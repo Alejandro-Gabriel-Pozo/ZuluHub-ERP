@@ -89,7 +89,8 @@ const MAXIMO_DE_LINEAS = 200;
  * reloj: ticket y cobro caen siempre en la misma jornada, también con la caja abierta pasada la hora de corte), la cotización contra el catálogo
  * (`PRECIO_CAMBIO` si el total ya no es el que vio el cajero: no se cobra nada) y los cobros contra el total al centavo; recién ahí escribe, con las
  * MISMAS funciones que el salón: abrir, agregar × n, cerrar (ticket con la fecha de la sesión) y cobrar. Con total 0 no hay cobro y el ticket queda
- * `CORTESIA` (pide `VENTA_A_CERO`). Cualquier error devuelto revierte todo: ni cuenta, ni número de ticket, ni cobro. NO lleva stock (E5).
+ * `CORTESIA` (pide `VENTA_A_CERO`). Cualquier error devuelto revierte todo: ni cuenta, ni número de ticket, ni cobro, ni salida de stock (al cerrar, con stock cableado y activo, el
+ * ticket descuenta sus líneas que controlan: E5-T12).
  */
 async function vender(
   tx: TxDeVentas,
@@ -156,7 +157,11 @@ async function vender(
   if (caja.estado === "EN_CIERRE") {
     return err({ codigo: "CAJA_EN_CIERRE", cajaId: caja.cajaId, sesionId: caja.sesionId });
   }
-  const opciones = { jornada: caja.fechaDeNegocio, sesionDeCajaId: caja.sesionId };
+  const opciones = {
+    jornada: caja.fechaDeNegocio,
+    sesionDeCajaId: caja.sesionId,
+    stock: dependencias.stock,
+  };
   const jornada = await exigirJornadaAbierta(tx, contexto, sucursal, opciones.jornada);
   if (!jornada.ok) return jornada;
 
@@ -333,6 +338,6 @@ export function armarVenderYCobrar(dependencias: DependenciasDeVentas) {
       (tx) => vender(tx, dependencias, contexto, entrada),
     );
     // Un error de la base en la transacción (caja) sale con su código de negocio; el resto, como el módulo lo traduce.
-    return traducir(traducirErroresDelCobro(resultado));
+    return traducir(traducirErroresDelCobro(resultado), dependencias.stock);
   };
 }

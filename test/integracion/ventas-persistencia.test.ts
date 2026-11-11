@@ -50,7 +50,7 @@ describe.skipIf(base === null)("ventas: la persistencia contra el esquema real",
     );
     const migracion = (
       await Promise.all(
-        ["0028_ventas.sql", "0029_facturacion.sql"].map((n) =>
+        ["0028_ventas.sql", "0029_facturacion.sql", "0036_ventas_sella_variante.sql"].map((n) =>
           readFile(join(import.meta.dirname, "../../migraciones", n), "utf8"),
         ),
       )

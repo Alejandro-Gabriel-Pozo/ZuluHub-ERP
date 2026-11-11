@@ -14,6 +14,7 @@ import { crearCasosDeUsoDeCatalogo, crearConsultasDeCatalogo } from "../modulos/
 import { crearCasosDeUsoDeStock, crearConsultasDeStock } from "../modulos/stock/publico";
 import { crearCasosDeUsoDeVentas, crearConsultasDeVentas } from "../modulos/ventas/publico";
 import { crearFacturadorDeTickets } from "./facturacion-de-tickets";
+import { crearStockDeVentas } from "./stock-de-ventas";
 import {
   crearCasosDeUsoDeCierre,
   crearConsultasDeCierre,
@@ -163,6 +164,8 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
         reglas,
         // Facturar un ticket (E1 §3.4): la composición es el único lugar donde ventas y fiscal se tocan.
         facturador: crearFacturadorDeTickets(reglas),
+        // Descontar y devolver stock al cerrar y anular un ticket (E5-T12): la composición es el único lugar donde ventas y stock se tocan.
+        stock: crearStockDeVentas(reglas),
       }),
     ),
     consultasDeVentas: perezoso(() =>

@@ -3,6 +3,8 @@ import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import { crearFacturadorDeTickets } from "../../src/composicion/facturacion-de-tickets";
+import { crearStockDeVentas } from "../../src/composicion/stock-de-ventas";
+import { crearRepositoriosDeStock } from "../../src/modulos/stock/publico";
 import { crearCasosDeUsoDeCaja } from "../../src/modulos/caja/publico";
 import {
   crearLecturasDeComprobantes,
@@ -63,6 +65,15 @@ export const REGLAS_DE_PRUEBA: ReglasDeEmpresa = {
   permisos: PERMISOS_DE_EMPRESA,
 };
 
+/** Las mismas reglas con `stock` disponible (el módulo real está en desarrollo): lo que usa un mundo con stock cableado (E5-T12). */
+export const REGLAS_DE_PRUEBA_CON_STOCK: ReglasDeEmpresa = {
+  ...REGLAS_DE_PRUEBA,
+  catalogo: {
+    ...REGLAS_DE_PRUEBA.catalogo,
+    stock: { ...CATALOGO_DE_MODULOS.stock, estado: "disponible" },
+  },
+};
+
 export type EscenarioDeVentas = Readonly<{
   empresa: string;
   sucursal: SucursalId;
@@ -87,8 +98,15 @@ export async function montarVentas(
     facturacion?: boolean;
     /** Envuelve la transacción compuesta (para inyectar una falla después de fiscal). */
     ajustarTx?: (tx: TxDePrueba) => TxDePrueba;
+    /**
+     * E5-T12: arma también los repositorios de stock sobre la MISMA conexión (como la `TxDeApp` real), le da a ventas el puerto de stock real de la
+     * composición y deja el módulo `stock` ACTIVO para la empresa (`apagarStock`/`encenderStock` lo cambian en medio de una prueba). Sin esto, ventas
+     * queda sin puerto de stock y no llama a nada.
+     */
+    stock?: boolean;
   }> = {},
 ) {
+  let stockActivo = opciones.stock === true;
   const propia = await crearBaseAparte(base);
   let barrera: () => Promise<void> = () => Promise.resolve();
   const conFiscal = (tx: TxDePrueba): TxDePrueba => {
@@ -107,8 +125,10 @@ export async function montarVentas(
       certificados: crearRepositorioDeCertificados(fiscal),
     } as TxDePrueba;
   };
+  const conStock = (tx: TxDePrueba): TxDePrueba =>
+    opciones.stock === true ? { ...tx, ...crearRepositoriosDeStock(tx.db) } : tx;
   const entorno = crearEntornoDePrueba(propia.base, opciones.conexiones ?? 12, (base0) => {
-    const tx = (opciones.ajustarTx ?? ((t: TxDePrueba) => t))(conFiscal(base0));
+    const tx = (opciones.ajustarTx ?? ((t: TxDePrueba) => t))(conStock(conFiscal(base0)));
     let primera = true;
     return {
       ...tx,
@@ -131,6 +151,7 @@ export async function montarVentas(
                   "cierre",
                   "caja",
                   "facturacion",
+                  ...(stockActivo ? ["stock"] : []),
                 ],
                 modulosHabilitados: [
                   ...datos.modulosHabilitados,
@@ -139,6 +160,7 @@ export async function montarVentas(
                   "cierre",
                   "caja",
                   "facturacion",
+                  ...(stockActivo ? ["stock"] : []),
                 ],
               };
         },
@@ -147,12 +169,13 @@ export async function montarVentas(
   });
   const dueno = new pg.Client({ connectionString: propia.base.dueno });
   await dueno.connect();
-  const reglas = REGLAS_DE_PRUEBA;
+  const reglas = opciones.stock === true ? REGLAS_DE_PRUEBA_CON_STOCK : REGLAS_DE_PRUEBA;
   const facturador = opciones.facturacion === true ? crearFacturadorDeTickets(reglas) : undefined;
   const casos = crearCasosDeUsoDeVentas({
     transacciones: entorno,
     reglas,
     ...(facturador === undefined ? {} : { facturador }),
+    ...(opciones.stock === true ? { stock: crearStockDeVentas(reglas) } : {}),
   });
   const consultas = crearConsultasDeVentas({
     transacciones: entorno,
@@ -292,6 +315,13 @@ export async function montarVentas(
     filas,
     contar,
     auditoria,
+    /** Apaga o enciende el módulo `stock` para la autorización (queda «no activo» / activo): el rol y la base siguen igual. */
+    apagarStock: () => {
+      stockActivo = false;
+    },
+    encenderStock: () => {
+      stockActivo = true;
+    },
     armarBarrera: (participantes: number) => {
       barrera = crearBarrera(participantes);
     },

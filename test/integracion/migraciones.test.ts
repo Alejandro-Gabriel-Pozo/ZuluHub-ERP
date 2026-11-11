@@ -54,6 +54,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0029_facturacion.sql",
         "0030_stock.sql",
         "0031_stock_costos.sql",
+        "0036_ventas_sella_variante.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -89,6 +90,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0029_facturacion.sql",
           "0030_stock.sql",
           "0031_stock_costos.sql",
+          "0036_ventas_sella_variante.sql",
         ],
       });
     } finally {
@@ -229,6 +231,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0029_facturacion.sql",
         "0030_stock.sql",
         "0031_stock_costos.sql",
+        "0036_ventas_sella_variante.sql",
       ]);
     } finally {
       await aparte.destruir();

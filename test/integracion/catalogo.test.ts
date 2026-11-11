@@ -1237,6 +1237,8 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "controla_stock",
             "creada_por",
             "creada_en",
+            // 0036: la versión de la variante se sella al insertar
+            "variante_version_de_opcion_id",
           ].map((c) => `linea_cuenta.${c}`),
           ...[
             "empresa_id",

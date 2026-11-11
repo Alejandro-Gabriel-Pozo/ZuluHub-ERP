@@ -108,6 +108,8 @@ export type VentasDb = {
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
+    /** La versión de la opción de la variante que se vendió (0036): de ella sale el factor de tamaño del consumo de stock. Nula en las líneas anteriores. */
+    variante_version_de_opcion_id: string | null;
   };
   linea_cuenta_opcion: {
     empresa_id: string;
@@ -274,6 +276,7 @@ export const COLUMNAS_DE_VENTAS = {
     "creado_en",
     "actualizado_en",
     "version",
+    "variante_version_de_opcion_id",
   ],
   linea_cuenta_opcion: [
     "empresa_id",

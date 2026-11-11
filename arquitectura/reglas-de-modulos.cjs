@@ -16,6 +16,14 @@ module.exports = [
     to: { path: "^src/modulos/fiscal/" },
   },
   {
+    name: "ventas-sin-stock",
+    severity: "error",
+    comment:
+      "E5-T12 (e5 §3.3). ventas no importa stock, ni siquiera por su publico.ts: para descontar y devolver stock declara su propio puerto (`StockDeVentas`, con tipos de ventas) y la composición (src/composicion/stock-de-ventas.ts) lo implementa con los puertos de stock; es el único lugar donde se tocan los dos módulos (con base-sin-ventas, stock tampoco importa ventas). Previene que ventas dependa de los tipos y errores de stock (cada cambio del libro rompería ventas) y el ciclo de módulos; si se elimina, falla la violación inyectada de esta regla.",
+    from: { path: "^src/modulos/ventas/" },
+    to: { path: "^src/modulos/stock/" },
+  },
+  {
     name: "base-sin-ventas",
     severity: "error",
     comment:

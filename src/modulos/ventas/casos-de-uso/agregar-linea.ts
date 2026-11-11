@@ -98,7 +98,8 @@ function cantidadIgual(a: string, b: Cantidad): boolean {
  * árbitro contra otra alta y contra el cierre: o la línea entra al ticket, o recibe `CUENTA_NO_ABIERTA`; nunca una línea vigente fuera
  * del ticket. El `lineaId` lo manda la pantalla: repetir el pedido devuelve la misma posición (`yaExistia`); el mismo id con otro
  * contenido es `LINEA_ID_EN_USO`. Un producto en «precio abierto» (sin precio cargado) se vende con el importe que escribe quien vende (`precioAbierto`, decisión 179); sin él, `PRODUCTO_SIN_PRECIO`; con precio de catálogo, un importe del cliente se rechaza. Una línea
- * a $0 pide la confirmación `VENTA_A_CERO`. Audita `LINEA_AGREGADA` en la misma transacción.
+ * a $0 pide la confirmación `VENTA_A_CERO`. Audita `LINEA_AGREGADA` en la misma transacción. Sella además la versión de la opción de la
+ * variante (el factor de tamaño del consumo de stock) y si la línea descuenta stock (`controla_stock`, lo dice el puerto de stock: sin él, no).
  */
 export async function agregarLineaEnTx(
   tx: TxDeVentas,
@@ -197,6 +198,15 @@ export async function agregarLineaEnTx(
   });
   if (!decision.ok) return decision;
 
+  // Qué líneas descuentan stock lo dice stock (con el módulo apagado, ninguna; sin puerto cableado, tampoco): se sella en la línea y el cierre
+  // solo manda esas (E4 §3.10; D132).
+  const controlaStock =
+    ventaOpciones.stock === undefined
+      ? false
+      : (await ventaOpciones.stock.controla(tx, contexto, [instantanea.productoId])).get(
+          instantanea.productoId,
+        )?.controla === true;
+
   const posicion = await tx.cuentas.reservarPosicion(empresaId, cuenta.id);
   if (posicion === null) return err("CUENTA_NO_ABIERTA");
   const opciones: OpcionDeLinea[] = instantanea.opciones.map((o, i) => ({
@@ -218,6 +228,9 @@ export async function agregarLineaEnTx(
     descripcion: instantanea.descripcion,
     varianteOpcionId: instantanea.variante === null ? null : instantanea.variante.opcionId,
     varianteNombre: instantanea.variante === null ? null : instantanea.variante.nombre,
+    // La versión del tamaño que se vendió: de ella sale el factor del consumo de stock aunque después cambie la vigente (0036).
+    varianteVersionDeOpcionId:
+      instantanea.variante === null ? null : instantanea.variante.versionDeOpcionId,
     precioId: esAbierto ? null : instantanea.precioId,
     origenDelPrecio: esAbierto
       ? "ABIERTO"
@@ -232,8 +245,7 @@ export async function agregarLineaEnTx(
     unidadDeVenta: instantanea.unidadDeVentaId,
     pasoDeCantidad: instantanea.pasoMinimo,
     alicuota: instantanea.alicuota,
-    // El stock está apagado en E4 (decisión 132): ninguna línea controla stock mientras el módulo no esté activo.
-    controlaStock: false,
+    controlaStock,
     creadaPor: persona,
     creadaEn: contexto.ahora,
     opciones,
@@ -278,7 +290,7 @@ async function agregar(
     "cuentas.agregar_linea",
   ]);
   if (!persona.ok) return persona;
-  return agregarLineaEnTx(tx, contexto, persona.valor, entrada);
+  return agregarLineaEnTx(tx, contexto, persona.valor, entrada, { stock: dependencias.stock });
 }
 
 export function armarAgregarLinea(dependencias: DependenciasDeVentas) {
