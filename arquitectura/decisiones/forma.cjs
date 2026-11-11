@@ -165,4 +165,50 @@ function problemasDeLosSensibles(valor) {
   return problemas;
 }
 
-module.exports = { TIPO_SIN_DECISION, problemasDeLosSensibles, problemasDelRegistro };
+/**
+ * Los problemas de la cuota (`cuota.json`): `{ vigente_desde, negocio, tecnicas, excepciones: [{ id, fecha, fuente }] }`. Una excepción es del
+ * dueño: lleva el id de la decisión, la fecha del mensaje y la fuente (el mensaje), y no se repite.
+ */
+const TOPE_MAXIMO_DE_UNA_CUOTA = 100;
+const esTopeValido = (valor) =>
+  Number.isInteger(valor) && valor >= 0 && valor <= TOPE_MAXIMO_DE_UNA_CUOTA;
+function problemasDeLaCuota(valor) {
+  const claves = ["vigente_desde", "negocio", "tecnicas", "excepciones"];
+  if (!esObjeto(valor) || Object.keys(valor).sort().join() !== [...claves].sort().join()) {
+    return [`cuota.json lleva exactamente: ${claves.join(", ")}.`];
+  }
+  const problemas = [];
+  if (!esFechaReal(valor.vigente_desde))
+    problemas.push("vigente_desde es un día real con la forma AAAA-MM-DD.");
+  for (const campo of ["negocio", "tecnicas"]) {
+    if (!esTopeValido(valor[campo]))
+      problemas.push(`${campo} es un entero entre 0 y ${TOPE_MAXIMO_DE_UNA_CUOTA}.`);
+  }
+  if (!Array.isArray(valor.excepciones)) {
+    problemas.push("excepciones tiene que ser una lista.");
+    return problemas;
+  }
+  const vistas = new Set();
+  for (const [posicion, fila] of valor.excepciones.entries()) {
+    const nombre = `excepciones[${posicion}]`;
+    if (!esObjeto(fila) || Object.keys(fila).sort().join() !== "fecha,fuente,id") {
+      problemas.push(`${nombre}: lleva exactamente id, fecha y fuente.`);
+      continue;
+    }
+    if (typeof fila.id !== "string" || !FORMA_DEL_ID.test(fila.id))
+      problemas.push(`${nombre}: id tiene la forma DEC-0001.`);
+    else if (vistas.has(fila.id)) problemas.push(`${nombre}: el id ${fila.id} está repetido.`);
+    else vistas.add(fila.id);
+    if (!esFechaReal(fila.fecha))
+      problemas.push(`${nombre}: fecha es un día real con la forma AAAA-MM-DD.`);
+    problemas.push(...problemasDeUnTexto(fila.fuente, `${nombre}.fuente`, LARGO_MAXIMO_DEL_MOTIVO));
+  }
+  return problemas;
+}
+
+module.exports = {
+  TIPO_SIN_DECISION,
+  problemasDeLaCuota,
+  problemasDeLosSensibles,
+  problemasDelRegistro,
+};

@@ -43,6 +43,10 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
   solo baja (`arquitectura/deuda/campos-sin-dato.json`), no una excepción silenciosa. Previene: la primitiva del CUIT existía y el campo de documento de
   «Emitir» no la usaba (el CUIT quedó escrito como nombre). Chequeo: `test/arquitectura/campos-con-dato.test.ts`, con una violación
   inyectada por cada caso.
+- **Cuota de decisiones por PR (dueño, 2026-11-11).** Un PR agrega como máximo 5 decisiones de negocio (`DINERO`, `PERMISOS`, `COMERCIAL`) y 10
+  técnicas pendientes de OK, desde la fecha de `arquitectura/decisiones/cuota.json` (`vigente_desde`); `npm run decisiones:verificar --base` falla si se pasa.
+  Si se pasa: preguntar al dueño antes de construir, reusar una decisión existente o pedir su excepción (id, fecha y fuente en `excepciones`). Previene:
+  sesiones que acumulan decisiones sin consultar (94 pendientes el 11/11/2026). Chequeo: `test/arquitectura/decisiones-cuota.test.ts`.
 - **Interfaz sobria (dueño, 2026-10-30).** No agregues textos, etiquetas, avisos ni ayudas visuales por iniciativa propia: usá primero textos ya
   aprobados y, si el control comunica el motivo con su estado y un texto existente, no dupliques la indicación. Ante la ambigüedad, el cambio mínimo,
   reversible y con menos texto, con el supuesto asentado y confirmación antes de ampliar. Una pantalla terminada no se modifica porque muestre una
