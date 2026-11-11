@@ -174,10 +174,10 @@ const INVARIANTES = [
         id: "I1-renombrar-una-carpeta",
         tipo: "alteracion",
         objetivo: "repo",
-        descripcion: "El módulo `empresas` se renombra a `clientes` con todo su contenido.",
+        descripcion: "El módulo `empresas` se renombra a `reservas` con todo su contenido.",
         esperado: {
           codigo: "ruta-sin-clase",
-          archivo: "src/modulos/clientes/dominio/empresa.ts",
+          archivo: "src/modulos/reservas/dominio/empresa.ts",
           linea: 1,
         },
       },

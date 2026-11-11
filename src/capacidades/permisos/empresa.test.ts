@@ -141,8 +141,40 @@ const DEL_OPERADOR_DE_CAJA_CIERRE_Y_VENTAS = [
   "ventas.ver",
 ] as const;
 
+/**
+ * Clientes y compras (E9-T1; F1 del directorio y P-3 de compras, decidida por el padre el 10/11/2026): el operador busca, da de
+ * alta y edita partes, pide puntos de venta o comprobantes y carga la compra y la factura. Los dos módulos están `en_desarrollo`.
+ */
+const DEL_OPERADOR_DE_CLIENTES_Y_COMPRAS = [
+  "comprobantes_de_proveedor.registrar",
+  "comprobantes_de_proveedor.ver",
+  "partes.cambiar_roles",
+  "partes.crear",
+  "partes.desvincular_contacto",
+  "partes.editar",
+  "partes.ver",
+  "partes.vincular_contacto",
+  "proveedores.pedir_ficha",
+  "recepciones.registrar",
+  "recepciones.ver",
+] as const;
+
+/** Lo que de clientes y compras pueden el gerente y el administrador pero no el operador: desactivar y reactivar, aprobar la ficha, pagar, anular y corregir. */
+const DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS = [
+  "comprobantes_de_proveedor.anular_pago",
+  "comprobantes_de_proveedor.pagar",
+  "partes.desactivar",
+  "partes.reactivar",
+  "proveedores.editar_ficha",
+  "recepciones.anular",
+] as const;
+
+/** El nivel de operación de las compras es solo del gerente. */
+const SOLO_DEL_GERENTE_DE_COMPRAS = ["compras.configurar"] as const;
+
 const DEL_OPERADOR = [
   ...DEL_OPERADOR_DE_EMPRESA,
+  ...DEL_OPERADOR_DE_CLIENTES_Y_COMPRAS,
   ...DEL_OPERADOR_DE_CATALOGO_Y_STOCK,
   ...DEL_OPERADOR_DE_CAJA_CIERRE_Y_VENTAS,
 ] as const;
@@ -176,6 +208,7 @@ const SOLO_DEL_GERENTE = [
   ...SOLO_DEL_GERENTE_DE_FACTURACION,
   ...SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL,
   ...SOLO_DEL_GERENTE_DE_CAJA,
+  ...SOLO_DEL_GERENTE_DE_COMPRAS,
 ] as const;
 
 const DEL_ADMINISTRADOR = [
@@ -193,6 +226,7 @@ const DEL_ADMINISTRADOR = [
   ...SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK,
   ...DE_LA_ESCALERA_DE_ELECCIONES,
   ...DEL_ADMINISTRADOR_DE_CAJA,
+  ...DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS,
 ].sort();
 
 const ACCIONES_DE_USUARIOS = [
@@ -213,9 +247,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 111 acciones: 34 de empresa, configuración fiscal y facturación, 42 de catálogo, carta y stock (39 de T0 y 2 de CE0) y 35 de caja, cierre y ventas", () => {
+  it("hay 129 acciones: 34 de empresa, configuración fiscal y facturación, 42 de catálogo, carta y stock (39 de T0 y 2 de CE0), 35 de caja, cierre y ventas y 18 de clientes y compras", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(111);
+    expect(todas).toHaveLength(129);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -259,6 +293,13 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("cuentas"),
       porPrefijo("tickets"),
     ]).toEqual([5, 4, 4, 4, 4, 1, 1, 4, 1, 5, 2]);
+    expect([
+      porPrefijo("partes"),
+      porPrefijo("proveedores"),
+      porPrefijo("recepciones"),
+      porPrefijo("comprobantes_de_proveedor"),
+      porPrefijo("compras"),
+    ]).toEqual([8, 2, 3, 4, 1]);
   });
 
   it("las acciones retiradas por las decisiones 138 y 133 ya no existen: ni en la matriz ni en el catálogo", () => {
@@ -490,7 +531,7 @@ describe("el guard con las reglas reales", () => {
   const acciones = ACCIONES_DE_ADMINISTRACION;
 
   it("administracion es obligatorio: está activo aunque no se haya activado nada", () => {
-    expect([...activos]).toEqual(["administracion"]);
+    expect([...activos]).toEqual(["administracion", "clientes"]);
   });
 
   it("cada rol puede exactamente lo que dice la tabla, y no puede, SIN_PERMISO", () => {
@@ -606,7 +647,7 @@ describe("el guard con las reglas reales", () => {
     (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
   );
 
-  it("todo módulo en desarrollo del catálogo incluye catalogo, vidriera, caja y ventas (cierre ya es disponible desde E3b y stock desde E5)", () => {
+  it("todo módulo en desarrollo del catálogo incluye catalogo, vidriera, caja y ventas (cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4 y compras desde E9-T12)", () => {
     expect([...ENDESARROLLO].sort()).toEqual(["caja", "catalogo", "ventas", "vidriera"].sort());
   });
 
@@ -658,7 +699,7 @@ describe("el guard con las reglas reales", () => {
   it("activar caja o ventas por empresa y plan no los deja activos: sigue sin habilitarse nada", () => {
     const todos = ["caja", "ventas", "catalogo"];
     const estado = estadoDeModulos(CATALOGO_DE_MODULOS, todos, todos);
-    expect([...estado.modulosActivos]).toEqual(["administracion"]);
+    expect([...estado.modulosActivos]).toEqual(["administracion", "clientes"]);
   });
 
   it("si el módulo no figura entre los activos, MODULO_NO_ACTIVO (el guard no lo da por hecho)", () => {

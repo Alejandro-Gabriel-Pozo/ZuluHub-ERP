@@ -913,7 +913,9 @@ describe.skipIf(base === null)("la sucursal de los comprobantes y del listado y 
         const r = await permisosDe(ctx);
         expect(r).toMatchObject({
           ok: true,
-          valor: { modulos: { activos: ["administracion", "facturacion"], enSoloLectura: [] } },
+          valor: {
+            modulos: { activos: ["administracion", "clientes", "facturacion"], enSoloLectura: [] },
+          },
         });
         expect(await accionesDe(ctx)).toContain("comprobantes.ver");
       }
@@ -937,7 +939,7 @@ describe.skipIf(base === null)("la sucursal de los comprobantes y del listado y 
       const deLaSin = await permisosDe(comoGerente(sin));
       expect(deLaSin).toMatchObject({
         ok: true,
-        valor: { modulos: { activos: ["administracion"] } },
+        valor: { modulos: { activos: ["administracion", "clientes"] } },
       });
       expect(await accionesDe(comoGerente(sin))).not.toContain("comprobantes.ver");
       expect(await accionesDe(comoGerente(sin))).toContain("usuarios.invitar");
@@ -955,7 +957,9 @@ describe.skipIf(base === null)("la sucursal de los comprobantes y del listado y 
       const r = await permisosDe(comoGerente(e));
       expect(r).toMatchObject({
         ok: true,
-        valor: { modulos: { activos: ["administracion"], enSoloLectura: ["facturacion"] } },
+        valor: {
+          modulos: { activos: ["administracion", "clientes"], enSoloLectura: ["facturacion"] },
+        },
       });
       const acciones = await accionesDe(comoGerente(e));
       expect(acciones).toContain("comprobantes.ver");

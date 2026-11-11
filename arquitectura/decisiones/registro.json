@@ -800,5 +800,166 @@
     "decision": "El tope de textos del vocabulario por marca sube de 500 a 2000: el catálogo del código ya pasó de 500 y cada etapa suma textos.",
     "que_cambia": "Cuántos textos propios puede tener una marca; no cambia ningún texto guardado.",
     "donde": "migraciones/0041_tope_de_textos_por_marca.sql (vocabulario_valido_ampliado) y test/integracion/marcas-sql.test.ts"
+  },
+  {
+    "id": "DEC-0300",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El número de un documento extranjero tiene de 3 a 20 letras o dígitos y el país es un código de dos letras.",
+    "que_cambia": "Si el dueño fija otros rangos o una lista de países, hay que cambiar una primitiva y un CHECK de la base.",
+    "donde": "src/primitivas/identificacion-fiscal/documento-extranjero.ts:6 y pais.ts:6"
+  },
+  {
+    "id": "DEC-0301",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Solo un proveedor monotributista se espera con factura C; inscripto con A; los demás eligen la letra a mano y se avisa si no coincide.",
+    "que_cambia": "Cambia cuándo la compra avisa «letra no esperada»; se corrige con una línea de la tabla de letras.",
+    "donde": "src/modulos/compras/dominio/comprobante.ts:100"
+  },
+  {
+    "id": "DEC-0302",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Un precio de compra en cero se rechaza: cero se confundiría con «sin precio», que se guarda vacío.",
+    "que_cambia": "Si se admitiera cero, una compra sin costo entraría al promedio de stock; se corrige aflojando una comparación.",
+    "donde": "src/modulos/compras/dominio/calcular-linea.ts:34"
+  },
+  {
+    "id": "DEC-0303",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Las líneas de la factura (cantidad y precio) se cargan en la unidad base del producto para comparar recibido, asignado y facturado sin convertir.",
+    "que_cambia": "La pantalla tendrá que convertir lo impreso en el papel; si se corrige, hace falta una capa de conversión y revisar la conciliación.",
+    "donde": "src/modulos/compras/dominio/factura.ts:18"
+  },
+  {
+    "id": "DEC-0304",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "SIN_DECISION",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Una compra admite hasta 9999 renglones, el mismo tope que un movimiento de stock.",
+    "que_cambia": "No cambia lo que ve el negocio salvo compras enormes.",
+    "donde": "src/modulos/compras/dominio/registrar-compra.ts:18",
+    "motivo": "Es un tope técnico igual al de stock; se corrige cambiando un número."
+  },
+  {
+    "id": "DEC-0305",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Ninguna acción de anonimizar partes del directorio: nadie puede anonimizar un cliente o proveedor hasta que el dueño lo pida.",
+    "que_cambia": "Quien necesite anonimizar por pedido de un titular no puede hacerlo desde el sistema; se corrige declarando la acción y su caso de uso.",
+    "donde": "src/capacidades/modulos/catalogo.ts:332"
+  },
+  {
+    "id": "DEC-0306",
+    "fecha": "2026-11-11",
+    "quien": "padre",
+    "tipo": "PERMISOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El operador carga compras, facturas y pide puntos de venta; solo gerente y administrador pagan, anulan compras o pagos y editan la ficha del proveedor; solo el gerente cambia el nivel de compras.",
+    "que_cambia": "Se achica o se amplía quién puede pagar o anular; se corrige en la matriz de permisos.",
+    "donde": "src/capacidades/permisos/empresa.ts:183"
+  },
+  {
+    "id": "DEC-0307",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El importe de un pago de factura es el total que dice el papel, no el calculado; un pago por factura, sin parciales, y por ahora no mueve la caja.",
+    "que_cambia": "Cambia cuánto figura pagado cuando el papel difiere del cálculo; si se corrige, el pago saldría de la caja o admitiría parciales.",
+    "donde": "src/modulos/compras/casos-de-uso/pagos.ts"
+  },
+  {
+    "id": "DEC-0308",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "En el nivel simple la compra no lleva factura; con el nivel de comprobante la factura es opcional; el nivel 3 y el 4 están apagados hasta tener perilla.",
+    "que_cambia": "Quien quiera cargar una factura tiene que subir el nivel; se corrige cambiando una regla del caso de uso.",
+    "donde": "src/modulos/compras/casos-de-uso/registrar-compra.ts"
+  },
+  {
+    "id": "DEC-0309",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Anular una compra anula también su factura, su conciliación y su pago vigente; si lo que entró al stock ya se consumió no se anula y hay que corregirla.",
+    "que_cambia": "Cambia qué queda vigente tras anular; si se corrige, la anulación podría dejar pagos o facturas sueltos.",
+    "donde": "src/modulos/compras/casos-de-uso/anular-compra.ts"
+  },
+  {
+    "id": "DEC-0310",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "La fecha impresa de una factura no se rechaza si es futura, y si la compra lleva fecha de otra jornada y entra a stock, stock la rechaza por su regla.",
+    "que_cambia": "Una factura con fecha equivocada se carga igual; si se corrige, se pediría la fecha dentro de la jornada.",
+    "donde": "src/modulos/compras/dominio/factura.ts y casos-de-uso/registrar-compra.ts"
+  },
+  {
+    "id": "DEC-0311",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Ver costos por unidad de un producto con sus proveedores pide permiso de costos además de ver compras, así que el operador no los ve.",
+    "que_cambia": "El operador no ve costos; si se corrige, se le da el permiso de costos o se separa la consulta.",
+    "donde": "src/modulos/compras/consultas/ficha.ts"
+  },
+  {
+    "id": "DEC-0312",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Se retira del catálogo la acción de corregir compras hasta construir la corrección; los permisos de gerente y administrador se vuelven a declarar entonces.",
+    "que_cambia": "Hoy nadie puede corregir una compra consumida; llega con la corrección por ajuste.",
+    "donde": "src/capacidades/modulos/catalogo.ts"
+  },
+  {
+    "id": "DEC-0313",
+    "fecha": "2026-11-11",
+    "quien": "padre",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Las presentaciones de un producto (caja de 12, pieza de 4 kg) son un dato del catálogo, no de compras; las edita quien edita productos.",
+    "que_cambia": "Corrección del padre: la tabla sigue en la migración de compras pero el dato es del catálogo; mover otra vez exige tocar ambos módulos.",
+    "donde": "src/modulos/catalogo/casos-de-uso/presentaciones.ts"
+  },
+  {
+    "id": "DEC-0314",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "En la consola de plataforma los módulos nuevos se llaman «Clientes y proveedores» y «Compras».",
+    "que_cambia": "Es el nombre que ve quien administra el plan de una empresa; se corrige cambiando dos rótulos.",
+    "donde": "apps/plataforma/logica/plan.ts"
+  },
+  {
+    "id": "DEC-0315",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "COMERCIAL",
+    "estado": "CORREGIDA",
+    "decision": "El tope de 500 textos por marca queda corregido por el padre con la migración 0041 (tope de 2000); el catálogo ya tiene 587.",
+    "que_cambia": "Cuántos textos puede redefinir una marca; no se agrega migración propia de compras.",
+    "donde": "migraciones/0041_tope_de_textos_por_marca.sql (rama orq/plan8-tope-de-textos)"
   }
 ]

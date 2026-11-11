@@ -167,6 +167,29 @@ export const PERMISOS_DE_EMPRESA = {
   "cuentas.anular": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "tickets.cobrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "tickets.corregir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  // E9-T1 (e9-compras-especificacion §3.9). Los dos módulos están `en_desarrollo`: el guard rechaza todo antes de mirar
+  // esta tabla. Directorio (F1, decidido): el operador busca, da de alta y edita; desactivar y reactivar, no.
+  "partes.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "partes.crear": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "partes.editar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "partes.cambiar_roles": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "partes.vincular_contacto": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "partes.desvincular_contacto": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "partes.desactivar": ["GERENTE", "ADMINISTRADOR"],
+  "partes.reactivar": ["GERENTE", "ADMINISTRADOR"],
+  // Compras (P-3, DECIDIDO por el padre el 10/11/2026, corregible): el operador carga la compra y la factura y pide
+  // puntos de venta o comprobantes; no paga, no anula, no corrige ni configura. Aprobar la ficha es de quien administra
+  // (D111); el nivel de operación es solo del gerente.
+  "proveedores.editar_ficha": ["GERENTE", "ADMINISTRADOR"],
+  "proveedores.pedir_ficha": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "recepciones.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "recepciones.registrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "recepciones.anular": ["GERENTE", "ADMINISTRADOR"],
+  "comprobantes_de_proveedor.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "comprobantes_de_proveedor.registrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "comprobantes_de_proveedor.pagar": ["GERENTE", "ADMINISTRADOR"],
+  "comprobantes_de_proveedor.anular_pago": ["GERENTE", "ADMINISTRADOR"],
+  "compras.configurar": ["GERENTE"],
 } as const satisfies Record<ClaveAccion, readonly RolDeEmpresa[]>;
 
 export type ReglasDeEmpresa = ReglasDelGuard<ClaveModulo, ClaveAccion, ClaveCapacidad>;
