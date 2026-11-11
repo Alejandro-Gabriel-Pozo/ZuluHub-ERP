@@ -94,6 +94,7 @@ export { huellaDeComando, type CampoDeHuella, type RenglonDeHuella } from "./dom
 export { traducirMovimiento } from "./casos-de-uso/movimientos-comun";
 // Los puertos que stock ofrece a ventas y a compras (E5-T7): contratos, fábricas y los tipos de lo que entra y sale de cada uno.
 export {
+  crearAjusteDeCostoPorOrigen,
   crearArticulosDeVenta,
   crearConsumoDeStock,
   crearDepositoDeVenta,
@@ -101,6 +102,7 @@ export {
   crearExistenciaParaMostrar,
   crearPuertosDeStock,
   crearReversionDeStock,
+  type AjusteDeCostoPorOrigen,
   type ArticulosDeVenta,
   type ConsumoDeStock,
   type DepositoDeVenta,
@@ -110,6 +112,7 @@ export {
   type PuertosDeStock,
   type ReversionDeStock,
 } from "./puertos";
+export type { EntradaDeAjusteDeCosto, SalidaDeAjusteDeCosto } from "./casos-de-uso/ajuste-de-costo";
 export type {
   AvisoDeSalidaPorVenta,
   ControlDeUnProducto,

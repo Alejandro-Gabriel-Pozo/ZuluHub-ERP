@@ -180,6 +180,24 @@ export const PERMISOS_DE_EMPRESA = {
   "cuentas.anular": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "tickets.cobrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "tickets.corregir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  // E7 (spec §3.13, PP-2 decidido por el padre el 10/11/2026): unir, dividir, cambiar de mesa, enviar a cocina e imprimir, los tres roles con todo
+  // auditado (como la decisión 155); armar el plano de mesas y las impresoras, el gerente y el administrador (el operador solo las mira).
+  "mesas.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "mesas.crear": ["GERENTE", "ADMINISTRADOR"],
+  "mesas.editar": ["GERENTE", "ADMINISTRADOR"],
+  "mesas.reactivar": ["GERENTE", "ADMINISTRADOR"],
+  "mesas.desactivar": ["GERENTE", "ADMINISTRADOR"],
+  "salon.cambiar_mesa": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "salon.unir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "salon.dividir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "comandas.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "comandas.enviar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "impresiones.imprimir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "impresiones.reimprimir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "impresoras.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "impresoras.crear": ["GERENTE", "ADMINISTRADOR"],
+  "impresoras.editar": ["GERENTE", "ADMINISTRADOR"],
+  "impresoras.desactivar": ["GERENTE", "ADMINISTRADOR"],
   // E9-T1 (e9-compras-especificacion §3.9). Los dos módulos están `en_desarrollo`: el guard rechaza todo antes de mirar
   // esta tabla. Directorio (F1, decidido): el operador busca, da de alta y edita; desactivar y reactivar, no.
   "partes.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
@@ -203,6 +221,7 @@ export const PERMISOS_DE_EMPRESA = {
   "comprobantes_de_proveedor.pagar": ["GERENTE", "ADMINISTRADOR"],
   "comprobantes_de_proveedor.anular_pago": ["GERENTE", "ADMINISTRADOR"],
   "compras.configurar": ["GERENTE"],
+  "compras.corregir": ["GERENTE", "ADMINISTRADOR"],
 } as const satisfies Record<ClaveAccion, readonly RolDeEmpresa[]>;
 
 export type ReglasDeEmpresa = ReglasDelGuard<ClaveModulo, ClaveAccion, ClaveCapacidad>;

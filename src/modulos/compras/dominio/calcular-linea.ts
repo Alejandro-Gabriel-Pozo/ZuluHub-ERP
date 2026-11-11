@@ -4,6 +4,7 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import { convertirCantidad } from "../../../primitivas/unidades/convertir-cantidad";
 import { UNIDADES, type CodigoDeUnidad } from "../../../primitivas/unidades/unidades";
 import { cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
+import { CIEN_POR_CIENTO, porcentajeDeAlicuota, type AlicuotaDeCompra } from "./comprobante";
 import {
   MAXIMO_DE_UNIDADES_EXACTAS,
   UNO_DE_CANTIDAD,
@@ -54,6 +55,11 @@ export type EntradaDeLinea = Readonly<{
   unidadDePrecio: CodigoDeUnidad | null;
   /** Texto decimal de hasta 6 decimales, o `null` si todavía no se sabe. */
   precio: string | null;
+  /**
+   * El IVA que entra al costo (DEC-0322): la alícuota de la línea cuando la empresa no recupera el IVA (monotributista o exento, Factura A); `null` o ausente,
+   * el costo es el importe de la línea. La decide `alicuotaQueEntraAlCosto`; el importe NO cambia (sigue siendo el neto), solo el costo por unidad.
+   */
+  alicuotaDeIvaEnElCosto?: AlicuotaDeCompra | null | undefined;
 }>;
 
 export type SalidaDeLinea = Readonly<{
@@ -159,9 +165,15 @@ export function calcularLinea(entrada: EntradaDeLinea): R<SalidaDeLinea> {
   const { numerador, denominador } = exacto.valor;
   const importe = dividirRedondeando(numerador * UNO_DE_IMPORTE, denominador, POLITICA_VIGENTE);
   // costo = importe exacto ÷ cantidad en stock, en millonésimos: (N/D) × 10^6 ÷ (q / 10^4)
+  // Con IVA al costo, el importe exacto se multiplica por (100 % + alícuota) ANTES de dividir: un solo redondeo.
+  const factorDeIva =
+    CIEN_POR_CIENTO +
+    (entrada.alicuotaDeIvaEnElCosto == null
+      ? 0n
+      : porcentajeDeAlicuota(entrada.alicuotaDeIvaEnElCosto));
   const costo = dividirRedondeando(
-    numerador * UNO_DE_PRECIO * UNO_DE_CANTIDAD,
-    denominador * enStock.valor,
+    numerador * UNO_DE_PRECIO * UNO_DE_CANTIDAD * factorDeIva,
+    denominador * enStock.valor * CIEN_POR_CIENTO,
     POLITICA_VIGENTE,
   );
   // Stryker disable next-line EqualityOperator: el importe exacto de numeric(18,2) (10^18 − 1 centavos) no se alcanza con un precio de 6 decimales por una cantidad de 4; el borde del costo lo prueba un caso aparte

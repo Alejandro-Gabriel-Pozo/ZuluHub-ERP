@@ -50,6 +50,8 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "caja"
       | "cierre"
       | "ventas"
+      | "comandas"
+      | "salon"
       | "clientes"
       | "compras"
       | "produccion"
@@ -175,6 +177,22 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "cuentas.cerrar"
       | "cuentas.anular_linea"
       | "cuentas.anular"
+      | "comandas.ver"
+      | "comandas.enviar"
+      | "impresiones.imprimir"
+      | "impresiones.reimprimir"
+      | "impresoras.ver"
+      | "impresoras.crear"
+      | "impresoras.editar"
+      | "impresoras.desactivar"
+      | "mesas.ver"
+      | "mesas.crear"
+      | "mesas.editar"
+      | "mesas.reactivar"
+      | "mesas.desactivar"
+      | "salon.cambiar_mesa"
+      | "salon.unir"
+      | "salon.dividir"
       | "tickets.cobrar"
       | "tickets.corregir"
       | "partes.ver"
@@ -195,6 +213,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "comprobantes_de_proveedor.pagar"
       | "comprobantes_de_proveedor.anular_pago"
       | "compras.configurar"
+      | "compras.corregir"
     >();
     // Hoy ninguna acción exige una capacidad de sucursal.
     expectTypeOf<ClaveCapacidad>().toEqualTypeOf<never>();
@@ -257,6 +276,8 @@ describe("tipos cerrados derivados del catálogo", () => {
       "caja",
       "cierre",
       "ventas",
+      "comandas",
+      "salon",
       "clientes",
       "compras",
       "produccion",

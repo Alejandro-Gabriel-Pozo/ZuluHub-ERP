@@ -54,6 +54,18 @@
     "pruebas": "src/modulos/ventas/dominio"
   },
   {
+    "grupo": "salon (dominio)",
+    "archivos": "src/modulos/salon/dominio/**/*.ts",
+    "minutos": 5,
+    "pruebas": "src/modulos/salon/dominio"
+  },
+  {
+    "grupo": "comandas (dominio)",
+    "archivos": "src/modulos/comandas/dominio/**/*.ts",
+    "minutos": 5,
+    "pruebas": "src/modulos/comandas/dominio"
+  },
+  {
     "grupo": "clientes (dominio)",
     "archivos": "src/modulos/clientes/dominio/**/*.ts",
     "minutos": 3,
@@ -499,8 +511,8 @@
   },
   {
     "grupo": "guardián (registro de decisiones)",
-    "archivos": "arquitectura/decisiones/forma.cjs,arquitectura/decisiones/decisiones.cjs,arquitectura/decisiones/resumen.cjs",
-    "minutos": 6,
-    "pruebas": "test/arquitectura/decisiones-forma.test.ts test/arquitectura/decisiones-control.test.ts test/arquitectura/decisiones-resumen.test.ts test/arquitectura/decisiones-mutantes.test.ts"
+    "archivos": "arquitectura/decisiones/forma.cjs,arquitectura/decisiones/cuota.cjs,arquitectura/decisiones/decisiones.cjs,arquitectura/decisiones/resumen.cjs",
+    "minutos": 8,
+    "pruebas": "test/arquitectura/decisiones-forma.test.ts test/arquitectura/decisiones-control.test.ts test/arquitectura/decisiones-resumen.test.ts test/arquitectura/decisiones-mutantes.test.ts test/arquitectura/decisiones-cuota.test.ts"
   }
 ]

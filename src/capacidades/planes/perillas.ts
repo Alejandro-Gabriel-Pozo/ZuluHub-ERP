@@ -106,6 +106,14 @@ export const CATALOGO_DE_PERILLAS = {
     base: { encendida: false },
     modulo: "stock",
   },
+  // Salón (E7, DEC-0201; respuesta del dueño del 11/11/2026 «extras excepto comanda»): el salón es un extra de pago y las comandas van en todos los
+  // planes. Base apagada: si el plan no la nombra, no viene. La verifican todos los casos de uso y consultas del salón con `exigirPerilla`.
+  salon: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "salon",
+  },
   // Caja (decisión 124; caja-y-cobros.md:43, 69; registro de contratos :778; supuesto S-5 de E0: nombre y base 1 del
   // registro de octubre): cuántas cajas activas puede tener una sucursal. Base 1 («Caja 1» nace con la sucursal, decisión
   // 165); la sube la plataforma. Declara el tipo; `crearCaja` y `reactivarCaja` la verifican con `exigirPerilla` en E3.

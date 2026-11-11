@@ -16,7 +16,7 @@ describe("el catálogo comercial de módulos", () => {
     expect(conCapacidad).toEqual([]);
   });
 
-  it("tiene once módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, carta, caja, ventas, compras (disponible desde E9-T12), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4) y producción (en desarrollo hasta E6-T9)", () => {
+  it("tiene trece módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, carta, caja, ventas, compras (disponible desde E9-T12), comandas y salon (en desarrollo, E7), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
     expect(CATALOGO_DE_MODULOS).toEqual({
       administracion: {
         estado: "disponible",
@@ -215,6 +215,42 @@ describe("el catálogo comercial de módulos", () => {
           "tickets.corregir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
         },
       },
+      comandas: {
+        estado: "en_desarrollo",
+        obligatorio: false,
+        requiere: ["ventas"],
+        usaSiExiste: ["stock"],
+        datosRequeridos: [],
+        implementadoPor: ["modulos/comandas"],
+        acciones: {
+          "comandas.ver": { capacidad: null, efecto: "LECTURA" },
+          "comandas.enviar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "impresiones.imprimir": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "impresiones.reimprimir": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "impresoras.ver": { capacidad: null, efecto: "LECTURA" },
+          "impresoras.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "impresoras.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "impresoras.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+        },
+      },
+      salon: {
+        estado: "en_desarrollo",
+        obligatorio: false,
+        requiere: ["ventas", "comandas"],
+        usaSiExiste: [],
+        datosRequeridos: [],
+        implementadoPor: ["modulos/salon"],
+        acciones: {
+          "mesas.ver": { capacidad: null, efecto: "LECTURA" },
+          "mesas.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "mesas.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "mesas.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "mesas.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "salon.cambiar_mesa": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "salon.unir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "salon.dividir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+        },
+      },
       clientes: {
         estado: "disponible",
         obligatorio: true,
@@ -251,6 +287,7 @@ describe("el catálogo comercial de módulos", () => {
           "comprobantes_de_proveedor.pagar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "comprobantes_de_proveedor.anular_pago": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "compras.configurar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "compras.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
       produccion: {
@@ -284,13 +321,13 @@ describe("el catálogo comercial de módulos", () => {
     ) => Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
     expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([14, 9, 25]);
     expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
-    expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 10]);
+    expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 11]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
     // 25 de administración (18 de usuarios, sucursales, gerencia y permisos, y 7 de la configuración fiscal de H7 T5),
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 48 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
-    // de E5-T10), 35 de caja, cierre y ventas (E0-T1) y 18 de clientes y compras (E9-T1, sin `compras.corregir` hasta E9-T11) y 6 de lotes de E6-T7 y 5 de producción de E6-T8: 140 en total.
-    expect(todas).toHaveLength(25 + 9 + 48 + 35 + 18 + 5);
+    // de E5-T10), 35 de caja, cierre y ventas (E0-T1), 19 de clientes y compras (E9-T1 y T11), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 157 en total.
+    expect(todas).toHaveLength(25 + 9 + 48 + 35 + 19 + 16 + 5);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -394,12 +431,15 @@ function accionesPorEfecto(
 const EFECTOS_DE_EMPRESA = {
   LECTURA: [
     "cajas.ver",
+    "comandas.ver",
     "comprobantes.ver",
     "comprobantes_de_proveedor.ver",
     "costos.ver",
     "gerencia.ver_traspaso",
+    "impresoras.ver",
     "jornadas.ver",
     "lotes.ver",
+    "mesas.ver",
     "modulos.ver",
     "partes.ver",
     "permisos.ver_propios",
@@ -422,8 +462,10 @@ const EFECTOS_DE_EMPRESA = {
     "categorias.editar",
     "categorias.reactivar",
     "certificados.gestionar",
+    "comandas.enviar",
     "composiciones.editar",
     "compras.configurar",
+    "compras.corregir",
     "comprobantes.emitir_manual",
     "comprobantes_de_proveedor.pagar",
     "comprobantes_de_proveedor.registrar",
@@ -443,9 +485,16 @@ const EFECTOS_DE_EMPRESA = {
     "lotes.controlar",
     "lotes.corregir",
     "lotes.reasignar",
+    "impresiones.imprimir",
+    "impresiones.reimprimir",
+    "impresoras.crear",
+    "impresoras.editar",
     "medios_de_pago.crear",
     "medios_de_pago.editar",
     "medios_de_pago.reactivar",
+    "mesas.crear",
+    "mesas.editar",
+    "mesas.reactivar",
     "movimientos_caja.ajustar",
     "movimientos_caja.registrar_manual",
     "opciones.editar",
@@ -508,12 +557,14 @@ const EFECTOS_DE_EMPRESA = {
     "gerencia.aceptar_traspaso",
     "gerencia.cancelar_traspaso",
     "gerencia.rechazar_traspaso",
+    "impresoras.desactivar",
     "jornadas.cancelar_auditoria",
     "jornadas.cerrar",
     "jornadas.iniciar_auditoria",
     "lotes.cambiar_calidad",
     "lotes.dejar_de_controlar",
     "medios_de_pago.desactivar",
+    "mesas.desactivar",
     "movimientos_caja.anular",
     "movimientos_caja.anular_de_otros",
     "notas_de_credito.emitir",
@@ -521,6 +572,9 @@ const EFECTOS_DE_EMPRESA = {
     "productos.desactivar",
     "puntos_de_venta.desactivar",
     "recepciones.anular",
+    "salon.cambiar_mesa",
+    "salon.dividir",
+    "salon.unir",
     "series.resincronizar",
     "sesiones_caja.cancelar_cierre",
     "sesiones_caja.cerrar",

@@ -116,6 +116,12 @@ describe("el catálogo de perillas real", () => {
         base: { limite: 1 },
         modulo: "caja",
       },
+      salon: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "salon",
+      },
     });
   });
 
@@ -130,6 +136,7 @@ describe("el catálogo de perillas real", () => {
       | "lotes"
       | "calidad_de_lote"
       | "produccion"
+      | "salon"
     >();
     // @ts-expect-error esa perilla no está declarada (la registra el módulo que la verifica)
     const inventada: ClavePerilla = "terminal_compartida";
@@ -161,7 +168,7 @@ describe("el catálogo de perillas real", () => {
     }
   });
 
-  it("cada perilla la verifica el módulo que la nombra: las de recetas, stock; la de combos, catálogo; la de cajas, caja", () => {
+  it("cada perilla la verifica el módulo que la nombra: las de recetas, stock; la de combos, catálogo; la de cajas, caja; la del salón, salón", () => {
     const duenos = Object.fromEntries(
       Object.entries(catalogoComoTabla).map(([clave, d]) => [clave, d.modulo]),
     );
@@ -175,6 +182,7 @@ describe("el catálogo de perillas real", () => {
       calidad_de_lote: "stock",
       produccion: "produccion",
       cajas_por_sucursal: "caja",
+      salon: "salon",
     });
   });
 

@@ -24,6 +24,30 @@ module.exports = [
     to: { path: "^src/modulos/stock/" },
   },
   {
+    name: "ventas-sin-salon-ni-comandas",
+    severity: "error",
+    comment:
+      "E7 §3.1. ventas no importa salon ni comandas, ni siquiera por su publico.ts: el sentido es salon → comandas → ventas → caja y catálogo, y ventas nunca llama hacia arriba (el salón agrega su regla y llama a los casos internos de ventas dentro de la misma transacción). Previene el ciclo de módulos y que la cuenta (que también usa el mostrador) dependa de lo que solo existe en un restaurante; si se elimina, falla la violación inyectada de esta regla.",
+    from: { path: "^src/modulos/ventas/" },
+    to: { path: "^src/modulos/(salon|comandas)/" },
+  },
+  {
+    name: "comandas-sin-salon",
+    severity: "error",
+    comment:
+      "E7 §3.1. comandas no importa salon, ni por su publico.ts: conoce cuentas y líneas por id opaco y recibe el rótulo («Mesa 5») ya armado; no sabe qué es una mesa. Previene el ciclo salon ↔ comandas y que la impresión (que usa también el mostrador) dependa del plano de mesas; si se elimina, falla la violación inyectada de esta regla.",
+    from: { path: "^src/modulos/comandas/" },
+    to: { path: "^src/modulos/salon/" },
+  },
+  {
+    name: "base-sin-salon-ni-comandas",
+    severity: "error",
+    comment:
+      "E7 §3.1. catalogo, caja, stock y cierre no importan salon ni comandas, ni por su publico.ts: son la base y el salón las usa de arriba hacia abajo (ADR-014). Previene el ciclo de módulos que modulos-solo-por-publico no ve porque alcanza publico.ts para cruzar; si se elimina, falla la violación inyectada de esta regla.",
+    from: { path: "^src/modulos/(catalogo|caja|stock|cierre)/" },
+    to: { path: "^src/modulos/(salon|comandas)/" },
+  },
+  {
     name: "base-sin-ventas",
     severity: "error",
     comment:

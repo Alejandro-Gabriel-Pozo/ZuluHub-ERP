@@ -4,7 +4,7 @@
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Los costos (permiso costos.ver) los ven solo el gerente y el administrador; el operador no.",
     "que_cambia": "El operador deja de ver costos; si se corrige, se amplía o se achica quién los ve.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A1 (E5)"
@@ -24,7 +24,7 @@
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Cambiar el nivel del control de existencia negativa (avisar o bloquear) es solo del gerente (acción controles.configurar); hoy corre en permitir.",
     "que_cambia": "Quién puede endurecer o aflojar el control de stock negativo.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A3 (E5)"
@@ -34,7 +34,7 @@
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "DINERO",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "El costo se declara solo en compras y carga inicial; un costo en cero se rechaza; devolución de cliente y otras entradas nacen sin costo.",
     "que_cambia": "Cómo se calcula el costo promedio: un cero no diluye el promedio y las entradas sin costo no lo mueven.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A4 (E5)"
@@ -54,7 +54,7 @@
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "DINERO",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "La merma se suma al neto (20 % sobre 1 kg es 1,2 kg), como el prototipo.",
     "que_cambia": "El costo y el descuento de stock de las recetas con merma.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A6 (E6)"
@@ -64,7 +64,7 @@
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Abrir y cerrar una orden de producción lo hacen los tres roles; cancelar y anular, solo gerente y administrador.",
     "que_cambia": "Quién puede mover producción y quién puede deshacerla.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A7 (E6)"
@@ -94,7 +94,7 @@
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Unir, dividir y cambiar de mesa lo hacen los tres roles, todo auditado; configurar mesas e impresoras, gerente y administrador.",
     "que_cambia": "Quién puede reacomodar el salón y quién configurarlo.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A10 (E7)"
@@ -114,7 +114,7 @@
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "DINERO",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "El centavo que sobra al dividir la cuenta va todo a la Cuenta 1; por porcentaje, restos mayores; en partes iguales, de a un centavo desde la parte 1.",
     "que_cambia": "Cuánto paga cada cuenta cuando la división no es exacta.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A12 (E7)"
@@ -134,7 +134,7 @@
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "COMERCIAL",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Salón extra de pago y comandas en todos los planes (lectura del padre sobre la respuesta del dueño a extras excepto comanda).",
     "que_cambia": "Qué se cobra aparte y qué viene en todos los planes.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A14 (E7)"
@@ -164,7 +164,7 @@
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "DINERO",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "El centavo sobrante del combo va al componente de mayor resto (el prototipo dice al más caro; difiere 1 o 2 centavos).",
     "que_cambia": "Cómo se reparte el precio del combo entre sus componentes.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A17 (E8)"
@@ -174,7 +174,7 @@
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "El operador carga la compra y la factura pero no paga, anula ni corrige; confirmar una recepción, gerente y administrador.",
     "que_cambia": "Quién puede pagar y corregir compras y quién recibe mercadería.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A18 (E9)"
@@ -184,7 +184,7 @@
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Una orden de compra no necesita aprobación de una segunda persona.",
     "que_cambia": "Si hace falta un segundo aprobador para comprar.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A19 (E9)"
@@ -204,7 +204,7 @@
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Facturar un ticket exige el permiso de ventas más el de comprobantes, en vez de un permiso propio de facturar tickets.",
     "que_cambia": "Quién puede facturar un ticket ya cobrado.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A21 (E1)"
@@ -254,7 +254,7 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DINERO",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "El cierre con diferencia y la jornada vencida se permiten siempre y dejan auditoría; no hay controles configurables todavía.",
     "que_cambia": "Si la caja puede cerrar con diferencia sin que nadie lo frene.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B1 (E3)"
@@ -264,7 +264,7 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DINERO",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Un egreso mayor al efectivo esperado se permite y deja un aviso en la auditoría.",
     "que_cambia": "Si se puede sacar de caja más de lo que hay.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B2 (E3)"
@@ -274,7 +274,7 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DINERO",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "El cobro libre desde caja queda fuera; el importe máximo es 999.999.999,99; en el arqueo no existe sin contar.",
     "que_cambia": "Qué importes admite la caja y cómo se arquea.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B3 (E3)"
@@ -304,8 +304,8 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "La baja por vencimiento exige gerente o administrador; el conteo físico no congela el depósito, así que lo vendido durante el conteo se pierde en la diferencia.",
+    "estado": "CORREGIDA",
+    "decision": "La baja por vencimiento exige gerente o administrador; el conteo físico no congela el depósito, así que lo vendido durante el conteo se pierde en la diferencia. Conteo corregido: lo reemplaza E5-T11.",
     "que_cambia": "Quién da de baja por vencimiento y cómo salen las diferencias de inventario.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B6 (E5)"
   },
@@ -414,7 +414,7 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DINERO",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Las cuotas van de 1 a 36.",
     "que_cambia": "Cuántas cuotas se pueden ofrecer en un cobro.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B17 (E0)"
@@ -544,7 +544,7 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "En la plataforma, cambiar lo que ven todas las empresas exige factor reciente, y en las listas del sistema soporte ve y solo el administrador edita.",
     "que_cambia": "Quién de la plataforma puede cambiar listas y datos comunes.",
     "donde": "src/capacidades/permisos/plataforma.ts"
@@ -554,7 +554,7 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Elegir los datos opcionales de cada medio de pago es medios_de_pago.editar.",
     "que_cambia": "Quién puede configurar los medios de pago.",
     "donde": "src/capacidades/permisos/empresa.ts y src/capacidades/modulos/catalogo.ts"
@@ -564,7 +564,7 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Si la persona no eligió sucursal y tiene exactamente una abierta, se usa esa sin preguntar; las cerradas no cuentan.",
     "que_cambia": "En qué sucursal opera quien tiene una sola abierta.",
     "donde": "src/capacidades/permisos/alcance.ts"
@@ -574,7 +574,7 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "El módulo clientes se suma al catálogo de módulos cuando exista; hoy ninguna acción lo pide.",
     "que_cambia": "Qué permisos da el módulo clientes.",
     "donde": "src/capacidades/modulos/catalogo.ts"
@@ -725,7 +725,7 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DINERO",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Al pasar un producto a precio abierto, los recargos de la empresa pasan a una versión nueva con recargo 0.",
     "que_cambia": "Qué recargo queda al cambiar la forma de venta.",
     "donde": "src/modulos/catalogo/casos-de-uso/cambiar-forma-de-venta.ts"
@@ -745,7 +745,7 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "DINERO",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "El costo de un movimiento es por unidad de stock; con otra unidad habría que convertir y redondear.",
     "que_cambia": "Cómo se carga un costo.",
     "donde": "src/modulos/stock/casos-de-uso/movimientos-comun.ts"
@@ -765,7 +765,7 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Controlar un artículo exige alcance a todas las sucursales, porque el artículo es de la empresa.",
     "que_cambia": "Quién puede controlar artículos.",
     "donde": "src/modulos/stock/casos-de-uso/articulos.ts"
@@ -790,177 +790,6 @@
     "que_cambia": "No cambia lo que ve el negocio.",
     "donde": "arquitectura/planificar-mutacion.cjs",
     "motivo": "Es una decisión del CI sobre qué pruebas correr; no toca dinero, permisos ni textos."
-  },
-  {
-    "id": "DEC-0200",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "DATOS",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "El tope de textos del vocabulario por marca sube de 500 a 2000: el catálogo del código ya pasó de 500 y cada etapa suma textos.",
-    "que_cambia": "Cuántos textos propios puede tener una marca; no cambia ningún texto guardado.",
-    "donde": "migraciones/0041_tope_de_textos_por_marca.sql (vocabulario_valido_ampliado) y test/integracion/marcas-sql.test.ts"
-  },
-  {
-    "id": "DEC-0300",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "DATOS",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "El número de un documento extranjero tiene de 3 a 20 letras o dígitos y el país es un código de dos letras.",
-    "que_cambia": "Si el dueño fija otros rangos o una lista de países, hay que cambiar una primitiva y un CHECK de la base.",
-    "donde": "src/primitivas/identificacion-fiscal/documento-extranjero.ts:6 y pais.ts:6"
-  },
-  {
-    "id": "DEC-0301",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "DATOS",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "Solo un proveedor monotributista se espera con factura C; inscripto con A; los demás eligen la letra a mano y se avisa si no coincide.",
-    "que_cambia": "Cambia cuándo la compra avisa «letra no esperada»; se corrige con una línea de la tabla de letras.",
-    "donde": "src/modulos/compras/dominio/comprobante.ts:100"
-  },
-  {
-    "id": "DEC-0302",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "DINERO",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "Un precio de compra en cero se rechaza: cero se confundiría con «sin precio», que se guarda vacío.",
-    "que_cambia": "Si se admitiera cero, una compra sin costo entraría al promedio de stock; se corrige aflojando una comparación.",
-    "donde": "src/modulos/compras/dominio/calcular-linea.ts:34"
-  },
-  {
-    "id": "DEC-0303",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "DATOS",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "Las líneas de la factura (cantidad y precio) se cargan en la unidad base del producto para comparar recibido, asignado y facturado sin convertir.",
-    "que_cambia": "La pantalla tendrá que convertir lo impreso en el papel; si se corrige, hace falta una capa de conversión y revisar la conciliación.",
-    "donde": "src/modulos/compras/dominio/factura.ts:18"
-  },
-  {
-    "id": "DEC-0304",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "SIN_DECISION",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "Una compra admite hasta 9999 renglones, el mismo tope que un movimiento de stock.",
-    "que_cambia": "No cambia lo que ve el negocio salvo compras enormes.",
-    "donde": "src/modulos/compras/dominio/registrar-compra.ts:18",
-    "motivo": "Es un tope técnico igual al de stock; se corrige cambiando un número."
-  },
-  {
-    "id": "DEC-0305",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "Ninguna acción de anonimizar partes del directorio: nadie puede anonimizar un cliente o proveedor hasta que el dueño lo pida.",
-    "que_cambia": "Quien necesite anonimizar por pedido de un titular no puede hacerlo desde el sistema; se corrige declarando la acción y su caso de uso.",
-    "donde": "src/capacidades/modulos/catalogo.ts:332"
-  },
-  {
-    "id": "DEC-0306",
-    "fecha": "2026-11-11",
-    "quien": "padre",
-    "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "El operador carga compras, facturas y pide puntos de venta; solo gerente y administrador pagan, anulan compras o pagos y editan la ficha del proveedor; solo el gerente cambia el nivel de compras.",
-    "que_cambia": "Se achica o se amplía quién puede pagar o anular; se corrige en la matriz de permisos.",
-    "donde": "src/capacidades/permisos/empresa.ts:183"
-  },
-  {
-    "id": "DEC-0307",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "DINERO",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "El importe de un pago de factura es el total que dice el papel, no el calculado; un pago por factura, sin parciales, y por ahora no mueve la caja.",
-    "que_cambia": "Cambia cuánto figura pagado cuando el papel difiere del cálculo; si se corrige, el pago saldría de la caja o admitiría parciales.",
-    "donde": "src/modulos/compras/casos-de-uso/pagos.ts"
-  },
-  {
-    "id": "DEC-0308",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "DATOS",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "En el nivel simple la compra no lleva factura; con el nivel de comprobante la factura es opcional; el nivel 3 y el 4 están apagados hasta tener perilla.",
-    "que_cambia": "Quien quiera cargar una factura tiene que subir el nivel; se corrige cambiando una regla del caso de uso.",
-    "donde": "src/modulos/compras/casos-de-uso/registrar-compra.ts"
-  },
-  {
-    "id": "DEC-0309",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "DATOS",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "Anular una compra anula también su factura, su conciliación y su pago vigente; si lo que entró al stock ya se consumió no se anula y hay que corregirla.",
-    "que_cambia": "Cambia qué queda vigente tras anular; si se corrige, la anulación podría dejar pagos o facturas sueltos.",
-    "donde": "src/modulos/compras/casos-de-uso/anular-compra.ts"
-  },
-  {
-    "id": "DEC-0310",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "DATOS",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "La fecha impresa de una factura no se rechaza si es futura, y si la compra lleva fecha de otra jornada y entra a stock, stock la rechaza por su regla.",
-    "que_cambia": "Una factura con fecha equivocada se carga igual; si se corrige, se pediría la fecha dentro de la jornada.",
-    "donde": "src/modulos/compras/dominio/factura.ts y casos-de-uso/registrar-compra.ts"
-  },
-  {
-    "id": "DEC-0311",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "Ver costos por unidad de un producto con sus proveedores pide permiso de costos además de ver compras, así que el operador no los ve.",
-    "que_cambia": "El operador no ve costos; si se corrige, se le da el permiso de costos o se separa la consulta.",
-    "donde": "src/modulos/compras/consultas/ficha.ts"
-  },
-  {
-    "id": "DEC-0312",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "PERMISOS",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "Se retira del catálogo la acción de corregir compras hasta construir la corrección; los permisos de gerente y administrador se vuelven a declarar entonces.",
-    "que_cambia": "Hoy nadie puede corregir una compra consumida; llega con la corrección por ajuste.",
-    "donde": "src/capacidades/modulos/catalogo.ts"
-  },
-  {
-    "id": "DEC-0313",
-    "fecha": "2026-11-11",
-    "quien": "padre",
-    "tipo": "DATOS",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "Las presentaciones de un producto (caja de 12, pieza de 4 kg) son un dato del catálogo, no de compras; las edita quien edita productos.",
-    "que_cambia": "Corrección del padre: la tabla sigue en la migración de compras pero el dato es del catálogo; mover otra vez exige tocar ambos módulos.",
-    "donde": "src/modulos/catalogo/casos-de-uso/presentaciones.ts"
-  },
-  {
-    "id": "DEC-0314",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "CLIENTE",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "En la consola de plataforma los módulos nuevos se llaman «Clientes y proveedores» y «Compras».",
-    "que_cambia": "Es el nombre que ve quien administra el plan de una empresa; se corrige cambiando dos rótulos.",
-    "donde": "apps/plataforma/logica/plan.ts"
-  },
-  {
-    "id": "DEC-0315",
-    "fecha": "2026-11-11",
-    "quien": "sesión",
-    "tipo": "COMERCIAL",
-    "estado": "CORREGIDA",
-    "decision": "El tope de 500 textos por marca queda corregido por el padre con la migración 0041 (tope de 2000); el catálogo ya tiene 587.",
-    "que_cambia": "Cuántos textos puede redefinir una marca; no se agrega migración propia de compras.",
-    "donde": "migraciones/0041_tope_de_textos_por_marca.sql (rama orq/plan8-tope-de-textos)"
   },
   {
     "id": "DEC-0100",
@@ -1181,5 +1010,346 @@
     "fecha": "2026-11-11",
     "quien": "sesión",
     "estado": "PENDIENTE_DE_OK"
+  },
+  {
+    "id": "DEC-0200",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El tope de textos del vocabulario por marca sube de 500 a 2000: el catálogo del código ya pasó de 500 y cada etapa suma textos.",
+    "que_cambia": "Cuántos textos propios puede tener una marca; no cambia ningún texto guardado.",
+    "donde": "migraciones/0041_tope_de_textos_por_marca.sql (vocabulario_valido_ampliado) y test/integracion/marcas-sql.test.ts"
+  },
+  {
+    "id": "DEC-0201",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Salón es un extra de pago (perilla `salon`, apagada de base) y comandas va en todos los planes; salón requiere comandas. Los módulos siguen en desarrollo y sin plan; permisos como DEC-0010.",
+    "que_cambia": "Qué se cobra aparte: sin la perilla `salon` no se opera el salón; las comandas funcionan igual.",
+    "donde": "src/capacidades/planes/perillas.ts, src/capacidades/modulos/catalogo.ts y src/capacidades/permisos/empresa.ts"
+  },
+  {
+    "id": "DEC-0202",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "CORREGIDA",
+    "decision": "El papel de la cocina marca un plato en espera con «Sale después» (texto aprobado de salida.html), no con «no preparar todavía».",
+    "que_cambia": "Qué lee la cocina en un plato que espera; corregida a pedido de la sesión padre.",
+    "donde": "src/capacidades/vocabulario/catalogo-comandas.ts"
+  },
+  {
+    "id": "DEC-0203",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Los textos del salón y de las comandas (salon.texto.*, comandas.texto.*) salen de las maquetas; los que no están en la lista aprobada esperan tu OK.",
+    "que_cambia": "Los rótulos y avisos que ven mozos y cocina.",
+    "donde": "src/capacidades/vocabulario/catalogo-salon.ts y src/capacidades/vocabulario/catalogo-comandas.ts"
+  },
+  {
+    "id": "DEC-0204",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El «Tomó:» del papel de cocina muestra el correo de quien tomó el pedido hasta que identidad ofrezca un nombre.",
+    "que_cambia": "Cómo se identifica al mozo en la comanda impresa.",
+    "donde": "src/modulos/comandas/consultas"
+  },
+  {
+    "id": "DEC-0205",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Al dividir por ítems un plato compartido, solo una de las cuentas hijas conserva el control de stock: el descuento sale una sola vez, no una por cuenta.",
+    "que_cambia": "Cuánto stock se descuenta cuando un plato se comparte entre cuentas.",
+    "donde": "src/modulos/ventas/casos-de-uso/copiar-linea.ts"
+  },
+  {
+    "id": "DEC-0206",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Las cuentas de reserva de una mesa unida o dividida que se anulan salen como anulaciones informativas en el control de la jornada; los traslados no cuentan.",
+    "que_cambia": "Qué anulaciones ve el control de la jornada cuando se une o divide una mesa.",
+    "donde": "src/modulos/ventas/consultas y src/modulos/salon/casos-de-uso"
+  },
+  {
+    "id": "DEC-0207",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "La anulación parcial de un ítem enviado exige jornada abierta, como el resto de las anulaciones; no se permite con la jornada cerrada.",
+    "que_cambia": "Si un mozo puede anular una parte de un plato ya enviado con la jornada cerrada.",
+    "donde": "src/modulos/comandas/casos-de-uso/anulaciones.ts"
+  },
+  {
+    "id": "DEC-0208",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Una mesa que fue destino de una unión puede volver a unirse o dividirse; solo la mesa de reserva (la origen) figura como «unida».",
+    "que_cambia": "Qué se puede hacer con una mesa que recibió otra mesa.",
+    "donde": "src/modulos/salon/casos-de-uso/unir.ts y src/modulos/salon/dominio/estado-de-mesa.ts"
+  },
+  {
+    "id": "DEC-0300",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El número de un documento extranjero tiene de 3 a 20 letras o dígitos y el país es un código de dos letras.",
+    "que_cambia": "Si el dueño fija otros rangos o una lista de países, hay que cambiar una primitiva y un CHECK de la base.",
+    "donde": "src/primitivas/identificacion-fiscal/documento-extranjero.ts:6 y pais.ts:6"
+  },
+  {
+    "id": "DEC-0301",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Solo un proveedor monotributista se espera con factura C; inscripto con A; los demás eligen la letra a mano y se avisa si no coincide.",
+    "que_cambia": "Cambia cuándo la compra avisa «letra no esperada»; se corrige con una línea de la tabla de letras.",
+    "donde": "src/modulos/compras/dominio/comprobante.ts:100"
+  },
+  {
+    "id": "DEC-0302",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DINERO",
+    "estado": "CONFIRMADA",
+    "decision": "Un precio de compra en cero se rechaza: cero se confundiría con «sin precio», que se guarda vacío.",
+    "que_cambia": "Si se admitiera cero, una compra sin costo entraría al promedio de stock; se corrige aflojando una comparación.",
+    "donde": "src/modulos/compras/dominio/calcular-linea.ts:34"
+  },
+  {
+    "id": "DEC-0303",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Las líneas de la factura (cantidad y precio) se cargan en la unidad base del producto para comparar recibido, asignado y facturado sin convertir.",
+    "que_cambia": "La pantalla tendrá que convertir lo impreso en el papel; si se corrige, hace falta una capa de conversión y revisar la conciliación.",
+    "donde": "src/modulos/compras/dominio/factura.ts:18"
+  },
+  {
+    "id": "DEC-0304",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "SIN_DECISION",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Una compra admite hasta 9999 renglones, el mismo tope que un movimiento de stock.",
+    "que_cambia": "No cambia lo que ve el negocio salvo compras enormes.",
+    "donde": "src/modulos/compras/dominio/registrar-compra.ts:18",
+    "motivo": "Es un tope técnico igual al de stock; se corrige cambiando un número."
+  },
+  {
+    "id": "DEC-0305",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "CONFIRMADA",
+    "decision": "Ninguna acción de anonimizar partes del directorio: nadie puede anonimizar un cliente o proveedor hasta que el dueño lo pida.",
+    "que_cambia": "Quien necesite anonimizar por pedido de un titular no puede hacerlo desde el sistema; se corrige declarando la acción y su caso de uso.",
+    "donde": "src/capacidades/modulos/catalogo.ts:332"
+  },
+  {
+    "id": "DEC-0306",
+    "fecha": "2026-11-11",
+    "quien": "padre",
+    "tipo": "PERMISOS",
+    "estado": "CONFIRMADA",
+    "decision": "El operador carga compras, facturas y pide puntos de venta; solo gerente y administrador pagan, anulan compras o pagos y editan la ficha del proveedor; solo el gerente cambia el nivel de compras.",
+    "que_cambia": "Se achica o se amplía quién puede pagar o anular; se corrige en la matriz de permisos.",
+    "donde": "src/capacidades/permisos/empresa.ts:183"
+  },
+  {
+    "id": "DEC-0307",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DINERO",
+    "estado": "CONFIRMADA",
+    "decision": "El importe de un pago de factura es el total que dice el papel, no el calculado; un pago por factura, sin parciales, y por ahora no mueve la caja.",
+    "que_cambia": "Cambia cuánto figura pagado cuando el papel difiere del cálculo; si se corrige, el pago saldría de la caja o admitiría parciales.",
+    "donde": "src/modulos/compras/casos-de-uso/pagos.ts"
+  },
+  {
+    "id": "DEC-0308",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "En el nivel simple la compra no lleva factura; con el nivel de comprobante la factura es opcional; el nivel 3 y el 4 están apagados hasta tener perilla.",
+    "que_cambia": "Quien quiera cargar una factura tiene que subir el nivel; se corrige cambiando una regla del caso de uso.",
+    "donde": "src/modulos/compras/casos-de-uso/registrar-compra.ts"
+  },
+  {
+    "id": "DEC-0309",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Anular una compra anula también su factura, su conciliación y su pago vigente; si lo que entró al stock ya se consumió no se anula y hay que corregirla.",
+    "que_cambia": "Cambia qué queda vigente tras anular; si se corrige, la anulación podría dejar pagos o facturas sueltos.",
+    "donde": "src/modulos/compras/casos-de-uso/anular-compra.ts"
+  },
+  {
+    "id": "DEC-0310",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "La fecha impresa de una factura no se rechaza si es futura, y si la compra lleva fecha de otra jornada y entra a stock, stock la rechaza por su regla.",
+    "que_cambia": "Una factura con fecha equivocada se carga igual; si se corrige, se pediría la fecha dentro de la jornada.",
+    "donde": "src/modulos/compras/dominio/factura.ts y casos-de-uso/registrar-compra.ts"
+  },
+  {
+    "id": "DEC-0311",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "CONFIRMADA",
+    "decision": "Ver costos por unidad de un producto con sus proveedores pide permiso de costos además de ver compras, así que el operador no los ve.",
+    "que_cambia": "El operador no ve costos; si se corrige, se le da el permiso de costos o se separa la consulta.",
+    "donde": "src/modulos/compras/consultas/ficha.ts"
+  },
+  {
+    "id": "DEC-0312",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "CORREGIDA",
+    "decision": "Se retira del catálogo la acción de corregir compras hasta construir la corrección; los permisos de gerente y administrador se vuelven a declarar entonces. Corregida: la reabre DEC-0321.",
+    "que_cambia": "Hoy nadie puede corregir una compra consumida; llega con la corrección por ajuste.",
+    "donde": "src/capacidades/modulos/catalogo.ts"
+  },
+  {
+    "id": "DEC-0313",
+    "fecha": "2026-11-11",
+    "quien": "padre",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Las presentaciones de un producto (caja de 12, pieza de 4 kg) son un dato del catálogo, no de compras; las edita quien edita productos.",
+    "que_cambia": "Corrección del padre: la tabla sigue en la migración de compras pero el dato es del catálogo; mover otra vez exige tocar ambos módulos.",
+    "donde": "src/modulos/catalogo/casos-de-uso/presentaciones.ts"
+  },
+  {
+    "id": "DEC-0314",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "En la consola de plataforma los módulos nuevos se llaman «Clientes y proveedores» y «Compras».",
+    "que_cambia": "Es el nombre que ve quien administra el plan de una empresa; se corrige cambiando dos rótulos.",
+    "donde": "apps/plataforma/logica/plan.ts"
+  },
+  {
+    "id": "DEC-0315",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "COMERCIAL",
+    "estado": "CORREGIDA",
+    "decision": "El tope de 500 textos por marca queda corregido por el padre con la migración 0041 (tope de 2000); el catálogo ya tiene 587.",
+    "que_cambia": "Cuántos textos puede redefinir una marca; no se agrega migración propia de compras.",
+    "donde": "migraciones/0041_tope_de_textos_por_marca.sql (rama orq/plan8-tope-de-textos)"
+  },
+  {
+    "id": "DEC-0316",
+    "fecha": "2026-11-11",
+    "quien": "padre",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Al pagar una factura en efectivo, la plata puede salir de una caja abierta de esa sucursal, en la misma transacción del pago; sin caja abierta el pago no se declara y se puede pagar por otro medio.",
+    "que_cambia": "El arqueo de la caja baja con el pago; si se corrige, el pago en efectivo vuelve a ser solo una declaración y el egreso se carga a mano en caja.",
+    "donde": "src/modulos/compras/casos-de-uso/pagos.ts y src/modulos/caja/egreso/egreso-por-origen.ts (puerto nuevo de caja, archivo compartido de E3)"
+  },
+  {
+    "id": "DEC-0317",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Quien puede pagar o anular un pago (gerente y administrador) puede sacar y devolver ese efectivo de la caja sin tener el permiso de movimientos manuales de caja.",
+    "que_cambia": "Si se exigiera además el permiso de caja, el administrador sin ese permiso no podría pagar en efectivo desde la caja; se corrige con una acción más en el guard del pago.",
+    "donde": "src/modulos/compras/casos-de-uso/pagos.ts"
+  },
+  {
+    "id": "DEC-0318",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El efectivo que sale por un pago se registra como un egreso manual de caja (con el motivo que escribe quien paga) y anular el pago lo devuelve con una anulación, solo si la caja sigue abierta.",
+    "que_cambia": "Si la caja ya está en cierre o cerrada el pago no se puede anular y la plata se corrige en caja; si se quisiera permitirlo, haría falta un ajuste de caja.",
+    "donde": "src/modulos/caja/egreso/egreso-por-origen.ts"
+  },
+  {
+    "id": "DEC-0319",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Se puede corregir el precio de una línea de una compra; corregir cantidad o peso real y completar el precio de una compra que entró sin precio quedan para después.",
+    "que_cambia": "Hoy una compra que entró sin precio no se puede completar después, y una cantidad o un peso real equivocado no se corrige: se anula la compra (si no se consumió) o se ajusta a mano; completarlo exige una columna nueva (migración).",
+    "donde": "src/modulos/compras/casos-de-uso/correcciones.ts y src/modulos/compras/dominio/correccion.ts"
+  },
+  {
+    "id": "DEC-0320",
+    "fecha": "2026-11-11",
+    "quien": "padre",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Al corregir el precio de una compra, el costo promedio del depósito se corrige por la diferencia sobre lo que queda de esa compra; lo ya consumido conserva su costo.",
+    "que_cambia": "Cuánto vale el stock y cuánto cuestan las recetas; es una aproximación (supone que lo que queda es lo más reciente): si se corrige, el promedio no se toca y la diferencia queda como ajuste de valorización.",
+    "donde": "src/modulos/stock/dominio/costo.ts (corregirPromedio) y src/modulos/stock/casos-de-uso/ajuste-de-costo.ts"
+  },
+  {
+    "id": "DEC-0321",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Corregir una compra lo hacen el gerente y el administrador, y además necesitan el permiso de ajustar stock si la compra entró a stock.",
+    "que_cambia": "Quién puede cambiar el costo del stock; se corrige en la matriz de permisos o sacando el permiso de stock del caso de uso.",
+    "donde": "src/capacidades/permisos/empresa.ts (compras.corregir) y src/modulos/compras/casos-de-uso/correcciones.ts"
+  },
+  {
+    "id": "DEC-0322",
+    "fecha": "2026-11-11",
+    "quien": "dueño",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El IVA de una compra es costo o crédito fiscal según la condición de la empresa: inscripta, costo neto; monotributista o exenta, costo con IVA; B o C, el importe de la línea.",
+    "que_cambia": "Cuánto cuesta lo comprado, el valor del stock y de las recetas, y cuánto crédito fiscal figura; el contador puede corregirlo (PC-1, PC-4) y las compras ya hechas se ajustan con una corrección de costo, no con una migración.",
+    "donde": "src/modulos/compras/dominio/comprobante.ts (alicuotaQueEntraAlCosto) y calcular-linea.ts"
+  },
+  {
+    "id": "DEC-0323",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "La condición de la empresa frente al IVA es la de los últimos datos fiscales confirmados de su emisor principal; si no se puede leer, una compra con IVA discriminado no se registra.",
+    "que_cambia": "Una empresa sin datos fiscales confirmados no puede cargar facturas A hasta confirmarlos; si hay otro emisor que debe mandar, se cambia de dónde se lee.",
+    "donde": "src/composicion/iva-de-la-empresa.ts"
+  },
+  {
+    "id": "DEC-0324",
+    "fecha": "2026-11-11",
+    "quien": "sesión",
+    "tipo": "DINERO",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Al corregir el precio de una compra con IVA discriminado se usa la condición de la empresa de hoy y, como costo de antes, el que la línea declaró al registrarse.",
+    "que_cambia": "Si la condición cambió entre la compra y la corrección, el promedio se mueve también por ese cambio; si se corrige, habría que guardar la condición con cada compra.",
+    "donde": "src/modulos/compras/casos-de-uso/correcciones.ts"
   }
 ]

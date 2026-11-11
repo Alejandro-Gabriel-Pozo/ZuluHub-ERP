@@ -18,6 +18,14 @@ import {
   DECLARACIONES_DE_PRODUCCION,
 } from "../../src/modulos/produccion/publico";
 import {
+  DECLARACIONES_DE_COMANDAS,
+  DECLARACIONES_DE_CONSULTAS_DE_COMANDAS,
+} from "../../src/modulos/comandas/publico";
+import {
+  DECLARACIONES_DE_CONSULTAS_DE_SALON,
+  DECLARACIONES_DE_SALON,
+} from "../../src/modulos/salon/publico";
+import {
   DECLARACIONES_DE_CONSULTAS_DE_STOCK,
   DECLARACIONES_DE_STOCK,
 } from "../../src/modulos/stock/publico";
@@ -85,7 +93,15 @@ const carpetaExiste = (carpeta: string): boolean => {
 type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
 /** Los módulos declarados en el catálogo cuyas carpetas y casos de uso todavía no existen (T0). */
-const SIN_CONSTRUIR: readonly string[] = ["catalogo", "vidriera", "caja", "ventas", "produccion"];
+const SIN_CONSTRUIR: readonly string[] = [
+  "catalogo",
+  "vidriera",
+  "caja",
+  "ventas",
+  "comandas",
+  "salon",
+  "produccion",
+];
 
 function crucesDelCatalogo(
   catalogo: CatalogoComercial,
@@ -260,6 +276,11 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       DECLARACIONES_DE_PRODUCCION,
       DECLARACIONES_DE_CONSULTAS_DE_PRODUCCION,
     ),
+    "modulos/comandas": accionesDe(
+      DECLARACIONES_DE_COMANDAS,
+      DECLARACIONES_DE_CONSULTAS_DE_COMANDAS,
+    ),
+    "modulos/salon": accionesDe(DECLARACIONES_DE_SALON, DECLARACIONES_DE_CONSULTAS_DE_SALON),
     "modulos/clientes": accionesDe(
       DECLARACIONES_DE_CLIENTES,
       DECLARACIONES_DE_CONSULTAS_DE_CLIENTES,
@@ -365,8 +386,16 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual([]);
   });
 
-  it("catálogo, carta, caja, ventas y producción (hasta E6-T9) son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1); stock salió con E5, clientes con E9-T4 y compras con E9-T12, y son disponibles", () => {
-    expect([...SIN_CONSTRUIR]).toEqual(["catalogo", "vidriera", "caja", "ventas", "produccion"]);
+  it("catálogo, carta, caja, ventas, comandas, salón y producción (hasta E6-T9) son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1); stock salió con E5, clientes con E9-T4 y compras con E9-T12, y son disponibles", () => {
+    expect([...SIN_CONSTRUIR]).toEqual([
+      "catalogo",
+      "vidriera",
+      "caja",
+      "ventas",
+      "comandas",
+      "salon",
+      "produccion",
+    ]);
     expect(SIN_CONSTRUIR).not.toContain("compras");
     expect(CATALOGO_DE_MODULOS.compras.estado).toBe("disponible");
     expect(SIN_CONSTRUIR).not.toContain("stock");

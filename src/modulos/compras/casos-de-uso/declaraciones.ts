@@ -141,4 +141,14 @@ export const DECLARACIONES = {
       },
     },
   },
+  corregirCompra: {
+    accion: "compras.corregir",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/compras-correcciones.test.ts",
+        it: "I6: la misma corrección dos veces (misma clave) deja una sola fila, un solo ajuste de costo y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
+      },
+    },
+  },
 } as const satisfies Record<string, DeclaracionDeCasoDeUso>;

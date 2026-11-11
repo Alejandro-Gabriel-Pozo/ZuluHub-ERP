@@ -163,6 +163,7 @@ const DEL_OPERADOR_DE_CLIENTES_Y_COMPRAS = [
 const DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS = [
   "comprobantes_de_proveedor.anular_pago",
   "comprobantes_de_proveedor.pagar",
+  "compras.corregir",
   "partes.desactivar",
   "partes.reactivar",
   "proveedores.editar_ficha",
@@ -193,6 +194,30 @@ const SOLO_DEL_ADMINISTRADOR_DE_PRODUCCION = [
   "transformaciones.anular",
 ] as const;
 
+/** E7 (spec §3.13, PP-2): los tres roles unen, dividen, cambian de mesa, envían a cocina e imprimen; el operador también mira mesas e impresoras. */
+const DEL_OPERADOR_DE_SALON_Y_COMANDAS = [
+  "comandas.enviar",
+  "comandas.ver",
+  "impresiones.imprimir",
+  "impresiones.reimprimir",
+  "impresoras.ver",
+  "mesas.ver",
+  "salon.cambiar_mesa",
+  "salon.dividir",
+  "salon.unir",
+] as const;
+
+/** E7: armar el plano de mesas y las impresoras es del gerente y el administrador. */
+const DEL_ADMINISTRADOR_DE_SALON_Y_COMANDAS = [
+  "impresoras.crear",
+  "impresoras.desactivar",
+  "impresoras.editar",
+  "mesas.crear",
+  "mesas.desactivar",
+  "mesas.editar",
+  "mesas.reactivar",
+] as const;
+
 const DEL_OPERADOR = [
   ...DEL_OPERADOR_DE_EMPRESA,
   ...DEL_OPERADOR_DE_CLIENTES_Y_COMPRAS,
@@ -200,6 +225,7 @@ const DEL_OPERADOR = [
   ...DEL_OPERADOR_DE_LOTES,
   ...DEL_OPERADOR_DE_PRODUCCION,
   ...DEL_OPERADOR_DE_CAJA_CIERRE_Y_VENTAS,
+  ...DEL_OPERADOR_DE_SALON_Y_COMANDAS,
 ] as const;
 
 /** Estructura fiscal y verificación de saldos: solo el gerente. */
@@ -252,6 +278,7 @@ const DEL_ADMINISTRADOR = [
   ...DE_LA_ESCALERA_DE_ELECCIONES,
   ...DEL_ADMINISTRADOR_DE_CAJA,
   ...DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS,
+  ...DEL_ADMINISTRADOR_DE_SALON_Y_COMANDAS,
 ].sort();
 
 const ACCIONES_DE_USUARIOS = [
@@ -272,9 +299,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 140 acciones: 34 de empresa, configuración fiscal y facturación, 48 de catálogo, carta y stock (39 de T0, 2 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 18 de clientes y compras y 5 de producción de E6-T8", () => {
+  it("hay 157 acciones: 34 de empresa, configuración fiscal y facturación, 48 de catálogo, carta y stock (39 de T0, 2 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 19 de clientes y compras y 16 de salón y comandas", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(140);
+    expect(todas).toHaveLength(157);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -324,7 +351,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("recepciones"),
       porPrefijo("comprobantes_de_proveedor"),
       porPrefijo("compras"),
-    ]).toEqual([8, 2, 3, 4, 1]);
+    ]).toEqual([8, 2, 3, 4, 2]);
   });
 
   it("las acciones retiradas por las decisiones 138 y 133 ya no existen: ni en la matriz ni en el catálogo", () => {
@@ -672,18 +699,18 @@ describe("el guard con las reglas reales", () => {
     (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
   );
 
-  it("todo módulo en desarrollo del catálogo incluye catalogo, vidriera, caja, ventas y produccion (cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4 y compras desde E9-T12)", () => {
+  it("todo módulo en desarrollo del catálogo incluye catalogo, vidriera, caja, ventas, comandas, salon y produccion (cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4 y compras desde E9-T12)", () => {
     expect([...ENDESARROLLO].sort()).toEqual(
-      ["caja", "catalogo", "produccion", "ventas", "vidriera"].sort(),
+      ["caja", "catalogo", "comandas", "produccion", "salon", "ventas", "vidriera"].sort(),
     );
   });
 
-  it("las 59 acciones sin construir (23 de catálogo y carta, 31 de caja y ventas y 5 de producción) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  it("las 70 acciones sin construir (23 de catálogo y carta, 31 de caja y ventas y 16 de salón y comandas) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
     const sinConstruir = ENDESARROLLO.flatMap(
       (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
     );
-    expect(sinConstruir).toHaveLength(59);
+    expect(sinConstruir).toHaveLength(70);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(

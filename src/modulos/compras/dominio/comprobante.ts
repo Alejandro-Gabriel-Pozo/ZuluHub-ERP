@@ -22,7 +22,7 @@ import {
  *
  * Los nueve tipos y las ocho alícuotas viven en `fiscal/dominio` y la regla de módulos impide importarlos (D-E9-9): acá hay una COPIA y la prueba
  * `test/arquitectura/compras-fuente-unica.test.ts` falla si difieren. El IVA se calcula POR LÍNEA, redondeado una vez con la política vigente (PC-5,
- * supuesto). El crédito fiscal computable sigue la regla inicial del PC-4 (a confirmar con el contador): igual al IVA en una Factura A y cero en
+ * supuesto). El crédito fiscal computable (DEC-0322; PC-4 a confirmar con el contador): igual al IVA en una Factura A de una empresa responsable inscripto y cero en
  * las demás. En una B o C (sin IVA discriminado) el importe de la línea es el neto y no hay alícuota.
  */
 export const TIPOS_DE_COMPROBANTE_DE_PROVEEDOR = [
@@ -67,6 +67,17 @@ export function esTipoDeComprobanteDeProveedor(
 ): texto is TipoDeComprobanteDeProveedor {
   return (TIPOS_DE_COMPROBANTE_DE_PROVEEDOR as readonly string[]).includes(texto);
 }
+
+/**
+ * La condición de la EMPRESA frente al IVA (la de sus datos fiscales: son tres; compras no importa fiscal, así que la lista se copia y la prueba
+ * `compras-fuente-unica.test.ts` la compara). De ella depende si el IVA discriminado es crédito fiscal o costo (DEC-0322, DEC del dueño del 11/11/2026).
+ */
+export const CONDICIONES_DE_IVA_DE_LA_EMPRESA = [
+  "RESPONSABLE_INSCRIPTO",
+  "MONOTRIBUTO",
+  "EXENTO",
+] as const;
+export type CondicionDeIvaDeLaEmpresa = (typeof CONDICIONES_DE_IVA_DE_LA_EMPRESA)[number];
 
 export const ALICUOTAS_DE_COMPRA = [
   "0",
@@ -114,6 +125,10 @@ export function esLetraNoEsperada(
 ): boolean {
   return esperada !== null && FICHA_DE_TIPO_DE_COMPROBANTE[tipo].letra !== esperada;
 }
+
+/** ¿El tipo discrimina IVA? Solo las A: en una B o C el importe de la línea es el neto y no hay alícuota. */
+export const discriminaIva = (tipo: TipoDeComprobanteDeProveedor): boolean =>
+  FICHA_DE_TIPO_DE_COMPROBANTE[tipo].letra === "A";
 
 export const claseDeTipoDeComprobante = (tipo: TipoDeComprobanteDeProveedor): ClaseDeComprobante =>
   FICHA_DE_TIPO_DE_COMPROBANTE[tipo].clase;
@@ -168,6 +183,8 @@ export type EntradaDeComprobante = Readonly<{
   lineas: readonly EntradaDeLineaDeComprobante[];
   tributos?: readonly EntradaDeTributo[];
   totalSegunFactura: string;
+  /** La condición de la empresa frente al IVA, o `null` si no se pudo leer: con IVA discriminado (una A) hace falta (`CONDICION_DE_IVA_NO_DISPONIBLE`). */
+  condicionDeLaEmpresa: CondicionDeIvaDeLaEmpresa | null;
 }>;
 
 export type LineaCalculada = Readonly<{
@@ -209,6 +226,7 @@ export type ErrorDeComprobante =
   | "ALICUOTA_NO_DISCRIMINADA"
   | "TRIBUTO_INVALIDO"
   | "TOTAL_INVALIDO"
+  | "CONDICION_DE_IVA_NO_DISPONIBLE"
   | "FUERA_DE_RANGO";
 
 type R<T> = Resultado<T, ErrorDeComprobante>;
@@ -223,13 +241,22 @@ export function totalCoincide(calculado: bigint, segunFactura: bigint): boolean 
 }
 
 /** El 100 % en las unidades mínimas de un porcentaje (la escala sale de la primitiva). */
-const CIEN_POR_CIENTO = porcentajeDesdeTexto("100").unidades;
+export const CIEN_POR_CIENTO = porcentajeDesdeTexto("100").unidades;
+
+/** El porcentaje de una alícuota en las unidades mínimas (centésimas de punto); `EXENTO` y `NO_GRAVADO` no llevan IVA (cero). Una sola lectura para el IVA de la línea y para el IVA que entra al costo. */
+export function porcentajeDeAlicuota(alicuota: AlicuotaDeCompra): bigint {
+  return alicuota === "EXENTO" || alicuota === "NO_GRAVADO"
+    ? 0n
+    : porcentajeDesdeTexto(alicuota).unidades;
+}
 
 /** El IVA de una línea: `neto × porcentaje`, redondeado una vez (PC-5). `neto` en centavos; el porcentaje en centésimas de punto (`porcentajeDesdeTexto`). */
 function ivaDeLinea(neto: bigint, alicuota: AlicuotaDeCompra): bigint {
-  if (alicuota === "EXENTO" || alicuota === "NO_GRAVADO") return 0n;
-  const porcentaje = porcentajeDesdeTexto(alicuota).unidades;
-  return dividirRedondeando(neto * porcentaje, CIEN_POR_CIENTO, POLITICA_VIGENTE);
+  return dividirRedondeando(
+    neto * porcentajeDeAlicuota(alicuota),
+    CIEN_POR_CIENTO,
+    POLITICA_VIGENTE,
+  );
 }
 
 /** El neto de una línea en centavos: `precio × cantidad`, redondeado una vez. */
@@ -284,7 +311,10 @@ export function calcularComprobante(entrada: EntradaDeComprobante): R<Comprobant
   if (!esTipoDeComprobanteDeProveedor(entrada.tipo)) return err("TIPO_DE_COMPROBANTE_INVALIDO");
   const tipo = entrada.tipo;
   if (entrada.lineas.length === 0) return err("LINEAS_REQUERIDAS");
-  const discrimina = FICHA_DE_TIPO_DE_COMPROBANTE[tipo].letra === "A";
+  const discrimina = discriminaIva(tipo);
+  if (discrimina && entrada.condicionDeLaEmpresa === null) {
+    return err("CONDICION_DE_IVA_NO_DISPONIBLE");
+  }
 
   const lineas: LineaCalculada[] = [];
   // La clave `null` (B y C) no sale: el resultado recorre solo las ocho alícuotas.
@@ -350,7 +380,10 @@ export function calcularComprobante(entrada: EntradaDeComprobante): R<Comprobant
     iva: textoDeImporte(iva),
     tributos,
     tributosTotal: textoDeImporte(tributosTotal),
-    creditoFiscalComputable: textoDeImporte(tipo === "FACTURA_A" ? iva : 0n),
+    // Crédito fiscal computable (DEC-0322): el IVA discriminado, solo en una Factura A y solo si la empresa es responsable inscripto; cero en el resto.
+    creditoFiscalComputable: textoDeImporte(
+      tipo === "FACTURA_A" && entrada.condicionDeLaEmpresa === "RESPONSABLE_INSCRIPTO" ? iva : 0n,
+    ),
     totalCalculado: textoDeImporte(total),
     totalSegunFactura: textoDeImporte(segun),
     totalCoincide: totalCoincide(total, segun),

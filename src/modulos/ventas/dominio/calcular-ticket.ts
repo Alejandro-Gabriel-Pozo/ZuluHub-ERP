@@ -16,12 +16,15 @@ import { POLITICA_VIGENTE, redondear } from "../../../primitivas/dinero/redondeo
  * hacia arriba, ADR-006; un solo grupo por ticket en E4) y el redondeo se reparte entre las líneas por restos mayores, de modo que la
  * suma de los renglones es el total al centavo. Ejemplo (decisión 162): dos líneas de 0,5 × $ 9,95 valen $ 4,975 cada una; redondeadas
  * una por una darían 4,98 + 4,98 = 9,96, y el total exacto es 9,95, que es lo que se cobra. Puro: sin reloj ni azar, sin `number`.
- * Previene: el centavo de más o de menos entre el ticket y el cobro (el error que ADR-006 describe).
+ * Una línea compartida entre cuentas (E7) lleva su importe fijo: es su importe exacto (un tercio de un ítem no es una cantidad). La suma y el
+ * redondeo por grupo no cambian. Previene: el centavo de más o de menos entre el ticket y el cobro (el error que ADR-006 describe).
  */
 export type LineaACalcular = Readonly<{
   id: string;
   precioUnitario: PrecioUnitario;
   cantidad: Cantidad;
+  /** El importe exacto de una línea compartida (E7): si está, ES el importe de la línea y no se multiplica nada. */
+  importeFijo?: Importe | undefined;
 }>;
 
 export type RenglonCalculado = Readonly<{ id: string; importe: Importe }>;
@@ -34,7 +37,9 @@ export type TicketCalculado = Readonly<{
 
 export function calcularTicket(lineas: readonly LineaACalcular[]): TicketCalculado {
   const exactos = lineas.map((l) =>
-    multiplicarPrecioPorCantidad(ARS, l.precioUnitario, l.cantidad),
+    l.importeFijo === undefined
+      ? multiplicarPrecioPorCantidad(ARS, l.precioUnitario, l.cantidad)
+      : exactoDeImporte(l.importeFijo),
   );
   const suma = exactos.reduce(sumarExactos, exactoDeImporte(importeCero(ARS)));
   const total = redondear(suma, POLITICA_VIGENTE);

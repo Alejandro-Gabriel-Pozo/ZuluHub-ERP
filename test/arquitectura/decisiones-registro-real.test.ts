@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -17,6 +18,18 @@ describe("el registro de decisiones del repositorio", () => {
     });
     expect(corrida.stdout).toContain("Registro de decisiones: 0 fallas");
     expect(corrida.status).toBe(0);
+  });
+
+  it("la cuota del dueño (11/11/2026) es 5 de negocio y 10 técnicas desde el 14/11/2026, sin excepciones", () => {
+    const cuota: unknown = JSON.parse(
+      readFileSync(join(RAIZ, "arquitectura/decisiones/cuota.json"), "utf8"),
+    );
+    expect(cuota).toEqual({
+      vigente_desde: "2026-11-14",
+      negocio: 5,
+      tecnicas: 10,
+      excepciones: [],
+    });
   });
 
   it("el resumen del dueño se imprime", () => {

@@ -4,6 +4,8 @@ import {
   type CadenasDeConfianza,
 } from "../adaptadores/certificados/lector-x509";
 import { CADENAS_DE_CONFIANZA_DE_ARCA } from "./cadenas-de-confianza-de-arca";
+import { crearEgresoDeCaja } from "./egreso-de-caja";
+import { crearIvaDeLaEmpresa } from "./iva-de-la-empresa";
 import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../capacidades/permisos/empresa";
 import {
   crearCasosDeUsoDeCaja,
@@ -11,6 +13,8 @@ import {
   ganchoDeSucursalDeCaja,
 } from "../modulos/caja/publico";
 import { crearCasosDeUsoDeCatalogo, crearConsultasDeCatalogo } from "../modulos/catalogo/publico";
+import { crearCasosDeUsoDeComandas, crearConsultasDeComandas } from "../modulos/comandas/publico";
+import { crearCasosDeUsoDeSalon, crearConsultasDeSalon } from "../modulos/salon/publico";
 import { crearCasosDeUsoDeClientes, crearConsultasDeClientes } from "../modulos/clientes/publico";
 import { crearCasosDeUsoDeCompras, crearConsultasDeCompras } from "../modulos/compras/publico";
 import {
@@ -208,6 +212,32 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
       crearConsultasDeProduccion({ transacciones: conexiones.transaccionesDeApp(), reglas }),
     ),
     /**
+     * Comandas (E7): enviar a cocina, pedir que salga, anular un ítem enviado, quitar sin enviar, las impresoras y los trabajos de impresión, cada uno con
+     * SU acción. El módulo sigue `en_desarrollo` y sin plan (pregunta abierta del dueño): el guard rechaza todo con `MODULO_EN_DESARROLLO`. El papel se
+     * imprime en el navegador con el diálogo del sistema: el servidor solo entrega el modelo (`documentoParaImprimir`).
+     */
+    casosDeUsoDeComandas: perezoso(() =>
+      crearCasosDeUsoDeComandas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeComandas: perezoso(() =>
+      crearConsultasDeComandas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
+     * Salón (E7): las mesas y su plano, el pedido de la mesa, el envío a cocina desde la mesa, cambiar de mesa, unir, dividir y cobrar la mesa. Orquesta
+     * ventas y comandas en la MISMA transacción; descuenta stock por el mismo puerto que ventas (la composición es el único lugar donde se tocan). El
+     * módulo sigue `en_desarrollo` y sin plan: el guard rechaza todo con `MODULO_EN_DESARROLLO`.
+     */
+    casosDeUsoDeSalon: perezoso(() =>
+      crearCasosDeUsoDeSalon({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        stock: crearStockDeVentas(reglas),
+      }),
+    ),
+    consultasDeSalon: perezoso(() =>
+      crearConsultasDeSalon({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
      * Clientes y proveedores (E9): el directorio de partes con sus roles y vínculos (casos de uso) y sus consultas, cada uno con SU acción de `partes`. El
      * módulo es de la empresa, no de una sucursal. Los puertos que ofrece a compras (`crearDirectorioDePartes`, `crearRegistroDePartes`) no salen por acá:
      * corren en la transacción de quien los llama.
@@ -228,6 +258,8 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
         transacciones: conexiones.transaccionesDeApp(),
         reglas,
         stock: crearPuertosDeStock({ reglas }),
+        egresoDeCaja: crearEgresoDeCaja(),
+        ivaDeLaEmpresa: crearIvaDeLaEmpresa(),
       }),
     ),
     consultasDeCompras: perezoso(() =>

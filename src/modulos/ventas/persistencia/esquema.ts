@@ -110,6 +110,16 @@ export type VentasDb = {
     version: Generated<number>;
     /** La versión de la opción de la variante que se vendió (0036): de ella sale el factor de tamaño del consumo de stock. Nula en las líneas anteriores. */
     variante_version_de_opcion_id: string | null;
+    /** 0038 (E7): el importe exacto de una línea compartida (copia COMPARTIDA); nulo en toda otra línea. */
+    importe_fijo: string | null;
+  };
+  /** 0038 (E7): de qué línea viene cada copia (unir, dividir, anular una parte de un ítem enviado). Solo inserción. */
+  linea_copiada: {
+    empresa_id: string;
+    linea_nueva_id: string;
+    linea_origen_id: string;
+    modo: "COMPLETA" | "POR_UNIDADES" | "COMPARTIDA" | "RESTO";
+    creado_en: Generated<Date>;
   };
   linea_cuenta_opcion: {
     empresa_id: string;
@@ -277,7 +287,9 @@ export const COLUMNAS_DE_VENTAS = {
     "actualizado_en",
     "version",
     "variante_version_de_opcion_id",
+    "importe_fijo",
   ],
+  linea_copiada: ["empresa_id", "linea_nueva_id", "linea_origen_id", "modo", "creado_en"],
   linea_cuenta_opcion: [
     "empresa_id",
     "linea_id",

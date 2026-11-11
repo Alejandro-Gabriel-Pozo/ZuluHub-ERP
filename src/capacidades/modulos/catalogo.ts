@@ -3,6 +3,7 @@
  * cerrados `ClaveModulo`, `ClaveAccion` y `ClaveCapacidad`, así que una acción sin módulo, o un
  * permiso para una acción que no existe, no compila.
  */
+import { MODULOS_DE_SALON_Y_COMANDAS } from "./catalogo-salon-y-comandas";
 
 import { ACCIONES_DE_LOTES, MODULO_DE_PRODUCCION } from "./catalogo-lotes-y-produccion";
 
@@ -327,6 +328,7 @@ export const CATALOGO_DE_MODULOS = {
       "tickets.corregir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
     },
   },
+  ...MODULOS_DE_SALON_Y_COMANDAS,
   /**
    * Directorio de clientes y proveedores (E9; `e9-compras-especificacion.md` §3.0 y §3.9, decisiones F1 a F4 de
    * `clientes-y-proveedores.md`). Nació `en_desarrollo` en E9-T1 y E9-T4 lo cerró: `disponible` y `obligatorio` (F5 del 12/10:
@@ -378,6 +380,7 @@ export const CATALOGO_DE_MODULOS = {
       "comprobantes_de_proveedor.pagar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "comprobantes_de_proveedor.anular_pago": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "compras.configurar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "compras.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
   produccion: MODULO_DE_PRODUCCION,

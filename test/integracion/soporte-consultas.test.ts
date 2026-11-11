@@ -623,16 +623,18 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
         "catalogo",
         "cierre",
         "clientes",
+        "comandas",
         "compras",
         "facturacion",
         "produccion",
+        "salon",
         "stock",
         "ventas",
         "vidriera",
       ]);
       expect(modulos[0]).toMatchObject({ estado: "disponible", obligatorio: true });
       // `facturacion` es disponible desde 2026-11-04 (no obligatoria: cada empresa la activa); stock desde E5; el resto sigue en desarrollo.
-      expect(modulos[6]).toMatchObject({
+      expect(modulos[7]).toMatchObject({
         clave: "facturacion",
         estado: "disponible",
         obligatorio: false,

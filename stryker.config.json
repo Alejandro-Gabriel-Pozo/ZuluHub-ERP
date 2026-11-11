@@ -25,6 +25,8 @@
     "src/modulos/ventas/dominio/**/*.ts",
     "src/modulos/stock/dominio/**/*.ts",
     "src/modulos/produccion/dominio/**/*.ts",
+    "src/modulos/salon/dominio/**/*.ts",
+    "src/modulos/comandas/dominio/**/*.ts",
     "src/modulos/clientes/dominio/**/*.ts",
     "src/modulos/compras/dominio/**/*.ts",
     "src/modulos/identidad/dominio/**/*.ts",
@@ -109,6 +111,7 @@
     "arquitectura/deuda/deuda.cjs",
     "arquitectura/deuda/campos-sin-dato.cjs",
     "arquitectura/decisiones/forma.cjs",
+    "arquitectura/decisiones/cuota.cjs",
     "arquitectura/decisiones/decisiones.cjs",
     "arquitectura/decisiones/resumen.cjs",
     "!src/**/*.test.ts"
