@@ -999,7 +999,7 @@
     "tipo": "DATOS",
     "estado": "PENDIENTE_DE_OK",
     "decision": "Se puede corregir el precio de una línea de una compra; corregir cantidad o peso real y completar el precio de una compra que entró sin precio quedan para después.",
-    "que_cambia": "Quien se equivocó de cantidad o peso anula la compra (si no se consumió) o la corrige a mano; si se quiere cubrir, se suma la corrección de cantidad y el «precio por» del precio completado.",
+    "que_cambia": "Hoy una compra que entró sin precio no se puede completar después, y una cantidad o un peso real equivocado no se corrige: se anula la compra (si no se consumió) o se ajusta a mano; completarlo exige una columna nueva (migración).",
     "donde": "src/modulos/compras/casos-de-uso/correcciones.ts y src/modulos/compras/dominio/correccion.ts"
   },
   {
