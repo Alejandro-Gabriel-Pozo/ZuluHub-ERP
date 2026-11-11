@@ -21,10 +21,17 @@ const { Buffer } = require("node:buffer");
 const fs = require("node:fs");
 const path = require("node:path");
 const { cargarArbol, dentroDeLaRaiz } = require("../deuda/deuda.cjs");
-const { problemasDeLosSensibles, problemasDelRegistro, TIPO_SIN_DECISION } = require("./forma.cjs");
+const { fallasDeLaCuota } = require("./cuota.cjs");
+const {
+  problemasDeLaCuota,
+  problemasDeLosSensibles,
+  problemasDelRegistro,
+  TIPO_SIN_DECISION,
+} = require("./forma.cjs");
 
 const ARCHIVO_DEL_REGISTRO = "arquitectura/decisiones/registro.json";
 const ARCHIVO_DE_LOS_SENSIBLES = "arquitectura/decisiones/archivos-sensibles.json";
+const ARCHIVO_DE_LA_CUOTA = "arquitectura/decisiones/cuota.json";
 const USO = "Uso: node arquitectura/decisiones/decisiones.cjs [--base=<carpeta de la base>]";
 
 /** Los archivos donde se busca el marcador: programa y SQL (las pruebas incluidas). La documentación (`.md`) no se mira. */
@@ -143,8 +150,23 @@ function controlarContraLaBase({ pr, base, registro, registroBase, sensibles }) 
   return fallas;
 }
 
+/**
+ * La cuota de decisiones por PR (`cuota.cjs`). Los topes y la vigencia son los de la BASE si ya los trae (un PR no afloja su propia cuota);
+ * si la base todavía no tiene `cuota.json` (la primera vez), los del cambio. Las excepciones del dueño son las del cambio.
+ */
+function controlarCuota({ delCambio, deLaBase }) {
+  const cuota = deLaBase.cuota ?? delCambio.cuota;
+  return fallasDeLaCuota({
+    registro: delCambio.registro,
+    registroBase: deLaBase.registro,
+    cuota,
+    excepciones: delCambio.cuota.excepciones,
+    archivo: ARCHIVO_DE_LA_CUOTA,
+  }).map((motivo) => enLinea(ARCHIVO_DEL_REGISTRO, 1, motivo));
+}
+
 /** Los problemas de forma del registro y de la lista de sensibles de un árbol, como fallas. Devuelve `{ fallas, registro, sensibles }`. */
-function leerDeclaraciones(arbol, etiqueta) {
+function leerDeclaraciones(arbol, etiqueta, cuotaObligatoria) {
   const fallas = [];
   const delRegistro = leerJson(arbol, ARCHIVO_DEL_REGISTRO);
   const deLosSensibles = leerJson(arbol, ARCHIVO_DE_LOS_SENSIBLES);
@@ -172,7 +194,20 @@ function leerDeclaraciones(arbol, etiqueta) {
       fallas.push(enLinea(ARCHIVO_DE_LOS_SENSIBLES, 1, `${quien}${problema}`));
     if (problemas.length === 0) sensibles = deLosSensibles.valor.sensibles;
   }
-  return { fallas, registro, sensibles, hayRegistro: !delRegistro.ausente };
+  const deLaCuota = leerJson(arbol, ARCHIVO_DE_LA_CUOTA);
+  let cuota = null;
+  if (deLaCuota.ausente) {
+    if (cuotaObligatoria) fallas.push(enLinea(ARCHIVO_DE_LA_CUOTA, 1, `${quien}no existe.`));
+  } else if (deLaCuota.error !== undefined) {
+    fallas.push(enLinea(ARCHIVO_DE_LA_CUOTA, 1, `${quien}${deLaCuota.error}`));
+  } else {
+    const problemas = problemasDeLaCuota(deLaCuota.valor);
+    for (const problema of problemas)
+      fallas.push(enLinea(ARCHIVO_DE_LA_CUOTA, 1, `${quien}${problema}`));
+    // Con problemas `evaluar` corta antes de usar la cuota, así que se guarda siempre.
+    cuota = deLaCuota.valor;
+  }
+  return { fallas, registro, sensibles, cuota, hayRegistro: !delRegistro.ausente };
 }
 
 /**
@@ -180,14 +215,14 @@ function leerDeclaraciones(arbol, etiqueta) {
  * Devuelve `{ fallas, avisos }` con `{ archivo, linea, motivo }`.
  */
 function evaluar({ pr, base = null }) {
-  const delCambio = leerDeclaraciones(pr, "");
+  const delCambio = leerDeclaraciones(pr, "", true);
   const fallas = [...delCambio.fallas];
   const avisos = [];
   if (delCambio.fallas.length === 0) {
     fallas.push(...controlarMarcadores({ pr, base, registro: delCambio.registro }));
   }
   if (base === null || delCambio.fallas.length > 0) return { fallas, avisos };
-  const deLaBase = leerDeclaraciones(base, "Base");
+  const deLaBase = leerDeclaraciones(base, "Base", false);
   if (!deLaBase.hayRegistro) {
     avisos.push(
       enLinea(
@@ -211,6 +246,7 @@ function evaluar({ pr, base = null }) {
       sensibles,
     }),
   );
+  fallas.push(...controlarCuota({ delCambio, deLaBase }));
   return { fallas, avisos };
 }
 
@@ -248,6 +284,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  ARCHIVO_DE_LA_CUOTA,
   ARCHIVO_DE_LOS_SENSIBLES,
   ARCHIVO_DEL_REGISTRO,
   COMO_AGREGAR,
