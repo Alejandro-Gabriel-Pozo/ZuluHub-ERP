@@ -4,12 +4,12 @@ import type { ContextoOperativo } from "../../../contexto/contexto";
 import { sucursalId as aSucursalId } from "../../../primitivas/identificadores/marca";
 import {
   fichaDeLaOrden,
+  filtroDeLaLista,
+  ordenIdBienFormado,
   ordenesDeLaLista,
   type FichaDeOrden,
   type OrdenDeLista,
 } from "../casos-de-uso/lectura-de-ordenes";
-import { esUuid } from "../dominio/identificadores";
-import type { EstadoDeOrden } from "../dominio/orden";
 import { type Lector, type RDeConsulta } from "./comun";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 
@@ -18,8 +18,6 @@ export type {
   OrdenDeLista,
   RenglonDeFichaDeOrden,
 } from "../casos-de-uso/lectura-de-ordenes";
-
-const ESTADOS: readonly string[] = ["ABIERTA", "CERRADA", "CANCELADA", "ANULADA"];
 
 /**
  * Las consultas de órdenes (E6 §3.5): la lista (de la más nueva a la más vieja, hasta un tope) y la ficha con lo esperado y lo real, la merma de lote,
@@ -33,20 +31,11 @@ export function armarConsultasDeOrdenes(leer: Lector, reglas: ReglasDeEmpresa) {
       entrada: Readonly<{ estado?: string | undefined; sucursalId?: string | undefined }> = {},
     ): Promise<RDeConsulta<readonly OrdenDeLista[]>> =>
       leer(contexto, DECLARACIONES_DE_CONSULTAS.listarOrdenes.accion, async (tx, alcance) => {
-        if (
-          (entrada.estado !== undefined &&
-            (typeof entrada.estado !== "string" || !ESTADOS.includes(entrada.estado))) ||
-          (entrada.sucursalId !== undefined &&
-            (typeof entrada.sucursalId !== "string" || !esUuid(entrada.sucursalId)))
-        ) {
-          return [];
-        }
+        const filtro = filtroDeLaLista(entrada);
+        if (filtro === null) return [];
         return ordenesDeLaLista(tx, contexto, alcance, {
-          estado: entrada.estado as EstadoDeOrden | undefined,
-          sucursalId:
-            entrada.sucursalId === undefined
-              ? undefined
-              : aSucursalId(entrada.sucursalId.toLowerCase()),
+          estado: filtro.estado,
+          sucursalId: filtro.sucursalId === undefined ? undefined : aSucursalId(filtro.sucursalId),
         });
       }),
 
@@ -55,11 +44,9 @@ export function armarConsultasDeOrdenes(leer: Lector, reglas: ReglasDeEmpresa) {
       entrada: Readonly<{ ordenId: string }>,
     ): Promise<RDeConsulta<FichaDeOrden | null>> =>
       leer(contexto, DECLARACIONES_DE_CONSULTAS.fichaDeOrden.accion, async (tx, alcance) => {
-        if (typeof entrada.ordenId !== "string" || !esUuid(entrada.ordenId)) return null;
-        const orden = await tx.ordenesDeProduccion.obtener(
-          contexto.empresaId,
-          entrada.ordenId.toLowerCase(),
-        );
+        const ordenId = ordenIdBienFormado(entrada.ordenId);
+        if (ordenId === null) return null;
+        const orden = await tx.ordenesDeProduccion.obtener(contexto.empresaId, ordenId);
         if (orden === null) return null;
         // Solo la ve quien tiene los dos depósitos en su alcance.
         const visibles = await tx.ordenesDeProduccion.listar(contexto.empresaId, {

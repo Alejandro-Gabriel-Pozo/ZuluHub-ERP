@@ -4,7 +4,8 @@ import { cantidadConSignoDesdeTexto } from "../../../primitivas/cantidad/con-sig
 import { formatearDecimalFijo } from "../../../primitivas/cantidad/decimal-fijo";
 import type { SucursalId } from "../../../primitivas/identificadores/marca";
 import { mermaDeLote, recetaCambiada } from "../dominio/esperados";
-import type { EstadoDeOrden } from "../dominio/orden";
+import { esUuid } from "../dominio/identificadores";
+import { esEstadoDeOrden, type EstadoDeOrden } from "../dominio/orden";
 import type { OrdenGuardada } from "../persistencia/modelo";
 import type { TxDeConsultasDeProduccion } from "./contrato";
 
@@ -75,6 +76,24 @@ export type FichaDeOrden = Readonly<{
 }>;
 
 type Tx = TxDeConsultasDeProduccion;
+
+/** Un id de orden bien formado (en minúsculas) o `null`: un id mal formado da lo mismo que uno ajeno. */
+export const ordenIdBienFormado = (texto: unknown): string | null =>
+  typeof texto === "string" && esUuid(texto) ? texto.toLowerCase() : null;
+
+/** El filtro de la lista, validado; `null` si viene mal formado (la lista sale vacía). */
+export function filtroDeLaLista(
+  entrada: Readonly<{ estado?: unknown; sucursalId?: unknown }>,
+): Readonly<{ estado: EstadoDeOrden | undefined; sucursalId: string | undefined }> | null {
+  const { estado, sucursalId } = entrada;
+  if (estado !== undefined && !(typeof estado === "string" && esEstadoDeOrden(estado))) return null;
+  if (sucursalId !== undefined && ordenIdBienFormado(sucursalId) === null) return null;
+  return {
+    estado: estado,
+    sucursalId:
+      sucursalId === undefined ? undefined : (ordenIdBienFormado(sucursalId) ?? undefined),
+  };
+}
 
 export async function ordenesDeLaLista(
   tx: Tx,

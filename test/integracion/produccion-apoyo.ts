@@ -17,7 +17,6 @@ import {
   nuevoId,
   valorDe,
   type EscenarioDeStock,
-  type MontajeDeStock,
 } from "./stock-casos-apoyo";
 
 /**
@@ -176,4 +175,3 @@ export async function montarProduccion(base: BaseDePruebas) {
 }
 
 export type MontajeDeProduccion = Awaited<ReturnType<typeof montarProduccion>>;
-export type { MontajeDeStock };
