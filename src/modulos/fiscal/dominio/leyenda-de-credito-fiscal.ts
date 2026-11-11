@@ -16,7 +16,7 @@ export const LEYENDA_DE_CREDITO_FISCAL_A_MONOTRIBUTISTA =
 /**
  * La leyenda si la letra es A y el receptor es monotributista; `null` en cualquier otro caso. Las notas de crédito y de débito
  * llevan la letra de su asociado y el receptor del original, así que entran por la misma regla.
- * SUPUESTO: «monotributista» es solo la condición `MONOTRIBUTO`; el monotributo social y el trabajador independiente promovido
+ * SUPUESTO (DEC-0048): «monotributista» es solo la condición `MONOTRIBUTO`; el monotributo social y el trabajador independiente promovido
  * (también letra A) quedan fuera hasta que el dueño responda (D-115 d deja el promovido fuera de la primera versión).
  */
 export function leyendaDeCreditoFiscal(

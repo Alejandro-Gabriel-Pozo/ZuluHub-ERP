@@ -111,7 +111,7 @@ const comoPrecio = (texto: string): PrecioUnitario => {
  *  - cambia la unidad y todo convierte exacto en 6 decimales (kilo → gramo) → filas nuevas `precio × factor` (y una versión nueva por cada
  *    recargo de la empresa, con lo que consumía);
  *  - cambia la unidad y ALGO no convierte exacto → el sistema NO se niega: cada precio vigente no nulo recibe una fila nueva con `precio =
- *    NULL` (precio abierto) y los recargos de la empresa pasan a una versión nueva con recargo 0 (SUPUESTO Q7: con precio abierto el
+ *    NULL` (precio abierto) y los recargos de la empresa pasan a una versión nueva con recargo 0 (SUPUESTO (DEC-0073) Q7: con precio abierto el
  *    recargo es informativo; el valor anterior queda en la versión vieja, en la auditoría y en el resultado).
  * Lo ya congelado no cambia: tickets y líneas conservan su `precioId`, unidad y paso; las filas viejas no se tocan. Audita una entrada con
  * la forma anterior, la nueva y la lista completa de lo creado. Repetición (`SIN_CAMBIOS`): la forma pedida ya es la del producto.

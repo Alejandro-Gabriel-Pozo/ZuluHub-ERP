@@ -36,7 +36,7 @@ export const TEXTOS_DE_FISCAL_IMPRIMIR = {
   "fiscal.pantalla.imprimir_hoja": { porDefecto: "Hoja {k} de {n}", marcadores: ["k", "n"] },
   // Dueño, 2026-11-04, D-112: el rótulo del número de ingresos brutos del emisor. RG 1415, Anexo II, A.I.a punto 4: «Número de inscripción del
   // impuesto sobre los ingresos brutos o condición de no contribuyente»; la norma no fija el rótulo, lo aprobó el dueño. Sin número, la línea
-  // se omite (SUPUESTO D-112).
+  // se omite (SUPUESTO (DEC-0051) D-112).
   "fiscal.pantalla.imprimir_ingresos_brutos": { porDefecto: "Ingresos Brutos" },
   // Dueño, 2026-11-05, mensaje en la sesión del PDF («Apruebo el botón descargar PDFs»; el texto «Descargar PDF» es el de la propuesta técnica de la
   // Fase 1 de esa fecha, punto (d)), ratificado por el orquestador el mismo día. Pedido original: «que el usuario pueda DESCARGAR la factura como PDF».

@@ -366,7 +366,7 @@ const DISPARAN_ESTABILIDAD = [
   /^src\/adaptadores\/postgres\//,
   /^migraciones\//,
   /^\.github\/workflows\//, // los workflows no ignorables (ver DOCUMENTACION_Y_AJENOS): ci.yml, migrar*, etc.
-  // SUPUESTO (el dueño dijo «arquitectura/ de la base» y no hay una carpeta con ese nombre): las reglas SQL.
+  // SUPUESTO (DEC-0079) (el dueño dijo «arquitectura/ de la base» y no hay una carpeta con ese nombre): las reglas SQL.
   /^arquitectura\/lint-sql\.cjs$/,
   // Lo que la integración lanza como proceso aparte (no es un `import` que el grafo vea).
   /^scripts\//,

@@ -10,7 +10,7 @@ type Modelo = ModeloDeImpresionParaLaPantalla["modelo"];
  * los objetos anidados (`documento`, `transparenciaFiscal`, `contacto`, `asociado`, `totales`) se copian campo por campo, así que un
  * campo nuevo del dominio no viaja al navegador hasta que se lo agregue acá. Chequeo: `test/web/impresion-mapeo.test.ts`.
  *
- * SUPUESTO: la primera entrega NO imprime nombre de fantasía (`marca.nombreDeFantasia` siempre `null`, aunque el modelo traiga uno).
+ * SUPUESTO (DEC-0051): la primera entrega NO imprime nombre de fantasía (`marca.nombreDeFantasia` siempre `null`, aunque el modelo traiga uno).
  * Previene: imprimir un dato de marca que el dueño no aprobó. Chequeo: `test/web/impresion-mapeo.test.ts`.
  */
 export function comprobanteParaLaHoja(m: Modelo): ComprobanteParaLaHoja {

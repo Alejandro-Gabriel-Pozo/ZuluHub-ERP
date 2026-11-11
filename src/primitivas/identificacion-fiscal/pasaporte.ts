@@ -3,13 +3,13 @@ import { err, ok, type Resultado } from "../resultado/resultado";
 
 /**
  * FICHA DEL DATO: PASAPORTE COMO FIGURA (el número tal cual está impreso en el pasaporte del receptor). (DECIDIDO = ya implementado;
- * SUPUESTO = del ingeniero, revertible; SIN DECIDIR = falta la decisión del dueño.) Es un dato DISTINTO del «número que se informa a
+ * SUPUESTO (DEC-0046) = del ingeniero, revertible; SIN DECIDIR = falta la decisión del dueño.) Es un dato DISTINTO del «número que se informa a
  * ARCA» (`numero-de-documento-para-arca.ts`): este es lo que se guarda y se imprime; aquel, lo que se manda.
  *
  * - Qué es: el número de un pasaporte, como figura en el documento (el argentino son 3 letras y 6 números: `ABC123456`).
  * - Cómo se escribe y qué se guarda: SOLO letras de la A a la Z (mayúsculas) y dígitos, de 6 a 9 caracteres, en cualquier
  *   mezcla (DECIDIDO, dueño, 2026-11-06, Q5: «letras y números, de 6 a 9 caracteres»; sin forma fija, así que `A1B2C3D4` también
- *   vale). Se guarda TAL CUAL y así sale en el comprobante. Las minúsculas se pasan a mayúsculas al escribirlas (SUPUESTO, orquestador
+ *   vale). Se guarda TAL CUAL y así sale en el comprobante. Las minúsculas se pasan a mayúsculas al escribirlas (SUPUESTO (DEC-0046), orquestador
  *   2026-11-06: costo de revertir bajo, es una línea de esta primitiva y la base sigue aceptando solo mayúsculas).
  * - Qué NO se acepta (lista de permitidos, nunca de prohibidos): espacios, guiones, puntos, tildes, la Ñ ni ningún otro carácter.
  * - Por qué 6 a 9: estándar internacional de pasaportes (decisión del dueño). Los pasaportes ya guardados, solo de dígitos y de 1 a 11

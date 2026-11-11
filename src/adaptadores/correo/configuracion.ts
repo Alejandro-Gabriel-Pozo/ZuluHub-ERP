@@ -38,7 +38,7 @@ const LARGO_MAXIMO_DE_MARCA = 60;
  *   como no confiables: el remitente va a un encabezado `From` y la marca al asunto y al cuerpo de cada mail.
  * - Nombre (el de la marca y el que acompaña al remitente): la lista de permitidos de `textoDeUnaLineaDesdeTexto` (letras latinas,
  *   dígitos, espacio y `. , & - ' / ( ) ° + : ; " # º ª ’ “ ” – — « » ® ™`; no empieza con `+` ni `-`; NFC y espacios colapsados),
- *   de 1 a `LARGO_MAXIMO_DE_MARCA` (60) caracteres. El 60 es el de `validarNombreVisible` de las marcas (SUPUESTO: el remitente
+ *   de 1 a `LARGO_MAXIMO_DE_MARCA` (60) caracteres. El 60 es el de `validarNombreVisible` de las marcas (SUPUESTO (DEC-0043): el remitente
  *   no tenía tope y usa el mismo).
  * - Dirección: la estructura y el tope (254, una línea, sin controles) son de la primitiva `emailDeContactoDesdeTexto`; además, y
  *   solo para un encabezado de correo, un conjunto cerrado: antes de la `@` letras ASCII, dígitos y `. _ % + -`; después, etiquetas

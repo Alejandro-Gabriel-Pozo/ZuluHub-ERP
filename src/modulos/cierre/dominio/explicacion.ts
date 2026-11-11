@@ -11,7 +11,7 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
  *   (saltos de línea y tabuladores adentro, invisibles, `<` y `>`, emojis): lista de permitidos, no de prohibidos.
  * - Código de error: `EXPLICACION_INVALIDA`.
  *
- * SUPUESTO (ingeniero, sin fuente del dueño): el conjunto de signos y el tope de 500 (el tope sale de la especificación e3b §3.2). La
+ * SUPUESTO (DEC-0043) (ingeniero, sin fuente del dueño): el conjunto de signos y el tope de 500 (el tope sale de la especificación e3b §3.2). La
  * lista de `texto-de-una-linea.ts` es la de nombres y direcciones: no admite `¿ ¡ ? ! %`, que una explicación en castellano necesita.
  * Costo de revertir: cambiar las constantes de abajo y el CHECK de la base (`jornada_observacion_ck`, `control_texto_ck`).
  * Se extraerá a `primitivas/` cuando caja (motivo de una corrección, explicación de una diferencia) la necesite (ADR-014).

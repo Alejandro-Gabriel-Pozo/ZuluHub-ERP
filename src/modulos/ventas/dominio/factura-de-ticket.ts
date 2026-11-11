@@ -50,7 +50,7 @@ export const documentoIdDeLaFactura = (ticket: string, intento: number): string 
 /**
  * «Producto · tamaño · opción · opción» (separador « · » de `venta-rapida.html:421`). `maximo` es lo más largo que fiscal admite en la descripción
  * de un renglón: lo da el puerto del facturador (una sola fuente, la de fiscal). Si se pasa se recorta a `maximo - 1` y termina en
- * «…» (SUPUESTO S-4 de E1: fiscal rechazaría el renglón y la persona no podría facturar; el detalle completo queda en el ticket).
+ * «…» (SUPUESTO (DEC-0053) S-4 de E1: fiscal rechazaría el renglón y la persona no podría facturar; el detalle completo queda en el ticket).
  */
 export function descripcionDelRenglon(r: RenglonParaFacturar, maximo: number): string {
   const partes = [

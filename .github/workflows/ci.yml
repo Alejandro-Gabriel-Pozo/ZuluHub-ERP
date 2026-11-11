@@ -98,6 +98,15 @@ jobs:
           else
             node arquitectura/deuda/campos-sin-dato.cjs
           fi
+      # El registro de decisiones (CLAUDE.md «No suponer»): todo SUPUESTO cita una decisión registrada y, con la base, tocar permisos, módulos,
+      # planes, dinero o textos del cliente trae una entrada nueva o cambiada en el registro. Previene: decisiones que el dueño no ve.
+      - name: Registro de decisiones (lo sensible deja una decisión para el dueño)
+        run: |
+          if [ -d base ]; then
+            node arquitectura/decisiones/decisiones.cjs --base=base
+          else
+            node arquitectura/decisiones/decisiones.cjs
+          fi
 
   pruebas:
     name: Pruebas (con Postgres real)

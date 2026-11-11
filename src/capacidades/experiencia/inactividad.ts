@@ -1,6 +1,6 @@
 /**
  * Inactividad de la sesión del mostrador (W1). Decisión del dueño: la sesión vence a los 15 minutos
- * sin uso. El aviso «¿Seguís ahí?» sale a los 12 minutos: es un SUPUESTO declarado (3 minutos antes
+ * sin uso. El aviso «¿Seguís ahí?» sale a los 12 minutos: es un SUPUESTO (DEC-0060) declarado (3 minutos antes
  * del vencimiento), que el dueño puede cambiar sin tocar el código que decide, porque los límites son
  * un parámetro. Función pura: la hora actual entra como dato (nunca se lee el reloj acá), así que se
  * prueba y se muta sin esperar y da lo mismo en el servidor que en el navegador.

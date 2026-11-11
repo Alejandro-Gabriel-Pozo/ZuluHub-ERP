@@ -53,7 +53,7 @@ export type ErrorDeResincronizacion =
 
 /**
  * Valores configurables.
- * - `plazoDeReservaEnMs`: cuánto dura una reserva antes de poder reconciliarse. SUPUESTO (5 minutos);
+ * - `plazoDeReservaEnMs`: cuánto dura una reserva antes de poder reconciliarse. SUPUESTO (DEC-0066) (5 minutos);
  *   el diseño no lo fija.
  * - `numeroMaximo`: tope del número de comprobante. WSFE v4.8 fija `CbteDesde` en el rango 1 a
  *   99 999 999 (error 10008) y el QR admite hasta 8 dígitos: pasado ese número ARCA rechaza todo.

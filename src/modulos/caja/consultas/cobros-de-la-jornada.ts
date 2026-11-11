@@ -74,7 +74,7 @@ export type ErrorAlListarLosCobrosDeLaJornada =
 /**
  * Los cobros de la jornada (e3b §4.5), con su medio y cuenta ORIGINALES y VIGENTES, quién y cuándo, la sesión, el origen (para unirlo con el
  * ticket), las correcciones con su motivo y `correccionPosible`. En orden `(registrado_en, id)`, con cursor, hasta 100 por pedido.
- * `cajas.ver`, `read committed`, alcance de la sucursal. SUPUESTO: el filtro por medio deja los cobros cuyo medio original O vigente es ese
+ * `cajas.ver`, `read committed`, alcance de la sucursal. SUPUESTO (DEC-0063): el filtro por medio deja los cobros cuyo medio original O vigente es ese
  * (los que tocan esa línea de la conciliación); costo de cambiarlo a solo el vigente: una condición de la consulta.
  */
 export function armarCobrosDeLaJornada({ transacciones, reglas }: DependenciasDeConsultasDeCaja) {

@@ -19,7 +19,7 @@ import type {
  * la sucursal con su estado: si no es `ABIERTA`, abrir una caja daría `JORNADA_EN_AUDITORIA` o `JORNADA_CERRADA` y el botón no se ofrece.
  * Una sucursal sin cajas activas devuelve `cajas: []`. SOLO LEE: no abre ni crea nada (ni la caja por defecto ni la jornada); la jornada
  * sin actividad todavía es `ABIERTA` porque abrir la caja la crea. La fecha de hoy es la de la hora de corte de la sucursal y la zona de la
- * empresa, leídas ahora y sin caché. SUPUESTO: la sucursal ajena o inexistente es `SUCURSAL_NO_ENCONTRADA` (la RLS las hace indistinguibles).
+ * empresa, leídas ahora y sin caché. SUPUESTO (DEC-0063): la sucursal ajena o inexistente es `SUCURSAL_NO_ENCONTRADA` (la RLS las hace indistinguibles).
  */
 export async function estadoDeCajasParaCobrar(
   tx: TxDeLecturaDeCaja,
