@@ -1,3 +1,9 @@
+import {
+  escribirNumero,
+  interpretarNumeroPegado,
+  type MotivoDePegadoRechazado as MotivoNumero,
+  type ReglaDeNumero,
+} from "./numero-argentino";
 import { importeATexto, importeDesdeTexto } from "../../primitivas/dinero/importe";
 import { ARS, decimalesDe } from "../../primitivas/dinero/moneda";
 
@@ -69,52 +75,35 @@ function armarTipeado(cruda: string, decimal: string | null): ImporteTipeado {
   return { texto: decimal === null ? entera : `${entera},${fraccion}`, canonico };
 }
 
+/** La regla del importe en pesos para el campo numérico: los decimales y los enteros que admite `numeric(18, 2)`; con ceros de relleno. */
+export const REGLA_DE_IMPORTE: ReglaDeNumero = {
+  decimales: DECIMALES,
+  enterosMaximos: DIGITOS_ENTEROS_MAXIMOS,
+  completarDecimales: true,
+};
+
 /**
- * Lo que queda en el campo al ESCRIBIR (decisión 153): solo dígitos y una coma con hasta dos decimales. El
- * punto no se puede escribir: se ignora (el de miles lo agrega `mostrarImporte` al salir del campo). Una
- * segunda coma se ignora y no se parte el número; la tercera cifra decimal se ignora al tipearla.
+ * Lo que queda en el campo al ESCRIBIR (decisión 153): solo dígitos y una coma con hasta dos decimales, sin puntos de miles (el campo
+ * los muestra con `numero-argentino.ts`). Una regla, un lugar: la política vive en `escribirNumero`.
  */
 export function filtrarImporteEscrito(crudo: string): ImporteTipeado {
-  const limpio = crudo.replace(/[^\d,]/g, "");
-  const coma = limpio.indexOf(",");
-  if (coma === -1) return limpio === "" ? { texto: "", canonico: "" } : armarTipeado(limpio, null);
-  return armarTipeado(limpio.slice(0, coma), limpio.slice(coma + 1).replace(/\D/g, ""));
+  const r = escribirNumero(crudo, crudo.length, REGLA_DE_IMPORTE);
+  return { texto: r.texto.replaceAll(".", ""), canonico: r.canonico };
 }
 
 /** Por qué se rechaza un pegado (decisión 153; supuesto S-6: más de dos decimales se rechaza, no se recorta). */
-export type MotivoDePegadoRechazado = "PUNTO_MAL_PUESTO" | "DECIMALES_DE_MAS" | "FORMA_INVALIDA";
+export type MotivoDePegadoRechazado = MotivoNumero;
 
 export type ImportePegado =
   | Readonly<{ ok: true; texto: string; canonico: string }>
   | Readonly<{ ok: false; motivo: MotivoDePegadoRechazado }>;
 
-/** Sin puntos, o con cada punto separando miles bien (grupos de tres dígitos). Cero y sin ceros a la izquierda. */
-const ENTERA_PEGADA = /^(?:0|[1-9]\d*|[1-9]\d{0,2}(?:\.\d{3})+)$/;
-
-/**
- * Interpreta lo PEGADO con la misma regla del campo (decisión 153): `14.000,50`, `1234,5` y `0,5` entran;
- * si un punto no separa miles bien, si hay más de dos decimales o si no tiene la forma de un importe, se
- * rechaza y el campo no cambia. Los espacios de los extremos se ignoran (SUPUESTO (DEC-0061): lo copiado suele traerlos).
- */
+/** Interpreta lo PEGADO con la regla del campo (decisión 153). Una regla, un lugar: la política vive en `interpretarNumeroPegado`. */
 export function interpretarImportePegado(crudo: string): ImportePegado {
-  const texto = crudo.trim();
-  if (!/^[\d.,]+$/.test(texto)) return { ok: false, motivo: "FORMA_INVALIDA" };
-  const partes = texto.split(",");
-  if (partes.length > 2) return { ok: false, motivo: "FORMA_INVALIDA" };
-  // `split` siempre entrega al menos un elemento y aquí no más de dos: la entera existe, la decimal puede faltar.
-  const [entera, decimal] = partes as [string, string | undefined];
-  if (!ENTERA_PEGADA.test(entera)) {
-    return { ok: false, motivo: entera.includes(".") ? "PUNTO_MAL_PUESTO" : "FORMA_INVALIDA" };
-  }
-  const digitos = entera.replace(/\./g, "");
-  if (digitos.length > DIGITOS_ENTEROS_MAXIMOS) return { ok: false, motivo: "FORMA_INVALIDA" };
-  if (decimal !== undefined) {
-    if (decimal.includes(".")) return { ok: false, motivo: "PUNTO_MAL_PUESTO" };
-    if (decimal === "") return { ok: false, motivo: "FORMA_INVALIDA" };
-    if (decimal.length > DECIMALES) return { ok: false, motivo: "DECIMALES_DE_MAS" };
-  }
-  const armado = armarTipeado(digitos, decimal ?? null);
-  return { ok: true, ...armado };
+  const r = interpretarNumeroPegado(crudo, REGLA_DE_IMPORTE);
+  return r.ok
+    ? { ok: true, texto: r.texto.replaceAll(".", ""), canonico: r.canonico }
+    : { ok: false, motivo: r.motivo };
 }
 
 /** El texto canónico con puntos de miles y coma decimal (`1234.5` → `1.234,50`). Vacío si no es un importe. */

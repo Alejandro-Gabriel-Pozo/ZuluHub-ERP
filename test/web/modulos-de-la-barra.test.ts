@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { estadoDeModulos } from "../../src/capacidades/modulos/activos";
+import { MAXIMO_DE_DESTINOS_DE_MODULOS } from "../../src/capacidades/experiencia/destinos";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import {
   PERMISOS_DE_EMPRESA,
@@ -47,6 +48,11 @@ const cargar = (
   destinosDeModulos: (contexto: unknown) => Promise<readonly { clave: string }[]>;
   puedeEmitirNotasDeCredito: (contexto: unknown) => Promise<boolean>;
   puedeEmitirFacturas: (contexto: unknown) => Promise<boolean>;
+  destinosPermitidos: (
+    entradas: readonly unknown[],
+    permisos: unknown,
+  ) => readonly { clave: string; etiqueta: string }[];
+  ENTRADAS_DE_MODULOS: readonly { clave: string; modulo: string; accion: string }[];
 }> => import(/* @vite-ignore */ ruta);
 
 const claves = async (): Promise<string[]> => {
@@ -104,6 +110,85 @@ describe("destinosDeModulos", () => {
   it("si la consulta falla con una excepción: no aparece y no rompe", async () => {
     mundo.falla = true;
     expect(await claves()).toEqual([]);
+  });
+});
+
+/**
+ * El menú es una lista declarativa (`ENTRADAS_DE_MODULOS`) y UNA regla (`destinosPermitidos`): todo nace cerrado. Previene: que un
+ * módulo nuevo se muestre a quien el servidor va a rechazar, que uno «en desarrollo» aparezca porque alguien le dio permisos, y que el
+ * cuarto módulo se pierda en silencio (la barra admite 3 y `destinosDeOperacion` recorta sin avisar).
+ */
+describe("destinosPermitidos (el menú declarativo)", () => {
+  const entrada = (modulo: string, accion: string, clave = "comprobantes") => ({
+    clave,
+    modulo,
+    accion,
+    href: "/x",
+    etiqueta: "fiscal.pantalla.listado_titulo",
+    icono: "comprobantes",
+  });
+  const de = async (
+    entradas: readonly unknown[],
+    p: { acciones: string[]; activos?: string[]; enSoloLectura?: string[] } | null,
+  ) => {
+    const { destinosPermitidos } = await cargar(RUTA);
+    return destinosPermitidos(
+      entradas,
+      p === null
+        ? null
+        : {
+            acciones: p.acciones,
+            modulos: { activos: p.activos ?? [], enSoloLectura: p.enSoloLectura ?? [] },
+          },
+    ).map((d) => d.clave);
+  };
+
+  it("un módulo «en desarrollo» no aparece aunque le llegue la acción y figure activo (falla cerrado)", async () => {
+    expect(CATALOGO_DE_MODULOS.caja.estado).toBe("en_desarrollo");
+    const [primera] = Object.keys(CATALOGO_DE_MODULOS.caja.acciones);
+    expect(
+      await de([entrada("caja", primera as string)], {
+        acciones: [primera as string],
+        activos: ["caja"],
+      }),
+    ).toEqual([]);
+  });
+
+  it("sin permiso, sin módulo activo o sin permisos leídos: no aparece; con las dos cosas: aparece", async () => {
+    const e = [entrada("facturacion", "comprobantes.ver")];
+    expect(await de(e, { acciones: [], activos: ["facturacion"] })).toEqual([]);
+    expect(await de(e, { acciones: ["comprobantes.ver"] })).toEqual([]);
+    expect(await de(e, null)).toEqual([]);
+    expect(await de(e, { acciones: ["comprobantes.ver"], activos: ["facturacion"] })).toEqual([
+      "comprobantes",
+    ]);
+  });
+
+  it("cada entrada se decide por separado y se conserva el orden declarado", async () => {
+    const e = [
+      entrada("facturacion", "comprobantes.ver", "a"),
+      entrada("administracion", "sucursales.editar", "b"),
+    ];
+    expect(
+      await de(e, {
+        acciones: ["sucursales.editar", "comprobantes.ver"],
+        activos: ["administracion", "facturacion"],
+      }),
+    ).toEqual(["a", "b"]);
+    expect(await de(e, { acciones: ["sucursales.editar"], activos: ["administracion"] })).toEqual([
+      "b",
+    ]);
+  });
+
+  it("las entradas declaradas son módulos y acciones reales del catálogo, disponibles, y no pasan del tope de la barra", async () => {
+    const { ENTRADAS_DE_MODULOS } = await cargar(RUTA);
+    expect(ENTRADAS_DE_MODULOS.length).toBeLessThanOrEqual(MAXIMO_DE_DESTINOS_DE_MODULOS);
+    for (const e of ENTRADAS_DE_MODULOS) {
+      const modulo = CATALOGO_DE_MODULOS[e.modulo as keyof typeof CATALOGO_DE_MODULOS];
+      expect(modulo.estado, e.clave).toBe("disponible");
+      expect(Object.keys(modulo.acciones), e.clave).toContain(e.accion);
+    }
+    expect(new Set(ENTRADAS_DE_MODULOS.map((e) => e.clave)).size).toBe(ENTRADAS_DE_MODULOS.length);
   });
 });
 

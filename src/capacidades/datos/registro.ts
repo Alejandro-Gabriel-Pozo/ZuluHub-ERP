@@ -191,5 +191,6 @@ export const COMPONENTES_DE_CAMPO = [
   "apps/web/ui/componentes/Campo.tsx",
   "apps/web/ui/componentes/CampoDeCodigo.tsx",
   "apps/web/ui/componentes/CampoImporte.tsx",
+  "apps/web/ui/componentes/CampoNumero.tsx",
   "apps/web/ui/componentes/Selector.tsx",
 ] as const;
