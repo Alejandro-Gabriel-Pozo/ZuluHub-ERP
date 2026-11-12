@@ -22,35 +22,71 @@ import type { DestinoDeModulo } from "../ui/plantillas/sesion/ArmazonDeOperacion
 import type { Pendiente } from "../ui/plantillas/sesion/PantallaDeInicio";
 
 /**
- * Lo que cada módulo suma al armazón: sus destinos de la barra inferior y lo que falta hacer en el inicio.
- * Hoy hay uno: el facturador (Comprobantes). Los demás tramos de los módulos agregan sus entradas acá.
- *
- * «Comprobantes» se muestra solo si la persona tiene hoy la acción `comprobantes.ver` Y el módulo `facturacion` está activo o en
- * solo lectura, según `permisosDelActor` (calculado por el servidor). SUPUESTO (DEC-0059) declarado: en solo lectura SÍ se muestra, porque el
- * Listado solo consulta (D-59 habla de botones apagados, no de ocultar consultas); revertirlo es quitar `enSoloLectura` de la
- * condición. Si `permisosDelActor` falla, la entrada NO se muestra (cierra, no abre) y la pantalla sigue andando. Ocultar no es
- * autorizar: la consulta vuelve a pasar por el guard.
+ * Una entrada del menú de módulos: lo que un módulo suma a la barra inferior. Cada módulo nuevo suma UNA entrada a
+ * `ENTRADAS_DE_MODULOS` (y su clave a `DestinoDeModulo`); la regla de cuándo se muestra es una sola y vive en `destinosPermitidos`.
  */
+export type EntradaDeModulo = Readonly<{
+  clave: DestinoDeModulo["clave"];
+  /** El módulo del catálogo (`catalogo.ts`) al que pertenece la pantalla. */
+  modulo: ClaveModulo;
+  /** La acción que exige la pantalla al guard (la misma que su consulta): sin ella no se ofrece. */
+  accion: ClaveAccion;
+  href: string;
+  /** Clave del texto del destino en el catálogo del vocabulario: solo textos ya aprobados por el dueño. */
+  etiqueta: ClaveDeTexto;
+  icono: DestinoDeModulo["icono"];
+}>;
+
+/**
+ * Los módulos con pantalla hoy, en el orden en que se ofrecen en la barra. Hoy hay uno: el facturador (Comprobantes).
+ * La barra admite como máximo `MAXIMO_DE_DESTINOS_DE_MODULOS` (3) módulos: una prueba (`test/web/modulos-de-la-barra.test.ts`) falla si
+ * se suma uno más, para que alguien decida cómo se muestran los demás en vez de cortarlos en silencio (`destinosDeOperacion` recorta).
+ * Aprobado por el dueño el 2026-10-29 (respuesta en la sesión web del carril web): el título «Comprobantes» (ver el catálogo).
+ */
+export const ENTRADAS_DE_MODULOS: readonly EntradaDeModulo[] = [
+  {
+    clave: "comprobantes",
+    modulo: "facturacion",
+    accion: "comprobantes.ver",
+    href: RUTA_DEL_LISTADO,
+    etiqueta: "fiscal.pantalla.listado_titulo",
+    icono: "comprobantes",
+  },
+];
+
+/**
+ * De las entradas, las que la persona ve hoy. Todo nace cerrado: una entrada se muestra solo si el módulo está `disponible` en el
+ * catálogo (uno «en desarrollo» no da permisos a nadie), la empresa lo tiene activo o en solo lectura y la persona tiene la acción
+ * según `permisosDelActor` (calculado por el servidor). SUPUESTO (DEC-0059) declarado: en solo lectura SÍ se muestra, porque el
+ * Listado solo consulta (D-59 habla de botones apagados, no de ocultar consultas); revertirlo es quitar `enSoloLectura` de la
+ * condición. Sin permisos leídos (`null`) no se muestra nada. Ocultar no es autorizar: la pantalla vuelve a pasar por el guard.
+ */
+export function destinosPermitidos(
+  entradas: readonly EntradaDeModulo[],
+  permisos: PermisosLeidos | null,
+): readonly DestinoDeModulo[] {
+  if (permisos === null) return [];
+  return entradas
+    .filter(
+      (e) =>
+        CATALOGO_DE_MODULOS[e.modulo].estado === "disponible" &&
+        permisos.acciones.includes(e.accion) &&
+        (permisos.modulos.activos.includes(e.modulo) ||
+          permisos.modulos.enSoloLectura.includes(e.modulo)),
+    )
+    .map((e) => ({
+      clave: e.clave,
+      href: e.href,
+      etiqueta: texto({}, e.etiqueta),
+      icono: e.icono,
+    }));
+}
+
+/** Los destinos de los módulos que la persona ve hoy. Si `permisosDelActor` falla, ninguno (cierra, no abre) y la pantalla sigue andando. */
 export async function destinosDeModulos(
   contexto: ContextoOperativo,
 ): Promise<readonly DestinoDeModulo[]> {
-  const permisos = await permisosDeLaPersona(contexto);
-  const veComprobantes =
-    permisos !== null &&
-    permisos.acciones.includes("comprobantes.ver") &&
-    (permisos.modulos.activos.includes("facturacion") ||
-      permisos.modulos.enSoloLectura.includes("facturacion"));
-  return veComprobantes
-    ? [
-        {
-          clave: "comprobantes",
-          href: RUTA_DEL_LISTADO,
-          // Aprobado por el dueño el 2026-10-29 (respuesta en la sesión web del carril web): el título «Comprobantes» (ver el catálogo).
-          etiqueta: texto({}, "fiscal.pantalla.listado_titulo"),
-          icono: "comprobantes",
-        },
-      ]
-    : [];
+  return destinosPermitidos(ENTRADAS_DE_MODULOS, await permisosDeLaPersona(contexto));
 }
 
 /**
