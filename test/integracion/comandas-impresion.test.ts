@@ -360,7 +360,13 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     const texto = papel.lineas.map((l) => l.texto).join("\n");
     expect(texto).toContain("Copia");
     expect(texto).toContain("Envío 1");
-    expect(texto).not.toMatch(/\$|1000/);
+    // Sin precios. Se mira todo menos la línea de quien tomó el pedido: lleva un email con hexadecimal al azar y «1000» cae ahí
+    // por azar (~0,01 % de las corridas).
+    const sinAutor = texto
+      .split("\n")
+      .filter((linea) => !linea.startsWith("Tomó:"))
+      .join("\n");
+    expect(sinAutor).not.toMatch(/\$|1000/);
     const original = valorDe(
       await m.consultasDeComandas.documentoParaImprimir(e.gerente, {
         documentoTipo: "COMANDA",
