@@ -740,7 +740,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       comoNavegador(HOST_A);
       const sinPermiso = html(await Inicio());
       expect(sinPermiso).toContain("Sin permiso");
-      expect(sinPermiso).toContain("No tiene permiso para hacer esto.");
+      expect(sinPermiso).toContain("No tenés permiso para hacer esto.");
       expect(sinPermiso).toContain("Cambiar de empresa");
       expect(sinPermiso).not.toContain(deB.empresa);
       expect(sinPermiso).not.toContain(NOMBRE_B);

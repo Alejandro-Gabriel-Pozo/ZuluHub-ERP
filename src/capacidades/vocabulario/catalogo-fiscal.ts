@@ -212,7 +212,7 @@ export const TEXTOS_DE_FISCAL = {
     largoMaximo: 160,
   },
   "error.fiscal_sucursal_fuera_de_alcance": {
-    porDefecto: "Sucursal fuera de su alcance.",
+    porDefecto: "Sucursal fuera de tu alcance.",
     largoMaximo: 160,
   },
   // Fuente: `Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, D-50 («Una sucursal cerrada no emite»; confirmada

@@ -71,7 +71,7 @@ export const CATALOGO_DE_TEXTOS = {
     largoMaximo: 160,
   },
   "motivo.sin_permiso": {
-    porDefecto: "No tiene permiso para hacer esto.",
+    porDefecto: "No tenés permiso para hacer esto.",
     largoMaximo: 160,
   },
 

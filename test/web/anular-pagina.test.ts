@@ -142,7 +142,7 @@ describe("la página de anular: quién la ve", () => {
   it("sin la acción de emitir notas de crédito: «No tiene permiso», sin leer la factura y sin ofrecer nada", async () => {
     permisos({ acciones: ["comprobantes.ver", "comprobantes.emitir_manual"] });
     const texto = await pagina(ID_FACTURA);
-    expect(texto).toContain("No tiene permiso para hacer esto.");
+    expect(texto).toContain("No tenés permiso para hacer esto.");
     expect(texto).not.toContain("Siguiente");
     expect(texto).not.toContain("SIN_PERMISO");
     expect(mundo.lecturas).toEqual([]);
@@ -200,7 +200,7 @@ describe("la página de anular: qué se puede anular", () => {
 
   it.each([
     ["SESION_VENCIDA", "Tu sesión venció"],
-    ["SIN_PERMISO", "No tiene permiso para hacer esto."],
+    ["SIN_PERMISO", "No tenés permiso para hacer esto."],
   ] as const)(
     "el error de lectura %s se ve con su texto y sin el código",
     async (codigo, esperado) => {

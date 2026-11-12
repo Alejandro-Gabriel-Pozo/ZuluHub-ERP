@@ -317,7 +317,7 @@ describe("errores marcados en su campo", () => {
     await render(formulario());
     await completar();
     tocar(guardarBoton());
-    await expect.element(page.getByText("No tiene permiso para hacer esto.")).toBeVisible();
+    await expect.element(page.getByText("No tenés permiso para hacer esto.")).toBeVisible();
     expect(document.body.textContent).not.toContain("SIN_PERMISO");
     expect(document.querySelectorAll('[aria-invalid="true"]')).toHaveLength(0);
   });
