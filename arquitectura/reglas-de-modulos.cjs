@@ -112,6 +112,24 @@ module.exports = [
     to: { path: "^src/modulos/compras/" },
   },
   {
+    name: "produccion-solo-con-stock",
+    severity: "error",
+    comment:
+      "E6-T9 (e6 §3.1). produccion no importa catalogo, caja, ventas, fiscal, clientes, compras, cierre ni reservas, ni por su publico.ts: solo consume a stock por su publico.ts (el libro y los lotes) y no escribe ninguna tabla ajena. Previene que producir dependa de lo que se vende o se cobra (ciclos, y que un cambio de venta rompa las órdenes); si se elimina, falla la violación inyectada de esta regla.",
+    from: { path: "^src/modulos/produccion/" },
+    to: { path: "^src/modulos/(catalogo|caja|ventas|fiscal|clientes|compras|cierre|reservas)/" },
+  },
+  {
+    name: "negocio-sin-produccion",
+    severity: "error",
+    comment:
+      "E6-T9 (e6 §3.1). Ningún módulo de negocio importa produccion, ni por su publico.ts: produccion depende de stock de arriba hacia abajo y la composición es el único lugar donde se toca. Previene el ciclo stock ↔ produccion (que modulos-solo-por-publico no ve porque alcanza publico.ts para cruzar) y que el libro de stock conozca órdenes de producción; si se elimina, falla la violación inyectada de esta regla.",
+    from: {
+      path: "^src/modulos/(catalogo|caja|ventas|fiscal|clientes|compras|cierre|reservas|stock)/",
+    },
+    to: { path: "^src/modulos/produccion/" },
+  },
+  {
     name: "empresas-sin-negocio",
     severity: "error",
     comment:

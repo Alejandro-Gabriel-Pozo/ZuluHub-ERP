@@ -54,6 +54,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "salon"
       | "clientes"
       | "compras"
+      | "produccion"
     >();
     expectTypeOf<ClaveAccion>().toEqualTypeOf<
       | "usuarios.invitar"
@@ -132,6 +133,17 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "conteos.registrar"
       | "conteos.aplicar"
       | "conteos.cancelar"
+      | "lotes.ver"
+      | "lotes.controlar"
+      | "lotes.dejar_de_controlar"
+      | "lotes.cambiar_calidad"
+      | "lotes.corregir"
+      | "lotes.reasignar"
+      | "transformaciones.ver"
+      | "transformaciones.abrir"
+      | "transformaciones.cerrar"
+      | "transformaciones.cancelar"
+      | "transformaciones.anular"
       | "cajas.ver"
       | "cajas.crear"
       | "cajas.editar"
@@ -268,6 +280,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       "salon",
       "clientes",
       "compras",
+      "produccion",
     ]);
   });
 });

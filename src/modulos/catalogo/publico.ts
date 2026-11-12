@@ -71,7 +71,7 @@ export type {
   OrigenDelRecargo,
 } from "./dominio/cotizar";
 export type { ClaseDeUso } from "./dominio/clases";
-export { CLASES_DE_USO } from "./dominio/clases";
+export { CLASES_DE_USO, seConsumeLaClase } from "./dominio/clases";
 export type { FormaDeVenta } from "./dominio/forma-de-venta";
 export { formaDeVentaDelPiloto } from "./dominio/forma-de-venta";
 export type { FilaDePrecio, Producto } from "./dominio/modelo";

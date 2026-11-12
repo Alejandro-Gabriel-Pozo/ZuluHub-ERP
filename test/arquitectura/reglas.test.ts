@@ -482,6 +482,20 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "produccion-solo-con-stock",
+      archivos: {
+        "src/modulos/produccion/dominio/d.ts": importa("../../ventas/publico"),
+        "src/modulos/ventas/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "negocio-sin-produccion",
+      archivos: {
+        "src/modulos/stock/dominio/d.ts": importa("../../produccion/publico"),
+        "src/modulos/produccion/publico.ts": exporta,
+      },
+    },
+    {
       regla: "empresas-sin-negocio",
       archivos: {
         "src/modulos/empresas/casos-de-uso/c.ts": importa("../../caja/publico"),
@@ -1607,6 +1621,46 @@ describe("E0-T5: sentido de las dependencias entre módulos de base, ventas y ci
       });
       expect(permitido, modulo).not.toContain("compras-sin-fiscal-ventas-ni-caja");
     }
+  });
+
+  it("producción solo importa a stock (por su publico.ts) y ningún módulo de negocio importa producción", async () => {
+    for (const modulo of [
+      "catalogo",
+      "caja",
+      "ventas",
+      "fiscal",
+      "clientes",
+      "compras",
+      "cierre",
+    ]) {
+      const v = await violacionesDe({
+        [`src/modulos/produccion/casos-de-uso/c.ts`]: importa(`../../${modulo}/publico`),
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+      });
+      expect(v, modulo).toContain("produccion-solo-con-stock");
+    }
+    for (const modulo of [
+      "catalogo",
+      "caja",
+      "ventas",
+      "fiscal",
+      "clientes",
+      "compras",
+      "cierre",
+      "stock",
+    ]) {
+      const v = await violacionesDe({
+        [`src/modulos/${modulo}/casos-de-uso/c.ts`]: importa("../../produccion/publico"),
+        "src/modulos/produccion/publico.ts": exporta,
+      });
+      expect(v, modulo).toContain("negocio-sin-produccion");
+    }
+    const permitido = await violacionesDe({
+      "src/modulos/produccion/casos-de-uso/c.ts": importa("../../stock/publico"),
+      "src/modulos/stock/publico.ts": exporta,
+    });
+    expect(permitido).not.toContain("produccion-solo-con-stock");
+    expect(permitido).not.toContain("negocio-sin-produccion");
   });
 
   it("cierre no importa ningún módulo de negocio, ni por su publico.ts", async () => {

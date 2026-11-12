@@ -35,6 +35,8 @@ export const cantidadDeUnidades = (unidades: bigint): Cantidad =>
 export const ORIGEN_MANUAL = "MANUAL";
 export const ORIGEN_EJEMPLAR_DE_TICKET = "EJEMPLAR_DE_TICKET";
 export const ORIGEN_RECEPCION = "RECEPCION";
+/** E6: la orden de producción (consumo de ingredientes y producto obtenido). */
+export const ORIGEN_TRANSFORMACION = "TRANSFORMACION";
 
 /**
  * El signo de cada renglón por clase: la entrada suma (> 0), la salida resta (< 0); la transferencia, los ajustes y la anulación llevan

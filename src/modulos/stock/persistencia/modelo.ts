@@ -100,12 +100,15 @@ export type RenglonGuardado = Readonly<{
 
 export type ComponenteGuardado = Readonly<{
   numero: number;
-  articuloId: string;
+  /** El artículo de stock del componente; `null` si es un elaborado (E6, D96). Exactamente uno de los dos. */
+  articuloId: string | null;
+  /** El producto `ELABORADO` del componente (subcomposición); `null` si es un artículo. */
+  compuestoId: string | null;
   /** Texto decimal exacto, en `unidadId`. */
   cantidad: string;
   unidadId: string;
   dimension: string;
-  /** En puntos porcentuales; 0 mientras no exista la perilla de pérdida. */
+  /** En puntos porcentuales (merma, E6): `0.0000` si no tiene. */
   perdida: string;
 }>;
 
@@ -118,6 +121,8 @@ export type ComposicionGuardada = Readonly<{
   rinde: string;
   creadaPor: PersonaId;
   creadaEn: Date;
+  /** E6 (0032): los pasos de la ficha de cocina, o `null`. */
+  pasos: string | null;
   componentes: readonly ComponenteGuardado[];
 }>;
 

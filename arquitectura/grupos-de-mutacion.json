@@ -79,8 +79,14 @@
   },
   {
     "grupo": "stock (dominio)",
-    "archivos": "src/modulos/stock/dominio/**/*.ts",
+    "archivos": "src/modulos/stock/dominio/**/*.ts,!src/modulos/stock/dominio/merma.ts,!src/modulos/stock/dominio/calidad.ts,!src/modulos/stock/dominio/disponibilidad.ts,!src/modulos/stock/dominio/lotes.ts,!src/modulos/stock/dominio/subcomposicion.ts,!src/modulos/stock/dominio/costo-de-receta.ts",
     "minutos": 10,
+    "pruebas": "src/modulos/stock"
+  },
+  {
+    "grupo": "stock (lotes y recetas)",
+    "archivos": "src/modulos/stock/dominio/merma.ts,src/modulos/stock/dominio/calidad.ts,src/modulos/stock/dominio/disponibilidad.ts,src/modulos/stock/dominio/lotes.ts,src/modulos/stock/dominio/subcomposicion.ts,src/modulos/stock/dominio/costo-de-receta.ts",
+    "minutos": 3,
     "pruebas": "src/modulos/stock"
   },
   {
@@ -496,6 +502,12 @@
     "archivos": "arquitectura/deuda/campos-sin-dato.cjs",
     "minutos": 3,
     "pruebas": "test/arquitectura/campos-sin-dato-presupuesto.test.ts"
+  },
+  {
+    "grupo": "produccion (dominio)",
+    "archivos": "src/modulos/produccion/dominio/**/*.ts",
+    "minutos": 2,
+    "pruebas": "src/modulos/produccion"
   },
   {
     "grupo": "guardián (registro de decisiones)",

@@ -36,6 +36,8 @@ export type DependenciasDeStock = Readonly<{
 export type TxDeConsultasDeStock = RepositoriosDeStock &
   Readonly<{
     autorizacion: CargaDeAutorizacion;
+    /** E6: la jornada de cada sucursal (zona y corte) para decidir lo vencido y lo disponible de los lotes. */
+    sucursales: Pick<RepositorioDeSucursales, "jornadaDe">;
   }>;
 
 export type DependenciasDeConsultasDeStock = Readonly<{

@@ -14,6 +14,10 @@ import {
   DECLARACIONES_DE_CONSULTAS_DE_CATALOGO,
 } from "../../src/modulos/catalogo/publico";
 import {
+  DECLARACIONES_DE_CONSULTAS_DE_PRODUCCION,
+  DECLARACIONES_DE_PRODUCCION,
+} from "../../src/modulos/produccion/publico";
+import {
   DECLARACIONES_DE_COMANDAS,
   DECLARACIONES_DE_CONSULTAS_DE_COMANDAS,
 } from "../../src/modulos/comandas/publico";
@@ -96,6 +100,7 @@ const SIN_CONSTRUIR: readonly string[] = [
   "ventas",
   "comandas",
   "salon",
+  "produccion",
 ];
 
 function crucesDelCatalogo(
@@ -267,6 +272,10 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     "modulos/cierre": accionesDe(DECLARACIONES_DE_CIERRE, DECLARACIONES_DE_CONSULTAS_DE_CIERRE),
     "modulos/ventas": accionesDe(DECLARACIONES_DE_VENTAS, DECLARACIONES_DE_CONSULTAS_DE_VENTAS),
     "modulos/stock": accionesDe(DECLARACIONES_DE_STOCK, DECLARACIONES_DE_CONSULTAS_DE_STOCK),
+    "modulos/produccion": accionesDe(
+      DECLARACIONES_DE_PRODUCCION,
+      DECLARACIONES_DE_CONSULTAS_DE_PRODUCCION,
+    ),
     "modulos/comandas": accionesDe(
       DECLARACIONES_DE_COMANDAS,
       DECLARACIONES_DE_CONSULTAS_DE_COMANDAS,
@@ -377,7 +386,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual([]);
   });
 
-  it("catálogo, carta, caja, ventas, comandas y salón son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1); stock salió con E5, clientes con E9-T4 y compras con E9-T12, y son disponibles", () => {
+  it("catálogo, carta, caja, ventas, comandas, salón y producción (hasta E6-T9) son los únicos módulos sin construir, y siguen en desarrollo (T0 y E0-T1); stock salió con E5, clientes con E9-T4 y compras con E9-T12, y son disponibles", () => {
     expect([...SIN_CONSTRUIR]).toEqual([
       "catalogo",
       "vidriera",
@@ -385,6 +394,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       "ventas",
       "comandas",
       "salon",
+      "produccion",
     ]);
     expect(SIN_CONSTRUIR).not.toContain("compras");
     expect(CATALOGO_DE_MODULOS.compras.estado).toBe("disponible");

@@ -94,6 +94,7 @@ const MODULOS_DE_NEGOCIO = [
   "listas",
   "marcas",
   "planes",
+  "produccion",
   "salon",
   "stock",
   "tenants",

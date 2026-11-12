@@ -24,6 +24,7 @@
     "src/modulos/listas/dominio/**/*.ts",
     "src/modulos/ventas/dominio/**/*.ts",
     "src/modulos/stock/dominio/**/*.ts",
+    "src/modulos/produccion/dominio/**/*.ts",
     "src/modulos/salon/dominio/**/*.ts",
     "src/modulos/comandas/dominio/**/*.ts",
     "src/modulos/clientes/dominio/**/*.ts",

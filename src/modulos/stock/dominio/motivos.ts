@@ -1,4 +1,8 @@
-import { ORIGEN_EJEMPLAR_DE_TICKET, type ClaseDeMovimiento } from "./movimiento";
+import {
+  ORIGEN_EJEMPLAR_DE_TICKET,
+  ORIGEN_TRANSFORMACION,
+  type ClaseDeMovimiento,
+} from "./movimiento";
 
 /**
  * Los motivos de movimiento sembrados (E5 §3.1, tabla `motivo_de_movimiento`: global, solo inserción). La CLASE es cerrada y el MOTIVO
@@ -44,9 +48,17 @@ export const MOTIVOS_DE_MOVIMIENTO: readonly MotivoSembrado[] = [
   motivo("AJUSTE", "CORRECCION"),
   motivo("AJUSTE_POR_CONTEO", "CONTEO"),
   motivo("ANULACION", "ANULACION"),
+  // E6 (0032): la producción en lote. Solo los escribe la orden de producción (origen `TRANSFORMACION`), nunca una persona.
+  motivo("ENTRADA", "PRODUCTO_DE_TRANSFORMACION", { entraConCosto: true }),
+  motivo("SALIDA", "CONSUMO_DE_TRANSFORMACION", { entregaMercaderia: true }),
 ];
 
 export const MOTIVO_DE_VENTA = "VENTA";
+export const MOTIVO_PRODUCTO_DE_TRANSFORMACION = "PRODUCTO_DE_TRANSFORMACION";
+export const MOTIVO_CONSUMO_DE_TRANSFORMACION = "CONSUMO_DE_TRANSFORMACION";
+
+const esMotivoDeTransformacion = (codigo: string): boolean =>
+  codigo === MOTIVO_PRODUCTO_DE_TRANSFORMACION || codigo === MOTIVO_CONSUMO_DE_TRANSFORMACION;
 export const MOTIVO_DE_VENCIMIENTO = "VENCIMIENTO";
 
 export const buscarMotivo = (clase: string, codigo: string): MotivoSembrado | null =>
@@ -58,7 +70,11 @@ export const buscarMotivo = (clase: string, codigo: string): MotivoSembrado | nu
  */
 export function motivoManualPermitido(clase: ClaseDeMovimiento, codigo: string): boolean {
   if (clase !== "ENTRADA" && clase !== "SALIDA") return false;
-  return buscarMotivo(clase, codigo) !== null && codigo !== MOTIVO_DE_VENTA;
+  return (
+    buscarMotivo(clase, codigo) !== null &&
+    codigo !== MOTIVO_DE_VENTA &&
+    !esMotivoDeTransformacion(codigo)
+  );
 }
 
 /** S-7: dar de baja por vencimiento exige además `stock.ajustar` (D118 lo reserva a administración). */
@@ -74,4 +90,8 @@ export const origenCoherenteConElMotivo = (
   codigo: string,
   origenTipo: string,
 ): boolean =>
-  (codigo === MOTIVO_DE_VENTA) === (clase === "SALIDA" && origenTipo === ORIGEN_EJEMPLAR_DE_TICKET);
+  (codigo === MOTIVO_DE_VENTA) ===
+    (clase === "SALIDA" && origenTipo === ORIGEN_EJEMPLAR_DE_TICKET) &&
+  // E6: los motivos de la producción van con el origen de la orden, y ese origen solo con ellos (una anulación puede llevarlo).
+  esMotivoDeTransformacion(codigo) ===
+    ((clase === "ENTRADA" || clase === "SALIDA") && origenTipo === ORIGEN_TRANSFORMACION);

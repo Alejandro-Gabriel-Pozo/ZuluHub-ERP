@@ -18,6 +18,10 @@ import { crearCasosDeUsoDeSalon, crearConsultasDeSalon } from "../modulos/salon/
 import { crearCasosDeUsoDeClientes, crearConsultasDeClientes } from "../modulos/clientes/publico";
 import { crearCasosDeUsoDeCompras, crearConsultasDeCompras } from "../modulos/compras/publico";
 import {
+  crearCasosDeUsoDeProduccion,
+  crearConsultasDeProduccion,
+} from "../modulos/produccion/publico";
+import {
   crearCasosDeUsoDeStock,
   crearConsultasDeStock,
   crearPuertosDeStock,
@@ -195,6 +199,17 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     ),
     consultasDeStock: perezoso(() =>
       crearConsultasDeStock({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
+     * Producción (E6): abrir, cerrar, cancelar y anular órdenes (casos de uso) y sus consultas, cada uno con SU acción de `transformaciones`. El módulo
+     * sigue `en_desarrollo` hasta que el dueño lo pase a disponible: el guard rechaza todo con `MODULO_EN_DESARROLLO`. Escribe el libro de stock por
+     * `stock/publico.ts`, dentro de la MISMA transacción de la orden.
+     */
+    casosDeUsoDeProduccion: perezoso(() =>
+      crearCasosDeUsoDeProduccion({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeProduccion: perezoso(() =>
+      crearConsultasDeProduccion({ transacciones: conexiones.transaccionesDeApp(), reglas }),
     ),
     /**
      * Comandas (E7): enviar a cocina, pedir que salga, anular un ítem enviado, quitar sin enviar, las impresoras y los trabajos de impresión, cada uno con

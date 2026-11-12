@@ -173,6 +173,27 @@ const DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS = [
 /** El nivel de operación de las compras es solo del gerente. */
 const SOLO_DEL_GERENTE_DE_COMPRAS = ["compras.configurar"] as const;
 
+/** E6-T7 (P-2): lotes y calidad. Mirar lo ven los tres roles; el resto, gerente y administrador. */
+const DEL_OPERADOR_DE_LOTES = ["lotes.ver"] as const;
+const SOLO_DEL_ADMINISTRADOR_DE_LOTES = [
+  "lotes.controlar",
+  "lotes.dejar_de_controlar",
+  "lotes.cambiar_calidad",
+  "lotes.corregir",
+  "lotes.reasignar",
+] as const;
+
+/** E6-T8 (DEC-0101): producción. Ver, abrir y cerrar una orden, los tres roles; cancelar y anular, gerente y administrador. */
+const DEL_OPERADOR_DE_PRODUCCION = [
+  "transformaciones.ver",
+  "transformaciones.abrir",
+  "transformaciones.cerrar",
+] as const;
+const SOLO_DEL_ADMINISTRADOR_DE_PRODUCCION = [
+  "transformaciones.cancelar",
+  "transformaciones.anular",
+] as const;
+
 /** E7 (spec §3.13, PP-2): los tres roles unen, dividen, cambian de mesa, envían a cocina e imprimen; el operador también mira mesas e impresoras. */
 const DEL_OPERADOR_DE_SALON_Y_COMANDAS = [
   "comandas.enviar",
@@ -201,6 +222,8 @@ const DEL_OPERADOR = [
   ...DEL_OPERADOR_DE_EMPRESA,
   ...DEL_OPERADOR_DE_CLIENTES_Y_COMPRAS,
   ...DEL_OPERADOR_DE_CATALOGO_Y_STOCK,
+  ...DEL_OPERADOR_DE_LOTES,
+  ...DEL_OPERADOR_DE_PRODUCCION,
   ...DEL_OPERADOR_DE_CAJA_CIERRE_Y_VENTAS,
   ...DEL_OPERADOR_DE_SALON_Y_COMANDAS,
 ] as const;
@@ -250,6 +273,8 @@ const DEL_ADMINISTRADOR = [
   "usuarios.revocar_invitacion",
   "usuarios.ver",
   ...SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK,
+  ...SOLO_DEL_ADMINISTRADOR_DE_LOTES,
+  ...SOLO_DEL_ADMINISTRADOR_DE_PRODUCCION,
   ...DE_LA_ESCALERA_DE_ELECCIONES,
   ...DEL_ADMINISTRADOR_DE_CAJA,
   ...DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS,
@@ -274,9 +299,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 146 acciones: 34 de empresa, configuración fiscal y facturación, 42 de catálogo, carta y stock (39 de T0 y 2 de CE0), 35 de caja, cierre y ventas, 19 de clientes y compras y 16 de salón y comandas", () => {
+  it("hay 157 acciones: 34 de empresa, configuración fiscal y facturación, 48 de catálogo, carta y stock (39 de T0, 2 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 19 de clientes y compras y 16 de salón y comandas", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(146);
+    expect(todas).toHaveLength(157);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -674,18 +699,18 @@ describe("el guard con las reglas reales", () => {
     (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
   );
 
-  it("todo módulo en desarrollo del catálogo incluye catalogo, vidriera, caja, ventas, comandas y salon (cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4 y compras desde E9-T12)", () => {
+  it("todo módulo en desarrollo del catálogo incluye catalogo, vidriera, caja, ventas, comandas, salon y produccion (cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4 y compras desde E9-T12)", () => {
     expect([...ENDESARROLLO].sort()).toEqual(
-      ["caja", "catalogo", "comandas", "salon", "ventas", "vidriera"].sort(),
+      ["caja", "catalogo", "comandas", "produccion", "salon", "ventas", "vidriera"].sort(),
     );
   });
 
-  it("las 70 acciones sin construir (23 de catálogo y carta, 31 de caja y ventas y 16 de salón y comandas) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  it("las 75 acciones sin construir (23 de catálogo y carta, 31 de caja y ventas 16 de salón y comandas y 5 de producción) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
     const sinConstruir = ENDESARROLLO.flatMap(
       (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
     );
-    expect(sinConstruir).toHaveLength(70);
+    expect(sinConstruir).toHaveLength(75);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(

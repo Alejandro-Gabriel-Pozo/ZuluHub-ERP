@@ -16,7 +16,7 @@ describe("el catálogo comercial de módulos", () => {
     expect(conCapacidad).toEqual([]);
   });
 
-  it("tiene doce módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, carta, caja, ventas, compras (disponible desde E9-T12), comandas y salon (en desarrollo, E7), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
+  it("tiene trece módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, carta, caja, ventas, compras (disponible desde E9-T12), comandas y salon (en desarrollo, E7), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
     expect(CATALOGO_DE_MODULOS).toEqual({
       administracion: {
         estado: "disponible",
@@ -142,6 +142,12 @@ describe("el catálogo comercial de módulos", () => {
           "conteos.registrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "conteos.aplicar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "conteos.cancelar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "lotes.ver": { capacidad: null, efecto: "LECTURA" },
+          "lotes.controlar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "lotes.dejar_de_controlar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "lotes.cambiar_calidad": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "lotes.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "lotes.reasignar": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
       caja: {
@@ -284,6 +290,21 @@ describe("el catálogo comercial de módulos", () => {
           "compras.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
+      produccion: {
+        estado: "en_desarrollo",
+        obligatorio: false,
+        requiere: ["stock"],
+        usaSiExiste: ["catalogo"],
+        datosRequeridos: [],
+        implementadoPor: ["modulos/produccion"],
+        acciones: {
+          "transformaciones.ver": { capacidad: null, efecto: "LECTURA" },
+          "transformaciones.abrir": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "transformaciones.cerrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "transformaciones.cancelar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "transformaciones.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+        },
+      },
     });
   });
 
@@ -294,19 +315,19 @@ describe("el catálogo comercial de módulos", () => {
     expect(carpetas).toEqual([["modulos/catalogo"], ["modulos/catalogo"], ["modulos/stock"]]);
   });
 
-  it("el catálogo tiene 42 acciones de catálogo, carta y stock (14 + 9 + 19), 35 de caja, cierre y ventas (23 + 4 + 8) y 18 de clientes y compras (8 + 10), sin repetir ninguna", () => {
+  it("el catálogo tiene 48 acciones de catálogo, carta y stock (14 + 9 + 25), 35 de caja, cierre y ventas (23 + 4 + 8) y 18 de clientes y compras (8 + 10), sin repetir ninguna", () => {
     const cuantas = (
       m: "catalogo" | "vidriera" | "stock" | "caja" | "cierre" | "ventas" | "clientes" | "compras",
     ) => Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
-    expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([14, 9, 19]);
+    expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([14, 9, 25]);
     expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
     expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 11]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
     // 25 de administración (18 de usuarios, sucursales, gerencia y permisos, y 7 de la configuración fiscal de H7 T5),
-    // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 42 de catálogo, carta y stock (48 menos las 6 retiradas por las
+    // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 48 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
-    // de E5-T10), 35 de caja, cierre y ventas (E0-T1), 19 de clientes y compras (E9-T1 y T11) y 16 de salón y comandas (E7): 146 en total.
-    expect(todas).toHaveLength(25 + 9 + 42 + 35 + 19 + 16);
+    // de E5-T10), 35 de caja, cierre y ventas (E0-T1), 19 de clientes y compras (E9-T1 y T11), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 157 en total.
+    expect(todas).toHaveLength(25 + 9 + 48 + 35 + 19 + 16 + 5);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -417,6 +438,7 @@ const EFECTOS_DE_EMPRESA = {
     "gerencia.ver_traspaso",
     "impresoras.ver",
     "jornadas.ver",
+    "lotes.ver",
     "mesas.ver",
     "modulos.ver",
     "partes.ver",
@@ -426,6 +448,7 @@ const EFECTOS_DE_EMPRESA = {
     "stock.ver",
     "stock.verificar_saldos",
     "sucursales.ver",
+    "transformaciones.ver",
     "usuarios.ver",
     "ventas.ver",
     "vidrieras.ver",
@@ -463,6 +486,9 @@ const EFECTOS_DE_EMPRESA = {
     "impresiones.reimprimir",
     "impresoras.crear",
     "impresoras.editar",
+    "lotes.controlar",
+    "lotes.corregir",
+    "lotes.reasignar",
     "medios_de_pago.crear",
     "medios_de_pago.editar",
     "medios_de_pago.reactivar",
@@ -498,6 +524,7 @@ const EFECTOS_DE_EMPRESA = {
     "sucursales.crear",
     "sucursales.editar",
     "sucursales.reactivar",
+    "transformaciones.abrir",
     "usuarios.asignar_sucursales",
     "usuarios.invitar",
     "variantes.editar",
@@ -534,6 +561,8 @@ const EFECTOS_DE_EMPRESA = {
     "jornadas.cancelar_auditoria",
     "jornadas.cerrar",
     "jornadas.iniciar_auditoria",
+    "lotes.cambiar_calidad",
+    "lotes.dejar_de_controlar",
     "medios_de_pago.desactivar",
     "mesas.desactivar",
     "movimientos_caja.anular",
@@ -554,6 +583,9 @@ const EFECTOS_DE_EMPRESA = {
     "sucursales.desactivar",
     "tickets.cobrar",
     "tickets.corregir",
+    "transformaciones.anular",
+    "transformaciones.cancelar",
+    "transformaciones.cerrar",
     "usuarios.apagar",
     "usuarios.reenviar_invitacion",
     "usuarios.revocar_invitacion",

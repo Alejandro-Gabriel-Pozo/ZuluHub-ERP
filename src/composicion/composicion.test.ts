@@ -8,6 +8,10 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DECLARACIONES_DE_CAJA, DECLARACIONES_DE_CONSULTAS_DE_CAJA } from "../modulos/caja/publico";
 import {
+  DECLARACIONES_DE_CONSULTAS_DE_PRODUCCION,
+  DECLARACIONES_DE_PRODUCCION,
+} from "../modulos/produccion/publico";
+import {
   DECLARACIONES_DE_STOCK,
   DECLARACIONES_DE_CONSULTAS_DE_STOCK,
 } from "../modulos/stock/publico";
@@ -643,6 +647,8 @@ const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
   consultasDeSalon: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_SALON },
   casosDeUsoDeStock: { conGuard: DECLARACIONES_DE_STOCK },
   consultasDeStock: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_STOCK },
+  casosDeUsoDeProduccion: { conGuard: DECLARACIONES_DE_PRODUCCION },
+  consultasDeProduccion: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_PRODUCCION },
   casosDeUsoDeClientes: { conGuard: DECLARACIONES_DE_CLIENTES },
   consultasDeClientes: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CLIENTES },
   casosDeUsoDeCompras: { conGuard: DECLARACIONES_DE_COMPRAS },

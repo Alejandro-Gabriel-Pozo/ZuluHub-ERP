@@ -3,6 +3,7 @@
  * cerrados `ClaveModulo`, `ClaveAccion` y `ClaveCapacidad`, así que una acción sin módulo, o un
  * permiso para una acción que no existe, no compila.
  */
+import { ACCIONES_DE_LOTES, MODULO_DE_PRODUCCION } from "./catalogo-lotes-y-produccion";
 import { MODULOS_DE_SALON_Y_COMANDAS } from "./catalogo-salon-y-comandas";
 
 export type EstadoDeConstruccion = "disponible" | "en_desarrollo";
@@ -59,9 +60,8 @@ export type CatalogoComercial = Readonly<Record<string, DefinicionDeModulo>>;
  * define en `permisos/empresa.ts`.
  *
  * Es el NÚCLEO (empresas, sucursales, identidad y la configuración fiscal del gerente): no depende de un
- * plan, así que nunca queda en solo lectura (el guard ignora ese estado en los módulos obligatorios). Aun
- * así cada acción declara su `efecto`, para que el día que un módulo con plan copie el patrón no haya
- * acciones sin clasificar.
+ * plan, así que nunca queda en solo lectura (el guard ignora ese estado en los módulos obligatorios).
+ * Aun así cada acción declara su `efecto`, para que no haya acciones sin clasificar.
  * Criterio: lo que quita, cierra o responde algo ya iniciado (apagar, revocar o reenviar una
  * invitación, desactivar una sucursal, cancelar, aceptar o rechazar un traspaso) es `COMPLETA_CIERRA`;
  * lo que da de alta, cambia la configuración, reactiva o amplía un alcance (invitar, asignar
@@ -235,6 +235,7 @@ export const CATALOGO_DE_MODULOS = {
       "conteos.registrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "conteos.aplicar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "conteos.cancelar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      ...ACCIONES_DE_LOTES,
     },
   },
   /**
@@ -328,11 +329,9 @@ export const CATALOGO_DE_MODULOS = {
   },
   ...MODULOS_DE_SALON_Y_COMANDAS,
   /**
-   * Directorio de clientes y proveedores (E9; `e9-compras-especificacion.md` §3.0 y §3.9, decisiones F1 a F4 de
-   * `clientes-y-proveedores.md`). Nació `en_desarrollo` en E9-T1 y E9-T4 lo cerró: `disponible` y `obligatorio` (F5 del 12/10:
-   * siempre activo para toda empresa; un módulo obligatorio tiene que estar disponible). Ocho acciones; no hay
-   * `partes.anonimizar` porque ningún caso de uso la usa (SUPUESTO S-3 de E9, DEC-0305). Mirar es `LECTURA`; desactivar cierra; el
-   * resto crea o amplía.
+   * Directorio de clientes y proveedores (E9; `e9-compras-especificacion.md` §3.0 y §3.9, F1 a F4 de `clientes-y-proveedores.md`). `disponible` y
+   * `obligatorio` desde E9-T4 (F5 del 12/10: siempre activo). Ocho acciones; sin `partes.anonimizar`: ningún caso de uso la usa
+   * (SUPUESTO S-3 de E9, DEC-0305). Mirar es `LECTURA`; desactivar cierra; el resto crea o amplía.
    */
   clientes: {
     estado: "disponible",
@@ -381,6 +380,7 @@ export const CATALOGO_DE_MODULOS = {
       "compras.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
+  produccion: MODULO_DE_PRODUCCION,
 } as const satisfies CatalogoComercial;
 
 type Catalogo = typeof CATALOGO_DE_MODULOS;

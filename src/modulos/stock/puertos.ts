@@ -80,7 +80,7 @@ export interface ArticulosDeVenta {
 export interface ExistenciaParaMostrar {
   existencias(
     tx: TxDeLecturaDeStock,
-    contexto: Pick<ContextoOperativo, "empresaId">,
+    contexto: Pick<ContextoOperativo, "empresaId" | "ahora">,
     productoIds: readonly string[],
     depositoId: string,
   ): Promise<readonly ExistenciaDeProducto[]>;

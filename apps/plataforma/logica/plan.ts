@@ -12,6 +12,11 @@ export const ROTULO_DE_PERILLA: Readonly<Record<string, string>> = {
   composiciones_por_tamano: "Composiciones por tamaño",
   // Decisión 175 (09/11/2026, textos delegados: lo más corto) + clave de la perilla (decisión 124).
   cajas_por_sucursal: "Cajas por sucursal",
+  // E6: decisión 175 (textos delegados: lo más corto) + clave de la perilla (`lotes` y `calidad_de_lote`, e6-recetas-produccion-especificacion §3.7).
+  lotes: "Lotes",
+  calidad_de_lote: "Calidad de lote",
+  // Decisión 175 (lo más corto) + clave de la perilla; el módulo se llama «Producción» en el prototipo aprobado produccion.html.
+  produccion: "Producción",
   // `salon`: el nombre del módulo extra de pago (DEC-0201), el mismo rótulo que el módulo.
   salon: "Salón",
 };
@@ -21,6 +26,7 @@ export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {
   facturacion: "Facturación",
   catalogo: "Catálogo",
   stock: "Stock",
+  produccion: "Producción",
   vidriera: "Vidriera",
   // Fuente de los tres rótulos: decisión 175 del dueño (09/11/2026, textos delegados: reutilizar lo aprobado, lo más corto).
   // `caja`: nombre del módulo en los prototipos aprobados caja.html y medios.html. `ventas`: palabra del módulo y de las

@@ -16,6 +16,7 @@ import {
   ORIGEN_EJEMPLAR_DE_TICKET,
   ORIGEN_MANUAL,
   ORIGEN_RECEPCION,
+  ORIGEN_TRANSFORMACION,
   ordenarParaBloqueo,
   type ClaseDeMovimiento,
   type RenglonDeLibro,
@@ -25,14 +26,19 @@ import { esUuid } from "../persistencia/filas";
 import type { Movimiento } from "../persistencia/modelo";
 import { llaveDeSaldo } from "../persistencia/repositorio-de-movimientos";
 import { costearMovimiento, type CostosDeclarados } from "./costos";
+import { asignarLotesDelLibro, type LotesDelPedido } from "./lotes-del-libro";
 import type { TxDeStock } from "./contrato";
 import type { ControlDeStock, DetalleDeNegativo, ErrorDeStock } from "./errores";
 
 /** El único control que mira el libro (D125, declarado en `capacidades/controles`). */
 export const CONTROL_DE_NEGATIVO: ControlDeStock = "stock.existencia_negativa";
 
-/** Lo que identifica un movimiento que viene de otro módulo: el ejemplar de un ticket (ventas) o la recepción (compras). */
-const ORIGENES_DE_OTRO_MODULO: readonly string[] = [ORIGEN_EJEMPLAR_DE_TICKET, ORIGEN_RECEPCION];
+/** Lo que identifica un movimiento que viene de otro módulo: el ejemplar de un ticket (ventas), la recepción (compras) o la orden de producción. */
+const ORIGENES_DE_OTRO_MODULO: readonly string[] = [
+  ORIGEN_EJEMPLAR_DE_TICKET,
+  ORIGEN_RECEPCION,
+  ORIGEN_TRANSFORMACION,
+];
 
 /**
  * Un movimiento ya resuelto, listo para escribir en el libro: lo arma un caso de uso (entrada, salida, transferencia, ajuste, anulación,
@@ -68,6 +74,11 @@ export type PedidoDeMovimiento = Readonly<{
    * queda `SIN_COSTO`. El resto de las clases toma su costo del promedio o del original (`costearMovimiento`).
    */
   costos?: CostosDeclarados | undefined;
+  /**
+   * E6: los lotes que trae la entrada (por renglón), el lote que la persona nombró para descartar y la calidad inicial. Solo cuentan para los
+   * artículos con control de lote activo; para el resto no se lee ni se escribe nada. Sin dato, el libro es el de E5.
+   */
+  lotes?: LotesDelPedido | undefined;
 }>;
 
 export type MovimientoRegistrado = Readonly<{
@@ -294,6 +305,13 @@ export async function registrarMovimientoEnTx(
       confirmoNegativo: confirmados.has(llaveDe(r.depositoId, r.articuloId)),
     })),
   );
+
+  const conLotes = await asignarLotesDelLibro(tx, contexto, {
+    movimiento,
+    renglones: ordenados,
+    lotes: pedido.lotes,
+  });
+  if (!conLotes.ok) return conLotes;
 
   await costearMovimiento(tx, contexto.empresaId, {
     movimientoId: movimiento.id,

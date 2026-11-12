@@ -235,7 +235,7 @@ describe("validarComposicion", () => {
     });
 
     it("un compuesto exige subcomposiciones", () => {
-      const compuesto = [comp("a", { compuestoId: "c1" })];
+      const compuesto = [comp("a", { articuloId: null, compuestoId: "c1" })];
       expect(error(validarComposicion(rinde("1"), compuesto, SIN_PERILLAS))).toEqual({
         codigo: "FUNCION_NO_INCLUIDA",
         perilla: "subcomposiciones",
@@ -251,12 +251,79 @@ describe("validarComposicion", () => {
       expect(validarComposicion(rinde("1"), compuesto, CON_PERILLAS).ok).toBe(true);
     });
 
+    it("una pérdida de 100 % o más no deja plato: PERDIDA_INVALIDA, antes que la perilla; 99,9999 pasa", () => {
+      for (const p of ["100", "100.0000"]) {
+        expect(
+          error(
+            validarComposicion(
+              rinde("1"),
+              [comp("a", { perdida: porcentajeDesdeTexto(p) })],
+              SIN_PERILLAS,
+            ),
+          ),
+        ).toEqual({ codigo: "PERDIDA_INVALIDA" });
+      }
+      const limite = validarComposicion(
+        rinde("1"),
+        [comp("a", { perdida: porcentajeDesdeTexto("99.9999") })],
+        CON_PERILLAS,
+      );
+      expect(limite.ok).toBe(true);
+    });
+
+    it("la pérdida válida queda en el componente y la nula o cero no (es lo que se guarda)", () => {
+      const r = validarComposicion(
+        rinde("1"),
+        [
+          comp("a", { perdida: porcentajeDesdeTexto("20") }),
+          comp("b", { perdida: porcentajeDesdeTexto("0") }),
+          comp("c", { articuloId: null, compuestoId: "masa" }),
+        ],
+        CON_PERILLAS,
+      );
+      if (!r.ok) throw new Error("debía validar");
+      expect(
+        r.valor.componentes.map((c) => [c.articuloId, c.compuestoId, c.perdida?.unidades]),
+      ).toEqual([
+        ["a", null, 200_000n],
+        ["b", null, undefined],
+        [null, "masa", undefined],
+      ]);
+    });
+
+    it("un componente es un artículo o un elaborado: ni los dos ni ninguno es un error de quien llama", () => {
+      expect(() =>
+        validarComposicion(rinde("1"), [comp("a", { compuestoId: "c1" })], CON_PERILLAS),
+      ).toThrow(/artículo o un elaborado/);
+      expect(() =>
+        validarComposicion(
+          rinde("1"),
+          [comp("a", { articuloId: null, compuestoId: null })],
+          CON_PERILLAS,
+        ),
+      ).toThrow(/artículo o un elaborado/);
+    });
+
+    it("un elaborado no se repite, y el mismo id de artículo y de elaborado no se confunden entre sí", () => {
+      const a = comp("x", { articuloId: null, compuestoId: "masa" });
+      expect(error(validarComposicion(rinde("1"), [a, a], CON_PERILLAS))).toEqual({
+        codigo: "COMPONENTE_REPETIDO",
+      });
+      expect(validarComposicion(rinde("1"), [a, comp("otro")], CON_PERILLAS).ok).toBe(true);
+    });
+
     it("con las dos cosas y sin perillas, manda la pérdida (el orden de las comprobaciones es fijo)", () => {
       expect(
         error(
           validarComposicion(
             rinde("1"),
-            [comp("a", { perdida: porcentajeDesdeTexto("1"), compuestoId: "c1" })],
+            [
+              comp("a", {
+                perdida: porcentajeDesdeTexto("1"),
+                articuloId: null,
+                compuestoId: "c1",
+              }),
+            ],
             SIN_PERILLAS,
           ),
         ),

@@ -1,4 +1,5 @@
 import type { Cantidad } from "../../../primitivas/cantidad/cantidad";
+import type { Porcentaje } from "../../../primitivas/cantidad/porcentaje";
 import {
   cantidadConSignoDesdeCantidad,
   negarConSigno,
@@ -11,7 +12,9 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import { convertirCantidad } from "../../../primitivas/unidades/convertir-cantidad";
 import { UNIDADES, type CodigoDeUnidad } from "../../../primitivas/unidades/unidades";
 import type { ClaseDeUso } from "../../catalogo/publico";
+import { fraccionDeBruto } from "./merma";
 import { cantidadDeUnidades, compararTexto, UNIDADES_POR_ENTERO } from "./movimiento";
+import { MAXIMO_DE_NIVELES_DE_RECETA } from "./subcomposicion";
 
 /**
  * La explosión de una línea vendida (E5 §3.3, pasos 1 a 7): qué artículos y cuánto descuenta una venta. Función pura: las versiones y
@@ -43,6 +46,16 @@ export type ComponenteVigente = Readonly<{
   unidadId: CodigoDeUnidad;
   /** La unidad de stock del artículo del componente. */
   unidadDeStockId: CodigoDeUnidad;
+  /** E6: la merma en puntos, que se SUMA al neto (`merma.ts`, P-1). Sin dato: sin merma. */
+  perdida?: Porcentaje | null;
+}>;
+
+/** E6: un componente que es un producto ELABORADO (subcomposición, D96). `cantidad` es la neta, en `unidadId` de la dimensión del elaborado. */
+export type ComponenteCompuesto = Readonly<{
+  compuestoId: string;
+  cantidad: Cantidad;
+  unidadId: CodigoDeUnidad;
+  perdida?: Porcentaje | null;
 }>;
 
 /** La composición vigente (la de mayor número). Una versión VACÍA retira la receta: el producto vuelve a `null`, no a una lista vacía. */
@@ -50,6 +63,8 @@ export type ComposicionVigente = Readonly<{
   composicionId: string;
   rinde: Cantidad;
   componentes: readonly ComponenteVigente[];
+  /** E6: los componentes que son elaborados. Sin dato: ninguno (la receta de E5). */
+  compuestos?: readonly ComponenteCompuesto[];
 }>;
 
 export type ProductoParaExplotar = Readonly<{
@@ -100,7 +115,9 @@ export type RenglonDeConsumo = Readonly<{
 
 export type AvisoDeExplosion =
   | Readonly<{ tipo: "INSUMO_SIN_ARTICULO"; posicion: number; insumoId: string }>
-  | Readonly<{ tipo: "CANTIDAD_EN_CERO"; articuloId: string; composicionId: string | null }>;
+  | Readonly<{ tipo: "CANTIDAD_EN_CERO"; articuloId: string; composicionId: string | null }>
+  /** E6: un elaborado sin stock propio y sin receta: no hay qué descontar. */
+  | Readonly<{ tipo: "COMPUESTO_SIN_RECETA"; compuestoId: string }>;
 
 export type Explosion = Readonly<{
   renglones: readonly RenglonDeConsumo[];
@@ -115,6 +132,7 @@ export type ErrorDeExplosion = Readonly<{
     | "DIMENSION_DISTINTA"
     | "CONVERSION_NO_EXACTA"
     | "FUERA_DE_RANGO"
+    | "RECETA_DEMASIADO_ANIDADA"
     | "OPCION_CON_CONSUMO_EN_VENTA_POR_PESO";
   /** La línea que lo causó; falta cuando sale de la suma de varias. */
   posicion?: number;
@@ -128,7 +146,10 @@ export type SituacionDeConsumo = "ARTICULO" | "COMPOSICION" | "FALTA_RECETA" | "
  */
 export function situacionDeConsumo(producto: ProductoParaExplotar): SituacionDeConsumo {
   if (producto.articulo !== null && producto.articulo.activo) return "ARTICULO";
-  if (producto.composicion !== null && producto.composicion.componentes.length > 0) {
+  if (
+    producto.composicion !== null &&
+    producto.composicion.componentes.length + (producto.composicion.compuestos?.length ?? 0) > 0
+  ) {
     return "COMPOSICION";
   }
   return producto.claseDeUso === "VENDIBLE" ? "FALTA_RECETA" : "NO_CONTROLADO";
@@ -170,6 +191,74 @@ const falla = (codigo: ErrorDeExplosion["codigo"], posicion?: number): ErrorDeEx
 
 const UNO = UNIDADES_POR_ENTERO;
 
+/**
+ * E6: baja una composición hasta los artículos (D96). `qNum ÷ qDen` es la cantidad del producto que se produce, en su unidad base y en
+ * unidades mínimas, como fracción exacta. Un componente que es elaborado con artículo activo descuenta SU stock (D94); sin artículo se
+ * explota su propia receta, hasta `MAXIMO_DE_NIVELES_DE_RECETA` (la composición de la línea es el nivel 1). Nada se redondea acá: lo
+ * hace el final, una vez por renglón (artículo, versión).
+ */
+function explotarComposicion(
+  entrada: EntradaDeExplosion,
+  sumas: Map<string, Suma>,
+  avisos: AvisoDeExplosion[],
+  composicion: ComposicionVigente,
+  qNum: bigint,
+  qDen: bigint,
+  nivel: number,
+): ErrorDeExplosion["codigo"] | null {
+  if (nivel > MAXIMO_DE_NIVELES_DE_RECETA) return "RECETA_DEMASIADO_ANIDADA";
+  for (const componente of composicion.componentes) {
+    const enStock = convertirCantidad(
+      componente.cantidad,
+      componente.unidadId,
+      componente.unidadDeStockId,
+    );
+    if (!enStock.ok) return enStock.error;
+    const bruto = fraccionDeBruto(enStock.valor.unidades, componente.perdida ?? null);
+    sumar(
+      sumas,
+      componente.articuloId,
+      composicion.composicionId,
+      componente.unidadDeStockId,
+      bruto.numerador * qNum,
+      bruto.denominador * composicion.rinde.unidades * qDen,
+    );
+  }
+  for (const compuesto of composicion.compuestos ?? []) {
+    const hijo = entrada.productos.get(compuesto.compuestoId);
+    if (hijo === undefined) return "PRODUCTO_DESCONOCIDO";
+    const enBase = convertirCantidad(compuesto.cantidad, compuesto.unidadId, hijo.unidadBaseId);
+    if (!enBase.ok) return enBase.error;
+    const bruto = fraccionDeBruto(enBase.valor.unidades, compuesto.perdida ?? null);
+    const num = bruto.numerador * qNum;
+    const den = bruto.denominador * composicion.rinde.unidades * qDen;
+    if (hijo.articulo !== null && hijo.articulo.activo) {
+      sumar(
+        sumas,
+        hijo.articulo.articuloId,
+        composicion.composicionId,
+        hijo.articulo.unidadDeStockId,
+        num,
+        den,
+      );
+    } else if (situacionDeConsumo(hijo) === "COMPOSICION") {
+      const fallo = explotarComposicion(
+        entrada,
+        sumas,
+        avisos,
+        hijo.composicion as ComposicionVigente,
+        num,
+        den,
+        nivel + 1,
+      );
+      if (fallo !== null) return fallo;
+    } else {
+      avisos.push({ tipo: "COMPUESTO_SIN_RECETA", compuestoId: compuesto.compuestoId });
+    }
+  }
+  return null;
+}
+
 export function explotarConsumo(
   entrada: EntradaDeExplosion,
 ): Resultado<Explosion, ErrorDeExplosion> {
@@ -190,23 +279,16 @@ export function explotarConsumo(
       const articulo = producto.articulo as ArticuloDeStock;
       sumar(sumas, articulo.articuloId, null, articulo.unidadDeStockId, q, 1n);
     } else if (situacion === "COMPOSICION") {
-      const composicion = producto.composicion as ComposicionVigente;
-      for (const componente of composicion.componentes) {
-        const enStock = convertirCantidad(
-          componente.cantidad,
-          componente.unidadId,
-          componente.unidadDeStockId,
-        );
-        if (!enStock.ok) return err(falla(enStock.error, linea.posicion));
-        sumar(
-          sumas,
-          componente.articuloId,
-          composicion.composicionId,
-          componente.unidadDeStockId,
-          enStock.valor.unidades * q,
-          composicion.rinde.unidades,
-        );
-      }
+      const fallo = explotarComposicion(
+        entrada,
+        sumas,
+        avisos,
+        producto.composicion as ComposicionVigente,
+        q,
+        1n,
+        1,
+      );
+      if (fallo !== null) return err(falla(fallo, linea.posicion));
     } else if (situacion === "FALTA_RECETA") {
       excepciones.push({ posicion: linea.posicion, tipo: "FALTA_RECETA" });
     }

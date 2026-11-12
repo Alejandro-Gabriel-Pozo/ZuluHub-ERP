@@ -85,14 +85,32 @@ export type ErrorDeStock =
   | "OPCION_CON_CONSUMO_EN_VENTA_POR_PESO"
   | "VERSION_DE_OPCION_NO_ENCONTRADA"
   // composiciones
-  | "PRODUCTO_NO_ES_VENDIBLE"
   | "COMPOSICION_VACIA"
   | "COMPONENTE_REPETIDO"
   | "COMPONENTE_NO_CONTROLADO"
   | "COMPOSICION_DESACTUALIZADA"
   | "RINDE_INVALIDO"
   | "SIN_COMPOSICION"
+  // E6: recetas dentro de recetas, lotes y calidad
+  | "RECETA_DEMASIADO_ANIDADA"
+  | "CICLO_EN_LA_RECETA"
+  | "COMPUESTO_NO_ES_ELABORADO"
+  | "PRODUCTO_NO_LLEVA_RECETA"
+  | "PERDIDA_INVALIDA"
+  | "VENCIMIENTO_REQUERIDO"
+  | "VENCIMIENTO_PASADO"
+  | "LOTE_NO_ENCONTRADO"
+  | "LOTE_SIN_CALIDAD"
+  | "LOTE_DESACTUALIZADO"
+  | "LOTE_SIN_ASIGNAR"
+  | "SALDO_DE_LOTE_INSUFICIENTE"
+  | "SIN_CAMBIOS"
   | Readonly<{
       error: "FUNCION_NO_INCLUIDA";
-      perilla: "composiciones_con_perdida" | "subcomposiciones";
+      perilla:
+        | "composiciones_con_perdida"
+        | "subcomposiciones"
+        | "lotes"
+        | "calidad_de_lote"
+        | "produccion";
     }>;

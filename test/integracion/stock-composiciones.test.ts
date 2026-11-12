@@ -215,13 +215,13 @@ describe.skipIf(base === null)("stock: composiciones", () => {
       expect((await registros("COMPOSICION_GUARDADA")).length).toBe(auditadas + 1);
     });
 
-    it("solo un producto VENDIBLE tiene receta (PRODUCTO_NO_ES_VENDIBLE); uno que no existe, no es uuid o está inactivo se rechaza", async () => {
+    it("solo un producto VENDIBLE o ELABORADO lleva receta (PRODUCTO_NO_LLEVA_RECETA); uno que no existe, no es uuid o está inactivo se rechaza", async () => {
       const a = await insumo();
-      for (const clase of ["MATERIA_PRIMA", "INSUMO", "REVENTA", "ELABORADO"] as const) {
+      for (const clase of ["MATERIA_PRIMA", "INSUMO", "REVENTA"] as const) {
         const producto = await vendible(clase);
         expect(await guardar(producto, { componentes: [componente(a.producto)] })).toEqual({
           ok: false,
-          error: "PRODUCTO_NO_ES_VENDIBLE",
+          error: "PRODUCTO_NO_LLEVA_RECETA",
         });
         expect(await versiones(producto)).toBe(0);
       }
@@ -360,7 +360,7 @@ describe.skipIf(base === null)("stock: composiciones", () => {
       expect(await versiones(pizza)).toBe(1);
     });
 
-    it("la pérdida y la subcomposición son de la perilla: apagada es FUNCION_NO_INCLUIDA, y encendida también hasta que la explosión las aplique (nace cerrado)", async () => {
+    it("la pérdida es de la perilla: apagada es FUNCION_NO_INCLUIDA y encendida se guarda con la merma (E6); lo que no es un porcentaje bien escrito es PERDIDA_INVALIDA", async () => {
       const pizza = await vendible();
       const a = await insumo();
       const conPerdida = (perdida: unknown) => ({
@@ -378,9 +378,15 @@ describe.skipIf(base === null)("stock: composiciones", () => {
       c.encenderPerilla("composiciones_con_perdida");
       try {
         expect(await guardar(pizza, { versionEsperada: 1, ...conPerdida("5.25") })).toEqual({
-          ok: false,
-          error: { error: "FUNCION_NO_INCLUIDA", perilla: "composiciones_con_perdida" },
+          ok: true,
+          valor: { version: 2, yaExistia: false },
         });
+        expect(
+          await c.filas(
+            "select perdida::text as perdida from componente_de_composicion where composicion_id = (select id from composicion where producto_id = $1 and numero = 2)",
+            [pizza],
+          ),
+        ).toEqual([{ perdida: "5.2500" }]);
       } finally {
         c.apagarPerillas();
       }
@@ -391,10 +397,10 @@ describe.skipIf(base === null)("stock: composiciones", () => {
           String(perdida),
         ).toEqual({
           ok: false,
-          error: "CANTIDAD_INVALIDA",
+          error: "PERDIDA_INVALIDA",
         });
       }
-      expect(await versiones(pizza)).toBe(1);
+      expect(await versiones(pizza)).toBe(2);
     });
 
     it("permisos: el operador no guarda (SIN_PERMISO); un administrador de una sola sucursal tampoco (la receta es de toda la empresa); con el módulo apagado nadie", async () => {
