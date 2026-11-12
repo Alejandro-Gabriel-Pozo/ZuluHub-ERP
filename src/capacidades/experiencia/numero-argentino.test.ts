@@ -111,6 +111,94 @@ describe("escribirNumero: el sistema pone los miles mientras se escribe", () => 
   });
 });
 
+describe("escribirNumero: casos exactos de borde", () => {
+  it("con el cursor al principio, el cursor queda al principio", () => {
+    expect(escribirNumero("8500", 0, IMPORTE)).toEqual({
+      texto: "8.500",
+      canonico: "8500.00",
+      cursor: 0,
+    });
+  });
+
+  it("si lo de delante del cursor se descarta (ceros), el cursor se acota al texto", () => {
+    expect(escribirNumero("007", 3, IMPORTE).cursor).toBe(1);
+    expect(escribirNumero("07", 2, IMPORTE)).toEqual({ texto: "7", canonico: "7.00", cursor: 1 });
+  });
+
+  it("la coma al principio muestra un 0: el cursor lo cuenta solo si ya pasó la coma", () => {
+    expect(escribirNumero(",", 0, IMPORTE)).toEqual({ texto: "0,", canonico: "0.00", cursor: 0 });
+    expect(escribirNumero(",", 1, IMPORTE)).toEqual({ texto: "0,", canonico: "0.00", cursor: 2 });
+    expect(escribirNumero(",5", 1, IMPORTE).cursor).toBe(2);
+    expect(escribirNumero(",5", 2, IMPORTE).cursor).toBe(3);
+    // Con parte entera no hay ningún cero agregado.
+    expect(escribirNumero("1,5", 2, IMPORTE).cursor).toBe(2);
+    expect(escribirNumero("1,5", 3, IMPORTE).cursor).toBe(3);
+  });
+
+  it("una segunda coma no entra, no mueve el cursor y lo que sigue sigue siendo decimal", () => {
+    expect(escribirNumero("1,2,3", 5, IMPORTE)).toEqual({
+      texto: "1,23",
+      canonico: "1.23",
+      cursor: 4,
+    });
+    expect(escribirNumero("1,,", 3, IMPORTE)).toEqual({ texto: "1,", canonico: "1.00", cursor: 2 });
+  });
+
+  it("el último decimal admitido entra y el siguiente no, con cualquier cantidad de decimales", () => {
+    expect(escribirNumero("1,23", 4, IMPORTE).texto).toBe("1,23");
+    expect(escribirNumero("1,234", 5, IMPORTE).texto).toBe("1,23");
+    expect(escribirNumero("1,2", 3, { decimales: 1, enterosMaximos: 5 }).texto).toBe("1,2");
+    expect(escribirNumero("1,23", 4, { decimales: 1, enterosMaximos: 5 }).texto).toBe("1,2");
+  });
+
+  it("los enteros máximos: exactamente el máximo entra y uno más se descarta", () => {
+    expect(escribirNumero("12345", 5, { decimales: 0, enterosMaximos: 5 }).canonico).toBe("12345");
+    expect(escribirNumero("123456", 6, { decimales: 0, enterosMaximos: 5 }).canonico).toBe("12345");
+  });
+
+  it("completar decimales: con 0 decimales no hay punto; con 1 o más se completan", () => {
+    expect(
+      escribirNumero("5", 1, { decimales: 0, enterosMaximos: 5, completarDecimales: true })
+        .canonico,
+    ).toBe("5");
+    expect(
+      escribirNumero("5", 1, { decimales: 1, enterosMaximos: 5, completarDecimales: true })
+        .canonico,
+    ).toBe("5.0");
+    expect(
+      escribirNumero("5,2", 3, { decimales: 3, enterosMaximos: 5, completarDecimales: true })
+        .canonico,
+    ).toBe("5.200");
+    expect(escribirNumero("5", 1, { decimales: 2, enterosMaximos: 5 }).canonico).toBe("5");
+    expect(escribirNumero("5,", 2, { decimales: 2, enterosMaximos: 5 }).canonico).toBe("5");
+    expect(escribirNumero("5,20", 4, { decimales: 2, enterosMaximos: 5 }).canonico).toBe("5.20");
+  });
+});
+
+describe("mostrarNumero: bordes", () => {
+  it("exactamente los enteros máximos se muestran y uno más se rechaza", () => {
+    expect(mostrarNumero("9".repeat(16), IMPORTE)).toBe("9.999.999.999.999.999,00");
+    expect(mostrarNumero("9".repeat(17), IMPORTE)).toBe("");
+    expect(mostrarNumero("12345", { decimales: 0, enterosMaximos: 5 })).toBe("12.345");
+    expect(mostrarNumero("123456", { decimales: 0, enterosMaximos: 5 })).toBe("");
+  });
+
+  it("completar decimales: 0 decimales no agrega coma; 1 o más completan con ceros", () => {
+    expect(mostrarNumero("5", { decimales: 0, enterosMaximos: 5, completarDecimales: true })).toBe(
+      "5",
+    );
+    expect(mostrarNumero("5", { decimales: 1, enterosMaximos: 5, completarDecimales: true })).toBe(
+      "5,0",
+    );
+    expect(
+      mostrarNumero("5.2", { decimales: 3, enterosMaximos: 5, completarDecimales: true }),
+    ).toBe("5,200");
+    expect(mostrarNumero("5.2", { decimales: 3, enterosMaximos: 5 })).toBe("5,2");
+    expect(mostrarNumero("5.2", { decimales: 1, enterosMaximos: 5 })).toBe("5,2");
+    expect(mostrarNumero("5.23", { decimales: 1, enterosMaximos: 5 })).toBe("");
+  });
+});
+
 describe("interpretarNumeroPegado: sin adivinar", () => {
   it.each([
     ["1.234,56", "1.234,56", "1234.56"],

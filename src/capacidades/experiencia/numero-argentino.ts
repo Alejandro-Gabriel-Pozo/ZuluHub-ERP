@@ -50,13 +50,12 @@ function conMiles(digitos: string): string {
 /** Arma lo que se ve y el canónico a partir de la parte entera y la decimal ya limpias (solo dígitos). `null` = sin coma. */
 function armar(enteraCruda: string, decimal: string | null, regla: ReglaDeNumero): NumeroEscrito {
   const entera = enteraCruda.replace(/^0+(?=\d)/, "").slice(0, regla.enterosMaximos) || "0";
-  const fraccion = decimal === null ? null : decimal.slice(0, regla.decimales);
-  const texto = fraccion === null ? conMiles(entera) : `${conMiles(entera)},${fraccion}`;
+  const texto = decimal === null ? conMiles(entera) : `${conMiles(entera)},${decimal}`;
   let canonico = entera;
   if (regla.completarDecimales === true && regla.decimales > 0) {
-    canonico = `${entera}.${(fraccion ?? "").padEnd(regla.decimales, "0")}`;
-  } else if (fraccion !== null && fraccion !== "") {
-    canonico = `${entera}.${fraccion}`;
+    canonico = `${entera}.${(decimal ?? "").padEnd(regla.decimales, "0")}`;
+  } else if (decimal !== null && decimal !== "") {
+    canonico = `${entera}.${decimal}`;
   }
   return { texto, canonico, cursor: texto.length };
 }
@@ -84,31 +83,31 @@ export function escribirNumero(
   cursorCrudo: number,
   regla: ReglaDeNumero,
 ): NumeroEscrito {
-  const tipeado = crudo;
-  const antes = tipeado.slice(0, cursorCrudo);
-  let coma = -1;
+  const todo = limpiar(crudo, regla);
+  if (todo.entera === "" && !todo.hayComa) return VACIO;
+  const armado = armar(todo.entera, todo.hayComa ? todo.decimal : null, regla);
+  // Lo que había delante del cursor, limpiado con la misma regla, dice cuántos caracteres significativos lo preceden.
+  const previo = limpiar(crudo.slice(0, cursorCrudo), regla);
+  // Una coma sin parte entera muestra un «0» que la persona no escribió: el cursor lo cuenta si ya pasó la coma.
+  const ceroAgregado = todo.entera === "" && previo.hayComa ? 1 : 0;
+  const significativos = previo.entera.length + previo.decimal.length + (previo.hayComa ? 1 : 0);
+  return { ...armado, cursor: cursorDespuesDe(armado.texto, significativos + ceroAgregado) };
+}
+
+/** Deja solo dígitos y una coma (con los decimales que admite la regla; sin decimales no hay coma): todo lo demás, puntos incluidos, se descarta. */
+function limpiar(texto: string, regla: ReglaDeNumero) {
   let entera = "";
   let decimal = "";
-  let significativosAntes = 0;
-  for (let i = 0; i < tipeado.length; i++) {
-    const c = tipeado[i] as string;
-    let cuenta = false;
+  let hayComa = false;
+  for (const c of texto) {
     if (c >= "0" && c <= "9") {
-      if (coma === -1) entera += c;
+      if (!hayComa) entera += c;
       else if (decimal.length < regla.decimales) decimal += c;
-      else continue;
-      cuenta = true;
-    } else if (c === "," && coma === -1 && regla.decimales > 0) {
-      coma = i;
-      cuenta = true;
+    } else if (c === "," && regla.decimales > 0) {
+      hayComa = true;
     }
-    if (cuenta && i < antes.length) significativosAntes++;
   }
-  if (entera === "" && coma === -1) return VACIO;
-  const armado = armar(entera, coma === -1 ? null : decimal, regla);
-  // Una coma sin parte entera muestra un «0» que la persona no escribió: el cursor lo cuenta si ya pasó la coma.
-  const ceroAgregado = entera === "" && significativosAntes > 0 ? 1 : 0;
-  return { ...armado, cursor: cursorDespuesDe(armado.texto, significativosAntes + ceroAgregado) };
+  return { entera, decimal, hayComa };
 }
 
 /** Parte entera pegada: cero, dígitos sin ceros a la izquierda, o con miles bien puestos (grupos de tres tras un primer grupo de 1 a 3). */
