@@ -3,9 +3,18 @@ import { errorDeCodigo } from "../capacidades/experiencia/respuesta";
 import type { CodigoDeCaja } from "../capacidades/experiencia/respuesta-de-caja";
 import type { MotivoDeRechazo } from "../capacidades/permisos/guard";
 import type {
+  ErrorAlCambiarElEstadoDeUnaCuentaDeCobro,
+  ErrorAlCrearCaja,
+  ErrorAlCrearCuentaDeCobro,
   ErrorAlCrearMedioDePago,
+  ErrorAlDesactivarCaja,
   ErrorAlDesactivarMedioDePago,
+  ErrorAlEditarCaja,
+  ErrorAlEditarCuentaDeCobro,
   ErrorAlEditarMedioDePago,
+  ErrorAlListarCajas,
+  ErrorAlListarCuentasDeCobro,
+  ErrorAlReactivarCaja,
   ErrorAlReactivarMedioDePago,
 } from "../modulos/caja/publico";
 import { err, type Resultado } from "../primitivas/resultado/resultado";
@@ -21,37 +30,64 @@ import type { ErrorDeEntrada } from "./entradas-de-facturacion";
  * Previene: que un error de caja salga crudo a la pantalla o que se invente un texto por cada regla del dominio.
  */
 
-type ErrorDeMedio =
+type ErrorDeConfiguracion =
   | ErrorAlCrearMedioDePago
   | ErrorAlEditarMedioDePago
   | ErrorAlDesactivarMedioDePago
-  | ErrorAlReactivarMedioDePago;
+  | ErrorAlReactivarMedioDePago
+  | ErrorAlCrearCuentaDeCobro
+  | ErrorAlEditarCuentaDeCobro
+  | ErrorAlCambiarElEstadoDeUnaCuentaDeCobro
+  | ErrorAlListarCuentasDeCobro
+  | ErrorAlCrearCaja
+  | ErrorAlEditarCaja
+  | ErrorAlDesactivarCaja
+  | ErrorAlReactivarCaja
+  | ErrorAlListarCajas;
 
 /** Los errores del dominio que son un texto propio de caja (los motivos del guard y los códigos de otros módulos tienen el suyo). */
-type ErrorPropioDeMedio = Exclude<Extract<ErrorDeMedio, string>, MotivoDeRechazo>;
+type ErrorPropio = Exclude<Extract<ErrorDeConfiguracion, string>, MotivoDeRechazo>;
 
-const CODIGO_DE_ERROR_PROPIO: Readonly<Record<ErrorPropioDeMedio, CodigoDeCaja>> = {
+const CODIGO_DE_ERROR_PROPIO: Readonly<Record<ErrorPropio, CodigoDeCaja>> = {
   MEDIO_DUPLICADO: "CAJA_MEDIO_REPETIDO",
   MEDIO_INACTIVO_CON_ESE_NOMBRE: "CAJA_MEDIO_REPETIDO",
+  CUENTA_DUPLICADA: "CAJA_CUENTA_REPETIDA",
+  CAJA_DUPLICADA: "CAJA_CAJA_REPETIDA",
+  CAJA_INACTIVA_CON_ESE_NOMBRE: "CAJA_CAJA_REPETIDA",
+  IDENTIFICADOR_EXTERNO_INVALIDO: "CAJA_IDENTIFICADOR_INVALIDO",
   TIPO_DE_MEDIO_INVALIDO: "CAJA_ACCION_NO_PERMITIDA",
   NOMBRE_DE_MEDIO_INVALIDO: "CAJA_ACCION_NO_PERMITIDA",
   EFECTIVO_YA_EXISTE: "CAJA_ACCION_NO_PERMITIDA",
   EFECTIVO_NO_SE_DESACTIVA: "CAJA_ACCION_NO_PERMITIDA",
   MEDIO_NO_ENCONTRADO: "CAJA_ACCION_NO_PERMITIDA",
   VERSION_DESACTUALIZADA: "CAJA_ACCION_NO_PERMITIDA",
+  TIPO_DE_CUENTA_INVALIDO: "CAJA_ACCION_NO_PERMITIDA",
+  NOMBRE_DE_CUENTA_INVALIDO: "CAJA_ACCION_NO_PERMITIDA",
+  NOMBRE_DE_CAJA_INVALIDO: "CAJA_ACCION_NO_PERMITIDA",
+  CUENTA_DE_COBRO_NO_ENCONTRADA: "CAJA_ACCION_NO_PERMITIDA",
+  CAJA_NO_ENCONTRADA: "CAJA_ACCION_NO_PERMITIDA",
+  CAJA_CON_SESION_VIGENTE: "CAJA_ACCION_NO_PERMITIDA",
+  SUCURSAL_NO_ENCONTRADA: "CAJA_ACCION_NO_PERMITIDA",
+  SUCURSAL_INACTIVA: "CAJA_ACCION_NO_PERMITIDA",
+  SUCURSAL_FUERA_DE_ALCANCE: "CAJA_ACCION_NO_PERMITIDA",
 };
 
-const CODIGO_DEL_DATO_NO_ADMITIDO = "DATO_NO_ADMITIDO_POR_EL_MEDIO";
+/** Los errores con forma de objeto que son del negocio y no tienen texto propio: el dato que el medio no admite y los límites del plan (la caja de más). Todos, el genérico. */
+const CODIGOS_DE_OBJETO_GENERICOS: ReadonlySet<string> = new Set([
+  "DATO_NO_ADMITIDO_POR_EL_MEDIO",
+  "LIMITE_DEL_PLAN",
+  "FUNCION_NO_INCLUIDA",
+]);
 
 /** El error del caso de uso tal como lo entiende `aRespuesta`: un código público de caja o, si no es de caja, el mismo error. */
 export function traducirErrorDeCaja(error: unknown): unknown {
   if (typeof error === "string" && Object.hasOwn(CODIGO_DE_ERROR_PROPIO, error)) {
-    return { codigo: CODIGO_DE_ERROR_PROPIO[error as ErrorPropioDeMedio] };
+    return { codigo: CODIGO_DE_ERROR_PROPIO[error as ErrorPropio] };
   }
   if (
     typeof error === "object" &&
     error !== null &&
-    (error as { codigo?: unknown }).codigo === CODIGO_DEL_DATO_NO_ADMITIDO
+    CODIGOS_DE_OBJETO_GENERICOS.has(String((error as { codigo?: unknown }).codigo))
   ) {
     return { codigo: "CAJA_ACCION_NO_PERMITIDA" satisfies CodigoDeCaja };
   }

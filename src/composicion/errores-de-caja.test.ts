@@ -15,6 +15,19 @@ describe("traducirErrorDeCaja", () => {
     ["EFECTIVO_NO_SE_DESACTIVA", "CAJA_ACCION_NO_PERMITIDA"],
     ["MEDIO_NO_ENCONTRADO", "CAJA_ACCION_NO_PERMITIDA"],
     ["VERSION_DESACTUALIZADA", "CAJA_ACCION_NO_PERMITIDA"],
+    ["CUENTA_DUPLICADA", "CAJA_CUENTA_REPETIDA"],
+    ["CAJA_DUPLICADA", "CAJA_CAJA_REPETIDA"],
+    ["CAJA_INACTIVA_CON_ESE_NOMBRE", "CAJA_CAJA_REPETIDA"],
+    ["IDENTIFICADOR_EXTERNO_INVALIDO", "CAJA_IDENTIFICADOR_INVALIDO"],
+    ["TIPO_DE_CUENTA_INVALIDO", "CAJA_ACCION_NO_PERMITIDA"],
+    ["NOMBRE_DE_CUENTA_INVALIDO", "CAJA_ACCION_NO_PERMITIDA"],
+    ["NOMBRE_DE_CAJA_INVALIDO", "CAJA_ACCION_NO_PERMITIDA"],
+    ["CUENTA_DE_COBRO_NO_ENCONTRADA", "CAJA_ACCION_NO_PERMITIDA"],
+    ["CAJA_NO_ENCONTRADA", "CAJA_ACCION_NO_PERMITIDA"],
+    ["CAJA_CON_SESION_VIGENTE", "CAJA_ACCION_NO_PERMITIDA"],
+    ["SUCURSAL_NO_ENCONTRADA", "CAJA_ACCION_NO_PERMITIDA"],
+    ["SUCURSAL_INACTIVA", "CAJA_ACCION_NO_PERMITIDA"],
+    ["SUCURSAL_FUERA_DE_ALCANCE", "CAJA_ACCION_NO_PERMITIDA"],
   ])("%s sale como %s", (error, codigo) => {
     expect(traducirErrorDeCaja(error)).toEqual({ codigo });
   });
@@ -24,6 +37,16 @@ describe("traducirErrorDeCaja", () => {
       traducirErrorDeCaja({ codigo: "DATO_NO_ADMITIDO_POR_EL_MEDIO", dato: "cuotas" }),
     ).toEqual({ codigo: "CAJA_ACCION_NO_PERMITIDA" });
   });
+
+  it.each([
+    { codigo: "LIMITE_DEL_PLAN", perilla: "cajas_por_sucursal", limite: 1, usoActual: 1 },
+    { codigo: "FUNCION_NO_INCLUIDA", perilla: "cajas_por_sucursal" },
+  ])(
+    "un límite del plan o una función que el plan no incluye sale como el genérico (%j)",
+    (error) => {
+      expect(traducirErrorDeCaja(error)).toEqual({ codigo: "CAJA_ACCION_NO_PERMITIDA" });
+    },
+  );
 
   it.each([
     "SIN_PERMISO",

@@ -1,6 +1,6 @@
 import { texto } from "../../../../../../../../../src/capacidades/vocabulario/vocabulario";
 import { pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
-import { accionesDeMediosDePago } from "../../../../../../../servidor/modulos";
+import { accionesDeLaListaDeCaja } from "../../../../../../../servidor/modulos";
 import { FormularioDeMedio } from "../../../../../../../ui/plantillas/caja/FormularioDeMedio.cliente";
 import { opcionesDeTipo } from "../../../../../../../ui/plantillas/caja/modelo-de-medios-de-pago";
 import { agregarMedioAccion } from "../../../../acciones-de-medios-de-pago";
@@ -18,7 +18,7 @@ export default async function PaginaDeAltaDeMedio() {
         nombre: texto({}, "caja.campo.nombre_opcional"),
         guardar: texto({}, "caja.accion.guardar"),
       }}
-      puedeGuardar={(await accionesDeMediosDePago(contexto)).agregar}
+      puedeGuardar={(await accionesDeLaListaDeCaja(contexto, "medios_de_pago")).agregar}
     />
   ));
 }

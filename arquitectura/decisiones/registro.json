@@ -1515,61 +1515,111 @@
   {
     "id": "DEC-0341",
     "fecha": "2026-11-12",
-    "quien": "sesión",
+    "quien": "dueño",
     "tipo": "DATOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "El rol público lee el precio de la carta con `precio_vigente` (como la caja): tiene SELECT sobre las 13 columnas de `precio_de_venta`, incluida `cargado_por`, que no sale del adaptador.",
     "que_cambia": "Solo un privilegio de lectura; una prueba fija las 13 columnas. Revertir: arma la fila sin `cargado_por` en la función (medio día) o vigencia en TypeScript (un día). Deuda: antes del primer cliente.",
-    "donde": "migraciones/0044_lectura_publica_de_carta.sql; test/integracion/carta-publica-lectura.test.ts; Pedernal-docs 11-especificaciones/carta-real-especificacion.md §3.3 y §4 (T-5); decidido por el orquestador (opción a), 12/11/2026"
+    "donde": "migraciones/0044_lectura_publica_de_carta.sql; test/integracion/carta-publica-lectura.test.ts; carta-real-especificacion.md §3.3 y §4 (T-5); orquestador, opción a, 12/11/2026; Aprobada por el dueño el 12/11/2026, decisiones-del-dueno-2026-11.md."
   },
   {
     "id": "DEC-0342",
     "fecha": "2026-11-12",
-    "quien": "sesión",
+    "quien": "dueño",
     "tipo": "DATOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "La ficha del dato «nombre del medio de pago» es el dominio de caja (configuracion.ts) y no una primitiva nueva.",
     "que_cambia": "Solo la ruta de la ficha en el registro de datos; el largo y el conjunto permitido ya viven ahí una vez. Revertir: mover la validación a una primitiva y apuntar la ruta.",
-    "donde": "src/capacidades/datos/registro.ts; Pedernal-docs 01-vision/primitivas-de-negocio.md regla 5"
+    "donde": "src/capacidades/datos/registro.ts; Pedernal-docs 01-vision/primitivas-de-negocio.md regla 5; Aprobada por el dueño el 12/11/2026, decisiones-del-dueno-2026-11.md."
   },
   {
     "id": "DEC-0343",
     "fecha": "2026-11-12",
-    "quien": "sesión",
+    "quien": "dueño",
     "tipo": "DATOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Los textos de error de caja llevan la clave caja.error.* (el prefijo de su módulo) y no la forma error.codigo de los demás códigos públicos.",
     "que_cambia": "Solo el nombre de la clave del texto; la prueba de códigos públicos exceptúa los de caja. Revertir: renombrar dos claves y quitar la excepción.",
-    "donde": "src/capacidades/experiencia/respuesta-de-caja.ts; Pedernal-docs 11-especificaciones/00-registro-de-contratos.md"
+    "donde": "src/capacidades/experiencia/respuesta-de-caja.ts; Pedernal-docs 11-especificaciones/00-registro-de-contratos.md; Aprobada por el dueño el 12/11/2026, decisiones-del-dueno-2026-11.md."
   },
   {
     "id": "DEC-0344",
     "fecha": "2026-11-12",
-    "quien": "sesión",
+    "quien": "dueño",
     "tipo": "DATOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "En Medios de pago todo rechazo del dominio salvo el nombre repetido sale con el aviso genérico «Esta acción no está permitida».",
     "que_cambia": "Solo qué texto ve la persona; la maqueta aprobada tiene esos dos avisos. Revertir: mapear un código más y sumar su texto aprobado.",
-    "donde": "src/composicion/errores-de-caja.ts; Pedernal-docs 10-ux-ui/prototipos-gastronomia/medios.html"
+    "donde": "src/composicion/errores-de-caja.ts; Pedernal-docs 10-ux-ui/prototipos-gastronomia/medios.html; Aprobada por el dueño el 12/11/2026, decisiones-del-dueno-2026-11.md."
   },
   {
     "id": "DEC-0345",
     "fecha": "2026-11-12",
-    "quien": "sesión",
+    "quien": "dueño",
     "tipo": "DATOS",
-    "estado": "PENDIENTE_DE_OK",
+    "estado": "CONFIRMADA",
     "decision": "Editar un medio de pago vuelve a mandar los datos del cobro que el medio ya tiene y solo cambia el nombre.",
     "que_cambia": "Nada visible: el caso de uso exige el conjunto final de datos y la versión protege contra un cambio ajeno. Revertir: que la pantalla de datos opcionales pase a ser la única que los toca.",
-    "donde": "src/composicion/medios-de-pago-web.ts; Pedernal-docs 11-especificaciones/caja-y-cobros.md decisión 129"
+    "donde": "src/composicion/medios-de-pago-web.ts; Pedernal-docs 11-especificaciones/caja-y-cobros.md decisión 129; Aprobada por el dueño el 12/11/2026, decisiones-del-dueno-2026-11.md."
   },
   {
     "id": "DEC-0346",
     "fecha": "2026-11-12",
+    "quien": "dueño",
+    "tipo": "DATOS",
+    "estado": "CONFIRMADA",
+    "decision": "Las tarjetas de Medios de pago apagan el botón sin permiso y no muestran el aviso genérico que la maqueta muestra en su estado Sin permiso.",
+    "que_cambia": "Solo una ayuda visual: el servidor rechaza igual. Revertir: mostrar el aviso con el texto ya aprobado, una línea.",
+    "donde": "apps/web/ui/plantillas/caja/PantallaDeMediosDePago.tsx; Pedernal-docs 10-ux-ui/prototipos-gastronomia/medios.html; Aprobada por el dueño el 12/11/2026, decisiones-del-dueno-2026-11.md."
+  },
+  {
+    "id": "DEC-0347",
+    "fecha": "2026-11-12",
     "quien": "sesión",
     "tipo": "DATOS",
     "estado": "PENDIENTE_DE_OK",
-    "decision": "Las tarjetas de Medios de pago apagan el botón sin permiso y no muestran el aviso genérico que la maqueta muestra en su estado Sin permiso.",
-    "que_cambia": "Solo una ayuda visual: el servidor rechaza igual. Revertir: mostrar el aviso con el texto ya aprobado, una línea.",
-    "donde": "apps/web/ui/plantillas/caja/PantallaDeMediosDePago.tsx; Pedernal-docs 10-ux-ui/prototipos-gastronomia/medios.html"
+    "decision": "Al editar una cuenta de cobro el tipo no se cambia: el selector sale apagado, aunque el prototipo lo deja editable.",
+    "que_cambia": "Solo qué campos se pueden tocar al editar; el caso de uso de editar no admite el tipo. Revertir: sumar el tipo al caso de uso y a su auditoría.",
+    "donde": "apps/web/ui/plantillas/caja/FormularioDeCuenta.cliente.tsx; Pedernal-docs 10-ux-ui/prototipos-gastronomia/medios.html"
+  },
+  {
+    "id": "DEC-0348",
+    "fecha": "2026-11-12",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "La caja nueva se agrega a la sucursal elegida en el dispositivo, que fija el servidor; sin sucursal elegida sale el aviso genérico y nunca se asume «todas».",
+    "que_cambia": "Solo de dónde sale la sucursal de una caja nueva; la maqueta no tiene selector de sucursal en el formulario de caja. Revertir: sumar el selector como el de cuentas.",
+    "donde": "apps/web/servidor/cajas.ts; Pedernal-docs 11-especificaciones/caja-y-cobros.md"
+  },
+  {
+    "id": "DEC-0349",
+    "fecha": "2026-11-12",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Las tres pantallas de la configuración de caja se enlazan con pestañas de tres enlaces con los títulos ya aprobados; no hay entrada de menú.",
+    "que_cambia": "Solo la navegación entre las tres pantallas; la maqueta tiene las pestañas. Revertir: quitar el componente de pestañas.",
+    "donde": "apps/web/ui/plantillas/caja/PestanasDeCaja.tsx; Pedernal-docs 10-ux-ui/prototipos-gastronomia/medios.html"
+  },
+  {
+    "id": "DEC-0350",
+    "fecha": "2026-11-12",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El límite de cajas del plan, la caja con sesión abierta y la sucursal fuera de alcance salen con el aviso genérico, y el identificador inválido con su texto aprobado.",
+    "que_cambia": "Solo qué texto ve la persona; la maqueta aprobada tiene esos avisos. Revertir: mapear un código más y sumar su texto aprobado.",
+    "donde": "src/composicion/errores-de-caja.ts; Pedernal-docs 10-ux-ui/prototipos-gastronomia/medios.html"
+  },
+  {
+    "id": "DEC-0351",
+    "fecha": "2026-11-12",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Una cuenta de cobro es de UNA sola sucursal, siempre elegida: la pantalla no ofrece «todas las sucursales» aunque el documento de caja lo permite.",
+    "que_cambia": "Solo qué ofrece el selector de sucursal; la maqueta aprobada exige elegir una. Revertir: permitir una cuenta sin sucursal en el caso de uso, la base y el selector.",
+    "donde": "src/composicion/cuentas-de-cobro-web.ts; Pedernal-docs 11-especificaciones/caja-y-cobros.md y 10-ux-ui/prototipos-gastronomia/medios.html"
   }
 ]

@@ -522,9 +522,9 @@
     "pruebas": "src/modulos/catalogo/dominio"
   },
   {
-    "grupo": "web (modelo de «Medios de pago»)",
-    "archivos": "apps/web/ui/plantillas/caja/modelo-de-medios-de-pago.ts",
+    "grupo": "web (modelos de la configuración de caja)",
+    "archivos": "apps/web/ui/plantillas/caja/modelo-de-medios-de-pago.ts,apps/web/ui/plantillas/caja/modelo-de-cuentas-de-cobro.ts,apps/web/ui/plantillas/caja/modelo-de-cajas.ts,apps/web/ui/plantillas/caja/lista-de-caja.ts,apps/web/ui/plantillas/caja/pestanas-de-caja.ts",
     "minutos": 1.0,
-    "pruebas": "test/web/medios-de-pago-modelo.test.ts"
+    "pruebas": "test/web/medios-de-pago-modelo.test.ts test/web/cuentas-y-cajas-modelo.test.ts"
   }
 ]
