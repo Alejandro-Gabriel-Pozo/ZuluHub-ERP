@@ -592,9 +592,15 @@ describe.skipIf(base === null)("puerto de cobrar: la caja para ventas", () => {
         datosCompletados: ["cupon", "ultimos4", "marca", "cuotas"],
       });
       const texto = JSON.stringify(fila?.despues);
+      // Los últimos 4 dígitos («4242») se buscan fuera de los uuid del registro: ahí caen por azar (~0,2 % de las corridas) y
+      // darían un falso positivo; un uuid nunca es el valor de un dato de la tarjeta.
+      const sinUuid = texto.replace(
+        /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g,
+        "",
+      );
       for (const secreto of ["ZX-9981", "4242", visa, `cobro_${entrada.origen.id}`]) {
         if (secreto === visa) continue; // el id de la marca no es un secreto, pero el valor tampoco se guarda (se comprueba abajo)
-        expect(texto.includes(secreto), secreto).toBe(false);
+        expect((secreto === "4242" ? sinUuid : texto).includes(secreto), secreto).toBe(false);
       }
       expect(texto.includes(visa)).toBe(false);
       expect(texto).not.toMatch(/huella|clave/i);
