@@ -6,6 +6,7 @@
  */
 
 import { cuitParaMostrar } from "../../../../../src/primitivas/identificacion-fiscal/cuit";
+import { documentoMientrasSeEscribe } from "../../../../../src/primitivas/identificacion-fiscal/documento-tipeado";
 
 const DECIMAL = /^(-?)([0-9]+)(?:\.([0-9]+))?$/;
 const FECHA_CIVIL = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/;
@@ -65,7 +66,7 @@ export function formatearFecha(texto: string): string {
 /** El CUIT, CUIL o CDI con guiones («20-12345678-9») y el DNI con puntos («12.345.678»); el resto, tal cual. */
 export function formatearNumeroDeDocumento(tipo: string, numero: string): string {
   if (!/^[0-9]+$/.test(numero)) return numero;
-  if (tipo === "DNI") return conMiles(numero);
+  if (tipo === "DNI") return documentoMientrasSeEscribe("DNI", numero);
   if (tipo === "CUIT" || tipo === "CUIL" || tipo === "CDI") return cuitParaMostrar(numero);
   return numero;
 }

@@ -46,7 +46,7 @@ export function documentoElegidoDe(valor: string): DocumentoElegido | null {
 
 export type ClienteEscrito = Readonly<{
   documento: DocumentoElegido;
-  /** Lo tipeado, tal cual: el servidor lo valida y lo guarda en su forma canónica (`primitivas/identificacion-fiscal/documento`). */
+  /** El número en su forma canónica (solo dígitos, o el pasaporte en mayúsculas; el campo da el formato): el servidor lo vuelve a validar (`primitivas/identificacion-fiscal/documento`). */
   numero: string;
   nombre: string;
   /** Una línea libre; solo se pide y se manda si el cliente no es el consumidor final. */
@@ -64,7 +64,8 @@ export const clienteInicial: ClienteEscrito = {
 };
 
 export function conDocumento(c: ClienteEscrito, documento: DocumentoElegido): ClienteEscrito {
-  return { ...c, documento };
+  // Cada tipo escribe y da formato distinto a su número: al cambiar de tipo se limpia (recortar un CUIT a DNI dejaría un documento válido pero equivocado).
+  return { ...c, documento, numero: "" };
 }
 
 /** El consumidor final no escribe nada más: se manda sin documento ni nombre y con su condición (D-24). */

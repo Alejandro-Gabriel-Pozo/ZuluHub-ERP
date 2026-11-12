@@ -190,6 +190,7 @@ export type DatoDeCampo = IdDeDato | typeof DATO_PENDIENTE;
 export const COMPONENTES_DE_CAMPO = [
   "apps/web/ui/componentes/Campo.tsx",
   "apps/web/ui/componentes/CampoDeCodigo.tsx",
+  "apps/web/ui/componentes/CampoDeDocumento.tsx",
   "apps/web/ui/componentes/CampoImporte.tsx",
   "apps/web/ui/componentes/CampoNumero.tsx",
   "apps/web/ui/componentes/Selector.tsx",

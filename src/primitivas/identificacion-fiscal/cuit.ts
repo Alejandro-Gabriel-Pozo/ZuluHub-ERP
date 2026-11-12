@@ -13,7 +13,9 @@ export type Cuit = Marca<string, "Cuit">;
 export type ErrorDeCuit = "CUIT_FORMATO_INVALIDO" | "CUIT_DIGITO_VERIFICADOR_INVALIDO";
 
 const PESOS = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2] as const;
-const FORMA_CANONICA = /^[0-9]{11}$/;
+/** Los dígitos de un CUIT, CUIL o CDI (una sola vez): lo usan la forma canónica y lo que se escribe en pantalla. */
+export const LARGO_DE_CUIT = 11;
+const FORMA_CANONICA = new RegExp(`^[0-9]{${LARGO_DE_CUIT}}$`);
 const FORMA_CON_GUIONES = /^([0-9]{2})-([0-9]{8})-([0-9])$/;
 
 /** Dígito verificador que corresponde a los primeros diez dígitos (el resto se ignora), o `null` si no existe. */
@@ -35,14 +37,30 @@ export function cuitDesdeTexto(texto: string): Resultado<Cuit, ErrorDeCuit> {
   return ok(digitos as Cuit);
 }
 
-const ONCE_DIGITOS = /^[0-9]{11}$/;
-
 /**
  * `30-70308853-4`: para mostrar. La forma canónica es la que se guarda. Es la ÚNICA función que arma el CUIT con guiones (la web y la
  * consola de plataforma la importan; antes cada una tenía su copia). Previene: tres formatos que se desvían con el tiempo.
  */
 export function cuitConGuiones(cuit: Cuit): string {
-  return `${cuit.slice(0, 2)}-${cuit.slice(2, 10)}-${cuit.slice(10)}`;
+  return cuitMientrasSeEscribe(cuit);
+}
+
+/** Dónde terminan el prefijo (`XX`) y el número (`XXXXXXXX`); lo que sigue es el dígito verificador. */
+const FIN_DEL_PREFIJO = 2;
+const FIN_DEL_NUMERO = 10;
+
+/**
+ * Los dígitos de un CUIT a medida que se escriben, con sus guiones puestos solo cuando ya hay un dígito detrás (`2`, `20`, `20-1`,
+ * `20-12345678`, `20-12345678-9`): nunca queda un guion colgado. Con los 11 dígitos es `cuitConGuiones`: una sola función arma la forma.
+ */
+export function cuitMientrasSeEscribe(digitos: string): string {
+  return [
+    digitos.slice(0, FIN_DEL_PREFIJO),
+    digitos.slice(FIN_DEL_PREFIJO, FIN_DEL_NUMERO),
+    digitos.slice(FIN_DEL_NUMERO),
+  ]
+    .filter((grupo) => grupo !== "")
+    .join("-");
 }
 
 /**
@@ -51,5 +69,5 @@ export function cuitConGuiones(cuit: Cuit): string {
  * `cuitDesdeTexto`, así que nunca lanza.
  */
 export function cuitParaMostrar(texto: string): string {
-  return ONCE_DIGITOS.test(texto) ? cuitConGuiones(texto as Cuit) : texto;
+  return FORMA_CANONICA.test(texto) ? cuitConGuiones(texto as Cuit) : texto;
 }
