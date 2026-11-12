@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { cuitConGuiones, cuitDesdeTexto, cuitParaMostrar, digitoVerificadorDeCuit } from "./cuit";
+import {
+  cuitConGuiones,
+  cuitDesdeTexto,
+  cuitMientrasSeEscribe,
+  cuitParaMostrar,
+  digitoVerificadorDeCuit,
+  LARGO_DE_CUIT,
+} from "./cuit";
 
 describe("CUIT", () => {
   it.each([
@@ -100,5 +107,27 @@ describe("cuitParaMostrar", () => {
       expect(() => cuitParaMostrar(texto)).not.toThrow();
       expect(cuitParaMostrar(texto)).toBe(texto);
     }
+  });
+});
+
+describe("cuitMientrasSeEscribe", () => {
+  it.each([
+    ["", ""],
+    ["2", "2"],
+    ["20", "20"],
+    ["201", "20-1"],
+    ["2012345678", "20-12345678"],
+    ["20123456786", "20-12345678-6"],
+  ])(
+    "«%s» se ve «%s» (el guion aparece recién cuando hay un dígito detrás)",
+    (digitos, visible) => {
+      expect(cuitMientrasSeEscribe(digitos)).toBe(visible);
+    },
+  );
+
+  it("con los dígitos de un CUIT es la forma con guiones: una sola función la arma", () => {
+    expect(LARGO_DE_CUIT).toBe(11);
+    const r = cuitDesdeTexto("20123456786");
+    expect(r.ok && cuitMientrasSeEscribe(r.valor)).toBe("20-12345678-6");
   });
 });

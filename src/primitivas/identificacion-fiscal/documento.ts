@@ -45,8 +45,12 @@ export type TipoDeDocumentoDeIdentidad = (typeof TIPOS_DE_DOCUMENTO_DE_IDENTIDAD
 
 export type ErrorDeDocumento = "DOCUMENTO_INVALIDO";
 
+export const LARGO_MINIMO_DE_DNI = 6;
+export const LARGO_MAXIMO_DE_DNI = 9;
 /** DNI: sin ceros a la izquierda, de 6 a 9 dígitos. */
-export const FORMATO_DE_DNI = /^[1-9][0-9]{5,8}$/;
+export const FORMATO_DE_DNI = new RegExp(
+  `^[1-9][0-9]{${LARGO_MINIMO_DE_DNI - 1},${LARGO_MAXIMO_DE_DNI - 1}}$`,
+);
 /**
  * DNI escrito con puntos de miles: un primer grupo de 1 a 3 dígitos y uno o dos grupos de 3 (`1.234.567`, `12.345.678`).
  * Es la lista de lo PERMITIDO (P1): cualquier otro uso del punto o cualquier espacio no entra. Después se exige la forma canónica.

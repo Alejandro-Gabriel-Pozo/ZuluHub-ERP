@@ -40,6 +40,16 @@ function conMayusculas(texto: string): string {
   return texto.replace(/[a-z]/g, (letra) => letra.toUpperCase());
 }
 
+/**
+ * Lo que queda de lo que se escribe en el campo del pasaporte: las minúsculas pasan a mayúsculas, lo que no está en el conjunto permitido
+ * se descarta y se corta en el largo máximo. No valida el largo mínimo: eso es `pasaporteDesdeTexto`, al terminar.
+ */
+export function pasaporteMientrasSeEscribe(texto: string): string {
+  return conMayusculas(texto)
+    .replace(new RegExp(`[^${CARACTERES_PERMITIDOS_DE_PASAPORTE}]`, "g"), "")
+    .slice(0, LARGO_MAXIMO_DE_PASAPORTE);
+}
+
 export function pasaporteDesdeTexto(texto: string): Resultado<Pasaporte, ErrorDePasaporte> {
   const figura = conMayusculas(texto);
   return FORMATO_DE_PASAPORTE.test(figura) ? ok(figura as Pasaporte) : err("PASAPORTE_INVALIDO");
