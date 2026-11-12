@@ -5,6 +5,7 @@ import {
   LARGO_MAXIMO_DEL_RUBRO_DE_CARTA,
   codigoDeCartaDesdeTexto,
   lugarDeCartaDesdeTexto,
+  mensajeDePortadaDesdeTexto,
   nombreDeCartaDesdeTexto,
   rubroDeCartaDesdeTexto,
 } from "./datos-de-carta-publica";
@@ -13,6 +14,7 @@ const TEXTOS = [
   ["nombre", nombreDeCartaDesdeTexto, LARGO_MAXIMO_DEL_NOMBRE_DE_CARTA, 80],
   ["rubro", rubroDeCartaDesdeTexto, LARGO_MAXIMO_DEL_RUBRO_DE_CARTA, 40],
   ["lugar", lugarDeCartaDesdeTexto, LARGO_MAXIMO_DEL_LUGAR_DE_CARTA, 120],
+  ["mensaje de la portada", mensajeDePortadaDesdeTexto, 60, 60],
 ] as const;
 
 describe.each(TEXTOS)("%s de la carta", (_dato, convertir, maximo, esperado) => {

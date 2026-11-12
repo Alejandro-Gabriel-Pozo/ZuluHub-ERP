@@ -18,6 +18,8 @@ export type CartaPublica = Readonly<{
   nombre: string;
   rubro: string | null;
   lugar: string | null;
+  /** La tercera línea de la portada (texto libre); nulo = sin mensaje y la pantalla muestra el adorno de siempre. */
+  mensajeDePortada: string | null;
   estado: EstadoDeCarta;
   version: number;
 }>;

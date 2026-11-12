@@ -15,6 +15,8 @@ export type TablasDeCarta = {
     nombre: string;
     rubro: string | null;
     lugar: string | null;
+    /** La tercera línea de la portada; nulo = sin mensaje. */
+    mensaje_de_portada: string | null;
     estado: Generated<string>;
     creado_por: string | null;
     creado_en: Generated<Date>;
@@ -44,6 +46,7 @@ export const COLUMNAS_DE_CARTA = {
     "nombre",
     "rubro",
     "lugar",
+    "mensaje_de_portada",
     "estado",
     "creado_por",
     "creado_en",
@@ -78,6 +81,7 @@ export const ERRORES_DE_CARTA_POR_RESTRICCION: Readonly<Record<string, string>> 
   carta_publica_nombre_ck: "NOMBRE_DE_CARTA_INVALIDO",
   carta_publica_rubro_ck: "RUBRO_DE_CARTA_INVALIDO",
   carta_publica_lugar_ck: "LUGAR_DE_CARTA_INVALIDO",
+  carta_publica_mensaje_ck: "MENSAJE_DE_PORTADA_INVALIDO",
   carta_publica_estado_ck: "NO_TRADUCIDA",
   carta_publica_codigo_inmutable: "NO_TRADUCIDA",
   carta_publica_sucursal_inmutable: "NO_TRADUCIDA",

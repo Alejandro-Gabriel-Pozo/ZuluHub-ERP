@@ -76,6 +76,7 @@ describe.skipIf(base === null)(
       nombre: "Parador El Ensayo",
       rubro: null,
       lugar: null,
+      mensajeDePortada: null,
       estado: "FUERA_DE_LINEA" as const,
       creadoPor: personaId(e.persona),
       ...datos,
@@ -99,6 +100,7 @@ describe.skipIf(base === null)(
           nombre: "¿Querés papas?",
           rubro: "Parrilla",
           lugar: "Huinganco",
+          mensajeDePortada: "Desliza para ver el menú",
         });
         expect(
           valor(await como(a, (r) => r.cartasPublicas.insertar(empresaId(a.empresa), nueva))),
@@ -114,6 +116,7 @@ describe.skipIf(base === null)(
           nombre: "¿Querés papas?",
           rubro: "Parrilla",
           lugar: "Huinganco",
+          mensajeDePortada: "Desliza para ver el menú",
           estado: "FUERA_DE_LINEA",
           version: 1,
         });
@@ -243,6 +246,7 @@ describe.skipIf(base === null)(
           nombre: "Otro nombre",
           rubro: "Café",
           lugar: null,
+          mensajeDePortada: "¡Bienvenidos!",
           estado: "EN_LINEA" as const,
         };
         const editada = valor(
@@ -293,6 +297,7 @@ describe.skipIf(base === null)(
                   nombre: nombres[i] as string,
                   rubro: null,
                   lugar: null,
+                  mensajeDePortada: null,
                   estado: "EN_LINEA",
                 }),
               ),
@@ -329,6 +334,18 @@ describe.skipIf(base === null)(
             await intentar({ lugar: "a".repeat(LARGO_MAXIMO_DEL_LUGAR_DE_CARTA + 1) }, a.s1),
           ),
         ).toBe("carta_publica_lugar_ck");
+        expect(restriccion(await intentar({ mensajeDePortada: "a".repeat(61) }, a.s1))).toBe(
+          "carta_publica_mensaje_ck",
+        );
+        expect(ERRORES_DE_CATALOGO_POR_RESTRICCION["carta_publica_mensaje_ck"]).toBe(
+          "MENSAJE_DE_PORTADA_INVALIDO",
+        );
+        expect(restriccion(await intentar({ mensajeDePortada: "<b>x</b>" }, a.s1))).toBe(
+          "carta_publica_mensaje_ck",
+        );
+        expect(restriccion(await intentar({ mensajeDePortada: "" }, a.s1))).toBe(
+          "carta_publica_mensaje_ck",
+        );
         expect(restriccion(await intentar({ nombre: "<b>x</b>" }, a.s1))).toBe(
           "carta_publica_nombre_ck",
         );
@@ -339,6 +356,7 @@ describe.skipIf(base === null)(
                 nombre: "a".repeat(LARGO_MAXIMO_DEL_NOMBRE_DE_CARTA),
                 rubro: "a".repeat(LARGO_MAXIMO_DEL_RUBRO_DE_CARTA),
                 lugar: "a".repeat(LARGO_MAXIMO_DEL_LUGAR_DE_CARTA),
+                mensajeDePortada: "a".repeat(60),
               },
               a.s1,
             ),

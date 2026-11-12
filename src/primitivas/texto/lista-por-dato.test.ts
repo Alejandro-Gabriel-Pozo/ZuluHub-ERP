@@ -3,6 +3,7 @@ import { domicilioLibreDesdeTexto } from "../domicilio/domicilio-libre";
 import { descripcionDeCartaDesdeTexto } from "./descripcion-de-carta";
 import {
   lugarDeCartaDesdeTexto,
+  mensajeDePortadaDesdeTexto,
   nombreDeCartaDesdeTexto,
   rubroDeCartaDesdeTexto,
 } from "./datos-de-carta-publica";
@@ -25,6 +26,7 @@ describe("los seis signos valen solo donde el dueño los aprobó", () => {
     ["nombre de la carta", nombreDeCartaDesdeTexto],
     ["rubro de la carta", rubroDeCartaDesdeTexto],
     ["lugar de la carta", lugarDeCartaDesdeTexto],
+    ["mensaje de la portada", mensajeDePortadaDesdeTexto],
   ])("%s los admite", (_nombre, convertir) => {
     for (const texto of CON_SIGNOS)
       expect(convertir(texto), texto).toEqual({ ok: true, valor: texto });

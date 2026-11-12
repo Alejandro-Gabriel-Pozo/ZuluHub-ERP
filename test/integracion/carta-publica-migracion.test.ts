@@ -265,6 +265,24 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
       expect(await alta("rubro", "a".repeat(41))).toBe("23514:carta_publica_rubro_ck");
       expect(await alta("lugar", "a".repeat(121))).toBe("23514:carta_publica_lugar_ck");
       expect(await alta("lugar", "<b>")).toBe("23514:carta_publica_lugar_ck");
+      // El mensaje de la portada: opcional (NULL), hasta 60, con la lista de catálogo; vacío no es un mensaje (es NULL).
+      expect(await alta("mensaje_de_portada", "a".repeat(61))).toBe(
+        "23514:carta_publica_mensaje_ck",
+      );
+      expect(await alta("mensaje_de_portada", "")).toBe("23514:carta_publica_mensaje_ck");
+      expect(await alta("mensaje_de_portada", "<b>")).toBe("23514:carta_publica_mensaje_ck");
+      // Los casos válidos, cada uno en una sucursal sin carta (una carta por sucursal).
+      const nueva = async (nombre: string) =>
+        (
+          await dueno.query<{ id: string }>(
+            "insert into sucursal (empresa_id, nombre) values ($1, $2) returning id",
+            [b.empresa, nombre],
+          )
+        ).rows[0]?.id as string;
+      expect(await alta("mensaje_de_portada", "a".repeat(60), await nueva("Pos 1"))).toBeNull();
+      expect(
+        await alta("mensaje_de_portada", "¡Desliza para ver el menú! $%", await nueva("Pos 2")),
+      ).toBeNull();
       await dueno.query("rollback");
     });
 
@@ -379,6 +397,7 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
         "carta_publica.estado:SELECT",
         "carta_publica.id:SELECT",
         "carta_publica.lugar:SELECT",
+        "carta_publica.mensaje_de_portada:SELECT",
         "carta_publica.nombre:SELECT",
         "carta_publica.rubro:SELECT",
         "carta_publica.sucursal_id:SELECT",

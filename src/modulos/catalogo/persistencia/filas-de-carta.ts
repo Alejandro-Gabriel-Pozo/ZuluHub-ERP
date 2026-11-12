@@ -19,6 +19,7 @@ export function aCartaPublica(fila: Selectable<TablasDeCarta["carta_publica"]>):
     nombre: fila.nombre,
     rubro: fila.rubro,
     lugar: fila.lugar,
+    mensajeDePortada: fila.mensaje_de_portada,
     estado: estadoDeCarta(fila.estado),
     version: fila.version,
   };

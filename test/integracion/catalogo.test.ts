@@ -826,7 +826,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "pedernal_app:pedido_de_ficha.estado",
           "pedernal_app:pedido_de_ficha.resuelto_en",
           "pedernal_app:pedido_de_ficha.resuelto_por",
-          ...["estado", "lugar", "nombre", "rubro"].map((c) => `pedernal_app:carta_publica.${c}`), // 0043
+          ...["estado", "lugar", "mensaje_de_portada", "nombre", "rubro"].map(
+            (c) => `pedernal_app:carta_publica.${c}`,
+          ), // 0043
           ...["actualizado_en", "actualizado_por", "oculto"].map(
             (c) => `pedernal_app:disponibilidad_de_producto.${c}`,
           ), // 0043
@@ -1197,6 +1199,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "estado",
           "id",
           "lugar",
+          "mensaje_de_portada",
           "nombre",
           "rubro",
           "sucursal_id",

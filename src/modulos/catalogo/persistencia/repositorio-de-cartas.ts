@@ -18,6 +18,7 @@ export type AltaDeCartaPublica = Readonly<{
   nombre: string;
   rubro: string | null;
   lugar: string | null;
+  mensajeDePortada: string | null;
   estado: EstadoDeCarta;
   creadoPor: PersonaId | null;
 }>;
@@ -26,6 +27,7 @@ export type CambiosDeCartaPublica = Readonly<{
   nombre: string;
   rubro: string | null;
   lugar: string | null;
+  mensajeDePortada: string | null;
   estado: EstadoDeCarta;
 }>;
 
@@ -87,6 +89,7 @@ export function crearRepositorioDeCartas(db: Kysely<CatalogoDb>): RepositorioDeC
           nombre: alta.nombre,
           rubro: alta.rubro,
           lugar: alta.lugar,
+          mensaje_de_portada: alta.mensajeDePortada,
           estado: alta.estado,
           creado_por: alta.creadoPor,
         });
@@ -115,6 +118,7 @@ export function crearRepositorioDeCartas(db: Kysely<CatalogoDb>): RepositorioDeC
           nombre: cambios.nombre,
           rubro: cambios.rubro,
           lugar: cambios.lugar,
+          mensaje_de_portada: cambios.mensajeDePortada,
           estado: cambios.estado,
         })
         .where("empresa_id", "=", empresa)

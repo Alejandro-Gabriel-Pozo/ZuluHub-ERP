@@ -42,6 +42,20 @@ export function lugarDeCartaDesdeTexto(texto: string): Resultado<string, MotivoD
   });
 }
 
+/**
+ * El mensaje de la portada (tercera línea, abajo de todo): hasta 60 caracteres, el largo del «lema» del prototipo `carta.html`. Opcional: quien llama guarda `null` si no
+ * lo carga. El 60 va escrito acá, una sola vez y sin constante nombrada: es un número común y una constante `LARGO_…` lo haría chocar con cualquier otro 60 del código.
+ */
+export function mensajeDePortadaDesdeTexto(
+  texto: string,
+): Resultado<string, MotivoDeTextoInvalido> {
+  return textoDeUnaLineaDesdeTexto(texto, {
+    maximo: 60,
+    exigirUnaLetra: false,
+    conSignosDeCatalogo: true,
+  });
+}
+
 /** ¿Tiene la forma de un código de carta? No dice si existe ni si es adivinable. */
 export function codigoDeCartaDesdeTexto(
   texto: string,

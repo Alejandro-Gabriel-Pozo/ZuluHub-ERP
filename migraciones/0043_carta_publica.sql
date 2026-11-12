@@ -93,6 +93,8 @@ CREATE TABLE carta_publica (
   nombre         text NOT NULL CONSTRAINT carta_publica_nombre_ck CHECK (texto_de_catalogo_valido(nombre, 80)),
   rubro          text CONSTRAINT carta_publica_rubro_ck CHECK (rubro IS NULL OR texto_de_catalogo_valido(rubro, 40)),
   lugar          text CONSTRAINT carta_publica_lugar_ck CHECK (lugar IS NULL OR texto_de_catalogo_valido(lugar, 120)),
+  -- La tercera línea de la portada (abajo de todo): texto libre del dueño, p. ej. «Desliza para ver el menú». NULL = sin mensaje (la pantalla muestra el adorno de siempre).
+  mensaje_de_portada text CONSTRAINT carta_publica_mensaje_ck CHECK (mensaje_de_portada IS NULL OR texto_de_catalogo_valido(mensaje_de_portada, 60)),
   estado         text NOT NULL DEFAULT 'FUERA_DE_LINEA' CONSTRAINT carta_publica_estado_ck CHECK (estado IN ('EN_LINEA', 'FUERA_DE_LINEA')),
   creado_por     uuid REFERENCES persona (id),
   creado_en      timestamptz NOT NULL DEFAULT now(),
@@ -189,13 +191,13 @@ REVOKE ALL ON carta_publica, disponibilidad_de_producto FROM PUBLIC;
 
 -- La aplicación (contexto de empresa).
 GRANT SELECT ON carta_publica, disponibilidad_de_producto TO pedernal_app;
-GRANT INSERT (id, empresa_id, sucursal_id, codigo, nombre, rubro, lugar, estado, creado_por) ON carta_publica TO pedernal_app;
-GRANT UPDATE (nombre, rubro, lugar, estado) ON carta_publica TO pedernal_app;
+GRANT INSERT (id, empresa_id, sucursal_id, codigo, nombre, rubro, lugar, mensaje_de_portada, estado, creado_por) ON carta_publica TO pedernal_app;
+GRANT UPDATE (nombre, rubro, lugar, mensaje_de_portada, estado) ON carta_publica TO pedernal_app;
 GRANT INSERT (empresa_id, producto_id, sucursal_id, oculto, actualizado_por, actualizado_en) ON disponibilidad_de_producto TO pedernal_app;
 GRANT UPDATE (oculto, actualizado_por, actualizado_en) ON disponibilidad_de_producto TO pedernal_app;
 
 -- El rol público (sin contexto): solo lo que la carta publica de sí misma, por columna. Ni quién la creó ni cuándo ni la versión.
-GRANT SELECT (id, empresa_id, sucursal_id, codigo, nombre, rubro, lugar, estado) ON carta_publica TO pedernal_publico;
+GRANT SELECT (id, empresa_id, sucursal_id, codigo, nombre, rubro, lugar, mensaje_de_portada, estado) ON carta_publica TO pedernal_publico;
 GRANT SELECT (empresa_id, producto_id, sucursal_id, oculto) ON disponibilidad_de_producto TO pedernal_publico;
 
 -- ---------------------------------------------------------------------------------------------
