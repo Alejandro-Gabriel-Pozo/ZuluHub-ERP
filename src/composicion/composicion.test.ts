@@ -128,6 +128,11 @@ const PEDIDOS: { nombre: string; pedir: (c: Conexiones) => unknown; nombra: stri
     nombra: "PEDERNAL_DB_PUBLICO",
   },
   {
+    nombre: "web.vidrieraPublica",
+    pedir: (c) => armarWeb(c).vidrieraPublica(),
+    nombra: "PEDERNAL_DB_PUBLICO",
+  },
+  {
     nombre: "autenticacion",
     pedir: (c) => c.autenticacion(),
     nombra: "PEDERNAL_AUTH_SECRETO_EMPRESA",
@@ -668,6 +673,7 @@ const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
   // Sin guard por diseño. Fuentes: web.ts:23-26 (puerta pública), :36-38 (autenticación y barrido), :133 y de-la-sesion.ts:18-22 (sesión).
   resolucionDeHost: { sinGuard: "puerta pública: sin sesión, solo lectura" },
   configuracionPublicaDeHost: { sinGuard: "puerta pública: sin sesión, solo lectura" },
+  vidrieraPublica: { sinGuard: "puerta pública: sin sesión, solo lectura (la carta en línea)" },
   autenticacion: { sinGuard: "dice QUIÉN es (usuario y email verificado, por host)" },
   barridoDeAutenticacion: { sinGuard: "lo llama el cron, no una persona" },
   lecturasCompartidas: {

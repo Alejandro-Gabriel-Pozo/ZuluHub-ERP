@@ -49,6 +49,7 @@ const vidriera: fc.Arbitrary<VidrieraPublicada> = fc.record({
   nombre,
   rubro: nombre,
   lugar: fc.constant(null),
+  mensajeDePortada: fc.constantFrom(null, "Desliza para ver el menú"),
   letraBase: fc.constantFrom("NORMAL" as const, "GRANDE" as const),
   secciones: fc.array(
     fc.record({ id: uuid, nombre, productos: fc.array(producto, { minLength: 1, maxLength: 5 }) }),

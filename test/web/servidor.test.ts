@@ -78,6 +78,7 @@ describe("apps/web/servidor/composicion.ts", () => {
       "consultasDeVentas",
       "lecturasCompartidas",
       "resolucionDeHost",
+      "vidrieraPublica",
     ]);
     expect(leidas).toEqual([]);
   });

@@ -514,5 +514,11 @@
     "archivos": "arquitectura/decisiones/forma.cjs,arquitectura/decisiones/cuota.cjs,arquitectura/decisiones/decisiones.cjs,arquitectura/decisiones/resumen.cjs",
     "minutos": 8,
     "pruebas": "test/arquitectura/decisiones-forma.test.ts test/arquitectura/decisiones-control.test.ts test/arquitectura/decisiones-resumen.test.ts test/arquitectura/decisiones-mutantes.test.ts test/arquitectura/decisiones-cuota.test.ts"
+  },
+  {
+    "grupo": "catálogo (carta pública que ve el comensal)",
+    "archivos": "src/modulos/catalogo/dominio/carta-publicada.ts,src/modulos/catalogo/dominio/carta-publica.ts,src/modulos/catalogo/dominio/fila-con-precio.ts,src/modulos/catalogo/dominio/identificadores.ts",
+    "minutos": 1,
+    "pruebas": "src/modulos/catalogo/dominio"
   }
 ]

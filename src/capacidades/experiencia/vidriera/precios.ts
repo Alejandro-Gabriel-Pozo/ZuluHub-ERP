@@ -59,6 +59,8 @@ export type ListaDePrecios = Readonly<{
   precioDeLista: ImporteJson;
   /** Hay más de un precio posible a la vista: la lista dice «desde». */
   desde: boolean;
+  /** El nombre de la medida (tamaño) que da el precio de la lista: la de menor precio, la primera si empatan; `null` si el producto no tiene medidas. */
+  medidaDeLista: string | null;
   /** Precio final de cada tamaño (base + recargo), en el MISMO orden en que llegaron. Vacío si no hay tamaños. */
   tamanos: readonly Readonly<{ nombre: string; precio: ImporteJson }>[];
   obligatorios: readonly GrupoDePrecios[];
@@ -183,6 +185,10 @@ export function listaDePreciosDelProducto(
   return ok({
     precioDeLista: importeAJson(piso),
     desde: !importesIguales(piso, techo),
+    medidaDeLista:
+      tamanos.valor.length === 0
+        ? null
+        : tamanos.valor.reduce((a, b) => (b.recargo.unidades < a.recargo.unidades ? b : a)).nombre,
     tamanos: tamanos.valor.map((t) => ({
       nombre: t.nombre,
       precio: importeAJson(sumaRedondeada([base.valor, t.recargo])),

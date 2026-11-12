@@ -147,12 +147,18 @@ const NOMBRES = [
  * `cantidad` por encima de 40 hace aparecer la búsqueda.
  */
 export function vidrieraDePrueba(
-  opciones: { cantidad?: number; letraBase?: LetraBase; lugar?: string | null } = {},
+  opciones: {
+    cantidad?: number;
+    letraBase?: LetraBase;
+    lugar?: string | null;
+    rubro?: string | null;
+  } = {},
 ): VistaDeVidriera {
   const {
     cantidad = 60,
     letraBase = "NORMAL",
     lugar = "Av. Belgrano 412 · todos los días de 7 a 21",
+    rubro = "Cafetería",
   } = opciones;
   const propios = [CAPUCHINO, CAFE_HELADO, MILANESA, NOQUIS, SIN_NADA, CON_FOTO, LARGO];
   const relleno = Array.from({ length: Math.max(0, cantidad - propios.length) }, (_, i) =>
@@ -181,7 +187,8 @@ export function vidrieraDePrueba(
   });
   return {
     nombre: "La Esquina Café",
-    rubro: "Cafetería",
+    rubro,
+    mensajeDePortada: null,
     lugar,
     letraBase,
     hrefDeLaVidriera: RUTA,
