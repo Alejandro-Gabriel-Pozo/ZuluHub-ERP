@@ -4,6 +4,7 @@ import {
   huellaDeAnularOrden,
   huellaDeCancelarOrden,
   huellaDeCerrarOrden,
+  huellaDelProductoDeLaOrden,
 } from "./huella";
 
 describe("huellas de producción", () => {
@@ -46,5 +47,29 @@ describe("la huella es la de stock con el nombre de la operación y el contenido
     expect(huellaDeAbrirOrden("o1", "p", "10", "UNIDAD", "d1", "d2")).toBe(
       huellaDeComando("produccion.abrir_orden", ["o1", "p", "10", "UNIDAD", "d1", "d2"], []),
     );
+  });
+});
+
+describe("la huella del producto de un cierre", () => {
+  it("es la de stock con su nombre y sus cuatro campos: cada uno la cambia y difiere de la del cierre entero", async () => {
+    const { huellaDeComando } = await import("../../stock/publico");
+    const base = huellaDelProductoDeLaOrden("o1", "9.5", "KILOGRAMO", "2026-12-01");
+    expect(base).toBe(
+      huellaDeComando(
+        "produccion.producto_de_la_orden",
+        ["o1", "9.5", "KILOGRAMO", "2026-12-01"],
+        [],
+      ),
+    );
+    expect(base).toMatch(/^[0-9a-f]{64}$/);
+    for (const otra of [
+      huellaDelProductoDeLaOrden("o2", "9.5", "KILOGRAMO", "2026-12-01"),
+      huellaDelProductoDeLaOrden("o1", "9.6", "KILOGRAMO", "2026-12-01"),
+      huellaDelProductoDeLaOrden("o1", "9.5", "GRAMO", "2026-12-01"),
+      huellaDelProductoDeLaOrden("o1", "9.5", "KILOGRAMO", null),
+      huellaDeCerrarOrden("o1", "9.5", "KILOGRAMO", "2026-12-01", []),
+    ]) {
+      expect(otra).not.toBe(base);
+    }
   });
 });
