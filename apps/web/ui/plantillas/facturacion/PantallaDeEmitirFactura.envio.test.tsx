@@ -373,7 +373,7 @@ describe("emitir: lo que rechaza el servidor se ve por la vía común", () => {
     ["FISCAL_SUCURSAL_CERRADA", "Sucursal cerrada."],
     ["FISCAL_PUNTO_DE_VENTA_INACTIVO", "El punto de venta está inactivo."],
     ["FISCAL_SIN_CERTIFICADO", "No hay un certificado de ARCA vigente"],
-    ["FISCAL_DATOS_INVALIDOS", "Revise los datos del comprobante"],
+    ["FISCAL_DATOS_INVALIDOS", "Revisá los datos del comprobante"],
   ] as const)(
     "%s: un punto de venta que se ofreció y el servidor rechaza muestra su motivo, sin el código",
     async (codigo, esperado) => {
