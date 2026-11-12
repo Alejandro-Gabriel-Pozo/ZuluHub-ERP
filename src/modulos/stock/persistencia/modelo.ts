@@ -59,11 +59,31 @@ export type RegistroGuardado = Readonly<{
   articuloId: string;
   /** Texto decimal exacto, en la unidad de stock. */
   cantidadContada: string;
-  /** La existencia del depósito al registrar (la fija la base). */
+  /** La existencia del depósito al cargar (la fija la base). Ya no se usa para ajustar: se compara contra lo que había a la hora del conteo. */
   existenciaAlRegistrar: string;
   registradoPor: PersonaId;
   registradoEn: Date;
+  /** La hora que declaró quien cargó (0042); `null` = sin hora declarada: vale `registradoEn`. */
+  contadoEn: Date | null;
   orden: number;
+}>;
+
+/** La explicación guardada de un artículo de un conteo aplicado (`conteo_diferencia`, 0042). Todas las cantidades, texto decimal exacto. */
+export type DiferenciaGuardada = Readonly<{
+  conteoId: string;
+  articuloId: string;
+  registroId: string;
+  contada: string;
+  contadoEn: Date;
+  existenciaALaHora: string;
+  diferenciaBruta: string;
+  marcado: string;
+  diferenciaFinal: string;
+  /** Nulo si y solo si la diferencia final es cero. */
+  motivo: string | null;
+  detalle: string | null;
+  explicadaPor: PersonaId;
+  explicadaEn: Date;
 }>;
 
 export type Movimiento = Readonly<{

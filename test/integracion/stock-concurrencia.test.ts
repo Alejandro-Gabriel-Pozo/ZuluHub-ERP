@@ -288,13 +288,22 @@ describe.skipIf(base === null)("stock: concurrencia de movimientos", () => {
     };
     const ajustesDe = (conteoId: string) =>
       c.contar("select count(*) as n from movimiento_de_stock where conteo_id = $1", [conteoId]);
+    /** Lo que mandaría la pantalla: la huella de la revisión que se miró (leída ANTES de que las transacciones se pisen) y el motivo de lo que queda. */
+    const pedidoDeAplicar = async (
+      m: EscenarioDeStock,
+      x: { conteoId: string; producto: string },
+    ) => ({
+      conteoId: x.conteoId,
+      huella: await c.huellaDeConteo(m.gerente, x.conteoId),
+      respuestas: [{ productoId: x.producto, motivo: "MERMA" }],
+    });
 
     it("P5: dos aplicaciones del mismo conteo a la vez dejan UN solo ajuste: una aplica y la otra ve yaAplicado con el mismo movimiento", async () => {
       for (let ronda = 0; ronda < RONDAS; ronda += 1) {
         const m = permitir;
         const x = await conteoAbierto(m);
-        const aplicar = () =>
-          firme(() => c.casos.aplicarConteo(m.gerente, { conteoId: x.conteoId }));
+        const pedido = await pedidoDeAplicar(m, x);
+        const aplicar = () => firme(() => c.casos.aplicarConteo(m.gerente, pedido));
         const resultados = await aLaVez(c, [aplicar, aplicar], ronda);
         expect(soloOk(resultados), JSON.stringify(resultados)).toBe(2);
         const valores = resultados.map((r) => valorDe(r));
@@ -317,13 +326,12 @@ describe.skipIf(base === null)("stock: concurrencia de movimientos", () => {
         const x = await conteoAbierto(m);
         let porAplicar: Awaited<ReturnType<typeof c.casos.aplicarConteo>> | undefined;
         let porCancelar: Awaited<ReturnType<typeof c.casos.cancelarConteo>> | undefined;
+        const pedido = await pedidoDeAplicar(m, x);
         await aLaVez(
           c,
           [
             async (): Promise<unknown> =>
-              (porAplicar = await firme(() =>
-                c.casos.aplicarConteo(m.gerente, { conteoId: x.conteoId }),
-              )),
+              (porAplicar = await firme(() => c.casos.aplicarConteo(m.gerente, pedido))),
             async (): Promise<unknown> =>
               (porCancelar = await firme(() =>
                 c.casos.cancelarConteo(m.gerente, { conteoId: x.conteoId, motivo: "Se cancela" }),
@@ -366,30 +374,32 @@ describe.skipIf(base === null)("stock: concurrencia de movimientos", () => {
           cantidadContada: "3",
           unidadId: "UNIDAD",
         };
+        const pedido = await pedidoDeAplicar(m, x);
         await aLaVez(
           c,
           [
             async (): Promise<unknown> =>
               (porRegistrar = await firme(() => c.casos.registrarConteo(m.gerente, registro))),
             async (): Promise<unknown> =>
-              (porAplicar = await firme(() =>
-                c.casos.aplicarConteo(m.gerente, { conteoId: x.conteoId }),
-              )),
+              (porAplicar = await firme(() => c.casos.aplicarConteo(m.gerente, pedido))),
           ],
           ronda,
         );
         if (porRegistrar === undefined || porAplicar === undefined)
           throw new Error("faltó un resultado");
-        expect(porAplicar.ok, JSON.stringify(porAplicar)).toBe(true);
         const existencia = await c.existencia(x.dep, x.articulo);
         if (porRegistrar.ok) {
-          // Entró antes de aplicar: el último registro (3) es el que vale.
-          expect(existencia).toBe("3.0000");
+          // Entró antes de aplicar: el registro vigente cambió y la revisión que la persona miró ya no es esta (CF-D10): no se aplica lo que no vio.
+          expect(codigoDe(porAplicar)).toBe("REVISION_DESACTUALIZADA");
+          expect(existencia).toBe("10.0000");
+          expect(await ajustesDe(x.conteoId)).toBe(0);
         } else {
+          // Aplicar ganó: el conteo ya estaba cerrado para el registro y el ajuste vio lo que la persona miró.
+          expect(porAplicar.ok, JSON.stringify(porAplicar)).toBe(true);
           expect(codigoDe(porRegistrar)).toBe("CONTEO_CERRADO");
           expect(existencia).toBe("6.0000");
+          expect(await ajustesDe(x.conteoId)).toBe(1);
         }
-        expect(await ajustesDe(x.conteoId)).toBe(1);
       }
     });
 

@@ -81,6 +81,13 @@ export type ErrorDeStock =
   | "CONTEO_CANCELADO"
   | "CONTEO_SIN_REGISTROS"
   | "MOTIVO_REQUERIDO"
+  // conteo con hora (0042): la ventana de la hora del conteo y la explicación de lo que queda de diferencia
+  | "HORA_FUERA_DE_VENTANA"
+  | "HORA_ANTERIOR_AL_ULTIMO_CONTEO"
+  | "MOTIVO_NO_CORRESPONDE"
+  | "MOVIMIENTO_NO_EXPLICA"
+  | "EXPLICACION_SUPERA_LA_DIFERENCIA"
+  | "REVISION_DESACTUALIZADA"
   // puertos de venta (E5-T7): lo que la explosión de una línea vendida rechaza
   | "OPCION_CON_CONSUMO_EN_VENTA_POR_PESO"
   | "VERSION_DE_OPCION_NO_ENCONTRADA"

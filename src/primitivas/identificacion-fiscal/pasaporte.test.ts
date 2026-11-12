@@ -5,6 +5,7 @@ import {
   LARGO_MAXIMO_DE_PASAPORTE,
   LARGO_MINIMO_DE_PASAPORTE,
   pasaporteDesdeTexto,
+  pasaporteMientrasSeEscribe,
 } from "./pasaporte";
 
 const valido = (texto: string, esperado = texto) =>
@@ -52,5 +53,20 @@ describe("pasaporteDesdeTexto (el pasaporte como figura)", () => {
       "ABC12345​", // invisible
     ])
       invalido(texto);
+  });
+});
+
+describe("pasaporteMientrasSeEscribe", () => {
+  it.each([
+    ["", ""],
+    ["abc123456", "ABC123456"],
+    ["Ab1", "AB1"],
+    ["AB-12 3", "AB123"],
+    ["ñandú1", "AND1"],
+    ["ß1", "1"],
+    ["ABCDEFGHIJ", "ABCDEFGHI"],
+    ["123456789012", "123456789"],
+  ])("lo escrito «%s» queda «%s»", (escrito, queda) => {
+    expect(pasaporteMientrasSeEscribe(escrito)).toBe(queda);
   });
 });

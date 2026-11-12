@@ -61,6 +61,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0037_compras.sql",
         "0038_salon.sql",
         "0041_tope_de_textos_por_marca.sql",
+        "0042_conteo_con_hora.sql",
         "0043_carta_publica.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
@@ -104,6 +105,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0037_compras.sql",
           "0038_salon.sql",
           "0041_tope_de_textos_por_marca.sql",
+          "0042_conteo_con_hora.sql",
           "0043_carta_publica.sql",
         ],
       });
@@ -252,6 +254,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0037_compras.sql",
         "0038_salon.sql",
         "0041_tope_de_textos_por_marca.sql",
+        "0042_conteo_con_hora.sql",
         "0043_carta_publica.sql",
       ]);
     } finally {

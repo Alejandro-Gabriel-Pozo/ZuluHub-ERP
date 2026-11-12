@@ -7,6 +7,7 @@ import {
   usoDeDepositoGuardado,
   type Articulo,
   type Conteo,
+  type DiferenciaGuardada,
   type Deposito,
   type Movimiento,
   type RegistroGuardado,
@@ -66,7 +67,28 @@ export function aRegistroDeConteo(fila: Selectable<StockDb["conteo_registro"]>):
     existenciaAlRegistrar: fila.existencia_al_registrar,
     registradoPor: personaId(fila.registrado_por),
     registradoEn: fila.registrado_en,
+    contadoEn: fila.contado_en,
     orden: Number(fila.orden),
+  };
+}
+
+export function aDiferenciaDeConteo(
+  fila: Selectable<StockDb["conteo_diferencia"]>,
+): DiferenciaGuardada {
+  return {
+    conteoId: fila.conteo_id,
+    articuloId: fila.articulo_id,
+    registroId: fila.registro_id,
+    contada: fila.contada,
+    contadoEn: fila.contado_en,
+    existenciaALaHora: fila.existencia_a_la_hora,
+    diferenciaBruta: fila.diferencia_bruta,
+    marcado: fila.marcado,
+    diferenciaFinal: fila.diferencia_final,
+    motivo: fila.motivo,
+    detalle: fila.detalle,
+    explicadaPor: personaId(fila.explicada_por),
+    explicadaEn: fila.explicada_en,
   };
 }
 

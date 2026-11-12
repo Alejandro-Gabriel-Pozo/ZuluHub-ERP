@@ -147,6 +147,10 @@ const TABLAS_DE_NEGOCIO = [
   "conteo_registro",
   "composicion",
   "componente_de_composicion",
+  // Stock, conteo con hora (0042): `motivo_de_diferencia` es global y sembrada (sin `empresa_id`)
+  "motivo_de_diferencia",
+  "conteo_diferencia",
+  "conteo_marca",
   // Stock, costos (0031_stock_costos)
   "costo_de_articulo",
   "costo_de_renglon",
@@ -460,6 +464,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "saldo_de_stock:SELECT", // 0030
           "conteo_fisico:SELECT", // 0030
           "conteo_registro:SELECT", // 0030
+          "motivo_de_diferencia:SELECT", // 0042
+          "conteo_diferencia:SELECT", // 0042
+          "conteo_marca:SELECT", // 0042
           "composicion:SELECT", // 0030
           "componente_de_composicion:SELECT", // 0030
           "costo_de_articulo:SELECT", // 0031
@@ -1795,7 +1802,35 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "cantidad_contada",
             "registrado_por",
             "registrado_en",
+            "contado_en", // 0042
           ].map((c) => `conteo_registro.${c}`),
+          // 0042: la explicación de cada artículo de un conteo aplicado y las marcas (solo inserción, sin `UPDATE`)
+          ...[
+            "empresa_id",
+            "conteo_id",
+            "articulo_id",
+            "registro_id",
+            "contada",
+            "contado_en",
+            "existencia_a_la_hora",
+            "diferencia_bruta",
+            "marcado",
+            "diferencia_final",
+            "motivo",
+            "detalle",
+            "explicada_por",
+            "explicada_en",
+          ].map((c) => `conteo_diferencia.${c}`),
+          ...[
+            "empresa_id",
+            "conteo_id",
+            "articulo_id",
+            "movimiento_id",
+            "numero",
+            "cantidad",
+            "marcada_por",
+            "marcada_en",
+          ].map((c) => `conteo_marca.${c}`),
           ...["id", "empresa_id", "producto_id", "numero", "rinde", "creada_por", "creada_en"].map(
             (c) => `composicion.${c}`,
           ),
