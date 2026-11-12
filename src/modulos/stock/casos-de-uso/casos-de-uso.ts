@@ -1,10 +1,6 @@
 import { armarControlarArticulo, armarDejarDeControlar } from "./articulos";
-import {
-  armarAbrirConteo,
-  armarAplicarConteo,
-  armarCancelarConteo,
-  armarRegistrarConteo,
-} from "./conteos";
+import { armarAbrirConteo, armarCancelarConteo, armarRegistrarConteo } from "./conteos";
+import { armarAplicarConteo } from "./aplicar-conteo";
 import { armarCambiarCalidadDeLote, armarControlarLote, armarDejarDeControlarLote } from "./lotes";
 import { armarCorregirLote } from "./corregir-lote";
 import { armarReasignarLote } from "./reasignar-lote";

@@ -206,7 +206,18 @@ describe.skipIf(base === null)("stock: propiedad del saldo (P17)", () => {
               }
               if (o.aplica) {
                 // Nada se movió entre contar y aplicar: cada artículo contado queda en lo contado, y un ajuste (nunca bloqueado) lo lleva ahí.
-                valorDe(await c.casos.aplicarConteo(e.gerente, { conteoId }));
+                // Lo que queda de diferencia pide su motivo: faltante o sobrante según el signo contra lo que había.
+                const respuestas = [...contado]
+                  .map(([art, q]) => ({
+                    productoId: (articulos[art] as { producto: string }).producto,
+                    diferencia: q - (modelo.get(llave(o.dep, art)) ?? 0),
+                  }))
+                  .filter((r) => r.diferencia !== 0)
+                  .map((r) => ({
+                    productoId: r.productoId,
+                    motivo: r.diferencia < 0 ? "MERMA" : "DEVOLUCION_DE_CLIENTE",
+                  }));
+                valorDe(await c.aplicarConteo(e.gerente, conteoId, respuestas));
                 for (const [art, q] of contado)
                   sumar(o.dep, art, q - (modelo.get(llave(o.dep, art)) ?? 0));
               } else {

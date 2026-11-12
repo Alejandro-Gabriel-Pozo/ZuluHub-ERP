@@ -56,11 +56,14 @@ describe.skipIf(base === null)("stock: la persistencia contra el esquema real", 
        select indexname from pg_indexes where schemaname = 'public' and tablename = any($1) and indexdef like 'CREATE UNIQUE%'`,
       [TABLAS],
     );
-    // Los disparadores de 0030, los de 0031 (costos) y los de 0032 (lotes y recetas): las tres migraciones son de stock.
+    // Los disparadores de 0030, los de 0031 (costos), los de 0032 (lotes y recetas) y los de 0042 (conteo con hora): todas son migraciones de stock.
     const migraciones = await Promise.all(
-      ["0030_stock.sql", "0031_stock_costos.sql", "0032_lotes_y_recetas.sql"].map((archivo) =>
-        readFile(join(import.meta.dirname, "../../migraciones", archivo), "utf8"),
-      ),
+      [
+        "0030_stock.sql",
+        "0031_stock_costos.sql",
+        "0032_lotes_y_recetas.sql",
+        "0042_conteo_con_hora.sql",
+      ].map((archivo) => readFile(join(import.meta.dirname, "../../migraciones", archivo), "utf8")),
     );
     const deDisparadores = migraciones.flatMap((texto) =>
       [...texto.matchAll(/CONSTRAINT = '(\w+)'/g)].map((m) => m[1] as string),
@@ -82,7 +85,7 @@ describe.skipIf(base === null)("stock: la persistencia contra el esquema real", 
     const { rows } = await c.query<{ tabla: string; indice: string; def: string }>(
       `select tablename as tabla, indexname as indice, indexdef as def from pg_indexes
         where schemaname = 'public' and tablename = any($1) and indexdef like 'CREATE UNIQUE%' and indexname not like '%_pkey'`,
-      [TABLAS.filter((t) => t !== "motivo_de_movimiento")],
+      [TABLAS.filter((t) => t !== "motivo_de_movimiento" && t !== "motivo_de_diferencia")],
     );
     expect(rows.length).toBeGreaterThan(12);
     expect(rows.filter((r) => !r.def.includes("empresa_id")).map((r) => r.indice)).toEqual([]);
@@ -95,7 +98,10 @@ describe.skipIf(base === null)("stock: la persistencia contra el esquema real", 
       [TABLAS],
     );
     const entreTablasDeEmpresa = rows.filter(
-      (r) => !/REFERENCES (empresa|persona|unidad_de_medida|motivo_de_movimiento)\(/.test(r.def),
+      (r) =>
+        !/REFERENCES (empresa|persona|unidad_de_medida|motivo_de_movimiento|motivo_de_diferencia)\(/.test(
+          r.def,
+        ),
     );
     expect(entreTablasDeEmpresa.length).toBeGreaterThan(15);
     expect(

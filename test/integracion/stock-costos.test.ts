@@ -261,7 +261,12 @@ describe.skipIf(base === null)("stock: costos", () => {
           }),
         );
       }
-      const aplicado = valorDe(await c.casos.aplicarConteo(e.gerente, { conteoId }));
+      const aplicado = valorDe(
+        await c.aplicarConteo(e.gerente, conteoId, [
+          { productoId: n.producto, motivo: "MERMA" },
+          { productoId: otro.producto, motivo: "DEVOLUCION_DE_CLIENTE" },
+        ]),
+      );
       const costos = await costosDe(aplicado.movimientoId as string);
       expect(costos.map((r) => [r.estado, r.costo_unitario].join(" ")).sort()).toEqual([
         "DEFINITIVO 4.000000",

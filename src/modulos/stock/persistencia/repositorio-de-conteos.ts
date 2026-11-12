@@ -3,8 +3,9 @@ import type { AlcanceDeSucursales } from "../../../capacidades/permisos/alcance"
 import type { EmpresaId, PersonaId, SucursalId } from "../../../primitivas/identificadores/marca";
 import { insertarIdempotente } from "../../catalogo/publico";
 import type { StockDb } from "./esquema";
-import { aConteo, aRegistroDeConteo, esUuid } from "./filas";
-import type { Conteo, EstadoDeConteo, RegistroGuardado } from "./modelo";
+import { aConteo, aDiferenciaDeConteo, aRegistroDeConteo, esUuid } from "./filas";
+import { crearLecturasDeConteo, type LecturasDeConteo } from "./lecturas-de-conteo";
+import type { Conteo, DiferenciaGuardada, EstadoDeConteo, RegistroGuardado } from "./modelo";
 
 export type AltaDeConteo = Readonly<{
   /** Lo manda la aplicación: es la idempotencia de abrirlo. */
@@ -23,6 +24,36 @@ export type AltaDeRegistro = Readonly<{
   cantidadContada: string;
   registradoPor: PersonaId;
   registradoEn: Date;
+  /** La hora que declaró quien cargó; `null` si no declaró ninguna (se lee como `registradoEn`). Nunca posterior a `registradoEn`. */
+  contadoEn: Date | null;
+}>;
+
+/** La explicación de un artículo al aplicar (0042). Las cantidades, texto decimal exacto. */
+export type AltaDeDiferencia = Readonly<{
+  conteoId: string;
+  articuloId: string;
+  registroId: string;
+  contada: string;
+  contadoEn: Date;
+  existenciaALaHora: string;
+  diferenciaBruta: string;
+  marcado: string;
+  diferenciaFinal: string;
+  motivo: string | null;
+  detalle: string | null;
+  explicadaPor: PersonaId;
+  explicadaEn: Date;
+}>;
+
+/** Un movimiento marcado «ya había ocurrido cuando contó» (0042): `cantidad` es la copia con signo del renglón. */
+export type AltaDeMarca = Readonly<{
+  conteoId: string;
+  articuloId: string;
+  movimientoId: string;
+  numero: number;
+  cantidad: string;
+  marcadaPor: PersonaId;
+  marcadaEn: Date;
 }>;
 
 export type ResolucionDeConteo = Readonly<{
@@ -40,7 +71,7 @@ export type FiltroDeConteos = Readonly<{
   limite: number;
 }>;
 
-export interface RepositorioDeConteos {
+export interface RepositorioDeConteos extends LecturasDeConteo {
   obtener(empresa: EmpresaId, id: string): Promise<Conteo | null>;
   /** El conteo con `SELECT … FOR UPDATE`: serializa aplicar, cancelar y registrar sobre el mismo conteo. */
   bloquear(empresa: EmpresaId, id: string): Promise<Conteo | null>;
@@ -61,6 +92,17 @@ export interface RepositorioDeConteos {
   insertarRegistro(empresa: EmpresaId, alta: AltaDeRegistro): Promise<boolean>;
   /** Todos los registros del conteo, del más viejo al más nuevo (`orden`). */
   registrosDe(empresa: EmpresaId, conteoId: string): Promise<RegistroGuardado[]>;
+  /** Cuándo se aplicó el último conteo APLICADO del depósito, o `null` si nunca se aplicó uno (la hora de un conteo nuevo no puede ser anterior). */
+  ultimoAplicadoEn(empresa: EmpresaId, depositoId: string): Promise<Date | null>;
+  /**
+   * Escribe la explicación de cada artículo del conteo (solo inserción, una vez por artículo: la base lo impone). Va después de resolver el conteo
+   * y antes de las marcas, en la misma transacción.
+   */
+  insertarDiferencias(empresa: EmpresaId, altas: readonly AltaDeDiferencia[]): Promise<void>;
+  /** Escribe las marcas (después de las diferencias): lo marcado de cada artículo tiene que ser su suma, la base lo verifica al confirmar. */
+  insertarMarcas(empresa: EmpresaId, altas: readonly AltaDeMarca[]): Promise<void>;
+  /** La explicación guardada de cada artículo de un conteo aplicado, por artículo. */
+  diferenciasDe(empresa: EmpresaId, conteoId: string): Promise<DiferenciaGuardada[]>;
   /** Los conteos que el alcance deja ver, del más nuevo al más viejo. */
   listar(empresa: EmpresaId, filtro: FiltroDeConteos): Promise<Conteo[]>;
   /** Cuántos conteos hay abiertos en esa sucursal (para el aporte al cierre del día). */
@@ -69,6 +111,7 @@ export interface RepositorioDeConteos {
 
 export function crearRepositorioDeConteos(db: Kysely<StockDb>): RepositorioDeConteos {
   return {
+    ...crearLecturasDeConteo(db),
     async obtener(empresa, id) {
       if (!esUuid(id)) return null;
       const fila = await db
@@ -164,6 +207,7 @@ export function crearRepositorioDeConteos(db: Kysely<StockDb>): RepositorioDeCon
           cantidad_contada: alta.cantidadContada,
           registrado_por: alta.registradoPor,
           registrado_en: alta.registradoEn,
+          contado_en: alta.contadoEn,
         });
       const fila = await insertarIdempotente(
         () =>
@@ -192,6 +236,72 @@ export function crearRepositorioDeConteos(db: Kysely<StockDb>): RepositorioDeCon
         .orderBy("orden")
         .execute();
       return filas.map(aRegistroDeConteo);
+    },
+    async ultimoAplicadoEn(empresa, depositoId) {
+      if (!esUuid(depositoId)) return null;
+      const fila = await db
+        .selectFrom("conteo_fisico")
+        .select("resuelto_en")
+        .where("empresa_id", "=", empresa)
+        .where("deposito_id", "=", depositoId)
+        .where("estado", "=", "APLICADO")
+        .orderBy("resuelto_en", "desc")
+        .limit(1)
+        .executeTakeFirst();
+      return fila?.resuelto_en ?? null;
+    },
+    async insertarDiferencias(empresa, altas) {
+      if (altas.length === 0) return;
+      await db
+        .insertInto("conteo_diferencia")
+        .values(
+          altas.map((a) => ({
+            empresa_id: empresa,
+            conteo_id: a.conteoId,
+            articulo_id: a.articuloId,
+            registro_id: a.registroId,
+            contada: a.contada,
+            contado_en: a.contadoEn,
+            existencia_a_la_hora: a.existenciaALaHora,
+            diferencia_bruta: a.diferenciaBruta,
+            marcado: a.marcado,
+            diferencia_final: a.diferenciaFinal,
+            motivo: a.motivo,
+            detalle: a.detalle,
+            explicada_por: a.explicadaPor,
+            explicada_en: a.explicadaEn,
+          })),
+        )
+        .execute();
+    },
+    async insertarMarcas(empresa, altas) {
+      if (altas.length === 0) return;
+      await db
+        .insertInto("conteo_marca")
+        .values(
+          altas.map((a) => ({
+            empresa_id: empresa,
+            conteo_id: a.conteoId,
+            articulo_id: a.articuloId,
+            movimiento_id: a.movimientoId,
+            numero: a.numero,
+            cantidad: a.cantidad,
+            marcada_por: a.marcadaPor,
+            marcada_en: a.marcadaEn,
+          })),
+        )
+        .execute();
+    },
+    async diferenciasDe(empresa, conteoId) {
+      if (!esUuid(conteoId)) return [];
+      const filas = await db
+        .selectFrom("conteo_diferencia")
+        .selectAll()
+        .where("empresa_id", "=", empresa)
+        .where("conteo_id", "=", conteoId)
+        .orderBy("articulo_id")
+        .execute();
+      return filas.map(aDiferenciaDeConteo);
     },
     async listar(empresa, filtro) {
       if (filtro.alcance !== "TODAS" && filtro.alcance.length === 0) return [];

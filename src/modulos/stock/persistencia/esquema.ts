@@ -111,12 +111,49 @@ export type StockDb = TablasDeCatalogoQueLeeStock &
       conteo_id: string;
       articulo_id: string;
       cantidad_contada: string;
-      /** La fija la base: la existencia del depósito en ese momento. */
+      /** La fija la base: la existencia del depósito al cargar. Se conserva (quitarla es destructivo) pero el ajuste ya no la usa: compara contra lo que había a la hora del conteo. */
       existencia_al_registrar: Generated<string>;
       registrado_por: string;
       registrado_en: Date;
       /** `bigint` (identity): `pg` lo devuelve como texto. */
       orden: Generated<string>;
+      /** 0042: la hora a la que se contó; `null` = sin hora declarada (se lee como `registrado_en`). */
+      contado_en: Date | null;
+    };
+    /** 0042: los motivos de una diferencia de conteo (global, sembrada, solo lectura). */
+    motivo_de_diferencia: {
+      codigo: string;
+      sentido: string;
+      pide_detalle: Generated<boolean>;
+      orden: number;
+    };
+    /** 0042: la explicación de cada artículo cargado de un conteo aplicado (solo inserción). Las cantidades, como texto decimal exacto. */
+    conteo_diferencia: {
+      empresa_id: string;
+      conteo_id: string;
+      articulo_id: string;
+      registro_id: string;
+      contada: string;
+      contado_en: Date;
+      existencia_a_la_hora: string;
+      diferencia_bruta: string;
+      marcado: string;
+      diferencia_final: string;
+      motivo: string | null;
+      detalle: string | null;
+      explicada_por: string;
+      explicada_en: Date;
+    };
+    /** 0042: los renglones del libro que quien aplicó declaró «ya ocurridos cuando contó» (solo inserción). */
+    conteo_marca: {
+      empresa_id: string;
+      conteo_id: string;
+      articulo_id: string;
+      movimiento_id: string;
+      numero: number;
+      cantidad: string;
+      marcada_por: string;
+      marcada_en: Date;
     };
     composicion: {
       /** Lo genera la base. */
@@ -246,6 +283,34 @@ export const COLUMNAS_DE_STOCK = {
     "registrado_por",
     "registrado_en",
     "orden",
+    "contado_en",
+  ],
+  motivo_de_diferencia: ["codigo", "sentido", "pide_detalle", "orden"],
+  conteo_diferencia: [
+    "empresa_id",
+    "conteo_id",
+    "articulo_id",
+    "registro_id",
+    "contada",
+    "contado_en",
+    "existencia_a_la_hora",
+    "diferencia_bruta",
+    "marcado",
+    "diferencia_final",
+    "motivo",
+    "detalle",
+    "explicada_por",
+    "explicada_en",
+  ],
+  conteo_marca: [
+    "empresa_id",
+    "conteo_id",
+    "articulo_id",
+    "movimiento_id",
+    "numero",
+    "cantidad",
+    "marcada_por",
+    "marcada_en",
   ],
   composicion: [
     "id",
