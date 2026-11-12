@@ -5,8 +5,8 @@ import { useEnvioDeFormulario } from "./EnvioDeFormulario.cliente";
 
 export type PropsDeBotonDeEnvio = Readonly<
   Pick<PropsDeBoton, "children" | "variante" | "ancho"> & {
-    /** Lo que dice mientras envía («Entrando…»). */
-    textoEnviando: string;
+    /** Lo que dice mientras envía («Entrando…»). Sin él, conserva su texto y solo ignora el segundo toque. */
+    textoEnviando?: string;
   }
 >;
 
@@ -21,7 +21,7 @@ export function BotonDeEnvio({ children, textoEnviando, variante, ancho }: Props
     <Boton
       tipo="submit"
       enviando={enviando}
-      textoEnviando={textoEnviando}
+      {...(textoEnviando === undefined ? {} : { textoEnviando })}
       {...(variante === undefined ? {} : { variante })}
       {...(ancho === undefined ? {} : { ancho })}
     >
