@@ -1359,7 +1359,7 @@
     "tipo": "CLIENTE",
     "estado": "CONFIRMADA",
     "decision": "Los caracteres ¿ ¡ ? ! % $ se permiten en nombres y descripciones de producto, sección y opción (por ejemplo «¿Querés papas?» o «Combo 2x1 50% $500»).",
-    "que_cambia": "Esos seis signos dejan de rechazarse al cargar un nombre; como la lista es la misma de otros datos, también los admiten razón social, domicilio y notas.",
+    "que_cambia": "Esos seis signos dejan de rechazarse al cargar un nombre o descripción del catálogo y de la carta; razón social, domicilio, notas y motivos siguen sin ellos.",
     "donde": "Pedernal-docs 11-especificaciones/carta-real-especificacion.md §0 y §8.2 V-2 (Q3, 12/11/2026); src/primitivas/texto/texto-de-una-linea.ts y migraciones/0043_carta_publica.sql"
   },
   {
@@ -1415,11 +1415,11 @@
   {
     "id": "DEC-0331",
     "fecha": "2026-11-12",
-    "quien": "sesión",
+    "quien": "padre",
     "tipo": "CLIENTE",
     "estado": "PENDIENTE_DE_OK",
-    "decision": "La lista de caracteres permitidos de los seis signos nuevos se amplía en la primitiva compartida y no solo para productos, secciones y opciones.",
-    "que_cambia": "Razón social, domicilio, notas, motivos y el nombre de la marca en los mails también aceptan ¿ ¡ ? ! % $; si se corrige, hay que separar la lista por dato.",
+    "decision": "La lista de los seis signos nuevos es aparte de la base: la usan solo producto, sección, opción, descripción y carta; razón social, domicilio, notas y motivos no.",
+    "que_cambia": "Se decidió con el orquestador (12/11/2026) por los datos que viajan a ARCA; si se corrige, se pasa la bandera conSignosDeCatalogo al dato que lo pida.",
     "donde": "src/primitivas/texto/texto-de-una-linea.ts; Pedernal-docs 11-especificaciones/carta-real-especificacion.md §13 H2"
   }
 ]

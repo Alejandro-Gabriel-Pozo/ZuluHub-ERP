@@ -21,9 +21,10 @@ import { err, ok, type Resultado } from "../resultado/resultado";
  *    dibuja (ASCII imprimible; Latin-1 salvo U+00A0, U+00AD y U+00B5; signos de Windows-1252). La revisión independiente de #197
  *    lo confirmó con un barrido del plano básico (informe del orquestador, 2026-11-06).
  *  · `¿ ¡ ? ! % $` (12/11/2026): DECIDIDO por el dueño, Q3 de la especificación de la carta real (`11-especificaciones/carta-real-especificacion.md`
- *    §0, §8.2 V-2, H2; respuesta asentada en `decisiones-del-dueno-2026-11.md`, 12/11/2026): son los nombres reales de una carta («¿Querés papas?»,
- *    «Combo 2x1 50% $500»). Están en WinAnsi (el PDF los dibuja) y no abren fórmula (solo `+` y `-` al principio la abren). Esta lista es de TODOS los
- *    que la usan (razón social, domicilio, motivos, notas…): ensancharla acá los ensancha a todos; la base la copia en `texto_de_catalogo_valido` (0043).
+ *    §0, §8.2 V-2, H2; respuesta asentada en `decisiones-del-dueno-2026-11.md`, 12/11/2026), SOLO para los datos del catálogo (nombres y descripciones de
+ *    producto, sección y opción, y los datos de la carta): son los nombres reales de una carta («¿Querés papas?», «Combo 2x1 50% $500»). NO son de la lista
+ *    base: razón social, domicilio, notas, motivos y el nombre de marca de los mails siguen SIN ellos (los datos fiscales viajan a ARCA; denegar por defecto,
+ *    instrucción del orquestador del 12/11/2026). Quien los quiere lo pide con `conSignosDeCatalogo`; la base los copia en `texto_de_catalogo_valido` (0043).
  *  · Q26 (® y ™ se admiten): DECIDIDO por el dueño, 2026-11-06 («Q26 ok», mensaje directo al orquestador).
  *  · Q25 (el conjunto): cubierta por la decisión del dueño del 2026-11-05 de «una sola lista de caracteres para lo que se imprime»
  *    (tablero del catálogo de datos, respuesta 1 de la auditoría de columnas). La lista exacta es la de este archivo.
@@ -44,12 +45,17 @@ export type MotivoDeTextoInvalido =
 const LETRAS = "A-Za-zÀ-ÖØ-öø-ÿŠšŒœŽžŸ";
 const DIGITOS = "0-9";
 /** Los signos admitidos, además del espacio: ver el SUPUESTO (DEC-0043) de arriba. */
-const SIGNOS = ".,&\\-'/()°+:;\"#ºª’“”–—«»®™¿¡?!%$";
+const SIGNOS = ".,&\\-'/()°+:;\"#ºª’“”–—«»®™";
+/** Los que SOLO suma el texto de catálogo (ver arriba). Una sola fuente: la copia de la base se compara con esta lista, carácter por carácter. */
+const SIGNOS_DEL_CATALOGO = "¿¡?!%$";
 
 const CARACTER_PERMITIDO = `[${LETRAS}${DIGITOS} ${SIGNOS}]`;
 // Sin la bandera `u` a propósito: todo lo permitido es del plano básico, así que un carácter de otro plano (un emoji) se rechaza igual, porque
 // sus dos mitades no están en la lista. Con la bandera el resultado sería el mismo; sin ella no queda una opción que ninguna prueba distingue.
 const SOLO_PERMITIDOS = new RegExp(`^${CARACTER_PERMITIDO}+$`);
+const SOLO_PERMITIDOS_DE_CATALOGO = new RegExp(
+  `^[${LETRAS}${DIGITOS} ${SIGNOS}${SIGNOS_DEL_CATALOGO}]+$`,
+);
 const UNA_LETRA = new RegExp(`[${LETRAS}]`);
 const ESPACIOS = /\p{Zs}+/gu;
 // Solo `+` y `-`: `=` y `@` ya los rechaza la lista de permitidos (si no, serían una opción que ninguna prueba distingue).
@@ -60,8 +66,20 @@ export function soloCaracteresPermitidos(texto: string): boolean {
   return SOLO_PERMITIDOS.test(texto);
 }
 
-/** Lo que cambia de un dato a otro: el largo máximo y si exige al menos una letra (el nombre sí; un domicilio puede ser solo números). */
-export type ReglasDelTexto = Readonly<{ maximo: number; exigirUnaLetra: boolean }>;
+/** ¿Todo el texto está hecho de caracteres permitidos EN EL CATÁLOGO (la lista base más `¿ ¡ ? ! % $`)? */
+export function soloCaracteresPermitidosDeCatalogo(texto: string): boolean {
+  return SOLO_PERMITIDOS_DE_CATALOGO.test(texto);
+}
+
+/**
+ * Lo que cambia de un dato a otro: el largo máximo, si exige al menos una letra (el nombre sí; un domicilio puede ser solo números) y, solo para los datos
+ * del catálogo, si suma `¿ ¡ ? ! % $` a la lista base (por defecto no).
+ */
+export type ReglasDelTexto = Readonly<{
+  maximo: number;
+  exigirUnaLetra: boolean;
+  conSignosDeCatalogo?: boolean;
+}>;
 
 /**
  * Deja el texto en su forma canónica o dice por qué no sirve. En este orden: recorta los extremos; pasa a NFC; colapsa los
@@ -76,7 +94,11 @@ export function textoDeUnaLineaDesdeTexto(
 ): Resultado<string, MotivoDeTextoInvalido> {
   const canonico = texto.trim().normalize("NFC").replace(ESPACIOS, " ");
   if (canonico === "") return err("VACIO");
-  if (!soloCaracteresPermitidos(canonico)) return err("CARACTER_PROHIBIDO");
+  const permitido =
+    reglas.conSignosDeCatalogo === true
+      ? soloCaracteresPermitidosDeCatalogo
+      : soloCaracteresPermitidos;
+  if (!permitido(canonico)) return err("CARACTER_PROHIBIDO");
   if (EMPIEZA_COMO_FORMULA.test(canonico)) return err("CARACTER_PROHIBIDO");
   if (largoEnCaracteres(canonico) > reglas.maximo) return err("DEMASIADO_LARGO");
   if (reglas.exigirUnaLetra && !UNA_LETRA.test(canonico)) return err("SIN_LETRAS");

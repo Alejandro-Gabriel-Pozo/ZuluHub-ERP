@@ -16,6 +16,7 @@ export function nombreDeProductoDesdeTexto(
   return textoDeUnaLineaDesdeTexto(texto, {
     maximo: LARGO_MAXIMO_DEL_NOMBRE_DE_PRODUCTO,
     exigirUnaLetra: true,
+    conSignosDeCatalogo: true,
   });
 }
 

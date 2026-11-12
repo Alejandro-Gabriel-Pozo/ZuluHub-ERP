@@ -252,7 +252,12 @@ describe.skipIf(base === null)("0025 catálogo: la migración contra una base re
       const base = await enBase(canonicos);
       const distintos = canonicos.filter(
         (texto, i) =>
-          base[i] !== textoDeUnaLineaDesdeTexto(texto, { maximo: 400, exigirUnaLetra: false }).ok,
+          base[i] !==
+          textoDeUnaLineaDesdeTexto(texto, {
+            maximo: 400,
+            exigirUnaLetra: false,
+            conSignosDeCatalogo: true,
+          }).ok,
       );
       expect(canonicos.length).toBeGreaterThan(60_000);
       expect(distintos).toEqual([]);
@@ -288,7 +293,11 @@ describe.skipIf(base === null)("0025 catálogo: la migración contra una base re
           .replace(/\p{Zs}+/gu, " ");
         const primitiva =
           canonico === texto &&
-          textoDeUnaLineaDesdeTexto(texto, { maximo: 400, exigirUnaLetra: false }).ok;
+          textoDeUnaLineaDesdeTexto(texto, {
+            maximo: 400,
+            exigirUnaLetra: false,
+            conSignosDeCatalogo: true,
+          }).ok;
         if (texto === "a  b") return; // dos espacios: la primitiva los colapsa, la base no los rechaza (los conserva la app)
         expect(base[i], JSON.stringify(texto)).toBe(primitiva);
       });

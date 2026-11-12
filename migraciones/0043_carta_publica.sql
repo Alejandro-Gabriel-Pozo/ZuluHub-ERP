@@ -3,7 +3,7 @@
 -- Especificación: Pedernal-docs/11-especificaciones/carta-real-especificacion.md (§3.2, §3.2b, §3.3, §3.4, §3.5, §12 T-2, T-3, T-4 y T-8; T0 = Q3 del dueño).
 --
 --  T0. `texto_de_catalogo_valido` admite además `¿ ¡ ? ! % $` (dueño, Q3 del 12/11/2026): los nombres reales de una carta («¿Querés papas?», «Combo 2x1 50% $500»).
---      Es la copia en la base de la lista de `src/primitivas/texto/texto-de-una-linea.ts` (una prueba las compara carácter por carácter). `CREATE OR REPLACE`
+--      Es la copia en la base de la lista de CATÁLOGO de `src/primitivas/texto/texto-de-una-linea.ts` (la base más esos seis signos: `soloCaracteresPermitidosDeCatalogo`; una prueba las compara carácter por carácter). Razón social, domicilio, notas y motivos NO la usan en TypeScript y siguen sin esos signos (dueño: solo catálogo). `CREATE OR REPLACE`
 --      conserva el EXECUTE de `pedernal_app` y no toca ninguna fila: lo que ya estaba guardado sigue válido (la lista solo se ensancha).
 --  T1. `carta_publica`: la carta en línea de una sucursal (una fila = una sucursal), con su código de QR no adivinable. `disponibilidad_de_producto`: el botón
 --      «Ocultar»: una fila = «este producto está oculto (o se volvió a mostrar) en este alcance»; `sucursal_id` NULO = toda la empresa; sin fila = visible.

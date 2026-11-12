@@ -22,6 +22,7 @@ export function nombreDeCartaDesdeTexto(texto: string): Resultado<string, Motivo
   return textoDeUnaLineaDesdeTexto(texto, {
     maximo: LARGO_MAXIMO_DEL_NOMBRE_DE_CARTA,
     exigirUnaLetra: false,
+    conSignosDeCatalogo: true,
   });
 }
 
@@ -29,6 +30,7 @@ export function rubroDeCartaDesdeTexto(texto: string): Resultado<string, MotivoD
   return textoDeUnaLineaDesdeTexto(texto, {
     maximo: LARGO_MAXIMO_DEL_RUBRO_DE_CARTA,
     exigirUnaLetra: false,
+    conSignosDeCatalogo: true,
   });
 }
 
@@ -36,6 +38,7 @@ export function lugarDeCartaDesdeTexto(texto: string): Resultado<string, MotivoD
   return textoDeUnaLineaDesdeTexto(texto, {
     maximo: LARGO_MAXIMO_DEL_LUGAR_DE_CARTA,
     exigirUnaLetra: false,
+    conSignosDeCatalogo: true,
   });
 }
 
