@@ -8,6 +8,7 @@ export type OpcionId = Marca<string, "OpcionId">;
 export type VersionDeOpcionId = Marca<string, "VersionDeOpcionId">;
 export type PrecioDeVentaId = Marca<string, "PrecioDeVentaId">;
 export type CopiaDeOpcionesId = Marca<string, "CopiaDeOpcionesId">;
+export type CartaPublicaId = Marca<string, "CartaPublicaId">;
 
 const FORMA_DE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -22,3 +23,4 @@ export const opcionId = (valor: string): OpcionId => valor as OpcionId;
 export const versionDeOpcionId = (valor: string): VersionDeOpcionId => valor as VersionDeOpcionId;
 export const precioDeVentaId = (valor: string): PrecioDeVentaId => valor as PrecioDeVentaId;
 export const copiaDeOpcionesId = (valor: string): CopiaDeOpcionesId => valor as CopiaDeOpcionesId;
+export const cartaPublicaId = (valor: string): CartaPublicaId => valor as CartaPublicaId;

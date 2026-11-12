@@ -171,7 +171,7 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
     ["razón social demasiado larga", { razonSocial: "a".repeat(201) }, "RAZON_SOCIAL_INVALIDA"],
     ["razón social con arroba", { razonSocial: "Kiosco @ Mendoza" }, "RAZON_SOCIAL_INVALIDA"],
     ["razón social con emoji", { razonSocial: "Hotel & Spa ✨" }, "RAZON_SOCIAL_INVALIDA"],
-    ["razón social con porcentaje", { razonSocial: "50% Off SRL" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social con barra baja", { razonSocial: "Norte_Sur SRL" }, "RAZON_SOCIAL_INVALIDA"],
     ["razón social sin ninguna letra", { razonSocial: "30-71234567-1" }, "RAZON_SOCIAL_INVALIDA"],
     ["razón social que empieza con guion", { razonSocial: "-Norte SA" }, "RAZON_SOCIAL_INVALIDA"],
     ["razón social de otro alfabeto", { razonSocial: "小林商事" }, "RAZON_SOCIAL_INVALIDA"],

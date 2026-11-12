@@ -111,7 +111,7 @@ describe("recorte de extremos y arranque con signo de fórmula", () => {
 describe("la lista de permitidos", () => {
   it("cada carácter declarado entra, uno por uno", () => {
     const permitidos =
-      "ABCXYZabcxyz0123456789 .,&-'/()°+:;\"#ºª’“”–—«»®™ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿŠšŒœŽžŸ";
+      "ABCXYZabcxyz0123456789 .,&-'/()°+:;\"#ºª’“”–—«»®™¿¡?!%$ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿŠšŒœŽžŸ";
     for (const caracter of permitidos) {
       expect(soloCaracteresPermitidos(`a${caracter}b`), caracter).toBe(true);
     }
@@ -132,9 +132,6 @@ describe("la lista de permitidos", () => {
       "5 € ",
       "Juan @ casa",
       "Juan = 3",
-      "50% off",
-      "$ 100",
-      "¿Qué tal?",
       "a_b",
       "a|b",
       "a\\b",
@@ -143,12 +140,59 @@ describe("la lista de permitidos", () => {
       "a~b",
       "a`b",
       "a^b",
-      "a!b",
-      "a?b",
       "a*b",
     ]) {
       invalido(texto, "CARACTER_PROHIBIDO");
     }
+  });
+
+  it("`¿ ¡ ? ! % $` entran (dueño, Q3 del 12/11/2026): los nombres reales de una carta, en cualquier posición", () => {
+    for (const texto of [
+      "¿Querés papas?",
+      "¡Promo!",
+      "Combo 2x1 50% $500",
+      "50% off",
+      "$ 100",
+      "a!b",
+      "a?b",
+      "$500",
+      "%",
+      "?",
+      "¡",
+    ]) {
+      valido(texto, texto);
+    }
+  });
+
+  it("lo que el pedido de la carta NO ensancha sigue afuera: `_ | \\ [ ] { } ~ ` ^ * = @ < > € × ÷` y los de otros alfabetos", () => {
+    for (const texto of [
+      "a_b",
+      "a|b",
+      "a\\b",
+      "a[b]",
+      "a{b}",
+      "a~b",
+      "a`b",
+      "a^b",
+      "a*b",
+      "a=b",
+      "a@b",
+      "a<b",
+      "a>b",
+      "5 €",
+      "a×b",
+      "a÷b",
+      "‽",
+      "¿¡¿" + "😀",
+    ]) {
+      invalido(texto, "CARACTER_PROHIBIDO");
+    }
+  });
+
+  it("los nuevos no abren una fórmula: el arranque con `+` o `-` sigue rechazado y y `¿ +` adentro del texto pasa", () => {
+    invalido("+¿Querés?", "CARACTER_PROHIBIDO");
+    invalido("-$500", "CARACTER_PROHIBIDO");
+    valido("¿+1?", "¿+1?");
   });
 
   it("los signos que se pegan desde un procesador de texto entran: comillas y guiones tipográficos", () => {
