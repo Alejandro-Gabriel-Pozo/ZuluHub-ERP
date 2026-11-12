@@ -3,16 +3,14 @@ import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import { tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
-import {
-  armarLaListaDeMedios,
-  type AccionesDeMedios,
-  type MedioDeLaLista,
-} from "./modelo-de-medios-de-pago";
-import { PantallaDeMediosDePago } from "./PantallaDeMediosDePago";
+import type { AccionesDeLista } from "./lista-de-caja";
+import { armarLaListaDeCajas } from "./modelo-de-cajas";
+import { armarLaListaDeMedios, type MedioDeLaLista } from "./modelo-de-medios-de-pago";
+import { PantallaDeListaDeCaja } from "./PantallaDeListaDeCaja";
 
 /** «Medios de pago» en Chromium (maqueta `medios.html`, 09/11/2026): las tarjetas, los botones apagados sin permiso y el doble toque. Las acciones del servidor van simuladas. */
-const TODO: AccionesDeMedios = { agregar: true, editar: true, desactivar: true, reactivar: true };
-const NADA: AccionesDeMedios = {
+const TODO: AccionesDeLista = { agregar: true, editar: true, desactivar: true, reactivar: true };
+const NADA: AccionesDeLista = {
   agregar: false,
   editar: false,
   desactivar: false,
@@ -40,11 +38,11 @@ const MEDIOS = [
 
 const ok: AccionDeFormulario = () => Promise.resolve({ error: null });
 const pantalla = (
-  acciones: AccionesDeMedios,
+  acciones: AccionesDeLista,
   desactivar: AccionDeFormulario = ok,
   reactivar: AccionDeFormulario = ok,
 ) => (
-  <PantallaDeMediosDePago
+  <PantallaDeListaDeCaja
     filas={armarLaListaDeMedios(MEDIOS)}
     acciones={acciones}
     textos={TEXTOS}
@@ -53,13 +51,30 @@ const pantalla = (
   />
 );
 
-describe("PantallaDeMediosDePago", () => {
+describe("PantallaDeListaDeCaja", () => {
   it("muestra una tarjeta por medio, con su estado y su cuenta de cobro, y es accesible", async () => {
     await render(pantalla(TODO));
     await expect.element(page.getByText("Mercado Pago")).toBeVisible();
     await expect.element(page.getByText("QR · Cuenta de cobro: opcional")).toBeVisible();
     await expect.element(page.getByText("Cuenta de cobro: no lleva")).toBeVisible();
     await expect.element(page.getByText("Desactivado")).toBeVisible();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("una tarjeta sin línea de detalle (las cajas) no deja un hueco vacío", async () => {
+    await render(
+      <PantallaDeListaDeCaja
+        filas={armarLaListaDeCajas([{ id: "k1", nombre: "Caja 1", activa: true, version: 1 }])}
+        acciones={TODO}
+        textos={TEXTOS}
+        hrefDeAgregar="/caja/cajas/nuevo"
+        accionDe={() => ({ desactivar: ok, reactivar: ok })}
+      />,
+    );
+    await expect.element(page.getByText("Caja 1")).toBeVisible();
+    expect(page.getByRole("listitem").elements()[0]?.textContent).toBe(
+      "Caja 1ActivoEditarDesactivar",
+    );
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 

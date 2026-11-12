@@ -35,6 +35,21 @@ export const TEXTOS_DE_CAJA = {
   "caja.medios.tipo.transferencia": { porDefecto: "Transferencia" },
   "caja.medios.tipo.qr": { porDefecto: "QR" },
   "caja.medios.tipo.otro": { porDefecto: "Otro" },
+  // MEDIOS, tabla «(reutilizados)»: los títulos de las otras dos listas y sus botones de alta.
+  "caja.cuentas.titulo": { porDefecto: "Cuentas de cobro" },
+  "caja.cuentas.agregar": { porDefecto: "Agregar cuenta" },
+  "caja.cajas.titulo": { porDefecto: "Cajas" },
+  "caja.cajas.agregar": { porDefecto: "Agregar caja" },
+  // MEDIOS, tabla «(reutilizados)»: rótulos del formulario de una cuenta («(opcional)» como en `vFormC`) y de su sucursal.
+  "caja.campo.identificador_opcional": { porDefecto: "Identificador (opcional)" },
+  "caja.campo.sucursal": { porDefecto: "Sucursal" },
+  // MEDIOS, arreglo `CTIPOS` de la maqueta («Terminal» y «Cuenta bancaria» están en la tabla «(reutilizados)»; «QR» es el de los medios, `caja.medios.tipo.qr`).
+  "caja.cuentas.tipo.terminal": { porDefecto: "Terminal" },
+  "caja.cuentas.tipo.cuenta_bancaria": { porDefecto: "Cuenta bancaria" },
+  // MEDIOS, tabla «(reutilizados)»: los avisos de error de cuentas y cajas.
+  "caja.error.cuenta_repetida": { porDefecto: "Ya existe una cuenta con ese nombre" },
+  "caja.error.caja_repetida": { porDefecto: "Ya existe una caja con ese nombre" },
+  "caja.error.identificador_invalido": { porDefecto: "Identificador no válido" },
   // MEDIOS, tabla «(reutilizados)»: los dos avisos de error de esta pantalla («Ya existe un medio con ese nombre» y el genérico).
   "caja.error.medio_repetido": { porDefecto: "Ya existe un medio con ese nombre" },
   "caja.error.accion_no_permitida": { porDefecto: "Esta acción no está permitida" },

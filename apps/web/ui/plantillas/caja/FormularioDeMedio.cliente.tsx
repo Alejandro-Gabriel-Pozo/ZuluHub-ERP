@@ -1,14 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Boton } from "../../componentes/Boton.cliente";
 import { Campo } from "../../componentes/Campo";
 import { Selector } from "../../componentes/Selector";
-import { BotonDeEnvio } from "../../patrones/BotonDeEnvio.cliente";
-import {
-  FormularioDeAccion,
-  type AccionDeFormulario,
-} from "../../patrones/FormularioDeAccion.cliente";
+import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
+import { FormularioDeConfiguracion } from "./FormularioDeConfiguracion.cliente";
 import type { MedioDeLaLista, OpcionDeTipo } from "./modelo-de-medios-de-pago";
 
 export type PropsDeFormularioDeMedio = Readonly<{
@@ -24,8 +20,7 @@ export type PropsDeFormularioDeMedio = Readonly<{
 
 /**
  * Alta y edición de un medio de pago en una sola pantalla (maqueta `medios.html`, 09/11/2026): el tipo de una lista cerrada (no se cambia después: en la edición sale
- * apagado) y el nombre, opcional. La validez la decide el servidor: acá no se valida nada. El error vuelve debajo, con el texto del catálogo. Repetir el
- * envío no duplica: el servidor devuelve el medio que ya existe (alta) o no escribe (versión igual).
+ * apagado) y el nombre, opcional. La validez la decide el servidor: acá no se valida nada. El error vuelve debajo, con el texto del catálogo.
  */
 export function FormularioDeMedio({
   original,
@@ -37,7 +32,11 @@ export function FormularioDeMedio({
   const [tipo, setTipo] = useState(original?.tipo ?? tipos[0]?.valor ?? "");
   const [nombre, setNombre] = useState(original?.nombre ?? "");
   return (
-    <FormularioDeAccion accion={accion}>
+    <FormularioDeConfiguracion
+      accion={accion}
+      textoGuardar={textos.guardar}
+      puedeGuardar={puedeGuardar}
+    >
       <Selector
         dato="tipo-de-medio-de-pago"
         etiqueta={textos.tipo}
@@ -55,11 +54,6 @@ export function FormularioDeMedio({
         alCambiar={setNombre}
         autoComplete="off"
       />
-      {puedeGuardar ? (
-        <BotonDeEnvio>{textos.guardar}</BotonDeEnvio>
-      ) : (
-        <Boton deshabilitado>{textos.guardar}</Boton>
-      )}
-    </FormularioDeAccion>
+    </FormularioDeConfiguracion>
   );
 }

@@ -1,12 +1,14 @@
 import { texto } from "../../../../../../../../src/capacidades/vocabulario/vocabulario";
 import { pantallaDeOperacion } from "../../../../../../pantallas/operacion";
 import { cargarLosMedios } from "../../../../../../servidor/medios-de-pago";
-import { accionesDeMediosDePago } from "../../../../../../servidor/modulos";
+import { accionesDeLaListaDeCaja } from "../../../../../../servidor/modulos";
 import {
   armarLaListaDeMedios,
   RUTAS_DE_MEDIOS,
 } from "../../../../../../ui/plantillas/caja/modelo-de-medios-de-pago";
-import { PantallaDeMediosDePago } from "../../../../../../ui/plantillas/caja/PantallaDeMediosDePago";
+import { PantallaDeListaDeCaja } from "../../../../../../ui/plantillas/caja/PantallaDeListaDeCaja";
+import { pestanasDeCaja } from "../../../../../../ui/plantillas/caja/pestanas-de-caja";
+import { PestanasDeCaja } from "../../../../../../ui/plantillas/caja/PestanasDeCaja";
 import { ErrorDelDetalle } from "../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
 import { desactivarMedioAccion, reactivarMedioAccion } from "../../../acciones-de-medios-de-pago";
 
@@ -17,21 +19,24 @@ export default async function PaginaDeMediosDePago() {
     const medios = await cargarLosMedios(contexto);
     if (!medios.ok) return <ErrorDelDetalle error={medios.error} />;
     return (
-      <PantallaDeMediosDePago
-        filas={armarLaListaDeMedios(medios.dato.medios)}
-        acciones={await accionesDeMediosDePago(contexto)}
-        textos={{
-          agregar: texto({}, "caja.medios.agregar"),
-          editar: texto({}, "caja.accion.editar"),
-          desactivar: texto({}, "caja.accion.desactivar"),
-          reactivar: texto({}, "caja.accion.reactivar"),
-        }}
-        hrefDeAgregar={RUTAS_DE_MEDIOS.nuevo}
-        accionDe={(fila) => ({
-          desactivar: desactivarMedioAccion.bind(null, fila.id),
-          reactivar: reactivarMedioAccion.bind(null, fila.id),
-        })}
-      />
+      <>
+        <PestanasDeCaja pestanas={pestanasDeCaja("medios")} />
+        <PantallaDeListaDeCaja
+          filas={armarLaListaDeMedios(medios.dato.medios)}
+          acciones={await accionesDeLaListaDeCaja(contexto, "medios_de_pago")}
+          textos={{
+            agregar: texto({}, "caja.medios.agregar"),
+            editar: texto({}, "caja.accion.editar"),
+            desactivar: texto({}, "caja.accion.desactivar"),
+            reactivar: texto({}, "caja.accion.reactivar"),
+          }}
+          hrefDeAgregar={RUTAS_DE_MEDIOS.nuevo}
+          accionDe={(fila) => ({
+            desactivar: desactivarMedioAccion.bind(null, fila.id),
+            reactivar: reactivarMedioAccion.bind(null, fila.id),
+          })}
+        />
+      </>
     );
   });
 }

@@ -2,7 +2,7 @@ import { errorDeCodigo } from "../../../../../../../../../src/capacidades/experi
 import { texto } from "../../../../../../../../../src/capacidades/vocabulario/vocabulario";
 import { pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
 import { cargarLosMedios } from "../../../../../../../servidor/medios-de-pago";
-import { accionesDeMediosDePago } from "../../../../../../../servidor/modulos";
+import { accionesDeLaListaDeCaja } from "../../../../../../../servidor/modulos";
 import { FormularioDeMedio } from "../../../../../../../ui/plantillas/caja/FormularioDeMedio.cliente";
 import { opcionesDeTipo } from "../../../../../../../ui/plantillas/caja/modelo-de-medios-de-pago";
 import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
@@ -31,7 +31,7 @@ export default async function PaginaDeUnMedio({ params }: PropsDePagina) {
           nombre: texto({}, "caja.campo.nombre_opcional"),
           guardar: texto({}, "caja.accion.guardar"),
         }}
-        puedeGuardar={(await accionesDeMediosDePago(contexto)).editar}
+        puedeGuardar={(await accionesDeLaListaDeCaja(contexto, "medios_de_pago")).editar}
       />
     );
   });

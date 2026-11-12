@@ -4,15 +4,27 @@ import { CODIGOS_PUBLICOS, errorDeCodigo } from "./respuesta";
 import { CLAVES_DE_ERRORES_DE_CAJA } from "./respuesta-de-caja";
 
 /**
- * Los dos códigos de la configuración de caja: cada uno con SU texto del catálogo (aprobado en la maqueta `medios.html`, 09/11/2026) y mostrado como un
+ * Los códigos de la configuración de caja: cada uno con SU texto del catálogo (aprobado en la maqueta `medios.html`, 09/11/2026) y mostrado como un
  * aviso. Previene: que un código de caja salga con el texto de otro o sin texto.
  */
 describe("códigos públicos de la configuración de caja", () => {
-  it("son exactamente estos dos, con su texto exacto", () => {
+  it("son exactamente estos, con su texto exacto", () => {
     expect(CLAVES_DE_ERRORES_DE_CAJA).toEqual({
       CAJA_MEDIO_REPETIDO: "caja.error.medio_repetido",
+      CAJA_CUENTA_REPETIDA: "caja.error.cuenta_repetida",
+      CAJA_CAJA_REPETIDA: "caja.error.caja_repetida",
+      CAJA_IDENTIFICADOR_INVALIDO: "caja.error.identificador_invalido",
       CAJA_ACCION_NO_PERMITIDA: "caja.error.accion_no_permitida",
     });
+    expect(CATALOGO_DE_TEXTOS["caja.error.cuenta_repetida"].porDefecto).toBe(
+      "Ya existe una cuenta con ese nombre",
+    );
+    expect(CATALOGO_DE_TEXTOS["caja.error.caja_repetida"].porDefecto).toBe(
+      "Ya existe una caja con ese nombre",
+    );
+    expect(CATALOGO_DE_TEXTOS["caja.error.identificador_invalido"].porDefecto).toBe(
+      "Identificador no válido",
+    );
     expect(CATALOGO_DE_TEXTOS["caja.error.medio_repetido"].porDefecto).toBe(
       "Ya existe un medio con ese nombre",
     );
