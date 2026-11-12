@@ -44,12 +44,12 @@ describe("PorQueNoPuedo", () => {
         <button type="button" disabled aria-describedby="porque">
           Anular
         </button>
-        <PorQueNoPuedo id="porque" texto="No tiene permiso para hacer esto." codigo="SIN_PERMISO" />
+        <PorQueNoPuedo id="porque" texto="No tenés permiso para hacer esto." codigo="SIN_PERMISO" />
       </>,
     );
     await expect
       .element(page.getByRole("button", { name: "Anular" }))
-      .toHaveAccessibleDescription("No tiene permiso para hacer esto. SIN_PERMISO");
+      .toHaveAccessibleDescription("No tenés permiso para hacer esto. SIN_PERMISO");
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 });

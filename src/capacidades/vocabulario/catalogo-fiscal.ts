@@ -8,11 +8,11 @@
 export const TEXTOS_DE_FISCAL = {
   "error.fiscal_datos_invalidos": {
     porDefecto:
-      "Revise los datos del comprobante: hay campos incompletos o con un formato que no es válido.",
+      "Revisá los datos del comprobante: hay campos incompletos o con un formato que no es válido.",
     largoMaximo: 160,
   },
   "error.fiscal_pedido_sin_identificar": {
-    porDefecto: "No se pudo identificar el pedido. Actualice la pantalla e intente de nuevo.",
+    porDefecto: "No se pudo identificar el pedido. Actualizá la pantalla e intentá de nuevo.",
     largoMaximo: 160,
   },
   "error.fiscal_pedido_repetido": {
@@ -62,12 +62,13 @@ export const TEXTOS_DE_FISCAL = {
     largoMaximo: 160,
   },
   "error.fiscal_motivo_invalido": {
-    porDefecto: "Escriba el motivo: es obligatorio y tiene un largo máximo.",
+    porDefecto: "Escribí el motivo: es obligatorio y tiene un largo máximo.",
     largoMaximo: 160,
   },
   "error.fiscal_receptor_invalido": {
     // Genérico y sin nombrar campos (dueño, 2026-11-06, conversación directa con la sesión «Emitir»: «uno genérico, en voseo»; Q22).
-    // Redacción provisoria: la aprueba el dueño con la pantalla armada. Previene un aviso que nombra un campo que Emitir no tiene.
+    // Aprobado por el dueño el 12/11/2026 («apruebo la 1 y 2»: este texto y la unificación al voseo), Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md.
+    // Genérico a propósito. Previene un aviso que nombra un campo que Emitir no tiene.
     porDefecto: "Revisá los datos del cliente.",
     largoMaximo: 160,
   },
@@ -84,7 +85,7 @@ export const TEXTOS_DE_FISCAL = {
     largoMaximo: 160,
   },
   "error.fiscal_sin_renglones": {
-    porDefecto: "Agregue al menos un renglón al comprobante.",
+    porDefecto: "Agregá al menos un renglón al comprobante.",
     largoMaximo: 160,
   },
   "error.fiscal_demasiados_renglones": {
@@ -109,7 +110,7 @@ export const TEXTOS_DE_FISCAL = {
   },
   "error.fiscal_fechas_de_servicio_invalidas": {
     porDefecto:
-      "Revise las fechas del servicio: son obligatorias para servicios y el período tiene que tener sentido.",
+      "Revisá las fechas del servicio: son obligatorias para servicios y el período tiene que tener sentido.",
     largoMaximo: 200,
   },
   "error.fiscal_total_fuera_de_rango": {
@@ -117,7 +118,7 @@ export const TEXTOS_DE_FISCAL = {
     largoMaximo: 160,
   },
   "error.fiscal_comprobante_ya_enviado": {
-    porDefecto: "El comprobante ya se envió a ARCA: espere su respuesta antes de descartarlo.",
+    porDefecto: "El comprobante ya se envió a ARCA: esperá su respuesta antes de descartarlo.",
     largoMaximo: 160,
   },
   "error.fiscal_estado_no_descartable": {
@@ -125,7 +126,7 @@ export const TEXTOS_DE_FISCAL = {
     largoMaximo: 160,
   },
   // Voseo aprobado por el dueño, 2026-11-04, D-113 (Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md):
-  // antes «Los datos cambiaron mientras los miraba. Actualice la pantalla e intente de nuevo.».
+  // antes «Los datos cambiaron mientras los miraba. Actualizá la pantalla e intentá de nuevo.».
   "error.fiscal_version_desactualizada": {
     porDefecto:
       "Los datos cambiaron mientras los mirabas. Actualizá la pantalla e intentá de nuevo.",
@@ -150,16 +151,16 @@ export const TEXTOS_DE_FISCAL = {
   },
   "error.fiscal_ultimo_distinto_del_de_arca": {
     porDefecto:
-      "ARCA informa otro último número que el que vio. Revise el dato y confirme de nuevo.",
+      "ARCA informa otro último número que el que viste. Revisá el dato y confirmá de nuevo.",
     largoMaximo: 160,
   },
   "error.fiscal_desfase_hacia_atras": {
     porDefecto:
-      "ARCA informa un número menor que el registrado y no se puede corregir desde acá. Consulte a soporte.",
+      "ARCA informa un número menor que el registrado y no se puede corregir desde acá. Consultá a soporte.",
     largoMaximo: 200,
   },
   "error.fiscal_arca_no_disponible": {
-    porDefecto: "ARCA no está disponible en este momento. Intente de nuevo en unos minutos.",
+    porDefecto: "ARCA no está disponible en este momento. Intentá de nuevo en unos minutos.",
     largoMaximo: 160,
   },
   "error.fiscal_arca_certificado_no_sirve": {
@@ -174,12 +175,12 @@ export const TEXTOS_DE_FISCAL = {
   },
   "error.fiscal_arca_acceso_en_curso": {
     porDefecto:
-      "ARCA ya tiene un acceso abierto para este certificado. Espere unos minutos e intente de nuevo.",
+      "ARCA ya tiene un acceso abierto para este certificado. Esperá unos minutos e intentá de nuevo.",
     largoMaximo: 160,
   },
   "error.fiscal_serie_en_curso": {
     porDefecto:
-      "Hay un comprobante en proceso en este punto de venta. Espere a que termine para cambiar el ambiente.",
+      "Hay un comprobante en proceso en este punto de venta. Esperá a que termine para cambiar el ambiente.",
     largoMaximo: 200,
   },
   "error.fiscal_ambiente_no_vuelve": {
@@ -211,7 +212,7 @@ export const TEXTOS_DE_FISCAL = {
     largoMaximo: 160,
   },
   "error.fiscal_sucursal_fuera_de_alcance": {
-    porDefecto: "Sucursal fuera de su alcance.",
+    porDefecto: "Sucursal fuera de tu alcance.",
     largoMaximo: 160,
   },
   // Fuente: `Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, D-50 («Una sucursal cerrada no emite»; confirmada
@@ -224,7 +225,7 @@ export const TEXTOS_DE_FISCAL = {
   },
   // Fuente de los cuatro textos que siguen: `Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, registro de decisiones,
   // D-66 (los tres mensajes al cargar un punto de venta) y D-67 («Revisá los datos marcados.», que reemplaza en Datos fiscales y Puntos
-  // de venta al «Revise los datos del comprobante», que es de las facturas); ambas confirmadas por el dueño el 2026-10-29, que aprobó
+  // de venta al «Revisá los datos del comprobante», que es de las facturas); ambas confirmadas por el dueño el 2026-10-29, que aprobó
   // los textos tal cual (en voseo, como los aprobó).
   "error.fiscal_configuracion_datos_invalidos": {
     porDefecto: "Revisá los datos marcados.",
@@ -259,7 +260,7 @@ export const TEXTOS_DE_FISCAL = {
   },
   "fiscal.arca.autorizacion": {
     porDefecto:
-      "ARCA no reconoció la autorización del certificado. Revise que esté autorizado para facturar.",
+      "ARCA no reconoció la autorización del certificado. Revisá que esté autorizado para facturar.",
     largoMaximo: 200,
   },
   "fiscal.arca.problema_interno": {

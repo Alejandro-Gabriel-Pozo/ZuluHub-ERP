@@ -273,12 +273,12 @@ describe("la página del listado de comprobantes", () => {
       pagina: { ok: false, error: errorDeCodigo("FISCAL_SUCURSAL_FUERA_DE_ALCANCE") },
     });
     const marcado = await html();
-    expect(await texto()).toContain("Sucursal fuera de su alcance.");
+    expect(await texto()).toContain("Sucursal fuera de tu alcance.");
     expect(marcado).toContain('name="sucursalId"');
   });
 
   it.each([
-    ["SIN_PERMISO", "No tiene permiso para hacer esto."],
+    ["SIN_PERMISO", "No tenés permiso para hacer esto."],
     ["MODULO_EN_DESARROLLO", "Esta función todavía está en desarrollo."],
     ["SESION_VENCIDA", "Tu sesión venció"],
     ["FISCAL_FILTRO_INVALIDO", "Los filtros del listado no son válidos."],

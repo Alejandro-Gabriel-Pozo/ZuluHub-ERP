@@ -131,7 +131,7 @@ describe("la página del detalle de un comprobante", () => {
 
   it.each([
     ["FISCAL_COMPROBANTE_NO_ENCONTRADO", "No encontramos ese comprobante."],
-    ["SIN_PERMISO", "No tiene permiso para hacer esto."],
+    ["SIN_PERMISO", "No tenés permiso para hacer esto."],
     ["MODULO_EN_DESARROLLO", "Esta función todavía está en desarrollo."],
     ["SESION_VENCIDA", "Tu sesión venció"],
   ] as const)("el error %s se ve con su texto y sin el código", async (codigo, esperado) => {

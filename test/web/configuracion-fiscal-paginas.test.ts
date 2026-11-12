@@ -207,7 +207,7 @@ describe("la página «Configuración fiscal» (la lista de lo que falta)", () =
     servidor.estado = falla("SIN_PERMISO");
     const marcado = await html("/page");
     const t = texto(marcado);
-    expect(t).toContain("No tiene permiso para hacer esto.");
+    expect(t).toContain("No tenés permiso para hacer esto.");
     expect(t).not.toContain("SIN_PERMISO");
     expect(titulos(marcado)).toEqual(["Configuración fiscal"]);
   });
@@ -265,7 +265,7 @@ describe("la página «Puntos de venta»", () => {
   it("sin permiso o con error: el texto del catálogo, sin «Agregar»", async () => {
     servidor.puntos = falla("SIN_PERMISO");
     const t = texto(await html("/puntos-de-venta/page"));
-    expect(t).toContain("No tiene permiso para hacer esto.");
+    expect(t).toContain("No tenés permiso para hacer esto.");
     expect(t).not.toContain("Nuevo punto de venta");
   });
 });
@@ -301,7 +301,7 @@ describe("la página «Nuevo punto de venta»", () => {
   it("sin permiso: no pide las sucursales ni muestra el formulario", async () => {
     servidor.puntos = falla("SIN_PERMISO");
     const t = texto(await html("/puntos-de-venta/nuevo/page"));
-    expect(t).toContain("No tiene permiso para hacer esto.");
+    expect(t).toContain("No tenés permiso para hacer esto.");
     expect(t).not.toContain("Guardar");
     expect(servidor.pedidos).toEqual(["puntos"]);
   });
@@ -309,7 +309,7 @@ describe("la página «Nuevo punto de venta»", () => {
   it("si las sucursales fallan, dice el error y no muestra el formulario", async () => {
     servidor.sucursales = falla("SIN_PERMISO");
     const t = texto(await html("/puntos-de-venta/nuevo/page"));
-    expect(t).toContain("No tiene permiso para hacer esto.");
+    expect(t).toContain("No tenés permiso para hacer esto.");
     expect(t).not.toContain("Guardar");
   });
 });
@@ -355,7 +355,7 @@ describe("la página de un punto de venta", () => {
   it("sin permiso: el texto del catálogo", async () => {
     servidor.puntos = falla("SIN_PERMISO");
     const t = texto(await html("/puntos-de-venta/[id]/page", { id: ID }));
-    expect(t).toContain("No tiene permiso para hacer esto.");
+    expect(t).toContain("No tenés permiso para hacer esto.");
     expect(t).not.toContain("Desactivar");
   });
 

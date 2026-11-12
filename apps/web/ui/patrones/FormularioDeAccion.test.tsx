@@ -46,7 +46,7 @@ describe("FormularioDeAccion y BotonDeEnvio", () => {
       });
     await render(formulario(accion));
     tocar(page.getByRole("button", { name: "Entrar a la empresa" }));
-    await expect.element(page.getByText("No tiene permiso para hacer esto.")).toBeVisible();
+    await expect.element(page.getByText("No tenés permiso para hacer esto.")).toBeVisible();
     await expect.element(page.getByText("SIN_PERMISO")).toBeVisible();
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
