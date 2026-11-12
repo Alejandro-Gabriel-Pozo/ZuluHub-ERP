@@ -7,7 +7,6 @@ import {
   valorDe,
   type EscenarioDeCatalogo,
 } from "./catalogo-apoyo";
-import type { BaseDePruebas } from "./global";
 
 /**
  * T2 de la carta real contra una base real, por los casos de uso de verdad (guard, perilla, transacción, auditoría): la carta pública, reordenar y reactivar
@@ -177,10 +176,7 @@ describe.skipIf(base === null)("carta pública y «Ocultar»: casos de uso", () 
         ),
       ).toMatchObject({ ok: true });
       expect(
-        await c.casos.guardarCartaPublica(
-          e.gerente,
-          cartaNueva(e, { estado: "BORRADOR" as never }),
-        ),
+        await c.casos.guardarCartaPublica(e.gerente, cartaNueva(e, { estado: "BORRADOR" })),
       ).toEqual({ ok: false, error: "ESTADO_DE_CARTA_INVALIDO" });
       expect(
         await c.casos.guardarCartaPublica(e.gerente, { ...cartaNueva(e), id: "no-es-uuid" }),

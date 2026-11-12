@@ -120,5 +120,6 @@ export type DependenciasDeConsultasDeCatalogo = Readonly<{
  * objetos planos, y estos tipos son su forma. Solo tipos; ninguna regla.
  */
 export type { ClaseDeUso } from "../dominio/clases";
+export type { EstadoDeCarta } from "../dominio/carta-publica";
 export type { GrupoConOpciones } from "../dominio/cotizar";
 export type { FilaDePrecio, LineaDeConsumo, Producto } from "../dominio/modelo";

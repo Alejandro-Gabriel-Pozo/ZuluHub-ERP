@@ -3,10 +3,10 @@ import { exigirSucursal } from "../../../capacidades/permisos/alcance";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { sucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import type { EstadoDeCarta } from "../dominio/carta-publica";
-import { esUuid } from "../dominio/identificadores";
+import { FORMA_DE_UUID } from "../persistencia/filas";
 import type {
   DependenciasDeConsultasDeCatalogo,
+  EstadoDeCarta,
   TxDeConsultasDeCatalogo,
 } from "../casos-de-uso/contrato";
 import type { ErrorDeCatalogo } from "../casos-de-uso/errores";
@@ -81,7 +81,7 @@ export function crearConsultasDeCarta(d: DependenciasDeConsultasDeCatalogo) {
       entrada: Readonly<{ sucursalId: string }>,
     ): Promise<R<VistaDeCartaPublica>> =>
       leer(contexto, async (tx) => {
-        if (!esUuid(entrada.sucursalId)) return err("SUCURSAL_NO_ENCONTRADA");
+        if (!FORMA_DE_UUID.test(entrada.sucursalId)) return err("SUCURSAL_NO_ENCONTRADA");
         const sucursal = sucursalId(entrada.sucursalId);
         const dentro = exigirSucursal(await tx.autorizacion.sucursalesDelActor(contexto), sucursal);
         if (!dentro.ok) return dentro;
@@ -126,7 +126,7 @@ export function crearConsultasDeCarta(d: DependenciasDeConsultasDeCatalogo) {
         if (entrada.sucursalId === undefined) {
           if (alcance !== "TODAS") return err("SUCURSAL_FUERA_DE_ALCANCE");
         } else {
-          if (!esUuid(entrada.sucursalId)) return err("SUCURSAL_NO_ENCONTRADA");
+          if (!FORMA_DE_UUID.test(entrada.sucursalId)) return err("SUCURSAL_NO_ENCONTRADA");
           const dentro = exigirSucursal(alcance, sucursalId(entrada.sucursalId));
           if (!dentro.ok) return dentro;
           if (
