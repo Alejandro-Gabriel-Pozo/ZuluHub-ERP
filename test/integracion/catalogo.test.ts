@@ -86,6 +86,9 @@ const TABLAS_DE_NEGOCIO = [
   "consumo_de_opcion",
   "precio_de_venta",
   "copia_de_opciones",
+  // La carta pública y el botón «Ocultar» (0043_carta_publica)
+  "carta_publica",
+  "disponibilidad_de_producto",
   // Cierre del día (0026_cierre)
   "jornada_de_sucursal",
   "control_de_jornada_cerrada",
@@ -518,6 +521,8 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "unidad_de_medida",
             "version_de_opcion",
           ].map((t) => `${t}:SELECT`), // 0025
+          "carta_publica:SELECT", // 0043
+          "disponibilidad_de_producto:SELECT", // 0043
         ].sort(),
       );
       expect(porRol("pedernal_grupo")).toEqual(
@@ -821,6 +826,12 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "pedernal_app:pedido_de_ficha.estado",
           "pedernal_app:pedido_de_ficha.resuelto_en",
           "pedernal_app:pedido_de_ficha.resuelto_por",
+          ...["estado", "lugar", "mensaje_de_portada", "nombre", "rubro"].map(
+            (c) => `pedernal_app:carta_publica.${c}`,
+          ), // 0043
+          ...["actualizado_en", "actualizado_por", "oculto"].map(
+            (c) => `pedernal_app:disponibilidad_de_producto.${c}`,
+          ), // 0043
           "pedernal_app:presentacion_de_producto.activa",
           "pedernal_app:presentacion_de_producto.nombre",
           "pedernal_app:presentacion_de_producto.nombre_clave",
@@ -1180,6 +1191,27 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         ...["creado_por", "empresa_id", "id", "producto_destino_id", "producto_origen_id"].map(
           (c) => `copia_de_opciones.${c}`,
         ),
+        // 0043: la carta pública y el botón «Ocultar»
+        ...[
+          "codigo",
+          "creado_por",
+          "empresa_id",
+          "estado",
+          "id",
+          "lugar",
+          "mensaje_de_portada",
+          "nombre",
+          "rubro",
+          "sucursal_id",
+        ].map((c) => `carta_publica.${c}`),
+        ...[
+          "actualizado_en",
+          "actualizado_por",
+          "empresa_id",
+          "oculto",
+          "producto_id",
+          "sucursal_id",
+        ].map((c) => `disponibilidad_de_producto.${c}`),
         ...[
           "activo",
           "admite_varias",
@@ -2623,8 +2655,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         )
       ).rows;
 
-    it("toda restricción única de una tabla con empresa_id la incluye (nada de detectar datos de otro cliente), salvo las excepciones explícitas emisor_cuit_uk y referencia_de_error_referencia_uk", async () => {
+    it("toda restricción única de una tabla con empresa_id la incluye (nada de detectar datos de otro cliente), salvo las excepciones explícitas carta_publica_codigo_uk, emisor_cuit_uk y referencia_de_error_referencia_uk", async () => {
       expect(await unicasSinEmpresa(dueno)).toEqual([
+        // El código de una carta es la llave pública del QR: único en TODA la plataforma, o dos empresas tendrían el mismo QR (0043, carta real §3.2).
+        { tabla: "carta_publica", indice: "carta_publica_codigo_uk" },
         { tabla: "emisor", indice: "emisor_cuit_uk" }, // el CUIT del secundario es único en toda la instalación
         // La referencia de error la sortea el servidor y quien la escribe no puede leer la tabla (0007, P5).
         { tabla: "referencia_de_error", indice: "referencia_de_error_referencia_uk" },
@@ -2640,6 +2674,33 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         [[...ROLES]],
       );
       expect(leen).toEqual([{ grantee: "pedernal_plataforma" }]);
+    });
+
+    it("la premisa de carta_publica_codigo_uk: el código nace en el alta y nadie lo cambia, y el rol público solo ve el de la carta que pide por su código", async () => {
+      // Quién puede ESCRIBIR el código: la aplicación en el alta (lo genera un puerto de azar de 128 bits, no lo elige quien opera) y nadie en un cambio.
+      const escriben = await filas<{ grantee: string; privilege_type: string }>(
+        `select grantee, privilege_type from information_schema.column_privileges
+         where table_schema = 'public' and table_name = 'carta_publica' and column_name = 'codigo'
+           and privilege_type in ('INSERT', 'UPDATE')
+           and (grantee = any($1) or grantee = 'PUBLIC' or grantee in ('pedernal_autenticacion', 'pedernal_publico'))
+         order by 1, 2`,
+        [[...ROLES]],
+      );
+      expect(escriben).toEqual([{ grantee: "pedernal_app", privilege_type: "INSERT" }]);
+      // Quién puede LEERLO fuera de su empresa: solo el rol público y solo con la política por código (sin `app.codigo_de_carta` no ve ninguna fila).
+      const leen = await filas<{ grantee: string }>(
+        `select distinct grantee from information_schema.column_privileges
+         where table_schema = 'public' and table_name = 'carta_publica' and column_name = 'codigo' and privilege_type = 'SELECT'
+           and (grantee = any($1) or grantee = 'PUBLIC' or grantee in ('pedernal_autenticacion', 'pedernal_publico'))
+         order by 1`,
+        [[...ROLES]],
+      );
+      expect(leen).toEqual([{ grantee: "pedernal_app" }, { grantee: "pedernal_publico" }]);
+      const politicasPublicas = await filas<{ policyname: string; qual: string }>(
+        `select policyname, qual from pg_policies where tablename = 'carta_publica' and 'pedernal_publico' = any(roles)`,
+      );
+      expect(politicasPublicas).toHaveLength(1);
+      expect(politicasPublicas[0]?.qual).toContain("app.codigo_de_carta");
     });
 
     it("la premisa de emisor_cuit_uk: solo la plataforma escribe emisor.cuit (si el cliente lo escribiera, el error de duplicado le mostraría los CUIT ajenos)", async () => {
@@ -2673,6 +2734,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           codigo text primary key, empresa_id uuid not null)`);
         await cliente.query(`create table producto_global (id uuid primary key, sku text unique)`);
         expect(await unicasSinEmpresa(cliente)).toEqual([
+          { tabla: "carta_publica", indice: "carta_publica_codigo_uk" }, // la excepción explícita de 0043
           { tabla: "emisor", indice: "emisor_cuit_uk" }, // la excepción explícita de 0006
           { tabla: "producto_clave_propia", indice: "producto_clave_propia_pkey" },
           { tabla: "producto_mala", indice: "producto_mala_sku_key" },

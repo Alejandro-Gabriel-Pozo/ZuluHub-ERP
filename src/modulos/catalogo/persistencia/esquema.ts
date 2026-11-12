@@ -1,5 +1,10 @@
 import type { Generated } from "kysely";
 import {
+  COLUMNAS_DE_CARTA,
+  ERRORES_DE_CARTA_POR_RESTRICCION,
+  type TablasDeCarta,
+} from "./esquema-de-carta";
+import {
   COLUMNAS_DE_PRESENTACIONES,
   ERRORES_DE_PRESENTACIONES_POR_RESTRICCION,
   type TablasDePresentaciones,
@@ -9,126 +14,128 @@ import {
  * Las tablas del catálogo (0025). Los decimales llegan como TEXTO (`numeric` de Postgres): nunca se pasan por `number` (ADR-006). Un test
  * compara estas columnas con el catálogo de la base (`catalogo-persistencia.test.ts`).
  */
-export type CatalogoDb = TablasDePresentaciones & {
-  unidad_de_medida: {
-    id: string;
-    dimension: string;
-    simbolo: string;
-    factor_a_base: string;
-    es_base: boolean;
+export type CatalogoDb = TablasDePresentaciones &
+  TablasDeCarta & {
+    unidad_de_medida: {
+      id: string;
+      dimension: string;
+      simbolo: string;
+      factor_a_base: string;
+      es_base: boolean;
+    };
+    seccion_de_carta: {
+      /** El que manda la aplicación (idempotencia); si no lo manda, lo genera la base. */
+      id: Generated<string>;
+      empresa_id: string;
+      nombre: string;
+      nombre_clave: string;
+      orden: number;
+      activa: Generated<boolean>;
+      creado_en: Generated<Date>;
+      actualizado_en: Generated<Date>;
+      version: Generated<number>;
+    };
+    producto: {
+      id: string;
+      empresa_id: string;
+      nombre: string;
+      nombre_clave: string;
+      nombre_de_cocina: string | null;
+      descripcion_en_carta: string | null;
+      codigo: string | null;
+      codigo_de_barras: string | null;
+      tipo: string;
+      clase_de_uso: string;
+      unidad_base_id: string;
+      dimension: string;
+      unidad_de_venta_id: string;
+      paso_minimo: Generated<string>;
+      alicuota_iva: string | null;
+      falta_completar: Generated<boolean>;
+      /** Columna generada: no se escribe. */
+      se_vende: Generated<boolean>;
+      seccion_de_carta_id: string | null;
+      activo: Generated<boolean>;
+      version_de_opciones: Generated<number>;
+      creado_por: string | null;
+      creado_en: Generated<Date>;
+      actualizado_en: Generated<Date>;
+      version: Generated<number>;
+    };
+    grupo_de_elecciones: {
+      /** El que manda la aplicación (idempotencia); si no lo manda, lo genera la base. */
+      id: Generated<string>;
+      empresa_id: string;
+      producto_id: string;
+      clase: string;
+      es_tamano: Generated<boolean>;
+      nombre: string;
+      nombre_clave: string;
+      es_obligatorio: boolean;
+      admite_varias: boolean;
+      se_muestra_en_carta: Generated<boolean>;
+      orden: number;
+      activo: Generated<boolean>;
+      creado_en: Generated<Date>;
+      actualizado_en: Generated<Date>;
+      version: Generated<number>;
+    };
+    opcion: {
+      /** El que manda la aplicación (idempotencia); si no lo manda, lo genera la base. */
+      id: Generated<string>;
+      empresa_id: string;
+      producto_id: string;
+      grupo_id: string;
+      nombre_clave: string;
+      orden: number;
+      activa: Generated<boolean>;
+      creado_en: Generated<Date>;
+      actualizado_en: Generated<Date>;
+      version: Generated<number>;
+    };
+    version_de_opcion: {
+      /** Lo genera la base (`gen_random_uuid()`): no hay un pedido que repetir. */
+      id: Generated<string>;
+      empresa_id: string;
+      opcion_id: string;
+      numero: number;
+      nombre: string;
+      recargo: Generated<string>;
+      moneda: Generated<string>;
+      iva_incluido: Generated<boolean>;
+      factor_de_tamano: Generated<string>;
+      cargada_por: string | null;
+      creado_en: Date;
+    };
+    consumo_de_opcion: {
+      empresa_id: string;
+      version_de_opcion_id: string;
+      numero: number;
+      insumo_id: string;
+      cantidad: string;
+      escala_con_tamano: Generated<boolean>;
+    };
+    precio_de_venta: {
+      /** El que manda la aplicación (idempotencia); si no lo manda, lo genera la base. */
+      id: Generated<string>;
+      empresa_id: string;
+      producto_id: string;
+      opcion_id: string | null;
+      sucursal_id: string | null;
+      precio: string | null;
+      unidad_id: string;
+      paso_minimo: string;
+      moneda: Generated<string>;
+      iva_incluido: Generated<boolean>;
+      vigente_desde: Date;
+      cargado_por: string | null;
+      creado_en: Generated<Date>;
+    };
   };
-  seccion_de_carta: {
-    /** El que manda la aplicación (idempotencia); si no lo manda, lo genera la base. */
-    id: Generated<string>;
-    empresa_id: string;
-    nombre: string;
-    nombre_clave: string;
-    orden: number;
-    activa: Generated<boolean>;
-    creado_en: Generated<Date>;
-    actualizado_en: Generated<Date>;
-    version: Generated<number>;
-  };
-  producto: {
-    id: string;
-    empresa_id: string;
-    nombre: string;
-    nombre_clave: string;
-    nombre_de_cocina: string | null;
-    descripcion_en_carta: string | null;
-    codigo: string | null;
-    codigo_de_barras: string | null;
-    tipo: string;
-    clase_de_uso: string;
-    unidad_base_id: string;
-    dimension: string;
-    unidad_de_venta_id: string;
-    paso_minimo: Generated<string>;
-    alicuota_iva: string | null;
-    falta_completar: Generated<boolean>;
-    /** Columna generada: no se escribe. */
-    se_vende: Generated<boolean>;
-    seccion_de_carta_id: string | null;
-    activo: Generated<boolean>;
-    version_de_opciones: Generated<number>;
-    creado_por: string | null;
-    creado_en: Generated<Date>;
-    actualizado_en: Generated<Date>;
-    version: Generated<number>;
-  };
-  grupo_de_elecciones: {
-    /** El que manda la aplicación (idempotencia); si no lo manda, lo genera la base. */
-    id: Generated<string>;
-    empresa_id: string;
-    producto_id: string;
-    clase: string;
-    es_tamano: Generated<boolean>;
-    nombre: string;
-    nombre_clave: string;
-    es_obligatorio: boolean;
-    admite_varias: boolean;
-    se_muestra_en_carta: Generated<boolean>;
-    orden: number;
-    activo: Generated<boolean>;
-    creado_en: Generated<Date>;
-    actualizado_en: Generated<Date>;
-    version: Generated<number>;
-  };
-  opcion: {
-    /** El que manda la aplicación (idempotencia); si no lo manda, lo genera la base. */
-    id: Generated<string>;
-    empresa_id: string;
-    producto_id: string;
-    grupo_id: string;
-    nombre_clave: string;
-    orden: number;
-    activa: Generated<boolean>;
-    creado_en: Generated<Date>;
-    actualizado_en: Generated<Date>;
-    version: Generated<number>;
-  };
-  version_de_opcion: {
-    /** Lo genera la base (`gen_random_uuid()`): no hay un pedido que repetir. */
-    id: Generated<string>;
-    empresa_id: string;
-    opcion_id: string;
-    numero: number;
-    nombre: string;
-    recargo: Generated<string>;
-    moneda: Generated<string>;
-    iva_incluido: Generated<boolean>;
-    factor_de_tamano: Generated<string>;
-    cargada_por: string | null;
-    creado_en: Date;
-  };
-  consumo_de_opcion: {
-    empresa_id: string;
-    version_de_opcion_id: string;
-    numero: number;
-    insumo_id: string;
-    cantidad: string;
-    escala_con_tamano: Generated<boolean>;
-  };
-  precio_de_venta: {
-    /** El que manda la aplicación (idempotencia); si no lo manda, lo genera la base. */
-    id: Generated<string>;
-    empresa_id: string;
-    producto_id: string;
-    opcion_id: string | null;
-    sucursal_id: string | null;
-    precio: string | null;
-    unidad_id: string;
-    paso_minimo: string;
-    moneda: Generated<string>;
-    iva_incluido: Generated<boolean>;
-    vigente_desde: Date;
-    cargado_por: string | null;
-    creado_en: Generated<Date>;
-  };
-};
 
 export const COLUMNAS_DE_CATALOGO = {
   ...COLUMNAS_DE_PRESENTACIONES,
+  ...COLUMNAS_DE_CARTA,
   unidad_de_medida: ["id", "dimension", "simbolo", "factor_a_base", "es_base"],
   seccion_de_carta: [
     "id",
@@ -249,6 +256,7 @@ export const COLUMNAS_DE_CATALOGO = {
  */
 export const ERRORES_DE_CATALOGO_POR_RESTRICCION: Readonly<Record<string, string>> = {
   ...ERRORES_DE_PRESENTACIONES_POR_RESTRICCION,
+  ...ERRORES_DE_CARTA_POR_RESTRICCION,
   // unidad_de_medida (sembrada: nadie la escribe)
   unidad_de_medida_pkey: "NO_TRADUCIDA",
   unidad_id_ck: "NO_TRADUCIDA",

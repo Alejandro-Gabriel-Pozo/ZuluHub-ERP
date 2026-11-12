@@ -13,5 +13,6 @@ export function descripcionDeCartaDesdeTexto(
   return textoDeUnaLineaDesdeTexto(texto, {
     maximo: LARGO_MAXIMO_DE_LA_DESCRIPCION_EN_CARTA,
     exigirUnaLetra: false,
+    conSignosDeCatalogo: true,
   });
 }

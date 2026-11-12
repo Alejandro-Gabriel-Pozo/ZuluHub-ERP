@@ -14,5 +14,6 @@ export function nombreDeEleccionDesdeTexto(
   return textoDeUnaLineaDesdeTexto(texto, {
     maximo: LARGO_MAXIMO_DEL_NOMBRE_DE_ELECCION,
     exigirUnaLetra: false,
+    conSignosDeCatalogo: true,
   });
 }

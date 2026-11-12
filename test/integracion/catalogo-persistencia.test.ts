@@ -48,12 +48,14 @@ describe.skipIf(base === null)("catálogo: la persistencia contra el esquema rea
        select indexname from pg_indexes where schemaname = 'public' and tablename = any($1) and indexdef like 'CREATE UNIQUE%'`,
       [TABLAS],
     );
-    const migracion = await readFile(
-      join(import.meta.dirname, "../../migraciones/0025_catalogo.sql"),
-      "utf8",
+    // Las restricciones que lanzan los disparadores del catálogo: las de 0025 y las de la carta pública (0043).
+    const migraciones = await Promise.all(
+      ["0025_catalogo.sql", "0043_carta_publica.sql"].map((archivo) =>
+        readFile(join(import.meta.dirname, "../../migraciones", archivo), "utf8"),
+      ),
     );
-    const deDisparadores = [...migracion.matchAll(/CONSTRAINT = '(\w+)'/g)].map(
-      (m) => m[1] as string,
+    const deDisparadores = migraciones.flatMap((sql) =>
+      [...sql.matchAll(/CONSTRAINT = '(\w+)'/g)].map((m) => m[1] as string),
     );
     expect(deDisparadores.length).toBeGreaterThan(20);
     const existentes = new Set([...rows.map((r) => r.nombre), ...deDisparadores]);
@@ -68,14 +70,17 @@ describe.skipIf(base === null)("catálogo: la persistencia contra el esquema rea
     ).toEqual([]);
   });
 
-  it("toda única de una tabla de empresa incluye `empresa_id` (salvo la clave primaria por `id` y la tabla global de unidades)", async () => {
+  it("toda única de una tabla de empresa incluye `empresa_id` (salvo la clave primaria por `id`, la tabla global de unidades y el código de la carta, único en toda la plataforma)", async () => {
     const { rows } = await c.query<{ tabla: string; indice: string; def: string }>(
       `select tablename as tabla, indexname as indice, indexdef as def from pg_indexes
         where schemaname = 'public' and tablename = any($1) and indexdef like 'CREATE UNIQUE%' and indexname not like '%_pkey'`,
       [TABLAS.filter((t) => t !== "unidad_de_medida")],
     );
     expect(rows.length).toBeGreaterThan(15);
-    expect(rows.filter((r) => !r.def.includes("empresa_id")).map((r) => r.indice)).toEqual([]);
+    // La única excepción, con su motivo (0043, carta real §3.2): el código es la llave pública del QR y tiene que ser único en TODA la plataforma.
+    expect(rows.filter((r) => !r.def.includes("empresa_id")).map((r) => r.indice)).toEqual([
+      "carta_publica_codigo_uk",
+    ]);
   });
 
   it("toda clave foránea entre tablas de empresa es compuesta con `empresa_id` (una fila no puede apuntar a otra empresa)", async () => {

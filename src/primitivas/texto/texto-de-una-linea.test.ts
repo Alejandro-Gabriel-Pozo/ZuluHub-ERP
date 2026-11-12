@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { soloCaracteresPermitidos, textoDeUnaLineaDesdeTexto } from "./texto-de-una-linea";
+import {
+  soloCaracteresPermitidos,
+  soloCaracteresPermitidosDeCatalogo,
+  textoDeUnaLineaDesdeTexto,
+} from "./texto-de-una-linea";
 
 /** Las reglas de un dato que no exige letra (como el domicilio): lo que se prueba acá es la regla común. */
 const con = (maximo: number) => ({ maximo, exigirUnaLetra: false });
@@ -237,5 +241,88 @@ describe("textoDeUnaLineaDesdeTexto: lo que rechaza", () => {
 
   it("devuelve el motivo de lo prohibido antes que el del largo", () => {
     invalido("a\n".repeat(300), "CARACTER_PROHIBIDO");
+  });
+});
+
+const SEIS = ["¿", "¡", "?", "!", "%", "$"];
+const catalogo = (maximo = 200, exigirUnaLetra = false) => ({
+  maximo,
+  exigirUnaLetra,
+  conSignosDeCatalogo: true,
+});
+
+describe("los seis signos del catálogo (`¿ ¡ ? ! % $`, dueño, Q3 del 12/11/2026)", () => {
+  it("la lista BASE (razón social, domicilio, notas, motivos, marca de mails) NO los admite: ni sola, ni por defecto, ni con la bandera en falso", () => {
+    for (const signo of SEIS) {
+      expect(soloCaracteresPermitidos(`a${signo}b`), signo).toBe(false);
+      invalido(`Juan ${signo}`, "CARACTER_PROHIBIDO");
+      expect(
+        textoDeUnaLineaDesdeTexto(`Juan ${signo}`, {
+          maximo: 200,
+          exigirUnaLetra: false,
+          conSignosDeCatalogo: false,
+        }),
+        signo,
+      ).toEqual({ ok: false, error: "CARACTER_PROHIBIDO" });
+    }
+    for (const texto of ["50% Off SRL", "$ 100", "¿Qué tal?", "¡Hola!", "a?b", "a!b"]) {
+      invalido(texto, "CARACTER_PROHIBIDO");
+    }
+  });
+
+  it("la lista de catálogo los admite, uno por uno y en cualquier posición", () => {
+    for (const signo of SEIS) {
+      expect(soloCaracteresPermitidosDeCatalogo(`a${signo}b`), signo).toBe(true);
+      expect(textoDeUnaLineaDesdeTexto(`${signo}a${signo}`, catalogo()), signo).toEqual({
+        ok: true,
+        valor: `${signo}a${signo}`,
+      });
+    }
+    for (const texto of ["¿Querés papas?", "¡Promo!", "Combo 2x1 50% $500", "$500", "%"]) {
+      expect(textoDeUnaLineaDesdeTexto(texto, catalogo()), texto).toEqual({
+        ok: true,
+        valor: texto,
+      });
+    }
+  });
+
+  it("la de catálogo es la base MÁS esos seis y nada más: todo lo demás se decide igual", () => {
+    for (let cp = 0x20; cp <= 0xffff; cp += 1) {
+      if (cp >= 0xd800 && cp <= 0xdfff) continue;
+      const caracter = String.fromCodePoint(cp);
+      const base = soloCaracteresPermitidos(`a${caracter}b`);
+      const ampliada = soloCaracteresPermitidosDeCatalogo(`a${caracter}b`);
+      expect(ampliada, `U+${cp.toString(16)}`).toBe(base || SEIS.includes(caracter));
+    }
+  });
+
+  it("siguen valiendo las demás reglas con la bandera: `+` y `-` no abren, vacío, largo y letra obligatoria, `=` y `@` afuera", () => {
+    expect(textoDeUnaLineaDesdeTexto("+¿?", catalogo())).toEqual({
+      ok: false,
+      error: "CARACTER_PROHIBIDO",
+    });
+    expect(textoDeUnaLineaDesdeTexto("-$500", catalogo())).toEqual({
+      ok: false,
+      error: "CARACTER_PROHIBIDO",
+    });
+    expect(textoDeUnaLineaDesdeTexto("¿+1?", catalogo())).toEqual({ ok: true, valor: "¿+1?" });
+    expect(textoDeUnaLineaDesdeTexto("  ", catalogo())).toEqual({ ok: false, error: "VACIO" });
+    expect(textoDeUnaLineaDesdeTexto("a=b", catalogo())).toEqual({
+      ok: false,
+      error: "CARACTER_PROHIBIDO",
+    });
+    expect(textoDeUnaLineaDesdeTexto("a@b", catalogo())).toEqual({
+      ok: false,
+      error: "CARACTER_PROHIBIDO",
+    });
+    expect(textoDeUnaLineaDesdeTexto("¿¿¿¿¿¿", catalogo(5))).toEqual({
+      ok: false,
+      error: "DEMASIADO_LARGO",
+    });
+    expect(textoDeUnaLineaDesdeTexto("¿?%$!", catalogo(5, true))).toEqual({
+      ok: false,
+      error: "SIN_LETRAS",
+    });
+    expect(textoDeUnaLineaDesdeTexto("¿a?", catalogo(5, true))).toEqual({ ok: true, valor: "¿a?" });
   });
 });

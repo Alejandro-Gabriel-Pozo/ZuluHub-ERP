@@ -104,6 +104,22 @@ export {
   type RepositorioDePrecios,
 } from "./persistencia/repositorio-de-precios";
 
+// La carta pública y el botón «Ocultar» (carta real §3.2 y §3.2b): el dato es del catálogo; los casos de uso (T2) y el adaptador de lectura (T3) los leen por estos tipos.
+export type { CartaPublica, Disponibilidad, EstadoDeCarta } from "./dominio/carta-publica";
+export { ocultoPor } from "./dominio/carta-publica";
+export type { CartaPublicaId } from "./dominio/identificadores";
+export {
+  crearRepositorioDeCartas,
+  type AltaDeCartaPublica,
+  type CambiosDeCartaPublica,
+  type RepositorioDeCartas,
+} from "./persistencia/repositorio-de-cartas";
+export {
+  crearRepositorioDeDisponibilidad,
+  type FijarDisponibilidad,
+  type RepositorioDeDisponibilidad,
+} from "./persistencia/repositorio-de-disponibilidad";
+
 export { insertarIdempotente } from "./persistencia/insertar-idempotente";
 export {
   crearRepositoriosDeCatalogo,
