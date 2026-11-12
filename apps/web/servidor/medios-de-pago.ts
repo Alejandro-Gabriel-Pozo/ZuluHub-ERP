@@ -1,5 +1,4 @@
 import "server-only";
-import { redirect } from "next/navigation";
 import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   agregarElMedioDePago,
@@ -15,6 +14,7 @@ import { RUTAS_DE_MEDIOS } from "../ui/plantillas/caja/modelo-de-medios-de-pago"
 import type { ResultadoDeAccion } from "./acciones";
 import { web } from "./composicion";
 import { conLaEmpresa } from "./facturacion";
+import { aLaLista, textoDe } from "./formularios-de-caja";
 import { dependenciasDeSesion } from "./sesion";
 
 /**
@@ -32,22 +32,11 @@ const dependencias: DependenciasDeMediosDePagoWeb = {
   respuesta: dependenciasDeSesion.respuesta,
 };
 
-const textoDe = (datos: FormData, nombre: string): string => {
-  const valor = datos.get(nombre);
-  return typeof valor === "string" ? valor : "";
-};
-
 /** Todos los medios de la empresa (también los desactivados), con el contexto que ya resolvió la página. */
 export function cargarLosMedios(
   contexto: ContextoOperativo,
 ): Promise<Respuesta<MediosParaLaPantalla>> {
   return listarLosMediosDePago(dependencias, contexto);
-}
-
-/** Termina una acción de formulario: el error ya traducido, o vuelve a la lista. */
-function aLaLista(respuesta: Respuesta<unknown>): ResultadoDeAccion {
-  if (!respuesta.ok) return { error: respuesta.error };
-  redirect(RUTAS_DE_MEDIOS.lista);
 }
 
 export async function agregarElMedio(datos: FormData): Promise<ResultadoDeAccion> {
@@ -58,6 +47,7 @@ export async function agregarElMedio(datos: FormData): Promise<ResultadoDeAccion
         nombre: textoDe(datos, "nombre"),
       }),
     ),
+    RUTAS_DE_MEDIOS.lista,
   );
 }
 
@@ -74,6 +64,7 @@ export async function editarElMedio(
         nombre: textoDe(datos, "nombre"),
       }),
     ),
+    RUTAS_DE_MEDIOS.lista,
   );
 }
 
@@ -82,6 +73,7 @@ export async function desactivarElMedio(medioDePagoId: string): Promise<Resultad
     await conLaEmpresa((contexto) =>
       desactivarElMedioDePago(dependencias, contexto, { medioDePagoId }),
     ),
+    RUTAS_DE_MEDIOS.lista,
   );
 }
 
@@ -90,5 +82,6 @@ export async function reactivarElMedio(medioDePagoId: string): Promise<Resultado
     await conLaEmpresa((contexto) =>
       reactivarElMedioDePago(dependencias, contexto, { medioDePagoId }),
     ),
+    RUTAS_DE_MEDIOS.lista,
   );
 }

@@ -10,6 +10,9 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  */
 export const CLAVES_DE_ERRORES_DE_CAJA = {
   CAJA_MEDIO_REPETIDO: "caja.error.medio_repetido",
+  CAJA_CUENTA_REPETIDA: "caja.error.cuenta_repetida",
+  CAJA_CAJA_REPETIDA: "caja.error.caja_repetida",
+  CAJA_IDENTIFICADOR_INVALIDO: "caja.error.identificador_invalido",
   CAJA_ACCION_NO_PERMITIDA: "caja.error.accion_no_permitida",
 } as const satisfies Record<string, ClaveDeTexto>;
 

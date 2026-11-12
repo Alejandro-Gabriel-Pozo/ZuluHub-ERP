@@ -1,6 +1,6 @@
 import type { ClaveDeTexto } from "../../../../../src/capacidades/vocabulario/catalogo";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import type { TonoDeEstado } from "../../componentes/Insignia";
+import { RUTAS_DE_CAJA, estadoDeLista, type FilaDeLista } from "./lista-de-caja";
 
 /**
  * El modelo de vista de «Medios de pago» (maqueta aprobada `medios.html`, 09/11/2026): de lo que entrega la lista de la composición, lo que se ve en cada tarjeta
@@ -9,8 +9,8 @@ import type { TonoDeEstado } from "../../componentes/Insignia";
  */
 
 export const RUTAS_DE_MEDIOS = {
-  lista: "/caja/medios-de-pago",
-  nuevo: "/caja/medios-de-pago/nuevo",
+  lista: RUTAS_DE_CAJA.medios,
+  nuevo: `${RUTAS_DE_CAJA.medios}/nuevo`,
 } as const;
 
 export const rutaDeUnMedio = (id: string): string => `${RUTAS_DE_MEDIOS.lista}/${id}`;
@@ -44,21 +44,7 @@ export const TIPOS_DE_MEDIO_CON_TEXTO: readonly string[] = Object.keys(TIPOS);
 const nombreDelTipo = (tipo: string): string =>
   Object.hasOwn(TIPOS, tipo) ? texto({}, TIPOS[tipo] as ClaveDeTexto) : tipo;
 
-export type FilaDeMedio = Readonly<{
-  id: string;
-  /** El nombre propio o, si no tiene, el del tipo. */
-  titulo: string;
-  /** «Tarjeta de débito · Cuenta de cobro: opcional» (el tipo solo si el medio tiene nombre propio, como en la maqueta). */
-  detalle: string;
-  activo: boolean;
-  estado: Readonly<{ texto: string; tono: TonoDeEstado }>;
-  /** El efectivo no se desactiva nunca: su botón sale apagado (maqueta). */
-  sePuedeDesactivar: boolean;
-  version: number;
-  href: string;
-}>;
-
-export function armarLaListaDeMedios(medios: readonly MedioDeLaLista[]): readonly FilaDeMedio[] {
+export function armarLaListaDeMedios(medios: readonly MedioDeLaLista[]): readonly FilaDeLista[] {
   return medios.map((m) => {
     const tipo = nombreDelTipo(m.tipo);
     const cuenta = texto(
@@ -70,9 +56,7 @@ export function armarLaListaDeMedios(medios: readonly MedioDeLaLista[]): readonl
       titulo: m.nombre ?? tipo,
       detalle: m.nombre === null ? cuenta : `${tipo} · ${cuenta}`,
       activo: m.activo,
-      estado: m.activo
-        ? { texto: texto({}, "caja.estado.activo"), tono: "exito" }
-        : { texto: texto({}, "caja.estado.desactivado"), tono: "aviso" },
+      estado: estadoDeLista(m.activo),
       sePuedeDesactivar: m.tipo !== EFECTIVO,
       version: m.version,
       href: rutaDeUnMedio(m.id),
@@ -88,15 +72,3 @@ export function opcionesDeTipo(original: MedioDeLaLista | null): readonly Opcion
     original === null ? TIPOS_DE_MEDIO_CON_TEXTO.filter((t) => t !== EFECTIVO) : [original.tipo];
   return tipos.map((valor) => ({ valor, etiqueta: nombreDelTipo(valor) }));
 }
-
-/**
- * Qué botones de Medios de pago se ofrecen activos hoy, según lo que el SERVIDOR deja hacer (`permisosDelActor`, una lectura por pedido; `servidor/modulos.ts`).
- * Sin permiso, el botón sale apagado (la maqueta, estado «Sin permiso»). Solo una ayuda: apagar no es autorizar, cada acción vuelve a pasar por el guard
- * dentro de su transacción. Si no se pudieron leer los permisos, todo sale apagado (ante la duda el sistema cierra).
- */
-export type AccionesDeMedios = Readonly<{
-  agregar: boolean;
-  editar: boolean;
-  desactivar: boolean;
-  reactivar: boolean;
-}>;
