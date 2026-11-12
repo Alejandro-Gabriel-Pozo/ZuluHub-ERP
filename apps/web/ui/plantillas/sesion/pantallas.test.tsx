@@ -266,7 +266,7 @@ describe("estados", () => {
       - main:
         - heading "Sin permiso" [level=1]
         - status:
-          - paragraph: No tiene permiso para hacer esto.
+          - paragraph: No tenés permiso para hacer esto.
           - paragraph:
             - code: SIN_PERMISO
           - link "Cambiar de empresa":

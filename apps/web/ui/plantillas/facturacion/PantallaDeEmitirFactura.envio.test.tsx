@@ -367,13 +367,13 @@ describe("emitir: lo que rechaza el servidor se ve por la vía común", () => {
   it.each([
     ["MODULO_EN_DESARROLLO", "Esta función todavía está en desarrollo."],
     ["MODULO_EN_SOLO_LECTURA", "Esta función quedó en solo lectura"],
-    ["SIN_PERMISO", "No tiene permiso para hacer esto."],
+    ["SIN_PERMISO", "No tenés permiso para hacer esto."],
     ["EMPRESA_NO_OPERA", "La empresa no está operando en este momento."],
     ["SESION_VENCIDA", "Tu sesión venció"],
     ["FISCAL_SUCURSAL_CERRADA", "Sucursal cerrada."],
     ["FISCAL_PUNTO_DE_VENTA_INACTIVO", "El punto de venta está inactivo."],
     ["FISCAL_SIN_CERTIFICADO", "No hay un certificado de ARCA vigente"],
-    ["FISCAL_DATOS_INVALIDOS", "Revise los datos del comprobante"],
+    ["FISCAL_DATOS_INVALIDOS", "Revisá los datos del comprobante"],
   ] as const)(
     "%s: un punto de venta que se ofreció y el servidor rechaza muestra su motivo, sin el código",
     async (codigo, esperado) => {

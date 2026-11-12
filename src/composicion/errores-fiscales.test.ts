@@ -127,7 +127,7 @@ describe("la configuración fiscal (D-43)", () => {
     );
     // El texto de las facturas no cambia.
     expect(CATALOGO_DE_TEXTOS["error.fiscal_datos_invalidos"].porDefecto).toMatch(
-      /^Revise los datos del comprobante/,
+      /^Revisá los datos del comprobante/,
     );
   });
 

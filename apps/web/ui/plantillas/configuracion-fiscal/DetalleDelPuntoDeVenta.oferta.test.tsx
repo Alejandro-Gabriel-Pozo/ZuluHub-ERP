@@ -33,7 +33,7 @@ const desactivar = vi.fn<Accion>();
 const cambiarAmbiente = vi.fn<Accion>();
 
 const EN_DESARROLLO = "Esta función todavía está en desarrollo.";
-const SIN_PERMISO = "No tiene permiso para hacer esto.";
+const SIN_PERMISO = "No tenés permiso para hacer esto.";
 const apagada = (motivo: string) => ({ permitida: false, motivo });
 
 const PUNTO: PuntoParaConfigurar = {
