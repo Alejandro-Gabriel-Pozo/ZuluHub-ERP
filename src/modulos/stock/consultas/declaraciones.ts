@@ -13,8 +13,10 @@ export const DECLARACIONES_DE_CONSULTAS = {
   fichaDeMovimiento: { accion: "stock.ver" },
   movimientosPorOrigen: { accion: "stock.ver" },
   verificarSaldos: { accion: "stock.verificar_saldos" },
-  // La existencia teórica y la diferencia de un conteo solo viajan con `conteos.aplicar` (a ciegas): lo decide la consulta, no la pantalla.
+  // Lo que el sistema creía, lo movido desde la hora del conteo y la diferencia solo viajan con `conteos.aplicar` (a ciegas): lo decide la consulta, no la pantalla.
   fichaDeConteo: { accion: "stock.ver" },
+  // El «ver detalle» opcional de la revisión (movimientos posteriores a la hora del conteo): es parte de revisar, que es de `conteos.aplicar`.
+  candidatosDeConteo: { accion: "conteos.aplicar" },
   listarConteos: { accion: "stock.ver" },
   // La receta es de la empresa, no de una sucursal: la ve quien puede mirar stock (E5-T7).
   composicionDeProducto: { accion: "stock.ver" },

@@ -1221,6 +1221,7 @@ describe.skipIf(base === null)("stock: repositorios de la persistencia", () => {
         cantidadContada: cantidad,
         registradoPor: e.personaDelGerente,
         registradoEn: e.gerente.ahora,
+        contadoEn: null,
       });
       const primero = nuevoId();
       const segundo = nuevoId();
@@ -1338,6 +1339,7 @@ describe.skipIf(base === null)("stock: repositorios de la persistencia", () => {
           cantidadContada: "2",
           registradoPor: e.personaDelGerente,
           registradoEn: e.gerente.ahora,
+          contadoEn: null,
         }),
       );
       expect(

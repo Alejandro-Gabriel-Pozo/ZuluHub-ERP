@@ -47,14 +47,18 @@ export type {
 } from "./casos-de-uso/anulaciones";
 export type {
   EntradaDeAbrirConteo,
-  EntradaDeAplicarConteo,
   EntradaDeCancelarConteo,
   EntradaDeRegistrarConteo,
   SalidaDeAbrirConteo,
-  SalidaDeAplicarConteo,
   SalidaDeCancelarConteo,
   SalidaDeRegistrarConteo,
 } from "./casos-de-uso/conteos";
+export type {
+  EntradaDeAplicarConteo,
+  MarcaPedida,
+  RespuestaDeConteo,
+  SalidaDeAplicarConteo,
+} from "./casos-de-uso/aplicar-conteo";
 export type {
   ComponenteDeEntrada,
   EntradaDeGuardarComposicion,
@@ -146,7 +150,15 @@ export type {
   PaginaDeLibro,
   RenglonDeFicha,
 } from "./consultas/libro";
-export type { ConteoDeLista, FichaDeConteo, RegistroDeFicha } from "./consultas/conteos";
+export type {
+  CandidatoDeConteo,
+  ConteoDeLista,
+  CursorDeCandidatos,
+  ExplicacionDeFicha,
+  FichaDeConteo,
+  PaginaDeCandidatos,
+  RegistroDeFicha,
+} from "./consultas/conteos";
 export type {
   CostoCongeladoDeRenglon,
   EntradaDeCostoDeRenglon,

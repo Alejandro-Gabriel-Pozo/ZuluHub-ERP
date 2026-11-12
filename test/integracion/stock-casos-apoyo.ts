@@ -155,6 +155,26 @@ export async function montarStock(
     reglas,
   });
 
+  /**
+   * La huella de la revisión que vería quien aplica un conteo (la de su ficha): `aplicarConteo` la exige igual. Vacía si no hay (el conteo no existe,
+   * ya no está abierto o quien pide no puede aplicar: el caso de uso rechaza antes de mirarla).
+   */
+  const huellaDeConteo = async (contexto: ContextoOperativo, conteoId: string): Promise<string> => {
+    const ficha = await consultas.fichaDeConteo(contexto, { conteoId });
+    return ficha.ok ? (ficha.valor?.huella ?? "") : "";
+  };
+  /** Aplicar un conteo como lo hace la pantalla: lee la revisión (y su huella) y aplica con las respuestas dadas. */
+  const aplicarConteo = async (
+    contexto: ContextoOperativo,
+    conteoId: string,
+    respuestas?: Parameters<typeof casos.aplicarConteo>[1]["respuestas"],
+  ) =>
+    casos.aplicarConteo(contexto, {
+      conteoId,
+      huella: await huellaDeConteo(contexto, conteoId),
+      respuestas,
+    });
+
   const miembro = async (empresa: string, rol: RolDePrueba) => {
     const p = await crearPersonaDeBase(dueno);
     await crearMembresiaDeBase(dueno, empresa, p.id, rol);
@@ -347,6 +367,8 @@ export async function montarStock(
     reglas,
     casos,
     consultas,
+    huellaDeConteo,
+    aplicarConteo,
     puertos,
     encenderPerilla: (
       perilla:

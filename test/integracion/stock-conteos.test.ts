@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import type { ContextoOperativo } from "../../src/contexto/contexto";
 import {
   montarStock,
   nuevoId,
@@ -72,6 +73,11 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
       cantidadContada: cantidad,
       unidadId,
     });
+  /** El mismo actor unos minutos después: el reloj de una prueba lo fija el contexto (`ahora`), así que «vender después de contar» es otro contexto. */
+  const enMinutos = (quien: ContextoOperativo, minutos: number): ContextoOperativo => ({
+    ...quien,
+    ahora: new Date(quien.ahora.getTime() + minutos * 60_000),
+  });
   const conteo = async (id: string) =>
     (await c.filas("select * from conteo_fisico where id = $1", [id]))[0];
   const ajustesDe = (conteoId: string) =>
@@ -154,7 +160,7 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
       valorDe(await c.casos.cancelarConteo(e.gerente, { conteoId: primero, motivo: "Empezó mal" }));
       const segundo = await abrir(dep);
       valorDe(await contar(segundo, (articulos[0] as { producto: string }).producto, "3"));
-      valorDe(await c.casos.aplicarConteo(e.gerente, { conteoId: segundo }));
+      valorDe(await c.aplicarConteo(e.gerente, segundo));
       await abrir(dep);
     });
 
@@ -344,16 +350,21 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
       valorDe(await contar(id, a.producto, "7")); // tenía 10: -3
       valorDe(await contar(id, b.producto, "5")); // tenía 5: sin diferencia
       valorDe(await contar(id, cc.producto, "4")); // no tenía saldo: +4
-      // Se vende 2 de «a» después de contarlo: la diferencia sigue siendo 7 − 10.
+      // Se vende 2 de «a» después de contarlo (5 minutos más tarde): la diferencia sigue siendo 7 − 10.
       valorDe(
-        await c.casos.registrarSalida(e.gerente, {
+        await c.casos.registrarSalida(enMinutos(e.gerente, 5), {
           clave: nuevoId(),
           depositoId: dep,
           motivo: "MERMA",
           renglones: [pedido(a.producto, "2")],
         }),
       );
-      const r = valorDe(await c.casos.aplicarConteo(e.gerente, { conteoId: id }));
+      const r = valorDe(
+        await c.aplicarConteo(enMinutos(e.gerente, 10), id, [
+          { productoId: a.producto, motivo: "ROTURA" },
+          { productoId: cc.producto, motivo: "DEVOLUCION_DE_CLIENTE" },
+        ]),
+      );
       expect(r.yaAplicado).toBe(false);
       expect(r.movimientoId).not.toBeNull();
       const m = (
@@ -404,7 +415,7 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
       const id = await abrir(dep);
       valorDe(await contar(id, a.producto, "3"));
       valorDe(await contar(id, a.producto, "9"));
-      valorDe(await c.casos.aplicarConteo(e.gerente, { conteoId: id }));
+      valorDe(await c.aplicarConteo(e.gerente, id, [{ productoId: a.producto, motivo: "MERMA" }]));
       expect(await c.existencia(dep, a.articulo)).toBe("9.0000");
     });
 
@@ -435,14 +446,18 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
       );
       // Mientras tanto se vendió todo lo que había (con BLOQUEAR no se podría vender más): la diferencia 0 − 2 deja el saldo en −2.
       valorDe(
-        await c.casos.registrarSalida(emp.gerente, {
+        await c.casos.registrarSalida(enMinutos(emp.gerente, 5), {
           clave: nuevoId(),
           depositoId: dep,
           motivo: "MERMA",
           renglones: [pedido(a.producto, "2")],
         }),
       );
-      valorDe(await c.casos.aplicarConteo(emp.gerente, { conteoId: id }));
+      valorDe(
+        await c.aplicarConteo(enMinutos(emp.gerente, 10), id, [
+          { productoId: a.producto, motivo: "MERMA" },
+        ]),
+      );
       expect(await c.existencia(dep, a.articulo)).toBe("-2.0000");
     });
 
@@ -450,7 +465,7 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
       const { dep, articulos } = await conExistencias(["5"]);
       const a = articulos[0] as { producto: string; articulo: string };
       const vacio = await abrir(dep);
-      expect(await c.casos.aplicarConteo(e.gerente, { conteoId: vacio })).toEqual({
+      expect(await c.aplicarConteo(e.gerente, vacio)).toEqual({
         ok: false,
         error: "CONTEO_SIN_REGISTROS",
       });
@@ -462,7 +477,7 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
         "select count(*) as n from movimiento_de_stock where empresa_id = $1",
         [e.empresa],
       );
-      expect(await c.casos.aplicarConteo(e.gerente, { conteoId: igual })).toEqual({
+      expect(await c.aplicarConteo(e.gerente, igual)).toEqual({
         ok: true,
         valor: { movimientoId: null, yaAplicado: false },
       });
@@ -473,7 +488,7 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
         ]),
       ).toBe(antes);
       // Repetirlo: ya estaba aplicado, y sigue sin ajuste.
-      expect(await c.casos.aplicarConteo(e.gerente, { conteoId: igual })).toEqual({
+      expect(await c.aplicarConteo(e.gerente, igual)).toEqual({
         ok: true,
         valor: { movimientoId: null, yaAplicado: true },
       });
@@ -484,26 +499,27 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
       const a = articulos[0] as { producto: string };
       const id = await abrir(dep);
       valorDe(await contar(id, a.producto, "1", e.operador));
-      expect(await c.casos.aplicarConteo(e.operador, { conteoId: id })).toEqual({
+      expect(await c.aplicarConteo(e.operador, id)).toEqual({
         ok: false,
         error: "SIN_PERMISO",
       });
       expect(await conteo(id)).toMatchObject({ estado: "ABIERTO" });
-      expect(await c.casos.aplicarConteo(e.gerente, { conteoId: nuevoId() })).toEqual({
+      expect(await c.aplicarConteo(e.gerente, nuevoId())).toEqual({
         ok: false,
         error: "CONTEO_NO_ENCONTRADO",
       });
-      expect(await c.casos.aplicarConteo(e.gerente, { conteoId: "x" })).toEqual({
+      expect(await c.casos.aplicarConteo(e.gerente, { conteoId: "x", huella: "" })).toEqual({
         ok: false,
         error: "CONTEO_NO_ENCONTRADO",
       });
       const ajeno = await c.deposito(e, { sucursal: e.otraSucursal });
       const delAjeno = await abrir(ajeno);
-      expect(
-        await c.casos.aplicarConteo(e.administradorDeUnaSucursal, { conteoId: delAjeno }),
-      ).toEqual({ ok: false, error: "SUCURSAL_FUERA_DE_ALCANCE" });
+      expect(await c.aplicarConteo(e.administradorDeUnaSucursal, delAjeno)).toEqual({
+        ok: false,
+        error: "SUCURSAL_FUERA_DE_ALCANCE",
+      });
       valorDe(await c.casos.cancelarConteo(e.gerente, { conteoId: id, motivo: "No sirve" }));
-      expect(await c.casos.aplicarConteo(e.gerente, { conteoId: id })).toEqual({
+      expect(await c.aplicarConteo(e.gerente, id)).toEqual({
         ok: false,
         error: "CONTEO_CANCELADO",
       });
@@ -515,9 +531,10 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
       const a = articulos[0] as { producto: string; articulo: string };
       const id = await abrir(dep);
       valorDe(await contar(id, a.producto, "6"));
-      const primera = valorDe(await c.casos.aplicarConteo(e.gerente, { conteoId: id }));
+      const respuestas = [{ productoId: a.producto, motivo: "MERMA" }];
+      const primera = valorDe(await c.aplicarConteo(e.gerente, id, respuestas));
       const auditoriasAntes = (await c.auditoria(e.empresa, "CONTEO_APLICADO")).length;
-      const segunda = valorDe(await c.casos.aplicarConteo(e.gerente, { conteoId: id }));
+      const segunda = valorDe(await c.aplicarConteo(e.gerente, id, respuestas));
       expect(primera.yaAplicado).toBe(false);
       expect(segunda).toEqual({ movimientoId: primera.movimientoId, yaAplicado: true });
       expect(await ajustesDe(id)).toHaveLength(1);
@@ -546,7 +563,7 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
         }),
       ).toEqual({ ok: false, error: "IDENTIFICADOR_INVALIDO" });
       valorDe(await contar(id, a.producto, "4"));
-      valorDe(await c.casos.aplicarConteo(e.gerente, { conteoId: id }));
+      valorDe(await c.aplicarConteo(e.gerente, id, [{ productoId: a.producto, motivo: "MERMA" }]));
     });
   });
 
@@ -605,7 +622,9 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
       expect((await c.auditoria(e.empresa, "CONTEO_CANCELADO")).length).toBe(antes);
       const aplicado = await abrir(dep);
       valorDe(await contar(aplicado, a.producto, "3"));
-      valorDe(await c.casos.aplicarConteo(e.gerente, { conteoId: aplicado }));
+      valorDe(
+        await c.aplicarConteo(e.gerente, aplicado, [{ productoId: a.producto, motivo: "MERMA" }]),
+      );
       expect(
         await c.casos.cancelarConteo(e.gerente, { conteoId: aplicado, motivo: "Tarde" }),
       ).toEqual({ ok: false, error: "CONTEO_CERRADO" });
@@ -650,8 +669,9 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
       expect(delOperador?.conteo).toMatchObject({ id, depositoId: dep, estado: "ABIERTO" });
       expect(delOperador?.registros).toHaveLength(3);
       for (const r of delOperador?.registros ?? []) {
-        expect(r).not.toHaveProperty("existenciaTeorica");
-        expect(r).not.toHaveProperty("diferencia");
+        expect(r).not.toHaveProperty("existenciaALaHora");
+        expect(r).not.toHaveProperty("movidoDesdeLaHora");
+        expect(r).not.toHaveProperty("diferenciaBruta");
         expect(r.registradoPor).toBe(e.operador.personaId);
       }
       expect(
@@ -661,15 +681,23 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
         [a.producto, "7.0000", true],
         [b.producto, "4.0000", true],
       ]);
+      expect(delOperador).not.toHaveProperty("huella");
       for (const quien of [e.gerente, e.administrador]) {
         const ficha = valorDe(await c.consultas.fichaDeConteo(quien, { conteoId: id }));
+        // La revisión solo está en el registro vigente de cada artículo (el recontado que se reemplazó no se evalúa).
         expect(
-          ficha?.registros.map((r) => [r.cantidadContada, r.existenciaTeorica, r.diferencia]),
+          ficha?.registros.map((r) => [
+            r.cantidadContada,
+            r.existenciaALaHora,
+            r.movidoDesdeLaHora,
+            r.diferenciaBruta,
+          ]),
         ).toEqual([
-          ["3.0000", "10.0000", "-7.0000"],
-          ["7.0000", "10.0000", "-3.0000"],
-          ["4.0000", "4.0000", "0.0000"],
+          ["3.0000", undefined, undefined, undefined],
+          ["7.0000", "10.0000", "0.0000", "-3.0000"],
+          ["4.0000", "4.0000", "0.0000", "0.0000"],
         ]);
+        expect(ficha?.huella).toMatch(/^[0-9a-f]{64}$/);
       }
     });
 
@@ -766,7 +794,7 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
         ok: false,
         error: "CONTEO_NO_ENCONTRADO",
       });
-      expect(await c.casos.aplicarConteo(b.gerente, { conteoId: idA })).toEqual({
+      expect(await c.aplicarConteo(b.gerente, idA)).toEqual({
         ok: false,
         error: "CONTEO_NO_ENCONTRADO",
       });
