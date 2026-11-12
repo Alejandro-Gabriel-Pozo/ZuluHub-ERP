@@ -60,7 +60,7 @@ describe.skipIf(base === null)("clientes: partes", () => {
             nombre,
             apellido: "Gómez",
             email: "marta@correo.com",
-            telefono: "+54 11 4321-0000",
+            telefono: "+54 11 7305-4821",
             documento: { tipo: "DNI", numero: "30.111.222" },
             roles: ["PROVEEDOR", "CUSTOMER"],
           }) as never,
@@ -92,9 +92,19 @@ describe.skipIf(base === null)("clientes: partes", () => {
         entidad: "parte",
         despues: { naturaleza: "HUMANA", roles: ["CUSTOMER", "PROVEEDOR"], conDocumento: true },
       });
-      // F2: ni el nombre, ni el documento, ni el email, ni el teléfono entran a la auditoría.
+      // F2: ni el nombre, ni el documento, ni el email, ni el teléfono entran a la auditoría. Los valores a buscar son
+      // largos (8 caracteres o más): un fragmento corto como «4321» aparece por azar dentro de los uuid del registro
+      // (0,09 % de las corridas) y daba un falso positivo.
       const texto = JSON.stringify(registros[0]);
-      for (const secreto of [nombre, "Gómez", "30111222", "marta@correo.com", "4321"]) {
+      for (const secreto of [
+        nombre,
+        "Gómez",
+        "30111222",
+        "30.111.222",
+        "marta@correo.com",
+        "73054821",
+        "7305-4821",
+      ]) {
         expect(texto).not.toContain(secreto);
       }
     });
