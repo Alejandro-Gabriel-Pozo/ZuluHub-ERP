@@ -391,9 +391,9 @@
   },
   {
     "grupo": "web (traductor único de respuestas, ADR-016)",
-    "archivos": "src/capacidades/experiencia/respuesta.ts,src/composicion/a-respuesta.ts",
+    "archivos": "src/capacidades/experiencia/respuesta.ts,src/composicion/a-respuesta.ts,src/composicion/entradas-de-caja.ts,src/composicion/errores-de-caja.ts",
     "minutos": 2.3,
-    "pruebas": "src/capacidades/experiencia/respuesta.test.ts src/capacidades/experiencia/respuesta.propiedades.test.ts src/composicion/a-respuesta.test.ts"
+    "pruebas": "src/capacidades/experiencia/respuesta.test.ts src/capacidades/experiencia/respuesta.propiedades.test.ts src/composicion/a-respuesta.test.ts src/capacidades/experiencia/respuesta-de-caja.test.ts src/composicion/entradas-de-caja.test.ts src/composicion/errores-de-caja.test.ts"
   },
   {
     "grupo": "web (sesión: origen, retorno y estado de la pantalla)",
@@ -520,5 +520,11 @@
     "archivos": "src/modulos/catalogo/dominio/carta-publicada.ts,src/modulos/catalogo/dominio/carta-publica.ts,src/modulos/catalogo/dominio/fila-con-precio.ts,src/modulos/catalogo/dominio/identificadores.ts",
     "minutos": 1,
     "pruebas": "src/modulos/catalogo/dominio"
+  },
+  {
+    "grupo": "web (modelo de «Medios de pago»)",
+    "archivos": "apps/web/ui/plantillas/caja/modelo-de-medios-de-pago.ts",
+    "minutos": 1.0,
+    "pruebas": "test/web/medios-de-pago-modelo.test.ts"
   }
 ]

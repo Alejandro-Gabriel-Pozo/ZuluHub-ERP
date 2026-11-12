@@ -1,6 +1,7 @@
 import type { EmpresaNoOpera } from "../../contexto/estados";
 import type { MotivoDeRechazo } from "../permisos/guard";
 import type { ClaveDeTexto } from "../vocabulario/catalogo";
+import { CLAVES_DE_ERRORES_DE_CAJA, type CodigoDeCaja } from "./respuesta-de-caja";
 import { CLAVES_DE_ERRORES_FISCALES, type CodigoFiscal } from "./respuesta-fiscal";
 
 /**
@@ -36,7 +37,8 @@ export type CodigoDeNegocio =
   | "YA_ES_MIEMBRO"
   | "ROL_DISTINTO_AL_ANTERIOR"
   | "EMPRESA_NO_OPERA"
-  | CodigoFiscal;
+  | CodigoFiscal
+  | CodigoDeCaja;
 
 export type CodigoPublico =
   CodigoDeNegocio | MotivoDeRechazo | "SESION_VENCIDA" | "ERROR_INTERNO" | "NO_DISPONIBLE";
@@ -64,6 +66,11 @@ const AVISOS_FISCALES = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_FISCALES).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoFiscal, DefinicionDeCodigo>>;
 
+/** Los códigos de la configuración de caja (`respuesta-de-caja.ts`): cada uno es un aviso con su texto `caja.error.*`. */
+const AVISOS_DE_CAJA = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_CAJA).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeCaja, DefinicionDeCodigo>>;
+
 /** La tabla de los códigos públicos: código estable → clave del texto, presentación y estado HTTP. */
 export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo>> = Object.freeze({
   INVITACION_NO_ENCONTRADA: aviso("error.invitacion_no_encontrada"),
@@ -79,6 +86,7 @@ export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo
   ROL_DISTINTO_AL_ANTERIOR: aviso("error.rol_distinto_al_anterior"),
   EMPRESA_NO_OPERA: motivo("error.empresa_no_opera", 422),
   ...AVISOS_FISCALES,
+  ...AVISOS_DE_CAJA,
   MODULO_EN_DESARROLLO: motivo("motivo.modulo_en_desarrollo"),
   MODULO_NO_ACTIVO: motivo("motivo.modulo_no_activo"),
   MODULO_EN_SOLO_LECTURA: motivo("motivo.modulo_en_solo_lectura"),

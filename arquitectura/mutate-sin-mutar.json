@@ -15,6 +15,10 @@
     {
       "archivo": "src/composicion/plataforma.ts",
       "motivo": "Cableado: `armarPlataforma` conecta los adaptadores de Postgres con los casos de uso de la consola; lo ejercen las pruebas de integración (test/integracion/plataforma-consultas-por-la-puerta.test.ts y ejecutar-caso-de-plataforma.test.ts), que la mutación no corre (PEDERNAL_SIN_INTEGRACION=1)."
+    },
+    {
+      "archivo": "src/composicion/entradas-de-facturacion.ts",
+      "motivo": "Esquemas de forma de la frontera (zod: identificador, texto, entero) y el tipo de error de entrada, compartidos por todas las fronteras de la web; su comportamiento lo ejerce cada frontera con sus propias pruebas. Lo importan entradas-de-caja y errores-de-caja (2026-11-12, piloto B + D1)."
     }
   ],
   "cargasNoEstaticas": [

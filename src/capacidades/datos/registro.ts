@@ -54,6 +54,18 @@ const REQUIERE_ADMINISTRACION = {
   estadoDeEmpresa: ["ACTIVE"],
 } as const;
 const REQUIERE_FACTURACION = { modulo: "facturacion", estadoDeEmpresa: ["ACTIVE"] } as const;
+const REQUIERE_CAJA = { modulo: "caja", estadoDeEmpresa: ["ACTIVE"] } as const;
+const MEDIOS_FORMULARIO = "apps/web/ui/plantillas/caja/FormularioDeMedio.cliente.tsx";
+const MEDIOS_PROPOSITO_NOMBRE: Proposito = {
+  para: "Nombre propio, opcional, de un medio de pago al agregarlo o editarlo (pantalla «Medios de pago»).",
+  fuente:
+    "Pedernal-docs/11-especificaciones/caja-y-cobros.md §B.6 (medio de pago: el nombre es opcional, la pantalla usa el vocabulario del tipo) y la maqueta aprobada el 09/11/2026 (`medios.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)",
+};
+const MEDIOS_PROPOSITO_TIPO: Proposito = {
+  para: "Tipo de un medio de pago, de una lista cerrada, al agregarlo (pantalla «Medios de pago»); no se cambia después.",
+  fuente:
+    "Pedernal-docs/11-especificaciones/caja-y-cobros.md §B.6 (medio de pago: lista cerrada de tipos) y la maqueta aprobada el 09/11/2026 (`medios.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)",
+};
 
 export const REGISTRO_DE_DATOS = {
   correo: {
@@ -175,6 +187,22 @@ export const REGISTRO_DE_DATOS = {
     consumidores: ["apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx"],
     ponerPor: ["comprobantes.emitir"],
     requiere: REQUIERE_FACTURACION,
+  },
+  "nombre-de-medio-de-pago": {
+    // SUPUESTO (DEC-0342): la ficha es el dominio de caja, que ya tiene el largo y el conjunto permitido del nombre del medio; no se movió a `primitivas/`
+    // (cambio mayor que el de este tramo). Revertirlo es mover `nombreDeMedioValido` a una primitiva y apuntar esta ruta a ella.
+    ficha: "src/modulos/caja/dominio/configuracion.ts",
+    propositos: [MEDIOS_PROPOSITO_NOMBRE],
+    consumidores: [MEDIOS_FORMULARIO],
+    ponerPor: ["medios_de_pago.crear", "medios_de_pago.editar"],
+    requiere: REQUIERE_CAJA,
+  },
+  "tipo-de-medio-de-pago": {
+    ficha: "src/modulos/caja/estados.ts",
+    propositos: [MEDIOS_PROPOSITO_TIPO],
+    consumidores: [MEDIOS_FORMULARIO],
+    ponerPor: ["medios_de_pago.crear"],
+    requiere: REQUIERE_CAJA,
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
 
