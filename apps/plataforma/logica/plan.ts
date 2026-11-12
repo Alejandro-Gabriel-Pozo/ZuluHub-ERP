@@ -19,6 +19,9 @@ export const ROTULO_DE_PERILLA: Readonly<Record<string, string>> = {
   produccion: "Producción",
   // `salon`: el nombre del módulo extra de pago (DEC-0201), el mismo rótulo que el módulo.
   salon: "Salón",
+  // `vidriera_por_qr`: «Carta en línea» es el nombre de la pantalla de la carta real (carta-real-especificacion §1 E4 y §11 Q4, 12/11/2026); decisión 175 (textos
+  // delegados: lo más corto). Texto de la consola de plataforma, pendiente del OK del dueño.
+  vidriera_por_qr: "Carta en línea",
 };
 
 export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {

@@ -44,8 +44,8 @@ export type DefinicionDePerilla = ComunDeUnaPerilla &
  * toque este archivo (catalogo-y-stock §E.2): son los extras de recetas (mermas, sub-recetas y factor
  * por tamaño) y el nivel de combos del catálogo. Cada tramo que las verifica con `exigirPerilla` las
  * cubre; hasta entonces ningún caso de uso las nombra (no existe todavía la prueba «toda perilla tiene
- * un uso»). Esas son interruptores de empresa con base apagada: si el plan no las nombra, no vienen. `vidriera_por_qr` y las
- * de la carta (fotos, modelos, estadísticas) se declaran cuando se construya la carta.
+ * un uso»). Esas son interruptores de empresa con base apagada: si el plan no las nombra, no vienen. `vidriera_por_qr` (T2 de la carta real) ya está declarada; las
+ * demás de la carta (fotos, modelos, estadísticas) se declaran cuando se construya la carta.
  */
 export const CATALOGO_DE_PERILLAS = {
   empresas_por_tenant: {
@@ -113,6 +113,15 @@ export const CATALOGO_DE_PERILLAS = {
     tipo: "INTERRUPTOR",
     base: { encendida: false },
     modulo: "salon",
+  },
+  // Carta pública en línea (QR): extra de pago, apagado de base y se habilita por empresa, como `salon` (dueño, Q5 del 12/11/2026: «no se cobra desde el día 1,
+  // después sí seguro»; carta-real-especificacion §0 y §11). La verifica `guardarCartaPublica` al PONER la carta en línea; retirarla no la pide (una baja de
+  // plan no impide cerrar lo ya abierto). Que el comensal siga viendo la carta si el plan se baja lo decide la lectura pública por visita (T6).
+  vidriera_por_qr: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "vidriera",
   },
   // Caja (decisión 124; caja-y-cobros.md:43, 69; registro de contratos :778; supuesto S-5 de E0: nombre y base 1 del
   // registro de octubre): cuántas cajas activas puede tener una sucursal. Base 1 («Caja 1» nace con la sucursal, decisión

@@ -1,5 +1,9 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import pg from "pg";
+import type {
+  AlcanceDeExistencia,
+  ExistenciasDelProducto,
+} from "../../src/modulos/catalogo/publico";
 import { crearEmpresaActiva, type crearEntornoDePrueba } from "./entorno";
 import { crearPersonaDeBase, sucursalDe } from "./fixtures-identidad";
 import { productoDeBase } from "./catalogo-apoyo";
@@ -93,4 +97,42 @@ export async function comoPublico<T extends Record<string, unknown>>(
   } finally {
     await c.end();
   }
+}
+
+/**
+ * Un stock FALSO para las pruebas del catálogo (el real es T9): la prueba dice qué producto tiene existencia o un conteo abierto con cargas, y dónde. La
+ * existencia de la EMPRESA es la de cualquiera de sus locales distinta de cero; la de un local, la de ese local.
+ */
+export type StockFalso = ExistenciasDelProducto &
+  Readonly<{
+    fijarExistencia: (producto: string, sucursal: string, cantidad: number) => void;
+    abrirConteoConCargas: (producto: string, sucursal: string, abierto?: boolean) => void;
+    limpiar: () => void;
+  }>;
+
+export function crearStockFalso(): StockFalso {
+  const existencias = new Map<string, number>();
+  const conteos = new Set<string>();
+  const llave = (producto: string, sucursal: string) => `${producto}|${sucursal}`;
+  const hay = (alcance: AlcanceDeExistencia, producto: string, en: (s: string) => boolean) =>
+    [...existencias.keys(), ...conteos].some((k) => {
+      const [p, s] = k.split("|") as [string, string];
+      return p === producto && (alcance.tipo === "EMPRESA" || alcance.sucursalId === s) && en(k);
+    });
+  return {
+    fijarExistencia: (producto, sucursal, cantidad) =>
+      void existencias.set(llave(producto, sucursal), cantidad),
+    abrirConteoConCargas: (producto, sucursal, abierto = true) => {
+      if (abierto) conteos.add(llave(producto, sucursal));
+      else conteos.delete(llave(producto, sucursal));
+    },
+    limpiar: () => {
+      existencias.clear();
+      conteos.clear();
+    },
+    conExistencia: (_tx, _contexto, producto, alcance) =>
+      Promise.resolve(hay(alcance, producto, (k) => (existencias.get(k) ?? 0) !== 0)),
+    conConteoAbiertoConCargas: (_tx, _contexto, producto, alcance) =>
+      Promise.resolve(hay(alcance, producto, (k) => conteos.has(k))),
+  };
 }

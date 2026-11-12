@@ -23,6 +23,8 @@ export type EntradaDeEditarSeccion = Readonly<{
 }>;
 export type SalidaDeEditarSeccion = Readonly<{ version: number }>;
 export type EntradaDeDesactivarSeccion = Readonly<{ seccionId: string }>;
+export type EntradaDeReactivarSeccion = Readonly<{ seccionId: string }>;
+export type SalidaDeReactivarSeccion = Readonly<{ yaEstaba: boolean }>;
 export type SalidaDeDesactivarSeccion = Readonly<{ yaEstaba: boolean }>;
 
 /**
@@ -148,6 +150,44 @@ export function armarDesactivarSeccionDeCarta(dependencias: DependenciasDeCatalo
           entidadId: actual.id,
           antes: { activa: true },
           despues: { activa: false },
+        });
+        return ok({ yaEstaba: false });
+      },
+    );
+    return traducir(resultado);
+  };
+}
+
+/**
+ * Volver a prender una sección apagada (carta real §6.1): la inversa de `desactivarSeccionDeCarta`. Hace falta porque el nombre de una sección apagada sigue ocupado
+ * y, sin esto, un «quitar» por error no tiene vuelta. Conserva su `orden` y sus productos reaparecen solos (no se tocaron). Repetir: `yaEstaba`. Una sección de
+ * otra empresa o inexistente es `SECCION_NO_ENCONTRADA`.
+ */
+export function armarReactivarSeccionDeCarta(dependencias: DependenciasDeCatalogo) {
+  return async function reactivarSeccionDeCarta(
+    contexto: ContextoOperativo,
+    entrada: EntradaDeReactivarSeccion,
+  ): Promise<R<SalidaDeReactivarSeccion>> {
+    const { empresaId } = contexto;
+    const resultado = await dependencias.transacciones.ejecutar(
+      { contexto },
+      async (tx): Promise<R<SalidaDeReactivarSeccion>> => {
+        const permiso = await autorizar(tx, contexto, dependencias.reglas, ["productos.editar"]);
+        if (!permiso.ok) return permiso;
+        const alcance = await exigirAlcanceTotal(tx, contexto);
+        if (!alcance.ok) return alcance;
+        const actual = await tx.productos.obtenerSeccion(empresaId, entrada.seccionId);
+        if (actual === null) return err("SECCION_NO_ENCONTRADA");
+        if (actual.activa) return ok({ yaEstaba: true });
+        await tx.seccionesDeCarta.reactivar(empresaId, actual.id);
+        await tx.auditoria.registrar({
+          empresaId,
+          actorPersonaId: contexto.personaId,
+          accion: "SECCION_DE_CARTA_REACTIVADA",
+          entidad: "seccion_de_carta",
+          entidadId: actual.id,
+          antes: { activa: false },
+          despues: { activa: true },
         });
         return ok({ yaEstaba: false });
       },

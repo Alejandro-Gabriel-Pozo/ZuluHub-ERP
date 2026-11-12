@@ -269,6 +269,14 @@ describe("catalogoDePerillas", () => {
         requiere: null,
         modulo: "stock",
       },
+      {
+        perilla: "vidriera_por_qr",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "vidriera",
+      },
     ]);
   });
 

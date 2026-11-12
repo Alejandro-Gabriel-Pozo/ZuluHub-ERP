@@ -116,6 +116,12 @@ describe("el catálogo de perillas real", () => {
         base: { limite: 1 },
         modulo: "caja",
       },
+      vidriera_por_qr: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "vidriera",
+      },
       salon: {
         ambito: "EMPRESA",
         tipo: "INTERRUPTOR",
@@ -136,6 +142,7 @@ describe("el catálogo de perillas real", () => {
       | "lotes"
       | "calidad_de_lote"
       | "produccion"
+      | "vidriera_por_qr"
       | "salon"
     >();
     // @ts-expect-error esa perilla no está declarada (la registra el módulo que la verifica)
@@ -154,9 +161,8 @@ describe("el catálogo de perillas real", () => {
     }
   });
 
-  it("las de la carta no se declaran hasta construir la carta: ni vidriera_por_qr ni las de fotos, modelos y estadísticas", () => {
+  it("las de la carta que todavía no se construyeron no se declaran: ni las de fotos, modelos ni estadísticas (`vidriera_por_qr` sí, desde T2)", () => {
     for (const clave of [
-      "vidriera_por_qr",
       "productos_con_foto",
       "fotos_alojadas",
       "vidriera_modelo_cuadricula",
@@ -182,6 +188,7 @@ describe("el catálogo de perillas real", () => {
       calidad_de_lote: "stock",
       produccion: "produccion",
       cajas_por_sucursal: "caja",
+      vidriera_por_qr: "vidriera",
       salon: "salon",
     });
   });

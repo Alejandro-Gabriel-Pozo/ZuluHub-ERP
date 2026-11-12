@@ -1,3 +1,4 @@
+import type { ErrorDePerilla } from "../../../capacidades/planes/derechos";
 import type { ErrorDePresentacion } from "../dominio/presentaciones";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ErrorDeAlcance } from "../../../capacidades/permisos/alcance";
@@ -42,6 +43,13 @@ export type ErrorDeCatalogo =
   | "RUBRO_DE_CARTA_INVALIDO"
   | "LUGAR_DE_CARTA_INVALIDO"
   | "MENSAJE_DE_PORTADA_INVALIDO"
+  | "ESTADO_DE_CARTA_INVALIDO"
+  | "CARTA_SIN_PRODUCTOS_VISIBLES"
+  | "LISTA_DE_SECCIONES_INCOMPLETA"
+  | "SECCION_REPETIDA"
+  | "PRODUCTO_CON_EXISTENCIA"
+  | "PRODUCTO_CON_CONTEO_ABIERTO"
+  | ErrorDePerilla
   | "OPCION_INVALIDA"
   | "PRECIO_INVALIDO"
   | "RECARGO_DE_EMPRESA_SE_EDITA_EN_OPCIONES"

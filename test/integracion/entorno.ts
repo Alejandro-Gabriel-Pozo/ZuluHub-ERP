@@ -112,6 +112,14 @@ import {
   crearRepositorioDeOpciones,
   crearRepositorioDePrecios,
   crearRepositorioDePresentaciones,
+  crearRepositorioDeCartas,
+  crearRepositorioDeDisponibilidad,
+  crearRepositorioDeSecciones,
+  crearLectorDeCarta,
+  type RepositorioDeCartas,
+  type RepositorioDeDisponibilidad,
+  type RepositorioDeSecciones,
+  type LectorDeCarta,
   crearRepositorioDeProductos,
   type CatalogoDb,
   type RepositorioDeOpciones,
@@ -175,6 +183,11 @@ export type TxDePrueba = Readonly<{
   opciones: RepositorioDeOpciones;
   precios: RepositorioDePrecios;
   presentacionesDeProducto: RepositorioDePresentaciones;
+  /** La carta pública, el botón «Ocultar» y las secciones (0043 y T2 de la carta real). */
+  cartasPublicas: RepositorioDeCartas;
+  disponibilidadDeProductos: RepositorioDeDisponibilidad;
+  seccionesDeCarta: RepositorioDeSecciones;
+  lectorDeCarta: LectorDeCarta;
 }> &
   PiezasDeCajaEnTx &
   TxDeIdentidad;
@@ -231,6 +244,10 @@ export function crearEntornoDePrueba(
       opciones: crearRepositorioDeOpciones(db.withTables<CatalogoDb>()),
       precios: crearRepositorioDePrecios(db.withTables<CatalogoDb>()),
       presentacionesDeProducto: crearRepositorioDePresentaciones(db.withTables<CatalogoDb>()),
+      cartasPublicas: crearRepositorioDeCartas(db.withTables<CatalogoDb>()),
+      disponibilidadDeProductos: crearRepositorioDeDisponibilidad(db.withTables<CatalogoDb>()),
+      seccionesDeCarta: crearRepositorioDeSecciones(db.withTables<CatalogoDb>()),
+      lectorDeCarta: crearLectorDeCarta(db.withTables<CatalogoDb>()),
     });
   return crearTransacciones<TxDePrueba>({
     urls: {
