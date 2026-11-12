@@ -24,6 +24,11 @@ const REVERSION = join(
   import.meta.dirname,
   "../../migraciones/reversiones/0043_revertir_carta_publica.sql",
 );
+/** 0044 (la lectura pública del catálogo) se revierte ANTES: sus políticas miran `carta_publica`. */
+const REVERSION_DE_LA_LECTURA = join(
+  import.meta.dirname,
+  "../../migraciones/reversiones/0044_revertir_lectura_publica_de_carta.sql",
+);
 
 /** Un error de SQL: el código de la falla y la restricción (o el texto, si no hay restricción). */
 const falla = async (c: pg.Client, sql: string, p: unknown[] = []) => {
@@ -369,7 +374,7 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
       ).rejects.toMatchObject({ code: "42501" });
     });
 
-    it("no puede escribir ni borrar nada, y ve solo estas dos tablas del catálogo (la lista exacta de lo que puede leer)", async () => {
+    it("no puede escribir ni borrar nada, y de las dos tablas de 0043 lee exactamente estas columnas", async () => {
       const publico = new pg.Client({ connectionString: (base as BaseDePruebas).publico });
       await publico.connect();
       try {
@@ -379,8 +384,10 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
           "insert into carta_publica (empresa_id, sucursal_id, codigo, nombre) values (gen_random_uuid(), gen_random_uuid(), 'x', 'x')",
           "update disponibilidad_de_producto set oculto = false",
           "delete from disponibilidad_de_producto",
-          "select 1 from producto",
-          "select 1 from seccion_de_carta",
+          // Lo de 0044 también es solo lectura: nada de escribir el catálogo.
+          "update producto set nombre = 'x'",
+          "delete from seccion_de_carta",
+          "insert into precio_de_venta (empresa_id, producto_id, unidad_id, paso_minimo, vigente_desde) values (gen_random_uuid(), gen_random_uuid(), 'UNIDAD', '1', now())",
         ]) {
           await expect(publico.query(sql), sql).rejects.toMatchObject({ code: "42501" });
         }
@@ -406,13 +413,6 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
         "disponibilidad_de_producto.producto_id:SELECT",
         "disponibilidad_de_producto.sucursal_id:SELECT",
       ]);
-      // Y de TODO el catálogo (`producto`, `seccion_de_carta`, precios…) el rol público no lee ni una columna hasta que T3 lo declare con su prueba.
-      const { rows: delCatalogo } = await dueno.query<{ n: string }>(
-        `select count(*)::text as n from information_schema.column_privileges
-          where grantee = 'pedernal_publico' and table_schema = 'public'
-            and table_name in ('producto', 'seccion_de_carta', 'grupo_de_elecciones', 'opcion', 'version_de_opcion', 'consumo_de_opcion', 'precio_de_venta', 'sucursal', 'empresa')`,
-      );
-      expect(delCatalogo[0]?.n).toBe("0");
     });
   });
 
@@ -434,6 +434,12 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
             throw e;
           }
         };
+        // Con 0044 aplicada, esta reversión falla por dependencia (las políticas del rol público miran `carta_publica`) y no cambia nada; se revierte 0044 primero.
+        await expect(correr()).rejects.toMatchObject({ code: "2BP01" });
+        expect((await c.query("select to_regclass('carta_publica') as t")).rows[0]).toBeDefined();
+        await c.query("begin");
+        await c.query(await readFile(REVERSION_DE_LA_LECTURA, "utf8"));
+        await c.query("commit");
         // Con una carta cargada: frena sin confirmación y no deja nada hecho.
         const entorno2 = crearEntornoDePrueba(otra.base, 3);
         const e2 = await empresaDeCarta(entorno2, c);

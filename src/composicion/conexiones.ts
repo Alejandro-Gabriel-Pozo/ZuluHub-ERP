@@ -30,7 +30,8 @@ import {
   leerClaveDeContexto,
 } from "../adaptadores/postgres/contexto-firmado";
 import { crearConfiguracionPublicaDeHost } from "../adaptadores/postgres/configuracion-publica-de-marca";
-import { crearResolucionDeHost, type TxPublica } from "../adaptadores/postgres/resolucion-de-host";
+import { crearResolucionDeHost } from "../adaptadores/postgres/resolucion-de-host";
+import { armarTxPublica, type TxPublicaCompleta } from "../adaptadores/postgres/vidriera-publica";
 import { crearLecturasDeSesionDePostgres, type SesionDb } from "../adaptadores/postgres/sesion";
 import { crearTrabajosDePostgres, type TrabajosDb } from "../adaptadores/postgres/trabajos";
 import {
@@ -100,7 +101,6 @@ import {
   type RepositorioDeReglasDeEmisor,
   type RepositorioDeSeries,
 } from "../modulos/fiscal/publico";
-import { crearLecturaPublicaDeMarcas, type PublicoDb } from "../modulos/marcas/publico";
 import {
   crearRepositorioDeTenants,
   type RepositorioDeTenants,
@@ -200,7 +200,7 @@ export type Conexiones = Readonly<{
   /** Puerta `TRABAJOS` (`PEDERNAL_DB_TRABAJOS`): solo la cola. */
   transaccionesDeTrabajos: () => TransaccionesDePostgres<TxDeCola>;
   /** Puerta pública (`PEDERNAL_DB_PUBLICO`, rol `pedernal_publico`): solo lectura, sin sesión ni contexto. */
-  transaccionesPublicas: () => TransaccionesPublicasDePostgres<TxPublica>;
+  transaccionesPublicas: () => TransaccionesPublicasDePostgres<TxPublicaCompleta>;
   /** Resolución de un host a su dueño y su marca, sobre la puerta pública. */
   resolucionDeHost: () => ResolucionDeHost;
   /** Cómo se pinta la marca de un host (nombre, tema y host canónico), sobre la misma puerta pública. */
@@ -319,9 +319,9 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
     leerConfiguracionDeCorreo(valores),
   );
   const transaccionesPublicas = armarPieza("transacciones-publicas", (valores) =>
-    crearTransaccionesPublicas<TxPublica>({
+    crearTransaccionesPublicas<TxPublicaCompleta>({
       url: valores.PEDERNAL_DB_PUBLICO,
-      armar: (db) => ({ marcas: crearLecturaPublicaDeMarcas(db.withTables<PublicoDb>()) }),
+      armar: armarTxPublica,
     }),
   );
 

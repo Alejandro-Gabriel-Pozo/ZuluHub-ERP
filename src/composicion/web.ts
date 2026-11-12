@@ -28,6 +28,7 @@ import {
 } from "../modulos/stock/publico";
 import { crearCasosDeUsoDeVentas, crearConsultasDeVentas } from "../modulos/ventas/publico";
 import { crearFacturadorDeTickets } from "./facturacion-de-tickets";
+import { crearVidrieraPublica } from "../adaptadores/postgres/vidriera-publica";
 import { crearExistenciasDeCatalogo, generarCodigoDeCarta } from "./existencias-de-catalogo";
 import { crearStockDeVentas } from "./stock-de-ventas";
 import {
@@ -103,6 +104,13 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
   return {
     resolucionDeHost: () => conexiones.resolucionDeHost(),
     configuracionPublicaDeHost: () => conexiones.configuracionPublicaDeHost(),
+    /**
+     * La carta pública con datos REALES (T3 de la carta real): la misma puerta pública (`PEDERNAL_DB_PUBLICO`, rol `pedernal_publico`), solo lectura. Hoy `apps/web`
+     * sigue con la carta de ejemplo hasta que T5 la corte y la pantalla lea de acá.
+     */
+    vidrieraPublica: perezoso(() =>
+      crearVidrieraPublica(conexiones.transaccionesPublicas(), reloj),
+    ),
     autenticacion: () => conexiones.autenticacion(),
     barridoDeAutenticacion: () => conexiones.barridoDeAutenticacion(),
     /** Las lecturas de un pedido que comparten una transacción (ver `LecturasCompartidas`): la misma conexión que usan las consultas. */

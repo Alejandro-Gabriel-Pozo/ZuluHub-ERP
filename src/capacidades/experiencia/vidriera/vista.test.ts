@@ -25,6 +25,7 @@ function publicada(c: VidrieraDeEjemplo, lugar: string | null = null): VidrieraP
     nombre: c.nombre,
     rubro: c.rubro,
     lugar,
+    mensajeDePortada: null,
     letraBase: "NORMAL",
     secciones: c.secciones,
   };
@@ -87,6 +88,57 @@ describe("armarVistaDeVidriera: la cafetería", () => {
     expect(v.secciones.map((s) => s.nombre)).toEqual(CAFETERIA.secciones.map((s) => s.nombre));
     expect(v.totalDeProductos).toBe(60);
     expect(v.letraBase).toBe("NORMAL");
+  });
+
+  it("rubro y lugar nulos pasan como nulos (la pantalla no pinta esa línea) y el mensaje de la portada viaja siempre, tal cual", () => {
+    const sinNada = armarVistaDeVidriera({ ...publicada(CAFETERIA), rubro: null }, "/x");
+    expect(sinNada.rubro).toBeNull();
+    expect(sinNada.lugar).toBeNull();
+    expect(sinNada.mensajeDePortada).toBeNull();
+    const con = armarVistaDeVidriera(
+      { ...publicada(CAFETERIA), mensajeDePortada: "Desliza para ver el menú" },
+      "/x",
+    );
+    expect(con.mensajeDePortada).toBe("Desliza para ver el menú");
+    expect(con.rubro).toBe(CAFETERIA.rubro);
+  });
+
+  it("medidas (regla del dueño, 12/11/2026): el detalle lleva el nombre de cada medida; la LÍNEA DE LISTA no lo lleva ni con una sola medida ni con varias (HALLAZGO: se avisó, no se cambia)", () => {
+    const con = (tamanos: readonly { nombre: string; recargo: string }[]) =>
+      armarVistaDeVidriera(
+        {
+          ...publicada(CAFETERIA),
+          secciones: [
+            {
+              id: "s",
+              nombre: "S",
+              productos: [
+                {
+                  id: "p",
+                  nombre: "Café",
+                  descripcion: null,
+                  agotado: false,
+                  foto: null,
+                  precioBase: "0",
+                  tamanos,
+                  obligatorios: [],
+                  adicionales: [],
+                },
+              ],
+            },
+          ],
+        },
+        "/x",
+      ).secciones[0]?.productos[0];
+    const una = con([{ nombre: "Grande", recargo: "3000" }]);
+    expect(una?.tamanos).toEqual([{ nombre: "Grande", precio: "$ 3.000" }]);
+    expect(una?.precioEnLista).toBe("$ 3.000");
+    const varias = con([
+      { nombre: "Chico", recargo: "2000" },
+      { nombre: "Grande", recargo: "3000" },
+    ]);
+    expect(varias?.tamanos.map((t) => t.nombre)).toEqual(["Chico", "Grande"]);
+    expect(varias?.precioEnLista).toBe("desde $ 2.000");
   });
 
   it("la letra base de la carta pasa tal cual", () => {

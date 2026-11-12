@@ -57,8 +57,10 @@ export type VistaDeSeccion = Readonly<{
 
 export type VistaDeVidriera = Readonly<{
   nombre: string;
-  rubro: string;
+  rubro: string | null;
   lugar: string | null;
+  /** La tercera línea de la portada; `null` si no hay (la pantalla decide si la muestra). */
+  mensajeDePortada: string | null;
   letraBase: LetraBase;
   /** La dirección de la carta, para volver a ella desde un producto. */
   hrefDeLaVidriera: string;
@@ -197,6 +199,7 @@ export function armarVistaDeVidriera(
     nombre: vidriera.nombre,
     rubro: vidriera.rubro,
     lugar: vidriera.lugar,
+    mensajeDePortada: vidriera.mensajeDePortada,
     letraBase: vidriera.letraBase,
     hrefDeLaVidriera: rutaPublica === "" ? "/" : rutaPublica,
     secciones,

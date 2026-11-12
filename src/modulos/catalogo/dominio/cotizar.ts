@@ -1,3 +1,4 @@
+import { filaConPrecio } from "./fila-con-precio";
 import { ErrorDeValor } from "../../../primitivas/cantidad/errores";
 import { cantidadATexto, type Cantidad } from "../../../primitivas/cantidad/cantidad";
 import { precioUnitarioATexto } from "../../../primitivas/dinero/precio-unitario";
@@ -140,9 +141,6 @@ export type InstantaneaDeProducto = Readonly<{
   precioUnitario: string | null;
   emisorExclusivoId: null;
 }>;
-
-const filaConPrecio = (fila: FilaDePrecio | null): fila is FilaDePrecio & { precio: string } =>
-  fila !== null && fila.precio !== null;
 
 /**
  * Arma la instantánea. `precioBase` es lo que devolvió `precio_vigente` para el producto (sin variante) o para la opción de la variante

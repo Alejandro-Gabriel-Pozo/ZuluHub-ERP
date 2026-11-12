@@ -1346,6 +1346,14 @@ describe.skipIf(base === null)("0025 catálogo: la migración contra una base re
       });
     });
 
+    const LEIDAS_POR_LA_CARTA_PUBLICA = new Set([
+      "seccion_de_carta",
+      "producto",
+      "grupo_de_elecciones",
+      "opcion",
+      "version_de_opcion",
+      "precio_de_venta",
+    ]);
     it("los demás roles (plataforma, grupo, trabajos, público, captación, autenticación) no leen nada del catálogo", async () => {
       for (const rol of [
         "plataforma",
@@ -1359,6 +1367,9 @@ describe.skipIf(base === null)("0025 catálogo: la migración contra una base re
         await c.connect();
         try {
           for (const tabla of TABLAS) {
+            // 0044 le da al rol público lectura por columna y con política de ESTAS tablas (solo la carta de un código en línea): su enumeración exacta y que sin código no
+            // devuelve filas se prueban en `carta-publica-lectura.test.ts`.
+            if (rol === "publico" && LEIDAS_POR_LA_CARTA_PUBLICA.has(tabla)) continue;
             const r = await c.query(`select 1 from ${tabla} limit 1`).then(
               () => "leyó",
               (e: { code?: string }) => e.code,

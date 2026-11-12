@@ -114,6 +114,19 @@ export {
   type CambiosDeCartaPublica,
   type RepositorioDeCartas,
 } from "./persistencia/repositorio-de-cartas";
+export type {
+  CartaLeida,
+  GrupoLeido,
+  OpcionLeida,
+  PrecioLeido,
+  ProductoLeido,
+} from "./dominio/carta-publicada";
+export { armarVidrieraPublicada } from "./dominio/carta-publicada";
+export {
+  crearLecturaPublicaDeCartas,
+  type LecturaPublicaDeCartas,
+  type PublicoDeCartaDb,
+} from "./persistencia/lector-publico-de-carta";
 export { crearLectorDeCarta, type LectorDeCarta } from "./persistencia/lector-de-carta";
 export {
   crearRepositorioDeSecciones,

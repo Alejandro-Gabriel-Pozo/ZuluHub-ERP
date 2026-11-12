@@ -74,6 +74,7 @@ function comoVidrieraPublicada(vidriera: VidrieraDeEjemplo): VidrieraPublicada {
     codigo: vidriera.codigo,
     nombre: vidriera.nombre,
     rubro: RUBROS[vidriera.rubro],
+    mensajeDePortada: null,
     ...complemento,
     secciones: vidriera.secciones.map((s) => ({
       ...s,

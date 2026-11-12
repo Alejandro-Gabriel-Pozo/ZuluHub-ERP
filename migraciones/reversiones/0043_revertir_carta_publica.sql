@@ -10,6 +10,9 @@
 -- opciones, grupos, depósitos…): con la lista vieja esa fila no se podría volver a guardar. Hay que corregir esos textos antes (y avisar al dueño). Solo
 -- se miran los CHECK; una función de disparador que use `texto_de_catalogo_valido` solo valida al escribir, así que no hay nada que contar.
 --
+-- ORDEN: si 0044_lectura_publica_de_carta está aplicada, hay que revertirla ANTES (sus políticas del rol público miran `carta_publica`): este script falla con un
+-- error de dependencia y no cambia nada si no se hace.
+--
 -- Este script NO lo aplica el ejecutor de migraciones (solo toma los `NNNN_nombre.sql` de `migraciones/`): se corre a mano, revisado, en una sola
 -- transacción (si algo frena, no queda nada a medias) y con el rol dueño de la base (que evade RLS, o el conteo no vería nada):
 --

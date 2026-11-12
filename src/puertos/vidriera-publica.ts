@@ -49,10 +49,15 @@ export type VidrieraPublicada = Readonly<{
   id: string;
   codigo: string;
   nombre: string;
-  /** El rubro tal como se lee en la cabecera («Cafetería»). */
-  rubro: string;
+  /** El rubro tal como se lee en la cabecera («Cafetería»); `null` si el comerciante no lo cargó (la pantalla no pinta esa línea). */
+  rubro: string | null;
   /** Dónde está el local («Av. Belgrano 412»); `null` si el comerciante no lo cargó. */
   lugar: string | null;
+  /**
+   * La tercera línea de la portada (texto libre del comerciante); `null` si no cargó ninguno. SIEMPRE viaja: si se muestra o no es de la pantalla (solo con el
+   * modelo Libro), no una regla del servidor.
+   */
+  mensajeDePortada: string | null;
   /**
    * Perilla `letra_base` (D10): `NORMAL` (18 px) o `GRANDE` (≈ 22 px). El comensal parte de este valor y
    * el control «Letra» se suma encima; no hay otra forma de fijar un tamaño.

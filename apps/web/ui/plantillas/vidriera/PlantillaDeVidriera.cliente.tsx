@@ -104,7 +104,7 @@ export function PlantillaDeVidriera({ vista, textos }: PropsDePlantillaDeVidrier
       data-letra={paso}
     >
       <header className={estilos["cabecera"]}>
-        <p className={estilos["rubro"]}>{vista.rubro}</p>
+        {vista.rubro === null ? null : <p className={estilos["rubro"]}>{vista.rubro}</p>}
         <h1 className={estilos["nombre"]}>{vista.nombre}</h1>
         {vista.lugar === null ? null : <p className={estilos["lugar"]}>{vista.lugar}</p>}
       </header>
