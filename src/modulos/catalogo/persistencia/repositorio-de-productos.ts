@@ -95,7 +95,7 @@ export interface RepositorioDeProductos {
   listarSecciones(empresa: EmpresaId): Promise<SeccionDeCarta[]>;
 }
 
-function aSeccion(f: {
+export function aSeccion(f: {
   id: string;
   nombre: string;
   orden: number;

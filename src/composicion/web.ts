@@ -28,6 +28,7 @@ import {
 } from "../modulos/stock/publico";
 import { crearCasosDeUsoDeVentas, crearConsultasDeVentas } from "../modulos/ventas/publico";
 import { crearFacturadorDeTickets } from "./facturacion-de-tickets";
+import { crearExistenciasDeCatalogo, generarCodigoDeCarta } from "./existencias-de-catalogo";
 import { crearStockDeVentas } from "./stock-de-ventas";
 import {
   crearCasosDeUsoDeCierre,
@@ -128,7 +129,12 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
      * `MODULO_EN_DESARROLLO` hasta que el dueño lo pase a disponible. `cotizarParaVender` no sale por acá: es el puerto de ventas.
      */
     casosDeUsoDeCatalogo: perezoso(() =>
-      crearCasosDeUsoDeCatalogo({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+      crearCasosDeUsoDeCatalogo({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        existencias: crearExistenciasDeCatalogo(),
+        generarCodigoDeCarta,
+      }),
     ),
     consultasDeCatalogo: perezoso(() =>
       crearConsultasDeCatalogo({ transacciones: conexiones.transaccionesDeApp(), reglas }),

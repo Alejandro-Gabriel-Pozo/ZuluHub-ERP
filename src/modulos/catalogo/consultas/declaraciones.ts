@@ -11,4 +11,6 @@ export const DECLARACIONES_DE_CONSULTAS = {
   productosParaConsumo: { accion: "productos.ver" },
   productosParaCopiar: { accion: "productos.ver" },
   listarSeccionesDeCarta: { accion: "productos.ver" },
+  verCartaPublica: { accion: "vidrieras.ver" },
+  productosOcultos: { accion: "vidrieras.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

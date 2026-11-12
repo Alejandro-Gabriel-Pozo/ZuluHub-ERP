@@ -1,3 +1,4 @@
+import { codigoAlAzar, crearStockFalso } from "./carta-publica-apoyo";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
@@ -170,7 +171,12 @@ export async function montarCompras(
   });
   const consultas = crearConsultasDeCompras({ transacciones: entorno, reglas });
   const clientes = crearCasosDeUsoDeClientes({ transacciones: entorno, reglas });
-  const catalogoCasos = crearCasosDeUsoDeCatalogo({ transacciones: entorno, reglas });
+  const catalogoCasos = crearCasosDeUsoDeCatalogo({
+    transacciones: entorno,
+    reglas,
+    existencias: crearStockFalso(),
+    generarCodigoDeCarta: codigoAlAzar,
+  });
   const stockCasos = crearCasosDeUsoDeStock({ transacciones: entorno, reglas });
   const cajaCasos = crearCasosDeUsoDeCaja({
     transacciones: entorno,

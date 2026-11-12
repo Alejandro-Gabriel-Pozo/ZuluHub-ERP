@@ -114,11 +114,36 @@ export {
   type CambiosDeCartaPublica,
   type RepositorioDeCartas,
 } from "./persistencia/repositorio-de-cartas";
+export { crearLectorDeCarta, type LectorDeCarta } from "./persistencia/lector-de-carta";
+export {
+  crearRepositorioDeSecciones,
+  type RepositorioDeSecciones,
+} from "./persistencia/repositorio-de-secciones";
 export {
   crearRepositorioDeDisponibilidad,
   type FijarDisponibilidad,
   type RepositorioDeDisponibilidad,
 } from "./persistencia/repositorio-de-disponibilidad";
+
+export type { AlcanceDeExistencia, ExistenciasDelProducto } from "./casos-de-uso/contrato";
+export type {
+  EntradaDeGuardarCartaPublica,
+  SalidaDeGuardarCartaPublica,
+} from "./casos-de-uso/guardar-carta-publica";
+export type {
+  AlcanceDeOcultamiento,
+  EntradaDeOcultarProducto,
+  SalidaDeOcultarProducto,
+} from "./casos-de-uso/ocultar-producto";
+export type {
+  EntradaDeReordenarSecciones,
+  SalidaDeReordenarSecciones,
+} from "./casos-de-uso/reordenar-secciones";
+export type {
+  CartaParaAdministrar,
+  ProductoOcultoParaAdministrar,
+  VistaDeCartaPublica,
+} from "./consultas/consultas-de-carta";
 
 export { insertarIdempotente } from "./persistencia/insertar-idempotente";
 export {

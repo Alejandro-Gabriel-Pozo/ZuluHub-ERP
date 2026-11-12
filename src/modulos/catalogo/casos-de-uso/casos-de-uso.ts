@@ -10,12 +10,16 @@ import {
   armarEditarProducto,
   armarReactivarProducto,
 } from "./editar-producto";
+import { armarGuardarCartaPublica } from "./guardar-carta-publica";
 import { armarGuardarConsumoDeGrupo } from "./guardar-consumo";
+import { armarOcultarProducto } from "./ocultar-producto";
+import { armarReordenarSeccionesDeCarta } from "./reordenar-secciones";
 import { armarCrearPresentacion, armarEditarPresentacion } from "./presentaciones";
 import {
   armarCrearSeccionDeCarta,
   armarDesactivarSeccionDeCarta,
   armarEditarSeccionDeCarta,
+  armarReactivarSeccionDeCarta,
 } from "./secciones";
 
 /**
@@ -39,6 +43,10 @@ export function crearCasosDeUsoDeCatalogo(dependencias: DependenciasDeCatalogo) 
     crearSeccionDeCarta: armarCrearSeccionDeCarta(dependencias),
     editarSeccionDeCarta: armarEditarSeccionDeCarta(dependencias),
     desactivarSeccionDeCarta: armarDesactivarSeccionDeCarta(dependencias),
+    reactivarSeccionDeCarta: armarReactivarSeccionDeCarta(dependencias),
+    reordenarSeccionesDeCarta: armarReordenarSeccionesDeCarta(dependencias),
+    guardarCartaPublica: armarGuardarCartaPublica(dependencias),
+    ocultarProducto: armarOcultarProducto(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

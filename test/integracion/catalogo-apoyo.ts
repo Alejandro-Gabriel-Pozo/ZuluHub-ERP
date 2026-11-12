@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { codigoAlAzar, crearStockFalso } from "./carta-publica-apoyo";
 import pg from "pg";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
@@ -211,6 +212,7 @@ const REGLAS_DE_PRUEBA: ReglasDeEmpresa = {
   catalogo: {
     ...CATALOGO_DE_MODULOS,
     catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "disponible" },
+    vidriera: { ...CATALOGO_DE_MODULOS.vidriera, estado: "disponible" },
   },
   permisos: PERMISOS_DE_EMPRESA,
 };
@@ -241,6 +243,10 @@ export async function montarCatalogo(
     reglas?: ReglasDeEmpresa;
     formaDeVentaHabilitada?: DependenciasDeCatalogo["formaDeVentaHabilitada"];
     conexiones?: number;
+    /** El stock que contesta por existencias y conteos (por defecto, uno FALSO vacío: nada tiene existencia). */
+    existencias?: DependenciasDeCatalogo["existencias"];
+    /** El puerto de azar del código de la carta (por defecto, 16 bytes al azar en base64url: el real). */
+    generarCodigoDeCarta?: DependenciasDeCatalogo["generarCodigoDeCarta"];
   }> = {},
 ) {
   const propia = await crearBaseAparte(base);
@@ -254,10 +260,29 @@ export async function montarCatalogo(
    * forzar que las dos hayan EMPEZADO antes de que cualquiera escriba. Vacía por defecto.
    */
   let barrera: () => Promise<void> = () => Promise.resolve();
+  /** El plan de las pruebas no enciende extras: la perilla `vidriera_por_qr` (carta en línea) se muestra encendida salvo que la prueba la apague. */
+  const plan = { perillaDeCarta: true };
   const entorno = crearEntornoDePrueba(propia.base, opciones.conexiones ?? 12, (tx) => {
     let primera = true;
     return {
       ...tx,
+      derechos: {
+        ...tx.derechos,
+        deLaEmpresa: async (contexto, ...resto) => {
+          const reales = await tx.derechos.deLaEmpresa(contexto, ...resto);
+          return {
+            ...reales,
+            perillas: new Map(
+              [...reales.perillas].map(([perilla, valor]) => [
+                perilla,
+                perilla === "vidriera_por_qr" && valor.tipo === "INTERRUPTOR"
+                  ? { ...valor, encendida: plan.perillaDeCarta }
+                  : valor,
+              ]),
+            ),
+          };
+        },
+      },
       autorizacion: {
         ...tx.autorizacion,
         sucursalesDelActor: async (contexto, opcionesDeAlcance) => {
@@ -274,8 +299,8 @@ export async function montarCatalogo(
             ? datos
             : {
                 ...datos,
-                modulosActivados: [...datos.modulosActivados, "catalogo"],
-                modulosHabilitados: [...datos.modulosHabilitados, "catalogo"],
+                modulosActivados: [...datos.modulosActivados, "catalogo", "vidriera"],
+                modulosHabilitados: [...datos.modulosHabilitados, "catalogo", "vidriera"],
               };
         },
       },
@@ -284,9 +309,12 @@ export async function montarCatalogo(
   const dueno = new pg.Client({ connectionString: propia.base.dueno });
   await dueno.connect();
   const reglas = opciones.reglas ?? REGLAS_DE_PRUEBA;
+  const stockFalso = crearStockFalso();
   const dependencias = {
     transacciones: entorno,
     reglas,
+    existencias: opciones.existencias ?? stockFalso,
+    generarCodigoDeCarta: opciones.generarCodigoDeCarta ?? codigoAlAzar,
     ...(opciones.formaDeVentaHabilitada === undefined
       ? {}
       : { formaDeVentaHabilitada: opciones.formaDeVentaHabilitada }),
@@ -344,6 +372,12 @@ export async function montarCatalogo(
   return {
     propia,
     entorno,
+    /** El stock falso por defecto: la prueba dice qué producto tiene existencia o un conteo abierto con cargas. */
+    stock: stockFalso,
+    /** Enciende o apaga la perilla `vidriera_por_qr` del plan (extra de pago): encendida de entrada. */
+    perillaDeCarta: (encendida: boolean) => {
+      plan.perillaDeCarta = encendida;
+    },
     dueno,
     alcances,
     armarBarrera: (participantes: number) => {

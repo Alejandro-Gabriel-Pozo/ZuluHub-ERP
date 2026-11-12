@@ -117,6 +117,17 @@ function armarCambiarActivo(dependencias: DependenciasDeCatalogo, activo: boolea
         const actual = await tx.productos.bloquear(empresaId, entrada.productoId);
         if (actual === null) return err("PRODUCTO_NO_ENCONTRADO");
         if (actual.activo === activo) return ok({ yaEstaba: true });
+        // Desactivar (N-4 de la carta real, cambio de comportamiento de una acción que ya estaba): con existencia distinta de cero o con un conteo abierto con cargas,
+        // no. Primero se toma el producto (arriba), así no se cruza con ocultar ni con otro desactivar. Reactivar no tiene condiciones.
+        if (!activo) {
+          const toda = { tipo: "EMPRESA" } as const;
+          if (await dependencias.existencias.conExistencia(tx, contexto, actual.id, toda))
+            return err("PRODUCTO_CON_EXISTENCIA");
+          if (
+            await dependencias.existencias.conConteoAbiertoConCargas(tx, contexto, actual.id, toda)
+          )
+            return err("PRODUCTO_CON_CONTEO_ABIERTO");
+        }
         await tx.productos.cambiarActivo(empresaId, actual.id, activo);
         await tx.auditoria.registrar({
           empresaId,

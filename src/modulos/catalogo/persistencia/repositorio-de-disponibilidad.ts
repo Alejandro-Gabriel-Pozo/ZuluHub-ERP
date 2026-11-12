@@ -7,6 +7,9 @@ import { FORMA_DE_UUID } from "./filas";
 
 const esUuid = (texto: string): boolean => FORMA_DE_UUID.test(texto);
 
+/** Una fila oculta con el nombre del producto. */
+export type ProductoOculto = Readonly<{ nombre: string; disponibilidad: Disponibilidad }>;
+
 export type FijarDisponibilidad = Readonly<{
   productoId: string;
   /** `null` = toda la empresa. */
@@ -43,6 +46,13 @@ export interface RepositorioDeDisponibilidad {
     productoId: string,
     sucursal: string,
   ): Promise<readonly Disponibilidad[]>;
+  /**
+   * Los productos hoy OCULTOS con su nombre (la pantalla de «Oculto» y de «Volver a mostrar»): con `sucursal` nula, los de toda la empresa y los de
+   * todos los locales; con una sucursal, los de la empresa y los de ese local (nunca los de otros). Por nombre y alcance.
+   */
+  ocultas(empresa: EmpresaId, sucursal: string | null): Promise<readonly ProductoOculto[]>;
+  /** Todas las filas (oculto o no) que cuentan en el local: la de la empresa y la de ese local, de TODOS los productos. Alimenta a `ocultoPor`. */
+  delLocal(empresa: EmpresaId, sucursal: string): Promise<readonly Disponibilidad[]>;
   /**
    * Fija el ESTADO (no alterna) del alcance: crea la fila o pisa la que haya. Repetir lo mismo deja el mismo estado. Dos personas a la vez no pueden dejar dos
    * filas: la base tiene una única por (empresa, producto, alcance). Es `INSERT … ON CONFLICT DO NOTHING` y, si ya había fila, un `UPDATE` en la misma
@@ -98,6 +108,38 @@ export function crearRepositorioDeDisponibilidad(
         .where("producto_id", "=", productoId)
         .where((eb) => eb.or([eb("sucursal_id", "is", null), eb("sucursal_id", "=", sucursal)]))
         .orderBy("sucursal_id", "asc")
+        .execute();
+      return filas.map(aDisponibilidad);
+    },
+    async ocultas(empresa, sucursal) {
+      if (sucursal !== null && !esUuid(sucursal)) return [];
+      let consulta = db
+        .selectFrom("disponibilidad_de_producto as d")
+        .innerJoin("producto as p", (j) =>
+          j.onRef("p.id", "=", "d.producto_id").onRef("p.empresa_id", "=", "d.empresa_id"),
+        )
+        .selectAll("d")
+        .select("p.nombre")
+        .where("d.empresa_id", "=", empresa)
+        .where("d.oculto", "=", true);
+      if (sucursal !== null)
+        consulta = consulta.where((eb) =>
+          eb.or([eb("d.sucursal_id", "is", null), eb("d.sucursal_id", "=", sucursal)]),
+        );
+      const filas = await consulta
+        .orderBy("p.nombre_clave")
+        .orderBy("d.producto_id")
+        .orderBy("d.sucursal_id")
+        .execute();
+      return filas.map((f) => ({ nombre: f.nombre, disponibilidad: aDisponibilidad(f) }));
+    },
+    async delLocal(empresa, sucursal) {
+      if (!esUuid(sucursal)) return [];
+      const filas = await db
+        .selectFrom("disponibilidad_de_producto")
+        .selectAll()
+        .where("empresa_id", "=", empresa)
+        .where((eb) => eb.or([eb("sucursal_id", "is", null), eb("sucursal_id", "=", sucursal)]))
         .execute();
       return filas.map(aDisponibilidad);
     },

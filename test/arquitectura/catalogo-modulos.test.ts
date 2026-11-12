@@ -419,7 +419,8 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
   it("violación inyectada: un módulo en desarrollo fuera de SIN_CONSTRUIR rompe X1 (ningún caso de uso exige sus acciones)", () => {
     const sinCarta = SIN_CONSTRUIR.filter((clave) => clave !== "vidriera");
     const problemas = crucesDelCatalogo(CATALOGO_DE_MODULOS, declaradas, carpetaExiste, sinCarta);
-    expect(problemas).toContain("X1: la acción vidrieras.ver no la exige ningún caso de uso");
+    // `vidrieras.ver` ya la exige una consulta de la carta (T2 de la carta real); `vidrieras.publicar` sigue sin uso (modelo viejo, H7).
+    expect(problemas).toContain("X1: la acción vidrieras.publicar no la exige ningún caso de uso");
   });
 
   it("violación inyectada: stock, ya disponible, rompe X4 (su carpeta no existe) y X1 (ningún caso de uso exige sus acciones) si se le quita lo que lo implementa (E5-T8)", () => {

@@ -2,6 +2,7 @@ import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/decla
 
 const ARCHIVO = "test/integracion/catalogo-casos-de-uso.test.ts";
 const ARCHIVO_DE_PRESENTACIONES = "test/integracion/catalogo-presentaciones.test.ts";
+const ARCHIVO_DE_CARTA = "test/integracion/carta-publica-casos-de-uso.test.ts";
 const ARCHIVO_DE_FORMA = "test/integracion/catalogo-forma-de-venta.test.ts";
 
 /**
@@ -137,6 +138,46 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO,
         it: "secciones: desactivar dos veces es ok y no audita la segunda; el producto elige una sección activa y desactivarla no lo toca",
+      },
+    },
+  },
+  reactivarSeccionDeCarta: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_CARTA,
+        it: "L-7: desactivar y reactivar una sección devuelve sus productos a la carta sin editar ninguno; repetir cada una es yaEstaba",
+      },
+    },
+  },
+  reordenarSeccionesDeCarta: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "SIN_CAMBIOS",
+      prueba: {
+        archivo: ARCHIVO_DE_CARTA,
+        it: "C-4: repetir el reordenamiento ya aplicado es SIN_CAMBIOS: no sube ninguna versión ni audita, aunque las versiones sean viejas",
+      },
+    },
+  },
+  guardarCartaPublica: {
+    accion: "vidrieras.editar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_CARTA,
+        it: "C-1: guardarCartaPublica con el mismo id dos veces deja UNA carta, un solo código y una entrada de auditoría; la segunda es yaExistia",
+      },
+    },
+  },
+  ocultarProducto: {
+    accion: "vidrieras.marcar_disponibilidad",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_CARTA,
+        it: "D-4: ocultar dos veces deja una fila y la segunda es yaEstaba sin auditar; true, false, false deja el producto visible",
       },
     },
   },
