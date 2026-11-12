@@ -10,27 +10,43 @@ import "../tokens.css";
 
 const ETIQUETAS_DE_AXE = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"];
 
+/** Cuánto se espera, como máximo, a que terminen las animaciones: una que no termina no cuelga la prueba (axe mide igual al vencer el plazo). */
+const TOPE_DE_ANIMACIONES_MS = 2000;
+
+/**
+ * Espera a que no quede ninguna transición ni animación FINITA en curso (las infinitas, como un esqueleto, no). Se vuelve a mirar después de cada ronda: una transición que
+ * cambia de destino a mitad de camino (un botón que se habilita y enseguida recibe el `:hover` o el `:active` del clic) se CANCELA y la reemplaza otra. La cancelada rechaza
+ * `finished`: esperar solo las que había al empezar daba por terminado lo que seguía corriendo, y axe medía el contraste con el fondo a medio camino (caso real: «Emitir
+ * factura», 4,43 contra 4,5, una de cada tantas corridas con la máquina cargada). `getAnimations()` sincroniza los estilos antes de contestar, así que ve la nueva.
+ * Previene: una violación de `color-contrast` intermitente. Chequeo: `ayudas.test.tsx` («espera también a la transición que reemplaza a otra»).
+ */
+async function esperarQueTerminenLasAnimaciones(): Promise<void> {
+  const limite = performance.now() + TOPE_DE_ANIMACIONES_MS;
+  for (;;) {
+    const enCurso = document
+      .getAnimations()
+      .filter((animacion) => animacion.effect?.getComputedTiming().iterations !== Infinity);
+    const restante = limite - performance.now();
+    if (enCurso.length === 0 || restante <= 0) return;
+    await Promise.race([
+      Promise.allSettled(enCurso.map((animacion) => animacion.finished)),
+      new Promise<void>((resolver) => setTimeout(resolver, restante)),
+    ]);
+  }
+}
+
 /**
  * Corre axe sobre `raiz` con el contraste incluido (es navegador real: calcula el color pintado) y
  * devuelve las violaciones como texto, para comparar con `[]`. Un componente suelto no es una página:
  * las reglas de página (una región principal, un `h1`, todo dentro de un landmark) solo se exigen con
- * `pagina: true`, que usan las plantillas. Antes de medir espera a que terminen las transiciones y animaciones finitas en curso (las infinitas, como un esqueleto, no): tras un
- * cambio de estado (un botón que se habilita) el fondo está a medio camino y el contraste medido no es el final
- * (previene una violación de `color-contrast` intermitente en un navegador lento, como el del CI).
+ * `pagina: true`, que usan las plantillas. Antes de medir espera a que terminen las transiciones y animaciones finitas en curso, también las que reemplazan a otra
+ * (`esperarQueTerminenLasAnimaciones`): tras un cambio de estado (un botón que se habilita) el fondo está a medio camino y el contraste medido no es el final.
  */
 export async function violacionesDeAccesibilidad(
   raiz: Element = document.body,
   { pagina = false }: { pagina?: boolean } = {},
 ): Promise<string[]> {
-  const enCurso = document
-    .getAnimations()
-    .filter((animacion) => animacion.effect?.getComputedTiming().iterations !== Infinity);
-  // Con un tope: una animación que no termina no cuelga la prueba (axe mide igual al vencer el plazo).
-  const tope = new Promise<void>((resolver) => setTimeout(resolver, 2000));
-  await Promise.race([
-    Promise.all(enCurso.map((animacion) => animacion.finished.catch(() => undefined))),
-    tope,
-  ]);
+  await esperarQueTerminenLasAnimaciones();
   const resultado = await axe.run(raiz, {
     runOnly: { type: "tag", values: ETIQUETAS_DE_AXE },
     rules: pagina
