@@ -20,6 +20,7 @@ describe("listaDePreciosDelProducto: sin variantes", () => {
     expect(lista(producto({ precioBase: "2200.50" }))).toEqual({
       precioDeLista: ARS("2200.50"),
       desde: false,
+      medidaDeLista: null,
       tamanos: [],
       obligatorios: [],
       adicionales: [],
@@ -42,10 +43,29 @@ describe("listaDePreciosDelProducto: tamaños", () => {
     ],
   });
 
+  it("la medida de la lista es la de menor precio, sin importar el orden, y la primera si empatan", () => {
+    const con = (tamanos: { nombre: string; recargo: string }[]) =>
+      lista(producto({ precioBase: "100", tamanos })).medidaDeLista;
+    expect(
+      con([
+        { nombre: "Grande", recargo: "800" },
+        { nombre: "Chico", recargo: "0" },
+        { nombre: "Mediano", recargo: "400" },
+      ]),
+    ).toBe("Chico");
+    expect(
+      con([
+        { nombre: "Primera", recargo: "300" },
+        { nombre: "Segunda", recargo: "300" },
+      ]),
+    ).toBe("Primera");
+  });
+
   it("lista de precios finales (base + recargo) y «desde» el menor", () => {
     expect(lista(cafe)).toEqual({
       precioDeLista: ARS("2300.00"),
       desde: true,
+      medidaDeLista: "Chico",
       tamanos: [
         { nombre: "Chico", precio: ARS("2300.00") },
         { nombre: "Mediano", precio: ARS("2700.00") },

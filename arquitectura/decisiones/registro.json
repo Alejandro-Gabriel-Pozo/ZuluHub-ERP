@@ -1511,5 +1511,15 @@
     "decision": "En la consola de plataforma la perilla vidriera_por_qr se rotula «Carta en línea», el nombre de la pantalla de la carta.",
     "que_cambia": "Solo el texto que ve el equipo de plataforma al habilitar el extra; sin fuente aprobada más corta (decisión 175).",
     "donde": "apps/plataforma/logica/plan.ts; Pedernal-docs 11-especificaciones/carta-real-especificacion.md §1 E4"
+  },
+  {
+    "id": "DEC-0341",
+    "fecha": "2026-11-12",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El rol público lee el precio de la carta con `precio_vigente` (como la caja): tiene SELECT sobre las 13 columnas de `precio_de_venta`, incluida `cargado_por`, que no sale del adaptador.",
+    "que_cambia": "Solo un privilegio de lectura; una prueba fija las 13 columnas. Revertir: arma la fila sin `cargado_por` en la función (medio día) o vigencia en TypeScript (un día). Deuda: antes del primer cliente.",
+    "donde": "migraciones/0044_lectura_publica_de_carta.sql; test/integracion/carta-publica-lectura.test.ts; Pedernal-docs 11-especificaciones/carta-real-especificacion.md §3.3 y §4 (T-5); decidido por el orquestador (opción a), 12/11/2026"
   }
 ]

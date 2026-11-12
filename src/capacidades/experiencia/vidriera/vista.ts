@@ -37,7 +37,10 @@ export type VistaDeProducto = Readonly<{
   nombre: string;
   descripcion: string | null;
   agotado: boolean;
-  /** «$ 3.300», o «desde $ 3.300» cuando hay más de un precio posible. Siempre está en la lista (D3). */
+  /**
+   * «$ 3.300», o «desde $ 3.300» cuando hay más de un precio posible; con medidas lleva el nombre de la medida de ese precio («Grande $ 3.000», «desde Chico $ 2.000»)
+   * (regla del dueño, 12/11/2026). Siempre está en la lista (D3).
+   */
   precioEnLista: string;
   /** «Con papas fritas, puré o ensalada», o «Con guarnición a elección» si no entra (§3.1). */
   guarnicion: string | null;
@@ -150,6 +153,7 @@ function productoParaLaVista(
   seccion: string,
 ): VistaDeProducto {
   const desde = lista.desde ? "desde " : "";
+  const medida = lista.medidaDeLista === null ? "" : `${lista.medidaDeLista} `;
   return {
     segmento,
     href: `${rutaPublica}/${segmento}`,
@@ -157,7 +161,7 @@ function productoParaLaVista(
     nombre: producto.nombre,
     descripcion: producto.descripcion,
     agotado: producto.agotado,
-    precioEnLista: `${desde}${formatearImporte(lista.precioDeLista)}`,
+    precioEnLista: `${desde}${medida}${formatearImporte(lista.precioDeLista)}`,
     guarnicion: guarnicionDe(lista),
     tamanos: lista.tamanos.map((t) => ({ nombre: t.nombre, precio: formatearImporte(t.precio) })),
     obligatorios: lista.obligatorios.map(grupoParaLaVista),

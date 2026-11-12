@@ -180,6 +180,102 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
         comoPublico(publico(), en.carta1.codigo, "select razon_social from empresa"),
       ).rejects.toMatchObject({ code: "42501" });
     });
+    it("C-6: lo que el rol público puede leer es EXACTAMENTE esto (columna por columna); cualquier ampliación falla", async () => {
+      const filas = await c.dueno.query<{ tabla: string; columnas: string }>(
+        `select table_name as tabla, string_agg(column_name, ',' order by column_name) as columnas
+           from information_schema.column_privileges
+          where grantee = 'pedernal_publico' and privilege_type = 'SELECT' and table_schema = 'public'
+          group by table_name order by table_name`,
+      );
+      const otorgado = Object.fromEntries(filas.rows.map((f) => [f.tabla, f.columnas.split(",")]));
+      const ordenadas = (...columnas: string[]) => [...columnas].sort();
+      expect(otorgado).toEqual({
+        // La puerta de marcas (resolución de host y aspecto): no es la carta.
+        dominio: ordenadas(
+          "duenio_empresa_id",
+          "duenio_marca_id",
+          "es_canonico",
+          "estado",
+          "host",
+          "marca_id",
+          "superficie",
+        ),
+        marca: ordenadas("codigo", "es_principal", "id", "marca_padre_id", "nivel"),
+        resolucion_de_host: ordenadas(
+          "duenio_empresa_id",
+          "duenio_marca_id",
+          "host",
+          "marca_id",
+          "superficie",
+        ),
+        version_de_marca: ordenadas(
+          "aspecto",
+          "logo",
+          "marca_id",
+          "nombre_visible",
+          "numero",
+          "tema",
+          "vigente_desde",
+          "vocabulario",
+        ),
+        // La carta (0043 y 0044).
+        carta_publica: ordenadas(
+          "codigo",
+          "empresa_id",
+          "estado",
+          "id",
+          "lugar",
+          "mensaje_de_portada",
+          "nombre",
+          "rubro",
+          "sucursal_id",
+        ),
+        disponibilidad_de_producto: ordenadas("empresa_id", "oculto", "producto_id", "sucursal_id"),
+        empresa: ordenadas("estado", "id", "tenant_id"),
+        tenant: ordenadas("estado", "id", "marca_id"),
+        sucursal: ordenadas("activa", "empresa_id", "id"),
+        seccion_de_carta: ordenadas("activa", "empresa_id", "id", "nombre", "orden"),
+        producto: ordenadas(
+          "activo",
+          "clase_de_uso",
+          "descripcion_en_carta",
+          "empresa_id",
+          "id",
+          "nombre",
+          "nombre_clave",
+          "seccion_de_carta_id",
+        ),
+        grupo_de_elecciones: ordenadas(
+          "activo",
+          "clase",
+          "empresa_id",
+          "es_obligatorio",
+          "id",
+          "nombre",
+          "orden",
+          "producto_id",
+          "se_muestra_en_carta",
+        ),
+        opcion: ordenadas("activa", "empresa_id", "grupo_id", "id", "orden"),
+        version_de_opcion: ordenadas("empresa_id", "nombre", "numero", "opcion_id", "recargo"),
+        // DECISIÓN ACEPTADA (DEC-0341): las 13 columnas, incluida `cargado_por`, porque `precio_vigente` lee la fila entera. Si esto cambia, que sea a propósito.
+        precio_de_venta: ordenadas(
+          "cargado_por",
+          "creado_en",
+          "empresa_id",
+          "id",
+          "iva_incluido",
+          "moneda",
+          "opcion_id",
+          "paso_minimo",
+          "precio",
+          "producto_id",
+          "sucursal_id",
+          "unidad_id",
+          "vigente_desde",
+        ),
+      });
+    });
     it("C-5: no puede escribir", async () => {
       await expect(
         comoPublico(publico(), en.carta1.codigo, "update producto set activo = false"),

@@ -13,7 +13,7 @@
 --    (`consumo_de_opcion`) ni su factor de tamaño; nada de stock ni de ventas.
 --  * `precio_vigente` (la ÚNICA lectura del precio vigente, la misma que usa la caja) se ejecuta con los permisos de quien la llama (no es SECURITY DEFINER). Su cuerpo
 --    lee la fila entera (`SELECT s.*`), así que el rol público recibe TODAS las columnas de `precio_de_venta` (incluida `cargado_por`, un id de persona que NUNCA sale
---    del adaptador). Es el costo de que carta y caja usen la misma cuenta (T-5); la alternativa es reimplementar la vigencia en TypeScript. Ver la pregunta en la entrega.
+--    del adaptador). Es el costo de que carta y caja usen la misma cuenta (T-5); la alternativa es reimplementar la vigencia en TypeScript. Decisión DEC-0341 (deuda: antes del primer cliente en producción; la prueba carta-publica-lectura C-6 fija las columnas).
 --
 -- Su reversión es un script aparte: `migraciones/reversiones/0044_revertir_lectura_publica_de_carta.sql` (sin pérdida de datos: solo quita permisos y políticas).
 -- DEPENDE de 0025 (catálogo), 0007 (rol público) y 0043 (carta pública); se comprueba al empezar.

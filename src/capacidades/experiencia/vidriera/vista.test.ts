@@ -103,7 +103,7 @@ describe("armarVistaDeVidriera: la cafetería", () => {
     expect(con.rubro).toBe(CAFETERIA.rubro);
   });
 
-  it("medidas (regla del dueño, 12/11/2026): el detalle lleva el nombre de cada medida; la LÍNEA DE LISTA no lo lleva ni con una sola medida ni con varias (HALLAZGO: se avisó, no se cambia)", () => {
+  it("medidas (regla del dueño, 12/11/2026): el detalle lleva el nombre de cada medida; la línea de lista también lo lleva, con una sola medida y con varias", () => {
     const con = (tamanos: readonly { nombre: string; recargo: string }[]) =>
       armarVistaDeVidriera(
         {
@@ -132,13 +132,13 @@ describe("armarVistaDeVidriera: la cafetería", () => {
       ).secciones[0]?.productos[0];
     const una = con([{ nombre: "Grande", recargo: "3000" }]);
     expect(una?.tamanos).toEqual([{ nombre: "Grande", precio: "$ 3.000" }]);
-    expect(una?.precioEnLista).toBe("$ 3.000");
+    expect(una?.precioEnLista).toBe("Grande $ 3.000");
     const varias = con([
       { nombre: "Chico", recargo: "2000" },
       { nombre: "Grande", recargo: "3000" },
     ]);
     expect(varias?.tamanos.map((t) => t.nombre)).toEqual(["Chico", "Grande"]);
-    expect(varias?.precioEnLista).toBe("desde $ 2.000");
+    expect(varias?.precioEnLista).toBe("desde Chico $ 2.000");
   });
 
   it("la letra base de la carta pasa tal cual", () => {
@@ -160,7 +160,7 @@ describe("armarVistaDeVidriera: la cafetería", () => {
 
   it("con tamaños el precio de la lista es «desde» el menor", () => {
     const p = producto(v, "Capuchino");
-    expect(p.precioEnLista).toBe("desde $ 3.300");
+    expect(p.precioEnLista).toBe("desde Chico $ 3.300");
     expect(p.tamanos).toEqual([
       { nombre: "Chico", precio: "$ 3.300" },
       { nombre: "Mediano", precio: "$ 3.700" },
@@ -467,7 +467,7 @@ describe("las otras cartas de ejemplo", () => {
     const v = vista(HOSTERIA);
     const malbec = producto(v, "Malbec reserva");
     expect(malbec.tamanos.map((t) => t.precio)).toEqual(["$ 6.800", "$ 24.133,34"]);
-    expect(malbec.precioEnLista).toBe("desde $ 6.800");
+    expect(malbec.precioEnLista).toBe("desde Copa $ 6.800");
   });
 
   it("la barbería arma todos sus servicios", () => {
