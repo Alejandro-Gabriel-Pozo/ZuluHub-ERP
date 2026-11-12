@@ -705,12 +705,12 @@ describe("el guard con las reglas reales", () => {
     );
   });
 
-  it("las 70 acciones sin construir (23 de catálogo y carta, 31 de caja y ventas y 16 de salón y comandas) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  it("las 75 acciones sin construir (23 de catálogo y carta, 31 de caja y ventas 16 de salón y comandas y 5 de producción) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
     const sinConstruir = ENDESARROLLO.flatMap(
       (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
     );
-    expect(sinConstruir).toHaveLength(70);
+    expect(sinConstruir).toHaveLength(75);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(
