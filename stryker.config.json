@@ -32,6 +32,7 @@
     "src/modulos/catalogo/dominio/carta-publica.ts",
     "src/modulos/catalogo/dominio/fila-con-precio.ts",
     "src/modulos/catalogo/dominio/identificadores.ts",
+    "src/modulos/catalogo/dominio/alcance-de-precio.ts",
     "src/modulos/compras/dominio/**/*.ts",
     "src/modulos/identidad/dominio/**/*.ts",
     "src/plataforma/dominio/**/*.ts",
