@@ -23,7 +23,7 @@ import type { ErrorDeStock } from "./errores";
 type R<S> = Resultado<S, ErrorDeStock>;
 
 /**
- * Un componente tal como llega de la pantalla: el producto (con artículo de stock, o un `ELABORADO`: subcomposición, D96), la cantidad NETA
+ * Un componente tal como llega de la pantalla: el producto (con artículo de stock, o un `ELABORADO`: subcomposición, D96), la cantidad BRUTA
  * en texto decimal y la unidad en que se escribió.
  */
 export type ComponenteDeEntrada = Readonly<{
@@ -31,8 +31,8 @@ export type ComponenteDeEntrada = Readonly<{
   cantidad: string;
   unidadId: string;
   /**
-   * Merma en puntos porcentuales (de 0 a menos de 100, hasta 4 decimales): se SUMA al neto (`merma.ts`, DEC-0100). Con ella hace falta la
-   * perilla `composiciones_con_perdida`; apagada es `FUNCION_NO_INCLUIDA`.
+   * Merma en puntos porcentuales (de 0 a menos de 100, hasta 4 decimales): la `cantidad` es el BRUTO y el neto = bruto × (100 − merma) ÷ 100
+   * (`merma.ts`, 13/11/2026); la merma no cambia lo que se descuenta ni el costo. Con ella hace falta la perilla `composiciones_con_perdida`; apagada es `FUNCION_NO_INCLUIDA`.
    */
   perdida?: string | undefined;
 }>;

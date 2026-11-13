@@ -12,7 +12,6 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import { convertirCantidad } from "../../../primitivas/unidades/convertir-cantidad";
 import { UNIDADES, type CodigoDeUnidad } from "../../../primitivas/unidades/unidades";
 import type { ClaseDeUso } from "../../catalogo/publico";
-import { fraccionDeBruto } from "./merma";
 import { cantidadDeUnidades, compararTexto, UNIDADES_POR_ENTERO } from "./movimiento";
 import { MAXIMO_DE_NIVELES_DE_RECETA } from "./subcomposicion";
 
@@ -46,11 +45,11 @@ export type ComponenteVigente = Readonly<{
   unidadId: CodigoDeUnidad;
   /** La unidad de stock del artículo del componente. */
   unidadDeStockId: CodigoDeUnidad;
-  /** E6: la merma en puntos, que se SUMA al neto (`merma.ts`, P-1). Sin dato: sin merma. */
+  /** La merma en puntos: solo informa el neto de la ficha; no entra a la cuenta del descuento (la cantidad ya es el BRUTO, `merma.ts`). */
   perdida?: Porcentaje | null;
 }>;
 
-/** E6: un componente que es un producto ELABORADO (subcomposición, D96). `cantidad` es la neta, en `unidadId` de la dimensión del elaborado. */
+/** E6: un componente que es un producto ELABORADO (subcomposición, D96). `cantidad` es la BRUTA, en `unidadId` de la dimensión del elaborado. */
 export type ComponenteCompuesto = Readonly<{
   compuestoId: string;
   cantidad: Cantidad;
@@ -214,14 +213,13 @@ function explotarComposicion(
       componente.unidadDeStockId,
     );
     if (!enStock.ok) return enStock.error;
-    const bruto = fraccionDeBruto(enStock.valor.unidades, componente.perdida ?? null);
     sumar(
       sumas,
       componente.articuloId,
       composicion.composicionId,
       componente.unidadDeStockId,
-      bruto.numerador * qNum,
-      bruto.denominador * composicion.rinde.unidades * qDen,
+      enStock.valor.unidades * qNum,
+      composicion.rinde.unidades * qDen,
     );
   }
   for (const compuesto of composicion.compuestos ?? []) {
@@ -229,9 +227,8 @@ function explotarComposicion(
     if (hijo === undefined) return "PRODUCTO_DESCONOCIDO";
     const enBase = convertirCantidad(compuesto.cantidad, compuesto.unidadId, hijo.unidadBaseId);
     if (!enBase.ok) return enBase.error;
-    const bruto = fraccionDeBruto(enBase.valor.unidades, compuesto.perdida ?? null);
-    const num = bruto.numerador * qNum;
-    const den = bruto.denominador * composicion.rinde.unidades * qDen;
+    const num = enBase.valor.unidades * qNum;
+    const den = composicion.rinde.unidades * qDen;
     if (hijo.articulo !== null && hijo.articulo.activo) {
       sumar(
         sumas,

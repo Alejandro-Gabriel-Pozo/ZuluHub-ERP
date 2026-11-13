@@ -41,7 +41,7 @@ export function armarConsultasDeRecetas(leer: Lector, reglas: ReglasDeEmpresa) {
     (await exigirAccion(reglas, "costos.ver", () => tx.autorizacion.delActor(contexto))).ok;
 
   return {
-    /** La ficha de una versión (la vigente si no se dice): componentes con neto, merma y bruto; con `costos.ver`, costo por línea y de la receta. */
+    /** La ficha de una versión (la vigente si no se dice): componentes con bruto cargado, merma y neto; con `costos.ver`, costo por línea y de la receta. */
     fichaDeReceta: (
       contexto: ContextoOperativo,
       entrada: Readonly<{ productoId: string; version?: number | undefined }>,
