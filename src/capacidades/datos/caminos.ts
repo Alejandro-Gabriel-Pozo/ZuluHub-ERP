@@ -51,6 +51,9 @@ const LISTA_DE_PRODUCTOS =
 const FORMULARIO_DE_FICHA_DE_PRODUCTO =
   "apps/web/ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente.tsx";
 
+const FORMULARIO_DE_ALTA_DE_PRODUCTO =
+  "apps/web/ui/plantillas/catalogo/FormularioDeAltaDeProducto.cliente.tsx";
+
 export const CAMINOS = {
   // Productos, lista: buscar por nombre y filtrar por clase y por estado. Es una lectura: la acción es la que deja mirar (`productos.ver`) y ningún dato es obligatorio (todo vacío es «todos»).
   // Sin `campo` de error: un filtro que no puede coincidir devuelve la lista vacía, no un error (`entradas-de-productos.ts`).
@@ -98,6 +101,41 @@ export const CAMINOS = {
     accion: {
       clave: "productos.editar",
       requiere: ["nombre-de-producto"],
+      admite: [
+        "nombre-de-cocina-de-producto",
+        "codigo-interno-de-producto",
+        "codigo-de-barras-de-producto",
+        "alicuota-de-iva-de-producto",
+        "seccion-de-carta-de-producto",
+      ],
+    },
+    camposDeError: ["nombre", "codigo", "codigoDeBarras", "alicuota"],
+  },
+  // Productos, alta: la clase, la unidad y el nombre son obligatorios para todas las clases; el nombre de cocina, la alícuota (obligatoria si se vende, lo decide el servidor) y la sección
+  // son de las clases que se venden. La clase y la unidad no se cambian después (dueño, 12/11 y 13/11/2026). Los errores con campo son los que la maqueta `productos.html` redacta: nombre
+  // repetido o vacío, código repetido, código de barras inválido y alícuota sin elegir. «Se controla el stock» no se pide: nace sin tildar y el catálogo no lo guarda.
+  "crear-producto": {
+    funcion: "Crear un producto de la empresa",
+    pantallas: [FORMULARIO_DE_ALTA_DE_PRODUCTO],
+    pasos: [
+      {
+        id: "datos-del-producto-nuevo",
+        campos: {
+          claseDeUso: "clase-de-uso-de-producto",
+          nombre: "nombre-de-producto",
+          nombreDeCocina: "nombre-de-cocina-de-producto",
+          codigo: "codigo-interno-de-producto",
+          codigoDeBarras: "codigo-de-barras-de-producto",
+          unidadBaseId: "unidad-de-medida-de-producto",
+          alicuota: "alicuota-de-iva-de-producto",
+          seccionDeCartaId: "seccion-de-carta-de-producto",
+        },
+      },
+    ],
+    deriva: [],
+    accion: {
+      clave: "productos.crear",
+      requiere: ["clase-de-uso-de-producto", "nombre-de-producto", "unidad-de-medida-de-producto"],
       admite: [
         "nombre-de-cocina-de-producto",
         "codigo-interno-de-producto",

@@ -86,6 +86,12 @@ const FUENTE_DE_LA_LISTA_DE_PRODUCTOS =
   "Pedernal-docs/11-especificaciones/fichas-de-modulo/a1-productos-y-precios.md §3 (consultas: `listarProductos` filtra por texto, clase, «falta completar» y activo) y la maqueta aprobada el 12/11/2026 (`productos.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)";
 
 const FICHA_DE_PRODUCTO = "apps/web/ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente.tsx";
+const ALTA_DE_PRODUCTO = "apps/web/ui/plantillas/catalogo/FormularioDeAltaDeProducto.cliente.tsx";
+const ALTA_PROPOSITO = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs/11-especificaciones/fichas-de-modulo/a1-productos-y-precios.md §3 (`crearProducto`, permiso `productos.crear`), la maqueta aprobada el 12/11/2026 (`productos.html`, «Nuevo producto», carpeta de prototipos de Pedernal-docs 10-ux-ui) y 11-especificaciones/decisiones-del-dueno-2026-11.md (fila del 13/11/2026: «Se controla el stock» nace sin tildar y la clase no se cambia)",
+});
 const FICHA_PROPOSITO = (para: string): Proposito => ({
   para,
   fuente:
@@ -305,9 +311,12 @@ export const REGISTRO_DE_DATOS = {
         para: "Filtro «¿Qué es?» de la lista de productos: una de las cinco clases de uso (materia prima, insumo, reventa, elaborado o producto vendible) o todas.",
         fuente: FUENTE_DE_LA_LISTA_DE_PRODUCTOS,
       },
+      ALTA_PROPOSITO(
+        "Clase de uso de un producto nuevo en el alta («¿Qué es?»): una de las cinco; se elige al crear y no se cambia después (una clase equivocada se corrige creando el producto correcto y desactivando el otro).",
+      ),
     ],
-    consumidores: [LISTA_DE_PRODUCTOS],
-    ponerPor: ["productos.ver"],
+    consumidores: [LISTA_DE_PRODUCTOS, ALTA_DE_PRODUCTO],
+    ponerPor: ["productos.ver", "productos.crear"],
     requiere: REQUIERE_CATALOGO,
   },
   "estado-de-producto": {
@@ -330,9 +339,10 @@ export const REGISTRO_DE_DATOS = {
       FICHA_PROPOSITO(
         "Nombre de un producto en su ficha de datos (obligatorio, único por empresa).",
       ),
+      ALTA_PROPOSITO("Nombre de un producto nuevo en el alta (obligatorio, único por empresa)."),
     ],
-    consumidores: [FICHA_DE_PRODUCTO],
-    ponerPor: ["productos.editar"],
+    consumidores: [FICHA_DE_PRODUCTO, ALTA_DE_PRODUCTO],
+    ponerPor: ["productos.editar", "productos.crear"],
     requiere: REQUIERE_CATALOGO,
   },
   "nombre-de-cocina-de-producto": {
@@ -341,9 +351,12 @@ export const REGISTRO_DE_DATOS = {
       FICHA_PROPOSITO(
         "Nombre con el que la cocina ve un producto que se vende (reventa o producto vendible), en su ficha de datos; vacío: la cocina ve el nombre.",
       ),
+      ALTA_PROPOSITO(
+        "Nombre con el que la cocina ve un producto nuevo que se vende (reventa o producto vendible), en el alta; vacío: la cocina ve el nombre.",
+      ),
     ],
-    consumidores: [FICHA_DE_PRODUCTO],
-    ponerPor: ["productos.editar"],
+    consumidores: [FICHA_DE_PRODUCTO, ALTA_DE_PRODUCTO],
+    ponerPor: ["productos.editar", "productos.crear"],
     requiere: REQUIERE_CATALOGO,
   },
   "codigo-interno-de-producto": {
@@ -352,9 +365,12 @@ export const REGISTRO_DE_DATOS = {
       FICHA_PROPOSITO(
         "Código interno, opcional y único por empresa, de un producto en su ficha de datos.",
       ),
+      ALTA_PROPOSITO(
+        "Código interno, opcional y único por empresa, de un producto nuevo en el alta.",
+      ),
     ],
-    consumidores: [FICHA_DE_PRODUCTO],
-    ponerPor: ["productos.editar"],
+    consumidores: [FICHA_DE_PRODUCTO, ALTA_DE_PRODUCTO],
+    ponerPor: ["productos.editar", "productos.crear"],
     requiere: REQUIERE_CATALOGO,
   },
   "codigo-de-barras-de-producto": {
@@ -363,9 +379,12 @@ export const REGISTRO_DE_DATOS = {
       FICHA_PROPOSITO(
         "Código de barras (de 8 a 14 dígitos), opcional, de un producto en su ficha de datos.",
       ),
+      ALTA_PROPOSITO(
+        "Código de barras (de 8 a 14 dígitos), opcional, de un producto nuevo en el alta.",
+      ),
     ],
-    consumidores: [FICHA_DE_PRODUCTO],
-    ponerPor: ["productos.editar"],
+    consumidores: [FICHA_DE_PRODUCTO, ALTA_DE_PRODUCTO],
+    ponerPor: ["productos.editar", "productos.crear"],
     requiere: REQUIERE_CATALOGO,
   },
   "alicuota-de-iva-de-producto": {
@@ -375,9 +394,12 @@ export const REGISTRO_DE_DATOS = {
       FICHA_PROPOSITO(
         "Alícuota de IVA de un producto que se vende, en su ficha de datos: una de las seis que ofrece el producto; es una decisión fiscal y no tiene valor por defecto.",
       ),
+      ALTA_PROPOSITO(
+        "Alícuota de IVA de un producto nuevo que se vende, en el alta: una de las seis que ofrece el producto; es una decisión fiscal y no tiene valor por defecto.",
+      ),
     ],
-    consumidores: [FICHA_DE_PRODUCTO],
-    ponerPor: ["productos.editar"],
+    consumidores: [FICHA_DE_PRODUCTO, ALTA_DE_PRODUCTO],
+    ponerPor: ["productos.editar", "productos.crear"],
     requiere: REQUIERE_CATALOGO,
   },
   "seccion-de-carta-de-producto": {
@@ -387,9 +409,24 @@ export const REGISTRO_DE_DATOS = {
       FICHA_PROPOSITO(
         "Sección de la carta a la que pertenece un producto que se vende, en su ficha de datos: una de las secciones activas de la empresa, o ninguna.",
       ),
+      ALTA_PROPOSITO(
+        "Sección de la carta de un producto nuevo que se vende, en el alta: una de las secciones activas de la empresa, o ninguna.",
+      ),
     ],
-    consumidores: [FICHA_DE_PRODUCTO],
-    ponerPor: ["productos.editar"],
+    consumidores: [FICHA_DE_PRODUCTO, ALTA_DE_PRODUCTO],
+    ponerPor: ["productos.editar", "productos.crear"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "unidad-de-medida-de-producto": {
+    // La lista cerrada de las 14 unidades vive una vez, en `UNIDADES` (copia de la tabla `unidad_de_medida`). Al crear, la unidad de venta es la base y el paso es 1 (decisión 162: el piloto no vende por fracciones ni por peso).
+    ficha: "src/primitivas/unidades/unidades.ts",
+    propositos: [
+      ALTA_PROPOSITO(
+        "Unidad base de un producto nuevo en el alta: una de las 14 unidades de medida; se elige al crear y no se cambia después.",
+      ),
+    ],
+    consumidores: [ALTA_DE_PRODUCTO],
+    ponerPor: ["productos.crear"],
     requiere: REQUIERE_CATALOGO,
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
