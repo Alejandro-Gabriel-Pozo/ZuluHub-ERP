@@ -1,7 +1,7 @@
 import type { Generated } from "kysely";
 
 /**
- * La tabla de la clasificación comercial (departamento → categoría → …, migración 0045). Vive aparte para que `esquema.ts` no pase el tope de líneas: el catálogo la suma
+ * Las tablas de la clasificación comercial: el árbol de nodos (departamento → categoría → …, migración 0045) y el vínculo del producto con vigencia (0046). Vive aparte para que `esquema.ts` no pase el tope de líneas: el catálogo la suma
  * a `CatalogoDb`, a las columnas que compara su prueba y al mapa de restricciones.
  */
 export type TablasDeClasificacion = {
@@ -18,6 +18,18 @@ export type TablasDeClasificacion = {
     actualizado_en: Generated<Date>;
     version: Generated<number>;
   };
+  /** El vínculo producto → nodo con vigencia, de solo inserción (0046). */
+  clasificacion_de_producto: {
+    /** El que manda la aplicación (clave de idempotencia del cambio). */
+    id: string;
+    empresa_id: string;
+    producto_id: string;
+    /** `null` = «Sin elegir». */
+    nodo_id: string | null;
+    vigente_desde: Date;
+    cargado_por: string;
+    creado_en: Generated<Date>;
+  };
 };
 
 export const COLUMNAS_DE_CLASIFICACION = {
@@ -31,6 +43,15 @@ export const COLUMNAS_DE_CLASIFICACION = {
     "creado_en",
     "actualizado_en",
     "version",
+  ],
+  clasificacion_de_producto: [
+    "id",
+    "empresa_id",
+    "producto_id",
+    "nodo_id",
+    "vigente_desde",
+    "cargado_por",
+    "creado_en",
   ],
 } as const;
 
@@ -54,4 +75,13 @@ export const ERRORES_DE_CLASIFICACION_POR_RESTRICCION: Readonly<Record<string, s
   nodo_de_clasificacion_tope: "TOPE_DE_NIVELES",
   nodo_de_clasificacion_padre_desactivado: "PADRE_DESACTIVADO",
   nodo_de_clasificacion_hijos_activos: "TIENE_HIJOS_ACTIVOS",
+  // clasificacion_de_producto (0046)
+  clasificacion_de_producto_pkey: "ID_REUTILIZADO",
+  clasificacion_de_producto_empresa_id_fkey: "NO_TRADUCIDA",
+  clasificacion_de_producto_cargado_por_fkey: "NO_TRADUCIDA",
+  clasificacion_de_producto_id_empresa_uk: "NO_TRADUCIDA",
+  clasificacion_de_producto_producto_fkey: "PRODUCTO_NO_ENCONTRADO",
+  clasificacion_de_producto_nodo_fkey: "NODO_INEXISTENTE",
+  clasificacion_de_producto_vigencia_uk: "CLASIFICACION_EN_ESA_FECHA",
+  clasificacion_de_producto_nodo_desactivado: "NODO_DESACTIVADO",
 };

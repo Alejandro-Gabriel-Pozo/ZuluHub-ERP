@@ -7,6 +7,7 @@ import type { TonoDeEstado } from "../../componentes/Insignia";
 import { formatearImporte } from "../facturacion/formato-fiscal";
 import {
   CLAVE_DE_CLASE,
+  RUTA_DEL_ALTA_DE_PRODUCTO,
   direccionDeLaLista,
   type FiltrosDeProductos,
 } from "./filtros-de-productos";
@@ -77,6 +78,19 @@ function precioDe(precio: ProductoDeLaLista["precio"], d: DiccionarioResuelto): 
     d,
     precio.tipo === "SEGUN_TAMANO" ? "catalogo.precio.segun_medida" : "catalogo.precio.sin_precio",
   );
+}
+
+/**
+ * «Nuevo producto» (maqueta `productos.html`, 12/11/2026; decisión del dueño, 13/11/2026): el enlace al alta SOLO si el servidor ya resolvió que la persona puede crear
+ * (`productos.crear`). Todo lo que no sea exactamente `true` (falso, ausente, dudoso) no lo muestra: nace cerrado. Ocultar no es autorizar: el alta vuelve a pasar por el guard.
+ */
+export function armarElEnlaceDeAlta(
+  puedeCrear: boolean | undefined,
+  d: DiccionarioResuelto = {},
+): Readonly<{ href: string; texto: string }> | null {
+  return puedeCrear === true
+    ? { href: RUTA_DEL_ALTA_DE_PRODUCTO, texto: texto(d, "catalogo.lista.nuevo") }
+    : null;
 }
 
 export function armarLaLista(

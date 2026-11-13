@@ -15,16 +15,26 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
     consultasDeEmpresas: () => ({
       permisosDelActor: () =>
-        Promise.resolve({
-          ok: true,
-          valor: {
-            acciones: ["productos.ver"],
-            modulos: { activos: ["catalogo"], enSoloLectura: [] },
-          },
-        }),
+        permisos.falla
+          ? Promise.reject(new Error("la base no responde"))
+          : Promise.resolve({
+              ok: true,
+              valor: {
+                acciones: permisos.acciones,
+                modulos: { activos: permisos.activos, enSoloLectura: permisos.soloLectura },
+              },
+            }),
     }),
   },
 }));
+const permisos = vi.hoisted(
+  (): { acciones: string[]; activos: string[]; soloLectura: string[]; falla: boolean } => ({
+    acciones: ["productos.ver"],
+    activos: ["catalogo"],
+    soloLectura: [],
+    falla: false,
+  }),
+);
 const servidor = vi.hoisted(
   (): { llamadas: { contexto: unknown; entrada: unknown }[]; respuesta: unknown } => ({
     llamadas: [],
@@ -95,7 +105,34 @@ const PAGINA = {
 describe("la página de la lista de productos", () => {
   beforeEach(() => {
     servidor.llamadas = [];
+    permisos.acciones = ["productos.ver"];
+    permisos.activos = ["catalogo"];
+    permisos.soloLectura = [];
+    permisos.falla = false;
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
     responde({ ok: true, dato: PAGINA });
+  });
+
+  it("«Nuevo producto» sale solo con productos.crear y lleva a la pantalla del alta", async () => {
+    permisos.acciones = ["productos.ver", "productos.crear"];
+    const marcado = await html();
+    expect(
+      /<a[^>]*href="\/catalogo\/productos\/nuevo"[^>]*>[^<]*Nuevo producto/.test(marcado),
+    ).toBe(true);
+  });
+
+  it("sin productos.crear, con el módulo en solo lectura o con los permisos sin poder leerse, no hay «Nuevo producto»", async () => {
+    expect(await texto()).not.toContain("Nuevo producto");
+    // El servidor no devuelve las acciones que crean de un módulo en solo lectura.
+    permisos.acciones = ["productos.ver"];
+    permisos.activos = [];
+    permisos.soloLectura = ["catalogo"];
+    expect(await texto()).not.toContain("Nuevo producto");
+    permisos.soloLectura = [];
+    permisos.activos = ["catalogo"];
+    permisos.acciones = ["productos.ver", "productos.crear"];
+    permisos.falla = true;
+    expect(await html()).not.toContain("/catalogo/productos/nuevo");
   });
 
   it("un solo h1 «Productos», los filtros y una fila por producto con su marca, su clase y su precio", async () => {

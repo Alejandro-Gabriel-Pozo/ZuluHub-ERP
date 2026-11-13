@@ -77,7 +77,7 @@ export type FichaArmada = Readonly<{
 }>;
 
 /** El texto de un valor de una tabla de claves, o el propio valor si la pantalla no lo conoce. */
-const nombrar = (
+export const nombrar = (
   tabla: Readonly<Record<string, ClaveDeTexto>>,
   valor: string,
   d: DiccionarioResuelto,
