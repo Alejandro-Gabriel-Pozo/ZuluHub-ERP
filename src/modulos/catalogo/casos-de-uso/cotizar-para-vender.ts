@@ -31,16 +31,15 @@ export type CotizacionParaVender = InstantaneaDeProducto &
   Readonly<{ clasificacion: ClasificacionDelRenglon | null }>;
 
 /**
- * La clasificación que rige hoy para el producto, con el camino (departamento → nodo) y los nombres de cada nodo, leída en la MISMA transacción que la cotización. Un nodo desactivado
+ * La clasificación que rige para el producto (el último cambio guardado), con el camino (departamento → nodo) y los nombres de cada nodo, leída en la MISMA transacción que la cotización. Un nodo desactivado
  * después de asignarlo se copia igual (el producto lo conserva). Un árbol dañado no se interpreta: `CLASIFICACION_INCONSISTENTE` (no se vende con un camino inventado).
  */
 async function clasificacionDelRenglon(
   tx: LecturasDeCatalogo,
   empresaId: EmpresaId,
   productoId: string,
-  ahora: Date,
 ): Promise<Resultado<ClasificacionDelRenglon | null, ErrorDeCotizacion>> {
-  const { vigente } = await tx.clasificacion.clasificacionDelProducto(empresaId, productoId, ahora);
+  const vigente = await tx.clasificacion.vigenteDelProducto(empresaId, productoId);
   if (vigente === null || vigente.nodoId === null) return ok(null);
   const nodos = await tx.clasificacion.todos(empresaId);
   const arbol: ArbolDeClasificacion = new Map(
@@ -114,7 +113,7 @@ export async function cotizarParaVender(
     recargosDeSucursal,
   });
   if (!instantanea.ok) return instantanea;
-  const clasificacion = await clasificacionDelRenglon(tx, empresaId, producto.id, entrada.ahora);
+  const clasificacion = await clasificacionDelRenglon(tx, empresaId, producto.id);
   if (!clasificacion.ok) return clasificacion;
   return ok({ ...instantanea.valor, clasificacion: clasificacion.valor });
 }

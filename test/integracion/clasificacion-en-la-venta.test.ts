@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
-import type { ContextoOperativo } from "../../src/contexto/contexto";
 import { anularLineaEnTx, copiarLineaEnTx } from "../../src/modulos/ventas/publico";
 import { personaId } from "../../src/primitivas/identificadores/marca";
 import {
@@ -54,10 +53,6 @@ describe.skipIf(base === null)("clasificación comercial en la venta (0047)", ()
     );
   // El reloj fijo del contexto de ventas es el 09/11/2026 15:00Z (12:00 en Argentina).
   const antes = "2026-11-01T00:00:00Z";
-  const en = (contexto: ContextoOperativo, instante: string): ContextoOperativo => ({
-    ...contexto,
-    ahora: new Date(instante),
-  });
 
   /** Agrega una línea del producto a una cuenta nueva y devuelve la fila sellada de `linea_cuenta`. */
   const vender = async (productoId: string, contexto = e.gerente) => {
@@ -150,19 +145,16 @@ describe.skipIf(base === null)("clasificación comercial en la venta (0047)", ()
     expect(await filaDe(vendida.linea)).toEqual(original);
   });
 
-  it("un cambio programado rige desde su fecha: antes se vende con lo vigente, después con lo programado", async () => {
+  it("rige el último cambio guardado: se vende con lo anterior hasta que se reclasifica, y volver a «Sin elegir» también es un cambio", async () => {
     const dep = await nodo("Barra");
     const dep2 = await nodo("Salón");
     const p = await producto();
     await vincular(p, dep, antes);
-    await vincular(p, dep2, "2026-11-20T03:00:00Z");
     expect((await vender(p)).fila["departamento_id"]).toBe(dep);
-    expect((await vender(p, en(e.gerente, "2026-11-21T15:00:00Z"))).fila["departamento_id"]).toBe(
-      dep2,
-    );
-    // Volver a «Sin elegir» también se programa: desde esa fecha el renglón queda sin camino.
-    await vincular(p, null, "2026-11-25T03:00:00Z");
-    expect((await vender(p, en(e.gerente, "2026-11-26T15:00:00Z"))).fila).toEqual({
+    await vincular(p, dep2, "2026-11-08T00:00:00Z");
+    expect((await vender(p)).fila["departamento_id"]).toBe(dep2);
+    await vincular(p, null, "2026-11-09T10:00:00Z");
+    expect((await vender(p)).fila).toEqual({
       departamento_id: null,
       camino_de_clasificacion: null,
     });
