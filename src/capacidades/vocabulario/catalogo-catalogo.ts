@@ -32,6 +32,21 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.clase.reventa": { porDefecto: "Reventa" },
   "catalogo.clase.elaborado": { porDefecto: "Elaborado" },
   "catalogo.clase.vendible": { porDefecto: "Producto vendible" },
+  // Las descripciones cortas de cada clase (lo que muestra «¿Qué es?» en el alta, debajo del desplegable): fuente `productos.html`, constante `CLASES` (línea 423), tercer elemento de cada
+  // fila; «son las de la decisión 69, ya aprobadas» (tabla «Textos nuevos», aprobada por el dueño el 09/11/2026).
+  "catalogo.clase.descripcion.materia_prima": {
+    porDefecto: "Se compra y es componente de lo que se elabora y se vende.",
+  },
+  "catalogo.clase.descripcion.insumo": {
+    porDefecto: "Se compra y se consume para operar, sin ser parte del producto.",
+  },
+  "catalogo.clase.descripcion.reventa": { porDefecto: "Se compra y se vende tal cual." },
+  "catalogo.clase.descripcion.elaborado": {
+    porDefecto: "Se produce en el negocio y se usa como componente.",
+  },
+  "catalogo.clase.descripcion.vendible": {
+    porDefecto: "Se arma o se produce y se vende; tiene composición.",
+  },
 
   // productos.html, «Textos nuevos», fila «Datos» (sin «Categoría»: ver arriba).
   "catalogo.dato.nombre": { porDefecto: "Nombre" },
@@ -83,6 +98,28 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.campo.obligatorio": { porDefecto: "(obligatorio)" },
   "catalogo.campo.opcional": { porDefecto: "(opcional)" },
   "catalogo.lista.no_figura_en_la_carta": { porDefecto: "· no figura en la carta" },
+  // Lista vacía (búsqueda sin coincidencias): `productos.html` línea 569 (`<div class="vacio"><p>Sin resultados</p></div>`); decisión del dueño del 13/11/2026 («búsqueda inválida =
+  // lista vacía con «Sin resultados»», `decisiones-del-dueno-2026-11.md`).
+  "catalogo.lista.sin_resultados": { porDefecto: "Sin resultados" },
   "catalogo.error.accion_no_permitida": { porDefecto: "Esta acción no está permitida" },
   "catalogo.accion.cancelar": { porDefecto: "Cancelar" },
+
+  // Los nombres de las 14 unidades de medida (A2i). FUENTE ÚNICA: la constante `UNID` de la maqueta aprobada `Pedernal-docs/10-ux-ui/prototipos-gastronomia/productos.html` (~línea 421),
+  // en el mismo orden que `src/primitivas/unidades/unidades.ts`; decisión del dueño del 13/11/2026 («las 14 unidades se muestran con los nombres de la maqueta de productos»,
+  // `decisiones-del-dueno-2026-11.md`, fila del 13/11). La clave de cada una sale del código de la unidad en minúscula (`catalogo.unidad.<codigo>`): el mapa código → clave está en
+  // `unidades-de-medida.ts` y falla al compilar si falta alguna unidad.
+  "catalogo.unidad.unidad": { porDefecto: "Unidad" },
+  "catalogo.unidad.gramo": { porDefecto: "Gramo" },
+  "catalogo.unidad.kilogramo": { porDefecto: "Kilogramo" },
+  "catalogo.unidad.tonelada": { porDefecto: "Tonelada" },
+  "catalogo.unidad.mililitro": { porDefecto: "Mililitro" },
+  "catalogo.unidad.litro": { porDefecto: "Litro" },
+  "catalogo.unidad.metro_cubico": { porDefecto: "Metro cúbico" },
+  "catalogo.unidad.milimetro": { porDefecto: "Milímetro" },
+  "catalogo.unidad.centimetro": { porDefecto: "Centímetro" },
+  "catalogo.unidad.metro": { porDefecto: "Metro" },
+  "catalogo.unidad.centimetro_cuadrado": { porDefecto: "Centímetro cuadrado" },
+  "catalogo.unidad.metro_cuadrado": { porDefecto: "Metro cuadrado" },
+  "catalogo.unidad.minuto": { porDefecto: "Minuto" },
+  "catalogo.unidad.hora": { porDefecto: "Hora" },
 } as const;
