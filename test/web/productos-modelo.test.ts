@@ -60,6 +60,7 @@ describe("armarLaLista: la fila", () => {
       marca: null,
       clase: "Producto vendible",
       seccion: null,
+      sinSeccion: true,
       precio: "$ 9.000,00",
     });
   });
@@ -68,6 +69,19 @@ describe("armarLaLista: la fila", () => {
     expect(fila(producto({ seccion: "Platos principales" })).seccion).toBe("Platos principales");
     expect(fila(producto({ seccion: "Postres (apagada)" })).seccion).toBe("Postres (apagada)");
     expect(fila(producto({ seccion: null })).seccion).toBeNull();
+  });
+
+  it("«clase · —»: solo un producto que se vende (trae precio, también «Sin precio» o «Según medida») y no tiene sección; con sección o sin venta, no", () => {
+    expect(fila(producto({ seccion: null })).sinSeccion).toBe(true);
+    expect(fila(producto({ seccion: null, precio: { tipo: "SIN_PRECIO" } })).sinSeccion).toBe(true);
+    expect(fila(producto({ seccion: null, precio: { tipo: "SEGUN_TAMANO" } })).sinSeccion).toBe(
+      true,
+    );
+    expect(fila(producto({ seccion: "Platos" })).sinSeccion).toBe(false);
+    expect(fila(producto({ seccion: null, claseDeUso: "INSUMO", precio: null })).sinSeccion).toBe(
+      false,
+    );
+    expect(fila(producto({ seccion: "Platos", precio: null })).sinSeccion).toBe(false);
   });
 
   it("falta completar y desactivado llevan su marca en tono de aviso", () => {
@@ -122,7 +136,7 @@ describe("armarLaLista: la fila", () => {
     ).toBe("$ 12.345.678.901.234.567.890,12");
   });
 
-  it("nada de más: la fila tiene solo id, nombre, marca, clase, sección y precio", () => {
+  it("nada de más: la fila tiene solo id, nombre, marca, clase, sección, si le falta y precio", () => {
     expect(Object.keys(fila(producto())).sort()).toEqual([
       "clase",
       "id",
@@ -130,6 +144,7 @@ describe("armarLaLista: la fila", () => {
       "nombre",
       "precio",
       "seccion",
+      "sinSeccion",
     ]);
   });
 

@@ -2,6 +2,7 @@ import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type {
   ClaseDeUso,
+  ConsultasDeCatalogo,
   EstadoDeProducto,
   PaginaDeProductos,
   PrecioDeLista,
@@ -12,7 +13,6 @@ import {
   leerLaEntradaDeLaLista,
   type EntradaDeLaLista,
 } from "./entradas-de-productos";
-import type { Web } from "./web";
 
 /**
  * La lista de productos de la empresa (A1, T1; maqueta aprobada `productos.html`, 12/11/2026): solo lectura. Vive acá, y no en `apps/web`, para probarse con la base real sin
@@ -30,7 +30,7 @@ import type { Web } from "./web";
  */
 
 export type DependenciasDeProductosWeb = Readonly<{
-  consultas: () => Pick<ReturnType<Web["consultasDeCatalogo"]>, "listarProductos">;
+  consultas: () => Pick<ConsultasDeCatalogo, "listarProductos">;
   respuesta: DependenciasDeRespuesta;
 }>;
 

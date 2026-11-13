@@ -16,7 +16,7 @@ export type PropsDePantallaDeListaDeProductos = Readonly<{
 
 /**
  * La lista de productos (A1, T1; maqueta `productos.html`, 12/11/2026), solo lectura: los filtros y una tarjeta por producto, también los desactivados. Cada tarjeta dice el
- * nombre, su marca de estado, «clase · sección» (sin sección, solo la clase) y el precio. Sin enlace a la ficha, sin «Nuevo producto» ni «Ocultar»: son de otros tramos. Una lista vacía dice «Sin resultados» (aviso informativo, el mismo patrón del listado de comprobantes). Una sola lista de tarjetas en celular y escritorio. Sin textos propios: todos llegan resueltos. El `h1` lo pone el armazón.
+ * nombre, su marca de estado, «clase · sección» («clase · —» si se vende y no tiene sección; solo la clase si no se vende) y el precio. Sin enlace a la ficha, sin «Nuevo producto» ni «Ocultar»: son de otros tramos. Una lista vacía dice «Sin resultados» (aviso informativo, el mismo patrón del listado de comprobantes). Una sola lista de tarjetas en celular y escritorio. Sin textos propios: todos llegan resueltos. El `h1` lo pone el armazón.
  */
 export function PantallaDeListaDeProductos({
   filtros,
@@ -48,6 +48,7 @@ export function PantallaDeListaDeProductos({
                   <div className={estilos["renglon"]}>
                     <span className={estilos["clase"]}>
                       {fila.seccion === null ? fila.clase : `${fila.clase} · ${fila.seccion}`}
+                      {fila.sinSeccion ? <span aria-hidden="true"> · —</span> : null}
                     </span>
                     {fila.precio === null ? null : (
                       <span className={estilos["precio"]}>{fila.precio}</span>

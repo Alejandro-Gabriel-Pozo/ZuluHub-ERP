@@ -115,11 +115,31 @@ describe("la página de la lista de productos", () => {
     expect(t).toContain("Página siguiente");
   });
 
-  it("cada fila dice «clase · sección»; sin sección, solo la clase y sin separador colgante", async () => {
+  it("cada fila dice «clase · sección»; vendible sin sección, «clase · —» con el guion oculto al lector; no vendible, solo la clase", async () => {
+    responde({
+      ok: true,
+      dato: {
+        ...PAGINA,
+        productos: [
+          ...PAGINA.productos,
+          {
+            id: "a3",
+            nombre: "Gaseosa",
+            claseDeUso: "REVENTA",
+            estado: "ACTIVO",
+            seccion: null,
+            precio: { tipo: "SIN_PRECIO" },
+          },
+        ],
+      },
+    });
     const t = await texto();
     expect(t).toContain("Producto vendible · Platos principales");
     expect(t).toContain("Materia prima");
     expect(t).not.toContain("Materia prima ·");
+    expect(t).toContain("Reventa · —");
+    expect(await html()).toContain('<span aria-hidden="true"> · —</span>');
+    expect(t.match(/—/g)).toHaveLength(1);
     expect(t).not.toContain("Sin resultados");
   });
 

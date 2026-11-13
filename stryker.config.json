@@ -105,6 +105,7 @@
     "apps/web/ui/plantillas/caja/lista-de-caja.ts",
     "apps/web/ui/plantillas/caja/pestanas-de-caja.ts",
     "src/composicion/entradas-de-productos.ts",
+    "src/composicion/productos-web.ts",
     "apps/web/ui/plantillas/catalogo/filtros-de-productos.ts",
     "apps/web/ui/plantillas/catalogo/modelo-de-productos.ts",
     "arquitectura/contratos/clasificacion.cjs",

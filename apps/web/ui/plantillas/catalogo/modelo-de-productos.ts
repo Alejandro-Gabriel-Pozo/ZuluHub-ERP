@@ -48,8 +48,13 @@ type FilaDeProducto = Readonly<{
   /** La marca de estado; `null` si el producto está activo y completo. */
   marca: Readonly<{ texto: string; tono: TonoDeEstado }> | null;
   clase: string;
-  /** El nombre de la sección; `null` si el producto no tiene (la pantalla dice solo la clase). */
+  /** El nombre de la sección; `null` si el producto no tiene. */
   seccion: string | null;
+  /**
+   * Un producto que se vende y no tiene sección se dice «clase · —» (maqueta `productos.html`, línea 577: `vende(clase) ? ' · ' + (p.sec || '—') : ''`); uno que no se vende, solo la clase.
+   * Se vende si trae precio (`null` es «no se vende», el mismo dato de la consulta). La pantalla oculta el guion al lector de pantalla (`aria-hidden`; no hay un patrón previo para guiones).
+   */
+  sinSeccion: boolean;
   /** El precio ya formateado; `null` si el producto no se vende. */
   precio: string | null;
 }>;
@@ -102,6 +107,7 @@ export function armarLaLista(
         marca: marcaDe(p.estado, d),
         clase: claveDeClase === null ? p.claseDeUso : texto(d, claveDeClase),
         seccion: p.seccion,
+        sinSeccion: p.seccion === null && p.precio !== null,
         precio: precioDe(p.precio, d),
       };
     }),

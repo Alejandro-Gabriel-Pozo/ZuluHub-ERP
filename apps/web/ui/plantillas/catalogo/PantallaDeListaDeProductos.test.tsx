@@ -133,11 +133,16 @@ describe("lista de productos", () => {
     expect(milanesa).toBe(
       "Milanesa napolitanaProducto vendible · Platos principales$ 12.345.678.901,50",
     );
-    expect(pizza).toBe("Pizza muzzarellaProducto vendibleSegún medida");
     expect(gaseosa).toContain("Falta completar");
     expect(gaseosa).toContain("Reventa · Bebidas");
     expect(gaseosa).toContain("Sin precio");
     expect(harina).toBe("Harina 000DesactivadoMateria prima");
+    // Vendible sin sección: «clase · —», y el guion no se lee (el nombre accesible dice solo la clase).
+    expect(pizza).toBe("Pizza muzzarellaProducto vendible · —Según medida");
+    const guion = [...lista().querySelectorAll("span[aria-hidden=true]")].filter(
+      (el) => el.textContent === " · —",
+    );
+    expect(guion).toHaveLength(1);
     // «Activo» no lleva marca: la lista tiene exactamente dos.
     expect(lista().querySelectorAll("[data-tono]")).toHaveLength(2);
   });

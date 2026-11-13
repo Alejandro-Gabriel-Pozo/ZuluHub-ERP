@@ -21,23 +21,23 @@ const contexto: ContextoOperativo = {
 const ID_SECCION = "33333333-3333-4333-8333-333333333333";
 const SIN_FILTROS = { texto: "", clase: "", estado: "", despues: "" };
 
-const producto = (seccion: unknown) => ({
+const producto = (seccion: unknown, precio: unknown = null) => ({
   id: "p-1",
   nombre: "Milanesa",
   claseDeUso: "VENDIBLE",
   estado: "ACTIVO",
   unidadDeVentaId: "UNIDAD",
   seccion,
-  precio: null,
+  precio,
 });
 
-function con(productos: readonly unknown[]) {
+function con(productos: readonly unknown[], siguiente: unknown = null) {
   const pedidos: unknown[] = [];
   const d: DependenciasDeProductosWeb = {
     consultas: () => ({
       listarProductos: (_contexto: unknown, entrada: unknown) => {
         pedidos.push(entrada);
-        return Promise.resolve(ok({ productos, siguiente: null }));
+        return Promise.resolve(ok({ productos, siguiente }));
       },
     }),
     respuesta: { registrar: () => undefined },
@@ -83,5 +83,45 @@ describe("lista de productos de la web: lo que sale por fila", () => {
     const r = await listarLosProductos(d, contexto, { ...SIN_FILTROS, texto: "a<b>" });
     expect(r).toEqual({ ok: true, dato: { productos: [], siguiente: null } });
     expect(pedidos).toEqual([]);
+  });
+
+  it("el precio: el importe de la empresa como texto, «según tamaño», «sin precio» o nada si no se vende", async () => {
+    const { d } = con([
+      producto(null, { tipo: "EMPRESA", precio: "1500.000000" }),
+      producto(null, { tipo: "SEGUN_TAMANO" }),
+      producto(null, { tipo: "SIN_PRECIO" }),
+      producto(null, null),
+    ]);
+    const r = await listarLosProductos(d, contexto, SIN_FILTROS);
+    if (!r.ok) throw new Error("se esperaba la lista");
+    expect(r.dato.productos.map((p) => p.precio)).toEqual([
+      { tipo: "EMPRESA", importe: "1500.000000" },
+      { tipo: "SEGUN_TAMANO" },
+      { tipo: "SIN_PRECIO" },
+      null,
+    ]);
+  });
+
+  it("la página que sigue sale codificada para la dirección; sin más páginas, null", async () => {
+    const { d } = con([producto(null)], { nombreClave: "harina", id: ID_SECCION });
+    const r = await listarLosProductos(d, contexto, SIN_FILTROS);
+    expect(r).toMatchObject({ ok: true, dato: { siguiente: `${ID_SECCION}:harina` } });
+    const ultima = await listarLosProductos(con([producto(null)]).d, contexto, SIN_FILTROS);
+    expect(ultima).toMatchObject({ ok: true, dato: { siguiente: null } });
+  });
+
+  it("un fallo inesperado de la consulta sale sin detalle, con referencia, y queda en el registro", async () => {
+    const registrados: string[] = [];
+    const d = {
+      consultas: () => ({
+        listarProductos: () => Promise.reject(new Error("detalle interno de la base")),
+      }),
+      respuesta: { registrar: (x: string) => registrados.push(x) },
+    } as never;
+    const r = await listarLosProductos(d, contexto, SIN_FILTROS);
+    expect(r.ok).toBe(false);
+    expect(JSON.stringify(r)).not.toContain("detalle interno");
+    expect(registrados).toHaveLength(1);
+    expect(registrados[0]).toContain("detalle interno de la base");
   });
 });
