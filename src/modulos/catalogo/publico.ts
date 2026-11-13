@@ -71,7 +71,7 @@ export type {
   OrigenDelRecargo,
 } from "./dominio/cotizar";
 export type { ClaseDeUso } from "./dominio/clases";
-export { CLASES_DE_USO, esClaseDeUso, seConsumeLaClase } from "./dominio/clases";
+export { CLASES_DE_USO, esClaseDeUso, seConsumeLaClase, vendeLaClase } from "./dominio/clases";
 export type { AlcanceDePrecio, ErrorDeAlcanceDePrecio } from "./dominio/alcance-de-precio";
 export { ALCANCES_DE_PRECIO, sucursalDelAlcanceDePrecio } from "./dominio/alcance-de-precio";
 export type { FormaDeVenta } from "./dominio/forma-de-venta";
@@ -134,6 +134,11 @@ export {
   crearRepositorioDeSecciones,
   type RepositorioDeSecciones,
 } from "./persistencia/repositorio-de-secciones";
+export {
+  crearRepositorioDeUnidades,
+  type RepositorioDeUnidades,
+  type UnidadDeMedida,
+} from "./persistencia/repositorio-de-unidades";
 export {
   crearRepositorioDeClasificacion,
   type NodoGuardado,

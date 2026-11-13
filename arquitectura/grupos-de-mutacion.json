@@ -532,5 +532,17 @@
     "archivos": "apps/web/ui/plantillas/caja/modelo-de-medios-de-pago.ts,apps/web/ui/plantillas/caja/modelo-de-cuentas-de-cobro.ts,apps/web/ui/plantillas/caja/modelo-de-cajas.ts,apps/web/ui/plantillas/caja/lista-de-caja.ts,apps/web/ui/plantillas/caja/pestanas-de-caja.ts",
     "minutos": 1.0,
     "pruebas": "test/web/medios-de-pago-modelo.test.ts test/web/cuentas-y-cajas-modelo.test.ts"
+  },
+  {
+    "grupo": "web (lista de productos)",
+    "archivos": "src/composicion/entradas-de-productos.ts,apps/web/ui/plantillas/catalogo/filtros-de-productos.ts,apps/web/ui/plantillas/catalogo/modelo-de-productos.ts",
+    "minutos": 1.0,
+    "pruebas": "src/composicion/entradas-de-productos.test.ts test/web/productos-modelo.test.ts"
+  },
+  {
+    "grupo": "web (ficha de datos de un producto)",
+    "archivos": "src/composicion/entradas-de-ficha-de-producto.ts,src/composicion/errores-de-catalogo.ts,apps/web/ui/plantillas/catalogo/modelo-de-ficha-de-producto.ts",
+    "minutos": 1.0,
+    "pruebas": "src/composicion/entradas-de-ficha-de-producto.test.ts src/composicion/errores-de-catalogo.test.ts test/web/ficha-de-producto-modelo.test.ts"
   }
 ]

@@ -11,6 +11,7 @@ import type { FormaDeVenta } from "../dominio/forma-de-venta";
 import type { LectorDeCarta } from "../persistencia/lector-de-carta";
 import type { RepositorioDeCartas } from "../persistencia/repositorio-de-cartas";
 import type { RepositorioDeDisponibilidad } from "../persistencia/repositorio-de-disponibilidad";
+import type { RepositorioDeUnidades } from "../persistencia/repositorio-de-unidades";
 import type { RepositorioDeClasificacion } from "../persistencia/repositorio-de-clasificacion";
 import type { RepositorioDeSecciones } from "../persistencia/repositorio-de-secciones";
 import type { RepositorioDePresentaciones } from "../persistencia/repositorio-de-presentaciones";
@@ -34,6 +35,7 @@ export type LecturasDeCatalogo = Readonly<{
   >;
   seccionesDeCarta: Pick<RepositorioDeSecciones, "todas">;
   clasificacion: Pick<RepositorioDeClasificacion, "todos" | "vigenteDelProducto">;
+  unidades: Pick<RepositorioDeUnidades, "todas">;
   cartasPublicas: Pick<RepositorioDeCartas, "deLaSucursal">;
   disponibilidadDeProductos: Pick<RepositorioDeDisponibilidad, "ocultas" | "delLocal">;
   lectorDeCarta: LectorDeCarta;
@@ -55,6 +57,7 @@ export type TxDeCatalogo = LecturaDeEstados &
     seccionesDeCarta: RepositorioDeSecciones;
     /** La clasificación comercial (0045, A2b). */
     clasificacion: RepositorioDeClasificacion;
+    unidades: RepositorioDeUnidades;
     lectorDeCarta: LectorDeCarta;
     sucursales: Pick<RepositorioDeSucursales, "obtener">;
     /** Lo que el plan de la empresa le deja usar (la perilla `vidriera_por_qr`), leído en esta transacción y sin caché. */

@@ -1,0 +1,17 @@
+.solo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  margin: 0;
+  color: var(--color-texto);
+}
+
+.solo dt {
+  color: var(--color-texto-suave);
+}
+
+.solo dd {
+  margin: 0;
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}

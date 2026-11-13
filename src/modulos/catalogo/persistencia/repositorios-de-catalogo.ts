@@ -1,5 +1,6 @@
 import type { Kysely } from "kysely";
 import type { CatalogoDb } from "./esquema";
+import { crearRepositorioDeUnidades, type RepositorioDeUnidades } from "./repositorio-de-unidades";
 import {
   crearRepositorioDeClasificacion,
   type RepositorioDeClasificacion,
@@ -35,6 +36,7 @@ export type RepositoriosDeCatalogo = Readonly<{
   disponibilidadDeProductos: RepositorioDeDisponibilidad;
   seccionesDeCarta: RepositorioDeSecciones;
   clasificacion: RepositorioDeClasificacion;
+  unidades: RepositorioDeUnidades;
   lectorDeCarta: LectorDeCarta;
 }>;
 
@@ -51,6 +53,7 @@ export function crearRepositoriosDeCatalogo(db: {
     disponibilidadDeProductos: crearRepositorioDeDisponibilidad(conexion),
     seccionesDeCarta: crearRepositorioDeSecciones(conexion),
     clasificacion: crearRepositorioDeClasificacion(conexion),
+    unidades: crearRepositorioDeUnidades(conexion),
     lectorDeCarta: crearLectorDeCarta(conexion),
   };
 }
