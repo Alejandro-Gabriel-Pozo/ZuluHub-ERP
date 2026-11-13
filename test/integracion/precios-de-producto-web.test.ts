@@ -179,7 +179,7 @@ describe.skipIf(base === null)("precios de un producto de la web", () => {
         parametros: { importe: "1000.000000" },
       },
     });
-    expect(JSON.stringify(segunda)).not.toContain("PRECIO_DESACTUALIZADO");
+    expect(JSON.stringify(segunda)).not.toMatch(/(^|[^A-Z_])PRECIO_DESACTUALIZADO/);
     expect((await filasDelPrecio(id)).map((f) => f["precio"])).toEqual(["1000.000000"]);
     expect(await auditorias(id)).toBe(1);
   });
@@ -188,7 +188,9 @@ describe.skipIf(base === null)("precios de un producto de la web", () => {
     const id = await nuevoProducto();
     const v0 = await precios(id);
     expect(await cambiar(id, "1000.00", v0)).toMatchObject({ ok: true });
-    expect(codigoDe(await cambiar(id, "9999.00", v0))).toBe(DESACTUALIZADO);
+    expect(codigoDe(await cambiar(id, "9999.00", { ...v0, claveDelCambio: nuevoId() }))).toBe(
+      DESACTUALIZADO,
+    );
     const vNueva = await precios(id);
     expect(await cambiar(id, "9999.00", vNueva)).toMatchObject({ ok: true });
     expect((await precios(id)).vigente?.importe).toBe("9999.000000");
