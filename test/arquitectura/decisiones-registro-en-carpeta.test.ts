@@ -99,12 +99,9 @@ describe("un archivo por entrada, nombre = id", () => {
       [`${CARPETA}/DEC-0001.json`]: una("DEC-0001"),
       [`${CARPETA}/LEEME.md`]: "x",
     });
-    expect(errores(ajeno)).toEqual([
-      expect.objectContaining({
-        archivo: `${CARPETA}/LEEME.md`,
-        motivo: expect.stringContaining("no es un archivo de entrada"),
-      }),
-    ]);
+    expect(errores(ajeno)).toHaveLength(1);
+    expect(errores(ajeno)[0]?.archivo).toBe(`${CARPETA}/LEEME.md`);
+    expect(errores(ajeno)[0]?.motivo).toContain("no es un archivo de entrada");
     const anidado = leer({ [`${CARPETA}/sub/DEC-0001.json`]: una("DEC-0001") });
     expect(errores(anidado)).toEqual([
       expect.objectContaining({ archivo: `${CARPETA}/sub/DEC-0001.json` }),
@@ -164,18 +161,16 @@ describe("un archivo por entrada, nombre = id", () => {
 describe("el array viejo (registro.json): solo la base, solo en la transición", () => {
   it("en el cambio, un array suelto falla aunque no haya carpeta", () => {
     const r = leer({ [MONOLITO]: "[]" });
-    expect(errores(r)).toEqual([
-      { archivo: MONOLITO, motivo: expect.stringContaining("no puede estar suelto") },
-    ]);
+    expect(errores(r)).toHaveLength(1);
+    expect(errores(r)[0]?.archivo).toBe(MONOLITO);
+    expect(errores(r)[0]?.motivo).toContain("no puede estar suelto");
   });
 
   it("al lado de la carpeta falla siempre, también en la base", () => {
     for (const admite of [false, true]) {
       const r = leer({ [MONOLITO]: "[]", [`${CARPETA}/DEC-0001.json`]: una("DEC-0001") }, admite);
-      expect(errores(r)[0]).toEqual({
-        archivo: MONOLITO,
-        motivo: expect.stringContaining("no puede estar al lado de ella"),
-      });
+      expect(errores(r)[0]?.archivo).toBe(MONOLITO);
+      expect(errores(r)[0]?.motivo).toContain("no puede estar al lado de ella");
     }
   });
 
