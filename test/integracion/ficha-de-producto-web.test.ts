@@ -331,15 +331,15 @@ describe.skipIf(base === null)("ficha de datos de un producto de la web", () => 
     for (const [claseDeUso, vende] of casos) {
       const id = await nuevoProducto({ claseDeUso, alicuota: vende ? "21" : undefined });
       const r = await guardar(id, 1, {
-        nombre: `Editado ${claseDeUso}`,
+        nombre: `Editado ${claseDeUso.replace("_", " ")}`,
         nombreDeCocina: "COCINA",
         alicuota: "10.5",
-        codigo: `C-${claseDeUso}`,
+        codigo: `C-${claseDeUso.replace("_", "-")}`,
       });
       expect(r, claseDeUso).toMatchObject({ ok: true });
       expect(await fila(id), claseDeUso).toMatchObject({
-        nombre: `Editado ${claseDeUso}`,
-        codigo: `C-${claseDeUso}`,
+        nombre: `Editado ${claseDeUso.replace("_", " ")}`,
+        codigo: `C-${claseDeUso.replace("_", "-")}`,
         nombre_de_cocina: vende ? "COCINA" : null,
         alicuota_iva: vende ? "10.5" : null,
       });
