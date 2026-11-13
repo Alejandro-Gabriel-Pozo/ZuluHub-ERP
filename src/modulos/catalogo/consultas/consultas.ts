@@ -1,4 +1,5 @@
 import { crearConsultasDeCarta } from "./consultas-de-carta";
+import { crearConsultasDeClasificacion } from "./consultas-de-clasificacion";
 import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
@@ -300,6 +301,7 @@ export function crearConsultasDeCatalogo(d: DependenciasDeConsultasDeCatalogo) {
         tx.productos.listarSecciones(contexto.empresaId),
       ),
     ...crearConsultasDeCarta(d),
+    ...crearConsultasDeClasificacion(d),
   };
 }
 

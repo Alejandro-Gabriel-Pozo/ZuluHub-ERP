@@ -4,7 +4,7 @@ import {
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { formatearFecha, formatearImporte } from "../facturacion/formato-fiscal";
-import { RUTA_DE_PRODUCTOS } from "./modelo-de-ficha-de-producto";
+import { RUTA_DE_PRODUCTOS } from "./filtros-de-productos";
 
 /**
  * El modelo de vista de los precios de un producto (A1, T3; maqueta aprobada `productos.html`, función `vPrecios`): de lo que entrega la composición, lo que se ve y en qué orden,

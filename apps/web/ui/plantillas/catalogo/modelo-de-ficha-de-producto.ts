@@ -3,6 +3,7 @@ import {
   texto,
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
+import { CLAVE_DE_CLASE, RUTA_DE_PRODUCTOS } from "./filtros-de-productos";
 
 /**
  * El modelo de vista de la ficha de datos de un producto (A1, T2a; maqueta aprobada `productos.html`, función `vDatos`): de lo que entrega la composición, los campos que se ven,
@@ -15,17 +16,7 @@ import {
  * esconde un dato por no saber nombrarlo).
  */
 
-export const RUTA_DE_PRODUCTOS = "/catalogo/productos";
 export const rutaDeLaFicha = (id: string): string => `${RUTA_DE_PRODUCTOS}/${id}`;
-
-/** Las cinco clases, cada una con la clave de su texto (las mismas de la lista de productos). */
-const CLAVE_DE_CLASE: Readonly<Record<string, ClaveDeTexto>> = {
-  MATERIA_PRIMA: "catalogo.clase.materia_prima",
-  INSUMO: "catalogo.clase.insumo",
-  REVENTA: "catalogo.clase.reventa",
-  ELABORADO: "catalogo.clase.elaborado",
-  VENDIBLE: "catalogo.clase.vendible",
-};
 
 /** Las seis alícuotas que ofrece el producto (dueño, 12/11/2026), cada una con la clave de su texto. Una prueba compara estas claves con la lista del módulo fiscal. */
 export const CLAVE_DE_ALICUOTA: Readonly<Record<string, ClaveDeTexto>> = {
