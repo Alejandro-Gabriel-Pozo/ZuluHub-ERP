@@ -16,6 +16,7 @@ import {
   arbolConRegistro,
   control,
   entrada,
+  resumen,
   SENSIBLES,
   CUOTA,
 } from "./decisiones-apoyo";
@@ -60,17 +61,27 @@ const errores = (r: Leido) => ("errores" in r ? r.errores : []);
 const una = (id: string) => JSON.stringify({ id, dato: id });
 
 describe("un archivo por entrada, nombre = id", () => {
-  it("junta las entradas de la carpeta ordenadas por id, sin depender del orden de los archivos", () => {
-    const r = leer({
-      [`${CARPETA}/DEC-0010.json`]: una("DEC-0010"),
-      [`${CARPETA}/DEC-0002.json`]: una("DEC-0002"),
-      [`${CARPETA}/DEC-0001.json`]: una("DEC-0001"),
+  it("junta las entradas de la carpeta ordenadas por id, sin depender del orden en que llegan los archivos", () => {
+    const archivos = {
+      [`${CARPETA}/B.json`]: una("B"),
+      [`${CARPETA}/A.json`]: una("A"),
+      [`${CARPETA}/A-B.json`]: una("A-B"),
+    };
+    // Al revés del orden de los ids, y con «A-B.json» antes que «A.json» por nombre: el orden sale del id, no de la lista de archivos.
+    const r = cargador.leerRegistroEnCarpeta({
+      arbol: {
+        ...arbol(archivos),
+        rutas: [`${CARPETA}/B.json`, `${CARPETA}/A.json`, `${CARPETA}/A-B.json`],
+      },
+      carpeta: CARPETA,
+      monolito: MONOLITO,
+      admiteMonolito: false,
     });
     expect(r).toEqual({
       valor: [
-        { id: "DEC-0001", dato: "DEC-0001" },
-        { id: "DEC-0002", dato: "DEC-0002" },
-        { id: "DEC-0010", dato: "DEC-0010" },
+        { id: "A", dato: "A" },
+        { id: "A-B", dato: "A-B" },
+        { id: "B", dato: "B" },
       ],
       enMonolito: false,
     });
@@ -99,6 +110,13 @@ describe("un archivo por entrada, nombre = id", () => {
       expect.objectContaining({ archivo: `${CARPETA}/sub/DEC-0001.json` }),
     ]);
     expect(errores(leer({ [`${CARPETA}/.json`]: "{}" }))).toHaveLength(1);
+    // Solo «<id>.json» exacto: una copia «.json.bak» o «.jsonx» no es una entrada.
+    for (const nombre of ["DEC-0001.json.bak", "DEC-0001.jsonx"]) {
+      const copia = leer({ [`${CARPETA}/${nombre}`]: una("DEC-0001") });
+      expect(errores(copia), nombre).toEqual([
+        expect.objectContaining({ archivo: `${CARPETA}/${nombre}` }),
+      ]);
+    }
   });
 
   it("un JSON roto, o que no es un objeto, falla con el archivo", () => {
@@ -264,6 +282,13 @@ describe("el registro de decisiones sobre este cargador", () => {
     expect(evaluar(conEntrada, base).fallas).toEqual([]);
   });
 
+  it("un registro.json solo, sin carpeta, en el cambio falla: el array viejo es solo de la base", () => {
+    const soloArray = baseConArrayViejo(REG);
+    const { fallas } = evaluar(soloArray);
+    expect(fallas.map((f) => f.motivo)).toEqual([expect.stringContaining("no puede estar suelto")]);
+    expect(fallas[0]?.archivo).toBe(control.MONOLITO_DEL_REGISTRO);
+  });
+
   it("un registro.json suelto en el cambio falla, y la base con carpeta y array a la vez también", () => {
     const suelto = arbolConRegistro(REG, { [control.MONOLITO_DEL_REGISTRO]: "[]" });
     expect(evaluar(suelto).fallas[0]?.archivo).toBe(control.MONOLITO_DEL_REGISTRO);
@@ -287,6 +312,38 @@ describe("el registro de decisiones sobre este cargador", () => {
     expect(evaluar(pr).fallas).toEqual([
       expect.objectContaining({ archivo: `${control.CARPETA_DEL_REGISTRO}/DEC-0003.json` }),
     ]);
+  });
+});
+
+describe("el resumen para el dueño sobre este cargador", () => {
+  const carpetas: string[] = [];
+  afterEach(() => {
+    for (const c of carpetas.splice(0)) rmSync(c, { recursive: true, force: true });
+  });
+  const disco = (archivos: Record<string, string>): string => {
+    const raiz = mkdtempSync(join(tmpdir(), "resumen-"));
+    carpetas.push(raiz);
+    for (const [ruta, contenido] of Object.entries(archivos)) {
+      mkdirSync(dirname(join(raiz, ruta)), { recursive: true });
+      writeFileSync(join(raiz, ruta), contenido);
+    }
+    return raiz;
+  };
+
+  it("sin registro dice que no existe (código 1, nada que imprimir)", () => {
+    expect(resumen.ejecutar(disco({}))).toEqual({
+      codigo: 1,
+      salida: "",
+      errores: [`${control.CARPETA_DEL_REGISTRO}: no existe.`],
+    });
+  });
+
+  it("con el array viejo suelto falla: el resumen lee solo la carpeta", () => {
+    const r = resumen.ejecutar(
+      disco({ [control.MONOLITO_DEL_REGISTRO]: JSON.stringify([entrada()]) }),
+    );
+    expect(r.codigo).toBe(1);
+    expect(r.errores).toEqual([expect.stringContaining("no puede estar suelto")]);
   });
 });
 

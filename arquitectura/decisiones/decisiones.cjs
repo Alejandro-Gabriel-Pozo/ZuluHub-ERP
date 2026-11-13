@@ -173,7 +173,7 @@ const archivoDe = (id) => `${CARPETA_DEL_REGISTRO}/${id}.json`;
 
 /**
  * Lee el registro de un árbol: `{ fallas, registro, hayRegistro }`. La BASE puede traer todavía el array viejo (transición); el cambio, nunca.
- * Una falla de lectura o de forma deja `registro` vacío: `evaluar` corta antes de usarlo.
+ * Con una falla de lectura o de forma `evaluar` corta antes de usar `registro`.
  */
 function leerElRegistro(arbol, etiqueta, quien) {
   const leido = leerRegistroEnCarpeta({
@@ -185,6 +185,7 @@ function leerElRegistro(arbol, etiqueta, quien) {
   if (leido.ausente) {
     return {
       fallas: [enLinea(CARPETA_DEL_REGISTRO, 1, `${quien}no existe.`)],
+      // Stryker disable next-line ArrayDeclaration: con una falla de lectura `evaluar` corta antes de usar la lista, así que su contenido no se ve.
       registro: [],
       hayRegistro: false,
     };
@@ -192,6 +193,7 @@ function leerElRegistro(arbol, etiqueta, quien) {
   if (leido.errores !== undefined) {
     return {
       fallas: leido.errores.map(({ archivo, motivo }) => enLinea(archivo, 1, `${quien}${motivo}`)),
+      // Stryker disable next-line ArrayDeclaration: ídem.
       registro: [],
       hayRegistro: true,
     };
@@ -203,7 +205,7 @@ function leerElRegistro(arbol, etiqueta, quien) {
       `${quien}${id}: ${problema}`,
     ),
   );
-  return { fallas, registro: fallas.length === 0 ? leido.valor : [], hayRegistro: true };
+  return { fallas, registro: leido.valor, hayRegistro: true };
 }
 
 /** Los problemas de forma del registro y de la lista de sensibles de un árbol, como fallas. Devuelve `{ fallas, registro, sensibles }`. */

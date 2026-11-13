@@ -4,7 +4,7 @@
  * Previene: el choque que se repetía entre sesiones en paralelo (4 veces en un día, 13/11/2026): dos ramas agregaban una entrada al final del mismo
  * array (mismas líneas) y, en decisiones, elegían el mismo `DEC-NNNN` «siguiente». Con un archivo por entrada, dos entradas distintas no se tocan
  * nunca; si dos ramas eligen el mismo id, Git marca «agregado en los dos» sobre el mismo archivo y el control de id único también falla (nunca pasa en silencio).
- * Chequeo: `test/arquitectura/registro-en-carpeta.test.ts` (cada caso de abajo con su violación inyectada).
+ * Chequeo: `test/arquitectura/decisiones-registro-en-carpeta.test.ts` (cada caso de abajo con su violación inyectada).
  *
  * Todo nace cerrado (falla ante la duda): un archivo que no es `<id>.json`, una subcarpeta, un JSON roto o que no es un objeto, un nombre que no coincide
  * con el `id` de adentro, o un `registro.json` suelto al lado de la carpeta es una falla, nunca algo que se ignora. La FORMA de cada entrada (campos, tipos)
@@ -21,8 +21,8 @@ const ENTRADA = /^([^/]+)\.json$/;
 
 const texto = (contenido) => Buffer.from(contenido).toString("utf8");
 
-/** El orden del registro: por id, igual en todas las máquinas (sin depender de la configuración regional). */
-const porId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+/** El orden del registro: por id, byte a byte, igual en todas las máquinas (sin depender de la configuración regional). Los ids son únicos (el nombre del archivo es el id). */
+const porId = (a, b) => Buffer.compare(Buffer.from(a.id), Buffer.from(b.id));
 
 /**
  * Lee el registro de `arbol` (`{ rutas, leer }`). Devuelve `{ ausente: true }` si no hay ni carpeta con entradas ni (con `admiteMonolito`) el array viejo,
@@ -30,7 +30,7 @@ const porId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
  */
 function leerRegistroEnCarpeta({ arbol, carpeta, monolito, admiteMonolito }) {
   const prefijo = `${carpeta}/`;
-  const propias = arbol.rutas.filter((ruta) => ruta.startsWith(prefijo)).sort();
+  const propias = arbol.rutas.filter((ruta) => ruta.startsWith(prefijo));
   const hayMonolito = arbol.rutas.includes(monolito);
   const errores = [];
   if (hayMonolito && (propias.length > 0 || !admiteMonolito)) {
