@@ -8,10 +8,15 @@ import type { CodigoDeCatalogo } from "../capacidades/experiencia/respuesta-de-c
  * «Esta acción no está permitida» (dueño, 30/10/2026, interfaz sobria: genérico antes que uno por acción). Pasan SIN CAMBIOS: los motivos del guard y los demás códigos públicos,
  * los errores con forma de objeto sin nombre de negocio (la empresa que no opera, la base) y `ERROR_DE_LA_BASE_NO_TRADUCIDO`, que es un defecto y sale como inesperado, con referencia.
  * Previene: que un error del catálogo salga como un fallo inesperado, o que un defecto de la base se disfrace de «no permitido».
+ * Precios (A1, T3): suma «Escribí un precio válido» y la frase aprobada del precio que otra persona cambió antes (lleva el importe vigente, el único dato que sale).
  * Chequeo: `errores-de-catalogo.test.ts`.
  */
 
-type ErrorConTexto = Readonly<{ codigo: CodigoDeCatalogo; campo: string }>;
+type ErrorConTexto = Readonly<{
+  codigo: CodigoDeCatalogo;
+  campo: string;
+  parametros?: Readonly<Record<string, string>>;
+}>;
 
 /** Los errores del dominio con texto propio y el campo (del pedido) al que se asocian. */
 const CON_TEXTO_PROPIO: Readonly<Record<string, ErrorConTexto>> = {
@@ -22,10 +27,26 @@ const CON_TEXTO_PROPIO: Readonly<Record<string, ErrorConTexto>> = {
     campo: "codigoDeBarras",
   },
   ALICUOTA_REQUERIDA: { codigo: "CATALOGO_ELEGI_LA_ALICUOTA", campo: "alicuota" },
+  // Precios (A1, T3): el único otro texto propio es «Escribí un precio válido» (misma fila «Errores»).
+  PRECIO_INVALIDO: { codigo: "CATALOGO_PRECIO_INVALIDO", campo: "precio" },
 };
 
 /** Un defecto: la base devolvió una restricción que el módulo no sabe traducir. No es de negocio. */
 const DEFECTO_DE_LA_BASE = "ERROR_DE_LA_BASE_NO_TRADUCIDO";
+
+/** `{ error: "PRECIO_DESACTUALIZADO", vigente: { precioId, precio } }` con un precio vigente (no abierto): el único objeto del módulo cuyo dato sale hacia la pantalla. */
+function esPrecioDesactualizado(
+  error: unknown,
+): error is Readonly<{ error: "PRECIO_DESACTUALIZADO"; vigente: Readonly<{ precio: string }> }> {
+  if (typeof error !== "object" || error === null) return false;
+  const { error: nombre, vigente } = error as { error?: unknown; vigente?: unknown };
+  return (
+    nombre === "PRECIO_DESACTUALIZADO" &&
+    typeof vigente === "object" &&
+    vigente !== null &&
+    typeof (vigente as { precio?: unknown }).precio === "string"
+  );
+}
 
 /** El error de un caso de uso o consulta del catálogo tal como lo entiende `aRespuesta`. */
 export function traducirErrorDeCatalogo(error: unknown): unknown {
@@ -33,6 +54,15 @@ export function traducirErrorDeCatalogo(error: unknown): unknown {
     if (Object.hasOwn(CON_TEXTO_PROPIO, error)) return CON_TEXTO_PROPIO[error];
     if (Object.hasOwn(CODIGOS_PUBLICOS, error) || error === DEFECTO_DE_LA_BASE) return error;
     return { codigo: "CATALOGO_ACCION_NO_PERMITIDA" satisfies CodigoDeCatalogo };
+  }
+  // El precio que otra persona cambió antes: lleva lo vigente, y de eso sale SOLO el importe (nunca el id de la fila). Frase aprobada por el dueño el 12/11/2026. Un objeto sin importe
+  // exacto no se arriesga: cae en el genérico de abajo.
+  if (esPrecioDesactualizado(error)) {
+    return {
+      codigo: "CATALOGO_PRECIO_DESACTUALIZADO" satisfies CodigoDeCatalogo,
+      campo: "precio",
+      parametros: { importe: error.vigente.precio },
+    };
   }
   // Un error de negocio con nombre y forma de objeto (`{ error: "CAMPO_NO_ADMITIDO_POR_LA_CLASE", campo }`): también el genérico. La base trae `tipo`, no `error`.
   if (
