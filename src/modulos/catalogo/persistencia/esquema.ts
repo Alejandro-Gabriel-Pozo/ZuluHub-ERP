@@ -1,4 +1,5 @@
 import type { Generated } from "kysely";
+import * as clasificacion from "./esquema-de-clasificacion";
 import {
   COLUMNAS_DE_CARTA,
   ERRORES_DE_CARTA_POR_RESTRICCION,
@@ -15,7 +16,8 @@ import {
  * compara estas columnas con el catálogo de la base (`catalogo-persistencia.test.ts`).
  */
 export type CatalogoDb = TablasDePresentaciones &
-  TablasDeCarta & {
+  TablasDeCarta &
+  clasificacion.TablasDeClasificacion & {
     unidad_de_medida: {
       id: string;
       dimension: string;
@@ -136,6 +138,7 @@ export type CatalogoDb = TablasDePresentaciones &
 export const COLUMNAS_DE_CATALOGO = {
   ...COLUMNAS_DE_PRESENTACIONES,
   ...COLUMNAS_DE_CARTA,
+  ...clasificacion.COLUMNAS_DE_CLASIFICACION,
   unidad_de_medida: ["id", "dimension", "simbolo", "factor_a_base", "es_base"],
   seccion_de_carta: [
     "id",
@@ -257,6 +260,7 @@ export const COLUMNAS_DE_CATALOGO = {
 export const ERRORES_DE_CATALOGO_POR_RESTRICCION: Readonly<Record<string, string>> = {
   ...ERRORES_DE_PRESENTACIONES_POR_RESTRICCION,
   ...ERRORES_DE_CARTA_POR_RESTRICCION,
+  ...clasificacion.ERRORES_DE_CLASIFICACION_POR_RESTRICCION,
   // unidad_de_medida (sembrada: nadie la escribe)
   unidad_de_medida_pkey: "NO_TRADUCIDA",
   unidad_id_ck: "NO_TRADUCIDA",

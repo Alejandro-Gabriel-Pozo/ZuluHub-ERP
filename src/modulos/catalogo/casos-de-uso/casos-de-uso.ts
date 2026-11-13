@@ -1,6 +1,13 @@
 import { armarCambiarFormaDeVenta } from "./cambiar-forma-de-venta";
 import { armarCambiarPrecio } from "./cambiar-precio";
 import type { DependenciasDeCatalogo } from "./contrato";
+import {
+  armarCrearNodoDeClasificacion,
+  armarDesactivarNodoDeClasificacion,
+  armarMoverNodoDeClasificacion,
+  armarReactivarNodoDeClasificacion,
+  armarRenombrarNodoDeClasificacion,
+} from "./clasificacion";
 import { armarCopiarOpciones } from "./copiar-opciones";
 import { armarCrearProducto, armarCrearProductoRapido } from "./crear-producto";
 import type { DECLARACIONES } from "./declaraciones";
@@ -45,6 +52,11 @@ export function crearCasosDeUsoDeCatalogo(dependencias: DependenciasDeCatalogo) 
     desactivarSeccionDeCarta: armarDesactivarSeccionDeCarta(dependencias),
     reactivarSeccionDeCarta: armarReactivarSeccionDeCarta(dependencias),
     reordenarSeccionesDeCarta: armarReordenarSeccionesDeCarta(dependencias),
+    crearNodoDeClasificacion: armarCrearNodoDeClasificacion(dependencias),
+    renombrarNodoDeClasificacion: armarRenombrarNodoDeClasificacion(dependencias),
+    moverNodoDeClasificacion: armarMoverNodoDeClasificacion(dependencias),
+    desactivarNodoDeClasificacion: armarDesactivarNodoDeClasificacion(dependencias),
+    reactivarNodoDeClasificacion: armarReactivarNodoDeClasificacion(dependencias),
     guardarCartaPublica: armarGuardarCartaPublica(dependencias),
     ocultarProducto: armarOcultarProducto(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;

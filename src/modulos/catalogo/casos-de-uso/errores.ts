@@ -8,6 +8,7 @@ import type { ErrorDeCotizacion } from "../dominio/cotizar";
 import type { ErrorDeFicha } from "../dominio/producto";
 import type { ErrorDeFormaDeVenta } from "../dominio/forma-de-venta";
 import type { ErrorDeOpciones } from "../dominio/opciones";
+import type { MotivoDeRechazoDeClasificacion } from "../../../primitivas/clasificacion/arbol";
 
 /**
  * Los errores con nombre de los comandos del catálogo (E2 mínimo §3.5). Cada comando devuelve un subconjunto; el contrato público de cada
@@ -22,6 +23,9 @@ export type ErrorDeCatalogo =
   | MotivoDeRechazo
   | EmpresaNoOpera
   | ErrorDePersistencia
+  | MotivoDeRechazoDeClasificacion
+  | "NOMBRE_DE_NODO_INVALIDO"
+  | "NODO_DUPLICADO"
   | "IDENTIFICADOR_INVALIDO"
   | "ID_REUTILIZADO"
   | "CLASE_INVALIDA"

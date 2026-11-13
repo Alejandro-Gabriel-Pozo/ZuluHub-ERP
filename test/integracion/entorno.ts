@@ -115,10 +115,12 @@ import {
   crearRepositorioDeCartas,
   crearRepositorioDeDisponibilidad,
   crearRepositorioDeSecciones,
+  crearRepositorioDeClasificacion,
   crearLectorDeCarta,
   type RepositorioDeCartas,
   type RepositorioDeDisponibilidad,
   type RepositorioDeSecciones,
+  type RepositorioDeClasificacion,
   type LectorDeCarta,
   crearRepositorioDeProductos,
   type CatalogoDb,
@@ -187,6 +189,8 @@ export type TxDePrueba = Readonly<{
   cartasPublicas: RepositorioDeCartas;
   disponibilidadDeProductos: RepositorioDeDisponibilidad;
   seccionesDeCarta: RepositorioDeSecciones;
+  /** La clasificación comercial (0045, A2b). */
+  clasificacion: RepositorioDeClasificacion;
   lectorDeCarta: LectorDeCarta;
 }> &
   PiezasDeCajaEnTx &
@@ -247,6 +251,7 @@ export function crearEntornoDePrueba(
       cartasPublicas: crearRepositorioDeCartas(db.withTables<CatalogoDb>()),
       disponibilidadDeProductos: crearRepositorioDeDisponibilidad(db.withTables<CatalogoDb>()),
       seccionesDeCarta: crearRepositorioDeSecciones(db.withTables<CatalogoDb>()),
+      clasificacion: crearRepositorioDeClasificacion(db.withTables<CatalogoDb>()),
       lectorDeCarta: crearLectorDeCarta(db.withTables<CatalogoDb>()),
     });
   return crearTransacciones<TxDePrueba>({
