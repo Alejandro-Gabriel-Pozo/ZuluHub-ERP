@@ -24,6 +24,7 @@ const pagina: PaginaDeLaLista = {
       nombre: "Milanesa napolitana",
       claseDeUso: "VENDIBLE",
       estado: "ACTIVO",
+      seccion: "Platos principales",
       precio: { tipo: "EMPRESA", importe: "12345678901.50" },
     },
     {
@@ -31,6 +32,7 @@ const pagina: PaginaDeLaLista = {
       nombre: "Pizza muzzarella",
       claseDeUso: "VENDIBLE",
       estado: "ACTIVO",
+      seccion: null,
       precio: { tipo: "SEGUN_TAMANO" },
     },
     {
@@ -38,6 +40,7 @@ const pagina: PaginaDeLaLista = {
       nombre: "Gaseosa de la casa de la esquina del puerto con un nombre larguísimo",
       claseDeUso: "REVENTA",
       estado: "FALTA_COMPLETAR",
+      seccion: "Bebidas",
       precio: { tipo: "SIN_PRECIO" },
     },
     {
@@ -45,6 +48,7 @@ const pagina: PaginaDeLaLista = {
       nombre: "Harina 000",
       claseDeUso: "MATERIA_PRIMA",
       estado: "DESACTIVADO",
+      seccion: null,
       precio: null,
     },
   ],
@@ -126,10 +130,12 @@ describe("lista de productos", () => {
     const [milanesa, pizza, gaseosa, harina] = [...lista().querySelectorAll("li")].map(
       (li) => li.textContent,
     );
-    expect(milanesa).toBe("Milanesa napolitanaProducto vendible$ 12.345.678.901,50");
+    expect(milanesa).toBe(
+      "Milanesa napolitanaProducto vendible · Platos principales$ 12.345.678.901,50",
+    );
     expect(pizza).toBe("Pizza muzzarellaProducto vendibleSegún medida");
     expect(gaseosa).toContain("Falta completar");
-    expect(gaseosa).toContain("Reventa");
+    expect(gaseosa).toContain("Reventa · Bebidas");
     expect(gaseosa).toContain("Sin precio");
     expect(harina).toBe("Harina 000DesactivadoMateria prima");
     // «Activo» no lleva marca: la lista tiene exactamente dos.
@@ -243,11 +249,14 @@ describe("lista de productos", () => {
     expect(page.getByRole("link", { name: "Página siguiente" }).elements()).toHaveLength(0);
   });
 
-  it("una lista vacía no dice nada: sin tarjetas, sin avisos y accesible", async () => {
+  it("una lista vacía dice «Sin resultados»: sin tarjetas, un solo aviso informativo y accesible", async () => {
     await ventana(390);
     await render(pantalla(FILTROS_POR_DEFECTO, { productos: [], siguiente: null }));
     expect(document.querySelector("ul[class*=lista]")).toBeNull();
-    expect(document.querySelector("[role=alert], [role=status]")).toBeNull();
+    expect(document.querySelectorAll("[role=alert]")).toHaveLength(0);
+    const avisos = document.querySelectorAll("[role=status]");
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]?.textContent).toBe("Sin resultados");
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
   });
 });

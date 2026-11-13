@@ -15,7 +15,10 @@ import {
  * El modelo de vista de la lista de productos (A1, T1; maqueta aprobada `productos.html`, 12/11/2026, función `vLista`): de lo que entrega la composición, lo que se ve en cada
  * fila y NADA más. Puro: sin React ni servidor. Una fila lleva el nombre, la marca de estado («Desactivado» o «Falta completar», solo cuando corresponde), la clase y el
  * precio (el importe como texto decimal con el formato es-AR, «Según medida» o «Sin precio»; nada si el producto no se vende). Los textos salen del catálogo (`catalogo.*`, con
- * su fuente en `catalogo-catalogo.ts`); no se arma ningún texto nuevo, solo se eligen los aprobados. Sin la sección de la carta ni el enlace a la ficha: no son de este tramo.
+ * su fuente en `catalogo-catalogo.ts`); no se arma ningún texto nuevo, solo se eligen los aprobados. La fila lleva también el nombre de la sección de la carta (la pantalla dice «clase · sección»,
+ * como la maqueta; decisión del dueño 13/11/2026, `decisiones-del-dueno-2026-11.md` fila «Lista de productos (T1): cada fila muestra «clase · sección»»), también si la sección está desactivada.
+ * Sin lista de resultados, «Sin resultados» (`catalogo.lista.sin_resultados`; maqueta línea 569; decisión del dueño 13/11/2026, filas «la lista sin resultados muestra «Sin resultados»» y «una búsqueda con texto
+ * inválido muestra la lista vacía con «Sin resultados»»). Sin el enlace a la ficha: no es de este tramo.
  */
 
 /** Un producto como lo entrega la composición (la misma forma, sin importar de dónde venga; la UI no importa los módulos). */
@@ -24,6 +27,8 @@ export type ProductoDeLaLista = Readonly<{
   nombre: string;
   claseDeUso: string;
   estado: string;
+  /** El NOMBRE de la sección de la carta (nunca su id ni otros datos); `null` si el producto no tiene. */
+  seccion: string | null;
   precio:
     | Readonly<{ tipo: "EMPRESA"; importe: string }>
     | Readonly<{ tipo: "SEGUN_TAMANO" }>
@@ -43,12 +48,16 @@ type FilaDeProducto = Readonly<{
   /** La marca de estado; `null` si el producto está activo y completo. */
   marca: Readonly<{ texto: string; tono: TonoDeEstado }> | null;
   clase: string;
+  /** El nombre de la sección; `null` si el producto no tiene (la pantalla dice solo la clase). */
+  seccion: string | null;
   /** El precio ya formateado; `null` si el producto no se vende. */
   precio: string | null;
 }>;
 
 export type ListaArmada = Readonly<{
   filas: readonly FilaDeProducto[];
+  /** «Sin resultados» si no hay filas; `null` si las hay. */
+  vacio: string | null;
   siguiente: Readonly<{ href: string; texto: string }> | null;
 }>;
 
@@ -92,9 +101,11 @@ export function armarLaLista(
         nombre: p.nombre,
         marca: marcaDe(p.estado, d),
         clase: claveDeClase === null ? p.claseDeUso : texto(d, claveDeClase),
+        seccion: p.seccion,
         precio: precioDe(p.precio, d),
       };
     }),
+    vacio: pagina.productos.length === 0 ? texto(d, "catalogo.lista.sin_resultados") : null,
     siguiente:
       pagina.siguiente === null
         ? null
