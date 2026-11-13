@@ -1466,6 +1466,8 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "abierta_por",
             "abierta_en",
           ].map((c) => `cuenta_consumo.${c}`),
+          // 0048: el departamento con el que se abre la cuenta se fija al insertar (ningún UPDATE de esa columna)
+          ...["departamento_id"].map((c) => `cuenta_consumo.${c}`),
           ...[
             "id",
             "empresa_id",
