@@ -53,6 +53,8 @@ export type Linea = Readonly<{
   controlaStock: boolean;
   /** El importe exacto de una línea compartida (0038, E7); `null` en toda otra: ahí vale `precio × cantidad`. */
   importeFijo: string | null;
+  /** El camino de clasificación del producto AL VENDER (0047); `null` = «Sin elegir» o una línea anterior a 0047. No cambia nunca. */
+  clasificacion: ClasificacionDeLinea | null;
   estado: EstadoDeLinea;
   anuladaPor: PersonaId | null;
   anuladaEn: Date | null;
@@ -92,9 +94,17 @@ export type AltaDeLinea = Readonly<{
   controlaStock: boolean;
   /** Solo lo escribe la copia COMPARTIDA de una línea (0038, E7). */
   importeFijo?: string | null | undefined;
+  /** El camino de clasificación del producto al vender (0047); sin dato, «Sin elegir». */
+  clasificacion?: ClasificacionDeLinea | null | undefined;
   creadaPor: PersonaId;
   creadaEn: Date;
   opciones: readonly OpcionDeLinea[];
+}>;
+
+/** El camino de clasificación comercial congelado en el renglón: del departamento al nodo del producto, con los nombres de ese momento (0047). */
+export type ClasificacionDeLinea = Readonly<{
+  departamentoId: string;
+  camino: readonly Readonly<{ id: string; nombre: string }>[];
 }>;
 
 /** Cómo se copió una línea (`linea_copiada`, 0038). */

@@ -18,8 +18,10 @@ export type {
 export {
   cotizarParaVender,
   tienePrecioParaLaCartaEnSucursal,
+  type CotizacionParaVender,
   type EntradaDeCotizarParaVender,
 } from "./casos-de-uso/cotizar-para-vender";
+export type { ClasificacionDelRenglon } from "./dominio/cotizar";
 export type {
   DependenciasDeCatalogo,
   DependenciasDeConsultasDeCatalogo,
