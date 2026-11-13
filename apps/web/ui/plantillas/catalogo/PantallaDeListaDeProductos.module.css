@@ -1,0 +1,66 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  min-width: 0;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie-elevada);
+  color: var(--color-texto);
+}
+
+.renglon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.nombre {
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.clase {
+  color: var(--color-texto-suave);
+  overflow-wrap: anywhere;
+}
+
+/* Sin `min-width: 0`: el importe no se achica por debajo de su ancho; el que cede y se corta en renglones es el texto de la izquierda. */
+.precio {
+  font-weight: var(--tipo-peso-fuerte);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.siguiente {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-width: var(--objetivo-minimo);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-5);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+  text-decoration: none;
+}

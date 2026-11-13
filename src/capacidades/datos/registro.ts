@@ -79,6 +79,12 @@ const MEDIOS_PROPOSITO_TIPO: Proposito = {
     "Pedernal-docs/11-especificaciones/caja-y-cobros.md §B.6 (medio de pago: lista cerrada de tipos) y la maqueta aprobada el 09/11/2026 (`medios.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)",
 };
 
+const LISTA_DE_PRODUCTOS =
+  "apps/web/ui/plantillas/catalogo/FormularioDeFiltrosDeProductos.cliente.tsx";
+const REQUIERE_CATALOGO = { modulo: "catalogo", estadoDeEmpresa: ["ACTIVE"] } as const;
+const FUENTE_DE_LA_LISTA_DE_PRODUCTOS =
+  "Pedernal-docs/11-especificaciones/fichas-de-modulo/a1-productos-y-precios.md §3 (consultas: `listarProductos` filtra por texto, clase, «falta completar» y activo) y la maqueta aprobada el 12/11/2026 (`productos.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)";
+
 export const REGISTRO_DE_DATOS = {
   correo: {
     ficha: "src/primitivas/contacto/email.ts",
@@ -271,6 +277,45 @@ export const REGISTRO_DE_DATOS = {
     consumidores: [CAJA_FORMULARIO],
     ponerPor: ["cajas.crear", "cajas.editar"],
     requiere: REQUIERE_CAJA,
+  },
+  "texto-de-busqueda-de-producto": {
+    ficha: "src/primitivas/texto/termino-de-busqueda-de-producto.ts",
+    propositos: [
+      {
+        para: "Texto con el que se busca un producto por su nombre en la lista de productos (el buscador vacío muestra todo).",
+        fuente: FUENTE_DE_LA_LISTA_DE_PRODUCTOS,
+      },
+    ],
+    consumidores: [LISTA_DE_PRODUCTOS],
+    ponerPor: ["productos.ver"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "clase-de-uso-de-producto": {
+    // La clase de uso es una lista cerrada del módulo de catálogo, no una primitiva de `src/primitivas/` (ficha de concepto `clase-de-uso.md`): la ficha es su dominio.
+    ficha: "src/modulos/catalogo/dominio/clases.ts",
+    propositos: [
+      {
+        para: "Filtro «¿Qué es?» de la lista de productos: una de las cinco clases de uso (materia prima, insumo, reventa, elaborado o producto vendible) o todas.",
+        fuente: FUENTE_DE_LA_LISTA_DE_PRODUCTOS,
+      },
+    ],
+    consumidores: [LISTA_DE_PRODUCTOS],
+    ponerPor: ["productos.ver"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "estado-de-producto": {
+    // Sin primitiva: el estado (activo, falta completar, desactivado) se deduce de dos marcas del producto y su tipo vive en la consulta del catálogo. Pregunta pendiente al dueño:
+    // la maqueta `productos.html` no trae un filtro por estado; lo pidió el encargo de T1.
+    ficha: "src/modulos/catalogo/consultas/consultas.ts",
+    propositos: [
+      {
+        para: "Filtro por estado de la lista de productos: activo, falta completar o desactivado, o todos.",
+        fuente: FUENTE_DE_LA_LISTA_DE_PRODUCTOS,
+      },
+    ],
+    consumidores: [LISTA_DE_PRODUCTOS],
+    ponerPor: ["productos.ver"],
+    requiere: REQUIERE_CATALOGO,
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
 
