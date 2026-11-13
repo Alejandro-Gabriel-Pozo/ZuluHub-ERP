@@ -1,5 +1,7 @@
-import type { EstadoDeEmpresa } from "../../contexto/estados";
-import type { ClaveAccion, ClaveModulo } from "../modulos/catalogo";
+import { DATOS_DE_PRODUCTOS } from "./registro-de-productos";
+import type { DefinicionDeDato, Proposito } from "./tipos-de-datos";
+
+export type { DefinicionDeDato } from "./tipos-de-datos";
 
 /**
  * REGISTRO DE DATOS (regla 5 de `Pedernal-docs/01-vision/primitivas-de-negocio.md`; dueño, 2026-11-05: «sin declaración de
@@ -21,27 +23,6 @@ import type { ClaveAccion, ClaveModulo } from "../modulos/catalogo";
 
 /** Marca de un campo cuyo dato todavía no está registrado: es deuda, la cuenta y la limita el chequeo. */
 export const DATO_PENDIENTE = "pendiente" as const;
-
-type Proposito = Readonly<{
-  /** Para qué existe: una pantalla o un caso de uso reales. */
-  para: string;
-  /** Documento verificable (archivo y sección) donde el dueño o el diseño lo pidió. */
-  fuente: string;
-}>;
-
-export type DefinicionDeDato = Readonly<{
-  /** Ruta de la primitiva (la «ficha del dato»), desde la raíz del repositorio. */
-  ficha: string;
-  propositos: readonly [Proposito, ...Proposito[]];
-  /** Archivos de pantalla (desde la raíz) que pueden pedir este dato. Uno que lo pide y no figura acá falla; uno que figura y no lo pide también. */
-  consumidores: readonly [string, ...string[]];
-  /** Acciones de permiso que habilitan a ponerlo. */
-  ponerPor: readonly [ClaveAccion, ...ClaveAccion[]];
-  requiere: Readonly<{
-    modulo: ClaveModulo;
-    estadoDeEmpresa: readonly [EstadoDeEmpresa, ...EstadoDeEmpresa[]];
-  }>;
-}>;
 
 const CONTACTO = "apps/web/ui/plantillas/sesion/PantallaDeContactoDeLaSucursal.cliente.tsx";
 const CONTACTO_PROPOSITO: Proposito = {
@@ -78,12 +59,6 @@ const MEDIOS_PROPOSITO_TIPO: Proposito = {
   fuente:
     "Pedernal-docs/11-especificaciones/caja-y-cobros.md §B.6 (medio de pago: lista cerrada de tipos) y la maqueta aprobada el 09/11/2026 (`medios.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)",
 };
-
-const LISTA_DE_PRODUCTOS =
-  "apps/web/ui/plantillas/catalogo/FormularioDeFiltrosDeProductos.cliente.tsx";
-const REQUIERE_CATALOGO = { modulo: "catalogo", estadoDeEmpresa: ["ACTIVE"] } as const;
-const FUENTE_DE_LA_LISTA_DE_PRODUCTOS =
-  "Pedernal-docs/11-especificaciones/fichas-de-modulo/a1-productos-y-precios.md §3 (consultas: `listarProductos` filtra por texto, clase, «falta completar» y activo) y la maqueta aprobada el 12/11/2026 (`productos.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)";
 
 export const REGISTRO_DE_DATOS = {
   correo: {
@@ -278,45 +253,7 @@ export const REGISTRO_DE_DATOS = {
     ponerPor: ["cajas.crear", "cajas.editar"],
     requiere: REQUIERE_CAJA,
   },
-  "texto-de-busqueda-de-producto": {
-    ficha: "src/primitivas/texto/termino-de-busqueda-de-producto.ts",
-    propositos: [
-      {
-        para: "Texto con el que se busca un producto por su nombre en la lista de productos (el buscador vacío muestra todo).",
-        fuente: FUENTE_DE_LA_LISTA_DE_PRODUCTOS,
-      },
-    ],
-    consumidores: [LISTA_DE_PRODUCTOS],
-    ponerPor: ["productos.ver"],
-    requiere: REQUIERE_CATALOGO,
-  },
-  "clase-de-uso-de-producto": {
-    // La clase de uso es una lista cerrada del módulo de catálogo, no una primitiva de `src/primitivas/` (ficha de concepto `clase-de-uso.md`): la ficha es su dominio.
-    ficha: "src/modulos/catalogo/dominio/clases.ts",
-    propositos: [
-      {
-        para: "Filtro «¿Qué es?» de la lista de productos: una de las cinco clases de uso (materia prima, insumo, reventa, elaborado o producto vendible) o todas.",
-        fuente: FUENTE_DE_LA_LISTA_DE_PRODUCTOS,
-      },
-    ],
-    consumidores: [LISTA_DE_PRODUCTOS],
-    ponerPor: ["productos.ver"],
-    requiere: REQUIERE_CATALOGO,
-  },
-  "estado-de-producto": {
-    // Sin primitiva: el estado (activo, falta completar, desactivado) se deduce de dos marcas del producto y su tipo vive en la consulta del catálogo. Pregunta pendiente al dueño:
-    // la maqueta `productos.html` no trae un filtro por estado; lo pidió el encargo de T1.
-    ficha: "src/modulos/catalogo/consultas/consultas.ts",
-    propositos: [
-      {
-        para: "Filtro por estado de la lista de productos: activo, falta completar o desactivado, o todos.",
-        fuente: FUENTE_DE_LA_LISTA_DE_PRODUCTOS,
-      },
-    ],
-    consumidores: [LISTA_DE_PRODUCTOS],
-    ponerPor: ["productos.ver"],
-    requiere: REQUIERE_CATALOGO,
-  },
+  ...DATOS_DE_PRODUCTOS,
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
 
 export type IdDeDato = keyof typeof REGISTRO_DE_DATOS;

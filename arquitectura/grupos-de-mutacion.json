@@ -538,5 +538,11 @@
     "archivos": "src/composicion/entradas-de-productos.ts,apps/web/ui/plantillas/catalogo/filtros-de-productos.ts,apps/web/ui/plantillas/catalogo/modelo-de-productos.ts",
     "minutos": 1.0,
     "pruebas": "src/composicion/entradas-de-productos.test.ts test/web/productos-modelo.test.ts"
+  },
+  {
+    "grupo": "web (ficha de datos de un producto)",
+    "archivos": "src/composicion/entradas-de-ficha-de-producto.ts,src/composicion/errores-de-catalogo.ts,apps/web/ui/plantillas/catalogo/modelo-de-ficha-de-producto.ts",
+    "minutos": 1.0,
+    "pruebas": "src/composicion/entradas-de-ficha-de-producto.test.ts src/composicion/errores-de-catalogo.test.ts test/web/ficha-de-producto-modelo.test.ts"
   }
 ]
