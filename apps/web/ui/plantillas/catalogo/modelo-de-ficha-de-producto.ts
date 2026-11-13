@@ -3,6 +3,7 @@ import {
   texto,
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
+import { CLAVE_DE_TEXTO_DE_UNIDAD } from "../../../../../src/capacidades/vocabulario/unidades-de-medida";
 import { CLAVE_DE_CLASE, RUTA_DE_PRODUCTOS } from "./filtros-de-productos";
 
 /**
@@ -40,7 +41,7 @@ export type FichaDeLaPantalla = Readonly<{
   codigo: string | null;
   codigoDeBarras: string | null;
   alicuota: string | null;
-  seccionDeCartaId: string | null;
+  seccion: Readonly<{ id: string; nombre: string; activa: boolean }> | null;
   alicuotas: readonly string[];
   secciones: readonly Readonly<{ id: string; nombre: string }>[];
 }>;
@@ -88,14 +89,14 @@ export const nombrar = (
  */
 function desplegable(
   etiqueta: string,
-  guardado: string | null,
+  guardado: Opcion | null,
   ofrecidas: readonly Opcion[],
 ): DesplegableArmado {
-  const fuera = guardado !== null && !ofrecidas.some((o) => o.valor === guardado);
+  const fuera = guardado !== null && !ofrecidas.some((o) => o.valor === guardado.valor);
   return {
     etiqueta,
-    valor: guardado ?? "",
-    opciones: fuera ? [...ofrecidas, { valor: guardado, etiqueta: guardado }] : ofrecidas,
+    valor: guardado?.valor ?? "",
+    opciones: fuera ? [...ofrecidas, guardado] : ofrecidas,
     apagado: fuera,
   };
 }
@@ -109,7 +110,10 @@ export function armarLaFicha(f: FichaDeLaPantalla, d: DiccionarioResuelto = {}):
       etiqueta: texto(d, "catalogo.lista.que_es"),
       valor: nombrar(CLAVE_DE_CLASE, f.claseDeUso, d),
     },
-    unidad: { etiqueta: texto(d, "catalogo.dato.unidad"), valor: f.unidadBaseId },
+    unidad: {
+      etiqueta: texto(d, "catalogo.dato.unidad"),
+      valor: nombrar(CLAVE_DE_TEXTO_DE_UNIDAD, f.unidadBaseId, d),
+    },
     nombre: { etiqueta: texto(d, "catalogo.dato.nombre"), valor: f.nombre },
     nombreDeCocina: f.seVende
       ? { etiqueta: texto(d, "catalogo.dato.nombre_de_cocina"), valor: f.nombreDeCocina ?? "" }
@@ -122,14 +126,16 @@ export function armarLaFicha(f: FichaDeLaPantalla, d: DiccionarioResuelto = {}):
     alicuota: f.seVende
       ? desplegable(
           texto(d, "catalogo.dato.alicuota_de_iva"),
-          f.alicuota,
+          f.alicuota === null
+            ? null
+            : { valor: f.alicuota, etiqueta: nombrar(CLAVE_DE_ALICUOTA, f.alicuota, d) },
           f.alicuotas.map((a) => ({ valor: a, etiqueta: nombrar(CLAVE_DE_ALICUOTA, a, d) })),
         )
       : null,
     seccion: f.seVende
       ? desplegable(
           texto(d, "catalogo.dato.seccion_de_la_carta"),
-          f.seccionDeCartaId,
+          f.seccion === null ? null : { valor: f.seccion.id, etiqueta: f.seccion.nombre },
           f.secciones.map((s) => ({ valor: s.id, etiqueta: s.nombre })),
         )
       : null,

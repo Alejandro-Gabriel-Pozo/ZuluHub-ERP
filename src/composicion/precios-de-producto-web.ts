@@ -1,5 +1,6 @@
 import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
+import { vendeLaClase } from "../modulos/catalogo/publico";
 import { precioDeVentaDesdeTexto } from "../primitivas/dinero/precio-de-venta";
 import { err } from "../primitivas/resultado/resultado";
 import { hoyEnArgentina } from "../primitivas/tiempo/fecha-civil-hasta-hoy";
@@ -10,7 +11,6 @@ import {
   type DependenciasDeRespuesta,
 } from "./a-respuesta";
 import { identificador } from "./entradas-de-facturacion";
-import { CLASES_QUE_SE_VENDEN } from "./entradas-de-ficha-de-producto";
 import { leerElPedidoDePrecio } from "./entradas-de-precios-de-producto";
 import { traducirErrorDeCatalogo } from "./errores-de-catalogo";
 import type { Web } from "./web";
@@ -87,7 +87,7 @@ export async function verLosPreciosDeUnProducto(
     if (ficha.valor === null) return { ok: false, error: GENERICO };
     const { producto, grupos, preciosVigentes, historial } = ficha.valor;
     // Una clase que no se vende no tiene solapa de precios (maqueta): sale como un producto que no está.
-    if (!CLASES_QUE_SE_VENDEN.includes(producto.claseDeUso)) return { ok: false, error: GENERICO };
+    if (!vendeLaClase(producto.claseDeUso)) return { ok: false, error: GENERICO };
     const base = { id: producto.id, nombre: producto.nombre, claveDelCambio: d.nuevoId() };
     if (grupos.some(({ clase, activo }) => clase === "VARIANTE" && activo)) {
       return {

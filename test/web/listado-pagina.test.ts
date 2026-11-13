@@ -12,7 +12,7 @@ import { PAGINA, SUCURSALES } from "../utilidades/listado-de-comprobantes";
  * fuera de alcance, vacío, errores (con la referencia, sin el código crudo) y clave de página que no sirve (vuelve a la primera).
  */
 vi.mock("server-only", () => ({}));
-// La barra pide los permisos de la persona (`permisosDelActor`): acá ve «Comprobantes» (el filtro se prueba en `modulos-de-la-barra.test.ts`).
+// La barra pide los permisos de la persona (`permisosDelActor`): acá ve «Ventas» (el área de Comprobantes; el filtro se prueba en `modulos-de-la-barra.test.ts`).
 const permisos = vi.hoisted(() => ({ acciones: ["comprobantes.ver"] as string[] }));
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
@@ -195,12 +195,12 @@ describe("la página del listado de comprobantes", () => {
     expect(await texto()).toContain("Punto de venta");
   });
 
-  it("la barra marca «Comprobantes» como el destino actual y no marca ningún otro", async () => {
+  it("la barra marca el área «Ventas» (Comprobantes) como el destino actual y no marca ningún otro", async () => {
     const marcado = await html();
     const actuales = [
       ...marcado.matchAll(/<a[^>]*aria-current="page"[^>]*>(?:<[^>]+>)*([^<]+)/g),
     ].map((m) => m[1]);
-    expect(actuales).toEqual(["Comprobantes"]);
+    expect(actuales).toEqual(["Ventas"]);
   });
 
   it("pide el listado con el contexto de la empresa y «Este mes» al día de Argentina", async () => {

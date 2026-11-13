@@ -1,8 +1,11 @@
 import { z } from "zod";
-import type { EntradaDeCrearProducto } from "../modulos/catalogo/publico";
+import {
+  esClaseDeUso,
+  vendeLaClase,
+  type EntradaDeCrearProducto,
+} from "../modulos/catalogo/publico";
 import { err, type Resultado } from "../primitivas/resultado/resultado";
 import { identificador, leer, texto } from "./entradas-de-facturacion";
-import { CLASES_QUE_SE_VENDEN } from "./entradas-de-ficha-de-producto";
 
 /**
  * La entrada del alta de un producto (A1, T6): de lo que manda el formulario a lo que acepta `crearProducto`. Pura: sin base ni servidor.
@@ -15,7 +18,7 @@ import { CLASES_QUE_SE_VENDEN } from "./entradas-de-ficha-de-producto";
  *  - **La clave de creación es el `id` del producto** (idempotencia del alta: el mismo `id` y el mismo contenido devuelven el producto ya creado, sin duplicar). La fija la página, no
  *    el navegador: viaja ligada a la acción, no en un campo.
  *  - **Lo que la clase no admite va vacío**: una clase que no se vende no lleva nombre de cocina, alícuota ni sección; aunque el pedido los traiga, no se mandan (el servidor los
- *    rechazaría). Es la misma regla que la ficha de datos (`CLASES_QUE_SE_VENDEN`, una sola fuente).
+ *    rechazaría). Es la misma regla que la ficha de datos (`vendeLaClase` del módulo, una sola fuente).
  *  - **Nace por unidad y paso 1, sin descripción**: la forma de venta no se manda (el caso de uso toma la unidad base y paso 1; la maqueta aprobada dice que al crear no se elige) y la
  *    descripción no entra en la pantalla (dueño, 13/11/2026).
  * Chequeo: `entradas-de-alta-de-producto.test.ts`.
@@ -44,7 +47,7 @@ export function leerElPedidoDeAlta(crudo: unknown): Resultado<PedidoDeAlta, "PED
 
 /** El pedido a `crearProducto`: ver arriba las reglas. */
 export function entradaDeCrearProducto(pedido: PedidoDeAlta): EntradaDeCrearProducto {
-  const vende = (CLASES_QUE_SE_VENDEN as readonly string[]).includes(pedido.claseDeUso);
+  const vende = esClaseDeUso(pedido.claseDeUso) && vendeLaClase(pedido.claseDeUso);
   return {
     id: pedido.claveDeCreacion,
     claseDeUso: pedido.claseDeUso,

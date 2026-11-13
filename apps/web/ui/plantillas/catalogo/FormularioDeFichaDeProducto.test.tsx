@@ -28,7 +28,7 @@ const FICHA: FichaDeLaPantalla = {
   codigo: "MIL-1",
   codigoDeBarras: "12345678",
   alicuota: "10.5",
-  seccionDeCartaId: SECCION,
+  seccion: { id: SECCION, nombre: "Minutas", activa: true },
   alicuotas: ["21", "10.5", "27", "5", "2.5", "0"],
   secciones: [
     { id: SECCION, nombre: "Minutas" },
@@ -68,7 +68,7 @@ describe("FormularioDeFichaDeProducto", () => {
   });
 
   it("trae los datos guardados; la clase y la unidad se ven pero no son campos", async () => {
-    await render(formulario());
+    await render(formulario(armarLaFicha({ ...FICHA, unidadBaseId: "KILOGRAMO" })));
     await expect.element(campo("Nombre")).toHaveValue("Milanesa");
     await expect.element(campo("Nombre de cocina")).toHaveValue("MILA");
     await expect.element(campo("Código interno")).toHaveValue("MIL-1");
@@ -76,7 +76,7 @@ describe("FormularioDeFichaDeProducto", () => {
     await expect.element(campo("Alícuota de IVA")).toHaveValue("10.5");
     await expect.element(campo("Sección de la carta")).toHaveValue(SECCION);
     await expect.element(page.getByText("Producto vendible")).toBeVisible();
-    await expect.element(page.getByText("UNIDAD")).toBeVisible();
+    await expect.element(page.getByText("Kilogramo")).toBeVisible();
     expect(document.querySelector("[name=clase], [name=unidad]")).toBeNull();
   });
 
@@ -163,7 +163,7 @@ describe("FormularioDeFichaDeProducto", () => {
           seVende: false,
           nombreDeCocina: null,
           alicuota: null,
-          seccionDeCartaId: null,
+          seccion: null,
         }),
       ),
     );
@@ -183,6 +183,22 @@ describe("FormularioDeFichaDeProducto", () => {
     const datos = accion.mock.calls[0]?.[1] as FormData;
     expect(datos.has("alicuota")).toBe(false);
     expect(datos.has("seccionDeCartaId")).toBe(true);
+  });
+
+  it("una sección guardada y desactivada sale con su nombre, apagada, y no viaja (el servidor la conserva)", async () => {
+    const accion = vi.fn(ok);
+    const desactivada = { id: "vieja", nombre: "Postres de verano", activa: false };
+    await render(formulario(armarLaFicha({ ...FICHA, seccion: desactivada }), accion));
+    await expect.element(campo("Sección de la carta")).toBeDisabled();
+    await expect.element(campo("Sección de la carta")).toHaveValue("vieja");
+    await expect
+      .element(page.getByRole("option", { name: "Postres de verano" }))
+      .toBeInTheDocument();
+    tocar(guardar());
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    const datos = accion.mock.calls[0]?.[1] as FormData;
+    expect(datos.has("seccionDeCartaId")).toBe(false);
+    expect(datos.has("alicuota")).toBe(true);
   });
 
   it("un error que apunta a un campo se asocia a él (aria-invalid y aria-describedby) y no se repite debajo", async () => {

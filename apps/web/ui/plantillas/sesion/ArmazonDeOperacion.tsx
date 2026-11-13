@@ -5,6 +5,7 @@ import {
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import type { ClaveDeIcono } from "../../iconos/catalogo";
+import type { ClaveDeArea, ClaveDeFila } from "../../navegacion/menu";
 import { FranjaSinConexion } from "../../patrones/FranjaSinConexion.cliente";
 import { IndicadorDeSesion } from "../../patrones/IndicadorDeSesion.cliente";
 import {
@@ -14,16 +15,24 @@ import {
 } from "../PlantillaOperacion";
 import { BarraSuperior } from "./BarraSuperior";
 
-/** Cada módulo suma la clave de su destino: así la pantalla de ese módulo lo marca como actual. */
-type ClaveDeModulo = "comprobantes";
+/**
+ * La clave de un destino del menú: la de su pantalla (un área con una sola pantalla va directo a ella) o la de su área (con varias, se
+ * abre su hoja). Así la pantalla de ese destino lo marca como actual. Salen de la tabla del menú (`navegacion/menu.ts`), no se repiten a mano.
+ */
+type ClaveDeModulo = ClaveDeFila | ClaveDeArea;
 
-/** Un destino que suma un módulo habilitado a la barra inferior (las entradas las llenan los otros tramos). */
+/** Un destino del menú en la barra inferior: un área con lo que la persona puede ver hoy. Con `hoja`, reúne varias pantallas. */
 export type DestinoDeModulo = Readonly<{
   clave: ClaveDeModulo;
   href: string;
   /** El texto del destino, ya resuelto. */
   etiqueta: string;
   icono: ClaveDeIcono;
+  /** Las pantallas del área, por grupo, cuando son varias; las claves son las de sus pantallas. */
+  hoja?: readonly Readonly<{
+    etiqueta: string | null;
+    enlaces: readonly Readonly<{ clave: ClaveDeFila; etiqueta: string; href: string }>[];
+  }>[];
 }>;
 
 /** Cuál de los destinos de la barra es el de esta pantalla: uno de los fijos o el de su módulo. */
@@ -75,7 +84,21 @@ export function ArmazonDeOperacion({
       etiqueta: m.etiqueta,
       icono: m.icono,
       href: m.href,
-      actual: actual === m.clave,
+      actual:
+        actual === m.clave ||
+        (m.hoja?.some((g) => g.enlaces.some((e) => e.clave === actual)) ?? false),
+      ...(m.hoja === undefined
+        ? {}
+        : {
+            hoja: m.hoja.map((g) => ({
+              etiqueta: g.etiqueta,
+              enlaces: g.enlaces.map((e) => ({
+                etiqueta: e.etiqueta,
+                href: e.href,
+                actual: actual === e.clave,
+              })),
+            })),
+          }),
     })),
   });
   return (

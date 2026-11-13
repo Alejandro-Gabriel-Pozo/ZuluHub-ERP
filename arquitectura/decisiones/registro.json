@@ -1674,6 +1674,36 @@
     "motivo": "Es ajuste técnico de reintentos: la operación sigue siendo idempotente y no cambia ningún importe, permiso ni texto."
   },
   {
+    "id": "DEC-0358",
+    "fecha": "2026-11-13",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "La barra muestra el nombre del área (Ventas, Catálogo); con una sola pantalla visible lleva directo a ella y con varias abre una hoja con sus grupos.",
+    "que_cambia": "Hoy la barra dice Comprobantes; pasa a decir Ventas y lleva al mismo listado. Revertir: mostrar el nombre de la pantalla cuando el área tiene una sola.",
+    "donde": "Pedernal-docs 10-ux-ui/prototipos-gastronomia/menu-por-areas.html (versión 5) y decisiones-del-dueno-2026-11.md (12/11/2026, nombres de áreas); apps/web/servidor/modulos.ts"
+  },
+  {
+    "id": "DEC-0359",
+    "fecha": "2026-11-13",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "Los íconos de las áreas reutilizan los que ya existen: Ventas con el de Comprobantes y Catálogo con el de Secciones, hasta que el dueño elija otros.",
+    "que_cambia": "Qué ícono ve la persona sobre el nombre de cada área en la barra. Revertir: cambiar una fila de la tabla del menú.",
+    "donde": "Pedernal-docs menu-por-areas.html (los íconos quedaron por definir, decisiones-del-dueno-2026-11.md 12/11/2026); apps/web/ui/navegacion/menu.ts"
+  },
+  {
+    "id": "DEC-0360",
+    "fecha": "2026-11-13",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "En el menú entran solo pantallas que ya existen con su texto aprobado; Medios de pago usa su título actual y las demás pantallas de la maqueta se suman con su fila.",
+    "que_cambia": "El menú real muestra menos filas que la maqueta hasta que existan las pantallas. Medios de pago y cajas se rotula Medios de pago. Revertir: sumar filas a la tabla.",
+    "donde": "Pedernal-docs menu-por-areas.html (tabla de textos por aprobar); apps/web/ui/navegacion/menu.ts"
+  },
+  {
     "id": "DEC-0357",
     "fecha": "2026-11-13",
     "quien": "dueño",
