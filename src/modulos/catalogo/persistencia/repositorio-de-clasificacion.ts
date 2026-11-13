@@ -1,9 +1,5 @@
 import { sql, type Kysely } from "kysely";
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
-import {
-  clasificacionDelProducto,
-  type ClasificacionDelProducto,
-} from "../dominio/clasificacion-de-producto";
 import type { CatalogoDb } from "./esquema";
 import { FORMA_DE_UUID } from "./filas";
 
@@ -66,14 +62,10 @@ export interface RepositorioDeClasificacion {
   /** Un vínculo por su id (la clave de idempotencia del cambio), o `null`. */
   vinculo(empresa: EmpresaId, id: string): Promise<VinculoGuardado | null>;
   /**
-   * Lo que rige para el producto en `ahora` y lo programado (regla de `clasificacionDelProducto`, la misma de la vigencia del precio). Lee todos los vínculos del producto y
-   * resuelve acá, en la persistencia, para que las consultas no importen el dominio (ADR-005).
+   * Lo que rige para el producto: el ÚLTIMO vínculo guardado (el cambio rige desde el instante en que se guarda: sin fechas futuras ni cambios programados, decisión del dueño del
+   * 13/11/2026), o `null` si nunca se clasificó. El historial queda en las filas (solo inserción) y en la auditoría.
    */
-  clasificacionDelProducto(
-    empresa: EmpresaId,
-    productoId: string,
-    ahora: Date,
-  ): Promise<ClasificacionDelProducto<VinculoGuardado>>;
+  vigenteDelProducto(empresa: EmpresaId, productoId: string): Promise<VinculoGuardado | null>;
   /** Agrega un vínculo (solo inserción). */
   insertarVinculo(empresa: EmpresaId, alta: AltaDeVinculo): Promise<VinculoGuardado>;
 }
@@ -183,16 +175,17 @@ export function crearRepositorioDeClasificacion(
         .executeTakeFirst();
       return fila === undefined ? null : aVinculo(fila);
     },
-    async clasificacionDelProducto(empresa, productoId, ahora) {
-      if (!FORMA_DE_UUID.test(productoId)) return { vigente: null, programados: [] };
-      const filas = await db
+    async vigenteDelProducto(empresa, productoId) {
+      if (!FORMA_DE_UUID.test(productoId)) return null;
+      const fila = await db
         .selectFrom("clasificacion_de_producto")
         .select(COLUMNAS_DE_VINCULO)
         .where("empresa_id", "=", empresa)
         .where("producto_id", "=", productoId)
         .orderBy("vigente_desde", "desc")
-        .execute();
-      return clasificacionDelProducto(filas.map(aVinculo), ahora);
+        .limit(1)
+        .executeTakeFirst();
+      return fila === undefined ? null : aVinculo(fila);
     },
     async insertarVinculo(empresa, alta) {
       const fila = await db

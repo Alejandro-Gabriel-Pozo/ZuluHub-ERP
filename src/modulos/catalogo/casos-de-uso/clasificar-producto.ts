@@ -1,6 +1,5 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { vigenteDesdeDesdeTexto } from "../../../primitivas/tiempo/vigente-desde";
 import { esUuid } from "../dominio/identificadores";
 import { autorizar, exigirAlcanceTotal, traducir } from "./comun";
 import type { DependenciasDeCatalogo } from "./contrato";
@@ -14,22 +13,21 @@ export type EntradaDeClasificarProducto = Readonly<{
   productoId: string;
   /** El nodo (departamento o categoría) donde queda el producto; `null` = volver a «Sin elegir». */
   nodoId: string | null;
-  /** `YYYY-MM-DD`: desde qué día de Argentina rige (hoy o futuro, nunca pasado); `null` = desde ahora. */
-  desde: string | null;
 }>;
 export type SalidaDeClasificarProducto = Readonly<{
   vinculoId: string;
-  /** Desde cuándo rige: ahora (si no se dio fecha o es hoy) o la medianoche de Argentina de la fecha futura. */
+  /** Desde cuándo rige: el instante del guardado (el cambio rige solo desde ahora). */
   vigenteDesde: Date;
   yaExistia: boolean;
 }>;
 
 /**
- * Clasificar un producto (A2b, decisión 60; maqueta `clasificacion.html`): agrega un vínculo producto → nodo con la fecha desde la que rige. NO edita nada: el vínculo anterior
- * sigue (y queda además en la auditoría) y el que rige es el último con fecha hasta ahora; uno con fecha futura queda programado y convive con el vigente. Acción
- * `productos.editar` con alcance TODAS, como el resto de la ficha. El `id` lo manda la aplicación: repetir el mismo pedido (doble clic, reintento, o dos a la vez: el candado del árbol los serializa) devuelve el vínculo existente sin
- * duplicarlo ni volver a auditar, aunque ya pasara la fecha pedida; el mismo `id` con otro producto o nodo es `ID_REUTILIZADO`. El nodo tiene que existir en la empresa y estar
- * ACTIVO al asignarlo (un nodo desactivado después no se le saca al producto). Una fecha pasada se rechaza (tocaría la historia del producto): `FECHA_PASADA`.
+ * Clasificar un producto (A2b, decisión 60; maqueta `clasificacion.html`): agrega un vínculo producto → nodo que rige DESDE AHORA (decisión del dueño del 13/11/2026: sin fecha
+ * futura ni cambios programados, como los precios). NO edita nada: el vínculo anterior sigue (y queda además en la auditoría) y el que rige es el último guardado. Acción
+ * `productos.editar` con alcance TODAS, como el resto de la ficha. El `id` lo manda la aplicación: repetir el mismo pedido (doble clic, reintento, o dos a la vez: el candado del árbol
+ * los serializa) devuelve el vínculo existente sin duplicarlo ni volver a auditar; el mismo `id` con otro producto o nodo es `ID_REUTILIZADO`. El nodo tiene que existir en la
+ * empresa y estar ACTIVO al asignarlo (un nodo desactivado después no se le saca al producto). Dos cambios del mismo producto en el MISMO instante chocan con la única de la base
+ * (`CLASIFICACION_EN_ESA_FECHA`): el segundo se reintenta.
  */
 export function armarClasificarProducto(dependencias: DependenciasDeCatalogo) {
   return async function clasificarProducto(
@@ -63,8 +61,6 @@ export function armarClasificarProducto(dependencias: DependenciasDeCatalogo) {
             ? ok({ vinculoId: previo.id, vigenteDesde: previo.vigenteDesde, yaExistia: true })
             : err("ID_REUTILIZADO");
         }
-        const vigenteDesde = vigenteDesdeDesdeTexto(entrada.desde, contexto.ahora);
-        if (!vigenteDesde.ok) return vigenteDesde;
         const producto = await tx.productos.obtener(empresaId, entrada.productoId);
         if (producto === null) return err("PRODUCTO_NO_ENCONTRADO");
         if (entrada.nodoId !== null) {
@@ -72,16 +68,12 @@ export function armarClasificarProducto(dependencias: DependenciasDeCatalogo) {
           if (nodo === null) return err("NODO_INEXISTENTE");
           if (!nodo.activo) return err("NODO_DESACTIVADO");
         }
-        const { vigente: antes } = await tx.clasificacion.clasificacionDelProducto(
-          empresaId,
-          entrada.productoId,
-          contexto.ahora,
-        );
+        const antes = await tx.clasificacion.vigenteDelProducto(empresaId, entrada.productoId);
         const creado = await tx.clasificacion.insertarVinculo(empresaId, {
           id: entrada.id,
           productoId: entrada.productoId,
           nodoId: entrada.nodoId,
-          vigenteDesde: vigenteDesde.valor,
+          vigenteDesde: contexto.ahora,
           cargadoPor: contexto.personaId,
         });
         await tx.auditoria.registrar({
