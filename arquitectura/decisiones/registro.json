@@ -1631,5 +1631,15 @@
     "decision": "Todos los textos que ve el cliente se escriben en voseo («Revisá», «Ingresá», «vos»), nunca en usted; solo cambia la conjugación o el pronombre.",
     "que_cambia": "Cambia la redacción de 12 textos del catálogo fiscal que estaban en usted; el sentido no cambia. Revertir: volver a las formas anteriores. «Revisá los datos del cliente.» queda aprobado sin marca de provisoria.",
     "donde": "src/capacidades/vocabulario/catalogo-fiscal.ts; Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md, fila del 12/11, «apruebo la 1 y 2»"
+  },
+  {
+    "id": "DEC-0353",
+    "fecha": "2026-11-12",
+    "quien": "dueño",
+    "tipo": "CLIENTE",
+    "estado": "CONFIRMADA",
+    "decision": "Los textos de lista, ficha, alta y precio de productos son los de la maqueta productos.html, con «medida» y las seis alícuotas sin «IVA».",
+    "que_cambia": "Qué lee la persona en las pantallas de productos; no se agrega ningún texto fuera de la maqueta. «Categoría» queda sin cargar hasta que el dueño responda.",
+    "donde": "Pedernal-docs 10-ux-ui/prototipos-gastronomia/productos.html (Textos nuevos, 09/11/2026) y 11-especificaciones/decisiones-del-dueno-2026-11.md (12/11/2026); src/capacidades/vocabulario/catalogo-catalogo.ts"
   }
 ]
