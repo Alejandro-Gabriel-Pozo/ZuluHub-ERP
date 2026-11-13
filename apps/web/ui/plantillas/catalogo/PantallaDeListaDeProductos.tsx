@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Aviso } from "../../componentes/Aviso";
+import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../componentes/Insignia";
 import { FormularioDeFiltrosDeProductos } from "./FormularioDeFiltrosDeProductos.cliente";
 import estilos from "./PantallaDeListaDeProductos.module.css";
@@ -12,16 +13,19 @@ export type PropsDePantallaDeListaDeProductos = Readonly<{
   lista: ListaArmada | null;
   /** El error ya pintado (la página lo arma con el catálogo y la referencia). */
   error?: ReactNode;
+  /** «Nuevo producto», ya armado solo si la persona puede crear; sin él (o `null`) no se muestra: nace cerrado. */
+  nuevo?: Readonly<{ href: string; texto: string }> | null;
 }>;
 
 /**
  * La lista de productos (A1, T1; maqueta `productos.html`, 12/11/2026), solo lectura: los filtros y una tarjeta por producto, también los desactivados. Cada tarjeta dice el
- * nombre, su marca de estado, «clase · sección» («clase · —» si se vende y no tiene sección; solo la clase si no se vende) y el precio. Sin enlace a la ficha, sin «Nuevo producto» ni «Ocultar»: son de otros tramos. Una lista vacía dice «Sin resultados» (aviso informativo, el mismo patrón del listado de comprobantes). Una sola lista de tarjetas en celular y escritorio. Sin textos propios: todos llegan resueltos. El `h1` lo pone el armazón.
+ * nombre, su marca de estado, «clase · sección» («clase · —» si se vende y no tiene sección; solo la clase si no se vende) y el precio. «Nuevo producto» (al final, como el pie de la maqueta) solo si llega armado, es decir, si la persona puede crear. Sin enlace a la ficha ni «Ocultar»: son de otros tramos. Una lista vacía dice «Sin resultados» (aviso informativo, el mismo patrón del listado de comprobantes). Una sola lista de tarjetas en celular y escritorio. Sin textos propios: todos llegan resueltos. El `h1` lo pone el armazón.
  */
 export function PantallaDeListaDeProductos({
   filtros,
   lista,
   error,
+  nuevo = null,
 }: PropsDePantallaDeListaDeProductos) {
   return (
     <div className={estilos["raiz"]}>
@@ -64,6 +68,11 @@ export function PantallaDeListaDeProductos({
             </a>
           )}
         </>
+      )}
+      {nuevo === null ? null : (
+        <div>
+          <EnlaceDeAccion href={nuevo.href}>{nuevo.texto}</EnlaceDeAccion>
+        </div>
       )}
     </div>
   );

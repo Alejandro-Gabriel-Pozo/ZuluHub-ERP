@@ -329,6 +329,86 @@ describe.skipIf(base === null)(
     });
 
     describe("editar, desactivar y reactivar", () => {
+      it("editar parcial: omitir un campo guardado NO lo borra; null o vacío lo borra; el nombre ausente se conserva", async () => {
+        const seccionId = nuevoId();
+        valorDe(
+          await c.casos.crearSeccionDeCarta(e.gerente, {
+            id: seccionId,
+            nombre: nombreAlAzarDeProducto("Parcial"),
+            orden: 1,
+          }),
+        );
+        const codigo = `P${Date.now() % 1_000_000}`;
+        const p = await nuevoProducto({
+          nombreDeCocina: "Cocina larga",
+          descripcionEnCarta: "Una descripción",
+          codigo,
+          codigoDeBarras: "7790000000017",
+          seccionDeCartaId: seccionId,
+          alicuota: "10.5",
+        });
+        const nombre = String((await producto(p))?.["nombre"]);
+        const v1 = await version(p);
+        // Solo el nombre: todo lo demás queda como estaba.
+        const nuevoNombre = nombreAlAzarDeProducto("Parcial renombrado");
+        valorDe(
+          await c.casos.editarProducto(e.gerente, {
+            productoId: p,
+            versionEsperada: v1,
+            nombre: nuevoNombre,
+          }),
+        );
+        const a = await producto(p);
+        expect(a).toMatchObject({
+          nombre: nuevoNombre,
+          nombre_de_cocina: "Cocina larga",
+          descripcion_en_carta: "Una descripción",
+          codigo,
+          codigo_de_barras: "7790000000017",
+          seccion_de_carta_id: seccionId,
+          alicuota_iva: "10.5",
+        });
+        // Ni siquiera el nombre: ausente = no tocar. No cambia nada y no audita.
+        const v2 = await version(p);
+        const auditorias2 = await cambiosEn(p);
+        expect(
+          await c.casos.editarProducto(e.gerente, { productoId: p, versionEsperada: v2 }),
+        ).toEqual({
+          ok: true,
+          valor: { version: v2 },
+        });
+        expect(await cambiosEn(p)).toBe(auditorias2);
+        // `null` y vacío borran; lo que no se manda se conserva.
+        valorDe(
+          await c.casos.editarProducto(e.gerente, {
+            productoId: p,
+            versionEsperada: v2,
+            nombreDeCocina: null,
+            codigo: "",
+            seccionDeCartaId: null,
+          }),
+        );
+        const b = await producto(p);
+        expect(b).toMatchObject({
+          nombre: nuevoNombre,
+          nombre_de_cocina: null,
+          codigo: null,
+          seccion_de_carta_id: null,
+          descripcion_en_carta: "Una descripción",
+          codigo_de_barras: "7790000000017",
+          alicuota_iva: "10.5",
+        });
+        // La alícuota no se puede borrar de algo que se vende: sigue siendo obligatoria.
+        expect(
+          await c.casos.editarProducto(e.gerente, {
+            productoId: p,
+            versionEsperada: await version(p),
+            alicuota: null,
+          }),
+        ).toEqual({ ok: false, error: "ALICUOTA_REQUERIDA" });
+        expect(nombre).toBeTruthy();
+      });
+
       it("idempotente: repetir editarProducto ya aplicado devuelve lo vigente aunque la versión esperada sea vieja, sin escribir ni auditar", async () => {
         const id = await nuevoProducto();
         const nombre = String((await producto(id))?.["nombre"]);

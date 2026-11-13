@@ -6,12 +6,14 @@ import {
   ESTADOS_DEL_FILTRO,
   FILTROS_POR_DEFECTO,
   RUTA_DE_PRODUCTOS,
+  RUTA_DEL_ALTA_DE_PRODUCTO,
   armarLosFiltros,
   direccionDeLaLista,
   leerLaPagina,
   leerLosFiltros,
 } from "../../apps/web/ui/plantillas/catalogo/filtros-de-productos";
 import {
+  armarElEnlaceDeAlta,
   armarLaLista,
   type PaginaDeLaLista,
   type ProductoDeLaLista,
@@ -256,5 +258,19 @@ describe("armarLosFiltros: los textos del formulario", () => {
       { valor: "FALTA_COMPLETAR", etiqueta: "Falta completar" },
       { valor: "DESACTIVADO", etiqueta: "Desactivado" },
     ]);
+  });
+});
+
+describe("«Nuevo producto»", () => {
+  it("con permiso resuelto lleva al alta con el texto del catálogo; la ruta sale de la de productos", () => {
+    expect(RUTA_DEL_ALTA_DE_PRODUCTO).toBe(`${RUTA_DE_PRODUCTOS}/nuevo`);
+    expect(armarElEnlaceDeAlta(true)).toEqual({
+      href: "/catalogo/productos/nuevo",
+      texto: "Nuevo producto",
+    });
+  });
+  it("sin permiso o sin dato (ausente) no hay enlace: nace cerrado", () => {
+    expect(armarElEnlaceDeAlta(false)).toBeNull();
+    expect(armarElEnlaceDeAlta(undefined)).toBeNull();
   });
 });

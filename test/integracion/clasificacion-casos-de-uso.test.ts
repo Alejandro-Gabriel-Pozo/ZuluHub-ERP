@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import type { ContextoOperativo } from "../../src/contexto/contexto";
 import { MAXIMO_DE_NIVELES_DE_CLASIFICACION } from "../../src/primitivas/clasificacion/arbol";
 import { agotadaEnElResultado, repetirSiAgotada } from "./concurrencia-apoyo";
 import {
@@ -513,6 +514,217 @@ describe.skipIf(base === null)("clasificación comercial: casos de uso y consult
         ok: false,
         error: "NODO_INEXISTENTE",
       });
+    });
+  });
+
+  describe("clasificar un producto (vínculo que rige desde ahora)", () => {
+    // `comoEmpresa` fija el reloj en 2026-10-11 12:00Z. Dos cambios del mismo producto necesitan instantes distintos (la única de la base): `en` mueve el reloj.
+    const AHORA = new Date("2026-10-11T12:00:00Z");
+    const en = (contexto: ContextoOperativo, instante: string): ContextoOperativo => ({
+      ...contexto,
+      ahora: new Date(instante),
+    });
+    const producto = async (actor = e.gerente) =>
+      valorDe(
+        await c.casos.crearProducto(actor, {
+          id: nuevoId(),
+          claseDeUso: "VENDIBLE",
+          nombre: nombreAlAzarDeProducto(),
+          unidadBaseId: "UNIDAD",
+          alicuota: "21",
+        }),
+      ).productoId;
+    const clasificar = (
+      productoId: string,
+      nodoId: string | null,
+      id: string = nuevoId(),
+      actor = e.gerente,
+    ) => c.casos.clasificarProducto(actor, { id, productoId, nodoId });
+    const ficha = async (productoId: string, actor = e.operador) =>
+      valorDe(await c.consultas.verClasificacionDelProducto(actor, { productoId }));
+    const vinculos = (productoId: string) =>
+      c.contar("select count(*) as n from clasificacion_de_producto where producto_id = $1", [
+        productoId,
+      ]);
+
+    it("un producto sin clasificar está «Sin elegir»", async () => {
+      const p = await producto();
+      expect(await ficha(p)).toEqual({ vigente: null });
+    });
+
+    it("el operador ve la clasificación pero no la cambia; un administrador de una sola sucursal tampoco; sin persona, nadie", async () => {
+      const p = await producto();
+      const dep = await nodo();
+      expect(await clasificar(p, dep, nuevoId(), e.operador)).toEqual({
+        ok: false,
+        error: "SIN_PERMISO",
+      });
+      expect(await clasificar(p, dep, nuevoId(), e.administradorDeUnaSucursal)).toEqual({
+        ok: false,
+        error: "SUCURSAL_FUERA_DE_ALCANCE",
+      });
+      expect(await clasificar(p, dep, nuevoId(), { ...e.gerente, personaId: null })).toMatchObject({
+        ok: false,
+      });
+      expect(await vinculos(p)).toBe(0);
+      expect((await clasificar(p, dep, nuevoId(), e.administrador)).ok).toBe(true);
+    });
+
+    it("clasificar: repetir con el mismo id deja un vínculo y una auditoría; con otro producto o nodo, ID_REUTILIZADO", async () => {
+      const p = await producto();
+      const dep = await nodo();
+      const otro = await nodo();
+      const id = nuevoId();
+      expect(await clasificar(p, dep, id)).toEqual({
+        ok: true,
+        valor: { vinculoId: id, vigenteDesde: AHORA, yaExistia: false },
+      });
+      expect(await clasificar(p, dep, id)).toEqual({
+        ok: true,
+        valor: { vinculoId: id, vigenteDesde: AHORA, yaExistia: true },
+      });
+      // Aunque el reloj ya sea otro al repetir, es el mismo pedido y devuelve lo que ya existe.
+      expect(await clasificar(p, dep, id, en(e.gerente, "2026-10-12T09:00:00Z"))).toMatchObject({
+        ok: true,
+        valor: { vigenteDesde: AHORA, yaExistia: true },
+      });
+      expect(await vinculos(p)).toBe(1);
+      expect(await auditorias(p)).toBe(2); // el alta del producto y UN cambio de clasificación
+      const registro = await c.auditoria(e.empresa, "PRODUCTO_CLASIFICADO");
+      expect(registro.find((r) => r["entidad_id"] === p)).toMatchObject({
+        entidad: "producto",
+        actor_persona_id: e.personaDelGerente,
+        antes: { nodoId: null },
+        despues: { nodoId: dep, vigenteDesde: AHORA.toISOString() },
+      });
+      expect(await clasificar(p, otro, id)).toEqual({ ok: false, error: "ID_REUTILIZADO" });
+      expect(await clasificar(await producto(), dep, id)).toEqual({
+        ok: false,
+        error: "ID_REUTILIZADO",
+      });
+      expect(await clasificar(p, null, id)).toEqual({ ok: false, error: "ID_REUTILIZADO" });
+      expect(await vinculos(p)).toBe(1);
+    });
+
+    it("rige desde ahora y el último cambio es el que vale, con su camino y «Vigente desde»; se puede volver a «Sin elegir»", async () => {
+      const p = await producto();
+      const dep = await nodo();
+      const cat = await nodo(dep);
+      valorDe(await clasificar(p, dep));
+      const a = await ficha(p);
+      expect(a?.vigente).toMatchObject({ nodoId: dep, desde: AHORA });
+      expect(a?.vigente?.camino.map((x) => x.id)).toEqual([dep]);
+      // Un segundo cambio, más tarde, reemplaza al vigente: la ficha no tiene programados.
+      const tarde = en(e.gerente, "2026-10-12T15:00:00Z");
+      valorDe(await clasificar(p, cat, nuevoId(), tarde));
+      const b = await ficha(p);
+      expect(b?.vigente).toMatchObject({ nodoId: cat, desde: new Date("2026-10-12T15:00:00Z") });
+      expect(b?.vigente?.camino.map((x) => x.id)).toEqual([dep, cat]);
+      expect(Object.keys(b ?? {})).toEqual(["vigente"]);
+      // Volver a «Sin elegir» también es un cambio que rige desde ahora.
+      valorDe(await clasificar(p, null, nuevoId(), en(e.gerente, "2026-10-13T15:00:00Z")));
+      expect((await ficha(p))?.vigente).toMatchObject({ nodoId: null, camino: [] });
+      expect(await vinculos(p)).toBe(3);
+    });
+
+    it("valida el nodo, el producto y los identificadores; un nodo desactivado no se asigna pero el producto que ya lo tiene lo conserva", async () => {
+      const p = await producto();
+      const dep = await nodo();
+      const cat = await nodo(dep);
+      expect(await clasificar(p, nuevoId())).toEqual({ ok: false, error: "NODO_INEXISTENTE" });
+      expect(await clasificar(await producto(), dep, "no-es-uuid")).toEqual({
+        ok: false,
+        error: "IDENTIFICADOR_INVALIDO",
+      });
+      expect(await clasificar("no-es-uuid", dep)).toEqual({
+        ok: false,
+        error: "IDENTIFICADOR_INVALIDO",
+      });
+      expect(await clasificar(p, "no-es-uuid")).toEqual({
+        ok: false,
+        error: "IDENTIFICADOR_INVALIDO",
+      });
+      expect(await clasificar(nuevoId(), dep)).toEqual({
+        ok: false,
+        error: "PRODUCTO_NO_ENCONTRADO",
+      });
+      valorDe(await clasificar(p, cat));
+      valorDe(await c.casos.desactivarNodoDeClasificacion(e.gerente, { nodoId: cat }));
+      expect((await ficha(p))?.vigente?.nodoId).toBe(cat); // lo conserva
+      expect(await clasificar(await producto(), cat)).toEqual({
+        ok: false,
+        error: "NODO_DESACTIVADO",
+      });
+      expect(await vinculos(p)).toBe(1);
+    });
+
+    it("dos cambios con el mismo instante para un producto: el segundo se rechaza sin pisar al primero", async () => {
+      const p = await producto();
+      const dep = await nodo();
+      const otro = await nodo();
+      valorDe(await clasificar(p, dep));
+      expect(await clasificar(p, otro)).toEqual({ ok: false, error: "CLASIFICACION_EN_ESA_FECHA" });
+      expect((await ficha(p))?.vigente?.nodoId).toBe(dep);
+    });
+
+    it("la empresa B no ve ni cambia la clasificación de un producto de la empresa A", async () => {
+      const b = await c.escenario();
+      const p = await producto();
+      const dep = await nodo();
+      valorDe(await clasificar(p, dep));
+      const depB = valorDe(
+        await c.casos.crearNodoDeClasificacion(b.gerente, {
+          id: nuevoId(),
+          padreId: null,
+          nombre: nombreAlAzarDeProducto("De B"),
+        }),
+      ).nodoId;
+      expect(
+        valorDe(await c.consultas.verClasificacionDelProducto(b.gerente, { productoId: p })),
+      ).toBeNull();
+      expect(await clasificar(p, depB, nuevoId(), b.gerente)).toEqual({
+        ok: false,
+        error: "PRODUCTO_NO_ENCONTRADO",
+      });
+      const propio = valorDe(
+        await c.casos.crearProducto(b.gerente, {
+          id: nuevoId(),
+          claseDeUso: "VENDIBLE",
+          nombre: nombreAlAzarDeProducto("De B"),
+          unidadBaseId: "UNIDAD",
+          alicuota: "21",
+        }),
+      ).productoId;
+      expect(await clasificar(propio, dep, nuevoId(), b.gerente)).toEqual({
+        ok: false,
+        error: "NODO_INEXISTENTE",
+      });
+      expect(await vinculos(p)).toBe(1);
+    });
+
+    it("el mismo pedido a la vez crea un solo vínculo: uno es nuevo y el otro yaExistia", async () => {
+      const p = await producto();
+      const dep = await nodo();
+      const id = nuevoId();
+      c.armarBarrera(2);
+      let r1;
+      let r2;
+      try {
+        [r1, r2] = await Promise.all([
+          repetirSiAgotada(() => clasificar(p, dep, id), {
+            esAgotada: (r) => agotadaEnElResultado(r as never),
+          }),
+          repetirSiAgotada(() => clasificar(p, dep, id), {
+            esAgotada: (r) => agotadaEnElResultado(r as never),
+          }),
+        ]);
+      } finally {
+        c.soltarBarrera();
+      }
+      expect([r1, r2].every((r) => r.ok)).toBe(true);
+      expect([r1, r2].map((r) => (r.ok ? r.valor.yaExistia : null)).sort()).toEqual([false, true]);
+      expect(await vinculos(p)).toBe(1);
+      expect(await auditorias(p)).toBe(2);
     });
   });
 

@@ -1,13 +1,14 @@
 "use server";
 
 import type { ResultadoDeAccion } from "../../../servidor/acciones";
+import { darDeAltaElProducto } from "../../../servidor/alta-de-producto";
 import { guardarLaFicha } from "../../../servidor/ficha-de-producto";
 import { cambiarElPrecio } from "../../../servidor/precios-de-producto";
 
 // Las acciones de servidor de los productos, expuestas a Next. Finas a propósito (ADR-015, punto 2): la directiva `"use server"` tiene que ser lo primero de este archivo, así que
-// lo que hacen vive en `servidor/ficha-de-producto.ts` y `servidor/precios-de-producto.ts`. Las de formulario reciben el estado anterior que pasa `useActionState`. El id y la versión
-// del producto (y, en el precio, la clave del cambio y la fila vista) se ligan con `.bind` al armar la página: Next los cifra, no viajan en un campo. La empresa y la persona no
-// viajan: las decide el servidor.
+// lo que hacen vive en `servidor/ficha-de-producto.ts`, `servidor/precios-de-producto.ts` y `servidor/alta-de-producto.ts`. Las de formulario reciben el estado anterior que pasa `useActionState`. El id y la
+// versión del producto (y, en el precio, la clave del cambio y la fila vista; en el alta, la clave de creación) se ligan con `.bind` al armar la página: Next los cifra, no viajan en un campo. La
+// empresa y la persona no viajan: las decide el servidor.
 
 export async function guardarFichaAccion(
   productoId: string,
@@ -28,4 +29,14 @@ export async function cambiarPrecioAccion(
 ): Promise<ResultadoDeAccion> {
   void previo;
   return cambiarElPrecio(productoId, precioId, precioIdEsperado, datos);
+}
+
+/** El alta: la clave de creación la liga la página con `.bind` (cifrada, no viaja en un campo); la empresa y la persona las decide el servidor. */
+export async function crearProductoAccion(
+  claveDeCreacion: string,
+  previo: ResultadoDeAccion,
+  datos: FormData,
+): Promise<ResultadoDeAccion> {
+  void previo;
+  return darDeAltaElProducto(claveDeCreacion, datos);
 }
