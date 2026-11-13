@@ -48,11 +48,14 @@ describe.skipIf(base === null)("catálogo: la persistencia contra el esquema rea
        select indexname from pg_indexes where schemaname = 'public' and tablename = any($1) and indexdef like 'CREATE UNIQUE%'`,
       [TABLAS],
     );
-    // Las restricciones que lanzan los disparadores del catálogo: las de 0025, las de la carta pública (0043) y las de la clasificación comercial (0045).
+    // Las restricciones que lanzan los disparadores del catálogo: las de 0025, las de la carta pública (0043) y las de la clasificación comercial (0045 y 0046).
     const migraciones = await Promise.all(
-      ["0025_catalogo.sql", "0043_carta_publica.sql", "0045_clasificacion_comercial.sql"].map(
-        (archivo) => readFile(join(import.meta.dirname, "../../migraciones", archivo), "utf8"),
-      ),
+      [
+        "0025_catalogo.sql",
+        "0043_carta_publica.sql",
+        "0045_clasificacion_comercial.sql",
+        "0046_clasificacion_de_producto.sql",
+      ].map((archivo) => readFile(join(import.meta.dirname, "../../migraciones", archivo), "utf8")),
     );
     const deDisparadores = migraciones.flatMap((sql) =>
       [...sql.matchAll(/CONSTRAINT = '(\w+)'/g)].map((m) => m[1] as string),
