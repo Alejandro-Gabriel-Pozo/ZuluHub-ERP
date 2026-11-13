@@ -3,7 +3,7 @@ import type { EmpresaNoOpera } from "../../contexto/estados";
 import type { MotivoDeRechazo } from "../permisos/guard";
 import { CATALOGO_DE_TEXTOS, type ClaveDeTexto } from "../vocabulario/catalogo";
 import { CLAVES_DE_ERRORES_DE_CAJA } from "./respuesta-de-caja";
-import { CLAVES_DE_ERRORES_DE_CATALOGO } from "./respuesta-de-catalogo";
+import { CLAVES_DE_ERRORES_DE_CATALOGO, PARAMETROS_DE_CATALOGO } from "./respuesta-de-catalogo";
 import {
   CODIGOS_PUBLICOS,
   clasificarError,
@@ -304,5 +304,110 @@ describe("errorPublicoDe, errorInesperado y errorDeCodigo", () => {
 describe("las claves de texto de los errores son del catálogo", () => {
   it("el tipo de la clave del error público es una clave del catálogo", () => {
     expectTypeOf(errorDeCodigo("SIN_PERMISO").clave).toEqualTypeOf<ClaveDeTexto>();
+  });
+});
+
+describe("los parámetros públicos de un error (A1, T3: el importe vigente del precio que otra persona cambió)", () => {
+  const con = (parametros: unknown, codigo = "CATALOGO_PRECIO_DESACTUALIZADO") =>
+    clasificarError({ codigo, campo: "precio", parametros });
+
+  it("pasa el importe declarado por el código, y solo ese", () => {
+    expect(con({ importe: "13000.000000", otro: "1", precioId: "x" })).toEqual({
+      tipo: "PUBLICO",
+      codigo: "CATALOGO_PRECIO_DESACTUALIZADO",
+      campo: "precio",
+      parametros: { importe: "13000.000000" },
+    });
+    expect(con({ importe: "0" })).toHaveProperty("parametros", { importe: "0" });
+    expect(con({ importe: "1.5" })).toHaveProperty("parametros", { importe: "1.5" });
+  });
+
+  const GENERICO = { tipo: "PUBLICO", codigo: "CATALOGO_ACCION_NO_PERMITIDA" };
+
+  it.each([
+    ["texto libre", "Hola"],
+    ["con signo", "-5.00"],
+    ["con coma", "13000,00"],
+    ["con exponente", "1e3"],
+    ["con 7 decimales", "1.1234567"],
+    ["con 19 enteros", "1".repeat(19)],
+    ["fuera del rango de numeric(18,6)", "1".repeat(13)],
+    ["vacío", ""],
+    ["un número", 13000],
+    ["marcado", "<b>1</b>"],
+    ["con salto de línea final", "1\n"],
+    ["con espacio", " 1"],
+    ["con dígitos Unicode", "١٢٣"],
+    ["con dígitos de ancho completo", "１２３"],
+  ])(
+    "un importe %s no pasa: el error CIERRA con el genérico, sin parámetros ni campo",
+    (_caso, importe) => {
+      expect(con({ importe })).toEqual(GENERICO);
+    },
+  );
+
+  it("un importe malformado nunca deja el marcador `{importe}` en el texto que sale", () => {
+    for (const importe of ["Hola", "1\n", "١٢٣", "-1", "1e3", 5, null, undefined]) {
+      const c = con({ importe });
+      if (c.tipo !== "PUBLICO") throw new Error("se esperaba un código público");
+      const error = errorPublicoDe(c);
+      expect(error.codigo).toBe("CATALOGO_ACCION_NO_PERMITIDA");
+      expect(error).not.toHaveProperty("parametros");
+      expect(CATALOGO_DE_TEXTOS[error.clave].porDefecto).not.toContain("{importe}");
+    }
+  });
+
+  it("sin parámetros, con parámetros que no son un objeto o sin el importe: el genérico", () => {
+    expect(con(undefined)).toEqual(GENERICO);
+    expect(con("13000.00")).toEqual(GENERICO);
+    expect(con(null)).toEqual(GENERICO);
+    expect(con({})).toEqual(GENERICO);
+  });
+
+  it("el código solo, como texto, también exige sus parámetros: el genérico", () => {
+    expect(clasificarError("CATALOGO_PRECIO_DESACTUALIZADO")).toEqual(GENERICO);
+    expect(errorDeCodigo("CATALOGO_PRECIO_DESACTUALIZADO").codigo).toBe(
+      "CATALOGO_ACCION_NO_PERMITIDA",
+    );
+  });
+
+  it("un `Clasificado` hecho a mano sin parámetros tampoco arma el código específico", () => {
+    const error = errorPublicoDe({ tipo: "PUBLICO", codigo: "CATALOGO_PRECIO_DESACTUALIZADO" });
+    expect(error.codigo).toBe("CATALOGO_ACCION_NO_PERMITIDA");
+    expect(error).not.toHaveProperty("campo");
+  });
+
+  it("un importe heredado por el prototipo no cuenta: solo valen los parámetros propios", () => {
+    const heredado = Object.create({ importe: "13000.00" }) as unknown;
+    expect(con(heredado)).toEqual(GENERICO);
+  });
+
+  it("un código que no declara parámetros los descarta aunque vengan bien formados", () => {
+    expect(con({ importe: "1.00" }, "YA_ES_MIEMBRO")).not.toHaveProperty("parametros");
+    expect(con({ importe: "1.00" }, "CATALOGO_PRECIO_INVALIDO")).not.toHaveProperty("parametros");
+  });
+
+  it.each(["toString", "constructor", "__proto__", "hasOwnProperty", "valueOf"])(
+    "un nombre heredado de Object.prototype (%s) no es un parámetro declarado ni un código público",
+    (nombre) => {
+      expect(Object.hasOwn(PARAMETROS_DE_CATALOGO, nombre)).toBe(false);
+      expect(con({ importe: "1" }, nombre).tipo).toBe("INESPERADO");
+      expect(clasificarError(nombre).tipo).toBe("INESPERADO");
+    },
+  );
+
+  it("el error público lleva los parámetros que clasificó; sin ellos, no trae la clave", () => {
+    const c = con({ importe: "13000.00" });
+    if (c.tipo !== "PUBLICO") throw new Error("se esperaba un código público");
+    expect(errorPublicoDe(c)).toEqual({
+      codigo: "CATALOGO_PRECIO_DESACTUALIZADO",
+      clave: "catalogo.precio.vigente_ahora",
+      presentacion: "AVISO",
+      campo: "precio",
+      parametros: { importe: "13000.00" },
+    });
+    const sin = clasificarError("SIN_PERMISO");
+    if (sin.tipo !== "PUBLICO") throw new Error("se esperaba un código público");
+    expect(errorPublicoDe(sin)).not.toHaveProperty("parametros");
   });
 });
