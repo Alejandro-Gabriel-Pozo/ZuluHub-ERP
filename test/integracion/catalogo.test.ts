@@ -1488,6 +1488,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "creada_en",
             // 0036: la versión de la variante se sella al insertar
             "variante_version_de_opcion_id",
+            // 0047: el camino de clasificación se sella al insertar
+            "departamento_id",
+            "camino_de_clasificacion",
           ].map((c) => `linea_cuenta.${c}`),
           ...[
             "empresa_id",
