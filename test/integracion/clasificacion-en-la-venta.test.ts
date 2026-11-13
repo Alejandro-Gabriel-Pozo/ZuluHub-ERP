@@ -51,13 +51,23 @@ describe.skipIf(base === null)("clasificación comercial en la venta (0047)", ()
       "insert into clasificacion_de_producto (empresa_id, producto_id, nodo_id, vigente_desde, cargado_por) values ($1, $2, $3, $4, $5)",
       [e.empresa, productoId, nodoId, desde, e.gerente.personaId],
     );
+  let departamentoEnContexto: string | null = null;
+  const departamentoDeLaCuenta = async (): Promise<string> =>
+    (departamentoEnContexto ??= await nodo("Contexto de la cuenta"));
   // El reloj fijo del contexto de ventas es el 09/11/2026 15:00Z (12:00 en Argentina).
   const antes = "2026-11-01T00:00:00Z";
 
   /** Agrega una línea del producto a una cuenta nueva y devuelve la fila sellada de `linea_cuenta`. */
   const vender = async (productoId: string, contexto = e.gerente) => {
     const cuenta = nuevoId();
-    valorDe(await m.casos.abrirCuenta(contexto, { cuentaId: cuenta, sucursalId: e.sucursal }));
+    // A2c: con dos o más departamentos en la empresa hay que elegir uno al abrir la cuenta (aquí, uno propio de la prueba: es independiente del del producto).
+    valorDe(
+      await m.casos.abrirCuenta(contexto, {
+        cuentaId: cuenta,
+        sucursalId: e.sucursal,
+        departamentoId: await departamentoDeLaCuenta(),
+      }),
+    );
     const linea = nuevoId();
     valorDe(
       await m.casos.agregarLinea(contexto, {
@@ -167,7 +177,13 @@ describe.skipIf(base === null)("clasificación comercial en la venta (0047)", ()
     await vincular(p, dep1, antes);
     const { cuenta, linea } = await vender(p);
     const destino = nuevoId();
-    valorDe(await m.casos.abrirCuenta(e.gerente, { cuentaId: destino, sucursalId: e.sucursal }));
+    valorDe(
+      await m.casos.abrirCuenta(e.gerente, {
+        cuentaId: destino,
+        sucursalId: e.sucursal,
+        departamentoId: await departamentoDeLaCuenta(),
+      }),
+    );
     await vincular(p, dep2, "2026-11-08T00:00:00Z");
     const nueva = nuevoId();
     valorDe(

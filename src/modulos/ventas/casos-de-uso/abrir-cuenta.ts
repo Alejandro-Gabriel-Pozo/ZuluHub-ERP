@@ -3,6 +3,7 @@ import type { PersonaId } from "../../../primitivas/identificadores/marca";
 import { sucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { anclaValida, etiquetaDeCuenta, type Ancla } from "../dominio/ancla";
+import { departamentoDeLaCuenta } from "../dominio/departamento";
 import { cuentaId, type CuentaId } from "../dominio/identificadores";
 import type { Cuenta } from "../persistencia/repositorio-de-cuentas";
 import {
@@ -22,6 +23,11 @@ export type EntradaDeAbrirCuenta = Readonly<{
   /** Lo manda la pantalla: es la clave de idempotencia del alta. */
   cuentaId: string;
   sucursalId: string;
+  /**
+   * A2c: el departamento en el que se abre (el del selector de la pantalla; se fija y no cambia). Ausente: con dos o más departamentos activos es
+   * `DEPARTAMENTO_REQUERIDO` (nunca se asume «todos»); con uno solo lo toma; sin departamentos queda sin departamento (`departamentoDeLaCuenta`).
+   */
+  departamentoId?: string | undefined;
   ancla?: Ancla | undefined;
   etiqueta?: string | undefined;
 }>;
@@ -31,11 +37,18 @@ export type SalidaDeAbrirCuenta = Readonly<{ cuentaId: CuentaId; yaExistia: bool
 /** ¿La cuenta ya guardada es lo que este pedido pediría? (mismo id y mismo contenido → repetición). */
 function esLoMismo(
   guardada: Cuenta,
-  pedido: Readonly<{ sucursal: string; ancla: Ancla | null; etiqueta: string | null }>,
+  pedido: Readonly<{
+    sucursal: string;
+    ancla: Ancla | null;
+    etiqueta: string | null;
+    /** Solo si el pedido lo nombró: una repetición que no lo manda acepta el que quedó guardado. */
+    departamentoId: string | undefined;
+  }>,
 ): boolean {
   return (
     guardada.sucursalId === pedido.sucursal &&
     guardada.etiqueta === pedido.etiqueta &&
+    (pedido.departamentoId === undefined || guardada.departamentoId === pedido.departamentoId) &&
     (guardada.ancla === null
       ? pedido.ancla === null
       : pedido.ancla !== null &&
@@ -78,6 +91,7 @@ export async function abrirCuentaEnTx(
     sucursal,
     ancla: ancla === null ? null : ancla.valor,
     etiqueta: etiqueta === null ? null : etiqueta.valor,
+    departamentoId: entrada.departamentoId,
   };
 
   const id = cuentaId(entrada.cuentaId);
@@ -91,9 +105,22 @@ export async function abrirCuentaEnTx(
     const ocupada = await tx.cuentas.abiertaPorAncla(empresaId, pedido.ancla);
     if (ocupada !== null) return ok({ cuentaId: ocupada.id, yaExistia: true });
   }
+  // El departamento se decide recién acá, sobre lo que hay AHORA en la empresa, y solo para una cuenta nueva (la repetición ya devolvió la guardada).
+  let departamento: string | null;
+  if (opciones.departamentoDeLaMadre !== undefined) {
+    departamento = opciones.departamentoDeLaMadre.id;
+  } else {
+    const elegido = departamentoDeLaCuenta(
+      await tx.clasificacion.todos(empresaId),
+      entrada.departamentoId,
+    );
+    if (!elegido.ok) return elegido;
+    departamento = elegido.valor;
+  }
   const insertada = await tx.cuentas.insertar(empresaId, {
     id,
     sucursalId: sucursal,
+    departamentoId: departamento,
     ancla: pedido.ancla,
     etiqueta: pedido.etiqueta,
     abiertaPor: persona,
@@ -113,6 +140,7 @@ export async function abrirCuentaEnTx(
     entidadId: id,
     despues: {
       sucursalId: sucursal,
+      departamentoId: departamento,
       anclaTipo: pedido.ancla === null ? null : pedido.ancla.tipo,
       anclaId: pedido.ancla === null ? null : pedido.ancla.id,
       etiqueta: pedido.etiqueta,

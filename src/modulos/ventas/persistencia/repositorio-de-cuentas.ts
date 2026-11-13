@@ -69,6 +69,7 @@ export interface RepositorioDeCuentasSolas {
 type FilaDeCuenta = Readonly<{
   id: string;
   sucursal_id: string;
+  departamento_id: string | null;
   ancla_tipo: string | null;
   ancla_id: string | null;
   etiqueta: string | null;
@@ -87,6 +88,7 @@ function aCuenta(f: FilaDeCuenta): Cuenta {
   return {
     id: cuentaId(f.id),
     sucursalId: sucursalId(f.sucursal_id),
+    departamentoId: f.departamento_id,
     ancla:
       f.ancla_tipo === null || f.ancla_id === null ? null : { tipo: f.ancla_tipo, id: f.ancla_id },
     etiqueta: f.etiqueta,
@@ -111,6 +113,7 @@ export function crearRepositorioDeCuentas(db: Kysely<VentasDb>): RepositorioDeCu
       .select([
         "id",
         "sucursal_id",
+        "departamento_id",
         "ancla_tipo",
         "ancla_id",
         "etiqueta",
@@ -132,6 +135,7 @@ export function crearRepositorioDeCuentas(db: Kysely<VentasDb>): RepositorioDeCu
           id: alta.id,
           empresa_id: empresa,
           sucursal_id: alta.sucursalId,
+          departamento_id: alta.departamentoId,
           ancla_tipo: alta.ancla === null ? null : alta.ancla.tipo,
           ancla_id: alta.ancla === null ? null : alta.ancla.id,
           etiqueta: alta.etiqueta,

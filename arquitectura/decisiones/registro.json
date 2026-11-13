@@ -1712,5 +1712,65 @@
     "decision": "En la receta se carga el BRUTO y neto = bruto * (1 - merma): 300 g con 10 % de merma son 270 g. Costo y descuento de stock usan el bruto. Merma de 100 % o más se rechaza.",
     "que_cambia": "La cantidad de cada componente pasa a ser bruto (sin migración): cambia el costo y lo que descuenta una receta con merma. La ficha muestra el neto calculado.",
     "donde": "Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md (13/11/2026: «Bruto, cargo el bruto. Cargo los 300 gr que corté y le defino una merma»); src/modulos/stock/dominio/merma.ts"
+  },
+  {
+    "id": "DEC-0362",
+    "fecha": "2026-11-13",
+    "quien": "dueño",
+    "tipo": "DATOS",
+    "estado": "CONFIRMADA",
+    "decision": "El departamento elegido se fija a la cuenta de venta al abrirla y no cambia; la caja y sus movimientos no lo llevan.",
+    "que_cambia": "Qué hecho lleva el departamento: la cuenta y, por ella, su ticket y su cobro; los reportes por departamento salen de la cuenta.",
+    "donde": "Pedernal-docs decisiones-del-dueno-2026-11.md (13/11/2026, respuesta con opciones relatada); migraciones/0048_departamento_en_la_cuenta.sql"
+  },
+  {
+    "id": "DEC-0363",
+    "fecha": "2026-11-13",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "CONFIRMADA",
+    "decision": "Sin departamento pedido: con 0 activos la cuenta queda sin departamento, con 1 toma ese y con 2 o más se exige elegir (Ventas cerrada hasta elegir; nunca «todos»).",
+    "que_cambia": "Una pantalla sin selector abre cuentas solo si hay 0 o 1 departamentos; con 2 o más tiene que mandar el elegido. Revertir: exigir elegir también con uno.",
+    "donde": "src/modulos/ventas/dominio/departamento.ts (A2c); confirmada por el dueño el 13/11/2026 (relatado)"
+  },
+  {
+    "id": "DEC-0364",
+    "fecha": "2026-11-13",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "CONFIRMADA",
+    "decision": "Solo se unen cuentas del mismo departamento.",
+    "que_cambia": "Unir mesas de departamentos distintos se rechaza. Revertir: permitir y decidir a cuál pertenece lo unido.",
+    "donde": "src/modulos/salon/casos-de-uso/unir.ts (A2c); confirmada por el dueño el 13/11/2026 (relatado)"
+  },
+  {
+    "id": "DEC-0365",
+    "fecha": "2026-11-13",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "CONFIRMADA",
+    "decision": "El departamento de la cuenta es independiente del de cada producto vendido: vender uno de otro departamento no se bloquea.",
+    "que_cambia": "Vender un producto de otro departamento no se bloquea. Revertir: validar contra la clasificación del producto.",
+    "donde": "migraciones/0048_departamento_en_la_cuenta.sql (A2c); confirmada por el dueño el 13/11/2026 (relatado)"
+  },
+  {
+    "id": "DEC-0366",
+    "fecha": "2026-11-13",
+    "quien": "sesión",
+    "tipo": "PERMISOS",
+    "estado": "CONFIRMADA",
+    "decision": "Sin alcance por departamento en la primera versión: todos los roles con acceso a Ventas ven todos los departamentos y pueden abrir cuentas en cualquiera activo.",
+    "que_cambia": "No hay roles ni asignaciones por departamento todavía. Revertir: agregar alcance por departamento como el de sucursales.",
+    "donde": "src/modulos/ventas/casos-de-uso/abrir-cuenta.ts (A2c); confirmada por el dueño el 13/11/2026 (relatado por el orquestador)"
+  },
+  {
+    "id": "DEC-0367",
+    "fecha": "2026-11-13",
+    "quien": "sesión",
+    "tipo": "CLIENTE",
+    "estado": "CONFIRMADA",
+    "decision": "El texto para elegir departamento es «Elegí un departamento» (aprobado por el dueño).",
+    "que_cambia": "Qué lee la persona en el selector cuando hay dos o más departamentos; sin fuente aprobada (misma forma que «Elegí una sucursal»). No se agrega hasta la parte web.",
+    "donde": "A2c (b), selector web; confirmada por el dueño el 13/11/2026 (relatado)"
   }
 ]

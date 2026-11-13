@@ -52,6 +52,8 @@ export type EntradaDeVenderYCobrar = Readonly<{
   /** El id del ejemplar ORIGINAL del ticket. */
   ejemplarId: string;
   sucursalId: string;
+  /** A2c: el departamento del selector (se fija al abrir la cuenta). Ver `EntradaDeAbrirCuenta.departamentoId`. */
+  departamentoId?: string | undefined;
   lineas: readonly LineaDeLaVenta[];
   /** Lo que el cajero vio en pantalla: si el total de ahora es otro, no se cobra nada (`PRECIO_CAMBIO`). */
   totalEsperado: Readonly<{ moneda: string; monto: string }>;
@@ -167,7 +169,11 @@ async function vender(
     tx,
     contexto,
     persona.valor,
-    { cuentaId: entrada.cuentaId, sucursalId: entrada.sucursalId },
+    {
+      cuentaId: entrada.cuentaId,
+      sucursalId: entrada.sucursalId,
+      departamentoId: entrada.departamentoId,
+    },
     opciones,
   );
   if (!abierta.ok) return abierta;

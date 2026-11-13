@@ -84,6 +84,12 @@ export const ERRORES_DE_VENTAS_POR_RESTRICCION: Readonly<Record<string, string>>
   cuenta_consumo_empresa_id_fkey: "NO_TRADUCIDA",
   cuenta_consumo_pkey: "NO_TRADUCIDA",
   cuenta_consumo_resuelta_por_fkey: "NO_TRADUCIDA",
+  // 0048 (A2c): el departamento con el que se abre la cuenta. Los casos de uso lo validan antes (`departamentoDeLaCuenta`); si la base salta por la carrera con
+  // otro cambio del árbol, sale el mismo error de negocio. Que cambie después no lo provoca ningún caso de uso: es un defecto.
+  cuenta_departamento_fkey: "DEPARTAMENTO_NO_ENCONTRADO",
+  cuenta_departamento_inactivo: "DEPARTAMENTO_INACTIVO",
+  cuenta_departamento_inmutable: "INVARIANTE_DE_VENTAS",
+  cuenta_departamento_no_es_departamento: "DEPARTAMENTO_NO_ENCONTRADO",
   cuenta_estado_ck: "NO_TRADUCIDA",
   cuenta_etiqueta_ck: "ETIQUETA_INVALIDA",
   cuenta_id_empresa_uk: "NO_TRADUCIDA",
