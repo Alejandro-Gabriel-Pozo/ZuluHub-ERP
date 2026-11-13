@@ -11,6 +11,7 @@ import {
   type ErrorDeCotizacion,
   type InstantaneaDeProducto,
 } from "../dominio/cotizar";
+import { ocultoPor } from "../dominio/carta-publica";
 import type { FilaDePrecio } from "../dominio/modelo";
 import type { LecturasDeCatalogo } from "./contrato";
 
@@ -75,6 +76,17 @@ export async function cotizarParaVender(
   const sucursal = await tx.sucursales.obtener(empresaId, entrada.sucursalId);
   if (sucursal === null) return err("SUCURSAL_NO_ENCONTRADA");
   if (!sucursal.activa) return err("SUCURSAL_INACTIVA");
+  // Carta real T8 (decisión del dueño, 12/11/2026: «oculto: que no aparezca ni en conteos, ni en carta/pos»): una línea NUEVA de un producto oculto en esta sucursal (la empresa
+  // o el local lo ocultan) no se carga. Quien ya tiene la línea cargada no vuelve a cotizar: se cobra con su precio congelado.
+  const oculto = ocultoPor(
+    await tx.disponibilidadDeProductos.queAlcanzanAlLocal(
+      empresaId,
+      producto.id,
+      entrada.sucursalId,
+    ),
+    entrada.sucursalId,
+  );
+  if (oculto !== null) return err("PRODUCTO_OCULTO");
   const cantidad = comprobarCantidad(producto, entrada.cantidad);
   if (!cantidad.ok) return cantidad;
 
