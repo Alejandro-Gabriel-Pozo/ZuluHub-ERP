@@ -112,6 +112,9 @@ export type VentasDb = {
     variante_version_de_opcion_id: string | null;
     /** 0038 (E7): el importe exacto de una línea compartida (copia COMPARTIDA); nulo en toda otra línea. */
     importe_fijo: string | null;
+    /** 0047: el camino de clasificación sellado al vender (el departamento y el arreglo `[{id, nombre}]`); nulos juntos en una línea sin clasificar o anterior. */
+    departamento_id: string | null;
+    camino_de_clasificacion: unknown;
   };
   /** 0038 (E7): de qué línea viene cada copia (unir, dividir, anular una parte de un ítem enviado). Solo inserción. */
   linea_copiada: {
@@ -288,6 +291,8 @@ export const COLUMNAS_DE_VENTAS = {
     "version",
     "variante_version_de_opcion_id",
     "importe_fijo",
+    "departamento_id",
+    "camino_de_clasificacion",
   ],
   linea_copiada: ["empresa_id", "linea_nueva_id", "linea_origen_id", "modo", "creado_en"],
   linea_cuenta_opcion: [

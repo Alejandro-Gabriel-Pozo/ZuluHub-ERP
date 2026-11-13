@@ -136,6 +136,9 @@ export const ERRORES_DE_VENTAS_POR_RESTRICCION: Readonly<Record<string, string>>
   grupo_orden_ck: "NO_TRADUCIDA",
   grupo_total_ck: "NO_TRADUCIDA",
   linea_alicuota_ck: "NO_TRADUCIDA",
+  // 0047: el camino de clasificación sellado en el renglón (lo arma `cotizarParaVender`, la base es la defensa en profundidad)
+  linea_clasificacion_ck: "NO_TRADUCIDA",
+  linea_departamento_fkey: "NO_TRADUCIDA",
   linea_alta_invalida: "NO_TRADUCIDA",
   linea_anulada_ck: "NO_TRADUCIDA",
   linea_anulada_congelada: "NO_TRADUCIDA",

@@ -22,6 +22,7 @@ import {
   prepararCaso,
   repetirSiOtroGano,
   UNICAS_DE_LA_CORRECCION,
+  REINTENTOS_EN_LA_SESION_DE_CAJA,
 } from "./comun";
 import type { DependenciasDeCaja } from "./contrato";
 import { DECLARACIONES } from "./declaraciones";
@@ -101,7 +102,7 @@ export function armarCorregirMedioDeCobro({ transacciones, reglas }: Dependencia
     let vigenteAlEmpezar: string | null = null;
     const ejecutar = () =>
       transacciones.ejecutar(
-        { contexto },
+        { contexto, reintentos: REINTENTOS_EN_LA_SESION_DE_CAJA },
         async (
           tx,
         ): Promise<

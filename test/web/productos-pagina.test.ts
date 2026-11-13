@@ -7,7 +7,7 @@ import { errorDeCodigo, type Respuesta } from "../../src/capacidades/experiencia
 
 /**
  * La página de la lista de productos (A1, T1): lee los filtros y la página de la dirección, pide la lista al servidor con el contexto de la empresa y SOLO con lo que la
- * dirección declara (una clase o un estado desconocido vuelve a «Todos»), y pinta cada situación con su texto del catálogo: la lista, la lista vacía (sin texto) y los errores
+ * dirección declara (una clase o un estado desconocido vuelve a «Todos»), y pinta cada situación con su texto del catálogo: la lista, la lista vacía («Sin resultados») y los errores
  * (el del guard con su motivo; el inesperado con la referencia y sin el código crudo). Un solo `h1`, el del armazón. Sin entrada en la barra: se llega por la dirección.
  */
 vi.mock("server-only", () => ({}));
@@ -89,6 +89,7 @@ const PAGINA = {
       nombre: "Milanesa napolitana",
       claseDeUso: "VENDIBLE",
       estado: "ACTIVO",
+      seccion: "Platos principales",
       precio: { tipo: "EMPRESA", importe: "9000.00" },
     },
     {
@@ -96,6 +97,7 @@ const PAGINA = {
       nombre: "Harina 000",
       claseDeUso: "MATERIA_PRIMA",
       estado: "DESACTIVADO",
+      seccion: null,
       precio: null,
     },
   ],
@@ -150,6 +152,34 @@ describe("la página de la lista de productos", () => {
     expect(t).toContain("Página siguiente");
   });
 
+  it("cada fila dice «clase · sección»; vendible sin sección, «clase · —» con el guion oculto al lector; no vendible, solo la clase", async () => {
+    responde({
+      ok: true,
+      dato: {
+        ...PAGINA,
+        productos: [
+          ...PAGINA.productos,
+          {
+            id: "a3",
+            nombre: "Gaseosa",
+            claseDeUso: "REVENTA",
+            estado: "ACTIVO",
+            seccion: null,
+            precio: { tipo: "SIN_PRECIO" },
+          },
+        ],
+      },
+    });
+    const t = await texto();
+    expect(t).toContain("Producto vendible · Platos principales");
+    expect(t).toContain("Materia prima");
+    expect(t).not.toContain("Materia prima ·");
+    expect(t).toContain("Reventa · —");
+    expect(await html()).toContain('<span aria-hidden="true"> · —</span>');
+    expect(t.match(/—/g)).toHaveLength(1);
+    expect(t).not.toContain("Sin resultados");
+  });
+
   it("pide la lista con el contexto del servidor y lo que dice la dirección", async () => {
     await html({ texto: " mila ", clase: "VENDIBLE", estado: "FALTA_COMPLETAR", despues: "x:y" });
     expect(servidor.llamadas).toEqual([
@@ -190,12 +220,25 @@ describe("la página de la lista de productos", () => {
     expect(await texto()).not.toContain("Página siguiente");
   });
 
-  it("una lista vacía no dice nada: ni avisos ni texto nuevo, pero los filtros siguen", async () => {
+  it("una lista vacía dice «Sin resultados», sin tarjetas y con los filtros", async () => {
     responde({ ok: true, dato: { productos: [], siguiente: null } });
     const t = await texto();
     expect(t).toContain("Buscar");
+    expect(t).toContain("Sin resultados");
     expect(await html()).not.toMatch(/_tarjeta_/);
     expect(t).not.toContain("Página siguiente");
+  });
+
+  it("una búsqueda sin coincidencias dice «Sin resultados» y deja el texto buscado en el formulario", async () => {
+    responde({ ok: true, dato: { productos: [], siguiente: null } });
+    const marcado = await html({ texto: "zzz" });
+    expect(marcado).toContain('value="zzz"');
+    expect(await texto({ texto: "zzz" })).toContain("Sin resultados");
+  });
+
+  it("con un error no se dice «Sin resultados»", async () => {
+    responde({ ok: false, error: errorDeCodigo("MODULO_EN_DESARROLLO") });
+    expect(await texto()).not.toContain("Sin resultados");
   });
 
   it("el motivo del guard (el módulo en desarrollo) sale con su texto y sin lista", async () => {

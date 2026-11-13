@@ -21,6 +21,7 @@ export type ErrorDeCotizacion =
   | "PRODUCTO_INACTIVO"
   | "PRODUCTO_NO_VENDIBLE"
   | "PRODUCTO_SIN_ALICUOTA"
+  | "CLASIFICACION_INCONSISTENTE"
   | "SUCURSAL_NO_ENCONTRADA"
   | "SUCURSAL_INACTIVA"
   | "CANTIDAD_INVALIDA"
@@ -118,6 +119,15 @@ export type OpcionCotizada = Readonly<{
   recargo: string;
   origenDelRecargo: OrigenDelRecargo;
   seMuestraEnCarta: boolean;
+}>;
+
+/**
+ * El camino de clasificación comercial de un producto, del departamento hasta su nodo, con el nombre de cada uno AL VENDER (A2b, decisión 60): lo que el renglón de venta
+ * copia para que renombrar, mover o reclasificar después no cambie lo vendido. `null` = el producto estaba «Sin elegir».
+ */
+export type ClasificacionDelRenglon = Readonly<{
+  departamentoId: string;
+  camino: readonly Readonly<{ id: string; nombre: string }>[];
 }>;
 
 /** Lo que cotizar devuelve (§3.6): todo dinero como texto decimal exacto; lo que ventas congela en la línea sale de acá. */

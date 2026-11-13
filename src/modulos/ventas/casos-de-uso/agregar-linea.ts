@@ -13,7 +13,7 @@ import {
 } from "../../../primitivas/dinero/precio-unitario";
 import { precioDeVentaDesdeTexto } from "../../../primitivas/dinero/precio-de-venta";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { cotizarParaVender, type InstantaneaDeProducto } from "../../catalogo/publico";
+import { cotizarParaVender, type CotizacionParaVender } from "../../catalogo/publico";
 import { comprobarCantidadDeLinea } from "../dominio/cantidad-de-linea";
 import { confirmacionesDesdeTexto, decidirAgregarLinea } from "../dominio/decisiones";
 import { decidirPrecioDeLaLinea, importeDePrecioAbierto } from "../dominio/precio-abierto";
@@ -176,7 +176,7 @@ export async function agregarLineaEnTx(
     ahora: contexto.ahora,
   });
   if (!cotizacion.ok) return cotizacion;
-  const instantanea: InstantaneaDeProducto = cotizacion.valor;
+  const instantanea: CotizacionParaVender = cotizacion.valor;
   const cotizado =
     instantanea.precioUnitario === null
       ? null
@@ -245,6 +245,8 @@ export async function agregarLineaEnTx(
     unidadDeVenta: instantanea.unidadDeVentaId,
     pasoDeCantidad: instantanea.pasoMinimo,
     alicuota: instantanea.alicuota,
+    // El camino de clasificación del producto AL VENDER (0047): leído por `cotizarParaVender` en esta misma transacción.
+    clasificacion: instantanea.clasificacion,
     controlaStock,
     creadaPor: persona,
     creadaEn: contexto.ahora,

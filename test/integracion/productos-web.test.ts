@@ -19,7 +19,7 @@ import {
 import { comoEmpresa } from "./entorno";
 
 /**
- * La lista de productos de la web (`productos-web.ts`, A1 T1) contra una base real y los roles reales: lo que la pantalla recibe (solo id, nombre, clase, estado y precio, con el
+ * La lista de productos de la web (`productos-web.ts`, A1 T1) contra una base real y los roles reales: lo que la pantalla recibe (solo id, nombre, clase, estado, el nombre de la sección y precio, con el
  * importe como texto), cada filtro, la paginación por nombre, que una empresa no ve los productos de otra, que el permiso y el módulo en desarrollo los decide la consulta y que un
  * fallo inesperado sale sin detalle. Las consultas del catálogo en sí (guard, filtros, páginas) tienen su prueba en `catalogo-casos-de-uso.test.ts`.
  * Concurrencia, idempotencia y auditoría NO aplican: es una lectura (aquí se comprueba que no escribe nada).
@@ -72,7 +72,7 @@ describe.skipIf(base === null)("lista de productos de la web", () => {
   const nombres = async (entrada: EntradaDeLaLista, contexto = e.gerente) =>
     (await lista(entrada, contexto)).productos.map((p) => p.nombre);
 
-  it("la lista trae los productos de la empresa, también los desactivados, con solo id, nombre, clase, estado y precio", async () => {
+  it("la lista trae los productos de la empresa, también los desactivados, con solo id, nombre, clase, estado, sección y precio", async () => {
     const x = await c.escenario();
     const conPrecio = await productoDeBase(c.dueno, x.empresa, { nombre: "Alfajor" });
     await precioDeBase(c.dueno, {
@@ -100,8 +100,47 @@ describe.skipIf(base === null)("lista de productos de la web", () => {
     ]);
     expect(pagina.siguiente).toBeNull();
     for (const p of pagina.productos) {
-      expect(Object.keys(p).sort()).toEqual(["claseDeUso", "estado", "id", "nombre", "precio"]);
+      expect(Object.keys(p).sort()).toEqual([
+        "claseDeUso",
+        "estado",
+        "id",
+        "nombre",
+        "precio",
+        "seccion",
+      ]);
     }
+  });
+
+  it("la fila trae el NOMBRE de la sección de la carta, también si está desactivada, y nada más de ella; sin sección, null", async () => {
+    const x = await c.escenario();
+    const seccion = async (nombre: string, activa: boolean) => {
+      const id = randomUUID();
+      await c.dueno.query(
+        "insert into seccion_de_carta (id, empresa_id, nombre, nombre_clave, orden, activa) values ($1, $2, $3, $4, $5, $6)",
+        [id, x.empresa, nombre, nombre.toLowerCase(), 0, activa],
+      );
+      return id;
+    };
+    const platos = await seccion("Platos", true);
+    const postres = await seccion("Postres", false);
+    const poner = async (nombre: string, seccionId: string | null) => {
+      const id = await productoDeBase(c.dueno, x.empresa, { nombre });
+      await c.dueno.query("update producto set seccion_de_carta_id = $2 where id = $1", [
+        id,
+        seccionId,
+      ]);
+    };
+    await poner("Asado", platos);
+    await poner("Budín", postres);
+    await poner("Chipá", null);
+    const pagina = await lista(SIN_FILTROS, x.gerente);
+    expect(pagina.productos.map((p) => [p.nombre, p.seccion])).toEqual([
+      ["Asado", "Platos"],
+      ["Budín", "Postres"],
+      ["Chipá", null],
+    ]);
+    expect(JSON.stringify(pagina)).not.toContain(platos);
+    expect(JSON.stringify(pagina)).not.toContain(postres);
   });
 
   it("el importe sale como texto decimal, nunca como número (ADR-006)", async () => {

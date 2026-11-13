@@ -137,6 +137,8 @@ export async function copiarLineaEnTx(
     unidadDeVenta: origen.unidadDeVenta,
     pasoDeCantidad: origen.pasoDeCantidad,
     alicuota: origen.alicuota,
+    // Una copia conserva lo congelado de la línea de origen (precio, alícuota y también el camino de clasificación): no se vuelve a leer del producto.
+    clasificacion: origen.clasificacion,
     controlaStock: entrada.controlaStock ?? origen.controlaStock,
     importeFijo: entrada.importeFijo ?? null,
     creadaPor: persona,

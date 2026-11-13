@@ -7,7 +7,35 @@ import {
 import { insertarIdempotente } from "../../catalogo/publico";
 import { cuentaId, esUuid, lineaId, type CuentaId, type LineaId } from "../dominio/identificadores";
 import type { VentasDb } from "./esquema";
-import type { AltaDeLinea, CopiaDeLinea, Linea, OpcionDeLinea } from "./modelo-de-cuentas";
+import type {
+  AltaDeLinea,
+  ClasificacionDeLinea,
+  CopiaDeLinea,
+  Linea,
+  OpcionDeLinea,
+} from "./modelo-de-cuentas";
+
+/**
+ * El camino sellado de una línea (0047), leído de las dos columnas. La base garantiza que son nulas juntas y que el arreglo tiene la forma `[{id, nombre}]`; si no la tiene,
+ * el dato está dañado y NO se interpreta (se corta la lectura en lugar de mostrar un camino inventado).
+ */
+function aClasificacion(departamento: string | null, camino: unknown): ClasificacionDeLinea | null {
+  if (departamento === null && camino === null) return null;
+  const nodos = Array.isArray(camino) ? (camino as unknown[]) : null;
+  if (departamento === null || nodos === null || nodos.length === 0) {
+    throw new Error("el camino de clasificación de la línea está dañado");
+  }
+  return {
+    departamentoId: departamento,
+    camino: nodos.map((n) => {
+      const { id, nombre } = n as { id?: unknown; nombre?: unknown };
+      if (typeof id !== "string" || typeof nombre !== "string") {
+        throw new Error("el camino de clasificación de la línea está dañado");
+      }
+      return { id, nombre };
+    }),
+  };
+}
 
 /**
  * Persistencia de las líneas de una cuenta y la foto de sus opciones (E4 §3.3 y §3.4). Todo corre dentro de la transacción del caso de uso,
@@ -55,6 +83,8 @@ export function crearRepositorioDeLineas(db: Kysely<VentasDb>): RepositorioDeLin
         "alicuota",
         "controla_stock",
         "importe_fijo",
+        "departamento_id",
+        "camino_de_clasificacion",
         "estado",
         "anulada_por",
         "anulada_en",
@@ -124,6 +154,7 @@ export function crearRepositorioDeLineas(db: Kysely<VentasDb>): RepositorioDeLin
     alicuota: f.alicuota,
     controlaStock: f.controla_stock,
     importeFijo: f.importe_fijo,
+    clasificacion: aClasificacion(f.departamento_id, f.camino_de_clasificacion),
     estado: f.estado,
     anuladaPor: f.anulada_por === null ? null : personaId(f.anulada_por),
     anuladaEn: f.anulada_en,
@@ -156,6 +187,15 @@ export function crearRepositorioDeLineas(db: Kysely<VentasDb>): RepositorioDeLin
           alicuota: alta.alicuota,
           controla_stock: alta.controlaStock,
           importe_fijo: alta.importeFijo ?? null,
+          departamento_id:
+            alta.clasificacion === undefined || alta.clasificacion === null
+              ? null
+              : alta.clasificacion.departamentoId,
+          // `pg` manda un arreglo de JavaScript como arreglo de Postgres: el JSON va como texto.
+          camino_de_clasificacion:
+            alta.clasificacion === undefined || alta.clasificacion === null
+              ? null
+              : JSON.stringify(alta.clasificacion.camino),
           creada_por: alta.creadaPor,
           creada_en: alta.creadaEn,
         });

@@ -15,6 +15,7 @@ import {
   esReintentable,
   traducirErrorDeBase,
 } from "./errores";
+import { esperaDelReintento } from "./espera-del-reintento";
 import { tomarPozo } from "./pozos";
 
 export { ErrorDeConfiguracion };
@@ -92,8 +93,6 @@ export const VIDA_MAXIMA_DE_LA_UNIDAD_EN_MS = 60_000;
 // SERIALIZABLE puede abortar transacciones sin conflicto real (falsos positivos del detector, más
 // frecuentes con tablas chicas); por eso se reintenta con espera creciente y al azar (ADR-004).
 const REINTENTOS_POR_DEFECTO = 6;
-const ESPERA_BASE_EN_MS = 10;
-const ESPERA_MAXIMA_EN_MS = 250;
 
 const esperar = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms));
 
@@ -313,9 +312,7 @@ export function crearTransacciones<Tx>(
       } catch (error) {
         if (esReintentable(error)) {
           if (intento >= reintentos) return err({ tipo: "ConcurrenciaAgotada" });
-          await esperar(
-            Math.min(ESPERA_MAXIMA_EN_MS, ESPERA_BASE_EN_MS * 2 ** intento) * (0.5 + Math.random()),
-          );
+          await esperar(esperaDelReintento(intento));
           continue;
         }
         const traducido = traducirErrorDeBase(error);
