@@ -1772,5 +1772,25 @@
     "decision": "El texto para elegir departamento es «Elegí un departamento» (aprobado por el dueño).",
     "que_cambia": "Qué lee la persona en el selector cuando hay dos o más departamentos; sin fuente aprobada (misma forma que «Elegí una sucursal»). No se agrega hasta la parte web.",
     "donde": "A2c (b), selector web; confirmada por el dueño el 13/11/2026 (relatado)"
+  },
+  {
+    "id": "DEC-0368",
+    "fecha": "2026-11-13",
+    "quien": "dueño",
+    "tipo": "DATOS",
+    "estado": "CONFIRMADA",
+    "decision": "La carta pública deja de verse sola si la empresa baja de plan o pierde el módulo; cada visita lo evalúa con la regla de derechos de uso, y el rol público lee solo columnas mínimas de plan y módulos.",
+    "que_cambia": "Cuatro permisos de lectura por columna y cuatro políticas por código de carta (0050); una prueba lista las columnas exactas. Revertir: reversión de 0050 (sin pérdida de datos) y mirar el plan solo al poner la carta en línea.",
+    "donde": "migraciones/0050_plan_en_la_lectura_publica_de_carta.sql; test/integracion/carta-publica-plan.test.ts y carta-publica-lectura.test.ts (C-6); carta-real-especificacion.md riesgo R3; decisiones-del-dueno-2026-11.md (13/11/2026, «Carta pública y plan (T6)»)"
+  },
+  {
+    "id": "DEC-0369",
+    "fecha": "2026-11-13",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El rol público lee también `plan_id` y `numero` de `version_de_plan`: identificadores sin datos del negocio que el cálculo de derechos pide.",
+    "que_cambia": "Dos columnas más en un permiso de lectura (nada de nombre comercial ni precios); sirven para calcular los derechos con la misma función que el resto del sistema sin una segunda lectura del plan. Revertir: quitarlas del permiso y rellenar el cálculo sin ellas (medio día).",
+    "donde": "migraciones/0050_plan_en_la_lectura_publica_de_carta.sql; test/integracion/carta-publica-lectura.test.ts (C-6); supuesto del ingeniero sobre la decisión DEC-0368"
   }
 ]

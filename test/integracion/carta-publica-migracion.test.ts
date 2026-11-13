@@ -24,6 +24,11 @@ const REVERSION = join(
   import.meta.dirname,
   "../../migraciones/reversiones/0043_revertir_carta_publica.sql",
 );
+/** 0050 (el plan en la lectura pública) se revierte primero de todo: también mira `carta_publica`, y 0044 es su requisito. */
+const REVERSION_DEL_PLAN = join(
+  import.meta.dirname,
+  "../../migraciones/reversiones/0050_revertir_plan_en_la_lectura_publica_de_carta.sql",
+);
 /** 0044 (la lectura pública del catálogo) se revierte ANTES: sus políticas miran `carta_publica`. */
 const REVERSION_DE_LA_LECTURA = join(
   import.meta.dirname,
@@ -438,6 +443,7 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
         await expect(correr()).rejects.toMatchObject({ code: "2BP01" });
         expect((await c.query("select to_regclass('carta_publica') as t")).rows[0]).toBeDefined();
         await c.query("begin");
+        await c.query(await readFile(REVERSION_DEL_PLAN, "utf8"));
         await c.query(await readFile(REVERSION_DE_LA_LECTURA, "utf8"));
         await c.query("commit");
         // Con una carta cargada: frena sin confirmación y no deja nada hecho.

@@ -7,6 +7,8 @@ import { CADENAS_DE_CONFIANZA_DE_ARCA } from "./cadenas-de-confianza-de-arca";
 import { crearEgresoDeCaja } from "./egreso-de-caja";
 import { crearIvaDeLaEmpresa } from "./iva-de-la-empresa";
 import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../capacidades/permisos/empresa";
+import { CATALOGO_DE_MODULOS } from "../capacidades/modulos/catalogo";
+import { CATALOGO_DE_PERILLAS } from "../capacidades/planes/perillas";
 import {
   crearCasosDeUsoDeCaja,
   crearConsultasDeCaja,
@@ -109,7 +111,10 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
      * sigue con la carta de ejemplo hasta que T5 la corte y la pantalla lea de acá.
      */
     vidrieraPublica: perezoso(() =>
-      crearVidrieraPublica(conexiones.transaccionesPublicas(), reloj),
+      crearVidrieraPublica(conexiones.transaccionesPublicas(), reloj, {
+        catalogoDeModulos: CATALOGO_DE_MODULOS,
+        catalogoDePerillas: CATALOGO_DE_PERILLAS,
+      }),
     ),
     autenticacion: () => conexiones.autenticacion(),
     barridoDeAutenticacion: () => conexiones.barridoDeAutenticacion(),

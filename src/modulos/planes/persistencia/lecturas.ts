@@ -170,3 +170,27 @@ export function crearLecturaDePlanes(db: Kysely<PlanesDb>): LecturaDePlanes {
     },
   };
 }
+
+/**
+ * Los módulos que una empresa tiene ACTIVOS (`modulo_de_empresa.activo`), tal como los ve quien consulta: con la aplicación, la RLS limita a la empresa del
+ * contexto; con la puerta pública de la carta (T6), a la empresa de la carta pedida (0050). Es solo lo que la empresa activó: si el plan lo deja usar lo decide
+ * `estadoDeModulos`. El filtro por empresa se repite a propósito (defensa en profundidad).
+ */
+export interface LecturaDeModulosActivados {
+  deLaEmpresa(empresa: EmpresaId): Promise<readonly string[]>;
+}
+
+export function crearLecturaDeModulosActivados(db: Kysely<PlanesDb>): LecturaDeModulosActivados {
+  return {
+    async deLaEmpresa(empresa) {
+      const filas = await db
+        .selectFrom("modulo_de_empresa")
+        .select("modulo")
+        .where("empresa_id", "=", empresa)
+        .where("activo", "=", true)
+        .orderBy("modulo")
+        .execute();
+      return filas.map((f) => f.modulo);
+    },
+  };
+}

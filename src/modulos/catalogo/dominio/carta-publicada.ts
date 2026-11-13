@@ -1,6 +1,6 @@
 import { estadoEfectivo, puedeOperar } from "../../../contexto/estados";
 import type { EstadoDeEmpresa, EstadoDeTenant } from "../../../contexto/estados";
-import type { SucursalId } from "../../../primitivas/identificadores/marca";
+import type { EmpresaId, SucursalId, TenantId } from "../../../primitivas/identificadores/marca";
 import type {
   GrupoConRecargos,
   OpcionConRecargo,
@@ -66,6 +66,9 @@ export type CartaLeida = Readonly<{
     sucursalId: SucursalId;
   }>;
   sucursalActiva: boolean;
+  /** La empresa dueña de la carta y su tenant: con ellos la puerta pública lee el plan (T6), siempre acotado por el código de la carta. */
+  empresaId: EmpresaId;
+  tenantId: TenantId;
   /** La marca del tenant de la empresa (`tenant.marca_id`). */
   marcaId: string;
   estadoDeLaEmpresa: EstadoDeEmpresa;
