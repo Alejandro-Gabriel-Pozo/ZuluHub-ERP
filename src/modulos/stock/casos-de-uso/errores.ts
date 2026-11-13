@@ -46,6 +46,8 @@ export type ErrorDeStock =
   | "PRODUCTO_INACTIVO"
   | "CLASE_NO_CONTROLABLE"
   | "ARTICULO_EN_COMPOSICION_ACTIVA"
+  /** Carta real T9: el producto está oculto en la sucursal del depósito: no recibe existencia ni se cuenta (primero se vuelve a mostrar). */
+  | "PRODUCTO_OCULTO"
   // movimientos
   | "DEPOSITO_INACTIVO"
   | "DEPOSITO_DE_DESTINO_NO_ENCONTRADO"

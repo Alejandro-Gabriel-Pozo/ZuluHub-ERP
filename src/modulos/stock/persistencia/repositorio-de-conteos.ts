@@ -107,6 +107,15 @@ export interface RepositorioDeConteos extends LecturasDeConteo {
   listar(empresa: EmpresaId, filtro: FiltroDeConteos): Promise<Conteo[]>;
   /** Cuántos conteos hay abiertos en esa sucursal (para el aporte al cierre del día). */
   contarAbiertosDe(empresa: EmpresaId, sucursal: SucursalId): Promise<number>;
+  /**
+   * ¿Hay un conteo ABIERTO con cargas (al menos un registro) de este artículo en algún depósito del alcance? `sucursal` nula = toda la empresa. Lo usa el catálogo (por
+   * el puerto de la composición) para no ocultar ni desactivar un producto que alguien está contando.
+   */
+  abiertoConCargasDelArticulo(
+    empresa: EmpresaId,
+    articuloId: string,
+    sucursal: SucursalId | null,
+  ): Promise<boolean>;
 }
 
 export function crearRepositorioDeConteos(db: Kysely<StockDb>): RepositorioDeConteos {
@@ -336,6 +345,19 @@ export function crearRepositorioDeConteos(db: Kysely<StockDb>): RepositorioDeCon
         db,
       );
       return Number(rows[0]?.n ?? "0");
+    },
+
+    async abiertoConCargasDelArticulo(empresa, articuloId, sucursal) {
+      if (!esUuid(articuloId)) return false;
+      const { rows } = await sql<{ uno: number }>`
+        select 1 as uno
+          from conteo_registro r
+          join conteo_fisico c on c.id = r.conteo_id and c.empresa_id = r.empresa_id
+          join deposito d on d.id = c.deposito_id and d.empresa_id = c.empresa_id
+         where r.empresa_id = ${empresa} and r.articulo_id = ${articuloId}::uuid and c.estado = 'ABIERTO'
+           ${sucursal === null ? sql`` : sql`and d.sucursal_id = ${sucursal}::uuid`}
+         limit 1`.execute(db);
+      return rows.length > 0;
     },
   };
 }

@@ -91,6 +91,7 @@ export const ERRORES_DE_STOCK_POR_RESTRICCION: Readonly<Record<string, string>> 
   renglon_deposito_inactivo: "DEPOSITO_INACTIVO",
   renglon_deposito_de_uso_restringido: "MOTIVO_NO_PERMITIDO",
   renglon_articulo_inactivo: "ARTICULO_NO_CONTROLADO",
+  renglon_producto_oculto: "PRODUCTO_OCULTO",
   stock_existencia_negativa_bloqueada: "NO_TRADUCIDA",
   stock_existencia_negativa_sin_confirmar: "NO_TRADUCIDA",
   // saldo_de_stock
@@ -127,6 +128,8 @@ export const ERRORES_DE_STOCK_POR_RESTRICCION: Readonly<Record<string, string>> 
   conteo_registro_existencia_ck: "NO_TRADUCIDA",
   conteo_registro_conteo_cerrado: "CONTEO_CERRADO",
   conteo_registro_articulo_inactivo: "ARTICULO_NO_CONTROLADO",
+  // 0049 (carta real T9): un producto oculto no se cuenta ni recibe existencia.
+  conteo_registro_producto_oculto: "PRODUCTO_OCULTO",
   conteo_registro_contado_en_ck: "FECHA_FUTURA_NO_ADMITIDA",
   // motivo_de_diferencia (0042)
   motivo_de_diferencia_pkey: "NO_TRADUCIDA",

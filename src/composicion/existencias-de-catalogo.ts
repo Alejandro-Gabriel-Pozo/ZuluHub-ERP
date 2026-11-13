@@ -1,16 +1,15 @@
 import { randomBytes } from "node:crypto";
-import type { EmpresaId } from "../primitivas/identificadores/marca";
-import type { ExistenciasDelProducto } from "../modulos/catalogo/publico";
+import { sucursalId } from "../primitivas/identificadores/marca";
+import type { AlcanceDeExistencia, ExistenciasDelProducto } from "../modulos/catalogo/publico";
 import type { TxDeApp } from "./conexiones";
 
 /**
- * El puerto que le contesta al catálogo «¿tiene este producto existencia o un conteo abierto con cargas?» (carta real §6.5, T-6): la composición es el ÚNICO lugar
- * donde se tocan catálogo y stock, con la MISMA transacción (`TxDeApp` contiene los repositorios de los dos).
- *
- * PROVISORIO HASTA T9 (el lado de stock de la carta real): hoy responde con lo que ya existe, sin tocar el módulo de stock y FALLANDO CERRADO. Un producto SIN
- * artículo de stock no tiene existencia ni conteos (`false`: se oculta y se desactiva siempre; es el caso del cliente actual, que no controla stock). Un producto CON
- * artículo de stock se responde `true` (con existencia y con conteo): no se oculta ni se desactiva hasta que T9 mire los saldos y los conteos de verdad. Es más
- * estricto de lo que debe, nunca más laxo. T9 reemplaza este archivo.
+ * El puerto que le contesta al catálogo «¿tiene este producto existencia o un conteo abierto con cargas?» (carta real §6.5, T-6 y T9): la composición es el ÚNICO lugar
+ * donde se tocan catálogo y stock, con la MISMA transacción (`TxDeApp` contiene los repositorios de los dos). Un producto SIN artículo de stock no tiene existencia ni
+ * conteos (`false`: se oculta y se desactiva sin más; es el caso de un cliente que no controla stock). Con artículo, se mira de verdad: la existencia DISTINTA DE CERO
+ * (también negativa) en los depósitos del alcance (la empresa entera, o los de ese local) y si algún conteo ABIERTO de esos depósitos tiene cargas de ese artículo.
+ * Es solo una lectura: lo que impide el estado «oculto con existencia» no es este puerto sino los disparadores de la base (`0049`), que rechazan sumar existencia y
+ * contar un producto oculto aunque el código se olvide. Reemplaza al provisorio de T2, que respondía «sí» a todo producto con artículo.
  */
 function comoTxDeApp(tx: object): TxDeApp {
   if (!("articulosDeStock" in tx)) {
@@ -19,13 +18,32 @@ function comoTxDeApp(tx: object): TxDeApp {
   return tx as TxDeApp;
 }
 
+const sucursalDelAlcance = (alcance: AlcanceDeExistencia): string | null =>
+  alcance.tipo === "EMPRESA" ? null : alcance.sucursalId;
+
 export function crearExistenciasDeCatalogo(): ExistenciasDelProducto {
-  const tieneArticulo = async (tx: object, empresa: EmpresaId, productoId: string) =>
-    (await comoTxDeApp(tx).articulosDeStock.porProducto(empresa, productoId)) !== null;
   return {
-    conExistencia: (tx, contexto, productoId) => tieneArticulo(tx, contexto.empresaId, productoId),
-    conConteoAbiertoConCargas: (tx, contexto, productoId) =>
-      tieneArticulo(tx, contexto.empresaId, productoId),
+    async conExistencia(tx, contexto, productoId, alcance) {
+      const stock = comoTxDeApp(tx);
+      const articulo = await stock.articulosDeStock.porProducto(contexto.empresaId, productoId);
+      if (articulo === null) return false;
+      return stock.movimientosDeStock.conExistenciaDelArticulo(
+        contexto.empresaId,
+        articulo.id,
+        sucursalDelAlcance(alcance),
+      );
+    },
+    async conConteoAbiertoConCargas(tx, contexto, productoId, alcance) {
+      const stock = comoTxDeApp(tx);
+      const articulo = await stock.articulosDeStock.porProducto(contexto.empresaId, productoId);
+      if (articulo === null) return false;
+      const sucursal = sucursalDelAlcance(alcance);
+      return stock.conteosDeStock.abiertoConCargasDelArticulo(
+        contexto.empresaId,
+        articulo.id,
+        sucursal === null ? null : sucursalId(sucursal),
+      );
+    },
   };
 }
 
