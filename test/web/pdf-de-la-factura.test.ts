@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { entradaDelPdf, nombreDelArchivoPdf } from "../../apps/web/pantallas/pdf-de-la-factura";
-import {
-  formatearFecha,
-  formatearImporte,
-} from "../../apps/web/ui/patrones/formato-fiscal";
+import { formatearFecha, formatearImporte } from "../../apps/web/ui/patrones/formato-fiscal";
 import { qrDeFacturaComoSvg } from "../../src/adaptadores/qr/qr-de-factura";
 import {
   CaracterNoSoportadoEnElPdf,
