@@ -79,6 +79,7 @@ const TABLAS_DE_NEGOCIO = [
   // Catálogo (0025_catalogo)
   "unidad_de_medida",
   "seccion_de_carta",
+  "nodo_de_clasificacion", // 0045
   "producto",
   "grupo_de_elecciones",
   "opcion",
@@ -521,6 +522,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "unidad_de_medida",
             "version_de_opcion",
           ].map((t) => `${t}:SELECT`), // 0025
+          "nodo_de_clasificacion:SELECT", // 0045
           "carta_publica:SELECT", // 0043
           "disponibilidad_de_producto:SELECT", // 0043
         ].sort(),
@@ -684,6 +686,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...["activa", "orden"].map((c) => `pedernal_app:opcion.${c}`),
           ...["activa", "nombre", "nombre_clave", "orden"].map(
             (c) => `pedernal_app:seccion_de_carta.${c}`,
+          ),
+          // 0045: la clasificación comercial; el padre solo cambia al mover (el disparador exige las reglas del árbol)
+          ...["activo", "nombre", "nombre_clave", "padre_id"].map(
+            (c) => `pedernal_app:nodo_de_clasificacion.${c}`,
           ),
           "pedernal_app:persona.usuario_auth_id", // 0010: solo el vínculo con el usuario, y solo en INVITACION
           // 0026: la jornada del cierre del día cambia de estado y de marcas (la máquina de estados la impone el disparador)
@@ -1265,6 +1271,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         ].map((c) => `producto.${c}`),
         ...["empresa_id", "id", "nombre", "nombre_clave", "orden"].map(
           (c) => `seccion_de_carta.${c}`,
+        ),
+        // 0045: la clasificación comercial
+        ...["empresa_id", "id", "nombre", "nombre_clave", "padre_id"].map(
+          (c) => `nodo_de_clasificacion.${c}`,
         ),
         ...[
           "cargada_por",
