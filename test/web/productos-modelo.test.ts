@@ -28,6 +28,7 @@ const producto = (cambios: Partial<ProductoDeLaLista> = {}): ProductoDeLaLista =
   nombre: "Milanesa",
   claseDeUso: "VENDIBLE",
   estado: "ACTIVO",
+  seccion: null,
   precio: { tipo: "EMPRESA", importe: "9000.00" },
   ...cambios,
 });
@@ -60,8 +61,29 @@ describe("armarLaLista: la fila", () => {
       nombre: "Milanesa",
       marca: null,
       clase: "Producto vendible",
+      seccion: null,
+      sinSeccion: true,
       precio: "$ 9.000,00",
     });
+  });
+
+  it("la sección es el nombre que entrega la composición, tal cual (también la de una sección desactivada: la lista no la distingue)", () => {
+    expect(fila(producto({ seccion: "Platos principales" })).seccion).toBe("Platos principales");
+    expect(fila(producto({ seccion: "Postres (apagada)" })).seccion).toBe("Postres (apagada)");
+    expect(fila(producto({ seccion: null })).seccion).toBeNull();
+  });
+
+  it("«clase · —»: solo un producto que se vende (trae precio, también «Sin precio» o «Según medida») y no tiene sección; con sección o sin venta, no", () => {
+    expect(fila(producto({ seccion: null })).sinSeccion).toBe(true);
+    expect(fila(producto({ seccion: null, precio: { tipo: "SIN_PRECIO" } })).sinSeccion).toBe(true);
+    expect(fila(producto({ seccion: null, precio: { tipo: "SEGUN_TAMANO" } })).sinSeccion).toBe(
+      true,
+    );
+    expect(fila(producto({ seccion: "Platos" })).sinSeccion).toBe(false);
+    expect(fila(producto({ seccion: null, claseDeUso: "INSUMO", precio: null })).sinSeccion).toBe(
+      false,
+    );
+    expect(fila(producto({ seccion: "Platos", precio: null })).sinSeccion).toBe(false);
   });
 
   it("falta completar y desactivado llevan su marca en tono de aviso", () => {
@@ -116,18 +138,28 @@ describe("armarLaLista: la fila", () => {
     ).toBe("$ 12.345.678.901.234.567.890,12");
   });
 
-  it("nada de más: la fila tiene solo id, nombre, marca, clase y precio", () => {
+  it("nada de más: la fila tiene solo id, nombre, marca, clase, sección, si le falta y precio", () => {
     expect(Object.keys(fila(producto())).sort()).toEqual([
       "clase",
       "id",
       "marca",
       "nombre",
       "precio",
+      "seccion",
+      "sinSeccion",
     ]);
   });
 
-  it("sin productos, sin filas y sin «Página siguiente»", () => {
-    expect(armarLaLista(pagina([]), FILTROS_POR_DEFECTO)).toEqual({ filas: [], siguiente: null });
+  it("sin productos, sin filas, «Sin resultados» y sin «Página siguiente»", () => {
+    expect(armarLaLista(pagina([]), FILTROS_POR_DEFECTO)).toEqual({
+      filas: [],
+      vacio: "Sin resultados",
+      siguiente: null,
+    });
+  });
+
+  it("con productos no hay «Sin resultados»", () => {
+    expect(armarLaLista(pagina([producto()]), FILTROS_POR_DEFECTO).vacio).toBeNull();
   });
 
   it("«Página siguiente» lleva a la dirección con los mismos filtros y la clave de la consulta", () => {

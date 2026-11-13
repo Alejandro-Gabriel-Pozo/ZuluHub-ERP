@@ -18,6 +18,15 @@ import { cargarEstadosDeLaEmpresa } from "../../empresas/publico";
 import type { SesionGuardada } from "../persistencia/repositorio-de-sesiones";
 import type { TxDeCaja } from "./contrato";
 
+/**
+ * Los reintentos ante un conflicto de serialización en lo que escribe sobre una SESIÓN de caja (abrir, mover, ajustar, anular, cerrar):
+ * todos los puestos de la sucursal chocan sobre la misma fila y solo una transacción confirma por ronda, así que con el default (6) la
+ * séptima que llega a la vez agota los reintentos y la persona ve un error evitable. Igual que el cobro de ventas (`REINTENTOS_AL_COBRAR`, 20).
+ * Es seguro: cada operación lleva su clave de idempotencia. Previene: `ConcurrenciaAgotada` con ~14 operaciones simultáneas sobre una sola sesión
+ * (medido en 3,75 % con 16). Chequeo: `test/integracion/caja-sesion-reintentos.test.ts`.
+ */
+export const REINTENTOS_EN_LA_SESION_DE_CAJA = 20;
+
 export type ErrorPrevio = MotivoDeRechazo | EmpresaNoOpera;
 
 /**
