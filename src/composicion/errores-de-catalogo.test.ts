@@ -61,3 +61,60 @@ describe("traducirErrorDeCatalogo", () => {
     }
   });
 });
+
+describe("traducirErrorDeCatalogo: precios (A1, T3)", () => {
+  it("PRECIO_INVALIDO sale con su texto propio, asociado al campo precio", () => {
+    expect(traducirErrorDeCatalogo("PRECIO_INVALIDO")).toEqual({
+      codigo: "CATALOGO_PRECIO_INVALIDO",
+      campo: "precio",
+    });
+  });
+
+  it("el precio que otra persona cambió antes sale con el importe vigente y nada más (ni el id de la fila)", () => {
+    expect(
+      traducirErrorDeCatalogo({
+        error: "PRECIO_DESACTUALIZADO",
+        vigente: { precioId: "00000000-0000-4000-8000-000000000001", precio: "13000.000000" },
+      }),
+    ).toEqual({
+      codigo: "CATALOGO_PRECIO_DESACTUALIZADO",
+      campo: "precio",
+      parametros: { importe: "13000.000000" },
+    });
+  });
+
+  it.each([
+    ["sin precio vigente (la fila vigente era un precio abierto)", { precioId: "x", precio: null }],
+    ["sin fila vigente", null],
+    ["un vigente que no es un objeto", "13000"],
+    ["un vigente ausente", undefined],
+    ["un vigente numérico", 13000],
+    // Algo que no es un objeto pero trae la propiedad `precio` (una función): no es la forma pedida, así que no se arriesga.
+    [
+      "un vigente que es una función con la propiedad precio",
+      Object.assign(() => 0, { precio: "13000.000000" }),
+    ],
+  ])("PRECIO_DESACTUALIZADO %s sale como el genérico", (_caso, vigente) => {
+    expect(traducirErrorDeCatalogo({ error: "PRECIO_DESACTUALIZADO", vigente })).toEqual({
+      codigo: "CATALOGO_ACCION_NO_PERMITIDA",
+    });
+  });
+
+  it("el nombre solo, como texto, también es el genérico; los demás errores del precio, igual", () => {
+    for (const error of [
+      "PRECIO_DESACTUALIZADO",
+      "ID_REUTILIZADO",
+      "PRECIO_DE_PRODUCTO_CON_VARIANTE",
+      "PRODUCTO_NO_VENDIBLE",
+      "SUCURSAL_FUERA_DE_ALCANCE",
+    ]) {
+      expect(traducirErrorDeCatalogo(error)).toEqual({ codigo: "CATALOGO_ACCION_NO_PERMITIDA" });
+    }
+  });
+
+  it("un objeto con otro error de negocio y un vigente no filtra el precio", () => {
+    expect(
+      traducirErrorDeCatalogo({ error: "OTRO", vigente: { precioId: "x", precio: "1.000000" } }),
+    ).toEqual({ codigo: "CATALOGO_ACCION_NO_PERMITIDA" });
+  });
+});

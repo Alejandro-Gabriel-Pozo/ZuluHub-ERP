@@ -15,6 +15,7 @@ import type {
   TxDeConsultasDeCatalogo,
 } from "../casos-de-uso/contrato";
 import type { SeccionDeCarta } from "../persistencia/repositorio-de-productos";
+import type { UnidadDeMedida } from "../persistencia/repositorio-de-unidades";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 
 type R<S> = Resultado<S, MotivoDeRechazo | ErrorDePersistencia>;
@@ -36,6 +37,8 @@ export type ProductoDeLista = Readonly<{
   claseDeUso: ClaseDeUso;
   estado: EstadoDeProducto;
   unidadDeVentaId: string;
+  /** La sección de la carta del producto, TAMBIÉN si está desactivada (el producto la conserva): la lista muestra «clase · sección»; `null` si no tiene. */
+  seccion: Readonly<{ id: string; nombre: string; activa: boolean }> | null;
   precio: PrecioDeLista;
 }>;
 
@@ -90,6 +93,11 @@ export type FilaDeHistorial = Readonly<{
 
 export type FichaDeProducto = Readonly<{
   producto: Producto;
+  /** La unidad base y la de venta con su símbolo (`kg`, `u`), de la lista cerrada de unidades; `null` solo si el código guardado no figura en la lista (dato dañado: no se inventa). */
+  unidadBase: UnidadDeMedida | null;
+  unidadDeVenta: UnidadDeMedida | null;
+  /** La sección de la carta del producto, TAMBIÉN si está desactivada (el producto la conserva); `null` si no tiene. */
+  seccion: SeccionDeCarta | null;
   grupos: readonly GrupoDeFicha[];
   /** Lo que rige hoy en cada alcance (empresa y cada sucursal, de cada tamaño o del producto). */
   preciosVigentes: readonly FilaDePrecio[];
@@ -106,6 +114,9 @@ export type PreciosDelProducto = Readonly<{
   }>;
   historial: readonly FilaDeHistorial[];
 }>;
+
+const seccionDeLista = (s: SeccionDeCarta | undefined): ProductoDeLista["seccion"] =>
+  s === undefined ? null : { id: s.id, nombre: s.nombre, activa: s.activa };
 
 const aHistorial = (
   f: FilaDePrecio & Readonly<{ cargadoPor: string | null }>,
@@ -176,6 +187,10 @@ export function crearConsultasDeCatalogo(d: DependenciasDeConsultasDeCatalogo) {
           limite: TAMANO_DE_PAGINA + 1,
         });
         const pagina = filas.slice(0, TAMANO_DE_PAGINA);
+        // Todas las secciones (también las desactivadas) en UNA lectura: el producto conserva la suya aunque se apague.
+        const secciones = new Map(
+          (await tx.seccionesDeCarta.todas(contexto.empresaId)).map((x) => [x.id as string, x]),
+        );
         const productos: ProductoDeLista[] = [];
         for (const { producto: p } of pagina) {
           const grupos =
@@ -188,6 +203,9 @@ export function crearConsultasDeCatalogo(d: DependenciasDeConsultasDeCatalogo) {
             claseDeUso: p.claseDeUso,
             estado: !p.activo ? "DESACTIVADO" : p.faltaCompletar ? "FALTA_COMPLETAR" : "ACTIVO",
             unidadDeVentaId: p.unidadDeVentaId,
+            seccion: seccionDeLista(
+              p.seccionDeCartaId === null ? undefined : secciones.get(p.seccionDeCartaId),
+            ),
             precio: await precioDeLista(tx, contexto, p, grupos),
           });
         }
@@ -214,8 +232,15 @@ export function crearConsultasDeCatalogo(d: DependenciasDeConsultasDeCatalogo) {
           contexto.empresaId,
           grupos.flatMap((g) => g.opciones.map((o) => o.versionId)),
         );
+        const unidades = await tx.unidades.todas();
         return {
           producto,
+          unidadBase: unidades.find((u) => u.id === producto.unidadBaseId) ?? null,
+          unidadDeVenta: unidades.find((u) => u.id === producto.unidadDeVentaId) ?? null,
+          seccion:
+            producto.seccionDeCartaId === null
+              ? null
+              : await tx.productos.obtenerSeccion(contexto.empresaId, producto.seccionDeCartaId),
           grupos: grupos.map(({ grupo, opciones }) => ({
             ...grupo,
             opciones: opciones.map((o) => ({
@@ -294,6 +319,10 @@ export function crearConsultasDeCatalogo(d: DependenciasDeConsultasDeCatalogo) {
         const destino = await tx.productos.obtener(contexto.empresaId, entrada.productoDestinoId);
         return destino === null ? [] : tx.productos.conOpciones(contexto.empresaId, destino.id);
       }),
+
+    /** Las unidades de medida de la lista cerrada (código, dimensión, símbolo y factor a la base de su dimensión): para mostrar y para el desplegable de la ficha. */
+    listarUnidades: (contexto: ContextoOperativo): Promise<R<readonly UnidadDeMedida[]>> =>
+      leer(contexto, DECLARACIONES_DE_CONSULTAS.listarUnidades.accion, (tx) => tx.unidades.todas()),
 
     /** Las secciones activas de la carta, en orden. */
     listarSeccionesDeCarta: (contexto: ContextoOperativo): Promise<R<readonly SeccionDeCarta[]>> =>

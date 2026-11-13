@@ -163,4 +163,18 @@ export const DATOS_DE_PRODUCTOS = {
     ponerPor: ["productos.crear"],
     requiere: REQUIERE_CATALOGO,
   },
+  "precio-de-venta-de-producto": {
+    // El importe se tipea en pesos con dos decimales (`CampoImporte`) y viaja como texto decimal; la validez (sin signo, hasta 6 decimales, en rango) la decide esta primitiva dentro de `cambiarPrecio`.
+    ficha: "src/primitivas/dinero/precio-de-venta.ts",
+    propositos: [
+      {
+        para: "Precio de venta de la empresa de un producto, IVA incluido, en la solapa «Precios» de su ficha: se cambia agregando una fila al historial.",
+        fuente:
+          "Pedernal-docs/11-especificaciones/fichas-de-modulo/a1-productos-y-precios.md §2 (`cambiarPrecio`) y §5 (dinero en texto decimal, ADR-006) y la maqueta aprobada el 12/11/2026 (`productos.html`, solapa «Precios», carpeta de prototipos de Pedernal-docs 10-ux-ui)",
+      },
+    ],
+    consumidores: ["apps/web/ui/plantillas/catalogo/FormularioDePrecioDeProducto.cliente.tsx"],
+    ponerPor: ["productos.cambiar_precio"],
+    requiere: REQUIERE_CATALOGO,
+  },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
