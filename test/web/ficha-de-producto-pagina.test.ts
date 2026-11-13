@@ -98,7 +98,12 @@ describe("la página de la ficha de datos de un producto", () => {
     expect([...marcado.matchAll(/<h1\b[^>]*>(.*?)<\/h1>/g)].map((m) => m[1])).toEqual(["Milanesa"]);
     const rotulos = [
       ...marcado.matchAll(/<(?:label|dt|button)\b[^>]*>(.*?)<\/(?:label|dt|button)>/g),
-    ].map((m) => (m[1] ?? "").replace(/<[^>]+>/g, "").trim());
+    ].map((m) =>
+      (m[1] ?? "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    );
     expect(rotulos.filter((r) => r !== "" && !/^(Inicio|Cuenta)/.test(r)).slice(-9)).toEqual([
       "¿Qué es?",
       "Nombre",
