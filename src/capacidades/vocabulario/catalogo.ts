@@ -239,6 +239,10 @@ export const CATALOGO_DE_TEXTOS = {
   "navegacion.inicio": { porDefecto: "Inicio" },
   "navegacion.empresa": { porDefecto: "Empresa" },
   "navegacion.cuenta": { porDefecto: "Cuenta" },
+  // Fuente: dueño, 12/11/2026, `Pedernal-docs/11-especificaciones/decisiones-del-dueno-2026-11.md`, fila «Menú por áreas, versión 4»: nombres de las
+  // áreas Ventas, Catálogo y Compras aprobados «por ahora». «Compras» se suma con su primera pantalla.
+  "navegacion.area.ventas": { porDefecto: "Ventas" },
+  "navegacion.area.catalogo": { porDefecto: "Catálogo" },
   "inicio.titulo": { porDefecto: "Inicio" },
   "inicio.bienvenida": {
     porDefecto: "Estás en {empresa}.",

@@ -108,6 +108,7 @@
     "apps/web/ui/plantillas/caja/modelo-de-cajas.ts",
     "apps/web/ui/plantillas/caja/lista-de-caja.ts",
     "apps/web/ui/plantillas/caja/pestanas-de-caja.ts",
+    "apps/web/ui/navegacion/menu.ts",
     "src/composicion/entradas-de-productos.ts",
     "apps/web/ui/plantillas/catalogo/filtros-de-productos.ts",
     "apps/web/ui/plantillas/catalogo/modelo-de-productos.ts",

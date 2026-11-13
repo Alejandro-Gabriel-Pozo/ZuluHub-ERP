@@ -457,6 +457,65 @@ describe("armazón de operación", () => {
       .not.toHaveAttribute("aria-current");
   });
 
+  it("un área con varias pantallas abre una hoja con sus grupos y marca como actual el área y la pantalla", async () => {
+    const area = {
+      clave: "ventas" as const,
+      href: "/facturacion/comprobantes",
+      etiqueta: "Ventas",
+      icono: "comprobantes" as const,
+      hoja: [
+        {
+          etiqueta: null,
+          enlaces: [
+            {
+              clave: "comprobantes" as const,
+              etiqueta: "Comprobantes",
+              href: "/facturacion/comprobantes",
+            },
+          ],
+        },
+        {
+          etiqueta: "Empresa",
+          enlaces: [
+            {
+              clave: "contacto" as const,
+              etiqueta: "Contacto",
+              href: "/cuenta/contacto-de-la-sucursal",
+            },
+            { clave: "productos" as const, etiqueta: "Productos", href: "/catalogo/productos" },
+          ],
+        },
+      ],
+    };
+    const nav = () => page.getByRole("navigation", { name: "Navegación principal" });
+    await render(
+      <ArmazonDeOperacion
+        titulo="Pantalla"
+        actual="comprobantes"
+        marca="Hotel del Lago"
+        empresa="Café del Puerto"
+        modulos={[area]}
+      >
+        <p>Contenido</p>
+      </ArmazonDeOperacion>,
+    );
+    // Cerrada: se ve el área; las pantallas no son tocables hasta abrirla.
+    await expect.element(nav().getByText("Ventas")).toBeVisible();
+    await expect.element(nav().getByRole("link", { name: "Comprobantes" })).not.toBeInTheDocument();
+    await nav().getByText("Ventas").click();
+    await expect.element(nav().getByText("Empresa")).toBeVisible();
+    await expect.element(nav().getByRole("link", { name: "Contacto" })).toBeVisible();
+    await expect.element(nav().getByRole("link", { name: "Productos" })).toBeVisible();
+    // La pantalla actual está marcada en la hoja y el área en la barra; las demás no.
+    await expect
+      .element(nav().getByRole("link", { name: "Comprobantes" }))
+      .toHaveAttribute("aria-current", "page");
+    await expect
+      .element(nav().getByRole("link", { name: "Productos" }))
+      .not.toHaveAttribute("aria-current");
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+  });
+
   it("cuenta: empresa, rol, sucursal y cerrar sesión", async () => {
     await verificar(
       <ArmazonDeOperacion

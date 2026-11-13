@@ -534,6 +534,12 @@
     "pruebas": "test/web/medios-de-pago-modelo.test.ts test/web/cuentas-y-cajas-modelo.test.ts"
   },
   {
+    "grupo": "web (menú por áreas)",
+    "archivos": "apps/web/ui/navegacion/menu.ts",
+    "minutos": 1.0,
+    "pruebas": "test/web/menu-por-areas.test.ts"
+  },
+  {
     "grupo": "web (lista de productos)",
     "archivos": "src/composicion/entradas-de-productos.ts,apps/web/ui/plantillas/catalogo/filtros-de-productos.ts,apps/web/ui/plantillas/catalogo/modelo-de-productos.ts",
     "minutos": 1.0,
