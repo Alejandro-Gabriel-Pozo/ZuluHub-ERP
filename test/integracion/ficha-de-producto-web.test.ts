@@ -128,7 +128,7 @@ describe.skipIf(base === null)("ficha de datos de un producto de la web", () => 
       codigo: "MIL-1",
       codigoDeBarras: null,
       alicuota: "21",
-      seccionDeCartaId: seccionId,
+      seccion: { id: seccionId, nombre: "Minutas", activa: true },
       alicuotas: ["21", "10.5", "27", "5", "2.5", "0"],
       secciones: [{ id: seccionId, nombre: "Minutas" }],
     });
@@ -293,7 +293,9 @@ describe.skipIf(base === null)("ficha de datos de un producto de la web", () => 
     );
     const id = await nuevoProducto({ seccionDeCartaId: seccionId }, x);
     valorDe(await c.casos.desactivarSeccionDeCarta(x.gerente, { seccionId }));
-    expect((await ficha(id, x.gerente)).secciones).toEqual([]);
+    const vista = await ficha(id, x.gerente);
+    expect(vista.secciones).toEqual([]);
+    expect(vista.seccion).toEqual({ id: seccionId, nombre: "Temporada", activa: false });
     expect(await guardar(id, 1, { nombre: "Sigue en su sección" }, x.gerente)).toMatchObject({
       ok: true,
     });

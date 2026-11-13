@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { UNIDADES } from "../../src/primitivas/unidades/unidades";
 import { CLASES_DE_USO } from "../../src/modulos/catalogo/publico";
 import { ALICUOTAS_DEL_PRODUCTO } from "../../src/modulos/fiscal/publico";
 import {
@@ -28,7 +29,7 @@ const ficha = (cambios: Partial<FichaDeLaPantalla> = {}): FichaDeLaPantalla => (
   codigo: "MIL-1",
   codigoDeBarras: "12345678",
   alicuota: "10.5",
-  seccionDeCartaId: SECCION,
+  seccion: { id: SECCION, nombre: "Minutas", activa: true },
   alicuotas: OFRECIDAS,
   secciones: [
     { id: SECCION, nombre: "Minutas" },
@@ -73,7 +74,7 @@ describe("armarLaFicha de un producto que se vende", () => {
 
   it("la clase y la unidad solo se ven, con su rótulo aprobado", () => {
     expect(f.clase).toEqual({ etiqueta: "¿Qué es?", valor: "Producto vendible" });
-    expect(f.unidad).toEqual({ etiqueta: "Unidad", valor: "UNIDAD" });
+    expect(f.unidad).toEqual({ etiqueta: "Unidad", valor: "Unidad" });
   });
 
   it("los campos llevan los rótulos y valores de la maqueta", () => {
@@ -114,7 +115,7 @@ describe("armarLaFicha de un producto que se vende", () => {
         codigo: null,
         codigoDeBarras: null,
         alicuota: null,
-        seccionDeCartaId: null,
+        seccion: null,
       }),
     );
     expect(vacia.nombreDeCocina?.valor).toBe("");
@@ -133,7 +134,7 @@ describe("armarLaFicha de un producto que no se vende", () => {
         seVende: false,
         nombreDeCocina: null,
         alicuota: null,
-        seccionDeCartaId: null,
+        seccion: null,
       }),
     );
     expect(f.nombreDeCocina).toBeNull();
@@ -155,11 +156,52 @@ describe("un valor guardado que la pantalla no ofrece", () => {
   });
 
   it("una sección desactivada (no está entre las activas) se ve y el desplegable sale apagado", () => {
-    const f = armarLaFicha(ficha({ seccionDeCartaId: "desactivada" }));
+    const f = armarLaFicha(
+      ficha({ seccion: { id: "desactivada", nombre: "Postres de verano", activa: false } }),
+    );
     expect(f.seccion?.apagado).toBe(true);
     expect(f.seccion?.valor).toBe("desactivada");
-    expect(f.seccion?.opciones.at(-1)).toEqual({ valor: "desactivada", etiqueta: "desactivada" });
+    expect(f.seccion?.opciones.at(-1)).toEqual({
+      valor: "desactivada",
+      etiqueta: "Postres de verano",
+    });
     expect(f.seccion?.opciones).toHaveLength(3);
+  });
+
+  it("una sección activa se ve con su nombre y el desplegable no sale apagado", () => {
+    const f = armarLaFicha(ficha());
+    expect(f.seccion).toMatchObject({ valor: SECCION, apagado: false });
+    expect(f.seccion?.opciones).toHaveLength(2);
+  });
+
+  it("sin sección guardada el desplegable queda sin elegir y no sale apagado", () => {
+    const f = armarLaFicha(ficha({ seccion: null }));
+    expect(f.seccion).toMatchObject({ valor: "", apagado: false });
+    expect(f.seccion?.opciones).toHaveLength(2);
+  });
+
+  it("la unidad se ve con su nombre: las 14 de la lista cerrada, y una que no se conoce con su propio valor", () => {
+    const nombres = Object.keys(UNIDADES).map(
+      (u) => armarLaFicha(ficha({ unidadBaseId: u })).unidad.valor,
+    );
+    expect(nombres).toEqual([
+      "Unidad",
+      "Gramo",
+      "Kilogramo",
+      "Tonelada",
+      "Mililitro",
+      "Litro",
+      "Metro cúbico",
+      "Milímetro",
+      "Centímetro",
+      "Metro",
+      "Centímetro cuadrado",
+      "Metro cuadrado",
+      "Minuto",
+      "Hora",
+    ]);
+    expect(armarLaFicha(ficha({ unidadBaseId: "PARSEC" })).unidad.valor).toBe("PARSEC");
+    expect(armarLaFicha(ficha({ unidadBaseId: "toString" })).unidad.valor).toBe("toString");
   });
 
   it("una clase desconocida se dice con su propio valor (no se esconde)", () => {

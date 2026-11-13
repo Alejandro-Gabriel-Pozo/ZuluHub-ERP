@@ -1,5 +1,6 @@
 import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
+import { vendeLaClase } from "../modulos/catalogo/publico";
 import { ALICUOTAS_DEL_PRODUCTO } from "../modulos/fiscal/publico";
 import { err } from "../primitivas/resultado/resultado";
 import {
@@ -9,11 +10,7 @@ import {
   type DependenciasDeRespuesta,
 } from "./a-respuesta";
 import { identificador } from "./entradas-de-facturacion";
-import {
-  CLASES_QUE_SE_VENDEN,
-  entradaDeEditarProducto,
-  leerElPedidoDeLaFicha,
-} from "./entradas-de-ficha-de-producto";
+import { entradaDeEditarProducto, leerElPedidoDeLaFicha } from "./entradas-de-ficha-de-producto";
 import { traducirErrorDeCatalogo } from "./errores-de-catalogo";
 import type { Web } from "./web";
 
@@ -43,7 +40,10 @@ export type DependenciasDeFichaDeProductoWeb = Readonly<{
   respuesta: DependenciasDeRespuesta;
 }>;
 
-/** La ficha para la pantalla. `alicuotas` y `secciones` son lo que se ofrece; `unidadBaseId` es el código de la unidad (no se cambia). */
+/**
+ * La ficha para la pantalla. `alicuotas` y `secciones` son lo que se ofrece (las secciones, solo las activas); `unidadBaseId` es el código de la unidad (no se cambia); `seccion` es la
+ * guardada con su nombre, también si está desactivada (A2i: `verProducto` la trae).
+ */
 export type FichaParaLaPantalla = Readonly<{
   id: string;
   version: number;
@@ -56,7 +56,7 @@ export type FichaParaLaPantalla = Readonly<{
   codigo: string | null;
   codigoDeBarras: string | null;
   alicuota: string | null;
-  seccionDeCartaId: string | null;
+  seccion: Readonly<{ id: string; nombre: string; activa: boolean }> | null;
   /** Las alícuotas que ofrece el producto, en el orden en que se muestran (una sola fuente: el módulo fiscal). */
   alicuotas: readonly string[];
   secciones: readonly Readonly<{ id: string; nombre: string }>[];
@@ -87,12 +87,19 @@ export async function verLaFichaDeProducto(
         nombre: p.nombre,
         claseDeUso: p.claseDeUso,
         unidadBaseId: p.unidadBaseId,
-        seVende: CLASES_QUE_SE_VENDEN.includes(p.claseDeUso),
+        seVende: vendeLaClase(p.claseDeUso),
         nombreDeCocina: p.nombreDeCocina,
         codigo: p.codigo,
         codigoDeBarras: p.codigoDeBarras,
         alicuota: p.alicuota,
-        seccionDeCartaId: p.seccionDeCartaId,
+        seccion:
+          ficha.valor.seccion === null
+            ? null
+            : {
+                id: ficha.valor.seccion.id,
+                nombre: ficha.valor.seccion.nombre,
+                activa: ficha.valor.seccion.activa,
+              },
         alicuotas: ALICUOTAS_DEL_PRODUCTO,
         secciones: secciones.valor.map((s) => ({ id: s.id, nombre: s.nombre })),
       },

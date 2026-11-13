@@ -72,7 +72,7 @@ const FICHA = {
   codigo: "MIL-1",
   codigoDeBarras: "12345678",
   alicuota: "10.5",
-  seccionDeCartaId: SECCION,
+  seccion: { id: SECCION, nombre: "Minutas", activa: true },
   alicuotas: ["21", "10.5", "27", "5", "2.5", "0"],
   secciones: [{ id: SECCION, nombre: "Minutas" }],
 };
@@ -182,7 +182,7 @@ describe("la página de la ficha de datos de un producto", () => {
         seVende: false,
         nombreDeCocina: null,
         alicuota: null,
-        seccionDeCartaId: null,
+        seccion: null,
       },
     });
     const marcado = await html();
