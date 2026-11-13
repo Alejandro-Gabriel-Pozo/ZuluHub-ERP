@@ -8,6 +8,7 @@ import {
   armarReactivarNodoDeClasificacion,
   armarRenombrarNodoDeClasificacion,
 } from "./clasificacion";
+import { armarClasificarProducto } from "./clasificar-producto";
 import { armarCopiarOpciones } from "./copiar-opciones";
 import { armarCrearProducto, armarCrearProductoRapido } from "./crear-producto";
 import type { DECLARACIONES } from "./declaraciones";
@@ -52,6 +53,7 @@ export function crearCasosDeUsoDeCatalogo(dependencias: DependenciasDeCatalogo) 
     desactivarSeccionDeCarta: armarDesactivarSeccionDeCarta(dependencias),
     reactivarSeccionDeCarta: armarReactivarSeccionDeCarta(dependencias),
     reordenarSeccionesDeCarta: armarReordenarSeccionesDeCarta(dependencias),
+    clasificarProducto: armarClasificarProducto(dependencias),
     crearNodoDeClasificacion: armarCrearNodoDeClasificacion(dependencias),
     renombrarNodoDeClasificacion: armarRenombrarNodoDeClasificacion(dependencias),
     moverNodoDeClasificacion: armarMoverNodoDeClasificacion(dependencias),

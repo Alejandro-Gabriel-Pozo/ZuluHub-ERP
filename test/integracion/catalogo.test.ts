@@ -80,6 +80,7 @@ const TABLAS_DE_NEGOCIO = [
   "unidad_de_medida",
   "seccion_de_carta",
   "nodo_de_clasificacion", // 0045
+  "clasificacion_de_producto", // 0046
   "producto",
   "grupo_de_elecciones",
   "opcion",
@@ -523,6 +524,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "version_de_opcion",
           ].map((t) => `${t}:SELECT`), // 0025
           "nodo_de_clasificacion:SELECT", // 0045
+          "clasificacion_de_producto:SELECT", // 0046
           "carta_publica:SELECT", // 0043
           "disponibilidad_de_producto:SELECT", // 0043
         ].sort(),
@@ -1275,6 +1277,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         // 0045: la clasificación comercial
         ...["empresa_id", "id", "nombre", "nombre_clave", "padre_id"].map(
           (c) => `nodo_de_clasificacion.${c}`,
+        ),
+        // 0046: el vínculo del producto con vigencia (solo inserción: sin UPDATE por columna)
+        ...["cargado_por", "empresa_id", "id", "nodo_id", "producto_id", "vigente_desde"].map(
+          (c) => `clasificacion_de_producto.${c}`,
         ),
         ...[
           "cargada_por",

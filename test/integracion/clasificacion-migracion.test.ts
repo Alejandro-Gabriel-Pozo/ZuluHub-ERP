@@ -5,6 +5,8 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { MAXIMO_DE_NIVELES_DE_CLASIFICACION } from "../../src/primitivas/clasificacion/arbol";
 import { comoEmpresa, crearBaseAparte, crearEmpresaActiva, crearEntornoDePrueba } from "./entorno";
+import { productoDeBase } from "./catalogo-apoyo";
+import { crearPersonaDeBase } from "./fixtures-identidad";
 import type { BaseDePruebas } from "./global";
 import { esperarBloqueo, SesionDePrueba } from "./sesiones";
 
@@ -17,6 +19,10 @@ vi.setConfig({ testTimeout: 120_000 });
 const REVERSION = join(
   import.meta.dirname,
   "../../migraciones/reversiones/0045_revertir_clasificacion_comercial.sql",
+);
+const REVERSION_DEL_VINCULO = join(
+  import.meta.dirname,
+  "../../migraciones/reversiones/0046_revertir_clasificacion_de_producto.sql",
 );
 
 describe.skipIf(base === null)("migración 0045: clasificación comercial", () => {
@@ -333,10 +339,15 @@ describe.skipIf(base === null)("migración 0045: clasificación comercial", () =
         dueno.query("delete from nodo_de_clasificacion where id = $1", [id]),
       ).rejects.toMatchObject({ code: "42501" });
       await dueno.query("rollback");
+      // Con 0046 aplicada, el `TRUNCATE` ya lo frena antes la clave foránea del vínculo del producto (0A000); sin ella lo frena el disparador (42501). Ninguno vacía la tabla.
       await dueno.query("begin");
-      await expect(dueno.query("truncate nodo_de_clasificacion")).rejects.toMatchObject({
-        code: "42501",
-      });
+      let codigo = "sin falla";
+      try {
+        await dueno.query("truncate nodo_de_clasificacion");
+      } catch (e) {
+        codigo = (e as { code?: string }).code ?? "?";
+      }
+      expect(["42501", "0A000"]).toContain(codigo);
       await dueno.query("rollback");
     });
   });
@@ -436,6 +447,234 @@ describe.skipIf(base === null)("migración 0045: clasificación comercial", () =
     });
   });
 
+  describe("0046: el vínculo del producto con vigencia", () => {
+    let persona: string;
+    let producto: string;
+    let productoAjeno: string;
+    let nodoActivo: string;
+    let nodoAjeno: string;
+    beforeAll(async () => {
+      persona = (await crearPersonaDeBase(dueno)).id;
+      producto = await productoDeBase(dueno, empresa);
+      productoAjeno = await productoDeBase(dueno, otra);
+      nodoActivo = await crear(empresa, "Vinculo activo");
+      nodoAjeno = await crear(otra, "Vinculo ajeno");
+    });
+
+    const comoAppConPersona = (e: string, p: string | null = persona) =>
+      SesionDePrueba.abrir(
+        base as BaseDePruebas,
+        "pedernal_app",
+        comoEmpresa(e as never, p as never),
+      );
+    /** Una sentencia con el rol de la aplicación y la persona del contexto, en su propia transacción: `codigo:restriccion` o `null`. */
+    const intentarVinculo = async (
+      sql: string,
+      p: unknown[] = [],
+      quien: string | null = persona,
+    ) => {
+      const s = await comoAppConPersona(empresa, quien);
+      try {
+        const r = await s.intentar(sql, p);
+        if (r.ok) {
+          await s.confirmar();
+          return null;
+        }
+        return `${r.codigo}:${r.restriccion ?? ""}`;
+      } finally {
+        await s.cerrar();
+      }
+    };
+    const alta = (nodo: string | null, desde: string, productoId = producto, id = randomUUID()) =>
+      intentarVinculo(
+        "insert into clasificacion_de_producto (id, empresa_id, producto_id, nodo_id, vigente_desde, cargado_por) values ($1, $2, $3, $4, $5, $6)",
+        [id, empresa, productoId, nodo, desde, persona],
+      );
+
+    it("RLS activa y forzada; solo la aplicación recibe algo: SELECT y un INSERT por columna (sin UPDATE, DELETE ni TRUNCATE)", async () => {
+      const { rows } = await dueno.query<{ relrowsecurity: boolean; relforcerowsecurity: boolean }>(
+        "select relrowsecurity, relforcerowsecurity from pg_class where relname = 'clasificacion_de_producto'",
+      );
+      expect(rows[0]).toEqual({ relrowsecurity: true, relforcerowsecurity: true });
+      const roles = [
+        "pedernal_app",
+        "pedernal_grupo",
+        "pedernal_trabajos",
+        "pedernal_plataforma",
+        "pedernal_publico",
+        "pedernal_captacion",
+        "pedernal_autenticacion",
+      ];
+      const privilegios = await dueno.query<{ rol: string; privilegio: string; tiene: boolean }>(
+        `select r as rol, p as privilegio, has_table_privilege(r, 'clasificacion_de_producto', p) as tiene
+           from unnest($1::text[]) r, unnest(array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE']) p`,
+        [roles],
+      );
+      expect(
+        privilegios.rows.filter((x) => x.tiene).map((x) => `${x.rol}:${x.privilegio}`),
+      ).toEqual(["pedernal_app:SELECT"]);
+      const columnas = await dueno.query<{ columna: string }>(
+        `select column_name as columna from information_schema.column_privileges
+          where table_name = 'clasificacion_de_producto' and grantee = 'pedernal_app' and privilege_type = 'INSERT' order by 1`,
+      );
+      expect(columnas.rows.map((r) => r.columna)).toEqual([
+        "cargado_por",
+        "empresa_id",
+        "id",
+        "nodo_id",
+        "producto_id",
+        "vigente_desde",
+      ]);
+      const update = await dueno.query(
+        `select 1 from information_schema.column_privileges where table_name = 'clasificacion_de_producto' and grantee = 'pedernal_app' and privilege_type = 'UPDATE'`,
+      );
+      expect(update.rowCount).toBe(0);
+    });
+
+    it("agrega vínculos; uno por instante y producto; «Sin elegir» (nodo nulo) también es un vínculo", async () => {
+      expect(await alta(nodoActivo, "2026-11-01T03:00:00Z")).toBeNull();
+      expect(await alta(nodoActivo, "2026-11-01T03:00:00Z")).toBe(
+        "23505:clasificacion_de_producto_vigencia_uk",
+      );
+      expect(await alta(null, "2026-11-02T03:00:00Z")).toBeNull();
+      expect(await alta(nodoActivo, "2026-11-02T03:00:00Z", productoAjeno)).toBe(
+        "23503:clasificacion_de_producto_producto_fkey",
+      );
+    });
+
+    it("el producto y el nodo son de la misma empresa que la fila", async () => {
+      expect(await alta(nodoAjeno, "2026-11-03T03:00:00Z")).toBe(
+        "23503:clasificacion_de_producto_nodo_fkey",
+      );
+      expect(
+        await intentarVinculo(
+          "insert into clasificacion_de_producto (empresa_id, producto_id, vigente_desde, cargado_por) values ($1, $2, '2026-11-04T03:00:00Z', $3)",
+          [empresa, productoAjeno, persona],
+        ),
+      ).toBe("23503:clasificacion_de_producto_producto_fkey");
+    });
+
+    it("no se asigna un nodo desactivado, pero uno desactivado después no altera lo ya vinculado", async () => {
+      const hoja = await crear(empresa, "Vinculo hoja");
+      expect(await alta(hoja, "2026-11-05T03:00:00Z")).toBeNull();
+      expect(
+        await intentar(empresa, "update nodo_de_clasificacion set activo = false where id = $1", [
+          hoja,
+        ]),
+      ).toBeNull();
+      expect(await alta(hoja, "2026-11-06T03:00:00Z")).toBe(
+        "23514:clasificacion_de_producto_nodo_desactivado",
+      );
+      const { rows } = await dueno.query(
+        "select 1 from clasificacion_de_producto where nodo_id = $1",
+        [hoja],
+      );
+      expect(rows).toHaveLength(1);
+    });
+
+    it("la persona que carga es la del contexto: otra persona, o ninguna, no pasa la política", async () => {
+      const otraPersona = (await crearPersonaDeBase(dueno)).id;
+      const sql =
+        "insert into clasificacion_de_producto (empresa_id, producto_id, vigente_desde, cargado_por) values ($1, $2, '2026-11-07T03:00:00Z', $3)";
+      expect(await intentarVinculo(sql, [empresa, producto, otraPersona])).toBe("42501:");
+      expect(await intentarVinculo(sql, [empresa, producto, persona], null)).toBe("42501:");
+      expect(await intentarVinculo(sql, [otra, producto, persona])).toBe("42501:");
+    });
+
+    it("solo inserción: nadie cambia ni borra un vínculo, ni el dueño de la base", async () => {
+      expect(
+        await intentarVinculo(
+          "update clasificacion_de_producto set nodo_id = null where producto_id = $1",
+          [producto],
+        ),
+      ).toBe("42501:");
+      expect(
+        await intentarVinculo("delete from clasificacion_de_producto where producto_id = $1", [
+          producto,
+        ]),
+      ).toBe("42501:");
+      expect(await intentarVinculo("truncate clasificacion_de_producto")).toBe("42501:");
+      await dueno.query("begin");
+      await expect(
+        dueno.query("update clasificacion_de_producto set nodo_id = null where producto_id = $1", [
+          producto,
+        ]),
+      ).rejects.toMatchObject({ code: "42501" });
+      await dueno.query("rollback");
+      await dueno.query("begin");
+      await expect(
+        dueno.query("delete from clasificacion_de_producto where producto_id = $1", [producto]),
+      ).rejects.toMatchObject({ code: "42501" });
+      await dueno.query("rollback");
+      await dueno.query("begin");
+      await expect(dueno.query("truncate clasificacion_de_producto")).rejects.toMatchObject({
+        code: "42501",
+      });
+      await dueno.query("rollback");
+    });
+
+    it("una empresa no ve los vínculos de otra", async () => {
+      const s = await comoAppConPersona(otra);
+      try {
+        const r = await s.directo(
+          "select id from clasificacion_de_producto where producto_id = $1",
+          [producto],
+        );
+        expect(r.ok && r.filas).toBe(0);
+      } finally {
+        await s.cerrar();
+      }
+    });
+
+    it("reversión: frena con vínculos sin confirmación; con ella borra la tabla y la función; repetirla no cambia nada; 0045 no se revierte antes", async () => {
+      const aparte = await crearBaseAparte(base as BaseDePruebas);
+      const c = new pg.Client({ connectionString: aparte.base.dueno });
+      await c.connect();
+      try {
+        const correr = async (archivo: string, confirmar = false) => {
+          const sql = await readFile(archivo, "utf8");
+          await c.query("begin");
+          try {
+            if (confirmar) await c.query("set local pedernal.confirmar_reversion = 'SI'");
+            await c.query(sql);
+            await c.query("commit");
+          } catch (e) {
+            await c.query("rollback");
+            throw e;
+          }
+        };
+        const entorno2 = crearEntornoDePrueba(aparte.base, 3);
+        const e2 = await crearEmpresaActiva(entorno2);
+        await entorno2.cerrar();
+        const p2 = (await crearPersonaDeBase(c)).id;
+        const prod2 = await productoDeBase(c, e2.empresa);
+        await c.query(
+          "insert into clasificacion_de_producto (empresa_id, producto_id, vigente_desde, cargado_por) values ($1, $2, now(), $3)",
+          [e2.empresa, prod2, p2],
+        );
+        // Con el vínculo cargado, revertir 0045 antes falla por dependencia (la clave foránea) y no cambia nada.
+        await expect(correr(REVERSION, true)).rejects.toMatchObject({ code: "2BP01" });
+        await expect(correr(REVERSION_DEL_VINCULO)).rejects.toMatchObject({ code: "55000" });
+        expect((await c.query("select 1 from clasificacion_de_producto")).rowCount).toBe(1);
+        await correr(REVERSION_DEL_VINCULO, true);
+        const { rows } = await c.query<{ t: string | null; f: string | null }>(
+          `select to_regclass('public.clasificacion_de_producto')::text as t, to_regprocedure('public.clasificacion_de_producto_validar()')::text as f`,
+        );
+        expect(rows[0]).toEqual({ t: null, f: null });
+        await correr(REVERSION_DEL_VINCULO); // repetirla no cambia nada
+        const registro = await c.query(
+          "select 1 from migracion where nombre = '0046_clasificacion_de_producto.sql'",
+        );
+        expect(registro.rowCount).toBe(0);
+        // Con 0046 revertida, 0045 ya se puede revertir (hay un nodo? no: la tabla de nodos está vacía en esta base).
+        await correr(REVERSION);
+      } finally {
+        await c.end();
+        await aparte.destruir();
+      }
+    });
+  });
+
   describe("reversión", () => {
     it("con filas frena salvo confirmación; con ella borra la tabla y las funciones; repetirla no cambia nada", async () => {
       const aparte = await crearBaseAparte(base as BaseDePruebas);
@@ -454,6 +693,10 @@ describe.skipIf(base === null)("migración 0045: clasificación comercial", () =
             throw e;
           }
         };
+        // 0046 depende de esta tabla: se revierte antes (vacía en esta base).
+        await c.query("begin");
+        await c.query(await readFile(REVERSION_DEL_VINCULO, "utf8"));
+        await c.query("commit");
         const entorno2 = crearEntornoDePrueba(aparte.base, 3);
         const e2 = await crearEmpresaActiva(entorno2);
         await entorno2.cerrar();
