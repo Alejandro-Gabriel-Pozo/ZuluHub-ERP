@@ -49,9 +49,10 @@ export type PreciosArmados = Readonly<{
  */
 export function valorInicialDelCampo(importe: string | null): string {
   if (importe === null) return "";
-  const partes = /^([0-9]+)(?:\.([0-9]*))?$/.exec(importe);
-  if (partes === null) return "";
-  const [, entera = "", fraccion = ""] = partes;
+  const punto = importe.indexOf(".");
+  if (!/^[0-9]+(?:\.[0-9]*)?$/.test(importe)) return "";
+  const entera = punto === -1 ? importe : importe.slice(0, punto);
+  const fraccion = punto === -1 ? "" : importe.slice(punto + 1);
   const util = fraccion.replace(/0+$/, "");
   return util.length > 2 ? "" : `${entera}.${util.padEnd(2, "0")}`;
 }
