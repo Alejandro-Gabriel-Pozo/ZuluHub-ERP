@@ -5,7 +5,12 @@ import type { EmpresaNoOpera } from "../../../contexto/estados";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import { decidirCancelarCierre, type ErrorDeEstadoDeSesion } from "../dominio/sesion";
-import { cargarSesion, dejarConstancia, prepararCaso } from "./comun";
+import {
+  cargarSesion,
+  dejarConstancia,
+  prepararCaso,
+  REINTENTOS_EN_LA_SESION_DE_CAJA,
+} from "./comun";
 import type { DependenciasDeCaja } from "./contrato";
 import { DECLARACIONES } from "./declaraciones";
 
@@ -34,7 +39,7 @@ export function armarCancelarCierre({ transacciones, reglas }: DependenciasDeCaj
   ): Promise<Resultado<SalidaDeCancelarCierre, ErrorAlCancelarCierre>> {
     const { empresaId } = contexto;
     return transacciones.ejecutar(
-      { contexto },
+      { contexto, reintentos: REINTENTOS_EN_LA_SESION_DE_CAJA },
       async (
         tx,
       ): Promise<
