@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0059",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Un módulo en solo lectura también aparece en la barra de navegación.",
+  "que_cambia": "Qué entradas ve una persona con solo lectura.",
+  "donde": "apps/web/servidor/modulos.ts"
+}

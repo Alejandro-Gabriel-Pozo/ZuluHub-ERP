@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0055",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "En la plataforma, cambiar lo que ven todas las empresas exige factor reciente, y en las listas del sistema soporte ve y solo el administrador edita.",
+  "que_cambia": "Quién de la plataforma puede cambiar listas y datos comunes.",
+  "donde": "src/capacidades/permisos/plataforma.ts"
+}

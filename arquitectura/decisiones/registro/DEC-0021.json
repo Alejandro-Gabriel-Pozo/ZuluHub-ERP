@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0021",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Facturar un ticket exige el permiso de ventas más el de comprobantes, en vez de un permiso propio de facturar tickets.",
+  "que_cambia": "Quién puede facturar un ticket ya cobrado.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A21 (E1)"
+}

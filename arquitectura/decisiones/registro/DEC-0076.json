@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0076",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Un movimiento de stock no puede tener fecha posterior a ahora.",
+  "que_cambia": "Qué fechas admite un movimiento.",
+  "donde": "src/modulos/stock/casos-de-uso/movimientos-comun.ts"
+}

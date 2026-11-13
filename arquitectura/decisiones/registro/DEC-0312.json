@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0312",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "CORREGIDA",
+  "decision": "Se retira del catálogo la acción de corregir compras hasta construir la corrección; los permisos de gerente y administrador se vuelven a declarar entonces. Corregida: la reabre DEC-0321.",
+  "que_cambia": "Hoy nadie puede corregir una compra consumida; llega con la corrección por ajuste.",
+  "donde": "src/capacidades/modulos/catalogo.ts"
+}

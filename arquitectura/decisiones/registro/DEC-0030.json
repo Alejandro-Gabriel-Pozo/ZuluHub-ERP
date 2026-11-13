@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0030",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Sin cierre de período ni carga con fecha pasada; la transferencia es instantánea sin en tránsito; sin emisor exclusivo por depósito.",
+  "que_cambia": "Qué movimientos de stock se pueden hacer.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B5 (E5)"
+}

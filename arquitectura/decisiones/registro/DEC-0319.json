@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0319",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Se puede corregir el precio de una línea de una compra; corregir cantidad o peso real y completar el precio de una compra que entró sin precio quedan para después.",
+  "que_cambia": "Hoy una compra que entró sin precio no se puede completar después, y una cantidad o un peso real equivocado no se corrige: se anula la compra (si no se consumió) o se ajusta a mano; completarlo exige una columna nueva (migración).",
+  "donde": "src/modulos/compras/casos-de-uso/correcciones.ts y src/modulos/compras/dominio/correccion.ts"
+}

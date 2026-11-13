@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0007",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Abrir y cerrar una orden de producción lo hacen los tres roles; cancelar y anular, solo gerente y administrador.",
+  "que_cambia": "Quién puede mover producción y quién puede deshacerla.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A7 (E6)"
+}

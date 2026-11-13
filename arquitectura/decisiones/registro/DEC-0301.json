@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0301",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Solo un proveedor monotributista se espera con factura C; inscripto con A; los demás eligen la letra a mano y se avisa si no coincide.",
+  "que_cambia": "Cambia cuándo la compra avisa «letra no esperada»; se corrige con una línea de la tabla de letras.",
+  "donde": "src/modulos/compras/dominio/comprobante.ts:100"
+}

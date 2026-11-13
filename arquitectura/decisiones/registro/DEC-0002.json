@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0002",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Con stock activo y sin depósito de venta no se puede cerrar una cuenta (falla cerrado).",
+  "que_cambia": "Para encender el stock hay que crear antes el depósito de venta; si se corrige, la venta podría cerrarse sin depósito.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A2 (E5)"
+}

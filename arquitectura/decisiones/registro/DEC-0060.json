@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0060",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El aviso Seguís ahí por inactividad sale a los 12 minutos.",
+  "que_cambia": "Cuándo se avisa antes de cerrar la sesión.",
+  "donde": "src/capacidades/experiencia/inactividad.ts"
+}

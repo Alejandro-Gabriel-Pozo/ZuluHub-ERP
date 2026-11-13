@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0358",
+  "fecha": "2026-11-13",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La barra muestra el nombre del área (Ventas, Catálogo); con una sola pantalla visible lleva directo a ella y con varias abre una hoja con sus grupos.",
+  "que_cambia": "Hoy la barra dice Comprobantes; pasa a decir Ventas y lleva al mismo listado. Revertir: mostrar el nombre de la pantalla cuando el área tiene una sola.",
+  "donde": "Pedernal-docs 10-ux-ui/prototipos-gastronomia/menu-por-areas.html (versión 5) y decisiones-del-dueno-2026-11.md (12/11/2026, nombres de áreas); apps/web/servidor/modulos.ts"
+}

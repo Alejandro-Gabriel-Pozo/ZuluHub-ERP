@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0073",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "Al pasar un producto a precio abierto, los recargos de la empresa pasan a una versión nueva con recargo 0.",
+  "que_cambia": "Qué recargo queda al cambiar la forma de venta.",
+  "donde": "src/modulos/catalogo/casos-de-uso/cambiar-forma-de-venta.ts"
+}

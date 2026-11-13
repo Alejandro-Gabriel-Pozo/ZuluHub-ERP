@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0067",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La primera llamada exitosa a ARCA con ticket anota que ARCA aceptó la autorización del certificado; cuentan tres operaciones y no otras.",
+  "que_cambia": "Cuándo se da por verificado un certificado.",
+  "donde": "src/adaptadores/arca/adaptador-arca.ts"
+}

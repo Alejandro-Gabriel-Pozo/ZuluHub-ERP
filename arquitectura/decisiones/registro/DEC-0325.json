@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0325",
+  "fecha": "2026-11-12",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Los caracteres ¿ ¡ ? ! % $ se permiten en nombres y descripciones de producto, sección y opción (por ejemplo «¿Querés papas?» o «Combo 2x1 50% $500»).",
+  "que_cambia": "Esos seis signos dejan de rechazarse al cargar un nombre o descripción del catálogo y de la carta; razón social, domicilio, notas y motivos siguen sin ellos.",
+  "donde": "Pedernal-docs 11-especificaciones/carta-real-especificacion.md §0 y §8.2 V-2 (Q3, 12/11/2026); src/primitivas/texto/texto-de-una-linea.ts y migraciones/0043_carta_publica.sql"
+}

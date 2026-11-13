@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0038",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Los números de envío son por cuenta; imprimir nunca bloquea el envío; impresa es lo que declara el dispositivo.",
+  "que_cambia": "Cómo se numeran y envían las comandas a cocina.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B13 (E7)"
+}

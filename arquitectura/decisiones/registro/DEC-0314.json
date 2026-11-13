@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0314",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En la consola de plataforma los módulos nuevos se llaman «Clientes y proveedores» y «Compras».",
+  "que_cambia": "Es el nombre que ve quien administra el plan de una empresa; se corrige cambiando dos rótulos.",
+  "donde": "apps/plataforma/logica/plan.ts"
+}

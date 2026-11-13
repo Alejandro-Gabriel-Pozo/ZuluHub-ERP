@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0306",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "El operador carga compras, facturas y pide puntos de venta; solo gerente y administrador pagan, anulan compras o pagos y editan la ficha del proveedor; solo el gerente cambia el nivel de compras.",
+  "que_cambia": "Se achica o se amplía quién puede pagar o anular; se corrige en la matriz de permisos.",
+  "donde": "src/capacidades/permisos/empresa.ts:183"
+}

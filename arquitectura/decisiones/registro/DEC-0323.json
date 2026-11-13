@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0323",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La condición de la empresa frente al IVA es la de los últimos datos fiscales confirmados de su emisor principal; si no se puede leer, una compra con IVA discriminado no se registra.",
+  "que_cambia": "Una empresa sin datos fiscales confirmados no puede cargar facturas A hasta confirmarlos; si hay otro emisor que debe mandar, se cambia de dónde se lee.",
+  "donde": "src/composicion/iva-de-la-empresa.ts"
+}
