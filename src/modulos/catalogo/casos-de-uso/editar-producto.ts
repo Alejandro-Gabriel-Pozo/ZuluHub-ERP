@@ -9,9 +9,16 @@ import type { ErrorDeCatalogo } from "./errores";
 
 type R<S> = Resultado<S, ErrorDeCatalogo>;
 
-/** Clase, unidad base, tipo y forma de venta NO se editan acá (la forma tiene su comando: `cambiarFormaDeVenta`). */
+/**
+ * Clase, unidad base, tipo y forma de venta NO se editan acá (la forma tiene su comando: `cambiarFormaDeVenta`). EDICIÓN PARCIAL (decisión del 13/11/2026): un campo AUSENTE
+ * (`undefined`) NO se toca y conserva lo guardado; `null` o un texto vacío lo BORRA (el nombre, que es obligatorio, no se puede borrar: ausente lo conserva). Previene que una pantalla que
+ * olvide mandar un campo guardado lo borre en silencio.
+ */
 export type EntradaDeEditarProducto = Readonly<
-  { productoId: string; versionEsperada: number } & EntradaDeFicha
+  { productoId: string; versionEsperada: number; nombre?: string | undefined } & Omit<
+    EntradaDeFicha,
+    "nombre"
+  >
 >;
 export type SalidaDeEditarProducto = Readonly<{ version: number }>;
 export type EntradaDeCambiarActivo = Readonly<{ productoId: string }>;
@@ -26,6 +33,21 @@ const FICHA = (p: Producto): Omit<FichaValida, "nombreClave"> => ({
   alicuota: p.alicuota,
   seccionDeCartaId: p.seccionDeCartaId,
 });
+
+/** La ficha que se valida: lo pedido, y de lo ausente (`undefined`), lo guardado. `null` y vacío pasan tal cual (borran). */
+function fusionarConLoGuardado(actual: Producto, e: EntradaDeEditarProducto): EntradaDeFicha {
+  const base = FICHA(actual);
+  return {
+    nombre: e.nombre === undefined ? base.nombre : e.nombre,
+    nombreDeCocina: e.nombreDeCocina === undefined ? base.nombreDeCocina : e.nombreDeCocina,
+    descripcionEnCarta:
+      e.descripcionEnCarta === undefined ? base.descripcionEnCarta : e.descripcionEnCarta,
+    codigo: e.codigo === undefined ? base.codigo : e.codigo,
+    codigoDeBarras: e.codigoDeBarras === undefined ? base.codigoDeBarras : e.codigoDeBarras,
+    alicuota: e.alicuota === undefined ? base.alicuota : e.alicuota,
+    seccionDeCartaId: e.seccionDeCartaId === undefined ? base.seccionDeCartaId : e.seccionDeCartaId,
+  };
+}
 
 /** Solo lo que cambia, antes y después (la auditoría no guarda lo que no se tocó). */
 function diferencias(
@@ -65,7 +87,7 @@ export function armarEditarProducto(dependencias: DependenciasDeCatalogo) {
         const actual = await tx.productos.bloquear(empresaId, entrada.productoId);
         if (actual === null) return err("PRODUCTO_NO_ENCONTRADO");
         if (!actual.activo) return err("PRODUCTO_INACTIVO");
-        const ficha = validarFicha(actual.claseDeUso, entrada, true);
+        const ficha = validarFicha(actual.claseDeUso, fusionarConLoGuardado(actual, entrada), true);
         if (!ficha.ok) return ficha;
         const seccion = ficha.valor.seccionDeCartaId;
         if (seccion !== null && seccion !== actual.seccionDeCartaId) {
