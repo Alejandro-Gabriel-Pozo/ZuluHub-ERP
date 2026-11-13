@@ -109,7 +109,12 @@ describe("la página del alta de un producto", () => {
     ]);
     const rotulos = [
       ...marcado.matchAll(/<(?:label|button)\b[^>]*>(.*?)<\/(?:label|button)>/g),
-    ].map((m) => (m[1] ?? "").replace(/<[^>]+>/g, "").trim());
+    ].map((m) =>
+      (m[1] ?? "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    );
     expect(rotulos.filter((r) => r !== "" && !/^(Inicio|Cuenta)/.test(r)).slice(-9)).toEqual([
       "¿Qué es?",
       "Nombre",
