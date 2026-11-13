@@ -19,14 +19,12 @@ export type VinculoParaLaFicha = Readonly<{
 }>;
 
 export type ClasificacionParaLaFicha = Readonly<{
-  /** Lo que rige ahora; `null` = nunca se clasificó (o solo hay cambios programados): «Sin elegir». */
+  /** Lo que rige: el último cambio guardado, con «Vigente desde» (el instante en que se guardó); `null` = nunca se clasificó: «Sin elegir». */
   vigente: VinculoParaLaFicha | null;
-  /** Los cambios con fecha futura, del más próximo al más lejano. */
-  programados: readonly VinculoParaLaFicha[];
 }>;
 
 /**
- * La clasificación de un producto para su ficha (A2b): la vigente con «Vigente desde» y los cambios programados, con el camino (departamento y categorías) de cada uno. Pide
+ * La clasificación de un producto para su ficha (A2b): la vigente con «Vigente desde» (cuándo se guardó) y su camino (departamento y categorías). Pide
  * `productos.ver` (los tres roles). Un producto de otra empresa o inexistente es `null`, indistinguible. El historial completo NO se muestra (decidido: queda en la auditoría).
  */
 export function crearConsultasDeClasificacionDeProducto(d: DependenciasDeConsultasDeCatalogo) {
@@ -64,15 +62,11 @@ export function crearConsultasDeClasificacionDeProducto(d: DependenciasDeConsult
                   : camino.valor.map((id) => ({ id, nombre: nombres.get(id) ?? "" })),
             };
           };
-          const { vigente, programados } = await tx.clasificacion.clasificacionDelProducto(
+          const vigente = await tx.clasificacion.vigenteDelProducto(
             contexto.empresaId,
             entrada.productoId,
-            contexto.ahora,
           );
-          return ok({
-            vigente: vigente === null ? null : paraLaFicha(vigente),
-            programados: programados.map(paraLaFicha),
-          });
+          return ok({ vigente: vigente === null ? null : paraLaFicha(vigente) });
         },
       ),
   };

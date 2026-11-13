@@ -3,12 +3,12 @@
 -- vigencia de solo inserción», decisión 60: un ítem tiene UN departamento principal con fechas, y cambiarlo no altera lo vendido); maqueta `clasificacion.html` (carpeta de
 -- prototipos de Pedernal-docs, 10-ux-ui). El camino que se copia al renglón de venta es el tramo siguiente (0047).
 --
--- Qué es: una lista de solo inserción, como `precio_de_venta` (la misma regla de vigencia): cada fila es «desde este instante el producto está en este nodo». Rige la última con
--- `vigente_desde <= ahora`; las de fecha futura conviven (rigen cuando llega su fecha). `nodo_id` nulo = «Sin elegir» (también es un cambio que se puede programar). Una fila no se
+-- Qué es: una lista de solo inserción, como `precio_de_venta`: cada fila es «desde este instante el producto está en este nodo». El cambio rige DESDE AHORA (decisión del dueño del
+-- 13/11/2026: sin fecha futura ni cambios programados): `vigente_desde` es el instante del guardado y rige la última fila. `nodo_id` nulo = «Sin elegir». Una fila no se
 -- edita ni se borra (ni el dueño de la base): se agrega otra más nueva; lo anterior queda además en la auditoría. El departamento es la raíz del camino del nodo: hay UN solo
 -- vínculo, no dos columnas que puedan contradecirse. El producto sin fila está «Sin elegir».
 --
--- Reglas que impone la base (la regla de negocio, incluida «nunca una fecha pasada», vive en el caso de uso y en `src/primitivas/tiempo/vigente-desde.ts`):
+-- Reglas que impone la base (la regla de negocio vive en el caso de uso):
 --  * El producto y el nodo son de la MISMA empresa que la fila (claves foráneas compuestas) y el nodo, al asignarlo, está activo (un nodo desactivado después no altera el
 --    historial: el producto lo conserva). Un nodo con productos vinculados no se borra de todos modos: no se borra nunca.
 --  * Una vigencia no se repite por producto: `UNIQUE (empresa_id, producto_id, vigente_desde)`. El `id` lo manda la aplicación: es la clave de idempotencia del cambio.

@@ -8,7 +8,6 @@ import type { ErrorDeCotizacion } from "../dominio/cotizar";
 import type { ErrorDeFicha } from "../dominio/producto";
 import type { ErrorDeFormaDeVenta } from "../dominio/forma-de-venta";
 import type { ErrorDeOpciones } from "../dominio/opciones";
-import type { ErrorDeVigenteDesde } from "../../../primitivas/tiempo/vigente-desde";
 import type { MotivoDeRechazoDeClasificacion } from "../../../primitivas/clasificacion/arbol";
 
 /**
@@ -25,7 +24,6 @@ export type ErrorDeCatalogo =
   | EmpresaNoOpera
   | ErrorDePersistencia
   | MotivoDeRechazoDeClasificacion
-  | ErrorDeVigenteDesde
   | "NODO_DESACTIVADO"
   | "CLASIFICACION_EN_ESA_FECHA"
   | "NOMBRE_DE_NODO_INVALIDO"
