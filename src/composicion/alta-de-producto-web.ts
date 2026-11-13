@@ -1,7 +1,7 @@
 import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import { ALICUOTAS_DEL_PRODUCTO } from "../modulos/fiscal/publico";
-import { CLASES_DE_USO } from "../modulos/catalogo/publico";
+import { CLASES_DE_USO, vendeLaClase } from "../modulos/catalogo/publico";
 import { err } from "../primitivas/resultado/resultado";
 import { UNIDADES } from "../primitivas/unidades/unidades";
 import {
@@ -11,7 +11,6 @@ import {
   type DependenciasDeRespuesta,
 } from "./a-respuesta";
 import { entradaDeCrearProducto, leerElPedidoDeAlta } from "./entradas-de-alta-de-producto";
-import { CLASES_QUE_SE_VENDEN } from "./entradas-de-ficha-de-producto";
 import { traducirErrorDeCatalogo } from "./errores-de-catalogo";
 import type { Web } from "./web";
 
@@ -62,7 +61,7 @@ export async function verLasOpcionesDelAlta(
       dato: {
         clases: CLASES_DE_USO.map((valor) => ({
           valor,
-          seVende: CLASES_QUE_SE_VENDEN.includes(valor),
+          seVende: vendeLaClase(valor),
         })),
         unidades: Object.keys(UNIDADES),
         alicuotas: ALICUOTAS_DEL_PRODUCTO,

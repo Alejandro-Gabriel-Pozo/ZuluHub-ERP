@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { CLASES_DE_USO } from "../modulos/catalogo/publico";
 import {
-  CLASES_QUE_SE_VENDEN,
   entradaDeEditarProducto,
   leerElPedidoDeLaFicha,
   type PedidoDeLaFicha,
@@ -236,8 +236,14 @@ describe("entradaDeEditarProducto", () => {
   });
 });
 
-describe("las clases que se venden", () => {
-  it("son la reventa y el producto vendible, y nada más", () => {
-    expect([...CLASES_QUE_SE_VENDEN]).toEqual(["REVENTA", "VENDIBLE"]);
+describe("según la clase (la pregunta es la del módulo: `vendeLaClase`)", () => {
+  it("solo la reventa y el producto vendible mandan nombre de cocina, descripción, alícuota y sección; las otras tres, vacíos", () => {
+    const mandan = CLASES_DE_USO.filter((claseDeUso) => {
+      const e = entradaDeEditarProducto(leido(pedido()), con({ claseDeUso }));
+      return [e.nombreDeCocina, e.descripcionEnCarta, e.alicuota, e.seccionDeCartaId].every(
+        (v) => v !== null,
+      );
+    });
+    expect(mandan).toEqual(["REVENTA", "VENDIBLE"]);
   });
 });

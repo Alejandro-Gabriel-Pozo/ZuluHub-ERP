@@ -13,6 +13,7 @@ import {
  */
 const ID = "0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b";
 const SECCION = "5c1d2e3f-4a5b-4c6d-8e7f-0a1b2c3d4e5f";
+const SECCION_GUARDADA = { id: SECCION, nombre: "Minutas", activa: true, orden: 1, version: 1 };
 const contexto = { empresaId: "e1" } as unknown as ContextoOperativo;
 
 const PRODUCTO = {
@@ -47,7 +48,14 @@ const montar = (cambios: Partial<Montaje> = {}) => {
   const m: Montaje = {
     llamadas: [],
     registrados: [],
-    ver: () => ok({ producto: PRODUCTO, grupos: [], preciosVigentes: [], historial: [] }),
+    ver: () =>
+      ok({
+        producto: PRODUCTO,
+        seccion: SECCION_GUARDADA,
+        grupos: [],
+        preciosVigentes: [],
+        historial: [],
+      }),
     secciones: () => ok([{ id: SECCION, nombre: "Minutas", orden: 1, activa: true, version: 1 }]),
     editar: () => ok({ version: 5 }),
     ...cambios,
@@ -93,11 +101,42 @@ describe("verLaFichaDeProducto", () => {
         codigo: "MIL-1",
         codigoDeBarras: null,
         alicuota: "21",
-        seccionDeCartaId: SECCION,
+        seccion: { id: SECCION, nombre: "Minutas", activa: true },
         alicuotas: ["21", "10.5", "27", "5", "2.5", "0"],
         secciones: [{ id: SECCION, nombre: "Minutas" }],
       },
     });
+  });
+
+  it("la sección guardada sale con su nombre y su estado, también desactivada, sin sumarla a las que se ofrecen", async () => {
+    const { d } = montar({
+      ver: () =>
+        ok({
+          producto: PRODUCTO,
+          seccion: { ...SECCION_GUARDADA, nombre: "Temporada", activa: false },
+          grupos: [],
+          preciosVigentes: [],
+          historial: [],
+        }),
+    });
+    const r = await verLaFichaDeProducto(d, contexto, ID);
+    expect(r.ok && r.dato.seccion).toEqual({ id: SECCION, nombre: "Temporada", activa: false });
+    expect(r.ok && r.dato.secciones).toEqual([{ id: SECCION, nombre: "Minutas" }]);
+  });
+
+  it("un producto sin sección sale con seccion en null", async () => {
+    const { d } = montar({
+      ver: () =>
+        ok({
+          producto: { ...PRODUCTO, seccionDeCartaId: null },
+          seccion: null,
+          grupos: [],
+          preciosVigentes: [],
+          historial: [],
+        }),
+    });
+    const r = await verLaFichaDeProducto(d, contexto, ID);
+    expect(r.ok && r.dato.seccion).toBeNull();
   });
 
   it("una clase que no se vende sale con seVende en falso", async () => {
@@ -105,6 +144,7 @@ describe("verLaFichaDeProducto", () => {
       ver: () =>
         ok({
           producto: { ...PRODUCTO, claseDeUso: "INSUMO", alicuota: null },
+          seccion: null,
           grupos: [],
           preciosVigentes: [],
           historial: [],
@@ -296,6 +336,7 @@ describe("guardarLaFichaDeProducto", () => {
             alicuota: null,
             seccionDeCartaId: null,
           },
+          seccion: null,
           grupos: [],
           preciosVigentes: [],
           historial: [],

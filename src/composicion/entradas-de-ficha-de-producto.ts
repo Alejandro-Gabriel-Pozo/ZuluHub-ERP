@@ -1,5 +1,9 @@
 import { z } from "zod";
-import type { ClaseDeUso, EntradaDeEditarProducto, Producto } from "../modulos/catalogo/publico";
+import {
+  vendeLaClase,
+  type EntradaDeEditarProducto,
+  type Producto,
+} from "../modulos/catalogo/publico";
 import { err, type Resultado } from "../primitivas/resultado/resultado";
 import { entero, identificador, leer, texto } from "./entradas-de-facturacion";
 
@@ -17,9 +21,6 @@ import { entero, identificador, leer, texto } from "./entradas-de-facturacion";
  *    el pedido los traiga, no se mandan.
  * Chequeo: `entradas-de-ficha-de-producto.test.ts`.
  */
-
-/** Las clases que se venden: llevan nombre de cocina, descripción, alícuota y sección (decisión 131, `clases.ts` del módulo; el módulo no exporta esta pregunta). */
-export const CLASES_QUE_SE_VENDEN: readonly ClaseDeUso[] = ["REVENTA", "VENDIBLE"];
 
 const opcional = z.string().max(1000).optional();
 
@@ -63,7 +64,7 @@ export function entradaDeEditarProducto(
   pedido: PedidoDeLaFicha,
   actual: ProductoParaEditar,
 ): EntradaDeEditarProducto {
-  const vende = CLASES_QUE_SE_VENDEN.includes(actual.claseDeUso);
+  const vende = vendeLaClase(actual.claseDeUso);
   return {
     productoId: actual.id,
     versionEsperada: pedido.versionEsperada,

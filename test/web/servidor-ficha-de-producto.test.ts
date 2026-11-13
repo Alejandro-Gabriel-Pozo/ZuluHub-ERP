@@ -50,7 +50,11 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
     consultasDeCatalogo: () => ({
       verProducto: () =>
         Promise.resolve(
-          ok(mundo.producto === null ? null : { producto: mundo.producto, grupos: [] }),
+          ok(
+            mundo.producto === null
+              ? null
+              : { producto: mundo.producto, seccion: null, grupos: [] },
+          ),
         ),
       listarSeccionesDeCarta: () => Promise.resolve(ok([])),
     }),
