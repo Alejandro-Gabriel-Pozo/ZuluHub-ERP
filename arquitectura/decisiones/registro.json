@@ -1641,5 +1641,15 @@
     "decision": "Los textos de lista, ficha, alta y precio de productos son los de la maqueta productos.html, con «medida» y las seis alícuotas sin «IVA».",
     "que_cambia": "Qué lee la persona en las pantallas de productos; no se agrega ningún texto fuera de la maqueta. «Categoría» queda sin cargar hasta que el dueño responda.",
     "donde": "Pedernal-docs 10-ux-ui/prototipos-gastronomia/productos.html (Textos nuevos, 09/11/2026) y 11-especificaciones/decisiones-del-dueno-2026-11.md (12/11/2026); src/capacidades/vocabulario/catalogo-catalogo.ts"
+  },
+  {
+    "id": "DEC-0354",
+    "fecha": "2026-11-13",
+    "quien": "sesión",
+    "tipo": "DATOS",
+    "estado": "PENDIENTE_DE_OK",
+    "decision": "El cambio de clasificación de un producto puede programarse hasta el 31/12/2100: una fecha posterior se rechaza.",
+    "que_cambia": "Solo hasta qué fecha futura se acepta un cambio programado; sin tope entraría una fecha mal tipeada y el cambio nunca regiría. Revertir: cambiar una constante.",
+    "donde": "src/primitivas/tiempo/vigente-desde.ts (FECHA_CIVIL_MAXIMA); sin fuente: pregunta al dueño"
   }
 ]

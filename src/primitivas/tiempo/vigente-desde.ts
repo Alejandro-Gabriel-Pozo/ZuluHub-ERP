@@ -7,7 +7,7 @@ import { hoyEnArgentina } from "./fecha-civil-hasta-hoy";
  * desde hoy o desde una fecha futura, nunca desde una pasada; por defecto, hoy). Una fecha pasada tocaría la historia del producto y lo ya vendido: se rechaza (es una pregunta al
  * dueño si algún día se quiere permitir). Sin fecha o con la de hoy en Argentina, rige DESDE AHORA (el instante del pedido: el cambio vale enseguida, y dos cambios del mismo día
  * se ordenan por su instante); con una fecha futura, desde la medianoche de Argentina de ese día. «Hoy» es el de Argentina (regla permanente del proyecto; sin horario de verano,
- * UTC-3). Techo: `FECHA_CIVIL_MAXIMA` (31/12/2100: SUPUESTO del ingeniero, no tiene fuente; sin tope, cualquier año de cuatro cifras entraría y una fecha mal tipeada dejaría un
+ * UTC-3). Techo: `FECHA_CIVIL_MAXIMA` (31/12/2100: SUPUESTO (DEC-0354) del ingeniero, no tiene fuente; sin tope, cualquier año de cuatro cifras entraría y una fecha mal tipeada dejaría un
  * cambio que nunca rige; se cambia con una constante). Puro: el reloj entra como parámetro.
  */
 export const FECHA_CIVIL_MAXIMA = "2100-12-31";
