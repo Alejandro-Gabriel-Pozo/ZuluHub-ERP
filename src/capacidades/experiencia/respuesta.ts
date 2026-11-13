@@ -2,7 +2,11 @@ import type { EmpresaNoOpera } from "../../contexto/estados";
 import type { MotivoDeRechazo } from "../permisos/guard";
 import type { ClaveDeTexto } from "../vocabulario/catalogo";
 import { CLAVES_DE_ERRORES_DE_CAJA, type CodigoDeCaja } from "./respuesta-de-caja";
-import { CLAVES_DE_ERRORES_DE_CATALOGO, type CodigoDeCatalogo } from "./respuesta-de-catalogo";
+import {
+  CLAVES_DE_ERRORES_DE_CATALOGO,
+  PARAMETROS_DE_CATALOGO,
+  type CodigoDeCatalogo,
+} from "./respuesta-de-catalogo";
 import { CLAVES_DE_ERRORES_FISCALES, type CodigoFiscal } from "./respuesta-fiscal";
 
 /**
@@ -123,6 +127,8 @@ export type ErrorPublico = Readonly<{
   presentacion: Presentacion;
   /** El campo del formulario al que se asocia el error, si el error lo trae y tiene la forma de un campo. */
   campo?: string;
+  /** Los valores de los marcadores del texto (hoy, un importe decimal como texto): solo los que el código declara y con forma de decimal. */
+  parametros?: Readonly<Record<string, string>>;
   /** `PD-…`: solo en los errores inesperados. Con ella soporte encuentra el registro del servidor. */
   referencia?: string;
 }>;
@@ -134,11 +140,34 @@ export type Respuesta<T> =
 const FORMA_DE_CAMPO = /^[a-z][A-Za-z0-9_]{0,63}(\.[a-z][A-Za-z0-9_]{0,63}){0,3}$/;
 
 export type Clasificado =
-  | Readonly<{ tipo: "PUBLICO"; codigo: CodigoPublico; campo?: string; clave?: ClaveDeTexto }>
+  | Readonly<{
+      tipo: "PUBLICO";
+      codigo: CodigoPublico;
+      campo?: string;
+      clave?: ClaveDeTexto;
+      parametros?: Readonly<Record<string, string>>;
+    }>
   | Readonly<{ tipo: "INESPERADO"; detalle: string }>;
 
 const esObjeto = (x: unknown): x is Readonly<Record<string, unknown>> =>
   typeof x === "object" && x !== null;
+
+/** Un parámetro público es un decimal en texto (un importe: «13000.000000»): nada de texto libre. */
+const FORMA_DE_PARAMETRO = /^[0-9]{1,18}(?:\.[0-9]{1,6})?$/;
+
+/** De lo que trae el error, solo los parámetros que el código declara y que tienen forma de decimal. */
+function parametrosDe(codigo: CodigoPublico, crudo: unknown): Record<string, string> | undefined {
+  const declarados = Object.hasOwn(PARAMETROS_DE_CATALOGO, codigo)
+    ? PARAMETROS_DE_CATALOGO[codigo as CodigoDeCatalogo]
+    : undefined;
+  if (declarados === undefined || !esObjeto(crudo)) return undefined;
+  const salida: Record<string, string> = {};
+  for (const nombre of declarados) {
+    const valor = Object.hasOwn(crudo, nombre) ? crudo[nombre] : undefined;
+    if (typeof valor === "string" && FORMA_DE_PARAMETRO.test(valor)) salida[nombre] = valor;
+  }
+  return Object.keys(salida).length === declarados.length ? salida : undefined;
+}
 
 const esCodigoPublico = (x: unknown): x is CodigoPublico =>
   typeof x === "string" && Object.hasOwn(CODIGOS_PUBLICOS, x);
@@ -167,6 +196,7 @@ export function clasificarError(error: unknown): Clasificado {
     const campo = error["campo"];
     const conCampo =
       typeof campo === "string" && FORMA_DE_CAMPO.test(campo) ? { campo } : ({} as const);
+    const parametros = parametrosDe(error["codigo"], error["parametros"]);
     const estado = error["motivo"];
     const claveDeEstado =
       error["codigo"] === "EMPRESA_NO_OPERA" &&
@@ -178,6 +208,7 @@ export function clasificarError(error: unknown): Clasificado {
       tipo: "PUBLICO",
       codigo: error["codigo"],
       ...conCampo,
+      ...(parametros === undefined ? {} : { parametros }),
       ...(claveDeEstado === undefined ? {} : { clave: claveDeEstado }),
     };
   }
@@ -193,6 +224,7 @@ export function errorPublicoDe(
     ...base,
     clave: clasificado.clave ?? base.clave,
     ...(clasificado.campo === undefined ? {} : { campo: clasificado.campo }),
+    ...(clasificado.parametros === undefined ? {} : { parametros: clasificado.parametros }),
   };
 }
 

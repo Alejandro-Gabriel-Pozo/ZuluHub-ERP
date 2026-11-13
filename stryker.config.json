@@ -98,6 +98,8 @@
     "src/composicion/errores-de-caja.ts",
     "src/composicion/entradas-de-ficha-de-producto.ts",
     "src/composicion/errores-de-catalogo.ts",
+    "src/composicion/entradas-de-precios-de-producto.ts",
+    "apps/web/ui/plantillas/catalogo/modelo-de-precios-de-producto.ts",
     "apps/web/ui/plantillas/catalogo/modelo-de-ficha-de-producto.ts",
     "apps/web/ui/plantillas/caja/modelo-de-medios-de-pago.ts",
     "apps/web/ui/plantillas/caja/modelo-de-cuentas-de-cobro.ts",

@@ -306,3 +306,64 @@ describe("las claves de texto de los errores son del catálogo", () => {
     expectTypeOf(errorDeCodigo("SIN_PERMISO").clave).toEqualTypeOf<ClaveDeTexto>();
   });
 });
+
+describe("los parámetros públicos de un error (A1, T3: el importe vigente del precio que otra persona cambió)", () => {
+  const con = (parametros: unknown, codigo = "CATALOGO_PRECIO_DESACTUALIZADO") =>
+    clasificarError({ codigo, campo: "precio", parametros });
+
+  it("pasa el importe declarado por el código, y solo ese", () => {
+    expect(con({ importe: "13000.000000", otro: "1", precioId: "x" })).toEqual({
+      tipo: "PUBLICO",
+      codigo: "CATALOGO_PRECIO_DESACTUALIZADO",
+      campo: "precio",
+      parametros: { importe: "13000.000000" },
+    });
+    expect(con({ importe: "0" })).toHaveProperty("parametros", { importe: "0" });
+    expect(con({ importe: "1.5" })).toHaveProperty("parametros", { importe: "1.5" });
+  });
+
+  it.each([
+    ["texto libre", "Hola"],
+    ["con signo", "-5.00"],
+    ["con coma", "13000,00"],
+    ["con exponente", "1e3"],
+    ["con 7 decimales", "1.1234567"],
+    ["con 19 enteros", "1".repeat(19)],
+    ["vacío", ""],
+    ["un número", 13000],
+    ["marcado", "<b>1</b>"],
+  ])("un importe %s no pasa: el error sale sin parámetros", (_caso, importe) => {
+    expect(con({ importe })).not.toHaveProperty("parametros");
+  });
+
+  it("sin parámetros, con parámetros que no son un objeto o sin el importe: no hay parámetros", () => {
+    expect(con(undefined)).not.toHaveProperty("parametros");
+    expect(con("13000.00")).not.toHaveProperty("parametros");
+    expect(con(null)).not.toHaveProperty("parametros");
+    expect(con({})).not.toHaveProperty("parametros");
+  });
+
+  it("un código que no declara parámetros los descarta aunque vengan bien formados", () => {
+    expect(con({ importe: "1.00" }, "YA_ES_MIEMBRO")).not.toHaveProperty("parametros");
+    expect(con({ importe: "1.00" }, "CATALOGO_PRECIO_INVALIDO")).not.toHaveProperty("parametros");
+  });
+
+  it("un nombre heredado de Object.prototype no se confunde con un parámetro declarado", () => {
+    expect(con({}, "toString").tipo).toBe("INESPERADO");
+  });
+
+  it("el error público lleva los parámetros que clasificó; sin ellos, no trae la clave", () => {
+    const c = con({ importe: "13000.00" });
+    if (c.tipo !== "PUBLICO") throw new Error("se esperaba un código público");
+    expect(errorPublicoDe(c)).toEqual({
+      codigo: "CATALOGO_PRECIO_DESACTUALIZADO",
+      clave: "catalogo.precio.vigente_ahora",
+      presentacion: "AVISO",
+      campo: "precio",
+      parametros: { importe: "13000.00" },
+    });
+    const sin = clasificarError("SIN_PERMISO");
+    if (sin.tipo !== "PUBLICO") throw new Error("se esperaba un código público");
+    expect(errorPublicoDe(sin)).not.toHaveProperty("parametros");
+  });
+});

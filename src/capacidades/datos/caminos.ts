@@ -48,7 +48,24 @@ const FORMULARIO_DE_CAJA = "apps/web/ui/plantillas/caja/FormularioDeCaja.cliente
 const FORMULARIO_DE_FICHA_DE_PRODUCTO =
   "apps/web/ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente.tsx";
 
+const FORMULARIO_DE_PRECIO_DE_PRODUCTO =
+  "apps/web/ui/plantillas/catalogo/FormularioDePrecioDeProducto.cliente.tsx";
+
 export const CAMINOS = {
+  // Productos, precio de la empresa (A1, T3): el precio es el único dato; el producto, la clave del cambio y la fila vista los fija la página. El único error con campo es «Escribí
+  // un precio válido» (y la frase del precio que otra persona cambió antes, que se muestra en el mismo campo), ambos de la maqueta `productos.html`.
+  "cambiar-precio-de-producto": {
+    funcion: "Cambiar el precio de la empresa de un producto",
+    pantallas: [FORMULARIO_DE_PRECIO_DE_PRODUCTO],
+    pasos: [{ id: "precio-del-producto", campos: { precio: "precio-de-venta-de-producto" } }],
+    deriva: [],
+    accion: {
+      clave: "productos.cambiar_precio",
+      requiere: ["precio-de-venta-de-producto"],
+      admite: [],
+    },
+    camposDeError: ["precio"],
+  },
   // Productos, ficha de datos: el nombre es el único dato obligatorio para todas las clases; el nombre de cocina, la alícuota (obligatoria si se vende, lo decide el servidor) y la
   // sección son de las clases que se venden. La descripción de la carta no se pide acá (la maqueta no la trae) y se conserva. Los errores con campo son los cuatro que la maqueta
   // `productos.html` redacta para la ficha: nombre repetido o vacío, código repetido, código de barras inválido y alícuota sin elegir.
