@@ -3,6 +3,7 @@ import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/decla
 const ARCHIVO = "test/integracion/catalogo-casos-de-uso.test.ts";
 const ARCHIVO_DE_PRESENTACIONES = "test/integracion/catalogo-presentaciones.test.ts";
 const ARCHIVO_DE_CARTA = "test/integracion/carta-publica-casos-de-uso.test.ts";
+const ARCHIVO_DE_CLASIFICACION = "test/integracion/clasificacion-casos-de-uso.test.ts";
 const ARCHIVO_DE_FORMA = "test/integracion/catalogo-forma-de-venta.test.ts";
 
 /**
@@ -158,6 +159,56 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_CARTA,
         it: "C-4: repetir el reordenamiento ya aplicado es SIN_CAMBIOS: no sube ninguna versión ni audita, aunque las versiones sean viejas",
+      },
+    },
+  },
+  crearNodoDeClasificacion: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_CLASIFICACION,
+        it: "crear: repetir con el mismo id deja un nodo y una auditoría; con otro contenido, ID_REUTILIZADO",
+      },
+    },
+  },
+  renombrarNodoDeClasificacion: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "SIN_CAMBIOS",
+      prueba: {
+        archivo: ARCHIVO_DE_CLASIFICACION,
+        it: "renombrar: repetir con el mismo nombre devuelve lo vigente aunque la versión esperada sea vieja, sin escribir ni auditar",
+      },
+    },
+  },
+  moverNodoDeClasificacion: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_CLASIFICACION,
+        it: "mover: repetir el movimiento ya aplicado es yaEstaba, aunque la versión esperada sea vieja, sin escribir ni auditar",
+      },
+    },
+  },
+  desactivarNodoDeClasificacion: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_CLASIFICACION,
+        it: "desactivar y reactivar: repetir cada uno es yaEstaba y no audita la segunda vez",
+      },
+    },
+  },
+  reactivarNodoDeClasificacion: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_CLASIFICACION,
+        it: "desactivar y reactivar: repetir cada uno es yaEstaba y no audita la segunda vez",
       },
     },
   },

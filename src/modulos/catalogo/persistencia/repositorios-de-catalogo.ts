@@ -1,5 +1,9 @@
 import type { Kysely } from "kysely";
 import type { CatalogoDb } from "./esquema";
+import {
+  crearRepositorioDeClasificacion,
+  type RepositorioDeClasificacion,
+} from "./repositorio-de-clasificacion";
 import { crearLectorDeCarta, type LectorDeCarta } from "./lector-de-carta";
 import { crearRepositorioDeCartas, type RepositorioDeCartas } from "./repositorio-de-cartas";
 import {
@@ -30,6 +34,7 @@ export type RepositoriosDeCatalogo = Readonly<{
   cartasPublicas: RepositorioDeCartas;
   disponibilidadDeProductos: RepositorioDeDisponibilidad;
   seccionesDeCarta: RepositorioDeSecciones;
+  clasificacion: RepositorioDeClasificacion;
   lectorDeCarta: LectorDeCarta;
 }>;
 
@@ -45,6 +50,7 @@ export function crearRepositoriosDeCatalogo(db: {
     cartasPublicas: crearRepositorioDeCartas(conexion),
     disponibilidadDeProductos: crearRepositorioDeDisponibilidad(conexion),
     seccionesDeCarta: crearRepositorioDeSecciones(conexion),
+    clasificacion: crearRepositorioDeClasificacion(conexion),
     lectorDeCarta: crearLectorDeCarta(conexion),
   };
 }
