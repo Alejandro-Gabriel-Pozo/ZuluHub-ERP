@@ -2,6 +2,7 @@ import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type {
   ClaseDeUso,
+  ConsultasDeCatalogo,
   EstadoDeProducto,
   PaginaDeProductos,
   PrecioDeLista,
@@ -12,7 +13,6 @@ import {
   leerLaEntradaDeLaLista,
   type EntradaDeLaLista,
 } from "./entradas-de-productos";
-import type { Web } from "./web";
 
 /**
  * La lista de productos de la empresa (A1, T1; maqueta aprobada `productos.html`, 12/11/2026): solo lectura. Vive acá, y no en `apps/web`, para probarse con la base real sin
@@ -22,14 +22,15 @@ import type { Web } from "./web";
  *  - **El permiso es de la consulta.** `listarProductos` exige `productos.ver` al guard dentro de su transacción: acá no se decide ningún permiso. Con `catalogo` en
  *    desarrollo (hoy) o sin el permiso sale el motivo del guard, sin dato alguno.
  *  - **La empresa y la persona las pone el servidor**: el pedido no las trae. Una empresa nunca ve productos de otra.
- *  - **Nada de más sale.** Lista blanca campo por campo: id, nombre, clase, estado y precio (el importe como texto decimal, ADR-006). Ni la unidad ni la versión ni la clave interna.
+ *  - **Nada de más sale.** Lista blanca campo por campo: id, nombre, clase, estado, el NOMBRE de la sección de la carta (la lista dice «clase · sección»; decisión del dueño 13/11/2026) y precio (el
+ *    importe como texto decimal, ADR-006). Ni el id de la sección ni su estado, ni la unidad ni la versión ni la clave interna.
  *  - **Lo que nada puede coincidir no se pregunta**: una búsqueda, clase, estado o página inválidos devuelven una página vacía sin consultar (`entradas-de-productos.ts`).
  *  - **Todo resultado sale por el camino común** (`aRespuesta`, ADR-016): un fallo inesperado sale sin detalle y con referencia.
  * No aplican a una lectura: idempotencia, concurrencia, transacción de escritura ni auditoría (no cambia datos).
  */
 
 export type DependenciasDeProductosWeb = Readonly<{
-  consultas: () => Pick<ReturnType<Web["consultasDeCatalogo"]>, "listarProductos">;
+  consultas: () => Pick<ConsultasDeCatalogo, "listarProductos">;
   respuesta: DependenciasDeRespuesta;
 }>;
 
@@ -45,6 +46,8 @@ export type ProductoParaLaPantalla = Readonly<{
   nombre: string;
   claseDeUso: ClaseDeUso;
   estado: EstadoDeProducto;
+  /** El nombre de la sección de la carta, también si está desactivada; `null` si no tiene. */
+  seccion: string | null;
   precio: PrecioParaLaPantalla | null;
 }>;
 
@@ -67,6 +70,7 @@ const paraLaPantalla = (pagina: PaginaDeProductos): ProductosParaLaPantalla => (
     nombre: p.nombre,
     claseDeUso: p.claseDeUso,
     estado: p.estado,
+    seccion: p.seccion === null ? null : p.seccion.nombre,
     precio: precioDe(p.precio),
   })),
   siguiente: pagina.siguiente === null ? null : codificarLaPagina(pagina.siguiente),
