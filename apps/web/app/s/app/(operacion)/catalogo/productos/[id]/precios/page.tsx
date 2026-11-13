@@ -3,7 +3,7 @@ import { puedeCambiarPrecios } from "../../../../../../../../servidor/modulos";
 import { cargarLosPrecios } from "../../../../../../../../servidor/precios-de-producto";
 import { FormularioDePrecioDeProducto } from "../../../../../../../../ui/plantillas/catalogo/FormularioDePrecioDeProducto.cliente";
 import { armarLosPrecios } from "../../../../../../../../ui/plantillas/catalogo/modelo-de-precios-de-producto";
-import { ErrorDelDetalle } from "../../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../../ui/patrones/ErrorDelDetalle";
 import { cambiarPrecioAccion } from "../../../../../acciones-de-productos";
 
 type PropsDePagina = Readonly<{ params: Promise<{ id: string }> }>;

@@ -54,7 +54,12 @@ describe.skipIf(base === null)("ventas: la persistencia contra el esquema real",
       (await leer("0038_salon.sql")).split("-- SALÓN: la mesa y sus casillas")[0] ?? "";
     const migracion = [
       ...(await Promise.all(
-        ["0028_ventas.sql", "0029_facturacion.sql", "0036_ventas_sella_variante.sql"].map(leer),
+        [
+          "0028_ventas.sql",
+          "0029_facturacion.sql",
+          "0036_ventas_sella_variante.sql",
+          "0048_departamento_en_la_cuenta.sql",
+        ].map(leer),
       )),
       de0038,
     ].join("\n");

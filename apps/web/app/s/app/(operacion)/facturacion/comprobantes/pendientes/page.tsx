@@ -1,6 +1,6 @@
 import { pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
 import { pendientesDeFacturar } from "../../../../../../../servidor/facturar-tickets";
-import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import {
   armarLosPendientes,
   pedidoDeLosPendientes,

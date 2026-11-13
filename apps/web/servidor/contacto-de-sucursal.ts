@@ -9,7 +9,7 @@ import {
 } from "../../../src/composicion/contacto-de-sucursal-web";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { web } from "./composicion";
-import { conLaEmpresa } from "./facturacion";
+import { conLaEmpresa } from "./con-la-empresa";
 import { dependenciasDeSesion } from "./sesion";
 import { sucursalDelPedido } from "./sucursal-elegida";
 

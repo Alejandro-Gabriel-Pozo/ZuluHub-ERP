@@ -9,7 +9,7 @@ import {
   formatearCantidadConUnidad,
   formatearFecha,
   formatearImporte,
-} from "../formato-fiscal";
+} from "../../../patrones/formato-fiscal";
 import { CLAVE_DE_CONDICION } from "../modelo-de-emision";
 import { documentoDe, type TipoDeDocumentoVisible } from "../modelo-del-detalle";
 import { filaDeLeyenda } from "./fila-de-leyenda";
