@@ -3,7 +3,7 @@ import {
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { direccionDeEmitirDesdeUnTicket, direccionDePendientes } from "./filtros-del-listado";
-import { formatearFecha, formatearImporte } from "./formato-fiscal";
+import { formatearFecha, formatearImporte } from "../../patrones/formato-fiscal";
 
 /**
  * El modelo de vista de «Pendientes de facturar» (E1 §3.6): los tickets cobrados sin comprobante vigente, de la sucursal con la que

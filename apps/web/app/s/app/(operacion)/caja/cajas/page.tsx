@@ -9,7 +9,7 @@ import {
 import { PantallaDeListaDeCaja } from "../../../../../../ui/plantillas/caja/PantallaDeListaDeCaja";
 import { pestanasDeCaja } from "../../../../../../ui/plantillas/caja/pestanas-de-caja";
 import { PestanasDeCaja } from "../../../../../../ui/plantillas/caja/PestanasDeCaja";
-import { ErrorDelDetalle } from "../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 import { desactivarCajaAccion, reactivarCajaAccion } from "../../../acciones-de-cajas";
 
 // `/caja/cajas`: las cajas de la sucursal elegida en el dispositivo, también las desactivadas (maqueta `medios.html`, 09/11/2026). Sin sucursal elegida no se asume «todas»: sale el

@@ -4,7 +4,7 @@ import { FORMA_DE_ID } from "../../../../../../../../pantallas/comprobante-por-i
 import { pantallaDeOperacion } from "../../../../../../../../pantallas/operacion";
 import { verElComprobante } from "../../../../../../../../servidor/facturacion";
 import { puedeEmitirNotasDeCredito } from "../../../../../../../../servidor/modulos";
-import { ErrorDelDetalle } from "../../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../../ui/patrones/ErrorDelDetalle";
 import { aFacturaParaAnular } from "../../../../../../../../ui/plantillas/facturacion/eleccion-de-anulacion";
 import { porQueNoSeAnula } from "../../../../../../../../ui/plantillas/facturacion/modelo-de-anulacion";
 import { PantallaDeAnularComprobante } from "../../../../../../../../ui/plantillas/facturacion/PantallaDeAnularComprobante.cliente";

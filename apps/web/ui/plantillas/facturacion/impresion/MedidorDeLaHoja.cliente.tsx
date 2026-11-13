@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { aplicarEstilos } from "../../../primitivas/aplicar-estilos";
-import { formatearImporte } from "../formato-fiscal";
+import { formatearImporte } from "../../../patrones/formato-fiscal";
 import estilos from "./HojaA4.module.css";
 import { variablesDeLaGeometria } from "./geometria";
 import type { Medidas } from "./medidas-de-la-hoja";

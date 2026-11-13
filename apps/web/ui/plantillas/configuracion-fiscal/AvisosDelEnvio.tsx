@@ -1,7 +1,7 @@
 import type { ErrorPublico } from "../../../../../src/capacidades/experiencia/respuesta";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { RegionDeEstado } from "../../patrones/RegionDeEstado";
-import { ErrorDelDetalle } from "../facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../patrones/ErrorDelDetalle";
 
 /**
  * Lo que dice una pantalla de Datos fiscales mientras envía (los mismos textos que ya usa Puntos de venta): «Verificando si se
