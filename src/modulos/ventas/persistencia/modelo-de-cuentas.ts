@@ -7,6 +7,8 @@ import type { CuentaId, LineaId } from "../dominio/identificadores";
 export type Cuenta = Readonly<{
   id: CuentaId;
   sucursalId: SucursalId;
+  /** El departamento con el que se abrió (no cambia); `null` = sin departamento (cuentas anteriores a 0048 o empresa sin departamentos). */
+  departamentoId: string | null;
   ancla: Ancla | null;
   etiqueta: string | null;
   estado: EstadoDeCuenta;
@@ -67,6 +69,7 @@ export type Linea = Readonly<{
 export type AltaDeCuenta = Readonly<{
   id: CuentaId;
   sucursalId: SucursalId;
+  departamentoId: string | null;
   ancla: Ancla | null;
   etiqueta: string | null;
   abiertaPor: PersonaId;

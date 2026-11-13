@@ -24,6 +24,10 @@ const REVERSION_DEL_CAMINO = join(
   import.meta.dirname,
   "../../migraciones/reversiones/0047_revertir_camino_en_el_renglon.sql",
 );
+const REVERSION_DEL_DEPARTAMENTO = join(
+  import.meta.dirname,
+  "../../migraciones/reversiones/0048_revertir_departamento_en_la_cuenta.sql",
+);
 const REVERSION_DEL_VINCULO = join(
   import.meta.dirname,
   "../../migraciones/reversiones/0046_revertir_clasificacion_de_producto.sql",
@@ -671,6 +675,7 @@ describe.skipIf(base === null)("migración 0045: clasificación comercial", () =
         );
         expect(registro.rowCount).toBe(0);
         // 0047 (el camino en el renglón) también depende de los nodos: se revierte antes (sin renglones en esta base). Con las dos revertidas, 0045 ya se puede revertir.
+        await correr(REVERSION_DEL_DEPARTAMENTO); // 0048 (el departamento en la cuenta) también apunta a los nodos
         await correr(REVERSION_DEL_CAMINO);
         await correr(REVERSION);
       } finally {
@@ -699,6 +704,9 @@ describe.skipIf(base === null)("migración 0045: clasificación comercial", () =
           }
         };
         // 0046 y 0047 dependen de esta tabla: se revierten antes (vacías en esta base).
+        await c.query("begin");
+        await c.query(await readFile(REVERSION_DEL_DEPARTAMENTO, "utf8"));
+        await c.query("commit");
         await c.query("begin");
         await c.query(await readFile(REVERSION_DEL_CAMINO, "utf8"));
         await c.query("commit");

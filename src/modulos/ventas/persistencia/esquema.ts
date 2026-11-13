@@ -48,6 +48,8 @@ export type VentasDb = {
     id: string;
     empresa_id: string;
     sucursal_id: string;
+    /** 0048: el departamento con el que se abrió la cuenta (se fija al abrir y no cambia); `null` = sin departamento. NO es el del producto (`linea_cuenta.departamento_id`). */
+    departamento_id: string | null;
     ancla_tipo: string | null;
     ancla_id: string | null;
     etiqueta: string | null;
@@ -251,6 +253,7 @@ export const COLUMNAS_DE_VENTAS = {
     "creado_en",
     "actualizado_en",
     "version",
+    "departamento_id", // 0048: la columna se agregó después, va al final
   ],
   ejemplar_grupo: ["empresa_id", "ejemplar_id", "orden", "total", "emisor_id"],
   ejemplar_linea: [
