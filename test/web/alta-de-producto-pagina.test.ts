@@ -136,7 +136,9 @@ describe("la página del alta de un producto", () => {
   it("abre con producto vendible y unidad elegidos, y la alícuota y la sección sin elegir", async () => {
     const marcado = await html();
     expect(marcado).toMatch(/<option value="VENDIBLE" selected[^>]*>Producto vendible<\/option>/);
-    expect(marcado).toMatch(/<option value="UNIDAD" selected/);
+    expect(marcado).toMatch(/<option value="UNIDAD" selected[^>]*>Unidad<\/option>/);
+    expect(marcado).toMatch(/<option value="KILOGRAMO"[^>]*>Kilogramo<\/option>/);
+    expect(marcado).toContain("Se arma o se produce y se vende; tiene composición.");
     expect(marcado).not.toMatch(/<option value="21" selected/);
     expect(marcado.match(/<option value="" selected="">Sin elegir<\/option>/g)).toHaveLength(2);
     expect(marcado.match(/<input[^>]*type="text"/g)).toHaveLength(4);

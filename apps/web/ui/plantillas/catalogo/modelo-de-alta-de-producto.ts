@@ -2,7 +2,8 @@ import {
   texto,
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { CLAVE_DE_CLASE } from "./filtros-de-productos";
+import { CLAVE_DE_CLASE, CLAVE_DE_DESCRIPCION_DE_CLASE } from "./filtros-de-productos";
+import { CLAVE_DE_TEXTO_DE_UNIDAD } from "../../../../../src/capacidades/vocabulario/unidades-de-medida";
 import { CLAVE_DE_ALICUOTA, nombrar } from "./modelo-de-ficha-de-producto";
 
 /**
@@ -13,7 +14,8 @@ import { CLAVE_DE_ALICUOTA, nombrar } from "./modelo-de-ficha-de-producto";
  * Lo que se ve según la clase (maqueta): el nombre de cocina, la alícuota y la sección solo si la clase se vende. Los valores de partida son los del borrador de la maqueta (`prod({})`):
  * clase «Producto vendible» y unidad «Unidad»; la alícuota y la sección arrancan en «Sin elegir» (la alícuota no tiene valor por defecto: dueño, 12/11/2026, pregunta 4). Lo que la maqueta
  * dibuja y esta pantalla NO tiene: «Se controla el stock» (nace sin tildar, dueño 13/11/2026, y el catálogo no lo guarda: es del artículo de stock) y la clasificación comercial (otro tramo).
- * Las unidades salen con su CÓDIGO (`KILOGRAMO`): sus 14 nombres son los de la maqueta, pero sus claves de vocabulario las agrega A2i (pendiente del backend); no se inventan acá.
+ * Las unidades salen con su nombre (`CLAVE_DE_TEXTO_DE_UNIDAD`, los de la maqueta; el valor que viaja sigue siendo el código) y la clase elegida lleva debajo su descripción corta (la maqueta
+ * muestra la de la clase elegida, `<p class="ayuda">`). Un valor que la pantalla no sabe nombrar se dice con el propio valor; una clase sin descripción no muestra ninguna.
  */
 
 /** Los valores con los que abre el formulario: los del borrador de la maqueta. */
@@ -33,7 +35,13 @@ type CampoArmado = Readonly<{ etiqueta: string }>;
 type DesplegableArmado = Readonly<{ etiqueta: string; opciones: readonly Opcion[] }>;
 
 export type AltaArmada = Readonly<{
-  clase: DesplegableArmado & Readonly<{ valorInicial: string; queSeVenden: readonly string[] }>;
+  clase: DesplegableArmado &
+    Readonly<{
+      valorInicial: string;
+      queSeVenden: readonly string[];
+      /** La descripción corta de cada clase que la tiene, por valor de la clase. */
+      descripciones: Readonly<Record<string, string>>;
+    }>;
   nombre: CampoArmado;
   nombreDeCocina: CampoArmado;
   codigo: CampoArmado;
@@ -58,6 +66,11 @@ export function armarElAlta(
       })),
       valorInicial: CLASE_POR_DEFECTO,
       queSeVenden: o.clases.filter((c) => c.seVende).map((c) => c.valor),
+      descripciones: Object.fromEntries(
+        o.clases
+          .filter((c) => Object.hasOwn(CLAVE_DE_DESCRIPCION_DE_CLASE, c.valor))
+          .map((c) => [c.valor, nombrar(CLAVE_DE_DESCRIPCION_DE_CLASE, c.valor, d)]),
+      ),
     },
     nombre: { etiqueta: texto(d, "catalogo.dato.nombre") },
     nombreDeCocina: { etiqueta: texto(d, "catalogo.dato.nombre_de_cocina") },
@@ -65,7 +78,10 @@ export function armarElAlta(
     codigoDeBarras: { etiqueta: texto(d, "catalogo.dato.codigo_de_barras") },
     unidad: {
       etiqueta: texto(d, "catalogo.dato.unidad"),
-      opciones: o.unidades.map((u) => ({ valor: u, etiqueta: u })),
+      opciones: o.unidades.map((u) => ({
+        valor: u,
+        etiqueta: nombrar(CLAVE_DE_TEXTO_DE_UNIDAD, u, d),
+      })),
       valorInicial: UNIDAD_POR_DEFECTO,
     },
     alicuota: {

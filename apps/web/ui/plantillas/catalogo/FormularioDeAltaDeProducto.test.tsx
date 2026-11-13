@@ -75,6 +75,27 @@ describe("FormularioDeAltaDeProducto", () => {
     await expect.element(campo("Sección de la carta")).toHaveValue("");
   });
 
+  it("bajo «¿Qué es?» se ve la descripción de la clase elegida, asociada al desplegable, y cambia al elegir otra sin cambiar lo que viaja", async () => {
+    await render(formulario());
+    const descripcion = () => {
+      const id = campo("¿Qué es?").element().getAttribute("aria-describedby");
+      return id === null ? null : document.getElementById(id)?.textContent;
+    };
+    expect(descripcion()).toBe("Se arma o se produce y se vende; tiene composición.");
+    await userEvent.selectOptions(campo("¿Qué es?"), "INSUMO");
+    expect(descripcion()).toBe("Se compra y se consume para operar, sin ser parte del producto.");
+    await userEvent.selectOptions(campo("¿Qué es?"), "REVENTA");
+    expect(descripcion()).toBe("Se compra y se vende tal cual.");
+    await expect.element(campo("¿Qué es?")).toHaveValue("REVENTA");
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("una clase sin descripción no deja una ayuda vacía", async () => {
+    const alta = armarElAlta({ ...OPCIONES, clases: [{ valor: "SERVICIO", seVende: false }] });
+    await render(formulario(alta));
+    expect(campo("¿Qué es?").element().getAttribute("aria-describedby")).toBeNull();
+  });
+
   it("la clase ofrece las cinco, sin «Sin elegir»; la alícuota, «Sin elegir» y las seis", async () => {
     await render(formulario());
     const textos = (etiqueta: string) =>
@@ -97,7 +118,12 @@ describe("FormularioDeAltaDeProducto", () => {
       "2,5 %",
       "0 %",
     ]);
-    expect(textos("Unidad")).toEqual(["UNIDAD", "GRAMO", "KILOGRAMO"]);
+    expect(textos("Unidad")).toEqual(["Unidad", "Gramo", "Kilogramo"]);
+    expect(
+      [...document.querySelectorAll<HTMLOptionElement>("[name=unidadBaseId] option")].map(
+        (o) => o.value,
+      ),
+    ).toEqual(["UNIDAD", "GRAMO", "KILOGRAMO"]);
   });
 
   it("no hay «Se controla el stock» ni ningún campo de más: cada campo es uno de los declarados", async () => {

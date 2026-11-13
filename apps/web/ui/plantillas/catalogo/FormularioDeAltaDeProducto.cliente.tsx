@@ -66,6 +66,7 @@ export function FormularioDeAltaDeProducto({
             valor={clase}
             alCambiar={setClase}
             opciones={alta.clase.opciones}
+            ayuda={alta.clase.descripciones[clase]}
           />
           <Campo
             dato="nombre-de-producto"

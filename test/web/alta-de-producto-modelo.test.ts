@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { CLASES_DE_USO } from "../../src/modulos/catalogo/publico";
 import { ALICUOTAS_DEL_PRODUCTO } from "../../src/modulos/fiscal/publico";
+import { texto } from "../../src/capacidades/vocabulario/vocabulario";
+import { CLAVE_DE_TEXTO_DE_UNIDAD } from "../../src/capacidades/vocabulario/unidades-de-medida";
 import { UNIDADES } from "../../src/primitivas/unidades/unidades";
 import {
   CLASE_POR_DEFECTO,
@@ -66,7 +68,23 @@ describe("armarElAlta", () => {
     expect(a.clase.queSeVenden).toEqual(["REVENTA", "VENDIBLE"]);
   });
 
-  it("las seis alícuotas con su texto; las 14 unidades con su código (sus nombres son de A2i); las secciones con su nombre", () => {
+  it("cada clase lleva su descripción corta, la de la maqueta (decisión 69)", () => {
+    expect(a.clase.descripciones).toEqual({
+      MATERIA_PRIMA: "Se compra y es componente de lo que se elabora y se vende.",
+      INSUMO: "Se compra y se consume para operar, sin ser parte del producto.",
+      REVENTA: "Se compra y se vende tal cual.",
+      ELABORADO: "Se produce en el negocio y se usa como componente.",
+      VENDIBLE: "Se arma o se produce y se vende; tiene composición.",
+    });
+  });
+
+  it("una clase que la pantalla no conoce no lleva descripción (ni una heredada de otra)", () => {
+    const r = armarElAlta({ ...OPCIONES, clases: [{ valor: "SERVICIO", seVende: true }] });
+    expect(r.clase.descripciones).toEqual({});
+    expect(r.clase.opciones).toEqual([{ valor: "SERVICIO", etiqueta: "SERVICIO" }]);
+  });
+
+  it("las seis alícuotas con su texto; las 14 unidades con su nombre y su código como valor; las secciones con su nombre", () => {
     expect(a.alicuota.opciones.map((o) => o.etiqueta)).toEqual([
       "21 %",
       "10,5 %",
@@ -75,8 +93,13 @@ describe("armarElAlta", () => {
       "2,5 %",
       "0 %",
     ]);
-    expect(a.unidad.opciones).toHaveLength(14);
-    expect(a.unidad.opciones.every((o) => o.valor === o.etiqueta)).toBe(true);
+    expect(a.unidad.opciones.map((o) => o.valor)).toEqual(Object.keys(UNIDADES));
+    expect(a.unidad.opciones.map((o) => o.etiqueta)).toEqual(
+      Object.keys(UNIDADES).map((c) =>
+        texto({}, CLAVE_DE_TEXTO_DE_UNIDAD[c as keyof typeof CLAVE_DE_TEXTO_DE_UNIDAD]),
+      ),
+    );
+    expect(a.unidad.opciones.find((o) => o.valor === "KILOGRAMO")?.etiqueta).toBe("Kilogramo");
     expect(a.seccion.opciones).toEqual([
       { valor: "s-1", etiqueta: "Minutas" },
       { valor: "s-2", etiqueta: "Bebidas" },
@@ -88,6 +111,14 @@ describe("armarElAlta", () => {
     expect(a.unidad.valorInicial).toBe("UNIDAD");
     expect(CLASES_DE_USO).toContain(CLASE_POR_DEFECTO);
     expect(Object.keys(UNIDADES)).toContain(UNIDAD_POR_DEFECTO);
+  });
+
+  it("una unidad que la pantalla no sabe nombrar se dice con el propio valor", () => {
+    const r = armarElAlta({ ...OPCIONES, unidades: ["UNIDAD", "QUINTAL"] });
+    expect(r.unidad.opciones).toEqual([
+      { valor: "UNIDAD", etiqueta: "Unidad" },
+      { valor: "QUINTAL", etiqueta: "QUINTAL" },
+    ]);
   });
 
   it("una alícuota que la pantalla no sabe nombrar se dice con el propio valor (no se esconde)", () => {
