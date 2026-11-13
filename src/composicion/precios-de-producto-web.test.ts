@@ -415,6 +415,43 @@ describe("cambiarElPrecioDeUnProducto", () => {
   });
 
   it.each([
+    ["malformado", "Hola"],
+    ["con salto de línea final", "13000\n"],
+    ["con signo", "-1.000000"],
+    ["que no es un texto", 15000],
+  ])(
+    "el precio vigente %s no sale: el genérico, sin parámetros y sin el marcador del texto",
+    async (_caso, precio) => {
+      const { d } = montar({
+        cambiar: () => err({ error: "PRECIO_DESACTUALIZADO", vigente: { precioId: P3, precio } }),
+      });
+      const r = await cambiarElPrecioDeUnProducto(d, contexto, PEDIDO);
+      expect(r).toEqual({
+        ok: false,
+        error: {
+          codigo: "CATALOGO_ACCION_NO_PERMITIDA",
+          clave: "catalogo.error.accion_no_permitida",
+          presentacion: "AVISO",
+        },
+      });
+      expect(JSON.stringify(r)).not.toContain("{importe}");
+    },
+  );
+
+  it("el importe vigente solo sale si el caso de uso lo entrega: sin permiso, aunque la lectura previa traiga el vigente, la respuesta es el motivo del guard y no lleva importe ni parámetros", async () => {
+    // El caso de uso autoriza (`productos.cambiar_precio`) ANTES de leer el vigente: acá lo simula rechazando. La composición no agrega nada desde la lectura previa.
+    const { m, d } = montar({ cambiar: () => err("SIN_PERMISO") });
+    const r = await cambiarElPrecioDeUnProducto(d, contexto, {
+      ...PEDIDO,
+      precioIdEsperado: P1,
+    });
+    expect(r).toMatchObject({ ok: false, error: { codigo: "SIN_PERMISO" } });
+    expect(r.ok ? null : r.error).not.toHaveProperty("parametros");
+    expect(JSON.stringify(r)).not.toContain("13000");
+    expect(m.llamadas.map((l) => l.que)).toEqual(["ver", "cambiar"]);
+  });
+
+  it.each([
     "ID_REUTILIZADO",
     "PRODUCTO_NO_ENCONTRADO",
     "PRODUCTO_INACTIVO",

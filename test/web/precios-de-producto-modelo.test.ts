@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { errorDeCodigo, type ErrorPublico } from "../../src/capacidades/experiencia/respuesta";
+import {
+  CODIGOS_PUBLICOS,
+  errorDeCodigo,
+  type ErrorPublico,
+} from "../../src/capacidades/experiencia/respuesta";
 import {
   armarLosPrecios,
   rutaDeLosPrecios,
@@ -131,8 +135,12 @@ describe("textoDelError", () => {
   });
 
   it("la frase del precio cambiado lleva el importe vigente formateado, con un solo «$»", () => {
+    // A mano, no con `errorDeCodigo`: ese cierra con el genérico un código que exige parámetros y no los trae.
+    const { clave, presentacion } = CODIGOS_PUBLICOS.CATALOGO_PRECIO_DESACTUALIZADO;
     const e = error({
-      ...errorDeCodigo("CATALOGO_PRECIO_DESACTUALIZADO"),
+      codigo: "CATALOGO_PRECIO_DESACTUALIZADO",
+      clave,
+      presentacion,
       parametros: { importe: "13000.000000" },
     });
     expect(textoDelError(e)).toBe(

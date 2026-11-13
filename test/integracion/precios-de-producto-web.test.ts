@@ -302,6 +302,21 @@ describe.skipIf(base === null)("precios de un producto de la web", () => {
     expect(codigoDe(await cambiar(id, "1000.00", v0, e.administrador))).toBe("OK");
   });
 
+  it("el importe vigente solo sale a quien tiene `productos.cambiar_precio`: el operador con una fila vieja recibe el motivo del guard, sin importe; el administrador de una sola sucursal, el genérico", async () => {
+    const id = await nuevoProducto();
+    const v0 = await precios(id);
+    expect(await cambiar(id, "1000.00", v0)).toMatchObject({ ok: true });
+    // `v0` ya quedó vieja: con permiso saldría el importe vigente (prueba de las dos pestañas); sin permiso, el caso de uso rechaza antes de mirar el precio.
+    for (const sinPermiso of [e.operador, e.administradorDeUnaSucursal]) {
+      const r = await cambiar(id, "9999.00", { ...v0, claveDelCambio: nuevoId() }, sinPermiso);
+      expect(r).toMatchObject({ ok: false });
+      expect(r.ok ? null : r.error).not.toHaveProperty("parametros");
+      expect(r.ok ? "" : r.error.codigo).not.toBe(DESACTUALIZADO);
+      expect(JSON.stringify(r)).not.toContain("1000");
+    }
+    expect(await filasDelPrecio(id)).toHaveLength(1);
+  });
+
   it("con el catálogo en desarrollo (hoy, en el catálogo real) todos reciben MODULO_EN_DESARROLLO y ningún dato", async () => {
     const x = await cerrado.escenario();
     const id = await productoDeBase(cerrado.dueno, x.empresa, { nombre: "Cerrado" });

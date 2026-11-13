@@ -399,7 +399,7 @@
     "grupo": "web (traductor único de respuestas, ADR-016)",
     "archivos": "src/capacidades/experiencia/respuesta.ts,src/composicion/a-respuesta.ts,src/composicion/entradas-de-caja.ts,src/composicion/errores-de-caja.ts",
     "minutos": 2.3,
-    "pruebas": "src/capacidades/experiencia/respuesta.test.ts src/capacidades/experiencia/respuesta.propiedades.test.ts src/composicion/a-respuesta.test.ts src/capacidades/experiencia/respuesta-de-caja.test.ts src/composicion/entradas-de-caja.test.ts src/composicion/errores-de-caja.test.ts"
+    "pruebas": "src/capacidades/experiencia/respuesta.test.ts src/capacidades/experiencia/respuesta.propiedades.test.ts src/composicion/a-respuesta.test.ts src/capacidades/experiencia/respuesta-de-caja.test.ts src/capacidades/experiencia/respuesta-de-catalogo.test.ts src/composicion/entradas-de-caja.test.ts src/composicion/errores-de-caja.test.ts"
   },
   {
     "grupo": "web (sesión: origen, retorno y estado de la pantalla)",

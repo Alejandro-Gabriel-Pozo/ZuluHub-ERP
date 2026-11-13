@@ -43,21 +43,43 @@ describe("códigos públicos de la ficha de un producto", () => {
     );
   });
 
-  it.each(Object.entries(CLAVES_DE_ERRORES_DE_CATALOGO))(
-    "%s está en la tabla pública, como aviso de estado 422 y con su clave",
-    (codigo, clave) => {
-      expect(CODIGOS_PUBLICOS[codigo as keyof typeof CLAVES_DE_ERRORES_DE_CATALOGO]).toEqual({
-        clave,
-        presentacion: "AVISO",
-        estadoHttp: 422,
-      });
-      expect(errorDeCodigo(codigo as keyof typeof CLAVES_DE_ERRORES_DE_CATALOGO)).toEqual({
-        codigo,
-        clave,
-        presentacion: "AVISO",
-      });
-    },
-  );
+  it("toda clave es `catalogo.error.*`, salvo la del precio vigente (`catalogo.precio.vigente_ahora`), que es la única otra", () => {
+    for (const [codigo, clave] of Object.entries(CLAVES_DE_ERRORES_DE_CATALOGO)) {
+      if (codigo === "CATALOGO_PRECIO_DESACTUALIZADO") {
+        expect(clave).toBe("catalogo.precio.vigente_ahora");
+      } else {
+        expect(clave.startsWith("catalogo.error.")).toBe(true);
+      }
+    }
+  });
+
+  it.each(
+    Object.entries(CLAVES_DE_ERRORES_DE_CATALOGO).filter(
+      ([codigo]) => codigo !== "CATALOGO_PRECIO_DESACTUALIZADO",
+    ),
+  )("%s está en la tabla pública, como aviso de estado 422 y con su clave", (codigo, clave) => {
+    expect(CODIGOS_PUBLICOS[codigo as keyof typeof CLAVES_DE_ERRORES_DE_CATALOGO]).toEqual({
+      clave,
+      presentacion: "AVISO",
+      estadoHttp: 422,
+    });
+    expect(errorDeCodigo(codigo as keyof typeof CLAVES_DE_ERRORES_DE_CATALOGO)).toEqual({
+      codigo,
+      clave,
+      presentacion: "AVISO",
+    });
+  });
+
+  it("el código que exige parámetros está en la tabla pública, pero sin ellos `errorDeCodigo` cierra con el genérico", () => {
+    expect(CODIGOS_PUBLICOS.CATALOGO_PRECIO_DESACTUALIZADO).toEqual({
+      clave: "catalogo.precio.vigente_ahora",
+      presentacion: "AVISO",
+      estadoHttp: 422,
+    });
+    expect(errorDeCodigo("CATALOGO_PRECIO_DESACTUALIZADO")).toEqual(
+      errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA"),
+    );
+  });
 
   it("los parámetros que cada código declara son exactamente los marcadores de su texto (y solo hay para los que tienen marcadores)", () => {
     for (const [codigo, clave] of Object.entries(CLAVES_DE_ERRORES_DE_CATALOGO)) {

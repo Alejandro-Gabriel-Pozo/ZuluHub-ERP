@@ -2,12 +2,12 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
 
 /**
  * Los códigos públicos de negocio de la ficha de datos de un producto (ADR-016; A1, T2a): lo ÚNICO que sale hacia la pantalla cuando guardar los datos de un producto no
- * se puede por una regla del negocio. Cada uno tiene su texto en el catálogo (`catalogo.error.*`), que ya está aprobado en la fila «Errores» de «Textos nuevos» de la maqueta
+ * se puede por una regla del negocio. Cada uno tiene su texto en el catálogo (`catalogo.error.*`, salvo el del precio vigente, que es `catalogo.precio.vigente_ahora`), que ya está aprobado en la fila «Errores» de «Textos nuevos» de la maqueta
  * `productos.html` (09/11/2026), con una excepción: «Esta acción no está permitida» es el genérico (ya aprobado en esa misma maqueta). Cómo se llega de un error del módulo a
  * uno de estos lo decide `src/composicion/errores-de-catalogo.ts`.
  *
  * Previene: que un error del catálogo sin traducir salga como «inesperado» (con referencia, como si fuera un defecto) o que se invente un texto por cada regla del dominio.
- * Chequeo: `respuesta-de-catalogo.test.ts` (cada código con su texto exacto) y `respuesta.test.ts` (todo código tiene su texto).
+ * Chequeo: `respuesta-de-catalogo.test.ts` (cada código con su texto exacto y su prefijo: `catalogo.error.` salvo la clave del precio vigente) y `respuesta.test.ts` (todo código tiene su texto).
  */
 export const CLAVES_DE_ERRORES_DE_CATALOGO = {
   CATALOGO_NOMBRE_REPETIDO: "catalogo.error.nombre_repetido",
@@ -25,9 +25,10 @@ export const CLAVES_DE_ERRORES_DE_CATALOGO = {
 export type CodigoDeCatalogo = keyof typeof CLAVES_DE_ERRORES_DE_CATALOGO;
 
 /**
- * Los parámetros que un código del catálogo puede llevar hacia la pantalla (los marcadores de su texto): lista de permitidos por código; cualquier otro dato del error se descarta.
+ * Los parámetros que un código del catálogo puede llevar hacia la pantalla (los marcadores de su texto): lista de permitidos por código; cualquier otro dato del error se descarta. Un código que
+ * figura acá EXIGE sus parámetros: sin ellos válidos el núcleo (`respuesta.ts`) cae en el genérico, nunca muestra el marcador.
  * Previene: que el valor de un marcador viaje sin nombre de código o que un error arrastre datos internos. Chequeo: `respuesta-de-catalogo.test.ts` (coinciden con los marcadores del texto)
- * y `respuesta.test.ts` (se descartan los que no figuran y los que no son un decimal).
+ * y `respuesta.test.ts` (se descartan los que no figuran y los que no son un decimal; sin ellos, el genérico).
  */
 export const PARAMETROS_DE_CATALOGO: Readonly<
   Partial<Record<CodigoDeCatalogo, readonly string[]>>

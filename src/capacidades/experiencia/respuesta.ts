@@ -1,4 +1,5 @@
 import type { EmpresaNoOpera } from "../../contexto/estados";
+import { precioDeVentaDesdeTexto } from "../../primitivas/dinero/precio-de-venta";
 import type { MotivoDeRechazo } from "../permisos/guard";
 import type { ClaveDeTexto } from "../vocabulario/catalogo";
 import { CLAVES_DE_ERRORES_DE_CAJA, type CodigoDeCaja } from "./respuesta-de-caja";
@@ -77,7 +78,7 @@ const AVISOS_DE_CAJA = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_CAJA).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoDeCaja, DefinicionDeCodigo>>;
 
-/** Los códigos de la ficha de datos de un producto (`respuesta-de-catalogo.ts`): cada uno es un aviso con su texto `catalogo.error.*`. */
+/** Los códigos de la ficha de datos de un producto (`respuesta-de-catalogo.ts`): cada uno es un aviso con su texto (`catalogo.error.*`, salvo el del precio vigente, `catalogo.precio.vigente_ahora`). */
 const AVISOS_DE_CATALOGO = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_CATALOGO).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoDeCatalogo, DefinicionDeCodigo>>;
@@ -152,19 +153,30 @@ export type Clasificado =
 const esObjeto = (x: unknown): x is Readonly<Record<string, unknown>> =>
   typeof x === "object" && x !== null;
 
-/** Un parámetro público es un decimal en texto (un importe: «13000.000000»): nada de texto libre. */
-const FORMA_DE_PARAMETRO = /^[0-9]{1,18}(?:\.[0-9]{1,6})?$/;
+/** El genérico al que cae un código que exige parámetros y no los tiene válidos: nunca sale un texto con su marcador `{…}` sin reemplazar. */
+const SIN_PARAMETROS_VALIDOS: CodigoDeCatalogo = "CATALOGO_ACCION_NO_PERMITIDA";
+
+/** Los parámetros que el código exige (los marcadores de su texto), o `undefined` si no declara ninguno. Un nombre heredado de `Object.prototype` no cuenta. */
+const declaradosDe = (codigo: CodigoPublico): readonly string[] | undefined =>
+  Object.hasOwn(PARAMETROS_DE_CATALOGO, codigo)
+    ? PARAMETROS_DE_CATALOGO[codigo as CodigoDeCatalogo]
+    : undefined;
+
+/**
+ * Un parámetro público es un importe decimal en texto («13000.000000»): lo decide la primitiva de precios (`precioDeVentaDesdeTexto`, una regla en un solo lugar: forma canónica, hasta 6
+ * decimales y el rango de `numeric(18,6)`), no una copia de su gramática. Nada de texto libre.
+ */
+const esParametroValido = (valor: unknown): valor is string =>
+  typeof valor === "string" && precioDeVentaDesdeTexto(valor).ok;
 
 /** De lo que trae el error, solo los parámetros que el código declara y que tienen forma de decimal. */
 function parametrosDe(codigo: CodigoPublico, crudo: unknown): Record<string, string> | undefined {
-  const declarados = Object.hasOwn(PARAMETROS_DE_CATALOGO, codigo)
-    ? PARAMETROS_DE_CATALOGO[codigo as CodigoDeCatalogo]
-    : undefined;
+  const declarados = declaradosDe(codigo);
   if (declarados === undefined || !esObjeto(crudo)) return undefined;
   const salida: Record<string, string> = {};
   for (const nombre of declarados) {
     const valor = Object.hasOwn(crudo, nombre) ? crudo[nombre] : undefined;
-    if (typeof valor === "string" && FORMA_DE_PARAMETRO.test(valor)) salida[nombre] = valor;
+    if (esParametroValido(valor)) salida[nombre] = valor;
   }
   return Object.keys(salida).length === declarados.length ? salida : undefined;
 }
@@ -190,13 +202,23 @@ export function detalleDeFalla(falla: unknown): string {
  */
 export function clasificarError(error: unknown): Clasificado {
   // Un código de negocio o un motivo del guard viene como texto.
-  if (esCodigoPublico(error)) return { tipo: "PUBLICO", codigo: error };
+  if (esCodigoPublico(error)) {
+    // Un código que exige parámetros no puede salir sin ellos (cerrado: el genérico).
+    return {
+      tipo: "PUBLICO",
+      codigo: declaradosDe(error) === undefined ? error : SIN_PARAMETROS_VALIDOS,
+    };
+  }
   // O como objeto con `codigo` (`EMPRESA_NO_OPERA { empresaId, motivo }`): solo el código y, si lo hay, el campo.
   if (esObjeto(error) && esCodigoPublico(error["codigo"])) {
     const campo = error["campo"];
     const conCampo =
       typeof campo === "string" && FORMA_DE_CAMPO.test(campo) ? { campo } : ({} as const);
     const parametros = parametrosDe(error["codigo"], error["parametros"]);
+    // Un código que exige parámetros y no los trae válidos (importe malformado o ausente) CIERRA: el genérico, sin su campo ni su texto propio. Nunca sale con el marcador `{importe}`.
+    if (declaradosDe(error["codigo"]) !== undefined && parametros === undefined) {
+      return { tipo: "PUBLICO", codigo: SIN_PARAMETROS_VALIDOS };
+    }
     const estado = error["motivo"];
     const claveDeEstado =
       error["codigo"] === "EMPRESA_NO_OPERA" &&
@@ -219,7 +241,11 @@ export function clasificarError(error: unknown): Clasificado {
 export function errorPublicoDe(
   clasificado: Extract<Clasificado, { tipo: "PUBLICO" }>,
 ): ErrorPublico {
-  const base = errorDeCodigo(clasificado.codigo);
+  // Garantía del núcleo (no de cada llamador): un código que exige parámetros nunca se arma sin ellos, ni siquiera con un `Clasificado` hecho a mano.
+  if (declaradosDe(clasificado.codigo) !== undefined && clasificado.parametros === undefined) {
+    return errorDeCodigo(SIN_PARAMETROS_VALIDOS);
+  }
+  const base = definicionDe(clasificado.codigo);
   return {
     ...base,
     clave: clasificado.clave ?? base.clave,
@@ -240,6 +266,11 @@ export function estadoHttpDe(codigo: CodigoPublico): number {
 
 /** El error público de un código conocido, tal cual (sin campo, sin referencia): «sin permiso», «sesión vencida»… */
 export function errorDeCodigo(codigo: CodigoPublico): ErrorPublico {
+  // Sin parámetros no se puede mostrar un código que los exige: cierra con el genérico.
+  return definicionDe(declaradosDe(codigo) === undefined ? codigo : SIN_PARAMETROS_VALIDOS);
+}
+
+function definicionDe(codigo: CodigoPublico): ErrorPublico {
   const definicion = CODIGOS_PUBLICOS[codigo];
   return { codigo, clave: definicion.clave, presentacion: definicion.presentacion };
 }
