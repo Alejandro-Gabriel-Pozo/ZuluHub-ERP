@@ -1,8 +1,11 @@
 /** Dominio fiscal: alícuotas, comprobante, emisor, identificadores, vigencia, datos fiscales, receptor, numeración. Se reexporta desde `../publico.ts`, la única puerta del módulo (ADR-001). */
 export {
+  ALICUOTAS_DEL_PRODUCTO,
   CODIGOS_DE_ALICUOTA,
+  esAlicuotaDelProducto,
   esCodigoDeAlicuota,
   porcentajeDeAlicuota,
+  type AlicuotaDelProducto,
   type CodigoDeAlicuota,
 } from "../dominio/alicuota";
 export {
