@@ -1,21 +1,18 @@
-import "server-only";
-
 import type {
   VidrieraPublica,
   VidrieraPublicada,
   FotoPublicada,
-} from "../../../src/puertos/vidriera-publica";
+} from "../../src/puertos/vidriera-publica";
 import {
   VIDRIERAS_DE_EJEMPLO,
   type VidrieraDeEjemplo,
   type ProductoDeEjemplo,
-} from "../../../test/fixtures/vidrieras";
+} from "../fixtures/vidrieras";
 
 /**
- * Falso del puerto `VidrieraPublica` (C-2): sirve las cuatro cartas de ejemplo de `test/fixtures/vidrieras`, que son
- * datos INVENTADOS (ningún nombre, precio ni foto es de un cliente). Vive acá y no en `test/` porque la página
- * lo necesita para compilar y mostrarse antes de que exista el adaptador real; C-3 lo reemplaza en
- * `carta.ts` por el que lee la base por la puerta pública, y este archivo se borra.
+ * Falso del puerto `VidrieraPublica`: sirve las cuatro cartas de ejemplo de `test/fixtures/vidrieras`, que son datos INVENTADOS (ningún nombre,
+ * precio ni foto es de un cliente). Es solo de pruebas: la web usa el adaptador real de la composición (`web.vidrieraPublica()`, T3/T5 de la carta
+ * real) y nada fuera de `test/` puede importar de acá (`test/arquitectura/sin-importar-de-test.test.ts`).
  *
  * Lo que las cartas de ejemplo no traen (el lugar, la perilla de letra y las fotos) se completa acá con datos
  * igual de inventados: la hostería parte con la letra GRANDE para poder ver la perilla del comerciante.
