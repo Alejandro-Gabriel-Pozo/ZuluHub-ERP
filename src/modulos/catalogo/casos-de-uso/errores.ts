@@ -24,6 +24,8 @@ export type ErrorDeCatalogo =
   | EmpresaNoOpera
   | ErrorDePersistencia
   | MotivoDeRechazoDeClasificacion
+  | "NODO_DESACTIVADO"
+  | "CLASIFICACION_EN_ESA_FECHA"
   | "NOMBRE_DE_NODO_INVALIDO"
   | "NODO_DUPLICADO"
   | "IDENTIFICADOR_INVALIDO"

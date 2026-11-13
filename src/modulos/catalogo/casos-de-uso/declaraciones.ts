@@ -162,6 +162,16 @@ export const DECLARACIONES = {
       },
     },
   },
+  clasificarProducto: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_CLASIFICACION,
+        it: "clasificar: repetir con el mismo id deja un vínculo y una auditoría; con otro producto o nodo, ID_REUTILIZADO",
+      },
+    },
+  },
   crearNodoDeClasificacion: {
     accion: "productos.editar",
     repeticion: {
