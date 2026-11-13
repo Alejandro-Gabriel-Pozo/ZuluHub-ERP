@@ -3,7 +3,6 @@ import { CLASES_DE_USO } from "../../src/modulos/catalogo/publico";
 import { ALICUOTAS_DEL_PRODUCTO } from "../../src/modulos/fiscal/publico";
 import {
   CLAVE_DE_ALICUOTA,
-  RUTA_DE_PRODUCTOS,
   armarLaFicha,
   rutaDeLaFicha,
   type FichaDeLaPantalla,
@@ -178,7 +177,6 @@ describe("un valor guardado que la pantalla no ofrece", () => {
 
 describe("las direcciones", () => {
   it("la ficha vive bajo la lista de productos", () => {
-    expect(RUTA_DE_PRODUCTOS).toBe("/catalogo/productos");
     expect(rutaDeLaFicha(ID)).toBe(`/catalogo/productos/${ID}`);
   });
 });

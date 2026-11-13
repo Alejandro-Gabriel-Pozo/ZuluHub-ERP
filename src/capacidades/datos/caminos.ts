@@ -45,10 +45,36 @@ const FORMULARIO_DE_MEDIO = "apps/web/ui/plantillas/caja/FormularioDeMedio.clien
 const FORMULARIO_DE_CUENTA = "apps/web/ui/plantillas/caja/FormularioDeCuenta.cliente.tsx";
 const FORMULARIO_DE_CAJA = "apps/web/ui/plantillas/caja/FormularioDeCaja.cliente.tsx";
 
+const LISTA_DE_PRODUCTOS =
+  "apps/web/ui/plantillas/catalogo/FormularioDeFiltrosDeProductos.cliente.tsx";
+
 const FORMULARIO_DE_FICHA_DE_PRODUCTO =
   "apps/web/ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente.tsx";
 
 export const CAMINOS = {
+  // Productos, lista: buscar por nombre y filtrar por clase y por estado. Es una lectura: la acción es la que deja mirar (`productos.ver`) y ningún dato es obligatorio (todo vacío es «todos»).
+  // Sin `campo` de error: un filtro que no puede coincidir devuelve la lista vacía, no un error (`entradas-de-productos.ts`).
+  "buscar-productos": {
+    funcion: "Buscar productos de la empresa por nombre, clase y estado",
+    pantallas: [LISTA_DE_PRODUCTOS],
+    pasos: [
+      {
+        id: "filtros-de-la-lista",
+        campos: {
+          texto: "texto-de-busqueda-de-producto",
+          clase: "clase-de-uso-de-producto",
+          estado: "estado-de-producto",
+        },
+      },
+    ],
+    deriva: [],
+    accion: {
+      clave: "productos.ver",
+      requiere: [],
+      admite: ["texto-de-busqueda-de-producto", "clase-de-uso-de-producto", "estado-de-producto"],
+    },
+    camposDeError: [],
+  },
   // Productos, ficha de datos: el nombre es el único dato obligatorio para todas las clases; el nombre de cocina, la alícuota (obligatoria si se vende, lo decide el servidor) y la
   // sección son de las clases que se venden. La descripción de la carta no se pide acá (la maqueta no la trae) y se conserva. Los errores con campo son los cuatro que la maqueta
   // `productos.html` redacta para la ficha: nombre repetido o vacío, código repetido, código de barras inválido y alícuota sin elegir.

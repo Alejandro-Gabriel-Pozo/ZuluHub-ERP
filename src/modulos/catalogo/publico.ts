@@ -135,6 +135,11 @@ export {
   type RepositorioDeSecciones,
 } from "./persistencia/repositorio-de-secciones";
 export {
+  crearRepositorioDeClasificacion,
+  type NodoGuardado,
+  type RepositorioDeClasificacion,
+} from "./persistencia/repositorio-de-clasificacion";
+export {
   crearRepositorioDeDisponibilidad,
   type FijarDisponibilidad,
   type RepositorioDeDisponibilidad,
