@@ -20,6 +20,10 @@ const REVERSION = join(
   import.meta.dirname,
   "../../migraciones/reversiones/0045_revertir_clasificacion_comercial.sql",
 );
+const REVERSION_DEL_CAMINO = join(
+  import.meta.dirname,
+  "../../migraciones/reversiones/0047_revertir_camino_en_el_renglon.sql",
+);
 const REVERSION_DEL_VINCULO = join(
   import.meta.dirname,
   "../../migraciones/reversiones/0046_revertir_clasificacion_de_producto.sql",
@@ -666,7 +670,8 @@ describe.skipIf(base === null)("migración 0045: clasificación comercial", () =
           "select 1 from migracion where nombre = '0046_clasificacion_de_producto.sql'",
         );
         expect(registro.rowCount).toBe(0);
-        // Con 0046 revertida, 0045 ya se puede revertir (hay un nodo? no: la tabla de nodos está vacía en esta base).
+        // 0047 (el camino en el renglón) también depende de los nodos: se revierte antes (sin renglones en esta base). Con las dos revertidas, 0045 ya se puede revertir.
+        await correr(REVERSION_DEL_CAMINO);
         await correr(REVERSION);
       } finally {
         await c.end();
@@ -693,7 +698,10 @@ describe.skipIf(base === null)("migración 0045: clasificación comercial", () =
             throw e;
           }
         };
-        // 0046 depende de esta tabla: se revierte antes (vacía en esta base).
+        // 0046 y 0047 dependen de esta tabla: se revierten antes (vacías en esta base).
+        await c.query("begin");
+        await c.query(await readFile(REVERSION_DEL_CAMINO, "utf8"));
+        await c.query("commit");
         await c.query("begin");
         await c.query(await readFile(REVERSION_DEL_VINCULO, "utf8"));
         await c.query("commit");
