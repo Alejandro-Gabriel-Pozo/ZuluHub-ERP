@@ -12,7 +12,7 @@ import { CampoImporte } from "../../componentes/CampoImporte";
 import { Insignia } from "../../componentes/Insignia";
 import { Texto } from "../../primitivas/Texto";
 import estilos from "./PantallaDeAnularComprobante.module.css";
-import { ErrorDelDetalle } from "./ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../patrones/ErrorDelDetalle";
 import {
   anulacionTotal,
   escribirImporte,

@@ -1,5 +1,5 @@
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { formatearFecha, formatearNumeroDeDocumento } from "../facturacion/formato-fiscal";
+import { formatearFecha, formatearNumeroDeDocumento } from "../../patrones/formato-fiscal";
 import { cartelDeUnCertificado, conCartel, RUTAS_DE_CONFIGURACION } from "./lista-de-lo-que-falta";
 
 /**

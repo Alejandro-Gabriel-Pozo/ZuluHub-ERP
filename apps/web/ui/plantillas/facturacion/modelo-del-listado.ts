@@ -10,7 +10,7 @@ import {
   direccionDelListado,
   type FiltrosDelListado,
 } from "./filtros-del-listado";
-import { formatearFecha, formatearImporte, formatearPuntoDeVenta } from "./formato-fiscal";
+import { formatearFecha, formatearImporte, formatearPuntoDeVenta } from "../../patrones/formato-fiscal";
 import {
   anulacionDe,
   documentoDe,

@@ -7,7 +7,7 @@ import {
   opcionesDeSucursal,
   opcionesDeTipoDeCuenta,
 } from "../../../../../../../ui/plantillas/caja/modelo-de-cuentas-de-cobro";
-import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import { agregarCuentaAccion } from "../../../../acciones-de-cuentas-de-cobro";
 
 // `/caja/cuentas-de-cobro/nuevo`: agregar una cuenta de cobro. Las sucursales que se ofrecen son las ABIERTAS que la persona puede elegir (el filtro vive en el servidor); la elegida

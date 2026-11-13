@@ -10,7 +10,7 @@ import {
   type FacturaParaAnular,
 } from "./eleccion-de-anulacion";
 import { direccionDeAnular, direccionDelDetalle } from "./filtros-del-listado";
-import { formatearAlicuota, formatearImporte } from "./formato-fiscal";
+import { formatearAlicuota, formatearImporte } from "../../patrones/formato-fiscal";
 import {
   anuladoDe,
   nombreDe,

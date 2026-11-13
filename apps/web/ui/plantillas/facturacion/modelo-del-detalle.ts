@@ -12,7 +12,7 @@ import {
   formatearImporte,
   formatearNumeroDeDocumento,
   formatearPuntoDeVenta,
-} from "./formato-fiscal";
+} from "../../patrones/formato-fiscal";
 
 /**
  * El modelo de vista del detalle de un comprobante (contrato de la pantalla 2): de lo que entrega la consulta, TODO lo que

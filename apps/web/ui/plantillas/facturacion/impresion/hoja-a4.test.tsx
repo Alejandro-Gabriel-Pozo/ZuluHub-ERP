@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { cdp } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { violacionesDeAccesibilidad } from "../../../pruebas/ayudas";
-import { formatearImporte } from "../formato-fiscal";
+import { formatearImporte } from "../../../patrones/formato-fiscal";
 import {
   comprobanteDePrueba,
   esperarLasHojas,

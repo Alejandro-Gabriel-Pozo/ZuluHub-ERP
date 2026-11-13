@@ -3,7 +3,7 @@ import { entradaDelPdf, nombreDelArchivoPdf } from "../../apps/web/pantallas/pdf
 import {
   formatearFecha,
   formatearImporte,
-} from "../../apps/web/ui/plantillas/facturacion/formato-fiscal";
+} from "../../apps/web/ui/patrones/formato-fiscal";
 import { qrDeFacturaComoSvg } from "../../src/adaptadores/qr/qr-de-factura";
 import {
   CaracterNoSoportadoEnElPdf,

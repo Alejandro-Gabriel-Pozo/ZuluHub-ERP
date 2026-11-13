@@ -3,7 +3,7 @@ import {
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import type { ClienteEscrito } from "./eleccion-de-emision";
-import { formatearAlicuota, formatearCantidadConUnidad, formatearImporte } from "./formato-fiscal";
+import { formatearAlicuota, formatearCantidadConUnidad, formatearImporte } from "../../patrones/formato-fiscal";
 import {
   clienteDeLaRevision,
   esDePruebas,

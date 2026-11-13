@@ -5,7 +5,7 @@ import { cargarLosMedios } from "../../../../../../../servidor/medios-de-pago";
 import { accionesDeLaListaDeCaja } from "../../../../../../../servidor/modulos";
 import { FormularioDeMedio } from "../../../../../../../ui/plantillas/caja/FormularioDeMedio.cliente";
 import { opcionesDeTipo } from "../../../../../../../ui/plantillas/caja/modelo-de-medios-de-pago";
-import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import { editarMedioAccion } from "../../../../acciones-de-medios-de-pago";
 
 type PropsDePagina = Readonly<{ params: Promise<{ id: string }> }>;
