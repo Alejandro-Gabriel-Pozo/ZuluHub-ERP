@@ -9,7 +9,7 @@ import {
   armarLosFiltros,
   type FiltrosDeProductos,
 } from "./filtros-de-productos";
-import { armarLaLista, type PaginaDeLaLista } from "./modelo-de-productos";
+import { armarElEnlaceDeAlta, armarLaLista, type PaginaDeLaLista } from "./modelo-de-productos";
 import { PantallaDeListaDeProductos } from "./PantallaDeListaDeProductos";
 
 /**
@@ -51,7 +51,11 @@ const pagina: PaginaDeLaLista = {
   siguiente: "0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b:harina 000",
 };
 
-const pantalla = (filtros: FiltrosDeProductos = FILTROS_POR_DEFECTO, conPagina = pagina) => (
+const pantalla = (
+  filtros: FiltrosDeProductos = FILTROS_POR_DEFECTO,
+  conPagina = pagina,
+  puedeCrear = true,
+) => (
   <ArmazonDeOperacion
     titulo={texto({}, "catalogo.lista.titulo")}
     marca="Hotel del Lago"
@@ -61,6 +65,7 @@ const pantalla = (filtros: FiltrosDeProductos = FILTROS_POR_DEFECTO, conPagina =
     <PantallaDeListaDeProductos
       filtros={armarLosFiltros(filtros)}
       lista={armarLaLista(conPagina, filtros)}
+      nuevo={armarElEnlaceDeAlta(puedeCrear)}
     />
   </ArmazonDeOperacion>
 );
@@ -212,7 +217,7 @@ describe("lista de productos", () => {
     ]);
   });
 
-  it("el foco por teclado se ve en el buscador, los selectores, el botón y «Página siguiente»", async () => {
+  it("el foco por teclado se ve en el buscador, los selectores, el botón, «Página siguiente» y «Nuevo producto»", async () => {
     await render(pantalla());
     const buscar = page.getByLabelText("Buscar").element() as HTMLElement;
     buscar.focus();
@@ -221,6 +226,7 @@ describe("lista de productos", () => {
       page.getByLabelText("Estado").element(),
       page.getByRole("button", { name: "Aplicar filtros" }).element(),
       page.getByRole("link", { name: "Página siguiente" }).element(),
+      page.getByRole("link", { name: "Nuevo producto" }).element(),
     ]) {
       await verificarFoco(siguiente as HTMLElement);
     }
@@ -241,6 +247,20 @@ describe("lista de productos", () => {
   it("en la última página no hay «Página siguiente»", async () => {
     await render(pantalla(FILTROS_POR_DEFECTO, { ...pagina, siguiente: null }));
     expect(page.getByRole("link", { name: "Página siguiente" }).elements()).toHaveLength(0);
+  });
+
+  it("«Nuevo producto» es un enlace al alta de 48 px o más; sin permiso no está", async () => {
+    await ventana(390);
+    await render(pantalla());
+    const enlace = page.getByRole("link", { name: "Nuevo producto" });
+    const el = enlace.element() as HTMLAnchorElement;
+    expect(new URL(el.href).pathname).toBe("/catalogo/productos/nuevo");
+    expect(el.getBoundingClientRect().height).toBeGreaterThanOrEqual(48);
+  });
+
+  it("sin permiso no hay «Nuevo producto»", async () => {
+    await render(pantalla(FILTROS_POR_DEFECTO, pagina, false));
+    expect(page.getByRole("link", { name: "Nuevo producto" }).elements()).toHaveLength(0);
   });
 
   it("una lista vacía no dice nada: sin tarjetas, sin avisos y accesible", async () => {

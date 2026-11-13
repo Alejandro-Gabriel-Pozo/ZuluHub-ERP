@@ -14,6 +14,9 @@ import {
 
 export const RUTA_DE_PRODUCTOS = "/catalogo/productos";
 
+/** La pantalla del alta (T6): la única dirección que dice adónde lleva «Nuevo producto». */
+export const RUTA_DEL_ALTA_DE_PRODUCTO = `${RUTA_DE_PRODUCTOS}/nuevo`;
+
 /** Las cinco clases, en el orden de la maqueta (`CLASES`), cada una con la clave de su texto. */
 export const CLAVE_DE_CLASE = {
   MATERIA_PRIMA: "catalogo.clase.materia_prima",
