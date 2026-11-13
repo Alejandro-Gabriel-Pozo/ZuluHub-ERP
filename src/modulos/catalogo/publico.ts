@@ -143,6 +143,7 @@ export {
   crearRepositorioDeClasificacion,
   type NodoGuardado,
   type RepositorioDeClasificacion,
+  type VinculoGuardado,
 } from "./persistencia/repositorio-de-clasificacion";
 export {
   crearRepositorioDeDisponibilidad,

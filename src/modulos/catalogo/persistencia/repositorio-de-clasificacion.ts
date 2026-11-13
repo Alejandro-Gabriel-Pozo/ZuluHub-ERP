@@ -20,6 +20,22 @@ export type AltaDeNodo = Readonly<{
   nombreClave: string;
 }>;
 
+/** Una fila de `clasificacion_de_producto`: desde cuándo el producto está en ese nodo (`null` = «Sin elegir»). */
+export type VinculoGuardado = Readonly<{
+  id: string;
+  productoId: string;
+  nodoId: string | null;
+  vigenteDesde: Date;
+}>;
+
+export type AltaDeVinculo = Readonly<{
+  id: string;
+  productoId: string;
+  nodoId: string | null;
+  vigenteDesde: Date;
+  cargadoPor: string;
+}>;
+
 export type CambiosDeNodo = Partial<
   Readonly<{ padreId: string; nombre: string; nombreClave: string; activo: boolean }>
 >;
@@ -43,6 +59,15 @@ export interface RepositorioDeClasificacion {
     versionEsperada: number,
     cambios: CambiosDeNodo,
   ): Promise<NodoGuardado | null>;
+  /** Un vínculo por su id (la clave de idempotencia del cambio), o `null`. */
+  vinculo(empresa: EmpresaId, id: string): Promise<VinculoGuardado | null>;
+  /**
+   * Lo que rige para el producto: el ÚLTIMO vínculo guardado (el cambio rige desde el instante en que se guarda: sin fechas futuras ni cambios programados, decisión del dueño del
+   * 13/11/2026), o `null` si nunca se clasificó. El historial queda en las filas (solo inserción) y en la auditoría.
+   */
+  vigenteDelProducto(empresa: EmpresaId, productoId: string): Promise<VinculoGuardado | null>;
+  /** Agrega un vínculo (solo inserción). */
+  insertarVinculo(empresa: EmpresaId, alta: AltaDeVinculo): Promise<VinculoGuardado>;
 }
 
 const COLUMNAS = ["id", "padre_id", "nombre", "nombre_clave", "activo", "version"] as const;
@@ -55,6 +80,20 @@ type Fila = {
   activo: boolean;
   version: number;
 };
+
+const COLUMNAS_DE_VINCULO = ["id", "producto_id", "nodo_id", "vigente_desde"] as const;
+
+const aVinculo = (f: {
+  id: string;
+  producto_id: string;
+  nodo_id: string | null;
+  vigente_desde: Date;
+}): VinculoGuardado => ({
+  id: f.id,
+  productoId: f.producto_id,
+  nodoId: f.nodo_id,
+  vigenteDesde: f.vigente_desde,
+});
 
 const aNodo = (f: Fila): NodoGuardado => ({
   id: f.id,
@@ -125,6 +164,43 @@ export function crearRepositorioDeClasificacion(
         .returning(COLUMNAS)
         .executeTakeFirst();
       return fila === undefined ? null : aNodo(fila);
+    },
+    async vinculo(empresa, id) {
+      if (!FORMA_DE_UUID.test(id)) return null;
+      const fila = await db
+        .selectFrom("clasificacion_de_producto")
+        .select(COLUMNAS_DE_VINCULO)
+        .where("empresa_id", "=", empresa)
+        .where("id", "=", id)
+        .executeTakeFirst();
+      return fila === undefined ? null : aVinculo(fila);
+    },
+    async vigenteDelProducto(empresa, productoId) {
+      if (!FORMA_DE_UUID.test(productoId)) return null;
+      const fila = await db
+        .selectFrom("clasificacion_de_producto")
+        .select(COLUMNAS_DE_VINCULO)
+        .where("empresa_id", "=", empresa)
+        .where("producto_id", "=", productoId)
+        .orderBy("vigente_desde", "desc")
+        .limit(1)
+        .executeTakeFirst();
+      return fila === undefined ? null : aVinculo(fila);
+    },
+    async insertarVinculo(empresa, alta) {
+      const fila = await db
+        .insertInto("clasificacion_de_producto")
+        .values({
+          id: alta.id,
+          empresa_id: empresa,
+          producto_id: alta.productoId,
+          nodo_id: alta.nodoId,
+          vigente_desde: alta.vigenteDesde,
+          cargado_por: alta.cargadoPor,
+        })
+        .returning(COLUMNAS_DE_VINCULO)
+        .executeTakeFirstOrThrow();
+      return aVinculo(fila);
     },
   };
 }
