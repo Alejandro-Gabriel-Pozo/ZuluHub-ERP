@@ -10,6 +10,12 @@ import {
 import type { ClaveDeTexto } from "../../../src/capacidades/vocabulario/catalogo";
 import { web } from "./composicion";
 import {
+  FILAS_DEL_MENU,
+  armarElMenu,
+  type ClaveDeFila,
+  type ItemDelMenu,
+} from "../ui/navegacion/menu";
+import {
   RUTAS_DE_CONFIGURACION,
   armarLaLista,
 } from "../ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta";
@@ -17,77 +23,70 @@ import type {
   AccionesDePuntosDeVenta,
   OfertaDeAccion,
 } from "../ui/plantillas/configuracion-fiscal/modelo-de-puntos-de-venta";
-import { RUTA_DEL_LISTADO } from "../ui/plantillas/facturacion/filtros-del-listado";
 import type { AccionesDeLista } from "../ui/plantillas/caja/lista-de-caja";
 import type { DestinoDeModulo } from "../ui/plantillas/sesion/ArmazonDeOperacion";
 import type { Pendiente } from "../ui/plantillas/sesion/PantallaDeInicio";
 
 /**
- * Una entrada del menú de módulos: lo que un módulo suma a la barra inferior. Cada módulo nuevo suma UNA entrada a
- * `ENTRADAS_DE_MODULOS` (y su clave a `DestinoDeModulo`); la regla de cuándo se muestra es una sola y vive en `destinosPermitidos`.
+ * Los destinos de la barra inferior: las áreas del menú (`ui/navegacion/menu.ts`, la única tabla) con lo que la persona ve hoy. La barra
+ * admite como máximo `MAXIMO_DE_DESTINOS_DE_MODULOS` (3) áreas sin contar Cuenta, que es fija; el tope lo vigila
+ * `test/arquitectura/menu-por-areas.test.ts` para que alguien decida cómo se muestran las demás en vez de cortarlas en silencio
+ * (`destinosDeOperacion` recorta). La regla de cuándo se muestra una pantalla es una sola: `armarElMenu` (todo nace cerrado).
+ * Un área con una sola pantalla lleva directo a ella; con varias, abre una hoja con sus grupos.
  */
-export type EntradaDeModulo = Readonly<{
-  clave: DestinoDeModulo["clave"];
-  /** El módulo del catálogo (`catalogo.ts`) al que pertenece la pantalla. */
-  modulo: ClaveModulo;
-  /** La acción que exige la pantalla al guard (la misma que su consulta): sin ella no se ofrece. */
-  accion: ClaveAccion;
-  href: string;
-  /** Clave del texto del destino en el catálogo del vocabulario: solo textos ya aprobados por el dueño. */
-  etiqueta: ClaveDeTexto;
-  icono: DestinoDeModulo["icono"];
-}>;
-
-/**
- * Los módulos con pantalla hoy, en el orden en que se ofrecen en la barra. Hoy hay uno: el facturador (Comprobantes).
- * La barra admite como máximo `MAXIMO_DE_DESTINOS_DE_MODULOS` (3) módulos: una prueba (`test/web/modulos-de-la-barra.test.ts`) falla si
- * se suma uno más, para que alguien decida cómo se muestran los demás en vez de cortarlos en silencio (`destinosDeOperacion` recorta).
- * Aprobado por el dueño el 2026-10-29 (respuesta en la sesión web del carril web): el título «Comprobantes» (ver el catálogo).
- */
-export const ENTRADAS_DE_MODULOS: readonly EntradaDeModulo[] = [
-  {
-    clave: "comprobantes",
-    modulo: "facturacion",
-    accion: "comprobantes.ver",
-    href: RUTA_DEL_LISTADO,
-    etiqueta: "fiscal.pantalla.listado_titulo",
-    icono: "comprobantes",
-  },
-];
-
-/**
- * De las entradas, las que la persona ve hoy. Todo nace cerrado: una entrada se muestra solo si el módulo está `disponible` en el
- * catálogo (uno «en desarrollo» no da permisos a nadie), la empresa lo tiene activo o en solo lectura y la persona tiene la acción
- * según `permisosDelActor` (calculado por el servidor). SUPUESTO (DEC-0059) declarado: en solo lectura SÍ se muestra, porque el
- * Listado solo consulta (D-59 habla de botones apagados, no de ocultar consultas); revertirlo es quitar `enSoloLectura` de la
- * condición. Sin permisos leídos (`null`) no se muestra nada. Ocultar no es autorizar: la pantalla vuelve a pasar por el guard.
- */
-export function destinosPermitidos(
-  entradas: readonly EntradaDeModulo[],
+export function destinosDeAreas(
   permisos: PermisosLeidos | null,
+  departamentoElegido: string | null,
 ): readonly DestinoDeModulo[] {
-  if (permisos === null) return [];
-  return entradas
-    .filter(
-      (e) =>
-        CATALOGO_DE_MODULOS[e.modulo].estado === "disponible" &&
-        permisos.acciones.includes(e.accion) &&
-        (permisos.modulos.activos.includes(e.modulo) ||
-          permisos.modulos.enSoloLectura.includes(e.modulo)),
-    )
-    .map((e) => ({
-      clave: e.clave,
-      href: e.href,
-      etiqueta: texto({}, e.etiqueta),
-      icono: e.icono,
-    }));
+  return armarElMenu(FILAS_DEL_MENU, permisos, departamentoElegido)
+    .filter((area) => !area.fija)
+    .map((area): DestinoDeModulo => {
+      const pantallas = area.grupos
+        .flatMap((g) => g.items)
+        .filter(
+          (i): i is ItemDelMenu & Readonly<{ href: string }> =>
+            i.tipo === "pantalla" && i.href !== null,
+        );
+      const [primera] = pantallas;
+      // Un área solo existe con al menos una pantalla visible; sin ella (solo acciones) no es un destino de la barra.
+      if (primera === undefined) throw new RangeError("menú: un área de la barra sin pantallas");
+      const base = { etiqueta: texto({}, area.etiqueta), icono: area.icono };
+      if (pantallas.length === 1) return { ...base, clave: primera.clave, href: primera.href };
+      return {
+        ...base,
+        clave: area.clave,
+        href: primera.href,
+        hoja: area.grupos.map((g) => ({
+          etiqueta: g.etiqueta === null ? null : texto({}, g.etiqueta),
+          enlaces: g.items
+            .filter((i): i is typeof i & Readonly<{ href: string }> => i.href !== null)
+            .map((i) => ({ clave: i.clave, etiqueta: texto({}, i.etiqueta), href: i.href })),
+        })),
+      };
+    });
 }
 
-/** Los destinos de los módulos que la persona ve hoy. Si `permisosDelActor` falla, ninguno (cierra, no abre) y la pantalla sigue andando. */
+/** Los destinos de las áreas que la persona ve hoy. Si `permisosDelActor` falla, ninguno (cierra, no abre) y la pantalla sigue andando. */
 export async function destinosDeModulos(
   contexto: ContextoOperativo,
 ): Promise<readonly DestinoDeModulo[]> {
-  return destinosPermitidos(ENTRADAS_DE_MODULOS, await permisosDeLaPersona(contexto));
+  // Sin departamento elegido: hoy ninguna fila lleva departamento (columna reservada, A2c) y sin elección nunca se asume «todos».
+  return destinosDeAreas(await permisosDeLaPersona(contexto), null);
+}
+
+/** Las pantallas del menú del área Cuenta que la persona ve hoy, por clave: la página de Cuenta las ofrece desde la misma tabla. */
+export async function pantallasDeCuenta(
+  contexto: ContextoOperativo,
+): Promise<ReadonlyMap<ClaveDeFila, Readonly<{ texto: string; href: string }>>> {
+  const cuenta = armarElMenu(FILAS_DEL_MENU, await permisosDeLaPersona(contexto), null).find(
+    (a) => a.clave === "cuenta",
+  );
+  const lista = (cuenta?.grupos ?? []).flatMap((g) => g.items);
+  return new Map(
+    lista.flatMap((i) =>
+      i.href === null ? [] : [[i.clave, { texto: texto({}, i.etiqueta), href: i.href }] as const],
+    ),
+  );
 }
 
 /**
@@ -141,7 +140,15 @@ const permisosDeLaPersona = cache(async (contexto: ContextoOperativo) => {
  * (`estadoDeLaConfiguracionFiscal`, solo el gerente). Previene: ofrecer la entrada a quien el servidor va a rechazar. Chequeo:
  * `test/web/modulos-de-la-barra.test.ts` la compara con la declaración de la consulta.
  */
-export const ACCION_DE_CONFIGURACION_FISCAL: ClaveAccion = "datos_fiscales.editar";
+export const ACCION_DE_CONFIGURACION_FISCAL: ClaveAccion = accionDeLaFila("configuracion-fiscal");
+
+/** La acción que la tabla del menú declara para una pantalla: una regla, un lugar. */
+function accionDeLaFila(clave: ClaveDeFila): ClaveAccion {
+  const fila = FILAS_DEL_MENU.find((f) => f.clave === clave);
+  if (fila === undefined || fila.tipo !== "pantalla")
+    throw new RangeError(`menú: la fila ${clave} no es una pantalla`);
+  return fila.accion;
+}
 
 /**
  * ¿La persona puede entrar a Configuración fiscal? Mismo permiso que la pantalla, según `permisosDelActor`. Si no se pudieron leer
