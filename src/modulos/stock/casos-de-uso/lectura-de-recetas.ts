@@ -1,6 +1,6 @@
 import type { AlcanceDeSucursales } from "../../../capacidades/permisos/alcance";
 import type { ContextoOperativo } from "../../../contexto/contexto";
-import { cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
+import { cantidadATexto, cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
 import {
   formatearDecimalFijo,
   parsearDecimalFijo,
@@ -16,7 +16,7 @@ import {
   type ComponenteParaCosto,
   type CostoDeReceta,
 } from "../dominio/costo-de-receta";
-import { brutoComoTexto } from "../dominio/merma";
+import { netoComoTexto } from "../dominio/merma";
 import { MAXIMO_DE_NIVELES_DE_RECETA } from "../dominio/subcomposicion";
 import type { ComposicionGuardada } from "../persistencia/modelo";
 
@@ -31,12 +31,12 @@ export type LineaDeFicha = Readonly<{
   /** Un artículo de stock o un elaborado (subcomposición). */
   tipo: "ARTICULO" | "ELABORADO";
   clase: ClaseDeUso;
-  /** NETO (lo que lleva el plato), en `unidadId`; la merma se suma (DEC-0100). */
-  cantidad: string;
+  /** BRUTO cargado en la receta, en `unidadId`: lo que se descuenta del stock y se costea (13/11/2026, `merma.ts`). */
+  bruto: string;
   unidadId: string;
   merma: string;
-  /** BRUTO: lo que se descuenta y se costea, en `unidadId` (un redondeo). */
-  bruto: string;
+  /** NETO, solo para mostrar: `bruto × (100 − merma) ÷ 100` (un redondeo). */
+  neto: string;
   /** Un insumo operativo (packaging, limpieza): se muestra aparte y no entra al costo (D77). */
   noEntraAlCosto: boolean;
   /** Costo de la línea para toda la receta, 6 decimales, o `null` si no hay costo (nunca cero). SOLO con `costos.ver`. */
@@ -223,7 +223,7 @@ async function costearVersion(
     componentes.push({
       clave: r.clave,
       noEntraAlCosto: r.clase === "INSUMO",
-      neto: aStock.valor,
+      bruto: aStock.valor,
       merma: porcentajeDesdeTexto(r.perdida),
       costoUnitario: costo === null ? null : parsearDecimalFijo(costo, ESCALA_DEL_COSTO, "costo"),
     });
@@ -266,18 +266,16 @@ export async function fichaDeLaVersion(
     : null;
   const costoDe = new Map(costo?.lineas.map((l) => [l.clave, l.costo]) ?? []);
   const componentes = resueltos.map((r): LineaDeFicha => {
-    const bruto = brutoComoTexto(cantidadDesdeTexto(r.cantidad), porcentajeDesdeTexto(r.perdida));
-    if (bruto === null) throw new RangeError("stock: el bruto de un componente no entra");
     const base = {
       numero: r.numero,
       productoId: r.productoId,
       nombre: r.nombre,
       tipo: r.tipo,
       clase: r.clase,
-      cantidad: r.cantidad,
+      bruto: r.cantidad,
       unidadId: r.unidadId,
       merma: r.perdida,
-      bruto,
+      neto: netoComoTexto(cantidadDesdeTexto(r.cantidad), porcentajeDesdeTexto(r.perdida)),
       noEntraAlCosto: r.clase === "INSUMO",
     };
     if (!conCostos) return base;
@@ -321,7 +319,7 @@ export async function comparacionDeVersiones(
   const paraComparar = (rs: readonly Resuelto[]) =>
     rs.map((r) => ({
       clave: r.clave,
-      neto: cantidadDesdeTexto(r.cantidad),
+      bruto: cantidadDesdeTexto(r.cantidad),
       merma: porcentajeDesdeTexto(r.perdida),
     }));
   const porClave = new Map(
@@ -371,13 +369,11 @@ export async function fichaDeCocinaDe(
     rinde: version.rinde,
     pasos: version.pasos,
     componentes: resueltos.map((r): LineaDeCocina => {
-      const bruto = brutoComoTexto(cantidadDesdeTexto(r.cantidad), porcentajeDesdeTexto(r.perdida));
-      if (bruto === null) throw new RangeError("stock: el bruto de un componente no entra");
       return {
         productoId: r.productoId,
         nombre: r.nombre,
         tipo: r.tipo,
-        cantidad: bruto,
+        cantidad: cantidadATexto(cantidadDesdeTexto(r.cantidad)),
         unidadId: r.unidadId,
       };
     }),

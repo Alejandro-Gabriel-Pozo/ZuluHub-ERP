@@ -119,7 +119,7 @@ describe("explosión anidada (D96, D94)", () => {
     };
     expect(texto(explotar({ medialuna: medialuna(), masa: inactiva })).length).toBe(6);
   });
-  it("la merma del compuesto y la de sus ingredientes se acumulan sobre el neto", () => {
+  it("la merma no cambia el descuento: se descuenta el BRUTO cargado, con o sin merma", () => {
     const conMerma = prod("VENDIBLE", "UNIDAD", {
       composicion: {
         composicionId: "rm",
@@ -133,9 +133,9 @@ describe("explosión anidada (D96, D94)", () => {
       ...m,
       composicion: { ...m.composicion!, componentes: [ing("harina", "6", "20")] },
     };
-    // 100 u → 6 kg × 1,5 = 9 kg de masa; la masa rinde 10 kg: harina 6 × 1,2 × 9 ÷ 10 = 6,48
+    // 100 u → 6 kg brutos de masa; la masa rinde 10 kg: harina 6 × 6 ÷ 10 = 3,6 (la merma solo informa el neto)
     expect(texto(explotar({ medialuna: conMerma, masa: ingredientesConMerma }))).toEqual([
-      ["harina", "r-masa", "-6.4800"],
+      ["harina", "r-masa", "-3.6000"],
     ]);
   });
   it("junta los renglones que coinciden antes de redondear (un redondeo por renglón)", () => {

@@ -796,8 +796,8 @@
     "fecha": "2026-11-11",
     "quien": "padre",
     "tipo": "DINERO",
-    "estado": "PENDIENTE_DE_OK",
-    "decision": "La merma de un ingrediente se suma al neto (20 % sobre 1 kg son 1,2 kg), como el prototipo aprobado.",
+    "estado": "CORREGIDA",
+    "decision": "La merma se suma al neto (20 % sobre 1 kg son 1,2 kg). Corregida el 13/11/2026 por DEC-0357: se carga el BRUTO y neto = bruto * (1 - merma).",
     "que_cambia": "Cambia el costo y lo que descuenta cada receta con merma; es una sola función.",
     "donde": "src/modulos/stock/dominio/merma.ts (E6, P-1)"
   },
@@ -1651,5 +1651,15 @@
     "decision": "Las 14 unidades de medida se muestran con los nombres de la maqueta de productos: Unidad, Gramo, Kilogramo, Tonelada, Mililitro, Litro y las demás.",
     "que_cambia": "Qué lee la persona al ver o elegir la unidad de un producto (14 textos), en la lista vacía («Sin resultados») y bajo «¿Qué es?» (5 descripciones de clase); todos de productos.html.",
     "donde": "Pedernal-docs 10-ux-ui/prototipos-gastronomia/productos.html (constante UNID) y 11-especificaciones/decisiones-del-dueno-2026-11.md (13/11/2026); src/capacidades/vocabulario/catalogo-catalogo.ts"
+  },
+  {
+    "id": "DEC-0357",
+    "fecha": "2026-11-13",
+    "quien": "dueño",
+    "tipo": "DINERO",
+    "estado": "CONFIRMADA",
+    "decision": "En la receta se carga el BRUTO y neto = bruto * (1 - merma): 300 g con 10 % de merma son 270 g. Costo y descuento de stock usan el bruto. Merma de 100 % o más se rechaza.",
+    "que_cambia": "La cantidad de cada componente pasa a ser bruto (sin migración): cambia el costo y lo que descuenta una receta con merma. La ficha muestra el neto calculado.",
+    "donde": "Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md (13/11/2026: «Bruto, cargo el bruto. Cargo los 300 gr que corté y le defino una merma»); src/modulos/stock/dominio/merma.ts"
   }
 ]

@@ -2,11 +2,10 @@ import type { Cantidad } from "../../../primitivas/cantidad/cantidad";
 import type { Porcentaje } from "../../../primitivas/cantidad/porcentaje";
 import { dividirRedondeando } from "../../../primitivas/cantidad/redondeo-entero";
 import { POLITICA_VIGENTE } from "../../../primitivas/dinero/redondeo";
-import { fraccionDeBruto } from "./merma";
 import { compararTexto, UNIDADES_POR_ENTERO } from "./movimiento";
 
 /**
- * El costo de una receta (E6 §3.3, D74, D77, D91): una CONSULTA, no se guarda. `Σ costo_unitario × neto × (100 + merma) ÷ 100 ÷ rinde`,
+ * El costo de una receta (E6 §3.3, D74, D77, D91): una CONSULTA, no se guarda. `Σ costo_unitario × bruto ÷ rinde` (la receta carga el BRUTO: la merma no se vuelve a aplicar, `merma.ts`),
  * en fracciones exactas y redondeado UNA vez, a 6 decimales (la escala de `numeric(18,6)` del costo). Un componente sin costo NO vale
  * cero (D125): deja el total incompleto y se lista; los insumos operativos (packaging, limpieza) no suman al costo y van aparte (D77).
  * Puro. `costoUnitario` en unidades de 10⁻⁶ pesos por unidad base; cantidades en unidades mínimas (10⁻⁴). Previene un food cost
@@ -16,7 +15,9 @@ export type ComponenteParaCosto = Readonly<{
   clave: string;
   /** Un insumo operativo: se muestra aparte y no entra al costo. */
   noEntraAlCosto: boolean;
-  neto: Cantidad;
+  /** La cantidad BRUTA cargada en la receta, en la unidad de costo. */
+  bruto: Cantidad;
+  /** Solo para comparar versiones: no entra a la cuenta del costo. */
   merma: Porcentaje | null;
   /** 10⁻⁶ pesos por unidad base; `null` = sin costo. */
   costoUnitario: bigint | null;
@@ -47,7 +48,7 @@ export function costearReceta(
   componentes: readonly ComponenteParaCosto[],
 ): CostoDeReceta {
   if (rinde.unidades <= 0n) throw new RangeError("costo de receta: el rinde es mayor que cero");
-  let exacto = 0n; // Σ costoUnitario × neto × (100 + merma), sobre CIEN × ESCALA (10⁻⁶ pesos)
+  let exacto = 0n; // Σ costoUnitario × bruto, sobre ESCALA (10⁻⁶ pesos)
   let denominador = 1n;
   const lineas: LineaDeCosto[] = [];
   const sinCosto: string[] = [];
@@ -57,9 +58,8 @@ export function costearReceta(
       if (!c.noEntraAlCosto) sinCosto.push(c.clave);
       continue;
     }
-    const bruto = fraccionDeBruto(c.neto.unidades, c.merma);
-    const numerador = c.costoUnitario * bruto.numerador;
-    const den = bruto.denominador * ESCALA;
+    const numerador = c.costoUnitario * c.bruto.unidades;
+    const den = ESCALA;
     lineas.push({
       clave: c.clave,
       noEntraAlCosto: c.noEntraAlCosto,
@@ -89,8 +89,8 @@ export type CambioDeVersion = Readonly<{
 }>;
 
 export function compararVersiones(
-  desde: readonly Pick<ComponenteParaCosto, "clave" | "neto" | "merma">[],
-  hasta: readonly Pick<ComponenteParaCosto, "clave" | "neto" | "merma">[],
+  desde: readonly Pick<ComponenteParaCosto, "clave" | "bruto" | "merma">[],
+  hasta: readonly Pick<ComponenteParaCosto, "clave" | "bruto" | "merma">[],
 ): readonly CambioDeVersion[] {
   const antes = new Map(desde.map((c) => [c.clave, c]));
   const despues = new Map(hasta.map((c) => [c.clave, c]));
@@ -99,7 +99,7 @@ export function compararVersiones(
     const previo = antes.get(c.clave);
     if (previo === undefined) cambios.push({ clave: c.clave, tipo: "AGREGADO" });
     else if (
-      previo.neto.unidades !== c.neto.unidades ||
+      previo.bruto.unidades !== c.bruto.unidades ||
       (previo.merma?.unidades ?? 0n) !== (c.merma?.unidades ?? 0n)
     ) {
       cambios.push({ clave: c.clave, tipo: "CAMBIADO" });

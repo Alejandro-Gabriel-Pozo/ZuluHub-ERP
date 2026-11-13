@@ -489,29 +489,30 @@ describe.skipIf(base === null)("stock: recetas (E6-T6)", () => {
       expect(await existencia(ingredientes.harina.articulo)).toBe("99.6400");
     });
 
-    it("D4: la merma se suma al neto (1 kg con 20 % son 1,2 kg): lo que se descuenta, lo que muestra la ficha de cocina y lo que se costea salen de la misma cuenta", async () => {
+    it("D4 (13/11/2026): la receta carga el BRUTO; 1 kg con 20 % de merma descuenta 1 kg, se costea 1 kg y la ficha muestra 0,8 kg de neto", async () => {
       const harina = await materia(kilos);
       const torta = await vendible();
       valorDe(await guardar(torta, [componente(harina.producto, "1", "KILOGRAMO", "20")]));
       await meter(harina.articulo, "10");
       expect((await vender(torta, "1")).ok).toBe(true);
-      expect(await existencia(harina.articulo)).toBe("8.8000");
+      expect(await existencia(harina.articulo)).toBe("9.0000");
       const cocina = await lleno.fichaDeCocina(e.operador, { productoId: torta });
-      expect(cocina.componentes).toMatchObject([{ cantidad: "1.2000", unidadId: "KILOGRAMO" }]);
-      // Costo: $ 100 el kilo → $ 120 la receta (un redondeo).
+      expect(cocina.componentes).toMatchObject([{ cantidad: "1.0000", unidadId: "KILOGRAMO" }]);
+      // Costo: $ 100 el kilo × 1 kg bruto = $ 100 (la merma no se aplica otra vez).
       await costear(harina.producto, "100", "0.0001");
       const ficha = await lleno.fichaDeReceta(e.gerente, { productoId: torta });
       expect(ficha.costos).toEqual({
         moneda: "ARS",
-        total: "120.000000",
-        porUnidad: "120.000000",
+        total: "100.000000",
+        porUnidad: "100.000000",
         incompleto: false,
         sinCosto: [],
       });
       expect(ficha.componentes[0]).toMatchObject({
-        bruto: "1.2000",
+        bruto: "1.0000",
         merma: "20.0000",
-        costo: "120.000000",
+        neto: "0.8000",
+        costo: "100.000000",
       });
     });
   });

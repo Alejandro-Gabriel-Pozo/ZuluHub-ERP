@@ -5,13 +5,13 @@ import { compararVersiones, costearReceta, type ComponenteParaCosto } from "./co
 
 const comp = (
   clave: string,
-  neto: string,
+  bruto: string,
   costo: string | null,
   over: Partial<ComponenteParaCosto> = {},
 ): ComponenteParaCosto => ({
   clave,
   noEntraAlCosto: false,
-  neto: cantidadDesdeTexto(neto),
+  bruto: cantidadDesdeTexto(bruto),
   merma: null,
   costoUnitario: costo === null ? null : BigInt(Math.round(Number(costo) * 1_000_000)),
   ...over,
@@ -19,7 +19,7 @@ const comp = (
 const rinde = cantidadDesdeTexto;
 
 describe("costo de una receta (D74, D77, D91, D125)", () => {
-  it("suma costo × neto ÷ rinde con un solo redondeo (D3 de la especificación)", () => {
+  it("suma costo × bruto ÷ rinde con un solo redondeo (D3 de la especificación)", () => {
     // harina 6 kg a $1.000 + manteca 2 kg a $9.000 = $24.000 para 9,5 kg: $2.526,315789 por kg
     const r = costearReceta(rinde("9.5"), [
       comp("harina", "6", "1000"),
@@ -30,12 +30,12 @@ describe("costo de una receta (D74, D77, D91, D125)", () => {
     expect(r.incompleto).toBe(false);
     expect(r.lineas.map((l) => l.costo)).toEqual([6_000_000_000n, 18_000_000_000n]);
   });
-  it("la merma se suma al neto: 1 kg a $100 con 20 % cuesta $120", () => {
+  it("costo = bruto × costo unitario: la merma no se aplica otra vez (1 kg bruto a $100 con 20 % cuesta $100)", () => {
     const r = costearReceta(rinde("1"), [
       comp("a", "1", "100", { merma: porcentajeDesdeTexto("20") }),
     ]);
-    expect(r.costoTotal).toBe(120_000_000n);
-    expect(r.costoPorUnidad).toBe(120_000_000n);
+    expect(r.costoTotal).toBe(100_000_000n);
+    expect(r.costoPorUnidad).toBe(100_000_000n);
   });
   it("sin costo no es cero: queda incompleto y se lista", () => {
     const r = costearReceta(rinde("2"), [comp("a", "1", "10"), comp("b", "1", null)]);
@@ -71,9 +71,9 @@ describe("costo de una receta (D74, D77, D91, D125)", () => {
 });
 
 describe("comparar versiones", () => {
-  const base = (clave: string, neto: string, merma: string | null = null) => ({
+  const base = (clave: string, bruto: string, merma: string | null = null) => ({
     clave,
-    neto: cantidadDesdeTexto(neto),
+    bruto: cantidadDesdeTexto(bruto),
     merma: merma === null ? null : porcentajeDesdeTexto(merma),
   });
   it("lista lo agregado, lo quitado y lo cambiado, ordenado", () => {

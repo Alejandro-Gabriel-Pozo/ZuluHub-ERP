@@ -1,41 +1,30 @@
 import type { Cantidad } from "../../../primitivas/cantidad/cantidad";
 import { cantidadATexto } from "../../../primitivas/cantidad/cantidad";
-import { MAXIMO_DE_UNIDADES } from "../../../primitivas/cantidad/decimal-fijo";
 import { porcentajeDesdeTexto, type Porcentaje } from "../../../primitivas/cantidad/porcentaje";
 import { dividirRedondeando } from "../../../primitivas/cantidad/redondeo-entero";
 import { POLITICA_VIGENTE } from "../../../primitivas/dinero/redondeo";
 import { cantidadDeUnidades } from "./movimiento";
 
 /**
- * La merma de un componente de receta (E6 §3.3, decisión P-1 del 10/11/2026): la merma se SUMA al neto, como el prototipo aprobado
- * (`receta.html`): bruto = neto × (1 + merma ÷ 100); 20 % sobre 1 kg neto son 1,2 kg brutos. Es la ÚNICA función que decide la fórmula: lo que
- * se descuenta del stock, lo que se costea y lo que muestra la ficha de cocina salen de acá. Cambiar la fórmula (P-1 corregida a
- * «porcentaje del bruto»: neto × 100 ÷ (100 − merma)) es tocar solo `fraccionDeBruto`. Puro y exacto: devuelve una fracción de
- * unidades mínimas, para que quien suma varios renglones redondee UNA sola vez. Previene que el costo y el descuento de stock usen
- * fórmulas distintas.
+ * La merma de un componente de receta (E6 §3.3; el dueño, 13/11/2026: «se carga el BRUTO; neto = bruto × (1 − merma)», 300 g bruto con 10 % de
+ * merma son 270 g neto). La receta guarda el BRUTO: es lo que se descuenta del stock y lo que se costea, sin ninguna cuenta. El neto (lo que
+ * llega al plato) es solo para mostrar y sale ÚNICAMENTE de `netoDeBruto`: una sola fórmula, un solo redondeo. Previene que el costo, el
+ * descuento de stock y la ficha usen fórmulas distintas (el caso de la fórmula anterior, que sumaba la merma al neto).
  */
-export type FraccionDeUnidades = Readonly<{ numerador: bigint; denominador: bigint }>;
-
 const CIEN = porcentajeDesdeTexto("100").unidades;
 export const SIN_MERMA: Porcentaje = porcentajeDesdeTexto("0");
 
-/** Bruto exacto como fracción de unidades mínimas: `neto × (100 + merma) ÷ 100` (el `+` es la decisión P-1). */
-export function fraccionDeBruto(
-  netoUnidades: bigint,
-  merma: Porcentaje | null,
-): FraccionDeUnidades {
+/**
+ * `bruto × (100 − merma) ÷ 100`, redondeado una vez a 4 decimales. La merma tiene que ser menor que 100 %: con 100 % o más no queda nada
+ * para el plato y se rechaza con un error (la base lo impide con `componente_perdida_ck`, 0 ≤ p < 100); nunca se acota en silencio.
+ */
+export function netoDeBruto(bruto: Cantidad, merma: Porcentaje | null): Cantidad {
   const puntos = merma === null ? 0n : merma.unidades;
-  return { numerador: netoUnidades * (CIEN + puntos), denominador: CIEN };
+  if (puntos >= CIEN) throw new RangeError("merma: tiene que ser menor que 100 %");
+  return cantidadDeUnidades(
+    dividirRedondeando(bruto.unidades * (CIEN - puntos), CIEN, POLITICA_VIGENTE),
+  );
 }
 
-/** El bruto a cantidad de 4 decimales (un solo redondeo): lo que muestra la ficha de cocina. `null` si se sale del rango de una cantidad. */
-export function brutoDeNeto(neto: Cantidad, merma: Porcentaje | null): Cantidad | null {
-  const { numerador, denominador } = fraccionDeBruto(neto.unidades, merma);
-  const unidades = dividirRedondeando(numerador, denominador, POLITICA_VIGENTE);
-  return unidades > MAXIMO_DE_UNIDADES ? null : cantidadDeUnidades(unidades);
-}
-
-export const brutoComoTexto = (neto: Cantidad, merma: Porcentaje | null): string | null => {
-  const bruto = brutoDeNeto(neto, merma);
-  return bruto === null ? null : cantidadATexto(bruto);
-};
+export const netoComoTexto = (bruto: Cantidad, merma: Porcentaje | null): string =>
+  cantidadATexto(netoDeBruto(bruto, merma));
