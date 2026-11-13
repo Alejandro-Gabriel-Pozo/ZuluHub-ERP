@@ -24,6 +24,7 @@ import {
   prepararCaso,
   repetirSiOtroGano,
   UNICAS_DE_LA_ANULACION,
+  REINTENTOS_EN_LA_SESION_DE_CAJA,
 } from "./comun";
 import type { DependenciasDeCaja } from "./contrato";
 import { DECLARACIONES } from "./declaraciones";
@@ -73,7 +74,7 @@ export function armarAnularMovimientoDeCaja({ transacciones, reglas }: Dependenc
     const { empresaId, ahora } = contexto;
     const ejecutar = () =>
       transacciones.ejecutar(
-        { contexto },
+        { contexto, reintentos: REINTENTOS_EN_LA_SESION_DE_CAJA },
         async (
           tx,
         ): Promise<

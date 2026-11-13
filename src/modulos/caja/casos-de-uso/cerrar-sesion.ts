@@ -19,7 +19,12 @@ import {
   type TotalDeclarado,
 } from "../dominio/arqueo";
 import { sumarImportes } from "../dominio/importes";
-import { cargarSesion, dejarConstancia, prepararCaso } from "./comun";
+import {
+  cargarSesion,
+  dejarConstancia,
+  prepararCaso,
+  REINTENTOS_EN_LA_SESION_DE_CAJA,
+} from "./comun";
 import type { DependenciasDeCaja } from "./contrato";
 import { DECLARACIONES } from "./declaraciones";
 import { traducirErrores } from "./traducir";
@@ -114,7 +119,7 @@ export function armarCerrarSesion({ transacciones, reglas }: DependenciasDeCaja)
   ): Promise<Resultado<SalidaDeCerrarSesion, ErrorAlCerrarSesion>> {
     const { empresaId, ahora } = contexto;
     const resultado = await transacciones.ejecutar(
-      { contexto },
+      { contexto, reintentos: REINTENTOS_EN_LA_SESION_DE_CAJA },
       async (
         tx,
       ): Promise<
