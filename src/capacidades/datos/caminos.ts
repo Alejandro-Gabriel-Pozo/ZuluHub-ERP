@@ -45,7 +45,43 @@ const FORMULARIO_DE_MEDIO = "apps/web/ui/plantillas/caja/FormularioDeMedio.clien
 const FORMULARIO_DE_CUENTA = "apps/web/ui/plantillas/caja/FormularioDeCuenta.cliente.tsx";
 const FORMULARIO_DE_CAJA = "apps/web/ui/plantillas/caja/FormularioDeCaja.cliente.tsx";
 
+const FORMULARIO_DE_FICHA_DE_PRODUCTO =
+  "apps/web/ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente.tsx";
+
 export const CAMINOS = {
+  // Productos, ficha de datos: el nombre es el único dato obligatorio para todas las clases; el nombre de cocina, la alícuota (obligatoria si se vende, lo decide el servidor) y la
+  // sección son de las clases que se venden. La descripción de la carta no se pide acá (la maqueta no la trae) y se conserva. Los errores con campo son los cuatro que la maqueta
+  // `productos.html` redacta para la ficha: nombre repetido o vacío, código repetido, código de barras inválido y alícuota sin elegir.
+  "guardar-ficha-de-producto": {
+    funcion: "Guardar los datos de un producto de la empresa",
+    pantallas: [FORMULARIO_DE_FICHA_DE_PRODUCTO],
+    pasos: [
+      {
+        id: "datos-del-producto",
+        campos: {
+          nombre: "nombre-de-producto",
+          nombreDeCocina: "nombre-de-cocina-de-producto",
+          codigo: "codigo-interno-de-producto",
+          codigoDeBarras: "codigo-de-barras-de-producto",
+          alicuota: "alicuota-de-iva-de-producto",
+          seccionDeCartaId: "seccion-de-carta-de-producto",
+        },
+      },
+    ],
+    deriva: [],
+    accion: {
+      clave: "productos.editar",
+      requiere: ["nombre-de-producto"],
+      admite: [
+        "nombre-de-cocina-de-producto",
+        "codigo-interno-de-producto",
+        "codigo-de-barras-de-producto",
+        "alicuota-de-iva-de-producto",
+        "seccion-de-carta-de-producto",
+      ],
+    },
+    camposDeError: ["nombre", "codigo", "codigoDeBarras", "alicuota"],
+  },
   // Medios de pago, alta: el tipo es obligatorio (lista cerrada) y el nombre es opcional. Sin `campo` de error: los rechazos de esta pantalla son el aviso genérico y el del nombre
   // repetido, que no apuntan a un campo (maqueta `medios.html`, 09/11/2026).
   "agregar-medio-de-pago": {

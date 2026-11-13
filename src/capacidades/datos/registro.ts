@@ -79,6 +79,14 @@ const MEDIOS_PROPOSITO_TIPO: Proposito = {
     "Pedernal-docs/11-especificaciones/caja-y-cobros.md §B.6 (medio de pago: lista cerrada de tipos) y la maqueta aprobada el 09/11/2026 (`medios.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)",
 };
 
+const FICHA_DE_PRODUCTO = "apps/web/ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente.tsx";
+const REQUIERE_CATALOGO = { modulo: "catalogo", estadoDeEmpresa: ["ACTIVE"] } as const;
+const FICHA_PROPOSITO = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs/11-especificaciones/fichas-de-modulo/a1-productos-y-precios.md §5 (datos del producto y sus primitivas) y la maqueta aprobada el 12/11/2026 (`productos.html`, solapa «Datos», carpeta de prototipos de Pedernal-docs 10-ux-ui)",
+});
+
 export const REGISTRO_DE_DATOS = {
   correo: {
     ficha: "src/primitivas/contacto/email.ts",
@@ -271,6 +279,74 @@ export const REGISTRO_DE_DATOS = {
     consumidores: [CAJA_FORMULARIO],
     ponerPor: ["cajas.crear", "cajas.editar"],
     requiere: REQUIERE_CAJA,
+  },
+  "nombre-de-producto": {
+    ficha: "src/primitivas/texto/nombre-de-producto.ts",
+    propositos: [
+      FICHA_PROPOSITO(
+        "Nombre de un producto en su ficha de datos (obligatorio, único por empresa).",
+      ),
+    ],
+    consumidores: [FICHA_DE_PRODUCTO],
+    ponerPor: ["productos.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "nombre-de-cocina-de-producto": {
+    ficha: "src/primitivas/texto/nombre-de-cocina.ts",
+    propositos: [
+      FICHA_PROPOSITO(
+        "Nombre con el que la cocina ve un producto que se vende (reventa o producto vendible), en su ficha de datos; vacío: la cocina ve el nombre.",
+      ),
+    ],
+    consumidores: [FICHA_DE_PRODUCTO],
+    ponerPor: ["productos.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "codigo-interno-de-producto": {
+    ficha: "src/primitivas/texto/codigo-de-producto.ts",
+    propositos: [
+      FICHA_PROPOSITO(
+        "Código interno, opcional y único por empresa, de un producto en su ficha de datos.",
+      ),
+    ],
+    consumidores: [FICHA_DE_PRODUCTO],
+    ponerPor: ["productos.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "codigo-de-barras-de-producto": {
+    ficha: "src/primitivas/texto/codigo-de-producto.ts",
+    propositos: [
+      FICHA_PROPOSITO(
+        "Código de barras (de 8 a 14 dígitos), opcional, de un producto en su ficha de datos.",
+      ),
+    ],
+    consumidores: [FICHA_DE_PRODUCTO],
+    ponerPor: ["productos.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "alicuota-de-iva-de-producto": {
+    // La lista que se ofrece (las seis de ARCA, sin «Exento» ni «No gravado») vive una vez, en `ALICUOTAS_DEL_PRODUCTO` del módulo fiscal.
+    ficha: "src/modulos/fiscal/dominio/alicuota.ts",
+    propositos: [
+      FICHA_PROPOSITO(
+        "Alícuota de IVA de un producto que se vende, en su ficha de datos: una de las seis que ofrece el producto; es una decisión fiscal y no tiene valor por defecto.",
+      ),
+    ],
+    consumidores: [FICHA_DE_PRODUCTO],
+    ponerPor: ["productos.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "seccion-de-carta-de-producto": {
+    // Una referencia a una sección activa de la carta de la empresa (no hay primitiva de texto: la fuente de las opciones es la consulta de secciones del catálogo).
+    ficha: "src/modulos/catalogo/casos-de-uso/secciones.ts",
+    propositos: [
+      FICHA_PROPOSITO(
+        "Sección de la carta a la que pertenece un producto que se vende, en su ficha de datos: una de las secciones activas de la empresa, o ninguna.",
+      ),
+    ],
+    consumidores: [FICHA_DE_PRODUCTO],
+    ponerPor: ["productos.editar"],
+    requiere: REQUIERE_CATALOGO,
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
 
