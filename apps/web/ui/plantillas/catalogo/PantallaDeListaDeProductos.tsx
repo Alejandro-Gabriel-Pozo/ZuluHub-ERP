@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Aviso } from "../../componentes/Aviso";
 import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../componentes/Insignia";
 import { FormularioDeFiltrosDeProductos } from "./FormularioDeFiltrosDeProductos.cliente";
@@ -18,8 +19,7 @@ export type PropsDePantallaDeListaDeProductos = Readonly<{
 
 /**
  * La lista de productos (A1, T1; maqueta `productos.html`, 12/11/2026), solo lectura: los filtros y una tarjeta por producto, también los desactivados. Cada tarjeta dice el
- * nombre, su marca de estado, la clase y el precio. «Nuevo producto» (al final, como el pie de la maqueta) solo si llega armado, es decir, si la persona puede crear. Sin enlace a la ficha ni «Ocultar»: son de otros tramos. Una lista vacía no dice nada (no hay un
- * texto aprobado para eso). Una sola lista de tarjetas en celular y escritorio. Sin textos propios: todos llegan resueltos. El `h1` lo pone el armazón.
+ * nombre, su marca de estado, «clase · sección» («clase · —» si se vende y no tiene sección; solo la clase si no se vende) y el precio. «Nuevo producto» (al final, como el pie de la maqueta) solo si llega armado, es decir, si la persona puede crear. Sin enlace a la ficha ni «Ocultar»: son de otros tramos. Una lista vacía dice «Sin resultados» (aviso informativo, el mismo patrón del listado de comprobantes). Una sola lista de tarjetas en celular y escritorio. Sin textos propios: todos llegan resueltos. El `h1` lo pone el armazón.
  */
 export function PantallaDeListaDeProductos({
   filtros,
@@ -37,7 +37,9 @@ export function PantallaDeListaDeProductos({
       {error ?? null}
       {lista === null ? null : (
         <>
-          {lista.filas.length === 0 ? null : (
+          {lista.vacio !== null ? (
+            <Aviso tono="info">{lista.vacio}</Aviso>
+          ) : (
             <ul className={estilos["lista"]}>
               {lista.filas.map((fila) => (
                 <li key={fila.id} className={estilos["tarjeta"]}>
@@ -48,7 +50,10 @@ export function PantallaDeListaDeProductos({
                     )}
                   </div>
                   <div className={estilos["renglon"]}>
-                    <span className={estilos["clase"]}>{fila.clase}</span>
+                    <span className={estilos["clase"]}>
+                      {fila.seccion === null ? fila.clase : `${fila.clase} · ${fila.seccion}`}
+                      {fila.sinSeccion ? <span aria-hidden="true"> · —</span> : null}
+                    </span>
                     {fila.precio === null ? null : (
                       <span className={estilos["precio"]}>{fila.precio}</span>
                     )}

@@ -535,9 +535,9 @@
   },
   {
     "grupo": "web (lista de productos)",
-    "archivos": "src/composicion/entradas-de-productos.ts,apps/web/ui/plantillas/catalogo/filtros-de-productos.ts,apps/web/ui/plantillas/catalogo/modelo-de-productos.ts",
+    "archivos": "src/composicion/entradas-de-productos.ts,src/composicion/productos-web.ts,apps/web/ui/plantillas/catalogo/filtros-de-productos.ts,apps/web/ui/plantillas/catalogo/modelo-de-productos.ts",
     "minutos": 1.0,
-    "pruebas": "src/composicion/entradas-de-productos.test.ts test/web/productos-modelo.test.ts"
+    "pruebas": "src/composicion/entradas-de-productos.test.ts src/composicion/productos-web.test.ts test/web/productos-modelo.test.ts"
   },
   {
     "grupo": "web (ficha de datos de un producto)",
