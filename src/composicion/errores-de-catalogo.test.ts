@@ -87,6 +87,13 @@ describe("traducirErrorDeCatalogo: precios (A1, T3)", () => {
     ["sin precio vigente (la fila vigente era un precio abierto)", { precioId: "x", precio: null }],
     ["sin fila vigente", null],
     ["un vigente que no es un objeto", "13000"],
+    ["un vigente ausente", undefined],
+    ["un vigente numérico", 13000],
+    // Algo que no es un objeto pero trae la propiedad `precio` (una función): no es la forma pedida, así que no se arriesga.
+    [
+      "un vigente que es una función con la propiedad precio",
+      Object.assign(() => 0, { precio: "13000.000000" }),
+    ],
   ])("PRECIO_DESACTUALIZADO %s sale como el genérico", (_caso, vigente) => {
     expect(traducirErrorDeCatalogo({ error: "PRECIO_DESACTUALIZADO", vigente })).toEqual({
       codigo: "CATALOGO_ACCION_NO_PERMITIDA",
