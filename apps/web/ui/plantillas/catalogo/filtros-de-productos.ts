@@ -14,6 +14,9 @@ import {
 
 export const RUTA_DE_PRODUCTOS = "/catalogo/productos";
 
+/** La pantalla del alta (T6): la única dirección que dice adónde lleva «Nuevo producto». */
+export const RUTA_DEL_ALTA_DE_PRODUCTO = `${RUTA_DE_PRODUCTOS}/nuevo`;
+
 /** Las cinco clases, en el orden de la maqueta (`CLASES`), cada una con la clave de su texto. */
 export const CLAVE_DE_CLASE = {
   MATERIA_PRIMA: "catalogo.clase.materia_prima",
@@ -23,6 +26,15 @@ export const CLAVE_DE_CLASE = {
   VENDIBLE: "catalogo.clase.vendible",
 } as const satisfies Readonly<Record<string, ClaveDeTexto>>;
 export type ClaseDelFiltro = keyof typeof CLAVE_DE_CLASE;
+
+/** La descripción corta de cada clase (maqueta `productos.html`, `CLASES`; decisión 69, aprobada el 09/11/2026): la clave de su texto, bajo «¿Qué es?» en el alta. */
+export const CLAVE_DE_DESCRIPCION_DE_CLASE = {
+  MATERIA_PRIMA: "catalogo.clase.descripcion.materia_prima",
+  INSUMO: "catalogo.clase.descripcion.insumo",
+  REVENTA: "catalogo.clase.descripcion.reventa",
+  ELABORADO: "catalogo.clase.descripcion.elaborado",
+  VENDIBLE: "catalogo.clase.descripcion.vendible",
+} as const satisfies Readonly<Record<ClaseDelFiltro, ClaveDeTexto>>;
 
 /** Los tres estados que ofrece el filtro; «Activo» no se marca en la fila (la maqueta marca solo «Desactivado» y «Falta completar»). */
 const CLAVE_DE_ESTADO = {
