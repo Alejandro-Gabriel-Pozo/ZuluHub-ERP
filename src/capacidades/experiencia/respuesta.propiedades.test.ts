@@ -1,6 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import "../../../test/propiedades/configuracion";
+import { PARAMETROS_DE_CATALOGO } from "./respuesta-de-catalogo";
 import {
   CODIGOS_PUBLICOS,
   clasificarError,
@@ -63,13 +64,18 @@ describe("propiedades del traductor de respuestas", () => {
         (codigo, extra) => {
           const publico = errorPublicoDe(
             (() => {
-              const c = clasificarError({ ...extra, codigo });
+              const entrada: Record<string, unknown> = { ...extra, codigo };
+              delete entrada["parametros"];
+              const c = clasificarError(entrada);
               if (c.tipo !== "PUBLICO") throw new Error("tenía que ser público");
               return c;
             })(),
           );
           expect(codigos).toContain(publico.codigo);
-          expect(publico.codigo).toBe(codigo);
+          // Un código que exige parámetros (`PARAMETROS_DE_CATALOGO`) sin ellos válidos cierra con el genérico; con `{ ...extra, codigo }` aquí no los hay.
+          expect(publico.codigo).toBe(
+            Object.hasOwn(PARAMETROS_DE_CATALOGO, codigo) ? "CATALOGO_ACCION_NO_PERMITIDA" : codigo,
+          );
           const claves = Object.keys(publico);
           for (const k of claves) expect(["codigo", "clave", "presentacion", "campo"]).toContain(k);
           if (publico.campo !== undefined) {
