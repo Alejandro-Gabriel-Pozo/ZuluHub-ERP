@@ -1643,6 +1643,16 @@
     "donde": "Pedernal-docs 10-ux-ui/prototipos-gastronomia/productos.html (Textos nuevos, 09/11/2026) y 11-especificaciones/decisiones-del-dueno-2026-11.md (12/11/2026); src/capacidades/vocabulario/catalogo-catalogo.ts"
   },
   {
+    "id": "DEC-0355",
+    "fecha": "2026-11-13",
+    "quien": "dueño",
+    "tipo": "CLIENTE",
+    "estado": "CONFIRMADA",
+    "decision": "Las 14 unidades de medida se muestran con los nombres de la maqueta de productos: Unidad, Gramo, Kilogramo, Tonelada, Mililitro, Litro y las demás.",
+    "que_cambia": "Qué lee la persona al ver o elegir la unidad de un producto (14 textos), en la lista vacía («Sin resultados») y bajo «¿Qué es?» (5 descripciones de clase); todos de productos.html.",
+    "donde": "Pedernal-docs 10-ux-ui/prototipos-gastronomia/productos.html (constante UNID) y 11-especificaciones/decisiones-del-dueno-2026-11.md (13/11/2026); src/capacidades/vocabulario/catalogo-catalogo.ts"
+  },
+  {
     "id": "DEC-0356",
     "fecha": "2026-11-13",
     "quien": "sesión",

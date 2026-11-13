@@ -508,6 +508,139 @@ describe.skipIf(base === null)(
       });
     });
 
+    describe("ficha del producto: unidades y sección", () => {
+      it("verProducto trae la unidad base y la de venta con su símbolo, y la sección también si está desactivada; listarUnidades trae la lista cerrada", async () => {
+        const seccionId = nuevoId();
+        const nombreDeSeccion = nombreAlAzarDeProducto("Entradas");
+        valorDe(
+          await c.casos.crearSeccionDeCarta(e.gerente, {
+            id: seccionId,
+            nombre: nombreDeSeccion,
+            orden: 1,
+          }),
+        );
+        const p = await nuevoProducto({ seccionDeCartaId: seccionId });
+        const sin = await nuevoProducto();
+        const ficha = valorDe(await c.consultas.verProducto(e.operador, { productoId: p }));
+        expect(ficha?.unidadBase).toEqual({
+          id: "UNIDAD",
+          dimension: "CONTEO",
+          simbolo: "u",
+          factorABase: "1",
+          esBase: true,
+        });
+        expect(ficha?.unidadDeVenta?.id).toBe("UNIDAD");
+        expect(ficha?.seccion).toMatchObject({
+          id: seccionId,
+          nombre: nombreDeSeccion,
+          activa: true,
+        });
+        // Desactivada, el producto la conserva y la ficha la sigue mostrando (con `activa: false`).
+        valorDe(await c.casos.desactivarSeccionDeCarta(e.gerente, { seccionId }));
+        expect(
+          valorDe(await c.consultas.verProducto(e.operador, { productoId: p }))?.seccion,
+        ).toMatchObject({ id: seccionId, activa: false });
+        expect(
+          valorDe(await c.consultas.verProducto(e.operador, { productoId: sin }))?.seccion,
+        ).toBeNull();
+        const unidades = valorDe(await c.consultas.listarUnidades(e.operador));
+        expect(unidades.map((u) => u.id).sort()).toEqual([
+          "CENTIMETRO",
+          "CENTIMETRO_CUADRADO",
+          "GRAMO",
+          "HORA",
+          "KILOGRAMO",
+          "LITRO",
+          "METRO",
+          "METRO_CUADRADO",
+          "METRO_CUBICO",
+          "MILILITRO",
+          "MILIMETRO",
+          "MINUTO",
+          "TONELADA",
+          "UNIDAD",
+        ]);
+        // Por dimensión, con la unidad base primero.
+        const primeras = new Map<string, boolean>();
+        for (const u of unidades)
+          if (!primeras.has(u.dimension)) primeras.set(u.dimension, u.esBase);
+        expect([...primeras.values()].every(Boolean)).toBe(true);
+        expect(unidades.find((u) => u.id === "KILOGRAMO")).toEqual({
+          id: "KILOGRAMO",
+          dimension: "MASA",
+          simbolo: "kg",
+          factorABase: "1000",
+          esBase: false,
+        });
+        expect(unidades).toHaveLength(14);
+        expect(
+          unidades
+            .filter((u) => u.esBase)
+            .map((u) => u.dimension)
+            .sort(),
+        ).toEqual(["CONTEO", "LONGITUD", "MASA", "SUPERFICIE", "TIEMPO", "VOLUMEN"]);
+      });
+
+      it("la lista trae la sección de cada producto, también desactivada; editar el producto SIN tocar una sección apagada o una alícuota «Exento» lo acepta", async () => {
+        const seccionId = nuevoId();
+        const nombreDeSeccion = nombreAlAzarDeProducto("Postres");
+        valorDe(
+          await c.casos.crearSeccionDeCarta(e.gerente, {
+            id: seccionId,
+            nombre: nombreDeSeccion,
+            orden: 1,
+          }),
+        );
+        const nombre = nombreAlAzarDeProducto("ConSeccion");
+        const p = await nuevoProducto({ nombre, seccionDeCartaId: seccionId, alicuota: "EXENTO" });
+        valorDe(await c.casos.desactivarSeccionDeCarta(e.gerente, { seccionId }));
+        const lista = valorDe(
+          await c.consultas.listarProductos(e.operador, { texto: nombre.toLowerCase() }),
+        );
+        expect(lista.productos.find((x) => x.id === p)?.seccion).toEqual({
+          id: seccionId,
+          nombre: nombreDeSeccion,
+          activa: false,
+        });
+        const sin = await nuevoProducto({ nombre: nombreAlAzarDeProducto("SinSeccion") });
+        const todos = valorDe(await c.consultas.listarProductos(e.operador, {}));
+        expect(todos.productos.find((x) => x.id === sin)?.seccion).toBeNull();
+        // Guardar solo el nombre nuevo, con la sección apagada y la alícuota «Exento» tal como estaban: se acepta (no obliga a tocarlas).
+        const nuevoNombre = nombreAlAzarDeProducto("Renombrado");
+        const editado = await c.casos.editarProducto(e.gerente, {
+          productoId: p,
+          versionEsperada: await version(p),
+          nombre: nuevoNombre,
+          alicuota: "EXENTO",
+          seccionDeCartaId: seccionId,
+        });
+        expect(editado.ok).toBe(true);
+        const ficha = valorDe(await c.consultas.verProducto(e.operador, { productoId: p }));
+        expect(ficha?.producto).toMatchObject({
+          nombre: nuevoNombre,
+          alicuota: "EXENTO",
+          seccionDeCartaId: seccionId,
+        });
+        expect(ficha?.seccion).toMatchObject({ id: seccionId, activa: false });
+        // Pasar a una sección apagada que el producto NO tenía sí se rechaza.
+        expect(
+          await c.casos.editarProducto(e.gerente, {
+            productoId: sin,
+            versionEsperada: await version(sin),
+            nombre: String((await producto(sin))?.["nombre"]),
+            alicuota: "21",
+            seccionDeCartaId: seccionId,
+          }),
+        ).toEqual({ ok: false, error: "SECCION_NO_ENCONTRADA" });
+      });
+
+      it("una sección de otra empresa no aparece en la ficha de un producto de esta (cada empresa ve solo la suya)", async () => {
+        const b = await c.escenario();
+        const p = await nuevoProducto();
+        expect(valorDe(await c.consultas.verProducto(b.gerente, { productoId: p }))).toBeNull();
+      });
+    });
+
     describe("secciones de la carta", () => {
       it("secciones: repetir crearSeccionDeCarta con el mismo id deja una sección", async () => {
         const id = nuevoId();
