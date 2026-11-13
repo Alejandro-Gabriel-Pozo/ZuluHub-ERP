@@ -38,9 +38,9 @@ import {
 import { type ResultadoDeAccion } from "./acciones";
 import { conLaEmpresa } from "./con-la-empresa";
 import { web } from "./composicion";
-import { COOKIE_DE_EMPRESA, COOKIE_DE_SUCURSAL, OPCIONES_DE_COOKIE_DE_SUCURSAL } from "./cookies";
+import { COOKIE_DE_SUCURSAL, OPCIONES_DE_COOKIE_DE_SUCURSAL } from "./cookies";
 import { despacharPorClavesDespuesDeConfirmar } from "./despacho-inmediato";
-import { dependenciasDeSesion, sesionDelPedido } from "./sesion";
+import { dependenciasDeSesion } from "./sesion";
 import {
   elegidaEntre,
   sucursalDelPedido,
