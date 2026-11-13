@@ -11,6 +11,7 @@ export const DECLARACIONES_DE_CONSULTAS = {
   productosParaConsumo: { accion: "productos.ver" },
   productosParaCopiar: { accion: "productos.ver" },
   listarSeccionesDeCarta: { accion: "productos.ver" },
+  listarUnidades: { accion: "productos.ver" },
   listarClasificacion: { accion: "productos.ver" },
   destinosParaMoverNodo: { accion: "productos.ver" },
   verCartaPublica: { accion: "vidrieras.ver" },
