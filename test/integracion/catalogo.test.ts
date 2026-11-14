@@ -671,6 +671,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "nombre_clave",
             "nombre_de_cocina",
             "paso_minimo",
+            "porciones_ofrecidas", // 0051 (A7): se escribe con la forma de venta
             "seccion_de_carta_id",
             "unidad_de_venta_id",
             "version_de_opciones",

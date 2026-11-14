@@ -3,10 +3,11 @@ import { cantidadATexto } from "../../../primitivas/cantidad/cantidad";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { UNIDADES } from "../../../primitivas/unidades/unidades";
 import { esClaseDeUso, vendeLaClase, type ClaseDeUso } from "../dominio/clases";
-import { esUnidad, formaDeVentaDelPiloto, validarFormaDeVenta } from "../dominio/forma-de-venta";
+import { esUnidad, validarFormaDeVenta } from "../dominio/forma-de-venta";
 import { esUuid, productoId, type ProductoId } from "../dominio/identificadores";
 import type { Producto } from "../dominio/modelo";
 import { validarFicha, type EntradaDeFicha, type FichaValida } from "../dominio/producto";
+import { formaDeVentaHabilitada } from "./forma-de-venta-habilitada";
 import { autorizar, exigirAlcanceTotal, traducir } from "./comun";
 import type { DependenciasDeCatalogo, TxDeCatalogo } from "./contrato";
 import type { ErrorDeCatalogo } from "./errores";
@@ -99,8 +100,9 @@ async function crear(
   if (!forma.ok) {
     return err(forma.error === "UNIDAD_INVALIDA" ? "UNIDAD_INVALIDA" : "FORMA_DE_VENTA_INVALIDA");
   }
-  const habilitada = dependencias.formaDeVentaHabilitada ?? formaDeVentaDelPiloto;
-  if (!habilitada(pedido.unidadBaseId, forma.valor)) return err("FORMA_DE_VENTA_NO_SOPORTADA");
+  if (!(await formaDeVentaHabilitada(tx, contexto, pedido.unidadBaseId, forma.valor, false))) {
+    return err("FORMA_DE_VENTA_NO_SOPORTADA");
+  }
 
   const seccion = ficha.valor.seccionDeCartaId;
   if (seccion !== null) {

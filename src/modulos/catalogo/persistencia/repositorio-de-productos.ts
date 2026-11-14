@@ -64,6 +64,8 @@ export interface RepositorioDeProductos {
     id: ProductoId,
     unidadDeVentaId: string,
     pasoMinimo: string,
+    /** Las fracciones que se ofrecen, ascendentes; vacío = sin fracciones (siempre se manda: una forma nueva las reemplaza). */
+    porciones: readonly number[],
   ): Promise<Producto | null>;
   /** Sube la versión del conjunto de opciones (y, por el disparador, la del producto). */
   subirVersionDeOpciones(empresa: EmpresaId, id: ProductoId): Promise<Producto | null>;
@@ -201,10 +203,14 @@ export function crearRepositorioDeProductos(db: Kysely<CatalogoDb>): Repositorio
         .executeTakeFirst();
       return fila === undefined ? null : aProducto(fila);
     },
-    async cambiarFormaDeVenta(empresa, id, unidadDeVentaId, pasoMinimo) {
+    async cambiarFormaDeVenta(empresa, id, unidadDeVentaId, pasoMinimo, porciones) {
       const fila = await db
         .updateTable("producto")
-        .set({ unidad_de_venta_id: unidadDeVentaId, paso_minimo: pasoMinimo })
+        .set({
+          unidad_de_venta_id: unidadDeVentaId,
+          paso_minimo: pasoMinimo,
+          porciones_ofrecidas: [...porciones],
+        })
         .where("empresa_id", "=", empresa)
         .where("id", "=", id)
         .returningAll()

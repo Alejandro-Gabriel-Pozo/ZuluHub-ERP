@@ -1,0 +1,6 @@
+{
+  "grupo": "catálogo (porciones: fracciones 2, 4 y 8)",
+  "archivos": "src/modulos/catalogo/dominio/porciones.ts",
+  "minutos": 1,
+  "pruebas": "src/modulos/catalogo/dominio/porciones.test.ts"
+}

@@ -22,6 +22,9 @@ export const ROTULO_DE_PERILLA: Readonly<Record<string, string>> = {
   // `vidriera_por_qr`: «Carta en línea» es el nombre de la pantalla de la carta real (carta-real-especificacion §1 E4 y §11 Q4, 12/11/2026); decisión 175 (textos
   // delegados: lo más corto). Texto de la consola de plataforma, pendiente del OK del dueño.
   vidriera_por_qr: "Carta en línea",
+  // `venta_por_fracciones_y_peso` (A7): «Fracciones» y «Peso» son los rótulos de «Cómo se vende» aprobados por el dueño el 14/11/2026 (`decisiones-del-dueno-2026-11.md`);
+  // decisión 175 (textos delegados: lo más corto). Texto de la consola de plataforma, pendiente del OK del dueño (DEC-0372).
+  venta_por_fracciones_y_peso: "Fracciones y peso",
 };
 
 export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {

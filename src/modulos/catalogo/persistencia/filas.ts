@@ -47,6 +47,7 @@ export function aProducto(fila: Selectable<CatalogoDb["producto"]>): Producto {
     unidadBaseId: fila.unidad_base_id,
     unidadDeVentaId: fila.unidad_de_venta_id,
     pasoMinimo: fila.paso_minimo,
+    porcionesOfrecidas: fila.porciones_ofrecidas,
     alicuota: fila.alicuota_iva,
     faltaCompletar: fila.falta_completar,
     seVende: fila.se_vende,
