@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import { afterEach, describe, expect, it } from "vitest";
-import { duplicadosPorArchivo } from "./fuente-unica-apoyo";
+import { duplicadosPorArchivo, topesDeDivisionEscritos } from "./fuente-unica-apoyo";
 import { contarProhibidosEnCodigo, contarProhibidosEnSql } from "./lista-de-permitidos-apoyo";
 
 /**
@@ -2616,5 +2616,20 @@ describe("validación de datos: lista de permitidos y fuente única (CLAUDE.md �
     ]);
     expect([...duplicadosPorArchivo(copia)]).toEqual([["apps/b.ts", 1]]);
     expect([...duplicadosPorArchivo(new Map([["src/a.ts", duena]]))]).toEqual([]);
+  });
+
+  it("un tope de dividir la cuenta escrito a mano fuera de su primitiva falla", () => {
+    const fuente = [
+      "src/primitivas/cuentas/limites-de-division.ts",
+      "export const MAXIMO_DE_CUENTAS_POR_ITEMS = 10;\nexport const MAXIMO_DE_PARTES_POR_PORCENTAJE = 12;\n",
+    ] as const;
+    expect(
+      topesDeDivisionEscritos(
+        new Map([fuente, ["src/x.ts", "if (partes > 10) throw new Error();\n"]]),
+      ),
+    ).toEqual(["src/x.ts:1"]);
+    expect(
+      topesDeDivisionEscritos(new Map([fuente, ["src/x.ts", "if (partes > MAXIMO) return;\n"]])),
+    ).toEqual([]);
   });
 });

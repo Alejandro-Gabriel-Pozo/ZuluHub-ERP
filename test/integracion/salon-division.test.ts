@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import { MAXIMO_DE_CUENTAS_POR_ITEMS } from "../../src/primitivas/cuentas/limites-de-division";
 import { montarSalon, type MundoDeSalon } from "./salon-apoyo";
 import { nuevaClave, nuevoId, valorDe, type EscenarioDeVentas } from "./ventas-apoyo";
 
@@ -201,7 +202,10 @@ describe.skipIf(base === null)("salón: dividir la cuenta", () => {
         { lineaId: p.ids[1] as string, forma: "ENTERO", parte: 1 },
       ]),
     ).toEqual({ ok: false, error: "PARTE_VACIA" });
-    expect(await dividir(p.cuenta, 5, [])).toEqual({ ok: false, error: "PARTES_INVALIDAS" });
+    expect(await dividir(p.cuenta, MAXIMO_DE_CUENTAS_POR_ITEMS + 1, [])).toEqual({
+      ok: false,
+      error: "PARTES_INVALIDAS",
+    });
     expect(await m.contar("select count(*) as n from cuenta_consumo", [])).toBe(antes);
     expect(
       await m.contar(
@@ -209,6 +213,44 @@ describe.skipIf(base === null)("salón: dividir la cuenta", () => {
         [p.cuenta],
       ),
     ).toBe(2);
+  });
+
+  it("el máximo de cuentas por ítems se divide entero y una más se rechaza sin escribir nada", async () => {
+    const hacer = async (n: number) => {
+      const p = await mesaConLineas(Array.from({ length: n }, () => ({ cantidad: "1" })));
+      return {
+        p,
+        asignaciones: p.ids.map((lineaId, i) => ({
+          lineaId,
+          forma: "ENTERO" as const,
+          parte: i + 1,
+        })),
+      };
+    };
+    const pasado = await hacer(MAXIMO_DE_CUENTAS_POR_ITEMS + 1);
+    const antes = await m.contar("select count(*) as n from cuenta_consumo", []);
+    expect(
+      await dividir(pasado.p.cuenta, MAXIMO_DE_CUENTAS_POR_ITEMS + 1, pasado.asignaciones),
+    ).toEqual({ ok: false, error: "PARTES_INVALIDAS" });
+    expect(await m.contar("select count(*) as n from cuenta_consumo", [])).toBe(antes);
+    expect(
+      await m.contar("select count(*) as n from division_de_cuenta where cuenta_madre_id = $1", [
+        pasado.p.cuenta,
+      ]),
+    ).toBe(0);
+
+    const justo = await hacer(MAXIMO_DE_CUENTAS_POR_ITEMS);
+    const r = valorDe(
+      await dividir(justo.p.cuenta, MAXIMO_DE_CUENTAS_POR_ITEMS, justo.asignaciones),
+    );
+    expect(r.cuentas.map((c) => c.numero)).toEqual(
+      Array.from({ length: MAXIMO_DE_CUENTAS_POR_ITEMS }, (_, i) => i + 1),
+    );
+    expect(
+      await m.contar("select count(*) as n from parte_de_division where division_id = $1", [
+        r.divisionId,
+      ]),
+    ).toBe(MAXIMO_DE_CUENTAS_POR_ITEMS);
   });
 
   it("I14: doble clic en «Confirmar división» deja una sola división, las cuentas hijas una vez y devuelve yaExistia", async () => {

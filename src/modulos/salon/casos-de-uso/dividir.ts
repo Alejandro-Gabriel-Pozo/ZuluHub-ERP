@@ -34,7 +34,7 @@ export type EntradaDeDividirCuenta = Readonly<{
   /** Lo manda la pantalla: es el id de la división (idempotencia). */
   divisionId: string;
   cuentaId: string;
-  /** De 2 a 4 cuentas. */
+  /** De 2 hasta el máximo de cuentas por ítems. */
   partes: number;
   /** Una por cada línea vigente de la cuenta: entero, por unidades o compartido. */
   asignaciones: readonly Asignacion[];
@@ -64,7 +64,7 @@ async function totalesDeLasHijas(
 }
 
 /**
- * `dividirCuenta` (E7 §3.9, D90 y D117): reparte los ítems de una cuenta de mesa entre 2 y 4 cuentas hijas, cada una con SU ticket, su cobro y su
+ * `dividirCuenta` (E7 §3.9, D90 y D117): reparte los ítems de una cuenta de mesa entre 2 y el máximo de cuentas hijas por ítems, cada una con SU ticket, su cobro y su
  * comprobante. Una transacción serializable. Guard de todas las acciones que usa por dentro (`salon.dividir`, `cuentas.abrir`, `cuentas.anular_linea`,
  * `cuentas.agregar_linea`). VALIDA TODO ANTES DE ESCRIBIR (D117): nada sin asignar, las unidades suman, ninguna cuenta queda vacía. Cada línea vigente se
  * anula con el motivo interno `TRASLADADA` y se copia a las hijas SIN recotizar (entera, por unidades o compartida con su importe fijo: el centavo que sobra
