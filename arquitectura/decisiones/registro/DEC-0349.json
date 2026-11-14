@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0349",
+  "fecha": "2026-11-12",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las tres pantallas de la configuración de caja se enlazan con pestañas de tres enlaces con los títulos ya aprobados; no hay entrada de menú.",
+  "que_cambia": "Solo la navegación entre las tres pantallas; la maqueta tiene las pestañas. Revertir: quitar el componente de pestañas.",
+  "donde": "apps/web/ui/plantillas/caja/PestanasDeCaja.tsx; Pedernal-docs 10-ux-ui/prototipos-gastronomia/medios.html"
+}

@@ -1,5 +1,5 @@
 import type { ModeloDeImpresionParaLaPantalla } from "../servidor/facturacion";
-import { formatearImporte } from "../ui/plantillas/facturacion/formato-fiscal";
+import { formatearImporte } from "../ui/patrones/formato-fiscal";
 import {
   ALTO_A4_MM,
   ANCHO_A4_MM,

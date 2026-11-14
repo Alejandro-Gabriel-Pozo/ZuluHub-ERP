@@ -164,7 +164,7 @@ describe("un PR no afloja su propia cuota", () => {
     const sinCuota = control.evaluar({
       pr: arbolConRegistro([...BASE, ...nuevas(6, "DINERO")], {}, undefined, CUOTA),
       base: {
-        rutas: [control.ARCHIVO_DEL_REGISTRO, control.ARCHIVO_DE_LOS_SENSIBLES],
+        rutas: arbolConRegistro(BASE).rutas,
         leer: (ruta: string) =>
           ruta === control.ARCHIVO_DE_LA_CUOTA ? null : arbolConRegistro(BASE).leer(ruta),
       },

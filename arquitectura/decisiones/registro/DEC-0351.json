@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0351",
+  "fecha": "2026-11-12",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Una cuenta de cobro es de UNA sola sucursal, siempre elegida: la pantalla no ofrece «todas las sucursales» aunque el documento de caja lo permite.",
+  "que_cambia": "Solo qué ofrece el selector de sucursal; la maqueta aprobada exige elegir una. Revertir: permitir una cuenta sin sucursal en el caso de uso, la base y el selector.",
+  "donde": "src/composicion/cuentas-de-cobro-web.ts; Pedernal-docs 11-especificaciones/caja-y-cobros.md y 10-ux-ui/prototipos-gastronomia/medios.html"
+}

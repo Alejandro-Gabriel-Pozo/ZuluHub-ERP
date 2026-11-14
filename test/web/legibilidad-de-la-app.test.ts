@@ -185,7 +185,6 @@ describe("el detalle de un comprobante: importes y fechas solo como texto (ADR-0
   it("la carpeta tiene los archivos del detalle y los del listado de comprobantes", () => {
     expect(delDetalle).toEqual(
       expect.arrayContaining([
-        "formato-fiscal.ts",
         "modelo-del-detalle.ts",
         "filtros-del-listado.ts",
         "modelo-del-listado.ts",
@@ -202,6 +201,12 @@ describe("el detalle de un comprobante: importes y fechas solo como texto (ADR-0
       expect(usosProhibidos(readFileSync(join(carpeta, archivo), "utf8"))).toEqual([]);
     },
   );
+
+  // `formato-fiscal.ts` pasó al núcleo de la interfaz (`ui/patrones`, lo usan caja, catálogo y configuración fiscal): sigue bajo la misma regla.
+  it("formato-fiscal.ts (en ui/patrones) no usa Number, parseFloat, Date ni formateadores del navegador", () => {
+    const ruta = join(RAIZ, "ui/patrones/formato-fiscal.ts");
+    expect(usosProhibidos(readFileSync(ruta, "utf8"))).toEqual([]);
+  });
 
   describe("el detector (violación inyectada)", () => {
     it("marca Number(x) y new Date()", () => {

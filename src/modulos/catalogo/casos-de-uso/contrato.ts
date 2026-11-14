@@ -37,7 +37,10 @@ export type LecturasDeCatalogo = Readonly<{
   clasificacion: Pick<RepositorioDeClasificacion, "todos" | "vigenteDelProducto">;
   unidades: Pick<RepositorioDeUnidades, "todas">;
   cartasPublicas: Pick<RepositorioDeCartas, "deLaSucursal">;
-  disponibilidadDeProductos: Pick<RepositorioDeDisponibilidad, "ocultas" | "delLocal">;
+  disponibilidadDeProductos: Pick<
+    RepositorioDeDisponibilidad,
+    "ocultas" | "delLocal" | "queAlcanzanAlLocal"
+  >;
   lectorDeCarta: LectorDeCarta;
   opciones: Pick<RepositorioDeOpciones, "gruposDelProducto" | "consumoDeVersiones">;
   precios: Pick<RepositorioDePrecios, "vigente" | "historial" | "ultimasPorAlcance">;

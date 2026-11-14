@@ -6,7 +6,7 @@ import {
 import { puedeCrearProductos } from "../../../../../../../servidor/modulos";
 import { FormularioDeAltaDeProducto } from "../../../../../../../ui/plantillas/catalogo/FormularioDeAltaDeProducto.cliente";
 import { armarElAlta } from "../../../../../../../ui/plantillas/catalogo/modelo-de-alta-de-producto";
-import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import { crearProductoAccion } from "../../../../acciones-de-productos";
 
 // `/catalogo/productos/nuevo`: el alta de un producto (maqueta `productos.html`, «Nuevo producto», 12/11/2026). Nada viene del navegador más que lo que se escribe: la empresa y la persona

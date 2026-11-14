@@ -5,7 +5,7 @@ import {
   textoDeLaHoja,
   type ComprobanteParaLaHoja,
 } from "../../apps/web/ui/plantillas/facturacion/impresion/modelo-de-la-hoja";
-import { formatearImporte } from "../../apps/web/ui/plantillas/facturacion/formato-fiscal";
+import { formatearImporte } from "../../apps/web/ui/patrones/formato-fiscal";
 import { paginar } from "../../apps/web/ui/plantillas/facturacion/impresion/paginador";
 import {
   modeloDeImpresion,

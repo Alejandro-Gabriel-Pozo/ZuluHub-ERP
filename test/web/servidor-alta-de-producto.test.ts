@@ -45,7 +45,7 @@ vi.mock("../../apps/web/servidor/sesion", () => ({
     respuesta: { registrar: () => undefined, azar: () => new Uint8Array(4) },
   },
 }));
-vi.mock("../../apps/web/servidor/facturacion", () => ({
+vi.mock("../../apps/web/servidor/con-la-empresa", () => ({
   conLaEmpresa: (hacer: (contexto: unknown) => unknown) => hacer(CONTEXTO),
 }));
 

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0053",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El detalle de un renglón de factura se corta con puntos suspensivos si ARCA lo rechazaría; el detalle completo queda en el ticket.",
+  "que_cambia": "Qué texto sale en el renglón de la factura.",
+  "donde": "src/modulos/ventas/dominio/factura-de-ticket.ts"
+}

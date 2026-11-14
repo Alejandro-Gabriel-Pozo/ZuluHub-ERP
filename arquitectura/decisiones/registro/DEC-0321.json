@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0321",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Corregir una compra lo hacen el gerente y el administrador, y además necesitan el permiso de ajustar stock si la compra entró a stock.",
+  "que_cambia": "Quién puede cambiar el costo del stock; se corrige en la matriz de permisos o sacando el permiso de stock del caso de uso.",
+  "donde": "src/capacidades/permisos/empresa.ts (compras.corregir) y src/modulos/compras/casos-de-uso/correcciones.ts"
+}

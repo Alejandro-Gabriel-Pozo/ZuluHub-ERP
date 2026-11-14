@@ -58,7 +58,8 @@ export const forma = require("../../arquitectura/decisiones/forma.cjs") as {
   problemasDeLaCuota: (valor: unknown) => string[];
 };
 export const control = require("../../arquitectura/decisiones/decisiones.cjs") as {
-  ARCHIVO_DEL_REGISTRO: string;
+  CARPETA_DEL_REGISTRO: string;
+  MONOLITO_DEL_REGISTRO: string;
   ARCHIVO_DE_LOS_SENSIBLES: string;
   ARCHIVO_DE_LA_CUOTA: string;
   EXENTOS: string[];
@@ -106,6 +107,16 @@ function arbol(archivos: Record<string, string>): Arbol {
   };
 }
 
+/** Los archivos del registro: uno por entrada, «<id>.json» dentro de la carpeta (el nombre del archivo es el id). */
+export function archivosDelRegistro(registro: unknown[]): Record<string, string> {
+  return Object.fromEntries(
+    registro.map((entrada, posicion) => [
+      `${control.CARPETA_DEL_REGISTRO}/${(entrada as { id?: string }).id ?? `sin-id-${posicion}`}.json`,
+      JSON.stringify(entrada),
+    ]),
+  );
+}
+
 /** Un árbol con el registro y la lista de sensibles ya escritos, más `otros` archivos. */
 export function arbolConRegistro(
   registro: unknown[],
@@ -114,7 +125,7 @@ export function arbolConRegistro(
   laCuota: unknown = CUOTA,
 ): Arbol {
   return arbol({
-    [control.ARCHIVO_DEL_REGISTRO]: JSON.stringify(registro),
+    ...archivosDelRegistro(registro),
     [control.ARCHIVO_DE_LOS_SENSIBLES]: JSON.stringify(sensibles),
     [control.ARCHIVO_DE_LA_CUOTA]: JSON.stringify(laCuota),
     ...otros,

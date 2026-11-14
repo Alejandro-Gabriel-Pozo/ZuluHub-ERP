@@ -9,7 +9,7 @@ import {
 import { PantallaDeListaDeCaja } from "../../../../../../ui/plantillas/caja/PantallaDeListaDeCaja";
 import { pestanasDeCaja } from "../../../../../../ui/plantillas/caja/pestanas-de-caja";
 import { PestanasDeCaja } from "../../../../../../ui/plantillas/caja/PestanasDeCaja";
-import { ErrorDelDetalle } from "../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 import {
   desactivarCuentaAccion,
   reactivarCuentaAccion,

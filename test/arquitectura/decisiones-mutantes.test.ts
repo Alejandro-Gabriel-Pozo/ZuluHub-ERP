@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   arbolConRegistro,
+  archivosDelRegistro,
   control,
   entrada,
   forma,
@@ -210,15 +211,17 @@ describe("mensajes exactos de las declaraciones", () => {
   const vacio = { rutas: [], leer: () => null };
   it("sin registro, lista ni cuota, tres fallas con su archivo y sin prefijo", () => {
     expect(evaluar(vacio).fallas).toEqual([
-      { archivo: control.ARCHIVO_DEL_REGISTRO, linea: 1, motivo: "no existe." },
+      { archivo: control.CARPETA_DEL_REGISTRO, linea: 1, motivo: "no existe." },
       { archivo: control.ARCHIVO_DE_LOS_SENSIBLES, linea: 1, motivo: "no existe." },
       { archivo: control.ARCHIVO_DE_LA_CUOTA, linea: 1, motivo: "no existe." },
     ]);
   });
   it("JSON roto en el cambio: el mensaje trae el archivo y no el prefijo de la base", () => {
-    const roto = { rutas: [], leer: () => Buffer.from("{roto") };
+    const entradaRota = `${control.CARPETA_DEL_REGISTRO}/DEC-0001.json`;
+    const roto = { rutas: [entradaRota], leer: () => Buffer.from("{roto") };
     const [uno, dos] = evaluar(roto).fallas;
-    expect(uno?.motivo).toMatch(/^arquitectura\/decisiones\/registro\.json: no se puede leer \(/);
+    expect(uno?.archivo).toBe(entradaRota);
+    expect(uno?.motivo).toMatch(/^no se puede leer \(/);
     expect(dos?.motivo).toMatch(
       /^arquitectura\/decisiones\/archivos-sensibles\.json: no se puede leer \(/,
     );
@@ -243,14 +246,17 @@ describe("mensajes exactos de las declaraciones", () => {
     expect(evaluar(arbolConRegistro(REG), sinLista).fallas[0]?.motivo).toBe(
       "Base: archivos-sensibles.json no puede quedar vacío.",
     );
+    const delRegistro = arbolConRegistro(REG);
     const sinArchivo = {
-      rutas: [],
-      leer: (r: string) => (r.endsWith("registro.json") ? Buffer.from("[]") : null),
+      rutas: delRegistro.rutas.filter((r) => r.startsWith(control.CARPETA_DEL_REGISTRO)),
+      leer: (r: string) =>
+        r.startsWith(control.CARPETA_DEL_REGISTRO) ? delRegistro.leer(r) : null,
     };
     expect(evaluar(arbolConRegistro(REG), sinArchivo).fallas[0]?.motivo).toBe("Base: no existe.");
     const rotaLista = {
-      rutas: [],
-      leer: (r: string) => Buffer.from(r.endsWith("registro.json") ? "[]" : "{roto"),
+      rutas: delRegistro.rutas,
+      leer: (r: string) =>
+        r.startsWith(control.CARPETA_DEL_REGISTRO) ? delRegistro.leer(r) : Buffer.from("{roto"),
     };
     expect(evaluar(arbolConRegistro(REG), rotaLista).fallas[0]?.motivo).toMatch(
       /^Base: arquitectura\/decisiones\/archivos-sensibles\.json: no se puede leer/,
@@ -273,8 +279,8 @@ describe("corrida como programa", () => {
     }
     return raiz;
   }
-  const declaraciones = (registro: unknown) => ({
-    [control.ARCHIVO_DEL_REGISTRO]: JSON.stringify(registro),
+  const declaraciones = (registro: unknown[]) => ({
+    ...archivosDelRegistro(registro),
     [control.ARCHIVO_DE_LOS_SENSIBLES]: JSON.stringify({
       sensibles: [{ ruta: "src/primitivas/dinero/", que: "el dinero" }],
     }),
@@ -327,15 +333,20 @@ describe("corrida como programa", () => {
     expect(corrida.stderr).toBe("");
   });
   it("resumen.cjs con un registro ilegible o inválido falla con el motivo y no imprime nada", () => {
-    const roto = correr("resumen.cjs", repo({ [control.ARCHIVO_DEL_REGISTRO]: "{roto" }));
+    const roto = correr(
+      "resumen.cjs",
+      repo({ [`${control.CARPETA_DEL_REGISTRO}/DEC-0001.json`]: "{roto" }),
+    );
     expect(roto.status).toBe(1);
     expect(roto.stdout).toBe("");
-    expect(roto.stderr).toContain("arquitectura/decisiones/registro.json: no se puede leer (");
+    expect(roto.stderr).toContain(
+      "arquitectura/decisiones/registro/DEC-0001.json: no se puede leer (",
+    );
     const invalido = correr("resumen.cjs", repo(declaraciones([entrada({ tipo: "OTRO" })])));
     expect(invalido.status).toBe(1);
     expect(invalido.stdout).toBe("");
     expect(invalido.stderr).toBe(
-      "arquitectura/decisiones/registro.json DEC-0001: tipo es uno de: DINERO, PERMISOS, CLIENTE, DATOS, COMERCIAL, INFRAESTRUCTURA, SIN_DECISION.\n",
+      "arquitectura/decisiones/registro/DEC-0001.json: tipo es uno de: DINERO, PERMISOS, CLIENTE, DATOS, COMERCIAL, INFRAESTRUCTURA, SIN_DECISION.\n",
     );
     expect(resumen.ejecutar(repo({})).errores).toHaveLength(1);
   });

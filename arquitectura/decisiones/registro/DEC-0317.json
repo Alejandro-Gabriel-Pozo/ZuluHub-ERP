@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0317",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Quien puede pagar o anular un pago (gerente y administrador) puede sacar y devolver ese efectivo de la caja sin tener el permiso de movimientos manuales de caja.",
+  "que_cambia": "Si se exigiera además el permiso de caja, el administrador sin ese permiso no podría pagar en efectivo desde la caja; se corrige con una acción más en el guard del pago.",
+  "donde": "src/modulos/compras/casos-de-uso/pagos.ts"
+}

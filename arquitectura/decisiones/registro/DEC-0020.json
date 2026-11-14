@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0020",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las percepciones se guardan como lista por tipo a partir de lo que pide ARCA; la pantalla aprobada las guarda como sin clasificar.",
+  "que_cambia": "Cómo quedan guardadas las percepciones de una compra.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A20 (E9)"
+}

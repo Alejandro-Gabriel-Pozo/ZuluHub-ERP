@@ -20,6 +20,8 @@ export type ErrorDeCotizacion =
   | "PRODUCTO_NO_ENCONTRADO"
   | "PRODUCTO_INACTIVO"
   | "PRODUCTO_NO_VENDIBLE"
+  /** Carta real T8: el producto está oculto en esa sucursal (por la empresa o por el local): no se carga una línea NUEVA; las ya cargadas se cobran con su precio. */
+  | "PRODUCTO_OCULTO"
   | "PRODUCTO_SIN_ALICUOTA"
   | "CLASIFICACION_INCONSISTENTE"
   | "SUCURSAL_NO_ENCONTRADA"

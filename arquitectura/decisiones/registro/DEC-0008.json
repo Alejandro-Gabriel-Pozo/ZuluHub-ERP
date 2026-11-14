@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0008",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La receta propia por sucursal queda para después.",
+  "que_cambia": "Hoy la receta es una sola para toda la empresa.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A8 (E6)"
+}

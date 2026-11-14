@@ -21,7 +21,7 @@ import {
   formatearCantidad,
   formatearImporte,
   formatearPuntoDeVenta,
-} from "./formato-fiscal";
+} from "../../patrones/formato-fiscal";
 import { nombreDeLaFila } from "./modelo-de-anulacion";
 import { documentoDe, type TipoDeDocumentoVisible } from "./modelo-del-detalle";
 

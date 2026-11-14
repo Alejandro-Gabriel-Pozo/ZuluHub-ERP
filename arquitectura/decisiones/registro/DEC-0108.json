@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0108",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Los textos de producción, receta y lotes son solo los de los prototipos aprobados el 09/11; los errores sin texto aprobado usan el mensaje genérico.",
+  "que_cambia": "Lo que ve el cliente.",
+  "donde": "src/capacidades/vocabulario/catalogo-produccion.ts y catalogo-lotes.ts (E6, D175)"
+}

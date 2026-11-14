@@ -3,7 +3,7 @@ import { cargarLaFicha } from "../../../../../../../servidor/ficha-de-producto";
 import { puedeEditarProductos } from "../../../../../../../servidor/modulos";
 import { FormularioDeFichaDeProducto } from "../../../../../../../ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente";
 import { armarLaFicha } from "../../../../../../../ui/plantillas/catalogo/modelo-de-ficha-de-producto";
-import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import { guardarFichaAccion } from "../../../../acciones-de-productos";
 
 type PropsDePagina = Readonly<{ params: Promise<{ id: string }> }>;

@@ -3,7 +3,7 @@ import {
   texto,
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { formatearFecha, formatearImporte } from "../facturacion/formato-fiscal";
+import { formatearFecha, formatearImporte } from "../../patrones/formato-fiscal";
 import { RUTA_DE_PRODUCTOS } from "./filtros-de-productos";
 
 /**

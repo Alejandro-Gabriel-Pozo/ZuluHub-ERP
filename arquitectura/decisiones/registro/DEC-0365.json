@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0365",
+  "fecha": "2026-11-13",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "El departamento de la cuenta es independiente del de cada producto vendido: vender uno de otro departamento no se bloquea.",
+  "que_cambia": "Vender un producto de otro departamento no se bloquea. Revertir: validar contra la clasificación del producto.",
+  "donde": "migraciones/0048_departamento_en_la_cuenta.sql (A2c); confirmada por el dueño el 13/11/2026 (relatado)"
+}

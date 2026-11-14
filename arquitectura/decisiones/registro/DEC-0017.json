@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0017",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "El centavo sobrante del combo va al componente de mayor resto (el prototipo dice al más caro; difiere 1 o 2 centavos).",
+  "que_cambia": "Cómo se reparte el precio del combo entre sus componentes.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A17 (E8)"
+}

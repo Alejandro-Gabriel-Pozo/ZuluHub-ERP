@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0068",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La renovación en curso de un certificado es el último pedido pendiente, sin mirar su antigüedad.",
+  "que_cambia": "Qué pedido se completa al renovar.",
+  "donde": "src/modulos/fiscal/consultas/estado-de-certificados.ts"
+}

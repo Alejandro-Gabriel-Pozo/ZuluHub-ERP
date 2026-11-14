@@ -136,6 +136,7 @@
     "arquitectura/deuda/antes-y-despues.cjs",
     "arquitectura/deuda/deuda.cjs",
     "arquitectura/deuda/campos-sin-dato.cjs",
+    "arquitectura/registros/en-carpeta.cjs",
     "arquitectura/decisiones/forma.cjs",
     "arquitectura/decisiones/cuota.cjs",
     "arquitectura/decisiones/decisiones.cjs",

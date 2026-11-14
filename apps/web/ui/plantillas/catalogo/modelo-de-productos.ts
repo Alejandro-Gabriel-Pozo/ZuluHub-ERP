@@ -4,7 +4,7 @@ import {
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import type { TonoDeEstado } from "../../componentes/Insignia";
-import { formatearImporte } from "../facturacion/formato-fiscal";
+import { formatearImporte } from "../../patrones/formato-fiscal";
 import {
   CLAVE_DE_CLASE,
   RUTA_DEL_ALTA_DE_PRODUCTO,

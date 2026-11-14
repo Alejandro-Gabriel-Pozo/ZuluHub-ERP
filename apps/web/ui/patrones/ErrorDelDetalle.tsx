@@ -1,10 +1,10 @@
-import type { ErrorPublico } from "../../../../../src/capacidades/experiencia/respuesta";
+import type { ErrorPublico } from "../../../../src/capacidades/experiencia/respuesta";
 import {
   texto,
   type DiccionarioResuelto,
-} from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { Aviso } from "../../componentes/Aviso";
-import type { TonoDeEstado } from "../../componentes/Insignia";
+} from "../../../../src/capacidades/vocabulario/vocabulario";
+import { Aviso } from "../componentes/Aviso";
+import type { TonoDeEstado } from "../componentes/Insignia";
 
 const TONO: Readonly<Record<ErrorPublico["presentacion"], TonoDeEstado>> = {
   AVISO: "aviso",

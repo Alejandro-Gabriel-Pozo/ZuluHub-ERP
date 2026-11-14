@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0043",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Topes de largo y caracteres permitidos de nombres y textos básicos (cocina 80, carta 300, detalle de stock 300, cierre 500, lista 40, remitente 60): elegidos sin fuente del dueño.",
+  "que_cambia": "Cuánto texto admiten esos campos; si se corrige, cambia el tope y su restricción en la base.",
+  "donde": "src/primitivas/texto y varios archivos con la marca DEC-0043"
+}
