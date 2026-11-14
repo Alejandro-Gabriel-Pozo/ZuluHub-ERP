@@ -1,10 +1,10 @@
 {
   "id": "DEC-0373",
   "fecha": "2026-11-14",
-  "quien": "sesión",
+  "quien": "dueño",
   "tipo": "DATOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "La base admite hasta 12 partes por división de cuenta (CHECK de 0038, de 4 a 12): el mayor de los límites del dueño del 14/11/2026 (10 por ítems, 12 por porcentaje).",
   "que_cambia": "Solo amplía un rango; ninguna fila cambia y el código anterior sigue andando. Revertir: reversión 0052, que se frena si ya hay divisiones de más de 4 partes.",
-  "donde": "migraciones/0052_tope_de_partes_de_la_division.sql y migraciones/reversiones/0052_revertir_tope_de_partes_de_la_division.sql; src/primitivas/cuentas/limites-de-division.ts; supuesto del ingeniero sobre la decisión del dueño del 14/11/2026 (decisiones-del-dueno-2026-11.md)"
+  "donde": "migraciones/0052_tope_de_partes_de_la_division.sql y migraciones/reversiones/0052_revertir_tope_de_partes_de_la_division.sql; src/primitivas/cuentas/limites-de-division.ts; aprobada por el dueño el 14/11/2026 (SQL de 0052 y tope de 12 partes; decisiones-del-dueno-2026-11.md)"
 }
