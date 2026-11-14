@@ -1,0 +1,6 @@
+{
+  "grupo": "tiempo",
+  "archivos": "src/primitivas/tiempo/**/*.ts",
+  "minutos": 1.8,
+  "pruebas": "src/primitivas/tiempo"
+}

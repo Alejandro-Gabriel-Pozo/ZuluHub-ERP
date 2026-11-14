@@ -55,7 +55,7 @@ const ARCHIVOS_DE_LA_RAIZ = [
   "CLAUDE.md",
   ".gitleaks.toml",
   "knip.json",
-  "stryker.config.json",
+  "stryker.config.mjs",
   "eslint.config.js",
   "tsconfig.json",
   "vitest.config.ts",

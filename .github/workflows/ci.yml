@@ -277,8 +277,8 @@ jobs:
         run: node arquitectura/planificar-mutacion.cjs
 
   mutacion:
-    # En paralelo por grupos de archivos (arquitectura/grupos-de-mutacion.json): el tiempo total es
-    # el del grupo más lento. Cada grupo exige 100 % (thresholds.break en stryker.config.json).
+    # En paralelo por grupos de archivos (arquitectura/mutacion/, un archivo por grupo): el tiempo total es
+    # el del grupo más lento. Cada grupo exige 100 % (thresholds.break en stryker.config.mjs).
     name: Mutación (${{ matrix.grupo }})
     needs: mutacion-plan
     if: needs.mutacion-plan.outputs.hay == 'true'

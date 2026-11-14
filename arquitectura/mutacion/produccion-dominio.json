@@ -1,0 +1,6 @@
+{
+  "grupo": "produccion (dominio)",
+  "archivos": "src/modulos/produccion/dominio/**/*.ts",
+  "minutos": 2,
+  "pruebas": "src/modulos/produccion"
+}

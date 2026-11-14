@@ -1888,21 +1888,20 @@
   {
     "id": "EV-098",
     "via": "exclusiones",
-    "titulo": "Vaciar `grupos-de-mutacion.json` a `[]`: el plan de mutación siempre da «sin grupos» y el Gate lo acepta",
+    "titulo": "Borrar la carpeta de grupos `arquitectura/mutacion/`: el plan de mutación siempre da «sin grupos» y el Gate lo acepta",
     "construccion": [
       {
-        "op": "escribir",
-        "ruta": "arquitectura/grupos-de-mutacion.json",
-        "contenido": "[]\n"
+        "op": "borrar",
+        "ruta": "arquitectura/mutacion"
       }
     ],
-    "controlEsperado": "La vigilancia no mira `grupos-de-mutacion.json` ni `stryker.config.json`; el Gate acepta `mutacion: skipped` cuando `mutacion-plan` dice `hay=false`.",
+    "controlEsperado": "La vigilancia no mira `arquitectura/mutacion/` ni `stryker.config.mjs`; el Gate acepta `mutacion: skipped` cuando `mutacion-plan` dice `hay=false`.",
     "esperado": {
       "tipo": "exige-excepcion"
     },
     "estado": "riesgo-aceptado",
     "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
-    "motivo": "Exige editar `arquitectura/grupos-de-mutacion.json` (maquinaria, §11.1): con la lista vacía el plan de mutación siempre da «sin grupos» y el Gate lo acepta. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "motivo": "Exige borrar `arquitectura/mutacion/` (maquinaria, §11.1): sin grupos el plan de mutación siempre da «sin grupos» y el Gate lo acepta. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
     "creada": "2026-10-21",
     "revisar": "2027-04-19"
   },
@@ -1971,18 +1970,16 @@
   {
     "id": "EV-102",
     "via": "exclusiones",
-    "titulo": "Vaciar a la vez `grupos-de-mutacion.json` y el `mutate` de `stryker.config.json` (la prueba que los compara entre sí queda en verde)",
+    "titulo": "Borrar a la vez los grupos de `arquitectura/mutacion/` y dejar `mutate` vacío en `stryker.config.mjs` (la prueba de cobertura queda en verde)",
     "construccion": [
       {
-        "op": "escribir",
-        "ruta": "arquitectura/grupos-de-mutacion.json",
-        "contenido": "[]\n"
+        "op": "borrar",
+        "ruta": "arquitectura/mutacion"
       },
       {
-        "op": "json-poner",
-        "ruta": "stryker.config.json",
-        "camino": ["mutate"],
-        "valor": []
+        "op": "escribir",
+        "ruta": "stryker.config.mjs",
+        "contenido": "export default { mutate: [] };\n"
       }
     ],
     "controlEsperado": "Algo ajeno al cambio que exija que la mutación cubra los archivos de dominio (la corrida nocturna también quedaría vacía).",
@@ -1991,7 +1988,7 @@
     },
     "estado": "riesgo-aceptado",
     "aprobadoPor": "Dueño del producto (§11.1, 2026-10-21)",
-    "motivo": "Exige editar `arquitectura/grupos-de-mutacion.json` y `stryker.config.json` (maquinaria, §11.1): con los dos vacíos la prueba que los compara entre sí queda en verde. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
+    "motivo": "Exige borrar `arquitectura/mutacion/` y editar `stryker.config.mjs` (maquinaria, §11.1): con los dos vacíos la prueba que compara los grupos con `mutate` queda en verde. El dueño acepta el riesgo; se mitiga con proceso y visibilidad (el PR que toca la maquinaria lo dice en su primera línea y no se mergea sin el «mergeá» explícito del dueño) y con G4 sobre la configuración de GitHub.",
     "creada": "2026-10-21",
     "revisar": "2027-04-19"
   },

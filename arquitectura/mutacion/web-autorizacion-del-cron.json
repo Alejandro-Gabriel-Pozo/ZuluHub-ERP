@@ -1,0 +1,6 @@
+{
+  "grupo": "web (autorización del cron)",
+  "archivos": "src/composicion/autorizacion-de-cron.ts",
+  "minutos": 0.5,
+  "pruebas": "src/composicion/autorizacion-de-cron.test.ts"
+}

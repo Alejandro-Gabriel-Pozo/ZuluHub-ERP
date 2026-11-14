@@ -1,0 +1,6 @@
+{
+  "grupo": "web (tipo de falla)",
+  "archivos": "src/composicion/tipo-de-falla.ts",
+  "minutos": 0.4,
+  "pruebas": "src/composicion/tipo-de-falla.test.ts"
+}

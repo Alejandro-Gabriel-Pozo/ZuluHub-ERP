@@ -1,0 +1,6 @@
+{
+  "grupo": "planes (decisiones del módulo)",
+  "archivos": "src/modulos/planes/dominio/**/*.ts",
+  "minutos": 2.2,
+  "pruebas": "src/modulos/planes"
+}

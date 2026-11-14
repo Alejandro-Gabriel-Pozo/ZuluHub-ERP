@@ -120,7 +120,7 @@ const ARCHIVOS_DE_LA_RAIZ = [
   "knip.json",
   "neon.ts",
   "package.json",
-  "stryker.config.json",
+  "stryker.config.mjs",
   "tsconfig.json",
   "vitest.config.ts",
 ];

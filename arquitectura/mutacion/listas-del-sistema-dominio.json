@@ -1,0 +1,6 @@
+{
+  "grupo": "listas del sistema (dominio)",
+  "archivos": "src/modulos/listas/dominio/**/*.ts",
+  "minutos": 1,
+  "pruebas": "src/modulos/listas"
+}

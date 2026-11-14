@@ -575,45 +575,42 @@ describe("las excepciones y las exclusiones del guardián: una entrada por eleme
   });
 });
 
-describe("grupos-de-mutacion.json: un marcador por grupo sin `pruebas`", () => {
-  const grupos = json([
-    { grupo: "con filtro", archivos: "a", pruebas: "src/a" },
-    { grupo: "sin filtro", archivos: "b" },
-    { grupo: "filtro vacío", archivos: "c", pruebas: "  " },
-    { grupo: "filtro que no es texto", archivos: "d", pruebas: 5 },
-    { archivos: "e" },
-    { grupo: "otro con filtro", archivos: "f", pruebas: "src/f" },
-  ]);
+describe("arquitectura/mutacion/: un marcador por archivo de grupo sin `pruebas`", () => {
+  const RUTA = "arquitectura/mutacion/un-grupo.json";
 
-  it("cuenta cada grupo sin `pruebas` (ausente, vacío o que no es texto) en la línea de su `grupo`", () => {
-    // cada grupo ocupa 4 líneas ({, grupo, archivos, }) o 5 con pruebas; el sin-grupo arranca en la 19
-    expect(vistos("arquitectura/grupos-de-mutacion.json", grupos)).toEqual([
-      "mutacion-sin-filtro@8",
-      "mutacion-sin-filtro@12",
-      "mutacion-sin-filtro@17",
-      "mutacion-sin-filtro@21",
-    ]);
-  });
-
-  it("sin grupos sin filtro no hay marcadores (el detector pasa cuando no queda ninguno)", () => {
-    expect(
-      vistos(
-        "arquitectura/grupos-de-mutacion.json",
-        json([{ grupo: "a", archivos: "x", pruebas: "src/x" }]),
-      ),
-    ).toEqual([]);
-    expect(vistos("arquitectura/grupos-de-mutacion.json", "[]\n")).toEqual([]);
-  });
-
-  it("un objeto en vez de una lista no suma y otro archivo con ese nombre no cuenta", () => {
-    expect(vistos("arquitectura/grupos-de-mutacion.json", "{}\n")).toEqual([]);
-    expect(vistos("otra/grupos-de-mutacion.json", grupos)).toEqual([]);
-  });
-
-  it("un elemento que no es objeto cuenta como grupo sin filtro, en su línea", () => {
-    expect(vistos("arquitectura/grupos-de-mutacion.json", "[\n  5\n]\n")).toEqual([
+  it("cuenta el grupo sin `pruebas` (ausente, vacío o que no es texto) en la línea de su `grupo`", () => {
+    expect(vistos(RUTA, json({ grupo: "sin filtro", archivos: "b" }))).toEqual([
       "mutacion-sin-filtro@2",
     ]);
+    expect(vistos(RUTA, json({ grupo: "filtro vacío", archivos: "c", pruebas: "  " }))).toEqual([
+      "mutacion-sin-filtro@2",
+    ]);
+    expect(vistos(RUTA, json({ grupo: "no es texto", archivos: "d", pruebas: 5 }))).toEqual([
+      "mutacion-sin-filtro@2",
+    ]);
+  });
+
+  it("con `pruebas` no hay marcador (el detector pasa cuando no queda ninguno)", () => {
+    expect(vistos(RUTA, json({ grupo: "a", archivos: "x", pruebas: "src/x" }))).toEqual([]);
+  });
+
+  it("sin `grupo` la línea es la de apertura del objeto", () => {
+    expect(vistos(RUTA, json({ archivos: "e" }))).toEqual(["mutacion-sin-filtro@1"]);
+    expect(vistos(RUTA, "{}\n")).toEqual(["mutacion-sin-filtro@1"]);
+  });
+
+  it("un archivo que no es un objeto cuenta como grupo sin filtro, en su primera línea (nace cerrado)", () => {
+    expect(vistos(RUTA, "null\n")).toEqual(["mutacion-sin-filtro@1"]);
+    expect(vistos(RUTA, "5\n")).toEqual(["mutacion-sin-filtro@1"]);
+    expect(vistos(RUTA, "[\n  5\n]\n")).toEqual(["mutacion-sin-filtro@1"]);
+  });
+
+  it("solo cuentan los `.json` que cuelgan directo de la carpeta", () => {
+    const sinFiltro = json({ grupo: "sin filtro", archivos: "b" });
+    expect(vistos("otra/mutacion/un-grupo.json", sinFiltro)).toEqual([]);
+    expect(vistos("arquitectura/mutacion/sub/un-grupo.json", sinFiltro)).toEqual([]);
+    expect(vistos("arquitectura/mutacion/un-grupo.txt", sinFiltro)).toEqual([]);
+    expect(vistos("arquitectura/mutacion.json", sinFiltro)).toEqual([]);
   });
 });
 
@@ -962,12 +959,6 @@ describe("el BOM y los archivos de configuración", () => {
     expect(
       vistos("knip.json", '[\n  [\n    { "ignoreIssues": { "a.ts": ["x"] } }\n  ]\n]\n'),
     ).toEqual(["knip-ignora@3"]);
-  });
-
-  it("un grupo `null` en grupos-de-mutacion.json cuenta como grupo sin filtro", () => {
-    expect(vistos("arquitectura/grupos-de-mutacion.json", "[\n  null\n]\n")).toEqual([
-      "mutacion-sin-filtro@2",
-    ]);
   });
 
   it("continue-on-error solo cuenta en un archivo .yml o .yaml", () => {
