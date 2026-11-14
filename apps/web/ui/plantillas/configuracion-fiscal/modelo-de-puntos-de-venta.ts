@@ -1,7 +1,7 @@
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { PROVINCIAS } from "../../../../../src/primitivas/domicilio/provincias";
 import type { TonoDeEstado } from "../../componentes/Insignia";
-import { formatearPuntoDeVenta } from "../facturacion/formato-fiscal";
+import { formatearPuntoDeVenta } from "../../patrones/formato-fiscal";
 import { rutaDeUnPuntoDeVenta } from "./lista-de-lo-que-falta";
 
 /**

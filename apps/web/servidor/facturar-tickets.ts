@@ -12,7 +12,8 @@ import {
 } from "../../../src/composicion/facturar-tickets-web";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { web } from "./composicion";
-import { conIntentoInmediato, conLaEmpresa } from "./facturacion";
+import { conLaEmpresa } from "./con-la-empresa";
+import { conIntentoInmediato } from "./facturacion";
 import { dependenciasDeSesion } from "./sesion";
 import { sucursalDelPedido } from "./sucursal-elegida";
 

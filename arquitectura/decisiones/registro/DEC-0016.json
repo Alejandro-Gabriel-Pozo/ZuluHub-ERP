@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0016",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Combo sin vigencia por fecha ni horario, sin adicional, punto de cocción como opción incluida, solo componentes fijos o a elegir en una sección, sin tamaño dentro de una elección.",
+  "que_cambia": "Alcance de los combos: lo que no está en la lista no se puede armar.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A16 (E8)"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0320",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "DINERO",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Al corregir el precio de una compra, el costo promedio del depósito se corrige por la diferencia sobre lo que queda de esa compra; lo ya consumido conserva su costo.",
+  "que_cambia": "Cuánto vale el stock y cuánto cuestan las recetas; es una aproximación (supone que lo que queda es lo más reciente): si se corrige, el promedio no se toca y la diferencia queda como ajuste de valorización.",
+  "donde": "src/modulos/stock/dominio/costo.ts (corregirPromedio) y src/modulos/stock/casos-de-uso/ajuste-de-costo.ts"
+}

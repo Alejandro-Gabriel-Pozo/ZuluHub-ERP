@@ -6,9 +6,8 @@
  * Previene: que las decisiones de permisos, dinero, lo que ve un cliente o lo comercial se acumulen en comentarios y PR sin que el dueño
  * tenga un lugar donde verlas todas juntas. Si el registro no es válido NO imprime una lista a medias: falla con el motivo (fail closed).
  */
-const fs = require("node:fs");
-const path = require("node:path");
-const { ARCHIVO_DEL_REGISTRO } = require("./decisiones.cjs");
+const { arbolDelDisco, leerRegistroEnCarpeta } = require("../registros/en-carpeta.cjs");
+const { CARPETA_DEL_REGISTRO, MONOLITO_DEL_REGISTRO } = require("./decisiones.cjs");
 const { TIPO_SIN_DECISION, problemasDelRegistro } = require("./forma.cjs");
 
 /** Cómo se llama cada tipo para el dueño, en el orden en que se muestran. */
@@ -48,20 +47,27 @@ function resumir(registro) {
 
 /** Lee y resume el registro de `raiz`: `{ codigo, salida, errores }` (nada se imprime acá). */
 function ejecutar(raiz) {
-  let registro;
-  try {
-    registro = JSON.parse(fs.readFileSync(path.join(raiz, ARCHIVO_DEL_REGISTRO)));
-  } catch (error) {
+  const leido = leerRegistroEnCarpeta({
+    arbol: arbolDelDisco(raiz, CARPETA_DEL_REGISTRO, MONOLITO_DEL_REGISTRO),
+    carpeta: CARPETA_DEL_REGISTRO,
+    monolito: MONOLITO_DEL_REGISTRO,
+    admiteMonolito: false,
+  });
+  if (leido.ausente) {
+    return { codigo: 1, salida: "", errores: [`${CARPETA_DEL_REGISTRO}: no existe.`] };
+  }
+  if (leido.errores !== undefined) {
     return {
       codigo: 1,
       salida: "",
-      errores: [`${ARCHIVO_DEL_REGISTRO}: no se puede leer (${error.message}).`],
+      errores: leido.errores.map(({ archivo, motivo }) => `${archivo}: ${motivo}`),
     };
   }
+  const registro = leido.valor;
   const problemas = problemasDelRegistro(registro);
   if (problemas.length > 0) {
     const errores = problemas.map(
-      ({ id, problema }) => `${ARCHIVO_DEL_REGISTRO} ${id}: ${problema}`,
+      ({ id, problema }) => `${CARPETA_DEL_REGISTRO}/${id}.json: ${problema}`,
     );
     return { codigo: 1, salida: "", errores };
   }

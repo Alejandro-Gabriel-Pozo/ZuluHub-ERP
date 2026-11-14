@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0056",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Elegir los datos opcionales de cada medio de pago es medios_de_pago.editar.",
+  "que_cambia": "Quién puede configurar los medios de pago.",
+  "donde": "src/capacidades/permisos/empresa.ts y src/capacidades/modulos/catalogo.ts"
+}

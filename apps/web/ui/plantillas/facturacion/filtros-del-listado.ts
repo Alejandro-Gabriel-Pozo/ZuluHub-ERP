@@ -2,7 +2,7 @@ import {
   texto,
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { formatearPuntoDeVenta } from "./formato-fiscal";
+import { formatearPuntoDeVenta } from "../../patrones/formato-fiscal";
 
 /**
  * Los filtros del listado de comprobantes (contrato de la pantalla 1) y cómo viajan por la dirección: un formulario GET, así

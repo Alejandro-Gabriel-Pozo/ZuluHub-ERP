@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0003",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Cambiar el nivel del control de existencia negativa (avisar o bloquear) es solo del gerente (acción controles.configurar); hoy corre en permitir.",
+  "que_cambia": "Quién puede endurecer o aflojar el control de stock negativo.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A3 (E5)"
+}

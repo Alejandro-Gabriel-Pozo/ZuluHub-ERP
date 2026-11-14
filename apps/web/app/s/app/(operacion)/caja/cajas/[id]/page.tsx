@@ -4,7 +4,7 @@ import { pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
 import { cargarLasCajas } from "../../../../../../../servidor/cajas";
 import { accionesDeLaListaDeCaja } from "../../../../../../../servidor/modulos";
 import { FormularioDeCaja } from "../../../../../../../ui/plantillas/caja/FormularioDeCaja.cliente";
-import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import { editarCajaAccion } from "../../../../acciones-de-cajas";
 
 type PropsDePagina = Readonly<{ params: Promise<{ id: string }> }>;

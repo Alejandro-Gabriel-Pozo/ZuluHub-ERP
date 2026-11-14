@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0367",
+  "fecha": "2026-11-13",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "El texto para elegir departamento es «Elegí un departamento» (aprobado por el dueño).",
+  "que_cambia": "Qué lee la persona en el selector cuando hay dos o más departamentos; sin fuente aprobada (misma forma que «Elegí una sucursal»). No se agrega hasta la parte web.",
+  "donde": "A2c (b), selector web; confirmada por el dueño el 13/11/2026 (relatado)"
+}

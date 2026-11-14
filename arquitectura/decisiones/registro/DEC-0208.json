@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0208",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Una mesa que fue destino de una unión puede volver a unirse o dividirse; solo la mesa de reserva (la origen) figura como «unida».",
+  "que_cambia": "Qué se puede hacer con una mesa que recibió otra mesa.",
+  "donde": "src/modulos/salon/casos-de-uso/unir.ts y src/modulos/salon/dominio/estado-de-mesa.ts"
+}

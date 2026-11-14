@@ -3,7 +3,7 @@ import {
   discriminaIvaParaEmitir,
   puntosDeVentaParaEmitir,
 } from "../../../../../../../servidor/facturacion";
-import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import { PantallaDeEmitirFactura } from "../../../../../../../ui/plantillas/facturacion/PantallaDeEmitirFactura.cliente";
 import { emitirFacturaAccion } from "../../../../acciones-de-facturacion";
 

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0050",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En la configuración fiscal el certificado muestra el estado más urgente entre los ambientes en uso; Pruebas va antes que Producción; el pedido de certificado se descarga con el alias como nombre.",
+  "que_cambia": "Qué ve quien configura el certificado.",
+  "donde": "apps/web/ui/plantillas/configuracion-fiscal"
+}

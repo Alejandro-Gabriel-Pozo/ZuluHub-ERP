@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0039",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Una línea de combo es una unidad; agotado es existencia 0 o menos con stock encendido; el reemplazo descuenta la misma cantidad; se vende en toda sucursal con precio.",
+  "que_cambia": "Cómo se venden y se agotan los combos.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B14 (E8)"
+}

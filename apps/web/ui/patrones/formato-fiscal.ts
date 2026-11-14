@@ -5,8 +5,8 @@
  * (importes enormes sin pérdida y ausencia de `Number`/`Date` en el código: `test/web/legibilidad-de-la-app.test.ts`).
  */
 
-import { cuitParaMostrar } from "../../../../../src/primitivas/identificacion-fiscal/cuit";
-import { documentoMientrasSeEscribe } from "../../../../../src/primitivas/identificacion-fiscal/documento-tipeado";
+import { cuitParaMostrar } from "../../../../src/primitivas/identificacion-fiscal/cuit";
+import { documentoMientrasSeEscribe } from "../../../../src/primitivas/identificacion-fiscal/documento-tipeado";
 
 const DECIMAL = /^(-?)([0-9]+)(?:\.([0-9]+))?$/;
 const FECHA_CIVIL = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/;

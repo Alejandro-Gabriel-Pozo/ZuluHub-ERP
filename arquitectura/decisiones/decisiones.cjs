@@ -1,5 +1,5 @@
 /**
- * Control del REGISTRO DE DECISIONES (`arquitectura/decisiones/registro.json`): que ninguna decisión de negocio quede sin que el dueño la vea.
+ * Control del REGISTRO DE DECISIONES (la carpeta `arquitectura/decisiones/registro/`, un archivo por decisión): que ninguna decisión de negocio quede sin que el dueño la vea.
  *
  *     node arquitectura/decisiones/decisiones.cjs [--base=<carpeta de la base>]
  *
@@ -21,6 +21,7 @@ const { Buffer } = require("node:buffer");
 const fs = require("node:fs");
 const path = require("node:path");
 const { cargarArbol, dentroDeLaRaiz } = require("../deuda/deuda.cjs");
+const { leerRegistroEnCarpeta } = require("../registros/en-carpeta.cjs");
 const { fallasDeLaCuota } = require("./cuota.cjs");
 const {
   problemasDeLaCuota,
@@ -29,7 +30,10 @@ const {
   TIPO_SIN_DECISION,
 } = require("./forma.cjs");
 
-const ARCHIVO_DEL_REGISTRO = "arquitectura/decisiones/registro.json";
+/** El registro es una carpeta con un archivo por decisión (`DEC-0001.json`): ver `arquitectura/registros/en-carpeta.cjs`. */
+const CARPETA_DEL_REGISTRO = "arquitectura/decisiones/registro";
+/** El registro de antes (un solo array): solo lo admite la BASE mientras `main` no trae la carpeta (transición). */
+const MONOLITO_DEL_REGISTRO = "arquitectura/decisiones/registro.json";
 const ARCHIVO_DE_LOS_SENSIBLES = "arquitectura/decisiones/archivos-sensibles.json";
 const ARCHIVO_DE_LA_CUOTA = "arquitectura/decisiones/cuota.json";
 const USO = "Uso: node arquitectura/decisiones/decisiones.cjs [--base=<carpeta de la base>]";
@@ -59,7 +63,7 @@ function leerJson(arbol, ruta) {
 
 /** Instrucción exacta de qué entrada falta y cómo agregarla (los PR que tocan permisos, módulos o textos la ven en el error). */
 const COMO_AGREGAR =
-  `Agregá una entrada a ${ARCHIVO_DEL_REGISTRO} (id nuevo, el siguiente libre; fecha AAAA-MM-DD): ` +
+  `Agregá un archivo nuevo en ${CARPETA_DEL_REGISTRO}/, uno por decisión, llamado «<id>.json» (id nuevo: el siguiente libre, el que sigue al último archivo de la carpeta; si al juntar con main otra rama tomó el mismo, Git marca el choque: renumerá el tuyo y las citas «DEC-NNNN» que pusiste; fecha AAAA-MM-DD): ` +
   '{ "id": "DEC-0000", "fecha": "AAAA-MM-DD", "quien": "sesión", "tipo": "PERMISOS", "estado": "PENDIENTE_DE_OK", ' +
   '"decision": "lo que se decidió, en una línea de negocio", "que_cambia": "qué ve el negocio si se corrige", "donde": "archivo o especificación" }. ' +
   `Si el cambio es puramente técnico: "tipo": "${TIPO_SIN_DECISION}" y un "motivo" que lo explique.`;
@@ -85,7 +89,7 @@ function controlarMarcadores({ pr, base, registro }) {
             enLinea(
               ruta,
               posicion + 1,
-              `cita ${cita}, que no está en ${ARCHIVO_DEL_REGISTRO}. ${COMO_AGREGAR}`,
+              `cita ${cita}, que no está en ${CARPETA_DEL_REGISTRO}/. ${COMO_AGREGAR}`,
             ),
           );
         }
@@ -119,7 +123,7 @@ function controlarContraLaBase({ pr, base, registro, registroBase, sensibles }) 
     if (!registro.some((entrada) => entrada.id === id)) {
       fallas.push(
         enLinea(
-          ARCHIVO_DEL_REGISTRO,
+          archivoDe(id),
           1,
           `${id} estaba en la base y ya no está: una decisión no se borra, se corrige con una entrada nueva (estado CORREGIDA).`,
         ),
@@ -143,7 +147,7 @@ function controlarContraLaBase({ pr, base, registro, registroBase, sensibles }) 
       enLinea(
         tocados[0],
         1,
-        `tocaste ${sensible.que} (${cuantos}) y ${ARCHIVO_DEL_REGISTRO} no trae ninguna entrada nueva ni cambiada en este cambio. ${COMO_AGREGAR}`,
+        `tocaste ${sensible.que} (${cuantos}) y ${CARPETA_DEL_REGISTRO}/ no trae ninguna entrada nueva ni cambiada en este cambio. ${COMO_AGREGAR}`,
       ),
     );
   }
@@ -162,28 +166,58 @@ function controlarCuota({ delCambio, deLaBase }) {
     cuota,
     excepciones: delCambio.cuota.excepciones,
     archivo: ARCHIVO_DE_LA_CUOTA,
-  }).map((motivo) => enLinea(ARCHIVO_DEL_REGISTRO, 1, motivo));
+  }).map((motivo) => enLinea(CARPETA_DEL_REGISTRO, 1, motivo));
+}
+
+const archivoDe = (id) => `${CARPETA_DEL_REGISTRO}/${id}.json`;
+
+/**
+ * Lee el registro de un árbol: `{ fallas, registro, hayRegistro }`. La BASE puede traer todavía el array viejo (transición); el cambio, nunca.
+ * Con una falla de lectura o de forma `evaluar` corta antes de usar `registro`.
+ */
+function leerElRegistro(arbol, etiqueta, quien) {
+  const leido = leerRegistroEnCarpeta({
+    arbol,
+    carpeta: CARPETA_DEL_REGISTRO,
+    monolito: MONOLITO_DEL_REGISTRO,
+    admiteMonolito: etiqueta !== "",
+  });
+  if (leido.ausente) {
+    return {
+      fallas: [enLinea(CARPETA_DEL_REGISTRO, 1, `${quien}no existe.`)],
+      // Stryker disable next-line ArrayDeclaration: con una falla de lectura `evaluar` corta antes de usar la lista, así que su contenido no se ve.
+      registro: [],
+      hayRegistro: false,
+    };
+  }
+  if (leido.errores !== undefined) {
+    return {
+      fallas: leido.errores.map(({ archivo, motivo }) => enLinea(archivo, 1, `${quien}${motivo}`)),
+      // Stryker disable next-line ArrayDeclaration: ídem.
+      registro: [],
+      hayRegistro: true,
+    };
+  }
+  const fallas = problemasDelRegistro(leido.valor).map(({ id, problema }) =>
+    enLinea(
+      leido.enMonolito ? MONOLITO_DEL_REGISTRO : archivoDe(id),
+      1,
+      `${quien}${id}: ${problema}`,
+    ),
+  );
+  return { fallas, registro: leido.valor, hayRegistro: true };
 }
 
 /** Los problemas de forma del registro y de la lista de sensibles de un árbol, como fallas. Devuelve `{ fallas, registro, sensibles }`. */
 function leerDeclaraciones(arbol, etiqueta, cuotaObligatoria) {
   const fallas = [];
-  const delRegistro = leerJson(arbol, ARCHIVO_DEL_REGISTRO);
-  const deLosSensibles = leerJson(arbol, ARCHIVO_DE_LOS_SENSIBLES);
   const quien = etiqueta === "" ? "" : `${etiqueta}: `;
+  const delRegistro = leerElRegistro(arbol, etiqueta, quien);
+  const deLosSensibles = leerJson(arbol, ARCHIVO_DE_LOS_SENSIBLES);
+  fallas.push(...delRegistro.fallas);
+  const registro = delRegistro.registro;
   // Stryker disable next-line ArrayDeclaration: con una falla de forma o de lectura `evaluar` corta antes de usar la lista, así que su contenido no se ve.
-  let registro = [];
-  // Stryker disable next-line ArrayDeclaration: ídem registro.
   let sensibles = [];
-  if (delRegistro.ausente) fallas.push(enLinea(ARCHIVO_DEL_REGISTRO, 1, `${quien}no existe.`));
-  else if (delRegistro.error !== undefined)
-    fallas.push(enLinea(ARCHIVO_DEL_REGISTRO, 1, `${quien}${delRegistro.error}`));
-  else {
-    const problemas = problemasDelRegistro(delRegistro.valor);
-    for (const { id, problema } of problemas)
-      fallas.push(enLinea(ARCHIVO_DEL_REGISTRO, 1, `${quien}${id}: ${problema}`));
-    registro = delRegistro.valor;
-  }
   if (deLosSensibles.ausente)
     fallas.push(enLinea(ARCHIVO_DE_LOS_SENSIBLES, 1, `${quien}no existe.`));
   else if (deLosSensibles.error !== undefined)
@@ -207,7 +241,7 @@ function leerDeclaraciones(arbol, etiqueta, cuotaObligatoria) {
     // Con problemas `evaluar` corta antes de usar la cuota, así que se guarda siempre.
     cuota = deLaCuota.valor;
   }
-  return { fallas, registro, sensibles, cuota, hayRegistro: !delRegistro.ausente };
+  return { fallas, registro, sensibles, cuota, hayRegistro: delRegistro.hayRegistro };
 }
 
 /**
@@ -226,7 +260,7 @@ function evaluar({ pr, base = null }) {
   if (!deLaBase.hayRegistro) {
     avisos.push(
       enLinea(
-        ARCHIVO_DEL_REGISTRO,
+        CARPETA_DEL_REGISTRO,
         1,
         "la rama base todavía no trae el registro (es la primera vez que se incorpora): no hay con qué comparar.",
       ),
@@ -286,8 +320,9 @@ if (require.main === module) {
 module.exports = {
   ARCHIVO_DE_LA_CUOTA,
   ARCHIVO_DE_LOS_SENSIBLES,
-  ARCHIVO_DEL_REGISTRO,
+  CARPETA_DEL_REGISTRO,
   COMO_AGREGAR,
+  MONOLITO_DEL_REGISTRO,
   EXENTOS,
   controlarContraLaBase,
   controlarMarcadores,

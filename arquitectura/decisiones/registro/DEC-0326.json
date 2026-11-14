@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0326",
+  "fecha": "2026-11-12",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Hay una carta pública por sucursal y todas las sucursales de la empresa comparten el catálogo; un local que no ofrece algo lo oculta.",
+  "que_cambia": "Un producto nuevo aparece en la carta de todos los locales hasta que se oculte; si se corrige, hace falta un catálogo propio por local.",
+  "donde": "Pedernal-docs 11-especificaciones/carta-real-especificacion.md §12 N-1; migraciones/0043_carta_publica.sql (carta_publica_sucursal_uk)"
+}

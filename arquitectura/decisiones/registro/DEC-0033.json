@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0033",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Con el control de negativo en avisar, el cierre de venta falla; la reversión dice Anulación del ticket N sin el motivo; no sale el aviso falta receta.",
+  "que_cambia": "Qué pasa al vender con stock en negativo.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B8 (E5)"
+}

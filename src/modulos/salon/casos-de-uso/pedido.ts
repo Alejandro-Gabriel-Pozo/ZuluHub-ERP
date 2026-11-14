@@ -28,6 +28,8 @@ export type EntradaDeTomarPedido = Readonly<{
   /** Lo manda la pantalla: es la clave de idempotencia del alta de la cuenta. */
   cuentaId: string;
   mesaId: string;
+  /** A2c: el departamento del selector (se fija al abrir la cuenta). Ver `EntradaDeAbrirCuenta.departamentoId`. */
+  departamentoId?: string | undefined;
 }>;
 export type SalidaDeTomarPedido = Readonly<{ cuentaId: string; yaExistia: boolean }>;
 
@@ -67,6 +69,7 @@ async function tomar(
   const abierta = await abrirCuentaEnTx(tx, contexto, persona, {
     cuentaId: entrada.cuentaId,
     sucursalId: mesa.sucursalId,
+    departamentoId: entrada.departamentoId,
     ancla,
     etiqueta: `Mesa ${mesa.numero}`,
   });

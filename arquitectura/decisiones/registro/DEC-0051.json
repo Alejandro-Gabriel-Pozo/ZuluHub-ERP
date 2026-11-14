@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0051",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La primera entrega imprime sin logo, sin color y sin nombre de fantasía (blanco y negro), A4 al abrir la vista previa; provisorio hasta que el dueño decida de dónde sale el nombre comercial.",
+  "que_cambia": "Cómo sale impresa una factura.",
+  "donde": "src/composicion/conexiones.ts y apps/web/pantallas/modelo-de-impresion.ts"
+}

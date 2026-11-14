@@ -4,7 +4,7 @@ import {
   discriminaIvaParaEmitir,
 } from "../../../../../../../../../servidor/facturacion";
 import { ticketParaEmitirDeLaPagina } from "../../../../../../../../../servidor/facturar-tickets";
-import { ErrorDelDetalle } from "../../../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../../../ui/patrones/ErrorDelDetalle";
 import { PantallaDeEmitirDesdeUnTicket } from "../../../../../../../../../ui/plantillas/facturacion/PantallaDeEmitirDesdeUnTicket.cliente";
 import { emitirTicketAccion } from "../../../../../../acciones-de-facturar-tickets";
 
