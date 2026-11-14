@@ -8,6 +8,7 @@ import {
   unidadDelRenglon,
 } from "../dominio/factura-de-ticket";
 import { ticketId, type TicketId } from "../dominio/identificadores";
+import { consultarComprobanteDelTicket } from "./comprobante-vigente-del-ticket";
 import { exigirAlcance, exigirUuid, prepararComando, traducir } from "./comun";
 import type { DependenciasDeVentas, TxDeVentas } from "./contrato";
 import type { ErrorDeVentas } from "./errores";
@@ -39,8 +40,8 @@ export type SalidaDeEmitirComprobanteDeTicket = Readonly<{
  *  1. La clave ya usada devuelve ese comprobante sin escribir (con otro ticket, `CLAVE_REUTILIZADA`).
  *  2. El ticket es de la empresa y está en el alcance de quien pide; tiene que estar COBRADO (`TICKET_NO_FACTURABLE`).
  *  3. La fila del ticket se toma `FOR UPDATE`: dos personas que facturan el mismo ticket se turnan.
- *  4. Si ya tiene un documento vigente se le pregunta a FISCAL si el comprobante sigue valiendo: si vale (también «Confirmando»), el ticket ya
- *     está facturado (`TICKET_YA_FACTURADO`) y no se emite otro; si dejó de valer (rechazado, descartado o acreditado por completo) se marca
+ *  4. Si ya tiene un documento vigente se le pregunta a FISCAL (`consultarComprobanteDelTicket`, la misma pregunta que hace `anularTicket`) si el
+ *     comprobante sigue valiendo: si vale (también «Confirmando»), el ticket ya está facturado (`TICKET_YA_FACTURADO`) y no se emite otro; si dejó de valer (rechazado, descartado o acreditado por completo) se marca
  *     ese documento no vigente y sigue, en la misma transacción.
  *  5. El origen del intento sale de (ticket, intento) de manera determinística (`origenDeLaFactura`); fiscal repite por origen.
  *  6. Los renglones son los del ejemplar vigente; fiscal valida que su total sea el cobrado y emite (nada va a ARCA dentro de la transacción).
@@ -85,24 +86,17 @@ async function emitir(
   const actual = await tx.tickets.obtener(empresaId, ticket.id);
   if (actual === null || actual.estado !== "COBRADO") return err("TICKET_NO_FACTURABLE");
 
-  const documentos = await tx.documentos.delTicket(empresaId, ticket.id);
-  const vigente = documentos.find((d) => d.vigente);
-  if (vigente !== undefined) {
-    const vigencia = await facturador.vigenciaEnTx(tx, contexto, [vigente.comprobanteId]);
-    if (!vigencia.ok) return err({ error: "FACTURACION_FALLIDA", causa: vigencia.error });
-    const estado = vigencia.valor.find((v) => v.comprobanteId === vigente.comprobanteId);
-    // El puntero es una clave foránea hacia fiscal: un comprobante que fiscal no reconoce es una inconsistencia grave, no un caso de negocio.
-    if (estado === undefined) {
-      throw new Error(
-        `el comprobante ${vigente.comprobanteId} del ticket ${ticket.id} no figura en fiscal`,
-      );
-    }
-    if (estado.vigente) {
-      return err({ error: "TICKET_YA_FACTURADO", comprobanteId: vigente.comprobanteId });
-    }
-    if (!(await tx.documentos.marcarNoVigente(empresaId, vigente.id, contexto.ahora))) {
-      return err("INVARIANTE_DE_VENTAS");
-    }
+  const comprobante = await consultarComprobanteDelTicket(tx, dependencias, contexto, ticket.id);
+  if (!comprobante.ok) return comprobante;
+  const { documentos, vigente, caido } = comprobante.valor;
+  if (vigente !== null) {
+    return err({ error: "TICKET_YA_FACTURADO", comprobanteId: vigente.comprobanteId });
+  }
+  if (
+    caido !== null &&
+    !(await tx.documentos.marcarNoVigente(empresaId, caido.id, contexto.ahora))
+  ) {
+    return err("INVARIANTE_DE_VENTAS");
   }
 
   const intento = documentos.reduce((mayor, d) => Math.max(mayor, d.intento), 0) + 1;
