@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0037",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "No hay cerrar sin cobrar en el salón; no se une ni se divide una mesa ya unida o dividida; máximo 4 cuentas por ítems y 6 por porcentaje.",
+  "que_cambia": "Flujo del salón.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B12 (E7)"
+}

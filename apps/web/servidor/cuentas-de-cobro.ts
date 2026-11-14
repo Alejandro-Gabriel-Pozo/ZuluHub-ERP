@@ -13,7 +13,7 @@ import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { RUTAS_DE_CUENTAS } from "../ui/plantillas/caja/modelo-de-cuentas-de-cobro";
 import type { ResultadoDeAccion } from "./acciones";
 import { web } from "./composicion";
-import { conLaEmpresa } from "./facturacion";
+import { conLaEmpresa } from "./con-la-empresa";
 import { aLaLista, textoDe } from "./formularios-de-caja";
 import { dependenciasDeSesion } from "./sesion";
 import { sucursalesParaElegir, type SucursalParaElegir } from "./sucursal-elegida";

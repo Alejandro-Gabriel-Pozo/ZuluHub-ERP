@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0054",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La letra del comprobante la decide fiscal y no ventas.",
+  "que_cambia": "Quién determina si sale A, B o C.",
+  "donde": "src/modulos/fiscal/casos-de-uso/emitir-comprobante.ts"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0113",
+  "tipo": "DINERO",
+  "decision": "La ficha de receta da costo por línea, total y por unidad con costos.ver; food cost, margen y costo por opción esperan el lector de precio y la regla de IVA.",
+  "que_cambia": "Lo que muestra la ficha de receta; pendiente de una pregunta al dueño y de un lector de precios en catálogo.",
+  "donde": "src/modulos/stock/consultas/recetas.ts (E6-T6, D147)",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "estado": "PENDIENTE_DE_OK"
+}

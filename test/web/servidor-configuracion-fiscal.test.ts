@@ -11,7 +11,7 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
 }));
 vi.mock("../../apps/web/servidor/sesion", () => ({ dependenciasDeSesion: { respuesta: {} } }));
 const CONTEXTO = { empresaId: "empresa-de-la-sesion" };
-vi.mock("../../apps/web/servidor/facturacion", () => ({
+vi.mock("../../apps/web/servidor/con-la-empresa", () => ({
   conLaEmpresa: (hacer: (contexto: unknown) => unknown) => hacer(CONTEXTO),
 }));
 const composicion = vi.hoisted(

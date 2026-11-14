@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0324",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Al corregir el precio de una compra con IVA discriminado se usa la condición de la empresa de hoy y, como costo de antes, el que la línea declaró al registrarse.",
+  "que_cambia": "Si la condición cambió entre la compra y la corrección, el promedio se mueve también por ese cambio; si se corrige, habría que guardar la condición con cada compra.",
+  "donde": "src/modulos/compras/casos-de-uso/correcciones.ts"
+}

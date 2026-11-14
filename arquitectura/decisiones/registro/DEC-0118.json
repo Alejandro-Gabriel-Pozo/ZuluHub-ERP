@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0118",
+  "tipo": "DATOS",
+  "decision": "Reactivar un control de lote apagado reabre el libro: lo que se movió mientras estuvo congelado entra al lote sin asignar, por depósito, para que los lotes sumen el saldo.",
+  "que_cambia": "Qué lote tiene lo movido en el intervalo apagado; revertirlo exige que reactivar frene si hay deriva.",
+  "donde": "src/modulos/stock/casos-de-uso/lotes.ts controlarLote (E6-T7, S-16)",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "estado": "PENDIENTE_DE_OK"
+}

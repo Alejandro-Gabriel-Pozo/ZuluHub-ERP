@@ -4,7 +4,7 @@ import { comprobanteParaLaHoja } from "../../../../../../../../pantallas/modelo-
 import { pantallaDeOperacion } from "../../../../../../../../pantallas/operacion";
 import { verElModeloDeImpresion } from "../../../../../../../../servidor/facturacion";
 import { direccionDelPdf } from "../../../../../../../../ui/plantillas/facturacion/filtros-del-listado";
-import { ErrorDelDetalle } from "../../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../../ui/patrones/ErrorDelDetalle";
 import { PantallaDeImprimirComprobante } from "../../../../../../../../ui/plantillas/facturacion/PantallaDeImprimirComprobante.cliente";
 
 // Imprimir es parte del módulo: «Comprobantes» queda marcado en la barra. El título (el único `h1`) es el del botón que lleva acá.

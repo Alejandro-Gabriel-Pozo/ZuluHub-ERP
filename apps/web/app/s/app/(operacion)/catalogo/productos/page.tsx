@@ -11,7 +11,7 @@ import {
   armarLaLista,
 } from "../../../../../../ui/plantillas/catalogo/modelo-de-productos";
 import { PantallaDeListaDeProductos } from "../../../../../../ui/plantillas/catalogo/PantallaDeListaDeProductos";
-import { ErrorDelDetalle } from "../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 
 type PropsDePagina = Readonly<{
   searchParams: Promise<Record<string, string | string[] | undefined>>;

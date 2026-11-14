@@ -13,7 +13,7 @@ import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { rutaDeLosPrecios } from "../ui/plantillas/catalogo/modelo-de-precios-de-producto";
 import type { ResultadoDeAccion } from "./acciones";
 import { web } from "./composicion";
-import { conLaEmpresa } from "./facturacion";
+import { conLaEmpresa } from "./con-la-empresa";
 import { textoDe } from "./formularios-de-caja";
 import { dependenciasDeSesion } from "./sesion";
 

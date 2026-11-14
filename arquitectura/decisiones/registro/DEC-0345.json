@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0345",
+  "fecha": "2026-11-12",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Editar un medio de pago vuelve a mandar los datos del cobro que el medio ya tiene y solo cambia el nombre.",
+  "que_cambia": "Nada visible: el caso de uso exige el conjunto final de datos y la versión protege contra un cambio ajeno. Revertir: que la pantalla de datos opcionales pase a ser la única que los toca.",
+  "donde": "src/composicion/medios-de-pago-web.ts; Pedernal-docs 11-especificaciones/caja-y-cobros.md decisión 129; Aprobada por el dueño el 12/11/2026, decisiones-del-dueno-2026-11.md."
+}

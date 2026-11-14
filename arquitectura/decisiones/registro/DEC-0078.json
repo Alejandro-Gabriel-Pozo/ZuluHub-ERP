@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0078",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El nivel de corrección de errores del QR de ARCA no está verificado porque la especificación oficial no lo define.",
+  "que_cambia": "Cuán robusto es el QR impreso.",
+  "donde": "src/adaptadores/qr/qr-de-factura.ts"
+}

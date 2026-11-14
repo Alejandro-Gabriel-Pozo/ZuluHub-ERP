@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0202",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "CORREGIDA",
+  "decision": "El papel de la cocina marca un plato en espera con «Sale después» (texto aprobado de salida.html), no con «no preparar todavía».",
+  "que_cambia": "Qué lee la cocina en un plato que espera; corregida a pedido de la sesión padre.",
+  "donde": "src/capacidades/vocabulario/catalogo-comandas.ts"
+}

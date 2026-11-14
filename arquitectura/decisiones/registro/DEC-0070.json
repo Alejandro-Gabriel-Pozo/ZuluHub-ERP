@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0070",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En el cierre del día, reconocer un control es listarlo junto con lo que se vio; una lista vacía no tiene nada que revisar.",
+  "que_cambia": "Cómo se reconocen los avisos al cerrar la jornada.",
+  "donde": "src/modulos/cierre"
+}

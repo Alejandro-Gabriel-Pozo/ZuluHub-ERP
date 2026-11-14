@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0102",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Un lote vencido, en cuarentena, en revisión o rechazado no se vende ni se usa; un lote que vence hoy se sigue vendiendo.",
+  "que_cambia": "Qué ve y puede vender el cliente.",
+  "donde": "src/modulos/stock/dominio/disponibilidad.ts (E6, D27, D118)"
+}

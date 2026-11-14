@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0100",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "DINERO",
+  "estado": "CORREGIDA",
+  "decision": "La merma se suma al neto (20 % sobre 1 kg son 1,2 kg). Corregida el 13/11/2026 por DEC-0357: se carga el BRUTO y neto = bruto * (1 - merma).",
+  "que_cambia": "Cambia el costo y lo que descuenta cada receta con merma; es una sola función.",
+  "donde": "src/modulos/stock/dominio/merma.ts (E6, P-1)"
+}

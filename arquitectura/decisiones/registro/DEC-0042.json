@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0042",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "Las cuotas van de 1 a 36.",
+  "que_cambia": "Cuántas cuotas se pueden ofrecer en un cobro.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B17 (E0)"
+}

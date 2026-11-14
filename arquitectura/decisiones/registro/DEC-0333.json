@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0333",
+  "fecha": "2026-11-12",
+  "quien": "dueño",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "La carta en línea con QR es un extra de pago: perilla vidriera_por_qr apagada de base, que se habilita por empresa como el salón.",
+  "que_cambia": "Sin la perilla no se puede poner una carta en línea; retirarla siempre se puede. Cuándo se empieza a cobrar lo decide el dueño.",
+  "donde": "Pedernal-docs 11-especificaciones/carta-real-especificacion.md §11 Q5 (12/11/2026); src/capacidades/planes/perillas.ts"
+}

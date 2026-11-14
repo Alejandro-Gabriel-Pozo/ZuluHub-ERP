@@ -6,7 +6,7 @@ import {
 } from "../../../../../../pantallas/entrada-del-listado";
 import { cargarElListado } from "../../../../../../servidor/facturacion";
 import { puedeEmitirFacturas } from "../../../../../../servidor/modulos";
-import { ErrorDelDetalle } from "../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 import {
   armarLosFiltros,
   conPuntoDeVentaDe,

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0015",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Un combo solo puede llevar productos de una misma alícuota hasta que conteste el contador.",
+  "que_cambia": "Qué combos se pueden cargar hoy.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A15 (E8)"
+}

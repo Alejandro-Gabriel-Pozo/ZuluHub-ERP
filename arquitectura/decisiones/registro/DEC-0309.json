@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0309",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Anular una compra anula también su factura, su conciliación y su pago vigente; si lo que entró al stock ya se consumió no se anula y hay que corregirla.",
+  "que_cambia": "Cambia qué queda vigente tras anular; si se corrige, la anulación podría dejar pagos o facturas sueltos.",
+  "donde": "src/modulos/compras/casos-de-uso/anular-compra.ts"
+}
