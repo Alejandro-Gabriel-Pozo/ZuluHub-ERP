@@ -1088,7 +1088,21 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
 
       // Pasó la reserva (5 minutos): una pasada del cron, tal cual la arma la web, con un reloj que ya avanzó una hora
       // (también el de los casos de uso: la reserva se compara con él).
-      const despues = unaHoraDespues(ahora());
+      //
+      // El cron atiende a lo sumo 50 empresas por pasada, las menos reconciliadas, de TODA la base compartida: con más de 50 con trabajo
+      // reciente (las dejan los demás archivos) esta empresa podía quedar afuera y el comprobante seguía INCIERTO. El reloj es fijo y
+      // la empresa deja un trabajo fechado en esa ventana (como en la prueba del cron de arriba): las de «hoy» quedan fuera.
+      const despues = new Date("2031-03-06T10:20:00Z");
+      await filas(
+        `insert into trabajo (empresa_id, tipo, datos, clave_idempotencia, creado_en)
+         values ($1, 'fiscal.validar_comprobante', $2::jsonb, $3, $4)`,
+        [
+          e.empresa,
+          JSON.stringify({ comprobanteId: randomUUID() }),
+          `fiscal.validar:${randomUUID()}:1`,
+          new Date("2031-03-06T09:00:00Z"),
+        ],
+      );
       const trabajosDeDespues = armarTrabajos(conexiones, {
         emision,
         reloj: { ahora: () => despues },
