@@ -611,6 +611,9 @@ describe("arquitectura/mutacion/: un marcador por archivo de grupo sin `pruebas`
     expect(vistos("arquitectura/mutacion/sub/un-grupo.json", sinFiltro)).toEqual([]);
     expect(vistos("arquitectura/mutacion/un-grupo.txt", sinFiltro)).toEqual([]);
     expect(vistos("arquitectura/mutacion.json", sinFiltro)).toEqual([]);
+    expect(vistos("copia/arquitectura/mutacion/un-grupo.json", sinFiltro)).toEqual([]);
+    expect(vistos("arquitectura/mutacion/un-grupo.json.bak", sinFiltro)).toEqual([]);
+    expect(vistos("arquitectura/mutacion/un-grupo.json/otro.json", sinFiltro)).toEqual([]);
   });
 });
 

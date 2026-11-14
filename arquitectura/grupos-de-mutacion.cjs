@@ -42,7 +42,7 @@ function identificadorDe(grupo) {
     .replace(/\p{M}/gu, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/^-|-$/g, "");
 }
 
 /** Los problemas de UN archivo de grupo ya leído: lista de motivos (vacía si está bien). */

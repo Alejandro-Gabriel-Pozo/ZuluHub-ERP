@@ -69,6 +69,28 @@ describe("el identificador de un grupo", () => {
   });
 });
 
+describe("leer los grupos: precisiones", () => {
+  it("si falta «archivos» se dice una sola vez, sin sumar que «tiene que ser un texto»", () => {
+    const { archivos: _omitido, ...sinArchivos } = BUENO;
+    expect(motivos(grupo("caja-dominio", sinArchivos))).toEqual(["falta «archivos»."]);
+  });
+
+  it("un patrón mal formado se nombra textualmente en el motivo", () => {
+    expect(motivos(grupo("caja-dominio", { ...BUENO, archivos: "src/a.ts,src/b c.ts" }))).toEqual([
+      "el patrón «src/b c.ts» de «archivos» no tiene la forma permitida.",
+    ]);
+  });
+
+  it("un archivo roto no entra a los grupos aunque haya otros bien formados", () => {
+    const resultado = leer({
+      ...grupo("caja-dominio", { ...BUENO, minutos: 0 }),
+      ...grupo("otro", { ...BUENO, grupo: "Otro" }),
+    });
+    expect(resultado.grupos.map((g) => g.id)).toEqual(["otro"]);
+    expect(resultado.errores).toHaveLength(1);
+  });
+});
+
 describe("leer los grupos", () => {
   it("un grupo bien formado se lee con su identificador, y los demás archivos del repositorio no cuentan", () => {
     const r = leer({ ...grupo("caja-dominio", BUENO), "src/otro.ts": "x" });
@@ -241,6 +263,13 @@ describe("derivar `mutate`", () => {
   it("un archivo repartido por rangos entre grupos entra una sola vez y sin rango", () => {
     expect(cargador.derivarMutate([g("src/g.cjs:1-100"), g("src/g.cjs:101-200")])).toEqual([
       "src/g.cjs",
+      "!src/**/*.test.ts",
+    ]);
+  });
+
+  it("el rango se quita solo del final del patrón (no del medio)", () => {
+    expect(cargador.derivarMutate([g("src/a.cjs:1-2:3-4")])).toEqual([
+      "src/a.cjs:1-2",
       "!src/**/*.test.ts",
     ]);
   });

@@ -40,7 +40,7 @@ const entradasDelGuardian = (raiz) =>
  * un objeto (nace cerrado: un archivo roto no esconde un grupo sin filtro). La línea es la de su `grupo`, o la de apertura del objeto si falta.
  */
 function grupoSinFiltro(raiz, valor) {
-  const pruebas = valor !== null && typeof valor === "object" ? valor.pruebas : undefined;
+  const pruebas = valor?.pruebas;
   if (typeof pruebas === "string" && pruebas.trim() !== "") return [];
   return [raiz.miembros?.get("grupo")?.linea ?? raiz.inicio];
 }
