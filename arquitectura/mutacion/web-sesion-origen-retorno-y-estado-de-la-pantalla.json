@@ -1,0 +1,6 @@
+{
+  "grupo": "web (sesión: origen, retorno y estado de la pantalla)",
+  "archivos": "src/capacidades/experiencia/origen.ts,src/capacidades/experiencia/ruta-de-retorno.ts,src/capacidades/experiencia/estado-de-sesion.ts",
+  "minutos": 1.1,
+  "pruebas": "src/capacidades/experiencia/origen.test.ts src/capacidades/experiencia/ruta-de-retorno.test.ts src/capacidades/experiencia/estado-de-sesion.test.ts"
+}

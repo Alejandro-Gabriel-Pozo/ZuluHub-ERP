@@ -1,0 +1,6 @@
+{
+  "grupo": "guardián (registro y ubicación de las fallas)",
+  "archivos": "arquitectura/contratos/registro.cjs,arquitectura/contratos/ubicacion.cjs",
+  "minutos": 8.3,
+  "pruebas": "test/arquitectura/guardian-clasificacion.test.ts test/arquitectura/guardian-declaraciones.test.ts test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-excepciones.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-b-registro.test.ts test/arquitectura/guardian-mutantes-b-ubicacion.test.ts test/arquitectura/guardian-nucleo.test.ts test/arquitectura/guardian-registro.test.ts"
+}

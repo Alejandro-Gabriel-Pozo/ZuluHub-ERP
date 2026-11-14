@@ -1,0 +1,6 @@
+{
+  "grupo": "activos (validación y limpieza)",
+  "archivos": "src/capacidades/activos/validacion.ts,src/capacidades/activos/limpieza.ts",
+  "minutos": 7.5,
+  "pruebas": "src/capacidades/activos/activos.propiedades.test.ts src/capacidades/activos/limpieza.test.ts src/capacidades/activos/validacion.test.ts"
+}
