@@ -71,7 +71,7 @@ describe("el identificador de un grupo", () => {
 
 describe("leer los grupos: precisiones", () => {
   it("si falta «archivos» se dice una sola vez, sin sumar que «tiene que ser un texto»", () => {
-    const { archivos: _omitido, ...sinArchivos } = BUENO;
+    const sinArchivos = { grupo: BUENO.grupo, minutos: BUENO.minutos, pruebas: BUENO.pruebas };
     expect(motivos(grupo("caja-dominio", sinArchivos))).toEqual(["falta «archivos»."]);
   });
 
