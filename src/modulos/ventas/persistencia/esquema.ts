@@ -272,7 +272,6 @@ export const COLUMNAS_DE_VENTAS = {
     "posicion",
     "producto_id",
     "descripcion",
-    "nombre_de_cocina",
     "variante_opcion_id",
     "variante_nombre",
     "precio_id",
@@ -298,6 +297,7 @@ export const COLUMNAS_DE_VENTAS = {
     "importe_fijo",
     "departamento_id",
     "camino_de_clasificacion",
+    "nombre_de_cocina",
   ],
   linea_copiada: ["empresa_id", "linea_nueva_id", "linea_origen_id", "modo", "creado_en"],
   linea_cuenta_opcion: [

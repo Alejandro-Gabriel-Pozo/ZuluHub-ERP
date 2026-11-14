@@ -1509,6 +1509,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ].map((c) => `linea_cuenta_opcion.${c}`),
           // 0038: salón y comandas nacen sin valores a mano (los contadores y `creado_en` de lo que se mueve los pone la base)
           "linea_cuenta.importe_fijo",
+          "linea_cuenta.nombre_de_cocina",
           ...[
             "anulado_en",
             "anulado_por",
