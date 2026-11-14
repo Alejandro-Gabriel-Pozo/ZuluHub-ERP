@@ -103,13 +103,19 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
       accion === undefined ? [e.mundo.empresa] : [e.mundo.empresa, accion],
     );
 
-  /** Cuántas transacciones tiene abiertas la aplicación en este momento (todas las conexiones). */
+  /**
+   * Cuántas transacciones tiene la aplicación ABIERTAS y quietas en este momento (todas las conexiones): lo que se vigila es que nadie
+   * sostenga una transacción mientras espera a ARCA, y eso es una conexión «idle in transaction». Contar también `xact_start` de una
+   * consulta suelta en vuelo (otra conexión del pozo terminando algo en ese instante) daba 1 de vez en cuando bajo carga del CI (caso real:
+   * «expected [ 1 ] to deeply equal [ 0 ]» en «ARCA tiene autorizado el número en curso», corrida del 14/11/2026); es el mismo criterio que
+   * ya usan `corte-de-conexion.test.ts` y `lecturas-compartidas.test.ts`.
+   */
   const transaccionesAbiertas = async (): Promise<number> =>
     Number(
       (
         await filas<{ n: string }>(
           `select count(*) as n from pg_stat_activity
-            where datname = current_database() and pid <> pg_backend_pid() and xact_start is not null
+            where datname = current_database() and pid <> pg_backend_pid() and state like 'idle in transaction%'
               and backend_type = 'client backend'`,
         )
       )[0]?.n,
@@ -1164,6 +1170,23 @@ describe.skipIf(base === null)("fiscal T6: numeración contra una base real", ()
       });
       expect(r1.ok && r1.valor.numero).toBe(1n);
       expect(r2.ok && r2.valor.numero).toBe(1n);
+    });
+  });
+
+  describe("el vigía de transacciones abiertas", () => {
+    it("control: ve una transacción sostenida (sin esto, un vigía que siempre da 0 haría pasar cualquier prueba)", async () => {
+      const otra = new pg.Client({ connectionString: propia.base.dueno });
+      await otra.connect();
+      try {
+        expect(await transaccionesAbiertas()).toBe(0);
+        await otra.query("begin");
+        await otra.query("select 1");
+        expect(await transaccionesAbiertas()).toBe(1);
+        await otra.query("rollback");
+        expect(await transaccionesAbiertas()).toBe(0);
+      } finally {
+        await otra.end();
+      }
     });
   });
 });
