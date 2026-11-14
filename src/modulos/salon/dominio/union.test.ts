@@ -7,6 +7,7 @@ const c = (cuentaId: string, extra: Partial<CuentaParaUnir> = {}): CuentaParaUni
   conCobro: false,
   dividida: false,
   unida: false,
+  recibioUnion: false,
   ...extra,
 });
 
@@ -42,6 +43,23 @@ describe("decidirUnion", () => {
       ok: false,
       error: "MESA_DIVIDIDA",
     });
+  });
+  it("D1: una cuenta que ya recibió una unión no pasa a otra (origen) y se rechaza antes que una división o un cobro", () => {
+    expect(decidirUnion(c("a"), c("b", { recibioUnion: true }))).toEqual({
+      ok: false,
+      error: "MESA_UNIDA",
+    });
+    expect(decidirUnion(c("a"), c("b", { recibioUnion: true, dividida: true }))).toEqual({
+      ok: false,
+      error: "MESA_UNIDA",
+    });
+    expect(decidirUnion(c("a"), c("b", { recibioUnion: true, conCobro: true }))).toEqual({
+      ok: false,
+      error: "MESA_UNIDA",
+    });
+  });
+  it("un destino que ya recibió una unión puede seguir recibiendo (no es el caso prohibido)", () => {
+    expect(decidirUnion(c("a", { recibioUnion: true }), c("b"))).toEqual({ ok: true, valor: null });
   });
 });
 

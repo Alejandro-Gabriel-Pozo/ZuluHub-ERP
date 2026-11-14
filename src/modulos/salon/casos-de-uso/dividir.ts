@@ -109,6 +109,9 @@ async function dividir(
   if (!clase.ok || clase.valor.clase !== "MESA")
     return clase.ok ? err("CUENTA_NO_ES_DE_MESA") : clase;
   if (madre.estado !== "ABIERTA") return err("CUENTA_NO_ABIERTA");
+  // D1: una cuenta que ya recibió una unión no se divide (la reserva de la mesa unida quedaría abierta al cobrar las hijas). MESA_UNIDA, ya existente.
+  if ((await tx.unionesYDivisiones.unionesDeDestino(empresaId, madre.id)).length > 0)
+    return err("MESA_UNIDA");
   const vigentes = (await lineasDeCuenta(tx, empresaId, madre.id)).filter(
     (l) => l.estado === "VIGENTE",
   );

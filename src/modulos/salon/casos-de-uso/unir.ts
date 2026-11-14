@@ -53,6 +53,8 @@ async function paraUnir(
     conCobro: cuenta.estado === "CERRADA",
     dividida: clase.clase === "RESERVA_DE_DIVISION" || clase.clase === "HIJA",
     unida: clase.clase === "RESERVA_DE_UNION",
+    recibioUnion:
+      (await tx.unionesYDivisiones.unionesDeDestino(contexto.empresaId, cuenta.id)).length > 0,
   };
 }
 

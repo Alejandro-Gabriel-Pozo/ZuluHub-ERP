@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0380",
+  "fecha": "2026-11-14",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: una cuenta que ya recibió una unión no se une como origen ni se divide (MESA_UNIDA); pero puede seguir recibiendo otras uniones (A→B y C→B).",
+  "que_cambia": "Corrige un defecto contra B12/E7 S-7 (INTEGRACION.md §5 D1; confirmada según el orquestador, 14/11). Lo no confirmado: que un destino reciba varias uniones. Prohibirlo: una línea en decidirUnion; revertir lo corregido: una línea cada una.",
+  "donde": "src/modulos/salon/dominio/union.ts; casos-de-uso/unir.ts y dividir.ts; test/integracion/salon-union-encadenada.test.ts"
+}
