@@ -4,7 +4,7 @@
  * (línea 245, una fila por grupo: decisiones D85, D94 y D95), y `receta.html`, sección «Textos aprobados» (línea 240: decisiones D74, D77, D82 y
  * D99). Lo que esas listas no traen no se agrega acá: los errores sin texto aprobado (`CICLO_EN_LA_RECETA`, `RECETA_DEMASIADO_ANIDADA`,
  * `PRODUCTO_SIN_RECETA`, `ORDEN_CANCELADA`, `PRODUCTO_YA_USADO`, `CLAVE_REUTILIZADA`, `FUNCION_NO_INCLUIDA`…) se muestran con el mensaje genérico
- * que ya existe (D175), «la receta cambió desde que abriste la orden» y el encabezado «Pasos» no tienen texto aprobado (la pantalla no los
+ * que ya existe (D175), el encabezado «Pasos» no tiene texto aprobado (la pantalla no los
  * rotula) y «La central cambió» / «Receta propia» quedan fuera hasta que se haga la receta por sucursal (P-3, decidida «después»).
  */
 export const TEXTOS_DE_PRODUCCION = {
@@ -23,6 +23,10 @@ export const TEXTOS_DE_PRODUCCION = {
   "produccion.orden.consume": { porDefecto: "Consume" },
   "produccion.orden.obtiene": { porDefecto: "Obtiene" },
   "produccion.orden.en_stock": { porDefecto: "En stock" },
+  // Aprobados por el dueño el 14/11/2026 (decisiones-del-dueno-2026-11.md, filas «Recetas, costos y producción» y «Textos y plan», punto 2; `rendimiento.md` y `orden-de-produccion.md` #4).
+  "produccion.orden.rinde": { porDefecto: "Rinde" },
+  "produccion.orden.receta_cambio": { porDefecto: "La receta cambió desde que abriste la orden" },
+  "produccion.orden.costo_estimado": { porDefecto: "Costo estimado" },
   // produccion.html, fila «Orden» (acciones).
   "produccion.accion.abrir_orden": { porDefecto: "Abrir orden" },
   "produccion.accion.cerrar_con_lo_real": { porDefecto: "Cerrar con lo real" },
