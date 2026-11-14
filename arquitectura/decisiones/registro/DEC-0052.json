@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0052",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En Emitir y Anular los botones van al final del contenido, 1.000 es mil, y Siguiente anda si hay un importe válido, sin texto de error aprobado.",
+  "que_cambia": "Cómo se comportan esas pantallas.",
+  "donde": "apps/web/ui/plantillas/facturacion"
+}

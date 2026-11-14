@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0352",
+  "fecha": "2026-11-12",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Todos los textos que ve el cliente se escriben en voseo («Revisá», «Ingresá», «vos»), nunca en usted; solo cambia la conjugación o el pronombre.",
+  "que_cambia": "Cambia la redacción de 12 textos del catálogo fiscal que estaban en usted; el sentido no cambia. Revertir: volver a las formas anteriores. «Revisá los datos del cliente.» queda aprobado sin marca de provisoria.",
+  "donde": "src/capacidades/vocabulario/catalogo-fiscal.ts; Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md, fila del 12/11, «apruebo la 1 y 2»"
+}

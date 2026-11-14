@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0103",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Salida de lotes: primero el que vence antes; si no alcanza, lo que falta va a «sin asignar» y puede quedar negativo según el control de existencia negativa.",
+  "que_cambia": "Qué lote se descuenta y cuándo se permite stock negativo.",
+  "donde": "src/modulos/stock/casos-de-uso/lotes-del-libro.ts (E6)"
+}

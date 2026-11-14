@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0346",
+  "fecha": "2026-11-12",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Las tarjetas de Medios de pago apagan el botón sin permiso y no muestran el aviso genérico que la maqueta muestra en su estado Sin permiso.",
+  "que_cambia": "Solo una ayuda visual: el servidor rechaza igual. Revertir: mostrar el aviso con el texto ya aprobado, una línea.",
+  "donde": "apps/web/ui/plantillas/caja/PantallaDeMediosDePago.tsx; Pedernal-docs 10-ux-ui/prototipos-gastronomia/medios.html; Aprobada por el dueño el 12/11/2026, decisiones-del-dueno-2026-11.md."
+}

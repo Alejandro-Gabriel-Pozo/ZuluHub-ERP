@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0115",
+  "tipo": "DATOS",
+  "decision": "Cambiar la calidad de un lote se repite por estado y versión, sin clave guardada: el mismo estado dice yaEstaba y una versión vieja con otro estado es LOTE_DESACTUALIZADO.",
+  "que_cambia": "La especificación pedía una clave; la historia de calidad no tiene dónde guardarla (agregarla exige migración).",
+  "donde": "src/modulos/stock/casos-de-uso/lotes.ts cambiarCalidadDeLote (E6-T7, I5)",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "estado": "PENDIENTE_DE_OK"
+}

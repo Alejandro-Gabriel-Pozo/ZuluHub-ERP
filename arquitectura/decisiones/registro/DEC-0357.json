@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0357",
+  "fecha": "2026-11-13",
+  "quien": "dueño",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "En la receta se carga el BRUTO y neto = bruto * (1 - merma): 300 g con 10 % de merma son 270 g. Costo y descuento de stock usan el bruto. Merma de 100 % o más se rechaza.",
+  "que_cambia": "La cantidad de cada componente pasa a ser bruto (sin migración): cambia el costo y lo que descuenta una receta con merma. La ficha muestra el neto calculado.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md (13/11/2026: «Bruto, cargo el bruto. Cargo los 300 gr que corté y le defino una merma»); src/modulos/stock/dominio/merma.ts"
+}

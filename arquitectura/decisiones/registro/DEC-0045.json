@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0045",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El contacto y el nombre de la sucursal se congelan al crear el comprobante pendiente, no al autorizar; una nota lleva el nombre de su sucursal, no el de la factura corregida.",
+  "que_cambia": "Qué contacto y nombre de sucursal salen en un comprobante.",
+  "donde": "migraciones/0019_contacto_de_la_sucursal.sql y migraciones/0022_nombre_de_la_sucursal_en_el_comprobante.sql"
+}

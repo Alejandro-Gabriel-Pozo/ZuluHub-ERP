@@ -3,7 +3,14 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { arbolConRegistro, control, entrada, MARCA, CUOTA } from "./decisiones-apoyo";
+import {
+  arbolConRegistro,
+  archivosDelRegistro,
+  control,
+  entrada,
+  MARCA,
+  CUOTA,
+} from "./decisiones-apoyo";
 
 /**
  * El control del registro de decisiones (`arquitectura/decisiones/decisiones.cjs`, enchufado en `npm run gate` y en el job del guardián
@@ -32,7 +39,7 @@ describe("(a) todo SUPUESTO cita una decisión registrada", () => {
     expect(fallas).toHaveLength(1);
     expect(fallas[0]).toMatchObject({ archivo: "src/a.ts", linea: 2 });
     expect(fallas[0]?.motivo).toContain("sin decisión registrada");
-    expect(fallas[0]?.motivo).toContain("arquitectura/decisiones/registro.json");
+    expect(fallas[0]?.motivo).toContain("arquitectura/decisiones/registro/");
     expect(fallas[0]?.motivo).toContain('"estado": "PENDIENTE_DE_OK"');
   });
 
@@ -72,7 +79,7 @@ describe("(a) todo SUPUESTO cita una decisión registrada", () => {
     });
     const { fallas } = evaluar(pr);
     expect(fallas.map((f) => f.archivo).sort()).toEqual(["src/a.ts", "src/b.ts"]);
-    expect(fallas[0]?.motivo).toContain("que no está en arquitectura/decisiones/registro.json");
+    expect(fallas[0]?.motivo).toContain("que no está en arquitectura/decisiones/registro/");
   });
 
   it("una cita de cinco dígitos no cuenta como cita", () => {
@@ -135,7 +142,9 @@ describe("la forma del registro y de la lista de sensibles también falla el con
   it("una entrada inválida falla con su id y no se sigue con el resto", () => {
     const pr = arbolConRegistro([entrada({ tipo: "OTRO" })], { "src/a.ts": CODIGO("") });
     const { fallas } = evaluar(pr);
-    expect(fallas.every((f) => f.archivo === "arquitectura/decisiones/registro.json")).toBe(true);
+    expect(
+      fallas.every((f) => f.archivo === "arquitectura/decisiones/registro/DEC-0001.json"),
+    ).toBe(true);
     expect(motivos({ fallas }).join("|")).toContain("DEC-0001: tipo es uno de");
   });
 
@@ -267,8 +276,9 @@ describe("(b) contra la base: un archivo sensible tocado exige una entrada nueva
 
   it("si la base trae el registro pero no se puede leer, falla (nunca pasa porque no se pudo mirar)", () => {
     const rota = {
-      rutas: ["x"],
-      leer: (ruta: string) => (ruta.endsWith("registro.json") ? Buffer.from("{roto") : null),
+      rutas: [control.MONOLITO_DEL_REGISTRO],
+      leer: (ruta: string) =>
+        ruta === control.MONOLITO_DEL_REGISTRO ? Buffer.from("{roto") : null,
     };
     const { fallas } = evaluar(arbolConRegistro(REGISTRO), rota);
     expect(motivos({ fallas }).join("|")).toContain("Base:");
@@ -292,7 +302,7 @@ describe("la línea de comandos", () => {
     return raiz;
   }
   const declaraciones = (registro: unknown[]) => ({
-    [control.ARCHIVO_DEL_REGISTRO]: JSON.stringify(registro),
+    ...archivosDelRegistro(registro),
     [control.ARCHIVO_DE_LOS_SENSIBLES]: JSON.stringify({
       sensibles: [{ ruta: "src/primitivas/dinero/", que: "el dinero" }],
     }),
@@ -343,7 +353,7 @@ describe("la línea de comandos", () => {
     const pr = repo(declaraciones(REGISTRO));
     const salida = control.ejecutar([`--base=${antes}`], pr);
     expect(salida.codigo).toBe(0);
-    expect(salida.lineas[0]).toMatch(/^AVISO arquitectura\/decisiones\/registro\.json:1 · /);
+    expect(salida.lineas[0]).toMatch(/^AVISO arquitectura\/decisiones\/registro:1 · /);
   });
 
   it("como programa: sale con el código del control", () => {

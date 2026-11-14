@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0058",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "El módulo clientes se suma al catálogo de módulos cuando exista; hoy ninguna acción lo pide.",
+  "que_cambia": "Qué permisos da el módulo clientes.",
+  "donde": "src/capacidades/modulos/catalogo.ts"
+}
