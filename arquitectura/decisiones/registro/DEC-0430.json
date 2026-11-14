@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0430",
+  "fecha": "2026-11-14",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Cerrar una orden de producción lo hacen solo gerente y administrador; el operador la abre y carga, pero no la cierra. Ver costos sigue igual.",
+  "que_cambia": "El operador deja de poder cerrar órdenes (hoy puede). Nace cerrado: ningún rol gana nada. Revertir: volver a agregar OPERADOR a la acción (una línea).",
+  "donde": "src/capacidades/permisos/empresa.ts (transformaciones.cerrar); decisiones-del-dueno-2026-11.md, fila «Q6, Q9, Q10 y Q11» del 14/11/2026 (Q10)"
+}

@@ -183,13 +183,10 @@ const SOLO_DEL_ADMINISTRADOR_DE_LOTES = [
   "lotes.reasignar",
 ] as const;
 
-/** E6-T8 (DEC-0101): producción. Ver, abrir y cerrar una orden, los tres roles; cancelar y anular, gerente y administrador. */
-const DEL_OPERADOR_DE_PRODUCCION = [
-  "transformaciones.ver",
-  "transformaciones.abrir",
-  "transformaciones.cerrar",
-] as const;
+/** E6-T8 (DEC-0101, DEC-0430): producción. Ver y abrir una orden, los tres roles; cerrar, cancelar y anular, gerente y administrador. */
+const DEL_OPERADOR_DE_PRODUCCION = ["transformaciones.ver", "transformaciones.abrir"] as const;
 const SOLO_DEL_ADMINISTRADOR_DE_PRODUCCION = [
+  "transformaciones.cerrar",
   "transformaciones.cancelar",
   "transformaciones.anular",
 ] as const;

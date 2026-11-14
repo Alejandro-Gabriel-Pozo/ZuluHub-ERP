@@ -70,6 +70,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0048_departamento_en_la_cuenta.sql",
         "0049_producto_oculto_en_stock.sql",
         "0050_plan_en_la_lectura_publica_de_carta.sql",
+        "0052_tope_de_partes_de_la_division.sql",
         "0055_salon_copias_y_nombre_de_cocina.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
@@ -122,6 +123,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0048_departamento_en_la_cuenta.sql",
           "0049_producto_oculto_en_stock.sql",
           "0050_plan_en_la_lectura_publica_de_carta.sql",
+          "0052_tope_de_partes_de_la_division.sql",
           "0055_salon_copias_y_nombre_de_cocina.sql",
         ],
       });
@@ -279,6 +281,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0048_departamento_en_la_cuenta.sql",
         "0049_producto_oculto_en_stock.sql",
         "0050_plan_en_la_lectura_publica_de_carta.sql",
+        "0052_tope_de_partes_de_la_division.sql",
         "0055_salon_copias_y_nombre_de_cocina.sql",
       ]);
     } finally {
