@@ -102,6 +102,11 @@ describe("leer los grupos", () => {
       expect(r.errores[0]?.archivo, ruta).toBe(ruta);
       expect(r.errores[0]?.motivo, ruta).toContain("no es un archivo de grupo");
     }
+    for (const ruta of [`${CARPETA}/caja-dominio.jsonx`, `${CARPETA}/caja-dominio.json.bak`]) {
+      const r = leer({ [ruta]: JSON.stringify(BUENO) });
+      expect(r.grupos, ruta).toEqual([]);
+      expect(r.errores[0]?.motivo, ruta).toContain("no es un archivo de grupo");
+    }
     const largo = "a".repeat(101);
     expect(leer(grupo(largo, { ...BUENO, grupo: largo })).errores).toHaveLength(1);
     expect(leer(grupo("a".repeat(100), { ...BUENO, grupo: "a".repeat(100) })).errores).toEqual([]);
@@ -174,6 +179,8 @@ describe("leer los grupos", () => {
       "src/{a-b}.ts",
       "arquitectura/contratos/no-debilitar.cjs:1-597",
       "src/a_b.c-d.ts",
+      "src/A1.ts",
+      "src/Z9/a0.ts",
     ]) {
       expect(con(bueno), bueno).toEqual([]);
     }
@@ -181,6 +188,8 @@ describe("leer los grupos", () => {
       "src/a.ts,",
       ",src/a.ts",
       "src/a b.ts",
+      " src/a.ts",
+      "src/a.ts ",
       "src/a;ls",
       "src/a.ts:1",
       "src/a.ts:1-",
@@ -292,6 +301,18 @@ describe("cargar los grupos del disco", () => {
     );
     expect(mensaje).toContain("\n  arquitectura/mutacion/suelto.txt: no es un archivo de grupo");
     expect(mensaje.split("\n")).toHaveLength(3);
+  });
+
+  it("si hay archivos pero todos rotos, lanza solo con sus fallas (no suma «ningún grupo»: no es lo que pasa)", () => {
+    const raiz = disco({ ...grupo("roto", "{roto") });
+    let mensaje = "";
+    try {
+      cargador.cargarLosGrupos(raiz);
+    } catch (error) {
+      mensaje = (error as Error).message;
+    }
+    expect(mensaje.split("\n")).toHaveLength(2);
+    expect(mensaje).not.toContain("no hay ningún grupo");
   });
 
   it("el árbol del disco lista con barras, incluidas las subcarpetas, y lee null lo que no existe", () => {

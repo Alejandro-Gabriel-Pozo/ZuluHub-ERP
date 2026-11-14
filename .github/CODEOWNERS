@@ -14,8 +14,14 @@
 /test/arquitectura/gate-rapido-coincide.test.ts  @Alejandro-Gabriel-Pozo
 /test/arquitectura/mutate-hermanos.test.ts       @Alejandro-Gabriel-Pozo
 /arquitectura/mutate-sin-mutar.json              @Alejandro-Gabriel-Pozo
-/arquitectura/grupos-de-mutacion.cjs              @Alejandro-Gabriel-Pozo
-/arquitectura/mutacion/                           @Alejandro-Gabriel-Pozo
+/arquitectura/grupos-de-mutacion.cjs             @Alejandro-Gabriel-Pozo
+/arquitectura/grupos-de-mutacion.json            @Alejandro-Gabriel-Pozo
+/arquitectura/mutacion/                          @Alejandro-Gabriel-Pozo
+/test/arquitectura/grupos-de-mutacion.test.ts    @Alejandro-Gabriel-Pozo
+/test/arquitectura/codeowners-de-la-mutacion.test.ts @Alejandro-Gabriel-Pozo
 /package.json                                    @Alejandro-Gabriel-Pozo
-/stryker.config.mjs                              @Alejandro-Gabriel-Pozo
+# Stryker busca su configuración en un orden fijo (`stryker[.conf|.config].[json|js|mjs|cjs]`, con o sin punto) y usa la PRIMERA que encuentra: una
+# `stryker.config.json` repuesta pisaría en silencio la `.mjs`. Por eso se protegen todos los nombres, no solo el que existe.
+/stryker.conf*                                   @Alejandro-Gabriel-Pozo
+/.stryker.conf*                                  @Alejandro-Gabriel-Pozo
 /vitest.config.ts                                @Alejandro-Gabriel-Pozo
