@@ -128,12 +128,19 @@ async function dividir(
   const hijas = new Map<number, string>();
   for (let numero = 1; numero <= entrada.partes; numero++) {
     const cuentaId = idDerivado("salon.division", entrada.divisionId, String(numero));
-    const abierta = await abrirCuentaEnTx(tx, contexto, persona, {
-      cuentaId,
-      sucursalId: madre.sucursalId,
-      ancla: { tipo: ANCLA_DE_PARTE, id: cuentaId },
-      etiqueta: `Cuenta ${numero}`,
-    });
+    // A2c: cada hija hereda EXACTAMENTE el departamento de la madre (también «sin departamento»): dividir no es elegir de nuevo.
+    const abierta = await abrirCuentaEnTx(
+      tx,
+      contexto,
+      persona,
+      {
+        cuentaId,
+        sucursalId: madre.sucursalId,
+        ancla: { tipo: ANCLA_DE_PARTE, id: cuentaId },
+        etiqueta: `Cuenta ${numero}`,
+      },
+      { departamentoDeLaMadre: { id: madre.departamentoId } },
+    );
     if (!abierta.ok) return abierta;
     hijas.set(numero, cuentaId);
   }

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0362",
+  "fecha": "2026-11-13",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "El departamento elegido se fija a la cuenta de venta al abrirla y no cambia; la caja y sus movimientos no lo llevan.",
+  "que_cambia": "Qué hecho lleva el departamento: la cuenta y, por ella, su ticket y su cobro; los reportes por departamento salen de la cuenta.",
+  "donde": "Pedernal-docs decisiones-del-dueno-2026-11.md (13/11/2026, respuesta con opciones relatada); migraciones/0048_departamento_en_la_cuenta.sql"
+}

@@ -9,7 +9,7 @@ import { Campo } from "../../componentes/Campo";
 import { Selector } from "../../componentes/Selector";
 import { RegionDeEstado } from "../../patrones/RegionDeEstado";
 import { Pila } from "../../primitivas/Pila";
-import { ErrorDelDetalle } from "../facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../patrones/ErrorDelDetalle";
 import estilos from "./FormularioDePuntoDeVenta.module.css";
 import {
   OPCIONES_DE_PROVINCIA,

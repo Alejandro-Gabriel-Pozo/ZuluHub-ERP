@@ -9,7 +9,7 @@ import {
   opcionesDeSucursal,
   opcionesDeTipoDeCuenta,
 } from "../../../../../../../ui/plantillas/caja/modelo-de-cuentas-de-cobro";
-import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import { editarCuentaAccion } from "../../../../acciones-de-cuentas-de-cobro";
 
 type PropsDePagina = Readonly<{ params: Promise<{ id: string }> }>;

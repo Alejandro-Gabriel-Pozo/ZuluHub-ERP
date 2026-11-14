@@ -9,7 +9,7 @@ import {
 import { PantallaDeListaDeCaja } from "../../../../../../ui/plantillas/caja/PantallaDeListaDeCaja";
 import { pestanasDeCaja } from "../../../../../../ui/plantillas/caja/pestanas-de-caja";
 import { PestanasDeCaja } from "../../../../../../ui/plantillas/caja/PestanasDeCaja";
-import { ErrorDelDetalle } from "../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 import { desactivarMedioAccion, reactivarMedioAccion } from "../../../acciones-de-medios-de-pago";
 
 // `/caja/medios-de-pago`: los medios de pago de la empresa, también los desactivados (maqueta `medios.html`, 09/11/2026). Solo lo que el servidor deja ver

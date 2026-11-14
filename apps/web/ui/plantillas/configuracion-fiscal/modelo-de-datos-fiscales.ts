@@ -1,5 +1,5 @@
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { formatearNumeroDeDocumento } from "../facturacion/formato-fiscal";
+import { formatearNumeroDeDocumento } from "../../patrones/formato-fiscal";
 import {
   cambioElDomicilio,
   domicilioNuevo,

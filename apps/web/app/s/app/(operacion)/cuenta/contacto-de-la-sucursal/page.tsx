@@ -1,6 +1,6 @@
 import { pantallaDeOperacion } from "../../../../../../pantallas/operacion";
 import { cargarElContactoDeLaSucursal } from "../../../../../../servidor/contacto-de-sucursal";
-import { ErrorDelDetalle } from "../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 import { PantallaDeContactoDeLaSucursal } from "../../../../../../ui/plantillas/sesion/PantallaDeContactoDeLaSucursal.cliente";
 import { RUTAS_DE_CUENTA } from "../../../../../../ui/plantillas/sesion/rutas-de-cuenta";
 import { guardarContactoDeSucursalAccion } from "../../../acciones-de-contacto-de-sucursal";

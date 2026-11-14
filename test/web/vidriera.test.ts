@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import type * as Falso from "../../apps/web/servidor/vidriera-publica-falsa";
+import type * as Falso from "../utilidades/vidriera-publica-falsa";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   HOST_APP_A,
@@ -25,17 +25,15 @@ vi.mock("../../apps/web/servidor/fuente-de-puertas", async () => {
   const puerta = crearPuertaFalsa();
   return { fuenteDePuertas: { consultarHost: puerta.consultarHost, leerMarca: puerta.leerMarca } };
 });
-vi.mock("../../apps/web/servidor/vidriera-publica-falsa", async (original) => {
-  const real = await original<typeof Falso>();
+vi.mock("../../apps/web/servidor/composicion", async () => {
+  const { crearVidrieraPublicaFalsa } = await import("../utilidades/vidriera-publica-falsa");
   const { MARCA_A, MARCA_B } = await import("../utilidades/puertas-falsas");
-  return {
-    ...real,
-    vidrieraPublicaFalsa: real.crearVidrieraPublicaFalsa({
-      "ejemplo-cafeteria": MARCA_A.id,
-      "ejemplo-hosteria": MARCA_A.id,
-      "ejemplo-panaderia": MARCA_B.id,
-    }),
-  };
+  const falsa = crearVidrieraPublicaFalsa({
+    "ejemplo-cafeteria": MARCA_A.id,
+    "ejemplo-hosteria": MARCA_A.id,
+    "ejemplo-panaderia": MARCA_B.id,
+  });
+  return { web: { vidrieraPublica: () => falsa } };
 });
 
 const HOST_VIDRIERA_B = "carta.panaderialospinos.test";
@@ -172,7 +170,7 @@ describe("la carta es de la marca del dominio (S2)", () => {
 describe("el falso de la carta respeta la marca (S2)", () => {
   it("devuelve la carta solo a su marca, y a cualquier otra o a un código desconocido, null", async () => {
     const { crearVidrieraPublicaFalsa } = await vi.importActual<typeof Falso>(
-      "../../apps/web/servidor/vidriera-publica-falsa",
+      "../utilidades/vidriera-publica-falsa",
     );
     const falso = crearVidrieraPublicaFalsa({ [CAFETERIA]: MARCA_A.id });
     expect((await falso.porCodigo(MARCA_A.id, CAFETERIA))?.codigo).toBe(CAFETERIA);
@@ -180,19 +178,5 @@ describe("el falso de la carta respeta la marca (S2)", () => {
     expect(await falso.porCodigo("", CAFETERIA)).toBeNull();
     expect(await falso.porCodigo(MARCA_A.id, PANADERIA)).toBeNull();
     expect(await falso.porCodigo(MARCA_A.id, "no-existe")).toBeNull();
-  });
-
-  it("el falso que usa la web de verdad pertenece a marcas inventadas: ninguna marca real recibe una carta", async () => {
-    const { vidrieraPublicaFalsa } = await vi.importActual<typeof Falso>(
-      "../../apps/web/servidor/vidriera-publica-falsa",
-    );
-    for (const marca of [MARCA_A.id, MARCA_B.id]) {
-      for (const codigo of [CAFETERIA, PANADERIA, "ejemplo-hosteria", "ejemplo-barberia"]) {
-        expect(
-          await vidrieraPublicaFalsa.porCodigo(marca, codigo),
-          `${marca} ${codigo}`,
-        ).toBeNull();
-      }
-    }
   });
 });

@@ -10,7 +10,7 @@ import { RegionDeEstado } from "../../patrones/RegionDeEstado";
 import { Superposicion } from "../../patrones/Superposicion";
 import { Pila } from "../../primitivas/Pila";
 import { Texto } from "../../primitivas/Texto";
-import { ErrorDelDetalle } from "../facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../patrones/ErrorDelDetalle";
 import estilos from "./DetalleDelPuntoDeVenta.module.css";
 import type { AccionesDePuntosDeVenta, PuntoDeVentaArmado } from "./modelo-de-puntos-de-venta";
 import { useEnvioFijado, type EnvioFijado } from "./useEnvioFijado";

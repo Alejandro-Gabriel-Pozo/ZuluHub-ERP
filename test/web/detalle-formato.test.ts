@@ -7,7 +7,7 @@ import {
   formatearImporte,
   formatearNumeroDeDocumento,
   formatearPuntoDeVenta,
-} from "../../apps/web/ui/plantillas/facturacion/formato-fiscal";
+} from "../../apps/web/ui/patrones/formato-fiscal";
 
 /** Formato de importes, fechas y documentos del detalle de un comprobante: solo cadenas, nunca `Number` ni `Date`. */
 
