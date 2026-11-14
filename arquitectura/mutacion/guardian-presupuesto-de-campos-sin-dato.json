@@ -1,0 +1,6 @@
+{
+  "grupo": "guardián (presupuesto de campos sin dato)",
+  "archivos": "arquitectura/deuda/campos-sin-dato.cjs",
+  "minutos": 3,
+  "pruebas": "test/arquitectura/campos-sin-dato-presupuesto.test.ts"
+}

@@ -1,0 +1,6 @@
+{
+  "grupo": "web (precios de un producto)",
+  "archivos": "src/composicion/entradas-de-precios-de-producto.ts,apps/web/ui/plantillas/catalogo/modelo-de-precios-de-producto.ts",
+  "minutos": 1,
+  "pruebas": "src/composicion/entradas-de-precios-de-producto.test.ts test/web/precios-de-producto-modelo.test.ts"
+}

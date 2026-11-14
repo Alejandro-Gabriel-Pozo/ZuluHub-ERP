@@ -1,0 +1,6 @@
+{
+  "grupo": "guardián (deuda técnica, control y códigos)",
+  "archivos": "arquitectura/deuda/deuda.cjs,arquitectura/deuda/codigos.cjs",
+  "minutos": 5.5,
+  "pruebas": "test/arquitectura/guardian-deuda-control.test.ts"
+}

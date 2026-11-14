@@ -1,0 +1,6 @@
+{
+  "grupo": "web (puerta mínima)",
+  "archivos": "src/capacidades/experiencia/**/*.ts,!src/capacidades/experiencia/vidriera/**/*.ts,!src/capacidades/experiencia/respuesta.ts,!src/capacidades/experiencia/origen.ts,!src/capacidades/experiencia/ruta-de-retorno.ts,!src/capacidades/experiencia/estado-de-sesion.ts,!src/capacidades/experiencia/empresa-elegida.ts,!src/capacidades/experiencia/destinos.ts,!src/capacidades/experiencia/sucursal.ts,!src/capacidades/experiencia/errores-de-ingreso.ts,!src/capacidades/experiencia/set-cookie.ts",
+  "minutos": 7.3,
+  "pruebas": "src/capacidades/experiencia"
+}

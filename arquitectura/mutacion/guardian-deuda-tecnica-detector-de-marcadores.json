@@ -1,0 +1,6 @@
+{
+  "grupo": "guardián (deuda técnica, detector de marcadores)",
+  "archivos": "arquitectura/deuda/marcadores.cjs,arquitectura/deuda/archivos-de-datos.cjs,arquitectura/deuda/tamano.cjs",
+  "minutos": 11.5,
+  "pruebas": "test/arquitectura/guardian-deuda-marcadores.test.ts"
+}

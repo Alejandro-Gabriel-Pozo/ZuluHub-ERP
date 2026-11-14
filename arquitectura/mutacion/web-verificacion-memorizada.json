@@ -1,0 +1,6 @@
+{
+  "grupo": "web (verificación memorizada)",
+  "archivos": "src/composicion/verificacion-memorizada.ts",
+  "minutos": 0.4,
+  "pruebas": "src/composicion/verificacion-memorizada.test.ts"
+}

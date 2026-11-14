@@ -1,0 +1,6 @@
+{
+  "grupo": "cierre del día (dominio y puerto)",
+  "archivos": "src/modulos/cierre/dominio/**/*.ts,src/modulos/cierre/aporte-al-cierre.ts,src/modulos/cierre/estados.ts",
+  "minutos": 2,
+  "pruebas": "src/modulos/cierre"
+}
