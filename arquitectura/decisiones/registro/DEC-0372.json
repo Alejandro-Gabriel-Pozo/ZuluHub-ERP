@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0372",
+  "fecha": "2026-11-14",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La perilla se llama `venta_por_fracciones_y_peso` (de empresa, apagada de base, módulo catálogo); sin ella cargar otra forma de venta da el mensaje genérico, no uno propio.",
+  "que_cambia": "Qué ve la plataforma al encender el extra a un cliente (el nombre de la perilla; sin texto de cliente nuevo). Revertir: renombrar la clave en el catálogo y en los planes que la usen.",
+  "donde": "src/capacidades/planes/perillas.ts; src/modulos/catalogo/casos-de-uso/forma-de-venta-habilitada.ts; decisiones-del-dueno-2026-11.md (14/11/2026, perilla apagada por defecto)"
+}

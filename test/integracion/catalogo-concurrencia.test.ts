@@ -26,7 +26,7 @@ describe.skipIf(base === null)("catálogo: concurrencia de los casos de uso", ()
   let e: EscenarioDeCatalogo;
   beforeAll(async () => {
     if (base === null) return;
-    c = await montarCatalogo(base, { formaDeVentaHabilitada: () => true });
+    c = await montarCatalogo(base, { fraccionesYPeso: true });
     e = await c.escenario();
   });
   afterAll(async () => {

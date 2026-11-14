@@ -7,16 +7,13 @@ import {
 } from "../../../primitivas/dinero/precio-unitario";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { vendeLaClase } from "../dominio/clases";
-import {
-  esUnidad,
-  formaDeVentaDelPiloto,
-  precioEnOtraUnidad,
-  validarFormaDeVenta,
-} from "../dominio/forma-de-venta";
+import { esUnidad, precioEnOtraUnidad, validarFormaDeVenta } from "../dominio/forma-de-venta";
+import { fraccionesAdmitidasEn, pasoDePorciones, validarPorciones } from "../dominio/porciones";
 import type { FilaDePrecio, Grupo, Opcion } from "../dominio/modelo";
 import { autorizar, exigirAlcanceTotal, traducir } from "./comun";
 import type { DependenciasDeCatalogo } from "./contrato";
 import type { ErrorDeCatalogo } from "./errores";
+import { formaDeVentaHabilitada } from "./forma-de-venta-habilitada";
 
 type R<S> = Resultado<S, ErrorDeCatalogo>;
 
@@ -24,8 +21,10 @@ export type EntradaDeCambiarFormaDeVenta = Readonly<{
   productoId: string;
   versionEsperada: number;
   unidadDeVentaId: string;
-  /** Texto decimal exacto: 1, 0.5, 0.25… */
-  pasoMinimo: string;
+  /** Texto decimal exacto: 1, 0.5, 0.25… Se manda cuando NO se vende por fracciones (en ese caso va `porciones` y el paso se deriva). */
+  pasoMinimo?: string;
+  /** Las fracciones que se ofrecen (2, 4 y 8: ½, ¼, ⅛). Si se mandan, el paso mínimo se DERIVA de la más fina y no se manda `pasoMinimo`. */
+  porciones?: readonly number[];
 }>;
 
 export type SalidaDeCambiarFormaDeVenta = Readonly<{
@@ -137,16 +136,35 @@ export function armarCambiarFormaDeVenta(dependencias: DependenciasDeCatalogo) {
         if (!producto.activo) return err("PRODUCTO_INACTIVO");
         if (!vendeLaClase(producto.claseDeUso)) return err("PRODUCTO_NO_VENDIBLE");
 
+        // O fracciones (el paso se deriva de la más fina) o un paso a mano: nunca los dos ni ninguno.
+        const conPorciones = entrada.porciones !== undefined;
+        if (conPorciones === (entrada.pasoMinimo !== undefined))
+          return err("FORMA_DE_VENTA_INVALIDA");
+        let porciones: readonly number[] = [];
+        let pasoPedido = entrada.pasoMinimo ?? "";
+        if (entrada.porciones !== undefined) {
+          const validas = validarPorciones(entrada.porciones);
+          if (!validas.ok) return err("FORMA_DE_VENTA_INVALIDA");
+          if (!fraccionesAdmitidasEn(producto.unidadBaseId, entrada.unidadDeVentaId)) {
+            return err("FORMA_DE_VENTA_INVALIDA");
+          }
+          porciones = validas.valor;
+          pasoPedido = cantidadATexto(pasoDePorciones(validas.valor));
+        }
         const forma = validarFormaDeVenta(
           producto.unidadBaseId,
           entrada.unidadDeVentaId,
-          entrada.pasoMinimo,
+          pasoPedido,
         );
         if (!forma.ok) return err(forma.error);
         const paso = cantidadATexto(forma.valor.pasoMinimo);
+        const mismasPorciones =
+          porciones.length === producto.porcionesOfrecidas.length &&
+          porciones.every((p, i) => p === producto.porcionesOfrecidas[i]);
         if (
           producto.unidadDeVentaId === forma.valor.unidadDeVentaId &&
-          producto.pasoMinimo === paso
+          producto.pasoMinimo === paso &&
+          mismasPorciones
         ) {
           return ok({
             version: producto.version,
@@ -155,9 +173,17 @@ export function armarCambiarFormaDeVenta(dependencias: DependenciasDeCatalogo) {
             yaEstaba: true,
           });
         }
-        const habilitada = dependencias.formaDeVentaHabilitada ?? formaDeVentaDelPiloto;
-        if (!habilitada(producto.unidadBaseId, forma.valor))
+        if (
+          !(await formaDeVentaHabilitada(
+            tx,
+            contexto,
+            producto.unidadBaseId,
+            forma.valor,
+            conPorciones,
+          ))
+        ) {
           return err("FORMA_DE_VENTA_NO_SOPORTADA");
+        }
         if (entrada.versionEsperada !== producto.version) return err("VERSION_DESACTUALIZADA");
 
         const unidadVieja = producto.unidadDeVentaId;
@@ -200,6 +226,7 @@ export function armarCambiarFormaDeVenta(dependencias: DependenciasDeCatalogo) {
           producto.id,
           unidadNueva,
           paso,
+          porciones,
         );
         if (cambiado === null) return err("PRODUCTO_NO_ENCONTRADO");
 
@@ -220,7 +247,9 @@ export function armarCambiarFormaDeVenta(dependencias: DependenciasDeCatalogo) {
           precio: string | null;
         }> = [];
         let preciosConvertidos = 0;
-        for (const { fila, esRecargo } of vivas) {
+        // Si solo cambian las porciones (mismo paso y misma unidad) los precios no se vuelven a cargar: ya llevan esa forma.
+        const cambiaLaForma = cambiaLaUnidad || producto.pasoMinimo !== paso;
+        for (const { fila, esRecargo } of cambiaLaForma ? vivas : []) {
           let precio: string | null = null;
           if (fila.precio !== null) {
             if (modo === "QUEDO_EN_PRECIO_ABIERTO") {
@@ -304,10 +333,15 @@ export function armarCambiarFormaDeVenta(dependencias: DependenciasDeCatalogo) {
           accion: "PRODUCTO_FORMA_DE_VENTA_CAMBIADA",
           entidad: "producto",
           entidadId: producto.id,
-          antes: { unidadDeVentaId: unidadVieja, pasoMinimo: producto.pasoMinimo },
+          antes: {
+            unidadDeVentaId: unidadVieja,
+            pasoMinimo: producto.pasoMinimo,
+            porciones: producto.porcionesOfrecidas,
+          },
           despues: {
             unidadDeVentaId: unidadNueva,
             pasoMinimo: paso,
+            porciones,
             resultado: modo,
             preciosConvertidos,
             preciosEnAbierto,
