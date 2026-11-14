@@ -3,8 +3,8 @@
   "fecha": "2026-11-14",
   "quien": "dueño",
   "tipo": "DINERO",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Una línea de factura del proveedor a precio cero no se carga: el dominio ya la rechazaba y la base se aprieta a precio mayor que cero.",
   "que_cambia": "La base rechaza precio_neto cero en linea_de_comprobante. Revertir: script 0054_revertir_precio_de_linea_de_factura_mayor_que_cero.sql (minutos, sin pérdida de datos).",
-  "donde": "migraciones/0054_precio_de_linea_de_factura_mayor_que_cero.sql; test/integracion/compras-precio-cero.test.ts; fuente: respuesta del dueño a D8 del 14/11/2026 relayada por la sesión madre; compras.md H-3; DEC-0302"
+  "donde": "migraciones/0054_precio_de_linea_de_factura_mayor_que_cero.sql; test/integracion/compras-precio-cero.test.ts; fuente: respuesta del dueño del 14/11/2026, registrada en docs main; compras.md H-3; DEC-0302"
 }
