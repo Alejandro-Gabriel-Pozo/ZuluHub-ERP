@@ -1,0 +1,6 @@
+{
+  "grupo": "catálogo (combos: contenido, reparto y huella)",
+  "archivos": "src/modulos/catalogo/dominio/conjuntos.ts,src/modulos/catalogo/dominio/reparto-de-conjunto.ts,src/modulos/catalogo/dominio/huella-de-conjunto.ts",
+  "minutos": 2,
+  "pruebas": "src/modulos/catalogo/dominio"
+}

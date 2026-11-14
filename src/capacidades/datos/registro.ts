@@ -1,5 +1,8 @@
+import { DATOS_DE_ADMINISTRACION } from "./registro-de-administracion";
+import { DATOS_DE_CAJA } from "./registro-de-caja";
+import { DATOS_DE_FACTURACION } from "./registro-de-facturacion";
 import { DATOS_DE_PRODUCTOS } from "./registro-de-productos";
-import type { DefinicionDeDato, Proposito } from "./tipos-de-datos";
+import type { DefinicionDeDato } from "./tipos-de-datos";
 
 export type { DefinicionDeDato } from "./tipos-de-datos";
 
@@ -24,235 +27,21 @@ export type { DefinicionDeDato } from "./tipos-de-datos";
 /** Marca de un campo cuyo dato todavía no está registrado: es deuda, la cuenta y la limita el chequeo. */
 export const DATO_PENDIENTE = "pendiente" as const;
 
-const CONTACTO = "apps/web/ui/plantillas/sesion/PantallaDeContactoDeLaSucursal.cliente.tsx";
-const CONTACTO_PROPOSITO: Proposito = {
-  para: "Contacto de la sucursal que la factura impresa muestra (pantalla de contacto de la sucursal).",
-  fuente:
-    "Pedernal-docs/11-especificaciones/diseno-contacto-de-la-sucursal.md §4 (casos de uso) y D-98",
-};
-const REQUIERE_ADMINISTRACION = {
-  modulo: "administracion",
-  estadoDeEmpresa: ["ACTIVE"],
+/**
+ * Los datos por módulo, cada uno en su archivo (`registro-de-<módulo>.ts`): un módulo nuevo suma su archivo y UNA línea acá, y dos ramas que suman datos de módulos
+ * distintos no se pisan. Un mismo id en dos fragmentos se perdería en silencio al juntarlos: `test/arquitectura/datos-por-modulo.test.ts` lo hace fallar.
+ */
+export const FRAGMENTOS_DEL_REGISTRO = {
+  administracion: DATOS_DE_ADMINISTRACION,
+  caja: DATOS_DE_CAJA,
+  facturacion: DATOS_DE_FACTURACION,
+  productos: DATOS_DE_PRODUCTOS,
 } as const;
-const REQUIERE_FACTURACION = { modulo: "facturacion", estadoDeEmpresa: ["ACTIVE"] } as const;
-const REQUIERE_CAJA = { modulo: "caja", estadoDeEmpresa: ["ACTIVE"] } as const;
-const MEDIOS_FORMULARIO = "apps/web/ui/plantillas/caja/FormularioDeMedio.cliente.tsx";
-const MEDIOS_PROPOSITO_NOMBRE: Proposito = {
-  para: "Nombre propio, opcional, de un medio de pago al agregarlo o editarlo (pantalla «Medios de pago»).",
-  fuente:
-    "Pedernal-docs/11-especificaciones/caja-y-cobros.md §B.6 (medio de pago: el nombre es opcional, la pantalla usa el vocabulario del tipo) y la maqueta aprobada el 09/11/2026 (`medios.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)",
-};
-const CUENTA_FORMULARIO = "apps/web/ui/plantillas/caja/FormularioDeCuenta.cliente.tsx";
-const CAJA_FORMULARIO = "apps/web/ui/plantillas/caja/FormularioDeCaja.cliente.tsx";
-const MAQUETA_DE_MEDIOS =
-  "la maqueta aprobada el 09/11/2026 (`medios.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)";
-const CUENTA_PROPOSITO = (para: string): Proposito => ({
-  para,
-  fuente: `Pedernal-docs/11-especificaciones/caja-y-cobros.md §B.6 (cuenta de cobro) y ${MAQUETA_DE_MEDIOS}`,
-});
-const CAJA_PROPOSITO = (para: string): Proposito => ({
-  para,
-  fuente: `Pedernal-docs/11-especificaciones/caja-y-cobros.md §B.6 (caja) y ${MAQUETA_DE_MEDIOS}`,
-});
-const MEDIOS_PROPOSITO_TIPO: Proposito = {
-  para: "Tipo de un medio de pago, de una lista cerrada, al agregarlo (pantalla «Medios de pago»); no se cambia después.",
-  fuente:
-    "Pedernal-docs/11-especificaciones/caja-y-cobros.md §B.6 (medio de pago: lista cerrada de tipos) y la maqueta aprobada el 09/11/2026 (`medios.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)",
-};
 
 export const REGISTRO_DE_DATOS = {
-  correo: {
-    ficha: "src/primitivas/contacto/email.ts",
-    propositos: [CONTACTO_PROPOSITO],
-    consumidores: [CONTACTO],
-    ponerPor: ["sucursales.editar"],
-    requiere: REQUIERE_ADMINISTRACION,
-  },
-  telefono: {
-    ficha: "src/primitivas/contacto/telefono.ts",
-    propositos: [CONTACTO_PROPOSITO],
-    consumidores: [CONTACTO],
-    ponerPor: ["sucursales.editar"],
-    requiere: REQUIERE_ADMINISTRACION,
-  },
-  web: {
-    ficha: "src/primitivas/contacto/web.ts",
-    propositos: [CONTACTO_PROPOSITO],
-    consumidores: [CONTACTO],
-    ponerPor: ["sucursales.editar"],
-    requiere: REQUIERE_ADMINISTRACION,
-  },
-  "fecha-civil": {
-    ficha: "src/primitivas/tiempo/fecha-civil.ts",
-    propositos: [
-      {
-        para: "Período personalizado (desde, hasta) del listado de comprobantes.",
-        fuente:
-          "Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md «Contrato de la pantalla 1: Listado de comprobantes»",
-      },
-    ],
-    consumidores: ["apps/web/ui/plantillas/facturacion/FormularioDeFiltros.cliente.tsx"],
-    ponerPor: ["comprobantes.ver"],
-    requiere: REQUIERE_FACTURACION,
-  },
-  importe: {
-    ficha: "src/primitivas/dinero/importe.ts",
-    propositos: [
-      {
-        para: "Importe unitario de cada renglón al emitir una factura (importes como texto decimal).",
-        fuente:
-          "Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md «Contrato de la pantalla 3: Emitir una factura» (paso 2, renglones)",
-      },
-      {
-        para: "Importe a anular por alícuota en la anulación parcial (D-69).",
-        fuente:
-          "Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md «Contrato de la pantalla 2: Detalle de un comprobante» (anulación por importe) y registro de decisiones D-69",
-      },
-    ],
-    consumidores: [
-      "apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx",
-      "apps/web/ui/plantillas/facturacion/PantallaDeAnularComprobante.cliente.tsx",
-    ],
-    ponerPor: ["comprobantes.emitir", "notas_de_credito.emitir"],
-    requiere: REQUIERE_FACTURACION,
-  },
-  cantidad: {
-    ficha: "src/primitivas/cantidad/cantidad.ts",
-    propositos: [
-      {
-        para: "Cantidad de cada renglón al emitir una factura.",
-        fuente:
-          "Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md «Contrato de la pantalla 3: Emitir una factura» (paso 2, renglones)",
-      },
-    ],
-    consumidores: ["apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx"],
-    ponerPor: ["comprobantes.emitir"],
-    requiere: REQUIERE_FACTURACION,
-  },
-  "nombre-o-razon-social": {
-    ficha: "src/primitivas/texto/nombre-o-razon-social.ts",
-    propositos: [
-      {
-        para: "Nombre o razón social del cliente al emitir una factura (RG 1415 Anexo II A.II: se imprime en la factura).",
-        fuente:
-          "Pedernal-docs/11-especificaciones/emitir-plan-factura-a.md §1 (decisiones del dueño, 2026-11-06) y facturador-contratos-de-pantalla.md «Contrato de la pantalla 3: Emitir una factura» (paso 1, cliente)",
-      },
-    ],
-    consumidores: ["apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx"],
-    ponerPor: ["comprobantes.emitir"],
-    requiere: REQUIERE_FACTURACION,
-  },
-  "documento-de-identidad": {
-    ficha: "src/primitivas/identificacion-fiscal/documento.ts",
-    propositos: [
-      {
-        para: "Tipo y número de documento del cliente al emitir una factura (CUIT, CUIL, CDI, DNI o pasaporte; la clase A exige CUIT).",
-        fuente:
-          "Pedernal-docs/11-especificaciones/emitir-plan-factura-a.md §1 (decisiones del dueño, 2026-11-06) y facturador-contratos-de-pantalla.md «Contrato de la pantalla 3: Emitir una factura» (paso 1, cliente)",
-      },
-    ],
-    consumidores: ["apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx"],
-    ponerPor: ["comprobantes.emitir"],
-    requiere: REQUIERE_FACTURACION,
-  },
-  "domicilio-libre": {
-    ficha: "src/primitivas/domicilio/domicilio-libre.ts",
-    propositos: [
-      {
-        para: "Domicilio comercial del cliente al emitir una factura: obligatorio salvo consumidor final (RG 1415 Anexo II A.II).",
-        fuente:
-          "Pedernal-docs/11-especificaciones/emitir-plan-factura-a.md §1 (decisiones del dueño, 2026-11-06) y facturador-contratos-de-pantalla.md «Contrato de la pantalla 3: Emitir una factura» (paso 1, cliente)",
-      },
-    ],
-    consumidores: ["apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx"],
-    ponerPor: ["comprobantes.emitir"],
-    requiere: REQUIERE_FACTURACION,
-  },
-  "condicion-iva": {
-    ficha: "src/primitivas/identificacion-fiscal/condicion-iva.ts",
-    propositos: [
-      {
-        para: "Condición frente al IVA del cliente al emitir una factura (de ella sale la letra A, B o C).",
-        fuente:
-          "Pedernal-docs/11-especificaciones/emitir-plan-factura-a.md §1 (decisiones del dueño, 2026-11-06) y facturador-contratos-de-pantalla.md «Contrato de la pantalla 3: Emitir una factura» (paso 1, cliente)",
-      },
-    ],
-    consumidores: ["apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx"],
-    ponerPor: ["comprobantes.emitir"],
-    requiere: REQUIERE_FACTURACION,
-  },
-  "nombre-de-medio-de-pago": {
-    // SUPUESTO (DEC-0342): la ficha es el dominio de caja, que ya tiene el largo y el conjunto permitido del nombre del medio; no se movió a `primitivas/`
-    // (cambio mayor que el de este tramo). Revertirlo es mover `nombreDeMedioValido` a una primitiva y apuntar esta ruta a ella.
-    ficha: "src/modulos/caja/dominio/configuracion.ts",
-    propositos: [MEDIOS_PROPOSITO_NOMBRE],
-    consumidores: [MEDIOS_FORMULARIO],
-    ponerPor: ["medios_de_pago.crear", "medios_de_pago.editar"],
-    requiere: REQUIERE_CAJA,
-  },
-  "tipo-de-medio-de-pago": {
-    ficha: "src/modulos/caja/estados.ts",
-    propositos: [MEDIOS_PROPOSITO_TIPO],
-    consumidores: [MEDIOS_FORMULARIO],
-    ponerPor: ["medios_de_pago.crear"],
-    requiere: REQUIERE_CAJA,
-  },
-  "nombre-de-cuenta-de-cobro": {
-    // Misma ficha que el nombre del medio (SUPUESTO, DEC-0342): el dominio de caja tiene el largo y el conjunto permitido de cada nombre.
-    ficha: "src/modulos/caja/dominio/configuracion.ts",
-    propositos: [
-      CUENTA_PROPOSITO(
-        "Nombre de una cuenta de cobro al agregarla o editarla (pantalla «Cuentas de cobro»).",
-      ),
-    ],
-    consumidores: [CUENTA_FORMULARIO],
-    ponerPor: ["cuentas_de_cobro.crear", "cuentas_de_cobro.editar"],
-    requiere: REQUIERE_CAJA,
-  },
-  "tipo-de-cuenta-de-cobro": {
-    ficha: "src/modulos/caja/estados.ts",
-    propositos: [
-      CUENTA_PROPOSITO(
-        "Tipo de una cuenta de cobro (terminal, QR o cuenta bancaria), de una lista cerrada, al agregarla; no se cambia después.",
-      ),
-    ],
-    consumidores: [CUENTA_FORMULARIO],
-    ponerPor: ["cuentas_de_cobro.crear"],
-    requiere: REQUIERE_CAJA,
-  },
-  "identificador-de-cuenta-de-cobro": {
-    ficha: "src/modulos/caja/dominio/configuracion.ts",
-    propositos: [
-      CUENTA_PROPOSITO(
-        "Identificador opcional de una cuenta de cobro (número de terminal o alias, nunca una clave) al agregarla o editarla.",
-      ),
-    ],
-    consumidores: [CUENTA_FORMULARIO],
-    ponerPor: ["cuentas_de_cobro.crear", "cuentas_de_cobro.editar"],
-    requiere: REQUIERE_CAJA,
-  },
-  "sucursal-de-cuenta-de-cobro": {
-    ficha: "src/primitivas/identificadores/marca.ts",
-    propositos: [
-      CUENTA_PROPOSITO(
-        "Sucursal a la que pertenece una cuenta de cobro: una sola, siempre elegida, al agregarla o editarla.",
-      ),
-    ],
-    consumidores: [CUENTA_FORMULARIO],
-    ponerPor: ["cuentas_de_cobro.crear", "cuentas_de_cobro.editar"],
-    requiere: REQUIERE_CAJA,
-  },
-  "nombre-de-caja": {
-    ficha: "src/modulos/caja/dominio/configuracion.ts",
-    propositos: [
-      CAJA_PROPOSITO(
-        "Nombre de una caja de la sucursal al agregarla o editarla (pantalla «Cajas»).",
-      ),
-    ],
-    consumidores: [CAJA_FORMULARIO],
-    ponerPor: ["cajas.crear", "cajas.editar"],
-    requiere: REQUIERE_CAJA,
-  },
+  ...DATOS_DE_ADMINISTRACION,
+  ...DATOS_DE_CAJA,
+  ...DATOS_DE_FACTURACION,
   ...DATOS_DE_PRODUCTOS,
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
 

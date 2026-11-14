@@ -32,6 +32,12 @@ type Plan = {
   grupos: { grupo: string; archivos: string; pruebas: string }[];
 };
 const require = createRequire(import.meta.url);
+const { cargarLosGrupos } = require("../../arquitectura/grupos-de-mutacion.cjs") as {
+  cargarLosGrupos: (raiz: string) => {
+    grupos: { id: string; grupo: string; archivos: string; minutos: number; pruebas?: string }[];
+    mutate: string[];
+  };
+};
 const {
   planificar,
   planificarEstabilidad,
@@ -128,11 +134,12 @@ describe("planificador de mutación: qué grupos corren", () => {
   });
 
   it.each([
-    ["la configuración de Stryker", "stryker.config.json"],
+    ["la configuración de Stryker", "stryker.config.mjs"],
     ["las dependencias", "package.json"],
     ["la configuración de vitest", "vitest.config.ts"],
     ["el workflow", ".github/workflows/ci.yml"],
-    ["los grupos de mutación", "arquitectura/grupos-de-mutacion.json"],
+    ["un grupo de mutación", "arquitectura/mutacion/cantidad.json"],
+    ["el cargador de los grupos", "arquitectura/grupos-de-mutacion.cjs"],
     ["un archivo borrado (no está en el grafo)", "src/a/dominio/borrado.ts"],
   ])("si cambia %s corren todos los grupos completos", (_nombre, archivo) => {
     const p = plan([archivo]);
@@ -294,9 +301,7 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
   });
 
   it("con los archivos reales: cualquier cambio en el guardián alcanza a todos sus archivos mutados", () => {
-    const configuracion = JSON.parse(readFileSync(join(RAIZ, "stryker.config.json"), "utf8")) as {
-      mutate: string[];
-    };
+    const configuracion = { mutate: cargarLosGrupos(RAIZ).mutate };
     const mutadosDelGuardian = expandir(configuracion.mutate.join(","), RAIZ).filter(
       (a) => a.startsWith("arquitectura/contratos/") || a.startsWith("arquitectura/deuda/"),
     );
@@ -317,13 +322,10 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
       expect(archivosDelGuardian).toContain(dato);
     }
 
-    const grupos = (
-      require("../../arquitectura/grupos-de-mutacion.json") as {
-        grupo: string;
-        archivos: string;
-        pruebas?: string;
-      }[]
-    ).map((g) => ({ ...g, expandidos: expandir(g.archivos, RAIZ) }));
+    const grupos = cargarLosGrupos(RAIZ).grupos.map((g) => ({
+      ...g,
+      expandidos: expandir(g.archivos, RAIZ),
+    }));
     // El grafo mínimo que hace falta: cada prueba real del guardián importa a sus auxiliares reales.
     const pruebas = globSync("test/arquitectura/guardian-*.ts", { cwd: RAIZ });
     expect(pruebas.length).toBeGreaterThan(0);
@@ -390,14 +392,8 @@ describe("planificador de mutación: archivos grandes repartidos por rango de l�
 });
 
 describe("grupos de mutación contra la configuración real", () => {
-  const configuracion = JSON.parse(readFileSync(join(RAIZ, "stryker.config.json"), "utf8")) as {
-    mutate: string[];
-  };
-  const grupos = require("../../arquitectura/grupos-de-mutacion.json") as {
-    grupo: string;
-    archivos: string;
-    pruebas?: string;
-  }[];
+  const { grupos, mutate } = cargarLosGrupos(RAIZ);
+  const configuracion = { mutate };
   const base = (entrada: string): string => archivoDe(entrada);
 
   it("cada archivo de `mutate` está en exactamente un grupo, o repartido por rangos que lo cubren entero", () => {
@@ -917,14 +913,10 @@ describe("planificador de mutación: orden por duración descendente", () => {
   });
 
   it("con las duraciones reales: todos los grupos declaran su duración y el plan completo sale de mayor a menor", () => {
-    const reales = (
-      require("../../arquitectura/grupos-de-mutacion.json") as {
-        grupo: string;
-        archivos: string;
-        pruebas?: string;
-        minutos?: number;
-      }[]
-    ).map((x) => ({ ...x, expandidos: expandir(x.archivos, RAIZ) }));
+    const reales = cargarLosGrupos(RAIZ).grupos.map((x) => ({
+      ...x,
+      expandidos: expandir(x.archivos, RAIZ),
+    }));
     for (const x of reales) {
       expect(
         typeof x.minutos === "number" && x.minutos > 0,

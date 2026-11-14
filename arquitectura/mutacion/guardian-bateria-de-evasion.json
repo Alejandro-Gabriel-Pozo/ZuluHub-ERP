@@ -1,0 +1,6 @@
+{
+  "grupo": "guardián (batería de evasión)",
+  "archivos": "arquitectura/contratos/evasiones.cjs",
+  "minutos": 16,
+  "pruebas": "test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-g-evasiones.test.ts"
+}

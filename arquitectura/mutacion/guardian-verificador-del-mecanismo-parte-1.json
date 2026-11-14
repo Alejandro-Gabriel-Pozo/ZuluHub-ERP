@@ -1,0 +1,6 @@
+{
+  "grupo": "guardián (verificador del mecanismo, parte 1)",
+  "archivos": "arquitectura/contratos/verificar-mecanismo.cjs:1-318",
+  "minutos": 4.8,
+  "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-c-verificador.test.ts"
+}

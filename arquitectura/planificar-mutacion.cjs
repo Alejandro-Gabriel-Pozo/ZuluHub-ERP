@@ -1,5 +1,5 @@
 /**
- * Planificador de la mutación en los pull requests: decide qué grupos de `grupos-de-mutacion.json`
+ * Planificador de la mutación en los pull requests: decide qué grupos de mutación (un archivo por grupo; ver `grupos-de-mutacion.cjs`)
  * corren y con qué archivos, a partir de los archivos que cambió el PR y del grafo de importaciones.
  *
  * Previene: que un PR deje sin re-mutar un archivo de dominio cuyo resultado cambió por algo que
@@ -29,6 +29,7 @@
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+const { cargarLosGrupos } = require("./grupos-de-mutacion.cjs");
 
 /**
  * Cambios que ninguna prueba lee de un modo que cambie un resultado: ni la mutación ni la integración los notan. Los dos workflows de acá no los lee ninguna prueba salvo el escaneo de nombres, que no ejerce código mutado.
@@ -80,7 +81,7 @@ const esPruebaDeNode = (archivo) => esPrueba(archivo) && /^(src|test)\//.test(ar
  * que esas pruebas copian a carpetas temporales, lanzan con `node` o leen como texto: los datos de las carpetas (`*.json`), los
  * `.cjs` que solo corren como proceso aparte (`no-debilitar.cjs` como CLI) y los archivos de `arquitectura/`
  * que el verificador carga del árbol (`evaluar-gate.cjs`, `reglas.cjs`, `ci.yml`). Como el código del guardián también
- * se muta (`stryker.config.json`), el mapa es EXPLÍCITO: toda prueba o auxiliar del guardián depende de TODOS
+ * se muta (los grupos de mutación; `stryker.config.mjs` deriva `mutate` de ellos), el mapa es EXPLÍCITO: toda prueba o auxiliar del guardián depende de TODOS
  * esos archivos. Es grueso a propósito: un mutante de `clasificacion.cjs` lo puede matar una prueba que
  * ejercita `guardian.cjs`, así que un cambio en cualquiera alcanza a los grupos de todos. Solo AGREGA
  * dependencias: lo que el grafo ya sabía sigue igual, y el resto de `arquitectura/` sigue sin estar en el mapa.
@@ -465,9 +466,7 @@ function leerDependencias(raiz) {
 }
 
 function leerGrupos(raiz) {
-  const definidos = JSON.parse(
-    fs.readFileSync(path.join(raiz, "arquitectura/grupos-de-mutacion.json"), "utf8"),
-  );
+  const { grupos: definidos } = cargarLosGrupos(raiz);
   return definidos.map(({ grupo, archivos, pruebas, minutos }) => ({
     grupo,
     archivos,

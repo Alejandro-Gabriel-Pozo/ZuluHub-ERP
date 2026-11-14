@@ -1,0 +1,6 @@
+{
+  "grupo": "unidades",
+  "archivos": "src/primitivas/unidades/**/*.ts",
+  "minutos": 1.1,
+  "pruebas": "src/primitivas/unidades"
+}

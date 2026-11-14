@@ -5,6 +5,12 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
+const { cargarLosGrupos } = require("../../arquitectura/grupos-de-mutacion.cjs") as {
+  cargarLosGrupos: (raiz: string) => {
+    grupos: { id: string; grupo: string; archivos: string; minutos: number; pruebas?: string }[];
+    mutate: string[];
+  };
+};
 const { expandir, archivoDe } = require("../../arquitectura/planificar-mutacion.cjs") as {
   expandir: (patrones: string, raiz: string) => string[];
   archivoDe: (entrada: string) => string;
@@ -13,7 +19,7 @@ const { expandir, archivoDe } = require("../../arquitectura/planificar-mutacion.
 /**
  * Un archivo que sale de PARTIR uno mutado no puede quedar fuera de la mutación en silencio.
  *
- * Previene: `stryker.config.json > mutate` lista archivos uno por uno (`src/adaptadores/arca/clasificar.ts`,
+ * Previene: `mutate` (derivado de los grupos de `arquitectura/mutacion/`) lista archivos uno por uno (`src/adaptadores/arca/clasificar.ts`,
  * `arquitectura/contratos/guardian.cjs`…). `planificar-mutacion.test.ts` ya falla si un archivo de `mutate` no está en
  * exactamente un grupo, pero NO ve lo inverso: al partir `clasificar.ts`, el archivo hijo queda sin `mutate` y sin grupo, sus
  * mutantes nunca corren y nada falla (hay 21 archivos grandes por partir).
@@ -243,9 +249,7 @@ function mundo(archivos: Record<string, string>): Archivos {
 }
 
 describe("el repositorio real", () => {
-  const configuracion = JSON.parse(readFileSync(join(RAIZ, "stryker.config.json"), "utf8")) as {
-    mutate: string[];
-  };
+  const configuracion = { mutate: cargarLosGrupos(RAIZ).mutate };
   const mutados = expandir(configuracion.mutate.join(","), RAIZ).map(archivoDe);
   const lista = JSON.parse(
     readFileSync(join(RAIZ, "arquitectura/mutate-sin-mutar.json"), "utf8"),

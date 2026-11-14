@@ -1,0 +1,6 @@
+{
+  "grupo": "planes (derechos de uso, vigencia y niveles)",
+  "archivos": "src/capacidades/planes/**/*.ts",
+  "minutos": 8,
+  "pruebas": "src/capacidades/planes"
+}

@@ -1,0 +1,6 @@
+{
+  "grupo": "stock (lotes y recetas)",
+  "archivos": "src/modulos/stock/dominio/merma.ts,src/modulos/stock/dominio/calidad.ts,src/modulos/stock/dominio/disponibilidad.ts,src/modulos/stock/dominio/lotes.ts,src/modulos/stock/dominio/subcomposicion.ts,src/modulos/stock/dominio/costo-de-receta.ts",
+  "minutos": 3,
+  "pruebas": "src/modulos/stock"
+}

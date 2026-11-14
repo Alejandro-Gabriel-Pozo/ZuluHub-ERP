@@ -1,0 +1,6 @@
+{
+  "grupo": "activos (dirección externa)",
+  "archivos": "src/capacidades/activos/direccion-externa.ts,src/capacidades/activos/proveedores-de-imagen.ts",
+  "minutos": 5,
+  "pruebas": "src/capacidades/activos/direccion-externa.propiedades.test.ts src/capacidades/activos/direccion-externa.test.ts src/capacidades/activos/proveedores-de-imagen.test.ts"
+}
