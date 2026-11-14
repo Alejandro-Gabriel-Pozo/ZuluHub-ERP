@@ -20,7 +20,7 @@ import {
   type Serie,
 } from "../../src/modulos/fiscal/publico";
 import "../propiedades/configuracion";
-import { crearEmpresaActiva, crearEntornoDePrueba, cuitAlAzar } from "./entorno";
+import { crearEmpresaActiva, crearEntornoDePrueba, cuitUnico } from "./entorno";
 import {
   acepta,
   check,
@@ -747,7 +747,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         );
         const { rows: e } = await dueno.query<{ id: string }>(
           "insert into empresa (tenant_id, cuit, razon_social) values ($1, $2, 'revierte') returning id",
-          [t[0]?.id, cuitAlAzar()],
+          [t[0]?.id, cuitUnico()],
         );
         expect(
           (
@@ -776,7 +776,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         check(
           await intento(
             "insert into emisor (empresa_id, es_principal, cuit) values ($1, true, $2)",
-            [m.empresa, cuitAlAzar()],
+            [m.empresa, cuitUnico()],
           ),
           "emisor_cuit_ck",
         );
@@ -811,7 +811,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         // Un secundario sí es activo por defecto y su `version` arranca en 1.
         const alta = await intento(
           "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning activo, version",
-          [m.empresa, cuitAlAzar()],
+          [m.empresa, cuitUnico()],
         );
         acepta(alta);
         expect(alta.ok && alta.rows[0]).toEqual({ activo: true, version: 1 });
@@ -831,7 +831,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         );
         const { rows } = await dueno.query<{ id: string }>(
           "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-          [m.empresa, cuitAlAzar()],
+          [m.empresa, cuitUnico()],
         );
         const secundario = rows[0]?.id;
         check(
@@ -851,18 +851,18 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       for (const estado of ["ACTIVE", "SUSPENDED"] as const) {
         const m = await crearMundo(dueno, { estado });
         await conPlataforma("ADMIN", async (s) => {
-          acepta(await altaDeSecundario(s, m.empresa, cuitAlAzar()));
+          acepta(await altaDeSecundario(s, m.empresa, cuitUnico()));
         });
       }
       for (const estado of ["PROVISIONING", "CANCELLED", "DELETING"] as const) {
         const m = await crearMundo(dueno, { estado });
         await conPlataforma("ADMIN", async (s) => {
-          check(await altaDeSecundario(s, m.empresa, cuitAlAzar()), "emisor_empresa_no_operable");
+          check(await altaDeSecundario(s, m.empresa, cuitUnico()), "emisor_empresa_no_operable");
         });
       }
       // Una empresa que no existe la rechaza la clave foránea.
       await conPlataforma("ADMIN", async (s) => {
-        referencia(await altaDeSecundario(s, randomUUID(), cuitAlAzar()), "emisor_empresa_id_fkey");
+        referencia(await altaDeSecundario(s, randomUUID(), cuitUnico()), "emisor_empresa_id_fkey");
       });
     });
 
@@ -870,7 +870,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       const a = await crearMundo(dueno);
       const b = await crearMundo(dueno); // otro tenant
       const cancelada = await crearMundo(dueno, { estado: "CANCELLED" });
-      const cuit = cuitAlAzar();
+      const cuit = cuitUnico();
       await conPlataforma("ADMIN", async (s) => {
         acepta(await altaDeSecundario(s, a.empresa, cuit));
         // Otro secundario (de otra empresa y otro tenant) con el mismo CUIT: la única global.
@@ -885,7 +885,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
 
     it("el alta de una empresa (y el cambio de su CUIT) con el CUIT de un secundario se rechaza; el de un alta cancelada sigue libre", async () => {
       const a = await crearMundo(dueno);
-      const secundario = cuitAlAzar();
+      const secundario = cuitUnico();
       await conPlataforma("ADMIN", async (s) => {
         acepta(await altaDeSecundario(s, a.empresa, secundario));
         const alta = (cuit: string) =>
@@ -894,14 +894,14 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
             [a.tenant, cuit],
           );
         check(await alta(secundario), "empresa_cuit_es_emisor");
-        acepta(await alta(cuitAlAzar()));
+        acepta(await alta(cuitUnico()));
         check(
           await s.intentar("update empresa set cuit = $2 where id = $1", [a.empresa, secundario]),
           "empresa_cuit_es_emisor",
         );
         // Sin conflicto, el cambio de CUIT pasa (todavía no hay series usadas).
         filas(
-          await s.intentar("update empresa set cuit = $2 where id = $1", [a.empresa, cuitAlAzar()]),
+          await s.intentar("update empresa set cuit = $2 where id = $1", [a.empresa, cuitUnico()]),
           1,
         );
       });
@@ -922,7 +922,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         const m = await crearMundo(dueno);
         const { rows } = await dueno.query<{ id: string }>(
           "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-          [m.empresa, cuitAlAzar()],
+          [m.empresa, cuitUnico()],
         );
         const secundario = rows[0]?.id as string;
         const pvPrincipal = await crearPuntoDeVenta(dueno, m, { numero: 1 });
@@ -932,11 +932,11 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         // Sin números usados, los dos CUIT se corrigen.
         await deshacible(async () => {
           filas(
-            await intento("update emisor set cuit = $2 where id = $1", [secundario, cuitAlAzar()]),
+            await intento("update emisor set cuit = $2 where id = $1", [secundario, cuitUnico()]),
             1,
           );
           filas(
-            await intento("update empresa set cuit = $2 where id = $1", [m.empresa, cuitAlAzar()]),
+            await intento("update empresa set cuit = $2 where id = $1", [m.empresa, cuitUnico()]),
             1,
           );
         });
@@ -944,11 +944,11 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         await usarSerie(dueno, pvSecundario, como);
         await deshacible(async () => {
           check(
-            await intento("update emisor set cuit = $2 where id = $1", [secundario, cuitAlAzar()]),
+            await intento("update emisor set cuit = $2 where id = $1", [secundario, cuitUnico()]),
             "emisor_cuit_inmutable",
           );
           check(
-            await intento("update empresa set cuit = $2 where id = $1", [m.empresa, cuitAlAzar()]),
+            await intento("update empresa set cuit = $2 where id = $1", [m.empresa, cuitUnico()]),
             "empresa_cuit_inmutable",
           );
           // Repetir el mismo CUIT no es un cambio.
@@ -959,14 +959,14 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
           check(
             await s.intentar("update emisor set cuit = $2 where id = $1", [
               secundario,
-              cuitAlAzar(),
+              cuitUnico(),
             ]),
             "emisor_cuit_inmutable",
           );
           check(
             await s.intentar("update empresa set cuit = $2 where id = $1", [
               m.empresa,
-              cuitAlAzar(),
+              cuitUnico(),
             ]),
             "empresa_cuit_inmutable",
           );
@@ -978,7 +978,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       const m = await crearMundo(dueno);
       const { rows } = await dueno.query<{ id: string }>(
         "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-        [m.empresa, cuitAlAzar()],
+        [m.empresa, cuitUnico()],
       );
       const secundario = rows[0]?.id as string;
       const pvPrincipal = await crearPuntoDeVenta(dueno, m, { numero: 1 });
@@ -986,7 +986,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       await usarSerie(dueno, pvPrincipal, "NUMERO");
       await deshacible(async () => {
         filas(
-          await intento("update emisor set cuit = $2 where id = $1", [secundario, cuitAlAzar()]),
+          await intento("update emisor set cuit = $2 where id = $1", [secundario, cuitUnico()]),
           1,
         );
       });
@@ -996,7 +996,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       const m = await crearMundo(dueno);
       const { rows } = await dueno.query<{ id: string }>(
         "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-        [m.empresa, cuitAlAzar()],
+        [m.empresa, cuitUnico()],
       );
       const secundario = rows[0]?.id as string;
       const pv = await crearPuntoDeVenta(dueno, m, { numero: 7, emisor: secundario, activo: true });
@@ -1024,7 +1024,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
 
     it("la plataforma solo escribe cuit y activo, solo como ADMIN: el SOPORTE, el sistema y quien no tiene actor no escriben; nadie borra", async () => {
       const m = await crearMundo(dueno);
-      const cuit = cuitAlAzar();
+      const cuit = cuitUnico();
       await conPlataforma("ADMIN", async (s) => {
         denegado(
           await s.intentar("update emisor set es_principal = true where id = $1", [m.emisor]),
@@ -1071,7 +1071,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
         denegado(
           await s.intentar(
             "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2)",
-            [m.empresa, cuitAlAzar()],
+            [m.empresa, cuitUnico()],
           ),
         );
         denegado(await s.intentar("update emisor set activo = false where id = $1", [m.emisor]));
@@ -1400,7 +1400,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       const m = await crearMundo(dueno);
       const { rows } = await dueno.query<{ id: string }>(
         "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-        [m.empresa, cuitAlAzar()],
+        [m.empresa, cuitUnico()],
       );
       const secundario = rows[0]?.id as string;
       const domicilio = await crearDomicilio(dueno, m.empresa);
@@ -2081,7 +2081,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       (
         await dueno.query<{ id: string }>(
           "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-          [m.empresa, cuitAlAzar()],
+          [m.empresa, cuitUnico()],
         )
       ).rows[0]?.id as string;
 
@@ -2417,7 +2417,7 @@ describe.skipIf(base === null)("fiscal: la migración 0006 contra una base real"
       const otra = await crearMundo(dueno);
       const { rows } = await dueno.query<{ id: string }>(
         "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-        [m.empresa, cuitAlAzar()],
+        [m.empresa, cuitUnico()],
       );
       const secundario = rows[0]?.id as string;
       const pv = await crearPuntoDeVenta(dueno, m, { numero: 1 });

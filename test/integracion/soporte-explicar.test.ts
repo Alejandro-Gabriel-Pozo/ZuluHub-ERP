@@ -34,6 +34,7 @@ import { crearCasosDeSoporte, crearEntornoDeSoporte } from "./soporte-apoyo";
 import { plataformaEn } from "./soporte-datos";
 import { usuarioDePrueba } from "../utilidades/usuarios";
 import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
+import { sufijoUnico } from "./unicos";
 
 /**
  * «Explicar por qué» (H5 §B.5.9) contra una base real: qué deja asentado (y que es lo ÚNICO que escribe),
@@ -445,7 +446,7 @@ describe.skipIf(base === null)(
       /** Lo que responde el caso de uso REAL de empresa a esa persona, para `sucursales.crear`. */
       const realCrear = (empresa: string, persona: string) =>
         reales.crearSucursal(comoEmpresa(empresaId(empresa), personaId(persona)), {
-          nombre: `Sucursal ${randomBytes(4).toString("hex")}`,
+          nombre: `Sucursal ${sufijoUnico()}`,
         });
       /** Y para `sucursales.desactivar` (solo el gerente) y `sucursales.ver` (gerente y administrador). */
       const realDesactivar = (empresa: string, persona: string) =>

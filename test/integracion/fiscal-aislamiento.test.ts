@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { empresaId, personaId, tenantId } from "../../src/primitivas/identificadores/marca";
-import { comoEmpresa, comoGrupo, comoTrabajos, cuitAlAzar } from "./entorno";
+import { comoEmpresa, comoGrupo, comoTrabajos, cuitUnico } from "./entorno";
 import {
   acepta,
   conAppDe,
@@ -62,7 +62,7 @@ describe.skipIf(base === null)("fiscal: aislamiento entre empresas y entre roles
     const secundario = (
       await dueno.query<{ id: string }>(
         "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-        [m.empresa, cuitAlAzar()],
+        [m.empresa, cuitUnico()],
       )
     ).rows[0]?.id as string;
     const domicilio = await crearDomicilio(dueno, m.empresa);

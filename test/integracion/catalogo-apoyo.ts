@@ -33,6 +33,7 @@ import {
   sucursalDe,
   type RolDePrueba,
 } from "./fixtures-identidad";
+import { nombreDeLetrasUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de integración del catálogo (E2): armar con SQL directo del dueño de la base (que evade RLS: es solo para montar
@@ -43,9 +44,7 @@ import {
 export type ClaseDeUsoDePrueba = "MATERIA_PRIMA" | "INSUMO" | "REVENTA" | "ELABORADO" | "VENDIBLE";
 
 export const nombreAlAzarDeProducto = (prefijo = "Producto"): string =>
-  `${prefijo} ${randomUUID()
-    .slice(0, 8)
-    .replace(/[0-9]/g, (d) => "abcdefghij"[Number(d)] ?? "x")}`;
+  nombreDeLetrasUnico(prefijo);
 
 export type DatosDeProducto = Readonly<{
   id?: string;

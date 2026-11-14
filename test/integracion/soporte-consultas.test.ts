@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { ContextoDePlataforma } from "../../src/contexto/contexto";
 import type { Resultado } from "../../src/primitivas/resultado/resultado";
 import { ADMIN_DE_PRUEBA, SOPORTE_DE_PRUEBA } from "./admins-de-prueba";
-import { crearBaseAparte, nombreAlAzar } from "./entorno";
+import { crearBaseAparte, nombreUnico } from "./entorno";
 import {
   crearInvitacionDeBase,
   crearMembresiaDeBase,
@@ -182,7 +182,7 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
     // Y uno que NO falló: no debe aparecer.
     await dueno.query(
       `insert into trabajo (tipo, clave_idempotencia, estado) values ('enviar_invitacion', $1, 'PENDIENTE')`,
-      [nombreAlAzar("clave-pendiente")],
+      [nombreUnico("clave-pendiente")],
     );
     s.claveDeUnTrabajo = (
       await dueno.query<{ clave_idempotencia: string }>(
@@ -290,7 +290,7 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
         vistos.push(...pagina.filas.map((t) => t.id));
         paginas += 1;
         // Llega un tenant nuevo en medio de la paginación: no duplica ni salta ninguno de los ya vistos.
-        if (paginas === 1) await sembrarTenant(dueno, { nombre: nombreAlAzar("nuevo") });
+        if (paginas === 1) await sembrarTenant(dueno, { nombre: nombreUnico("nuevo") });
         if (pagina.siguienteDespuesDeId === null) break;
         despuesDeId = pagina.siguienteDespuesDeId;
       }

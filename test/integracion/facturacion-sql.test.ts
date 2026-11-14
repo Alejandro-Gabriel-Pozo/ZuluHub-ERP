@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
-import { cuitAlAzar } from "./entorno";
+import { cuitUnico } from "./entorno";
 import {
   acepta,
   check,
@@ -700,7 +700,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
     });
 
     it("una factura A con tres alícuotas (10,5 %, 21 % y exento) se crea y cuadra; también la C sin alícuotas", async () => {
-      const receptor = cuitAlAzar();
+      const receptor = cuitUnico();
       const a = datosDeComprobante(e, {
         tipo_comprobante: "FACTURA_A",
         modo_de_precio: "IVA_DISCRIMINADO",
@@ -746,7 +746,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
 
     it("el emisor secundario factura con su propio CUIT; con el del principal, no (la foto coincide con su fuente)", async () => {
       const m = await crearMundo(dueno);
-      const cuitSecundario = cuitAlAzar();
+      const cuitSecundario = cuitUnico();
       const { rows } = await dueno.query<{ id: string }>(
         "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
         [m.empresa, cuitSecundario],
@@ -1168,7 +1168,7 @@ describe.skipIf(base === null)("facturación: la migración 0009 contra una base
         "sin IIBB cuando los datos lo traen",
         () => ({ emisor_iibb_numero: null, emisor_iibb_condicion: null }),
       ],
-      ["otro CUIT que el del emisor", () => ({ emisor_cuit: cuitAlAzar() })],
+      ["otro CUIT que el del emisor", () => ({ emisor_cuit: cuitUnico() })],
       ["otro número de punto de venta", (x) => ({ punto_de_venta_numero: x.pvNumero + 1 })],
       ["otro ambiente que el del punto de venta", () => ({ ambiente: "PRODUCCION" })],
     ])(

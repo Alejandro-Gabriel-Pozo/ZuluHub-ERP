@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import pg from "pg";
@@ -6,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import type { RolPorPreparar } from "../../src/adaptadores/postgres/roles-de-la-aplicacion";
 import { ejecutarMigracion, VARIABLE_DE_LA_CADENA } from "../../scripts/ejecutar-migracion";
 import { crearBaseAparte } from "./entorno";
+import { sufijoUnico } from "./unicos";
 
 /**
  * El rol exclusivo de respaldo y las reglas de aislamiento que lo acompañan (`respaldo-y-recuperacion.md` §C, en el
@@ -222,7 +222,7 @@ async function revertido<T>(c: pg.ClientBase, trabajo: () => Promise<T>): Promis
   }
 }
 
-const sufijo = () => randomBytes(4).toString("hex");
+const sufijo = () => sufijoUnico();
 
 describe.skipIf(base === null)("el rol de respaldo y las reglas de aislamiento (RS1-RS5)", () => {
   let aparte: Awaited<ReturnType<typeof crearBaseAparte>>;

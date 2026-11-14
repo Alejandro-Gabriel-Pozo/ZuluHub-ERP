@@ -6,7 +6,7 @@ import {
   type EscenarioDeCompras,
   type MontajeDeCompras,
 } from "./compras-casos-apoyo";
-import { cuitAlAzar } from "./entorno";
+import { cuitUnico } from "./entorno";
 
 /**
  * E9-T9: la factura que llega con la compra (N2): el comprobante con sus líneas, importes por alícuota y tributos, la conciliación atajo, la letra esperada,
@@ -82,7 +82,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
             fecha: "2026-10-10",
             lineas: [lineaFactura()],
             totalSegunFactura: "2420.00",
-            cuitDelProveedor: cuitAlAzar(),
+            cuitDelProveedor: cuitUnico(),
             ...factura,
           },
         }),
@@ -94,7 +94,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
 
   it("el operador carga la compra con su factura: comprobante, líneas, importes por alícuota, conciliación atajo, saldos y el CUIT en la ficha del proveedor", async () => {
     const m = await armar();
-    const cuit = cuitAlAzar();
+    const cuit = cuitUnico();
     const r = valorDe(
       await c.casos.registrarCompraConFactura(m.e.operador, compra(m, { cuitDelProveedor: cuit })),
     );
@@ -408,7 +408,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
   it("C2: dos cargas de la misma factura a la vez, en dos compras distintas: una factura; la otra COMPROBANTE_YA_REGISTRADO, sin recepción huérfana ni entrada de stock", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const m = await armar();
-      const cuit = cuitAlAzar();
+      const cuit = cuitUnico();
       c.armarBarrera(2);
       try {
         const resultados = await Promise.all([
@@ -462,7 +462,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
         m.proveedor,
       ]),
     ).toBe(0);
-    const cuit = cuitAlAzar();
+    const cuit = cuitUnico();
     valorDe(
       await c.casos.registrarCompraConFactura(m.e.operador, compra(m, { cuitDelProveedor: cuit })),
     );
@@ -477,7 +477,7 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
     expect(
       await c.casos.registrarCompraConFactura(
         m.e.operador,
-        compra(m, { numero: 102, cuitDelProveedor: cuitAlAzar() }),
+        compra(m, { numero: 102, cuitDelProveedor: cuitUnico() }),
       ),
     ).toEqual({ ok: false, error: "PROVEEDOR_CON_OTRO_DOCUMENTO" });
     // sin CUIT en la factura, el guardado se usa y se copia
@@ -526,11 +526,11 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
         const resultados = await Promise.all([
           c.casos.registrarCompraConFactura(
             m.e.operador,
-            compra(m, { numero: 1, cuitDelProveedor: cuitAlAzar() }),
+            compra(m, { numero: 1, cuitDelProveedor: cuitUnico() }),
           ),
           c.casos.registrarCompraConFactura(
             m.e.administrador,
-            compra(m, { numero: 2, cuitDelProveedor: cuitAlAzar() }),
+            compra(m, { numero: 2, cuitDelProveedor: cuitUnico() }),
           ),
         ]);
         expect(resultados.filter((r) => r.ok)).toHaveLength(1);

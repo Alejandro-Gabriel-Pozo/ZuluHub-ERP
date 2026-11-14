@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { firmarCarga } from "../../src/adaptadores/postgres/contexto-firmado";
 import { cuitDesdeTexto } from "../../src/primitivas/identificacion-fiscal/cuit";
 import type { EstadoDeEmpresa } from "../../src/contexto/estados";
-import { crearBaseAparte, cuitAlAzar } from "./entorno";
+import { crearBaseAparte, cuitUnico } from "./entorno";
 import {
   COLUMNAS_DE_EMPRESAS,
   ERRORES_DE_EMPRESAS_POR_RESTRICCION,
@@ -2431,7 +2431,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         const { rows: o } = await dueno.query<{ id: string }>(
           `insert into public.empresa (tenant_id, cuit, razon_social, estado)
            values ($1, $2, 'suplantacion 2', 'ACTIVE') returning id`,
-          [tenant, cuitAlAzar()],
+          [tenant, cuitUnico()],
         );
         const otraEmpresa = o[0]?.id as string;
         await dueno.query(
@@ -2501,7 +2501,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           await expect(
             dueno.query(
               `insert into public.empresa (tenant_id, cuit, razon_social) values ($1, $2, 'nueva')`,
-              [tenant, cuitAlAzar()],
+              [tenant, cuitUnico()],
             ),
           ).rejects.toMatchObject({ code: "23514", constraint: "empresa_tenant_no_activo" });
         });

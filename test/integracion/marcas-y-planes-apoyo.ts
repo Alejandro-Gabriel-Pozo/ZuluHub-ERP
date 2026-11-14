@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
 import type pg from "pg";
 import {
@@ -56,6 +55,7 @@ import { MODULOS_DE_PRUEBA, PERILLAS_DE_PRUEBA } from "../utilidades/planes";
 import { SOPORTE_DE_PRUEBA } from "./admins-de-prueba";
 import type { BaseDePruebas } from "./global";
 import { plataformaEn } from "./soporte-datos";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de integración de los casos de uso y las consultas de plataforma sobre marcas,
@@ -161,7 +161,12 @@ export const enLaHora = (ahora: Date): ContextoDePlataforma => plataformaEn(ahor
 export const desdeAhora = (segundos: number): Date => new Date(Date.now() + segundos * 1000);
 
 /** Una clave de idempotencia válida y única. */
-export const clave = (): string => `clave-${randomUUID().replaceAll("-", "").slice(0, 24)}`;
+/**
+ * Clave de idempotencia con la forma de la base (mínimo 16 caracteres). Las cifras que cambian más rápido van PRIMERO (el valor
+ * relleno se da vuelta): varias pruebas arman códigos con `clave().slice(6, 14)` y con ceros al principio salían todos iguales.
+ */
+export const clave = (): string =>
+  `clave-${[...sufijoUnico().padStart(18, "0")].reverse().join("")}`;
 
 export function exito<T>(r: Resultado<T, unknown>): T {
   if (!r.ok) throw new Error(`tenía que salir bien: ${JSON.stringify(r.error)}`);
