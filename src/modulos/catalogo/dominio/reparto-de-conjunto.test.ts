@@ -75,4 +75,36 @@ describe("repartirPrecioDelConjunto", () => {
     expect(reparto("1234.56", ["77", "21"])).toEqual(reparto("1234.56", ["77", "21"]));
     expect(reparto("1234.56", ["77", "21"]).partes).toEqual(["1234.56"]);
   });
+
+  it("alícuota única: una sola parte por alícuota con todo el importe, y las partes son las mismas que sin hablar de alícuotas (como antes de PP-1)", () => {
+    const r = reparto("14000", ["12500", "21"], ["2200", "21"]);
+    expect(r.porAlicuota).toEqual([["21", "14000.00"]]);
+    const mezcladas = reparto("14000", ["12500", "21"], ["2200", "10.5"]);
+    expect(mezcladas.partes).toEqual(r.partes);
+  });
+
+  it("alícuotas mezcladas (PP-1): cada parte lleva la alícuota de su componente y las partes por alícuota suman el precio del combo al centavo", () => {
+    const r = reparto("4000", ["3300", "21"], ["800", "10.5"], ["800", "10.5"], ["100", "0"]);
+    const centavos = (t: string) => BigInt(t.replace(".", ""));
+    expect(r.porAlicuota.map(([a]) => a)).toEqual(["21", "10.5", "0"]);
+    expect(r.porAlicuota.reduce((a, [, t]) => a + centavos(t as string), 0n)).toBe(400000n);
+    expect(r.partes.reduce((a, t) => a + centavos(t), 0n)).toBe(400000n);
+  });
+
+  it("el IVA discriminado sale de las partes por alícuota: neto + IVA de cada alícuota suma el precio del combo (ejemplo Desayuno)", () => {
+    const r = reparto("4000", ["3300", "21"], ["800", "10.5"], ["800", "10.5"]);
+    const porAlicuota = r.porAlicuota.map(([a, t]) => ({
+      bp: BigInt(Math.round(Number(a) * 100)),
+      bruto: BigInt((t as string).replace(".", "")),
+    }));
+    // Oráculo de la prueba: neto = bruto / (1 + tasa), redondeado al centavo; IVA = lo que falta para el bruto.
+    const neto = (bruto: bigint, bp: bigint) =>
+      (bruto * 20000n + (10000n + bp)) / (2n * (10000n + bp));
+    const total = porAlicuota.reduce(
+      (a, x) => a + neto(x.bruto, x.bp) + (x.bruto - neto(x.bruto, x.bp)),
+      0n,
+    );
+    expect(total).toBe(400000n);
+    expect(porAlicuota.map((x) => x.bp)).toEqual([2100n, 1050n]);
+  });
 });

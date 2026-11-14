@@ -93,4 +93,37 @@ describe("repartirPrecioDelConjunto (propiedades)", () => {
       }),
     );
   });
+
+  it("con alícuotas mezcladas: neto + IVA de cada alícuota suma el precio del combo, y con una sola alícuota da lo mismo que repartir sin ella", () => {
+    fc.assert(
+      fc.property(importes, componentes, (centavos, lista) => {
+        const entrada = lista.map((c) => ({
+          precioDeLista: aPrecio(c.precio),
+          alicuota: c.alicuota,
+        }));
+        const r = repartirPrecioDelConjunto(aImporte(centavos), entrada);
+        if (!r.ok) return;
+        // Oráculo: neto = bruto / (1 + tasa) al centavo (mitad hacia arriba); IVA = bruto − neto.
+        const neto = (bruto: bigint, bp: bigint) =>
+          (bruto * 20000n + (10000n + bp)) / (2n * (10000n + bp));
+        let suma = 0n;
+        for (const a of r.valor.porAlicuota) {
+          const bp = BigInt(Math.round(Number(a.alicuota) * 100));
+          const n = neto(a.importe.unidades, bp);
+          suma += n + (a.importe.unidades - n);
+        }
+        expect(suma).toBe(centavos);
+        // Con la alícuota de todos igual, las partes no cambian respecto de repartir con una sola.
+        const unica = repartirPrecioDelConjunto(
+          aImporte(centavos),
+          entrada.map((c) => ({ ...c, alicuota: "21" })),
+        );
+        if (!unica.ok) throw new Error("se esperaba un reparto");
+        expect(unica.valor.partes.map((p) => p.unidades)).toEqual(
+          r.valor.partes.map((p) => p.unidades),
+        );
+        expect(unica.valor.porAlicuota).toHaveLength(1);
+      }),
+    );
+  });
 });
