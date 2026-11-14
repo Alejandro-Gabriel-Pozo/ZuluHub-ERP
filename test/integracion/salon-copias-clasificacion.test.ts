@@ -1,12 +1,12 @@
-import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import pg from "pg";
-import { afterAll, beforeAll, describe, it, inject, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, inject, vi } from "vitest";
 import { crearBaseAparte } from "./entorno";
 import { acepta, check, conAppDe, crearMundo, type Mundo } from "./fiscal-apoyo";
 import type { BaseDePruebas } from "./global";
 import type { SesionDePrueba } from "./sesiones";
+import { nuevoId } from "./ventas-apoyo";
 
 /**
  * D2 (auditoría de salón, INTEGRACION §5): `copias_cuadran` (0038) vigila que la copia de una línea conserve lo congelado de la origen, pero 0047 sumó a lo
@@ -19,7 +19,7 @@ const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 120_000 });
 
 const AHORA = "2026-11-09T15:00:00Z";
-const uuid = () => randomUUID();
+const uuid = nuevoId;
 
 type Clasificacion = Readonly<{ departamento: string; camino: string }> | null;
 
@@ -182,6 +182,29 @@ describe.skipIf(base === null)("0055 (D2): copias_cuadran y la clasificación co
       "utf8",
     );
     await dueno.query(reversion);
+    // EXACTAMENTE el cuerpo vigente antes de 0055: `linea_validar_cambio` es el de 0047 y `copias_cuadran` el de 0038, comparados con `pg_get_functiondef`.
+    const definicion = async (firma: string): Promise<string> =>
+      (
+        await dueno.query<{ d: string }>("select pg_get_functiondef(to_regprocedure($1)) as d", [
+          firma,
+        ])
+      ).rows[0]?.d ?? "";
+    const tras = {
+      cambio: await definicion("public.linea_validar_cambio()"),
+      copias: await definicion("public.copias_cuadran()"),
+    };
+    const funcionDe = async (archivo: string, nombre: string): Promise<string> => {
+      const texto = await readFile(join(carpeta, archivo), "utf8");
+      const desde = texto.search(new RegExp(`CREATE (OR REPLACE )?FUNCTION ${nombre}\\(\\)`));
+      const hasta = texto.indexOf("$$;", texto.indexOf("RETURN", desde));
+      return texto
+        .slice(desde, hasta + 3)
+        .replace(/^CREATE FUNCTION/, "CREATE OR REPLACE FUNCTION");
+    };
+    await dueno.query(await funcionDe("0047_camino_en_el_renglon.sql", "linea_validar_cambio"));
+    await dueno.query(await funcionDe("0038_salon.sql", "copias_cuadran"));
+    expect(tras.cambio).toBe(await definicion("public.linea_validar_cambio()"));
+    expect(tras.copias).toBe(await definicion("public.copias_cuadran()"));
     acepta(await trasladar(ventas, bebidas));
     const migracion = await readFile(
       join(carpeta, "0055_salon_copias_y_nombre_de_cocina.sql"),
