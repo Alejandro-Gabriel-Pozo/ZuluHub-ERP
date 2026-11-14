@@ -98,6 +98,8 @@ export const TEXTOS_DE_COMPRAS = {
   "compras.control.lote": { porDefecto: "Lote" },
   "compras.control.vence": { porDefecto: "Vence" },
   "compras.control.temperatura": { porDefecto: "Temperatura" },
+  // Aprobado por el dueño el 14/11/2026 (decisiones-del-dueno-2026-11.md, fila «Textos y plan», punto 2; `temperatura-de-recepcion.md` #2).
+  "compras.control.falta_la_temperatura": { porDefecto: "Falta la temperatura" },
   "compras.control.condicion": { porDefecto: "Condición" },
   "compras.control.conforme": { porDefecto: "Conforme" },
   "compras.control.con_observaciones": { porDefecto: "Con observaciones" },

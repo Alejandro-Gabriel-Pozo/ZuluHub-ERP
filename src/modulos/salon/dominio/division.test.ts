@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MAXIMO_DE_CUENTAS_POR_ITEMS } from "../../../primitivas/cuentas/limites-de-division";
 import { huellaDeDivision, planDeDivision, type Asignacion, type LineaADividir } from "./division";
 
 const linea = (
@@ -99,12 +100,14 @@ describe("planDeDivision", () => {
       ]),
     ).toEqual(error("DIVISION_INCOMPLETA"));
   });
-  it("rechaza partes fuera de 2 a 4 y cuentas fuera de rango", () => {
+  it("rechaza partes fuera de 2 al máximo y cuentas fuera de rango", () => {
     expect(caso([{ lineaId: "a", forma: "ENTERO", parte: 1 }], 1)).toEqual({
       ok: false,
       error: "PARTES_INVALIDAS",
     });
-    expect(caso([{ lineaId: "a", forma: "ENTERO", parte: 1 }], 5)).toEqual({
+    expect(
+      caso([{ lineaId: "a", forma: "ENTERO", parte: 1 }], MAXIMO_DE_CUENTAS_POR_ITEMS + 1),
+    ).toEqual({
       ok: false,
       error: "PARTES_INVALIDAS",
     });

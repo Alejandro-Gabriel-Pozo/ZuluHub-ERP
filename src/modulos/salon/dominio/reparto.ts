@@ -1,5 +1,9 @@
 import { ErrorDeValor } from "../../../primitivas/cantidad/errores";
 import { porcentajeDesdeTexto } from "../../../primitivas/cantidad/porcentaje";
+import {
+  MAXIMO_DE_CUENTAS_POR_ITEMS,
+  MAXIMO_DE_PARTES_POR_PORCENTAJE,
+} from "../../../primitivas/cuentas/limites-de-division";
 import { importeDesdeTexto } from "../../../primitivas/dinero/importe";
 import { ARS } from "../../../primitivas/dinero/moneda";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
@@ -18,9 +22,6 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 export type ParteRepartida = Readonly<{ parte: number; importe: string }>;
 
 export type ErrorDeReparto = "PARTES_INVALIDAS" | "IMPORTE_INVALIDO" | "PORCENTAJE_INVALIDO";
-
-export const MAXIMO_DE_PARTES_POR_PORCENTAJE = 6;
-export const MAXIMO_DE_CUENTAS_POR_ITEMS = 4;
 
 function centavosDe(texto: string): Resultado<bigint, "IMPORTE_INVALIDO"> {
   try {
@@ -64,7 +65,7 @@ export function repartirItemCompartido(
   );
 }
 
-/** Un total en `n` partes iguales (2 a 6): el resto de a un centavo desde la parte 1. */
+/** Un total en `n` partes iguales (2 hasta el máximo de partes por porcentaje): el resto de a un centavo desde la parte 1. */
 export function repartirEnPartesIguales(
   total: string,
   n: number,
