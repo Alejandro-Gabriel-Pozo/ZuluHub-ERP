@@ -51,7 +51,6 @@ function ejecutar(raiz) {
     arbol: arbolDelDisco(raiz, CARPETA_DEL_REGISTRO, MONOLITO_DEL_REGISTRO),
     carpeta: CARPETA_DEL_REGISTRO,
     monolito: MONOLITO_DEL_REGISTRO,
-    admiteMonolito: false,
   });
   if (leido.ausente) {
     return { codigo: 1, salida: "", errores: [`${CARPETA_DEL_REGISTRO}: no existe.`] };
