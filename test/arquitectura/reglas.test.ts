@@ -16,6 +16,7 @@ import { createRequire } from "node:module";
 import { afterEach, describe, expect, it } from "vitest";
 import { duplicadosPorArchivo } from "./fuente-unica-apoyo";
 import { contarProhibidosEnCodigo, contarProhibidosEnSql } from "./lista-de-permitidos-apoyo";
+import { fallasDeErrores, resumirErrores } from "./oraculo-de-errores-apoyo";
 
 /**
  * Cada regla de arquitectura tiene una violación inyectada a propósito que la rompe (ADR-003).
@@ -2648,5 +2649,44 @@ describe("validación de datos: lista de permitidos y fuente única (CLAUDE.md �
     ]);
     expect([...duplicadosPorArchivo(copia)]).toEqual([["apps/b.ts", 1]]);
     expect([...duplicadosPorArchivo(new Map([["src/a.ts", duena]]))]).toEqual([]);
+  });
+});
+
+describe("oráculo de ticket, cobranza y factura: todo código de error de ventas o fiscal figura en una celda o está declarado fuera", () => {
+  // La prueba real es `oraculo-de-errores.test.ts`; acá, la violación inyectada (el espejo que pide «una regla nueva trae su violación inyectada
+  // en reglas.test.ts»). El detalle de cada forma está en ese archivo.
+  const resumir = (texto: string) =>
+    resumirErrores(new Map([["src/modulos/ventas/casos-de-uso/x.ts", texto]]));
+  it("un código de error nuevo sin celda ni permiso se dispara", () => {
+    const fallas = fallasDeErrores(
+      resumir('export const f = () => err("CODIGO_NUEVO");'),
+      new Set(),
+      {
+        grupos: [],
+        opacos: {},
+      },
+    );
+    expect(fallas.map((f) => f.tipo)).toEqual(["código sin celda ni permiso"]);
+  });
+
+  it("un err(...) que no se puede leer se dispara (fail-closed)", () => {
+    const fallas = fallasDeErrores(
+      resumir("export const f = () => err(armar() as E);"),
+      new Set(),
+      {
+        grupos: [],
+        opacos: {},
+      },
+    );
+    expect(fallas.map((f) => f.tipo)).toEqual(["err(...) ilegibles fuera del presupuesto"]);
+  });
+
+  it("un código con celda no se dispara", () => {
+    expect(
+      fallasDeErrores(resumir('export const f = () => err("A");'), new Set(["A"]), {
+        grupos: [],
+        opacos: {},
+      }),
+    ).toEqual([]);
   });
 });

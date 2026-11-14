@@ -148,6 +148,12 @@ export function crearFiscalDePrueba(m: MundoDeVentas) {
         ),
       );
     },
+    /** Lo mismo que `notaDeCredito` pero devuelve el resultado crudo (el oráculo prueba también lo que se rechaza). */
+    intentarNotaDeCredito: (e: EscenarioDeVentas, id: string, total: string) =>
+      casos.emitirNotaDeCredito(
+        { ...e.gerente, ahora: reloj.ahora() },
+        notaManual(id as ComprobanteId, { renglones: [renglon(total, "1", "21")] }),
+      ),
     notaDeCredito: async (e: EscenarioDeVentas, id: string, total: string): Promise<string> =>
       exito(
         await casos.emitirNotaDeCredito(

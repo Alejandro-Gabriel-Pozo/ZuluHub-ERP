@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0391",
+  "fecha": "2026-11-14",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las 16 celdas del oráculo que hoy no coinciden con el código se marcan «PENDIENTE (tramo X)» y no se prueban contra el código; D-05 solo prueba que nada queda a medias.",
+  "que_cambia": "No cambia lo que ve el negocio: es el orden en que se activan las pruebas al construir cada tramo (cobrar en partes, facturar por partes, anular con factura vigente).",
+  "donde": "test/integracion/oraculo-de-ticket-casos.test.ts y oraculo-de-ticket-concurrencia.test.ts",
+  "motivo": "Es la forma de entrega que pide el documento del oráculo (§8 y §10): las pruebas de esas celdas nacen con su tramo; no se prueba el defecto de hoy como si fuera política."
+}

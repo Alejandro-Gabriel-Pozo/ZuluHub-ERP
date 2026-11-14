@@ -1,6 +1,6 @@
 {
   "grupo": "ventas (dominio)",
-  "archivos": "src/modulos/ventas/dominio/**/*.ts",
+  "archivos": "src/modulos/ventas/dominio/**/*.ts,!src/modulos/ventas/dominio/oraculo-de-ticket.ts",
   "minutos": 3,
   "pruebas": "src/modulos/ventas/dominio"
 }

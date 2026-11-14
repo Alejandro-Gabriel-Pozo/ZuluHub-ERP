@@ -1,0 +1,6 @@
+{
+  "grupo": "oráculo de ventas",
+  "archivos": "src/modulos/ventas/dominio/oraculo-de-ticket.ts",
+  "minutos": 1,
+  "pruebas": "src/modulos/ventas/dominio/oraculo-de-ticket.test.ts"
+}

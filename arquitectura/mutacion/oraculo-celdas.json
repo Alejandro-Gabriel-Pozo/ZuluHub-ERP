@@ -1,0 +1,6 @@
+{
+  "grupo": "oráculo (celdas)",
+  "archivos": "src/primitivas/oraculo/**/*.ts,!src/primitivas/oraculo/**/*.test.ts",
+  "minutos": 1,
+  "pruebas": "src/primitivas/oraculo"
+}

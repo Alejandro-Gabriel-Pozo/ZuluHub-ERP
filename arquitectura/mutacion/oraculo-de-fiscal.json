@@ -1,0 +1,6 @@
+{
+  "grupo": "oráculo de fiscal",
+  "archivos": "src/modulos/fiscal/dominio/oraculo-de-comprobante.ts",
+  "minutos": 1,
+  "pruebas": "src/modulos/fiscal/dominio/oraculo-de-comprobante.test.ts"
+}

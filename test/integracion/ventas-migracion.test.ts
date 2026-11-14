@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import { transicionesDeTicketDelOraculo } from "../../src/modulos/ventas/dominio/oraculo-de-ticket";
 import { fechaDeNegocio } from "../../src/primitivas/tiempo/fecha-de-negocio";
 import { productoDeBase } from "./catalogo-apoyo";
 import { crearBaseAparte, cuitUnico } from "./entorno";
@@ -2027,12 +2028,14 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
       CORTESIA: f.cortesia.ticket,
       ANULADO: f.anulado.ticket,
     } as const;
-    const permitidas = new Set([
-      "EMITIDO>COBRADO",
-      "EMITIDO>ANULADO",
-      "COBRADO>ANULADO",
-      "CORTESIA>ANULADO",
-    ]);
+    // Las transiciones que permite la base son las que el oráculo de ventas deriva de sus celdas (que a su vez es `TRANSICIONES_DE_TICKET`, por
+    // `oraculo-de-ticket.test.ts`): una sola lista, comparada con el disparador real en los 12 pares.
+    const permitidas = new Set(
+      Object.entries(transicionesDeTicketDelOraculo()).flatMap(([de, aes]) =>
+        aes.map((a) => `${de}>${a}`),
+      ),
+    );
+    expect(permitidas.size).toBe(4);
     // El estado de partida de cada uno es el que dice el nombre.
     for (const estado of estados) {
       expect(

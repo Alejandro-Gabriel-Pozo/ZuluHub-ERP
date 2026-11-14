@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0390",
+  "fecha": "2026-11-14",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Corregir un ticket bajando su total por debajo de lo ya cobrado no se permite: la devolución del dinero queda fuera del sistema (la decisión 152 dice que el sistema no procesa pagos).",
+  "que_cambia": "Hoy no cambia nada (la corrección de ticket no está construida): la celda A-19 del oráculo queda PENDIENTE sin pruebas hasta que el dueño confirme, al diseñar la corrección. Si prefiere permitirlo, se cambia la celda y el caso de uso que se construya (días).",
+  "donde": "src/modulos/ventas/dominio/oraculo-de-ticket-datos.ts (celda A-19); oraculo-ticket-cobranza.md §9 punto 3; migraciones-que-aflojan-la-base.md §6 riesgo 1"
+}
