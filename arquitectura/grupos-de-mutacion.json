@@ -528,6 +528,12 @@
     "pruebas": "src/modulos/catalogo/dominio"
   },
   {
+    "grupo": "catálogo (combos: contenido, reparto y huella)",
+    "archivos": "src/modulos/catalogo/dominio/conjuntos.ts,src/modulos/catalogo/dominio/reparto-de-conjunto.ts,src/modulos/catalogo/dominio/huella-de-conjunto.ts",
+    "minutos": 2,
+    "pruebas": "src/modulos/catalogo/dominio"
+  },
+  {
     "grupo": "web (modelos de la configuración de caja)",
     "archivos": "apps/web/ui/plantillas/caja/modelo-de-medios-de-pago.ts,apps/web/ui/plantillas/caja/modelo-de-cuentas-de-cobro.ts,apps/web/ui/plantillas/caja/modelo-de-cajas.ts,apps/web/ui/plantillas/caja/lista-de-caja.ts,apps/web/ui/plantillas/caja/pestanas-de-caja.ts",
     "minutos": 1.0,
