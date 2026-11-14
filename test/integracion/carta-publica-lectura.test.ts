@@ -258,6 +258,19 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
         ),
         opcion: ordenadas("activa", "empresa_id", "grupo_id", "id", "orden"),
         version_de_opcion: ordenadas("empresa_id", "nombre", "numero", "opcion_id", "recargo"),
+        // El plan de la empresa de la carta (0050, T6; decisión del dueño del 13/11/2026): módulos, asignaciones, versiones (solo módulos y perillas, sin nombre
+        // comercial) y ajustes (sin motivo ni autor). Si esto cambia, que sea a propósito.
+        modulo_de_empresa: ordenadas("activo", "empresa_id", "modulo"),
+        plan_de_tenant: ordenadas("numero", "tenant_id", "version_de_plan_id", "vigente_desde"),
+        version_de_plan: ordenadas("id", "modulos", "numero", "perillas", "plan_id"),
+        ajuste_de_perilla: ordenadas(
+          "empresa_id",
+          "numero",
+          "perilla",
+          "tenant_id",
+          "valor",
+          "vigente_desde",
+        ),
         // DECISIÓN ACEPTADA (DEC-0341): las 13 columnas, incluida `cargado_por`, porque `precio_vigente` lee la fila entera. Si esto cambia, que sea a propósito.
         precio_de_venta: ordenadas(
           "cargado_por",

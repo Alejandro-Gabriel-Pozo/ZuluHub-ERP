@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0369",
+  "fecha": "2026-11-13",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El rol público lee también `plan_id` y `numero` de `version_de_plan`: identificadores sin datos del negocio que el cálculo de derechos pide.",
+  "que_cambia": "Dos columnas más en un permiso de lectura (nada de nombre comercial ni precios); sirven para calcular los derechos con la misma función que el resto del sistema sin una segunda lectura del plan. Revertir: quitarlas del permiso y rellenar el cálculo sin ellas (medio día).",
+  "donde": "migraciones/0050_plan_en_la_lectura_publica_de_carta.sql; test/integracion/carta-publica-lectura.test.ts (C-6); supuesto del ingeniero sobre la decisión DEC-0368"
+}

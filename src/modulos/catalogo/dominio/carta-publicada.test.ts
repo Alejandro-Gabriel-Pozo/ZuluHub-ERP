@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sucursalId } from "../../../primitivas/identificadores/marca";
+import { empresaId, sucursalId, tenantId } from "../../../primitivas/identificadores/marca";
 import {
   armarVidrieraPublicada,
   type CartaLeida,
@@ -75,6 +75,8 @@ function ensayo(cambios: Partial<CartaLeida> = {}): CartaLeida {
       sucursalId: S1,
     },
     sucursalActiva: true,
+    empresaId: empresaId("00000000-0000-4000-8000-0000000000e1"),
+    tenantId: tenantId("00000000-0000-4000-8000-0000000000f1"),
     marcaId: MARCA,
     estadoDeLaEmpresa: "ACTIVE",
     estadoDelTenant: "ACTIVE",

@@ -1,16 +1,20 @@
 import { randomUUID } from "node:crypto";
 import {
+  armarTxPublica,
   crearVidrieraPublica,
+  type CatalogosDeLaCarta,
   type TxPublicaDeCarta,
 } from "../../src/adaptadores/postgres/vidriera-publica";
 import {
   crearTransaccionesPublicas,
   type TransaccionesPublicasDePostgres,
 } from "../../src/adaptadores/postgres/transacciones-publicas";
-import { crearLecturaPublicaDeCartas } from "../../src/modulos/catalogo/publico";
+import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
+import { CATALOGO_DE_PERILLAS } from "../../src/capacidades/planes/perillas";
 import type { VidrieraPublica } from "../../src/puertos/vidriera-publica";
 import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
 import type { montarCatalogo } from "./catalogo-apoyo";
+import { crearPlanPublicado } from "./marcas-apoyo";
 import {
   grupoDeBase,
   opcionDeBase,
@@ -32,16 +36,81 @@ const DESDE = "2026-10-01T00:00:00Z";
 
 export type Catalogo = Awaited<ReturnType<typeof montarCatalogo>>;
 
+/**
+ * Los catálogos de las pruebas de la carta: los reales, salvo que el módulo de la carta (`vidriera`) figura `disponible`. En el catálogo real sigue
+ * `en_desarrollo` y la carta no se sirve a nadie (todo nace cerrado); la prueba del catálogo real está en `carta-publica-plan.test.ts`.
+ */
+export const CATALOGOS_DE_PRUEBA_DE_LA_CARTA: CatalogosDeLaCarta = {
+  catalogoDeModulos: {
+    ...CATALOGO_DE_MODULOS,
+    vidriera: { ...CATALOGO_DE_MODULOS.vidriera, estado: "disponible" },
+  },
+  catalogoDePerillas: CATALOGO_DE_PERILLAS,
+};
+
 /** El puerto real y la conexión pública que lo sostiene (hay que cerrarla). */
 export function adaptadorReal(
   c: Catalogo,
   ahora: () => Date = () => AHORA_DE_LA_VISITA,
+  catalogos: CatalogosDeLaCarta = CATALOGOS_DE_PRUEBA_DE_LA_CARTA,
 ): { vidriera: VidrieraPublica; publicas: TransaccionesPublicasDePostgres<TxPublicaDeCarta> } {
   const publicas = crearTransaccionesPublicas<TxPublicaDeCarta>({
     url: c.propia.base.publico,
-    armar: (db) => ({ cartas: crearLecturaPublicaDeCartas(db) }),
+    armar: (db) => armarTxPublica(db),
   });
-  return { vidriera: crearVidrieraPublica(publicas, { ahora }), publicas };
+  return { vidriera: crearVidrieraPublica(publicas, { ahora }, catalogos), publicas };
+}
+
+/** El plan con que se arma la carta: el módulo de la carta y su perilla encendida, vigente desde antes de todas las visitas de las pruebas. */
+const DESDE_DEL_PLAN_DE_PRUEBA = "2026-10-01T00:00:00Z";
+
+/** Asigna una versión publicada a un tenant con el número siguiente y la vigencia pedida (SQL del dueño: es el escenario, no lo que se prueba). */
+export async function asignarVersion(
+  c: Catalogo,
+  tenant: string,
+  version: string,
+  desde: string = DESDE_DEL_PLAN_DE_PRUEBA,
+): Promise<void> {
+  await c.dueno.query(
+    `insert into plan_de_tenant (tenant_id, numero, version_de_plan_id, vigente_desde, origen, motivo, asignado_por, creado_en)
+     select $1::uuid, coalesce(max(numero), 0) + 1, $2::uuid, $3::timestamptz, 'CAMBIO', 'prueba', 'prueba', $3::timestamptz
+       from plan_de_tenant where tenant_id = $1::uuid`,
+    [tenant, version, desde],
+  );
+}
+
+/** Una versión publicada de plan para la carta: con o sin el módulo y la perilla. */
+export async function versionDeLaCarta(
+  c: Catalogo,
+  datos: Readonly<{ conModulo?: boolean; conPerilla?: boolean }> = {},
+): Promise<string> {
+  const { version } = await crearPlanPublicado(c.dueno, {
+    modulos: datos.conModulo === false ? ["catalogo"] : ["catalogo", "vidriera"],
+    perillas:
+      datos.conPerilla === false
+        ? {}
+        : { vidriera_por_qr: { tipo: "INTERRUPTOR", encendida: true } },
+  });
+  return version;
+}
+
+/** Le da a la empresa lo que la carta pide: el plan con módulo y perilla, asignado a su tenant, y el módulo activado por la empresa. */
+export async function darleLaCartaAlPlan(
+  c: Catalogo,
+  empresa: string,
+): Promise<{ tenant: string; version: string }> {
+  const { rows } = await c.dueno.query<{ tenant_id: string }>(
+    "select tenant_id from empresa where id = $1",
+    [empresa],
+  );
+  const tenant = rows[0]?.tenant_id as string;
+  const version = await versionDeLaCarta(c);
+  await asignarVersion(c, tenant, version);
+  await c.dueno.query(
+    "insert into modulo_de_empresa (empresa_id, modulo) values ($1, 'vidriera')",
+    [empresa],
+  );
+  return { tenant, version };
 }
 
 export type Ensayo = Readonly<{
@@ -64,6 +133,8 @@ export type Ensayo = Readonly<{
   >;
   /** Los códigos de la carta de la primera sucursal (la de «Huinganco») y de la segunda. */
   carta1: Readonly<{ id: string; codigo: string }>;
+  /** El tenant de la empresa y la versión de plan que le da la carta (módulo y perilla): lo que la carta pública lee en cada visita (T6). */
+  plan: Readonly<{ tenant: string; version: string }>;
   carta2: Readonly<{ id: string; codigo: string }>;
 }>;
 
@@ -203,6 +274,7 @@ export async function montarEnsayo(c: Catalogo): Promise<Ensayo> {
     o: { pure, ensalada, papas, huevo, chico, mediano, grande, carne, pollo },
     carta1: await crear(e.sucursal),
     carta2: await crear(e.otraSucursal),
+    plan: await darleLaCartaAlPlan(c, e.empresa),
   };
 }
 

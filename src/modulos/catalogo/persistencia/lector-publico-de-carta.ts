@@ -1,6 +1,6 @@
 import { sql, type Kysely } from "kysely";
 import type { EstadoDeEmpresa, EstadoDeTenant } from "../../../contexto/estados";
-import { empresaId, sucursalId } from "../../../primitivas/identificadores/marca";
+import { empresaId, sucursalId, tenantId } from "../../../primitivas/identificadores/marca";
 import { ocultoPor } from "../dominio/carta-publica";
 import type {
   CartaLeida,
@@ -222,6 +222,8 @@ export function crearLecturaPublicaDeCartas(db: {
           sucursalId: sucursalDeLaCarta,
         },
         sucursalActiva: sucursal.activa,
+        empresaId: empresaId(empresa),
+        tenantId: tenantId(tenantFila.id),
         marcaId: tenantFila.marca_id,
         estadoDeLaEmpresa: estadoDe(COMO_ESTADO_DE_EMPRESA, empresaFila.estado),
         estadoDelTenant: estadoDe(COMO_ESTADO_DE_TENANT, tenantFila.estado),
