@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0374",
+  "fecha": "2026-11-14",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Anular un ticket con comprobante vigente (también «Confirmando») da TICKET_CON_COMPROBANTE_VIGENTE; con documento vigente y sin facturador cableado, falla cerrado.",
+  "que_cambia": "Antes anular un ticket facturado pasaba; ahora hay que acreditar la factura primero (e4:231). Criterio: sin facturador se rechaza, todo nace cerrado. Revertir: una línea.",
+  "donde": "src/modulos/ventas/casos-de-uso/comprobante-vigente-del-ticket.ts y anular-ticket.ts; test/integracion/ventas-anular-con-comprobante.test.ts; respuesta del dueño del 14/11/2026 (por el orquestador)"
+}

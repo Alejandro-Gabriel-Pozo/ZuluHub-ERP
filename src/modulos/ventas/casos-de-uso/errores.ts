@@ -55,6 +55,8 @@ export type ErrorDeVentas =
   | Readonly<{ error: "TICKET_YA_COBRADO"; cobranzaId: string }>
   /** E1: el ticket ya tiene un comprobante vigente en fiscal (la pantalla muestra ese comprobante). */
   | Readonly<{ error: "TICKET_YA_FACTURADO"; comprobanteId: string }>
+  /** E4 §3.8: el ticket tiene un comprobante vigente en fiscal (también «Confirmando»): no se anula hasta acreditarlo con una nota de crédito. */
+  | Readonly<{ error: "TICKET_CON_COMPROBANTE_VIGENTE"; comprobanteId: string }>
   /** E1: fiscal rechazó facturar (punto de venta, certificado, total, receptor…): `causa` es el error de fiscal ya traducido por la composición. */
   | Readonly<{ error: "FACTURACION_FALLIDA"; causa: ErrorDelFacturador }>
   | "FACTURACION_NO_DISPONIBLE"
