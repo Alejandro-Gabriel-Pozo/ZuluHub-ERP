@@ -21,6 +21,8 @@ import {
   MOTIVO_MESA_LIBERADA,
 } from "./cuenta-de-mesa";
 import type { ErrorDeSalon } from "./errores";
+import { accionesDeCaso } from "../../../capacidades/permisos/declaracion";
+import { DECLARACIONES } from "./declaraciones";
 
 type R<S> = Resultado<S, ErrorDeSalon>;
 
@@ -160,7 +162,7 @@ async function liberar(
 
 export function armarPedido(dependencias: DependenciasDeSalon) {
   const comando = armarComando(dependencias);
-  const tomarPedido = comando(["cuentas.abrir"], tomar);
+  const tomarPedido = comando(accionesDeCaso(DECLARACIONES.tomarPedido), tomar);
   return {
     /**
      * Dos mozos que tocan «Tomar pedido» a la vez en la misma mesa libre: la única de la base deja pasar a uno; el otro vuelve a pedir y recibe la
@@ -176,10 +178,10 @@ export function armarPedido(dependencias: DependenciasDeSalon) {
         : tomarPedido(contexto, entrada);
     },
     agregarAlPedido: comando(
-      ["cuentas.agregar_linea"],
+      accionesDeCaso(DECLARACIONES.agregarAlPedido),
       (tx, contexto, persona, entrada: EntradaDeAgregarAlPedido) =>
         agregar(tx, dependencias, contexto, persona, entrada),
     ),
-    liberarMesa: comando(["cuentas.anular"], liberar),
+    liberarMesa: comando(accionesDeCaso(DECLARACIONES.liberarMesa), liberar),
   };
 }

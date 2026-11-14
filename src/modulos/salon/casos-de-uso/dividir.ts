@@ -27,6 +27,8 @@ import {
   MOTIVO_TRASLADADA,
 } from "./cuenta-de-mesa";
 import type { ErrorDeSalon } from "./errores";
+import { accionesDeCaso } from "../../../capacidades/permisos/declaracion";
+import { DECLARACIONES } from "./declaraciones";
 
 type R<S> = Resultado<S, ErrorDeSalon>;
 
@@ -243,9 +245,6 @@ export function armarDivision(dependencias: DependenciasDeSalon) {
     },
   });
   return {
-    dividirCuenta: comando(
-      ["salon.dividir", "cuentas.abrir", "cuentas.anular_linea", "cuentas.agregar_linea"],
-      dividir,
-    ),
+    dividirCuenta: comando(accionesDeCaso(DECLARACIONES.dividirCuenta), dividir),
   };
 }

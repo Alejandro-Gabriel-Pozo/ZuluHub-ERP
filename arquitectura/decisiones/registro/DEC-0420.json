@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0420",
+  "fecha": "2026-11-14",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: la comanda dice el nombre de cocina (CYN 72), o el comercial si no hay; la línea de la cuenta lo congela al agregarse (columna nueva, opción A de la pregunta 2 de salón).",
+  "que_cambia": "Una columna nullable más en la línea de venta; las líneas anteriores quedan en NULL y siguen saliendo con el nombre comercial. Revertir: script de reversión de 0055 (borra lo congelado, medio día) o, sin migración, leer el nombre de cocina del producto al enviar.",
+  "donde": "migraciones/0055_salon_copias_y_nombre_de_cocina.sql; src/modulos/comandas/dominio/envio.ts (nombreParaLaCocina); test/integracion/comandas-nombre-de-cocina.test.ts; fuente: INTEGRACION.md §5 D3 y X3, catalogo-y-niveles-maqueta.md línea 569"
+}

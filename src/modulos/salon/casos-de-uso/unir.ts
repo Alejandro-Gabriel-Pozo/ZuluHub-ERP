@@ -17,6 +17,8 @@ import { armarComando, exigirAlcance, exigirClave, exigirUuid } from "./comun";
 import type { DependenciasDeSalon, TxDeSalon } from "./contrato";
 import { claseDeCuenta, MOTIVO_TRASLADADA } from "./cuenta-de-mesa";
 import type { ErrorDeSalon } from "./errores";
+import { accionesDeCaso } from "../../../capacidades/permisos/declaracion";
+import { DECLARACIONES } from "./declaraciones";
 
 type R<S> = Resultado<S, ErrorDeSalon>;
 
@@ -212,7 +214,7 @@ export function armarUnion(dependencias: DependenciasDeSalon) {
   };
   const comando = armarComando(dependenciasConReintentos);
   return {
-    unirMesas: comando(["salon.unir", "cuentas.anular_linea", "cuentas.agregar_linea"], unir),
+    unirMesas: comando(accionesDeCaso(DECLARACIONES.unirMesas), unir),
   };
 }
 

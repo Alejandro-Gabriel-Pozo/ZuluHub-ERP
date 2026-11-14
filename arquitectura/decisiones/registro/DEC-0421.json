@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0421",
+  "fecha": "2026-11-14",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: el guard de cada caso de salón y comandas exige exactamente lo que declara; anular parte de un ítem enviado exige las mismas acciones por las dos puertas.",
+  "que_cambia": "Con la matriz actual (gerente, administrador y operador pueden todas esas acciones) nadie gana ni pierde nada; si el dueño separa esas acciones por rol más adelante, el guard nunca exige menos de lo declarado. Revertir: sacar `tambien` de las declaraciones (una hora).",
+  "donde": "src/capacidades/permisos/declaracion.ts (accionesDeCaso); src/modulos/salon/casos-de-uso/declaraciones.ts; src/modulos/comandas/casos-de-uso/declaraciones.ts; pruebas de paridad en guard-primero.test.ts de ambos módulos; fuente: INTEGRACION.md §5 D4, salon.md D-7"
+}

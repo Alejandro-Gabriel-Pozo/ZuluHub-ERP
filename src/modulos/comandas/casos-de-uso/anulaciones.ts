@@ -32,6 +32,8 @@ import type { DependenciasDeComandas, TxDeComandas } from "./contrato";
 import type { ErrorDeComandas } from "./errores";
 import { crearTrabajoOriginalEnTx } from "./envios";
 import { copiarEstadoDeComandaEnTx } from "./lineas-de-comanda";
+import { accionesDeCaso } from "../../../capacidades/permisos/declaracion";
+import { DECLARACIONES } from "./declaraciones";
 
 type R<S> = Resultado<S, ErrorDeComandas>;
 
@@ -224,15 +226,21 @@ export async function anularItemEnviadoEnTx(
   });
 }
 
+/** El guard de un caso de esta puerta: exige lo que su declaración dice (`accionesDeCaso`), ni más ni menos. */
+const exigirLoDeclarado = (
+  tx: TxDeComandas,
+  contexto: ContextoOperativo,
+  dependencias: DependenciasDeComandas,
+  caso: "anularItemEnviado" | "quitarSinEnviar" | "cambiarSalida",
+) => prepararComando(tx, contexto, dependencias.reglas, accionesDeCaso(DECLARACIONES[caso]));
+
 async function anularItem(
   tx: TxDeComandas,
   dependencias: DependenciasDeComandas,
   contexto: ContextoOperativo,
   entrada: EntradaDeAnularItemEnviado,
 ): Promise<R<SalidaDeAnularItemEnviado>> {
-  const persona = await prepararComando(tx, contexto, dependencias.reglas, [
-    "cuentas.anular_linea",
-  ]);
+  const persona = await exigirLoDeclarado(tx, contexto, dependencias, "anularItemEnviado");
   if (!persona.ok) return persona;
   return anularItemEnviadoEnTx(tx, contexto, persona.valor, entrada);
 }
@@ -292,9 +300,7 @@ async function quitar(
   entrada: EntradaDeQuitarSinEnviar,
 ): Promise<R<SalidaDeQuitarSinEnviar>> {
   const { empresaId } = contexto;
-  const persona = await prepararComando(tx, contexto, dependencias.reglas, [
-    "cuentas.anular_linea",
-  ]);
+  const persona = await exigirLoDeclarado(tx, contexto, dependencias, "quitarSinEnviar");
   if (!persona.ok) return persona;
   const ids = exigirUuid(entrada.cuentaId, entrada.lineaId);
   if (!ids.ok) return ids;
@@ -350,9 +356,7 @@ async function cambiar(
   entrada: EntradaDeCambiarSalida,
 ): Promise<R<SalidaDeCambiarSalida>> {
   const { empresaId } = contexto;
-  const persona = await prepararComando(tx, contexto, dependencias.reglas, [
-    "cuentas.agregar_linea",
-  ]);
+  const persona = await exigirLoDeclarado(tx, contexto, dependencias, "cambiarSalida");
   if (!persona.ok) return persona;
   const ids = exigirUuid(entrada.cuentaId, entrada.lineaId);
   if (!ids.ok) return ids;

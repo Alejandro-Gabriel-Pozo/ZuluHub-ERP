@@ -6,8 +6,9 @@ const UNION = "test/integracion/salon-union.test.ts";
 const PEDIDO = "test/integracion/salon-pedido-y-cobro.test.ts";
 
 /**
- * Los casos de uso del salón (E7 §3.4) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar (ADR-015 §4) y la
- * prueba que lo fija. Los de pedido, cambio de mesa, cobro, unir y dividir se suman con su tramo.
+ * Los casos de uso del salón (E7 §3.4) y las acciones que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar (ADR-015 §4) y la
+ * prueba que lo fija. `accion` es la del módulo (X1) y `tambien` las de ventas y comandas que usa por dentro: el caso las lee de acá (`accionesDeCaso`), así que declaración y
+ * guard son la misma lista (la prueba de paridad es `guard-primero-de-salon-y-comandas.test.ts`).
  */
 export const DECLARACIONES = {
   crearMesa: {
@@ -51,8 +52,8 @@ export const DECLARACIONES = {
     },
   },
   tomarPedido: {
-    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `mesas.ver`; el caso exige las acciones reales de ventas y comandas que usa por dentro (ver su archivo) y la base las valida todas al principio.
     accion: "mesas.ver",
+    tambien: ["cuentas.abrir"],
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
@@ -62,8 +63,8 @@ export const DECLARACIONES = {
     },
   },
   agregarAlPedido: {
-    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `mesas.ver`; el caso exige las acciones reales de ventas y comandas que usa por dentro (ver su archivo) y la base las valida todas al principio.
     accion: "mesas.ver",
+    tambien: ["cuentas.agregar_linea"],
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
@@ -73,8 +74,8 @@ export const DECLARACIONES = {
     },
   },
   liberarMesa: {
-    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `mesas.ver`; el caso exige las acciones reales de ventas y comandas que usa por dentro (ver su archivo) y la base las valida todas al principio.
     accion: "mesas.ver",
+    tambien: ["cuentas.anular"],
     repeticion: {
       regla: "YA_ESTABA",
       prueba: {
@@ -94,8 +95,8 @@ export const DECLARACIONES = {
     },
   },
   cobrarMesa: {
-    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `mesas.ver`; el caso exige las acciones reales de ventas y comandas que usa por dentro (ver su archivo) y la base las valida todas al principio.
     accion: "mesas.ver",
+    tambien: ["cuentas.cerrar", "tickets.cobrar", "cuentas.anular"],
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
@@ -105,8 +106,8 @@ export const DECLARACIONES = {
     },
   },
   enviarACocina: {
-    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `mesas.ver`; el caso exige las acciones reales de ventas y comandas que usa por dentro (ver su archivo) y la base las valida todas al principio.
     accion: "mesas.ver",
+    tambien: ["comandas.enviar"],
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
@@ -116,8 +117,8 @@ export const DECLARACIONES = {
     },
   },
   pedirQueSalga: {
-    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `mesas.ver`; el caso exige las acciones reales de ventas y comandas que usa por dentro (ver su archivo) y la base las valida todas al principio.
     accion: "mesas.ver",
+    tambien: ["comandas.enviar"],
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
@@ -127,8 +128,8 @@ export const DECLARACIONES = {
     },
   },
   anularItemEnviado: {
-    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `mesas.ver`; el caso exige las acciones reales de ventas y comandas que usa por dentro (ver su archivo) y la base las valida todas al principio.
     accion: "mesas.ver",
+    tambien: ["comandas.enviar", "cuentas.anular_linea", "cuentas.agregar_linea"],
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
@@ -138,8 +139,8 @@ export const DECLARACIONES = {
     },
   },
   unirMesas: {
-    // La declaración admite UNA acción; el caso exige además `cuentas.anular_linea` y `cuentas.agregar_linea` (ver `unir.ts`).
     accion: "salon.unir",
+    tambien: ["cuentas.anular_linea", "cuentas.agregar_linea"],
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
@@ -149,8 +150,8 @@ export const DECLARACIONES = {
     },
   },
   dividirCuenta: {
-    // La declaración admite UNA acción; el caso exige además `cuentas.abrir`, `cuentas.anular_linea` y `cuentas.agregar_linea` (ver `dividir.ts`).
     accion: "salon.dividir",
+    tambien: ["cuentas.abrir", "cuentas.anular_linea", "cuentas.agregar_linea"],
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
