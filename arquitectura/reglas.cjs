@@ -376,6 +376,17 @@ const reglas = [
     to: { path: "^src/composicion/" },
   },
   {
+    // Previene: el registro de datos y los caminos pasaron a UN archivo por módulo (`registro-de-<módulo>.ts`, `caminos-de-<módulo>.ts`) para que dos ramas no choquen;
+    // si una pantalla o un test importara un fragmento directo, leería un pedazo sin el chequeo de ids repetidos entre fragmentos y "dónde se lee el registro" tendría
+    // dos respuestas. Chequeo: la violación inyectada de reglas.test.ts y `test/arquitectura/datos-por-modulo.test.ts`.
+    name: "datos-fragmentos-solo-desde-su-ensamblador",
+    severity: "error",
+    comment:
+      "Los fragmentos `registro-de-*.ts` y `caminos-de-*.ts` de src/capacidades/datos solo los importa su ensamblador (`registro.ts` y `caminos.ts`): todo el resto lee el registro y los caminos completos por ellos.",
+    from: { pathNot: "^src/capacidades/datos/(registro|caminos)\\.ts$" },
+    to: { path: "^src/capacidades/datos/(registro-de|caminos-de)-[^/]+\\.ts$" },
+  },
+  {
     name: "cliente-sin-servidor",
     severity: "error",
     comment:
