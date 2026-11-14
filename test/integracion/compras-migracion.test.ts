@@ -17,6 +17,7 @@ import type { BaseDePruebas } from "./global";
 import { baseConMigraciones, CARPETA_DE_MIGRACIONES } from "./marcas-apoyo";
 import { sembrarMarcaPrincipalDePrueba } from "./marcas-de-prueba";
 import type { SesionDePrueba } from "./sesiones";
+import { numeroUnico } from "./unicos";
 
 /**
  * La migración 0037 (E9 compras N1 y N2) contra una base real: RLS forzada y una política por comando, nada se borra, peso variable sin pesar (R1), «sin
@@ -312,7 +313,7 @@ describe.skipIf(base === null)("0037 compras: la migración contra una base real
         clase,
         tipo,
         1,
-        Math.floor(Math.random() * 9e7) + 1,
+        numeroUnico(),
         "2026-11-10",
         "100",
         "0",

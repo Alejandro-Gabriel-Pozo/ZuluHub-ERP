@@ -35,7 +35,7 @@ import {
   tokensDePrueba,
   type TxDeAltaDePrueba,
 } from "./altas-apoyo";
-import { crearBarrera, crearBaseAparte, crearEntornoDePrueba, cuitAlAzar } from "./entorno";
+import { crearBarrera, crearBaseAparte, crearEntornoDePrueba, cuitUnico } from "./entorno";
 import { crearInvitacionDeBase, emailAlAzar, incluirEmpresa } from "./fixtures-identidad";
 import { claveAlAzar } from "./plataforma-apoyo";
 import { plataformaEn } from "./soporte-datos";
@@ -273,7 +273,7 @@ describe.skipIf(base === null)("cancelar el alta y el barrido de altas vencidas"
       const mundo = await crearTenantConPlan(dueno, m, { empresasPorTenant: "5" });
       const enAlta = await dueno.query<{ id: string }>(
         "insert into empresa (tenant_id, cuit, razon_social) values ($1, $2, 'Vencida S.A.') returning id",
-        [mundo.tenant, cuitAlAzar()],
+        [mundo.tenant, cuitUnico()],
       );
       const vencida = {
         empresaId: enAlta.rows[0]?.id as string,

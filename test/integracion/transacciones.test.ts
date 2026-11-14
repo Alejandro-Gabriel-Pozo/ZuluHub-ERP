@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { sql } from "kysely";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
@@ -15,10 +14,11 @@ import {
   crearBaseAparte,
   crearEmpresaActiva,
   crearEntornoDePrueba,
-  cuitAlAzar,
-  nombreAlAzar,
+  cuitUnico,
+  nombreUnico,
   type EmpresaDePrueba,
 } from "./entorno";
+import { sufijoUnico } from "./unicos";
 
 const base = inject("baseDePruebas");
 
@@ -98,7 +98,7 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
 
   describe("resultado de negocio y atomicidad", () => {
     it("un error de negocio revierte todo y vuelve tal cual", async () => {
-      const nombre = nombreAlAzar("revertida");
+      const nombre = nombreUnico("revertida");
       const r = await entorno.ejecutar(
         { contexto: comoEmpresa(a.empresa) },
         async ({ sucursales }) => {
@@ -115,7 +115,7 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
     });
 
     it("si algo falla a mitad de camino, no queda nada a medias", async () => {
-      const nombre = nombreAlAzar("a-medias");
+      const nombre = nombreUnico("a-medias");
       const r = await entorno.ejecutar(
         { contexto: comoEmpresa(a.empresa) },
         async ({ sucursales, db }) => {
@@ -135,8 +135,8 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
     });
 
     it("si el trabajo atrapa un error de la base y devuelve ok, no se informa éxito: Inesperado 25P02 y nada persiste", async () => {
-      const antes = nombreAlAzar("antes-del-error");
-      const repetida = nombreAlAzar("repetida");
+      const antes = nombreUnico("antes-del-error");
+      const repetida = nombreUnico("repetida");
       const r = await entorno.ejecutar(
         { contexto: comoEmpresa(a.empresa) },
         async ({ sucursales, db }) => {
@@ -193,7 +193,7 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
   });
 
   describe("errores de la base, con nombre", () => {
-    const comoAltaDeEmpresa = (tenant: string, cuit: string, razon = nombreAlAzar("e")) =>
+    const comoAltaDeEmpresa = (tenant: string, cuit: string, razon = nombreUnico("e")) =>
       entorno.ejecutar({ contexto: comoPlataforma() }, async ({ db }) => {
         await sql`insert into empresa (tenant_id, cuit, razon_social) values (${tenant}, ${cuit}, ${razon})`.execute(
           db,
@@ -224,12 +224,10 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
     });
 
     it("23503 → Referencia: empresa de un tenant que no existe", async () => {
-      expect(await comoAltaDeEmpresa("00000000-0000-4000-8000-000000000000", cuitAlAzar())).toEqual(
-        {
-          ok: false,
-          error: { tipo: "Referencia", restriccion: "empresa_tenant_id_fkey" },
-        },
-      );
+      expect(await comoAltaDeEmpresa("00000000-0000-4000-8000-000000000000", cuitUnico())).toEqual({
+        ok: false,
+        error: { tipo: "Referencia", restriccion: "empresa_tenant_id_fkey" },
+      });
     });
 
     it("la empresa no se reasigna a otro tenant", async () => {
@@ -245,7 +243,7 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
       const r = await entorno.ejecutar(
         { contexto: comoEmpresa(a.empresa), soloLectura: true },
         async ({ sucursales }) => {
-          await sucursales.crear(a.empresa, nombreAlAzar("no-debe"));
+          await sucursales.crear(a.empresa, nombreUnico("no-debe"));
           return ok(null);
         },
       );
@@ -281,7 +279,7 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
      * completo y la repetición ya ve la fila de la otra.
      */
     async function carrera(reintentos?: number) {
-      const prefijo = nombreAlAzar("unica");
+      const prefijo = nombreUnico("unica");
       const encuentro = crearBarrera(2);
       let intentos = 0;
       const intentar = (sufijo: string) =>
@@ -374,8 +372,8 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
      * El deadlock es un problema de bloqueos de fila, igual en ambos niveles.
      */
     it("deadlock (40P01): el motor aborta una, el adaptador repite el trabajo y ambas terminan ok", async () => {
-      const par = await crearEmpresaActiva(propio, { nombreDeSucursal: nombreAlAzar("s1") });
-      const s2 = nombreAlAzar("s2");
+      const par = await crearEmpresaActiva(propio, { nombreDeSucursal: nombreUnico("s1") });
+      const s2 = nombreUnico("s2");
       const filas = await propio.ejecutar(
         { contexto: comoEmpresa(par.empresa) },
         async ({ sucursales }) => {
@@ -396,7 +394,7 @@ describe.skipIf(base === null)("Transacciones sobre Postgres (ADR-004)", () => {
             intentos[quien] += 1;
             const intento = intentos[quien];
             const renombrar = (id: string, paso: number) =>
-              sql`update sucursal set nombre = ${`${quien}-${intento}-${paso}-${randomBytes(3).toString("hex")}`}
+              sql`update sucursal set nombre = ${`${quien}-${intento}-${paso}-${sufijoUnico()}`}
                 where id = ${id}`.execute(db);
             await renombrar(orden[0], 1);
             if (intento === 1) await encuentro();

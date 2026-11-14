@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type pg from "pg";
 import { AHORA_DE_PRUEBA } from "./entorno";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Datos de identidad para las pruebas de integración (H3). Todo se arma con el cliente del DUEÑO de
@@ -12,8 +13,7 @@ import { AHORA_DE_PRUEBA } from "./entorno";
 export const hashDeToken = (token: string): string =>
   createHash("sha256").update(token).digest("hex");
 
-export const emailAlAzar = (prefijo = "u"): string =>
-  `${prefijo}-${randomBytes(5).toString("hex")}@prueba.test`;
+export const emailAlAzar = (prefijo = "u"): string => `${prefijo}-${sufijoUnico()}@prueba.test`;
 
 /** Un token al azar y su hash: la base nunca ve el token. */
 export const tokenAlAzar = (): { token: string; tokenHash: string } => {

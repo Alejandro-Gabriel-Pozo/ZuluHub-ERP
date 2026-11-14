@@ -30,6 +30,7 @@ import {
   marcaPrincipal,
   publicarVersionDePlan,
 } from "./marcas-apoyo";
+import { referenciaDeErrorUnica } from "./unicos";
 
 /**
  * Marcas y planes (M3), migración 0007: las reglas que la base impone tabla por tabla, AUN contra el dueño
@@ -1502,7 +1503,7 @@ describe.skipIf(base === null)("marcas y planes: las reglas de la base", () => {
   describe("referencia_de_error_referencia_uk", () => {
     it("la referencia no se repite: la segunda igual choca con la única", async () => {
       await deshacer(async () => {
-        const referenciaNueva = `PD-${randomUUID().slice(0, 4).toUpperCase()}-${randomUUID().slice(0, 4).toUpperCase()}`;
+        const referenciaNueva = referenciaDeErrorUnica();
         const insertar = () =>
           q(
             "insert into referencia_de_error (referencia, accion, motivo) values ($1, 'a.b', 'X')",

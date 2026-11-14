@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type pg from "pg";
 import { productoDeBase } from "./catalogo-apoyo";
 import type { Mundo } from "./fiscal-apoyo";
+import { numeroUnico } from "./unicos";
 
 /** Armado de escenarios de compras con SQL del dueño (lo que se prueba pasa por el rol de la aplicación): un proveedor, un producto y datos de una compra. */
 
@@ -91,7 +92,7 @@ export async function comprobanteDeBase(
         proveedor,
         tipo,
         extra.puntoDeVenta ?? 1,
-        extra.numero ?? Math.floor(Math.random() * 90_000_000) + 1,
+        extra.numero ?? numeroUnico(),
         claveDeCompra(),
         huellaAlAzar(),
         m.persona,

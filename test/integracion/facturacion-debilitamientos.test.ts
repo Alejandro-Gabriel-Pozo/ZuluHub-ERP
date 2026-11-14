@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
-import { cuitAlAzar, crearBaseAparte } from "./entorno";
+import { cuitUnico, crearBaseAparte } from "./entorno";
 import { crearPuntoDeVenta } from "./fiscal-apoyo";
 import {
   asegurarSerie,
@@ -227,7 +227,7 @@ describe.skipIf(base === null)("facturación: debilitamientos propios de la migr
         )) &&
         (await rechaza(ej, "update comprobante set emisor_cuit = $2 where id = $1", [
           id,
-          cuitAlAzar(),
+          cuitUnico(),
         ]))
       );
     },
@@ -609,9 +609,8 @@ describe.skipIf(base === null)("facturación: debilitamientos propios de la migr
           datosDeComprobante(e, { emisor_razon_social: "Otra SA" }),
         )
       ).ok &&
-      !(
-        await insertarComprobante(viaDueno(c), datosDeComprobante(e, { emisor_cuit: cuitAlAzar() }))
-      ).ok,
+      !(await insertarComprobante(viaDueno(c), datosDeComprobante(e, { emisor_cuit: cuitUnico() })))
+        .ok,
     /** Una nota solo sobre un comprobante AUTORIZADO. */
     notaSoloSobreAutorizado: async (c) =>
       !(

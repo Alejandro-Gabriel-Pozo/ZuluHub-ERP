@@ -23,7 +23,7 @@ import {
   crearBarrera,
   crearBaseAparte,
   crearEntornoDePrueba,
-  cuitAlAzar,
+  cuitUnico,
 } from "./entorno";
 import {
   acepta,
@@ -673,7 +673,7 @@ describe.skipIf(base === null)("fiscal: concurrencia de lo que impone la 0006", 
         for (const primero of ["emisor", "empresa"] as const) {
           for (let i = 0; i < 4; i++) {
             const m = await crearMundo(dueno);
-            const cuit = cuitAlAzar();
+            const cuit = cuitUnico();
             const s1 = await plataforma(aislamiento);
             const s2 = await plataforma(aislamiento);
             const altaDeEmisor = (s: SesionDePrueba) =>
@@ -737,7 +737,7 @@ describe.skipIf(base === null)("fiscal: concurrencia de lo que impone la 0006", 
       const secundario = (
         await dueno.query<{ id: string }>(
           "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-          [m.empresa, cuitAlAzar()],
+          [m.empresa, cuitUnico()],
         )
       ).rows[0]?.id as string;
       const domicilio = await crearDomicilio(dueno, m.empresa);
@@ -850,7 +850,7 @@ describe.skipIf(base === null)("fiscal: concurrencia de lo que impone la 0006", 
 
     it("corregir el CUIT del emisor MIENTRAS se reserva su serie: o cambia antes, o se rechaza", async () => {
       for (let i = 0; i < 4; i++) {
-        const nuevoCuit = cuitAlAzar();
+        const nuevoCuit = cuitUnico();
         // (a) La reserva va primero: el cambio de CUIT espera el bloqueo del emisor y se rechaza.
         const a = await armar();
         const reserva = await app(a);
@@ -899,7 +899,7 @@ describe.skipIf(base === null)("fiscal: concurrencia de lo que impone la 0006", 
     });
 
     it("lo mismo con el CUIT de la empresa (el del emisor principal)", async () => {
-      const nuevoCuit = cuitAlAzar();
+      const nuevoCuit = cuitUnico();
       const a = await armar();
       const reserva = await app(a);
       const cambio = await plataforma();
