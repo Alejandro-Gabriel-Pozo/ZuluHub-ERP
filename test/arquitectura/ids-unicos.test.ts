@@ -157,30 +157,41 @@ const PERMITIDOS: Readonly<Record<string, Readonly<{ usos: number; motivo: strin
   },
 };
 
+/**
+ * Recorre y analiza con el compilador TODAS las pruebas de integración (más de mil archivos): ~3 s solo y más de 5 s con el CI cargado, y el
+ * tiempo por defecto de Vitest (5 s) lo cortaba (caso real: #310, 14/11/2026, «Test timed out in 5000ms»). El barrido no depende de la red ni
+ * de la base: el límite es holgado a propósito y no sube el costo de ninguna otra prueba.
+ */
+const TIEMPO_DEL_BARRIDO = 60_000;
+
 describe("ids únicos: todo valor único de la integración sale del generador común", () => {
   const propios = archivos(CARPETA).filter((r) => r !== GENERADOR);
 
-  it("nadie sortea un valor único: solo queda lo permitido, con su cuenta exacta", () => {
-    const porArchivo = new Map<string, UsoDebil[]>();
-    for (const ruta of propios) {
-      const usos = usosDebilesDeUnicidad(ruta, readFileSync(ruta, "utf8"));
-      if (usos.length > 0) porArchivo.set(relative(CARPETA, ruta), usos);
-    }
-    const sobran = [...porArchivo.entries()]
-      .map(([archivo, usos]) => ({
-        archivo,
-        usos: usos.length > (PERMITIDOS[archivo]?.usos ?? 0) ? usos : [],
-      }))
-      .filter((x) => x.usos.length > 0);
-    expect(
-      sobran,
-      "usos prohibidos (usá `cuitUnico`, `numeroUnico`, `sufijoUnico`, `nombreUnico`, `correoUnico` de `test/integracion/unicos.ts`)",
-    ).toEqual([]);
-    // Y la lista no se pudre: cada permitido sigue teniendo exactamente su cuenta.
-    for (const [archivo, { usos }] of Object.entries(PERMITIDOS)) {
-      expect(porArchivo.get(archivo)?.length ?? 0, `${archivo}: la cuenta permitida`).toBe(usos);
-    }
-  });
+  it(
+    "nadie sortea un valor único: solo queda lo permitido, con su cuenta exacta",
+    () => {
+      const porArchivo = new Map<string, UsoDebil[]>();
+      for (const ruta of propios) {
+        const usos = usosDebilesDeUnicidad(ruta, readFileSync(ruta, "utf8"));
+        if (usos.length > 0) porArchivo.set(relative(CARPETA, ruta), usos);
+      }
+      const sobran = [...porArchivo.entries()]
+        .map(([archivo, usos]) => ({
+          archivo,
+          usos: usos.length > (PERMITIDOS[archivo]?.usos ?? 0) ? usos : [],
+        }))
+        .filter((x) => x.usos.length > 0);
+      expect(
+        sobran,
+        "usos prohibidos (usá `cuitUnico`, `numeroUnico`, `sufijoUnico`, `nombreUnico`, `correoUnico` de `test/integracion/unicos.ts`)",
+      ).toEqual([]);
+      // Y la lista no se pudre: cada permitido sigue teniendo exactamente su cuenta.
+      for (const [archivo, { usos }] of Object.entries(PERMITIDOS)) {
+        expect(porArchivo.get(archivo)?.length ?? 0, `${archivo}: la cuenta permitida`).toBe(usos);
+      }
+    },
+    TIEMPO_DEL_BARRIDO,
+  );
 
   it("el generador común es el único que puede tener azar de valores únicos, y no lo usa: sus rangos son por puesto", () => {
     expect(usosDebilesDeUnicidad(GENERADOR, readFileSync(GENERADOR, "utf8"))).toEqual([]);
