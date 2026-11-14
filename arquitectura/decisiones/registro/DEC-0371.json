@@ -1,10 +1,10 @@
 {
   "id": "DEC-0371",
   "fecha": "2026-11-14",
-  "quien": "sesión",
+  "quien": "dueño",
   "tipo": "DATOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Las fracciones se ofrecen solo en productos «por unidad» (unidad de venta = la base, de conteo); el peso usa otra unidad de masa con paso a mano, sin fracciones.",
   "que_cambia": "La base rechaza porciones en un producto de masa, volumen o con otra unidad de venta. Revertir: quitar una restricción (producto_porciones_unidad_ck), una migración chica.",
-  "donde": "migraciones/0051_porciones_del_producto.sql; src/modulos/catalogo/dominio/porciones.ts (fraccionesAdmitidasEn); porciones.md y forma-de-venta-unidad-y-paso-minimo.md"
+  "donde": "migraciones/0051_porciones_del_producto.sql; src/modulos/catalogo/dominio/porciones.ts (fraccionesAdmitidasEn); porciones.md y forma-de-venta-unidad-y-paso-minimo.md; aprobada por el dueño el 14/11/2026 (respuesta registrada por el orquestador)"
 }
