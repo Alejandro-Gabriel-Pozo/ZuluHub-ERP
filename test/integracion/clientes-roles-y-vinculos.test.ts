@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import { codigoDe } from "./concurrencia-apoyo";
-import { cuitAlAzar } from "./entorno";
+import { cuitUnico } from "./entorno";
 import {
   montarClientes,
-  nombreAlAzar,
+  nombreUnico,
   nuevoId,
   valorDe,
   RONDAS,
@@ -38,7 +38,7 @@ describe.skipIf(base === null)("clientes: roles, vínculos, consultas y puertos"
       await c.casos.crearParte(quien, {
         idempotencia: nuevoId(),
         naturaleza: "HUMANA",
-        nombre: nombreAlAzar("Ana"),
+        nombre: nombreUnico("Ana"),
         apellido: "López",
         roles: [],
         ...extra,
@@ -49,7 +49,7 @@ describe.skipIf(base === null)("clientes: roles, vínculos, consultas y puertos"
       await c.casos.crearParte(quien, {
         idempotencia: nuevoId(),
         naturaleza: "JURIDICA",
-        nombre: nombreAlAzar("Empresa"),
+        nombre: nombreUnico("Empresa"),
         roles: ["PROVEEDOR"],
         ...extra,
       }),
@@ -280,8 +280,8 @@ describe.skipIf(base === null)("clientes: roles, vínculos, consultas y puertos"
   describe("consultas", () => {
     it("buscarPartes: el documento idéntico primero, luego los nombres que empiezan y al final los que contienen", async () => {
       const otra = await c.escenario();
-      const cuit = cuitAlAzar();
-      const marca = nombreAlAzar("Zzquesos").replace(/\s.*/, "");
+      const cuit = cuitUnico();
+      const marca = nombreUnico("Zzquesos").replace(/\s.*/, "");
       const contiene = await empresa({ nombre: `La ${marca} del Sur`, documento: undefined });
       const empieza = await empresa({ nombre: `${marca} Argentinos SA`, documento: undefined });
       const idéntico = await empresa({
@@ -302,7 +302,7 @@ describe.skipIf(base === null)("clientes: roles, vínculos, consultas y puertos"
     });
 
     it("buscarPartes: sin tildes ni mayúsculas, por rol, y las desactivadas solo si se piden", async () => {
-      const marca = nombreAlAzar("Panadería").replace(/\s.*/, "");
+      const marca = nombreUnico("Panadería").replace(/\s.*/, "");
       const proveedor = await empresa({ nombre: `${marca} Pérez`, roles: ["PROVEEDOR"] });
       const cliente = await empresa({ nombre: `${marca} Gómez`, roles: ["CUSTOMER"] });
       const buscar = async (entrada: Record<string, unknown>) =>
@@ -321,7 +321,7 @@ describe.skipIf(base === null)("clientes: roles, vínculos, consultas y puertos"
     });
 
     it("buscarPartes: un texto con comodines de LIKE se busca tal cual; la paginación sigue por la última parte vista", async () => {
-      const marca = nombreAlAzar("Pag").replace(/\s.*/, "");
+      const marca = nombreUnico("Pag").replace(/\s.*/, "");
       const ids: string[] = [];
       for (const sufijo of ["a", "b", "c"])
         ids.push(await empresa({ nombre: `${marca} ${sufijo}` }));
@@ -355,8 +355,8 @@ describe.skipIf(base === null)("clientes: roles, vínculos, consultas y puertos"
     });
 
     it("fichaDeParte: la ficha con sus roles y vínculos; una parte de otra empresa es indistinguible de una inexistente", async () => {
-      const de = await empresa({ nombre: nombreAlAzar("Ficha"), roles: ["PROVEEDOR", "CUSTOMER"] });
-      const contacto = await persona({ nombre: nombreAlAzar("Contacto") });
+      const de = await empresa({ nombre: nombreUnico("Ficha"), roles: ["PROVEEDOR", "CUSTOMER"] });
+      const contacto = await persona({ nombre: nombreUnico("Contacto") });
       valorDe(
         await c.casos.vincularContacto(e.operador, {
           contactoId: contacto,
@@ -408,7 +408,7 @@ describe.skipIf(base === null)("clientes: roles, vínculos, consultas y puertos"
         [igual, ["EMAIL", "TELEFONO", "NOMBRE"]],
       ]);
       expect(
-        valorDe(await c.consultas.posiblesDuplicados(e.operador, { nombre: nombreAlAzar("Nada") })),
+        valorDe(await c.consultas.posiblesDuplicados(e.operador, { nombre: nombreUnico("Nada") })),
       ).toEqual([]);
     });
 
@@ -450,7 +450,7 @@ describe.skipIf(base === null)("clientes: roles, vínculos, consultas y puertos"
       const entrada = {
         idempotencia: nuevoId(),
         naturaleza: "JURIDICA",
-        nombre: nombreAlAzar("Nuevo proveedor"),
+        nombre: nombreUnico("Nuevo proveedor"),
         roles: ["PROVEEDOR"],
       };
       const crear = (contexto = e.operador) =>
@@ -468,7 +468,7 @@ describe.skipIf(base === null)("clientes: roles, vínculos, consultas y puertos"
       const entrada = {
         idempotencia: nuevoId(),
         naturaleza: "JURIDICA",
-        nombre: nombreAlAzar("Se revierte"),
+        nombre: nombreUnico("Se revierte"),
         roles: ["PROVEEDOR"],
       };
       const antes = await c.contar("select count(*) as n from parte where empresa_id = $1", [
@@ -487,7 +487,7 @@ describe.skipIf(base === null)("clientes: roles, vínculos, consultas y puertos"
 
     it("completarDocumentoEnTx: guarda el CUIT de la primera factura; repetirlo es yaEstaba; otro documento no se pisa; uno ocupado da el id", async () => {
       const sinDocumento = await empresa({ documento: undefined });
-      const cuit = cuitAlAzar();
+      const cuit = cuitUnico();
       const completar = (parteId: string, numero: string, version = 1, condicionIva?: string) =>
         c.entorno.ejecutar({ contexto: e.operador }, async (tx) =>
           c.registro.completarDocumentoEnTx(tx, e.operador, REGLAS_DE_EMPRESA, {
@@ -510,7 +510,7 @@ describe.skipIf(base === null)("clientes: roles, vínculos, consultas y puertos"
         version: 2,
         yaEstaba: true,
       });
-      expect(await completar(sinDocumento, cuitAlAzar(), 2)).toEqual({
+      expect(await completar(sinDocumento, cuitUnico(), 2)).toEqual({
         ok: false,
         error: "PARTE_CON_OTRO_DOCUMENTO",
       });
@@ -525,7 +525,7 @@ describe.skipIf(base === null)("clientes: roles, vínculos, consultas y puertos"
     it("C6: dos primeras facturas del mismo proveedor sin CUIT, con CUIT distintos: uno guarda el suyo y el otro PARTE_CON_OTRO_DOCUMENTO", async () => {
       for (let ronda = 0; ronda < RONDAS; ronda++) {
         const sinDocumento = await empresa({ documento: undefined });
-        const cuits = [cuitAlAzar(), cuitAlAzar()];
+        const cuits = [cuitUnico(), cuitUnico()];
         c.armarBarrera(2);
         try {
           const resultados = await Promise.all(

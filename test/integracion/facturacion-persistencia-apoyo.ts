@@ -65,6 +65,7 @@ import {
 import { comoEmpresa } from "./entorno";
 import type { Escenario } from "./facturacion-apoyo";
 import type { BaseDePruebas } from "./global";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de la persistencia de la facturación (F3). Lo que recibe un trabajo de prueba es lo
@@ -375,7 +376,7 @@ export function pedidoDe(
     empresaId: empresaId(e.empresa),
     emisorId: emisorId(e.emisor),
     ambiente: "HOMOLOGACION",
-    alias: `pedernal${randomBytes(4).toString("hex")}`,
+    alias: `pedernal${sufijoUnico()}`,
     cuitTitular: e.cuit as Cuit,
     pedidoPem: PEDIDO_PEM,
     clave: claveCifradaAlAzar(),

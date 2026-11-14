@@ -47,7 +47,7 @@ import {
   tenantId,
 } from "../../src/primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../src/primitivas/resultado/resultado";
-import { cuitAlAzar } from "./entorno";
+import { cuitUnico } from "./entorno";
 import {
   crearDomicilio,
   crearMundo,
@@ -96,7 +96,7 @@ function exito<T, E>(r: Resultado<T, E>): T {
   return r.valor;
 }
 
-const cuitValido = (): Cuit => cuitAlAzar();
+const cuitValido = (): Cuit => cuitUnico();
 
 describe.skipIf(base === null)("fiscal T4: la persistencia contra una base real", () => {
   let dueno: pg.Client;

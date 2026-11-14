@@ -1,4 +1,6 @@
 import { randomBytes } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import pg from "pg";
 import type { TestProject } from "vitest/node";
@@ -42,6 +44,8 @@ export type BaseDePruebas = Readonly<{
 declare module "vitest" {
   export interface ProvidedContext {
     baseDePruebas: BaseDePruebas | null;
+    /** La carpeta de reservas de valores únicos de la corrida (`unicos.ts`): un puesto por archivo de pruebas. `null` sin corrida de integración. */
+    reservaDeUnicos: string | null;
   }
 }
 
@@ -73,6 +77,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
   // La mutación corre solo las pruebas sin base: lo indica con esta variable.
   if (process.env["PEDERNAL_SIN_INTEGRACION"] === "1") {
     project.provide("baseDePruebas", null);
+    project.provide("reservaDeUnicos", null);
     return () => Promise.resolve();
   }
   if (urlAdmin === undefined || urlAdmin === "") {
@@ -82,10 +87,14 @@ export default async function setup(project: TestProject): Promise<() => Promise
       );
     }
     project.provide("baseDePruebas", null);
+    project.provide("reservaDeUnicos", null);
     return () => Promise.resolve();
   }
 
-  const nombre = `pedernal_it_${randomBytes(6).toString("hex")}`;
+  // Una carpeta de reservas por corrida: cada archivo de pruebas toma en ella un puesto de valores únicos (`unicos.ts`).
+  const reservaDeUnicos = mkdtempSync(join(tmpdir(), "pedernal-unicos-"));
+  project.provide("reservaDeUnicos", reservaDeUnicos);
+  const nombre = `pedernal_it_${randomBytes(8).toString("hex")}`;
   const admin = new pg.Client({ connectionString: urlAdmin });
   await admin.connect();
   await admin.query(`CREATE DATABASE ${nombre} ${OPCIONES_DE_BASE}`);
@@ -120,6 +129,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
   });
 
   return async () => {
+    rmSync(reservaDeUnicos, { recursive: true, force: true });
     for (const rol of ROLES) await admin.query(`ALTER ROLE pedernal_${rol} NOLOGIN`);
     await admin.query(`DROP DATABASE ${nombre} WITH (FORCE)`);
     await admin.end();

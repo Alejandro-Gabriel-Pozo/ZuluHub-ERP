@@ -45,7 +45,7 @@ import {
   tokensDePrueba,
   type TxDeAltaDePrueba,
 } from "./altas-apoyo";
-import { crearBaseAparte, crearEntornoDePrueba, cuitAlAzar } from "./entorno";
+import { crearBaseAparte, crearEntornoDePrueba, cuitUnico } from "./entorno";
 import { emailAlAzar } from "./fixtures-identidad";
 import {
   ajustarPerilla,
@@ -824,7 +824,7 @@ describe.skipIf(base === null)("alta de empresa: casos de uso contra Postgres", 
 
     it("los mismos datos escritos de otra forma (CUIT con guiones, email en mayúsculas, espacios) son el mismo pedido", async () => {
       const m = await crearMarcaLista(dueno);
-      const cuit = cuitAlAzar();
+      const cuit = cuitUnico();
       const entrada = altaNueva(m.marca, {
         cuit,
         emailGerente: "g@acme.com",
@@ -843,7 +843,7 @@ describe.skipIf(base === null)("alta de empresa: casos de uso contra Postgres", 
     });
 
     it.each([
-      ["otro CUIT", { cuit: cuitAlAzar() }],
+      ["otro CUIT", { cuit: cuitUnico() }],
       ["otro email del gerente", { emailGerente: "otro@gerente.test" }],
       ["otra razón social", { razonSocial: "Otra S.A." }],
       ["otra zona horaria", { zonaHoraria: "America/Argentina/Cordoba" }],

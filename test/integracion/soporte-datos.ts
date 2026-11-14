@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type pg from "pg";
 import type { ContextoDePlataforma } from "../../src/contexto/contexto";
 import type { EstadoDeEmpresa } from "../../src/contexto/estados";
-import { cuitAlAzar, nombreAlAzar } from "./entorno";
+import { cuitUnico, nombreUnico } from "./entorno";
 import { ADMIN_DE_PRUEBA } from "./admins-de-prueba";
 
 /**
@@ -23,7 +23,7 @@ export async function sembrarTenant(
 ): Promise<string> {
   const { rows } = await c.query<{ id: string }>(
     "insert into tenant (nombre) values ($1) returning id",
-    [opciones.nombre ?? nombreAlAzar("tenant")],
+    [opciones.nombre ?? nombreUnico("tenant")],
   );
   const id = rows[0]?.id as string;
   if (opciones.suspendido === true) {
@@ -48,7 +48,7 @@ export async function sembrarEmpresa(
   const estado = opciones.estado ?? "ACTIVE";
   const { rows } = await c.query<{ id: string }>(
     "insert into empresa (tenant_id, cuit, razon_social) values ($1, $2, $3) returning id",
-    [tenant, cuitAlAzar(), opciones.razonSocial ?? nombreAlAzar("empresa")],
+    [tenant, cuitUnico(), opciones.razonSocial ?? nombreUnico("empresa")],
   );
   const id = rows[0]?.id as string;
   if (estado === "ACTIVE" || estado === "SUSPENDED" || estado === "DELETING") {

@@ -36,6 +36,7 @@ import type {
 import type { AuditoriaDeIngresoDePlataforma } from "../../src/puertos/segundo-factor-de-autenticacion";
 import { Navegador, type PerfilDePrueba, type ProveedorLocal } from "./autenticacion-ingreso-apoyo";
 import type { BaseDePruebas } from "./global";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de la consola de plataforma (P8a): la autenticación de plataforma armada sobre la base de la
@@ -140,7 +141,7 @@ export async function altaDeAdmin(
   dueno: pg.Client,
   opciones: { rol?: "ADMIN" | "SOPORTE"; activo?: boolean } = {},
 ): Promise<AdminDePrueba> {
-  const email = `admin-${randomUUID().slice(0, 8)}@ejemplo.test`;
+  const email = `admin-${sufijoUnico()}@ejemplo.test`;
   const { rows } = await dueno.query<{ id: string }>(
     `insert into admin_plataforma (id, email, rol, activo) values ($1, $2, $3, $4) returning id`,
     [identificadorQueElTapadoNoToca(), email, opciones.rol ?? "ADMIN", opciones.activo ?? true],

@@ -13,7 +13,7 @@ import {
   type TxDeAltaDePrueba,
 } from "./altas-apoyo";
 import { esConcurrenciaAgotada } from "./concurrencia-apoyo";
-import { crearBarrera, crearBaseAparte, cuitAlAzar } from "./entorno";
+import { crearBarrera, crearBaseAparte, cuitUnico } from "./entorno";
 import { emailAlAzar } from "./fixtures-identidad";
 import { claveAlAzar } from "./plataforma-apoyo";
 
@@ -276,7 +276,7 @@ describe.skipIf(base === null)("alta de empresa: concurrencia", () => {
         const { entorno, casos } = conBarrera(participantes, "consultar");
         try {
           const m = await crearMarcaLista(dueno);
-          const cuit = cuitAlAzar();
+          const cuit = cuitUnico();
           const rs = await Promise.all(
             Array.from({ length: participantes }, () =>
               casos.altaDeEmpresa(comoAdminAhora(), altaNueva(m.marca, { cuit })),

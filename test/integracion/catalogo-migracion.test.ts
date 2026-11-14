@@ -34,6 +34,7 @@ import {
   huellaDeCatalogo,
 } from "./marcas-apoyo";
 import { sembrarMarcaPrincipalDePrueba } from "./marcas-de-prueba";
+import { sufijoUnico } from "./unicos";
 
 /**
  * La migración 0025 (E2 mínimo: el catálogo). Se prueba contra una base real, con el rol de la aplicación y el dueño: las tablas nacen con
@@ -323,7 +324,7 @@ describe.skipIf(base === null)("0025 catálogo: la migración contra una base re
          values ($1, $2, $3, $4, $5, 'BIEN', $6, 'UNIDAD', 'CONTEO', 'UNIDAD', $7, $8, false)`,
         [
           m.empresa,
-          `Prueba ${randomUUID().slice(0, 8)}`.replace(/[0-9]/g, "x"),
+          `Prueba ${sufijoUnico()}`.replace(/[0-9]/g, "x"),
           randomUUID(),
           extra["cocina"] ?? null,
           extra["descripcion"] ?? null,
@@ -548,12 +549,7 @@ describe.skipIf(base === null)("0025 catálogo: la migración contra una base re
           intento(
             `insert into producto (empresa_id, nombre, nombre_clave, ${campo}, tipo, clase_de_uso, unidad_base_id, dimension, unidad_de_venta_id)
              values ($1, $2, $3, $4, 'BIEN', 'INSUMO', 'UNIDAD', 'CONTEO', 'UNIDAD')`,
-            [
-              m.empresa,
-              `Otro ${randomUUID().slice(0, 6)}`.replace(/[0-9]/g, "z"),
-              randomUUID(),
-              valor,
-            ],
+            [m.empresa, `Otro ${sufijoUnico()}`.replace(/[0-9]/g, "z"), randomUUID(), valor],
           );
         acepta(await insertarCon("codigo", "ABC-1"));
         clave(await insertarCon("codigo", "ABC-1"), "producto_codigo_uk");
@@ -623,12 +619,7 @@ describe.skipIf(base === null)("0025 catálogo: la migración contra una base re
           intento(
             `insert into grupo_de_elecciones (empresa_id, producto_id, clase, nombre, nombre_clave, es_obligatorio, admite_varias, se_muestra_en_carta, es_tamano, orden)
              values ($1, $2, 'VARIANTE', $3, $4, ${extra}, 0)`,
-            [
-              m.empresa,
-              producto,
-              `V${randomUUID().slice(0, 5)}`.replace(/[0-9]/g, "q"),
-              randomUUID(),
-            ],
+            [m.empresa, producto, `V${sufijoUnico()}`.replace(/[0-9]/g, "q"), randomUUID()],
           );
         check(await variante("false, false, true, false"), "grupo_de_elecciones_variante_ck");
         check(await variante("true, true, true, false"), "grupo_de_elecciones_variante_ck");

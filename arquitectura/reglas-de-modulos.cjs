@@ -1,7 +1,7 @@
 /**
  * Reglas de dependencia entre módulos de negocio (E0-T5, e0 §3.6.2), en archivo propio para que `reglas.cjs`
  * (sobre el tope de líneas del libro de deuda) no crezca; `reglas.cjs` las reparte con un spread.
- * Las rutas son relativas a la raíz del repositorio. Todas con severidad `error` y su violación inyectada
+ * También la de los fragmentos del registro de datos y de los caminos (`src/capacidades/datos`), que se ensamblan en un solo lugar. Las rutas son relativas a la raíz del repositorio. Todas con severidad `error` y su violación inyectada
  * en `test/arquitectura/reglas.test.ts`.
  */
 
@@ -136,5 +136,16 @@ module.exports = [
       "E0-T7 (e0 §3.6.2; decisión 165, e3 §3.2.1). empresas no importa caja, ni por su publico.ts: declara el puerto GanchosDeSucursal y caja lo implementa y la composición lo registra. Previene que crear una sucursal dependa del módulo de dinero (ciclo: caja ya depende de empresas); si se elimina, falla la violación inyectada de esta regla.",
     from: { path: "^src/modulos/empresas/" },
     to: { path: "^src/modulos/caja/" },
+  },
+  {
+    // Previene: el registro de datos y los caminos pasaron a UN archivo por módulo (`registro-de-<módulo>.ts`, `caminos-de-<módulo>.ts`) para que dos ramas no choquen;
+    // si una pantalla o un test importara un fragmento directo, leería un pedazo sin el chequeo de ids repetidos entre fragmentos y "dónde se lee el registro" tendría
+    // dos respuestas. Chequeo: la violación inyectada de reglas.test.ts y `test/arquitectura/datos-por-modulo.test.ts`.
+    name: "datos-fragmentos-solo-desde-su-ensamblador",
+    severity: "error",
+    comment:
+      "Los fragmentos `registro-de-*.ts` y `caminos-de-*.ts` de src/capacidades/datos solo los importa su ensamblador (`registro.ts` y `caminos.ts`): todo el resto lee el registro y los caminos completos por ellos.",
+    from: { pathNot: "^src/capacidades/datos/(registro|caminos)\\.ts$" },
+    to: { path: "^src/capacidades/datos/(registro-de|caminos-de)-[^/]+\\.ts$" },
   },
 ];
