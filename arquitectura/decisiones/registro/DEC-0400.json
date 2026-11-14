@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0400",
+  "fecha": "2026-11-14",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: no existe el regalo con costo conocido en cero; el costo de stock es mayor que cero y lo que no tiene precio queda sin costo (nulo), como dice CYN 125.",
+  "que_cambia": "La base rechaza costo cero en costo_de_articulo y costo_de_renglon; el código ya lo rechazaba. Revertir: script 0053_revertir_costo_nunca_cero.sql (minutos, sin pérdida de datos).",
+  "donde": "migraciones/0053_costo_nunca_cero.sql; test/integracion/stock-costo-cero.test.ts; fuente: CYN 125 (dueño, 09/11/2026), e5-stock-especificacion.md:23,188, INTEGRACION.md §5 D7 y X4"
+}
