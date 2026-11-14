@@ -86,6 +86,15 @@ export interface MovimientosYSaldos {
     pares: readonly ParDeSaldo[],
     bloquear: boolean,
   ): Promise<Map<string, string>>;
+  /**
+   * ¿El artículo tiene existencia DISTINTA DE CERO (también negativa) en algún depósito del alcance? `sucursal` nula = toda la empresa; con una sucursal,
+   * solo los depósitos de ese local. Lo usa el catálogo (por el puerto de la composición) para no ocultar ni desactivar un producto con existencia.
+   */
+  conExistenciaDelArticulo(
+    empresa: EmpresaId,
+    articuloId: string,
+    sucursal: string | null,
+  ): Promise<boolean>;
 }
 
 /** El libro de movimientos: escritura y lectura de movimientos y saldos más las lecturas de las consultas (`lecturas-del-libro.ts`). */
@@ -260,6 +269,17 @@ function crearMovimientosYSaldos(db: Kysely<StockDb>): MovimientosYSaldos {
          ${bloquear ? sql`for update` : sql``}`.execute(db);
       for (const f of rows) saldos.set(llaveDeSaldo(f.deposito_id, f.articulo_id), f.existencia);
       return saldos;
+    },
+    async conExistenciaDelArticulo(empresa, articuloId, sucursal) {
+      if (!esUuid(articuloId) || (sucursal !== null && !esUuid(sucursal))) return false;
+      const { rows } = await sql<{ uno: number }>`
+        select 1 as uno
+          from saldo_de_stock s
+          join deposito d on d.id = s.deposito_id and d.empresa_id = s.empresa_id
+         where s.empresa_id = ${empresa} and s.articulo_id = ${articuloId}::uuid and s.existencia <> 0
+           ${sucursal === null ? sql`` : sql`and d.sucursal_id = ${sucursal}::uuid`}
+         limit 1`.execute(db);
+      return rows.length > 0;
     },
   };
 }
