@@ -7,7 +7,8 @@ import {
   type EscenarioDeCompras,
   type MontajeDeCompras,
 } from "./compras-casos-apoyo";
-import { cuitAlAzar } from "./entorno";
+import { cuitUnico } from "./entorno";
+import { numeroUnico } from "./unicos";
 
 /**
  * E9-T10: el pago mínimo de la factura (D142): declararlo, anularlo y que viaje con la compra. Un pago por factura, sin parciales, que NO mueve la caja.
@@ -42,7 +43,7 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
     const { producto } = await c.articulo(e, { unidadBase: "GRAMO", dimension: "MASA" });
     const proveedor = await c.proveedor(e.operador, { condicionIva: "RESPONSABLE_INSCRIPTO" });
     valorDe(await c.casos.agregarPuntoDeVenta(e.gerente, { parteId: proveedor, numero: 5 }));
-    const cuit = cuitAlAzar();
+    const cuit = cuitUnico();
     const compra = (extra: Record<string, unknown> = {}) => ({
       clave: nuevoId(),
       sucursalId: e.sucursal,
@@ -61,7 +62,7 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
       factura: {
         tipo: "FACTURA_A",
         puntoDeVenta: 5,
-        numero: Math.floor(Math.random() * 1_000_000) + 1,
+        numero: numeroUnico(),
         fecha: "2026-10-10",
         lineas: [{ renglon: 1, cantidadFacturada: "2000", precioNeto: "1", alicuota: "21" }],
         totalSegunFactura: "2420.00",

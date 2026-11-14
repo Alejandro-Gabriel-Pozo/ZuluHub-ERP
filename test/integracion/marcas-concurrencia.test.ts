@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { adminPlataformaId, empresaId } from "../../src/primitivas/identificadores/marca";
@@ -21,6 +20,7 @@ import {
   hostAlAzar,
 } from "./marcas-apoyo";
 import { SesionDePrueba, esperarBloqueo, type Intento } from "./sesiones";
+import { referenciaDeErrorUnica } from "./unicos";
 
 /**
  * Marcas y planes (M3), migración 0007: CONCURRENCIA con los roles reales y barrera. Lo que garantiza la
@@ -691,7 +691,7 @@ describe.skipIf(base === null)("marcas y planes: concurrencia", () => {
     });
 
     it("ocho referencias de error iguales a la vez: se guarda una; las otras siete chocan con la única", async () => {
-      const referencia = `PD-${randomUUID().slice(0, 4).toUpperCase()}-${randomUUID().slice(0, 4).toUpperCase()}`;
+      const referencia = referenciaDeErrorUnica();
       const sesiones = await Promise.all(
         Array.from({ length: 8 }, () => abrirAdmin("read committed")),
       );

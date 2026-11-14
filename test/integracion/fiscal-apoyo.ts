@@ -3,9 +3,10 @@ import type pg from "pg";
 import { expect } from "vitest";
 import { empresaId, personaId } from "../../src/primitivas/identificadores/marca";
 import { SOPORTE_DE_PRUEBA } from "./admins-de-prueba";
-import { comoEmpresa, comoPlataforma, cuitAlAzar } from "./entorno";
+import { comoEmpresa, comoPlataforma, cuitUnico } from "./entorno";
 import type { BaseDePruebas } from "./global";
 import { SesionDePrueba, type Intento } from "./sesiones";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de la migración 0006 (H7 fiscal). Todo se arma con el cliente del DUEÑO de la
@@ -44,11 +45,11 @@ export async function crearMundo(
     opciones.tenant ??
     (
       await un<{ id: string }>("insert into tenant (nombre) values ($1) returning id", [
-        `tenant-${randomUUID().slice(0, 8)}`,
+        `tenant-${sufijoUnico()}`,
       ])
     ).id;
   const estado = opciones.estado ?? "ACTIVE";
-  const cuit = opciones.cuit ?? cuitAlAzar();
+  const cuit = opciones.cuit ?? cuitUnico();
   const empresa = (
     await un<{ id: string }>(
       `insert into empresa (tenant_id, cuit, razon_social, estado, motivo_estado)
@@ -56,7 +57,7 @@ export async function crearMundo(
       [
         tenant,
         cuit,
-        `empresa-${randomUUID().slice(0, 8)}`,
+        `empresa-${sufijoUnico()}`,
         estado,
         estado === "SUSPENDED" || estado === "CANCELLED" ? "prueba" : null,
       ],
@@ -70,7 +71,7 @@ export async function crearMundo(
   ).id;
   const persona = (
     await un<{ id: string }>("insert into persona (email) values ($1) returning id", [
-      `${randomUUID().slice(0, 12)}@prueba.test`,
+      `${sufijoUnico()}@prueba.test`,
     ])
   ).id;
   const emisor =

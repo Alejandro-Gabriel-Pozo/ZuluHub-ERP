@@ -24,8 +24,8 @@ import {
   crearEmpresaEnAlta,
   crearEntornoDePrueba,
   crearPropietario,
-  cuitAlAzar,
-  nombreAlAzar,
+  cuitUnico,
+  nombreUnico,
   type EmpresaDePrueba,
 } from "./entorno";
 import {
@@ -285,7 +285,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
     );
     await dueno.query(
       `insert into trabajo (empresa_id, tipo, clave_idempotencia) values ($1, 'mantenimiento', $2)`,
-      [activa.empresa, nombreAlAzar("clave-trabajo")],
+      [activa.empresa, nombreUnico("clave-trabajo")],
     );
     await dueno.query(
       `insert into idempotencia_plataforma (admin_id, clave, operacion, huella, resultado)
@@ -1205,7 +1205,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
     it("el control positivo del bloque anterior: el mismo ADMIN con un token vigente sí escribe", async () => {
       await comoPlat(tokenDe(ADMIN_DE_PRUEBA), async (s) => {
         esperarFilas(
-          await s.intentar("insert into tenant (nombre) values ($1)", [nombreAlAzar("t")]),
+          await s.intentar("insert into tenant (nombre) values ($1)", [nombreUnico("t")]),
           1,
         );
         // El conteo y el UPDATE van en UNA sentencia: comparten la misma foto de los datos. Contar aparte
@@ -1333,7 +1333,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
         await s.intentar("select set_config('app.actor_plataforma', $1, true)", [ADMIN_DE_PRUEBA]);
         expect(await s.actor()).toBe(SOPORTE_DE_PRUEBA);
         esperarRechazo(
-          await s.intentar("insert into tenant (nombre) values ($1)", [nombreAlAzar("t")]),
+          await s.intentar("insert into tenant (nombre) values ($1)", [nombreUnico("t")]),
         );
       });
     });
@@ -1356,7 +1356,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           await new Promise((r) => setTimeout(r, 3200));
           expect(await s.contar("tenant")).toBe(0);
           esperarRechazo(
-            await s.intentar("insert into tenant (nombre) values ($1)", [nombreAlAzar("t")]),
+            await s.intentar("insert into tenant (nombre) values ($1)", [nombreUnico("t")]),
             ["42501", "55000"],
           );
         });
@@ -1397,12 +1397,12 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       it("no crea estructura: INSERT de tenant, empresa, persona, membresia_tenant, sucursal y auditoría de empresa viola la RLS (42501)", async () => {
         await comoPlat(soporte(), async (s) => {
           esperarRechazo(
-            await s.intentar("insert into tenant (nombre) values ($1)", [nombreAlAzar("t")]),
+            await s.intentar("insert into tenant (nombre) values ($1)", [nombreUnico("t")]),
           );
           esperarRechazo(
             await s.intentar(
               "insert into empresa (tenant_id, cuit, razon_social) values ($1, $2, $3)",
-              [activa.tenant, cuitAlAzar(), nombreAlAzar("e")],
+              [activa.tenant, cuitUnico(), nombreUnico("e")],
             ),
           );
           esperarRechazo(
@@ -1417,7 +1417,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           esperarRechazo(
             await s.intentar("insert into sucursal (empresa_id, nombre) values ($1, $2)", [
               enAlta.empresa,
-              nombreAlAzar("s"),
+              nombreUnico("s"),
             ]),
           );
           esperarRechazo(
@@ -1500,19 +1500,19 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           esperarRechazo(
             await s.intentar(
               "insert into trabajo (empresa_id, tipo, clave_idempotencia) values ($1, 'mantenimiento', $2)",
-              [enAlta.empresa, nombreAlAzar("k")],
+              [enAlta.empresa, nombreUnico("k")],
             ),
           );
           esperarRechazo(
             await s.intentar(
               "insert into trabajo (empresa_id, tipo, clave_idempotencia) values ($1, $2, $3)",
-              [enAlta.empresa, `${TRABAJO_ENVIAR_INVITACION}_otro`, nombreAlAzar("k")],
+              [enAlta.empresa, `${TRABAJO_ENVIAR_INVITACION}_otro`, nombreUnico("k")],
             ),
           );
           esperarFilas(
             await s.intentar(
               "insert into trabajo (empresa_id, tipo, clave_idempotencia) values ($1, $2, $3)",
-              [enAlta.empresa, TRABAJO_ENVIAR_INVITACION, nombreAlAzar("k")],
+              [enAlta.empresa, TRABAJO_ENVIAR_INVITACION, nombreUnico("k")],
             ),
             1,
           );
@@ -1604,7 +1604,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           [{ tipo: "ADMIN", id: SOPORTE_DE_PRUEBA }, TRABAJO_ENVIAR_INVITACION],
           [{ tipo: "ADMIN", id: ADMIN_DE_PRUEBA }, TRABAJO_ENVIAR_INVITACION],
         ] as const) {
-          const clave = nombreAlAzar("encolar");
+          const clave = nombreUnico("encolar");
           const encolar = () =>
             entorno.ejecutar({ contexto: comoPlataforma(actor) }, async ({ trabajos }) =>
               ok(
@@ -1630,7 +1630,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
                 empresaId: enAlta.empresa,
                 tipo: "mantenimiento",
                 datos: {},
-                claveDeIdempotencia: nombreAlAzar("encolar"),
+                claveDeIdempotencia: nombreUnico("encolar"),
               }),
             ),
         );
@@ -1642,13 +1642,13 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       it("crea y cambia estructura, emite invitaciones de cualquier tipo, encola cualquier trabajo y audita en la plataforma y en la empresa", async () => {
         await comoPlat(tokenDe(ADMIN_DE_PRUEBA), async (s) => {
           const t = await s.intentar("insert into tenant (nombre) values ($1) returning id", [
-            nombreAlAzar("t"),
+            nombreUnico("t"),
           ]);
           expect(t.ok).toBe(true);
           const tenant = (t.ok ? t.rows[0]?.["id"] : null) as string;
           const e = await s.intentar(
             "insert into empresa (tenant_id, cuit, razon_social) values ($1, $2, $3) returning id",
-            [tenant, cuitAlAzar(), nombreAlAzar("e")],
+            [tenant, cuitUnico(), nombreUnico("e")],
           );
           expect(e.ok).toBe(true);
           const empresa = (e.ok ? e.rows[0]?.["id"] : null) as string;
@@ -1698,7 +1698,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           esperarFilas(
             await s.intentar(
               "insert into trabajo (empresa_id, tipo, clave_idempotencia) values ($1, 'mantenimiento', $2)",
-              [empresa, nombreAlAzar("k")],
+              [empresa, nombreUnico("k")],
             ),
             1,
           );
@@ -1744,7 +1744,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           expect(await s.contar("empresa")).toBe(0);
           expect(await s.contar("invitacion")).toBe(0);
           for (const [texto, params] of [
-            ["insert into tenant (nombre) values ($1)", [nombreAlAzar("t")]],
+            ["insert into tenant (nombre) values ($1)", [nombreUnico("t")]],
             ["insert into persona (email) values ($1)", [emailAlAzar("p")]],
             [
               "insert into auditoria_plataforma (actor, accion, entidad, entidad_id) values ($1, 'X', 'x', 'x')",
@@ -1787,7 +1787,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           expect(await s.contar("tenant")).toBeGreaterThan(0);
           // Ya no es ADMIN: bajó a SOPORTE y la base lo aplica en la operación siguiente.
           esperarRechazo(
-            await s.intentar("insert into tenant (nombre) values ($1)", [nombreAlAzar("t")]),
+            await s.intentar("insert into tenant (nombre) values ($1)", [nombreUnico("t")]),
           );
         });
       });
@@ -1798,7 +1798,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
             expect(await s.contar(tabla), tabla).toBe(0);
           }
           esperarRechazo(
-            await s.intentar("insert into tenant (nombre) values ($1)", [nombreAlAzar("t")]),
+            await s.intentar("insert into tenant (nombre) values ($1)", [nombreUnico("t")]),
             ["42501", "55000"],
           );
         });
@@ -1906,16 +1906,16 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       it("no crea nada: ni tenants, empresas, personas, sucursales, invitaciones, trabajos, claves de idempotencia ni auditoría de empresa", async () => {
         await comoPlat(sistema(), async (s) => {
           for (const [texto, params] of [
-            ["insert into tenant (nombre) values ($1)", [nombreAlAzar("t")]],
+            ["insert into tenant (nombre) values ($1)", [nombreUnico("t")]],
             [
               "insert into empresa (tenant_id, cuit, razon_social) values ($1, $2, $3)",
-              [activa.tenant, cuitAlAzar(), nombreAlAzar("e")],
+              [activa.tenant, cuitUnico(), nombreUnico("e")],
             ],
             ["insert into persona (email) values ($1)", [emailAlAzar("p")]],
             ["insert into sucursal (empresa_id, nombre) values ($1, 'x')", [enAlta.empresa]],
             [
               "insert into trabajo (empresa_id, tipo, clave_idempotencia) values ($1, 'enviar_invitacion', $2)",
-              [activa.empresa, nombreAlAzar("k")],
+              [activa.empresa, nombreUnico("k")],
             ],
             [
               "insert into auditoria_empresa (empresa_id, accion, entidad, entidad_id) values ($1, 'X', 'x', 'x')",
@@ -2664,7 +2664,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           const tenant = t[0]?.id as string;
           const { rows: e } = await cliente.query<{ id: string }>(
             "insert into empresa (tenant_id, cuit, razon_social, estado) values ($1, $2, 'previa', 'ACTIVE') returning id",
-            [tenant, cuitAlAzar()],
+            [tenant, cuitUnico()],
           );
           const empresa = e[0]?.id as string;
           await cliente.query(

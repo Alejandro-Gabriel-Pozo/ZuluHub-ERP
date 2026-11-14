@@ -1,4 +1,4 @@
-import { randomBytes, randomInt } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import pg from "pg";
 import type { Kysely } from "kysely";
@@ -16,11 +16,7 @@ import type {
   ContextoDeSesion,
   ContextoOperativo,
 } from "../../src/contexto/contexto";
-import {
-  digitoVerificadorDeCuit,
-  cuitDesdeTexto,
-  type Cuit,
-} from "../../src/primitivas/identificacion-fiscal/cuit";
+import { type Cuit } from "../../src/primitivas/identificacion-fiscal/cuit";
 import {
   personaId,
   type EmpresaId,
@@ -340,31 +336,13 @@ export const comoSesion = (usuarioAuth: UsuarioAuthId): ContextoDeSesion => ({
 /** El `ahora` de las pruebas (el mismo de todos los contextos de este archivo). */
 export const AHORA_DE_PRUEBA = AHORA;
 
-const CUERPOS_POSIBLES = 100_000_000;
-/** Dónde empieza la secuencia de ESTE proceso: al azar, para que dos procesos (copias de «Estabilidad») no recorran lo mismo. */
-let siguienteCuerpo = randomInt(0, CUERPOS_POSIBLES);
-
 /**
- * CUIT válido, distinto en cada llamada de este proceso: una secuencia (contador) y no un sorteo, porque dos sorteos pueden
- * repetirse (cumpleaños) y un CUIT repetido choca con la unicidad de la base (caso real: «Estabilidad» en #191). Entre procesos
- * distintos la secuencia arranca en un punto al azar de 10^8 cuerpos: la unicidad entre procesos es PROBABILÍSTICA (≈1,7e-3 de que dos se pisen con 6 000 llamadas), no una garantía. El dígito verificador sale de `digitoVerificadorDeCuit`; si
- * un cuerpo no tiene verificador válido se salta.
+ * Los valores únicos de las pruebas (CUIT, nombres…) vienen del generador común, `unicos.ts`: la unicidad es determinista por construcción (un puesto por archivo de
+ * pruebas en la corrida), no probable. Se re-exportan acá porque este archivo es donde los buscan las pruebas.
  */
-export function cuitAlAzar(): Cuit {
-  for (let intentos = 0; intentos < CUERPOS_POSIBLES; intentos++) {
-    const cuerpo = siguienteCuerpo;
-    siguienteCuerpo = (siguienteCuerpo + 1) % CUERPOS_POSIBLES;
-    const diez = `${20 + (cuerpo % 14)}${String(cuerpo).padStart(8, "0")}`;
-    const verificador = digitoVerificadorDeCuit(diez);
-    if (verificador === null) continue;
-    const resultado = cuitDesdeTexto(`${diez}${verificador}`);
-    if (resultado.ok) return resultado.valor;
-  }
-  throw new Error("cuitAlAzar: se agotaron los CUIT posibles");
-}
-
-export const nombreAlAzar = (prefijo: string): string =>
-  `${prefijo}-${randomBytes(4).toString("hex")}`;
+import { cuitUnico, nombreUnico } from "./unicos";
+import { correoUnico } from "./unicos";
+export { cuitUnico, nombreUnico };
 
 export type EmpresaDePrueba = Readonly<{ tenant: TenantId; empresa: EmpresaId; cuit: Cuit }>;
 
@@ -377,12 +355,12 @@ export async function crearEmpresaActiva(
     // El armado de datos no prueba aislamiento transaccional: no necesita SERIALIZABLE.
     { contexto: comoPlataforma(), aislamiento: "read committed" },
     async ({ tenants, empresas, db }) => {
-      const tenant = opciones.tenant ?? (await tenants.crear(nombreAlAzar("tenant"))).id;
-      const cuit = cuitAlAzar();
+      const tenant = opciones.tenant ?? (await tenants.crear(nombreUnico("tenant"))).id;
+      const cuit = cuitUnico();
       const creada = await empresas.crear({
         tenantId: tenant,
         cuit,
-        razonSocial: nombreAlAzar("empresa"),
+        razonSocial: nombreUnico("empresa"),
       });
       await sql`insert into sucursal (empresa_id, nombre)
                 values (${creada.id}, ${opciones.nombreDeSucursal ?? "Casa central"})`.execute(db);
@@ -407,12 +385,12 @@ export async function crearEmpresaEnAlta(
   const resultado = await entorno.ejecutar(
     { contexto: comoPlataforma(), aislamiento: "read committed" },
     async ({ tenants, empresas }) => {
-      const tenant = opciones.tenant ?? (await tenants.crear(nombreAlAzar("tenant"))).id;
-      const cuit = cuitAlAzar();
+      const tenant = opciones.tenant ?? (await tenants.crear(nombreUnico("tenant"))).id;
+      const cuit = cuitUnico();
       const creada = await empresas.crear({
         tenantId: tenant,
         cuit,
-        razonSocial: nombreAlAzar("empresa"),
+        razonSocial: nombreUnico("empresa"),
       });
       return { ok: true as const, valor: { tenant, empresa: creada.id, cuit } };
     },
@@ -432,7 +410,7 @@ export async function crearPropietario(
     { contexto: comoPlataforma(), aislamiento: "read committed" },
     async ({ db }) => {
       const { rows } = await sql<{ id: string }>`
-      insert into persona (email) values (${`${randomBytes(6).toString("hex")}@prueba.test`})
+      insert into persona (email) values (${correoUnico("")})
       returning id`.execute(db);
       const id = rows[0]?.id;
       if (id === undefined) throw new Error("no se creó la persona");
@@ -454,7 +432,7 @@ export async function crearBaseAparte(
   base: BaseDePruebas,
   opciones: { migrar?: boolean; sinClave?: boolean; sinMarcaDePrueba?: boolean } = {},
 ): Promise<{ base: BaseDePruebas; destruir: () => Promise<void> }> {
-  const nombre = `pedernal_it_${randomBytes(6).toString("hex")}`;
+  const nombre = `pedernal_it_${randomBytes(8).toString("hex")}`;
   const admin = new pg.Client({ connectionString: base.admin });
   await admin.connect();
   await admin.query(`CREATE DATABASE ${nombre} ${OPCIONES_DE_BASE}`);

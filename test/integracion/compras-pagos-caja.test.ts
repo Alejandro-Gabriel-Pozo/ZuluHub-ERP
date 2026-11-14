@@ -6,7 +6,8 @@ import {
   type EscenarioDeCompras,
   type MontajeDeCompras,
 } from "./compras-casos-apoyo";
-import { cuitAlAzar } from "./entorno";
+import { cuitUnico } from "./entorno";
+import { numeroUnico } from "./unicos";
 
 /**
  * E9-T10b: el pago en efectivo que SACA la plata de la caja abierta, en la misma transacción del pago (DEC-0316). Con la caja sin sesión abierta el pago no se
@@ -61,11 +62,11 @@ describe.skipIf(base === null)("compras: pago en efectivo desde la caja", () => 
         factura: {
           tipo: "FACTURA_A",
           puntoDeVenta: 5,
-          numero: Math.floor(Math.random() * 1_000_000) + 1,
+          numero: numeroUnico(),
           fecha: "2026-10-10",
           lineas: [{ renglon: 1, cantidadFacturada: "2000", precioNeto: "1", alicuota: "21" }],
           totalSegunFactura: "2420.00",
-          cuitDelProveedor: cuitAlAzar(),
+          cuitDelProveedor: cuitUnico(),
         },
       }),
     );

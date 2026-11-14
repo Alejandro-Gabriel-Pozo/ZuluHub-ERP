@@ -30,6 +30,7 @@ import {
   type RolDePrueba,
 } from "./fixtures-identidad";
 import { asignarPlan, crearPlanPublicado } from "./marcas-apoyo";
+import { sufijoUnico } from "./unicos";
 
 /**
  * La sucursal de los comprobantes y de lo que se ve de ellos, con la composición REAL (conexiones, web y trabajos, base de verdad,
@@ -142,7 +143,7 @@ describe.skipIf(base === null)("la sucursal de los comprobantes y del listado y 
 
   async function sucursalNueva(
     e: EscenarioDeCasos,
-    nombre = `Sucursal ${randomUUID().slice(0, 6)}`,
+    nombre = `Sucursal ${sufijoUnico()}`,
     abierta = true,
   ) {
     const r = await dueno.query<{ id: string }>(

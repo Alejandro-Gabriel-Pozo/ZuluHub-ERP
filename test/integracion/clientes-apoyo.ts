@@ -26,6 +26,7 @@ import {
 } from "./entorno";
 import { crearMembresiaDeBase, crearPersonaDeBase, type RolDePrueba } from "./fixtures-identidad";
 import type { BaseDePruebas } from "./global";
+import { nombreDeLetrasUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de integración de los casos de uso del directorio (E9): las dependencias REALES sobre una base propia (SERIALIZABLE aborta por
@@ -144,10 +145,7 @@ export function valorDe<T, E>(r: Readonly<{ ok: true; valor: T } | { ok: false; 
 export const nuevoId = (): string => randomUUID();
 
 /** Un nombre al azar sin dígitos (la lista de permitidos los admite, pero así no se confunden con un documento). */
-export const nombreAlAzar = (prefijo = "Parte"): string =>
-  `${prefijo} ${randomUUID()
-    .slice(0, 8)
-    .replace(/[0-9]/g, (d) => "abcdefghij"[Number(d)] ?? "x")}`;
+export const nombreUnico = (prefijo = "Parte"): string => nombreDeLetrasUnico(prefijo);
 
 /** Las rondas de las pruebas de concurrencia (`PEDERNAL_RONDAS`, 3 por defecto: el CI tiene un tope de tiempo ajustado). */
 export const RONDAS = (() => {
