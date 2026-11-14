@@ -3,13 +3,16 @@
   "workspaces": {
     ".": {
       // `arquitectura/deuda/*.cjs`: el control de deuda lo lanzan el CLI y la prueba por `require` (que knip no
-      // sigue): sus funciones exportadas son su interfaz de prueba, no código muerto.
+      // sigue): sus funciones exportadas son su interfaz de prueba, no código muerto. Lo mismo `arquitectura/grupos-de-mutacion.cjs`
+      // (lo cargan `stryker.config.mjs`, el planificador y su prueba por `require`): como entrada, sus exportaciones no cuentan
+      // como muertas y no hace falta una excepción nueva en `ignoreIssues` (que sumaría deuda).
       "entry": [
         "src/**/*.ts",
         "test/**/*.test.ts",
         "test/**/*.recorrido.ts",
         "neon.ts",
-        "arquitectura/deuda/*.cjs"
+        "arquitectura/deuda/*.cjs",
+        "arquitectura/grupos-de-mutacion.cjs"
       ],
       "project": ["src/**/*.ts", "test/**/*.ts", "arquitectura/**/*.cjs"],
       "ignoreDependencies": ["@stryker-mutator/command-runner"],

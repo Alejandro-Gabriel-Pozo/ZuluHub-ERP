@@ -607,7 +607,7 @@ function construirPlantilla(nombre: string, destino: string, ahora: Date): void 
     ".github/workflows/ci.yml",
     "package.json",
     "vitest.config.ts",
-    "stryker.config.json",
+    "stryker.config.mjs",
     "knip.json",
     ".gitignore",
   ]) {
