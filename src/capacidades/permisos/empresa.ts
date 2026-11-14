@@ -94,10 +94,11 @@ export const PERMISOS_DE_EMPRESA = {
   "lotes.cambiar_calidad": ["GERENTE", "ADMINISTRADOR"],
   "lotes.corregir": ["GERENTE", "ADMINISTRADOR"],
   "lotes.reasignar": ["GERENTE", "ADMINISTRADOR"],
-  // E6 (T8, P-2, DEC-0101): producción. Mirar, abrir y cerrar una orden, los tres roles; cancelar y anular (deshacer stock y costo), gerente y administrador.
+  // E6 (T8, P-2, DEC-0101): producción. Mirar y abrir una orden, los tres roles; cerrar, cancelar y anular (deshacer stock y costo), gerente y administrador.
+  // Cerrar: decisión del dueño del 14/11/2026 (auditoría Q10, DEC-0430): el operador carga la orden pero no la cierra.
   "transformaciones.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "transformaciones.abrir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "transformaciones.cerrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "transformaciones.cerrar": ["GERENTE", "ADMINISTRADOR"],
   "transformaciones.cancelar": ["GERENTE", "ADMINISTRADOR"],
   "transformaciones.anular": ["GERENTE", "ADMINISTRADOR"],
   "depositos.desactivar": ["GERENTE", "ADMINISTRADOR"],

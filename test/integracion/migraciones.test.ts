@@ -71,6 +71,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0049_producto_oculto_en_stock.sql",
         "0050_plan_en_la_lectura_publica_de_carta.sql",
         "0051_porciones_del_producto.sql",
+        "0052_tope_de_partes_de_la_division.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -123,6 +124,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0049_producto_oculto_en_stock.sql",
           "0050_plan_en_la_lectura_publica_de_carta.sql",
           "0051_porciones_del_producto.sql",
+          "0052_tope_de_partes_de_la_division.sql",
         ],
       });
     } finally {
@@ -280,6 +282,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0049_producto_oculto_en_stock.sql",
         "0050_plan_en_la_lectura_publica_de_carta.sql",
         "0051_porciones_del_producto.sql",
+        "0052_tope_de_partes_de_la_division.sql",
       ]);
     } finally {
       await aparte.destruir();

@@ -76,6 +76,8 @@ plataforma tuvo en el menú «Dominios» y «Soporte» sin pantalla aprobada.
   primitiva escrito en cualquier archivo (`.max(254)`, `maxLength={254}`, `.slice(0, 254)`, `{1,254}`) y el mismo límite con otro nombre o privado.
   Límites que NO ve (con ejemplo): el número de una constante que no es de una primitiva en un archivo que no la nombra (`motivo.length > 200`
   en `resincronizar-y-ambiente.ts`), una lista de caracteres permitidos repetida en dos archivos y un número calculado (`2 * 150`).
+  Los límites de dividir la cuenta (10 por ítems, 12 por porcentaje; dueño, 14/11/2026) viven en `src/primitivas/cuentas/limites-de-division.ts`; escribir su número a mano junto a «parte» o «cuenta» falla en
+  `test/arquitectura/fuente-unica-limites-de-division.test.ts` (previene el tope desfasado entre dominio, pantalla y base; la base la compara `test/integracion/salon-division-limites.test.ts`).
 - **Lo que el dueño no aprobó lleva su fuente.** Todo texto, rótulo, regla o dato que ve el cliente y que el dueño no aprobó se agrega
   solo si tiene una **fuente verificable** y se cita junto a la clave o la regla (comentario del catálogo o del código) y en la descripción del
   PR: archivo y línea o sección (documento, manual de ARCA, grabación, código) o el mensaje con su fecha, y quién lo decidió. «Lo aprobó el

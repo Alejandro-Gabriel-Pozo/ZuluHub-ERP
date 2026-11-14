@@ -24,6 +24,10 @@ describe("los textos de producción, receta y lotes", () => {
       "Consume",
       "Obtiene",
       "En stock",
+      // Aprobados por el dueño el 14/11/2026 (decisiones-del-dueno-2026-11.md).
+      "Rinde",
+      "La receta cambió desde que abriste la orden",
+      "Costo estimado",
       "Abrir orden",
       "Cerrar con lo real",
       "Cerrar la orden",
