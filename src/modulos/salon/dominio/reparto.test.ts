@@ -1,6 +1,10 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import "../../../../test/propiedades/configuracion";
+import {
+  MAXIMO_DE_CUENTAS_POR_ITEMS,
+  MAXIMO_DE_PARTES_POR_PORCENTAJE,
+} from "../../../primitivas/cuentas/limites-de-division";
 import { repartirEnPartesIguales, repartirItemCompartido, repartirPorPorcentaje } from "./reparto";
 
 const centavos = (texto: string): bigint => BigInt(texto.replace(".", ""));
@@ -36,13 +40,13 @@ describe("ítem compartido (D117)", () => {
     const dos = repartirItemCompartido("0.03", [1, 2]);
     expect(dos.ok && dos.valor.map((p) => p.importe)).toEqual(["0.02", "0.01"]);
   });
-  it("rechaza menos de dos, repetidas, fuera de 1 a 4 e importes inválidos", () => {
+  it("rechaza menos de dos, repetidas, fuera de 1 al máximo e importes inválidos", () => {
     expect(repartirItemCompartido("1.00", [1])).toEqual({ ok: false, error: "PARTES_INVALIDAS" });
     expect(repartirItemCompartido("1.00", [1, 1])).toEqual({
       ok: false,
       error: "PARTES_INVALIDAS",
     });
-    expect(repartirItemCompartido("1.00", [1, 5])).toEqual({
+    expect(repartirItemCompartido("1.00", [1, MAXIMO_DE_CUENTAS_POR_ITEMS + 1])).toEqual({
       ok: false,
       error: "PARTES_INVALIDAS",
     });
@@ -69,13 +73,32 @@ describe("partes iguales", () => {
       "16.66",
     ]);
   });
-  it("2 a 6 partes", () => {
+  it("de 2 al máximo de partes: el máximo se acepta y una más no", () => {
     expect(repartirEnPartesIguales("1.00", 1)).toEqual({ ok: false, error: "PARTES_INVALIDAS" });
-    expect(repartirEnPartesIguales("1.00", 7)).toEqual({ ok: false, error: "PARTES_INVALIDAS" });
+    const justo = repartirEnPartesIguales("12.00", MAXIMO_DE_PARTES_POR_PORCENTAJE);
+    expect(justo.ok && justo.valor).toHaveLength(MAXIMO_DE_PARTES_POR_PORCENTAJE);
+    expect(repartirEnPartesIguales("1.00", MAXIMO_DE_PARTES_POR_PORCENTAJE + 1)).toEqual({
+      ok: false,
+      error: "PARTES_INVALIDAS",
+    });
+  });
+  it("un ítem compartido entre todas las cuentas del máximo se acepta", () => {
+    const todas = Array.from({ length: MAXIMO_DE_CUENTAS_POR_ITEMS }, (_, i) => i + 1);
+    const r = repartirItemCompartido("10.00", todas);
+    expect(r.ok && r.valor).toHaveLength(MAXIMO_DE_CUENTAS_POR_ITEMS);
   });
 });
 
 describe("por porcentaje", () => {
+  it("el máximo de partes se acepta y una más no", () => {
+    const resto = (n: number) => Array.from({ length: n - 1 }, () => "5");
+    const justo = repartirPorPorcentaje("100.00", resto(MAXIMO_DE_PARTES_POR_PORCENTAJE));
+    expect(justo.ok && justo.valor).toHaveLength(MAXIMO_DE_PARTES_POR_PORCENTAJE);
+    expect(repartirPorPorcentaje("100.00", resto(MAXIMO_DE_PARTES_POR_PORCENTAJE + 1))).toEqual({
+      ok: false,
+      error: "PARTES_INVALIDAS",
+    });
+  });
   it("la parte 1 es el resto hasta 100 %", () => {
     const r = repartirPorPorcentaje("200.00", ["25", "25"]);
     expect(r.ok && r.valor.map((p) => p.importe)).toEqual(["100.00", "50.00", "50.00"]);
@@ -95,7 +118,12 @@ describe("por porcentaje", () => {
       error: "PORCENTAJE_INVALIDO",
     });
     expect(repartirPorPorcentaje("1.00", [])).toEqual({ ok: false, error: "PARTES_INVALIDAS" });
-    expect(repartirPorPorcentaje("1.00", ["1", "1", "1", "1", "1", "1"])).toEqual({
+    expect(
+      repartirPorPorcentaje(
+        "1.00",
+        Array.from({ length: MAXIMO_DE_PARTES_POR_PORCENTAJE }, () => "1"),
+      ),
+    ).toEqual({
       ok: false,
       error: "PARTES_INVALIDAS",
     });
@@ -106,24 +134,31 @@ describe("reparto: propiedades (P15)", () => {
   const total = fc.bigInt({ min: 0n, max: 10n ** 12n });
   it("la suma de las partes es el total al centavo y es determinista (ítem compartido)", () => {
     fc.assert(
-      fc.property(total, fc.subarray([1, 2, 3, 4], { minLength: 2 }), (t, cuentas) => {
-        const r = repartirItemCompartido(texto(t), cuentas);
-        expect(r.ok && suma(r.valor)).toBe(t);
-        expect(repartirItemCompartido(texto(t), cuentas)).toEqual(r);
-        if (r.ok) {
-          const menor = Math.min(...cuentas);
-          const mayor = r.valor.reduce((a, p) =>
-            centavos(p.importe) > centavos(a.importe) ? p : a,
-          );
-          expect(centavos(mayor.importe) >= centavos(r.valor[1]?.importe ?? "0")).toBe(true);
-          expect(r.valor[0]?.parte).toBe(menor);
-        }
-      }),
+      fc.property(
+        total,
+        fc.subarray(
+          Array.from({ length: MAXIMO_DE_CUENTAS_POR_ITEMS }, (_, i) => i + 1),
+          { minLength: 2 },
+        ),
+        (t, cuentas) => {
+          const r = repartirItemCompartido(texto(t), cuentas);
+          expect(r.ok && suma(r.valor)).toBe(t);
+          expect(repartirItemCompartido(texto(t), cuentas)).toEqual(r);
+          if (r.ok) {
+            const menor = Math.min(...cuentas);
+            const mayor = r.valor.reduce((a, p) =>
+              centavos(p.importe) > centavos(a.importe) ? p : a,
+            );
+            expect(centavos(mayor.importe) >= centavos(r.valor[1]?.importe ?? "0")).toBe(true);
+            expect(r.valor[0]?.parte).toBe(menor);
+          }
+        },
+      ),
     );
   });
   it("partes iguales: suman el total y difieren a lo sumo en un centavo", () => {
     fc.assert(
-      fc.property(total, fc.integer({ min: 2, max: 6 }), (t, n) => {
+      fc.property(total, fc.integer({ min: 2, max: MAXIMO_DE_PARTES_POR_PORCENTAJE }), (t, n) => {
         const r = repartirEnPartesIguales(texto(t), n);
         if (!r.ok) throw new Error("esperaba ok");
         expect(suma(r.valor)).toBe(t);

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { celdasDeMesa } from "./celdas";
 import { huellaDeDivision, planDeDivision, type Asignacion, type LineaADividir } from "./division";
 import { posicionDeMesa } from "./mesa";
+import { MAXIMO_DE_CUENTAS_POR_ITEMS } from "../../../primitivas/cuentas/limites-de-division";
 import { repartirEnPartesIguales, repartirItemCompartido, repartirPorPorcentaje } from "./reparto";
 
 /**
@@ -44,16 +45,22 @@ describe("celdas y posición de la mesa", () => {
 
 describe("planDeDivision: cada rechazo por separado", () => {
   const una = [linea("a", "2", "10")];
-  it("partes: 4 se acepta y 5 no", () => {
-    const lineas = [
-      linea("a", "1", "10"),
-      linea("b", "1", "10"),
-      linea("c", "1", "10"),
-      linea("d", "1", "10"),
-    ];
-    const asignaciones = [entero("a", 1), entero("b", 2), entero("c", 3), entero("d", 4)];
-    expect(error(planDeDivision({ partes: 4, lineas, asignaciones }))).toBe("ok");
-    expect(error(planDeDivision({ partes: 5, lineas, asignaciones }))).toBe("PARTES_INVALIDAS");
+  it("por ítems: el máximo de cuentas se acepta y una más no", () => {
+    const hacer = (n: number) => {
+      const ids = Array.from({ length: n }, (_, i) => `l${i + 1}`);
+      return {
+        lineas: ids.map((id) => linea(id, "1", "10")),
+        asignaciones: ids.map((id, i) => entero(id, i + 1)),
+      };
+    };
+    const enElLimite = hacer(MAXIMO_DE_CUENTAS_POR_ITEMS);
+    expect(error(planDeDivision({ partes: MAXIMO_DE_CUENTAS_POR_ITEMS, ...enElLimite }))).toBe(
+      "ok",
+    );
+    const pasado = hacer(MAXIMO_DE_CUENTAS_POR_ITEMS + 1);
+    expect(error(planDeDivision({ partes: MAXIMO_DE_CUENTAS_POR_ITEMS + 1, ...pasado }))).toBe(
+      "PARTES_INVALIDAS",
+    );
   });
   it("sin líneas no hay qué dividir", () => {
     expect(error(planDeDivision({ partes: 2, lineas: [], asignaciones: [] }))).toBe(
@@ -235,8 +242,10 @@ describe("reparto: rechazos y desempates", () => {
     expect(error(repartirItemCompartido("10.00", [1, 2, 2]))).toBe("PARTES_INVALIDAS");
     expect(error(repartirItemCompartido("10.00", [1, 1.5]))).toBe("PARTES_INVALIDAS");
     expect(error(repartirItemCompartido("10.00", [0, 1]))).toBe("PARTES_INVALIDAS");
-    expect(error(repartirItemCompartido("10.00", [1, 5]))).toBe("PARTES_INVALIDAS");
-    expect(error(repartirItemCompartido("10.00", [1, 4]))).toBe("ok");
+    expect(error(repartirItemCompartido("10.00", [1, MAXIMO_DE_CUENTAS_POR_ITEMS + 1]))).toBe(
+      "PARTES_INVALIDAS",
+    );
+    expect(error(repartirItemCompartido("10.00", [1, MAXIMO_DE_CUENTAS_POR_ITEMS]))).toBe("ok");
   });
   it("un error ajeno al dato no se toma por importe inválido", () => {
     expect(() => repartirItemCompartido(explota, [1, 2])).toThrow(RangeError);
