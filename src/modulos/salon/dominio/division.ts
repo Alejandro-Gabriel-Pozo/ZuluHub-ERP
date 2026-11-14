@@ -5,6 +5,7 @@ import {
   type Cantidad,
 } from "../../../primitivas/cantidad/cantidad";
 import { ErrorDeValor } from "../../../primitivas/cantidad/errores";
+import { MAXIMO_DE_CUENTAS_POR_ITEMS } from "../../../primitivas/cuentas/limites-de-division";
 import { importeATexto } from "../../../primitivas/dinero/importe";
 import { ARS } from "../../../primitivas/dinero/moneda";
 import { multiplicarPrecioPorCantidad } from "../../../primitivas/dinero/monto-exacto";
@@ -14,7 +15,7 @@ import {
 } from "../../../primitivas/dinero/precio-unitario";
 import { POLITICA_VIGENTE, redondear } from "../../../primitivas/dinero/redondeo";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { MAXIMO_DE_CUENTAS_POR_ITEMS, repartirItemCompartido } from "./reparto";
+import { repartirItemCompartido } from "./reparto";
 
 /**
  * DIVIDIR LA CUENTA POR ÍTEMS (E7 §3.9, D90 y D117). Por cada línea vigente, UNA de tres formas: `ENTERO` (la línea completa a una cuenta),
@@ -44,7 +45,7 @@ export type ModoDeCopia = "COMPLETA" | "POR_UNIDADES" | "COMPARTIDA";
 
 export type CopiaAHacer = Readonly<{
   lineaOrigenId: string;
-  /** La cuenta hija (1 a 4). */
+  /** La cuenta hija (1 hasta el máximo de cuentas por ítems). */
   parte: number;
   modo: ModoDeCopia;
   /** Texto decimal exacto: la cantidad de la copia (en `COMPARTIDA`, la de la línea original). */
