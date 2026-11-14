@@ -70,6 +70,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0048_departamento_en_la_cuenta.sql",
         "0049_producto_oculto_en_stock.sql",
         "0050_plan_en_la_lectura_publica_de_carta.sql",
+        "0052_tope_de_partes_de_la_division.sql",
         "0053_costo_nunca_cero.sql",
         "0054_precio_de_linea_de_factura_mayor_que_cero.sql",
       ]);
@@ -123,6 +124,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0048_departamento_en_la_cuenta.sql",
           "0049_producto_oculto_en_stock.sql",
           "0050_plan_en_la_lectura_publica_de_carta.sql",
+          "0052_tope_de_partes_de_la_division.sql",
           "0053_costo_nunca_cero.sql",
           "0054_precio_de_linea_de_factura_mayor_que_cero.sql",
         ],
@@ -281,6 +283,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0048_departamento_en_la_cuenta.sql",
         "0049_producto_oculto_en_stock.sql",
         "0050_plan_en_la_lectura_publica_de_carta.sql",
+        "0052_tope_de_partes_de_la_division.sql",
         "0053_costo_nunca_cero.sql",
         "0054_precio_de_linea_de_factura_mayor_que_cero.sql",
       ]);

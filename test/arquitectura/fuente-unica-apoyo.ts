@@ -233,3 +233,96 @@ export function duplicadosPorArchivo(archivos: ReadonlyMap<string, string>): Map
   }
   return cuenta;
 }
+
+/**
+ * LÍMITES DE DIVIDIR LA CUENTA (dueño, 14/11/2026: 10 por ítems, 12 por porcentaje; fuente única `src/primitivas/cuentas/limites-de-division.ts`).
+ * Cuenta, fuera de esa primitiva, cada lugar que vuelve a escribir esos topes (`ruta:línea`):
+ *  1. una constante `MAXIMO_DE_CUENTAS_…` o `MAXIMO_DE_PARTES_…` declarada de nuevo (el mismo límite con el mismo nombre, con cualquier valor);
+ *  2. el número de una de las dos constantes escrito a mano en una comparación (`<`, `<=`, `>`, `>=`, `===`, `!==`) o en un `.max(N)`/`.min(N)`/`.lte(N)`/`.lt(N)`
+ *     contra algo cuyo nombre diga parte o cuenta (`partes > 10`, `cuentas.length <= 12`, `partes: z.number().max(12)`).
+ * Previene: el tope que se desfasa entre el dominio, la pantalla y la base (caso real: 4 y 6 salieron de maquetas y estaban escritos en dos archivos).
+ * LÍMITES que NO ve (con ejemplo): un número de otra forma (`Array.from({ length: 12 })`, `partes: 12`), uno calculado (`6 * 2`), un nombre que no diga parte ni cuenta
+ * (`n > 10`), y la copia en la base (la comprueba `test/integracion/salon-division-limites.test.ts`).
+ */
+export const RUTA_DE_LOS_LIMITES_DE_DIVISION = "src/primitivas/cuentas/limites-de-division.ts";
+const NOMBRES_DE_LIMITES_DE_DIVISION = [
+  "MAXIMO_DE_CUENTAS_POR_ITEMS",
+  "MAXIMO_DE_PARTES_POR_PORCENTAJE",
+];
+const NOMBRE_DE_PARTES_O_CUENTAS = /parte|cuenta/i;
+const METODOS_DE_TOPE = new Set(["max", "min", "lte", "lt", "gte", "gt"]);
+
+/** Los valores de las dos constantes, leídos de su archivo (vacío si el archivo o una constante falta: la prueba real lo exige). */
+export function valoresDeLosLimitesDeDivision(archivos: ReadonlyMap<string, string>): number[] {
+  const texto = archivos.get(RUTA_DE_LOS_LIMITES_DE_DIVISION);
+  if (texto === undefined) return [];
+  const valores: number[] = [];
+  for (const s of fuente(RUTA_DE_LOS_LIMITES_DE_DIVISION, texto).statements) {
+    if (!ts.isVariableStatement(s) || !esExportada(s)) continue;
+    for (const d of s.declarationList.declarations) {
+      const valor = numero(d.initializer);
+      if (
+        ts.isIdentifier(d.name) &&
+        NOMBRES_DE_LIMITES_DE_DIVISION.includes(d.name.text) &&
+        valor !== undefined
+      )
+        valores.push(valor);
+    }
+  }
+  return valores;
+}
+
+export function topesDeDivisionEscritos(archivos: ReadonlyMap<string, string>): string[] {
+  const valores = new Set(valoresDeLosLimitesDeDivision(archivos));
+  const halladas: string[] = [];
+  for (const [ruta, texto] of archivos) {
+    if (ruta === RUTA_DE_LOS_LIMITES_DE_DIVISION) continue;
+    const f = fuente(ruta, texto);
+    const ajenas = lineasMarcadas(texto);
+    const anotar = (n: ts.Node) => {
+      const linea = f.getLineAndCharacterOfPosition(n.getStart(f)).line;
+      if (!ajenas.has(linea)) halladas.push(`${ruta}:${linea + 1}`);
+    };
+    const nombreDeLoComparado = (e: ts.Node): string => e.getText(f);
+    const ir = (n: ts.Node, contexto: string): void => {
+      let siguiente = contexto;
+      if (ts.isPropertyAssignment(n) && (ts.isIdentifier(n.name) || ts.isStringLiteral(n.name)))
+        siguiente = n.name.text;
+      if (ts.isVariableDeclaration(n) && ts.isIdentifier(n.name)) {
+        if (/^MAXIMO_DE_(CUENTAS|PARTES)_/.test(n.name.text)) anotar(n);
+        siguiente = n.name.text;
+      }
+      if (ts.isBinaryExpression(n) && OPERADORES.has(n.operatorToken.kind)) {
+        for (const [a, b] of [
+          [n.left, n.right],
+          [n.right, n.left],
+        ] as const) {
+          const valor = numero(a);
+          if (
+            valor !== undefined &&
+            valores.has(valor) &&
+            NOMBRE_DE_PARTES_O_CUENTAS.test(nombreDeLoComparado(b))
+          )
+            anotar(a);
+        }
+      }
+      if (
+        ts.isCallExpression(n) &&
+        ts.isPropertyAccessExpression(n.expression) &&
+        METODOS_DE_TOPE.has(n.expression.name.text) &&
+        n.arguments.length === 1
+      ) {
+        const valor = numero(n.arguments[0]);
+        if (
+          valor !== undefined &&
+          valores.has(valor) &&
+          NOMBRE_DE_PARTES_O_CUENTAS.test(`${contexto} ${n.expression.expression.getText(f)}`)
+        )
+          anotar(n.arguments[0] as ts.Expression);
+      }
+      ts.forEachChild(n, (h) => ir(h, siguiente));
+    };
+    ir(f, "");
+  }
+  return halladas.sort();
+}
