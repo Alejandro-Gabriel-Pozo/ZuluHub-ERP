@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
+
 import {
   chownSync,
   copyFileSync,
@@ -17,6 +17,7 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
 import { OPCIONES_DE_BASE } from "./opciones-de-base";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Las migraciones corridas como el rol que migra en Neon: NO superusuario.
@@ -221,7 +222,7 @@ describe.skipIf(binarios === null)(
         await c.end();
       }
     }
-    const sufijo = () => randomBytes(3).toString("hex");
+    const sufijo = () => sufijoUnico();
 
     it("con la pertenencia automática del creador, 0012 repetida pasa", async () => {
       expect((await correr0012ComoDueno()).error).toBeNull();

@@ -1,4 +1,4 @@
-import { randomBytes, randomInt, randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import type { Kysely } from "kysely";
 import type pg from "pg";
 import {
@@ -40,7 +40,7 @@ import {
   type TxDeCertificados,
 } from "../../src/modulos/fiscal/publico";
 import { crearRepositorioDeTenants, type TenantsDb } from "../../src/modulos/tenants/publico";
-import { digitoVerificadorDeCuit } from "../../src/primitivas/identificacion-fiscal/cuit";
+
 import { emisorId } from "../../src/primitivas/identificadores/marca";
 import type { CifradorDeSecretos } from "../../src/puertos/cifrado-de-secretos";
 import type { GeneradorDeCredenciales } from "../../src/puertos/generador-de-credenciales";
@@ -54,6 +54,8 @@ import {
 import { crearEscenarioDeCasos, type EscenarioDeCasos } from "./facturacion-casos-apoyo";
 import { REGLAS_CON_FACTURACION, conFacturacion } from "./fiscal-numeracion-apoyo";
 import type { BaseDePruebas } from "./global";
+import { sufijoUnico } from "./unicos";
+import { cuitUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de los certificados (F7) contra una base real: la transacción que recibe cada caso de uso, la
@@ -187,14 +189,9 @@ export const almacenDe = (
 export const escenarioDeCertificados = (dueno: pg.Client, base: BaseDePruebas) =>
   crearEscenarioDeCasos(dueno, base, { rol: "GERENTE", sinCertificado: true });
 
-/** Un CUIT válido al azar con ese prefijo (30 = sociedad, 20 y 27 = personas físicas): único con altísima probabilidad. */
+/** Un CUIT válido con ese prefijo (30 = sociedad, 20 y 27 = personas físicas), ÚNICO en la corrida (generador común, `unicos.ts`). */
 export function cuitConPrefijo(prefijo: "20" | "27" | "30"): string {
-  for (;;) {
-    let diez = prefijo;
-    while (diez.length < 10) diez += String(randomInt(0, 10));
-    const verificador = digitoVerificadorDeCuit(diez);
-    if (verificador !== null) return `${diez}${verificador}`;
-  }
+  return cuitUnico(prefijo);
 }
 
 /**
@@ -218,7 +215,7 @@ export function pedidoDeCertificado(
     id: randomUUID(),
     emisorId: emisorId(e.emisor),
     ambiente: "HOMOLOGACION",
-    alias: `pedernal${randomBytes(3).toString("hex")}`,
+    alias: `pedernal${sufijoUnico()}`,
     cuitTitular: e.cuit,
     organizacion: "Panadería Zulú SA",
     ...cambios,

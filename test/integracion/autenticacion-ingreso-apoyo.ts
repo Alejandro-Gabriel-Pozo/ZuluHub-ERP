@@ -7,6 +7,8 @@ import { crearAutenticacionDeBetterAuth } from "../../src/adaptadores/autenticac
 import { vi } from "vitest";
 import type { Autenticacion } from "../../src/puertos/autenticacion";
 import type { BaseDePruebas } from "./global";
+import { sufijoUnico } from "./unicos";
+import { unicos } from "./unicos";
 
 /**
  * Apoyo de las pruebas del ingreso (W3b): un proveedor OIDC LOCAL que hace de Google, un bloqueo de la red
@@ -26,7 +28,7 @@ export type PerfilDePrueba = Readonly<{
 
 export const perfilAlAzar = (opciones: Partial<PerfilDePrueba> = {}): PerfilDePrueba => ({
   sub: `sub-${randomUUID()}`,
-  email: `ingreso-${randomUUID().slice(0, 8)}@ejemplo.test`,
+  email: `ingreso-${sufijoUnico()}@ejemplo.test`,
   emailVerificado: true,
   nombre: "Persona de prueba",
   ...opciones,
@@ -224,7 +226,8 @@ type Respuesta = Readonly<{
   json: () => unknown;
 }>;
 
-let contadorDeIp = Math.floor(Math.random() * 30_000);
+// Cada archivo de pruebas arranca en su propio bloque de 32 direcciones (su puesto de la corrida): dos archivos a la vez no se pisan. Pasadas las 32 sigue contando.
+let contadorDeIp = unicos().puesto * 32;
 /** Una IP distinta en cada llamada (rango de pruebas): la librería limita los pedidos por IP y dos navegadores no pueden compartirla por azar. */
 export function ipUnica(): string {
   contadorDeIp += 1;

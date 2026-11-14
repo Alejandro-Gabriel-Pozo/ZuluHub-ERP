@@ -30,6 +30,7 @@ import {
   type MundoDeMarca,
 } from "./marcas-apoyo";
 import { SesionDePrueba, type Intento } from "./sesiones";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Marcas y planes (M3), migración 0007: AISLAMIENTO con los roles reales y su contexto firmado. Qué lee y qué
@@ -1018,7 +1019,7 @@ describe.skipIf(base === null)(
           };
           const marca = (
             await un("insert into marca (codigo, marca_padre_id) values ($1, $2) returning id", [
-              `circuito-${randomUUID().slice(0, 6)}`,
+              `circuito-${sufijoUnico()}`,
               principal,
             ])
           )[0]?.["id"] as string;
@@ -1036,7 +1037,7 @@ describe.skipIf(base === null)(
           await un("update dominio set estado = 'ACTIVO' where id = $1", [dominio]);
           const plan = (
             await un("insert into plan (codigo) values ($1) returning id", [
-              `circuito-${randomUUID().slice(0, 6)}`,
+              `circuito-${sufijoUnico()}`,
             ])
           )[0]?.["id"] as string;
           const vplan = (
@@ -1134,7 +1135,7 @@ describe.skipIf(base === null)(
           );
           // publicar un borrador a nombre de otro
           const plan = await s.intentar("insert into plan (codigo) values ($1) returning id", [
-            `ajeno-${randomUUID().slice(0, 6)}`,
+            `ajeno-${sufijoUnico()}`,
           ]);
           const planId = plan.ok ? (plan.rows[0]?.["id"] as string) : "";
           const v = await s.intentar(
@@ -1150,7 +1151,7 @@ describe.skipIf(base === null)(
           );
           // confirmar una versión de marca a nombre de otro
           const marca = await s.intentar("insert into marca (codigo) values ($1) returning id", [
-            `ajena-${randomUUID().slice(0, 6)}`,
+            `ajena-${sufijoUnico()}`,
           ]);
           const marcaId = marca.ok ? (marca.rows[0]?.["id"] as string) : "";
           const vm = await s.intentar(

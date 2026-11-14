@@ -19,7 +19,7 @@ import {
   crearBarrera,
   crearEmpresaActiva,
   crearEntornoDePrueba,
-  nombreAlAzar,
+  nombreUnico,
   type EmpresaDePrueba,
   type TxDePrueba,
 } from "./entorno";
@@ -85,7 +85,7 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
 
   /** Encola un trabajo con el puerto real y devuelve su id. */
   const encolar = async (tipo = "demo", datos: Record<string, string> = {}): Promise<string> => {
-    const clave = nombreAlAzar("clave");
+    const clave = nombreUnico("clave");
     const r = await entorno.ejecutar({ contexto: comoEmpresa(empresa.empresa) }, async (tx) =>
       ok(
         await tx.trabajos.encolar({
@@ -256,7 +256,7 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
         const emp = await crearEmpresaActiva(e);
         const ids: string[] = [];
         for (let i = 0; i < 4; i++) {
-          const clave = nombreAlAzar("c");
+          const clave = nombreUnico("c");
           await e.ejecutar({ contexto: comoEmpresa(emp.empresa) }, async (tx) =>
             ok(
               await tx.trabajos.encolar({
@@ -310,7 +310,7 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
     });
 
     it("encuentra los ids de los trabajos de la empresa por clave de idempotencia", async () => {
-      const clave = nombreAlAzar("busqueda");
+      const clave = nombreUnico("busqueda");
       await entorno.ejecutar({ contexto: comoEmpresa(empresa.empresa) }, async (tx) =>
         ok(
           await tx.trabajos.encolar({
@@ -335,7 +335,7 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
   });
 
   describe("empresas con trabajos de un tipo (el cron sabe a quién barrerle lo que quedó en vuelo)", () => {
-    const tipo = () => `tipo-${nombreAlAzar("empresas")}`;
+    const tipo = () => `tipo-${nombreUnico("empresas")}`;
     const encolarCon = async (e: EmpresaDePrueba, t: string, clave: string, creadoEn?: string) => {
       await entorno.ejecutar({ contexto: comoEmpresa(e.empresa) }, async (tx) =>
         ok(
@@ -362,12 +362,12 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
       const a = await crearEmpresaActiva(entorno);
       const b = await crearEmpresaActiva(entorno);
       const c = await crearEmpresaActiva(entorno);
-      await encolarCon(a, t, nombreAlAzar("k"));
-      await encolarCon(a, t, nombreAlAzar("k"));
-      await encolarCon(b, t, nombreAlAzar("k"));
+      await encolarCon(a, t, nombreUnico("k"));
+      await encolarCon(a, t, nombreUnico("k"));
+      await encolarCon(b, t, nombreUnico("k"));
       // Otro tipo: no cuenta. Uno viejo: no cuenta.
-      await encolarCon(c, "otro-tipo", nombreAlAzar("k"));
-      await encolarCon(c, t, nombreAlAzar("k"), "2020-01-01T00:00:00Z");
+      await encolarCon(c, "otro-tipo", nombreUnico("k"));
+      await encolarCon(c, t, nombreUnico("k"), "2020-01-01T00:00:00Z");
       const hallada = await empresasDe(t, new Date("2025-01-01T00:00:00Z"));
       expect([...hallada].sort()).toEqual([a.empresa, b.empresa].sort());
       expect(hallada).toEqual([...hallada].sort());
@@ -379,8 +379,8 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
       const t = tipo();
       const e1 = await crearEmpresaActiva(entorno);
       const e2 = await crearEmpresaActiva(entorno);
-      await encolarCon(e1, t, nombreAlAzar("k"));
-      await encolarCon(e2, t, nombreAlAzar("k"));
+      await encolarCon(e1, t, nombreUnico("k"));
+      await encolarCon(e2, t, nombreUnico("k"));
       const todas = await empresasDe(t, new Date(0));
       expect(await empresasDe(t, new Date(0), 1)).toEqual([todas[0]]);
       for (const limite of [0, -1, 1.5]) {
@@ -394,10 +394,10 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
       const a = await crearEmpresaActiva(entorno);
       const b = await crearEmpresaActiva(entorno);
       const c = await crearEmpresaActiva(entorno);
-      for (const e of [a, b, c]) await encolarCon(e, t, nombreAlAzar("k"));
+      for (const e of [a, b, c]) await encolarCon(e, t, nombreUnico("k"));
       // `a` encoló el otro tipo hace poco, `b` hace mucho y `c` nunca: el orden es c, b, a, sin importar los ids.
-      await encolarCon(a, otro, nombreAlAzar("k"), "2026-03-02T00:00:00Z");
-      await encolarCon(b, otro, nombreAlAzar("k"), "2026-03-01T00:00:00Z");
+      await encolarCon(a, otro, nombreUnico("k"), "2026-03-02T00:00:00Z");
+      await encolarCon(b, otro, nombreUnico("k"), "2026-03-01T00:00:00Z");
       const desde = new Date(0);
       expect(await enLaCola((q) => q.empresasConTrabajosDe(t, desde, 50, otro))).toEqual([
         c.empresa,
@@ -409,7 +409,7 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
         c.empresa,
       ]);
       const d = await crearEmpresaActiva(entorno);
-      await encolarCon(d, otro, nombreAlAzar("k"));
+      await encolarCon(d, otro, nombreUnico("k"));
       expect(await enLaCola((q) => q.empresasConTrabajosDe(t, desde, 50, otro))).not.toContain(
         d.empresa,
       );
@@ -421,7 +421,7 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
       const todas: string[] = [];
       for (let i = 0; i < 205; i++) {
         const e = await crearEmpresaActiva(entorno);
-        await encolarCon(e, t, nombreAlAzar("k"));
+        await encolarCon(e, t, nombreUnico("k"));
         todas.push(e.empresa);
       }
       const desde = new Date(0);
@@ -433,7 +433,7 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
         for (const empresa of elegidas) {
           await dueno.query(
             "insert into trabajo (empresa_id, tipo, clave_idempotencia) values ($1, $2, $3)",
-            [empresa, otro, nombreAlAzar("k")],
+            [empresa, otro, nombreUnico("k")],
           );
           cubiertas.add(empresa);
         }
@@ -446,7 +446,7 @@ describe.skipIf(base === null)("cola de trabajos: el procesador contra una base 
       const t = tipo();
       await dueno.query(
         "insert into trabajo (empresa_id, tipo, clave_idempotencia) values (null, $1, $2)",
-        [t, nombreAlAzar("k")],
+        [t, nombreUnico("k")],
       );
       expect(await empresasDe(t, new Date(0))).toEqual([]);
     });

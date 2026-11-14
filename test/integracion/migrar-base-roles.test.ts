@@ -1,4 +1,4 @@
-import { createHash, createHmac, pbkdf2Sync, randomBytes } from "node:crypto";
+import { createHash, createHmac, pbkdf2Sync } from "node:crypto";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import pg from "pg";
@@ -16,6 +16,7 @@ import {
 import type { RolPorPreparar } from "../../src/adaptadores/postgres/roles-de-la-aplicacion";
 import { ejecutarMigracion, VARIABLE_DE_LA_CADENA } from "../../scripts/ejecutar-migracion";
 import { crearBaseAparte } from "./entorno";
+import { sufijoUnico } from "./unicos";
 
 /**
  * `--preparar-roles`: aplica las migraciones y da LOGIN con contraseña al azar a los roles de la
@@ -148,7 +149,7 @@ describe.skipIf(base === null)("migrar-base --preparar-roles", () => {
 
   beforeEach(async () => {
     if (base === null) return;
-    sufijo = randomBytes(4).toString("hex");
+    sufijo = sufijoUnico();
     ROLES = [
       { rol: `zz_${sufijo}_app`, variable: "PEDERNAL_DB_APP" },
       { rol: `zz_${sufijo}_trabajos`, variable: "PEDERNAL_DB_TRABAJOS" },

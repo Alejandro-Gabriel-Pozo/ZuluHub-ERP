@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { codigoDe } from "./concurrencia-apoyo";
-import { cuitAlAzar } from "./entorno";
+import { cuitUnico } from "./entorno";
 import {
   montarClientes,
-  nombreAlAzar,
+  nombreUnico,
   nuevoId,
   valorDe,
   RONDAS,
@@ -36,7 +36,7 @@ describe.skipIf(base === null)("clientes: partes", () => {
   const alta = (extra: Record<string, unknown> = {}) => ({
     idempotencia: nuevoId(),
     naturaleza: "HUMANA",
-    nombre: nombreAlAzar("Juan"),
+    nombre: nombreUnico("Juan"),
     apellido: "Pérez",
     roles: ["CUSTOMER"],
     ...extra,
@@ -52,7 +52,7 @@ describe.skipIf(base === null)("clientes: partes", () => {
   // =============================================================================================
   describe("crearParte", () => {
     it("el operador da de alta una persona y una empresa con sus roles; queda auditado SIN los datos personales", async () => {
-      const nombre = nombreAlAzar("Marta");
+      const nombre = nombreUnico("Marta");
       const salida = valorDe(
         await c.casos.crearParte(
           e.operador,
@@ -116,8 +116,8 @@ describe.skipIf(base === null)("clientes: partes", () => {
         await c.casos.crearParte(e.operador, {
           idempotencia: nuevoId(),
           naturaleza: "JURIDICA",
-          nombre: nombreAlAzar("Distribuidora"),
-          documento: { tipo: "CUIT", numero: cuitAlAzar() },
+          nombre: nombreUnico("Distribuidora"),
+          documento: { tipo: "CUIT", numero: cuitUnico() },
           condicionIva: "RESPONSABLE_INSCRIPTO",
           roles: ["PROVEEDOR"],
         }),
@@ -194,7 +194,7 @@ describe.skipIf(base === null)("clientes: partes", () => {
         error: { error: "PARTE_INACTIVA_CON_ESE_DOCUMENTO", parteId: primera.parteId },
       });
       // Un CUIL con el número de un CUIT es el mismo documento.
-      const cuit = cuitAlAzar();
+      const cuit = cuitUnico();
       const conCuit = await crear({ documento: { tipo: "CUIL", numero: cuit } });
       expect(
         await c.casos.crearParte(
@@ -227,7 +227,7 @@ describe.skipIf(base === null)("clientes: partes", () => {
       expect(await contarPartes()).toBe(antes + 1);
       expect((await c.auditoria(e.empresa, "PARTE_CREADA")).length).toBe(auditadas);
       expect(
-        await c.casos.crearParte(e.operador, { ...entrada, nombre: nombreAlAzar("Otro") }),
+        await c.casos.crearParte(e.operador, { ...entrada, nombre: nombreUnico("Otro") }),
       ).toEqual({ ok: false, error: "CLAVE_REUTILIZADA" });
       expect(await c.casos.crearParte(e.operador, { ...entrada, roles: ["PROVEEDOR"] })).toEqual({
         ok: false,
@@ -237,7 +237,7 @@ describe.skipIf(base === null)("clientes: partes", () => {
 
     it("el mismo clic doble (dos pedidos iguales a la vez) deja una sola parte", async () => {
       for (let ronda = 0; ronda < RONDAS; ronda++) {
-        const entrada = alta({ documento: { tipo: "CUIT", numero: cuitAlAzar() } });
+        const entrada = alta({ documento: { tipo: "CUIT", numero: cuitUnico() } });
         const antes = await contarPartes();
         c.armarBarrera(2);
         try {
@@ -258,7 +258,7 @@ describe.skipIf(base === null)("clientes: partes", () => {
 
     it("C7: dos altas a la vez con el mismo documento: una parte y la otra DOCUMENTO_YA_REGISTRADO con el id de la ganadora", async () => {
       for (let ronda = 0; ronda < RONDAS; ronda++) {
-        const documento = { tipo: "CUIT", numero: cuitAlAzar() };
+        const documento = { tipo: "CUIT", numero: cuitUnico() };
         c.armarBarrera(2);
         try {
           const [a, b] = await Promise.all([

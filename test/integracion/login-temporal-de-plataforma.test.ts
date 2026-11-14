@@ -1,10 +1,10 @@
-import { randomBytes } from "node:crypto";
 import pg from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
   abrirLoginDePlataforma,
   cerrarLoginDePlataforma,
 } from "../../src/adaptadores/postgres/login-temporal-de-plataforma";
+import { sufijoUnico } from "./unicos";
 
 /**
  * El login temporal del rol de plataforma contra una base REAL: abre el login con una clave de la corrida (y se puede
@@ -16,7 +16,7 @@ import {
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
-const ROL = `prueba_login_temporal_${randomBytes(4).toString("hex")}`;
+const ROL = `prueba_login_temporal_${sufijoUnico()}`;
 
 describe.skipIf(base === null)("login temporal del rol de plataforma (base real)", () => {
   const dueno = base?.dueno as string;

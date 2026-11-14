@@ -22,7 +22,7 @@ import type { Contexto } from "../../src/contexto/contexto";
 import type { Aislamiento } from "../../src/puertos/transacciones";
 import { empresaId, personaId, tenantId } from "../../src/primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../src/primitivas/resultado/resultado";
-import { crearBarrera, crearBaseAparte, cuitAlAzar } from "./entorno";
+import { crearBarrera, crearBaseAparte, cuitUnico } from "./entorno";
 import {
   crearDomicilio,
   crearMundo,
@@ -212,7 +212,7 @@ describe.skipIf(base === null)("fiscal T4: concurrencia de los repositorios", ()
     it("dos altas del mismo emisor secundario (misma empresa y CUIT) a la vez dejan un emisor y las dos reciben el mismo", async () => {
       for (let n = 0; n < RONDAS; n++) {
         const m = await mundo();
-        const cuit = cuitAlAzar();
+        const cuit = cuitUnico();
         const alta = (tx: TxFiscalDePrueba) => tx.emisores.crearSecundario(empresaDe(m), cuit);
         const rs = (await enParalelo(contextoDePlataforma(), [alta, alta])).map(valor);
         expect(
@@ -300,7 +300,7 @@ describe.skipIf(base === null)("fiscal T4: concurrencia de los repositorios", ()
         const m = await mundo();
         const sec = valor(
           await entorno.ejecutar({ contexto: contextoDePlataforma() }, async (tx) => {
-            const r = await tx.emisores.crearSecundario(empresaDe(m), cuitAlAzar());
+            const r = await tx.emisores.crearSecundario(empresaDe(m), cuitUnico());
             return r.ok ? ok(r.valor.valor) : err(r.error);
           }),
         );
@@ -343,7 +343,7 @@ describe.skipIf(base === null)("fiscal T4: concurrencia de los repositorios", ()
       for (let n = 0; n < RONDAS; n++) {
         const a = await mundo();
         const b = await mundo();
-        const cuit = cuitAlAzar();
+        const cuit = cuitUnico();
         const rs = await enParalelo(contextoDePlataforma(), [
           (tx) => tx.emisores.crearSecundario(empresaDe(a), cuit),
           (tx) => tx.emisores.crearSecundario(empresaDe(b), cuit),
@@ -366,7 +366,7 @@ describe.skipIf(base === null)("fiscal T4: concurrencia de los repositorios", ()
     it("un emisor secundario y el alta de una empresa con el MISMO CUIT a la vez: gana uno solo, el otro CUIT_EN_USO", async () => {
       for (let n = 0; n < RONDAS; n++) {
         const m = await mundo();
-        const cuit = cuitAlAzar();
+        const cuit = cuitUnico();
         const rs = await enParalelo(contextoDePlataforma(), [
           async (tx) => {
             const r = await tx.emisores.crearSecundario(empresaDe(m), cuit);
@@ -671,7 +671,7 @@ describe.skipIf(base === null)("fiscal T4: concurrencia de los repositorios", ()
       const m = await mundo();
       const sec = valor(
         await entorno.ejecutar({ contexto: contextoDePlataforma() }, async (tx) => {
-          const r = await tx.emisores.crearSecundario(empresaDe(m), cuitAlAzar());
+          const r = await tx.emisores.crearSecundario(empresaDe(m), cuitUnico());
           return r.ok ? ok(r.valor.valor) : err(r.error);
         }),
       );

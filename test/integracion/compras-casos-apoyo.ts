@@ -56,6 +56,8 @@ import {
 } from "./fixtures-identidad";
 import type { BaseDePruebas } from "./global";
 import { articuloDeBase, depositoDeBase, existenciaDe } from "./stock-apoyo";
+import { sufijoUnico } from "./unicos";
+import { nombreDeLetrasUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de integración de los casos de uso de compras (E9): las dependencias REALES sobre una base propia (SERIALIZABLE aborta por falsos
@@ -241,7 +243,7 @@ export async function montarCompras(
     );
     const { rows } = await dueno.query<{ id: string }>(
       "insert into caja (empresa_id, sucursal_id, nombre) values ($1, $2, $3) returning id",
-      [e.empresa, e.sucursal, `Caja ${randomUUID().slice(0, 8)}`],
+      [e.empresa, e.sucursal, `Caja ${sufijoUnico()}`],
     );
     const cajaId = rows[0]?.id as string;
     const r = await cajaCasos.abrirSesion(e.gerente, {
@@ -262,9 +264,7 @@ export async function montarCompras(
     const r = await clientes.crearParte(quien, {
       idempotencia: randomUUID(),
       naturaleza: "JURIDICA",
-      nombre: `Proveedor ${randomUUID()
-        .slice(0, 8)
-        .replace(/[0-9]/g, (d) => "abcdefghij"[Number(d)] ?? "x")}`,
+      nombre: nombreDeLetrasUnico("Proveedor"),
       roles: ["PROVEEDOR"],
       ...datos,
     });

@@ -66,7 +66,7 @@ import type { EntradaDeAltaDeEmpresa } from "../../src/plataforma/casos-de-uso/a
 import type { Tokens } from "../../src/puertos/tokens";
 import { MODULOS_DE_PRUEBA } from "../utilidades/planes";
 import { SOPORTE_DE_PRUEBA } from "./admins-de-prueba";
-import { cuitAlAzar } from "./entorno";
+import { cuitUnico } from "./entorno";
 import type { BaseDePruebas } from "./global";
 import {
   ajustarPerilla,
@@ -81,6 +81,7 @@ import {
 } from "./marcas-apoyo";
 import { claveAlAzar } from "./plataforma-apoyo";
 import { plataformaEn } from "./soporte-datos";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de integración del alta de empresas (H5 P5 y M6): arma la transacción de plataforma
@@ -354,13 +355,13 @@ export function altaNueva(
 ): EntradaDeAltaDeEmpresa {
   return {
     claveDeIdempotencia: claveAlAzar(),
-    nombreDeTenant: `tenant-${randomBytes(4).toString("hex")}`,
+    nombreDeTenant: `tenant-${sufijoUnico()}`,
     marcaId: marca,
-    cuit: cuitAlAzar(),
-    razonSocial: `Empresa ${randomBytes(3).toString("hex")} S.A.`,
+    cuit: cuitUnico(),
+    razonSocial: `Empresa ${sufijoUnico()} S.A.`,
     zonaHoraria: "America/Argentina/Buenos_Aires",
     moneda: "ARS",
-    emailGerente: `gerente-${randomBytes(5).toString("hex")}@prueba.test`,
+    emailGerente: `gerente-${sufijoUnico()}@prueba.test`,
     ...extra,
   };
 }
