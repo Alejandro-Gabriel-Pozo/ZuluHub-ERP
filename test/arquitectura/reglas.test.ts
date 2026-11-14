@@ -357,6 +357,15 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "datos-fragmentos-solo-desde-su-ensamblador",
+      archivos: {
+        "src/capacidades/datos/registro-de-caja.ts": exporta,
+        "apps/web/ui/plantillas/caja/Pantalla.tsx": importa(
+          "../../../../../src/capacidades/datos/registro-de-caja",
+        ),
+      },
+    },
+    {
       regla: "cliente-sin-servidor",
       archivos: {
         "apps/web/app/s/app/boton.cliente.tsx": importa("../../../servidor/composicion"),
@@ -1151,6 +1160,29 @@ describe("R-W2: la composición solo se importa desde apps/web/servidor", () => 
       "src/modulos/empresas/ui.tsx": importa("../../composicion/web"),
     });
     expect(v).toContain("composicion-solo-desde-servidor-de-apps");
+  });
+});
+
+describe("datos por módulo: los fragmentos solo los importa su ensamblador", () => {
+  it("registro.ts y caminos.ts sí importan sus fragmentos, y una pantalla importa el ensamblador", async () => {
+    const v = await violacionesDe({
+      "src/capacidades/datos/registro-de-caja.ts": exporta,
+      "src/capacidades/datos/caminos-de-caja.ts": exporta,
+      "src/capacidades/datos/registro.ts": importa("./registro-de-caja"),
+      "src/capacidades/datos/caminos.ts": importa("./caminos-de-caja"),
+      "apps/web/ui/plantillas/caja/Pantalla.tsx": importa(
+        "../../../../../src/capacidades/datos/registro",
+      ),
+    });
+    expect(v).not.toContain("datos-fragmentos-solo-desde-su-ensamblador");
+  });
+
+  it("un fragmento tampoco importa a otro fragmento: se juntan solo en el ensamblador", async () => {
+    const v = await violacionesDe({
+      "src/capacidades/datos/registro-de-caja.ts": exporta,
+      "src/capacidades/datos/registro-de-facturacion.ts": importa("./registro-de-caja"),
+    });
+    expect(v).toContain("datos-fragmentos-solo-desde-su-ensamblador");
   });
 });
 
