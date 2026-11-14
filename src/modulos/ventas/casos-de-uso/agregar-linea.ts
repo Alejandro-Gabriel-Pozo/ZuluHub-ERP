@@ -226,6 +226,7 @@ export async function agregarLineaEnTx(
     posicion,
     productoId: instantanea.productoId,
     descripcion: instantanea.descripcion,
+    nombreDeCocina: instantanea.nombreDeCocina,
     varianteOpcionId: instantanea.variante === null ? null : instantanea.variante.opcionId,
     varianteNombre: instantanea.variante === null ? null : instantanea.variante.nombre,
     // La versión del tamaño que se vendió: de ella sale el factor del consumo de stock aunque después cambie la vigente (0036).

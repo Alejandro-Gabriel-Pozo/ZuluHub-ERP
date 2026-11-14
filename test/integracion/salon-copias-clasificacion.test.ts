@@ -78,7 +78,12 @@ describe.skipIf(base === null)("0055 (D2): copias_cuadran y la clasificación co
     );
   }
 
-  async function linea(s: SesionDePrueba, cuentaId: string, clase: Clasificacion): Promise<string> {
+  async function linea(
+    s: SesionDePrueba,
+    cuentaId: string,
+    clase: Clasificacion,
+    cocina: string | null = null,
+  ): Promise<string> {
     const id = uuid();
     const r = await s.directo(
       `update cuenta_consumo set ultima_posicion = ultima_posicion + 1 where id = $1 and empresa_id = $2 returning ultima_posicion`,
@@ -89,8 +94,8 @@ describe.skipIf(base === null)("0055 (D2): copias_cuadran y la clasificación co
       await s.directo(
         `insert into linea_cuenta (id, empresa_id, cuenta_id, posicion, producto_id, descripcion, precio_id, origen_del_precio, precio_base,
                                    precio_unitario, cantidad, unidad_de_venta, paso_de_cantidad, alicuota, controla_stock, creada_por, creada_en,
-                                   departamento_id, camino_de_clasificacion)
-         values ($1, $2, $3, $4, $5, 'Pizza', $6, 'EMPRESA', 1000, 1000, 1, 'UNIDAD', 1, '21', false, $7, $8, $9, $10::jsonb)`,
+                                   departamento_id, camino_de_clasificacion${cocina === null ? "" : ", nombre_de_cocina"})
+         values ($1, $2, $3, $4, $5, 'Pizza', $6, 'EMPRESA', 1000, 1000, 1, 'UNIDAD', 1, '21', false, $7, $8, $9, $10::jsonb${cocina === null ? "" : ", $11"})`,
         [
           id,
           m.empresa,
@@ -102,6 +107,7 @@ describe.skipIf(base === null)("0055 (D2): copias_cuadran y la clasificación co
           AHORA,
           clase?.departamento ?? null,
           clase?.camino ?? null,
+          ...(cocina === null ? [] : [cocina]),
         ],
       ),
     );
@@ -109,11 +115,15 @@ describe.skipIf(base === null)("0055 (D2): copias_cuadran y la clasificación co
   }
 
   /** Traslada entera una línea de la cuenta 1 a la 2 con la clasificación indicada para la copia, y fuerza los controles diferidos. */
-  async function trasladar(origenClase: Clasificacion, copiaClase: Clasificacion) {
+  async function trasladar(
+    origenClase: Clasificacion,
+    copiaClase: Clasificacion,
+    cocinas: readonly [string | null, string | null] = [null, null],
+  ) {
     return app(async (s) => {
       const c1 = await cuenta(s);
       const c2 = await cuenta(s);
-      const origen = await linea(s, c1, origenClase);
+      const origen = await linea(s, c1, origenClase, cocinas[0]);
       await total(s, c1);
       acepta(
         await s.directo(
@@ -122,7 +132,7 @@ describe.skipIf(base === null)("0055 (D2): copias_cuadran y la clasificación co
         ),
       );
       await total(s, c1);
-      const nueva = await linea(s, c2, copiaClase);
+      const nueva = await linea(s, c2, copiaClase, cocinas[1]);
       await total(s, c2);
       acepta(
         await s.directo(
@@ -158,16 +168,23 @@ describe.skipIf(base === null)("0055 (D2): copias_cuadran y la clasificación co
     check(await trasladar(ventas, otroNombre), "copias_cuadran");
   });
 
+  it("D3: la copia conserva el nombre de cocina congelado de la origen (también el nulo)", async () => {
+    acepta(await trasladar(ventas, ventas, ["Medallón", "Medallón"]));
+    check(await trasladar(ventas, ventas, ["Medallón", "Otro"]), "copias_cuadran");
+    check(await trasladar(ventas, ventas, ["Medallón", null]), "copias_cuadran");
+    check(await trasladar(ventas, ventas, [null, "Medallón"]), "copias_cuadran");
+  });
+
   it("la reversión devuelve la función de 0038 (la base vuelve a aceptar el cambio) y la migración se puede volver a aplicar", async () => {
     const carpeta = join(import.meta.dirname, "../../migraciones");
     const reversion = await readFile(
-      join(carpeta, "reversiones/0055_revertir_copias_cuadran_vigila_la_clasificacion.sql"),
+      join(carpeta, "reversiones/0055_revertir_salon_copias_y_nombre_de_cocina.sql"),
       "utf8",
     );
     await dueno.query(reversion);
     acepta(await trasladar(ventas, bebidas));
     const migracion = await readFile(
-      join(carpeta, "0055_copias_cuadran_vigila_la_clasificacion.sql"),
+      join(carpeta, "0055_salon_copias_y_nombre_de_cocina.sql"),
       "utf8",
     );
     await dueno.query(migracion);

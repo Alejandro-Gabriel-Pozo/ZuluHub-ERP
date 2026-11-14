@@ -3,6 +3,7 @@ import {
   decidirCambiarSalida,
   estadoDeLineaDeComanda,
   nombreDeImpresora,
+  nombreParaLaCocina,
   puedeCobrarse,
   rotuloDeEnvio,
   seleccionarParaElEnvio,
@@ -106,5 +107,14 @@ describe("textos cortos", () => {
     expect(nombreDeImpresora("Cocina 1")).toEqual({ ok: true, valor: "Cocina 1" });
     expect(nombreDeImpresora("123")).toEqual({ ok: false, error: "NOMBRE_DE_IMPRESORA_INVALIDO" });
     expect(nombreDeImpresora("a".repeat(41)).ok).toBe(false);
+  });
+});
+
+describe("nombreParaLaCocina (CYN 72)", () => {
+  it("con nombre de cocina, ese; sin él, el comercial", () => {
+    expect(nombreParaLaCocina({ nombreDeCocina: "Medallón", descripcion: "Bife" })).toBe(
+      "Medallón",
+    );
+    expect(nombreParaLaCocina({ nombreDeCocina: null, descripcion: "Bife" })).toBe("Bife");
   });
 });

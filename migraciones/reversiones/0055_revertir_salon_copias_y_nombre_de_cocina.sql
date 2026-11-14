@@ -1,23 +1,82 @@
--- 0055_copias_cuadran_vigila_la_clasificacion (D2 de la auditoría de salón, INTEGRACION §5): `copias_cuadran` (0038) exige que la copia de una línea conserve lo congelado de la
--- origen («no se recotiza»), pero 0047 sumó a lo congelado `departamento_id` y `camino_de_clasificacion` (decisión 60: la clasificación se copia a la venta y no cambia) y el
--- disparador no los miraba: hoy solo lo garantiza el código de `copiar-linea.ts`. Previene: un traslado o una división que reclasifica en silencio lo ya vendido.
--- Probado por `test/integracion/salon-copias-clasificacion.test.ts`.
+-- 0055_revertir_salon_copias_y_nombre_de_cocina: deshace la migración 0055_salon_copias_y_nombre_de_cocina: devuelve `linea_validar_cambio` a la versión de 0047 y
+-- `copias_cuadran` a la de 0038 (sin comparar departamento, camino ni nombre de cocina) y quita `linea_cuenta.nombre_de_cocina`.
 --
--- Reglas de esta migración:
---  * Es ADITIVA y compatible hacia atrás: reemplaza el cuerpo de la función (`CREATE OR REPLACE`, misma firma, mismo `search_path`, mismos permisos y mismo disparador) sumando
---    dos comparaciones. No toca datos. Las filas existentes no se revalidan (el disparador corre al insertar una copia); una copia ya hecha con otra clasificación no se
---    corrige acá.
---  * Su reversión es `migraciones/reversiones/0055_revertir_copias_cuadran_vigila_la_clasificacion.sql` (devuelve la función de 0038; no destruye nada).
--- DEPENDE de 0038 y 0047; se comprueba al empezar.
+-- DESTRUCTIVA si hay datos: BORRA el nombre de cocina congelado en cada línea de venta (no se recupera: lo que decía el producto al venderse no se reconstruye si después se
+-- renombra). Hay que AVISAR AL DUEÑO antes de correrla si alguna línea lo tiene. Conviene bajar primero el código que escribe y lee la columna (`agregarLinea`, `copiarLinea` y la
+-- comanda). Además afloja un control: con la función de 0038 la base deja de impedir que una copia cambie la clasificación (queda solo el código de `copiar-linea.ts`).
+--
+-- Este script NO lo aplica el ejecutor de migraciones (solo toma los `NNNN_nombre.sql` de `migraciones/`): se corre a mano, revisado, en una sola transacción y con el rol dueño
+-- de la base (que evade RLS, o el conteo no vería nada):
+--
+--     BEGIN;
+--     SET LOCAL pedernal.confirmar_reversion = 'SI';   -- solo si alguna línea tiene nombre de cocina
+--     \i migraciones/reversiones/0055_revertir_salon_copias_y_nombre_de_cocina.sql
+--     COMMIT;
+--
+-- No usa CASCADE. Solo borra su propia fila del registro `migracion`, para poder volver a aplicarla. Se puede repetir sin que cambie nada.
 
 DO $$
+DECLARE
+  v_filas bigint := 0;
 BEGIN
-  IF to_regprocedure('public.copias_cuadran()') IS NULL OR NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-     WHERE table_schema = 'public' AND table_name = 'linea_cuenta' AND column_name = 'camino_de_clasificacion'
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_roles WHERE rolname = current_user AND (rolsuper OR rolbypassrls)
   ) THEN
-    RAISE EXCEPTION 'esta migración requiere 0038_salon y 0047_camino_en_el_renglon aplicadas antes' USING ERRCODE = '55000';
+    RAISE EXCEPTION 'la reversión necesita que el rol que la corre evada RLS (superusuario o BYPASSRLS): si no, el conteo de datos no ve nada'
+      USING ERRCODE = '55000';
   END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = 'linea_cuenta' AND column_name = 'nombre_de_cocina'
+  ) THEN
+    SELECT count(*) INTO v_filas FROM public.linea_cuenta WHERE nombre_de_cocina IS NOT NULL;
+  END IF;
+  IF v_filas > 0 AND coalesce(current_setting('pedernal.confirmar_reversion', true), '') <> 'SI' THEN
+    RAISE EXCEPTION 'hay % líneas de venta con nombre de cocina que esta reversión borraría (no se recuperan): avisar al dueño y repetir con SET LOCAL pedernal.confirmar_reversion = ''SI''', v_filas
+      USING ERRCODE = '55000';
+  END IF;
+END
+$$;
+
+-- Las funciones primero, para que nada lea la columna mientras se saca.
+CREATE OR REPLACE FUNCTION linea_validar_cambio() RETURNS trigger LANGUAGE plpgsql
+  SET search_path = pg_catalog, public, pg_temp AS
+$$
+BEGIN
+  -- Todo lo que se congeló al agregar la línea queda como está: solo cambia `estado` (y su marca de anulación).
+  IF NEW.id IS DISTINCT FROM OLD.id OR NEW.empresa_id IS DISTINCT FROM OLD.empresa_id OR NEW.cuenta_id IS DISTINCT FROM OLD.cuenta_id
+     OR NEW.posicion IS DISTINCT FROM OLD.posicion OR NEW.producto_id IS DISTINCT FROM OLD.producto_id
+     OR NEW.descripcion IS DISTINCT FROM OLD.descripcion OR NEW.variante_opcion_id IS DISTINCT FROM OLD.variante_opcion_id
+     OR NEW.variante_nombre IS DISTINCT FROM OLD.variante_nombre
+     OR NEW.variante_version_de_opcion_id IS DISTINCT FROM OLD.variante_version_de_opcion_id
+     OR NEW.precio_id IS DISTINCT FROM OLD.precio_id
+     OR NEW.origen_del_precio IS DISTINCT FROM OLD.origen_del_precio OR NEW.moneda IS DISTINCT FROM OLD.moneda
+     OR NEW.precio_base IS DISTINCT FROM OLD.precio_base OR NEW.precio_unitario IS DISTINCT FROM OLD.precio_unitario
+     OR NEW.importe_fijo IS DISTINCT FROM OLD.importe_fijo
+     OR NEW.cantidad IS DISTINCT FROM OLD.cantidad OR NEW.unidad_de_venta IS DISTINCT FROM OLD.unidad_de_venta
+     OR NEW.paso_de_cantidad IS DISTINCT FROM OLD.paso_de_cantidad OR NEW.alicuota IS DISTINCT FROM OLD.alicuota
+     OR NEW.controla_stock IS DISTINCT FROM OLD.controla_stock OR NEW.creada_por IS DISTINCT FROM OLD.creada_por
+     OR NEW.creada_en IS DISTINCT FROM OLD.creada_en OR NEW.creado_en IS DISTINCT FROM OLD.creado_en
+     OR NEW.departamento_id IS DISTINCT FROM OLD.departamento_id
+     OR NEW.camino_de_clasificacion IS DISTINCT FROM OLD.camino_de_clasificacion THEN
+    RAISE EXCEPTION 'una línea no se edita: se anula con motivo y se agrega otra'
+      USING ERRCODE = '23514', CONSTRAINT = 'linea_inmutable';
+  END IF;
+  IF OLD.estado = 'ANULADA' THEN
+    RAISE EXCEPTION 'una línea anulada no se puede modificar'
+      USING ERRCODE = '23514', CONSTRAINT = 'linea_anulada_congelada';
+  END IF;
+  IF NEW.estado = 'ANULADA' THEN
+    IF NEW.anulada_por IS DISTINCT FROM public.app_persona_id() THEN
+      RAISE EXCEPTION 'la línea la anula la persona del contexto'
+        USING ERRCODE = '23514', CONSTRAINT = 'linea_persona_del_contexto';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM public.cuenta_consumo c WHERE c.id = NEW.cuenta_id AND c.empresa_id = NEW.empresa_id AND c.estado = 'ABIERTA') THEN
+      RAISE EXCEPTION 'solo se anulan líneas de una cuenta abierta'
+        USING ERRCODE = '23514', CONSTRAINT = 'linea_cuenta_no_abierta';
+    END IF;
+  END IF;
+  RETURN NEW;
 END
 $$;
 
@@ -54,8 +113,6 @@ BEGIN
             OR n.precio_base IS DISTINCT FROM v_origen.precio_base OR n.precio_unitario IS DISTINCT FROM v_origen.precio_unitario
             OR n.unidad_de_venta IS DISTINCT FROM v_origen.unidad_de_venta OR n.paso_de_cantidad IS DISTINCT FROM v_origen.paso_de_cantidad
             OR n.alicuota IS DISTINCT FROM v_origen.alicuota
-            OR n.departamento_id IS DISTINCT FROM v_origen.departamento_id
-            OR n.camino_de_clasificacion IS DISTINCT FROM v_origen.camino_de_clasificacion
             OR EXISTS (
               (SELECT o.orden, o.opcion_id, o.version_de_opcion_id, o.grupo_id, o.nombre_de_grupo, o.nombre, o.clase, o.recargo, o.origen_del_recargo
                  FROM public.linea_cuenta_opcion o WHERE o.linea_id = n.id AND o.empresa_id = n.empresa_id
@@ -109,5 +166,15 @@ BEGIN
     END IF;
   END IF;
   RETURN NULL;
+END
+$$;
+
+ALTER TABLE linea_cuenta DROP COLUMN IF EXISTS nombre_de_cocina;
+
+DO $$
+BEGIN
+  IF to_regclass('public.migracion') IS NOT NULL THEN
+    DELETE FROM public.migracion WHERE nombre = '0055_salon_copias_y_nombre_de_cocina.sql';
+  END IF;
 END
 $$;
