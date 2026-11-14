@@ -33,7 +33,7 @@ import {
   crearEmpresaActiva,
   crearEmpresaEnAlta,
   crearEntornoDePrueba,
-  nombreAlAzar,
+  nombreUnico,
   type EmpresaDePrueba,
 } from "./entorno";
 import {
@@ -598,7 +598,7 @@ describe.skipIf(base === null)("enviar_invitacion: el trabajo contra una base re
     });
 
     it("un trabajo de ámbito plataforma (sin empresa) no se puede ejecutar: falla sin enviar", async () => {
-      const clave = nombreAlAzar("sin-empresa");
+      const clave = nombreUnico("sin-empresa");
       const r = await entorno.ejecutar({ contexto: comoPlataforma() }, async (tx) =>
         ok(
           await tx.trabajos.encolar({
@@ -621,7 +621,7 @@ describe.skipIf(base === null)("enviar_invitacion: el trabajo contra una base re
 
     it("datos que no traen una invitación válida: FALLIDO de inmediato", async () => {
       const e = await escenario();
-      const clave = nombreAlAzar("datos-malos");
+      const clave = nombreUnico("datos-malos");
       await entorno.ejecutar({ contexto: comoEmpresa(e.empresa) }, async (tx) =>
         ok(
           await tx.trabajos.encolar({

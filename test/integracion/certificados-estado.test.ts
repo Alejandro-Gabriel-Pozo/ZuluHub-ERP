@@ -18,6 +18,7 @@ import {
 import { crearBaseAparte } from "./entorno";
 import { crearEntornoDeConsultas, type EntornoDeConsultas } from "./facturacion-consultas-apoyo";
 import { crearMembresiaDeBase } from "./fixtures-identidad";
+import { sufijoUnico } from "./unicos";
 
 /**
  * D-42: la consulta de SOLO LECTURA del estado de los certificados de un emisor (falta cargar, pedido generado, vigente con
@@ -339,7 +340,7 @@ describe.skipIf(base === null)("certificados D-42: consulta del estado de los ce
       const e = await escenarioDeSociedad(dueno, propia.base);
       const persona = (
         await dueno.query<{ id: string }>("insert into persona (email) values ($1) returning id", [
-          `${randomUUID().slice(0, 12)}@prueba.test`,
+          `${sufijoUnico()}@prueba.test`,
         ])
       ).rows[0]?.id;
       await crearMembresiaDeBase(dueno, e.empresa, persona ?? "", rol);

@@ -8,8 +8,9 @@ import {
   type EscenarioDeCompras,
   type MontajeDeCompras,
 } from "./compras-casos-apoyo";
-import { cuitAlAzar } from "./entorno";
+import { cuitUnico } from "./entorno";
 import { crearDomicilio } from "./fiscal-apoyo";
+import { numeroUnico } from "./unicos";
 
 /**
  * E9-T15 (DEC-0322, decisión del dueño del 11/11/2026): el IVA como costo o como crédito fiscal según la condición de la EMPRESA frente al IVA. Las cuatro combinaciones
@@ -43,7 +44,7 @@ describe.skipIf(base === null)("compras: IVA al costo según la condición de la
     const proveedor = await c.proveedor(e.operador, { condicionIva: "RESPONSABLE_INSCRIPTO" });
     valorDe(await c.casos.agregarPuntoDeVenta(e.gerente, { parteId: proveedor, numero: 5 }));
     // El CUIT del proveedor se fija una vez: otro en una segunda factura sería PROVEEDOR_CON_OTRO_DOCUMENTO.
-    return { e, deposito, producto, articulo, proveedor, cuit: cuitAlAzar() };
+    return { e, deposito, producto, articulo, proveedor, cuit: cuitUnico() };
   };
   type Montaje = Awaited<ReturnType<typeof armar>>;
 
@@ -70,7 +71,7 @@ describe.skipIf(base === null)("compras: IVA al costo según la condición de la
       factura: {
         tipo,
         puntoDeVenta: 5,
-        numero: Math.floor(Math.random() * 1_000_000) + 1,
+        numero: numeroUnico(),
         fecha: "2026-10-10",
         lineas: [
           {

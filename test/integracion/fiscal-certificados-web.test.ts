@@ -12,7 +12,7 @@ import { armarConexiones, type Conexiones } from "../../src/composicion/conexion
 import { armarWeb } from "../../src/composicion/web";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import { certificadoDeArca, crearServicios, type ServiciosDePrueba } from "./certificados-apoyo";
-import { crearBaseAparte, cuitAlAzar } from "./entorno";
+import { crearBaseAparte, cuitUnico } from "./entorno";
 import {
   crearEscenarioDeConfiguracion,
   otraPersona,
@@ -21,6 +21,7 @@ import {
 import { REGLAS_CON_FACTURACION } from "./fiscal-numeracion-apoyo";
 import type { RolDePrueba } from "./fixtures-identidad";
 import { asignarPlan, crearPlanPublicado } from "./marcas-apoyo";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Las dos acciones del certificado de ARCA con la composición REAL (conexiones y web, base de verdad, roles limitados): generar el
@@ -141,7 +142,7 @@ describe.skipIf(base === null)(
       id: uuid(),
       emisorId: e.mundo.emisor,
       ambiente: "HOMOLOGACION",
-      alias: `pedernal${randomBytes(3).toString("hex")}`,
+      alias: `pedernal${sufijoUnico()}`,
       cuitTitular: e.mundo.cuit,
       organizacion: "Panadería Zulú SA",
       ...cambios,
@@ -348,7 +349,7 @@ describe.skipIf(base === null)(
         // El principal no puede estar inactivo (lo impide la base): se prueba con uno secundario.
         const [secundario] = await filas<{ id: string }>(
           "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-          [e.mundo.empresa, cuitAlAzar()],
+          [e.mundo.empresa, cuitUnico()],
         );
         await dueno.query("update emisor set activo = false where id = $1", [secundario?.id]);
         expect(

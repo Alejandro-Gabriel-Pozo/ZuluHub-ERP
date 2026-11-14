@@ -3,6 +3,7 @@ import type pg from "pg";
 import { productoDeBase, type ClaseDeUsoDePrueba } from "./catalogo-apoyo";
 import type { Mundo } from "./fiscal-apoyo";
 import type { Intento } from "./sesiones";
+import { nombreDeLetrasUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de la migración 0030 (E5 stock). Los depósitos, artículos y niveles se arman con SQL del DUEÑO de la base (que evade
@@ -21,10 +22,7 @@ export const claveNueva = (): string => `clave-${randomUUID()}`;
 
 type MundoDeStock = Pick<Mundo, "empresa" | "sucursal" | "persona">;
 
-const nombreAlAzar = (prefijo: string): string =>
-  `${prefijo} ${randomUUID()
-    .slice(0, 8)
-    .replace(/[0-9]/g, (d) => "abcdefghij"[Number(d)] ?? "x")}`;
+const nombreUnico = (prefijo: string): string => nombreDeLetrasUnico(prefijo);
 
 export async function sucursalDeBase(
   c: pg.Client,
@@ -33,7 +31,7 @@ export async function sucursalDeBase(
 ): Promise<string> {
   const { rows } = await c.query<{ id: string }>(
     "insert into sucursal (empresa_id, nombre, hora_de_corte) values ($1, $2, $3) returning id",
-    [empresa, nombreAlAzar("Sucursal"), datos.corte ?? "00:00"],
+    [empresa, nombreUnico("Sucursal"), datos.corte ?? "00:00"],
   );
   return rows[0]?.id as string;
 }
@@ -51,7 +49,7 @@ export async function depositoDeBase(
   }> = {},
 ): Promise<string> {
   const id = datos.id ?? randomUUID();
-  const nombre = datos.nombre ?? nombreAlAzar("Deposito");
+  const nombre = datos.nombre ?? nombreUnico("Deposito");
   await c.query(
     `insert into deposito (id, empresa_id, sucursal_id, nombre, nombre_clave, uso, de_venta)
      values ($1, $2, $3, $4, $5, $6, $7)`,

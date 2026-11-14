@@ -34,6 +34,7 @@ import {
   type RolDePrueba,
 } from "./fixtures-identidad";
 import { asignarPlan, crearPlanPublicado } from "./marcas-apoyo";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Las demás operaciones fiscales respetan la sucursal (decisiones del dueño, `facturador-contratos-de-pantalla.md`), con la
@@ -164,10 +165,7 @@ describe.skipIf(base === null)("las operaciones fiscales y la sucursal", () => {
     for (const s of asignadas) await crearAsignacionDeBase(dueno, e.empresa, p.id, s);
     return { ...comoEmpresa(empresaId(e.empresa), personaId(p.id)), ahora: new Date() };
   }
-  async function sucursalNueva(
-    e: EscenarioDeCasos,
-    nombre = `Sucursal ${randomUUID().slice(0, 6)}`,
-  ) {
+  async function sucursalNueva(e: EscenarioDeCasos, nombre = `Sucursal ${sufijoUnico()}`) {
     const r = await dueno.query<{ id: string }>(
       "insert into sucursal (empresa_id, nombre) values ($1, $2) returning id",
       [e.empresa, nombre],

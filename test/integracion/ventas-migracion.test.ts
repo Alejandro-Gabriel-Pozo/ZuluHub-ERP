@@ -5,7 +5,7 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { fechaDeNegocio } from "../../src/primitivas/tiempo/fecha-de-negocio";
 import { productoDeBase } from "./catalogo-apoyo";
-import { crearBaseAparte, cuitAlAzar } from "./entorno";
+import { crearBaseAparte, cuitUnico } from "./entorno";
 import { acepta, check, conAppDe, denegado, filas, intentoDelDueno } from "./fiscal-apoyo";
 import { CARPETA_DE_MIGRACIONES } from "./marcas-apoyo";
 import type { SesionDePrueba } from "./sesiones";
@@ -2675,7 +2675,7 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
         );
         const { rows: emp } = await c.query<{ id: string }>(
           "insert into empresa (tenant_id, cuit, razon_social) values ($1, $2, 'e') returning id",
-          [t[0]?.id, cuitAlAzar()],
+          [t[0]?.id, cuitUnico()],
         );
         const { rows: suc } = await c.query<{ id: string }>(
           "insert into sucursal (empresa_id, nombre) values ($1, 'S') returning id",

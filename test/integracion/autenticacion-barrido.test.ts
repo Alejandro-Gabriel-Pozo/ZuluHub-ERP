@@ -13,6 +13,7 @@ import {
   vigenciaDeSesion,
 } from "../../src/capacidades/autenticacion/vigencia-de-sesion";
 import { crearBaseAparte } from "./entorno";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Autenticación (W3b): el barrido de sesiones, verificaciones y contadores vencidos (lo llamará el cron de W6, que
@@ -69,7 +70,7 @@ describe.skipIf(base === null)("autenticación: barrido de lo vencido", () => {
     usuario = (
       await dueno.query<{ id: string }>(
         `insert into autenticacion."user" (name, email, "emailVerified") values ('Barrido', $1, true) returning id`,
-        [`barrido-${randomUUID().slice(0, 8)}@ejemplo.test`],
+        [`barrido-${sufijoUnico()}@ejemplo.test`],
       )
     ).rows[0]?.id as string;
   });

@@ -37,6 +37,7 @@ import {
   type Ejecutor,
   type MovimientoDePrueba,
 } from "./stock-apoyo";
+import { sufijoUnico } from "./unicos";
 
 /**
  * La migración 0032 (E6: lotes, calidad y recetas dentro de recetas) contra una base real, con el rol de la aplicación y el dueño: RLS
@@ -489,7 +490,7 @@ describe.skipIf(base === null)("0032 lotes y recetas: la migración contra una b
           ex(
             `insert into lote (id, empresa_id, articulo_id, codigo, fecha_de_vencimiento, fecha_de_primer_ingreso, creado_por, creado_en)
              values ($1, $2, $3, $4, '2027-01-01', '2026-11-09', $5, now())`,
-            [randomUUID(), e.m.empresa, e.articulo, `L-${randomUUID().slice(0, 6)}`, persona],
+            [randomUUID(), e.m.empresa, e.articulo, `L-${sufijoUnico()}`, persona],
           );
         denegado(await insertar(randomUUID()));
         acepta(await insertar(e.m.persona));

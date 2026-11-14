@@ -44,6 +44,7 @@ import {
 import type { BaseDePruebas } from "./global";
 import pg from "pg";
 import { personaId } from "../../src/primitivas/identificadores/marca";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de integración de ventas (E4 fase A): una base propia, el entorno con `catalogo`, `ventas` y `cierre` ACTIVOS para
@@ -251,7 +252,7 @@ export async function montarVentas(
     const sucursal = opciones.sucursal ?? e.sucursal;
     const { rows } = await dueno.query<{ id: string }>(
       "insert into caja (empresa_id, sucursal_id, nombre) values ($1, $2, $3) returning id",
-      [e.empresa, sucursal, `Caja ${randomUUID().slice(0, 8)}`],
+      [e.empresa, sucursal, `Caja ${sufijoUnico()}`],
     );
     const cajaId = rows[0]?.id as string;
     const medios: Record<string, string> = {};

@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { copyFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,8 +5,9 @@ import pg from "pg";
 import { instalarClaveDeContexto } from "../../src/adaptadores/postgres/contexto-firmado";
 import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
 import { ADMIN_DE_PRUEBA, sembrarAdminsDePrueba } from "./admins-de-prueba";
-import { cuitAlAzar, crearBaseAparte } from "./entorno";
+import { cuitUnico, crearBaseAparte } from "./entorno";
 import type { BaseDePruebas } from "./global";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de la migración 0007 (marcas y planes). Todo se arma con el cliente del DUEÑO de la
@@ -40,10 +40,9 @@ const un = async <T extends Record<string, unknown>>(
 ): Promise<T> => (await c.query<T>(texto, parametros)).rows[0] as T;
 
 /** Un nombre de host válido y único. */
-export const hostAlAzar = (): string =>
-  `h${randomUUID().replaceAll("-", "").slice(0, 12)}.prueba.test`;
+export const hostAlAzar = (): string => `h${sufijoUnico()}.prueba.test`;
 /** Un código de marca o de plan válido y único. */
-export const codigoAlAzar = (prefijo = "m"): string => `${prefijo}-${randomUUID().slice(0, 8)}`;
+export const codigoAlAzar = (prefijo = "m"): string => `${prefijo}-${sufijoUnico()}`;
 
 export async function marcaPrincipal(c: pg.Client): Promise<string> {
   return (await un<{ id: string }>(c, "select id from marca where es_principal")).id;
@@ -371,7 +370,7 @@ export async function crearMundoDeMarca(
       await un<{ id: string }>(
         c,
         "insert into tenant (nombre, marca_id) values ($1, $2) returning id",
-        [`tenant-${randomUUID().slice(0, 8)}`, marca],
+        [`tenant-${sufijoUnico()}`, marca],
       )
     ).id;
   const estado = opciones.estado ?? "ACTIVE";
@@ -382,8 +381,8 @@ export async function crearMundoDeMarca(
        values ($1, $2, $3, $4, $5) returning id`,
       [
         tenant,
-        cuitAlAzar(),
-        `empresa-${randomUUID().slice(0, 8)}`,
+        cuitUnico(),
+        `empresa-${sufijoUnico()}`,
         estado,
         estado === "SUSPENDED" ? "prueba" : null,
       ],
@@ -398,7 +397,7 @@ export async function crearMundoDeMarca(
   ).id;
   const persona = (
     await un<{ id: string }>(c, "insert into persona (email) values ($1) returning id", [
-      `${randomUUID().slice(0, 12)}@prueba.test`,
+      `${sufijoUnico()}@prueba.test`,
     ])
   ).id;
   return { marca, tenant, empresa, sucursal, persona };
