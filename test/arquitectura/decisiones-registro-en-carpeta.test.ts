@@ -11,28 +11,14 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  type Arbol,
-  arbolConRegistro,
-  control,
-  entrada,
-  resumen,
-  SENSIBLES,
-  CUOTA,
-} from "./decisiones-apoyo";
+import { type Arbol, arbolConRegistro, control, entrada, resumen } from "./decisiones-apoyo";
 
 const require = createRequire(import.meta.url);
 
 type Error = { archivo: string; motivo: string };
-type Leido =
-  { ausente: true } | { errores: Error[] } | { valor: { id: string }[]; enMonolito: boolean };
+type Leido = { ausente: true } | { errores: Error[] } | { valor: { id: string }[] };
 const cargador = require("../../arquitectura/registros/en-carpeta.cjs") as {
-  leerRegistroEnCarpeta: (datos: {
-    arbol: Arbol;
-    carpeta: string;
-    monolito: string;
-    admiteMonolito: boolean;
-  }) => Leido;
+  leerRegistroEnCarpeta: (datos: { arbol: Arbol; carpeta: string; monolito: string }) => Leido;
   arbolDelDisco: (raiz: string, carpeta: string, monolito: string) => Arbol;
 };
 
@@ -50,12 +36,11 @@ const arbol = (archivos: Record<string, string | null>): Arbol => ({
     return contenido === undefined || contenido === null ? null : Buffer.from(contenido);
   },
 });
-const leer = (archivos: Record<string, string | null>, admiteMonolito = false) =>
+const leer = (archivos: Record<string, string | null>) =>
   cargador.leerRegistroEnCarpeta({
     arbol: arbol(archivos),
     carpeta: CARPETA,
     monolito: MONOLITO,
-    admiteMonolito,
   });
 const errores = (r: Leido) => ("errores" in r ? r.errores : []);
 const una = (id: string) => JSON.stringify({ id, dato: id });
@@ -75,7 +60,6 @@ describe("un archivo por entrada, nombre = id", () => {
       },
       carpeta: CARPETA,
       monolito: MONOLITO,
-      admiteMonolito: false,
     });
     expect(r).toEqual({
       valor: [
@@ -83,7 +67,6 @@ describe("un archivo por entrada, nombre = id", () => {
         { id: "A-B", dato: "A-B" },
         { id: "B", dato: "B" },
       ],
-      enMonolito: false,
     });
   });
 
@@ -158,43 +141,27 @@ describe("un archivo por entrada, nombre = id", () => {
   });
 });
 
-describe("el array viejo (registro.json): solo la base, solo en la transición", () => {
-  it("en el cambio, un array suelto falla aunque no haya carpeta", () => {
+describe("el array viejo (registro.json): nunca se lee", () => {
+  it("suelto, sin carpeta, falla y nombra el archivo", () => {
     const r = leer({ [MONOLITO]: "[]" });
     expect(errores(r)).toHaveLength(1);
     expect(errores(r)[0]?.archivo).toBe(MONOLITO);
-    expect(errores(r)[0]?.motivo).toContain("no puede estar suelto");
+    expect(errores(r)[0]?.motivo).toContain("no puede estar ahí");
   });
 
-  it("al lado de la carpeta falla siempre, también en la base", () => {
-    for (const admite of [false, true]) {
-      const r = leer({ [MONOLITO]: "[]", [`${CARPETA}/DEC-0001.json`]: una("DEC-0001") }, admite);
-      expect(errores(r)[0]?.archivo).toBe(MONOLITO);
-      expect(errores(r)[0]?.motivo).toContain("no puede estar al lado de ella");
-    }
-  });
-
-  it("la base sin carpeta lee el array viejo y lo marca como tal", () => {
-    expect(leer({ [MONOLITO]: JSON.stringify([{ id: "DEC-0001" }]) }, true)).toEqual({
-      valor: [{ id: "DEC-0001" }],
-      enMonolito: true,
+  it("al lado de la carpeta también falla, y se suman las fallas de las entradas", () => {
+    const r = leer({
+      [MONOLITO]: "[]",
+      [`${CARPETA}/DEC-0001.json`]: una("DEC-0001"),
+      [`${CARPETA}/DEC-0002.json`]: "{roto",
     });
+    expect(errores(r).map((e) => e.archivo)).toEqual([MONOLITO, `${CARPETA}/DEC-0002.json`]);
   });
 
-  it("un array viejo roto, que no es lista o que no se puede leer falla", () => {
-    expect(errores(leer({ [MONOLITO]: "{roto" }, true))[0]?.motivo).toMatch(/^no se puede leer \(/);
-    expect(errores(leer({ [MONOLITO]: "{}" }, true))[0]?.motivo).toBe(
-      "tiene que ser una lista de entradas.",
-    );
-    const fantasma = cargador.leerRegistroEnCarpeta({
-      arbol: { rutas: [MONOLITO], leer: () => null },
-      carpeta: CARPETA,
-      monolito: MONOLITO,
-      admiteMonolito: true,
-    });
-    expect(errores(fantasma)).toEqual([
-      { archivo: MONOLITO, motivo: "no se puede leer (el archivo no existe)." },
-    ]);
+  it("aunque sea una lista válida con entradas, no se lee como registro", () => {
+    const r = leer({ [MONOLITO]: JSON.stringify([{ id: "DEC-0001" }]) });
+    expect("valor" in r).toBe(false);
+    expect(errores(r)).toHaveLength(1);
   });
 });
 
@@ -237,36 +204,24 @@ describe("leer del disco", () => {
 describe("el registro de decisiones sobre este cargador", () => {
   const REG = [entrada({ id: "DEC-0001" }), entrada({ id: "DEC-0002" })];
   const evaluar = (pr: Arbol, base: Arbol | null = null) => control.evaluar({ pr, base });
-  /** La base de antes de partir el registro: un solo `registro.json`. */
-  const baseConArrayViejo = (registro: unknown[], otros: Record<string, string> = {}): Arbol => {
-    const hijos = arbolConRegistro([]);
-    const archivos: Record<string, string> = {
-      [control.MONOLITO_DEL_REGISTRO]: JSON.stringify(registro),
-      [control.ARCHIVO_DE_LOS_SENSIBLES]: JSON.stringify(SENSIBLES),
-      [control.ARCHIVO_DE_LA_CUOTA]: JSON.stringify(CUOTA),
-      ...otros,
-    };
-    expect(hijos.rutas).not.toContain(control.MONOLITO_DEL_REGISTRO);
-    return arbol(archivos);
-  };
 
-  it("partir el registro no es borrarlo: la misma lista en carpeta contra la base con el array viejo pasa", () => {
-    expect(evaluar(arbolConRegistro(REG), baseConArrayViejo(REG))).toEqual({
+  it("el mismo registro en el cambio y en la base pasa", () => {
+    expect(evaluar(arbolConRegistro(REG), arbolConRegistro(REG))).toEqual({
       fallas: [],
       avisos: [],
     });
   });
 
-  it("quitar una entrada al partir sigue fallando como borrado", () => {
-    const { fallas } = evaluar(arbolConRegistro([REG[0]!]), baseConArrayViejo(REG));
+  it("quitar una entrada contra la base falla como borrado, con el archivo de esa entrada", () => {
+    const { fallas } = evaluar(arbolConRegistro([REG[0]!]), arbolConRegistro(REG));
     expect(fallas.map((f) => f.motivo)).toEqual([
       expect.stringContaining("DEC-0002 estaba en la base"),
     ]);
     expect(fallas[0]?.archivo).toBe(`${control.CARPETA_DEL_REGISTRO}/DEC-0002.json`);
   });
 
-  it("tocar un archivo sensible sin entrada nueva sigue fallando contra la base con el array viejo", () => {
-    const base = baseConArrayViejo(REG, { "src/primitivas/dinero/a.ts": "x" });
+  it("tocar un archivo sensible sin entrada nueva falla contra la base; con entrada nueva pasa", () => {
+    const base = arbolConRegistro(REG, { "src/primitivas/dinero/a.ts": "x" });
     const pr = arbolConRegistro(REG, { "src/primitivas/dinero/a.ts": "y" });
     expect(evaluar(pr, base).fallas[0]?.motivo).toContain(
       "no trae ninguna entrada nueva ni cambiada",
@@ -277,18 +232,19 @@ describe("el registro de decisiones sobre este cargador", () => {
     expect(evaluar(conEntrada, base).fallas).toEqual([]);
   });
 
-  it("un registro.json solo, sin carpeta, en el cambio falla: el array viejo es solo de la base", () => {
-    const soloArray = baseConArrayViejo(REG);
-    const { fallas } = evaluar(soloArray);
-    expect(fallas.map((f) => f.motivo)).toEqual([expect.stringContaining("no puede estar suelto")]);
+  it("un registro.json suelto en el cambio falla, aunque esté la carpeta", () => {
+    const suelto = arbolConRegistro(REG, { [control.MONOLITO_DEL_REGISTRO]: "[]" });
+    const { fallas } = evaluar(suelto);
+    expect(fallas.map((f) => f.motivo)).toEqual([expect.stringContaining("no puede estar ahí")]);
     expect(fallas[0]?.archivo).toBe(control.MONOLITO_DEL_REGISTRO);
   });
 
-  it("un registro.json suelto en el cambio falla, y la base con carpeta y array a la vez también", () => {
-    const suelto = arbolConRegistro(REG, { [control.MONOLITO_DEL_REGISTRO]: "[]" });
-    expect(evaluar(suelto).fallas[0]?.archivo).toBe(control.MONOLITO_DEL_REGISTRO);
-    const base = arbolConRegistro(REG, { [control.MONOLITO_DEL_REGISTRO]: "[]" });
-    expect(evaluar(arbolConRegistro(REG), base).fallas[0]?.motivo).toMatch(/^Base: /);
+  it("una base que todavía trae el array viejo no se lee: falla con su prefijo (ya no hay transición)", () => {
+    const base = arbolConRegistro([], { [control.MONOLITO_DEL_REGISTRO]: JSON.stringify(REG) });
+    const { fallas } = evaluar(arbolConRegistro(REG), base);
+    expect(fallas.map((f) => f.motivo)).toEqual([
+      expect.stringMatching(/^Base: .*no puede estar ahí/),
+    ]);
   });
 
   it("un id repetido (dos archivos que dicen ser la misma decisión) falla por el nombre", () => {
@@ -338,7 +294,7 @@ describe("el resumen para el dueño sobre este cargador", () => {
       disco({ [control.MONOLITO_DEL_REGISTRO]: JSON.stringify([entrada()]) }),
     );
     expect(r.codigo).toBe(1);
-    expect(r.errores).toEqual([expect.stringContaining("no puede estar suelto")]);
+    expect(r.errores).toEqual([expect.stringContaining("no puede estar ahí")]);
   });
 });
 

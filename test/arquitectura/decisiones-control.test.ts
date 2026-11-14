@@ -275,10 +275,10 @@ describe("(b) contra la base: un archivo sensible tocado exige una entrada nueva
   });
 
   it("si la base trae el registro pero no se puede leer, falla (nunca pasa porque no se pudo mirar)", () => {
+    const entradaRota = `${control.CARPETA_DEL_REGISTRO}/DEC-0001.json`;
     const rota = {
-      rutas: [control.MONOLITO_DEL_REGISTRO],
-      leer: (ruta: string) =>
-        ruta === control.MONOLITO_DEL_REGISTRO ? Buffer.from("{roto") : null,
+      rutas: [entradaRota],
+      leer: (ruta: string) => (ruta === entradaRota ? Buffer.from("{roto") : null),
     };
     const { fallas } = evaluar(arbolConRegistro(REGISTRO), rota);
     expect(motivos({ fallas }).join("|")).toContain("Base:");

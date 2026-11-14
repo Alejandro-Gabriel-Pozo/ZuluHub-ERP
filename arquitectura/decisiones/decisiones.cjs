@@ -32,7 +32,7 @@ const {
 
 /** El registro es una carpeta con un archivo por decisión (`DEC-0001.json`): ver `arquitectura/registros/en-carpeta.cjs`. */
 const CARPETA_DEL_REGISTRO = "arquitectura/decisiones/registro";
-/** El registro de antes (un solo array): solo lo admite la BASE mientras `main` no trae la carpeta (transición). */
+/** El registro de antes (un solo array): ya no se lee; si reaparece, es una falla. */
 const MONOLITO_DEL_REGISTRO = "arquitectura/decisiones/registro.json";
 const ARCHIVO_DE_LOS_SENSIBLES = "arquitectura/decisiones/archivos-sensibles.json";
 const ARCHIVO_DE_LA_CUOTA = "arquitectura/decisiones/cuota.json";
@@ -172,15 +172,14 @@ function controlarCuota({ delCambio, deLaBase }) {
 const archivoDe = (id) => `${CARPETA_DEL_REGISTRO}/${id}.json`;
 
 /**
- * Lee el registro de un árbol: `{ fallas, registro, hayRegistro }`. La BASE puede traer todavía el array viejo (transición); el cambio, nunca.
+ * Lee el registro de un árbol: `{ fallas, registro, hayRegistro }`. El array viejo (`registro.json`) no se lee: si está, falla.
  * Con una falla de lectura o de forma `evaluar` corta antes de usar `registro`.
  */
-function leerElRegistro(arbol, etiqueta, quien) {
+function leerElRegistro(arbol, quien) {
   const leido = leerRegistroEnCarpeta({
     arbol,
     carpeta: CARPETA_DEL_REGISTRO,
     monolito: MONOLITO_DEL_REGISTRO,
-    admiteMonolito: etiqueta !== "",
   });
   if (leido.ausente) {
     return {
@@ -199,11 +198,7 @@ function leerElRegistro(arbol, etiqueta, quien) {
     };
   }
   const fallas = problemasDelRegistro(leido.valor).map(({ id, problema }) =>
-    enLinea(
-      leido.enMonolito ? MONOLITO_DEL_REGISTRO : archivoDe(id),
-      1,
-      `${quien}${id}: ${problema}`,
-    ),
+    enLinea(archivoDe(id), 1, `${quien}${id}: ${problema}`),
   );
   return { fallas, registro: leido.valor, hayRegistro: true };
 }
@@ -212,7 +207,7 @@ function leerElRegistro(arbol, etiqueta, quien) {
 function leerDeclaraciones(arbol, etiqueta, cuotaObligatoria) {
   const fallas = [];
   const quien = etiqueta === "" ? "" : `${etiqueta}: `;
-  const delRegistro = leerElRegistro(arbol, etiqueta, quien);
+  const delRegistro = leerElRegistro(arbol, quien);
   const deLosSensibles = leerJson(arbol, ARCHIVO_DE_LOS_SENSIBLES);
   fallas.push(...delRegistro.fallas);
   const registro = delRegistro.registro;

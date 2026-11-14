@@ -10,8 +10,7 @@
  * con el `id` de adentro, o un `registro.json` suelto al lado de la carpeta es una falla, nunca algo que se ignora. La FORMA de cada entrada (campos, tipos)
  * no se juzga acá: la juzga cada control (`decisiones/forma.cjs`, `deuda/entradas.cjs`).
  *
- * TRANSICIÓN (solo mientras la rama base todavía trae el `registro.json` viejo): con `admiteMonolito` el árbol de la BASE puede traer el array viejo si no tiene
- * carpeta. El árbol del cambio nunca: su `registro.json` suelto es una falla. Se quita cuando `main` ya trae la carpeta.
+ * El array viejo (`registro.json`) ya no se lee nunca: si reaparece (una rama que partió de antes del cambio, o alguien que lo recrea), es una falla que lo nombra.
  */
 const { Buffer } = require("node:buffer");
 const fs = require("node:fs");
@@ -25,24 +24,21 @@ const texto = (contenido) => Buffer.from(contenido).toString("utf8");
 const porId = (a, b) => Buffer.compare(Buffer.from(a.id), Buffer.from(b.id));
 
 /**
- * Lee el registro de `arbol` (`{ rutas, leer }`). Devuelve `{ ausente: true }` si no hay ni carpeta con entradas ni (con `admiteMonolito`) el array viejo,
- * `{ errores: [{ archivo, motivo }] }` si algo no cumple, o `{ valor: entradas ordenadas por id, enMonolito: boolean }`.
+ * Lee el registro de `arbol` (`{ rutas, leer }`). Devuelve `{ ausente: true }` si la carpeta no tiene entradas (y no hay un array viejo suelto),
+ * `{ errores: [{ archivo, motivo }] }` si algo no cumple, o `{ valor: entradas ordenadas por id }`.
  */
-function leerRegistroEnCarpeta({ arbol, carpeta, monolito, admiteMonolito }) {
+function leerRegistroEnCarpeta({ arbol, carpeta, monolito }) {
   const prefijo = `${carpeta}/`;
   const propias = arbol.rutas.filter((ruta) => ruta.startsWith(prefijo));
   const hayMonolito = arbol.rutas.includes(monolito);
   const errores = [];
-  if (hayMonolito && (propias.length > 0 || !admiteMonolito)) {
+  if (hayMonolito) {
     errores.push({
       archivo: monolito,
-      motivo: `el registro es la carpeta ${carpeta}/ (un archivo por entrada): ${monolito} no puede estar ${propias.length > 0 ? "al lado de ella" : "suelto"}.`,
+      motivo: `el registro es la carpeta ${carpeta}/ (un archivo por entrada): ${monolito} no puede estar ahí.`,
     });
   }
-  if (propias.length === 0) {
-    if (errores.length > 0) return { errores };
-    return hayMonolito ? leerMonolito(arbol, monolito) : { ausente: true };
-  }
+  if (propias.length === 0) return errores.length > 0 ? { errores } : { ausente: true };
   const valor = [];
   for (const ruta of propias) {
     const nombre = ruta.slice(prefijo.length);
@@ -59,7 +55,7 @@ function leerRegistroEnCarpeta({ arbol, carpeta, monolito, admiteMonolito }) {
     else valor.push(resultado.entrada);
   }
   if (errores.length > 0) return { errores };
-  return { valor: valor.sort(porId), enMonolito: false };
+  return { valor: valor.sort(porId) };
 }
 
 function leerEntrada(arbol, ruta, idDelNombre) {
@@ -80,23 +76,6 @@ function leerEntrada(arbol, ruta, idDelNombre) {
     };
   }
   return { entrada };
-}
-
-function leerMonolito(arbol, monolito) {
-  const contenido = arbol.leer(monolito);
-  if (contenido === null) {
-    return { errores: [{ archivo: monolito, motivo: "no se puede leer (el archivo no existe)." }] };
-  }
-  let valor;
-  try {
-    valor = JSON.parse(texto(contenido));
-  } catch (error) {
-    return { errores: [{ archivo: monolito, motivo: `no se puede leer (${error.message}).` }] };
-  }
-  if (!Array.isArray(valor)) {
-    return { errores: [{ archivo: monolito, motivo: "tiene que ser una lista de entradas." }] };
-  }
-  return { valor, enMonolito: true };
 }
 
 /** El árbol `{ rutas, leer }` de lo que hay en el disco bajo `carpeta` (y el `monolito`, si existe), para quien lee el registro sin pasar por git. */
