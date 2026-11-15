@@ -75,6 +75,7 @@ import {
   type RolDePrueba,
 } from "./fixtures-identidad";
 import { asignarPlan, crearPlanPublicado } from "./marcas-apoyo";
+import { ahoraDeLaCorrida } from "./reloj-de-la-corrida";
 
 /**
  * Apoyo de las pruebas de integración de la configuración de caja (E3, tramo 3): una empresa con el módulo `caja` activado y dentro de su
@@ -235,7 +236,7 @@ export async function crearMundoDeCaja(
     empresa: e.empresa,
     sucursal: sucursalId(sucursal),
     persona: id,
-    ctx: () => ({ ...comoEmpresa(e.empresa, id), ahora: new Date() }),
+    ctx: () => ({ ...comoEmpresa(e.empresa, id), ahora: ahoraDeLaCorrida() }),
   };
 }
 
@@ -252,7 +253,7 @@ export async function sumarPersona(
     await crearAsignacionDeBase(dueno, mundo.empresa, persona.id, mundo.sucursal);
   }
   const id = personaId(persona.id);
-  return () => ({ ...comoEmpresa(mundo.empresa, id), ahora: new Date() });
+  return () => ({ ...comoEmpresa(mundo.empresa, id), ahora: ahoraDeLaCorrida() });
 }
 
 /** Otra sucursal de la empresa (la inserta el dueño de la base). */
