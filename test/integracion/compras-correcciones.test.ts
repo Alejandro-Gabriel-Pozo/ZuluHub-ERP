@@ -80,6 +80,57 @@ describe.skipIf(base === null)("compras: corrección del precio de una compra", 
       articulo,
     ]);
 
+  const oferta = async (m: Montaje) =>
+    (
+      await c.filas<{ precio: string; costo: string; compra: string }>(
+        "select ultimo_precio::text as precio, ultimo_costo_por_unidad_de_stock::text as costo, ultima_compra_id::text as compra from oferta_de_proveedor where proveedor_id = $1 and producto_id = $2",
+        [m.proveedor, m.producto],
+      )
+    )[0];
+
+  it("D11: corregir una compra corrige también lo que el proveedor cobró (la oferta), si esa compra es la última; si ya hay una más nueva, la oferta no se toca", async () => {
+    const m = await armar();
+    const vieja = await comprar(m);
+    expect(await oferta(m)).toEqual({
+      precio: "1000.000000",
+      costo: "1.000000",
+      compra: vieja.recepcionId,
+    });
+    valorDe(await c.casos.corregirCompra(e.gerente, corregir(vieja.recepcionId)));
+    expect(await oferta(m)).toEqual({
+      precio: "1200.000000",
+      costo: "1.200000",
+      compra: vieja.recepcionId,
+    });
+    // Repetir la misma corrección (mismo pedido) no cambia nada.
+    const otra = corregir(vieja.recepcionId, { correccionesVistas: 1, precio: "1300" });
+    valorDe(await c.casos.corregirCompra(e.gerente, otra));
+    valorDe(await c.casos.corregirCompra(e.gerente, otra));
+    expect(await oferta(m)).toEqual({
+      precio: "1300.000000",
+      costo: "1.300000",
+      compra: vieja.recepcionId,
+    });
+    // Una compra más nueva del mismo producto y proveedor pasa a ser la oferta; corregir la vieja ya no la pisa.
+    const nueva = await comprar(m, { precio: "1500" });
+    expect(await oferta(m)).toEqual({
+      precio: "1500.000000",
+      costo: "1.500000",
+      compra: nueva.recepcionId,
+    });
+    valorDe(
+      await c.casos.corregirCompra(
+        e.gerente,
+        corregir(vieja.recepcionId, { correccionesVistas: 2, precio: "900" }),
+      ),
+    );
+    expect(await oferta(m)).toEqual({
+      precio: "1500.000000",
+      costo: "1.500000",
+      compra: nueva.recepcionId,
+    });
+  });
+
   it("el gerente corrige el precio: queda la corrección con su motivo, el promedio sube por la diferencia y la línea original no se toca", async () => {
     const m = await armar();
     const r = await comprar(m);
