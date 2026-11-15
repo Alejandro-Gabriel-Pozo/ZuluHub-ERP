@@ -1,6 +1,6 @@
 import { sql, type Kysely } from "kysely";
 import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
-import type { ClaseDeUso } from "../dominio/clases";
+import { CLASES_DE_USO, seConsumeLaClase, type ClaseDeUso } from "../dominio/clases";
 import type { ProductoId, SeccionDeCartaId } from "../dominio/identificadores";
 import type { Producto } from "../dominio/modelo";
 import type { FichaValida } from "../dominio/producto";
@@ -277,7 +277,7 @@ export function crearRepositorioDeProductos(db: Kysely<CatalogoDb>): Repositorio
         .selectAll()
         .where("empresa_id", "=", empresa)
         .where("activo", "=", true)
-        .where("clase_de_uso", "in", ["MATERIA_PRIMA", "INSUMO", "REVENTA"]);
+        .where("clase_de_uso", "in", CLASES_DE_USO.filter(seConsumeLaClase));
       if (texto !== undefined && texto !== "") {
         consulta = consulta.where(
           sql<boolean>`nombre_clave like ${comoPrefijo(texto.toLowerCase())} escape '\\'`,
