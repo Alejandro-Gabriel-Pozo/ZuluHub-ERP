@@ -114,6 +114,15 @@ export const CATALOGO_DE_PERILLAS = {
     base: { encendida: false },
     modulo: "salon",
   },
+  // A7 (decisión del dueño, 14/11/2026, `decisiones-del-dueno-2026-11.md`: «la venta por fracciones y por peso se construye ya, con perilla apagada por defecto»):
+  // vender un producto por fracciones (porciones 2, 4 y 8) o por peso (unidad de venta de masa). Base apagada: sin ella un producto solo se vende «por unidad,
+  // paso 1» (el piloto). La verifica `cambiarFormaDeVenta` al PONER una forma distinta del piloto; lo ya cargado se sigue vendiendo si se baja el plan.
+  venta_por_fracciones_y_peso: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "catalogo",
+  },
   // Carta pública en línea (QR): extra de pago, apagado de base y se habilita por empresa, como `salon` (dueño, Q5 del 12/11/2026: «no se cobra desde el día 1,
   // después sí seguro»; carta-real-especificacion §0 y §11). La verifica `guardarCartaPublica` al PONER la carta en línea; retirarla no la pide (una baja de
   // plan no impide cerrar lo ya abierto). Que el comensal siga viendo la carta si el plan se baja lo decide la lectura pública por visita (T6).

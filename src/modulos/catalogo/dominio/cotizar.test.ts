@@ -32,6 +32,7 @@ const producto = (extra: Partial<Producto> = {}): Producto => ({
   unidadBaseId: "UNIDAD",
   unidadDeVentaId: "UNIDAD",
   pasoMinimo: "1.0000",
+  porcionesOfrecidas: [],
   alicuota: "21",
   faltaCompletar: false,
   seVende: true,
