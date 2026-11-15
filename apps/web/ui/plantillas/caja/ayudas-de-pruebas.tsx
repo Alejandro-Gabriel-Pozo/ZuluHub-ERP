@@ -42,10 +42,7 @@ export const INESPERADO: Respuesta<unknown> = {
   error: { ...errorDeCodigo("ERROR_INTERNO"), referencia: "PD-ABCD-0123" },
 };
 
-const linea = (
-  tipo: "EFECTIVO" | "TARJETA_DEBITO" | "TRANSFERENCIA" | "QR",
-  esperado: string,
-) => {
+const linea = (tipo: "EFECTIVO" | "TARJETA_DEBITO" | "TRANSFERENCIA" | "QR", esperado: string) => {
   const base = {
     EFECTIVO: { medioDePagoId: "m-ef", cuentaDeCobroId: null, cuentaNombre: null },
     TARJETA_DEBITO: { medioDePagoId: "m-de", cuentaDeCobroId: "c-1", cuentaNombre: "Posnet 1" },
