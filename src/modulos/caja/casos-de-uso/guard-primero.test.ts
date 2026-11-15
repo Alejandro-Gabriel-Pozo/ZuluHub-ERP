@@ -208,6 +208,8 @@ const LLAMADAS_DE_CONSULTAS: Record<
   listarSesiones: (c) =>
     c.listarSesiones(contexto, { sucursalId: UUID, desde: "2026-11-01", hasta: "2026-11-09" }),
   fichaDeSesion: (c) => c.fichaDeSesion(contexto, { sesionId: UUID }),
+  estadoDeLaCaja: (c) => c.estadoDeLaCaja(contexto, { sucursalId: UUID }),
+  ultimaSesionDeLaCaja: (c) => c.ultimaSesionDeLaCaja(contexto, { cajaId: UUID }),
   sesionesDeLaJornada: (c) =>
     c.sesionesDeLaJornada(contexto, { sucursalId: UUID, fechaDeNegocio: "2026-11-09" }),
   cobrosDeLaJornada: (c) =>
@@ -273,6 +275,7 @@ describe("P7: el guard va primero en cada caso de uso y consulta de caja", () =>
       "cobradoPorOrigenDeLaJornada",
       "cobrosDeLaJornada",
       "conciliacionDeLaJornada",
+      "estadoDeLaCaja",
       "fichaDeSesion",
       "informeDeCajaDelDia",
       "listarCajas",
@@ -285,6 +288,7 @@ describe("P7: el guard va primero en cada caso de uso y consulta de caja", () =>
       "prepararCierre",
       "resumenDeSesion",
       "sesionesDeLaJornada",
+      "ultimaSesionDeLaCaja",
     ]);
   });
 

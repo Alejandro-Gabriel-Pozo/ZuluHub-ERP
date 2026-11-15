@@ -363,3 +363,5 @@ export type {
   LineaDeArqueoDeLaFicha,
 } from "./consultas/ficha-de-sesion";
 export type { SesionDeConsulta } from "./consultas/comun";
+export type { ErrorAlConsultarElEstadoDeLaCaja } from "./consultas/estado-de-la-caja";
+export type { ErrorAlVerLaUltimaSesion } from "./consultas/ultima-sesion-de-la-caja";
