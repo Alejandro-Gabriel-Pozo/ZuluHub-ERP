@@ -25,7 +25,7 @@ export function PantallaDePendientesDeFacturar({
       {pendientes === null ? null : pendientes.vacio !== null ? (
         <Aviso tono="info">{pendientes.vacio}</Aviso>
       ) : (
-        <ul className={estilos["tarjetas"]}>
+        <ul className={`${estilos["tarjetas"]} ${estilos["tarjetasEnTodoAncho"]}`}>
           {pendientes.filas.map((fila) => (
             <li key={fila.id}>
               <a className={estilos["tarjeta"]} href={fila.href}>
