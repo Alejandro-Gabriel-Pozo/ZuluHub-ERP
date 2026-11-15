@@ -1003,8 +1003,24 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       await emitirYValidar(con);
       const sin = await empresaConFacturacion();
       const momento = new Date("2031-03-05T10:20:00Z");
-      // Las validaciones de arriba son «de hoy»: se mira desde un momento cercano a hoy.
-      const hoy = ahora();
+      /**
+       * La pasada mira TODAS las empresas de la base con trabajos en los 30 días anteriores a su reloj y atiende a lo sumo 50 (las menos
+       * reconciliadas: `EMPRESAS_POR_PASADA_DE_RECONCILIACION`). La base se comparte con los demás archivos de pruebas: con más de 50 la
+       * segunda pasada tomaba las que la primera dejó afuera («expected 15 to be 0», Estabilidad del 14/11/2026), y con el reloj real un
+       * pedido podía caer en la hora siguiente. Acá el reloj es fijo y ESTA empresa deja un trabajo fechado dentro de esa ventana (como la
+       * «vieja» de más abajo): las demás empresas, con trabajo de «hoy», quedan fuera.
+       */
+      await filas(
+        `insert into trabajo (empresa_id, tipo, datos, clave_idempotencia, creado_en)
+         values ($1, 'fiscal.validar_comprobante', $2::jsonb, $3, $4)`,
+        [
+          con.empresa,
+          JSON.stringify({ comprobanteId: randomUUID() }),
+          `fiscal.validar:${randomUUID()}:1`,
+          new Date("2031-03-05T09:00:00Z"),
+        ],
+      );
+      const hoy = momento;
 
       const primera = await trabajos.encolarReconciliaciones(hoy);
       expect(primera.encoladas).toBeGreaterThanOrEqual(1);
@@ -1072,7 +1088,21 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
 
       // Pasó la reserva (5 minutos): una pasada del cron, tal cual la arma la web, con un reloj que ya avanzó una hora
       // (también el de los casos de uso: la reserva se compara con él).
-      const despues = unaHoraDespues(ahora());
+      //
+      // El cron atiende a lo sumo 50 empresas por pasada, las menos reconciliadas, de TODA la base compartida: con más de 50 con trabajo
+      // reciente (las dejan los demás archivos) esta empresa podía quedar afuera y el comprobante seguía INCIERTO. El reloj es fijo y
+      // la empresa deja un trabajo fechado en esa ventana (como en la prueba del cron de arriba): las de «hoy» quedan fuera.
+      const despues = new Date("2031-03-06T10:20:00Z");
+      await filas(
+        `insert into trabajo (empresa_id, tipo, datos, clave_idempotencia, creado_en)
+         values ($1, 'fiscal.validar_comprobante', $2::jsonb, $3, $4)`,
+        [
+          e.empresa,
+          JSON.stringify({ comprobanteId: randomUUID() }),
+          `fiscal.validar:${randomUUID()}:1`,
+          new Date("2031-03-06T09:00:00Z"),
+        ],
+      );
       const trabajosDeDespues = armarTrabajos(conexiones, {
         emision,
         reloj: { ahora: () => despues },

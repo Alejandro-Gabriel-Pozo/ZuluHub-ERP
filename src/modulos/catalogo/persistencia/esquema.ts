@@ -52,6 +52,7 @@ export type CatalogoDb = TablasDePresentaciones &
       dimension: string;
       unidad_de_venta_id: string;
       paso_minimo: Generated<string>;
+      porciones_ofrecidas: Generated<number[]>;
       alicuota_iva: string | null;
       falta_completar: Generated<boolean>;
       /** Columna generada: no se escribe. */
@@ -176,6 +177,7 @@ export const COLUMNAS_DE_CATALOGO = {
     "creado_en",
     "actualizado_en",
     "version",
+    "porciones_ofrecidas",
   ],
   grupo_de_elecciones: [
     "id",
@@ -298,6 +300,7 @@ export const ERRORES_DE_CATALOGO_POR_RESTRICCION: Readonly<Record<string, string
   producto_paso_ck: "FORMA_DE_VENTA_INVALIDA",
   producto_paso_cota_ck: "FORMA_DE_VENTA_INVALIDA",
   producto_paso_no_exacto: "FORMA_DE_VENTA_INVALIDA",
+  producto_porciones_ck: "FORMA_DE_VENTA_INVALIDA",
   producto_alicuota_ck: "ALICUOTA_INVALIDA",
   producto_unidad_fkey: "UNIDAD_INVALIDA",
   producto_unidad_de_venta_fkey: "UNIDAD_INVALIDA",

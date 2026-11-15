@@ -240,7 +240,8 @@ export async function montarCatalogo(
   base: BaseDePruebas,
   opciones: Readonly<{
     reglas?: ReglasDeEmpresa;
-    formaDeVentaHabilitada?: DependenciasDeCatalogo["formaDeVentaHabilitada"];
+    /** Enciende de entrada la perilla `venta_por_fracciones_y_peso` del plan (extra de pago, apagada de base): la prueba de fracciones y peso la pide. */
+    fraccionesYPeso?: boolean;
     conexiones?: number;
     /** El stock que contesta por existencias y conteos (por defecto, uno FALSO vacío: nada tiene existencia). */
     existencias?: DependenciasDeCatalogo["existencias"];
@@ -260,7 +261,7 @@ export async function montarCatalogo(
    */
   let barrera: () => Promise<void> = () => Promise.resolve();
   /** El plan de las pruebas no enciende extras: la perilla `vidriera_por_qr` (carta en línea) se muestra encendida salvo que la prueba la apague. */
-  const plan = { perillaDeCarta: true };
+  const plan = { perillaDeCarta: true, fraccionesYPeso: opciones.fraccionesYPeso ?? false };
   const entorno = crearEntornoDePrueba(propia.base, opciones.conexiones ?? 12, (tx) => {
     let primera = true;
     return {
@@ -276,7 +277,9 @@ export async function montarCatalogo(
                 perilla,
                 perilla === "vidriera_por_qr" && valor.tipo === "INTERRUPTOR"
                   ? { ...valor, encendida: plan.perillaDeCarta }
-                  : valor,
+                  : perilla === "venta_por_fracciones_y_peso" && valor.tipo === "INTERRUPTOR"
+                    ? { ...valor, encendida: plan.fraccionesYPeso }
+                    : valor,
               ]),
             ),
           };
@@ -314,9 +317,6 @@ export async function montarCatalogo(
     reglas,
     existencias: opciones.existencias ?? stockFalso,
     generarCodigoDeCarta: opciones.generarCodigoDeCarta ?? codigoAlAzar,
-    ...(opciones.formaDeVentaHabilitada === undefined
-      ? {}
-      : { formaDeVentaHabilitada: opciones.formaDeVentaHabilitada }),
   } as DependenciasDeCatalogo;
   const casos = crearCasosDeUsoDeCatalogo(dependencias);
   const consultas = crearConsultasDeCatalogo({ transacciones: entorno, reglas });
@@ -376,6 +376,10 @@ export async function montarCatalogo(
     /** Enciende o apaga la perilla `vidriera_por_qr` del plan (extra de pago): encendida de entrada. */
     perillaDeCarta: (encendida: boolean) => {
       plan.perillaDeCarta = encendida;
+    },
+    /** Enciende o apaga la perilla `venta_por_fracciones_y_peso` del plan (extra de pago): apagada de entrada. */
+    perillaDeFraccionesYPeso: (encendida: boolean) => {
+      plan.fraccionesYPeso = encendida;
     },
     dueno,
     alcances,
