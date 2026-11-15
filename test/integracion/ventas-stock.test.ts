@@ -242,7 +242,7 @@ describe.skipIf(base === null)("ventas con stock: cerrar descuenta, anular devue
     const { e, dep } = mundo;
     const a = await reventa(mundo, "10");
     const anulada = await reventa(mundo, "10");
-    const insumo = await articuloDeBase(m.dueno, e, { clase: "INSUMO" });
+    const insumo = await articuloDeBase(m.dueno, e, { clase: "MATERIA_PRIMA" });
     valorDe(
       await stock.registrarEntrada(e.gerente, {
         clave: nuevoId(),

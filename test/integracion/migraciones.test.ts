@@ -75,6 +75,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0053_costo_nunca_cero.sql",
         "0054_precio_de_linea_de_factura_mayor_que_cero.sql",
         "0055_salon_copias_y_nombre_de_cocina.sql",
+        "0056_receta_sin_insumos.sql",
         "0057_opcion_consume_elaborado.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
@@ -132,6 +133,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0053_costo_nunca_cero.sql",
           "0054_precio_de_linea_de_factura_mayor_que_cero.sql",
           "0055_salon_copias_y_nombre_de_cocina.sql",
+          "0056_receta_sin_insumos.sql",
           "0057_opcion_consume_elaborado.sql",
         ],
       });
@@ -294,6 +296,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0053_costo_nunca_cero.sql",
         "0054_precio_de_linea_de_factura_mayor_que_cero.sql",
         "0055_salon_copias_y_nombre_de_cocina.sql",
+        "0056_receta_sin_insumos.sql",
         "0057_opcion_consume_elaborado.sql",
       ]);
     } finally {
