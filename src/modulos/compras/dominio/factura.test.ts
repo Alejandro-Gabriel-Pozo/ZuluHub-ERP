@@ -25,6 +25,25 @@ const factura = (extra: Record<string, unknown> = {}) => ({
 });
 
 describe("leerFactura", () => {
+  it("D6: solo lee facturas: las seis notas (crédito y débito, A, B y C) son TIPO_DE_COMPROBANTE_INVALIDO y las tres facturas pasan", () => {
+    for (const tipo of ["FACTURA_A", "FACTURA_B", "FACTURA_C"]) {
+      expect(leerFactura(factura({ tipo }))).toMatchObject({ ok: true, valor: { tipo } });
+    }
+    for (const tipo of [
+      "NOTA_CREDITO_A",
+      "NOTA_CREDITO_B",
+      "NOTA_CREDITO_C",
+      "NOTA_DEBITO_A",
+      "NOTA_DEBITO_B",
+      "NOTA_DEBITO_C",
+    ]) {
+      expect(leerFactura(factura({ tipo }))).toEqual({
+        ok: false,
+        error: "TIPO_DE_COMPROBANTE_INVALIDO",
+      });
+    }
+  });
+
   it("lee una factura completa y completa lo opcional con null", () => {
     const r = leerFactura(factura());
     expect(r).toEqual({

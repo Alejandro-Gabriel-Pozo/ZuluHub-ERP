@@ -1,6 +1,7 @@
 import { fechaCivilDesdeTexto } from "../../../primitivas/tiempo/fecha-civil";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import {
+  claseDeTipoDeComprobante,
   esNumeroDeComprobanteValido,
   esPuntoDeVentaValido,
   esTipoDeComprobanteDeProveedor,
@@ -73,6 +74,10 @@ export function leerFactura(valor: unknown): Resultado<FacturaPedida, ErrorDeFac
   const tipo = f["tipo"];
   // `includes` compara con `===`: lo que no es un texto de la lista no pasa, sin mirar el tipo antes.
   if (!esTipoDeComprobanteDeProveedor(tipo as string)) return err("TIPO_DE_COMPROBANTE_INVALIDO");
+  // «Comprar y recibir» es recibir mercadería: solo entra una factura. Una nota de crédito o de débito no es una recepción y, cargada así, sumaría stock que no llegó (D6, DEC-0411, SUPUESTO).
+  if (claseDeTipoDeComprobante(tipo as TipoDeComprobanteDeProveedor) !== "FACTURA") {
+    return err("TIPO_DE_COMPROBANTE_INVALIDO");
+  }
   // `Number.isInteger` ya rechaza todo lo que no es un número entero: no hace falta mirar el tipo antes.
   if (!esPuntoDeVentaValido(f["puntoDeVenta"] as number)) return err("PUNTO_DE_VENTA_INVALIDO");
   if (!esNumeroDeComprobanteValido(f["numero"] as number)) {

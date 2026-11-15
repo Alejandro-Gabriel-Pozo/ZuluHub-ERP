@@ -352,7 +352,7 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
     ).toEqual({ ok: false, error: "FECHA_INVALIDA" });
   });
 
-  it("anular la compra anula también su pago vigente", async () => {
+  it("anular una compra con pago vigente falla (COMPROBANTE_YA_PAGADO) y no toca nada; con el pago anulado antes, la compra se anula", async () => {
     const m = await armar();
     const r = valorDe(
       await c.casos.registrarCompraConFactura(
@@ -360,14 +360,26 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
         m.compra({ pago: { fechaDePago: "2026-10-11", medio: "QR" } }),
       ),
     );
-    valorDe(
-      await c.casos.anularCompra(m.e.gerente, { recepcionId: r.recepcionId, motivo: "Devolución" }),
-    );
+    const anular = () =>
+      c.casos.anularCompra(m.e.gerente, { recepcionId: r.recepcionId, motivo: "Devolución" });
+    expect(await anular()).toEqual({
+      ok: false,
+      error: { error: "COMPROBANTE_YA_PAGADO", pagoId: r.pagoId },
+    });
+    expect(
+      await c.filas("select estado from pago_de_comprobante where id = $1", [r.pagoId]),
+    ).toEqual([{ estado: "VIGENTE" }]);
+    expect(await c.filas("select estado from recepcion where id = $1", [r.recepcionId])).toEqual([
+      { estado: "CONFIRMADA" },
+    ]);
+    valorDe(await c.casos.anularPago(m.e.gerente, { pagoId: r.pagoId as string, motivo: "Error" }));
+    valorDe(await anular());
     expect(
       await c.filas("select estado, anulado_por from pago_de_comprobante where id = $1", [
         r.pagoId,
       ]),
     ).toEqual([{ estado: "ANULADO", anulado_por: m.e.gerente.personaId }]);
+    expect(await anular()).toEqual({ ok: false, error: "RECEPCION_YA_ANULADA" });
   });
 
   it("R6: una empresa B no ve ni toca los pagos de la A; y el alcance de sucursales vale para pagar", async () => {

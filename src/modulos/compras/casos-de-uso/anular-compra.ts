@@ -28,8 +28,8 @@ export type EntradaDeAnularCompra = Readonly<{ recepcionId: string; motivo: stri
 export type SalidaDeAnularCompra = Readonly<{ anulada: true }>;
 
 /**
- * Anular una compra (E9 §3.5): una anulación ESPEJO de su entrada de stock (mismo depósito y renglones con la cantidad opuesta, y el mismo costo congelado), del espejo de la conciliación atajo, de su factura (queda `ANULADO`: libera el número) y de su pago vigente, y la
- * recepción queda `ANULADA` con quién, cuándo y por qué; nada se borra. Guard `recepciones.anular` (gerente y administrador) y, si hubo entrada, también
+ * Anular una compra (E9 §3.5): una anulación ESPEJO de su entrada de stock (mismo depósito y renglones con la cantidad opuesta, y el mismo costo congelado), del espejo de la conciliación atajo, de su factura (queda `ANULADO`: libera el número), y la
+ * recepción queda `ANULADA` con quién, cuándo y por qué; nada se borra. Una compra con pago vigente no se anula (`COMPROBANTE_YA_PAGADO`, con el id del pago): primero se anula el pago, que devuelve el efectivo a la caja (DEC-0410, SUPUESTO). Guard `recepciones.anular` (gerente y administrador) y, si hubo entrada, también
  * `stock.anular`. Si lo que entró ya se consumió (la existencia actual del depósito es menor que lo que entró) no se anula: `COMPRA_CONSUMIDA`, se corrige
  * (D143). Todo o nada: si el espejo falla, la compra sigue como estaba. Repetición (`RECHAZA_LA_REPETICION`): anular una compra ya anulada es
  * `RECEPCION_YA_ANULADA` y no escribe nada; el estado de la recepción bajo bloqueo es lo que decide, así que dos anulaciones a la vez dejan un solo espejo.
@@ -62,6 +62,24 @@ export function armarAnularCompra(dependencias: DependenciasDeCompras) {
           );
           if (!alcance.ok) return alcance;
           if (recepcion.estado === "ANULADA") return err("RECEPCION_YA_ANULADA");
+
+          // Una compra con pago vigente no se anula: primero se anula el pago (`anularPago`, que devuelve el efectivo a la caja). El comprobante se bloquea
+          // antes de mirar el pago: `declararPago` bloquea el mismo comprobante, así que no puede quedar una compra anulada con un pago vigente.
+          const comprobanteDeLaCompra = await tx.comprobantesDeProveedor.delaRecepcion(
+            empresaId,
+            recepcion.id,
+          );
+          if (comprobanteDeLaCompra !== null) {
+            const bloqueadoPorElPago = await tx.comprobantesDeProveedor.bloquear(
+              empresaId,
+              comprobanteDeLaCompra.id,
+            );
+            if (bloqueadoPorElPago !== null) {
+              const vigente = await tx.pagosDeProveedor.vigenteDe(empresaId, bloqueadoPorElPago.id);
+              if (vigente !== null)
+                return err({ error: "COMPROBANTE_YA_PAGADO", pagoId: vigente.id });
+            }
+          }
 
           const lineas = await tx.recepciones.lineasDe(empresaId, recepcion.id);
           const entradas = lineas.filter((l) => l.movimientoId !== null && l.depositoId !== null);
@@ -180,15 +198,6 @@ export function armarAnularCompra(dependencias: DependenciasDeCompras) {
                     };
                   }),
                 );
-              }
-              const pagoVigente = await tx.pagosDeProveedor.vigenteDe(empresaId, bloqueado.id);
-              if (pagoVigente !== null) {
-                const pagoAnulado = await tx.pagosDeProveedor.anular(empresaId, pagoVigente.id, {
-                  por: persona,
-                  en: contexto.ahora,
-                  motivo: motivo.valor,
-                });
-                if (!pagoAnulado) throw new Error("el pago ya no estaba vigente bajo bloqueo");
               }
               const comprobanteAnulado = await tx.comprobantesDeProveedor.anular(
                 empresaId,
