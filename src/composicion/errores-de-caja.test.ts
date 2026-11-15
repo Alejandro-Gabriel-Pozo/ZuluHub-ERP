@@ -32,6 +32,32 @@ describe("traducirErrorDeCaja", () => {
     expect(traducirErrorDeCaja(error)).toEqual({ codigo });
   });
 
+  it.each([
+    "CLAVE_DE_IDEMPOTENCIA_INVALIDA",
+    "CLAVE_REUTILIZADA",
+    "IMPORTE_INVALIDO",
+    "JORNADA_EN_AUDITORIA",
+    "JORNADA_CERRADA",
+    "CAJA_REQUERIDA",
+    "SESION_NO_ENCONTRADA",
+    "SESION_CERRADA",
+    "SESION_EN_CIERRE",
+    "MOTIVO_INVALIDO",
+    "CONFORME_NO_ADMITIDO_EN_EFECTIVO",
+    "CONTEO_DE_EFECTIVO_FALTANTE",
+    "MOVIMIENTO_NO_ENCONTRADO",
+    "MOVIMIENTO_YA_ANULADO",
+    "MOVIMIENTO_DE_OTRA_PERSONA",
+    "JORNADA_A_CORREGIR_NO_CERRADA",
+    "CUENTA_DE_COBRO_INCOMPATIBLE",
+    { codigo: "CAJA_YA_ABIERTA", sesionId: ID },
+    { codigo: "CONTEO_INVALIDO", campo: "billetes" },
+    { codigo: "CONTEO_O_CONFORME_FALTANTE", lineas: [] },
+    { codigo: "MOVIMIENTO_CON_ORIGEN", origenTipo: "COBRANZA", origenId: ID },
+  ])("la operación de la caja: %j sale como el genérico (sin texto propio aprobado)", (error) => {
+    expect(traducirErrorDeCaja(error)).toEqual({ codigo: "CAJA_ACCION_NO_PERMITIDA" });
+  });
+
   it("un dato que el medio no admite sale como el genérico", () => {
     expect(
       traducirErrorDeCaja({ codigo: "DATO_NO_ADMITIDO_POR_EL_MEDIO", dato: "cuotas" }),

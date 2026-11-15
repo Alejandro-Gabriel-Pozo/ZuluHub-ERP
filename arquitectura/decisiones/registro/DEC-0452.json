@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0452",
+  "fecha": "2026-11-15",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: volver atrás desde Contar no cancela el cierre de la caja; la caja sigue en cierre hasta que se cancele el cierre o se cierre.",
+  "que_cambia": "Quien sale de Contar a mitad de camino deja la caja contándose, sin movimientos nuevos, hasta cancelar el cierre. Revertir: llamar a cancelarElCierreDeCaja al volver, una línea de pantalla.",
+  "donde": "src/composicion/sesion-de-caja-web.ts; servidor-del-mostrador-minimo.md sección 4, ambigüedad de la maqueta caja.html"
+}
