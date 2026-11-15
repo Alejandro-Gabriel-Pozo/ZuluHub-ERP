@@ -370,8 +370,8 @@ describe("P7: el guard va primero en cada consulta de identidad", () => {
     listarMiembros: (c) => c.listarMiembros(contexto),
     listarInvitacionesPendientes: (c) => c.listarInvitacionesPendientes(contexto),
     traspasoEnCurso: (c) => c.traspasoEnCurso(contexto),
-    nombresDePersonas: (c) =>
-      c.nombresDePersonas(contexto, { ids: ["00000000-0000-4000-8000-000000000001"] }),
+    personasParaMostrar: (c) =>
+      c.personasParaMostrar(contexto, { ids: ["00000000-0000-4000-8000-000000000001"] }),
   };
 
   const consultas = Object.entries(DECLARACIONES_DE_CONSULTAS).flatMap(([nombre, declaracion]) =>
@@ -384,7 +384,7 @@ describe("P7: el guard va primero en cada consulta de identidad", () => {
     expect(consultas.map((c) => c.nombre).sort()).toEqual([
       "listarInvitacionesPendientes",
       "listarMiembros",
-      "nombresDePersonas",
+      "personasParaMostrar",
       "traspasoEnCurso",
     ]);
   });

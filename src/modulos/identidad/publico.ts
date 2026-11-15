@@ -125,9 +125,9 @@ export type {
 export type { ErrorAlListarMiembros, MiembroDeLista } from "./consultas/listar-miembros";
 export {
   MAXIMO_DE_PERSONAS_POR_CONSULTA,
-  type EntradaDeNombresDePersonas,
-  type ErrorAlPedirNombresDePersonas,
-} from "./consultas/nombres-de-personas";
+  type EntradaDePersonasParaMostrar,
+  type ErrorAlPedirPersonasParaMostrar,
+} from "./consultas/personas-para-mostrar";
 export type {
   ErrorAlListarInvitacionesPendientes,
   InvitacionPendienteDeLaLista,

@@ -12,43 +12,41 @@ import type { DependenciasDeConsultasDeIdentidad } from "./contrato";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 
 /**
- * Cuántas personas se piden en una sola consulta. SUPUESTO DEC-0462: una pantalla (un historial, un cierre) nombra a unas pocas personas;
+ * Cuántas personas se piden en una sola consulta. SUPUESTO DEC-0464: una pantalla (un historial, un cierre) muestra a unas pocas personas;
  * el tope evita una lectura sin límite. Una consulta que pide más se rechaza entera (`ENTRADA_INVALIDA`), no se recorta en silencio.
  */
 export const MAXIMO_DE_PERSONAS_POR_CONSULTA = 200;
 
-export type EntradaDeNombresDePersonas = Readonly<{ ids: readonly string[] }>;
+export type EntradaDePersonasParaMostrar = Readonly<{ ids: readonly string[] }>;
 
-export type ErrorAlPedirNombresDePersonas =
+export type ErrorAlPedirPersonasParaMostrar =
   MotivoDeRechazo | ErrorDePersistencia | "ENTRADA_INVALIDA";
 
 /**
- * El nombre con que se muestra a cada persona pedida, para las pantallas que hoy reciben solo ids (caja, ventas, cierre). Pide
- * `permisos.ver_propios` al guard (los tres roles) dentro de su transacción (`read committed`, solo lectura). El alcance es la empresa del
- * contexto: solo vuelven las personas pedidas que tienen membresía en ella (activa o apagada: quien ya se fue sigue figurando en lo que
- * hizo); un id de otra empresa o inexistente no aparece, indistinguible entre sí. Cada id pedido aparece una sola vez.
- *
- * SUPUESTO DEC-0462 (D9, el mismo que `listarMiembros` y el traspaso): la persona todavía no tiene nombre propio, así que su nombre es su
- * email, hasta que la autenticación aporte el nombre. Esta función es el único lugar donde pantallas nuevas lo resuelven: el día que
- * exista el nombre cambia acá y no en cada pantalla.
+ * El valor con que se muestra a cada persona pedida, para las pantallas que hoy reciben solo ids (caja, ventas, cierre): su CORREO (el
+ * dueño decidió que se muestre el correo, sin nombre: fila «Respuestas 24 a 27», 26A, del 15/11/2026). Pide `permisos.ver_propios` al guard
+ * (los tres roles) dentro de su transacción (`read committed`, solo lectura). El alcance es la empresa del contexto: solo vuelven las
+ * personas pedidas que tienen membresía en ella (activa o apagada: quien ya se fue sigue figurando en lo que hizo), así que no se filtra el
+ * correo de nadie que no sea de la empresa; un id de otra empresa o inexistente no aparece, indistinguible entre sí. Cada id pedido aparece
+ * una sola vez. Si algún día hay nombre propio, se cambia acá y no en cada pantalla.
  */
-export function armarNombresDePersonas({
+export function armarPersonasParaMostrar({
   transacciones,
   reglas,
 }: DependenciasDeConsultasDeIdentidad) {
-  return async function nombresDePersonas(
+  return async function personasParaMostrar(
     contexto: ContextoOperativo,
-    entrada: EntradaDeNombresDePersonas,
-  ): Promise<Resultado<ReadonlyMap<PersonaId, string>, ErrorAlPedirNombresDePersonas>> {
+    entrada: EntradaDePersonasParaMostrar,
+  ): Promise<Resultado<ReadonlyMap<PersonaId, string>, ErrorAlPedirPersonasParaMostrar>> {
     const { empresaId } = contexto;
     return transacciones.ejecutar(
       { contexto, aislamiento: "read committed", soloLectura: true },
       async (
         tx,
-      ): Promise<Resultado<ReadonlyMap<PersonaId, string>, ErrorAlPedirNombresDePersonas>> => {
+      ): Promise<Resultado<ReadonlyMap<PersonaId, string>, ErrorAlPedirPersonasParaMostrar>> => {
         const permiso = await exigirAccion(
           reglas,
-          DECLARACIONES_DE_CONSULTAS.nombresDePersonas.accion,
+          DECLARACIONES_DE_CONSULTAS.personasParaMostrar.accion,
           () => tx.autorizacion.delActor(contexto),
         );
         if (!permiso.ok) return permiso;

@@ -302,7 +302,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       "gerencia.proponer_traspaso",
       "gerencia.rechazar_traspaso",
       "gerencia.ver_traspaso",
-      // `nombresDePersonas` (C6/X6) pide la acción de los tres roles que ya usan las sucursales elegibles (DEC-0461).
+      // `personasParaMostrar` (C6/X6) pide la acción de los tres roles que ya usan las sucursales elegibles (DEC-0464).
       "permisos.ver_propios",
       "usuarios.apagar",
       "usuarios.asignar_sucursales",

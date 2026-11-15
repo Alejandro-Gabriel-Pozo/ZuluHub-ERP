@@ -15,9 +15,9 @@ import { comoEmpresa, crearBaseAparte, crearEmpresaActiva, crearEntornoDePrueba 
 import { crearMembresiaDeBase, crearPersonaDeBase, type RolDePrueba } from "./fixtures-identidad";
 
 /**
- * C6/X6 del mostrador mínimo: `nombresDePersonas` contra una base real, con el contexto firmado (nunca el dueño de la base, salvo para
+ * C6/X6 del mostrador mínimo: `personasParaMostrar` contra una base real, con el contexto firmado (nunca el dueño de la base, salvo para
  * armar el escenario y para mirar). Cubre aislamiento entre empresas (un id de otra empresa no aparece), autorización en el servidor
- * (sin persona o sin membresía no hay nombres; los tres roles pueden), entrada validada, lectura pura (idempotente, no escribe) y
+ * (sin persona o sin membresía no hay correos; los tres roles pueden), entrada validada, lectura pura (idempotente, no escribe) y
  * lecturas simultáneas.
  */
 
@@ -25,7 +25,7 @@ const base = inject("baseDePruebas");
 const LIMITE_EN_MS = 60_000;
 
 describe.skipIf(base === null)(
-  "nombresDePersonas contra una base real",
+  "personasParaMostrar contra una base real",
   { timeout: LIMITE_EN_MS },
   () => {
     let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
@@ -74,7 +74,7 @@ describe.skipIf(base === null)(
       return filas.rows[0];
     };
 
-    it("los tres roles obtienen el nombre de las personas de su empresa (activas y apagadas), solo las pedidas", async () => {
+    it("los tres roles obtienen el correo de las personas de su empresa (activas y apagadas), solo las pedidas", async () => {
       const x = await empresaConGente();
       const esperado = new Map<PersonaId, string>([
         [x.gerente.id, x.gerente.email],
@@ -82,7 +82,7 @@ describe.skipIf(base === null)(
         [x.apagada.id, x.apagada.email],
       ]);
       for (const quien of [x.gerente, x.administrador, x.operador]) {
-        const r = await consultas.nombresDePersonas(comoEmpresa(x.e.empresa, quien.id), {
+        const r = await consultas.personasParaMostrar(comoEmpresa(x.e.empresa, quien.id), {
           ids: [x.gerente.id, x.operador.id, x.apagada.id],
         });
         expect(r).toEqual({ ok: true, valor: esperado });
@@ -93,12 +93,14 @@ describe.skipIf(base === null)(
       const a = await empresaConGente();
       const b = await empresaConGente();
       const inexistente = "00000000-0000-4000-8000-00000000abcd";
-      const r = await consultas.nombresDePersonas(comoEmpresa(a.e.empresa, a.operador.id), {
+      const r = await consultas.personasParaMostrar(comoEmpresa(a.e.empresa, a.operador.id), {
         ids: [a.gerente.id, b.gerente.id, b.operador.id, inexistente],
       });
       expect(r).toEqual({ ok: true, valor: new Map([[a.gerente.id, a.gerente.email]]) });
+      // El correo de quien no es de la empresa no se filtra, ni siquiera dentro del resultado serializado.
+      expect(JSON.stringify([...(r.ok ? r.valor : [])])).not.toContain(b.gerente.email);
       // Del otro lado, lo mismo: la empresa B tampoco ve a la gente de A.
-      const rb = await consultas.nombresDePersonas(comoEmpresa(b.e.empresa, b.operador.id), {
+      const rb = await consultas.personasParaMostrar(comoEmpresa(b.e.empresa, b.operador.id), {
         ids: [a.gerente.id, b.gerente.id],
       });
       expect(rb).toEqual({ ok: true, valor: new Map([[b.gerente.id, b.gerente.email]]) });
@@ -115,7 +117,7 @@ describe.skipIf(base === null)(
         [a, a.gerente],
         [b, b.gerente],
       ] as const) {
-        const r = await consultas.nombresDePersonas(comoEmpresa(x.e.empresa, x.operador.id), {
+        const r = await consultas.personasParaMostrar(comoEmpresa(x.e.empresa, x.operador.id), {
           ids: [id, solo.id],
         });
         expect(r).toEqual({
@@ -128,14 +130,14 @@ describe.skipIf(base === null)(
       }
     });
 
-    it("autorización: sin persona en el contexto, o con una persona que no es de la empresa, no hay nombres", async () => {
+    it("autorización: sin persona en el contexto, o con una persona que no es de la empresa, no hay correos", async () => {
       const a = await empresaConGente();
       const b = await empresaConGente();
-      const sinPersona = await consultas.nombresDePersonas(comoEmpresa(a.e.empresa, null), {
+      const sinPersona = await consultas.personasParaMostrar(comoEmpresa(a.e.empresa, null), {
         ids: [a.gerente.id],
       });
       expect(sinPersona).toEqual({ ok: false, error: "SIN_PERMISO" });
-      const deOtraEmpresa = await consultas.nombresDePersonas(
+      const deOtraEmpresa = await consultas.personasParaMostrar(
         comoEmpresa(a.e.empresa, b.gerente.id),
         {
           ids: [a.gerente.id],
@@ -143,7 +145,7 @@ describe.skipIf(base === null)(
       );
       expect(deOtraEmpresa).toEqual({ ok: false, error: "SIN_PERMISO" });
       // Una membresía apagada no autoriza.
-      const apagada = await consultas.nombresDePersonas(comoEmpresa(a.e.empresa, a.apagada.id), {
+      const apagada = await consultas.personasParaMostrar(comoEmpresa(a.e.empresa, a.apagada.id), {
         ids: [a.gerente.id],
       });
       expect(apagada.ok).toBe(false);
@@ -168,7 +170,7 @@ describe.skipIf(base === null)(
       ];
       for (const ids of invalidas) {
         expect(
-          await consultas.nombresDePersonas(ctx, { ids: ids as readonly string[] }),
+          await consultas.personasParaMostrar(ctx, { ids: ids as readonly string[] }),
           JSON.stringify(ids)?.slice(0, 60),
         ).toEqual({ ok: false, error: "ENTRADA_INVALIDA" });
       }
@@ -177,17 +179,19 @@ describe.skipIf(base === null)(
     it("entrada: lista vacía da un mapa vacío; los repetidos salen una sola vez; el tope exacto (200) pasa", async () => {
       const x = await empresaConGente();
       const ctx = comoEmpresa(x.e.empresa, x.operador.id);
-      expect(await consultas.nombresDePersonas(ctx, { ids: [] })).toEqual({
+      expect(await consultas.personasParaMostrar(ctx, { ids: [] })).toEqual({
         ok: true,
         valor: new Map(),
       });
       expect(
-        await consultas.nombresDePersonas(ctx, { ids: [x.gerente.id, x.gerente.id, x.gerente.id] }),
+        await consultas.personasParaMostrar(ctx, {
+          ids: [x.gerente.id, x.gerente.id, x.gerente.id],
+        }),
       ).toEqual({ ok: true, valor: new Map([[x.gerente.id, x.gerente.email]]) });
       const justo = Array.from({ length: MAXIMO_DE_PERSONAS_POR_CONSULTA }, (_, i) =>
         i === 0 ? x.gerente.id : `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
       );
-      expect(await consultas.nombresDePersonas(ctx, { ids: justo })).toEqual({
+      expect(await consultas.personasParaMostrar(ctx, { ids: justo })).toEqual({
         ok: true,
         valor: new Map([[x.gerente.id, x.gerente.email]]),
       });
@@ -198,8 +202,8 @@ describe.skipIf(base === null)(
       const ctx = comoEmpresa(x.e.empresa, x.administrador.id);
       const entrada = { ids: [x.gerente.id, x.operador.id] };
       const antes = await cuentas();
-      const primera = await consultas.nombresDePersonas(ctx, entrada);
-      const segunda = await consultas.nombresDePersonas(ctx, entrada);
+      const primera = await consultas.personasParaMostrar(ctx, entrada);
+      const segunda = await consultas.personasParaMostrar(ctx, entrada);
       expect(segunda).toEqual(primera);
       expect(await cuentas()).toEqual(antes);
     });
@@ -209,7 +213,7 @@ describe.skipIf(base === null)(
       const ctx = comoEmpresa(x.e.empresa, x.operador.id);
       const entrada = { ids: [x.gerente.id, x.administrador.id, x.operador.id] };
       const resultados = await Promise.all(
-        Array.from({ length: 8 }, () => consultas.nombresDePersonas(ctx, entrada)),
+        Array.from({ length: 8 }, () => consultas.personasParaMostrar(ctx, entrada)),
       );
       const esperado = {
         ok: true,
