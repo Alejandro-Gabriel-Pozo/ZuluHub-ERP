@@ -462,7 +462,7 @@ describe.skipIf(base === null)("stock: costos", () => {
   describe("salida por venta", () => {
     it("la venta congela el promedio de cada insumo (con su receta) y su reversión lo devuelve al mismo costo", async () => {
       const dep = await c.deposito(e, { deVenta: true });
-      const harina = await c.articulo(e, { clase: "INSUMO" });
+      const harina = await c.articulo(e, { clase: "MATERIA_PRIMA" });
       valorDe(await entrada(dep, harina.producto, "100", "3"));
       const pan = await productoDeBase(c.dueno, e.empresa, { clase: "VENDIBLE" });
       valorDe(

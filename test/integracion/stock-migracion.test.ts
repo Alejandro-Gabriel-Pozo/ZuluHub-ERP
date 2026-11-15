@@ -2192,8 +2192,9 @@ describe.skipIf(base === null)("0030 stock: la migración contra una base real",
       const kilos = await articuloDeBase(dueno, e.m, {
         unidadBase: "KILOGRAMO",
         dimension: "MASA",
-        clase: "INSUMO",
+        clase: "MATERIA_PRIMA",
       });
+      const insumoOperativo = await articuloDeBase(dueno, e.m, { clase: "INSUMO" });
       const v1 = await cargarComposicion(e, { numero: 1 });
       const producto = await productoDeBase(dueno, e.m.empresa, { clase: "VENDIBLE" });
       await enApp(e.m, async (_s, ex) => {
@@ -2238,6 +2239,11 @@ describe.skipIf(base === null)("0030 stock: la migración contra una base real",
         check(
           await componente(2, inactivo.articulo, "1", "UNIDAD", "CONTEO"),
           "componente_articulo_inactivo",
+        );
+        // La receta lleva solo ingredientes: un artículo de clase «insumo» (packaging, limpieza) no es componente (0056, decisión del 14/11/2026).
+        check(
+          await componente(2, insumoOperativo.articulo, "1", "UNIDAD", "CONTEO"),
+          "componente_articulo_es_insumo",
         );
         // La unidad es de la dimensión del artículo (un artículo por unidad no se descuenta en kilos).
         referencia(
