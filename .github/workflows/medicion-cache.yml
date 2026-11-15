@@ -1,0 +1,91 @@
+name: Medición del caché de node_modules (experimento; NO se integra)
+
+# Mide, con corridas reales de GitHub Actions, si cachear `node_modules` gana algo frente a `npm ci` (que ya usa el caché de ~/.npm).
+# Corre solo en la rama de medición; se borra con la rama.
+on:
+  push:
+    branches: [ci/p5-medicion-cache-node-modules]
+
+permissions:
+  contents: read
+
+jobs:
+  base:
+    name: Base (npm ci como hoy) ${{ matrix.rep }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        rep: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: npm ci
+        run: npm ci
+      - run: du -sk node_modules | cut -f1
+
+  sembrar:
+    name: Sembrar el caché de node_modules
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: nm
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+          key: nm-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('package-lock.json') }}
+      - name: npm ci (solo si no hubo caché)
+        if: steps.nm.outputs.cache-hit != 'true'
+        run: npm ci
+
+  con-cache:
+    name: Con caché de node_modules ${{ matrix.rep }}
+    needs: sembrar
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        rep: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: nm
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+          key: nm-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('package-lock.json') }}
+      - name: npm ci (solo si no hubo caché)
+        if: steps.nm.outputs.cache-hit != 'true'
+        run: npm ci
+      - name: El árbol restaurado funciona (binarios y paquetes que usa el CI)
+        run: |
+          test "${{ steps.nm.outputs.cache-hit }}" = "true"
+          npx --no-install tsc --version
+          npx --no-install eslint --version
+          npx --no-install vitest --version
+          npx --no-install prettier --version
+          node -e "require.resolve('next'); require.resolve('pg'); require.resolve('playwright')"
+          du -sk node_modules | cut -f1
