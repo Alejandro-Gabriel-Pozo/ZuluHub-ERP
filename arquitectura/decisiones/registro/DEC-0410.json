@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0410",
+  "fecha": "2026-11-14",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO D5. Una compra con pago vigente no se anula: primero se anula el pago, que devuelve el efectivo a la caja, y después la compra.",
+  "que_cambia": "anularCompra ya no anula en silencio el pago vigente. Falla con COMPROBANTE_YA_PAGADO y el id del pago, también si el pago fue por otro medio. Antes el efectivo quedaba sin devolver en la caja. Revertir es devolver el bloque que anulaba el pago, medio día.",
+  "donde": "src/modulos/compras/casos-de-uso/anular-compra.ts; test/integracion/compras-pagos-caja.test.ts; origen en INTEGRACION.md sección 5 D5 y Q1, dueño sin preferencia"
+}
