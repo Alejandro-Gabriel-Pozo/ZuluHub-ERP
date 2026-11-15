@@ -106,6 +106,60 @@ describe("calcularVuelto", () => {
       "IMPORTE_INVALIDO",
     );
   });
+  it("borde: lo entregado EXACTAMENTE igual al total no tiene falta, sobra ni vuelto (mixto y de a un centavo)", () => {
+    expect(
+      valor(
+        calcularVuelto({
+          total: total("1500"),
+          pagos: [pago("QR", "1000"), pago("EFECTIVO", "500")],
+        }),
+      ),
+    ).toEqual({ falta: "0.00", sobra: "0.00", vuelto: "0.00", netoEnEfectivo: "500.00" });
+    expect(
+      valor(calcularVuelto({ total: total("0.01"), pagos: [pago("EFECTIVO", "0.01")] })),
+    ).toMatchObject({
+      falta: "0.00",
+      vuelto: "0.00",
+      sobra: "0.00",
+    });
+    // Un centavo de menos es falta; un centavo de más es vuelto.
+    expect(
+      valor(calcularVuelto({ total: total("10"), pagos: [pago("EFECTIVO", "9.99")] })),
+    ).toMatchObject({ falta: "0.01", vuelto: "0.00" });
+    expect(
+      valor(calcularVuelto({ total: total("10"), pagos: [pago("EFECTIVO", "10.01")] })),
+    ).toMatchObject({ vuelto: "0.01", netoEnEfectivo: "10.00" });
+  });
+  it("borde: el efectivo EXACTAMENTE igual al sobrante lo cubre justo (vuelto, neto en cero); un centavo menos no hay vuelto", () => {
+    expect(
+      valor(
+        calcularVuelto({
+          total: total("1500"),
+          pagos: [pago("QR", "1500"), pago("EFECTIVO", "200")],
+        }),
+      ),
+    ).toEqual({ falta: "0.00", sobra: "0.00", vuelto: "200.00", netoEnEfectivo: "0.00" });
+    expect(
+      valor(
+        calcularVuelto({
+          total: total("1500"),
+          pagos: [pago("QR", "1700"), pago("EFECTIVO", "199.99")],
+        }),
+      ),
+    ).toEqual({ falta: "0.00", sobra: "399.99", vuelto: "0.00", netoEnEfectivo: "199.99" });
+  });
+  it("borde: exactamente el máximo de pagos es válido y uno más se rechaza", () => {
+    const pagos = (n: number) => Array.from({ length: n }, () => pago("EFECTIVO", "1"));
+    expect(
+      calcularVuelto({
+        total: total(String(MAXIMO_DE_COBROS_POR_TICKET)),
+        pagos: pagos(MAXIMO_DE_COBROS_POR_TICKET),
+      }).ok,
+    ).toBe(true);
+    const r = calcularVuelto({ total: total("1"), pagos: pagos(MAXIMO_DE_COBROS_POR_TICKET + 1) });
+    expect(r.ok ? "ok" : r.error).toBe("PAGOS_INVALIDOS");
+    expect(calcularVuelto({ total: total("1"), pagos: pagos(1) }).ok).toBe(true);
+  });
   it("propiedad: lo que se manda al servidor (neto) más lo no efectivo cuadra con el total cuando no hay falta ni sobra", () => {
     const centavos = fc.integer({ min: 1, max: 5_000_000 });
     fc.assert(
