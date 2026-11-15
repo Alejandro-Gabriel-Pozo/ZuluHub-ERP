@@ -25,6 +25,8 @@ export type Producto = Readonly<{
   unidadBaseId: string;
   unidadDeVentaId: string;
   pasoMinimo: string;
+  /** Las fracciones que se ofrecen (2, 4, 8), ascendentes; vacío = no se vende por fracciones. El paso mínimo se deriva de ellas (0051). */
+  porcionesOfrecidas: readonly number[];
   alicuota: string | null;
   faltaCompletar: boolean;
   seVende: boolean;

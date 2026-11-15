@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0432",
+  "fecha": "2026-11-15",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: al armar el pedido a ARCA no se informa una alícuota cuyo neto es cero (un renglón a $0); el total y el neto no cambian. Recomendación de Arquitectura, WSFE 10020.",
+  "que_cambia": "Una factura con un renglón a $0 en una alícuota que no tiene otro importe positivo ya no manda esa alícuota (antes ARCA la rechazaba con 10020, BaseImp mayor que cero). Revertir: quitar el filtro de bases en cero (una línea), con el rechazo de ARCA como consecuencia.",
+  "donde": "src/modulos/fiscal/dominio/importes-para-arca.ts (alicuotasInformadas); auditoria-de-reglas/wsfe-codigos-que-condicionan-decisiones.md (cortesía, 10020)"
+}

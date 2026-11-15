@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0370",
+  "fecha": "2026-11-14",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Fracciones (porciones 2, 4 y 8) y peso se construyen ya, con perilla apagada; el paso mínimo se deriva de la fracción más fina; el peso se carga a mano en un campo.",
+  "que_cambia": "Una columna de porciones en el producto (0051) y cambiarFormaDeVenta que acepta porciones o paso, con la perilla. Revertir: script de reversión de 0051 (frena si hay productos con fracciones).",
+  "donde": "migraciones/0051_porciones_del_producto.sql; decisiones-del-dueno-2026-11.md (12/11/2026 «Solo 2, 4 y 8» y 14/11/2026 «Cómo se vende» en el servidor); A7"
+}

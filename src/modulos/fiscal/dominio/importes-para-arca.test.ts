@@ -124,6 +124,45 @@ describe("importesParaArca: letras A y B", () => {
   });
 });
 
+describe("importesParaArca: renglones a $0 (cortesía parcial, error 10020 de WSFE)", () => {
+  it("una alícuota cuyo neto es cero no se informa (BaseImp tiene que ser mayor que cero); el total y el neto no cambian", () => {
+    const c = facturaArmada(consumidorFinal, [
+      renglon("1210.00", "1", "21"),
+      renglon("0.00", "1", "10.5"),
+    ]);
+    expect(texto(importesParaArca(c))).toEqual({
+      total: "1210.00",
+      neto: "1000.00",
+      iva: "210.00",
+      exento: "0.00",
+      noGravado: "0.00",
+      tributos: "0.00",
+      alicuotas: [["21", "1000.00", "210.00"]],
+    });
+  });
+
+  it("con el neto de una alícuota en un centavo SÍ se informa: el corte es exactamente «mayor que cero»", () => {
+    const c = facturaArmada(consumidorFinal, [
+      renglon("1210.00", "1", "21"),
+      renglon("0.01", "1", "10.5"),
+    ]);
+    const informadas = importesParaArca(c).alicuotas.map((a) => a.alicuota);
+    expect(informadas).toContain("10.5");
+    expect(informadas).toContain("21");
+  });
+
+  it("todo exento más un renglón gravado a $0: no se informa ninguna alícuota", () => {
+    const c = facturaArmada(consumidorFinal, [
+      renglon("500.00", "1", "EXENTO"),
+      renglon("0.00", "1", "21"),
+    ]);
+    const i = importesParaArca(c);
+    expect(i.alicuotas).toEqual([]);
+    expect(importeATexto(i.exento)).toBe("500.00");
+    expect(importeATexto(i.total)).toBe("500.00");
+  });
+});
+
 describe("importesParaArca: letra C", () => {
   it("el total es el neto y todo lo demás es cero; no se informa Iva[]", () => {
     const c = facturaArmada(consumidorFinal, [renglon("100.00", "3", null)], {}, contextoC);
