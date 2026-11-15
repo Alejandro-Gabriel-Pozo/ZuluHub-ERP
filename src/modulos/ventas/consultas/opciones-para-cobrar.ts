@@ -7,7 +7,7 @@ import {
   type ErrorAlConsultarOpcionesDeCobro,
   type OpcionesDeCobro,
 } from "../../caja/publico";
-import { esUuid } from "../dominio/identificadores";
+import { esUuid } from "../casos-de-uso/calculo";
 import type { TxDeConsultasDeVentas } from "./contrato";
 
 /**
