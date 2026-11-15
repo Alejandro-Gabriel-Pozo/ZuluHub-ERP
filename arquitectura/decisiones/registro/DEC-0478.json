@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0478",
+  "fecha": "2026-11-15",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Textos de la pantalla Venta rápida (ventas.venta.* y ventas.cantidad.*), todos aprobados o con fuente verificable; ninguno es nuevo.",
+  "que_cambia": "Qué lee la persona en la venta rápida: Ver cuenta, Total, Con opciones, Agregar, Cantidad, Quitar, medidas, fracciones y demás. M1, M3, M4, M7 y P12 son de la fila 171; el resto, aprobados el 09/11. La fuente de cada uno está junto a su clave.",
+  "donde": "delegación del dueño, DDD filas 173 y 174; fila 171 de decisiones-del-dueno-2026-11.md; catalogo-ventas.ts"
+}

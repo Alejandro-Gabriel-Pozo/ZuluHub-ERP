@@ -1,0 +1,6 @@
+{
+  "grupo": "web (venta rápida)",
+  "archivos": "apps/web/ui/plantillas/venta/modelo-de-venta-rapida.ts",
+  "minutos": 1,
+  "pruebas": "test/web/modelo-de-venta-rapida.test.ts"
+}

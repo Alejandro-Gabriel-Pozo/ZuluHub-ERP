@@ -10,6 +10,7 @@ import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
 import { RUTAS_DE_CONFIGURACION } from "../plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
 import { RUTAS_DE_CUENTA } from "../plantillas/sesion/rutas-de-cuenta";
+import { RUTA_DE_LA_VENTA } from "../plantillas/venta/rutas-de-venta";
 
 /**
  * EL MENÚ POR ÁREAS: una sola tabla declarativa (área → grupo → pantalla), una fila por pantalla. Es la ÚNICA fuente de qué hay en el
@@ -43,6 +44,7 @@ export type ClaveDeArea = (typeof AREAS_DEL_MENU)[number]["clave"];
  * muestra como una fila, sin encabezado repetido»).
  */
 export const GRUPOS_DEL_MENU = [
+  { clave: "venta", etiqueta: null },
   { clave: "comprobantes", etiqueta: null },
   { clave: "productos", etiqueta: null },
   { clave: "empresa", etiqueta: "navegacion.empresa" },
@@ -62,7 +64,13 @@ type BaseDeFila = Readonly<{
 export type FilaDePantalla = BaseDeFila &
   Readonly<{
     tipo: "pantalla";
-    clave: "comprobantes" | "productos" | "configuracion-fiscal" | "medios-de-pago" | "contacto";
+    clave:
+      | "venta-rapida"
+      | "comprobantes"
+      | "productos"
+      | "configuracion-fiscal"
+      | "medios-de-pago"
+      | "contacto";
     modulo: ClaveModulo;
     accion: ClaveAccion;
     href: string;
@@ -86,6 +94,17 @@ export type ClaveDeFila = FilaDelMenu["clave"];
  * maqueta dice «Medios de pago y cajas», que no tiene clave: va a preguntas pendientes.
  */
 export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
+  {
+    tipo: "pantalla",
+    clave: "venta-rapida",
+    area: "ventas",
+    grupo: "venta",
+    modulo: "ventas",
+    accion: "ventas.ver",
+    href: RUTA_DE_LA_VENTA,
+    etiqueta: "ventas.venta.titulo",
+    departamento: null,
+  },
   {
     tipo: "pantalla",
     clave: "comprobantes",
