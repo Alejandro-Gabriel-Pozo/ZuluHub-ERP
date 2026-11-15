@@ -16,7 +16,7 @@ describe("el catálogo comercial de módulos", () => {
     expect(conCapacidad).toEqual([]);
   });
 
-  it("tiene trece módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, caja y ventas (disponibles desde el 15/11/2026, DEC-0460), compras (disponible desde E9-T12), carta, comandas y salon (en desarrollo, E7), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
+  it("tiene trece módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, caja y ventas (disponibles desde el 15/11/2026, DEC-0463), compras (disponible desde E9-T12), carta, comandas y salon (en desarrollo, E7), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
     expect(CATALOGO_DE_MODULOS).toEqual({
       administracion: {
         estado: "disponible",
@@ -363,7 +363,7 @@ describe("el catálogo comercial de módulos", () => {
     expect([...estado.modulosEnSoloLectura]).toEqual([]);
   });
 
-  it("catalogo, caja y ventas son disponibles (DEC-0460) pero NO nacen activos: sin activarlos y sin plan la empresa no los tiene; activados y en el plan operan", () => {
+  it("catalogo, caja y ventas son disponibles (DEC-0463) pero NO nacen activos: sin activarlos y sin plan la empresa no los tiene; activados y en el plan operan", () => {
     const todos = ["catalogo", "caja", "ventas"];
     for (const clave of todos) {
       expect(CATALOGO_DE_MODULOS[clave as keyof typeof CATALOGO_DE_MODULOS].estado).toBe(

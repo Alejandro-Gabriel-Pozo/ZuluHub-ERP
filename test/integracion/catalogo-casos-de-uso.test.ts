@@ -1707,7 +1707,7 @@ describe.skipIf(base === null)(
         expect((await c.casos.cambiarPrecio(e.administrador, pedido({}))).ok).toBe(true);
       });
 
-      it("todo nace cerrado: con `catalogo` en desarrollo (en el catálogo real es disponible, DEC-0460) ningún rol hace nada, ni siquiera mirar", async () => {
+      it("todo nace cerrado: con `catalogo` en desarrollo (en el catálogo real es disponible, DEC-0463) ningún rol hace nada, ni siquiera mirar", async () => {
         const cerrado = await montarCatalogo(base as NonNullable<typeof base>, {
           reglas: {
             catalogo: {

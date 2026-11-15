@@ -1424,7 +1424,7 @@ describe.skipIf(base === null)("ventas: casos de uso", () => {
     expect(await sinCambios(e)).toEqual(antes);
   });
 
-  it("P15: con ventas en desarrollo (en el catálogo real es disponible, DEC-0460) ningún comando pasa (MODULO_EN_DESARROLLO)", async () => {
+  it("P15: con ventas en desarrollo (en el catálogo real es disponible, DEC-0463) ningún comando pasa (MODULO_EN_DESARROLLO)", async () => {
     const e = await m.escenario();
     const { cuenta, linea } = await cuentaConLinea(m, e);
     const t = await ticketDe(e);

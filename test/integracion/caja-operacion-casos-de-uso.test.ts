@@ -302,7 +302,7 @@ describe.skipIf(base === null)("operación de caja: casos de uso y consultas", (
       }
     });
 
-    it("con caja en desarrollo (en el catálogo real es disponible, DEC-0460) se rechaza con MODULO_EN_DESARROLLO y uno no activado, con MODULO_NO_ACTIVO", async () => {
+    it("con caja en desarrollo (en el catálogo real es disponible, DEC-0463) se rechaza con MODULO_EN_DESARROLLO y uno no activado, con MODULO_NO_ACTIVO", async () => {
       const m = await mundo();
       const real = armarCaja(entorno, {
         catalogo: {

@@ -249,7 +249,7 @@ describe.skipIf(base === null)("configuración de caja: casos de uso y consultas
       expect(await foto(m)).toBe(antes);
     });
 
-    it("con caja en desarrollo (en el catálogo real es disponible, DEC-0460): todo se rechaza con MODULO_EN_DESARROLLO (todo nace cerrado)", async () => {
+    it("con caja en desarrollo (en el catálogo real es disponible, DEC-0463): todo se rechaza con MODULO_EN_DESARROLLO (todo nace cerrado)", async () => {
       expect(CATALOGO_DE_MODULOS.caja.estado).toBe("disponible");
       const m = await mundo();
       const real = armarCaja(entorno, {

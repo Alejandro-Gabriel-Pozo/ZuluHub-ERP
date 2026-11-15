@@ -100,7 +100,7 @@ type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 const SIN_CONSTRUIR: readonly string[] = ["vidriera", "comandas", "salon", "produccion"];
 
 /**
- * Acciones de un módulo YA disponible que ninguna declaración de caso de uso nombra (X1 inverso), con lista exacta. Nació con DEC-0460
+ * Acciones de un módulo YA disponible que ninguna declaración de caso de uso nombra (X1 inverso), con lista exacta. Nació con DEC-0463
  * (catálogo, caja y ventas pasan a disponibles): antes el módulo entero estaba perdonado por `SIN_CONSTRUIR`. Previene: perdonar de
  * nuevo un módulo entero; acá solo pasa lo nombrado, y una entrada que ya no hace falta hace fallar su prueba.
  * - Pedidas DENTRO del caso de uso con `autorizar`/`exigirAccion` además de la principal (el chequeo lee la fuente): el escáner solo lee
@@ -410,7 +410,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual([]);
   });
 
-  it("carta, comandas, salón y producción son los únicos módulos sin construir, y siguen en desarrollo; stock salió con E5, clientes con E9-T4, compras con E9-T12 y catálogo, caja y ventas el 15/11/2026 (DEC-0460), y son disponibles", () => {
+  it("carta, comandas, salón y producción son los únicos módulos sin construir, y siguen en desarrollo; stock salió con E5, clientes con E9-T4, compras con E9-T12 y catálogo, caja y ventas el 15/11/2026 (DEC-0463), y son disponibles", () => {
     expect([...SIN_CONSTRUIR]).toEqual(["vidriera", "comandas", "salon", "produccion"]);
     for (const clave of ["catalogo", "caja", "ventas"] as const) {
       expect(SIN_CONSTRUIR).not.toContain(clave);

@@ -38,7 +38,7 @@ describe.skipIf(base === null)("ficha de datos de un producto de la web", () => 
   beforeAll(async () => {
     if (base === null) return;
     c = await montarCatalogo(base);
-    // El catálogo real con `catalogo` forzado a `en_desarrollo` (en el real es disponible, DEC-0460): el guard rechaza todo.
+    // El catálogo real con `catalogo` forzado a `en_desarrollo` (en el real es disponible, DEC-0463): el guard rechaza todo.
     cerrado = await montarCatalogo(base, {
       reglas: {
         catalogo: {

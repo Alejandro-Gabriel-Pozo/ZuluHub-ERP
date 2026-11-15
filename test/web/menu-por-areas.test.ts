@@ -54,7 +54,7 @@ describe("armarElMenu: todo nace cerrado", () => {
     expect(claves(armarElMenu([comprobantes], a, null))).toEqual([["ventas", [["comprobantes"]]]]);
   });
 
-  it("catálogo y caja son disponibles (DEC-0460): aparecen solo con el módulo activo y la acción; sin cualquiera de las dos, nada", () => {
+  it("catálogo y caja son disponibles (DEC-0463): aparecen solo con el módulo activo y la acción; sin cualquiera de las dos, nada", () => {
     const a = permisos(["productos.ver", "medios_de_pago.editar"], ["catalogo", "caja"]);
     const conTodo = claves(armarElMenu([productos, medios], a, null)).flatMap(([, grupos]) =>
       (grupos as string[][]).flat(),

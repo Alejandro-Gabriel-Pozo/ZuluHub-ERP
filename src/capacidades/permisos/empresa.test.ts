@@ -96,7 +96,7 @@ const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
 const DE_LA_ESCALERA_DE_ELECCIONES = ["conjuntos.editar_contenido", "variantes.editar"] as const;
 
 /**
- * Caja, cierre y ventas (E0-T1, e0-cimientos-especificacion §3.1): los tres módulos pasaron a `disponible` (caja y ventas el 15/11/2026, DEC-0460); esta tabla fija quién puede cada acción.
+ * Caja, cierre y ventas (E0-T1, e0-cimientos-especificacion §3.1): los tres módulos pasaron a `disponible` (caja y ventas el 15/11/2026, DEC-0463); esta tabla fija quién puede cada acción.
  */
 const SOLO_DEL_GERENTE_DE_CAJA = ["cajas.crear", "cajas.desactivar", "cajas.reactivar"] as const;
 
@@ -695,7 +695,7 @@ describe("el guard con las reglas reales", () => {
     (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
   );
 
-  it("todo módulo en desarrollo del catálogo incluye vidriera, comandas, salon y produccion (cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12 y catalogo, caja y ventas desde el 15/11/2026, DEC-0460)", () => {
+  it("todo módulo en desarrollo del catálogo incluye vidriera, comandas, salon y produccion (cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12 y catalogo, caja y ventas desde el 15/11/2026, DEC-0463)", () => {
     expect([...ENDESARROLLO].sort()).toEqual(
       ["comandas", "produccion", "salon", "vidriera"].sort(),
     );
@@ -746,7 +746,7 @@ describe("el guard con las reglas reales", () => {
     );
   });
 
-  it("caja, ventas y catalogo (disponibles, DEC-0460) no nacen activos: solo quedan activos si la empresa los activa Y el plan los incluye", () => {
+  it("caja, ventas y catalogo (disponibles, DEC-0463) no nacen activos: solo quedan activos si la empresa los activa Y el plan los incluye", () => {
     const todos = ["caja", "ventas", "catalogo"];
     const base = ["administracion", "clientes"];
     expect([...estadoDeModulos(CATALOGO_DE_MODULOS, [], todos).modulosActivos]).toEqual(base);

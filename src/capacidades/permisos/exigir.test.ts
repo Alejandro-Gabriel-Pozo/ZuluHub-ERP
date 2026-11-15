@@ -376,7 +376,7 @@ describe("exigirAccion con las reglas de plataforma (H5 P1)", () => {
 });
 
 describe("accionesPermitidas", () => {
-  // `catalogo` es disponible en el catálogo real (DEC-0460): esta variante lo pone en desarrollo para comparar las dos situaciones.
+  // `catalogo` es disponible en el catálogo real (DEC-0463): esta variante lo pone en desarrollo para comparar las dos situaciones.
   const CON_CATALOGO_EN_DESARROLLO: ReglasDeEmpresa = {
     catalogo: {
       ...CATALOGO_DE_MODULOS,
