@@ -71,7 +71,7 @@ describe.skipIf(base === null)("compras: pago en efectivo desde la caja", () => 
       }),
     );
     const caja = await c.cajaAbierta(e);
-    return { e, caja, comprobanteId: r.comprobanteId as string };
+    return { e, caja, comprobanteId: r.comprobanteId as string, recepcionId: r.recepcionId };
   };
   const salida = (cajaId: string) => ({ cajaId, motivo: "Pago de la factura en efectivo" });
   const pedido = (
@@ -315,6 +315,107 @@ describe.skipIf(base === null)("compras: pago en efectivo desde la caja", () => 
     );
     expect(estado?.estado).toBe("VIGENTE");
     expect(await movimientos(m.caja.sesionId)).toBe(2);
+  });
+
+  it("D5: anular una compra pagada en efectivo NO deja anulado el pago con el egreso vivo: falla y todo queda como estaba", async () => {
+    const m = await armar();
+    const pago = valorDe(await c.casos.declararPago(m.e.gerente, pedido(m, m.caja.cajaId)));
+    expect(
+      await c.casos.anularCompra(m.e.gerente, { recepcionId: m.recepcionId, motivo: "Error" }),
+    ).toEqual({
+      ok: false,
+      error: { error: "COMPROBANTE_YA_PAGADO", pagoId: pago.pagoId },
+    });
+    const [pagoFila] = await c.filas<{ estado: string }>(
+      "select estado from pago_de_comprobante where id = $1",
+      [pago.pagoId],
+    );
+    expect(pagoFila?.estado).toBe("VIGENTE");
+    const [recepcion] = await c.filas<{ estado: string }>(
+      "select estado from recepcion where id = $1",
+      [m.recepcionId],
+    );
+    expect(recepcion?.estado).toBe("CONFIRMADA");
+    expect(await esperado(m.caja.sesionId)).toBe("-1420.00");
+    expect(await movimientos(m.caja.sesionId)).toBe(2);
+  });
+
+  it("D5 flujo correcto: anular el pago (devuelve el efectivo) y después la compra; la caja queda como al principio", async () => {
+    const m = await armar();
+    const pago = valorDe(await c.casos.declararPago(m.e.gerente, pedido(m, m.caja.cajaId)));
+    valorDe(await c.casos.anularPago(m.e.gerente, { pagoId: pago.pagoId, motivo: "Error" }));
+    valorDe(
+      await c.casos.anularCompra(m.e.gerente, { recepcionId: m.recepcionId, motivo: "Error" }),
+    );
+    expect(await esperado(m.caja.sesionId)).toBe("1000.00");
+  });
+
+  it("D5 idempotencia: repetir anularCompra fallida (pago vigente) no escribe nada ni toca la caja", async () => {
+    const m = await armar();
+    valorDe(await c.casos.declararPago(m.e.gerente, pedido(m, m.caja.cajaId)));
+    const antes = await movimientos(m.caja.sesionId);
+    const auditoriaAntes = (await c.auditoria(m.e.empresa, "COMPRA_ANULADA")).length;
+    for (let i = 0; i < 3; i++) {
+      expect(
+        codigo(
+          await c.casos.anularCompra(m.e.gerente, { recepcionId: m.recepcionId, motivo: "Otra" }),
+        ),
+      ).toBe("COMPROBANTE_YA_PAGADO");
+    }
+    expect(await movimientos(m.caja.sesionId)).toBe(antes);
+    expect((await c.auditoria(m.e.empresa, "COMPRA_ANULADA")).length).toBe(auditoriaAntes);
+  });
+
+  it("D5 concurrencia: anular la compra y anular su pago a la vez; nunca queda la compra anulada con el pago vigente, y la caja vuelve una sola vez", async () => {
+    for (let ronda = 0; ronda < RONDAS; ronda++) {
+      const m = await armar();
+      const pago = valorDe(await c.casos.declararPago(m.e.gerente, pedido(m, m.caja.cajaId)));
+      const [a, b] = await Promise.all([
+        c.casos.anularCompra(m.e.gerente, { recepcionId: m.recepcionId, motivo: "Compra" }),
+        c.casos.anularPago(m.e.administrador, { pagoId: pago.pagoId, motivo: "Pago" }),
+      ]);
+      expect(b.ok).toBe(true);
+      if (!a.ok) expect(["COMPROBANTE_YA_PAGADO", "ConcurrenciaAgotada"]).toContain(codigo(a));
+      const [p] = await c.filas<{ estado: string }>(
+        "select estado from pago_de_comprobante where id = $1",
+        [pago.pagoId],
+      );
+      const [r] = await c.filas<{ estado: string }>("select estado from recepcion where id = $1", [
+        m.recepcionId,
+      ]);
+      expect(!(r?.estado === "ANULADA" && p?.estado === "VIGENTE")).toBe(true);
+      expect(p?.estado).toBe("ANULADO");
+      expect(await esperado(m.caja.sesionId)).toBe("1000.00");
+    }
+  });
+
+  it("D5 concurrencia: anular la compra y declarar su pago en efectivo a la vez; o queda la compra anulada sin pago ni egreso, o el pago y la compra en pie", async () => {
+    for (let ronda = 0; ronda < RONDAS; ronda++) {
+      const m = await armar();
+      const [a, b] = await Promise.all([
+        c.casos.anularCompra(m.e.gerente, { recepcionId: m.recepcionId, motivo: "Compra" }),
+        c.casos.declararPago(m.e.gerente, pedido(m, m.caja.cajaId)),
+      ]);
+      const [r] = await c.filas<{ estado: string }>("select estado from recepcion where id = $1", [
+        m.recepcionId,
+      ]);
+      const vigentes = await c.contar(
+        "select count(*) as n from pago_de_comprobante where comprobante_id = $1 and estado = 'VIGENTE'",
+        [m.comprobanteId],
+      );
+      if (a.ok) {
+        expect(r?.estado).toBe("ANULADA");
+        expect(vigentes).toBe(0);
+        expect(b.ok).toBe(false);
+        expect(await esperado(m.caja.sesionId)).toBe("1000.00");
+      } else {
+        expect(["COMPROBANTE_YA_PAGADO", "ConcurrenciaAgotada"]).toContain(codigo(a));
+        expect(r?.estado).toBe("CONFIRMADA");
+        expect(b.ok).toBe(true);
+        expect(vigentes).toBe(1);
+        expect(await esperado(m.caja.sesionId)).toBe("-1420.00");
+      }
+    }
   });
 
   it("un pago sin salida de caja se anula sin tocar la caja", async () => {
