@@ -8,7 +8,9 @@ import { ESTADOS_DE_SESION, type EstadoDeSesion } from "../estados";
 
 /**
  * Las transiciones que permite el dominio. La base impone EXACTAMENTE las mismas (`sesion_caja_validar_cambio`, 0027): una prueba de
- * integración recorre todos los pares y exige que coincidan. Previene que el código y la base se desalineen.
+ * integración (`caja-migracion.test.ts`) arma su lista desde esta tabla, recorre todos los pares y exige que coincidan. Previene que el código y
+ * la base se desalineen. La base admite además `ABIERTA → ABIERTA` como «toque» sin cambios (lo escribe un movimiento cargado fuera de
+ * `serializable` para chocar con un cierre en vuelo); no es un cambio de estado y por eso no figura acá.
  */
 export const TRANSICIONES_DE_SESION: Readonly<Record<EstadoDeSesion, readonly EstadoDeSesion[]>> = {
   ABIERTA: ["EN_CIERRE", "CERRADA"],
