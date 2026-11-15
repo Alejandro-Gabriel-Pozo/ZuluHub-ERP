@@ -270,6 +270,14 @@ describe("catalogoDePerillas", () => {
         modulo: "stock",
       },
       {
+        perilla: "venta_por_fracciones_y_peso",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "catalogo",
+      },
+      {
         perilla: "vidriera_por_qr",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",
