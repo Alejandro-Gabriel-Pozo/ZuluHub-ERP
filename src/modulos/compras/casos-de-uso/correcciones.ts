@@ -215,6 +215,16 @@ export function armarCorregirCompra(dependencias: DependenciasDeCompras) {
             );
           }
 
+          // Lo que el proveedor cobró (la oferta) acompaña a la corrección mientras esta compra sea la última de la oferta (D11): una compra más nueva no se pisa.
+          await tx.ofertasDeProveedor.corregirPrecioDeCompra(empresaId, {
+            compraId: recepcion.id,
+            proveedorId: recepcion.proveedorId,
+            productoId: linea.productoId,
+            presentacionId: linea.presentacionId,
+            ultimoPrecio: p.precio,
+            ultimoCostoPorUnidadDeStock: costoDespues.valor,
+          });
+
           let consumidoAlCorregir: string | null = null;
           let promedioAntes: string | null = null;
           let promedioDespues: string | null = null;
