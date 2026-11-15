@@ -3,6 +3,8 @@
   flex-direction: column;
   gap: var(--espacio-5);
   min-width: 0;
+  /* A 1200 px la lista y los formularios no se estiran a todo el ancho (el importe quedaba lejos del texto). */
+  max-width: 40rem;
 }
 
 .bloque {

@@ -1,10 +1,10 @@
 {
   "id": "DEC-0475",
   "fecha": "2026-11-15",
-  "quien": "sesión",
+  "quien": "padre",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
-  "decision": "SUPUESTO: la pantalla Caja usa los rótulos «Fondo inicial» y «Falta» de la maqueta caja.html, que no tienen fila propia aprobada.",
+  "estado": "CONFIRMADA",
+  "decision": "la pantalla Caja usa los rótulos «Fondo inicial» y «Falta» de la maqueta caja.html, que no tienen fila propia aprobada.",
   "que_cambia": "La persona ve esos dos rótulos en la pantalla Caja. Revertir: sacar las claves caja.campo.fondo_inicial y caja.ajuste.falta y poner el rótulo que apruebe el dueño.",
-  "donde": "src/capacidades/vocabulario/catalogo-caja.ts; textos-mostrador-pendientes.md (M11) y servidor-del-mostrador-minimo.md sección 8"
+  "donde": "src/capacidades/vocabulario/catalogo-caja.ts; textos-mostrador-pendientes.md (M11) y servidor-del-mostrador-minimo.md sección 8; delegación del dueño, DDD filas 173/174; la maqueta aprobada caja.html: «Fondo inicial» línea 420 y «Falta» línea 426, con parientes aprobados («Sobra», «Anulado»)"
 }
