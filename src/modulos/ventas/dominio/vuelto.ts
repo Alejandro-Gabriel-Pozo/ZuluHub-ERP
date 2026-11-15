@@ -68,6 +68,7 @@ export function calcularVuelto(entrada: EntradaDeVuelto): Resultado<Vuelto, Erro
     if (pago.tipo === "EFECTIVO") efectivo = sumar(efectivo, importe.valor);
   }
   const cero = importeCero(ARS);
+  // Stryker disable next-line EqualityOperator: con lo entregado igual al total, `<` y `<=` dan el mismo resultado (falta 0, sin sobra ni vuelto, neto = efectivo); el borde lo fija la prueba «exactamente igual al total».
   if (entregado.unidades <= total.valor.unidades) {
     return ok({
       falta: importeATexto(restar(total.valor, entregado)),

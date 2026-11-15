@@ -177,6 +177,26 @@ describe("datos del cobro (K7)", () => {
     };
     expect(huella(conDatos("5", sinDni))).not.toBe(h);
   });
+  it("UN solo dato basta para cambiar la huella (los demás ausentes), cada uno por separado", () => {
+    const h = huella(cobro("5"));
+    for (const solo of [
+      { cupon: "ZX-1" },
+      { ultimos4: "4242" },
+      { marcaDeTarjetaId: M2 },
+      { cuotas: 3 },
+      { dni: "30123456" },
+    ]) {
+      expect(huella(conDatos("5", solo)), JSON.stringify(solo)).not.toBe(h);
+    }
+  });
+  it("los campos ausentes no quedan como claves con `undefined`: solo viajan los presentes", () => {
+    const [c] = normalizados(
+      conDatos("5", { cupon: "ZX-1", ultimos4: undefined } as unknown as CobroPedido["datos"]),
+    );
+    expect(Object.keys(c?.datos ?? {})).toEqual(["cupon"]);
+    const [vacio] = normalizados(cobro("5"));
+    expect(Object.keys(vacio?.datos ?? { x: 1 })).toEqual([]);
+  });
   it("el orden de los cobros no importa aunque solo se distingan por sus datos, ni el orden de las claves", () => {
     const a = conDatos("5", { cupon: "AAA", ultimos4: "1111" });
     const b = conDatos("5", { cupon: "BBB", ultimos4: "2222" });
