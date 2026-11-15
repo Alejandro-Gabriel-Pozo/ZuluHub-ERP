@@ -21,7 +21,7 @@ export type PuertosDeLaPuerta = Readonly<{
  * rol `pedernal_publico`. Decisión: son dos lecturas (el puerto de resolución es el que da el `marcaId`
  * de la puerta; la configuración trae el suyo para poder contrastarlos), pero la segunda solo se hace si la primera encontró un host
  * servible y las dos pasan por la caché del resolutor (≤ 60 s por host).
- *  - Del resolutor sale solo el `marcaId`: nada del dueño ni de la empresa llega más arriba.
+ *  - Del resolutor salen el `marcaId` y el dueño del host (marca, o la empresa de un host dedicado: H-DOM-1); ni titular ni tenant llegan más arriba.
  *  - Falla cerrado: una variable sin configurar (pedir el puerto lanza) o un error de la base ES una
  *    excepción o un `err`, que el resolutor convierte en `NO_DISPONIBLE` (503 neutra), nunca en «desconocido»
  *    ni en la marca de otro host. Un `ok(null)` de la configuración (la marca dejó de ser servible entre las
@@ -32,7 +32,15 @@ export function armarFuenteDePuertas(puertos: PuertosDeLaPuerta): FuenteDePuerta
     consultarHost: async (host, superficie) => {
       const respuesta = await puertos.resolucion().porHost(host, superficie);
       if (!respuesta.ok) return respuesta;
-      return ok(respuesta.valor === null ? null : { marcaId: respuesta.valor.marcaId });
+      if (respuesta.valor === null) return ok(null);
+      const { marcaId, duenio } = respuesta.valor;
+      return ok({
+        marcaId,
+        duenio:
+          duenio.tipo === "EMPRESA"
+            ? { tipo: "EMPRESA", empresaId: duenio.empresaId }
+            : { tipo: "MARCA" },
+      });
     },
     leerMarca: async (_marcaId, host, superficie) => {
       const respuesta = await puertos.configuracion().porHost(host, superficie);
