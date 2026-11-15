@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0451",
+  "fecha": "2026-11-15",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: corregir el precio de una compra también corrige la oferta del proveedor (último precio y costo) solo si esa compra sigue siendo la última de la oferta (D11).",
+  "que_cambia": "La ficha «qué nos vende cada proveedor» deja de mostrar el precio equivocado ya corregido. Con una compra más nueva no cambia. Revertir: quitar la llamada en correcciones.ts (una línea).",
+  "donde": "src/modulos/compras/casos-de-uso/correcciones.ts; persistencia/repositorio-de-ofertas.ts (corregirPrecioDeCompra); auditoria-de-reglas/compras.md H-4"
+}
