@@ -169,7 +169,12 @@ describe("datos del cobro (K7)", () => {
       expect(huella(conDatos("5", { ...datos, ...otro }))).not.toBe(h);
     }
     // Quitar un dato también es otro pedido.
-    const { dni: _quitado, ...sinDni } = datos;
+    const sinDni = {
+      cupon: datos.cupon,
+      ultimos4: datos.ultimos4,
+      marcaDeTarjetaId: datos.marcaDeTarjetaId,
+      cuotas: datos.cuotas,
+    };
     expect(huella(conDatos("5", sinDni))).not.toBe(h);
   });
   it("el orden de los cobros no importa aunque solo se distingan por sus datos, ni el orden de las claves", () => {
