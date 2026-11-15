@@ -65,13 +65,23 @@ export type MarcaPublica = Readonly<{
   hostDeApp: string | null;
 }>;
 
-/** Un host servible con la marca que le corresponde. */
-export type PuertaResuelta = Readonly<{
-  host: string;
-  superficie: SuperficieServible;
-  marcaId: string;
-  marca: MarcaPublica;
-}>;
+/**
+ * De quién es el host: de una marca (host compartido por todas sus empresas) o de UNA empresa (host dedicado). Viaja con la puerta para que quien sirve datos de
+ * una empresa pueda acotarlos a la del host (H-DOM-1: un host dedicado a la empresa A servía la carta de la B, de la misma marca).
+ */
+export type DuenioDeLaPuerta =
+  Readonly<{ tipo: "MARCA" }> | Readonly<{ tipo: "EMPRESA"; empresaId: string }>;
+
+/** Lo que de un host sirve para acotar datos de una empresa: la marca por cuya puerta se entra y el dueño del host. */
+export type AlcanceDelHost = Readonly<{ marcaId: string; duenio: DuenioDeLaPuerta }>;
+
+/** Un host servible con la marca que le corresponde y su dueño. */
+export type PuertaResuelta = AlcanceDelHost &
+  Readonly<{
+    host: string;
+    superficie: SuperficieServible;
+    marca: MarcaPublica;
+  }>;
 
 /** Cómo terminó de resolverse un host. Un fallo de la base NO es «desconocido»: se distingue. */
 export type EstadoDeLaResolucion =

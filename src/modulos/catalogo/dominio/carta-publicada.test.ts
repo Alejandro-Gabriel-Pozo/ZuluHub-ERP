@@ -1,3 +1,4 @@
+import { deLaMarca, deLaEmpresa } from "../../../../test/utilidades/alcance-del-host";
 import { describe, expect, it } from "vitest";
 import { empresaId, sucursalId, tenantId } from "../../../primitivas/identificadores/marca";
 import {
@@ -116,7 +117,7 @@ const nombres = (v: ReturnType<typeof armarVidrieraPublicada>) =>
 
 describe("L-1: lo que sale y en qué orden", () => {
   it("las secciones activas en su orden, con sus productos; sin precio, sin sección, desactivados o en sección apagada no salen", () => {
-    const v = armarVidrieraPublicada(ensayo(), MARCA);
+    const v = armarVidrieraPublicada(ensayo(), deLaMarca(MARCA));
     expect(nombres(v)).toEqual([
       ["Entradas", ["Empanada de carne"]],
       ["Platos", ["Milanesa napolitana"]],
@@ -135,7 +136,7 @@ describe("L-1: lo que sale y en qué orden", () => {
           mensajeDePortada: "Desliza para ver el menú",
         },
       }),
-      MARCA,
+      deLaMarca(MARCA),
     );
     expect(v).toMatchObject({
       id: "00000000-0000-4000-8000-0000000000c1",
@@ -146,7 +147,7 @@ describe("L-1: lo que sale y en qué orden", () => {
       mensajeDePortada: "Desliza para ver el menú",
       letraBase: "NORMAL",
     });
-    const sinNada = armarVidrieraPublicada(ensayo(), MARCA);
+    const sinNada = armarVidrieraPublicada(ensayo(), deLaMarca(MARCA));
     expect([sinNada?.rubro, sinNada?.lugar, sinNada?.mensajeDePortada]).toEqual([null, null, null]);
     for (const p of sinNada?.secciones.flatMap((s) => s.productos) ?? []) {
       expect([p.agotado, p.foto]).toEqual([false, null]);
@@ -162,13 +163,13 @@ describe("L-1: lo que sale y en qué orden", () => {
           producto("c", "Alfajor", "postres"),
         ],
       }),
-      MARCA,
+      deLaMarca(MARCA),
     );
     expect(v?.secciones[0]?.productos.map((p) => p.nombre)).toEqual(["Flan", "Helado", "Alfajor"]);
   });
 
   it("L-6: la descripción viaja y la ausencia es nula", () => {
-    const v = armarVidrieraPublicada(ensayo(), MARCA);
+    const v = armarVidrieraPublicada(ensayo(), deLaMarca(MARCA));
     const todos = v?.secciones.flatMap((s) => s.productos) ?? [];
     expect(todos.find((p) => p.nombre === "Empanada de carne")?.descripcion).toBe(
       "Frita o al horno",
@@ -179,7 +180,7 @@ describe("L-1: lo que sale y en qué orden", () => {
 
 describe("L-2 y L-3: precios, tamaños, guarnición y extras", () => {
   const delProducto = (nombre: string, cambios: Partial<CartaLeida> = {}) =>
-    armarVidrieraPublicada(ensayo(cambios), MARCA)
+    armarVidrieraPublicada(ensayo(cambios), deLaMarca(MARCA))
       ?.secciones.flatMap((s) => s.productos)
       .find((p) => p.nombre === nombre);
 
@@ -368,7 +369,7 @@ describe("L-2 y L-3: precios, tamaños, guarnición y extras", () => {
 
 describe("D-1 a D-3: lo oculto, activo y desactivado", () => {
   const sale = (nombre: string, cambios: Partial<CartaLeida>) =>
-    armarVidrieraPublicada(ensayo(cambios), MARCA)?.secciones.some((s) =>
+    armarVidrieraPublicada(ensayo(cambios), deLaMarca(MARCA))?.secciones.some((s) =>
       s.productos.some((p) => p.nombre === nombre),
     ) === true;
   const fila = (productoId: string, s: typeof S1 | null, oculto: boolean) => ({
@@ -396,7 +397,7 @@ describe("D-1 a D-3: lo oculto, activo y desactivado", () => {
   it("una sección que se queda sin productos no sale; el producto desactivado no sale aunque no esté oculto", () => {
     const v = armarVidrieraPublicada(
       ensayo({ disponibilidad: [fila("p-empanada", S1, true)] }),
-      MARCA,
+      deLaMarca(MARCA),
     );
     expect(v?.secciones.map((s) => s.nombre)).toEqual(["Platos", "Postres", "Cafetería"]);
     expect(sale("Tarta de ricota", {})).toBe(false);
@@ -414,7 +415,7 @@ describe("D-1 a D-3: lo oculto, activo y desactivado", () => {
 describe("la carta no se sirve: una sola respuesta, `null`", () => {
   it("retirada, sucursal cerrada, de otra marca o con la empresa o el tenant sin operar", () => {
     const sirve = (cambios: Partial<CartaLeida>, marca = MARCA) =>
-      armarVidrieraPublicada(ensayo(cambios), marca) !== null;
+      armarVidrieraPublicada(ensayo(cambios), deLaMarca(marca)) !== null;
     expect(sirve({})).toBe(true);
     expect(sirve({ carta: { ...ensayo().carta, estado: "FUERA_DE_LINEA" } })).toBe(false);
     expect(sirve({ sucursalActiva: false })).toBe(false);
@@ -431,6 +432,38 @@ describe("la carta no se sirve: una sola respuesta, `null`", () => {
   });
 
   it("una carta sin ningún producto que salga se sirve igual, vacía (poner en línea lo impide en la acción, no acá)", () => {
-    expect(armarVidrieraPublicada(ensayo({ productos: [] }), MARCA)?.secciones).toEqual([]);
+    expect(armarVidrieraPublicada(ensayo({ productos: [] }), deLaMarca(MARCA))?.secciones).toEqual(
+      [],
+    );
+  });
+});
+
+describe("armarVidrieraPublicada: dueño del host (H-DOM-1)", () => {
+  const carta = ensayo();
+  const empresaDeLaCarta = carta.empresaId;
+
+  it("host de la marca: sirve la carta de cualquiera de sus empresas", () => {
+    expect(armarVidrieraPublicada(carta, deLaMarca(MARCA))).not.toBeNull();
+  });
+
+  it("host dedicado a la empresa de la carta: la sirve", () => {
+    expect(armarVidrieraPublicada(carta, deLaEmpresa(MARCA, empresaDeLaCarta))).not.toBeNull();
+  });
+
+  it("host dedicado a OTRA empresa de la misma marca: null (la neutra)", () => {
+    expect(armarVidrieraPublicada(carta, deLaEmpresa(MARCA, "otra-empresa"))).toBeNull();
+  });
+
+  it("un dueño que no es ni marca ni empresa (llamador sin tipos) no sirve nada", () => {
+    const sinTipos = {
+      marcaId: MARCA,
+      duenio: { tipo: "OTRO", empresaId: empresaDeLaCarta },
+    } as unknown as Parameters<typeof armarVidrieraPublicada>[1];
+    expect(armarVidrieraPublicada(carta, sinTipos)).toBeNull();
+  });
+
+  it("sin dueño (llamador sin tipos) FALLA, no sirve: una ruta que lo omita se nota en el primer uso", () => {
+    const sinDuenio = { marcaId: MARCA } as unknown as Parameters<typeof armarVidrieraPublicada>[1];
+    expect(() => armarVidrieraPublicada(carta, sinDuenio)).toThrow();
   });
 });

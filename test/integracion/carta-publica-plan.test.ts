@@ -1,3 +1,4 @@
+import { deLaMarca } from "../utilidades/alcance-del-host";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import type { BaseDePruebas } from "./global";
@@ -66,7 +67,7 @@ describe.skipIf(base === null)("carta pública y plan de la empresa (0050)", () 
     return { ...e, carta, ...plan };
   };
   const sirve = async (codigo: string, puerto = vidriera) =>
-    (await puerto.porCodigo(MARCA_DEL_HOST, codigo)) !== null;
+    (await puerto.porCodigo(deLaMarca(MARCA_DEL_HOST), codigo)) !== null;
 
   it("con módulo y perilla en el plan, la carta se sirve", async () => {
     const m = await empresaConCarta();
@@ -210,9 +211,9 @@ describe.skipIf(base === null)("carta pública y plan de la empresa (0050)", () 
     const sinCarta = await versionDeLaCarta(c, { conModulo: false, conPerilla: false });
     await asignarVersion(c, m.tenant, sinCarta, haceSegundos(60));
     const respuestas = await Promise.all([
-      vidriera.porCodigo(MARCA_DEL_HOST, m.carta.codigo),
-      vidriera.porCodigo(MARCA_DEL_HOST, codigoAlAzar()),
-      vidriera.porCodigo(MARCA_DEL_HOST, "x"),
+      vidriera.porCodigo(deLaMarca(MARCA_DEL_HOST), m.carta.codigo),
+      vidriera.porCodigo(deLaMarca(MARCA_DEL_HOST), codigoAlAzar()),
+      vidriera.porCodigo(deLaMarca(MARCA_DEL_HOST), "x"),
     ]);
     expect(respuestas).toEqual([null, null, null]);
   });
@@ -221,7 +222,7 @@ describe.skipIf(base === null)("carta pública y plan de la empresa (0050)", () 
     const m = await empresaConCarta();
     const sinCarta = await versionDeLaCarta(c, { conModulo: false, conPerilla: false });
     const visitas = Array.from({ length: 12 }, () =>
-      vidriera.porCodigo(MARCA_DEL_HOST, m.carta.codigo),
+      vidriera.porCodigo(deLaMarca(MARCA_DEL_HOST), m.carta.codigo),
     );
     const baja = asignarVersion(c, m.tenant, sinCarta, haceSegundos(60));
     const [respuestas] = await Promise.all([Promise.all(visitas), baja]);
