@@ -5,4 +5,5 @@ export const DECLARACIONES_DE_CONSULTAS = {
   estadoDeJornada: { accion: "jornadas.ver" },
   listarJornadas: { accion: "jornadas.ver" },
   controlesDeLaJornada: { accion: "jornadas.ver" },
+  jornadaDeHoy: { accion: "jornadas.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;
