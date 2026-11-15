@@ -24,7 +24,7 @@ import type { Web } from "./web";
  *    otro contenido es rechazada); iniciar y cancelar el cierre y cerrar la caja se resuelven por el estado de la sesión (`yaEstabaEnCierre`, `yaEstabaAbierta`, `yaEstabaCerrada`). Dos aperturas
  *    a la vez de la misma caja: una abre y la otra recibe el genérico. Un movimiento o ajuste nunca se borra: se anula con un registro nuevo.
  *  - **Dinero** como texto decimal con moneda (ARS) y sin redondeo; las fechas, de negocio (Argentina) tal como las sella el servidor al abrir.
- * SUPUESTO (DEC-0452): «‹» desde Contar NO cancela el cierre; solo vuelve a la pantalla anterior. Cancelar el cierre es la acción `cancelarElCierreDeCaja`.
+ * SUPUESTO (DEC-0455): «‹» desde Contar NO cancela el cierre; solo vuelve a la pantalla anterior. Cancelar el cierre es la acción `cancelarElCierreDeCaja`.
  */
 
 export type DependenciasDeSesionDeCajaWeb = Readonly<{
