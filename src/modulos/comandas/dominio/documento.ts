@@ -2,7 +2,14 @@ import { cantidadDesdeTexto, type Cantidad } from "../../../primitivas/cantidad/
 import { cantidadParaMostrar } from "../../../primitivas/cantidad/cantidad-para-mostrar";
 import { ErrorDeValor } from "../../../primitivas/cantidad/errores";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import type { PapelEnMm } from "./impresion";
+import {
+  columnasDelPapel,
+  envolver,
+  SEPARADOR,
+  type LineaDePapel,
+  type ModeloDePapel,
+  type PapelEnMm,
+} from "../../../primitivas/papel/modelo-de-papel";
 import type { RolDeRenglon, TipoDeEnvio } from "./envio";
 
 /**
@@ -30,14 +37,13 @@ export const TEXTOS_DEL_PAPEL = {
   total: "Total",
 } as const;
 
-export type EstiloDeLinea = "NORMAL" | "GRANDE" | "NEGRITA" | "SEPARADOR";
-export type LineaDePapel = Readonly<{ texto: string; estilo: EstiloDeLinea }>;
-export type ModeloDePapel = Readonly<{ ancho: PapelEnMm; lineas: readonly LineaDePapel[] }>;
-
-/** Columnas de texto normal por ancho de papel (fuente de impresora térmica estándar). */
-export function columnasDelPapel(ancho: PapelEnMm): number {
-  return ancho === 58 ? 32 : 48;
-}
+// El modelo de papel y su maquetado son de `primitivas/papel` (los comparte el ticket de ventas); se reexportan con los mismos nombres.
+export {
+  columnasDelPapel,
+  type EstiloDeLinea,
+  type LineaDePapel,
+  type ModeloDePapel,
+} from "../../../primitivas/papel/modelo-de-papel";
 
 // ---------------------------------------------------------------------------------------------
 // La cantidad en el papel (decisión 181)
@@ -75,27 +81,6 @@ export function cantidadParaPapel(
 /** Un renglón de detalle: sangrado de dos espacios, partido por palabras dentro del ancho que queda. */
 function sangrado(texto: string, columnas: number): LineaDePapel[] {
   return envolver(texto, columnas - 2, "NORMAL").map((l) => ({ ...l, texto: `  ${l.texto}` }));
-}
-
-const SEPARADOR: LineaDePapel = { texto: "", estilo: "SEPARADOR" };
-
-/** Parte un texto en renglones de a lo sumo `columnas` caracteres, por palabras (una palabra más larga se corta). Previene: texto cortado por el papel. */
-function envolver(texto: string, columnas: number, estilo: EstiloDeLinea): LineaDePapel[] {
-  const ancho = estilo === "GRANDE" ? Math.max(1, Math.floor(columnas / 2)) : columnas;
-  const lineas: string[] = [];
-  for (const palabra of texto.split(" ")) {
-    // Los espacios de más dejan palabras vacías, que no dan ningún trozo. Una palabra más larga que el ancho se corta en trozos de a `ancho`; cada trozo se pega al renglón anterior solo si entra con su espacio.
-    for (let desde = 0; desde < palabra.length; desde += ancho) {
-      const trozo = palabra.slice(desde, desde + ancho);
-      const previo = lineas.at(-1);
-      if (previo !== undefined && previo.length + 1 + trozo.length <= ancho) {
-        lineas[lineas.length - 1] = `${previo} ${trozo}`;
-      } else {
-        lineas.push(trozo);
-      }
-    }
-  }
-  return lineas.map((t) => ({ texto: t, estilo }));
 }
 
 export type RenglonDelPapel = Readonly<{
