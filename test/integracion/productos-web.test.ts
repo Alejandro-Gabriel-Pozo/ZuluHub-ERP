@@ -44,9 +44,15 @@ describe.skipIf(base === null)("lista de productos de la web", () => {
   beforeAll(async () => {
     if (base === null) return;
     c = await montarCatalogo(base);
-    // El catálogo real: `catalogo` sigue `en_desarrollo` y el guard rechaza todo.
+    // El catálogo real con `catalogo` forzado a `en_desarrollo` (en el real es disponible, DEC-0460): el guard rechaza todo.
     cerrado = await montarCatalogo(base, {
-      reglas: { catalogo: CATALOGO_DE_MODULOS, permisos: PERMISOS_DE_EMPRESA },
+      reglas: {
+        catalogo: {
+          ...CATALOGO_DE_MODULOS,
+          catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "en_desarrollo" },
+        },
+        permisos: PERMISOS_DE_EMPRESA,
+      },
     });
     e = await c.escenario();
     registrados = [];
@@ -286,7 +292,7 @@ describe.skipIf(base === null)("lista de productos de la web", () => {
     expect(JSON.stringify(r)).not.toContain("Reservado");
   });
 
-  it("con el catálogo en desarrollo (hoy, en el catálogo real) todos reciben MODULO_EN_DESARROLLO y ningún dato", async () => {
+  it("con el catálogo en desarrollo todos reciben MODULO_EN_DESARROLLO y ningún dato", async () => {
     const x = await cerrado.escenario();
     await productoDeBase(cerrado.dueno, x.empresa, { nombre: "Cerrado" });
     const dependencias: DependenciasDeProductosWeb = { ...d, consultas: () => cerrado.consultas };

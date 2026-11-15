@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0460",
+  "fecha": "2026-11-15",
+  "quien": "dueño",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "Los módulos catálogo, caja y ventas pasan de «en desarrollo» a «disponible»: cada empresa los activa por su plan y el cambio no activa nada por sí solo.",
+  "que_cambia": "Las empresas con esos módulos en su plan pasan a poder usarlos y el cierre del día cuenta sus controles. Revertir: volver el estado a en_desarrollo en tres líneas.",
+  "donde": "src/capacidades/modulos/catalogo.ts (catalogo, caja y ventas); decisiones-del-dueno-2026-11.md, fila «Mostrador mínimo: respuestas a las 4 preguntas» del 15/11/2026 (pregunta 1, opción A)"
+}

@@ -3,11 +3,7 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { clavesDe } from "../../src/capacidades/modulos/activos";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
-import {
-  PERMISOS_DE_EMPRESA,
-  REGLAS_DE_EMPRESA,
-  type ReglasDeEmpresa,
-} from "../../src/capacidades/permisos/empresa";
+import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import { TIPOS_DE_MEDIO } from "../../src/modulos/caja/publico";
 import { ok } from "../../src/primitivas/resultado/resultado";
 import { crearBaseAparte, crearEntornoDePrueba } from "./entorno";
@@ -253,10 +249,16 @@ describe.skipIf(base === null)("configuración de caja: casos de uso y consultas
       expect(await foto(m)).toBe(antes);
     });
 
-    it("con el catálogo real, caja está en desarrollo: todo se rechaza con MODULO_EN_DESARROLLO (todo nace cerrado)", async () => {
-      expect(CATALOGO_DE_MODULOS.caja.estado).toBe("en_desarrollo");
+    it("con caja en desarrollo (en el catálogo real es disponible, DEC-0460): todo se rechaza con MODULO_EN_DESARROLLO (todo nace cerrado)", async () => {
+      expect(CATALOGO_DE_MODULOS.caja.estado).toBe("disponible");
       const m = await mundo();
-      const real = armarCaja(entorno, REGLAS_DE_EMPRESA);
+      const real = armarCaja(entorno, {
+        catalogo: {
+          ...CATALOGO_DE_MODULOS,
+          caja: { ...CATALOGO_DE_MODULOS.caja, estado: "en_desarrollo" },
+        },
+        permisos: PERMISOS_DE_EMPRESA,
+      });
       const antes = await foto(m);
       for (const r of [
         await real.casos.crearCaja(m.ctx(), { sucursalId: m.sucursal, nombre: "Caja 1" }),

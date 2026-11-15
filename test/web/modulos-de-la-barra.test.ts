@@ -131,10 +131,12 @@ describe("destinosDeAreas (la barra desde la tabla del menú)", () => {
     const { destinosDeAreas } = await cargar(RUTA);
     expect(destinosDeAreas(null, null)).toEqual([]);
   });
-  it("«Catálogo» está en desarrollo: no aparece aunque llegue la acción y figure activo", async () => {
-    expect(CATALOGO_DE_MODULOS.catalogo.estado).toBe("en_desarrollo");
+  it("«Catálogo» es disponible (DEC-0460): aparece con la acción y el módulo activo; sin el módulo activo, no", async () => {
+    expect(CATALOGO_DE_MODULOS.catalogo.estado).toBe("disponible");
     const { destinosDeAreas } = await cargar(RUTA);
-    expect(destinosDeAreas(todo, null).map((d) => d.etiqueta)).toEqual(["Ventas"]);
+    expect(destinosDeAreas(todo, null).map((d) => d.etiqueta)).toEqual(["Ventas", "Catálogo"]);
+    const sinCatalogo = { ...todo, modulos: { activos: ["facturacion"], enSoloLectura: [] } };
+    expect(destinosDeAreas(sinCatalogo, null).map((d) => d.etiqueta)).toEqual(["Ventas"]);
   });
 });
 

@@ -54,9 +54,16 @@ describe("armarElMenu: todo nace cerrado", () => {
     expect(claves(armarElMenu([comprobantes], a, null))).toEqual([["ventas", [["comprobantes"]]]]);
   });
 
-  it("un módulo «en desarrollo» no aparece aunque llegue la acción y figure activo", () => {
+  it("catálogo y caja son disponibles (DEC-0460): aparecen solo con el módulo activo y la acción; sin cualquiera de las dos, nada", () => {
     const a = permisos(["productos.ver", "medios_de_pago.editar"], ["catalogo", "caja"]);
-    expect(armarElMenu([productos, medios], a, null)).toEqual([]);
+    const conTodo = claves(armarElMenu([productos, medios], a, null)).flatMap(([, grupos]) =>
+      (grupos as string[][]).flat(),
+    );
+    expect(conTodo.sort()).toEqual(["medios-de-pago", "productos"]);
+    const sinModulos = permisos(["productos.ver", "medios_de_pago.editar"]);
+    expect(armarElMenu([productos, medios], sinModulos, null)).toEqual([]);
+    const sinAcciones = permisos([], ["catalogo", "caja"]);
+    expect(armarElMenu([productos, medios], sinAcciones, null)).toEqual([]);
   });
 
   it("las acciones («Cerrar sesión») aparecen siempre que se leyeron los permisos, sin ruta", () => {
