@@ -7,7 +7,6 @@ import type { LecturaDeDerechosDeUso } from "../../../puertos/derechos-de-uso";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { RepositorioDeEmpresas, RepositorioDeSucursales } from "../../empresas/publico";
-import type { FormaDeVenta } from "../dominio/forma-de-venta";
 import type { LectorDeCarta } from "../persistencia/lector-de-carta";
 import type { RepositorioDeCartas } from "../persistencia/repositorio-de-cartas";
 import type { RepositorioDeDisponibilidad } from "../persistencia/repositorio-de-disponibilidad";
@@ -100,11 +99,6 @@ export type DependenciasDeCatalogo = Readonly<{
   transacciones: Transacciones<TxDeCatalogo>;
   /** El catálogo y la matriz rol → acciones con los que el guard autoriza (los pasa la composición). */
   reglas: ReglasDeEmpresa;
-  /**
-   * Qué formas de venta se pueden cargar. Por defecto, las del PILOTO: unidad de venta = unidad base y paso 1 (decisión 162). Fracciones y
-   * peso se habilitan pasando otra función (un cambio de configuración en código, sin migración).
-   */
-  formaDeVentaHabilitada?: (unidadBaseId: string, forma: FormaDeVenta) => boolean;
   /** Existencia y conteos abiertos de un producto (lo implementa la composición con stock). */
   existencias: ExistenciasDelProducto;
   /**
