@@ -1,7 +1,7 @@
 import { cantidadDesdeTexto, type Cantidad } from "../../../primitivas/cantidad/cantidad";
+import { cantidadParaMostrar } from "../../../primitivas/cantidad/cantidad-para-mostrar";
 import { ErrorDeValor } from "../../../primitivas/cantidad/errores";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { UNIDADES, type CodigoDeUnidad } from "../../../primitivas/unidades/unidades";
 import type { PapelEnMm } from "./impresion";
 import type { RolDeRenglon, TipoDeEnvio } from "./envio";
 
@@ -44,31 +44,6 @@ export function columnasDelPapel(ancho: PapelEnMm): number {
 // ---------------------------------------------------------------------------------------------
 export type ErrorDeCantidadParaPapel = "CANTIDAD_NO_IMPRIMIBLE";
 
-/** La abreviatura de cada unidad en el papel; el `satisfies` exige una por cada unidad conocida (una nueva sin abreviatura no compila). */
-const ABREVIATURA_DE_UNIDAD = {
-  UNIDAD: "u",
-  GRAMO: "g",
-  KILOGRAMO: "kg",
-  TONELADA: "t",
-  MILILITRO: "ml",
-  LITRO: "l",
-  METRO_CUBICO: "m³",
-  MILIMETRO: "mm",
-  CENTIMETRO: "cm",
-  METRO: "m",
-  CENTIMETRO_CUADRADO: "cm²",
-  METRO_CUADRADO: "m²",
-  MINUTO: "min",
-  HORA: "h",
-} as const satisfies Record<CodigoDeUnidad, string>;
-
-const ESCALA = 10_000n; // la cantidad tiene 4 decimales
-const DENOMINADORES_IMPRIMIBLES = new Set([1n, 2n, 4n, 8n]);
-
-function mcd(a: bigint, b: bigint): bigint {
-  return b === 0n ? a : mcd(b, a % b);
-}
-
 function leer(texto: string): Cantidad | null {
   try {
     return cantidadDesdeTexto(texto);
@@ -79,37 +54,19 @@ function leer(texto: string): Cantidad | null {
 }
 
 /**
- * Una sola función para escribir la cantidad en el papel. Por unidad: entero y fracción reducida con barra («1/2», «3/4», «1 1/2», «1/8», «2»; nunca
- * «½»); la fracción es una parte de la unidad del tamaño elegido. Por peso, volumen y demás: el número con coma y la unidad («350 g»), sin fracciones.
- * Solo cantidades positivas y múltiplo exacto del paso congelado; un denominador que no sea 2, 4 u 8 no se imprime como fracción (un tercio no existe).
+ * La cantidad en el papel de COMANDA: la regla única de `primitivas/cantidad/cantidad-para-mostrar.ts` (decisión 181) en su variante ASCII, con barra
+ * («1/2», «3/4», «1 1/2», «1/8», «2», «350 g»; nunca «½» en la cocina, D181) y con el paso congelado del renglón obligatorio.
  */
 export function cantidadParaPapel(
   cantidad: string,
   datos: Readonly<{ unidadDeVenta: string; paso: string }>,
 ): Resultado<string, ErrorDeCantidadParaPapel> {
-  const c = leer(cantidad);
-  const paso = leer(datos.paso);
-  if (c === null || paso === null || c.unidades <= 0n || paso.unidades <= 0n) {
-    return err("CANTIDAD_NO_IMPRIMIBLE");
-  }
-  if (c.unidades % paso.unidades !== 0n) return err("CANTIDAD_NO_IMPRIMIBLE");
-  if (!Object.hasOwn(UNIDADES, datos.unidadDeVenta)) return err("CANTIDAD_NO_IMPRIMIBLE");
-  const codigo = datos.unidadDeVenta as CodigoDeUnidad;
-  const entera = c.unidades / ESCALA;
-  const resto = c.unidades % ESCALA;
-  if (codigo !== "UNIDAD") {
-    const decimales = resto.toString().padStart(4, "0").replace(/0+$/, "");
-    const numero = decimales === "" ? `${entera}` : `${entera},${decimales}`;
-    return ok(`${numero} ${ABREVIATURA_DE_UNIDAD[codigo]}`);
-  }
-  if (resto === 0n) return ok(`${entera}`);
-  const divisor = mcd(resto, ESCALA);
-  const numerador = resto / divisor;
-  const denominador = ESCALA / divisor;
-  if (!DENOMINADORES_IMPRIMIBLES.has(denominador)) return err("CANTIDAD_NO_IMPRIMIBLE");
-  return ok(
-    entera === 0n ? `${numerador}/${denominador}` : `${entera} ${numerador}/${denominador}`,
+  const r = cantidadParaMostrar(
+    cantidad,
+    { unidadDeVenta: datos.unidadDeVenta, paso: datos.paso },
+    { fraccionEnAscii: true },
   );
+  return r.ok ? r : err("CANTIDAD_NO_IMPRIMIBLE");
 }
 
 // ---------------------------------------------------------------------------------------------
