@@ -549,6 +549,67 @@ describe.skipIf(base === null)("compras: factura con la compra (N2)", () => {
     }
   });
 
+  const TIPOS_QUE_NO_SON_FACTURA = [
+    "NOTA_CREDITO_A",
+    "NOTA_CREDITO_B",
+    "NOTA_CREDITO_C",
+    "NOTA_DEBITO_A",
+    "NOTA_DEBITO_B",
+    "NOTA_DEBITO_C",
+  ] as const;
+  const huellaDeLoCargado = async (m: M) => ({
+    recepciones: await cantidadDe("select count(*) as n from recepcion where empresa_id = $1", [
+      m.e.empresa,
+    ]),
+    comprobantes: await cantidadDe(
+      "select count(*) as n from comprobante_de_proveedor where proveedor_id = $1",
+      [m.proveedor],
+    ),
+    existencia: await c.existencia(m.deposito, m.articulo),
+  });
+
+  it("D6: «Comprar y recibir» solo acepta facturas: una nota de crédito o de débito se rechaza y no deja recepción, comprobante ni stock", async () => {
+    const m = await armar();
+    const antes = await huellaDeLoCargado(m);
+    for (const tipo of TIPOS_QUE_NO_SON_FACTURA) {
+      expect(
+        await c.casos.registrarCompraConFactura(m.e.operador, compra(m, { tipo, numero: 321 })),
+      ).toEqual({ ok: false, error: "TIPO_DE_COMPROBANTE_INVALIDO" });
+    }
+    expect(await huellaDeLoCargado(m)).toEqual(antes);
+  });
+
+  it("D6 idempotencia: repetir el mismo pedido con una nota (misma clave) da el mismo rechazo y no escribe", async () => {
+    const m = await armar();
+    const pedido = compra(m, { tipo: "NOTA_CREDITO_A", numero: 322 });
+    const primera = await c.casos.registrarCompraConFactura(m.e.operador, pedido);
+    const segunda = await c.casos.registrarCompraConFactura(m.e.operador, pedido);
+    expect(primera).toEqual({ ok: false, error: "TIPO_DE_COMPROBANTE_INVALIDO" });
+    expect(segunda).toEqual(primera);
+    expect((await huellaDeLoCargado(m)).recepciones).toBe(0);
+  });
+
+  it("D6 concurrencia: dos cargas de la misma nota a la vez se rechazan las dos; con una factura válida a la vez entra una sola compra", async () => {
+    for (let ronda = 0; ronda < RONDAS; ronda++) {
+      const m = await armar();
+      const nota = compra(m, { tipo: "NOTA_DEBITO_A", numero: 400 + ronda });
+      const factura = compra(m, { numero: 500 + ronda });
+      // Las notas se rechazan al leer el pedido, antes de abrir la transacción: no hay barrera que esperar.
+      const r = await Promise.all([
+        c.casos.registrarCompraConFactura(m.e.operador, nota),
+        c.casos.registrarCompraConFactura(m.e.operador, { ...nota, clave: nuevoId() }),
+        c.casos.registrarCompraConFactura(m.e.operador, factura),
+      ]);
+      expect(r[0]).toEqual({ ok: false, error: "TIPO_DE_COMPROBANTE_INVALIDO" });
+      expect(r[1]).toEqual({ ok: false, error: "TIPO_DE_COMPROBANTE_INVALIDO" });
+      expect(r[2].ok).toBe(true);
+      const despues = await huellaDeLoCargado(m);
+      expect(despues.recepciones).toBe(1);
+      expect(despues.comprobantes).toBe(1);
+      expect(despues.existencia).toBe("2000.0000");
+    }
+  });
+
   it("rechaza una factura mal formada: moneda, tipo, renglón inexistente, alícuota faltante en una A, líneas vacías, tipo/punto/número/fecha", async () => {
     const m = await armar();
     const mal = async (factura: Record<string, unknown>) =>

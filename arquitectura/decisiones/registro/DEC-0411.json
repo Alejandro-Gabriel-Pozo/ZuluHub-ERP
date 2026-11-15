@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0411",
+  "fecha": "2026-11-14",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO D6. Comprar y recibir con factura solo acepta facturas. Una nota de crédito o de débito se rechaza como TIPO_DE_COMPROBANTE_INVALIDO.",
+  "que_cambia": "Una nota cargada por este camino ya no suma stock ni crea recepción. La nota propia queda para su flujo diseñado. Revertir es quitar el chequeo de clase en leerFactura, una hora.",
+  "donde": "src/modulos/compras/dominio/factura.ts; test/integracion/compras-factura.test.ts; origen en INTEGRACION.md sección 5 D6 y Q2, dueño sin preferencia"
+}
