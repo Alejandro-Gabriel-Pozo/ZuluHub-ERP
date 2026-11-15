@@ -43,6 +43,16 @@ export type ProductoDeLista = Readonly<{
   precio: PrecioDeLista;
 }>;
 
+/** Una sección de la carta tal como la ve quien la gestiona: con su estado y cuántos productos (de cualquier estado) apuntan a ella. */
+export type SeccionParaGestionar = Readonly<{
+  id: string;
+  nombre: string;
+  orden: number;
+  activa: boolean;
+  version: number;
+  productos: number;
+}>;
+
 export type PaginaDeProductos = Readonly<{
   productos: readonly ProductoDeLista[];
   /** Pasar como `despuesDe` para pedir la página siguiente; `null` si no hay más. */
@@ -54,6 +64,8 @@ export type EntradaDeListarProductos = Readonly<{
   claseDeUso?: ClaseDeUso | undefined;
   faltaCompletar?: boolean | undefined;
   activo?: boolean | undefined;
+  /** Solo los productos de esa sección de la carta (otra empresa, inexistente o que no es un uuid: lista vacía). */
+  seccionId?: string | undefined;
   despuesDe?: Readonly<{ nombreClave: string; id: string }> | undefined;
 }>;
 
@@ -329,6 +341,23 @@ export function crearConsultasDeCatalogo(d: DependenciasDeConsultasDeCatalogo) {
     listarSeccionesDeCarta: (contexto: ContextoOperativo): Promise<R<readonly SeccionDeCarta[]>> =>
       leer(contexto, DECLARACIONES_DE_CONSULTAS.listarSeccionesDeCarta.accion, (tx) =>
         tx.productos.listarSecciones(contexto.empresaId),
+      ),
+    /**
+     * TODAS las secciones de la empresa (activas y desactivadas) para gestionarlas, en el orden de la carta `(orden, nombre, id)`, cada una con la cantidad de
+     * productos (de cualquier estado) que apuntan a ella: UNA consulta agrupada, no una por sección. Solo lectura; permiso `productos.ver`.
+     */
+    listarSeccionesParaGestionar: (
+      contexto: ContextoOperativo,
+    ): Promise<R<readonly SeccionParaGestionar[]>> =>
+      leer(contexto, DECLARACIONES_DE_CONSULTAS.listarSeccionesParaGestionar.accion, async (tx) =>
+        (await tx.seccionesDeCarta.todasConProductos(contexto.empresaId)).map((x) => ({
+          id: x.seccion.id,
+          nombre: x.seccion.nombre,
+          orden: x.seccion.orden,
+          activa: x.seccion.activa,
+          version: x.seccion.version,
+          productos: x.productos,
+        })),
       ),
     ...crearConsultasDeCarta(d),
     ...crearConsultasDeClasificacion(d),

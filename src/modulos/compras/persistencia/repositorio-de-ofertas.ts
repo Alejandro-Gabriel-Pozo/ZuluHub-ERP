@@ -22,6 +22,21 @@ export type OfertaDeProveedor = Readonly<{
  */
 export interface RepositorioDeOfertas {
   registrar(empresa: EmpresaId, oferta: OfertaDeProveedor): Promise<void>;
+  /**
+   * Una corrección de precio de la compra `compraId` (D11): si esa compra SIGUE siendo la última de la oferta, la oferta toma el precio y el costo corregidos; si ya hay una compra más nueva,
+   * no se toca. Es el único cambio que `corregirCompra` hace sobre la oferta; no cambia la fecha ni la compra de la oferta. Devuelve si la actualizó.
+   */
+  corregirPrecioDeCompra(
+    empresa: EmpresaId,
+    corregida: Readonly<{
+      compraId: string;
+      proveedorId: string;
+      productoId: string;
+      presentacionId: string | null;
+      ultimoPrecio: string;
+      ultimoCostoPorUnidadDeStock: string;
+    }>,
+  ): Promise<boolean>;
   delProducto(empresa: EmpresaId, productoId: string): Promise<readonly OfertaDeProveedor[]>;
   delProveedor(empresa: EmpresaId, proveedorId: string): Promise<readonly OfertaDeProveedor[]>;
 }
@@ -109,6 +124,23 @@ export function crearRepositorioDeOfertas(db: Kysely<ComprasDb>): RepositorioDeO
         )
         .where("ultima_compra_en", "<=", oferta.ultimaCompraEn)
         .execute();
+    },
+    async corregirPrecioDeCompra(empresa, c) {
+      if (!esUuid(c.compraId)) return false;
+      const filas = await db
+        .updateTable("oferta_de_proveedor")
+        .set({
+          ultimo_precio: c.ultimoPrecio,
+          ultimo_costo_por_unidad_de_stock: c.ultimoCostoPorUnidadDeStock,
+        })
+        .where("empresa_id", "=", empresa)
+        .where("proveedor_id", "=", c.proveedorId)
+        .where("producto_id", "=", c.productoId)
+        .where("presentacion_id", c.presentacionId === null ? "is" : "=", c.presentacionId)
+        .where("ultima_compra_id", "=", c.compraId)
+        .returning("id")
+        .execute();
+      return filas.length > 0;
     },
     async delProducto(empresa, productoId) {
       if (!esUuid(productoId)) return [];
