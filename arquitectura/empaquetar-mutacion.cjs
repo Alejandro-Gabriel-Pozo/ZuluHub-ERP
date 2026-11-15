@@ -16,7 +16,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { cargarLosGrupos } = require("./grupos-de-mutacion.cjs");
 
-/** Minutos DECLARADOS (`arquitectura/mutacion/*.json`) que suma como máximo un paquete. Con los datos del 13-15/11/2026: 44 jobs, el más largo = el grupo más largo. */
+/** Minutos DECLARADOS de cada grupo (los lee el cargador de grupos) que suma como máximo un paquete. Con los datos del 13-15/11/2026: 44 jobs, el más largo = el grupo más largo. */
 const TOPE_DE_MINUTOS_DECLARADOS = 8;
 
 /** El nombre del job: el primer grupo y, si hay más, cuántos van con él. Cada grupo igual se nombra en el log, en el resumen y en cada falla. */
