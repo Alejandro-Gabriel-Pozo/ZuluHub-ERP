@@ -123,6 +123,11 @@ export type {
   TxDeConsultasDeIdentidad,
 } from "./consultas/contrato";
 export type { ErrorAlListarMiembros, MiembroDeLista } from "./consultas/listar-miembros";
+export {
+  MAXIMO_DE_PERSONAS_POR_CONSULTA,
+  type EntradaDeNombresDePersonas,
+  type ErrorAlPedirNombresDePersonas,
+} from "./consultas/nombres-de-personas";
 export type {
   ErrorAlListarInvitacionesPendientes,
   InvitacionPendienteDeLaLista,

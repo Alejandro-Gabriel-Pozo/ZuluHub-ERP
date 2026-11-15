@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0462",
+  "fecha": "2026-11-15",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: como la persona todavía no tiene nombre propio, el nombre que muestran las pantallas es su email (igual que la lista de usuarios y el traspaso), con un máximo de 200 personas por consulta.",
+  "que_cambia": "La maqueta muestra «Lucía» y el sistema mostraría su email hasta que exista el nombre. Revertir: cambiar una función cuando haya nombre; sin migración hoy.",
+  "donde": "src/modulos/identidad/consultas/nombres-de-personas.ts; listar-miembros.ts (D9)"
+}

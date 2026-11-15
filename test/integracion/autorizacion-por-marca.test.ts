@@ -353,6 +353,8 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
       listarInvitacionesPendientes: (_e, ctx) =>
         ops.consultasDeIdentidad.listarInvitacionesPendientes(ctx),
       traspasoEnCurso: (_e, ctx) => ops.consultasDeIdentidad.traspasoEnCurso(ctx),
+      nombresDePersonas: (e, ctx) =>
+        ops.consultasDeIdentidad.nombresDePersonas(ctx, { ids: [e.otra] }),
     };
     const DE_EMPRESAS: Record<
       keyof typeof DECLARACIONES_DE_EMPRESAS,
