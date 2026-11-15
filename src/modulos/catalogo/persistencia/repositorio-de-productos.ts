@@ -33,6 +33,8 @@ export type FiltroDeProductos = Readonly<{
   claseDeUso?: ClaseDeUso | undefined;
   faltaCompletar?: boolean | undefined;
   activo?: boolean | undefined;
+  /** Solo los productos de esa sección de la carta (de la empresa: otra empresa, un id inexistente o que no es un uuid dan una lista vacía). */
+  seccionId?: string | undefined;
   /** Paginación por `(nombre_clave, id)`: lo que viene después de este par. */
   despuesDe?: Readonly<{ nombreClave: string; id: string }> | undefined;
   limite: number;
@@ -239,6 +241,11 @@ export function crearRepositorioDeProductos(db: Kysely<CatalogoDb>): Repositorio
       if (filtro.faltaCompletar !== undefined)
         consulta = consulta.where("falta_completar", "=", filtro.faltaCompletar);
       if (filtro.activo !== undefined) consulta = consulta.where("activo", "=", filtro.activo);
+      if (filtro.seccionId !== undefined) {
+        // Un texto que no es un uuid no puede ser el id de ninguna sección: lista vacía, no un error de formato de la base.
+        if (!FORMA_DE_UUID.test(filtro.seccionId)) return [];
+        consulta = consulta.where("seccion_de_carta_id", "=", filtro.seccionId);
+      }
       if (filtro.despuesDe !== undefined) {
         const { nombreClave, id } = filtro.despuesDe;
         consulta = consulta.where(sql<boolean>`(nombre_clave, id) > (${nombreClave}, ${id}::uuid)`);
