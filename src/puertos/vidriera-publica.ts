@@ -1,3 +1,4 @@
+import type { AlcanceDelHost } from "../capacidades/experiencia/puerta";
 import type { LetraBase } from "../capacidades/experiencia/vidriera/letra";
 import type { ProductoParaPrecios } from "../capacidades/experiencia/vidriera/precios";
 
@@ -67,5 +68,9 @@ export type VidrieraPublicada = Readonly<{
 }>;
 
 export interface VidrieraPublica {
-  porCodigo(marcaId: string, codigo: string): Promise<VidrieraPublicada | null>;
+  /**
+   * `host` es el alcance de la puerta resuelta (S2, H-DOM-1), nunca un dato del cliente: la marca y el dueño del host. Si el dueño es una EMPRESA (host dedicado),
+   * solo se sirve la carta de ESA empresa; si es la marca (host compartido), la de cualquiera de sus empresas.
+   */
+  porCodigo(host: AlcanceDelHost, codigo: string): Promise<VidrieraPublicada | null>;
 }

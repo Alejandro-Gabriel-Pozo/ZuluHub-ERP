@@ -51,11 +51,11 @@ export type CatalogosDeLaCarta = Readonly<{
 }>;
 
 /**
- * `VidrieraPublica` sobre la puerta pública (carta real §4): la carta de un código DENTRO DE UNA MARCA, con datos REALES de la empresa.
+ * `VidrieraPublica` sobre la puerta pública (carta real §4): la carta de un código DENTRO DEL ALCANCE DEL HOST (su marca y, si es dedicado, su empresa), con datos REALES de la empresa.
  *
  *  - Un código que no tiene la forma de un código de carta responde `null` SIN tocar la base (igual que uno inexistente).
  *  - Todo lo demás es UNA transacción de solo lectura con una sola foto (`LecturaPublicaDeCartas`): la visita ve la carta ENTERA de antes o ENTERA de después de
- *    un cambio, nunca a medias. La marca es la del host de la puerta (nunca un dato del cliente).
+ *    un cambio, nunca a medias. La marca y el dueño son los del host de la puerta (nunca un dato del cliente): un host dedicado a una empresa solo sirve SU carta (H-DOM-1).
  *  - `null` es la ÚNICA respuesta para todo lo que no se sirve (código inexistente, de otra marca, carta retirada, sucursal cerrada, empresa que no opera): no
  *    hay oráculo. Un fallo de la base NO es `null`: se lanza (una caída no se disfraza de «no disponible»).
  *  - La hora es la del reloj de la composición, no `now()` de la base: el precio vigente depende de ella.
@@ -69,13 +69,13 @@ export function crearVidrieraPublica(
   catalogos: CatalogosDeLaCarta,
 ): VidrieraPublica {
   return {
-    async porCodigo(marcaId, codigo) {
+    async porCodigo(host, codigo) {
       if (!codigoDeCartaDesdeTexto(codigo).ok) return null;
       const ahora = reloj.ahora();
       const leida = await transacciones.leer(async (tx) => {
         const carta = await tx.cartas.porCodigo(codigo, ahora);
         if (carta === null) return null;
-        const vidriera = armarVidrieraPublicada(carta, marcaId);
+        const vidriera = armarVidrieraPublicada(carta, host);
         // El plan se lee solo de una carta que, por lo demás, se serviría: lo que ya es `null` no cuesta ni muestra nada más.
         if (vidriera === null) return null;
         const derechos = await derechosDeLaEmpresaDeUnTenant(tx.planes, catalogos, {

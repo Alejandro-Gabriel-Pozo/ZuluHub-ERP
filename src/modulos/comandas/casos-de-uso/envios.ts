@@ -4,6 +4,7 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import { cuentaPorId, idDerivado, lineasDeCuenta, type Linea } from "../../ventas/publico";
 import { huellaDeEnvio, huellaDeImpresion } from "../dominio/huella";
 import {
+  nombreParaLaCocina,
   rotuloDeEnvio,
   seleccionarParaElEnvio,
   type LineaDeComanda,
@@ -123,7 +124,7 @@ function renglonDeLaLinea(linea: Linea, orden: number, rol: "SALE" | "ESPERA"): 
     lineaId: linea.id,
     cantidad: linea.cantidad,
     rol,
-    nombreDeCocina: linea.descripcion,
+    nombreDeCocina: nombreParaLaCocina(linea),
     detalleDeCocina: [
       ...(linea.varianteNombre === null ? [] : [linea.varianteNombre]),
       ...linea.opciones.map((o) => o.nombre),

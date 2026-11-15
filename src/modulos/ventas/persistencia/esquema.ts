@@ -89,6 +89,7 @@ export type VentasDb = {
     posicion: number;
     producto_id: string;
     descripcion: string;
+    nombre_de_cocina: string | null;
     variante_opcion_id: string | null;
     variante_nombre: string | null;
     precio_id: string | null;
@@ -296,6 +297,7 @@ export const COLUMNAS_DE_VENTAS = {
     "importe_fijo",
     "departamento_id",
     "camino_de_clasificacion",
+    "nombre_de_cocina",
   ],
   linea_copiada: ["empresa_id", "linea_nueva_id", "linea_origen_id", "modo", "creado_en"],
   linea_cuenta_opcion: [

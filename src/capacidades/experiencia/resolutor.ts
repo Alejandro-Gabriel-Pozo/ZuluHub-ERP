@@ -3,6 +3,7 @@ import {
   HOST_DESCONOCIDO,
   HOST_NO_DISPONIBLE,
   SUPERFICIES_SERVIBLES,
+  type DuenioDeLaPuerta,
   type EstadoDeLaResolucion,
   type MarcaPublica,
   type SuperficieServible,
@@ -17,7 +18,7 @@ import {
  *  - un host sirve una sola superficie: se pregunta por cada una en orden y se corta en la primera;
  *  - guarda por INSTANCIA, hasta 60 s y con tamaño acotado, la configuración PÚBLICA resuelta, también
  *    el «desconocido» (un dominio retirado deja de servirse en a lo sumo un minuto). La clave es el
- *    host normalizado: nada se comparte entre hosts. Los fallos NO se guardan;
+ *    host normalizado: nada se comparte entre hosts (el dueño del host viaja DENTRO de la entrada de su host y nada más se guarda). Los fallos NO se guardan;
  *  - un fallo (error devuelto o excepción de la consulta o de la lectura) es `NO_DISPONIBLE`, nunca
  *    «desconocido» ni la marca principal. Un host sin marca legible también es desconocido.
  */
@@ -27,7 +28,7 @@ export const TAMANO_DE_LA_CACHE = 500;
 export type ConsultaDeHost = (
   host: string,
   superficie: SuperficieServible,
-) => Promise<Resultado<Readonly<{ marcaId: string }> | null, unknown>>;
+) => Promise<Resultado<Readonly<{ marcaId: string; duenio: DuenioDeLaPuerta }> | null, unknown>>;
 
 /**
  * La marca que se pinta en `host`. Recibe el host y la superficie ya resueltos además del id: la lectura
@@ -80,7 +81,13 @@ export function crearResolutorDePuerta(
       if (marca === null) return HOST_DESCONOCIDO;
       return {
         tipo: "RESUELTA",
-        puerta: { host, superficie, marcaId: respuesta.valor.marcaId, marca },
+        puerta: {
+          host,
+          superficie,
+          marcaId: respuesta.valor.marcaId,
+          duenio: respuesta.valor.duenio,
+          marca,
+        },
       };
     }
     return HOST_DESCONOCIDO;

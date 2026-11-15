@@ -40,6 +40,8 @@ export type Linea = Readonly<{
   posicion: number;
   productoId: string;
   descripcion: string;
+  /** El nombre de cocina del producto al agregar la línea (0055); `null` si no tenía: la cocina usa entonces `descripcion` (CYN 72). */
+  nombreDeCocina: string | null;
   varianteOpcionId: string | null;
   varianteNombre: string | null;
   /** La versión de la opción de la variante que se vendió (0036); `null` en una línea sin variante o anterior a 0036. */
@@ -82,6 +84,8 @@ export type AltaDeLinea = Readonly<{
   posicion: number;
   productoId: string;
   descripcion: string;
+  /** El nombre de cocina del producto al agregar la línea (0055); `null` si no tenía: la cocina usa entonces `descripcion` (CYN 72). */
+  nombreDeCocina: string | null;
   varianteOpcionId: string | null;
   varianteNombre: string | null;
   /** La versión de la opción de la variante que se vendió (0036); `null` en una línea sin variante o anterior a 0036. */

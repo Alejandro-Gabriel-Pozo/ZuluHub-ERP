@@ -33,10 +33,17 @@ export const CERO = pesos("0.00");
 export const claveNueva = (): string => randomUUID();
 
 /**
- * El instante UTC en que, en Buenos Aires (UTC-3, sin horario de verano), es `hora` (`HH:MM`) del día de `dias` días después de hoy
- * (en Buenos Aires). Con `dias >= 1` es siempre posterior a «ahora»: sirve para armar contextos de fecha fija relativa.
+ * «Ahora» de ESTE archivo de pruebas, tomado una sola vez al cargarlo. Antes cada llamada miraba el reloj real: una prueba que armaba la jornada y
+ * después la buscaba con `fechaDelDia()` caía en el día siguiente si cruzaba la medianoche de Buenos Aires (03:00 UTC) entre una llamada y la otra
+ * (caso real: «desactivar contra abrir una sesión con la jornada ya creada», `expected null to be 'CERRADA'`, gate del 15/11/2026, 02:56 a 03:15 UTC).
  */
-export function instanteLocal(dias: number, hora: string, ahora: Date = new Date()): Date {
+const AHORA_DE_LA_CORRIDA = new Date();
+
+/**
+ * El instante UTC en que, en Buenos Aires (UTC-3, sin horario de verano), es `hora` (`HH:MM`) del día de `dias` días después de hoy
+ * (en Buenos Aires), con «hoy» fijo para todo el archivo. Con `dias >= 1` es siempre posterior a «ahora»: sirve para armar contextos de fecha fija relativa.
+ */
+export function instanteLocal(dias: number, hora: string, ahora: Date = AHORA_DE_LA_CORRIDA): Date {
   const localAhora = new Date(ahora.getTime() - 3 * 3_600_000);
   const dia = new Date(
     Date.UTC(localAhora.getUTCFullYear(), localAhora.getUTCMonth(), localAhora.getUTCDate() + dias),

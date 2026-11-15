@@ -25,6 +25,7 @@ const resuelta = (superficie: SuperficieServible): EstadoDeLaResolucion => ({
     host: "x.test",
     superficie,
     marcaId: "m1",
+    duenio: { tipo: "MARCA" },
     marca: { nombre: "Marca", tema: {}, hostDeApp: null },
   },
 });

@@ -1,3 +1,4 @@
+import { deLaMarca } from "../utilidades/alcance-del-host";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import type { BaseDePruebas } from "./global";
 import { montarCatalogo, valorDe, cotizarEnTx } from "./catalogo-apoyo";
@@ -31,7 +32,10 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
     c = await montarCatalogo(base as BaseDePruebas);
     en = await montarEnsayo(c);
     ({ vidriera, publicas } = adaptadorReal(c));
-    carta = (await vidriera.porCodigo(MARCA_DEL_HOST, en.carta1.codigo)) as VidrieraPublicada;
+    carta = (await vidriera.porCodigo(
+      deLaMarca(MARCA_DEL_HOST),
+      en.carta1.codigo,
+    )) as VidrieraPublicada;
   });
   afterAll(async () => {
     await publicas.cerrar();
@@ -76,7 +80,10 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
       "update carta_publica set rubro = 'Cafetería', lugar = 'Av. Belgrano 412', mensaje_de_portada = 'Hoy: ¡2x1 en flan!' where id = $1",
       [r.rows[0]?.id],
     );
-    const otra = (await vidriera.porCodigo(MARCA_DEL_HOST, en.carta2.codigo)) as VidrieraPublicada;
+    const otra = (await vidriera.porCodigo(
+      deLaMarca(MARCA_DEL_HOST),
+      en.carta2.codigo,
+    )) as VidrieraPublicada;
     expect([otra.rubro, otra.lugar, otra.mensajeDePortada]).toEqual([
       "Cafetería",
       "Av. Belgrano 412",
@@ -104,13 +111,13 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
   });
 
   it("A-1: misma respuesta (null) para código inventado, de otra marca, malformado y carta retirada", async () => {
-    expect(await vidriera.porCodigo(MARCA_DEL_HOST, codigoAlAzar())).toBeNull();
-    expect(await vidriera.porCodigo(OTRA_MARCA, en.carta1.codigo)).toBeNull();
-    expect(await vidriera.porCodigo(MARCA_DEL_HOST, "no-es-un-codigo")).toBeNull();
+    expect(await vidriera.porCodigo(deLaMarca(MARCA_DEL_HOST), codigoAlAzar())).toBeNull();
+    expect(await vidriera.porCodigo(deLaMarca(OTRA_MARCA), en.carta1.codigo)).toBeNull();
+    expect(await vidriera.porCodigo(deLaMarca(MARCA_DEL_HOST), "no-es-un-codigo")).toBeNull();
     await c.dueno.query("update carta_publica set estado = 'FUERA_DE_LINEA' where id = $1", [
       en.carta2.id,
     ]);
-    expect(await vidriera.porCodigo(MARCA_DEL_HOST, en.carta2.codigo)).toBeNull();
+    expect(await vidriera.porCodigo(deLaMarca(MARCA_DEL_HOST), en.carta2.codigo)).toBeNull();
     await c.dueno.query("update carta_publica set estado = 'EN_LINEA' where id = $1", [
       en.carta2.id,
     ]);
@@ -118,9 +125,9 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
 
   it("A-2: sucursal inactiva = misma respuesta que un código inventado", async () => {
     await c.dueno.query("update sucursal set activa = false where id = $1", [en.e.otraSucursal]);
-    expect(await vidriera.porCodigo(MARCA_DEL_HOST, en.carta2.codigo)).toBeNull();
+    expect(await vidriera.porCodigo(deLaMarca(MARCA_DEL_HOST), en.carta2.codigo)).toBeNull();
     await c.dueno.query("update sucursal set activa = true where id = $1", [en.e.otraSucursal]);
-    expect(await vidriera.porCodigo(MARCA_DEL_HOST, en.carta2.codigo)).not.toBeNull();
+    expect(await vidriera.porCodigo(deLaMarca(MARCA_DEL_HOST), en.carta2.codigo)).not.toBeNull();
   });
 
   it("A-3: ocultar un producto lo saca de la carta de esa sucursal y no de la otra", async () => {
@@ -128,8 +135,14 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
       `insert into disponibilidad_de_producto (empresa_id, producto_id, sucursal_id, oculto, actualizado_en) values ($1, $2, $3, true, now())`,
       [en.e.empresa, en.p.flan, en.e.sucursal],
     );
-    const a = (await vidriera.porCodigo(MARCA_DEL_HOST, en.carta1.codigo)) as VidrieraPublicada;
-    const b = (await vidriera.porCodigo(MARCA_DEL_HOST, en.carta2.codigo)) as VidrieraPublicada;
+    const a = (await vidriera.porCodigo(
+      deLaMarca(MARCA_DEL_HOST),
+      en.carta1.codigo,
+    )) as VidrieraPublicada;
+    const b = (await vidriera.porCodigo(
+      deLaMarca(MARCA_DEL_HOST),
+      en.carta2.codigo,
+    )) as VidrieraPublicada;
     expect(productosDe(a).flat()).not.toContain("Flan");
     expect(productosDe(b).flat()).toContain("Flan");
   });
@@ -350,8 +363,14 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
         precio: "9999",
         desde: "2027-01-01T00:00:00Z",
       });
-      const a = (await vidriera.porCodigo(MARCA_DEL_HOST, en.carta1.codigo)) as VidrieraPublicada;
-      const b = (await vidriera.porCodigo(MARCA_DEL_HOST, en.carta2.codigo)) as VidrieraPublicada;
+      const a = (await vidriera.porCodigo(
+        deLaMarca(MARCA_DEL_HOST),
+        en.carta1.codigo,
+      )) as VidrieraPublicada;
+      const b = (await vidriera.porCodigo(
+        deLaMarca(MARCA_DEL_HOST),
+        en.carta2.codigo,
+      )) as VidrieraPublicada;
       expect(micro(a.secciones[0]?.productos[0]?.precioBase ?? "0")).toBe(micro("1800"));
       expect(micro(b.secciones[0]?.productos[0]?.precioBase ?? "0")).toBe(micro("1500"));
       expect(micro(a.secciones[0]?.productos[0]?.precioBase ?? "0")).toBe(
@@ -368,7 +387,9 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
         base: { ...c.propia.base, publico: "postgres://nadie:nada@127.0.0.1:1/x" },
       },
     });
-    await expect(roto.vidriera.porCodigo(MARCA_DEL_HOST, en.carta1.codigo)).rejects.toThrow();
+    await expect(
+      roto.vidriera.porCodigo(deLaMarca(MARCA_DEL_HOST), en.carta1.codigo),
+    ).rejects.toThrow();
     await roto.publicas.cerrar();
   });
 });

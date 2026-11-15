@@ -6,6 +6,17 @@ import { textoDeUnaLineaDesdeTexto } from "../../../primitivas/texto/texto-de-un
  * `AHORA` = para enviar; sin envío y `DESPUES` = espera; con envío = enviada. Cada línea sale en UN solo envío (la base lo impone con
  * `UPDATE … WHERE envio_id IS NULL`); acá vive la decisión pura de qué línea entra en cada envío. Puro: sin reloj ni azar.
  */
+/**
+ * El nombre con que sale una línea en el papel de cocina (CYN 72, dueño, 08/11/2026: «en la comanda va el nombre de cocina… porque así se sabe qué stock descuento»):
+ * el de cocina que la línea congeló al venderse; si el producto no tenía, el comercial (`catalogo-y-niveles-maqueta.md`: «Si algo no tiene nombre de cocina, usa el comercial»).
+ * Previene: la cocina lee el nombre del cliente en vez del suyo.
+ */
+export function nombreParaLaCocina(
+  linea: Readonly<{ nombreDeCocina: string | null; descripcion: string }>,
+): string {
+  return linea.nombreDeCocina ?? linea.descripcion;
+}
+
 export const SALIDAS_DE_LINEA = ["AHORA", "DESPUES"] as const;
 export type SalidaDeLinea = (typeof SALIDAS_DE_LINEA)[number];
 

@@ -93,11 +93,11 @@ type MarcaPorCodigo = Readonly<Record<string, string>>;
 /** El falso: una carta de ejemplo solo se devuelve a la marca a la que se la asocia; a cualquier otra, `null`. */
 export function crearVidrieraPublicaFalsa(marcaPorCodigo: MarcaPorCodigo): VidrieraPublica {
   return {
-    porCodigo(marcaId, codigo) {
+    porCodigo(host, codigo) {
       const vidriera = VIDRIERAS_DE_EJEMPLO.find((c) => c.codigo === codigo);
       const duenia = vidriera === undefined ? undefined : marcaPorCodigo[vidriera.codigo];
       return Promise.resolve(
-        vidriera === undefined || duenia === undefined || duenia !== marcaId
+        vidriera === undefined || duenia === undefined || duenia !== host.marcaId
           ? null
           : comoVidrieraPublicada(vidriera),
       );
