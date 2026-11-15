@@ -37,7 +37,7 @@ describe.skipIf(base === null)("stock: composiciones", () => {
   const vendible = (clase: ClaseDeUsoDePrueba = "VENDIBLE", empresa = e.empresa) =>
     productoDeBase(c.dueno, empresa, { clase });
   const insumo = (datos: Parameters<MontajeDeStock["articulo"]>[1] = {}, escenario = e) =>
-    c.articulo(escenario, { clase: "INSUMO", ...datos });
+    c.articulo(escenario, { clase: "MATERIA_PRIMA", ...datos });
   const componente = (producto: string, cantidad = "1", unidadId = "UNIDAD") => ({
     productoId: producto,
     cantidad,
@@ -293,7 +293,7 @@ describe.skipIf(base === null)("stock: composiciones", () => {
         }),
       ).toBe("COMPONENTE_NO_CONTROLADO");
       // Sin artículo: un producto que nunca se controló, otro que dejó de controlarse, y uno que no existe.
-      const sinArticulo = await productoDeBase(c.dueno, e.empresa, { clase: "INSUMO" });
+      const sinArticulo = await productoDeBase(c.dueno, e.empresa, { clase: "MATERIA_PRIMA" });
       expect(await error({ componentes: [componente(sinArticulo)] })).toBe(
         "COMPONENTE_NO_CONTROLADO",
       );
@@ -306,6 +306,54 @@ describe.skipIf(base === null)("stock: composiciones", () => {
       );
       // Nada de lo rechazado escribió una versión.
       expect(await versiones(pizza)).toBe(antes);
+    });
+
+    it("la receta lleva solo ingredientes: un insumo operativo (packaging, limpieza) se rechaza con COMPONENTE_ES_INSUMO y no escribe ni audita; materia prima y reventa pasan (14/11/2026)", async () => {
+      const pizza = await vendible();
+      const caja = await c.articulo(e, { clase: "INSUMO" });
+      const harina = await insumo();
+      const gaseosa = await c.articulo(e, { clase: "REVENTA" });
+      const auditadas = (await registros("COMPOSICION_GUARDADA")).length;
+      // Solo, o mezclado con ingredientes válidos: la receta entera se rechaza (todo o nada).
+      for (const componentes of [
+        [componente(caja.producto)],
+        [componente(harina.producto), componente(caja.producto)],
+      ]) {
+        expect(await guardar(pizza, { componentes })).toEqual({
+          ok: false,
+          error: "COMPONENTE_ES_INSUMO",
+        });
+      }
+      expect(await versiones(pizza)).toBe(0);
+      expect((await registros("COMPOSICION_GUARDADA")).length).toBe(auditadas);
+      // Materia prima y reventa, sí.
+      expect(
+        valorDe(
+          await guardar(pizza, {
+            componentes: [componente(harina.producto), componente(gaseosa.producto)],
+          }),
+        ),
+      ).toEqual({ version: 1, yaExistia: false });
+    });
+
+    it("dos guardados a la vez con un insumo: los dos se rechazan y no queda nada; repetir el rechazo da lo mismo", async () => {
+      for (let ronda = 0; ronda < RONDAS; ronda += 1) {
+        const pizza = await vendible();
+        const caja = await c.articulo(e, { clase: "INSUMO" });
+        const resultados = await aLaVez(
+          c,
+          [
+            () => firme(() => guardar(pizza, { componentes: [componente(caja.producto)] })),
+            () => firme(() => guardar(pizza, { componentes: [componente(caja.producto)] })),
+          ],
+          ronda,
+        );
+        expect(resultados).toEqual([
+          { ok: false, error: "COMPONENTE_ES_INSUMO" },
+          { ok: false, error: "COMPONENTE_ES_INSUMO" },
+        ]);
+        expect(await versiones(pizza)).toBe(0);
+      }
     });
 
     it("la conversión de la cantidad a la unidad de stock es exacta o se rechaza (CONVERSION_NO_EXACTA), y mide la dimensión del artículo", async () => {

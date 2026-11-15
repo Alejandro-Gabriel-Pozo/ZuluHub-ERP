@@ -59,7 +59,7 @@ describe.skipIf(base === null)("stock: puertos de venta", () => {
   const insumo = (
     datos: Parameters<MontajeDeStock["articulo"]>[1] = {},
     escenario: Pick<EscenarioDeStock, "empresa"> = e,
-  ) => c.articulo(escenario, { clase: "INSUMO", ...datos });
+  ) => c.articulo(escenario, { clase: "MATERIA_PRIMA", ...datos });
   const reventa = (datos: Parameters<MontajeDeStock["articulo"]>[1] = {}) =>
     c.articulo(e, { clase: "REVENTA", ...datos });
   const vendible = (

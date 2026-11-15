@@ -196,6 +196,7 @@ export const ERRORES_DE_STOCK_POR_RESTRICCION: Readonly<Record<string, string>> 
   componente_destino_ck: "NO_TRADUCIDA",
   componente_version_confirmada: "NO_TRADUCIDA",
   componente_articulo_inactivo: "COMPONENTE_NO_CONTROLADO",
+  componente_articulo_es_insumo: "COMPONENTE_ES_INSUMO",
   // costo_de_articulo (0031): lo escribe el caso de uso de costos con valores que ya calculó la función pura; ninguna es un error de la persona
   costo_de_articulo_pkey: "NO_TRADUCIDA",
   costo_de_articulo_empresa_id_fkey: "NO_TRADUCIDA",
