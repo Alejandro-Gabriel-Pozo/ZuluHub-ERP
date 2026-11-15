@@ -6,6 +6,7 @@ import {
   columnasDelPapel,
   envolver,
   SEPARADOR,
+  sangrado,
   type LineaDePapel,
   type ModeloDePapel,
   type PapelEnMm,
@@ -33,8 +34,6 @@ export const TEXTOS_DEL_PAPEL = {
   quedan: "Quedan",
   motivo: "Motivo",
   saleDespues: "Sale después",
-  ticket: "Ticket N.º",
-  total: "Total",
 } as const;
 
 // El modelo de papel y su maquetado son de `primitivas/papel` (los comparte el ticket de ventas); se reexportan con los mismos nombres.
@@ -78,11 +77,6 @@ export function cantidadParaPapel(
 // ---------------------------------------------------------------------------------------------
 // Armado del modelo
 // ---------------------------------------------------------------------------------------------
-/** Un renglón de detalle: sangrado de dos espacios, partido por palabras dentro del ancho que queda. */
-function sangrado(texto: string, columnas: number): LineaDePapel[] {
-  return envolver(texto, columnas - 2, "NORMAL").map((l) => ({ ...l, texto: `  ${l.texto}` }));
-}
-
 export type RenglonDelPapel = Readonly<{
   /** Cantidad del renglón, texto decimal exacto (múltiplo del paso). */
   cantidad: string;
@@ -195,41 +189,4 @@ export function documentoDeAnulacion(
   lineas.push(...envolver(`${TEXTOS_DEL_PAPEL.quedan}: ${quedan.valor}`, columnas, "NORMAL"));
   lineas.push(...envolver(`${TEXTOS_DEL_PAPEL.motivo}: ${aviso.motivo}`, columnas, "NORMAL"));
   return ok({ ancho: opciones.ancho, lineas });
-}
-
-export type FichaParaElPapel = Readonly<{
-  numero: number;
-  /** Fecha del ticket, ya formateada. */
-  fecha: string;
-  lineas: readonly Readonly<{ cantidad: string; descripcion: string; importe: string }>[];
-  total: string;
-}>;
-
-/** El ticket del cliente: lo que ya muestra la ficha de ventas, en el modelo de papel (descripción a la izquierda, importe a la derecha). */
-export function documentoDeTicket(
-  ficha: FichaParaElPapel,
-  opciones: Readonly<{ ancho: PapelEnMm }>,
-): ModeloDePapel {
-  const columnas = columnasDelPapel(opciones.ancho);
-  const dosColumnas = (izquierda: string, derecha: string): LineaDePapel[] => {
-    const lugar = columnas - derecha.length - 1;
-    // La descripción siempre trae al menos la cantidad: con lugar 0 o negativo nunca entra y se parte.
-    if (izquierda.length <= lugar) {
-      return [{ texto: `${izquierda.padEnd(lugar)} ${derecha}`, estilo: "NORMAL" }];
-    }
-    return [...envolver(izquierda, columnas, "NORMAL"), ...envolver(derecha, columnas, "NORMAL")];
-  };
-  const lineas: LineaDePapel[] = [
-    { texto: `${TEXTOS_DEL_PAPEL.ticket} ${ficha.numero}`, estilo: "NEGRITA" },
-    ...envolver(ficha.fecha, columnas, "NORMAL"),
-    SEPARADOR,
-  ];
-  for (const l of ficha.lineas) {
-    lineas.push(...dosColumnas(`${l.cantidad} ${l.descripcion}`, l.importe));
-  }
-  lineas.push(SEPARADOR);
-  for (const l of dosColumnas(TEXTOS_DEL_PAPEL.total, ficha.total)) {
-    lineas.push({ ...l, estilo: "NEGRITA" });
-  }
-  return { ancho: opciones.ancho, lineas };
 }

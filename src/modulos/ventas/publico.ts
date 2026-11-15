@@ -88,6 +88,8 @@ export {
   type CuentaAbiertaDeAncla,
 } from "./casos-de-uso/lecturas-de-cuenta";
 export { idDerivado } from "./dominio/id-derivado";
+export { papelDelTicket } from "./consultas/documento-del-ticket";
+export type { ErrorDelPapelDelTicket } from "./dominio/documento-del-ticket";
 export { calcularLasLineas } from "./casos-de-uso/calculo";
 export { anclaValida, type Ancla } from "./dominio/ancla";
 export { esUuid } from "./dominio/identificadores";

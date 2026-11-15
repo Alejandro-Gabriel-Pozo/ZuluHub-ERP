@@ -38,3 +38,8 @@ export function envolver(texto: string, columnas: number, estilo: EstiloDeLinea)
   }
   return lineas.map((t) => ({ texto: t, estilo }));
 }
+
+/** Un renglón de detalle: sangrado de dos espacios, partido por palabras dentro del ancho que queda. */
+export function sangrado(texto: string, columnas: number): LineaDePapel[] {
+  return envolver(texto, columnas - 2, "NORMAL").map((l) => ({ ...l, texto: `  ${l.texto}` }));
+}
