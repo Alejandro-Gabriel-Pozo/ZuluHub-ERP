@@ -1194,14 +1194,6 @@ describe.skipIf(base === null)(
             unidadBaseId: "KILOGRAMO",
           }),
         ).productoId;
-        const elaborado = valorDe(
-          await c.casos.crearProductoRapido(e.gerente, {
-            id: nuevoId(),
-            claseDeUso: "ELABORADO",
-            nombre: nombreAlAzarDeProducto("Salsa"),
-            unidadBaseId: "KILOGRAMO",
-          }),
-        ).productoId;
         const opcion = g.opciones[0]?.id as string;
         const guardar = (
           lineas: Array<{ insumoId: string; cantidad: string; escalaConTamano: boolean }>,
@@ -1219,7 +1211,8 @@ describe.skipIf(base === null)(
           cantidad,
           escalaConTamano,
         });
-        expect(await guardar([linea(elaborado)])).toEqual({
+        // Un producto vendible no se consume (el elaborado sí desde 12/11/2026: ver «D9» más abajo).
+        expect(await guardar([linea(await nuevoProducto())])).toEqual({
           ok: false,
           error: "INSUMO_NO_ADMITIDO",
         });
@@ -1288,6 +1281,60 @@ describe.skipIf(base === null)(
             e.empresa,
           ]),
         ).toBe(0);
+      });
+
+      it("D9: una opción puede consumir un elaborado (dueño, 12/11/2026): se guarda en la versión sellada y repetir el pedido es SIN_CAMBIOS; un producto vendible sigue sin poder consumirse", async () => {
+        const p = await nuevoProducto();
+        const g = grupoAdicional();
+        valorDe(
+          await c.casos.editarOpciones(e.gerente, {
+            productoId: p,
+            versionDeOpcionesEsperada: 0,
+            grupos: [g],
+          }),
+        );
+        const salsa = valorDe(
+          await c.casos.crearProductoRapido(e.gerente, {
+            id: nuevoId(),
+            claseDeUso: "ELABORADO",
+            nombre: nombreAlAzarDeProducto("Salsa"),
+            unidadBaseId: "KILOGRAMO",
+          }),
+        ).productoId;
+        const otroVendible = await nuevoProducto();
+        const pedido = (insumoId: string) => ({
+          productoId: p,
+          versionDeOpcionesEsperada: 1,
+          grupoId: g.id,
+          opciones: [
+            {
+              opcionId: g.opciones[0]?.id as string,
+              lineas: [{ insumoId, cantidad: "0.25", escalaConTamano: false }],
+            },
+          ],
+        });
+        // Un producto vendible no es un insumo: sigue rechazado, y no escribe nada.
+        expect(await c.casos.guardarConsumoDeGrupo(e.gerente, pedido(otroVendible))).toEqual({
+          ok: false,
+          error: "INSUMO_NO_ADMITIDO",
+        });
+        expect(await versionDeOpciones(p)).toBe(1);
+        // El elaborado, sí.
+        expect(await c.casos.guardarConsumoDeGrupo(e.gerente, pedido(salsa))).toEqual({
+          ok: true,
+          valor: { versionDeOpciones: 2, yaEstaba: false },
+        });
+        expect(
+          await c.filas(
+            "select c.insumo_id from consumo_de_opcion c join version_de_opcion v on v.id = c.version_de_opcion_id where v.opcion_id = $1",
+            [g.opciones[0]?.id],
+          ),
+        ).toEqual([{ insumo_id: salsa }]);
+        // Repetir el mismo pedido: lo ya hecho, sin versión nueva.
+        expect(await c.casos.guardarConsumoDeGrupo(e.gerente, { ...pedido(salsa) })).toEqual({
+          ok: true,
+          valor: { versionDeOpciones: 2, yaEstaba: true },
+        });
       });
 
       it("I3: reenviar guardarConsumoDeGrupo después de un éxito es SIN_CAMBIOS y no inserta versiones", async () => {
