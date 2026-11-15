@@ -60,21 +60,23 @@ export function armarElPedidoDeCierre(
   estado: EstadoDelConteo,
   observacion: string,
 ) {
-  const billetes = denominaciones
-    .filter((d) => (estado.billetes[String(d)] ?? "") !== "")
-    .map((d) => ({ denominacion: d, cantidad: Number(estado.billetes[String(d)]) }));
-  const declaradas = filas.filter(
-    (f) => estado.conformes[f.clave] !== true && (estado.contados[f.clave] ?? "") !== "",
-  );
-  const sinDeclarar = filas.filter((f) => !declaradas.includes(f));
+  const billetes = denominaciones.flatMap((d) => {
+    const cantidad = estado.billetes[String(d)] ?? "";
+    return cantidad === "" ? [] : [{ denominacion: d, cantidad: Number(cantidad) }];
+  });
+  const declaradas = filas.flatMap((f) => {
+    const contado = estado.contados[f.clave] ?? "";
+    return estado.conformes[f.clave] !== true && contado !== "" ? [{ fila: f, contado }] : [];
+  });
+  const sinDeclarar = filas.filter((f) => !declaradas.some((d) => d.fila === f));
   return {
     sesionId,
     conteo:
       billetes.length === 0 && estado.monedas === "" ? null : { billetes, monedas: estado.monedas },
-    otros: declaradas.map((f) => ({
-      medioDePagoId: f.medioDePagoId,
-      cuentaDeCobroId: f.cuentaDeCobroId,
-      contado: estado.contados[f.clave] ?? "",
+    otros: declaradas.map(({ fila, contado }) => ({
+      medioDePagoId: fila.medioDePagoId,
+      cuentaDeCobroId: fila.cuentaDeCobroId,
+      contado,
     })),
     conformeGeneral:
       sinDeclarar.length > 0 && sinDeclarar.every((f) => estado.conformes[f.clave] === true),

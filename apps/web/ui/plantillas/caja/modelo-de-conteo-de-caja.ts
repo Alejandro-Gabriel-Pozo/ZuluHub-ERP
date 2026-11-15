@@ -135,12 +135,15 @@ export function totalContadoDelEfectivo(
   billetes: Readonly<Record<string, string>>,
   monedas: string,
 ): string | null {
-  const escritos = denominaciones.filter((d) => (billetes[String(d)] ?? "") !== "");
+  const escritos = denominaciones.flatMap((d) => {
+    const cantidad = billetes[String(d)] ?? "";
+    return cantidad === "" ? [] : [{ denominacion: d, cantidad }];
+  });
   if (escritos.length === 0 && monedas === "") return null;
   try {
     let total = importeDesdeTexto(ARS, monedas === "" ? "0.00" : monedas);
-    for (const d of escritos) {
-      const subtotal = subtotalDeBilletes(d, billetes[String(d)] ?? "");
+    for (const { denominacion, cantidad } of escritos) {
+      const subtotal = subtotalDeBilletes(denominacion, cantidad);
       if (subtotal !== null) total = sumar(total, importeDesdeTexto(ARS, subtotal));
     }
     return importeATexto(total);
@@ -172,8 +175,7 @@ export function diferenciaDeUnMedio(
   conforme: boolean,
 ): DiferenciaParaMostrar {
   if (conforme) return { texto: texto({}, "caja.conforme"), tono: null };
-  if (contado === "") return { texto: texto({}, "caja.sin_declarar"), tono: null };
-  const dif = diferenciaDe(contado, fila.esperado);
+  const dif = contado === "" ? null : diferenciaDe(contado, fila.esperado);
   return dif === null
     ? { texto: texto({}, "caja.sin_declarar"), tono: null }
     : { texto: formatearImporte(dif), tono: tonoDeLaDiferencia(dif) };

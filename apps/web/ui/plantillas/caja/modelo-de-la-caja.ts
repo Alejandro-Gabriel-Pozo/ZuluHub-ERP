@@ -265,7 +265,7 @@ export function resumenDeLaUltimaSesion(u: UltimaSesionDeLaCaja): Readonly<{
   });
   return {
     filas,
-    observacion: u.observacion === null || u.observacion === "" ? null : u.observacion,
+    observacion: u.observacion === "" ? null : u.observacion,
   };
 }
 

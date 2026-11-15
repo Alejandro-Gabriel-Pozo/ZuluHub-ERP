@@ -458,6 +458,7 @@ describe("conteo de billetes y total contado", () => {
     expect(totalContadoDelEfectivo(d, { "100": "1" }, "0.35")).toBe("100.35");
     expect(totalContadoDelEfectivo(d, { "100": "0" }, "")).toBe("0.00");
     expect(totalContadoDelEfectivo(d, { "20000": "2", "10": "9" }, "")).toBe("40000.00");
+    expect(totalContadoDelEfectivo(d, { "20000": "x", "500": "2" }, "")).toBe("1000.00");
   });
 
   it("un total fuera del rango del dinero no rompe la pantalla: no se muestra", () => {
@@ -503,6 +504,7 @@ describe("estado del conteo: «Conforme» y «Conforme general»", () => {
   const [a, b] = filas as [(typeof filas)[number], (typeof filas)[number]];
 
   it("escribir billetes y monedas", () => {
+    expect(CONTEO_EN_BLANCO.monedas).toBe("");
     expect(conBilletes(CONTEO_EN_BLANCO, 100, "3").billetes).toEqual({ "100": "3" });
     expect(conMonedas(CONTEO_EN_BLANCO, "5.00").monedas).toBe("5.00");
     expect(claveDeLinea("m", null)).toBe("m|");

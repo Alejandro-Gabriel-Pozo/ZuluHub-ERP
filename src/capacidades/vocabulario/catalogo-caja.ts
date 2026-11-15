@@ -96,10 +96,10 @@ export const TEXTOS_DE_CAJA = {
   "caja.movimiento.egreso": { porDefecto: "Egreso" },
   "caja.movimiento.ajuste": { porDefecto: "Ajuste" },
   "caja.ajuste.sobra": { porDefecto: "Sobra" },
-  // SUPUESTO (DEC-0456): «Falta» es el sentido contrario de «Sobra» (M11: «el sentido contrario es "Falta"», `caja.html`, `vMov`); no tiene fila propia en `textos-mostrador-pendientes.md`.
+  // SUPUESTO (DEC-0475): «Falta» es el sentido contrario de «Sobra» (M11: «el sentido contrario es "Falta"», `caja.html`, `vMov`); no tiene fila propia en `textos-mostrador-pendientes.md`.
   "caja.ajuste.falta": { porDefecto: "Falta" },
   "caja.movimiento.registrar": { porDefecto: "Registrar" },
-  // SUPUESTO (DEC-0457): rótulos de la clase de cada movimiento de la lista; la maqueta aprobada los muestra («Fondo inicial», `caja.html` línea 382; «Cobro», línea 383; «Anulación», línea 502) y no tienen
+  // SUPUESTO (DEC-0476): rótulos de la clase de cada movimiento de la lista; la maqueta aprobada los muestra («Fondo inicial», `caja.html` línea 382; «Cobro», línea 383; «Anulación», línea 502) y no tienen
   // fila propia en las tablas aprobadas: pendiente de confirmación del dueño. Revertirlo es sacar estas tres claves y el rótulo de la clase en `modelo-de-la-caja.ts`.
   "caja.movimiento.cobro": { porDefecto: "Cobro" },
   "caja.movimiento.fondo_inicial": { porDefecto: "Fondo inicial" },
@@ -112,7 +112,7 @@ export const TEXTOS_DE_CAJA = {
   "caja.error.motivo_obligatorio": { porDefecto: "Escribí el motivo" },
   // MOSTRADOR, rótulos de los formularios (`caja.html`, `vAbrir`, `vMov` y `vModal`): «Anular» (APR N.º 214) y «Motivo» (APR N.º 215) están aprobados el 09/11/2026 (`textos-nuevos-pendientes.md`,
   // fila T5); «Importe» es la palabra aprobada del prototipo v8 (D-111, 2026-11-04, `fiscal.pantalla.imprimir_rotulo_importe`); «Cancelar» es la de todos los modales (`catalogo.accion.cancelar`).
-  // SUPUESTO (DEC-0456): «Fondo inicial» no tiene fila propia en las tablas aprobadas que encontré (`servidor-del-mostrador-minimo.md` §8); se declara por el pedido del orquestador de la pantalla Caja
+  // SUPUESTO (DEC-0475): «Fondo inicial» no tiene fila propia en las tablas aprobadas que encontré (`servidor-del-mostrador-minimo.md` §8); se declara por el pedido del orquestador de la pantalla Caja
   // (delegación de las filas 173 a 175 del 15/11/2026). Revertirlo es sacar esta clave y el rótulo del campo.
   "caja.campo.fondo_inicial": { porDefecto: "Fondo inicial" },
   "caja.campo.importe": { porDefecto: "Importe" },
