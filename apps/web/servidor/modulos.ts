@@ -23,7 +23,10 @@ import type {
   AccionesDePuntosDeVenta,
   OfertaDeAccion,
 } from "../ui/plantillas/configuracion-fiscal/modelo-de-puntos-de-venta";
-import type { AccionesDeLista } from "../ui/plantillas/caja/lista-de-caja";
+import type {
+  AccionesDeLaPantallaDeCaja,
+  AccionesDeLista,
+} from "../ui/plantillas/caja/lista-de-caja";
 import type { DestinoDeModulo } from "../ui/plantillas/sesion/ArmazonDeOperacion";
 import type { Pendiente } from "../ui/plantillas/sesion/PantallaDeInicio";
 
@@ -289,6 +292,30 @@ export async function accionesDeLaListaDeCaja(
     editar: puede(`${familia}.editar`),
     desactivar: puede(`${familia}.desactivar`),
     reactivar: puede(`${familia}.reactivar`),
+  };
+}
+
+/**
+ * Qué acciones de la pantalla «Caja» del mostrador se ofrecen activas hoy (abrir, iniciar y cancelar el cierre, cerrar, registrar un movimiento, ajustar y anular, propio o de otra
+ * persona): las que el SERVIDOR deja hacer según `permisosDelActor` (una lectura por pedido, el mismo cálculo que el guard). Con `caja` en desarrollo o no activo esa lista no trae sus
+ * acciones: todo apagado. Sin permisos leídos, todo apagado. Previene: ofrecer un botón que el guard va a rechazar. Es solo una ayuda: cada acción vuelve a pasar por el guard dentro de su
+ * transacción. Chequeo: `test/web/acciones-de-la-pantalla-de-caja.test.ts`.
+ */
+export async function accionesDeLaPantallaDeCaja(
+  contexto: ContextoOperativo,
+): Promise<AccionesDeLaPantallaDeCaja> {
+  const permisos = await permisosDeLaPersona(contexto);
+  const puede = (accion: ClaveAccion): boolean =>
+    permisos !== null && permisos.acciones.includes(accion);
+  return {
+    abrir: puede("sesiones_caja.abrir"),
+    iniciarCierre: puede("sesiones_caja.iniciar_cierre"),
+    cancelarCierre: puede("sesiones_caja.cancelar_cierre"),
+    cerrar: puede("sesiones_caja.cerrar"),
+    registrarMovimiento: puede("movimientos_caja.registrar_manual"),
+    ajustar: puede("movimientos_caja.ajustar"),
+    anular: puede("movimientos_caja.anular"),
+    anularDeOtros: puede("movimientos_caja.anular_de_otros"),
   };
 }
 

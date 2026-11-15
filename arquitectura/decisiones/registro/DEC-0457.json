@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0457",
+  "fecha": "2026-11-15",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: la lista de movimientos de la pantalla Caja rotula la clase «Cobro», «Fondo inicial» y «Anulación» como la maqueta caja.html, que no tiene fila propia aprobada para esos tres.",
+  "que_cambia": "La persona ve esos tres rótulos en cada movimiento de la lista. Revertir: sacar las claves caja.movimiento.cobro, caja.movimiento.fondo_inicial y caja.movimiento.anulacion y poner el rótulo que apruebe el dueño.",
+  "donde": "src/capacidades/vocabulario/catalogo-caja.ts; caja.html líneas 382, 383 y 502 de la maqueta aprobada"
+}
