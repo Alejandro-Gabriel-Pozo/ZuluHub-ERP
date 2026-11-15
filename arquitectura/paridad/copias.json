@@ -1,0 +1,87 @@
+[
+  {
+    "id": "transiciones-de-traspaso",
+    "forma": "transiciones",
+    "constante": "TRANSICIONES_DE_TRASPASO",
+    "archivo": "src/modulos/identidad/dominio/traspaso.ts",
+    "prueba": "test/integracion/administracion-sql.test.ts"
+  },
+  {
+    "id": "transiciones-de-invitacion",
+    "forma": "transiciones",
+    "constante": "TRANSICIONES_DE_INVITACION",
+    "archivo": "src/modulos/identidad/dominio/invitacion-tipos.ts",
+    "prueba": "test/integracion/identidad-sql.test.ts"
+  },
+  {
+    "id": "transiciones-de-empresa",
+    "forma": "transiciones",
+    "constante": "TRANSICIONES_DE_EMPRESA",
+    "archivo": "src/modulos/empresas/dominio/empresa.ts",
+    "prueba": "test/integracion/catalogo.test.ts"
+  },
+  {
+    "id": "transiciones-de-sesion-de-caja",
+    "forma": "transiciones",
+    "constante": "TRANSICIONES_DE_SESION",
+    "archivo": "src/modulos/caja/dominio/sesion.ts",
+    "prueba": "test/integracion/caja-migracion.test.ts"
+  },
+  {
+    "id": "transiciones-de-comprobante",
+    "forma": "transiciones",
+    "constante": "TRANSICIONES_DE_COMPROBANTE",
+    "archivo": "src/modulos/fiscal/dominio/estados-de-comprobante.ts",
+    "prueba": "test/integracion/facturacion-estados.test.ts"
+  },
+  {
+    "id": "transiciones-de-serie",
+    "forma": "transiciones",
+    "constante": "TRANSICIONES_DE_SERIE",
+    "archivo": "src/modulos/fiscal/dominio/numeracion.ts",
+    "prueba": "test/integracion/fiscal-sql.test.ts"
+  },
+  {
+    "id": "transiciones-de-cuenta",
+    "forma": "transiciones",
+    "constante": "TRANSICIONES_DE_CUENTA",
+    "archivo": "src/modulos/ventas/dominio/estados.ts",
+    "sinPrueba": "P3b"
+  },
+  {
+    "id": "transiciones-de-ticket",
+    "forma": "transiciones",
+    "constante": "TRANSICIONES_DE_TICKET",
+    "archivo": "src/modulos/ventas/dominio/estados.ts",
+    "sinPrueba": "P3b"
+  },
+  {
+    "id": "transiciones-de-parte",
+    "forma": "transiciones",
+    "constante": "TRANSICIONES_DE_PARTE",
+    "archivo": "src/modulos/clientes/dominio/estados.ts",
+    "prueba": "test/integracion/clientes-migracion.test.ts"
+  },
+  {
+    "id": "transiciones-de-jornada",
+    "forma": "transiciones",
+    "constante": "TRANSICIONES_DE_JORNADA",
+    "archivo": "src/modulos/cierre/dominio/jornada.ts",
+    "prueba": "test/integracion/cierre-migracion.test.ts",
+    "mencion": "transicionPermitida"
+  },
+  {
+    "id": "transiciones-de-solicitud",
+    "forma": "transiciones",
+    "constante": "TRANSICIONES_DE_SOLICITUD",
+    "archivo": "src/plataforma/captacion/dominio/estados.ts",
+    "prueba": "test/integracion/captacion-sql.test.ts"
+  },
+  {
+    "id": "transiciones-de-trabajo",
+    "forma": "transiciones",
+    "constante": "TRANSICIONES_DE_TRABAJO",
+    "archivo": "src/puertos/cola-de-trabajos.ts",
+    "prueba": "test/integracion/trabajos-base.test.ts"
+  }
+]
