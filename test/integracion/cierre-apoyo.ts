@@ -33,6 +33,7 @@ import {
   type RolDePrueba,
 } from "./fixtures-identidad";
 import { asignarPlan, crearPlanPublicado } from "./marcas-apoyo";
+import { ahoraDeLaCorrida } from "./reloj-de-la-corrida";
 
 /**
  * Apoyo de las pruebas de integración del cierre del día (E3b): una empresa con los módulos del plan activados (el guard exige
@@ -97,7 +98,7 @@ export async function crearMundoDeCierre(
     empresa: e.empresa,
     sucursal: sucursalId(sucursal),
     persona: id,
-    ctx: () => ({ ...comoEmpresa(e.empresa, id), ahora: new Date() }),
+    ctx: () => ({ ...comoEmpresa(e.empresa, id), ahora: ahoraDeLaCorrida() }),
   };
 }
 

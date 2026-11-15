@@ -64,6 +64,7 @@ describe.skipIf(base === null)("stock: la persistencia contra el esquema real", 
         "0032_lotes_y_recetas.sql",
         "0042_conteo_con_hora.sql",
         "0049_producto_oculto_en_stock.sql",
+        "0056_receta_sin_insumos.sql",
       ].map((archivo) => readFile(join(import.meta.dirname, "../../migraciones", archivo), "utf8")),
     );
     const deDisparadores = migraciones.flatMap((texto) =>

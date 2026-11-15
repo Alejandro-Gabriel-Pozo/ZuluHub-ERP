@@ -49,7 +49,7 @@ describe.skipIf(base === null)("stock: recetas (E6-T6)", () => {
 
   const kilos = { unidadBase: "KILOGRAMO", dimension: "MASA" } as const;
   const insumo = (datos: Parameters<MontajeDeStock["articulo"]>[1] = {}, escenario = e) =>
-    c.articulo(escenario, { clase: "INSUMO", ...datos });
+    c.articulo(escenario, { clase: "MATERIA_PRIMA", ...datos });
   const materia = (datos: Parameters<MontajeDeStock["articulo"]>[1] = {}) =>
     c.articulo(e, { clase: "MATERIA_PRIMA", ...datos });
   const elaborado = (datos: Parameters<typeof productoDeBase>[2] = {}, empresa = e.empresa) =>
@@ -521,7 +521,7 @@ describe.skipIf(base === null)("stock: recetas (E6-T6)", () => {
     it("fichaDeReceta: costo por línea y de la receta con costos.ver; sin costo no es cero (incompleto y se lista); el insumo operativo va aparte; el operador no ve costos", async () => {
       const harina = await materia(kilos);
       const manteca = await materia(kilos);
-      const bolsa = await insumo();
+      const bolsa = await c.articulo(e, { clase: "INSUMO" });
       const masa = await elaborado();
       valorDe(
         await guardar(
@@ -529,11 +529,27 @@ describe.skipIf(base === null)("stock: recetas (E6-T6)", () => {
           [
             componente(harina.producto, "6", "KILOGRAMO"),
             componente(manteca.producto, "2", "KILOGRAMO"),
-            componente(bolsa.producto, "1"),
           ],
           { rinde: "9.5" },
         ),
       );
+      // Una receta GUARDADA ANTES de que el insumo operativo dejara de entrar (14/11/2026: la receta lleva solo ingredientes): hoy ni el servidor ni la
+      // base lo aceptan, así que la línea se siembra saltando los disparadores. Lo que se prueba es que las recetas viejas siguen calculándose igual.
+      await c.dueno.query("begin");
+      try {
+        await c.dueno.query("set local session_replication_role = replica");
+        await c.dueno.query(
+          `insert into componente_de_composicion (empresa_id, composicion_id, numero, articulo_id, cantidad, unidad_id, dimension)
+           select $1, k.id, 3, a.id, 1, 'UNIDAD', a.dimension
+             from composicion k, articulo_de_stock a
+            where k.producto_id = $2 and a.id = $3`,
+          [e.empresa, masa, bolsa.articulo],
+        );
+        await c.dueno.query("commit");
+      } catch (error) {
+        await c.dueno.query("rollback");
+        throw error;
+      }
       await costear(harina.producto, "1000");
       await costear(manteca.producto, "9000");
       const ficha = await lleno.fichaDeReceta(e.gerente, { productoId: masa });

@@ -124,6 +124,10 @@ export function armarGuardarComposicion(dependencias: DependenciasDeStock) {
         for (const c of leidos.valor) {
           const componente = productoDe.get(c.productoId);
           if (componente === undefined) return err("COMPONENTE_NO_CONTROLADO");
+          // La receta lleva solo ingredientes (materia prima, elaborado y reventa): el packaging y la limpieza (clase «insumo») no entran
+          // (decisión del dueño del 14/11/2026, decisiones-del-dueno-2026-11.md, «Receta e insumos operativos»). Las versiones ya guardadas
+          // con un insumo no se tocan; guardar una versión nueva con él, sí se rechaza.
+          if (componente.claseDeUso === "INSUMO") return err("COMPONENTE_ES_INSUMO");
           if (componente.claseDeUso === "ELABORADO") {
             elaborados.push(componente);
             dimensionDe.set(componente.id, componente.dimension);
