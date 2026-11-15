@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import type { CatalogoDb } from "./esquema";
 import { FORMA_DE_UUID } from "./filas";
@@ -11,6 +11,11 @@ import { aSeccion, type SeccionDeCarta } from "./repositorio-de-productos";
 export interface RepositorioDeSecciones {
   /** TODAS las secciones, activas o no, en el orden de la carta: la lista de la ficha necesita las apagadas para «volver a prender». */
   todas(empresa: EmpresaId): Promise<readonly SeccionDeCarta[]>;
+  /**
+   * Lo mismo que `todas`, con cuántos productos (de CUALQUIER estado) apuntan a cada una, en UNA consulta (sin una por sección). La pantalla de secciones
+   * muestra la cantidad también de las apagadas.
+   */
+  todasConProductos(empresa: EmpresaId): Promise<readonly SeccionConProductos[]>;
   /**
    * Las secciones ACTIVAS, tomadas con `FOR UPDATE` en un orden fijo (por `id`): dos reordenamientos a la vez toman las mismas filas en el mismo orden, así
    * que uno espera al otro y no hay cruce. Se devuelven en el orden de la carta (`orden` y, si empatan, `id`).
@@ -27,6 +32,8 @@ export interface RepositorioDeSecciones {
   reactivar(empresa: EmpresaId, id: string): Promise<SeccionDeCarta | null>;
 }
 
+export type SeccionConProductos = Readonly<{ seccion: SeccionDeCarta; productos: number }>;
+
 export function crearRepositorioDeSecciones(db: Kysely<CatalogoDb>): RepositorioDeSecciones {
   return {
     async todas(empresa) {
@@ -39,6 +46,24 @@ export function crearRepositorioDeSecciones(db: Kysely<CatalogoDb>): Repositorio
         .orderBy("id")
         .execute();
       return filas.map(aSeccion);
+    },
+    async todasConProductos(empresa) {
+      const filas = await db
+        .selectFrom("seccion_de_carta as s")
+        .leftJoin("producto as p", (join) =>
+          join
+            .onRef("p.seccion_de_carta_id", "=", "s.id")
+            .onRef("p.empresa_id", "=", "s.empresa_id"),
+        )
+        .selectAll("s")
+        .select(sql<string>`count(p.id)`.as("productos"))
+        .where("s.empresa_id", "=", empresa)
+        .groupBy("s.id")
+        .orderBy("s.orden")
+        .orderBy("s.nombre_clave")
+        .orderBy("s.id")
+        .execute();
+      return filas.map((f) => ({ seccion: aSeccion(f), productos: Number(f.productos) }));
     },
     async bloquearActivas(empresa) {
       const filas = await db

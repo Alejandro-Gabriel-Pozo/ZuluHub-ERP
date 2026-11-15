@@ -11,6 +11,7 @@ export type {
   GrupoDeFicha,
   OpcionDeFicha,
   PaginaDeProductos,
+  SeccionParaGestionar,
   PreciosDelProducto,
   PrecioDeLista,
   ProductoDeLista,
