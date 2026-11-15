@@ -54,7 +54,7 @@ function recogerDatos(datos: unknown): DatosDelCobro | null {
   for (const campo of CAMPOS_DE_DATOS) {
     if (origen[campo] !== undefined) recogidos[campo] = origen[campo];
   }
-  return recogidos as DatosDelCobro;
+  return recogidos;
 }
 
 export type ErrorDeCobros =
