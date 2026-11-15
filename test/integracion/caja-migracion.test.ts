@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import { TRANSICIONES_DE_SESION } from "../../src/modulos/caja/publico";
 import { comoPlataforma, crearBaseAparte } from "./entorno";
 import { CARPETA_DE_MIGRACIONES } from "./marcas-apoyo";
 import {
@@ -496,13 +497,15 @@ describe.skipIf(base === null)(
       });
 
       it("transiciones exactas de la sesión: ABIERTA → EN_CIERRE | CERRADA y EN_CIERRE → ABIERTA | CERRADA, y nada más", async () => {
+        // La tabla del DOMINIO es la fuente: la base impone exactamente esos pares (si alguien cambia una y no la otra, esta prueba falla) más UN toque
+        // que no es un cambio de estado: ABIERTA>ABIERTA, la escritura «sin cambios» que hace un movimiento cargado fuera de `serializable` para chocar
+        // con un cierre en vuelo (hueco de dinero del cierre, 0027 C1). Ese toque no es una transición del dominio y por eso no figura en su tabla.
+        const TOQUE_SIN_CAMBIOS = "ABIERTA>ABIERTA";
         const PERMITIDAS = new Set([
-          "ABIERTA>EN_CIERRE",
-          "ABIERTA>CERRADA",
-          // El toque sin cambios que hace un movimiento cargado fuera de `serializable` (hueco de dinero del cierre).
-          "ABIERTA>ABIERTA",
-          "EN_CIERRE>ABIERTA",
-          "EN_CIERRE>CERRADA",
+          ...Object.entries(TRANSICIONES_DE_SESION).flatMap(([desde, haciaLista]) =>
+            haciaLista.map((hacia) => `${desde}>${hacia}`),
+          ),
+          TOQUE_SIN_CAMBIOS,
         ]);
         const ESTADOS = ["ABIERTA", "EN_CIERRE", "CERRADA"] as const;
         const iniciar = (s: SesionDePrueba, sesion: string) =>
