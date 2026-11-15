@@ -188,6 +188,7 @@ export const ERRORES_DE_VENTAS_POR_RESTRICCION: Readonly<Record<string, string>>
   linea_unidad_de_venta_ck: "NO_TRADUCIDA",
   linea_variante_completa_ck: "NO_TRADUCIDA",
   linea_variante_nombre_ck: "NO_TRADUCIDA",
+  linea_nombre_de_cocina_ck: "NO_TRADUCIDA",
   linea_variante_version_fkey: "NO_TRADUCIDA",
   linea_variante_version_no_corresponde: "INVARIANTE_DE_VENTAS",
   numerador_alta_invalida: "NO_TRADUCIDA",

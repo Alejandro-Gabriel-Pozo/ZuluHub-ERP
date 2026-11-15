@@ -20,6 +20,8 @@ import {
   MOTIVO_UNIDA_COBRADA,
 } from "./cuenta-de-mesa";
 import type { ErrorDeSalon } from "./errores";
+import { accionesDeCaso } from "../../../capacidades/permisos/declaracion";
+import { DECLARACIONES } from "./declaraciones";
 
 type R<S> = Resultado<S, ErrorDeSalon>;
 
@@ -144,11 +146,12 @@ export function armarCobro(dependencias: DependenciasDeSalon) {
       const resultado = await dependencias.transacciones.ejecutar(
         { contexto, reintentos: REINTENTOS_AL_COBRAR },
         async (tx) => {
-          const persona = await prepararComando(tx, contexto, dependencias.reglas, [
-            "cuentas.cerrar",
-            "tickets.cobrar",
-            "cuentas.anular",
-          ]);
+          const persona = await prepararComando(
+            tx,
+            contexto,
+            dependencias.reglas,
+            accionesDeCaso(DECLARACIONES.cobrarMesa),
+          );
           if (!persona.ok) return persona;
           return cobrar(tx, dependencias, contexto, persona.valor, entrada);
         },

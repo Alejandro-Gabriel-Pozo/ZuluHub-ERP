@@ -126,6 +126,7 @@ export async function copiarLineaEnTx(
     posicion,
     productoId: origen.productoId,
     descripcion: origen.descripcion,
+    nombreDeCocina: origen.nombreDeCocina,
     varianteOpcionId: origen.varianteOpcionId,
     varianteNombre: origen.varianteNombre,
     varianteVersionDeOpcionId: origen.varianteVersionDeOpcionId,

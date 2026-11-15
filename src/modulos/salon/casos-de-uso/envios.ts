@@ -16,6 +16,8 @@ import { armarComando, exigirAlcance, exigirUuid } from "./comun";
 import type { DependenciasDeSalon, TxDeSalon } from "./contrato";
 import { claseDeCuenta, exigirCuentaUsable, rotuloDeLaCuenta } from "./cuenta-de-mesa";
 import type { ErrorDeSalon } from "./errores";
+import { accionesDeCaso } from "../../../capacidades/permisos/declaracion";
+import { DECLARACIONES } from "./declaraciones";
 
 type R<S> = Resultado<S, ErrorDeSalon>;
 
@@ -50,7 +52,7 @@ export function armarEnvios(dependencias: DependenciasDeSalon) {
   const comando = armarComando(dependencias);
   return {
     enviarACocina: comando(
-      ["comandas.enviar"],
+      accionesDeCaso(DECLARACIONES.enviarACocina),
       async (
         tx: TxDeSalon,
         contexto: ContextoOperativo,
@@ -63,7 +65,7 @@ export function armarEnvios(dependencias: DependenciasDeSalon) {
       },
     ),
     pedirQueSalga: comando(
-      ["comandas.enviar"],
+      accionesDeCaso(DECLARACIONES.pedirQueSalga),
       async (
         tx: TxDeSalon,
         contexto: ContextoOperativo,
@@ -76,7 +78,7 @@ export function armarEnvios(dependencias: DependenciasDeSalon) {
       },
     ),
     anularItemEnviado: comando(
-      ["cuentas.anular_linea", "cuentas.agregar_linea"],
+      accionesDeCaso(DECLARACIONES.anularItemEnviado),
       async (
         tx: TxDeSalon,
         contexto: ContextoOperativo,
