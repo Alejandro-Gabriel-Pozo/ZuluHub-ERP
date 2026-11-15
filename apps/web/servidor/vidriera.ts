@@ -10,6 +10,7 @@ import {
   type VistaDeVidriera,
   type VistaDeProducto,
 } from "../../../src/capacidades/experiencia/vidriera/vista";
+import type { AlcanceDelHost } from "../../../src/capacidades/experiencia/puerta";
 import type { VidrieraPublica } from "../../../src/puertos/vidriera-publica";
 import { web } from "./composicion";
 
@@ -38,13 +39,14 @@ function rutaPublicaDe(codigo: string): string {
 
 /**
  * La carta lista para pintar, o `null` si no existe en ESA marca (misma respuesta para cualquier código malo).
- * `marcaId` es el de la puerta resuelta para el host del pedido (`exigirPuerta("CARTA")`), nunca un dato del cliente (S2).
+ * `puerta` es la resuelta para el host del pedido (`exigirPuerta("CARTA")`), nunca un dato del cliente (S2): lleva la marca y el dueño del host, y un host dedicado
+ * a una empresa solo sirve la de ella (H-DOM-1). Se pasa ENTERA: no hay forma de pedir una carta sin el dueño.
  */
 export async function vidrieraParaLaPantalla(
-  marcaId: string,
+  puerta: AlcanceDelHost,
   codigo: string,
 ): Promise<VidrieraParaLaPantalla | null> {
-  const vidriera = await vidrieras().porCodigo(marcaId, codigo);
+  const vidriera = await vidrieras().porCodigo(puerta, codigo);
   if (vidriera === null) return null;
   return {
     vista: armarVistaDeVidriera(vidriera, rutaPublicaDe(codigo)),
@@ -54,11 +56,11 @@ export async function vidrieraParaLaPantalla(
 
 /** Un producto de la carta por el último tramo de su dirección (`<slug>-<h8>`), o `null` si ya no está. */
 export async function productoParaLaPantalla(
-  marcaId: string,
+  puerta: AlcanceDelHost,
   codigo: string,
   segmento: string,
 ): Promise<(VidrieraParaLaPantalla & Readonly<{ producto: VistaDeProducto }>) | null> {
-  const vidriera = await vidrieras().porCodigo(marcaId, codigo);
+  const vidriera = await vidrieras().porCodigo(puerta, codigo);
   if (vidriera === null) return null;
   const vista = armarVistaDeVidriera(vidriera, rutaPublicaDe(codigo));
   const resuelto = resolverProductoPorSegmento(

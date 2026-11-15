@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { err, ok } from "../../primitivas/resultado/resultado";
-import type { MarcaPublica, SuperficieServible } from "./puerta";
+import type { DuenioDeLaPuerta, MarcaPublica, SuperficieServible } from "./puerta";
 import {
   TAMANO_DE_LA_CACHE,
   VIDA_MAXIMA_DE_LA_CACHE_EN_MS,
@@ -11,7 +11,15 @@ import {
 
 const marca = (nombre: string): MarcaPublica => ({ nombre, tema: {}, hostDeApp: null });
 const MARCAS: Record<string, MarcaPublica> = { mA: marca("Marca A"), mB: marca("Marca B") };
+const DE_LA_MARCA: DuenioDeLaPuerta = { tipo: "MARCA" };
+/** Hosts dedicados: cada uno de una empresa distinta de la misma marca `mA` (H-DOM-1). */
+const DUENIOS: Record<string, DuenioDeLaPuerta> = {
+  "carta.e1.test": { tipo: "EMPRESA", empresaId: "e1" },
+  "carta.e2.test": { tipo: "EMPRESA", empresaId: "e2" },
+};
 const HOSTS: Record<string, [SuperficieServible, string]> = {
+  "carta.e1.test": ["CARTA", "mA"],
+  "carta.e2.test": ["CARTA", "mA"],
   "app.a.test": ["APP", "mA"],
   "a.test": ["LANDING", "mA"],
   "carta.a.test": ["CARTA", "mA"],
@@ -31,7 +39,11 @@ function armar(opciones: { vidaEnMs?: number; tamano?: number } = {}) {
     if (control.falla === "err") return Promise.resolve(err({ tipo: "Inesperado" }));
     const fila = HOSTS[host];
     return Promise.resolve(
-      ok(fila !== undefined && fila[0] === superficie ? { marcaId: fila[1] } : null),
+      ok(
+        fila !== undefined && fila[0] === superficie
+          ? { marcaId: fila[1], duenio: DUENIOS[host] ?? DE_LA_MARCA }
+          : null,
+      ),
     );
   };
   const leerMarca: LecturaDeMarca = (id, host, superficie) => {
@@ -67,7 +79,7 @@ describe("crearResolutorDePuerta: resolución", () => {
       const r = await resolver(host);
       expect(r).toEqual({
         tipo: "RESUELTA",
-        puerta: { host, superficie, marcaId: id, marca: MARCAS[id] },
+        puerta: { host, superficie, marcaId: id, duenio: { tipo: "MARCA" }, marca: MARCAS[id] },
       });
     }
   });
@@ -277,5 +289,40 @@ describe("crearResolutorDePuerta: caché", () => {
     expect(consultas).toEqual(["app.a.test|APP", "app.b.test|APP"]);
     await resolver("app.a.test");
     expect(consultas).toHaveLength(3);
+  });
+});
+
+describe("crearResolutorDePuerta: dueño del host (H-DOM-1)", () => {
+  it("el dueño viaja con la puerta: marca en el host compartido, empresa en el dedicado", async () => {
+    const { resolver } = armar();
+    const compartido = await resolver("carta.a.test");
+    const e1 = await resolver("carta.e1.test");
+    expect(compartido.tipo === "RESUELTA" && compartido.puerta.duenio).toEqual({ tipo: "MARCA" });
+    expect(e1.tipo === "RESUELTA" && e1.puerta.duenio).toEqual({
+      tipo: "EMPRESA",
+      empresaId: "e1",
+    });
+  });
+
+  it("la caché no mezcla dueños entre hosts de la misma marca (ni en la segunda lectura)", async () => {
+    const { resolver, consultas } = armar();
+    for (let vuelta = 0; vuelta < 2; vuelta++) {
+      const e1 = await resolver("carta.e1.test");
+      const e2 = await resolver("carta.e2.test");
+      const compartido = await resolver("carta.a.test");
+      expect(e1.tipo === "RESUELTA" && e1.puerta.duenio).toEqual({
+        tipo: "EMPRESA",
+        empresaId: "e1",
+      });
+      expect(e2.tipo === "RESUELTA" && e2.puerta.duenio).toEqual({
+        tipo: "EMPRESA",
+        empresaId: "e2",
+      });
+      expect(compartido.tipo === "RESUELTA" && compartido.puerta.duenio).toEqual({ tipo: "MARCA" });
+    }
+    // La segunda vuelta salió de la caché: no hubo consultas nuevas.
+    const primeras = consultas.length;
+    await resolver("carta.e1.test");
+    expect(consultas.length).toBe(primeras);
   });
 });

@@ -1,3 +1,4 @@
+import { deLaMarca } from "../utilidades/alcance-del-host";
 import type { ReactElement } from "react";
 import type * as Falso from "../utilidades/vidriera-publica-falsa";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -107,7 +108,7 @@ async function metadatosDelProducto(codigo: string, producto: string) {
 /** El tramo final de la dirección de un producto de la cafetería (de la marca A), para pedirlo por separado. */
 async function segmentoDeUnProductoDeA(): Promise<string> {
   const { vidrieraParaLaPantalla } = await import("../../apps/web/servidor/vidriera");
-  const vidriera = await vidrieraParaLaPantalla(MARCA_A.id, CAFETERIA);
+  const vidriera = await vidrieraParaLaPantalla(deLaMarca(MARCA_A.id), CAFETERIA);
   const segmento = vidriera?.vista.secciones[0]?.productos[0]?.segmento;
   if (segmento === undefined) throw new Error("la cafetería de ejemplo no tiene productos");
   return segmento;
@@ -173,10 +174,10 @@ describe("el falso de la carta respeta la marca (S2)", () => {
       "../utilidades/vidriera-publica-falsa",
     );
     const falso = crearVidrieraPublicaFalsa({ [CAFETERIA]: MARCA_A.id });
-    expect((await falso.porCodigo(MARCA_A.id, CAFETERIA))?.codigo).toBe(CAFETERIA);
-    expect(await falso.porCodigo(MARCA_B.id, CAFETERIA)).toBeNull();
-    expect(await falso.porCodigo("", CAFETERIA)).toBeNull();
-    expect(await falso.porCodigo(MARCA_A.id, PANADERIA)).toBeNull();
-    expect(await falso.porCodigo(MARCA_A.id, "no-existe")).toBeNull();
+    expect((await falso.porCodigo(deLaMarca(MARCA_A.id), CAFETERIA))?.codigo).toBe(CAFETERIA);
+    expect(await falso.porCodigo(deLaMarca(MARCA_B.id), CAFETERIA)).toBeNull();
+    expect(await falso.porCodigo(deLaMarca(""), CAFETERIA)).toBeNull();
+    expect(await falso.porCodigo(deLaMarca(MARCA_A.id), PANADERIA)).toBeNull();
+    expect(await falso.porCodigo(deLaMarca(MARCA_A.id), "no-existe")).toBeNull();
   });
 });

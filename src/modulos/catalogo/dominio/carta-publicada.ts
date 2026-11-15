@@ -10,6 +10,7 @@ import type {
   SeccionPublicada,
   VidrieraPublicada,
 } from "../../../puertos/vidriera-publica";
+import type { AlcanceDelHost } from "../../../capacidades/experiencia/puerta";
 import { ocultoPor, type Disponibilidad, type EstadoDeCarta } from "./carta-publica";
 import { filaConPrecio } from "./fila-con-precio";
 
@@ -147,16 +148,26 @@ function productoPublicado(p: ProductoLeido): ProductoPublicado | null {
 }
 
 /**
+ * Lista de permitidos (todo nace cerrado): un host de MARCA sirve la carta de cualquiera de sus empresas; uno de EMPRESA, solo la de esa empresa; un dueño que no es
+ * ninguno de los dos (un llamador sin tipos) no sirve nada. Previene H-DOM-1: un host dedicado a la empresa A servía la carta de la B de la misma marca.
+ */
+function elDuenioDelHostLaSirve(duenio: AlcanceDelHost["duenio"], empresa: EmpresaId): boolean {
+  if (duenio.tipo === "MARCA") return true;
+  return duenio.tipo === "EMPRESA" && duenio.empresaId === empresa;
+}
+
+/**
  * La carta que ve el comensal, o `null` si no se sirve (la misma respuesta para todos los motivos: no hay oráculo). No se sirve si: la carta no está en línea; su
- * sucursal está cerrada; la marca del tenant no es la del host; la empresa no opera. Sale cada producto activo, con sección activa, que NO está oculto en esa sucursal
+ * sucursal está cerrada; la marca del tenant no es la del host; el host es de una empresa y la carta es de otra; la empresa no opera. Sale cada producto activo, con sección activa, que NO está oculto en esa sucursal
  * (la regla única `ocultoPor`) y con precio para la carta; una sección sin productos no sale. El orden de secciones y productos es el de la entrada.
  */
 export function armarVidrieraPublicada(
   leida: CartaLeida,
-  marcaDelHost: string,
+  host: AlcanceDelHost,
 ): VidrieraPublicada | null {
   if (leida.carta.estado !== "EN_LINEA" || !leida.sucursalActiva) return null;
-  if (leida.marcaId !== marcaDelHost) return null;
+  if (leida.marcaId !== host.marcaId) return null;
+  if (!elDuenioDelHostLaSirve(host.duenio, leida.empresaId)) return null;
   if (!puedeOperar(estadoEfectivo(leida.estadoDelTenant, leida.estadoDeLaEmpresa))) return null;
 
   const secciones = leida.secciones
