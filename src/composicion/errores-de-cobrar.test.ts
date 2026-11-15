@@ -94,9 +94,9 @@ describe("accionDeCobrar", () => {
       respuesta,
       { cajaId: "no-es-uuid" },
       entradaDeOpcionesDeCobro,
-      async () => {
+      () => {
         corrio = true;
-        return ok(1);
+        return Promise.resolve(ok(1));
       },
       (x) => x,
     );
@@ -109,7 +109,7 @@ describe("accionDeCobrar", () => {
       respuesta,
       { cajaId: ID },
       entradaDeOpcionesDeCobro,
-      async () => err({ error: "COBRO_NO_CUADRA", sobra: "5.00" }),
+      () => Promise.resolve(err({ error: "COBRO_NO_CUADRA", sobra: "5.00" })),
       (x) => x,
     );
     expect(r).toMatchObject({ ok: false, error: { codigo: "CAJA_ACCION_NO_PERMITIDA" } });
@@ -122,9 +122,7 @@ describe("accionDeCobrar", () => {
       respuesta,
       { cajaId: ID },
       entradaDeOpcionesDeCobro,
-      async () => {
-        throw new Error("password=hunter2 en la base");
-      },
+      () => Promise.reject(new Error("password=hunter2 en la base")),
       (x) => x,
     );
     expect(r.ok).toBe(false);

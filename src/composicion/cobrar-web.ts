@@ -40,7 +40,7 @@ type Importe = Readonly<{ moneda: string; monto: string }>;
 
 /** Los datos del cobro sin las claves ausentes: para el dominio `undefined` es «no vino» y no puede viajar como valor (`exactOptionalPropertyTypes`). */
 const sinAusentes = (datos: Readonly<Record<string, string | number | undefined>>): DatosDelCobro =>
-  Object.fromEntries(Object.entries(datos).filter(([, v]) => v !== undefined)) as DatosDelCobro;
+  Object.fromEntries(Object.entries(datos).filter(([, v]) => v !== undefined));
 const importe = (i: Importe): Importe => ({ moneda: i.moneda, monto: i.monto });
 
 // ---------------------------------------------------------------------------------------------------------------
