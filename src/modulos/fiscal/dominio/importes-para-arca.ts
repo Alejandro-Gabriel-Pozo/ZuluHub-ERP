@@ -63,7 +63,7 @@ export function importesParaArca(
 }
 
 /**
- * Una entrada por alícuota gravada, sin repetir (error 10022). Con `ImpIVA` igual a cero ARCA solo
+ * Una entrada por alícuota gravada con base mayor que cero, sin repetir (errores 10022 y 10020). Con `ImpIVA` igual a cero ARCA solo
  * admite la alícuota 0 % (error 10018, l. 989): si hay IVA gravado pero todos los importes redondean
  * a cero (totales de centavos), se informa una sola entrada al 0 % con toda la base.
  */
@@ -72,7 +72,10 @@ function alicuotasInformadas(
   neto: Importe,
   iva: Importe,
 ): readonly AlicuotaParaArca[] {
-  if (gravadas.length === 0) return [];
+  // `BaseImp` de cada `AlicIVA` tiene que ser MAYOR que cero (error 10020, excluyente): una alícuota cuyo neto es cero (un renglón a $0, p. ej. la cortesía
+  // parcial) no se informa; el total y el neto no cambian. Si no queda ninguna con base, no se informa ninguna.
+  const conBase = gravadas.filter((d) => d.neto.unidades > 0n);
+  if (conBase.length === 0) return [];
   if (iva.unidades === 0n) return [{ alicuota: "0", base: neto, iva }];
-  return gravadas.map((d) => ({ alicuota: d.alicuota, base: d.neto, iva: d.iva }));
+  return conBase.map((d) => ({ alicuota: d.alicuota, base: d.neto, iva: d.iva }));
 }
