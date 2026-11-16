@@ -254,11 +254,26 @@ describe("validarFormulario: nombres (texto visible de una línea)", () => {
     expect(camposInvalidos({ nombreContacto: "a".repeat(100) })).toEqual(["nombreContacto"]);
   });
 
-  it("un emoji cuenta como un carácter (como char_length de la base), no como dos", () => {
-    const ochenta = "😀".repeat(80);
-    expect(ochenta.length).toBe(160);
+  it("el largo se cuenta en caracteres, no en piezas del texto", () => {
+    const ochenta = "é".repeat(80);
     expect(aceptada({ nombreContacto: ochenta }).nombreContacto).toBe(ochenta);
-    expect(camposInvalidos({ nombreContacto: "😀".repeat(81) })).toEqual(["nombreContacto"]);
+    expect(camposInvalidos({ nombreContacto: "é".repeat(81) })).toEqual(["nombreContacto"]);
+  });
+
+  // DECIDIDO por el dueño, 2026-11-16 (opción B, vía el orquestador): lista base, sin `¡ ! ¿ ?`; un negocio como «¡Qué Rico!» no pasa.
+  it("lo que la lista de permitidos no nombra se rechaza, también «¡Qué Rico!», otros alfabetos y emojis", () => {
+    for (const texto of [
+      "¡Qué Rico!",
+      "¿Querés papas?",
+      "李雷",
+      "Ana 😀",
+      "<b>Ana</b>",
+      "=1+1",
+      "Ana @ casa",
+    ]) {
+      expect(camposInvalidos({ nombreContacto: texto }), texto).toEqual(["nombreContacto"]);
+      expect(camposInvalidos({ nombreNegocio: texto }), texto).toEqual(["nombreNegocio"]);
+    }
   });
 
   it("los caracteres de control, de formato, separadores de línea y sustitutos sueltos se rechazan", () => {
@@ -296,7 +311,8 @@ describe("validarFormulario: nombres (texto visible de una línea)", () => {
       "Ñandú O'Brien-Pérez",
       "Café & Té S.R.L.",
       "Panadería 25 de Mayo",
-      "李雷",
+      "Hotel Ñandú",
+      "Pizza & Co",
       "Zoë",
     ]) {
       expect(aceptada({ nombreNegocio: nombre }).nombreNegocio).toBe(nombre);

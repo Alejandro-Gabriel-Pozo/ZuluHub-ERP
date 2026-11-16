@@ -1,6 +1,7 @@
 import { LARGO_MAXIMO_DEL_EMAIL_DE_CONTACTO } from "../../../primitivas/contacto/email";
 import { cuitDesdeTexto } from "../../../primitivas/identificacion-fiscal/cuit";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { textoDeUnaLineaDesdeTexto } from "../../../primitivas/texto/texto-de-una-linea";
 import { normalizarAtribucion, type Atribucion } from "./atribucion";
 import { CODIGOS_DE_PROVINCIA, RUBROS, type Rubro, type VersionesVigentes } from "./catalogos";
 
@@ -73,20 +74,16 @@ export const LARGO_MAXIMO_DEL_NOMBRE_DEL_NEGOCIO = 100;
 export const LARGO_MAXIMO_DEL_CORREO = LARGO_MAXIMO_DEL_EMAIL_DE_CONTACTO;
 const LARGO_MAXIMO_DE_LA_PARTE_LOCAL = 64;
 
-/** Control, formato, sustitutos, uso privado, sin asignar, y los separadores de línea y de párrafo. */
-const NO_VISIBLE = /[\p{C}\p{Zl}\p{Zp}]/u;
-const ESPACIOS_RAROS = /\p{Zs}+/gu;
-
 /**
- * Texto de una línea para mostrar a una persona. `null` si no sirve. El largo se cuenta en caracteres
- * (puntos de código), como `char_length` de la base: un emoji cuenta uno.
+ * Texto de una línea para mostrar a una persona: de 1 a `maximo` caracteres de la lista de permitidos (`texto-de-una-linea.ts`, una
+ * sola fuente, la misma que la razón social y el PDF), en su forma canónica (NFC, espacios repetidos en uno). `null` si no sirve. El
+ * largo se cuenta en caracteres (puntos de código), como `char_length` de la base. DECIDIDO por el dueño, 2026-11-16 (pregunta por el
+ * orquestador, opción B): la lista base, SIN `¡ ! ¿ ?`; consecuencia aceptada: un negocio como «¡Qué Rico!», otros alfabetos y los
+ * emojis no pasan el formulario. Revertir es cambiar solo el conjunto de estos dos campos (nombre de contacto y nombre del negocio).
  */
 function textoVisible(crudo: string, maximo: number): string | null {
-  const recortado = crudo.normalize("NFC").trim();
-  if (NO_VISIBLE.test(recortado)) return null;
-  const limpio = recortado.replace(ESPACIOS_RAROS, " ");
-  const largo = [...limpio].length;
-  return largo >= 1 && largo <= maximo ? limpio : null;
+  const limpio = textoDeUnaLineaDesdeTexto(crudo, { maximo, exigirUnaLetra: false });
+  return limpio.ok ? limpio.valor : null;
 }
 
 const FUERA_DE_ASCII_VISIBLE = /[^!-~]/;
