@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import pg from "pg";
+import ts from "typescript";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { crearBaseAparte } from "./entorno";
 import type { BaseDePruebas } from "./global";
@@ -79,13 +80,56 @@ function archivos(dir: string, salida: string[] = []): string[] {
   return salida;
 }
 
-/** El texto de las pruebas que comparan definiciones de restricciones. */
-function textoDePruebasDeParidad(): string {
+/** Los helpers de `paridad-apoyo.ts` que reciben el nombre de la restricción como literal. */
+const HELPERS_DE_PARIDAD = new Set([
+  "definicionDeCheck",
+  "paridadDeLista",
+  "paridadDeTope",
+  "paridadDeListaNumerica",
+]);
+
+/**
+ * Los nombres de restricción que una prueba COMPARA, leídos del árbol sintáctico (no del texto): (1) literal pasado a una llamada de un helper de paridad (la forma buena);
+ * (2) LEGADO: literal de texto de una prueba que consulta `pg_get_constraintdef`, que desaparece a medida que esas pruebas migran a los helpers. Un nombre en un comentario, o en un
+ * literal de una prueba que no compara definiciones, NO cuenta. Previene: dar por cubierta una restricción que una prueba solo menciona. Límite que NO ve (legado): un literal
+ * cualquiera dentro de una prueba que sí consulta definiciones, aunque no lo compare.
+ */
+export function nombresCubiertos(
+  fuentes: readonly Readonly<{ ruta: string; texto: string }>[],
+): ReadonlySet<string> {
+  const cubiertos = new Set<string>();
+  for (const { ruta, texto } of fuentes) {
+    const arbol = ts.createSourceFile(ruta, texto, ts.ScriptTarget.Latest, true);
+    const literales: string[] = [];
+    let consultaDefiniciones = false;
+    const recorrer = (nodo: ts.Node): void => {
+      if (ts.isCallExpression(nodo) && ts.isIdentifier(nodo.expression)) {
+        const nombre = nodo.expression.text;
+        if (HELPERS_DE_PARIDAD.has(nombre))
+          for (const a of nodo.arguments) if (ts.isStringLiteralLike(a)) cubiertos.add(a.text);
+      }
+      if (ts.isStringLiteralLike(nodo)) {
+        literales.push(nodo.text);
+        if (nodo.text.includes("pg_get_constraintdef")) consultaDefiniciones = true;
+      }
+      ts.forEachChild(nodo, recorrer);
+    };
+    recorrer(arbol);
+    if (consultaDefiniciones)
+      for (const l of literales) {
+        cubiertos.add(l);
+        // El nombre embebido en el SQL de la prueba: `where conname = 'x_ck'`.
+        for (const m of l.matchAll(/'([a-z0-9_]+)'/g)) cubiertos.add(m[1] ?? "");
+      }
+  }
+  return cubiertos;
+}
+
+/** Las pruebas del repositorio, con su texto. */
+function pruebasDelRepositorio(): readonly Readonly<{ ruta: string; texto: string }>[] {
   return archivos(join(RAIZ, "test"))
     .concat(archivos(join(RAIZ, "src")))
-    .map((f) => readFileSync(f, "utf8"))
-    .filter((t) => t.includes("pg_get_constraintdef") || t.includes("paridad-apoyo"))
-    .join("\n");
+    .map((ruta) => ({ ruta, texto: readFileSync(ruta, "utf8") }));
 }
 
 describe("escáner de restricciones (C2): la lógica, con violaciones inyectadas", () => {
@@ -132,6 +176,43 @@ describe("escáner de restricciones (C2): la lógica, con violaciones inyectadas
   });
 });
 
+describe("escáner de restricciones (C2): qué cuenta como «tiene prueba»", () => {
+  const fuente = (texto: string) => [{ ruta: "x.test.ts", texto }];
+  it("el nombre como literal de un helper de paridad cuenta", () => {
+    const c = nombresCubiertos(fuente('await paridadDeLista(c, "t", "t_estado_ck", LISTA);'));
+    expect(c.has("t_estado_ck")).toBe(true);
+  });
+  it("el nombre solo en un comentario NO cuenta, ni siquiera en una prueba que consulta definiciones", () => {
+    const c = nombresCubiertos(
+      fuente(
+        '// ver t_estado_ck y "t_estado_ck"\n/* "t_otro_ck" */\nconst d = "select pg_get_constraintdef(oid)";',
+      ),
+    );
+    expect(c.has("t_estado_ck")).toBe(false);
+    expect(c.has("t_otro_ck")).toBe(false);
+  });
+  it("el nombre en un literal de una prueba que no compara definiciones NO cuenta", () => {
+    expect(nombresCubiertos(fuente('const x = "t_estado_ck";')).has("t_estado_ck")).toBe(false);
+    expect(nombresCubiertos(fuente('otraCosa(c, "t", "t_estado_ck");')).has("t_estado_ck")).toBe(
+      false,
+    );
+  });
+  it("LEGADO: el nombre embebido en el SQL de una prueba que consulta pg_get_constraintdef cuenta", () => {
+    const c = nombresCubiertos(
+      fuente(
+        "const q = `select pg_get_constraintdef(oid) from pg_constraint where conname = 't_estado_ck'`;",
+      ),
+    );
+    expect(c.has("t_estado_ck")).toBe(true);
+  });
+  it("LEGADO: un literal en una prueba que consulta pg_get_constraintdef cuenta", () => {
+    const c = nombresCubiertos(
+      fuente('const q = "select pg_get_constraintdef(oid)"; const n = "t_estado_ck";'),
+    );
+    expect(c.has("t_estado_ck")).toBe(true);
+  });
+});
+
 describe.skipIf(base === null)("escáner de restricciones (C2): la base real", () => {
   let aparte: Awaited<ReturnType<typeof crearBaseAparte>>;
   let c: pg.Client;
@@ -153,8 +234,8 @@ describe.skipIf(base === null)("escáner de restricciones (C2): la base real", (
     const ruta = join(RAIZ, "arquitectura/paridad/sin-prueba.json");
     expect(existsSync(ruta)).toBe(true);
     const deuda = JSON.parse(readFileSync(ruta, "utf8")) as Deuda;
-    const texto = textoDePruebasDeParidad();
-    const tiene = (n: string) => texto.includes(`"${n}"`) || texto.includes(`'${n}'`);
+    const cubiertos = nombresCubiertos(pruebasDelRepositorio());
+    const tiene = (n: string) => cubiertos.has(n);
     const hoy = new Date().toISOString().slice(0, 10);
     expect(evaluar(rows, deuda, tiene, hoy, MAXIMO_EN_DEUDA)).toEqual([]);
   });
