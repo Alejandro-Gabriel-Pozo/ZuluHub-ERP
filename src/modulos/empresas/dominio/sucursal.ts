@@ -1,6 +1,7 @@
 import type { EmpresaId, SucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { horaDelDiaDesdeTexto, type HoraDelDia } from "../../../primitivas/tiempo/hora-del-dia";
+import { textoDeUnaLineaDesdeTexto } from "../../../primitivas/texto/texto-de-una-linea";
 import {
   contactoQueCambia,
   type CambiosDeContacto,
@@ -50,22 +51,19 @@ type ErrorAlEditar = Extract<ErrorDeSucursal, "SUCURSAL_NO_ENCONTRADA" | "VERSIO
 /** Largo máximo del nombre, en caracteres (la base no lo limita; sin tope entra cualquier cosa). */
 export const LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL = 100;
 
-/** Caracteres de control (saltos de línea, tabuladores…): un nombre es una sola línea de texto. */
-const CARACTER_DE_CONTROL = /\p{Cc}/u;
-
 /**
- * El nombre limpio: normalizado (NFC, así "é" escrita de una o de dos piezas es el mismo nombre
- * para la unicidad), sin espacios en los extremos, no vacío, de hasta 100 caracteres y sin
- * caracteres de control.
+ * El nombre limpio: texto de una línea de 1 a `LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL` caracteres de la lista de permitidos
+ * (`texto-de-una-linea.ts`, una sola fuente: la misma que dibuja el PDF), en su forma canónica: NFC (así "é" escrita de una o de dos
+ * piezas es el mismo nombre para la unicidad), sin espacios en los extremos y con los espacios repetidos en uno. Previene: un
+ * invisible, `<>` o un emoji en un nombre que se imprime en el comprobante. SUPUESTO (DEC-0047) del ingeniero (Deuda 1, 2026-11-16,
+ * sin fuente del dueño): la lista base; revertir es volver a «sin caracteres de control».
  */
 export function nombreDeSucursalValido(texto: string): Resultado<string, ErrorDeNombreDeSucursal> {
-  const limpio = texto.normalize("NFC").trim();
-  if (limpio === "") return err("NOMBRE_DE_SUCURSAL_INVALIDO");
-  if ([...limpio].length > LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL) {
-    return err("NOMBRE_DE_SUCURSAL_INVALIDO");
-  }
-  if (CARACTER_DE_CONTROL.test(limpio)) return err("NOMBRE_DE_SUCURSAL_INVALIDO");
-  return ok(limpio);
+  const limpio = textoDeUnaLineaDesdeTexto(texto, {
+    maximo: LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL,
+    exigirUnaLetra: false,
+  });
+  return limpio.ok ? ok(limpio.valor) : err("NOMBRE_DE_SUCURSAL_INVALIDO");
 }
 
 /**
