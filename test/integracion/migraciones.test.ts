@@ -79,6 +79,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0057_opcion_consume_elaborado.sql",
         "0063_compras_recepcion_separada.sql",
         "0064_stock_entrada_de_compra_a_cuarentena_y_rechazo.sql",
+        "0065_producto_en_la_linea_de_la_factura.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -139,6 +140,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0057_opcion_consume_elaborado.sql",
           "0063_compras_recepcion_separada.sql",
           "0064_stock_entrada_de_compra_a_cuarentena_y_rechazo.sql",
+          "0065_producto_en_la_linea_de_la_factura.sql",
         ],
       });
     } finally {
@@ -304,6 +306,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0057_opcion_consume_elaborado.sql",
         "0063_compras_recepcion_separada.sql",
         "0064_stock_entrada_de_compra_a_cuarentena_y_rechazo.sql",
+        "0065_producto_en_la_linea_de_la_factura.sql",
       ]);
     } finally {
       await aparte.destruir();

@@ -192,6 +192,8 @@ export type ComprasDb = {
     iva_de_linea: string;
     recepcion_id: string | null;
     linea_de_recepcion: number | null;
+    /** Solo la factura de N3 lo trae (0065); las de N1 y N2 quedan en `null`. */
+    producto_id: string | null;
     registrado_en: DeLaBase<Date>;
   };
   importe_por_alicuota: {

@@ -1979,6 +1979,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "linea_de_comprobante.neto_de_linea",
           "linea_de_comprobante.numero",
           "linea_de_comprobante.precio_neto",
+          "linea_de_comprobante.producto_id",
           "linea_de_comprobante.recepcion_id",
           "linea_de_comprobante.unidad",
           "linea_de_recepcion.cantidad_de_compra",
