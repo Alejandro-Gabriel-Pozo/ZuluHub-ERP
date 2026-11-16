@@ -10,60 +10,172 @@ export const TEXTOS_DE_FISCAL = {
     porDefecto:
       "Revisá los datos del comprobante: hay campos incompletos o con un formato que no es válido.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_pedido_sin_identificar": {
     porDefecto: "No se pudo identificar el pedido. Actualizá la pantalla e intentá de nuevo.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_pedido_repetido": {
     porDefecto:
       "Ya existe un comprobante con esta misma referencia pero con otros datos. Cárguelo de nuevo desde el principio.",
     largoMaximo: 200,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_punto_de_venta_no_encontrado": {
     porDefecto: "No se encontró el punto de venta.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_punto_de_venta_inactivo": {
     porDefecto: "El punto de venta está inactivo. Actívelo antes de emitir.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_emisor_inactivo": {
     porDefecto: "El emisor de este punto de venta está inactivo.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_sin_datos_fiscales": {
     porDefecto: "Faltan los datos fiscales confirmados de la empresa.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_sin_certificado": {
     porDefecto: "No hay un certificado de ARCA vigente para este punto de venta y ambiente.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_comprobante_no_encontrado": {
     porDefecto: "No encontramos ese comprobante.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_asociado_no_autorizado": {
     porDefecto: "Solo se puede corregir un comprobante que ARCA ya autorizó.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_asociado_de_otro_emisor": {
     porDefecto: "La nota debe ser del mismo emisor que el comprobante que corrige.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_asociado_de_otro_ambiente": {
     porDefecto:
       "La nota debe emitirse en el mismo ambiente (pruebas o producción) que el comprobante que corrige.",
     largoMaximo: 200,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_asociado_no_asociable": {
     porDefecto: "No se puede emitir una nota sobre una nota de crédito.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_motivo_invalido": {
     porDefecto: "Escribí el motivo: es obligatorio y tiene un largo máximo.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_receptor_invalido": {
     // Genérico y sin nombrar campos (dueño, 2026-11-06, conversación directa con la sesión «Emitir»: «uno genérico, en voseo»; Q22).
@@ -71,59 +183,171 @@ export const TEXTOS_DE_FISCAL = {
     // Genérico a propósito. Previene un aviso que nombra un campo que Emitir no tiene.
     porDefecto: "Revisá los datos del cliente.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_receptor_invalido_para_a": {
     porDefecto: "Una factura A necesita el CUIT del cliente.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_receptor_igual_al_emisor": {
     porDefecto: "El documento del cliente no puede ser el mismo que el de la empresa que factura.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_receptor_no_categorizado": {
     porDefecto: "Todavía no se pueden emitir comprobantes a un sujeto no categorizado.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_sin_renglones": {
     porDefecto: "Agregá al menos un renglón al comprobante.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_demasiados_renglones": {
     porDefecto: "El comprobante tiene más renglones de los permitidos.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_renglon_invalido": {
     porDefecto: "Hay un renglón con la descripción o la cantidad incompletas.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_alicuota_en_letra_c": {
     porDefecto: "Los comprobantes C no llevan alícuota de IVA en los renglones.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_falta_alicuota": {
     porDefecto: "Falta la alícuota de IVA en un renglón.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_modo_de_precio_invalido_para_c": {
     porDefecto: "Los comprobantes C se cargan con el IVA incluido en el precio.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_fechas_de_servicio_invalidas": {
     porDefecto:
       "Revisá las fechas del servicio: son obligatorias para servicios y el período tiene que tener sentido.",
     largoMaximo: 200,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_total_fuera_de_rango": {
     porDefecto: "El total del comprobante es demasiado grande o no es válido.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_comprobante_ya_enviado": {
     porDefecto: "El comprobante ya se envió a ARCA: esperá su respuesta antes de descartarlo.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_estado_no_descartable": {
     porDefecto: "Este comprobante ya no se puede descartar.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   // Voseo aprobado por el dueño, 2026-11-04, D-113 (Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md):
   // antes «Los datos cambiaron mientras los miraba. Actualizá la pantalla e intentá de nuevo.».
@@ -131,61 +355,170 @@ export const TEXTOS_DE_FISCAL = {
     porDefecto:
       "Los datos cambiaron mientras los mirabas. Actualizá la pantalla e intentá de nuevo.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_serie_bloqueada": {
     porDefecto:
       "La numeración del punto de venta está bloqueada hasta que se resincronice con ARCA.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_estado_no_reintentable": {
     porDefecto: "Este comprobante no se puede reintentar en su estado actual.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_serie_no_encontrada": {
     porDefecto: "No se encontró la numeración de este punto de venta.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_serie_no_bloqueada": {
     porDefecto: "La numeración ya no está bloqueada: no hace falta resincronizar.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_ultimo_distinto_del_de_arca": {
     porDefecto:
       "ARCA informa otro último número que el que viste. Revisá el dato y confirmá de nuevo.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_desfase_hacia_atras": {
     porDefecto:
       "ARCA informa un número menor que el registrado y no se puede corregir desde acá. Consultá a soporte.",
     largoMaximo: 200,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_arca_no_disponible": {
     porDefecto: "ARCA no está disponible en este momento. Intentá de nuevo en unos minutos.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_arca_certificado_no_sirve": {
     porDefecto:
       "El certificado de ARCA de este punto de venta no se pudo usar. Revíselo o cárguelo de nuevo.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_arca_servicio_no_autorizado": {
     porDefecto:
       "El certificado no está autorizado en ARCA para facturar. Autorícelo en el Administrador de Relaciones de ARCA.",
     largoMaximo: 200,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_arca_acceso_en_curso": {
     porDefecto:
       "ARCA ya tiene un acceso abierto para este certificado. Esperá unos minutos e intentá de nuevo.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_serie_en_curso": {
     porDefecto:
       "Hay un comprobante en proceso en este punto de venta. Esperá a que termine para cambiar el ambiente.",
     largoMaximo: 200,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_ambiente_no_vuelve": {
     porDefecto: "Un punto de venta que pasó a producción no vuelve al ambiente de pruebas.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/configuracion-fiscal/DetalleDelPuntoDeVenta.cliente.tsx",
+        nombre: "DetalleDelPuntoDeVenta",
+      },
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   // Pasar un punto de venta a producción que ARCA no tiene habilitado (D-77). Fuente del texto: el MISMO, palabra por palabra, que el dueño
   // aprobó para el rechazo 10005 de una factura, `fiscal.arca.punto_de_venta_no_habilitado` (este archivo, más abajo). D-77 pide un aviso
@@ -193,14 +526,38 @@ export const TEXTOS_DE_FISCAL = {
   "error.fiscal_punto_de_venta_no_habilitado_en_arca": {
     porDefecto: "El punto de venta no está habilitado en ARCA para facturar con web service.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_ya_emitio_en_produccion": {
     porDefecto: "Este punto de venta ya emitió en producción: no se puede cambiar de ambiente.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_filtro_invalido": {
     porDefecto: "Los filtros del listado no son válidos.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   // Fuente: `Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, D-36 («el servidor responde "sucursal no elegida"
   // y se pide elegir»; confirmada por el dueño el 2026-10-28) y D-34 (el servidor valida la sucursal elegida cada vez; el error
@@ -210,10 +567,31 @@ export const TEXTOS_DE_FISCAL = {
   "error.fiscal_sucursal_no_elegida": {
     porDefecto: "Elegí una sucursal.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/configuracion-fiscal/FormularioDePuntoDeVenta.cliente.tsx",
+        nombre: "FormularioDePuntoDeVenta",
+      },
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_sucursal_fuera_de_alcance": {
     porDefecto: "Sucursal fuera de tu alcance.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   // Fuente: `Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, D-50 («Una sucursal cerrada no emite»; confirmada
   // por el dueño el 2026-10-29: «No, una sucursal cerrada no emite»). El TEXTO es solo la lectura literal del nombre de la decisión: la
@@ -222,6 +600,19 @@ export const TEXTOS_DE_FISCAL = {
   "error.fiscal_sucursal_cerrada": {
     porDefecto: "Sucursal cerrada.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/configuracion-fiscal/modelo-de-puntos-de-venta.ts",
+        nombre: "accionesDelPuntoDeVenta",
+      },
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   // Fuente de los cuatro textos que siguen: `Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, registro de decisiones,
   // D-66 (los tres mensajes al cargar un punto de venta) y D-67 («Revisá los datos marcados.», que reemplaza en Datos fiscales y Puntos
@@ -230,92 +621,265 @@ export const TEXTOS_DE_FISCAL = {
   "error.fiscal_configuracion_datos_invalidos": {
     porDefecto: "Revisá los datos marcados.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/facturacion/modelo-de-emision.ts",
+        nombre: "vistaDelCliente",
+      },
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_punto_de_venta_duplicado": {
     porDefecto: "Ya existe un punto de venta con ese número.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_punto_de_venta_numero_inmutable": {
     porDefecto: "Este punto de venta ya emitió comprobantes: el número no se puede cambiar.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "error.fiscal_punto_de_venta_sin_domicilio": {
     porDefecto: "Para activarlo, cargá un domicilio.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-fiscal.ts",
+        nombre: "CLAVES_DE_ERRORES_FISCALES",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.error_generico": {
     porDefecto: "ARCA no aceptó el comprobante. Código {codigo}.",
     largoMaximo: 160,
     marcadores: ["codigo"],
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "GENERICO_POR_CLASE",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.observacion_generica": {
     porDefecto: "ARCA agregó una observación al comprobante. Código {codigo}.",
     largoMaximo: 160,
     marcadores: ["codigo"],
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "GENERICO_POR_CLASE",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.evento_generico": {
     porDefecto: "ARCA informó un evento sobre el comprobante. Código {codigo}.",
     largoMaximo: 160,
     marcadores: ["codigo"],
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "GENERICO_POR_CLASE",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.autorizacion": {
     porDefecto:
       "ARCA no reconoció la autorización del certificado. Revisá que esté autorizado para facturar.",
     largoMaximo: 200,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "CLAVE_DE_CATEGORIA",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.problema_interno": {
     porDefecto:
       "ARCA tuvo un problema interno. El comprobante se confirma solo: no lo emita de nuevo.",
     largoMaximo: 200,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "CLAVE_DE_CATEGORIA",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.sin_datos": {
     porDefecto: "ARCA no tiene datos de ese comprobante.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "CLAVE_DE_CATEGORIA",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.fuera_de_secuencia": {
     porDefecto:
       "La numeración no coincide con la que tiene ARCA. El punto de venta queda bloqueado hasta resincronizar.",
     largoMaximo: 200,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "CLAVE_DE_CATEGORIA",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.punto_de_venta_no_habilitado": {
     porDefecto: "El punto de venta no está habilitado en ARCA para facturar con web service.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "TEXTO_DE_CODIGO_DE_ARCA",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.receptor_para_a": {
     porDefecto: "Las facturas A necesitan el CUIT del cliente.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "TEXTO_DE_CODIGO_DE_ARCA",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.receptor_sin_identificar": {
     porDefecto: "Para este importe ARCA exige identificar al cliente.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "TEXTO_DE_CODIGO_DE_ARCA",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.receptor_igual_al_emisor": {
     porDefecto: "El documento del cliente no puede ser el mismo que el del emisor.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "TEXTO_DE_CODIGO_DE_ARCA",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.receptor_no_categorizado": {
     porDefecto: "ARCA exige informar la percepción de IVA para un sujeto no categorizado.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "TEXTO_DE_CODIGO_DE_ARCA",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.condicion_iva_del_receptor": {
     porDefecto: "La condición frente al IVA del cliente no corresponde a este tipo de comprobante.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "TEXTO_DE_CODIGO_DE_ARCA",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.condicion_iva_obligatoria": {
     porDefecto: "Falta la condición frente al IVA del cliente.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "TEXTO_DE_CODIGO_DE_ARCA",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.importes_no_cierran": {
     porDefecto: "Los importes del comprobante no cierran para ARCA.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "TEXTO_DE_CODIGO_DE_ARCA",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.nota_sin_asociado": {
     porDefecto: "La nota necesita el comprobante que corrige.",
     largoMaximo: 160,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "TEXTO_DE_CODIGO_DE_ARCA",
+      },
+    ],
+    fuente: "HEREDADO",
   },
   "fiscal.arca.nota_mayor_que_el_comprobante": {
     porDefecto:
       "La nota de crédito supera el importe del comprobante que corrige. ARCA la aprobó con esta observación.",
     largoMaximo: 200,
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-fiscales.ts",
+        nombre: "TEXTO_DE_CODIGO_DE_ARCA",
+      },
+    ],
+    fuente: "HEREDADO",
   },
 } as const;
