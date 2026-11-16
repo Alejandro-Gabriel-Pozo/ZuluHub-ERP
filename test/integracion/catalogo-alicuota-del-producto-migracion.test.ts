@@ -99,14 +99,12 @@ describe.skipIf(base === null)("0075: la alícuota del producto", () => {
 
   it("la reversión borra de verdad su fila del registro `migracion` (con «.sql»), para poder volver a aplicarla", async () => {
     const reversion = await REVERSION();
-    const registradas = async () =>
-      Number(
-        (
-          await dueno.query(
-            "select count(*) as n from migracion where nombre = '0075_alicuota_del_producto.sql'",
-          )
-        ).rows[0]?.n,
+    const registradas = async (): Promise<number> => {
+      const r = await dueno.query<{ n: string }>(
+        "select count(*) as n from migracion where nombre = '0075_alicuota_del_producto.sql'",
       );
+      return Number(r.rows[0]?.n);
+    };
     await sinConfirmar(dueno, async () => {
       expect(await registradas()).toBe(1);
       acepta(await intentoDelDueno(dueno, reversion));
