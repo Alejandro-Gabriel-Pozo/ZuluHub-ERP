@@ -49,6 +49,10 @@ const TABLAS = [
   "asignacion_de_conciliacion",
   "pago_de_comprobante",
   "correccion_de_compra",
+  "orden_de_compra",
+  "linea_de_orden",
+  "saldo_de_linea_de_orden",
+  "linea_de_recepcion_de_orden",
 ];
 
 describe.skipIf(base === null)("compras: la persistencia contra el esquema real", () => {
@@ -73,7 +77,15 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
       join(import.meta.dirname, "../../migraciones", "0037_compras.sql"),
       "utf8",
     );
-    const fijas = [...migracion.matchAll(/CONSTRAINT = '(\w+)'/g)].map((m) => m[1] as string);
+    // Las restricciones que lanzan los disparadores de las órdenes (0066) también se traducen.
+    const ordenes = await readFile(
+      join(import.meta.dirname, "../../migraciones", "0066_compras_ordenes.sql"),
+      "utf8",
+    );
+    const fijas = [
+      ...migracion.matchAll(/CONSTRAINT = '(\w+)'/g),
+      ...ordenes.matchAll(/CONSTRAINT = '(\w+)'/g),
+    ].map((m) => m[1] as string);
     // Las de nombre armado con el de la tabla (`TG_TABLE_NAME || '_inmutable'`): se expanden con las tablas que llevan ese disparador.
     const deLaTabla = (sufijo: string, tablas: readonly string[]) =>
       tablas.map((t) => `${t}_${sufijo}`);

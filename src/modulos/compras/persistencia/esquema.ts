@@ -278,4 +278,52 @@ export type ComprasDb = {
     registrado_en: DeLaBase<Date>;
     registrado_por: string;
   };
+  /** N4 (0066): la orden de compra al proveedor. El número, los momentos y el motivo de cierre los fija la base al cambiar de estado. */
+  orden_de_compra: {
+    id: Generated<string>;
+    empresa_id: string;
+    numero: DeLaBase<number | null>;
+    proveedor_id: string;
+    sucursal_destino_id: string | null;
+    fecha_de_entrega_prevista: string | null;
+    estado: Generated<string>;
+    cierre_motivo: DeLaBase<string | null>;
+    clave_idempotencia: SoloAlInsertar<string>;
+    huella: SoloAlInsertar<string>;
+    creado_por: SoloAlInsertar<string>;
+    creado_en: DeLaBase<Date>;
+    pedida_por: string | null;
+    pedida_en: DeLaBase<Date | null>;
+    fecha_negocio: DeLaBase<string | null>;
+    cerrada_por: string | null;
+    cerrada_en: DeLaBase<Date | null>;
+    anulada_por: string | null;
+    anulada_en: DeLaBase<Date | null>;
+    motivo_de_anulacion: string | null;
+    version: Generated<number>;
+  };
+  linea_de_orden: {
+    empresa_id: string;
+    orden_id: string;
+    numero: number;
+    producto_id: SoloAlInsertar<string>;
+    cantidad_pedida: string;
+    precio_unitario: string | null;
+    retirada: Generated<boolean>;
+  };
+  saldo_de_linea_de_orden: {
+    empresa_id: string;
+    orden_id: string;
+    linea: number;
+    cantidad_pedida: DeLaBase<string>;
+    cantidad_recibida: DeLaBase<string>;
+  };
+  linea_de_recepcion_de_orden: {
+    empresa_id: string;
+    recepcion_id: string;
+    linea: number;
+    orden_id: string;
+    linea_de_orden: number;
+    confirmo_exceso: Generated<boolean>;
+  };
 };

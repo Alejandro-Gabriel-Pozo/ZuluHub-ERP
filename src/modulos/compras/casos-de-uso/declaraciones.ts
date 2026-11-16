@@ -6,6 +6,7 @@ const ARCHIVO_DE_PAGOS = "test/integracion/compras-pagos.test.ts";
 const ARCHIVO_DE_RECEPCION = "test/integracion/compras-recepcion.test.ts";
 const ARCHIVO_DE_RECEPCION_SEPARADA = "test/integracion/compras-n3-recepcion.test.ts";
 const ARCHIVO_DE_CONCILIACION_SEPARADA = "test/integracion/compras-n3-conciliacion.test.ts";
+const ARCHIVO_DE_ORDENES = "test/integracion/compras-n4-ordenes.test.ts";
 
 /**
  * Los casos de uso de compras (E9 §3.2 a §3.6) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar (ADR-015 §4) y la
@@ -100,6 +101,56 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_RECEPCION_SEPARADA,
         it: "I1: la misma recepción dos veces (misma clave) deja una sola pendiente y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
+      },
+    },
+  },
+  crearOrden: {
+    accion: "ordenes_de_compra.crear",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_ORDENES,
+        it: "I1: la misma orden dos veces (misma clave) deja un solo borrador y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
+      },
+    },
+  },
+  editarOrden: {
+    accion: "ordenes_de_compra.crear",
+    repeticion: {
+      regla: "SIN_CAMBIOS",
+      prueba: {
+        archivo: ARCHIVO_DE_ORDENES,
+        it: "I2: editar dos veces con el mismo contenido deja una sola edición: la segunda devuelve sinCambios sin escribir ni auditar",
+      },
+    },
+  },
+  pedirOrden: {
+    accion: "ordenes_de_compra.pedir",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_ORDENES,
+        it: "I3: pedir dos veces la misma orden deja un solo número y la segunda devuelve yaEstaba sin escribir ni auditar",
+      },
+    },
+  },
+  cerrarOrden: {
+    accion: "ordenes_de_compra.cerrar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_ORDENES,
+        it: "I4: cerrar dos veces la misma orden devuelve el mismo motivo y la segunda no escribe ni audita",
+      },
+    },
+  },
+  anularOrden: {
+    accion: "ordenes_de_compra.anular",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_ORDENES,
+        it: "I5: anular dos veces la misma orden devuelve yaEstaba y la segunda no escribe ni audita",
       },
     },
   },

@@ -64,7 +64,13 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
     texto: `insert into orden_de_compra (id, empresa_id, proveedor_id, clave_idempotencia, huella, creado_por) values ($1, $2, $3, $4, $5, $6)`,
     parametros: [id, m.empresa, proveedor, claveDeCompra(), huellaAlAzar(), m.persona],
   });
-  const altaDeLinea = (m: Mundo, orden: string, producto: string, numero: number, cantidad: string) => ({
+  const altaDeLinea = (
+    m: Mundo,
+    orden: string,
+    producto: string,
+    numero: number,
+    cantidad: string,
+  ) => ({
     texto: `insert into linea_de_orden (empresa_id, orden_id, numero, producto_id, cantidad_pedida, precio_unitario) values ($1, $2, $3, $4, $5, 10)`,
     parametros: [m.empresa, orden, numero, producto, cantidad],
   });
@@ -134,7 +140,15 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
         await s.intentar(
           `insert into recepcion (id, empresa_id, sucursal_id, proveedor_id, nivel, estado, hecho_en, clave_idempotencia, huella, registrado_por)
            values ($1, $2, $3, $4, 'RECEPCION_SEPARADA', 'PENDIENTE', now(), $5, $6, $7)`,
-          [id, e.m.empresa, e.m.sucursal, extra.proveedor ?? e.proveedor, claveDeCompra(), huellaAlAzar(), e.m.persona],
+          [
+            id,
+            e.m.empresa,
+            e.m.sucursal,
+            extra.proveedor ?? e.proveedor,
+            claveDeCompra(),
+            huellaAlAzar(),
+            e.m.persona,
+          ],
         ),
       );
       acepta(
@@ -318,12 +332,16 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
     const borrador = await orden(e, ["5"], false);
     const pedida = await orden(e, ["5"]);
     await conAppDe(b(), e.m, async (s) => {
-      check(await s.intentar(cerrarSql.replace("estado = 'PEDIDA'", "estado = 'BORRADOR'"), [borrador, e.m.empresa, e.m.persona]), "orden_transicion_invalida");
       check(
-        await s.intentar(
-          "update orden_de_compra set estado = 'BORRADOR' where id = $1",
-          [pedida],
-        ),
+        await s.intentar(cerrarSql.replace("estado = 'PEDIDA'", "estado = 'BORRADOR'"), [
+          borrador,
+          e.m.empresa,
+          e.m.persona,
+        ]),
+        "orden_transicion_invalida",
+      );
+      check(
+        await s.intentar("update orden_de_compra set estado = 'BORRADOR' where id = $1", [pedida]),
         "orden_transicion_invalida",
       );
       acepta(await s.intentar(cerrarSql, [pedida, e.m.empresa, e.m.persona]));
@@ -333,7 +351,11 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
       );
       acepta(await s.intentar(anularSql, [borrador, e.m.empresa, e.m.persona]));
       check(
-        await s.intentar(pedirSql.replace("and estado = 'BORRADOR'", ""), [borrador, e.m.empresa, e.m.persona]),
+        await s.intentar(pedirSql.replace("and estado = 'BORRADOR'", ""), [
+          borrador,
+          e.m.empresa,
+          e.m.persona,
+        ]),
         "orden_transicion_invalida",
       );
     });
@@ -368,10 +390,26 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
     const id = await orden(e, ["5"], false);
     await conAppDe(b(), e.m, async (s) => {
       denegado(await s.intentar("update orden_de_compra set numero = 99 where id = $1", [id]));
-      denegado(await s.intentar("update orden_de_compra set pedida_en = now() where id = $1", [id]));
-      denegado(await s.intentar("update orden_de_compra set cierre_motivo = 'COMPLETA' where id = $1", [id]));
-      denegado(await s.intentar("update orden_de_compra set clave_idempotencia = 'otra-clave-distinta' where id = $1", [id]));
-      denegado(await s.intentar("update orden_de_compra set huella = $2 where id = $1", [id, huellaAlAzar()]));
+      denegado(
+        await s.intentar("update orden_de_compra set pedida_en = now() where id = $1", [id]),
+      );
+      denegado(
+        await s.intentar("update orden_de_compra set cierre_motivo = 'COMPLETA' where id = $1", [
+          id,
+        ]),
+      );
+      denegado(
+        await s.intentar(
+          "update orden_de_compra set clave_idempotencia = 'otra-clave-distinta' where id = $1",
+          [id],
+        ),
+      );
+      denegado(
+        await s.intentar("update orden_de_compra set huella = $2 where id = $1", [
+          id,
+          huellaAlAzar(),
+        ]),
+      );
     });
   });
 
@@ -402,14 +440,25 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
         "orden_inmutable",
       );
       check(
-        await s.intentar("update linea_de_orden set cantidad_pedida = 9 where orden_id = $1 and numero = 1", [id]),
+        await s.intentar(
+          "update linea_de_orden set cantidad_pedida = 9 where orden_id = $1 and numero = 1",
+          [id],
+        ),
         "linea_de_orden_orden_pedida",
       );
       check(
-        await s.intentar(altaDeLinea(e.m, id, e.producto, 3, "1").texto, altaDeLinea(e.m, id, e.producto, 3, "1").parametros),
+        await s.intentar(
+          altaDeLinea(e.m, id, e.producto, 3, "1").texto,
+          altaDeLinea(e.m, id, e.producto, 3, "1").parametros,
+        ),
         "linea_de_orden_orden_pedida",
       );
-      denegado(await s.intentar("update linea_de_orden set producto_id = producto_id where orden_id = $1", [id]));
+      denegado(
+        await s.intentar(
+          "update linea_de_orden set producto_id = producto_id where orden_id = $1",
+          [id],
+        ),
+      );
       expect((await s.confirmar()).ok).toBe(true);
     });
     const saldos = await dueno.query<{ linea: number; cantidad_pedida: string }>(
@@ -431,7 +480,12 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
         const l = altaDeLinea(e.m, a.id, e.producto, n, "5");
         acepta(await s.intentar(l.texto, l.parametros));
       }
-      acepta(await s.intentar("update linea_de_orden set retirada = true where orden_id = $1 and numero = 2", [a.id]));
+      acepta(
+        await s.intentar(
+          "update linea_de_orden set retirada = true where orden_id = $1 and numero = 2",
+          [a.id],
+        ),
+      );
       acepta(await s.intentar(pedirSql, [a.id, e.m.empresa, e.m.persona]));
       denegado(
         await s.intentar(
@@ -440,12 +494,18 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
         ),
       );
       denegado(
-        await s.intentar("update saldo_de_linea_de_orden set cantidad_recibida = 1 where orden_id = $1", [a.id]),
+        await s.intentar(
+          "update saldo_de_linea_de_orden set cantidad_recibida = 1 where orden_id = $1",
+          [a.id],
+        ),
       );
       expect((await s.confirmar()).ok).toBe(true);
       return a.id;
     });
-    const r = await dueno.query<{ linea: number }>("select linea from saldo_de_linea_de_orden where orden_id = $1", [id]);
+    const r = await dueno.query<{ linea: number }>(
+      "select linea from saldo_de_linea_de_orden where orden_id = $1",
+      [id],
+    );
     expect(r.rows).toEqual([{ linea: 1 }]);
   });
 
@@ -498,7 +558,12 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
         const l = altaDeLinea(e.m, a.id, e.producto, n, "5");
         acepta(await s.intentar(l.texto, l.parametros));
       }
-      acepta(await s.intentar("update linea_de_orden set retirada = true where orden_id = $1 and numero = 2", [a.id]));
+      acepta(
+        await s.intentar(
+          "update linea_de_orden set retirada = true where orden_id = $1 and numero = 2",
+          [a.id],
+        ),
+      );
       acepta(await s.intentar(pedirSql, [a.id, e.m.empresa, e.m.persona]));
       expect((await s.confirmar()).ok).toBe(true);
       return a.id;
@@ -512,7 +577,10 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
     const id = await orden(e, ["10"]);
     await recepcion(e, "6", { orden: id, linea: 1 });
     check(await intentarVinculo(e, id, "5"), "recepcion_excede_la_orden_bloqueada");
-    check(await intentarVinculo(e, id, "5", { confirmoExceso: true }), "recepcion_excede_la_orden_bloqueada");
+    check(
+      await intentarVinculo(e, id, "5", { confirmoExceso: true }),
+      "recepcion_excede_la_orden_bloqueada",
+    );
     await recepcion(e, "4", { orden: id, linea: 1 });
     expect(await recibido(id)).toBe(10);
   });
@@ -551,12 +619,30 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
     const r2 = randomUUID();
     await conAppDe(b(), e.m, async (s1) => {
       await conAppDe(b(), e.m, async (s2) => {
-        acepta(await s1.intentar(cabecera, [r1, e.m.empresa, e.m.sucursal, e.proveedor, claveDeCompra(), huellaAlAzar(), e.m.persona]));
+        acepta(
+          await s1.intentar(cabecera, [
+            r1,
+            e.m.empresa,
+            e.m.sucursal,
+            e.proveedor,
+            claveDeCompra(),
+            huellaAlAzar(),
+            e.m.persona,
+          ]),
+        );
         acepta(await s1.intentar(lineaSql, [e.m.empresa, r1, e.producto]));
         acepta(await s1.intentar(vinculoSql, [e.m.empresa, r1, id]));
         // La numeración de las recepciones de la empresa serializa a las dos: la segunda espera y, al terminar la primera, choca con el número ya tomado (la aplicación reintenta,
         // y en el reintento el saldo ya está lleno: eso lo prueba la prueba de arriba).
-        const segunda = s2.directo(cabecera, [r2, e.m.empresa, e.m.sucursal, e.proveedor, claveDeCompra(), huellaAlAzar(), e.m.persona]);
+        const segunda = s2.directo(cabecera, [
+          r2,
+          e.m.empresa,
+          e.m.sucursal,
+          e.proveedor,
+          claveDeCompra(),
+          huellaAlAzar(),
+          e.m.persona,
+        ]);
         expect(await esperarBloqueo(dueno, s2.pid)).toBe(true);
         expect((await s1.confirmar()).ok).toBe(true);
         const choque = await segunda;
@@ -616,7 +702,15 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
           await s2.intentar(
             `insert into recepcion (id, empresa_id, sucursal_id, proveedor_id, nivel, estado, hecho_en, clave_idempotencia, huella, registrado_por)
              values ($1, $2, $3, $4, 'RECEPCION_SEPARADA', 'PENDIENTE', now(), $5, $6, $7)`,
-            [rid, e.m.empresa, e.m.sucursal, e.proveedor, claveDeCompra(), huellaAlAzar(), e.m.persona],
+            [
+              rid,
+              e.m.empresa,
+              e.m.sucursal,
+              e.proveedor,
+              claveDeCompra(),
+              huellaAlAzar(),
+              e.m.persona,
+            ],
           ),
         );
         acepta(
@@ -651,8 +745,15 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
         ),
         "linea_de_recepcion_de_orden_cabecera_confirmada",
       );
-      denegado(await s.intentar("update linea_de_recepcion_de_orden set confirmo_exceso = true where orden_id = $1", [id]));
-      denegado(await s.intentar("delete from linea_de_recepcion_de_orden where orden_id = $1", [id]));
+      denegado(
+        await s.intentar(
+          "update linea_de_recepcion_de_orden set confirmo_exceso = true where orden_id = $1",
+          [id],
+        ),
+      );
+      denegado(
+        await s.intentar("delete from linea_de_recepcion_de_orden where orden_id = $1", [id]),
+      );
     });
   });
 
@@ -665,7 +766,10 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
         const r = await s.intentar(`select count(*)::int as n from ${t}`);
         expect(r.ok && r.rows[0], t).toEqual({ n: 0 });
       }
-      const u = await s.directo("update orden_de_compra set fecha_de_entrega_prevista = '2999-01-01' where id = $1", [id]);
+      const u = await s.directo(
+        "update orden_de_compra set fecha_de_entrega_prevista = '2999-01-01' where id = $1",
+        [id],
+      );
       expect(u.ok && u.filas).toBe(0);
     });
     const ajena = await intentarVinculo(otra, id, "1");
@@ -685,10 +789,18 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
         await dueno.query("set local pedernal.confirmar_reversion = 'SI'");
         acepta(await intentoDelDueno(dueno, sql));
         acepta(await intentoDelDueno(dueno, sql));
-        for (const t of TABLAS) expect((await dueno.query("select to_regclass($1) as t", [`public.${t}`])).rows[0]?.t, t).toBeNull();
+        for (const t of TABLAS) {
+          const existe = await dueno.query<{ t: string | null }>(
+            "select to_regclass($1)::text as t",
+            [`public.${t}`],
+          );
+          expect(existe.rows[0]?.t, t).toBeNull();
+        }
         const queda = await dueno.query("select 1 from recepcion where id = $1", [r]);
         expect(queda.rowCount).toBe(1);
-        const disparador = await dueno.query("select 1 from pg_trigger where tgname = 'recepcion_devuelve_a_la_orden'");
+        const disparador = await dueno.query(
+          "select 1 from pg_trigger where tgname = 'recepcion_devuelve_a_la_orden'",
+        );
         expect(disparador.rowCount).toBe(0);
       });
     });

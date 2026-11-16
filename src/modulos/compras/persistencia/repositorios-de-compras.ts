@@ -40,6 +40,7 @@ import {
   type RepositorioDeLecturasSeparadas,
 } from "./repositorio-de-lecturas-separadas";
 import { crearRepositorioDeOfertas, type RepositorioDeOfertas } from "./repositorio-de-ofertas";
+import { crearRepositorioDeOrdenes, type RepositorioDeOrdenes } from "./repositorio-de-ordenes";
 
 /**
  * Los repositorios de compras, armados sobre la MISMA conexión de la transacción. La composición los junta con los de los demás módulos en UNA sola `Tx`:
@@ -58,6 +59,7 @@ export type RepositoriosDeCompras = Readonly<{
   conciliacionesDeCompra: RepositorioDeConciliaciones;
   pagosDeProveedor: RepositorioDePagos;
   correccionesDeCompra: RepositorioDeCorrecciones;
+  ordenesDeCompra: RepositorioDeOrdenes;
   productosParaCompras: ProductosParaCompras;
 }>;
 
@@ -78,6 +80,7 @@ export function crearRepositoriosDeCompras(db: {
     conciliacionesDeCompra: crearRepositorioDeConciliaciones(conexion),
     pagosDeProveedor: crearRepositorioDePagos(conexion),
     correccionesDeCompra: crearRepositorioDeCorrecciones(conexion),
+    ordenesDeCompra: crearRepositorioDeOrdenes(conexion),
     productosParaCompras: crearProductosParaCompras(conexion),
   };
 }

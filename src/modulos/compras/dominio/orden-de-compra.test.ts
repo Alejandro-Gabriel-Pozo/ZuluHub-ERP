@@ -1,0 +1,144 @@
+import { describe, expect, it } from "vitest";
+import { huellaDeLaOrden, leerOrden } from "./orden-de-compra";
+
+const PROVEEDOR = "00000000-0000-4000-8000-0000000000a1";
+const SUCURSAL = "00000000-0000-4000-8000-0000000000b1";
+const P1 = "00000000-0000-4000-8000-000000000001";
+const P2 = "00000000-0000-4000-8000-000000000002";
+
+const orden = (extra: Record<string, unknown> = {}) => ({
+  proveedorId: PROVEEDOR,
+  sucursalId: SUCURSAL,
+  entrega: "2026-12-01",
+  lineas: [{ productoId: P1, cantidad: "10", precio: "12.5" }],
+  ...extra,
+});
+
+describe("leerOrden", () => {
+  it("lee el pedido completo con las cantidades y los precios en forma canónica", () => {
+    expect(leerOrden(orden())).toEqual({
+      ok: true,
+      valor: {
+        proveedorId: PROVEEDOR,
+        sucursalId: SUCURSAL,
+        entrega: "2026-12-01",
+        lineas: [{ productoId: P1, cantidad: "10.0000", precio: "12.500000" }],
+      },
+    });
+  });
+
+  it("la sucursal, la entrega y el precio son opcionales (ausentes o null dan null)", () => {
+    const r = leerOrden({ proveedorId: PROVEEDOR, lineas: [{ productoId: P1, cantidad: "1" }] });
+    expect(r).toEqual({
+      ok: true,
+      valor: {
+        proveedorId: PROVEEDOR,
+        sucursalId: null,
+        entrega: null,
+        lineas: [{ productoId: P1, cantidad: "1.0000", precio: null }],
+      },
+    });
+    expect(
+      leerOrden(
+        orden({
+          sucursalId: null,
+          entrega: null,
+          lineas: [{ productoId: P1, cantidad: "1", precio: null }],
+        }),
+      ),
+    ).toMatchObject({ ok: true, valor: { sucursalId: null, entrega: null } });
+  });
+
+  it("el proveedor y la sucursal tienen que ser identificadores", () => {
+    for (const extra of [
+      { proveedorId: "x" },
+      { proveedorId: 7 },
+      { proveedorId: undefined },
+      { sucursalId: "x" },
+      { sucursalId: 7 },
+    ]) {
+      expect(leerOrden(orden(extra))).toEqual({ ok: false, error: "IDENTIFICADOR_INVALIDO" });
+    }
+    expect(leerOrden(null)).toEqual({ ok: false, error: "IDENTIFICADOR_INVALIDO" });
+    expect(leerOrden([])).toEqual({ ok: false, error: "IDENTIFICADOR_INVALIDO" });
+  });
+
+  it("la entrega tiene que ser una fecha civil", () => {
+    for (const entrega of ["mañana", "2026-02-30", 20261201, ""]) {
+      expect(leerOrden(orden({ entrega }))).toEqual({ ok: false, error: "FECHA_INVALIDA" });
+    }
+  });
+
+  it("las líneas: no vacías, con tope, sin producto repetido, cantidad positiva y precio positivo si viene", () => {
+    const malas: unknown[] = [
+      undefined,
+      "x",
+      [],
+      [null],
+      [7],
+      [{ productoId: "x", cantidad: "1" }],
+      [{ productoId: P1 }],
+      [{ productoId: P1, cantidad: 1 }],
+      [{ productoId: P1, cantidad: "0" }],
+      [{ productoId: P1, cantidad: "-1" }],
+      [{ productoId: P1, cantidad: "1.00001" }],
+      [{ productoId: P1, cantidad: "1", precio: 5 }],
+      [{ productoId: P1, cantidad: "1", precio: "0" }],
+      [{ productoId: P1, cantidad: "1", precio: "-2" }],
+      [
+        { productoId: P1, cantidad: "1" },
+        { productoId: P1, cantidad: "2" },
+      ],
+      Array.from({ length: 10_000 }, (_, i) => ({
+        productoId: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+        cantidad: "1",
+      })),
+    ];
+    for (const lineas of malas) {
+      expect(leerOrden(orden({ lineas }))).toEqual({ ok: false, error: "RENGLONES_INVALIDOS" });
+    }
+  });
+
+  it("acepta el tope de líneas", () => {
+    const lineas = Array.from({ length: 9_999 }, (_, i) => ({
+      productoId: `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`,
+      cantidad: "1",
+    }));
+    expect(leerOrden(orden({ lineas })).ok).toBe(true);
+  });
+});
+
+describe("huellaDeLaOrden", () => {
+  const leida = (extra: Record<string, unknown> = {}) => {
+    const r = leerOrden(orden(extra));
+    if (!r.ok) throw new Error("la orden de prueba tiene que ser válida");
+    return r.valor;
+  };
+  const dos = [
+    { productoId: P1, cantidad: "1", precio: "2" },
+    { productoId: P2, cantidad: "3", precio: null },
+  ];
+
+  it("es sha256 en hex, estable y no depende del orden de las líneas", () => {
+    const h = huellaDeLaOrden(leida({ lineas: dos }));
+    expect(h).toMatch(/^[0-9a-f]{64}$/);
+    expect(huellaDeLaOrden(leida({ lineas: [...dos].reverse() }))).toBe(h);
+    // Fija el contenido: si cambia, una orden repetida dejaría de reconocerse.
+    expect(h).toBe("ebdbf4d48ec3bf4cc6b024dfaf2bab5a2570abf8ca4b03ccc2f4e65ebb0ee420");
+  });
+
+  it("cualquier campo distinto da otra huella", () => {
+    const base = huellaDeLaOrden(leida());
+    const otras = [
+      leida({ proveedorId: "00000000-0000-4000-8000-0000000000a2" }),
+      leida({ sucursalId: null }),
+      leida({ entrega: "2026-12-02" }),
+      leida({ entrega: null }),
+      leida({ lineas: [{ productoId: P2, cantidad: "10", precio: "12.5" }] }),
+      leida({ lineas: [{ productoId: P1, cantidad: "11", precio: "12.5" }] }),
+      leida({ lineas: [{ productoId: P1, cantidad: "10", precio: "12.6" }] }),
+      leida({ lineas: [{ productoId: P1, cantidad: "10", precio: null }] }),
+    ].map(huellaDeLaOrden);
+    expect(new Set([base, ...otras]).size).toBe(otras.length + 1);
+  });
+});

@@ -3,6 +3,7 @@ import { crearLector } from "./comun";
 import { armarConsultasDeCompras } from "./compras";
 import { armarConsultasDeConciliacion } from "./conciliacion";
 import { armarConsultasDeFicha } from "./ficha";
+import { armarConsultasDeOrdenes } from "./ordenes";
 
 /**
  * Las consultas por pantalla de compras (ADR-005): solo lectura (`read committed`), cada una pide su acción al guard dentro de su transacción. Una fila de
@@ -14,6 +15,7 @@ export function crearConsultasDeCompras(d: DependenciasDeConsultasDeCompras) {
     ...armarConsultasDeFicha(leer),
     ...armarConsultasDeCompras(leer),
     ...armarConsultasDeConciliacion(leer),
+    ...armarConsultasDeOrdenes(leer),
   };
 }
 

@@ -291,6 +291,11 @@ describe("el catálogo comercial de módulos", () => {
           "comprobantes_de_proveedor.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "comprobantes_de_proveedor.pagar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "comprobantes_de_proveedor.anular_pago": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "ordenes_de_compra.ver": { capacidad: null, efecto: "LECTURA" },
+          "ordenes_de_compra.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "ordenes_de_compra.pedir": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "ordenes_de_compra.cerrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "ordenes_de_compra.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "compras.configurar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "compras.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
@@ -326,13 +331,13 @@ describe("el catálogo comercial de módulos", () => {
     ) => Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
     expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([14, 9, 25]);
     expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
-    expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 16]);
+    expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 21]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
     // 25 de administración (18 de usuarios, sucursales, gerencia y permisos, y 7 de la configuración fiscal de H7 T5),
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 48 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
-    // de E5-T10), 35 de caja, cierre y ventas (E0-T1), 24 de clientes y compras (E9-T1, T11, N3-2b y N3-4), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 162 en total.
-    expect(todas).toHaveLength(25 + 9 + 48 + 35 + 24 + 16 + 5);
+    // de E5-T10), 35 de caja, cierre y ventas (E0-T1), 29 de clientes y compras (E9-T1, T11, N3-2b, N3-4 y N4-1), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 167 en total.
+    expect(todas).toHaveLength(25 + 9 + 48 + 35 + 29 + 16 + 5);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -447,6 +452,7 @@ const EFECTOS_DE_EMPRESA = {
     "lotes.ver",
     "mesas.ver",
     "modulos.ver",
+    "ordenes_de_compra.ver",
     "partes.ver",
     "permisos.ver_propios",
     "productos.ver",
@@ -504,6 +510,8 @@ const EFECTOS_DE_EMPRESA = {
     "movimientos_caja.ajustar",
     "movimientos_caja.registrar_manual",
     "opciones.editar",
+    "ordenes_de_compra.crear",
+    "ordenes_de_compra.pedir",
     "partes.cambiar_roles",
     "partes.crear",
     "partes.desvincular_contacto",
@@ -577,6 +585,8 @@ const EFECTOS_DE_EMPRESA = {
     "movimientos_caja.anular",
     "movimientos_caja.anular_de_otros",
     "notas_de_credito.emitir",
+    "ordenes_de_compra.anular",
+    "ordenes_de_compra.cerrar",
     "partes.desactivar",
     "productos.desactivar",
     "puntos_de_venta.desactivar",
