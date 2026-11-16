@@ -21,18 +21,16 @@ import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
  *  - **El alta es idempotente**: la clave la genera la pantalla al abrir el formulario; repetir el envío (doble clic, reintento) no crea otra parte.
  *  - **Un nombre repetido solo AVISA** (DDD 15/11/2026, 8b): antes de guardar un alta se buscan los posibles duplicados; si hay y la persona no dijo «Guardar igual», no se escribe nada y
  *    se devuelven para mostrarlos. Solo un documento repetido bloquea (lo rechaza el caso de uso).
- *  - **Editar toca dos cosas** (los datos y los roles) en dos transacciones, porque el directorio ofrece dos casos de uso: primero los datos (lo que más se rechaza) y después los roles.
- *    Las dos son idempotentes: si la segunda falla, repetir el guardado la completa sin duplicar ni auditar de más. SUPUESTO (DEC-0567): ver el hallazgo del informe.
+ *  - **Editar es atómico** (DEC-0567): los datos y los roles se guardan en UNA transacción (`editarParteConRoles`): o quedan los dos o no queda ninguno.
  */
 
 export type DependenciasDeDirectorioWeb = Readonly<{
   casosDeUso: () => Pick<
     ReturnType<Web["casosDeUsoDeClientes"]>,
     | "crearParte"
-    | "editarParte"
+    | "editarParteConRoles"
     | "desactivarParte"
     | "reactivarParte"
-    | "cambiarRolesDeParte"
     | "vincularContacto"
     | "desvincularContacto"
   >;
@@ -268,16 +266,13 @@ export function guardarLaParte(
       if (entrada.versionEsperada === null || entrada.versionEsperada === undefined) {
         return err("VERSION_DESACTUALIZADA");
       }
-      const edicion = await d.casosDeUso().editarParte(contexto, {
+      const edicion = await d.casosDeUso().editarParteConRoles(contexto, {
         parteId: entrada.parteId,
         versionEsperada: entrada.versionEsperada,
         cambios: datos,
+        roles: entrada.roles,
       });
-      if (!edicion.ok) return edicion;
-      const roles = await d
-        .casosDeUso()
-        .cambiarRolesDeParte(contexto, { parteId: entrada.parteId, roles: entrada.roles });
-      return roles.ok ? ok({ estado: "GUARDADA", parteId: entrada.parteId }) : roles;
+      return edicion.ok ? ok({ estado: "GUARDADA", parteId: entrada.parteId }) : edicion;
     },
     (resultado) => resultado,
   );

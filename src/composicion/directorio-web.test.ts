@@ -36,16 +36,9 @@ function armar(
         "crearParte",
         ok({ parteId: ID, yaExistia: false, posiblesDuplicados: [] }),
       ),
-      editarParte: llamar(
-        "editarParte",
-        ok({ version: 2, yaEstaba: false, posiblesDuplicados: [] }),
-      ),
+      editarParteConRoles: llamar("editarParteConRoles", ok({ datos: {}, roles: {} })),
       desactivarParte: llamar("desactivarParte", ok({ yaEstaba: false })),
       reactivarParte: llamar("reactivarParte", ok({ yaEstaba: false })),
-      cambiarRolesDeParte: llamar(
-        "cambiarRolesDeParte",
-        ok({ agregados: [], reactivados: [], quitados: [] }),
-      ),
       vincularContacto: llamar("vincularContacto", ok({ yaExistia: false })),
       desvincularContacto: llamar("desvincularContacto", ok({ yaEstaba: false })),
     }),
@@ -437,19 +430,22 @@ describe("guardarLaParte: edición", () => {
     roles: ["CUSTOMER", "PROVEEDOR"],
   };
 
-  it("guarda los datos con la versión que se vio y después los roles; no busca duplicados", async () => {
+  it("guarda datos y roles juntos con la versión que se vio, en una sola llamada; no busca duplicados", async () => {
     const { d, llamadas } = armar();
     const r = await guardarLaParte(d, contexto, EDICION);
     expect(r).toEqual({ ok: true, dato: { estado: "GUARDADA", parteId: ID } });
-    expect(llamadas.map((l) => l[0])).toEqual(["editarParte", "cambiarRolesDeParte"]);
-    expect(llamadas[0]?.[1]).toMatchObject({ parteId: ID, versionEsperada: 3 });
+    expect(llamadas.map((l) => l[0])).toEqual(["editarParteConRoles"]);
+    expect(llamadas[0]?.[1]).toMatchObject({
+      parteId: ID,
+      versionEsperada: 3,
+      roles: ["CUSTOMER", "PROVEEDOR"],
+    });
     expect((llamadas[0]?.[1] as { cambios: Record<string, unknown> }).cambios).toMatchObject({
       naturaleza: "JURIDICA",
       nombre: "Lácteos del Sur S.A.",
       documento: { tipo: "CUIT", pais: null, numero: "30701234567" },
       email: null,
     });
-    expect(llamadas[1]?.[1]).toEqual({ parteId: ID, roles: ["CUSTOMER", "PROVEEDOR"] });
   });
 
   it("la versión viene como texto de dígitos del formulario", async () => {
@@ -467,29 +463,25 @@ describe("guardarLaParte: edición", () => {
     expect(r2.ok === false && r2.error.codigo).toBe("CLIENTES_ACCION_NO_PERMITIDA");
   });
 
-  it("si los datos se rechazan no toca los roles", async () => {
-    const { d, llamadas } = armar({
-      editarParte: err({
+  it("un dato rechazado sale por su campo", async () => {
+    const { d } = armar({
+      editarParteConRoles: err({
         error: "DATOS_INVALIDOS",
         campos: [{ campo: "email", codigo: "EMAIL_INVALIDO" }],
       }),
     });
     const r = await guardarLaParte(d, contexto, EDICION);
     expect(r.ok === false && r.error.codigo).toBe("CLIENTES_EMAIL_INVALIDO");
-    expect(llamadas.map((l) => l[0])).toEqual(["editarParte"]);
   });
 
-  it("si los roles fallan después de los datos, el error sale (repetir lo completa)", async () => {
-    const { d } = armar({ cambiarRolesDeParte: err("ROL_DE_PARTE_INVALIDO") });
-    const r = await guardarLaParte(d, contexto, EDICION);
-    expect(r.ok === false && r.error.codigo).toBe("CLIENTES_ACCION_NO_PERMITIDA");
-  });
-
-  it("una versión vieja sale como el genérico", async () => {
-    const { d } = armar({ editarParte: err("VERSION_DESACTUALIZADA") });
-    const r = await guardarLaParte(d, contexto, EDICION);
-    expect(r.ok === false && r.error.codigo).toBe("CLIENTES_ACCION_NO_PERMITIDA");
-  });
+  it.each(["VERSION_DESACTUALIZADA", "ROL_DE_PARTE_INVALIDO"])(
+    "%s sale como el genérico",
+    async (e) => {
+      const { d } = armar({ editarParteConRoles: err(e) });
+      const r = await guardarLaParte(d, contexto, EDICION);
+      expect(r.ok === false && r.error.codigo).toBe("CLIENTES_ACCION_NO_PERMITIDA");
+    },
+  );
 });
 
 describe("desactivar, reactivar y contactos", () => {

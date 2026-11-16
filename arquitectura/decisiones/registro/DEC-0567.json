@@ -1,10 +1,10 @@
 {
   "id": "DEC-0567",
   "fecha": "2026-11-16",
-  "quien": "sesión",
+  "quien": "padre",
   "tipo": "DATOS",
   "estado": "PENDIENTE_DE_OK",
-  "decision": "SUPUESTO: editar una parte guarda los datos y después los roles en dos transacciones; las dos son idempotentes, así que repetir el guardado completa lo que falló.",
-  "que_cambia": "Si la segunda falla, los datos quedan guardados y los roles no, hasta repetir; hacerlo atómico pide un caso de uso nuevo en clientes que edite datos y roles juntos.",
-  "donde": "src/composicion/directorio-web.ts; pantallas-de-compras-inventario.md §3 (D1)"
+  "decision": "Editar una parte guarda los datos y los roles en una sola transacción: todo o nada, con las dos acciones de permiso exigidas.",
+  "que_cambia": "Quien edita necesita partes.editar y partes.cambiar_roles; si algo falla no queda nada a medias. Revertir es volver a dos pasos separados.",
+  "donde": "src/modulos/clientes/casos-de-uso/editar-parte-con-roles.ts; orden del orquestador por delegación del dueño, 16/11/2026"
 }
