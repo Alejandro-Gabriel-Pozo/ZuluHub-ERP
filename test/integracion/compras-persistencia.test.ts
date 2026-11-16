@@ -104,7 +104,10 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
       ...ordenes.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...diferencias.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...notas.matchAll(/CONSTRAINT = '(\w+)'/g),
-      ...devoluciones.matchAll(/CONSTRAINT = '(\w+)'/g),
+      // De 0084 solo cuenta lo de compras: la función de stock que vuelve a definir (`renglon_de_movimiento_validar`) tiene sus restricciones en stock.
+      ...(devoluciones
+        .split("CREATE OR REPLACE FUNCTION renglon_de_movimiento_validar")[0]
+        ?.matchAll(/CONSTRAINT = '(\w+)'/g) ?? []),
     ].map((m) => m[1] as string);
     // Las de nombre armado con el de la tabla (`TG_TABLE_NAME || '_inmutable'`): se expanden con las tablas que llevan ese disparador.
     const deLaTabla = (sufijo: string, tablas: readonly string[]) =>
