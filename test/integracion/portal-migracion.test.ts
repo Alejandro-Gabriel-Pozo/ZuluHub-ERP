@@ -11,11 +11,7 @@ import {
   COLUMNAS_DE_PORTAL,
 } from "../../src/modulos/portal/publico";
 import { LARGO_MAXIMO_DEL_TELEFONO } from "../../src/primitivas/contacto/telefono";
-import {
-  LARGO_MAXIMO_DE_LA_LINEA_DEL_PORTAL,
-  LARGO_MAXIMO_DEL_NOMBRE_DE_TARJETA,
-  LARGO_MAXIMO_DEL_TITULO_DEL_PORTAL,
-} from "../../src/primitivas/texto/datos-de-portal";
+import { LARGO_MAXIMO_DEL_NOMBRE_DE_CARTA } from "../../src/primitivas/texto/datos-de-carta-publica";
 
 /**
  * Migraciones 0078 y 0083 contra una base real: forma y espejo con el código, privilegios, disparadores y la reversión (frena con datos; sin datos es repetible).
@@ -86,13 +82,9 @@ describe.skipIf(base === null)("migraciones 0078 y 0083: portal de la empresa", 
           "select conname, pg_get_constraintdef(oid) as def from pg_constraint where conname in ('portal_de_empresa_linea_ck','portal_de_empresa_titulo_ck','portal_tarjeta_nombre_ck','portal_tarjeta_telefono_ck')",
         );
         const d = Object.fromEntries(defs.rows.map((r) => [r.conname, r.def]));
-        expect(d["portal_de_empresa_linea_ck"]).toContain(
-          `, ${LARGO_MAXIMO_DE_LA_LINEA_DEL_PORTAL})`,
-        );
-        expect(d["portal_de_empresa_titulo_ck"]).toContain(
-          `, ${LARGO_MAXIMO_DEL_TITULO_DEL_PORTAL})`,
-        );
-        expect(d["portal_tarjeta_nombre_ck"]).toContain(`, ${LARGO_MAXIMO_DEL_NOMBRE_DE_TARJETA})`);
+        expect(d["portal_de_empresa_linea_ck"]).toContain(`, 40)`);
+        expect(d["portal_de_empresa_titulo_ck"]).toContain(`, 60)`);
+        expect(d["portal_tarjeta_nombre_ck"]).toContain(`, ${LARGO_MAXIMO_DEL_NOMBRE_DE_CARTA})`);
         expect(d["portal_tarjeta_telefono_ck"]).toContain(`<= ${LARGO_MAXIMO_DEL_TELEFONO})`);
       });
     } finally {

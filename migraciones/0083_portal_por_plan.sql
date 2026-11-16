@@ -55,3 +55,19 @@ CREATE POLICY ajuste_de_perilla_publico_de_portal ON ajuste_de_perilla FOR SELEC
      WHERE p.codigo = current_setting('app.codigo_de_portal', true) AND e.tenant_id = ajuste_de_perilla.tenant_id
        AND (ajuste_de_perilla.empresa_id IS NULL OR ajuste_de_perilla.empresa_id = p.empresa_id)
   ));
+
+-- CORRECCIÓN PROPUESTA (C8, 16/11; vuelve al dueño): las políticas de arriba y el lector del portal llegan al tenant por `empresa` y `tenant`, que el rol público solo ve con el
+-- código de una carta (0044). Sin estas dos, las cuatro políticas de plan devuelven 0 filas y el portal nunca se sirve. Mismas columnas ya otorgadas en 0044; sin GRANT nuevo.
+DROP POLICY IF EXISTS empresa_publico_de_portal ON empresa;
+CREATE POLICY empresa_publico_de_portal ON empresa FOR SELECT TO pedernal_publico
+  USING (EXISTS (
+    SELECT 1 FROM public.portal_de_empresa p
+     WHERE p.codigo = current_setting('app.codigo_de_portal', true) AND p.empresa_id = empresa.id
+  ));
+
+DROP POLICY IF EXISTS tenant_publico_de_portal ON tenant;
+CREATE POLICY tenant_publico_de_portal ON tenant FOR SELECT TO pedernal_publico
+  USING (EXISTS (
+    SELECT 1 FROM public.portal_de_empresa p JOIN public.empresa e ON e.id = p.empresa_id
+     WHERE p.codigo = current_setting('app.codigo_de_portal', true) AND e.tenant_id = tenant.id
+  ));

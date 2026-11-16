@@ -260,24 +260,20 @@ CREATE POLICY portal_de_empresa_publico_de_carta ON portal_de_empresa FOR SELECT
      WHERE c.codigo = current_setting('app.codigo_de_carta', true) AND c.empresa_id = portal_de_empresa.empresa_id
   ));
 
--- Las cartas EN_LINEA de la empresa del portal pedido (el portal las lista y enlaza). Se SUMA a la política de 0043 (las políticas permisivas se combinan con «o»):
--- el código de la carta sigue siendo la llave para ver UNA carta; esta deja ver, con las mismas columnas ya otorgadas, las cartas en línea de ESA empresa y de ninguna otra.
+-- CORRECCIÓN PROPUESTA (C8, 16/11; vuelve al dueño): el original consultaba `portal_de_empresa` desde las políticas de `carta_publica` y `sucursal`, y `portal_de_empresa_publico_de_carta`
+-- consulta `carta_publica`: Postgres detecta un ciclo de políticas (SQLSTATE 42P17) y rompe TAMBIÉN la lectura pública de la carta existente. Se corta así: el lector lee primero el
+-- portal por su código (sin tocar cartas) y fija `app.empresa_del_portal` con la empresa que leyó; estas dos políticas miran ESA empresa, no la tabla del portal. Sin ese valor no hay filas.
+-- (Una SECURITY DEFINER lo resolvería, pero el repo exige que `contexto_firmado` sea la única.) Las cartas que se ven ya son públicas por su código y solo las EN_LINEA.
 DROP POLICY IF EXISTS carta_publica_publico_de_portal ON carta_publica;
 CREATE POLICY carta_publica_publico_de_portal ON carta_publica FOR SELECT TO pedernal_publico
-  USING (estado = 'EN_LINEA' AND EXISTS (
-    SELECT 1 FROM public.portal_de_empresa p
-     WHERE p.codigo = current_setting('app.codigo_de_portal', true) AND p.empresa_id = carta_publica.empresa_id
-  ));
+  USING (estado = 'EN_LINEA' AND empresa_id::text = current_setting('app.empresa_del_portal', true));
 
 -- La sucursal solo si está abierta Y tiene su carta en línea (la subconsulta pasa por la política anterior): una sucursal cerrada no aparece en el portal.
 DROP POLICY IF EXISTS sucursal_publico_de_portal ON sucursal;
 CREATE POLICY sucursal_publico_de_portal ON sucursal FOR SELECT TO pedernal_publico
-  USING (activa AND EXISTS (
+  USING (activa AND empresa_id::text = current_setting('app.empresa_del_portal', true) AND EXISTS (
     SELECT 1 FROM public.carta_publica c
-     WHERE c.sucursal_id = sucursal.id AND c.empresa_id = sucursal.empresa_id
-       AND c.estado = 'EN_LINEA'
-       AND EXISTS (SELECT 1 FROM public.portal_de_empresa p
-                    WHERE p.codigo = current_setting('app.codigo_de_portal', true) AND p.empresa_id = c.empresa_id)
+     WHERE c.sucursal_id = sucursal.id AND c.empresa_id = sucursal.empresa_id AND c.estado = 'EN_LINEA'
   ));
 
 -- Tarjetas y zonas visibles de ese portal, y solo de sucursales que el portal puede mostrar (abiertas y con carta en línea).
