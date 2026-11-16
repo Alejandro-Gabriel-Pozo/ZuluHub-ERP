@@ -10,7 +10,7 @@ import {
 } from "./clientes-apoyo";
 
 /**
- * LB-6 (DEC-0725, SUPUESTO del orquestador): marcar a alguien como EMPLEADO lo hacen solo gerente y administrador. Contra la base real: el operador queda
+ * LB-6 (DEC-0725, respuesta del dueño del 16/11/2026): marcar a alguien como EMPLEADO lo hacen solo gerente y administrador. Contra la base real: el operador queda
  * sin permiso y no se escribe nada (ni rol ni auditoría), el gerente y el administrador pueden, lo que no toca EMPLEADO sigue como antes para el operador, repetir no
  * duplica, dos pedidos a la vez dejan un solo rol y la otra empresa no ve nada.
  */

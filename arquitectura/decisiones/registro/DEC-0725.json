@@ -4,7 +4,7 @@
   "quien": "padre",
   "tipo": "PERMISOS",
   "estado": "PENDIENTE_DE_OK",
-  "decision": "SUPUESTO del orquestador: marcar a alguien como empleado lo hacen solo gerente y administrador, no el operador. Una misma persona puede ser empleado y además cliente o proveedor.",
+  "decision": "Marcar a alguien como empleado lo hacen solo gerente y administrador, no el operador. Una misma persona puede ser empleado y además cliente o proveedor.",
   "que_cambia": "El operador sigue cargando clientes y proveedores como hoy, pero pedir el rol empleado le da sin permiso y no se escribe nada. Nace cerrado. Revertir: sumar OPERADOR a partes.marcar_empleado (una línea).",
-  "donde": "empresa.ts y catalogo.ts (partes.marcar_empleado); mensaje del orquestador del 16/11/2026 con el «0070 A» del dueño en decisiones-del-dueno-2026-11.md; quién marca es su recomendación B, pendiente de confirmar."
+  "donde": "empresa.ts y catalogo.ts (partes.marcar_empleado); decisiones-del-dueno-2026-11.md, fila «Roles: quién marca a una persona como empleado» (16/11/2026): «Solo gerente y administrador»."
 }
