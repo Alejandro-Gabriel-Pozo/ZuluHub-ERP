@@ -113,6 +113,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
       ),
     ).toEqual([
       [
+        "venta-rapida",
+        "ventas",
+        "venta",
+        "ventas",
+        "ventas.ver",
+        "/ventas/venta-rapida",
+        "ventas.venta.titulo",
+      ],
+      [
         "comprobantes",
         "ventas",
         "comprobantes",
