@@ -77,6 +77,14 @@ function textoDeDomicilio(texto: string, maximo: number): string | null {
   return limpio.ok ? limpio.valor : null;
 }
 
+/**
+ * ¿Un opcional que viene (no `null`) no calza con su lista de permitidos? Sin dato no hay nada que rechazar. Se escribe con `match` y no con
+ * `test`: `test(null)` evalúa el texto «null», que calza, y ningún caso podría distinguir un `null` mal manejado.
+ */
+function noCalza(texto: string | null, permitido: RegExp): boolean {
+  return texto?.match(permitido) === null;
+}
+
 /** Recorta; lo ausente, nulo o en blanco es `null` (un opcional vacío). */
 function recortarOpcional(valor: string | null | undefined): string | null {
   const limpio = valor?.trim() ?? "";
@@ -98,12 +106,10 @@ export function domicilioDesdeDatos(
   if (numero !== SIN_NUMERO && !FORMATO_DE_NUMERO.test(numero)) return err("NUMERO_INVALIDO");
 
   const piso = recortarOpcional(datos.piso);
-  if (piso !== null && !PISO_PERMITIDO.test(piso)) return err("PISO_INVALIDO");
+  if (noCalza(piso, PISO_PERMITIDO)) return err("PISO_INVALIDO");
 
   const departamento = recortarOpcional(datos.departamento);
-  if (departamento !== null && !DEPARTAMENTO_PERMITIDO.test(departamento)) {
-    return err("DEPARTAMENTO_INVALIDO");
-  }
+  if (noCalza(departamento, DEPARTAMENTO_PERMITIDO)) return err("DEPARTAMENTO_INVALIDO");
 
   const localidad = textoDeDomicilio(datos.localidad, LIMITES_DE_DOMICILIO.localidad);
   if (localidad === null) return err("LOCALIDAD_INVALIDA");
