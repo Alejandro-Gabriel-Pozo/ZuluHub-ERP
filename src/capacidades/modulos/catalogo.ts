@@ -387,7 +387,6 @@ export const CATALOGO_DE_MODULOS = {
 type Catalogo = typeof CATALOGO_DE_MODULOS;
 
 export type ClaveModulo = keyof Catalogo;
-
 export type ClaveAccion = { [M in ClaveModulo]: keyof Catalogo[M]["acciones"] }[ClaveModulo];
 
 type CapacidadDe<D> = D extends { capacidad: infer C } ? C : never;
