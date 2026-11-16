@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  analizarReemplazo,
   contarProhibidosEnCodigo,
   contarProhibidosEnSql,
   cuentaDeMigracion,
   esPatronDeProhibicion,
   problemasDeExenciones,
   problemasDeReversionesEximidas,
+  prohibidosPorRestriccion,
 } from "./lista-de-permitidos-apoyo";
 
 /**
@@ -481,5 +483,125 @@ describe("lista de permitidos: la exención de las reversiones de migración no 
         [REVERSION]: { prohibidos: 1 },
       }),
     ).toEqual([`${REVERSION}: está eximido y también en el presupuesto de deuda`]);
+  });
+});
+
+describe("lista de permitidos: «reemplazada por la migración NNNN» solo baja el presupuesto si se verifica (Deuda 1)", () => {
+  const VIEJA = "migraciones/0001_a.sql";
+  const NUEVA = "migraciones/0002_b.sql";
+  const SQL_VIEJO = `CREATE TABLE t (
+  a text CONSTRAINT a_ck CHECK (a !~ '[\\x01-\\x1F]'),
+  b text CONSTRAINT b_ck CHECK (b !~ '[\\x01-\\x1F]')
+);
+ALTER TABLE t ADD CONSTRAINT c_ck CHECK (c !~ '[\\x01-\\x1F]');
+SELECT 'x' !~ '[\\x01-\\x1F]';`;
+  // Una lista de permitidos con `;` adentro (como la de 0062): el cuerpo se corta en el `$$`, no en el primer `;`.
+  const FUNCION = `CREATE FUNCTION permitido(t text) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT t ~ '^[A-Za-z ;]+$' $$;`;
+  const nueva = (cuerpo: string) => `${FUNCION}\n${cuerpo}`;
+  const BUENA = nueva(
+    "ALTER TABLE t DROP CONSTRAINT a_ck;\nALTER TABLE t ADD CONSTRAINT a_ck CHECK (permitido(a));",
+  );
+  const analizar = (nuevoTexto: string | undefined, restricciones = ["a_ck"], por = NUEVA) => {
+    const textos = new Map<string, string>([[VIEJA, SQL_VIEJO]]);
+    if (nuevoTexto !== undefined) textos.set(NUEVA, nuevoTexto);
+    return analizarReemplazo(VIEJA, { por, restricciones }, textos);
+  };
+
+  it("cada prohibición se atribuye a la restricción en que está, y las de fuera de una restricción (o de otra sentencia) a ninguna", () => {
+    expect([...prohibidosPorRestriccion(SQL_VIEJO)]).toEqual([
+      ["a_ck", 1],
+      ["b_ck", 1],
+      ["c_ck", 1],
+      ["", 1],
+    ]);
+    // Los comentarios no cuentan ni mueven la atribución.
+    expect([
+      ...prohibidosPorRestriccion("-- CONSTRAINT x_ck\nCHECK (a !~ '[\\x01-\\x1F]')"),
+    ]).toEqual([["", 1]]);
+  });
+
+  it("lo verificado descuenta lo que esa restricción aportaba y nada más: lo no reemplazado sigue contando", () => {
+    expect(analizar(BUENA)).toEqual({ problemas: [], descuento: 1 });
+    expect(contarProhibidosEnSql(SQL_VIEJO) - analizar(BUENA).descuento).toBe(3);
+    const dos = nueva(
+      "ALTER TABLE t DROP CONSTRAINT IF EXISTS a_ck;\nALTER TABLE t ADD CONSTRAINT a_ck CHECK (permitido(a));\nALTER TABLE t DROP CONSTRAINT b_ck;\nALTER TABLE t ADD CONSTRAINT b_ck CHECK (permitido(b));",
+    );
+    expect(analizar(dos, ["a_ck", "b_ck"])).toEqual({ problemas: [], descuento: 2 });
+  });
+
+  it("una migración que reemplaza inexistente, igual o anterior, o un archivo viejo inexistente, no descuenta", () => {
+    expect(analizar(undefined)).toEqual({
+      problemas: [`${VIEJA}: la migración que lo reemplaza (${NUEVA}) no existe`],
+      descuento: 0,
+    });
+    expect(analizar(BUENA, ["a_ck"], VIEJA).problemas).toContain(
+      `${VIEJA}: ${VIEJA} no es posterior`,
+    );
+    expect(
+      analizarReemplazo(VIEJA, { por: NUEVA, restricciones: ["a_ck"] }, new Map([[NUEVA, BUENA]])),
+    ).toEqual({ problemas: [`${VIEJA}: no existe`], descuento: 0 });
+  });
+
+  it("declarar un reemplazo sin restricciones, o de una restricción que no tenía prohibiciones, es un problema", () => {
+    expect(analizar(BUENA, []).problemas).toEqual([
+      `${VIEJA}: no declara qué restricciones reemplaza`,
+    ]);
+    const sinAporte = nueva(
+      "ALTER TABLE t DROP CONSTRAINT z_ck;\nALTER TABLE t ADD CONSTRAINT z_ck CHECK (permitido(z));",
+    );
+    expect(analizar(sinAporte, ["z_ck"])).toEqual({
+      problemas: [`${VIEJA}: z_ck no tiene prohibiciones que descontar (o no existe)`],
+      descuento: 0,
+    });
+  });
+
+  it("un reemplazo declarado sin DROP, o sin ADD, no descuenta", () => {
+    const sinDrop = nueva("ALTER TABLE t ADD CONSTRAINT a_ck CHECK (permitido(a));");
+    expect(analizar(sinDrop)).toEqual({
+      problemas: [`${VIEJA}: ${NUEVA} no tiene el DROP CONSTRAINT de a_ck`],
+      descuento: 0,
+    });
+    const sinAdd = nueva("ALTER TABLE t DROP CONSTRAINT a_ck;");
+    expect(analizar(sinAdd)).toEqual({
+      problemas: [`${VIEJA}: ${NUEVA} no tiene el ADD CONSTRAINT a_ck CHECK`],
+      descuento: 0,
+    });
+    // El DROP o el ADD de OTRA restricción no valen.
+    const deOtra = nueva(
+      "ALTER TABLE t DROP CONSTRAINT b_ck;\nALTER TABLE t ADD CONSTRAINT b_ck CHECK (permitido(b));",
+    );
+    expect(analizar(deOtra).descuento).toBe(0);
+    expect(analizar(deOtra).problemas).toHaveLength(2);
+  });
+
+  it("un ADD que sigue con una lista de prohibidos no descuenta (y tampoco declara lo permitido)", () => {
+    const sigue = nueva(
+      "ALTER TABLE t DROP CONSTRAINT a_ck;\nALTER TABLE t ADD CONSTRAINT a_ck CHECK (a !~ '[\\x01-\\x1F]');",
+    );
+    expect(analizar(sigue)).toEqual({
+      problemas: [
+        `${VIEJA}: el ADD CONSTRAINT a_ck de ${NUEVA} sigue con una lista de prohibidos`,
+        `${VIEJA}: el ADD CONSTRAINT a_ck de ${NUEVA} no llama a una función de permitidos que esa migración cree`,
+      ],
+      descuento: 0,
+    });
+  });
+
+  it("un ADD que llama a una función que la migración no crea, o cuyo cuerpo es una lista de prohibidos, no descuenta", () => {
+    const ajena = nueva(
+      "ALTER TABLE t DROP CONSTRAINT a_ck;\nALTER TABLE t ADD CONSTRAINT a_ck CHECK (length(a) > 0);",
+    );
+    expect(analizar(ajena).problemas).toEqual([
+      `${VIEJA}: el ADD CONSTRAINT a_ck de ${NUEVA} no llama a una función de permitidos que esa migración cree`,
+    ]);
+    const prohibe = `CREATE FUNCTION permitido(t text) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT t !~ '[\\x01-\\x1F]' $$;
+ALTER TABLE t DROP CONSTRAINT a_ck;
+ALTER TABLE t ADD CONSTRAINT a_ck CHECK (permitido(a));`;
+    expect(analizar(prohibe).descuento).toBe(0);
+    expect(analizar(prohibe).problemas.length).toBeGreaterThan(0);
+  });
+
+  it("un problema en cualquiera de las restricciones declaradas anula todo el descuento", () => {
+    expect(analizar(BUENA, ["a_ck", "b_ck"]).descuento).toBe(0);
   });
 });

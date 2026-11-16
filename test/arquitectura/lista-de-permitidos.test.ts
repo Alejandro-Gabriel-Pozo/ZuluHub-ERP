@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  analizarReemplazo,
   contarProhibidosEnCodigo,
   contarProhibidosEnSql,
   cuentaDeMigracion,
@@ -10,6 +11,7 @@ import {
   problemasDeExenciones,
   problemasDeReversionesEximidas,
   type Exencion,
+  type Reemplazo,
 } from "./lista-de-permitidos-apoyo";
 
 /**
@@ -72,6 +74,44 @@ const REVERSIONES_EXIMIDAS: Readonly<Record<string, Exencion>> = {
 const REVERSIONES_ESPERADAS: readonly string[] = [
   "migraciones/reversiones/0062_revertir_listas_de_permitidos_de_texto.sql",
 ];
+/**
+ * Migraciones ya aplicadas cuyas restricciones con lista de prohibidos las reemplazó una migración posterior (Deuda 1; ver `analizarReemplazo`): cada declaración
+ * se VERIFICA contra la migración que reemplaza (que exista, el DROP y el ADD con una función de permitidos) y solo entonces baja el presupuesto de ese archivo.
+ * Una restricción de esos archivos que no figure acá sigue contando (los motivos de 0006 y los usos de `texto_fiscal_valido` que 0062 no toca).
+ */
+const POR_0062 = "migraciones/0062_listas_de_permitidos_de_texto.sql";
+const REEMPLAZADAS: Readonly<Record<string, Reemplazo>> = {
+  "migraciones/0005_administracion.sql": {
+    por: POR_0062,
+    restricciones: ["sucursal_nombre_control_ck"],
+  },
+  "migraciones/0006_fiscal.sql": {
+    por: POR_0062,
+    restricciones: [
+      "domicilio_calle_ck",
+      "domicilio_localidad_ck",
+      "domicilio_piso_ck",
+      "domicilio_departamento_ck",
+      "datos_fiscales_razon_social_ck",
+      "datos_fiscales_iibb_numero_ck",
+    ],
+  },
+  "migraciones/0009_facturacion.sql": {
+    por: POR_0062,
+    restricciones: [
+      "comprobante_emisor_razon_social_ck",
+      "comprobante_emisor_domicilio_ck",
+      "comprobante_emisor_iibb_numero_ck",
+      "comprobante_pv_domicilio_ck",
+      "comprobante_receptor_nombre_ck",
+      "comprobante_receptor_domicilio_ck",
+    ],
+  },
+  "migraciones/0022_nombre_de_la_sucursal_en_el_comprobante.sql": {
+    por: POR_0062,
+    restricciones: ["comprobante_sucursal_nombre_ck"],
+  },
+};
 const EXTENSIONES = ["ts", "tsx", "js", "jsx", "mjs", "cjs", "mts", "cts"];
 
 function archivos(carpeta: string, extensiones: string[]): string[] {
@@ -79,6 +119,12 @@ function archivos(carpeta: string, extensiones: string[]): string[] {
     .filter((r) => !r.split("/").some((p) => p === "node_modules" || p === ".next"))
     .filter((r) => extensiones.includes(r.split(".").pop() ?? ""))
     .map((r) => `${carpeta}/${r}`);
+}
+
+function textosDeMigraciones(): Map<string, string> {
+  return new Map(
+    archivos("migraciones", ["sql"]).map((ruta) => [ruta, readFileSync(join(RAIZ, ruta), "utf8")]),
+  );
 }
 
 function prohibidosReales(): Map<string, number> {
@@ -90,8 +136,12 @@ function prohibidosReales(): Map<string, number> {
     const n = contarProhibidosEnCodigo(ruta, readFileSync(join(RAIZ, ruta), "utf8"));
     if (n > 0 && !(ruta in FORMATOS_DE_TERCEROS)) mapa.set(ruta, n);
   }
-  for (const ruta of archivos("migraciones", ["sql"])) {
-    const n = cuentaDeMigracion(ruta, readFileSync(join(RAIZ, ruta), "utf8"), REVERSIONES_EXIMIDAS);
+  const textos = textosDeMigraciones();
+  for (const [ruta, texto] of textos) {
+    const reemplazo = REEMPLAZADAS[ruta];
+    const descuento =
+      reemplazo === undefined ? 0 : analizarReemplazo(ruta, reemplazo, textos).descuento;
+    const n = cuentaDeMigracion(ruta, texto, REVERSIONES_EXIMIDAS) - descuento;
     if (n > 0) mapa.set(ruta, n);
   }
   return mapa;
@@ -131,6 +181,15 @@ describe("lista de permitidos: el código real", () => {
         presupuesto,
       ),
     ).toEqual([]);
+  });
+
+  it("cada migración reemplazada se verifica contra la que la reemplaza (existe, DROP, ADD con función de permitidos) y descuenta algo", () => {
+    const textos = textosDeMigraciones();
+    for (const [ruta, reemplazo] of Object.entries(REEMPLAZADAS)) {
+      const { problemas, descuento } = analizarReemplazo(ruta, reemplazo, textos);
+      expect(problemas, ruta).toEqual([]);
+      expect(descuento, ruta).toBeGreaterThan(0);
+    }
   });
 
   it("las funciones SQL que heredan prohibidos existen en una migración (y sus usos cuentan)", () => {

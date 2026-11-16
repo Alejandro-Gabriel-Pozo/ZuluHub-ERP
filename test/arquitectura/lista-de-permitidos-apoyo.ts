@@ -324,9 +324,9 @@ export const FUNCIONES_SQL_CON_PROHIBIDOS = [
   "texto_fiscal_valido",
 ] as const;
 
-/** Cuántos usos (no definiciones ni bajas) de esas funciones tiene un SQL. */
-function usosDeFuncionesConProhibidos(sinComentarios: string): number {
-  let usos = 0;
+/** Las posiciones (en el SQL sin comentarios) de los usos (no definiciones ni bajas) de esas funciones. */
+function usosDeFuncionesConProhibidos(sinComentarios: string): number[] {
+  const usos: number[] = [];
   for (const nombre of FUNCIONES_SQL_CON_PROHIBIDOS) {
     for (const m of sinComentarios.matchAll(new RegExp(`\\b"?${nombre}"?\\s*\\(`, "gi"))) {
       const antes = sinComentarios.slice(Math.max(0, (m.index ?? 0) - 40), m.index);
@@ -335,35 +335,43 @@ function usosDeFuncionesConProhibidos(sinComentarios: string): number {
           antes,
         )
       )
-        usos += 1;
+        usos.push(m.index ?? 0);
     }
   }
   return usos;
 }
 
-/** Cuántas condiciones SQL por negación de un patrón describen una prohibición, más los usos de las funciones que las heredan. */
-export function contarProhibidosEnSql(texto: string): number {
-  const sinComentarios = texto.replace(/--[^\n]*/g, "");
-  let cuenta = usosDeFuncionesConProhibidos(sinComentarios);
+const sinComentariosSql = (texto: string): string => texto.replace(/--[^\n]*/g, "");
+
+/** Las posiciones (en el SQL sin comentarios) de cada condición por negación de un patrón que describe una prohibición, más los usos de las funciones que las heredan. */
+function posicionesDeProhibidosEnSql(sinComentarios: string): number[] {
+  const posiciones = usosDeFuncionesConProhibidos(sinComentarios);
   for (const m of sinComentarios.matchAll(OPERADOR_SQL)) {
     const operador = m[0];
-    const fin = (m.index ?? 0) + operador.length;
+    const inicio = m.index ?? 0;
+    const fin = inicio + operador.length;
     if (/^NOT\s+(?:I?LIKE|SIMILAR)/i.test(operador)) {
-      cuenta += 1;
+      posiciones.push(inicio);
       continue;
     }
     const operando = operandoSql(sinComentarios, fin);
     const cadenas = [...operando.matchAll(CADENA_SQL)];
     if (cadenas.length === 0 || cadenas.some((c) => (c[1] ?? "") !== "")) {
-      cuenta += 1;
+      posiciones.push(inicio);
       continue;
     }
     const patron = cadenas.map((c) => (c[2] ?? "").replaceAll("''", "'")).join("");
     // en SQL cualquier lista de caracteres no ASCII (escapada o escrita) es una prohibición
     const noAscii = [...patron].some((c) => (c.codePointAt(0) ?? 0) > 127);
-    if (esPatronDeProhibicion(patron) || /\\[uU][0-9a-fA-F]/.test(patron) || noAscii) cuenta += 1;
+    if (esPatronDeProhibicion(patron) || /\\[uU][0-9a-fA-F]/.test(patron) || noAscii)
+      posiciones.push(inicio);
   }
-  return cuenta;
+  return posiciones;
+}
+
+/** Cuántas condiciones SQL por negación describen una prohibición, más los usos de las funciones que las heredan. */
+export function contarProhibidosEnSql(texto: string): number {
+  return posicionesDeProhibidosEnSql(sinComentariosSql(texto)).length;
 }
 
 export type Exencion = Readonly<{ motivo: string; prohibidos: number }>;
@@ -430,4 +438,107 @@ export function problemasDeReversionesEximidas(
       problemas.push(`${ruta}: no es un .sql de ${CARPETA_DE_REVERSIONES}`);
   }
   return problemas;
+}
+
+/**
+ * MIGRACIÓN REEMPLAZADA (Deuda 1, 2026-11-16; el dueño aprobó la 0062): una migración ya aplicada no se edita, así que sus textos con lista de prohibidos siguen
+ * en el archivo aunque una migración posterior ya haya cambiado la restricción. Una restricción cuenta como «reemplazada» solo si la prueba verifica TODO esto en la
+ * migración que la reemplaza (`por`): que existe y es posterior; que tiene el `DROP CONSTRAINT` de esa restricción y su `ADD CONSTRAINT … CHECK`; que el `ADD` no trae
+ * una lista de prohibidos y llama a una función que esa misma migración crea y que declara lo permitido; y que la restricción tenía de verdad prohibiciones en el archivo
+ * viejo (una declaración sin nada que descontar es un error). Lo que no se declara, o no se verifica, sigue contando.
+ * Previene: bajar el presupuesto de deuda de una migración sin haber cambiado de verdad la regla en la base (una deuda «pagada» en el papel).
+ */
+export type Reemplazo = Readonly<{ por: string; restricciones: readonly string[] }>;
+
+const NOMBRE_DE_RESTRICCION = /\bCONSTRAINT\s+"?([A-Za-z0-9_]+)"?/gi;
+
+/** Cuántas prohibiciones aporta cada restricción de un SQL (clave: su nombre; `""` las que no están dentro de una restricción). */
+export function prohibidosPorRestriccion(texto: string): Map<string, number> {
+  const sin = sinComentariosSql(texto);
+  const cuenta = new Map<string, number>();
+  const nombres = [...sin.matchAll(NOMBRE_DE_RESTRICCION)].map((m) => ({
+    nombre: m[1] as string,
+    en: m.index ?? 0,
+  }));
+  for (const posicion of posicionesDeProhibidosEnSql(sin)) {
+    const fin = sin.lastIndexOf(";", posicion);
+    const duena = nombres.filter((n) => n.en < posicion && n.en > fin).at(-1)?.nombre ?? "";
+    cuenta.set(duena, (cuenta.get(duena) ?? 0) + 1);
+  }
+  return cuenta;
+}
+
+const numeroDeLaMigracion = (ruta: string): string => /\/(\d{4})_[^/]*\.sql$/.exec(ruta)?.[1] ?? "";
+
+/** El texto de la sentencia (hasta el `;`) que empieza donde calza `inicio`, o `undefined`. */
+function sentencia(texto: string, inicio: RegExp): string | undefined {
+  const m = inicio.exec(texto);
+  if (m === null) return undefined;
+  const fin = texto.indexOf(";", m.index);
+  return texto.slice(m.index, fin === -1 ? undefined : fin);
+}
+
+/** Los problemas de una declaración de «reemplazada por» y cuánto descuenta del presupuesto del archivo (cero si tiene algún problema). */
+export function analizarReemplazo(
+  archivo: string,
+  reemplazo: Reemplazo,
+  textos: ReadonlyMap<string, string>,
+): { problemas: string[]; descuento: number } {
+  const problemas: string[] = [];
+  const viejo = textos.get(archivo);
+  const nuevo = textos.get(reemplazo.por);
+  if (viejo === undefined) problemas.push(`${archivo}: no existe`);
+  if (nuevo === undefined)
+    problemas.push(`${archivo}: la migración que lo reemplaza (${reemplazo.por}) no existe`);
+  if (viejo === undefined || nuevo === undefined) return { problemas, descuento: 0 };
+  if (numeroDeLaMigracion(reemplazo.por) <= numeroDeLaMigracion(archivo))
+    problemas.push(`${archivo}: ${reemplazo.por} no es posterior`);
+  if (reemplazo.restricciones.length === 0)
+    problemas.push(`${archivo}: no declara qué restricciones reemplaza`);
+
+  const sinNuevo = sinComentariosSql(nuevo);
+  const funciones = new Map<string, string>();
+  for (const m of sinNuevo.matchAll(/\bCREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+"?(\w+)"?\s*\(/gi)) {
+    // El cuerpo va entre `$$` y `$$` (una lista de permitidos puede traer `;` adentro): se corta ahí, no en el primer `;`.
+    const desde = sinNuevo.indexOf("$$", m.index ?? 0);
+    const hasta = desde === -1 ? -1 : sinNuevo.indexOf("$$", desde + 2);
+    funciones.set(m[1] as string, hasta === -1 ? "" : sinNuevo.slice(desde, hasta));
+  }
+  const aportes = prohibidosPorRestriccion(viejo);
+  let descuento = 0;
+  for (const c of reemplazo.restricciones) {
+    const aporte = aportes.get(c) ?? 0;
+    if (aporte === 0)
+      problemas.push(`${archivo}: ${c} no tiene prohibiciones que descontar (o no existe)`);
+    const nombre = `"?${c}"?\\b`;
+    if (
+      sentencia(
+        sinNuevo,
+        new RegExp(`\\bDROP\\s+CONSTRAINT\\s+(?:IF\\s+EXISTS\\s+)?${nombre}`, "i"),
+      ) === undefined
+    )
+      problemas.push(`${archivo}: ${reemplazo.por} no tiene el DROP CONSTRAINT de ${c}`);
+    const alta = sentencia(
+      sinNuevo,
+      new RegExp(`\\bADD\\s+CONSTRAINT\\s+${nombre}\\s+CHECK\\s*\\(`, "i"),
+    );
+    if (alta === undefined) {
+      problemas.push(`${archivo}: ${reemplazo.por} no tiene el ADD CONSTRAINT ${c} CHECK`);
+      continue;
+    }
+    if (contarProhibidosEnSql(alta) > 0)
+      problemas.push(
+        `${archivo}: el ADD CONSTRAINT ${c} de ${reemplazo.por} sigue con una lista de prohibidos`,
+      );
+    const llamadas = [...alta.matchAll(/\b([a-z_][a-z0-9_]*)\s*\(/gi)].map((m) => m[1] as string);
+    const declaraLoPermitido = llamadas.some(
+      (f) => funciones.has(f) && contarProhibidosEnSql(funciones.get(f) as string) === 0,
+    );
+    if (!declaraLoPermitido)
+      problemas.push(
+        `${archivo}: el ADD CONSTRAINT ${c} de ${reemplazo.por} no llama a una función de permitidos que esa migración cree`,
+      );
+    descuento += aporte;
+  }
+  return { problemas, descuento: problemas.length === 0 ? descuento : 0 };
 }

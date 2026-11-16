@@ -7,12 +7,8 @@
     "prohibidos": 0,
     "duplicados": 1
   },
-  "migraciones/0005_administracion.sql": {
-    "prohibidos": 1,
-    "duplicados": 0
-  },
   "migraciones/0006_fiscal.sql": {
-    "prohibidos": 8,
+    "prohibidos": 2,
     "duplicados": 0
   },
   "migraciones/0007_marcas_y_planes.sql": {
@@ -20,15 +16,11 @@
     "duplicados": 0
   },
   "migraciones/0009_facturacion.sql": {
-    "prohibidos": 13,
+    "prohibidos": 7,
     "duplicados": 0
   },
   "migraciones/0019_contacto_de_la_sucursal.sql": {
     "prohibidos": 4,
-    "duplicados": 0
-  },
-  "migraciones/0022_nombre_de_la_sucursal_en_el_comprobante.sql": {
-    "prohibidos": 1,
     "duplicados": 0
   },
   "src/capacidades/activos/direccion-externa.ts": {
