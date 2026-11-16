@@ -202,6 +202,26 @@ export async function puedeCambiarPrecios(contexto: ContextoOperativo): Promise<
   return permisos !== null && ofertaDe("productos.cambiar_precio", permisos).permitida;
 }
 
+/** Qué botones de «Carta en línea» se ofrecen activos hoy (una sola lectura de permisos). */
+export type OfertaDeLaCarta = Readonly<{ guardar: boolean; poner: boolean; sacar: boolean }>;
+
+/**
+ * ¿Qué puede hacer la persona con la carta en línea? Es la oferta de `vidrieras.editar` (guardar los textos), `vidrieras.publicar_en_linea` (ponerla en línea) y `vidrieras.retirar_de_linea` (sacarla)
+ * que el servidor calcula con `ofertaDe`: con el módulo `vidriera` en desarrollo (hoy), sin activar o sin el rol, no. Si no se pudieron leer los permisos, todo `false` (cierra, no abre). Ocultar no es
+ * autorizar: cada acción vuelve a pasar por el guard dentro de su transacción. Es solo la ayuda que apaga los botones. Chequeo: `test/web/carta-en-linea-acceso.test.ts`.
+ */
+export async function ofertaDeLaCartaEnLinea(
+  contexto: ContextoOperativo,
+): Promise<OfertaDeLaCarta> {
+  const permisos = await permisosDeLaPersona(contexto);
+  if (permisos === null) return { guardar: false, poner: false, sacar: false };
+  return {
+    guardar: ofertaDe("vidrieras.editar", permisos).permitida,
+    poner: ofertaDe("vidrieras.publicar_en_linea", permisos).permitida,
+    sacar: ofertaDe("vidrieras.retirar_de_linea", permisos).permitida,
+  };
+}
+
 type PermisosLeidos = NonNullable<Awaited<ReturnType<typeof permisosDeLaPersona>>>;
 
 /** De una acción, su módulo, el estado de construcción de ese módulo y su efecto: el catálogo es el único dueño de esos datos. */

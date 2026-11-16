@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0462",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La pantalla «Carta en línea» vive en la dirección /catalogo/carta-en-linea (la maqueta aprobada no fija ruta; sigue el patrón de /catalogo/secciones).",
+  "que_cambia": "Solo la dirección de la pantalla dentro del sistema (y dónde se la enlaza desde el menú, que todavía no la trae). Revertir: cambiar una constante y mover una carpeta.",
+  "donde": "apps/web/ui/plantillas/carta/modelo-de-carta-en-linea.ts (RUTA_DE_LA_CARTA_EN_LINEA); maqueta 10-ux-ui/prototipos-gastronomia/carta-en-linea.html"
+}

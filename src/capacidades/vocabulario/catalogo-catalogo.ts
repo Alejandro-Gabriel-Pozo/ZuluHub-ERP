@@ -134,6 +134,27 @@ export const TEXTOS_DE_CATALOGO = {
   // (líneas 381 y 389). No figura en sus «Textos nuevos» ni en los reutilizados. Revertir: quitar el botón (se vuelve por el menú).
   "catalogo.seccion.volver_a_la_lista": { porDefecto: "Volver a la lista" },
 
+  // Carta en línea (C1). Fuente: la maqueta APROBADA `Pedernal-docs/10-ux-ui/prototipos-gastronomia/carta-en-linea.html` (aprobada por el dueño: filas 60 y 70 de `decisiones-del-dueno-2026-11.md`; sus
+  // «Textos por aprobar» llevan el visto bueno del 12/11/2026), tabla «Textos por aprobar» (`PA_REG`: «Carta en línea», «Rubro», «Lugar», «Poner en línea», «Sacar de línea», «En línea», «Fuera de línea»,
+  // «Dirección pública», «No habilitado», «Salen N productos» / «Sale 1 producto», «Sin sección», «Oculto», «No disponible», «Descargar QR») y de sus «Textos ya aprobados» («Nombre», «Guardar», «Copiar»,
+  // «Sin precio», «Desactivado», «Esta acción no está permitida»). NO están: «Frase final» (su rótulo no está confirmado: la propia maqueta lo marca «Pendiente») ni el aviso de «No habilitado» sin la perilla.
+  "catalogo.carta.titulo": { porDefecto: "Carta en línea" },
+  "catalogo.carta.rubro": { porDefecto: "Rubro" },
+  "catalogo.carta.lugar": { porDefecto: "Lugar" },
+  "catalogo.carta.poner": { porDefecto: "Poner en línea" },
+  "catalogo.carta.sacar": { porDefecto: "Sacar de línea" },
+  "catalogo.carta.en_linea": { porDefecto: "En línea" },
+  "catalogo.carta.fuera_de_linea": { porDefecto: "Fuera de línea" },
+  "catalogo.carta.direccion": { porDefecto: "Dirección pública" },
+  "catalogo.carta.descargar_qr": { porDefecto: "Descargar QR" },
+  "catalogo.carta.salen": { porDefecto: "Salen {cantidad} productos", marcadores: ["cantidad"] },
+  "catalogo.carta.sale_uno": { porDefecto: "Sale 1 producto" },
+  "catalogo.carta.sin_seccion": { porDefecto: "Sin sección" },
+  "catalogo.carta.oculto": { porDefecto: "Oculto" },
+  "catalogo.carta.no_disponible": { porDefecto: "No disponible" },
+  // «Copiar» ya existe en el vocabulario de fiscal (`fiscal.pantalla.config_cert_copiar`); se registra aparte por módulo, con el mismo texto y la misma maqueta (`productos.html`, «Textos nuevos», 09/11/2026).
+  "catalogo.accion.copiar": { porDefecto: "Copiar" },
+
   // Los nombres de las 14 unidades de medida (A2i). FUENTE ÚNICA: la constante `UNID` de la maqueta aprobada `Pedernal-docs/10-ux-ui/prototipos-gastronomia/productos.html` (~línea 421),
   // en el mismo orden que `src/primitivas/unidades/unidades.ts`; decisión del dueño del 13/11/2026 («las 14 unidades se muestran con los nombres de la maqueta de productos»,
   // `decisiones-del-dueno-2026-11.md`, fila del 13/11). La clave de cada una sale del código de la unidad en minúscula (`catalogo.unidad.<codigo>`): el mapa código → clave está en
