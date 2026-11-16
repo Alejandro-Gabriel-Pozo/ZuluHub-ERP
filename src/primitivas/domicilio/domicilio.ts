@@ -1,5 +1,5 @@
 import { err, ok, type Resultado } from "../resultado/resultado";
-import { textoDeUnaLineaDesdeTexto } from "../texto/texto-de-una-linea";
+import { LETRAS_LATINAS, textoDeUnaLineaDesdeTexto } from "../texto/texto-de-una-linea";
 import { provinciaDesdeCodigo, type CodigoDeProvincia } from "./provincias";
 
 /**
@@ -24,13 +24,13 @@ export const FORMATO_DE_CODIGO_POSTAL = /^[A-Z0-9]{4,8}$/;
 const FORMATO_DE_NUMERO = /^[0-9]{1,6}$/;
 const SIN_NUMERO = "S/N";
 /**
- * LISTA DE PERMITIDOS del piso y del departamento: letras y dígitos ASCII, espacio y `º ° ª . / -` (de 1 a su tope). Se escribe
+ * LISTA DE PERMITIDOS del piso y del departamento: letras latinas con tilde y ñ (las de `texto-de-una-linea.ts`), dígitos, espacio y `º ° ª . / -` (de 1 a su tope; el orquestador pidió las tildes por delegación, 2026-11-16). Se escribe
  * «-1» (subsuelo), «PB», «1°», «B/2»: por eso NO usa el texto de una línea de nombres, que no deja empezar con `-`. SUPUESTO
  * (DEC-0047) del ingeniero, sin fuente del dueño; revertir es cambiar esta constante. Previene: un invisible, `<>` o un emoji en un
  * dato que se imprime (la forma vieja, «sin controles», los dejaba pasar).
  */
 function pisoODepartamentoPermitido(maximo: number): RegExp {
-  return new RegExp(`^[A-Za-z0-9º°ª./ -]{1,${maximo}}$`);
+  return new RegExp(`^[${LETRAS_LATINAS}0-9º°ª./ -]{1,${maximo}}$`);
 }
 const PISO_PERMITIDO = pisoODepartamentoPermitido(LIMITES_DE_DOMICILIO.piso);
 const DEPARTAMENTO_PERMITIDO = pisoODepartamentoPermitido(LIMITES_DE_DOMICILIO.departamento);

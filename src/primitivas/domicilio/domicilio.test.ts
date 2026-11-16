@@ -92,7 +92,7 @@ describe("domicilio: caso válido y normalización", () => {
     expect(valido(con({ calle: "25 de Mayo" })).calle).toBe("25 de Mayo");
     expect(valido(con({ calle: "Ruta  9   Km 12" })).calle).toBe("Ruta 9 Km 12");
     expect(valido(con({ localidad: "Ñandú" })).localidad).toBe("Ñandú");
-    for (const piso of ["PB", "3", "-1", "1°", "B/2", "Sub 1"]) {
+    for (const piso of ["PB", "3", "-1", "1°", "B/2", "Sub 1", "Único", "Ñ"]) {
       expect(valido(con({ piso })).piso, piso).toBe(piso);
       expect(valido(con({ departamento: piso })).departamento, piso).toBe(piso);
     }
@@ -270,8 +270,8 @@ describe("formatearDomicilio", () => {
 
 describe("domicilio: propiedades", () => {
   const letras = "abcdefghijklmnopqrstuvwxyzáéíóúñABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,-'";
-  // El piso y el departamento tienen su propia lista de permitidos (ASCII, `º ° ª . / -` y espacio).
-  const letrasDePiso = "abcxyzABCXYZ0123456789 º°ª./-";
+  // El piso y el departamento tienen su propia lista de permitidos (letras latinas, dígitos, `º ° ª . / -` y espacio).
+  const letrasDePiso = "abcxyzñáÓABCXYZ0123456789 º°ª./-";
   const textoValido = (maximo: number, permitidos: string = letras) =>
     fc
       .array(fc.constantFrom(...permitidos.split("")), { minLength: 1, maxLength: maximo })
