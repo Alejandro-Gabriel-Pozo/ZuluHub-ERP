@@ -111,6 +111,7 @@ export const PERMISOS_DE_EMPRESA = {
   "vidrieras.publicar_en_linea": ["GERENTE", "ADMINISTRADOR"],
   "vidrieras.renovar_enlace": ["GERENTE", "ADMINISTRADOR"],
   "vidrieras.retirar_de_linea": ["GERENTE", "ADMINISTRADOR"],
+  "vidrieras.administrar_portal": ["GERENTE", "ADMINISTRADOR"],
   "productos.asignar_emisor": ["GERENTE"],
   "stock.verificar_saldos": ["GERENTE"],
   // E5-T10 (P-1, DECIDIDO: e5-stock-especificacion §8): ver costos, de gerente y administrador; el operador no los ve nunca.

@@ -80,6 +80,7 @@ const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
   "productos.reactivar",
   "stock.ajustar",
   "stock.anular",
+  "vidrieras.administrar_portal",
   "vidrieras.crear",
   "vidrieras.editar",
   "vidrieras.publicar",
@@ -295,9 +296,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 157 acciones: 34 de empresa, configuración fiscal y facturación, 48 de catálogo, carta y stock (39 de T0, 2 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 19 de clientes y compras y 16 de salón y comandas", () => {
+  it("hay 158 acciones: 34 de empresa, configuración fiscal y facturación, 49 de catálogo, carta y stock (39 de T0, 2 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 19 de clientes y compras y 16 de salón y comandas", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(157);
+    expect(todas).toHaveLength(158);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -327,7 +328,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("composiciones"),
       porPrefijo("conteos"),
       porPrefijo("costos"),
-    ]).toEqual([7, 4, 1, 1, 0, 1, 9, 7, 4, 2, 1, 4, 1]);
+    ]).toEqual([7, 4, 1, 1, 0, 1, 10, 7, 4, 2, 1, 4, 1]);
     expect([
       porPrefijo("cajas"),
       porPrefijo("medios_de_pago"),

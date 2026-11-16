@@ -114,6 +114,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "vidrieras.publicar_en_linea"
       | "vidrieras.renovar_enlace"
       | "vidrieras.retirar_de_linea"
+      | "vidrieras.administrar_portal"
       | "stock.ver"
       | "stock.verificar_saldos"
       | "costos.ver"

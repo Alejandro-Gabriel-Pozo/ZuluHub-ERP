@@ -7,7 +7,6 @@ import { ACCIONES_DE_LOTES, MODULO_DE_PRODUCCION } from "./catalogo-lotes-y-prod
 import { MODULOS_DE_SALON_Y_COMANDAS } from "./catalogo-salon-y-comandas";
 
 export type EstadoDeConstruccion = "disponible" | "en_desarrollo";
-
 /**
  * Qué hace una acción con lo que la empresa ya tiene (reglas transversales §7.9). Decide qué pasa
  * cuando un módulo queda en SOLO LECTURA (una baja de plan lo dejó fuera del techo):
@@ -204,6 +203,7 @@ export const CATALOGO_DE_MODULOS = {
       "vidrieras.publicar_en_linea": { capacidad: null, efecto: "CREA_AMPLIA" },
       "vidrieras.renovar_enlace": { capacidad: null, efecto: "CREA_AMPLIA" },
       "vidrieras.retirar_de_linea": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "vidrieras.administrar_portal": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
   stock: {

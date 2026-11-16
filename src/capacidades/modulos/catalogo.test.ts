@@ -113,6 +113,7 @@ describe("el catálogo comercial de módulos", () => {
           "vidrieras.publicar_en_linea": { capacidad: null, efecto: "CREA_AMPLIA" },
           "vidrieras.renovar_enlace": { capacidad: null, efecto: "CREA_AMPLIA" },
           "vidrieras.retirar_de_linea": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "vidrieras.administrar_portal": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
       stock: {
