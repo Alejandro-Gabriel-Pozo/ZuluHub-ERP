@@ -279,6 +279,9 @@ jobs:
       # Agrupa los grupos chicos en el mismo job (cada job paga ~1 min de arranque); no cambia qué se muta. Ver `arquitectura/empaquetar-mutacion.cjs`.
       - id: paquetes
         run: node arquitectura/empaquetar-mutacion.cjs
+        env:
+          # Cada paso tiene su propio $GITHUB_OUTPUT: lo que eligió el plan llega por el contexto `steps`, no leyendo el archivo del otro paso.
+          GRUPOS_DEL_PLAN: ${{ steps.plan.outputs.grupos }}
 
   mutacion:
     # En paralelo por PAQUETES de grupos (arquitectura/mutacion/, un archivo por grupo; los chicos comparten job, ver `empaquetar-mutacion.cjs`):

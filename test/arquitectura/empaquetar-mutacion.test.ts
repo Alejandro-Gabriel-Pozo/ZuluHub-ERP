@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import fc from "fast-check";
@@ -17,7 +19,7 @@ const { empaquetar, etiquetaDe, gruposDelPlan, TOPE_DE_MINUTOS_DECLARADOS } =
   require("../../arquitectura/empaquetar-mutacion.cjs") as {
     empaquetar: (g: G[], m: Map<string, number>, tope?: number) => Paquete[];
     etiquetaDe: (g: G[]) => string;
-    gruposDelPlan: (texto: string) => G[];
+    gruposDelPlan: (texto: string | undefined) => G[];
     TOPE_DE_MINUTOS_DECLARADOS: number;
   };
 const { correrPaquete, problemasDelGrupo, escaparPropiedad, comandoDeStryker } =
@@ -136,17 +138,95 @@ describe("empaquetar: cada grupo del plan sale en exactamente un paquete", () =>
   });
 });
 
-describe("empaquetar: lo que deja el plan en $GITHUB_OUTPUT", () => {
-  it("toma la última línea `grupos=`", () => {
-    const texto = `hay=true\ngrupos=[{"grupo":"x","archivos":"a","pruebas":""}]\nestabilidad=false\n`;
+describe("empaquetar: los grupos del plan llegan por GRUPOS_DEL_PLAN", () => {
+  it("toma la lista JSON del entorno", () => {
+    const texto = '[{"grupo":"x","archivos":"a","pruebas":""}]';
     expect(gruposDelPlan(texto)).toEqual([{ grupo: "x", archivos: "a", pruebas: "" }]);
   });
-  it.each(["hay=true\n", "grupos={}\n", "grupos=no es json\n"])(
-    "falla (no sigue) si falta o no es una lista: %j",
+  it.each([undefined, "", "   ", "{}", "no es json", '"texto"'])(
+    "falla (no sigue) si falta, no es JSON o no es una lista: %j",
     (texto) => {
       expect(() => gruposDelPlan(texto)).toThrow();
     },
   );
+});
+
+describe("empaquetar: los DOS pasos como los corre Actions (cada paso con su propio $GITHUB_OUTPUT)", () => {
+  // Qué previene: la primera versión (#350) leía `grupos=` del archivo de salidas del paso del plan y en Actions cada paso tiene el suyo: falló en
+  // «Mutación (plan)». La prueba local usaba un solo archivo y no lo veía. Acá se corren los dos pasos con archivos distintos, y los grupos pasan por
+  // `steps.plan.outputs.grupos` → `GRUPOS_DEL_PLAN`, que es lo que hace ci.yml.
+  const nuevaCarpeta = () => mkdtempSync(join(tmpdir(), "empaquetar-"));
+  const correr = (script: string, env: Record<string, string>) =>
+    spawnSync("node", [join(RAIZ, script)], {
+      cwd: RAIZ,
+      encoding: "utf8",
+      env: { NODE_ENV: "test", PATH: process.env["PATH"] ?? "", ...env },
+    });
+  const salidaDe = (archivo: string, clave: string) =>
+    readFileSync(archivo, "utf8")
+      .split("\n")
+      .filter((l) => l.startsWith(`${clave}=`))
+      .at(-1)
+      ?.slice(clave.length + 1);
+
+  it("el plan escribe en su archivo, el empaquetador en el suyo, y los grupos viajan por el entorno", () => {
+    const dir = nuevaCarpeta();
+    try {
+      const delPlan = join(dir, "paso-plan");
+      const delEmpaquetador = join(dir, "paso-paquetes");
+      writeFileSync(delEmpaquetador, "");
+      const plan = correr("arquitectura/planificar-mutacion.cjs", {
+        GITHUB_OUTPUT: delPlan,
+        GITHUB_EVENT_NAME: "push",
+      });
+      expect(plan.status, plan.stderr).toBe(0);
+      const grupos = salidaDe(delPlan, "grupos") ?? "";
+      expect(grupos.length).toBeGreaterThan(2);
+      // Actions entrega `steps.plan.outputs.grupos` como variable de entorno del paso siguiente.
+      const r = correr("arquitectura/empaquetar-mutacion.cjs", {
+        GITHUB_OUTPUT: delEmpaquetador,
+        GRUPOS_DEL_PLAN: grupos,
+      });
+      expect(r.status, r.stderr).toBe(0);
+      const paquetes = JSON.parse(salidaDe(delEmpaquetador, "paquetes") ?? "null") as Paquete[];
+      const delPlanJson = JSON.parse(grupos) as G[];
+      expect(nombresDe(paquetes).sort()).toEqual(delPlanJson.map((x) => x.grupo).sort());
+      expect(paquetes.length).toBeLessThan(delPlanJson.length / 2);
+      // Y NO escribe nada en el archivo del otro paso.
+      expect(readFileSync(delPlan, "utf8")).not.toContain("paquetes=");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("forma vieja: sin GRUPOS_DEL_PLAN falla aunque el archivo de OTRO paso tenga `grupos=` (no se lee el archivo del vecino)", () => {
+    const dir = nuevaCarpeta();
+    try {
+      const delPlan = join(dir, "paso-plan");
+      const delEmpaquetador = join(dir, "paso-paquetes");
+      writeFileSync(delPlan, 'grupos=[{"grupo":"x","archivos":"src/x.ts","pruebas":""}]\n');
+      writeFileSync(delEmpaquetador, "");
+      const r = correr("arquitectura/empaquetar-mutacion.cjs", { GITHUB_OUTPUT: delEmpaquetador });
+      expect(r.status).not.toBe(0);
+      expect(readFileSync(delEmpaquetador, "utf8")).not.toContain("paquetes=");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("sin $GITHUB_OUTPUT falla con código 2 (el paso corre solo dentro del job del plan)", () => {
+    const r = correr("arquitectura/empaquetar-mutacion.cjs", { GRUPOS_DEL_PLAN: "[]" });
+    expect(r.status).toBe(2);
+  });
+
+  it("el plan completo cabe de sobra en una variable de entorno (el límite de Linux es 128 KiB por variable)", () => {
+    const todos = cargarLosGrupos(RAIZ).grupos.map((x) => ({
+      grupo: x.grupo,
+      archivos: x.archivos,
+      pruebas: x.pruebas ?? "",
+    }));
+    expect(Buffer.byteLength(JSON.stringify(todos))).toBeLessThan(100_000);
+  });
 });
 
 describe("correr un paquete: se nombra cada grupo y ninguna falla se oculta", () => {
@@ -275,6 +355,7 @@ describe("ci.yml: el job de mutación corre paquetes", () => {
     expect(plan.indexOf("planificar-mutacion.cjs")).toBeLessThan(
       plan.indexOf("empaquetar-mutacion.cjs"),
     );
+    expect(plan).toContain("GRUPOS_DEL_PLAN: ${{ steps.plan.outputs.grupos }}");
   });
 
   it("la matriz sale de los paquetes, el job se nombra por su etiqueta y corre el script (no un Stryker suelto)", () => {

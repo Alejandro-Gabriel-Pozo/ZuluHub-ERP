@@ -9,7 +9,8 @@
  *
  * NO cambia qué se muta ni con qué pruebas: cada grupo conserva su `--mutate`, su filtro de pruebas y el umbral de 100 % (`correr-paquete-de-mutacion.cjs` corre una
  * vez Stryker por grupo, una tras otra). Todo grupo del plan sale en exactamente un paquete (se comprueba antes de escribir la salida); un grupo sin minutos
- * conocidos corre solo, y primero (lo desconocido se supone largo). Lee `grupos=` de `$GITHUB_OUTPUT` (el plan) y agrega `paquetes=`.
+ * conocidos corre solo, y primero (lo desconocido se supone largo). Recibe los grupos del plan en `GRUPOS_DEL_PLAN` (`steps.plan.outputs.grupos`) y escribe `paquetes=` en
+ * SU `$GITHUB_OUTPUT`: en Actions cada paso tiene su propio archivo de salidas, así que un paso no puede leer lo que otro escribió (así falló la primera versión, #350).
  * Chequeo que falla si se quita: `test/arquitectura/empaquetar-mutacion.test.ts`.
  */
 const fs = require("node:fs");
@@ -60,15 +61,12 @@ function empaquetar(grupos, minutosDe, tope = TOPE_DE_MINUTOS_DECLARADOS) {
     .map((p) => ({ etiqueta: etiquetaDe(p), grupos: p }));
 }
 
-/** Los grupos que dejó el plan en el archivo de salidas del job (la última línea `grupos=`). Falla si no está o no es una lista. */
+/** Los grupos del plan, desde el texto JSON que recibe el paso. Falla (no sigue) si falta, no es JSON o no es una lista. */
 function gruposDelPlan(texto) {
-  const linea = texto
-    .split("\n")
-    .filter((l) => l.startsWith("grupos="))
-    .at(-1);
-  if (linea === undefined) throw new Error("el plan no dejó `grupos=` en $GITHUB_OUTPUT.");
-  const valor = JSON.parse(linea.slice("grupos=".length));
-  if (!Array.isArray(valor)) throw new Error("`grupos=` del plan no es una lista.");
+  if (texto === undefined || texto.trim() === "")
+    throw new Error("falta GRUPOS_DEL_PLAN (los grupos que eligió el plan).");
+  const valor = JSON.parse(texto);
+  if (!Array.isArray(valor)) throw new Error("GRUPOS_DEL_PLAN no es una lista.");
   return valor;
 }
 
@@ -78,7 +76,7 @@ function principal() {
     process.stderr.write("Falta $GITHUB_OUTPUT: este paso corre dentro del job `mutacion-plan`.\n");
     process.exit(2);
   }
-  const plan = gruposDelPlan(fs.readFileSync(salida, "utf8"));
+  const plan = gruposDelPlan(process.env["GRUPOS_DEL_PLAN"]);
   const minutosDe = new Map(
     cargarLosGrupos(path.resolve(".")).grupos.map((g) => [g.grupo, g.minutos]),
   );
