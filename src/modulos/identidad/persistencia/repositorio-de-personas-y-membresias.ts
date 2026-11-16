@@ -47,6 +47,14 @@ export interface RepositorioDeMembresias {
   listarActivas(empresa: EmpresaId): Promise<Membresia[]>;
   /** TODAS las membresías de la empresa (activas o apagadas) con el email de su persona. */
   listarConEmail(empresa: EmpresaId): Promise<MiembroConEmail[]>;
+  /**
+   * El email de las personas pedidas que tienen membresía (activa o apagada) en ESA empresa; una persona sin membresía en ella no aparece,
+   * existan o no en otra. Pensada para poner el nombre en historiales: quien ya se fue de la empresa sigue figurando.
+   */
+  emailsDeMiembros(
+    empresa: EmpresaId,
+    personas: readonly PersonaId[],
+  ): Promise<readonly Readonly<{ personaId: PersonaId; email: Email }>[]>;
   /** Las membresías de la persona (activas o no) en las empresas indicadas. */
   deLaPersonaEn(persona: PersonaId, empresas: readonly EmpresaId[]): Promise<Membresia[]>;
   crear(datos: {
@@ -188,6 +196,22 @@ export function crearRepositorioDeMembresias(db: Kysely<IdentidadDb>): Repositor
         .orderBy("m.persona_id")
         .execute();
       return filas.map((fila) => ({ membresia: aMembresia(fila), email: aEmail(fila.email) }));
+    },
+
+    async emailsDeMiembros(empresa, personas) {
+      if (personas.length === 0) return [];
+      const filas = await db
+        .selectFrom("membresia as m")
+        .innerJoin("persona as p", "p.id", "m.persona_id")
+        .select(["m.persona_id", "p.email as email"])
+        .where("m.empresa_id", "=", empresa)
+        .where("m.persona_id", "in", [...personas])
+        .orderBy("m.persona_id")
+        .execute();
+      return filas.map((fila) => ({
+        personaId: personaId(fila.persona_id),
+        email: aEmail(fila.email),
+      }));
     },
 
     async deLaPersonaEn(persona, empresas) {
