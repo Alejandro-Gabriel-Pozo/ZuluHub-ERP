@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0461",
+  "fecha": "2026-11-15",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Código público VENTAS_ACCION_NO_PERMITIDA con el genérico aprobado «Esta acción no está permitida».",
+  "que_cambia": "Qué lee la persona cuando una consulta o acción del mostrador es rechazada por una regla del negocio: el mismo genérico ya aprobado en caja, sin un texto por cada regla (clave ventas.error.accion_no_permitida en catalogo-ventas.ts).",
+  "donde": "delegación del dueño, DDD filas 171 y 173; decisión P5 del 15/11"
+}

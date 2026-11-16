@@ -547,11 +547,7 @@ describe("el catálogo de textos: cableado de los archivos por módulo", () => {
     }
   });
 
-  it("los archivos de módulo nacen vacíos: un archivo sin textos no rompe el catálogo ni agrega claves", () => {
-    for (const archivo of ["catalogo-ventas.ts"]) {
-      const parte = partes.find((p) => p.archivo === archivo);
-      expect(Object.keys(parte?.exportados[0]?.[1] ?? {})).toHaveLength(0);
-    }
+  it("el catálogo no queda vacío aunque un archivo de módulo no tenga textos todavía", () => {
     expect(entradas.length).toBeGreaterThan(0);
   });
 });
