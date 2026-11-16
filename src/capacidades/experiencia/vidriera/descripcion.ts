@@ -1,3 +1,4 @@
+import { LARGO_MAXIMO_DE_LA_DESCRIPCION_EN_CARTA } from "../../../primitivas/texto/descripcion-de-carta";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { validarTextoVisible } from "../../vocabulario/texto-visible";
 
@@ -6,7 +7,7 @@ import { validarTextoVisible } from "../../vocabulario/texto-visible";
  * lo sumo 2 saltos de línea, sin HTML ni Markdown (se pinta como texto). Opcional: vacía = no hay bloque.
  */
 
-export const LARGO_MAXIMO_DE_LA_DESCRIPCION = 300;
+export const LARGO_MAXIMO_DE_LA_DESCRIPCION = LARGO_MAXIMO_DE_LA_DESCRIPCION_EN_CARTA;
 export const SALTOS_MAXIMOS_DE_LA_DESCRIPCION = 2;
 
 export type MotivoDeDescripcionInvalida =

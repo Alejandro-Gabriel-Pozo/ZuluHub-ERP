@@ -1,8 +1,4 @@
 {
-  "apps/plataforma/logica/entrada-de-submarca.ts": {
-    "prohibidos": 0,
-    "duplicados": 1
-  },
   "apps/web/ui/plantillas/facturacion/impresion/ayudas-de-impresion.tsx": {
     "prohibidos": 0,
     "duplicados": 1
@@ -32,10 +28,6 @@
     "duplicados": 0
   },
   "src/capacidades/activos/direccion-externa.ts": {
-    "prohibidos": 0,
-    "duplicados": 1
-  },
-  "src/capacidades/experiencia/vidriera/descripcion.ts": {
     "prohibidos": 0,
     "duplicados": 1
   },
@@ -70,10 +62,6 @@
   "src/plataforma/captacion/dominio/formulario.ts": {
     "prohibidos": 1,
     "duplicados": 0
-  },
-  "src/plataforma/dominio/soporte/consulta.ts": {
-    "prohibidos": 0,
-    "duplicados": 1
   },
   "src/primitivas/contacto/una-linea.ts": {
     "prohibidos": 1,

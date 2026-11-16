@@ -29,7 +29,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
 const LARGO_MAXIMO_DE_COLOR = 20;
-const LARGO_MAXIMO_DE_ASPECTO = 40;
+const LARGO_MAXIMO_DE_ASPECTO = 40; // fuente-unica: ajeno — el valor de un token de aspecto de la submarca es otro dato que el rubro o el teléfono
 const LARGO_MAXIMO_DEL_MOTIVO = 2000;
 
 const TOKENS_DE_TEMA = ["primary", "on-primary", "secondary", "accent"] as const;

@@ -101,7 +101,7 @@ export function resultadoDePagina<T>(
 }
 
 /** El tope del largo de un filtro de texto: una entidad o un id de la auditoría nunca es más largo. */
-export const LARGO_MAXIMO_DE_FILTRO = 200;
+export const LARGO_MAXIMO_DE_FILTRO = 200; // fuente-unica: ajeno — el filtro de la consola de soporte es otro dato que el nombre o razón social
 
 /**
  * Un filtro de texto opcional: sin valor no filtra (`null`); con valor se recortan los espacios y no
