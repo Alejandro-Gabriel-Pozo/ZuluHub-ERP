@@ -39,10 +39,6 @@
     "prohibidos": 0,
     "duplicados": 1
   },
-  "src/capacidades/planes/version-de-plan.ts": {
-    "prohibidos": 1,
-    "duplicados": 0
-  },
   "src/capacidades/vocabulario/texto-visible.ts": {
     "prohibidos": 1,
     "duplicados": 0
@@ -50,10 +46,6 @@
   "src/composicion/entradas-de-facturacion.ts": {
     "prohibidos": 0,
     "duplicados": 2
-  },
-  "src/plataforma/captacion/dominio/formulario.ts": {
-    "prohibidos": 1,
-    "duplicados": 0
   },
   "src/primitivas/contacto/una-linea.ts": {
     "prohibidos": 1,

@@ -1,4 +1,5 @@
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
+import { textoDeUnaLineaDesdeTexto } from "../../primitivas/texto/texto-de-una-linea";
 import { esClaveDe } from "../modulos/activos";
 import type { DefinicionDeModulo } from "../modulos/catalogo";
 import type { DefinicionDePerilla } from "./perillas";
@@ -36,17 +37,19 @@ export type ErrorDeVersionDePlan =
   | Readonly<{ codigo: "VALOR_DE_PERILLA_INVALIDO"; perilla: string }>
   | Readonly<{ codigo: "PERILLA_REQUIERE_OTRA"; perilla: string; requiere: string }>;
 
-/** Caracteres de control, de formato (ancho cero, marcas bidireccionales), separadores de línea y sin asignar. */
-const CARACTER_NO_IMPRIMIBLE = /[\p{C}\p{Zl}\p{Zp}]/u;
-
 /**
- * El nombre comercial: texto recortado de 1 a 60 caracteres, sin caracteres de control ni de formato
- * (el nombre se muestra tal cual; un ancho cero o una marca bidireccional lo falsificarían).
+ * El nombre comercial: texto de una línea de 1 a 60 caracteres de la lista de permitidos (`texto-de-una-linea.ts`, una sola fuente),
+ * en su forma canónica (NFC, espacios repetidos en uno). El nombre se muestra tal cual: un ancho cero o una marca bidireccional lo
+ * falsificarían, y lo que la lista no nombra (emoji, `<>`, otros alfabetos) tampoco pasa. SUPUESTO (DEC-0047) del ingeniero (Deuda 1,
+ * 2026-11-16, aprobado por el orquestador, sin fuente del dueño): la lista base; revertir es volver a la expresión anterior
+ * (`/[\p{C}\p{Zl}\p{Zp}]/u`, solo controles y formato).
  */
 export function nombreDePlanValido(nombre: string): string | null {
-  const limpio = nombre.trim();
-  if (limpio === "" || [...limpio].length > LARGO_MAXIMO_DEL_NOMBRE_DE_PLAN) return null;
-  return CARACTER_NO_IMPRIMIBLE.test(limpio) ? null : limpio;
+  const limpio = textoDeUnaLineaDesdeTexto(nombre, {
+    maximo: LARGO_MAXIMO_DEL_NOMBRE_DE_PLAN,
+    exigirUnaLetra: false,
+  });
+  return limpio.ok ? limpio.valor : null;
 }
 
 /** El código técnico de un plan: minúsculas, dígitos y guion; de 2 a 40 caracteres, empieza con letra (`plan_codigo_ck`). */

@@ -64,9 +64,18 @@ describe("nombreDePlanValido", () => {
     expect(nombreDePlanValido("a".repeat(61))).toBeNull();
   });
 
-  it("cuenta caracteres, no unidades de texto: 60 emojis entran, 61 no", () => {
-    expect(nombreDePlanValido("😀".repeat(60))).toBe("😀".repeat(60));
-    expect(nombreDePlanValido("😀".repeat(61))).toBeNull();
+  it("cuenta caracteres, no unidades de texto: 60 letras con tilde entran, 61 no", () => {
+    expect(nombreDePlanValido("é".repeat(60))).toBe("é".repeat(60));
+    expect(nombreDePlanValido("é".repeat(61))).toBeNull();
+  });
+
+  it("solo pasa lo que la lista de permitidos nombra: lo que la forma vieja («sin controles») dejaba pasar se rechaza", () => {
+    for (const nombre of ["Plan 😀", "計画", "<b>Plan</b>", "=1+1", "Plan @ casa"]) {
+      expect(nombreDePlanValido(nombre), nombre).toBeNull();
+    }
+    for (const nombre of ["Plan Pro", "Básico 2", "Hotel & Spa", "Plan  Pro"]) {
+      expect(nombreDePlanValido(nombre), nombre).toBe(nombre.replace(/ +/g, " "));
+    }
   });
 
   it.each([
