@@ -8,7 +8,7 @@ import {
   desactivarValorAccion,
   reactivarValorAccion,
 } from "../app/listas/acciones";
-import type { ValorParaLaPantalla } from "../servidor/listas";
+import type { ValorParaLaPantalla } from "../logica/cambio-de-lista";
 import { ListaDeValores } from "./lista-de-valores.cliente";
 
 /**

@@ -18,3 +18,12 @@ export type RechazoDeLista =
 export type RespuestaDeCambio =
   | Readonly<{ ok: true; dato: Readonly<{ version: number }> }>
   | Readonly<{ ok: false; error: ErrorParaLaPantalla; referencia?: string }>;
+
+/** Un valor de una lista tal como lo muestra la pantalla: solo lo que se ve y la versión que pide el próximo cambio. */
+export type ValorParaLaPantalla = Readonly<{
+  id: string;
+  nombre: string;
+  activo: boolean;
+  fija: boolean;
+  version: number;
+}>;

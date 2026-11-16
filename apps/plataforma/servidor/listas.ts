@@ -7,21 +7,13 @@ import {
   listaDeLaConsola,
   type ListaDeLaConsola,
 } from "../logica/listas-del-sistema";
+import type { ValorParaLaPantalla } from "../logica/cambio-de-lista";
 import { exigirAcceso } from "./acceso";
 import { fallaDe, protegida, type Falla } from "./proteccion";
 
 export type { Falla } from "./proteccion";
 
 const ETIQUETA = "listas";
-
-/** Un valor de una lista tal como lo muestra la pantalla: solo lo que se ve y la versión que pide el próximo cambio. */
-export type ValorParaLaPantalla = Readonly<{
-  id: string;
-  nombre: string;
-  activo: boolean;
-  fija: boolean;
-  version: number;
-}>;
 
 export type ResumenDeLista = Readonly<{
   nombre: string;

@@ -9,7 +9,7 @@ import { Insignia } from "../../web/ui/componentes/Insignia";
 import { Texto } from "../../web/ui/primitivas/Texto";
 import type { ErrorParaLaPantalla } from "../logica/errores-de-plataforma";
 import type { NombreDeLista } from "../logica/listas-del-sistema";
-import type { ValorParaLaPantalla } from "../servidor/listas";
+import type { ValorParaLaPantalla } from "../logica/cambio-de-lista";
 import estilos from "./lista-de-valores.module.css";
 import { useCambioDeLista } from "./usar-cambio-de-lista.cliente";
 
