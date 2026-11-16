@@ -137,8 +137,11 @@ describe("«Secciones»: la fila del grupo «Carta» de Catálogo (A8)", () => {
     );
   });
 
-  it("hoy, con `catalogo` en desarrollo, no se ve ni siquiera con la acción y el módulo activo", () => {
-    expect(armarElMenu([secciones], permisos(["productos.ver"], ["catalogo"]), null)).toEqual([]);
+  it("con `catalogo` disponible (DEC-0463) se ve con la acción y el módulo activo; sin cualquiera de las dos, no", () => {
+    const conTodo = armarElMenu([secciones], permisos(["productos.ver"], ["catalogo"]), null);
+    expect(claves(conTodo)).toEqual([["catalogo", [["secciones"]]]]);
+    expect(armarElMenu([secciones], permisos([], ["catalogo"]), null)).toEqual([]);
+    expect(armarElMenu([secciones], permisos(["productos.ver"]), null)).toEqual([]);
   });
 });
 
