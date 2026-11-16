@@ -39,10 +39,6 @@
     "prohibidos": 0,
     "duplicados": 1
   },
-  "src/capacidades/planes/version-de-plan.ts": {
-    "prohibidos": 1,
-    "duplicados": 0
-  },
   "src/capacidades/vocabulario/texto-visible.ts": {
     "prohibidos": 1,
     "duplicados": 0
@@ -50,26 +46,6 @@
   "src/composicion/entradas-de-facturacion.ts": {
     "prohibidos": 0,
     "duplicados": 2
-  },
-  "src/modulos/empresas/dominio/sucursal.ts": {
-    "prohibidos": 1,
-    "duplicados": 0
-  },
-  "src/plataforma/captacion/dominio/atribucion.ts": {
-    "prohibidos": 0,
-    "duplicados": 2
-  },
-  "src/plataforma/captacion/dominio/auditoria.ts": {
-    "prohibidos": 0,
-    "duplicados": 1
-  },
-  "src/plataforma/captacion/dominio/formulario.ts": {
-    "prohibidos": 1,
-    "duplicados": 1
-  },
-  "src/plataforma/dominio/soporte/consulta.ts": {
-    "prohibidos": 0,
-    "duplicados": 1
   },
   "src/primitivas/contacto/una-linea.ts": {
     "prohibidos": 1,
