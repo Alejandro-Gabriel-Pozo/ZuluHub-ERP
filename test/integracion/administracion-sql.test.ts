@@ -2547,10 +2547,10 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
           expect(mitad.codigo).toBe("23505");
           expect(["sucursal_nombre_uk", "sucursal_nombre_ci_uk"]).toContain(mitad.restriccion);
         }
-        // El mismo nombre escrito con la É descompuesta (E + acento combinado): también es el mismo.
-        clave(await altaConIntento(e, "CAFE\u0301"), "sucursal_nombre_ci_uk");
-        // Un carácter invisible en el medio no hace otro nombre.
-        clave(await altaConIntento(e, "CA\u200bFÉ"), "sucursal_nombre_ci_uk");
+        // La É descompuesta (E + acento combinado) y un carácter invisible en el medio ya no llegan al índice: desde 0062 la lista de
+        // permitidos (NFC, sin invisibles) los rechaza antes; el índice sigue siendo la defensa del mismo nombre escrito en NFC.
+        check(await altaConIntento(e, "CAFE\u0301"), "sucursal_nombre_control_ck");
+        check(await altaConIntento(e, "CA\u200bFÉ"), "sucursal_nombre_control_ck");
         // Un acento distinto, sí es otro nombre.
         filas(await altaConIntento(e, "cafe"), 1);
         filas(await altaConIntento(e, "Cafés"), 1);
@@ -2574,10 +2574,11 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
       const e = await armar();
       await sinConfirmar(async () => {
         filas(await altaConIntento(e, "a".repeat(100)), 1);
-        check(await altaConIntento(e, "b".repeat(101)), "sucursal_nombre_largo_ck");
+        // Desde 0062 los dos CHECK acotan el largo y Postgres informa el primero por nombre: el de la lista de permitidos.
+        check(await altaConIntento(e, "b".repeat(101)), "sucursal_nombre_control_ck");
         // Cien «ñ» son 200 bytes: se cuentan caracteres.
         filas(await altaConIntento(e, "ñ".repeat(100)), 1);
-        check(await altaConIntento(e, "ñ".repeat(101)), "sucursal_nombre_largo_ck");
+        check(await altaConIntento(e, "ñ".repeat(101)), "sucursal_nombre_control_ck");
         for (const malo of [
           "uno\tdos",
           "uno\ndos",
@@ -2589,15 +2590,20 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
         ]) {
           check(await altaConIntento(e, malo), "sucursal_nombre_control_ck");
         }
-        // Lo que no es de control entra: signos, acentos, el espacio ancho, emojis.
-        for (const bueno of [
-          "Local 1 - Centro",
-          "Ñandú & Hijos",
-          "Sucursal Nº 3",
+        // Lo que está en la lista de permitidos entra: signos, acentos.
+        for (const bueno of ["Local 1 - Centro", "Ñandú & Hijos", "Sucursal Nº 3"]) {
+          filas(await altaConIntento(e, bueno), 1);
+        }
+        // Lo que no (desde 0062): el espacio de no corte, el emoji, otro alfabeto, el marcado y un signo de fórmula al principio.
+        for (const malo of [
           "Depósito\u00a0Sur",
           "Tienda 🏪",
+          "东京店",
+          "<b>x</b>",
+          "=1+1",
+          "+Kota",
         ]) {
-          filas(await altaConIntento(e, bueno), 1);
+          check(await altaConIntento(e, malo), "sucursal_nombre_control_ck");
         }
       });
     });

@@ -78,6 +78,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0056_receta_sin_insumos.sql",
         "0057_opcion_consume_elaborado.sql",
         "0058_oferta_vigente.sql",
+        "0062_listas_de_permitidos_de_texto.sql",
         "0075_alicuota_del_producto.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
@@ -138,6 +139,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0056_receta_sin_insumos.sql",
           "0057_opcion_consume_elaborado.sql",
           "0058_oferta_vigente.sql",
+          "0062_listas_de_permitidos_de_texto.sql",
           "0075_alicuota_del_producto.sql",
         ],
       });
@@ -303,6 +305,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0056_receta_sin_insumos.sql",
         "0057_opcion_consume_elaborado.sql",
         "0058_oferta_vigente.sql",
+        "0062_listas_de_permitidos_de_texto.sql",
         "0075_alicuota_del_producto.sql",
       ]);
     } finally {

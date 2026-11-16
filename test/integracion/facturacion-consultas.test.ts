@@ -537,21 +537,19 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       expect(anonimo.receptor.nombre).toBeNull();
     });
 
+    // Desde 0062 un nombre de receptor no puede traer `%`, `_` ni `\\` (no están en la lista de permitidos): lo que se prueba es que esos
+    // signos, escritos en el BUSCADOR, son letras comunes y no comodines (no traen todo ni un tramo cualquiera).
     it("`%`, `_` y `\\` del texto son letras comunes, no comodines", async () => {
       const a = await crearEmpresa();
-      const conSimbolos = await crearComprobante(dueno, a.x, {
-        receptor_nombre: "50% Descuento_Pan\\Sur",
-      });
-      const otro = await crearComprobante(dueno, a.x, { receptor_nombre: "500 Descuentos Pan" });
-      expect(await idsDe(a, { texto: "50%" })).toEqual([conSimbolos]);
+      const uno = await crearComprobante(dueno, a.x, { receptor_nombre: "500 Descuentos Pan" });
+      const dos = await crearComprobante(dueno, a.x, { receptor_nombre: "Descuento Pan" });
       expect(await idsDe(a, { texto: "5%" })).toEqual([]);
-      expect(await idsDe(a, { texto: "Descuento_Pan" })).toEqual([conSimbolos]);
-      expect(await idsDe(a, { texto: "Descuento Pan" })).toEqual([]);
-      expect(await idsDe(a, { texto: "Pan\\Sur" })).toEqual([conSimbolos]);
-      expect(await idsDe(a, { texto: "%" })).toEqual([conSimbolos]);
-      expect(await idsDe(a, { texto: "_" })).toEqual([conSimbolos]);
+      expect(await idsDe(a, { texto: "Descuento_Pan" })).toEqual([]);
+      expect(await idsDe(a, { texto: "Descuento\\Pan" })).toEqual([]);
+      expect(await idsDe(a, { texto: "%" })).toEqual([]);
+      expect(await idsDe(a, { texto: "_" })).toEqual([]);
       expect(await idsDe(a, { texto: "Descuento" })).toHaveLength(2);
-      expect(otro).toBeTruthy();
+      expect([uno, dos]).toHaveLength(2);
     });
 
     it("un pedido inválido es un error de negocio, no un fallo de la base", async () => {

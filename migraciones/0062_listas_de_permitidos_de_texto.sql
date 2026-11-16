@@ -22,9 +22,8 @@
 DO $$
 BEGIN
   IF to_regclass('public.comprobante') IS NULL
-     OR NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.comprobante'::regclass AND attname = 'sucursal_nombre' AND NOT attisdropped)
-     OR to_regprocedure('public.texto_fiscal_valido(text, integer)') IS NULL THEN
-    RAISE EXCEPTION '0062 necesita 0005, 0006, 0009 y 0022 (comprobante.sucursal_nombre y texto_fiscal_valido)';
+     OR NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.comprobante'::regclass AND attname = 'sucursal_nombre' AND NOT attisdropped) THEN
+    RAISE EXCEPTION '0062 necesita 0005, 0006, 0009 y 0022 (comprobante.sucursal_nombre)';
   END IF;
   -- El pre-chequeo cuenta filas de tablas con RLS forzado: con un rol que no la evade vería cero y dejaría pasar lo que no cumple.
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = current_user AND (rolsuper OR rolbypassrls)) THEN
