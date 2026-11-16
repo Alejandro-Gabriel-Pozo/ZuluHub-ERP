@@ -9,6 +9,7 @@ import { RUTAS_DE_CAJA } from "../plantillas/caja/lista-de-caja";
 import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
 import { RUTAS_DE_CONFIGURACION } from "../plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
+import { RUTA_DE_PRODUCCION } from "../plantillas/produccion/filtros-de-ordenes";
 import { RUTAS_DE_CUENTA } from "../plantillas/sesion/rutas-de-cuenta";
 
 /**
@@ -45,6 +46,7 @@ export type ClaveDeArea = (typeof AREAS_DEL_MENU)[number]["clave"];
 export const GRUPOS_DEL_MENU = [
   { clave: "comprobantes", etiqueta: null },
   { clave: "productos", etiqueta: null },
+  { clave: "produccion", etiqueta: null },
   { clave: "empresa", etiqueta: "navegacion.empresa" },
   { clave: "sucursal", etiqueta: "sucursal.etiqueta" },
   { clave: "salir", etiqueta: null },
@@ -62,7 +64,13 @@ type BaseDeFila = Readonly<{
 export type FilaDePantalla = BaseDeFila &
   Readonly<{
     tipo: "pantalla";
-    clave: "comprobantes" | "productos" | "configuracion-fiscal" | "medios-de-pago" | "contacto";
+    clave:
+      | "comprobantes"
+      | "productos"
+      | "produccion"
+      | "configuracion-fiscal"
+      | "medios-de-pago"
+      | "contacto";
     modulo: ClaveModulo;
     accion: ClaveAccion;
     href: string;
@@ -106,6 +114,17 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     accion: "productos.ver",
     href: RUTA_DE_PRODUCTOS,
     etiqueta: "catalogo.lista.titulo",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
+    clave: "produccion",
+    area: "catalogo",
+    grupo: "produccion",
+    modulo: "produccion",
+    accion: "transformaciones.ver",
+    href: RUTA_DE_PRODUCCION,
+    etiqueta: "produccion.pantalla.produccion",
     departamento: null,
   },
   {

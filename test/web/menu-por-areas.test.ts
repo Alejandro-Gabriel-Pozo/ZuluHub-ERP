@@ -131,6 +131,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "catalogo.lista.titulo",
       ],
       [
+        "produccion",
+        "catalogo",
+        "produccion",
+        "produccion",
+        "transformaciones.ver",
+        "/catalogo/produccion",
+        "produccion.pantalla.produccion",
+      ],
+      [
         "configuracion-fiscal",
         "cuenta",
         "empresa",

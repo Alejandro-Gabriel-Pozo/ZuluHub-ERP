@@ -4,6 +4,7 @@ import type { MotivoDeRechazo } from "../permisos/guard";
 import { CATALOGO_DE_TEXTOS, type ClaveDeTexto } from "../vocabulario/catalogo";
 import { CLAVES_DE_ERRORES_DE_CAJA } from "./respuesta-de-caja";
 import { CLAVES_DE_ERRORES_DE_CATALOGO, PARAMETROS_DE_CATALOGO } from "./respuesta-de-catalogo";
+import { CLAVES_DE_ERRORES_DE_PRODUCCION } from "./respuesta-de-produccion";
 import {
   CODIGOS_PUBLICOS,
   clasificarError,
@@ -46,11 +47,13 @@ describe("CODIGOS_PUBLICOS: contrato exhaustivo", () => {
   it("los errores de negocio usan `error.<código>` en minúsculas; los inesperados, el texto genérico", () => {
     for (const codigo of codigos) {
       const { clave, presentacion } = CODIGOS_PUBLICOS[codigo];
-      // Los códigos de caja y de catálogo viven en el archivo de textos de su módulo, que exige su prefijo a toda clave (`catalogo.test.ts`): `caja.error.<…>` y `catalogo.error.<…>`.
+      // Los códigos de caja y de catálogo viven en el archivo de textos de su módulo, que exige su prefijo a toda clave (`catalogo.test.ts`): `caja.error.<…>` y `catalogo.error.<…>`. El de
+      // producción reutiliza el texto ya aprobado de lotes (`lotes.error.sin_permiso`: «Esta acción no está permitida»), sin texto nuevo.
       if (
         presentacion === "AVISO" &&
         !Object.hasOwn(CLAVES_DE_ERRORES_DE_CAJA, codigo) &&
-        !Object.hasOwn(CLAVES_DE_ERRORES_DE_CATALOGO, codigo)
+        !Object.hasOwn(CLAVES_DE_ERRORES_DE_CATALOGO, codigo) &&
+        !Object.hasOwn(CLAVES_DE_ERRORES_DE_PRODUCCION, codigo)
       )
         expect(clave).toBe(`error.${codigo.toLowerCase()}`);
     }

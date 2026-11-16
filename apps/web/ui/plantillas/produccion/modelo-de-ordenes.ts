@@ -1,0 +1,122 @@
+import type { ClaveDeTexto } from "../../../../../src/capacidades/vocabulario/catalogo";
+import { CLAVE_DE_TEXTO_DE_UNIDAD } from "../../../../../src/capacidades/vocabulario/unidades-de-medida";
+import {
+  texto,
+  type DiccionarioResuelto,
+} from "../../../../../src/capacidades/vocabulario/vocabulario";
+import type { TonoDeEstado } from "../../componentes/Insignia";
+import { formatearCantidad } from "../../patrones/formato-fiscal";
+import {
+  direccionDeLaLista,
+  rutaDeLaOrden,
+  type EstadoDelFiltroDeLaLista,
+} from "./filtros-de-ordenes";
+
+/**
+ * El modelo de vista de la lista de órdenes de producción (maqueta aprobada `produccion.html`, 09/11/2026, función `vLista`): de lo que entrega la composición, lo que se ve en cada
+ * fila y NADA más. Puro: sin React ni servidor. Una fila lleva «Orden N · producto», el estado en texto y la cantidad con su unidad; los filtros son enlaces. Los textos salen del
+ * catálogo (`produccion.*`, ya aprobados); no se arma ningún texto nuevo, solo se eligen los aprobados. Sin órdenes, «Sin resultados» (`catalogo.lista.sin_resultados`, ya aprobado).
+ */
+
+const CLAVE_DE_ESTADO = {
+  ABIERTA: "produccion.estado.abierta",
+  CERRADA: "produccion.estado.cerrada",
+  CANCELADA: "produccion.estado.cancelada",
+  ANULADA: "produccion.estado.anulada",
+} as const satisfies Readonly<Record<string, ClaveDeTexto>>;
+
+const TONO_DE_ESTADO = {
+  ABIERTA: "info",
+  CERRADA: "exito",
+  CANCELADA: "neutro",
+  ANULADA: "aviso",
+} as const satisfies Readonly<Record<keyof typeof CLAVE_DE_ESTADO, TonoDeEstado | "neutro">>;
+
+/** Un valor que la pantalla no conoce se dice con el propio valor (nunca se esconde una orden por no saber nombrar su estado o su unidad). */
+const conocido = (
+  tabla: Readonly<Record<string, ClaveDeTexto>>,
+  valor: string,
+): ClaveDeTexto | null => (Object.hasOwn(tabla, valor) ? (tabla[valor] as ClaveDeTexto) : null);
+
+/** El estado de una orden: su texto y su tono. */
+export function marcaDeEstado(
+  estado: string,
+  d: DiccionarioResuelto = {},
+): Readonly<{ texto: string; tono: TonoDeEstado | "neutro" }> {
+  const clave = conocido(CLAVE_DE_ESTADO, estado);
+  return clave === null
+    ? { texto: estado, tono: "neutro" }
+    : { texto: texto(d, clave), tono: TONO_DE_ESTADO[estado as keyof typeof TONO_DE_ESTADO] };
+}
+
+/** «10» y «KILOGRAMO» pasan a «10 Kilogramo»; sin unidad, solo la cantidad. La cantidad es texto decimal: nunca pasa por `Number` (ADR-006). */
+export function cantidadConUnidad(
+  cantidad: string,
+  unidadId: string,
+  d: DiccionarioResuelto = {},
+): string {
+  const clave = conocido(CLAVE_DE_TEXTO_DE_UNIDAD, unidadId);
+  const unidad = clave === null ? unidadId : texto(d, clave);
+  return unidad === "" ? formatearCantidad(cantidad) : `${formatearCantidad(cantidad)} ${unidad}`;
+}
+
+/** Las órdenes como las entrega la composición (la misma forma, sin importar de dónde venga; la UI no importa la composición). */
+export type OrdenesDeLaLista = Readonly<{
+  ordenes: readonly Readonly<{
+    id: string;
+    numero: number;
+    estado: string;
+    nombre: string;
+    cantidad: string;
+    unidadId: string;
+  }>[];
+}>;
+
+type FiltroArmado = Readonly<{ href: string; texto: string; actual: boolean }>;
+
+type FilaDeOrden = Readonly<{
+  id: string;
+  href: string;
+  /** «Orden 14 · Masa de medialuna». */
+  titulo: string;
+  estado: Readonly<{ texto: string; tono: TonoDeEstado | "neutro" }>;
+  cantidad: string;
+}>;
+
+export type ListaArmada = Readonly<{
+  filtros: readonly FiltroArmado[];
+  filas: readonly FilaDeOrden[];
+  /** «Sin resultados» si no hay filas; `null` si las hay. */
+  vacio: string | null;
+}>;
+
+/**
+ * «Todas» es el texto ya aprobado del listado de comprobantes (`fiscal.pantalla.listado_todas`) y «Abiertas», el del estado «Abierta»: la maqueta dice «Todas» y «Abiertas», que no
+ * tienen fila propia (van a preguntas pendientes); mientras tanto se usa lo existente.
+ */
+const FILTROS = [
+  { estado: "", clave: "fiscal.pantalla.listado_todas" },
+  { estado: "ABIERTA", clave: "produccion.estado.abierta" },
+] as const satisfies readonly Readonly<{ estado: EstadoDelFiltroDeLaLista; clave: ClaveDeTexto }>[];
+
+export function armarLaLista(
+  lista: OrdenesDeLaLista,
+  estado: EstadoDelFiltroDeLaLista,
+  d: DiccionarioResuelto = {},
+): ListaArmada {
+  return {
+    filtros: FILTROS.map((f) => ({
+      href: direccionDeLaLista(f.estado),
+      texto: texto(d, f.clave),
+      actual: f.estado === estado,
+    })),
+    filas: lista.ordenes.map((o) => ({
+      id: o.id,
+      href: rutaDeLaOrden(o.id),
+      titulo: `${texto(d, "produccion.pantalla.orden")} ${String(o.numero)} · ${o.nombre}`,
+      estado: marcaDeEstado(o.estado, d),
+      cantidad: cantidadConUnidad(o.cantidad, o.unidadId, d),
+    })),
+    vacio: lista.ordenes.length === 0 ? texto(d, "catalogo.lista.sin_resultados") : null,
+  };
+}

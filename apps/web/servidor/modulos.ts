@@ -24,6 +24,7 @@ import type {
   OfertaDeAccion,
 } from "../ui/plantillas/configuracion-fiscal/modelo-de-puntos-de-venta";
 import type { AccionesDeLista } from "../ui/plantillas/caja/lista-de-caja";
+import type { AccionesDeLaOrden } from "../ui/plantillas/produccion/modelo-de-orden";
 import type { DestinoDeModulo } from "../ui/plantillas/sesion/ArmazonDeOperacion";
 import type { Pendiente } from "../ui/plantillas/sesion/PantallaDeInicio";
 
@@ -200,6 +201,22 @@ export async function puedeCrearProductos(contexto: ContextoOperativo): Promise<
 export async function puedeCambiarPrecios(contexto: ContextoOperativo): Promise<boolean> {
   const permisos = await permisosDeLaPersona(contexto);
   return permisos !== null && ofertaDe("productos.cambiar_precio", permisos).permitida;
+}
+
+/**
+ * Qué botones de la ficha de una orden de producción se ofrecen hoy: «Cancelar la orden» (`transformaciones.cancelar`) y «Anular la orden» (`transformaciones.anular`), solo gerente y
+ * administrador (el operador abre y mira). Es la oferta que el servidor calcula con `ofertaDe`: con el módulo `produccion` en desarrollo (hoy), no activo o sin el rol, no; cancelar y anular
+ * cierran lo iniciado y pasan con el módulo en solo lectura. Si no se pudieron leer los permisos, ninguna (cierra, no abre). Ocultar no es autorizar: cada acción vuelve a pasar por el guard.
+ * Chequeo: `test/web/produccion-acceso.test.ts`.
+ */
+export async function accionesDeProduccion(
+  contexto: ContextoOperativo,
+): Promise<AccionesDeLaOrden> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return {
+    cancelar: permisos !== null && ofertaDe("transformaciones.cancelar", permisos).permitida,
+    anular: permisos !== null && ofertaDe("transformaciones.anular", permisos).permitida,
+  };
 }
 
 type PermisosLeidos = NonNullable<Awaited<ReturnType<typeof permisosDeLaPersona>>>;
