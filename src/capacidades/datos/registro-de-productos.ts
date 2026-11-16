@@ -40,7 +40,7 @@ export const DATOS_DE_PRODUCTOS = {
       {
         para: "Texto con el que se busca un producto por su nombre para agregarlo a una sección de la carta (el buscador vacío muestra todos los que se pueden agregar).",
         fuente:
-          "Pedernal-docs/10-ux-ui/prototipos-gastronomia/productos-secciones.html:399,490 (cuadro «Agregar producto», campo «Buscar», aprobada el 12/11/2026) y 11-especificaciones/conceptos/secciones-de-la-carta-pantalla.md §4",
+          "la maqueta `productos-secciones.html` líneas 399 y 490, carpeta de prototipos de Pedernal-docs 10-ux-ui (cuadro «Agregar producto», campo «Buscar», aprobada el 12/11/2026) y 11-especificaciones/conceptos/secciones-de-la-carta-pantalla.md §4",
       },
     ],
     consumidores: [LISTA_DE_PRODUCTOS, BUSCADOR_DE_CANDIDATOS],
