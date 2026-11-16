@@ -80,6 +80,7 @@ const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
   "productos.reactivar",
   "stock.ajustar",
   "stock.anular",
+  "vidrieras.administrar_portal",
   "vidrieras.crear",
   "vidrieras.editar",
   "vidrieras.ocultar_en_empresa",
