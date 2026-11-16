@@ -1,7 +1,7 @@
 -- 0079_familias_de_productos (M-A de la especificación de familias, A8): una familia reúne productos que siguen siendo independientes (receta, stock, costo, código y precio
 -- propios) para mostrarlos juntos en la carta y/o en el POS. Aditiva: dos tablas nuevas; NO toca `producto` (su `version` sube con cualquier UPDATE: una familia que cambiara
 -- columnas del producto haría fallar la edición simultánea de la ficha).
--- Especificación: ZuluHub-docs/11-especificaciones/familias-especificacion.md (§4 y §7). Decisiones del dueño: 11 y 12/11/2026 (MIG §12.10 a §12.27, DDD 68 a 70) y 16/11/2026
+-- Especificación: docs/11-especificaciones/familias-especificacion.md (§4 y §7). Decisiones del dueño: 11 y 12/11/2026 (MIG §12.10 a §12.27, DDD 68 a 70) y 16/11/2026
 -- (sin sección propia: la familia toma la de sus miembros; el interruptor del POS nace apagado; al desactivar una familia sus productos siguen siendo miembros).
 --
 -- Reglas (las de 0025 y 0043):
