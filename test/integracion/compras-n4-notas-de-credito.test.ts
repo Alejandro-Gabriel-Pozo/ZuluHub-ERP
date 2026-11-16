@@ -212,9 +212,7 @@ describe.skipIf(base === null)("compras N4: notas de crédito del proveedor", ()
       } finally {
         c.soltarBarrera();
       }
-      expect(valorDe(rs[0]).comprobanteId).toBe(
-        valorDe(rs[1]).comprobanteId,
-      );
+      expect(valorDe(rs[0]).comprobanteId).toBe(valorDe(rs[1]).comprobanteId);
       expect(rs.filter((r) => r.ok && !r.valor.yaExistia)).toHaveLength(1);
       expect(await cuantas(m)).toBe(1);
     }
