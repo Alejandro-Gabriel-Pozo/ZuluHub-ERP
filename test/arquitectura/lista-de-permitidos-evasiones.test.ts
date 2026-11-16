@@ -626,6 +626,62 @@ ALTER TABLE t ADD CONSTRAINT a_ck CHECK (permitido(a));`;
     expect(analizar(prohibe).problemas.length).toBeGreaterThan(0);
   });
 
+  it("el SQL se lee con cualquier blanco, mayúsculas o comillas, y sin `;` al final", () => {
+    const variante = `create  or  replace  function  "permitido"  (t text) returns boolean language sql immutable as $$ select t ~ '^[a-z ;]+$' $$;
+alter table t drop  constraint  if  exists  a_ck;
+alter table t add  constraint  a_ck  check  (permitido  (a))`;
+    expect(analizar(variante)).toEqual({ problemas: [], descuento: 1 });
+  });
+
+  it("la sentencia del ADD termina en su `;`: lo que sigue no cuenta", () => {
+    const conOtra = `${BUENA}\nSELECT 1 WHERE x !~ '[\\x01-\\x1F]';`;
+    expect(analizar(conOtra)).toEqual({ problemas: [], descuento: 1 });
+  });
+
+  it("cada función se lee con SU cuerpo: una función con prohibidos antes no contamina a la permitida", () => {
+    const dos = `CREATE FUNCTION mala(t text) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT t !~ '[\\x01-\\x1F]' $$;
+${BUENA}`;
+    expect(analizar(dos)).toEqual({ problemas: [], descuento: 1 });
+    const alReves = `${FUNCION}
+CREATE FUNCTION mala(t text) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT t !~ '[\\x01-\\x1F]' $$;
+ALTER TABLE t DROP CONSTRAINT a_ck;
+ALTER TABLE t ADD CONSTRAINT a_ck CHECK (mala(a));`;
+    expect(analizar(alReves).descuento).toBe(0);
+  });
+
+  it("una función sin cuerpo legible entre `$$` no se toma por una lista de permitidos (fail-closed)", () => {
+    const comillas = `CREATE FUNCTION permitido(t text) RETURNS boolean AS 'select true' LANGUAGE sql;
+ALTER TABLE t DROP CONSTRAINT a_ck;
+ALTER TABLE t ADD CONSTRAINT a_ck CHECK (permitido(a));`;
+    expect(analizar(comillas)).toEqual({
+      problemas: [
+        `${VIEJA}: el ADD CONSTRAINT a_ck de ${NUEVA} no llama a una función de permitidos que esa migración cree`,
+      ],
+      descuento: 0,
+    });
+    // Con otra función que sí usa `$$` más abajo, la de comillas tampoco hereda ese cuerpo.
+    const seguida = `CREATE FUNCTION permitido(t text) RETURNS boolean AS 'select true' LANGUAGE sql;
+CREATE FUNCTION otra(t text) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT t ~ '^[a-z]+$' $$;
+ALTER TABLE t DROP CONSTRAINT a_ck;
+ALTER TABLE t ADD CONSTRAINT a_ck CHECK (permitido(a));`;
+    expect(analizar(seguida).descuento).toBe(0);
+    const abierta = `CREATE FUNCTION permitido(t text) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT t ~ '^[a-z]+$';
+ALTER TABLE t DROP CONSTRAINT a_ck;
+ALTER TABLE t ADD CONSTRAINT a_ck CHECK (permitido(a));`;
+    expect(analizar(abierta).descuento).toBe(0);
+  });
+
+  it("una migración cuyo nombre no termina en `.sql` no tiene número (no es posterior)", () => {
+    const textos = new Map<string, string>([
+      [VIEJA, SQL_VIEJO],
+      ["migraciones/0002_b.sqlx", BUENA],
+    ]);
+    expect(
+      analizarReemplazo(VIEJA, { por: "migraciones/0002_b.sqlx", restricciones: ["a_ck"] }, textos)
+        .problemas,
+    ).toContain(`${VIEJA}: migraciones/0002_b.sqlx no es posterior`);
+  });
+
   it("un problema en cualquiera de las restricciones declaradas anula todo el descuento", () => {
     expect(analizar(BUENA, ["a_ck", "b_ck"]).descuento).toBe(0);
   });
