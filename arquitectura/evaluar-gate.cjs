@@ -5,7 +5,7 @@
  * caído cuente como verde (`skipped` solo vale donde el flujo lo prevé); (2) que la mutación
  * saltada porque el PR no toca ningún grupo bloquee el merge. Ese «saltado por filtro» se
  * distingue de cualquier otro por la salida `hay` del plan, que solo es `false` si el plan terminó bien.
- * Con `estabilidad` (la integración repetida 12 veces) pasa lo mismo, con una condición más: solo se acepta
+ * Con `estabilidad` (la integración repetida: 3 veces en un pull request, 12 en la nocturna y a pedido) pasa lo mismo, con una condición más: solo se acepta
  * saltada en un pull request y si el plan terminó bien y dijo `estabilidad == "false"`. En la corrida nocturna y a
  * pedido tiene que dar `success`, diga lo que diga el plan.
  * En push a `main` corre solo lo rápido: el plan, la mutación y Estabilidad se aceptan SALTADOS (`SALTABLES_EN_PUSH`) y solo ahí;

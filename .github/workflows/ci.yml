@@ -209,11 +209,11 @@ jobs:
           deny-licenses: AGPL-3.0-only, AGPL-3.0-or-later, GPL-3.0-only, GPL-3.0-or-later
 
   estabilidad:
-    # Repite la integración en paralelo (12 copias) para detectar fallas intermitentes. En la corrida nocturna y a pedido
-    # corre SIEMPRE; en push a `main` nunca (corrió en su pull request); en un pull request, solo si el cambio toca pruebas de integración, persistencia,
-    # migraciones, las reglas SQL o workflows, o algo que no se puede explicar (decisión del dueño, 2026-11-07; lo decide
-    # `mutacion-plan` en la salida `estabilidad`, ver `planificarEstabilidad`). Saltearlo por esa salida es válido solo en
-    # un pull request y lo verifica `arquitectura/evaluar-gate.cjs`.
+    # Repite la integración en paralelo para detectar fallas intermitentes: 12 copias en la corrida nocturna y a pedido (corre SIEMPRE), 3 en un pull
+    # request (decisión del dueño, 16/11/2026, que reemplaza las 12 del 2026-11-07; ahorra ~140 min de máquina por pull request que la dispara). En push a `main`
+    # nunca (corrió en su pull request). En un pull request, solo si el cambio toca pruebas de integración, persistencia,
+    # migraciones, las reglas SQL o workflows, o algo que no se puede explicar (lo decide `mutacion-plan` en la salida `estabilidad`, ver
+    # `planificarEstabilidad`). Saltearlo por esa salida es válido solo en un pull request y lo verifica `arquitectura/evaluar-gate.cjs`.
     name: Estabilidad (integración, copia ${{ matrix.corrida }})
     needs: mutacion-plan
     if: github.event_name != 'push' && (github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true')
@@ -223,7 +223,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        corrida: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        # El número de copias por evento está fijado en `test/arquitectura/gate-coincide-con-ci.test.ts` (`COPIAS_DE_ESTABILIDAD`).
+        corrida: ${{ fromJSON(github.event_name == 'pull_request' && '[1, 2, 3]' || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]') }}
     services:
       postgres:
         image: postgres:18
