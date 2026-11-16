@@ -83,6 +83,14 @@ export interface RepositorioDeRecepciones {
     lineas: readonly LineaDeRecepcion[],
   ): Promise<void>;
   lineasDe(empresa: EmpresaId, recepcionId: string): Promise<readonly LineaDeRecepcion[]>;
+  /**
+   * La última línea CON PRECIO de una compra NO anulada de ese proveedor para ese producto y presentación (la compra más nueva por `hecho_en`, luego `id`; dentro de la compra, la línea de
+   * número más alto: como `registrarCompra`, la última gana). Es de donde se rehace la oferta del proveedor al anular una compra (0058). `null` si no queda ninguna.
+   */
+  ultimaLineaVigenteDe(
+    empresa: EmpresaId,
+    clave: Readonly<{ proveedorId: string; productoId: string; presentacionId: string | null }>,
+  ): Promise<Readonly<{ recepcionId: string; hechoEn: Date; numero: number }> | null>;
   /** `false` si ya no estaba CONFIRMADA. */
   anular(
     empresa: EmpresaId,
@@ -300,6 +308,35 @@ export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): Repositori
         depositoId: f.deposito_id,
         movimientoId: f.movimiento_id,
       }));
+    },
+    async ultimaLineaVigenteDe(empresa, clave) {
+      if (!esUuid(clave.proveedorId) || !esUuid(clave.productoId)) return null;
+      if (clave.presentacionId !== null && !esUuid(clave.presentacionId)) return null;
+      const fila = await db
+        .selectFrom("linea_de_recepcion as l")
+        .innerJoin("recepcion as r", (join) =>
+          join.onRef("r.id", "=", "l.recepcion_id").onRef("r.empresa_id", "=", "l.empresa_id"),
+        )
+        .select(["r.id as recepcion_id", "r.hecho_en", "l.numero"])
+        .where("l.empresa_id", "=", empresa)
+        .where("r.proveedor_id", "=", clave.proveedorId)
+        .where("r.estado", "=", "CONFIRMADA")
+        .where("l.producto_id", "=", clave.productoId)
+        .where(
+          "l.presentacion_id",
+          clave.presentacionId === null ? "is" : "=",
+          clave.presentacionId,
+        )
+        .where("l.precio", "is not", null)
+        .where("l.costo_por_unidad_de_stock", "is not", null)
+        .orderBy("r.hecho_en", "desc")
+        .orderBy("r.id", "desc")
+        .orderBy("l.numero", "desc")
+        .limit(1)
+        .executeTakeFirst();
+      return fila === undefined
+        ? null
+        : { recepcionId: fila.recepcion_id, hechoEn: fila.hecho_en, numero: fila.numero };
     },
     async anular(empresa, id, anulacion) {
       const fila = await db
