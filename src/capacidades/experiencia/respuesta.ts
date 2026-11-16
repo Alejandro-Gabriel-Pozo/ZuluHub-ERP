@@ -8,6 +8,7 @@ import {
   PARAMETROS_DE_CATALOGO,
   type CodigoDeCatalogo,
 } from "./respuesta-de-catalogo";
+import { CLAVES_DE_ERRORES_DE_CIERRE, type CodigoDeCierre } from "./respuesta-de-cierre";
 import { CLAVES_DE_ERRORES_FISCALES, type CodigoFiscal } from "./respuesta-fiscal";
 
 /**
@@ -45,7 +46,8 @@ export type CodigoDeNegocio =
   | "EMPRESA_NO_OPERA"
   | CodigoFiscal
   | CodigoDeCaja
-  | CodigoDeCatalogo;
+  | CodigoDeCatalogo
+  | CodigoDeCierre;
 
 export type CodigoPublico =
   CodigoDeNegocio | MotivoDeRechazo | "SESION_VENCIDA" | "ERROR_INTERNO" | "NO_DISPONIBLE";
@@ -83,6 +85,11 @@ const AVISOS_DE_CATALOGO = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_CATALOGO).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoDeCatalogo, DefinicionDeCodigo>>;
 
+/** Los códigos de la pantalla del cierre del día (`respuesta-de-cierre.ts`): cada uno es un aviso con su texto (`cierre.error.*` o el genérico de caja). */
+const AVISOS_DE_CIERRE = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_CIERRE).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeCierre, DefinicionDeCodigo>>;
+
 /** La tabla de los códigos públicos: código estable → clave del texto, presentación y estado HTTP. */
 export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo>> = Object.freeze({
   INVITACION_NO_ENCONTRADA: aviso("error.invitacion_no_encontrada"),
@@ -100,6 +107,7 @@ export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo
   ...AVISOS_FISCALES,
   ...AVISOS_DE_CAJA,
   ...AVISOS_DE_CATALOGO,
+  ...AVISOS_DE_CIERRE,
   MODULO_EN_DESARROLLO: motivo("motivo.modulo_en_desarrollo"),
   MODULO_NO_ACTIVO: motivo("motivo.modulo_no_activo"),
   MODULO_EN_SOLO_LECTURA: motivo("motivo.modulo_en_solo_lectura"),

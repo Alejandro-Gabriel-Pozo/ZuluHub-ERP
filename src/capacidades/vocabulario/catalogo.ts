@@ -19,6 +19,7 @@
 
 import { TEXTOS_DE_CAJA } from "./catalogo-caja";
 import { TEXTOS_DE_CATALOGO } from "./catalogo-catalogo";
+import { TEXTOS_DE_CIERRE } from "./catalogo-cierre";
 import { TEXTOS_DE_COMANDAS } from "./catalogo-comandas";
 import { TEXTOS_DE_CLIENTES } from "./catalogo-clientes";
 import { TEXTOS_DE_COMPRAS } from "./catalogo-compras";
@@ -350,6 +351,7 @@ export const CATALOGO_DE_TEXTOS = {
   // Módulos de E2, E3 y E4: nacen vacíos y cada etapa suma los suyos en su archivo (E0-T4).
   ...TEXTOS_DE_CATALOGO,
   ...TEXTOS_DE_CAJA,
+  ...TEXTOS_DE_CIERRE,
   ...TEXTOS_DE_VENTAS,
   ...TEXTOS_DE_STOCK,
   ...TEXTOS_DE_PRODUCCION,

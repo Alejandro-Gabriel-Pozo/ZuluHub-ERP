@@ -1,0 +1,209 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  min-width: 0;
+}
+
+.cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  flex-wrap: wrap;
+}
+
+.jornada {
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.volver {
+  align-self: flex-start;
+}
+
+.puntos {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.punto {
+  display: flex;
+  align-items: center;
+}
+
+.punto:not(:last-child)::after {
+  content: "";
+  width: 2.5rem;
+  border-top: var(--borde-grosor-fuerte) solid var(--color-borde);
+}
+
+.numero {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: 50%;
+  background: var(--color-fondo);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.punto[data-estado="ahora"] .numero {
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
+  color: var(--brand-on-primary);
+}
+
+.punto[data-estado="hecho"] .numero {
+  background: var(--color-exito-suave);
+  border-color: var(--color-exito);
+  color: var(--color-exito);
+}
+
+.paso {
+  margin: 0;
+  padding-bottom: var(--espacio-1);
+  border-bottom: var(--borde-grosor-fuerte) solid var(--brand-primary);
+  font-size: var(--tipo-tamano-medio);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.paso:focus {
+  outline: none;
+}
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.tituloDelGrupo {
+  margin: 0;
+  padding-bottom: var(--espacio-1);
+  border-bottom: var(--borde-grosor-fuerte) solid currentcolor;
+  font-size: var(--tipo-tamano-medio);
+}
+
+.grupo[data-severidad="bloquea"] .tituloDelGrupo {
+  color: var(--color-peligro);
+}
+
+.grupo[data-severidad="reconocible"] .tituloDelGrupo {
+  color: var(--color-aviso);
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie-elevada);
+  color: var(--color-texto);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.grupo[data-severidad="bloquea"] .tarjeta {
+  border: var(--borde-grosor-fuerte) solid var(--color-peligro);
+  background: var(--color-peligro-suave);
+}
+
+.titulo {
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.suave {
+  color: var(--color-texto-suave);
+}
+
+.renglon {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--espacio-3);
+  flex-wrap: wrap;
+}
+
+.monto {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.monto[data-tono="peligro"] {
+  color: var(--color-peligro);
+}
+
+.monto[data-tono="aviso"] {
+  color: var(--color-aviso);
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plegable {
+  border: var(--borde-grosor) solid var(--color-divisor, var(--color-borde));
+  border-radius: var(--radio-base);
+}
+
+.plegable > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--objetivo-minimo);
+  padding: 0 var(--espacio-3);
+  font-weight: var(--tipo-peso-fuerte);
+  cursor: pointer;
+}
+
+.plegableCuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  padding: 0 var(--espacio-3) var(--espacio-3);
+}
+
+.pie {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3) 0;
+  background: var(--color-fondo);
+  border-top: var(--borde-grosor) solid var(--color-borde);
+}
+
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.botones {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-2);
+}

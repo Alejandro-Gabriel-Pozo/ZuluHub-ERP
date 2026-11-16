@@ -7,6 +7,7 @@ import type { ClaveDeTexto } from "../../../../src/capacidades/vocabulario/catal
 import type { ClaveDeIcono } from "../iconos/catalogo";
 import { RUTAS_DE_CAJA } from "../plantillas/caja/lista-de-caja";
 import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
+import { RUTA_DEL_CIERRE } from "../plantillas/cierre/ruta-del-cierre";
 import { RUTAS_DE_CONFIGURACION } from "../plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
 import { RUTAS_DE_CUENTA } from "../plantillas/sesion/rutas-de-cuenta";
@@ -44,6 +45,7 @@ export type ClaveDeArea = (typeof AREAS_DEL_MENU)[number]["clave"];
  */
 export const GRUPOS_DEL_MENU = [
   { clave: "comprobantes", etiqueta: null },
+  { clave: "cierre", etiqueta: null },
   { clave: "productos", etiqueta: null },
   { clave: "empresa", etiqueta: "navegacion.empresa" },
   { clave: "sucursal", etiqueta: "sucursal.etiqueta" },
@@ -62,7 +64,13 @@ type BaseDeFila = Readonly<{
 export type FilaDePantalla = BaseDeFila &
   Readonly<{
     tipo: "pantalla";
-    clave: "comprobantes" | "productos" | "configuracion-fiscal" | "medios-de-pago" | "contacto";
+    clave:
+      | "comprobantes"
+      | "cierre-del-dia"
+      | "productos"
+      | "configuracion-fiscal"
+      | "medios-de-pago"
+      | "contacto";
     modulo: ClaveModulo;
     accion: ClaveAccion;
     href: string;
@@ -95,6 +103,17 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     accion: "comprobantes.ver",
     href: RUTA_DEL_LISTADO,
     etiqueta: "fiscal.pantalla.listado_titulo",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
+    clave: "cierre-del-dia",
+    area: "ventas",
+    grupo: "cierre",
+    modulo: "cierre",
+    accion: "jornadas.ver",
+    href: RUTA_DEL_CIERRE,
+    etiqueta: "cierre.titulo",
     departamento: null,
   },
   {

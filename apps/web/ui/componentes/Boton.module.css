@@ -68,3 +68,10 @@
   color: var(--color-texto-suave);
   font-size: var(--tipo-tamano-chico);
 }
+
+/* Botón de dos estados: marcado se distingue por el fondo y el borde fuerte, no solo por el color. */
+.boton[aria-pressed="true"] {
+  background: var(--color-info-suave);
+  border-color: var(--brand-primary);
+  color: var(--color-texto);
+}

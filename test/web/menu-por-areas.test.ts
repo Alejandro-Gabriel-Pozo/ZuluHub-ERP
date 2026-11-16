@@ -122,6 +122,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "fiscal.pantalla.listado_titulo",
       ],
       [
+        "cierre-del-dia",
+        "ventas",
+        "cierre",
+        "cierre",
+        "jornadas.ver",
+        "/caja/cierre-del-dia",
+        "cierre.titulo",
+      ],
+      [
         "productos",
         "catalogo",
         "productos",
