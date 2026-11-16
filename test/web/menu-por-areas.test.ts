@@ -17,6 +17,7 @@ const fila = (clave: FilaDePantalla["clave"]): FilaDePantalla => {
 };
 const comprobantes = fila("comprobantes");
 const productos = fila("productos");
+const secciones = fila("secciones");
 const fiscal = fila("configuracion-fiscal");
 const medios = fila("medios-de-pago");
 const contacto = fila("contacto");
@@ -103,6 +104,37 @@ describe("armarElMenu: todo nace cerrado", () => {
   });
 });
 
+describe("«Secciones»: la fila del grupo «Carta» de Catálogo (A8)", () => {
+  it("exige el mismo módulo y la misma acción que «Productos» (las de su consulta, `productos.ver`)", () => {
+    expect([secciones.modulo, secciones.accion, secciones.area]).toEqual([
+      productos.modulo,
+      productos.accion,
+      productos.area,
+    ]);
+  });
+
+  it("con el módulo disponible (simulado: hoy `catalogo` está en desarrollo y no se ve) el área Catálogo trae dos grupos: «Productos» sin encabezado y «Carta» con el suyo", () => {
+    // El módulo `catalogo` sigue «en desarrollo» y no se ve; para mirar el armado se usa un módulo disponible con la acción de su consulta.
+    const disponibles = [productos, secciones].map((f) => ({
+      ...f,
+      modulo: comprobantes.modulo,
+      accion: comprobantes.accion,
+    }));
+    const areas = armarElMenu(disponibles, permisos(["comprobantes.ver"], ["facturacion"]), null);
+    expect(areas.map((a) => a.clave)).toEqual(["catalogo"]);
+    expect(areas[0]?.grupos.map((g) => [g.clave, g.etiqueta, g.items.map((i) => i.clave)])).toEqual(
+      [
+        ["productos", null, ["productos"]],
+        ["carta", "navegacion.grupo.carta", ["secciones"]],
+      ],
+    );
+  });
+
+  it("hoy, con `catalogo` en desarrollo, no se ve ni siquiera con la acción y el módulo activo", () => {
+    expect(armarElMenu([secciones], permisos(["productos.ver"], ["catalogo"]), null)).toEqual([]);
+  });
+});
+
 describe("la tabla real: lo declarado por pantalla", () => {
   it("cada fila lleva su área, grupo, módulo, acción, ruta y rótulo aprobados", () => {
     expect(
@@ -129,6 +161,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "productos.ver",
         "/catalogo/productos",
         "catalogo.lista.titulo",
+      ],
+      [
+        "secciones",
+        "catalogo",
+        "carta",
+        "catalogo",
+        "productos.ver",
+        "/catalogo/secciones",
+        "catalogo.seccion.titulo",
       ],
       [
         "configuracion-fiscal",

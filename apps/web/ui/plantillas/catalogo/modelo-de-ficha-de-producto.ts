@@ -5,6 +5,7 @@ import {
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { CLAVE_DE_TEXTO_DE_UNIDAD } from "../../../../../src/capacidades/vocabulario/unidades-de-medida";
 import { CLAVE_DE_CLASE, RUTA_DE_PRODUCTOS } from "./filtros-de-productos";
+import { RUTA_DE_SECCIONES } from "./modelo-de-secciones";
 
 /**
  * El modelo de vista de la ficha de datos de un producto (A1, T2a; maqueta aprobada `productos.html`, función `vDatos`): de lo que entrega la composición, los campos que se ven,
@@ -72,6 +73,8 @@ export type FichaArmada = Readonly<{
   alicuota: DesplegableArmado | null;
   /** `null` si la clase no se vende. */
   seccion: DesplegableArmado | null;
+  /** «Secciones», junto al campo de la sección (A8, maqueta `productos-secciones.html`, línea 368); `null` si la clase no se vende (el campo no está). */
+  enlaceDeSecciones: Readonly<{ href: string; texto: string }> | null;
   textoDeElegir: string;
   guardar: string;
 }>;
@@ -138,6 +141,9 @@ export function armarLaFicha(f: FichaDeLaPantalla, d: DiccionarioResuelto = {}):
           f.seccion === null ? null : { valor: f.seccion.id, etiqueta: f.seccion.nombre },
           f.secciones.map((s) => ({ valor: s.id, etiqueta: s.nombre })),
         )
+      : null,
+    enlaceDeSecciones: f.seVende
+      ? { href: RUTA_DE_SECCIONES, texto: texto(d, "catalogo.seccion.titulo") }
       : null,
     textoDeElegir: texto(d, "catalogo.dato.sin_elegir"),
     guardar: texto(d, "catalogo.accion.guardar"),
