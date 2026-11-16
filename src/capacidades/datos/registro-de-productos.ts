@@ -32,6 +32,8 @@ const CLASIFICACION_PROPOSITO = (para: string): Proposito => ({
   fuente:
     "Pedernal-docs/11-especificaciones/pantallas-de-catalogo-restante-inventario.md §2.5 (Clasificación), la maqueta aprobada el 12/11/2026 (`clasificacion.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui) y 11-especificaciones/decisiones-del-dueno-2026-11.md (filas del 12/11 y 13/11/2026: árbol departamento → categoría de hasta 4 niveles; el cambio de un producto rige solo desde ahora)",
 });
+const FORMULARIO_DE_SECCION_DE_CARTA =
+  "apps/web/ui/plantillas/catalogo/FormularioDeSeccionDeCarta.cliente.tsx";
 
 export const DATOS_DE_PRODUCTOS = {
   "texto-de-busqueda-de-producto": {
@@ -158,6 +160,20 @@ export const DATOS_DE_PRODUCTOS = {
     ],
     consumidores: [FICHA_DE_PRODUCTO, ALTA_DE_PRODUCTO],
     ponerPor: ["productos.editar", "productos.crear"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "nombre-de-seccion-de-carta": {
+    // La primitiva ya existe y es la que valida el servidor (`secciones.ts`): largo y conjunto permitido viven ahí, una sola vez; la pantalla no escribe ningún número.
+    ficha: "src/primitivas/texto/nombre-de-eleccion.ts",
+    propositos: [
+      {
+        para: "Nombre de una sección de la carta, al crearla y al renombrarla: de 1 a 80 caracteres, único por empresa sin distinguir mayúsculas (`claveDeNombre`: NFC y minúsculas; los acentos distinguen).",
+        fuente:
+          "la maqueta aprobada el 12/11/2026 (`productos-secciones.html` líneas 303, 486 y 488, carpeta de prototipos de Pedernal-docs 10-ux-ui), Pedernal-docs/11-especificaciones/e2-catalogo-minimo-especificacion.md §3.5 y 11-especificaciones/decisiones-del-dueno-2026-11.md línea 90 (quién: gerente y administrador, el mismo permiso que las secciones)",
+      },
+    ],
+    consumidores: [FORMULARIO_DE_SECCION_DE_CARTA],
+    ponerPor: ["productos.editar"],
     requiere: REQUIERE_CATALOGO,
   },
   "unidad-de-medida-de-producto": {

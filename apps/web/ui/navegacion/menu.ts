@@ -8,6 +8,7 @@ import type { ClaveDeIcono } from "../iconos/catalogo";
 import { RUTAS_DE_CAJA } from "../plantillas/caja/lista-de-caja";
 import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
 import { RUTA_DE_CLASIFICACION } from "../plantillas/catalogo/modelo-de-clasificacion";
+import { RUTA_DE_SECCIONES } from "../plantillas/catalogo/modelo-de-secciones";
 import { RUTAS_DE_CONFIGURACION } from "../plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
 import { RUTAS_DE_CUENTA } from "../plantillas/sesion/rutas-de-cuenta";
@@ -46,6 +47,7 @@ export type ClaveDeArea = (typeof AREAS_DEL_MENU)[number]["clave"];
 export const GRUPOS_DEL_MENU = [
   { clave: "comprobantes", etiqueta: null },
   { clave: "productos", etiqueta: null },
+  { clave: "carta", etiqueta: "navegacion.grupo.carta" },
   { clave: "empresa", etiqueta: "navegacion.empresa" },
   { clave: "sucursal", etiqueta: "sucursal.etiqueta" },
   { clave: "salir", etiqueta: null },
@@ -67,6 +69,7 @@ export type FilaDePantalla = BaseDeFila &
       | "comprobantes"
       | "productos"
       | "clasificacion"
+      | "secciones"
       | "configuracion-fiscal"
       | "medios-de-pago"
       | "contacto";
@@ -126,6 +129,19 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     accion: "productos.editar",
     href: RUTA_DE_CLASIFICACION,
     etiqueta: "catalogo.clasificacion.titulo",
+    departamento: null,
+  },
+  // «Secciones» (A8; dueño, 13/11/2026, `decisiones-del-dueno-2026-11.md` línea 110): en Catálogo, grupo «Carta». Módulo `catalogo` y acción `productos.ver`, las de su consulta (S7 de la ficha:
+  // la celda de la maqueta del menú dice `vidriera` y `vidrieras.ver`, pero el servidor resuelve estas).
+  {
+    tipo: "pantalla",
+    clave: "secciones",
+    area: "catalogo",
+    grupo: "carta",
+    modulo: "catalogo",
+    accion: "productos.ver",
+    href: RUTA_DE_SECCIONES,
+    etiqueta: "catalogo.seccion.titulo",
     departamento: null,
   },
   {

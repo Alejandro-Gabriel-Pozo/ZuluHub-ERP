@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { CLASES_DE_USO, seConsumeLaClase, vendeLaClase, type ClaseDeUso } from "./clases";
+import {
+  CLASES_DE_USO,
+  seConsumeLaClase,
+  seControlaStockLaClase,
+  vendeLaClase,
+  type ClaseDeUso,
+} from "./clases";
 import { validarFicha, type EntradaDeFicha } from "./producto";
 
 const SECCION = "11111111-1111-4111-8111-111111111111";
@@ -47,10 +53,11 @@ describe("D1: lo que pide y lo que prohíbe cada clase (en el dominio)", () => {
     }
   });
 
-  it("solo materia prima, insumo y reventa se consumen; solo reventa y vendible se venden", () => {
+  it("se consumen materia prima, insumo, reventa y elaborado (12/11/2026); solo reventa y vendible se venden", () => {
     const quienes = (f: (c: ClaseDeUso) => boolean) => CLASES_DE_USO.filter(f);
     expect(quienes(vendeLaClase)).toEqual(["REVENTA", "VENDIBLE"]);
-    expect(quienes(seConsumeLaClase)).toEqual(["MATERIA_PRIMA", "INSUMO", "REVENTA"]);
+    expect(quienes(seConsumeLaClase)).toEqual(["MATERIA_PRIMA", "INSUMO", "REVENTA", "ELABORADO"]);
+    expect(quienes(seControlaStockLaClase)).toEqual(["MATERIA_PRIMA", "INSUMO", "REVENTA"]);
   });
 });
 

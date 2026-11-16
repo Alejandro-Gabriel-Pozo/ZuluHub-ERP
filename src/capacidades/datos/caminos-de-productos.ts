@@ -21,6 +21,8 @@ const HOJAS_DE_CLASIFICACION = "apps/web/ui/plantillas/catalogo/HojasDeClasifica
 
 const CLASIFICACION_DEL_PRODUCTO =
   "apps/web/ui/plantillas/catalogo/ClasificacionDelProducto.cliente.tsx";
+const FORMULARIO_DE_SECCION_DE_CARTA =
+  "apps/web/ui/plantillas/catalogo/FormularioDeSeccionDeCarta.cliente.tsx";
 
 export const CAMINOS_DE_PRODUCTOS = {
   // Productos, precio de la empresa (A1, T3): el precio es el único dato; el producto, la clave del cambio y la fila vista los fija la página. El único error con campo es «Escribí
@@ -182,5 +184,23 @@ export const CAMINOS_DE_PRODUCTOS = {
       admite: ["nodo-de-clasificacion-de-producto"],
     },
     camposDeError: [],
+  },
+  // Secciones de la carta (A8, parte 1; maqueta aprobada `productos-secciones.html`, 12/11/2026): el nombre es el único dato, para crear y para renombrar. El orden lo calcula el servidor al crear y las
+  // flechas no son un campo; la sección y su versión las fija la página. El único error con campo, por ahora, es «Falta el nombre» (el de nombre repetido, «Ya existe una sección con ese nombre», es de la parte 2: hasta entonces sale el genérico).
+  "crear-seccion-de-carta": {
+    funcion: "Crear una sección de la carta de la empresa",
+    pantallas: [FORMULARIO_DE_SECCION_DE_CARTA],
+    pasos: [{ id: "nombre-de-la-seccion", campos: { nombre: "nombre-de-seccion-de-carta" } }],
+    deriva: [],
+    accion: { clave: "productos.editar", requiere: ["nombre-de-seccion-de-carta"], admite: [] },
+    camposDeError: ["nombre"],
+  },
+  "renombrar-seccion-de-carta": {
+    funcion: "Renombrar una sección de la carta de la empresa",
+    pantallas: [FORMULARIO_DE_SECCION_DE_CARTA],
+    pasos: [{ id: "nombre-de-la-seccion", campos: { nombre: "nombre-de-seccion-de-carta" } }],
+    deriva: [],
+    accion: { clave: "productos.editar", requiere: ["nombre-de-seccion-de-carta"], admite: [] },
+    camposDeError: ["nombre"],
   },
 } as const satisfies Readonly<Record<string, DefinicionDeCamino>>;
