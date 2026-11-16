@@ -90,7 +90,7 @@ describe("leerDevolucion", () => {
       });
     }
     expect(con("0001")).toEqual({ ok: false, error: "NUMERO_DE_COMPROBANTE_INVALIDO" });
-    for (const fecha of ["2026-02-30", "mañana", 20261110, null, undefined]) {
+    for (const fecha of ["2026-02-30", "mañana", 20261110, null, undefined, ["2026-11-10"]]) {
       expect(con({ numero: "1", fecha }), String(fecha)).toEqual({
         ok: false,
         error: "FECHA_INVALIDA",
@@ -118,6 +118,13 @@ describe("leerDevolucion", () => {
     }
     expect(con([{ productoId: "x", cantidad: "1" }])).toEqual(mal);
     expect(con([5])).toEqual(mal);
+    const muchas = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        productoId: `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
+        cantidad: "1",
+      }));
+    expect(con(muchas(9_999))).toMatchObject({ ok: true });
+    expect(con(muchas(10_000))).toEqual(mal);
     expect(
       con([
         { productoId: P1, cantidad: "1" },
@@ -158,6 +165,10 @@ describe("huellaDeLaDevolucion", () => {
     );
   });
 
+  it("la huella no cambia entre versiones: es la que ya guardaron las devoluciones (la repetición de una clave depende de ella)", () => {
+    expect(base).toBe("d0907eb764f00a97bb0fd27e93fa15328e920a7fd291791be4343f9fd0262554");
+  });
+
   it("cualquier campo distinto da otra huella", () => {
     const otras = [
       huellaDeLaDevolucion(leida({ sucursalId: P2 }), null),
@@ -190,9 +201,15 @@ describe("huellaDeLaDevolucion", () => {
         }),
         null,
       ),
+      huellaDeLaDevolucion(
+        leida({
+          lineas: [{ productoId: P1, cantidad: "2.5", recepcionId: P2, lineaDeRecepcion: 2 }],
+        }),
+        null,
+      ),
     ];
     expect(new Set([base, ...otras]).size).toBe(otras.length + 1);
-    // Y las dos con origen (línea 1 y 2) entre sí.
+    // Y las de origen entre sí (otra línea o otra recepción).
     expect(otras.at(-1)).not.toBe(otras.at(-2));
   });
 });

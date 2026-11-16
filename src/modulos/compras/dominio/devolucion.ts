@@ -84,7 +84,7 @@ function leerRemitoDeDevolucion(
     exigirUnaLetra: false,
   });
   if (!numero.ok) return err("NUMERO_DE_COMPROBANTE_INVALIDO");
-  if (typeof r["fecha"] !== "string" || !esFechaCivil(r["fecha"])) return err("FECHA_INVALIDA");
+  if (!esFechaCivil(r["fecha"])) return err("FECHA_INVALIDA");
   return ok({ numero: numero.valor, fecha: r["fecha"] });
 }
 
