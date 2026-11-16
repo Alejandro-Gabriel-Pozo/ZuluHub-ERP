@@ -2052,10 +2052,17 @@ describe.skipIf(base === null)("captación: el dominio y la base dicen lo mismo"
   });
 
   it("todo lo que validarFormulario acepta (cientos de formularios al azar) entra en la tabla sin que ninguna CHECK lo rechace", async () => {
+    // Los nombres usan la lista de permitidos (`texto-de-una-linea.ts`): el texto al azar ya casi nunca pasa, así que el que sí cumple
+    // pesa más para que la prueba siga viendo cientos de formularios aceptados (el piso de abajo lo exige).
     const texto = fc.oneof(
-      fc.stringMatching(/^ ?[A-Za-zÁÉÍÓÚáéíóúñÑ0-9]{1,12}( {1,3}[A-Za-zñ0-9.&'-]{1,12}){0,3} ?$/),
-      fc.string({ unit: "grapheme", maxLength: 40 }),
-      fc.string({ unit: "binary", maxLength: 40 }),
+      {
+        weight: 4,
+        arbitrary: fc.stringMatching(
+          /^ ?[A-Za-zÁÉÍÓÚáéíóúñÑ0-9]{1,12}( {1,3}[A-Za-zñ0-9.&'-]{1,12}){0,3} ?$/,
+        ),
+      },
+      { weight: 1, arbitrary: fc.string({ unit: "grapheme", maxLength: 40 }) },
+      { weight: 1, arbitrary: fc.string({ unit: "binary", maxLength: 40 }) },
     );
     const entrada = fc.record({
       nombreContacto: texto,
