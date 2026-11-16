@@ -1,6 +1,7 @@
 import type { EntradaDeIngredientes, EntradaDeListarRecetas } from "../modulos/stock/publico";
 import { textoDeBusquedaDeProductoDesdeTexto } from "../primitivas/texto/termino-de-busqueda-de-producto";
 import { leerLaPagina } from "./entradas-de-productos";
+import { identificador } from "./entradas-de-facturacion";
 
 /**
  * Las entradas de la lista de recetas y de los ingredientes (B1 y B3 de `recetas-pantalla.md` §8): de lo que pide la dirección de la pantalla (todo texto) a lo que aceptan
@@ -18,7 +19,12 @@ export type EntradaDeLaListaDeRecetas = Readonly<{
 }>;
 
 /** Lo que la dirección pide para los ingredientes que se ofrecen, sin validar. */
-export type EntradaDeLosIngredientes = Readonly<{ texto: string; despues: string }>;
+export type EntradaDeLosIngredientes = Readonly<{
+  texto: string;
+  despues: string;
+  /** El producto de la receta que se arma; vacío o ausente: no se excluye ninguno. */
+  excluirProductoId?: string | undefined;
+}>;
 
 const CON_RECETA = { con: true, sin: false } as const;
 const ACTIVO = { si: true, no: false } as const;
@@ -52,9 +58,12 @@ export function leerLaEntradaDeLosIngredientes(
 ): EntradaDeIngredientes | null {
   const texto = textoDeBusquedaDeProductoDesdeTexto(entrada.texto);
   const pagina = entrada.despues === "" ? undefined : leerLaPagina(entrada.despues);
-  if (!texto.ok || pagina === null) return null;
+  const excluir = entrada.excluirProductoId ?? "";
+  if (!texto.ok || pagina === null || (excluir !== "" && !identificador.safeParse(excluir).success))
+    return null;
   return {
     ...(texto.valor === null ? {} : { texto: texto.valor }),
+    ...(excluir === "" ? {} : { excluirProductoId: excluir }),
     ...(pagina === undefined ? {} : { despuesDe: pagina }),
   };
 }

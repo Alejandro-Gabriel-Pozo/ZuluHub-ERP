@@ -61,6 +61,22 @@ describe("leerLaEntradaDeLosIngredientes", () => {
     ).toStrictEqual({ texto: "ha", despuesDe: { id: ID, nombreClave: "harina" } });
   });
 
+  it("pasa el producto que no se ofrece, si es un uuid; vacío o ausente es no excluir", () => {
+    expect(
+      leerLaEntradaDeLosIngredientes({ texto: "", despues: "", excluirProductoId: ID }),
+    ).toStrictEqual({ excluirProductoId: ID });
+    expect(
+      leerLaEntradaDeLosIngredientes({ texto: "", despues: "", excluirProductoId: "" }),
+    ).toStrictEqual({});
+  });
+
+  it.each([{ excluirProductoId: "no-es-un-uuid" }, { excluirProductoId: " " }])(
+    "%j: null",
+    (parte) => {
+      expect(leerLaEntradaDeLosIngredientes({ texto: "", despues: "", ...parte })).toBeNull();
+    },
+  );
+
   it.each([{ texto: "uno\u0000" }, { despues: "mal" }, { despues: `${ID}:` }])(
     "%j: null",
     (parte) => {

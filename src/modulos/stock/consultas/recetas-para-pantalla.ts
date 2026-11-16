@@ -69,6 +69,8 @@ export type PaginaDeIngredientes = Readonly<{
 
 export type EntradaDeIngredientes = Readonly<{
   texto?: string | undefined;
+  /** El producto de la receta que se arma: no se ofrece como ingrediente de sí mismo (terminaría en un ciclo). Un id que no es uuid: página vacía. */
+  excluirProductoId?: string | undefined;
   despuesDe?: ClaveDePagina | undefined;
 }>;
 
@@ -249,9 +251,17 @@ export function armarConsultasDeRecetasParaPantalla(leer: Lector, reglas: Reglas
       leer(contexto, DECLARACIONES_DE_CONSULTAS.ingredientesParaReceta.accion, async (tx) => {
         const texto = leerTexto(entrada.texto);
         const despuesDe = leerPagina(entrada.despuesDe);
-        if (texto === null || despuesDe === null) return { ingredientes: [], ...VACIA };
+        const excluir = entrada.excluirProductoId;
+        if (
+          texto === null ||
+          despuesDe === null ||
+          (excluir !== undefined && (typeof excluir !== "string" || !esUuid(excluir)))
+        ) {
+          return { ingredientes: [], ...VACIA };
+        }
         const filas = await tx.listasDeRecetas.ingredientesElegibles(contexto.empresaId, {
           texto,
+          excluirProductoId: excluir,
           despuesDe,
           limite: TAMANO_DE_PAGINA + 1,
         });

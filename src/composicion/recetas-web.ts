@@ -32,6 +32,8 @@ import type { Web } from "./web";
  *    no existe (`null`); una entrada fuera de la lista de permitidos es una lista vacía, no un error que distinga.
  *  - **El dinero sale como texto decimal con su moneda** (`costoPorUnidad` con `moneda`), y «sin costo» es `null`, nunca cero (D125).
  *  - **Nada de más sale.** Las versiones no llevan el id de la persona sino su nombre (el correo, decisión 26A del 15/11/2026); una persona que ya no figura queda sin nombre.
+ *  - **Cómo se muestra el costo lo decide la pantalla.** El servidor da 6 decimales en texto; el dueño pidió ver el costo por unidad redondeado a 2 decimales, mitad hacia arriba (como en Producción), y la
+ *    pantalla de Recetas sigue lo mismo (decisión del orquestador, 16/11/2026): se redondea con la primitiva de dinero, nunca con `number`.
  *  - **Todo resultado sale por el camino común** (`aRespuesta`, ADR-016): un fallo inesperado sale sin detalle y con referencia.
  */
 

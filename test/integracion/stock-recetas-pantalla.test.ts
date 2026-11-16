@@ -549,6 +549,24 @@ describe.skipIf(base === null)("stock: consultas de la pantalla de Recetas (B1 a
       }
     });
 
+    it("excluirProductoId saca al propio producto (no se ofrece de ingrediente de sí mismo); un id malo es una página vacía", async () => {
+      const x = await c.escenario();
+      const masa = await producto("ELABORADO", { nombre: "Masa propia" }, x);
+      const salsa = await producto("ELABORADO", { nombre: "Salsa" }, x);
+      const r = await ingredientes({ excluirProductoId: masa }, x.gerente);
+      expect(r.ingredientes.map((i) => i.productoId)).toEqual([salsa]);
+      const otraEmpresa = await ingredientes({ excluirProductoId: nuevoId() }, x.gerente);
+      expect(otraEmpresa.ingredientes).toHaveLength(2);
+      expect(await ingredientes({ excluirProductoId: "mal" }, x.gerente)).toEqual({
+        ingredientes: [],
+        siguiente: null,
+      });
+      expect(await ingredientes({ excluirProductoId: 5 as never }, x.gerente)).toEqual({
+        ingredientes: [],
+        siguiente: null,
+      });
+    });
+
     it("todo lo que se ofrece se puede guardar (la lista y el guardado dicen lo mismo)", async () => {
       const x = await c.escenario();
       await materia({}, x);

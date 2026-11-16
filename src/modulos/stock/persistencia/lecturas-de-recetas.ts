@@ -39,6 +39,8 @@ export type FilaDeProductoConReceta = Readonly<{
 
 export type FiltroDeIngredientes = Readonly<{
   texto?: string | undefined;
+  /** Un producto que no se ofrece (el de la receta que se arma: de ingrediente de sí mismo terminaría en un ciclo). */
+  excluirProductoId?: string | undefined;
   despuesDe?: ClaveDePagina | undefined;
   limite: number;
 }>;
@@ -135,6 +137,9 @@ export function crearLecturasDeRecetas(db: Kysely<StockDb>): LecturasDeRecetas {
         // El elaborado entra por sí mismo; los demás, solo con su artículo de stock activo.
         sql`(p.clase_de_uso = 'ELABORADO' or (p.clase_de_uso in (${enLista(ARTICULOS)}) and a.activo))`,
       ];
+      if (filtro.excluirProductoId !== undefined) {
+        condiciones.push(sql`p.id <> ${filtro.excluirProductoId}::uuid`);
+      }
       if (filtro.texto !== undefined) {
         condiciones.push(
           sql`p.nombre_clave like ${comoPrefijo(filtro.texto.toLowerCase())} escape '\\'`,
