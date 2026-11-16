@@ -44,8 +44,8 @@ export type DefinicionDePerilla = ComunDeUnaPerilla &
  * toque este archivo (catalogo-y-stock §E.2): son los extras de recetas (mermas, sub-recetas y factor
  * por tamaño) y el nivel de combos del catálogo. Cada tramo que las verifica con `exigirPerilla` las
  * cubre; hasta entonces ningún caso de uso las nombra (no existe todavía la prueba «toda perilla tiene
- * un uso»). Esas son interruptores de empresa con base apagada: si el plan no las nombra, no vienen. `vidriera_por_qr` (T2 de la carta real) ya está declarada; las
- * demás de la carta (fotos, modelos, estadísticas) se declaran cuando se construya la carta.
+ * un uso»). Esas son interruptores de empresa con base apagada: si el plan no las nombra, no vienen. `vidriera_por_qr` (T2 de la carta real) y `vidriera_modelo_libro` ya están declaradas; las
+ * demás de la carta (fotos, otros modelos, estadísticas) se declaran cuando se construya la carta.
  */
 export const CATALOGO_DE_PERILLAS = {
   empresas_por_tenant: {
@@ -130,6 +130,17 @@ export const CATALOGO_DE_PERILLAS = {
     ambito: "EMPRESA",
     tipo: "INTERRUPTOR",
     base: { encendida: false },
+    modulo: "vidriera",
+  },
+  // Modelo Libro de la carta (portada, índice y una página por sección): extra de pago, apagado de base y se habilita por empresa; cada sucursal elige después
+  // Lista o Libro en el portal (dueño, fila 53 del 12/11/2026 «portal siempre, libro perilla»; Q1 A del 16/11/2026: extra por empresa, prendido sin cobrar al cliente
+  // de Motor2, valor por plan sin definir; carta-libro-especificacion §3). Requiere la carta en línea: un Libro sin carta que mostrar no tiene sentido. La verifica el
+  // caso de uso que guarda el modelo al ELEGIR Libro; volver a Lista no la pide, y sin ella la carta se ve en Lista (`modeloEfectivo`).
+  vidriera_modelo_libro: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    requiere: "vidriera_por_qr",
     modulo: "vidriera",
   },
   // Caja (decisión 124; caja-y-cobros.md:43, 69; registro de contratos :778; supuesto S-5 de E0: nombre y base 1 del

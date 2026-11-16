@@ -60,7 +60,7 @@ const entradas = Object.entries(CATALOGO_DE_PERILLAS) as [string, DefinicionDePe
 const catalogoComoTabla: Readonly<Record<string, DefinicionDePerilla>> = CATALOGO_DE_PERILLAS;
 
 describe("el catálogo de perillas real", () => {
-  it("trae nueve perillas: empresas_por_tenant (de administración), cuatro de catálogo y stock y tres de E6 (lotes, calidad de lote y producción), interruptores de empresa apagados, y cajas_por_sucursal (de caja, límite por sucursal con base 1)", () => {
+  it("trae diez perillas: empresas_por_tenant (de administración), cuatro de catálogo y stock y tres de E6 (lotes, calidad de lote y producción), interruptores de empresa apagados, y cajas_por_sucursal (de caja, límite por sucursal con base 1)", () => {
     expect(CATALOGO_DE_PERILLAS).toEqual({
       empresas_por_tenant: {
         ambito: "TENANT",
@@ -122,6 +122,13 @@ describe("el catálogo de perillas real", () => {
         base: { encendida: false },
         modulo: "vidriera",
       },
+      vidriera_modelo_libro: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        requiere: "vidriera_por_qr",
+        modulo: "vidriera",
+      },
       salon: {
         ambito: "EMPRESA",
         tipo: "INTERRUPTOR",
@@ -149,6 +156,7 @@ describe("el catálogo de perillas real", () => {
       | "calidad_de_lote"
       | "produccion"
       | "vidriera_por_qr"
+      | "vidriera_modelo_libro"
       | "salon"
       | "venta_por_fracciones_y_peso"
     >();
@@ -168,12 +176,12 @@ describe("el catálogo de perillas real", () => {
     }
   });
 
-  it("las de la carta que todavía no se construyeron no se declaran: ni las de fotos, modelos ni estadísticas (`vidriera_por_qr` sí, desde T2)", () => {
+  // `vidriera_modelo_libro` salió de esta lista el 16/11/2026: el dueño aprobó el Libro como extra por empresa (Q1 A, fila 53) y lo construye este tramo. Siguen sin declararse las demás.
+  it("las de la carta que todavía no se construyeron no se declaran: ni las de fotos, otros modelos ni estadísticas (`vidriera_por_qr` desde T2 y `vidriera_modelo_libro` desde el Libro sí)", () => {
     for (const clave of [
       "productos_con_foto",
       "fotos_alojadas",
       "vidriera_modelo_cuadricula",
-      "vidriera_modelo_libro",
       "vidriera_modelo_tablero",
       "vidriera_estadisticas",
     ]) {
@@ -195,6 +203,7 @@ describe("el catálogo de perillas real", () => {
       calidad_de_lote: "stock",
       produccion: "produccion",
       cajas_por_sucursal: "caja",
+      vidriera_modelo_libro: "vidriera",
       vidriera_por_qr: "vidriera",
       salon: "salon",
       venta_por_fracciones_y_peso: "catalogo",

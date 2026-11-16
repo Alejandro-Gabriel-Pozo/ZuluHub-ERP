@@ -31,6 +31,12 @@ export type TextosDeVidriera = Readonly<{
   enlaceNoCopiado: string;
   productoNoEsta: string;
   precioConIva: string;
+  /** El botón «Índice» del Libro (la Lista usa «Secciones»). */
+  libroIndice: string;
+  /** Con los marcadores `{n}` y `{m}`. */
+  libroSeccionNDeM: string;
+  libroAnterior: string;
+  libroSiguiente: string;
 }>;
 
 export function textosDeVidriera(diccionario: DiccionarioResuelto): TextosDeVidriera {
@@ -59,5 +65,10 @@ export function textosDeVidriera(diccionario: DiccionarioResuelto): TextosDeVidr
     enlaceNoCopiado: t("vidriera.producto.enlace_no_copiado"),
     productoNoEsta: t("vidriera.producto.no_esta"),
     precioConIva: t("vidriera.pie.iva"),
+    libroIndice: t("vidriera.libro.indice"),
+    // Los marcadores se dejan a la vista: el número lo pone la pantalla, como texto.
+    libroSeccionNDeM: t("vidriera.libro.seccion_n_de_m"),
+    libroAnterior: t("vidriera.libro.anterior"),
+    libroSiguiente: t("vidriera.libro.siguiente"),
   };
 }

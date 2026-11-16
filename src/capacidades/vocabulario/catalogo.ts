@@ -163,6 +163,12 @@ export const CATALOGO_DE_TEXTOS = {
   },
   "vidriera.producto.no_esta": { porDefecto: "Este producto ya no está en la carta." },
   "vidriera.pie.iva": { porDefecto: "Los precios incluyen IVA." },
+  // Modelo Libro (carta-libro-especificacion §9). Fuente: maqueta `carta-libro.html:305-306` (`aria-label` «Anterior» y «Siguiente», contador «Sección n de 13», botón «ÍNDICE»),
+  // respuestas del dueño del 16/11/2026 (Q2 A: «Sección n de m»; Q4 A: «Índice» en el Libro) y fila 53. Pendiente de aceptar por la delegación 173 (sin DEC todavía).
+  "vidriera.libro.indice": { porDefecto: "Índice" },
+  "vidriera.libro.seccion_n_de_m": { porDefecto: "Sección {n} de {m}", marcadores: ["n", "m"] },
+  "vidriera.libro.anterior": { porDefecto: "Anterior" },
+  "vidriera.libro.siguiente": { porDefecto: "Siguiente" },
   // Sesión y empresa (W5): ingreso, invitación, elegir empresa, shell y estados. La interfaz recibe estos
   // textos ya resueltos; cada código de error público (`experiencia/respuesta.ts`) tiene el suyo.
   "ingreso.titulo": { porDefecto: "Ingresá a {marca}", marcadores: ["marca"] },

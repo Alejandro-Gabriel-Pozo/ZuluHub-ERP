@@ -279,6 +279,7 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
           "id",
           "lugar",
           "mensaje_de_portada",
+          "modelo", // 0082
           "nombre",
           "rubro",
           "sucursal_id",

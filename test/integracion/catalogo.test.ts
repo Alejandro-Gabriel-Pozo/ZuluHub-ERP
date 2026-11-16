@@ -836,7 +836,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "pedernal_app:pedido_de_ficha.estado",
           "pedernal_app:pedido_de_ficha.resuelto_en",
           "pedernal_app:pedido_de_ficha.resuelto_por",
-          ...["estado", "lugar", "mensaje_de_portada", "nombre", "rubro"].map(
+          ...["estado", "lugar", "mensaje_de_portada", "modelo", "nombre", "rubro"].map(
             (c) => `pedernal_app:carta_publica.${c}`,
           ), // 0043
           ...["actualizado_en", "actualizado_por", "oculto"].map(

@@ -1,0 +1,145 @@
+/* El Libro (carta-libro-especificacion §4): una página por vez, con la barra de abajo siempre a la vista. Solo tokens del sistema; el color de marca llega por la identidad. */
+.raiz {
+  display: flex;
+  flex-direction: column;
+  max-width: 40rem;
+  height: 100dvh;
+  margin-inline: auto;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+}
+
+.barra {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--espacio-2) var(--espacio-4);
+  border-bottom: var(--borde-grosor) solid var(--color-borde);
+}
+
+/* La página tiene alto fijo y su contenido se desplaza adentro: el documento no se mueve. */
+.pagina {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.portada {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-3);
+  min-height: 100%;
+  padding: var(--espacio-5) var(--espacio-4);
+  text-align: center;
+}
+
+.rubro {
+  margin: 0;
+  font-size: 0.9em;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-texto-suave);
+}
+
+.nombre {
+  margin: 0;
+  font-family: var(--tipo-familia-titulos);
+  font-size: 2.2em;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.lugar,
+.final {
+  margin: 0;
+  color: var(--color-texto-suave);
+}
+
+.tituloDePagina {
+  margin: 0;
+  padding: var(--espacio-4);
+  font-family: var(--tipo-familia-titulos);
+  font-size: 1.6em;
+  font-weight: 500;
+}
+
+.indice,
+.indiceDeAnclas ol {
+  margin: 0;
+  padding: 0 var(--espacio-4);
+  list-style: none;
+}
+
+.fila {
+  display: grid;
+  grid-template-columns: 2.5em 1fr;
+  align-items: center;
+  width: 100%;
+  min-height: 3rem;
+  padding: var(--espacio-2) 0;
+  border: 0;
+  border-bottom: 1px dotted var(--color-borde);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.numero {
+  color: var(--color-texto-suave);
+  font-size: 0.875em;
+}
+
+.indiceDeAnclas {
+  padding: var(--espacio-4);
+}
+
+.pie {
+  margin: 0;
+  padding: var(--espacio-4);
+  color: var(--color-texto-suave);
+  font-size: 0.9em;
+}
+
+/* Objetivos de 48 px o más (D5): flechas a los lados y «Índice» al centro. */
+.navegacion {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: 3.5rem;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-top: var(--borde-grosor) solid var(--color-borde);
+  background: var(--color-fondo);
+}
+
+.navegacion > :last-child {
+  justify-self: end;
+}
+
+.soloLector {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media print {
+  /* Imprimir da la carta completa, no la página que se estaba mirando (la Lista imprime todo). */
+  .raiz {
+    height: auto;
+  }
+
+  .pagina {
+    overflow: visible;
+  }
+
+  .navegacion,
+  .barra {
+    display: none;
+  }
+}
