@@ -133,6 +133,16 @@ export const DECLARACIONES = {
       },
     },
   },
+  anularFactura: {
+    accion: "comprobantes_de_proveedor.anular",
+    repeticion: {
+      regla: "RECHAZA_LA_REPETICION",
+      prueba: {
+        archivo: ARCHIVO_DE_CONCILIACION_SEPARADA,
+        it: "I4: anular dos veces una factura sola es COMPROBANTE_ANULADO y no escribe; con conciliaciones vivas o con un pago vigente no se anula",
+      },
+    },
+  },
   conciliarFactura: {
     accion: "conciliaciones.conciliar",
     repeticion: {

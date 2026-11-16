@@ -495,4 +495,126 @@ describe.skipIf(base === null)("compras N3: factura sola y conciliación", () =>
       });
     }
   });
+
+  it("I4: anular dos veces una factura sola es COMPROBANTE_ANULADO y no escribe; con conciliaciones vivas o con un pago vigente no se anula", async () => {
+    const m = await armar();
+    const recibida = await recibir(m, m.harina.producto, "2");
+    const f = await cargarFactura(m, [linea(m.harina.producto, "2000")], 2000);
+    const g = await cargarFactura(m, [linea(m.harina.producto, "1000")], 1000);
+    const estadoDe = async (id: string) =>
+      (
+        await c.filas<{ estado: string }>(
+          "select estado from comprobante_de_proveedor where id = $1",
+          [id],
+        )
+      )[0]?.estado;
+    // permisos y motivo
+    expect(
+      await c.casos.anularFactura(m.e.operador, {
+        comprobanteId: f.comprobanteId,
+        motivo: "Error",
+      }),
+    ).toMatchObject({ ok: false, error: "SIN_PERMISO" });
+    expect(
+      await c.casos.anularFactura(m.e.gerente, { comprobanteId: f.comprobanteId, motivo: "  " }),
+    ).toEqual({ ok: false, error: "MOTIVO_REQUERIDO" });
+    // con una conciliación viva no se anula; sin ella, sí
+    const hecha = valorDe(
+      await c.casos.conciliarFactura(m.e.gerente, {
+        clave: nuevoId(),
+        comprobanteId: f.comprobanteId,
+        asignaciones: [
+          { lineaDeFactura: 1, recepcionId: recibida, lineaDeRecepcion: 1, cantidad: "2000" },
+        ],
+      }),
+    );
+    expect(
+      await c.casos.anularFactura(m.e.gerente, {
+        comprobanteId: f.comprobanteId,
+        motivo: "Mal cargada",
+      }),
+    ).toEqual({ ok: false, error: "COMPROBANTE_CONCILIADO" });
+    expect(await estadoDe(f.comprobanteId)).toBe("REGISTRADO");
+    valorDe(
+      await c.casos.anularConciliacion(m.e.gerente, { conciliacionId: hecha.conciliacionId }),
+    );
+    expect(
+      valorDe(
+        await c.casos.anularFactura(m.e.gerente, {
+          comprobanteId: f.comprobanteId,
+          motivo: "Mal cargada",
+        }),
+      ),
+    ).toEqual({ anulada: true });
+    const [fila] = await c.filas<Record<string, unknown>>(
+      "select estado, anulado_por, motivo_de_anulacion from comprobante_de_proveedor where id = $1",
+      [f.comprobanteId],
+    );
+    expect(fila).toEqual({
+      estado: "ANULADO",
+      anulado_por: m.e.gerente.personaId,
+      motivo_de_anulacion: "Mal cargada",
+    });
+    // la segunda no escribe ni audita; una anulada no se concilia
+    const auditadas = (await c.auditoria(m.e.empresa, "FACTURA_ANULADA")).length;
+    expect(
+      await c.casos.anularFactura(m.e.administrador, {
+        comprobanteId: f.comprobanteId,
+        motivo: "Otra vez",
+      }),
+    ).toEqual({ ok: false, error: "COMPROBANTE_ANULADO" });
+    expect((await c.auditoria(m.e.empresa, "FACTURA_ANULADA")).length).toBe(auditadas);
+    expect(
+      await c.casos.conciliarFactura(m.e.gerente, {
+        clave: nuevoId(),
+        comprobanteId: f.comprobanteId,
+        asignaciones: [
+          { lineaDeFactura: 1, recepcionId: recibida, lineaDeRecepcion: 1, cantidad: "100" },
+        ],
+      }),
+    ).toEqual({ ok: false, error: "COMPROBANTE_ANULADO" });
+    // el número queda libre: la misma factura se puede volver a cargar
+    expect(
+      valorDe(
+        await c.casos.registrarFactura(
+          m.e.operador,
+          pedidoDeFactura(m, [linea(m.harina.producto, "1000")], {
+            numero: 9_999_999,
+            totalSegunFactura: totalDe(1000),
+          }),
+        ),
+      ).yaExistia,
+    ).toBe(false);
+    // una factura que no existe, de otra empresa o de N2 (atajo) no existe para esta acción
+    const otra = await armar();
+    for (const comprobanteId of [nuevoId(), "no-es-un-id", g.comprobanteId]) {
+      expect(
+        await c.casos.anularFactura(otra.e.gerente, { comprobanteId, motivo: "Prueba" }),
+      ).toEqual({ ok: false, error: "COMPROBANTE_NO_ENCONTRADO" });
+    }
+    // anular y conciliar a la vez: gana una sola y el estado queda de acuerdo con lo asignado
+    for (let ronda = 0; ronda < RONDAS; ronda++) {
+      const rec = await recibir(m, m.harina.producto, "1");
+      const h = await cargarFactura(m, [linea(m.harina.producto, "1000")], 1000);
+      c.armarBarrera(2);
+      let rs;
+      try {
+        rs = await Promise.all([
+          c.casos.anularFactura(m.e.gerente, { comprobanteId: h.comprobanteId, motivo: "Carrera" }),
+          c.casos.conciliarFactura(m.e.administrador, {
+            clave: nuevoId(),
+            comprobanteId: h.comprobanteId,
+            asignaciones: [
+              { lineaDeFactura: 1, recepcionId: rec, lineaDeRecepcion: 1, cantidad: "1000" },
+            ],
+          }),
+        ]);
+      } finally {
+        c.soltarBarrera();
+      }
+      expect(rs.filter((r) => r.ok)).toHaveLength(1);
+      const anulada = (await estadoDe(h.comprobanteId)) === "ANULADO";
+      expect(await asignadaDeLaFactura(h.comprobanteId)).toBe(anulada ? "0.0000" : "1000.0000");
+    }
+  });
 });
