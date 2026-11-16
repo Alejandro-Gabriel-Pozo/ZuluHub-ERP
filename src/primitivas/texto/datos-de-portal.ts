@@ -1,4 +1,5 @@
-import type { Resultado } from "../resultado/resultado";
+import { telefonoDesdeTexto, type Telefono } from "../contacto/telefono";
+import { err, type Resultado } from "../resultado/resultado";
 import { textoDeUnaLineaDesdeTexto, type MotivoDeTextoInvalido } from "./texto-de-una-linea";
 
 /**
@@ -22,4 +23,18 @@ export function tituloDelPortalDesdeTexto(texto: string): Resultado<string, Moti
     exigirUnaLetra: false,
     conSignosDeCatalogo: true,
   });
+}
+
+/**
+ * El teléfono de la tarjeta del portal: el de siempre (`telefonoDesdeTexto`: sin espacios en los extremos, 1 a 40, una línea) Y ADEMÁS solo de la lista permitida: dígitos, letras
+ * ASCII, espacio y `+ ( ) . , / # * -` (SUPUESTO DEC-0484, lo confirma el dueño). La base lo copia en `portal_tarjeta_telefono_ck` y una prueba falla si difieren. Previene: un invisible
+ * o un `<>` en un dato que se muestra en una página pública (lo que `\p{Cc}` de la primitiva común no ve).
+ */
+const TELEFONO_DE_TARJETA = /^[0-9A-Za-z +().,/#*-]+$/;
+
+export function telefonoDeTarjetaDesdeTexto(
+  texto: string,
+): Resultado<Telefono, "TELEFONO_INVALIDO"> {
+  const t = telefonoDesdeTexto(texto);
+  return t.ok && TELEFONO_DE_TARJETA.test(t.valor) ? t : err("TELEFONO_INVALIDO");
 }
