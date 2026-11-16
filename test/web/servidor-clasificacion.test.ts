@@ -118,6 +118,6 @@ describe("las acciones: la empresa la pone el servidor y el pedido lo lee la com
         error: { codigo: "CATALOGO_ACCION_NO_PERMITIDA" },
       });
       expect(mundo.llamadas).toEqual([]);
-      },
+    },
   );
 });
