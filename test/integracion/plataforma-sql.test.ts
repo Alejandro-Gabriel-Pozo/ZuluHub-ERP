@@ -91,6 +91,10 @@ const TABLAS_LEGIBLES = [
   "plan_de_tenant",
   "ajuste_de_perilla",
   "modulo_de_empresa",
+  "plantilla_de_rol", // 0061 (permisos configurables): la plataforma lee las plantillas, los pisos y las acciones introducidas
+  "version_de_plantilla",
+  "piso_de_plataforma",
+  "accion_introducida",
   "solicitud_de_alta", // captación: la plataforma revisa y decide las solicitudes
   "valor_de_lista", // 0027 (caja y cobros): las listas del sistema (marcas de tarjeta y motivos de rechazo) las administra la plataforma
 ] as const;
@@ -478,6 +482,21 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           "modulo_de_empresa.modulo_de_empresa_plataforma_admin_alta:INSERT:RESTRICTIVE",
           "modulo_de_empresa.modulo_de_empresa_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
           "modulo_de_empresa.modulo_de_empresa_plataforma_con_actor:SELECT:RESTRICTIVE",
+          // 0061 (permisos configurables): con sus restrictivas del actor; las plantillas y las acciones introducidas solo se leen
+          ...["plantilla_de_rol", "accion_introducida"].flatMap((t) => [
+            `${t}.${t}_plataforma_leer:SELECT:PERMISSIVE`,
+            `${t}.${t}_plataforma_con_actor:SELECT:RESTRICTIVE`,
+          ]),
+          "version_de_plantilla.version_de_plantilla_plataforma_leer:SELECT:PERMISSIVE",
+          "version_de_plantilla.version_de_plantilla_plataforma_alta:INSERT:PERMISSIVE",
+          "version_de_plantilla.version_de_plantilla_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "version_de_plantilla.version_de_plantilla_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "piso_de_plataforma.piso_de_plataforma_plataforma_leer:SELECT:PERMISSIVE",
+          "piso_de_plataforma.piso_de_plataforma_plataforma_alta:INSERT:PERMISSIVE",
+          "piso_de_plataforma.piso_de_plataforma_plataforma_cambiar:UPDATE:PERMISSIVE",
+          "piso_de_plataforma.piso_de_plataforma_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "piso_de_plataforma.piso_de_plataforma_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
+          "piso_de_plataforma.piso_de_plataforma_plataforma_con_actor:SELECT:RESTRICTIVE",
           "plan_de_tenant.plan_de_tenant_plataforma_alta:INSERT:PERMISSIVE",
           "plan_de_tenant.plan_de_tenant_plataforma_leer:SELECT:PERMISSIVE",
           "plan_de_tenant.plan_de_tenant_plataforma_admin_alta:INSERT:RESTRICTIVE",
