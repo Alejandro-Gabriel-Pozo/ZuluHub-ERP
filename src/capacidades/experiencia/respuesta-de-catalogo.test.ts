@@ -18,6 +18,7 @@ describe("códigos públicos de la ficha de un producto", () => {
       CATALOGO_PRECIO_INVALIDO: "catalogo.error.precio_invalido",
       CATALOGO_PRECIO_DESACTUALIZADO: "catalogo.precio.vigente_ahora",
       CATALOGO_INCLUIDA_CON_RECARGO: "catalogo.error.incluida_con_recargo",
+      CATALOGO_SEGUNDA_VARIANTE: "catalogo.error.una_sola_variante",
       CATALOGO_ACCION_NO_PERMITIDA: "catalogo.error.accion_no_permitida",
     });
     expect(CATALOGO_DE_TEXTOS["catalogo.error.nombre_repetido"].porDefecto).toBe(

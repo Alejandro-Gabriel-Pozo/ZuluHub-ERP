@@ -21,6 +21,7 @@ export const CLAVES_DE_ERRORES_DE_CATALOGO = {
   CATALOGO_PRECIO_DESACTUALIZADO: "catalogo.precio.vigente_ahora",
   // Opciones (A13): «Una opción incluida no lleva recargo» es de la misma fila «Errores» de «Textos nuevos» de `productos.html` (09/11/2026).
   CATALOGO_INCLUIDA_CON_RECARGO: "catalogo.error.incluida_con_recargo",
+  CATALOGO_SEGUNDA_VARIANTE: "catalogo.error.una_sola_variante",
   CATALOGO_ACCION_NO_PERMITIDA: "catalogo.error.accion_no_permitida",
 } as const satisfies Record<string, ClaveDeTexto>;
 

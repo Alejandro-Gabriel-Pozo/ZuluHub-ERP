@@ -35,6 +35,10 @@ const FORMA_DEL_PEDIDO_DE_GRUPO = z.object({
   /** El grupo que se edita; `null` = un grupo nuevo (su id es la clave del cambio). */
   grupoId: identificador.nullable(),
   nombre: texto,
+  /** `true`: es la variante del producto (la medida), no un grupo de opciones. No se cambia en un grupo que ya existe. */
+  esVariante: z.boolean(),
+  /** Solo de la variante: si es la medida. */
+  esTamano: z.boolean(),
   /** Solo cuenta al crear: la clase de un grupo que ya existe no se cambia. */
   esAdicional: z.boolean(),
   esObligatorio: z.boolean(),

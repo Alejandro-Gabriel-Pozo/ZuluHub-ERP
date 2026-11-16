@@ -48,6 +48,7 @@ export function FormularioDeGrupoDeOpciones({
   const [obligatorio, setObligatorio] = useState(grupo.obligatorio.valor);
   const [varias, setVarias] = useState(grupo.varias.valor);
   const [fuera, setFuera] = useState(grupo.fueraDeLaCarta.valor);
+  const [esMedida, setEsMedida] = useState(grupo.esTamano.valor);
   const [filas, setFilas] = useState<readonly FilaDeOpcionArmada[]>(grupo.opciones.filas);
   const [siguiente, setSiguiente] = useState(grupo.esNuevo ? 1 : 0);
 
@@ -79,38 +80,50 @@ export function FormularioDeGrupoDeOpciones({
             autoComplete="off"
             error={errorDe(CAMPO_DEL_GRUPO)}
           />
-          {grupo.claseGuardada === null ? (
+          {grupo.esVariante ? (
             <Casilla
-              dato="clase-de-grupo-de-opciones"
-              etiqueta={grupo.adicional.etiqueta}
-              nombre="esAdicional"
-              marcada={adicional}
-              alCambiar={setAdicional}
+              dato="medida-de-variante-de-producto"
+              etiqueta={grupo.esTamano.etiqueta}
+              nombre="esTamano"
+              marcada={esMedida}
+              alCambiar={setEsMedida}
             />
           ) : (
-            <Texto>{grupo.claseGuardada}</Texto>
+            <>
+              {grupo.claseGuardada === null ? (
+                <Casilla
+                  dato="clase-de-grupo-de-opciones"
+                  etiqueta={grupo.adicional.etiqueta}
+                  nombre="esAdicional"
+                  marcada={adicional}
+                  alCambiar={setAdicional}
+                />
+              ) : (
+                <Texto>{grupo.claseGuardada}</Texto>
+              )}
+              <Casilla
+                dato="obligatoriedad-de-grupo-de-opciones"
+                etiqueta={grupo.obligatorio.etiqueta}
+                nombre="esObligatorio"
+                marcada={obligatorio}
+                alCambiar={setObligatorio}
+              />
+              <Casilla
+                dato="eleccion-multiple-de-grupo-de-opciones"
+                etiqueta={grupo.varias.etiqueta}
+                nombre="admiteVarias"
+                marcada={varias}
+                alCambiar={setVarias}
+              />
+              <Casilla
+                dato="visibilidad-en-la-carta-de-grupo-de-opciones"
+                etiqueta={grupo.fueraDeLaCarta.etiqueta}
+                nombre="fueraDeLaCarta"
+                marcada={fuera}
+                alCambiar={setFuera}
+              />
+            </>
           )}
-          <Casilla
-            dato="obligatoriedad-de-grupo-de-opciones"
-            etiqueta={grupo.obligatorio.etiqueta}
-            nombre="esObligatorio"
-            marcada={obligatorio}
-            alCambiar={setObligatorio}
-          />
-          <Casilla
-            dato="eleccion-multiple-de-grupo-de-opciones"
-            etiqueta={grupo.varias.etiqueta}
-            nombre="admiteVarias"
-            marcada={varias}
-            alCambiar={setVarias}
-          />
-          <Casilla
-            dato="visibilidad-en-la-carta-de-grupo-de-opciones"
-            etiqueta={grupo.fueraDeLaCarta.etiqueta}
-            nombre="fueraDeLaCarta"
-            marcada={fuera}
-            alCambiar={setFuera}
-          />
           <ul className={estilos["filas"]}>
             {filas.map((fila) => (
               <li key={fila.clave} className={estilos["fila"]}>
@@ -125,15 +138,17 @@ export function FormularioDeGrupoDeOpciones({
                   autoComplete="off"
                   error={errorDe(`opcion_${fila.clave}_nombre`)}
                 />
-                <CampoImporte
-                  dato="recargo-de-opcion-de-producto"
-                  etiqueta={grupo.opciones.recargoDelCampo}
-                  nombre={`opcion_${fila.clave}_recargo`}
-                  valor={fila.recargo}
-                  alCambiar={(valor) => {
-                    cambiarFila(fila.clave, { recargo: valor });
-                  }}
-                />
+                {grupo.esVariante ? null : (
+                  <CampoImporte
+                    dato="recargo-de-opcion-de-producto"
+                    etiqueta={grupo.opciones.recargoDelCampo}
+                    nombre={`opcion_${fila.clave}_recargo`}
+                    valor={fila.recargo}
+                    alCambiar={(valor) => {
+                      cambiarFila(fila.clave, { recargo: valor });
+                    }}
+                  />
+                )}
                 <Boton
                   variante="secundaria"
                   alTocar={() => {

@@ -21,13 +21,16 @@ export const rutaDeLasOpciones = (id: string): string => `${RUTA_DE_PRODUCTOS}/$
 export const rutaDeUnGrupoNuevo = (id: string): string => `${rutaDeLasOpciones(id)}/nuevo`;
 export const rutaDeUnGrupo = (id: string, grupoId: string): string =>
   `${rutaDeLasOpciones(id)}/${grupoId}`;
+export const rutaDeLaVariante = (id: string): string => `${rutaDeLasOpciones(id)}/variante`;
 export const rutaDeLaCopia = (id: string): string => `${rutaDeLasOpciones(id)}/copiar`;
 
 /** Los grupos como los entrega la composición (la misma forma, sin importar de dónde venga; la UI no importa los módulos). */
 export type GrupoDeLaPantalla = Readonly<{
   id: string;
   nombre: string;
-  clase: "INCLUIDA" | "ADICIONAL";
+  clase: "INCLUIDA" | "ADICIONAL" | "VARIANTE";
+  /** Solo de la variante: si es la medida. */
+  esTamano: boolean;
   esObligatorio: boolean;
   admiteVarias: boolean;
   seMuestraEnCarta: boolean;
@@ -39,6 +42,7 @@ export type OpcionesDeLaPantalla = Readonly<{
   nombre: string;
   versionDeOpciones: number;
   grupos: readonly GrupoDeLaPantalla[];
+  variante: GrupoDeLaPantalla | null;
   claveDelCambio: string;
 }>;
 
@@ -64,9 +68,24 @@ const llevaRecargo = (recargo: string): boolean => /[1-9]/.test(recargo);
 const claseDe = (c: GrupoDeLaPantalla["clase"], d: DiccionarioResuelto): string =>
   texto(d, c === "ADICIONAL" ? "catalogo.opciones.adicional" : "catalogo.opciones.incluida");
 
+/** La tarjeta de la variante: su nombre, «Es la medida» si lo es y sus opciones (sin recargo: el precio de cada medida es propio). */
+const tarjetaDeLaVariante = (v: GrupoDeLaPantalla, d: DiccionarioResuelto) => ({
+  id: v.id,
+  nombre: v.nombre,
+  esLaMedida: v.esTamano ? texto(d, "catalogo.opciones.es_la_medida") : null,
+  opciones: v.opciones.map((o) => o.nombre),
+});
+
 export type OpcionesArmadas = Readonly<{
   id: string;
   titulo: string;
+  /** «Variantes»: la variante del producto (una sola) con «Editar», o «Agregar variante» si no tiene. */
+  variantes: Readonly<{
+    titulo: string;
+    tarjeta: ReturnType<typeof tarjetaDeLaVariante> | null;
+    editar: Readonly<{ href: string; texto: string }> | null;
+    agregar: Readonly<{ href: string; texto: string }> | null;
+  }>;
   grupos: Readonly<{
     titulo: string;
     tarjetas: readonly Readonly<{
@@ -95,6 +114,15 @@ export function armarLasOpciones(
   return {
     id: o.id,
     titulo: o.nombre,
+    variantes: {
+      titulo: texto(d, "catalogo.opciones.variantes"),
+      tarjeta: o.variante === null ? null : tarjetaDeLaVariante(o.variante, d),
+      editar: o.variante === null ? null : enlace(rutaDeLaVariante(o.id), "catalogo.accion.editar"),
+      agregar:
+        o.variante === null
+          ? enlace(rutaDeLaVariante(o.id), "catalogo.opciones.agregar_variante")
+          : null,
+    },
     grupos: {
       titulo: texto(d, "catalogo.opciones.grupos"),
       tarjetas: o.grupos.map((g) => ({
@@ -127,6 +155,9 @@ export type FilaDeOpcionArmada = Readonly<{
 export type GrupoArmado = Readonly<{
   id: string;
   titulo: string;
+  /** La variante (la medida): sin recargo, sin reglas de elección y con la casilla «Es la medida». */
+  esVariante: boolean;
+  esTamano: Readonly<{ etiqueta: string; valor: boolean }>;
   /** Solo cuando el grupo ya existe: «Incluida» o «Adicional» (la clase no se cambia). Un grupo nuevo la elige con la casilla `adicional`. */
   claseGuardada: string | null;
   esNuevo: boolean;
@@ -150,15 +181,21 @@ export type GrupoArmado = Readonly<{
 export function armarElGrupo(
   g: GrupoParaEditarDeLaPantalla,
   d: DiccionarioResuelto = {},
+  esVariante = false,
 ): GrupoArmado {
   const guardado = g.grupo;
+  const nuevo = esVariante
+    ? "catalogo.opciones.agregar_variante"
+    : "catalogo.opciones.agregar_grupo";
   return {
     id: g.id,
-    titulo: texto(
-      d,
-      guardado === null ? "catalogo.opciones.agregar_grupo" : "catalogo.accion.editar",
-    ),
-    claseGuardada: guardado === null ? null : claseDe(guardado.clase, d),
+    esVariante,
+    esTamano: {
+      etiqueta: texto(d, "catalogo.opciones.es_la_medida"),
+      valor: guardado?.esTamano ?? false,
+    },
+    titulo: texto(d, guardado === null ? nuevo : "catalogo.accion.editar"),
+    claseGuardada: guardado === null || esVariante ? null : claseDe(guardado.clase, d),
     esNuevo: guardado === null,
     nombre: { etiqueta: texto(d, "catalogo.dato.nombre"), valor: guardado?.nombre ?? "" },
     adicional: { etiqueta: texto(d, "catalogo.opciones.adicional"), valor: false },
@@ -193,6 +230,12 @@ export function armarElGrupo(
     guardar: texto(d, "catalogo.accion.guardar"),
   };
 }
+
+/** La variante (la medida) de un producto para editar, con los textos de la maqueta. */
+export const armarLaVariante = (
+  g: GrupoParaEditarDeLaPantalla,
+  d: DiccionarioResuelto = {},
+): GrupoArmado => armarElGrupo(g, d, true);
 
 export type CopiaArmada = Readonly<{
   id: string;

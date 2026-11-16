@@ -66,6 +66,8 @@ const PEDIDO: PedidoDeGrupo = {
   claveDelCambio: CLAVE,
   grupoId: null,
   nombre: "Agregados",
+  esVariante: false,
+  esTamano: false,
   esAdicional: true,
   esObligatorio: true,
   admiteVarias: false,
@@ -125,6 +127,18 @@ describe("armarElConjunto: un grupo nuevo", () => {
         { id: idDerivado(CLAVE, 0), nombre: "Queso", recargo: "500.00", orden: 1, activa: true },
         { id: idDerivado(CLAVE, 1), nombre: "Huevo", recargo: "300.00", orden: 2, activa: true },
       ],
+    });
+  });
+
+  it("las reglas de un grupo nuevo salen de lo pedido: opcional y de varias elecciones, u obligatorio y de una", () => {
+    const g = (extra: Partial<PedidoDeGrupo>) => armar([], { ...PEDIDO, ...extra }).grupos[0];
+    expect(g({ esObligatorio: false, admiteVarias: true })).toMatchObject({
+      esObligatorio: false,
+      admiteVarias: true,
+    });
+    expect(g({ esObligatorio: true, admiteVarias: false })).toMatchObject({
+      esObligatorio: true,
+      admiteVarias: false,
     });
   });
 
@@ -377,5 +391,71 @@ describe("armarElConjunto: un grupo que ya existe", () => {
 
   it("si la clave de un grupo nuevo coincide con la variante, tampoco", () => {
     expect(armarElConjunto([V], { ...PEDIDO, claveDelCambio: GRUPO_V })).toBe("GRUPO_NO_EDITABLE");
+  });
+});
+
+describe("armarElConjunto: la variante", () => {
+  const VARIANTE: PedidoDeGrupo = {
+    ...PEDIDO,
+    esVariante: true,
+    esTamano: true,
+    esAdicional: true,
+    esObligatorio: false,
+    admiteVarias: true,
+    seMuestraEnCarta: false,
+    nombre: "Tamaño",
+    opciones: [
+      { clave: "n0", id: null, nombre: "Chico", recargo: "99.00" },
+      { clave: "n1", id: null, nombre: "Grande", recargo: "" },
+    ],
+  };
+
+  it("una variante nueva es obligatoria, de una sola elección, se muestra en la carta, puede ser la medida y sus opciones no llevan recargo", () => {
+    const { grupos } = armar([A], VARIANTE);
+    expect(grupos.at(-1)).toEqual({
+      id: CLAVE,
+      clase: "VARIANTE",
+      nombre: "Tamaño",
+      esTamano: true,
+      esObligatorio: true,
+      admiteVarias: false,
+      seMuestraEnCarta: true,
+      orden: 2,
+      activo: true,
+      opciones: [
+        { id: idDerivado(CLAVE, 0), nombre: "Chico", recargo: "0.00", orden: 1, activa: true },
+        { id: idDerivado(CLAVE, 1), nombre: "Grande", recargo: "0.00", orden: 2, activa: true },
+      ],
+    });
+    expect(armar([A], { ...VARIANTE, esTamano: false }).grupos.at(-1)).toMatchObject({
+      esTamano: false,
+    });
+  });
+
+  it("una variante que existe cambia el nombre y si es la medida, conserva el factor de sus opciones y no toca las reglas", () => {
+    const { grupos } = armar([V, A], {
+      ...VARIANTE,
+      grupoId: GRUPO_V,
+      esTamano: false,
+      opciones: [{ clave: "e0", id: OPCION_3, nombre: "Gigante", recargo: "" }],
+    });
+    expect(grupos[0]).toMatchObject({
+      id: GRUPO_V,
+      clase: "VARIANTE",
+      nombre: "Tamaño",
+      esTamano: false,
+      esObligatorio: true,
+      admiteVarias: false,
+      seMuestraEnCarta: true,
+      opciones: [
+        { id: OPCION_3, nombre: "Gigante", recargo: "0.00", factorDeTamano: "1.500000", orden: 1 },
+      ],
+    });
+    expect(grupos[1]).toMatchObject({ id: GRUPO_A });
+  });
+
+  it("la variante y un grupo no se confunden: cada pantalla edita lo suyo", () => {
+    expect(armarElConjunto([V, A], { ...VARIANTE, grupoId: GRUPO_A })).toBe("GRUPO_NO_EDITABLE");
+    expect(armarElConjunto([V, A], { ...PEDIDO, grupoId: GRUPO_V })).toBe("GRUPO_NO_EDITABLE");
   });
 });

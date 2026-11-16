@@ -25,6 +25,7 @@ describe.skipIf(base === null)(
     let vigilante: Vigilante;
     let milanesa = "";
     let hamburguesa = "";
+    let latte = "";
 
     const ir = async (ruta: string) => {
       const respuesta = await pagina.goto(`${mundo.url}${ruta}`);
@@ -73,6 +74,7 @@ describe.skipIf(base === null)(
       });
       const c = mundo.mundo.dueno;
       milanesa = await productoDeBase(c, mundo.empresa, { nombre: "Milanesa" });
+      latte = await productoDeBase(c, mundo.empresa, { nombre: "Latte" });
       hamburguesa = await productoDeBase(c, mundo.empresa, { nombre: "Hamburguesa" });
       const salsas = await grupoDeBase(c, mundo.empresa, hamburguesa, {
         clase: "ADICIONAL",
@@ -173,6 +175,50 @@ describe.skipIf(base === null)(
       expect(await gruposDe(milanesa)).toHaveLength(1);
       expect(await auditorias(milanesa)).toBe(2);
       await sinViolacionesDeAxe();
+      pantallaLimpia();
+    });
+
+    it("la medida: agrega la variante «Tamaño» (es la medida) con dos opciones sin recargo y, desde «Precios» → «Según medida», carga el precio de cada una; con DOBLE TOQUE se escribe una sola vez", async () => {
+      await ir(`/catalogo/productos/${latte}/opciones`);
+      await pagina.getByRole("link", { name: "Agregar variante" }).click();
+      await pagina.waitForURL("**/opciones/variante");
+      expect(await pagina.getByLabel("Recargo", { exact: true }).count()).toBe(0);
+      await pagina.getByLabel("Nombre", { exact: true }).first().fill("Tamaño");
+      await pagina.getByRole("checkbox", { name: "Es la medida" }).check();
+      await pagina.getByLabel("Nombre", { exact: true }).nth(1).fill("Chico");
+      await pagina.getByRole("button", { name: "Agregar opción" }).click();
+      await pagina.getByLabel("Nombre", { exact: true }).nth(2).fill("Grande");
+      await sinViolacionesDeAxe();
+      await pagina.getByRole("button", { name: "Guardar" }).dblclick();
+      await pagina.waitForURL(`**/catalogo/productos/${latte}/opciones`);
+      await ir(`/catalogo/productos/${latte}/opciones`);
+      await pagina.getByText("Es la medida").waitFor();
+      await pagina.getByText("Chico · Grande").waitFor();
+      expect(await gruposDe(latte)).toEqual([
+        { nombre: "Tamaño", clase: "VARIANTE", activo: true },
+      ]);
+      expect(await auditorias(latte)).toBe(1);
+
+      await ir(`/catalogo/productos/${latte}/precios`);
+      await pagina.getByRole("link", { name: "Según medida" }).click();
+      await pagina.waitForURL("**/precios/medidas");
+      await pagina.getByLabel("Chico", { exact: true }).fill("3200");
+      await pagina.getByLabel("Grande", { exact: true }).fill("3800");
+      await sinViolacionesDeAxe();
+      await pagina.getByRole("button", { name: "Guardar" }).dblclick();
+      // La acción vuelve a la misma dirección: se espera lo que escribió, no la dirección.
+      const filas = async () =>
+        (
+          await consultar<{ n: string }>(
+            "select count(*)::text as n from precio_de_venta where producto_id = $1 and opcion_id is not null and sucursal_id is null",
+            [latte],
+          )
+        )[0]?.n;
+      await expect.poll(filas).toBe("2");
+      await ir(`/catalogo/productos/${latte}/precios/medidas`);
+      expect(await pagina.getByLabel("Chico", { exact: true }).inputValue()).toBe("3.200,00");
+      expect(await pagina.getByLabel("Grande", { exact: true }).inputValue()).toBe("3.800,00");
+      expect(await filas()).toBe("2");
       pantallaLimpia();
     });
 

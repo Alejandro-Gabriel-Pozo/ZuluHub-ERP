@@ -8,6 +8,7 @@ import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.clien
 import { FormularioDeGrupoDeOpciones } from "./FormularioDeGrupoDeOpciones.cliente";
 import {
   armarElGrupo,
+  armarLaVariante,
   type GrupoArmado,
   type GrupoParaEditarDeLaPantalla,
 } from "./modelo-de-opciones";
@@ -25,6 +26,7 @@ const GUARDADO: GrupoParaEditarDeLaPantalla = {
     id: "g1",
     nombre: "Salsas",
     clase: "ADICIONAL",
+    esTamano: false,
     esObligatorio: true,
     admiteVarias: true,
     seMuestraEnCarta: false,
@@ -51,6 +53,85 @@ const enviado = (accion: ReturnType<typeof vi.fn>, llamada = 0) =>
 
 afterEach(async () => {
   await page.viewport(390, 844);
+});
+
+describe("FormularioDeGrupoDeOpciones: la variante", () => {
+  const VARIANTE: GrupoParaEditarDeLaPantalla = {
+    ...GUARDADO,
+    grupo: {
+      id: "v1",
+      nombre: "Tamaño",
+      clase: "VARIANTE",
+      esTamano: true,
+      esObligatorio: true,
+      admiteVarias: false,
+      seMuestraEnCarta: true,
+      opciones: [
+        { id: "a", nombre: "Chico", recargo: "0.000000" },
+        { id: "b", nombre: "Grande", recargo: "0.000000" },
+      ],
+    },
+  };
+
+  it("sin recargos ni reglas de elección: el nombre, «Es la medida» y las opciones solo con su nombre; axe en 390 y 1280", async () => {
+    for (const [ancho, alto] of [
+      [390, 1400],
+      [1280, 900],
+    ] as const) {
+      await page.viewport(ancho, alto);
+      const { unmount } = await render(formulario(armarLaVariante(VARIANTE)));
+      await expect.element(page.getByRole("heading", { name: "Editar" })).toBeVisible();
+      await expect.element(page.getByRole("checkbox", { name: "Es la medida" })).toBeChecked();
+      for (const ausente of [
+        "Obligatorio",
+        "Adicional",
+        "Se puede elegir más de una",
+        "No figura en la carta",
+      ]) {
+        expect(page.getByRole("checkbox", { name: ausente }).elements()).toHaveLength(0);
+      }
+      expect(page.getByLabelText("Recargo", { exact: true }).elements()).toHaveLength(0);
+      expect(page.getByLabelText("Nombre", { exact: true }).elements()).toHaveLength(3);
+      expect(await violacionesDeAccesibilidad()).toEqual([]);
+      await unmount();
+    }
+  });
+
+  it("una variante nueva: «Agregar variante», «Es la medida» sin marcar; al guardar manda el nombre, la medida y las filas sin recargo", async () => {
+    const accion = vi.fn(ok);
+    await render(formulario(armarLaVariante({ ...VARIANTE, grupo: null }), accion));
+    await expect.element(page.getByRole("heading", { name: "Agregar variante" })).toBeVisible();
+    await expect.element(page.getByRole("checkbox", { name: "Es la medida" })).not.toBeChecked();
+    await userEvent.fill(page.getByLabelText("Nombre", { exact: true }).first(), "Tamaño");
+    await userEvent.click(page.getByRole("checkbox", { name: "Es la medida" }));
+    await userEvent.fill(page.getByLabelText("Nombre", { exact: true }).nth(1), "Chico");
+    tocar(guardar());
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    expect(Object.fromEntries(enviado(accion))).toEqual({
+      nombre: "Tamaño",
+      esTamano: "on",
+      opcion_n0_nombre: "Chico",
+    });
+  });
+
+  it("«Un producto admite una sola variante» se asocia al nombre", async () => {
+    await render(
+      formulario(
+        armarLaVariante({ ...VARIANTE, grupo: null }),
+        rechazo({
+          codigo: "CATALOGO_SEGUNDA_VARIANTE",
+          clave: "catalogo.error.una_sola_variante",
+          presentacion: "AVISO",
+          campo: "nombre",
+        }),
+      ),
+    );
+    tocar(guardar());
+    await expect.element(page.getByText("Un producto admite una sola variante")).toBeVisible();
+    expect(
+      page.getByLabelText("Nombre", { exact: true }).first().element().getAttribute("aria-invalid"),
+    ).toBe("true");
+  });
 });
 
 describe("FormularioDeGrupoDeOpciones", () => {

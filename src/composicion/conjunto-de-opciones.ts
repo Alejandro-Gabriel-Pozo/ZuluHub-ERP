@@ -57,6 +57,10 @@ function comoEstaba(g: GrupoDeFicha): GrupoParaGuardar {
 /** El más alto de una lista de órdenes (0 si no hay). */
 const maximo = (ordenes: readonly number[]): number => Math.max(0, ...ordenes);
 
+/** La variante no lleva recargo en sus opciones (el precio de cada medida es propio): siempre cero. */
+const recargoDe = (pedido: PedidoDeGrupo, recargo: string): string =>
+  pedido.esVariante ? "0.00" : recargo;
+
 export type ConjuntoArmado = Readonly<{ grupos: readonly GrupoParaGuardar[]; grupoId: string }>;
 
 /**
@@ -71,7 +75,7 @@ export function armarElConjunto(
   const grupoId = pedido.grupoId ?? pedido.claveDelCambio;
   const actual = existentes.find((g) => g.id === grupoId) ?? null;
   if (pedido.grupoId !== null && actual === null) return "GRUPO_NO_EDITABLE";
-  if (actual !== null && (!actual.activo || actual.clase === "VARIANTE"))
+  if (actual !== null && (!actual.activo || (actual.clase === "VARIANTE") !== pedido.esVariante))
     return "GRUPO_NO_EDITABLE";
 
   const guardadas = actual === null ? [] : actual.opciones;
@@ -94,7 +98,7 @@ export function armarElConjunto(
       opciones.push({
         id: existente.id,
         nombre: fila.nombre,
-        recargo: fila.recargo,
+        recargo: recargoDe(pedido, fila.recargo),
         orden: existente.orden,
         activa: true,
         factorDeTamano: existente.factorDeTamano,
@@ -104,7 +108,7 @@ export function armarElConjunto(
     opciones.push({
       id: derivado,
       nombre: fila.nombre,
-      recargo: fila.recargo,
+      recargo: recargoDe(pedido, fila.recargo),
       orden: siguiente,
       activa: true,
     });
@@ -115,12 +119,12 @@ export function armarElConjunto(
     actual === null
       ? {
           id: grupoId,
-          clase: pedido.esAdicional ? "ADICIONAL" : "INCLUIDA",
+          clase: pedido.esVariante ? "VARIANTE" : pedido.esAdicional ? "ADICIONAL" : "INCLUIDA",
           nombre: pedido.nombre,
-          esTamano: false,
-          esObligatorio: pedido.esObligatorio,
-          admiteVarias: pedido.admiteVarias,
-          seMuestraEnCarta: pedido.seMuestraEnCarta,
+          esTamano: pedido.esVariante && pedido.esTamano,
+          esObligatorio: pedido.esVariante || pedido.esObligatorio,
+          admiteVarias: !pedido.esVariante && pedido.admiteVarias,
+          seMuestraEnCarta: pedido.esVariante || pedido.seMuestraEnCarta,
           orden: maximo(existentes.map((g) => g.orden)) + 1,
           activo: true,
           opciones,
@@ -128,9 +132,13 @@ export function armarElConjunto(
       : {
           ...comoEstaba(actual),
           nombre: pedido.nombre,
-          esObligatorio: pedido.esObligatorio,
-          admiteVarias: pedido.admiteVarias,
-          seMuestraEnCarta: pedido.seMuestraEnCarta,
+          ...(pedido.esVariante
+            ? { esTamano: pedido.esTamano }
+            : {
+                esObligatorio: pedido.esObligatorio,
+                admiteVarias: pedido.admiteVarias,
+                seMuestraEnCarta: pedido.seMuestraEnCarta,
+              }),
           opciones,
         };
   return {

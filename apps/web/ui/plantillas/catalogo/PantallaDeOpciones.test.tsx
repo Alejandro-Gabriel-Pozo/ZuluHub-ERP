@@ -16,11 +16,13 @@ const OPCIONES: OpcionesDeLaPantalla = {
   nombre: "Milanesa",
   versionDeOpciones: 4,
   claveDelCambio: "c",
+  variante: null,
   grupos: [
     {
       id: "g1",
       nombre: "Salsas",
       clase: "ADICIONAL",
+      esTamano: false,
       esObligatorio: false,
       admiteVarias: true,
       seMuestraEnCarta: true,
@@ -34,6 +36,7 @@ const OPCIONES: OpcionesDeLaPantalla = {
       nombre:
         "Guarnición con un nombre muy largo que tiene que cortarse en renglones sin desbordar",
       clase: "INCLUIDA",
+      esTamano: false,
       esObligatorio: true,
       admiteVarias: false,
       seMuestraEnCarta: false,
@@ -91,6 +94,41 @@ describe("PantallaDeOpciones", () => {
         .elements()
         .map((e) => e.getAttribute("href")),
     ).toEqual([`/catalogo/productos/${ID}/opciones/g1`, `/catalogo/productos/${ID}/opciones/g2`]);
+  });
+
+  it("la variante: su tarjeta con «Es la medida» y «Editar»; sin variante, «Agregar variante»; sin permiso, ningún enlace", async () => {
+    const variante = {
+      id: "v1",
+      nombre: "Tamaño del café",
+      clase: "VARIANTE" as const,
+      esTamano: true,
+      esObligatorio: true,
+      admiteVarias: false,
+      seMuestraEnCarta: true,
+      opciones: [
+        { id: "a", nombre: "Chico", recargo: "0.000000" },
+        { id: "b", nombre: "Grande", recargo: "0.000000" },
+      ],
+    };
+    const { unmount } = await render(
+      <PantallaDeOpciones opciones={armarLasOpciones({ ...OPCIONES, variante }, true)} />,
+    );
+    await expect.element(page.getByRole("heading", { name: "Variantes" })).toBeVisible();
+    await expect.element(page.getByText("Es la medida")).toBeVisible();
+    await expect.element(page.getByText("Chico · Grande")).toBeVisible();
+    expect(page.getByRole("link", { name: "Agregar variante" }).elements()).toHaveLength(0);
+    expect(
+      page
+        .getByRole("link", { name: "Editar" })
+        .elements()
+        .map((e) => e.getAttribute("href")),
+    ).toContain(`/catalogo/productos/${ID}/opciones/variante`);
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+    await unmount();
+    await render(<PantallaDeOpciones opciones={armarLasOpciones(OPCIONES, true)} />);
+    await expect
+      .element(page.getByRole("link", { name: "Agregar variante" }))
+      .toHaveAttribute("href", `/catalogo/productos/${ID}/opciones/variante`);
   });
 
   it("sin permiso no hay ningún enlace", async () => {

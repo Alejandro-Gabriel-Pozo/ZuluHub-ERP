@@ -35,6 +35,10 @@ vi.mock("../../apps/web/servidor/opciones", () => ({
     mundo.llamadas.push({ pagina: "grupo", contexto, id, grupoId });
     return Promise.resolve(mundo.respuesta);
   },
+  cargarLaVariante: (contexto: unknown, id: string) => {
+    mundo.llamadas.push({ pagina: "variante", contexto, id });
+    return Promise.resolve(mundo.respuesta);
+  },
   cargarLaCopia: (contexto: unknown, id: string) => {
     mundo.llamadas.push({ pagina: "copia", contexto, id });
     return Promise.resolve(mundo.respuesta);
@@ -76,6 +80,7 @@ const SALSAS = {
   id: GRUPO,
   nombre: "Salsas",
   clase: "ADICIONAL",
+  esTamano: false,
   esObligatorio: false,
   admiteVarias: true,
   seMuestraEnCarta: true,
@@ -89,6 +94,7 @@ const OPCIONES = {
   nombre: "Milanesa",
   versionDeOpciones: 4,
   grupos: [SALSAS],
+  variante: null,
   claveDelCambio: "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
 };
 const responde = (r: Respuesta<unknown>) => {
@@ -279,6 +285,49 @@ describe("la página de un grupo que ya existe", () => {
     const params = { id: ID, grupoId: "no-existe" };
     expect(await html("/[grupoId]/page", params)).not.toContain("<form");
     expect(await texto("/[grupoId]/page", params)).toContain("Esta acción no está permitida");
+  });
+});
+
+describe("la página de la variante", () => {
+  const VARIANTE = {
+    id: "v1",
+    nombre: "Tamaño",
+    clase: "VARIANTE",
+    esTamano: true,
+    esObligatorio: true,
+    admiteVarias: false,
+    seMuestraEnCarta: true,
+    opciones: [{ id: "a", nombre: "Chico", recargo: "0.000000" }],
+  };
+  const dato = (grupo: unknown) => ({
+    ok: true as const,
+    dato: { id: ID, nombre: "Milanesa", versionDeOpciones: 4, grupo, claveDelCambio: "c" },
+  });
+
+  it("sin variante: «Agregar variante», la medida sin marcar y una fila sin recargo; pide la variante con el id de la dirección", async () => {
+    responde(dato(null));
+    const marcado = await html("/variante/page");
+    expect(mundo.llamadas).toEqual([{ pagina: "variante", contexto: { id: "contexto" }, id: ID }]);
+    expect(marcado).toContain("Agregar variante");
+    expect(marcado).toContain('name="esTamano"');
+    expect(marcado).not.toContain('name="esObligatorio"');
+    expect(marcado).not.toMatch(/name="opcion_n0_recargo"/);
+    expect(marcado).toMatch(/<input[^>]*name="opcion_n0_nombre"/);
+  });
+
+  it("con variante: «Editar», «Es la medida» y sus opciones; «Guardar» apagado sin opciones.editar", async () => {
+    responde(dato(VARIANTE));
+    const marcado = await html("/variante/page");
+    expect(marcado).toMatch(/<input[^>]*name="nombre"[^>]*value="Tamaño"/);
+    expect(marcado).toMatch(/<input[^>]*name="opcion_e0_nombre"[^>]*value="Chico"/);
+    expect(marcado).toMatch(/<input[^>]*name="esTamano"[^>]*checked/);
+    puede(["productos.ver"]);
+    expect(await html("/variante/page")).toMatch(/<button[^>]*disabled[^>]*>Guardar/);
+  });
+
+  it("el guard y un producto que no está salen con su texto, sin formulario", async () => {
+    responde({ ok: false, error: errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA") });
+    expect(await html("/variante/page")).not.toContain("<form");
   });
 });
 
