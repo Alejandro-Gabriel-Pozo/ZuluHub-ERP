@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0491",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: al completar el precio de una línea Sin precio, la oferta del proveedor toma esa compra como una más y la más nueva gana; si ya hay una más nueva no cambia.",
+  "que_cambia": "La ficha del proveedor muestra el precio completado solo si esa compra es la más reciente de ese producto. Migración 0060 (precio por y peso real de la corrección). Revertir: reversión 0060 y quitar la llamada.",
+  "donde": "src/modulos/compras/casos-de-uso/correcciones.ts; migraciones/0060_correccion_de_compra_ampliada.sql; pantallas-de-compras-inventario.md, seccion 8 bis K2 y K4"
+}

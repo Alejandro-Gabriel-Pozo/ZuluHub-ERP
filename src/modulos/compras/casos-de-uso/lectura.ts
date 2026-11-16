@@ -159,6 +159,13 @@ export type FichaDeCompra = Readonly<{
     numero: number;
     precioAnterior: string | null;
     precioNuevo: string | null;
+    /** Solo al completar el precio de una línea «Sin precio»: su «precio por». */
+    precioPorTipo: "PRESENTACION" | "UNIDAD" | null;
+    unidadDePrecioId: string | null;
+    cantidadAnterior: string | null;
+    cantidadNueva: string | null;
+    pesoRealAnterior: string | null;
+    pesoRealNuevo: string | null;
     motivo: string;
     registradoPor: string;
     registradoEn: string;
@@ -234,6 +241,12 @@ export async function fichaDeCompraDentro(
       numero: k.numero,
       precioAnterior: k.precioAnterior,
       precioNuevo: k.precioNuevo,
+      precioPorTipo: k.precioPorTipo,
+      unidadDePrecioId: k.unidadDePrecioId,
+      cantidadAnterior: k.cantidadAnterior,
+      cantidadNueva: k.cantidadNueva,
+      pesoRealAnterior: k.pesoRealAnterior,
+      pesoRealNuevo: k.pesoRealNuevo,
       motivo: k.motivo,
       registradoPor: k.registradoPor,
       registradoEn: k.registradoEn.toISOString(),

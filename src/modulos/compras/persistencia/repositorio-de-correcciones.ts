@@ -10,6 +10,15 @@ export type CorreccionGuardada = Readonly<{
   /** `null` si la línea no tenía precio (se le puso uno). */
   precioAnterior: string | null;
   precioNuevo: string | null;
+  /** La cantidad de compra de antes y de después; `null` si esta corrección no la cambió. */
+  cantidadAnterior: string | null;
+  cantidadNueva: string | null;
+  /** El peso real de antes y de después; `null` si esta corrección no lo cambió. */
+  pesoRealAnterior: string | null;
+  pesoRealNuevo: string | null;
+  /** Solo al completar el precio de una línea «Sin precio»: su «precio por». */
+  precioPorTipo: "PRESENTACION" | "UNIDAD" | null;
+  unidadDePrecioId: string | null;
   motivo: string;
   claveIdempotencia: string;
   huella: string;
@@ -22,7 +31,13 @@ export type AltaDeCorreccion = Readonly<{
   linea: number;
   numero: number;
   precioAnterior: string | null;
-  precioNuevo: string;
+  precioNuevo: string | null;
+  cantidadAnterior: string | null;
+  cantidadNueva: string | null;
+  pesoRealAnterior: string | null;
+  pesoRealNuevo: string | null;
+  precioPorTipo: "PRESENTACION" | "UNIDAD" | null;
+  unidadDePrecioId: string | null;
   motivo: string;
   clave: string;
   huella: string;
@@ -58,6 +73,12 @@ const COLUMNAS = [
   "registrado_por",
   sql<string | null>`precio_anterior::text`.as("precio_anterior"),
   sql<string | null>`precio_nuevo::text`.as("precio_nuevo"),
+  sql<string | null>`cantidad_anterior::text`.as("cantidad_anterior"),
+  sql<string | null>`cantidad_nueva::text`.as("cantidad_nueva"),
+  sql<string | null>`peso_real_anterior::text`.as("peso_real_anterior"),
+  sql<string | null>`peso_real_nuevo::text`.as("peso_real_nuevo"),
+  "precio_por_tipo",
+  "unidad_de_precio_id",
 ] as const;
 
 type Fila = {
@@ -71,6 +92,12 @@ type Fila = {
   registrado_por: string;
   precio_anterior: string | null;
   precio_nuevo: string | null;
+  cantidad_anterior: string | null;
+  cantidad_nueva: string | null;
+  peso_real_anterior: string | null;
+  peso_real_nuevo: string | null;
+  precio_por_tipo: string | null;
+  unidad_de_precio_id: string | null;
 };
 
 const aCorreccion = (f: Fila): CorreccionGuardada => ({
@@ -79,6 +106,15 @@ const aCorreccion = (f: Fila): CorreccionGuardada => ({
   numero: f.numero,
   precioAnterior: f.precio_anterior,
   precioNuevo: f.precio_nuevo,
+  cantidadAnterior: f.cantidad_anterior,
+  cantidadNueva: f.cantidad_nueva,
+  pesoRealAnterior: f.peso_real_anterior,
+  pesoRealNuevo: f.peso_real_nuevo,
+  precioPorTipo:
+    f.precio_por_tipo === "PRESENTACION" || f.precio_por_tipo === "UNIDAD"
+      ? f.precio_por_tipo
+      : null,
+  unidadDePrecioId: f.unidad_de_precio_id,
   motivo: f.motivo,
   claveIdempotencia: f.clave_idempotencia,
   huella: f.huella,
@@ -132,8 +168,12 @@ export function crearRepositorioDeCorrecciones(db: Kysely<ComprasDb>): Repositor
           numero: alta.numero,
           precio_anterior: alta.precioAnterior,
           precio_nuevo: alta.precioNuevo,
-          cantidad_anterior: null,
-          cantidad_nueva: null,
+          cantidad_anterior: alta.cantidadAnterior,
+          cantidad_nueva: alta.cantidadNueva,
+          peso_real_anterior: alta.pesoRealAnterior,
+          peso_real_nuevo: alta.pesoRealNuevo,
+          precio_por_tipo: alta.precioPorTipo,
+          unidad_de_precio_id: alta.unidadDePrecioId,
           motivo: alta.motivo,
           clave_idempotencia: alta.clave,
           huella: alta.huella,

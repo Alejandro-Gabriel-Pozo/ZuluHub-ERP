@@ -38,7 +38,8 @@ export type SalidaDeCorregirCompra = Readonly<{
   yaExistia: boolean;
   /** Solo la primera vez (`null` al repetir): el efecto de la corrección. */
   ajuste: Readonly<{
-    costoPorUnidadAntes: string;
+    /** `null` si la línea no tenía precio (se la completó). */
+    costoPorUnidadAntes: string | null;
     costoPorUnidadDespues: string;
     /** El promedio del depósito antes y después; `null` si la línea no entró a stock con costo. */
     promedioAntes: string | null;
@@ -55,6 +56,11 @@ export async function costoDeLaLinea(
   linea: LineaDeRecepcion,
   precio: string,
   alicuotaDeIvaEnElCosto: AlicuotaDeCompra | null,
+  /** El «precio por» que rige: el de la línea, o el de la corrección que completó su precio (una línea «Sin precio» no lo tiene guardado). */
+  precioPor: Readonly<{
+    precioPorTipo: "PRESENTACION" | "UNIDAD" | null;
+    unidadDePrecioId: string | null;
+  }> = linea,
 ): Promise<R<string>> {
   const producto = await tx.productosParaCompras.bloquearCompartido(
     contexto.empresaId,
@@ -78,8 +84,8 @@ export async function costoDeLaLinea(
     unidadDeCompra: linea.unidadDeCompraId as CodigoDeUnidad,
     cantidadDeCompra: linea.cantidadDeCompra,
     pesoReal: linea.pesoReal,
-    precioPor: linea.precioPorTipo as "PRESENTACION" | "UNIDAD",
-    unidadDePrecio: linea.unidadDePrecioId as CodigoDeUnidad | null,
+    precioPor: precioPor.precioPorTipo as "PRESENTACION" | "UNIDAD",
+    unidadDePrecio: precioPor.unidadDePrecioId as CodigoDeUnidad | null,
     precio,
     alicuotaDeIvaEnElCosto,
   });
@@ -120,7 +126,7 @@ export async function alicuotaDelCosto(
  * consumido conserva su costo congelado). Todo en UNA transacción: una falla en el ajuste de costo no deja la corrección (A3). La recepción se bloquea: dos
  * correcciones a la vez de la misma línea dejan una (la otra, `CORRECCION_DESACTUALIZADA`, C4) y una corrección y una anulación de la compra se serializan (C5).
  * Repetición (`CLAVE_DE_IDEMPOTENCIA`, I6): misma clave y mismo contenido devuelve la corrección con `yaExistia` sin escribir ni auditar; otro contenido,
- * `CLAVE_REUTILIZADA`. Una línea sin precio no se corrige acá (`LINEA_SIN_PRECIO`: la corrección no guarda el «precio por» del precio nuevo; DEC-0319).
+ * `CLAVE_REUTILIZADA`. Completar el precio de una línea «Sin precio» es una corrección con su «precio por» (migración 0060): el costo entra a la línea y al promedio del depósito (antes `null`), y la oferta del proveedor la toma como una compra más (la más nueva gana). Cambiar la cantidad o el peso real, con su ajuste de stock, queda para el tramo siguiente (`CORRECCION_DE_CANTIDAD_NO_DISPONIBLE`).
  */
 export function armarCorregirCompra(dependencias: DependenciasDeCompras) {
   return async function corregirCompra(
@@ -165,18 +171,39 @@ export function armarCorregirCompra(dependencias: DependenciasDeCompras) {
           const lineas = await tx.recepciones.lineasDe(empresaId, recepcion.id);
           const linea = lineas.find((l) => l.numero === p.linea);
           if (linea === undefined) return err("LINEA_NO_ENCONTRADA");
-          if (linea.precio === null) return err("LINEA_SIN_PRECIO");
-
-          const ultima = await tx.correccionesDeCompra.ultimaDeLaLinea(
-            empresaId,
-            recepcion.id,
-            linea.numero,
-          );
+          // Corregir la cantidad o el peso real (con su ajuste de stock) viene en el tramo siguiente: hasta entonces no se acepta (nunca se ignora en silencio).
+          if (p.cantidad !== null || p.pesoReal !== null) {
+            return err("CORRECCION_DE_CANTIDAD_NO_DISPONIBLE");
+          }
+          const delaLinea = (
+            await tx.correccionesDeCompra.deLaRecepcion(empresaId, recepcion.id)
+          ).filter((c) => c.linea === linea.numero);
+          const ultima = delaLinea[delaLinea.length - 1] ?? null;
           if ((ultima?.numero ?? 0) !== p.correccionesVistas) {
             return err("CORRECCION_DESACTUALIZADA");
           }
-          const precioVigente = ultima?.precioNuevo ?? linea.precio;
-          if (esElMismoPrecio(precioVigente, p.precio)) return err("SIN_CAMBIOS");
+          // Lo que rige hoy: el precio de la última corrección que lo cambió (o el de la línea) y su «precio por» (el de la corrección que completó una línea «Sin precio»).
+          const completo = [...delaLinea].reverse().find((c) => c.precioPorTipo !== null) ?? null;
+          const precioVigente =
+            [...delaLinea].reverse().find((c) => c.precioNuevo !== null)?.precioNuevo ??
+            linea.precio;
+          const porVigente =
+            precioVigente === null
+              ? { precioPorTipo: null, unidadDePrecioId: null }
+              : completo !== null
+                ? {
+                    precioPorTipo: completo.precioPorTipo,
+                    unidadDePrecioId: completo.unidadDePrecioId,
+                  }
+                : { precioPorTipo: linea.precioPorTipo, unidadDePrecioId: linea.unidadDePrecioId };
+          // Completar «Sin precio»: trae su «precio por»; una línea que ya tiene precio no lo cambia.
+          const completando = precioVigente === null;
+          if (completando !== (p.precioPor !== null)) return err("PRECIO_POR_INVALIDO");
+          const precioNuevo = p.precio as string;
+          if (esElMismoPrecio(precioVigente, precioNuevo)) return err("SIN_CAMBIOS");
+          const porNuevo = completando
+            ? { precioPorTipo: p.precioPor, unidadDePrecioId: p.unidadDePrecio }
+            : porVigente;
 
           // El IVA que entra al costo: la MISMA regla del registro (`alicuotaQueEntraAlCosto`), con la alícuota de la línea de la factura que cubre esta línea y la condición
           // de la empresa de hoy (DEC-0324). Sin factura vigente (o una B o C) el costo es el importe de la línea.
@@ -188,13 +215,28 @@ export function armarCorregirCompra(dependencias: DependenciasDeCompras) {
             linea.numero,
           );
           if (!alicuota.ok) return alicuota;
-          // Antes: el costo que la línea declaró al registrarse (el guardado) mientras no se haya corregido; después de una corrección, el de su precio vigente.
-          const costoAntes =
-            ultima === null
+          // Antes: el costo que la línea declaró al registrarse (el guardado) mientras no se haya corregido; después de una corrección, el de su precio vigente; una línea «Sin precio» no tenía costo.
+          const costoAntes: R<string | null> = completando
+            ? ok(null)
+            : ultima === null
               ? ok(linea.costoPorUnidadDeStock as string)
-              : await costoDeLaLinea(tx, contexto, linea, precioVigente, alicuota.valor);
+              : await costoDeLaLinea(
+                  tx,
+                  contexto,
+                  linea,
+                  precioVigente,
+                  alicuota.valor,
+                  porVigente,
+                );
           if (!costoAntes.ok) return costoAntes;
-          const costoDespues = await costoDeLaLinea(tx, contexto, linea, p.precio, alicuota.valor);
+          const costoDespues = await costoDeLaLinea(
+            tx,
+            contexto,
+            linea,
+            precioNuevo,
+            alicuota.valor,
+            porNuevo,
+          );
           if (!costoDespues.ok) return costoDespues;
 
           const numero = p.correccionesVistas + 1;
@@ -203,7 +245,13 @@ export function armarCorregirCompra(dependencias: DependenciasDeCompras) {
             linea: linea.numero,
             numero,
             precioAnterior: precioVigente,
-            precioNuevo: p.precio,
+            precioNuevo,
+            cantidadAnterior: null,
+            cantidadNueva: null,
+            pesoRealAnterior: null,
+            pesoRealNuevo: null,
+            precioPorTipo: completando ? p.precioPor : null,
+            unidadDePrecioId: completando ? p.unidadDePrecio : null,
             motivo: p.motivo,
             clave: p.clave,
             huella,
@@ -215,15 +263,30 @@ export function armarCorregirCompra(dependencias: DependenciasDeCompras) {
             );
           }
 
-          // Lo que el proveedor cobró (la oferta) acompaña a la corrección mientras esta compra sea la última de la oferta (D11): una compra más nueva no se pisa.
-          await tx.ofertasDeProveedor.corregirPrecioDeCompra(empresaId, {
-            compraId: recepcion.id,
-            proveedorId: recepcion.proveedorId,
-            productoId: linea.productoId,
-            presentacionId: linea.presentacionId,
-            ultimoPrecio: p.precio,
-            ultimoCostoPorUnidadDeStock: costoDespues.valor,
-          });
+          // Lo que el proveedor cobró (la oferta) acompaña a la corrección: si esta compra es la última de la oferta, toma el precio y el costo corregidos (D11); si la línea no tenía
+          // precio (nunca formó la oferta), entra como una compra más: la más nueva gana, igual que al registrar.
+          if (completando) {
+            await tx.ofertasDeProveedor.registrar(empresaId, {
+              proveedorId: recepcion.proveedorId,
+              productoId: linea.productoId,
+              presentacionId: linea.presentacionId,
+              precioPorTipo: p.precioPor as "PRESENTACION" | "UNIDAD",
+              unidadDePrecioId: p.unidadDePrecio,
+              ultimoPrecio: precioNuevo,
+              ultimoCostoPorUnidadDeStock: costoDespues.valor,
+              ultimaCompraId: recepcion.id,
+              ultimaCompraEn: recepcion.hechoEn,
+            });
+          } else {
+            await tx.ofertasDeProveedor.corregirPrecioDeCompra(empresaId, {
+              compraId: recepcion.id,
+              proveedorId: recepcion.proveedorId,
+              productoId: linea.productoId,
+              presentacionId: linea.presentacionId,
+              ultimoPrecio: precioNuevo,
+              ultimoCostoPorUnidadDeStock: costoDespues.valor,
+            });
+          }
 
           let consumidoAlCorregir: string | null = null;
           let promedioAntes: string | null = null;
