@@ -1,5 +1,6 @@
 import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { LETRAS_LATINAS } from "../../../primitivas/texto/texto-de-una-linea";
 import { fechaCivilHastaHoyDesdeTexto } from "../../../primitivas/tiempo/fecha-civil-hasta-hoy";
 import {
   LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL,
@@ -158,14 +159,14 @@ export function borradorDesdeConfirmada(
 }
 
 /**
- * LISTA DE PERMITIDOS del número de IIBB: letras y dígitos ASCII (el prefijo de convenio, «CM»), espacio y `. / -`; 1 a
+ * LISTA DE PERMITIDOS del número de IIBB: letras latinas con tilde (el prefijo de convenio «CM», o «en trámite», que hoy se guarda según `catalogo-de-datos-auditoria-de-columnas.md` pregunta 6), dígitos, espacio y `. / -`; 1 a
  * `LIMITES_DE_DATOS_FISCALES.iibbNumero` caracteres. SUPUESTO (DEC-0047) del ingeniero, sin fuente del dueño sobre el formato real
  * (Q6: texto corto de 30 sin formato); revertir es cambiar esta constante. Previene: un invisible, `<>` o un emoji en un dato que
  * viaja a ARCA y se imprime en la factura (la forma vieja, «sin controles», los dejaba pasar). El CHECK de la base
  * (`datos_fiscales_iibb_numero_ck`) sigue más flojo hasta la migración que lo repita.
  */
 const NUMERO_DE_IIBB_PERMITIDO = new RegExp(
-  `^[A-Za-z0-9][A-Za-z0-9 ./-]{0,${LIMITES_DE_DATOS_FISCALES.iibbNumero - 1}}$`,
+  `^[${LETRAS_LATINAS}0-9][${LETRAS_LATINAS}0-9 ./-]{0,${LIMITES_DE_DATOS_FISCALES.iibbNumero - 1}}$`,
 );
 
 /** Texto recortado de un número de IIBB que está entero en la lista de permitidos; `null` si no sirve (el en blanco ya lo resolvió quien llama). */

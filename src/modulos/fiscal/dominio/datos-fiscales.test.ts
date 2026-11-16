@@ -199,7 +199,7 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
     ["número de IIBB con un invisible", { iibbNumero: "12\u200B3" }, "IIBB_NUMERO_INVALIDO"],
     ["número de IIBB con marcado", { iibbNumero: "<b>1</b>" }, "IIBB_NUMERO_INVALIDO"],
     ["número de IIBB con emoji", { iibbNumero: "123 ✨" }, "IIBB_NUMERO_INVALIDO"],
-    ["número de IIBB con acento", { iibbNumero: "Córdoba 1" }, "IIBB_NUMERO_INVALIDO"],
+    ["número de IIBB con otro alfabeto", { iibbNumero: "小林 1" }, "IIBB_NUMERO_INVALIDO"],
     ["número de IIBB con espacio de no corte", { iibbNumero: "12\u00A03" }, "IIBB_NUMERO_INVALIDO"],
     ["número de IIBB con inversor de texto", { iibbNumero: "12\u202E3" }, "IIBB_NUMERO_INVALIDO"],
     ["número de IIBB que empieza con guion", { iibbNumero: "-123" }, "IIBB_NUMERO_INVALIDO"],
@@ -217,7 +217,14 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
   });
 
   it("el número de IIBB acepta lo que se escribe de verdad", () => {
-    for (const bueno of ["901-123456-7", "CM 901-123456-7", "280123456", "12.345/6", "a"]) {
+    for (const bueno of [
+      "901-123456-7",
+      "CM 901-123456-7",
+      "280123456",
+      "12.345/6",
+      "a",
+      "en trámite",
+    ]) {
       expect(editado({ iibbNumero: bueno }).iibbNumero, bueno).toBe(bueno);
     }
   });

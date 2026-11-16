@@ -41,8 +41,12 @@ import { err, ok, type Resultado } from "../resultado/resultado";
 export type MotivoDeTextoInvalido =
   "VACIO" | "DEMASIADO_LARGO" | "CARACTER_PROHIBIDO" | "SIN_LETRAS";
 
-/** Letras latinas con tilde, ñ y diéresis: Latin-1 sin `×` ni `÷`, más las letras extra de WinAnsi (Š š Œ œ Ž ž Ÿ). */
-const LETRAS = "A-Za-zÀ-ÖØ-öø-ÿŠšŒœŽžŸ";
+/**
+ * Letras latinas con tilde, ñ y diéresis: Latin-1 sin `×` ni `÷`, más las letras extra de WinAnsi (Š š Œ œ Ž ž Ÿ). Exportada para que
+ * los datos que arman su propia lista (piso, departamento, número de IIBB) tomen las letras de acá y no las repitan (una regla, un lugar).
+ */
+export const LETRAS_LATINAS = "A-Za-zÀ-ÖØ-öø-ÿŠšŒœŽžŸ";
+const LETRAS = LETRAS_LATINAS;
 const DIGITOS = "0-9";
 /** Los signos admitidos, además del espacio: ver el SUPUESTO (DEC-0043) de arriba. */
 const SIGNOS = ".,&\\-'/()°+:;\"#ºª’“”–—«»®™";
