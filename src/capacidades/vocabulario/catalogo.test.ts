@@ -360,7 +360,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
           .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
       );
     expect(Object.keys(de("clientes"))).toHaveLength(20);
-    expect(Object.keys(de("compras"))).toHaveLength(116);
+    expect(Object.keys(de("compras"))).toHaveLength(139);
     expect(de("clientes")).toMatchObject({
       "clientes.lista.clientes_y_proveedores": "Clientes y proveedores",
       "clientes.error.cuit_invalido": "El CUIT no es válido",
@@ -376,6 +376,48 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "compras.error.punto_de_venta_no_declarado": "Falta declarar los puntos de venta",
       "compras.error.total_no_coincide": "El total no coincide",
       "compras.error.sin_permiso": "Esta acción no está permitida",
+    });
+  });
+
+  it("los 23 textos de compras que el dueño aprobó el 09/11/2026 en compra.html:332-341 y no tenían clave (DEC-0565) son exactamente estos", () => {
+    expect(
+      Object.fromEntries(
+        claves
+          .filter((c) =>
+            /^compras\.(ficha\.(ver_todas|por_ser|emite|condicion_no_define_la_letra|todavia_no_se_le_compro_nada|todavia_no_tiene_facturas|ninguno_cargado|sin_puntos_de_venta|ultima_compra|agregar_otro_comprobante|pedido_lo_aprueba_quien_administra|pedido_el|pedido_pendiente|falta_que_lo_apruebe|se_agrega_a_la_ficha_de|despues_solo_se_elige_entre_los_de_la_ficha|numero_del_punto_de_venta|las_facturas_cargadas_no_cambian|agregar)|factura\.(sin_iva_discriminado|neto_sin_iva_discriminado|neto_de_la_linea|falta_la_factura))$/.test(
+              c,
+            ),
+          )
+          .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
+      ),
+    ).toEqual({
+      "compras.ficha.ver_todas": "Ver todas",
+      "compras.ficha.por_ser": "Por ser",
+      "compras.ficha.emite": "emite",
+      "compras.ficha.condicion_no_define_la_letra":
+        "Su condición no define la letra: se elige a mano",
+      "compras.ficha.todavia_no_se_le_compro_nada": "Todavía no se le compró nada",
+      "compras.ficha.todavia_no_tiene_facturas": "Todavía no tiene facturas",
+      "compras.ficha.ninguno_cargado": "Ninguno cargado",
+      "compras.ficha.sin_puntos_de_venta": "Sin puntos de venta",
+      "compras.ficha.ultima_compra": "Última compra",
+      "compras.ficha.agregar_otro_comprobante": "Agregar otro comprobante",
+      "compras.ficha.pedido_lo_aprueba_quien_administra":
+        "Lo tiene que aprobar quien administra. Hasta entonces no se puede usar en una factura",
+      "compras.ficha.pedido_el": "Pedido el",
+      "compras.ficha.pedido_pendiente": "Pedido pendiente",
+      "compras.ficha.falta_que_lo_apruebe": "Falta que lo apruebe quien administra",
+      "compras.ficha.se_agrega_a_la_ficha_de": "Se agrega a la ficha de",
+      "compras.ficha.despues_solo_se_elige_entre_los_de_la_ficha":
+        "Después solo se puede elegir entre los puntos de venta de la ficha",
+      "compras.ficha.numero_del_punto_de_venta": "Número del punto de venta",
+      "compras.ficha.las_facturas_cargadas_no_cambian":
+        "Las facturas ya cargadas no cambian. Si el proveedor vuelve a usarlo, se agrega de nuevo",
+      "compras.ficha.agregar": "Agregar",
+      "compras.factura.sin_iva_discriminado": "Sin IVA discriminado: es un comprobante B o C",
+      "compras.factura.neto_sin_iva_discriminado": "Neto (sin IVA discriminado)",
+      "compras.factura.neto_de_la_linea": "Neto de la línea",
+      "compras.factura.falta_la_factura": "Falta la factura",
     });
   });
 

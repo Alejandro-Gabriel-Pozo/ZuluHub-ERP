@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0565",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Se cargan 23 textos de compras que el dueño aprobó el 09/11/2026 y no tenían clave: ficha del proveedor, pedidos y modales, y carga de factura B o C.",
+  "que_cambia": "Qué lee quien usa la ficha del proveedor y la carga de factura; ninguna redacción es nueva, y revertir es sacar las 23 claves de catalogo-compras.ts.",
+  "donde": "src/capacidades/vocabulario/catalogo-compras.ts; compra.html:332-336, 340 y 341; delegación del dueño, DDD filas 173 y 174"
+}

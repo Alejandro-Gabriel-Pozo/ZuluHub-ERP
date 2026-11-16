@@ -8,6 +8,7 @@ import {
   PARAMETROS_DE_CATALOGO,
   type CodigoDeCatalogo,
 } from "./respuesta-de-catalogo";
+import { CLAVES_DE_ERRORES_DE_COMPRAS, type CodigoDeCompras } from "./respuesta-de-compras";
 import { CLAVES_DE_ERRORES_FISCALES, type CodigoFiscal } from "./respuesta-fiscal";
 
 /**
@@ -45,7 +46,8 @@ export type CodigoDeNegocio =
   | "EMPRESA_NO_OPERA"
   | CodigoFiscal
   | CodigoDeCaja
-  | CodigoDeCatalogo;
+  | CodigoDeCatalogo
+  | CodigoDeCompras;
 
 export type CodigoPublico =
   CodigoDeNegocio | MotivoDeRechazo | "SESION_VENCIDA" | "ERROR_INTERNO" | "NO_DISPONIBLE";
@@ -78,6 +80,11 @@ const AVISOS_DE_CAJA = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_CAJA).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoDeCaja, DefinicionDeCodigo>>;
 
+/** Los códigos de compras N1 y N2 (`respuesta-de-compras.ts`): cada uno es un aviso con su texto `compras.error.*`. */
+const AVISOS_DE_COMPRAS = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_COMPRAS).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeCompras, DefinicionDeCodigo>>;
+
 /** Los códigos de la ficha de datos de un producto (`respuesta-de-catalogo.ts`): cada uno es un aviso con su texto (`catalogo.error.*`, salvo el del precio vigente, `catalogo.precio.vigente_ahora`). */
 const AVISOS_DE_CATALOGO = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_CATALOGO).map(([codigo, clave]) => [codigo, aviso(clave)]),
@@ -100,6 +107,7 @@ export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo
   ...AVISOS_FISCALES,
   ...AVISOS_DE_CAJA,
   ...AVISOS_DE_CATALOGO,
+  ...AVISOS_DE_COMPRAS,
   MODULO_EN_DESARROLLO: motivo("motivo.modulo_en_desarrollo"),
   MODULO_NO_ACTIVO: motivo("motivo.modulo_no_activo"),
   MODULO_EN_SOLO_LECTURA: motivo("motivo.modulo_en_solo_lectura"),
