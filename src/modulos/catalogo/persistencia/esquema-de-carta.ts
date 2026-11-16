@@ -57,6 +57,11 @@ export const COLUMNAS_DE_CARTA = {
     "lugar",
     "mensaje_de_portada",
     "estado",
+    "creado_por",
+    "creado_en",
+    "actualizado_en",
+    "version",
+    // 0077: las columnas se agregaron después, y el orden es el de la base.
     "modelo",
     "cara",
     "color_propio",
@@ -65,10 +70,6 @@ export const COLUMNAS_DE_CARTA = {
     "logo_id_publico",
     "logo_version",
     "logo_extension",
-    "creado_por",
-    "creado_en",
-    "actualizado_en",
-    "version",
   ],
   disponibilidad_de_producto: [
     "empresa_id",
