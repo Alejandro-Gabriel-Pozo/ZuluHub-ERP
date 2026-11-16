@@ -18,11 +18,11 @@ export type ClaveDeAtribucion = (typeof CLAVES_DE_ATRIBUCION)[number];
 
 export type Atribucion = Readonly<Partial<Record<ClaveDeAtribucion, string>>>;
 
-export const LARGO_MAXIMO_DE_ATRIBUCION = 200;
+export const LARGO_MAXIMO_DE_ATRIBUCION = 200; // fuente-unica: ajeno — el largo de un parámetro de campaña no es el del nombre o razón social
 
 const NO_PERMITIDO = /[^A-Za-z0-9._~-]+/g;
 const BORDES_SIN_VALOR = /^-+|-+$/g;
-const VALOR_EXACTO = /^[A-Za-z0-9._~-]{1,200}$/;
+const VALOR_EXACTO = new RegExp(`^[A-Za-z0-9._~-]{1,${LARGO_MAXIMO_DE_ATRIBUCION}}$`);
 
 /**
  * Una campaña con espacios o acentos («Promo Verano») es lo normal: cada tramo de caracteres no
