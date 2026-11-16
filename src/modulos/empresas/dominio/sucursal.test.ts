@@ -45,8 +45,8 @@ describe("nombreDeSucursalValido", () => {
     });
   });
 
-  it("conserva los espacios del medio y las mayúsculas", () => {
-    expect(nombreDeSucursalValido("Local  Nº 2")).toEqual({ ok: true, valor: "Local  Nº 2" });
+  it("conserva las mayúsculas y junta los espacios repetidos del medio en uno", () => {
+    expect(nombreDeSucursalValido("Local  Nº 2")).toEqual({ ok: true, valor: "Local Nº 2" });
   });
 
   it("rechaza el vacío y el que es solo espacios", () => {
@@ -60,10 +60,10 @@ describe("nombreDeSucursalValido", () => {
     const justo = "a".repeat(100);
     expect(nombreDeSucursalValido(justo)).toEqual({ ok: true, valor: justo });
     expect(nombreDeSucursalValido(`${justo}a`)).toEqual(INVALIDO);
-    // El largo se cuenta en caracteres, no en piezas del texto: 100 emojis entran.
-    const emojis = "😀".repeat(100);
-    expect(nombreDeSucursalValido(emojis)).toEqual({ ok: true, valor: emojis });
-    expect(nombreDeSucursalValido(`${emojis}😀`)).toEqual(INVALIDO);
+    // El largo se cuenta en caracteres, no en piezas del texto: 100 letras con tilde (una pieza o dos, según cómo se escriban) entran.
+    const acentos = "é".repeat(100);
+    expect(nombreDeSucursalValido(acentos)).toEqual({ ok: true, valor: acentos });
+    expect(nombreDeSucursalValido(`${acentos}é`)).toEqual(INVALIDO);
   });
 
   it("el largo máximo se mide después de limpiar los extremos", () => {
@@ -81,8 +81,22 @@ describe("nombreDeSucursalValido", () => {
   });
 
   it("acepta letras con acento, ñ, símbolos y números", () => {
-    for (const nombre of ["Sucursal Ñandú", "Local 3 – Norte", "Éxito & Cía.", "东京店"]) {
+    for (const nombre of ["Sucursal Ñandú", "Local 3 – Norte", "Éxito & Cía.", "Local #2"]) {
       expect(nombreDeSucursalValido(nombre)).toEqual({ ok: true, valor: nombre });
+    }
+  });
+
+  it("rechaza lo que la lista de permitidos no nombra: lo que la forma vieja («sin controles») dejaba pasar", () => {
+    for (const nombre of [
+      "Sucursal 😀",
+      "东京店",
+      "Casa\u200Bcentral",
+      "Casa\u202Ecentral",
+      "<b>Casa</b>",
+      "=1+1",
+      "Casa @ centro",
+    ]) {
+      expect(nombreDeSucursalValido(nombre), JSON.stringify(nombre)).toEqual(INVALIDO);
     }
   });
 
