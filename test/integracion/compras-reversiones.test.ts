@@ -1,6 +1,6 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
-import pg from "pg";
+import type pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
 import type { BaseDePruebas } from "./global";
