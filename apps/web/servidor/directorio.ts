@@ -1,5 +1,4 @@
 import "server-only";
-import { redirect } from "next/navigation";
 import type { ErrorPublico, Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   agregarElContacto,
@@ -14,7 +13,6 @@ import {
   type PartesParaLaLista,
   type PosibleDuplicadoParaLaPantalla,
 } from "../../../src/composicion/directorio-web";
-import { RUTAS_DE_CLIENTES, rutaDeUnaParte } from "../ui/plantillas/clientes/rutas-de-clientes";
 import type { ResultadoDeAccion } from "./acciones";
 import { web } from "./composicion";
 import { conLaEmpresa } from "./con-la-empresa";
@@ -24,7 +22,7 @@ import { dependenciasDeSesion } from "./sesion";
 /**
  * «Clientes y proveedores»: la lectura de la lista y de la ficha y las acciones de guardar, desactivar, reactivar y los contactos. Finas a propósito (ADR-015, punto 2): resuelven QUIÉN
  * actúa (la empresa y la persona salen de la sesión, nunca del formulario) y llaman a `src/composicion/directorio-web.ts`. El permiso y toda regla del negocio los decide el servidor dentro
- * de su transacción: la pantalla no replica ninguna. Al guardar bien se vuelve a la lista (`redirect`); el aviso de posibles duplicados NO es un error: vuelve con la lista de coincidencias
+ * de su transacción: la pantalla no replica ninguna. Las acciones NO redirigen (un `redirect` dentro de una acción pierde el host y la puerta responde «No encontrado»): devuelven el resultado y la pantalla navega; el aviso de posibles duplicados NO es un error: vuelve con la lista de coincidencias
  * y no escribe nada hasta que la persona elige «Guardar igual».
  */
 
@@ -37,6 +35,8 @@ const dependencias: DependenciasDeDirectorioWeb = {
 /** Lo que vuelve de guardar: el error ya traducido (o nada) y, si hay coincidencias, las partes parecidas. */
 export type ResultadoDeGuardarLaParte = Readonly<{
   error: ErrorPublico | null;
+  /** Quedó guardada: la pantalla vuelve a la lista (la acción NO redirige: un `redirect` dentro de una acción pierde el host, defecto hallado el 16/11/2026). */
+  guardada: boolean;
   duplicados: readonly PosibleDuplicadoParaLaPantalla[];
 }>;
 
@@ -100,36 +100,35 @@ export async function guardarLaParteDelFormulario(
       roles: rolesDe(datos),
     }),
   );
-  if (!r.ok) return { error: r.error, duplicados: [] };
-  if (r.dato.estado === "DUPLICADOS") return { error: null, duplicados: r.dato.duplicados };
-  redirect(RUTAS_DE_CLIENTES.lista);
+  if (!r.ok) return { error: r.error, guardada: false, duplicados: [] };
+  if (r.dato.estado === "DUPLICADOS") {
+    return { error: null, guardada: false, duplicados: r.dato.duplicados };
+  }
+  return { error: null, guardada: true, duplicados: [] };
 }
 
-/** Termina una acción sobre una parte: el error ya traducido, o vuelve a la ficha (`redirect` corta la ejecución). */
-function aLaFicha(respuesta: Respuesta<unknown>, parteId: string): ResultadoDeAccion {
-  if (!respuesta.ok) return { error: respuesta.error };
-  redirect(rutaDeUnaParte(parteId));
+/** Termina una acción sobre una parte: el error ya traducido o nada. No redirige: la pantalla decide adónde ir. */
+function terminar(respuesta: Respuesta<unknown>): ResultadoDeAccion {
+  return { error: respuesta.ok ? null : respuesta.error };
 }
 
 export async function desactivarLaParteDelDirectorio(parteId: string): Promise<ResultadoDeAccion> {
-  const r = await conLaEmpresa((contexto) =>
-    desactivarLaParte(dependencias, contexto, { parteId }),
+  return terminar(
+    await conLaEmpresa((contexto) => desactivarLaParte(dependencias, contexto, { parteId })),
   );
-  if (!r.ok) return { error: r.error };
-  redirect(RUTAS_DE_CLIENTES.lista);
 }
 
 export async function reactivarLaParteDelDirectorio(parteId: string): Promise<ResultadoDeAccion> {
-  const r = await conLaEmpresa((contexto) => reactivarLaParte(dependencias, contexto, { parteId }));
-  if (!r.ok) return { error: r.error };
-  redirect(RUTAS_DE_CLIENTES.lista);
+  return terminar(
+    await conLaEmpresa((contexto) => reactivarLaParte(dependencias, contexto, { parteId })),
+  );
 }
 
 export async function agregarUnContacto(
   deParteId: string,
   datos: FormData,
 ): Promise<ResultadoDeAccion> {
-  return aLaFicha(
+  return terminar(
     await conLaEmpresa((contexto) =>
       agregarElContacto(dependencias, contexto, {
         deParteId,
@@ -137,7 +136,6 @@ export async function agregarUnContacto(
         cargo: textoDe(datos, "cargo"),
       }),
     ),
-    deParteId,
   );
 }
 
@@ -146,10 +144,9 @@ export async function quitarUnContacto(
   contactoId: string,
   tipo: string,
 ): Promise<ResultadoDeAccion> {
-  return aLaFicha(
+  return terminar(
     await conLaEmpresa((contexto) =>
       quitarElContacto(dependencias, contexto, { deParteId, contactoId, tipo }),
     ),
-    deParteId,
   );
 }
