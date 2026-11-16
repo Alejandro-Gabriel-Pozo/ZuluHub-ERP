@@ -405,7 +405,7 @@ export function problemasDeExenciones(
  * Alcance CERRADO: solo la carpeta `migraciones/reversiones/`, solo los archivos de la lista exacta de la prueba y con su cuenta exacta
  * (`problemasDeReversionesEximidas`). El MISMO texto en una migración de `migraciones/` (o en una reversión que no está en la lista) sigue contando.
  */
-export const CARPETA_DE_REVERSIONES = "migraciones/reversiones/";
+const CARPETA_DE_REVERSIONES = "migraciones/reversiones/";
 
 /** Las prohibiciones de una migración SQL: cero si es una reversión de la lista eximida; si no, las de su texto. */
 export function cuentaDeMigracion(
