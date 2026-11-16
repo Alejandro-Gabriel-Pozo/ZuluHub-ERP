@@ -1,6 +1,7 @@
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
+import type { RepositorioDeSucursales } from "../../empresas/publico";
 import type { RegistroDeAportes } from "../aporte-al-cierre";
 import type { RepositorioDeJornadas } from "../persistencia/repositorio-de-jornadas";
 
@@ -10,6 +11,8 @@ import type { RepositorioDeJornadas } from "../persistencia/repositorio-de-jorna
  */
 export type TxDeConsultasDeCierre = Readonly<{
   jornadas: Pick<RepositorioDeJornadas, "obtener" | "listar" | "controlesGuardados">;
+  /** La zona de la empresa y la hora de corte de la sucursal (`datosDeJornada`), para saber qué fecha de negocio es hoy. */
+  sucursales: Pick<RepositorioDeSucursales, "jornadaDe">;
   autorizacion: CargaDeAutorizacion;
 }>;
 
