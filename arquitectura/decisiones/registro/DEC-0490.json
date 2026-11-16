@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0490",
+  "fecha": "2026-11-15",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: el escáner de la base cuenta como cubierta a una restricción cuyo nombre figura en una prueba de paridad; las 366 sin cubrir son deuda en un archivo propio que vence el 2027-01-04.",
+  "que_cambia": "Una restricción nueva de lista, tope o texto sin prueba rompe el gate. La deuda no entra a registro.json porque el tope de 10 excepciones está lleno. Revertir: borrar el escáner y su lista.",
+  "donde": "test/integracion/paridad-escaner.test.ts; arquitectura/paridad/sin-prueba.json; auditoria-de-reglas/primitivas-y-base-comprobacion.md, secciones 4.2 C2 y 4.4"
+}
