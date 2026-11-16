@@ -10,6 +10,7 @@ import type { ErrorDeFacturaSeparada } from "../dominio/conciliacion-separada";
 import type { ErrorDeControl } from "../dominio/control-de-recepcion";
 import type { ErrorDeCorreccion } from "../dominio/correccion";
 import type { ErrorDeVinculo } from "../dominio/orden-de-compra";
+import type { ErrorDeResolucion, ErrorDeTolerancia } from "../dominio/diferencias";
 import type { ErrorDePago, ErrorDeSalidaDeCaja } from "../dominio/pago";
 import type { ErrorDeLinea } from "../dominio/calcular-linea";
 
@@ -86,6 +87,9 @@ export const CODIGOS_DE_ERROR_DE_COMPRAS = [
   "ORDEN_YA_CERRADA",
   "ORDEN_CON_RECEPCIONES",
   "ORDEN_CON_RECEPCIONES_PENDIENTES",
+  "DIFERENCIA_NO_ENCONTRADA",
+  "DIFERENCIA_YA_RESUELTA",
+  "DIFERENCIA_ANULADA",
   "ORDEN_DE_OTRO_PROVEEDOR",
   "LINEA_DE_ORDEN_DE_OTRO_PRODUCTO",
   "LINEA_DE_ORDEN_RETIRADA",
@@ -108,6 +112,8 @@ export type ErrorDeCompras =
   | ErrorDeCorreccion
   | ErrorDeControl
   | ErrorDeVinculo
+  | ErrorDeResolucion
+  | ErrorDeTolerancia
   | ErrorDeFacturaSeparada
   | ErrorDeStock
   | ErrorDeClientes

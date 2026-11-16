@@ -9,6 +9,7 @@ import type { AsignacionGuardada } from "../persistencia/repositorio-de-concilia
 import { autorizar, exigirAlcanceDeSucursal, traducir } from "./comun";
 import type { DependenciasDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
+import { registrarDiferenciasDeLaConciliacion } from "./diferencias-de-conciliacion";
 
 type R<S> = Resultado<S, ErrorDeCompras>;
 
@@ -151,13 +152,30 @@ export function armarConciliarFactura(dependencias: DependenciasDeCompras) {
               cantidad: a.cantidad,
             })),
           );
+          // En N4 la conciliación calcula las diferencias (misma transacción); en N3 no las hay.
+          const configuracion = await tx.configuracionDeCompras.leer(empresaId);
+          const diferencias =
+            configuracion.nivel === "TRES_VIAS"
+              ? await registrarDiferenciasDeLaConciliacion(
+                  tx,
+                  contexto,
+                  { id: conciliacionId, comprobanteId: comprobante.id },
+                  asignaciones.valor,
+                )
+              : null;
           await tx.auditoria.registrar({
             empresaId,
             actorPersonaId: persona,
             accion: "CONCILIACION_REGISTRADA",
             entidad: "conciliacion",
             entidadId: conciliacionId,
-            despues: { comprobanteId: comprobante.id, asignaciones: asignaciones.valor.length },
+            despues: {
+              comprobanteId: comprobante.id,
+              asignaciones: asignaciones.valor.length,
+              ...(diferencias === null
+                ? {}
+                : { diferencias: diferencias.total, diferenciasAbiertas: diferencias.abiertas }),
+            },
           });
           return ok({ conciliacionId, yaExistia: false });
         },
@@ -231,13 +249,18 @@ export function armarAnularConciliacion(dependencias: DependenciasDeCompras) {
             { id: espejoId, acto: "ANULACION", comprobanteId: comprobante.id },
             hechas.map((a) => ({ ...a, cantidad: `-${a.cantidad}` })),
           );
+          // Las diferencias de la conciliación se anulan con ella (las ya resueltas conservan su resolución).
+          const diferenciasAnuladas = await tx.diferenciasDeCompra.anularDeLaConciliacion(
+            empresaId,
+            conciliacion.id,
+          );
           await tx.auditoria.registrar({
             empresaId,
             actorPersonaId: persona,
             accion: "CONCILIACION_ANULADA",
             entidad: "conciliacion",
             entidadId: conciliacion.id,
-            despues: { comprobanteId: comprobante.id, espejoId },
+            despues: { comprobanteId: comprobante.id, espejoId, diferenciasAnuladas },
           });
           return ok({ anulada: true });
         },

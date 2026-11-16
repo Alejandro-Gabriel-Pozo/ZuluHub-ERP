@@ -218,6 +218,8 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "ordenes_de_compra.pedir"
       | "ordenes_de_compra.cerrar"
       | "ordenes_de_compra.anular"
+      | "diferencias_de_compra.ver"
+      | "diferencias_de_compra.resolver"
       | "comprobantes_de_proveedor.ver"
       | "comprobantes_de_proveedor.registrar"
       | "comprobantes_de_proveedor.pagar"

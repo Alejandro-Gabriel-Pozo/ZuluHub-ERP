@@ -7,6 +7,7 @@ const ARCHIVO_DE_RECEPCION = "test/integracion/compras-recepcion.test.ts";
 const ARCHIVO_DE_RECEPCION_SEPARADA = "test/integracion/compras-n3-recepcion.test.ts";
 const ARCHIVO_DE_CONCILIACION_SEPARADA = "test/integracion/compras-n3-conciliacion.test.ts";
 const ARCHIVO_DE_ORDENES = "test/integracion/compras-n4-ordenes.test.ts";
+const ARCHIVO_DE_DIFERENCIAS = "test/integracion/compras-n4-diferencias.test.ts";
 
 /**
  * Los casos de uso de compras (E9 §3.2 a §3.6) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar (ADR-015 §4) y la
@@ -151,6 +152,26 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_ORDENES,
         it: "I5: anular dos veces la misma orden devuelve yaEstaba y la segunda no escribe ni audita",
+      },
+    },
+  },
+  configurarTolerancias: {
+    accion: "compras.configurar",
+    repeticion: {
+      regla: "SIN_CAMBIOS",
+      prueba: {
+        archivo: ARCHIVO_DE_DIFERENCIAS,
+        it: "I7: fijar dos veces las mismas tolerancias deja una sola escritura: la segunda devuelve sinCambios sin escribir ni auditar",
+      },
+    },
+  },
+  resolverDiferencia: {
+    accion: "diferencias_de_compra.resolver",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_DIFERENCIAS,
+        it: "I8: resolver dos veces la misma diferencia con lo mismo devuelve yaEstaba y la segunda no escribe ni audita",
       },
     },
   },

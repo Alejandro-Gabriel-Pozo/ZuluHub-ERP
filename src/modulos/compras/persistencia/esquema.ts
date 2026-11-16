@@ -326,4 +326,47 @@ export type ComprasDb = {
     linea_de_orden: number;
     confirmo_exceso: Generated<boolean>;
   };
+  /** N4 (0067): las tolerancias de la empresa; `null` = no definida (no es cero). */
+  tolerancia_de_compras: {
+    empresa_id: string;
+    tolerancia_de_cantidad: string | null;
+    tolerancia_de_precio: string | null;
+    tolerancia_de_importe: string | null;
+    tolerancia_de_recepcion: string | null;
+    version: Generated<number>;
+  };
+  /** Los umbrales vigentes al conciliar, copiados a la conciliación (solo inserción). */
+  tolerancia_aplicada_de_conciliacion: {
+    empresa_id: string;
+    conciliacion_id: string;
+    tolerancia_de_cantidad: string | null;
+    tolerancia_de_precio: string | null;
+    tolerancia_de_importe: string | null;
+  };
+  diferencia_de_compra: {
+    id: Generated<string>;
+    empresa_id: string;
+    conciliacion_id: SoloAlInsertar<string>;
+    tipo: SoloAlInsertar<string>;
+    comprobante_id: SoloAlInsertar<string>;
+    linea_de_comprobante: SoloAlInsertar<number | null>;
+    recepcion_id: SoloAlInsertar<string | null>;
+    linea_de_recepcion: SoloAlInsertar<number | null>;
+    cantidad_de_diferencia: SoloAlInsertar<string | null>;
+    importe_de_diferencia: SoloAlInsertar<string | null>;
+    precio_facturado: SoloAlInsertar<string | null>;
+    precio_de_referencia: SoloAlInsertar<string | null>;
+    origen_del_precio_de_referencia: SoloAlInsertar<string | null>;
+    dentro_de_tolerancia: SoloAlInsertar<boolean>;
+    tolerancia_de_cantidad: SoloAlInsertar<string | null>;
+    tolerancia_de_precio: SoloAlInsertar<string | null>;
+    tolerancia_de_importe: SoloAlInsertar<string | null>;
+    estado: Generated<string>;
+    resolucion: string | null;
+    motivo: string | null;
+    resuelta_por: string | null;
+    resuelta_en: DeLaBase<Date | null>;
+    registrado_en: DeLaBase<Date>;
+    version: Generated<number>;
+  };
 };

@@ -178,6 +178,8 @@ const DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS = [
   "ordenes_de_compra.pedir",
   "ordenes_de_compra.cerrar",
   "ordenes_de_compra.anular",
+  "diferencias_de_compra.ver",
+  "diferencias_de_compra.resolver",
 ] as const;
 
 /** El nivel de operación de las compras es solo del gerente. */
@@ -306,9 +308,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 167 acciones: 34 de empresa, configuración fiscal y facturación, 48 de catálogo, carta y stock (39 de T0, 2 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 29 de clientes y compras y 16 de salón y comandas", () => {
+  it("hay 169 acciones: 34 de empresa, configuración fiscal y facturación, 48 de catálogo, carta y stock (39 de T0, 2 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 31 de clientes y compras y 16 de salón y comandas", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(167);
+    expect(todas).toHaveLength(169);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),

@@ -36,6 +36,8 @@ export const MODULO_DE_COMPRAS = {
     "ordenes_de_compra.pedir": { capacidad: null, efecto: "CREA_AMPLIA" },
     "ordenes_de_compra.cerrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
     "ordenes_de_compra.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+    "diferencias_de_compra.ver": { capacidad: null, efecto: "LECTURA" },
+    "diferencias_de_compra.resolver": { capacidad: null, efecto: "COMPLETA_CIERRA" },
     "compras.configurar": { capacidad: null, efecto: "CREA_AMPLIA" },
     "compras.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
   },

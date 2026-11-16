@@ -53,6 +53,9 @@ const TABLAS = [
   "linea_de_orden",
   "saldo_de_linea_de_orden",
   "linea_de_recepcion_de_orden",
+  "tolerancia_de_compras",
+  "tolerancia_aplicada_de_conciliacion",
+  "diferencia_de_compra",
 ];
 
 describe.skipIf(base === null)("compras: la persistencia contra el esquema real", () => {
@@ -82,9 +85,14 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
       join(import.meta.dirname, "../../migraciones", "0066_compras_ordenes.sql"),
       "utf8",
     );
+    const diferencias = await readFile(
+      join(import.meta.dirname, "../../migraciones", "0067_compras_diferencias.sql"),
+      "utf8",
+    );
     const fijas = [
       ...migracion.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...ordenes.matchAll(/CONSTRAINT = '(\w+)'/g),
+      ...diferencias.matchAll(/CONSTRAINT = '(\w+)'/g),
     ].map((m) => m[1] as string);
     // Las de nombre armado con el de la tabla (`TG_TABLE_NAME || '_inmutable'`): se expanden con las tablas que llevan ese disparador.
     const deLaTabla = (sufijo: string, tablas: readonly string[]) =>
