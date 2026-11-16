@@ -410,8 +410,6 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
         "carta_publica.id:SELECT",
         "carta_publica.lugar:SELECT",
         "carta_publica.mensaje_de_portada:SELECT",
-        // 0082: el modelo con el que se dibuja la carta (`LISTA` o `LIBRO`); la pantalla pública lo necesita y no es un dato privado.
-        "carta_publica.modelo:SELECT",
         "carta_publica.nombre:SELECT",
         "carta_publica.rubro:SELECT",
         "carta_publica.sucursal_id:SELECT",
