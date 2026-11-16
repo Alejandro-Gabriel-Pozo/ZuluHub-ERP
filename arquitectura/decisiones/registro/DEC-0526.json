@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0526",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: Opciones se arma con páginas (no hojas), la clase del grupo con la casilla «Adicional», sin vista previa de «Copiar» y el recargo mal escrito reusa «Escribí un precio válido».",
+  "que_cambia": "La maqueta dibuja hojas, radios Incluida/Adicional y una vista previa de lo copiado; acá es una página por pantalla, una casilla y sin vista previa. Revertir: cambiar el formulario de grupo y el de copia; costo bajo.",
+  "donde": "apps/web/ui/plantillas/catalogo/FormularioDeGrupoDeOpciones.cliente.tsx y FormularioDeCopiaDeOpciones.cliente.tsx; src/composicion/errores-de-catalogo.ts"
+}

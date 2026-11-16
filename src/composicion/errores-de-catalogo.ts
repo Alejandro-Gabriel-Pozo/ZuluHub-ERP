@@ -9,6 +9,7 @@ import type { CodigoDeCatalogo } from "../capacidades/experiencia/respuesta-de-c
  * los errores con forma de objeto sin nombre de negocio (la empresa que no opera, la base) y `ERROR_DE_LA_BASE_NO_TRADUCIDO`, que es un defecto y sale como inesperado, con referencia.
  * Previene: que un error del catálogo salga como un fallo inesperado, o que un defecto de la base se disfrace de «no permitido».
  * Precios (A1, T3): suma «Escribí un precio válido» y la frase aprobada del precio que otra persona cambió antes (lleva el importe vigente, el único dato que sale).
+ * Opciones (A13): suma «Una opción incluida no lleva recargo» y reusa «Escribí un precio válido» para un recargo mal escrito.
  * Chequeo: `errores-de-catalogo.test.ts`.
  */
 
@@ -29,6 +30,10 @@ const CON_TEXTO_PROPIO: Readonly<Record<string, ErrorConTexto>> = {
   ALICUOTA_REQUERIDA: { codigo: "CATALOGO_ELEGI_LA_ALICUOTA", campo: "alicuota" },
   // Precios (A1, T3): el único otro texto propio es «Escribí un precio válido» (misma fila «Errores»).
   PRECIO_INVALIDO: { codigo: "CATALOGO_PRECIO_INVALIDO", campo: "precio" },
+  // Opciones (A13): el recargo es un importe, así que un recargo mal escrito usa el mismo texto aprobado («Escribí un precio válido»); «Una opción incluida no lleva recargo» es de la
+  // misma fila «Errores» de `productos.html`. Los demás errores de las opciones (grupo repetido, versión vieja…) salen como el genérico.
+  RECARGO_INVALIDO: { codigo: "CATALOGO_PRECIO_INVALIDO", campo: "recargo" },
+  INCLUIDA_CON_RECARGO: { codigo: "CATALOGO_INCLUIDA_CON_RECARGO", campo: "recargo" },
 };
 
 /** Un defecto: la base devolvió una restricción que el módulo no sabe traducir. No es de negocio. */
