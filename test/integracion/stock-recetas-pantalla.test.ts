@@ -23,13 +23,11 @@ const kilos = { unidadBase: "KILOGRAMO", dimension: "MASA" } as const;
 describe.skipIf(base === null)("stock: consultas de la pantalla de Recetas (B1 a B5)", () => {
   let c: MontajeDeStock;
   let e: EscenarioDeStock;
-  let dep: string;
 
   beforeAll(async () => {
     if (base === null) return;
     c = await montarStock(base);
     e = await c.escenario();
-    dep = await c.deposito(e, { deVenta: true });
     c.encenderPerilla("subcomposiciones");
     c.encenderPerilla("composiciones_con_perdida");
   });
