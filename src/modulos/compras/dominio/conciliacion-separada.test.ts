@@ -69,6 +69,15 @@ describe("leerFacturaSeparada", () => {
     });
   });
 
+  it("una línea que no es un objeto (nula, texto, lista) no es una línea: RENGLONES_INVALIDOS", () => {
+    for (const linea of [null, undefined, "x", 5, []]) {
+      expect(leerFacturaSeparada(factura({ lineas: [linea] }))).toEqual({
+        ok: false,
+        error: "RENGLONES_INVALIDOS",
+      });
+    }
+  });
+
   it("los errores de la factura de N2 pasan tal cual (primero la forma de la factura, después el producto)", () => {
     expect(leerFacturaSeparada(factura({ tipo: "OTRA" }))).toEqual({
       ok: false,
@@ -103,9 +112,8 @@ describe("huellaDeLaFacturaSeparada", () => {
   it("el contenido canónico no cambia: la huella de una factura ya guardada tiene que seguir siendo la misma", () => {
     const leida = leerFacturaSeparada(factura());
     if (!leida.ok) throw new Error("la factura de prueba tiene que leerse");
-    expect(huellaDeLaFacturaSeparada("prov-1", leida.valor)).toMatch(/^[0-9a-f]{64}$/);
     expect(huellaDeLaFacturaSeparada("prov-1", leida.valor)).toBe(
-      huellaDeLaFacturaSeparada("prov-1", leida.valor),
+      "032009aacf14bfab8d5a3c99ecfd2562f6ae3b734dc04bb9faf5524dc5f7db68",
     );
   });
 });
@@ -234,6 +242,24 @@ describe("proponerAsignaciones", () => {
     expect(proponerAsignaciones([f(1, P1, "0")], [r(R1, 1, P1, "10")])).toEqual([]);
     expect(proponerAsignaciones([], [r(R1, 1, P1, "10")])).toEqual([]);
     expect(proponerAsignaciones([f(1, P1, "10")], [])).toEqual([]);
+  });
+
+  it("cuando la primera línea recibida cubre todo lo facturado no se toma de las siguientes (nada de asignaciones en cero)", () => {
+    expect(
+      proponerAsignaciones([f(1, P1, "100")], [r(R1, 1, P1, "2000"), r(R2, 1, P1, "500")]),
+    ).toEqual([{ lineaDeFactura: 1, recepcionId: R1, lineaDeRecepcion: 1, cantidad: "100.0000" }]);
+  });
+
+  it("lo que una línea consumió por completo no se vuelve a tomar: la siguiente sigue con la próxima línea recibida", () => {
+    expect(
+      proponerAsignaciones(
+        [f(1, P1, "1000"), f(2, P1, "500")],
+        [r(R1, 1, P1, "1000"), r(R2, 1, P1, "1000")],
+      ),
+    ).toEqual([
+      { lineaDeFactura: 1, recepcionId: R1, lineaDeRecepcion: 1, cantidad: "1000.0000" },
+      { lineaDeFactura: 2, recepcionId: R2, lineaDeRecepcion: 1, cantidad: "500.0000" },
+    ]);
   });
 
   it("dos líneas recibidas con la misma recepción y distinta línea tienen saldos separados", () => {

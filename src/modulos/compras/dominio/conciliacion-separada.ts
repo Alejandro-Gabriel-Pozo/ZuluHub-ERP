@@ -35,16 +35,13 @@ export function leerFacturaSeparada(
       ? (valor as Record<string, unknown>)
       : {};
   const lineas = Array.isArray(crudo["lineas"]) ? (crudo["lineas"] as readonly unknown[]) : null;
-  if (lineas === null || lineas.length === 0) return err("LINEAS_REQUERIDAS");
+  if (lineas === null) return err("LINEAS_REQUERIDAS");
   const productos: string[] = [];
   const conRenglon = lineas.map((l, i) => {
-    const linea =
-      typeof l === "object" && l !== null && !Array.isArray(l)
-        ? (l as Record<string, unknown>)
-        : {};
-    const productoId = linea["productoId"];
-    productos.push(typeof productoId === "string" && esUuid(productoId) ? productoId : "");
-    return { ...linea, renglon: i + 1 };
+    // Lo que no es un objeto no tiene `productoId` y `leerFactura` lo rechaza como línea inválida: no hace falta mirar la forma antes.
+    const productoId = (l as { productoId?: unknown } | null | undefined)?.productoId;
+    productos.push(esUuid(productoId as string) ? (productoId as string) : "");
+    return { ...(l as object), renglon: i + 1 };
   });
   const factura = leerFactura({ ...crudo, lineas: conRenglon });
   if (!factura.ok) return factura;
@@ -88,10 +85,8 @@ export function leerAsignaciones(
   const vistas = new Set<string>();
   const leidas: AsignacionPedida[] = [];
   for (const crudo of valor as readonly unknown[]) {
-    const a =
-      typeof crudo === "object" && crudo !== null && !Array.isArray(crudo)
-        ? (crudo as Record<string, unknown>)
-        : {};
+    // Lo que no es un objeto no tiene ninguno de los campos: cae en la validación de abajo.
+    const a = (crudo ?? {}) as Record<string, unknown>;
     const cantidad = typeof a["cantidad"] === "string" ? leerCantidadPositiva(a["cantidad"]) : null;
     const recepcionId = a["recepcionId"];
     if (
@@ -99,18 +94,17 @@ export function leerAsignaciones(
       (a["lineaDeFactura"] as number) < 1 ||
       !Number.isInteger(a["lineaDeRecepcion"]) ||
       (a["lineaDeRecepcion"] as number) < 1 ||
-      typeof recepcionId !== "string" ||
-      !esUuid(recepcionId) ||
+      !esUuid(recepcionId as string) ||
       cantidad === null
     ) {
       return err("ASIGNACIONES_INVALIDAS");
     }
-    const par = `${String(a["lineaDeFactura"])}|${recepcionId}|${String(a["lineaDeRecepcion"])}`;
+    const par = `${String(a["lineaDeFactura"])}|${recepcionId as string}|${String(a["lineaDeRecepcion"])}`;
     if (vistas.has(par)) return err("ASIGNACIONES_INVALIDAS");
     vistas.add(par);
     leidas.push({
       lineaDeFactura: a["lineaDeFactura"] as number,
-      recepcionId,
+      recepcionId: recepcionId as string,
       lineaDeRecepcion: a["lineaDeRecepcion"] as number,
       cantidad: textoDeCantidad(cantidad),
     });
@@ -125,6 +119,7 @@ export function leerAsignaciones(
 export function pendienteDeLinea(total: string, asignada: string): string | null {
   const t = leerCantidad(total);
   const a = leerCantidad(asignada);
+  // Stryker disable next-line ConditionalExpression: con el total inválido (`null`) la comparación coerciona a 0 y también da `null`
   if (t === null || a === null || t <= a) return null;
   return textoDeCantidad(t - a);
 }
@@ -154,23 +149,21 @@ export function proponerAsignaciones(
   facturadas: readonly LineaFacturadaPendiente[],
   recibidas: readonly LineaRecibidaDisponible[],
 ): readonly AsignacionPedida[] {
-  const saldos = new Map<string, bigint>();
-  for (const r of recibidas) {
-    const unidades = leerCantidadPositiva(r.sinAsignar);
-    if (unidades !== null) saldos.set(`${r.recepcionId}|${String(r.linea)}`, unidades);
-  }
+  // Lo que no es un decimal positivo no tiene saldo (0): no se propone nada de esa línea.
+  const disponibles = recibidas.map((r) => ({
+    ...r,
+    restante: leerCantidadPositiva(r.sinAsignar) ?? 0n,
+  }));
   const propuestas: AsignacionPedida[] = [];
   for (const f of facturadas) {
     let falta = leerCantidadPositiva(f.sinConciliar);
     if (falta === null) continue;
-    for (const r of recibidas) {
+    for (const r of disponibles) {
       if (falta === 0n) break;
-      if (r.productoId !== f.productoId) continue;
-      const clave = `${r.recepcionId}|${String(r.linea)}`;
-      const saldo = saldos.get(clave) ?? 0n;
-      if (saldo === 0n) continue;
-      const tomar = falta < saldo ? falta : saldo;
-      saldos.set(clave, saldo - tomar);
+      if (r.productoId !== f.productoId || r.restante === 0n) continue;
+      // Stryker disable next-line EqualityOperator: con lo que falta igual al saldo da lo mismo
+      const tomar = falta < r.restante ? falta : r.restante;
+      r.restante -= tomar;
       falta -= tomar;
       propuestas.push({
         lineaDeFactura: f.numero,
