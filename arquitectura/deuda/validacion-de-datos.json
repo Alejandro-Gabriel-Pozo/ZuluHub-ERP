@@ -1,8 +1,4 @@
 {
-  "apps/web/ui/plantillas/facturacion/impresion/ayudas-de-impresion.tsx": {
-    "prohibidos": 0,
-    "duplicados": 1
-  },
   "migraciones/0005_administracion.sql": {
     "prohibidos": 1,
     "duplicados": 0
@@ -27,10 +23,6 @@
     "prohibidos": 1,
     "duplicados": 0
   },
-  "src/capacidades/activos/direccion-externa.ts": {
-    "prohibidos": 0,
-    "duplicados": 1
-  },
   "src/capacidades/planes/version-de-plan.ts": {
     "prohibidos": 1,
     "duplicados": 0
@@ -38,10 +30,6 @@
   "src/capacidades/vocabulario/texto-visible.ts": {
     "prohibidos": 1,
     "duplicados": 0
-  },
-  "src/composicion/entradas-de-facturacion.ts": {
-    "prohibidos": 0,
-    "duplicados": 2
   },
   "src/modulos/empresas/dominio/sucursal.ts": {
     "prohibidos": 1,

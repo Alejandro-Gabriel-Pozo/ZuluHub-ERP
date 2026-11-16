@@ -45,7 +45,7 @@ describe("fuente única: el código real", () => {
   it("mira src y apps (no pasa en vacío)", () => {
     expect([...archivos.keys()].some((r) => r.startsWith("src/"))).toBe(true);
     expect([...archivos.keys()].some((r) => r.startsWith("apps/"))).toBe(true);
-    expect(reales.size).toBeGreaterThan(0);
+    // Con la deuda pagada `reales` puede estar vacío; que el analizador no es ciego lo prueban las violaciones de `fuente-unica-evasiones.test.ts`.
   });
 
   it("los topes escritos dos veces coinciden EXACTO con el presupuesto (no hay uno nuevo sin registrar ni uno viejo sin sacar)", () => {

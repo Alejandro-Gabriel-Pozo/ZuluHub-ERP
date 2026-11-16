@@ -19,7 +19,7 @@ import {
  */
 
 /** Más largo que esto no es una dirección de foto (el patrón de Cloudinary da menos de 300). */
-export const LARGO_MAXIMO_DE_DIRECCION = 300;
+export const LARGO_MAXIMO_DE_DIRECCION = 300; // fuente-unica: ajeno — el largo de una dirección de foto es otro dato que la descripción o el domicilio
 
 /** Por qué una dirección pegada no sirve. Códigos estables: la pantalla los traduce (`fotos.error.*`). */
 export type ErrorDeDireccion =

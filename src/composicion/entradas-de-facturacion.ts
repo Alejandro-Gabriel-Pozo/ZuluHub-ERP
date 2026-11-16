@@ -55,7 +55,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export const identificador = z.string().regex(UUID);
 const fecha = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 /** La forma canónica la comprueba la primitiva; acá solo se acota el largo de lo que se lee. */
-export const decimal = z.string().max(40);
+export const decimal = z.string().max(40); // fuente-unica: ajeno — acota el texto de un decimal que se lee, no es el código ni el teléfono
 /** Texto de formulario: la forma (que sea texto y no sea enorme); el largo y el contenido válidos los decide el dominio. */
 export const texto = z.string().max(1000);
 /** Un entero que un formulario manda como número o como texto de dígitos (nunca `"3.5"`, `"1e3"` ni `"-1"`). */
@@ -83,7 +83,7 @@ const receptor = z.object({
   nombre: texto.nullable(),
   documento: z.union([
     z.object({ tipo: z.literal("SIN_IDENTIFICAR") }),
-    z.object({ tipo: z.enum(TIPOS_DE_DOCUMENTO), numero: z.string().max(40) }),
+    z.object({ tipo: z.enum(TIPOS_DE_DOCUMENTO), numero: z.string().max(40) }), // fuente-unica: ajeno — acota el número de documento que se lee; la forma la decide la primitiva
   ]),
   condicionIva: z.enum(CONDICIONES_DE_IVA),
   domicilio: texto.nullable(),

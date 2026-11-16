@@ -14,7 +14,7 @@ const aTexto = (centavos: bigint): string => {
 const DESCRIPCION_DE_200 =
   "Pan de campo artesanal de masa madre con semillas y frutos secos, horneado en el día y entregado en caja individual con tarjeta personalizada para la empresa, incluye servicio de entrega y retiro de envases, sin cargo".slice(
     0,
-    200,
+    200, // fuente-unica: ajeno — el tamaño del texto de prueba de la hoja, no un límite que se valide
   );
 
 export type OpcionesDelComprobante = Readonly<{
