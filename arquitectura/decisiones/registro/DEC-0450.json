@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0450",
+  "fecha": "2026-11-15",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Al vender una opción con un elaborado se descuenta el stock propio del elaborado (o avisa INSUMO_SIN_ARTICULO); sus ingredientes se descuentan al producir, no se despliega la receta en la venta.",
+  "que_cambia": "Opción con elaborado: migración 0057 (aditiva). El costo y el stock usan el artículo del elaborado, no sus insumos. Revertir: reversión 0057 (frena si hay consumos) y volver a 3 clases.",
+  "donde": "src/modulos/catalogo/dominio/clases.ts; migraciones/0057_opcion_consume_elaborado.sql; stock explosion.ts:298-305; aprobada por el dueño el 15/11/2026 (opción A; SQL de 0057 aprobado)"
+}
