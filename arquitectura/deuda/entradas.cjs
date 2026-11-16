@@ -6,6 +6,7 @@
  * `backlog`, `intermitente`, `riesgo-aceptado`, `brecha`). Una entrada de marcador lleva UN solo archivo (una
  * entrada por tipo y archivo); la de `archivo-grande` lleva además el `tamano` registrado: el trinquete.
  */
+const { esFechaValida } = require("../contratos/excepciones.cjs");
 const { esRutaExacta } = require("../contratos/globs.cjs");
 const { TIPOS_DE_MARCADOR } = require("./marcadores.cjs");
 const { enJson } = require("../contratos/ubicacion.cjs");
@@ -24,6 +25,15 @@ const TIPOS_DE_HALLAZGO = Object.freeze([
 const TIPOS = Object.freeze([...TIPOS_DE_MARCADOR, ...TIPOS_DE_HALLAZGO]);
 
 const CAMPOS_DE_EXCEPCION = Object.freeze(["motivo", "aprobadoPor", "vence"]);
+/**
+ * Los hallazgos que ninguna máquina vuelve a mirar y que, SIN excepción, llevan `revisarAntes` (fecha AAAA-MM-DD): el día en
+ * que alguien tiene que pagarlos o re-triarlos con una fecha nueva (el control falla al pasar la fecha, y no más lejos de
+ * `PLAZO_DE_REVISION_EN_DIAS` desde hoy). NO es una excepción: no pide aprobación del dueño ni cuenta contra el tope de
+ * excepciones. Previene: un `backlog` que nadie vuelve a mirar (cinco entradas de octubre seguían sin fecha ni dueño). La
+ * excepción ya tiene su propio `vence`, así que no lleva los dos. Revertir: sacar este campo, su chequeo y las fechas.
+ */
+const TIPOS_CON_REVISION = Object.freeze(["backlog", "brecha", "riesgo-aceptado"]);
+const PLAZO_DE_REVISION_EN_DIAS = 60;
 const CAMPOS_PERMITIDOS = Object.freeze([
   "id",
   "archivos",
@@ -33,6 +43,7 @@ const CAMPOS_PERMITIDOS = Object.freeze([
   "creada",
   "verificacion",
   "tamano",
+  "revisarAntes",
   ...CAMPOS_DE_EXCEPCION,
 ]);
 const CLAVES_DE_LA_CONFIGURACION = Object.freeze([
@@ -270,6 +281,27 @@ function formaDeLaEntrada(entrada, idsVistos) {
   } else if (tamano !== undefined) {
     nuevo("tamano", "solo un «archivo-grande» lleva «tamano».", "Sacalo.");
   }
+  const { revisarAntes } = entrada;
+  const esExcepcion = CAMPOS_DE_EXCEPCION.some((campo) => entrada[campo] !== undefined);
+  const exigeRevision = TIPOS_CON_REVISION.includes(entrada.tipo) && !esExcepcion;
+  if (exigeRevision && revisarAntes === undefined) {
+    nuevo(
+      "revisarAntes",
+      `un «${entrada.tipo}» sin excepción lleva «revisarAntes»: la fecha (AAAA-MM-DD) en que se vuelve a mirar.`,
+      `Poné una fecha de hasta ${PLAZO_DE_REVISION_EN_DIAS} días desde hoy.`,
+    );
+  } else if (revisarAntes !== undefined && !exigeRevision) {
+    nuevo(
+      "revisarAntes",
+      `«revisarAntes» es solo de un ${TIPOS_CON_REVISION.join(", ")} sin excepción (la excepción ya tiene «vence»).`,
+      "Sacalo.",
+    );
+  } else if (
+    revisarAntes !== undefined &&
+    !(esTexto(revisarAntes) && esFechaValida(revisarAntes))
+  ) {
+    nuevo("revisarAntes", "«revisarAntes» es una fecha real con forma AAAA-MM-DD.", "Corregila.");
+  }
   if (esTexto(entrada.id)) {
     if (idsVistos.has(entrada.id))
       nuevo("id", `el id «${entrada.id}» está repetido.`, "Cada entrada lleva un id propio.");
@@ -283,6 +315,7 @@ module.exports = {
   ARCHIVO_DEL_REGISTRO,
   CAMPOS_DE_EXCEPCION,
   CONTRATO,
+  PLAZO_DE_REVISION_EN_DIAS,
   TIPOS,
   TIPOS_DE_HALLAZGO,
   esObjeto,

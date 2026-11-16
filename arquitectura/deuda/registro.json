@@ -238,6 +238,7 @@
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22",
+    "revisarAntes": "2026-12-14",
     "verificacion": {
       "contiene": "function comprobarMatriz"
     }
@@ -248,7 +249,8 @@
     "descripcion": "Presupuesto de tiempo del CI por job (informe de CI §3.2 D5, D8, D9 y §7.3): topes de `timeout-minutes` ajustados a lo medido, cancelación al primer rojo y arranque compartido de los grupos de mutación. Decisión de cuánto se acepta por PR: del dueño.",
     "tipo": "backlog",
     "responsable": "dueño",
-    "creada": "2026-10-22"
+    "creada": "2026-10-22",
+    "revisarAntes": "2026-12-14"
   },
   {
     "id": "sondeo-ast-pendiente",
@@ -256,7 +258,8 @@
     "descripcion": "El sondeo de primitivas con análisis AST (contratos-arquitectonicos.md §12, G7) no se hizo: los detectores del guardián son texto línea por línea. Se hace en modo reporte, regla por regla.",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-10-22",
+    "revisarAntes": "2026-12-14"
   },
   {
     "id": "brecha-ev-094",
@@ -265,6 +268,7 @@
     "tipo": "brecha",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-10-22",
+    "revisarAntes": "2026-12-14",
     "verificacion": {
       "contiene": "\"brecha-abierta\""
     }
@@ -276,6 +280,7 @@
     "tipo": "riesgo-aceptado",
     "responsable": "dueño",
     "creada": "2026-10-22",
+    "revisarAntes": "2026-12-14",
     "verificacion": {
       "contiene": "\"estado\": \"riesgo-aceptado\""
     }
@@ -286,7 +291,8 @@
     "descripcion": "`npm run gate` no replica el CI (informe de CI §3.2 D11): faltan componentes (Chromium), builds, seguridad, estabilidad y mutación; y las pruebas de integración se saltean en silencio sin PRUEBAS_DATABASE_URL (`describe.skipIf`), salvo con CI=true.",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-10-22",
+    "revisarAntes": "2026-12-14"
   },
   {
     "id": "permisos-y-acciones-menores-del-ci",
@@ -294,7 +300,8 @@
     "descripcion": "Pendiente menor de acciones (informe de CI §3.2 D10): la imagen de gitleaks está fijada por tag y no por digest. Falta un digest verificable (pregunta pendiente al dueño).",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
+    "creada": "2026-10-22",
+    "revisarAntes": "2026-12-14"
   },
   {
     "id": "archivo-grande--arquitectura-contratos-evasiones-cjs",

@@ -239,7 +239,7 @@ export function arbolDe(archivos: Record<string, string | Buffer>): Arbol {
 
 /** Una entrada plana (sin excepción) del registro: un marcador `ts-expect-error` en `a.ts`. */
 export function entrada(cambios: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
+  const base = {
     id: "ts-expect-error--a-ts",
     archivos: ["a.ts"],
     descripcion: "Pruebas negativas de tipos.",
@@ -248,6 +248,13 @@ export function entrada(cambios: Record<string, unknown> = {}): Record<string, u
     creada: "2026-10-01",
     ...cambios,
   };
+  // Un hallazgo sin excepción lleva su fecha de revisión (a 24 días del reloj de las pruebas): se pone sola, y `revisarAntes: undefined`
+  // en `cambios` la quita para probar que falta.
+  const lleva =
+    ["backlog", "brecha", "riesgo-aceptado"].includes(base.tipo) &&
+    !("motivo" in base || "aprobadoPor" in base || "vence" in base) &&
+    !("revisarAntes" in cambios);
+  return lleva ? { ...base, revisarAntes: "2026-11-15" } : base;
 }
 
 /** Una excepción vigente: la entrada anterior con motivo, aprobación y un vencimiento a 30 días. */

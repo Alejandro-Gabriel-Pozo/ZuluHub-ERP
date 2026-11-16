@@ -531,8 +531,140 @@ describe("la forma de cada entrada", () => {
       ],
     ]);
     expect(fallas[0]?.correccion).toBe(
-      "Dejá solo: id, archivos, descripcion, tipo, responsable, creada, verificacion, tamano, motivo, aprobadoPor, vence.",
+      "Dejá solo: id, archivos, descripcion, tipo, responsable, creada, verificacion, tamano, revisarAntes, motivo, aprobadoPor, vence.",
     );
+  });
+
+  describe("revisarAntes: el hallazgo que nadie vuelve a mirar (el reloj de las pruebas es 2026-10-22)", () => {
+    /** Las fallas de esas entradas sobre un a.ts SIN marcadores (así no hay deuda sin registrar de por medio). */
+    const sinMarcadores = (entradas: unknown[], configuracion = {}) =>
+      conEntradas(entradas, {}, configuracion, 0).resultado.fallas;
+    /** Un hallazgo (con `cambios`) evaluado: sus fallas con código, texto, corrección y lugar. */
+    const hallazgo = (cambios: Record<string, unknown>) =>
+      sinMarcadores([entrada({ id: "h", tipo: "backlog", archivos: ["a.ts"], ...cambios })]).map(
+        (f) => ({ codigo: f.codigo, motivo: f.motivo, correccion: f.correccion, donde: f.donde }),
+      );
+    const EN = (camino: (string | number)[]) => ({ tipo: "json", camino });
+
+    it.each(["backlog", "brecha", "riesgo-aceptado"])(
+      "un %s con fecha vigente no falla (y no cuenta como excepción)",
+      (tipo) => {
+        const resultado = conEntradas(
+          [entrada({ id: "h", tipo, archivos: ["a.ts"] })],
+          {},
+          {},
+          0,
+        ).resultado;
+        expect(resultado.fallas).toEqual([]);
+        expect(resultado.entradas[0]?.excepcion).toBe(false);
+      },
+    );
+
+    it.each(["backlog", "brecha", "riesgo-aceptado"])(
+      "un %s sin fecha falla en su entrada",
+      (tipo) => {
+        expect(hallazgo({ tipo, revisarAntes: undefined })).toEqual([
+          {
+            codigo: "deuda-entrada-invalida",
+            motivo: `Entrada «h»: un «${tipo}» sin excepción lleva «revisarAntes»: la fecha (AAAA-MM-DD) en que se vuelve a mirar.`,
+            correccion: "Poné una fecha de hasta 60 días desde hoy.",
+            donde: EN([0, "revisarAntes"]),
+          },
+        ]);
+      },
+    );
+
+    it.each(["intermitente", "auditoria", "ts-expect-error"])(
+      "un %s no lleva fecha de revisión",
+      (tipo) => {
+        const fallas = hallazgo({ tipo, revisarAntes: "2026-11-15" });
+        expect(fallas).toEqual([
+          {
+            codigo: "deuda-entrada-invalida",
+            motivo:
+              "Entrada «h»: «revisarAntes» es solo de un backlog, brecha, riesgo-aceptado sin excepción (la excepción ya tiene «vence»).",
+            correccion: "Sacalo.",
+            donde: EN([0, "revisarAntes"]),
+          },
+        ]);
+      },
+    );
+
+    it("una excepción no la lleva (ya tiene vence) y tampoco la exige", () => {
+      const sola = sinMarcadores([excepcion({ id: "h", tipo: "backlog" })]);
+      expect(sola).toEqual([]);
+      const con = hallazgo({
+        ...excepcion({ id: "h", tipo: "backlog" }),
+        revisarAntes: "2026-11-15",
+      });
+      expect(con.map((f) => f.motivo)).toEqual([
+        "Entrada «h»: «revisarAntes» es solo de un backlog, brecha, riesgo-aceptado sin excepción (la excepción ya tiene «vence»).",
+      ]);
+    });
+
+    it.each(["mañana", "2026-13-01", "2026-02-30", "26-11-15", "2026-11-15 ", "", 20261115, null])(
+      "una fecha mal formada (%j) falla por su forma",
+      (valor) => {
+        expect(hallazgo({ revisarAntes: valor })).toEqual([
+          {
+            codigo: "deuda-entrada-invalida",
+            motivo: "Entrada «h»: «revisarAntes» es una fecha real con forma AAAA-MM-DD.",
+            correccion: "Corregila.",
+            donde: EN([0, "revisarAntes"]),
+          },
+        ]);
+      },
+    );
+
+    it("una excepción a medias (solo `motivo`) falla por incompleta y NO pide además la fecha de revisión", () => {
+      const fallas = hallazgo({ motivo: "x", revisarAntes: undefined });
+      expect(fallas.length).toBeGreaterThan(0);
+      expect(fallas.map((f) => f.motivo).join("\n")).not.toContain("lleva «revisarAntes»");
+    });
+
+    it("una fecha que no es texto falla solo por su forma, aunque lo que contenga sea una fecha pasada", () => {
+      expect(hallazgo({ revisarAntes: ["2026-10-01"] }).map((f) => f.motivo)).toEqual([
+        "Entrada «h»: «revisarAntes» es una fecha real con forma AAAA-MM-DD.",
+      ]);
+    });
+
+    it("hoy y los 60 días justos valen; ayer y 61 días no", () => {
+      expect(hallazgo({ revisarAntes: "2026-10-22" })).toEqual([]);
+      expect(hallazgo({ revisarAntes: "2026-12-21" })).toEqual([]);
+      expect(hallazgo({ revisarAntes: "2026-10-21" })).toEqual([
+        {
+          codigo: "deuda-entrada-invalida",
+          motivo: "Entrada «h»: su fecha de revisión (2026-10-21) ya pasó (hoy es 2026-10-22).",
+          correccion: "Pagá la deuda, o re-triala con una fecha nueva en «revisarAntes».",
+          donde: EN([0, "revisarAntes"]),
+        },
+      ]);
+      expect(hallazgo({ revisarAntes: "2026-12-22" })).toEqual([
+        {
+          codigo: "deuda-entrada-invalida",
+          motivo:
+            "Entrada «h»: su fecha de revisión (2026-12-22) está a más de 60 días (hoy es 2026-10-22).",
+          correccion: "Poné una fecha de hasta 60 días desde hoy.",
+          donde: EN([0, "revisarAntes"]),
+        },
+      ]);
+    });
+
+    it("una entrada sin id se nombra por su número", () => {
+      const fallas = sinMarcadores([
+        entrada({ id: undefined, tipo: "backlog", revisarAntes: "2026-10-01" }),
+      ]);
+      expect(fallas.map((f) => f.motivo)).toContain(
+        "Entrada 1: su fecha de revisión (2026-10-01) ya pasó (hoy es 2026-10-22).",
+      );
+    });
+
+    it("no cuenta contra el tope de excepciones", () => {
+      const muchas = Array.from({ length: 12 }, (_, i) =>
+        entrada({ id: `h-${String(i)}`, tipo: "backlog", archivos: ["a.ts"] }),
+      );
+      expect(codigosDe(sinMarcadores(muchas, { topeDeExcepciones: 1 }))).toEqual([]);
+    });
   });
 
   it("sin descripción (o vacía) falla en el campo", () => {

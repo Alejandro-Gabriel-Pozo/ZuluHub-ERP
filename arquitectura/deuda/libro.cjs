@@ -3,7 +3,7 @@
  * entradas tiene el registro y si coinciden. Es puro: recibe las rutas y una función que lee archivos.
  *
  * EL REGISTRO (`arquitectura/deuda/registro.json`) es una lista de entradas:
- *   { id, archivos, descripcion, tipo, responsable, creada, [verificacion], [motivo, aprobadoPor, vence] }
+ *   { id, archivos, descripcion, tipo, responsable, creada, [verificacion], [revisarAntes], [motivo, aprobadoPor, vence] }
  *  - `archivos`: rutas exactas (nada de carpetas ni comodines) que existen en el repositorio;
  *  - `tipo`: un tipo de marcador de `marcadores.cjs` (la entrada REGISTRA los marcadores de ese tipo en ese
  *    archivo: lleva UN solo archivo, así hay una entrada por tipo y archivo) o un hallazgo que ninguna máquina
@@ -13,19 +13,28 @@
  *  - `motivo`, `aprobadoPor` y `vence` juntos (o ninguno) hacen de la entrada una EXCEPCIÓN: permite que ese tipo
  *    siga o aparezca en ese archivo hasta `vence` (como máximo 60 días después de `creada`, el mismo control
  *    que las excepciones del guardián: `problemasComunes`).
+ *  - `revisarAntes` (AAAA-MM-DD): obligatorio en un `backlog`, `brecha` o `riesgo-aceptado` SIN excepción; el control falla al pasar la fecha
+ *    (se paga o se re-tría con otra) y no admite una fecha a más de 60 días. No es una excepción: no pide aprobación ni cuenta en el tope.
  * `configuracion.json` trae `topeDeExcepciones` (cuántas excepciones abiertas a la vez) y
  * `bloqueaDeudaEnArchivoTocado` (si tocar un archivo con deuda sin pagarla bloquea o solo avisa).
  *
  * Una falla trae SIEMPRE archivo y línea: o la línea real del marcador, o un descriptor `donde` de
  * `ubicacion.cjs` (la línea de una clave del JSON) que `deuda.cjs` resuelve.
  */
-const { avisoDeVencimiento, diaDe, problemasComunes } = require("../contratos/excepciones.cjs");
+const {
+  avisoDeVencimiento,
+  diaDe,
+  diasEntre,
+  esFechaValida,
+  problemasComunes,
+} = require("../contratos/excepciones.cjs");
 const { enJson } = require("../contratos/ubicacion.cjs");
 const {
   ARCHIVO_DE_LA_CONFIGURACION,
   ARCHIVO_DEL_REGISTRO,
   CAMPOS_DE_EXCEPCION,
   CONTRATO,
+  PLAZO_DE_REVISION_EN_DIAS,
   TIPOS,
   TIPOS_DE_HALLAZGO,
   esObjeto,
@@ -202,6 +211,27 @@ function evaluarArbol({ arbol, ahora }) {
             enJson(indice, campo),
           ),
         );
+      }
+      // La fecha de revisión (solo la que tiene forma de fecha; la forma ya la juzgó `formaDeLaEntrada`).
+      const { revisarAntes } = crudo;
+      if (typeof revisarAntes === "string" && esFechaValida(revisarAntes)) {
+        const faltan = diasEntre(hoy, revisarAntes);
+        const vencida = faltan < 0;
+        if (vencida || faltan > PLAZO_DE_REVISION_EN_DIAS) {
+          fallas.push(
+            delRegistro(
+              "deuda-entrada-invalida",
+              `Entrada ${esTexto(crudo.id) ? `«${crudo.id}»` : indice + 1}: ` +
+                (vencida
+                  ? `su fecha de revisión (${revisarAntes}) ya pasó (hoy es ${hoy}).`
+                  : `su fecha de revisión (${revisarAntes}) está a más de ${PLAZO_DE_REVISION_EN_DIAS} días (hoy es ${hoy}).`),
+              vencida
+                ? "Pagá la deuda, o re-triala con una fecha nueva en «revisarAntes»."
+                : `Poné una fecha de hasta ${PLAZO_DE_REVISION_EN_DIAS} días desde hoy.`,
+              enJson(indice, "revisarAntes"),
+            ),
+          );
+        }
       }
       // (sin `vence` —lo que pasa si no es una excepción— no hay aviso)
       const aviso = avisoDeVencimiento(
