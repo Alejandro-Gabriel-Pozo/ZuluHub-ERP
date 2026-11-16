@@ -104,6 +104,30 @@ function HojaDeCambiar({ clasificacion, accion, alCerrar }: PropsDeHojaDeCambiar
 }
 
 /**
+ * Una fila de la clasificación vigente (rótulo y nombre). Con varios niveles llamados «Categoría» el nombre accesible lleva al padre («Categoría de Restaurante»); lo visible no cambia. El
+ * grupo envuelve a la lista porque `dl` no admite `role`.
+ */
+function Fila({
+  fila,
+}: Readonly<{
+  fila: Readonly<{ rotulo: string; valor: string; nombreAccesible: string | undefined }>;
+}>) {
+  const datos = (
+    <dl className={estilos["fila"]}>
+      <dt>{fila.rotulo}</dt>
+      <dd>{fila.valor}</dd>
+    </dl>
+  );
+  return fila.nombreAccesible === undefined ? (
+    <div>{datos}</div>
+  ) : (
+    <div role="group" aria-label={fila.nombreAccesible}>
+      {datos}
+    </div>
+  );
+}
+
+/**
  * La clasificación de un producto en su ficha (maqueta `clasificacion.html`, «Ficha del producto»): una fila por nivel (el rótulo y el nombre; «Departamento: Sin elegir» si no tiene), «Desactivado» si
  * el último nodo se desactivó después de asignarlo (el producto lo conserva), «Vigente desde» (solo lectura) y «Cambiar», que abre la hoja. No hereda ni propone la alícuota. «Cambiar» sale apagado sin
  * permiso o sin departamentos cargados.
@@ -120,17 +144,7 @@ export function ClasificacionDelProducto({
   return (
     <div className={estilos["tarjeta"]}>
       {clasificacion.filas.map((f, i) => (
-        // Con varios niveles llamados «Categoría» el nombre accesible lleva al padre («Categoría de Restaurante»); lo visible no cambia. El grupo envuelve a la lista: `dl` no admite `role`.
-        <div
-          key={`${String(i)}-${f.rotulo}`}
-          role={f.nombreAccesible === undefined ? undefined : "group"}
-          aria-label={f.nombreAccesible}
-        >
-          <dl className={estilos["fila"]}>
-            <dt>{f.rotulo}</dt>
-            <dd>{f.valor}</dd>
-          </dl>
-        </div>
+        <Fila key={`${String(i)}-${f.rotulo}`} fila={f} />
       ))}
       {clasificacion.desactivado === null ? null : (
         <Texto como="span" variante="suave">
