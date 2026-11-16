@@ -177,7 +177,7 @@ export function FormularioDePuntoDeVenta({
             : {})}
           error={errorEn("sucursalId")}
           deshabilitado={bloqueado}
-          dato="pendiente"
+          dato="sucursal-de-punto-de-venta"
         />
         <fieldset className={estilos["domicilio"]} disabled={bloqueado}>
           <legend className={estilos["leyenda"]}>

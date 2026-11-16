@@ -383,7 +383,6 @@
       "apps/web/ui/componentes/Selector.test.tsx",
       "apps/web/ui/patrones/SelectorDeSucursal.cliente.tsx",
       "apps/web/ui/patrones/Superposicion.test.tsx",
-      "apps/web/ui/plantillas/configuracion-fiscal/FormularioDePuntoDeVenta.cliente.tsx",
       "apps/web/ui/plantillas/configuracion-fiscal/PasoGenerarPedido.cliente.tsx",
       "apps/web/ui/plantillas/facturacion/EleccionDeSucursal.cliente.tsx",
       "apps/web/ui/plantillas/facturacion/FormularioDeFiltros.cliente.tsx",

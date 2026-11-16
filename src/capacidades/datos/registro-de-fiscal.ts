@@ -243,4 +243,17 @@ export const DATOS_DE_FISCAL = {
     ponerPor: ["certificados.gestionar"],
     requiere: REQUIERE_FACTURACION,
   },
+  "sucursal-de-punto-de-venta": {
+    ficha: "src/primitivas/identificadores/marca.ts",
+    propositos: [
+      {
+        para: "Sucursal a la que pertenece el punto de venta (se elige de la lista de sucursales de la empresa; el servidor valida que sea de la misma empresa).",
+        fuente:
+          "Pedernal-docs/11-especificaciones/h7-fiscal.md §B.5 (punto de venta: «Pertenece a un emisor y a una sucursal de la misma empresa»)",
+      },
+    ],
+    consumidores: [CONSUMIDOR_DE_PUNTO_DE_VENTA],
+    ponerPor: ["puntos_de_venta.crear", "puntos_de_venta.editar"],
+    requiere: REQUIERE_ADMINISTRACION,
+  },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
