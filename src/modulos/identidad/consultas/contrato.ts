@@ -15,7 +15,7 @@ import type {
  * la carga de autorización. No hay auditoría ni trabajos: por tipos, una consulta no escribe.
  */
 export type TxDeConsultasDeIdentidad = Readonly<{
-  membresias: Pick<RepositorioDeMembresias, "listarConEmail">;
+  membresias: Pick<RepositorioDeMembresias, "listarConEmail" | "emailsDeMiembros">;
   asignaciones: Pick<RepositorioDeAsignaciones, "activasDeLaEmpresa">;
   invitaciones: Pick<RepositorioDeInvitaciones, "pendientesDeLaEmpresa">;
   traspasos: Pick<RepositorioDeTraspasos, "enCurso">;

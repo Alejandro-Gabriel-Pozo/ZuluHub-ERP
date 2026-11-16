@@ -12,6 +12,7 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
 export const CLAVES_DE_ERRORES_DE_CATALOGO = {
   CATALOGO_NOMBRE_REPETIDO: "catalogo.error.nombre_repetido",
   CATALOGO_CODIGO_REPETIDO: "catalogo.error.codigo_repetido",
+  CATALOGO_SECCION_REPETIDA: "catalogo.error.seccion_repetida",
   CATALOGO_CODIGO_DE_BARRAS_INVALIDO: "catalogo.error.codigo_de_barras_invalido",
   CATALOGO_ELEGI_LA_ALICUOTA: "catalogo.error.elegi_la_alicuota",
   CATALOGO_FALTA_EL_NOMBRE: "catalogo.error.falta_el_nombre",

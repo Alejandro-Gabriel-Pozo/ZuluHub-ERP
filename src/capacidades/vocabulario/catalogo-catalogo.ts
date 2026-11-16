@@ -85,6 +85,8 @@ export const TEXTOS_DE_CATALOGO = {
 
   // productos.html, «Textos nuevos», fila «Errores» (solo los de lista, ficha, alta y precio; los de variantes y opciones son de T4).
   "catalogo.error.nombre_repetido": { porDefecto: "Ya existe un producto con ese nombre" },
+  // productos-secciones.html:333, `sec.duplicada` (aprobado por el dueño el 12/11/2026; misma frase que «Ya existe un depósito con ese nombre»).
+  "catalogo.error.seccion_repetida": { porDefecto: "Ya existe una sección con ese nombre" },
   "catalogo.error.codigo_repetido": { porDefecto: "Ya existe un producto con ese código" },
   "catalogo.error.codigo_de_barras_invalido": {
     porDefecto: "El código de barras debe tener de 8 a 14 dígitos",

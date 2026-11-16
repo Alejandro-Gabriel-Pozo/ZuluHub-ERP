@@ -23,6 +23,8 @@ type ErrorConTexto = Readonly<{
 const CON_TEXTO_PROPIO: Readonly<Record<string, ErrorConTexto>> = {
   PRODUCTO_DUPLICADO: { codigo: "CATALOGO_NOMBRE_REPETIDO", campo: "nombre" },
   CODIGO_DUPLICADO: { codigo: "CATALOGO_CODIGO_REPETIDO", campo: "codigo" },
+  // Secciones de la carta: el texto es `sec.duplicada` de productos-secciones.html:333 (aprobado por el dueño el 12/11/2026).
+  SECCION_DUPLICADA: { codigo: "CATALOGO_SECCION_REPETIDA", campo: "nombre" },
   CODIGO_DE_BARRAS_INVALIDO: {
     codigo: "CATALOGO_CODIGO_DE_BARRAS_INVALIDO",
     campo: "codigoDeBarras",
