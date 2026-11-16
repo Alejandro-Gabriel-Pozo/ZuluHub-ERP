@@ -256,9 +256,8 @@ async function costoDeElaboradoSinStock(
 }
 
 /**
- * El costo de UNA unidad de lo que rinde la receta de esa versión, con los precios de hoy (6 decimales, en pesos), o `null` si no se sabe: una versión sin componentes (la
- * retirada) o con alguno que cuenta y no tiene costo (nunca cero, D125). Es lo que la lista de recetas y la de versiones muestran como «Costo de la comida». Todas las que
- * se piden juntas comparten `memo` (el costo de un elaborado que varias usan se calcula una vez).
+ * El costo de UNA unidad que rinde la receta de esa versión, con los precios de hoy (6 decimales, pesos), o `null` si no se sabe: versión sin componentes (la retirada) o con alguno que
+ * cuenta y no tiene costo (nunca cero, D125). Las que se piden juntas comparten `memo` (el costo de un elaborado compartido se calcula una vez).
  */
 export async function costoPorUnidadDeLaVersion(
   tx: Tx,
