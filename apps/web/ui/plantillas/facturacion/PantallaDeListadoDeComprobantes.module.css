@@ -186,3 +186,11 @@
     inset: 0;
   }
 }
+
+/*
+ * «Pendientes de facturar» no tiene tabla: sus tarjetas se ven en TODOS los anchos. Va al final, después del `@media` de escritorio que
+ * oculta `.tarjetas`, para ganarle por orden (mismo peso). Previene: la pantalla vacía en escritorio. Chequeo: `PantallaDePendientesDeFacturar.test.tsx`.
+ */
+.tarjetasEnTodoAncho {
+  display: flex;
+}
