@@ -10,6 +10,13 @@ on:
 permissions:
   contents: read
 
+# Un pull request o un push a `main` cancela el análisis anterior de la misma rama: solo cuenta el del último commit (sin esto, cada push a un PR dejaba
+# otro análisis completo en la misma cola de ~40 máquinas que el CI: 63 corridas de PR para 43 ramas, 13-15/11/2026). La semanal (`schedule`) NUNCA
+# se cancela ni cancela a nadie: su grupo es propio (por SHA). Misma política que `ci.yml`; la fija `test/arquitectura/codeql-concurrencia.test.ts`.
+concurrency:
+  group: codeql-${{ github.event_name }}-${{ github.event_name == 'schedule' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+
 jobs:
   analizar:
     name: Análisis de seguridad del código (CodeQL)

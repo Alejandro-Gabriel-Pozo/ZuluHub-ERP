@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0480",
+  "fecha": "2026-11-15",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Las pantallas muestran a cada persona por su correo, sin nombre propio y sin migración; guardar nombres queda para más adelante.",
+  "que_cambia": "Donde la maqueta dice «Lucía» se ve el correo de la persona. Revertir: cambiar una sola función cuando exista el nombre.",
+  "donde": "src/modulos/identidad/consultas/personas-para-mostrar.ts; decisiones-del-dueno-2026-11.md, fila «Respuestas 24 a 27», 26A, del 15/11/2026"
+}

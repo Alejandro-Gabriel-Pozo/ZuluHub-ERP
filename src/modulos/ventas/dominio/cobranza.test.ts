@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import "../../../../test/propiedades/configuracion";
@@ -123,6 +124,107 @@ describe("huellaDeCobranza (P20)", () => {
     expect(huellaDeCobranza({ ...base, cobros: cobros(cobro("5", M2)) })).not.toBe(h);
     expect(huellaDeCobranza({ ...base, cobros: cobros(cobro("5", M1, C1)) })).not.toBe(h);
     expect(huellaDeCobranza({ ...base, cobros: cobros(cobro("5"), cobro("5")) })).not.toBe(h);
+  });
+});
+
+describe("datos del cobro (K7)", () => {
+  const base = { ticketId: "t", ejemplarId: "e", cajaId: "c" };
+  const conDatos = (monto: string, datos: CobroPedido["datos"], medio = M1): CobroPedido => ({
+    ...cobro(monto, medio),
+    datos,
+  });
+  const normalizados = (...m: CobroPedido[]) => {
+    const r = normalizarCobros(m);
+    if (!r.ok) throw new Error("cobros de prueba inválidos");
+    return r.valor;
+  };
+  const huella = (...m: CobroPedido[]) => huellaDeCobranza({ ...base, cobros: normalizados(...m) });
+
+  it("sin datos, con `{}` o con campos ausentes es el mismo pedido, con la huella de siempre (forma anterior a los datos)", () => {
+    const h = huella(cobro("5"));
+    expect(huella(conDatos("5", {}))).toBe(h);
+    expect(huella(conDatos("5", undefined))).toBe(h);
+    const anterior = createHash("sha256")
+      .update(JSON.stringify(["t", "e", "c", [[M1, null, "5.00"]]]))
+      .digest("hex");
+    expect(h).toBe(anterior);
+  });
+  it("cada dato cambia la huella: otro cupón, otros últimos 4, otra marca, otras cuotas u otro DNI es otro pedido", () => {
+    const datos = {
+      cupon: "ZX-1",
+      ultimos4: "4242",
+      marcaDeTarjetaId: M2,
+      cuotas: 3,
+      dni: "30123456",
+    };
+    const h = huella(conDatos("5", datos));
+    expect(h).not.toBe(huella(cobro("5")));
+    for (const otro of [
+      { cupon: "ZX-2" },
+      { ultimos4: "1111" },
+      { marcaDeTarjetaId: M1 },
+      { cuotas: 6 },
+      { dni: "30123457" },
+    ]) {
+      expect(huella(conDatos("5", { ...datos, ...otro }))).not.toBe(h);
+    }
+    // Quitar un dato también es otro pedido.
+    const sinDni = {
+      cupon: datos.cupon,
+      ultimos4: datos.ultimos4,
+      marcaDeTarjetaId: datos.marcaDeTarjetaId,
+      cuotas: datos.cuotas,
+    };
+    expect(huella(conDatos("5", sinDni))).not.toBe(h);
+  });
+  it("UN solo dato basta para cambiar la huella (los demás ausentes), cada uno por separado", () => {
+    const h = huella(cobro("5"));
+    for (const solo of [
+      { cupon: "ZX-1" },
+      { ultimos4: "4242" },
+      { marcaDeTarjetaId: M2 },
+      { cuotas: 3 },
+      { dni: "30123456" },
+    ]) {
+      expect(huella(conDatos("5", solo)), JSON.stringify(solo)).not.toBe(h);
+    }
+  });
+  it("los campos ausentes no quedan como claves con `undefined`: solo viajan los presentes", () => {
+    const [c] = normalizados(
+      conDatos("5", { cupon: "ZX-1", ultimos4: undefined } as unknown as CobroPedido["datos"]),
+    );
+    expect(Object.keys(c?.datos ?? {})).toEqual(["cupon"]);
+    const [vacio] = normalizados(cobro("5"));
+    expect(Object.keys(vacio?.datos ?? { x: 1 })).toEqual([]);
+  });
+  it("el orden de los cobros no importa aunque solo se distingan por sus datos, ni el orden de las claves", () => {
+    const a = conDatos("5", { cupon: "AAA", ultimos4: "1111" });
+    const b = conDatos("5", { cupon: "BBB", ultimos4: "2222" });
+    expect(huella(a, b)).toBe(huella(b, a));
+    expect(huella(conDatos("5", { ultimos4: "1111", cupon: "AAA" }))).toBe(
+      huella(conDatos("5", { cupon: "AAA", ultimos4: "1111" })),
+    );
+    expect(normalizados(a, b).map((c) => c.datos.cupon)).toEqual(
+      normalizados(b, a).map((c) => c.datos.cupon),
+    );
+  });
+  it("solo se recogen los cinco campos conocidos: una clave de más se ignora y no cambia la huella", () => {
+    const extra = {
+      cupon: "ZX-1",
+      numeroDeTarjeta: "4509953566233704",
+    } as unknown as CobroPedido["datos"];
+    const [c] = normalizados(conDatos("5", extra));
+    expect(c?.datos).toEqual({ cupon: "ZX-1" });
+    expect(huella(conDatos("5", extra))).toBe(huella(conDatos("5", { cupon: "ZX-1" })));
+  });
+  it("lo que no es un objeto es COBROS_INVALIDOS; `null` y vacío en un campo se conservan para que caja los rechace como mal escritos", () => {
+    for (const malo of ["texto", 7, null, ["x"]]) {
+      expect(
+        codigo(normalizarCobros([conDatos("5", malo as unknown as CobroPedido["datos"])])),
+      ).toBe("COBROS_INVALIDOS");
+    }
+    const [c] = normalizados(conDatos("5", { cupon: "", dni: null as unknown as string }));
+    expect(c?.datos).toEqual({ cupon: "", dni: null });
   });
 });
 

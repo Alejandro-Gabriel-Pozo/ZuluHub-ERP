@@ -64,8 +64,51 @@ function evaluarGate(needs, evento) {
   return problemas;
 }
 
+/** Un SHA de git completo: lo único que se acepta como «cabeza» (lo que no tiene esta forma no cuenta, y el Gate evalúa normal). */
+const SHA = /^[0-9a-f]{40}$/;
+
+/**
+ * ¿Esta corrida fue REEMPLAZADA por otra más nueva de la misma rama o PR? Solo si se cumplen TODAS: el evento es un pull request o un push (la
+ * nocturna nunca), la cabeza actual de la rama y la de esta corrida son SHA válidos y DISTINTOS (la rama ya avanzó), ningún job FALLÓ, y al menos uno fue
+ * cancelado (lo que hace `concurrency` al llegar un push nuevo). Cualquier duda (no se pudo leer la cabeza, mismo commit, un job fallido o ausente) da
+ * `false`: el Gate evalúa normal y sigue en rojo.
+ * Previene: 24 de 29 Gates rojos (13-15/11/2026) eran solo corridas reemplazadas; un rojo sobre un commit viejo parece una falla y esconde las reales.
+ * NO se usa `!cancelled()`: con la corrida del head actual cancelada a mano, el Gate quedaría omitido, y un job omitido cuenta como éxito para
+ * la protección de ramas. Con `always()` el Gate corre siempre y, con el commit vigente, cancelado o con timeout (el SHA no cambió), sigue en rojo.
+ *
+ * @param {{ needs: Readonly<Record<string, { result?: string }>>, evento?: string, actual?: string, deEstaCorrida?: string }} entrada
+ * @returns {boolean}
+ */
+function corridaReemplazada({ needs, evento, actual = "", deEstaCorrida = "" }) {
+  if (evento !== "pull_request" && evento !== "push") return false;
+  if (!SHA.test(actual) || !SHA.test(deEstaCorrida) || actual === deEstaCorrida) return false;
+  const resultados = Object.values(needs).map((job) => job?.result);
+  if (
+    resultados.some(
+      (resultado) =>
+        resultado !== "success" && resultado !== "cancelled" && resultado !== "skipped",
+    )
+  ) {
+    return false;
+  }
+  return resultados.includes("cancelled");
+}
+
 function principal() {
-  const problemas = evaluarGate(JSON.parse(process.env["NEEDS"] ?? "{}"), process.env["EVENTO"]);
+  const needs = JSON.parse(process.env["NEEDS"] ?? "{}");
+  const problemas = evaluarGate(needs, process.env["EVENTO"]);
+  const reemplazada = corridaReemplazada({
+    needs,
+    evento: process.env["EVENTO"],
+    actual: process.env["CABEZA_ACTUAL"],
+    deEstaCorrida: process.env["CABEZA_DE_ESTA_CORRIDA"],
+  });
+  if (problemas.length > 0 && reemplazada) {
+    process.stdout.write(
+      `::notice::Corrida reemplazada: la rama ya avanzó a ${process.env["CABEZA_ACTUAL"]} y esta corrida (de ${process.env["CABEZA_DE_ESTA_CORRIDA"]}) se canceló. No es un resultado de este commit; el que cuenta es el de la corrida nueva.\n`,
+    );
+    return;
+  }
   if (problemas.length > 0) {
     process.stderr.write(`Gate en rojo:\n${problemas.map((p) => `- ${p}`).join("\n")}\n`);
     process.exit(1);
@@ -73,6 +116,6 @@ function principal() {
   process.stdout.write("Gate en verde.\n");
 }
 
-module.exports = { evaluarGate, OBLIGATORIOS, SOLO_EN_PULL_REQUEST };
+module.exports = { evaluarGate, corridaReemplazada, OBLIGATORIOS, SOLO_EN_PULL_REQUEST };
 
 if (require.main === module) principal();
