@@ -86,6 +86,11 @@ export type LineaConciliada = Readonly<{
   precioNeto: string;
   /** Lo asignado a la línea DESPUÉS de esta conciliación, sumadas todas sus conciliaciones vivas (decimal de 4). */
   asignada: string;
+  /**
+   * ¿Queda mercadería recibida de este producto (del mismo proveedor, confirmada y no rechazada) sin asignar a ninguna factura? Mientras quede, la factura puede estar
+   * conciliándose por partes (una factura con varios remitos): lo facturado de más NO se mide todavía, para no inventar diferencias. Se mide cuando ya no queda nada por asignar.
+   */
+  recibidoSinAsignar: boolean;
 }>;
 
 export type AsignacionConciliada = Readonly<{
@@ -152,7 +157,8 @@ function estaDentro(
 
 /**
  * Las diferencias de una conciliación, en un orden fijo (las de cantidad por línea de la factura, después las de precio por asignación). Por cada línea de la factura
- * conciliada: si queda facturado más de lo asignado, `FACTURADO_DISTINTO_DE_LO_RECIBIDO` (el ejemplo del dueño: factura de 10, asignados 9,6, diferencia de 0,4). Por cada asignación con
+ * conciliada que ya no tiene recibido sin asignar (`recibidoSinAsignar`): si queda facturado más de lo asignado, `FACTURADO_DISTINTO_DE_LO_RECIBIDO` (el ejemplo del dueño: factura de 10,
+ * asignados 9,6, diferencia de 0,4; una conciliación parcial por remitos no mide nada todavía, decisión del orquestador del 16/11/2026). Por cada asignación con
  * precio de referencia cuyo precio facturado difiere, `PRECIO_DISTINTO`. Lo que no difiere no genera nada. `FACTURADO_Y_NO_RECIBIDO` no se calcula acá: una conciliación no puede
  * llevar una línea sin asignación (la factura sin recepción es el estado «Facturada, falta recibir»). Los datos que no son decimales válidos no se interpretan: `lineas` y
  * `asignaciones` los arma el caso de uso con lo guardado.
@@ -165,7 +171,7 @@ export function calcularDiferencias(
   const calculadas: DiferenciaCalculada[] = [];
   const conciliadas = new Set(asignaciones.map((a) => a.lineaDeFactura));
   for (const linea of [...lineas].sort((a, b) => a.numero - b.numero)) {
-    if (!conciliadas.has(linea.numero)) continue;
+    if (!conciliadas.has(linea.numero) || linea.recibidoSinAsignar) continue;
     const facturada = leerCantidad(linea.facturada) as bigint;
     const asignada = leerCantidad(linea.asignada) as bigint;
     const diferencia = facturada - asignada;

@@ -235,6 +235,32 @@ describe.skipIf(base === null)("compras N4: tolerancias y diferencias", () => {
     ]);
   });
 
+  it("una factura con tres remitos conciliada por partes: con mercadería recibida sin asignar no se mide lo facturado de más; en la última conciliación sí", async () => {
+    const m = await armar();
+    const r1 = await recibir(m, "1", false);
+    const r2 = await recibir(m, "1", false);
+    const r3 = await recibir(m, "1", false);
+    const factura = await facturar(m, 3500, "1");
+    valorDe(await conciliar(m, factura, r1, "1000"));
+    valorDe(await conciliar(m, factura, r2, "1000"));
+    expect(await diferencias(m)).toEqual([]);
+    const ultima = valorDe(await conciliar(m, factura, r3, "1000")).conciliacionId;
+    const filas = await diferencias(m);
+    expect(filas).toMatchObject([
+      {
+        tipo: "FACTURADO_DISTINTO_DE_LO_RECIBIDO",
+        estado: "ABIERTA",
+        cantidad: "500.0000",
+        importe: "500.00",
+      },
+    ]);
+    expect(
+      await c.contar("select count(*) as n from diferencia_de_compra where conciliacion_id = $1", [
+        ultima,
+      ]),
+    ).toBe(1);
+  });
+
   it("reintentar la conciliación (misma clave) no duplica diferencias ni auditoría; la tolerancia cambiada después no toca lo ya conciliado", async () => {
     const m = await armar();
     const recepcion = await recibir(m, "9.6");

@@ -159,7 +159,11 @@ export function armarConciliarFactura(dependencias: DependenciasDeCompras) {
               ? await registrarDiferenciasDeLaConciliacion(
                   tx,
                   contexto,
-                  { id: conciliacionId, comprobanteId: comprobante.id },
+                  {
+                    id: conciliacionId,
+                    comprobanteId: comprobante.id,
+                    proveedorId: comprobante.proveedorId,
+                  },
                   asignaciones.valor,
                 )
               : null;

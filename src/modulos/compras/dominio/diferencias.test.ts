@@ -62,12 +62,8 @@ const linea = (
   facturada: string,
   asignada: string,
   precioNeto: string,
-): LineaConciliada => ({
-  numero,
-  facturada,
-  asignada,
-  precioNeto,
-});
+  recibidoSinAsignar = false,
+): LineaConciliada => ({ numero, facturada, asignada, precioNeto, recibidoSinAsignar });
 const asignacion = (
   lineaDeFactura: number,
   cantidad: string,
@@ -182,6 +178,28 @@ describe("calcularDiferencias: el ejemplo del dueño", () => {
       SIN_TOLERANCIAS,
     );
     expect(menos?.importeDeDiferencia).toBe("-0.01");
+  });
+});
+
+describe("calcularDiferencias: conciliación por partes", () => {
+  it("mientras quede mercadería recibida sin asignar no se mide lo facturado de más; cuando no queda, sí; el precio se mide siempre", () => {
+    const asignaciones = [asignacion(1, "1000.0000", ref("1.000000"))];
+    const parcial = calcularDiferencias(
+      [linea(1, "3000.0000", "1000.0000", "1.100000", true)],
+      asignaciones,
+      SIN_TOLERANCIAS,
+    );
+    expect(parcial.map((d) => d.tipo)).toEqual(["PRECIO_DISTINTO"]);
+    const ultima = calcularDiferencias(
+      [linea(1, "3000.0000", "2500.0000", "1.100000", false)],
+      asignaciones,
+      SIN_TOLERANCIAS,
+    );
+    expect(ultima.map((d) => d.tipo)).toEqual([
+      "FACTURADO_DISTINTO_DE_LO_RECIBIDO",
+      "PRECIO_DISTINTO",
+    ]);
+    expect(ultima[0]).toMatchObject({ cantidadDeDiferencia: "500.0000" });
   });
 });
 
