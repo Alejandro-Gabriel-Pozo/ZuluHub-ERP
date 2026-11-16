@@ -24,8 +24,8 @@ export function esCodigoDeAlicuota(texto: string): texto is CodigoDeAlicuota {
 /**
  * Las alícuotas que el producto ofrece al elegirla, EN EL ORDEN en que se muestran: las seis de ARCA, sin «EXENTO» ni «NO_GRAVADO» (dueño, 12/11/2026,
  * «Recomendadas en todas, aprobado», `decisiones-del-dueno-2026-11.md`; el orden es el de la maqueta `productos.html`, aprobado por el orquestador el 12/11).
- * El servidor del producto sigue aceptando las ocho (`esCodigoDeAlicuota`) y Emitir también: esto es solo lo que se OFRECE. Una sola fuente: la pantalla y su
- * validación derivan de acá; una prueba falla si ARCA suma un código que nadie decidió si se ofrece. Previene: una lista de seis repetida a mano en la pantalla.
+ * Es también lo que el servidor del producto ACEPTA guardar (`validarFicha`, y el CHECK de la base cuando se aplique su migración); Emitir sigue aceptando las ocho
+ * (`esCodigoDeAlicuota`). Una sola fuente: la pantalla y la validación derivan de acá; una prueba falla si ARCA suma un código que nadie decidió si se ofrece. Previene: una lista de seis repetida a mano en la pantalla.
  */
 export const ALICUOTAS_DEL_PRODUCTO = [
   "21",
