@@ -5,9 +5,9 @@ import {
 import { esUuidCanonico } from "../../../primitivas/identificadores/marca";
 import { telefonoDesdeTexto } from "../../../primitivas/contacto/telefono";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { nombreDeCartaDesdeTexto } from "../../../primitivas/texto/datos-de-carta-publica";
 import {
   lineaDelPortalDesdeTexto,
-  nombreDeTarjetaDesdeTexto,
   tituloDelPortalDesdeTexto,
 } from "../../../primitivas/texto/datos-de-portal";
 import type { MotivoDeTextoInvalido } from "../../../primitivas/texto/texto-de-una-linea";
@@ -166,7 +166,7 @@ function validarTarjeta(t: EntradaDeTarjeta): R<Tarjeta> {
   if (!esUuidCanonico(t.sucursalId)) return err("SUCURSAL_NO_ENCONTRADA");
   if (!Number.isSafeInteger(t.orden) || t.orden < 0) return err("ORDEN_INVALIDO");
   if (typeof t.visible !== "boolean") return err("TARJETA_INVALIDA");
-  const nombre = opcional(t.nombre, nombreDeTarjetaDesdeTexto, "NOMBRE_DE_TARJETA_INVALIDO");
+  const nombre = opcional(t.nombre, nombreDeCartaDesdeTexto, "NOMBRE_DE_TARJETA_INVALIDO");
   if (!nombre.ok) return nombre;
   const telefono = opcional(t.telefono, telefonoDesdeTexto, "TELEFONO_DE_TARJETA_INVALIDO");
   if (!telefono.ok) return telefono;

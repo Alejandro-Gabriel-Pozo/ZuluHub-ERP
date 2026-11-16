@@ -65,6 +65,8 @@ export function crearLecturaPublicaDePortales(db: {
         .where("codigo", "=", codigo)
         .executeTakeFirst();
       if (fila === undefined) return null;
+      // La empresa que el portal ya mostró: desde acá las políticas de `carta_publica` y `sucursal` (0078) dejan ver las de ESA empresa y de ninguna otra.
+      await sql`select set_config('app.empresa_del_portal', ${fila.empresa_id}, true)`.execute(k);
       const empresa = await k
         .selectFrom("empresa")
         .select(["id", "tenant_id", "estado"])

@@ -34,4 +34,4 @@ DROP TABLE IF EXISTS portal_de_empresa;
 DROP FUNCTION IF EXISTS portal_tarjeta_validar();
 DROP FUNCTION IF EXISTS portal_hijo_validar();
 DROP FUNCTION IF EXISTS portal_de_empresa_validar();
-DELETE FROM migracion WHERE nombre = '0078_portal_de_la_empresa';   -- † nombre exacto de la tabla y columna del registro: verificar contra 0043_revertir (mismo patrón)
+DELETE FROM migracion WHERE nombre = '0078_portal_de_la_empresa.sql';   -- † nombre exacto de la tabla y columna del registro: verificar contra 0043_revertir (mismo patrón)

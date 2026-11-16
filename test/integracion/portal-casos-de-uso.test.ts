@@ -9,7 +9,6 @@ import {
   nuevoId,
   type Montaje,
 } from "./portal-apoyo";
-import { LARGO_MAXIMO_DE_LA_LINEA_DEL_PORTAL } from "../../src/primitivas/texto/datos-de-portal";
 
 /**
  * El caso de uso `guardarPortalDeLaEmpresa` contra una base real: permiso nuevo y alcance total, validación, idempotencia, versión, atomicidad, aislamiento entre
@@ -100,9 +99,7 @@ describe.skipIf(base === null)("guardarPortalDeLaEmpresa (0078)", () => {
       return r.ok ? "OK" : r.error;
     };
     expect(await err({ variante: "C" })).toBe("VARIANTE_INVALIDA");
-    expect(await err({ lineaSuperior: "x".repeat(LARGO_MAXIMO_DE_LA_LINEA_DEL_PORTAL + 1) })).toBe(
-      "LINEA_DEL_PORTAL_INVALIDA",
-    );
+    expect(await err({ lineaSuperior: "x".repeat(41) })).toBe("LINEA_DEL_PORTAL_INVALIDA");
     expect(await err({ colorPagina: "#ABCDEF" })).toBe("COLOR_INVALIDO");
     expect(await err({ colorDetras: "rojo" })).toBe("COLOR_INVALIDO");
     expect(await err({ imagen: "https://ejemplo.com/a/image/upload/v1/x.jpg" })).toBe(

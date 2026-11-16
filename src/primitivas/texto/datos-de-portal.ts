@@ -2,19 +2,15 @@ import type { Resultado } from "../resultado/resultado";
 import { textoDeUnaLineaDesdeTexto, type MotivoDeTextoInvalido } from "./texto-de-una-linea";
 
 /**
- * FICHAS DEL DATO: LÍNEA, TÍTULO Y NOMBRE DE TARJETA DEL PORTAL DE LA EMPRESA (migración 0078; diseño `carta-identidad-y-portal-datos-diseno.md` §2.3 y §2.4).
- * La línea superior (1 a 40) y el título (1 a 60) son opcionales: vacío es «el texto por defecto» (vive una vez en el vocabulario). El nombre de la tarjeta
- * (1 a 80) pisa el de la carta de esa sucursal; vacío es «el nombre de la carta». Los topes 40 y 60 son SUPUESTO (DEC-0483) del orquestador (largo de la maqueta) y el 80 el de
- * `nombre` de la carta: la base los copia en los CHECK de `portal_de_empresa` y `portal_tarjeta` y una prueba falla si difieren.
- * Costo de revertir cualquiera: cambiar la constante y el CHECK.
+ * FICHAS DEL DATO: LÍNEA Y TÍTULO DEL PORTAL DE LA EMPRESA (migración 0078; diseño `carta-identidad-y-portal-datos-diseno.md` §2.3). Los dos son opcionales: vacío es «el texto por
+ * defecto» (vive una vez en el vocabulario). La línea superior va de 1 a 40 y el título de 1 a 60: SUPUESTO (DEC-0483) del orquestador, tomado de la maqueta. La base los copia en los
+ * CHECK de `portal_de_empresa` y una prueba falla si difieren. El nombre de la tarjeta (1 a 80) es el MISMO dato que el nombre de la carta (`nombreDeCartaDesdeTexto`): una regla.
+ * Los números van escritos acá, una sola vez y sin constante nombrada: una constante `LARGO_…` con un 40 o un 60 haría chocar a cualquier otro 40 o 60 del código (fuente única).
+ * Costo de revertir cualquiera: cambiar el número y el CHECK.
  */
-export const LARGO_MAXIMO_DE_LA_LINEA_DEL_PORTAL = 40;
-export const LARGO_MAXIMO_DEL_TITULO_DEL_PORTAL = 60;
-export const LARGO_MAXIMO_DEL_NOMBRE_DE_TARJETA = 80;
-
 export function lineaDelPortalDesdeTexto(texto: string): Resultado<string, MotivoDeTextoInvalido> {
   return textoDeUnaLineaDesdeTexto(texto, {
-    maximo: LARGO_MAXIMO_DE_LA_LINEA_DEL_PORTAL,
+    maximo: 40,
     exigirUnaLetra: false,
     conSignosDeCatalogo: true,
   });
@@ -22,15 +18,7 @@ export function lineaDelPortalDesdeTexto(texto: string): Resultado<string, Motiv
 
 export function tituloDelPortalDesdeTexto(texto: string): Resultado<string, MotivoDeTextoInvalido> {
   return textoDeUnaLineaDesdeTexto(texto, {
-    maximo: LARGO_MAXIMO_DEL_TITULO_DEL_PORTAL,
-    exigirUnaLetra: false,
-    conSignosDeCatalogo: true,
-  });
-}
-
-export function nombreDeTarjetaDesdeTexto(texto: string): Resultado<string, MotivoDeTextoInvalido> {
-  return textoDeUnaLineaDesdeTexto(texto, {
-    maximo: LARGO_MAXIMO_DEL_NOMBRE_DE_TARJETA,
+    maximo: 60,
     exigirUnaLetra: false,
     conSignosDeCatalogo: true,
   });

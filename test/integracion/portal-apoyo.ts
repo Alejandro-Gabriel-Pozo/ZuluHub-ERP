@@ -110,6 +110,11 @@ export async function comoPublicoDelPortal<T extends Record<string, unknown>>(
     await cliente.query("begin read only isolation level repeatable read");
     if (codigoDePortal !== null)
       await cliente.query("select set_config('app.codigo_de_portal', $1, true)", [codigoDePortal]);
+    // Como el lector: la empresa del portal que acaba de leer.
+    if (codigoDePortal !== null)
+      await cliente.query(
+        "select set_config('app.empresa_del_portal', coalesce((select empresa_id::text from portal_de_empresa limit 1), ''), true)",
+      );
     if (codigoDeCarta !== null)
       await cliente.query("select set_config('app.codigo_de_carta', $1, true)", [codigoDeCarta]);
     const { rows } = await cliente.query<T>(consulta, parametros);
@@ -118,27 +123,4 @@ export async function comoPublicoDelPortal<T extends Record<string, unknown>>(
   } finally {
     await cliente.end();
   }
-}
-
-/**
- * PROPUESTA (vuelve al dueño; NO está en los SQL aprobados 0078 y 0083): sin esto el rol público no puede leer el portal. (1) La política `portal_de_empresa_publico_de_carta` de
- * 0078 y `carta_publica_publico_de_portal` se llaman en ciclo (SQLSTATE 42P17): se rompe con una función que devuelve solo el `empresa_id` de la carta visitada.
- * (2) El lector llega al tenant, y las políticas de plan de 0083 lo hacen en su subconsulta, por `empresa` y `tenant`: faltan sus políticas por código de portal.
- * Cuando el dueño apruebe el SQL corregido, esto se borra y sus líneas pasan a 0078 y 0083.
- */
-export async function aplicarParchePropuesto(dueno: pg.Client): Promise<void> {
-  const sentencias = [
-    "drop policy portal_de_empresa_publico_de_carta on portal_de_empresa",
-    `create function empresa_de_la_carta_visitada() returns uuid language sql stable security definer set search_path = pg_catalog, public, pg_temp
-       as $$ select empresa_id from public.carta_publica where codigo = current_setting('app.codigo_de_carta', true) $$`,
-    "revoke all on function empresa_de_la_carta_visitada() from public",
-    "grant execute on function empresa_de_la_carta_visitada() to pedernal_publico",
-    `create policy portal_de_empresa_publico_de_carta on portal_de_empresa for select to pedernal_publico using (empresa_id = public.empresa_de_la_carta_visitada())`,
-    `create policy empresa_publico_de_portal on empresa for select to pedernal_publico
-       using (exists (select 1 from public.portal_de_empresa p where p.codigo = current_setting('app.codigo_de_portal', true) and p.empresa_id = empresa.id))`,
-    `create policy tenant_publico_de_portal on tenant for select to pedernal_publico
-       using (exists (select 1 from public.portal_de_empresa p join public.empresa e on e.id = p.empresa_id
-                       where p.codigo = current_setting('app.codigo_de_portal', true) and e.tenant_id = tenant.id))`,
-  ];
-  for (const sentencia of sentencias) await dueno.query(sentencia);
 }

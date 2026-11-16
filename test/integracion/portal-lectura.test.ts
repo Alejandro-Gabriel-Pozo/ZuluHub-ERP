@@ -6,7 +6,6 @@ import { valorDe } from "./catalogo-apoyo";
 import {
   comoPublicoDelPortal,
   direccionDeImagen,
-  aplicarParchePropuesto,
   empresaConPortal,
   hostDeLaMarca,
   montarPortal,
@@ -27,7 +26,6 @@ describe.skipIf(base === null)("lectura pública del portal (0078 y 0083)", () =
   let c: Montaje;
   beforeAll(async () => {
     c = await montarPortal(base as BaseDePruebas);
-    await aplicarParchePropuesto(c.dueno);
   });
   afterAll(async () => {
     await c.cerrar();
