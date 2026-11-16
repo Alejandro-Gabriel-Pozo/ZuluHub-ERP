@@ -100,6 +100,7 @@ describe("armarPedidoDeCertificado", () => {
         "Pañalera Cañuelas S.R.L. & Cía. «Ñandú»",
       ],
       ["espacios repetidos (quedan en uno)", "Coop   Pampa"],
+      ["solo dígitos (no exige letras)", "2026"],
     ])("acepta %s", (_nombre, organizacion) => {
       expect(armarPedidoDeCertificado(entrada({ organizacion })).ok).toBe(true);
     });
