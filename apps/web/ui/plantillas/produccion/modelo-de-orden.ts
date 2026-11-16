@@ -2,7 +2,7 @@ import {
   texto,
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { formatearFecha, formatearImporte } from "../../patrones/formato-fiscal";
+import { formatearCantidad, formatearFecha, formatearImporte } from "../../patrones/formato-fiscal";
 import { cantidadConUnidad, marcaDeEstado } from "./modelo-de-ordenes";
 
 /**
@@ -25,6 +25,8 @@ export type OrdenDeLaFicha = Readonly<{
   unidadId: string;
   cantidadEsperada: string;
   cantidadObtenida: string | null;
+  /** `esperado − obtenido`; `null` hasta cerrar. */
+  mermaDeLote: string | null;
   recetaCambiada: boolean;
   vence: string | null;
   lote: string | null;
@@ -51,6 +53,9 @@ type AccionArmada = Readonly<{
   motivo: string;
   cancelar: string;
   cerrar: string;
+  /** «Se devuelve lo consumido y se saca lo producido…»: solo al anular (cancelar no devuelve nada). */
+  explicacion: string | null;
+  sinConexion: string;
 }>;
 
 export type OrdenArmada = Readonly<{
@@ -58,6 +63,8 @@ export type OrdenArmada = Readonly<{
   titulo: string;
   estado: ReturnType<typeof marcaDeEstado>;
   producto: Readonly<{ nombre: string; cantidad: string }>;
+  /** «Orden anulada»: solo en una anulada. */
+  avisoDeAnulada: string | null;
   /** «La receta cambió desde que abriste la orden»: solo en una abierta. */
   avisoDeReceta: string | null;
   /** Lote, vencimiento y costo por unidad: solo lo que hay. */
@@ -81,14 +88,21 @@ function accionDe(
     motivo: texto(d, "stock.accion.motivo"),
     cancelar: texto(d, "catalogo.accion.cancelar"),
     cerrar: texto(d, "vidriera.producto.cerrar"),
+    sinConexion: texto(d, "produccion.accion.sin_conexion"),
   };
   if (orden.estado === "ABIERTA" && acciones.cancelar === true) {
     const boton = texto(d, "produccion.accion.cancelar_la_orden");
-    return { tipo: "CANCELAR", boton, titulo: `${boton} ${numero}`, ...comun };
+    return { tipo: "CANCELAR", boton, titulo: `${boton} ${numero}`, explicacion: null, ...comun };
   }
   if (orden.estado === "CERRADA" && acciones.anular === true) {
     const boton = texto(d, "produccion.accion.anular_la_orden");
-    return { tipo: "ANULAR", boton, titulo: `${boton} ${numero}`, ...comun };
+    return {
+      tipo: "ANULAR",
+      boton,
+      titulo: `${boton} ${numero}`,
+      explicacion: texto(d, "produccion.accion.anular_explicacion"),
+      ...comun,
+    };
   }
   return null;
 }
@@ -106,6 +120,22 @@ function costoDe(orden: OrdenDeLaFicha, d: DiccionarioResuelto): DatoArmado | nu
   };
 }
 
+/** La diferencia de rendimiento del lote (esperado menos obtenido) solo se dice si hay una (maqueta: «− 4 unidades»). */
+const hayMerma = (merma: string | null): merma is string =>
+  merma !== null && !merma.startsWith("-") && /[1-9]/.test(merma);
+
+/** «Esperado 100 · obtenido 96» con lo que faltó a la derecha («− 4 Unidad»); solo con una orden cerrada o anulada. */
+function mermaDe(orden: OrdenDeLaFicha, d: DiccionarioResuelto): DatoArmado | null {
+  if (!hayMerma(orden.mermaDeLote) || orden.cantidadObtenida === null) return null;
+  return {
+    rotulo: texto(d, "produccion.cierre.esperado_obtenido", {
+      esperado: formatearCantidad(orden.cantidadEsperada),
+      obtenido: formatearCantidad(orden.cantidadObtenida),
+    }),
+    valor: `− ${cantidadConUnidad(orden.mermaDeLote, orden.unidadId, d)}`,
+  };
+}
+
 export function armarLaOrden(
   orden: OrdenDeLaFicha,
   acciones: AccionesDeLaOrden,
@@ -115,6 +145,7 @@ export function armarLaOrden(
   const cantidadDelProducto =
     cerrada && orden.cantidadObtenida !== null ? orden.cantidadObtenida : orden.cantidadEsperada;
   const costo = cerrada ? costoDe(orden, d) : null;
+  const merma = cerrada ? mermaDe(orden, d) : null;
   return {
     titulo: `${texto(d, "produccion.pantalla.orden")} ${String(orden.numero)}`,
     estado: marcaDeEstado(orden.estado, d),
@@ -122,6 +153,7 @@ export function armarLaOrden(
       nombre: orden.nombre,
       cantidad: cantidadConUnidad(cantidadDelProducto, orden.unidadId, d),
     },
+    avisoDeAnulada: orden.estado === "ANULADA" ? texto(d, "produccion.orden.anulada") : null,
     avisoDeReceta:
       orden.estado === "ABIERTA" && orden.recetaCambiada
         ? texto(d, "produccion.orden.receta_cambio")
@@ -134,9 +166,10 @@ export function armarLaOrden(
         ? [{ rotulo: texto(d, "produccion.cierre.vence"), valor: formatearFecha(orden.vence) }]
         : []),
       ...(costo === null ? [] : [costo]),
+      ...(merma === null ? [] : [merma]),
     ],
     consume: {
-      titulo: texto(d, "produccion.orden.consume"),
+      titulo: texto(d, cerrada ? "produccion.orden.consumio" : "produccion.orden.consume"),
       filas: orden.renglones.map((r) => ({
         nombre: r.nombre,
         cantidad: cantidadConUnidad(

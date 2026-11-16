@@ -142,7 +142,7 @@ describe("lista de órdenes de producción", () => {
     const filtros = [...document.body.querySelectorAll<HTMLAnchorElement>("ul[class*=filtros] a")];
     expect(filtros.map((f) => [f.textContent, f.getAttribute("href")])).toEqual([
       ["Todas", "/catalogo/produccion"],
-      ["Abierta", "/catalogo/produccion?estado=ABIERTA"],
+      ["Abiertas", "/catalogo/produccion?estado=ABIERTA"],
     ]);
     expect(filtros.map((f) => f.getAttribute("aria-current"))).toEqual(["page", null]);
     expect(document.body.querySelectorAll("input, select, textarea, form")).toHaveLength(0);
@@ -164,7 +164,7 @@ describe("lista de órdenes de producción", () => {
   it("con el teclado: Tab llega a los filtros y a las tarjetas, con el foco visible", async () => {
     await render(pantalla());
     page.getByRole("link", { name: "Todas" }).element().focus();
-    await verificarFoco(page.getByRole("link", { name: "Abierta" }).element() as HTMLElement);
+    await verificarFoco(page.getByRole("link", { name: "Abiertas" }).element() as HTMLElement);
     await verificarFoco(tarjetas()[0] as HTMLElement);
     expect(document.activeElement?.textContent).toContain("Orden 14");
   });

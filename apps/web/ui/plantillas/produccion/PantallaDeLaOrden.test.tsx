@@ -22,6 +22,7 @@ const abierta: OrdenDeLaFicha = {
   unidadId: "KILOGRAMO",
   cantidadEsperada: "10.0000",
   cantidadObtenida: null,
+  mermaDeLote: null,
   recetaCambiada: true,
   vence: null,
   lote: null,
@@ -34,6 +35,7 @@ const cerrada: OrdenDeLaFicha = {
   ...abierta,
   estado: "CERRADA",
   cantidadObtenida: "9.5000",
+  mermaDeLote: "0.5000",
   recetaCambiada: false,
   vence: "2026-12-01",
   lote: "OP-14",
@@ -150,6 +152,9 @@ describe("ficha de una orden de producción", () => {
       "Costo por unidad",
       "$ 2.833,333333",
       "6,2 Kilogramo",
+      "Consumió",
+      "Esperado 10 · obtenido 9,5",
+      "− 0,5 Kilogramo",
     ]) {
       expect(t).toContain(esperado);
     }
@@ -270,6 +275,49 @@ describe("la hoja de motivo", () => {
       await userEvent.tab();
       expect(hoja.element().contains(document.activeElement)).toBe(true);
     }
+  });
+});
+
+describe("anulada y sin conexión", () => {
+  it("una anulada dice «Orden anulada» y no ofrece botones", async () => {
+    await render(pantalla({ ...cerrada, estado: "ANULADA" }));
+    await expect.element(page.getByText("Orden anulada")).toBeVisible();
+    expect(document.body.querySelectorAll("button")).toHaveLength(0);
+  });
+
+  it("anular explica qué pasa; cancelar no lleva explicación", async () => {
+    const { unmount } = await render(pantalla(cerrada));
+    tocar(page.getByRole("button", { name: "Anular la orden" }));
+    await expect
+      .element(
+        page.getByText(
+          "Se devuelve lo consumido y se saca lo producido. Queda el registro de la orden.",
+        ),
+      )
+      .toBeVisible();
+    await unmount();
+    await render(pantalla(abierta));
+    tocar(page.getByRole("button", { name: "Cancelar la orden" }));
+    await expect.element(page.getByRole("dialog", { name: "Cancelar la orden 14" })).toBeVisible();
+    expect(document.body.textContent).not.toContain("Se devuelve lo consumido");
+  });
+
+  it("sin conexión la confirmación sale apagada y lo dice; al volver, se habilita", async () => {
+    await render(pantalla(cerrada));
+    tocar(page.getByRole("button", { name: "Anular la orden" }));
+    const hoja = page.getByRole("dialog", { name: "Anular la orden 14" });
+    await userEvent.fill(page.getByLabelText("Motivo"), "Error de carga");
+    const confirmar = hoja.getByRole("button", { name: "Anular la orden" });
+    await expect.element(confirmar).toBeEnabled();
+    const enLinea = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    window.dispatchEvent(new Event("offline"));
+    await expect.element(confirmar).toBeDisabled();
+    await expect.element(hoja.getByText("No se puede enviar sin conexión.")).toBeVisible();
+    enLinea.mockReturnValue(true);
+    window.dispatchEvent(new Event("online"));
+    await expect.element(confirmar).toBeEnabled();
+    expect(document.body.textContent).not.toContain("No se puede enviar sin conexión.");
+    enLinea.mockRestore();
   });
 });
 

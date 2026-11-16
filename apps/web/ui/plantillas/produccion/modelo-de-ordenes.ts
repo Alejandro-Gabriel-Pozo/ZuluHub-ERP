@@ -90,13 +90,10 @@ export type ListaArmada = Readonly<{
   vacio: string | null;
 }>;
 
-/**
- * «Todas» es el texto ya aprobado del listado de comprobantes (`fiscal.pantalla.listado_todas`) y «Abiertas», el del estado «Abierta»: la maqueta dice «Todas» y «Abiertas», que no
- * tienen fila propia (van a preguntas pendientes); mientras tanto se usa lo existente.
- */
+/** «Todas» y «Abiertas»: los textos de la maqueta (`produccion.html`, línea 341), aceptados por delegación del dueño (DEC-0555). */
 const FILTROS = [
-  { estado: "", clave: "fiscal.pantalla.listado_todas" },
-  { estado: "ABIERTA", clave: "produccion.estado.abierta" },
+  { estado: "", clave: "produccion.lista.todas" },
+  { estado: "ABIERTA", clave: "produccion.lista.abiertas" },
 ] as const satisfies readonly Readonly<{ estado: EstadoDelFiltroDeLaLista; clave: ClaveDeTexto }>[];
 
 export function armarLaLista(

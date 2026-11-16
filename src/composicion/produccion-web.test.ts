@@ -171,7 +171,7 @@ describe("lista de órdenes de la web: lo que sale por orden", () => {
 });
 
 describe("ficha de una orden de la web", () => {
-  it("nada de más: sin ids de producto, depósito, movimiento ni lote, sin versión, merma, motivo ni fechas", async () => {
+  it("nada de más: sin ids de producto, depósito, movimiento ni lote, sin versión, motivo ni fechas", async () => {
     const { d } = con({ ficha: () => ok(deFicha()) });
     const r = await verLaOrden(d, contexto, { ordenId: ORDEN });
     expect(r).toEqual({
@@ -184,6 +184,7 @@ describe("ficha de una orden de la web", () => {
         unidadId: "KILOGRAMO",
         cantidadEsperada: "10.0000",
         cantidadObtenida: "9.5000",
+        mermaDeLote: "0.5000",
         recetaCambiada: true,
         vence: "2026-12-01",
         lote: "OP-14",

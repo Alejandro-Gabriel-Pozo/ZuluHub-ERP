@@ -68,6 +68,8 @@ export type OrdenParaLaPantalla = Readonly<{
   unidadId: string;
   cantidadEsperada: string;
   cantidadObtenida: string | null;
+  /** `esperado − obtenido`; `null` hasta cerrar. */
+  mermaDeLote: string | null;
   recetaCambiada: boolean;
   vence: string | null;
   lote: string | null;
@@ -155,6 +157,7 @@ export function verLaOrden(
       unidadId: f.unidadId,
       cantidadEsperada: f.cantidadEsperada,
       cantidadObtenida: f.cantidadObtenida,
+      mermaDeLote: f.mermaDeLote,
       recetaCambiada: f.recetaCambiada,
       vence: f.vence,
       lote: f.lote === null ? null : f.lote.codigo,

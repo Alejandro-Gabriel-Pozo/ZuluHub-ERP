@@ -130,7 +130,7 @@ describe("armarLaLista", () => {
   it("los filtros son enlaces «Todas» y «Abiertas»; el actual es el que se pidió", () => {
     expect(armarLaLista(lista, "").filtros).toEqual([
       { href: "/catalogo/produccion", texto: "Todas", actual: true },
-      { href: "/catalogo/produccion?estado=ABIERTA", texto: "Abierta", actual: false },
+      { href: "/catalogo/produccion?estado=ABIERTA", texto: "Abiertas", actual: false },
     ]);
     expect(armarLaLista(lista, "ABIERTA").filtros.map((f) => f.actual)).toEqual([false, true]);
   });
@@ -152,6 +152,7 @@ describe("armarLaOrden", () => {
     unidadId: "KILOGRAMO",
     cantidadEsperada: "10.0000",
     cantidadObtenida: null,
+    mermaDeLote: null,
     recetaCambiada: false,
     vence: null,
     lote: null,
@@ -164,6 +165,7 @@ describe("armarLaOrden", () => {
     ...abierta,
     estado: "CERRADA",
     cantidadObtenida: "9.5000",
+    mermaDeLote: "0.5000",
     vence: "2026-12-01",
     lote: "OP-14",
     renglones: [
@@ -199,7 +201,9 @@ describe("armarLaOrden", () => {
       { rotulo: "Lote", valor: "OP-14" },
       { rotulo: "Vence", valor: "01/12/2026" },
       { rotulo: "Costo por unidad", valor: "$ 2.833,333333" },
+      { rotulo: "Esperado 10 · obtenido 9,5", valor: "− 0,5 Kilogramo" },
     ]);
+    expect(o.consume.titulo).toBe("Consumió");
     expect(o.consume.filas).toEqual([
       { nombre: "Harina 000", cantidad: "6,2 Kilogramo" },
       { nombre: "Agua", cantidad: "0 Litro" },
@@ -210,7 +214,12 @@ describe("armarLaOrden", () => {
     const o = armarLaOrden({ ...cerrada, estado: "ANULADA" }, todo);
     expect(o.estado).toEqual({ texto: "Anulada", tono: "aviso" });
     expect(o.producto.cantidad).toBe("9,5 Kilogramo");
-    expect(o.datos.map((d) => d.rotulo)).toEqual(["Lote", "Vence", "Costo por unidad"]);
+    expect(o.datos.map((d) => d.rotulo)).toEqual([
+      "Lote",
+      "Vence",
+      "Costo por unidad",
+      "Esperado 10 · obtenido 9,5",
+    ]);
     expect(o.accion).toBeNull();
   });
 
@@ -231,16 +240,48 @@ describe("armarLaOrden", () => {
     }
   });
 
+  it("la diferencia de rendimiento (merma de lote) solo se dice si la hay: positiva, no cero ni negativa ni ausente", () => {
+    for (const merma of ["0.0000", "0", "-0.5000", null]) {
+      const o = armarLaOrden({ ...cerrada, mermaDeLote: merma }, nadie);
+      expect(o.datos.some((x) => x.rotulo.startsWith("Esperado"))).toBe(false);
+    }
+    const sinObtenido = armarLaOrden({ ...cerrada, cantidadObtenida: null }, nadie);
+    expect(sinObtenido.datos.some((x) => x.rotulo.startsWith("Esperado"))).toBe(false);
+    const chica = armarLaOrden({ ...cerrada, mermaDeLote: "0.0001" }, nadie);
+    expect(chica.datos.at(-1)?.valor).toBe("− 0,0001 Kilogramo");
+  });
+
+  it("«Orden anulada» solo en una anulada", () => {
+    expect(armarLaOrden({ ...cerrada, estado: "ANULADA" }, nadie).avisoDeAnulada).toBe(
+      "Orden anulada",
+    );
+    for (const estado of ["ABIERTA", "CERRADA", "CANCELADA"]) {
+      expect(armarLaOrden({ ...cerrada, estado }, nadie).avisoDeAnulada).toBeNull();
+    }
+  });
+
   it("lo que no hay no se inventa: sin lote, sin vencimiento o sin costo (sin `costos.ver`) no hay esa fila", () => {
     const sinLote = armarLaOrden({ ...cerrada, lote: null }, nadie);
-    expect(sinLote.datos.map((d) => d.rotulo)).toEqual(["Vence", "Costo por unidad"]);
+    expect(sinLote.datos.map((d) => d.rotulo)).toEqual([
+      "Vence",
+      "Costo por unidad",
+      "Esperado 10 · obtenido 9,5",
+    ]);
     const sinVence = armarLaOrden({ ...cerrada, vence: null }, nadie);
-    expect(sinVence.datos.map((d) => d.rotulo)).toEqual(["Lote", "Costo por unidad"]);
+    expect(sinVence.datos.map((d) => d.rotulo)).toEqual([
+      "Lote",
+      "Costo por unidad",
+      "Esperado 10 · obtenido 9,5",
+    ]);
     const sinCosto: OrdenDeLaFicha = { ...cerrada };
     delete (sinCosto as { costo?: unknown }).costo;
     expect(Object.hasOwn(sinCosto, "costo")).toBe(false);
-    expect(armarLaOrden(sinCosto, nadie).datos.map((d) => d.rotulo)).toEqual(["Lote", "Vence"]);
-    expect(armarLaOrden({ ...cerrada, costo: undefined }, nadie).datos).toHaveLength(2);
+    expect(armarLaOrden(sinCosto, nadie).datos.map((d) => d.rotulo)).toEqual([
+      "Lote",
+      "Vence",
+      "Esperado 10 · obtenido 9,5",
+    ]);
+    expect(armarLaOrden({ ...cerrada, costo: undefined }, nadie).datos).toHaveLength(3);
   });
 
   it("una cerrada sin la cantidad obtenida (no debería pasar) muestra lo esperado; un renglón sin lo real, lo esperado", () => {
@@ -262,7 +303,11 @@ describe("armarLaOrden", () => {
       { costoUnitario: "10.000000", costoEstado: "SIN_COSTO" },
       { costoUnitario: null, costoEstado: null },
     ]) {
-      expect(armarLaOrden({ ...cerrada, costo }, nadie).datos.at(-1)).toEqual({
+      expect(
+        armarLaOrden({ ...cerrada, costo }, nadie).datos.find(
+          (x) => x.rotulo === "Costo por unidad",
+        ),
+      ).toEqual({
         rotulo: "Costo por unidad",
         valor: "Sin costo",
       });
@@ -285,6 +330,8 @@ describe("armarLaOrden", () => {
       motivo: "Motivo",
       cancelar: "Cancelar",
       cerrar: "Cerrar",
+      explicacion: null,
+      sinConexion: "No se puede enviar sin conexión.",
     });
     expect(armarLaOrden(abierta, { cancelar: false, anular: true }).accion).toBeNull();
   });
@@ -297,6 +344,9 @@ describe("armarLaOrden", () => {
       motivo: "Motivo",
       cancelar: "Cancelar",
       cerrar: "Cerrar",
+      explicacion:
+        "Se devuelve lo consumido y se saca lo producido. Queda el registro de la orden.",
+      sinConexion: "No se puede enviar sin conexión.",
     });
     expect(armarLaOrden(cerrada, { cancelar: true, anular: false }).accion).toBeNull();
   });

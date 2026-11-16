@@ -28,7 +28,13 @@ export function PantallaDeLaOrden({ orden, cancelar, anular }: PropsDePantallaDe
         accion={accion.tipo === "CANCELAR" ? cancelar : anular}
         boton={accion.boton}
         titulo={accion.titulo}
-        textos={{ motivo: accion.motivo, cancelar: accion.cancelar, cerrar: accion.cerrar }}
+        textos={{
+          motivo: accion.motivo,
+          cancelar: accion.cancelar,
+          cerrar: accion.cerrar,
+          explicacion: accion.explicacion,
+          sinConexion: accion.sinConexion,
+        }}
       />
     );
   }
@@ -49,6 +55,7 @@ export function PantallaDeLaOrden({ orden, cancelar, anular }: PropsDePantallaDe
           </div>
         ))}
       </div>
+      {orden.avisoDeAnulada === null ? null : <Aviso tono="info">{orden.avisoDeAnulada}</Aviso>}
       {orden.avisoDeReceta === null ? null : <Aviso tono="aviso">{orden.avisoDeReceta}</Aviso>}
       <Texto como="h2" variante="subtitulo">
         {orden.consume.titulo}

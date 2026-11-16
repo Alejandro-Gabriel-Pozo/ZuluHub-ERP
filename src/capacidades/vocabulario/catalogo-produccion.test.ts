@@ -41,6 +41,14 @@ describe("los textos de producción, receta y lotes", () => {
       "Producir igual",
       "Se produce en tanda",
       "Se arma al usarlo",
+      // produccion.html, textos sin fila en «Textos aprobados» aceptados por delegación (DEC-0555).
+      "Todas",
+      "Abiertas",
+      "Consumió",
+      "Orden anulada",
+      "Se devuelve lo consumido y se saca lo producido. Queda el registro de la orden.",
+      "Esperado {esperado} · obtenido {obtenido}",
+      "No se puede enviar sin conexión.",
     ]);
   });
   it("receta: los de receta.html «Textos aprobados», sin la receta por sucursal", () => {

@@ -106,6 +106,7 @@ const FICHA = {
   unidadId: "KILOGRAMO",
   cantidadEsperada: "10.0000",
   cantidadObtenida: null,
+  mermaDeLote: null,
   recetaCambiada: false,
   vence: null,
   lote: null,
@@ -164,7 +165,7 @@ describe("la página de la lista de órdenes de producción", () => {
   it("el filtro pedido queda marcado como el actual", async () => {
     const html = await htmlDeLaLista({ estado: "ABIERTA" });
     expect(html.match(/aria-current="page"/g)).toHaveLength(1);
-    expect(html).toMatch(/aria-current="page"[^>]*>Abierta</);
+    expect(html).toMatch(/aria-current="page"[^>]*>Abiertas</);
   });
 
   it("sin órdenes, «Sin resultados»", async () => {

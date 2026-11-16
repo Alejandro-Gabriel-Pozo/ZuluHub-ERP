@@ -9,7 +9,9 @@ import {
   type AccionDeFormulario,
 } from "../../patrones/FormularioDeAccion.cliente";
 import { Superposicion } from "../../patrones/Superposicion";
+import { useEnLinea } from "../../patrones/useEnLinea";
 import { Pila } from "../../primitivas/Pila";
+import { Texto } from "../../primitivas/Texto";
 import estilos from "./HojaDeMotivo.module.css";
 
 export type PropsDeHojaDeMotivo = Readonly<{
@@ -19,7 +21,15 @@ export type PropsDeHojaDeMotivo = Readonly<{
   boton: string;
   /** El título de la hoja («Anular la orden 13»). */
   titulo: string;
-  textos: Readonly<{ motivo: string; cancelar: string; cerrar: string }>;
+  textos: Readonly<{
+    motivo: string;
+    cancelar: string;
+    cerrar: string;
+    /** Qué pasa al confirmar (solo al anular); `null` no lleva. */
+    explicacion: string | null;
+    /** Lo que se dice cuando no hay conexión: la confirmación sale apagada (no hay modo sin conexión). */
+    sinConexion: string;
+  }>;
 }>;
 
 /**
@@ -30,6 +40,7 @@ export type PropsDeHojaDeMotivo = Readonly<{
 export function HojaDeMotivo({ accion, boton, titulo, textos }: PropsDeHojaDeMotivo) {
   const [abierta, setAbierta] = useState(false);
   const [motivo, setMotivo] = useState("");
+  const enLinea = useEnLinea();
   const envolturaDelBoton = useRef<HTMLSpanElement>(null);
   const estabaAbierta = useRef(false);
 
@@ -68,6 +79,7 @@ export function HojaDeMotivo({ accion, boton, titulo, textos }: PropsDeHojaDeMot
         alCerrar={cerrar}
       >
         <FormularioDeAccion accion={accion}>
+          {textos.explicacion === null ? null : <Texto>{textos.explicacion}</Texto>}
           <Campo
             dato="motivo-de-orden-de-produccion"
             etiqueta={textos.motivo}
@@ -78,13 +90,14 @@ export function HojaDeMotivo({ accion, boton, titulo, textos }: PropsDeHojaDeMot
           />
           <div className={estilos["botones"]}>
             <Pila separacion={2}>
-              {motivo.trim() === "" ? (
+              {motivo.trim() === "" || !enLinea ? (
                 <Boton variante="primaria" deshabilitado ancho="completo">
                   {boton}
                 </Boton>
               ) : (
                 <BotonDeEnvio ancho="completo">{boton}</BotonDeEnvio>
               )}
+              {enLinea ? null : <Texto variante="suave">{textos.sinConexion}</Texto>}
               <Boton variante="secundaria" alTocar={cerrar} ancho="completo">
                 {textos.cancelar}
               </Boton>

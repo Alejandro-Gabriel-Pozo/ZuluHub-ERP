@@ -45,6 +45,21 @@ export const TEXTOS_DE_PRODUCCION = {
   "produccion.elaborado.se_produce_en_tanda": { porDefecto: "Se produce en tanda" },
   "produccion.elaborado.se_arma_al_usarlo": { porDefecto: "Se arma al usarlo" },
 
+  // Textos de la maqueta aprobada `produccion.html` (09/11/2026) que no tenían fila propia en «Textos aprobados»; aceptados por el orquestador por delegación del dueño (DDD filas 173 y 174, DEC-0555).
+  // Fuente de cada uno: la línea de `10-ux-ui/prototipos-gastronomia/produccion.html` de Pedernal-docs.
+  "produccion.lista.todas": { porDefecto: "Todas" }, // línea 341
+  "produccion.lista.abiertas": { porDefecto: "Abiertas" }, // línea 341
+  "produccion.orden.consumio": { porDefecto: "Consumió" }, // línea 373
+  "produccion.orden.anulada": { porDefecto: "Orden anulada" }, // línea 370
+  "produccion.accion.anular_explicacion": {
+    porDefecto: "Se devuelve lo consumido y se saca lo producido. Queda el registro de la orden.",
+  }, // línea 402
+  "produccion.cierre.esperado_obtenido": {
+    porDefecto: "Esperado {esperado} · obtenido {obtenido}",
+    marcadores: ["esperado", "obtenido"],
+  }, // línea 372
+  "produccion.accion.sin_conexion": { porDefecto: "No se puede enviar sin conexión." }, // líneas 361 y 389
+
   // receta.html «Textos aprobados», fila «Lista» y fila «Sin receta».
   "receta.pantalla.recetas": { porDefecto: "Recetas" },
   "receta.lista.sin_receta": { porDefecto: "Sin receta" },
