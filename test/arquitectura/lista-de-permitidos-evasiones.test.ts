@@ -634,6 +634,19 @@ describe("lista de permitidos: el SQL que se refactorizó para dar posiciones si
     expect(contarProhibidosEnSql(`CREATE FUNCTION y(); ${USO}`)).toBe(1);
   });
 
+  it("un comentario entre el operador y su patrón no cambia lo que se lee", () => {
+    expect(contarProhibidosEnSql("CHECK (a !~ -- nota\n '^[a-z]+$')")).toBe(0);
+  });
+
+  it("el patrón se lee entero: comillas dobladas, cadenas unidas con `||` y un carácter no ASCII entre ASCII", () => {
+    // `[^'']` es la clase negada que lista una comilla: una prohibición (si se perdiera la comilla doblada quedaría `[^]`, que no lo es).
+    expect(contarProhibidosEnSql("CHECK (a !~ '[^'']')")).toBe(1);
+    // `'[^' || ']'` es `[^]`: nada prohibido (si las cadenas se unieran con otra cosa, la clase listaría esa cosa).
+    expect(contarProhibidosEnSql("CHECK (a !~ '[^' || ']')")).toBe(0);
+    expect(contarProhibidosEnSql("CHECK (a !~ 'ab€')")).toBe(1);
+    expect(contarProhibidosEnSql("CHECK (a !~ 'ab')")).toBe(0);
+  });
+
   it("NOT LIKE (con cualquier blanco) y un patrón armado con una cadena E'…' cuentan siempre", () => {
     expect(contarProhibidosEnSql("CHECK (a NOT LIKE '%x%')")).toBe(1);
     expect(contarProhibidosEnSql("CHECK (a NOT  LIKE '%x%')")).toBe(1);
