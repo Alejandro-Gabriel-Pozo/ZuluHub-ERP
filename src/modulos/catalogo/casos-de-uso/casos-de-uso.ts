@@ -26,6 +26,7 @@ import {
 } from "./familias";
 import { armarGuardarCartaPublica } from "./guardar-carta-publica";
 import { armarGuardarConsumoDeGrupo } from "./guardar-consumo";
+import { armarDestacarRenglon, armarOrdenarRenglonesDeSeccion } from "./orden-de-carta";
 import { armarOcultarProducto } from "./ocultar-producto";
 import { armarReordenarSeccionesDeCarta } from "./reordenar-secciones";
 import { armarCrearPresentacion, armarEditarPresentacion } from "./presentaciones";
@@ -71,6 +72,8 @@ export function crearCasosDeUsoDeCatalogo(dependencias: DependenciasDeCatalogo) 
     editarFamilia: armarEditarFamilia(dependencias),
     agregarProductoAFamilia: armarAgregarProductoAFamilia(dependencias),
     quitarProductoDeFamilia: armarQuitarProductoDeFamilia(dependencias),
+    ordenarRenglonesDeSeccion: armarOrdenarRenglonesDeSeccion(dependencias),
+    destacarRenglon: armarDestacarRenglon(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

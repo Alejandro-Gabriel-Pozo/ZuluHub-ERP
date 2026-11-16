@@ -59,6 +59,12 @@ export type {
   SalidaDeCopiarOpciones,
 } from "./casos-de-uso/copiar-opciones";
 export type {
+  EntradaDeDestacarRenglon,
+  EntradaDeOrdenarRenglones,
+  SalidaDeDestacarRenglon,
+  SalidaDeOrdenarRenglones,
+} from "./casos-de-uso/orden-de-carta";
+export type {
   EntradaDeCambiarMiembroDeFamilia,
   EntradaDeCrearFamilia,
   EntradaDeEditarFamilia,

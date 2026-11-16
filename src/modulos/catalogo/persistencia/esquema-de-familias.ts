@@ -16,6 +16,9 @@ export type TablasDeFamilias = {
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
+    /** 0081: cómo se ordenan los renglones de la sección («ALFABETICO» o «A_MANO») y la versión de ese orden. */
+    orden_de_renglones: Generated<string>;
+    version_del_orden: Generated<number>;
   };
   familia_de_producto: {
     /** El que manda la aplicación (idempotencia del alta). */
