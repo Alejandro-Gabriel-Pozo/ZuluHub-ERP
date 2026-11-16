@@ -46,6 +46,58 @@ const correr = async (c: pg.Client, sql: string, confirmar = false) => {
 };
 
 describe.skipIf(base === null)("migraciones 0078 y 0083: portal de la empresa", () => {
+  it("variante A: toda única y clave de las tablas del portal lleva empresa_id (salvo el código del QR) y no se puede apuntar a un portal o una sucursal de otra empresa", async () => {
+    const c = await montarPortal(base as BaseDePruebas);
+    try {
+      const { rows } = await c.dueno.query<{ conname: string; columnas: string }>(
+        `select con.conname, string_agg(a.attname, ',' order by array_position(con.conkey, a.attnum)) as columnas
+           from pg_constraint con join pg_attribute a on a.attrelid = con.conrelid and a.attnum = any(con.conkey)
+          where con.conrelid = any($1::regclass[]) and con.contype in ('p', 'u') group by con.conname order by con.conname`,
+        [TABLAS],
+      );
+      const sinEmpresa = rows
+        .filter((r) => !r.columnas.split(",").includes("empresa_id"))
+        .map((r) => r.conname);
+      expect(sinEmpresa).toEqual(
+        ["portal_de_empresa_codigo_uk", "portal_de_empresa_pkey", "portal_zona_pkey"].filter((n) =>
+          sinEmpresa.includes(n),
+        ),
+      );
+      expect(sinEmpresa).not.toContain("portal_tarjeta_pkey");
+      expect(sinEmpresa).not.toContain("portal_zona_destino_uk");
+      // Cruzar empresas: la clave foránea compuesta lo impide aunque el id del portal y el de la sucursal existan.
+      const a = await empresaConPortal(c);
+      const b = await empresaConPortal(c);
+      const portalA = valorDe(
+        await c.casos.guardarPortalDeLaEmpresa(a.e.gerente, {
+          id: nuevoId(),
+          variante: "A",
+          logoVisible: true,
+        }),
+      ).portalId;
+      await expect(
+        c.dueno.query(
+          "insert into portal_tarjeta (portal_id, sucursal_id, empresa_id, orden) values ($1, $2, $3, 0)",
+          [portalA, b.e.sucursal, a.e.empresa],
+        ),
+      ).rejects.toThrow(/portal_tarjeta_sucursal_fkey/);
+      await expect(
+        c.dueno.query(
+          "insert into portal_tarjeta (portal_id, sucursal_id, empresa_id, orden) values ($1, $2, $3, 0)",
+          [portalA, a.e.sucursal, b.e.empresa],
+        ),
+      ).rejects.toThrow(/portal_tarjeta_portal_fkey/);
+      await expect(
+        c.dueno.query(
+          "insert into portal_zona (id, portal_id, sucursal_id, empresa_id, x, y, ancho, alto) values ($1, $2, $3, $4, 0, 0, 1, 1)",
+          [nuevoId(), portalA, b.e.sucursal, a.e.empresa],
+        ),
+      ).rejects.toThrow(/portal_zona_sucursal_fkey/);
+    } finally {
+      await c.cerrar();
+    }
+  });
+
   it("espejo del teléfono de la tarjeta: la base y el código aceptan y rechazan lo mismo (lo recortado, ya recortado)", async () => {
     const c = await montarPortal(base as BaseDePruebas);
     try {

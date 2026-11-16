@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS portal_tarjeta (
   creado_en      timestamptz NOT NULL DEFAULT now(),
   actualizado_en timestamptz NOT NULL DEFAULT now(),
   version        integer NOT NULL DEFAULT 1,
-  PRIMARY KEY (portal_id, sucursal_id),
+  PRIMARY KEY (empresa_id, portal_id, sucursal_id),   -- VARIANTE A: toda única lleva empresa_id
   CONSTRAINT portal_tarjeta_foto_ck CHECK (imagen_externa_valida(foto_proveedor, foto_cuenta, foto_id_publico, foto_version, foto_extension)),
   CONSTRAINT portal_tarjeta_portal_fkey FOREIGN KEY (portal_id, empresa_id) REFERENCES portal_de_empresa (id, empresa_id),
   CONSTRAINT portal_tarjeta_sucursal_fkey FOREIGN KEY (sucursal_id, empresa_id) REFERENCES sucursal (id, empresa_id)
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS portal_zona (
   version        integer NOT NULL DEFAULT 1,
   CONSTRAINT portal_zona_dentro_ck CHECK (x + ancho <= 100 AND y + alto <= 100),
   CONSTRAINT portal_zona_id_empresa_uk UNIQUE (id, empresa_id),
-  CONSTRAINT portal_zona_destino_uk UNIQUE (portal_id, sucursal_id),   -- SUPUESTO (DEC-0481): una zona por sucursal (la maqueta dibuja una por restaurante)
+  CONSTRAINT portal_zona_destino_uk UNIQUE (empresa_id, portal_id, sucursal_id),   -- SUPUESTO (DEC-0481): una zona por sucursal (la maqueta dibuja una por restaurante)
   CONSTRAINT portal_zona_portal_fkey FOREIGN KEY (portal_id, empresa_id) REFERENCES portal_de_empresa (id, empresa_id),
   CONSTRAINT portal_zona_sucursal_fkey FOREIGN KEY (sucursal_id, empresa_id) REFERENCES sucursal (id, empresa_id)
 );
