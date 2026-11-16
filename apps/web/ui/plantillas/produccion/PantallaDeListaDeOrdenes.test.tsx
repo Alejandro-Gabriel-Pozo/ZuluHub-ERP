@@ -164,7 +164,7 @@ describe("lista de órdenes de producción", () => {
   it("con el teclado: Tab llega a los filtros y a las tarjetas, con el foco visible", async () => {
     await render(pantalla());
     page.getByRole("link", { name: "Todas" }).element().focus();
-    await verificarFoco(page.getByRole("link", { name: "Abierta" }).element());
+    await verificarFoco(page.getByRole("link", { name: "Abierta" }).element() as HTMLElement);
     await verificarFoco(tarjetas()[0] as HTMLElement);
     expect(document.activeElement?.textContent).toContain("Orden 14");
   });
