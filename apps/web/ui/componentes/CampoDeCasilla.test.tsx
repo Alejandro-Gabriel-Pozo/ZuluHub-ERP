@@ -10,7 +10,7 @@ function Probado({ deshabilitado, inicial }: { deshabilitado?: boolean; inicial?
   return (
     <form>
       <CampoDeCasilla
-        dato="pendiente"
+        dato="deposito-de-venta"
         etiqueta="De venta"
         nombre="deVenta"
         marcada={marcada}

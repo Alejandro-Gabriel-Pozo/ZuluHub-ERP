@@ -42,7 +42,8 @@ export const DATOS_DE_STOCK_DEPOSITOS = {
         "Si el depósito es el del que sale lo que se vende: uno por sucursal y solo de uso Normal (pantalla «Depósitos»).",
       ),
     ],
-    consumidores: [FORMULARIO_DE_DEPOSITO],
+    // La prueba del componente de la casilla también lo pide (la ejerce con este dato real, para no sumar deuda de campos con dato pendiente).
+    consumidores: [FORMULARIO_DE_DEPOSITO, "apps/web/ui/componentes/CampoDeCasilla.test.tsx"],
     ponerPor: ["depositos.crear"],
     requiere: REQUIERE_STOCK,
   },
