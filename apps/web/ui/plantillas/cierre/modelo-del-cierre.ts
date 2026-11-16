@@ -149,7 +149,8 @@ const TONO_DE_ESTADO = {
   CERRADA: "exito",
 } as const satisfies Readonly<Record<ModeloDelCierre["estado"], TonoDeEstado>>;
 
-const esCero = (monto: string): boolean => /^-?0+(\.0+)?$/.test(monto);
+// Los importes llegan en texto decimal canónico (sin ceros a la izquierda): el cero es «0», «0.00», «-0.00».
+const esCero = (monto: string): boolean => /^-?0(\.0+)?$/.test(monto);
 
 /** El texto de un control de la tabla aprobada; `null` si el control no está. */
 function claveDeTextoDe(clave: string): ClaveDeTexto | null {
@@ -170,19 +171,18 @@ const lineaDeQuien = (
 
 function armarLosControles(
   cierre: CierreParaLaPantalla,
-):
-  | Readonly<{ ok: true; controles: readonly (ControlVisto & Readonly<{ severidad: string }>)[] }>
-  | Readonly<{ ok: false }> {
+): readonly (ControlVisto & Readonly<{ severidad: string }>)[] | null {
   const filasDeTicket = (cierre.conciliacion?.cobradoContraTicket ?? []).map((t) =>
     t.ticketNumero === null
       ? `${texto({}, "cierre.conciliacion.diferencia")} ${formatearImporte(t.diferencia)}`
       : `${texto({}, "cierre.ticket_numero", { numero: String(t.ticketNumero) })} · ${texto({}, "cierre.conciliacion.diferencia")} ${formatearImporte(t.diferencia)}`,
   );
+  // Stryker disable next-line ArrayDeclaration: un elemento ajeno sin severidad no entra en ningún grupo (`de` filtra por severidad), así que el arreglo inicial vacío no se distingue de uno con ese elemento.
   const controles: (ControlVisto & Readonly<{ severidad: string }>)[] = [];
   for (const c of cierre.controles) {
     if (c.cantidad <= 0 || CONTROLES_QUE_NO_SE_MUESTRAN.has(c.clave)) continue;
     const clave = claveDeTextoDe(c.clave);
-    if (clave === null) return { ok: false };
+    if (clave === null) return null;
     controles.push({
       clave: c.clave,
       modulo: c.modulo,
@@ -196,7 +196,7 @@ function armarLosControles(
       observacion: c.reconocido ? c.texto : null,
     });
   }
-  return { ok: true, controles };
+  return controles;
 }
 
 const nombreDelMedio = (tipo: string, nombre: string | null): string =>
@@ -238,8 +238,8 @@ export function armarElModeloDelCierre(
   if (!Object.hasOwn(ESTADO_DE_LA_PANTALLA, cierre.estado)) return { error: "ESTADO_DESCONOCIDO" };
   const estado = ESTADO_DE_LA_PANTALLA[cierre.estado];
   const controles = armarLosControles(cierre);
-  if (!controles.ok) return { error: "CONTROL_SIN_TEXTO" };
-  const de = (severidad: string) => controles.controles.filter((c) => c.severidad === severidad);
+  if (controles === null) return { error: "CONTROL_SIN_TEXTO" };
+  const de = (severidad: string) => controles.filter((c) => c.severidad === severidad);
   return {
     fechaDeNegocio: cierre.fechaDeNegocio,
     fecha: fechaParaMostrar(fecha.valor),

@@ -389,6 +389,16 @@ describe("la conciliación por medio", () => {
     });
   });
 
+  it("sin un total que mostrar (contado o declarado pero sin importe) no se muestra nada ni se precarga: el texto vacío, nunca «null»", () => {
+    const [contado, declarado] =
+      conLineas(
+        linea({ medioDePagoId: "a", estadoDeConteo: "CONTADO", declarado: null }),
+        linea({ medioDePagoId: "b", estadoDeConteo: "DECLARADO", declarado: null }),
+      ) ?? [];
+    expect(contado).toMatchObject({ declarado: null, declaradoCanonico: "" });
+    expect(declarado).toMatchObject({ declarado: null, declaradoCanonico: "" });
+  });
+
   it("«Conforme» no muestra un total y no precarga nada; la clave de una línea sin cuenta no deja un hueco ambiguo", () => {
     const [conforme] =
       conLineas(

@@ -109,6 +109,14 @@ describe("traducirErrorDelCierre: de un error del cierre, de caja, de ventas o d
     expect(registrados).toHaveLength(1);
   });
 
+  it("un arreglo que se lee como el nombre de un error no es ese error: pasa SIN CAMBIOS", () => {
+    for (const parecido of [["JORNADA_CERRADA"], [["CONTROLES_QUE_BLOQUEAN"]]]) {
+      expect(traducirErrorDelCierre(parecido)).toBe(parecido);
+    }
+    const conCodigoEnArreglo = { codigo: ["CONTROLES_QUE_BLOQUEAN"] };
+    expect(traducirErrorDelCierre(conCodigoEnArreglo)).toBe(conCodigoEnArreglo);
+  });
+
   it("un nombre heredado de Object.prototype no es un error del cierre", () => {
     for (const heredado of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
       expect(traducirErrorDelCierre(heredado)).toBe(heredado);

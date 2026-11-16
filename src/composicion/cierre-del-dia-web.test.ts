@@ -317,6 +317,18 @@ describe("qué se lee en cada estado de la jornada", () => {
     expect(f.listarCuentasDeCobro).toHaveBeenCalledWith(CONTEXTO, { sucursalId: SUCURSAL });
   });
 
+  it("EN_AUDITORIA con UN cobro corregible entre varios que no lo son también pide los medios (alcanza con uno)", async () => {
+    const { f, d } = armar({
+      estado: estadoDe("EN_AUDITORIA"),
+      cobros: ok({
+        cobros: [cobro({ correccionPosible: false }), cobro({ cobroId: "cobro-2" })],
+        siguiente: null,
+      }),
+    });
+    await dato(cargar(d));
+    expect(f.listarMediosDePago).toHaveBeenCalledTimes(1);
+  });
+
   it("CERRADA: lee el detalle (la foto guardada) pero no ofrece medios aunque un cobro figure como corregible", async () => {
     const { f, d } = armar({
       estado: estadoDe("CERRADA", { cerradaEn: new Date("2026-11-10T01:30:00Z"), cerradaPor: P1 }),

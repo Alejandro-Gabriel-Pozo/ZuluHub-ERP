@@ -51,6 +51,7 @@ export type DependenciasDeLaLecturaDelCierre = Readonly<{
 /** Un rechazo de una lectura: corta la carga entera y sale traducido, nunca un día a medias. */
 class Rechazo extends Error {
   constructor(readonly causa: unknown) {
+    // Stryker disable next-line StringLiteral: el mensaje solo sirve para depurar; nadie lo lee (la causa viaja en `causa`).
     super("rechazo de una lectura del cierre");
   }
 }
@@ -108,7 +109,9 @@ async function jornadaAOperar(
   );
   // `AAAA-MM-DD` de ancho fijo: el orden del texto es el del calendario.
   const abiertas = lista.filter((j) => j.estado !== "CERRADA").map((j) => j.fechaDeNegocio);
-  return abiertas.length === 0 ? hoy.fechaDeNegocio : abiertas.reduce((a, b) => (b < a ? b : a));
+  if (abiertas.length === 0) return hoy.fechaDeNegocio;
+  // Stryker disable next-line EqualityOperator: no hay dos jornadas con la misma fecha (clave única), así que con `<=` o `<` se elige la misma.
+  return abiertas.reduce((a, b) => (b < a ? b : a));
 }
 
 async function medios(
@@ -179,6 +182,7 @@ async function cargar(
 
   const paraCorregir =
     jornada.estado === "EN_AUDITORIA" &&
+    // Stryker disable next-line ConditionalExpression: con la jornada en cierre los cobros siempre se leen (`conDetalle`); la comprobación solo estrecha el tipo.
     cobros !== null &&
     cobros.cobros.some((c) => c.correccionPosible)
       ? await medios(d, contexto, sucursalId)
@@ -196,6 +200,7 @@ async function cargar(
   }
   const correos = await correosDe(d, contexto, personas);
   const quien = (id: string | null): string | null =>
+    // Stryker disable next-line ConditionalExpression: sin persona no hay clave en el mapa, así que preguntarle igual da `null` (solo estrecha el tipo para `get`).
     id === null ? null : (correos.get(id) ?? null);
 
   return {
