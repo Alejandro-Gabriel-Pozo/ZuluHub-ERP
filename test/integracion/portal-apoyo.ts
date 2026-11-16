@@ -113,7 +113,7 @@ export async function comoPublicoDelPortal<T extends Record<string, unknown>>(
     // Como el lector: la empresa del portal que acaba de leer.
     if (codigoDePortal !== null)
       await cliente.query(
-        "select set_config('app.empresa_del_portal', coalesce((select empresa_id::text from portal_de_empresa limit 1), ''), true)",
+        "select set_config('app.empresa_del_portal', coalesce((select empresa_id::text from portal_de_empresa limit 1), ''), true), set_config('app.id_del_portal', coalesce((select id::text from portal_de_empresa limit 1), ''), true)",
       );
     if (codigoDeCarta !== null)
       await cliente.query("select set_config('app.codigo_de_carta', $1, true)", [codigoDeCarta]);

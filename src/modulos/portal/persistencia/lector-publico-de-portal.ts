@@ -67,6 +67,7 @@ export function crearLecturaPublicaDePortales(db: {
       if (fila === undefined) return null;
       // La empresa que el portal ya mostró: desde acá las políticas de `carta_publica` y `sucursal` (0078) dejan ver las de ESA empresa y de ninguna otra.
       await sql`select set_config('app.empresa_del_portal', ${fila.empresa_id}, true)`.execute(k);
+      await sql`select set_config('app.id_del_portal', ${fila.id}, true)`.execute(k);
       const empresa = await k
         .selectFrom("empresa")
         .select(["id", "tenant_id", "estado"])
@@ -101,7 +102,14 @@ export function crearLecturaPublicaDePortales(db: {
         .where("estado", "=", "EN_LINEA")
         .orderBy("sucursal_id")
         .execute();
+      const abiertas = await k
+        .selectFrom("sucursal")
+        .select(["id"])
+        .where("empresa_id", "=", fila.empresa_id)
+        .where("activa", "=", true)
+        .execute();
       return {
+        sucursalesAbiertas: abiertas.map((x) => x.id),
         id: fila.id,
         codigo: fila.codigo,
         empresaId: empresaId(fila.empresa_id),

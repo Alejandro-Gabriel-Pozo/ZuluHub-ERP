@@ -9,6 +9,8 @@ import { textoDesdeCentesimas, type DatosDelPortal, type Tarjeta, type Zona } fr
 export type CartaDelPortal = Readonly<{ sucursalId: string; codigo: string; nombre: string }>;
 
 export type PortalLeido = Readonly<{
+  /** Las sucursales ABIERTAS que la política deja ver en este portal (con tarjeta o zona visible y carta en línea). Una cerrada no sale. */
+  sucursalesAbiertas: readonly string[];
   id: string;
   codigo: string;
   empresaId: EmpresaId;
@@ -43,7 +45,10 @@ export function armarPortalPublicado(
   if (!loSirve) return null;
   if (!puedeOperar(estadoEfectivo(leido.estadoDelTenant, leido.estadoDeLaEmpresa))) return null;
 
-  const cartaDe = new Map(leido.cartas.map((c) => [c.sucursalId, c]));
+  const abiertas = new Set(leido.sucursalesAbiertas);
+  const cartaDe = new Map(
+    leido.cartas.filter((c) => abiertas.has(c.sucursalId)).map((c) => [c.sucursalId, c]),
+  );
   return {
     codigo: leido.codigo,
     variante: leido.datos.variante,
