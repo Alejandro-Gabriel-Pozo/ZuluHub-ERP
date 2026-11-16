@@ -32,6 +32,7 @@ import { TEXTOS_DE_PRODUCCION } from "./catalogo-produccion";
 import { TEXTOS_DE_SALON } from "./catalogo-salon";
 import { TEXTOS_DE_STOCK } from "./catalogo-stock";
 import { TEXTOS_DE_VENTAS } from "./catalogo-ventas";
+import type { FuenteDeTexto, UsosDeTexto } from "./uso-y-fuente-de-texto";
 
 /** El largo máximo de un texto que no declara otro (la base admite hasta 200 en cualquier caso). */
 export const LARGO_MAXIMO_DE_TEXTO = 80; // fuente-unica: ajeno — el largo de un texto del vocabulario es otro dato que el nombre de cocina
@@ -43,6 +44,13 @@ export type DefinicionDeTexto = Readonly<{
   largoMaximo?: number;
   /** Los marcadores que admite, sin llaves; los mismos que usa `porDefecto`. Omitido: ninguno. */
   marcadores?: readonly string[];
+  /**
+   * Quién consume el texto (inventario de textos, fila 173 de `decisiones-del-dueno-2026-11.md`). OPCIONAL por ahora: ningún chequeo
+   * lo exige; lo medirá el analizador de declaraciones (tramo U2). No se agrega a los catálogos existentes en este tramo.
+   */
+  usos?: UsosDeTexto;
+  /** De dónde salió el texto aprobado: un `DEC` aceptado o `HEREDADO`. OPCIONAL por ahora, igual que `usos`. */
+  fuente?: FuenteDeTexto;
 }>;
 
 export const CATALOGO_DE_TEXTOS = {
@@ -243,6 +251,8 @@ export const CATALOGO_DE_TEXTOS = {
   // áreas Ventas, Catálogo y Compras aprobados «por ahora». «Compras» se suma con su primera pantalla.
   "navegacion.area.ventas": { porDefecto: "Ventas" },
   "navegacion.area.catalogo": { porDefecto: "Catálogo" },
+  // Fuente: dueño, 13/11/2026, `decisiones-del-dueno-2026-11.md` línea 110, fila «Rótulos del menú por áreas aprobados»: el encabezado del grupo de la carta dentro de Catálogo es «Carta».
+  "navegacion.grupo.carta": { porDefecto: "Carta" },
   "inicio.titulo": { porDefecto: "Inicio" },
   "inicio.bienvenida": {
     porDefecto: "Estás en {empresa}.",
