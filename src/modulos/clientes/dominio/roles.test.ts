@@ -4,10 +4,11 @@ import { ROLES_DE_PARTE, decidirRoles, esRolDeParte, rolesPedidos, type RolDePar
 
 describe("roles de una parte", () => {
   it("los códigos son los de la tabla sembrada", () => {
-    expect([...ROLES_DE_PARTE]).toEqual(["CUSTOMER", "PROVEEDOR"]);
+    expect([...ROLES_DE_PARTE]).toEqual(["CUSTOMER", "PROVEEDOR", "EMPLEADO"]);
     expect(esRolDeParte("CUSTOMER")).toBe(true);
     expect(esRolDeParte("PROVEEDOR")).toBe(true);
-    for (const texto of ["EMPLEADO", "customer", "", "CUSTOMER "])
+    expect(esRolDeParte("EMPLEADO")).toBe(true);
+    for (const texto of ["empleado", "customer", "", "CUSTOMER "])
       expect(esRolDeParte(texto)).toBe(false);
   });
 
@@ -15,7 +16,8 @@ describe("roles de una parte", () => {
     expect(rolesPedidos([])).toEqual([]);
     expect(rolesPedidos(["PROVEEDOR", "CUSTOMER", "PROVEEDOR"])).toEqual(["CUSTOMER", "PROVEEDOR"]);
     expect(rolesPedidos(["PROVEEDOR"])).toEqual(["PROVEEDOR"]);
-    expect(rolesPedidos(["CUSTOMER", "EMPLEADO"])).toBeNull();
+    expect(rolesPedidos(["CUSTOMER", "GERENTE"])).toBeNull();
+    expect(rolesPedidos(["EMPLEADO", "CUSTOMER"])).toEqual(["CUSTOMER", "EMPLEADO"]);
   });
 
   it("agrega lo que no existe, reactiva lo apagado y quita lo activo que ya no se pide", () => {

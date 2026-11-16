@@ -1,9 +1,9 @@
 /**
  * Los roles de una parte (E9 §3.1): qué es para el negocio. Una parte puede ser cliente y proveedor a la vez; un contacto puede no tener ninguno.
- * Los códigos son los de la tabla sembrada `rol_de_parte` (0034); EMPLEADO queda fuera de la primera versión (decisión F6 de
- * `clientes-y-proveedores.md`). Los roles no se borran: se apagan y se reactivan.
+ * Los códigos son los de la tabla sembrada `rol_de_parte` (0034 y 0070); una prueba de integración la compara con la base. EMPLEADO (0070, LB-6) es una persona
+ * del personal como PARTE con ficha (para tener saldo en el libro): no es un usuario del sistema. Los roles no se borran: se apagan y se reactivan.
  */
-export const ROLES_DE_PARTE = ["CUSTOMER", "PROVEEDOR"] as const;
+export const ROLES_DE_PARTE = ["CUSTOMER", "PROVEEDOR", "EMPLEADO"] as const;
 export type RolDeParte = (typeof ROLES_DE_PARTE)[number];
 
 export type RolGuardado = Readonly<{ rol: RolDeParte; activo: boolean }>;
