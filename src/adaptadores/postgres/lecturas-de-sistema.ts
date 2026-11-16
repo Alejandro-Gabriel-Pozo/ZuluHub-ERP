@@ -7,8 +7,8 @@ import { tomarPozo, type PozoTomado } from "./pozos";
  * §5.7 y §8.1 W6), con el rol limitado de la aplicación (`pedernal_app`, `PEDERNAL_DB_APP`):
  *
  *  - `ping`: `SELECT 1`, la salud. No lee ninguna tabla.
- *  - `ultimaMigracion`: el nombre de la última fila de la tabla de control `migracion`, para la guarda
- *    `MIGRACION_REQUERIDA`. Necesita que `pedernal_app` pueda leer esa tabla (`GRANT SELECT`); sin ese permiso
+ *  - `migracionesAplicadas`: los nombres de todas las filas de la tabla de control `migracion`, para la guarda
+ *    de migración (que exige que figuren todas las que el código necesita). Necesita que `pedernal_app` pueda leer esa tabla (`GRANT SELECT`); sin ese permiso
  *    la base responde `42501` y la guarda falla cerrado (la app queda «En mantenimiento»).
  *
  * Ni una escritura ni una transacción: consultas sueltas y de solo lectura. Tiempos acotados del lado del
@@ -18,8 +18,8 @@ import { tomarPozo, type PozoTomado } from "./pozos";
  */
 export type LecturasDeSistema = Readonly<{
   ping(): Promise<void>;
-  /** El nombre de la última migración aplicada, o `null` si la tabla está vacía. */
-  ultimaMigracion(): Promise<string | null>;
+  /** Los nombres de las migraciones aplicadas, en orden; vacío si la tabla está vacía. */
+  migracionesAplicadas(): Promise<string[]>;
   /** Cierra todas las conexiones abiertas. */
   cerrar(): Promise<void>;
 }>;
@@ -83,11 +83,11 @@ export function crearLecturasDeSistema(
       await consultar("SELECT 1");
     },
 
-    async ultimaMigracion() {
+    async migracionesAplicadas() {
       const filas = await consultar<{ nombre: string }>(
-        "SELECT nombre FROM migracion ORDER BY nombre DESC LIMIT 1",
+        "SELECT nombre FROM migracion ORDER BY nombre",
       );
-      return filas[0]?.nombre ?? null;
+      return filas.map((fila) => fila.nombre);
     },
 
     async cerrar() {

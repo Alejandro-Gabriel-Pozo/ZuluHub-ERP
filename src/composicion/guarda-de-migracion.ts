@@ -1,3 +1,4 @@
+import { MIGRACIONES_ESPERADAS } from "./migraciones-esperadas";
 import { tipoDeFalla } from "./tipo-de-falla";
 import { verificacionMemorizada } from "./verificacion-memorizada";
 
@@ -7,46 +8,64 @@ import { verificacionMemorizada } from "./verificacion-memorizada";
  * una migración que todavía no se aplicó, la guarda lo nota al primer pedido de cada instancia y la app
  * responde «En mantenimiento» (503, con una referencia) en vez de fallar a mitad de una factura.
  *
- *  - `MIGRACION_REQUERIDA`: el número de la ÚLTIMA migración que este código necesita. Se sube en el mismo
- *    cambio que agrega la migración; una prueba la mantiene igual al número del último archivo de
- *    `migraciones/`, así que olvidarla rompe el CI (si no, la guarda dejaría pasar código sin su esquema).
- *  - Se compara con la última fila de la tabla `migracion` (`ORDER BY nombre DESC`): los nombres empiezan con
- *    el número de cuatro cifras y se aplican en orden, así que la última fila es la más nueva.
+ *  - `MIGRACIONES_ESPERADAS` (`migraciones-esperadas.ts`): los nombres de TODAS las migraciones que este código
+ *    necesita. Una prueba la mantiene igual a la carpeta `migraciones/`, así que olvidarse de agregar una rompe el
+ *    CI (si no, la guarda dejaría pasar código sin su esquema). `MIGRACION_REQUERIDA` es el número de la última.
+ *  - Se lee la lista de nombres de la tabla `migracion` y se exige que figuren TODAS las esperadas (no solo la
+ *    última: una base con la última pero sin una del medio no está al día). Los números tienen huecos, así que no
+ *    se exige que sean seguidos; las migraciones de más (de un código más nuevo) no molestan.
  *  - Un «al día» se memoriza para siempre en la instancia (las migraciones solo avanzan); un «no» se vuelve a
  *    mirar pasados unos segundos, para que la app vuelva sola apenas el dueño migra.
  *  - Falla cerrado: no poder leer la tabla (sin conexión, sin permiso, sin tabla) es «no al día».
  */
-export const MIGRACION_REQUERIDA = "0085";
-
 /** Cuánto se espera antes de volver a mirar una base que no estaba al día. */
 export const ESPERA_ENTRE_VERIFICACIONES_EN_MS = 10_000;
 
-const FORMA_DE_NUMERO = /^\d{4}$/;
 const NUMERO_DE_MIGRACION = /^(\d{4})_[a-z0-9_]+\.sql$/;
 
+/** Cuántos nombres faltantes se nombran en el informe (el resto se cuenta). */
+const FALTANTES_QUE_SE_NOMBRAN = 5;
+
 /**
- * ¿La base está al menos en la migración requerida? `ultimaAplicada` es el nombre del último registro
- * (`0012_respaldo.sql`) o `null` si no hay ninguno. Un nombre que no tiene la forma de una migración no
- * cuenta: ante la duda, no está al día.
+ * Valida la lista esperada (un defecto del código, no de la base, así que lanza): no vacía, con la forma de los
+ * nombres de migración, sin repetidos y en orden. Devuelve el número de cuatro cifras de la última.
  */
-export function migracionAlDia(ultimaAplicada: string | null, requerida: string): boolean {
-  if (!FORMA_DE_NUMERO.test(requerida)) {
-    throw new RangeError("la migración requerida es un número de cuatro cifras");
+function numeroDeLaUltima(esperadas: readonly string[]): string {
+  const ultima = esperadas.at(-1);
+  if (ultima === undefined) throw new RangeError("la lista de migraciones esperadas está vacía");
+  if (esperadas.some((nombre) => !NUMERO_DE_MIGRACION.test(nombre))) {
+    throw new RangeError("la lista de migraciones esperadas trae un nombre que no es de migración");
   }
-  // `null` se lee como el texto «null», que no tiene la forma de una migración. Sin número, el texto vacío queda
-  // por debajo de cualquier requerida (que tiene cuatro cifras), así que «no al día».
-  const numero = NUMERO_DE_MIGRACION.exec(String(ultimaAplicada))?.[1] ?? "";
-  // Cuatro cifras en los dos lados: el orden de los textos es el orden de los números.
-  return numero >= requerida;
+  // Estrictamente creciente: sin repetidas y en orden (los nombres empiezan con el número de cuatro cifras).
+  if (esperadas.slice(1).some((nombre, i) => nombre <= (esperadas[i] as string))) {
+    throw new RangeError("la lista de migraciones esperadas tiene repetidas o está desordenada");
+  }
+  return ultima.slice(0, 4);
+}
+
+/** El número de la ÚLTIMA migración que este código necesita (se sube agregando su nombre a la lista). */
+export const MIGRACION_REQUERIDA: string = numeroDeLaUltima(MIGRACIONES_ESPERADAS);
+
+/**
+ * Las migraciones esperadas que NO figuran entre las aplicadas, en el orden de la lista. Se compara por nombre
+ * completo: lo que no tiene la forma exacta no cuenta. Lista vacía = todo se espera y nada está: no al día.
+ */
+export function migracionesFaltantes(
+  aplicadas: readonly string[],
+  esperadas: readonly string[],
+): string[] {
+  const presentes = new Set(aplicadas);
+  return esperadas.filter((nombre) => !presentes.has(nombre));
 }
 
 export type ConfiguracionDeLaGuarda = Readonly<{
-  /** Lee el nombre de la última migración aplicada (o `null`). Lanza si no puede. */
-  leerUltima: () => Promise<string | null>;
+  /** Lee los nombres de las migraciones aplicadas (todas las filas de `migracion`). Lanza si no puede. */
+  leerAplicadas: () => Promise<readonly string[]>;
   ahora: () => number;
   /** Se informa (para el registro del servidor, sin secretos) por qué no está al día. */
   alNoEstarAlDia: (detalle: string) => void;
-  requerida?: string;
+  /** Por defecto, `MIGRACIONES_ESPERADAS`. Se inyecta en las pruebas. */
+  esperadas?: readonly string[];
   esperaEnMs?: number;
 }>;
 
@@ -54,20 +73,25 @@ export type ConfiguracionDeLaGuarda = Readonly<{
 export function crearGuardaDeMigracion(
   configuracion: ConfiguracionDeLaGuarda,
 ): () => Promise<boolean> {
-  const requerida = configuracion.requerida ?? MIGRACION_REQUERIDA;
+  const esperadas = configuracion.esperadas ?? MIGRACIONES_ESPERADAS;
+  const requerida = numeroDeLaUltima(esperadas);
   const verificar = async (): Promise<boolean> => {
-    let ultima: string | null;
+    let aplicadas: readonly string[];
     try {
-      ultima = await configuracion.leerUltima();
+      aplicadas = await configuracion.leerAplicadas();
     } catch (error) {
       configuracion.alNoEstarAlDia(
-        `no se pudo leer la última migración aplicada: ${tipoDeFalla(error)}`,
+        `no se pudieron leer las migraciones aplicadas: ${tipoDeFalla(error)}`,
       );
       return false;
     }
-    if (migracionAlDia(ultima, requerida)) return true;
+    const faltantes = migracionesFaltantes(aplicadas, esperadas);
+    if (faltantes.length === 0) return true;
+    const nombradas = faltantes.slice(0, FALTANTES_QUE_SE_NOMBRAN).join(", ");
+    const resto = faltantes.length - FALTANTES_QUE_SE_NOMBRAN;
     configuracion.alNoEstarAlDia(
-      `la base está en ${ultima ?? "ninguna migración"} y el código necesita la ${requerida}`,
+      `a la base le faltan migraciones (el código necesita hasta la ${requerida}): ${nombradas}` +
+        (resto > 0 ? ` y ${String(resto)} más` : ""),
     );
     return false;
   };

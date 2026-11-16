@@ -354,7 +354,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
 
   describe("P-15: la guarda de migración", () => {
     let carpetaSinLaUltima: string;
-    let anteultima: string;
+    let ultima: string;
     const conGuarda = (url: string, reloj: { valor: number }, registrados: string[]) => {
       const conexiones = armarConexiones({
         fuente: () => ({ PEDERNAL_DB_APP: url }),
@@ -373,7 +373,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
         .filter((n) => /^\d{4}_.+\.sql$/.test(n))
         .sort();
       expect(archivos.at(-1)?.slice(0, 4)).toBe(MIGRACION_REQUERIDA);
-      anteultima = archivos.at(-2) ?? "";
+      ultima = archivos.at(-1) ?? "";
       for (const archivo of archivos.slice(0, -1)) {
         await copyFile(join(CARPETA_REAL, archivo), join(carpetaSinLaUltima, archivo));
       }
@@ -405,7 +405,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
         const ok = await conGuarda(aparte.base.app, { valor: 0 }, registrados);
         expect(ok).toBe(false);
         expect(registrados).toEqual([
-          "[migración] no se pudo leer la última migración aplicada: error 42501",
+          "[migración] no se pudieron leer las migraciones aplicadas: error 42501",
         ]);
       } finally {
         await aparte.destruir();
@@ -436,7 +436,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
           expect(registrados).toHaveLength(1);
           expect(registrados[0]).toMatch(
             new RegExp(
-              `^\\[migración\\] la base está en ${anteultima.replace(".", "\\.")} y el código necesita la ${MIGRACION_REQUERIDA}$`,
+              `^\\[migración\\] a la base le faltan migraciones \\(el código necesita hasta la ${MIGRACION_REQUERIDA}\\): ${ultima.replace(".", "\\.")}$`,
             ),
           );
           // Dentro de la espera no se vuelve a preguntar a la base.
@@ -467,7 +467,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
         expect(ok).toBe(false);
         expect(registrados).toHaveLength(1);
         expect(registrados[0]).toContain(
-          "[migración] no se pudo leer la última migración aplicada",
+          "[migración] no se pudieron leer las migraciones aplicadas",
         );
       } finally {
         await aparte.destruir();

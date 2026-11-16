@@ -220,7 +220,7 @@ export type Conexiones = Readonly<{
   /** Origen y marca del mail (el respaldo hasta que exista M7) y la clave del proveedor. */
   configuracionDeCorreo: () => ConfiguracionDeCorreo;
   correo: () => Correo;
-  /** `SELECT 1` y la última migración aplicada, con el rol de la aplicación (`PEDERNAL_DB_APP`), sin contexto firmado (W6). */
+  /** `SELECT 1` y la lista de migraciones aplicadas, con el rol de la aplicación (`PEDERNAL_DB_APP`), sin contexto firmado (W6). */
   lecturasDeSistema: () => LecturasDeSistema;
   /** El valor de `CRON_SECRET` (W6): lanza `ErrorDeEntorno` si falta o es demasiado corto. */
   secretoDeCron: () => string;

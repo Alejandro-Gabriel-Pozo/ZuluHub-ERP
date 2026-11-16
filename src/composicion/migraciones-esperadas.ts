@@ -1,0 +1,68 @@
+/**
+ * Los nombres de TODAS las migraciones que este código necesita (la carpeta `migraciones/`, de la primera a
+ * `MIGRACION_REQUERIDA`), para la guarda en ejecución (`guarda-de-migracion.ts`): en producción no se lee el disco,
+ * así que la lista viaja con el código. La numeración tiene huecos históricos (nunca existieron 0020, 0035, 0039 ni
+ * 0040; la 0025 se retiró) y habrá huecos nuevos: por eso se exige que figure cada una de ESTAS, no que los números
+ * sean seguidos. Previene: una base con la última aplicada pero sin una del medio (restaurada a medias o migrada
+ * fuera de orden) daba «al día» cuando solo se miraba la última fila.
+ *
+ * Una prueba (`guarda-de-migracion.test.ts`) la compara con la carpeta y muestra la lista exacta si difiere: al
+ * agregar una migración se agrega su nombre acá, al final, en el mismo cambio.
+ */
+export const MIGRACIONES_ESPERADAS: readonly string[] = [
+  "0001_base.sql",
+  "0002_identidad.sql",
+  "0003_trabajos.sql",
+  "0004_plataforma.sql",
+  "0005_administracion.sql",
+  "0006_fiscal.sql",
+  "0007_marcas_y_planes.sql",
+  "0008_captacion.sql",
+  "0009_facturacion.sql",
+  "0010_autenticacion.sql",
+  "0011_lectura_publica_de_marca.sql",
+  "0012_respaldo.sql",
+  "0013_permisos_minimos.sql",
+  "0014_aspecto_de_marca.sql",
+  "0015_segundo_factor_de_plataforma.sql",
+  "0016_comprobante_con_sucursal.sql",
+  "0017_comprobante_sucursal_abierta.sql",
+  "0018_pedido_de_certificado_unico.sql",
+  "0019_contacto_de_la_sucursal.sql",
+  "0021_ingresos_brutos_no_contribuyente.sql",
+  "0022_nombre_de_la_sucursal_en_el_comprobante.sql",
+  "0023_nombre_solo_con_varias_sucursales_abiertas.sql",
+  "0024_pasaporte_con_letras.sql",
+  "0025_catalogo.sql",
+  "0026_cierre.sql",
+  "0027_caja.sql",
+  "0028_ventas.sql",
+  "0029_facturacion.sql",
+  "0030_stock.sql",
+  "0031_stock_costos.sql",
+  "0032_lotes_y_recetas.sql",
+  "0033_produccion.sql",
+  "0034_clientes.sql",
+  "0036_ventas_sella_variante.sql",
+  "0037_compras.sql",
+  "0038_salon.sql",
+  "0041_tope_de_textos_por_marca.sql",
+  "0042_conteo_con_hora.sql",
+  "0043_carta_publica.sql",
+  "0044_lectura_publica_de_carta.sql",
+  "0045_clasificacion_comercial.sql",
+  "0046_clasificacion_de_producto.sql",
+  "0047_camino_en_el_renglon.sql",
+  "0048_departamento_en_la_cuenta.sql",
+  "0049_producto_oculto_en_stock.sql",
+  "0050_plan_en_la_lectura_publica_de_carta.sql",
+  "0051_porciones_del_producto.sql",
+  "0052_tope_de_partes_de_la_division.sql",
+  "0053_costo_nunca_cero.sql",
+  "0054_precio_de_linea_de_factura_mayor_que_cero.sql",
+  "0055_salon_copias_y_nombre_de_cocina.sql",
+  "0056_receta_sin_insumos.sql",
+  "0057_opcion_consume_elaborado.sql",
+  "0058_oferta_vigente.sql",
+  "0075_alicuota_del_producto.sql",
+];

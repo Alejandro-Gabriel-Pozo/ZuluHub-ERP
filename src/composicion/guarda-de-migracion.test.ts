@@ -5,20 +5,25 @@ import {
   ESPERA_ENTRE_VERIFICACIONES_EN_MS,
   MIGRACION_REQUERIDA,
   crearGuardaDeMigracion,
-  migracionAlDia,
+  migracionesFaltantes,
 } from "./guarda-de-migracion";
+import { MIGRACIONES_ESPERADAS } from "./migraciones-esperadas";
 
-describe("MIGRACION_REQUERIDA", () => {
-  it("es el número de la última migración de migraciones/ (si se agrega una, se sube acá)", () => {
-    const numeros = readdirSync(join(import.meta.dirname, "../../migraciones"))
-      .map((nombre) => /^(\d{4})_[a-z0-9_]+\.sql$/.exec(nombre)?.[1])
-      .filter((numero): numero is string => numero !== undefined)
-      .sort();
-    expect(numeros.length).toBeGreaterThan(0);
-    expect(MIGRACION_REQUERIDA).toBe(numeros[numeros.length - 1]);
+const EN_CARPETA = readdirSync(join(import.meta.dirname, "../../migraciones"))
+  .filter((nombre) => /^\d{4}_[a-z0-9_]+\.sql$/.test(nombre))
+  .sort();
+
+describe("MIGRACIONES_ESPERADAS y MIGRACION_REQUERIDA", () => {
+  it("la lista es EXACTAMENTE la carpeta migraciones/ (si se agrega una, se agrega su nombre al final de la lista)", () => {
+    expect(EN_CARPETA.length).toBeGreaterThan(0);
+    // Si difiere, el mensaje muestra la lista esperada completa para pegarla.
+    expect(MIGRACIONES_ESPERADAS, `la lista debe ser:\n${JSON.stringify(EN_CARPETA)}`).toEqual(
+      EN_CARPETA,
+    );
   });
 
-  it("tiene la forma de un número de migración", () => {
+  it("MIGRACION_REQUERIDA es el número de la última migración de la carpeta", () => {
+    expect(MIGRACION_REQUERIDA).toBe(EN_CARPETA.at(-1)?.slice(0, 4));
     expect(MIGRACION_REQUERIDA).toMatch(/^\d{4}$/);
   });
 
@@ -27,62 +32,59 @@ describe("MIGRACION_REQUERIDA", () => {
   });
 });
 
-describe("migracionAlDia", () => {
-  it.each([
-    ["0012_respaldo.sql", "0012", true],
-    ["0013_nueva.sql", "0012", true],
-    ["0100_mas_nueva.sql", "0012", true],
-    ["0011_lectura_publica_de_marca.sql", "0012", false],
-    ["0001_base.sql", "0012", false],
-    ["0000_cero.sql", "0001", false],
-    ["0001_base.sql", "0001", true],
-    ["9999_x.sql", "0012", true],
-    [null, "0012", false],
-    [null, "0000", false],
-  ])("última %j, requerida %s → %s", (ultima, requerida, esperado) => {
-    expect(migracionAlDia(ultima, requerida)).toBe(esperado);
+describe("migracionesFaltantes", () => {
+  const esperadas = ["0001_a.sql", "0002_b.sql", "0004_d.sql"];
+
+  it("todas presentes → ninguna falta (los huecos de numeración no cuentan)", () => {
+    expect(migracionesFaltantes(esperadas, esperadas)).toEqual([]);
   });
 
-  it.each([
-    "",
-    "respaldo",
-    "0012",
-    "0012.sql",
-    "12_respaldo.sql",
-    "00012_respaldo.sql",
-    "0012_Respaldo.sql",
-    "0012_respaldo.txt",
-    "x0012_respaldo.sql",
-    "0012_respaldo.sql\n",
-    "9999",
-  ])("un nombre que no es de una migración (%j) no cuenta como al día", (nombre) => {
-    expect(migracionAlDia(nombre, "0001")).toBe(false);
+  it("falta la del medio aunque esté la última → la nombra", () => {
+    expect(migracionesFaltantes(["0001_a.sql", "0004_d.sql"], esperadas)).toEqual(["0002_b.sql"]);
   });
 
-  it.each(["", "12", "00012", "abcd", "0012_x", " 0012", "0012\n", "-001"])(
-    "una requerida mal formada (%j) es un defecto y lanza",
-    (requerida) => {
-      expect(() => migracionAlDia("0012_respaldo.sql", requerida)).toThrow(RangeError);
-      expect(() => migracionAlDia(null, requerida)).toThrow(/número de cuatro cifras/);
-    },
-  );
+  it("falta la última", () => {
+    expect(migracionesFaltantes(["0001_a.sql", "0002_b.sql"], esperadas)).toEqual(["0004_d.sql"]);
+  });
+
+  it("sobra una (de un código más nuevo): no molesta, pero no tapa una que falta", () => {
+    expect(migracionesFaltantes([...esperadas, "0005_e.sql"], esperadas)).toEqual([]);
+    expect(migracionesFaltantes(["0001_a.sql", "0004_d.sql", "0005_e.sql"], esperadas)).toEqual([
+      "0002_b.sql",
+    ]);
+  });
+
+  it("base vacía → faltan todas, en orden", () => {
+    expect(migracionesFaltantes([], esperadas)).toEqual(esperadas);
+  });
+
+  it("se compara el nombre completo: otro texto con el mismo número no cuenta", () => {
+    expect(migracionesFaltantes(["0001_a.sql", "0002_x.sql", "0004_d.sql"], esperadas)).toEqual([
+      "0002_b.sql",
+    ]);
+    expect(migracionesFaltantes(["0001_a.sql ", "0002_b.sql", "0004_d.sql"], esperadas)).toEqual([
+      "0001_a.sql",
+    ]);
+  });
 });
 
 describe("crearGuardaDeMigracion", () => {
-  function armar(lecturas: (string | null | Error)[], requerida = "0012") {
+  const ESPERADAS = ["0001_base.sql", "0003_otra.sql", "0012_respaldo.sql"];
+
+  function armar(lecturas: (readonly string[] | Error)[], esperadas = ESPERADAS) {
     let reloj = 0;
     const informes: string[] = [];
     const estado = { lecturas: 0 };
     const guarda = crearGuardaDeMigracion({
-      leerUltima: () => {
+      leerAplicadas: () => {
         estado.lecturas += 1;
         const r = lecturas.shift();
         if (r instanceof Error) return Promise.reject(r);
-        return Promise.resolve(r ?? null);
+        return Promise.resolve(r ?? []);
       },
       ahora: () => reloj,
       alNoEstarAlDia: (detalle) => informes.push(detalle),
-      requerida,
+      esperadas,
     });
     return {
       guarda,
@@ -94,22 +96,51 @@ describe("crearGuardaDeMigracion", () => {
     };
   }
 
-  it("P-15: una base con una migración menos que la requerida → no está al día (mantenimiento)", async () => {
-    const g = armar(["0011_lectura_publica_de_marca.sql"]);
+  it("P-15: una base sin la última migración → no está al día (mantenimiento)", async () => {
+    const g = armar([["0001_base.sql", "0003_otra.sql"]]);
     expect(await g.guarda()).toBe(false);
     expect(g.informes).toEqual([
-      "la base está en 0011_lectura_publica_de_marca.sql y el código necesita la 0012",
+      "a la base le faltan migraciones (el código necesita hasta la 0012): 0012_respaldo.sql",
     ]);
   });
 
-  it("sin ninguna migración: no está al día y lo dice", async () => {
-    const g = armar([null]);
+  it("falta una del medio pero la última está: NO está al día (antes pasaba)", async () => {
+    const g = armar([["0001_base.sql", "0012_respaldo.sql"]]);
     expect(await g.guarda()).toBe(false);
-    expect(g.informes).toEqual(["la base está en ninguna migración y el código necesita la 0012"]);
+    expect(g.informes).toEqual([
+      "a la base le faltan migraciones (el código necesita hasta la 0012): 0003_otra.sql",
+    ]);
   });
 
-  it("con la requerida: al día, sin informes, y no se vuelve a leer nunca más", async () => {
-    const g = armar(["0012_respaldo.sql", new Error("no debería leerse")]);
+  it("sobra una: con todas las esperadas más una nueva está al día; con una de menos y una de más, no", async () => {
+    expect(await armar([[...ESPERADAS, "0013_nueva.sql"]]).guarda()).toBe(true);
+    const g = armar([["0001_base.sql", "0012_respaldo.sql", "0013_nueva.sql"]]);
+    expect(await g.guarda()).toBe(false);
+    expect(g.informes).toHaveLength(1);
+  });
+
+  it("sin ninguna migración (base vacía): no está al día y nombra las que faltan", async () => {
+    const g = armar([[]]);
+    expect(await g.guarda()).toBe(false);
+    expect(g.informes).toEqual([
+      "a la base le faltan migraciones (el código necesita hasta la 0012): 0001_base.sql, 0003_otra.sql, 0012_respaldo.sql",
+    ]);
+  });
+
+  it("de muchas faltantes nombra cinco y cuenta el resto", async () => {
+    const muchas = Array.from({ length: 8 }, (_, i) => `000${String(i + 1)}_m.sql`);
+    const g = armar([[]], muchas);
+    expect(await g.guarda()).toBe(false);
+    expect(g.informes).toEqual([
+      "a la base le faltan migraciones (el código necesita hasta la 0008): 0001_m.sql, 0002_m.sql, 0003_m.sql, 0004_m.sql, 0005_m.sql y 3 más",
+    ]);
+    const justas = armar([[]], muchas.slice(0, 5));
+    await justas.guarda();
+    expect(justas.informes[0]).not.toMatch(/ más$/);
+  });
+
+  it("con todas las esperadas: al día, sin informes, y no se vuelve a leer nunca más", async () => {
+    const g = armar([ESPERADAS, new Error("no debería leerse")]);
     expect(await g.guarda()).toBe(true);
     g.avanzar(10 ** 12);
     expect(await g.guarda()).toBe(true);
@@ -117,25 +148,47 @@ describe("crearGuardaDeMigracion", () => {
     expect(g.informes).toEqual([]);
   });
 
-  it("usa la requerida que se le pasa y, por defecto, MIGRACION_REQUERIDA", async () => {
-    const con = armar(["0003_x.sql"], "0003");
-    expect(await con.guarda()).toBe(true);
-    const por = crearGuardaDeMigracion({
-      leerUltima: () => Promise.resolve(`${MIGRACION_REQUERIDA}_x.sql`),
-      ahora: () => 0,
-      alNoEstarAlDia: () => undefined,
+  it("por defecto usa MIGRACIONES_ESPERADAS", async () => {
+    const informes: string[] = [];
+    const config = { ahora: () => 0, alNoEstarAlDia: (d: string) => informes.push(d) };
+    const todas = crearGuardaDeMigracion({
+      ...config,
+      leerAplicadas: () => Promise.resolve(MIGRACIONES_ESPERADAS),
     });
-    expect(await por()).toBe(true);
-    const menos = crearGuardaDeMigracion({
-      leerUltima: () => Promise.resolve("0001_base.sql"),
-      ahora: () => 0,
-      alNoEstarAlDia: () => undefined,
+    expect(await todas()).toBe(true);
+    const sinLaUltima = crearGuardaDeMigracion({
+      ...config,
+      leerAplicadas: () => Promise.resolve(MIGRACIONES_ESPERADAS.slice(0, -1)),
     });
-    expect(await menos()).toBe(false);
+    expect(await sinLaUltima()).toBe(false);
+    expect(informes).toEqual([
+      `a la base le faltan migraciones (el código necesita hasta la ${MIGRACION_REQUERIDA}): ${MIGRACIONES_ESPERADAS.at(-1) ?? ""}`,
+    ]);
+  });
+
+  it.each([
+    ["vacía", [], /está vacía/],
+    ["con un nombre que no es de migración", ["0001_base.sql", "respaldo"], /no es de migración/],
+    ["con un prefijo antes del número", ["x0001_base.sql"], /no es de migración/],
+    ["con un nombre con salto de línea", ["0001_base.sql\n"], /no es de migración/],
+    ["con repetidas", ["0001_base.sql", "0001_base.sql"], /repetidas o está desordenada/],
+    ["desordenada", ["0002_b.sql", "0001_a.sql"], /repetidas o está desordenada/],
+    ["desordenada con otra en el medio", ["0001_a.sql", "0003_c.sql", "0002_b.sql"], /desordenada/],
+  ])(
+    "una lista esperada %s es un defecto del código y lanza al crear la guarda",
+    (_, esperadas, mensaje) => {
+      expect(() => armar([[]], esperadas)).toThrow(RangeError);
+      expect(() => armar([[]], esperadas)).toThrow(mensaje);
+    },
+  );
+
+  it("una lista esperada válida con un solo nombre sirve", async () => {
+    expect(await armar([["0001_a.sql"]], ["0001_a.sql"]).guarda()).toBe(true);
   });
 
   it("un «no» se vuelve a mirar pasada la espera, y apenas se migra la app vuelve sola", async () => {
-    const g = armar(["0011_a.sql", "0011_a.sql", "0012_respaldo.sql"]);
+    const atrasada = ["0001_base.sql", "0003_otra.sql"];
+    const g = armar([atrasada, atrasada, ESPERADAS]);
     expect(await g.guarda()).toBe(false);
     g.avanzar(ESPERA_ENTRE_VERIFICACIONES_EN_MS - 1);
     expect(await g.guarda()).toBe(false);
@@ -152,12 +205,13 @@ describe("crearGuardaDeMigracion", () => {
     let reloj = 0;
     let lecturas = 0;
     const guarda = crearGuardaDeMigracion({
-      leerUltima: () => {
+      leerAplicadas: () => {
         lecturas += 1;
-        return Promise.resolve("0001_base.sql");
+        return Promise.resolve(["0001_base.sql"]);
       },
       ahora: () => reloj,
       alNoEstarAlDia: () => undefined,
+      esperadas: ESPERADAS,
       esperaEnMs: 500,
     });
     await guarda();
@@ -179,7 +233,7 @@ describe("crearGuardaDeMigracion", () => {
     );
     const g = armar([sinPermiso]);
     expect(await g.guarda()).toBe(false);
-    expect(g.informes).toEqual(["no se pudo leer la última migración aplicada: error 42501"]);
+    expect(g.informes).toEqual(["no se pudieron leer las migraciones aplicadas: error 42501"]);
     expect(g.informes.join()).not.toMatch(/secreta|permission/);
   });
 
@@ -189,41 +243,43 @@ describe("crearGuardaDeMigracion", () => {
     });
     const a = armar([sinCodigo]);
     await a.guarda();
-    expect(a.informes).toEqual(["no se pudo leer la última migración aplicada: Error"]);
+    expect(a.informes).toEqual(["no se pudieron leer las migraciones aplicadas: Error"]);
     const b = crearGuardaDeMigracion({
       // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- justamente se prueba lo que no es un Error
-      leerUltima: () => Promise.reject("texto crudo con clave"),
+      leerAplicadas: () => Promise.reject("texto crudo con clave"),
+      esperadas: ESPERADAS,
       ahora: () => 0,
       alNoEstarAlDia: (d) => informes.push(d),
     });
     const informes: string[] = [];
     await b();
     expect(informes).toEqual([
-      "no se pudo leer la última migración aplicada: falla que no es un Error",
+      "no se pudieron leer las migraciones aplicadas: falla que no es un Error",
     ]);
     const c = armar([Object.assign(new Error("x"), { code: 42501 })]);
     await c.guarda();
-    expect(c.informes).toEqual(["no se pudo leer la última migración aplicada: Error"]);
+    expect(c.informes).toEqual(["no se pudieron leer las migraciones aplicadas: Error"]);
   });
 
   it("falla cerrado aunque la lectura LANCE de inmediato (sin devolver una promesa) o venga vacía", async () => {
     const informes: string[] = [];
     const lanza = crearGuardaDeMigracion({
-      leerUltima: () => {
+      leerAplicadas: () => {
         throw Object.assign(new Error("permission denied for table migracion"), { code: "42501" });
       },
+      esperadas: ESPERADAS,
       ahora: () => 0,
       alNoEstarAlDia: (d) => informes.push(d),
     });
     expect(await lanza()).toBe(false);
-    expect(informes).toEqual(["no se pudo leer la última migración aplicada: Error 42501"]);
+    expect(informes).toEqual(["no se pudieron leer las migraciones aplicadas: Error 42501"]);
     // Sin ninguna fila de migración (tabla vacía) tampoco es «al día».
-    expect(await armar([null]).guarda()).toBe(false);
+    expect(await armar([[]]).guarda()).toBe(false);
   });
 
   it("sin permiso de lectura no se memoriza ningún «sí»: apenas se otorga, la próxima mirada lo nota", async () => {
     const sinPermiso = Object.assign(new Error("permission denied"), { code: "42501" });
-    const g = armar([sinPermiso, sinPermiso, "0012_respaldo.sql"]);
+    const g = armar([sinPermiso, sinPermiso, ESPERADAS]);
     expect(await g.guarda()).toBe(false);
     expect(await g.guarda()).toBe(false);
     g.avanzar(ESPERA_ENTRE_VERIFICACIONES_EN_MS);
@@ -233,14 +289,14 @@ describe("crearGuardaDeMigracion", () => {
   });
 
   it("después de una falla de lectura, vuelve a intentar pasada la espera", async () => {
-    const g = armar([new Error("caída"), "0012_respaldo.sql"]);
+    const g = armar([new Error("caída"), ESPERADAS]);
     expect(await g.guarda()).toBe(false);
     g.avanzar(ESPERA_ENTRE_VERIFICACIONES_EN_MS);
     expect(await g.guarda()).toBe(true);
   });
 
   it("los pedidos simultáneos del primer momento hacen una sola lectura", async () => {
-    const g = armar(["0012_respaldo.sql"]);
+    const g = armar([ESPERADAS]);
     expect(await Promise.all([g.guarda(), g.guarda(), g.guarda()])).toEqual([true, true, true]);
     expect(g.estado.lecturas).toBe(1);
   });

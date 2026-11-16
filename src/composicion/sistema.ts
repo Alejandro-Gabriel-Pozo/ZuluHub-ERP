@@ -28,7 +28,7 @@ export function armarSistema(conexiones: Conexiones, opciones: OpcionesDeSistema
     /** `true` si la base tiene la migración que el código necesita (`MIGRACION_REQUERIDA`). */
     guardaDeMigracion: perezoso(() =>
       crearGuardaDeMigracion({
-        leerUltima: () => conexiones.lecturasDeSistema().ultimaMigracion(),
+        leerAplicadas: () => conexiones.lecturasDeSistema().migracionesAplicadas(),
         ahora,
         alNoEstarAlDia: (detalle) => registrar(`[migración] ${detalle}`),
       }),

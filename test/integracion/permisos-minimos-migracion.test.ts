@@ -355,14 +355,16 @@ describe.skipIf(base === null)(
         ).toEqual([]);
       });
 
-      it("la consulta exacta de la guarda de la web devuelve la última migración; el resto de la tabla, escribirla o borrarla da 42501", async () => {
-        const ultima = (await archivos()).filter((n) => /^\d{4}_[a-z0-9_]+\.sql$/.test(n)).at(-1);
+      it("la consulta exacta de la guarda de la web devuelve los nombres de todas las migraciones; el resto de la tabla, escribirla o borrarla da 42501", async () => {
+        const aplicadas = (await archivos())
+          .filter((n) => /^\d{4}_[a-z0-9_]+\.sql$/.test(n))
+          .sort();
         await comoRol(completa.base.app, async (app) => {
           const { rows } = await app.query<{ nombre: string }>(
-            "SELECT nombre FROM migracion ORDER BY nombre DESC LIMIT 1",
+            "SELECT nombre FROM migracion ORDER BY nombre",
           );
           // Sin RLS que la filtre a cero filas: ve lo que el dueño ve.
-          expect(rows).toEqual([{ nombre: ultima }]);
+          expect(rows).toEqual(aplicadas.map((nombre) => ({ nombre })));
           const { rows: todas } = await app.query<{ n: string }>(
             "select count(*)::text as n from migracion",
           );
