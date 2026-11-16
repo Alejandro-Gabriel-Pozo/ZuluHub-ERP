@@ -264,32 +264,25 @@ CREATE POLICY portal_de_empresa_publico_de_carta ON portal_de_empresa FOR SELECT
 -- consulta `carta_publica`: Postgres detecta un ciclo de políticas (SQLSTATE 42P17) y rompe TAMBIÉN la lectura pública de la carta existente. Se corta así: el lector lee primero el
 -- portal por su código (sin tocar cartas) y fija `app.empresa_del_portal` con la empresa que leyó; estas dos políticas miran ESA empresa, no la tabla del portal. Sin ese valor no hay filas.
 -- (Una SECURITY DEFINER lo resolvería, pero el repo exige que `contexto_firmado` sea la única.) Las cartas que se ven ya son públicas por su código y solo las EN_LINEA.
+-- VARIANTE B: el lector fija `app.empresa_del_portal` y `app.id_del_portal` (el portal que acaba de leer). Las tarjetas y zonas visibles se filtran por ESE portal (sin tocar otras
+-- tablas: así no hay ciclo de políticas) y la carta solo se ve si su sucursal tiene una tarjeta o una zona VISIBLE de ese portal: otra sucursal de la empresa no sale.
+DROP POLICY IF EXISTS portal_tarjeta_publico_leer ON portal_tarjeta;
+CREATE POLICY portal_tarjeta_publico_leer ON portal_tarjeta FOR SELECT TO pedernal_publico
+  USING (visible AND portal_id::text = current_setting('app.id_del_portal', true) AND empresa_id::text = current_setting('app.empresa_del_portal', true));
+DROP POLICY IF EXISTS portal_zona_publico_leer ON portal_zona;
+CREATE POLICY portal_zona_publico_leer ON portal_zona FOR SELECT TO pedernal_publico
+  USING (visible AND portal_id::text = current_setting('app.id_del_portal', true) AND empresa_id::text = current_setting('app.empresa_del_portal', true));
+
 DROP POLICY IF EXISTS carta_publica_publico_de_portal ON carta_publica;
 CREATE POLICY carta_publica_publico_de_portal ON carta_publica FOR SELECT TO pedernal_publico
-  USING (estado = 'EN_LINEA' AND empresa_id::text = current_setting('app.empresa_del_portal', true));
+  USING (estado = 'EN_LINEA' AND empresa_id::text = current_setting('app.empresa_del_portal', true) AND (
+    EXISTS (SELECT 1 FROM public.portal_tarjeta t WHERE t.empresa_id = carta_publica.empresa_id AND t.sucursal_id = carta_publica.sucursal_id)
+    OR EXISTS (SELECT 1 FROM public.portal_zona z WHERE z.empresa_id = carta_publica.empresa_id AND z.sucursal_id = carta_publica.sucursal_id)
+  ));
 
--- La sucursal solo si está abierta Y tiene su carta en línea (la subconsulta pasa por la política anterior): una sucursal cerrada no aparece en el portal.
+-- La sucursal solo si está abierta Y su carta se ve en este portal (la subconsulta pasa por la política anterior).
 DROP POLICY IF EXISTS sucursal_publico_de_portal ON sucursal;
 CREATE POLICY sucursal_publico_de_portal ON sucursal FOR SELECT TO pedernal_publico
   USING (activa AND empresa_id::text = current_setting('app.empresa_del_portal', true) AND EXISTS (
-    SELECT 1 FROM public.carta_publica c
-     WHERE c.sucursal_id = sucursal.id AND c.empresa_id = sucursal.empresa_id AND c.estado = 'EN_LINEA'
-  ));
-
--- Tarjetas y zonas visibles de ese portal, y solo de sucursales que el portal puede mostrar (abiertas y con carta en línea).
-DROP POLICY IF EXISTS portal_tarjeta_publico_leer ON portal_tarjeta;
-CREATE POLICY portal_tarjeta_publico_leer ON portal_tarjeta FOR SELECT TO pedernal_publico
-  USING (visible AND EXISTS (
-    SELECT 1 FROM public.portal_de_empresa p
-      JOIN public.sucursal s ON s.id = portal_tarjeta.sucursal_id AND s.empresa_id = p.empresa_id
-     WHERE p.id = portal_tarjeta.portal_id AND p.empresa_id = portal_tarjeta.empresa_id
-       AND p.codigo = current_setting('app.codigo_de_portal', true)
-  ));
-DROP POLICY IF EXISTS portal_zona_publico_leer ON portal_zona;
-CREATE POLICY portal_zona_publico_leer ON portal_zona FOR SELECT TO pedernal_publico
-  USING (visible AND EXISTS (
-    SELECT 1 FROM public.portal_de_empresa p
-      JOIN public.sucursal s ON s.id = portal_zona.sucursal_id AND s.empresa_id = p.empresa_id
-     WHERE p.id = portal_zona.portal_id AND p.empresa_id = portal_zona.empresa_id
-       AND p.codigo = current_setting('app.codigo_de_portal', true)
+    SELECT 1 FROM public.carta_publica c WHERE c.sucursal_id = sucursal.id AND c.empresa_id = sucursal.empresa_id
   ));

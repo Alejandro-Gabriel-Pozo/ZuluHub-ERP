@@ -212,6 +212,72 @@ describe.skipIf(base === null)("lectura pública del portal (0078 y 0083)", () =
     expect(filas).toEqual([]);
   });
 
+  it("variante B: un portal solo deja leer la carta de las sucursales con tarjeta o zona VISIBLE; otra sucursal de la empresa no aparece, ni su código", async () => {
+    const m = await empresaConPortal(c);
+    // Solo la sucursal 1 tiene tarjeta; la sucursal 2 tiene una carta en línea pero ninguna tarjeta ni zona.
+    const g = valorDe(
+      await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+        id: nuevoId(),
+        variante: "A",
+        logoVisible: true,
+        tarjetas: [{ sucursalId: m.e.sucursal, orden: 0, visible: true }],
+      }),
+    );
+    const cartas = () =>
+      comoPublicoDelPortal<{ codigo: string }>(
+        c.propia.base.publico,
+        g.codigo,
+        "select codigo from carta_publica",
+      );
+    expect((await cartas()).map((f) => f.codigo)).toEqual([m.carta1.codigo]);
+    expect((await vista(g.codigo))?.tarjetas.map((t) => t.codigoDeCarta)).toEqual([
+      m.carta1.codigo,
+    ]);
+    const sucursales = await comoPublicoDelPortal<{ id: string }>(
+      c.propia.base.publico,
+      g.codigo,
+      "select id from sucursal",
+    );
+    expect(sucursales.map((f) => f.id)).toEqual([m.e.sucursal]);
+    // Una zona visible hacia la sucursal 2 la abre; ocultarla la cierra otra vez.
+    const zona = {
+      id: nuevoId(),
+      sucursalId: m.e.otraSucursal,
+      x: "1",
+      y: "1",
+      ancho: "5",
+      alto: "5",
+      visible: true,
+    };
+    const v2 = valorDe(
+      await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+        id: g.portalId,
+        variante: "B",
+        logoVisible: true,
+        zonas: [zona],
+        versionEsperada: g.version,
+      }),
+    );
+    expect((await cartas()).map((f) => f.codigo).sort()).toEqual(
+      [m.carta1.codigo, m.carta2.codigo].sort(),
+    );
+    valorDe(
+      await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+        id: g.portalId,
+        variante: "B",
+        logoVisible: true,
+        zonas: [{ ...zona, visible: false }],
+        versionEsperada: v2.version,
+      }),
+    );
+    expect((await cartas()).map((f) => f.codigo)).toEqual([m.carta1.codigo]);
+    // Y una tarjeta oculta de la sucursal 1 cierra también su carta.
+    await c.dueno.query("update portal_tarjeta set visible = false where portal_id = $1", [
+      g.portalId,
+    ]);
+    expect(await cartas()).toEqual([]);
+  });
+
   it("solo sale lo mostrable: carta fuera de línea, sucursal cerrada, tarjeta o zona oculta no aparecen, y nada se borró", async () => {
     const m = await empresaConPortalGuardado();
     await c.dueno.query("update carta_publica set estado = 'FUERA_DE_LINEA' where id = $1", [
