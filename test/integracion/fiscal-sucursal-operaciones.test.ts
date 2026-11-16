@@ -1131,6 +1131,33 @@ describe.skipIf(base === null)("las operaciones fiscales y la sucursal", () => {
       }
     });
 
+    it("el motivo es una sola línea de la lista de permitidos: lo que la forma vieja («no vacío y hasta 200») dejaba pasar se rechaza antes de tocar nada", async () => {
+      const e = await empresaConFacturacion();
+      const sur = await sucursalNueva(e, "Sur");
+      const pvSur = await puntoDeVentaEn(e, sur, 4);
+      const pedido = {
+        puntoDeVentaId: pvSur,
+        tipo: "FACTURA_B",
+        ambiente: "HOMOLOGACION",
+        ultimoVistoEnArca: "5",
+      };
+      for (const motivo of [
+        "",
+        "   ",
+        "Otro\nsistema",
+        "Otro\u200Bsistema",
+        "Otro \u202Esistema",
+        "<b>Otro</b>",
+        "Otro sistema 😀",
+        "a".repeat(201),
+      ]) {
+        expect(
+          await resincronizarSerie(d, comoGerente(e), { ...pedido, motivo }),
+          JSON.stringify(motivo),
+        ).toMatchObject(ERROR("FISCAL_MOTIVO_INVALIDO"));
+      }
+    });
+
     it("el gerente (sin ninguna sucursal asignada) llega hasta la serie de un punto de venta de una sucursal cerrada; los demás roles, aun con la sucursal asignada, son SIN_PERMISO", async () => {
       const e = await empresaConFacturacion();
       const sur = await sucursalNueva(e, "Sur");

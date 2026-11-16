@@ -86,6 +86,18 @@ describe("domicilio: caso válido y normalización", () => {
     });
   });
 
+  it("acepta lo que se escribe de verdad en un domicilio", () => {
+    expect(valido(con({ calle: "D'Orbigny" })).calle).toBe("D'Orbigny");
+    expect(valido(con({ calle: "Pellegrini & Cía." })).calle).toBe("Pellegrini & Cía.");
+    expect(valido(con({ calle: "25 de Mayo" })).calle).toBe("25 de Mayo");
+    expect(valido(con({ calle: "Ruta  9   Km 12" })).calle).toBe("Ruta 9 Km 12");
+    expect(valido(con({ localidad: "Ñandú" })).localidad).toBe("Ñandú");
+    for (const piso of ["PB", "3", "-1", "1°", "B/2", "Sub 1"]) {
+      expect(valido(con({ piso })).piso, piso).toBe(piso);
+      expect(valido(con({ departamento: piso })).departamento, piso).toBe(piso);
+    }
+  });
+
   it("acepta una calle con espacios, puntos y acentos en el medio", () => {
     expect(valido(con({ calle: "Gral. José de San Martín" })).calle).toBe(
       "Gral. José de San Martín",
@@ -100,6 +112,13 @@ describe("domicilio: cada regla con su caso inválido", () => {
     ["calle con salto de línea", { calle: "Mitre\nSur" }, "CALLE_INVALIDA"],
     ["calle con tabulación", { calle: "Mitre\tSur" }, "CALLE_INVALIDA"],
     ["calle demasiado larga", { calle: "a".repeat(101) }, "CALLE_INVALIDA"],
+    // Lo que la forma vieja («sin controles») dejaba pasar: no está en la lista de permitidos.
+    ["calle con un invisible", { calle: "Mitre\u200BSur" }, "CALLE_INVALIDA"],
+    ["calle con inversor de texto", { calle: "Mitre\u202ESur" }, "CALLE_INVALIDA"],
+    ["calle con marcado", { calle: "<b>Mitre</b>" }, "CALLE_INVALIDA"],
+    ["calle con emoji", { calle: "Mitre 😀" }, "CALLE_INVALIDA"],
+    ["calle con otro alfabeto", { calle: "Улица Ленина" }, "CALLE_INVALIDA"],
+    ["calle que empieza con signo de fórmula", { calle: "=1+1" }, "CALLE_INVALIDA"],
     ["número vacío", { numero: "" }, "NUMERO_INVALIDO"],
     ["número en blanco", { numero: "  " }, "NUMERO_INVALIDO"],
     ["número con letras", { numero: "12a" }, "NUMERO_INVALIDO"],
@@ -119,6 +138,14 @@ describe("domicilio: cada regla con su caso inválido", () => {
     ["localidad en blanco", { localidad: " \t " }, "LOCALIDAD_INVALIDA"],
     ["localidad con salto de línea", { localidad: "Villa\nMaría" }, "LOCALIDAD_INVALIDA"],
     ["localidad demasiado larga", { localidad: "a".repeat(101) }, "LOCALIDAD_INVALIDA"],
+    ["localidad con un invisible", { localidad: "Villa\u200BMaría" }, "LOCALIDAD_INVALIDA"],
+    ["localidad con marcado", { localidad: "Villa <María>" }, "LOCALIDAD_INVALIDA"],
+    ["piso con un invisible", { piso: "1\u200B2" }, "PISO_INVALIDO"],
+    ["piso con marcado", { piso: "<1>" }, "PISO_INVALIDO"],
+    ["piso con emoji", { piso: "1 😀" }, "PISO_INVALIDO"],
+    ["departamento con un invisible", { departamento: "A\u200BB" }, "DEPARTAMENTO_INVALIDO"],
+    ["departamento con marcado", { departamento: "<A>" }, "DEPARTAMENTO_INVALIDO"],
+    ["departamento con emoji", { departamento: "A 😀" }, "DEPARTAMENTO_INVALIDO"],
     ["provincia vacía", { provincia: "" }, "PROVINCIA_INVALIDA"],
     ["provincia que no existe", { provincia: "AR-I" }, "PROVINCIA_INVALIDA"],
     ["provincia en minúsculas", { provincia: "ar-s" }, "PROVINCIA_INVALIDA"],
@@ -243,11 +270,15 @@ describe("formatearDomicilio", () => {
 
 describe("domicilio: propiedades", () => {
   const letras = "abcdefghijklmnopqrstuvwxyzáéíóúñABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,-'";
-  const textoValido = (maximo: number) =>
+  // El piso y el departamento tienen su propia lista de permitidos (ASCII, `º ° ª . / -` y espacio).
+  const letrasDePiso = "abcxyzABCXYZ0123456789 º°ª./-";
+  const textoValido = (maximo: number, permitidos: string = letras) =>
     fc
-      .array(fc.constantFrom(...letras.split("")), { minLength: 1, maxLength: maximo })
+      .array(fc.constantFrom(...permitidos.split("")), { minLength: 1, maxLength: maximo })
       .map((cs) => cs.join(""))
-      .filter((t) => t.trim() !== "");
+      .filter((t) => t.trim() !== "")
+      // La calle y la localidad no pueden empezar con `+` ni `-` (se tomaría por una fórmula; Q7). El piso sí puede («-1»).
+      .filter((t) => permitidos !== letras || !/^[+-]/.test(t.trim()));
   const blancos = fc.constantFrom("", " ", "  ", "\t", "  ");
   const provincia = fc.constantFrom(...PROVINCIAS.map((p) => p.codigo as string));
   const numero = fc.oneof(
@@ -265,8 +296,8 @@ describe("domicilio: propiedades", () => {
   const datos = fc.record({
     calle: textoValido(100),
     numero,
-    piso: fc.option(textoValido(20), { nil: undefined }),
-    departamento: fc.option(textoValido(20), { nil: null }),
+    piso: fc.option(textoValido(20, letrasDePiso), { nil: undefined }),
+    departamento: fc.option(textoValido(20, letrasDePiso), { nil: null }),
     localidad: textoValido(100),
     provincia,
     codigoPostal,

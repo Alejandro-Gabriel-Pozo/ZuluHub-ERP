@@ -90,7 +90,7 @@ describe("armarPedidoDeCertificado", () => {
     });
   });
 
-  describe("la organización son 1 a 64 caracteres sin controles (después de recortar)", () => {
+  describe("la organización son 1 a 64 caracteres de la lista de permitidos (después de recortar)", () => {
     it.each([
       ["una letra", "A"],
       ["64 caracteres", "A".repeat(64)],
@@ -99,7 +99,7 @@ describe("armarPedidoDeCertificado", () => {
         "con acentos, símbolos y letras que un patrón sin `u` rechazaría",
         "Pañalera Cañuelas S.R.L. & Cía. «Ñandú»",
       ],
-      ["64 caracteres que ocupan dos unidades cada uno", "🌱".repeat(64)],
+      ["espacios repetidos (quedan en uno)", "Coop   Pampa"],
     ])("acepta %s", (_nombre, organizacion) => {
       expect(armarPedidoDeCertificado(entrada({ organizacion })).ok).toBe(true);
     });
@@ -108,7 +108,12 @@ describe("armarPedidoDeCertificado", () => {
       ["vacía", ""],
       ["solo blancos", "   "],
       ["65 caracteres", "A".repeat(65)],
-      ["65 caracteres de dos unidades", "🌱".repeat(65)],
+      ["un emoji", "Coop 🌱"],
+      ["un invisible (U+200B)", "Coop\u200BPampa"],
+      ["un inversor de texto (U+202E)", "Coop\u202EPampa"],
+      ["marcado", "<b>Coop</b>"],
+      ["otro alfabeto", "小林商事"],
+      ["una arroba", "Coop @ Pampa"],
       ["con un tabulador adentro", "Coop\tPampa"],
       ["con un salto de línea adentro", "Coop\nPampa"],
       ["con un carácter nulo", "Coop\u0000Pampa"],

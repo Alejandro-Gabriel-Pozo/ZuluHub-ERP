@@ -195,6 +195,14 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
     ["inicio de actividades vacío", { inicioActividades: "" }, "INICIO_DE_ACTIVIDADES_INVALIDO"],
     ["número de IIBB con salto de línea", { iibbNumero: "1\n2" }, "IIBB_NUMERO_INVALIDO"],
     ["número de IIBB demasiado largo", { iibbNumero: "1".repeat(31) }, "IIBB_NUMERO_INVALIDO"],
+    // Lo que la forma vieja («sin controles») dejaba pasar: ahora cae porque no está en la lista de permitidos.
+    ["número de IIBB con un invisible", { iibbNumero: "12\u200B3" }, "IIBB_NUMERO_INVALIDO"],
+    ["número de IIBB con marcado", { iibbNumero: "<b>1</b>" }, "IIBB_NUMERO_INVALIDO"],
+    ["número de IIBB con emoji", { iibbNumero: "123 ✨" }, "IIBB_NUMERO_INVALIDO"],
+    ["número de IIBB con acento", { iibbNumero: "Córdoba 1" }, "IIBB_NUMERO_INVALIDO"],
+    ["número de IIBB con espacio de no corte", { iibbNumero: "12\u00A03" }, "IIBB_NUMERO_INVALIDO"],
+    ["número de IIBB con inversor de texto", { iibbNumero: "12\u202E3" }, "IIBB_NUMERO_INVALIDO"],
+    ["número de IIBB que empieza con guion", { iibbNumero: "-123" }, "IIBB_NUMERO_INVALIDO"],
     ["condición de IIBB desconocida", { iibbCondicion: "TOTAL" }, "IIBB_CONDICION_INVALIDA"],
     ["condición de IIBB en minúsculas", { iibbCondicion: "local" }, "IIBB_CONDICION_INVALIDA"],
     [
@@ -206,6 +214,12 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
 
   it.each(casos)("%s", (_nombre, cambios, error) => {
     expect(editarBorrador(vacio, cambios, AHORA)).toEqual({ ok: false, error });
+  });
+
+  it("el número de IIBB acepta lo que se escribe de verdad", () => {
+    for (const bueno of ["901-123456-7", "CM 901-123456-7", "280123456", "12.345/6", "a"]) {
+      expect(editado({ iibbNumero: bueno }).iibbNumero, bueno).toBe(bueno);
+    }
   });
 
   it("los límites exactos entran", () => {

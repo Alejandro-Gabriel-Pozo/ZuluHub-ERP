@@ -536,22 +536,18 @@
       "src/capacidades/vocabulario/texto-visible.ts",
       "src/composicion/entradas-de-facturacion.ts",
       "src/modulos/empresas/dominio/sucursal.ts",
-      "src/modulos/fiscal/casos-de-uso/resincronizar-y-ambiente.ts",
-      "src/modulos/fiscal/dominio/certificado-pedido.ts",
-      "src/modulos/fiscal/dominio/datos-fiscales.ts",
       "src/plataforma/captacion/dominio/atribucion.ts",
       "src/plataforma/captacion/dominio/auditoria.ts",
       "src/plataforma/captacion/dominio/formulario.ts",
       "src/plataforma/dominio/soporte/consulta.ts",
       "src/primitivas/contacto/una-linea.ts",
-      "src/primitivas/contacto/web.ts",
-      "src/primitivas/domicilio/domicilio.ts"
+      "src/primitivas/contacto/web.ts"
     ],
     "descripcion": "Validaciones de datos por lista de prohibidos (controles, invisibles, marcado, «todo menos esto»; en código y en migraciones SQL) y topes de largo escritos dos veces: todavía no declaran lo que se PERMITE ni toman el límite de su única fuente. No hay un texto común para verificarlas: las cubre el presupuesto exacto por archivo, que solo baja.",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-11-06",
-    "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json. puerta.ts y ruta-de-retorno.ts ya se reescribieron con lista de permitidos (Deuda 4, #209 y #214) y salieron del presupuesto; configuracion.ts del correo y entorno.ts se reescribieron con lista de permitidos (Deuda 9) y salieron del presupuesto. entrada-del-plan.ts y filtros-de-empresas.ts salieron por P2 (fuente única: importan su tope del dueño, 500 y 200), no por lista de permitidos.",
+    "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json. puerta.ts y ruta-de-retorno.ts ya se reescribieron con lista de permitidos (Deuda 4, #209 y #214) y salieron del presupuesto; configuracion.ts del correo y entorno.ts se reescribieron con lista de permitidos (Deuda 9) y salieron del presupuesto. datos-fiscales.ts, certificado-pedido.ts, resincronizar-y-ambiente.ts y domicilio.ts salieron (Deuda 1, PR1: lista de permitidos y tope de su única fuente). entrada-del-plan.ts y filtros-de-empresas.ts salieron por P2 (fuente única: importan su tope del dueño, 500 y 200), no por lista de permitidos.",
     "aprobadoPor": "orquestador (PR 2 de C1 autorizado el 2026-11-06 por mensaje entre sesiones; decisión del dueño 2026-11-05). Reescribir YA lo existente que viola P1 (en vez de dejarlo pasar): el dueño, 2026-11-05 y 2026-11-06, conversación con el orquestador; constancia en `11-especificaciones/decisiones-del-dueno-2026-11.md` del repo de docs, fila «Principios P1 y P2 de validación».",
     "vence": "2027-01-05"
   }

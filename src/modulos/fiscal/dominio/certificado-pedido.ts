@@ -1,5 +1,6 @@
 import { cuitDesdeTexto, type Cuit } from "../../../primitivas/identificacion-fiscal/cuit";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { textoDeUnaLineaDesdeTexto } from "../../../primitivas/texto/texto-de-una-linea";
 import type { Ambiente } from "./comprobante-nuevo";
 import { certificadoId, esUuid, type CertificadoId, type EmisorId } from "./identificadores";
 
@@ -11,8 +12,13 @@ import { certificadoId, esUuid, type CertificadoId, type EmisorId } from "./iden
 
 /** El alias del certificado (`CN`): letras y dígitos, de 1 a 30. Es la regla de la base (`certificado_alias_ck`). */
 const ALIAS = /^[A-Za-z0-9]{1,30}$/;
-/** La organización (`O`): hasta 64 caracteres (el tope de X.520) y sin caracteres de control. */
-const ORGANIZACION = /^[^\p{Cc}]{1,64}$/u;
+/**
+ * La organización (`O`): hasta 64 caracteres (el tope de X.520) y solo los caracteres permitidos del texto de una línea
+ * (`texto-de-una-linea.ts`: la lista cerrada, una sola fuente, la misma que dibuja el PDF). No exige letras. Previene: un
+ * invisible, `<>` o un emoji en el sujeto de un certificado que después se imprime y se compara. SUPUESTO (DEC-0047) del ingeniero:
+ * la lista de permitidos reemplaza a «sin controles»; revertir es volver a la expresión anterior.
+ */
+const LARGO_MAXIMO_DE_LA_ORGANIZACION = 64;
 
 export type EntradaDePedidoDeCertificado = Readonly<{
   /** El identificador del certificado, un uuid: repetir el pedido con el mismo `id` es la repetición. */
@@ -31,7 +37,7 @@ export type PedidoDeCertificadoValido = Readonly<{
   ambiente: Ambiente;
   alias: string;
   cuitTitular: Cuit;
-  /** Sin blancos en los extremos. */
+  /** En su forma canónica: sin blancos en los extremos, NFC y los espacios repetidos en uno. */
   organizacion: string;
 }>;
 
@@ -49,15 +55,18 @@ export function armarPedidoDeCertificado(
   if (!ALIAS.test(entrada.alias)) return err("ALIAS_INVALIDO");
   const cuit = cuitDesdeTexto(entrada.cuitTitular);
   if (!cuit.ok) return err("CUIT_INVALIDO");
-  const organizacion = entrada.organizacion.trim();
-  if (!ORGANIZACION.test(organizacion)) return err("ORGANIZACION_INVALIDA");
+  const organizacion = textoDeUnaLineaDesdeTexto(entrada.organizacion, {
+    maximo: LARGO_MAXIMO_DE_LA_ORGANIZACION,
+    exigirUnaLetra: false,
+  });
+  if (!organizacion.ok) return err("ORGANIZACION_INVALIDA");
   return ok({
     id: certificadoId(entrada.id),
     emisorId: entrada.emisorId,
     ambiente: entrada.ambiente,
     alias: entrada.alias,
     cuitTitular: cuit.valor,
-    organizacion,
+    organizacion: organizacion.valor,
   });
 }
 

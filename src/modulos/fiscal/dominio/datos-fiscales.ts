@@ -157,16 +157,21 @@ export function borradorDesdeConfirmada(
   };
 }
 
-const CARACTERES_DE_CONTROL = /\p{Cc}/u;
-
 /**
- * Texto recortado, sin caracteres de control y de hasta `maximo`; `null` si no sirve. Hoy solo lo usa el número de IIBB (sin
- * primitiva: Q6, texto corto de 30 sin formato; el en blanco ya lo resolvió quien llama: es «sin número»); sigue siendo lista de prohibidos (deuda, ver «Hallazgos aparte»).
+ * LISTA DE PERMITIDOS del número de IIBB: letras y dígitos ASCII (el prefijo de convenio, «CM»), espacio y `. / -`; 1 a
+ * `LIMITES_DE_DATOS_FISCALES.iibbNumero` caracteres. SUPUESTO (DEC-0047) del ingeniero, sin fuente del dueño sobre el formato real
+ * (Q6: texto corto de 30 sin formato); revertir es cambiar esta constante. Previene: un invisible, `<>` o un emoji en un dato que
+ * viaja a ARCA y se imprime en la factura (la forma vieja, «sin controles», los dejaba pasar). El CHECK de la base
+ * (`datos_fiscales_iibb_numero_ck`) sigue más flojo hasta la migración que lo repita.
  */
-function textoLimpio(valor: string, maximo: number): string | null {
+const NUMERO_DE_IIBB_PERMITIDO = new RegExp(
+  `^[A-Za-z0-9][A-Za-z0-9 ./-]{0,${LIMITES_DE_DATOS_FISCALES.iibbNumero - 1}}$`,
+);
+
+/** Texto recortado de un número de IIBB que está entero en la lista de permitidos; `null` si no sirve (el en blanco ya lo resolvió quien llama). */
+function textoLimpio(valor: string): string | null {
   const limpio = valor.trim();
-  if (limpio.length > maximo || CARACTERES_DE_CONTROL.test(limpio)) return null;
-  return limpio;
+  return NUMERO_DE_IIBB_PERMITIDO.test(limpio) ? limpio : null;
 }
 
 const NUMERO_INVALIDO = Symbol("numero de IIBB invalido");
@@ -177,7 +182,7 @@ function limpiarNumeroDeIibb(
 ): string | null | undefined | typeof NUMERO_INVALIDO {
   if (valor === undefined) return undefined;
   if (valor === null || valor.trim() === "") return null;
-  return textoLimpio(valor, LIMITES_DE_DATOS_FISCALES.iibbNumero) ?? NUMERO_INVALIDO;
+  return textoLimpio(valor) ?? NUMERO_INVALIDO;
 }
 
 /** Solo «No contribuyente» se acepta al editar (las otras tres ya no se piden). Mismas salidas que el número. */
