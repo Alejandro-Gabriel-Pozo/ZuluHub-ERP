@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0434",
+  "fecha": "2026-11-15",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: las pantallas de una sección llevan un botón de vuelta a la lista con el nombre accesible «Volver a la lista», como la maqueta; ese texto no figura entre los aprobados.",
+  "que_cambia": "Solo lo que lee quien usa lector de pantalla en el botón de vuelta. Revertir: quitar el botón y la clave catalogo.seccion.volver_a_la_lista (se vuelve por el menú). «Volver a la ficha» no se construye.",
+  "donde": "Pedernal-docs 10-ux-ui productos-secciones.html líneas 381 y 389; 11-especificaciones/conceptos/secciones-de-la-carta-pantalla.md §5 y pregunta P1 (opción A); src/capacidades/vocabulario/catalogo-catalogo.ts"
+}
