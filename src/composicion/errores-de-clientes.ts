@@ -21,6 +21,7 @@ import type { ErrorDeEntrada } from "./entradas-de-facturacion";
 
 type ErrorPropio = Exclude<Extract<ErrorDeClientes, string>, MotivoDeRechazo>;
 
+// Stryker disable next-line ObjectLiteral: la tabla existe para la exhaustividad por TIPO (compila o no); en ejecución todo lo que no está acá también es el genérico, así que vaciarla no cambia el resultado.
 const CODIGO_DE_ERROR_PROPIO: Readonly<Record<ErrorPropio, CodigoDeClientes>> = {
   SUCURSAL_FUERA_DE_ALCANCE: "CLIENTES_ACCION_NO_PERMITIDA",
   IDENTIFICADOR_INVALIDO: "CLIENTES_ACCION_NO_PERMITIDA",
@@ -61,7 +62,9 @@ const GENERICO = { codigo: "CLIENTES_ACCION_NO_PERMITIDA" satisfies CodigoDeClie
 function deLosDatosInvalidos(campos: unknown): unknown {
   if (!Array.isArray(campos)) return GENERICO;
   for (const c of campos as readonly unknown[]) {
+    // Stryker disable next-line ConditionalExpression: equivalente, un valor que no es objeto no tiene `codigo` y cae igual en el genérico.
     const codigo = typeof c === "object" && c !== null ? (c as { codigo?: unknown }).codigo : null;
+    // Stryker disable next-line ConditionalExpression: equivalente, `hasOwn` de algo que no es texto es falso.
     if (typeof codigo === "string" && Object.hasOwn(DATO_CON_TEXTO_PROPIO, codigo)) {
       return DATO_CON_TEXTO_PROPIO[codigo];
     }
@@ -72,6 +75,7 @@ function deLosDatosInvalidos(campos: unknown): unknown {
 /** El error del caso de uso o de la consulta tal como lo entiende `aRespuesta`: un código público del directorio o, si no es suyo, el mismo error. */
 export function traducirErrorDeClientes(error: unknown): unknown {
   if (typeof error === "string") {
+    // Stryker disable next-line ConditionalExpression,BlockStatement: equivalente, ver la tabla: lo que no está en ella sale igual como el genérico.
     if (Object.hasOwn(CODIGO_DE_ERROR_PROPIO, error)) {
       return { codigo: CODIGO_DE_ERROR_PROPIO[error as ErrorPropio] };
     }

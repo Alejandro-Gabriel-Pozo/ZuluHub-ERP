@@ -308,6 +308,16 @@ describe("guardarLaParte: alta", () => {
     });
   });
 
+  it("un domicilio con solo el número manda la calle vacía: lo decide el dominio", async () => {
+    const { d, llamadas } = armar();
+    await guardarLaParte(d, contexto, { ...FORMULARIO, numero: "10" });
+    const alta = llamadas.find((l) => l[0] === "crearParte")?.[1] as {
+      domicilio: { estructurado: Record<string, unknown> };
+    };
+    expect(alta.domicilio.estructurado["calle"]).toBe("");
+    expect(alta.domicilio.estructurado["numero"]).toBe("10");
+  });
+
   it("con un documento de un tipo que no vino lo manda vacío para que el dominio lo rechace", async () => {
     const { d, llamadas } = armar();
     await guardarLaParte(d, contexto, { ...FORMULARIO, documentoTipo: undefined });
@@ -315,6 +325,23 @@ describe("guardarLaParte: alta", () => {
       documento: Record<string, unknown>;
     };
     expect(alta.documento).toEqual({ tipo: "", pais: null, numero: "30701234567" });
+  });
+
+  it("un alta con parteId nulo (no ausente) también es un alta", async () => {
+    const { d, llamadas } = armar();
+    await guardarLaParte(d, contexto, { ...FORMULARIO, guardarIgual: true, parteId: null });
+    expect(llamadas.map((l) => l[0])).toEqual(["crearParte"]);
+  });
+
+  it("un campo opcional que viene nulo es «sin dato»", async () => {
+    const { d, llamadas } = armar();
+    await guardarLaParte(d, contexto, {
+      ...FORMULARIO,
+      guardarIgual: true,
+      email: null,
+      apellido: null,
+    });
+    expect(llamadas[0]?.[1]).toMatchObject({ email: null, apellido: null });
   });
 
   it("con posibles duplicados NO escribe nada y los devuelve (solo avisa)", async () => {
@@ -520,7 +547,9 @@ describe("desactivar, reactivar y contactos", () => {
 
   it("agregar un contacto lo vincula como CONTACTO con su cargo (o sin cargo si viene en blanco)", async () => {
     const { d, llamadas } = armar();
-    await agregarElContacto(d, contexto, { deParteId: ID, contactoId: OTRO, cargo: "Ventas" });
+    expect(
+      await agregarElContacto(d, contexto, { deParteId: ID, contactoId: OTRO, cargo: "Ventas" }),
+    ).toEqual({ ok: true, dato: {} });
     await agregarElContacto(d, contexto, { deParteId: ID, contactoId: OTRO, cargo: " " });
     expect(llamadas).toEqual([
       ["vincularContacto", { contactoId: OTRO, deParteId: ID, tipo: "CONTACTO", cargo: "Ventas" }],

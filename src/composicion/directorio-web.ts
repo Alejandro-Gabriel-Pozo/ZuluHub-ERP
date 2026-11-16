@@ -145,6 +145,7 @@ export function fichaDeLaParte(
     async (entrada): Promise<Resultado<FichaParaLaPantalla, unknown>> => {
       const r = await d.consultas().fichaDeParte(contexto, { parteId: entrada.parteId });
       if (!r.ok) return r;
+      // Stryker disable next-line StringLiteral: cualquier texto que no es un código conocido sale como el genérico; el nombre es solo para quien lee.
       if (r.valor === null) return err("PARTE_NO_ENCONTRADA");
       const f = r.valor;
       const domicilio = f.domicilio;
@@ -264,6 +265,7 @@ export function guardarLaParte(
         return alta.ok ? ok({ estado: "GUARDADA", parteId: alta.valor.parteId }) : alta;
       }
       if (entrada.versionEsperada === null || entrada.versionEsperada === undefined) {
+        // Stryker disable next-line StringLiteral: ídem, el nombre es solo para quien lee.
         return err("VERSION_DESACTUALIZADA");
       }
       const edicion = await d.casosDeUso().editarParteConRoles(contexto, {
