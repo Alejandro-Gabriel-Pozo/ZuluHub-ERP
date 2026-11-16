@@ -273,6 +273,10 @@ describe("la página de una sección", () => {
     expect(quitar).toHaveLength(2);
     expect(quitar.map((a) => /name="quitar"/.test(a))).toEqual([true, true]);
     expect(quitar.map((a) => /value="([^"]*)"/.exec(a)?.[1])).toEqual(["p1", "p2"]);
+    expect(quitar.map((a) => /aria-label="([^"]*)"/.exec(a)?.[1])).toEqual([
+      "Quitar Cortado",
+      "Quitar Espresso",
+    ]);
     expect(quitar.every((a) => /type="submit"/.test(a) && !/\bdisabled\b/.test(a))).toBe(true);
     expect(marcado).not.toContain("versionEsperada");
     expect(marcado).not.toMatch(/value="(4|9)"/);

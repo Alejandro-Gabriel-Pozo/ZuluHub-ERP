@@ -145,8 +145,9 @@ export type UnaSeccionArmada = Readonly<{
   estado: Readonly<{ reactivar: boolean; texto: string; apagado: boolean }>;
   /** «Agregar producto»: lleva a elegir; sin `href` (la persona no puede editar) sale apagado. */
   agregar: Readonly<{ texto: string; href: string | null }>;
-  productos: readonly Readonly<{ id: string; nombre: string }>[];
-  /** «Quitar», el mismo en cada producto; apagado si la persona no puede editar. */
+  /** De cada producto, su id, su nombre y el nombre accesible de su «Quitar» («Quitar {nombre}», DEC-0522). */
+  productos: readonly Readonly<{ id: string; nombre: string; etiquetaDeQuitar: string }>[];
+  /** «Quitar», el mismo texto en cada producto; apagado si la persona no puede editar. */
   quitar: Readonly<{ texto: string; apagado: boolean }>;
   /** Los productos como se ven, con su versión: la página los liga a la acción de «Quitar». */
   vistas: readonly VistaDeProducto[];
@@ -183,7 +184,11 @@ export function armarUnaSeccion(
       texto: texto(d, "catalogo.seccion.agregar_producto"),
       href: edita ? rutaDeAgregarProducto(seccion.id) : null,
     },
-    productos: dato.productos.map((p) => ({ id: p.id, nombre: p.nombre })),
+    productos: dato.productos.map((p) => ({
+      id: p.id,
+      nombre: p.nombre,
+      etiquetaDeQuitar: texto(d, "catalogo.seccion.quitar_producto", { nombre: p.nombre }),
+    })),
     quitar: { texto: texto(d, "catalogo.accion.quitar"), apagado: !edita },
     vistas: dato.productos.map((p) => ({ productoId: p.id, versionEsperada: p.version })),
     siguiente:

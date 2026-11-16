@@ -116,6 +116,9 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.seccion.nueva": { porDefecto: "Nueva sección" },
   "catalogo.seccion.agregar_producto": { porDefecto: "Agregar producto" },
   "catalogo.accion.quitar": { porDefecto: "Quitar" },
+  // Nombre accesible de «Quitar» en cada producto (DEC-0522): lleva el nombre del producto, como «Subir {nombre}» (DEC-0433). Aprobado por el orquestador por delegación (DDD filas 173 y 174), misma fuente
+  // que las flechas (T22/T23). Lo ve en pantalla solo «Quitar»; el nombre completo lo lee quien usa lector de pantalla. Revertir: quitar la clave y el aria-label.
+  "catalogo.seccion.quitar_producto": { porDefecto: "Quitar {nombre}", marcadores: ["nombre"] },
   // SUPUESTO (DEC-0433; pendiente de aprobación del dueño: ficha de la pantalla §5 y pregunta P1, opción A): el nombre accesible de las flechas se compone con el nombre de la sección, como lo hace la
   // maqueta (`aria-label="Subir ' + esc(x.n)`, línea 374: «Subir Cafés»). Lo aprobado es «Subir» y «Bajar» solos; sin el nombre, dos flechas de filas distintas se llaman igual. Revertir: quitar el marcador.
   "catalogo.seccion.subir": { porDefecto: "Subir {nombre}", marcadores: ["nombre"] },

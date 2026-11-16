@@ -12,6 +12,8 @@ export type PropsDeBotonDeFilaDeProducto = Readonly<{
   apagado: boolean;
   /** `enlace` para «Quitar» (texto suelto a la derecha de la fila); `fila` para un candidato (toda la fila es el botón). */
   forma: "enlace" | "fila";
+  /** El nombre accesible, si el texto visible solo no alcanza para distinguir la fila («Quitar Cortado»). */
+  etiqueta?: string | undefined;
   children: ReactNode;
 }>;
 
@@ -25,6 +27,7 @@ export function BotonDeFilaDeProducto({
   valor,
   apagado,
   forma,
+  etiqueta,
   children,
 }: PropsDeBotonDeFilaDeProducto) {
   const enviando = useEnvioDeFormulario();
@@ -34,6 +37,7 @@ export function BotonDeFilaDeProducto({
       className={estilos[forma === "enlace" ? "quitar" : "candidato"]}
       name={campo}
       value={valor}
+      aria-label={etiqueta}
       disabled={apagado}
       aria-disabled={enviando ? "true" : undefined}
       onClick={(evento) => {

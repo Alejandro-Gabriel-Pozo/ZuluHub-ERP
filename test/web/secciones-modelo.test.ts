@@ -166,8 +166,8 @@ describe("armarUnaSeccion", () => {
       estado: { reactivar: false, texto: "Desactivar", apagado: false },
       agregar: { texto: "Agregar producto", href: `/catalogo/secciones/${A}/agregar` },
       productos: [
-        { id: "p1", nombre: "Cortado" },
-        { id: "p2", nombre: "Espresso" },
+        { id: "p1", nombre: "Cortado", etiquetaDeQuitar: "Quitar Cortado" },
+        { id: "p2", nombre: "Espresso", etiquetaDeQuitar: "Quitar Espresso" },
       ],
       quitar: { texto: "Quitar", apagado: false },
       vistas: [
@@ -180,7 +180,8 @@ describe("armarUnaSeccion", () => {
 
   it("la versión de cada producto NO sale en las filas: viaja solo en lo que la página liga a la acción", () => {
     const s = armarUnaSeccion(dato(CAFES), true);
-    for (const fila of s.productos) expect(Object.keys(fila)).toEqual(["id", "nombre"]);
+    for (const fila of s.productos)
+      expect(Object.keys(fila)).toEqual(["id", "nombre", "etiquetaDeQuitar"]);
   });
 
   it("una sección desactivada: la marca «Desactivado» y «Reactivar»", () => {
@@ -221,11 +222,13 @@ describe("armarUnaSeccion", () => {
       "catalogo.seccion.volver_a_la_lista": "Atrás",
       "catalogo.seccion.agregar_producto": "Sumar",
       "catalogo.accion.quitar": "Sacar",
+      "catalogo.seccion.quitar_producto": "Sacar {nombre} de acá",
     });
     expect(s.estado.texto).toBe("Apagar");
     expect(s.volver.etiqueta).toBe("Atrás");
     expect(s.agregar.texto).toBe("Sumar");
     expect(s.quitar.texto).toBe("Sacar");
+    expect(s.productos[0]?.etiquetaDeQuitar).toBe("Sacar Cortado de acá");
   });
 });
 

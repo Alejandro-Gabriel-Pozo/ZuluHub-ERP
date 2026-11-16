@@ -71,7 +71,16 @@ describe("PantallaDeUnaSeccion", () => {
     await expect
       .element(page.getByRole("link", { name: "Agregar producto" }))
       .toHaveAttribute("href", "/catalogo/secciones/s-1/agregar");
-    await expect.element(page.getByRole("button", { name: "Quitar" }).first()).toBeEnabled();
+    await expect.element(page.getByRole("button", { name: /^Quitar/ }).first()).toBeEnabled();
+  });
+
+  it("cada «Quitar» se dice «Quitar {producto}» para quien usa lector de pantalla, y en pantalla solo «Quitar»", async () => {
+    await render(pantalla());
+    await expect.element(page.getByRole("button", { name: "Quitar Cortado" })).toBeVisible();
+    await expect.element(page.getByRole("button", { name: "Quitar Espresso" })).toBeVisible();
+    expect(page.getByRole("button", { name: "Quitar Espresso" }).element().textContent).toBe(
+      "Quitar",
+    );
   });
 
   it("«Quitar» manda el id del producto tocado (no el de otro); el segundo toque no manda un segundo envío", async () => {
@@ -84,11 +93,11 @@ describe("PantallaDeUnaSeccion", () => {
       return { error: null };
     });
     await render(pantalla(dato(), ok, true, accion));
-    const segundo = page.getByRole("button", { name: "Quitar" }).nth(1);
+    const segundo = page.getByRole("button", { name: /^Quitar/ }).nth(1);
     tocar(segundo);
     await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
     tocar(segundo);
-    tocar(page.getByRole("button", { name: "Quitar" }).first());
+    tocar(page.getByRole("button", { name: /^Quitar/ }).first());
     expect([...(accion.mock.calls[0]?.[1] as FormData).entries()]).toEqual([["quitar", "p2"]]);
     liberar();
     await vi.waitFor(() => expect(document.querySelector("[aria-disabled=true]")).toBeNull());
@@ -108,7 +117,7 @@ describe("PantallaDeUnaSeccion", () => {
         }),
       ),
     );
-    tocar(page.getByRole("button", { name: "Quitar" }).first());
+    tocar(page.getByRole("button", { name: /^Quitar/ }).first());
     await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
@@ -198,14 +207,14 @@ describe("PantallaDeUnaSeccion", () => {
     await render(pantalla(dato(), accion, false, accion));
     await expect.element(page.getByRole("button", { name: "Agregar producto" })).toBeDisabled();
     expect(document.querySelector('a[href$="/agregar"]')).toBeNull();
-    for (const quitar of page.getByRole("button", { name: "Quitar" }).elements()) {
+    for (const quitar of page.getByRole("button", { name: /^Quitar/ }).elements()) {
       expect((quitar as HTMLButtonElement).disabled).toBe(true);
     }
     await expect.element(page.getByRole("button", { name: "Nombre" })).toBeDisabled();
     await expect.element(page.getByRole("button", { name: "Desactivar" })).toBeDisabled();
     expect(document.querySelector('a[href$="/nombre"]')).toBeNull();
     tocar(page.getByRole("button", { name: "Desactivar" }));
-    tocar(page.getByRole("button", { name: "Quitar" }).first());
+    tocar(page.getByRole("button", { name: /^Quitar/ }).first());
     expect(accion).not.toHaveBeenCalled();
     await expect.element(page.getByText("Espresso")).toBeVisible();
     expect(await violacionesDeAccesibilidad()).toEqual([]);

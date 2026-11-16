@@ -40,6 +40,7 @@ export function ListaDeProductosDeSeccion({
                 valor={p.id}
                 apagado={quitar.apagado}
                 forma="enlace"
+                etiqueta={p.etiquetaDeQuitar}
               >
                 {quitar.texto}
               </BotonDeFilaDeProducto>
