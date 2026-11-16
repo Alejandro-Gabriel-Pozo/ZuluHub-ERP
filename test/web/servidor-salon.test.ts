@@ -67,7 +67,12 @@ vi.mock("../../apps/web/servidor/sucursal-elegida", () => ({
 }));
 
 const RUTA = "../../apps/web/servidor/salon";
-type Salon = typeof import("../../apps/web/servidor/salon");
+type Salon = {
+  darDeAltaLaMesa: (clave: string, datos: FormData) => Promise<unknown>;
+  cargarLasMesas: (contexto: never) => Promise<unknown>;
+  cambiarElEstadoDeLaMesaDelSalon: (id: string, activa: boolean) => Promise<unknown>;
+  nuevaClaveDeMesa: () => string;
+};
 const cargar = () => import(/* @vite-ignore */ RUTA) as Promise<Salon>;
 const formulario = (extra: Record<string, string> = {}) => {
   const datos = new FormData();
