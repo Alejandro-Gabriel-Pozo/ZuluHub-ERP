@@ -12,8 +12,8 @@ import { describe, expect, it } from "vitest";
  */
 
 const RAIZ = join(__dirname, "../..");
-/** Las constantes sin prueba de paridad hoy (cuenta y ticket, paso P3b). Solo baja. */
-const MAXIMO_SIN_PRUEBA = 2;
+/** Las constantes sin prueba de paridad hoy (ninguna desde P3b: cuenta y ticket). Solo baja. */
+const MAXIMO_SIN_PRUEBA = 0;
 const PASOS_QUE_LAS_TRAEN = ["P3b"] as const;
 
 type Entrada = Readonly<{
@@ -34,6 +34,7 @@ export function evaluar(
   registro: readonly Entrada[],
   existe: (ruta: string) => boolean,
   contiene: (ruta: string, texto: string) => boolean,
+  maximo: number = MAXIMO_SIN_PRUEBA,
 ): readonly string[] {
   const fallas: string[] = [];
   for (const c of enElCodigo) {
@@ -67,8 +68,8 @@ export function evaluar(
       );
   }
   const sinPrueba = registro.filter((e) => e.sinPrueba !== undefined).length;
-  if (sinPrueba > MAXIMO_SIN_PRUEBA)
-    fallas.push(`hay ${sinPrueba} entradas sin prueba y el máximo es ${MAXIMO_SIN_PRUEBA}`);
+  if (sinPrueba > maximo)
+    fallas.push(`hay ${sinPrueba} entradas sin prueba y el máximo es ${maximo}`);
   return fallas;
 }
 
@@ -128,7 +129,7 @@ describe("registro de copias dominio ↔ base (P0)", () => {
       registro: Entrada[],
       existe = () => true,
       contiene = () => true,
-    ) => evaluar(codigo, registro, existe, contiene);
+    ) => evaluar(codigo, registro, existe, contiene, 5);
 
     it("la línea base no tiene hallazgos", () => {
       expect(corre([uno], [ok])).toEqual([]);
@@ -180,9 +181,24 @@ describe("registro de copias dominio ↔ base (P0)", () => {
         constante: `TRANSICIONES_DE_${n}`,
         archivo: "src/x.ts",
       }));
-      expect(corre(codigo, [1, 2, 3].map(sin))).toEqual([
-        `hay 3 entradas sin prueba y el máximo es ${MAXIMO_SIN_PRUEBA}`,
-      ]);
+      expect(
+        evaluar(
+          codigo,
+          [1, 2, 3].map(sin),
+          () => true,
+          () => true,
+          2,
+        ),
+      ).toEqual(["hay 3 entradas sin prueba y el máximo es 2"]);
+      // Con el máximo real (cero), una sola entrada sin prueba ya falla.
+      expect(
+        evaluar(
+          [uno],
+          [{ ...sin(1), constante: "TRANSICIONES_DE_X", id: "transiciones-de-x" }],
+          () => true,
+          () => true,
+        ),
+      ).toEqual([`hay 1 entradas sin prueba y el máximo es ${MAXIMO_SIN_PRUEBA}`]);
       expect(corre([uno], [ok, ok])).toEqual([
         "TRANSICIONES_DE_X está 2 veces en el registro",
         "id repetido: transiciones-de-x",

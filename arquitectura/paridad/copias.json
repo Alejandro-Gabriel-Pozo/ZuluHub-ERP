@@ -46,14 +46,14 @@
     "forma": "transiciones",
     "constante": "TRANSICIONES_DE_CUENTA",
     "archivo": "src/modulos/ventas/dominio/estados.ts",
-    "sinPrueba": "P3b"
+    "prueba": "test/integracion/ventas-migracion.test.ts"
   },
   {
     "id": "transiciones-de-ticket",
     "forma": "transiciones",
     "constante": "TRANSICIONES_DE_TICKET",
     "archivo": "src/modulos/ventas/dominio/estados.ts",
-    "sinPrueba": "P3b"
+    "prueba": "test/integracion/ventas-migracion.test.ts"
   },
   {
     "id": "transiciones-de-parte",

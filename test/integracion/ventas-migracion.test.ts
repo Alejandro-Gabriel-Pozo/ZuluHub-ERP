@@ -3,6 +3,10 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import {
+  TRANSICIONES_DE_CUENTA,
+  TRANSICIONES_DE_TICKET,
+} from "../../src/modulos/ventas/dominio/estados";
 import { fechaDeNegocio } from "../../src/primitivas/tiempo/fecha-de-negocio";
 import { productoDeBase } from "./catalogo-apoyo";
 import { crearBaseAparte, cuitUnico } from "./entorno";
@@ -2027,12 +2031,12 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
       CORTESIA: f.cortesia.ticket,
       ANULADO: f.anulado.ticket,
     } as const;
-    const permitidas = new Set([
-      "EMITIDO>COBRADO",
-      "EMITIDO>ANULADO",
-      "COBRADO>ANULADO",
-      "CORTESIA>ANULADO",
-    ]);
+    // La tabla del DOMINIO es la fuente (paridad dominio ↔ base): la base impone exactamente esos pares.
+    const permitidas = new Set(
+      Object.entries(TRANSICIONES_DE_TICKET).flatMap(([desde, haciaLista]) =>
+        haciaLista.map((hacia) => `${desde}>${hacia}`),
+      ),
+    );
     // El estado de partida de cada uno es el que dice el nombre.
     for (const estado of estados) {
       expect(
@@ -2323,6 +2327,52 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
         1,
       );
     });
+  });
+
+  it("transiciones de la cuenta: la base admite exactamente los pares de TRANSICIONES_DE_CUENTA (paridad con el dominio); una resuelta queda congelada", async () => {
+    const estados = ["ABIERTA", "CERRADA", "ANULADA"] as const;
+    const guardada = {
+      ABIERTA: f.abierta.cuenta,
+      CERRADA: f.emitido.cuenta,
+      ANULADA: f.cuentaAnulada,
+    } as const;
+    const permitidas = new Set(
+      Object.entries(TRANSICIONES_DE_CUENTA).flatMap(([desde, haciaLista]) =>
+        haciaLista.map((hacia) => `${desde}>${hacia}`),
+      ),
+    );
+    const w = mundoDe(a);
+    for (const estado of estados) {
+      expect(
+        (
+          await m.filas<{ estado: string }>("select estado from cuenta_consumo where id = $1", [
+            guardada[estado],
+          ])
+        )[0]?.estado,
+      ).toBe(estado);
+    }
+    for (const desde of estados) {
+      for (const hasta of estados) {
+        if (desde === hasta) continue;
+        await conA(async (s) => {
+          // Un cambio bien formado hacia `hasta` (persona del contexto, hora, motivo si anula): lo único que puede rechazarlo es el par.
+          const cambio =
+            hasta === "ANULADA"
+              ? "estado = 'ANULADA', resuelta_por = $2, resuelta_en = $3, motivo = 'Se fue'"
+              : hasta === "CERRADA"
+                ? "estado = 'CERRADA', resuelta_por = $2, resuelta_en = $3"
+                : "estado = 'ABIERTA', resuelta_por = null, resuelta_en = null, motivo = null";
+          const parametros =
+            hasta === "ABIERTA" ? [guardada[desde]] : [guardada[desde], w.persona, AHORA];
+          const r = await s.intentar(
+            `update cuenta_consumo set ${cambio} where id = $1`,
+            parametros,
+          );
+          if (permitidas.has(`${desde}>${hasta}`)) acepta(r);
+          else check(r, "cuenta_resuelta_congelada");
+        });
+      }
+    }
   });
 
   it("una única cuenta abierta por ancla (cuenta_ancla_abierta_uk); resuelta la primera, la ancla queda libre; el ancla es completa y de forma válida", async () => {
