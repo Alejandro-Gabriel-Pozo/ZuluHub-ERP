@@ -8,8 +8,7 @@ import {
 import type { SucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { esUuid } from "../casos-de-uso/calculo";
-import { documentoDeTicket, type ErrorDelPapelDelTicket } from "../dominio/documento-del-ticket";
-import type { FichaDeTicketLeida } from "../persistencia/repositorio-de-lecturas";
+import { papelDelTicket, type ErrorDelPapelDelTicket } from "../casos-de-uso/papel-del-ticket";
 import type { TxDeConsultasDeVentas } from "./contrato";
 
 /**
@@ -32,29 +31,6 @@ export type ErrorDeDocumentoDelTicket =
   | "TICKET_NO_IMPRIMIBLE";
 
 const ANCHO_POR_DEFECTO: PapelEnMm = 80;
-
-/** El papel de una ficha ya leída: lo comparte la consulta de ventas y la de comandas (una regla, un lugar). El total es el del ejemplar vigente. */
-export function papelDelTicket(
-  ficha: FichaDeTicketLeida,
-  ancho: PapelEnMm,
-): Resultado<ModeloDePapel, ErrorDelPapelDelTicket> {
-  return documentoDeTicket(
-    {
-      numero: ficha.ticket.numero,
-      fechaNegocio: ficha.ticket.fechaNegocio,
-      lineas: ficha.renglonesDelVigente.map((r) => ({
-        cantidad: r.cantidad,
-        unidadDeVenta: r.unidadDeVenta,
-        descripcion: r.descripcion,
-        varianteNombre: r.varianteNombre,
-        opciones: r.opciones.map((o) => ({ nombre: o.nombre })),
-        importe: r.importe,
-      })),
-      total: ficha.ejemplares[0]?.total ?? ficha.ticket.total,
-    },
-    { ancho },
-  );
-}
 
 export async function documentoDelTicket(
   tx: TxDeConsultasDeVentas,
