@@ -86,6 +86,11 @@ describe("traducirErrorDeStock", () => {
     }
   });
 
+  it("en un error con forma de objeto solo un TEXTO es el nombre: una lista que se lee como uno pasa sin cambios", () => {
+    const disfrazado = { error: ["CONTROL_BLOQUEA"] };
+    expect(traducirErrorDeStock(disfrazado)).toBe(disfrazado);
+  });
+
   it("solo un TEXTO es un error: un objeto que se lee como uno (toString) pasa sin cambios", () => {
     const disfrazado = { toString: () => "NOMBRE_DUPLICADO" };
     expect(traducirErrorDeStock(disfrazado)).toBe(disfrazado);
