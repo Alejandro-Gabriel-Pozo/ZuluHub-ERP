@@ -21,6 +21,7 @@ import {
   depositoDeBase,
   entrada as entradaDeStock,
   escribirMovimiento,
+  salida as salidaDeStock,
 } from "./stock-apoyo";
 import { conectarDueno, motivoDeRechazo } from "./compras-devoluciones-apoyo";
 
@@ -457,6 +458,53 @@ describe.skipIf(base === null)("0084 compras N4: devoluciones contra una base re
       [e.m.empresa],
     );
     expect(vigentes.rows[0]?.n).toBe("7.0000");
+  });
+
+  it("la salida por devolución sale de cuarentena y de rechazo; venta, merma, otra salida y una devolución con otro origen (o con otro motivo) siguen rechazadas", async () => {
+    const e = await escenario();
+    const escribir = (mov: Parameters<typeof escribirMovimiento>[2]) =>
+      escribirMovimiento((t, p) => intentoDelDueno(dueno, t, p), e.m.empresa, mov);
+    const restringido = "renglon_deposito_de_uso_restringido";
+    const deDevolucion = () => ({ tipo: "DEVOLUCION_A_PROVEEDOR", id: randomUUID() }) as const;
+    await sinConfirmar(dueno, async () => {
+      for (const uso of ["CUARENTENA", "RECHAZO"] as const) {
+        const deposito = await depositoDeBase(dueno, e.m, { uso });
+        // La mercadería llega ahí por una compra recibida (0064).
+        acepta(
+          (
+            await escribir(
+              entradaDeStock(e.m, deposito, e.articulo, "10", {
+                origen: { tipo: "RECEPCION", id: randomUUID() },
+              }),
+            )
+          ).resultado,
+        );
+        const salir = (extra: Record<string, unknown>) =>
+          escribir(salidaDeStock(e.m, deposito, e.articulo, "1", extra)).then((r) => r.resultado);
+        acepta(await salir({ motivo: "DEVOLUCION_A_PROVEEDOR", origen: deDevolucion() }));
+        for (const motivo of ["MERMA", "ROTURA", "VENCIMIENTO", "OTRA_SALIDA", "CONSUMO_INTERNO"]) {
+          check(await salir({ motivo }), restringido);
+        }
+        check(
+          await salir({
+            motivo: "VENTA",
+            origen: { tipo: "EJEMPLAR_DE_TICKET", id: randomUUID() },
+            fechaDeNegocio: "2026-11-10",
+          }),
+          restringido,
+        );
+        // El motivo de la devolución sin su origen, o con el origen de una recepción, o el origen de la devolución con otro motivo: no pasan.
+        check(await salir({ motivo: "DEVOLUCION_A_PROVEEDOR" }), restringido);
+        check(
+          await salir({
+            motivo: "DEVOLUCION_A_PROVEEDOR",
+            origen: { tipo: "RECEPCION", id: randomUUID() },
+          }),
+          restringido,
+        );
+        check(await salir({ motivo: "MERMA", origen: deDevolucion() }), restringido);
+      }
+    });
   });
 
   it("aislamiento: otra empresa no ve ni toca las devoluciones ajenas", async () => {

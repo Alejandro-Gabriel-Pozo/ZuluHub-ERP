@@ -307,6 +307,61 @@ describe.skipIf(base === null)("compras N4: devoluciones al proveedor", () => {
     valorDe(await c.casos.devolverAlProveedor(m.e.gerente, conOrigen("6000")));
   });
 
+  it("devolver lo rechazado: sale del depósito de rechazo, con origen en su recepción, y anular la devolución lo devuelve ahí", async () => {
+    const m = await armar();
+    const rechazo = await c.deposito(m.e, { uso: "RECHAZO" });
+    const recibida = valorDe(
+      await c.casos.registrarRecepcion(m.e.operador, {
+        clave: nuevoId(),
+        sucursalId: m.e.sucursal,
+        proveedorId: m.proveedor,
+        renglones: [
+          {
+            productoId: m.harina.producto,
+            unidadDeCompraId: "KILOGRAMO",
+            cantidad: "3",
+            precioPor: "UNIDAD",
+            unidadDePrecioId: "KILOGRAMO",
+            precio: "1000",
+          },
+        ],
+        controles: [{ linea: 1, condicion: "RECHAZADA", observacion: "Vencida" }],
+      }),
+    );
+    valorDe(
+      await c.casos.confirmarRecepcion(m.e.gerente, {
+        recepcionId: recibida.recepcionId,
+        depositoId: m.deposito,
+      }),
+    );
+    expect(await c.existencia(rechazo, m.harina.articulo)).toBe("3000.0000");
+    const r = valorDe(
+      await c.casos.devolverAlProveedor(
+        m.e.gerente,
+        pedido(m, "3000", {
+          depositoId: rechazo,
+          lineas: [
+            {
+              productoId: m.harina.producto,
+              cantidad: "3000",
+              recepcionId: recibida.recepcionId,
+              lineaDeRecepcion: 1,
+            },
+          ],
+        }),
+      ),
+    );
+    expect(await c.existencia(rechazo, m.harina.articulo)).toBe("0.0000");
+    expect(await existencia(m)).toBe("10000.0000");
+    valorDe(
+      await c.casos.anularDevolucion(m.e.gerente, {
+        devolucionId: r.devolucionId,
+        motivo: "Error",
+      }),
+    );
+    expect(await c.existencia(rechazo, m.harina.articulo)).toBe("3000.0000");
+  });
+
   it("dos devoluciones a la vez de la misma línea recibida que juntas se pasan: solo entra una", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const m = await armar();

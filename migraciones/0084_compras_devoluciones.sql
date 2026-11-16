@@ -1,10 +1,10 @@
 -- 0084_compras_devoluciones (número provisorio): compras N4, DEVOLUCIÓN DE MERCADERÍA AL PROVEEDOR (E9 §3.8; compras.md Anexo C.5 y D-34). Decisiones del dueño: devolver mercadería NO es devolver dinero
 -- (15/11/2026: la nota de crédito y el saldo a favor son otros hechos); el motivo de la devolución se ELIGE de la lista del sistema de motivos de rechazo (`MOTIVOS_DE_RECHAZO`, 16/11/2026), sin texto libre; cualquier detalle va en el remito de devolución; quién devuelve y anula:
 -- gerente y administrador (SUPUESTO del ingeniero, DEC-0712, a confirmar; los permisos viven en el catálogo, no acá).
--- ADITIVA: una fila sembrada en `motivo_de_movimiento` (tabla global de solo inserción) y dos tablas nuevas; no toca datos ni columnas existentes.
+-- ADITIVA: una fila sembrada en `motivo_de_movimiento` (tabla global de solo inserción), dos tablas nuevas y una excepción más en la función `renglon_de_movimiento_validar` (solo relaja, para esa salida); no toca datos ni columnas existentes.
 -- Sin SECURITY DEFINER; toda función fija `search_path = pg_catalog, public, pg_temp`. Nadie recibe DELETE ni TRUNCATE. INSERT y UPDATE por columna. RLS activa y FORZADA, una política por comando. Toda clave foránea
 -- entre tablas de empresa es COMPUESTA. Reversión: `migraciones/reversiones/0084_revertir_compras_devoluciones.sql` (FRENA si hay devoluciones; el motivo sembrado NO se borra: la tabla de motivos es de solo inserción).
--- DEPENDE de 0027 (`valor_de_lista`), 0030 (stock), 0037 (compras) y 0063 (recepción separada).
+-- DEPENDE de 0027 (`valor_de_lista`), 0030 (stock), 0037 (compras), 0063 (recepción separada) y 0064 (entrada de compra a cuarentena y rechazo; esta migración vuelve a definir su función).
 --
 -- Diseño (probado por `test/integracion/compras-devoluciones-migracion.test.ts`):
 --  V1. El motivo `DEVOLUCION_A_PROVEEDOR` (clase SALIDA) no entrega mercadería a un uso como una venta: sale de vuelta al proveedor. La salida de stock de cada devolución lleva origen (`DEVOLUCION_A_PROVEEDOR`, id de la devolución):
@@ -13,6 +13,7 @@
 --  V3. Con línea recibida de origen, lo devuelto VIGENTE (devoluciones CONFIRMADAS) no supera lo recibido de esa línea: el disparador bloquea la fila del saldo de la línea recibida y compara (dos devoluciones simultáneas de la
 --      misma línea se serializan); una devolución anulada deja de contar. La recepción de origen debe estar CONFIRMADA, ser del mismo proveedor y la línea del mismo producto que el artículo devuelto.
 --  V4. Una sola línea por (depósito, artículo) y devolución (lo impone el renglón de la salida de stock). El número es consecutivo por empresa (candado por empresa) y la fecha de negocio sigue la jornada de la sucursal.
+--  V5. La salida por devolución puede salir de un depósito de cuarentena o de rechazo (decisión del dueño 16/11/2026): `renglon_de_movimiento_validar` (0064) suma esa única excepción; el resto de las salidas desde esos depósitos sigue rechazado.
 
 DO $$
 BEGIN
@@ -24,6 +25,10 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'recepcion' AND column_name = 'confirmada_por') THEN
     RAISE EXCEPTION 'compras N4 (devoluciones) requiere 0063 aplicada antes' USING ERRCODE = '55000';
+  END IF;
+  IF to_regprocedure('public.renglon_de_movimiento_validar()') IS NULL
+     OR position('origen_tipo = ''RECEPCION''' IN pg_get_functiondef('public.renglon_de_movimiento_validar()'::regprocedure)) = 0 THEN
+    RAISE EXCEPTION 'compras N4 (devoluciones) requiere 0064 aplicada antes (la entrada de una compra a cuarentena y rechazo)' USING ERRCODE = '55000';
   END IF;
   IF to_regclass('public.devolucion_a_proveedor') IS NOT NULL OR to_regclass('public.linea_de_devolucion') IS NOT NULL THEN
     RAISE EXCEPTION 'compras N4: las tablas de devoluciones ya existen; esta migración solo crea objetos nuevos' USING ERRCODE = '55000';
@@ -193,6 +198,61 @@ CREATE TRIGGER linea_de_devolucion_solo_insercion BEFORE UPDATE OR DELETE ON lin
 CREATE TRIGGER linea_de_devolucion_sin_truncate BEFORE TRUNCATE ON linea_de_devolucion FOR EACH STATEMENT EXECUTE FUNCTION solo_insercion();
 
 -- Privilegios y RLS
+-- La salida de una devolución al proveedor SÍ puede salir de cuarentena y de rechazo (donde queda lo que se devuelve): la única excepción nueva a `renglon_de_movimiento_validar` (0030, 0064). Ninguna otra salida cambia:
+-- una venta, una merma u otra salida desde esos depósitos sigue rechazada. Es la función de 0064 con UNA condición más (clase SALIDA, motivo y origen DEVOLUCION_A_PROVEEDOR).
+CREATE OR REPLACE FUNCTION renglon_de_movimiento_validar() RETURNS trigger LANGUAGE plpgsql
+  SET search_path = pg_catalog, public, pg_temp AS
+$$
+DECLARE
+  m record;
+  v_deposito record;
+  v_activo boolean;
+BEGIN
+  SELECT x.clase, x.motivo, x.origen_tipo, x.deposito_id, x.hecho_en, x.fecha_negocio, x.registrado_en = now() AS de_esta_transaccion INTO m
+    FROM public.movimiento_de_stock x WHERE x.id = NEW.movimiento_id AND x.empresa_id = NEW.empresa_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'el movimiento del renglón no existe'
+      USING ERRCODE = '23503', CONSTRAINT = 'renglon_de_movimiento_movimiento_fkey';
+  END IF;
+  IF NOT m.de_esta_transaccion THEN
+    RAISE EXCEPTION 'los renglones solo se cargan en la misma transacción que crea el movimiento'
+      USING ERRCODE = '23514', CONSTRAINT = 'renglon_movimiento_confirmado';
+  END IF;
+  NEW.hecho_en := m.hecho_en;
+  NEW.fecha_negocio := m.fecha_negocio;
+  IF m.clase NOT IN ('TRANSFERENCIA', 'ANULACION') AND NEW.deposito_id <> m.deposito_id THEN
+    RAISE EXCEPTION 'el depósito del renglón es el del movimiento'
+      USING ERRCODE = '23514', CONSTRAINT = 'renglon_deposito_distinto_del_acto';
+  END IF;
+  SELECT d.uso, d.activo INTO v_deposito
+    FROM public.deposito d WHERE d.id = NEW.deposito_id AND d.empresa_id = NEW.empresa_id FOR SHARE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'el depósito del renglón no existe'
+      USING ERRCODE = '23503', CONSTRAINT = 'renglon_de_movimiento_deposito_fkey';
+  END IF;
+  IF NOT v_deposito.activo THEN
+    RAISE EXCEPTION 'un depósito inactivo no admite movimientos'
+      USING ERRCODE = '23514', CONSTRAINT = 'renglon_deposito_inactivo';
+  END IF;
+  IF v_deposito.uso <> 'NORMAL' AND m.clase NOT IN ('TRANSFERENCIA', 'AJUSTE', 'AJUSTE_POR_CONTEO', 'ANULACION')
+     AND NOT (m.clase = 'ENTRADA' AND m.motivo = 'COMPRA' AND m.origen_tipo = 'RECEPCION')
+     AND NOT (m.clase = 'SALIDA' AND m.motivo = 'DEVOLUCION_A_PROVEEDOR' AND m.origen_tipo = 'DEVOLUCION_A_PROVEEDOR') THEN
+    RAISE EXCEPTION 'cuarentena y rechazo solo reciben y entregan por transferencia, ajuste o anulación (y reciben la entrada de una compra recibida y entregan la salida de una devolución al proveedor)'
+      USING ERRCODE = '23514', CONSTRAINT = 'renglon_deposito_de_uso_restringido';
+  END IF;
+  SELECT a.activo INTO v_activo FROM public.articulo_de_stock a WHERE a.id = NEW.articulo_id AND a.empresa_id = NEW.empresa_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'el artículo del renglón no existe'
+      USING ERRCODE = '23503', CONSTRAINT = 'renglon_de_movimiento_articulo_fkey';
+  END IF;
+  IF NOT v_activo AND m.clase <> 'ANULACION' THEN
+    RAISE EXCEPTION 'un artículo inactivo no admite movimientos'
+      USING ERRCODE = '23514', CONSTRAINT = 'renglon_articulo_inactivo';
+  END IF;
+  RETURN NEW;
+END
+$$;
+
 REVOKE ALL ON devolucion_a_proveedor, linea_de_devolucion FROM PUBLIC;
 GRANT SELECT ON devolucion_a_proveedor, linea_de_devolucion TO pedernal_app;
 GRANT INSERT (id, empresa_id, sucursal_id, proveedor_id, motivo_id, remito_de_devolucion_numero, remito_de_devolucion_fecha, clave_idempotencia, huella, hecho_en, registrado_por) ON devolucion_a_proveedor TO pedernal_app;

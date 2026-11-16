@@ -83,6 +83,47 @@ describe.skipIf(base === null)(
       expect(await c.existencia(dep, a.articulo)).toBe("6.0000");
     });
 
+    it("la devolución sale también de cuarentena y de rechazo (y se anula de vuelta ahí); la misma salida con otro motivo sigue rechazada", async () => {
+      for (const uso of ["CUARENTENA", "RECHAZO"] as const) {
+        const a = await c.articulo(e);
+        const deposito = await c.deposito(e, { uso });
+        valorDe(
+          traducirMovimiento(
+            await c.entorno.ejecutar({ contexto: e.gerente }, (tx) =>
+              c.puertos.entradaPorOrigen.registrarEntrada(tx, e.gerente, {
+                clave: nuevoId(),
+                origen: { tipo: "RECEPCION", id: nuevoId() },
+                accion: "stock.registrar_entrada",
+                depositoId: deposito,
+                motivo: "COMPRA",
+                renglones: [{ productoId: a.producto, cantidad: "10", unidadId: "UNIDAD" }],
+              }),
+            ),
+          ),
+        );
+        const devolucion = nuevoId();
+        valorDe(
+          traducirMovimiento(await salir(devolucion, a.producto, "4", { depositoId: deposito })),
+        );
+        expect(await c.existencia(deposito, a.articulo)).toBe("6.0000");
+        valorDe(traducirMovimiento(await anular(devolucion)));
+        expect(await c.existencia(deposito, a.articulo)).toBe("10.0000");
+        // Una merma desde ese mismo depósito sigue rechazada por la base.
+        await expect(
+          c.entorno.ejecutar({ contexto: e.gerente }, (tx) =>
+            c.puertos.salidaPorOrigen.registrarSalida(tx, e.gerente, {
+              clave: nuevoId(),
+              origen: { tipo: "DEVOLUCION_A_PROVEEDOR", id: nuevoId() },
+              accion: "stock.registrar_salida",
+              depositoId: deposito,
+              motivo: "MERMA" as never,
+              renglones: [{ productoId: a.producto, cantidad: "1", unidadId: "UNIDAD" }],
+            }),
+          ),
+        ).resolves.toEqual({ ok: false, error: "MOTIVO_NO_PERMITIDO" });
+      }
+    });
+
     it("dos pedidos a la vez de la misma devolución dejan una sola salida", async () => {
       for (let ronda = 0; ronda < RONDAS; ronda += 1) {
         const a = await c.articulo(e);
