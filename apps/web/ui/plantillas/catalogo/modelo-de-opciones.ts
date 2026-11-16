@@ -21,6 +21,8 @@ export const rutaDeLasOpciones = (id: string): string => `${RUTA_DE_PRODUCTOS}/$
 export const rutaDeUnGrupoNuevo = (id: string): string => `${rutaDeLasOpciones(id)}/nuevo`;
 export const rutaDeUnGrupo = (id: string, grupoId: string): string =>
   `${rutaDeLasOpciones(id)}/${grupoId}`;
+export const rutaDelConsumo = (id: string, grupoId: string): string =>
+  `${rutaDeUnGrupo(id, grupoId)}/consumo`;
 export const rutaDeLaVariante = (id: string): string => `${rutaDeLasOpciones(id)}/variante`;
 export const rutaDeLaCopia = (id: string): string => `${rutaDeLasOpciones(id)}/copiar`;
 
@@ -98,6 +100,8 @@ export type OpcionesArmadas = Readonly<{
       opciones: readonly string[];
       /** «Editar»: solo si la persona puede editar. */
       editar: Readonly<{ href: string; texto: string }> | null;
+      /** «Qué consume»: solo si la persona puede editar. */
+      consumo: Readonly<{ href: string; texto: string }> | null;
     }>[];
   }>;
   agregar: Readonly<{ href: string; texto: string }> | null;
@@ -137,6 +141,7 @@ export function armarLasOpciones(
             `${op.nombre}${llevaRecargo(op.recargo) ? ` + ${formatearImporte(op.recargo)}` : ""}`,
         ),
         editar: enlace(rutaDeUnGrupo(o.id, g.id), "catalogo.accion.editar"),
+        consumo: enlace(rutaDelConsumo(o.id, g.id), "catalogo.consumo.que_consume"),
       })),
     },
     agregar: enlace(rutaDeUnGrupoNuevo(o.id), "catalogo.opciones.agregar_grupo"),

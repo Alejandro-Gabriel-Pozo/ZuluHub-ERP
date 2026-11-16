@@ -22,6 +22,13 @@ const FORMULARIO_DE_GRUPO =
   "apps/web/ui/plantillas/catalogo/FormularioDeGrupoDeOpciones.cliente.tsx";
 const FORMULARIO_DE_COPIA =
   "apps/web/ui/plantillas/catalogo/FormularioDeCopiaDeOpciones.cliente.tsx";
+const FORMULARIO_DE_CONSUMO =
+  "apps/web/ui/plantillas/catalogo/FormularioDeConsumoDeUnGrupo.cliente.tsx";
+const CONSUMO_PROPOSITO = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs/11-especificaciones/pantallas-de-catalogo-restante-inventario.md §2.4 (`guardarConsumoDeGrupo`, permiso `opciones.editar`), conceptos/escala-con-la-medida-y-consumo-por-opcion.md y la maqueta aprobada el 12/11/2026 (`productos.html`, función `vConsumo`, carpeta de prototipos de Pedernal-docs 10-ux-ui)",
+});
 const OPCIONES_PROPOSITO = (para: string): Proposito => ({
   para,
   fuente:
@@ -287,6 +294,40 @@ export const DATOS_DE_PRODUCTOS = {
     ],
     consumidores: [FORMULARIO_DE_GRUPO],
     ponerPor: ["variantes.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "insumo-de-consumo-de-opcion": {
+    // Una referencia a un producto activo de la empresa que se puede consumir (materia prima, insumo, reventa o elaborado): la fuente de la lista es `productosParaConsumo`.
+    ficha: "src/modulos/catalogo/consultas/consultas.ts",
+    propositos: [
+      CONSUMO_PROPOSITO(
+        "Insumo que consume una opción cuando se elige: uno de los productos de la empresa que se consumen (materia prima, insumo, reventa o elaborado), sin repetir dentro de la opción.",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_CONSUMO],
+    ponerPor: ["opciones.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "cantidad-de-consumo-de-opcion": {
+    ficha: "src/primitivas/cantidad/cantidad.ts",
+    propositos: [
+      CONSUMO_PROPOSITO(
+        "Cuánto consume una opción de un insumo, en la unidad base del insumo: mayor que cero y hasta cuatro decimales.",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_CONSUMO],
+    ponerPor: ["opciones.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "escala-con-la-medida-de-consumo": {
+    ficha: "src/modulos/catalogo/dominio/modelo.ts",
+    propositos: [
+      CONSUMO_PROPOSITO(
+        "Si la cantidad que consume una opción se multiplica por el factor de la medida elegida (solo si el producto tiene una variante que es la medida).",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_CONSUMO],
+    ponerPor: ["opciones.editar"],
     requiere: REQUIERE_CATALOGO,
   },
   "producto-de-origen-de-copia-de-opciones": {

@@ -86,6 +86,10 @@ describe("armarLasOpciones", () => {
             reglas: "(opcional)",
             opciones: ["Mayonesa + $ 500,00", "Ketchup"],
             editar: { href: `/catalogo/productos/${ID}/opciones/${GRUPO}`, texto: "Editar" },
+            consumo: {
+              href: `/catalogo/productos/${ID}/opciones/${GRUPO}/consumo`,
+              texto: "Qué consume",
+            },
           },
           {
             id: "g2",
@@ -94,6 +98,10 @@ describe("armarLasOpciones", () => {
             reglas: "(obligatorio) · no figura en la carta",
             opciones: ["Jugoso"],
             editar: { href: `/catalogo/productos/${ID}/opciones/g2`, texto: "Editar" },
+            consumo: {
+              href: `/catalogo/productos/${ID}/opciones/g2/consumo`,
+              texto: "Qué consume",
+            },
           },
         ],
       },
@@ -110,6 +118,7 @@ describe("armarLasOpciones", () => {
     expect(armadas.agregar).toBeNull();
     expect(armadas.copiar).toBeNull();
     expect(armadas.grupos.tarjetas.map((t) => t.editar)).toEqual([null, null]);
+    expect(armadas.grupos.tarjetas.map((t) => t.consumo)).toEqual([null, null]);
     expect(armadas.grupos.tarjetas.map((t) => t.nombre)).toEqual(["Salsas", "Punto de la carne"]);
   });
 

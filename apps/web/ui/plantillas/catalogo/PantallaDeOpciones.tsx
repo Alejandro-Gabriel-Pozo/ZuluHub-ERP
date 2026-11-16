@@ -63,9 +63,12 @@ export function PantallaDeOpciones({ opciones }: PropsDePantallaDeOpciones) {
               </div>
               <span className={estilos["suave"]}>{tarjeta.reglas}</span>
               <span className={estilos["suave"]}>{tarjeta.opciones.join(" · ")}</span>
-              {tarjeta.editar === null ? null : (
-                <div>
+              {tarjeta.editar === null || tarjeta.consumo === null ? null : (
+                <div className={estilos["acciones"]}>
                   <EnlaceDeAccion href={tarjeta.editar.href}>{tarjeta.editar.texto}</EnlaceDeAccion>
+                  <EnlaceDeAccion href={tarjeta.consumo.href}>
+                    {tarjeta.consumo.texto}
+                  </EnlaceDeAccion>
                 </div>
               )}
             </li>

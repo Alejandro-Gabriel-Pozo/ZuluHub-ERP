@@ -87,6 +87,10 @@ describe.skipIf(base === null)(
         recargo: "400.00",
       });
       await opcionDeBase(c, mundo.empresa, hamburguesa, salsas, { nombre: "Ketchup" });
+      await productoDeBase(c, mundo.empresa, {
+        nombre: "Mayonesa base",
+        clase: "MATERIA_PRIMA",
+      } as never);
 
       const ejecutable = process.env["PEDERNAL_NAVEGADOR"];
       navegador = await chromium.launch({
@@ -219,6 +223,41 @@ describe.skipIf(base === null)(
       expect(await pagina.getByLabel("Chico", { exact: true }).inputValue()).toBe("3.200,00");
       expect(await pagina.getByLabel("Grande", { exact: true }).inputValue()).toBe("3.800,00");
       expect(await filas()).toBe("2");
+      pantallaLimpia();
+    });
+
+    it("qué consume: desde «Qué consume» de un grupo carga un insumo y una cantidad en una opción, con DOBLE TOQUE en «Guardar» se escribe una sola vez y la opción sella una versión nueva", async () => {
+      await ir(`/catalogo/productos/${hamburguesa}/opciones`);
+      await pagina.getByRole("link", { name: "Qué consume" }).click();
+      await pagina.waitForURL("**/consumo");
+      await pagina.getByRole("heading", { name: "Qué consume · Salsas" }).waitFor();
+      await pagina.getByRole("button", { name: "Agregar insumo" }).first().click();
+      await pagina.getByLabel("Cantidad (u)", { exact: true }).first().fill("2,5");
+      await sinViolacionesDeAxe();
+      await pagina.getByRole("button", { name: "Guardar" }).dblclick();
+      await pagina.waitForURL(`**/catalogo/productos/${hamburguesa}/opciones`);
+      const lineas = async () =>
+        (
+          await consultar<{ n: string }>(
+            "select count(*)::text as n from consumo_de_opcion k join version_de_opcion v on v.id = k.version_de_opcion_id join opcion o on o.id = v.opcion_id where o.producto_id = $1",
+            [hamburguesa],
+          )
+        )[0]?.n;
+      await expect.poll(lineas).toBe("1");
+      expect(
+        (
+          await consultar<{ cantidad: string }>(
+            "select k.cantidad::text as cantidad from consumo_de_opcion k join version_de_opcion v on v.id = k.version_de_opcion_id join opcion o on o.id = v.opcion_id where o.producto_id = $1",
+            [hamburguesa],
+          )
+        )[0]?.cantidad,
+      ).toBe("2.5000");
+      await ir(`/catalogo/productos/${hamburguesa}/opciones`);
+      await pagina.getByRole("link", { name: "Qué consume" }).click();
+      await pagina.waitForURL("**/consumo");
+      expect(await pagina.getByLabel("Cantidad (u)", { exact: true }).first().inputValue()).toBe(
+        "2,5",
+      );
       pantallaLimpia();
     });
 

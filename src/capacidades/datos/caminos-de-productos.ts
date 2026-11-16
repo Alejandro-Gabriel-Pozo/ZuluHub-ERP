@@ -203,6 +203,33 @@ export const CAMINOS_DE_PRODUCTOS = {
     },
     camposDeError: ["nombre"],
   },
+  // Productos, consumo (A13): lo que consume cada opción de un grupo; las líneas son campos repetidos (`consumo_<opción>_<línea>_insumo|cantidad|escala`): acá `insumo`, `cantidad` y `escala`. El
+  // producto, el grupo, la versión y las opciones los fija la página. Los errores con campo son «Ese insumo ya está cargado» y «La cantidad tiene que ser mayor que cero».
+  "guardar-consumo-de-opcion": {
+    funcion: "Guardar lo que consume cada opción de un grupo de un producto",
+    pantallas: ["apps/web/ui/plantillas/catalogo/FormularioDeConsumoDeUnGrupo.cliente.tsx"],
+    pasos: [
+      {
+        id: "lineas-de-consumo",
+        campos: {
+          insumo: "insumo-de-consumo-de-opcion",
+          cantidad: "cantidad-de-consumo-de-opcion",
+          escala: "escala-con-la-medida-de-consumo",
+        },
+      },
+    ],
+    deriva: [],
+    accion: {
+      clave: "opciones.editar",
+      requiere: [],
+      admite: [
+        "insumo-de-consumo-de-opcion",
+        "cantidad-de-consumo-de-opcion",
+        "escala-con-la-medida-de-consumo",
+      ],
+    },
+    camposDeError: ["insumo", "cantidad"],
+  },
   // Productos, opciones: copiar los grupos de otro producto («Copiar de otro producto»). El único dato es el producto de origen; el destino, la versión y la clave de la copia los fija la página.
   "copiar-opciones-de-otro-producto": {
     funcion: "Copiar las opciones de otro producto al producto de la pantalla",

@@ -5,7 +5,17 @@ import { describe, expect, it, vi } from "vitest";
  * lo que la página ligó (producto, versión de las opciones, grupo, clave del cambio, ids de las opciones vistas) y el formulario tal cual: la empresa y la persona las fija el servidor.
  */
 vi.mock("server-only", () => ({}));
-const delegadas = vi.hoisted(() => ({ guardar: [] as unknown[][], copiar: [] as unknown[][] }));
+const delegadas = vi.hoisted(() => ({
+  guardar: [] as unknown[][],
+  copiar: [] as unknown[][],
+  consumo: [] as unknown[][],
+}));
+vi.mock("../../apps/web/servidor/consumo", () => ({
+  guardarElConsumo: (...args: unknown[]) => {
+    delegadas.consumo.push(args);
+    return Promise.resolve({ error: null });
+  },
+}));
 vi.mock("../../apps/web/servidor/opciones", () => ({
   guardarElGrupo: (...args: unknown[]) => {
     delegadas.guardar.push(args);
@@ -25,6 +35,7 @@ describe("las acciones de servidor de las opciones expuestas a Next", () => {
       "guardarGrupoAccion",
       "guardarVarianteAccion",
       "copiarOpcionesAccion",
+      "guardarConsumoAccion",
     ]);
     expect(acciones.guardarGrupoAccion.constructor.name).toBe("AsyncFunction");
     expect(acciones.copiarOpcionesAccion.constructor.name).toBe("AsyncFunction");
@@ -96,6 +107,19 @@ describe("las acciones de servidor de las opciones expuestas a Next", () => {
           claveDelCambio: "clave-1",
           idsDeOpciones: ["o-1"],
         },
+        datos,
+      ],
+    ]);
+  });
+
+  it("el consumo delega con lo ligado por la página (producto, versión, grupo, ids de las opciones) y el formulario, sin el estado anterior", async () => {
+    const datos = new FormData();
+    expect(
+      await acciones.guardarConsumoAccion("p-1", 4, "g-1", ["o-1", "o-2"], { error: null }, datos),
+    ).toEqual({ error: null });
+    expect(delegadas.consumo).toEqual([
+      [
+        { productoId: "p-1", versionDeOpciones: 4, grupoId: "g-1", idsDeOpciones: ["o-1", "o-2"] },
         datos,
       ],
     ]);
