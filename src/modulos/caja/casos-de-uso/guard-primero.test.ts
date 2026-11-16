@@ -20,7 +20,7 @@ import { DECLARACIONES } from "./declaraciones";
  * P7 para caja: ningún caso de uso ni consulta se salta el guard, y el orden fijo de e3 §3.2 empieza por él. Corren contra una transacción
  * VIGILADA: solo `autorizacion` responde y cualquier otro acceso (un repositorio, la auditoría, los estados de la empresa, los derechos)
  * queda registrado y corta la ejecución. Un caso que lee o escribe antes de autorizar, o que no autoriza, se delata solo. Sin base de datos.
- * Las reglas son las reales con `caja` ya construida (hoy está «en desarrollo» y el guard rechazaría todo con `MODULO_EN_DESARROLLO`).
+ * Las reglas son las reales con `caja` disponible (DEC-0463).
  */
 
 const contexto: ContextoOperativo = {
@@ -413,8 +413,8 @@ describe("los demás motivos del guard salen tal cual", () => {
     permisos: PERMISOS_DE_EMPRESA,
   });
 
-  it("el catálogo real lo tiene en desarrollo: todo se rechaza con MODULO_EN_DESARROLLO, casos y consultas (todo nace cerrado)", async () => {
-    expect(CATALOGO_DE_MODULOS.caja.estado).toBe("en_desarrollo");
+  it("si el módulo vuelve a estar en desarrollo, todo se rechaza con MODULO_EN_DESARROLLO, casos y consultas (todo nace cerrado); el catálogo real lo tiene disponible desde DEC-0463", async () => {
+    expect(CATALOGO_DE_MODULOS.caja.estado).toBe("disponible");
     for (const entrada of todos) {
       const vigilada = vigilar(conCaja("GERENTE"));
       expect(await entrada.llamar(vigilada, cajaComo("en_desarrollo")), entrada.nombre).toEqual({
