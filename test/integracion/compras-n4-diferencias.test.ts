@@ -249,7 +249,7 @@ describe.skipIf(base === null)("compras N4: tolerancias y diferencias", () => {
     expect((await diferencias(m)).every((f) => f.estado === "ABIERTA")).toBe(true);
   });
 
-  it("I8: resolver dos veces la misma diferencia con lo mismo devuelve yaEstaba y la segunda no escribe ni audita; distinto, DIFERENCIA_YA_RESUELTA", async () => {
+  it("I8: resolver dos veces la misma diferencia con lo mismo devuelve yaEstaba y la segunda no escribe ni audita", async () => {
     const m = await armar();
     const recepcion = await recibir(m, "9.6");
     valorDe(await conciliar(m, await facturar(m, 10000, "1.25"), recepcion, "9600"));
