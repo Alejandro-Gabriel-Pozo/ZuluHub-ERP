@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import type { ClaseDeUso } from "../../src/modulos/catalogo/publico";
 import {
   montarCatalogo,
   nombreAlAzarDeProducto,
@@ -128,6 +129,48 @@ describe.skipIf(base === null)("catálogo: consultas de la pantalla de secciones
       // Y desde la otra empresa, la suya sí.
       expect(await ids({ seccionId: ajena }, otra.gerente)).toEqual([deLaAjena]);
       expect(await ids({ seccionId: seccion }, otra.gerente)).toEqual([]);
+    });
+  });
+
+  describe("listarProductos: version y varias clases (faltantes de la pantalla de Secciones)", () => {
+    it("cada fila trae la `version` del producto, la que exige editarProducto", async () => {
+      const a = await nuevoProducto(e);
+      const fila = valorDe(await c.consultas.listarProductos(e.gerente, {})).productos.find(
+        (p) => p.id === a,
+      );
+      const ficha = valorDe(await c.consultas.verProducto(e.gerente, { productoId: a }));
+      expect(fila?.version).toBeTypeOf("number");
+      expect(fila?.version).toBe(ficha?.producto.version);
+    });
+
+    it("`claseDeUso` acepta una clase (como siempre) o varias; una lista vacía no ensancha el filtro: no trae nada", async () => {
+      const vendible = await nuevoProducto(e);
+      const reventa = valorDe(
+        await c.casos.crearProductoRapido(e.gerente, {
+          id: nuevoId(),
+          claseDeUso: "REVENTA",
+          nombre: nombreAlAzarDeProducto("Gaseosa"),
+          unidadBaseId: "UNIDAD",
+        }),
+      ).productoId;
+      const insumo = valorDe(
+        await c.casos.crearProductoRapido(e.gerente, {
+          id: nuevoId(),
+          claseDeUso: "INSUMO",
+          nombre: nombreAlAzarDeProducto("Servilleta"),
+          unidadBaseId: "UNIDAD",
+        }),
+      ).productoId;
+      const ids = async (claseDeUso: ClaseDeUso | readonly ClaseDeUso[]) =>
+        valorDe(await c.consultas.listarProductos(e.gerente, { claseDeUso })).productos.map(
+          (p) => p.id,
+        );
+      expect(await ids("REVENTA")).toContain(reventa);
+      expect(await ids("REVENTA")).not.toContain(vendible);
+      const dos = await ids(["VENDIBLE", "REVENTA"]);
+      expect(dos).toEqual(expect.arrayContaining([vendible, reventa]));
+      expect(dos).not.toContain(insumo);
+      expect(await ids([])).toEqual([]);
     });
   });
 });
