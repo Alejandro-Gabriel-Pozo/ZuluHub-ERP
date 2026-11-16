@@ -20,7 +20,7 @@ END
 $$;
 
 CREATE TABLE aplicacion_de_precio_de_familia (
-  id                 uuid PRIMARY KEY,   -- lo manda la app: es la clave de idempotencia
+  id                 uuid NOT NULL,   -- lo manda la app: es la clave de idempotencia (única POR EMPRESA: una empresa no puede «ocupar» ni sondear el id de otra)
   empresa_id         uuid NOT NULL REFERENCES empresa (id),
   familia_id         uuid NOT NULL,
   huella             text NOT NULL CONSTRAINT aplicacion_huella_ck CHECK (huella ~ '^[0-9a-f]{64}$'),
@@ -28,7 +28,7 @@ CREATE TABLE aplicacion_de_precio_de_familia (
   precios_sin_cambio integer NOT NULL CONSTRAINT aplicacion_sin_cambio_ck CHECK (precios_sin_cambio BETWEEN 0 AND 1000),
   aplicada_por       uuid REFERENCES persona (id),
   aplicada_en        timestamptz NOT NULL,
-  CONSTRAINT aplicacion_id_empresa_uk UNIQUE (id, empresa_id),
+  CONSTRAINT aplicacion_de_precio_de_familia_pkey PRIMARY KEY (empresa_id, id),
   CONSTRAINT aplicacion_familia_fkey FOREIGN KEY (familia_id, empresa_id) REFERENCES familia_de_producto (id, empresa_id)
 );
 CREATE INDEX aplicacion_de_precio_de_familia_ix ON aplicacion_de_precio_de_familia (empresa_id, familia_id, aplicada_en);
