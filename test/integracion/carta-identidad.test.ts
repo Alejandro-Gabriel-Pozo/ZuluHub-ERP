@@ -350,19 +350,27 @@ describe.skipIf(base === null)("identidad de la carta (0077)", () => {
       ).toBe(1);
     });
 
-    it("LIBRO exige la perilla `vidriera_modelo_libro` (hoy sin declarar en esta rama: se cierra); volver a LISTA no la pide", async () => {
+    it("LIBRO y CUADRICULA exigen su perilla (hoy sin declarar en esta rama: se cierran); volver a LISTA no la pide", async () => {
       const e = await c.escenario();
       expect(await c.casos.guardarCartaPublica(e.gerente, nueva(e, { modelo: "LIBRO" }))).toEqual({
         ok: false,
         error: "MODELO_DE_CARTA_INVALIDO",
       });
-      const pedido = nueva(e, { modelo: "CUADRICULA" });
+      // CUADRICULA también cierra mientras su perilla no esté declarada (todo nace cerrado).
+      expect(
+        await c.casos.guardarCartaPublica(e.gerente, nueva(e, { modelo: "CUADRICULA" })),
+      ).toEqual({ ok: false, error: "MODELO_DE_CARTA_INVALIDO" });
+      // Volver a LISTA no pide nada: con la carta ya existente se acepta.
+      const pedido = nueva(e);
       valorDe(await c.casos.guardarCartaPublica(e.gerente, pedido));
+      await c.dueno.query("update carta_publica set modelo = 'CUADRICULA' where id = $1", [
+        pedido.id,
+      ]);
       valorDe(
         await c.casos.guardarCartaPublica(e.gerente, {
           ...pedido,
           modelo: "LISTA",
-          versionEsperada: 1,
+          versionEsperada: 2,
         }),
       );
       expect((await fila(pedido.id))?.modelo).toBe("LISTA");
@@ -380,6 +388,19 @@ describe.skipIf(base === null)("identidad de la carta (0077)", () => {
           },
         );
         valorDe(await c.casos.guardarCartaPublica(e.gerente, nueva(e, { modelo: "LISTA" })));
+      },
+    );
+
+    it.skipIf(!Object.hasOwn(CATALOGO_DE_PERILLAS, "vidriera_modelo_cuadricula"))(
+      "con la perilla `vidriera_modelo_cuadricula` declarada y apagada, CUADRICULA es FUNCION_NO_INCLUIDA",
+      async () => {
+        const e = await c.escenario();
+        expect(
+          await c.casos.guardarCartaPublica(e.gerente, nueva(e, { modelo: "CUADRICULA" })),
+        ).toEqual({
+          ok: false,
+          error: { codigo: "FUNCION_NO_INCLUIDA", perilla: "vidriera_modelo_cuadricula" },
+        });
       },
     );
 

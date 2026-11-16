@@ -197,7 +197,7 @@ const aDato = (c: Datos | CartaPublica) => ({
 });
 
 /**
- * Elegir un modelo con perilla de plan (hoy LIBRO: `vidriera_modelo_libro`) la exige AL ELEGIRLO; volver a Lista, o seguir con el que ya tenía, no la pide (una baja
+ * Elegir un modelo con perilla de plan (LIBRO: `vidriera_modelo_libro`; CUADRICULA: `vidriera_modelo_cuadricula`) la exige AL ELEGIRLO; volver a Lista, o seguir con el que ya tenía, no la pide (una baja
  * de plan no traba la edición de lo demás; qué modelo se DIBUJA lo decide el lector con `modeloEfectivo`). Si la perilla todavía no está declarada en el catálogo
  * de perillas, el modelo no se puede elegir (cierra): la declara la rama del Libro y esta rama la usa sin cambios.
  */
@@ -274,7 +274,7 @@ export function armarGuardarCartaPublica(dependencias: DependenciasDeCatalogo) {
           if (existente.sucursalId !== sucursal) return err("ID_REUTILIZADO");
           if (igual(existente, datos.valor)) return ok(salida(existente, true));
           if (entrada.versionEsperada !== existente.version) return err("VERSION_DESACTUALIZADA");
-          if (datos.valor.modelo === "LIBRO" && existente.modelo !== "LIBRO") {
+          if (datos.valor.modelo !== existente.modelo) {
             const perilla = await exigirPerillaDelModelo(tx, contexto, datos.valor.modelo);
             if (!perilla.ok) return perilla;
           }
@@ -325,7 +325,7 @@ export function armarGuardarCartaPublica(dependencias: DependenciasDeCatalogo) {
         if (!abierta.ok) return abierta;
         if ((await tx.cartasPublicas.deLaSucursal(empresaId, sucursal)) !== null)
           return err("CARTA_DE_LA_SUCURSAL_YA_EXISTE");
-        if (datos.valor.modelo === "LIBRO") {
+        if (datos.valor.modelo !== MODELO_DE_RESERVA) {
           const perilla = await exigirPerillaDelModelo(tx, contexto, datos.valor.modelo);
           if (!perilla.ok) return perilla;
         }
