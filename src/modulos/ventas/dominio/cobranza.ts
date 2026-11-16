@@ -9,6 +9,7 @@ import {
 } from "../../../primitivas/dinero/importe";
 import { ARS } from "../../../primitivas/dinero/moneda";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { datosEnFormaCompleta, type DatosDelCobro } from "../../caja/publico";
 import type { EstadoDeTicket } from "./estados";
 import { FORMA_DEL_IMPORTE } from "./forma-del-importe";
 import { esUuid } from "./identificadores";
@@ -26,19 +27,41 @@ export type CobroPedido = Readonly<{
   cuentaDeCobroId: string | null;
   /** Importe de la frontera: `{ moneda: "ARS", monto: "1234.56" }`. */
   importe: Readonly<{ moneda: string; monto: string }>;
+  /**
+   * Datos opcionales del cobro (cupón, últimos 4, marca, cuotas, DNI; mostrador K7). Ausente = sin datos. Acá solo se recogen los cinco campos
+   * conocidos (lista de permitidos: cualquier otra clave se ignora); QUÉ habilita cada medio y si cada dato está bien escrito lo juzga caja
+   * al registrar el cobro (`validarDatosDelCobro`), dentro de la transacción. El DNI es dato personal: no va a auditoría ni a registros.
+   */
+  datos?: DatosDelCobro | undefined;
 }>;
 
 export type CobroNormalizado = Readonly<{
   medioDePagoId: string;
   cuentaDeCobroId: string | null;
   importe: Importe;
+  /** Solo los campos presentes de los cinco conocidos (`{}` si no hay datos). */
+  datos: DatosDelCobro;
 }>;
+
+const CAMPOS_DE_DATOS = ["cupon", "ultimos4", "marcaDeTarjetaId", "cuotas", "dni"] as const;
+
+/** Copia SOLO los campos conocidos y presentes (`undefined` = no vino; `null` y vacío se conservan para que caja los rechace como mal escritos). */
+function recogerDatos(datos: unknown): DatosDelCobro | null {
+  if (datos === undefined) return {};
+  if (typeof datos !== "object" || datos === null || Array.isArray(datos)) return null;
+  const origen = datos as Record<string, unknown>;
+  const recogidos: Record<string, unknown> = {};
+  for (const campo of CAMPOS_DE_DATOS) {
+    if (origen[campo] !== undefined) recogidos[campo] = origen[campo];
+  }
+  return recogidos;
+}
 
 export type ErrorDeCobros =
   "COBROS_INVALIDOS" | "IDENTIFICADOR_INVALIDO" | "MONEDA_NO_SOPORTADA" | "IMPORTE_INVALIDO";
 
 const clave = (c: CobroNormalizado): string =>
-  `${c.medioDePagoId}\u0000${c.cuentaDeCobroId ?? ""}\u0000${importeATexto(c.importe).padStart(20, "0")}`;
+  `${c.medioDePagoId}\u0000${c.cuentaDeCobroId ?? ""}\u0000${importeATexto(c.importe).padStart(20, "0")}\u0000${JSON.stringify(datosEnFormaCompleta(c.datos))}`;
 
 /**
  * Valida cada cobro y los deja en ORDEN CANÓNICO (por medio, cuenta e importe): el mismo pedido en otro orden es el mismo pedido y da la misma
@@ -58,10 +81,13 @@ export function normalizarCobros(
     if (!FORMA_DEL_IMPORTE.test(c.importe.monto)) return err("IMPORTE_INVALIDO");
     const importe = importeDesdeTexto(ARS, c.importe.monto);
     if (importe.unidades <= 0n) return err("IMPORTE_INVALIDO");
+    const datos = recogerDatos(c.datos);
+    if (datos === null) return err("COBROS_INVALIDOS");
     normalizados.push({
       medioDePagoId: c.medioDePagoId,
       cuentaDeCobroId: c.cuentaDeCobroId,
       importe,
+      datos,
     });
   }
   const porLlave = new Map<string, CobroNormalizado[]>();
@@ -93,7 +119,11 @@ export type PedidoDeCobranza = Readonly<{
   cobros: readonly CobroNormalizado[];
 }>;
 
-/** sha256 (hex) del pedido con los cobros ya en orden canónico: la misma clave con la misma huella devuelve lo hecho; con otra, `CLAVE_REUTILIZADA`. */
+/**
+ * sha256 (hex) del pedido con los cobros ya en orden canónico: la misma clave con la misma huella devuelve lo hecho; con otra, `CLAVE_REUTILIZADA`.
+ * Los datos del cobro entran a la huella (misma clave con otro cupón o DNI es otro pedido, no un reuso silencioso). COMPATIBILIDAD: un cobro SIN
+ * datos conserva la forma anterior `[medio, cuenta, importe]`, así la repetición de un cobro hecho antes de existir los datos da la misma huella.
+ */
 export function huellaDeCobranza(pedido: PedidoDeCobranza): string {
   return createHash("sha256")
     .update(
@@ -101,7 +131,11 @@ export function huellaDeCobranza(pedido: PedidoDeCobranza): string {
         pedido.ticketId,
         pedido.ejemplarId,
         pedido.cajaId,
-        pedido.cobros.map((c) => [c.medioDePagoId, c.cuentaDeCobroId, importeATexto(c.importe)]),
+        pedido.cobros.map((c) => {
+          const base = [c.medioDePagoId, c.cuentaDeCobroId, importeATexto(c.importe)];
+          const datos = datosEnFormaCompleta(c.datos);
+          return Object.values(datos).every((v) => v === null) ? base : [...base, datos];
+        }),
       ]),
     )
     .digest("hex");
