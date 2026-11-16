@@ -1155,6 +1155,8 @@ describe("planificador de mutación: el registro de decisiones (arquitectura/dec
   // Quien la dispare, o suma su nombre a `PRUEBAS_DEL_GUARDIAN` (arquitectura/planificar-mutacion.cjs, si lee el registro) o la explica abajo
   // (no lo lee). La corrida completa de `main` y la nocturna siguen corriendo todos los grupos: un olvido se ve a los minutos.
   const NO_LEEN_EL_REGISTRO: Record<string, string> = {
+    "test/arquitectura/catalogo-modulos.test.ts":
+      "cita un identificador de decisión en un comentario; solo comprueba que existan carpetas (corrida sola y traza strace: 0 lecturas del registro)",
     "test/arquitectura/compras-fuente-unica.test.ts":
       "cita un identificador de decisión en un comentario; no abre el registro (corrida sola y traza strace: 0 lecturas)",
     "test/arquitectura/lint.test.ts":
