@@ -80,26 +80,6 @@ export function PasoGenerarPedido({
     envio.reiniciar();
   }
 
-  const campo = (
-    clave: CampoDelPedido,
-    etiqueta: Parameters<typeof texto>[1],
-    extra: Partial<Parameters<typeof Campo>[0]> = {},
-  ) => (
-    <Campo
-      etiqueta={texto({}, etiqueta)}
-      valor={valores[clave]}
-      alCambiar={(v) => {
-        poner(clave, v);
-      }}
-      autoComplete="off"
-      autoCapitalize="off"
-      error={rechazo !== null && lugar === clave ? texto({}, rechazo.clave) : undefined}
-      deshabilitado={bloqueado}
-      {...extra}
-      dato="pendiente"
-    />
-  );
-
   function alEnviar(evento: SyntheticEvent): void {
     evento.preventDefault();
     // Con Enter dentro de un campo, el foco está en un campo que se apaga (`disabled`) al enviar y caería al <body>: pasa al botón de
@@ -117,9 +97,47 @@ export function PasoGenerarPedido({
           referenciaIncierta={referenciaIncierta}
           rechazo={rechazo !== null && lugar === null ? rechazo : null}
         />
-        {campo("alias", "fiscal.pantalla.config_cert_alias")}
-        {campo("cuitTitular", "fiscal.pantalla.config_cert_cuit_titular", { inputMode: "numeric" })}
-        {campo("organizacion", "fiscal.pantalla.config_cert_organizacion")}
+        <Campo
+          dato="alias-de-certificado"
+          etiqueta={texto({}, "fiscal.pantalla.config_cert_alias")}
+          valor={valores.alias}
+          alCambiar={(v) => {
+            poner("alias", v);
+          }}
+          autoComplete="off"
+          autoCapitalize="off"
+
+          error={rechazo !== null && lugar === "alias" ? texto({}, rechazo.clave) : undefined}
+          deshabilitado={bloqueado}
+        />
+        <Campo
+          dato="cuit-del-titular-de-certificado"
+          etiqueta={texto({}, "fiscal.pantalla.config_cert_cuit_titular")}
+          valor={valores.cuitTitular}
+          alCambiar={(v) => {
+            poner("cuitTitular", v);
+          }}
+          autoComplete="off"
+          autoCapitalize="off"
+          inputMode="numeric"
+          error={rechazo !== null && lugar === "cuitTitular" ? texto({}, rechazo.clave) : undefined}
+          deshabilitado={bloqueado}
+        />
+        <Campo
+          dato="pendiente"
+          etiqueta={texto({}, "fiscal.pantalla.config_cert_organizacion")}
+          valor={valores.organizacion}
+          alCambiar={(v) => {
+            poner("organizacion", v);
+          }}
+          autoComplete="off"
+          autoCapitalize="off"
+
+          error={
+            rechazo !== null && lugar === "organizacion" ? texto({}, rechazo.clave) : undefined
+          }
+          deshabilitado={bloqueado}
+        />
         <div className={estilos["botones"]}>
           <Boton variante="secundaria" enviando={envio.enCurso} alTocar={alCancelar}>
             {texto({}, "fiscal.pantalla.config_pv_cancelar")}

@@ -1,3 +1,4 @@
+import { esAliasDeCertificado } from "../../../primitivas/identificacion-fiscal/alias-de-certificado";
 import { cuitDesdeTexto, type Cuit } from "../../../primitivas/identificacion-fiscal/cuit";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { Ambiente } from "./comprobante-nuevo";
@@ -9,9 +10,6 @@ import { certificadoId, esUuid, type CertificadoId, type EmisorId } from "./iden
  * sirve y cómo se nombra el titular en el certificado.
  */
 
-/** El alias del certificado (`CN`): letras y dígitos, de 1 a 30. Es la regla de la base (`certificado_alias_ck`). */
-// fuente-unica: ajeno — el 30 del alias del certificado coincide por casualidad con el largo del número de IIBB
-const ALIAS = /^[A-Za-z0-9]{1,30}$/;
 /** La organización (`O`): hasta 64 caracteres (el tope de X.520) y sin caracteres de control. */
 const ORGANIZACION = /^[^\p{Cc}]{1,64}$/u;
 
@@ -47,7 +45,7 @@ export function armarPedidoDeCertificado(
   entrada: EntradaDePedidoDeCertificado,
 ): Resultado<PedidoDeCertificadoValido, ErrorDePedidoDeCertificado> {
   if (!esUuid(entrada.id)) return err("ID_INVALIDO");
-  if (!ALIAS.test(entrada.alias)) return err("ALIAS_INVALIDO");
+  if (!esAliasDeCertificado(entrada.alias)) return err("ALIAS_INVALIDO");
   const cuit = cuitDesdeTexto(entrada.cuitTitular);
   if (!cuit.ok) return err("CUIT_INVALIDO");
   const organizacion = entrada.organizacion.trim();

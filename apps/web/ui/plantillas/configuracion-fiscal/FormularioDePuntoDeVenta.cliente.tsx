@@ -121,25 +121,6 @@ export function FormularioDePuntoDeVenta({
   const errorEn = (campo: CampoDelFormulario): string | undefined =>
     rechazo !== null && lugar === campo ? texto({}, rechazo.clave) : undefined;
 
-  const campo = (
-    campoDelFormulario: CampoDelFormulario,
-    etiqueta: Parameters<typeof texto>[1],
-    extra: Partial<Parameters<typeof Campo>[0]> = {},
-  ) => (
-    <Campo
-      etiqueta={texto({}, etiqueta)}
-      valor={valores[campoDelFormulario]}
-      alCambiar={(v) => {
-        poner(campoDelFormulario, v);
-      }}
-      autoComplete="off"
-      error={errorEn(campoDelFormulario)}
-      deshabilitado={bloqueado}
-      {...extra}
-      dato="pendiente"
-    />
-  );
-
   function alEnviar(evento: SyntheticEvent): void {
     evento.preventDefault();
     if (!oferta.permitida) return;
@@ -170,10 +151,19 @@ export function FormularioDePuntoDeVenta({
           />
         ) : null}
         {rechazo !== null && lugar === null ? <ErrorDelDetalle error={rechazo} /> : null}
-        {campo("numero", "fiscal.pantalla.config_pv_campo_numero", {
-          nombre: "numero",
-          inputMode: "numeric",
-        })}
+        <Campo
+          dato="numero-de-punto-de-venta"
+          etiqueta={texto({}, "fiscal.pantalla.config_pv_campo_numero")}
+          valor={valores.numero}
+          alCambiar={(v) => {
+            poner("numero", v);
+          }}
+          nombre="numero"
+          autoComplete="off"
+          inputMode="numeric"
+          error={errorEn("numero")}
+          deshabilitado={bloqueado}
+        />
         <Selector
           etiqueta={texto({}, "fiscal.pantalla.listado_rotulo_sucursal")}
           nombre="sucursalId"
@@ -194,18 +184,66 @@ export function FormularioDePuntoDeVenta({
             {texto({}, "fiscal.pantalla.config_pv_domicilio")}
           </legend>
           <div className={estilos["par"]}>
-            {campo("calle", "fiscal.pantalla.config_pv_calle", { autoComplete: "address-line1" })}
-            {campo("numeroDeCalle", "fiscal.pantalla.config_pv_numero_de_calle")}
+            <Campo
+              dato="calle-de-domicilio"
+              etiqueta={texto({}, "fiscal.pantalla.config_pv_calle")}
+              valor={valores.calle}
+              alCambiar={(v) => {
+                poner("calle", v);
+              }}
+              autoComplete="address-line1"
+              error={errorEn("calle")}
+              deshabilitado={bloqueado}
+            />
+            <Campo
+              dato="numero-de-calle-de-domicilio"
+              etiqueta={texto({}, "fiscal.pantalla.config_pv_numero_de_calle")}
+              valor={valores.numeroDeCalle}
+              alCambiar={(v) => {
+                poner("numeroDeCalle", v);
+              }}
+              autoComplete="off"
+              error={errorEn("numeroDeCalle")}
+              deshabilitado={bloqueado}
+            />
           </div>
           <div className={estilos["parParejo"]}>
-            {campo("piso", "fiscal.pantalla.config_pv_piso")}
-            {campo("departamento", "fiscal.pantalla.config_pv_departamento")}
+            <Campo
+              dato="piso-de-domicilio"
+              etiqueta={texto({}, "fiscal.pantalla.config_pv_piso")}
+              valor={valores.piso}
+              alCambiar={(v) => {
+                poner("piso", v);
+              }}
+              autoComplete="off"
+              error={errorEn("piso")}
+              deshabilitado={bloqueado}
+            />
+            <Campo
+              dato="departamento-de-domicilio"
+              etiqueta={texto({}, "fiscal.pantalla.config_pv_departamento")}
+              valor={valores.departamento}
+              alCambiar={(v) => {
+                poner("departamento", v);
+              }}
+              autoComplete="off"
+              error={errorEn("departamento")}
+              deshabilitado={bloqueado}
+            />
           </div>
-          {campo("localidad", "fiscal.pantalla.config_pv_localidad", {
-            autoComplete: "address-level2",
-          })}
+          <Campo
+            dato="localidad-de-domicilio"
+            etiqueta={texto({}, "fiscal.pantalla.config_pv_localidad")}
+            valor={valores.localidad}
+            alCambiar={(v) => {
+              poner("localidad", v);
+            }}
+            autoComplete="address-level2"
+            error={errorEn("localidad")}
+            deshabilitado={bloqueado}
+          />
           <Selector
-            dato="pendiente"
+            dato="provincia-de-domicilio"
             etiqueta={texto({}, "fiscal.pantalla.config_pv_provincia")}
             nombre="provincia"
             valor={valores.provincia}
@@ -218,9 +256,17 @@ export function FormularioDePuntoDeVenta({
             error={errorEn("provincia")}
             deshabilitado={bloqueado}
           />
-          {campo("codigoPostal", "fiscal.pantalla.config_pv_codigo_postal", {
-            autoComplete: "postal-code",
-          })}
+          <Campo
+            dato="codigo-postal-de-domicilio"
+            etiqueta={texto({}, "fiscal.pantalla.config_pv_codigo_postal")}
+            valor={valores.codigoPostal}
+            alCambiar={(v) => {
+              poner("codigoPostal", v);
+            }}
+            autoComplete="postal-code"
+            error={errorEn("codigoPostal")}
+            deshabilitado={bloqueado}
+          />
         </fieldset>
         <div className={estilos["botones"]}>
           <Boton

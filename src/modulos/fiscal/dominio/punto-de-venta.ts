@@ -1,5 +1,10 @@
 import type { EmpresaId, SucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import {
+  RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA,
+  esNumeroDePuntoDeVentaEnRango,
+  type RangoDeNumero,
+} from "../../../primitivas/identificacion-fiscal/numero-de-punto-de-venta";
 import type { Emisor } from "./emisor";
 import type { DomicilioId, EmisorId, PuntoDeVentaId } from "./identificadores";
 
@@ -12,9 +17,7 @@ import type { DomicilioId, EmisorId, PuntoDeVentaId } from "./identificadores";
  *
  * NO VERIFICADO: el rango del número (1 a 99999). Es configurable (`RangoDeNumero`).
  */
-export type RangoDeNumero = Readonly<{ minimo: number; maximo: number }>;
-
-export const RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA: RangoDeNumero = { minimo: 1, maximo: 99999 };
+export { RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA, type RangoDeNumero };
 
 export type EstadoDePuntoDeVenta = "INACTIVO" | "ACTIVO";
 
@@ -45,10 +48,6 @@ export type ErrorDePuntoDeVenta =
 /** `cambio` es `false` cuando repetir la operación no cambia nada (sin escritura ni auditoría). */
 export type CambioDePuntoDeVenta = Readonly<{ puntoDeVenta: PuntoDeVenta; cambio: boolean }>;
 
-function numeroValido(numero: number, rango: RangoDeNumero): boolean {
-  return Number.isInteger(numero) && numero >= rango.minimo && numero <= rango.maximo;
-}
-
 /**
  * ¿Algún punto de venta de ese emisor ya tiene ese número? Al editar, el propio punto de venta
  * no molesta: solo se pregunta cuando el número cambia, y entonces el suyo es el viejo.
@@ -76,7 +75,8 @@ export function nuevoPuntoDeVenta(
   rango: RangoDeNumero = RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA,
 ): Resultado<PuntoDeVenta, ErrorDePuntoDeVenta> {
   if (sucursal.empresaId !== emisor.empresaId) return err("SUCURSAL_DE_OTRA_EMPRESA");
-  if (!numeroValido(datos.numero, rango)) return err("PUNTO_DE_VENTA_NUMERO_INVALIDO");
+  if (!esNumeroDePuntoDeVentaEnRango(datos.numero, rango))
+    return err("PUNTO_DE_VENTA_NUMERO_INVALIDO");
   if (numeroOcupado(existentes, emisor.id, datos.numero)) {
     return err("PUNTO_DE_VENTA_DUPLICADO");
   }
@@ -152,7 +152,7 @@ export function editarPuntoDeVenta(
   }
   const numero = cambios.numero ?? puntoDeVenta.numero;
   if (numero !== puntoDeVenta.numero) {
-    if (!numeroValido(numero, rango)) return err("PUNTO_DE_VENTA_NUMERO_INVALIDO");
+    if (!esNumeroDePuntoDeVentaEnRango(numero, rango)) return err("PUNTO_DE_VENTA_NUMERO_INVALIDO");
     if (contexto.tieneNumerosUsados) return err("PUNTO_DE_VENTA_NUMERO_INMUTABLE");
     if (numeroOcupado(contexto.delEmisor, puntoDeVenta.emisorId, numero)) {
       return err("PUNTO_DE_VENTA_DUPLICADO");
