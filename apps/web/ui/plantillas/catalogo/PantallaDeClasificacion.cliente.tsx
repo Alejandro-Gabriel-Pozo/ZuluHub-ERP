@@ -12,7 +12,7 @@ import {
 import estilos from "./PantallaDeClasificacion.module.css";
 import { nodosVisibles, type ArbolArmado, type NodoArmado } from "./modelo-de-clasificacion";
 
-export type AccionesDeClasificacion = Readonly<{
+type AccionesDeClasificacion = Readonly<{
   crear: AccionDeClasificacion;
   renombrar: AccionDeClasificacion;
   mover: AccionDeClasificacion;
