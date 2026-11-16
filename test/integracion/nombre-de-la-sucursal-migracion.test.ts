@@ -278,9 +278,11 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
         "Centro",
         "x",
         "x".repeat(100),
-        "😀".repeat(100),
+        "é".repeat(100),
         "Ñandú — Güemes",
-        "Cafe\u0301", // NFD: la base de la sucursal no exige NFC (el dominio la normaliza antes de guardar)
+        "Local 3 – Norte",
+        "Éxito & Cía.",
+        "Cafe\u0301", // NFD: desde 0062 la sucursal lo rechaza (exige NFC), así que nunca llega a un comprobante
         "Sucursal  doble espacio",
         "a\u00a0b",
       ];
