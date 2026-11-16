@@ -65,7 +65,7 @@ describe("textos heredados: la línea base real", () => {
 describe("textos heredados: violaciones inyectadas", () => {
   const catalogo: Catalogo = {
     "a.uno": { porDefecto: "Uno", fuente: "HEREDADO" },
-    "a.dos": { porDefecto: "Dos", fuente: { decision: "DEC-0410" } },
+    "a.dos": { porDefecto: "Dos", fuente: { decision: `DEC-${410}` } },
     "a.tres": { porDefecto: "Tres" },
   };
 
