@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { join } from "node:path";
 import { armarConexiones } from "../../../src/composicion/conexiones";
 import { crearAlmacenDeTickets } from "../../../src/adaptadores/certificados/almacen-de-tickets";
 import { emisorId, empresaId } from "../../../src/primitivas/identificadores/marca";
@@ -56,7 +57,19 @@ export type MundoDelRecorrido = Readonly<{
   cerrar(): Promise<void>;
 }>;
 
-export async function armarMundoDelRecorrido(base: BaseDePruebas): Promise<MundoDelRecorrido> {
+/** Lo que un recorrido puede pedirle al mundo además de la facturación (sin pedido, el mundo es el de siempre). */
+export type OpcionesDelMundo = Readonly<{
+  /** Módulos que la empresa tiene activos por su plan, además de `facturacion`. */
+  modulosAdicionales?: readonly string[];
+  /** Los módulos «en desarrollo» se leen como «disponibles» SOLO en el proceso de esta app (`activar-modulos-en-desarrollo.mjs`). */
+  activarModulosEnDesarrollo?: boolean;
+}>;
+
+export async function armarMundoDelRecorrido(
+  base: BaseDePruebas,
+  opciones: OpcionesDelMundo = {},
+): Promise<MundoDelRecorrido> {
+  const modulos = ["facturacion", ...(opciones.modulosAdicionales ?? [])];
   const mundo = await armarMundoWeb(base);
   const propia = mundo.propia.base;
   await crearVersionDeMarcaConfirmada(mundo.dueno, mundo.marcaA, { nombreVisible: "Zulú Pan" });
@@ -108,12 +121,14 @@ export async function armarMundoDelRecorrido(base: BaseDePruebas): Promise<Mundo
     condicionIva: "RESPONSABLE_INSCRIPTO",
   };
   await cargarCertificado(propia, e, "HOMOLOGACION");
-  const { version } = await crearPlanPublicado(mundo.dueno, { modulos: ["facturacion"] });
+  const { version } = await crearPlanPublicado(mundo.dueno, { modulos });
   await asignarPlan(mundo.dueno, m.tenant, version);
-  await mundo.dueno.query(
-    "insert into modulo_de_empresa (empresa_id, modulo) values ($1, 'facturacion')",
-    [m.empresa],
-  );
+  for (const modulo of modulos) {
+    await mundo.dueno.query("insert into modulo_de_empresa (empresa_id, modulo) values ($1, $2)", [
+      m.empresa,
+      modulo,
+    ]);
+  }
 
   // Un ticket de acceso vigente, guardado como lo guarda la app (cifrado con su clave): así la emisión no pide `loginCms`
   // (firmaría con una clave privada real) y lo único que sale hacia ARCA es lo que simula `arca-simulada.ts`.
@@ -152,7 +167,13 @@ export async function armarMundoDelRecorrido(base: BaseDePruebas): Promise<Mundo
   }
 
   const arca = await levantarArcaSimulada();
-  const app = await levantarAppReal(entorno, arca.puerto);
+  const app = await levantarAppReal(
+    entorno,
+    arca.puerto,
+    opciones.activarModulosEnDesarrollo === true
+      ? [join(import.meta.dirname, "activar-modulos-en-desarrollo.mjs")]
+      : [],
+  );
   const fachada = await levantarFachadaHttps(HOST_DEL_RECORRIDO, app.puerto);
   const cookies = yo.navegador.cookiesDe(HOST_DEL_RECORRIDO).map((c) => ({
     name: c.nombre,
