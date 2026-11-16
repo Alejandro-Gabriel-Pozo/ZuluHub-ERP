@@ -517,11 +517,16 @@ describe.skipIf(base === null)("0037 compras: la migración contra una base real
         await previa.cerrar();
       }
     }
+    // Las migraciones posteriores que dependen de compras (N3: 0063) se revierten antes: sus tablas apuntan a las de 0037.
+    const POSTERIORES = [
+      join(CARPETA_DE_MIGRACIONES, "reversiones", "0063_revertir_compras_recepcion_separada.sql"),
+    ];
     async function revertir(c: pg.Client, confirmar = false): Promise<void> {
       const sql = await readFile(REVERSION, "utf8");
       await c.query("begin");
       try {
         if (confirmar) await c.query("set local pedernal.confirmar_reversion = 'SI'");
+        for (const posterior of POSTERIORES) await c.query(await readFile(posterior, "utf8"));
         await c.query(sql);
         await c.query("commit");
       } catch (error) {
