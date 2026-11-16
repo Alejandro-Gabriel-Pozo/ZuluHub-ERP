@@ -29,6 +29,14 @@
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+const {
+  ARCHIVO_DE_CI,
+  partirCi,
+  JOBS_AJENOS_A_LA_MUTACION,
+  cambioDeCiAfecta,
+  leerCi,
+} = require("./analizar-ci.cjs");
+const { conEnlacesDelGuardian, leerArchivosDelGuardian } = require("./enlaces-del-guardian.cjs");
 const { cargarLosGrupos } = require("./grupos-de-mutacion.cjs");
 
 /**
@@ -50,8 +58,6 @@ const IGNORABLES = [
 
 /** Los mismos, para la integración: las migraciones SÍ la afectan (las aplica), así que no están. */
 const IGNORABLES_DE_INTEGRACION = DOCUMENTACION_Y_AJENOS;
-
-const ARCHIVO_DE_CI = ".github/workflows/ci.yml";
 
 /** Configuración de una aplicación: cambia cómo se instalan o transforman sus archivos (workspace de npm, `tsconfig` de esbuild). Se trata como lo desconocido: corre todo. */
 const CONFIGURACION_DE_APPS = /^apps\/[^/]+\/(package\.json|tsconfig[^/]*\.json)$/;
@@ -75,28 +81,6 @@ const esPrueba = (archivo) => archivo.endsWith(".test.ts");
  */
 const esPruebaDeNode = (archivo) => esPrueba(archivo) && /^(src|test)\//.test(archivo);
 
-/**
- * Lo que el grafo de importaciones NO ve del guardián: lo que sus pruebas copian a carpetas temporales, lanzan con `node` o leen como texto
- * (datos `*.json`, `.cjs` que solo corren como CLI, `evaluar-gate.cjs`, `reglas.cjs`, `ci.yml`). El código del guardián también se muta, así que
- * el mapa es EXPLÍCITO y grueso a propósito: toda prueba o auxiliar del guardián depende de TODOS esos archivos. Solo AGREGA dependencias.
- * El registro de decisiones (`DEC-NNNN.json`) entra acá: además de las del guardián lo leen solo `decisiones-*`, `nombre-del-producto`,
- * `grupos-de-mutacion` y `planificar-mutacion` (medido con `strace`); antes cada decisión nueva corría los ~97 grupos. Borrarla corre todo.
- */
-const PRUEBAS_DEL_GUARDIAN =
-  /^test\/arquitectura\/(?:guardian-|decisiones-|nombre-del-producto\.|grupos-de-mutacion\.|planificar-mutacion\.)[^/]*\.ts$/;
-/** Las carpetas del guardián: el código de los contratos, el control de deuda técnica y el registro de decisiones. */
-const CARPETAS_DEL_GUARDIAN = [
-  "arquitectura/contratos",
-  "arquitectura/deuda",
-  "arquitectura/decisiones/registro",
-];
-const OTROS_ARCHIVOS_DEL_GUARDIAN = [
-  "arquitectura/evaluar-gate.cjs",
-  "arquitectura/reglas.cjs",
-  // Sus pruebas leen el `ci.yml` real (el trabajo `guardian`, el `needs` del Gate) y lo alteran en memoria.
-  ARCHIVO_DE_CI,
-];
-
 /** Cierre de importaciones de `archivo` (incluido él mismo). */
 function cierre(archivo, dependencias) {
   const visto = new Set([archivo]);
@@ -111,135 +95,6 @@ function cierre(archivo, dependencias) {
     }
   }
   return visto;
-}
-
-/**
- * Agrega al grafo los archivos que lee el guardián (para que un cambio en ellos no sea «desconocido») y la
- * dependencia de cada prueba o auxiliar del guardián sobre todos ellos.
- *
- * @param {Readonly<Record<string, readonly string[]>>} dependencias
- * @param {readonly string[]} archivosDelGuardian
- * @returns {Record<string, string[]>}
- */
-function conEnlacesDelGuardian(dependencias, archivosDelGuardian) {
-  const grafo = Object.fromEntries(
-    Object.entries(dependencias).map(([archivo, importados]) => [archivo, [...importados]]),
-  );
-  for (const archivo of archivosDelGuardian) grafo[archivo] ??= [];
-  for (const archivo of Object.keys(grafo)) {
-    if (PRUEBAS_DEL_GUARDIAN.test(archivo)) {
-      grafo[archivo] = [...new Set([...grafo[archivo], ...archivosDelGuardian])];
-    }
-  }
-  return grafo;
-}
-
-/**
- * Los archivos que el guardián lee: las carpetas de arriba (los informes que generan no cuentan) y los otros archivos de `arquitectura/` que su verificador carga. Un archivo que falta en disco no se inventa.
- */
-function leerArchivosDelGuardian(raiz) {
-  const presentes = (archivo) =>
-    fs.statSync(path.join(raiz, archivo), { throwIfNoEntry: false })?.isFile() === true;
-  return [
-    ...CARPETAS_DEL_GUARDIAN.flatMap((carpeta) => fs.globSync(`${carpeta}/**/*`, { cwd: raiz }))
-      .map((archivo) => archivo.split(path.sep).join("/"))
-      .filter((archivo) => !archivo.endsWith("/informe.json")),
-    ...OTROS_ARCHIVOS_DEL_GUARDIAN,
-  ]
-    .filter(presentes)
-    .sort();
-}
-
-/**
- * Un `ci.yml` partido en su cabecera (todo lo que no es un job: `on`, `permissions`, `concurrency`…) y el texto
- * de cada job. Es un análisis de TEXTO que entiende el estilo que Prettier impone al archivo (jobs a 2 espacios).
- * Devuelve `null` si no lo entiende (job duplicado, indentación rara, anclas o alias de YAML): quien llama lo
- * trata como «no se puede decir que no afecta», es decir, corre todo.
- *
- * @param {string} texto
- * @returns {{ cabecera: string, jobs: Map<string, string> } | null}
- */
-function partirCi(texto) {
-  const lineas = texto.replaceAll("\r", "").split("\n");
-  const inicio = lineas.findIndex((linea) => /^jobs:\s*$/.test(linea));
-  if (inicio < 0) return null;
-  const conAnclas = lineas.some(
-    (linea) =>
-      /^\s*<<:/.test(linea) ||
-      /:\s+[&*][A-Za-z0-9_-]+\s*(#.*)?$/.test(linea) ||
-      /^\s*-\s+[&*][A-Za-z0-9_-]+\s*(#.*)?$/.test(linea),
-  );
-  if (conAnclas) return null;
-
-  const cabecera = lineas.slice(0, inicio + 1);
-  const bloques = new Map();
-  let actual;
-  for (const linea of lineas.slice(inicio + 1)) {
-    if (/^\S/.test(linea)) {
-      // Otra sección de primer nivel después de `jobs:`: cuenta como cabecera.
-      cabecera.push(linea);
-      actual = undefined;
-      continue;
-    }
-    const abre = /^ {2}([A-Za-z0-9_-]+):\s*$/.exec(linea);
-    if (abre?.[1] !== undefined) {
-      if (bloques.has(abre[1])) return null;
-      actual = [];
-      bloques.set(abre[1], actual);
-    } else if (linea.trim() === "" || linea.trimStart().startsWith("#")) {
-      (actual ?? cabecera).push(linea);
-    } else if (/^ {1,3}\S/.test(linea) || actual === undefined) {
-      return null;
-    } else {
-      actual.push(linea);
-    }
-  }
-  const sinFinal = (partes) => partes.join("\n").replace(/\s+$/, "");
-  return {
-    cabecera: sinFinal(cabecera),
-    jobs: new Map([...bloques].map(([id, cuerpo]) => [id, sinFinal(cuerpo)])),
-  };
-}
-
-/**
- * Jobs de `ci.yml` cuyo cambio NO puede alterar el resultado de la mutación de `src/` ni de
- * `arquitectura/contratos/`: cada uno corre una verificación distinta y nada de lo que hace llega a un grupo.
- * Quedan afuera a propósito `mutacion-plan` y `mutacion` (deciden y ejecutan la mutación) y cualquier job que
- * no figure acá (uno nuevo o renombrado se considera desconocido).
- */
-const JOBS_AJENOS_A_LA_MUTACION = [
-  "estatico",
-  "guardian",
-  "pruebas",
-  "seguridad",
-  "flujos",
-  "dependencias",
-  "estabilidad",
-  "web",
-  "componentes",
-  "gate",
-];
-
-/**
- * ¿El cambio de `ci.yml` puede afectar lo que decide `ajenos`? Sí (`true`) si no se pueden leer las dos versiones,
- * si cambió la cabecera (eventos, permisos, concurrencia, variables globales) o si cambió, se agregó o se quitó
- * un job que no está en `ajenos`. Lo único que da `false` es un cambio confinado a jobs de `ajenos` (o ninguno).
- *
- * @param {{ antes: string | null, despues: string | null } | undefined} ci
- * @param {readonly string[]} ajenos
- */
-function cambioDeCiAfecta(ci, ajenos) {
-  if (ci === undefined || typeof ci.antes !== "string" || typeof ci.despues !== "string")
-    return true;
-  const antes = partirCi(ci.antes);
-  const despues = partirCi(ci.despues);
-  if (antes === null || despues === null) return true;
-  if (antes.cabecera !== despues.cabecera) return true;
-  const ids = new Set([...antes.jobs.keys(), ...despues.jobs.keys()]);
-  for (const id of ids) {
-    if (antes.jobs.get(id) !== despues.jobs.get(id) && !ajenos.includes(id)) return true;
-  }
-  return false;
 }
 
 /** ¿Alguna de las lecturas de `prueba` (patrones de `lecturas`) coincide con algún archivo de `enApps` (un `Set`)? */
@@ -483,31 +338,6 @@ function leerCambios(raiz) {
     encoding: "utf8",
   });
   return salida.split("\n").filter((linea) => linea !== "");
-}
-
-/**
- * Las dos versiones de `ci.yml` que compara el plan: la de la base del PR (primer padre del commit de merge) y la
- * del árbol. `null` si no se puede leer una (por ejemplo, el archivo no existía en la base): quien decide lo
- * trata como un cambio que puede afectar.
- */
-function leerCi(raiz) {
-  const leer = (obtener) => {
-    try {
-      return obtener();
-    } catch {
-      return null;
-    }
-  };
-  return {
-    antes: leer(() =>
-      execFileSync("git", ["show", `HEAD^1:${ARCHIVO_DE_CI}`], {
-        cwd: raiz,
-        encoding: "utf8",
-        maxBuffer: 16 * 1024 * 1024,
-      }),
-    ),
-    despues: leer(() => fs.readFileSync(path.join(raiz, ARCHIVO_DE_CI), "utf8")),
-  };
 }
 
 function principal() {
