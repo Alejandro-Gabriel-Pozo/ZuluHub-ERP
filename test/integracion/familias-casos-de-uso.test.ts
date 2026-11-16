@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { nombreUnico } from "./unicos";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
   montarCatalogo,
@@ -26,7 +27,7 @@ describe.skipIf(base === null)("familias: casos de uso (F1)", () => {
 
   const auditorias = async (e: EscenarioDeCatalogo, accion: string) =>
     (await c.auditoria(e.empresa, accion)).length;
-  const nueva = async (e: EscenarioDeCatalogo, nombre = `Familia ${randomUUID().slice(0, 8)}`) =>
+  const nueva = async (e: EscenarioDeCatalogo, nombre = nombreUnico("Familia")) =>
     valorDe(await c.casos.crearFamilia(e.gerente, { id: randomUUID(), nombre }));
   const producto = (e: EscenarioDeCatalogo) => productoDeBase(c.dueno, e.empresa);
   const miembros = (familiaId: string) =>

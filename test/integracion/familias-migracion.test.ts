@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import { nombreUnico } from "./unicos";
 import { comoEmpresa, crearEmpresaActiva, crearEntornoDePrueba } from "./entorno";
 import { productoDeBase } from "./catalogo-apoyo";
 import type { BaseDePruebas } from "./global";
@@ -125,7 +126,7 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
     });
 
     it("sin código de carta el rol público no ve ninguna familia", async () => {
-      await familia(empresa, `Publica ${randomUUID()}`);
+      await familia(empresa, nombreUnico("Publica"));
       const s = await SesionDePrueba.abrir(base as BaseDePruebas, "pedernal_publico", null);
       try {
         const r = await s.intentar("select id from familia_de_producto");
@@ -138,7 +139,7 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
 
   describe("0079: familias y miembros", () => {
     it("nombre único por empresa sin distinguir mayúsculas; otra empresa puede repetirlo", async () => {
-      const nombre = `Cafe ${randomUUID().slice(0, 6)}`;
+      const nombre = nombreUnico("Cafe");
       await familia(empresa, nombre);
       const insertar = (e: string, n: string) =>
         intentar(
@@ -159,7 +160,7 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
           [empresa],
         ),
       ).toBe("23514:familia_nombre_ck");
-      const id = await familia(empresa, `Defecto ${randomUUID().slice(0, 6)}`);
+      const id = await familia(empresa, nombreUnico("Defecto"));
       const { rows } = await dueno.query(
         "select agrupar_en_carta, agrupar_en_pos, activa, version from familia_de_producto where id = $1",
         [id],
@@ -173,8 +174,8 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
     });
 
     it("un producto está en UNA familia a la vez: el segundo vínculo vigente se rechaza; quitado, puede volver a entrar", async () => {
-      const f1 = await familia(empresa, `F1 ${randomUUID().slice(0, 6)}`);
-      const f2 = await familia(empresa, `F2 ${randomUUID().slice(0, 6)}`);
+      const f1 = await familia(empresa, nombreUnico("F1"));
+      const f2 = await familia(empresa, nombreUnico("F2"));
       const p = await productoDeBase(dueno, empresa);
       expect(await agregar(empresa, f1, p, 1)).toBeNull();
       expect(await agregar(empresa, f2, p, 1)).toBe("23505:miembro_vigente_producto_uk");
@@ -195,8 +196,8 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
     });
 
     it("dos personas agregan el MISMO producto a familias distintas a la vez: gana una sola", async () => {
-      const f1 = await familia(empresa, `C1 ${randomUUID().slice(0, 6)}`);
-      const f2 = await familia(empresa, `C2 ${randomUUID().slice(0, 6)}`);
+      const f1 = await familia(empresa, nombreUnico("C1"));
+      const f2 = await familia(empresa, nombreUnico("C2"));
       const p = await productoDeBase(dueno, empresa);
       const [a, b] = await Promise.all([agregar(empresa, f1, p, 1), agregar(empresa, f2, p, 1)]);
       expect([a, b].filter((x) => x === null)).toHaveLength(1);
@@ -204,7 +205,7 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
     });
 
     it("la posición es única entre los miembros vigentes de la familia, y va de 1 a 1000", async () => {
-      const f = await familia(empresa, `Pos ${randomUUID().slice(0, 6)}`);
+      const f = await familia(empresa, nombreUnico("Pos"));
       const p1 = await productoDeBase(dueno, empresa);
       const p2 = await productoDeBase(dueno, empresa);
       expect(await agregar(empresa, f, p1, 1)).toBeNull();
@@ -214,7 +215,7 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
     });
 
     it("aislamiento: otra empresa no ve ni toca familias ni miembros; un producto de otra empresa no se agrega", async () => {
-      const f = await familia(empresa, `Aisl ${randomUUID().slice(0, 6)}`);
+      const f = await familia(empresa, nombreUnico("Aisl"));
       const pAjeno = await productoDeBase(dueno, otra);
       expect(await agregar(empresa, f, pAjeno, 1)).toBe("23503:miembro_producto_fkey");
       const s = await comoApp(otra);
@@ -236,8 +237,8 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
     });
 
     it("un miembro quitado no cambia más; la familia y el producto de un miembro no se mueven; nada se borra", async () => {
-      const f = await familia(empresa, `Inm ${randomUUID().slice(0, 6)}`);
-      const g = await familia(empresa, `Inm2 ${randomUUID().slice(0, 6)}`);
+      const f = await familia(empresa, nombreUnico("Inm"));
+      const g = await familia(empresa, nombreUnico("Inm2"));
       const p = await productoDeBase(dueno, empresa);
       await agregar(empresa, f, p, 1);
       expect(
@@ -274,7 +275,7 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
     });
 
     it("la versión de la familia sube sola con cada cambio y la identidad no cambia", async () => {
-      const f = await familia(empresa, `Ver ${randomUUID().slice(0, 6)}`);
+      const f = await familia(empresa, nombreUnico("Ver"));
       expect(
         await intentar(
           empresa,
@@ -307,7 +308,7 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
       );
 
     it("el id es la clave: el mismo id dos veces o a la vez se rechaza (y la huella distingue un pedido de otro)", async () => {
-      const f = await familia(empresa, `Ap ${randomUUID().slice(0, 6)}`);
+      const f = await familia(empresa, nombreUnico("Ap"));
       const id = randomUUID();
       const [a, b] = await Promise.all([aplicar(empresa, id, f), aplicar(empresa, id, f)]);
       expect([a, b].filter((x) => x === null)).toHaveLength(1);
@@ -322,13 +323,13 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
     });
 
     it("huella con forma inválida, conteos fuera de rango y familia de otra empresa se rechazan", async () => {
-      const f = await familia(empresa, `Ap2 ${randomUUID().slice(0, 6)}`);
+      const f = await familia(empresa, nombreUnico("Ap2"));
       expect(await aplicar(empresa, randomUUID(), f, "xyz")).toBe("23514:aplicacion_huella_ck");
       expect(await aplicar(otra, randomUUID(), f)).toBe("23503:aplicacion_familia_fkey");
     });
 
     it("una aplicación hecha no se cambia ni se borra, ni por el dueño; otra empresa no la ve", async () => {
-      const f = await familia(empresa, `Ap3 ${randomUUID().slice(0, 6)}`);
+      const f = await familia(empresa, nombreUnico("Ap3"));
       const id = randomUUID();
       await aplicar(empresa, id, f);
       expect(
@@ -440,7 +441,7 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
     });
 
     it("el orden y la estrella de una familia: acotados y de la empresa", async () => {
-      const f = await familia(empresa, `Ord ${randomUUID().slice(0, 6)}`);
+      const f = await familia(empresa, nombreUnico("Ord"));
       expect(
         await intentar(
           empresa,
