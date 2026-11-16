@@ -2783,11 +2783,13 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         )
       ).rows;
 
-    it("toda restricción única de una tabla con empresa_id la incluye (nada de detectar datos de otro cliente), salvo las excepciones explícitas carta_publica_codigo_uk, emisor_cuit_uk y referencia_de_error_referencia_uk", async () => {
+    it("toda restricción única de una tabla con empresa_id la incluye (nada de detectar datos de otro cliente), salvo las excepciones explícitas carta_publica_codigo_uk, emisor_cuit_uk, portal_de_empresa_codigo_uk y referencia_de_error_referencia_uk", async () => {
       expect(await unicasSinEmpresa(dueno)).toEqual([
         // El código de una carta es la llave pública del QR: único en TODA la plataforma, o dos empresas tendrían el mismo QR (0043, carta real §3.2).
         { tabla: "carta_publica", indice: "carta_publica_codigo_uk" },
         { tabla: "emisor", indice: "emisor_cuit_uk" }, // el CUIT del secundario es único en toda la instalación
+        // El código del portal es la llave pública del QR de la empresa, única en toda la plataforma, como carta_publica_codigo_uk (0078).
+        { tabla: "portal_de_empresa", indice: "portal_de_empresa_codigo_uk" },
         // La referencia de error la sortea el servidor y quien la escribe no puede leer la tabla (0007, P5).
         { tabla: "referencia_de_error", indice: "referencia_de_error_referencia_uk" },
       ]);
@@ -2827,8 +2829,16 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       const politicasPublicas = await filas<{ policyname: string; qual: string }>(
         `select policyname, qual from pg_policies where tablename = 'carta_publica' and 'pedernal_publico' = any(roles)`,
       );
-      expect(politicasPublicas).toHaveLength(1);
-      expect(politicasPublicas[0]?.qual).toContain("app.codigo_de_carta");
+      // Dos políticas públicas: la de siempre por `app.codigo_de_carta` (UNA carta) y la del portal (0078), por `app.empresa_del_portal`, que solo deja ver las cartas EN LÍNEA
+      // de sucursales con una tarjeta o una zona del portal (ver `portal-lectura.test.ts`, «variante B»).
+      expect(politicasPublicas).toHaveLength(2);
+      const porCarta = politicasPublicas.find((p) => p.qual.includes("app.codigo_de_carta"));
+      const porPortal = politicasPublicas.find((p) => p.qual.includes("app.empresa_del_portal"));
+      expect(porCarta?.qual).not.toContain("app.empresa_del_portal");
+      expect(porPortal?.qual).not.toContain("app.codigo_de_carta");
+      expect(porPortal?.qual).toContain("portal_tarjeta");
+      expect(porPortal?.qual).toContain("portal_zona");
+      expect(porPortal?.qual).toContain("EN_LINEA");
     });
 
     it("la premisa de emisor_cuit_uk: solo la plataforma escribe emisor.cuit (si el cliente lo escribiera, el error de duplicado le mostraría los CUIT ajenos)", async () => {
@@ -2864,6 +2874,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         expect(await unicasSinEmpresa(cliente)).toEqual([
           { tabla: "carta_publica", indice: "carta_publica_codigo_uk" }, // la excepción explícita de 0043
           { tabla: "emisor", indice: "emisor_cuit_uk" }, // la excepción explícita de 0006
+          { tabla: "portal_de_empresa", indice: "portal_de_empresa_codigo_uk" }, // la excepción explícita de 0078
           { tabla: "producto_clave_propia", indice: "producto_clave_propia_pkey" },
           { tabla: "producto_mala", indice: "producto_mala_sku_key" },
           { tabla: "referencia_de_error", indice: "referencia_de_error_referencia_uk" }, // la de 0007
