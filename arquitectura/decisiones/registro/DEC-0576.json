@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0576",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: las cuatro consultas nuevas de Recetas (lista, receta, ingredientes y vista previa) piden stock.ver, y los costos viajan solo con costos.ver.",
+  "que_cambia": "El operador ve recetas, ingredientes y el neto, nunca costos. Revertir: declarar otra acción en una línea de declaraciones.ts de stock.",
+  "donde": "src/modulos/stock/consultas/declaraciones.ts; recetas-pantalla.md §8"
+}

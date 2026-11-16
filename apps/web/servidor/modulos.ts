@@ -202,6 +202,16 @@ export async function puedeCambiarPrecios(contexto: ContextoOperativo): Promise<
   return permisos !== null && ofertaDe("productos.cambiar_precio", permisos).permitida;
 }
 
+/**
+ * ¿La persona puede guardar recetas (crear una, agregar o quitar ingredientes, nueva versión)? Es la oferta de `composiciones.editar` (gerente y administrador) que el servidor calcula con `ofertaDe`: con el
+ * módulo en solo lectura o sin el rol, no. Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: guardar vuelve a pasar por el guard, con alcance de todas las sucursales.
+ * Es solo la ayuda que apaga «Nueva receta», «Editar», «Agregar ingrediente», «Quitar» y «Guardar» (B8, `recetas-pantalla.md` §3). Chequeo: `test/web/recetas-acceso.test.ts`.
+ */
+export async function puedeEditarRecetas(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("composiciones.editar", permisos).permitida;
+}
+
 type PermisosLeidos = NonNullable<Awaited<ReturnType<typeof permisosDeLaPersona>>>;
 
 /** De una acción, su módulo, el estado de construcción de ese módulo y su efecto: el catálogo es el único dueño de esos datos. */

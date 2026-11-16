@@ -97,6 +97,10 @@ export type VersionDeReceta = Readonly<{
   pasos: string | null;
   creadaPor: string;
   creadaEn: Date;
+  /** SOLO con `costos.ver`: lo que cuesta cada unidad que rinde esa versión con los precios de hoy (6 decimales) o `null` si no se sabe (nunca cero). */
+  costoPorUnidad?: string | null | undefined;
+  /** SOLO con `costos.ver`: la moneda de `costoPorUnidad`. */
+  moneda?: "ARS" | undefined;
 }>;
 
 export type LineaDeCocina = Readonly<{
@@ -249,6 +253,22 @@ async function costoDeElaboradoSinStock(
   const porUnidad = costo === null || costo.incompleto ? null : costo.costoPorUnidad;
   memo.set(productoId, porUnidad);
   return porUnidad;
+}
+
+/**
+ * El costo de UNA unidad de lo que rinde la receta de esa versión, con los precios de hoy (6 decimales, en pesos), o `null` si no se sabe: una versión sin componentes (la
+ * retirada) o con alguno que cuenta y no tiene costo (nunca cero, D125). Es lo que la lista de recetas y la de versiones muestran como «Costo de la comida». Todas las que
+ * se piden juntas comparten `memo` (el costo de un elaborado que varias usan se calcula una vez).
+ */
+export async function costoPorUnidadDeLaVersion(
+  tx: Tx,
+  contexto: ContextoOperativo,
+  alcance: AlcanceDeSucursales,
+  version: ComposicionGuardada,
+  memo: Map<string, bigint | null>,
+): Promise<string | null> {
+  const costo = await costearVersion(tx, contexto, alcance, version, 1, memo);
+  return costo === null || costo.incompleto ? null : costoATexto(costo.costoPorUnidad);
 }
 
 /** La ficha de una versión: componentes con neto, merma y bruto y, con `conCostos`, el costo por línea y de la receta. */

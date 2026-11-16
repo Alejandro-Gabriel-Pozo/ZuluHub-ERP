@@ -73,4 +73,7 @@ export const TEXTOS_DE_PRODUCCION = {
   "receta.edicion.comparar": { porDefecto: "Comparar" },
   // receta.html, fila «Ficha de cocina» (idea 6, decisión 99).
   "receta.ficha_de_cocina.titulo": { porDefecto: "Ficha de cocina" },
+  // El genérico de la pantalla de Recetas (rechazo de guardar). Texto ya aprobado y repetido por módulo (`caja.error.accion_no_permitida`, `catalogo.error.accion_no_permitida`):
+  // interfaz sobria, dueño 30/10/2026 («Mensaje genérico … antes que uno por acción», CLAUDE.md); fila «Rechazo del servidor» de `recetas-pantalla.md` §5 y §6 (15/11/2026). DEC-0575.
+  "receta.error.accion_no_permitida": { porDefecto: "Esta acción no está permitida" },
 } as const;

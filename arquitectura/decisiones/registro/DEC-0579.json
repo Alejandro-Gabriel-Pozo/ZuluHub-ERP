@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0579",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: la lista de ingredientes ofrece materia prima y reventa con artículo de stock y producto activos, y elaborados activos; nunca insumos; la unidad es la de stock del artículo o la base del elaborado.",
+  "que_cambia": "Un producto desactivado o sin artículo no se ofrece como ingrediente. Revertir: cambiar las condiciones de ingredientesElegibles.",
+  "donde": "src/modulos/stock/persistencia/lecturas-de-recetas.ts; recetas-pantalla.md §8 B3"
+}

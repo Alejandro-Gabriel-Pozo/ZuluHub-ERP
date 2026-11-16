@@ -17,6 +17,7 @@ import {
   type RepositorioDeDepositos,
 } from "./repositorio-de-depositos";
 import { crearLecturasDeLotes, type LecturasDeLotes } from "./lecturas-de-lotes";
+import { crearLecturasDeRecetas, type LecturasDeRecetas } from "./lecturas-de-recetas";
 import {
   crearRepositorioDeReasignaciones,
   type RepositorioDeReasignaciones,
@@ -42,6 +43,8 @@ export type RepositoriosDeStock = Readonly<{
   /** E6 (0032): lotes, control de lote y lotes de cada renglón del libro. */
   lotesDeStock: RepositorioDeLotes & LecturasDeLotes & RepositorioDeReasignaciones;
   productosParaStock: ProductosParaStock;
+  /** Las listas de la pantalla de Recetas: productos con o sin receta e ingredientes que se ofrecen (solo lectura). */
+  listasDeRecetas: LecturasDeRecetas;
 }>;
 
 export function crearRepositoriosDeStock(db: {
@@ -61,5 +64,6 @@ export function crearRepositoriosDeStock(db: {
       ...crearRepositorioDeReasignaciones(conexion),
     },
     productosParaStock: crearProductosParaStock(conexion),
+    listasDeRecetas: crearLecturasDeRecetas(conexion),
   };
 }

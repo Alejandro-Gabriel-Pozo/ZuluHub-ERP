@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0580",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: la lista de recetas admite además el filtro opcional activo (solo activos o solo desactivados), para que el selector de la receta nueva ofrezca solo productos activos sin recortar páginas en la pantalla.",
+  "que_cambia": "La firma de listarRecetas suma un filtro más que el propuesto. Revertir: quitar el parámetro activo.",
+  "donde": "src/modulos/stock/consultas/recetas-para-pantalla.ts; recetas-pantalla.md §6 (Nueva receta)"
+}
