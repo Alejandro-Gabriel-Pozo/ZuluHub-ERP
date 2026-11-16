@@ -173,4 +173,27 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.unidad.metro_cuadrado": { porDefecto: "Metro cuadrado" },
   "catalogo.unidad.minuto": { porDefecto: "Minuto" },
   "catalogo.unidad.hora": { porDefecto: "Hora" },
+
+  // A13, tramo Opciones (DEC-0525). Fuente de todo este bloque: la maqueta aprobada `Pedernal-docs/10-ux-ui/prototipos-gastronomia/productos.html`, tabla «Textos nuevos» (aprobados por el
+  // dueño el 09/11/2026): fila «Opciones» («Variantes · Agregar variante · Es la medida · Grupos de opciones · Agregar grupo · Incluida · Adicional · Obligatorio · Opcional · Se puede
+  // elegir más de una · Recargo · Agregar opción · Quitar») y fila «Copiar de otro producto · Copiar · Producto». «Variantes», «Agregar variante» y «Es la medida» son del tramo de medidas.
+  "catalogo.opciones.grupos": { porDefecto: "Grupos de opciones" },
+  "catalogo.opciones.agregar_grupo": { porDefecto: "Agregar grupo" },
+  "catalogo.opciones.incluida": { porDefecto: "Incluida" },
+  "catalogo.opciones.adicional": { porDefecto: "Adicional" },
+  "catalogo.opciones.obligatorio": { porDefecto: "Obligatorio" },
+  "catalogo.opciones.varias": { porDefecto: "Se puede elegir más de una" },
+  "catalogo.opciones.recargo": { porDefecto: "Recargo" },
+  "catalogo.opciones.agregar_opcion": { porDefecto: "Agregar opción" },
+  "catalogo.opciones.quitar": { porDefecto: "Quitar" },
+  "catalogo.opciones.copiar_de_otro": { porDefecto: "Copiar de otro producto" },
+  "catalogo.opciones.copiar": { porDefecto: "Copiar" },
+  "catalogo.opciones.producto": { porDefecto: "Producto" },
+  // `productos.html`, función `vGrupo` (línea 662): la casilla dice «No figura en la carta»; el texto aprobado de la lista es «· no figura en la carta» (`catalogo.lista.no_figura_en_la_carta`):
+  // misma frase, sin el punto medio y con mayúscula inicial. Pregunta pendiente al orquestador: confirmar que la mayúscula no cuenta como texto nuevo.
+  "catalogo.opciones.no_figura": { porDefecto: "No figura en la carta" },
+  // `productos.html`, función `vOpciones` y título de `vGrupo` (el botón «Editar» sin marcar como nuevo: reutilizado de Medios de pago, `caja.accion.editar`, aprobado el 09/11/2026).
+  "catalogo.accion.editar": { porDefecto: "Editar" },
+  // `productos.html`, «Textos nuevos», fila «Errores»: «Una opción incluida no lleva recargo».
+  "catalogo.error.incluida_con_recargo": { porDefecto: "Una opción incluida no lleva recargo" },
 } as const;

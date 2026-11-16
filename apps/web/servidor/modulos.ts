@@ -257,6 +257,16 @@ export const puedeReimprimir = (contexto: ContextoOperativo): Promise<boolean> =
 export const puedeAdministrarImpresoras = (contexto: ContextoOperativo): Promise<boolean> =>
   puedeLaAccionDelSalon(contexto, "impresoras.editar");
 
+/**
+ * ¿La persona puede editar las opciones de un producto (grupos, opciones, recargos y copiar de otro producto)? Es la oferta de `opciones.editar` (gerente y administrador) que el
+ * servidor calcula con `ofertaDe`: con el módulo en solo lectura o sin el rol, no. Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: guardar
+ * vuelve a pasar por el guard. Es solo la ayuda que apaga «Guardar» y esconde los enlaces de escribir (DEC-0346). Chequeo: `test/web/opciones-acceso.test.ts`.
+ */
+export async function puedeEditarOpciones(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("opciones.editar", permisos).permitida;
+}
+
 type PermisosLeidos = NonNullable<Awaited<ReturnType<typeof permisosDeLaPersona>>>;
 
 /** De una acción, su módulo, el estado de construcción de ese módulo y su efecto: el catálogo es el único dueño de esos datos. */
