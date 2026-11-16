@@ -1,7 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   cambiarElPrecioDeUnProducto,
@@ -11,7 +10,7 @@ import {
 } from "../../../src/composicion/precios-de-producto-web";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { rutaDeLosPrecios } from "../ui/plantillas/catalogo/modelo-de-precios-de-producto";
-import type { ResultadoDeAccion } from "./acciones";
+import { redirigirAlTerminar, type ResultadoDeAccion } from "./acciones";
 import { web } from "./composicion";
 import { conLaEmpresa } from "./con-la-empresa";
 import { textoDe } from "./formularios-de-caja";
@@ -61,5 +60,5 @@ export async function cambiarElPrecio(
     }
     return { error: respuesta.error };
   }
-  redirect(rutaDeLosPrecios(respuesta.dato.productoId));
+  return redirigirAlTerminar(rutaDeLosPrecios(respuesta.dato.productoId));
 }

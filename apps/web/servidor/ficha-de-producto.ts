@@ -1,5 +1,4 @@
 import "server-only";
-import { redirect } from "next/navigation";
 import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   guardarLaFichaDeProducto,
@@ -9,7 +8,7 @@ import {
 } from "../../../src/composicion/ficha-de-producto-web";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { rutaDeLaFicha } from "../ui/plantillas/catalogo/modelo-de-ficha-de-producto";
-import type { ResultadoDeAccion } from "./acciones";
+import { redirigirAlTerminar, type ResultadoDeAccion } from "./acciones";
 import { web } from "./composicion";
 import { conLaEmpresa } from "./con-la-empresa";
 import { textoDe } from "./formularios-de-caja";
@@ -60,5 +59,5 @@ export async function guardarLaFicha(
     }),
   );
   if (!respuesta.ok) return { error: respuesta.error };
-  redirect(rutaDeLaFicha(respuesta.dato.productoId));
+  return redirigirAlTerminar(rutaDeLaFicha(respuesta.dato.productoId));
 }

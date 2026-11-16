@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import type { ErrorPublico } from "../../../../../src/capacidades/experiencia/respuesta";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { Boton } from "../../componentes/Boton.cliente";
 import { Campo } from "../../componentes/Campo";
@@ -9,7 +8,11 @@ import { Selector } from "../../componentes/Selector";
 import { BotonDeEnvio } from "../../patrones/BotonDeEnvio.cliente";
 import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
 import { ProveedorDeEnvioDeFormulario } from "../../patrones/EnvioDeFormulario.cliente";
-import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
+import type {
+  AccionDeFormulario,
+  ResultadoDeFormulario,
+} from "../../patrones/FormularioDeAccion.cliente";
+import { useDestinoDeLaAccion } from "../../patrones/useDestinoDeLaAccion.cliente";
 import { Pila } from "../../primitivas/Pila";
 import type { AltaArmada } from "./modelo-de-alta-de-producto";
 
@@ -24,7 +27,7 @@ export type PropsDeFormularioDeAltaDeProducto = Readonly<{
 /** Los campos del formulario a los que un error puede apuntarse (los que muestran su propio error). */
 const CAMPOS = ["nombre", "codigo", "codigoDeBarras", "alicuota"];
 
-const SIN_ERROR: Readonly<{ error: ErrorPublico | null }> = { error: null };
+const SIN_ERROR: ResultadoDeFormulario = { error: null };
 
 /**
  * El alta de un producto (maqueta `productos.html`, «Nuevo producto»): la clase, el nombre, el nombre de cocina, los códigos, la unidad, la alícuota y la sección, en ese orden
@@ -38,6 +41,7 @@ export function FormularioDeAltaDeProducto({
   puedeCrear,
 }: PropsDeFormularioDeAltaDeProducto) {
   const [resultado, enviar, enviando] = useActionState(accion, SIN_ERROR);
+  useDestinoDeLaAccion(resultado.destino);
   const [clase, setClase] = useState(alta.clase.valorInicial);
   const [nombre, setNombre] = useState("");
   const [cocina, setCocina] = useState("");

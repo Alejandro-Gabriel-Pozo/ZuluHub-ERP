@@ -44,8 +44,22 @@ import { dependenciasDeSesion, sesionDelPedido } from "./sesion";
  *    de la invitación (la segunda vez devuelve `yaEstabaAceptada`, nunca duplica).
  */
 
-/** Lo que devuelven las acciones de formulario: nada si salió bien (redirigen), o el error ya traducido. */
-export type ResultadoDeAccion = Readonly<{ error: ErrorPublico | null }>;
+/**
+ * Lo que devuelven las acciones de formulario: el error ya traducido, o nada si salió bien. Si salió bien y la acción tiene que llevar a otra pantalla, o redirige (el formulario se envió sin
+ * JavaScript) o trae `destino`, que el formulario abre en el navegador (`FormularioDeAccion`): ver `redirigirAlTerminar`.
+ */
+export type ResultadoDeAccion = Readonly<{ error: ErrorPublico | null; destino?: string }>;
+
+/**
+ * Cómo termina una acción de formulario que lleva a otra pantalla. Sin JavaScript (el envío común del formulario, sin la cabecera `next-action`) responde la redirección de siempre. Con
+ * JavaScript NO se usa `redirect()`: Next busca él mismo la pantalla de destino con un pedido interno a `localhost` (la cabecera `host` de ese pedido se pierde: Node no la reenvía) y la puerta
+ * por host (`proxy.ts`) lo toma por un host desconocido y contesta la pantalla neutra «No encontrado» como resultado de la acción. Por eso devuelve el destino y el navegador, que sí tiene su
+ * host, lo abre. Previene: la persona guarda y ve «No encontrado» (reproducido en la app real, el recorrido de la ficha de producto (a sumar cuando entre el apoyo `activar-modulos-en-desarrollo`)).
+ */
+export async function redirigirAlTerminar(destino: string): Promise<ResultadoDeAccion> {
+  if ((await headers()).get("next-action") !== null) return { error: null, destino };
+  return redirect(destino);
+}
 
 const textoDe = (datos: FormData, nombre: string): string => {
   const valor = datos.get(nombre);

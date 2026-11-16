@@ -9,6 +9,14 @@ import { err, ok } from "../../src/primitivas/resultado/resultado";
  */
 vi.mock("server-only", () => ({}));
 const REDIRIGIO = "NEXT_REDIRECT";
+const cabecera = vi.hoisted(() => ({ accion: null as string | null }));
+vi.mock("next/headers", () => ({
+  headers: () =>
+    Promise.resolve(
+      new Headers(cabecera.accion === null ? {} : { "next-action": cabecera.accion }),
+    ),
+  cookies: () => Promise.reject(new Error("no se usa")),
+}));
 vi.mock("next/navigation", () => ({
   redirect: (destino: string) => {
     throw new Error(`${REDIRIGIO} ${destino}`);
@@ -205,5 +213,19 @@ describe("darDeAltaElProducto", () => {
       `${REDIRIGIO} /catalogo/productos/${NUEVO}`,
     );
     expect(mundo.altas[0]).toEqual(mundo.altas[1]);
+  });
+});
+
+describe("con JavaScript (acción de fetch)", () => {
+  it("no usa redirect(): devuelve el destino para que el navegador lo abra (con redirect, Next lo pide a localhost y la puerta por host contesta «No encontrado»)", async () => {
+    cabecera.accion = "abc123";
+    try {
+      await expect(darDeAltaElProducto(CLAVE, formulario(COMPLETO))).resolves.toEqual({
+        error: null,
+        destino: `/catalogo/productos/${NUEVO}`,
+      });
+    } finally {
+      cabecera.accion = null;
+    }
   });
 });

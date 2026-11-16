@@ -12,6 +12,9 @@ import {
   type FichaDeLaPantalla,
 } from "./modelo-de-ficha-de-producto";
 
+const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+
 /**
  * La ficha de datos de un producto en Chromium (maqueta `productos.html`, solapa «Datos»): los campos y su orden, lo que viaja al guardar, el desplegable apagado que no se manda,
  * el error asociado al campo (o debajo, si no apunta a uno), el doble toque, sin permiso, el teclado y axe, tamaños y sin desborde en 390 y 1280 px.

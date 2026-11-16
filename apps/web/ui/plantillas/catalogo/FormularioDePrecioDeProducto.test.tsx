@@ -12,6 +12,9 @@ import {
   type PreciosDeLaPantalla,
 } from "./modelo-de-precios-de-producto";
 
+const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+
 /**
  * Los precios de un producto en Chromium (maqueta `productos.html`, solapa «Precios»): el campo con el precio vigente, la vigencia y el historial, lo que viaja al guardar (el importe
  * como texto decimal canónico), el error asociado al campo (con el importe vigente cuando otra persona cambió antes), el doble toque, sin permiso, «Según medida» sin campo, el teclado

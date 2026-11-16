@@ -1,13 +1,16 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import type { ErrorPublico } from "../../../../../src/capacidades/experiencia/respuesta";
 import { Boton } from "../../componentes/Boton.cliente";
 import { CampoImporte } from "../../componentes/CampoImporte";
 import { BotonDeEnvio } from "../../patrones/BotonDeEnvio.cliente";
 import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
 import { ProveedorDeEnvioDeFormulario } from "../../patrones/EnvioDeFormulario.cliente";
-import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
+import type {
+  AccionDeFormulario,
+  ResultadoDeFormulario,
+} from "../../patrones/FormularioDeAccion.cliente";
+import { useDestinoDeLaAccion } from "../../patrones/useDestinoDeLaAccion.cliente";
 import { Pila } from "../../primitivas/Pila";
 import { Texto } from "../../primitivas/Texto";
 import estilos from "./FormularioDePrecioDeProducto.module.css";
@@ -24,7 +27,7 @@ export type PropsDeFormularioDePrecioDeProducto = Readonly<{
 /** El único campo al que un error puede apuntarse. */
 const CAMPO = "precio";
 
-const SIN_ERROR: Readonly<{ error: ErrorPublico | null }> = { error: null };
+const SIN_ERROR: ResultadoDeFormulario = { error: null };
 
 /**
  * Los precios de un producto (maqueta `productos.html`, solapa «Precios»): el precio de la empresa (IVA incluido) para editar, desde cuándo rige o «Precio abierto», y el historial.
@@ -38,6 +41,7 @@ export function FormularioDePrecioDeProducto({
   puedeGuardar,
 }: PropsDeFormularioDePrecioDeProducto) {
   const [resultado, enviar, enviando] = useActionState(accion, SIN_ERROR);
+  useDestinoDeLaAccion(resultado.destino);
   const [precio, setPrecio] = useState(precios.campo.valorInicial);
 
   if (precios.segunMedida !== null) return <Texto>{precios.segunMedida}</Texto>;

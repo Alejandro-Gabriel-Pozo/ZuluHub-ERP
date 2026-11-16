@@ -10,6 +10,9 @@ import { errorDeCodigo, type Respuesta } from "../../src/capacidades/experiencia
  * cada situación con su texto del catálogo: los campos en el orden de la maqueta, «Guardar» activo o apagado según el permiso, y los errores (el del guard con su motivo; el inesperado
  * con la referencia y sin el código crudo). Un solo `h1`: «Nuevo producto». Sin entrada en la barra: se llega por la dirección.
  */
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: () => undefined, refresh: () => undefined }),
+}));
 vi.mock("server-only", () => ({}));
 const mundo = vi.hoisted(
   (): {

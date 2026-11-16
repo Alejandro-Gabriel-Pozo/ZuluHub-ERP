@@ -12,6 +12,9 @@ import {
   type OpcionesDelAltaDeLaPantalla,
 } from "./modelo-de-alta-de-producto";
 
+const router = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
+
 /**
  * El alta de un producto en Chromium (maqueta `productos.html`, «Nuevo producto»): los campos y su orden, los valores de partida, lo que viaja al guardar, lo que aparece y desaparece
  * según la clase, el error asociado al campo (o debajo, si no apunta a uno), el doble toque, sin permiso, el teclado y axe, tamaños y sin desborde en 390 y 1280 px.

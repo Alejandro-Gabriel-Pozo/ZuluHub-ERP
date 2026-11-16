@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import type { ErrorPublico } from "../../../../../src/capacidades/experiencia/respuesta";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { Boton } from "../../componentes/Boton.cliente";
 import { Campo } from "../../componentes/Campo";
@@ -9,7 +8,11 @@ import { Selector } from "../../componentes/Selector";
 import { BotonDeEnvio } from "../../patrones/BotonDeEnvio.cliente";
 import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
 import { ProveedorDeEnvioDeFormulario } from "../../patrones/EnvioDeFormulario.cliente";
-import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
+import type {
+  AccionDeFormulario,
+  ResultadoDeFormulario,
+} from "../../patrones/FormularioDeAccion.cliente";
+import { useDestinoDeLaAccion } from "../../patrones/useDestinoDeLaAccion.cliente";
 import { Pila } from "../../primitivas/Pila";
 import estilos from "./FormularioDeFichaDeProducto.module.css";
 import type { FichaArmada } from "./modelo-de-ficha-de-producto";
@@ -25,7 +28,7 @@ export type PropsDeFormularioDeFichaDeProducto = Readonly<{
 /** Los campos del formulario a los que un error puede apuntarse (los que muestran su propio error). */
 const CAMPOS = ["nombre", "codigo", "codigoDeBarras", "alicuota"];
 
-const SIN_ERROR: Readonly<{ error: ErrorPublico | null }> = { error: null };
+const SIN_ERROR: ResultadoDeFormulario = { error: null };
 
 /** Un dato que solo se ve (la clase y la unidad no se cambian después de crear el producto). */
 function SoloLectura({ etiqueta, valor }: Readonly<{ etiqueta: string; valor: string }>) {
@@ -49,6 +52,7 @@ export function FormularioDeFichaDeProducto({
   puedeGuardar,
 }: PropsDeFormularioDeFichaDeProducto) {
   const [resultado, enviar, enviando] = useActionState(accion, SIN_ERROR);
+  useDestinoDeLaAccion(resultado.destino);
   const [nombre, setNombre] = useState(ficha.nombre.valor);
   const [cocina, setCocina] = useState(ficha.nombreDeCocina?.valor ?? "");
   const [codigo, setCodigo] = useState(ficha.codigo.valor);
