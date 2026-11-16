@@ -281,10 +281,13 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       DECLARACIONES_DE_CONSULTAS_DE_COMANDAS,
     ),
     "modulos/salon": accionesDe(DECLARACIONES_DE_SALON, DECLARACIONES_DE_CONSULTAS_DE_SALON),
-    "modulos/clientes": accionesDe(
-      DECLARACIONES_DE_CLIENTES,
-      DECLARACIONES_DE_CONSULTAS_DE_CLIENTES,
-    ),
+    "modulos/clientes": [
+      ...accionesDe(DECLARACIONES_DE_CLIENTES, DECLARACIONES_DE_CONSULTAS_DE_CLIENTES),
+      // `partes.marcar_empleado` es de este mismo módulo y se exige solo cuando el pedido nombra EMPLEADO: va en `tambien`.
+      ...(Object.values(DECLARACIONES_DE_CLIENTES).flatMap((d) =>
+        "tambien" in d ? d.tambien : [],
+      ) as string[]),
+    ],
     "modulos/compras": accionesDe(DECLARACIONES_DE_COMPRAS, DECLARACIONES_DE_CONSULTAS_DE_COMPRAS),
     "modulos/fiscal": accionesDe(
       DECLARACIONES_DE_FISCAL,

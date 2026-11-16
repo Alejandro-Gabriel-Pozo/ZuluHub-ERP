@@ -263,6 +263,7 @@ describe("el catálogo comercial de módulos", () => {
           "partes.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
           "partes.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "partes.cambiar_roles": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "partes.marcar_empleado": { capacidad: null, efecto: "CREA_AMPLIA" },
           "partes.vincular_contacto": { capacidad: null, efecto: "CREA_AMPLIA" },
           "partes.desvincular_contacto": { capacidad: null, efecto: "CREA_AMPLIA" },
           "partes.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
@@ -315,19 +316,19 @@ describe("el catálogo comercial de módulos", () => {
     expect(carpetas).toEqual([["modulos/catalogo"], ["modulos/catalogo"], ["modulos/stock"]]);
   });
 
-  it("el catálogo tiene 48 acciones de catálogo, carta y stock (14 + 9 + 25), 35 de caja, cierre y ventas (23 + 4 + 8) y 18 de clientes y compras (8 + 10), sin repetir ninguna", () => {
+  it("el catálogo tiene 48 acciones de catálogo, carta y stock (14 + 9 + 25), 35 de caja, cierre y ventas (23 + 4 + 8) y 19 de clientes y compras (9 + 10), sin repetir ninguna", () => {
     const cuantas = (
       m: "catalogo" | "vidriera" | "stock" | "caja" | "cierre" | "ventas" | "clientes" | "compras",
     ) => Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
     expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([14, 9, 25]);
     expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
-    expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 11]);
+    expect([cuantas("clientes"), cuantas("compras")]).toEqual([9, 11]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
     // 25 de administración (18 de usuarios, sucursales, gerencia y permisos, y 7 de la configuración fiscal de H7 T5),
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 48 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
-    // de E5-T10), 35 de caja, cierre y ventas (E0-T1), 19 de clientes y compras (E9-T1 y T11), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 157 en total.
-    expect(todas).toHaveLength(25 + 9 + 48 + 35 + 19 + 16 + 5);
+    // de E5-T10), 35 de caja, cierre y ventas (E0-T1), 20 de clientes y compras (E9-T1, T11 y LB-6), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 158 en total.
+    expect(todas).toHaveLength(25 + 9 + 48 + 35 + 20 + 16 + 5);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -502,6 +503,7 @@ const EFECTOS_DE_EMPRESA = {
     "partes.crear",
     "partes.desvincular_contacto",
     "partes.editar",
+    "partes.marcar_empleado",
     "partes.reactivar",
     "partes.vincular_contacto",
     "productos.asignar_emisor",

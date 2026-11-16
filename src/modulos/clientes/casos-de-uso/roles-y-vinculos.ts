@@ -8,7 +8,7 @@ import {
 } from "../dominio/vinculos";
 import { decidirRoles, rolesPedidos, type RolDeParte } from "../dominio/roles";
 import { esUuid } from "../persistencia/filas";
-import { autorizar, traducir } from "./comun";
+import { ROL_QUE_EXIGE_PERMISO_DE_EMPLEADO, autorizar, traducir } from "./comun";
 import type { DependenciasDeClientes } from "./contrato";
 import type { ErrorDeClientes } from "./errores";
 
@@ -47,6 +47,19 @@ export function armarCambiarRolesDeParte(dependencias: DependenciasDeClientes) {
         const parte = await tx.partes.bloquear(empresaId, entrada.parteId);
         if (parte === null) return err("PARTE_NO_ENCONTRADA");
         const cambio = decidirRoles(await tx.partes.rolesDe(empresaId, [parte.id]), pedidos);
+        // Fail-closed: si el cambio agrega, reactiva o quita EMPLEADO hace falta además `partes.marcar_empleado`; se decide ANTES de escribir.
+        const tocados: readonly string[] = [
+          ...cambio.agregados,
+          ...cambio.reactivados,
+          ...cambio.quitados,
+        ];
+        if (tocados.includes(ROL_QUE_EXIGE_PERMISO_DE_EMPLEADO)) {
+          const permisoDeEmpleado = await autorizar(tx, contexto, dependencias.reglas, [
+            "partes.cambiar_roles",
+            "partes.marcar_empleado",
+          ]);
+          if (!permisoDeEmpleado.ok) return permisoDeEmpleado;
+        }
         for (const rol of cambio.agregados) await tx.partes.insertarRol(empresaId, parte.id, rol);
         for (const rol of cambio.reactivados) {
           await tx.partes.cambiarActivoDeRol(empresaId, parte.id, rol, true);

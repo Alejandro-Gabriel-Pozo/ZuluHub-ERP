@@ -2,7 +2,7 @@ import type { ReglasDeEmpresa } from "../../capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../contexto/contexto";
 import type { EmpresaId } from "../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
-import { autorizar } from "./casos-de-uso/comun";
+import { accionesConEmpleado, autorizar } from "./casos-de-uso/comun";
 import type { TxDeClientes } from "./casos-de-uso/contrato";
 import type { ErrorDeClientes } from "./casos-de-uso/errores";
 import {
@@ -120,7 +120,12 @@ export interface RegistroDePartes {
 export function crearRegistroDePartes(): RegistroDePartes {
   return {
     async crearEnTx(tx, contexto, reglas, entrada) {
-      const permiso = await autorizar(tx, contexto, reglas, ["partes.crear"]);
+      const permiso = await autorizar(
+        tx,
+        contexto,
+        reglas,
+        accionesConEmpleado("partes.crear", entrada.roles),
+      );
       if (!permiso.ok) return permiso;
       return crearParteDentro(tx, contexto, entrada);
     },

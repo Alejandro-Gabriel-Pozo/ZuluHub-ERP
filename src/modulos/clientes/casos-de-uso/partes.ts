@@ -7,7 +7,7 @@ import { razonesDeDuplicado, type RazonDeDuplicado } from "../dominio/duplicados
 import { rolesPedidos, type RolDeParte } from "../dominio/roles";
 import { esUuid } from "../persistencia/filas";
 import type { Parte } from "../persistencia/modelo";
-import { autorizar, traducir } from "./comun";
+import { accionesConEmpleado, autorizar, traducir } from "./comun";
 import type { DependenciasDeClientes, TxDeClientes } from "./contrato";
 import type { ErrorDeClientes } from "./errores";
 import { claveDeDocumento, datosValidos, entradaDeParte, mismosDatos } from "./partes-comun";
@@ -191,7 +191,12 @@ export function armarCrearParte(dependencias: DependenciasDeClientes) {
     const resultado = await dependencias.transacciones.ejecutar(
       { contexto },
       async (tx): Promise<R<SalidaDeCrearParte>> => {
-        const permiso = await autorizar(tx, contexto, dependencias.reglas, ["partes.crear"]);
+        const permiso = await autorizar(
+          tx,
+          contexto,
+          dependencias.reglas,
+          accionesConEmpleado("partes.crear", entrada.roles),
+        );
         if (!permiso.ok) return permiso;
         return crearParteDentro(tx, contexto, entrada);
       },

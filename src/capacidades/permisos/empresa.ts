@@ -205,6 +205,7 @@ export const PERMISOS_DE_EMPRESA = {
   "partes.crear": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "partes.editar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "partes.cambiar_roles": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "partes.marcar_empleado": ["GERENTE", "ADMINISTRADOR"],
   "partes.vincular_contacto": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "partes.desvincular_contacto": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "partes.desactivar": ["GERENTE", "ADMINISTRADOR"],

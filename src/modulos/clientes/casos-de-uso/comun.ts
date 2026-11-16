@@ -29,6 +29,24 @@ export async function autorizar(
   );
 }
 
+/**
+ * Quién puede marcar a una persona como EMPLEADO (LB-6, SUPUESTO del orquestador DEC-0725: solo gerente y administrador, no el operador). Se exige ADEMÁS de la
+ * acción propia del caso de uso, y solo cuando el pedido toca ese rol. Lista de permitidos: un rol que no está declarado acá no pide el permiso extra, pero tampoco
+ * existe (`rolesPedidos` lo rechaza). Previene que cualquiera con permiso de editar el directorio meta a una persona del personal como parte. Probado por
+ * `test/integracion/clientes-rol-empleado-permiso.test.ts`.
+ */
+export const ROL_QUE_EXIGE_PERMISO_DE_EMPLEADO = "EMPLEADO";
+
+/** `accion` y, si el pedido nombra EMPLEADO, también `partes.marcar_empleado` (el guard exige todas o ninguna). */
+export function accionesConEmpleado(
+  accion: ClaveAccion,
+  roles: readonly string[],
+): readonly [ClaveAccion, ...ClaveAccion[]] {
+  return roles.includes(ROL_QUE_EXIGE_PERMISO_DE_EMPLEADO)
+    ? [accion, "partes.marcar_empleado"]
+    : [accion];
+}
+
 const ES_ERROR_DE_PERSISTENCIA = (error: unknown): error is ErrorDePersistencia =>
   typeof error === "object" && error !== null && "tipo" in error;
 

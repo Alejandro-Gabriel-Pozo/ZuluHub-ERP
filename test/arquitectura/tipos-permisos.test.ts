@@ -199,6 +199,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "partes.crear"
       | "partes.editar"
       | "partes.cambiar_roles"
+      | "partes.marcar_empleado"
       | "partes.vincular_contacto"
       | "partes.desvincular_contacto"
       | "partes.desactivar"

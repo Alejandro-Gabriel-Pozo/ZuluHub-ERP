@@ -345,6 +345,7 @@ export const CATALOGO_DE_MODULOS = {
       "partes.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
       "partes.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "partes.cambiar_roles": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "partes.marcar_empleado": { capacidad: null, efecto: "CREA_AMPLIA" },
       "partes.vincular_contacto": { capacidad: null, efecto: "CREA_AMPLIA" },
       "partes.desvincular_contacto": { capacidad: null, efecto: "CREA_AMPLIA" },
       "partes.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },

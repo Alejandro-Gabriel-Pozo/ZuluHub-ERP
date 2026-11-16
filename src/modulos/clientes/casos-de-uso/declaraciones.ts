@@ -10,6 +10,7 @@ const ARCHIVO_DE_ROLES = "test/integracion/clientes-roles-y-vinculos.test.ts";
 export const DECLARACIONES = {
   crearParte: {
     accion: "partes.crear",
+    tambien: ["partes.marcar_empleado"], // solo si el pedido nombra EMPLEADO (`accionesConEmpleado`); si no, basta `partes.crear`
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
@@ -50,6 +51,7 @@ export const DECLARACIONES = {
   },
   cambiarRolesDeParte: {
     accion: "partes.cambiar_roles",
+    tambien: ["partes.marcar_empleado"], // solo si el cambio agrega, reactiva o quita EMPLEADO; si no, basta `partes.cambiar_roles`
     repeticion: {
       regla: "SIN_CAMBIOS",
       prueba: {
