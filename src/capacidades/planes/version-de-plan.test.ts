@@ -73,7 +73,7 @@ describe("nombreDePlanValido", () => {
     for (const nombre of ["Plan 😀", "計画", "<b>Plan</b>", "=1+1", "Plan @ casa"]) {
       expect(nombreDePlanValido(nombre), nombre).toBeNull();
     }
-    for (const nombre of ["Plan Pro", "Básico 2", "Hotel & Spa", "Plan  Pro"]) {
+    for (const nombre of ["Plan Pro", "Básico 2", "Hotel & Spa", "Plan  Pro", "2026"]) {
       expect(nombreDePlanValido(nombre), nombre).toBe(nombre.replace(/ +/g, " "));
     }
   });

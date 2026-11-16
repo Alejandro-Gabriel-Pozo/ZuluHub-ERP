@@ -314,6 +314,7 @@ describe("validarFormulario: nombres (texto visible de una línea)", () => {
       "Hotel Ñandú",
       "Pizza & Co",
       "Zoë",
+      "2026",
     ]) {
       expect(aceptada({ nombreNegocio: nombre }).nombreNegocio).toBe(nombre);
     }
