@@ -4,10 +4,10 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
   ESTADOS_DE_JORNADA,
-  explicacionDesdeTexto,
   transicionPermitida,
   type EstadoDeJornada,
 } from "../../src/modulos/cierre/publico";
+import { explicacionDesdeTexto } from "../../src/primitivas/texto/explicacion";
 import { crearBaseAparte } from "./entorno";
 import { check, conAppDe, crearMundo, denegado, filas, acepta, type Mundo } from "./fiscal-apoyo";
 import { CARPETA_DE_MIGRACIONES } from "./marcas-apoyo";

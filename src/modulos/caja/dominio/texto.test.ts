@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LARGO_MAXIMO_DE_LA_EXPLICACION } from "../../cierre/publico";
+import { LARGO_MAXIMO_DE_LA_EXPLICACION } from "../../../primitivas/texto/explicacion";
 import { motivoObligatorio, observacionOpcional } from "./texto";
 
 describe("motivo obligatorio (la lista de permitidos de la explicación del cierre)", () => {

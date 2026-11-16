@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import "../../../../test/propiedades/configuracion";
+import "../../../test/propiedades/configuracion";
 import { LARGO_MAXIMO_DE_LA_EXPLICACION, explicacionDesdeTexto } from "./explicacion";
 
 const MALA = { ok: false, error: "EXPLICACION_INVALIDA" } as const;

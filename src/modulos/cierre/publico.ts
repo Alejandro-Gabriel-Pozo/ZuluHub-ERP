@@ -24,7 +24,6 @@ export {
   type Reconocimiento,
   type ReconocimientoPedido,
 } from "./dominio/cierre";
-export { LARGO_MAXIMO_DE_LA_EXPLICACION, explicacionDesdeTexto } from "./dominio/explicacion";
 export {
   ESTADOS_DE_JORNADA,
   TRANSICIONES_DE_JORNADA,
