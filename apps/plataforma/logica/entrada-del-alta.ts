@@ -1,4 +1,5 @@
 import { LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL } from "../../../src/primitivas/texto/nombre-o-razon-social";
+import { esUuidEstandar } from "../../../src/primitivas/identificadores/forma-de-uuid";
 
 /**
  * La forma de lo que el navegador manda al alta de una empresa. El navegador NO es de confianza: acá se comprueba
@@ -16,15 +17,13 @@ export type EntradaDelAlta = Readonly<{
   zonaHoraria: string;
 }>;
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 function textoDe(valor: unknown, maximo: number): string | null {
   if (typeof valor !== "string") return null;
   return valor.length >= 1 && valor.length <= maximo ? valor : null;
 }
 
 function uuidDe(valor: unknown): string | null {
-  return typeof valor === "string" && UUID.test(valor) ? valor : null;
+  return esUuidEstandar(valor) ? valor : null;
 }
 
 export function entradaDelAlta(

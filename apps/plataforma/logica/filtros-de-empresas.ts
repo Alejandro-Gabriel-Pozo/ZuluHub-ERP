@@ -4,6 +4,7 @@
  */
 
 import { LARGO_MAXIMO_DE_FILTRO } from "../../../src/plataforma/dominio/soporte/consulta";
+import { esUuidCualquiera } from "../../../src/primitivas/identificadores/forma-de-uuid";
 
 export const ESTADOS_EFECTIVOS = [
   "OPERA",
@@ -23,8 +24,6 @@ export type FiltrosDeEmpresas = Readonly<{
   buscar?: string;
   despuesDeId?: string;
 }>;
-
-const FORMA_DE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Consulta = Record<string, string | string[] | undefined>;
 
@@ -47,10 +46,10 @@ export function filtrosDeLaDireccion(consulta: Consulta): FiltrosDeEmpresas {
   const despues = primerValor(consulta, "despues");
   return {
     ...(estado !== undefined && esEstado(estado) ? { estadoEfectivo: estado } : {}),
-    ...(submarca !== undefined && FORMA_DE_UUID.test(submarca) ? { marcaId: submarca } : {}),
-    ...(plan !== undefined && FORMA_DE_UUID.test(plan) ? { planId: plan } : {}),
+    ...(submarca !== undefined && esUuidCualquiera(submarca) ? { marcaId: submarca } : {}),
+    ...(plan !== undefined && esUuidCualquiera(plan) ? { planId: plan } : {}),
     ...(buscar !== undefined && buscar !== "" ? { buscar } : {}),
-    ...(despues !== undefined && FORMA_DE_UUID.test(despues) ? { despuesDeId: despues } : {}),
+    ...(despues !== undefined && esUuidCualquiera(despues) ? { despuesDeId: despues } : {}),
   };
 }
 

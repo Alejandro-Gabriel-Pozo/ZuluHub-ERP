@@ -4,6 +4,7 @@
  */
 import { LARGO_MAXIMO_DEL_MOTIVO } from "../../../src/plataforma/dominio/formas-de-entrada";
 import { instanteDeVigencia } from "./vigencia";
+import { esUuidCualquiera } from "../../../src/primitivas/identificadores/forma-de-uuid";
 
 /** El tope del motivo vive una vez, en el dominio de plataforma; acá solo se vuelve a ofrecer a las pantallas. */
 export { LARGO_MAXIMO_DEL_MOTIVO };
@@ -18,12 +19,10 @@ export type EntradaDelCambioDePlan = Readonly<{
   reemplazaProgramada: boolean;
 }>;
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 const esRegistro = (valor: unknown): valor is Record<string, unknown> =>
   typeof valor === "object" && valor !== null && !Array.isArray(valor);
 
-const esUuid = (valor: unknown): valor is string => typeof valor === "string" && UUID.test(valor);
+const esUuid = esUuidCualquiera;
 
 export function entradaDelCambioDePlan(
   entrada: unknown,

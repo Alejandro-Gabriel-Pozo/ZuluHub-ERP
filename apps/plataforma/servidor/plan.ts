@@ -5,13 +5,13 @@ import { detalleDeFalla } from "../../../src/capacidades/experiencia/respuesta";
 import { errorParaLaPantalla } from "../logica/errores-de-plataforma";
 import { exigirAcceso } from "./acceso";
 import { fallaInesperada, protegida, type Falla } from "./proteccion";
+import { esUuidCualquiera } from "../../../src/primitivas/identificadores/forma-de-uuid";
 
 export type { PlanDeEmpresa } from "../logica/plan-de-empresa";
 export type { Falla } from "./proteccion";
 
 const ETIQUETA = "plan";
 const TEXTO_PANTALLA_VIEJA = "La pantalla quedó vieja. Volvé a abrirla y probá de nuevo.";
-const FORMA_DE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** El error de un resultado para la pantalla, con el contexto del plan; lo inesperado, con su referencia. */
 function fallaDelPlan(error: unknown): Falla {
@@ -28,7 +28,7 @@ export type ResultadoDelPlan = Readonly<{ ok: true; plan: PlanDeEmpresa }> | Fal
  */
 export async function planDeEmpresa(empresaId: string): Promise<ResultadoDelPlan> {
   return protegida(ETIQUETA, async () => {
-    if (!FORMA_DE_UUID.test(empresaId)) {
+    if (!esUuidCualquiera(empresaId)) {
       return {
         ok: false as const,
         error: { tipo: "PANTALLA_VIEJA" as const, texto: TEXTO_PANTALLA_VIEJA },

@@ -3,13 +3,13 @@ import "server-only";
 import { armarFichaDeSubmarca, type FichaDeSubmarca } from "../logica/ficha-de-submarca";
 import { exigirAcceso } from "./acceso";
 import { fallaDe, protegida, type Falla } from "./proteccion";
+import { esUuidCualquiera } from "../../../src/primitivas/identificadores/forma-de-uuid";
 
 export type { FichaDeSubmarca } from "../logica/ficha-de-submarca";
 export type { Falla } from "./proteccion";
 
 const ETIQUETA = "submarcas";
 const TEXTO_PANTALLA_VIEJA = "La pantalla quedó vieja. Volvé a abrirla y probá de nuevo.";
-const FORMA_DE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Una submarca tal como la muestra la lista: solo texto y marcas, sin más ids internos. */
 export type FilaDeSubmarca = Readonly<{
@@ -48,7 +48,7 @@ export async function listaDeSubmarcas(): Promise<ListaDeSubmarcas> {
 
 export async function fichaDeSubmarca(marcaId: string): Promise<ResultadoDeFicha> {
   return protegida(ETIQUETA, async () => {
-    if (!FORMA_DE_UUID.test(marcaId)) {
+    if (!esUuidCualquiera(marcaId)) {
       return {
         ok: false as const,
         error: { tipo: "PANTALLA_VIEJA" as const, texto: TEXTO_PANTALLA_VIEJA },

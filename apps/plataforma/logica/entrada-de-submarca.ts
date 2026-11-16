@@ -6,6 +6,7 @@
  */
 import { LARGO_MAXIMO_DEL_NOMBRE } from "../../../src/modulos/marcas/publico";
 import type { CambiosDelBorrador } from "./submarca";
+import { esUuidEstandar } from "../../../src/primitivas/identificadores/forma-de-uuid";
 
 export type EntradaDelBorrador = Readonly<{
   claveDeIdempotencia: string;
@@ -25,7 +26,6 @@ export type EntradaDeLaConfirmacion = Readonly<{
   reemplazaProgramada: boolean;
 }>;
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
 const LARGO_MAXIMO_DE_COLOR = 20;
@@ -39,7 +39,7 @@ const esRegistro = (valor: unknown): valor is Record<string, unknown> =>
   typeof valor === "object" && valor !== null && !Array.isArray(valor);
 
 function uuidDe(valor: unknown): string | null {
-  return typeof valor === "string" && UUID.test(valor) ? valor : null;
+  return esUuidEstandar(valor) ? valor : null;
 }
 
 function textoDe(valor: unknown, maximo: number): string | null {
