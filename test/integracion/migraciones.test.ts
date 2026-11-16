@@ -138,7 +138,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0056_receta_sin_insumos.sql",
           "0057_opcion_consume_elaborado.sql",
           "0058_oferta_vigente.sql",
-        "0075_alicuota_del_producto.sql",
+          "0075_alicuota_del_producto.sql",
         ],
       });
     } finally {
