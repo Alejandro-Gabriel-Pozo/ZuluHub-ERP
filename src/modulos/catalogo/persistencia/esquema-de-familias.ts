@@ -5,6 +5,18 @@ import type { Generated } from "kysely";
  * `CatalogoDb`, a las columnas que compara su prueba y al mapa de restricciones.
  */
 export type TablasDeFamilias = {
+  seccion_de_carta: {
+    /** El que manda la aplicación (idempotencia); si no lo manda, lo genera la base. */
+    id: Generated<string>;
+    empresa_id: string;
+    nombre: string;
+    nombre_clave: string;
+    orden: number;
+    activa: Generated<boolean>;
+    creado_en: Generated<Date>;
+    actualizado_en: Generated<Date>;
+    version: Generated<number>;
+  };
   familia_de_producto: {
     /** El que manda la aplicación (idempotencia del alta). */
     id: string;
@@ -55,6 +67,20 @@ export type TablasDeFamilias = {
 };
 
 export const COLUMNAS_DE_FAMILIAS = {
+  seccion_de_carta: [
+    "id",
+    "empresa_id",
+    "nombre",
+    "nombre_clave",
+    "orden",
+    "activa",
+    "creado_en",
+    "actualizado_en",
+    "version",
+    // 0081 las agrega con ALTER TABLE: quedan al final.
+    "orden_de_renglones",
+    "version_del_orden",
+  ],
   familia_de_producto: [
     "id",
     "empresa_id",
@@ -63,12 +89,13 @@ export const COLUMNAS_DE_FAMILIAS = {
     "agrupar_en_carta",
     "agrupar_en_pos",
     "activa",
-    "orden",
-    "destacada",
     "creado_por",
     "creado_en",
     "actualizado_en",
     "version",
+    // 0081 las agrega con ALTER TABLE: quedan al final.
+    "orden",
+    "destacada",
   ],
   miembro_de_familia: [
     "id",
@@ -144,4 +171,8 @@ export const ERRORES_DE_FAMILIAS_POR_RESTRICCION: Readonly<Record<string, string
   lugar_orden_ck: "ORDEN_INVALIDO",
   lugar_producto_fkey: "PRODUCTO_NO_ENCONTRADO",
   lugar_identidad_inmutable: "NO_TRADUCIDA",
+  // seccion_de_carta (columnas de 0081)
+  seccion_orden_de_renglones_ck: "ORDEN_INVALIDO",
+  seccion_version_del_orden_ck: "NO_TRADUCIDA",
+  seccion_version_del_orden_salto: "NO_TRADUCIDA",
 };

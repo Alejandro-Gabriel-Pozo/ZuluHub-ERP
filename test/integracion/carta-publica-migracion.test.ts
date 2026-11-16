@@ -443,6 +443,21 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
         await expect(correr()).rejects.toMatchObject({ code: "2BP01" });
         expect((await c.query("select to_regclass('carta_publica') as t")).rows[0]).toBeDefined();
         await c.query("begin");
+        // Las familias (0079 a 0081) también miran `carta_publica` (su lectura pública): se revierten antes, en orden inverso.
+        await c.query("set local pedernal.confirmar_reversion = 'SI'");
+        for (const n of [
+          "0081_revertir_orden_y_destacado_de_la_carta",
+          "0080_revertir_aplicacion_de_precio_de_familia",
+          "0079_revertir_familias_de_productos",
+        ]) {
+          await c.query(
+            await readFile(
+              join(import.meta.dirname, "../../migraciones/reversiones", `${n}.sql`),
+              "utf8",
+            ),
+          );
+        }
+        await c.query("set local pedernal.confirmar_reversion = ''");
         await c.query(await readFile(REVERSION_DEL_PLAN, "utf8"));
         await c.query(await readFile(REVERSION_DE_LA_LECTURA, "utf8"));
         await c.query("commit");
