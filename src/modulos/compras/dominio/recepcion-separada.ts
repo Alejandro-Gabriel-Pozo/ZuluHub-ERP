@@ -1,4 +1,5 @@
 import type { ControlDeLinea } from "./control-de-recepcion";
+import { leerCantidad } from "./decimal";
 import { huellaDeComando } from "./huella";
 import type { NivelDeCompra } from "./niveles";
 import type { Remito, RenglonDeCompra } from "./registrar-compra";
@@ -47,4 +48,49 @@ export function huellaDeLaRecepcion(pedido: PedidoDeRecepcion): string {
       r.precio,
     ]),
   );
+}
+
+/**
+ * El estado DERIVADO de una recepción de N3 o N4 (S-12: no se guarda): `PENDIENTE_DE_CONFIRMAR` (todavía no entró el stock), `ANULADA`, y, confirmada, cuánto de lo
+ * recibido (sin las líneas rechazadas) ya se concilió con facturas: nada → `RECIBIDA_SIN_FACTURAR`, todo → `RECIBIDA_Y_FACTURADA`, algo → `FACTURADA_EN_PARTE`. Los dos
+ * primeros de la conciliación son los textos aprobados de la maqueta; `FACTURADA_EN_PARTE` y `PENDIENTE_DE_CONFIRMAR` son códigos: su texto lo decide la pantalla.
+ * Lo recibido o lo asignado que no es un decimal válido no cuenta como facturado (falla cerrada hacia «sin facturar»).
+ */
+export type EstadoDeRecepcionSeparada =
+  | "PENDIENTE_DE_CONFIRMAR"
+  | "ANULADA"
+  | "RECIBIDA_SIN_FACTURAR"
+  | "FACTURADA_EN_PARTE"
+  | "RECIBIDA_Y_FACTURADA";
+
+export function estadoDeRecepcionSeparada(
+  estado: "PENDIENTE" | "CONFIRMADA" | "ANULADA",
+  recibida: string,
+  asignada: string,
+): EstadoDeRecepcionSeparada {
+  if (estado === "ANULADA") return "ANULADA";
+  if (estado === "PENDIENTE") return "PENDIENTE_DE_CONFIRMAR";
+  const total = leerCantidad(recibida);
+  const hecha = leerCantidad(asignada);
+  if (total === null || hecha === null || hecha === 0n) return "RECIBIDA_SIN_FACTURAR";
+  return hecha >= total ? "RECIBIDA_Y_FACTURADA" : "FACTURADA_EN_PARTE";
+}
+
+/**
+ * El estado derivado de una factura de N3 o N4: `ANULADA`, y, registrada, cuánto de lo facturado ya se concilió con lo recibido: nada → `FACTURADA_FALTA_RECIBIR` (el texto
+ * aprobado de la maqueta «Facturada, falta recibir»), todo → `CONCILIADA`, algo → `CONCILIADA_EN_PARTE` (códigos: su texto lo decide la pantalla).
+ */
+export type EstadoDeFacturaSeparada =
+  "ANULADA" | "FACTURADA_FALTA_RECIBIR" | "CONCILIADA_EN_PARTE" | "CONCILIADA";
+
+export function estadoDeFacturaSeparada(
+  estado: "REGISTRADO" | "ANULADO",
+  facturada: string,
+  asignada: string,
+): EstadoDeFacturaSeparada {
+  if (estado === "ANULADO") return "ANULADA";
+  const total = leerCantidad(facturada);
+  const hecha = leerCantidad(asignada);
+  if (total === null || hecha === null || hecha === 0n) return "FACTURADA_FALTA_RECIBIR";
+  return hecha >= total ? "CONCILIADA" : "CONCILIADA_EN_PARTE";
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   esNivelDeRecepcionSeparada,
+  estadoDeFacturaSeparada,
+  estadoDeRecepcionSeparada,
   huellaDeLaRecepcion,
   type PedidoDeRecepcion,
 } from "./recepcion-separada";
@@ -115,5 +117,43 @@ describe("huellaDeLaRecepcion", () => {
 
   it("no se confunde con la huella de una compra común", () => {
     expect(huellaDeLaRecepcion(base)).not.toBe(huellaDeLaRecepcion({ ...base, hechoEn: "" }));
+  });
+});
+
+describe("estadoDeRecepcionSeparada", () => {
+  it("anulada y pendiente mandan sobre lo conciliado; confirmada se deriva de lo asignado", () => {
+    expect(estadoDeRecepcionSeparada("ANULADA", "10.0000", "10.0000")).toBe("ANULADA");
+    expect(estadoDeRecepcionSeparada("PENDIENTE", "10.0000", "0.0000")).toBe(
+      "PENDIENTE_DE_CONFIRMAR",
+    );
+    expect(estadoDeRecepcionSeparada("CONFIRMADA", "10.0000", "0.0000")).toBe(
+      "RECIBIDA_SIN_FACTURAR",
+    );
+    expect(estadoDeRecepcionSeparada("CONFIRMADA", "10.0000", "0.0001")).toBe("FACTURADA_EN_PARTE");
+    expect(estadoDeRecepcionSeparada("CONFIRMADA", "10.0000", "9.9999")).toBe("FACTURADA_EN_PARTE");
+    expect(estadoDeRecepcionSeparada("CONFIRMADA", "10.0000", "10.0000")).toBe(
+      "RECIBIDA_Y_FACTURADA",
+    );
+    expect(estadoDeRecepcionSeparada("CONFIRMADA", "0.0000", "0.0000")).toBe(
+      "RECIBIDA_SIN_FACTURAR",
+    );
+  });
+
+  it("lo que no es un decimal válido no cuenta como facturado", () => {
+    expect(estadoDeRecepcionSeparada("CONFIRMADA", "abc", "5")).toBe("RECIBIDA_SIN_FACTURAR");
+    expect(estadoDeRecepcionSeparada("CONFIRMADA", "10", "abc")).toBe("RECIBIDA_SIN_FACTURAR");
+  });
+});
+
+describe("estadoDeFacturaSeparada", () => {
+  it("anulada manda; registrada se deriva de lo conciliado", () => {
+    expect(estadoDeFacturaSeparada("ANULADO", "10.0000", "10.0000")).toBe("ANULADA");
+    expect(estadoDeFacturaSeparada("REGISTRADO", "10.0000", "0.0000")).toBe(
+      "FACTURADA_FALTA_RECIBIR",
+    );
+    expect(estadoDeFacturaSeparada("REGISTRADO", "10.0000", "4.0000")).toBe("CONCILIADA_EN_PARTE");
+    expect(estadoDeFacturaSeparada("REGISTRADO", "10.0000", "10.0000")).toBe("CONCILIADA");
+    expect(estadoDeFacturaSeparada("REGISTRADO", "abc", "5")).toBe("FACTURADA_FALTA_RECIBIR");
+    expect(estadoDeFacturaSeparada("REGISTRADO", "10", "abc")).toBe("FACTURADA_FALTA_RECIBIR");
   });
 });

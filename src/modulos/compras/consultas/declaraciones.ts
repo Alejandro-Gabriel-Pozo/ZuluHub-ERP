@@ -13,4 +13,6 @@ export const DECLARACIONES_DE_CONSULTAS = {
   comprasSinPrecio: { accion: "recepciones.ver" },
   proveedoresDelProducto: { accion: "recepciones.ver" },
   proponerConciliacion: { accion: "conciliaciones.ver" },
+  listarRecepcionesSeparadas: { accion: "recepciones.ver" },
+  listarFacturasSeparadas: { accion: "comprobantes_de_proveedor.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

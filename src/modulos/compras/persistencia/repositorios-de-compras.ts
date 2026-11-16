@@ -35,6 +35,10 @@ import {
   crearRepositorioDeCorrecciones,
   type RepositorioDeCorrecciones,
 } from "./repositorio-de-correcciones";
+import {
+  crearRepositorioDeLecturasSeparadas,
+  type RepositorioDeLecturasSeparadas,
+} from "./repositorio-de-lecturas-separadas";
 import { crearRepositorioDeOfertas, type RepositorioDeOfertas } from "./repositorio-de-ofertas";
 
 /**
@@ -48,6 +52,7 @@ export type RepositoriosDeCompras = Readonly<{
   recepciones: RepositorioDeRecepciones;
   recepcionesSeparadas: RepositorioDeRecepcionesSeparadas;
   lecturasDeCompras: RepositorioDeLecturasDeCompras;
+  lecturasSeparadas: RepositorioDeLecturasSeparadas;
   comprobantesDeProveedor: RepositorioDeComprobantes;
   detalleDeComprobantes: RepositorioDeDetalleDeComprobantes;
   conciliacionesDeCompra: RepositorioDeConciliaciones;
@@ -67,6 +72,7 @@ export function crearRepositoriosDeCompras(db: {
     recepciones: crearRepositorioDeRecepciones(conexion),
     recepcionesSeparadas: crearRepositorioDeRecepcionesSeparadas(conexion),
     lecturasDeCompras: crearRepositorioDeLecturasDeCompras(conexion),
+    lecturasSeparadas: crearRepositorioDeLecturasSeparadas(conexion),
     comprobantesDeProveedor: crearRepositorioDeComprobantes(conexion),
     detalleDeComprobantes: crearRepositorioDeDetalleDeComprobantes(conexion),
     conciliacionesDeCompra: crearRepositorioDeConciliaciones(conexion),
