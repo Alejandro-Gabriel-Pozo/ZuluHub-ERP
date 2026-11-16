@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0464",
+  "fecha": "2026-11-15",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: los tres roles piden el correo de las personas de su empresa con permisos.ver_propios (la acción de sus sucursales), hasta 200 por consulta.",
+  "que_cambia": "Una persona de otra empresa nunca aparece. El operador ve correos (por ejemplo quién abrió la caja). Revertir: declarar otra acción en una línea.",
+  "donde": "declaraciones.ts de identidad (personasParaMostrar); decisiones-del-dueno-2026-11.md, «Respuestas 24 a 27», 26A, 15/11/2026"
+}
