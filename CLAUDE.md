@@ -1,7 +1,7 @@
 # Pedernal ERP: instrucciones para trabajar en este repositorio
 
 Idioma: español rioplatense. El dueño define el negocio y no programa; la calidad técnica es responsabilidad
-del ingeniero. Las decisiones están en el repositorio `zuluhub-docs` (ADR 001 a 008 y casos de uso).
+del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 a 008 y casos de uso).
 
 ## Antes de entregar
 
@@ -112,7 +112,7 @@ consume | Fuente | ¿Cambia dinero, permisos, fiscal o una decisión previa?` (l
 
 ## Justificar cada regla, abstracción y convención
 
-Fuente: `zuluhub-docs/01-vision/reglas-transversales.md` §8. El sistema lo construye y mantiene una IA: una regla sin motivo se
+Fuente: `Pedernal-docs/01-vision/reglas-transversales.md` §8. El sistema lo construye y mantiene una IA: una regla sin motivo se
 obedece igual, se acumula y compite con otras.
 
 - Toda regla, abstracción o convención nueva se justifica por **la ambigüedad que elimina**, **la categoría concreta de fallos que
