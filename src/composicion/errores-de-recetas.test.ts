@@ -49,6 +49,11 @@ describe("traducirErrorDeReceta", () => {
     }
   });
 
+  it("un objeto que se convierte en el nombre de un error conocido no se confunde con él", () => {
+    const falso = { toString: () => "PERDIDA_INVALIDA" };
+    expect(traducirErrorDeReceta(falso)).toBe(falso);
+  });
+
   it("lo que no es de la receta pasa sin cambios: la base, la empresa que no opera y los errores de otros módulos", () => {
     for (const error of [
       "ERROR_DE_LA_BASE_NO_TRADUCIDO",

@@ -10,21 +10,23 @@ const VACIA = { texto: "", conReceta: "", activo: "", despues: "" };
 
 describe("leerLaEntradaDeLaListaDeRecetas", () => {
   it("todo vacío es «sin filtrar» y primera página", () => {
-    expect(leerLaEntradaDeLaListaDeRecetas(VACIA)).toEqual({});
-    expect(leerLaEntradaDeLaListaDeRecetas({ ...VACIA, texto: "   " })).toEqual({});
+    expect(leerLaEntradaDeLaListaDeRecetas(VACIA)).toStrictEqual({});
+    expect(leerLaEntradaDeLaListaDeRecetas({ ...VACIA, texto: "   " })).toStrictEqual({});
   });
 
   it("pasa lo permitido: el texto, con receta o sin ella, el estado y la página que dio la consulta", () => {
     const despues = codificarLaPagina({ id: ID, nombreClave: "milanesa" });
     expect(
       leerLaEntradaDeLaListaDeRecetas({ texto: "Mila", conReceta: "con", activo: "si", despues }),
-    ).toEqual({
+    ).toStrictEqual({
       texto: "Mila",
       conReceta: true,
       activo: true,
       despuesDe: { id: ID, nombreClave: "milanesa" },
     });
-    expect(leerLaEntradaDeLaListaDeRecetas({ ...VACIA, conReceta: "sin", activo: "no" })).toEqual({
+    expect(
+      leerLaEntradaDeLaListaDeRecetas({ ...VACIA, conReceta: "sin", activo: "no" }),
+    ).toStrictEqual({
       conReceta: false,
       activo: false,
     });
@@ -50,13 +52,13 @@ describe("leerLaEntradaDeLaListaDeRecetas", () => {
 
 describe("leerLaEntradaDeLosIngredientes", () => {
   it("vacío es «sin filtrar»; con texto y página pasa lo permitido", () => {
-    expect(leerLaEntradaDeLosIngredientes({ texto: "", despues: "" })).toEqual({});
+    expect(leerLaEntradaDeLosIngredientes({ texto: "", despues: "" })).toStrictEqual({});
     expect(
       leerLaEntradaDeLosIngredientes({
         texto: "ha",
         despues: codificarLaPagina({ id: ID, nombreClave: "harina" }),
       }),
-    ).toEqual({ texto: "ha", despuesDe: { id: ID, nombreClave: "harina" } });
+    ).toStrictEqual({ texto: "ha", despuesDe: { id: ID, nombreClave: "harina" } });
   });
 
   it.each([{ texto: "uno\u0000" }, { despues: "mal" }, { despues: `${ID}:` }])(

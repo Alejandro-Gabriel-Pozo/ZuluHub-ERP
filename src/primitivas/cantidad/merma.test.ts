@@ -19,6 +19,8 @@ describe("mermaDesdeTexto", () => {
     ["99", "99.0000"],
     ["99.9999", "99.9999"],
     ["10.5000", "10.5000"],
+    ["5", "5.0000"],
+    ["9.5", "9.5000"],
   ])("«%s» es una merma permitida (%s)", (texto, canonico) => {
     const r = mermaDesdeTexto(texto);
     expect(r.ok && mermaATexto(r.valor)).toBe(canonico);
