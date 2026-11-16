@@ -423,25 +423,9 @@ describe.skipIf(base === null)("compras N3: registrar una recepción pendiente",
       }
     });
 
-    it("una línea RECHAZADA en el control no entra a stock; las demás sí; con depósito ajeno o sin elegir entre varios no se confirma nada (todo o nada)", async () => {
+    it("depósito de destino: sin elegir entre varios normales, o con uno de otra sucursal, no se confirma nada (todo o nada) y sigue PENDIENTE", async () => {
       const m = await armar();
-      const otro = await c.articulo(e, { unidadBase: "GRAMO", dimension: "MASA" });
-      const p = pedido(m, e, {
-        renglones: [
-          ...pedido(m).renglones,
-          {
-            productoId: otro.producto,
-            unidadDeCompraId: "KILOGRAMO",
-            cantidad: "1",
-            precioPor: "UNIDAD",
-            unidadDePrecioId: "KILOGRAMO",
-            precio: "500",
-          },
-        ],
-        controles: [{ linea: 2, condicion: "RECHAZADA", observacion: "Vencida" }],
-      });
-      const r = valorDe(await c.casos.registrarRecepcion(e.operador, p));
-      // varios depósitos normales y ninguno elegido: DEPOSITO_A_ELEGIR y sigue pendiente
+      const r = await recibir(m);
       expect(await c.casos.confirmarRecepcion(e.gerente, { recepcionId: r.recepcionId })).toEqual({
         ok: false,
         error: "DEPOSITO_A_ELEGIR",
@@ -455,24 +439,146 @@ describe.skipIf(base === null)("compras N3: registrar una recepción pendiente",
       ).toEqual({ ok: false, error: "DEPOSITO_NO_ENCONTRADO" });
       expect(await estadoDe(r.recepcionId)).toBe("PENDIENTE");
       expect(await movimientosDe(m.deposito)).toBe(0);
+    });
+
+    /** Una empresa aparte en N3 (así sus depósitos de cuarentena y rechazo no se mezclan con los de las demás pruebas). */
+    const empresaN3 = async () => {
+      const x = await c.escenario();
       valorDe(
-        await c.casos.confirmarRecepcion(e.gerente, {
-          recepcionId: r.recepcionId,
-          depositoId: m.deposito,
+        await c.casos.configurarCompras(x.gerente, {
+          nivel: "RECEPCION_SEPARADA",
+          versionEsperada: 1,
         }),
       );
-      expect(await c.existencia(m.deposito, m.articulo)).toBe("2000.0000");
-      expect(await c.existencia(m.deposito, otro.articulo)).toBe("0");
-      const entradas = await c.filas<{ linea: number }>(
-        "select linea from entrada_de_linea_de_recepcion where recepcion_id = $1",
+      const normal = await c.deposito(x);
+      const a = await c.articulo(x, { unidadBase: "GRAMO", dimension: "MASA" });
+      const b = await c.articulo(x, { unidadBase: "GRAMO", dimension: "MASA" });
+      const proveedor = await c.proveedor(x.operador);
+      const renglon = (producto: string) => ({
+        productoId: producto,
+        unidadDeCompraId: "KILOGRAMO",
+        cantidad: "1",
+        precioPor: "UNIDAD",
+        unidadDePrecioId: "KILOGRAMO",
+        precio: "500",
+      });
+      const recibirDos = async (controles: unknown[]) =>
+        valorDe(
+          await c.casos.registrarRecepcion(x.operador, {
+            clave: nuevoId(),
+            sucursalId: x.sucursal,
+            proveedorId: proveedor,
+            renglones: [renglon(a.producto), renglon(b.producto)],
+            controles,
+          }),
+        );
+      return { x, normal, a, b, proveedor, recibirDos };
+    };
+    const existencia = (x: EscenarioDeCompras, d: string, articulo: string) =>
+      c.existencia(d, articulo);
+    void existencia;
+
+    it("N3-3: el control propone el destino (rechazada → rechazo, con observaciones → cuarentena, conforme → normal): una entrada de stock por depósito", async () => {
+      const { x, normal, a, b, recibirDos } = await empresaN3();
+      const cuarentena = await c.deposito(x, { uso: "CUARENTENA" });
+      const rechazo = await c.deposito(x, { uso: "RECHAZO" });
+      const r = await recibirDos([
+        { linea: 1, condicion: "CON_OBSERVACIONES", observacion: "Caja abollada" },
+        { linea: 2, condicion: "RECHAZADA", observacion: "Vencida" },
+      ]);
+      const hecha = valorDe(
+        await c.casos.confirmarRecepcion(x.gerente, {
+          recepcionId: r.recepcionId,
+          depositoId: normal,
+        }),
+      );
+      expect(hecha.movimientos).toHaveLength(2);
+      expect(await c.existencia(cuarentena, a.articulo)).toBe("1000.0000");
+      expect(await c.existencia(rechazo, b.articulo)).toBe("1000.0000");
+      expect(await c.existencia(normal, a.articulo)).toBe("0");
+      expect(await c.existencia(normal, b.articulo)).toBe("0");
+      const entradas = await c.filas<{ linea: number; deposito_id: string }>(
+        "select linea, deposito_id from entrada_de_linea_de_recepcion where recepcion_id = $1 order by linea",
         [r.recepcionId],
       );
-      expect(entradas.map((x) => x.linea)).toEqual([1]);
-      const ofertas = await c.contar(
-        "select count(*) as n from oferta_de_proveedor where proveedor_id = $1",
-        [m.proveedor],
+      expect(entradas).toEqual([
+        { linea: 1, deposito_id: cuarentena },
+        { linea: 2, deposito_id: rechazo },
+      ]);
+      // lo rechazado no mueve el último precio del proveedor; lo observado sí
+      expect(
+        await c.contar("select count(*) as n from oferta_de_proveedor where producto_id = $1", [
+          b.producto,
+        ]),
+      ).toBe(0);
+      expect(
+        await c.contar("select count(*) as n from oferta_de_proveedor where producto_id = $1", [
+          a.producto,
+        ]),
+      ).toBe(1);
+      // repetir no mueve nada más
+      valorDe(
+        await c.casos.confirmarRecepcion(x.gerente, {
+          recepcionId: r.recepcionId,
+          depositoId: normal,
+        }),
       );
-      expect(ofertas).toBe(1);
+      expect(await c.existencia(cuarentena, a.articulo)).toBe("1000.0000");
+    });
+
+    it("N3-3: sin depósito de cuarentena o de rechazo en la sucursal se BLOQUEA la confirmación (falla cerrada) y la recepción sigue pendiente; con dos y sin elegir, DEPOSITO_A_ELEGIR", async () => {
+      const { x, normal, recibirDos } = await empresaN3();
+      const r = await recibirDos([{ linea: 2, condicion: "RECHAZADA", observacion: "Vencida" }]);
+      expect(
+        await c.casos.confirmarRecepcion(x.gerente, {
+          recepcionId: r.recepcionId,
+          depositoId: normal,
+        }),
+      ).toEqual({ ok: false, error: "DEPOSITO_DE_CALIDAD_NO_CONFIGURADO" });
+      expect(await estadoDe(r.recepcionId)).toBe("PENDIENTE");
+      expect(await movimientosDe(normal)).toBe(0);
+      await c.deposito(x, { uso: "RECHAZO" });
+      await c.deposito(x, { uso: "RECHAZO" });
+      expect(
+        await c.casos.confirmarRecepcion(x.gerente, {
+          recepcionId: r.recepcionId,
+          depositoId: normal,
+        }),
+      ).toEqual({ ok: false, error: "DEPOSITO_A_ELEGIR" });
+      expect(await estadoDe(r.recepcionId)).toBe("PENDIENTE");
+    });
+
+    it("N3-3: quien confirma cambia el destino de una línea (queda auditado); un destino de una línea que no existe o de otro depósito inexistente se rechaza", async () => {
+      const { x, normal, a, b, recibirDos } = await empresaN3();
+      const cuarentena = await c.deposito(x, { uso: "CUARENTENA" });
+      const r = await recibirDos([]);
+      expect(
+        await c.casos.confirmarRecepcion(x.gerente, {
+          recepcionId: r.recepcionId,
+          depositoId: normal,
+          destinos: [{ linea: 3, depositoId: cuarentena }],
+        }),
+      ).toEqual({ ok: false, error: "LINEA_NO_ENCONTRADA" });
+      expect(
+        await c.casos.confirmarRecepcion(x.gerente, {
+          recepcionId: r.recepcionId,
+          depositoId: normal,
+          destinos: [{ linea: 1, depositoId: nuevoId() }],
+        }),
+      ).toEqual({ ok: false, error: "DEPOSITO_NO_ENCONTRADO" });
+      expect(await estadoDe(r.recepcionId)).toBe("PENDIENTE");
+      valorDe(
+        await c.casos.confirmarRecepcion(x.gerente, {
+          recepcionId: r.recepcionId,
+          depositoId: normal,
+          destinos: [{ linea: 1, depositoId: cuarentena }],
+        }),
+      );
+      expect(await c.existencia(cuarentena, a.articulo)).toBe("1000.0000");
+      expect(await c.existencia(normal, b.articulo)).toBe("1000.0000");
+      const auditoria = (await c.auditoria(x.empresa, "RECEPCION_CONFIRMADA")).at(-1);
+      expect(JSON.stringify(auditoria)).toContain('"destinoElegido":true');
+      expect(JSON.stringify(auditoria)).toContain('"destinoElegido":false');
     });
 
     it("recepción inexistente, de otra empresa o con id inválido: RECEPCION_NO_ENCONTRADA", async () => {

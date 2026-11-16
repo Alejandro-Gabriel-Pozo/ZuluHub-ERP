@@ -17,15 +17,28 @@ import type { ErrorDeCompras } from "./errores";
 
 type R<S> = Resultado<S, ErrorDeCompras>;
 
+type Destino = Readonly<{
+  linea: number;
+  depositoId: string;
+  uso: string;
+  /** `true`: quien confirma eligió un destino distinto del que proponía el control. */
+  cambiado: boolean;
+}>;
+
 export type EntradaDeConfirmarRecepcion = Readonly<{
   recepcionId: string;
-  /** El depósito donde entra la mercadería; sin elegir, el único depósito normal activo de la sucursal (S-4). */
+  /** El depósito NORMAL donde entra la mercadería conforme; sin elegir, el único depósito normal activo de la sucursal (S-4). */
   depositoId?: string | null | undefined;
+  /**
+   * El destino que quien confirma le da a una línea, en lugar del que propone su control (rechazada → rechazo, con observaciones → cuarentena, el resto → normal):
+   * cualquier depósito activo de la sucursal. Cada cambio queda en la auditoría.
+   */
+  destinos?: readonly Readonly<{ linea: number; depositoId: string }>[] | undefined;
 }>;
 
 export type SalidaDeConfirmarRecepcion = Readonly<{
   recepcionId: string;
-  /** Los movimientos de stock que dejó la confirmación (uno por depósito); vacío si nada controlaba stock. */
+  /** Los movimientos de stock que dejó la confirmación (uno por depósito de destino); vacío si nada controlaba stock. */
   movimientos: readonly string[];
   /** `true`: ya estaba confirmada: no se escribió ni se auditó nada. */
   yaExistia: boolean;
@@ -38,8 +51,12 @@ export type SalidaDeConfirmarRecepcion = Readonly<{
  * devuelve sus movimientos sin escribir ni auditar; una anulada es `RECEPCION_YA_ANULADA`.
  *
  * Todo en UNA transacción: el estado, la entrada de stock (con clave determinista por recepción y depósito), lo que entró por línea, el último precio del proveedor
- * (se registra al confirmar, no al recibir; DEC-0701) y la auditoría. La hora de la entrada de stock es la de la confirmación (DEC-0701). Una línea RECHAZADA en su
- * control NO entra al stock normal (cuarentena y rechazo llegan en el tramo N3-3): queda recibida y sin entrada. Las líneas con observaciones entran al depósito normal.
+ * (se registra al confirmar, no al recibir; DEC-0701) y la auditoría. La hora de la entrada de stock es la de la confirmación (DEC-0701).
+ *
+ * Destino de cada línea (N3-3, decisión del dueño del 14/11/2026: se puede recibir directo a cuarentena o a rechazo): el control PROPONE (rechazada → rechazo, con
+ * observaciones → cuarentena, conforme o sin control → normal) y quien confirma puede cambiarlo línea por línea (`destinos`); el cambio queda en la auditoría. Sin depósito de
+ * cuarentena o rechazo en la sucursal, la confirmación se BLOQUEA con `DEPOSITO_DE_CALIDAD_NO_CONFIGURADO` (falla cerrada, nunca entra al normal en silencio); con más de uno
+ * y sin elegir, `DEPOSITO_A_ELEGIR`. Una línea rechazada no actualiza el último precio del proveedor (DEC-0703). Una entrada de stock por depósito de destino.
  */
 export function armarConfirmarRecepcion(dependencias: DependenciasDeCompras) {
   return async function confirmarRecepcion(
@@ -88,9 +105,10 @@ export function armarConfirmarRecepcion(dependencias: DependenciasDeCompras) {
             });
           }
 
-          // Qué entra a stock: los renglones de artículos controlados con stock activo, salvo los que el control dejó RECHAZADOS.
+          // Qué entra a stock: los renglones de artículos controlados con stock activo, cada uno al destino que le toca (ver `destinoDeLaLinea`).
           const lineas = await tx.recepciones.lineasDe(empresaId, recepcion.id);
           const controles = await tx.recepcionesSeparadas.controlesDe(empresaId, recepcion.id);
+          const condicionDe = new Map(controles.map((c) => [c.linea, c.condicion]));
           const rechazadas = new Set(
             controles.filter((c) => c.condicion === "RECHAZADA").map((c) => c.linea),
           );
@@ -99,26 +117,34 @@ export function armarConfirmarRecepcion(dependencias: DependenciasDeCompras) {
             contexto,
             lineas.map((l) => l.productoId),
           );
-          const entran = lineas.filter(
-            (l) => controla.get(l.productoId)?.controla === true && !rechazadas.has(l.numero),
-          );
-          let depositoId: string | null = null;
+          const entran = lineas.filter((l) => controla.get(l.productoId)?.controla === true);
+          const destinos: Destino[] = [];
           if (entran.length > 0) {
             const acciones: [ClaveAccion, ...ClaveAccion[]] = ["stock.registrar_entrada"];
             const stock = await autorizar(tx, contexto, dependencias.reglas, acciones);
             if (!stock.ok) return stock;
-            const candidatos = (
+            const sucursal = sucursalId(recepcion.sucursalId);
+            const depositos = (
               await tx.depositos.listar(empresaId, {
-                alcance: [sucursalId(recepcion.sucursalId)],
-                sucursalId: sucursalId(recepcion.sucursalId),
+                alcance: [sucursal],
+                sucursalId: sucursal,
                 soloActivos: true,
               })
-            )
-              .filter((d) => d.uso === "NORMAL")
-              .map((d) => d.id);
-            const elegido = elegirDepositoDeLaCompra(candidatos, entrada.depositoId ?? null);
-            if (!elegido.ok) return elegido;
-            depositoId = elegido.valor;
+            ).map((d) => ({ id: d.id, uso: d.uso }));
+            const pedidos = new Map((entrada.destinos ?? []).map((d) => [d.linea, d.depositoId]));
+            for (const linea of pedidos.keys()) {
+              if (!entran.some((l) => l.numero === linea)) return err("LINEA_NO_ENCONTRADA");
+            }
+            for (const l of entran) {
+              const destino = destinoDeLaLinea({
+                condicion: condicionDe.get(l.numero) ?? null,
+                depositos,
+                elegidoParaLaLinea: pedidos.get(l.numero) ?? null,
+                depositoNormal: entrada.depositoId ?? null,
+              });
+              if (!destino.ok) return destino;
+              destinos.push({ linea: l.numero, ...destino.valor });
+            }
           }
 
           const confirmada = await tx.recepcionesSeparadas.confirmar(
@@ -128,9 +154,13 @@ export function armarConfirmarRecepcion(dependencias: DependenciasDeCompras) {
           );
           if (!confirmada) throw new Error("la recepción ya no estaba pendiente bajo bloqueo");
           const movimientos: string[] = [];
-          if (depositoId !== null) {
+          const entradas: EntradaDeLinea[] = [];
+          for (const depositoId of [...new Set(destinos.map((d) => d.depositoId))]) {
+            const deEste = entran.filter((l) =>
+              destinos.some((d) => d.linea === l.numero && d.depositoId === depositoId),
+            );
             const renglones = [];
-            for (const l of entran) {
+            for (const l of deEste) {
               const producto = await tx.productosParaCompras.obtener(empresaId, l.productoId);
               if (producto === null) return err("PRODUCTO_NO_ENCONTRADO");
               renglones.push({
@@ -153,14 +183,16 @@ export function armarConfirmarRecepcion(dependencias: DependenciasDeCompras) {
             });
             if (!hecha.ok) return hecha;
             movimientos.push(hecha.valor.movimientoId);
-            const entradas: EntradaDeLinea[] = entran.map((l) => ({
-              linea: l.numero,
-              depositoId,
-              movimientoId: hecha.valor.movimientoId,
-              cantidad: l.cantidadEnStock,
-            }));
-            await tx.recepcionesSeparadas.insertarEntradas(empresaId, recepcion.id, entradas);
+            for (const l of deEste) {
+              entradas.push({
+                linea: l.numero,
+                depositoId,
+                movimientoId: hecha.valor.movimientoId,
+                cantidad: l.cantidadEnStock,
+              });
+            }
           }
+          await tx.recepcionesSeparadas.insertarEntradas(empresaId, recepcion.id, entradas);
 
           // Lo que cobró el proveedor: la compra más nueva gana (se registra al confirmar, no al recibir).
           for (const l of lineas) {
@@ -193,6 +225,12 @@ export function armarConfirmarRecepcion(dependencias: DependenciasDeCompras) {
               renglones: lineas.length,
               sinEntrada: lineas.length - entran.length,
               movimientos,
+              destinos: destinos.map((d) => ({
+                linea: d.linea,
+                depositoId: d.depositoId,
+                uso: d.uso,
+                destinoElegido: d.cambiado,
+              })),
             },
           });
           return ok({ recepcionId: recepcion.id, movimientos, yaExistia: false });
@@ -200,6 +238,41 @@ export function armarConfirmarRecepcion(dependencias: DependenciasDeCompras) {
       ),
     );
   };
+}
+
+const USO_QUE_PROPONE: Readonly<Record<string, string>> = {
+  CONFORME: "NORMAL",
+  CON_OBSERVACIONES: "CUARENTENA",
+  RECHAZADA: "RECHAZO",
+};
+
+/**
+ * A qué depósito va una línea: el que eligió quien confirma (cualquier depósito activo de la sucursal) o, sin elección, el que corresponde al uso que propone su control.
+ * Del uso normal sirve `elegirDepositoDeLaCompra` (el elegido o el único); de cuarentena o rechazo, el único de la sucursal.
+ */
+function destinoDeLaLinea(
+  datos: Readonly<{
+    condicion: string | null;
+    depositos: readonly Readonly<{ id: string; uso: string }>[];
+    elegidoParaLaLinea: string | null;
+    depositoNormal: string | null;
+  }>,
+): R<Readonly<{ depositoId: string; uso: string; cambiado: boolean }>> {
+  const uso = USO_QUE_PROPONE[datos.condicion ?? "CONFORME"] ?? "NORMAL";
+  if (datos.elegidoParaLaLinea !== null) {
+    const elegido = datos.depositos.find((d) => d.id === datos.elegidoParaLaLinea);
+    if (elegido === undefined) return err("DEPOSITO_NO_ENCONTRADO");
+    return ok({ depositoId: elegido.id, uso: elegido.uso, cambiado: elegido.uso !== uso });
+  }
+  const candidatos = datos.depositos.filter((d) => d.uso === uso).map((d) => d.id);
+  if (uso === "NORMAL") {
+    const normal = elegirDepositoDeLaCompra(candidatos, datos.depositoNormal);
+    return normal.ok ? ok({ depositoId: normal.valor, uso, cambiado: false }) : normal;
+  }
+  const [unico, ...resto] = candidatos;
+  if (unico === undefined) return err("DEPOSITO_DE_CALIDAD_NO_CONFIGURADO");
+  if (resto.length > 0) return err("DEPOSITO_A_ELEGIR");
+  return ok({ depositoId: unico, uso, cambiado: false });
 }
 
 export type EntradaDeAnularRecepcionPendiente = Readonly<{ recepcionId: string; motivo: string }>;
