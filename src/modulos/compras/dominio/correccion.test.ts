@@ -27,6 +27,10 @@ describe("leerCorreccion", () => {
         linea: 1,
         correccionesVistas: 0,
         precio: "1200.000000",
+        cantidad: null,
+        pesoReal: null,
+        precioPor: null,
+        unidadDePrecio: null,
         motivo: "El proveedor cobró 1200",
       },
     });
@@ -87,6 +91,111 @@ describe("leerCorreccion", () => {
     for (const malo of [null, undefined, "texto", 7, [], [valido]]) {
       expect(leerCorreccion(malo)).toEqual({ ok: false, error: "IDENTIFICADOR_INVALIDO" });
     }
+  });
+});
+
+describe("leerCorreccion: cantidad, peso real y «precio por» (ampliada, 15/11/2026)", () => {
+  const sinPrecio = {
+    clave: CLAVE,
+    recepcionId: RECEPCION,
+    linea: 1,
+    correccionesVistas: 0,
+    motivo: "Se contó mal",
+  };
+  const leer = (cambio: Record<string, unknown>) => leerCorreccion({ ...sinPrecio, ...cambio });
+  const error = (cambio: Record<string, unknown>) => {
+    const r = leer(cambio);
+    return r.ok ? null : r.error;
+  };
+
+  it("corrige solo la cantidad, solo el peso real o los tres a la vez, en su forma canónica", () => {
+    expect(leer({ cantidad: "3" })).toMatchObject({
+      ok: true,
+      valor: { precio: null, cantidad: "3.0000", pesoReal: null },
+    });
+    expect(leer({ pesoReal: "2.5" })).toMatchObject({
+      ok: true,
+      valor: { pesoReal: "2.5000", cantidad: null },
+    });
+    expect(leer({ precio: "10", cantidad: "3", pesoReal: "1.2" })).toMatchObject({
+      ok: true,
+      valor: { precio: "10.000000", cantidad: "3.0000", pesoReal: "1.2000" },
+    });
+  });
+  it("sin ningún cambio no hay corrección (un campo que no viene es «no cambia»); uno que viene y es inválido se rechaza, no se ignora", () => {
+    expect(error({})).toBe("CORRECCION_SIN_CAMBIOS_PEDIDOS");
+    expect(error({ precioPor: undefined })).toBe("CORRECCION_SIN_CAMBIOS_PEDIDOS");
+    for (const cantidad of ["0", "-1", "", "abc", 3, null, "1.00001", "1e2"]) {
+      expect(error({ cantidad })).toBe("CANTIDAD_INVALIDA");
+    }
+    for (const pesoReal of ["0", "-1", "", 2, null, "1.00001"]) {
+      expect(error({ pesoReal })).toBe("PESO_REAL_INVALIDO");
+    }
+    expect(error({ precio: null })).toBe("PRECIO_INVALIDO");
+  });
+  it("el «precio por» solo acompaña a un precio: por unidad lleva su unidad, por presentación no, y cualquier otra combinación se rechaza", () => {
+    expect(leer({ precio: "10", precioPor: "PRESENTACION" })).toMatchObject({
+      ok: true,
+      valor: { precioPor: "PRESENTACION", unidadDePrecio: null },
+    });
+    expect(leer({ precio: "10", precioPor: "UNIDAD", unidadDePrecio: "KILOGRAMO" })).toMatchObject({
+      ok: true,
+      valor: { precioPor: "UNIDAD", unidadDePrecio: "KILOGRAMO" },
+    });
+    for (const cambio of [
+      { precioPor: "PRESENTACION" },
+      { cantidad: "3", precioPor: "PRESENTACION" },
+      { precio: "10", precioPor: "UNIDAD" },
+      { precio: "10", precioPor: "UNIDAD", unidadDePrecio: "LITRO_QUE_NO_EXISTE" },
+      { precio: "10", precioPor: "PRESENTACION", unidadDePrecio: "KILOGRAMO" },
+      { precio: "10", precioPor: "OTRO" },
+      { precio: "10", unidadDePrecio: "KILOGRAMO" },
+      { precio: "10", precioPor: null },
+    ]) {
+      expect(error(cambio)).toBe("PRECIO_POR_INVALIDO");
+    }
+  });
+  it("el orden de los errores: precio, cantidad, peso real, «precio por», al menos un cambio y motivo", () => {
+    expect(error({ precio: "0", cantidad: "0", pesoReal: "0", motivo: "" })).toBe(
+      "PRECIO_INVALIDO",
+    );
+    expect(error({ cantidad: "0", pesoReal: "0", motivo: "" })).toBe("CANTIDAD_INVALIDA");
+    expect(error({ pesoReal: "0", motivo: "" })).toBe("PESO_REAL_INVALIDO");
+    expect(error({ precioPor: "UNIDAD", motivo: "" })).toBe("PRECIO_POR_INVALIDO");
+    expect(error({ motivo: "" })).toBe("CORRECCION_SIN_CAMBIOS_PEDIDOS");
+    expect(error({ cantidad: "3", motivo: "" })).toBe("MOTIVO_REQUERIDO");
+  });
+  it("la huella: solo precio conserva los campos de antes de la ampliación; con otros campos, todos, y el mismo pedido da la misma huella", () => {
+    const pedido = (cambio: Record<string, unknown>) => {
+      const r = leer(cambio);
+      if (!r.ok) throw new Error("el pedido válido no se leyó");
+      return camposDeHuellaDeCorreccion(r.valor);
+    };
+    expect(pedido({ precio: "1200" })).toEqual([RECEPCION, 1, 0, "1200.000000", "Se contó mal"]);
+    expect(pedido({ cantidad: "3" })).toEqual([
+      RECEPCION,
+      1,
+      0,
+      "",
+      "3.0000",
+      "",
+      "",
+      "",
+      "Se contó mal",
+    ]);
+    expect(pedido({ precio: "10", precioPor: "UNIDAD", unidadDePrecio: "KILOGRAMO" })).toEqual([
+      RECEPCION,
+      1,
+      0,
+      "10.000000",
+      "",
+      "",
+      "UNIDAD",
+      "KILOGRAMO",
+      "Se contó mal",
+    ]);
+    expect(pedido({ cantidad: "3" })).toEqual(pedido({ cantidad: "3.0" }));
+    expect(pedido({ cantidad: "3" })).not.toEqual(pedido({ pesoReal: "3" }));
   });
 });
 

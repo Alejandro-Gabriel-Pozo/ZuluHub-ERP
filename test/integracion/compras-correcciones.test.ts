@@ -131,6 +131,109 @@ describe.skipIf(base === null)("compras: corrección del precio de una compra", 
     });
   });
 
+  describe("completar el precio de una línea «Sin precio» (ampliada, 0060)", () => {
+    const sinPrecio = (m: Montaje) =>
+      comprar(m, { precio: null, precioPor: "UNIDAD", unidadDePrecioId: null });
+    const completar = (recepcionId: string, extra: Record<string, unknown> = {}) =>
+      corregir(recepcionId, { precioPor: "UNIDAD", unidadDePrecio: "KILOGRAMO", ...extra });
+    const listadas = async () =>
+      valorDe(await c.consultas.comprasSinPrecio(e.gerente)).map((x) => x.recepcionId);
+
+    it("completa el precio: la línea pasa a tener costo, el promedio del depósito lo toma, la oferta del proveedor se crea y la compra sale de «Sin precio»", async () => {
+      const m = await armar();
+      const r = await sinPrecio(m);
+      expect(await listadas()).toContain(r.recepcionId);
+      expect(await oferta(m)).toBeUndefined();
+      const salida = valorDe(await c.casos.corregirCompra(e.gerente, completar(r.recepcionId)));
+      expect(salida.ajuste).toMatchObject({
+        costoPorUnidadAntes: null,
+        costoPorUnidadDespues: "1.200000",
+      });
+      expect(await promedio(m)).toEqual({ costo: "1.200000", valorizada: "2000.0000" });
+      expect(await oferta(m)).toMatchObject({
+        precio: "1200.000000",
+        costo: "1.200000",
+        compra: r.recepcionId,
+      });
+      expect(await listadas()).not.toContain(r.recepcionId);
+      const [k] = await c.filas<Record<string, unknown>>(
+        "select precio_anterior, precio_nuevo::text as nuevo, precio_por_tipo, unidad_de_precio_id from correccion_de_compra where recepcion_id = $1",
+        [r.recepcionId],
+      );
+      expect(k).toEqual({
+        precio_anterior: null,
+        nuevo: "1200.000000",
+        precio_por_tipo: "UNIDAD",
+        unidad_de_precio_id: "KILOGRAMO",
+      });
+    });
+
+    it("después de completarla, una corrección común (sin «precio por») cambia el precio sobre ese «precio por»", async () => {
+      const m = await armar();
+      const r = await sinPrecio(m);
+      valorDe(await c.casos.corregirCompra(e.gerente, completar(r.recepcionId)));
+      valorDe(
+        await c.casos.corregirCompra(
+          e.gerente,
+          corregir(r.recepcionId, { correccionesVistas: 1, precio: "1500" }),
+        ),
+      );
+      expect(await promedio(m)).toEqual({ costo: "1.500000", valorizada: "2000.0000" });
+      expect(await oferta(m)).toMatchObject({ precio: "1500.000000", costo: "1.500000" });
+    });
+
+    it("el «precio por» es obligatorio al completar y no corresponde si la línea ya tiene precio", async () => {
+      const m = await armar();
+      const sin = await sinPrecio(m);
+      const con = await comprar(m);
+      const sinPor = await c.casos.corregirCompra(e.gerente, corregir(sin.recepcionId));
+      expect(sinPor.ok ? null : sinPor.error).toBe("PRECIO_POR_INVALIDO");
+      const demas = await c.casos.corregirCompra(e.gerente, completar(con.recepcionId));
+      expect(demas.ok ? null : demas.error).toBe("PRECIO_POR_INVALIDO");
+      expect(await filasDeCorreccion(sin.recepcionId)).toBe(0);
+      expect(await filasDeCorreccion(con.recepcionId)).toBe(0);
+    });
+
+    it("repetir el mismo pedido (misma clave) no completa dos veces: una fila, un ajuste de costo; otro contenido con la clave es CLAVE_REUTILIZADA", async () => {
+      const m = await armar();
+      const r = await sinPrecio(m);
+      const pedido = completar(r.recepcionId);
+      valorDe(await c.casos.corregirCompra(e.gerente, pedido));
+      const otra = valorDe(await c.casos.corregirCompra(e.gerente, pedido));
+      expect(otra).toMatchObject({ yaExistia: true, ajuste: null });
+      expect(await filasDeCorreccion(r.recepcionId)).toBe(1);
+      expect(await promedio(m)).toEqual({ costo: "1.200000", valorizada: "2000.0000" });
+      const distinta = await c.casos.corregirCompra(e.gerente, { ...pedido, precio: "1300" });
+      expect(distinta.ok ? null : distinta.error).toBe("CLAVE_REUTILIZADA");
+    });
+
+    it("dos pedidos a la vez de completar la misma línea dejan uno: el otro es CORRECCION_DESACTUALIZADA", async () => {
+      const m = await armar();
+      const r = await sinPrecio(m);
+      const resultados = await Promise.all([
+        c.casos.corregirCompra(e.gerente, completar(r.recepcionId, { precio: "1200" })),
+        c.casos.corregirCompra(e.administrador, completar(r.recepcionId, { precio: "1300" })),
+      ]);
+      expect(resultados.filter((x) => x.ok)).toHaveLength(1);
+      const perdedora = resultados.find((x) => !x.ok);
+      expect(perdedora && !perdedora.ok ? perdedora.error : null).toBe("CORRECCION_DESACTUALIZADA");
+      expect(await filasDeCorreccion(r.recepcionId)).toBe(1);
+    });
+
+    it("cambiar la cantidad o el peso real todavía no se acepta: se rechaza y no se escribe nada", async () => {
+      const m = await armar();
+      const r = await comprar(m);
+      for (const extra of [{ cantidad: "3" }, { pesoReal: "2" }]) {
+        const x = await c.casos.corregirCompra(
+          e.gerente,
+          corregir(r.recepcionId, { precio: undefined, ...extra }),
+        );
+        expect(x.ok ? null : x.error).toBe("CORRECCION_DE_CANTIDAD_NO_DISPONIBLE");
+      }
+      expect(await filasDeCorreccion(r.recepcionId)).toBe(0);
+    });
+  });
+
   it("el gerente corrige el precio: queda la corrección con su motivo, el promedio sube por la diferencia y la línea original no se toca", async () => {
     const m = await armar();
     const r = await comprar(m);
@@ -182,6 +285,12 @@ describe.skipIf(base === null)("compras: corrección del precio de una compra", 
         numero: 1,
         precioAnterior: "1000.000000",
         precioNuevo: "1200.000000",
+        precioPorTipo: null,
+        unidadDePrecioId: null,
+        cantidadAnterior: null,
+        cantidadNueva: null,
+        pesoRealAnterior: null,
+        pesoRealNuevo: null,
         motivo: "El proveedor cobró 1200 el kilo",
         registradoPor: e.gerente.personaId,
         registradoEn: expect.any(String) as unknown,
