@@ -72,6 +72,6 @@
 /* Botón de dos estados: marcado se distingue por el fondo y el borde fuerte, no solo por el color. */
 .boton[aria-pressed="true"] {
   background: var(--color-info-suave);
-  border-color: var(--brand-primary);
+  border-color: var(--color-info);
   color: var(--color-texto);
 }

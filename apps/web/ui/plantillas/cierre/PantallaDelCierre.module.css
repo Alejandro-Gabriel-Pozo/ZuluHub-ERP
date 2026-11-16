@@ -53,15 +53,15 @@
   width: 2.25rem;
   height: 2.25rem;
   border: var(--borde-grosor-fuerte) solid var(--color-borde);
-  border-radius: 50%;
+  border-radius: var(--radio-base);
   background: var(--color-fondo);
   font-weight: var(--tipo-peso-fuerte);
 }
 
 .punto[data-estado="ahora"] .numero {
-  background: var(--brand-primary);
-  border-color: var(--brand-primary);
-  color: var(--brand-on-primary);
+  background: var(--accion-primaria-fondo);
+  border-color: var(--accion-primaria-fondo);
+  color: var(--accion-primaria-texto);
 }
 
 .punto[data-estado="hecho"] .numero {
@@ -73,7 +73,7 @@
 .paso {
   margin: 0;
   padding-bottom: var(--espacio-1);
-  border-bottom: var(--borde-grosor-fuerte) solid var(--brand-primary);
+  border-bottom: var(--borde-grosor-fuerte) solid var(--accion-primaria-fondo);
   font-size: var(--tipo-tamano-medio);
   font-weight: var(--tipo-peso-fuerte);
 }
