@@ -1,4 +1,4 @@
-import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
+import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type { CasosDeUsoDeCatalogo, ConsultasDeCatalogo } from "../modulos/catalogo/publico";
 import { aRespuestaDeExcepcion, errorAPublico, type DependenciasDeRespuesta } from "./a-respuesta";
