@@ -180,6 +180,24 @@ describe("formaDeFamilia: cómo sale una familia en la carta", () => {
     expect(r).toMatchObject({ forma: "TABLA", medidas: ["Chico"] });
   });
 
+  it("una medida que aparece con distinto lugar en dos productos va en el menor; con el mismo lugar, en el orden en que se vio", () => {
+    const r = formaDeFamilia(
+      entrada([
+        cafe("a", { medidas: [medida("Grande", 5), medida("Chico", 3)] }),
+        cafe("b", { medidas: [medida("Grande", 2)] }),
+        cafe("c", { medidas: [medida("Grande", 9)] }),
+      ]),
+    );
+    expect(r).toMatchObject({ forma: "TABLA", medidas: ["Grande", "Chico"] });
+    const empate = formaDeFamilia(
+      entrada([
+        cafe("a", { medidas: [medida("Uno", 1), medida("Dos", 1)] }),
+        cafe("b", { medidas: [medida("Dos", 1), medida("Uno", 1)] }),
+      ]),
+    );
+    expect(empate).toMatchObject({ medidas: ["Uno", "Dos"] });
+  });
+
   it("los miembros conservan el orden de la familia", () => {
     const r = formaDeFamilia(entrada([cafe("z"), cafe("a"), cafe("m")]));
     expect(r.productos).toEqual(["z", "a", "m"]);

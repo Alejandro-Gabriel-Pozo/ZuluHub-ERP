@@ -72,8 +72,7 @@ type Vigente = Readonly<{
 }>;
 
 /**
- * Un miembro es vigente si está activo, no oculto y tiene precio (el del producto, o el de al menos una medida). Las medidas sin precio no se ofrecen. Una medida repetida
- * dentro del producto (mismo nombre sin distinguir mayúsculas) deja la primera: la base ya lo impide, esto solo evita duplicar una columna.
+ * Un miembro es vigente si está activo, no oculto y tiene precio (el del producto, o el de al menos una medida). Las medidas sin precio no se ofrecen.
  */
 function vigente(m: MiembroParaForma): Vigente | null {
   if (!m.activo || m.oculto) return null;
@@ -83,13 +82,11 @@ function vigente(m: MiembroParaForma): Vigente | null {
       ? null
       : { productoId: m.productoId, seccionId: m.seccionId, medidas: [], precio };
   }
-  const vistas = new Set<string>();
-  const medidas = m.medidas.flatMap((medida) => {
-    const clave = claveDeNombre(medida.nombre);
-    if (vistas.has(clave) || canonico(medida.precio) === null) return [];
-    vistas.add(clave);
-    return [{ nombre: medida.nombre, clave, orden: medida.orden }];
-  });
+  const medidas = m.medidas.flatMap((medida) =>
+    canonico(medida.precio) === null
+      ? []
+      : [{ nombre: medida.nombre, clave: claveDeNombre(medida.nombre), orden: medida.orden }],
+  );
   return medidas.length === 0
     ? null
     : { productoId: m.productoId, seccionId: m.seccionId, medidas, precio: null };
@@ -106,10 +103,8 @@ function columnas(miembros: readonly Vigente[]): readonly string[] {
       else if (medida.orden < previa.orden) previa.orden = medida.orden;
     }
   }
-  return [...porClave.values()]
-    .map((m, indice) => ({ ...m, indice }))
-    .sort((a, b) => a.orden - b.orden || a.indice - b.indice)
-    .map((m) => m.nombre);
+  // `sort` es estable: con el mismo `orden` queda primero la medida que se vio primero.
+  return [...porClave.values()].sort((a, b) => a.orden - b.orden).map((m) => m.nombre);
 }
 
 export function formaDeFamilia(entrada: EntradaDeForma): FormaDeFamilia {
@@ -133,7 +128,9 @@ export function formaDeFamilia(entrada: EntradaDeForma): FormaDeFamilia {
   const conMedidas = vigentes.filter((v) => v.medidas.length > 0).length;
   if (conMedidas === 0) {
     const precios = new Set(vigentes.map((v) => v.precio));
+    // Stryker disable next-line OptionalChaining: con 2 o más vigentes hay un primero; el `?.` solo satisface al compilador.
     const unico = vigentes[0]?.precio ?? null;
+    // Stryker disable next-line ConditionalExpression: un vigente sin medidas siempre tiene precio, así que `unico` no es nulo; la guarda solo acota el tipo.
     return precios.size === 1 && unico !== null
       ? { forma: "LINEA", precio: unico, productos }
       : sueltos("PRECIOS_DISTINTOS");
