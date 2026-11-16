@@ -2,7 +2,6 @@ import type { ClaveDeTexto } from "../../../../../src/capacidades/vocabulario/ca
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { MAXIMO_DE_CUOTAS, cuotasDesdeTexto } from "../../../../../src/primitivas/cantidad/cuotas";
 import { FORMA_DEL_IMPORTE } from "../../../../../src/primitivas/dinero/forma-del-importe";
-import { MAXIMO_DE_COBROS_POR_TICKET } from "../../../../../src/primitivas/dinero/limites-de-cobro";
 import {
   TIPO_DE_MEDIO_CON_VUELTO,
   calcularVuelto,
@@ -219,10 +218,10 @@ export function estadoDelCobro(
     }
     return { clave: pago.clave, importeNoValido: !esImporteValido(pago.importe), erroresDeDatos };
   });
-  const todasConMedioEImporte =
-    pagos.length > 0 &&
-    pagos.length <= MAXIMO_DE_COBROS_POR_TICKET &&
-    pagos.every((p) => medioDe(p) !== undefined && esImporteValido(p.importe));
+  // Que haya de 1 al tope de filas lo juzga `calcularVuelto` (PAGOS_INVALIDOS): una sola regla.
+  const todasConMedioEImporte = pagos.every(
+    (p) => medioDe(p) !== undefined && esImporteValido(p.importe),
+  );
   const vuelto = todasConMedioEImporte
     ? calcularVuelto({
         total,

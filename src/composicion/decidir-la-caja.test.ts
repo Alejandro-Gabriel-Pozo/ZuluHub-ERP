@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { decidirLaCaja, type CajasParaCobrarParaLaPantalla } from "./cobrar-web";
+import type { CajasParaCobrarParaLaPantalla } from "./cobrar-web";
+import { decidirLaCaja } from "./decidir-la-caja";
 
 type Caja = CajasParaCobrarParaLaPantalla["cajas"][number];
 

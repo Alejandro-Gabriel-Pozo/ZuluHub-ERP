@@ -271,6 +271,107 @@ describe("estadoDelCobro", () => {
   });
 });
 
+describe("más casos de borde", () => {
+  it("una fila nueva no está tocada", () => {
+    expect(pagoNuevo("a", EFECTIVO.id, "1.00").tocado).toBe(false);
+  });
+
+  it("al cambiar de medio la cuenta se conserva solo si es una de las del medio nuevo", () => {
+    const otraCuenta: MedioParaCobrar = {
+      ...CREDITO,
+      id: "m-otro",
+      cuentas: [{ id: "c-otra", tipo: "TERMINAL", nombre: "Otra" }],
+    };
+    const p = { ...pago(DEBITO, "1.00"), cuentaId: "c-posnet" };
+    expect(cambiarDeMedio(p, otraCuenta).cuentaId).toBe("");
+    expect(cambiarDeMedio(p, CREDITO).cuentaId).toBe("c-posnet");
+  });
+
+  it("con dos filas, una inválida, no hay cuenta ni está listo", () => {
+    const e = estadoDelCobro(
+      TOTAL,
+      [pago(EFECTIVO, "1500.00", "a"), pago(DEBITO, "", "b")],
+      MEDIOS,
+    );
+    expect(e.vuelto).toBeNull();
+    expect(e.listo).toBe(false);
+  });
+
+  it("con dos filas, una con un dato mal escrito, no está listo", () => {
+    const mala = cambiarUnDato(pago(DEBITO, "500.00", "b"), "ultimos4", "1");
+    const e = estadoDelCobro(TOTAL, [pago(EFECTIVO, "1000.00", "a"), mala], MEDIOS);
+    expect(e.listo).toBe(false);
+    expect(e.filas[0]?.erroresDeDatos).toEqual({});
+  });
+
+  it("con una fila válida y otra de un medio desconocido no hay cuenta", () => {
+    const e = estadoDelCobro(
+      TOTAL,
+      [pago(EFECTIVO, "1000.00", "a"), pagoNuevo("x", "otro", "500.00")],
+      MEDIOS,
+    );
+    expect(e.vuelto).toBeNull();
+    expect(e.listo).toBe(false);
+  });
+
+  it("un medio desconocido no tiene datos que juzgar", () => {
+    const e = estadoDelCobro(TOTAL, [pagoNuevo("x", "otro", "1500.00")], MEDIOS);
+    expect(Object.keys(e.filas[0]?.erroresDeDatos ?? { x: 1 })).toEqual([]);
+  });
+
+  it("con la tarjeta primero y el efectivo después, el efectivo viaja por su neto", () => {
+    const pagos = [pago(DEBITO, "1000.00", "a"), pago(EFECTIVO, "800.00", "b")];
+    const e = estadoDelCobro(TOTAL, pagos, MEDIOS);
+    if (e.vuelto === null) throw new Error("sin cuenta");
+    const pedido = pedidoDeCobro({
+      ids: { cuentaId: "c", ejemplarId: "e", lineas: new Map([["l", "x"]]) },
+      cajaId: "caja",
+      cuenta: [
+        {
+          clave: "l",
+          productoId: "p",
+          varianteId: null,
+          opcionIds: [],
+          cantidad: 10_000,
+          revision: 0,
+        },
+      ],
+      total: TOTAL,
+      pagos,
+      medios: MEDIOS,
+      vuelto: e.vuelto,
+    });
+    expect(
+      (pedido?.["cobros"] as { importe: { monto: string } }[]).map((c) => c.importe.monto),
+    ).toEqual(["1000.00", "500.00"]);
+  });
+
+  it("el resumen toma la cuenta que corresponde entre varias", () => {
+    const medio: MedioParaCobrar = {
+      ...DEBITO,
+      cuentas: [
+        { id: "c-1", tipo: "TERMINAL", nombre: "Posnet 1" },
+        { id: "c-2", tipo: "TERMINAL", nombre: "Posnet 2" },
+      ],
+    };
+    const venta: VentaCobrada = {
+      ticketId: "t",
+      ejemplarId: "e",
+      numero: 1,
+      estado: "COBRADO",
+      total: TOTAL,
+      cobros: [
+        {
+          medioDePagoId: medio.id,
+          cuentaDeCobroId: "c-2",
+          importe: { moneda: "ARS", monto: "1.00" },
+        },
+      ],
+    };
+    expect(resumenDelCobro(venta, [medio])[0]?.rotulo).toBe("Tarjeta de débito · Posnet 2");
+  });
+});
+
 describe("pagoAdicional", () => {
   it("elige un medio que todavía no se usa y propone lo que falta", () => {
     const otro = pagoAdicional("n", MEDIOS, [pago(EFECTIVO, "1000.00")], "500.00");
@@ -283,6 +384,10 @@ describe("pagoAdicional", () => {
       importe: "",
     });
     expect(pagoAdicional("n", MEDIOS, [pago(EFECTIVO, "1.00")], null)?.importe).toBe("");
+  });
+  it("con dos medios ya usados elige uno que no se usa", () => {
+    const usados = [pago(EFECTIVO, "1.00"), pago(DEBITO, "1.00")];
+    expect(pagoAdicional("n", MEDIOS, usados, "5.00")?.medioId).toBe(CREDITO.id);
   });
   it("sin medios no hay fila", () => {
     expect(pagoAdicional("n", [], [], "1.00")).toBeNull();
