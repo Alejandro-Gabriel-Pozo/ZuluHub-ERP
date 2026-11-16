@@ -56,6 +56,8 @@ const TABLAS = [
   "tolerancia_de_compras",
   "tolerancia_aplicada_de_conciliacion",
   "diferencia_de_compra",
+  "devolucion_a_proveedor",
+  "linea_de_devolucion",
 ];
 
 describe.skipIf(base === null)("compras: la persistencia contra el esquema real", () => {
@@ -89,10 +91,15 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
       join(import.meta.dirname, "../../migraciones", "0067_compras_diferencias.sql"),
       "utf8",
     );
+    const devoluciones = await readFile(
+      join(import.meta.dirname, "../../migraciones", "0084_compras_devoluciones.sql"),
+      "utf8",
+    );
     const fijas = [
       ...migracion.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...ordenes.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...diferencias.matchAll(/CONSTRAINT = '(\w+)'/g),
+      ...devoluciones.matchAll(/CONSTRAINT = '(\w+)'/g),
     ].map((m) => m[1] as string);
     // Las de nombre armado con el de la tabla (`TG_TABLE_NAME || '_inmutable'`): se expanden con las tablas que llevan ese disparador.
     const deLaTabla = (sufijo: string, tablas: readonly string[]) =>
@@ -157,9 +164,9 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
         where connamespace = 'public'::regnamespace and contype = 'f' and conrelid::regclass::text = any($1)`,
       [TABLAS],
     );
-    // Las que apuntan a `empresa`, a la persona o a la unidad de medida son a tablas globales; todas las demás (de empresa) llevan `empresa_id`.
+    // Las que apuntan a `empresa`, a la persona, a la unidad de medida o a una lista del sistema (`valor_de_lista`, global) son a tablas globales; todas las demás (de empresa) llevan `empresa_id`.
     const aTablaDeEmpresa = rows.filter(
-      (r) => !/REFERENCES (empresa|persona|unidad_de_medida)\(/.test(r.def),
+      (r) => !/REFERENCES (empresa|persona|unidad_de_medida|valor_de_lista)\(/.test(r.def),
     );
     expect(rows.length).toBeGreaterThan(30);
     expect(aTablaDeEmpresa.length).toBeGreaterThan(20);
