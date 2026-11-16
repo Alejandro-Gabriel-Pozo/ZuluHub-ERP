@@ -141,7 +141,7 @@ export type FormularioDeMesaArmado = Readonly<{
 
 /**
  * El formulario: para una mesa nueva, número, columna y fila vacíos y la forma y el tamaño que propone la maqueta (Redonda, Chica); para editar, con los datos de la mesa para editar. «Cancelar» y ‹ vuelven a la lista, como en la maqueta.
- * SUPUESTO: la posición inicial de una mesa nueva queda en blanco (la maqueta propone la primera casilla libre; calcularla es regla del servidor y no está pedida).
+ * SUPUESTO (DEC-0462): la posición inicial de una mesa nueva queda en blanco (la maqueta propone la primera casilla libre; calcularla es regla del servidor y no está pedida).
  */
 export function armarElFormularioDeMesa(
   mesa: MesaDeLaLista | null,
