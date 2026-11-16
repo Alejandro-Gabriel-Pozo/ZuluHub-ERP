@@ -4,12 +4,7 @@ import {
   verLaVisibilidadDelProducto,
   type DependenciasDeOcultarWeb,
 } from "../../src/composicion/ocultar-web";
-import {
-  montarCatalogo,
-  productoDeBase,
-  valorDe,
-  type EscenarioDeCatalogo,
-} from "./catalogo-apoyo";
+import { montarCatalogo, productoDeBase, type EscenarioDeCatalogo } from "./catalogo-apoyo";
 
 /**
  * «Ocultar» de la web (`ocultar-web.ts`, A15) contra una base real y los roles reales: dónde está oculto un producto, ocultar y mostrar en el local y en toda la empresa, el permiso nuevo
