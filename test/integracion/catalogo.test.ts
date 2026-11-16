@@ -91,6 +91,8 @@ const TABLAS_DE_NEGOCIO = [
   // La carta pública y el botón «Ocultar» (0043_carta_publica)
   "carta_publica",
   "disponibilidad_de_producto",
+  // La identidad de la carta: el color de la empresa para sus cartas (0077_identidad_de_la_carta)
+  "identidad_de_carta_empresa",
   // Cierre del día (0026_cierre)
   "jornada_de_sucursal",
   "control_de_jornada_cerrada",
@@ -527,6 +529,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "clasificacion_de_producto:SELECT", // 0046
           "carta_publica:SELECT", // 0043
           "disponibilidad_de_producto:SELECT", // 0043
+          "identidad_de_carta_empresa:SELECT", // 0077
         ].sort(),
       );
       expect(porRol("pedernal_grupo")).toEqual(
@@ -835,9 +838,22 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "pedernal_app:pedido_de_ficha.estado",
           "pedernal_app:pedido_de_ficha.resuelto_en",
           "pedernal_app:pedido_de_ficha.resuelto_por",
-          ...["estado", "lugar", "mensaje_de_portada", "nombre", "rubro"].map(
-            (c) => `pedernal_app:carta_publica.${c}`,
-          ), // 0043
+          ...[
+            "cara",
+            "color_propio",
+            "estado",
+            "logo_cuenta",
+            "logo_extension",
+            "logo_id_publico",
+            "logo_proveedor",
+            "logo_version",
+            "lugar",
+            "mensaje_de_portada",
+            "modelo",
+            "nombre",
+            "rubro",
+          ].map((c) => `pedernal_app:carta_publica.${c}`), // 0043 y 0077
+          "pedernal_app:identidad_de_carta_empresa.color_principal", // 0077
           ...["actualizado_en", "actualizado_por", "oculto"].map(
             (c) => `pedernal_app:disponibilidad_de_producto.${c}`,
           ), // 0043
@@ -1202,17 +1218,29 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         ),
         // 0043: la carta pública y el botón «Ocultar»
         ...[
+          "cara",
           "codigo",
+          "color_propio",
           "creado_por",
           "empresa_id",
           "estado",
           "id",
+          "logo_cuenta",
+          "logo_extension",
+          "logo_id_publico",
+          "logo_proveedor",
+          "logo_version",
           "lugar",
           "mensaje_de_portada",
+          "modelo",
           "nombre",
           "rubro",
           "sucursal_id",
-        ].map((c) => `carta_publica.${c}`),
+        ].map((c) => `carta_publica.${c}`), // 0043 y 0077
+        // 0077: el color de la empresa para sus cartas (una fila por empresa)
+        ...["color_principal", "creado_por", "empresa_id"].map(
+          (c) => `identidad_de_carta_empresa.${c}`,
+        ),
         ...[
           "actualizado_en",
           "actualizado_por",

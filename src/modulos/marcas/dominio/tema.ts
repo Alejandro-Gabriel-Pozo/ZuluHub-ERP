@@ -1,3 +1,4 @@
+import { COLOR_HEXADECIMAL } from "../../../primitivas/color/color-hexadecimal";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { SuperficieDeAspecto } from "./aspecto";
 
@@ -17,7 +18,7 @@ export type TemaCompleto = Readonly<Record<TokenDeTema, string>>;
 export type ErrorDeTema = Readonly<{ codigo: "TEMA_INVALIDO"; token: string }>;
 
 /** Un color es `#rrggbb` con letras minúsculas: nada de `#fff`, `rgb()`, `url()` ni nombres. */
-export const COLOR_DEL_TEMA = /^#[0-9a-f]{6}$/;
+export const COLOR_DEL_TEMA = COLOR_HEXADECIMAL;
 
 export const esTokenDeTema = (token: string): token is TokenDeTema =>
   (TOKENS_DE_TEMA as readonly string[]).includes(token);

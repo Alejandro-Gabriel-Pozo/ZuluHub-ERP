@@ -24,6 +24,11 @@ const REVERSION = join(
   import.meta.dirname,
   "../../migraciones/reversiones/0043_revertir_carta_publica.sql",
 );
+/** 0077 (la identidad de la carta) se revierte antes que 0043: su tabla y sus columnas cuelgan de `carta_publica`. */
+const REVERSION_DE_LA_IDENTIDAD = join(
+  import.meta.dirname,
+  "../../migraciones/reversiones/0077_revertir_identidad_de_la_carta.sql",
+);
 /** 0050 (el plan en la lectura pública) se revierte primero de todo: también mira `carta_publica`, y 0044 es su requisito. */
 const REVERSION_DEL_PLAN = join(
   import.meta.dirname,
@@ -404,12 +409,20 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
           where grantee = 'pedernal_publico' and table_schema = 'public' and table_name in ('carta_publica', 'disponibilidad_de_producto') order by 1, 2, 3`,
       );
       expect(rows.map((r) => `${r.tabla}.${r.columna}:${r.privilegio}`)).toEqual([
+        "carta_publica.cara:SELECT", // 0077
         "carta_publica.codigo:SELECT",
+        "carta_publica.color_propio:SELECT", // 0077
         "carta_publica.empresa_id:SELECT",
         "carta_publica.estado:SELECT",
         "carta_publica.id:SELECT",
+        "carta_publica.logo_cuenta:SELECT", // 0077
+        "carta_publica.logo_extension:SELECT", // 0077
+        "carta_publica.logo_id_publico:SELECT", // 0077
+        "carta_publica.logo_proveedor:SELECT", // 0077
+        "carta_publica.logo_version:SELECT", // 0077
         "carta_publica.lugar:SELECT",
         "carta_publica.mensaje_de_portada:SELECT",
+        "carta_publica.modelo:SELECT", // 0077
         "carta_publica.nombre:SELECT",
         "carta_publica.rubro:SELECT",
         "carta_publica.sucursal_id:SELECT",
@@ -443,6 +456,8 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
         await expect(correr()).rejects.toMatchObject({ code: "2BP01" });
         expect((await c.query("select to_regclass('carta_publica') as t")).rows[0]).toBeDefined();
         await c.query("begin");
+        // 0077 (identidad) también mira `carta_publica`: se revierte primero (sin datos, no frena).
+        await c.query(await readFile(REVERSION_DE_LA_IDENTIDAD, "utf8"));
         await c.query(await readFile(REVERSION_DEL_PLAN, "utf8"));
         await c.query(await readFile(REVERSION_DE_LA_LECTURA, "utf8"));
         await c.query("commit");

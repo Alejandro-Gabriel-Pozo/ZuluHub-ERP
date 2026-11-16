@@ -18,6 +18,15 @@ export type TablasDeCarta = {
     /** La tercera línea de la portada; nulo = sin mensaje. */
     mensaje_de_portada: string | null;
     estado: Generated<string>;
+    /** Identidad de la carta (0077). */
+    modelo: Generated<string>;
+    cara: string | null;
+    color_propio: string | null;
+    logo_proveedor: string | null;
+    logo_cuenta: string | null;
+    logo_id_publico: string | null;
+    logo_version: string | null;
+    logo_extension: string | null;
     creado_por: string | null;
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
@@ -48,6 +57,14 @@ export const COLUMNAS_DE_CARTA = {
     "lugar",
     "mensaje_de_portada",
     "estado",
+    "modelo",
+    "cara",
+    "color_propio",
+    "logo_proveedor",
+    "logo_cuenta",
+    "logo_id_publico",
+    "logo_version",
+    "logo_extension",
     "creado_por",
     "creado_en",
     "actualizado_en",
@@ -83,6 +100,10 @@ export const ERRORES_DE_CARTA_POR_RESTRICCION: Readonly<Record<string, string>> 
   carta_publica_lugar_ck: "LUGAR_DE_CARTA_INVALIDO",
   carta_publica_mensaje_ck: "MENSAJE_DE_PORTADA_INVALIDO",
   carta_publica_estado_ck: "NO_TRADUCIDA",
+  carta_publica_modelo_ck: "MODELO_DE_CARTA_INVALIDO",
+  carta_publica_cara_ck: "CARA_DE_CARTA_INVALIDA",
+  carta_publica_color_ck: "COLOR_DE_CARTA_INVALIDO",
+  carta_publica_logo_ck: "LOGO_DE_CARTA_INVALIDO",
   carta_publica_codigo_inmutable: "NO_TRADUCIDA",
   carta_publica_sucursal_inmutable: "NO_TRADUCIDA",
   carta_publica_identidad_inmutable: "NO_TRADUCIDA",
