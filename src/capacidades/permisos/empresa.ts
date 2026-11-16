@@ -233,6 +233,10 @@ export const PERMISOS_DE_EMPRESA = {
   "ordenes_de_compra.pedir": ["GERENTE", "ADMINISTRADOR"],
   "ordenes_de_compra.cerrar": ["GERENTE", "ADMINISTRADOR"],
   "ordenes_de_compra.anular": ["GERENTE", "ADMINISTRADOR"],
+  // Devoluciones de mercadería al proveedor (N4): mirarlas es de los tres roles (como la orden); devolver y anular una devolución es de quien administra o gerencia. SUPUESTO a confirmar por el dueño (16/11/2026, DEC-0712).
+  "devoluciones_a_proveedor.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "devoluciones_a_proveedor.registrar": ["GERENTE", "ADMINISTRADOR"],
+  "devoluciones_a_proveedor.anular": ["GERENTE", "ADMINISTRADOR"],
   // Diferencias de la conciliación de tres vías (N4): verlas y resolverlas es de quien administra o gerencia. SUPUESTO a confirmar por el dueño (16/11/2026, DEC-0710).
   "diferencias_de_compra.ver": ["GERENTE", "ADMINISTRADOR"],
   "diferencias_de_compra.resolver": ["GERENTE", "ADMINISTRADOR"],

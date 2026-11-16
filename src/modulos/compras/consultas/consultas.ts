@@ -2,6 +2,7 @@ import type { DependenciasDeConsultasDeCompras } from "../casos-de-uso/contrato"
 import { crearLector } from "./comun";
 import { armarConsultasDeCompras } from "./compras";
 import { armarConsultasDeConciliacion } from "./conciliacion";
+import { armarConsultasDeDevoluciones } from "./devoluciones";
 import { armarConsultasDeDiferencias } from "./diferencias";
 import { armarConsultasDeFicha } from "./ficha";
 import { armarConsultasDeOrdenes } from "./ordenes";
@@ -17,6 +18,7 @@ export function crearConsultasDeCompras(d: DependenciasDeConsultasDeCompras) {
     ...armarConsultasDeCompras(leer),
     ...armarConsultasDeConciliacion(leer),
     ...armarConsultasDeOrdenes(leer),
+    ...armarConsultasDeDevoluciones(leer),
     ...armarConsultasDeDiferencias(leer),
   };
 }

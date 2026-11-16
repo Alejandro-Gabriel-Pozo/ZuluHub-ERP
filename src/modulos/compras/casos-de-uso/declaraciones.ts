@@ -8,6 +8,7 @@ const ARCHIVO_DE_RECEPCION_SEPARADA = "test/integracion/compras-n3-recepcion.tes
 const ARCHIVO_DE_CONCILIACION_SEPARADA = "test/integracion/compras-n3-conciliacion.test.ts";
 const ARCHIVO_DE_ORDENES = "test/integracion/compras-n4-ordenes.test.ts";
 const ARCHIVO_DE_DIFERENCIAS = "test/integracion/compras-n4-diferencias.test.ts";
+const ARCHIVO_DE_DEVOLUCIONES = "test/integracion/compras-n4-devoluciones.test.ts";
 
 /**
  * Los casos de uso de compras (E9 §3.2 a §3.6) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar (ADR-015 §4) y la
@@ -172,6 +173,26 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_DIFERENCIAS,
         it: "I8: resolver dos veces la misma diferencia con lo mismo devuelve yaEstaba y la segunda no escribe ni audita",
+      },
+    },
+  },
+  devolverAlProveedor: {
+    accion: "devoluciones_a_proveedor.registrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_DEVOLUCIONES,
+        it: "I1: la misma devolución dos veces (misma clave) deja una sola salida de stock y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
+      },
+    },
+  },
+  anularDevolucion: {
+    accion: "devoluciones_a_proveedor.anular",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_DEVOLUCIONES,
+        it: "I2: anular dos veces la misma devolución devuelve yaEstaba y la segunda no escribe ni audita",
       },
     },
   },
