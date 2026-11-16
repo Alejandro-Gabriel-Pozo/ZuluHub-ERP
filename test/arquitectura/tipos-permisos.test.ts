@@ -208,6 +208,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "recepciones.ver"
       | "recepciones.registrar"
       | "recepciones.anular"
+      | "recepciones.confirmar"
       | "comprobantes_de_proveedor.ver"
       | "comprobantes_de_proveedor.registrar"
       | "comprobantes_de_proveedor.pagar"

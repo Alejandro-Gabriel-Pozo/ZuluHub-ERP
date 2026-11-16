@@ -5,7 +5,6 @@
  */
 import { ACCIONES_DE_LOTES, MODULO_DE_PRODUCCION } from "./catalogo-lotes-y-produccion";
 import { MODULOS_DE_SALON_Y_COMANDAS } from "./catalogo-salon-y-comandas";
-
 export type EstadoDeConstruccion = "disponible" | "en_desarrollo";
 
 /**
@@ -372,6 +371,7 @@ export const CATALOGO_DE_MODULOS = {
       "recepciones.ver": { capacidad: null, efecto: "LECTURA" },
       "recepciones.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "recepciones.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "recepciones.confirmar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "comprobantes_de_proveedor.ver": { capacidad: null, efecto: "LECTURA" },
       "comprobantes_de_proveedor.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "comprobantes_de_proveedor.pagar": { capacidad: null, efecto: "CREA_AMPLIA" },

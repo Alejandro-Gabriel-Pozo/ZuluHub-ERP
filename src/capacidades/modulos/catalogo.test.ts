@@ -282,6 +282,7 @@ describe("el catálogo comercial de módulos", () => {
           "recepciones.ver": { capacidad: null, efecto: "LECTURA" },
           "recepciones.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "recepciones.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "recepciones.confirmar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "comprobantes_de_proveedor.ver": { capacidad: null, efecto: "LECTURA" },
           "comprobantes_de_proveedor.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "comprobantes_de_proveedor.pagar": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -321,13 +322,13 @@ describe("el catálogo comercial de módulos", () => {
     ) => Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
     expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([14, 9, 25]);
     expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
-    expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 11]);
+    expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 12]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
     // 25 de administración (18 de usuarios, sucursales, gerencia y permisos, y 7 de la configuración fiscal de H7 T5),
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 48 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
-    // de E5-T10), 35 de caja, cierre y ventas (E0-T1), 19 de clientes y compras (E9-T1 y T11), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 157 en total.
-    expect(todas).toHaveLength(25 + 9 + 48 + 35 + 19 + 16 + 5);
+    // de E5-T10), 35 de caja, cierre y ventas (E0-T1), 20 de clientes y compras (E9-T1, T11 y N3-2b), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 158 en total.
+    expect(todas).toHaveLength(25 + 9 + 48 + 35 + 20 + 16 + 5);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -572,6 +573,7 @@ const EFECTOS_DE_EMPRESA = {
     "productos.desactivar",
     "puntos_de_venta.desactivar",
     "recepciones.anular",
+    "recepciones.confirmar",
     "salon.cambiar_mesa",
     "salon.dividir",
     "salon.unir",

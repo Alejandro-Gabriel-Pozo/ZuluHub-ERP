@@ -62,6 +62,13 @@ describe("leerControlDeLinea", () => {
         error: "OBSERVACION_INVALIDA",
       });
     }
+    // Una observación sin una sola letra (solo signos) no es una observación.
+    expect(leerControlDeLinea({ ...conforme, condicion: "RECHAZADA", observacion: "..." })).toEqual(
+      {
+        ok: false,
+        error: "OBSERVACION_INVALIDA",
+      },
+    );
     const justa = "a".repeat(LARGO_MAXIMO_DE_LA_OBSERVACION_DE_RECEPCION);
     expect(leerControlDeLinea({ ...conforme, condicion: "RECHAZADA", observacion: justa }).ok).toBe(
       true,

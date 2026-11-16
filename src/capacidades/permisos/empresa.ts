@@ -217,6 +217,7 @@ export const PERMISOS_DE_EMPRESA = {
   "recepciones.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "recepciones.registrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "recepciones.anular": ["GERENTE", "ADMINISTRADOR"],
+  "recepciones.confirmar": ["GERENTE", "ADMINISTRADOR"],
   "comprobantes_de_proveedor.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "comprobantes_de_proveedor.registrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "comprobantes_de_proveedor.pagar": ["GERENTE", "ADMINISTRADOR"],

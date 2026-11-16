@@ -88,6 +88,15 @@ describe("huellaDeLaRecepcion", () => {
     );
   });
 
+  it("el contenido canónico no cambia (la huella de una recepción ya guardada tiene que seguir siendo la misma): sin remito y con remito", () => {
+    expect(huellaDeLaRecepcion(base)).toBe(
+      "1e017e2f66e0a55e99dc3d4aeb6972e157b4f55c0cc9d5b2fdb58ed822976b2d",
+    );
+    expect(
+      huellaDeLaRecepcion({ ...base, remito: { puntoDeVenta: 1, numero: 2, fecha: "2026-11-10" } }),
+    ).toBe("9b7a7feab97e031b1ed3dddfa955f1f70e43922083892a3c5a157b362c5b43c6");
+  });
+
   it("el orden de los renglones y el de los controles no cambian el pedido", () => {
     const otro = { ...renglon, productoId: "00000000-0000-4000-8000-000000000002" };
     const ctl = (linea: number) => ({

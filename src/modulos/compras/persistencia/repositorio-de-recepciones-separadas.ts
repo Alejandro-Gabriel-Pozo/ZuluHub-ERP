@@ -1,5 +1,5 @@
 import { sql, type Kysely } from "kysely";
-import type { EmpresaId } from "../../../primitivas/identificadores/marca";
+import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
 import type { ControlDeLinea } from "../dominio/control-de-recepcion";
 import type { ComprasDb } from "./esquema";
 import { esUuid } from "./filas";
@@ -25,6 +25,13 @@ export type RecepcionSeparada = Omit<Recepcion, "estado"> &
  * Las recepciones de N3 y N4 (E9 §3.8): lo mismo que las de N1 y N2 pero viendo también las PENDIENTES, más el control de la mercadería por línea. Las lecturas son de
  * la misma tabla; N1 y N2 no pasan por acá.
  */
+export type EntradaDeLinea = Readonly<{
+  linea: number;
+  depositoId: string;
+  movimientoId: string;
+  cantidad: string;
+}>;
+
 export interface RepositorioDeRecepcionesSeparadas {
   /** Como `porClave` de N1 y N2, pero ve también las PENDIENTES. */
   porClaveSeparada(empresa: EmpresaId, clave: string): Promise<RecepcionSeparada | null>;
@@ -45,6 +52,21 @@ export interface RepositorioDeRecepcionesSeparadas {
     controles: readonly ControlDeLinea[],
   ): Promise<void>;
   controlesDe(empresa: EmpresaId, recepcionId: string): Promise<readonly ControlDeLinea[]>;
+  /** PENDIENTE → CONFIRMADA con quién la confirmó (la hora la fija la base). `false` si ya no estaba PENDIENTE. */
+  confirmar(empresa: EmpresaId, id: string, por: PersonaId): Promise<boolean>;
+  /** PENDIENTE → ANULADA con su motivo. `false` si ya no estaba PENDIENTE. */
+  anularPendiente(
+    empresa: EmpresaId,
+    id: string,
+    anulacion: Readonly<{ por: PersonaId; en: Date; motivo: string }>,
+  ): Promise<boolean>;
+  /** Lo que entró a stock por línea y depósito (solo en la transacción que confirma). */
+  insertarEntradas(
+    empresa: EmpresaId,
+    recepcionId: string,
+    entradas: readonly EntradaDeLinea[],
+  ): Promise<void>;
+  entradasDe(empresa: EmpresaId, recepcionId: string): Promise<readonly EntradaDeLinea[]>;
 }
 
 export function aRecepcionSeparada(f: FilaDeRecepcion): RecepcionSeparada {
@@ -99,6 +121,71 @@ export function crearRepositorioDeRecepcionesSeparadas(
     return fila === undefined ? null : aRecepcionSeparada(fila);
   }
   return {
+    async confirmar(empresa, id, por) {
+      const fila = await db
+        .updateTable("recepcion")
+        .set({ estado: "CONFIRMADA", confirmada_por: por })
+        .where("empresa_id", "=", empresa)
+        .where("id", "=", id)
+        .where("estado", "=", "PENDIENTE")
+        .returning("id")
+        .executeTakeFirst();
+      return fila !== undefined;
+    },
+    async anularPendiente(empresa, id, anulacion) {
+      const fila = await db
+        .updateTable("recepcion")
+        .set({
+          estado: "ANULADA",
+          anulada_por: anulacion.por,
+          anulada_en: anulacion.en,
+          motivo_de_anulacion: anulacion.motivo,
+        })
+        .where("empresa_id", "=", empresa)
+        .where("id", "=", id)
+        .where("estado", "=", "PENDIENTE")
+        .returning("id")
+        .executeTakeFirst();
+      return fila !== undefined;
+    },
+    async insertarEntradas(empresa, recepcionId, entradas) {
+      if (entradas.length === 0) return;
+      await db
+        .insertInto("entrada_de_linea_de_recepcion")
+        .values(
+          entradas.map((e) => ({
+            empresa_id: empresa,
+            recepcion_id: recepcionId,
+            linea: e.linea,
+            deposito_id: e.depositoId,
+            movimiento_id: e.movimientoId,
+            cantidad: e.cantidad,
+          })),
+        )
+        .execute();
+    },
+    async entradasDe(empresa, recepcionId) {
+      if (!esUuid(recepcionId)) return [];
+      const filas = await db
+        .selectFrom("entrada_de_linea_de_recepcion")
+        .select([
+          "linea",
+          "deposito_id",
+          "movimiento_id",
+          sql<string>`cantidad::text`.as("cantidad"),
+        ])
+        .where("empresa_id", "=", empresa)
+        .where("recepcion_id", "=", recepcionId)
+        .orderBy("linea")
+        .orderBy("deposito_id")
+        .execute();
+      return filas.map((f) => ({
+        linea: f.linea,
+        depositoId: f.deposito_id,
+        movimientoId: f.movimiento_id,
+        cantidad: f.cantidad,
+      }));
+    },
     async porClaveSeparada(empresa, clave) {
       const fila = await db
         .selectFrom("recepcion")

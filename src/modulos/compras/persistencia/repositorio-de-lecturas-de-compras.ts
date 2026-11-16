@@ -5,6 +5,7 @@ import { esUuid } from "./filas";
 import {
   aRecepcion,
   COLUMNAS_DE_RECEPCION,
+  NIVELES_DE_RECEPCION_INMEDIATA,
   type EstadoDeRecepcion,
   type Recepcion,
 } from "./repositorio-de-recepciones";
@@ -70,8 +71,8 @@ export function crearRepositorioDeLecturasDeCompras(
         .selectFrom("recepcion")
         .select([...COLUMNAS_DE_RECEPCION, ESTADO_DEL_COMPROBANTE])
         .where("empresa_id", "=", empresa)
-        // Una recepción PENDIENTE (N3) no es una compra de este listado: la lee el listado de N3.
-        .where("estado", "<>", "PENDIENTE");
+        // Una recepción de N3 o N4 no es una compra de este listado (su stock no está en la línea): la lee el listado de N3.
+        .where("nivel", "in", NIVELES_DE_RECEPCION_INMEDIATA);
       if (filtro.sucursales !== "TODAS") {
         consulta = consulta.where("sucursal_id", "in", [...filtro.sucursales]);
       }
@@ -112,6 +113,7 @@ export function crearRepositorioDeLecturasDeCompras(
         .select([...COLUMNAS_DE_RECEPCION, ESTADO_DEL_COMPROBANTE])
         .where("empresa_id", "=", empresa)
         .where("estado", "=", "CONFIRMADA")
+        .where("nivel", "in", NIVELES_DE_RECEPCION_INMEDIATA)
         .where(
           sql<boolean>`exists (select 1 from linea_de_recepcion l where l.empresa_id = recepcion.empresa_id and l.recepcion_id = recepcion.id and l.precio is null)`,
         );

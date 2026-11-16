@@ -6,6 +6,12 @@ import type { ComprasDb } from "./esquema";
 import { esUuid } from "./filas";
 
 export type EstadoDeRecepcion = "CONFIRMADA" | "ANULADA";
+/**
+ * Los niveles que reciben y entran stock en un solo paso (N1 y N2): lo que leen los caminos de `registrarCompra`, `anularCompra`, `corregirCompra` y los listados de
+ * compras. Una recepción de N3 o N4 (pendiente o ya confirmada) guarda su stock en `entrada_de_linea_de_recepcion`, no en la línea: esos caminos la tratarían mal
+ * (anularla sin devolver el stock), así que para ellos NO EXISTE (falla cerrada) hasta que N3 tenga los suyos.
+ */
+export const NIVELES_DE_RECEPCION_INMEDIATA = ["COMPRA_SIMPLE", "CON_COMPROBANTE"] as const;
 
 export type Recepcion = Readonly<{
   id: string;
@@ -193,7 +199,7 @@ const COLUMNAS_DE_LINEA = [
 ] as const;
 
 export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): RepositorioDeRecepciones {
-  /** N1 y N2: una recepción PENDIENTE (solo existe en N3 y N4) no se ve: para estos caminos «no existe» (falla cerrada). */
+  /** N1 y N2: una recepción de N3 o N4 no se ve: para estos caminos «no existe» (falla cerrada). */
   async function leer(empresa: EmpresaId, id: string, bloquear: boolean) {
     if (!esUuid(id)) return null;
     let consulta = db
@@ -201,7 +207,7 @@ export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): Repositori
       .select(COLUMNAS_DE_RECEPCION)
       .where("empresa_id", "=", empresa)
       .where("id", "=", id)
-      .where("estado", "<>", "PENDIENTE");
+      .where("nivel", "in", NIVELES_DE_RECEPCION_INMEDIATA);
     if (bloquear) consulta = consulta.forUpdate();
     const fila = await consulta.executeTakeFirst();
     return fila === undefined ? null : aRecepcion(fila);
@@ -213,7 +219,7 @@ export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): Repositori
         .select(COLUMNAS_DE_RECEPCION)
         .where("empresa_id", "=", empresa)
         .where("clave_idempotencia", "=", clave)
-        .where("estado", "<>", "PENDIENTE")
+        .where("nivel", "in", NIVELES_DE_RECEPCION_INMEDIATA)
         .executeTakeFirst();
       return fila === undefined ? null : aRecepcion(fila);
     },
@@ -226,6 +232,7 @@ export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): Repositori
         .where("remito_punto_de_venta", "=", puntoDeVenta)
         .where("remito_numero", "=", numero)
         .where("estado", "=", "CONFIRMADA")
+        .where("nivel", "in", NIVELES_DE_RECEPCION_INMEDIATA)
         .executeTakeFirst();
       return fila === undefined ? null : aRecepcion(fila);
     },

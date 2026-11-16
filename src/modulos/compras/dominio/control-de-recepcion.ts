@@ -35,13 +35,16 @@ export type ErrorDeControl =
 
 export const LARGO_MAXIMO_DE_LA_OBSERVACION_DE_RECEPCION = 500;
 /** Por encima del cero absoluto y por debajo de mil grados: lo que cabe en `numeric(5,1)` y tiene sentido físico (`inspeccion_temperatura_ck`). */
+const esEnteroEntre = (valor: unknown, minimo: number, maximo: number): valor is number =>
+  Number.isInteger(valor) && (valor as number) >= minimo && (valor as number) <= maximo;
+const esCondicion = (valor: unknown): valor is CondicionDeLinea =>
+  (CONDICIONES_DE_LINEA as readonly unknown[]).includes(valor);
 const FORMA_DE_LA_TEMPERATURA = /^-?(?:0|[1-9][0-9]{0,2})(?:\.[0-9])?$/;
 
 function leerTemperatura(texto: string): string | null {
   if (!FORMA_DE_LA_TEMPERATURA.test(texto)) return null;
-  const grados = Number(texto);
-  // La forma ya acota a tres dígitos y un decimal: el único borde físico que queda es el cero absoluto (-273,15 °C).
-  if (grados <= -273.15) return null;
+  // La forma ya acota a tres dígitos y un decimal: el único borde físico que queda es el cero absoluto (-273,15 °C): el menor valor con un decimal que lo respeta es -273,1.
+  if (Number(texto) < -273.1) return null;
   // Forma canónica: sin «.0» de más y sin cero negativo (`5.0` y `5` son el mismo pedido).
   const sinDecimalVacio = texto.endsWith(".0") ? texto.slice(0, -2) : texto;
   return sinDecimalVacio === "-0" ? "0" : sinDecimalVacio;
@@ -54,21 +57,11 @@ export function leerControlDeLinea(valor: unknown): Resultado<ControlDeLinea, Er
   }
   const v = valor as Record<string, unknown>;
   const linea = v["linea"];
-  if (
-    typeof linea !== "number" ||
-    !Number.isInteger(linea) ||
-    linea < 1 ||
-    linea > MAXIMO_DE_RENGLONES_DE_UNA_COMPRA
-  ) {
+  if (!esEnteroEntre(linea, 1, MAXIMO_DE_RENGLONES_DE_UNA_COMPRA)) {
     return err("LINEA_NO_ENCONTRADA");
   }
   const condicion = v["condicion"];
-  if (
-    typeof condicion !== "string" ||
-    !(CONDICIONES_DE_LINEA as readonly string[]).includes(condicion)
-  ) {
-    return err("CONDICION_INVALIDA");
-  }
+  if (!esCondicion(condicion)) return err("CONDICION_INVALIDA");
   let cantidadSegunRemito: string | null = null;
   const remito = v["cantidadSegunRemito"];
   if (remito !== undefined && remito !== null) {
@@ -100,7 +93,7 @@ export function leerControlDeLinea(valor: unknown): Resultado<ControlDeLinea, Er
   return ok({
     linea,
     cantidadSegunRemito,
-    condicion: condicion as CondicionDeLinea,
+    condicion,
     observacion,
     temperaturaEnC,
   });

@@ -102,6 +102,26 @@ export const DECLARACIONES = {
       },
     },
   },
+  confirmarRecepcion: {
+    accion: "recepciones.confirmar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_RECEPCION_SEPARADA,
+        it: "I2: confirmar dos veces la misma recepción deja una entrada de stock y la segunda devuelve yaExistia sin escribir ni auditar",
+      },
+    },
+  },
+  anularRecepcionPendiente: {
+    accion: "recepciones.anular",
+    repeticion: {
+      regla: "RECHAZA_LA_REPETICION",
+      prueba: {
+        archivo: ARCHIVO_DE_RECEPCION_SEPARADA,
+        it: "I3: anular dos veces una pendiente: la segunda es RECEPCION_YA_ANULADA y no escribe; una confirmada no se anula por acá",
+      },
+    },
+  },
   registrarCompraConFactura: {
     accion: "comprobantes_de_proveedor.registrar",
     repeticion: {
