@@ -1,5 +1,6 @@
 import { expect } from "vitest";
 import type { Consulta } from "./paridad-apoyo";
+import { numeroUnico } from "./unicos";
 
 /**
  * Paridad por COMPORTAMIENTO (PR2b de la comprobación primitivas ↔ base): en vez de leer con regex el texto de `pg_get_constraintdef` (cuyo formato puede moverse entre versiones de Postgres), se
@@ -73,7 +74,7 @@ export async function aceptaLaBase(
       fijos[o.nombre],
       `${tabla}.${nombre} nombra también «${o.nombre}»: pasá su valor en «fijos»`,
     ).toBeDefined();
-  const temporal = `paridad_${Math.random().toString(36).slice(2, 10)}`;
+  const temporal = `paridad_${numeroUnico()}`;
   const definiciones = columnas.map((x) => `${entre(x.nombre)} ${x.tipo}`).join(", ");
   const nombres = columnas.map((x) => entre(x.nombre)).join(", ");
   const resultados: boolean[] = [];
