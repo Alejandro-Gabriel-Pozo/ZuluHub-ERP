@@ -6,13 +6,14 @@ import type { TxDeCaja } from "../casos-de-uso/contrato";
 import type { ErrorDeAnulacion } from "../dominio/anulacion";
 import type { ErrorDeImporte } from "../dominio/importes";
 import type { ErrorDeSesionParaCobrar } from "../dominio/cobrar";
+import type { TipoDeOrigenDeEgreso } from "../dominio/origen-de-movimiento";
 
 /**
  * El puerto de egreso de efectivo de caja para compras (E9 T10b, D-E9-7): al pagar una factura en efectivo, la plata sale de la caja abierta en la
  * MISMA transacción del pago. Corre en la transacción de quien llama y NO autoriza (el permiso es el de la acción de compras que paga); caja aplica sus
  * invariantes y su aislamiento por empresa. Nunca se expone al cliente. Como el cobro, solo corre en una transacción serializable.
  */
-export type OrigenDeEgreso = Readonly<{ tipo: "PAGO_A_PROVEEDOR"; id: string }>;
+export type OrigenDeEgreso = Readonly<{ tipo: TipoDeOrigenDeEgreso; id: string }>;
 
 export type EntradaDeEgresoPorOrigen = Readonly<{
   cajaId: string;
@@ -37,6 +38,7 @@ export type ErrorAlEgresar =
   | ErrorDeSesionParaCobrar
   | ErrorDeJornadaNoAbierta
   | "MOTIVO_INVALIDO"
+  | "ORIGEN_INVALIDO"
   | "CLAVE_REUTILIZADA"
   | "CAJA_NO_ENCONTRADA"
   | "CAJA_INACTIVA"
@@ -50,7 +52,7 @@ export type SalidaDeAnularEgresoPorOrigen = Readonly<{
   anulacionId: string | null;
 }>;
 
-export type ErrorAlAnularEgreso = ErrorDeAnulacion | "SIN_PERMISO";
+export type ErrorAlAnularEgreso = ErrorDeAnulacion | "ORIGEN_INVALIDO" | "SIN_PERMISO";
 
 export type CajaParaCompras = Readonly<{
   registrarEgresoEnTx(

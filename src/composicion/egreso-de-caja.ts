@@ -8,7 +8,13 @@ import type { CodigoDeEgresoDeCaja, EgresoDeCaja, TxDeCompras } from "../modulos
  * pago y el egreso son una sola transacción. Si por un defecto de armado no los trae, se aborta antes de escribir (nunca se paga sin descontar).
  * Los errores de caja se traducen a los códigos de compras; lo que caja no distingue para esta operación (importe o motivo mal formados) es `EGRESO_DE_CAJA_RECHAZADO`.
  */
-const PIEZAS_DE_CAJA = ["movimientos", "sesiones", "cajas", "mediosDePago", "cobros"] as const;
+export const PIEZAS_DE_CAJA = [
+  "movimientos",
+  "sesiones",
+  "cajas",
+  "mediosDePago",
+  "cobros",
+] as const;
 
 function comoTxDeCaja(tx: TxDeCompras): TxDeCaja {
   for (const pieza of PIEZAS_DE_CAJA) {

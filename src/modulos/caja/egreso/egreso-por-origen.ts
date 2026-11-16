@@ -10,29 +10,23 @@ import { decidirPorHuella } from "../dominio/huella";
 import { huellaDeAnulacion, huellaDeMovimientoManual } from "../dominio/idempotencia-de-operacion";
 import { sumarImportes } from "../dominio/importes";
 import { decidirMovimientoManual, egresoSuperaElEfectivo } from "../dominio/movimiento";
+import {
+  claveDeAnulacionDeOrigen,
+  claveDeEgresoDe,
+  origenDeEgresoValido,
+} from "../dominio/origen-de-movimiento";
 import type {
   EntradaDeAnularEgresoPorOrigen,
   EntradaDeEgresoPorOrigen,
   ErrorAlAnularEgreso,
   ErrorAlEgresar,
-  OrigenDeEgreso,
   SalidaDeAnularEgresoPorOrigen,
   SalidaDeEgresoPorOrigen,
 } from "./contrato";
 
-/** La clave del egreso de un origen: una por origen, así repetir el pago no saca la plata dos veces. */
-export function claveDeEgreso(origen: OrigenDeEgreso): string {
-  return `egreso_${origen.tipo.toLowerCase()}_${origen.id}`;
-}
-
-/** La clave de la anulación de ese egreso (otra clave: la tabla de movimientos tiene una sola clave única por empresa). */
-export function claveDeAnulacionDeEgreso(origen: OrigenDeEgreso): string {
-  return `anulacion_${claveDeEgreso(origen)}`;
-}
-
 /**
  * Saca UN egreso de efectivo de la caja abierta (E9 T10b) en la transacción del llamador y sin autorizar (el permiso es el de la acción de compras).
- * Orden: persona del contexto, serializable (como el cobro: el cierre de la caja detecta al egreso en vuelo), validación del importe y del motivo,
+ * Orden: persona del contexto, origen de la lista cerrada (`PAGO_A_PROVEEDOR`, `ENTREGA_A_RENDIR`; otro es `ORIGEN_INVALIDO`), serializable (como el cobro: el cierre de la caja detecta al egreso en vuelo), validación del importe y del motivo,
  * BÚSQUEDA POR CLAVE ANTES DE MIRAR LA SESIÓN (misma clave y misma huella: lo ya hecho con `yaExistia`; otra huella: `CLAVE_REUTILIZADA`), caja
  * activa de la sucursal, sesión `ABIERTA` (sin sesión o en cierre falla cerrado con su error tipado: se puede pagar por otro medio) y jornada abierta.
  * Inserta el movimiento `EGRESO_MANUAL` en el medio efectivo y su auditoría; un egreso que supera el efectivo esperado se PERMITE y deja
@@ -46,6 +40,7 @@ export async function registrarEgresoEnTx(
 ): Promise<Resultado<SalidaDeEgresoPorOrigen, ErrorAlEgresar>> {
   const { empresaId, ahora } = contexto;
   if (contexto.personaId === null) return err("SIN_PERMISO");
+  if (!origenDeEgresoValido(entrada.origen)) return err("ORIGEN_INVALIDO");
   if ((await tx.cobros.aislamientoDeLaTransaccion()) !== "serializable") {
     throw new Error("registrarEgresoEnTx solo corre en una transacción serializable");
   }
@@ -56,7 +51,7 @@ export async function registrarEgresoEnTx(
     motivo: entrada.motivo,
   });
   if (!movimiento.ok) return movimiento;
-  const clave = claveDeEgreso(entrada.origen);
+  const clave = claveDeEgresoDe(entrada.origen);
   const huella = huellaDeMovimientoManual({
     // La sesión todavía no se conoce (se busca por clave ANTES de mirarla): la huella lleva la caja, que es lo que pidió quien paga.
     sesionId: entrada.cajaId,
@@ -159,7 +154,9 @@ export async function anularEgresoEnTx(
   const { empresaId, ahora } = contexto;
   if (contexto.personaId === null) return err("SIN_PERMISO");
   const persona = contexto.personaId;
-  const original = await tx.movimientos.obtenerPorClave(empresaId, claveDeEgreso(entrada.origen));
+  if (!origenDeEgresoValido(entrada.origen)) return err("ORIGEN_INVALIDO");
+  const claveDelEgreso = claveDeEgresoDe(entrada.origen);
+  const original = await tx.movimientos.obtenerPorClave(empresaId, claveDelEgreso);
   if (original === null) return ok({ anulacionId: null });
   const movimiento = await tx.movimientos.obtener(empresaId, original.id);
   if (movimiento === null) throw new Error("invariante rota: un egreso sin su movimiento");
@@ -171,9 +168,9 @@ export async function anularEgresoEnTx(
     motivo: entrada.motivo,
   });
   if (!espejo.ok) return espejo;
-  const clave = claveDeAnulacionDeEgreso(entrada.origen);
+  const clave = claveDeAnulacionDeOrigen(claveDelEgreso);
   const huella = huellaDeAnulacion({ movimientoId: movimiento.id, motivo: espejo.valor.motivo });
-  const anulacionId = await tx.movimientos.insertar({
+  const anulacionId = await tx.movimientos.insertarSiNoExiste({
     empresa: empresaId,
     sesionId: movimiento.sesionId,
     clase: espejo.valor.clase,
@@ -188,6 +185,8 @@ export async function anularEgresoEnTx(
     claveDeIdempotencia: clave,
     huella,
   });
+  // Otra anulación del mismo movimiento se adelantó (y esta transacción lo ve recién ahora): es una repetición, no un error de base.
+  if (anulacionId === null) return err("MOVIMIENTO_YA_ANULADO");
   await dejarConstancia(tx, contexto, persona, {
     accion: "MOVIMIENTO_ANULADO",
     entidad: "movimiento_caja",

@@ -294,6 +294,23 @@ export type {
   SalidaDeAnularEgresoPorOrigen,
   SalidaDeEgresoPorOrigen,
 } from "./egreso/contrato";
+export { cajaParaIngresos } from "./ingreso/caja-para-ingresos";
+export type {
+  CajaParaIngresos,
+  EntradaDeAnularIngresoPorOrigen,
+  EntradaDeIngresoPorOrigen,
+  ErrorAlAnularIngreso,
+  ErrorAlIngresar,
+  OrigenDeIngreso,
+  SalidaDeAnularIngresoPorOrigen,
+  SalidaDeIngresoPorOrigen,
+} from "./ingreso/contrato";
+export {
+  ORIGENES_DE_EGRESO,
+  ORIGENES_DE_INGRESO,
+  type TipoDeOrigenDeEgreso,
+  type TipoDeOrigenDeIngreso,
+} from "./dominio/origen-de-movimiento";
 export { traducirErroresDelCobro } from "./cobrar/traducir-errores-del-cobro";
 export type {
   CajaParaVentas,

@@ -2,6 +2,7 @@ import { importeATexto, type Importe } from "../../../primitivas/dinero/importe"
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import { huellaDeCampos } from "./huella";
+import { esClaveReservada } from "./origen-de-movimiento";
 
 /**
  * La clave y la huella de las operaciones de caja que mandan clave de idempotencia (abrir sesión, ingreso o egreso, ajuste y anulación;
@@ -17,9 +18,12 @@ const FORMA_DE_CLAVE = /^[A-Za-z0-9_-]{16,128}$/;
 
 export type ErrorDeClave = "CLAVE_DE_IDEMPOTENCIA_INVALIDA";
 
-/** Lo que llega de la pantalla puede ser cualquier cosa: solo un texto con la forma de la base es una clave. */
+/**
+ * Lo que llega de la pantalla puede ser cualquier cosa: solo un texto con la forma de la base es una clave. Las que empiezan como una clave derivada de un
+ * origen (`egreso_`, `ingreso_`, `anulacion_`; `origen-de-movimiento.ts`) son de caja y no se aceptan de afuera.
+ */
 export function exigirClave(clave: unknown): Resultado<string, ErrorDeClave> {
-  return typeof clave === "string" && FORMA_DE_CLAVE.test(clave)
+  return typeof clave === "string" && FORMA_DE_CLAVE.test(clave) && !esClaveReservada(clave)
     ? ok(clave)
     : err("CLAVE_DE_IDEMPOTENCIA_INVALIDA");
 }
