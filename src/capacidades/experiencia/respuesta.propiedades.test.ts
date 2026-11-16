@@ -2,6 +2,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import "../../../test/propiedades/configuracion";
 import { PARAMETROS_DE_CATALOGO } from "./respuesta-de-catalogo";
+import { PARAMETROS_DE_SALON } from "./respuesta-de-salon";
 import {
   CODIGOS_PUBLICOS,
   clasificarError,
@@ -74,7 +75,10 @@ describe("propiedades del traductor de respuestas", () => {
           expect(codigos).toContain(publico.codigo);
           // Un código que exige parámetros (`PARAMETROS_DE_CATALOGO`) sin ellos válidos cierra con el genérico; con `{ ...extra, codigo }` aquí no los hay.
           expect(publico.codigo).toBe(
-            Object.hasOwn(PARAMETROS_DE_CATALOGO, codigo) ? "CATALOGO_ACCION_NO_PERMITIDA" : codigo,
+            Object.hasOwn(PARAMETROS_DE_CATALOGO, codigo) ||
+              Object.hasOwn(PARAMETROS_DE_SALON, codigo)
+              ? "CATALOGO_ACCION_NO_PERMITIDA"
+              : codigo,
           );
           const claves = Object.keys(publico);
           for (const k of claves) expect(["codigo", "clave", "presentacion", "campo"]).toContain(k);

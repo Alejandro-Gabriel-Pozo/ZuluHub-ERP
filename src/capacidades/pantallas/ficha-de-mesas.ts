@@ -42,7 +42,7 @@ const MAQUETA_APROBADA: FuenteDeTexto = {
   decidio:
     "el dueño, 09/11/2026 (aprobó la maqueta `mesas.html`; Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md, D115: 302 textos)",
   donde:
-    "Pedernal-docs 10-ux-ui/prototipos-gastronomia/mesas.html (tabla «Textos nuevos») y e7-salon-e-impresion-especificacion.md §10, fila «Mesas (administración)»",
+    "Pedernal-docs 10-ux-ui, maqueta mesas.html (tabla «Textos nuevos») y e7-salon-e-impresion-especificacion.md §10, fila «Mesas (administración)»",
 };
 const USO_DEL_FORMULARIO = "FormularioDeMesa.cliente.tsx";
 const USO_DE_LA_LISTA = "modelo-de-mesas.ts (lista)";
@@ -116,7 +116,7 @@ export const FICHA_DE_MESAS = {
       fuente: {
         decidio:
           "el dueño, 09/11/2026 (maqueta `mesas.html`, rótulo de cada tarjeta; el mismo «Mesa 5» del papel de la comanda)",
-        donde: "Pedernal-docs 10-ux-ui/prototipos-gastronomia/mesas.html, función `vLista`",
+        donde: "Pedernal-docs 10-ux-ui, maqueta mesas.html, función `vLista`",
       },
     },
     "salon.texto.admin_numero": { usos: [USO_DEL_FORMULARIO], fuente: MAQUETA_APROBADA },
@@ -175,15 +175,14 @@ export const FICHA_DE_MESAS = {
       fuente: {
         decidio:
           "el dueño, 09/11/2026 (maqueta `mesas.html`: «Se superpone con la mesa» seguido del número de la mesa que se pisa)",
-        donde: "Pedernal-docs 10-ux-ui/prototipos-gastronomia/mesas.html, función `validar`",
+        donde: "Pedernal-docs 10-ux-ui, maqueta mesas.html, función `validar`",
       },
     },
     "salon.texto.grupo_salon": {
       usos: ["grupo «Salón» del menú (área Ventas)"],
       fuente: {
         decidio: "el dueño, 13/11/2026 (nombres de grupos del menú por áreas aprobados)",
-        donde:
-          "Pedernal-docs 10-ux-ui/prototipos-gastronomia/menu-por-areas.html, texto `p.salon` (ap: true)",
+        donde: "Pedernal-docs 10-ux-ui, maqueta menu-por-areas.html, texto `p.salon` (ap: true)",
       },
     },
   },

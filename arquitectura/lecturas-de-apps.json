@@ -1,4 +1,8 @@
 {
+  "test/web/ficha-de-mesas.test.ts": [
+    "apps/web/app/s/app/(operacion)/salon/mesas/**",
+    "apps/web/ui/plantillas/salon/*"
+  ],
   "test/web/contraste-de-superficies.test.ts": ["apps/web/ui/tokens.css"],
   "test/web/legibilidad-de-la-app.test.ts": ["apps/web/**"],
   "src/adaptadores/pdf/medidas-del-papel.test.ts": ["apps/web/ui/**/*.css"],
