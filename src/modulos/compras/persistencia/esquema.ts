@@ -93,7 +93,29 @@ export type ComprasDb = {
     anulada_por: string | null;
     anulada_en: Date | null;
     motivo_de_anulacion: string | null;
+    /** Solo N3 y N4 (0063): quién confirmó la recepción pendiente; la hora la fija la base. */
+    confirmada_por: string | null;
+    confirmada_en: DeLaBase<Date | null>;
     version: Generated<number>;
+  };
+  inspeccion_de_linea_de_recepcion: {
+    empresa_id: string;
+    recepcion_id: string;
+    linea: number;
+    cantidad_segun_remito: string | null;
+    condicion: string;
+    observacion: string | null;
+    temperatura_en_c: string | null;
+    registrado_en: DeLaBase<Date>;
+  };
+  entrada_de_linea_de_recepcion: {
+    empresa_id: string;
+    recepcion_id: string;
+    linea: number;
+    deposito_id: string;
+    movimiento_id: string;
+    cantidad: string;
+    registrado_en: DeLaBase<Date>;
   };
   linea_de_recepcion: {
     empresa_id: string;

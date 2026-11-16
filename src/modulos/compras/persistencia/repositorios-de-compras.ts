@@ -28,6 +28,10 @@ import {
   type RepositorioDeRecepciones,
 } from "./repositorio-de-recepciones";
 import {
+  crearRepositorioDeRecepcionesSeparadas,
+  type RepositorioDeRecepcionesSeparadas,
+} from "./repositorio-de-recepciones-separadas";
+import {
   crearRepositorioDeCorrecciones,
   type RepositorioDeCorrecciones,
 } from "./repositorio-de-correcciones";
@@ -42,6 +46,7 @@ export type RepositoriosDeCompras = Readonly<{
   ofertasDeProveedor: RepositorioDeOfertas;
   configuracionDeCompras: RepositorioDeConfiguracionDeCompras;
   recepciones: RepositorioDeRecepciones;
+  recepcionesSeparadas: RepositorioDeRecepcionesSeparadas;
   lecturasDeCompras: RepositorioDeLecturasDeCompras;
   comprobantesDeProveedor: RepositorioDeComprobantes;
   detalleDeComprobantes: RepositorioDeDetalleDeComprobantes;
@@ -60,6 +65,7 @@ export function crearRepositoriosDeCompras(db: {
     ofertasDeProveedor: crearRepositorioDeOfertas(conexion),
     configuracionDeCompras: crearRepositorioDeConfiguracionDeCompras(conexion),
     recepciones: crearRepositorioDeRecepciones(conexion),
+    recepcionesSeparadas: crearRepositorioDeRecepcionesSeparadas(conexion),
     lecturasDeCompras: crearRepositorioDeLecturasDeCompras(conexion),
     comprobantesDeProveedor: crearRepositorioDeComprobantes(conexion),
     detalleDeComprobantes: crearRepositorioDeDetalleDeComprobantes(conexion),

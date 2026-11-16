@@ -69,7 +69,9 @@ export function crearRepositorioDeLecturasDeCompras(
       let consulta = db
         .selectFrom("recepcion")
         .select([...COLUMNAS_DE_RECEPCION, ESTADO_DEL_COMPROBANTE])
-        .where("empresa_id", "=", empresa);
+        .where("empresa_id", "=", empresa)
+        // Una recepción PENDIENTE (N3) no es una compra de este listado: la lee el listado de N3.
+        .where("estado", "<>", "PENDIENTE");
       if (filtro.sucursales !== "TODAS") {
         consulta = consulta.where("sucursal_id", "in", [...filtro.sucursales]);
       }

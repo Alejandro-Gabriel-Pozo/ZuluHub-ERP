@@ -4,6 +4,7 @@ const ARCHIVO_DE_FICHA = "test/integracion/compras-ficha.test.ts";
 const ARCHIVO_DE_FACTURA = "test/integracion/compras-factura.test.ts";
 const ARCHIVO_DE_PAGOS = "test/integracion/compras-pagos.test.ts";
 const ARCHIVO_DE_RECEPCION = "test/integracion/compras-recepcion.test.ts";
+const ARCHIVO_DE_RECEPCION_SEPARADA = "test/integracion/compras-n3-recepcion.test.ts";
 
 /**
  * Los casos de uso de compras (E9 §3.2 a §3.6) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar (ADR-015 §4) y la
@@ -88,6 +89,16 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_RECEPCION,
         it: "I1: la misma compra dos veces (misma clave) deja una compra y una entrada de stock y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
+      },
+    },
+  },
+  registrarRecepcion: {
+    accion: "recepciones.registrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_RECEPCION_SEPARADA,
+        it: "I1: la misma recepción dos veces (misma clave) deja una sola pendiente y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
       },
     },
   },

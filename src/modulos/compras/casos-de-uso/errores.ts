@@ -6,6 +6,7 @@ import type { ErrorDeClientes } from "../../clientes/publico";
 import type { ErrorDeStock } from "../../stock/publico";
 import type { ErrorDeComprobante } from "../dominio/comprobante";
 import type { ErrorDeFactura } from "../dominio/factura";
+import type { ErrorDeControl } from "../dominio/control-de-recepcion";
 import type { ErrorDeCorreccion } from "../dominio/correccion";
 import type { ErrorDePago, ErrorDeSalidaDeCaja } from "../dominio/pago";
 import type { ErrorDeLinea } from "../dominio/calcular-linea";
@@ -68,6 +69,7 @@ export const CODIGOS_DE_ERROR_DE_COMPRAS = [
   "CONCILIACION_YA_ANULADA",
   "CANTIDAD_ASIGNADA_EXCEDE_LO_RECIBIDO",
   "CANTIDAD_ASIGNADA_EXCEDE_LO_FACTURADO",
+  "RECEPCION_SEPARADA_NO_CORRESPONDE_AL_NIVEL",
 ] as const;
 export type CodigoDeErrorDeCompras = (typeof CODIGOS_DE_ERROR_DE_COMPRAS)[number];
 
@@ -83,6 +85,7 @@ export type ErrorDeCompras =
   | ErrorDePago
   | ErrorDeSalidaDeCaja
   | ErrorDeCorreccion
+  | ErrorDeControl
   | ErrorDeStock
   | ErrorDeClientes
   /** El remito ya está cargado: `recepcionId` es la ganadora (`null` solo si lo dijo la base, que no sabe con quién choca). */
