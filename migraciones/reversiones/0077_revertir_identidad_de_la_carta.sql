@@ -35,4 +35,12 @@ ALTER TABLE carta_publica
   DROP COLUMN IF EXISTS color_propio, DROP COLUMN IF EXISTS cara, DROP COLUMN IF EXISTS modelo;
 DROP FUNCTION IF EXISTS imagen_externa_valida(text, text, text, text, text);
 DROP FUNCTION IF EXISTS color_de_carta_valido(text);
-DELETE FROM migracion WHERE nombre = '0077_identidad_de_la_carta';   -- † ídem
+-- Sin esta fila, la migración figuraría aplicada y el ejecutor no volvería a correrla. El registro guarda el nombre del archivo CON «.sql» (corrección aprobada
+-- por el orquestador por delegación; el SQL original borraba '0077_identidad_de_la_carta' y no encontraba la fila).
+DO $$
+BEGIN
+  IF to_regclass('public.migracion') IS NOT NULL THEN
+    DELETE FROM public.migracion WHERE nombre = '0077_identidad_de_la_carta.sql';
+  END IF;
+END
+$$;

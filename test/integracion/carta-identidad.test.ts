@@ -9,6 +9,7 @@ import {
 } from "../../src/capacidades/activos/direccion-externa";
 import { CARAS_DE_VIDRIERA } from "../../src/capacidades/experiencia/vidriera/caras";
 import { CATALOGO_DE_MODELOS_DE_VIDRIERA } from "../../src/capacidades/experiencia/vidriera/modelos";
+import { CATALOGO_DE_PERILLAS } from "../../src/capacidades/planes/perillas";
 import { COLOR_HEXADECIMAL } from "../../src/primitivas/color/color-hexadecimal";
 import { deLaMarca } from "../utilidades/alcance-del-host";
 import { cartaDeBase } from "./carta-publica-apoyo";
@@ -29,6 +30,8 @@ const REVERSION = join(
   import.meta.dirname,
   "../../migraciones/reversiones/0077_revertir_identidad_de_la_carta.sql",
 );
+
+const MIGRACION = join(import.meta.dirname, "../../migraciones/0077_identidad_de_la_carta.sql");
 
 const LOGO = {
   proveedor: "CLOUDINARY",
@@ -365,6 +368,21 @@ describe.skipIf(base === null)("identidad de la carta (0077)", () => {
       expect((await fila(pedido.id))?.modelo).toBe("LISTA");
     });
 
+    // Se activa sola cuando la rama del Libro declare `vidriera_modelo_libro` en el catálogo de perillas (dependencia de integración).
+    it.skipIf(!Object.hasOwn(CATALOGO_DE_PERILLAS, "vidriera_modelo_libro"))(
+      "con la perilla `vidriera_modelo_libro` declarada y apagada, LIBRO es FUNCION_NO_INCLUIDA; volver a LISTA se acepta",
+      async () => {
+        const e = await c.escenario();
+        expect(await c.casos.guardarCartaPublica(e.gerente, nueva(e, { modelo: "LIBRO" }))).toEqual(
+          {
+            ok: false,
+            error: { codigo: "FUNCION_NO_INCLUIDA", perilla: "vidriera_modelo_libro" },
+          },
+        );
+        valorDe(await c.casos.guardarCartaPublica(e.gerente, nueva(e, { modelo: "LISTA" })));
+      },
+    );
+
     it("sin permiso `vidrieras.editar` no se guarda nada; y la carta de otra empresa no se toca por su id (aislamiento)", async () => {
       const e = await c.escenario();
       const pedido = nueva(e, { cara: "NOCHE" });
@@ -533,8 +551,17 @@ describe.skipIf(base === null)("identidad de la carta (0077)", () => {
         await expect(correr()).rejects.toMatchObject({ code: "55000" });
         expect(await existe("identidad_de_carta_empresa")).toBe(true);
         // Confirmada la pérdida: se aplica (la tabla y las columnas se van), y repetirla no cambia nada.
+        const registrada = async () =>
+          (
+            await cl.query(
+              "select 1 from migracion where nombre = '0077_identidad_de_la_carta.sql'",
+            )
+          ).rowCount;
+        expect(await registrada()).toBe(1);
         await correr(true);
         await correr();
+        // El registro de migraciones queda sin la fila: el ejecutor volvería a correrla.
+        expect(await registrada()).toBe(0);
         expect(await existe("identidad_de_carta_empresa")).toBe(false);
         expect(await columnas()).toBe(0);
         expect(
@@ -544,6 +571,15 @@ describe.skipIf(base === null)("identidad de la carta (0077)", () => {
             )
           ).rows[0]?.f,
         ).toBeNull();
+        // Re-aplicar 0077 sobre la base revertida funciona, y aplicarla dos veces seguidas no cambia nada (idempotente).
+        const aplicar = await readFile(MIGRACION, "utf8");
+        for (let vez = 0; vez < 2; vez++) {
+          await cl.query("begin");
+          await cl.query(aplicar);
+          await cl.query("commit");
+        }
+        expect(await columnas()).toBe(4);
+        expect(await existe("identidad_de_carta_empresa")).toBe(true);
         // La carta sigue ahí, intacta.
         expect((await cl.query("select 1 from carta_publica where id = $1", [id])).rowCount).toBe(
           1,
