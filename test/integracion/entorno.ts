@@ -139,7 +139,7 @@ import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
 import { ADMIN_DE_PRUEBA, sembrarAdminsDePrueba } from "./admins-de-prueba";
 import { sembrarMarcaPrincipalDePrueba } from "./marcas-de-prueba";
 import type { BaseDePruebas } from "./global";
-import { OPCIONES_DE_BASE } from "./opciones-de-base";
+import { OPCIONES_DE_BASE, fijarLaZonaDeLaBase } from "./opciones-de-base";
 
 /**
  * Armado común de las pruebas de integración. Lo que recibe un trabajo de prueba es lo que
@@ -436,6 +436,7 @@ export async function crearBaseAparte(
   const admin = new pg.Client({ connectionString: base.admin });
   await admin.connect();
   await admin.query(`CREATE DATABASE ${nombre} ${OPCIONES_DE_BASE}`);
+  await fijarLaZonaDeLaBase(admin, nombre);
   const conBase = (url: string) => {
     const u = new URL(url);
     u.pathname = `/${nombre}`;
