@@ -5,6 +5,7 @@ const ARCHIVO_DE_FACTURA = "test/integracion/compras-factura.test.ts";
 const ARCHIVO_DE_PAGOS = "test/integracion/compras-pagos.test.ts";
 const ARCHIVO_DE_RECEPCION = "test/integracion/compras-recepcion.test.ts";
 const ARCHIVO_DE_RECEPCION_SEPARADA = "test/integracion/compras-n3-recepcion.test.ts";
+const ARCHIVO_DE_CONCILIACION_SEPARADA = "test/integracion/compras-n3-conciliacion.test.ts";
 
 /**
  * Los casos de uso de compras (E9 §3.2 a §3.6) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar (ADR-015 §4) y la
@@ -119,6 +120,36 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_RECEPCION_SEPARADA,
         it: "I3: anular dos veces una pendiente: la segunda es RECEPCION_YA_ANULADA y no escribe; una confirmada no se anula por acá; una anulada no se confirma",
+      },
+    },
+  },
+  registrarFactura: {
+    accion: "comprobantes_de_proveedor.registrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_CONCILIACION_SEPARADA,
+        it: "I1: la misma factura dos veces (misma clave) deja un solo comprobante y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA; la misma factura con otra clave, COMPROBANTE_YA_REGISTRADO",
+      },
+    },
+  },
+  conciliarFactura: {
+    accion: "conciliaciones.conciliar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_CONCILIACION_SEPARADA,
+        it: "I2: la misma conciliación dos veces (misma clave) deja una sola y devuelve yaExistia; con otras asignaciones, CLAVE_REUTILIZADA",
+      },
+    },
+  },
+  anularConciliacion: {
+    accion: "conciliaciones.anular",
+    repeticion: {
+      regla: "RECHAZA_LA_REPETICION",
+      prueba: {
+        archivo: ARCHIVO_DE_CONCILIACION_SEPARADA,
+        it: "I3: anular dos veces una conciliación deja un solo espejo y la segunda es CONCILIACION_YA_ANULADA; las líneas recuperan su saldo",
       },
     },
   },

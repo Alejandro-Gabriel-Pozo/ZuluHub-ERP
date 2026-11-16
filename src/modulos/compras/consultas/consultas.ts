@@ -1,6 +1,7 @@
 import type { DependenciasDeConsultasDeCompras } from "../casos-de-uso/contrato";
 import { crearLector } from "./comun";
 import { armarConsultasDeCompras } from "./compras";
+import { armarConsultasDeConciliacion } from "./conciliacion";
 import { armarConsultasDeFicha } from "./ficha";
 
 /**
@@ -9,7 +10,11 @@ import { armarConsultasDeFicha } from "./ficha";
  */
 export function crearConsultasDeCompras(d: DependenciasDeConsultasDeCompras) {
   const leer = crearLector(d);
-  return { ...armarConsultasDeFicha(leer), ...armarConsultasDeCompras(leer) };
+  return {
+    ...armarConsultasDeFicha(leer),
+    ...armarConsultasDeCompras(leer),
+    ...armarConsultasDeConciliacion(leer),
+  };
 }
 
 export type ConsultasDeCompras = ReturnType<typeof crearConsultasDeCompras>;

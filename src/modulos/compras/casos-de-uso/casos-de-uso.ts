@@ -2,6 +2,8 @@ import { armarAnularCompra } from "./anular-compra";
 import { armarCorregirCompra } from "./correcciones";
 import { armarAnularPago, armarDeclararPago } from "./pagos";
 import { armarConfigurarCompras } from "./configuracion";
+import { armarAnularConciliacion, armarConciliarFactura } from "./conciliar-factura";
+import { armarRegistrarFactura } from "./registrar-factura";
 import { armarAnularRecepcionPendiente, armarConfirmarRecepcion } from "./confirmar-recepcion";
 import { armarRegistrarRecepcion } from "./registrar-recepcion";
 import { armarRegistrarCompra, armarRegistrarCompraConFactura } from "./registrar-compra";
@@ -35,6 +37,9 @@ export function crearCasosDeUsoDeCompras(dependencias: DependenciasDeCompras) {
     registrarRecepcion: armarRegistrarRecepcion(dependencias),
     confirmarRecepcion: armarConfirmarRecepcion(dependencias),
     anularRecepcionPendiente: armarAnularRecepcionPendiente(dependencias),
+    registrarFactura: armarRegistrarFactura(dependencias),
+    conciliarFactura: armarConciliarFactura(dependencias),
+    anularConciliacion: armarAnularConciliacion(dependencias),
     anularCompra: armarAnularCompra(dependencias),
     configurarCompras: armarConfigurarCompras(dependencias),
     declararPago: armarDeclararPago(dependencias),

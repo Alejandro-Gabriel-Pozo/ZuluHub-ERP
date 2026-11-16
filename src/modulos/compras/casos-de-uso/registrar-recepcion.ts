@@ -1,5 +1,3 @@
-import { exigirPerilla } from "../../../capacidades/planes/derechos";
-import type { ClavePerilla } from "../../../capacidades/planes/perillas";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { sucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
@@ -7,8 +5,6 @@ import { crearDirectorioDePartes } from "../../clientes/publico";
 import { leerControles } from "../dominio/control-de-recepcion";
 import { decidirPorHuella } from "../dominio/huella";
 import { esUuid } from "../dominio/identificadores";
-import { PERILLA_DEL_NIVEL } from "../dominio/niveles";
-import { esNivelDeRecepcionSeparada, huellaDeLaRecepcion } from "../dominio/recepcion-separada";
 import { leerRemito, leerRenglonesDeCompra, type Remito } from "../dominio/registrar-compra";
 import type { LineaDeRecepcion } from "../persistencia/repositorio-de-recepciones";
 import { autorizar, exigirAlcanceDeSucursal, traducir } from "./comun";
@@ -16,6 +12,8 @@ import type { DependenciasDeCompras, TxDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
 import { calcularRenglones, leerHechoEn } from "./registrar-compra-apoyo";
 import type { EntradaDeRegistrarCompra } from "./registrar-compra-tipos";
+import { exigirNivelSeparado } from "./nivel-separado";
+import { huellaDeLaRecepcion } from "../dominio/recepcion-separada";
 
 type R<S> = Resultado<S, ErrorDeCompras>;
 
@@ -93,18 +91,8 @@ export function armarRegistrarRecepcion(dependencias: DependenciasDeCompras) {
           if (!fila.activa) return err("SUCURSAL_INACTIVA");
 
           // El nivel y la perilla: solo N3 y N4, y solo si el plan los incluye (bajar de plan no toca lo cargado, pero no se carga más).
-          const configuracion = await tx.configuracionDeCompras.leer(empresaId);
-          if (!esNivelDeRecepcionSeparada(configuracion.nivel)) {
-            return err("RECEPCION_SEPARADA_NO_CORRESPONDE_AL_NIVEL");
-          }
-          const perilla = PERILLA_DEL_NIVEL[configuracion.nivel];
-          if (perilla === null)
-            throw new Error("el nivel de recepción separada siempre tiene perilla");
-          const derechos = await tx.derechos.deLaEmpresa(contexto);
-          const incluida = exigirPerilla(derechos, perilla as ClavePerilla, { empresaId });
-          if (!incluida.ok) {
-            return err({ error: "FUNCION_NO_INCLUIDA", perilla: incluida.error.perilla });
-          }
+          const nivel = await exigirNivelSeparado(tx, contexto);
+          if (!nivel.ok) return nivel;
 
           // Repetición: por la clave (el mismo gesto) y por el remito (el primer hecho manda, aunque cambie la clave).
           const repetida = await repeticion(
@@ -132,7 +120,7 @@ export function armarRegistrarRecepcion(dependencias: DependenciasDeCompras) {
             estado: "PENDIENTE",
             sucursalId: sucursal,
             proveedorId: proveedor.valor.id,
-            nivel: configuracion.nivel,
+            nivel: nivel.valor,
             esAtajo: false,
             remito,
             hechoEn,
@@ -183,7 +171,7 @@ export function armarRegistrarRecepcion(dependencias: DependenciasDeCompras) {
             despues: {
               proveedorId: proveedor.valor.id,
               sucursalId: entrada.sucursalId,
-              nivel: configuracion.nivel,
+              nivel: nivel.valor,
               estado: "PENDIENTE",
               renglones: lineas.length,
               controles: controles.valor.length,

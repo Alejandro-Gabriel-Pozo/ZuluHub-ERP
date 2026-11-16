@@ -25,6 +25,14 @@ export type RecepcionSeparada = Omit<Recepcion, "estado"> &
  * Las recepciones de N3 y N4 (E9 §3.8): lo mismo que las de N1 y N2 pero viendo también las PENDIENTES, más el control de la mercadería por línea. Las lecturas son de
  * la misma tabla; N1 y N2 no pasan por acá.
  */
+export type LineaConciliable = Readonly<{
+  recepcionId: string;
+  linea: number;
+  productoId: string;
+  recibida: string;
+  asignada: string;
+}>;
+
 export type EntradaDeLinea = Readonly<{
   linea: number;
   depositoId: string;
@@ -52,6 +60,11 @@ export interface RepositorioDeRecepcionesSeparadas {
     controles: readonly ControlDeLinea[],
   ): Promise<void>;
   controlesDe(empresa: EmpresaId, recepcionId: string): Promise<readonly ControlDeLinea[]>;
+  /**
+   * Las líneas recibidas de ese proveedor que se pueden conciliar: de recepciones CONFIRMADAS de N3 o N4, sin las que el control dejó RECHAZADAS, la más vieja primero
+   * (por número de recepción y línea), con lo recibido y lo ya asignado.
+   */
+  lineasConciliables(empresa: EmpresaId, proveedorId: string): Promise<readonly LineaConciliable[]>;
   /** PENDIENTE → CONFIRMADA con quién la confirmó (la hora la fija la base). `false` si ya no estaba PENDIENTE. */
   confirmar(empresa: EmpresaId, id: string, por: PersonaId): Promise<boolean>;
   /** PENDIENTE → ANULADA con su motivo. `false` si ya no estaba PENDIENTE. */
@@ -121,6 +134,45 @@ export function crearRepositorioDeRecepcionesSeparadas(
     return fila === undefined ? null : aRecepcionSeparada(fila);
   }
   return {
+    async lineasConciliables(empresa, proveedorId) {
+      if (!esUuid(proveedorId)) return [];
+      const filas = await db
+        .selectFrom("recepcion as r")
+        .innerJoin("linea_de_recepcion as l", (j) =>
+          j.onRef("l.empresa_id", "=", "r.empresa_id").onRef("l.recepcion_id", "=", "r.id"),
+        )
+        .innerJoin("saldo_de_linea_de_recepcion as s", (j) =>
+          j
+            .onRef("s.empresa_id", "=", "l.empresa_id")
+            .onRef("s.recepcion_id", "=", "l.recepcion_id")
+            .onRef("s.numero", "=", "l.numero"),
+        )
+        .select([
+          "r.id as recepcion_id",
+          "l.numero as linea",
+          "l.producto_id",
+          sql<string>`s.cantidad_recibida::text`.as("recibida"),
+          sql<string>`s.cantidad_asignada::text`.as("asignada"),
+        ])
+        .where("r.empresa_id", "=", empresa)
+        .where("r.proveedor_id", "=", proveedorId)
+        .where("r.estado", "=", "CONFIRMADA")
+        .where("r.nivel", "in", ["RECEPCION_SEPARADA", "TRES_VIAS"])
+        .where(
+          sql<boolean>`not exists (select 1 from inspeccion_de_linea_de_recepcion i
+            where i.empresa_id = l.empresa_id and i.recepcion_id = l.recepcion_id and i.linea = l.numero and i.condicion = 'RECHAZADA')`,
+        )
+        .orderBy("r.numero")
+        .orderBy("l.numero")
+        .execute();
+      return filas.map((f) => ({
+        recepcionId: f.recepcion_id,
+        linea: f.linea,
+        productoId: f.producto_id,
+        recibida: f.recibida,
+        asignada: f.asignada,
+      }));
+    },
     async confirmar(empresa, id, por) {
       const fila = await db
         .updateTable("recepcion")
