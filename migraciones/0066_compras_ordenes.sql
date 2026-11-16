@@ -18,9 +18,11 @@
 --  O2. Transiciones: BORRADOR → PEDIDA | ANULADA; PEDIDA → CERRADA | ANULADA. Nada más (CERRADA y ANULADA son finales). En BORRADOR se edita la cabecera y las líneas; desde PEDIDA la
 --      orden y sus líneas son inmutables. Pedir asigna el número (max+1 de la empresa bajo un candado por empresa: dos pedidos a la vez no repiten número) y el momento; cerrar fija
 --      el motivo calculado por la base (COMPLETA si todas las líneas llegaron a lo pedido, CON_SALDO si no); anular exige motivo y falla si la orden tiene recepciones vigentes.
---  O3. El saldo de cada línea nace al pedir y SOLO lo mueve un disparador anidado. Recibir contra la orden suma lo recibido con UN UPDATE condicionado (el tope viaja en el WHERE):
---      con el control `compras.recepcion_excede_la_orden` en BLOQUEAR —o en AVISAR sin `confirmo_exceso`— lo recibido no supera lo pedido; sin fila en `nivel_de_control` = PERMITIR.
---      Anular la recepción devuelve lo recibido a la orden. Se recibe solo contra una orden PEDIDA, del mismo proveedor, del mismo producto y cuya línea no se retiró.
+--  O3. El saldo de cada línea nace al pedir y SOLO lo mueve un disparador anidado. Registrar una recepción contra la orden crea el vínculo y lo VALIDA (orden PEDIDA, mismo proveedor,
+--      mismo producto, línea no retirada, y un aviso temprano si ya se pasa del tope); lo recibido se SUMA al saldo recién al CONFIRMAR la recepción (decisión del dueño, 16/11/2026: una
+--      línea que el control dejó RECHAZADA no cuenta como recibida contra la orden). La suma es UN UPDATE condicionado (el tope viaja en el WHERE): con el control
+--      `compras.recepcion_excede_la_orden` en BLOQUEAR —o en AVISAR sin `confirmo_exceso`— lo recibido no supera lo pedido; sin fila en `nivel_de_control` = PERMITIR. Anular una
+--      recepción ya confirmada devuelve lo sumado; anular una pendiente no devuelve nada (nunca sumó). Una orden con recepciones PENDIENTES no se cierra ni se anula.
 
 DO $$
 DECLARE
@@ -175,6 +177,10 @@ BEGIN
     PERFORM pg_advisory_xact_lock(hashtextextended('orden_de_compra:' || NEW.empresa_id::text, 0));
     SELECT coalesce(max(o.numero), 0) + 1 INTO NEW.numero FROM public.orden_de_compra o WHERE o.empresa_id = NEW.empresa_id;
   ELSIF NEW.estado = 'CERRADA' THEN
+    IF EXISTS (SELECT 1 FROM public.linea_de_recepcion_de_orden v JOIN public.recepcion r ON r.id = v.recepcion_id AND r.empresa_id = v.empresa_id
+                WHERE v.orden_id = NEW.id AND v.empresa_id = NEW.empresa_id AND r.estado = 'PENDIENTE') THEN
+      RAISE EXCEPTION 'la orden tiene recepciones pendientes de confirmar' USING ERRCODE = '23514', CONSTRAINT = 'orden_con_recepciones_pendientes';
+    END IF;
     NEW.cerrada_en := now();
     SELECT count(*) INTO v_incompletas FROM public.saldo_de_linea_de_orden s
      WHERE s.orden_id = NEW.id AND s.empresa_id = NEW.empresa_id AND s.cantidad_recibida < s.cantidad_pedida;
@@ -238,9 +244,9 @@ END
 $$;
 CREATE TRIGGER saldo_de_orden_solo_por_disparadores BEFORE INSERT OR UPDATE ON saldo_de_linea_de_orden FOR EACH ROW EXECUTE FUNCTION compras_saldo_de_orden_solo_por_disparadores();
 
--- Recibir contra una orden: PEDIDA (se bloquea contra una anulación o un cierre simultáneos), mismo proveedor, mismo producto y línea no retirada. Lo recibido se suma con UN UPDATE
--- condicionado: la condición del tope viaja en el WHERE (como el saldo de stock). Sin margen: la tolerancia de recepción llega con 0067.
-CREATE FUNCTION compras_vinculo_de_orden_aplica() RETURNS trigger LANGUAGE plpgsql
+-- Registrar una recepción contra una orden: PEDIDA (la fila se bloquea en modo compartido contra un cierre o una anulación simultáneos), mismo proveedor, mismo producto y línea no
+-- retirada. Si la línea no quedó RECHAZADA por el control y ya se pasa del tope (con lo ya sumado), avisa desde acá (aviso temprano: el tope firme se impone al confirmar).
+CREATE FUNCTION compras_vinculo_de_orden_valida() RETURNS trigger LANGUAGE plpgsql
   SET search_path = pg_catalog, public, pg_temp AS
 $$
 DECLARE
@@ -253,7 +259,6 @@ DECLARE
   v_cantidad numeric;
   v_nivel text;
   v_exige boolean;
-  v_nueva numeric;
 BEGIN
   SELECT o.estado, o.proveedor_id INTO v_estado, v_prov_orden FROM public.orden_de_compra o WHERE o.id = NEW.orden_id AND o.empresa_id = NEW.empresa_id FOR SHARE;
   IF v_estado IS DISTINCT FROM 'PEDIDA' THEN
@@ -273,29 +278,74 @@ BEGIN
   IF v_producto_recepcion IS DISTINCT FROM v_producto_orden THEN
     RAISE EXCEPTION 'el producto de la línea recibida no es el de la línea de la orden' USING ERRCODE = '23514', CONSTRAINT = 'recepcion_de_orden_producto_distinto';
   END IF;
-  v_nivel := coalesce((SELECT n.nivel FROM public.nivel_de_control n
-                        WHERE n.empresa_id = NEW.empresa_id AND n.sucursal_id IS NULL AND n.control = 'compras.recepcion_excede_la_orden'), 'PERMITIR');
-  v_exige := v_nivel = 'BLOQUEAR' OR (v_nivel = 'AVISAR' AND NOT NEW.confirmo_exceso);
-  UPDATE public.saldo_de_linea_de_orden s SET cantidad_recibida = s.cantidad_recibida + v_cantidad, actualizado_en = now()
-   WHERE s.empresa_id = NEW.empresa_id AND s.orden_id = NEW.orden_id AND s.linea = NEW.linea_de_orden
-     AND (NOT v_exige OR s.cantidad_recibida + v_cantidad <= s.cantidad_pedida)
-  RETURNING s.cantidad_recibida INTO v_nueva;
-  IF v_nueva IS NULL THEN
-    IF v_nivel = 'BLOQUEAR' THEN
-      RAISE EXCEPTION 'la recepción supera lo pedido' USING ERRCODE = '23514', CONSTRAINT = 'recepcion_excede_la_orden_bloqueada';
+  IF NOT EXISTS (SELECT 1 FROM public.inspeccion_de_linea_de_recepcion i WHERE i.empresa_id = NEW.empresa_id AND i.recepcion_id = NEW.recepcion_id AND i.linea = NEW.linea
+                  AND i.condicion = 'RECHAZADA') THEN
+    v_nivel := coalesce((SELECT n.nivel FROM public.nivel_de_control n
+                          WHERE n.empresa_id = NEW.empresa_id AND n.sucursal_id IS NULL AND n.control = 'compras.recepcion_excede_la_orden'), 'PERMITIR');
+    v_exige := v_nivel = 'BLOQUEAR' OR (v_nivel = 'AVISAR' AND NOT NEW.confirmo_exceso);
+    IF v_exige AND EXISTS (SELECT 1 FROM public.saldo_de_linea_de_orden s WHERE s.empresa_id = NEW.empresa_id AND s.orden_id = NEW.orden_id AND s.linea = NEW.linea_de_orden
+                            AND s.cantidad_recibida + v_cantidad > s.cantidad_pedida) THEN
+      IF v_nivel = 'BLOQUEAR' THEN
+        RAISE EXCEPTION 'la recepción supera lo pedido' USING ERRCODE = '23514', CONSTRAINT = 'recepcion_excede_la_orden_bloqueada';
+      END IF;
+      RAISE EXCEPTION 'la recepción supera lo pedido y no se confirmó' USING ERRCODE = '23514', CONSTRAINT = 'recepcion_excede_la_orden_sin_confirmar';
     END IF;
-    RAISE EXCEPTION 'la recepción supera lo pedido y no se confirmó' USING ERRCODE = '23514', CONSTRAINT = 'recepcion_excede_la_orden_sin_confirmar';
   END IF;
   RETURN NEW;
 END
 $$;
-CREATE TRIGGER vinculo_de_orden_aplica BEFORE INSERT ON linea_de_recepcion_de_orden FOR EACH ROW EXECUTE FUNCTION compras_vinculo_de_orden_aplica();
+CREATE TRIGGER vinculo_de_orden_valida BEFORE INSERT ON linea_de_recepcion_de_orden FOR EACH ROW EXECUTE FUNCTION compras_vinculo_de_orden_valida();
 
 -- El vínculo solo entra en la transacción de la recepción (la línea de recepción es de solo inserción y nace con su cabecera).
 CREATE TRIGGER vinculo_de_orden_en_la_transaccion BEFORE INSERT ON linea_de_recepcion_de_orden FOR EACH ROW
   EXECUTE FUNCTION compras_hija_en_la_transaccion_de_su_cabecera('recepcion', 'recepcion_id');
 
--- Anular una recepción devuelve lo recibido a la orden (una sola vez: PENDIENTE|CONFIRMADA → ANULADA ocurre una vez).
+-- Confirmar la recepción suma lo aceptado (las líneas no RECHAZADAS por el control) al saldo de la orden, con UN UPDATE condicionado por vínculo: el tope viaja en el WHERE (como el
+-- saldo de stock). Las líneas se toman en un orden fijo (orden y línea) para que dos confirmaciones simultáneas no se bloqueen entre sí. Sin margen: la tolerancia llega con 0067.
+CREATE FUNCTION compras_recepcion_confirmada_suma_a_la_orden() RETURNS trigger LANGUAGE plpgsql
+  SET search_path = pg_catalog, public, pg_temp AS
+$$
+DECLARE
+  v_nivel text;
+  v_exige boolean;
+  v_estado text;
+  v_nueva numeric;
+  r record;
+BEGIN
+  v_nivel := coalesce((SELECT n.nivel FROM public.nivel_de_control n
+                        WHERE n.empresa_id = NEW.empresa_id AND n.sucursal_id IS NULL AND n.control = 'compras.recepcion_excede_la_orden'), 'PERMITIR');
+  FOR r IN
+    SELECT v.orden_id, v.linea_de_orden, v.confirmo_exceso, l.cantidad_en_stock AS cantidad
+      FROM public.linea_de_recepcion_de_orden v
+      JOIN public.linea_de_recepcion l ON l.empresa_id = v.empresa_id AND l.recepcion_id = v.recepcion_id AND l.numero = v.linea
+     WHERE v.empresa_id = NEW.empresa_id AND v.recepcion_id = NEW.id
+       AND NOT EXISTS (SELECT 1 FROM public.inspeccion_de_linea_de_recepcion i WHERE i.empresa_id = v.empresa_id AND i.recepcion_id = v.recepcion_id AND i.linea = v.linea
+                        AND i.condicion = 'RECHAZADA')
+     ORDER BY v.orden_id, v.linea_de_orden
+  LOOP
+    SELECT o.estado INTO v_estado FROM public.orden_de_compra o WHERE o.id = r.orden_id AND o.empresa_id = NEW.empresa_id FOR SHARE;
+    IF v_estado IS DISTINCT FROM 'PEDIDA' THEN
+      RAISE EXCEPTION 'se recibe contra una orden pedida' USING ERRCODE = '23514', CONSTRAINT = 'orden_no_pedida';
+    END IF;
+    v_exige := v_nivel = 'BLOQUEAR' OR (v_nivel = 'AVISAR' AND NOT r.confirmo_exceso);
+    UPDATE public.saldo_de_linea_de_orden s SET cantidad_recibida = s.cantidad_recibida + r.cantidad, actualizado_en = now()
+     WHERE s.empresa_id = NEW.empresa_id AND s.orden_id = r.orden_id AND s.linea = r.linea_de_orden
+       AND (NOT v_exige OR s.cantidad_recibida + r.cantidad <= s.cantidad_pedida)
+    RETURNING s.cantidad_recibida INTO v_nueva;
+    IF v_nueva IS NULL THEN
+      IF v_nivel = 'BLOQUEAR' THEN
+        RAISE EXCEPTION 'la recepción supera lo pedido' USING ERRCODE = '23514', CONSTRAINT = 'recepcion_excede_la_orden_bloqueada';
+      END IF;
+      RAISE EXCEPTION 'la recepción supera lo pedido y no se confirmó' USING ERRCODE = '23514', CONSTRAINT = 'recepcion_excede_la_orden_sin_confirmar';
+    END IF;
+  END LOOP;
+  RETURN NULL;
+END
+$$;
+CREATE TRIGGER recepcion_suma_a_la_orden AFTER UPDATE OF estado ON recepcion FOR EACH ROW WHEN (OLD.estado = 'PENDIENTE' AND NEW.estado = 'CONFIRMADA')
+  EXECUTE FUNCTION compras_recepcion_confirmada_suma_a_la_orden();
+
+-- Anular una recepción YA CONFIRMADA devuelve a la orden lo que había sumado (solo lo aceptado); anular una pendiente no devuelve nada porque nunca sumó.
 CREATE FUNCTION compras_recepcion_anulada_devuelve_a_la_orden() RETURNS trigger LANGUAGE plpgsql
   SET search_path = pg_catalog, public, pg_temp AS
 $$
@@ -304,11 +354,13 @@ BEGIN
     FROM public.linea_de_recepcion_de_orden v
     JOIN public.linea_de_recepcion l ON l.empresa_id = v.empresa_id AND l.recepcion_id = v.recepcion_id AND l.numero = v.linea
    WHERE v.empresa_id = NEW.empresa_id AND v.recepcion_id = NEW.id
-     AND s.empresa_id = v.empresa_id AND s.orden_id = v.orden_id AND s.linea = v.linea_de_orden;
+     AND s.empresa_id = v.empresa_id AND s.orden_id = v.orden_id AND s.linea = v.linea_de_orden
+     AND NOT EXISTS (SELECT 1 FROM public.inspeccion_de_linea_de_recepcion i WHERE i.empresa_id = v.empresa_id AND i.recepcion_id = v.recepcion_id AND i.linea = v.linea
+                      AND i.condicion = 'RECHAZADA');
   RETURN NULL;
 END
 $$;
-CREATE TRIGGER recepcion_devuelve_a_la_orden AFTER UPDATE OF estado ON recepcion FOR EACH ROW WHEN (OLD.estado <> 'ANULADA' AND NEW.estado = 'ANULADA')
+CREATE TRIGGER recepcion_devuelve_a_la_orden AFTER UPDATE OF estado ON recepcion FOR EACH ROW WHEN (OLD.estado = 'CONFIRMADA' AND NEW.estado = 'ANULADA')
   EXECUTE FUNCTION compras_recepcion_anulada_devuelve_a_la_orden();
 
 -- Sin borrado ni truncado.

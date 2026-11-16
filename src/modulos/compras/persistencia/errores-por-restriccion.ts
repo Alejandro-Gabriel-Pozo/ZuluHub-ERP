@@ -157,6 +157,7 @@ export const ERRORES_DE_COMPRAS_POR_RESTRICCION: Readonly<Record<string, string>
   orden_clave_ck: "NO_TRADUCIDA",
   orden_clave_uk: "NO_TRADUCIDA",
   orden_con_recepciones: "ORDEN_CON_RECEPCIONES",
+  orden_con_recepciones_pendientes: "ORDEN_CON_RECEPCIONES_PENDIENTES",
   orden_de_compra_anulada_por_fkey: "NO_TRADUCIDA",
   orden_de_compra_cerrada_por_fkey: "NO_TRADUCIDA",
   orden_de_compra_creado_por_fkey: "NO_TRADUCIDA",

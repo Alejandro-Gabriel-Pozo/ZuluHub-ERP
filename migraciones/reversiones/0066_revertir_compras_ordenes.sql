@@ -36,12 +36,14 @@ END
 $$;
 
 DROP TRIGGER IF EXISTS recepcion_devuelve_a_la_orden ON recepcion;
+DROP TRIGGER IF EXISTS recepcion_suma_a_la_orden ON recepcion;
 DROP TABLE IF EXISTS linea_de_recepcion_de_orden;
 DROP TABLE IF EXISTS saldo_de_linea_de_orden;
 DROP TABLE IF EXISTS linea_de_orden;
 DROP TABLE IF EXISTS orden_de_compra;
 DROP FUNCTION IF EXISTS compras_recepcion_anulada_devuelve_a_la_orden();
-DROP FUNCTION IF EXISTS compras_vinculo_de_orden_aplica();
+DROP FUNCTION IF EXISTS compras_recepcion_confirmada_suma_a_la_orden();
+DROP FUNCTION IF EXISTS compras_vinculo_de_orden_valida();
 DROP FUNCTION IF EXISTS compras_saldo_de_orden_solo_por_disparadores();
 DROP FUNCTION IF EXISTS compras_linea_de_orden_valida();
 DROP FUNCTION IF EXISTS compras_orden_abre_saldos();

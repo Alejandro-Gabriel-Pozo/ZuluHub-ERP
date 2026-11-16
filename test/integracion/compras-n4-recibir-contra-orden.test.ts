@@ -39,6 +39,8 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
     const harina = (await c.articulo(e, { unidadBase: "GRAMO", dimension: "MASA" })).producto;
     const azucar = (await c.articulo(e, { unidadBase: "GRAMO", dimension: "MASA" })).producto;
     const proveedor = await c.proveedor(e.operador, { condicionIva: "RESPONSABLE_INSCRIPTO" });
+    const deposito = await c.deposito(e);
+    await c.deposito(e, { uso: "RECHAZO" });
     const ordenId = valorDe(
       await c.casos.crearOrden(e.gerente, {
         clave: nuevoId(),
@@ -51,7 +53,7 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
       }),
     ).ordenId;
     valorDe(await c.casos.pedirOrden(e.gerente, { ordenId }));
-    return { e, harina, azucar, proveedor, ordenId };
+    return { e, harina, azucar, proveedor, ordenId, deposito };
   };
   type M = Awaited<ReturnType<typeof armar>>;
 
@@ -74,6 +76,14 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
   });
   const recibir = (m: M, kilos: string, extra: Record<string, unknown> = {}) =>
     c.casos.registrarRecepcion(m.e.operador, pedido(m, kilos, extra));
+  const confirmar = (m: M, recepcionId: string) =>
+    c.casos.confirmarRecepcion(m.e.gerente, { recepcionId, depositoId: m.deposito });
+  /** Registra la recepción contra la orden y la confirma: recién ahí se suma lo aceptado al saldo. */
+  const recibirYConfirmar = async (m: M, kilos: string, extra: Record<string, unknown> = {}) => {
+    const r = valorDe(await recibir(m, kilos, extra));
+    valorDe(await confirmar(m, r.recepcionId));
+    return r.recepcionId;
+  };
   const recibido = async (m: M, linea = 1) =>
     (
       await c.dueno.query<{ r: string }>(
@@ -89,7 +99,9 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
 
   it("recibir contra la orden suma lo recibido (kilos a gramos) al saldo y el detalle lo muestra", async () => {
     const m = await armar();
-    valorDe(await recibir(m, "4"));
+    const r = valorDe(await recibir(m, "4"));
+    expect(await recibido(m)).toBe("0.0000");
+    valorDe(await confirmar(m, r.recepcionId));
     expect(await recibido(m)).toBe("4000.0000");
     const detalle = valorDe(await c.consultas.obtenerOrden(m.e.operador, { ordenId: m.ordenId }));
     expect(detalle?.lineas.map((l) => [l.cantidadPedida, l.cantidadRecibida])).toEqual([
@@ -106,6 +118,8 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
     const primera = valorDe(await c.casos.registrarRecepcion(m.e.operador, p));
     const segunda = valorDe(await c.casos.registrarRecepcion(m.e.operador, p));
     expect(segunda).toEqual({ recepcionId: primera.recepcionId, yaExistia: true });
+    valorDe(await confirmar(m, primera.recepcionId));
+    expect(valorDe(await confirmar(m, primera.recepcionId)).yaExistia).toBe(true);
     expect(await recibido(m)).toBe("3000.0000");
     expect(
       await c.casos.registrarRecepcion(m.e.operador, {
@@ -118,11 +132,11 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
 
   it("sin control (PERMITIR) el exceso pasa; con BLOQUEAR nunca supera lo pedido, ni con confirmación; nada queda a medias", async () => {
     const m = await armar();
-    valorDe(await recibir(m, "12"));
+    await recibirYConfirmar(m, "12");
     expect(await recibido(m)).toBe("12000.0000");
     const b = await armar();
     await control(b, "BLOQUEAR");
-    valorDe(await recibir(b, "6"));
+    await recibirYConfirmar(b, "6");
     const antes = (
       await c.dueno.query("select 1 from recepcion where empresa_id = $1", [b.e.empresa])
     ).rowCount;
@@ -137,7 +151,7 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
       (await c.dueno.query("select 1 from recepcion where empresa_id = $1", [b.e.empresa]))
         .rowCount,
     ).toBe(antes);
-    valorDe(await recibir(b, "4"));
+    await recibirYConfirmar(b, "4");
     expect(await recibido(b)).toBe("10000.0000");
   });
 
@@ -145,11 +159,9 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
     const m = await armar();
     await control(m, "AVISAR");
     expect(codigo(await recibir(m, "11"))).toBe("RECEPCION_EXCEDE_LA_ORDEN_SIN_CONFIRMAR");
-    valorDe(
-      await recibir(m, "11", {
-        contraOrden: [{ linea: 1, ordenId: m.ordenId, lineaDeOrden: 1, confirmoExceso: true }],
-      }),
-    );
+    await recibirYConfirmar(m, "11", {
+      contraOrden: [{ linea: 1, ordenId: m.ordenId, lineaDeOrden: 1, confirmoExceso: true }],
+    });
     expect(await recibido(m)).toBe("11000.0000");
   });
 
@@ -250,15 +262,18 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
     ).toEqual({ ok: false, error: "ORDEN_NO_CORRESPONDE_AL_NIVEL" });
   });
 
-  it("anular la recepción pendiente devuelve lo recibido a la orden; con recepciones vigentes la orden no se anula; cerrar da COMPLETA o CON_SALDO", async () => {
+  it("una orden con una recepción pendiente no se anula ni se cierra; anulada la pendiente no devuelve nada (nunca sumó) y la orden se puede cerrar COMPLETA", async () => {
     const m = await armar();
     const r = valorDe(await recibir(m, "6")).recepcionId;
-    expect(await recibido(m)).toBe("6000.0000");
     expect(
       await c.casos.anularOrden(m.e.gerente, { ordenId: m.ordenId, motivo: "Con recepciones" }),
     ).toEqual({
       ok: false,
       error: "ORDEN_CON_RECEPCIONES",
+    });
+    expect(await c.casos.cerrarOrden(m.e.gerente, { ordenId: m.ordenId })).toEqual({
+      ok: false,
+      error: "ORDEN_CON_RECEPCIONES_PENDIENTES",
     });
     valorDe(
       await c.casos.anularRecepcionPendiente(m.e.gerente, {
@@ -267,8 +282,8 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
       }),
     );
     expect(await recibido(m)).toBe("0.0000");
-    valorDe(await recibir(m, "10"));
-    valorDe(
+    await recibirYConfirmar(m, "10");
+    const azucar = valorDe(
       await c.casos.registrarRecepcion(m.e.operador, {
         ...pedido(m, "500", {}),
         renglones: [
@@ -284,20 +299,39 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
         contraOrden: [{ linea: 1, ordenId: m.ordenId, lineaDeOrden: 2 }],
       }),
     );
+    valorDe(await confirmar(m, azucar.recepcionId));
     expect(valorDe(await c.casos.cerrarOrden(m.e.gerente, { ordenId: m.ordenId })).motivo).toBe(
       "COMPLETA",
     );
     expect(codigo(await recibir(m, "1"))).toBe("ORDEN_NO_ESTA_PEDIDA");
   });
 
-  it("dos recepciones a la vez contra lo que queda de la línea con BLOQUEAR: nunca se supera lo pedido", async () => {
+  it("una línea RECHAZADA por el control no cuenta como recibida contra la orden: la orden sigue con saldo y se cierra CON_SALDO", async () => {
+    const m = await armar();
+    const r = valorDe(
+      await recibir(m, "4", {
+        controles: [{ linea: 1, condicion: "RECHAZADA", observacion: "Vencida" }],
+      }),
+    );
+    valorDe(await confirmar(m, r.recepcionId));
+    expect(await recibido(m)).toBe("0.0000");
+    await recibirYConfirmar(m, "3");
+    expect(await recibido(m)).toBe("3000.0000");
+    expect(valorDe(await c.casos.cerrarOrden(m.e.gerente, { ordenId: m.ordenId })).motivo).toBe(
+      "CON_SALDO",
+    );
+  });
+
+  it("dos recepciones pendientes que no caben juntas, confirmadas a la vez con BLOQUEAR: entra una sola y la otra falla cerrado y sigue pendiente", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const m = await armar();
       await control(m, "BLOQUEAR");
+      const a = valorDe(await recibir(m, "7")).recepcionId;
+      const b = valorDe(await recibir(m, "7")).recepcionId;
       c.armarBarrera(2);
       let rs;
       try {
-        rs = await Promise.all([recibir(m, "7"), recibir(m, "7")]);
+        rs = await Promise.all([confirmar(m, a), confirmar(m, b)]);
       } finally {
         c.soltarBarrera();
       }
@@ -305,36 +339,54 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
       const perdedora = rs.find((r) => !r.ok);
       expect(perdedora && codigo(perdedora)).toBe("RECEPCION_EXCEDE_LA_ORDEN");
       expect(await recibido(m)).toBe("7000.0000");
+      const pendientes = await c.dueno.query(
+        "select 1 from recepcion where id = any($1) and estado = 'PENDIENTE'",
+        [[a, b]],
+      );
+      expect(pendientes.rowCount).toBe(1);
     }
   });
 
-  it("recibir y anular la orden a la vez: gana una y no queda una recepción vigente contra una orden anulada", async () => {
+  it("confirmar la misma recepción dos veces a la vez suma una sola vez", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const m = await armar();
+      const r = valorDe(await recibir(m, "4")).recepcionId;
+      c.armarBarrera(2);
+      let rs;
+      try {
+        rs = await Promise.all([confirmar(m, r), confirmar(m, r)]);
+      } finally {
+        c.soltarBarrera();
+      }
+      expect(rs.filter((x) => x.ok).length).toBeGreaterThanOrEqual(1);
+      expect(await recibido(m)).toBe("4000.0000");
+    }
+  });
+
+  it("confirmar la recepción y anular la orden a la vez: la orden no se anula (hay una recepción vigente) y lo recibido queda sumado", async () => {
+    for (let ronda = 0; ronda < RONDAS; ronda++) {
+      const m = await armar();
+      const r = valorDe(await recibir(m, "2")).recepcionId;
       c.armarBarrera(2);
       let rs;
       try {
         rs = await Promise.all([
-          recibir(m, "2"),
+          confirmar(m, r),
           c.casos.anularOrden(m.e.gerente, { ordenId: m.ordenId, motivo: "Carrera" }),
         ]);
       } finally {
         c.soltarBarrera();
       }
+      expect(rs[0].ok).toBe(true);
+      expect(codigo(rs[1])).toBe("ORDEN_CON_RECEPCIONES");
       const estado = (
         await c.dueno.query<{ estado: string }>(
           "select estado from orden_de_compra where id = $1",
           [m.ordenId],
         )
       ).rows[0]?.estado;
-      const vigentes = (
-        await c.dueno.query(
-          "select 1 from linea_de_recepcion_de_orden v join recepcion r on r.id = v.recepcion_id where v.orden_id = $1 and r.estado <> 'ANULADA'",
-          [m.ordenId],
-        )
-      ).rowCount;
-      expect(estado === "ANULADA" ? vigentes : 1).toBe(estado === "ANULADA" ? 0 : 1);
-      expect(rs.filter((r) => r.ok).length).toBeGreaterThanOrEqual(1);
+      expect(estado).toBe("PEDIDA");
+      expect(await recibido(m)).toBe("2000.0000");
     }
   });
 });

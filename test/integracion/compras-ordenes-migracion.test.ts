@@ -99,6 +99,7 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
     contra: { orden: string; linea: number; confirmoExceso?: boolean } | null,
     proveedor = e.proveedor,
     producto = e.producto,
+    rechazada = false,
   ) =>
     conAppDe(b(), e.m, async (s) => {
       const id = randomUUID();
@@ -116,6 +117,14 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
           [e.m.empresa, id, producto, cantidad],
         ),
       );
+      if (rechazada) {
+        acepta(
+          await s.intentar(
+            `insert into inspeccion_de_linea_de_recepcion (empresa_id, recepcion_id, linea, condicion, observacion) values ($1, $2, 1, 'RECHAZADA', 'Vencida')`,
+            [e.m.empresa, id],
+          ),
+        );
+      }
       if (contra !== null) {
         acepta(
           await s.intentar(
@@ -127,6 +136,24 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
       expect((await s.confirmar()).ok).toBe(true);
       return id;
     });
+  const confirmarSql = `update recepcion set estado = 'CONFIRMADA', confirmada_por = $2 where id = $1 and estado = 'PENDIENTE'`;
+  /** Confirma la recepción pendiente (en su propia transacción): ahí se suma lo aceptado a la orden. Devuelve el resultado del intento. */
+  const confirmar = (e: E, recepcionId: string) =>
+    conAppDe(b(), e.m, async (s) => {
+      const r = await s.intentar(confirmarSql, [recepcionId, e.m.persona]);
+      if (r.ok) expect((await s.confirmar()).ok).toBe(true);
+      return r;
+    });
+  /** Registra la recepción contra la orden y la confirma: lo aceptado queda sumado a la orden. */
+  const recibida = async (
+    e: E,
+    cantidad: string,
+    contra: { orden: string; linea: number; confirmoExceso?: boolean },
+  ) => {
+    const id = await recepcion(e, cantidad, contra);
+    acepta(await confirmar(e, id));
+    return id;
+  };
   /** El intento de recibir contra la orden, en una sesión que no confirma: devuelve el resultado del vínculo. */
   const intentarVinculo = (
     e: E,
@@ -513,8 +540,8 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
     const e = await escenario();
     const completa = await orden(e, ["10"]);
     const conSaldo = await orden(e, ["10"]);
-    await recepcion(e, "10", { orden: completa, linea: 1 });
-    await recepcion(e, "4", { orden: conSaldo, linea: 1 });
+    await recepcion(e, "10", { orden: completa, linea: 1 }).then((id) => confirmar(e, id));
+    await recibida(e, "4", { orden: conSaldo, linea: 1 });
     expect(await recibido(completa)).toBe(10);
     expect(await recibido(conSaldo)).toBe(4);
     await conAppDe(b(), e.m, async (s) => {
@@ -571,17 +598,17 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
     check(await intentarVinculo(e, conRetirada, "1", { linea: 2 }), "linea_de_orden_retirada");
   });
 
-  it("control en BLOQUEAR: lo recibido nunca supera lo pedido, ni con confirmación", async () => {
+  it("control en BLOQUEAR: lo recibido nunca supera lo pedido, ni con confirmación (aviso al registrar y tope firme al confirmar)", async () => {
     const e = await escenario();
     await nivelDeControl(e.m, "BLOQUEAR");
     const id = await orden(e, ["10"]);
-    await recepcion(e, "6", { orden: id, linea: 1 });
+    await recibida(e, "6", { orden: id, linea: 1 });
     check(await intentarVinculo(e, id, "5"), "recepcion_excede_la_orden_bloqueada");
     check(
       await intentarVinculo(e, id, "5", { confirmoExceso: true }),
       "recepcion_excede_la_orden_bloqueada",
     );
-    await recepcion(e, "4", { orden: id, linea: 1 });
+    await recibida(e, "4", { orden: id, linea: 1 });
     expect(await recibido(id)).toBe(10);
   });
 
@@ -590,87 +617,136 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
     await nivelDeControl(e.m, "AVISAR");
     const id = await orden(e, ["10"]);
     check(await intentarVinculo(e, id, "12"), "recepcion_excede_la_orden_sin_confirmar");
-    await recepcion(e, "12", { orden: id, linea: 1, confirmoExceso: true });
+    await recibida(e, "12", { orden: id, linea: 1, confirmoExceso: true });
     expect(await recibido(id)).toBe(12);
   });
 
   it("sin control (o en PERMITIR) el exceso pasa y queda en el saldo", async () => {
     const e = await escenario();
     const id = await orden(e, ["10"]);
-    await recepcion(e, "15", { orden: id, linea: 1 });
+    await recibida(e, "15", { orden: id, linea: 1 });
     expect(await recibido(id)).toBe(15);
     const otra = await escenario();
     await nivelDeControl(otra.m, "PERMITIR");
     const o2 = await orden(otra, ["10"]);
-    await recepcion(otra, "15", { orden: o2, linea: 1 });
+    await recibida(otra, "15", { orden: o2, linea: 1 });
     expect(await recibido(o2)).toBe(15);
   });
 
-  it("dos recepciones a la vez contra lo que queda de la línea con BLOQUEAR: entra una sola (la numeración serializa y la segunda no llega al saldo)", async () => {
+  it("registrar no suma nada: el saldo se mueve recién al confirmar, y una línea RECHAZADA por el control no cuenta (ni avisa del tope)", async () => {
     const e = await escenario();
     await nivelDeControl(e.m, "BLOQUEAR");
     const id = await orden(e, ["10"]);
-    const cabecera = `insert into recepcion (id, empresa_id, sucursal_id, proveedor_id, nivel, estado, hecho_en, clave_idempotencia, huella, registrado_por)
-      values ($1, $2, $3, $4, 'RECEPCION_SEPARADA', 'PENDIENTE', now(), $5, $6, $7)`;
-    const lineaSql = `insert into linea_de_recepcion (empresa_id, recepcion_id, numero, producto_id, unidad_de_compra_id, cantidad_de_compra, cantidad_en_stock)
-      values ($1, $2, 1, $3, 'UNIDAD', 8, 8)`;
-    const vinculoSql = `insert into linea_de_recepcion_de_orden (empresa_id, recepcion_id, linea, orden_id, linea_de_orden) values ($1, $2, 1, $3, 1)`;
-    const r1 = randomUUID();
-    const r2 = randomUUID();
-    await conAppDe(b(), e.m, async (s1) => {
-      await conAppDe(b(), e.m, async (s2) => {
-        acepta(
-          await s1.intentar(cabecera, [
-            r1,
-            e.m.empresa,
-            e.m.sucursal,
-            e.proveedor,
-            claveDeCompra(),
-            huellaAlAzar(),
-            e.m.persona,
-          ]),
-        );
-        acepta(await s1.intentar(lineaSql, [e.m.empresa, r1, e.producto]));
-        acepta(await s1.intentar(vinculoSql, [e.m.empresa, r1, id]));
-        // La numeración de las recepciones de la empresa serializa a las dos: la segunda espera y, al terminar la primera, choca con el número ya tomado (la aplicación reintenta,
-        // y en el reintento el saldo ya está lleno: eso lo prueba la prueba de arriba).
-        const segunda = s2.directo(cabecera, [
-          r2,
-          e.m.empresa,
-          e.m.sucursal,
-          e.proveedor,
-          claveDeCompra(),
-          huellaAlAzar(),
-          e.m.persona,
-        ]);
-        expect(await esperarBloqueo(dueno, s2.pid)).toBe(true);
-        expect((await s1.confirmar()).ok).toBe(true);
-        const choque = await segunda;
-        expect(!choque.ok && choque.restriccion).toBe("recepcion_numero_uk");
-      });
-    });
-    expect(await recibido(id)).toBe(8);
-  });
-
-  it("anular la recepción devuelve lo recibido a la orden, una sola vez", async () => {
-    const e = await escenario();
-    const id = await orden(e, ["10"]);
-    const r1 = await recepcion(e, "6", { orden: id, linea: 1 });
-    await recepcion(e, "3", { orden: id, linea: 1 });
-    expect(await recibido(id)).toBe(9);
+    const pendiente = await recepcion(e, "6", { orden: id, linea: 1 });
+    expect(await recibido(id)).toBe(0);
+    acepta(await confirmar(e, pendiente));
+    expect(await recibido(id)).toBe(6);
+    const rechazada = await recepcion(
+      e,
+      "9",
+      { orden: id, linea: 1 },
+      e.proveedor,
+      e.producto,
+      true,
+    );
+    acepta(await confirmar(e, rechazada));
+    expect(await recibido(id)).toBe(6);
     await conAppDe(b(), e.m, async (s) => {
-      acepta(
-        await s.intentar(
-          "update recepcion set estado = 'ANULADA', anulada_por = $2, anulada_en = now(), motivo_de_anulacion = 'Prueba' where id = $1",
-          [r1, e.m.persona],
-        ),
-      );
-      check(
-        await s.intentar("update recepcion set estado = 'PENDIENTE' where id = $1", [r1]),
-        "recepcion_transicion_invalida",
-      );
+      acepta(await s.intentar(cerrarSql, [id, e.m.empresa, e.m.persona]));
       expect((await s.confirmar()).ok).toBe(true);
     });
+    const cierre = await dueno.query<{ cierre_motivo: string }>(
+      "select cierre_motivo from orden_de_compra where id = $1",
+      [id],
+    );
+    expect(cierre.rows[0]?.cierre_motivo).toBe("CON_SALDO");
+  });
+
+  it("dos recepciones pendientes que caben cada una pero no juntas, confirmadas a la vez con BLOQUEAR: entra una sola y la otra queda pendiente", async () => {
+    const e = await escenario();
+    await nivelDeControl(e.m, "BLOQUEAR");
+    const id = await orden(e, ["10"]);
+    const r1 = await recepcion(e, "7", { orden: id, linea: 1 });
+    const r2 = await recepcion(e, "7", { orden: id, linea: 1 });
+    await conAppDe(b(), e.m, async (s1) => {
+      await conAppDe(b(), e.m, async (s2) => {
+        const primera = await s1.directo(confirmarSql, [r1, e.m.persona]);
+        expect(primera.ok && primera.filas).toBe(1);
+        const segunda = s2.directo(confirmarSql, [r2, e.m.persona]);
+        expect(await esperarBloqueo(dueno, s2.pid)).toBe(true);
+        expect((await s1.confirmar()).ok).toBe(true);
+        const r = await segunda;
+        expect(r.ok).toBe(false);
+        expect(!r.ok && r.restriccion).toBe("recepcion_excede_la_orden_bloqueada");
+      });
+    });
+    expect(await recibido(id)).toBe(7);
+    const estados = await dueno.query<{ id: string; estado: string }>(
+      "select id, estado from recepcion where id = any($1)",
+      [[r1, r2]],
+    );
+    expect(estados.rows.find((x) => x.id === r2)?.estado).toBe("PENDIENTE");
+  });
+
+  it("confirmar la misma recepción dos veces a la vez suma una sola vez", async () => {
+    const e = await escenario();
+    const id = await orden(e, ["10"]);
+    const r = await recepcion(e, "4", { orden: id, linea: 1 });
+    await conAppDe(b(), e.m, async (s1) => {
+      await conAppDe(b(), e.m, async (s2) => {
+        const primera = await s1.directo(confirmarSql, [r, e.m.persona]);
+        expect(primera.ok && primera.filas).toBe(1);
+        const segunda = s2.directo(confirmarSql, [r, e.m.persona]);
+        expect(await esperarBloqueo(dueno, s2.pid)).toBe(true);
+        expect((await s1.confirmar()).ok).toBe(true);
+        const x = await segunda;
+        expect(x.ok && x.filas).toBe(0);
+      });
+    });
+    expect(await recibido(id)).toBe(4);
+  });
+
+  it("una orden con una recepción pendiente no se cierra; confirmada, sí", async () => {
+    const e = await escenario();
+    const id = await orden(e, ["10"]);
+    const r = await recepcion(e, "4", { orden: id, linea: 1 });
+    await conAppDe(b(), e.m, async (s) => {
+      check(
+        await s.intentar(cerrarSql, [id, e.m.empresa, e.m.persona]),
+        "orden_con_recepciones_pendientes",
+      );
+    });
+    acepta(await confirmar(e, r));
+    await conAppDe(b(), e.m, async (s) => {
+      acepta(await s.intentar(cerrarSql, [id, e.m.empresa, e.m.persona]));
+    });
+  });
+
+  it("anular una recepción confirmada devuelve lo sumado (menos lo rechazado) una sola vez; anular una pendiente no devuelve nada", async () => {
+    const e = await escenario();
+    const id = await orden(e, ["10"]);
+    const r1 = await recibida(e, "6", { orden: id, linea: 1 });
+    await recibida(e, "3", { orden: id, linea: 1 });
+    const pendiente = await recepcion(e, "1", { orden: id, linea: 1 });
+    expect(await recibido(id)).toBe(9);
+    const anular = (r: string) =>
+      conAppDe(b(), e.m, async (s) => {
+        const x = await s.intentar(
+          "update recepcion set estado = 'ANULADA', anulada_por = $2, anulada_en = now(), motivo_de_anulacion = 'Prueba' where id = $1",
+          [r, e.m.persona],
+        );
+        acepta(x);
+        if (r === r1) {
+          check(
+            await s.intentar("update recepcion set estado = 'PENDIENTE' where id = $1", [r]),
+            "recepcion_transicion_invalida",
+          );
+        }
+        expect((await s.confirmar()).ok).toBe(true);
+      });
+    await anular(r1);
+    expect(await recibido(id)).toBe(3);
+    await anular(pendiente);
     expect(await recibido(id)).toBe(3);
   });
 
