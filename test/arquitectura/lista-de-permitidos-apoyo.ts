@@ -40,7 +40,7 @@ import ts from "typescript";
  * conversión de tipo), `Reflect.get(globalThis, …)`, `NOT a ~ '…'` sin paréntesis y con una función (`NOT (lower(a) ~ '…')`, `NOT btrim(a) ~ '…'`)
  * y `"nombre"(` entre comillas.
  * No se miran los archivos de prueba (`*.test.*` y `test/`): usan estas expresiones como ejemplos. Las migraciones `reversiones/` SÍ se
- * leen (solo traen `DROP`, que no cuenta).
+ * leen, salvo las de la lista eximida de la prueba (dueño, 2026-11-16: ver `cuentaDeMigracion`); una reversión nueva con prohibidos cuenta hasta que se la agregue a propósito.
  */
 
 const CATEGORIAS =
@@ -394,6 +394,40 @@ export function problemasDeExenciones(
       problemas.push(`${ruta}: tiene ${real} prohibiciones y la exención declara ${e.prohibidos}`);
     if (ruta in presupuesto)
       problemas.push(`${ruta}: está eximido y también en el presupuesto de deuda`);
+  }
+  return problemas;
+}
+
+/**
+ * EXENCIÓN DE LAS REVERSIONES DE MIGRACIÓN (dueño, 2026-11-16, «A»: eximir las reversiones; constancia en el repo de docs). Una reversión
+ * existe para dejar la base como estaba, y a veces «como estaba» es una regla por lista de prohibidos (`!~ '[\x01-\x1F…]'`): no puede dejar
+ * la regla vieja y a la vez estar en cero. Previene: una reversión que, para no sumar deuda, deja una regla distinta de la que había.
+ * Alcance CERRADO: solo la carpeta `migraciones/reversiones/`, solo los archivos de la lista exacta de la prueba y con su cuenta exacta
+ * (`problemasDeReversionesEximidas`). El MISMO texto en una migración de `migraciones/` (o en una reversión que no está en la lista) sigue contando.
+ */
+export const CARPETA_DE_REVERSIONES = "migraciones/reversiones/";
+
+/** Las prohibiciones de una migración SQL: cero si es una reversión de la lista eximida; si no, las de su texto. */
+export function cuentaDeMigracion(
+  ruta: string,
+  texto: string,
+  eximidas: Readonly<Record<string, Exencion>>,
+): number {
+  if (ruta.startsWith(CARPETA_DE_REVERSIONES) && ruta in eximidas) return 0;
+  return contarProhibidosEnSql(texto);
+}
+
+/** Los problemas de la lista de reversiones eximidas: los de `problemasDeExenciones` y que cada una sea un `.sql` de la carpeta de reversiones. */
+export function problemasDeReversionesEximidas(
+  eximidas: Readonly<Record<string, Exencion>>,
+  esperadas: readonly string[],
+  cuentaReal: (ruta: string) => number,
+  presupuesto: Readonly<Record<string, unknown>>,
+): string[] {
+  const problemas = problemasDeExenciones(eximidas, esperadas, cuentaReal, presupuesto);
+  for (const ruta of Object.keys(eximidas).sort()) {
+    if (!ruta.startsWith(CARPETA_DE_REVERSIONES) || !ruta.endsWith(".sql"))
+      problemas.push(`${ruta}: no es un .sql de ${CARPETA_DE_REVERSIONES}`);
   }
   return problemas;
 }

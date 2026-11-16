@@ -15,7 +15,11 @@ import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import { afterEach, describe, expect, it } from "vitest";
 import { duplicadosPorArchivo, topesDeDivisionEscritos } from "./fuente-unica-apoyo";
-import { contarProhibidosEnCodigo, contarProhibidosEnSql } from "./lista-de-permitidos-apoyo";
+import {
+  contarProhibidosEnCodigo,
+  contarProhibidosEnSql,
+  cuentaDeMigracion,
+} from "./lista-de-permitidos-apoyo";
 
 /**
  * Cada regla de arquitectura tiene una violación inyectada a propósito que la rompe (ADR-003).
@@ -2629,6 +2633,15 @@ describe("validación de datos: lista de permitidos y fuente única (CLAUDE.md �
       contarProhibidosEnCodigo("x.ts", "export const v = (t: string) => !/\\p{Cc}/u.test(t);"),
     ).toBe(1);
     expect(contarProhibidosEnSql("CHECK (nombre !~ '[\\x01-\\x1F\\x7F-\\x9F]')")).toBe(1);
+  });
+
+  it("una reversión de migración de la lista eximida no cuenta; el mismo texto en una migración sí (dueño, 2026-11-16)", () => {
+    const sql = "CHECK (nombre !~ '[\\x01-\\x1F\\x7F-\\x9F]')";
+    const eximidas = {
+      "migraciones/reversiones/0099_r.sql": { motivo: "vuelve a la regla vieja", prohibidos: 1 },
+    };
+    expect(cuentaDeMigracion("migraciones/reversiones/0099_r.sql", sql, eximidas)).toBe(0);
+    expect(cuentaDeMigracion("migraciones/0099_m.sql", sql, eximidas)).toBe(1);
   });
 
   it("declarar lo permitido no se cuenta", () => {

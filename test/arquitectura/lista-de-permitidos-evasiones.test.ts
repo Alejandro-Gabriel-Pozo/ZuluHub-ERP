@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   contarProhibidosEnCodigo,
   contarProhibidosEnSql,
+  cuentaDeMigracion,
   esPatronDeProhibicion,
   problemasDeExenciones,
+  problemasDeReversionesEximidas,
 } from "./lista-de-permitidos-apoyo";
 
 /**
@@ -404,5 +406,80 @@ describe("lista de permitidos: tercera revisión independiente (evasiones barata
         r`CREATE OR REPLACE FUNCTION "texto_visible_valido"(t text, p integer) RETURNS boolean AS $$ SELECT true $$;`,
       ),
     ).toBe(0);
+  });
+});
+
+describe("lista de permitidos: la exención de las reversiones de migración no se ciega (dueño, 2026-11-16)", () => {
+  const PROHIBE = "ALTER TABLE t ADD CONSTRAINT c CHECK (nombre !~ '[\\x01-\\x1F\\x7F-\\x9F]');";
+  const REVERSION = "migraciones/reversiones/0099_revertir_x.sql";
+  const eximidas = {
+    [REVERSION]: { motivo: "vuelve a la regla vieja de la migración 0099", prohibidos: 1 },
+  };
+
+  it("el texto prohibe y cuenta fuera de toda exención", () => {
+    expect(contarProhibidosEnSql(PROHIBE)).toBe(1);
+    expect(cuentaDeMigracion("migraciones/0099_x.sql", PROHIBE, eximidas)).toBe(1);
+  });
+
+  it("el MISMO texto en la reversión de la lista no cuenta", () => {
+    expect(cuentaDeMigracion(REVERSION, PROHIBE, eximidas)).toBe(0);
+  });
+
+  it("una reversión que no está en la lista sigue contando (hay que agregarla a propósito)", () => {
+    expect(
+      cuentaDeMigracion("migraciones/reversiones/0100_revertir_y.sql", PROHIBE, eximidas),
+    ).toBe(1);
+  });
+
+  it("la exención es solo de la carpeta de reversiones: una ruta de la lista fuera de ella cuenta y es un problema", () => {
+    const fuera = { "migraciones/0099_x.sql": { motivo: "no debería poder", prohibidos: 1 } };
+    expect(cuentaDeMigracion("migraciones/0099_x.sql", PROHIBE, fuera)).toBe(1);
+    expect(problemasDeReversionesEximidas(fuera, ["migraciones/0099_x.sql"], () => 1, {})).toEqual([
+      "migraciones/0099_x.sql: no es un .sql de migraciones/reversiones/",
+    ]);
+    const noSql = { "migraciones/reversiones/x.txt": { motivo: "otro formato", prohibidos: 1 } };
+    expect(
+      problemasDeReversionesEximidas(noSql, ["migraciones/reversiones/x.txt"], () => 1, {}),
+    ).toEqual(["migraciones/reversiones/x.txt: no es un .sql de migraciones/reversiones/"]);
+  });
+
+  it("los problemas de carpeta salen en orden alfabético, estén como estén en la lista", () => {
+    const dos = {
+      "migraciones/z.sql": { motivo: "fuera de la carpeta", prohibidos: 0 },
+      "migraciones/a.sql": { motivo: "fuera de la carpeta", prohibidos: 0 },
+    };
+    expect(
+      problemasDeReversionesEximidas(dos, ["migraciones/a.sql", "migraciones/z.sql"], () => 0, {}),
+    ).toEqual([
+      "migraciones/a.sql: no es un .sql de migraciones/reversiones/",
+      "migraciones/z.sql: no es un .sql de migraciones/reversiones/",
+    ]);
+  });
+
+  it("lo exacto no tiene problemas; una prohibición de más o de menos, una de la lista que falta o una sin motivo, sí", () => {
+    const real = (n: number) => () => n;
+    expect(problemasDeReversionesEximidas(eximidas, [REVERSION], real(1), {})).toEqual([]);
+    expect(problemasDeReversionesEximidas(eximidas, [REVERSION], real(2), {})).toEqual([
+      `${REVERSION}: tiene 2 prohibiciones y la exención declara 1`,
+    ]);
+    expect(problemasDeReversionesEximidas(eximidas, [REVERSION], real(0), {})).toEqual([
+      `${REVERSION}: tiene 0 prohibiciones y la exención declara 1`,
+    ]);
+    expect(problemasDeReversionesEximidas(eximidas, [], real(1), {})).toEqual([
+      `las exenciones son ${REVERSION} y tienen que ser exactamente `,
+    ]);
+    expect(
+      problemasDeReversionesEximidas(
+        { [REVERSION]: { motivo: " ", prohibidos: 1 } },
+        [REVERSION],
+        real(1),
+        {},
+      ),
+    ).toEqual([`${REVERSION}: la exención no tiene motivo`]);
+    expect(
+      problemasDeReversionesEximidas(eximidas, [REVERSION], real(1), {
+        [REVERSION]: { prohibidos: 1 },
+      }),
+    ).toEqual([`${REVERSION}: está eximido y también en el presupuesto de deuda`]);
   });
 });

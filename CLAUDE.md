@@ -34,7 +34,7 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
   de cada uno, vive UNA vez, en el encabezado de `test/arquitectura/lista-de-permitidos-apoyo.ts` (es una alarma para errores honestos, no un
   límite de seguridad; lo que ahí figura como límite es deuda a anotar si aparece en el código). No mira las pruebas (`*.test.*`, `test/`): usan estas expresiones como ejemplo. Los formatos de máquinas de terceros
   (`set-cookie.ts`, `saneamiento.ts` de ARCA) están eximidos con lista exacta y cuenta exacta en la prueba (dueño, 2026-11-06, pregunta directa al orquestador; constancia en
-  `11-especificaciones/decisiones-del-dueno-2026-11.md` del repo de docs; un archivo nuevo en esa categoría requiere aprobación del dueño).
+  `11-especificaciones/decisiones-del-dueno-2026-11.md` del repo de docs; un archivo nuevo en esa categoría requiere aprobación del dueño). Las reversiones de migración (`migraciones/reversiones/`) están eximidas con lista exacta de archivos y cuenta exacta en la misma prueba (dueño, 2026-11-16; previene: una reversión que no puede dejar la regla vieja y queda con otra): el mismo texto en una migración sigue contando y una reversión nueva con prohibidos cuenta hasta que se la agregue a propósito.
 - **Sin dato registrado no hay campo (dueño, 2026-11-05).** Todo campo de entrada de `apps/web` y `apps/plataforma` es un componente de
   campo con la prop `dato`, y ese dato está en `src/capacidades/datos/registro.ts` (primitiva, propósitos con fuente, consumidores, quién
   lo pone, qué necesita). Un `<input>`, `<textarea>` o `<select>` crudo, un campo sin dato o con un dato no registrado, un consumidor no

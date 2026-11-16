@@ -5,8 +5,10 @@ import { describe, expect, it } from "vitest";
 import {
   contarProhibidosEnCodigo,
   contarProhibidosEnSql,
+  cuentaDeMigracion,
   FUNCIONES_SQL_CON_PROHIBIDOS,
   problemasDeExenciones,
+  problemasDeReversionesEximidas,
   type Exencion,
 } from "./lista-de-permitidos-apoyo";
 
@@ -53,6 +55,15 @@ const EXENCIONES_ESPERADAS = [
   "src/adaptadores/arca/saneamiento.ts",
   "src/capacidades/experiencia/set-cookie.ts",
 ] as const;
+/**
+ * Las reversiones de migración eximidas (dueño, 2026-11-16, «A»; constancia en `11-especificaciones/decisiones-del-dueno-2026-11.md` del repo de docs): una reversión
+ * deja la base «como estaba», y a veces eso es una regla por lista de prohibidos que no puede quedar en cero. Previene: una reversión que deja una regla distinta de la que
+ * había para no sumar deuda. Alcance CERRADO: solo `migraciones/reversiones/`, ruta exacta y cuenta exacta; una reversión nueva con prohibidos cuenta como deuda hasta que se
+ * la agregue acá a propósito (la revisión lo ve). El mismo texto en una migración de `migraciones/` sigue contando.
+ */
+const REVERSIONES_EXIMIDAS: Readonly<Record<string, Exencion>> = {};
+/** La lista EXACTA de reversiones eximidas: sumar una obliga a tocar esta línea. */
+const REVERSIONES_ESPERADAS: readonly string[] = [];
 const EXTENSIONES = ["ts", "tsx", "js", "jsx", "mjs", "cjs", "mts", "cts"];
 
 function archivos(carpeta: string, extensiones: string[]): string[] {
@@ -72,7 +83,7 @@ function prohibidosReales(): Map<string, number> {
     if (n > 0 && !(ruta in FORMATOS_DE_TERCEROS)) mapa.set(ruta, n);
   }
   for (const ruta of archivos("migraciones", ["sql"])) {
-    const n = contarProhibidosEnSql(readFileSync(join(RAIZ, ruta), "utf8"));
+    const n = cuentaDeMigracion(ruta, readFileSync(join(RAIZ, ruta), "utf8"), REVERSIONES_EXIMIDAS);
     if (n > 0) mapa.set(ruta, n);
   }
   return mapa;
@@ -98,6 +109,17 @@ describe("lista de permitidos: el código real", () => {
         FORMATOS_DE_TERCEROS,
         EXENCIONES_ESPERADAS,
         (ruta) => contarProhibidosEnCodigo(ruta, readFileSync(join(RAIZ, ruta), "utf8")),
+        presupuesto,
+      ),
+    ).toEqual([]);
+  });
+
+  it("las reversiones de migración eximidas son exactamente las esperadas, están en su carpeta y cuentan lo mismo que hoy", () => {
+    expect(
+      problemasDeReversionesEximidas(
+        REVERSIONES_EXIMIDAS,
+        REVERSIONES_ESPERADAS,
+        (ruta) => contarProhibidosEnSql(readFileSync(join(RAIZ, ruta), "utf8")),
         presupuesto,
       ),
     ).toEqual([]);
