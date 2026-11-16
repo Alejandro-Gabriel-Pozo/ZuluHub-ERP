@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DATOS_DEL_COBRO, type DatoDelCobro } from "../modulos/caja/publico";
 import { ok, type Resultado } from "../primitivas/resultado/resultado";
 import { identificador, entero, texto, leer, type ErrorDeEntrada } from "./entradas-de-facturacion";
 
@@ -24,6 +25,12 @@ const formaDeEdicion = z.object({
   nombre: nombreOpcional,
 });
 const formaDeEstado = z.object({ medioDePagoId: identificador });
+/** Los datos que el medio PIDE: lista blanca de los cinco datos del cobro; un valor que no es uno de ellos se rechaza (nada de más entra). */
+const formaDeDatosDelMedio = z.object({
+  medioDePagoId: identificador,
+  versionEsperada: entero,
+  datos: z.array(z.enum(DATOS_DEL_COBRO)).max(DATOS_DEL_COBRO.length),
+});
 
 /** Un campo opcional que viene vacío o en blanco es «sin dato» (`null`), igual que el nombre del medio. */
 const textoOpcional = nombreOpcional;
@@ -55,6 +62,12 @@ export type EntradaWebDeEdicionDeMedio = Readonly<{
   versionEsperada: number;
   nombre: string | null;
 }>;
+export type EntradaWebDeDatosDelMedio = Readonly<{
+  medioDePagoId: string;
+  versionEsperada: number;
+  /** El conjunto FINAL que el medio pide al cobrar (los datos ausentes no se piden). */
+  pide: Readonly<Record<DatoDelCobro, boolean>>;
+}>;
 export type EntradaWebDeEstadoDeMedio = Readonly<{ medioDePagoId: string }>;
 
 export function entradaDeAltaDeMedio(
@@ -75,6 +88,25 @@ export function entradaDeEdicionDeMedio(
         nombre: forma.valor.nombre,
       })
     : forma;
+}
+
+export function entradaDeDatosDelMedio(
+  crudo: unknown,
+): Resultado<EntradaWebDeDatosDelMedio, ErrorDeEntrada> {
+  const forma = leer(formaDeDatosDelMedio, crudo);
+  if (!forma.ok) return forma;
+  const marcados = new Set<DatoDelCobro>(forma.valor.datos);
+  return ok({
+    medioDePagoId: forma.valor.medioDePagoId,
+    versionEsperada: forma.valor.versionEsperada,
+    pide: {
+      cupon: marcados.has("cupon"),
+      ultimos4: marcados.has("ultimos4"),
+      marca: marcados.has("marca"),
+      cuotas: marcados.has("cuotas"),
+      dni: marcados.has("dni"),
+    },
+  });
 }
 
 export function entradaDeEstadoDeMedio(

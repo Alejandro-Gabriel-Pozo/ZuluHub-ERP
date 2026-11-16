@@ -3,6 +3,7 @@
 import type { ResultadoDeAccion } from "../../../servidor/acciones";
 import {
   agregarElMedio,
+  cambiarLosDatosDelMedioDePago,
   desactivarElMedio,
   editarElMedio,
   reactivarElMedio,
@@ -28,6 +29,16 @@ export async function editarMedioAccion(
 ): Promise<ResultadoDeAccion> {
   void previo;
   return editarElMedio(medioDePagoId, versionEsperada, datos);
+}
+
+export async function cambiarLosDatosDelMedioAccion(
+  medioDePagoId: string,
+  versionEsperada: number,
+  previo: ResultadoDeAccion,
+  datos: FormData,
+): Promise<ResultadoDeAccion> {
+  void previo;
+  return cambiarLosDatosDelMedioDePago(medioDePagoId, versionEsperada, datos);
 }
 
 export async function desactivarMedioAccion(

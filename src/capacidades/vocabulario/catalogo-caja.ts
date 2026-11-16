@@ -50,6 +50,14 @@ export const TEXTOS_DE_CAJA = {
   "caja.error.cuenta_repetida": { porDefecto: "Ya existe una cuenta con ese nombre" },
   "caja.error.caja_repetida": { porDefecto: "Ya existe una caja con ese nombre" },
   "caja.error.identificador_invalido": { porDefecto: "Identificador no válido" },
+  // DATOS DEL COBRO (T4a), `datos-cobro.html` (maqueta aprobada el 09/11/2026, ajustada el 15/11), tabla «Textos nuevos»: «Datos que se piden al cobrar» (pantallas) y «Cupón · Últimos 4 dígitos ·
+  // Marca de la tarjeta · Cuotas · DNI» (datos). Aprobados por el dueño el 09/11/2026; el 15/11 se ajustó la pantalla (decisión 184, ficha `pantalla-medios-de-pago-datos-del-cobro.md` §7). DEC-0585.
+  "caja.medios.datos_que_se_piden": { porDefecto: "Datos que se piden al cobrar" },
+  "caja.dato.cupon": { porDefecto: "Cupón" },
+  "caja.dato.ultimos4": { porDefecto: "Últimos 4 dígitos" },
+  "caja.dato.marca": { porDefecto: "Marca de la tarjeta" },
+  "caja.dato.cuotas": { porDefecto: "Cuotas" },
+  "caja.dato.dni": { porDefecto: "DNI" },
   // MEDIOS, tabla «(reutilizados)»: los dos avisos de error de esta pantalla («Ya existe un medio con ese nombre» y el genérico).
   "caja.error.medio_repetido": { porDefecto: "Ya existe un medio con ese nombre" },
   "caja.error.accion_no_permitida": { porDefecto: "Esta acción no está permitida" },

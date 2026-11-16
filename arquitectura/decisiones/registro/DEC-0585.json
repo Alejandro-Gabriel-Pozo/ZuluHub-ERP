@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0585",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Seis textos de «Datos del cobro» de un medio (caja.medios.datos_que_se_piden, caja.dato.*): son los aprobados el 09/11 en datos-cobro.html; delegación del dueño, DDD filas 173 y 174.",
+  "que_cambia": "Rótulos de las casillas de la ficha del medio de pago. Revertir: quitar las seis claves y la sección.",
+  "donde": "src/capacidades/vocabulario/catalogo-caja.ts; Pedernal-docs datos-cobro.html (Textos nuevos); conceptos/pantalla-medios-de-pago-datos-del-cobro.md §7"
+}

@@ -1,0 +1,21 @@
+.casilla {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--objetivo-minimo);
+}
+
+.control {
+  flex: none;
+  width: var(--objetivo-minimo);
+  height: var(--objetivo-minimo);
+  margin: 0;
+}
+
+.etiqueta {
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.deshabilitada .etiqueta {
+  color: var(--color-sobre-deshabilitado);
+}
