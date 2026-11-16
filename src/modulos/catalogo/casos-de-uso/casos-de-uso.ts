@@ -18,6 +18,12 @@ import {
   armarEditarProducto,
   armarReactivarProducto,
 } from "./editar-producto";
+import {
+  armarAgregarProductoAFamilia,
+  armarCrearFamilia,
+  armarEditarFamilia,
+  armarQuitarProductoDeFamilia,
+} from "./familias";
 import { armarGuardarCartaPublica } from "./guardar-carta-publica";
 import { armarGuardarConsumoDeGrupo } from "./guardar-consumo";
 import { armarOcultarProducto } from "./ocultar-producto";
@@ -61,6 +67,10 @@ export function crearCasosDeUsoDeCatalogo(dependencias: DependenciasDeCatalogo) 
     reactivarNodoDeClasificacion: armarReactivarNodoDeClasificacion(dependencias),
     guardarCartaPublica: armarGuardarCartaPublica(dependencias),
     ocultarProducto: armarOcultarProducto(dependencias),
+    crearFamilia: armarCrearFamilia(dependencias),
+    editarFamilia: armarEditarFamilia(dependencias),
+    agregarProductoAFamilia: armarAgregarProductoAFamilia(dependencias),
+    quitarProductoDeFamilia: armarQuitarProductoDeFamilia(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

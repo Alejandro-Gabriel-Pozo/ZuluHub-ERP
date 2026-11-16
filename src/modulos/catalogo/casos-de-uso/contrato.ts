@@ -10,6 +10,7 @@ import type { RepositorioDeEmpresas, RepositorioDeSucursales } from "../../empre
 import type { LectorDeCarta } from "../persistencia/lector-de-carta";
 import type { RepositorioDeCartas } from "../persistencia/repositorio-de-cartas";
 import type { RepositorioDeDisponibilidad } from "../persistencia/repositorio-de-disponibilidad";
+import type { RepositorioDeFamilias } from "../persistencia/repositorio-de-familias";
 import type { RepositorioDeUnidades } from "../persistencia/repositorio-de-unidades";
 import type { RepositorioDeClasificacion } from "../persistencia/repositorio-de-clasificacion";
 import type { RepositorioDeSecciones } from "../persistencia/repositorio-de-secciones";
@@ -56,6 +57,8 @@ export type TxDeCatalogo = LecturaDeEstados &
     /** La carta pública, el botón «Ocultar» y las secciones (migración 0043 y T2 de la carta real). */
     cartasPublicas: RepositorioDeCartas;
     disponibilidadDeProductos: RepositorioDeDisponibilidad;
+    /** Las familias de productos (0079, A8). */
+    familias: RepositorioDeFamilias;
     seccionesDeCarta: RepositorioDeSecciones;
     /** La clasificación comercial (0045, A2b). */
     clasificacion: RepositorioDeClasificacion;
