@@ -205,8 +205,8 @@ describe("la clasificación de un producto en su ficha", () => {
       ]),
     );
     expect(a.filas).toEqual([
-      { rotulo: "Departamento", valor: "Restaurante" },
-      { rotulo: "Categoría", valor: "Comidas" },
+      { rotulo: "Departamento", valor: "Restaurante", nombreAccesible: undefined },
+      { rotulo: "Categoría", valor: "Comidas", nombreAccesible: "Categoría de Restaurante" },
     ]);
     expect(a.vigenteDesde).toEqual({ rotulo: "Vigente desde", valor: "02/11/2026" });
     expect(a.desactivado).toBeNull();
@@ -261,7 +261,11 @@ describe("la clasificación de un producto en su ficha", () => {
       ]),
     );
     expect(a.desactivado).toBe("Desactivado");
-    expect(a.filas.at(-1)).toEqual({ rotulo: "Categoría", valor: "Comidas" });
+    expect(a.filas.at(-1)).toEqual({
+      rotulo: "Categoría",
+      valor: "Comidas",
+      nombreAccesible: "Categoría de Restaurante",
+    });
     expect(a.nodoVigente).toBe("comidas");
     expect(a.seleccionInicial).toEqual(["rest"]);
   });
@@ -342,6 +346,33 @@ describe("los selectores encadenados de «Cambiar»", () => {
 
   it("sin nodos, ningún selector", () => {
     expect(selectoresDeNivel([], [])).toEqual([]);
+  });
+
+  it("el nombre accesible de cada categoría lleva el nombre del nodo elegido arriba; el departamento no lo lleva", () => {
+    const todo = selectoresDeNivel(NODOS_ACTIVOS, ["rest", "bebidas", "cafes", "especial"]);
+    expect(todo.map((s) => s.nombreAccesible)).toEqual([
+      undefined,
+      "Categoría de Restaurante",
+      "Categoría de Bebidas",
+      "Categoría de Cafés",
+    ]);
+    const filas = armarLaClasificacionDelProducto({
+      productoId: "p1",
+      vigente: {
+        desde: "2026-11-02",
+        camino: [
+          { id: "rest", nombre: "Restaurante", activo: true },
+          { id: "bebidas", nombre: "Bebidas", activo: true },
+          { id: "cafes", nombre: "Cafés", activo: true },
+        ],
+      },
+      nodos: NODOS_ACTIVOS,
+    }).filas;
+    expect(filas.map((f) => f.nombreAccesible)).toEqual([
+      undefined,
+      "Categoría de Restaurante",
+      "Categoría de Bebidas",
+    ]);
   });
 
   it("lo elegido válido, de arriba hacia abajo, hasta el último nivel con algo elegido", () => {

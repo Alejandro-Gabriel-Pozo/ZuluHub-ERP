@@ -72,6 +72,7 @@ function HojaDeCambiar({ clasificacion, accion, alCerrar }: PropsDeHojaDeCambiar
             key={s.nivel}
             dato="nodo-de-clasificacion-de-producto"
             etiqueta={s.rotulo}
+            nombreAccesible={s.nombreAccesible}
             valor={s.valor}
             alCambiar={(valor) => {
               setSeleccion(elegirEnElNivel(elegidos, s.nivel, valor));
@@ -119,11 +120,17 @@ export function ClasificacionDelProducto({
   return (
     <div className={estilos["tarjeta"]}>
       {clasificacion.filas.map((f, i) => (
-        // Con varios niveles llamados «Categoría» la posición es la que los distingue: el orden de arriba hacia abajo.
-        <dl key={`${String(i)}-${f.rotulo}`} className={estilos["fila"]}>
-          <dt>{f.rotulo}</dt>
-          <dd>{f.valor}</dd>
-        </dl>
+        // Con varios niveles llamados «Categoría» el nombre accesible lleva al padre («Categoría de Restaurante»); lo visible no cambia. El grupo envuelve a la lista: `dl` no admite `role`.
+        <div
+          key={`${String(i)}-${f.rotulo}`}
+          role={f.nombreAccesible === undefined ? undefined : "group"}
+          aria-label={f.nombreAccesible}
+        >
+          <dl className={estilos["fila"]}>
+            <dt>{f.rotulo}</dt>
+            <dd>{f.valor}</dd>
+          </dl>
+        </div>
       ))}
       {clasificacion.desactivado === null ? null : (
         <Texto como="span" variante="suave">

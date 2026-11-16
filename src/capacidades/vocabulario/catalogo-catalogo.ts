@@ -149,5 +149,11 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.clasificacion.renombrar": { porDefecto: "Renombrar" },
   "catalogo.clasificacion.mover": { porDefecto: "Mover" },
   "catalogo.clasificacion.cambiar": { porDefecto: "Cambiar" },
+  // Nombre accesible (solo lector de pantalla, no se ve) de los niveles repetidos «Categoría»: «Categoría de Restaurante». S14 de `clasificacion.html`; aprobado por el orquestador, por delegación del dueño
+  // (DDD filas 173 y 174), el 16/11/2026: usa la palabra aprobada «Categoría», mismo criterio que «Subir {nombre}»; DEC-0536.
+  "catalogo.clasificacion.categoria_de": {
+    porDefecto: "Categoría de {padre}",
+    marcadores: ["padre"],
+  },
   "catalogo.error.primero_desactiva": { porDefecto: "Primero desactivá lo que tiene adentro." },
 } as const;

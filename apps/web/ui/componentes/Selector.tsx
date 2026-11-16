@@ -23,6 +23,8 @@ export type PropsDeSelector = Readonly<{
   ayuda?: string | undefined;
   error?: string | undefined;
   deshabilitado?: boolean;
+  /** Un nombre accesible más preciso que la etiqueta visible (varios selectores con la misma etiqueta, como los niveles «Categoría»): solo para lectores de pantalla, no se ve. */
+  nombreAccesible?: string | undefined;
   /** El navegador no deja enviar el formulario con la opción vacía (`required`). Sin texto visible: el aviso lo da el navegador. */
   requerido?: boolean;
 }>;
@@ -39,6 +41,7 @@ export function Selector({
   ayuda,
   error,
   deshabilitado = false,
+  nombreAccesible,
   requerido = false,
 }: PropsDeSelector) {
   return (
@@ -54,6 +57,7 @@ export function Selector({
           name={nombre}
           value={valor}
           disabled={deshabilitado}
+          aria-label={nombreAccesible}
           required={requerido}
           onChange={(evento) => {
             alCambiar(evento.target.value);

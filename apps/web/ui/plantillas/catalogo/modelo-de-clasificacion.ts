@@ -193,8 +193,12 @@ export type ClasificacionDelProducto = Readonly<{
 
 export type ClasificacionDelProductoArmada = Readonly<{
   productoId: string;
-  /** Una fila por nivel del camino vigente; sin camino, una sola: «Departamento: Sin elegir». */
-  filas: readonly Readonly<{ rotulo: string; valor: string }>[];
+  /** Una fila por nivel del camino vigente; sin camino, una sola: «Departamento: Sin elegir». El nombre accesible de las categorías lleva su padre («Categoría de Restaurante»). */
+  filas: readonly Readonly<{
+    rotulo: string;
+    valor: string;
+    nombreAccesible: string | undefined;
+  }>[];
   /** «Desactivado» si el último nodo del camino lo está; `null` si no. */
   desactivado: string | null;
   /** «Vigente desde dd/mm/aaaa»; `null` si nunca se clasificó. */
@@ -224,8 +228,12 @@ export function armarLaClasificacionDelProducto(
     productoId: c.productoId,
     filas:
       camino.length === 0
-        ? [{ rotulo: rotuloDe(1, d), valor: sinElegir }]
-        : camino.map((n, i) => ({ rotulo: rotuloDe(i + 1, d), valor: n.nombre })),
+        ? [{ rotulo: rotuloDe(1, d), valor: sinElegir, nombreAccesible: undefined }]
+        : camino.map((n, i) => ({
+            rotulo: rotuloDe(i + 1, d),
+            valor: n.nombre,
+            nombreAccesible: nombreAccesibleDe(camino[i - 1]?.nombre, d),
+          })),
     desactivado:
       ultimo !== undefined && !ultimo.activo ? texto(d, "catalogo.estado.desactivado") : null,
     vigenteDesde:
@@ -246,9 +254,18 @@ export function armarLaClasificacionDelProducto(
   };
 }
 
+/** «Categoría de {padre}» para un nivel que tiene padre; el departamento no lo lleva (su rótulo ya alcanza). */
+const nombreAccesibleDe = (
+  padre: string | undefined,
+  d: DiccionarioResuelto,
+): string | undefined =>
+  padre === undefined ? undefined : texto(d, "catalogo.clasificacion.categoria_de", { padre });
+
 export type SelectorDeNivel = Readonly<{
   nivel: number;
   rotulo: string;
+  /** Solo lector de pantalla: «Categoría de Restaurante»; `undefined` en el primer nivel. */
+  nombreAccesible: string | undefined;
   /** El nodo elegido en este nivel (`""` = «Sin elegir»). */
   valor: string;
   opciones: readonly Readonly<{ valor: string; etiqueta: string }>[];
@@ -266,6 +283,7 @@ export function selectoresDeNivel(
   const hijos = hijosPorPadre(nodos);
   const salida: SelectorDeNivel[] = [];
   let padre: string | null = null;
+  let nombreDelPadre: string | undefined;
   for (let nivel = 1; ; nivel += 1) {
     const ofrecidos: readonly NodoParaElegir[] = hijos.get(padre) ?? [];
     if (ofrecidos.length === 0) break;
@@ -273,11 +291,13 @@ export function selectoresDeNivel(
     salida.push({
       nivel,
       rotulo: rotuloDe(nivel, d),
+      nombreAccesible: nombreAccesibleDe(nombreDelPadre, d),
       valor: elegido === undefined ? "" : elegido.id,
       opciones: ofrecidos.map((n) => ({ valor: n.id, etiqueta: n.nombre })),
     });
     if (elegido === undefined) break;
     padre = elegido.id;
+    nombreDelPadre = elegido.nombre;
   }
   return salida;
 }

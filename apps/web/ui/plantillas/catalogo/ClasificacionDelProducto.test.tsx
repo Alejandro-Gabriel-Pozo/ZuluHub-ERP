@@ -147,6 +147,24 @@ describe("ClasificacionDelProducto", () => {
     await expect.element(guardar()).toBeDisabled();
   });
 
+  it("con varios niveles «Categoría», cada selector y cada fila se distinguen por su nombre accesible, con el padre; lo visible no cambia", async () => {
+    await render(ficha());
+    await cambiar().click();
+    await userEvent.selectOptions(nivel(2), "bebidas");
+    await expect
+      .element(hoja().getByRole("combobox", { name: "Categoría de Restaurante" }))
+      .toBeVisible();
+    await expect
+      .element(hoja().getByRole("combobox", { name: "Categoría de Bebidas" }))
+      .toBeVisible();
+    expect(hoja().getByText("Categoría", { exact: true }).elements().length).toBeGreaterThan(0);
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+    await hoja().getByRole("button", { name: "Cancelar" }).click();
+    await expect
+      .element(page.getByRole("group", { name: "Categoría de Restaurante" }))
+      .toBeVisible();
+  });
+
   it("los niveles se encadenan: al cambiar el departamento se descarta lo de abajo y aparece su nivel", async () => {
     await render(ficha());
     await cambiar().click();
