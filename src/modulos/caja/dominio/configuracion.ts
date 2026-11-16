@@ -1,6 +1,6 @@
 import type { SucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { explicacionDesdeTexto } from "../../../primitivas/texto/explicacion";
+import { explicacionDesdeTexto } from "../../cierre/publico";
 import {
   DATOS_DEL_COBRO,
   TIPOS_DE_CUENTA,

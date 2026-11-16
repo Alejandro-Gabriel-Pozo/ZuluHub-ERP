@@ -1,5 +1,5 @@
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { explicacionDesdeTexto } from "../../../primitivas/texto/explicacion";
+import { explicacionDesdeTexto } from "../../cierre/publico";
 
 /**
  * FICHA DEL DATO: VALOR DE UNA LISTA DEL SISTEMA (e3 §3.7, decisión 130; migración 0027, `valor_de_lista`).
@@ -8,7 +8,7 @@ import { explicacionDesdeTexto } from "../../../primitivas/texto/explicacion";
  *   Una empresa no agrega ni saca valores. Nada se borra: se desactiva (deja de ofrecerse en cobros NUEVOS; lo ya cobrado lo conserva)
  *   y se reactiva. Corregir el nombre cambia cómo se ve también lo anterior, porque lo cobrado guarda el id y no el texto.
  * - Cómo se escribe el nombre: de 1 a `LARGO_MAXIMO_DEL_NOMBRE_DE_VALOR` caracteres hechos SOLO de la lista de permitidos de la
- *   explicación del cierre (`primitivas/texto/explicacion.ts`, una regla, un lugar; la base la repite en `valor_de_lista_nombre_ck`):
+ *   explicación del cierre (`cierre/dominio/explicacion.ts`, una regla, un lugar; la base la repite en `valor_de_lista_nombre_ck`):
  *   se recorta, se pasa a NFC y los espacios repetidos quedan en uno. Es único por lista SIN distinguir mayúsculas ni acentos: lo
  *   decide el índice de la base (`valor_de_lista_nombre_uk`, ICU nivel 1), no este archivo.
  * - Una sola «Otra» fija por lista: no se renombra ni se desactiva (`VALOR_FIJO`; la base lo repite en `valor_de_lista_validar_cambio`).

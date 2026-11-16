@@ -12,7 +12,7 @@ import {
   type ErrorDeCierre,
   type ReconocimientoPedido,
 } from "../dominio/cierre";
-import { explicacionDesdeTexto } from "../../../primitivas/texto/explicacion";
+import { explicacionDesdeTexto } from "../dominio/explicacion";
 import type { ControlGuardado } from "../persistencia/repositorio-de-jornadas";
 import {
   aportesDeLaEmpresa,

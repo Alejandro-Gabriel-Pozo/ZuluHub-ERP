@@ -7,7 +7,7 @@ import {
   type ControlDelDia,
 } from "../aporte-al-cierre";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { explicacionDesdeTexto } from "../../../primitivas/texto/explicacion";
+import { explicacionDesdeTexto } from "./explicacion";
 
 /**
  * Cuándo se puede cerrar la jornada y qué queda guardado (E3b §3.3 y §3.4; decisiones 160 y 167). «Resuelto o reconocido» =

@@ -1,4 +1,4 @@
-import { err, ok, type Resultado } from "../resultado/resultado";
+import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 
 /**
  * FICHA DEL DATO: EXPLICACIÓN DEL CIERRE (decisión 160: «el texto es opcional»; e3b §3.2: `observacion` y `texto` de 500).
@@ -14,7 +14,7 @@ import { err, ok, type Resultado } from "../resultado/resultado";
  * SUPUESTO (DEC-0043) (ingeniero, sin fuente del dueño): el conjunto de signos y el tope de 500 (el tope sale de la especificación e3b §3.2). La
  * lista de `texto-de-una-linea.ts` es la de nombres y direcciones: no admite `¿ ¡ ? ! %`, que una explicación en castellano necesita.
  * Costo de revertir: cambiar las constantes de abajo y el CHECK de la base (`jornada_observacion_ck`, `control_texto_ck`).
- * Vive en `primitivas/texto/` desde que caja, ventas y listas la usan (ADR-014): los módulos y la pantalla del cierre importan UNA sola copia de la regla y del largo.
+ * Se extraerá a `primitivas/` cuando caja (motivo de una corrección, explicación de una diferencia) la necesite (ADR-014).
  */
 export const LARGO_MAXIMO_DE_LA_EXPLICACION = 500;
 
