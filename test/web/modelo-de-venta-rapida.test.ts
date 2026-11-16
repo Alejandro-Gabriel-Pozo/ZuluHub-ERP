@@ -4,33 +4,38 @@ import {
   DIEZMILESIMOS_POR_UNIDAD,
   MAXIMO_DE_DIEZMILESIMOS,
   aDiezmilesimos,
-  agregarALaCuenta,
-  cambiarCantidad,
-  cantidadDelProductoEnLaCuenta,
   cantidadParaLeer,
-  claveDeLinea,
   deDiezmilesimos,
-  detalleDeLaLinea,
   esCantidadValida,
   formaDeCantidad,
   fraccionesOfrecidas,
   nombreDeLaUnidad,
-  pedidoDeCotizacion,
   precioDeLaTarjeta,
   productosVisibles,
-  quitarDeLaCuenta,
   rotuloDeFraccion,
   sePuedeAgregar,
   sumarCantidades,
+  textoSinResultados,
   textosDeLaVenta,
   tieneOpciones,
-  type LineaDeLaVenta,
   type ProductoDeLaVenta,
 } from "../../apps/web/ui/plantillas/venta/modelo-de-venta-rapida";
+import {
+  agregarALaCuenta,
+  cambiarCantidad,
+  cantidadDelProductoEnLaCuenta,
+  claveDeLinea,
+  detalleDeLaLinea,
+  pedidoDeCotizacion,
+  quitarDeLaCuenta,
+  type LineaDeLaVenta,
+} from "../../apps/web/ui/plantillas/venta/modelo-de-la-cuenta";
 
 const producto = (parcial: Partial<ProductoDeLaVenta> = {}): ProductoDeLaVenta => ({
   id: "p1",
   nombre: "Medialuna",
+  codigo: null,
+  codigoDeBarras: null,
   seccionId: "s1",
   unidadDeVentaId: "UNIDAD",
   pasoMinimo: "1.0000",
@@ -152,8 +157,16 @@ describe("cómo se carga la cantidad de cada producto", () => {
 describe("lo que se ve de cada producto", () => {
   const textos = textosDeLaVenta();
 
+  it("los textos son datos simples: viajan del servidor al navegador sin funciones", () => {
+    for (const valor of Object.values(textos)) expect(typeof valor).toBe("string");
+  });
+
   it("todos los textos existen y ninguno queda vacío", () => {
     for (const [clave, valor] of Object.entries(textos)) expect(valor, clave).not.toBe("");
+    expect(textos.buscar).toBe("Buscar por nombre o código");
+    expect(textoSinResultados("pan")).toBe("No encontré productos con «pan»");
+    expect(textos.sinResultadosAyuda).toBe("Revisá el nombre o probá con el código.");
+    expect(textos.borrarBusqueda).toBe("Borrar la búsqueda");
     expect(textos.cantidadNoValida).toBe("Cantidad no válida");
     expect(textos.noPermitido).toBe("Esta acción no está permitida");
   });
@@ -228,6 +241,23 @@ describe("la búsqueda y las secciones", () => {
     // Todas las palabras tienen que estar: una sola que coincida no alcanza.
     expect(ids(productosVisibles(lista, secciones, "cafe muzzarella", null))).toEqual([]);
     expect(ids(productosVisibles(lista, secciones, "muzza", null))).toEqual([["s2", ["b"]]]);
+  });
+
+  it("busca también por código y por código de barras, sin importar mayúsculas", () => {
+    const con = [
+      producto({ id: "x", nombre: "Alfajor", codigo: "ALF-01", codigoDeBarras: "7791234567890" }),
+      producto({ id: "y", nombre: "Budín" }),
+    ];
+    const hallados = (q: string) =>
+      productosVisibles(con, secciones, q, null).flatMap((g) => g.productos.map((p) => p.id));
+    expect(hallados("alf-01")).toEqual(["x"]);
+    expect(hallados("7791234567890")).toEqual(["x"]);
+    expect(hallados("alfajor 01")).toEqual(["x"]);
+    expect(hallados("budin")).toEqual(["y"]);
+    expect(hallados("99999")).toEqual([]);
+    // Sin código no se busca «nada»: un texto cualquiera no los encuentra.
+    expect(hallados("stryker")).toEqual([]);
+    expect(hallados("null")).toEqual([]);
   });
 
   it("una sección elegida deja solo esa; no hay resultados es una lista vacía", () => {

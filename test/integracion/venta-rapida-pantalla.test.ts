@@ -8,15 +8,17 @@ import {
 } from "../../src/composicion/venta-rapida-web";
 import { crearConsultasDeCatalogo } from "../../src/modulos/catalogo/publico";
 import {
-  agregarALaCuenta,
   esCantidadValida,
   formaDeCantidad,
-  pedidoDeCotizacion,
   productosVisibles,
   sePuedeAgregar,
-  type LineaDeLaVenta,
   type ProductoDeLaVenta,
 } from "../../apps/web/ui/plantillas/venta/modelo-de-venta-rapida";
+import {
+  agregarALaCuenta,
+  pedidoDeCotizacion,
+  type LineaDeLaVenta,
+} from "../../apps/web/ui/plantillas/venta/modelo-de-la-cuenta";
 import {
   REGLAS_DE_PRUEBA,
   montarVentas,
@@ -298,6 +300,29 @@ describe.skipIf(base === null)(
         revision: 0,
       };
       expect(await cotizar([linea])).toMatchObject({ ok: false, error: GENERICO });
+    });
+
+    it("P8: el código propio y el de barras llegan a la pantalla y la búsqueda los encuentra", async () => {
+      await m.dueno.query(
+        "update producto set codigo = 'Q-77', codigo_de_barras = '7790001234567' where id = $1",
+        [ids.peso],
+      );
+      const venta = await cargar();
+      const queso = porNombre(venta, "Queso cremoso");
+      expect(queso).toMatchObject({ codigo: "Q-77", codigoDeBarras: "7790001234567" });
+      expect(venta.productos.find((x) => x.id === e.producto)).toMatchObject({
+        codigo: null,
+        codigoDeBarras: null,
+      });
+      for (const buscado of ["q-77", "7790001234567", "queso"]) {
+        const visibles = productosVisibles(venta.productos, venta.secciones, buscado, null).flatMap(
+          (g) => g.productos,
+        );
+        expect(
+          visibles.map((p) => p.nombre),
+          buscado,
+        ).toEqual(["Queso cremoso"]);
+      }
     });
 
     it("P7: la búsqueda de la pantalla encuentra por nombre lo que el servidor ofrece, sin importar tildes ni mayúsculas", async () => {

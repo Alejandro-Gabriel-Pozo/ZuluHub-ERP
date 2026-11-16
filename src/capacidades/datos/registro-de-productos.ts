@@ -34,7 +34,7 @@ export const DATOS_DE_PRODUCTOS = {
         fuente: FUENTE_DE_LA_LISTA_DE_PRODUCTOS,
       },
       {
-        para: "Texto con el que se busca un producto por su nombre en la venta rápida del mostrador (se filtra la lista ya cargada; el buscador vacío muestra todo).",
+        para: "Texto con el que se busca un producto por su nombre, su código o su código de barras en la venta rápida del mostrador (se filtra la lista ya cargada; el buscador vacío muestra todo).",
         fuente:
           "Pedernal-docs/11-especificaciones/servidor-del-mostrador-minimo.md §7 (fila «Buscar por nombre o código») y la maqueta `venta-rapida-v4.html` (carpeta de prototipos de Pedernal-docs 10-ux-ui)",
       },

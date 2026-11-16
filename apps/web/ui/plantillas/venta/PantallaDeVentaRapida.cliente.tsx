@@ -6,6 +6,7 @@ import {
   type ErrorPublico,
   type Respuesta,
 } from "../../../../../src/capacidades/experiencia/respuesta";
+import { Boton } from "../../componentes/Boton.cliente";
 import { Campo } from "../../componentes/Campo";
 import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
 import { Superposicion } from "../../patrones/Superposicion";
@@ -14,23 +15,26 @@ import { CuentaDeLaVenta } from "./CuentaDeLaVenta.cliente";
 import { HojaDeProducto, type LineaElegida } from "./HojaDeProducto.cliente";
 import estilos from "./VentaRapida.module.css";
 import {
-  agregarALaCuenta,
-  cambiarCantidad,
-  cantidadDelProductoEnLaCuenta,
   cantidadParaLeer,
   formaDeCantidad,
-  pedidoDeCotizacion,
   precioDeLaTarjeta,
   productosVisibles,
-  quitarDeLaCuenta,
   sePuedeAgregar,
+  textoSinResultados,
   tieneOpciones,
-  type CotizacionDeLaVenta,
-  type LineaDeLaVenta,
   type ProductoDeLaVenta,
   type SeccionDeLaVenta,
   type TextosDeLaVenta,
 } from "./modelo-de-venta-rapida";
+import {
+  agregarALaCuenta,
+  cambiarCantidad,
+  cantidadDelProductoEnLaCuenta,
+  pedidoDeCotizacion,
+  quitarDeLaCuenta,
+  type CotizacionDeLaVenta,
+  type LineaDeLaVenta,
+} from "./modelo-de-la-cuenta";
 
 export type PropsDePantallaDeVentaRapida = Readonly<{
   secciones: readonly SeccionDeLaVenta[];
@@ -177,6 +181,20 @@ export function PantallaDeVentaRapida({
           ))}
         </div>
       )}
+      {visibles.length === 0 && busqueda.trim() !== "" ? (
+        <div className={estilos["sinResultados"]}>
+          <p className={estilos["vacia"]}>{textoSinResultados(busqueda.trim())}</p>
+          <p className={estilos["ayuda"]}>{textos.sinResultadosAyuda}</p>
+          <Boton
+            variante="secundaria"
+            alTocar={() => {
+              setBusqueda("");
+            }}
+          >
+            {textos.borrarBusqueda}
+          </Boton>
+        </div>
+      ) : null}
       {visibles.map((grupo) => (
         <section key={grupo.seccion?.id ?? "sin-seccion"} className={estilos["grupoDeProductos"]}>
           {grupo.seccion === null ? null : (

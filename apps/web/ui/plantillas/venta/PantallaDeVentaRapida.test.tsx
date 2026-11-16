@@ -7,13 +7,12 @@ import {
 } from "../../../../../src/capacidades/experiencia/respuesta";
 import { tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
 import { PantallaDeVentaRapida } from "./PantallaDeVentaRapida.cliente";
-import {
-  textosDeLaVenta,
-  type CotizacionDeLaVenta,
-  type ProductoDeLaVenta,
-} from "./modelo-de-venta-rapida";
+import { textosDeLaVenta, type ProductoDeLaVenta } from "./modelo-de-venta-rapida";
+import { type CotizacionDeLaVenta } from "./modelo-de-la-cuenta";
 
 const base = {
+  codigo: null,
+  codigoDeBarras: null,
   seccionId: "comer",
   unidadDeVentaId: "UNIDAD",
   pasoMinimo: "1.0000",
@@ -82,6 +81,8 @@ const productos: readonly ProductoDeLaVenta[] = [
     ...base,
     id: "queso",
     nombre: "Queso cremoso",
+    codigo: "Q-77",
+    codigoDeBarras: "7790001234567",
     unidadDeVentaId: "KILOGRAMO",
     pasoMinimo: "0.0010",
     precio: { tipo: "BASE", importe: "14000.00" },
@@ -170,12 +171,18 @@ describe("VentaRapida: lo que se ve", () => {
 
   it("buscar filtra por nombre sin importar tildes ni mayúsculas y una sección elegida deja solo esa", async () => {
     await pantalla();
-    await userEvent.fill(page.getByRole("searchbox", { name: "Buscar" }), "MUZA");
+    await userEvent.fill(
+      page.getByRole("searchbox", { name: "Buscar por nombre o código" }),
+      "MUZA",
+    );
     expect(page.getByRole("button", { name: /Muzzarella/ }).elements()).toHaveLength(0);
-    await userEvent.fill(page.getByRole("searchbox", { name: "Buscar" }), "muzza");
+    await userEvent.fill(
+      page.getByRole("searchbox", { name: "Buscar por nombre o código" }),
+      "muzza",
+    );
     await expect.element(page.getByRole("button", { name: /Muzzarella/ })).toBeVisible();
     expect(page.getByRole("button", { name: /Medialuna/ }).elements()).toHaveLength(0);
-    await userEvent.fill(page.getByRole("searchbox", { name: "Buscar" }), "");
+    await userEvent.fill(page.getByRole("searchbox", { name: "Buscar por nombre o código" }), "");
     await userEvent.click(page.getByRole("button", { name: "Cafés", exact: true }));
     expect(page.getByRole("button", { name: /Medialuna/ }).elements()).toHaveLength(0);
     await expect.element(page.getByRole("button", { name: /Latte/ })).toBeVisible();
@@ -183,10 +190,33 @@ describe("VentaRapida: lo que se ve", () => {
     await expect.element(page.getByRole("button", { name: /Medialuna/ })).toBeVisible();
   });
 
+  it("también busca por código y por código de barras", async () => {
+    await pantalla();
+    const buscar = page.getByRole("searchbox", { name: "Buscar por nombre o código" });
+    for (const codigo of ["q-77", "7790001234567"]) {
+      await userEvent.fill(buscar, codigo);
+      await expect.element(page.getByRole("button", { name: /Queso cremoso/ })).toBeVisible();
+      expect(page.getByRole("button", { name: /Medialuna/ }).elements()).toHaveLength(0);
+    }
+  });
+
+  it("sin coincidencias lo dice con el texto buscado como texto, ayuda y «Borrar la búsqueda»", async () => {
+    await pantalla();
+    const buscar = page.getByRole("searchbox", { name: "Buscar por nombre o código" });
+    await userEvent.fill(buscar, "<b>zzz</b>");
+    await expect.element(page.getByText("No encontré productos con «<b>zzz</b>»")).toBeVisible();
+    expect(document.querySelector("b")).toBeNull();
+    await expect.element(page.getByText("Revisá el nombre o probá con el código.")).toBeVisible();
+    await userEvent.click(page.getByRole("button", { name: "Borrar la búsqueda" }));
+    await expect.element(buscar).toHaveValue("");
+    await expect.element(page.getByRole("button", { name: /Medialuna/ })).toBeVisible();
+    expect(page.getByText("No encontré productos").elements()).toHaveLength(0);
+  });
+
   it("lo que se escribe en el buscador se muestra como texto, nunca como código", async () => {
     await pantalla();
     await userEvent.fill(
-      page.getByRole("searchbox", { name: "Buscar" }),
+      page.getByRole("searchbox", { name: "Buscar por nombre o código" }),
       "<img src=x onerror=alert(1)>",
     );
     expect(document.querySelector("img[src='x']")).toBeNull();

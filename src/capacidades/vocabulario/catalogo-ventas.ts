@@ -12,6 +12,17 @@ export const TEXTOS_DE_VENTAS = {
   // «Venta»: título de la pantalla y de su entrada del menú. Figura en la maqueta aprobada de la venta rápida (`venta-rapida.html:551`, carpeta de prototipos de Pedernal-docs 10-ux-ui) y se mantiene en `venta-rapida-v4.html`;
   // no está en la lista de 302 textos (`textos-por-aprobar.html`): queda como pregunta de confirmación (DEC-0479).
   "ventas.venta.titulo": { porDefecto: "Venta" },
+  // «Buscar por nombre o código»: rótulo del buscador. Aprobado 09/11 (`textos-mostrador-pendientes.md` §4, línea 69); busca por nombre, código y código de barras (respuesta del orquestador, 15/11/2026).
+  "ventas.venta.buscar": { porDefecto: "Buscar por nombre o código" },
+  // Búsqueda sin coincidencias: los tres textos figuran en la maqueta aprobada de la venta rápida (`venta-rapida.html:548`); aceptados por el orquestador el 15/11/2026 (delegación del dueño, DDD filas 173 y 174).
+  // El texto buscado se inserta como texto, nunca como código (R6 de e4 §3.9).
+  "ventas.venta.sin_resultados": {
+    porDefecto: "No encontré productos con «{busqueda}»",
+    marcadores: ["busqueda"],
+    largoMaximo: 120,
+  },
+  "ventas.venta.sin_resultados_ayuda": { porDefecto: "Revisá el nombre o probá con el código." },
+  "ventas.venta.borrar_busqueda": { porDefecto: "Borrar la búsqueda" },
   // «Ver cuenta»: aprobado 09/11 (`textos-mostrador-pendientes.md` §4, línea 69).
   "ventas.venta.ver_cuenta": { porDefecto: "Ver cuenta" },
   // «Total»: aprobado 09/11 (ídem; `e4-venta-rapida-especificacion.md` §3.16, `ventas.confirmar_cero`).

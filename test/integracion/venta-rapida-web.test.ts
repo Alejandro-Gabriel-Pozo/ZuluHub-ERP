@@ -73,6 +73,8 @@ describe.skipIf(base === null)("venta rápida web: lista y cotización contra la
     expect(p?.precio).toEqual({ tipo: "BASE", importe: "1000.000000" });
     expect(Object.keys(p ?? {}).sort()).toEqual(
       [
+        "codigo",
+        "codigoDeBarras",
         "grupos",
         "id",
         "nombre",

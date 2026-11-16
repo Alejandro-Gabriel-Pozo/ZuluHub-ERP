@@ -6,14 +6,16 @@ import { ControlDeCantidad } from "./ControlDeCantidad.cliente";
 import estilos from "./VentaRapida.module.css";
 import {
   cantidadParaLeer,
-  detalleDeLaLinea,
   formaDeCantidad,
   nombreDeLaUnidad,
-  type CotizacionDeLaVenta,
-  type LineaDeLaVenta,
   type ProductoDeLaVenta,
   type TextosDeLaVenta,
 } from "./modelo-de-venta-rapida";
+import {
+  detalleDeLaLinea,
+  type CotizacionDeLaVenta,
+  type LineaDeLaVenta,
+} from "./modelo-de-la-cuenta";
 
 export type PropsDeCuentaDeLaVenta = Readonly<{
   cuenta: readonly LineaDeLaVenta[];

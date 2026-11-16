@@ -40,6 +40,8 @@ type GrupoDeLaVenta = Readonly<{
 export type ProductoDeLaVenta = Readonly<{
   id: string;
   nombre: string;
+  codigo: string | null;
+  codigoDeBarras: string | null;
   seccionId: string | null;
   unidadDeVentaId: string;
   pasoMinimo: string;
@@ -175,6 +177,8 @@ export function nombreDeLaUnidad(codigo: string): string | null {
 
 export type TextosDeLaVenta = Readonly<{
   buscar: string;
+  sinResultadosAyuda: string;
+  borrarBusqueda: string;
   verCuenta: string;
   total: string;
   conOpciones: string;
@@ -197,12 +201,13 @@ export type TextosDeLaVenta = Readonly<{
 }>;
 
 /**
- * Los textos de la pantalla ya resueltos. Reutiliza los aprobados que ya tienen clave en otro módulo cuando son el mismo texto y la misma función: «Buscar» (`catalogo.lista.buscar`; mientras el
- * listado no traiga el código del producto, el buscador dice solo «Buscar»), «Según medida», «Sin precio», «Sin elegir» y «Cerrar».
+ * Los textos de la pantalla ya resueltos. Reutiliza los aprobados que ya tienen clave en otro módulo cuando son el mismo texto y la misma función: «Según medida», «Sin precio», «Sin elegir» y «Cerrar».
  */
 export function textosDeLaVenta(): TextosDeLaVenta {
   return {
-    buscar: texto({}, "catalogo.lista.buscar"),
+    buscar: texto({}, "ventas.venta.buscar"),
+    sinResultadosAyuda: texto({}, "ventas.venta.sin_resultados_ayuda"),
+    borrarBusqueda: texto({}, "ventas.venta.borrar_busqueda"),
     verCuenta: texto({}, "ventas.venta.ver_cuenta"),
     total: texto({}, "ventas.venta.total"),
     conOpciones: texto({}, "ventas.venta.con_opciones"),
@@ -224,6 +229,13 @@ export function textosDeLaVenta(): TextosDeLaVenta {
     cerrar: texto({}, "vidriera.producto.cerrar"),
   };
 }
+
+/**
+ * «No encontré productos con «…»»: el texto buscado se inserta como texto. Es una función aparte de `textosDeLaVenta` a propósito: los textos viajan del servidor al navegador como datos y una función
+ * no puede cruzar esa frontera (Next lo rechaza; lo atrapa el recorrido de la app real).
+ */
+export const textoSinResultados = (busqueda: string): string =>
+  texto({}, "ventas.venta.sin_resultados", { busqueda });
 
 /** El precio que se ve en la tarjeta: el de lista (formateado, tal cual lo trae el servidor), «Según medida» o «Sin precio». */
 export function precioDeLaTarjeta(producto: ProductoDeLaVenta, textos: TextosDeLaVenta): string {
@@ -262,8 +274,8 @@ export function productosVisibles(
 ): readonly GrupoDeSeccion[] {
   const palabras = normalizarParaBuscar(busqueda).split(" ");
   const responde = (p: ProductoDeLaVenta) => {
-    const nombre = normalizarParaBuscar(p.nombre);
-    return palabras.every((palabra) => nombre.includes(palabra));
+    const donde = normalizarParaBuscar(`${p.nombre} ${p.codigo ?? ""} ${p.codigoDeBarras ?? ""}`);
+    return palabras.every((palabra) => donde.includes(palabra));
   };
   const grupos: GrupoDeSeccion[] = secciones.map((seccion) => ({
     seccion,
@@ -282,118 +294,3 @@ export function productosVisibles(
     (g) => g.productos.length > 0,
   );
 }
-
-// ─── La cuenta ──────────────────────────────────────────────────────────────────────────────────────────
-
-/** Una línea de la cuenta local: lo que se eligió, no lo que cuesta (eso lo dice el servidor). */
-export type LineaDeLaVenta = Readonly<{
-  /** Misma configuración (producto, medida y opciones) = misma clave = una sola línea. */
-  clave: string;
-  productoId: string;
-  varianteId: string | null;
-  opcionIds: readonly string[];
-  /** En diezmilésimos. */
-  cantidad: number;
-  /** Sube cada vez que otra carga se suma a esta línea desde afuera del campo de la cuenta: la pantalla lo usa para que el campo vuelva a mostrar la cantidad nueva (no cambia al escribir). */
-  revision: number;
-}>;
-
-/** La clave de una configuración: el producto, la medida y las opciones sin importar el orden en que se tocaron. */
-export function claveDeLinea(
-  productoId: string,
-  varianteId: string | null,
-  opcionIds: readonly string[],
-): string {
-  return JSON.stringify([productoId, varianteId, [...opcionIds].sort()]);
-}
-
-/** Agrega a la cuenta: una configuración que ya está suma su cantidad (decimal exacto, tope 9999); una nueva queda al final. No muta la cuenta anterior. */
-export function agregarALaCuenta(
-  cuenta: readonly LineaDeLaVenta[],
-  nueva: Readonly<{
-    productoId: string;
-    varianteId: string | null;
-    opcionIds: readonly string[];
-    cantidad: number;
-  }>,
-): readonly LineaDeLaVenta[] {
-  const clave = claveDeLinea(nueva.productoId, nueva.varianteId, nueva.opcionIds);
-  if (cuenta.some((l) => l.clave === clave)) {
-    return cuenta.map((l) =>
-      l.clave === clave
-        ? { ...l, cantidad: sumarCantidades(l.cantidad, nueva.cantidad), revision: l.revision + 1 }
-        : l,
-    );
-  }
-  return [
-    ...cuenta,
-    {
-      clave,
-      productoId: nueva.productoId,
-      varianteId: nueva.varianteId,
-      opcionIds: [...nueva.opcionIds].sort(),
-      cantidad: nueva.cantidad,
-      revision: 0,
-    },
-  ];
-}
-
-/** Cambia la cantidad de una línea (la que se escribe en la cuenta). */
-export const cambiarCantidad = (
-  cuenta: readonly LineaDeLaVenta[],
-  clave: string,
-  cantidad: number,
-): readonly LineaDeLaVenta[] => cuenta.map((l) => (l.clave === clave ? { ...l, cantidad } : l));
-
-/** Quita una línea de la cuenta. */
-export const quitarDeLaCuenta = (
-  cuenta: readonly LineaDeLaVenta[],
-  clave: string,
-): readonly LineaDeLaVenta[] => cuenta.filter((l) => l.clave !== clave);
-
-/** Cuánto hay de un producto en la cuenta (todas sus configuraciones), para marcar la tarjeta. */
-export const cantidadDelProductoEnLaCuenta = (
-  cuenta: readonly LineaDeLaVenta[],
-  productoId: string,
-): number =>
-  cuenta.filter((l) => l.productoId === productoId).reduce((suma, l) => suma + l.cantidad, 0);
-
-/** El pedido de cotización del carrito: solo lo elegido; la sucursal la pone el servidor. Las cantidades viajan como texto decimal. */
-export function pedidoDeCotizacion(cuenta: readonly LineaDeLaVenta[]): Readonly<{
-  lineas: readonly Readonly<{
-    productoId: string;
-    varianteId?: string;
-    opcionIds: readonly string[];
-    cantidad: string;
-  }>[];
-}> {
-  return {
-    lineas: cuenta.map((l) => ({
-      productoId: l.productoId,
-      ...(l.varianteId === null ? {} : { varianteId: l.varianteId }),
-      opcionIds: l.opcionIds,
-      cantidad: deDiezmilesimos(l.cantidad),
-    })),
-  };
-}
-
-/** El detalle de una línea: la medida y las opciones elegidas, por su nombre, en el orden del producto. Un id que el producto ya no ofrece no se muestra (nunca se inventa un nombre). */
-export function detalleDeLaLinea(
-  producto: ProductoDeLaVenta,
-  linea: LineaDeLaVenta,
-): readonly string[] {
-  const medida = producto.variante?.opciones.find((o) => o.id === linea.varianteId)?.nombre;
-  const opciones = producto.grupos.flatMap((g) =>
-    g.opciones.filter((o) => linea.opcionIds.includes(o.id)).map((o) => o.nombre),
-  );
-  return medida === undefined ? opciones : [medida, ...opciones];
-}
-
-/** La cotización del servidor tal como la usa la pantalla: el total y, por línea (en el mismo orden que la cuenta), el precio unitario y el importe. Dinero como texto decimal con su moneda. */
-export type CotizacionDeLaVenta = Readonly<{
-  total: Readonly<{ moneda: string; monto: string }>;
-  lineas: readonly Readonly<{
-    precioUnitario: Readonly<{ moneda: string; monto: string }>;
-    importe: Readonly<{ moneda: string; monto: string }>;
-  }>[];
-}>;
