@@ -98,9 +98,10 @@ function columnas(miembros: readonly Vigente[]): readonly string[] {
   for (const miembro of miembros) {
     for (const medida of miembro.medidas) {
       const previa = porClave.get(medida.clave);
-      if (previa === undefined)
-        porClave.set(medida.clave, { nombre: medida.nombre, orden: medida.orden });
-      else if (medida.orden < previa.orden) previa.orden = medida.orden;
+      porClave.set(medida.clave, {
+        nombre: previa === undefined ? medida.nombre : previa.nombre,
+        orden: previa === undefined ? medida.orden : Math.min(previa.orden, medida.orden),
+      });
     }
   }
   // `sort` es estable: con el mismo `orden` queda primero la medida que se vio primero.
