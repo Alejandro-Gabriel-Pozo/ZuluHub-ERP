@@ -45,7 +45,14 @@ describe.skipIf(base === null)("opciones de un producto de la web", () => {
     c = await montarCatalogo(base);
     // El catálogo real: `catalogo` sigue `en_desarrollo` y el guard rechaza todo.
     cerrado = await montarCatalogo(base, {
-      reglas: { catalogo: CATALOGO_DE_MODULOS, permisos: PERMISOS_DE_EMPRESA },
+      // En el catálogo real `catalogo` es disponible (DEC-0463): para probar que todo nace cerrado se lo declara en desarrollo.
+      reglas: {
+        catalogo: {
+          ...CATALOGO_DE_MODULOS,
+          catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "en_desarrollo" },
+        },
+        permisos: PERMISOS_DE_EMPRESA,
+      },
     });
     e = await c.escenario();
     d = {
@@ -501,7 +508,7 @@ describe.skipIf(base === null)("opciones de un producto de la web", () => {
     expect(codigoDe(await guardar(id, v0, {}, e.administrador))).toBe("OK");
   });
 
-  it("con el catálogo en desarrollo (hoy, en el catálogo real) todos reciben MODULO_EN_DESARROLLO y ningún dato", async () => {
+  it("con el catálogo en desarrollo todos reciben MODULO_EN_DESARROLLO y ningún dato", async () => {
     const x = await cerrado.escenario();
     const id = await productoDeBase(cerrado.dueno, x.empresa, { nombre: "Cerrado" });
     const dependencias: DependenciasDeOpcionesWeb = {

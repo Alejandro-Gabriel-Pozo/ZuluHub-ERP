@@ -750,8 +750,13 @@ describe.skipIf(base === null)(
     });
 
     describe("precios por medida, todo o nada (PM)", () => {
+      // Su propia empresa: no engordan la lista de productos de la del resto de las pruebas.
+      let ep: EscenarioDeCatalogo;
+      beforeAll(async () => {
+        ep = await c.escenario();
+      });
       /** Un producto con la variante «Tamaño» y dos medidas, en la empresa del escenario `x`. */
-      const conMedidas = async (x: EscenarioDeCatalogo = e) => {
+      const conMedidas = async (x: EscenarioDeCatalogo = ep) => {
         const p = valorDe(
           await c.casos.crearProducto(x.gerente, {
             id: nuevoId(),
@@ -793,7 +798,7 @@ describe.skipIf(base === null)(
 
       it("aplica todas las medidas en una transacción, una fila y una auditoría por medida", async () => {
         const m = await conMedidas();
-        const r = valorDe(await c.casos.cambiarPreciosPorMedida(e.gerente, pedido(m.p, m)));
+        const r = valorDe(await c.casos.cambiarPreciosPorMedida(ep.gerente, pedido(m.p, m)));
         expect(r.yaExistia).toBe(false);
         expect(r.cambios).toHaveLength(2);
         expect(await filasDe(m.p)).toBe(2);
@@ -803,8 +808,8 @@ describe.skipIf(base === null)(
       it("PM2: repetir el mismo pedido de precios por medida deja todo en yaExistia y no escribe", async () => {
         const m = await conMedidas();
         const ped = pedido(m.p, m);
-        valorDe(await c.casos.cambiarPreciosPorMedida(e.gerente, ped));
-        const otra = valorDe(await c.casos.cambiarPreciosPorMedida(e.gerente, ped));
+        valorDe(await c.casos.cambiarPreciosPorMedida(ep.gerente, ped));
+        const otra = valorDe(await c.casos.cambiarPreciosPorMedida(ep.gerente, ped));
         expect(otra.yaExistia).toBe(true);
         expect(otra.cambios.every((x) => x.yaExistia && x.vigenteDesde === null)).toBe(true);
         expect(await filasDe(m.p)).toBe(2);
@@ -814,7 +819,7 @@ describe.skipIf(base === null)(
           ...ped,
           cambios: ped.cambios.map((x) => ({ ...x, precio: "9999" })),
         };
-        expect(await c.casos.cambiarPreciosPorMedida(e.gerente, cambiado)).toEqual({
+        expect(await c.casos.cambiarPreciosPorMedida(ep.gerente, cambiado)).toEqual({
           ok: false,
           error: "ID_REUTILIZADO",
         });
@@ -824,11 +829,11 @@ describe.skipIf(base === null)(
       it("atomicidad: si la segunda medida falla no queda la primera, ni su auditoría", async () => {
         const m = await conMedidas();
         expect(
-          await c.casos.cambiarPreciosPorMedida(e.gerente, pedido(m.p, m, ["2500", "abc"])),
+          await c.casos.cambiarPreciosPorMedida(ep.gerente, pedido(m.p, m, ["2500", "abc"])),
         ).toEqual({ ok: false, error: "PRECIO_INVALIDO" });
         // Otra pestaña ya le puso precio a «Grande»: el pedido viejo (esperaba ninguno) no deja a medias.
         valorDe(
-          await c.casos.cambiarPrecio(e.gerente, {
+          await c.casos.cambiarPrecio(ep.gerente, {
             precioId: nuevoId(),
             productoId: m.p,
             opcionId: m.grande,
@@ -839,7 +844,7 @@ describe.skipIf(base === null)(
         );
         const antes = await filasDe(m.p);
         const auditoriasAntes = await auditoriasDe(m.p);
-        const r = await c.casos.cambiarPreciosPorMedida(e.gerente, pedido(m.p, m));
+        const r = await c.casos.cambiarPreciosPorMedida(ep.gerente, pedido(m.p, m));
         expect(r).toMatchObject({ ok: false, error: { error: "PRECIO_DESACTUALIZADO" } });
         expect(await filasDe(m.p)).toBe(antes);
         expect(await auditoriasDe(m.p)).toBe(auditoriasAntes);
@@ -850,8 +855,8 @@ describe.skipIf(base === null)(
         const a = pedido(m.p, m, ["2500", "3500"]);
         const b = pedido(m.p, m, ["2600", "3600"]);
         const [ra, rb] = await Promise.all([
-          c.casos.cambiarPreciosPorMedida(e.gerente, a),
-          c.casos.cambiarPreciosPorMedida(e.gerente, b),
+          c.casos.cambiarPreciosPorMedida(ep.gerente, a),
+          c.casos.cambiarPreciosPorMedida(ep.gerente, b),
         ]);
         expect([ra.ok, rb.ok].filter(Boolean)).toHaveLength(1);
         const perdedor = ra.ok ? rb : ra;
@@ -864,8 +869,8 @@ describe.skipIf(base === null)(
         const m = await conMedidas();
         const ped = pedido(m.p, m);
         const [ra, rb] = await Promise.all([
-          c.casos.cambiarPreciosPorMedida(e.gerente, ped),
-          c.casos.cambiarPreciosPorMedida(e.gerente, ped),
+          c.casos.cambiarPreciosPorMedida(ep.gerente, ped),
+          c.casos.cambiarPreciosPorMedida(ep.gerente, ped),
         ]);
         expect(ra.ok).toBe(true);
         expect(rb.ok).toBe(true);
@@ -878,13 +883,13 @@ describe.skipIf(base === null)(
         const otro = await conMedidas();
         const base = pedido(m.p, m);
         expect(
-          await c.casos.cambiarPreciosPorMedida(e.gerente, {
+          await c.casos.cambiarPreciosPorMedida(ep.gerente, {
             ...base,
             cambios: [base.cambios[0]!, { ...base.cambios[1]!, opcionId: m.chico }],
           }),
         ).toEqual({ ok: false, error: "OPCION_INVALIDA" });
         expect(
-          await c.casos.cambiarPreciosPorMedida(e.gerente, {
+          await c.casos.cambiarPreciosPorMedida(ep.gerente, {
             ...base,
             cambios: [
               base.cambios[0]!,
@@ -893,19 +898,19 @@ describe.skipIf(base === null)(
           }),
         ).toEqual({ ok: false, error: "ID_REUTILIZADO" });
         expect(
-          await c.casos.cambiarPreciosPorMedida(e.gerente, {
+          await c.casos.cambiarPreciosPorMedida(ep.gerente, {
             ...base,
             cambios: [base.cambios[0]!, { ...base.cambios[1]!, opcionId: otro.grande }],
           }),
         ).toEqual({ ok: false, error: "OPCION_INVALIDA" });
-        expect((await c.casos.cambiarPreciosPorMedida(e.operador, base)).ok).toBe(false);
+        expect((await c.casos.cambiarPreciosPorMedida(ep.operador, base)).ok).toBe(false);
         expect(await filasDe(m.p)).toBe(0);
       });
 
       it("sin cambios no hace nada; con más medidas que el tope, rechaza", async () => {
         const m = await conMedidas();
         expect(
-          await c.casos.cambiarPreciosPorMedida(e.gerente, { productoId: m.p, cambios: [] }),
+          await c.casos.cambiarPreciosPorMedida(ep.gerente, { productoId: m.p, cambios: [] }),
         ).toEqual({ ok: true, valor: { cambios: [], yaExistia: true } });
         const muchos = Array.from({ length: 51 }, () => ({
           precioId: nuevoId(),
@@ -914,7 +919,7 @@ describe.skipIf(base === null)(
           precio: "1",
         }));
         expect(
-          await c.casos.cambiarPreciosPorMedida(e.gerente, { productoId: m.p, cambios: muchos }),
+          await c.casos.cambiarPreciosPorMedida(ep.gerente, { productoId: m.p, cambios: muchos }),
         ).toEqual({ ok: false, error: "OPCION_INVALIDA" });
       });
 

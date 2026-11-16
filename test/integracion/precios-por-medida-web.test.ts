@@ -36,7 +36,14 @@ describe.skipIf(base === null)("precios por medida de la web", () => {
     if (base === null) return;
     c = await montarCatalogo(base);
     cerrado = await montarCatalogo(base, {
-      reglas: { catalogo: CATALOGO_DE_MODULOS, permisos: PERMISOS_DE_EMPRESA },
+      // En el catálogo real `catalogo` es disponible (DEC-0463): para probar que todo nace cerrado se lo declara en desarrollo.
+      reglas: {
+        catalogo: {
+          ...CATALOGO_DE_MODULOS,
+          catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "en_desarrollo" },
+        },
+        permisos: PERMISOS_DE_EMPRESA,
+      },
     });
     e = await c.escenario();
     d = {
