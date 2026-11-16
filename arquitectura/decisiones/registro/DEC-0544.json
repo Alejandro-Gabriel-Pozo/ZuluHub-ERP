@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0544",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: la tarjeta de Ocultar aparece debajo de la ficha solo si se pudo leer dónde está oculto; sin local elegido solo se ofrece Ocultar en toda la empresa, nunca se asume todas.",
+  "que_cambia": "Sin vidriera activa o sin vidrieras.ver la ficha sigue igual, sin tarjeta. Revertir: sacar la tarjeta de la página de la ficha.",
+  "donde": "página de la ficha de producto en apps/web/app/s/app/catalogo/productos; apps/web/servidor/ocultar.ts"
+}

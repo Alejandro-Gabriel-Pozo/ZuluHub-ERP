@@ -104,6 +104,19 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.error.accion_no_permitida": { porDefecto: "Esta acción no está permitida" },
   "catalogo.accion.cancelar": { porDefecto: "Cancelar" },
 
+  // Ocultar un producto (A15). Los cinco rótulos son T13 de `textos-nuevos-pendientes.md` (maqueta `productos.html:310-318`, `carta-real-especificacion.md` §10.6 punto 6), aprobados por el dueño el
+  // 15/11/2026 (`decisiones-del-dueno-2026-11.md`, DDD:165). «Oculto con existencia negativa», también de T13, no se construye en esta pantalla (hace falta leer la existencia: pregunta pendiente).
+  // Los dos mensajes de bloqueo los aprobó el dueño el 12/11/2026 (`productos.html:318`: «3.- sí», textos propuestos por el padre y aprobados): `PRODUCTO_CON_EXISTENCIA` y `PRODUCTO_CON_CONTEO_ABIERTO`.
+  "catalogo.ocultar.ocultar": { porDefecto: "Ocultar" },
+  "catalogo.ocultar.volver_a_mostrar": { porDefecto: "Volver a mostrar" },
+  "catalogo.ocultar.ocultar_en_la_empresa": { porDefecto: "Ocultar en toda la empresa" },
+  "catalogo.ocultar.oculto": { porDefecto: "Oculto" },
+  "catalogo.ocultar.oculto_en_la_empresa": { porDefecto: "Oculto en toda la empresa" },
+  "catalogo.error.primero_existencia_en_cero": { porDefecto: "Primero dejá la existencia en 0." },
+  "catalogo.error.conteo_abierto_con_el_producto": {
+    porDefecto: "Hay un conteo abierto con este producto.",
+  },
+
   // Los nombres de las 14 unidades de medida (A2i). FUENTE ÚNICA: la constante `UNID` de la maqueta aprobada `Pedernal-docs/10-ux-ui/prototipos-gastronomia/productos.html` (~línea 421),
   // en el mismo orden que `src/primitivas/unidades/unidades.ts`; decisión del dueño del 13/11/2026 («las 14 unidades se muestran con los nombres de la maqueta de productos»,
   // `decisiones-del-dueno-2026-11.md`, fila del 13/11). La clave de cada una sale del código de la unidad en minúscula (`catalogo.unidad.<codigo>`): el mapa código → clave está en

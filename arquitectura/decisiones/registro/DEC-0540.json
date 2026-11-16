@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0540",
+  "fecha": "2026-11-16",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Ocultar un producto en toda la empresa pide una acción propia, vidrieras.ocultar_en_empresa (gerente y administrador); ocultar en un local sigue en los tres roles.",
+  "que_cambia": "Reemplaza la exigencia vieja de vidrieras.editar en ocultarProducto; el operador sigue sin ocultar lo de todos los locales. Revertir: volver a exigir vidrieras.editar y quitar la acción.",
+  "donde": "src/capacidades/modulos/catalogo.ts; src/capacidades/permisos/empresa.ts; ocultar-producto.ts; respuesta del dueño 22A, DDD fila 180 (15/11/2026)"
+}

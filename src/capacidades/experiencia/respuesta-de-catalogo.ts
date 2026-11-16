@@ -20,6 +20,9 @@ export const CLAVES_DE_ERRORES_DE_CATALOGO = {
   CATALOGO_PRECIO_INVALIDO: "catalogo.error.precio_invalido",
   CATALOGO_PRECIO_DESACTUALIZADO: "catalogo.precio.vigente_ahora",
   CATALOGO_ACCION_NO_PERMITIDA: "catalogo.error.accion_no_permitida",
+  // Ocultar (A15): los dos bloqueos con texto propio, aprobados por el dueño el 12/11/2026 (`productos.html:318`). Valen igual para desactivar.
+  CATALOGO_PRODUCTO_CON_EXISTENCIA: "catalogo.error.primero_existencia_en_cero",
+  CATALOGO_PRODUCTO_CON_CONTEO_ABIERTO: "catalogo.error.conteo_abierto_con_el_producto",
 } as const satisfies Record<string, ClaveDeTexto>;
 
 export type CodigoDeCatalogo = keyof typeof CLAVES_DE_ERRORES_DE_CATALOGO;

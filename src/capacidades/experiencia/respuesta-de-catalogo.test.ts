@@ -18,7 +18,15 @@ describe("códigos públicos de la ficha de un producto", () => {
       CATALOGO_PRECIO_INVALIDO: "catalogo.error.precio_invalido",
       CATALOGO_PRECIO_DESACTUALIZADO: "catalogo.precio.vigente_ahora",
       CATALOGO_ACCION_NO_PERMITIDA: "catalogo.error.accion_no_permitida",
+      CATALOGO_PRODUCTO_CON_EXISTENCIA: "catalogo.error.primero_existencia_en_cero",
+      CATALOGO_PRODUCTO_CON_CONTEO_ABIERTO: "catalogo.error.conteo_abierto_con_el_producto",
     });
+    expect(CATALOGO_DE_TEXTOS["catalogo.error.primero_existencia_en_cero"].porDefecto).toBe(
+      "Primero dejá la existencia en 0.",
+    );
+    expect(CATALOGO_DE_TEXTOS["catalogo.error.conteo_abierto_con_el_producto"].porDefecto).toBe(
+      "Hay un conteo abierto con este producto.",
+    );
     expect(CATALOGO_DE_TEXTOS["catalogo.error.nombre_repetido"].porDefecto).toBe(
       "Ya existe un producto con ese nombre",
     );

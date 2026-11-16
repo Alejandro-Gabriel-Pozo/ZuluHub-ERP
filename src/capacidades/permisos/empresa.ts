@@ -79,6 +79,7 @@ export const PERMISOS_DE_EMPRESA = {
   "categorias.reactivar": ["GERENTE", "ADMINISTRADOR"],
   "vidrieras.crear": ["GERENTE", "ADMINISTRADOR"],
   "vidrieras.editar": ["GERENTE", "ADMINISTRADOR"],
+  "vidrieras.ocultar_en_empresa": ["GERENTE", "ADMINISTRADOR"],
   "vidrieras.publicar": ["GERENTE", "ADMINISTRADOR"],
   "categorias.desactivar": ["GERENTE", "ADMINISTRADOR"],
   "vidrieras.retirar": ["GERENTE", "ADMINISTRADOR"],

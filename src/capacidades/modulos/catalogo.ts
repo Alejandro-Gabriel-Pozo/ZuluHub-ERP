@@ -197,6 +197,7 @@ export const CATALOGO_DE_MODULOS = {
     acciones: {
       "vidrieras.ver": { capacidad: null, efecto: "LECTURA" },
       "vidrieras.marcar_disponibilidad": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "vidrieras.ocultar_en_empresa": { capacidad: null, efecto: "CREA_AMPLIA" },
       "vidrieras.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
       "vidrieras.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "vidrieras.publicar": { capacidad: null, efecto: "CREA_AMPLIA" },

@@ -107,6 +107,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "conjuntos.editar_contenido"
       | "vidrieras.ver"
       | "vidrieras.marcar_disponibilidad"
+      | "vidrieras.ocultar_en_empresa"
       | "vidrieras.crear"
       | "vidrieras.editar"
       | "vidrieras.publicar"

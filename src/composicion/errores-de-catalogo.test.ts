@@ -62,6 +62,22 @@ describe("traducirErrorDeCatalogo", () => {
   });
 });
 
+describe("traducirErrorDeCatalogo: ocultar (A15)", () => {
+  it("los dos bloqueos de ocultar salen con su texto propio y el resto sigue siendo el genérico", () => {
+    expect(traducirErrorDeCatalogo("PRODUCTO_CON_EXISTENCIA")).toEqual({
+      codigo: "CATALOGO_PRODUCTO_CON_EXISTENCIA",
+      campo: "ocultar",
+    });
+    expect(traducirErrorDeCatalogo("PRODUCTO_CON_CONTEO_ABIERTO")).toEqual({
+      codigo: "CATALOGO_PRODUCTO_CON_CONTEO_ABIERTO",
+      campo: "ocultar",
+    });
+    expect(traducirErrorDeCatalogo("SUCURSAL_NO_ENCONTRADA")).toEqual({
+      codigo: "CATALOGO_ACCION_NO_PERMITIDA",
+    });
+  });
+});
+
 describe("traducirErrorDeCatalogo: precios (A1, T3)", () => {
   it("PRECIO_INVALIDO sale con su texto propio, asociado al campo precio", () => {
     expect(traducirErrorDeCatalogo("PRECIO_INVALIDO")).toEqual({
