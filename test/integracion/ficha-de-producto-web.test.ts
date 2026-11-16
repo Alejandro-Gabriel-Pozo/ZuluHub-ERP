@@ -275,16 +275,23 @@ describe.skipIf(base === null)("ficha de datos de un producto de la web", () => 
     expect(await version(id)).toBe(1);
   });
 
-  it("una alícuota que el producto no ofrece (Exento) no se pierde si la pantalla no la manda", async () => {
-    const id = await nuevoProducto({ alicuota: "EXENTO" });
-    expect(await guardar(id, 1, { nombre: "Con exento", codigo: "EX-1" })).toMatchObject({
-      ok: true,
-    });
-    expect(await fila(id)).toMatchObject({
-      alicuota_iva: "EXENTO",
-      codigo: "EX-1",
-      nombre: "Con exento",
-    });
+  it("una alícuota que el producto no ofrece (Exento, No gravado) se rechaza al crear y al editar, sin tocar lo guardado", async () => {
+    for (const alicuota of ["EXENTO", "NO_GRAVADO"]) {
+      expect(
+        await c.casos.crearProducto(e.gerente, {
+          id: nuevoId(),
+          claseDeUso: "VENDIBLE",
+          nombre: nombreAlAzarDeProducto(),
+          unidadBaseId: "UNIDAD",
+          alicuota,
+        }),
+      ).toEqual({ ok: false, error: "ALICUOTA_INVALIDA" });
+    }
+    const id = await nuevoProducto();
+    const antes = await fila(id);
+    expect(codigoDe(await guardar(id, 1, { alicuota: "EXENTO" }))).toBe(GENERICO);
+    expect(codigoDe(await guardar(id, 1, { alicuota: "NO_GRAVADO" }))).toBe(GENERICO);
+    expect(await fila(id)).toEqual(antes);
   });
 
   it("una sección desactivada no se pierde si la pantalla no la manda, y no se ofrece", async () => {

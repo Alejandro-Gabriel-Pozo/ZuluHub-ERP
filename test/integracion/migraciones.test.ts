@@ -83,6 +83,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0065_producto_en_la_linea_de_la_factura.sql",
         "0066_compras_ordenes.sql",
         "0067_compras_diferencias.sql",
+        "0075_alicuota_del_producto.sql",
         "0084_compras_devoluciones.sql",
         "0085_compras_notas_de_credito.sql",
       ]);
@@ -149,6 +150,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0065_producto_en_la_linea_de_la_factura.sql",
           "0066_compras_ordenes.sql",
           "0067_compras_diferencias.sql",
+          "0075_alicuota_del_producto.sql",
           "0084_compras_devoluciones.sql",
           "0085_compras_notas_de_credito.sql",
         ],
@@ -320,6 +322,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0065_producto_en_la_linea_de_la_factura.sql",
         "0066_compras_ordenes.sql",
         "0067_compras_diferencias.sql",
+        "0075_alicuota_del_producto.sql",
         "0084_compras_devoluciones.sql",
         "0085_compras_notas_de_credito.sql",
       ]);
