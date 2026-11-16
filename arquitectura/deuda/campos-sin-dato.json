@@ -99,11 +99,6 @@
     "crudos": 10,
     "dinamicos": 0
   },
-  "apps/web/ui/plantillas/configuracion-fiscal/FormularioDeDatosFiscales.cliente.tsx": {
-    "pendientes": 4,
-    "crudos": 0,
-    "dinamicos": 0
-  },
   "apps/web/ui/plantillas/configuracion-fiscal/FormularioDePuntoDeVenta.cliente.tsx": {
     "pendientes": 3,
     "crudos": 0,
