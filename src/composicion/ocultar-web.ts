@@ -1,5 +1,6 @@
 import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
+import type { CasosDeUsoDeCatalogo, ConsultasDeCatalogo } from "../modulos/catalogo/publico";
 import { err } from "../primitivas/resultado/resultado";
 import {
   aRespuesta,
@@ -10,7 +11,6 @@ import {
 import { identificador } from "./entradas-de-facturacion";
 import { leerElPedidoDeOcultar } from "./entradas-de-ocultar";
 import { traducirErrorDeCatalogo } from "./errores-de-catalogo";
-import type { Web } from "./web";
 
 /**
  * Ocultar un producto de la web (A15; maqueta aprobada `productos.html`, tarjeta de visibilidad de la ficha): ver si el producto está oculto en el local y en toda la empresa, y ocultarlo o
@@ -28,8 +28,8 @@ import type { Web } from "./web";
  */
 
 export type DependenciasDeOcultarWeb = Readonly<{
-  casosDeUso: () => Pick<ReturnType<Web["casosDeUsoDeCatalogo"]>, "ocultarProducto">;
-  consultas: () => Pick<ReturnType<Web["consultasDeCatalogo"]>, "productosOcultos">;
+  casosDeUso: () => Pick<CasosDeUsoDeCatalogo, "ocultarProducto">;
+  consultas: () => Pick<ConsultasDeCatalogo, "productosOcultos">;
   respuesta: DependenciasDeRespuesta;
 }>;
 
