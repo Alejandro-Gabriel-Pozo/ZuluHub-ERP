@@ -4,7 +4,7 @@ import {
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 
 /**
- * El modelo de vista de la pantalla «Secciones de la carta» (A8, parte 1; maqueta aprobada `productos-secciones.html`, 12/11/2026): de lo que entrega la composición, lo que se ve en la lista,
+ * El modelo de vista de la pantalla «Secciones de la carta» (A8, partes 1 y 2; maqueta aprobada `productos-secciones.html`, 12/11/2026): de lo que entrega la composición, lo que se ve en la lista,
  * en la página de una sección y en el formulario del nombre, y NADA más. Puro: sin React ni servidor. Los textos salen del catálogo (`catalogo.*`, con su fuente en `catalogo-catalogo.ts`); no
  * se arma ningún texto nuevo, solo se eligen los aprobados.
  *
@@ -14,6 +14,8 @@ import {
  *    que el servidor no entiende.
  *  - **Lo que cambia algo sale solo si la persona puede editar** (`puedeEditarProductos`, solo una ayuda: el guard decide): sin permiso las flechas salen apagadas y «Nueva sección», «Nombre»
  *    y «Desactivar» / «Reactivar» no se ofrecen o salen apagados. Todo lo que no sea exactamente `true` cierra.
+ *  - **«Agregar producto» y «Quitar» (parte 2) se ofrecen solo si la persona puede editar**; apagados si no (ayuda, no autorización). «Quitar» sale en cada producto de la sección; los candidatos de
+ *    «Agregar producto» salen apagados sin permiso y, si falta completarlos, siempre (no se pueden elegir). Un candidato dice dónde está hoy: «Falta completar», su sección o «Sin elegir».
  *  - **Lo que la persona vio viaja con el toque**: la página liga a la acción las secciones activas en el orden en que se ven, cada una con su versión (`vistas`); un cambio de otra persona
  *    entre medio lo rechaza el caso de uso y la pantalla recarga.
  */
@@ -23,6 +25,12 @@ export const RUTA_DE_SECCIONES = "/catalogo/secciones";
 export const RUTA_DE_LA_SECCION_NUEVA = `${RUTA_DE_SECCIONES}/nueva`;
 export const rutaDeLaSeccion = (id: string): string => `${RUTA_DE_SECCIONES}/${id}`;
 export const rutaDelNombreDeLaSeccion = (id: string): string => `${rutaDeLaSeccion(id)}/nombre`;
+
+export const rutaDeAgregarProducto = (id: string): string => `${rutaDeLaSeccion(id)}/agregar`;
+
+/** Los nombres con los que «Quitar» y un candidato de «Agregar producto» viajan en el formulario: el valor es el id del producto tocado. */
+export const CAMPO_DE_QUITAR = "quitar";
+export const CAMPO_DE_AGREGAR = "agregar";
 
 /** Los nombres con los que una flecha viaja en el formulario: el valor es el id de la sección tocada. */
 export const CAMPO_DE_SUBIR = "subir";
@@ -38,6 +46,9 @@ export type SeccionDeLaLista = Readonly<{
 
 /** Lo que la persona vio de una sección activa: lo que la página liga a la acción. */
 export type VistaDeSeccion = Readonly<{ seccionId: string; versionEsperada: number }>;
+
+/** Lo que la persona vio de un producto (de la sección o candidato): lo que la página liga a la acción de «Quitar» y de «Agregar». */
+export type VistaDeProducto = Readonly<{ productoId: string; versionEsperada: number }>;
 
 type FlechaArmada = Readonly<{
   /** El nombre accesible: «Subir {nombre}» / «Bajar {nombre}» (SUPUESTO, DEC-0433, ver `catalogo-catalogo.ts`). */
@@ -116,7 +127,7 @@ type EnlaceArmado = Readonly<{ href: string; texto: string }>;
 /** Lo que entrega la composición para una sección: ella y una página de sus productos activos (en orden alfabético). */
 export type UnaSeccionDeLaPantalla = Readonly<{
   seccion: SeccionDeLaLista;
-  productos: readonly Readonly<{ id: string; nombre: string }>[];
+  productos: readonly Readonly<{ id: string; nombre: string; version: number }>[];
   /** La clave de la página que sigue; `null` en la última. */
   siguiente: string | null;
 }>;
@@ -132,7 +143,13 @@ export type UnaSeccionArmada = Readonly<{
   nombre: Readonly<{ texto: string; href: string | null }>;
   /** «Desactivar» si está activa, «Reactivar» si no; apagado si la persona no puede editar. */
   estado: Readonly<{ reactivar: boolean; texto: string; apagado: boolean }>;
+  /** «Agregar producto»: lleva a elegir; sin `href` (la persona no puede editar) sale apagado. */
+  agregar: Readonly<{ texto: string; href: string | null }>;
   productos: readonly Readonly<{ id: string; nombre: string }>[];
+  /** «Quitar», el mismo en cada producto; apagado si la persona no puede editar. */
+  quitar: Readonly<{ texto: string; apagado: boolean }>;
+  /** Los productos como se ven, con su versión: la página los liga a la acción de «Quitar». */
+  vistas: readonly VistaDeProducto[];
   siguiente: EnlaceArmado | null;
 }>;
 
@@ -162,12 +179,98 @@ export function armarUnaSeccion(
       texto: texto(d, seccion.activa ? "catalogo.accion.desactivar" : "catalogo.accion.reactivar"),
       apagado: !edita,
     },
-    productos: dato.productos,
+    agregar: {
+      texto: texto(d, "catalogo.seccion.agregar_producto"),
+      href: edita ? rutaDeAgregarProducto(seccion.id) : null,
+    },
+    productos: dato.productos.map((p) => ({ id: p.id, nombre: p.nombre })),
+    quitar: { texto: texto(d, "catalogo.accion.quitar"), apagado: !edita },
+    vistas: dato.productos.map((p) => ({ productoId: p.id, versionEsperada: p.version })),
     siguiente:
       dato.siguiente === null
         ? null
         : {
             href: `${rutaDeLaSeccion(seccion.id)}?${new URLSearchParams([["despues", dato.siguiente]]).toString()}`,
+            texto: texto(d, "fiscal.pantalla.listado_pagina_siguiente"),
+          },
+  };
+}
+
+/** Lo que entrega la composición para «Agregar producto»: la sección y una página de candidatos. */
+export type CandidatosDeLaPantalla = Readonly<{
+  seccion: SeccionDeLaLista;
+  candidatos: readonly Readonly<{
+    id: string;
+    nombre: string;
+    version: number;
+    faltaCompletar: boolean;
+    seccion: string | null;
+  }>[];
+  /** La clave de la página que sigue; `null` en la última. */
+  siguiente: string | null;
+}>;
+
+type FilaDeCandidato = Readonly<{
+  id: string;
+  nombre: string;
+  /** Dónde está hoy: «Falta completar», el nombre de su sección o «Sin elegir». */
+  donde: string;
+  /** Sin permiso, o si falta completarlo: no se puede elegir. */
+  apagada: boolean;
+}>;
+
+export type CandidatosArmados = Readonly<{
+  seccion: SeccionDeLaLista;
+  buscador: Readonly<{ accion: string; etiqueta: string; boton: string; valorInicial: string }>;
+  filas: readonly FilaDeCandidato[];
+  /** Los candidatos como se ven, con su versión: la página los liga a la acción de agregar. */
+  vistas: readonly VistaDeProducto[];
+  /** «Cancelar»: vuelve a la sección, como el cuadro de la maqueta. */
+  cancelar: EnlaceArmado;
+  siguiente: EnlaceArmado | null;
+}>;
+
+/** La dirección de «Agregar producto» con el texto buscado y, si sigue, la página. */
+function direccionDeAgregar(seccionId: string, buscado: string, despues: string | null): string {
+  const pares: [string, string][] = [];
+  if (buscado !== "") pares.push(["texto", buscado]);
+  if (despues !== null) pares.push(["despues", despues]);
+  return pares.length === 0
+    ? rutaDeAgregarProducto(seccionId)
+    : `${rutaDeAgregarProducto(seccionId)}?${new URLSearchParams(pares).toString()}`;
+}
+
+export function armarLosCandidatos(
+  dato: CandidatosDeLaPantalla,
+  buscado: string,
+  puedeEditar: boolean | undefined,
+  d: DiccionarioResuelto = {},
+): CandidatosArmados {
+  const edita = puede(puedeEditar);
+  const { seccion } = dato;
+  return {
+    seccion,
+    buscador: {
+      accion: rutaDeAgregarProducto(seccion.id),
+      etiqueta: texto(d, "catalogo.lista.buscar"),
+      boton: texto(d, "catalogo.lista.buscar"),
+      valorInicial: buscado,
+    },
+    filas: dato.candidatos.map((c) => ({
+      id: c.id,
+      nombre: c.nombre,
+      donde: c.faltaCompletar
+        ? texto(d, "catalogo.estado.falta_completar")
+        : (c.seccion ?? texto(d, "catalogo.dato.sin_elegir")),
+      apagada: !edita || c.faltaCompletar,
+    })),
+    vistas: dato.candidatos.map((c) => ({ productoId: c.id, versionEsperada: c.version })),
+    cancelar: { href: rutaDeLaSeccion(seccion.id), texto: texto(d, "catalogo.accion.cancelar") },
+    siguiente:
+      dato.siguiente === null
+        ? null
+        : {
+            href: direccionDeAgregar(seccion.id, buscado, dato.siguiente),
             texto: texto(d, "fiscal.pantalla.listado_pagina_siguiente"),
           },
   };

@@ -7,6 +7,8 @@ import type { DefinicionDeDato, Proposito } from "./tipos-de-datos";
 
 const LISTA_DE_PRODUCTOS =
   "apps/web/ui/plantillas/catalogo/FormularioDeFiltrosDeProductos.cliente.tsx";
+const BUSCADOR_DE_CANDIDATOS =
+  "apps/web/ui/plantillas/catalogo/FormularioDeBuscadorDeCandidatos.cliente.tsx";
 const REQUIERE_CATALOGO = { modulo: "catalogo", estadoDeEmpresa: ["ACTIVE"] } as const;
 const FUENTE_DE_LA_LISTA_DE_PRODUCTOS =
   "Pedernal-docs/11-especificaciones/fichas-de-modulo/a1-productos-y-precios.md §3 (consultas: `listarProductos` filtra por texto, clase, «falta completar» y activo) y la maqueta aprobada el 12/11/2026 (`productos.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)";
@@ -35,8 +37,13 @@ export const DATOS_DE_PRODUCTOS = {
         para: "Texto con el que se busca un producto por su nombre en la lista de productos (el buscador vacío muestra todo).",
         fuente: FUENTE_DE_LA_LISTA_DE_PRODUCTOS,
       },
+      {
+        para: "Texto con el que se busca un producto por su nombre para agregarlo a una sección de la carta (el buscador vacío muestra todos los que se pueden agregar).",
+        fuente:
+          "Pedernal-docs/10-ux-ui/prototipos-gastronomia/productos-secciones.html:399,490 (cuadro «Agregar producto», campo «Buscar», aprobada el 12/11/2026) y 11-especificaciones/conceptos/secciones-de-la-carta-pantalla.md §4",
+      },
     ],
-    consumidores: [LISTA_DE_PRODUCTOS],
+    consumidores: [LISTA_DE_PRODUCTOS, BUSCADOR_DE_CANDIDATOS],
     ponerPor: ["productos.ver"],
     requiere: REQUIERE_CATALOGO,
   },

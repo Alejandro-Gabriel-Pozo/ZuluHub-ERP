@@ -176,13 +176,27 @@ describe("verLaSeccion", () => {
 describe("verUnaSeccion", () => {
   const PRODUCTOS = {
     productos: [
-      { id: "p1", nombre: "Cortado", estado: "ACTIVO", precio: null, seccion: { id: A } },
-      { id: "p2", nombre: "Espresso", estado: "ACTIVO", precio: null, seccion: { id: A } },
+      {
+        id: "p1",
+        nombre: "Cortado",
+        version: 4,
+        estado: "ACTIVO",
+        precio: null,
+        seccion: { id: A },
+      },
+      {
+        id: "p2",
+        nombre: "Espresso",
+        version: 9,
+        estado: "ACTIVO",
+        precio: null,
+        seccion: { id: A },
+      },
     ],
     siguiente: null,
   };
 
-  it("trae la sección y sus productos activos (solo id y nombre) con el filtro de la sección", async () => {
+  it("trae la sección y sus productos activos (solo id, nombre y versión) con el filtro de la sección", async () => {
     const { m, d } = montar({ productos: () => ok(PRODUCTOS) });
     const r = await verUnaSeccion(d, contexto, { seccionId: A, despues: "" });
     expect(r).toEqual({
@@ -190,8 +204,8 @@ describe("verUnaSeccion", () => {
       dato: {
         seccion: { id: A, nombre: "Cafés", activa: true, version: 3 },
         productos: [
-          { id: "p1", nombre: "Cortado" },
-          { id: "p2", nombre: "Espresso" },
+          { id: "p1", nombre: "Cortado", version: 4 },
+          { id: "p2", nombre: "Espresso", version: 9 },
         ],
         siguiente: null,
       },
@@ -337,8 +351,17 @@ describe("crearLaSeccion", () => {
     expect(queLlamo(m)).toEqual(["lista"]);
   });
 
-  it.each(["SECCION_DUPLICADA", "ID_REUTILIZADO", "NOMBRE_DE_SECCION_INVALIDO", "ORDEN_INVALIDO"])(
-    "el error %s sale como el genérico (hasta que el dueño apruebe un texto propio)",
+  it("un nombre repetido sale con su texto aprobado, atado al campo «nombre» (no es el genérico)", async () => {
+    const { d } = montar({ crear: () => err("SECCION_DUPLICADA") });
+    const r = await crearLaSeccion(d, contexto, PEDIDO);
+    expect(r).toMatchObject({
+      ok: false,
+      error: { codigo: "CATALOGO_SECCION_REPETIDA", campo: "nombre" },
+    });
+  });
+
+  it.each(["ID_REUTILIZADO", "NOMBRE_DE_SECCION_INVALIDO", "ORDEN_INVALIDO"])(
+    "el error %s sale como el genérico",
     async (error) => {
       const { d } = montar({ crear: () => err(error) });
       expect(await crearLaSeccion(d, contexto, PEDIDO)).toEqual(GENERICO);
@@ -423,7 +446,16 @@ describe("renombrarLaSeccion", () => {
     expect(queLlamo(m)).toEqual(["lista"]);
   });
 
-  it.each(["VERSION_DESACTUALIZADA", "SECCION_DUPLICADA", "SECCION_NO_ENCONTRADA"])(
+  it("renombrar con el nombre de otra sección sale con el texto de nombre repetido, atado al campo «nombre»", async () => {
+    const { d } = montar({ editar: () => err("SECCION_DUPLICADA") });
+    const r = await renombrarLaSeccion(d, contexto, PEDIDO);
+    expect(r).toMatchObject({
+      ok: false,
+      error: { codigo: "CATALOGO_SECCION_REPETIDA", campo: "nombre" },
+    });
+  });
+
+  it.each(["VERSION_DESACTUALIZADA", "SECCION_NO_ENCONTRADA"])(
     "el error %s sale como el genérico: dos pestañas, la segunda con la versión vieja, no dice que es de versión",
     async (error) => {
       const { d } = montar({ editar: () => err(error) });

@@ -1,21 +1,26 @@
 import { describe, expect, it } from "vitest";
 import {
+  CAMPO_DE_AGREGAR,
   CAMPO_DE_BAJAR,
+  CAMPO_DE_QUITAR,
   CAMPO_DE_SUBIR,
   RUTA_DE_LA_SECCION_NUEVA,
   RUTA_DE_SECCIONES,
   armarElFormularioDeSeccion,
   armarLaListaDeSecciones,
+  armarLosCandidatos,
   armarUnaSeccion,
+  rutaDeAgregarProducto,
   rutaDeLaSeccion,
   rutaDelNombreDeLaSeccion,
   sePuedeGuardarElNombre,
+  type CandidatosDeLaPantalla,
   type SeccionDeLaLista,
   type UnaSeccionDeLaPantalla,
 } from "../../apps/web/ui/plantillas/catalogo/modelo-de-secciones";
 
 /**
- * El modelo de vista de «Secciones de la carta» (A8, parte 1; maqueta `productos-secciones.html`), con los textos reales del catálogo: el orden de la lista (activas primero, desactivadas al
+ * El modelo de vista de «Secciones de la carta» (A8, partes 1 y 2; maqueta `productos-secciones.html`), con los textos reales del catálogo: el orden de la lista (activas primero, desactivadas al
  * final sin flechas), qué flechas salen apagadas, qué se ofrece sin permiso, lo que viaja ligado a la acción, la página de una sección y el formulario del nombre.
  */
 const A = "0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b";
@@ -34,6 +39,11 @@ describe("las direcciones", () => {
     expect(RUTA_DE_LA_SECCION_NUEVA).toBe("/catalogo/secciones/nueva");
     expect(rutaDeLaSeccion(A)).toBe(`/catalogo/secciones/${A}`);
     expect(rutaDelNombreDeLaSeccion(A)).toBe(`/catalogo/secciones/${A}/nombre`);
+    expect(rutaDeAgregarProducto(A)).toBe(`/catalogo/secciones/${A}/agregar`);
+  });
+
+  it("«Quitar» y los candidatos viajan con los nombres que lee la acción", () => {
+    expect([CAMPO_DE_QUITAR, CAMPO_DE_AGREGAR]).toEqual(["quitar", "agregar"]);
   });
 
   it("las flechas viajan con los nombres que lee la acción", () => {
@@ -133,8 +143,8 @@ describe("armarLaListaDeSecciones", () => {
 
 describe("armarUnaSeccion", () => {
   const productos = [
-    { id: "p1", nombre: "Cortado" },
-    { id: "p2", nombre: "Espresso" },
+    { id: "p1", nombre: "Cortado", version: 4 },
+    { id: "p2", nombre: "Espresso", version: 9 },
   ];
   const dato = (
     seccion: SeccionDeLaLista,
@@ -154,9 +164,23 @@ describe("armarUnaSeccion", () => {
       marca: null,
       nombre: { texto: "Nombre", href: `/catalogo/secciones/${A}/nombre` },
       estado: { reactivar: false, texto: "Desactivar", apagado: false },
-      productos,
+      agregar: { texto: "Agregar producto", href: `/catalogo/secciones/${A}/agregar` },
+      productos: [
+        { id: "p1", nombre: "Cortado" },
+        { id: "p2", nombre: "Espresso" },
+      ],
+      quitar: { texto: "Quitar", apagado: false },
+      vistas: [
+        { productoId: "p1", versionEsperada: 4 },
+        { productoId: "p2", versionEsperada: 9 },
+      ],
       siguiente: null,
     });
+  });
+
+  it("la versión de cada producto NO sale en las filas: viaja solo en lo que la página liga a la acción", () => {
+    const s = armarUnaSeccion(dato(CAFES), true);
+    for (const fila of s.productos) expect(Object.keys(fila)).toEqual(["id", "nombre"]);
   });
 
   it("una sección desactivada: la marca «Desactivado» y «Reactivar»", () => {
@@ -171,7 +195,9 @@ describe("armarUnaSeccion", () => {
       const s = armarUnaSeccion(dato(CAFES), puede);
       expect(s.nombre).toEqual({ texto: "Nombre", href: null });
       expect(s.estado.apagado).toBe(true);
-      expect(s.productos).toEqual(productos);
+      expect(s.agregar).toEqual({ texto: "Agregar producto", href: null });
+      expect(s.quitar).toEqual({ texto: "Quitar", apagado: true });
+      expect(s.productos.map((p) => p.id)).toEqual(["p1", "p2"]);
     },
   );
 
@@ -186,15 +212,119 @@ describe("armarUnaSeccion", () => {
   it("una sección sin productos no dice nada", () => {
     const s = armarUnaSeccion({ seccion: CAFES, productos: [], siguiente: null }, true);
     expect(s.productos).toEqual([]);
+    expect(s.vistas).toEqual([]);
   });
 
   it("usa el diccionario si se lo dan", () => {
     const s = armarUnaSeccion(dato(CAFES), true, {
       "catalogo.accion.desactivar": "Apagar",
       "catalogo.seccion.volver_a_la_lista": "Atrás",
+      "catalogo.seccion.agregar_producto": "Sumar",
+      "catalogo.accion.quitar": "Sacar",
     });
     expect(s.estado.texto).toBe("Apagar");
     expect(s.volver.etiqueta).toBe("Atrás");
+    expect(s.agregar.texto).toBe("Sumar");
+    expect(s.quitar.texto).toBe("Sacar");
+  });
+});
+
+describe("armarLosCandidatos", () => {
+  const dato = (siguiente: string | null = null): CandidatosDeLaPantalla => ({
+    seccion: CAFES,
+    candidatos: [
+      { id: "p1", nombre: "Budín", version: 2, faltaCompletar: true, seccion: null },
+      { id: "p2", nombre: "Flan", version: 6, faltaCompletar: false, seccion: "Postres" },
+      { id: "p3", nombre: "Milanesa", version: 1, faltaCompletar: false, seccion: null },
+    ],
+    siguiente,
+  });
+
+  it("el buscador, las filas con dónde está cada uno, lo que se vio y «Cancelar» a la sección, con los textos aprobados", () => {
+    expect(armarLosCandidatos(dato(), "", true)).toEqual({
+      seccion: CAFES,
+      buscador: {
+        accion: `/catalogo/secciones/${A}/agregar`,
+        etiqueta: "Buscar",
+        boton: "Buscar",
+        valorInicial: "",
+      },
+      filas: [
+        { id: "p1", nombre: "Budín", donde: "Falta completar", apagada: true },
+        { id: "p2", nombre: "Flan", donde: "Postres", apagada: false },
+        { id: "p3", nombre: "Milanesa", donde: "Sin elegir", apagada: false },
+      ],
+      vistas: [
+        { productoId: "p1", versionEsperada: 2 },
+        { productoId: "p2", versionEsperada: 6 },
+        { productoId: "p3", versionEsperada: 1 },
+      ],
+      cancelar: { href: `/catalogo/secciones/${A}`, texto: "Cancelar" },
+      siguiente: null,
+    });
+  });
+
+  it.each([false, undefined])(
+    "sin permiso (%s): todos los candidatos salen apagados, pero se ven",
+    (puede) => {
+      const c = armarLosCandidatos(dato(), "", puede);
+      expect(c.filas.map((f) => f.apagada)).toEqual([true, true, true]);
+    },
+  );
+
+  it("uno que falta completar dice «Falta completar» y no su sección, y no se puede elegir", () => {
+    const c = armarLosCandidatos(
+      {
+        seccion: CAFES,
+        candidatos: [
+          { id: "p1", nombre: "Budín", version: 2, faltaCompletar: true, seccion: "Postres" },
+        ],
+        siguiente: null,
+      },
+      "",
+      true,
+    );
+    expect(c.filas).toEqual([
+      { id: "p1", nombre: "Budín", donde: "Falta completar", apagada: true },
+    ]);
+  });
+
+  it("el texto buscado vuelve al campo, y «Página siguiente» conserva el texto y lleva la clave de la página", () => {
+    const c = armarLosCandidatos(dato(`${B}:flan`), "fla n", true);
+    expect(c.buscador.valorInicial).toBe("fla n");
+    expect(c.siguiente).toEqual({
+      href: `/catalogo/secciones/${A}/agregar?${new URLSearchParams([
+        ["texto", "fla n"],
+        ["despues", `${B}:flan`],
+      ]).toString()}`,
+      texto: "Página siguiente",
+    });
+  });
+
+  it("sin texto buscado, «Página siguiente» lleva solo la clave de la página", () => {
+    const c = armarLosCandidatos(dato(`${B}:flan`), "", true);
+    expect(c.siguiente?.href).toBe(
+      `/catalogo/secciones/${A}/agregar?despues=${encodeURIComponent(`${B}:flan`)}`,
+    );
+  });
+
+  it("una lista sin candidatos no dice nada", () => {
+    const c = armarLosCandidatos({ seccion: CAFES, candidatos: [], siguiente: null }, "x", true);
+    expect(c.filas).toEqual([]);
+    expect(c.vistas).toEqual([]);
+  });
+
+  it("usa el diccionario si se lo dan", () => {
+    const c = armarLosCandidatos(dato(), "", true, {
+      "catalogo.lista.buscar": "Encontrar",
+      "catalogo.dato.sin_elegir": "Ninguna",
+      "catalogo.estado.falta_completar": "Incompleto",
+      "catalogo.accion.cancelar": "Volver",
+    });
+    expect(c.buscador.etiqueta).toBe("Encontrar");
+    expect(c.buscador.boton).toBe("Encontrar");
+    expect(c.filas.map((f) => f.donde)).toEqual(["Incompleto", "Postres", "Ninguna"]);
+    expect(c.cancelar.texto).toBe("Volver");
   });
 });
 
