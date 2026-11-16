@@ -81,7 +81,7 @@ export const TEXTOS_DE_STOCK = {
   // `{hora}` en «Movido desde las {hora}» es un marcador de implementación (el texto aprobado trae «10:00» de ejemplo; la hora es la de ese artículo).
   "stock.conteo.hora": { porDefecto: "Hora del conteo" },
   "stock.conteo.sistema_a_esa_hora": { porDefecto: "Sistema a esa hora" },
-  "stock.conteo.movido_desde": { porDefecto: "Movido desde las {hora}" },
+  "stock.conteo.movido_desde": { porDefecto: "Movido desde las {hora}", marcadores: ["hora"] },
   "stock.conteo.ver_detalle": { porDefecto: "Ver detalle" },
   "stock.conteo.ya_habia_ocurrido": { porDefecto: "Ya había ocurrido cuando contaste" },
   // Es un motivo de DIFERENCIA del conteo (faltante), no de un movimiento: por eso no es `stock.motivo.*`.
