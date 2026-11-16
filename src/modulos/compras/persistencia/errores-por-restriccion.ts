@@ -106,6 +106,7 @@ export const ERRORES_DE_COMPRAS_POR_RESTRICCION: Readonly<Record<string, string>
   linea_de_comprobante_precio_ck: "NO_TRADUCIDA",
   linea_de_comprobante_ptr_ck: "NO_TRADUCIDA",
   linea_de_comprobante_recepcion_fkey: "NO_TRADUCIDA",
+  linea_de_comprobante_producto_fkey: "PRODUCTO_NO_ENCONTRADO",
   linea_de_comprobante_unidad_ck: "NO_TRADUCIDA",
   linea_de_recepcion_cabecera_confirmada: "NO_TRADUCIDA",
   linea_de_recepcion_compra_ck: "NO_TRADUCIDA",
