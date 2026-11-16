@@ -22,7 +22,8 @@ describe("códigos públicos de stock", () => {
     const textos = {
       "stock.error.control_avisa": "Va a quedar en negativo. ¿Confirmás?",
       "stock.error.control_bloquea": "No hay stock suficiente",
-      "stock.error.transferencia_al_mismo_deposito": "El origen y el destino no pueden ser el mismo",
+      "stock.error.transferencia_al_mismo_deposito":
+        "El origen y el destino no pueden ser el mismo",
       "stock.error.detalle_requerido": "Escribí el detalle",
       "stock.error.cantidad_invalida": "La cantidad tiene que ser mayor que cero",
       "stock.error.conteo_en_curso": "Ya hay un conteo abierto en este depósito",
