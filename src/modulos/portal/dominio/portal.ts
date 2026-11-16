@@ -130,6 +130,8 @@ export type DatosDelPortal = Readonly<{
 }>;
 
 export type PortalValidado = Readonly<{
+  /** `true` si la entrada no trae `imagen` (ausente): se conserva la que ya tiene el portal. `null` o vacío la quita. Así cambiar de variante no pierde la imagen de la B. */
+  conservarImagen: boolean;
   datos: DatosDelPortal;
   tarjetas: readonly Tarjeta[];
   zonas: readonly Zona[];
@@ -244,6 +246,7 @@ export function validarPortal(entrada: EntradaDePortal): R<PortalValidado> {
     return err("ZONA_REPETIDA");
   const [encabezado, pagina, detras] = colores.map((c) => (c.ok ? c.valor : null));
   return ok({
+    conservarImagen: entrada.imagen === undefined,
     datos: {
       variante,
       lineaSuperior: linea.valor,

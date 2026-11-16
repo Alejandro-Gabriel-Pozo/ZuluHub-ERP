@@ -97,6 +97,39 @@ describe.skipIf(base === null)("lectura pública del portal (0078 y 0083)", () =
     ]);
   });
 
+  it("las dos variantes se ofrecen: guardada como B (imagen con zonas) se lee igual, y volver a A y otra vez a B no pierde lo cargado en la otra", async () => {
+    const m = await empresaConPortalGuardado();
+    const pedir = (variante: "A" | "B", version: number) =>
+      c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+        id: m.portalId,
+        variante,
+        logoVisible: true,
+        versionEsperada: version,
+      });
+    const b = valorDe(await pedir("B", 1));
+    let p = await vista(m.codigoDePortal);
+    expect(p?.variante).toBe("B");
+    expect(p?.imagen).not.toBeNull();
+    expect(p?.zonas).toHaveLength(1);
+    expect(p?.tarjetas).toHaveLength(2);
+    const a = valorDe(await pedir("A", b.version));
+    p = await vista(m.codigoDePortal);
+    expect(p?.variante).toBe("A");
+    expect(p?.zonas).toHaveLength(1);
+    valorDe(await pedir("B", a.version));
+    expect((await vista(m.codigoDePortal))?.zonas).toHaveLength(1);
+    // `null` SÍ quita la imagen; ausente la conserva.
+    const sin = await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+      id: m.portalId,
+      variante: "B",
+      logoVisible: true,
+      imagen: null,
+      versionEsperada: valorDe(await pedir("B", a.version + 1)).version,
+    });
+    expect(sin.ok).toBe(true);
+    expect((await vista(m.codigoDePortal))?.imagen).toBeNull();
+  });
+
   it("no se recorre: código inexistente, sin forma de código, o el de una CARTA puesto como de portal, dan la misma respuesta nula", async () => {
     const m = await empresaConPortalGuardado();
     expect(await vista(codigoAlAzar())).toBeNull();

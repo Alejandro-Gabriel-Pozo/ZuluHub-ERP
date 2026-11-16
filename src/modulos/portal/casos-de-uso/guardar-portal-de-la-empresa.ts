@@ -131,11 +131,19 @@ export function armarGuardarPortalDeLaEmpresa(d: DependenciasDePortal) {
         if (!esUuidCanonico(entrada.id)) return err("IDENTIFICADOR_INVALIDO");
         const validado = validarPortal(entrada);
         if (!validado.ok) return validado;
-        const v = validado.valor;
-        const sucursales = await exigirSucursalesDeLaEmpresa(tx, contexto, v);
+        const validadoSinImagen = validado.valor;
+        const sucursales = await exigirSucursalesDeLaEmpresa(tx, contexto, validadoSinImagen);
         if (!sucursales.ok) return sucursales;
 
         const existente = await tx.portales.bloquearDeLaEmpresa(empresa);
+        // Sin `imagen` en la entrada se conserva la que ya tiene (cambiar de variante no pierde la imagen de la B); `null` la quita.
+        const v: PortalValidado =
+          validadoSinImagen.conservarImagen && existente !== null
+            ? {
+                ...validadoSinImagen,
+                datos: { ...validadoSinImagen.datos, imagen: existente.datos.imagen },
+              }
+            : validadoSinImagen;
         if (existente !== null) {
           if (existente.id !== entrada.id) {
             // Otro portal ya es el de la empresa (otro administrador llegó primero con otro id): repetir lo mismo no cambia nada; si no, hay que releer.
