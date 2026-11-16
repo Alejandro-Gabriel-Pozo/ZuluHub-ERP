@@ -3,11 +3,11 @@ import {
   type PartesDeDireccion,
 } from "../../../capacidades/activos/direccion-externa";
 import { esUuidCanonico } from "../../../primitivas/identificadores/marca";
-import { telefonoDesdeTexto } from "../../../primitivas/contacto/telefono";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { nombreDeCartaDesdeTexto } from "../../../primitivas/texto/datos-de-carta-publica";
 import {
   lineaDelPortalDesdeTexto,
+  telefonoDeTarjetaDesdeTexto,
   tituloDelPortalDesdeTexto,
 } from "../../../primitivas/texto/datos-de-portal";
 import type { MotivoDeTextoInvalido } from "../../../primitivas/texto/texto-de-una-linea";
@@ -168,7 +168,11 @@ function validarTarjeta(t: EntradaDeTarjeta): R<Tarjeta> {
   if (typeof t.visible !== "boolean") return err("TARJETA_INVALIDA");
   const nombre = opcional(t.nombre, nombreDeCartaDesdeTexto, "NOMBRE_DE_TARJETA_INVALIDO");
   if (!nombre.ok) return nombre;
-  const telefono = opcional(t.telefono, telefonoDesdeTexto, "TELEFONO_DE_TARJETA_INVALIDO");
+  const telefono = opcional(
+    t.telefono,
+    telefonoDeTarjetaDesdeTexto,
+    "TELEFONO_DE_TARJETA_INVALIDO",
+  );
   if (!telefono.ok) return telefono;
   const foto = imagen(t.foto, "FOTO_DE_TARJETA_INVALIDA");
   if (!foto.ok) return foto;

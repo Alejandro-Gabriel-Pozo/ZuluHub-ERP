@@ -66,9 +66,9 @@ CREATE TABLE IF NOT EXISTS portal_tarjeta (
   visible        boolean NOT NULL DEFAULT true,
   -- NULL = el nombre de la carta de esa sucursal.
   nombre         text CONSTRAINT portal_tarjeta_nombre_ck CHECK (nombre IS NULL OR texto_de_catalogo_valido(nombre, 80)),
-  -- Misma regla que `sucursal_telefono_ck` (0019): una línea, 1 a 40, sin controles.
+  -- Una línea, 1 a 40, SOLO de la lista permitida: dígitos, letras ASCII, espacio y + ( ) . , / # * - (CORRECCIÓN PROPUESTA C8: patrón positivo en lugar del `!~` de 0019; SUPUESTO DEC-0484, el conjunto lo confirma el dueño).
   telefono       text CONSTRAINT portal_tarjeta_telefono_ck CHECK (
-                   telefono IS NULL OR (telefono = btrim(telefono) AND char_length(telefono) BETWEEN 1 AND 40 AND telefono !~ '[\x01-\x1F\x7F-\x9F]')),
+                   telefono IS NULL OR (telefono = btrim(telefono) AND char_length(telefono) BETWEEN 1 AND 40 AND telefono ~ '^[0-9A-Za-z +().,/#*-]+$')),
   foto_proveedor text,
   foto_cuenta    text,
   foto_id_publico text,

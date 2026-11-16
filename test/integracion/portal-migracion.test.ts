@@ -4,6 +4,7 @@ import pg from "pg";
 import { describe, expect, inject, it, vi } from "vitest";
 import { crearBaseAparte } from "./entorno";
 import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
+import { telefonoDeTarjetaDesdeTexto } from "../../src/primitivas/texto/datos-de-portal";
 import { valorDe } from "./catalogo-apoyo";
 import { empresaConPortal, montarPortal, nuevoId } from "./portal-apoyo";
 import type { BaseDePruebas } from "./global";
@@ -45,6 +46,76 @@ const correr = async (c: pg.Client, sql: string, confirmar = false) => {
 };
 
 describe.skipIf(base === null)("migraciones 0078 y 0083: portal de la empresa", () => {
+  it("espejo del teléfono de la tarjeta: la base y el código aceptan y rechazan lo mismo (lo recortado, ya recortado)", async () => {
+    const c = await montarPortal(base as BaseDePruebas);
+    try {
+      const m = await empresaConPortal(c);
+      valorDe(
+        await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+          id: nuevoId(),
+          variante: "A",
+          logoVisible: true,
+          tarjetas: [{ sucursalId: m.e.sucursal, orden: 0, visible: true }],
+        }),
+      );
+      const muestras = [
+        "11 4321-0000",
+        "+54 (11) 4321-0000",
+        "4321-0000 int. 2",
+        "x".repeat(40),
+        "x".repeat(41),
+        "",
+        "a\nb",
+        "a\tb",
+        "a\u0001b",
+        "a\u200bb",
+        "a\u00a0b",
+        "<script>",
+        "=cmd",
+        "@tel",
+        "Teléfono",
+        "📞 4321",
+        "１２３",
+        "a;b",
+        "a_b",
+      ];
+      await c.dueno.query("begin");
+      for (const t of muestras) {
+        const codigo = telefonoDeTarjetaDesdeTexto(t).ok;
+        await c.dueno.query("savepoint s");
+        let enBase = true;
+        try {
+          await c.dueno.query("update portal_tarjeta set telefono = $1 where empresa_id = $2", [
+            t,
+            m.e.empresa,
+          ]);
+        } catch {
+          enBase = false;
+        }
+        await c.dueno.query("rollback to savepoint s");
+        // La base no recorta: lo que el código acepta lo guarda ya recortado.
+        const recortado = telefonoDeTarjetaDesdeTexto(t);
+        const paraLaBase = recortado.ok ? recortado.valor : t;
+        await c.dueno.query("savepoint s");
+        let enBaseRecortado = true;
+        try {
+          await c.dueno.query("update portal_tarjeta set telefono = $1 where empresa_id = $2", [
+            paraLaBase,
+            m.e.empresa,
+          ]);
+        } catch {
+          enBaseRecortado = false;
+        }
+        await c.dueno.query("rollback to savepoint s");
+        expect(enBaseRecortado, JSON.stringify(t)).toBe(codigo);
+        void enBase;
+      }
+      await c.dueno.query("rollback");
+    } finally {
+      await c.cerrar();
+    }
+  });
+
   it("forma y espejo: las columnas y restricciones de la base son las que declara el código, y los largos coinciden", async () => {
     const aparte = await crearBaseAparte(base as BaseDePruebas);
     try {
