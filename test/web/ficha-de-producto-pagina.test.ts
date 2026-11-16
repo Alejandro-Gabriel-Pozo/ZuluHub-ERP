@@ -133,6 +133,22 @@ describe("la página de la ficha de datos de un producto", () => {
     expect(await texto()).toContain("Producto vendible");
   });
 
+  it("«Secciones» es un enlace a la lista de secciones, después del campo de la sección", async () => {
+    const marcado = await html();
+    expect(marcado).toMatch(/<a [^>]*href="\/catalogo\/secciones"[^>]*>Secciones<\/a>/);
+    expect(marcado.indexOf('name="seccionDeCartaId"')).toBeLessThan(
+      marcado.indexOf('href="/catalogo/secciones"'),
+    );
+  });
+
+  it("una clase que no se vende no lleva el enlace «Secciones»", async () => {
+    responde({
+      ok: true,
+      dato: { ...FICHA, claseDeUso: "INSUMO", seVende: false, alicuota: null, seccion: null },
+    });
+    expect(await html()).not.toContain('href="/catalogo/secciones"');
+  });
+
   it("la clase y la unidad solo se ven: no son campos del formulario", async () => {
     const marcado = await html();
     expect(marcado).not.toMatch(/name="clase/);

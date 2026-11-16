@@ -104,6 +104,21 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.error.accion_no_permitida": { porDefecto: "Esta acción no está permitida" },
   "catalogo.accion.cancelar": { porDefecto: "Cancelar" },
 
+  // Secciones de la carta (A8, parte 1). Fuente: la maqueta APROBADA `Pedernal-docs/10-ux-ui/prototipos-gastronomia/productos-secciones.html` (aprobada por el dueño el 12/11/2026,
+  // `decisiones-del-dueno-2026-11.md` fila del 12/11 «Maquetas del recorrido mínimo»), tabla «Textos nuevos» (`PA_REG`, líneas 327-334): «Secciones» (`sec.titulo`, línea 328: botón de la
+  // ficha y título de la lista; también la fila «Secciones» del menú, fila del 13/11 «Rótulos del menú por áreas aprobados»), «Nueva sección» (`sec.nueva`, línea 329), «Subir» y «Bajar»
+  // (`sec.subir`, `sec.bajar`, líneas 331-332: nombre accesible de las flechas). Todo lo demás de la pantalla es de la tabla «Reutilizados» de la misma maqueta (Nombre, Guardar, Cancelar,
+  // Desactivar, Reactivar, Desactivado, «Esta acción no está permitida»). «Agregar producto», «Quitar» y «Ya existe una sección con ese nombre» NO están: son de la parte 2 de la pantalla.
+  "catalogo.seccion.titulo": { porDefecto: "Secciones" },
+  "catalogo.seccion.nueva": { porDefecto: "Nueva sección" },
+  // SUPUESTO (DEC-0433; pendiente de aprobación del dueño: ficha de la pantalla §5 y pregunta P1, opción A): el nombre accesible de las flechas se compone con el nombre de la sección, como lo hace la
+  // maqueta (`aria-label="Subir ' + esc(x.n)`, línea 374: «Subir Cafés»). Lo aprobado es «Subir» y «Bajar» solos; sin el nombre, dos flechas de filas distintas se llaman igual. Revertir: quitar el marcador.
+  "catalogo.seccion.subir": { porDefecto: "Subir {nombre}", marcadores: ["nombre"] },
+  "catalogo.seccion.bajar": { porDefecto: "Bajar {nombre}", marcadores: ["nombre"] },
+  // SUPUESTO (DEC-0434; pendiente de aprobación del dueño: pregunta P1, opción A): nombre accesible del botón ‹ de la barra de las pantallas de una sección, `aria-label` «Volver a la lista» de la maqueta
+  // (líneas 381 y 389). No figura en sus «Textos nuevos» ni en los reutilizados. Revertir: quitar el botón (se vuelve por el menú).
+  "catalogo.seccion.volver_a_la_lista": { porDefecto: "Volver a la lista" },
+
   // Los nombres de las 14 unidades de medida (A2i). FUENTE ÚNICA: la constante `UNID` de la maqueta aprobada `Pedernal-docs/10-ux-ui/prototipos-gastronomia/productos.html` (~línea 421),
   // en el mismo orden que `src/primitivas/unidades/unidades.ts`; decisión del dueño del 13/11/2026 («las 14 unidades se muestran con los nombres de la maqueta de productos»,
   // `decisiones-del-dueno-2026-11.md`, fila del 13/11). La clave de cada una sale del código de la unidad en minúscula (`catalogo.unidad.<codigo>`): el mapa código → clave está en
