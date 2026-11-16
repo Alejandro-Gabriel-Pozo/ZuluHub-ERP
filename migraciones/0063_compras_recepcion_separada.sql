@@ -1,6 +1,6 @@
 -- 0063_compras_recepcion_separada: compras N3 `RECEPCION_SEPARADA` (E9 T13). Recibir y confirmar son dos momentos: la recepción nace PENDIENTE, la confirma un gerente o un
 -- administrador (decisión del dueño del 14/11/2026, Q9: «confirmar» una recepción existe solo en N3) y recién ahí entra el stock. Cada línea recibida se controla
--- (conforme, con observaciones, rechazada) y el stock entra al depósito que corresponde a su condición.
+-- (conforme, con observaciones, rechazada) y el stock entra al depósito que elige quien recibe (cuarentena y rechazo incluidos: tramo N3-3, compras.md D-16).
 -- Especificación: zuluhub-docs/11-especificaciones/compras.md (Anexo C.2), e9-compras-especificacion.md §3.8 y decisiones-del-dueno-2026-11.md (14/11 y 16/11).
 --
 -- Reglas de esta migración (las mismas de 0001 a 0057):
@@ -148,7 +148,7 @@ END
 $$;
 CREATE TRIGGER inspeccion_validar BEFORE INSERT ON inspeccion_de_linea_de_recepcion FOR EACH ROW EXECUTE FUNCTION compras_inspeccion_validar();
 
--- N2: la entrada de stock solo entra en la transacción que CONFIRMA la recepción (o en la que la crea como atajo confirmado), y nunca supera lo recibido en la línea.
+-- N2: la entrada de stock solo entra en la transacción que CONFIRMA la recepción (o en la que la crea ya confirmada como atajo), y nunca supera lo recibido en la línea.
 CREATE FUNCTION compras_entrada_de_linea_validar() RETURNS trigger LANGUAGE plpgsql
   SET search_path = pg_catalog, public, pg_temp AS
 $$
