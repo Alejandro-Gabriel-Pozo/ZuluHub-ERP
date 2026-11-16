@@ -39,11 +39,12 @@ const RONDAS = 8;
 describe.skipIf(base === null)(
   "carta pública y «Ocultar»: repositorios contra la base real",
   () => {
-    const entorno = crearEntornoDePrueba(base as BaseDePruebas, 10);
+    let entorno: ReturnType<typeof crearEntornoDePrueba>;
     let dueno: pg.Client;
     let barrera: (() => Promise<void>) | null = null;
 
     beforeAll(async () => {
+      entorno = crearEntornoDePrueba(base as BaseDePruebas, 10);
       dueno = new pg.Client({ connectionString: (base as BaseDePruebas).dueno });
       await dueno.connect();
     });

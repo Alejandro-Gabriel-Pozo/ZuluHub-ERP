@@ -50,7 +50,7 @@ const falla = async (c: pg.Client, sql: string, p: unknown[] = []) => {
 };
 
 describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocultar»", () => {
-  const entorno = crearEntornoDePrueba(base as BaseDePruebas, 6);
+  let entorno: ReturnType<typeof crearEntornoDePrueba>;
   let dueno: pg.Client;
   let a: EmpresaDeCarta;
   let b: EmpresaDeCarta;
@@ -58,6 +58,7 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
   let cartaA: { id: string; codigo: string };
   let cartaB: { id: string; codigo: string };
   beforeAll(async () => {
+    entorno = crearEntornoDePrueba(base as BaseDePruebas, 6);
     dueno = new pg.Client({ connectionString: (base as BaseDePruebas).dueno });
     await dueno.connect();
     a = await empresaDeCarta(entorno, dueno);

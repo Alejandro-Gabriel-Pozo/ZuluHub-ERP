@@ -34,7 +34,7 @@ const REVERSION_DEL_VINCULO = join(
 );
 
 describe.skipIf(base === null)("migración 0045: clasificación comercial", () => {
-  const entorno = crearEntornoDePrueba(base as BaseDePruebas, 6);
+  let entorno: ReturnType<typeof crearEntornoDePrueba>;
   let dueno: pg.Client;
   let empresa: string;
   let otra: string;
@@ -79,6 +79,7 @@ describe.skipIf(base === null)("migración 0045: clasificación comercial", () =
   };
 
   beforeAll(async () => {
+    entorno = crearEntornoDePrueba(base as BaseDePruebas, 6);
     dueno = new pg.Client({ connectionString: (base as BaseDePruebas).dueno });
     await dueno.connect();
     empresa = (await crearEmpresaActiva(entorno)).empresa;
