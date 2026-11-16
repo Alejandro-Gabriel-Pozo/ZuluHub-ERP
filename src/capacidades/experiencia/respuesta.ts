@@ -9,6 +9,7 @@ import {
   type CodigoDeCatalogo,
 } from "./respuesta-de-catalogo";
 import { CLAVES_DE_ERRORES_DE_CIERRE, type CodigoDeCierre } from "./respuesta-de-cierre";
+import { CLAVES_DE_ERRORES_DE_VENTAS, type CodigoDeVentas } from "./respuesta-de-ventas";
 import { CLAVES_DE_ERRORES_FISCALES, type CodigoFiscal } from "./respuesta-fiscal";
 
 /**
@@ -47,6 +48,7 @@ export type CodigoDeNegocio =
   | CodigoFiscal
   | CodigoDeCaja
   | CodigoDeCatalogo
+  | CodigoDeVentas
   | CodigoDeCierre;
 
 export type CodigoPublico =
@@ -89,6 +91,10 @@ const AVISOS_DE_CATALOGO = Object.fromEntries(
 const AVISOS_DE_CIERRE = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_CIERRE).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoDeCierre, DefinicionDeCodigo>>;
+/** Los códigos de ventas (`respuesta-de-ventas.ts`): cada uno es un aviso con su texto `ventas.error.*`. */
+const AVISOS_DE_VENTAS = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_VENTAS).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeVentas, DefinicionDeCodigo>>;
 
 /** La tabla de los códigos públicos: código estable → clave del texto, presentación y estado HTTP. */
 export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo>> = Object.freeze({
@@ -108,6 +114,7 @@ export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo
   ...AVISOS_DE_CAJA,
   ...AVISOS_DE_CATALOGO,
   ...AVISOS_DE_CIERRE,
+  ...AVISOS_DE_VENTAS,
   MODULO_EN_DESARROLLO: motivo("motivo.modulo_en_desarrollo"),
   MODULO_NO_ACTIVO: motivo("motivo.modulo_no_activo"),
   MODULO_EN_SOLO_LECTURA: motivo("motivo.modulo_en_solo_lectura"),
