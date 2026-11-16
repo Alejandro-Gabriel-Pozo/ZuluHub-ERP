@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { USOS_DE_DEPOSITO } from "../../../../../../../../../src/composicion/depositos-web";
 import { texto } from "../../../../../../../../../src/capacidades/vocabulario/vocabulario";
 import { pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
+import { USOS_PARA_ELEGIR } from "../../../../../../../servidor/depositos-de-stock";
 import { puedeEnStock } from "../../../../../../../servidor/stock";
 import { FormularioDeDeposito } from "../../../../../../../ui/plantillas/stock/depositos/FormularioDeDeposito.cliente";
 import { opcionesDeUso } from "../../../../../../../ui/plantillas/stock/depositos/modelo-de-depositos";
@@ -19,7 +19,7 @@ export default async function PaginaDeAltaDeDeposito() {
         deVenta: texto({}, "stock.deposito.de_venta"),
         guardar: texto({}, "stock.deposito.agregar"),
       }}
-      opcionesDeUso={opcionesDeUso(USOS_DE_DEPOSITO, (clave) => texto({}, clave))}
+      opcionesDeUso={opcionesDeUso(USOS_PARA_ELEGIR, (clave) => texto({}, clave))}
       puedeGuardar={await puedeEnStock(contexto, "depositos.crear")}
     />
   ));

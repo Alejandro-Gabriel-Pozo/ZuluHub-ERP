@@ -3,6 +3,7 @@ import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   agregarElDeposito,
   listarLosDepositos,
+  USOS_DE_DEPOSITO,
   type DependenciasDeDepositosWeb,
   type DepositosParaLaPantalla,
 } from "../../../src/composicion/depositos-web";
@@ -54,3 +55,6 @@ export async function agregarElDepositoDeLaSucursal(
     RUTAS_DE_DEPOSITOS.lista,
   );
 }
+
+/** Los usos que se ofrecen al agregar un depósito: los del servidor (una regla, un lugar), para que la página no importe la composición. */
+export const USOS_PARA_ELEGIR: readonly string[] = USOS_DE_DEPOSITO;
