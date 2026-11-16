@@ -144,6 +144,61 @@ export function opcionesDeCobroDeLaCaja(
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// Qué caja usa el cobro (lo resuelve el servidor, la pantalla solo lo muestra)
+// ---------------------------------------------------------------------------------------------------------------
+
+export type DecisionDeLaCaja =
+  | Readonly<{ tipo: "LISTA"; cajaId: string }>
+  | Readonly<{ tipo: "ABRIR_LA_CAJA" }>
+  | Readonly<{ tipo: "NO_PERMITIDO" }>;
+
+/**
+ * En qué caja se cobra, a partir de las cajas de la sucursal y la jornada de hoy. Nace cerrado (DEC-0502): se cobra solo con UNA caja abierta, de la jornada de hoy, con la jornada abierta. Sin ninguna
+ * sesión abierta (todas sin sesión) la pantalla pide abrir la caja; con el día en cierre o cerrado, la caja en cierre, una sesión vencida, ninguna caja o más de una abierta (no se elige una por la persona)
+ * es el genérico. Ante la duda cierra: nunca se asume una caja.
+ */
+export function decidirLaCaja(estado: CajasParaCobrarParaLaPantalla): DecisionDeLaCaja {
+  if (estado.jornadaActual.estado !== "ABIERTA") return { tipo: "NO_PERMITIDO" };
+  const abiertas = estado.cajas.filter((c) => c.estado === "ABIERTA");
+  if (abiertas.length > 1) return { tipo: "NO_PERMITIDO" };
+  const unica = abiertas[0];
+  if (unica !== undefined) {
+    return unica.jornadaVencida
+      ? { tipo: "NO_PERMITIDO" }
+      : { tipo: "LISTA", cajaId: unica.cajaId };
+  }
+  if (estado.cajas.length === 0 || estado.cajas.some((c) => c.estado === "EN_CIERRE")) {
+    return { tipo: "NO_PERMITIDO" };
+  }
+  return { tipo: "ABRIR_LA_CAJA" };
+}
+
+export type CobroPreparadoParaLaPantalla =
+  | Readonly<{ estado: "LISTO"; cajaId: string; opciones: OpcionesDeCobroParaLaPantalla }>
+  | Readonly<{ estado: "ABRIR_LA_CAJA" }>
+  | Readonly<{ estado: "NO_PERMITIDO" }>;
+
+/**
+ * Todo lo que la pantalla necesita para abrir la hoja de cobro: la caja que se usa y sus opciones (medios, cuentas, datos y marcas). Son LECTURAS (`ventas.ver`): no escriben ni auditan. Si una
+ * lectura falla, el error se devuelve tal cual (la página decide qué mostrar); nunca se inventa una caja ni una opción.
+ */
+export async function cobroParaLaPantalla(
+  d: DependenciasDeCobrarWeb,
+  contexto: ContextoOperativo,
+  sucursalId: string,
+): Promise<Respuesta<CobroPreparadoParaLaPantalla>> {
+  const cajas = await cajasParaCobrar(d, contexto, sucursalId);
+  if (!cajas.ok) return { ok: false, error: cajas.error };
+  const decision = decidirLaCaja(cajas.dato);
+  if (decision.tipo !== "LISTA") {
+    return { ok: true, dato: { estado: decision.tipo } };
+  }
+  const opciones = await opcionesDeCobroDeLaCaja(d, contexto, { cajaId: decision.cajaId });
+  if (!opciones.ok) return { ok: false, error: opciones.error };
+  return { ok: true, dato: { estado: "LISTO", cajaId: decision.cajaId, opciones: opciones.dato } };
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 // Cobrar la venta
 // ---------------------------------------------------------------------------------------------------------------
 

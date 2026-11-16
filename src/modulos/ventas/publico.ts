@@ -93,7 +93,7 @@ export {
   type EntradaDeVuelto,
   type PagoParaVuelto,
   type Vuelto,
-} from "./dominio/vuelto";
+} from "../../primitivas/dinero/vuelto";
 export { calcularLasLineas } from "./casos-de-uso/calculo";
 export { anclaValida, type Ancla } from "./dominio/ancla";
 export { esUuid } from "./dominio/identificadores";

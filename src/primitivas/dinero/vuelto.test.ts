@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import "../../../../test/propiedades/configuracion";
-import { MAXIMO_DE_COBROS_POR_TICKET } from "./cobranza";
+import "../../../test/propiedades/configuracion";
+import { MAXIMO_DE_COBROS_POR_TICKET } from "./limites-de-cobro";
 import { calcularVuelto, type PagoParaVuelto } from "./vuelto";
 
 const pago = (tipo: PagoParaVuelto["tipo"], monto: string): PagoParaVuelto => ({
@@ -110,16 +110,19 @@ describe("calcularVuelto", () => {
     const centavos = fc.integer({ min: 1, max: 5_000_000 });
     fc.assert(
       fc.property(centavos, centavos, centavos, (t, e, o) => {
-        const aTexto = (c: number) => `${Math.floor(c / 100)}.${String(c % 100).padStart(2, "0")}`;
+        // Sin `number` para dinero (ADR-006): la cuenta de control se hace en centavos enteros (`bigint`).
+        const aTexto = (c: number) =>
+          `${String(BigInt(c) / 100n)}.${String(BigInt(c) % 100n).padStart(2, "0")}`;
+        const aCentavos = (texto: string) => BigInt(texto.replace(".", ""));
         const r = valor(
           calcularVuelto({
             total: total(aTexto(t)),
             pagos: [pago("EFECTIVO", aTexto(e)), pago("QR", aTexto(o))],
           }),
         );
-        const neto = Math.round(Number(r.netoEnEfectivo) * 100);
-        if (r.falta === "0.00" && r.sobra === "0.00") expect(neto + o).toBe(t);
-        expect(Number(r.vuelto) >= 0 && Number(r.sobra) >= 0 && Number(r.falta) >= 0).toBe(true);
+        const neto = aCentavos(r.netoEnEfectivo);
+        if (r.falta === "0.00" && r.sobra === "0.00") expect(neto + BigInt(o)).toBe(BigInt(t));
+        expect([r.vuelto, r.sobra, r.falta].some((x) => x.startsWith("-"))).toBe(false);
         // vuelto y sobra nunca conviven; falta y vuelto tampoco
         expect(r.vuelto !== "0.00" && r.sobra !== "0.00").toBe(false);
         expect(r.vuelto !== "0.00" && r.falta !== "0.00").toBe(false);

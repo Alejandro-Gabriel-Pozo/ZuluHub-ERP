@@ -6,10 +6,19 @@ import {
   type ErrorPublico,
   type Respuesta,
 } from "../../../../../src/capacidades/experiencia/respuesta";
+import { Boton } from "../../componentes/Boton.cliente";
 import { Campo } from "../../componentes/Campo";
 import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
 import { Superposicion } from "../../patrones/Superposicion";
 import { formatearImporte } from "../../patrones/formato-fiscal";
+import { PantallaDeCobro } from "../cobrar/PantallaDeCobro.cliente";
+import {
+  esImporteValido,
+  type CobroPreparado,
+  type TicketAnulado,
+  type VentaCobrada,
+} from "../cobrar/modelo-de-cobro";
+import { type TextosDeCobrar } from "../cobrar/textos-de-cobrar";
 import { CuentaDeLaVenta } from "./CuentaDeLaVenta.cliente";
 import { HojaDeProducto, type LineaElegida } from "./HojaDeProducto.cliente";
 import estilos from "./VentaRapida.module.css";
@@ -38,6 +47,18 @@ export type PropsDePantallaDeVentaRapida = Readonly<{
   textos: TextosDeLaVenta;
   /** La cotización del servidor: la acción de servidor que llama a `cotizarElCarritoDeLaSucursal`. Es una lectura (repetirla no cambia nada). */
   cotizar: (pedido: unknown) => Promise<Respuesta<CotizacionDeLaVenta>>;
+  /**
+   * Cobrar la cuenta (pantalla «Cobrar», `../cobrar/`). Sin esto la pantalla solo arma la cuenta: lo que no se declara no se ofrece. La página lo resuelve en el servidor (qué caja, qué opciones o por qué
+   * no se puede cobrar); las acciones son las de servidor de cobrar y anular.
+   */
+  cobro?:
+    | Readonly<{
+        preparado: CobroPreparado;
+        textos: TextosDeCobrar;
+        cobrar: (pedido: unknown) => Promise<Respuesta<VentaCobrada>>;
+        anular: (pedido: unknown) => Promise<Respuesta<TicketAnulado>>;
+      }>
+    | undefined;
 }>;
 
 type EstadoDeLaCotizacion =
@@ -67,11 +88,13 @@ export function PantallaDeVentaRapida({
   productos,
   textos,
   cotizar,
+  cobro,
 }: PropsDePantallaDeVentaRapida) {
   const [busqueda, setBusqueda] = useState("");
   const [seccionId, setSeccionId] = useState<string | null>(null);
   const [abierto, setAbierto] = useState<ProductoDeLaVenta | null>(null);
   const [cuentaAbierta, setCuentaAbierta] = useState(false);
+  const [cobrando, setCobrando] = useState(false);
   const [cuenta, setCuenta] = useState<readonly LineaDeLaVenta[]>([]);
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [aviso, setAviso] = useState("");
@@ -250,6 +273,16 @@ export function PantallaDeVentaRapida({
           {textos.verCuenta}
           {cuenta.length === 0 ? null : <span className={estilos["cuantas"]}>{cuenta.length}</span>}
         </button>
+        {cobro === undefined ? null : (
+          <Boton
+            deshabilitado={cotizacion === null || !esImporteValido(cotizacion.total.monto)}
+            alTocar={() => {
+              setCobrando(true);
+            }}
+          >
+            {cobro.textos.cobrar}
+          </Boton>
+        )}
         <p className={estilos["total"]} aria-busy={estado.tipo === "PENDIENTE"}>
           <span>{textos.total}</span>
           <strong data-total>
@@ -257,6 +290,27 @@ export function PantallaDeVentaRapida({
           </strong>
         </p>
       </div>
+
+      {cobro !== undefined && cobrando && cotizacion !== null ? (
+        <PantallaDeCobro
+          cuenta={cuenta}
+          total={cotizacion.total}
+          preparado={cobro.preparado}
+          textos={cobro.textos}
+          cobrar={cobro.cobrar}
+          anular={cobro.anular}
+          alVolver={() => {
+            setCobrando(false);
+          }}
+          alNuevaVenta={() => {
+            // La venta terminó (cobrada o anulada): cuenta vacía, sin cotización vieja y la hoja cerrada.
+            setCobrando(false);
+            setCuenta([]);
+            setResultado(null);
+            setCuentaAbierta(false);
+          }}
+        />
+      ) : null}
 
       <Superposicion
         abierta={abierto !== null && formaAbierta !== null}

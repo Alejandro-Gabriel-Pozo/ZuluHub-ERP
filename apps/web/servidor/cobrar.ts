@@ -2,12 +2,10 @@ import "server-only";
 import { errorDeCodigo, type Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   anularElTicket,
-  cajasParaCobrar,
   cobrarLaVenta,
-  opcionesDeCobroDeLaCaja,
-  type CajasParaCobrarParaLaPantalla,
+  cobroParaLaPantalla,
+  type CobroPreparadoParaLaPantalla,
   type DependenciasDeCobrarWeb,
-  type OpcionesDeCobroParaLaPantalla,
   type TicketAnuladoParaLaPantalla,
   type VentaCobradaParaLaPantalla,
 } from "../../../src/composicion/cobrar-web";
@@ -25,6 +23,8 @@ import { sucursalDelPedido } from "./sucursal-elegida";
  * `entradas-de-cobrar.ts`: la clave de idempotencia y los ids de la venta los genera la pantalla una vez por intento y los repite en cada reintento.
  */
 
+export type { TicketAnuladoParaLaPantalla, VentaCobradaParaLaPantalla };
+
 const dependencias: DependenciasDeCobrarWeb = {
   casosDeUso: web.casosDeUsoDeVentas,
   consultas: web.consultasDeVentas,
@@ -40,21 +40,16 @@ async function laSucursal(contexto: ContextoOperativo): Promise<Respuesta<string
   return sucursal.dato.efectiva === "" ? SIN_SUCURSAL : { ok: true, dato: sucursal.dato.efectiva };
 }
 
-/** Las cajas de la sucursal elegida con su estado (sin sesión, abierta o en cierre) y la jornada de hoy. Con el contexto que ya resolvió la página. */
-export async function cajasParaCobrarDeLaPagina(
+/**
+ * Lo que la pantalla de venta necesita para abrir la hoja de cobro: la caja que se usa y sus opciones, o por qué no se puede cobrar (sin caja abierta, día en cierre…). Con el contexto que ya resolvió
+ * la página. Es una lectura. Si una lectura falla, la hoja sale cerrada (el genérico): la venta se puede armar igual y el error inesperado ya quedó registrado con su referencia.
+ */
+export async function cobroDeLaPagina(
   contexto: ContextoOperativo,
-): Promise<Respuesta<CajasParaCobrarParaLaPantalla>> {
+): Promise<Respuesta<CobroPreparadoParaLaPantalla>> {
   const sucursal = await laSucursal(contexto);
   if (!sucursal.ok) return sucursal;
-  return cajasParaCobrar(dependencias, contexto, sucursal.dato);
-}
-
-/** Medios, cuentas, datos que pide cada medio y marcas de una caja. Con el contexto que ya resolvió la página. */
-export function opcionesDeCobroDeLaPagina(
-  contexto: ContextoOperativo,
-  pedido: unknown,
-): Promise<Respuesta<OpcionesDeCobroParaLaPantalla>> {
-  return opcionesDeCobroDeLaCaja(dependencias, contexto, pedido);
+  return cobroParaLaPantalla(dependencias, contexto, sucursal.dato);
 }
 
 /** Cobra la venta del mostrador en un acto (idempotente por la clave de la pantalla). */
