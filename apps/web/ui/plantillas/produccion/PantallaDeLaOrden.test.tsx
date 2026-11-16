@@ -150,7 +150,7 @@ describe("ficha de una orden de producción", () => {
       "Vence",
       "01/12/2026",
       "Costo por unidad",
-      "$ 2.833,333333",
+      "$ 2.833,33",
       "6,2 Kilogramo",
       "Consumió",
       "Esperado 10 · obtenido 9,5",

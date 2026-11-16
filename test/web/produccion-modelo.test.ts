@@ -200,7 +200,7 @@ describe("armarLaOrden", () => {
     expect(o.datos).toEqual([
       { rotulo: "Lote", valor: "OP-14" },
       { rotulo: "Vence", valor: "01/12/2026" },
-      { rotulo: "Costo por unidad", valor: "$ 2.833,333333" },
+      { rotulo: "Costo por unidad", valor: "$ 2.833,33" },
       { rotulo: "Esperado 10 · obtenido 9,5", valor: "− 0,5 Kilogramo" },
     ]);
     expect(o.consume.titulo).toBe("Consumió");
@@ -295,6 +295,33 @@ describe("armarLaOrden", () => {
     );
     expect(o.producto.cantidad).toBe("10 Kilogramo");
     expect(o.consume.filas).toEqual([{ nombre: "Sal", cantidad: "0,1 Kilogramo" }]);
+  });
+
+  it("el costo por unidad se muestra redondeado a 2 decimales (la mitad hacia arriba), sin tocar lo guardado", () => {
+    const costo = (costoUnitario: string) =>
+      armarLaOrden(
+        { ...cerrada, costo: { costoUnitario, costoEstado: "DEFINITIVO" } },
+        nadie,
+      ).datos.find((x) => x.rotulo === "Costo por unidad")?.valor;
+    expect(costo("2833.333333")).toBe("$ 2.833,33");
+    expect(costo("2833.336000")).toBe("$ 2.833,34");
+    expect(costo("10.005000")).toBe("$ 10,01");
+    expect(costo("10.004999")).toBe("$ 10,00");
+    expect(costo("10.015000")).toBe("$ 10,02");
+    expect(costo("0.005000")).toBe("$ 0,01");
+    expect(costo("0.004999")).toBe("$ 0,00");
+    expect(costo("0.000000")).toBe("$ 0,00");
+    expect(costo("123456789012.995000")).toBe("$ 123.456.789.013,00");
+    expect(costo("999999999999.999999")).toBe("$ 1.000.000.000.000,00");
+    expect(costo("5")).toBe("$ 5,00");
+  });
+
+  it("un costo que no es un precio válido no se redondea ni se inventa: se dice como llegó", () => {
+    const o = armarLaOrden(
+      { ...cerrada, costo: { costoUnitario: "abc", costoEstado: "DEFINITIVO" } },
+      nadie,
+    );
+    expect(o.datos.find((x) => x.rotulo === "Costo por unidad")?.valor).toBe("$ abc");
   });
 
   it("el costo sin definir (sin costo cargado) dice «Sin costo», nunca un valor", () => {

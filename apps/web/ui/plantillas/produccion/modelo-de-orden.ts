@@ -2,6 +2,13 @@ import {
   texto,
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
+import { cantidadDesdeTexto } from "../../../../../src/primitivas/cantidad/cantidad";
+import { ErrorDeValor } from "../../../../../src/primitivas/cantidad/errores";
+import { importeATexto } from "../../../../../src/primitivas/dinero/importe";
+import { ARS } from "../../../../../src/primitivas/dinero/moneda";
+import { multiplicarPrecioPorCantidad } from "../../../../../src/primitivas/dinero/monto-exacto";
+import { precioUnitarioDesdeTexto } from "../../../../../src/primitivas/dinero/precio-unitario";
+import { POLITICA_VIGENTE, redondear } from "../../../../../src/primitivas/dinero/redondeo";
 import { formatearCantidad, formatearFecha, formatearImporte } from "../../patrones/formato-fiscal";
 import { cantidadConUnidad, marcaDeEstado } from "./modelo-de-ordenes";
 
@@ -107,6 +114,25 @@ function accionDe(
   return null;
 }
 
+/**
+ * El costo por unidad se MUESTRA redondeado a 2 decimales (decisión del dueño, 16/11/2026, opción B): con la primitiva de dinero del sistema (`redondear` con `POLITICA_VIGENTE`: la
+ * mitad se aleja del cero), sin números flotantes. El valor guardado y los cálculos no se tocan. Un texto que no es un precio válido no se redondea ni se inventa: se dice como llegó.
+ */
+function costoRedondeado(costoUnitario: string): string {
+  try {
+    const exacto = multiplicarPrecioPorCantidad(
+      ARS,
+      precioUnitarioDesdeTexto(costoUnitario),
+      cantidadDesdeTexto("1"),
+    );
+    return formatearImporte(importeATexto(redondear(exacto, POLITICA_VIGENTE)));
+  } catch (error) {
+    // Stryker disable next-line ConditionalExpression: las primitivas solo lanzan `ErrorDeValor`; la guarda existe para no tragar un fallo ajeno y ese camino no se puede provocar.
+    if (error instanceof ErrorDeValor) return formatearImporte(costoUnitario);
+    throw error;
+  }
+}
+
 /** El costo por unidad: el importe con formato, o «Sin costo» si la orden quedó sin costo. Solo con `costos.ver` (la consulta decide). */
 function costoDe(orden: OrdenDeLaFicha, d: DiccionarioResuelto): DatoArmado | null {
   if (orden.costo === undefined) return null;
@@ -116,7 +142,7 @@ function costoDe(orden: OrdenDeLaFicha, d: DiccionarioResuelto): DatoArmado | nu
     valor:
       costoUnitario === null || costoEstado === "SIN_COSTO"
         ? texto(d, "stock.accion.sin_costo")
-        : formatearImporte(costoUnitario),
+        : costoRedondeado(costoUnitario),
   };
 }
 
