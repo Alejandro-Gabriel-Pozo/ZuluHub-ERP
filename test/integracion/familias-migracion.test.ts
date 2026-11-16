@@ -485,6 +485,15 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
       const c = new pg.Client({ connectionString: (base as BaseDePruebas).dueno });
       await c.connect();
       try {
+        const registro = (prefijo: string) =>
+          c
+            .query<{ n: number }>("select count(*)::int as n from migracion where nombre like $1", [
+              `${prefijo}%`,
+            ])
+            .then((r) => r.rows[0]?.n);
+        expect(await registro("0079_")).toBe(1);
+        expect(await registro("0080_")).toBe(1);
+        expect(await registro("0081_")).toBe(1);
         await c.query("begin");
         await c.query("set local lock_timeout = '60s'");
         await c.query("set local pedernal.confirmar_reversion = 'SI'");
@@ -503,6 +512,10 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
                   (select count(*) from information_schema.columns where table_name = 'seccion_de_carta' and column_name in ('orden_de_renglones','version_del_orden'))::int as c`,
         );
         expect(fuera.rows[0]).toEqual({ f: null, m: null, a: null, l: null, c: 0 });
+        // La reversión borra de verdad su fila del registro (con el nombre CON «.sql», como lo guarda el ejecutor).
+        expect(await registro("0079_")).toBe(0);
+        expect(await registro("0080_")).toBe(0);
+        expect(await registro("0081_")).toBe(0);
         for (const n of [
           "0079_familias_de_productos",
           "0080_aplicacion_de_precio_de_familia",
