@@ -7,7 +7,10 @@ import {
   type TipoDeCuenta,
   type TipoDeMedio,
 } from "../modulos/caja/publico";
-import type { EstadoConsultado, Severidad } from "../modulos/cierre/publico";
+import type {
+  CierreParaLaPantalla,
+  MedioParaCorregir,
+} from "../capacidades/experiencia/vista-del-cierre";
 import { ARS } from "../primitivas/dinero/moneda";
 import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import { FECHA_CIVIL_MINIMA } from "../primitivas/tiempo/fecha-civil-hasta-hoy";
@@ -43,87 +46,6 @@ export type DependenciasDeLaLecturaDelCierre = Readonly<{
   consultasDeVentas: () => Pick<ReturnType<Web["consultasDeVentas"]>, "listarTickets">;
   consultasDeIdentidad: () => Pick<ReturnType<Web["consultasDeIdentidad"]>, "personasParaMostrar">;
   respuesta: DependenciasDeRespuesta;
-}>;
-
-export type ControlDelCierre = Readonly<{
-  modulo: string;
-  /** La clave del control del servidor (`caja.sesiones_sin_cerrar`): la pantalla la usa para elegir el texto aprobado. */
-  clave: string;
-  severidad: Severidad;
-  cantidad: number;
-  /** Solo en una jornada cerrada. */
-  reconocido: boolean;
-  /** El correo de quien lo reconoció (solo cerrada). */
-  reconocidoPor: string | null;
-  /** ISO UTC. */
-  reconocidoEn: string | null;
-  texto: string | null;
-}>;
-
-export type EstadoDeConteoDelCierre = "CONTADO" | "DECLARADO" | "CONFORME" | "SIN_DATO";
-
-export type LineaDeConciliacionDelCierre = Readonly<{
-  medioDePagoId: string;
-  cuentaDeCobroId: string | null;
-  medioTipo: string;
-  medioNombre: string | null;
-  cuentaNombre: string | null;
-  /** Importes en ARS como texto decimal (ADR-006). */
-  registrado: string;
-  correcciones: string;
-  declarado: string | null;
-  estadoDeConteo: EstadoDeConteoDelCierre;
-  diferencia: string | null;
-}>;
-
-export type CobradoContraTicketDelCierre = Readonly<{
-  /** El número del ticket; `null` si ventas no lo devuelve para esta jornada (el cobro es de un ticket de otro día). */
-  ticketNumero: number | null;
-  diferencia: string;
-}>;
-
-export type CobroDelCierre = Readonly<{
-  cobroId: string;
-  importe: string;
-  /** Medio y cuenta VIGENTES (tras las correcciones). */
-  medioDePagoId: string;
-  cuentaDeCobroId: string | null;
-  medioTipo: string;
-  medioNombre: string | null;
-  cuentaNombre: string | null;
-  registradoPor: string | null;
-  /** La jornada está en cierre y quien mira puede corregir: la misma regla del caso de uso (la pantalla no decide). */
-  correccionPosible: boolean;
-  ultimaCorreccion: Readonly<{ por: string | null; en: string; motivo: string }> | null;
-}>;
-
-/** Un medio activo y las cuentas de cobro activas de la sucursal que admite: las opciones del diálogo «Corregir medio». */
-export type MedioParaCorregir = Readonly<{
-  medioDePagoId: string;
-  tipo: string;
-  nombre: string | null;
-  cuentas: readonly Readonly<{ cuentaDeCobroId: string; nombre: string }>[];
-}>;
-
-export type CierreParaLaPantalla = Readonly<{
-  /** `AAAA-MM-DD`: la jornada que se opera. */
-  fechaDeNegocio: string;
-  estado: EstadoConsultado;
-  cerradaPor: string | null;
-  cerradaEn: string | null;
-  /** Lo que `cerrarJornada` vuelve a comparar: nada se cierra con algo que nadie vio. */
-  huella: string;
-  controles: readonly ControlDelCierre[];
-  /** Solo con la jornada en cierre o cerrada. */
-  conciliacion: Readonly<{
-    enVivo: boolean;
-    lineas: readonly LineaDeConciliacionDelCierre[];
-    cobradoContraTicket: readonly CobradoContraTicketDelCierre[];
-  }> | null;
-  /** Solo con la jornada en cierre o cerrada: la primera página (hasta 100). */
-  cobros: Readonly<{ cobros: readonly CobroDelCierre[]; hayMas: boolean }> | null;
-  /** Solo con la jornada en cierre y algún cobro corregible. */
-  medios: readonly MedioParaCorregir[];
 }>;
 
 /** Un rechazo de una lectura: corta la carga entera y sale traducido, nunca un día a medias. */

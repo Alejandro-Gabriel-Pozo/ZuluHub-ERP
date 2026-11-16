@@ -9,10 +9,8 @@ import {
   empezarElCierre,
   type DependenciasDeCierreWeb,
 } from "../../src/composicion/cierre-del-dia-web";
-import {
-  cargarElCierre,
-  type CierreParaLaPantalla,
-} from "../../src/composicion/lectura-del-cierre";
+import type { CierreParaLaPantalla } from "../../src/capacidades/experiencia/vista-del-cierre";
+import { cargarElCierre } from "../../src/composicion/lectura-del-cierre";
 import type { Respuesta } from "../../src/capacidades/experiencia/respuesta";
 import { ok } from "../../src/primitivas/resultado/resultado";
 import { crearMundoDeCobro, type MundoDeCobro } from "./caja-cobrar-apoyo";

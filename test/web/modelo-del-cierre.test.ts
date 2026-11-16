@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { CONTROLES_DE_CAJA } from "../../src/modulos/caja/publico";
 import { aporteDeVentas } from "../../src/modulos/ventas/publico";
 import { CONTROLES_DE_STOCK } from "../../src/modulos/stock/publico";
-import type { CierreParaLaPantalla } from "../../src/composicion/lectura-del-cierre";
+import type { CierreParaLaPantalla } from "../../src/capacidades/experiencia/vista-del-cierre";
 import {
   CONTROLES_QUE_NO_SE_MUESTRAN,
   TEXTO_DE_CONTROL,
@@ -288,7 +288,7 @@ describe("los controles", () => {
           anulacionesDeLaJornada: vacio,
           correccionesDeLaJornada: vacio,
         },
-      } as never,
+      },
       { empresaId: "e", sucursalId: "s", fechaDeNegocio: "2026-11-09" } as never,
     );
     if (!r.ok) throw new Error("ventas no respondió");

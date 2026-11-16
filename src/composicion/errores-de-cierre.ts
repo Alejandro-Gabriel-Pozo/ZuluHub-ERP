@@ -8,7 +8,7 @@ import type {
   ErrorAlIniciarAuditoria,
   ErrorAlPedirLaJornadaDeHoy,
 } from "../modulos/cierre/publico";
-import type { ErrorAlPedirPersonasParaMostrar } from "../modulos/identidad/consultas/personas-para-mostrar";
+import type { ErrorAlPedirPersonasParaMostrar } from "../modulos/identidad/publico";
 import { err, type Resultado } from "../primitivas/resultado/resultado";
 import { aRespuesta, aRespuestaDeExcepcion, type DependenciasDeRespuesta } from "./a-respuesta";
 import type { ErrorDeEntradaDeCierre } from "./entradas-de-cierre";

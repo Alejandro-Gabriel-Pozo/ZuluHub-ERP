@@ -22,10 +22,7 @@ type Props = Readonly<{
 }>;
 
 /** Los medios que se ofrecen: todos los activos menos el vigente del cobro, salvo que tenga más de una cuenta (se puede pasar de una cuenta a otra del mismo medio). */
-export function mediosOfrecidos(
-  cobro: CobroVisto,
-  medios: readonly MedioVisto[],
-): readonly MedioVisto[] {
+function mediosOfrecidos(cobro: CobroVisto, medios: readonly MedioVisto[]): readonly MedioVisto[] {
   return medios.filter((m) => m.medioDePagoId !== cobro.medioDePagoId || m.cuentas.length > 1);
 }
 

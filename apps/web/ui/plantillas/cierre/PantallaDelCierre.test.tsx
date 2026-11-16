@@ -68,15 +68,15 @@ describe("accesibilidad y medidas, en cada paso", () => {
   const estados = [
     {
       nombre: "jornada abierta",
-      ir: async () => undefined,
+      ir: () => Promise.resolve(),
       modelo: modeloDe({ estado: "ABIERTA", conciliacion: null, cobros: null, medios: [] }),
     },
-    { nombre: "paso 1: cobros", ir: async () => undefined, modelo: modeloDe() },
+    { nombre: "paso 1: cobros", ir: () => Promise.resolve(), modelo: modeloDe() },
     { nombre: "paso 2: conciliación por medio", ir: () => irAlPaso(2), modelo: modeloDe() },
     { nombre: "paso 3: hay que reconocer", ir: () => irAlPaso(3), modelo: modeloDe() },
     {
       nombre: "jornada cerrada",
-      ir: async () => undefined,
+      ir: () => Promise.resolve(),
       modelo: modeloDe({
         estado: "CERRADA",
         cerradaPor: "lucia@ejemplo.com",
@@ -214,9 +214,9 @@ describe("en cierre: un paso por vez", () => {
   it("los pasos 2 y 3 siguen mostrando arriba lo que impide cerrar", async () => {
     await render(pantalla());
     await irAlPaso(2);
-    expect([...document.querySelectorAll("h2")][0]?.textContent).toBe("Impide cerrar");
+    expect(document.querySelector("h2")?.textContent).toBe("Impide cerrar");
     await siguiente().click();
-    expect([...document.querySelectorAll("h2")][0]?.textContent).toBe("Impide cerrar");
+    expect(document.querySelector("h2")?.textContent).toBe("Impide cerrar");
   });
 
   it("paso 2: cada medio con lo registrado, las correcciones (solo si hubo), lo declarado y la diferencia; el efectivo no se declara", async () => {

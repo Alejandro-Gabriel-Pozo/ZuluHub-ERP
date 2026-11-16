@@ -1,4 +1,4 @@
-import type { CierreParaLaPantalla } from "../../../../../src/composicion/lectura-del-cierre";
+import type { CierreParaLaPantalla } from "../../../../../src/capacidades/experiencia/vista-del-cierre";
 import type { ClaveDeTexto } from "../../../../../src/capacidades/vocabulario/catalogo";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { fechaCivilDesdeTexto } from "../../../../../src/primitivas/tiempo/fecha-civil";

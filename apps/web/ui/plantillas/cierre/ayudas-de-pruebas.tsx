@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { expect, vi } from "vitest";
 import { page } from "vitest/browser";
 import type { Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
-import type { CierreParaLaPantalla } from "../../../../../src/composicion/lectura-del-cierre";
+import type { CierreParaLaPantalla } from "../../../../../src/capacidades/experiencia/vista-del-cierre";
 import type { AccionesDelServidorDelCierre } from "./PantallaDelCierre.cliente";
 import {
   armarElModeloDelCierre,

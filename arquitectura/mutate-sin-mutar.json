@@ -19,6 +19,10 @@
     {
       "archivo": "src/composicion/entradas-de-facturacion.ts",
       "motivo": "Esquemas de forma de la frontera (zod: identificador, texto, entero) y el tipo de error de entrada, compartidos por todas las fronteras de la web; su comportamiento lo ejerce cada frontera con sus propias pruebas. Lo importan entradas-de-caja y errores-de-caja (2026-11-12, piloto B + D1)."
+    },
+    {
+      "archivo": "src/composicion/web.ts",
+      "motivo": "Cableado: `armarWeb` conecta los adaptadores de Postgres con los casos de uso de todos los módulos; lo ejercen las pruebas de integración, que la mutación no corre (PEDERNAL_SIN_INTEGRACION=1). Las fronteras del cierre solo importan su tipo `Web` para declarar de qué consultas dependen (2026-11-16)."
     }
   ],
   "cargasNoEstaticas": [

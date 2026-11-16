@@ -43,9 +43,9 @@ describe("Boton", () => {
       .element(page.getByRole("button", { name: "Reconocer" }))
       .toHaveAttribute("aria-pressed", "false");
     await rerender(<Boton>Cobrar</Boton>);
-    expect(page.getByRole("button", { name: "Cobrar" }).element().hasAttribute("aria-pressed")).toBe(
-      false,
-    );
+    expect(
+      page.getByRole("button", { name: "Cobrar" }).element().hasAttribute("aria-pressed"),
+    ).toBe(false);
   });
 
   it("enviando: dice el texto de envío, se anuncia ocupado, conserva el foco y no repite el toque", async () => {
