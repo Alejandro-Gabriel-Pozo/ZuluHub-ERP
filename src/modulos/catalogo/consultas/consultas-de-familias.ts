@@ -10,7 +10,7 @@ import {
   formaDeFamilia,
   type FormaDeFamilia,
   type MiembroParaForma,
-} from "../dominio/forma-de-familia";
+} from "../casos-de-uso/forma-de-la-familia";
 import { FORMA_DE_UUID } from "../persistencia/filas";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 

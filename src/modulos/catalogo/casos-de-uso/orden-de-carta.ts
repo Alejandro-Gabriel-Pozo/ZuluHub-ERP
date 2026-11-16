@@ -7,7 +7,7 @@ import {
   validarOrdenPedido,
   type TipoDeRenglon,
 } from "../dominio/renglones-de-seccion";
-import type { ModoDeOrden } from "../persistencia/repositorio-de-familias";
+import type { ModoDeOrden } from "../persistencia/repositorio-de-orden-de-carta";
 import { autorizar, exigirAlcanceTotal, traducir } from "./comun";
 import type { DependenciasDeCatalogo } from "./contrato";
 import type { ErrorDeCatalogo } from "./errores";
