@@ -15,7 +15,7 @@ import {
 } from "../dominio/identificadores";
 import type { FilaDePrecio } from "../dominio/modelo";
 import { autorizar, exigirAlcanceTotal, exigirSucursalAbierta, traducir } from "./comun";
-import type { DependenciasDeCatalogo } from "./contrato";
+import type { DependenciasDeCatalogo, TxDeCatalogo } from "./contrato";
 import type { ErrorDeCatalogo } from "./errores";
 
 type R<S> = Resultado<S, ErrorDeCatalogo>;
@@ -72,7 +72,6 @@ export function armarCambiarPrecio(dependencias: DependenciasDeCatalogo) {
     contexto: ContextoOperativo,
     entrada: EntradaDeCambiarPrecio,
   ): Promise<R<SalidaDeCambiarPrecio>> {
-    const { empresaId } = contexto;
     const resultado = await dependencias.transacciones.ejecutar(
       { contexto },
       async (tx): Promise<R<SalidaDeCambiarPrecio>> => {
@@ -80,118 +79,128 @@ export function armarCambiarPrecio(dependencias: DependenciasDeCatalogo) {
           "productos.cambiar_precio",
         ]);
         if (!permiso.ok) return permiso;
-        if (
-          !esUuid(entrada.precioId) ||
-          (entrada.opcionId !== null && !esUuid(entrada.opcionId)) ||
-          (entrada.sucursalId !== null && !esUuid(entrada.sucursalId))
-        ) {
-          return err("IDENTIFICADOR_INVALIDO");
-        }
-        let sucursal: SucursalId | null = null;
-        if (entrada.sucursalId === null) {
-          const alcance = await exigirAlcanceTotal(tx, contexto);
-          if (!alcance.ok) return alcance;
-        } else {
-          sucursal = aSucursalId(entrada.sucursalId);
-          const abierta = await exigirSucursalAbierta(tx, contexto, sucursal);
-          if (!abierta.ok) return abierta;
-        }
-        // Un precio vacío solo con sucursal (vuelve al de la empresa); sin sucursal, el precio abierto lo escribe `cambiarFormaDeVenta`.
-        let precio: string | null = null;
-        if (entrada.precio === null) {
-          if (sucursal === null) return err("PRECIO_INVALIDO");
-        } else {
-          const leido = precioDeVentaDesdeTexto(entrada.precio);
-          if (!leido.ok) return err("PRECIO_INVALIDO");
-          precio = precioUnitarioATexto(leido.valor);
-        }
-
-        const producto = await tx.productos.bloquear(empresaId, entrada.productoId);
-        if (producto === null) return err("PRODUCTO_NO_ENCONTRADO");
-        if (!producto.activo) return err("PRODUCTO_INACTIVO");
-        if (!vendeLaClase(producto.claseDeUso)) return err("PRODUCTO_NO_VENDIBLE");
-        const grupos = await tx.opciones.gruposDelProducto(empresaId, producto.id);
-        const varianteActiva = grupos.some(
-          ({ grupo }) => grupo.clase === "VARIANTE" && grupo.activo,
-        );
-        let opcion: OpcionId | null = null;
-        if (entrada.opcionId === null) {
-          if (varianteActiva) return err("PRECIO_DE_PRODUCTO_CON_VARIANTE");
-        } else {
-          const hallada = grupos
-            .flatMap((g) => g.opciones.map((o) => ({ g: g.grupo, o })))
-            .find(({ o }) => o.id === entrada.opcionId);
-          if (hallada === undefined || !hallada.o.activa || !hallada.g.activo)
-            return err("OPCION_INVALIDA");
-          if (hallada.g.clase === "INCLUIDA") return err("INCLUIDA_CON_RECARGO");
-          if (hallada.g.clase === "ADICIONAL") {
-            if (sucursal === null) return err("RECARGO_DE_EMPRESA_SE_EDITA_EN_OPCIONES");
-            if (precio !== null && !hallada.g.seMuestraEnCarta)
-              return err("ELECCION_OCULTA_CON_PRECIO");
-          }
-          opcion = hallada.o.id;
-        }
-
-        const existente = await tx.precios.obtener(empresaId, entrada.precioId);
-        if (existente !== null) {
-          const igual = mismoContenido(existente, {
-            producto: producto.id,
-            opcion: opcion,
-            sucursal,
-            precio,
-          });
-          return igual
-            ? ok({ precioId: existente.id, vigenteDesde: null, yaExistia: true })
-            : err("ID_REUTILIZADO");
-        }
-
-        const ultima = await tx.precios.ultimaDelAlcance(empresaId, producto.id, opcion, sucursal);
-        if ((ultima === null ? null : ultima.id) !== entrada.precioIdEsperado) {
-          return err({
-            error: "PRECIO_DESACTUALIZADO",
-            vigente: ultima === null ? null : { precioId: ultima.id, precio: ultima.precio },
-          });
-        }
-        const nueva = await tx.precios.insertar(empresaId, {
-          id: precioDeVentaId(entrada.precioId),
-          productoId: producto.id,
-          opcionId: opcion,
-          sucursalId: sucursal,
-          precio,
-          unidadId: producto.unidadDeVentaId,
-          pasoMinimo: producto.pasoMinimo,
-          ahora: contexto.ahora,
-          cargadoPor: contexto.personaId,
-        });
-        if (nueva === null) {
-          // Alguien escribió ese `precioId` entre la lectura de arriba y ahora: se vuelve a mirar (repetición o id ajeno).
-          const repetida = await tx.precios.obtener(empresaId, entrada.precioId);
-          const igual =
-            repetida !== null &&
-            mismoContenido(repetida, { producto: producto.id, opcion, sucursal, precio });
-          return igual
-            ? ok({ precioId: repetida.id, vigenteDesde: null, yaExistia: true })
-            : err("ID_REUTILIZADO");
-        }
-        await tx.auditoria.registrar({
-          empresaId,
-          actorPersonaId: contexto.personaId,
-          accion: "PRECIO_CAMBIADO",
-          entidad: "precio_de_venta",
-          entidadId: nueva.id,
-          antes: ultima === null ? null : { precioId: ultima.id, precio: ultima.precio },
-          despues: {
-            productoId: producto.id,
-            opcionId: opcion,
-            sucursalId: sucursal,
-            precio,
-            unidadId: producto.unidadDeVentaId,
-            pasoMinimo: producto.pasoMinimo,
-          },
-        });
-        return ok({ precioId: nueva.id, vigenteDesde: nueva.vigenteDesde, yaExistia: false });
+        return aplicarCambioDePrecio(tx, contexto, entrada);
       },
     );
     return traducir(resultado);
   };
+}
+
+/**
+ * Los pasos 1 a 4 de arriba DENTRO de una transacción ya abierta y con el permiso ya comprobado por quien la abrió (`cambiarPrecio` y `cambiarPreciosPorMedida`): una sola regla, un solo
+ * lugar. Si devuelve un error, quien abrió la transacción la revierte (no deja medio cambio).
+ */
+export async function aplicarCambioDePrecio(
+  tx: TxDeCatalogo,
+  contexto: ContextoOperativo,
+  entrada: EntradaDeCambiarPrecio,
+): Promise<R<SalidaDeCambiarPrecio>> {
+  const { empresaId } = contexto;
+  if (
+    !esUuid(entrada.precioId) ||
+    (entrada.opcionId !== null && !esUuid(entrada.opcionId)) ||
+    (entrada.sucursalId !== null && !esUuid(entrada.sucursalId))
+  ) {
+    return err("IDENTIFICADOR_INVALIDO");
+  }
+  let sucursal: SucursalId | null = null;
+  if (entrada.sucursalId === null) {
+    const alcance = await exigirAlcanceTotal(tx, contexto);
+    if (!alcance.ok) return alcance;
+  } else {
+    sucursal = aSucursalId(entrada.sucursalId);
+    const abierta = await exigirSucursalAbierta(tx, contexto, sucursal);
+    if (!abierta.ok) return abierta;
+  }
+  // Un precio vacío solo con sucursal (vuelve al de la empresa); sin sucursal, el precio abierto lo escribe `cambiarFormaDeVenta`.
+  let precio: string | null = null;
+  if (entrada.precio === null) {
+    if (sucursal === null) return err("PRECIO_INVALIDO");
+  } else {
+    const leido = precioDeVentaDesdeTexto(entrada.precio);
+    if (!leido.ok) return err("PRECIO_INVALIDO");
+    precio = precioUnitarioATexto(leido.valor);
+  }
+
+  const producto = await tx.productos.bloquear(empresaId, entrada.productoId);
+  if (producto === null) return err("PRODUCTO_NO_ENCONTRADO");
+  if (!producto.activo) return err("PRODUCTO_INACTIVO");
+  if (!vendeLaClase(producto.claseDeUso)) return err("PRODUCTO_NO_VENDIBLE");
+  const grupos = await tx.opciones.gruposDelProducto(empresaId, producto.id);
+  const varianteActiva = grupos.some(({ grupo }) => grupo.clase === "VARIANTE" && grupo.activo);
+  let opcion: OpcionId | null = null;
+  if (entrada.opcionId === null) {
+    if (varianteActiva) return err("PRECIO_DE_PRODUCTO_CON_VARIANTE");
+  } else {
+    const hallada = grupos
+      .flatMap((g) => g.opciones.map((o) => ({ g: g.grupo, o })))
+      .find(({ o }) => o.id === entrada.opcionId);
+    if (hallada === undefined || !hallada.o.activa || !hallada.g.activo)
+      return err("OPCION_INVALIDA");
+    if (hallada.g.clase === "INCLUIDA") return err("INCLUIDA_CON_RECARGO");
+    if (hallada.g.clase === "ADICIONAL") {
+      if (sucursal === null) return err("RECARGO_DE_EMPRESA_SE_EDITA_EN_OPCIONES");
+      if (precio !== null && !hallada.g.seMuestraEnCarta) return err("ELECCION_OCULTA_CON_PRECIO");
+    }
+    opcion = hallada.o.id;
+  }
+
+  const existente = await tx.precios.obtener(empresaId, entrada.precioId);
+  if (existente !== null) {
+    const igual = mismoContenido(existente, {
+      producto: producto.id,
+      opcion: opcion,
+      sucursal,
+      precio,
+    });
+    return igual
+      ? ok({ precioId: existente.id, vigenteDesde: null, yaExistia: true })
+      : err("ID_REUTILIZADO");
+  }
+
+  const ultima = await tx.precios.ultimaDelAlcance(empresaId, producto.id, opcion, sucursal);
+  if ((ultima === null ? null : ultima.id) !== entrada.precioIdEsperado) {
+    return err({
+      error: "PRECIO_DESACTUALIZADO",
+      vigente: ultima === null ? null : { precioId: ultima.id, precio: ultima.precio },
+    });
+  }
+  const nueva = await tx.precios.insertar(empresaId, {
+    id: precioDeVentaId(entrada.precioId),
+    productoId: producto.id,
+    opcionId: opcion,
+    sucursalId: sucursal,
+    precio,
+    unidadId: producto.unidadDeVentaId,
+    pasoMinimo: producto.pasoMinimo,
+    ahora: contexto.ahora,
+    cargadoPor: contexto.personaId,
+  });
+  if (nueva === null) {
+    // Alguien escribió ese `precioId` entre la lectura de arriba y ahora: se vuelve a mirar (repetición o id ajeno).
+    const repetida = await tx.precios.obtener(empresaId, entrada.precioId);
+    const igual =
+      repetida !== null &&
+      mismoContenido(repetida, { producto: producto.id, opcion, sucursal, precio });
+    return igual
+      ? ok({ precioId: repetida.id, vigenteDesde: null, yaExistia: true })
+      : err("ID_REUTILIZADO");
+  }
+  await tx.auditoria.registrar({
+    empresaId,
+    actorPersonaId: contexto.personaId,
+    accion: "PRECIO_CAMBIADO",
+    entidad: "precio_de_venta",
+    entidadId: nueva.id,
+    antes: ultima === null ? null : { precioId: ultima.id, precio: ultima.precio },
+    despues: {
+      productoId: producto.id,
+      opcionId: opcion,
+      sucursalId: sucursal,
+      precio,
+      unidadId: producto.unidadDeVentaId,
+      pasoMinimo: producto.pasoMinimo,
+    },
+  });
+  return ok({ precioId: nueva.id, vigenteDesde: nueva.vigenteDesde, yaExistia: false });
 }

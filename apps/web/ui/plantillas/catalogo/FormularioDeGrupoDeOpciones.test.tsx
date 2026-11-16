@@ -113,25 +113,6 @@ describe("FormularioDeGrupoDeOpciones: la variante", () => {
       opcion_n0_nombre: "Chico",
     });
   });
-
-  it("«Un producto admite una sola variante» se asocia al nombre", async () => {
-    await render(
-      formulario(
-        armarLaVariante({ ...VARIANTE, grupo: null }),
-        rechazo({
-          codigo: "CATALOGO_SEGUNDA_VARIANTE",
-          clave: "catalogo.error.una_sola_variante",
-          presentacion: "AVISO",
-          campo: "nombre",
-        }),
-      ),
-    );
-    tocar(guardar());
-    await expect.element(page.getByText("Un producto admite una sola variante")).toBeVisible();
-    expect(
-      page.getByLabelText("Nombre", { exact: true }).first().element().getAttribute("aria-invalid"),
-    ).toBe("true");
-  });
 });
 
 describe("FormularioDeGrupoDeOpciones", () => {

@@ -82,6 +82,16 @@ export const DECLARACIONES = {
       },
     },
   },
+  cambiarPreciosPorMedida: {
+    accion: "productos.cambiar_precio",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO,
+        it: "PM2: repetir el mismo pedido de precios por medida deja todo en yaExistia y no escribe",
+      },
+    },
+  },
   editarOpciones: {
     accion: "opciones.editar",
     repeticion: {

@@ -1,5 +1,6 @@
 import { armarCambiarFormaDeVenta } from "./cambiar-forma-de-venta";
 import { armarCambiarPrecio } from "./cambiar-precio";
+import { armarCambiarPreciosPorMedida } from "./cambiar-precios-por-medida";
 import type { DependenciasDeCatalogo } from "./contrato";
 import {
   armarCrearNodoDeClasificacion,
@@ -43,6 +44,7 @@ export function crearCasosDeUsoDeCatalogo(dependencias: DependenciasDeCatalogo) 
     reactivarProducto: armarReactivarProducto(dependencias),
     cambiarFormaDeVenta: armarCambiarFormaDeVenta(dependencias),
     cambiarPrecio: armarCambiarPrecio(dependencias),
+    cambiarPreciosPorMedida: armarCambiarPreciosPorMedida(dependencias),
     editarOpciones: armarEditarOpciones(dependencias),
     guardarConsumoDeGrupo: armarGuardarConsumoDeGrupo(dependencias),
     copiarOpciones: armarCopiarOpciones(dependencias),

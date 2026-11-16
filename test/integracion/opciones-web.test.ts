@@ -577,7 +577,7 @@ describe.skipIf(base === null)("opciones de un producto de la web", () => {
       expect(await auditorias(id)).toBe(1);
     });
 
-    it("repetirla (doble toque) escribe una sola vez; con otra clave una segunda variante sale como «Un producto admite una sola variante»", async () => {
+    it("repetirla (doble toque) escribe una sola vez; con otra clave una segunda variante sale con el genérico", async () => {
       const id = await nuevoProducto();
       const v0 = await opciones(id);
       expect(await variante(id, v0)).toMatchObject({ ok: true });
@@ -586,7 +586,7 @@ describe.skipIf(base === null)("opciones de un producto de la web", () => {
       const v1 = await opciones(id);
       expect(await variante(id, v1, { nombre: "Otra" })).toMatchObject({
         ok: false,
-        error: { codigo: "CATALOGO_SEGUNDA_VARIANTE", campo: "nombre" },
+        error: { codigo: "CATALOGO_ACCION_NO_PERMITIDA" },
       });
       expect(await gruposDe(id)).toHaveLength(1);
     });

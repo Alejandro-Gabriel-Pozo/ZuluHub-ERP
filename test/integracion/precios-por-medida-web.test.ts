@@ -207,6 +207,32 @@ describe.skipIf(base === null)("precios por medida de la web", () => {
     expect(await filas(producto, chico)).toHaveLength(0);
   });
 
+  it("todo o nada: la primera medida está bien y la segunda mal escrita: no queda ninguna, ni auditoría, y se marca la segunda", async () => {
+    const { producto, chico, grande } = await conMedidas();
+    const v0 = await ver(producto);
+    expect(await cambiar(producto, v0, ["1500.00", "abc"])).toMatchObject({
+      ok: false,
+      error: { codigo: "CATALOGO_PRECIO_INVALIDO", campo: "precio_1" },
+    });
+    expect(await filas(producto, chico)).toHaveLength(0);
+    expect(await filas(producto, grande)).toHaveLength(0);
+    expect(await auditorias(producto)).toBe(0);
+  });
+
+  it("todo o nada con otra pestaña: si la segunda medida ya cambió, la primera tampoco se guarda y el error marca la segunda", async () => {
+    const { producto, chico, grande } = await conMedidas();
+    const v0 = await ver(producto);
+    const otra = await ver(producto);
+    expect(codigoDe(await cambiar(producto, otra, ["", "2000.00"]))).toBe("OK");
+    expect(await cambiar(producto, v0, ["1500.00", "2100.00"])).toMatchObject({
+      ok: false,
+      error: { codigo: "CATALOGO_PRECIO_DESACTUALIZADO", campo: "precio_1" },
+    });
+    expect(await filas(producto, chico)).toHaveLength(0);
+    expect(await filas(producto, grande)).toHaveLength(1);
+    expect(await auditorias(producto)).toBe(1);
+  });
+
   it("una medida que no es del producto, un producto sin variante o que no se vende, uno desactivado o que no existe: el genérico", async () => {
     const { producto } = await conMedidas();
     const otro = await conMedidas();

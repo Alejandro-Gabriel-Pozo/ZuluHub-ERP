@@ -27,7 +27,7 @@ const mundo = vi.hoisted((): { cambios: unknown[]; resultado: unknown } => ({
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
     casosDeUsoDeCatalogo: () => ({
-      cambiarPrecio: (_c: unknown, entrada: unknown) => {
+      cambiarPreciosPorMedida: (_c: unknown, entrada: unknown) => {
         mundo.cambios.push(entrada);
         return Promise.resolve(mundo.resultado);
       },
@@ -108,11 +108,9 @@ describe("cambiarLosPreciosDeLasMedidas", () => {
     expect(mundo.cambios).toHaveLength(1);
     expect(mundo.cambios[0]).toMatchObject({
       productoId: ID,
-      opcionId: CHICO,
-      sucursalId: null,
-      precioIdEsperado: VISTO,
-      precio: "3500.00",
+      cambios: [{ opcionId: CHICO, precioIdEsperado: VISTO, precio: "3500.00" }],
     });
+    expect(JSON.stringify(mundo.cambios[0])).not.toContain("sucursalId");
     expect(revalidadas).toEqual([`/catalogo/productos/${ID}/precios/medidas`]);
   });
 
@@ -132,10 +130,9 @@ describe("cambiarLosPreciosDeLasMedidas", () => {
     ).rejects.toThrow("NEXT_REDIRECT");
     expect(mundo.cambios).toHaveLength(1);
     expect(mundo.cambios[0]).toMatchObject({
-      opcionId: GRANDE,
-      sucursalId: null,
-      precioIdEsperado: null,
+      cambios: [{ opcionId: GRANDE, precioIdEsperado: null }],
     });
+    expect(JSON.stringify(mundo.cambios[0])).not.toContain("sucursalId");
   });
 
   it("un precio que no es texto o que falta es vacío: esa medida no se toca", async () => {

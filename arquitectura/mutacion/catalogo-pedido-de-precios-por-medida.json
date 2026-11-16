@@ -1,0 +1,6 @@
+{
+  "grupo": "catálogo (pedido de precios por medida)",
+  "archivos": "src/modulos/catalogo/dominio/pedido-de-precios-por-medida.ts",
+  "minutos": 1,
+  "pruebas": "src/modulos/catalogo/dominio/pedido-de-precios-por-medida.test.ts"
+}

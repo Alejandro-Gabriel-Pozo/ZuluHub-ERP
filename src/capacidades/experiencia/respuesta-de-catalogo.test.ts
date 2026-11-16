@@ -20,7 +20,6 @@ describe("códigos públicos de la ficha de un producto", () => {
       CATALOGO_INCLUIDA_CON_RECARGO: "catalogo.error.incluida_con_recargo",
       CATALOGO_CONSUMO_REPETIDO: "catalogo.error.insumo_ya_cargado",
       CATALOGO_CANTIDAD_INVALIDA: "catalogo.error.cantidad_mayor_que_cero",
-      CATALOGO_SEGUNDA_VARIANTE: "catalogo.error.una_sola_variante",
       CATALOGO_ACCION_NO_PERMITIDA: "catalogo.error.accion_no_permitida",
     });
     expect(CATALOGO_DE_TEXTOS["catalogo.error.nombre_repetido"].porDefecto).toBe(

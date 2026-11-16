@@ -12,7 +12,6 @@ describe("traducirErrorDeCatalogo", () => {
     ["INCLUIDA_CON_RECARGO", "CATALOGO_INCLUIDA_CON_RECARGO", "recargo"],
     ["CONSUMO_REPETIDO", "CATALOGO_CONSUMO_REPETIDO", "insumo"],
     ["CANTIDAD_INVALIDA", "CATALOGO_CANTIDAD_INVALIDA", "cantidad"],
-    ["SEGUNDA_VARIANTE", "CATALOGO_SEGUNDA_VARIANTE", "nombre"],
   ])("%s sale como %s, asociado al campo %s", (error, codigo, campo) => {
     expect(traducirErrorDeCatalogo(error)).toEqual({ codigo, campo });
   });

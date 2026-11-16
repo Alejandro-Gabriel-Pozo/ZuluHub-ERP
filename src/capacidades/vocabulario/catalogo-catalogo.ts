@@ -165,8 +165,6 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.opciones.variantes": { porDefecto: "Variantes" },
   "catalogo.opciones.agregar_variante": { porDefecto: "Agregar variante" },
   "catalogo.opciones.es_la_medida": { porDefecto: "Es la medida" },
-  // `productos.html`, segunda tabla de «Textos nuevos» (decisiones 138, 139 y 147; «por aprobar», los redactó el ingeniero): «Un producto admite una sola variante» (decisión 138: una sola variante).
-  "catalogo.error.una_sola_variante": { porDefecto: "Un producto admite una sola variante" },
   // A13, tramo Consumo (DEC-0529). Fuente: la maqueta `productos.html`, función `vConsumo` y tabla «Textos nuevos» (decisiones 138, 139 y 147, 09/11/2026): «Qué consume», «Escala con la medida» y
   // «Agregar insumo» son de Motor2; «Insumo», «Cantidad» y los dos errores están en esa misma tabla o en `validarConsumo`. Sin fila de aprobación propia: los acepta el orquestador (DDD:173).
   "catalogo.consumo.que_consume": { porDefecto: "Qué consume" },

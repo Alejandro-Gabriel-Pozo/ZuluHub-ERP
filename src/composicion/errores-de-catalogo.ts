@@ -31,14 +31,12 @@ const CON_TEXTO_PROPIO: Readonly<Record<string, ErrorConTexto>> = {
   // Precios (A1, T3): el único otro texto propio es «Escribí un precio válido» (misma fila «Errores»).
   PRECIO_INVALIDO: { codigo: "CATALOGO_PRECIO_INVALIDO", campo: "precio" },
   // Opciones (A13): el recargo es un importe, así que un recargo mal escrito usa el mismo texto aprobado («Escribí un precio válido»); «Una opción incluida no lleva recargo» es de la
-  // misma fila «Errores» de `productos.html`. Los demás errores de las opciones (grupo repetido, versión vieja…) salen como el genérico.
+  // misma fila «Errores» de `productos.html`. Los demás errores de las opciones (grupo repetido, versión vieja, una segunda variante…) salen como el genérico (el texto de la segunda variante no está aprobado, 16/11/2026).
   RECARGO_INVALIDO: { codigo: "CATALOGO_PRECIO_INVALIDO", campo: "recargo" },
   INCLUIDA_CON_RECARGO: { codigo: "CATALOGO_INCLUIDA_CON_RECARGO", campo: "recargo" },
-  // Variante (A13, tramo Medidas): un producto admite una sola variante (decisión 138; texto de `productos.html`, tabla «por aprobar», DEC-0527).
   // Consumo (A13, tramo Consumo): «Ese insumo ya está cargado» y «La cantidad tiene que ser mayor que cero» (`productos.html`, funciones `vConsumo` y `validarConsumo`; DEC-0529).
   CONSUMO_REPETIDO: { codigo: "CATALOGO_CONSUMO_REPETIDO", campo: "insumo" },
   CANTIDAD_INVALIDA: { codigo: "CATALOGO_CANTIDAD_INVALIDA", campo: "cantidad" },
-  SEGUNDA_VARIANTE: { codigo: "CATALOGO_SEGUNDA_VARIANTE", campo: "nombre" },
 };
 
 /** Un defecto: la base devolvió una restricción que el módulo no sabe traducir. No es de negocio. */

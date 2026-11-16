@@ -23,7 +23,6 @@ export const CLAVES_DE_ERRORES_DE_CATALOGO = {
   CATALOGO_INCLUIDA_CON_RECARGO: "catalogo.error.incluida_con_recargo",
   CATALOGO_CONSUMO_REPETIDO: "catalogo.error.insumo_ya_cargado",
   CATALOGO_CANTIDAD_INVALIDA: "catalogo.error.cantidad_mayor_que_cero",
-  CATALOGO_SEGUNDA_VARIANTE: "catalogo.error.una_sola_variante",
   CATALOGO_ACCION_NO_PERMITIDA: "catalogo.error.accion_no_permitida",
 } as const satisfies Record<string, ClaveDeTexto>;
 

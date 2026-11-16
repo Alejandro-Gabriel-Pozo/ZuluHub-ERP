@@ -43,6 +43,10 @@ export type {
 } from "./casos-de-uso/editar-producto";
 export type { EntradaDeCambiarPrecio, SalidaDeCambiarPrecio } from "./casos-de-uso/cambiar-precio";
 export type {
+  EntradaDeCambiarPreciosPorMedida,
+  SalidaDeCambiarPreciosPorMedida,
+} from "./casos-de-uso/cambiar-precios-por-medida";
+export type {
   EntradaDeCambiarFormaDeVenta,
   SalidaDeCambiarFormaDeVenta,
 } from "./casos-de-uso/cambiar-forma-de-venta";

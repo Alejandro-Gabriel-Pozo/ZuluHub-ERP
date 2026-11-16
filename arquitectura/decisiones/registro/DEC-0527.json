@@ -4,7 +4,7 @@
   "quien": "padre",
   "tipo": "CLIENTE",
   "estado": "PENDIENTE_DE_OK",
-  "decision": "Textos del tramo Medidas: Variantes, Agregar variante y Es la medida (aprobados 09/11) y Un producto admite una sola variante (de la tabla por aprobar de productos.html).",
-  "que_cambia": "Qué lee quien edita la medida de un producto. El último texto es del ingeniero y espera confirmación. Revertir: quitar las cuatro claves de catalogo-catalogo.ts y el código SEGUNDA_VARIANTE.",
+  "decision": "Textos del tramo Medidas: Variantes, Agregar variante y Es la medida (aprobados 09/11).",
+  "que_cambia": "Qué lee quien edita la medida de un producto. La segunda variante sale con el texto genérico (no hay texto aprobado, 16/11/2026). Revertir: quitar las tres claves de catalogo-catalogo.ts.",
   "donde": "src/capacidades/vocabulario/catalogo-catalogo.ts; productos.html decisiones 138 y 12/11; delegación del dueño, DDD filas 173 y 174"
 }
