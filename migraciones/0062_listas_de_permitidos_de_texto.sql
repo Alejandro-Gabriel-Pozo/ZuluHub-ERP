@@ -141,7 +141,7 @@ ALTER TABLE datos_fiscales ADD CONSTRAINT datos_fiscales_iibb_numero_ck CHECK (i
 -- comprobante (0009 y 0022): la foto del emisor, del punto de venta, del receptor y de la sucursal.
 -- ---------------------------------------------------------------------------------------------
 ALTER TABLE comprobante DROP CONSTRAINT comprobante_sucursal_nombre_ck;
-ALTER TABLE comprobante ADD CONSTRAINT comprobante_sucursal_nombre_ck CHECK (texto_de_una_linea_valido(sucursal_nombre, 100));
+ALTER TABLE comprobante ADD CONSTRAINT comprobante_sucursal_nombre_ck CHECK (sucursal_nombre IS NULL OR texto_de_una_linea_valido(sucursal_nombre, 100));
 ALTER TABLE comprobante DROP CONSTRAINT comprobante_emisor_razon_social_ck;
 ALTER TABLE comprobante ADD CONSTRAINT comprobante_emisor_razon_social_ck CHECK (texto_de_una_linea_valido(emisor_razon_social, 200));
 ALTER TABLE comprobante DROP CONSTRAINT comprobante_emisor_domicilio_ck;
