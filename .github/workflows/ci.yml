@@ -261,6 +261,7 @@ jobs:
     outputs:
       hay: ${{ steps.plan.outputs.hay }}
       grupos: ${{ steps.plan.outputs.grupos }}
+      paquetes: ${{ steps.paquetes.outputs.paquetes }}
       estabilidad: ${{ steps.plan.outputs.estabilidad }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -275,11 +276,18 @@ jobs:
       - run: npm ci
       - id: plan
         run: node arquitectura/planificar-mutacion.cjs
+      # Agrupa los grupos chicos en el mismo job (cada job paga ~1 min de arranque); no cambia qué se muta. Ver `arquitectura/empaquetar-mutacion.cjs`.
+      - id: paquetes
+        run: node arquitectura/empaquetar-mutacion.cjs
+        env:
+          # Cada paso tiene su propio $GITHUB_OUTPUT: lo que eligió el plan llega por el contexto `steps`, no leyendo el archivo del otro paso.
+          GRUPOS_DEL_PLAN: ${{ steps.plan.outputs.grupos }}
 
   mutacion:
-    # En paralelo por grupos de archivos (arquitectura/mutacion/, un archivo por grupo): el tiempo total es
-    # el del grupo más lento. Cada grupo exige 100 % (thresholds.break en stryker.config.mjs).
-    name: Mutación (${{ matrix.grupo }})
+    # En paralelo por PAQUETES de grupos (arquitectura/mutacion/, un archivo por grupo; los chicos comparten job, ver `empaquetar-mutacion.cjs`):
+    # el tiempo total es el del grupo más lento, que va solo. Cada grupo exige 100 % (thresholds.break en stryker.config.mjs) y se nombra
+    # en el log, en el resumen y en su error (`correr-paquete-de-mutacion.cjs`); si uno falla, los demás igual corren.
+    name: Mutación (${{ matrix.etiqueta }})
     needs: mutacion-plan
     if: needs.mutacion-plan.outputs.hay == 'true'
     runs-on: ubuntu-latest
@@ -287,7 +295,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.mutacion-plan.outputs.grupos) }}
+        include: ${{ fromJSON(needs.mutacion-plan.outputs.paquetes) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -297,13 +305,11 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx stryker run --mutate "$ARCHIVOS,!src/**/*.test.ts"
+      - run: node arquitectura/correr-paquete-de-mutacion.cjs
         env:
           FC_SEMILLA: "20261011"
-          # Filtro de archivos de prueba que corre cada mutante (vacío = toda la suite unitaria). Los
-          # grupos grandes lo acotan a las pruebas de su módulo para entrar en el tiempo del job.
-          PEDERNAL_FILTRO_PRUEBAS: ${{ matrix.pruebas }}
-          ARCHIVOS: ${{ matrix.archivos }}
+          # Los grupos de este paquete (nombre, archivos a mutar y filtro de pruebas de cada uno); el script los valida y corre Stryker por cada uno.
+          GRUPOS_DEL_PAQUETE: ${{ toJSON(matrix.grupos) }}
 
   gate:
     name: Gate
