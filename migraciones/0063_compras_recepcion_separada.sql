@@ -14,7 +14,7 @@
 -- Decisiones de diseño (probadas por `test/integracion/compras-n3-migracion.test.ts`):
 --  N1. `PENDIENTE → CONFIRMADA | ANULADA` y `CONFIRMADA → ANULADA`; solo PENDIENTE → CONFIRMADA fija `confirmada_por` y `confirmada_en` (la hora la pone la base).
 --  N2. El stock de una recepción N3 NO se guarda en `linea_de_recepcion.movimiento_id` (la línea es de solo inserción y nace antes de confirmar): cada entrada es una fila de
---      `entrada_de_linea_de_recepcion`, una por línea y depósito, y solo entra en la transacción que confirma.
+--      `entrada_de_linea_de_recepcion`, una por línea y depósito (un mismo movimiento de stock puede cubrir varias líneas del mismo depósito), y solo entra en la transacción que confirma.
 --  N3. El control de una línea (`inspeccion_de_linea_de_recepcion`) solo entra en la transacción de su recepción y solo en una recepción de nivel N3 o N4. Sin fila = no se
 --      constató (no hay un CONFORME por defecto). La observación escrita es obligatoria si la línea no es conforme.
 --  N4. Un remito no se carga dos veces entre las recepciones PENDIENTES y CONFIRMADAS (la anulada libera el número).
@@ -121,7 +121,6 @@ CREATE TABLE entrada_de_linea_de_recepcion (
   cantidad      numeric(18,4) NOT NULL CONSTRAINT entrada_de_linea_cantidad_ck CHECK (cantidad > 0 AND cantidad < 100000000000000),
   registrado_en timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT entrada_de_linea_de_recepcion_pkey PRIMARY KEY (empresa_id, recepcion_id, linea, deposito_id),
-  CONSTRAINT entrada_de_linea_movimiento_uk UNIQUE (empresa_id, movimiento_id),
   CONSTRAINT entrada_de_linea_linea_fkey FOREIGN KEY (empresa_id, recepcion_id, linea) REFERENCES linea_de_recepcion (empresa_id, recepcion_id, numero),
   CONSTRAINT entrada_de_linea_deposito_fkey FOREIGN KEY (deposito_id, empresa_id) REFERENCES deposito (id, empresa_id),
   CONSTRAINT entrada_de_linea_movimiento_fkey FOREIGN KEY (movimiento_id, empresa_id) REFERENCES movimiento_de_stock (id, empresa_id)

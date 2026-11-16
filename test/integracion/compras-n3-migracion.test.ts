@@ -412,6 +412,41 @@ describe.skipIf(base === null)("0063 compras N3: la migración contra una base r
     });
   });
 
+  it("un mismo movimiento de stock cubre varias líneas del mismo depósito (así entra una recepción de varios renglones)", async () => {
+    const { m, proveedor, producto } = await escenario();
+    const deposito = await depositoDeBase(dueno, m);
+    const id = await conAppDe(b(), m, async (s) => {
+      const c = cabecera(m, proveedor, { estado: "PENDIENTE" });
+      const r = await s.intentar(c.texto, c.parametros);
+      acepta(r);
+      const nueva = String(r.ok ? r.rows[0]?.id : "");
+      for (const numero of [1, 2]) {
+        acepta(
+          await s.intentar(
+            `insert into linea_de_recepcion (empresa_id, recepcion_id, numero, producto_id, unidad_de_compra_id, cantidad_de_compra, cantidad_en_stock)
+             values ($1, $2, $3, $4, 'UNIDAD', 5, 5)`,
+            [m.empresa, nueva, numero, producto],
+          ),
+        );
+      }
+      expect((await s.confirmar()).ok).toBe(true);
+      return nueva;
+    });
+    const movimientoId = await movimiento(m, deposito);
+    await conAppDe(b(), m, async (s) => {
+      acepta(await s.intentar(confirmarSql, [id, m.empresa, m.persona]));
+      for (const linea of [1, 2]) {
+        acepta(
+          await s.intentar(
+            `insert into entrada_de_linea_de_recepcion (empresa_id, recepcion_id, linea, deposito_id, movimiento_id, cantidad) values ($1, $2, $3, $4, $5, 5)`,
+            [m.empresa, id, linea, deposito, movimientoId],
+          ),
+        );
+      }
+      expect((await s.confirmar()).ok).toBe(true);
+    });
+  });
+
   it("dos personas confirman la misma recepción a la vez: una sola gana y la otra no encuentra nada que confirmar", async () => {
     const { m, proveedor, producto } = await escenario();
     const id = await pendienteN3(m, proveedor, producto);
