@@ -1726,7 +1726,12 @@ const INVARIANTES = [
         objetivo: "workflow",
         descripcion:
           "El trabajo `pruebas` pasa a correr solo en `workflow_dispatch`: nunca correría en un pull request.",
-        esperado: { codigo: "ci-job-condicionado", archivo: CI, lineaDe: "workflow_dispatch" },
+        // El texto completo del `if` y no solo «workflow_dispatch»: el disparador `workflow_dispatch:` de `on:` (corrida a pedido) aparece antes en el archivo.
+        esperado: {
+          codigo: "ci-job-condicionado",
+          archivo: CI,
+          lineaDe: "github.event_name == 'workflow_dispatch'",
+        },
       },
       {
         id: "I9-sin-disparador-de-pull-request",

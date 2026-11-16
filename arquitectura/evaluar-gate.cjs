@@ -6,8 +6,12 @@
  * saltada porque el PR no toca ningún grupo bloquee el merge. Ese «saltado por filtro» se
  * distingue de cualquier otro por la salida `hay` del plan, que solo es `false` si el plan terminó bien.
  * Con `estabilidad` (la integración repetida 12 veces) pasa lo mismo, con una condición más: solo se acepta
- * saltada en un pull request y si el plan terminó bien y dijo `estabilidad == "false"`. En push a `main` y en
- * la corrida nocturna tiene que dar `success`, diga lo que diga el plan.
+ * saltada en un pull request y si el plan terminó bien y dijo `estabilidad == "false"`. En la corrida nocturna y a
+ * pedido tiene que dar `success`, diga lo que diga el plan.
+ * En push a `main` corre solo lo rápido: el plan, la mutación y Estabilidad se aceptan SALTADOS (`SALTABLES_EN_PUSH`) y solo ahí;
+ * si corrieron tienen que dar `success`, y todo lo demás (estático, guardián, pruebas, seguridad, flujos, web, componentes,
+ * recorrido) sigue siendo obligatorio. Previene: ~795 min de máquina por merge repitiendo lo que ya corrió en el PR (28 % del
+ * consumo medido el 13-16/11/2026) sin dejar pasar un push a main con las pruebas en rojo ni con un job saltado por otra causa.
  * El chequeo que falla si se quita: `test/arquitectura/evaluar-gate.test.ts`.
  */
 
@@ -25,6 +29,8 @@ const OBLIGATORIOS = [
 ];
 /** Jobs que solo corren en pull requests: en push a main quedan `skipped`. */
 const SOLO_EN_PULL_REQUEST = ["dependencias"];
+/** Jobs que en push a `main` NO corren (`if: github.event_name != 'push'`); en cualquier otro evento tienen que correr y dar `success`. */
+const SALTABLES_EN_PUSH = ["mutacion-plan", "mutacion", "estabilidad"];
 
 /**
  * @param {Readonly<Record<string, { result?: string, outputs?: Record<string, string> }>>} needs
@@ -34,9 +40,14 @@ const SOLO_EN_PULL_REQUEST = ["dependencias"];
 function evaluarGate(needs, evento) {
   const problemas = [];
   const resultado = (job) => needs[job]?.result;
+  // Solo con el evento `push` y solo para los tres jobs declarados, y solo `skipped` (un `failure` o un `cancelled` siguen en rojo).
+  const saltadoEnPush = (job) =>
+    evento === "push" && SALTABLES_EN_PUSH.includes(job) && resultado(job) === "skipped";
 
   for (const job of OBLIGATORIOS) {
-    if (resultado(job) !== "success") problemas.push(`${job}: ${resultado(job) ?? "ausente"}`);
+    if (resultado(job) !== "success" && !saltadoEnPush(job)) {
+      problemas.push(`${job}: ${resultado(job) ?? "ausente"}`);
+    }
   }
   for (const job of SOLO_EN_PULL_REQUEST) {
     if (resultado(job) !== "success" && resultado(job) !== "skipped") {
@@ -48,6 +59,7 @@ function evaluarGate(needs, evento) {
     needs["mutacion-plan"]?.outputs?.["hay"] === "false";
   const mutacionAceptable =
     resultado("mutacion") === "success" ||
+    saltadoEnPush("mutacion") ||
     (filtradoPorElPlan && resultado("mutacion") === "skipped");
   if (!mutacionAceptable) problemas.push(`mutacion: ${resultado("mutacion") ?? "ausente"}`);
 
@@ -57,6 +69,7 @@ function evaluarGate(needs, evento) {
     needs["mutacion-plan"]?.outputs?.["estabilidad"] === "false";
   const estabilidadAceptable =
     resultado("estabilidad") === "success" ||
+    saltadoEnPush("estabilidad") ||
     (estabilidadFiltrada && resultado("estabilidad") === "skipped");
   if (!estabilidadAceptable) {
     problemas.push(`estabilidad: ${resultado("estabilidad") ?? "ausente"}`);
@@ -116,6 +129,12 @@ function principal() {
   process.stdout.write("Gate en verde.\n");
 }
 
-module.exports = { evaluarGate, corridaReemplazada, OBLIGATORIOS, SOLO_EN_PULL_REQUEST };
+module.exports = {
+  evaluarGate,
+  corridaReemplazada,
+  OBLIGATORIOS,
+  SOLO_EN_PULL_REQUEST,
+  SALTABLES_EN_PUSH,
+};
 
 if (require.main === module) principal();
