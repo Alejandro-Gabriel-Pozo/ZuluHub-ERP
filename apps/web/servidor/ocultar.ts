@@ -4,7 +4,10 @@ import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   ocultarOMostrarUnProducto,
   verLaVisibilidadDelProducto,
+  verLosProductosOcultos,
+  volverAMostrarProductos,
   type DependenciasDeOcultarWeb,
+  type ProductoOcultoParaLaPantalla,
   type VisibilidadParaLaPantalla,
 } from "../../../src/composicion/ocultar-web";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
@@ -62,4 +65,27 @@ export async function ocultarOMostrar(
   if (!respuesta.ok) return { error: respuesta.error };
   revalidatePath(rutaDeLaFicha(respuesta.dato.productoId));
   return { error: null };
+}
+
+/**
+ * Los productos ocultos en el local con el que se trabaja y en toda la empresa (C2: la lista de ocultos y la marca de la lista de productos). Si no se puede leer (módulo `vidriera` sin
+ * activar, sin `vidrieras.ver`, falla), no se ofrece nada (fail closed): la lista de productos sigue sin marcas.
+ */
+export async function cargarLosOcultos(
+  contexto: ContextoOperativo,
+): Promise<Respuesta<readonly ProductoOcultoParaLaPantalla[]>> {
+  return verLosProductosOcultos(dependencias, contexto, await elLocal(contexto));
+}
+
+/**
+ * Vuelve a mostrar uno o varios productos (C2). El servidor lee dónde está oculto cada uno y actúa en el local con el que trabaja la sesión y en toda la empresa, con el permiso de cada
+ * alcance; repetirlo no duplica nada. Si sale bien (o a medias), se vuelve a pedir la lista de productos.
+ */
+export async function volverAMostrar(productoIds: readonly string[]): Promise<ResultadoDeAccion> {
+  const respuesta = await conLaEmpresa(async (contexto) =>
+    volverAMostrarProductos(dependencias, contexto, await elLocal(contexto), { productoIds }),
+  );
+  revalidatePath("/catalogo/productos");
+  for (const id of productoIds) revalidatePath(rutaDeLaFicha(id));
+  return respuesta.ok ? { error: null } : { error: respuesta.error };
 }

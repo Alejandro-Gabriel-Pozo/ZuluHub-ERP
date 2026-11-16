@@ -1,4 +1,8 @@
-import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
+import {
+  errorDeCodigo,
+  type ErrorPublico,
+  type Respuesta,
+} from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type { CasosDeUsoDeCatalogo, ConsultasDeCatalogo } from "../modulos/catalogo/publico";
 import { err } from "../primitivas/resultado/resultado";
@@ -9,7 +13,7 @@ import {
   type DependenciasDeRespuesta,
 } from "./a-respuesta";
 import { identificador } from "./entradas-de-facturacion";
-import { leerElPedidoDeOcultar } from "./entradas-de-ocultar";
+import { leerElPedidoDeMostrar, leerElPedidoDeOcultar } from "./entradas-de-ocultar";
 import { traducirErrorDeCatalogo } from "./errores-de-catalogo";
 
 /**
@@ -111,6 +115,114 @@ export async function ocultarOMostrarUnProducto(
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, d.respuesta);
   }
+}
+
+/** Un producto oculto para la lista de ocultos: dónde lo está (en el local con el que se trabaja y/o en toda la empresa). Lista blanca: nada de quién ni cuándo. */
+export type ProductoOcultoParaLaPantalla = Readonly<{
+  productoId: string;
+  nombre: string;
+  local: boolean;
+  empresa: boolean;
+}>;
+
+/**
+ * La lista de productos ocultos (C2) en el local `sucursalId` y en toda la empresa. Sin local (nada elegido) lista solo lo oculto en toda la empresa, nunca lo de «todos los locales»: no se
+ * asume «todas» (y la consulta sin local solo la responde a quien tiene alcance total). Es una LECTURA. Orden: por nombre y, a igual nombre, por id.
+ */
+export async function verLosProductosOcultos(
+  d: DependenciasDeOcultarWeb,
+  contexto: ContextoOperativo,
+  sucursalId: string | null,
+): Promise<Respuesta<readonly ProductoOcultoParaLaPantalla[]>> {
+  try {
+    const ocultos = await d
+      .consultas()
+      .productosOcultos(contexto, sucursalId === null ? {} : { sucursalId });
+    if (!ocultos.ok) return conError(ocultos.error, d);
+    const porProducto = new Map<string, { nombre: string; local: boolean; empresa: boolean }>();
+    for (const o of ocultos.valor) {
+      const esEmpresa = o.sucursalId === null;
+      if (!esEmpresa && o.sucursalId !== sucursalId) continue;
+      const previo = porProducto.get(o.productoId) ?? {
+        nombre: o.nombre,
+        local: false,
+        empresa: false,
+      };
+      porProducto.set(o.productoId, {
+        nombre: o.nombre,
+        local: previo.local || !esEmpresa,
+        empresa: previo.empresa || esEmpresa,
+      });
+    }
+    const lista = [...porProducto].map(([productoId, v]) => ({ productoId, ...v }));
+    lista.sort((a, b) =>
+      a.nombre === b.nombre
+        ? a.productoId.localeCompare(b.productoId)
+        : a.nombre.localeCompare(b.nombre, "es"),
+    );
+    return { ok: true, dato: lista };
+  } catch (excepcion) {
+    return aRespuestaDeExcepcion(excepcion, d.respuesta);
+  }
+}
+
+/** Lo que devuelve volver a mostrar varios: cuántos productos se volvieron a mostrar (los que ya estaban visibles no cuentan). */
+export type ResultadoDeMostrar = Readonly<{ productoIds: readonly string[]; mostrados: number }>;
+
+/**
+ * «Volver a mostrar» uno o varios productos (C2): en cada producto, los alcances donde HOY está oculto, que lee el servidor (el pedido trae solo los ids). Reusa `ocultarProducto`, así que cada
+ * escritura es su propia transacción con su permiso, su `FOR UPDATE` y su auditoría. SUPUESTO (DEC-0545): una transacción por producto y alcance, no una sola para todo; los productos son
+ * independientes (uno que falla no deshace a los otros) y un producto oculto en el local Y en la empresa son dos escrituras, no una (el caso de uso fija un alcance por llamada). Todas fijan un
+ * ESTADO: si algo falla a medias, repetir el pedido termina lo que falta sin duplicar nada. Revertirlo cuesta un caso de uso nuevo (`mostrarProducto`) que haga ambos alcances en una transacción.
+ * Se procesa en orden, uno por vez: nunca dos transacciones del mismo pedido a la vez (sin riesgo de bloqueo cruzado). Si alguno falla, devuelve el primer error al final y los demás igual
+ * quedaron hechos.
+ */
+export async function volverAMostrarProductos(
+  d: DependenciasDeOcultarWeb,
+  contexto: ContextoOperativo,
+  sucursalId: string | null,
+  crudo: unknown,
+): Promise<Respuesta<ResultadoDeMostrar>> {
+  const pedido = leerElPedidoDeMostrar(crudo);
+  if (!pedido.ok) return { ok: false, error: GENERICO };
+  const ocultos = await verLosProductosOcultos(d, contexto, sucursalId);
+  if (!ocultos.ok) return ocultos;
+  const hoy = new Map(ocultos.dato.map((o) => [o.productoId, o]));
+  let primerError: ErrorPublico | null = null;
+  let mostrados = 0;
+  for (const productoId of pedido.valor.productoIds) {
+    const oculto = hoy.get(productoId);
+    if (oculto === undefined) continue;
+    const alcances = [
+      ...(oculto.local && sucursalId !== null ? [{ tipo: "SUCURSAL", sucursalId } as const] : []),
+      ...(oculto.empresa ? [{ tipo: "EMPRESA" } as const] : []),
+    ];
+    let completo = true;
+    for (const destino of alcances) {
+      try {
+        const hecho = await d
+          .casosDeUso()
+          .ocultarProducto(contexto, { productoId, alcance: destino, oculto: false });
+        const r = aRespuesta(
+          hecho.ok ? hecho : err(traducirErrorDeCatalogo(hecho.error)),
+          d.respuesta,
+          () => null,
+        );
+        if (!r.ok) {
+          primerError ??= r.error;
+          completo = false;
+        }
+      } catch (excepcion) {
+        const falla = aRespuestaDeExcepcion(excepcion, d.respuesta);
+        if (!falla.ok) primerError ??= falla.error;
+        completo = false;
+      }
+    }
+    if (completo && alcances.length > 0) mostrados += 1;
+  }
+  return primerError === null
+    ? { ok: true, dato: { productoIds: pedido.valor.productoIds, mostrados } }
+    : { ok: false, error: primerError };
 }
 
 const conError = (error: unknown, d: DependenciasDeOcultarWeb): Respuesta<never> => ({

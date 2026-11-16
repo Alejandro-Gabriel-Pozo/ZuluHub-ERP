@@ -2,6 +2,8 @@ import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
   ocultarOMostrarUnProducto,
   verLaVisibilidadDelProducto,
+  verLosProductosOcultos,
+  volverAMostrarProductos,
   type DependenciasDeOcultarWeb,
 } from "../../src/composicion/ocultar-web";
 import { montarCatalogo, productoDeBase, type EscenarioDeCatalogo } from "./catalogo-apoyo";
@@ -206,5 +208,133 @@ describe.skipIf(base === null)("ocultar un producto desde la web", () => {
       );
       expect(ocultas).toBe(estado ? 1 : 0);
     }
+  });
+
+  describe("C2: lista de ocultos y «Volver a mostrar» (uno o varios)", () => {
+    const lista = async (contexto: EscenarioDeCatalogo["gerente"], local: string | null) =>
+      datoDe(await verLosProductosOcultos(d, contexto, local));
+    const mostrar = (
+      contexto: EscenarioDeCatalogo["gerente"],
+      local: string | null,
+      productoIds: readonly string[],
+    ) => volverAMostrarProductos(d, contexto, local, { productoIds });
+
+    it("la lista trae lo oculto en el local y en la empresa (dónde), sin lo de otros locales ni lo de otra empresa, ordenado por nombre", async () => {
+      const e = await c.escenario();
+      const otra = await c.escenario();
+      const [a, b, x, ajeno] = [
+        await producto(e),
+        await producto(e),
+        await producto(e),
+        await producto(otra),
+      ];
+      datoDe(await ocultar(e, e.gerente, a, "LOCAL", true));
+      datoDe(await ocultar(e, e.gerente, b, "EMPRESA", true));
+      datoDe(await ocultar(e, e.gerente, b, "LOCAL", true));
+      datoDe(await ocultar(e, e.gerente, x, "LOCAL", true, e.otraSucursal));
+      datoDe(await ocultar(otra, otra.gerente, ajeno, "EMPRESA", true, otra.sucursal));
+      const l = await lista(e.gerente, e.sucursal);
+      expect(l.map((o) => o.productoId).sort()).toEqual([a, b].sort());
+      expect(l.find((o) => o.productoId === a)).toMatchObject({ local: true, empresa: false });
+      expect(l.find((o) => o.productoId === b)).toMatchObject({ local: true, empresa: true });
+      // Sin local no se asume «todas»: solo lo oculto en toda la empresa.
+      expect((await lista(e.gerente, null)).map((o) => o.productoId)).toEqual([b]);
+      // El operador no puede pedir la lista sin local.
+      expect((await verLosProductosOcultos(d, e.operador, null)).ok).toBe(false);
+    });
+
+    it("volver a mostrar varios: muestra los alcances que están ocultos, deja una entrada de auditoría por cambio y los demás productos quedan igual", async () => {
+      const e = await c.escenario();
+      const [a, b, otro] = [await producto(e), await producto(e), await producto(e)];
+      datoDe(await ocultar(e, e.gerente, a, "LOCAL", true));
+      datoDe(await ocultar(e, e.gerente, b, "EMPRESA", true));
+      datoDe(await ocultar(e, e.gerente, b, "LOCAL", true));
+      datoDe(await ocultar(e, e.gerente, otro, "LOCAL", true));
+      const r = datoDe(await mostrar(e.gerente, e.sucursal, [a, b]));
+      expect(r.mostrados).toBe(2);
+      expect((await lista(e.gerente, e.sucursal)).map((o) => o.productoId)).toEqual([otro]);
+      expect(await auditorias(e, "PRODUCTO_MOSTRADO")).toBe(3);
+    });
+
+    it("idempotencia: repetir el mismo pedido no duplica ni deshace (cero cambios y ninguna auditoría nueva)", async () => {
+      const e = await c.escenario();
+      const [a, b] = [await producto(e), await producto(e)];
+      datoDe(await ocultar(e, e.gerente, a, "LOCAL", true));
+      datoDe(await ocultar(e, e.gerente, b, "EMPRESA", true));
+      expect(datoDe(await mostrar(e.gerente, e.sucursal, [a, b, a])).mostrados).toBe(2);
+      expect(datoDe(await mostrar(e.gerente, e.sucursal, [a, b])).mostrados).toBe(0);
+      expect(await auditorias(e, "PRODUCTO_MOSTRADO")).toBe(2);
+      // Mostrar uno que nunca estuvo oculto tampoco escribe nada.
+      const visible = await producto(e);
+      expect(datoDe(await mostrar(e.gerente, e.sucursal, [visible])).mostrados).toBe(0);
+      expect(await filas(e, visible)).toBe(0);
+    });
+
+    it("concurrencia: dos «Volver a mostrar» a la vez (dos personas, dos pestañas) sobre lo mismo escriben una sola vez", async () => {
+      const e = await c.escenario();
+      const ids = [await producto(e), await producto(e), await producto(e)];
+      for (const id of ids) {
+        datoDe(await ocultar(e, e.gerente, id, "LOCAL", true));
+        datoDe(await ocultar(e, e.gerente, id, "EMPRESA", true));
+      }
+      const resultados = await Promise.all([
+        mostrar(e.gerente, e.sucursal, ids),
+        mostrar(e.administrador, e.sucursal, [...ids].reverse()),
+      ]);
+      expect(resultados.map(codigoDe)).toEqual(["OK", "OK"]);
+      expect(await lista(e.gerente, e.sucursal)).toEqual([]);
+      // Seis ocultamientos (3 productos x 2 alcances) y seis cambios de vuelta, ni uno más.
+      expect(await auditorias(e, "PRODUCTO_MOSTRADO")).toBe(6);
+      const ocultas = await c.contar(
+        "select count(*) as n from disponibilidad_de_producto where empresa_id = $1 and oculto",
+        [e.empresa],
+      );
+      expect(ocultas).toBe(0);
+    });
+
+    it("permiso: el operador muestra lo de su local pero no lo de la empresa (sin cambiar lo que sí pudo); gerente sí", async () => {
+      const e = await c.escenario();
+      const [soloLocal, deLaEmpresa] = [await producto(e), await producto(e)];
+      datoDe(await ocultar(e, e.gerente, soloLocal, "LOCAL", true));
+      datoDe(await ocultar(e, e.gerente, deLaEmpresa, "EMPRESA", true));
+      const r = await mostrar(e.operador, e.sucursal, [soloLocal, deLaEmpresa]);
+      expect(codigoDe(r)).toBe("SIN_PERMISO");
+      expect(await visibilidad(e.gerente, soloLocal, e.sucursal)).toEqual({
+        local: false,
+        empresa: false,
+      });
+      expect(await visibilidad(e.gerente, deLaEmpresa, e.sucursal)).toEqual({
+        local: false,
+        empresa: true,
+      });
+      expect(codigoDe(await mostrar(e.gerente, e.sucursal, [deLaEmpresa]))).toBe("OK");
+      expect(await visibilidad(e.gerente, deLaEmpresa, e.sucursal)).toEqual({
+        local: false,
+        empresa: false,
+      });
+    });
+
+    it("aislamiento: un id de otra empresa se ignora (no lo toca ni lo cuenta) y el pedido mal formado sale genérico", async () => {
+      const e = await c.escenario();
+      const otra = await c.escenario();
+      const ajeno = await producto(otra);
+      datoDe(await ocultar(otra, otra.gerente, ajeno, "EMPRESA", true, otra.sucursal));
+      expect(datoDe(await mostrar(e.gerente, e.sucursal, [ajeno])).mostrados).toBe(0);
+      expect(await visibilidad(otra.gerente, ajeno, otra.sucursal)).toEqual({
+        local: false,
+        empresa: true,
+      });
+      expect(codigoDe(await mostrar(e.gerente, e.sucursal, []))).toBe(GENERICO);
+      expect(codigoDe(await mostrar(e.gerente, e.sucursal, ["no-es-un-id"]))).toBe(GENERICO);
+    });
+
+    it("sin local nada se asume: no toca lo oculto en un local, solo lo de la empresa", async () => {
+      const e = await c.escenario();
+      const id = await producto(e);
+      datoDe(await ocultar(e, e.gerente, id, "LOCAL", true));
+      datoDe(await ocultar(e, e.gerente, id, "EMPRESA", true));
+      expect(datoDe(await mostrar(e.gerente, null, [id])).mostrados).toBe(1);
+      expect(await visibilidad(e.gerente, id, e.sucursal)).toEqual({ local: true, empresa: false });
+    });
   });
 });

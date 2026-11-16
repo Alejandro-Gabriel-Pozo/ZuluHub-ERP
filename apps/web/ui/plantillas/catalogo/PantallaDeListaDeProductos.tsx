@@ -15,6 +15,8 @@ export type PropsDePantallaDeListaDeProductos = Readonly<{
   error?: ReactNode;
   /** «Nuevo producto», ya armado solo si la persona puede crear; sin él (o `null`) no se muestra: nace cerrado. */
   nuevo?: Readonly<{ href: string; texto: string }> | null;
+  /** El filtro «Oculto» (C2), ya armado solo si se pudo leer dónde está oculto cada producto; sin él (o `null`) no se muestra. */
+  filtroDeOcultos?: Readonly<{ href: string; texto: string }> | null;
 }>;
 
 /**
@@ -26,6 +28,7 @@ export function PantallaDeListaDeProductos({
   lista,
   error,
   nuevo = null,
+  filtroDeOcultos = null,
 }: PropsDePantallaDeListaDeProductos) {
   return (
     <div className={estilos["raiz"]}>
@@ -34,6 +37,11 @@ export function PantallaDeListaDeProductos({
         key={direccionDeLaLista(filtros.valores, null)}
         filtros={filtros}
       />
+      {filtroDeOcultos === null ? null : (
+        <div>
+          <EnlaceDeAccion href={filtroDeOcultos.href}>{filtroDeOcultos.texto}</EnlaceDeAccion>
+        </div>
+      )}
       {error ?? null}
       {lista === null ? null : (
         <>
@@ -48,6 +56,11 @@ export function PantallaDeListaDeProductos({
                     {fila.marca === null ? null : (
                       <Insignia tono={fila.marca.tono}>{fila.marca.texto}</Insignia>
                     )}
+                    {fila.avisosDeOculto.map((aviso) => (
+                      <Insignia key={aviso} tono="aviso">
+                        {aviso}
+                      </Insignia>
+                    ))}
                   </div>
                   <div className={estilos["renglon"]}>
                     <span className={estilos["clase"]}>

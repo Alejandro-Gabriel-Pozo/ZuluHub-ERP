@@ -26,3 +26,25 @@ export function leerElPedidoDeOcultar(
   const forma = leer(FORMA_DEL_PEDIDO, crudo);
   return forma.ok ? forma : err("PEDIDO_INVALIDO");
 }
+
+/** Cuántos productos se pueden volver a mostrar en un solo pedido (la lista de ocultos de una página; más se pide en otro pedido). */
+export const MAXIMO_DE_PRODUCTOS_A_MOSTRAR = 50;
+
+const FORMA_DEL_PEDIDO_DE_MOSTRAR = z.strictObject({
+  productoIds: z.array(identificador).min(1).max(MAXIMO_DE_PRODUCTOS_A_MOSTRAR),
+});
+
+export type PedidoDeMostrar = z.output<typeof FORMA_DEL_PEDIDO_DE_MOSTRAR>;
+
+/**
+ * El pedido de «Volver a mostrar» uno o varios productos (C2): solo los ids (sin repetidos). Dónde están ocultos y en qué alcance NO viaja: lo lee el servidor. Una clave de más, una lista
+ * vacía o de más de 50, o un id mal formado lo rechaza entero (sin decir cuál). Previene: mostrar en un alcance que eligió el navegador y un pedido sin tope.
+ */
+export function leerElPedidoDeMostrar(
+  crudo: unknown,
+): Resultado<PedidoDeMostrar, "PEDIDO_INVALIDO"> {
+  const forma = leer(FORMA_DEL_PEDIDO_DE_MOSTRAR, crudo);
+  return forma.ok
+    ? { ok: true, valor: { productoIds: [...new Set(forma.valor.productoIds)] } }
+    : err("PEDIDO_INVALIDO");
+}
