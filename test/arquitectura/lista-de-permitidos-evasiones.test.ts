@@ -665,6 +665,12 @@ CREATE FUNCTION otra(t text) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT
 ALTER TABLE t DROP CONSTRAINT a_ck;
 ALTER TABLE t ADD CONSTRAINT a_ck CHECK (permitido(a));`;
     expect(analizar(seguida).descuento).toBe(0);
+    // Una función de comillas al FINAL del archivo (sin `;` ni `$$` después) con otra de `$$` antes.
+    const alFinal = `${FUNCION.replace("permitido", "otra")}
+ALTER TABLE t DROP CONSTRAINT a_ck;
+ALTER TABLE t ADD CONSTRAINT a_ck CHECK (permitido(a));
+CREATE FUNCTION permitido(t text) RETURNS boolean AS 'select true'`;
+    expect(analizar(alFinal).descuento).toBe(0);
     const abierta = `CREATE FUNCTION permitido(t text) RETURNS boolean LANGUAGE sql IMMUTABLE AS $$ SELECT t ~ '^[a-z]+$';
 ALTER TABLE t DROP CONSTRAINT a_ck;
 ALTER TABLE t ADD CONSTRAINT a_ck CHECK (permitido(a));`;

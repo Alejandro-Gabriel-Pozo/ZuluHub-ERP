@@ -498,13 +498,10 @@ export function analizarReemplazo(
   const sinNuevo = sinComentariosSql(nuevo);
   const funciones = new Map<string, string>();
   for (const m of sinNuevo.matchAll(/\bCREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+"?(\w+)"?\s*\(/gi)) {
-    // El cuerpo va entre `$$` y `$$` (una lista de permitidos puede traer `;` adentro): se corta ahí, no en el primer `;`. Una función cuyo cuerpo no se
-    // puede leer así NO se registra (fail-closed: no se puede decir que declare lo permitido).
-    const desde = sinNuevo.indexOf("$$", m.index);
-    const hasta = sinNuevo.indexOf("$$", desde + 2);
-    // Y el `$$` tiene que ser de ESTA función (sin un `;` de por medio): si no, se le asignaría el cuerpo de la que sigue.
-    const esDeEsta = desde !== -1 && !sinNuevo.slice(m.index, desde).includes(";");
-    if (esDeEsta && hasta !== -1) funciones.set(m[1] as string, sinNuevo.slice(desde, hasta));
+    // El cuerpo va entre `$$` y `$$` (una lista de permitidos puede traer `;` adentro): se corta ahí, no en el primer `;`, y el `$$` tiene que ser de ESTA función
+    // (el encabezado no trae `;` ni `$`). Una función cuyo cuerpo no se puede leer así NO se registra (fail-closed: no se puede decir que declare lo permitido).
+    const cuerpo = /^[^;$]*(\$\$[\s\S]*?\$\$)/.exec(sinNuevo.slice(m.index))?.[1];
+    if (cuerpo !== undefined) funciones.set(m[1] as string, cuerpo);
   }
   const aportes = prohibidosPorRestriccion(viejo);
   let descuento = 0;
