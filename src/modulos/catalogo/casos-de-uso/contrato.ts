@@ -34,6 +34,7 @@ export type LecturasDeCatalogo = Readonly<{
     "obtener" | "listar" | "conOpciones" | "insumosElegibles" | "listarSecciones" | "obtenerSeccion"
   >;
   seccionesDeCarta: Pick<RepositorioDeSecciones, "todas" | "todasConProductos">;
+  familias: Pick<RepositorioDeFamilias, "todas" | "obtener" | "miembrosVigentes">;
   clasificacion: Pick<RepositorioDeClasificacion, "todos" | "vigenteDelProducto">;
   unidades: Pick<RepositorioDeUnidades, "todas">;
   cartasPublicas: Pick<RepositorioDeCartas, "deLaSucursal">;
