@@ -1156,7 +1156,7 @@ describe("planificador de mutación: el registro de decisiones (arquitectura/dec
   // (no lo lee). La corrida completa de `main` y la nocturna siguen corriendo todos los grupos: un olvido se ve a los minutos.
   const NO_LEEN_EL_REGISTRO: Record<string, string> = {
     "test/arquitectura/catalogo-modulos.test.ts":
-      "cita DEC-0463 en comentarios y lee unas pocas fuentes de `src/` por ruta fija; no abre el registro de decisiones",
+      "cita un identificador de decisión en un comentario; solo comprueba que existan carpetas (corrida sola y traza strace: 0 lecturas del registro)",
     "test/arquitectura/compras-fuente-unica.test.ts":
       "cita un identificador de decisión en un comentario; no abre el registro (corrida sola y traza strace: 0 lecturas)",
     "test/arquitectura/lint.test.ts":

@@ -177,7 +177,7 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
     expect(await fila(id)).toEqual(antes);
   });
 
-  it("un nombre repetido (sin distinguir mayúsculas) sale como el genérico y no crea nada; un nombre vacío, como «Falta el nombre»", async () => {
+  it("un nombre repetido (sin distinguir mayúsculas) sale con su texto aprobado y no crea nada; un nombre vacío, como «Falta el nombre»", async () => {
     const x = await c.escenario();
     const nom = nombre("Cafés");
     await nueva(nom, x);
@@ -185,7 +185,15 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
       "select count(*) as n from seccion_de_carta where empresa_id = $1",
       [x.empresa],
     );
-    expect(codigoDe(await crear(nom.toUpperCase(), x))).toBe(GENERICO);
+    expect(await crear(nom.toUpperCase(), x)).toMatchObject({
+      ok: false,
+      error: {
+        codigo: "CATALOGO_SECCION_REPETIDA",
+        clave: "catalogo.error.seccion_repetida",
+        presentacion: "AVISO",
+        campo: "nombre",
+      },
+    });
     expect(await crear("   ", x)).toMatchObject({
       ok: false,
       error: { codigo: "CATALOGO_FALTA_EL_NOMBRE", campo: "nombre" },
@@ -236,7 +244,7 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
     expect(await fila(a)).toEqual(despues);
   });
 
-  it("renombrar con el nombre de otra sección sale como el genérico y no escribe", async () => {
+  it("renombrar con el nombre de otra sección sale con el texto de nombre repetido y no escribe", async () => {
     const x = await c.escenario();
     const a = await nueva(nombre("Cafés"), x);
     const otra = nombre("Postres");
@@ -244,10 +252,16 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
     const v = (await lista(x.gerente))[0]?.version as number;
     const antes = await fila(a);
     expect(
-      codigoDe(
-        await renombrarLaSeccion(d, x.gerente, { seccionId: a, versionEsperada: v, nombre: otra }),
-      ),
-    ).toBe(GENERICO);
+      await renombrarLaSeccion(d, x.gerente, { seccionId: a, versionEsperada: v, nombre: otra }),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        codigo: "CATALOGO_SECCION_REPETIDA",
+        clave: "catalogo.error.seccion_repetida",
+        presentacion: "AVISO",
+        campo: "nombre",
+      },
+    });
     expect(await fila(a)).toEqual(antes);
   });
 

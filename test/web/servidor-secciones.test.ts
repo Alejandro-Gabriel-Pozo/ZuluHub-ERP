@@ -189,10 +189,22 @@ describe("darDeAltaLaSeccion", () => {
     expect(escrituras()).toEqual([]);
   });
 
-  it("el error del servidor vuelve a la pantalla ya traducido, sin redirigir (un nombre repetido sale genérico)", async () => {
-    mundo.resultados["crear"] = err("SECCION_DUPLICADA");
+  it("el error del servidor vuelve a la pantalla ya traducido, sin redirigir", async () => {
+    mundo.resultados["crear"] = err("VERSION_DESACTUALIZADA");
     expect(await darDeAltaLaSeccion(CLAVE, formulario({ nombre: "Cafés" }))).toEqual({
       error: GENERICO,
+    });
+  });
+
+  it("un nombre repetido vuelve a la pantalla con su texto aprobado, atado al campo «nombre», sin redirigir", async () => {
+    mundo.resultados["crear"] = err("SECCION_DUPLICADA");
+    expect(await darDeAltaLaSeccion(CLAVE, formulario({ nombre: "Cafés" }))).toEqual({
+      error: {
+        codigo: "CATALOGO_SECCION_REPETIDA",
+        clave: "catalogo.error.seccion_repetida",
+        presentacion: "AVISO",
+        campo: "nombre",
+      },
     });
   });
 
