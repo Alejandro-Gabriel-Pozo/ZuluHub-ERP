@@ -1,3 +1,4 @@
+import { useId, type ReactNode, type Ref } from "react";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import type { ClaveDeTexto } from "../../../../../src/capacidades/vocabulario/catalogo";
 import { Boton } from "../../componentes/Boton.cliente";
@@ -15,6 +16,8 @@ const TITULO = {
 
 type PropsDelGrupo = Readonly<{
   severidad: "bloquea" | "reconocible";
+  /** El título del grupo puede ser el título del paso (el 3): recibe el foco al llegar. */
+  tituloRef?: Ref<HTMLHeadingElement>;
   controles: readonly ControlVisto[];
   /** Solo en «Hay que reconocer», con el día en cierre: cada control se marca para reconocerlo al cerrar. */
   marcable?: Readonly<{
@@ -33,20 +36,23 @@ function Constancia({ control }: Readonly<{ control: ControlVisto }>) {
   );
 }
 
-/** El contenido de una tarjeta de control: el rótulo con su cantidad y, si hay, las filas del detalle y la constancia. */
-function Tarjeta({ control, boton }: Readonly<{ control: ControlVisto; boton?: React.ReactNode }>) {
+/** Una tarjeta de control: un grupo accesible con su rótulo y su cantidad como nombre y, si hay, las filas del detalle, la constancia y el botón. */
+function Tarjeta({ control, boton }: Readonly<{ control: ControlVisto; boton?: ReactNode }>) {
+  const idDelTitulo = useId();
   return (
-    <li className={estilos["tarjeta"]}>
-      <span className={estilos["titulo"]}>
-        {control.rotulo} · {control.cantidad}
-      </span>
-      {control.detalle.map((fila) => (
-        <span key={fila} className={estilos["suave"]}>
-          {fila}
+    <li className={estilos["item"]}>
+      <div role="group" aria-labelledby={idDelTitulo} className={estilos["tarjeta"]}>
+        <span id={idDelTitulo} className={estilos["titulo"]}>
+          {control.rotulo} · {control.cantidad}
         </span>
-      ))}
-      <Constancia control={control} />
-      {boton}
+        {control.detalle.map((fila) => (
+          <span key={fila} className={estilos["suave"]}>
+            {fila}
+          </span>
+        ))}
+        <Constancia control={control} />
+        {boton}
+      </div>
     </li>
   );
 }
@@ -55,11 +61,17 @@ function Tarjeta({ control, boton }: Readonly<{ control: ControlVisto; boton?: R
  * Un grupo de controles con su título aprobado: «Impide cerrar» (arriba de todo, en cualquier paso donde exista) o «Hay que reconocer» (con «Reconocer» por control, solo con el día en
  * cierre). Un grupo sin controles no se dibuja. El título dice la severidad una vez por grupo, no en cada tarjeta (maqueta aceptada, `cierre-del-dia-claridad.md` §2).
  */
-export function GrupoDeControles({ severidad, controles, marcable }: PropsDelGrupo) {
+export function GrupoDeControles({ severidad, tituloRef, controles, marcable }: PropsDelGrupo) {
   if (controles.length === 0) return null;
   return (
     <section className={estilos["grupo"]} data-severidad={severidad}>
-      <h3 className={estilos["tituloDelGrupo"]}>{texto({}, TITULO[severidad])}</h3>
+      <h2
+        ref={tituloRef}
+        tabIndex={tituloRef === undefined ? undefined : -1}
+        className={estilos["tituloDelGrupo"]}
+      >
+        {texto({}, TITULO[severidad])}
+      </h2>
       <ul className={estilos["lista"]}>
         {controles.map((control) => (
           <Tarjeta

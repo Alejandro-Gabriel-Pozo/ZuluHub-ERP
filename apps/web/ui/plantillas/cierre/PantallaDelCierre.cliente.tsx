@@ -10,6 +10,7 @@ import { Insignia } from "../../componentes/Insignia";
 import { ErrorDelDetalle } from "../../patrones/ErrorDelDetalle";
 import { BotonDeAccionDelCierre, type AccionDelCierre } from "./BotonDeAccionDelCierre.cliente";
 import { ControlesQueSoloInforman, GrupoDeControles } from "./GrupoDeControles";
+import { ListaDeCobros } from "./ListaDeCobros";
 import { LineaDeConciliacion } from "./LineaDeConciliacion.cliente";
 import { ModalDeCorregirMedio } from "./ModalDeCorregirMedio.cliente";
 import { ModalDeReconocer } from "./ModalDeReconocer.cliente";
@@ -39,50 +40,6 @@ function Lista({ children }: Readonly<{ children: ReactNode }>) {
   return <ul className={estilos["lista"]}>{children}</ul>;
 }
 
-/** «Cobros»: cada uno con su importe, quién lo registró, el medio vigente y, si se corrigió, quién y por qué. Con el día en cierre cada uno ofrece «Corregir medio». */
-function ListaDeCobros({
-  cobros,
-  editable,
-  alCorregir,
-}: Readonly<{
-  cobros: readonly CobroVisto[];
-  editable: boolean;
-  alCorregir: (cobro: CobroVisto) => void;
-}>) {
-  return (
-    <Lista>
-      {cobros.map((cobro) => (
-        <li key={cobro.cobroId} className={estilos["tarjeta"]}>
-          <div className={estilos["renglon"]}>
-            <span>
-              <strong className={estilos["monto"]}>{cobro.importe}</strong>
-              {cobro.registradoPor === null ? null : (
-                <span className={estilos["suave"]}> · {cobro.registradoPor}</span>
-              )}
-            </span>
-            {editable ? (
-              <Boton
-                variante="secundaria"
-                deshabilitado={!cobro.puedeCorregir}
-                alTocar={() => {
-                  alCorregir(cobro);
-                }}
-              >
-                {texto({}, "cierre.corregir_medio")}
-              </Boton>
-            ) : null}
-          </div>
-          <span>{cobro.medio}</span>
-          {cobro.corregidoPor === null ? null : (
-            <span className={estilos["suave"]}>{cobro.corregidoPor}</span>
-          )}
-          {cobro.motivo === null ? null : <span className={estilos["suave"]}>{cobro.motivo}</span>}
-        </li>
-      ))}
-    </Lista>
-  );
-}
-
 function Plegable({ rotulo, children }: Readonly<{ rotulo: string; children: ReactNode }>) {
   return (
     <details className={estilos["plegable"]}>
@@ -109,6 +66,7 @@ export function PantallaDelCierre({ modelo, servidor }: Props) {
   const [mensaje, setMensaje] = useState<ErrorPublico | null>(null);
   const [fallo, setFallo] = useState(false);
   const titulo = useRef<HTMLHeadingElement>(null);
+  const raiz = useRef<HTMLDivElement>(null);
   const primeraVez = useRef(true);
 
   useEffect(() => {
@@ -116,7 +74,8 @@ export function PantallaDelCierre({ modelo, servidor }: Props) {
       primeraVez.current = false;
       return;
     }
-    titulo.current?.focus();
+    // Al cambiar de paso el foco va al título del paso (el que se lee primero); si el paso no tiene título (el 3 sin nada que reconocer), a la pantalla: nunca queda perdido en el botón que ya no está.
+    (titulo.current ?? raiz.current)?.focus();
   }, [paso]);
 
   const enCierre = modelo.estado === "EN_AUDITORIA";
@@ -213,9 +172,9 @@ export function PantallaDelCierre({ modelo, servidor }: Props) {
     if (paso === 1) {
       cuerpo = (
         <>
-          <h3 ref={titulo} tabIndex={-1} className={estilos["paso"]}>
+          <h2 ref={titulo} tabIndex={-1} className={estilos["paso"]}>
             {texto({}, "cierre.cobros")}
-          </h3>
+          </h2>
           <ListaDeCobros
             cobros={modelo.cobros ?? []}
             editable
@@ -234,9 +193,9 @@ export function PantallaDelCierre({ modelo, servidor }: Props) {
     } else if (paso === 2) {
       cuerpo = (
         <>
-          <h3 ref={titulo} tabIndex={-1} className={estilos["paso"]}>
+          <h2 ref={titulo} tabIndex={-1} className={estilos["paso"]}>
             {texto({}, "cierre.control.conciliacion_por_medio")}
-          </h3>
+          </h2>
           <BotonDeAccionDelCierre
             variante="secundaria"
             deshabilitado={!modelo.acciones.declarar}
@@ -271,11 +230,9 @@ export function PantallaDelCierre({ modelo, servidor }: Props) {
     } else {
       cuerpo = (
         <>
-          <h3 ref={titulo} tabIndex={-1} className={estilos["paso"]}>
-            {texto({}, "cierre.severidad.reconocible")}
-          </h3>
           <GrupoDeControles
             severidad="reconocible"
+            tituloRef={titulo}
             controles={modelo.porReconocer}
             marcable={{
               marcado,
@@ -341,7 +298,7 @@ export function PantallaDelCierre({ modelo, servidor }: Props) {
   }
 
   return (
-    <div className={estilos["raiz"]}>
+    <div ref={raiz} tabIndex={-1} className={estilos["raiz"]}>
       {enCierre && paso > 1 ? (
         <div className={estilos["volver"]}>
           <Boton

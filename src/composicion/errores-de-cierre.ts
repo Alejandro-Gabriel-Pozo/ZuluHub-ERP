@@ -62,58 +62,58 @@ type ErrorPropio = Exclude<Extract<ErrorDelCierre, string>, MotivoDeRechazo>;
  * Cada error con nombre que puede salir de la pantalla del cierre (incluidos los que la consulta de tickets de ventas declara por su tipo aunque este uso no los dé). Todos
  * valen lo mismo (el genérico): el `Record` es solo para que el compilador falle si el tipo suma un error que no está acá.
  */
-const ERRORES_PROPIOS: Readonly<Record<ErrorPropio, true>> = {
-  JORNADA_NO_ENCONTRADA: true,
-  FECHA_INVALIDA: true,
-  JORNADA_CERRADA: true,
-  SUCURSAL_FUERA_DE_ALCANCE: true,
-  JORNADA_NO_EN_AUDITORIA: true,
-  OBSERVACION_INVALIDA: true,
-  RECONOCIMIENTO_INVALIDO: true,
-  HORA_DE_CORTE_INVALIDA: true,
-  ZONA_HORARIA_INVALIDA: true,
-  INSTANTE_INVALIDO: true,
-  APORTE_NO_DISPONIBLE: true,
-  SUCURSAL_NO_ENCONTRADA: true,
-  CONVERSION_NO_EXACTA: true,
-  IDENTIFICADOR_INVALIDO: true,
-  PRODUCTO_NO_ENCONTRADO: true,
-  PRODUCTO_INACTIVO: true,
-  PRODUCTO_NO_VENDIBLE: true,
-  PRODUCTO_OCULTO: true,
-  PRODUCTO_SIN_ALICUOTA: true,
-  CLASIFICACION_INCONSISTENTE: true,
-  SUCURSAL_INACTIVA: true,
-  CANTIDAD_INVALIDA: true,
-  CANTIDAD_NO_ES_MULTIPLO_DEL_PASO: true,
-  OPCION_REPETIDA: true,
-  VARIANTE_SIN_PRECIO: true,
-  PRECIO_EN_OTRA_FORMA_DE_VENTA: true,
-  PRECIO_FUERA_DE_RANGO: true,
-  MEDIO_NO_ENCONTRADO: true,
-  CUENTA_DE_COBRO_NO_ENCONTRADA: true,
-  CLAVE_DE_IDEMPOTENCIA_INVALIDA: true,
-  IMPORTE_INVALIDO: true,
-  MONEDA_NO_SOPORTADA: true,
-  CLAVE_REUTILIZADA: true,
-  MOTIVO_INVALIDO: true,
-  MEDIO_INACTIVO: true,
-  CUENTA_DE_COBRO_NO_ADMITIDA: true,
-  CUENTA_DE_COBRO_DE_OTRA_SUCURSAL: true,
-  CUENTA_DE_COBRO_INACTIVA: true,
-  CUENTA_DE_COBRO_INCOMPATIBLE: true,
-  COBRO_NO_ENCONTRADO: true,
-  MEDIO_DEL_COBRO_SIN_CAMBIOS: true,
-  MEDIO_NO_DECLARABLE: true,
-  CURSOR_INVALIDO: true,
-  LIMITE_INVALIDO: true,
-  ENTRADA_INVALIDA: true,
-  FACTURACION_NO_DISPONIBLE: true,
-  TICKET_NO_FACTURABLE: true,
-  CUENTA_NO_ENCONTRADA: true,
-  PRODUCTO_SIN_PRECIO: true,
-  PRECIO_ABIERTO_NO_PERMITIDO: true,
-  TICKET_NO_ENCONTRADO: true,
+const ERRORES_PROPIOS: Readonly<Record<ErrorPropio, CodigoDeCierre>> = {
+  JORNADA_NO_ENCONTRADA: GENERICO,
+  FECHA_INVALIDA: GENERICO,
+  JORNADA_CERRADA: GENERICO,
+  SUCURSAL_FUERA_DE_ALCANCE: GENERICO,
+  JORNADA_NO_EN_AUDITORIA: GENERICO,
+  OBSERVACION_INVALIDA: GENERICO,
+  RECONOCIMIENTO_INVALIDO: GENERICO,
+  HORA_DE_CORTE_INVALIDA: GENERICO,
+  ZONA_HORARIA_INVALIDA: GENERICO,
+  INSTANTE_INVALIDO: GENERICO,
+  APORTE_NO_DISPONIBLE: GENERICO,
+  SUCURSAL_NO_ENCONTRADA: GENERICO,
+  CONVERSION_NO_EXACTA: GENERICO,
+  IDENTIFICADOR_INVALIDO: GENERICO,
+  PRODUCTO_NO_ENCONTRADO: GENERICO,
+  PRODUCTO_INACTIVO: GENERICO,
+  PRODUCTO_NO_VENDIBLE: GENERICO,
+  PRODUCTO_OCULTO: GENERICO,
+  PRODUCTO_SIN_ALICUOTA: GENERICO,
+  CLASIFICACION_INCONSISTENTE: GENERICO,
+  SUCURSAL_INACTIVA: GENERICO,
+  CANTIDAD_INVALIDA: GENERICO,
+  CANTIDAD_NO_ES_MULTIPLO_DEL_PASO: GENERICO,
+  OPCION_REPETIDA: GENERICO,
+  VARIANTE_SIN_PRECIO: GENERICO,
+  PRECIO_EN_OTRA_FORMA_DE_VENTA: GENERICO,
+  PRECIO_FUERA_DE_RANGO: GENERICO,
+  MEDIO_NO_ENCONTRADO: GENERICO,
+  CUENTA_DE_COBRO_NO_ENCONTRADA: GENERICO,
+  CLAVE_DE_IDEMPOTENCIA_INVALIDA: GENERICO,
+  IMPORTE_INVALIDO: GENERICO,
+  MONEDA_NO_SOPORTADA: GENERICO,
+  CLAVE_REUTILIZADA: GENERICO,
+  MOTIVO_INVALIDO: GENERICO,
+  MEDIO_INACTIVO: GENERICO,
+  CUENTA_DE_COBRO_NO_ADMITIDA: GENERICO,
+  CUENTA_DE_COBRO_DE_OTRA_SUCURSAL: GENERICO,
+  CUENTA_DE_COBRO_INACTIVA: GENERICO,
+  CUENTA_DE_COBRO_INCOMPATIBLE: GENERICO,
+  COBRO_NO_ENCONTRADO: GENERICO,
+  MEDIO_DEL_COBRO_SIN_CAMBIOS: GENERICO,
+  MEDIO_NO_DECLARABLE: GENERICO,
+  CURSOR_INVALIDO: GENERICO,
+  LIMITE_INVALIDO: GENERICO,
+  ENTRADA_INVALIDA: GENERICO,
+  FACTURACION_NO_DISPONIBLE: GENERICO,
+  TICKET_NO_FACTURABLE: GENERICO,
+  CUENTA_NO_ENCONTRADA: GENERICO,
+  PRODUCTO_SIN_PRECIO: GENERICO,
+  PRECIO_ABIERTO_NO_PERMITIDO: GENERICO,
+  TICKET_NO_ENCONTRADO: GENERICO,
 };
 
 /** Los errores con forma de objeto y `codigo` que son del negocio (el de la empresa que no opera tiene su propio texto y pasa). */
@@ -124,21 +124,20 @@ type ErrorDeObjeto = Exclude<
 
 /** Los que valen el genérico; `CONTROLES_CAMBIARON` tiene el aviso propio. */
 const ERRORES_DE_OBJETO_GENERICOS: Readonly<
-  Record<Exclude<ErrorDeObjeto, "CONTROLES_CAMBIARON">, true>
+  Record<Exclude<ErrorDeObjeto, "CONTROLES_CAMBIARON">, CodigoDeCierre>
 > = {
-  JORNADA_CON_IMPEDIMENTOS: true,
-  APORTE_NO_DISPONIBLE: true,
-  CONTROLES_QUE_BLOQUEAN: true,
-  CONTROLES_SIN_RECONOCER: true,
-  MEDIO_DEL_COBRO_CAMBIO: true,
+  JORNADA_CON_IMPEDIMENTOS: GENERICO,
+  APORTE_NO_DISPONIBLE: GENERICO,
+  CONTROLES_QUE_BLOQUEAN: GENERICO,
+  CONTROLES_SIN_RECONOCER: GENERICO,
+  MEDIO_DEL_COBRO_CAMBIO: GENERICO,
 };
-
-const PROPIOS: ReadonlySet<string> = new Set(Object.keys(ERRORES_PROPIOS));
-const DE_OBJETO_GENERICOS: ReadonlySet<string> = new Set(Object.keys(ERRORES_DE_OBJETO_GENERICOS));
 
 /** El error del caso de uso tal como lo entiende `aRespuesta`: un código público del cierre o, si no es del cierre, el mismo error. */
 export function traducirErrorDelCierre(error: unknown): unknown {
-  if (typeof error === "string" && PROPIOS.has(error)) return { codigo: GENERICO };
+  if (typeof error === "string" && Object.hasOwn(ERRORES_PROPIOS, error)) {
+    return { codigo: ERRORES_PROPIOS[error as ErrorPropio] };
+  }
   const codigo =
     typeof error === "object" && error !== null
       ? (error as { codigo?: unknown }).codigo
@@ -146,7 +145,11 @@ export function traducirErrorDelCierre(error: unknown): unknown {
   if (codigo === "CONTROLES_CAMBIARON") {
     return { codigo: "CIERRE_CONTROLES_CAMBIARON" satisfies CodigoDeCierre };
   }
-  if (typeof codigo === "string" && DE_OBJETO_GENERICOS.has(codigo)) return { codigo: GENERICO };
+  if (typeof codigo === "string" && Object.hasOwn(ERRORES_DE_OBJETO_GENERICOS, codigo)) {
+    return {
+      codigo: ERRORES_DE_OBJETO_GENERICOS[codigo as keyof typeof ERRORES_DE_OBJETO_GENERICOS],
+    };
+  }
   return error;
 }
 

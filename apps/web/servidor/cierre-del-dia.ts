@@ -2,15 +2,17 @@ import "server-only";
 import { errorDeCodigo, type Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   cancelarElCierre,
-  cargarElCierre,
   cerrarElDia,
   corregirElMedio,
   darElConforme,
   declararElTotal,
   empezarElCierre,
-  type CierreParaLaPantalla,
   type DependenciasDeCierreWeb,
 } from "../../../src/composicion/cierre-del-dia-web";
+import {
+  cargarElCierre,
+  type CierreParaLaPantalla,
+} from "../../../src/composicion/lectura-del-cierre";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { web } from "./composicion";
 import { conLaEmpresa } from "./con-la-empresa";
