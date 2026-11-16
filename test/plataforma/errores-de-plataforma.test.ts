@@ -491,3 +491,46 @@ describe("errorParaLaPantalla: contexto PLAN (asignarPlan)", () => {
     });
   });
 });
+
+describe("errorParaLaPantalla: listas del sistema", () => {
+  it("el nombre repetido y el inválido van al campo «Nombre»; el tope sale del dominio", () => {
+    expect(errorParaLaPantalla("VALOR_DUPLICADO", "LISTA")).toEqual({
+      tipo: "CAMPO",
+      campo: "nombre",
+      texto: "Ya existe un valor con ese nombre",
+    });
+    expect(textoDe(errorParaLaPantalla("NOMBRE_INVALIDO", "LISTA"))).toMatch(
+      /^Escribí un nombre de hasta \d+ caracteres$/,
+    );
+  });
+
+  it.each(["VALOR_FIJO", "LISTA_INVALIDA"])("%s es el genérico aprobado", (codigo) => {
+    expect(errorParaLaPantalla(codigo, "LISTA")).toEqual({
+      tipo: "GENERAL",
+      texto: "Esta acción no está permitida",
+    });
+  });
+
+  it.each(["VALOR_NO_ENCONTRADO", "ID_INVALIDO", "VERSION_DESACTUALIZADA"])(
+    "%s es pantalla vieja",
+    (codigo) => {
+      expect(errorParaLaPantalla(codigo, "LISTA")).toMatchObject({ tipo: "PANTALLA_VIEJA" });
+    },
+  );
+
+  it("VERSION_ESPERADA_INVALIDA es inesperado; el resto de la tabla común sigue valiendo", () => {
+    expect(errorParaLaPantalla("VERSION_ESPERADA_INVALIDA", "LISTA")).toEqual({
+      tipo: "INESPERADO",
+    });
+    expect(errorParaLaPantalla("SIN_PERMISO", "LISTA")).toEqual({ tipo: "OCULTAR_ACCION" });
+    expect(errorParaLaPantalla("segundo_factor_reciente_requerido", "LISTA")).toEqual({
+      tipo: "SEGUNDO_FACTOR",
+    });
+  });
+
+  it("fuera del contexto de listas los códigos de lista no se reconocen, y NOMBRE_INVALIDO sigue siendo del alta", () => {
+    expect(errorParaLaPantalla("VALOR_DUPLICADO")).toEqual({ tipo: "INESPERADO" });
+    expect(errorParaLaPantalla("NOMBRE_INVALIDO")).toMatchObject({ campo: "razonSocial" });
+    expect(errorParaLaPantalla("constructor", "LISTA")).toEqual({ tipo: "INESPERADO" });
+  });
+});

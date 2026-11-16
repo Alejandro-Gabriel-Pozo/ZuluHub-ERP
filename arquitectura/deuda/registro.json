@@ -485,6 +485,7 @@
       "apps/plataforma/pantallas/editor-de-submarca.cliente.tsx",
       "apps/plataforma/pantallas/filtros-de-empresas.cliente.tsx",
       "apps/plataforma/pantallas/formulario-de-alta.cliente.tsx",
+      "apps/plataforma/pantallas/lista-de-valores.cliente.tsx",
       "apps/plataforma/pantallas/ventana-de-codigo.cliente.tsx",
       "apps/plataforma/pantallas/ventana-de-confirmacion.cliente.tsx",
       "apps/plataforma/pantallas/verificar-codigo.cliente.tsx"

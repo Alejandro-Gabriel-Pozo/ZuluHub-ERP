@@ -9,6 +9,8 @@ import estilos from "./armazon-de-consola.module.css";
 const SECCIONES = [
   { clave: "empresas", etiqueta: "Empresas", href: "/empresas" },
   { clave: "submarcas", etiqueta: "Submarcas", href: "/submarcas" },
+  // «Listas»: texto aprobado el 09/11/2026 (`listas.html`: «La entrada "Listas" del menú de la consola se agrega al construir»).
+  { clave: "listas", etiqueta: "Listas", href: "/listas" },
 ] as const;
 
 export type PropsDeArmazonDeConsola = Readonly<{
