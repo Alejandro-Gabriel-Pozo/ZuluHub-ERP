@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0453",
+  "fecha": "2026-11-12",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "El error de una sección con un nombre repetido dice «Ya existe una sección con ese nombre», con texto propio en vez del genérico.",
+  "que_cambia": "Al guardar una sección con un nombre que ya existe, la pantalla muestra ese texto junto al campo nombre. Revertir: quitar la clave y volver al genérico (una línea).",
+  "donde": "src/capacidades/vocabulario/catalogo-catalogo.ts (catalogo.error.seccion_repetida); src/composicion/errores-de-catalogo.ts; maqueta productos-secciones.html:333 (sec.duplicada), aprobada por el dueño el 12/11/2026"
+}

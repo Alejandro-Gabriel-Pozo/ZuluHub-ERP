@@ -329,6 +329,21 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # La cabeza actual de la rama o del PR: si ya avanzó, esta corrida fue reemplazada (cancelada por `concurrency`) y su Gate no es un resultado de
+      # este commit. `ls-remote` de un repositorio público no necesita credenciales; si falla, queda vacío y el Gate evalúa normal (rojo ante la duda).
+      - name: Cabeza actual de la rama
+        id: cabeza
+        run: |
+          case "$GITHUB_EVENT_NAME" in
+            pull_request) ref="${GITHUB_REF%/merge}/head" ;;
+            push) ref="$GITHUB_REF" ;;
+            *) ref="" ;;
+          esac
+          actual=""
+          if [ -n "$ref" ]; then
+            actual="$(git ls-remote origin "$ref" 2>/dev/null | cut -f1 || true)"
+          fi
+          echo "actual=${actual}" >> "$GITHUB_OUTPUT"
       # «Saltado por filtro» (la mutación sin grupos que correr) es correcto; «fallido» o «cancelado»
       # no. La lógica y sus casos están en arquitectura/evaluar-gate.cjs y su prueba.
       - name: Todos los jobs en verde
@@ -337,6 +352,9 @@ jobs:
           NEEDS: ${{ toJSON(needs) }}
           # Estabilidad saltada por el plan solo vale en un pull request; en push a main y en la nocturna no.
           EVENTO: ${{ github.event_name }}
+          # Con la cabeza actual y la de esta corrida, el Gate distingue «reemplazada por un push nuevo» de una falla real.
+          CABEZA_ACTUAL: ${{ steps.cabeza.outputs.actual }}
+          CABEZA_DE_ESTA_CORRIDA: ${{ github.event.pull_request.head.sha || github.sha }}
 
   web:
     # P-12: la web y la consola de plataforma compilan sin ningún secreto. Las variables viven en Vercel y se

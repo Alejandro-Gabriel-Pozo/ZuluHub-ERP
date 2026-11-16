@@ -86,7 +86,7 @@ export const EXTENSIONES_DE_CODIGO = [
   "mts",
   "cts",
 ] as const;
-const TIPOS_DE_SCRIPT: Record<string, ts.ScriptKind> = {
+export const TIPOS_DE_SCRIPT: Record<string, ts.ScriptKind> = {
   ts: ts.ScriptKind.TS,
   mts: ts.ScriptKind.TS,
   cts: ts.ScriptKind.TS,
@@ -103,14 +103,14 @@ const nombreDeComponente = (ruta: string): string =>
 
 type Atributos = readonly ts.JsxAttributeLike[];
 
-function atributo(atributos: Atributos, nombre: string, fuente: ts.SourceFile) {
+export function atributo(atributos: Atributos, nombre: string, fuente: ts.SourceFile) {
   return atributos.find(
     (a): a is ts.JsxAttribute => ts.isJsxAttribute(a) && a.name.getText(fuente) === nombre,
   );
 }
 
 /** El literal de texto de un atributo JSX (`x="a"` o `x={"a"}`), o `undefined` si es dinámico. */
-function literalDe(attr: ts.JsxAttribute | undefined): string | undefined {
+export function literalDe(attr: ts.JsxAttribute | undefined): string | undefined {
   const valor = attr?.initializer;
   if (valor === undefined) return undefined;
   if (ts.isStringLiteral(valor)) return valor.text;
@@ -122,7 +122,7 @@ function literalDe(attr: ts.JsxAttribute | undefined): string | undefined {
 }
 
 /** Todos los valores literales que puede tomar una expresión (literal, condición de literales, con paréntesis o `as const`); `undefined` si alguno no lo es. */
-function literalesDe(e: ts.Expression): string[] | undefined {
+export function literalesDe(e: ts.Expression): string[] | undefined {
   if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) return [e.text];
   if (ts.isParenthesizedExpression(e) || ts.isAsExpression(e) || ts.isSatisfiesExpression(e))
     return literalesDe(e.expression);
@@ -144,7 +144,7 @@ function literalesDeAtributo(attr: ts.JsxAttribute): string[] | undefined {
     : undefined;
 }
 
-const esDeTipos = (nodo: ts.Node): boolean => {
+export const esDeTipos = (nodo: ts.Node): boolean => {
   for (let p: ts.Node | undefined = nodo.parent; p !== undefined; p = p.parent) {
     if (ts.isTypeNode(p) || ts.isTypeAliasDeclaration(p) || ts.isInterfaceDeclaration(p))
       return true;

@@ -76,19 +76,20 @@ const esPrueba = (archivo) => archivo.endsWith(".test.ts");
 const esPruebaDeNode = (archivo) => esPrueba(archivo) && /^(src|test)\//.test(archivo);
 
 /**
- * Lo que el grafo de importaciones NO ve del guardián. El grafo sí sigue los `require()` de sus pruebas
- * (`test/arquitectura/guardian-*.ts` cargan `arquitectura/contratos/*.cjs` y `arquitectura/deuda/*.cjs`), pero no lo
- * que esas pruebas copian a carpetas temporales, lanzan con `node` o leen como texto: los datos de las carpetas (`*.json`), los
- * `.cjs` que solo corren como proceso aparte (`no-debilitar.cjs` como CLI) y los archivos de `arquitectura/`
- * que el verificador carga del árbol (`evaluar-gate.cjs`, `reglas.cjs`, `ci.yml`). Como el código del guardián también
- * se muta (los grupos de mutación; `stryker.config.mjs` deriva `mutate` de ellos), el mapa es EXPLÍCITO: toda prueba o auxiliar del guardián depende de TODOS
- * esos archivos. Es grueso a propósito: un mutante de `clasificacion.cjs` lo puede matar una prueba que
- * ejercita `guardian.cjs`, así que un cambio en cualquiera alcanza a los grupos de todos. Solo AGREGA
- * dependencias: lo que el grafo ya sabía sigue igual, y el resto de `arquitectura/` sigue sin estar en el mapa.
+ * Lo que el grafo de importaciones NO ve del guardián: lo que sus pruebas copian a carpetas temporales, lanzan con `node` o leen como texto
+ * (datos `*.json`, `.cjs` que solo corren como CLI, `evaluar-gate.cjs`, `reglas.cjs`, `ci.yml`). El código del guardián también se muta, así que
+ * el mapa es EXPLÍCITO y grueso a propósito: toda prueba o auxiliar del guardián depende de TODOS esos archivos. Solo AGREGA dependencias.
+ * El registro de decisiones (`DEC-NNNN.json`) entra acá: además de las del guardián lo leen solo `decisiones-*`, `nombre-del-producto`,
+ * `grupos-de-mutacion` y `planificar-mutacion` (medido con `strace`); antes cada decisión nueva corría los ~97 grupos. Borrarla corre todo.
  */
-const PRUEBAS_DEL_GUARDIAN = /^test\/arquitectura\/guardian-[^/]+\.ts$/;
-/** Las carpetas del guardián: el código de los contratos y el control de deuda técnica (una pieza del guardián). */
-const CARPETAS_DEL_GUARDIAN = ["arquitectura/contratos", "arquitectura/deuda"];
+const PRUEBAS_DEL_GUARDIAN =
+  /^test\/arquitectura\/(?:guardian-|decisiones-|nombre-del-producto\.|grupos-de-mutacion\.|planificar-mutacion\.)[^/]*\.ts$/;
+/** Las carpetas del guardián: el código de los contratos, el control de deuda técnica y el registro de decisiones. */
+const CARPETAS_DEL_GUARDIAN = [
+  "arquitectura/contratos",
+  "arquitectura/deuda",
+  "arquitectura/decisiones/registro",
+];
 const OTROS_ARCHIVOS_DEL_GUARDIAN = [
   "arquitectura/evaluar-gate.cjs",
   "arquitectura/reglas.cjs",
@@ -134,8 +135,7 @@ function conEnlacesDelGuardian(dependencias, archivosDelGuardian) {
 }
 
 /**
- * Los archivos que el guardián lee: `arquitectura/contratos/**` y `arquitectura/deuda/**` (los informes que generan no cuentan) y los
- * otros archivos de `arquitectura/` que su verificador carga. Un archivo que falta en disco no se inventa.
+ * Los archivos que el guardián lee: las carpetas de arriba (los informes que generan no cuentan) y los otros archivos de `arquitectura/` que su verificador carga. Un archivo que falta en disco no se inventa.
  */
 function leerArchivosDelGuardian(raiz) {
   const presentes = (archivo) =>
