@@ -1,6 +1,6 @@
 import { sql, type Kysely } from "kysely";
 import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
-import type { ClaseDeUso } from "../dominio/clases";
+import { CLASES_DE_USO, seConsumeLaClase, type ClaseDeUso } from "../dominio/clases";
 import type { ProductoId, SeccionDeCartaId } from "../dominio/identificadores";
 import type { Producto } from "../dominio/modelo";
 import type { FichaValida } from "../dominio/producto";
@@ -30,7 +30,8 @@ export type AltaDeProducto = Readonly<{
 
 export type FiltroDeProductos = Readonly<{
   texto?: string | undefined;
-  claseDeUso?: ClaseDeUso | undefined;
+  /** Una clase o varias; una lista vacía no trae nada (fail closed). */
+  claseDeUso?: ClaseDeUso | readonly ClaseDeUso[] | undefined;
   faltaCompletar?: boolean | undefined;
   activo?: boolean | undefined;
   /** Solo los productos de esa sección de la carta (de la empresa: otra empresa, un id inexistente o que no es un uuid dan una lista vacía). */
@@ -236,8 +237,12 @@ export function crearRepositorioDeProductos(db: Kysely<CatalogoDb>): Repositorio
           sql<boolean>`nombre_clave like ${comoPrefijo(filtro.texto.toLowerCase())} escape '\\'`,
         );
       }
-      if (filtro.claseDeUso !== undefined)
-        consulta = consulta.where("clase_de_uso", "=", filtro.claseDeUso);
+      if (filtro.claseDeUso !== undefined) {
+        const clases =
+          typeof filtro.claseDeUso === "string" ? [filtro.claseDeUso] : filtro.claseDeUso;
+        if (clases.length === 0) return [];
+        consulta = consulta.where("clase_de_uso", "in", clases);
+      }
       if (filtro.faltaCompletar !== undefined)
         consulta = consulta.where("falta_completar", "=", filtro.faltaCompletar);
       if (filtro.activo !== undefined) consulta = consulta.where("activo", "=", filtro.activo);
@@ -284,7 +289,7 @@ export function crearRepositorioDeProductos(db: Kysely<CatalogoDb>): Repositorio
         .selectAll()
         .where("empresa_id", "=", empresa)
         .where("activo", "=", true)
-        .where("clase_de_uso", "in", ["MATERIA_PRIMA", "INSUMO", "REVENTA"]);
+        .where("clase_de_uso", "in", CLASES_DE_USO.filter(seConsumeLaClase));
       if (texto !== undefined && texto !== "") {
         consulta = consulta.where(
           sql<boolean>`nombre_clave like ${comoPrefijo(texto.toLowerCase())} escape '\\'`,

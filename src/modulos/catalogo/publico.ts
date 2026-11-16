@@ -74,7 +74,13 @@ export type {
   OrigenDelRecargo,
 } from "./dominio/cotizar";
 export type { ClaseDeUso } from "./dominio/clases";
-export { CLASES_DE_USO, esClaseDeUso, seConsumeLaClase, vendeLaClase } from "./dominio/clases";
+export {
+  CLASES_DE_USO,
+  esClaseDeUso,
+  seConsumeLaClase,
+  seControlaStockLaClase,
+  vendeLaClase,
+} from "./dominio/clases";
 export type { AlcanceDePrecio, ErrorDeAlcanceDePrecio } from "./dominio/alcance-de-precio";
 export { ALCANCES_DE_PRECIO, sucursalDelAlcanceDePrecio } from "./dominio/alcance-de-precio";
 export type { FormaDeVenta } from "./dominio/forma-de-venta";
@@ -168,6 +174,15 @@ export type {
   EntradaDeReordenarSecciones,
   SalidaDeReordenarSecciones,
 } from "./casos-de-uso/reordenar-secciones";
+export type { EntradaDeProductosParaVender } from "./consultas/consultas-para-vender";
+export type {
+  GrupoParaVender,
+  MedidaParaVender,
+  OpcionParaVender,
+  PaginaParaVender,
+  PrecioParaVender,
+  ProductoParaVender,
+} from "./casos-de-uso/productos-para-vender";
 export type {
   CartaParaAdministrar,
   ProductoOcultoParaAdministrar,

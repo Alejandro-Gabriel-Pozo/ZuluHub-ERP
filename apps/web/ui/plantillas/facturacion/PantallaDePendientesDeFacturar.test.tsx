@@ -90,6 +90,32 @@ describe("pendientes de facturar", () => {
     expect(document.querySelectorAll('a[href*="/emitir/venta/"]').length).toBe(0);
   });
 
+  it("se ven las ventas pendientes y el aviso de «no hay» en celular Y en escritorio (la tabla del Listado no existe acá)", async () => {
+    for (const [ancho, alto] of [
+      [390, 1600],
+      [1280, 1100],
+    ] as const) {
+      await page.viewport(ancho, alto);
+      const conVentas = await render(
+        enArmazon(<PantallaDePendientesDeFacturar pendientes={lista} />),
+      );
+      await expect.element(page.getByText("Venta N.º 124")).toBeVisible();
+      await expect.element(page.getByText("$ 17.525,00")).toBeVisible();
+      await expect.element(page.getByRole("link", { name: "Página siguiente" })).toBeVisible();
+      expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+      await conVentas.unmount();
+      const vacia = await render(
+        enArmazon(
+          <PantallaDePendientesDeFacturar
+            pendientes={armarLosPendientes({}, { tickets: [], siguiente: null })}
+          />,
+        ),
+      );
+      await expect.element(page.getByText("No hay ventas pendientes de facturar")).toBeVisible();
+      await vacia.unmount();
+    }
+  });
+
   it("axe, tamaños y sin desborde en 390 y 1280 px (también con un total enorme)", async () => {
     // Alto suficiente para ver todo sin scroll (la barra inferior fija no tapa nada), como las demás pruebas del facturador.
     for (const [ancho, alto] of [

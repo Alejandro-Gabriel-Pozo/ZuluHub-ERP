@@ -126,6 +126,25 @@ describe("armarLaFicha de un producto que se vende", () => {
   });
 });
 
+describe("el enlace «Secciones» de la ficha (A8)", () => {
+  it("un producto que se vende lleva el enlace a la lista de secciones, con el texto aprobado", () => {
+    expect(armarLaFicha(ficha()).enlaceDeSecciones).toEqual({
+      href: "/catalogo/secciones",
+      texto: "Secciones",
+    });
+  });
+
+  it("un producto que no se vende no lo lleva: el campo de la sección tampoco está", () => {
+    expect(armarLaFicha(ficha({ seVende: false })).enlaceDeSecciones).toBeNull();
+  });
+
+  it("usa el diccionario si se lo dan", () => {
+    expect(
+      armarLaFicha(ficha(), { "catalogo.seccion.titulo": "Cartas" }).enlaceDeSecciones?.texto,
+    ).toBe("Cartas");
+  });
+});
+
 describe("armarLaFicha de un producto que no se vende", () => {
   it("no lleva nombre de cocina, alícuota ni sección; sí el nombre y los códigos", () => {
     const f = armarLaFicha(

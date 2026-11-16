@@ -804,6 +804,7 @@ describe.skipIf(base === null)("0025 catálogo: la migración contra una base re
         const insumo = await productoDeBase(dueno, m.empresa, { clase: "INSUMO" });
         const reventa = await productoDeBase(dueno, m.empresa, { clase: "REVENTA" });
         const elaborado = await productoDeBase(dueno, m.empresa, { clase: "ELABORADO" });
+        const vendible = await productoDeBase(dueno, m.empresa, { clase: "VENDIBLE" });
         const cargar = (
           numero: number,
           producto: string,
@@ -817,11 +818,12 @@ describe.skipIf(base === null)("0025 catálogo: la migración contra una base re
           );
         acepta(await cargar(1, insumo, "0.2500"));
         acepta(await cargar(2, reventa, "1", true));
-        check(await cargar(3, elaborado, "1"), "consumo_de_opcion_insumo_no_admitido");
-        check(await cargar(3, p, "1"), "consumo_de_opcion_insumo_es_el_mismo_producto");
-        check(await cargar(3, insumo, "0"), "consumo_de_opcion_cantidad_ck");
-        check(await cargar(3, insumo, "-1"), "consumo_de_opcion_cantidad_ck");
-        clave(await cargar(3, insumo, "1"), "consumo_de_opcion_insumo_uk");
+        acepta(await cargar(3, elaborado, "1")); // 12/11/2026: una opción puede consumir un elaborado
+        check(await cargar(4, vendible, "1"), "consumo_de_opcion_insumo_no_admitido");
+        check(await cargar(4, p, "1"), "consumo_de_opcion_insumo_es_el_mismo_producto");
+        check(await cargar(4, insumo, "0"), "consumo_de_opcion_cantidad_ck");
+        check(await cargar(4, insumo, "-1"), "consumo_de_opcion_cantidad_ck");
+        clave(await cargar(4, insumo, "1"), "consumo_de_opcion_insumo_uk");
         const tamano = await grupoDeBase(dueno, m.empresa, p, {
           clase: "VARIANTE",
           esTamano: true,

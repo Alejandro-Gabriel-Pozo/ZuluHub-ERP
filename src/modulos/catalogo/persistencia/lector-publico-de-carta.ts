@@ -101,6 +101,8 @@ export function crearLecturaPublicaDeCartas(db: {
         .select(["id", "nombre", "activa"])
         .where("empresa_id", "=", empresa)
         .orderBy("orden")
+        // El rol público no lee `nombre_clave` (0044): el desempate es el mismo que el de gestión (`nombre_clave` = el nombre en minúsculas), con `id` si aun así empatan.
+        .orderBy(sql`lower(nombre)`)
         .orderBy("id")
         .execute();
       const productosFilas = await k

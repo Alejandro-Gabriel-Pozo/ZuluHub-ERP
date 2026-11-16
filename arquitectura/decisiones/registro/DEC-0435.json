@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0435",
+  "fecha": "2026-11-15",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO (S1 de la ficha): en la lista de secciones las activas van primero, en el orden de la carta y con flechas; las desactivadas van al final y sin flechas.",
+  "que_cambia": "Una sección desactivada no se mueve: el servidor solo reordena las activas. En el ejemplo de la maqueta (Postres, última) se ve igual. Revertir: pedir al servidor que admita desactivadas en reordenar.",
+  "donde": "11-especificaciones/conceptos/secciones-de-la-carta-pantalla.md §6 (S1); src/modulos/catalogo/casos-de-uso/reordenar-secciones.ts; apps/web/ui/plantillas/catalogo/modelo-de-secciones.ts"
+}
