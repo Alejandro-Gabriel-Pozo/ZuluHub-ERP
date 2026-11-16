@@ -4,6 +4,8 @@ import { USOS_DE_DEPOSITO } from "../../src/modulos/stock/publico";
 import {
   armarLaListaDeDepositos,
   CLAVE_DE_TEXTO_DEL_USO,
+  opcionesDeUso,
+  USO_DE_VENTA,
   RUTAS_DE_DEPOSITOS,
 } from "../../apps/web/ui/plantillas/stock/depositos/modelo-de-depositos";
 import { pestanasDeStock } from "../../apps/web/ui/plantillas/stock/pestanas-de-stock";
@@ -49,6 +51,26 @@ describe("el modelo de «Depósitos» de stock", () => {
 
   it("los usos que la pantalla sabe nombrar son EXACTAMENTE los del servidor y la base", () => {
     expect(Object.keys(CLAVE_DE_TEXTO_DEL_USO).sort()).toEqual([...USOS_DE_DEPOSITO].sort());
+  });
+});
+
+describe("las opciones del uso", () => {
+  it("se ofrecen en el orden del servidor, cada una con su texto aprobado", () => {
+    expect(opcionesDeUso(USOS_DE_DEPOSITO, textoDe)).toEqual([
+      { valor: "NORMAL", etiqueta: "Normal" },
+      { valor: "CUARENTENA", etiqueta: "Cuarentena" },
+      { valor: "RECHAZO", etiqueta: "Rechazo" },
+    ]);
+  });
+
+  it("un uso sin texto aprobado no se ofrece", () => {
+    expect(opcionesDeUso(["NORMAL", "OTRO", "constructor"], textoDe)).toEqual([
+      { valor: "NORMAL", etiqueta: "Normal" },
+    ]);
+  });
+
+  it("«De venta» le corresponde solo al uso Normal", () => {
+    expect(USO_DE_VENTA).toBe("NORMAL");
   });
 });
 

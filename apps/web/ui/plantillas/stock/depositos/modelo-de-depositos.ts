@@ -3,7 +3,7 @@ import { RUTAS_DE_STOCK } from "../rutas-de-stock";
 
 /**
  * El modelo de vista de «Depósitos» (maqueta aprobada `stock.html`, 09/11/2026): de lo que entrega la composición, lo que se ve en cada tarjeta (el nombre, el uso y «De venta» si lo
- * es) . Puro: sin React ni servidor.
+ * es) y las opciones del uso. Puro: sin React ni servidor.
  */
 
 export const RUTAS_DE_DEPOSITOS = {
@@ -17,6 +17,9 @@ export const CLAVE_DE_TEXTO_DEL_USO: Readonly<Record<string, ClaveDeTexto>> = {
   CUARENTENA: "stock.deposito.cuarentena",
   RECHAZO: "stock.deposito.rechazo",
 };
+
+/** El único uso al que le corresponde «De venta». */
+export const USO_DE_VENTA = "NORMAL";
 
 /** Un depósito como lo entrega la composición. */
 export type DepositoDeLaLista = Readonly<{
@@ -49,5 +52,18 @@ export function armarLaListaDeDepositos(
     return d.activo && clave !== undefined
       ? [{ id: d.id, titulo: d.nombre, uso: textoDelUso(clave), deVenta: d.deVenta }]
       : [];
+  });
+}
+
+/** Las opciones del selector «Uso», en el orden de la lista del servidor, solo con los usos que tienen texto aprobado. */
+export function opcionesDeUso(
+  usos: readonly string[],
+  textoDelUso: (clave: ClaveDeTexto) => string,
+): readonly Readonly<{ valor: string; etiqueta: string }>[] {
+  return usos.flatMap((uso) => {
+    const clave = Object.hasOwn(CLAVE_DE_TEXTO_DEL_USO, uso)
+      ? CLAVE_DE_TEXTO_DEL_USO[uso]
+      : undefined;
+    return clave === undefined ? [] : [{ valor: uso, etiqueta: textoDelUso(clave) }];
   });
 }
