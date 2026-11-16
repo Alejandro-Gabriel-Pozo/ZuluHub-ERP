@@ -230,14 +230,11 @@ export type CandidatosArmados = Readonly<{
   siguiente: EnlaceArmado | null;
 }>;
 
-/** La dirección de «Agregar producto» con el texto buscado y, si sigue, la página. */
-function direccionDeAgregar(seccionId: string, buscado: string, despues: string | null): string {
-  const pares: [string, string][] = [];
-  if (buscado !== "") pares.push(["texto", buscado]);
-  if (despues !== null) pares.push(["despues", despues]);
-  return pares.length === 0
-    ? rutaDeAgregarProducto(seccionId)
-    : `${rutaDeAgregarProducto(seccionId)}?${new URLSearchParams(pares).toString()}`;
+/** La dirección de la página siguiente de «Agregar producto»: el texto buscado (si hay) y la clave de la página. */
+function direccionDeLaPaginaSiguiente(seccionId: string, buscado: string, despues: string): string {
+  const pares: [string, string][] = buscado === "" ? [] : [["texto", buscado]];
+  pares.push(["despues", despues]);
+  return `${rutaDeAgregarProducto(seccionId)}?${new URLSearchParams(pares).toString()}`;
 }
 
 export function armarLosCandidatos(
@@ -270,7 +267,7 @@ export function armarLosCandidatos(
       dato.siguiente === null
         ? null
         : {
-            href: direccionDeAgregar(seccion.id, buscado, dato.siguiente),
+            href: direccionDeLaPaginaSiguiente(seccion.id, buscado, dato.siguiente),
             texto: texto(d, "fiscal.pantalla.listado_pagina_siguiente"),
           },
   };

@@ -53,10 +53,10 @@ export type CandidatosParaLaPantalla = Readonly<{
  */
 function enUnProducto(error: unknown, d: DependenciasDeProductosDeSeccionWeb): Respuesta<never> {
   const traducido = traducirErrorDeCatalogo(error);
-  const conTexto = typeof traducido === "object" && traducido !== null && "codigo" in traducido;
+  // Solo pasan los motivos del guard y los defectos (textos); cualquier objeto (error con texto propio o de forma desconocida) es el genérico: cierra ante la duda.
   return {
     ok: false,
-    error: conTexto ? GENERICO : errorAPublico(traducido, d.respuesta),
+    error: typeof traducido === "string" ? errorAPublico(traducido, d.respuesta) : GENERICO,
   };
 }
 

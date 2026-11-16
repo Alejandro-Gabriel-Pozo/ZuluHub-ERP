@@ -243,6 +243,14 @@ describe.each([
     },
   );
 
+  it.each([null, { tipo: "desconocido" }, { error: "OTRO", campo: "x" }])(
+    "un error que no es un texto (%j) es el genérico: cierra ante la duda",
+    async (error) => {
+      const { d } = montar({ editarProducto: () => err(error) });
+      expect(await funcion(d, contexto, PEDIDO)).toEqual(GENERICO);
+    },
+  );
+
   it.each(["SIN_PERMISO", "MODULO_EN_DESARROLLO"])(
     "el motivo del guard %s sale tal cual",
     async (motivo) => {
