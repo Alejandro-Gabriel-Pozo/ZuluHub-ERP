@@ -302,6 +302,8 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       "gerencia.proponer_traspaso",
       "gerencia.rechazar_traspaso",
       "gerencia.ver_traspaso",
+      // `personasParaMostrar` (C6/X6) pide la acción de los tres roles que ya usan las sucursales elegibles (DEC-0464).
+      "permisos.ver_propios",
       "usuarios.apagar",
       "usuarios.asignar_sucursales",
       "usuarios.invitar",
@@ -477,10 +479,13 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
   });
 
   it("X1 se dispara si empresas deja de exigir una acción del catálogo (violación inyectada)", () => {
+    // `permisos.ver_propios` la exigen empresas e identidad: la acción solo queda sin quien la exija si dejan las dos.
     const sinPermisosPropios: AccionesPorCarpeta = {
       ...declaradas,
       "modulos/empresas":
         declaradas["modulos/empresas"]?.filter((a) => a !== "permisos.ver_propios") ?? [],
+      "modulos/identidad":
+        declaradas["modulos/identidad"]?.filter((a) => a !== "permisos.ver_propios") ?? [],
     };
     expect(
       crucesDelCatalogo(CATALOGO_DE_MODULOS, sinPermisosPropios, carpetaExiste, SIN_CONSTRUIR),
