@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0567",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: editar una parte guarda los datos y después los roles en dos transacciones; las dos son idempotentes, así que repetir el guardado completa lo que falló.",
+  "que_cambia": "Si la segunda falla, los datos quedan guardados y los roles no, hasta repetir; hacerlo atómico pide un caso de uso nuevo en clientes que edite datos y roles juntos.",
+  "donde": "src/composicion/directorio-web.ts; pantallas-de-compras-inventario.md §3 (D1)"
+}

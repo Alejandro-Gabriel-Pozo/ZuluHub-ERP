@@ -8,6 +8,7 @@ import {
   PARAMETROS_DE_CATALOGO,
   type CodigoDeCatalogo,
 } from "./respuesta-de-catalogo";
+import { CLAVES_DE_ERRORES_DE_CLIENTES, type CodigoDeClientes } from "./respuesta-de-clientes";
 import { CLAVES_DE_ERRORES_DE_COMPRAS, type CodigoDeCompras } from "./respuesta-de-compras";
 import { CLAVES_DE_ERRORES_FISCALES, type CodigoFiscal } from "./respuesta-fiscal";
 
@@ -47,7 +48,8 @@ export type CodigoDeNegocio =
   | CodigoFiscal
   | CodigoDeCaja
   | CodigoDeCatalogo
-  | CodigoDeCompras;
+  | CodigoDeCompras
+  | CodigoDeClientes;
 
 export type CodigoPublico =
   CodigoDeNegocio | MotivoDeRechazo | "SESION_VENCIDA" | "ERROR_INTERNO" | "NO_DISPONIBLE";
@@ -80,6 +82,11 @@ const AVISOS_DE_CAJA = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_CAJA).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoDeCaja, DefinicionDeCodigo>>;
 
+/** Los códigos del directorio de clientes y proveedores (`respuesta-de-clientes.ts`): cada uno es un aviso con su texto `clientes.error.*`. */
+const AVISOS_DE_CLIENTES = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_CLIENTES).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeClientes, DefinicionDeCodigo>>;
+
 /** Los códigos de compras N1 y N2 (`respuesta-de-compras.ts`): cada uno es un aviso con su texto `compras.error.*`. */
 const AVISOS_DE_COMPRAS = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_COMPRAS).map(([codigo, clave]) => [codigo, aviso(clave)]),
@@ -108,6 +115,7 @@ export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo
   ...AVISOS_DE_CAJA,
   ...AVISOS_DE_CATALOGO,
   ...AVISOS_DE_COMPRAS,
+  ...AVISOS_DE_CLIENTES,
   MODULO_EN_DESARROLLO: motivo("motivo.modulo_en_desarrollo"),
   MODULO_NO_ACTIVO: motivo("motivo.modulo_no_activo"),
   MODULO_EN_SOLO_LECTURA: motivo("motivo.modulo_en_solo_lectura"),

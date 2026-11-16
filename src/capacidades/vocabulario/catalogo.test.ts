@@ -359,7 +359,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
           .filter((c) => c.startsWith(`${modulo}.`))
           .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
       );
-    expect(Object.keys(de("clientes"))).toHaveLength(20);
+    expect(Object.keys(de("clientes"))).toHaveLength(32);
     expect(Object.keys(de("compras"))).toHaveLength(139);
     expect(de("clientes")).toMatchObject({
       "clientes.lista.clientes_y_proveedores": "Clientes y proveedores",
@@ -418,6 +418,33 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "compras.factura.neto_sin_iva_discriminado": "Neto (sin IVA discriminado)",
       "compras.factura.neto_de_la_linea": "Neto de la línea",
       "compras.factura.falta_la_factura": "Falta la factura",
+    });
+  });
+
+  it("los 11 textos del directorio que el dueño aprobó el 09/11/2026 en directorio.html:266 y no tenían clave (DEC-0566) son exactamente estos", () => {
+    expect(
+      Object.fromEntries(
+        claves
+          .filter((c) =>
+            /^clientes\.(lista\.(nuevo|clientes|proveedores)|formulario\.[a-z_]+|error\.(dni_invalido|empresa_solo_cuit_o_extranjero))$/.test(
+              c,
+            ),
+          )
+          .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
+      ),
+    ).toEqual({
+      "clientes.lista.nuevo": "Nuevo",
+      "clientes.lista.clientes": "Clientes",
+      "clientes.lista.proveedores": "Proveedores",
+      "clientes.formulario.tipo_de_documento": "Tipo de documento",
+      "clientes.formulario.pais": "País",
+      "clientes.formulario.nota": "Nota",
+      "clientes.formulario.roles": "Roles",
+      "clientes.formulario.email": "Email",
+      "clientes.formulario.apellido": "Apellido",
+      "clientes.error.dni_invalido": "El DNI no es válido",
+      "clientes.error.empresa_solo_cuit_o_extranjero":
+        "Una empresa solo admite CUIT o documento extranjero",
     });
   });
 
