@@ -111,14 +111,34 @@ describe("politicaDeContenido", () => {
 });
 
 describe("esIndexable", () => {
-  it("solo la landing y solo en producción", () => {
-    for (const s of SUPERFICIES) {
+  const DUENIOS = ["MARCA", "EMPRESA", null] as const;
+
+  it("la landing solo en producción; la app, la neutra y el sistema nunca", () => {
+    for (const s of SUPERFICIES.filter((x) => x !== "CARTA")) {
       for (const produccion of [true, false]) {
-        expect(esIndexable(s, produccion), `${s} ${String(produccion)}`).toBe(
-          s === "LANDING" && produccion,
-        );
+        for (const duenio of DUENIOS) {
+          expect(
+            esIndexable(s, produccion, duenio),
+            `${s} ${String(produccion)} ${String(duenio)}`,
+          ).toBe(s === "LANDING" && produccion);
+        }
       }
     }
+  });
+
+  it("la carta del host COMPARTIDO (dueño MARCA) nunca se indexa, en producción o no (dueño, 16/11/2026)", () => {
+    expect(esIndexable("CARTA", true, "MARCA")).toBe(false);
+    expect(esIndexable("CARTA", false, "MARCA")).toBe(false);
+  });
+
+  it("la carta de un dominio propio (dueño EMPRESA) nace cerrada: hoy tampoco se indexa", () => {
+    // Cuando el dueño lo decida, se abre en `CARTA_INDEXABLE_SEGUN_DUENIO` y esta prueba cambia a `true` solo para producción.
+    expect(esIndexable("CARTA", true, "EMPRESA")).toBe(false);
+    expect(esIndexable("CARTA", false, "EMPRESA")).toBe(false);
+  });
+
+  it("la carta sin dueño conocido se cierra", () => {
+    expect(esIndexable("CARTA", true, null)).toBe(false);
   });
 });
 
