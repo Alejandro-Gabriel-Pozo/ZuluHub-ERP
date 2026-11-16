@@ -17,6 +17,7 @@ describe("códigos públicos de la ficha de un producto", () => {
       CATALOGO_FALTA_EL_NOMBRE: "catalogo.error.falta_el_nombre",
       CATALOGO_PRECIO_INVALIDO: "catalogo.error.precio_invalido",
       CATALOGO_PRECIO_DESACTUALIZADO: "catalogo.precio.vigente_ahora",
+      CATALOGO_PRIMERO_DESACTIVA: "catalogo.error.primero_desactiva",
       CATALOGO_ACCION_NO_PERMITIDA: "catalogo.error.accion_no_permitida",
     });
     expect(CATALOGO_DE_TEXTOS["catalogo.error.nombre_repetido"].porDefecto).toBe(
@@ -37,6 +38,10 @@ describe("códigos públicos de la ficha de un producto", () => {
     );
     expect(CATALOGO_DE_TEXTOS["catalogo.precio.vigente_ahora"].porDefecto).toBe(
       "El precio vigente ahora es $ {importe}. Revisalo y volvé a intentar.",
+    );
+    // Clasificación comercial (A14): aprobado por el dueño el 12/11/2026 (DDD, línea 92).
+    expect(CATALOGO_DE_TEXTOS["catalogo.error.primero_desactiva"].porDefecto).toBe(
+      "Primero desactivá lo que tiene adentro.",
     );
     expect(CATALOGO_DE_TEXTOS["catalogo.error.accion_no_permitida"].porDefecto).toBe(
       "Esta acción no está permitida",

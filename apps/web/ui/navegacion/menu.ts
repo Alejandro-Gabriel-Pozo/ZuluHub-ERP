@@ -7,6 +7,7 @@ import type { ClaveDeTexto } from "../../../../src/capacidades/vocabulario/catal
 import type { ClaveDeIcono } from "../iconos/catalogo";
 import { RUTAS_DE_CAJA } from "../plantillas/caja/lista-de-caja";
 import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
+import { RUTA_DE_CLASIFICACION } from "../plantillas/catalogo/modelo-de-clasificacion";
 import { RUTAS_DE_CONFIGURACION } from "../plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
 import { RUTAS_DE_CUENTA } from "../plantillas/sesion/rutas-de-cuenta";
@@ -62,7 +63,13 @@ type BaseDeFila = Readonly<{
 export type FilaDePantalla = BaseDeFila &
   Readonly<{
     tipo: "pantalla";
-    clave: "comprobantes" | "productos" | "configuracion-fiscal" | "medios-de-pago" | "contacto";
+    clave:
+      | "comprobantes"
+      | "productos"
+      | "clasificacion"
+      | "configuracion-fiscal"
+      | "medios-de-pago"
+      | "contacto";
     modulo: ClaveModulo;
     accion: ClaveAccion;
     href: string;
@@ -106,6 +113,19 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     accion: "productos.ver",
     href: RUTA_DE_PRODUCTOS,
     etiqueta: "catalogo.lista.titulo",
+    departamento: null,
+  },
+  // Clasificación comercial (A14): solo gerente y administrador (`productos.editar`; maqueta `clasificacion.html`, «Quién»: el operador no ve la entrada). Su rótulo es el título aprobado
+  // «Clasificación comercial» (DDD, fila del 12/11/2026, línea 92). Sin ruta propia de otro módulo: es de `catalogo`, como Productos.
+  {
+    tipo: "pantalla",
+    clave: "clasificacion",
+    area: "catalogo",
+    grupo: "productos",
+    modulo: "catalogo",
+    accion: "productos.editar",
+    href: RUTA_DE_CLASIFICACION,
+    etiqueta: "catalogo.clasificacion.titulo",
     departamento: null,
   },
   {

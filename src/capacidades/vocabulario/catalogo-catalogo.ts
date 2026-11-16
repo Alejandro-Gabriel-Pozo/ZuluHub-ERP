@@ -122,4 +122,17 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.unidad.metro_cuadrado": { porDefecto: "Metro cuadrado" },
   "catalogo.unidad.minuto": { porDefecto: "Minuto" },
   "catalogo.unidad.hora": { porDefecto: "Hora" },
+
+  // Clasificación comercial (A14; maqueta aprobada `clasificacion.html`). FUENTE de los ocho textos: `decisiones-del-dueno-2026-11.md`, fila del 12/11/2026 «Maqueta de clasificación comercial
+  // aprobada» (línea 92: «Clasificación comercial», «Departamento», «Categoría», «Crear», «Renombrar», «Mover», «Cambiar» y «Primero desactivá lo que tiene adentro.») y fila del 13/11/2026
+  // (línea 95: los niveles 2 a 4 se llaman todos «Categoría»); DEC-0535 (aceptados por el orquestador, delegación del dueño, filas 173 y 174). El resto de la pantalla reutiliza claves que ya
+  // existen: Desactivar y Reactivar (`catalogo.accion.*`), Guardar, Cancelar, Nombre, Sin elegir, Desactivado, «Vigente desde» (`catalogo.precio.vigente_desde`) y el genérico «Esta acción no está permitida».
+  "catalogo.clasificacion.titulo": { porDefecto: "Clasificación comercial" },
+  "catalogo.clasificacion.departamento": { porDefecto: "Departamento" },
+  "catalogo.clasificacion.categoria": { porDefecto: "Categoría" },
+  "catalogo.clasificacion.crear": { porDefecto: "Crear" },
+  "catalogo.clasificacion.renombrar": { porDefecto: "Renombrar" },
+  "catalogo.clasificacion.mover": { porDefecto: "Mover" },
+  "catalogo.clasificacion.cambiar": { porDefecto: "Cambiar" },
+  "catalogo.error.primero_desactiva": { porDefecto: "Primero desactivá lo que tiene adentro." },
 } as const;

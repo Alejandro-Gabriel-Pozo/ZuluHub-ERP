@@ -2,7 +2,12 @@ import type { DatoDeCampo } from "../../../../src/capacidades/datos/registro";
 import { CajaDeCampo } from "./CajaDeCampo";
 import estilos from "./Selector.module.css";
 
-type OpcionDeSelector = Readonly<{ valor: string; etiqueta: string }>;
+type OpcionDeSelector = Readonly<{
+  valor: string;
+  etiqueta: string;
+  /** La opción se ve pero no se puede elegir (por ejemplo, un destino que el servidor no admite). */
+  apagada?: boolean;
+}>;
 
 export type PropsDeSelector = Readonly<{
   /** Qué dato pide el campo: un `IdDeDato` del registro de datos o `"pendiente"` (deuda registrada). Obligatorio: sin dato no hay campo. */
@@ -56,7 +61,7 @@ export function Selector({
         >
           {textoDeElegir !== undefined ? <option value="">{textoDeElegir}</option> : null}
           {opciones.map((opcion) => (
-            <option key={opcion.valor} value={opcion.valor}>
+            <option key={opcion.valor} value={opcion.valor} disabled={opcion.apagada === true}>
               {opcion.etiqueta}
             </option>
           ))}

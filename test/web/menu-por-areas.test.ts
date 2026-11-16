@@ -130,6 +130,16 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "/catalogo/productos",
         "catalogo.lista.titulo",
       ],
+      // Clasificación comercial (A14): solo quien edita productos (gerente y administrador); el operador no ve la entrada.
+      [
+        "clasificacion",
+        "catalogo",
+        "productos",
+        "catalogo",
+        "productos.editar",
+        "/catalogo/clasificacion",
+        "catalogo.clasificacion.titulo",
+      ],
       [
         "configuracion-fiscal",
         "cuenta",

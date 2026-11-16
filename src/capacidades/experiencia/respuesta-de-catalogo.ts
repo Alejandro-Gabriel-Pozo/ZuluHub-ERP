@@ -19,6 +19,8 @@ export const CLAVES_DE_ERRORES_DE_CATALOGO = {
   // (`decisiones-del-dueno-2026-11.md`, respuestas chicas, punto 5). Esta última lleva el importe vigente como parámetro (`PARAMETROS_DE_CATALOGO`).
   CATALOGO_PRECIO_INVALIDO: "catalogo.error.precio_invalido",
   CATALOGO_PRECIO_DESACTUALIZADO: "catalogo.precio.vigente_ahora",
+  // Clasificación comercial (A14): «Primero desactivá lo que tiene adentro.» (DDD, fila del 12/11/2026, línea 92; DEC-0535), al desactivar un nodo con hijos activos.
+  CATALOGO_PRIMERO_DESACTIVA: "catalogo.error.primero_desactiva",
   CATALOGO_ACCION_NO_PERMITIDA: "catalogo.error.accion_no_permitida",
 } as const satisfies Record<string, ClaveDeTexto>;
 

@@ -17,6 +17,11 @@ const FORMULARIO_DE_PRECIO_DE_PRODUCTO =
 const FORMULARIO_DE_ALTA_DE_PRODUCTO =
   "apps/web/ui/plantillas/catalogo/FormularioDeAltaDeProducto.cliente.tsx";
 
+const HOJAS_DE_CLASIFICACION = "apps/web/ui/plantillas/catalogo/HojasDeClasificacion.cliente.tsx";
+
+const CLASIFICACION_DEL_PRODUCTO =
+  "apps/web/ui/plantillas/catalogo/ClasificacionDelProducto.cliente.tsx";
+
 export const CAMINOS_DE_PRODUCTOS = {
   // Productos, precio de la empresa (A1, T3): el precio es el único dato; el producto, la clave del cambio y la fila vista los fija la página. El único error con campo es «Escribí
   // un precio válido» (y la frase del precio que otra persona cambió antes, que se muestra en el mismo campo), ambos de la maqueta `productos.html`.
@@ -122,5 +127,60 @@ export const CAMINOS_DE_PRODUCTOS = {
       ],
     },
     camposDeError: ["nombre", "codigo", "codigoDeBarras", "alicuota"],
+  },
+  // Clasificación comercial (A14; maqueta `clasificacion.html`, 12/11/2026). Crear, renombrar y mover un nodo y cambiar la clasificación de un producto: el nombre, el nuevo padre y el nodo son
+  // los únicos datos; el nodo, la versión que se vio y la clave de idempotencia los fija la pantalla al abrir la hoja. Ningún error apunta a un campo: el único con texto propio es «Primero
+  // desactivá lo que tiene adentro.» (al desactivar, que no pide datos) y el resto sale como el genérico.
+  "crear-nodo-de-clasificacion": {
+    funcion: "Crear un departamento o una categoría de la clasificación comercial",
+    pantallas: [HOJAS_DE_CLASIFICACION],
+    pasos: [{ id: "nombre-del-nodo-nuevo", campos: { nombre: "nombre-de-nodo-de-clasificacion" } }],
+    deriva: [],
+    accion: {
+      clave: "productos.editar",
+      requiere: ["nombre-de-nodo-de-clasificacion"],
+      admite: [],
+    },
+    camposDeError: [],
+  },
+  "renombrar-nodo-de-clasificacion": {
+    funcion: "Renombrar un departamento o una categoría de la clasificación comercial",
+    pantallas: [HOJAS_DE_CLASIFICACION],
+    pasos: [{ id: "nombre-del-nodo", campos: { nombre: "nombre-de-nodo-de-clasificacion" } }],
+    deriva: [],
+    accion: {
+      clave: "productos.editar",
+      requiere: ["nombre-de-nodo-de-clasificacion"],
+      admite: [],
+    },
+    camposDeError: [],
+  },
+  "mover-nodo-de-clasificacion": {
+    funcion: "Mover una categoría de la clasificación comercial bajo otro padre",
+    pantallas: [HOJAS_DE_CLASIFICACION],
+    pasos: [
+      { id: "nuevo-padre-del-nodo", campos: { nuevoPadreId: "padre-de-nodo-de-clasificacion" } },
+    ],
+    deriva: [],
+    accion: {
+      clave: "productos.editar",
+      requiere: ["padre-de-nodo-de-clasificacion"],
+      admite: [],
+    },
+    camposDeError: [],
+  },
+  "clasificar-producto": {
+    funcion: "Cambiar el departamento y la categoría de un producto (rige desde ahora)",
+    pantallas: [CLASIFICACION_DEL_PRODUCTO],
+    pasos: [
+      { id: "clasificacion-del-producto", campos: { nodoId: "nodo-de-clasificacion-de-producto" } },
+    ],
+    deriva: [],
+    accion: {
+      clave: "productos.editar",
+      requiere: [],
+      admite: ["nodo-de-clasificacion-de-producto"],
+    },
+    camposDeError: [],
   },
 } as const satisfies Readonly<Record<string, DefinicionDeCamino>>;

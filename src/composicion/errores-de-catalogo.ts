@@ -8,13 +8,14 @@ import type { CodigoDeCatalogo } from "../capacidades/experiencia/respuesta-de-c
  * «Esta acción no está permitida» (dueño, 30/10/2026, interfaz sobria: genérico antes que uno por acción). Pasan SIN CAMBIOS: los motivos del guard y los demás códigos públicos,
  * los errores con forma de objeto sin nombre de negocio (la empresa que no opera, la base) y `ERROR_DE_LA_BASE_NO_TRADUCIDO`, que es un defecto y sale como inesperado, con referencia.
  * Previene: que un error del catálogo salga como un fallo inesperado, o que un defecto de la base se disfrace de «no permitido».
- * Precios (A1, T3): suma «Escribí un precio válido» y la frase aprobada del precio que otra persona cambió antes (lleva el importe vigente, el único dato que sale).
+ * Clasificación (A14): suma «Primero desactivá lo que tiene adentro.». Precios (A1, T3): suma «Escribí un precio válido» y la frase aprobada del precio que otra persona cambió antes (lleva el importe vigente, el único dato que sale).
  * Chequeo: `errores-de-catalogo.test.ts`.
  */
 
 type ErrorConTexto = Readonly<{
   codigo: CodigoDeCatalogo;
-  campo: string;
+  /** Sin campo: un aviso que no apunta a un campo del formulario (el de la clasificación, al desactivar un nodo con hijos activos). */
+  campo?: string;
   parametros?: Readonly<Record<string, string>>;
 }>;
 
@@ -29,6 +30,8 @@ const CON_TEXTO_PROPIO: Readonly<Record<string, ErrorConTexto>> = {
   ALICUOTA_REQUERIDA: { codigo: "CATALOGO_ELEGI_LA_ALICUOTA", campo: "alicuota" },
   // Precios (A1, T3): el único otro texto propio es «Escribí un precio válido» (misma fila «Errores»).
   PRECIO_INVALIDO: { codigo: "CATALOGO_PRECIO_INVALIDO", campo: "precio" },
+  // Clasificación comercial (A14): el único texto propio es «Primero desactivá lo que tiene adentro.» (DDD, línea 92); ciclo, tope, versión vieja, nombre inválido y lo demás: el genérico.
+  TIENE_HIJOS_ACTIVOS: { codigo: "CATALOGO_PRIMERO_DESACTIVA" },
 };
 
 /** Un defecto: la base devolvió una restricción que el módulo no sabe traducir. No es de negocio. */
