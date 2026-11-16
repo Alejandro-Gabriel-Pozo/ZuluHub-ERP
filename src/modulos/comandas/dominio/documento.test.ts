@@ -163,6 +163,18 @@ describe("documentoDeAnulacion", () => {
     detalle: ["Napolitana"],
     motivo: "Se equivocó el pedido",
   };
+  it("lo que queda ilegible es CANTIDAD_NO_IMPRIMIBLE, pero un defecto que no es un valor mal escrito se relanza", () => {
+    const sinLeer = documentoDeAnulacion({ ...aviso, quedan: "x" }, { copia: false, ancho: 58 });
+    expect(sinLeer).toEqual({ ok: false, error: "CANTIDAD_NO_IMPRIMIBLE" });
+    const explota = {
+      toString(): string {
+        throw new RangeError("ajeno");
+      },
+    } as unknown as string;
+    expect(() =>
+      documentoDeAnulacion({ ...aviso, quedan: explota }, { copia: false, ancho: 58 }),
+    ).toThrow(RangeError);
+  });
   it("dice ANULACIÓN · NO PREPARAR, cuánto se anuló, cuánto queda y el motivo", () => {
     const r = documentoDeAnulacion(aviso, { copia: false, ancho: 58 });
     const t = r.ok ? r.valor.lineas.map((l) => l.texto) : [];
