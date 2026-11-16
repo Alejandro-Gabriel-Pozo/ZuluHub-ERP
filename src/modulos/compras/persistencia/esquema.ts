@@ -149,6 +149,8 @@ export type ComprasDb = {
     empresa_id: string;
     proveedor_id: string;
     clase: string;
+    /** N4 (0085): la factura que corrige una nota de crédito (solo la clase NOTA_DE_CREDITO la lleva). */
+    comprobante_asociado_id: string | null;
     tipo: string | null;
     punto_de_venta: number | null;
     numero: number | null;

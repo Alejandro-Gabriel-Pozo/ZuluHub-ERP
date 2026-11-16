@@ -8,6 +8,7 @@ const ARCHIVO_DE_RECEPCION_SEPARADA = "test/integracion/compras-n3-recepcion.tes
 const ARCHIVO_DE_CONCILIACION_SEPARADA = "test/integracion/compras-n3-conciliacion.test.ts";
 const ARCHIVO_DE_ORDENES = "test/integracion/compras-n4-ordenes.test.ts";
 const ARCHIVO_DE_DIFERENCIAS = "test/integracion/compras-n4-diferencias.test.ts";
+const ARCHIVO_DE_NOTAS = "test/integracion/compras-n4-notas-de-credito.test.ts";
 const ARCHIVO_DE_DEVOLUCIONES = "test/integracion/compras-n4-devoluciones.test.ts";
 
 /**
@@ -193,6 +194,26 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_DEVOLUCIONES,
         it: "I2: anular dos veces la misma devolución devuelve yaEstaba y la segunda no escribe ni audita",
+      },
+    },
+  },
+  registrarNotaDeCredito: {
+    accion: "notas_de_credito_de_proveedor.registrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_NOTAS,
+        it: "I1: la misma nota dos veces (misma clave) deja una sola nota y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
+      },
+    },
+  },
+  anularNotaDeCredito: {
+    accion: "notas_de_credito_de_proveedor.anular",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_NOTAS,
+        it: "I2: anular dos veces la misma nota devuelve yaEstaba y la segunda no escribe ni audita",
       },
     },
   },

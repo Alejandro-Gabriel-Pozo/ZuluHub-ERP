@@ -91,6 +91,10 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
       join(import.meta.dirname, "../../migraciones", "0067_compras_diferencias.sql"),
       "utf8",
     );
+    const notas = await readFile(
+      join(import.meta.dirname, "../../migraciones", "0085_compras_notas_de_credito.sql"),
+      "utf8",
+    );
     const devoluciones = await readFile(
       join(import.meta.dirname, "../../migraciones", "0084_compras_devoluciones.sql"),
       "utf8",
@@ -99,6 +103,7 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
       ...migracion.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...ordenes.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...diferencias.matchAll(/CONSTRAINT = '(\w+)'/g),
+      ...notas.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...devoluciones.matchAll(/CONSTRAINT = '(\w+)'/g),
     ].map((m) => m[1] as string);
     // Las de nombre armado con el de la tabla (`TG_TABLE_NAME || '_inmutable'`): se expanden con las tablas que llevan ese disparador.

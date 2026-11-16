@@ -519,6 +519,7 @@ describe.skipIf(base === null)("0037 compras: la migración contra una base real
     }
     // Las migraciones posteriores que dependen de compras (N3: 0063) se revierten antes: sus tablas apuntan a las de 0037.
     const POSTERIORES = [
+      join(CARPETA_DE_MIGRACIONES, "reversiones", "0085_revertir_compras_notas_de_credito.sql"),
       join(CARPETA_DE_MIGRACIONES, "reversiones", "0084_revertir_compras_devoluciones.sql"),
       join(CARPETA_DE_MIGRACIONES, "reversiones", "0067_revertir_compras_diferencias.sql"),
       join(CARPETA_DE_MIGRACIONES, "reversiones", "0066_revertir_compras_ordenes.sql"),

@@ -3,6 +3,7 @@ import { crearLector } from "./comun";
 import { armarConsultasDeCompras } from "./compras";
 import { armarConsultasDeConciliacion } from "./conciliacion";
 import { armarConsultasDeDevoluciones } from "./devoluciones";
+import { armarConsultasDeNotasDeCredito } from "./notas-de-credito";
 import { armarConsultasDeDiferencias } from "./diferencias";
 import { armarConsultasDeFicha } from "./ficha";
 import { armarConsultasDeOrdenes } from "./ordenes";
@@ -19,6 +20,7 @@ export function crearConsultasDeCompras(d: DependenciasDeConsultasDeCompras) {
     ...armarConsultasDeConciliacion(leer),
     ...armarConsultasDeOrdenes(leer),
     ...armarConsultasDeDevoluciones(leer),
+    ...armarConsultasDeNotasDeCredito(leer),
     ...armarConsultasDeDiferencias(leer),
   };
 }

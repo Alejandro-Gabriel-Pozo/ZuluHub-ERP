@@ -19,6 +19,8 @@ export const DECLARACIONES_DE_CONSULTAS = {
   obtenerOrden: { accion: "ordenes_de_compra.ver" },
   listarDevoluciones: { accion: "devoluciones_a_proveedor.ver" },
   obtenerDevolucion: { accion: "devoluciones_a_proveedor.ver" },
+  listarNotasDeCredito: { accion: "notas_de_credito_de_proveedor.ver" },
+  obtenerNotaDeCredito: { accion: "notas_de_credito_de_proveedor.ver" },
   listarDiferencias: { accion: "diferencias_de_compra.ver" },
   obtenerTolerancias: { accion: "diferencias_de_compra.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

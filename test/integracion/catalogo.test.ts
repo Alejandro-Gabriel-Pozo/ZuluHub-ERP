@@ -1944,6 +1944,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "comprobante_de_la_ficha.tipo",
           "comprobante_de_proveedor.clase",
           "comprobante_de_proveedor.clave_idempotencia",
+          "comprobante_de_proveedor.comprobante_asociado_id",
           "comprobante_de_proveedor.credito_fiscal_computable",
           "comprobante_de_proveedor.empresa_id",
           "comprobante_de_proveedor.es_atajo",

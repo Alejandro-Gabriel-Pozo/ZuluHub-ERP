@@ -1,6 +1,6 @@
 -- 0084_compras_devoluciones (número provisorio): compras N4, DEVOLUCIÓN DE MERCADERÍA AL PROVEEDOR (E9 §3.8; compras.md Anexo C.5 y D-34). Decisiones del dueño: devolver mercadería NO es devolver dinero
 -- (15/11/2026: la nota de crédito y el saldo a favor son otros hechos); el motivo de la devolución se ELIGE de la lista del sistema de motivos de rechazo (`MOTIVOS_DE_RECHAZO`, 16/11/2026), sin texto libre; cualquier detalle va en el remito de devolución; quién devuelve y anula:
--- gerente y administrador (SUPUESTO del ingeniero, a confirmar; los permisos viven en el catálogo, no acá).
+-- gerente y administrador (SUPUESTO del ingeniero, DEC-0712, a confirmar; los permisos viven en el catálogo, no acá).
 -- ADITIVA: una fila sembrada en `motivo_de_movimiento` (tabla global de solo inserción) y dos tablas nuevas; no toca datos ni columnas existentes.
 -- Sin SECURITY DEFINER; toda función fija `search_path = pg_catalog, public, pg_temp`. Nadie recibe DELETE ni TRUNCATE. INSERT y UPDATE por columna. RLS activa y FORZADA, una política por comando. Toda clave foránea
 -- entre tablas de empresa es COMPUESTA. Reversión: `migraciones/reversiones/0084_revertir_compras_devoluciones.sql` (FRENA si hay devoluciones; el motivo sembrado NO se borra: la tabla de motivos es de solo inserción).

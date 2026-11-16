@@ -380,7 +380,7 @@ describe.skipIf(base === null)("compras N4: devoluciones al proveedor", () => {
       [{ lineas: [] }, "RENGLONES_INVALIDOS"],
       [{ lineas: [{ productoId: m.harina.producto, cantidad: "0" }] }, "RENGLONES_INVALIDOS"],
       [{ remito: { numero: "1", fecha: "mañana" } }, "FECHA_INVALIDA"],
-      [{ hechoEn: new Date(Date.now() + 86_400_000) }, "FECHA_INVALIDA"],
+      [{ hechoEn: new Date(m.e.gerente.ahora.getTime() + 86_400_000) }, "FECHA_INVALIDA"],
     ];
     for (const [cambio, esperado] of casos) {
       const r = await c.casos.devolverAlProveedor(m.e.gerente, pedido(m, "100", cambio));

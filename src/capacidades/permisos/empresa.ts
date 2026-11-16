@@ -237,6 +237,10 @@ export const PERMISOS_DE_EMPRESA = {
   "devoluciones_a_proveedor.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "devoluciones_a_proveedor.registrar": ["GERENTE", "ADMINISTRADOR"],
   "devoluciones_a_proveedor.anular": ["GERENTE", "ADMINISTRADOR"],
+  // Notas de crédito del proveedor (N4, comprobante sin saldo): cargarlas y anularlas es de quien administra o gerencia; verlas, de los tres roles. SUPUESTO a confirmar por el dueño (16/11/2026, DEC-0713).
+  "notas_de_credito_de_proveedor.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+  "notas_de_credito_de_proveedor.registrar": ["GERENTE", "ADMINISTRADOR"],
+  "notas_de_credito_de_proveedor.anular": ["GERENTE", "ADMINISTRADOR"],
   // Diferencias de la conciliación de tres vías (N4): verlas y resolverlas es de quien administra o gerencia. SUPUESTO a confirmar por el dueño (16/11/2026, DEC-0710).
   "diferencias_de_compra.ver": ["GERENTE", "ADMINISTRADOR"],
   "diferencias_de_compra.resolver": ["GERENTE", "ADMINISTRADOR"],

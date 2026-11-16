@@ -15,6 +15,7 @@ import {
 } from "./fiscal-apoyo";
 import type { BaseDePruebas } from "./global";
 import { esperarBloqueo } from "./sesiones";
+import { nombreUnico } from "./unicos";
 import {
   articuloDeBase,
   depositoDeBase,
@@ -268,7 +269,7 @@ describe.skipIf(base === null)("0084 compras N4: devoluciones contra una base re
         "select id from valor_de_lista where lista = 'MARCAS_DE_TARJETA' limit 1",
       )
     ).rows[0]?.id as string;
-    const nombre = `Motivo ${randomUUID().slice(0, 8)}`;
+    const nombre = nombreUnico("Motivo");
     const nuevo = (
       await dueno.query<{ id: string }>(
         "insert into valor_de_lista (lista, nombre) values ('MOTIVOS_DE_RECHAZO', $1) returning id",

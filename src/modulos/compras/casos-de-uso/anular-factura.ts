@@ -44,6 +44,7 @@ export function armarAnularFactura(dependencias: DependenciasDeCompras) {
           );
           if (
             comprobante === null ||
+            comprobante.clase !== "FACTURA" ||
             !esNivelDeRecepcionSeparada(comprobante.nivel) ||
             comprobante.esAtajo
           ) {

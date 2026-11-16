@@ -160,6 +160,7 @@ export function crearRepositorioDeLecturasSeparadas(
           ),
         ])
         .where("c.empresa_id", "=", empresa)
+        .where("c.clase", "=", "FACTURA")
         .where("c.nivel", "in", ["RECEPCION_SEPARADA", "TRES_VIAS"])
         .where("c.es_atajo", "=", false);
       if (filtro.proveedorId !== null)

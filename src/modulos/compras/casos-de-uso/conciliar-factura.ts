@@ -76,6 +76,7 @@ export function armarConciliarFactura(dependencias: DependenciasDeCompras) {
           );
           if (
             comprobante === null ||
+            comprobante.clase !== "FACTURA" ||
             !esNivelDeRecepcionSeparada(comprobante.nivel) ||
             comprobante.esAtajo
           ) {

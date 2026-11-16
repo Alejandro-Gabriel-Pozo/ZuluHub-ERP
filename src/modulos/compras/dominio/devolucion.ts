@@ -12,6 +12,7 @@ import { MAXIMO_DE_RENGLONES_DE_UNA_COMPRA } from "./registrar-compra";
  * obligatorio y cerrado: sin texto libre), de UN depósito, con el número y la fecha del remito de devolución como dato opcional. Devolver mercadería NO devuelve dinero ni crea una
  * nota de crédito: son otros hechos. Las cantidades van en la unidad base del producto. Pura: sin reloj ni azar.
  */
+// fuente-unica: ajeno — el largo del número del remito de devolución (columna de 0084), un dato propio de compras que coincide por casualidad con otros límites de 40
 export const LARGO_MAXIMO_DEL_REMITO_DE_DEVOLUCION = 40;
 
 export type RemitoDeDevolucion = Readonly<{ numero: string; fecha: string }>;
