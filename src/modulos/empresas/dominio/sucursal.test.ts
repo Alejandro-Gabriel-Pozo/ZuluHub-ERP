@@ -81,7 +81,13 @@ describe("nombreDeSucursalValido", () => {
   });
 
   it("acepta letras con acento, ñ, símbolos y números", () => {
-    for (const nombre of ["Sucursal Ñandú", "Local 3 – Norte", "Éxito & Cía.", "Local #2"]) {
+    for (const nombre of [
+      "Sucursal Ñandú",
+      "Local 3 – Norte",
+      "Éxito & Cía.",
+      "Local #2",
+      "2026",
+    ]) {
       expect(nombreDeSucursalValido(nombre)).toEqual({ ok: true, valor: nombre });
     }
   });
