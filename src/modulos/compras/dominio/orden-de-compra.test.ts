@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { huellaDeLaOrden, leerOrden } from "./orden-de-compra";
+import { huellaDeLaOrden, leerOrden, leerVinculos } from "./orden-de-compra";
 
 const PROVEEDOR = "00000000-0000-4000-8000-0000000000a1";
 const SUCURSAL = "00000000-0000-4000-8000-0000000000b1";
@@ -140,5 +140,56 @@ describe("huellaDeLaOrden", () => {
       leida({ lineas: [{ productoId: P1, cantidad: "10", precio: null }] }),
     ].map(huellaDeLaOrden);
     expect(new Set([base, ...otras]).size).toBe(otras.length + 1);
+  });
+});
+
+describe("leerVinculos", () => {
+  const O = "00000000-0000-4000-8000-0000000000c1";
+  const v = (extra: Record<string, unknown> = {}) => ({
+    linea: 1,
+    ordenId: O,
+    lineaDeOrden: 2,
+    ...extra,
+  });
+
+  it("lee los vínculos con la confirmación en falso por defecto", () => {
+    expect(leerVinculos([v(), v({ linea: 2, confirmoExceso: true })], 2)).toEqual({
+      ok: true,
+      valor: [
+        { linea: 1, ordenId: O, lineaDeOrden: 2, confirmoExceso: false },
+        { linea: 2, ordenId: O, lineaDeOrden: 2, confirmoExceso: true },
+      ],
+    });
+    expect(leerVinculos([], 1)).toEqual({ ok: true, valor: [] });
+  });
+
+  it("rechaza lo que no tiene la forma: lista, objeto, ids, números y confirmación booleana", () => {
+    for (const malo of [
+      "x",
+      null,
+      [null],
+      [7],
+      [v({ ordenId: "x" })],
+      [v({ ordenId: 7 })],
+      [v({ linea: "1" })],
+      [v({ linea: 1.5 })],
+      [v({ lineaDeOrden: 0 })],
+      [v({ lineaDeOrden: "2" })],
+      [v({ confirmoExceso: "si" })],
+      Array.from({ length: 10_000 }, (_, i) => v({ linea: i + 1 })),
+    ]) {
+      expect(leerVinculos(malo, 9_999)).toEqual({ ok: false, error: "VINCULO_INVALIDO" });
+    }
+  });
+
+  it("cada vínculo apunta a una línea que existe y ninguna se repite", () => {
+    expect(leerVinculos([v({ linea: 0 })], 2)).toEqual({ ok: false, error: "LINEA_NO_ENCONTRADA" });
+    expect(leerVinculos([v({ linea: 3 })], 2)).toEqual({ ok: false, error: "LINEA_NO_ENCONTRADA" });
+    expect(leerVinculos([v(), v()], 2)).toEqual({ ok: false, error: "LINEA_REPETIDA" });
+  });
+
+  it("acepta el tope de líneas", () => {
+    const lista = Array.from({ length: 9_999 }, (_, i) => v({ linea: i + 1 }));
+    expect(leerVinculos(lista, 9_999).ok).toBe(true);
   });
 });

@@ -27,6 +27,38 @@ const base: PedidoDeRecepcion = {
   controles: [],
 };
 
+describe("huellaDeLaRecepcion: vínculos con la orden", () => {
+  const O = "00000000-0000-4000-8000-0000000000c1";
+  const un = (extra: Record<string, unknown> = {}) => ({
+    linea: 1,
+    ordenId: O,
+    lineaDeOrden: 1,
+    confirmoExceso: false,
+    ...extra,
+  });
+
+  it("sin vínculos (o vacío) la huella es la de siempre", () => {
+    expect(huellaDeLaRecepcion({ ...base, vinculos: [] })).toBe(huellaDeLaRecepcion(base));
+  });
+
+  it("cada dato del vínculo cuenta y el orden de la lista no", () => {
+    const h = huellaDeLaRecepcion({ ...base, vinculos: [un()] });
+    expect(h).not.toBe(huellaDeLaRecepcion(base));
+    for (const otro of [
+      un({ linea: 2 }),
+      un({ ordenId: "00000000-0000-4000-8000-0000000000c2" }),
+      un({ lineaDeOrden: 2 }),
+      un({ confirmoExceso: true }),
+    ]) {
+      expect(huellaDeLaRecepcion({ ...base, vinculos: [otro] })).not.toBe(h);
+    }
+    const dos = [un(), un({ linea: 2 })];
+    expect(huellaDeLaRecepcion({ ...base, vinculos: [...dos].reverse() })).toBe(
+      huellaDeLaRecepcion({ ...base, vinculos: dos }),
+    );
+  });
+});
+
 describe("esNivelDeRecepcionSeparada", () => {
   it("solo N3 y N4", () => {
     expect(NIVELES_DE_COMPRA.filter(esNivelDeRecepcionSeparada)).toEqual([

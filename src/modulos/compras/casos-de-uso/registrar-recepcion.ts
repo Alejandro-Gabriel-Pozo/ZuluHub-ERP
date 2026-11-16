@@ -3,6 +3,8 @@ import { sucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { crearDirectorioDePartes } from "../../clientes/publico";
 import { leerControles } from "../dominio/control-de-recepcion";
+import { leerVinculos } from "../dominio/orden-de-compra";
+import { exigirTresVias } from "./nivel-tres-vias";
 import { decidirPorHuella } from "../dominio/huella";
 import { esUuid } from "../dominio/identificadores";
 import { leerRemito, leerRenglonesDeCompra, type Remito } from "../dominio/registrar-compra";
@@ -27,6 +29,8 @@ export type EntradaDeRegistrarRecepcion = Omit<
   Readonly<{
     /** El control de la mercadería por línea (`dominio/control-de-recepcion.ts`); una línea sin control = «no se constató». */
     controles?: unknown;
+    /** N4: contra qué línea de qué orden pedida se recibe cada línea (`dominio/orden-de-compra.ts`); sin vínculos, no es contra una orden. */
+    contraOrden?: unknown;
   }>;
 
 export type SalidaDeRegistrarRecepcion = Readonly<{
@@ -66,6 +70,8 @@ export function armarRegistrarRecepcion(dependencias: DependenciasDeCompras) {
     if (!renglones.ok) return renglones;
     const controles = leerControles(entrada.controles ?? [], renglones.valor.length);
     if (!controles.ok) return controles;
+    const vinculos = leerVinculos(entrada.contraOrden ?? [], renglones.valor.length);
+    if (!vinculos.ok) return vinculos;
     const huella = huellaDeLaRecepcion({
       sucursalId: entrada.sucursalId,
       proveedorId: entrada.proveedorId,
@@ -73,6 +79,7 @@ export function armarRegistrarRecepcion(dependencias: DependenciasDeCompras) {
       remito,
       renglones: renglones.valor,
       controles: controles.valor,
+      vinculos: vinculos.valor,
     });
 
     return traducir(
@@ -93,6 +100,22 @@ export function armarRegistrarRecepcion(dependencias: DependenciasDeCompras) {
           // El nivel y la perilla: solo N3 y N4, y solo si el plan los incluye (bajar de plan no toca lo cargado, pero no se carga más).
           const nivel = await exigirNivelSeparado(tx, contexto);
           if (!nivel.ok) return nivel;
+          // Recibir contra una orden es de N4: pide el nivel y la perilla de tres vías (el vínculo solo se crea acá, nunca después).
+          if (vinculos.valor.length > 0) {
+            const tresVias = await exigirTresVias(tx, contexto);
+            if (!tresVias.ok) return tresVias;
+            for (const ordenId of new Set(vinculos.valor.map((v) => v.ordenId))) {
+              if ((await tx.ordenesDeCompra.obtener(empresaId, ordenId)) === null) {
+                return err("ORDEN_NO_ENCONTRADA");
+              }
+              // La línea de la orden tiene que existir (la base la comprobaría tarde y con otro motivo).
+              const lineas = await tx.ordenesDeCompra.lineasDe(empresaId, ordenId);
+              const faltante = vinculos.valor.some(
+                (v) => v.ordenId === ordenId && !lineas.some((l) => l.numero === v.lineaDeOrden),
+              );
+              if (faltante) return err("ORDEN_NO_ENCONTRADA");
+            }
+          }
 
           // Repetición: por la clave (el mismo gesto) y por el remito (el primer hecho manda, aunque cambie la clave).
           const repetida = await repeticion(
@@ -162,6 +185,7 @@ export function armarRegistrarRecepcion(dependencias: DependenciasDeCompras) {
           }));
           await tx.recepciones.insertarLineas(empresaId, recepcionId, guardadas);
           await tx.recepcionesSeparadas.insertarControles(empresaId, recepcionId, controles.valor);
+          await tx.ordenesDeCompra.insertarVinculos(empresaId, recepcionId, vinculos.valor);
           await tx.auditoria.registrar({
             empresaId,
             actorPersonaId: persona,
@@ -175,6 +199,7 @@ export function armarRegistrarRecepcion(dependencias: DependenciasDeCompras) {
               estado: "PENDIENTE",
               renglones: lineas.length,
               controles: controles.valor.length,
+              ordenes: [...new Set(vinculos.valor.map((v) => v.ordenId))],
             },
           });
           return ok({ recepcionId, yaExistia: false });

@@ -1,4 +1,5 @@
 import type { ControlDeLinea } from "./control-de-recepcion";
+import type { VinculoDeOrden } from "./orden-de-compra";
 import { leerCantidad } from "./decimal";
 import { huellaDeComando } from "./huella";
 import type { NivelDeCompra } from "./niveles";
@@ -20,6 +21,8 @@ export type PedidoDeRecepcion = Readonly<{
   remito: Remito | null;
   renglones: readonly RenglonDeCompra[];
   controles: readonly ControlDeLinea[];
+  /** Contra qué líneas de qué órdenes se recibe (N4); vacío o ausente si no es contra una orden (la huella no cambia). */
+  vinculos?: readonly VinculoDeOrden[];
 }>;
 
 /**
@@ -34,9 +37,19 @@ export function huellaDeLaRecepcion(pedido: PedidoDeRecepcion): string {
   const controles = [...pedido.controles]
     .sort((a, b) => a.linea - b.linea)
     .map((c) => [c.linea, c.condicion, c.cantidadSegunRemito, c.observacion, c.temperaturaEnC]);
+  const vinculos = [...(pedido.vinculos ?? [])]
+    .sort((a, b) => a.linea - b.linea)
+    .map((v) => [v.linea, v.ordenId, v.lineaDeOrden, v.confirmoExceso]);
   return huellaDeComando(
     "registrar_recepcion",
-    [pedido.sucursalId, pedido.proveedorId, pedido.hechoEn, ...remito, JSON.stringify(controles)],
+    [
+      pedido.sucursalId,
+      pedido.proveedorId,
+      pedido.hechoEn,
+      ...remito,
+      JSON.stringify(controles),
+      ...(vinculos.length === 0 ? [] : [JSON.stringify(vinculos)]),
+    ],
     pedido.renglones.map((r) => [
       r.productoId,
       r.presentacionId,

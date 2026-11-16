@@ -1,6 +1,10 @@
 import { sql, type Kysely } from "kysely";
 import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
-import { ESTADOS_DE_ORDEN, type EstadoDeOrden } from "../dominio/orden-de-compra";
+import {
+  ESTADOS_DE_ORDEN,
+  type EstadoDeOrden,
+  type VinculoDeOrden,
+} from "../dominio/orden-de-compra";
 import type { ComprasDb } from "./esquema";
 import { esUuid } from "./filas";
 
@@ -115,6 +119,12 @@ export interface RepositorioDeOrdenes {
   ): Promise<void>;
   cambiarEstado(empresa: EmpresaId, id: string, cambio: CambioDeEstadoDeOrden): Promise<void>;
   saldosDe(empresa: EmpresaId, ordenId: string): Promise<readonly SaldoDeOrden[]>;
+  /** «Esta línea recibida es contra esta línea de la orden»: la base suma lo recibido al saldo de la orden (con el tope del control) en esta misma transacción. */
+  insertarVinculos(
+    empresa: EmpresaId,
+    recepcionId: string,
+    vinculos: readonly VinculoDeOrden[],
+  ): Promise<void>;
   /** De la más nueva a la más vieja (`creado_en`, `id`), con el filtro y el alcance de sucursales. */
   listar(
     empresa: EmpresaId,
@@ -297,6 +307,22 @@ export function crearRepositorioDeOrdenes(db: Kysely<ComprasDb>): RepositorioDeO
           .set({ estado: "ANULADA", anulada_por: cambio.por, motivo_de_anulacion: cambio.motivo })
           .execute();
       }
+    },
+    async insertarVinculos(empresa, recepcionId, vinculos) {
+      if (vinculos.length === 0) return;
+      await db
+        .insertInto("linea_de_recepcion_de_orden")
+        .values(
+          vinculos.map((v) => ({
+            empresa_id: empresa,
+            recepcion_id: recepcionId,
+            linea: v.linea,
+            orden_id: v.ordenId,
+            linea_de_orden: v.lineaDeOrden,
+            confirmo_exceso: v.confirmoExceso,
+          })),
+        )
+        .execute();
     },
     async listar(empresa, filtro) {
       if (filtro.sucursales !== "TODAS" && filtro.sucursales.length === 0) return [];

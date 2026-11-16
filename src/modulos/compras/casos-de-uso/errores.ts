@@ -9,6 +9,7 @@ import type { ErrorDeFactura } from "../dominio/factura";
 import type { ErrorDeFacturaSeparada } from "../dominio/conciliacion-separada";
 import type { ErrorDeControl } from "../dominio/control-de-recepcion";
 import type { ErrorDeCorreccion } from "../dominio/correccion";
+import type { ErrorDeVinculo } from "../dominio/orden-de-compra";
 import type { ErrorDePago, ErrorDeSalidaDeCaja } from "../dominio/pago";
 import type { ErrorDeLinea } from "../dominio/calcular-linea";
 
@@ -84,6 +85,11 @@ export const CODIGOS_DE_ERROR_DE_COMPRAS = [
   "ORDEN_NO_ESTA_PEDIDA",
   "ORDEN_YA_CERRADA",
   "ORDEN_CON_RECEPCIONES",
+  "ORDEN_DE_OTRO_PROVEEDOR",
+  "LINEA_DE_ORDEN_DE_OTRO_PRODUCTO",
+  "LINEA_DE_ORDEN_RETIRADA",
+  "RECEPCION_EXCEDE_LA_ORDEN",
+  "RECEPCION_EXCEDE_LA_ORDEN_SIN_CONFIRMAR",
 ] as const;
 export type CodigoDeErrorDeCompras = (typeof CODIGOS_DE_ERROR_DE_COMPRAS)[number];
 
@@ -100,6 +106,7 @@ export type ErrorDeCompras =
   | ErrorDeSalidaDeCaja
   | ErrorDeCorreccion
   | ErrorDeControl
+  | ErrorDeVinculo
   | ErrorDeFacturaSeparada
   | ErrorDeStock
   | ErrorDeClientes

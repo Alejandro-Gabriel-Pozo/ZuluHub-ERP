@@ -104,3 +104,53 @@ export function huellaDeLaOrden(orden: OrdenPedida): string {
     orden.lineas.map((l) => [l.productoId, l.cantidad, l.precio]),
   );
 }
+
+/** «Esta línea recibida es contra esta línea de la orden» (N4-2): la línea de la recepción (por posición), la orden y la línea de la orden. */
+export type VinculoDeOrden = Readonly<{
+  linea: number;
+  ordenId: string;
+  lineaDeOrden: number;
+  /** La confirmación explícita de pasarse de lo pedido cuando el control está en AVISAR. */
+  confirmoExceso: boolean;
+}>;
+
+export type ErrorDeVinculo = "VINCULO_INVALIDO" | "LINEA_NO_ENCONTRADA" | "LINEA_REPETIDA";
+
+/**
+ * Lee los vínculos de una recepción con la orden: una lista (con tope) donde cada línea recibida (1 a `lineasDeLaRecepcion`) apunta como mucho a UNA línea de una orden.
+ * Que la orden exista, esté pedida, sea del mismo proveedor y producto lo comprueba la base al guardar.
+ */
+export function leerVinculos(
+  valor: unknown,
+  lineasDeLaRecepcion: number,
+): Resultado<readonly VinculoDeOrden[], ErrorDeVinculo> {
+  if (!Array.isArray(valor) || valor.length > MAXIMO_DE_RENGLONES_DE_UNA_COMPRA) {
+    return err("VINCULO_INVALIDO");
+  }
+  const vistas = new Set<number>();
+  const vinculos: VinculoDeOrden[] = [];
+  for (const crudo of valor as readonly unknown[]) {
+    const v = comoRegistro(crudo);
+    const confirmo = v["confirmoExceso"] ?? false;
+    if (
+      !Number.isInteger(v["linea"]) ||
+      !Number.isInteger(v["lineaDeOrden"]) ||
+      (v["lineaDeOrden"] as number) < 1 ||
+      !esUuid(v["ordenId"] as string) ||
+      typeof confirmo !== "boolean"
+    ) {
+      return err("VINCULO_INVALIDO");
+    }
+    const linea = v["linea"] as number;
+    if (linea < 1 || linea > lineasDeLaRecepcion) return err("LINEA_NO_ENCONTRADA");
+    if (vistas.has(linea)) return err("LINEA_REPETIDA");
+    vistas.add(linea);
+    vinculos.push({
+      linea,
+      ordenId: v["ordenId"] as string,
+      lineaDeOrden: v["lineaDeOrden"] as number,
+      confirmoExceso: confirmo,
+    });
+  }
+  return ok(vinculos);
+}
