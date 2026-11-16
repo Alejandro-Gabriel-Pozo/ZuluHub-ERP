@@ -48,8 +48,8 @@ const CLASIFICACION: Clasificacion = {
   soloEnPullRequest: gate.SOLO_EN_PULL_REQUEST,
   // `mutacion` es la matriz por grupos: puede quedar `skipped` solo si el plan dijo `hay == false`
   // (regla de `mutacionAceptable` en evaluar-gate.cjs; se verifica abajo con `evaluarGate`).
-  // `estabilidad` (12 copias de la integración) puede quedar `skipped` solo en un pull request y si el plan
-  // dijo `estabilidad == "false"` (regla de `estabilidadAceptable`; `EVENTO` se verifica abajo).
+  // `estabilidad` (12 copias de la integración) puede quedar `skipped` en un pull request si el plan
+  // dijo `estabilidad == "false"` (regla de `estabilidadAceptable`) y en push a main (`SALTABLES_EN_PUSH`; `EVENTO` se verifica abajo).
   tratadosAparte: ["mutacion", "estabilidad"],
   gate: "gate",
 };
@@ -71,10 +71,15 @@ const SI_DE_JOB_ESPERADO: Readonly<Record<string, { si: string; motivo: string }
     motivo:
       "revisa lo que un pull request agrega; en push a main queda skipped (SOLO_EN_PULL_REQUEST)",
   },
-  estabilidad: {
-    si: "github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true'",
+  "mutacion-plan": {
+    si: "github.event_name != 'push'",
     motivo:
-      "corre siempre en push a main y en la nocturna; en un pull request, solo si el plan dice que el cambio puede afectar a la integración (el Gate acepta el salto solo así)",
+      "en push a main no corre (corre solo lo rápido; el Gate acepta el plan, la mutación y Estabilidad saltados solo en push: SALTABLES_EN_PUSH); en la nocturna, a pedido y en un pull request corre siempre",
+  },
+  estabilidad: {
+    si: "github.event_name != 'push' && (github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true')",
+    motivo:
+      "corre siempre en la nocturna y a pedido, nunca en push a main (corrió en su pull request); en un pull request, solo si el plan dice que el cambio puede afectar a la integración (el Gate acepta el salto solo así)",
   },
   mutacion: {
     si: "needs.mutacion-plan.outputs.hay == 'true'",
@@ -479,12 +484,13 @@ const CASOS: Caso[] = [
   ...CLASIFICACION.obligatorios.map((id): Caso => ({
     nombre: `agregar if: false al job obligatorio «${id}»`,
     alterar: (t) => conPropiedad(t, id, "if: false"),
-    esperado: [`«${id}»`, "if: false"],
+    // `mutacion-plan` ya tiene un `if` permitido (no corre en push): un segundo `if` lo cambia y se dice «debe ser».
+    esperado: [`«${id}»`, id === "mutacion-plan" ? "debe ser" : "if: false"],
   })),
   {
     nombre: "agregar un if que saltea al job «mutacion-plan» con la forma del de dependencias",
     alterar: (t) => conPropiedad(t, "mutacion-plan", "if: github.event_name == 'pull_request'"),
-    esperado: ["«mutacion-plan»", "no debería"],
+    esperado: ["«mutacion-plan»", "debe ser"],
   },
   {
     nombre: "dejar «dependencias» siempre saltado (if: false)",
@@ -510,12 +516,39 @@ const CASOS: Caso[] = [
     esperado: ["«estabilidad»", "debe ser"],
   },
   {
-    nombre: "«estabilidad» se saltea en push a main (el if pierde la rama de «no es pull request»)",
+    nombre:
+      "«estabilidad» no corre en la nocturna ni a pedido (el if pierde la rama de «no es pull request»)",
     alterar: (t) =>
       enJob(t, "estabilidad", (b) =>
         reemplazarUnico(b, "github.event_name != 'pull_request' || ", ""),
       ),
     esperado: ["«estabilidad»", "debe ser"],
+  },
+  {
+    nombre: "«estabilidad» vuelve a correr en push a main (el if pierde la exclusión de push)",
+    alterar: (t) =>
+      enJob(t, "estabilidad", (b) =>
+        reemplazarUnico(
+          b,
+          /^ {4}if: .*\n/m,
+          "    if: github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true'\n",
+        ),
+      ),
+    esperado: ["«estabilidad»", "debe ser"],
+  },
+  {
+    nombre: "«mutacion-plan» vuelve a correr en push a main (pierde su if)",
+    alterar: (t) => enJob(t, "mutacion-plan", (b) => reemplazarUnico(b, /^ {4}if: .*\n/m, "")),
+    esperado: ["«mutacion-plan»", "debe ser"],
+  },
+  {
+    nombre:
+      "«mutacion-plan» solo en pull request (la nocturna y a pedido se quedarían sin mutación)",
+    alterar: (t) =>
+      enJob(t, "mutacion-plan", (b) =>
+        reemplazarUnico(b, /^ {4}if: .*\n/m, "    if: github.event_name == 'pull_request'\n"),
+      ),
+    esperado: ["«mutacion-plan»", "debe ser"],
   },
   {
     nombre: "ampliar el if de «mutacion» para que además se saltee",
