@@ -50,7 +50,7 @@ export type SalidaDeCorregirCompra = Readonly<{
 }>;
 
 /** La cuenta de la línea guardada con el precio dado (la misma `calcularLinea` del alta): importe y costo por unidad de stock. */
-async function costoDeLaLinea(
+export async function costoDeLaLinea(
   tx: TxDeCompras,
   contexto: ContextoOperativo,
   linea: LineaDeRecepcion,
@@ -95,7 +95,7 @@ async function costoDeLaLinea(
 }
 
 /** El IVA que entra al costo de una línea ya registrada: sale de la línea de la factura VIGENTE de la compra que la cubre; sin factura vigente, ninguno. */
-async function alicuotaDelCosto(
+export async function alicuotaDelCosto(
   tx: TxDeCompras,
   contexto: ContextoOperativo,
   dependencias: DependenciasDeCompras,

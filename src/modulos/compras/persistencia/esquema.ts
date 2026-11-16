@@ -70,6 +70,8 @@ export type ComprasDb = {
     ultimo_costo_por_unidad_de_stock: string;
     ultima_compra_id: string;
     ultima_compra_en: Date;
+    /** `false` cuando se anuló la última compra que la formó y no queda otra vigente (0058): no se borra, la ficha no la muestra. */
+    vigente: Generated<boolean>;
     version: Generated<number>;
   };
   recepcion: {
