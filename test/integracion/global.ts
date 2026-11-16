@@ -11,7 +11,7 @@ import {
 import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
 import { sembrarAdminsDePrueba } from "./admins-de-prueba";
 import { sembrarMarcaPrincipalDePrueba } from "./marcas-de-prueba";
-import { OPCIONES_DE_BASE } from "./opciones-de-base";
+import { OPCIONES_DE_BASE, fijarLaZonaDeLaBase } from "./opciones-de-base";
 
 /**
  * Base compartida de las pruebas de integración: se crea una base descartable, se migra, se les da
@@ -98,6 +98,7 @@ export default async function setup(project: TestProject): Promise<() => Promise
   const admin = new pg.Client({ connectionString: urlAdmin });
   await admin.connect();
   await admin.query(`CREATE DATABASE ${nombre} ${OPCIONES_DE_BASE}`);
+  await fijarLaZonaDeLaBase(admin, nombre);
 
   const urlDueno = conBase(urlAdmin, nombre);
   await aplicarMigraciones(urlDueno, join(import.meta.dirname, "../../migraciones"));

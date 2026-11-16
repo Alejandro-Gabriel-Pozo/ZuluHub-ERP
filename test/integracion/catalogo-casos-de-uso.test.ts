@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
-import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
+import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
+import { PERMISOS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import type { GrupoPedido } from "../../src/modulos/catalogo/publico";
 import {
   CONTEXTO_CON_AHORA,
@@ -1753,9 +1754,15 @@ describe.skipIf(base === null)(
         expect((await c.casos.cambiarPrecio(e.administrador, pedido({}))).ok).toBe(true);
       });
 
-      it("todo nace cerrado: con el catálogo real (`en_desarrollo`) ningún rol hace nada, ni siquiera mirar", async () => {
+      it("todo nace cerrado: con `catalogo` en desarrollo (en el catálogo real es disponible, DEC-0463) ningún rol hace nada, ni siquiera mirar", async () => {
         const cerrado = await montarCatalogo(base as NonNullable<typeof base>, {
-          reglas: REGLAS_DE_EMPRESA,
+          reglas: {
+            catalogo: {
+              ...CATALOGO_DE_MODULOS,
+              catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "en_desarrollo" },
+            },
+            permisos: PERMISOS_DE_EMPRESA,
+          },
           conexiones: 4,
         });
         try {

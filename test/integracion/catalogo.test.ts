@@ -826,6 +826,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "pedernal_app:oferta_de_proveedor.ultimo_costo_por_unidad_de_stock",
           "pedernal_app:oferta_de_proveedor.ultimo_precio",
           "pedernal_app:oferta_de_proveedor.unidad_de_precio_id",
+          "pedernal_app:oferta_de_proveedor.vigente",
           "pedernal_app:pago_de_comprobante.anulado_en",
           "pedernal_app:pago_de_comprobante.anulado_por",
           "pedernal_app:pago_de_comprobante.estado",

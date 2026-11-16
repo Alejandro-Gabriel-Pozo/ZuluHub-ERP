@@ -30,7 +30,8 @@ export type AltaDeProducto = Readonly<{
 
 export type FiltroDeProductos = Readonly<{
   texto?: string | undefined;
-  claseDeUso?: ClaseDeUso | undefined;
+  /** Una clase o varias; una lista vacía no trae nada (fail closed). */
+  claseDeUso?: ClaseDeUso | readonly ClaseDeUso[] | undefined;
   faltaCompletar?: boolean | undefined;
   activo?: boolean | undefined;
   /** Solo los productos de esa sección de la carta (de la empresa: otra empresa, un id inexistente o que no es un uuid dan una lista vacía). */
@@ -236,8 +237,12 @@ export function crearRepositorioDeProductos(db: Kysely<CatalogoDb>): Repositorio
           sql<boolean>`nombre_clave like ${comoPrefijo(filtro.texto.toLowerCase())} escape '\\'`,
         );
       }
-      if (filtro.claseDeUso !== undefined)
-        consulta = consulta.where("clase_de_uso", "=", filtro.claseDeUso);
+      if (filtro.claseDeUso !== undefined) {
+        const clases =
+          typeof filtro.claseDeUso === "string" ? [filtro.claseDeUso] : filtro.claseDeUso;
+        if (clases.length === 0) return [];
+        consulta = consulta.where("clase_de_uso", "in", clases);
+      }
       if (filtro.faltaCompletar !== undefined)
         consulta = consulta.where("falta_completar", "=", filtro.faltaCompletar);
       if (filtro.activo !== undefined) consulta = consulta.where("activo", "=", filtro.activo);

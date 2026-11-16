@@ -154,7 +154,7 @@ export const CATALOGO_DE_MODULOS = {
    * ediciones, reactivar, cambiar un precio, publicar, mover stock) es `CREA_AMPLIA`.
    */
   catalogo: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["administracion"],
     usaSiExiste: [],
@@ -250,7 +250,7 @@ export const CATALOGO_DE_MODULOS = {
    * Elegir los datos opcionales de cada medio es `medios_de_pago.editar` (SUPUESTO (DEC-0056) S-2).
    */
   caja: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["administracion"],
     usaSiExiste: ["facturacion"],
@@ -310,7 +310,7 @@ export const CATALOGO_DE_MODULOS = {
    * clientes porque no existen (cruce X3, SUPUESTO (DEC-0058) S-1).
    */
   ventas: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["administracion", "catalogo", "caja"],
     usaSiExiste: ["facturacion", "stock"],

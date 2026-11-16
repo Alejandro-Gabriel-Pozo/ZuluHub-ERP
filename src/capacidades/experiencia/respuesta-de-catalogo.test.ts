@@ -12,6 +12,7 @@ describe("códigos públicos de la ficha de un producto", () => {
     expect(CLAVES_DE_ERRORES_DE_CATALOGO).toEqual({
       CATALOGO_NOMBRE_REPETIDO: "catalogo.error.nombre_repetido",
       CATALOGO_CODIGO_REPETIDO: "catalogo.error.codigo_repetido",
+      CATALOGO_SECCION_REPETIDA: "catalogo.error.seccion_repetida",
       CATALOGO_CODIGO_DE_BARRAS_INVALIDO: "catalogo.error.codigo_de_barras_invalido",
       CATALOGO_ELEGI_LA_ALICUOTA: "catalogo.error.elegi_la_alicuota",
       CATALOGO_FALTA_EL_NOMBRE: "catalogo.error.falta_el_nombre",
@@ -21,6 +22,10 @@ describe("códigos públicos de la ficha de un producto", () => {
     });
     expect(CATALOGO_DE_TEXTOS["catalogo.error.nombre_repetido"].porDefecto).toBe(
       "Ya existe un producto con ese nombre",
+    );
+    // productos-secciones.html:333 (`sec.duplicada`), aprobado por el dueño el 12/11/2026 (pedido del orquestador del 15/11/2026).
+    expect(CATALOGO_DE_TEXTOS["catalogo.error.seccion_repetida"].porDefecto).toBe(
+      "Ya existe una sección con ese nombre",
     );
     expect(CATALOGO_DE_TEXTOS["catalogo.error.codigo_repetido"].porDefecto).toBe(
       "Ya existe un producto con ese código",
