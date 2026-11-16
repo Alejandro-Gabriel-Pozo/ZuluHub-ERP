@@ -3,6 +3,7 @@ import { join } from "node:path";
 import pg from "pg";
 import { describe, expect, inject, it, vi } from "vitest";
 import { crearBaseAparte } from "./entorno";
+import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
 import { valorDe } from "./catalogo-apoyo";
 import { empresaConPortal, montarPortal, nuevoId } from "./portal-apoyo";
 import type { BaseDePruebas } from "./global";
@@ -130,6 +131,16 @@ describe.skipIf(base === null)("migraciones 0078 y 0083: portal de la empresa", 
         ).rows[0]?.t,
       ).toBeNull();
       await correr(c.dueno, r78);
+      // El registro de migraciones queda sin las dos filas (el nombre lleva «.sql») y volver a aplicar las recrea.
+      const registro = await c.dueno.query<{ nombre: string }>(
+        "select nombre from migracion where nombre in ('0078_portal_de_la_empresa.sql', '0083_portal_por_plan.sql')",
+      );
+      expect(registro.rows).toEqual([]);
+      const otra = await aplicarMigraciones(c.propia.base.dueno, join(CARPETA, ".."));
+      expect(otra.aplicadas).toEqual(["0078_portal_de_la_empresa.sql", "0083_portal_por_plan.sql"]);
+      expect(
+        (await c.dueno.query("select to_regclass('public.portal_de_empresa') as t")).rows[0],
+      ).toEqual({ t: "portal_de_empresa" });
     } finally {
       await c.cerrar();
     }

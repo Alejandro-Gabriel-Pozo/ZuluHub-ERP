@@ -161,6 +161,24 @@ describe.skipIf(base === null)("lectura pública del portal (0078 y 0083)", () =
     expect(b.codigoDePortal).not.toBe(a.codigoDePortal);
   });
 
+  it("aislamiento: el código de portal de OTRA empresa no devuelve filas de esta, y el portal de una no ve lo de la otra aunque se fije la empresa ajena", async () => {
+    const a = await empresaConPortalGuardado();
+    const b = await empresaConPortalGuardado();
+    const pa = await vista(a.codigoDePortal);
+    const pb = await vista(b.codigoDePortal);
+    const cartasA = [a.carta1.codigo, a.carta2.codigo].sort();
+    expect([...(pa?.tarjetas.map((t) => t.codigoDeCarta) ?? [])].sort()).toEqual(cartasA);
+    expect(pb?.tarjetas.map((t) => t.codigoDeCarta).some((x) => cartasA.includes(x))).toBe(false);
+    // Con el código de A, las tablas de B no devuelven nada.
+    const filas = await comoPublicoDelPortal<{ id: string }>(
+      c.propia.base.publico,
+      a.codigoDePortal,
+      "select id from portal_de_empresa where empresa_id = $1",
+      [b.e.empresa],
+    );
+    expect(filas).toEqual([]);
+  });
+
   it("solo sale lo mostrable: carta fuera de línea, sucursal cerrada, tarjeta o zona oculta no aparecen, y nada se borró", async () => {
     const m = await empresaConPortalGuardado();
     await c.dueno.query("update carta_publica set estado = 'FUERA_DE_LINEA' where id = $1", [
