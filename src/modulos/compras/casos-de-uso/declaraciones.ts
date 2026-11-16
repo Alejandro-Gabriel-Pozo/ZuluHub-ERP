@@ -118,7 +118,7 @@ export const DECLARACIONES = {
       regla: "RECHAZA_LA_REPETICION",
       prueba: {
         archivo: ARCHIVO_DE_RECEPCION_SEPARADA,
-        it: "I3: anular dos veces una pendiente: la segunda es RECEPCION_YA_ANULADA y no escribe; una confirmada no se anula por acá",
+        it: "I3: anular dos veces una pendiente: la segunda es RECEPCION_YA_ANULADA y no escribe; una confirmada no se anula por acá; una anulada no se confirma",
       },
     },
   },
