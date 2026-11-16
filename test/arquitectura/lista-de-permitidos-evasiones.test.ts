@@ -605,3 +605,40 @@ ALTER TABLE t ADD CONSTRAINT a_ck CHECK (permitido(a));`;
     expect(analizar(BUENA, ["a_ck", "b_ck"]).descuento).toBe(0);
   });
 });
+
+describe("lista de permitidos: el SQL que se refactorizó para dar posiciones sigue contando lo mismo (Deuda 1)", () => {
+  const USO = "CHECK (texto_fiscal_valido(a, 1))";
+
+  it("un comentario con una prohibición no cuenta, y no cambia lo que sigue", () => {
+    expect(contarProhibidosEnSql("-- a !~ '[\\x01-\\x1F]'\nCHECK (a ~ '^[a-z]+$')")).toBe(0);
+    expect(contarProhibidosEnSql("-- nada\nCHECK (a !~ '[\\x01-\\x1F]')")).toBe(1);
+  });
+
+  it("definir, borrar, cambiar o comentar la función (con cualquier blanco de por medio) no es un uso; usarla sí", () => {
+    for (const definicion of [
+      "CREATE FUNCTION texto_fiscal_valido(text, integer)",
+      "CREATE  OR  REPLACE  FUNCTION  texto_fiscal_valido(text, integer)",
+      "DROP  FUNCTION  texto_fiscal_valido(text, integer)",
+      "DROP  FUNCTION  IF  EXISTS  texto_fiscal_valido(text, integer)",
+      'DROP FUNCTION IF EXISTS "texto_fiscal_valido"(text, integer)',
+      "ALTER  FUNCTION  texto_fiscal_valido(text, integer)",
+      "COMMENT  ON  FUNCTION  texto_fiscal_valido(text, integer)",
+    ]) {
+      expect(contarProhibidosEnSql(`${definicion};`), definicion).toBe(0);
+    }
+    expect(contarProhibidosEnSql(USO)).toBe(1);
+  });
+
+  it("un uso cerca de una definición (en la misma línea) cuenta igual", () => {
+    expect(contarProhibidosEnSql(`DROP FUNCTION x(); ${USO}`)).toBe(1);
+    expect(contarProhibidosEnSql(`CREATE FUNCTION y(); ${USO}`)).toBe(1);
+  });
+
+  it("NOT LIKE (con cualquier blanco) y un patrón armado con una cadena E'…' cuentan siempre", () => {
+    expect(contarProhibidosEnSql("CHECK (a NOT LIKE '%x%')")).toBe(1);
+    expect(contarProhibidosEnSql("CHECK (a NOT  LIKE '%x%')")).toBe(1);
+    expect(contarProhibidosEnSql("CHECK (a !~ E'abc')")).toBe(1);
+    expect(contarProhibidosEnSql("CHECK (a !~ 'ab' || E'cd')")).toBe(1);
+    expect(contarProhibidosEnSql("CHECK (a !~ 'ab' || 'cd')")).toBe(0);
+  });
+});
