@@ -243,6 +243,8 @@ export const CATALOGO_DE_TEXTOS = {
   // áreas Ventas, Catálogo y Compras aprobados «por ahora». «Compras» se suma con su primera pantalla.
   "navegacion.area.ventas": { porDefecto: "Ventas" },
   "navegacion.area.catalogo": { porDefecto: "Catálogo" },
+  // Fuente: dueño, 13/11/2026, `decisiones-del-dueno-2026-11.md` línea 110, fila «Rótulos del menú por áreas aprobados»: el encabezado del grupo de la carta dentro de Catálogo es «Carta».
+  "navegacion.grupo.carta": { porDefecto: "Carta" },
   "inicio.titulo": { porDefecto: "Inicio" },
   "inicio.bienvenida": {
     porDefecto: "Estás en {empresa}.",
