@@ -1,0 +1,6 @@
+{
+  "grupo": "catálogo (familias: forma de salir y nombre)",
+  "archivos": "src/modulos/catalogo/dominio/forma-de-familia.ts,src/modulos/catalogo/dominio/familia.ts",
+  "minutos": 1,
+  "pruebas": "src/modulos/catalogo/dominio/forma-de-familia src/modulos/catalogo/dominio/familia.test"
+}
