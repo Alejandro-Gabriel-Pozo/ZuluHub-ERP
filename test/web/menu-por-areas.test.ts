@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import {
   AREAS_DEL_MENU,
   FILAS_DEL_MENU,
@@ -134,6 +135,23 @@ describe("«Secciones»: la fila del grupo «Carta» de Catálogo (A8)", () => {
         ["productos", null, ["productos"]],
         ["carta", "navegacion.grupo.carta", ["secciones"]],
       ],
+    );
+  });
+
+  it("un módulo «en desarrollo» no aparece aunque llegue la acción y figure activo (fila de prueba sobre `comandas`, que sigue en desarrollo)", () => {
+    // Con catalogo, caja y ventas disponibles (DEC-0463) ninguna fila real del menú depende de un módulo en desarrollo: se prueba la regla con una fila armada.
+    const enDesarrollo = { ...productos, modulo: "comandas" as const };
+    expect(CATALOGO_DE_MODULOS.comandas.estado).toBe("en_desarrollo");
+    expect(armarElMenu([enDesarrollo], permisos(["productos.ver"], ["comandas"]), null)).toEqual(
+      [],
+    );
+    expect(
+      armarElMenu([enDesarrollo], permisos(["productos.ver"], [], ["comandas"]), null),
+    ).toEqual([]);
+    // La misma fila con un módulo disponible sí se ve: lo que la oculta es el estado, no la forma de la fila.
+    const disponible = { ...productos, modulo: "catalogo" as const };
+    expect(armarElMenu([disponible], permisos(["productos.ver"], ["catalogo"]), null)).not.toEqual(
+      [],
     );
   });
 
