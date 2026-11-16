@@ -51,7 +51,8 @@ export async function ocultarOMostrar(
   oculto: boolean,
 ): Promise<ResultadoDeAccion> {
   const respuesta = await conLaEmpresa(async (contexto) => {
-    const local = alcance === "LOCAL" ? await elLocal(contexto) : null;
+    // El local solo lo usa el alcance LOCAL: la composición lo ignora para toda la empresa.
+    const local = await elLocal(contexto);
     return ocultarOMostrarUnProducto(dependencias, contexto, local, {
       productoId,
       alcance,
