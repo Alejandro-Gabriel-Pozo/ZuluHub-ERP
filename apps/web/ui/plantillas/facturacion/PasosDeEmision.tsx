@@ -127,7 +127,7 @@ export function PasoDeLosRenglones({
         <fieldset key={r.id} className={estilos["renglon"]}>
           <legend className={estilos["nombre"]}>{vista.grupo(i + 1)}</legend>
           <Campo
-            dato="pendiente"
+            dato="descripcion-de-renglon"
             etiqueta={etiquetas.descripcion}
             valor={r.descripcion}
             autoComplete="off"
@@ -155,7 +155,7 @@ export function PasoDeLosRenglones({
           />
           {etiquetas.iva === null ? null : (
             <Selector
-              dato="pendiente"
+              dato="alicuota-de-iva-de-renglon"
               etiqueta={etiquetas.iva}
               textoDeElegir={etiquetas.iva}
               valor={r.alicuota}
@@ -232,7 +232,7 @@ export function PasoDeRevisar({
       <section className={estilos["tarjeta"]} aria-label={puntoDeVenta.rotulo}>
         {puntoDeVenta.modo === "varios" ? (
           <Selector
-            dato="pendiente"
+            dato="punto-de-venta-de-comprobante"
             etiqueta={puntoDeVenta.rotulo}
             textoDeElegir={puntoDeVenta.rotulo}
             valor={puntoElegido}

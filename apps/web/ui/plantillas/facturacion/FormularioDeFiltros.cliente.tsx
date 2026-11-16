@@ -74,7 +74,7 @@ export function FormularioDeFiltros({ filtros }: PropsDeFormularioDeFiltros) {
             />
           </div>
           <Selector
-            dato="pendiente"
+            dato="estado-de-comprobante"
             etiqueta={textos.estado}
             nombre="estado"
             valor={estado}
@@ -83,7 +83,7 @@ export function FormularioDeFiltros({ filtros }: PropsDeFormularioDeFiltros) {
             opciones={filtros.estados}
           />
           <Selector
-            dato="pendiente"
+            dato="letra-de-comprobante"
             etiqueta={textos.letra}
             nombre="letra"
             valor={letra}
@@ -93,7 +93,7 @@ export function FormularioDeFiltros({ filtros }: PropsDeFormularioDeFiltros) {
           />
           {filtros.puntosDeVenta.length === 0 ? null : (
             <Selector
-              dato="pendiente"
+              dato="punto-de-venta-de-comprobante"
               etiqueta={textos.puntoDeVenta}
               nombre="puntoDeVenta"
               valor={puntoDeVenta}

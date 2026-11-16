@@ -130,7 +130,7 @@
     "dinamicos": 0
   },
   "apps/web/ui/plantillas/facturacion/FormularioDeFiltros.cliente.tsx": {
-    "pendientes": 5,
+    "pendientes": 2,
     "crudos": 0,
     "dinamicos": 0
   },
@@ -147,11 +147,6 @@
   "apps/web/ui/plantillas/facturacion/PantallaDeImprimirComprobante.test.tsx": {
     "pendientes": 0,
     "crudos": 1,
-    "dinamicos": 0
-  },
-  "apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx": {
-    "pendientes": 3,
-    "crudos": 0,
     "dinamicos": 0
   },
   "apps/web/ui/plantillas/facturacion/impresion/hoja-a4.test.tsx": {

@@ -387,8 +387,7 @@
       "apps/web/ui/plantillas/configuracion-fiscal/FormularioDePuntoDeVenta.cliente.tsx",
       "apps/web/ui/plantillas/configuracion-fiscal/PasoGenerarPedido.cliente.tsx",
       "apps/web/ui/plantillas/facturacion/EleccionDeSucursal.cliente.tsx",
-      "apps/web/ui/plantillas/facturacion/FormularioDeFiltros.cliente.tsx",
-      "apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx"
+      "apps/web/ui/plantillas/facturacion/FormularioDeFiltros.cliente.tsx"
     ],
     "descripcion": "Campos de entrada de la web con dato=\"pendiente\" (pantallas y tests): todavía no pasan por el registro de datos (src/capacidades/datos/registro.ts). Se saldan por módulo ligando cada campo a su dato; la cuenta por archivo solo baja.",
     "tipo": "backlog",

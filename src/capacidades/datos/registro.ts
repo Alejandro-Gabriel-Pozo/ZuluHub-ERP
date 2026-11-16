@@ -1,6 +1,7 @@
 import { DATOS_DE_ADMINISTRACION } from "./registro-de-administracion";
 import { DATOS_DE_CAJA } from "./registro-de-caja";
 import { DATOS_DE_FACTURACION } from "./registro-de-facturacion";
+import { DATOS_DE_FACTURACION_PANTALLAS } from "./registro-de-facturacion-pantallas";
 import { DATOS_DE_PRODUCTOS } from "./registro-de-productos";
 import type { DefinicionDeDato } from "./tipos-de-datos";
 
@@ -35,6 +36,7 @@ export const FRAGMENTOS_DEL_REGISTRO = {
   administracion: DATOS_DE_ADMINISTRACION,
   caja: DATOS_DE_CAJA,
   facturacion: DATOS_DE_FACTURACION,
+  "facturacion-pantallas": DATOS_DE_FACTURACION_PANTALLAS,
   productos: DATOS_DE_PRODUCTOS,
 } as const;
 
@@ -42,6 +44,7 @@ export const REGISTRO_DE_DATOS = {
   ...DATOS_DE_ADMINISTRACION,
   ...DATOS_DE_CAJA,
   ...DATOS_DE_FACTURACION,
+  ...DATOS_DE_FACTURACION_PANTALLAS,
   ...DATOS_DE_PRODUCTOS,
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
 
