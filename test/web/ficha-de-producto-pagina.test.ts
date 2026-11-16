@@ -16,7 +16,8 @@ const mundo = vi.hoisted(
     permisos: unknown;
     llamadas: { contexto: unknown; id: string }[];
     respuesta: unknown;
-  } => ({ permisos: null, llamadas: [], respuesta: null }),
+    visibilidad: unknown;
+  } => ({ permisos: null, llamadas: [], respuesta: null, visibilidad: null }),
 );
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
@@ -31,6 +32,10 @@ vi.mock("../../apps/web/servidor/ficha-de-producto", () => ({
     return Promise.resolve(mundo.respuesta);
   },
   guardarLaFicha: () => Promise.resolve({ error: null }),
+}));
+vi.mock("../../apps/web/servidor/ocultar", () => ({
+  cargarLaVisibilidad: () => Promise.resolve(mundo.visibilidad),
+  ocultarOMostrar: () => Promise.resolve({ error: null }),
 }));
 vi.mock("../../apps/web/servidor/sesion", () => ({
   dependenciasDeSesion: {},
@@ -91,6 +96,76 @@ describe("la página de la ficha de datos de un producto", () => {
     mundo.llamadas = [];
     responde({ ok: true, dato: FICHA });
     puede(["productos.ver", "productos.editar"]);
+    // Por defecto la tarjeta de «Ocultar» no se pudo leer (módulo sin activar): la ficha sigue sin ella.
+    mundo.visibilidad = { ok: false, error: errorDeCodigo("MODULO_EN_DESARROLLO") };
+  });
+
+  describe("tarjeta de «Ocultar» (A15)", () => {
+    const conVidriera = (acciones: string[]) => {
+      mundo.permisos = {
+        ok: true,
+        valor: { acciones, modulos: { activos: ["catalogo", "vidriera"], enSoloLectura: [] } },
+      };
+    };
+    const botones = (marcado: string) =>
+      [...marcado.matchAll(/<button\b([^>]*)>(.*?)<\/button>/g)].map((m) => ({
+        texto: (m[2] ?? "").replace(/<[^>]+>/g, "").trim(),
+        apagado: /disabled/.test(m[1] ?? ""),
+      }));
+
+    it("sin poder leer dónde está oculto (módulo sin activar, sin permiso) no hay tarjeta: la ficha sigue igual", async () => {
+      const t = await texto();
+      expect(t).not.toContain("Ocultar");
+      expect(t).not.toContain("Volver a mostrar");
+    });
+
+    it("gerente o administrador con el producto visible: «Ocultar» y «Ocultar en toda la empresa», activos", async () => {
+      conVidriera([
+        "productos.ver",
+        "vidrieras.ver",
+        "vidrieras.marcar_disponibilidad",
+        "vidrieras.ocultar_en_empresa",
+      ]);
+      mundo.visibilidad = { ok: true, dato: { local: false, empresa: false } };
+      const b = botones(await html()).filter((x) => /Ocultar/.test(x.texto));
+      expect(b).toEqual([
+        { texto: "Ocultar", apagado: false },
+        { texto: "Ocultar en toda la empresa", apagado: false },
+      ]);
+    });
+
+    it("operador con el producto oculto en toda la empresa: lo ve y «Volver a mostrar» de la empresa sale apagado; el del local, activo", async () => {
+      conVidriera(["productos.ver", "vidrieras.ver", "vidrieras.marcar_disponibilidad"]);
+      mundo.visibilidad = { ok: true, dato: { local: false, empresa: true } };
+      const marcado = await html();
+      expect(marcado).toContain("Oculto en toda la empresa");
+      expect(botones(marcado).filter((x) => /Ocultar|Volver/.test(x.texto))).toEqual([
+        { texto: "Ocultar", apagado: false },
+        { texto: "Volver a mostrar", apagado: true },
+      ]);
+    });
+
+    it("sin local con el que trabajar solo se ofrece «Ocultar en toda la empresa»", async () => {
+      conVidriera([
+        "productos.ver",
+        "vidrieras.ver",
+        "vidrieras.marcar_disponibilidad",
+        "vidrieras.ocultar_en_empresa",
+      ]);
+      mundo.visibilidad = { ok: true, dato: { local: null, empresa: false } };
+      expect(botones(await html()).filter((x) => /Ocultar/.test(x.texto))).toEqual([
+        { texto: "Ocultar en toda la empresa", apagado: false },
+      ]);
+    });
+
+    it("si no se pudieron leer los permisos, los botones salen apagados (cierra, no abre)", async () => {
+      mundo.permisos = { ok: false, error: "x" };
+      mundo.visibilidad = { ok: true, dato: { local: false, empresa: false } };
+      expect(botones(await html()).filter((x) => /Ocultar/.test(x.texto))).toEqual([
+        { texto: "Ocultar", apagado: true },
+        { texto: "Ocultar en toda la empresa", apagado: true },
+      ]);
+    });
   });
 
   it("un solo h1, el nombre del producto, y los campos en el orden de la maqueta", async () => {

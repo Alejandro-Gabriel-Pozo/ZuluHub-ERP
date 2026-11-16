@@ -329,3 +329,22 @@ export async function pendientesDeLaEmpresa(
     return [];
   }
 }
+
+/**
+ * ¿La persona puede ocultar o volver a mostrar un producto en un local? Es la oferta de `vidrieras.marcar_disponibilidad` (los tres roles) que el servidor calcula con `ofertaDe`: con
+ * el módulo en solo lectura, en desarrollo o sin el rol, no. Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar el botón no es autorizar: la acción vuelve a pasar
+ * por el guard. Es solo la ayuda que apaga el botón (A15). Chequeo: `test/web/ocultar-acceso.test.ts`.
+ */
+export async function puedeOcultarEnElLocal(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("vidrieras.marcar_disponibilidad", permisos).permitida;
+}
+
+/**
+ * ¿La persona puede ocultar o volver a mostrar un producto en toda la empresa? Es la oferta de `vidrieras.ocultar_en_empresa` (gerente y administrador; dueño, 22A) que el servidor
+ * calcula con `ofertaDe`. Las mismas reglas de cierre que `puedeOcultarEnElLocal`. Chequeo: `test/web/ocultar-acceso.test.ts`.
+ */
+export async function puedeOcultarEnLaEmpresa(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("vidrieras.ocultar_en_empresa", permisos).permitida;
+}

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0541",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Los cinco rótulos de Ocultar (Ocultar, Volver a mostrar, Ocultar en toda la empresa, Oculto, Oculto en toda la empresa) entran al catálogo de textos con su fuente T13.",
+  "que_cambia": "Textos del dueño ya aprobados el 15/11/2026 (T13, DDD:165). Oculto con existencia negativa no se agrega: falta leer la existencia (pregunta pendiente). Revertir: borrar las cinco claves.",
+  "donde": "src/capacidades/vocabulario/catalogo-catalogo.ts; delegación del dueño, DDD filas 173 y 174; textos-nuevos-pendientes.md T13"
+}

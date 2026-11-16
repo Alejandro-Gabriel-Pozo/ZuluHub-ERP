@@ -106,6 +106,7 @@ describe("el catálogo comercial de módulos", () => {
         acciones: {
           "vidrieras.ver": { capacidad: null, efecto: "LECTURA" },
           "vidrieras.marcar_disponibilidad": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "vidrieras.ocultar_en_empresa": { capacidad: null, efecto: "CREA_AMPLIA" },
           "vidrieras.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
           "vidrieras.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "vidrieras.publicar": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -315,19 +316,19 @@ describe("el catálogo comercial de módulos", () => {
     expect(carpetas).toEqual([["modulos/catalogo"], ["modulos/catalogo"], ["modulos/stock"]]);
   });
 
-  it("el catálogo tiene 48 acciones de catálogo, carta y stock (14 + 9 + 25), 35 de caja, cierre y ventas (23 + 4 + 8) y 18 de clientes y compras (8 + 10), sin repetir ninguna", () => {
+  it("el catálogo tiene 49 acciones de catálogo, carta y stock (14 + 10 + 25), 35 de caja, cierre y ventas (23 + 4 + 8) y 18 de clientes y compras (8 + 10), sin repetir ninguna", () => {
     const cuantas = (
       m: "catalogo" | "vidriera" | "stock" | "caja" | "cierre" | "ventas" | "clientes" | "compras",
     ) => Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
-    expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([14, 9, 25]);
+    expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([14, 10, 25]);
     expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
     expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 11]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
     // 25 de administración (18 de usuarios, sucursales, gerencia y permisos, y 7 de la configuración fiscal de H7 T5),
-    // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 48 de catálogo, carta y stock (54 menos las 6 retiradas por las
+    // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 49 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
-    // de E5-T10), 35 de caja, cierre y ventas (E0-T1), 19 de clientes y compras (E9-T1 y T11), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 157 en total.
-    expect(todas).toHaveLength(25 + 9 + 48 + 35 + 19 + 16 + 5);
+    // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A), 35 de caja, cierre y ventas (E0-T1), 19 de clientes y compras (E9-T1 y T11), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 158 en total.
+    expect(todas).toHaveLength(25 + 9 + 49 + 35 + 19 + 16 + 5);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -555,6 +556,7 @@ const EFECTOS_DE_EMPRESA = {
     "vidrieras.crear",
     "vidrieras.editar",
     "vidrieras.marcar_disponibilidad",
+    "vidrieras.ocultar_en_empresa",
     "vidrieras.publicar",
     "vidrieras.publicar_en_linea",
     "vidrieras.renovar_enlace",

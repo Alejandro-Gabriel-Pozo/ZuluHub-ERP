@@ -31,8 +31,8 @@ export type SalidaDeOcultarProducto = Readonly<{
 /**
  * El botón «Ocultar» / «Volver a mostrar» (carta real §6.1 y §6.5). Fija un ESTADO por alcance: dos veces seguidas da el mismo resultado (la segunda es `yaEstaba`,
  * sin escribir ni auditar). Acción `vidrieras.marcar_disponibilidad` (los tres roles). EN UN LOCAL: el operador solo en SUS locales (alcance); gerente y
- * administrador en cualquiera; el local tiene que existir y estar abierto. EN TODA LA EMPRESA: alcance TODAS y, además, `vidrieras.editar` (que solo tienen gerente y
- * administrador): el operador no oculta lo de todos los locales (N-2, sin claves nuevas). Se toma el producto con `FOR UPDATE`: dos ocultar a la vez, o ocultar y
+ * administrador en cualquiera; el local tiene que existir y estar abierto. EN TODA LA EMPRESA: alcance TODAS y, además, `vidrieras.ocultar_en_empresa` (solo gerente y
+ * administrador; dueño, 22A, DDD fila 180): el operador no oculta lo de todos los locales. Se toma el producto con `FOR UPDATE`: dos ocultar a la vez, o ocultar y
  * desactivar, se ponen en fila. OCULTAR escribe la fila y recién entonces pregunta a stock por el alcance (así, si stock suma existencia a la vez, ve la fila): con
  * existencia distinta de cero (también negativa) → `PRODUCTO_CON_EXISTENCIA`; con un conteo abierto con cargas → `PRODUCTO_CON_CONTEO_ABIERTO`; el error revierte
  * la fila y la auditoría. Un producto sin artículo de stock se oculta siempre. MOSTRAR no tiene condiciones. «Oculto» y «desactivado» son independientes.
@@ -54,7 +54,7 @@ export function armarOcultarProducto(dependencias: DependenciasDeCatalogo) {
         if (entrada.alcance.tipo === "EMPRESA") {
           const soloDeGerencia = await exigirAcciones(
             dependencias.reglas,
-            ["vidrieras.marcar_disponibilidad", "vidrieras.editar"],
+            ["vidrieras.marcar_disponibilidad", "vidrieras.ocultar_en_empresa"],
             () => tx.autorizacion.delActor(contexto),
           );
           if (!soloDeGerencia.ok) return soloDeGerencia;
