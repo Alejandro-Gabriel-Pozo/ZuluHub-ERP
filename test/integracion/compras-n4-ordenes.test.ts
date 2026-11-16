@@ -318,7 +318,7 @@ describe.skipIf(base === null)("compras N4: órdenes de compra", () => {
     });
   });
 
-  it("I5: anular dos veces la misma orden devuelve yaEstaba y la segunda no escribe ni audita; sirve en borrador y pedida, exige motivo y una anulada no se pide ni se cierra", async () => {
+  it("I5: anular dos veces la misma orden devuelve yaEstaba y la segunda no escribe ni audita", async () => {
     const m = await armar();
     const borrador = await crear(m);
     const pedida = await crear(m);
