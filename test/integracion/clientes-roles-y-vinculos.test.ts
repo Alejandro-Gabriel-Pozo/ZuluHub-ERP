@@ -104,7 +104,7 @@ describe.skipIf(base === null)("clientes: roles, vínculos, consultas y puertos"
     it("un rol que no existe, una parte ajena y una parte inexistente", async () => {
       const id = await persona();
       expect(
-        await c.casos.cambiarRolesDeParte(e.operador, { parteId: id, roles: ["EMPLEADO"] }),
+        await c.casos.cambiarRolesDeParte(e.operador, { parteId: id, roles: ["GERENTE"] }),
       ).toEqual({
         ok: false,
         error: "ROL_DE_PARTE_INVALIDO",
@@ -312,7 +312,7 @@ describe.skipIf(base === null)("clientes: roles, vínculos, consultas y puertos"
       );
       expect(await buscar({ texto: marca, rol: "PROVEEDOR" })).toEqual([proveedor]);
       expect(await buscar({ texto: marca, rol: "CUSTOMER" })).toEqual([cliente]);
-      expect(await buscar({ texto: marca, rol: "EMPLEADO" })).toEqual([]);
+      expect(await buscar({ texto: marca, rol: "GERENTE" })).toEqual([]);
       valorDe(await c.casos.desactivarParte(e.gerente, { parteId: cliente }));
       expect(await buscar({ texto: marca })).toEqual([proveedor]);
       expect((await buscar({ texto: marca, incluirDesactivadas: true })).sort()).toEqual(

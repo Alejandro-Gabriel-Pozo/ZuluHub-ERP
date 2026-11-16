@@ -169,7 +169,7 @@ describe.skipIf(base === null)("clientes: partes", () => {
         }),
       );
       expect(JSON.stringify(empresaConDni)).toContain("DOCUMENTO_NO_ADMITIDO_PARA_EMPRESA");
-      expect(await c.casos.crearParte(e.operador, alta({ roles: ["EMPLEADO"] }) as never)).toEqual({
+      expect(await c.casos.crearParte(e.operador, alta({ roles: ["GERENTE"] }) as never)).toEqual({
         ok: false,
         error: "ROL_DE_PARTE_INVALIDO",
       });
