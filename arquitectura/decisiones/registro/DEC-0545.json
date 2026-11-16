@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0545",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Entran al catálogo de stock los seis textos del conteo con hora que el dueño aprobó el 14/11/2026, tal cual; la hora de «Movido desde las {hora}» es un marcador.",
+  "que_cambia": "Lo que ve el cliente en Conteo; por delegación del dueño, DDD filas 173 y 174. Revertir es sacar las seis claves: ninguna pantalla las usa hasta que se construya Conteo.",
+  "donde": "src/capacidades/vocabulario/catalogo-stock.ts; Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md (fila del 14/11/2026, punto 2)"
+}

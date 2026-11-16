@@ -123,7 +123,7 @@ export async function puedeEmitirFacturas(contexto: ContextoOperativo): Promise<
  * Con `cache` de React se lee UNA vez por pedido: la barra y los botones de la página comparten el mismo `contexto` (la misma
  * referencia), así que la segunda llamada no vuelve a abrir una transacción. Previene: dos lecturas de los permisos por pantalla.
  */
-const permisosDeLaPersona = cache(async (contexto: ContextoOperativo) => {
+export const permisosDeLaPersona = cache(async (contexto: ContextoOperativo) => {
   try {
     const permisos = await web.consultasDeEmpresas().permisosDelActor(contexto);
     return permisos.ok ? permisos.valor : null;

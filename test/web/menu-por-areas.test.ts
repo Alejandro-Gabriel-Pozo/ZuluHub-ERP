@@ -131,6 +131,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "catalogo.lista.titulo",
       ],
       [
+        "stock",
+        "catalogo",
+        "stock",
+        "stock",
+        "stock.ver",
+        "/stock/depositos",
+        "stock.pantalla.stock",
+      ],
+      [
         "configuracion-fiscal",
         "cuenta",
         "empresa",
