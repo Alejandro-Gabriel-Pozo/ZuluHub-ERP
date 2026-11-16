@@ -7,6 +7,7 @@ import {
 } from "./compras-casos-apoyo";
 import { codigoDe } from "./concurrencia-apoyo";
 import { cuitUnico } from "./entorno";
+import { numeroUnico } from "./unicos";
 
 /**
  * Compras N3 (tramo N3-4): la factura del proveedor llega SOLA y se concilia con lo recibido. Cargar la factura con el producto de cada línea, la propuesta de un toque,
@@ -89,7 +90,7 @@ describe.skipIf(base === null)("compras N3: factura sola y conciliación", () =>
     factura: {
       tipo: "FACTURA_A",
       puntoDeVenta: 5,
-      numero: Math.floor(Math.random() * 90_000_000) + 1,
+      numero: numeroUnico(),
       fecha: "2026-10-10",
       lineas,
       totalSegunFactura: "0.00",
