@@ -42,9 +42,13 @@ describe("límites de dividir: el código real", () => {
   it("la fuente única existe con sus dos valores (la regla no pasa en vacío)", () => {
     expect(valoresDeLosLimitesDeDivision(archivos).sort((a, b) => a - b)).toEqual([10, 12]);
   });
+  // Recorre con el compilador todo `src` y `apps` (~2.100 archivos): ~2 s solo y más de 5 s con el CI cargado, y el tiempo por defecto de Vitest
+  // (5 s) la cortaba (caso real: push a `main` d3cb117, 15/11/2026, «Test timed out in 5000ms»). El tope propio sigue la convención de las otras
+  // pruebas que recorren el repo (`campos-con-dato`: 30 s; `ids-unicos`: `TIEMPO_DEL_BARRIDO`) y no sube el de ninguna otra: 30 s son ~15 veces lo medido,
+  // así que un barrido que se vuelva lento de verdad sigue fallando.
   it("ningún archivo vuelve a escribir los topes", () => {
     expect(topesDeDivisionEscritos(archivos)).toEqual([]);
-  });
+  }, 30_000);
   it("la regla está escrita en CLAUDE.md (quitarla hace fallar la prueba)", () => {
     expect(readFileSync(join(RAIZ, "CLAUDE.md"), "utf8")).toContain(
       "fuente-unica-limites-de-division.test.ts",

@@ -7,6 +7,7 @@ import type { ClaveDeTexto } from "../../../../src/capacidades/vocabulario/catal
 import type { ClaveDeIcono } from "../iconos/catalogo";
 import { RUTAS_DE_CAJA } from "../plantillas/caja/lista-de-caja";
 import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
+import { RUTA_DE_SECCIONES } from "../plantillas/catalogo/modelo-de-secciones";
 import { RUTAS_DE_CONFIGURACION } from "../plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
 import { RUTAS_DE_CUENTA } from "../plantillas/sesion/rutas-de-cuenta";
@@ -47,6 +48,7 @@ export const GRUPOS_DEL_MENU = [
   { clave: "venta", etiqueta: null },
   { clave: "comprobantes", etiqueta: null },
   { clave: "productos", etiqueta: null },
+  { clave: "carta", etiqueta: "navegacion.grupo.carta" },
   { clave: "empresa", etiqueta: "navegacion.empresa" },
   { clave: "sucursal", etiqueta: "sucursal.etiqueta" },
   { clave: "salir", etiqueta: null },
@@ -68,6 +70,7 @@ export type FilaDePantalla = BaseDeFila &
       | "venta-rapida"
       | "comprobantes"
       | "productos"
+      | "secciones"
       | "configuracion-fiscal"
       | "medios-de-pago"
       | "contacto";
@@ -125,6 +128,19 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     accion: "productos.ver",
     href: RUTA_DE_PRODUCTOS,
     etiqueta: "catalogo.lista.titulo",
+    departamento: null,
+  },
+  // «Secciones» (A8; dueño, 13/11/2026, `decisiones-del-dueno-2026-11.md` línea 110): en Catálogo, grupo «Carta». Módulo `catalogo` y acción `productos.ver`, las de su consulta (S7 de la ficha:
+  // la celda de la maqueta del menú dice `vidriera` y `vidrieras.ver`, pero el servidor resuelve estas).
+  {
+    tipo: "pantalla",
+    clave: "secciones",
+    area: "catalogo",
+    grupo: "carta",
+    modulo: "catalogo",
+    accion: "productos.ver",
+    href: RUTA_DE_SECCIONES,
+    etiqueta: "catalogo.seccion.titulo",
     departamento: null,
   },
   {

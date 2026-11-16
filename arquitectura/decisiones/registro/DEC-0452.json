@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0452",
+  "fecha": "2026-11-15",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: P0 registra las 12 tablas de transiciones; lo sin prueba (cuenta, ticket) se declara con su paso P3b y un tope que solo baja, sin fecha de vencimiento.",
+  "que_cambia": "Una tabla de transiciones nueva sin registrar rompe el gate. El vencimiento de la deuda lo fija la orquestadora en P1; revertir P0 es borrar el registro y su prueba.",
+  "donde": "arquitectura/paridad/copias.json; test/arquitectura/paridad-con-la-base.test.ts; auditoria-de-reglas/primitivas-y-base-comprobacion.md, secciones 4.2 C1 y 5 P0"
+}

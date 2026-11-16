@@ -133,6 +133,11 @@ export function FormularioDeFichaDeProducto({
               deshabilitado={ficha.seccion.apagado}
             />
           )}
+          {ficha.enlaceDeSecciones === null ? null : (
+            <a className={estilos["enlace"]} href={ficha.enlaceDeSecciones.href}>
+              {ficha.enlaceDeSecciones.texto}
+            </a>
+          )}
           {sinCampo ? <ErrorDeRespuesta error={error} /> : null}
           {puedeGuardar ? (
             <BotonDeEnvio>{ficha.guardar}</BotonDeEnvio>

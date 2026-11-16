@@ -15,3 +15,20 @@
   font-weight: var(--tipo-peso-fuerte);
   overflow-wrap: anywhere;
 }
+
+/* «Secciones»: un enlace con el aspecto del botón secundario, junto al campo de la sección (navega, no envía). */
+.enlace {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-width: var(--objetivo-minimo);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-5);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+  text-decoration: none;
+}
