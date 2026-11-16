@@ -57,6 +57,7 @@ describe("las listas de la pantalla coinciden con las del módulo y de la compos
 describe("armarLaLista: la fila", () => {
   it("un producto activo y completo no lleva marca; dice su nombre, su clase y su precio con el formato es-AR", () => {
     expect(fila(producto())).toEqual({
+      avisosDeOculto: [],
       id: "p1",
       nombre: "Milanesa",
       marca: null,
@@ -138,8 +139,9 @@ describe("armarLaLista: la fila", () => {
     ).toBe("$ 12.345.678.901.234.567.890,12");
   });
 
-  it("nada de más: la fila tiene solo id, nombre, marca, clase, sección, si le falta y precio", () => {
+  it("nada de más: la fila tiene solo id, nombre, marca, clase, sección, si le falta, precio y dónde está oculto", () => {
     expect(Object.keys(fila(producto())).sort()).toEqual([
+      "avisosDeOculto",
       "clase",
       "id",
       "marca",
