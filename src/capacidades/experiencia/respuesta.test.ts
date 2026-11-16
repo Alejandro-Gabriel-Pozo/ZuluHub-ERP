@@ -6,6 +6,7 @@ import { CLAVES_DE_ERRORES_DE_CAJA } from "./respuesta-de-caja";
 import { CLAVES_DE_ERRORES_DE_CATALOGO, PARAMETROS_DE_CATALOGO } from "./respuesta-de-catalogo";
 import { CLAVES_DE_ERRORES_DE_CLIENTES } from "./respuesta-de-clientes";
 import { CLAVES_DE_ERRORES_DE_COMPRAS } from "./respuesta-de-compras";
+import { CLAVES_DE_ERRORES_DE_VENTAS } from "./respuesta-de-ventas";
 import {
   CODIGOS_PUBLICOS,
   clasificarError,
@@ -48,13 +49,14 @@ describe("CODIGOS_PUBLICOS: contrato exhaustivo", () => {
   it("los errores de negocio usan `error.<código>` en minúsculas; los inesperados, el texto genérico", () => {
     for (const codigo of codigos) {
       const { clave, presentacion } = CODIGOS_PUBLICOS[codigo];
-      // Los códigos de caja, de catálogo y de compras viven en el archivo de textos de su módulo, que exige su prefijo a toda clave (`catalogo.test.ts`): `caja.error.<…>`, `catalogo.error.<…>` y `compras.error.<…>`.
+      // Los códigos de caja, de catálogo, de ventas, de compras y de clientes viven en el archivo de textos de su módulo, que exige su prefijo a toda clave (`catalogo.test.ts`): `caja.error.<…>`, `catalogo.error.<…>` y `ventas.error.<…>`.
       if (
         presentacion === "AVISO" &&
         !Object.hasOwn(CLAVES_DE_ERRORES_DE_CAJA, codigo) &&
         !Object.hasOwn(CLAVES_DE_ERRORES_DE_CATALOGO, codigo) &&
         !Object.hasOwn(CLAVES_DE_ERRORES_DE_COMPRAS, codigo) &&
-        !Object.hasOwn(CLAVES_DE_ERRORES_DE_CLIENTES, codigo)
+        !Object.hasOwn(CLAVES_DE_ERRORES_DE_CLIENTES, codigo) &&
+        !Object.hasOwn(CLAVES_DE_ERRORES_DE_VENTAS, codigo)
       )
         expect(clave).toBe(`error.${codigo.toLowerCase()}`);
     }

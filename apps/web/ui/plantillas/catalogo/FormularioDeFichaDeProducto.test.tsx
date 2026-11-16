@@ -98,7 +98,7 @@ describe("FormularioDeFichaDeProducto", () => {
     await render(formulario());
     await userEvent.click(campo("Nombre"));
     const recorrido: string[] = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 7; i++) {
       await userEvent.tab();
       recorrido.push(
         document.activeElement?.getAttribute("name") ?? document.activeElement?.textContent ?? "?",
@@ -110,8 +110,22 @@ describe("FormularioDeFichaDeProducto", () => {
       "codigoDeBarras",
       "alicuota",
       "seccionDeCartaId",
+      "Secciones",
       "Guardar",
     ]);
+  });
+
+  it("«Secciones» es un enlace a la lista de secciones, junto al campo de la sección (maqueta `productos-secciones.html`), que no envía nada", async () => {
+    const accion = vi.fn(ok);
+    await render(formulario(armarLaFicha(FICHA), accion));
+    const enlace = page.getByRole("link", { name: "Secciones" });
+    await expect.element(enlace).toHaveAttribute("href", "/catalogo/secciones");
+    const campoDeLaSeccion = campo("Sección de la carta").element();
+    expect(
+      campoDeLaSeccion.compareDocumentPosition(enlace.element()) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(accion).not.toHaveBeenCalled();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 
   it("al guardar manda los seis campos por su nombre, con lo editado", async () => {
@@ -170,6 +184,7 @@ describe("FormularioDeFichaDeProducto", () => {
     await expect.element(campo("Nombre")).toBeVisible();
     await expect.element(campo("Código de barras")).toBeVisible();
     expect(document.querySelector("[name=nombreDeCocina], [name=alicuota], select")).toBeNull();
+    expect(document.querySelector('a[href="/catalogo/secciones"]')).toBeNull();
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 

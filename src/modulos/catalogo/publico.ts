@@ -174,6 +174,15 @@ export type {
   EntradaDeReordenarSecciones,
   SalidaDeReordenarSecciones,
 } from "./casos-de-uso/reordenar-secciones";
+export type { EntradaDeProductosParaVender } from "./consultas/consultas-para-vender";
+export type {
+  GrupoParaVender,
+  MedidaParaVender,
+  OpcionParaVender,
+  PaginaParaVender,
+  PrecioParaVender,
+  ProductoParaVender,
+} from "./casos-de-uso/productos-para-vender";
 export type {
   CartaParaAdministrar,
   ProductoOcultoParaAdministrar,
