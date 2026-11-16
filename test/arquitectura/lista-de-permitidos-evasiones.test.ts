@@ -520,6 +520,31 @@ SELECT 'x' !~ '[\\x01-\\x1F]';`;
     ]).toEqual([["", 1]]);
   });
 
+  it("el nombre de la restricción puede ir con cualquier blanco y con comillas", () => {
+    expect([
+      ...prohibidosPorRestriccion(
+        "ALTER TABLE t ADD CONSTRAINT   z_ck CHECK (z !~ '[\\x01-\\x1F]');",
+      ),
+    ]).toEqual([["z_ck", 1]]);
+    expect([
+      ...prohibidosPorRestriccion("ADD CONSTRAINT \"y_ck\" CHECK (y !~ '[\\x01-\\x1F]');"),
+    ]).toEqual([["y_ck", 1]]);
+  });
+
+  it("una migración que reemplaza sin número en el nombre no es posterior (no rompe)", () => {
+    const textos = new Map<string, string>([
+      [VIEJA, SQL_VIEJO],
+      ["migraciones/sin_numero.sql", BUENA],
+    ]);
+    expect(
+      analizarReemplazo(
+        VIEJA,
+        { por: "migraciones/sin_numero.sql", restricciones: ["a_ck"] },
+        textos,
+      ).problemas,
+    ).toContain(`${VIEJA}: migraciones/sin_numero.sql no es posterior`);
+  });
+
   it("lo verificado descuenta lo que esa restricción aportaba y nada más: lo no reemplazado sigue contando", () => {
     expect(analizar(BUENA)).toEqual({ problemas: [], descuento: 1 });
     expect(contarProhibidosEnSql(SQL_VIEJO) - analizar(BUENA).descuento).toBe(3);

@@ -462,6 +462,7 @@ export function prohibidosPorRestriccion(texto: string): Map<string, number> {
   }));
   for (const posicion of posicionesDeProhibidosEnSql(sin)) {
     const fin = sin.lastIndexOf(";", posicion);
+    // Stryker disable next-line EqualityOperator: mutantes equivalentes: el nombre de una restricción nunca empieza en la misma posición que una prohibición ni que el `;` anterior
     const duena = nombres.filter((n) => n.en < posicion && n.en > fin).at(-1)?.nombre ?? "";
     cuenta.set(duena, (cuenta.get(duena) ?? 0) + 1);
   }
