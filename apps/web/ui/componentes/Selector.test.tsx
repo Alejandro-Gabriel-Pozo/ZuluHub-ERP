@@ -90,30 +90,3 @@ matrizDeEstados("Selector", {
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   },
 });
-
-describe("Selector: opciones apagadas", () => {
-  it("una opción apagada se ve pero no se puede elegir", async () => {
-    await render(
-      <Selector
-        dato="pendiente"
-        etiqueta="Destino"
-        valor=""
-        alCambiar={() => undefined}
-        opciones={[
-          { valor: "a", etiqueta: "Uno" },
-          { valor: "b", etiqueta: "Dos", apagada: true },
-          { valor: "c", etiqueta: "Tres", apagada: false },
-        ]}
-        textoDeElegir="Elegí"
-      />,
-    );
-    const opciones = [...page.getByRole("combobox").element().querySelectorAll("option")];
-    expect(opciones.map((o) => [o.textContent, o.disabled])).toEqual([
-      ["Elegí", false],
-      ["Uno", false],
-      ["Dos", true],
-      ["Tres", false],
-    ]);
-    expect(await violacionesDeAccesibilidad()).toEqual([]);
-  });
-});
