@@ -32,6 +32,15 @@ const REVERSION = join(
 );
 
 const MIGRACION = join(import.meta.dirname, "../../migraciones/0077_identidad_de_la_carta.sql");
+/** 0078 (el portal) y 0083 (su plan) dependen de 0077: se revierten antes que ella. */
+const REVERSION_DEL_PORTAL = join(
+  import.meta.dirname,
+  "../../migraciones/reversiones/0078_revertir_portal_de_la_empresa.sql",
+);
+const REVERSION_DEL_PORTAL_POR_PLAN = join(
+  import.meta.dirname,
+  "../../migraciones/reversiones/0083_revertir_portal_por_plan.sql",
+);
 
 const LOGO = {
   proveedor: "CLOUDINARY",
@@ -554,6 +563,11 @@ describe.skipIf(base === null)("identidad de la carta (0077)", () => {
             )
           ).rows[0]?.n as number;
 
+        // 0078 y 0083 (el portal) usan las funciones de 0077: se revierten antes (sin datos, no frenan).
+        await cl.query("begin");
+        await cl.query(await readFile(REVERSION_DEL_PORTAL_POR_PLAN, "utf8"));
+        await cl.query(await readFile(REVERSION_DEL_PORTAL, "utf8"));
+        await cl.query("commit");
         // Con una carta que eligió una cara: frena y no deja nada a medias.
         const e = await (
           await import("./carta-publica-apoyo")

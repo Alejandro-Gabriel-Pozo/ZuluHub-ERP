@@ -5,6 +5,6 @@
   "tipo": "DATOS",
   "estado": "PENDIENTE_DE_OK",
   "decision": "El teléfono de la tarjeta del portal admite solo dígitos, letras ASCII, espacio y + ( ) . , / # * - (1 a 40).",
-  "que_cambia": "Un teléfono con otro símbolo (por ejemplo acentos o @) no se guarda en la tarjeta. Revertir: ampliar el conjunto en la primitiva y en el CHECK de la base.",
+  "que_cambia": "Un teléfono con otro símbolo no se guarda en la tarjeta. Para revertir se amplía el conjunto en la primitiva y en el CHECK de la base.",
   "donde": "migraciones/0078_portal_de_la_empresa.sql; src/primitivas/texto/datos-de-portal.ts"
 }

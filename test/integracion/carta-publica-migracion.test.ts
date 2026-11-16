@@ -29,6 +29,15 @@ const REVERSION_DE_LA_IDENTIDAD = join(
   import.meta.dirname,
   "../../migraciones/reversiones/0077_revertir_identidad_de_la_carta.sql",
 );
+/** 0078 (el portal) y 0083 (su plan) dependen de 0077: se revierten antes que ella. */
+const REVERSION_DEL_PORTAL = join(
+  import.meta.dirname,
+  "../../migraciones/reversiones/0078_revertir_portal_de_la_empresa.sql",
+);
+const REVERSION_DEL_PORTAL_POR_PLAN = join(
+  import.meta.dirname,
+  "../../migraciones/reversiones/0083_revertir_portal_por_plan.sql",
+);
 /** 0050 (el plan en la lectura pública) se revierte primero de todo: también mira `carta_publica`, y 0044 es su requisito. */
 const REVERSION_DEL_PLAN = join(
   import.meta.dirname,
@@ -456,6 +465,9 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
         await expect(correr()).rejects.toMatchObject({ code: "2BP01" });
         expect((await c.query("select to_regclass('carta_publica') as t")).rows[0]).toBeDefined();
         await c.query("begin");
+        // 0083 y 0078 (el portal) usan las funciones de 0077: se revierten antes (sin datos, no frenan).
+        await c.query(await readFile(REVERSION_DEL_PORTAL_POR_PLAN, "utf8"));
+        await c.query(await readFile(REVERSION_DEL_PORTAL, "utf8"));
         // 0077 (identidad) también mira `carta_publica`: se revierte primero (sin datos, no frena).
         await c.query(await readFile(REVERSION_DE_LA_IDENTIDAD, "utf8"));
         await c.query(await readFile(REVERSION_DEL_PLAN, "utf8"));

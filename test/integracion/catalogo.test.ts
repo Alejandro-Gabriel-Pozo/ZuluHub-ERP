@@ -93,6 +93,10 @@ const TABLAS_DE_NEGOCIO = [
   "disponibilidad_de_producto",
   // La identidad de la carta: el color de la empresa para sus cartas (0077_identidad_de_la_carta)
   "identidad_de_carta_empresa",
+  // El portal de la empresa (0078_portal_de_la_empresa)
+  "portal_de_empresa",
+  "portal_tarjeta",
+  "portal_zona",
   // Cierre del día (0026_cierre)
   "jornada_de_sucursal",
   "control_de_jornada_cerrada",
@@ -530,6 +534,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "carta_publica:SELECT", // 0043
           "disponibilidad_de_producto:SELECT", // 0043
           "identidad_de_carta_empresa:SELECT", // 0077
+          ...["portal_de_empresa", "portal_tarjeta", "portal_zona"].map(
+            (tabla) => `${tabla}:SELECT`,
+          ), // 0078
         ].sort(),
       );
       expect(porRol("pedernal_grupo")).toEqual(
@@ -855,6 +862,35 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "rubro",
           ].map((c) => `pedernal_app:carta_publica.${c}`), // 0043 y 0077
           "pedernal_app:identidad_de_carta_empresa.color_principal", // 0077
+          ...[
+            "portal_de_empresa.color_detras",
+            "portal_de_empresa.color_encabezado",
+            "portal_de_empresa.color_pagina",
+            "portal_de_empresa.imagen_cuenta",
+            "portal_de_empresa.imagen_extension",
+            "portal_de_empresa.imagen_id_publico",
+            "portal_de_empresa.imagen_proveedor",
+            "portal_de_empresa.imagen_version",
+            "portal_de_empresa.linea_superior",
+            "portal_de_empresa.logo_visible",
+            "portal_de_empresa.titulo",
+            "portal_de_empresa.variante",
+            "portal_tarjeta.foto_cuenta",
+            "portal_tarjeta.foto_extension",
+            "portal_tarjeta.foto_id_publico",
+            "portal_tarjeta.foto_proveedor",
+            "portal_tarjeta.foto_version",
+            "portal_tarjeta.nombre",
+            "portal_tarjeta.orden",
+            "portal_tarjeta.telefono",
+            "portal_tarjeta.visible",
+            "portal_zona.alto",
+            "portal_zona.ancho",
+            "portal_zona.sucursal_id",
+            "portal_zona.visible",
+            "portal_zona.x",
+            "portal_zona.y",
+          ].map((c) => `pedernal_app:${c}`), // 0078
           ...["actualizado_en", "actualizado_por", "oculto"].map(
             (c) => `pedernal_app:disponibilidad_de_producto.${c}`,
           ), // 0043
@@ -1242,6 +1278,46 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         ...["color_principal", "creado_por", "empresa_id"].map(
           (c) => `identidad_de_carta_empresa.${c}`,
         ),
+        // 0078: el portal de la empresa, sus tarjetas (variante A) y sus zonas (variante B)
+        ...[
+          "portal_de_empresa.codigo",
+          "portal_de_empresa.color_detras",
+          "portal_de_empresa.color_encabezado",
+          "portal_de_empresa.color_pagina",
+          "portal_de_empresa.creado_por",
+          "portal_de_empresa.empresa_id",
+          "portal_de_empresa.id",
+          "portal_de_empresa.imagen_cuenta",
+          "portal_de_empresa.imagen_extension",
+          "portal_de_empresa.imagen_id_publico",
+          "portal_de_empresa.imagen_proveedor",
+          "portal_de_empresa.imagen_version",
+          "portal_de_empresa.linea_superior",
+          "portal_de_empresa.logo_visible",
+          "portal_de_empresa.titulo",
+          "portal_de_empresa.variante",
+          "portal_tarjeta.empresa_id",
+          "portal_tarjeta.foto_cuenta",
+          "portal_tarjeta.foto_extension",
+          "portal_tarjeta.foto_id_publico",
+          "portal_tarjeta.foto_proveedor",
+          "portal_tarjeta.foto_version",
+          "portal_tarjeta.nombre",
+          "portal_tarjeta.orden",
+          "portal_tarjeta.portal_id",
+          "portal_tarjeta.sucursal_id",
+          "portal_tarjeta.telefono",
+          "portal_tarjeta.visible",
+          "portal_zona.alto",
+          "portal_zona.ancho",
+          "portal_zona.empresa_id",
+          "portal_zona.id",
+          "portal_zona.portal_id",
+          "portal_zona.sucursal_id",
+          "portal_zona.visible",
+          "portal_zona.x",
+          "portal_zona.y",
+        ],
         ...[
           "actualizado_en",
           "actualizado_por",
