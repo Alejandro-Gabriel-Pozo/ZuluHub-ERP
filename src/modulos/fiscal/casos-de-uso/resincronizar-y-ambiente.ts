@@ -3,9 +3,10 @@ import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { EmpresaNoOpera } from "../../../contexto/estados";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { textoDeUnaLineaDesdeTexto } from "../../../primitivas/texto/texto-de-una-linea";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { TipoDeComprobante } from "../dominio/comprobante-emitido";
-import type { Ambiente } from "../dominio/comprobante-nuevo";
+import { LIMITES_DE_COMPROBANTE, type Ambiente } from "../dominio/comprobante-nuevo";
 import { habilitadoEnArca } from "../dominio/habilitacion-en-arca";
 import type { EmisorId, PuntoDeVentaId } from "../dominio/identificadores";
 import {
@@ -74,7 +75,15 @@ export function armarResincronizarSerie(dependencias: DependenciasDeFacturacion)
     entrada: EntradaDeResincronizarSerie,
   ): Promise<Resultado<SalidaDeResincronizarSerie, ErrorAlResincronizarSerie>> {
     const { empresaId } = contexto;
-    const motivo = entrada.motivo.trim();
+    // El motivo es un texto de una línea de la lista de permitidos (una sola fuente) y de hasta el tope de los motivos del comprobante
+    // (`LIMITES_DE_COMPROBANTE.motivo`, el mismo que cuenta la pantalla). Se informa DESPUÉS del permiso, como antes. Previene: un
+    // invisible o un salto de línea en el motivo de bloqueo que queda en la serie y en la auditoría. SUPUESTO (DEC-0047): la lista base
+    // (sin `¿ ¡ ? ! % $`, que el dueño habilitó solo para el catálogo); ampliarla es una decisión del dueño.
+    const motivoValidado = textoDeUnaLineaDesdeTexto(entrada.motivo, {
+      maximo: LIMITES_DE_COMPROBANTE.motivo,
+      exigirUnaLetra: false,
+    });
+    const motivo = motivoValidado.ok ? motivoValidado.valor : "";
 
     const lectura = await transacciones.ejecutar(
       { contexto, soloLectura: true },
@@ -90,7 +99,7 @@ export function armarResincronizarSerie(dependencias: DependenciasDeFacturacion)
           tx.autorizacion.delActor(contexto),
         );
         if (!permiso.ok) return permiso;
-        if (motivo === "" || motivo.length > 200) return err("MOTIVO_INVALIDO");
+        if (!motivoValidado.ok) return err("MOTIVO_INVALIDO");
         const opera = await empresaOpera(tx, empresaId);
         if (!opera.ok) return opera;
         const serie = await tx.series.obtener(

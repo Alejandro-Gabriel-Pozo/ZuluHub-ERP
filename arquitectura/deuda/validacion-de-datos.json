@@ -55,18 +55,6 @@
     "prohibidos": 1,
     "duplicados": 0
   },
-  "src/modulos/fiscal/casos-de-uso/resincronizar-y-ambiente.ts": {
-    "prohibidos": 0,
-    "duplicados": 1
-  },
-  "src/modulos/fiscal/dominio/certificado-pedido.ts": {
-    "prohibidos": 1,
-    "duplicados": 0
-  },
-  "src/modulos/fiscal/dominio/datos-fiscales.ts": {
-    "prohibidos": 1,
-    "duplicados": 0
-  },
   "src/plataforma/captacion/dominio/atribucion.ts": {
     "prohibidos": 0,
     "duplicados": 2
@@ -89,10 +77,6 @@
   },
   "src/primitivas/contacto/web.ts": {
     "prohibidos": 2,
-    "duplicados": 0
-  },
-  "src/primitivas/domicilio/domicilio.ts": {
-    "prohibidos": 1,
     "duplicados": 0
   }
 }
