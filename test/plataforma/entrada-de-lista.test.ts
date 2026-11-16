@@ -64,6 +64,33 @@ describe("entradaDeAgregarValor", () => {
   });
 });
 
+describe("la clave y los ids tienen que ser TEXTO con forma de uuid completa", () => {
+  const comoUuid = { toString: () => CLAVE };
+
+  it.each([`x${CLAVE}`, `${CLAVE}x`, ` ${CLAVE}`, `${CLAVE}\n`, comoUuid])(
+    "%j no es un uuid válido",
+    (clave) => {
+      expect(
+        entradaDeAgregarValor({ claveDeIdempotencia: clave, lista: "marcas", nombre: "X" }),
+      ).toEqual({ ok: false });
+      expect(
+        entradaDeCambiarEstado({ claveDeIdempotencia: CLAVE, valorId: clave, versionEsperada: 1 }),
+      ).toEqual({ ok: false });
+    },
+  );
+
+  it("la versión tiene que ser un número: un objeto que se parece a uno se rechaza", () => {
+    const comoNumero = { valueOf: () => 2 };
+    expect(
+      entradaDeCambiarEstado({
+        claveDeIdempotencia: CLAVE,
+        valorId: VALOR,
+        versionEsperada: comoNumero,
+      }),
+    ).toEqual({ ok: false });
+  });
+});
+
 describe("entradaDeCorregirNombre", () => {
   const buena = { claveDeIdempotencia: CLAVE, valorId: VALOR, nombre: "Cabal", versionEsperada: 3 };
 

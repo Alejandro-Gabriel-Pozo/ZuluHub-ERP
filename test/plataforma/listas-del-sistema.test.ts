@@ -29,4 +29,8 @@ describe("listas de la consola", () => {
       expect(listaDeLaConsola(nombre)).toBeNull();
     },
   );
+
+  it("un objeto que se convierte en «marcas» no es el nombre de una lista (tiene que ser texto)", () => {
+    expect(listaDeLaConsola({ toString: () => "marcas" })).toBeNull();
+  });
 });

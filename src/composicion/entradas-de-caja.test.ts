@@ -92,6 +92,14 @@ describe("entradaDeDatosDelMedio", () => {
     });
   });
 
+  it.each(["cupon", "ultimos4", "marca", "cuotas", "dni"])(
+    "tildar solo %s apaga los otros cuatro",
+    (dato) => {
+      const r = entradaDeDatosDelMedio({ ...base, datos: [dato] });
+      expect(r.ok && Object.entries(r.valor.pide).filter(([, v]) => v)).toEqual([[dato, true]]);
+    },
+  );
+
   it("ninguno tildado es válido: el medio deja de pedir datos", () => {
     const r = entradaDeDatosDelMedio({ ...base, datos: [] });
     expect(r).toMatchObject({ ok: true });

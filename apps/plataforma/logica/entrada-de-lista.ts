@@ -30,7 +30,7 @@ const esRegistro = (valor: unknown): valor is Record<string, unknown> =>
   typeof valor === "object" && valor !== null && !Array.isArray(valor);
 const esUuid = (valor: unknown): valor is string => typeof valor === "string" && UUID.test(valor);
 const esVersion = (valor: unknown): valor is number =>
-  typeof valor === "number" && Number.isSafeInteger(valor) && valor >= 1;
+  Number.isSafeInteger(valor) && (valor as number) >= 1;
 
 export function entradaDeAgregarValor(entrada: unknown): Forma<EntradaDeAgregarValor> {
   if (!esRegistro(entrada)) return { ok: false };
