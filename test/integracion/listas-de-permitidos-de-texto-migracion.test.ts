@@ -1,4 +1,4 @@
-import { readFile, readdir, rm } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
@@ -7,6 +7,7 @@ import { textoDeUnaLineaDesdeTexto } from "../../src/primitivas/texto/texto-de-u
 import { crearEscenario } from "./facturacion-apoyo";
 import type { BaseDePruebas } from "./global";
 import { CARPETA_DE_MIGRACIONES, baseConMigraciones } from "./marcas-apoyo";
+import { sembrarMarcaPrincipalDePrueba } from "./marcas-de-prueba";
 
 /**
  * La migración 0062: la base pasa de «sin caracteres de control» a la lista de PERMITIDOS que ya usa el dominio. Se prueba: que cada
@@ -66,103 +67,134 @@ const PUNTOS: readonly number[] = [
   0xe0020,
 ];
 
-describe.skipIf(base === null)("0062: las listas de permitidos de la base repiten las del dominio", () => {
-  let c: pg.Client;
-  beforeAll(async () => {
-    if (base === null) return;
-    c = new pg.Client({ connectionString: b().dueno });
-    await c.connect();
-  });
-  afterAll(async () => {
-    await c.end();
-  });
+describe.skipIf(base === null)(
+  "0062: las listas de permitidos de la base repiten las del dominio",
+  () => {
+    let c: pg.Client;
+    beforeAll(async () => {
+      if (base === null) return;
+      c = new pg.Client({ connectionString: b().dueno });
+      await c.connect();
+    });
+    afterAll(async () => {
+      await c.end();
+    });
 
-  const dice = async (consulta: string, valor: string | null, maximo?: number) =>
-    (await c.query<{ ok: boolean | null }>(consulta, maximo === undefined ? [valor] : [valor, maximo]))
-      .rows[0]?.ok;
+    const dice = async (consulta: string, valor: string | null, maximo?: number) =>
+      (
+        await c.query<{ ok: boolean | null }>(
+          consulta,
+          maximo === undefined ? [valor] : [valor, maximo],
+        )
+      ).rows[0]?.ok;
 
-  it("texto_de_una_linea_valido dice lo mismo que `textoDeUnaLineaDesdeTexto` en cada punto de código (y el texto ya canónico)", async () => {
-    // El dominio normaliza (NFC, espacios repetidos en uno); la base exige que el texto YA venga así: se compara contra «el dominio lo deja igual».
-    const igualEnElDominio = (texto: string): boolean => {
-      const r = textoDeUnaLineaDesdeTexto(texto, { maximo: 100, exigirUnaLetra: false });
-      return r.ok && r.valor === texto;
-    };
-    const lote: string[] = [];
-    for (const punto of PUNTOS) lote.push(`a${String.fromCodePoint(punto)}b`);
-    const { rows } = await c.query<{ t: string; ok: boolean }>(
-      "select t, texto_de_una_linea_valido(t, 100) as ok from unnest($1::text[]) as t",
-      [lote],
-    );
-    const distintos = rows.filter((r) => r.ok !== igualEnElDominio(r.t)).map((r) => r.t.codePointAt(1)?.toString(16));
-    expect(distintos, "puntos de código en que la base y el dominio no coinciden").toEqual([]);
-    expect(rows.filter((r) => r.ok).length, "la lista no puede quedar vacía").toBeGreaterThan(150);
-  });
+    it("texto_de_una_linea_valido dice lo mismo que `textoDeUnaLineaDesdeTexto` en cada punto de código (y el texto ya canónico)", async () => {
+      // El dominio normaliza (NFC, espacios repetidos en uno); la base exige que el texto YA venga así: se compara contra «el dominio lo deja igual».
+      const igualEnElDominio = (texto: string): boolean => {
+        const r = textoDeUnaLineaDesdeTexto(texto, { maximo: 100, exigirUnaLetra: false });
+        return r.ok && r.valor === texto;
+      };
+      const lote: string[] = [];
+      for (const punto of PUNTOS) lote.push(`a${String.fromCodePoint(punto)}b`);
+      const { rows } = await c.query<{ t: string; ok: boolean }>(
+        "select t, texto_de_una_linea_valido(t, 100) as ok from unnest($1::text[]) as t",
+        [lote],
+      );
+      const distintos = rows
+        .filter((r) => r.ok !== igualEnElDominio(r.t))
+        .map((r) => r.t.codePointAt(1)?.toString(16));
+      expect(distintos, "puntos de código en que la base y el dominio no coinciden").toEqual([]);
+      expect(rows.filter((r) => r.ok).length, "la lista no puede quedar vacía").toBeGreaterThan(
+        150,
+      );
+    });
 
-  it("los bordes de texto_de_una_linea_valido: largo, extremos, `+` y `-` iniciales, NFC y NULL", async () => {
-    const q = "select texto_de_una_linea_valido($1, $2) as ok";
-    expect(await dice(q, "a".repeat(100), 100)).toBe(true);
-    expect(await dice(q, "a".repeat(101), 100)).toBe(false);
-    expect(await dice(q, "", 100)).toBe(false);
-    expect(await dice(q, " a", 100)).toBe(false);
-    expect(await dice(q, "a ", 100)).toBe(false);
-    expect(await dice(q, "+a", 100)).toBe(false);
-    expect(await dice(q, "-a", 100)).toBe(false);
-    expect(await dice(q, "a-+b", 100)).toBe(true);
-    expect(await dice(q, "Café", 100)).toBe(false);
-    expect(await dice(q, "Café", 100)).toBe(true);
-    expect(await dice(q, null, 100)).toBe(false);
-    // El tope cuenta caracteres, no bytes ni unidades de UTF-16.
-    expect(await dice(q, "é".repeat(100), 100)).toBe(true);
-  });
+    it("los bordes de texto_de_una_linea_valido: largo, extremos, `+` y `-` iniciales, NFC y NULL", async () => {
+      const q = "select texto_de_una_linea_valido($1, $2) as ok";
+      expect(await dice(q, "a".repeat(100), 100)).toBe(true);
+      expect(await dice(q, "a".repeat(101), 100)).toBe(false);
+      expect(await dice(q, "", 100)).toBe(false);
+      expect(await dice(q, " a", 100)).toBe(false);
+      expect(await dice(q, "a ", 100)).toBe(false);
+      expect(await dice(q, "+a", 100)).toBe(false);
+      expect(await dice(q, "-a", 100)).toBe(false);
+      expect(await dice(q, "a-+b", 100)).toBe(true);
+      expect(await dice(q, "Café", 100)).toBe(false);
+      expect(await dice(q, "Café", 100)).toBe(true);
+      expect(await dice(q, null, 100)).toBe(false);
+      // El tope cuenta caracteres, no bytes ni unidades de UTF-16.
+      expect(await dice(q, "é".repeat(100), 100)).toBe(true);
+    });
 
-  it("piso_o_departamento_valido dice lo mismo que `domicilioDesdeDatos` en cada punto de código", async () => {
-    const aceptaElDominio = (texto: string): boolean => {
-      const r = domicilioDesdeDatos({
-        calle: "a",
-        numero: "1",
-        piso: texto,
-        localidad: "a",
-        provincia: "AR-B",
-      });
-      return r.ok;
-    };
-    const lote = PUNTOS.map((p) => `a${String.fromCodePoint(p)}b`);
-    const { rows } = await c.query<{ t: string; ok: boolean }>(
-      "select t, piso_o_departamento_valido(t, 20) as ok from unnest($1::text[]) as t",
-      [lote],
-    );
-    // El dominio recorta y usa el texto tal cual: con `a…b` (sin extremos) los dos ven lo mismo.
-    const distintos = rows.filter((r) => r.ok !== aceptaElDominio(r.t)).map((r) => r.t.codePointAt(1)?.toString(16));
-    expect(distintos).toEqual([]);
-    const q = "select piso_o_departamento_valido($1, $2) as ok";
-    for (const bueno of ["PB", "3", "-1", "1°", "B/2", "Sub 1", "Único", "Ñ"]) {
-      expect(await dice(q, bueno, 20), bueno).toBe(true);
-    }
-    for (const malo of ["", " 1", "1 ", "<1>", "1&2", "😀", "a".repeat(21)]) {
-      expect(await dice(q, malo, 20), JSON.stringify(malo)).toBe(false);
-    }
-    expect(await dice(q, null, 20)).toBe(false);
-  });
+    it("piso_o_departamento_valido dice lo mismo que `domicilioDesdeDatos` en cada punto de código", async () => {
+      const aceptaElDominio = (texto: string): boolean => {
+        const r = domicilioDesdeDatos({
+          calle: "a",
+          numero: "1",
+          piso: texto,
+          localidad: "a",
+          provincia: "AR-B",
+        });
+        return r.ok;
+      };
+      const lote = PUNTOS.map((p) => `a${String.fromCodePoint(p)}b`);
+      const { rows } = await c.query<{ t: string; ok: boolean }>(
+        "select t, piso_o_departamento_valido(t, 20) as ok from unnest($1::text[]) as t",
+        [lote],
+      );
+      // El dominio recorta y usa el texto tal cual: con `a…b` (sin extremos) los dos ven lo mismo.
+      const distintos = rows
+        .filter((r) => r.ok !== aceptaElDominio(r.t))
+        .map((r) => r.t.codePointAt(1)?.toString(16));
+      expect(distintos).toEqual([]);
+      const q = "select piso_o_departamento_valido($1, $2) as ok";
+      for (const bueno of ["PB", "3", "-1", "1°", "B/2", "Sub 1", "Único", "Ñ"]) {
+        expect(await dice(q, bueno, 20), bueno).toBe(true);
+      }
+      for (const malo of ["", " 1", "1 ", "<1>", "1&2", "😀", "a".repeat(21)]) {
+        expect(await dice(q, malo, 20), JSON.stringify(malo)).toBe(false);
+      }
+      expect(await dice(q, null, 20)).toBe(false);
+    });
 
-  it("numero_de_iibb_valido: la forma de `datos-fiscales.ts` (letras latinas, dígitos, espacio y `. / -`, de 1 a 30, empieza con letra o dígito)", async () => {
-    const q = "select numero_de_iibb_valido($1) as ok";
-    for (const bueno of ["901-123456-7", "CM 901-123456-7", "280123456", "12.345/6", "a", "en trámite", "1".repeat(30)]) {
-      expect(await dice(q, bueno), bueno).toBe(true);
-    }
-    for (const malo of ["", "-123", " 1", "1 ", "12​3", "<b>1</b>", "123 ✨", "1".repeat(31), "小林 1"]) {
-      expect(await dice(q, malo), JSON.stringify(malo)).toBe(false);
-    }
-    expect(await dice(q, null)).toBe(false);
-  });
+    it("numero_de_iibb_valido: la forma de `datos-fiscales.ts` (letras latinas, dígitos, espacio y `. / -`, de 1 a 30, empieza con letra o dígito)", async () => {
+      const q = "select numero_de_iibb_valido($1) as ok";
+      for (const bueno of [
+        "901-123456-7",
+        "CM 901-123456-7",
+        "280123456",
+        "12.345/6",
+        "a",
+        "en trámite",
+        "1".repeat(30),
+      ]) {
+        expect(await dice(q, bueno), bueno).toBe(true);
+      }
+      for (const malo of [
+        "",
+        "-123",
+        " 1",
+        "1 ",
+        "12​3",
+        "<b>1</b>",
+        "123 ✨",
+        "1".repeat(31),
+        "小林 1",
+      ]) {
+        expect(await dice(q, malo), JSON.stringify(malo)).toBe(false);
+      }
+      expect(await dice(q, null)).toBe(false);
+    });
 
-  it("los 14 CHECK usan la función que les toca, con el nombre que ya tenían", async () => {
-    for (const [tabla, nombre, funcion] of CHECKS) {
-      const def = await definicion(c, tabla, nombre);
-      expect(def, `${nombre}: ${def}`).toContain(funcion);
-      expect(def, `${nombre} no puede conservar la lista de prohibidos`).not.toContain("x01");
-    }
-  });
-});
+    it("los 14 CHECK usan la función que les toca, con el nombre que ya tenían", async () => {
+      for (const [tabla, nombre, funcion] of CHECKS) {
+        const def = await definicion(c, tabla, nombre);
+        expect(def, `${nombre}: ${def}`).toContain(funcion);
+        expect(def, `${nombre} no puede conservar la lista de prohibidos`).not.toContain("x01");
+      }
+    });
+  },
+);
 
 describe.skipIf(base === null)("0062 sobre una base con datos", () => {
   let previas: string[];
@@ -174,6 +206,7 @@ describe.skipIf(base === null)("0062 sobre una base con datos", () => {
 
   it("con datos que no cumplen ABORTA con tabla, columna y cantidad y no deja nada a medias; con datos que cumplen no cambia ni una fila; y la reversión vuelve atrás", async () => {
     const previa = await baseConMigraciones(b(), previas);
+    await sembrarMarcaPrincipalDePrueba(previa.aparte.base.dueno);
     const c = previa.cliente;
     try {
       const e = await crearEscenario(c);
@@ -186,12 +219,14 @@ describe.skipIf(base === null)("0062 sobre una base con datos", () => {
       );
       const migracion = await textoDe(CARPETA_DE_MIGRACIONES, ARCHIVO);
       const huella = async () =>
-        (await c.query<{ h: string }>(
-          `select md5(coalesce((select string_agg(to_jsonb(x)::text, '|' order by id) from sucursal x), '')
+        (
+          await c.query<{ h: string }>(
+            `select md5(coalesce((select string_agg(to_jsonb(x)::text, '|' order by id) from sucursal x), '')
                || coalesce((select string_agg(to_jsonb(x)::text, '|' order by id) from domicilio x), '')
                || coalesce((select string_agg(to_jsonb(x)::text, '|' order by id) from datos_fiscales x), '')
                || coalesce((select string_agg(to_jsonb(x)::text, '|' order by id) from comprobante x), '')) as h`,
-        )).rows[0]?.h;
+          )
+        ).rows[0]?.h;
       const antes = await huella();
 
       // 1. Aborta, y dice qué y cuánto.
@@ -215,7 +250,10 @@ describe.skipIf(base === null)("0062 sobre una base con datos", () => {
 
       // 3. Corregidos los datos, se aplica sin cambiar ninguna fila.
       await c.query("update sucursal set nombre = 'Casa central' where id = $1", [e.sucursal]);
+      // Un domicilio es de solo inserción (lo protege un disparador): en esta base descartable se lo saca a mano.
+      await c.query("alter table domicilio disable trigger user");
       await c.query("delete from domicilio where calle = 'Calle <b>'");
+      await c.query("alter table domicilio enable trigger user");
       const limpias = await huella();
       await c.query(migracion);
       expect(await huella()).toBe(limpias);
@@ -224,6 +262,7 @@ describe.skipIf(base === null)("0062 sobre una base con datos", () => {
       }
 
       // 4. Con la lista nueva, la base rechaza por sí sola lo hostil y acepta lo válido.
+      await c.query("begin");
       for (const calle of ["Calle​x", "Calle‮x", "<b>x</b>", "Calle 😀", "=1+1", "小林商事"]) {
         await c.query("savepoint s");
         await expect(
@@ -249,6 +288,7 @@ describe.skipIf(base === null)("0062 sobre una base con datos", () => {
         c.query("update sucursal set nombre = $1 where id = $2", ["Casa​central", e.sucursal]),
       ).rejects.toMatchObject({ code: "23514", constraint: "sucursal_nombre_control_ck" });
       await c.query("rollback to savepoint s");
+      await c.query("rollback");
 
       // 5. La reversión vuelve a «sin controles», no pierde datos y se puede repetir.
       const reversion = await textoDe(join(CARPETA_DE_MIGRACIONES, "reversiones"), REVERSION);
@@ -268,8 +308,6 @@ describe.skipIf(base === null)("0062 sobre una base con datos", () => {
       expect(registro).toHaveLength(0);
     } finally {
       await previa.cerrar();
-      await previa.aparte.destruir();
-      await rm(previa.carpeta, { recursive: true, force: true });
     }
   });
 });

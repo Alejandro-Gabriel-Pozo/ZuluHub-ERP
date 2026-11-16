@@ -229,13 +229,22 @@ describe.skipIf(base === null)(
         const e = await nuevo();
         const { mandado, version } = await guardadoYConfirmado(e);
         // Una versión confirmada ANTES de endurecer la regla: doble espacio y arroba. Se la deja así tocando la fila directamente
-        // (el disparador de cambios la protege en uso normal; esta base es descartable y solo de esta prueba).
+        // (el disparador de cambios la protege en uso normal; esta base es descartable y solo de esta prueba). Desde 0062 la base
+        // también rechaza esa razón social, así que se saca el CHECK mientras se arma la fila vieja y se lo vuelve a poner NOT VALID
+        // (sigue valiendo para lo nuevo, sin revisar la fila vieja): es lo que había en una base migrada antes de 0062.
+        await dueno.query(
+          "alter table datos_fiscales drop constraint datos_fiscales_razon_social_ck",
+        );
         await dueno.query("alter table datos_fiscales disable trigger user");
         await dueno.query(
           "update datos_fiscales set razon_social = $2, inicio_actividades = $3 where id = $1",
           [mandado.borradorId, "Kiosco  @ Mendoza", "2030-01-01"],
         );
         await dueno.query("alter table datos_fiscales enable trigger user");
+        await dueno.query(
+          `alter table datos_fiscales add constraint datos_fiscales_razon_social_ck
+             check (razon_social is null or texto_de_una_linea_valido(razon_social, 200)) not valid`,
+        );
         const antes = await foto(e.mundo.empresa);
         const yaEstaba = ok({ borradorId: mandado.borradorId, version, yaEstaba: true });
         const { borradorId } = mandado;

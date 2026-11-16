@@ -6,7 +6,7 @@ import {
 } from "../../src/modulos/empresas/publico";
 
 /**
- * El CHECK `comprobante_sucursal_nombre_ck` (0022) es el ESPEJO de los tres CHECK que ya tiene `sucursal.nombre` (0001 y 0005) y repite
+ * El CHECK `comprobante_sucursal_nombre_ck` (0022) es el ESPEJO del CHECK de `sucursal.nombre` (desde 0062 los dos llaman a `texto_de_una_linea_valido`) y repite
  * el tope del dominio (`LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL`). Esta prueba lee las definiciones del CATÁLOGO de la base real y las
  * compara. Previene: que el CHECK del comprobante sea más estricto que el de la sucursal (un nombre válido de sucursal haría fallar el
  * alta de todos sus comprobantes: la sucursal no podría emitir) o más laxo (un texto sin regla impreso en la factura), y que el tope
@@ -37,57 +37,38 @@ describe.skipIf(base === null)(
       expect(rows, `falta el CHECK ${nombre}`).toHaveLength(1);
       return rows[0]?.def as string;
     };
-    const SUCURSAL = [
-      "sucursal_nombre_ck",
-      "sucursal_nombre_largo_ck",
-      "sucursal_nombre_control_ck",
-    ];
-
     /** La condición del CHECK, sin `CHECK (...)` y con la columna normalizada, para comparar las dos tablas. */
     const condicion = (def: string, columna: string): string =>
       def
         .replace(/^CHECK \(+/, "")
         .replace(/\)+$/, "")
         .replaceAll(columna, "<col>");
+    // Sin el paréntesis de cierre: `condicion` se lo saca al final de la definición.
+    const LLAMADA = `texto_de_una_linea_valido(<col>, ${LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL}`;
 
-    it("el largo: el tope de la sucursal, el del comprobante y el del dominio son el mismo", async () => {
-      const tope = (def: string, columna: string) =>
-        Number(new RegExp(`char_length\\(${columna}\\) <= (\\d+)`).exec(def)?.[1]);
-      const enSucursal = tope(await definicion("sucursal", "sucursal_nombre_largo_ck"), "nombre");
-      const enComprobante = tope(
+    it("el largo y la lista: la sucursal y el comprobante llaman a la MISMA función con el tope del dominio", async () => {
+      const enSucursal = condicion(
+        await definicion("sucursal", "sucursal_nombre_control_ck"),
+        "nombre",
+      );
+      const enComprobante = condicion(
         await definicion("comprobante", "comprobante_sucursal_nombre_ck"),
         "sucursal_nombre",
       );
-      expect(enSucursal).toBe(LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL);
-      expect(enComprobante).toBe(LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL);
-    });
-
-    it("cada condición de los tres CHECK de la sucursal está, igual, en el del comprobante (y no hay ninguna de más)", async () => {
-      const del = condicion(
-        await definicion("comprobante", "comprobante_sucursal_nombre_ck"),
-        "sucursal_nombre",
-      );
-      const partes: string[] = [];
-      for (const nombre of SUCURSAL) {
-        partes.push(condicion(await definicion("sucursal", nombre), "nombre"));
-      }
-      for (const parte of partes) {
-        expect(del, `«${parte}» no está en el CHECK del comprobante: «${del}»`).toContain(parte);
-      }
-      // Nada más que esas tres condiciones unidas por AND (cada una puede venir entre paréntesis).
-      const sobrante = partes
-        .reduce((resto, parte) => resto.replace(parte, ""), del)
-        .replace(/[()\s]|AND/g, "");
-      expect(sobrante, "el CHECK del comprobante tiene condiciones que la sucursal no tiene").toBe(
-        "",
+      expect(enSucursal).toContain(LLAMADA);
+      expect(enComprobante).toContain(LLAMADA);
+      // El comprobante solo agrega que el nombre congelado puede faltar (los comprobantes anteriores a 0022 no lo tienen).
+      expect(enComprobante.replace(LLAMADA, "").replace(/[()\s]|OR|<col> IS NULL/g, "")).toBe("");
+      // El tope de la sucursal sigue además en su CHECK de largo (0005).
+      expect(await definicion("sucursal", "sucursal_nombre_largo_ck")).toContain(
+        `char_length(nombre) <= ${LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL}`,
       );
     });
 
-    it("la base y `nombreDeSucursalValido` coinciden: todo nombre limpio por el dominio pasa los CHECK, y los CHECK rechazan lo que el dominio rechaza", async () => {
+    it("la base y `nombreDeSucursalValido` coinciden: todo nombre limpio por el dominio pasa la función de la base, y la función rechaza lo que el dominio rechaza", async () => {
       const pasa = async (texto: string): Promise<boolean> => {
         const { rows } = await c.query<{ ok: boolean }>(
-          `select (($1::text) !~ '^\\s|\\s$' and ($1::text) <> '' and char_length($1::text) <= ${LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL}
-                 and ($1::text) !~ '[\\x01-\\x1F\\x7F-\\x9F]') as ok`,
+          `select texto_de_una_linea_valido($1::text, ${LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL}) as ok`,
           [texto],
         );
         return rows[0]?.ok === true;
@@ -97,9 +78,12 @@ describe.skipIf(base === null)(
         "a",
         "x".repeat(LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL),
         "x".repeat(LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL + 1),
-        "😀".repeat(LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL), // el tope es de caracteres, no de bytes
-        "😀".repeat(LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL + 1),
+        "é".repeat(LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL), // el tope es de caracteres, no de bytes
+        "é".repeat(LARGO_MAXIMO_DEL_NOMBRE_DE_SUCURSAL + 1),
         "Ñandú — Güemes",
+        "😀",
+        "小林商事",
+        "<b>x</b>",
         "",
         " Centro",
         "Centro ",
@@ -107,6 +91,7 @@ describe.skipIf(base === null)(
         "Centro\nNorte",
         "Centro\tNorte",
         "Centro\u0085Norte",
+        "Centro\u200BNorte",
         "Cafe\u0301",
       ];
       for (const texto of textos) {
@@ -117,24 +102,6 @@ describe.skipIf(base === null)(
         if (!(await pasa(texto)) && texto === texto.normalize("NFC").trim()) {
           expect(r.ok, JSON.stringify(texto)).toBe(false);
         }
-      }
-    });
-
-    it("«sin control»: la clase de la base y `\\p{Cc}` del dominio coinciden en cada carácter hasta U+00FF y en los separadores de línea", async () => {
-      const def = await definicion("comprobante", "comprobante_sucursal_nombre_ck");
-      const clase = /!~ '(\[[^']*\])'/.exec(def)?.[1];
-      expect(clase, `sin la regla de «sin control» en «${def}»`).toBeDefined();
-      const puntos = [...Array.from({ length: 0x100 }, (_, i) => i), 0x2028, 0x2029, 0xfeff];
-      for (const punto of puntos) {
-        if (punto === 0) continue; // Postgres no admite NUL en un texto
-        const { rows } = await c.query<{ ok: boolean }>("select (chr($1) !~ $2) as ok", [
-          punto,
-          clase,
-        ]);
-        expect(
-          rows[0]?.ok,
-          `U+${punto.toString(16).padStart(4, "0")} (la base y el dominio no coinciden)`,
-        ).toBe(!/\p{Cc}/u.test(String.fromCodePoint(punto)));
       }
     });
 
