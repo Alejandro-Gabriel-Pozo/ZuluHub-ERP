@@ -135,8 +135,12 @@ describe("rutas de sistema en el proxy", () => {
     for (const host of ["pedernal-erp.vercel.app", "otro.ejemplo.com", HOST_LANDING_A]) {
       for (const ruta of PARECIDAS) {
         const r = await proxy(pedido(host, ruta));
-        // Next conserva la barra final del pedido en la reescritura.
-        expect(reescritura(r), `${host} ${ruta}`).toMatch(/^\/s\/neutra\/?$/);
+        // Host desconocido: 404 plano que contesta la puerta (sin reescribir). Host conocido de otra superficie: la neutra (Next conserva la barra final del pedido en la reescritura).
+        if (host === HOST_LANDING_A) {
+          expect(reescritura(r), `${host} ${ruta}`).toMatch(/^\/s\/neutra\/?$/);
+        } else {
+          expect(reescritura(r), `${host} ${ruta}`).toBeNull();
+        }
         expect(r.status).toBe(404);
         expect(r.headers.get("x-robots-tag")).toBe("noindex");
       }

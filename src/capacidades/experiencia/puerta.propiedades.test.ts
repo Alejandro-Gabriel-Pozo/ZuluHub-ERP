@@ -110,7 +110,7 @@ describe("decidirPuerta (propiedades)", () => {
     );
   });
 
-  it("sin una marca servible, siempre la neutra con 404 (503 si la base falló)", () => {
+  it("sin una marca servible: host desconocido = 404 plano que contesta la puerta (nunca una reescritura); base caída = la neutra con 503", () => {
     fc.assert(
       fc.property(
         encabezados,
@@ -119,8 +119,15 @@ describe("decidirPuerta (propiedades)", () => {
         fc.boolean(),
         (pares, r, res, prod) => {
           const d = decidir(pares, r, res, prod);
-          expect(d.rutaInterna).toBe("/s/neutra");
-          expect(d.estado).toBe(res.tipo === "NO_DISPONIBLE" ? 503 : 404);
+          if (res.tipo === "NO_DISPONIBLE") {
+            expect(d.rutaInterna).toBe("/s/neutra");
+            expect(d.estado).toBe(503);
+          } else {
+            // Con cualquier encabezado (también el de RSC): jamás una reescritura, que Next podría devolver como flujo RSC.
+            expect(d.accion).toBe("RESPONDER");
+            expect(d.rutaInterna).toBeNull();
+            expect(d.estado).toBe(404);
+          }
           expect(d.encabezadosDeRespuesta["X-Robots-Tag"]).toBe("noindex");
         },
       ),
@@ -131,6 +138,11 @@ describe("decidirPuerta (propiedades)", () => {
     fc.assert(
       fc.property(ruta, resolucion, (r, res) => {
         const d = decidir([], r, res, false);
+        if (d.accion === "RESPONDER") {
+          expect(d.rutaInterna).toBeNull();
+          expect(res.tipo).toBe("DESCONOCIDO");
+          return;
+        }
         if (d.rutaInterna === null) {
           expect(d.accion).toBe("SEGUIR");
           expect(res.tipo === "RESUELTA" && res.puerta.superficie === "APP").toBe(true);
@@ -183,7 +195,9 @@ describe("decidirPuerta (propiedades)", () => {
         resolucion,
         (base, cola, res) => {
           const d = decidir([], `${base}${cola}`, res, true);
-          expect(d.rutaInterna).toBe("/s/neutra");
+          // Host desconocido: 404 plano de la puerta (sin ruta interna); el resto, la neutra.
+          expect(d.rutaInterna).toBe(res.tipo === "DESCONOCIDO" ? null : "/s/neutra");
+          expect(d.accion).toBe(res.tipo === "DESCONOCIDO" ? "RESPONDER" : "REESCRIBIR");
         },
       ),
     );
