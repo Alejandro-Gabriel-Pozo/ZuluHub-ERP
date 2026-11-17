@@ -42,9 +42,15 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
   beforeAll(async () => {
     if (base === null) return;
     c = await montarCatalogo(base);
-    // El catálogo real: `catalogo` sigue `en_desarrollo` y el guard rechaza todo.
+    // El catálogo real con `catalogo` forzado a `en_desarrollo` (en el real es disponible, DEC-0463): el guard rechaza todo.
     cerrado = await montarCatalogo(base, {
-      reglas: { catalogo: CATALOGO_DE_MODULOS, permisos: PERMISOS_DE_EMPRESA },
+      reglas: {
+        catalogo: {
+          ...CATALOGO_DE_MODULOS,
+          catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "en_desarrollo" },
+        },
+        permisos: PERMISOS_DE_EMPRESA,
+      },
     });
     e = await c.escenario();
     registrados = [];
@@ -171,7 +177,7 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
     expect(await fila(id)).toEqual(antes);
   });
 
-  it("un nombre repetido (sin distinguir mayúsculas) sale como el genérico y no crea nada; un nombre vacío, como «Falta el nombre»", async () => {
+  it("un nombre repetido (sin distinguir mayúsculas) sale con su texto aprobado y no crea nada; un nombre vacío, como «Falta el nombre»", async () => {
     const x = await c.escenario();
     const nom = nombre("Cafés");
     await nueva(nom, x);
@@ -179,7 +185,15 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
       "select count(*) as n from seccion_de_carta where empresa_id = $1",
       [x.empresa],
     );
-    expect(codigoDe(await crear(nom.toUpperCase(), x))).toBe(GENERICO);
+    expect(await crear(nom.toUpperCase(), x)).toMatchObject({
+      ok: false,
+      error: {
+        codigo: "CATALOGO_SECCION_REPETIDA",
+        clave: "catalogo.error.seccion_repetida",
+        presentacion: "AVISO",
+        campo: "nombre",
+      },
+    });
     expect(await crear("   ", x)).toMatchObject({
       ok: false,
       error: { codigo: "CATALOGO_FALTA_EL_NOMBRE", campo: "nombre" },
@@ -230,7 +244,7 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
     expect(await fila(a)).toEqual(despues);
   });
 
-  it("renombrar con el nombre de otra sección sale como el genérico y no escribe", async () => {
+  it("renombrar con el nombre de otra sección sale con el texto de nombre repetido y no escribe", async () => {
     const x = await c.escenario();
     const a = await nueva(nombre("Cafés"), x);
     const otra = nombre("Postres");
@@ -238,10 +252,16 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
     const v = (await lista(x.gerente))[0]?.version as number;
     const antes = await fila(a);
     expect(
-      codigoDe(
-        await renombrarLaSeccion(d, x.gerente, { seccionId: a, versionEsperada: v, nombre: otra }),
-      ),
-    ).toBe(GENERICO);
+      await renombrarLaSeccion(d, x.gerente, { seccionId: a, versionEsperada: v, nombre: otra }),
+    ).toMatchObject({
+      ok: false,
+      error: {
+        codigo: "CATALOGO_SECCION_REPETIDA",
+        clave: "catalogo.error.seccion_repetida",
+        presentacion: "AVISO",
+        campo: "nombre",
+      },
+    });
     expect(await fila(a)).toEqual(antes);
   });
 
@@ -513,7 +533,7 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
     ).toBe("OK");
   });
 
-  it("con el catálogo en desarrollo (hoy, en el catálogo real) todos reciben MODULO_EN_DESARROLLO y ningún dato", async () => {
+  it("con el catálogo en desarrollo (forzado: en el catálogo real es disponible, DEC-0463) todos reciben MODULO_EN_DESARROLLO y ningún dato", async () => {
     const x = await cerrado.escenario();
     const dependencias: DependenciasDeSeccionesWeb = {
       ...d,

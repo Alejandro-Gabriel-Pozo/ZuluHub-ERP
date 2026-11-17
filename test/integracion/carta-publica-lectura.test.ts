@@ -1,7 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { deLaMarca } from "../utilidades/alcance-del-host";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import type { BaseDePruebas } from "./global";
-import { montarCatalogo, valorDe, cotizarEnTx } from "./catalogo-apoyo";
+import { montarCatalogo, productoDeBase, valorDe, cotizarEnTx } from "./catalogo-apoyo";
 import { codigoAlAzar, comoPublico } from "./carta-publica-apoyo";
 import {
   AHORA_DE_LA_VISITA,
@@ -49,6 +50,45 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
   };
   const productosDe = (v: VidrieraPublicada) =>
     v.secciones.map((s) => s.productos.map((p) => p.nombre));
+
+  it("H3: dos secciones con el mismo `orden` salen siempre por nombre y luego id, igual que la lista de gestión (la carta no varía entre lecturas)", async () => {
+    const otro = await montarEnsayo(c);
+    // El id menor va a «Zeta»: si el desempate fuera el id, «Zeta» saldría antes que «Alfa».
+    const [idZeta, idAlfa] = [randomUUID(), randomUUID()].sort() as [string, string];
+    for (const [id, nombre, producto] of [
+      [idZeta, "Zeta", "Pan de zeta"],
+      [idAlfa, "Alfa", "Pan de alfa"],
+    ] as const) {
+      await c.dueno.query(
+        "insert into seccion_de_carta (id, empresa_id, nombre, nombre_clave, orden, activa) values ($1, $2, $3, $4, 9, true)",
+        [id, otro.e.empresa, nombre, nombre.toLowerCase()],
+      );
+      const idDeProducto = await productoDeBase(c.dueno, otro.e.empresa, { nombre: producto });
+      await c.dueno.query("update producto set seccion_de_carta_id = $2 where id = $1", [
+        idDeProducto,
+        id,
+      ]);
+      await precioDeBase(c.dueno, {
+        empresa: otro.e.empresa,
+        producto: idDeProducto,
+        precio: "100",
+        desde: "2026-10-01T00:00:00Z",
+      });
+    }
+    const leida = (await vidriera.porCodigo(
+      deLaMarca(MARCA_DEL_HOST),
+      otro.carta1.codigo,
+    )) as VidrieraPublicada;
+    const nombres = leida.secciones.map((x) => x.nombre);
+    expect(nombres.indexOf("Alfa")).toBeGreaterThan(-1);
+    expect(nombres.indexOf("Alfa")).toBeLessThan(nombres.indexOf("Zeta"));
+    // Y la lista de gestión (misma empresa) dice lo mismo.
+    const gestion = await c.dueno.query<{ nombre: string }>(
+      "select nombre from seccion_de_carta where empresa_id = $1 and orden = 9 order by orden, nombre_clave, id",
+      [otro.e.empresa],
+    );
+    expect(gestion.rows.map((r) => r.nombre)).toEqual(["Alfa", "Zeta"]);
+  });
 
   it("L-1: sale lo que corresponde, con las secciones en su orden y los productos por nombre", () => {
     expect(carta.secciones.map((s) => s.nombre)).toEqual([
