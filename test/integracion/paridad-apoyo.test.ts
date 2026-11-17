@@ -5,7 +5,9 @@ import type { BaseDePruebas } from "./global";
 import {
   definicionDeCheck,
   literalesDeLaLista,
+  numerosDeLaLista,
   paridadDeLista,
+  paridadDeListaNumerica,
   paridadDeTope,
   topeDe,
 } from "./paridad-apoyo";
@@ -27,7 +29,8 @@ describe.skipIf(base === null)("helpers de paridad con la base", () => {
     await c.query(`
       create table uno (estado text, nota text, importe numeric(18,2),
         constraint x_ck check (estado in ('ABIERTA', 'EN_CIERRE', 'D''ARTAGNAN') and nota <> 'no vale'),
-        constraint tope_ck check (importe <= 999999999.99 and importe >= 0));
+        constraint tope_ck check (importe <= 999999999.99 and importe >= 0),
+        constraint denominacion_ck check (importe::int in (20000, 10000, 100)));
       create table dos (estado text, constraint x_ck check (estado in ('OTRO')));
     `);
   });
@@ -74,6 +77,20 @@ describe.skipIf(base === null)("helpers de paridad con la base", () => {
     ).rejects.toThrow();
     await expect(paridadDeTope(c, "uno", "tope_ck", "importe", ">", 0)).rejects.toThrow();
     await expect(paridadDeTope(c, "uno", "tope_ck", "otra_columna", "<=", 1)).rejects.toThrow();
+  });
+
+  it("una lista numérica: acepta la igual en cualquier orden y rechaza la que sobra o falta", async () => {
+    expect(numerosDeLaLista(await definicionDeCheck(c, "uno", "denominacion_ck"))).toEqual([
+      20000, 10000, 100,
+    ]);
+    await paridadDeListaNumerica(c, "uno", "denominacion_ck", [100, 20000, 10000]);
+    await expect(
+      paridadDeListaNumerica(c, "uno", "denominacion_ck", [20000, 10000]),
+    ).rejects.toThrow();
+    await expect(
+      paridadDeListaNumerica(c, "uno", "denominacion_ck", [20000, 10000, 100, 50000]),
+    ).rejects.toThrow();
+    await expect(paridadDeListaNumerica(c, "uno", "tope_ck", [0])).rejects.toThrow();
   });
 
   it("topeDe lee la comparación de SU columna, no la primera cifra", () => {

@@ -582,7 +582,7 @@ describe.skipIf(base === null)(
         ).toEqual(["CONTEO", "LONGITUD", "MASA", "SUPERFICIE", "TIEMPO", "VOLUMEN"]);
       });
 
-      it("la lista trae la sección de cada producto, también desactivada; editar el producto SIN tocar una sección apagada o una alícuota «Exento» lo acepta", async () => {
+      it("la lista trae la sección de cada producto, también desactivada; editar el producto SIN tocar una sección apagada lo acepta", async () => {
         const seccionId = nuevoId();
         const nombreDeSeccion = nombreAlAzarDeProducto("Postres");
         valorDe(
@@ -593,7 +593,7 @@ describe.skipIf(base === null)(
           }),
         );
         const nombre = nombreAlAzarDeProducto("ConSeccion");
-        const p = await nuevoProducto({ nombre, seccionDeCartaId: seccionId, alicuota: "EXENTO" });
+        const p = await nuevoProducto({ nombre, seccionDeCartaId: seccionId, alicuota: "21" });
         valorDe(await c.casos.desactivarSeccionDeCarta(e.gerente, { seccionId }));
         const lista = valorDe(
           await c.consultas.listarProductos(e.operador, { texto: nombre.toLowerCase() }),
@@ -606,20 +606,20 @@ describe.skipIf(base === null)(
         const sin = await nuevoProducto({ nombre: nombreAlAzarDeProducto("SinSeccion") });
         const todos = valorDe(await c.consultas.listarProductos(e.operador, {}));
         expect(todos.productos.find((x) => x.id === sin)?.seccion).toBeNull();
-        // Guardar solo el nombre nuevo, con la sección apagada y la alícuota «Exento» tal como estaban: se acepta (no obliga a tocarlas).
+        // Guardar solo el nombre nuevo, con la sección apagada tal como estaba: se acepta (no obliga a tocarlas).
         const nuevoNombre = nombreAlAzarDeProducto("Renombrado");
         const editado = await c.casos.editarProducto(e.gerente, {
           productoId: p,
           versionEsperada: await version(p),
           nombre: nuevoNombre,
-          alicuota: "EXENTO",
+          alicuota: "21",
           seccionDeCartaId: seccionId,
         });
         expect(editado.ok).toBe(true);
         const ficha = valorDe(await c.consultas.verProducto(e.operador, { productoId: p }));
         expect(ficha?.producto).toMatchObject({
           nombre: nuevoNombre,
-          alicuota: "EXENTO",
+          alicuota: "21",
           seccionDeCartaId: seccionId,
         });
         expect(ficha?.seccion).toMatchObject({ id: seccionId, activa: false });

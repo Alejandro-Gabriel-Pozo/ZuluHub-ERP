@@ -474,6 +474,48 @@ describe("explotarConsumo: opciones (la versión sellada)", () => {
   });
 });
 
+describe("explotarConsumo: una opción que consume un elaborado (decisión 179, DEC-0450 opción A)", () => {
+  const salsa = producto("ELABORADO", {
+    articulo: art("A-salsa"),
+    composicion: receta("1", [comp("tomate", "3")]),
+  });
+  const base = {
+    p: producto("VENDIBLE", { composicion: receta("1", [comp("masa", "1")]) }),
+    salsa,
+  };
+  const conSalsa = (cantidad = "1") =>
+    linea(1, "p", cantidad, {
+      opciones: [{ versionDeOpcionId: "v1", consumos: [consumo("salsa", "2")] }],
+    });
+
+  it("descuenta el stock PROPIO del elaborado, sin desplegar su receta", () => {
+    const r = explotar([conSalsa("3")], base, { salsa: art("A-salsa") });
+    expect(renglones(r)).toEqual([
+      ["A-salsa", null, "-6.0000"],
+      ["masa", "comp1", "-3.0000"],
+    ]);
+    if (r.ok) expect(r.valor.avisos).toEqual([]);
+  });
+
+  it("sin artículo activo (la producción no está encendida) no descuenta, avisa y la venta pasa", () => {
+    for (const insumos of [{}, { salsa: art("A-salsa", "UNIDAD", false) }]) {
+      const r = explotar([conSalsa()], base, insumos);
+      expect(renglones(r)).toEqual([["masa", "comp1", "-1.0000"]]);
+      if (r.ok) {
+        expect(r.valor.avisos).toEqual([
+          { tipo: "INSUMO_SIN_ARTICULO", posicion: 1, insumoId: "salsa" },
+        ]);
+      }
+    }
+  });
+
+  it("repetir la misma venta da el mismo resultado (la explosión es pura)", () => {
+    const una = explotar([conSalsa("2")], base, { salsa: art("A-salsa") });
+    const otra = explotar([conSalsa("2")], base, { salsa: art("A-salsa") });
+    expect(renglones(otra)).toEqual(renglones(una));
+  });
+});
+
 describe("explotarConsumo: redondeo", () => {
   const unidad = producto("REVENTA");
   const opcion = (c: string) => [{ versionDeOpcionId: "v", consumos: [consumo("i", c)] }];

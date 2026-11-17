@@ -66,7 +66,7 @@ function textoOpcional(valor: unknown): string | null | undefined {
   return typeof valor === "string" ? valor : undefined;
 }
 
-const esFechaCivil = (valor: unknown): valor is string =>
+export const esFechaCivil = (valor: unknown): valor is string =>
   typeof valor === "string" && fechaCivilDesdeTexto(valor).ok;
 
 export function leerFactura(valor: unknown): Resultado<FacturaPedida, ErrorDeFactura> {
