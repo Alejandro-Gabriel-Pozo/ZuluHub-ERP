@@ -6,7 +6,8 @@
       // sigue): sus funciones exportadas son su interfaz de prueba, no código muerto. Lo mismo `arquitectura/grupos-de-mutacion.cjs`
       // (lo cargan `stryker.config.mjs`, el planificador y su prueba por `require`): como entrada, sus exportaciones no cuentan
       // como muertas y no hace falta una excepción nueva en `ignoreIssues` (que sumaría deuda).
-      // Igual `arquitectura/fragmento-de-pruebas.cjs` (lo carga `vitest.config.ts` por `createRequire` y lo prueban las pruebas de arquitectura).
+      // Igual `arquitectura/fragmento-de-pruebas.cjs` (lo carga `vitest.config.ts` por `createRequire` y lo prueban las pruebas de arquitectura)
+      // y `arquitectura/grupos-por-filtro.cjs` (su paridad con `vitest list` la prueba una prueba de arquitectura por `createRequire`).
       "entry": [
         "src/**/*.ts",
         "test/**/*.test.ts",
@@ -14,7 +15,8 @@
         "neon.ts",
         "arquitectura/deuda/*.cjs",
         "arquitectura/grupos-de-mutacion.cjs",
-        "arquitectura/fragmento-de-pruebas.cjs"
+        "arquitectura/fragmento-de-pruebas.cjs",
+        "arquitectura/grupos-por-filtro.cjs"
       ],
       "project": ["src/**/*.ts", "test/**/*.ts", "arquitectura/**/*.cjs"],
       "ignoreDependencies": ["@stryker-mutator/command-runner"],
