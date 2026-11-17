@@ -51,6 +51,8 @@ export type MovimientoNuevo = Readonly<{
   /** El fondo inicial no lleva clave ni huella (nace con la sesión, que las tiene). */
   claveDeIdempotencia: string | null;
   huella: string | null;
+  /** El origen de un movimiento que nace de otro módulo (puertos de egreso e ingreso por origen); sin él, no se escriben las columnas (0072). */
+  origen?: Readonly<{ tipo: string; id: string }> | null;
 }>;
 
 /** Un movimiento reducido a lo que suma al esperado: de qué (medio, cuenta) y con qué signo. */
@@ -179,6 +181,9 @@ export function crearRepositorioDeMovimientos(db: Kysely<CajaDb>): RepositorioDe
       registrado_por: nuevo.registradoPor,
       clave_idempotencia: nuevo.claveDeIdempotencia,
       huella: nuevo.huella,
+      ...(nuevo.origen === undefined || nuevo.origen === null
+        ? {}
+        : { origen_tipo: nuevo.origen.tipo, origen_id: nuevo.origen.id }),
     });
 
   const seleccionar = () =>

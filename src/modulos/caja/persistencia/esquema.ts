@@ -82,6 +82,9 @@ export type CajaDb = TablasDelCierreDeCaja & {
     registrado_por: string;
     clave_idempotencia: string | null;
     huella: string | null;
+    /** El origen de un movimiento de efectivo que nace de otro módulo (0072); nulo en el resto. */
+    origen_tipo: string | null;
+    origen_id: string | null;
     creado_en: Generated<Date>;
   };
   cobro: {

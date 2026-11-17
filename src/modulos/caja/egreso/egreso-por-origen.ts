@@ -104,6 +104,7 @@ export async function registrarEgresoEnTx(
     registradoPor: persona,
     claveDeIdempotencia: clave,
     huella,
+    origen: { tipo: entrada.origen.tipo, id: entrada.origen.id.toLowerCase() },
   });
   if (movimientoId === null) {
     // Otro pedido con esta misma clave se adelantó (y esta transacción lo ve recién ahora): es una repetición, no un error.

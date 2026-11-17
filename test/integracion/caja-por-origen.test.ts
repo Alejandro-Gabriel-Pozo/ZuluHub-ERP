@@ -212,8 +212,16 @@ describe.skipIf(base === null)("caja: movimientos de efectivo por origen", () =>
     return correr(ctx, (tx) => v.anular(tx, ctx, origenId, motivo));
   };
   const movimientos = (m: MundoDeOperacion, clave: string) =>
-    filas<{ id: string; clase: string; importe: string; anula_a: string | null; medio: string }>(
-      `select mc.id, mc.clase, mc.importe::text, mc.anula_a, mp.tipo as medio
+    filas<{
+      id: string;
+      clase: string;
+      importe: string;
+      anula_a: string | null;
+      medio: string;
+      origen_tipo: string | null;
+      origen_id: string | null;
+    }>(
+      `select mc.id, mc.clase, mc.importe::text, mc.anula_a, mp.tipo as medio, mc.origen_tipo, mc.origen_id
          from movimiento_caja mc join medio_de_pago mp on mp.id = mc.medio_de_pago_id
         where mc.empresa_id = $1 and mc.clave_idempotencia = $2`,
       [m.empresa, clave],
@@ -252,6 +260,8 @@ describe.skipIf(base === null)("caja: movimientos de efectivo por origen", () =>
         importe: v.signo === 1 ? "10.00" : "-10.00",
         anula_a: null,
         medio: "EFECTIVO",
+        origen_tipo: v.tipo,
+        origen_id: origen,
       });
       expect(await esperado(sesion)).toBe(monto(v, 1000));
       expect(await auditorias(m, "MOVIMIENTO_MANUAL_REGISTRADO")).toBe(1);
@@ -280,6 +290,7 @@ describe.skipIf(base === null)("caja: movimientos de efectivo por origen", () =>
       expect(primera.ok && segunda.ok).toBe(true);
       expect(segunda.ok && segunda.valor.yaExistia).toBe(true);
       expect(await totalDeMovimientos(m)).toBe(2); // el fondo inicial y el movimiento
+      expect((await movimientos(m, v.clave(id)))[0]?.origen_id).toBe(id);
     });
 
     it("el mismo origen con otro importe o con otro motivo es CLAVE_REUTILIZADA y no escribe", async () => {
@@ -553,6 +564,8 @@ describe.skipIf(base === null)("caja: movimientos de efectivo por origen", () =>
           importe: v.signo === 1 ? "-10.00" : "10.00",
           anula_a: hecho.ok ? hecho.valor.movimientoId : null,
           medio: "EFECTIVO",
+          origen_tipo: null,
+          origen_id: null,
         });
         expect(await movimientos(m, v.clave(p.origenId))).toHaveLength(1); // el original sigue
         expect(await esperado(sesion)).toBe("1000.00");
