@@ -159,6 +159,43 @@ describe("L-1: lo que sale y en qué orden", () => {
     }
   });
 
+  it("la identidad de la carta lleva sus cinco datos tal cual, cada uno en su lugar (lo ELEGIDO, sin ajustar), y sin elegir sale con los vacíos", () => {
+    const logo = {
+      proveedor: "CLOUDINARY",
+      cuenta: "mi-cafe",
+      idPublico: "carta/logo",
+      version: "1712345678",
+      extension: "png",
+    } as const;
+    const v = armarVidrieraPublicada(
+      ensayo({
+        carta: {
+          ...ensayo().carta,
+          modelo: "LIBRO",
+          cara: "NOCHE",
+          colorPropio: "#112233",
+          logo,
+        },
+        colorDeLaEmpresa: "#445566",
+      }),
+      deLaMarca(MARCA),
+    );
+    expect(v?.identidad).toEqual({
+      modelo: "LIBRO",
+      cara: "NOCHE",
+      colorPropio: "#112233",
+      colorDeLaEmpresa: "#445566",
+      logo,
+    });
+    expect(armarVidrieraPublicada(ensayo(), deLaMarca(MARCA))?.identidad).toEqual({
+      modelo: "LISTA",
+      cara: null,
+      colorPropio: null,
+      colorDeLaEmpresa: null,
+      logo: null,
+    });
+  });
+
   it("el orden de la entrada se respeta: dos productos de una sección salen como llegaron (la base los ordena por nombre y id)", () => {
     const v = armarVidrieraPublicada(
       ensayo({
