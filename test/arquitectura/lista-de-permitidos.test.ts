@@ -61,9 +61,17 @@ const EXENCIONES_ESPERADAS = [
  * había para no sumar deuda. Alcance CERRADO: solo `migraciones/reversiones/`, ruta exacta y cuenta exacta; una reversión nueva con prohibidos cuenta como deuda hasta que se
  * la agregue acá a propósito (la revisión lo ve). El mismo texto en una migración de `migraciones/` sigue contando.
  */
-const REVERSIONES_EXIMIDAS: Readonly<Record<string, Exencion>> = {};
+const REVERSIONES_EXIMIDAS: Readonly<Record<string, Exencion>> = {
+  "migraciones/reversiones/0062_revertir_listas_de_permitidos_de_texto.sql": {
+    motivo:
+      "vuelve a los CHECK de 0005, 0006, 0009 y 0022 («sin caracteres de control»): son los 14 que 0062 reemplaza",
+    prohibidos: 14,
+  },
+};
 /** La lista EXACTA de reversiones eximidas: sumar una obliga a tocar esta línea. */
-const REVERSIONES_ESPERADAS: readonly string[] = [];
+const REVERSIONES_ESPERADAS: readonly string[] = [
+  "migraciones/reversiones/0062_revertir_listas_de_permitidos_de_texto.sql",
+];
 const EXTENSIONES = ["ts", "tsx", "js", "jsx", "mjs", "cjs", "mts", "cts"];
 
 function archivos(carpeta: string, extensiones: string[]): string[] {
