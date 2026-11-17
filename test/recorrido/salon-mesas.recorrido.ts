@@ -123,8 +123,9 @@ describe.skipIf(base === null || !salonAbierto)(
       expect(await planoDelAlta.getByRole("listitem").count()).toBe(1);
 
       await pagina.getByRole("button", { name: "Guardar" }).click();
-      // Hallazgo aparte: la navegación suave que sigue al guardado (el `redirect` de la acción, de #379) mostró «No encontrado» en este recorrido; con la carga completa la lista está bien.
-      // Se vuelve a cargar la lista para comprobar lo que importa acá: que el plano muestra la mesa guardada.
+      // PENDIENTE (workaround, a sacar cuando se arregle el 404 de la redirección de la acción): Next resuelve el `redirect` de la acción con un pedido interno a `localhost:<puerto>`
+      // (sin el host de la marca); la puerta no reconoce ese host y contesta la superficie neutra («No encontrado») como si fuera la lista. Ya pasa en main (#379) con el módulo abierto.
+      // Por eso se recarga la lista: lo que se comprueba acá es que el plano muestra la mesa guardada.
       await pagina.waitForURL("**/salon/mesas");
       await pagina.goto(`${mundo.url}/salon/mesas`);
       await pagina.waitForLoadState("networkidle");
