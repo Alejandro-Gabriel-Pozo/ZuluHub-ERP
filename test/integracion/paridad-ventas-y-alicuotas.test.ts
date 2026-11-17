@@ -1,6 +1,9 @@
 import pg from "pg";
 import { afterAll, beforeAll, describe, inject, it, vi } from "vitest";
-import { CODIGOS_DE_ALICUOTA } from "../../src/modulos/fiscal/dominio/alicuota";
+import {
+  ALICUOTAS_DEL_PRODUCTO,
+  CODIGOS_DE_ALICUOTA,
+} from "../../src/modulos/fiscal/dominio/alicuota";
 import {
   ESTADOS_DE_CUENTA,
   ESTADOS_DE_LINEA,
@@ -34,7 +37,8 @@ describe.skipIf(base === null)("paridad dominio ↔ base: alícuotas y estados d
   it("toda columna de alícuota admite exactamente los códigos de alícuota del dominio", async () => {
     // Una llamada por restricción, con el nombre como literal: así el escáner (C2) la ve como comparada.
     await paridadDeLista(c, "linea_cuenta", "linea_alicuota_ck", CODIGOS_DE_ALICUOTA);
-    await paridadDeLista(c, "producto", "producto_alicuota_ck", CODIGOS_DE_ALICUOTA);
+    // El producto ofrece y guarda solo las seis de ARCA (0075), sin «EXENTO» ni «NO_GRAVADO»; las demás columnas guardan las ocho.
+    await paridadDeLista(c, "producto", "producto_alicuota_ck", ALICUOTAS_DEL_PRODUCTO);
     await paridadDeLista(
       c,
       "importe_por_alicuota",
