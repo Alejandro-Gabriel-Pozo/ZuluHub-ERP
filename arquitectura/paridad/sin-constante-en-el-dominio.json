@@ -1,0 +1,26 @@
+{
+  "vence": "2027-01-04",
+  "topes": [
+    {
+      "tabla": "linea_cuenta",
+      "restriccion": "linea_precio_base_ck",
+      "columna": "precio_base",
+      "rechazaDesde": "1000000000",
+      "nota": "ventas: tope de un precio de línea; el dominio solo acota por MAXIMO_DE_UNIDADES (10^18)"
+    },
+    {
+      "tabla": "linea_cuenta",
+      "restriccion": "linea_precio_unitario_ck",
+      "columna": "precio_unitario",
+      "rechazaDesde": "1000000000",
+      "nota": "ventas: tope de un precio de línea; el dominio solo acota por MAXIMO_DE_UNIDADES (10^18)"
+    },
+    {
+      "tabla": "precio_de_venta",
+      "restriccion": "precio_de_venta_precio_ck",
+      "columna": "precio",
+      "rechazaDesde": "1000000000000",
+      "nota": "catálogo: tope de un precio de venta; el dominio solo acota por MAXIMO_DE_UNIDADES (10^18)"
+    }
+  ]
+}

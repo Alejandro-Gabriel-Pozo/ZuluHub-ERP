@@ -12,7 +12,8 @@ import { numeroUnico } from "./unicos";
 type Columna = Readonly<{ nombre: string; tipo: string; escala: number }>;
 
 const IDENTIFICADOR = /^[a-z_][a-z0-9_]*$/;
-const CHECK_VIOLATION = "23514";
+/** Lo que la base responde al rechazar un valor: viola el CHECK, o no entra en el tipo de la columna (`numeric(p,s)` es también un tope de la base). */
+const RECHAZOS = new Set(["23514", "22003"]);
 
 function entre(nombre: string): string {
   if (!IDENTIFICADOR.test(nombre)) throw new Error(`identificador no permitido: ${nombre}`);
@@ -53,7 +54,7 @@ async function columnasYDefinicion(
 
 /**
  * ¿La restricción `nombre` de `tabla` acepta cada valor de `columna`? Devuelve, por valor, `true` si lo acepta. `fijos` da el valor (texto) de las otras columnas que el CHECK nombra; si falta
- * alguna, falla. Un error distinto de «viola el CHECK» se propaga (nunca se toma por un rechazo).
+ * alguna, falla. Un error distinto de «viola el CHECK» o «fuera del rango del tipo» se propaga (nunca se toma por un rechazo).
  */
 export async function aceptaLaBase(
   c: Consulta,
@@ -93,7 +94,7 @@ export async function aceptaLaBase(
         await c.query(`insert into ${temporal} (${nombres}) values (${marcas})`, parametros);
         resultados.push(true);
       } catch (e) {
-        if ((e as { code?: string }).code !== CHECK_VIOLATION) throw e;
+        if (!RECHAZOS.has((e as { code?: string }).code ?? "")) throw e;
         resultados.push(false);
       }
       await c.query(`rollback to savepoint ${punto}`, []);
@@ -105,7 +106,7 @@ export async function aceptaLaBase(
 }
 
 /** Suma `unidades` (cada una, el menor paso de `escala`: 0.01 con escala 2) a un decimal en texto, sin flotantes. */
-export function desplazado(valor: string, escala: number, unidades: 1n | -1n): string {
+export function desplazado(valor: string, escala: number, unidades: bigint): string {
   const negativo = valor.startsWith("-");
   const [entera = "0", fraccion = ""] = valor.replace("-", "").split(".");
   const f = fraccion.padEnd(escala, "0").slice(0, escala);
@@ -162,4 +163,38 @@ export async function paridadDeRango(
   expect(r, `${tabla}.${nombre}.${columna}: ${vistas.join("; ")}`).toEqual(
     sondas.map((s) => s.debeAceptar),
   );
+}
+
+/** Las sondas de signo y cero de una columna: un paso por debajo de cero, cero y un paso por encima (el paso es el de la escala de la columna). */
+export function sondasDeSigno(escala: number): readonly string[] {
+  return [desplazado("0", escala, -1n), "0", desplazado("0", escala, 1n)];
+}
+
+/**
+ * La base acepta y rechaza lo mismo que una función del DOMINIO (`aceptaElDominio`): para cada sonda, el CHECK acepta si y solo si el dominio acepta. Es la comparación de signo y cero (y de
+ * cualquier borde que el dominio sepa decidir) sin escribir el valor en la prueba: lo decide el dominio. `sondas` puede depender de la escala de la columna. Si difieren, el mensaje dice
+ * qué sondas difieren y de qué lado está cada una.
+ */
+export async function paridadDeAceptacion(
+  c: Consulta,
+  tabla: string,
+  nombre: string,
+  columna: string,
+  sondas: readonly string[] | ((escala: number) => readonly string[]),
+  aceptaElDominio: (sonda: string) => boolean,
+  fijos: Readonly<Record<string, string>> = {},
+): Promise<void> {
+  const { columnas } = await columnasYDefinicion(c, tabla, nombre);
+  const escala = columnas.find((x) => x.nombre === columna)?.escala ?? 0;
+  const valores = typeof sondas === "function" ? sondas(escala) : sondas;
+  const enLaBase = await aceptaLaBase(c, tabla, nombre, columna, valores, fijos);
+  const delDominio = valores.map((v) => aceptaElDominio(v));
+  const difieren = valores
+    .map((v, i) => ({ v, base: enLaBase[i], dominio: delDominio[i] }))
+    .filter((x) => x.base !== x.dominio)
+    .map(
+      (x) =>
+        `${x.v}: base ${x.base ? "acepta" : "rechaza"}, dominio ${x.dominio ? "acepta" : "rechaza"}`,
+    );
+  expect(difieren, `${tabla}.${nombre}.${columna}`).toEqual([]);
 }
