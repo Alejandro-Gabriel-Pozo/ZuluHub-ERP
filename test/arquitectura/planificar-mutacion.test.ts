@@ -335,7 +335,11 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
       Object.fromEntries(pruebas.map((p) => [p, p.endsWith(".test.ts") ? auxiliares : []])),
       archivosDelGuardian,
     );
-    for (const cambio of [...archivosDelGuardian, ...pruebas]) {
+    // Un DEC es dato: no enciende los grupos del guardián en un PR (ver `guardian-en-pr.test.ts`).
+    const tocanElGuardian = [...archivosDelGuardian, ...pruebas].filter(
+      (a) => !a.startsWith("arquitectura/decisiones/registro/"),
+    );
+    for (const cambio of tocanElGuardian) {
       // `ci.yml` es una entrada del guardián: sin cambio de contenido en sus jobs de mutación, solo corre el guardián.
       const p = planificar({
         cambios: [cambio],
@@ -1070,20 +1074,16 @@ describe("planificador de mutación: el registro de decisiones (arquitectura/dec
   const corre = (cambios: string[], registro: string[] = [...REGISTRO, DEC_NUEVA]) =>
     planificar({ cambios, grupos: GRUPOS_REGISTRO, dependencias: grafo(registro) });
 
-  it("un PR que solo agrega una decisión corre los grupos de lo que la lee, y no todos", () => {
+  it("un PR que solo agrega una decisión no corre ni el guardián ni todos (son los grupos del guardián, que en un PR dependen de tocarlo)", () => {
     const p = corre([DEC_NUEVA]);
     expect(p.completo).toBe(false);
-    expect(nombres(p).sort()).toEqual(["decisiones", "guardián"]);
+    expect(nombres(p)).toEqual([]);
     expect(p.motivo).not.toContain("no explica");
   });
 
-  it("si el PR toca además código, corre lo que ese código alcanza MÁS lo de la decisión (nunca menos que sin la decisión)", () => {
+  it("si el PR toca además código, corre lo que ese código alcanza (la decisión no suma ni resta)", () => {
     expect(nombres(corre(["src/ajeno/dominio/ajeno.ts"]))).toEqual(["ajeno"]);
-    expect(nombres(corre(["src/ajeno/dominio/ajeno.ts", DEC_NUEVA])).sort()).toEqual([
-      "ajeno",
-      "decisiones",
-      "guardián",
-    ]);
+    expect(nombres(corre(["src/ajeno/dominio/ajeno.ts", DEC_NUEVA]))).toEqual(["ajeno"]);
   });
 
   it("una decisión BORRADA (ya no existe en disco, no es un nodo) corre todo", () => {
