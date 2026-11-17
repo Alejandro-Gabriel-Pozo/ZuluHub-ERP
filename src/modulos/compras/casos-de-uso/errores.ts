@@ -6,7 +6,11 @@ import type { ErrorDeClientes } from "../../clientes/publico";
 import type { ErrorDeStock } from "../../stock/publico";
 import type { ErrorDeComprobante } from "../dominio/comprobante";
 import type { ErrorDeFactura } from "../dominio/factura";
+import type { ErrorDeFacturaSeparada } from "../dominio/conciliacion-separada";
+import type { ErrorDeControl } from "../dominio/control-de-recepcion";
 import type { ErrorDeCorreccion } from "../dominio/correccion";
+import type { ErrorDeVinculo } from "../dominio/orden-de-compra";
+import type { ErrorDeResolucion, ErrorDeTolerancia } from "../dominio/diferencias";
 import type { ErrorDePago, ErrorDeSalidaDeCaja } from "../dominio/pago";
 import type { ErrorDeLinea } from "../dominio/calcular-linea";
 
@@ -68,6 +72,41 @@ export const CODIGOS_DE_ERROR_DE_COMPRAS = [
   "CONCILIACION_YA_ANULADA",
   "CANTIDAD_ASIGNADA_EXCEDE_LO_RECIBIDO",
   "CANTIDAD_ASIGNADA_EXCEDE_LO_FACTURADO",
+  "RECEPCION_SEPARADA_NO_CORRESPONDE_AL_NIVEL",
+  "RECEPCION_YA_CONFIRMADA",
+  "DEPOSITO_DE_CALIDAD_NO_CONFIGURADO",
+  "ASIGNACIONES_INVALIDAS",
+  "ASIGNACION_NO_CONCILIABLE",
+  "ASIGNACION_DE_OTRO_PRODUCTO",
+  "CONCILIACION_NO_ENCONTRADA",
+  "COMPROBANTE_CONCILIADO",
+  "ORDEN_NO_CORRESPONDE_AL_NIVEL",
+  "ORDEN_NO_ENCONTRADA",
+  "ORDEN_NO_ES_BORRADOR",
+  "ORDEN_NO_ESTA_PEDIDA",
+  "ORDEN_YA_CERRADA",
+  "ORDEN_CON_RECEPCIONES",
+  "ORDEN_CON_RECEPCIONES_PENDIENTES",
+  "DIFERENCIA_NO_ENCONTRADA",
+  "DIFERENCIA_YA_RESUELTA",
+  "DIFERENCIA_ANULADA",
+  "MOTIVO_DE_DEVOLUCION_INVALIDO",
+  "DEVOLUCION_EXCEDE_LO_RECIBIDO",
+  "DEVOLUCION_DE_OTRO_PROVEEDOR",
+  "DEVOLUCION_DE_OTRO_PRODUCTO",
+  "DEVOLUCION_DE_RECEPCION_NO_CONFIRMADA",
+  "DEVOLUCION_NO_ENCONTRADA",
+  "NOTA_DE_CREDITO_NO_ENCONTRADA",
+  "NOTA_DE_CREDITO_SIN_FACTURA",
+  "NOTA_DE_CREDITO_DE_FACTURA_ANULADA",
+  "NOTA_DE_CREDITO_DE_OTRO_PROVEEDOR",
+  "NOTA_DE_CREDITO_EXCEDE_LA_FACTURA",
+  "COMPROBANTE_CON_NOTA_DE_CREDITO",
+  "ORDEN_DE_OTRO_PROVEEDOR",
+  "LINEA_DE_ORDEN_DE_OTRO_PRODUCTO",
+  "LINEA_DE_ORDEN_RETIRADA",
+  "RECEPCION_EXCEDE_LA_ORDEN",
+  "RECEPCION_EXCEDE_LA_ORDEN_SIN_CONFIRMAR",
 ] as const;
 export type CodigoDeErrorDeCompras = (typeof CODIGOS_DE_ERROR_DE_COMPRAS)[number];
 
@@ -83,6 +122,11 @@ export type ErrorDeCompras =
   | ErrorDePago
   | ErrorDeSalidaDeCaja
   | ErrorDeCorreccion
+  | ErrorDeControl
+  | ErrorDeVinculo
+  | ErrorDeResolucion
+  | ErrorDeTolerancia
+  | ErrorDeFacturaSeparada
   | ErrorDeStock
   | ErrorDeClientes
   /** El remito ya está cargado: `recepcionId` es la ganadora (`null` solo si lo dijo la base, que no sabe con quién choca). */

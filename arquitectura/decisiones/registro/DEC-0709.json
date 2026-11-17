@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0709",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La base impone las transiciones de la orden, su inmutabilidad, el número, el motivo de cierre y el saldo recibido por línea; recibir contra la orden respeta el control de exceso.",
+  "que_cambia": "Sin fila de control vale PERMITIR; BLOQUEAR nunca supera lo pedido; AVISAR pasa solo con confirmación; anular la recepción devuelve lo recibido a la orden. Revertir: migración 0066.",
+  "donde": "migraciones/0066_compras_ordenes.sql; test/integracion/compras-ordenes-migracion.test.ts; compras.md D-61; tramo N4-1 de compras."
+}

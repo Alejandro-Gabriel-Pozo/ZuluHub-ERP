@@ -134,6 +134,19 @@ describe("el catálogo de perillas real", () => {
         base: { encendida: false },
         modulo: "catalogo",
       },
+      recepcion_separada: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "compras",
+      },
+      conciliacion_de_tres_vias: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "compras",
+        requiere: "recepcion_separada",
+      },
     });
   });
 
@@ -151,6 +164,8 @@ describe("el catálogo de perillas real", () => {
       | "vidriera_por_qr"
       | "salon"
       | "venta_por_fracciones_y_peso"
+      | "recepcion_separada"
+      | "conciliacion_de_tres_vias"
     >();
     // @ts-expect-error esa perilla no está declarada (la registra el módulo que la verifica)
     const inventada: ClavePerilla = "terminal_compartida";
@@ -198,6 +213,8 @@ describe("el catálogo de perillas real", () => {
       vidriera_por_qr: "vidriera",
       salon: "salon",
       venta_por_fracciones_y_peso: "catalogo",
+      recepcion_separada: "compras",
+      conciliacion_de_tres_vias: "compras",
     });
   });
 

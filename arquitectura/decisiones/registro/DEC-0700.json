@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0700",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En compras N3 confirmar una recepción lo hacen gerente y administrador; el operador carga la recepción y no la confirma.",
+  "que_cambia": "Permiso nuevo recepciones.confirmar (nace cerrado, solo gerente y administrador). Revertir: cambiar la matriz de roles; no toca datos.",
+  "donde": "El dueño respondió sin preferencia el 14/11/2026 (decisiones-del-dueno-2026-11.md, fila de recepción separada); el orquestador pidió mantenerlo declarado el 16/11/2026; se aplica en el tramo N3-2 de compras."
+}

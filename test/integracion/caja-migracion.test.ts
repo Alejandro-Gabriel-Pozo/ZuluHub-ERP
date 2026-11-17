@@ -2390,7 +2390,13 @@ describe.skipIf(base === null)(
         await c.connect();
         try {
           const sql = await readFile(rutaDeReversion(), "utf8");
+          // Las devoluciones al proveedor (0084) apuntan a la lista del sistema `valor_de_lista`: se bajan primero.
+          const deDevoluciones = await readFile(
+            join(CARPETA_DE_MIGRACIONES, "reversiones", "0084_revertir_compras_devoluciones.sql"),
+            "utf8",
+          );
           await c.query("begin");
+          await c.query(deDevoluciones);
           await c.query(sql);
           await c.query(sql); // repetirla no cambia nada
           const { rows } = await c.query<{ n: string }>(

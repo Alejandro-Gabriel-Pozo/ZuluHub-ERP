@@ -29,7 +29,7 @@ import type {
   SalidaDeReversionPorOrigen,
 } from "./tipos-de-puertos";
 import { estadoDelModuloDeStock } from "./lectura-de-venta";
-import { cargarDepositoNormal, claveDeLaReversionDeVenta } from "./salida-por-venta";
+import { cargarDepositoDeEntrada, claveDeLaReversionDeVenta } from "./salida-por-venta";
 
 type R<S> = Resultado<S, ErrorDeStock>;
 
@@ -134,7 +134,7 @@ export async function registrarEntradaPorOrigen(
   if (entrada.motivo !== "COMPRA") return err("MOTIVO_NO_PERMITIDO");
   const leidos = leerRenglones(entrada.renglones, true);
   if (!leidos.ok) return leidos;
-  const deposito = await cargarDepositoNormal(tx, contexto, entrada.depositoId);
+  const deposito = await cargarDepositoDeEntrada(tx, contexto, entrada.depositoId);
   if (!deposito.ok) return deposito;
 
   const hechoEnPedido =
