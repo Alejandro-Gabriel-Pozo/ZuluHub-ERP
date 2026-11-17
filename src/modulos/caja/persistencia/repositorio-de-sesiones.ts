@@ -89,6 +89,8 @@ export interface RepositorioDeSesiones {
     ahora: Date,
     observacion: string | null,
   ): Promise<boolean>;
+  /** La última sesión CERRADA de la caja (la que cerró más tarde), o `null` si nunca se cerró ninguna. Solo lectura. */
+  ultimaCerradaDeLaCaja(empresa: EmpresaId, cajaId: string): Promise<SesionGuardada | null>;
   /** Las sesiones de una sucursal entre dos fechas de negocio (inclusive), de la más nueva a la más vieja. Solo lectura. */
   listar(filtro: FiltroDeSesiones): Promise<SesionGuardada[]>;
   /**
@@ -267,6 +269,18 @@ export function crearRepositorioDeSesiones(db: Kysely<CajaDb>): RepositorioDeSes
         .where("estado", "=", desde)
         .executeTakeFirst();
       return resultado.numUpdatedRows === 1n;
+    },
+
+    async ultimaCerradaDeLaCaja(empresa, cajaId) {
+      const fila = await seleccionar()
+        .where("s.empresa_id", "=", empresa)
+        .where("s.caja_id", "=", cajaId)
+        .where("s.estado", "=", "CERRADA")
+        .orderBy("s.cerrada_en", "desc")
+        .orderBy("s.id", "desc")
+        .limit(1)
+        .executeTakeFirst();
+      return fila === undefined ? null : aSesion(fila);
     },
 
     async listar(filtro) {

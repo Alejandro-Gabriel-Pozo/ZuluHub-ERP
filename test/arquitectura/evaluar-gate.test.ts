@@ -11,15 +11,17 @@ import { describe, expect, it } from "vitest";
 
 type Needs = Record<string, { result: string; outputs?: Record<string, string> }>;
 const require = createRequire(import.meta.url);
-const { evaluarGate, corridaReemplazada } = require("../../arquitectura/evaluar-gate.cjs") as {
-  evaluarGate: (needs: Needs, evento?: string) => string[];
-  corridaReemplazada: (e: {
-    needs: Needs;
-    evento?: string;
-    actual?: string;
-    deEstaCorrida?: string;
-  }) => boolean;
-};
+const { evaluarGate, corridaReemplazada, SALTABLES_EN_PUSH } =
+  require("../../arquitectura/evaluar-gate.cjs") as {
+    SALTABLES_EN_PUSH: readonly string[];
+    evaluarGate: (needs: Needs, evento?: string) => string[];
+    corridaReemplazada: (e: {
+      needs: Needs;
+      evento?: string;
+      actual?: string;
+      deEstaCorrida?: string;
+    }) => boolean;
+  };
 const RAIZ = join(import.meta.dirname, "../..");
 
 const VERDE: Needs = {
@@ -136,7 +138,7 @@ describe("Gate: estabilidad (la integración repetida 12 veces)", () => {
     expect(evaluarGate(con(SIN_ESTABILIDAD), "pull_request")).toEqual([]);
   });
 
-  it.each(["push", "schedule", "workflow_dispatch", "", undefined])(
+  it.each(["schedule", "workflow_dispatch", "", undefined])(
     "con el evento «%s» NO se acepta saltada, ni siquiera si el plan dijo «no hace falta»",
     (evento) => {
       expect(evaluarGate(con(SIN_ESTABILIDAD), evento)).toEqual(["estabilidad: skipped"]);
@@ -298,5 +300,104 @@ describe("Gate: una corrida REEMPLAZADA por un push nuevo no es una falla (y tod
     expect(gate).toContain(
       "CABEZA_DE_ESTA_CORRIDA: ${{ github.event.pull_request.head.sha || github.sha }}",
     );
+  });
+});
+
+describe("Gate: un push a main corre solo lo rápido (la mutación y Estabilidad quedan para la nocturna)", () => {
+  // Qué previene: ~795 min de máquina por merge a main repitiendo lo que ya corrió en el PR (28 % del consumo medido el 13-16/11/2026). Lo que NO puede
+  // pasar: que un push a main con el estático, las pruebas o el recorrido en rojo salga en verde, que un job saltado por otra causa cuente como
+  // correcto, o que la nocturna / un disparo a pedido acepten saltar la mutación.
+  const RAPIDOS = [
+    "estatico",
+    "guardian",
+    "pruebas",
+    "seguridad",
+    "flujos",
+    "web",
+    "componentes",
+    "recorrido",
+  ];
+  const SALTADOS = Object.fromEntries(SALTABLES_EN_PUSH.map((job) => [job, { result: "skipped" }]));
+  const PUSH_RAPIDO = con({ ...SALTADOS, dependencias: { result: "skipped" } });
+
+  it("los jobs que se pueden saltar en push son exactamente el plan, la mutación y Estabilidad", () => {
+    expect([...SALTABLES_EN_PUSH].sort()).toEqual(["estabilidad", "mutacion", "mutacion-plan"]);
+  });
+
+  it("push con lo rápido en verde y los tres saltados pasa", () => {
+    expect(evaluarGate(PUSH_RAPIDO, "push")).toEqual([]);
+  });
+
+  it.each(SALTABLES_EN_PUSH)("push con solo «%s» saltado (los otros dos corrieron) pasa", (job) => {
+    expect(evaluarGate(con({ [job]: { result: "skipped" } }), "push")).toEqual([]);
+  });
+
+  it.each(RAPIDOS)("push: «%s» fallido, cancelado, saltado o ausente falla", (job) => {
+    for (const result of ["failure", "cancelled", "skipped"]) {
+      expect(evaluarGate({ ...PUSH_RAPIDO, [job]: { result } }, "push")).toEqual([
+        `${job}: ${result}`,
+      ]);
+    }
+    const sinElJob = Object.fromEntries(Object.entries(PUSH_RAPIDO).filter(([j]) => j !== job));
+    expect(evaluarGate(sinElJob, "push")).toEqual([`${job}: ausente`]);
+  });
+
+  it.each(SALTABLES_EN_PUSH)(
+    "push: si «%s» corre y falla o se cancela, el Gate falla (saltar es una opción, no un perdón)",
+    (job) => {
+      for (const result of ["failure", "cancelled"]) {
+        expect(evaluarGate({ ...PUSH_RAPIDO, [job]: { result } }, "push")).toContain(
+          `${job}: ${result}`,
+        );
+      }
+    },
+  );
+
+  it.each(["pull_request", "schedule", "workflow_dispatch", "", undefined])(
+    "con el evento «%s» el plan, la mutación y Estabilidad saltados NO pasan los tres",
+    (evento) => {
+      expect(evaluarGate(PUSH_RAPIDO, evento)).toEqual(
+        expect.arrayContaining(["mutacion-plan: skipped", "mutacion: skipped"]),
+      );
+      expect(evaluarGate(PUSH_RAPIDO, evento).some((p) => p.startsWith("estabilidad:"))).toBe(true);
+    },
+  );
+
+  it("la nocturna y el disparo a pedido siguen exigiendo la mutación completa y Estabilidad", () => {
+    for (const evento of ["schedule", "workflow_dispatch"]) {
+      expect(evaluarGate(VERDE, evento)).toEqual([]);
+      for (const job of SALTABLES_EN_PUSH) {
+        expect(evaluarGate(con({ [job]: { result: "skipped" } }), evento)).not.toEqual([]);
+      }
+    }
+  });
+
+  it("el paso de verdad: push rápido sale 0; con las pruebas en rojo sale 1; la nocturna con la mutación saltada sale 1", () => {
+    const correr = (needs: Needs, evento: string) =>
+      spawnSync("node", [join(RAIZ, "arquitectura/evaluar-gate.cjs")], {
+        encoding: "utf8",
+        env: {
+          NODE_ENV: "test",
+          PATH: process.env["PATH"] ?? "",
+          NEEDS: JSON.stringify(needs),
+          EVENTO: evento,
+        },
+      });
+    expect(correr(PUSH_RAPIDO, "push").status).toBe(0);
+    const rojo = correr({ ...PUSH_RAPIDO, pruebas: { result: "failure" } }, "push");
+    expect(rojo.status).toBe(1);
+    expect(rojo.stderr).toContain("pruebas: failure");
+    expect(correr(PUSH_RAPIDO, "schedule").status).toBe(1);
+  });
+
+  it("ci.yml: el plan y Estabilidad no corren en push, la mutación no corre sin plan, y hay corrida a pedido", () => {
+    const ci = readFileSync(join(RAIZ, ".github/workflows/ci.yml"), "utf8");
+    const job = (id: string, siguiente: string) =>
+      ci.slice(ci.indexOf(`\n  ${id}:\n`), ci.indexOf(`\n  ${siguiente}:\n`));
+    expect(job("mutacion-plan", "mutacion")).toContain("if: github.event_name != 'push'");
+    expect(job("estabilidad", "mutacion-plan")).toContain("if: github.event_name != 'push' &&");
+    expect(job("mutacion", "gate")).toContain("needs.mutacion-plan.outputs.hay == 'true'");
+    expect(ci).toMatch(/^ {2}workflow_dispatch:\s*$/m);
+    expect(ci).toMatch(/^ {2}schedule:\s*$/m);
   });
 });
