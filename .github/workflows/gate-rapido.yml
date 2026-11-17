@@ -43,7 +43,9 @@ jobs:
   pruebas:
     name: Pruebas (con Postgres real)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 25 como en `ci.yml`: con 20 la suite (17-20 min, p90 de 19-22) se cancelaba por timeout y dejaba el PR «unstable» (run 43989591478: 20 min 16 s, 20 min 5 s y un tercer intento que pasó con 19 min 27 s).
+    # Chequeo: `gate-rapido-coincide.test.ts` (el timeout de `pruebas` no puede ser menor que el de `ci.yml`).
+    timeout-minutes: 25
     services:
       postgres:
         # Misma versión mayor que Neon. Sin contraseña: es una base descartable del CI.
