@@ -1726,7 +1726,7 @@ const INVARIANTES = [
         objetivo: "workflow",
         descripcion:
           "El trabajo `pruebas` pasa a correr solo en `workflow_dispatch`: nunca correría en un pull request.",
-        esperado: { codigo: "ci-job-condicionado", archivo: CI, lineaDe: "workflow_dispatch" },
+        esperado: { codigo: "ci-job-condicionado", archivo: CI, lineaDe: "== 'workflow_dispatch'" },
       },
       {
         id: "I9-sin-disparador-de-pull-request",

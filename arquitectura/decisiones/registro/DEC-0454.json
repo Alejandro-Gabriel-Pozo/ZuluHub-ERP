@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0454",
+  "fecha": "2026-11-15",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Al anular una compra, lo que el proveedor cobró vuelve a la última compra vigente; si no queda otra, la oferta queda no vigente (no se borra) y la ficha no la muestra.",
+  "que_cambia": "La ficha del proveedor deja de mostrar el precio de una compra anulada. Migración 0058 (columna vigente, aditiva, sin DELETE). Revertir: reversión 0058 (frena si hay ofertas no vigentes).",
+  "donde": "migraciones/0058_oferta_vigente.sql; src/modulos/compras/casos-de-uso/oferta-del-proveedor.ts; aprobada por el dueño el 15/11/2026 (respuestas 21, 22 y 23, opción A)"
+}

@@ -21,7 +21,7 @@ import type { RepositorioDeSesiones } from "../persistencia/repositorio-de-sesio
 export type TxDeConsultasDeCaja = TxDeLecturaDeLaJornada &
   Readonly<{
     cajas: Pick<RepositorioDeCajas, "listarDeLaSucursal" | "obtener">;
-    sesiones: Pick<RepositorioDeSesiones, "obtener" | "listar">;
+    sesiones: Pick<RepositorioDeSesiones, "obtener" | "listar" | "ultimaCerradaDeLaCaja">;
     movimientos: Pick<RepositorioDeMovimientos, "esperadoPorLinea" | "pagina">;
     arqueos: Pick<RepositorioDeArqueos, "deLaSesion" | "ultimoEfectivoContadoDeLaCaja">;
     mediosDePago: Pick<RepositorioDeMediosDePago, "listar">;
