@@ -22,7 +22,7 @@ vi.setConfig({ testTimeout: 180_000 });
 
 const RAIZ = join(__dirname, "../..");
 /** La cantidad de restricciones en deuda: solo baja. */
-const MAXIMO_EN_DEUDA = 358;
+const MAXIMO_EN_DEUDA = 343;
 
 export type Restriccion = Readonly<{ tabla: string; nombre: string; definicion: string }>;
 type Deuda = Readonly<{ vence: string; restricciones: readonly string[] }>;
