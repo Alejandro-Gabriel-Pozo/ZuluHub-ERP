@@ -1424,13 +1424,19 @@ describe.skipIf(base === null)("ventas: casos de uso", () => {
     expect(await sinCambios(e)).toEqual(antes);
   });
 
-  it("P15: con las reglas reales el módulo ventas está en desarrollo: ningún comando pasa (MODULO_EN_DESARROLLO)", async () => {
+  it("P15: con ventas en desarrollo (en el catálogo real es disponible, DEC-0463) ningún comando pasa (MODULO_EN_DESARROLLO)", async () => {
     const e = await m.escenario();
     const { cuenta, linea } = await cuentaConLinea(m, e);
     const t = await ticketDe(e);
     const reales = crearCasosDeUsoDeVentas({
       transacciones: m.entorno,
-      reglas: { catalogo: CATALOGO_DE_MODULOS, permisos: PERMISOS_DE_EMPRESA },
+      reglas: {
+        catalogo: {
+          ...CATALOGO_DE_MODULOS,
+          ventas: { ...CATALOGO_DE_MODULOS.ventas, estado: "en_desarrollo" },
+        },
+        permisos: PERMISOS_DE_EMPRESA,
+      },
     });
     const antes = await sinCambios(e);
     const c = e.gerente;

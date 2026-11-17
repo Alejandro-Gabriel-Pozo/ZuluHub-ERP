@@ -5,7 +5,9 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
 
 ## Antes de entregar
 
-- Correr `npm run gate` (tipos, lint, formato, arquitectura, código muerto, pruebas). Debe pasar completo.
+- Antes de entregar, solo comprobaciones rápidas locales: `npm run typecheck`, `npm run format:check`, `npm run lint`, `npm run arquitectura` y las
+  pruebas de lo que tocaste. El gate completo (`npm run gate`) lo corre el CI; local, solo para reproducir una falla del CI. Motivo: el gate
+  completo local tarda unos 20 minutos y repite lo que ya corre el CI (dueño, 17/11/2026, «4.-si»).
 - Cambios mínimos y enfocados; no inventar librerías ni APIs; avisar antes de sumar una dependencia.
 - Si tocás `apps/web/ui`, corré también `npm run test:componentes` (Chromium real: axe, foco y envío; el CI lo corre en el job
   `componentes`). Un entorno que ya trae su propio Chromium lo indica con `PEDERNAL_NAVEGADOR=<ruta del ejecutable>`.
@@ -78,12 +80,25 @@ plataforma tuvo en el menú «Dominios» y «Soporte» sin pantalla aprobada.
   en `resincronizar-y-ambiente.ts`), una lista de caracteres permitidos repetida en dos archivos y un número calculado (`2 * 150`).
   Los límites de dividir la cuenta (10 por ítems, 12 por porcentaje; dueño, 14/11/2026) viven en `src/primitivas/cuentas/limites-de-division.ts`; escribir su número a mano junto a «parte» o «cuenta» falla en
   `test/arquitectura/fuente-unica-limites-de-division.test.ts` (previene el tope desfasado entre dominio, pantalla y base; la base la compara `test/integracion/salon-division-limites.test.ts`).
-- **Lo que el dueño no aprobó lleva su fuente.** Todo texto, rótulo, regla o dato que ve el cliente y que el dueño no aprobó se agrega
-  solo si tiene una **fuente verificable** y se cita junto a la clave o la regla (comentario del catálogo o del código) y en la descripción del
-  PR: archivo y línea o sección (documento, manual de ARCA, grabación, código) o el mensaje con su fecha, y quién lo decidió. «Lo aprobó el
-  backend» o «lo aprobó el orquestador» no es una fuente. Sin fuente verificable no se agrega: va a preguntas pendientes. Caso real: los
-  textos de tipos de documento de la pantalla del detalle del facturador figuraban como «aprobados por el backend»; la fuente real era la
-  grabación de ARCA (`test/utilidades/arca-grabaciones/corrida1/012-FEParamGetTiposDoc-respuesta-http200.xml`) y hubo que buscarla después.
+- **Lo que el dueño no aprobó lleva su fuente, y todo texto y toda pantalla están declarados.** Todo texto que ve el cliente se declara en
+  `src/capacidades/vocabulario/catalogo-*.ts` con `usos` (qué función o dato lo consume) y `fuente` (un `DEC-` aceptado, o `HEREDADO` solo para la
+  línea base); toda pantalla, con su ficha en `src/capacidades/pantallas/` (botones, modales, campos con su dato, estados y textos). **Fuente
+  aceptable:** (a) una fila del dueño citada en un DEC; (b) por delegación del 15/11 (`decisiones-del-dueno-2026-11.md`, fila 173 para textos y
+  fila 174 para pantallas), el orquestador acepta o rechaza un **inventario de textos** o una **ficha de pantalla** (plantilla abajo) y lo asienta
+  en un DEC con `quien: "padre"` y esa fila en `donde`. El orquestador lleva al dueño lo que cambie dinero, permisos, un texto fiscal o legal,
+  contradiga una decisión anterior, sea una palabra de negocio nueva sin parecido aprobado o agregue una función de negocio nueva. «Lo aprobó el
+  backend» sigue sin ser fuente. Caso real: los textos de tipos de documento de la pantalla del detalle del facturador figuraban como «aprobados
+  por el backend»; la fuente real era la grabación de ARCA (`test/utilidades/arca-grabaciones/corrida1/012-FEParamGetTiposDoc-respuesta-http200.xml`)
+  y hubo que buscarla después. Sin fuente verificable no se agrega: va a preguntas pendientes.
+  Estado del chequeo: hoy `test/arquitectura/declaracion-de-pantallas.test.ts` **mide** (R1 a R4 de textos y P1 a P4 de pantallas; informe en
+  `arquitectura/declaraciones/informe.json`) y no falla por lo existente; los campos `usos` y `fuente` son opcionales. Lo que se exija (clave
+  nueva sin `usos` ni `fuente`, valor repetido, texto escrito a mano en `apps/`, ficha por pantalla) se activa en los tramos siguientes con deuda
+  con vencimiento y presupuesto por archivo que solo baja; esta regla se actualiza entonces. Previene: palabras duplicadas o sin dueño (61 textos
+  repetidos y 413 sin consumidor al 15/11) y pantallas con texto o botones que nadie declaró.
+  Plantilla que entrega la sesión para que el orquestador acepte o rechace. Textos: `Clave | Texto | Dónde se ve | Función o dato que lo
+consume | Fuente | ¿Cambia dinero, permisos, fiscal o una decisión previa?` (la última columna decide si lo acepta el orquestador o va al dueño).
+  Pantallas: pasos y campos (cada uno con su dato), botones (texto, acción de permiso, qué hacen y qué pasa sin permiso), modales, estados y textos
+  propios, cada uno con su fuente.
 - Si no podés frenar porque el resto depende de la respuesta, elegí la opción más chica y reversible, marcala **SUPUESTO** en el informe
   con cuánto cuesta revertirla, y no la entregues como definitiva: el orquestador la trata como pregunta pendiente.
 

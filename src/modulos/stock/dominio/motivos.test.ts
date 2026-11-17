@@ -31,12 +31,13 @@ describe("los motivos sembrados (E5 §3.1)", () => {
       "VENCIMIENTO",
       "OTRA_SALIDA",
       "CONSUMO_DE_TRANSFORMACION",
+      "DEVOLUCION_A_PROVEEDOR",
     ]);
     expect(codigos("TRANSFERENCIA")).toEqual(["TRANSFERENCIA"]);
     expect(codigos("AJUSTE")).toEqual(["CORRECCION"]);
     expect(codigos("AJUSTE_POR_CONTEO")).toEqual(["CONTEO"]);
     expect(codigos("ANULACION")).toEqual(["ANULACION"]);
-    expect(MOTIVOS_DE_MOVIMIENTO).toHaveLength(16);
+    expect(MOTIVOS_DE_MOVIMIENTO).toHaveLength(17);
   });
 
   it("(clase, código) no se repite y toda clase es conocida", () => {
@@ -91,6 +92,7 @@ describe("motivoManualPermitido: lo que una persona puede elegir", () => {
       const esperado =
         (m.clase === "ENTRADA" || m.clase === "SALIDA") &&
         m.codigo !== "VENTA" &&
+        m.codigo !== "DEVOLUCION_A_PROVEEDOR" &&
         !m.codigo.endsWith("_DE_TRANSFORMACION");
       expect(motivoManualPermitido(m.clase, m.codigo)).toBe(esperado);
     }
@@ -167,5 +169,31 @@ describe("los textos de los motivos", () => {
         `stock.motivo.${m.codigo.toLowerCase()}`,
       );
     }
+  });
+});
+
+describe("origenCoherenteConElMotivo: la devolución al proveedor ⇔ el origen de la devolución (E9 N4)", () => {
+  it("la salida por devolución lleva el origen DEVOLUCION_A_PROVEEDOR y ese origen solo va con ella", () => {
+    expect(
+      origenCoherenteConElMotivo("SALIDA", "DEVOLUCION_A_PROVEEDOR", "DEVOLUCION_A_PROVEEDOR"),
+    ).toBe(true);
+    expect(origenCoherenteConElMotivo("SALIDA", "DEVOLUCION_A_PROVEEDOR", "MANUAL")).toBe(false);
+    expect(origenCoherenteConElMotivo("SALIDA", "DEVOLUCION_A_PROVEEDOR", "RECEPCION")).toBe(false);
+    expect(origenCoherenteConElMotivo("SALIDA", "MERMA", "DEVOLUCION_A_PROVEEDOR")).toBe(false);
+    expect(origenCoherenteConElMotivo("ENTRADA", "COMPRA", "DEVOLUCION_A_PROVEEDOR")).toBe(false);
+  });
+  it("una anulación puede llevar el origen de la devolución que revierte", () => {
+    expect(origenCoherenteConElMotivo("ANULACION", "ANULACION", "DEVOLUCION_A_PROVEEDOR")).toBe(
+      true,
+    );
+  });
+  it("una persona no elige el motivo de la devolución", () => {
+    expect(motivoManualPermitido("SALIDA", "DEVOLUCION_A_PROVEEDOR")).toBe(false);
+    expect(buscarMotivo("SALIDA", "DEVOLUCION_A_PROVEEDOR")).toEqual({
+      clase: "SALIDA",
+      codigo: "DEVOLUCION_A_PROVEEDOR",
+      entraConCosto: false,
+      entregaMercaderia: false,
+    });
   });
 });

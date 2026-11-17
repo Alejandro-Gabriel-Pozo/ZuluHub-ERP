@@ -28,6 +28,7 @@ export type TxDeLecturaDeStock = Pick<
 /** Un sello para los orígenes que acepta cada puerto: el ejemplar de un ticket (ventas) y la recepción (compras). */
 export type OrigenDeVenta = Readonly<{ tipo: "EJEMPLAR_DE_TICKET"; id: string }>;
 export type OrigenDeRecepcion = Readonly<{ tipo: "RECEPCION"; id: string }>;
+export type OrigenDeDevolucion = Readonly<{ tipo: "DEVOLUCION_A_PROVEEDOR"; id: string }>;
 
 export type OpcionVendida = Readonly<{ versionDeOpcionId: string }>;
 
@@ -106,3 +107,39 @@ export type EntradaDeEntradaPorOrigen = Readonly<{
   renglones: readonly RenglonDeEntradaPorOrigen[];
 }>;
 export type SalidaDeEntradaPorOrigen = Readonly<{ movimientoId: string; yaExistia: boolean }>;
+
+export type EntradaDeSalidaPorOrigen = Readonly<{
+  /** UUID del pedido (idempotencia secundaria: la identidad es el origen). */
+  clave: string;
+  origen: OrigenDeDevolucion;
+  accion: ClaveAccion;
+  /** El depósito de donde sale: de cualquier uso (también cuarentena y rechazo, que es de donde suele salir lo que se devuelve). */
+  depositoId: string;
+  motivo: "DEVOLUCION_A_PROVEEDOR";
+  hechoEn?: Date | undefined;
+  renglones: readonly RenglonPedido[];
+  /** `["stock.existencia_negativa"]` cuando quien devuelve confirmó que va a quedar en negativo (nivel `AVISAR`). */
+  confirmaciones?: readonly string[] | undefined;
+}>;
+export type SalidaDeSalidaPorOrigen = Readonly<{
+  movimientoId: string;
+  /** `true`: esa devolución ya tenía su salida (el primer hecho manda): no se escribió ni se auditó nada. */
+  yaExistia: boolean;
+  /** Los saldos que quedaron en negativo porque el control lo permitió o quien devuelve lo confirmó. */
+  excepciones: readonly DetalleDeNegativo[];
+  /** Los renglones del movimiento, para que quien devuelve los enlace con sus líneas. */
+  renglones: readonly Readonly<{ numero: number; depositoId: string; articuloId: string }>[];
+}>;
+export type EntradaDeAnulacionPorOrigen = Readonly<{
+  origen: OrigenDeDevolucion;
+  accion: ClaveAccion;
+  /** Por qué se anula: obligatorio (queda en el libro). */
+  detalle: string;
+}>;
+export type SalidaDeAnulacionPorOrigen = Readonly<{
+  /** `null` si esa devolución nunca tuvo salida. */
+  anulacionId: string | null;
+  habiaSalida: boolean;
+  /** `true`: la salida ya estaba anulada (una sola anulación por movimiento). */
+  yaExistia: boolean;
+}>;
