@@ -180,7 +180,9 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm audit --audit-level=high
+      - name: Auditoría de dependencias (altos y críticos, con excepciones que vencen)
+        # Reemplaza a `npm audit --audit-level=high`: igual de estricta, pero admite excepciones con id, motivo, fuente y vencimiento (`arquitectura/auditoria-excepciones.json`).
+        run: node arquitectura/auditoria-de-dependencias.cjs
       - name: Firmas de los paquetes
         run: npm audit signatures
       - name: Secretos en el historial (gitleaks)
