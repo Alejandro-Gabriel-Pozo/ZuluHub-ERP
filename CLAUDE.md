@@ -53,6 +53,12 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
   acción que el servidor rechazará: mientras valide bien, devuelve el motivo al intentarla, sin replicar reglas del backend ni trabajo por cada
   combinación de estado, sucursal y permiso; solo se toca ante confusión importante, acción peligrosa o mejora explícita de la entrega. Mensaje genérico
   («esta acción no está permitida», «algo ocurrió») antes que uno por acción; lo específico solo si importa.
+- **Un solo reloj en las pruebas (dueño, 2026-11-16).** Las pruebas, los fixtures y los apoyos toman «ahora» y «hoy» (el día de negocio de Argentina) de un solo lugar,
+  `test/integracion/reloj-de-la-corrida.ts` (`ahoraDeLaCorrida()`, `hoyDeNegocio()`, fijable con `PEDERNAL_RELOJ_FIJO`), y no del reloj real ni de `now()` de la base en
+  cada llamada; la base de pruebas abre la sesión en la zona de Argentina (`PEDERNAL_ZONA_DE_LA_BASE`, lista cerrada: Argentina o UTC). Previene: tres noches de CI en rojo
+  (13-16/11/2026) por mezclar el día de Argentina con el de la base y por un CAE fijo vencido. Chequeos: `test/arquitectura/reloj-de-jornada.test.ts` (cortes de jornada en las
+  pruebas de integración) y el job `reloj` del CI, que corre la suite crítica (caja, cierre, planes, ventas, fiscal) con el reloj fijado POR DELANTE del real a las 23:30 y 00:30 de
+  Argentina y al cambio de día UTC con la base en UTC (`arquitectura/reloj-critico.cjs`; no prueba relojes atrasados: el SQL del producto usa `now()`).
 
 ## Cómo trabajan los agentes: no suponer y alcance cerrado
 
