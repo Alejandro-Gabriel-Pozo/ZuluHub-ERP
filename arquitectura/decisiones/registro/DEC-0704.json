@@ -1,10 +1,10 @@
 {
   "id": "DEC-0704",
-  "fecha": "2026-11-16",
-  "quien": "sesión",
+  "fecha": "2026-11-17",
+  "quien": "dueño",
   "tipo": "DATOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "La entrada de una compra recibida puede ir directo a un depósito de cuarentena o de rechazo; cada línea va al que propone su control y quien confirma puede cambiarlo.",
-  "que_cambia": "Migración 0064 (afloja un control solo para entradas de compra con origen recepción) y el cargador de depósito de la entrada por origen. Revertir: reversión 0064; no borra datos.",
-  "donde": "migraciones/0064_stock_entrada_de_compra_a_cuarentena_y_rechazo.sql; src/modulos/stock/casos-de-uso/reversion-y-entrada.ts; decisión del dueño del 14/11/2026 y respuestas del orquestador del 16/11/2026."
+  "que_cambia": "Migración 0064 (afloja un control solo para entradas de compra con origen recepción) y el cargador de depósito de la entrada por origen. Revertir: reversión 0064; no borra datos. Confirmado por el dueño.",
+  "donde": "migraciones/0064_stock_entrada_de_compra_a_cuarentena_y_rechazo.sql; src/modulos/stock/casos-de-uso/reversion-y-entrada.ts; decisión del dueño del 14/11/2026 y respuestas del orquestador del 16/11/2026. Confirmada por el dueño el 17/11/2026 («A, todas»): decisiones-del-dueno-2026-11.md."
 }

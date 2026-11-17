@@ -1,10 +1,10 @@
 {
   "id": "DEC-0706",
-  "fecha": "2026-11-16",
-  "quien": "sesión",
+  "fecha": "2026-11-17",
+  "quien": "dueño",
   "tipo": "DATOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "En N3 la factura llega sola y cada línea dice su producto; la conciliación con lo recibido se propone por producto y en el orden en que se recibió, y la persona confirma.",
-  "que_cambia": "Migración 0065 (columna producto_id nullable en la línea de la factura). La reversión frena si hay líneas con producto. Las líneas rechazadas ni se proponen ni se asignan.",
-  "donde": "migraciones/0065_producto_en_la_linea_de_la_factura.sql; src/modulos/compras/casos-de-uso/registrar-factura.ts y conciliar-factura.ts; aprobada por el orquestador el 16/11/2026, 0065 pendiente del dueño."
+  "que_cambia": "Migración 0065 (columna producto_id nullable en la línea de la factura). La reversión frena si hay líneas con producto. Las líneas rechazadas ni se proponen ni se asignan. Confirmado por el dueño.",
+  "donde": "migraciones/0065_producto_en_la_linea_de_la_factura.sql; src/modulos/compras/casos-de-uso/registrar-factura.ts y conciliar-factura.ts; aprobada por el orquestador el 16/11/2026, 0065 pendiente del dueño. Confirmada por el dueño el 17/11/2026 («A, todas»): decisiones-del-dueno-2026-11.md."
 }

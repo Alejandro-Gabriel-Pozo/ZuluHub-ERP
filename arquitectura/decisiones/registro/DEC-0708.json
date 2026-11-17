@@ -1,10 +1,10 @@
 {
   "id": "DEC-0708",
-  "fecha": "2026-11-16",
-  "quien": "sesión",
+  "fecha": "2026-11-17",
+  "quien": "dueño",
   "tipo": "COMERCIAL",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "La orden de compra recibe su número al pedirla y no se toca desde ahí: se cierra (con saldo o completa) o se anula con motivo. Cantidades y precio por unidad base; el precio es opcional.",
-  "que_cambia": "Ciclo BORRADOR, PEDIDA, CERRADA o ANULADA («Pedida» ya aprobado). Sin unidad de compra ni moneda por línea (solo pesos). No hay «reemplazar una orden»: queda como pregunta. Revertir: migración 0066.",
-  "donde": "migraciones/0066_compras_ordenes.sql; E9 §3.8 y compras.md Anexo C.4 (D127); tramo N4-1 de compras."
+  "que_cambia": "Ciclo BORRADOR, PEDIDA, CERRADA o ANULADA («Pedida» ya aprobado). Sin unidad de compra ni moneda por línea (solo pesos). No hay «reemplazar una orden»: queda como pregunta. Revertir: migración 0066. Confirmado por el dueño.",
+  "donde": "migraciones/0066_compras_ordenes.sql; E9 §3.8 y compras.md Anexo C.4 (D127); tramo N4-1 de compras. Confirmada por el dueño el 17/11/2026 («A, todas»): decisiones-del-dueno-2026-11.md."
 }

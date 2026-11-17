@@ -1,10 +1,10 @@
 {
   "id": "DEC-0702",
-  "fecha": "2026-11-16",
-  "quien": "sesión",
+  "fecha": "2026-11-17",
+  "quien": "dueño",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "La consola de plataforma muestra las perillas de compras como «Recepción separada» y «Tres vías», los nombres de los niveles N3 y N4.",
-  "que_cambia": "Dos rótulos en la pantalla «Plan de una empresa». Revertir: cambiar el texto en apps/plataforma/logica/plan.ts.",
-  "donde": "apps/plataforma/logica/plan.ts; nombres tomados de la tabla de escaleras para el dueño (N3 y N4 de compras); delegación de textos, decisión 175 del 09/11/2026."
+  "que_cambia": "Dos rótulos en la pantalla «Plan de una empresa». Revertir: cambiar el texto en apps/plataforma/logica/plan.ts. Confirmado por el dueño.",
+  "donde": "apps/plataforma/logica/plan.ts; nombres tomados de la tabla de escaleras para el dueño (N3 y N4 de compras); delegación de textos, decisión 175 del 09/11/2026. Confirmada por el dueño el 17/11/2026 («A, todas»): decisiones-del-dueno-2026-11.md."
 }

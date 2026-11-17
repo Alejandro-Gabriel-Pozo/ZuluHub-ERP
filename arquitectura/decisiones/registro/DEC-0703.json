@@ -1,10 +1,10 @@
 {
   "id": "DEC-0703",
-  "fecha": "2026-11-16",
-  "quien": "sesión",
+  "fecha": "2026-11-17",
+  "quien": "dueño",
   "tipo": "DATOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Al confirmar en N3 la línea rechazada no mueve el último precio del proveedor, la hora de la entrada es la de confirmar y confirmar no exige la perilla.",
-  "que_cambia": "Cambia solo confirmarRecepcion. Sin depósito de cuarentena o rechazo se bloquea la confirmación de esa línea. Revertir: ajustar ese caso de uso; no toca datos guardados.",
-  "donde": "src/modulos/compras/casos-de-uso/confirmar-recepcion.ts; el orquestador aceptó estos supuestos el 16/11/2026 y los lleva al dueño."
+  "que_cambia": "Cambia solo confirmarRecepcion. Sin depósito de cuarentena o rechazo se bloquea la confirmación de esa línea. Revertir: ajustar ese caso de uso; no toca datos guardados. Confirmado por el dueño.",
+  "donde": "src/modulos/compras/casos-de-uso/confirmar-recepcion.ts; el orquestador aceptó estos supuestos el 16/11/2026 y los lleva al dueño. Confirmada por el dueño el 17/11/2026 («A, todas»): decisiones-del-dueno-2026-11.md."
 }
