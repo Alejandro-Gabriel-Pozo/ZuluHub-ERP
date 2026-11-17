@@ -313,9 +313,12 @@ describe("el timeout de `pruebas` del Gate rápido no es menor que el de ci.yml"
     expect(
       faltaMargen(leer(".github/workflows/ci.yml"), leer(".github/workflows/gate-rapido.yml")),
     ).toBeNull();
+    // Con `pruebas` en fragmentos (cada uno ~7 min) el tope por fragmento es 20 en los dos workflows; el piso de 25 era del job monolítico.
     expect(
       timeoutDeJob(leer(".github/workflows/gate-rapido.yml"), "pruebas"),
-    ).toBeGreaterThanOrEqual(25);
+    ).toBeGreaterThanOrEqual(
+      timeoutDeJob(leer(".github/workflows/ci.yml"), "pruebas") ?? Number.POSITIVE_INFINITY,
+    );
   });
 
   it("violaciones inyectadas: menor, ausente, job faltante y job que no declara el tope", () => {

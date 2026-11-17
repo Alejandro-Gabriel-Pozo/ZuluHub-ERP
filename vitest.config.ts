@@ -1,5 +1,13 @@
+import { createRequire } from "node:module";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
+
+const require = createRequire(import.meta.url);
+const { fragmentoDeLaCorrida } = require("./arquitectura/fragmento-de-pruebas.cjs") as {
+  fragmentoDeLaCorrida: (valor: string | undefined) => string | undefined;
+};
+// El fragmento de la suite que corre este proceso (`indice/total`; el CI corre `pruebas` en tres fragmentos). Sin la variable, la suite entera. Un valor mal escrito hace fallar la carga.
+const fragmento = fragmentoDeLaCorrida(process.env["PEDERNAL_FRAGMENTO"]);
 
 // Dónde está el Chromium. En el CI se instala con `npx playwright install chromium` y Playwright lo
 // encuentra solo (la variable no se define). Un entorno que ya trae uno propio apunta acá a su
@@ -8,6 +16,7 @@ const ejecutable = process.env["PEDERNAL_NAVEGADOR"] ?? "";
 
 export default defineConfig({
   test: {
+    ...(fragmento === undefined ? {} : { shard: fragmento }),
     projects: [
       {
         // El proyecto de siempre (Node): dominio, arquitectura e integración. Sin cambios.
