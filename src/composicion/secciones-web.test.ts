@@ -83,6 +83,15 @@ const GENERICO = {
     presentacion: "AVISO",
   },
 };
+const SECCION_REPETIDA = {
+  ok: false,
+  error: {
+    codigo: "CATALOGO_SECCION_REPETIDA",
+    clave: "catalogo.error.seccion_repetida",
+    presentacion: "AVISO",
+    campo: "nombre",
+  },
+};
 const FALTA_EL_NOMBRE = {
   ok: false,
   error: {
@@ -337,8 +346,13 @@ describe("crearLaSeccion", () => {
     expect(queLlamo(m)).toEqual(["lista"]);
   });
 
-  it.each(["SECCION_DUPLICADA", "ID_REUTILIZADO", "NOMBRE_DE_SECCION_INVALIDO", "ORDEN_INVALIDO"])(
-    "el error %s sale como el genérico (hasta que el dueño apruebe un texto propio)",
+  it("un nombre repetido sale con su texto aprobado, atado al campo «nombre» (no es el genérico)", async () => {
+    const { d } = montar({ crear: () => err("SECCION_DUPLICADA") });
+    expect(await crearLaSeccion(d, contexto, PEDIDO)).toEqual(SECCION_REPETIDA);
+  });
+
+  it.each(["ID_REUTILIZADO", "NOMBRE_DE_SECCION_INVALIDO", "ORDEN_INVALIDO"])(
+    "el error %s sale como el genérico",
     async (error) => {
       const { d } = montar({ crear: () => err(error) });
       expect(await crearLaSeccion(d, contexto, PEDIDO)).toEqual(GENERICO);
@@ -423,7 +437,12 @@ describe("renombrarLaSeccion", () => {
     expect(queLlamo(m)).toEqual(["lista"]);
   });
 
-  it.each(["VERSION_DESACTUALIZADA", "SECCION_DUPLICADA", "SECCION_NO_ENCONTRADA"])(
+  it("renombrar con el nombre de otra sección sale con el texto de nombre repetido, atado al campo «nombre»", async () => {
+    const { d } = montar({ editar: () => err("SECCION_DUPLICADA") });
+    expect(await renombrarLaSeccion(d, contexto, PEDIDO)).toEqual(SECCION_REPETIDA);
+  });
+
+  it.each(["VERSION_DESACTUALIZADA", "SECCION_NO_ENCONTRADA"])(
     "el error %s sale como el genérico: dos pestañas, la segunda con la versión vieja, no dice que es de versión",
     async (error) => {
       const { d } = montar({ editar: () => err(error) });

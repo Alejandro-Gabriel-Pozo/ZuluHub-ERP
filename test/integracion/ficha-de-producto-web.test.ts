@@ -38,9 +38,15 @@ describe.skipIf(base === null)("ficha de datos de un producto de la web", () => 
   beforeAll(async () => {
     if (base === null) return;
     c = await montarCatalogo(base);
-    // El catálogo real: `catalogo` sigue `en_desarrollo` y el guard rechaza todo.
+    // El catálogo real con `catalogo` forzado a `en_desarrollo` (en el real es disponible, DEC-0463): el guard rechaza todo.
     cerrado = await montarCatalogo(base, {
-      reglas: { catalogo: CATALOGO_DE_MODULOS, permisos: PERMISOS_DE_EMPRESA },
+      reglas: {
+        catalogo: {
+          ...CATALOGO_DE_MODULOS,
+          catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "en_desarrollo" },
+        },
+        permisos: PERMISOS_DE_EMPRESA,
+      },
     });
     e = await c.escenario();
     registrados = [];
@@ -269,16 +275,23 @@ describe.skipIf(base === null)("ficha de datos de un producto de la web", () => 
     expect(await version(id)).toBe(1);
   });
 
-  it("una alícuota que el producto no ofrece (Exento) no se pierde si la pantalla no la manda", async () => {
-    const id = await nuevoProducto({ alicuota: "EXENTO" });
-    expect(await guardar(id, 1, { nombre: "Con exento", codigo: "EX-1" })).toMatchObject({
-      ok: true,
-    });
-    expect(await fila(id)).toMatchObject({
-      alicuota_iva: "EXENTO",
-      codigo: "EX-1",
-      nombre: "Con exento",
-    });
+  it("una alícuota que el producto no ofrece (Exento, No gravado) se rechaza al crear y al editar, sin tocar lo guardado", async () => {
+    for (const alicuota of ["EXENTO", "NO_GRAVADO"]) {
+      expect(
+        await c.casos.crearProducto(e.gerente, {
+          id: nuevoId(),
+          claseDeUso: "VENDIBLE",
+          nombre: nombreAlAzarDeProducto(),
+          unidadBaseId: "UNIDAD",
+          alicuota,
+        }),
+      ).toEqual({ ok: false, error: "ALICUOTA_INVALIDA" });
+    }
+    const id = await nuevoProducto();
+    const antes = await fila(id);
+    expect(codigoDe(await guardar(id, 1, { alicuota: "EXENTO" }))).toBe(GENERICO);
+    expect(codigoDe(await guardar(id, 1, { alicuota: "NO_GRAVADO" }))).toBe(GENERICO);
+    expect(await fila(id)).toEqual(antes);
   });
 
   it("una sección desactivada no se pierde si la pantalla no la manda, y no se ofrece", async () => {
@@ -401,7 +414,7 @@ describe.skipIf(base === null)("ficha de datos de un producto de la web", () => 
     expect((await fila(id))?.["nombre"]).not.toBe(antes?.["nombre"]);
   });
 
-  it("con el catálogo en desarrollo (hoy, en el catálogo real) todos reciben MODULO_EN_DESARROLLO y ningún dato", async () => {
+  it("con el catálogo en desarrollo todos reciben MODULO_EN_DESARROLLO y ningún dato", async () => {
     const x = await cerrado.escenario();
     // Con SQL del dueño de la base: el caso de uso de alta también está cerrado.
     const id = await productoDeBase(cerrado.dueno, x.empresa, { nombre: "Cerrado" });

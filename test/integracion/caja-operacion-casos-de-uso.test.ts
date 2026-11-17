@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { sql } from "kysely";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
-import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
+import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
+import { PERMISOS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import { ok } from "../../src/primitivas/resultado/resultado";
 import { ERRORES_DE_CAJA_POR_RESTRICCION } from "../../src/modulos/caja/publico";
 import { crearBaseAparte, crearEntornoDePrueba } from "./entorno";
@@ -301,9 +302,15 @@ describe.skipIf(base === null)("operación de caja: casos de uso y consultas", (
       }
     });
 
-    it("el módulo caja sin construir (catálogo real) se rechaza con MODULO_EN_DESARROLLO y uno no activado, con MODULO_NO_ACTIVO", async () => {
+    it("con caja en desarrollo (en el catálogo real es disponible, DEC-0463) se rechaza con MODULO_EN_DESARROLLO y uno no activado, con MODULO_NO_ACTIVO", async () => {
       const m = await mundo();
-      const real = armarCaja(entorno, REGLAS_DE_EMPRESA);
+      const real = armarCaja(entorno, {
+        catalogo: {
+          ...CATALOGO_DE_MODULOS,
+          caja: { ...CATALOGO_DE_MODULOS.caja, estado: "en_desarrollo" },
+        },
+        permisos: PERMISOS_DE_EMPRESA,
+      });
       const antes = await foto(m);
       expect(
         await real.casos.abrirSesion(ctxEn(m), {

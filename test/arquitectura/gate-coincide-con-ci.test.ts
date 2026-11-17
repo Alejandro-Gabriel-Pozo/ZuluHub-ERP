@@ -48,8 +48,8 @@ const CLASIFICACION: Clasificacion = {
   soloEnPullRequest: gate.SOLO_EN_PULL_REQUEST,
   // `mutacion` es la matriz por grupos: puede quedar `skipped` solo si el plan dijo `hay == false`
   // (regla de `mutacionAceptable` en evaluar-gate.cjs; se verifica abajo con `evaluarGate`).
-  // `estabilidad` (12 copias de la integración) puede quedar `skipped` solo en un pull request y si el plan
-  // dijo `estabilidad == "false"` (regla de `estabilidadAceptable`; `EVENTO` se verifica abajo).
+  // `estabilidad` (copias repetidas de la integración) puede quedar `skipped` en un pull request si el plan
+  // dijo `estabilidad == "false"` (regla de `estabilidadAceptable`) y en push a main (`SALTABLES_EN_PUSH`; `EVENTO` se verifica abajo).
   tratadosAparte: ["mutacion", "estabilidad"],
   gate: "gate",
 };
@@ -71,10 +71,15 @@ const SI_DE_JOB_ESPERADO: Readonly<Record<string, { si: string; motivo: string }
     motivo:
       "revisa lo que un pull request agrega; en push a main queda skipped (SOLO_EN_PULL_REQUEST)",
   },
-  estabilidad: {
-    si: "github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true'",
+  "mutacion-plan": {
+    si: "github.event_name != 'push'",
     motivo:
-      "corre siempre en push a main y en la nocturna; en un pull request, solo si el plan dice que el cambio puede afectar a la integración (el Gate acepta el salto solo así)",
+      "en push a main no corre (corre solo lo rápido; el Gate acepta el plan, la mutación y Estabilidad saltados solo en push: SALTABLES_EN_PUSH); en la nocturna, a pedido y en un pull request corre siempre",
+  },
+  estabilidad: {
+    si: "github.event_name != 'push' && (github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true')",
+    motivo:
+      "corre siempre en la nocturna y a pedido, nunca en push a main (corrió en su pull request); en un pull request, solo si el plan dice que el cambio puede afectar a la integración (el Gate acepta el salto solo así)",
   },
   mutacion: {
     si: "needs.mutacion-plan.outputs.hay == 'true'",
@@ -286,6 +291,14 @@ function verificarCI(texto: string, clasificacion: Clasificacion = CLASIFICACION
     );
   }
 
+  // (g) Las copias de Estabilidad por evento: 3 en un pull request, 12 en la nocturna y a pedido.
+  const matriz = leerMatrizDeEstabilidad(texto);
+  if (matriz !== MATRIZ_DE_ESTABILIDAD_ESPERADA) {
+    problemas.push(
+      `estabilidad: la matriz de copias es ${matriz === undefined ? "(ninguna)" : `«${matriz}»`} y debe ser «${MATRIZ_DE_ESTABILIDAD_ESPERADA}» (3 copias en un pull request, 12 en la nocturna y a pedido)`,
+    );
+  }
+
   // (c) y (e) Por cada job clasificado que existe: sin fallos tragados, sin saltos, con tope.
   for (const id of clasificados) {
     const job = jobs.get(id);
@@ -333,6 +346,26 @@ function verificarCI(texto: string, clasificacion: Clasificacion = CLASIFICACION
 const GRUPO_ESPERADO =
   "ci-${{ github.event_name }}-${{ github.event_name == 'schedule' && github.sha || github.ref }}";
 const CANCELAR_ESPERADO = "${{ github.event_name != 'schedule' }}";
+
+/**
+ * Cuántas copias de la integración repite `estabilidad` por evento (decisión del dueño, 16/11/2026: 3 en un pull request, 12 en la nocturna y a pedido; reemplaza
+ * las 12 fijas del 2026-11-07). Previene: pagar 12 máquinas (~188 min) en cada pull request que toca la base cuando 3 alcanzan para verlo antes de mergear y la
+ * nocturna sigue repitiendo 12 (el ahorro medido: ~140 min de máquina por pull request que la dispara). `push` no figura: el job no corre en push a main.
+ */
+const COPIAS_DE_ESTABILIDAD: Readonly<Record<string, number>> = {
+  pull_request: 3,
+  schedule: 12,
+  workflow_dispatch: 12,
+};
+const MATRIZ_DE_ESTABILIDAD_ESPERADA =
+  "${{ fromJSON(github.event_name == 'pull_request' && '[1, 2, 3]' || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]') }}";
+
+/** La expresión de `matrix.corrida` del job `estabilidad`, tal como está escrita (sin comentarios). */
+function leerMatrizDeEstabilidad(texto: string): string | undefined {
+  const cuerpo = leerJobs(texto).get("estabilidad")?.texto ?? "";
+  const linea = cuerpo.split("\n").find((l) => /^ {8}corrida:/.test(l));
+  return linea === undefined ? undefined : escalar(linea.replace(/^ {8}corrida:[ \t]*/, ""));
+}
 
 /** El bloque `concurrency:` de primer nivel (`group` y `cancel-in-progress`), sin comentarios. */
 function leerConcurrencia(texto: string): {
@@ -479,12 +512,13 @@ const CASOS: Caso[] = [
   ...CLASIFICACION.obligatorios.map((id): Caso => ({
     nombre: `agregar if: false al job obligatorio «${id}»`,
     alterar: (t) => conPropiedad(t, id, "if: false"),
-    esperado: [`«${id}»`, "if: false"],
+    // `mutacion-plan` ya tiene un `if` permitido (no corre en push): un segundo `if` lo cambia y se dice «debe ser».
+    esperado: [`«${id}»`, id === "mutacion-plan" ? "debe ser" : "if: false"],
   })),
   {
     nombre: "agregar un if que saltea al job «mutacion-plan» con la forma del de dependencias",
     alterar: (t) => conPropiedad(t, "mutacion-plan", "if: github.event_name == 'pull_request'"),
-    esperado: ["«mutacion-plan»", "no debería"],
+    esperado: ["«mutacion-plan»", "debe ser"],
   },
   {
     nombre: "dejar «dependencias» siempre saltado (if: false)",
@@ -510,12 +544,61 @@ const CASOS: Caso[] = [
     esperado: ["«estabilidad»", "debe ser"],
   },
   {
-    nombre: "«estabilidad» se saltea en push a main (el if pierde la rama de «no es pull request»)",
+    nombre:
+      "«estabilidad» no corre en la nocturna ni a pedido (el if pierde la rama de «no es pull request»)",
     alterar: (t) =>
       enJob(t, "estabilidad", (b) =>
         reemplazarUnico(b, "github.event_name != 'pull_request' || ", ""),
       ),
     esperado: ["«estabilidad»", "debe ser"],
+  },
+  {
+    nombre: "«estabilidad» vuelve a correr en push a main (el if pierde la exclusión de push)",
+    alterar: (t) =>
+      enJob(t, "estabilidad", (b) =>
+        reemplazarUnico(
+          b,
+          /^ {4}if: .*\n/m,
+          "    if: github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true'\n",
+        ),
+      ),
+    esperado: ["«estabilidad»", "debe ser"],
+  },
+  {
+    nombre: "«mutacion-plan» vuelve a correr en push a main (pierde su if)",
+    alterar: (t) => enJob(t, "mutacion-plan", (b) => reemplazarUnico(b, /^ {4}if: .*\n/m, "")),
+    esperado: ["«mutacion-plan»", "debe ser"],
+  },
+  {
+    nombre:
+      "«mutacion-plan» solo en pull request (la nocturna y a pedido se quedarían sin mutación)",
+    alterar: (t) =>
+      enJob(t, "mutacion-plan", (b) =>
+        reemplazarUnico(b, /^ {4}if: .*\n/m, "    if: github.event_name == 'pull_request'\n"),
+      ),
+    esperado: ["«mutacion-plan»", "debe ser"],
+  },
+  {
+    nombre: "«estabilidad» vuelve a 12 copias en un pull request",
+    alterar: (t) =>
+      reemplazarUnico(t, "github.event_name == 'pull_request' && '[1, 2, 3]' || ", ""),
+    esperado: ["estabilidad", "la matriz de copias"],
+  },
+  {
+    nombre: "«estabilidad» queda con 3 copias también en la nocturna",
+    alterar: (t) =>
+      reemplazarUnico(t, "'[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]') }}", "'[1, 2, 3]') }}"),
+    esperado: ["estabilidad", "la matriz de copias"],
+  },
+  {
+    nombre: "«estabilidad» queda con una sola copia en un pull request",
+    alterar: (t) => reemplazarUnico(t, "'[1, 2, 3]' ||", "'[1]' ||"),
+    esperado: ["estabilidad", "la matriz de copias"],
+  },
+  {
+    nombre: "«estabilidad» pierde su matriz de copias",
+    alterar: (t) => reemplazarUnico(t, /^ {8}corrida: .*\n/m, ""),
+    esperado: ["estabilidad", "(ninguna)"],
   },
   {
     nombre: "ampliar el if de «mutacion» para que además se saltee",
@@ -761,6 +844,25 @@ describe("ci.yml y el Gate", () => {
 
   it("el Gate recibe el evento (sin él no puede saber si saltar Estabilidad es legítimo)", () => {
     expect(leerJobs(CI).get("gate")?.texto).toContain("EVENTO: ${{ github.event_name }}");
+  });
+
+  it("estabilidad repite 3 copias en un pull request y 12 en la nocturna y a pedido (y sigue exigida por el Gate)", () => {
+    const expresion = leerMatrizDeEstabilidad(CI) ?? "";
+    const forma =
+      /^\$\{\{ fromJSON\(github\.event_name == 'pull_request' && '(\[[\d, ]+\])' \|\| '(\[[\d, ]+\])'\) \}\}$/.exec(
+        expresion,
+      );
+    expect(forma, expresion).not.toBeNull();
+    const [, enPr, enElResto] = forma ?? [];
+    const copias = (lista: string | undefined): number[] => JSON.parse(lista ?? "[]") as number[];
+    for (const [evento, cuantas] of Object.entries(COPIAS_DE_ESTABILIDAD)) {
+      const lista = copias(evento === "pull_request" ? enPr : enElResto);
+      expect(lista, evento).toEqual(Array.from({ length: cuantas }, (_, i) => i + 1));
+    }
+    // El job sigue siendo obligatorio para el Gate y espera al plan (el plan sigue decidiendo si corre en un pull request).
+    expect(gate.OBLIGATORIOS.concat(CLASIFICACION.tratadosAparte)).toContain("estabilidad");
+    expect(leerJobs(CI).get("estabilidad")?.needs).toEqual(["mutacion-plan"]);
+    expect(leerJobs(CI).get("gate")?.needs).toContain("estabilidad");
   });
 
   it("el workflow no usa pull_request_target ni secretos (la base y el PR corren sin credenciales)", () => {

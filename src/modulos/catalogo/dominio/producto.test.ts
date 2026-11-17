@@ -109,10 +109,22 @@ describe("validarFicha: forma de cada dato", () => {
       error: "SECCION_NO_ENCONTRADA",
     });
   });
-  it("las ocho alícuotas pasan, y sin valor por defecto", () => {
-    for (const a of ["0", "2.5", "5", "10.5", "21", "27", "EXENTO", "NO_GRAVADO"]) {
+  it("las seis alícuotas con IVA pasan, y sin valor por defecto", () => {
+    for (const a of ["0", "2.5", "5", "10.5", "21", "27"]) {
       expect(validarFicha("REVENTA", { ...base, alicuota: a }, true).ok, a).toBe(true);
     }
+  });
+  it("EXENTO y NO_GRAVADO no se guardan en un producto (Emitir sí las acepta)", () => {
+    for (const a of ["EXENTO", "NO_GRAVADO"]) {
+      for (const exigir of [true, false]) {
+        expect(validarFicha("REVENTA", { ...base, alicuota: a }, exigir), a).toEqual({
+          ok: false,
+          error: "ALICUOTA_INVALIDA",
+        });
+      }
+    }
+  });
+  it("sin valor sigue exigiéndose", () => {
     expect(validarFicha("REVENTA", base, true)).toEqual({ ok: false, error: "ALICUOTA_REQUERIDA" });
   });
 });
