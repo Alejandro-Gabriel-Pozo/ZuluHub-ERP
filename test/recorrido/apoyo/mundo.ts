@@ -56,7 +56,11 @@ export type MundoDelRecorrido = Readonly<{
   cerrar(): Promise<void>;
 }>;
 
-export async function armarMundoDelRecorrido(base: BaseDePruebas): Promise<MundoDelRecorrido> {
+export async function armarMundoDelRecorrido(
+  base: BaseDePruebas,
+  /** Los módulos del plan y de la empresa: por defecto solo `facturacion`; un recorrido de otra pantalla suma el suyo (p. ej. `comandas`). */
+  modulos: readonly string[] = ["facturacion"],
+): Promise<MundoDelRecorrido> {
   const mundo = await armarMundoWeb(base);
   const propia = mundo.propia.base;
   await crearVersionDeMarcaConfirmada(mundo.dueno, mundo.marcaA, { nombreVisible: "Zulú Pan" });
@@ -108,12 +112,14 @@ export async function armarMundoDelRecorrido(base: BaseDePruebas): Promise<Mundo
     condicionIva: "RESPONSABLE_INSCRIPTO",
   };
   await cargarCertificado(propia, e, "HOMOLOGACION");
-  const { version } = await crearPlanPublicado(mundo.dueno, { modulos: ["facturacion"] });
+  const { version } = await crearPlanPublicado(mundo.dueno, { modulos: [...modulos] });
   await asignarPlan(mundo.dueno, m.tenant, version);
-  await mundo.dueno.query(
-    "insert into modulo_de_empresa (empresa_id, modulo) values ($1, 'facturacion')",
-    [m.empresa],
-  );
+  for (const modulo of modulos) {
+    await mundo.dueno.query("insert into modulo_de_empresa (empresa_id, modulo) values ($1, $2)", [
+      m.empresa,
+      modulo,
+    ]);
+  }
 
   // Un ticket de acceso vigente, guardado como lo guarda la app (cifrado con su clave): así la emisión no pide `loginCms`
   // (firmaría con una clave privada real) y lo único que sale hacia ARCA es lo que simula `arca-simulada.ts`.

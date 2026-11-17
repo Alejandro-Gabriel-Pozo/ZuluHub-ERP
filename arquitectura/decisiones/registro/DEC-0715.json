@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0715",
+  "fecha": "2026-11-17",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Los textos de Impresoras y del botón Imprimir son los de la maqueta imprimir.html aprobada el 09/11/2026: no hay textos nuevos y cada uno declara sus usos.",
+  "que_cambia": "Ninguna palabra nueva en pantalla. Cada texto de Impresoras, Imprimir, Imprimiendo, Impresa, No se pudo imprimir, Reintentar y Ver en pantalla declara dónde se usa y de dónde sale.",
+  "donde": "10-ux-ui/prototipos-gastronomia/imprimir.html (tabla «Textos nuevos», aprobada 09/11/2026); salon-s2-impresoras-plan.md §3; src/capacidades/vocabulario/catalogo-comandas.ts; aceptado por el orquestador el 17/11/2026 por la delegación de las filas 173 y 174."
+}

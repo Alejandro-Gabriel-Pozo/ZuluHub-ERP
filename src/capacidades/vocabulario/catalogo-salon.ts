@@ -86,7 +86,22 @@ export const TEXTOS_DE_SALON = {
   "salon.texto.admin_posicion": { porDefecto: "Posición" },
   "salon.texto.admin_columna": { porDefecto: "Columna" },
   "salon.texto.admin_fila": { porDefecto: "Fila" },
-  "salon.texto.admin_guardar": { porDefecto: "Guardar" },
+  // mesas.html:287-289 e imprimir.html:300: el mismo «Guardar» (un texto, un lugar); lo usan los formularios de mesa (S-1) y de impresora (S-2).
+  "salon.texto.admin_guardar": {
+    porDefecto: "Guardar",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/salon/modelo-de-mesas.ts",
+        nombre: "armarElFormularioDeMesa",
+      },
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/salon/modelo-de-impresoras.ts",
+        nombre: "armarElFormularioDeImpresora",
+      },
+    ],
+  },
   "salon.texto.admin_desactivar": { porDefecto: "Desactivar" },
   "salon.texto.admin_reactivar": { porDefecto: "Reactivar" },
   "salon.texto.admin_desactivada": { porDefecto: "Desactivada" },
