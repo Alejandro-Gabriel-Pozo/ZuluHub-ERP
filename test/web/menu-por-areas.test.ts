@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import {
   AREAS_DEL_MENU,
   FILAS_DEL_MENU,
@@ -55,9 +56,16 @@ describe("armarElMenu: todo nace cerrado", () => {
     expect(claves(armarElMenu([comprobantes], a, null))).toEqual([["ventas", [["comprobantes"]]]]);
   });
 
-  it("un módulo «en desarrollo» no aparece aunque llegue la acción y figure activo", () => {
+  it("catálogo y caja son disponibles (DEC-0463): aparecen solo con el módulo activo y la acción; sin cualquiera de las dos, nada", () => {
     const a = permisos(["productos.ver", "medios_de_pago.editar"], ["catalogo", "caja"]);
-    expect(armarElMenu([productos, medios], a, null)).toEqual([]);
+    const conTodo = claves(armarElMenu([productos, medios], a, null)).flatMap(([, grupos]) =>
+      (grupos as string[][]).flat(),
+    );
+    expect(conTodo.sort()).toEqual(["medios-de-pago", "productos"]);
+    const sinModulos = permisos(["productos.ver", "medios_de_pago.editar"]);
+    expect(armarElMenu([productos, medios], sinModulos, null)).toEqual([]);
+    const sinAcciones = permisos([], ["catalogo", "caja"]);
+    expect(armarElMenu([productos, medios], sinAcciones, null)).toEqual([]);
   });
 
   it("las acciones («Cerrar sesión») aparecen siempre que se leyeron los permisos, sin ruta", () => {
@@ -130,8 +138,28 @@ describe("«Secciones»: la fila del grupo «Carta» de Catálogo (A8)", () => {
     );
   });
 
-  it("hoy, con `catalogo` en desarrollo, no se ve ni siquiera con la acción y el módulo activo", () => {
-    expect(armarElMenu([secciones], permisos(["productos.ver"], ["catalogo"]), null)).toEqual([]);
+  it("un módulo «en desarrollo» no aparece aunque llegue la acción y figure activo (fila de prueba sobre `comandas`, que sigue en desarrollo)", () => {
+    // Con catalogo, caja y ventas disponibles (DEC-0463) ninguna fila real del menú depende de un módulo en desarrollo: se prueba la regla con una fila armada.
+    const enDesarrollo = { ...productos, modulo: "comandas" as const };
+    expect(CATALOGO_DE_MODULOS.comandas.estado).toBe("en_desarrollo");
+    expect(armarElMenu([enDesarrollo], permisos(["productos.ver"], ["comandas"]), null)).toEqual(
+      [],
+    );
+    expect(
+      armarElMenu([enDesarrollo], permisos(["productos.ver"], [], ["comandas"]), null),
+    ).toEqual([]);
+    // La misma fila con un módulo disponible sí se ve: lo que la oculta es el estado, no la forma de la fila.
+    const disponible = { ...productos, modulo: "catalogo" as const };
+    expect(armarElMenu([disponible], permisos(["productos.ver"], ["catalogo"]), null)).not.toEqual(
+      [],
+    );
+  });
+
+  it("con `catalogo` disponible (DEC-0463) se ve con la acción y el módulo activo; sin cualquiera de las dos, no", () => {
+    const conTodo = armarElMenu([secciones], permisos(["productos.ver"], ["catalogo"]), null);
+    expect(claves(conTodo)).toEqual([["catalogo", [["secciones"]]]]);
+    expect(armarElMenu([secciones], permisos([], ["catalogo"]), null)).toEqual([]);
+    expect(armarElMenu([secciones], permisos(["productos.ver"]), null)).toEqual([]);
   });
 });
 
