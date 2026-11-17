@@ -14,6 +14,10 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
 - Si tocás `apps/web`, corré también `npm run test:recorrido` (app real, Chromium y Postgres; necesita `npm run build:web` hecho). Previene: un `Boton`
   sin `"use client"` rompe «Emitir» en el navegador (React #441) y ninguna prueba unitaria lo ve; lo cubre el job `recorrido` del Gate.
 - Una regla nueva de arquitectura trae su violación inyectada en `test/arquitectura/reglas.test.ts`.
+- **Parar la línea (dueño, 17/11/2026).** Si la nocturna (mutación completa, incluido el guardián) está roja, no se mergea producto hasta que
+  esté verde o explicada; el orquestador la mira cada mañana. Previene: un fallo del guardián que los PR ya no corren (solo la nocturna lo ve)
+  quede escondido bajo merges nuevos. Chequeo: `test/arquitectura/guardian-en-pr.test.ts` (que la nocturna corra todo); que el orquestador la
+  mire es proceso, no un test.
 
 ## Reglas que no se negocian
 
