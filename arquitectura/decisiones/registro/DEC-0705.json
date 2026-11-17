@@ -1,10 +1,10 @@
 {
   "id": "DEC-0705",
-  "fecha": "2026-11-16",
-  "quien": "sesión",
+  "fecha": "2026-11-17",
+  "quien": "dueño",
   "tipo": "PERMISOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "En N3 y N4 conciliar una factura con lo recibido, anular esa conciliación y ver la propuesta lo hacen gerente y administrador; el operador no.",
-  "que_cambia": "Tres permisos nuevos conciliaciones.ver, conciliaciones.conciliar y conciliaciones.anular (nacen cerrados). Revertir: cambiar la matriz de roles; no toca datos.",
-  "donde": "src/capacidades/permisos/empresa.ts; src/capacidades/modulos/catalogo-compras.ts; matriz de compras.md; confirmada por el orquestador el 16/11/2026."
+  "que_cambia": "Tres permisos nuevos conciliaciones.ver, conciliaciones.conciliar y conciliaciones.anular (nacen cerrados). Revertir: cambiar la matriz de roles; no toca datos. Confirmado por el dueño.",
+  "donde": "src/capacidades/permisos/empresa.ts; src/capacidades/modulos/catalogo-compras.ts; matriz de compras.md; confirmada por el orquestador el 16/11/2026. Confirmada por el dueño el 17/11/2026 («2-si»): decisiones-del-dueno-2026-11.md."
 }

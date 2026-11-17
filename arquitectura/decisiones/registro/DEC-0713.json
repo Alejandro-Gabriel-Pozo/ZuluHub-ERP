@@ -1,10 +1,10 @@
 {
   "id": "DEC-0713",
-  "fecha": "2026-11-16",
-  "quien": "sesión",
+  "fecha": "2026-11-17",
+  "quien": "dueño",
   "tipo": "PERMISOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "En N4 cargar y anular una nota de crédito del proveedor lo hacen gerente y administrador; verlas, los tres roles. El dueño habló de destinar el saldo (17A), que acá no existe.",
-  "que_cambia": "Tres permisos nuevos notas_de_credito_de_proveedor.ver, .registrar y .anular (nacen cerrados). SUPUESTO del ingeniero, a confirmar. Revertir: cambiar la matriz de roles; no toca datos.",
-  "donde": "src/capacidades/permisos/empresa.ts; src/capacidades/modulos/catalogo-compras.ts; decisiones-del-dueno-2026-11.md (15/11/2026, 17A); tramo N4-4 de compras."
+  "que_cambia": "Tres permisos nuevos notas_de_credito_de_proveedor.ver, .registrar y .anular (nacen cerrados). Revertir: cambiar la matriz de roles; no toca datos. Confirmado por el dueño.",
+  "donde": "src/capacidades/permisos/empresa.ts; src/capacidades/modulos/catalogo-compras.ts; decisiones-del-dueno-2026-11.md (15/11/2026, 17A); tramo N4-4 de compras. Confirmada por el dueño el 17/11/2026 («2-si»): decisiones-del-dueno-2026-11.md."
 }
