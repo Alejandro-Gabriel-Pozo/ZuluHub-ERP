@@ -6,6 +6,10 @@
  * sean seguidos. Previene: una base con la última aplicada pero sin una del medio (restaurada a medias o migrada
  * fuera de orden) daba «al día» cuando solo se miraba la última fila.
  *
+ * FALLO QUE PREVIENE: una migración nueva sin su nombre acá (o `MIGRACION_REQUERIDA` desfasada) dejaría pasar código sin su esquema; lo
+ * sostiene `guarda-de-migracion.test.ts` («la lista es EXACTAMENTE la carpeta migraciones/»), que falla solo si la lista y la carpeta
+ * difieren (nunca por huecos de numeración).
+ *
  * Una prueba (`guarda-de-migracion.test.ts`) la compara con la carpeta y muestra la lista exacta si difiere: al
  * agregar una migración se agrega su nombre acá, al final, en el mismo cambio.
  */
