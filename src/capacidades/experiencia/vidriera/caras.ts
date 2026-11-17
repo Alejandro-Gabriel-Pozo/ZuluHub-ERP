@@ -12,5 +12,5 @@ export const CARA_POR_DEFECTO: CaraDeVidriera = "DIA";
 
 /** Estrecha un texto (de la base o de un pedido) a una cara del catálogo. */
 export function esCaraDeVidriera(valor: unknown): valor is CaraDeVidriera {
-  return typeof valor === "string" && (CARAS_DE_VIDRIERA as readonly string[]).includes(valor);
+  return (CARAS_DE_VIDRIERA as readonly unknown[]).includes(valor);
 }
