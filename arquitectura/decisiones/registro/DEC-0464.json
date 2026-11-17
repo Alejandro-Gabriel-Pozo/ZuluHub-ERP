@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0464",
+  "fecha": "2026-11-15",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Los tres roles piden el correo de las personas de su empresa con permisos.ver_propios, la misma acción que ya usan para ver sus sucursales.",
+  "que_cambia": "Una persona de otra empresa nunca aparece. El operador ve correos (por ejemplo quién abrió la caja). Revertir: declarar otra acción en una línea.",
+  "donde": "declaraciones.ts de identidad (personasParaMostrar); delegación del dueño, DDD filas 173 y 174, y respuesta 26A del 15/11/2026"
+}

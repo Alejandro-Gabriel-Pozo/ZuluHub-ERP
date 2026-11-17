@@ -15,6 +15,8 @@ export type LineaDeComprobante = Readonly<{
   ivaDeLinea: string;
   recepcionId: string | null;
   lineaDeRecepcion: number | null;
+  /** De qué producto es la línea (solo la factura de N3, 0065): con él se propone la conciliación. */
+  productoId?: string | null;
 }>;
 
 export type ImporteGuardadoPorAlicuota = Readonly<{
@@ -88,6 +90,7 @@ export function crearRepositorioDeDetalleDeComprobantes(
             iva_de_linea: l.ivaDeLinea,
             recepcion_id: l.recepcionId,
             linea_de_recepcion: l.lineaDeRecepcion,
+            producto_id: l.productoId ?? null,
           })),
         )
         .execute();
@@ -140,6 +143,7 @@ export function crearRepositorioDeDetalleDeComprobantes(
           "iva_de_linea",
           "recepcion_id",
           "linea_de_recepcion",
+          "producto_id",
         ])
         .where("empresa_id", "=", empresa)
         .where("comprobante_id", "=", comprobanteId)
@@ -156,6 +160,7 @@ export function crearRepositorioDeDetalleDeComprobantes(
         ivaDeLinea: f.iva_de_linea,
         recepcionId: f.recepcion_id,
         lineaDeRecepcion: f.linea_de_recepcion,
+        productoId: f.producto_id,
       }));
     },
     async importesDe(empresa, comprobanteId) {

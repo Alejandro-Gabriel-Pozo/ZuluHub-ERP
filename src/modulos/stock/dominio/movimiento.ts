@@ -35,6 +35,8 @@ export const cantidadDeUnidades = (unidades: bigint): Cantidad =>
 export const ORIGEN_MANUAL = "MANUAL";
 export const ORIGEN_EJEMPLAR_DE_TICKET = "EJEMPLAR_DE_TICKET";
 export const ORIGEN_RECEPCION = "RECEPCION";
+/** E9 N4: la devolución de mercadería al proveedor (una salida por devolución). */
+export const ORIGEN_DEVOLUCION_A_PROVEEDOR = "DEVOLUCION_A_PROVEEDOR";
 /** E6: la orden de producción (consumo de ingredientes y producto obtenido). */
 export const ORIGEN_TRANSFORMACION = "TRANSFORMACION";
 

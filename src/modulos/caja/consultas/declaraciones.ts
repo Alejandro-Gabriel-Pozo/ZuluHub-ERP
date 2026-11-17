@@ -11,6 +11,8 @@ export const DECLARACIONES_DE_CONSULTAS = {
   prepararCierre: { accion: "cajas.ver" },
   listarSesiones: { accion: "cajas.ver" },
   fichaDeSesion: { accion: "cajas.ver" },
+  estadoDeLaCaja: { accion: "cajas.ver" },
+  ultimaSesionDeLaCaja: { accion: "cajas.ver" },
   // El cierre del día de caja (e3b §4.5).
   sesionesDeLaJornada: { accion: "cajas.ver" },
   cobrosDeLaJornada: { accion: "cajas.ver" },

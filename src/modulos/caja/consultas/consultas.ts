@@ -6,6 +6,8 @@ import { armarConciliacionDeLaJornada } from "./conciliacion-de-la-jornada";
 import { armarInformeDeCajaDelDia } from "./informe-de-caja-del-dia";
 import { armarMovimientosManualesDeLaJornada } from "./movimientos-manuales-de-la-jornada";
 import { armarSesionesDeLaJornada } from "./sesiones-de-la-jornada";
+import { armarEstadoDeLaCaja } from "./estado-de-la-caja";
+import { armarUltimaSesionDeLaCaja } from "./ultima-sesion-de-la-caja";
 import { armarListarCajas } from "./listar-cajas";
 import { armarListarCuentasDeCobro } from "./listar-cuentas-de-cobro";
 import { armarListarMediosDePago } from "./listar-medios-de-pago";
@@ -32,6 +34,8 @@ export function crearConsultasDeCaja(dependencias: DependenciasDeConsultasDeCaja
     prepararCierre: armarPrepararCierre(dependencias),
     listarSesiones: armarListarSesiones(dependencias),
     fichaDeSesion: armarFichaDeSesion(dependencias),
+    estadoDeLaCaja: armarEstadoDeLaCaja(dependencias),
+    ultimaSesionDeLaCaja: armarUltimaSesionDeLaCaja(dependencias),
     sesionesDeLaJornada: armarSesionesDeLaJornada(dependencias),
     cobrosDeLaJornada: armarCobrosDeLaJornada(dependencias),
     movimientosManualesDeLaJornada: armarMovimientosManualesDeLaJornada(dependencias),

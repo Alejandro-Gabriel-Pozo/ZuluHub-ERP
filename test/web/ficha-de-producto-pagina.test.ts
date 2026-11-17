@@ -142,11 +142,15 @@ describe("la página de la ficha de datos de un producto", () => {
   });
 
   it("una clase que no se vende no lleva el enlace «Secciones»", async () => {
+    // Con `catalogo` disponible (DEC-0463) la barra también trae un enlace a «Secciones»: se compara con la ficha de algo que se vende y
+    // el del formulario es el que tiene que faltar.
+    const enlaces = (marcado: string) => marcado.split('href="/catalogo/secciones"').length - 1;
+    const deAlgoQueSeVende = enlaces(await html());
     responde({
       ok: true,
       dato: { ...FICHA, claseDeUso: "INSUMO", seVende: false, alicuota: null, seccion: null },
     });
-    expect(await html()).not.toContain('href="/catalogo/secciones"');
+    expect(deAlgoQueSeVende - enlaces(await html())).toBe(1);
   });
 
   it("la clase y la unidad solo se ven: no son campos del formulario", async () => {

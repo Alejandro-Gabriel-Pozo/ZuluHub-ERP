@@ -2,6 +2,7 @@ import { armarControlesDeLaJornada } from "./controles-de-la-jornada";
 import type { DependenciasDeConsultasDeCierre } from "./contrato";
 import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 import { armarEstadoDeJornada } from "./estado-de-jornada";
+import { armarJornadaDeHoy } from "./jornada-de-hoy";
 import { armarListarJornadas } from "./listar-jornadas";
 
 /**
@@ -15,6 +16,7 @@ export function crearConsultasDeCierre<TAportes = unknown>(
     estadoDeJornada: armarEstadoDeJornada(dependencias),
     listarJornadas: armarListarJornadas(dependencias),
     controlesDeLaJornada: armarControlesDeLaJornada(dependencias),
+    jornadaDeHoy: armarJornadaDeHoy(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES_DE_CONSULTAS, unknown>;
 }
 
