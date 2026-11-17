@@ -6,6 +6,12 @@ import type { ComprasDb } from "./esquema";
 import { esUuid } from "./filas";
 
 export type EstadoDeRecepcion = "CONFIRMADA" | "ANULADA";
+/**
+ * Los niveles que reciben y entran stock en un solo paso (N1 y N2): lo que leen los caminos de `registrarCompra`, `anularCompra`, `corregirCompra` y los listados de
+ * compras. Una recepción de N3 o N4 (pendiente o ya confirmada) guarda su stock en `entrada_de_linea_de_recepcion`, no en la línea: esos caminos la tratarían mal
+ * (anularla sin devolver el stock), así que para ellos NO EXISTE (falla cerrada) hasta que N3 tenga los suyos.
+ */
+export const NIVELES_DE_RECEPCION_INMEDIATA = ["COMPRA_SIMPLE", "CON_COMPROBANTE"] as const;
 
 export type Recepcion = Readonly<{
   id: string;
@@ -30,6 +36,8 @@ export type Recepcion = Readonly<{
 }>;
 
 export type AltaDeRecepcion = Readonly<{
+  /** Solo N3 y N4 nacen `PENDIENTE`; sin decir nada nace `CONFIRMADA` (N1 y N2). */
+  estado?: "PENDIENTE";
   sucursalId: SucursalId;
   proveedorId: string;
   nivel: NivelDeCompra;
@@ -118,6 +126,8 @@ export const COLUMNAS_DE_RECEPCION = [
   "anulada_en",
   "motivo_de_anulacion",
   "version",
+  "confirmada_por",
+  "confirmada_en",
   sql<string | null>`remito_fecha::text`.as("remito_fecha"),
   sql<string>`fecha_negocio::text`.as("fecha_negocio"),
 ] as const;
@@ -143,6 +153,8 @@ export type FilaDeRecepcion = {
   anulada_en: Date | null;
   motivo_de_anulacion: string | null;
   version: number;
+  confirmada_por: string | null;
+  confirmada_en: Date | null;
 };
 
 export function aRecepcion(f: FilaDeRecepcion): Recepcion {
@@ -195,13 +207,15 @@ const COLUMNAS_DE_LINEA = [
 ] as const;
 
 export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): RepositorioDeRecepciones {
+  /** N1 y N2: una recepción de N3 o N4 no se ve: para estos caminos «no existe» (falla cerrada). */
   async function leer(empresa: EmpresaId, id: string, bloquear: boolean) {
     if (!esUuid(id)) return null;
     let consulta = db
       .selectFrom("recepcion")
       .select(COLUMNAS_DE_RECEPCION)
       .where("empresa_id", "=", empresa)
-      .where("id", "=", id);
+      .where("id", "=", id)
+      .where("nivel", "in", NIVELES_DE_RECEPCION_INMEDIATA);
     if (bloquear) consulta = consulta.forUpdate();
     const fila = await consulta.executeTakeFirst();
     return fila === undefined ? null : aRecepcion(fila);
@@ -213,6 +227,7 @@ export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): Repositori
         .select(COLUMNAS_DE_RECEPCION)
         .where("empresa_id", "=", empresa)
         .where("clave_idempotencia", "=", clave)
+        .where("nivel", "in", NIVELES_DE_RECEPCION_INMEDIATA)
         .executeTakeFirst();
       return fila === undefined ? null : aRecepcion(fila);
     },
@@ -225,6 +240,7 @@ export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): Repositori
         .where("remito_punto_de_venta", "=", puntoDeVenta)
         .where("remito_numero", "=", numero)
         .where("estado", "=", "CONFIRMADA")
+        .where("nivel", "in", NIVELES_DE_RECEPCION_INMEDIATA)
         .executeTakeFirst();
       return fila === undefined ? null : aRecepcion(fila);
     },
@@ -246,6 +262,7 @@ export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): Repositori
           clave_idempotencia: alta.clave,
           huella: alta.huella,
           registrado_por: alta.registradoPor,
+          ...(alta.estado === undefined ? {} : { estado: alta.estado }),
         })
         .onConflict((oc) => oc.doNothing())
         .returning("id")

@@ -96,3 +96,29 @@ function decimalNormalizado(t: string): string {
   const f = fraccion.replace(/0+$/, "");
   return f === "" ? entera : `${entera}.${f}`;
 }
+
+/** Los números de la cláusula `IN (...)` de una definición numérica (`= ANY (ARRAY[20000, 10000])`), en el orden en que están. Sin cláusula, falla. */
+export function numerosDeLaLista(definicion: string): readonly number[] {
+  const numeros = [...definicion.matchAll(/ARRAY\[([^\]]*)\]/g)].flatMap((a) =>
+    [...(a[1] ?? "").matchAll(/-?\d+(?:\.\d+)?/g)].map((m) => Number(m[0])),
+  );
+  expect(
+    numeros.length,
+    `la definición no tiene una cláusula IN numérica: ${definicion}`,
+  ).toBeGreaterThan(0);
+  return numeros;
+}
+
+/** La lista numérica del dominio es EXACTAMENTE la del CHECK. */
+export async function paridadDeListaNumerica(
+  c: Consulta,
+  tabla: string,
+  nombre: string,
+  lista: readonly number[],
+): Promise<void> {
+  const enLaBase = numerosDeLaLista(await definicionDeCheck(c, tabla, nombre));
+  expect(
+    [...enLaBase].sort((a, b) => a - b),
+    `${tabla}.${nombre}`,
+  ).toEqual([...lista].sort((a, b) => a - b));
+}

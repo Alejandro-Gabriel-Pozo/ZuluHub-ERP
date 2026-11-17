@@ -337,3 +337,21 @@ export async function cargarDepositoNormal(
   if (deposito.uso !== "NORMAL") return err("MOTIVO_NO_PERMITIDO" as const);
   return ok(deposito);
 }
+
+/**
+ * El depósito donde entra la mercadería de una compra recibida (`EntradaPorOrigen`): de la empresa y activo, de CUALQUIER uso. Una entrada de compra puede ir directo a
+ * cuarentena o a rechazo (decisión del dueño, 14/11/2026; compras N3); lo que no es una compra no llega acá (el motivo se valida antes y la base lo exige en
+ * `renglon_de_movimiento_validar`, 0064). La venta sigue usando `cargarDepositoNormal`.
+ */
+export async function cargarDepositoDeEntrada(
+  tx: Pick<TxDeStock, "depositos">,
+  contexto: Pick<ContextoOperativo, "empresaId">,
+  id: unknown,
+) {
+  const depositoId = leerId(id);
+  if (depositoId === null) return err("DEPOSITO_NO_ENCONTRADO" as const);
+  const deposito = await tx.depositos.obtener(contexto.empresaId, depositoId);
+  if (deposito === null) return err("DEPOSITO_NO_ENCONTRADO" as const);
+  if (!deposito.activo) return err("DEPOSITO_INACTIVO" as const);
+  return ok(deposito);
+}

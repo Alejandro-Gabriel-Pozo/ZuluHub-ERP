@@ -668,7 +668,13 @@ describe.skipIf(base === null)("migración 0026: el cierre del día", () => {
           join(CARPETA_DE_MIGRACIONES, "reversiones", "0027_revertir_caja.sql"),
           "utf8",
         );
+        // Las devoluciones al proveedor (0084) apuntan a la lista del sistema de caja: se bajan antes.
+        const deDevoluciones = await readFile(
+          join(CARPETA_DE_MIGRACIONES, "reversiones", "0084_revertir_compras_devoluciones.sql"),
+          "utf8",
+        );
         await c.query("begin");
+        await c.query(deDevoluciones);
         await c.query(deCaja);
         await c.query(sql);
         await c.query(sql); // repetirla no cambia nada
