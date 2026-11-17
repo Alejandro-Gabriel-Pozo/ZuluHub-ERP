@@ -23,13 +23,13 @@
  *    de correr todo, y aun así alcanza al guardián, cuyas pruebas leen ese archivo.
  *
  * El mismo grafo (más una lista de rutas del dueño) decide si la integración (`Estabilidad`, 12 copias) tiene que repetirse: ver `planificarEstabilidad`.
- * El orden de los grupos que sale del plan es el de duración descendente (ver `ordenarPorDuracion`).
- * El chequeo que falla si se quita una de estas decisiones es `test/arquitectura/planificar-mutacion.test.ts`.
+ * Orden de los grupos: duración descendente (`ordenarPorDuracion`); los del guardián solo entran si el PR lo toca (`guardian-en-pr.cjs`). Chequeo: `test/arquitectura/planificar-mutacion.test.ts`.
  */
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const { cargarLosGrupos } = require("./grupos-de-mutacion.cjs");
+const { gruposDelPlan } = require("./guardian-en-pr.cjs");
 
 /**
  * Cambios que ninguna prueba lee de un modo que cambie un resultado: ni la mutación ni la integración los notan. Los dos workflows de acá no los lee ninguna prueba salvo el escaneo de nombres, que no ejerce código mutado.
@@ -341,7 +341,7 @@ function planificar({ cambios, grupos, dependencias, ci, lecturas = LECTURAS_DE_
   }
 
   const elegidos = [];
-  for (const { grupo, pruebas, expandidos } of ordenarPorDuracion(grupos)) {
+  for (const { grupo, pruebas, expandidos } of ordenarPorDuracion(gruposDelPlan(grupos, cambios))) {
     const archivos = expandidos.filter((entrada) => afectados.has(archivoDe(entrada)));
     if (archivos.length > 0) {
       elegidos.push({ grupo, archivos: archivos.join(","), pruebas: pruebas ?? "" });
