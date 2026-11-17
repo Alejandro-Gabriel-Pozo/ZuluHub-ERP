@@ -5,6 +5,8 @@ const ARCHIVO_DE_PRESENTACIONES = "test/integracion/catalogo-presentaciones.test
 const ARCHIVO_DE_CARTA = "test/integracion/carta-publica-casos-de-uso.test.ts";
 const ARCHIVO_DE_CLASIFICACION = "test/integracion/clasificacion-casos-de-uso.test.ts";
 const ARCHIVO_DE_FORMA = "test/integracion/catalogo-forma-de-venta.test.ts";
+const ARCHIVO_DE_FAMILIAS = "test/integracion/familias-casos-de-uso.test.ts";
+const ARCHIVO_DE_ORDEN = "test/integracion/familias-orden.test.ts";
 
 /**
  * Los casos de uso del catálogo (E2 mínimo §3.5) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin
@@ -259,6 +261,66 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_PRESENTACIONES,
         it: "I8: editar una presentación con lo que ya tiene devuelve lo vigente aunque la versión esperada sea vieja, sin escribir ni auditar",
+      },
+    },
+  },
+  crearFamilia: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_FAMILIAS,
+        it: "crear: repetir con el mismo id deja una familia y una auditoría; con otro nombre, ID_REUTILIZADO",
+      },
+    },
+  },
+  editarFamilia: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_FAMILIAS,
+        it: "editar: repetir el estado ya aplicado es yaEstaba aunque la versión esperada sea vieja, sin escribir ni auditar",
+      },
+    },
+  },
+  agregarProductoAFamilia: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_FAMILIAS,
+        it: "agregar: el mismo producto dos veces es yaEstaba, sin escribir ni auditar la segunda",
+      },
+    },
+  },
+  quitarProductoDeFamilia: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_FAMILIAS,
+        it: "quitar: quitar dos veces es yaEstaba, sin escribir ni auditar la segunda",
+      },
+    },
+  },
+  ordenarRenglonesDeSeccion: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "SIN_CAMBIOS",
+      prueba: {
+        archivo: ARCHIVO_DE_ORDEN,
+        it: "ordenar: repetir el orden ya aplicado es yaEstaba aunque la versión del orden sea vieja, sin escribir ni auditar",
+      },
+    },
+  },
+  destacarRenglon: {
+    accion: "productos.editar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_ORDEN,
+        it: "destacar: encender dos veces la misma estrella es yaEstaba, sin escribir ni auditar la segunda",
       },
     },
   },

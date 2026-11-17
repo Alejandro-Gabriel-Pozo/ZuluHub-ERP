@@ -70,6 +70,8 @@ export const TEXTOS_DE_SALON = {
 
   // mesas.html:287-289: grupo «Mesas (administración)».
   "salon.texto.admin_mesas": { porDefecto: "Mesas" },
+  // mesas.html, función `vLista` (`'Mesa ' + m.n`): el rótulo de cada tarjeta de la lista, el mismo «Mesa 5» que ya lleva el papel de la comanda (E7 §10 «Mesa y pedido»).
+  "salon.texto.admin_mesa_numero": { porDefecto: "Mesa {numero}", marcadores: ["numero"] },
   "salon.texto.admin_agregar_mesa": { porDefecto: "Agregar mesa" },
   "salon.texto.admin_editar_mesa": { porDefecto: "Editar mesa" },
   "salon.texto.admin_numero": { porDefecto: "Número" },
@@ -97,6 +99,15 @@ export const TEXTOS_DE_SALON = {
   },
   "salon.texto.admin_queda_fuera_del_salon": { porDefecto: "Queda fuera del salón" },
   "salon.texto.admin_se_superpone_con_la_mesa": { porDefecto: "Se superpone con la mesa" },
+
+  // mesas.html, función `validar` (línea del `Se superpone con la mesa ' + o.n`): el texto aprobado «Se superpone con la mesa» seguido del número de la mesa que se pisa.
+  "salon.error.se_superpone_con_la_mesa": {
+    porDefecto: "Se superpone con la mesa {numero}",
+    marcadores: ["numero"],
+  },
+
+  // Menú (menu-por-areas.html, texto `p.salon`, aprobado por el dueño: «Salón» como nombre del grupo del área Ventas).
+  "salon.texto.grupo_salon": { porDefecto: "Salón" },
 
   // escritorio.html:321: grupo «Escritorio».
   "salon.texto.escritorio_atajos_de_teclado": { porDefecto: "Atajos de teclado" },

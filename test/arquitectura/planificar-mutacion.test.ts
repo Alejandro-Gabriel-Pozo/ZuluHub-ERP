@@ -331,11 +331,34 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
     expect(pruebas.length).toBeGreaterThan(0);
     const auxiliares = pruebas.filter((p) => !p.endsWith(".test.ts"));
     expect(auxiliares.length).toBeGreaterThan(0);
+    // Cada prueba del filtro de un grupo ejerce los archivos de ese grupo (como en el grafo real): sin eso, un grupo cuyo filtro no
+    // es de `guardian-*` no tendría ninguna prueba que lo alcance y el plan por filtro lo saltearía con razón.
+    const delFiltro = globSync("test/arquitectura/*.test.ts", { cwd: RAIZ });
+    const ejercidos: Record<string, string[]> = {};
+    const delCodigo = (a: string) =>
+      a.startsWith("arquitectura/contratos/") || a.startsWith("arquitectura/deuda/");
+    // (Un grupo cuyo filtro no es de `guardian-*` no lee `ci.yml` ni los demás archivos del guardián: lo saltearía con razón.)
+    const delGuardian = (g: { pruebas?: string }) =>
+      (g.pruebas ?? "").split(/\s+/).every((p) => p.startsWith("test/arquitectura/guardian-"));
+    for (const g of grupos.filter((g) => g.expandidos.every(delCodigo) && delGuardian(g))) {
+      for (const entrada of (g.pruebas ?? "").split(/\s+/).filter(Boolean)) {
+        for (const prueba of delFiltro.filter((p) => p.includes(entrada))) {
+          ejercidos[prueba] = [...(ejercidos[prueba] ?? auxiliares), ...g.expandidos];
+        }
+      }
+    }
     const dependencias = conEnlacesDelGuardian(
-      Object.fromEntries(pruebas.map((p) => [p, p.endsWith(".test.ts") ? auxiliares : []])),
+      {
+        ...Object.fromEntries(pruebas.map((p) => [p, p.endsWith(".test.ts") ? auxiliares : []])),
+        ...ejercidos,
+      },
       archivosDelGuardian,
     );
-    for (const cambio of [...archivosDelGuardian, ...pruebas]) {
+    // Un DEC es dato: no enciende los grupos del guardián en un PR (ver `guardian-en-pr.test.ts`).
+    const tocanElGuardian = [...archivosDelGuardian, ...pruebas].filter(
+      (a) => !a.startsWith("arquitectura/decisiones/registro/"),
+    );
+    for (const cambio of tocanElGuardian) {
       // `ci.yml` es una entrada del guardián: sin cambio de contenido en sus jobs de mutación, solo corre el guardián.
       const p = planificar({
         cambios: [cambio],
@@ -345,7 +368,15 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
       });
       expect(p.completo, cambio).toBe(false);
       const corridos = [...new Set(p.grupos.flatMap((g) => g.archivos.split(",").map(archivoDe)))];
-      expect(corridos.sort(), cambio).toEqual([...mutadosDelGuardian].sort());
+      // Un cambio en una PRUEBA solo alcanza a los grupos que la tienen en su filtro (solo esas matan sus mutantes).
+      const esperados = cambio.endsWith(".test.ts")
+        ? grupos
+            // (los grupos con filtro fuera del grafo de juguete no se resuelven y conservan la regla ancha)
+            .filter((g) => !delGuardian(g) || (g.pruebas ?? "").split(/\s+/).includes(cambio))
+            .flatMap((g) => g.expandidos.map(archivoDe))
+            .filter((a) => mutadosDelGuardian.includes(a))
+        : mutadosDelGuardian;
+      expect(corridos.sort(), cambio).toEqual([...new Set(esperados)].sort());
     }
   });
 });
@@ -508,8 +539,12 @@ describe("planificador de mutación: apps/** (las aplicaciones importan de src, 
     "test/integracion/global.ts": [],
   };
   const lecturas = { "test/web/contraste.test.ts": ["apps/web/ui/tokens.css"] };
+  // El grupo «a» corre `test/web/pantalla.test.ts` además de lo suyo: sin eso el plan por filtro no lo alcanzaría por la pantalla.
+  const GRUPOS_APPS: Grupo[] = GRUPOS.map((g) =>
+    g.grupo === "a" ? { ...g, pruebas: "src/a test/web/pantalla" } : g,
+  );
   const enApps = (cambios: string[], ci?: Ci): Plan =>
-    planificar({ cambios, grupos: GRUPOS, dependencias, lecturas, ...(ci ? { ci } : {}) });
+    planificar({ cambios, grupos: GRUPOS_APPS, dependencias, lecturas, ...(ci ? { ci } : {}) });
 
   it.each([
     ["una pantalla que ninguna prueba importa", "apps/web/app/suelta.tsx"],
@@ -1070,20 +1105,16 @@ describe("planificador de mutación: el registro de decisiones (arquitectura/dec
   const corre = (cambios: string[], registro: string[] = [...REGISTRO, DEC_NUEVA]) =>
     planificar({ cambios, grupos: GRUPOS_REGISTRO, dependencias: grafo(registro) });
 
-  it("un PR que solo agrega una decisión corre los grupos de lo que la lee, y no todos", () => {
+  it("un PR que solo agrega una decisión no corre ni el guardián ni todos (son los grupos del guardián, que en un PR dependen de tocarlo)", () => {
     const p = corre([DEC_NUEVA]);
     expect(p.completo).toBe(false);
-    expect(nombres(p).sort()).toEqual(["decisiones", "guardián"]);
+    expect(nombres(p)).toEqual([]);
     expect(p.motivo).not.toContain("no explica");
   });
 
-  it("si el PR toca además código, corre lo que ese código alcanza MÁS lo de la decisión (nunca menos que sin la decisión)", () => {
+  it("si el PR toca además código, corre lo que ese código alcanza (la decisión no suma ni resta)", () => {
     expect(nombres(corre(["src/ajeno/dominio/ajeno.ts"]))).toEqual(["ajeno"]);
-    expect(nombres(corre(["src/ajeno/dominio/ajeno.ts", DEC_NUEVA])).sort()).toEqual([
-      "ajeno",
-      "decisiones",
-      "guardián",
-    ]);
+    expect(nombres(corre(["src/ajeno/dominio/ajeno.ts", DEC_NUEVA]))).toEqual(["ajeno"]);
   });
 
   it("una decisión BORRADA (ya no existe en disco, no es un nodo) corre todo", () => {
