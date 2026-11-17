@@ -9,8 +9,13 @@ import type { CadenasDeConfianza } from "../adaptadores/certificados/lector-x509
  * intermedia y esta contra la raíz. Los PEM son los `.normalizado.pem` de esa carpeta, byte a byte; las huellas son las verificadas.
  * Una prueba recalcula la huella de cada PEM y falla si un byte cambia (cambiar una autoridad es una decisión del dueño).
  *
- * PRODUCCIÓN: vacía a propósito. Su cadena NO está verificada todavía: sin autoridades la cadena no cierra y cargar un
- * certificado de producción falla cerrado (`CADENA_NO_CONFIABLE`). Se carga recién cuando el dueño verifique las huellas.
+ * PRODUCCIÓN: la raíz «AFIP Root CA 2» (2015-2035) y la intermedia «Computadores» (2024-2035). Fuente: repositorio de docs Pedernal-docs,
+ * `12-referencias-externas/arca-cadena-de-certificacion-prod-2024-2035/README.md` (recibida del dueño el 2026-10-12), sección
+ * «Autenticidad VERIFICADA el 2026-11-17»: el dueño obtuvo un certificado REAL de producción emitido por ARCA ese día (emisor
+ * «Computadores, AFIP») y verificó con `openssl verify` que cierra contra la intermedia y esta contra la raíz; las huellas coinciden con las
+ * del README. Los PEM son los de esa carpeta (la raíz, el `.normalizado.pem`), byte a byte. Una prueba recalcula la huella de cada PEM y
+ * falla si un byte cambia (cambiar una autoridad es una decisión del dueño; autorizada para producción el 2026-11-17, «si dale»).
+ * Producción y homologación no se mezclan: cada ambiente confía solo en su cadena.
  */
 
 export type AutoridadDeArca = Readonly<{
@@ -74,7 +79,64 @@ YmxVeWCQzOJMOVrsOa6wVH7gfS06//Ysw6cpDt+/PbJScoTmAA==
 `,
 };
 
+export const RAIZ_DE_PRODUCCION: AutoridadDeArca = {
+  huellaSha256:
+    "81:40:C0:02:63:70:0B:5A:FC:CB:F4:62:28:CF:84:6F:EC:6F:1E:50:53:35:77:F4:D4:77:03:EA:C2:23:5B:95",
+  pem: `-----BEGIN CERTIFICATE-----
+MIIDrTCCApWgAwIBAgIIJfHgOpZsfpgwDQYJKoZIhvcNAQENBQAwNTEXMBUGA1UE
+AwwOQUZJUCBSb290IENBIDIxDTALBgNVBAoMBEFGSVAxCzAJBgNVBAYTAkFSMB4X
+DTE1MTIxNjEzNTM1MVoXDTM1MTEyNTAzMDAwMFowNTEXMBUGA1UEAwwOQUZJUCBS
+b290IENBIDIxDTALBgNVBAoMBEFGSVAxCzAJBgNVBAYTAkFSMIIBIjANBgkqhkiG
+9w0BAQEFAAOCAQ8AMIIBCgKCAQEAo1qbU6FTo9m5mH8tpVgQPErqv9PqYiN2GLA8
+aQmit5D1EeWZgjNoDLQ490Jpka33prp8Nb1/ZcZ40r4pd6gEmyVgIPHVqXwWfXlx
+BJd+tlDJlnkLS9ce2mnOiY+wctdRrqAEazeTZVeRYewnFjNGvgaQqxPSyaT6X3LX
+TuUmT77Vit4i8REDU9shq8Bw05qDuuQX1XQTGgASqOrGWzfjbLffAlKsUghcnDVu
+OwL7rlh89NzFS6u+YrR1YD8ymq8y2tcOc2/I3/WN3U9hGBjwO4WsAudhDnV9MLAt
+yTgWTzqInlqQtzS0JoFK1IATfcLftc0BsOHP6kUqgtI7UryeWwIDAQABo4HAMIG9
+MB0GA1UdDgQWBBSub6bslHl0a1A02pk2VbNxXSiaBjAPBgNVHRMBAf8EBTADAQH/
+MB8GA1UdIwQYMBaAFK5vpuyUeXRrUDTamTZVs3FdKJoGMBkGA1UdIAQSMBAwDgYM
+KwYBBAGBu2MBAgEBMD8GA1UdHwQ4MDYwNKAyoDCGLmh0dHA6Ly9hdXRoLmFmaXAu
+Z29iLmFyL2NybC9hZmlwLXJvb3QtY2EtMi5jcmwwDgYDVR0PAQH/BAQDAgGGMA0G
+CSqGSIb3DQEBDQUAA4IBAQAKouuzospUKiOGza2SQbAeGCQ+C570l0M6Hxz4tSog
+KKK1nvJZtHwXr/MuKq0s4/3BMWWQxk3HzIb+w42CaE7JcolwfmjFXGu3y+MXAGv8
+CqaSOWqb+OVoshGZpp9qQXJO5o+vG9zmveAvChKQ+CRvfIwvGouNvj8/K8h4mice
+KDm02uDAQBcXz0sL7KFl402y+KiPXuZOJExJYjZhlCFOoO9/Gig/8bzBFRhPa0BL
+quFsZLTl7QgB/ee1HPyzhncW/P1uCDN7AILl2s+JzBRLow4MPIvfYMyScT8FUicN
+7SW0VI2MfOgj4uS8LNenDpl77BHySz3U6OI8EAEc/82+
+-----END CERTIFICATE-----
+`,
+};
+
+export const INTERMEDIA_DE_PRODUCCION: AutoridadDeArca = {
+  huellaSha256:
+    "92:84:C8:A4:8B:A1:79:1F:AC:74:4A:95:B5:F7:E9:8C:0F:6A:DF:6E:78:6A:CB:84:69:91:11:35:F7:35:A5:1D",
+  pem: `-----BEGIN CERTIFICATE-----
+MIIDyzCCArOgAwIBAgIIWwdIzRZnKFUwDQYJKoZIhvcNAQENBQAwNTEXMBUGA1UE
+AwwOQUZJUCBSb290IENBIDIxDTALBgNVBAoMBEFGSVAxCzAJBgNVBAYTAkFSMB4X
+DTI0MDEwMzEyMzQ0MVoXDTM1MDEwMzEyMzQ0MVowMzEVMBMGA1UEAwwMQ29tcHV0
+YWRvcmVzMQ0wCwYDVQQKDARBRklQMQswCQYDVQQGEwJBUjCCASIwDQYJKoZIhvcN
+AQEBBQADggEPADCCAQoCggEBAMbq4S98I6cFRHbbd9jWVVavfEbAhV56hE0eA2+L
+EJLh1rbn1w7UxaQ7VjQdGiOnPhFRfcYnjNqZAsmqwGvm7aaPTKe5TiUP85zCuRgT
+qyFpQ10niJJfHwjP50M/mdXlskPDCNCvdY6mTRZKhGf3t6pj+1Flv0uDWR4qTPM7
+yF2W5wlwImRs93vbfnL1shjfXZeZiKEKlkjHO5KsFATVb9yxQWnyd1gfs2uS8gxa
+2KoCswYiN2FXMvAt/EU+H2GSz9T1yTb+7Oa9SQCEnX6nKkYd2GP2UUDxyx4M59+Q
+ve7Xd/av/SQ2hvavrO8HnLlwvN5zMla3T14CzVQLeg52Rh8CAwEAAaOB4DCB3TAP
+BgNVHRMBAf8EBTADAQH/MB8GA1UdIwQYMBaAFK5vpuyUeXRrUDTamTZVs3FdKJoG
+MDkGCCsGAQUFBwEBBC0wKzApBggrBgEFBQcwAYYdaHR0cDovL2F1dGguYWZpcC5n
+b2IuYXIvb2NzcC8wPwYDVR0fBDgwNjA0oDKgMIYuaHR0cDovL2F1dGguYWZpcC5n
+b2IuYXIvY3JsL2FmaXAtcm9vdC1jYS0yLmNybDAdBgNVHQ4EFgQUKw0vyN9h/QjJ
+ThHQNZMEbY5b0G4wDgYDVR0PAQH/BAQDAgGGMA0GCSqGSIb3DQEBDQUAA4IBAQA8
+2z3Fyh8PDS7Sw2R3HtS7BHN7bRsb2H8NdWhFDcgoY1GfMTCa1ECzIRk8Y1WUeiQt
+1Ahx4SeBs5n6B3mnMBD0f6LPNAlgoLWrITvrxj+yDkhGzD09WbgfG1Qg3yy0lBzR
+2loIFL19d3ihMRV9cGkrce5tR7JVy1xWHmfm4Xvi/dCoiNCZPI4K3oqc29WOrLEd
+5MG8jFnLxvurN6aKpH8++rv1R3c1cvgNDCQqwyvo9oV4cHt0nT2Xc4yW0LW0BTce
+28koDvg+sury8nXtHQVmnCSUjQPZjprNipWnCXcYhrRPYcS4bHRsJVbn2tDwJCcZ
+TKkMVBPVNkQZ120BLFcn
+-----END CERTIFICATE-----
+`,
+};
+
 export const CADENAS_DE_CONFIANZA_DE_ARCA: CadenasDeConfianza = {
   HOMOLOGACION: [RAIZ_DE_HOMOLOGACION.pem, INTERMEDIA_DE_HOMOLOGACION.pem],
-  PRODUCCION: [],
+  PRODUCCION: [RAIZ_DE_PRODUCCION.pem, INTERMEDIA_DE_PRODUCCION.pem],
 };
