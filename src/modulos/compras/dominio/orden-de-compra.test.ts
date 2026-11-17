@@ -188,6 +188,19 @@ describe("leerVinculos", () => {
     expect(leerVinculos([v(), v()], 2)).toEqual({ ok: false, error: "LINEA_REPETIDA" });
   });
 
+  it("la línea de la orden empieza en 1: la 1 se acepta y la 0 o una negativa no", () => {
+    expect(leerVinculos([v({ lineaDeOrden: 1 })], 1)).toEqual({
+      ok: true,
+      valor: [{ linea: 1, ordenId: O, lineaDeOrden: 1, confirmoExceso: false }],
+    });
+    for (const lineaDeOrden of [0, -1]) {
+      expect(leerVinculos([v({ lineaDeOrden })], 1), String(lineaDeOrden)).toEqual({
+        ok: false,
+        error: "VINCULO_INVALIDO",
+      });
+    }
+  });
+
   it("acepta el tope de líneas", () => {
     const lista = Array.from({ length: 9_999 }, (_, i) => v({ linea: i + 1 }));
     expect(leerVinculos(lista, 9_999).ok).toBe(true);
