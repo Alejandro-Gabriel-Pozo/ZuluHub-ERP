@@ -1,10 +1,10 @@
 {
   "id": "DEC-0484",
   "fecha": "2026-11-16",
-  "quien": "sesión",
+  "quien": "dueño",
   "tipo": "DATOS",
-  "estado": "PENDIENTE_DE_OK",
-  "decision": "El teléfono de la tarjeta del portal admite solo dígitos, letras ASCII, espacio y + ( ) . , / # * - (1 a 40).",
-  "que_cambia": "Un teléfono con otro símbolo no se guarda en la tarjeta. Para revertir se amplía el conjunto en la primitiva y en el CHECK de la base.",
-  "donde": "migraciones/0078_portal_de_la_empresa.sql; src/primitivas/texto/datos-de-portal.ts"
+  "estado": "CONFIRMADA",
+  "decision": "El teléfono de la tarjeta del portal acepta solo números (dígitos 0-9), de 1 a 40.",
+  "que_cambia": "Un teléfono con espacios, guiones, + o paréntesis no se guarda en la tarjeta: se escribe todo junto (por ejemplo 5491143210000). Revertir: ampliar el conjunto en la primitiva y en el CHECK de la base.",
+  "donde": "migraciones/0078_portal_de_la_empresa.sql; src/primitivas/texto/datos-de-portal.ts; respuesta «7.- solo numeros» del dueño, 17/11/2026"
 }

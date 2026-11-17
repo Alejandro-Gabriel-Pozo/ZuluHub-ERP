@@ -42,7 +42,7 @@ describe.skipIf(base === null)("guardarPortalDeLaEmpresa (0078)", () => {
     const entrada = {
       ...portalBase,
       id,
-      tarjetas: [{ sucursalId: m.e.sucursal, orden: 0, visible: true, telefono: "11 4321-0000" }],
+      tarjetas: [{ sucursalId: m.e.sucursal, orden: 0, visible: true, telefono: "1143210000" }],
     };
     const a = valorDe(await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, entrada));
     const b = valorDe(await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, entrada));

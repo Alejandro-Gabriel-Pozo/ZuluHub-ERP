@@ -48,7 +48,7 @@ describe.skipIf(base === null)("lectura pública del portal (0078 y 0083)", () =
             orden: 0,
             visible: true,
             nombre: "El Norte",
-            telefono: "11 5555-0000",
+            telefono: "1155550000",
             foto: direccionDeImagen("foto"),
           },
           { sucursalId: m.e.sucursal, orden: 1, visible: true },
@@ -91,7 +91,7 @@ describe.skipIf(base === null)("lectura pública del portal (0078 y 0083)", () =
       ["El Norte", m.carta2.codigo],
       ["Casa central", m.carta1.codigo],
     ]);
-    expect(p?.tarjetas[0]?.telefono).toBe("11 5555-0000");
+    expect(p?.tarjetas[0]?.telefono).toBe("1155550000");
     expect(p?.zonas).toEqual([
       { x: "10.00", y: "10.00", ancho: "20.00", alto: "20.00", codigoDeCarta: m.carta1.codigo },
     ]);

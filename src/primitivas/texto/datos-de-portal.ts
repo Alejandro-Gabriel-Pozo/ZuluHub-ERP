@@ -26,15 +26,15 @@ export function tituloDelPortalDesdeTexto(texto: string): Resultado<string, Moti
 }
 
 /**
- * El teléfono de la tarjeta del portal: el de siempre (`telefonoDesdeTexto`: sin espacios en los extremos, 1 a 40, una línea) Y ADEMÁS solo de la lista permitida: dígitos, letras
- * ASCII, espacio y `+ ( ) . , / # * -` (SUPUESTO DEC-0484, lo confirma el dueño). La base lo copia en `portal_tarjeta_telefono_ck` y una prueba falla si difieren. Previene: un invisible
- * o un `<>` en un dato que se muestra en una página pública (lo que `\p{Cc}` de la primitiva común no ve).
+ * El teléfono de la tarjeta del portal: SOLO NÚMEROS (decisión del dueño del 17/11/2026, «solo números»): dígitos 0-9, sin espacios, guiones, `+` ni letras. El largo (1 a 40) y el
+ * recorte de los extremos son los de la primitiva común (`telefonoDesdeTexto`, UNA sola fuente del largo). La base lo copia en `portal_tarjeta_telefono_ck` y una prueba falla si difieren.
+ * Previene: un invisible, un `<>` o un símbolo en un dato que se muestra en una página pública (lo que `\p{Cc}` de la primitiva común no ve).
  */
-const TELEFONO_DE_TARJETA = /^[0-9A-Za-z +().,/#*-]+$/;
+const SOLO_DIGITOS = /^[0-9]+$/;
 
 export function telefonoDeTarjetaDesdeTexto(
   texto: string,
 ): Resultado<Telefono, "TELEFONO_INVALIDO"> {
   const t = telefonoDesdeTexto(texto);
-  return t.ok && TELEFONO_DE_TARJETA.test(t.valor) ? t : err("TELEFONO_INVALIDO");
+  return t.ok && SOLO_DIGITOS.test(t.valor) ? t : err("TELEFONO_INVALIDO");
 }

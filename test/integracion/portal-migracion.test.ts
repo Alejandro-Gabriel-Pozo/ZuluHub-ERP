@@ -111,25 +111,31 @@ describe.skipIf(base === null)("migraciones 0078 y 0083: portal de la empresa", 
         }),
       );
       const muestras = [
-        "11 4321-0000",
-        "+54 (11) 4321-0000",
-        "4321-0000 int. 2",
-        "x".repeat(40),
-        "x".repeat(41),
+        "1143210000",
+        "5491143210000",
+        "0",
+        "9".repeat(LARGO_MAXIMO_DEL_TELEFONO),
+        "9".repeat(LARGO_MAXIMO_DEL_TELEFONO + 1),
         "",
-        "a\nb",
-        "a\tb",
-        "a\u0001b",
-        "a\u200bb",
-        "a\u00a0b",
-        "<script>",
-        "=cmd",
-        "@tel",
+        "11 4321",
+        "11-4321",
+        "+5411",
+        "(011)4321",
+        "int2",
+        "1143a",
         "Teléfono",
-        "📞 4321",
+        "1\n2",
+        "1\t2",
+        "1\u00012",
+        "1\u200b2",
+        "1\u00a02",
+        "1\u202e2",
+        "<1>",
+        "=1",
+        "@1",
         "１２３",
-        "a;b",
-        "a_b",
+        "١٢٣",
+        "1.5",
       ];
       await c.dueno.query("begin");
       for (const t of muestras) {
@@ -209,7 +215,7 @@ describe.skipIf(base === null)("migraciones 0078 y 0083: portal de la empresa", 
         expect(d["portal_de_empresa_linea_ck"]).toContain(`, 40)`);
         expect(d["portal_de_empresa_titulo_ck"]).toContain(`, 60)`);
         expect(d["portal_tarjeta_nombre_ck"]).toContain(`, ${LARGO_MAXIMO_DEL_NOMBRE_DE_CARTA})`);
-        expect(d["portal_tarjeta_telefono_ck"]).toContain(`<= ${LARGO_MAXIMO_DEL_TELEFONO})`);
+        expect(d["portal_tarjeta_telefono_ck"]).toContain(`{1,${LARGO_MAXIMO_DEL_TELEFONO}}`);
       });
     } finally {
       await aparte.destruir();
