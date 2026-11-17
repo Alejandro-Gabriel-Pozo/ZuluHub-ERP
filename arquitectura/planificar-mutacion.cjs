@@ -21,9 +21,9 @@
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
-const { cargarLosGrupos } = require("./grupos-de-mutacion.cjs");
+const { CARPETA_DE_LOS_GRUPOS, cargarLosGrupos } = require("./grupos-de-mutacion.cjs");
 const { gruposDelPlan } = require("./guardian-en-pr.cjs");
-const { decidirPorFiltro } = require("./grupos-por-filtro.cjs");
+const { elegirGrupos } = require("./grupos-por-filtro.cjs");
 
 /**
  * Cambios que ninguna prueba lee de un modo que cambie un resultado: ni la mutación ni la integración los notan. Los dos workflows de acá no los lee ninguna prueba salvo el escaneo de nombres, que no ejerce código mutado.
@@ -83,10 +83,17 @@ const CARPETAS_DEL_GUARDIAN = [
   "arquitectura/contratos",
   "arquitectura/deuda",
   "arquitectura/decisiones/registro",
+  CARPETA_DE_LOS_GRUPOS,
+  "arquitectura/paridad",
 ];
 const OTROS_ARCHIVOS_DEL_GUARDIAN = [
   "arquitectura/evaluar-gate.cjs",
   "arquitectura/reglas.cjs",
+  // Datos que sus pruebas leen (strace): `.gitignore` por `git ls-files`; de `CODEOWNERS` solo su existencia.
+  ".gitignore",
+  ".github/CODEOWNERS",
+  "arquitectura/decisiones/cuota.json",
+  "arquitectura/decisiones/archivos-sensibles.json",
   // Sus pruebas leen el `ci.yml` real (el trabajo `guardian`, el `needs` del Gate) y lo alteran en memoria.
   ARCHIVO_DE_CI,
 ];
@@ -335,18 +342,9 @@ function planificar({ cambios, grupos, dependencias, ci, lecturas = LECTURAS_DE_
     for (const importado of alcance) afectados.add(importado);
   }
 
-  const elegidos = [];
-  const saltados = [];
+  const candidatos = ordenarPorDuracion(gruposDelPlan(grupos, cambios));
   const contexto = { dependencias, afectadas, enElGrafo, esPruebaDeNode, archivoDe };
-  const porFiltro = decidirPorFiltro(contexto);
-  for (const { grupo, pruebas, expandidos } of ordenarPorDuracion(gruposDelPlan(grupos, cambios))) {
-    const archivos = expandidos.filter((entrada) => afectados.has(archivoDe(entrada)));
-    if (archivos.length === 0) continue;
-    const decision = porFiltro({ grupo, pruebas, expandidos });
-    if (decision.corre)
-      elegidos.push({ grupo, archivos: archivos.join(","), pruebas: pruebas ?? "" });
-    else saltados.push(`${grupo}: ${decision.motivo}`);
-  }
+  const { elegidos, saltados } = elegirGrupos({ grupos: candidatos, afectados, ...contexto });
   const alcanzan = new Set([...enElGrafo, ...enApps]).size;
   return {
     completo: false,
@@ -466,11 +464,12 @@ function leerDependencias(raiz) {
 
 function leerGrupos(raiz) {
   const { grupos: definidos } = cargarLosGrupos(raiz);
-  return definidos.map(({ grupo, archivos, pruebas, minutos }) => ({
+  return definidos.map(({ id, grupo, archivos, pruebas, minutos }) => ({
     grupo,
     archivos,
     pruebas,
     minutos,
+    fuente: `${CARPETA_DE_LOS_GRUPOS}/${id}.json`,
     expandidos: expandir(archivos, raiz),
   }));
 }

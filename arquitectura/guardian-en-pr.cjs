@@ -9,11 +9,15 @@
  * El chequeo que falla si se quita es `test/arquitectura/guardian-en-pr.test.ts`.
  */
 
+const { CARPETA_DE_LOS_GRUPOS } = require("./grupos-de-mutacion.cjs");
+
 /** Lo que cuenta como «tocar el guardián»: lista de lo que SÍ enciende los grupos (el resto no). */
 const TOCAN_EL_GUARDIAN = [
   /^arquitectura\/.*\.cjs$/,
   /^arquitectura\/contratos\//,
   /^arquitectura\/deuda\//,
+  new RegExp(`^${CARPETA_DE_LOS_GRUPOS}/`), // la definición de los grupos: cambiarla cambia qué se muta y con qué pruebas
+  /^arquitectura\/decisiones\/(?!registro\/)/, // cuota y archivos sensibles: la política que las pruebas de decisiones comprueban (un DEC nuevo no)
   /^test\/arquitectura\//,
   /^\.github\/workflows\//,
 ];

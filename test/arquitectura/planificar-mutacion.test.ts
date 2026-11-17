@@ -355,8 +355,14 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
       archivosDelGuardian,
     );
     // Un DEC es dato: no enciende los grupos del guardián en un PR (ver `guardian-en-pr.test.ts`).
+    // Tampoco los datos que no cambian qué comprueba el guardián (`.gitignore`, `CODEOWNERS`, paridad) ni la definición de los grupos
+    // (corre su propio grupo): los cubre `datos-de-arquitectura.test.ts`.
     const tocanElGuardian = [...archivosDelGuardian, ...pruebas].filter(
-      (a) => !a.startsWith("arquitectura/decisiones/registro/"),
+      (a) =>
+        !a.startsWith("arquitectura/decisiones/registro/") &&
+        !a.startsWith("arquitectura/mutacion/") &&
+        !a.startsWith("arquitectura/paridad/") &&
+        ![".gitignore", ".github/CODEOWNERS"].includes(a),
     );
     for (const cambio of tocanElGuardian) {
       // `ci.yml` es una entrada del guardián: sin cambio de contenido en sus jobs de mutación, solo corre el guardián.
@@ -367,7 +373,10 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
         ci: { antes: CI_REAL, despues: CI_REAL },
       });
       expect(p.completo, cambio).toBe(false);
-      const corridos = [...new Set(p.grupos.flatMap((g) => g.archivos.split(",").map(archivoDe)))];
+      // (los grupos de `arquitectura/decisiones/` y de `registros/` también son del guardián; acá se mira lo de contratos y deuda)
+      const corridos = [
+        ...new Set(p.grupos.flatMap((g) => g.archivos.split(",").map(archivoDe))),
+      ].filter((a) => mutadosDelGuardian.includes(a));
       // Un cambio en una PRUEBA solo alcanza a los grupos que la tienen en su filtro (solo esas matan sus mutantes).
       const esperados = cambio.endsWith(".test.ts")
         ? grupos

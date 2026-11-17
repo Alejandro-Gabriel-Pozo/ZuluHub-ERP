@@ -35,14 +35,15 @@ function pruebasDelFiltro(pruebas, universo) {
  * Prepara la decisión por grupo. `afectadas` son las pruebas que ya alcanzan lo cambiado (con su cierre de importaciones y las raíces globales:
  * las calcula `pruebasAfectadas` en `planificar-mutacion.cjs`, que es quien carga este módulo); `esPruebaDeNode` filtra las del proyecto `node` (el universo que vitest filtra).
  *
- * @returns {(grupo: { grupo: string, pruebas?: string, expandidos: readonly string[] }) => { corre: boolean, motivo: string }}
+ * @returns {(grupo: { grupo: string, pruebas?: string, expandidos: readonly string[], fuente?: string }) => { corre: boolean, motivo: string }}
  */
 function decidirPorFiltro({ dependencias, afectadas, enElGrafo, esPruebaDeNode, archivoDe }) {
   const universo = Object.keys(dependencias).filter(esPruebaDeNode);
-  return ({ pruebas, expandidos }) => {
+  return ({ pruebas, expandidos, fuente }) => {
     if (entradasDelFiltro(pruebas).length === 0)
       return { corre: true, motivo: "sin filtro de pruebas: corre con todas" };
-    const propio = expandidos.map(archivoDe).find((archivo) => enElGrafo.has(archivo));
+    // Su definición (su archivo de grupo: qué archivos muta y con qué pruebas) también es suya: si cambia, el grupo corre.
+    const propio = [...expandidos.map(archivoDe), fuente].find((archivo) => enElGrafo.has(archivo));
     if (propio !== undefined) return { corre: true, motivo: `cambió su archivo ${propio}` };
     const { corridas, sinPrueba } = pruebasDelFiltro(pruebas, universo);
     if (sinPrueba.length > 0)
@@ -60,4 +61,27 @@ function decidirPorFiltro({ dependencias, afectadas, enElGrafo, esPruebaDeNode, 
   };
 }
 
-module.exports = { decidirPorFiltro, pruebasDelFiltro };
+/**
+ * Los grupos que corren de los candidatos (ya ordenados y sin los del guardián que no toca el PR): los que alcanza lo cambiado (`afectados`:
+ * archivos cambiados y cierres de las pruebas afectadas) y que `decidirPorFiltro` no descarta. Un grupo cuya definición cambió corre con TODOS sus
+ * archivos. Devuelve también una línea de motivo por cada grupo saltado.
+ */
+function elegirGrupos({ grupos, afectados, ...contexto }) {
+  const porFiltro = decidirPorFiltro(contexto);
+  const elegidos = [];
+  const saltados = [];
+  for (const { grupo, pruebas, expandidos, fuente } of grupos) {
+    const nueva = contexto.enElGrafo.has(fuente);
+    const archivos = nueva
+      ? expandidos
+      : expandidos.filter((e) => afectados.has(contexto.archivoDe(e)));
+    if (archivos.length === 0) continue;
+    const decision = porFiltro({ grupo, pruebas, expandidos, fuente });
+    if (decision.corre)
+      elegidos.push({ grupo, archivos: archivos.join(","), pruebas: pruebas ?? "" });
+    else saltados.push(`${grupo}: ${decision.motivo}`);
+  }
+  return { elegidos, saltados };
+}
+
+module.exports = { decidirPorFiltro, elegirGrupos, pruebasDelFiltro };
