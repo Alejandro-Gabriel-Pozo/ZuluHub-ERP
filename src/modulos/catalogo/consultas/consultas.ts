@@ -37,6 +37,8 @@ export type ProductoDeLista = Readonly<{
   id: string;
   nombre: string;
   claseDeUso: ClaseDeUso;
+  /** El control de versión optimista del producto: lo que `editarProducto` exige (Agregar/Quitar de la pantalla de Secciones). */
+  version: number;
   estado: EstadoDeProducto;
   unidadDeVentaId: string;
   /** La sección de la carta del producto, TAMBIÉN si está desactivada (el producto la conserva): la lista muestra «clase · sección»; `null` si no tiene. */
@@ -62,7 +64,8 @@ export type PaginaDeProductos = Readonly<{
 
 export type EntradaDeListarProductos = Readonly<{
   texto?: string | undefined;
-  claseDeUso?: ClaseDeUso | undefined;
+  /** Una clase o varias (cualquiera de ellas); una lista vacía no trae nada (nunca ensancha el filtro). */
+  claseDeUso?: ClaseDeUso | readonly ClaseDeUso[] | undefined;
   faltaCompletar?: boolean | undefined;
   activo?: boolean | undefined;
   /** Solo los productos de esa sección de la carta (otra empresa, inexistente o que no es un uuid: lista vacía). */
@@ -215,6 +218,7 @@ export function crearConsultasDeCatalogo(d: DependenciasDeConsultasDeCatalogo) {
             id: p.id,
             nombre: p.nombre,
             claseDeUso: p.claseDeUso,
+            version: p.version,
             estado: !p.activo ? "DESACTIVADO" : p.faltaCompletar ? "FALTA_COMPLETAR" : "ACTIVO",
             unidadDeVentaId: p.unidadDeVentaId,
             seccion: seccionDeLista(

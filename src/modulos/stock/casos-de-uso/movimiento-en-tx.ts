@@ -13,6 +13,7 @@ import { decidirExistenciaNegativa, type DecisionDeNegativo } from "../dominio/c
 import { decidirPorHuella } from "../dominio/huella";
 import {
   comprobarCoherencia,
+  ORIGEN_DEVOLUCION_A_PROVEEDOR,
   ORIGEN_EJEMPLAR_DE_TICKET,
   ORIGEN_MANUAL,
   ORIGEN_RECEPCION,
@@ -33,10 +34,11 @@ import type { ControlDeStock, DetalleDeNegativo, ErrorDeStock } from "./errores"
 /** El único control que mira el libro (D125, declarado en `capacidades/controles`). */
 export const CONTROL_DE_NEGATIVO: ControlDeStock = "stock.existencia_negativa";
 
-/** Lo que identifica un movimiento que viene de otro módulo: el ejemplar de un ticket (ventas), la recepción (compras) o la orden de producción. */
+/** Lo que identifica un movimiento que viene de otro módulo: el ejemplar de un ticket (ventas), la recepción (compras), la devolución al proveedor (compras) o la orden de producción. */
 const ORIGENES_DE_OTRO_MODULO: readonly string[] = [
   ORIGEN_EJEMPLAR_DE_TICKET,
   ORIGEN_RECEPCION,
+  ORIGEN_DEVOLUCION_A_PROVEEDOR,
   ORIGEN_TRANSFORMACION,
 ];
 

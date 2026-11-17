@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
-import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
+import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
+import { PERMISOS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import type { GrupoPedido } from "../../src/modulos/catalogo/publico";
 import {
   CONTEXTO_CON_AHORA,
@@ -581,7 +582,7 @@ describe.skipIf(base === null)(
         ).toEqual(["CONTEO", "LONGITUD", "MASA", "SUPERFICIE", "TIEMPO", "VOLUMEN"]);
       });
 
-      it("la lista trae la sección de cada producto, también desactivada; editar el producto SIN tocar una sección apagada o una alícuota «Exento» lo acepta", async () => {
+      it("la lista trae la sección de cada producto, también desactivada; editar el producto SIN tocar una sección apagada lo acepta", async () => {
         const seccionId = nuevoId();
         const nombreDeSeccion = nombreAlAzarDeProducto("Postres");
         valorDe(
@@ -592,7 +593,7 @@ describe.skipIf(base === null)(
           }),
         );
         const nombre = nombreAlAzarDeProducto("ConSeccion");
-        const p = await nuevoProducto({ nombre, seccionDeCartaId: seccionId, alicuota: "EXENTO" });
+        const p = await nuevoProducto({ nombre, seccionDeCartaId: seccionId, alicuota: "21" });
         valorDe(await c.casos.desactivarSeccionDeCarta(e.gerente, { seccionId }));
         const lista = valorDe(
           await c.consultas.listarProductos(e.operador, { texto: nombre.toLowerCase() }),
@@ -605,20 +606,20 @@ describe.skipIf(base === null)(
         const sin = await nuevoProducto({ nombre: nombreAlAzarDeProducto("SinSeccion") });
         const todos = valorDe(await c.consultas.listarProductos(e.operador, {}));
         expect(todos.productos.find((x) => x.id === sin)?.seccion).toBeNull();
-        // Guardar solo el nombre nuevo, con la sección apagada y la alícuota «Exento» tal como estaban: se acepta (no obliga a tocarlas).
+        // Guardar solo el nombre nuevo, con la sección apagada tal como estaba: se acepta (no obliga a tocarlas).
         const nuevoNombre = nombreAlAzarDeProducto("Renombrado");
         const editado = await c.casos.editarProducto(e.gerente, {
           productoId: p,
           versionEsperada: await version(p),
           nombre: nuevoNombre,
-          alicuota: "EXENTO",
+          alicuota: "21",
           seccionDeCartaId: seccionId,
         });
         expect(editado.ok).toBe(true);
         const ficha = valorDe(await c.consultas.verProducto(e.operador, { productoId: p }));
         expect(ficha?.producto).toMatchObject({
           nombre: nuevoNombre,
-          alicuota: "EXENTO",
+          alicuota: "21",
           seccionDeCartaId: seccionId,
         });
         expect(ficha?.seccion).toMatchObject({ id: seccionId, activa: false });
@@ -1753,9 +1754,15 @@ describe.skipIf(base === null)(
         expect((await c.casos.cambiarPrecio(e.administrador, pedido({}))).ok).toBe(true);
       });
 
-      it("todo nace cerrado: con el catálogo real (`en_desarrollo`) ningún rol hace nada, ni siquiera mirar", async () => {
+      it("todo nace cerrado: con `catalogo` en desarrollo (en el catálogo real es disponible, DEC-0463) ningún rol hace nada, ni siquiera mirar", async () => {
         const cerrado = await montarCatalogo(base as NonNullable<typeof base>, {
-          reglas: REGLAS_DE_EMPRESA,
+          reglas: {
+            catalogo: {
+              ...CATALOGO_DE_MODULOS,
+              catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "en_desarrollo" },
+            },
+            permisos: PERMISOS_DE_EMPRESA,
+          },
           conexiones: 4,
         });
         try {

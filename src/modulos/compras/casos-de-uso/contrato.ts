@@ -78,7 +78,11 @@ export type DependenciasDeCompras = Readonly<{
   /** Los puertos de stock que usa «Comprar y recibir»: qué productos se controlan, la entrada por origen y la existencia (la composición los arma). */
   stock: Pick<
     PuertosDeStock,
-    "articulosDeVenta" | "entradaPorOrigen" | "existenciaParaMostrar" | "ajusteDeCostoPorOrigen"
+    | "articulosDeVenta"
+    | "entradaPorOrigen"
+    | "salidaPorOrigen"
+    | "existenciaParaMostrar"
+    | "ajusteDeCostoPorOrigen"
   >;
   /** El egreso de efectivo de caja para el pago en efectivo (la composición lo implementa con caja). */
   egresoDeCaja: EgresoDeCaja;

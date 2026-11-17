@@ -4,8 +4,8 @@
  * permiso para una acción que no existe, no compila.
  */
 import { ACCIONES_DE_LOTES, MODULO_DE_PRODUCCION } from "./catalogo-lotes-y-produccion";
+import { MODULO_DE_COMPRAS } from "./catalogo-compras";
 import { MODULOS_DE_SALON_Y_COMANDAS } from "./catalogo-salon-y-comandas";
-
 export type EstadoDeConstruccion = "disponible" | "en_desarrollo";
 
 /**
@@ -154,7 +154,7 @@ export const CATALOGO_DE_MODULOS = {
    * ediciones, reactivar, cambiar un precio, publicar, mover stock) es `CREA_AMPLIA`.
    */
   catalogo: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["administracion"],
     usaSiExiste: [],
@@ -250,7 +250,7 @@ export const CATALOGO_DE_MODULOS = {
    * Elegir los datos opcionales de cada medio es `medios_de_pago.editar` (SUPUESTO (DEC-0056) S-2).
    */
   caja: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["administracion"],
     usaSiExiste: ["facturacion"],
@@ -310,7 +310,7 @@ export const CATALOGO_DE_MODULOS = {
    * clientes porque no existen (cruce X3, SUPUESTO (DEC-0058) S-1).
    */
   ventas: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["administracion", "catalogo", "caja"],
     usaSiExiste: ["facturacion", "stock"],
@@ -351,35 +351,7 @@ export const CATALOGO_DE_MODULOS = {
       "partes.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
-  /**
-   * Compras (E9-T1; `e9-compras-especificacion.md` §3.0 y §3.9): ficha de compra del proveedor, recepción y factura
-   * (N1 y N2), pago mínimo y corrección. Nace `en_desarrollo` hasta E9-T12. `usaSiExiste: ["stock"]`: sin stock activo
-   * registra compras y facturas sin entrada de stock (S-9). `costos.ver` es de stock (E5-T10), no de acá. Las acciones
-   * de N3 y N4 (órdenes, conciliaciones, notas de crédito, devoluciones) las declaran T13 y T14. Criterio de efectos:
-   * mirar es `LECTURA`; anular una compra o un pago cierra lo ya iniciado; cargar, pagar, corregir, configurar y pedir
-   * o editar la ficha crean o amplían.
-   */
-  compras: {
-    estado: "disponible",
-    obligatorio: false,
-    requiere: ["administracion", "clientes", "catalogo"],
-    usaSiExiste: ["stock"],
-    datosRequeridos: [],
-    implementadoPor: ["modulos/compras"],
-    acciones: {
-      "proveedores.editar_ficha": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "proveedores.pedir_ficha": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "recepciones.ver": { capacidad: null, efecto: "LECTURA" },
-      "recepciones.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "recepciones.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "comprobantes_de_proveedor.ver": { capacidad: null, efecto: "LECTURA" },
-      "comprobantes_de_proveedor.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "comprobantes_de_proveedor.pagar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "comprobantes_de_proveedor.anular_pago": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "compras.configurar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "compras.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
-    },
-  },
+  compras: MODULO_DE_COMPRAS,
   produccion: MODULO_DE_PRODUCCION,
 } as const satisfies CatalogoComercial;
 

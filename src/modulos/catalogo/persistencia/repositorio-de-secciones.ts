@@ -18,7 +18,7 @@ export interface RepositorioDeSecciones {
   todasConProductos(empresa: EmpresaId): Promise<readonly SeccionConProductos[]>;
   /**
    * Las secciones ACTIVAS, tomadas con `FOR UPDATE` en un orden fijo (por `id`): dos reordenamientos a la vez toman las mismas filas en el mismo orden, así
-   * que uno espera al otro y no hay cruce. Se devuelven en el orden de la carta (`orden` y, si empatan, `id`).
+   * que uno espera al otro y no hay cruce. Se devuelven en el orden de la carta (`orden` y, si empatan, `nombre_clave` e `id`).
    */
   bloquearActivas(empresa: EmpresaId): Promise<readonly SeccionDeCarta[]>;
   /** `null` si la versión ya no es la esperada (o la sección no es de la empresa). */
@@ -74,7 +74,14 @@ export function crearRepositorioDeSecciones(db: Kysely<CatalogoDb>): Repositorio
         .orderBy("id")
         .forUpdate()
         .execute();
-      return filas.map(aSeccion).sort((a, b) => a.orden - b.orden || (a.id < b.id ? -1 : 1));
+      // El orden de la carta: `orden`, luego nombre (sin mayúsculas) y luego id, igual que las listas y la carta pública (H3: dos secciones pueden empatar en `orden`).
+      const comparar = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+      return [...filas]
+        .sort(
+          (a, b) =>
+            a.orden - b.orden || comparar(a.nombre_clave, b.nombre_clave) || comparar(a.id, b.id),
+        )
+        .map(aSeccion);
     },
     async cambiarOrden(empresa, id, versionEsperada, orden) {
       if (!FORMA_DE_UUID.test(id)) return null;

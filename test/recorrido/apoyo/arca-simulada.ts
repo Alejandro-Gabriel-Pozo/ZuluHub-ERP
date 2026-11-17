@@ -25,6 +25,12 @@ export type ArcaSimulada = Readonly<{
   cerrar(): Promise<void>;
 }>;
 
+/** Vencimiento del CAE de la ARCA simulada: siempre 10 días después de HOY (AAAAMMDD). Con una fecha fija el CAE «vence» cuando pasa ese día y los recorridos de facturación dejan de autorizar (pasó el 16/11/2026). */
+const VENCIMIENTO_DEL_CAE = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
+  .toISOString()
+  .slice(0, 10)
+  .replaceAll("-", "");
+
 const ENCABEZADO =
   '<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soap:Header><FEHeaderInfo xmlns="http://ar.gov.afip.dif.FEV1/"><ambiente>HomologacionExterno - srt</ambiente><fecha>2026-11-05T10:00:00.0000000-03:00</fecha><id>7.0.0.53</id></FEHeaderInfo></soap:Header><soap:Body>';
 const PIE = "</soap:Body></soap:Envelope>";
@@ -75,7 +81,7 @@ export async function levantarArcaSimulada(): Promise<ArcaSimulada> {
       responder(
         res,
         200,
-        `${ENCABEZADO}<FECAESolicitarResponse xmlns="http://ar.gov.afip.dif.FEV1/"><FECAESolicitarResult><FeCabResp><Cuit>${dato(cuerpo, "Cuit")}</Cuit><PtoVta>${dato(cuerpo, "PtoVta")}</PtoVta><CbteTipo>${dato(cuerpo, "CbteTipo")}</CbteTipo><FchProceso>${dato(cuerpo, "CbteFch")}101837</FchProceso><CantReg>1</CantReg><Resultado>A</Resultado><Reproceso>N</Reproceso></FeCabResp><FeDetResp><FECAEDetResponse><Concepto>${dato(cuerpo, "Concepto")}</Concepto><DocTipo>${dato(cuerpo, "DocTipo")}</DocTipo><DocNro>${dato(cuerpo, "DocNro")}</DocNro><CbteDesde>${numero}</CbteDesde><CbteHasta>${numero}</CbteHasta><CbteFch>${dato(cuerpo, "CbteFch")}</CbteFch><Resultado>A</Resultado><CAE>${cae}</CAE><CAEFchVto>20261115</CAEFchVto></FECAEDetResponse></FeDetResp></FECAESolicitarResult></FECAESolicitarResponse>${PIE}`,
+        `${ENCABEZADO}<FECAESolicitarResponse xmlns="http://ar.gov.afip.dif.FEV1/"><FECAESolicitarResult><FeCabResp><Cuit>${dato(cuerpo, "Cuit")}</Cuit><PtoVta>${dato(cuerpo, "PtoVta")}</PtoVta><CbteTipo>${dato(cuerpo, "CbteTipo")}</CbteTipo><FchProceso>${dato(cuerpo, "CbteFch")}101837</FchProceso><CantReg>1</CantReg><Resultado>A</Resultado><Reproceso>N</Reproceso></FeCabResp><FeDetResp><FECAEDetResponse><Concepto>${dato(cuerpo, "Concepto")}</Concepto><DocTipo>${dato(cuerpo, "DocTipo")}</DocTipo><DocNro>${dato(cuerpo, "DocNro")}</DocNro><CbteDesde>${numero}</CbteDesde><CbteHasta>${numero}</CbteHasta><CbteFch>${dato(cuerpo, "CbteFch")}</CbteFch><Resultado>A</Resultado><CAE>${cae}</CAE><CAEFchVto>${VENCIMIENTO_DEL_CAE}</CAEFchVto></FECAEDetResponse></FeDetResp></FECAESolicitarResult></FECAESolicitarResponse>${PIE}`,
       );
       return;
     }
