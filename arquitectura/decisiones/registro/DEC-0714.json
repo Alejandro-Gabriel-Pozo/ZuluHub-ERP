@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0714",
+  "fecha": "2026-11-17",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Comandas y salón pasan de «en desarrollo» a «disponible»; salón sigue como extra de pago con la perilla apagada de base y comandas en todos los planes.",
+  "que_cambia": "Las empresas con esos módulos en su plan pasan a poder usarlos (el salón además necesita la perilla encendida). Sin pantallas todavía (S-3 en adelante): lo que se habilita es la base del servidor. Revertir: volver el estado a en_desarrollo en dos líneas.",
+  "donde": "src/capacidades/modulos/catalogo-salon-y-comandas.ts (comandas y salon); salon-s0-ficha-y-tramos.md §4 Q-S0-3 del repo de documentos (17/11/2026, decidido por el orquestador a partir del Q1-A del dueño del 16/11/2026, DEC-0014)"
+}

@@ -18,7 +18,7 @@ import { entero, identificador, leer } from "./entradas-de-facturacion";
 
 /** Uno o dos dígitos: la forma del número de mesa, de la columna y de la fila (cuántas hay lo decide el dominio). */
 const DIGITOS = z.string().regex(/^[0-9]{1,2}$/);
-const PALABRA = z.string().regex(/^[A-Z]{1,20}$/);
+export const PALABRA = z.string().regex(/^[A-Z]{1,20}$/);
 
 const DATOS = {
   numero: DIGITOS,

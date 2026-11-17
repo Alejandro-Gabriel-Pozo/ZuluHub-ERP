@@ -232,7 +232,7 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     ),
     /**
      * Comandas (E7): enviar a cocina, pedir que salga, anular un ítem enviado, quitar sin enviar, las impresoras y los trabajos de impresión, cada uno con
-     * SU acción. El módulo sigue `en_desarrollo` y sin plan (pregunta abierta del dueño): el guard rechaza todo con `MODULO_EN_DESARROLLO`. El papel se
+     * SU acción. El módulo está `disponible` desde S-0r (17/11/2026, DEC-0714): cada empresa lo activa por su plan. El papel se
      * imprime en el navegador con el diálogo del sistema: el servidor solo entrega el modelo (`documentoParaImprimir`).
      */
     casosDeUsoDeComandas: perezoso(() =>
@@ -244,7 +244,7 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
     /**
      * Salón (E7): las mesas y su plano, el pedido de la mesa, el envío a cocina desde la mesa, cambiar de mesa, unir, dividir y cobrar la mesa. Orquesta
      * ventas y comandas en la MISMA transacción; descuenta stock por el mismo puerto que ventas (la composición es el único lugar donde se tocan). El
-     * módulo sigue `en_desarrollo` y sin plan: el guard rechaza todo con `MODULO_EN_DESARROLLO`.
+     * módulo está `disponible` desde S-0r (17/11/2026, DEC-0714), con la perilla `salon` del plan apagada de base (extra de pago).
      */
     casosDeUsoDeSalon: perezoso(() =>
       crearCasosDeUsoDeSalon({

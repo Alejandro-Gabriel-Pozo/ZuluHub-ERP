@@ -3,6 +3,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
+  cambiarDeMesaLaCuenta,
+  liberarLaMesa,
+  tomarElPedido,
+  verElMapaDeMesas,
+  verLaFichaDeLaMesa,
+  type DependenciasDeCuentaDeMesaWeb,
+  type FichaParaLaPantalla,
+  type MapaParaLaPantalla,
+} from "../../../src/composicion/cuenta-de-mesa-web";
+import {
   cambiarElEstadoDeLaMesa,
   crearLaMesa,
   editarLaMesa,
@@ -37,11 +47,17 @@ const dependencias: DependenciasDeMesasWeb = {
   respuesta: dependenciasDeSesion.respuesta,
 };
 
+const dependenciasDeLaCuenta: DependenciasDeCuentaDeMesaWeb = {
+  casosDeUso: web.casosDeUsoDeSalon,
+  consultas: web.consultasDeSalon,
+  respuesta: dependenciasDeSesion.respuesta,
+};
+
 /** La clave de creación de UN intento de alta de una mesa: la fija la página al abrirse. Previene: que un doble toque o un reintento por red cortada creen dos mesas. */
 export const nuevaClaveDeMesa = (): string => crypto.randomUUID();
 
 /** La sucursal con la que se trabaja: la que el servidor resuelve, `""` si ninguna (nunca «todas»). */
-async function sucursalDeTrabajo(contexto: ContextoOperativo): Promise<Respuesta<string>> {
+export async function sucursalDeTrabajo(contexto: ContextoOperativo): Promise<Respuesta<string>> {
   const sucursal = await sucursalDelPedido(contexto);
   return sucursal.ok ? { ok: true, dato: sucursal.dato.efectiva } : sucursal;
 }
@@ -116,3 +132,45 @@ export async function cambiarElEstadoDeLaMesaDelSalon(
   revalidatePath(RUTA_DE_MESAS);
   return respuesta.ok ? { error: null } : { error: respuesta.error };
 }
+
+/** El id de la cuenta de UN intento de «Tomar pedido»: lo fija la página al abrirse. Previene: que un doble toque, un reintento por red cortada o dos pestañas sobre la misma mesa abran dos cuentas. */
+export const nuevoIdDeCuentaDeMesa = (): string => crypto.randomUUID();
+
+/** Corre una operación de la cuenta de mesa con la sucursal de trabajo que fija el servidor (nunca la del navegador; sin ninguna, el genérico). */
+const enLaSucursal = <D>(
+  hacer: (contexto: ContextoOperativo, sucursalId: string) => Promise<Respuesta<D>>,
+): Promise<Respuesta<D>> =>
+  conLaEmpresa(async (contexto) => {
+    const sucursal = await sucursalDeTrabajo(contexto);
+    return sucursal.ok ? hacer(contexto, sucursal.dato) : sucursal;
+  });
+
+/** El mapa de mesas de la sucursal de trabajo; `crudo` puede traer `{ filtro }` (Todas, Libres, En pedido, Ocupadas). */
+export const cargarElMapaDeMesas = (crudo?: unknown): Promise<Respuesta<MapaParaLaPantalla>> =>
+  enLaSucursal((contexto, sucursal) =>
+    verElMapaDeMesas(dependenciasDeLaCuenta, contexto, sucursal, crudo),
+  );
+
+/** La ficha de una mesa de la sucursal de trabajo (`{ mesaId }`). */
+export const cargarLaFichaDeLaMesa = (crudo: unknown): Promise<Respuesta<FichaParaLaPantalla>> =>
+  enLaSucursal((contexto, sucursal) =>
+    verLaFichaDeLaMesa(dependenciasDeLaCuenta, contexto, sucursal, crudo),
+  );
+
+/** «Tomar pedido» (`{ cuentaId, mesaId }`, con el `cuentaId` de `nuevoIdDeCuentaDeMesa`). */
+export const tomarElPedidoDeLaMesa = (crudo: unknown) =>
+  enLaSucursal((contexto, sucursal) =>
+    tomarElPedido(dependenciasDeLaCuenta, contexto, sucursal, crudo),
+  );
+
+/** «Liberar mesa» (`{ cuentaId }`). */
+export const liberarLaMesaDelSalon = (crudo: unknown) =>
+  enLaSucursal((contexto, sucursal) =>
+    liberarLaMesa(dependenciasDeLaCuenta, contexto, sucursal, crudo),
+  );
+
+/** «Cambiar de mesa» (`{ cuentaId, mesaDestinoId }`). */
+export const cambiarDeMesaLaCuentaDelSalon = (crudo: unknown) =>
+  enLaSucursal((contexto, sucursal) =>
+    cambiarDeMesaLaCuenta(dependenciasDeLaCuenta, contexto, sucursal, crudo),
+  );
