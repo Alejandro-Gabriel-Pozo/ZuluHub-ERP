@@ -175,7 +175,7 @@ describe.skipIf(base === null)(
         "-123",
         " 1",
         "1 ",
-        "12​3",
+        "12\u200B3",
         "<b>1</b>",
         "123 ✨",
         "1".repeat(31),
@@ -211,7 +211,10 @@ describe.skipIf(base === null)("0062 sobre una base con datos", () => {
     try {
       const e = await crearEscenario(c);
       // Datos que hoy valen (la regla vieja solo rechaza controles) pero que la lista de permitidos no nombra.
-      await c.query("update sucursal set nombre = $1 where id = $2", [`Casa​ central`, e.sucursal]);
+      await c.query("update sucursal set nombre = $1 where id = $2", [
+        `Casa\u200B central`,
+        e.sucursal,
+      ]);
       await c.query(
         `insert into domicilio (empresa_id, calle, numero, localidad, provincia, piso)
          values ($1, 'Calle <b>', '1', 'Rosario', 'AR-S', '1 😀')`,
@@ -263,7 +266,14 @@ describe.skipIf(base === null)("0062 sobre una base con datos", () => {
 
       // 4. Con la lista nueva, la base rechaza por sí sola lo hostil y acepta lo válido.
       await c.query("begin");
-      for (const calle of ["Calle​x", "Calle‮x", "<b>x</b>", "Calle 😀", "=1+1", "小林商事"]) {
+      for (const calle of [
+        "Calle\u200Bx",
+        "Calle\u202Ex",
+        "<b>x</b>",
+        "Calle 😀",
+        "=1+1",
+        "小林商事",
+      ]) {
         await c.query("savepoint s");
         await expect(
           c.query(
@@ -285,7 +295,7 @@ describe.skipIf(base === null)("0062 sobre una base con datos", () => {
       }
       await c.query("savepoint s");
       await expect(
-        c.query("update sucursal set nombre = $1 where id = $2", ["Casa​central", e.sucursal]),
+        c.query("update sucursal set nombre = $1 where id = $2", ["Casa\u200Bcentral", e.sucursal]),
       ).rejects.toMatchObject({ code: "23514", constraint: "sucursal_nombre_control_ck" });
       await c.query("rollback to savepoint s");
       await c.query("rollback");
