@@ -1,12 +1,11 @@
 -- 0072_caja_origen_y_anulacion_distinta (LB-5b): dos cambios ADITIVOS sobre `movimiento_caja`, en dos bloques independientes.
 --
---  BLOQUE 1 (APROBADO por el dueño, 17/11/2026, «3.-si»): `CHECK (anula_a IS DISTINCT FROM id)`. Hoy nada impide que un movimiento de anulación se anule a sí mismo (la
+--  BLOQUE 1 (APROBADO por el dueño, 17/11/2026, «3.-si»; `decisiones-del-dueno-2026-11.md`): `CHECK (anula_a IS DISTINCT FROM id)`. Hoy nada impide que un movimiento de anulación se anule a sí mismo (la
 --    clave foránea `movimiento_caja_anula_fkey` se cumple contra la propia fila recién insertada). `movimiento_de_stock` ya lo tiene (0030). Previene: un movimiento que «se anula
 --    a sí mismo» y deja el esperado de la caja en cero sin que nadie lo vea.
---  BLOQUE 2 (PENDIENTE DE APROBACIÓN del dueño, hallazgo R2 de `primitiva-de-libro-diseno.md` §9): las columnas `origen_tipo` y `origen_id`, NULABLES. Hoy el origen de un movimiento que
+--  BLOQUE 2 (APROBADO por el dueño, 17/11/2026, «1. A», SQL completo; `decisiones-del-dueno-2026-11.md`; hallazgo R2 de `primitiva-de-libro-diseno.md` §9): las columnas `origen_tipo` y `origen_id`, NULABLES. Hoy el origen de un movimiento que
 --    nace de otro módulo (pago a un proveedor, entrega a rendir, reintegro, devolución del sobrante) vive solo dentro del texto de la clave de idempotencia (`egreso_<tipo>_<id>`). Con las
 --    columnas el origen se consulta sin leer texto, y una restricción única impide DOS movimientos del mismo origen aunque cambie la clave (identidad por origen, como `movimiento_de_stock`).
---    Si el dueño no lo aprueba, se borra este bloque (y su reversión) y queda el bloque 1.
 --
 -- Reglas de esta migración:
 --  * ADITIVA y compatible hacia atrás: columnas nulables sin default (el código anterior no las nombra y la inserción sigue sin pasarlas); NO toca datos (la tabla es de solo inserción: las
@@ -33,7 +32,7 @@ ALTER TABLE movimiento_caja ADD CONSTRAINT movimiento_caja_anula_distinta_ck CHE
 ALTER TABLE movimiento_caja VALIDATE CONSTRAINT movimiento_caja_anula_distinta_ck;
 
 -- ---------------------------------------------------------------------------------------------
--- BLOQUE 2 (PENDIENTE de aprobación del dueño): el origen de un movimiento de efectivo, en columnas.
+-- BLOQUE 2 (aprobado 17/11/2026, «1. A»): el origen de un movimiento de efectivo, en columnas.
 -- ---------------------------------------------------------------------------------------------
 ALTER TABLE movimiento_caja ADD COLUMN origen_tipo text;
 ALTER TABLE movimiento_caja ADD COLUMN origen_id uuid;

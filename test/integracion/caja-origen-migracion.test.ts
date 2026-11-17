@@ -20,7 +20,7 @@ import type { BaseDePruebas } from "./global";
 import type { SesionDePrueba } from "./sesiones";
 
 /**
- * Migración 0072 (LB-5b) contra una base real. Bloque 1 (aprobado 17/11/2026): un movimiento no se anula a sí mismo. Bloque 2 (pendiente de aprobación): `origen_tipo` y `origen_id`
+ * Migración 0072 (LB-5b) contra una base real. Bloque 1 (aprobado 17/11/2026): un movimiento no se anula a sí mismo. Bloque 2 (aprobado 17/11/2026, «1. A»): `origen_tipo` y `origen_id`
  * nulables en `movimiento_caja`, con su forma, su lista cerrada (paridad con `origen-de-movimiento.ts`), su sentido contra la clase y un movimiento por origen y empresa; la reversión
  * frena si hay movimientos con origen, se puede repetir y reaplicar la migración vuelve a dejar todo.
  */
