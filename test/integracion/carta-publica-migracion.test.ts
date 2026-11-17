@@ -468,6 +468,21 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
         // 0083 y 0078 (el portal) usan las funciones de 0077: se revierten antes (sin datos, no frenan).
         await c.query(await readFile(REVERSION_DEL_PORTAL_POR_PLAN, "utf8"));
         await c.query(await readFile(REVERSION_DEL_PORTAL, "utf8"));
+        // Las familias (0079 a 0081) también miran `carta_publica` (su lectura pública): se revierten antes, en orden inverso.
+        await c.query("set local pedernal.confirmar_reversion = 'SI'");
+        for (const n of [
+          "0081_revertir_orden_y_destacado_de_la_carta",
+          "0080_revertir_aplicacion_de_precio_de_familia",
+          "0079_revertir_familias_de_productos",
+        ]) {
+          await c.query(
+            await readFile(
+              join(import.meta.dirname, "../../migraciones/reversiones", `${n}.sql`),
+              "utf8",
+            ),
+          );
+        }
+        await c.query("set local pedernal.confirmar_reversion = ''");
         // 0077 (identidad) también mira `carta_publica`: se revierte primero (sin datos, no frena).
         await c.query(await readFile(REVERSION_DE_LA_IDENTIDAD, "utf8"));
         await c.query(await readFile(REVERSION_DEL_PLAN, "utf8"));

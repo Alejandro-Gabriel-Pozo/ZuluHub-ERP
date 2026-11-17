@@ -97,6 +97,11 @@ const TABLAS_DE_NEGOCIO = [
   "portal_de_empresa",
   "portal_tarjeta",
   "portal_zona",
+  // Familias de productos (0079, 0080 y 0081)
+  "familia_de_producto",
+  "miembro_de_familia",
+  "aplicacion_de_precio_de_familia",
+  "lugar_en_carta_de_producto",
   // Cierre del día (0026_cierre)
   "jornada_de_sucursal",
   "control_de_jornada_cerrada",
@@ -559,6 +564,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...["portal_de_empresa", "portal_tarjeta", "portal_zona"].map(
             (tabla) => `${tabla}:SELECT`,
           ), // 0078
+          "familia_de_producto:SELECT", // 0079
+          "miembro_de_familia:SELECT", // 0079
+          "aplicacion_de_precio_de_familia:SELECT", // 0080
+          "lugar_en_carta_de_producto:SELECT", // 0081
         ].sort(),
       );
       expect(porRol("pedernal_grupo")).toEqual(
@@ -916,6 +925,22 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...["actualizado_en", "actualizado_por", "oculto"].map(
             (c) => `pedernal_app:disponibilidad_de_producto.${c}`,
           ), // 0043
+          ...[
+            "activa",
+            "agrupar_en_carta",
+            "agrupar_en_pos",
+            "destacada",
+            "nombre",
+            "nombre_clave",
+            "orden",
+          ].map((c) => `pedernal_app:familia_de_producto.${c}`), // 0079 y 0081
+          ...["actualizado_en", "actualizado_por", "destacado", "orden"].map(
+            (c) => `pedernal_app:lugar_en_carta_de_producto.${c}`,
+          ), // 0081
+          "pedernal_app:miembro_de_familia.quitado_en", // 0079
+          "pedernal_app:miembro_de_familia.quitado_por", // 0079
+          "pedernal_app:seccion_de_carta.orden_de_renglones", // 0081
+          "pedernal_app:seccion_de_carta.version_del_orden", // 0081
           "pedernal_app:presentacion_de_producto.activa",
           "pedernal_app:presentacion_de_producto.nombre",
           "pedernal_app:presentacion_de_producto.nombre_clave",
@@ -1374,6 +1399,45 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "producto_id",
           "sucursal_id",
         ].map((c) => `disponibilidad_de_producto.${c}`),
+        ...[
+          "aplicada_en",
+          "aplicada_por",
+          "empresa_id",
+          "familia_id",
+          "huella",
+          "id",
+          "precios_escritos",
+          "precios_sin_cambio",
+        ].map((c) => `aplicacion_de_precio_de_familia.${c}`),
+        ...[
+          "activa",
+          "agrupar_en_carta",
+          "agrupar_en_pos",
+          "creado_por",
+          "destacada",
+          "empresa_id",
+          "id",
+          "nombre",
+          "nombre_clave",
+          "orden",
+        ].map((c) => `familia_de_producto.${c}`),
+        ...[
+          "actualizado_en",
+          "actualizado_por",
+          "destacado",
+          "empresa_id",
+          "orden",
+          "producto_id",
+        ].map((c) => `lugar_en_carta_de_producto.${c}`),
+        ...[
+          "agregado_en",
+          "agregado_por",
+          "empresa_id",
+          "familia_id",
+          "id",
+          "posicion",
+          "producto_id",
+        ].map((c) => `miembro_de_familia.${c}`),
         ...[
           "activo",
           "admite_varias",

@@ -59,6 +59,20 @@ export type {
   SalidaDeCopiarOpciones,
 } from "./casos-de-uso/copiar-opciones";
 export type {
+  EntradaDeDestacarRenglon,
+  EntradaDeOrdenarRenglones,
+  SalidaDeDestacarRenglon,
+  SalidaDeOrdenarRenglones,
+} from "./casos-de-uso/orden-de-carta";
+export type {
+  EntradaDeCambiarMiembroDeFamilia,
+  EntradaDeCrearFamilia,
+  EntradaDeEditarFamilia,
+  SalidaDeCambiarMiembroDeFamilia,
+  SalidaDeCrearFamilia,
+  SalidaDeEditarFamilia,
+} from "./casos-de-uso/familias";
+export type {
   EntradaDeCrearSeccion,
   EntradaDeEditarSeccion,
   SalidaDeCrearSeccion,
@@ -139,6 +153,12 @@ export {
   type PublicoDeCartaDb,
 } from "./persistencia/lector-publico-de-carta";
 export { crearLectorDeCarta, type LectorDeCarta } from "./persistencia/lector-de-carta";
+export {
+  crearRepositorioDeFamilias,
+  type Familia,
+  type MiembroDeFamilia,
+  type RepositorioDeFamilias,
+} from "./persistencia/repositorio-de-familias";
 export {
   crearRepositorioDeSecciones,
   type RepositorioDeSecciones,

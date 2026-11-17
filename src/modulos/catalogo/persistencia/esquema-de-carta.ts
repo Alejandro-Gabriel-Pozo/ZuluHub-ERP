@@ -1,10 +1,16 @@
 import type { Generated } from "kysely";
+import {
+  COLUMNAS_DE_FAMILIAS,
+  ERRORES_DE_FAMILIAS_POR_RESTRICCION,
+  type TablasDeFamilias,
+} from "./esquema-de-familias";
 
 /**
  * Las dos tablas de la carta pública y del botón «Ocultar» (migración 0043, carta real §3.2 y §3.2b). Vive aparte para que `esquema.ts` no pase el tope de
  * líneas; el catálogo las suma a `CatalogoDb`, a las columnas que compara su prueba y al mapa de restricciones.
  */
-export type TablasDeCarta = {
+/** Las de la carta y, por el tope de líneas de `esquema.ts`, las de las familias (0079 a 0081), que se muestran en ella. */
+export type TablasDeCarta = TablasDeFamilias & {
   carta_publica: {
     /** El que manda la aplicación (idempotencia del alta y semilla de la dirección de cada producto). */
     id: string;
@@ -47,6 +53,7 @@ export type TablasDeCarta = {
 };
 
 export const COLUMNAS_DE_CARTA = {
+  ...COLUMNAS_DE_FAMILIAS,
   carta_publica: [
     "id",
     "empresa_id",
@@ -87,6 +94,7 @@ export const COLUMNAS_DE_CARTA = {
  * por un camino de la aplicación, o no tiene error propio: sale como el error de persistencia tipado).
  */
 export const ERRORES_DE_CARTA_POR_RESTRICCION: Readonly<Record<string, string>> = {
+  ...ERRORES_DE_FAMILIAS_POR_RESTRICCION,
   // carta_publica
   carta_publica_pkey: "ID_REUTILIZADO",
   carta_publica_empresa_id_fkey: "NO_TRADUCIDA",
