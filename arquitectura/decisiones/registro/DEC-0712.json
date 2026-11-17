@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0712",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En N4 devolver mercadería al proveedor y anular una devolución lo hacen gerente y administrador; verlas, los tres roles. El dueño dijo «sin preferencia» (14/11/2026).",
+  "que_cambia": "Tres permisos nuevos devoluciones_a_proveedor.ver, .registrar y .anular (nacen cerrados). SUPUESTO del ingeniero, a confirmar. Revertir: cambiar la matriz de roles; no toca datos.",
+  "donde": "src/capacidades/permisos/empresa.ts; src/capacidades/modulos/catalogo-compras.ts; decisiones-del-dueno-2026-11.md (14/11/2026, devolución #3); tramo N4-5 de compras."
+}

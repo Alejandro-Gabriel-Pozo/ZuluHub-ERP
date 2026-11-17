@@ -169,7 +169,7 @@ export async function cobrarTicketEnTx(
       medioDePagoId: cobro.medioDePagoId,
       cuentaDeCobroId: cobro.cuentaDeCobroId,
       importe: cobro.importe,
-      datos: {},
+      datos: cobro.datos,
     });
     if (!r.ok) return r;
     // La cobranza es nueva: un cobro con su origen que ya existía no puede ser de otra.
