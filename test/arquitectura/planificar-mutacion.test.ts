@@ -1032,3 +1032,177 @@ describe("planificador: cuándo se repite la integración (Estabilidad x12)", ()
     expect(e(["README.md", ".gitleaks.toml", "skills-lock.json"]).corre).toBe(false);
   });
 });
+
+describe("planificador de mutación: el registro de decisiones (arquitectura/decisiones/registro/DEC-NNNN.json)", () => {
+  // Qué previene: un PR que solo suma una decisión (cada PR de las sesiones suma una) corría los ~97 grupos porque el grafo no conoce el JSON
+  // («que el grafo de importaciones no explica»): 17 de 33 planes de PR del 13 al 15/11/2026, ~520 min de máquina cada uno, y repetía la integración.
+  // Grafo de juguete: lectores del registro (una prueba del registro, una del guardián), una prueba de arquitectura que NO lo lee, y tres grupos.
+  const REGISTRO = ["arquitectura/decisiones/registro/DEC-0001.json"];
+  const DEC_NUEVA = "arquitectura/decisiones/registro/DEC-0002.json";
+  const BASE: Record<string, string[]> = {
+    "arquitectura/decisiones/decisiones.cjs": [],
+    "arquitectura/contratos/guardian.cjs": [],
+    "src/ajeno/dominio/ajeno.ts": [],
+    "src/ajeno/dominio/ajeno.test.ts": ["src/ajeno/dominio/ajeno.ts"],
+    "test/arquitectura/decisiones-control.test.ts": ["arquitectura/decisiones/decisiones.cjs"],
+    "test/arquitectura/guardian-nucleo.test.ts": ["arquitectura/contratos/guardian.cjs"],
+    "test/arquitectura/lint.test.ts": ["src/ajeno/dominio/ajeno.ts"],
+  };
+  const GRUPOS_REGISTRO: Grupo[] = [
+    {
+      grupo: "decisiones",
+      archivos: "arquitectura/decisiones/decisiones.cjs",
+      expandidos: ["arquitectura/decisiones/decisiones.cjs"],
+    },
+    {
+      grupo: "guardián",
+      archivos: "arquitectura/contratos/guardian.cjs",
+      expandidos: ["arquitectura/contratos/guardian.cjs"],
+    },
+    {
+      grupo: "ajeno",
+      archivos: "src/ajeno/dominio/*.ts",
+      expandidos: ["src/ajeno/dominio/ajeno.ts"],
+    },
+  ];
+  const grafo = (registro: string[]) =>
+    conEnlacesDelGuardian(BASE, ["arquitectura/contratos/guardian.cjs", ...registro]);
+  const corre = (cambios: string[], registro: string[] = [...REGISTRO, DEC_NUEVA]) =>
+    planificar({ cambios, grupos: GRUPOS_REGISTRO, dependencias: grafo(registro) });
+
+  it("un PR que solo agrega una decisión corre los grupos de lo que la lee, y no todos", () => {
+    const p = corre([DEC_NUEVA]);
+    expect(p.completo).toBe(false);
+    expect(nombres(p).sort()).toEqual(["decisiones", "guardián"]);
+    expect(p.motivo).not.toContain("no explica");
+  });
+
+  it("si el PR toca además código, corre lo que ese código alcanza MÁS lo de la decisión (nunca menos que sin la decisión)", () => {
+    expect(nombres(corre(["src/ajeno/dominio/ajeno.ts"]))).toEqual(["ajeno"]);
+    expect(nombres(corre(["src/ajeno/dominio/ajeno.ts", DEC_NUEVA])).sort()).toEqual([
+      "ajeno",
+      "decisiones",
+      "guardián",
+    ]);
+  });
+
+  it("una decisión BORRADA (ya no existe en disco, no es un nodo) corre todo", () => {
+    const p = corre([DEC_NUEVA], REGISTRO);
+    expect(p.completo).toBe(true);
+    expect(nombres(p).sort()).toEqual(["ajeno", "decisiones", "guardián"]);
+  });
+
+  it.each([
+    "arquitectura/decisiones/cuota.json",
+    "arquitectura/decisiones/archivos-sensibles.json",
+    "arquitectura/decisiones/registro.json",
+  ])("cualquier otro archivo de arquitectura/decisiones (%s) sigue corriendo todo", (archivo) => {
+    expect(corre([archivo]).completo).toBe(true);
+  });
+
+  it("una prueba de arquitectura que no lee el registro no entra: su grupo no corre por una decisión sola", () => {
+    expect(nombres(corre([DEC_NUEVA]))).not.toContain("ajeno");
+  });
+
+  it("la integración (Estabilidad x12) no se repite por una decisión sola, y sí si el PR toca la base", () => {
+    const dependencias = grafo([...REGISTRO, DEC_NUEVA]);
+    expect(planificarEstabilidad({ cambios: [DEC_NUEVA], dependencias }).corre).toBe(false);
+    expect(
+      planificarEstabilidad({ cambios: [DEC_NUEVA, "migraciones/0099_x.sql"], dependencias }).corre,
+    ).toBe(true);
+    expect(
+      planificarEstabilidad({ cambios: ["arquitectura/decisiones/cuota.json"], dependencias })
+        .corre,
+    ).toBe(true);
+  });
+
+  it("el árbol real: las decisiones están entre los archivos del guardián (todas con la forma DEC-NNNN.json)", () => {
+    const reales = leerArchivosDelGuardian(RAIZ).filter((a) =>
+      a.startsWith("arquitectura/decisiones/registro/"),
+    );
+    expect(reales.length).toBeGreaterThan(100);
+    for (const archivo of reales) {
+      expect(archivo).toMatch(/^arquitectura\/decisiones\/registro\/DEC-\d{4}\.json$/);
+    }
+  });
+
+  // Quién lee el registro: las pruebas que, con el mapa del guardián, quedan dependiendo de una decisión.
+  const leeElRegistro = (ruta: string) =>
+    conEnlacesDelGuardian({ [ruta]: [] }, REGISTRO)[ruta]?.includes(REGISTRO[0] as string) === true;
+
+  it("lo leen las pruebas del guardián, del registro, del nombre del producto, de los grupos y del planificador; no las demás", () => {
+    for (const ruta of [
+      "test/arquitectura/guardian-nucleo.test.ts",
+      "test/arquitectura/decisiones-control.test.ts",
+      "test/arquitectura/decisiones-apoyo.ts",
+      "test/arquitectura/nombre-del-producto.test.ts",
+      "test/arquitectura/grupos-de-mutacion.test.ts",
+      "test/arquitectura/planificar-mutacion.test.ts",
+    ]) {
+      expect(leeElRegistro(ruta), ruta).toBe(true);
+    }
+    for (const ruta of [
+      "test/arquitectura/lint.test.ts",
+      "test/arquitectura/reglas.test.ts",
+      "src/composicion/cadenas-de-confianza-de-arca.test.ts",
+    ]) {
+      expect(leeElRegistro(ruta), ruta).toBe(false);
+    }
+  });
+
+  // El hueco que no se puede cerrar del todo: una prueba NUEVA de test/arquitectura que recorra el repo y lea el registro sin llamarse como las
+  // de arriba quedaría afuera. Alarma para errores honestos, no un límite de seguridad: mira marcas de texto en las pruebas de esa carpeta.
+  // Quien la dispare, o suma su nombre a `PRUEBAS_DEL_GUARDIAN` (arquitectura/planificar-mutacion.cjs, si lee el registro) o la explica abajo
+  // (no lo lee). La corrida completa de `main` y la nocturna siguen corriendo todos los grupos: un olvido se ve a los minutos.
+  const NO_LEEN_EL_REGISTRO: Record<string, string> = {
+    "test/arquitectura/catalogo-modulos.test.ts":
+      "cita un identificador de decisión en un comentario; solo comprueba que existan carpetas (corrida sola y traza strace: 0 lecturas del registro)",
+    "test/arquitectura/compras-fuente-unica.test.ts":
+      "cita un identificador de decisión en un comentario; no abre el registro (corrida sola y traza strace: 0 lecturas)",
+    "test/arquitectura/lint.test.ts":
+      "su `readdirSync(..., { recursive })` recorre las fixtures del lint, no el repo",
+    "test/arquitectura/reglas.test.ts":
+      "su `readdirSync(..., { recursive })` recorre `src/` y `apps/`, no `arquitectura/`",
+  };
+  const MARCAS_DE_LECTURA_DEL_REPO = [
+    /ls-files/,
+    /decisiones\/registro/,
+    /\bDEC-\d{4}\b/,
+    /readdirSync\([^)]*recursive/,
+  ];
+  const sinDeclarar = (archivos: Record<string, string>) =>
+    Object.entries(archivos)
+      .filter(([ruta]) => !leeElRegistro(ruta) && !(ruta in NO_LEEN_EL_REGISTRO))
+      .filter(([, texto]) => MARCAS_DE_LECTURA_DEL_REPO.some((marca) => marca.test(texto)))
+      .map(([ruta]) => ruta);
+
+  it("ninguna prueba de test/arquitectura que recorra el repo queda sin declarar como lectora o como no lectora", () => {
+    const archivos = Object.fromEntries(
+      globSync("test/arquitectura/*.ts", { cwd: RAIZ }).map((a) => [
+        a,
+        readFileSync(join(RAIZ, a), "utf8"),
+      ]),
+    );
+    expect(
+      sinDeclarar(archivos),
+      "recorre el repo: sumá su nombre a PRUEBAS_DEL_GUARDIAN (arquitectura/planificar-mutacion.cjs) si lee el registro, o explicala en NO_LEEN_EL_REGISTRO",
+    ).toEqual([]);
+  });
+
+  it("violación inyectada: una prueba nueva con `git ls-files` que no está declarada se detecta; una lectora o una explicada, no", () => {
+    const ls = 'execFileSync("git", ["ls-files"])';
+    expect(sinDeclarar({ "test/arquitectura/escaner-nuevo.test.ts": ls })).toEqual([
+      "test/arquitectura/escaner-nuevo.test.ts",
+    ]);
+    expect(sinDeclarar({ "test/arquitectura/guardian-otro.test.ts": ls })).toEqual([]);
+    expect(
+      sinDeclarar({ "test/arquitectura/lint.test.ts": "readdirSync(d, { recursive: true })" }),
+    ).toEqual([]);
+  });
+
+  it("las pruebas explicadas como no lectoras existen (la lista no se pudre)", () => {
+    for (const ruta of Object.keys(NO_LEEN_EL_REGISTRO)) {
+      expect(existsSync(join(RAIZ, ruta)), ruta).toBe(true);
+    }
+  });
+});
