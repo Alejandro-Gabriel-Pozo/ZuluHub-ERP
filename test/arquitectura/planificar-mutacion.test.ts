@@ -607,6 +607,8 @@ describe("planificador de mutación: apps/** (las aplicaciones importan de src, 
       /^test\/arquitectura\/guardian-[^/]+\.ts$/,
       // Esta misma prueba: grafos de juguete con nombres `apps/...`; del árbol real solo lista nombres de archivo.
       /^test\/arquitectura\/planificar-mutacion\.test\.ts$/,
+      // Cambios de juguete con nombres `apps/...`; del árbol real lee solo `ci.yml`, `arquitectura/reloj-critico.json` y la lista de pruebas críticas.
+      /^test\/arquitectura\/reloj-critico\.test\.ts$/,
     ];
     const LECTURA_DE_ARCHIVOS =
       /\b(readFileSync|readdirSync|readdir|globSync|existsSync|statSync|lstatSync|readFile|opendirSync|cpSync|copyFileSync)\b/;
@@ -1163,6 +1165,8 @@ describe("planificador de mutación: el registro de decisiones (arquitectura/dec
       "su `readdirSync(..., { recursive })` recorre las fixtures del lint, no el repo",
     "test/arquitectura/reglas.test.ts":
       "su `readdirSync(..., { recursive })` recorre `src/` y `apps/`, no `arquitectura/`",
+    "test/arquitectura/reloj-critico.test.ts":
+      "cita `decisiones/registro/DEC-0001.json` como ejemplo de un cambio que no toca la suite crítica; no abre el registro (corrida sola y traza strace: 0 lecturas)",
   };
   const MARCAS_DE_LECTURA_DEL_REPO = [
     /ls-files/,

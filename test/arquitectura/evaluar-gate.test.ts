@@ -35,7 +35,11 @@ const VERDE: Needs = {
   recorrido: { result: "success" },
   dependencias: { result: "success" },
   estabilidad: { result: "success" },
-  "mutacion-plan": { result: "success", outputs: { hay: "true", estabilidad: "true" } },
+  reloj: { result: "success" },
+  "mutacion-plan": {
+    result: "success",
+    outputs: { hay: "true", estabilidad: "true", reloj: "true" },
+  },
   mutacion: { result: "success" },
 };
 const con = (cambios: Needs): Needs => ({ ...VERDE, ...cambios });
@@ -399,5 +403,67 @@ describe("Gate: un push a main corre solo lo rápido (la mutación y Estabilidad
     expect(job("mutacion", "gate")).toContain("needs.mutacion-plan.outputs.hay == 'true'");
     expect(ci).toMatch(/^ {2}workflow_dispatch:\s*$/m);
     expect(ci).toMatch(/^ {2}schedule:\s*$/m);
+  });
+});
+
+describe("Gate: reloj (la suite crítica con el reloj fijado)", () => {
+  // Qué previene: tres noches de CI en rojo por mezclar el día de Argentina con el de la base. Lo que NO puede pasar: que un job `reloj` fallido, cancelado o ausente
+  // cuente como verde, o que se saltee fuera de un pull request que el plan dijo que no toca esa suite.
+  const SIN_RELOJ: Needs = {
+    "mutacion-plan": {
+      result: "success",
+      outputs: { hay: "true", estabilidad: "true", reloj: "false" },
+    },
+    reloj: { result: "skipped" },
+  };
+
+  it("en un pull request, saltado porque el plan dijo «no toca la suite crítica» pasa", () => {
+    expect(evaluarGate(con(SIN_RELOJ), "pull_request")).toEqual([]);
+  });
+
+  it.each(["push", "schedule", "workflow_dispatch", "", undefined])(
+    "con el evento «%s» NO se acepta saltado, ni siquiera si el plan dijo «no toca»",
+    (evento) => {
+      expect(evaluarGate(con(SIN_RELOJ), evento)).toContain("reloj: skipped");
+    },
+  );
+
+  it("saltado sin que el plan lo haya pedido falla en un pull request", () => {
+    expect(evaluarGate(con({ reloj: { result: "skipped" } }), "pull_request")).toEqual([
+      "reloj: skipped",
+    ]);
+  });
+
+  it.each([
+    ["sin la salida del plan", { result: "success", outputs: { hay: "true" } }],
+    ["con una salida distinta de «false»", { result: "success", outputs: { reloj: "FALSE" } }],
+    ["con el plan fallido", { result: "failure", outputs: { reloj: "false" } }],
+    ["con el plan cancelado", { result: "cancelled", outputs: { reloj: "false" } }],
+    ["con el plan saltado", { result: "skipped", outputs: { reloj: "false" } }],
+  ])("saltado %s falla en un pull request", (_nombre, plan) => {
+    const necesidades = con({ "mutacion-plan": plan, reloj: { result: "skipped" } });
+    expect(evaluarGate(necesidades, "pull_request")).toContain("reloj: skipped");
+  });
+
+  it.each(["failure", "cancelled"])("%s falla aunque el plan haya dicho «no toca»", (r) => {
+    expect(evaluarGate(con({ ...SIN_RELOJ, reloj: { result: r } }), "pull_request")).toEqual([
+      `reloj: ${r}`,
+    ]);
+  });
+
+  it("en push a main (con el plan saltado) tiene que dar success: fallido o ausente falla", () => {
+    const rapido = con({
+      ...Object.fromEntries(SALTABLES_EN_PUSH.map((j) => [j, { result: "skipped" }])),
+    });
+    expect(evaluarGate(rapido, "push")).toEqual([]);
+    expect(evaluarGate({ ...rapido, reloj: { result: "failure" } }, "push")).toEqual([
+      "reloj: failure",
+    ]);
+    const sin = Object.fromEntries(Object.entries(rapido).filter(([j]) => j !== "reloj"));
+    expect(evaluarGate(sin, "push")).toEqual(["reloj: ausente"]);
+  });
+
+  it("reloj no está entre los jobs que se pueden saltar en push", () => {
+    expect(SALTABLES_EN_PUSH).not.toContain("reloj");
   });
 });

@@ -48,9 +48,10 @@ const CLASIFICACION: Clasificacion = {
   soloEnPullRequest: gate.SOLO_EN_PULL_REQUEST,
   // `mutacion` es la matriz por grupos: puede quedar `skipped` solo si el plan dijo `hay == false`
   // (regla de `mutacionAceptable` en evaluar-gate.cjs; se verifica abajo con `evaluarGate`).
+  // `reloj` (la suite crítica con el reloj fijado) puede quedar `skipped` solo en un pull request si el plan dijo `reloj == "false"` (regla de `relojAceptable`).
   // `estabilidad` (copias repetidas de la integración) puede quedar `skipped` en un pull request si el plan
   // dijo `estabilidad == "false"` (regla de `estabilidadAceptable`) y en push a main (`SALTABLES_EN_PUSH`; `EVENTO` se verifica abajo).
-  tratadosAparte: ["mutacion", "estabilidad"],
+  tratadosAparte: ["mutacion", "estabilidad", "reloj"],
   gate: "gate",
 };
 
@@ -80,6 +81,11 @@ const SI_DE_JOB_ESPERADO: Readonly<Record<string, { si: string; motivo: string }
     si: "github.event_name != 'push' && (github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true')",
     motivo:
       "corre siempre en la nocturna y a pedido, nunca en push a main (corrió en su pull request); en un pull request, solo si el plan dice que el cambio puede afectar a la integración (el Gate acepta el salto solo así)",
+  },
+  reloj: {
+    si: "${{ !cancelled() && (github.event_name != 'pull_request' || needs.mutacion-plan.outputs.reloj == 'true') }}",
+    motivo:
+      "la suite crítica con el reloj fijado: en un pull request solo si el plan dice que el cambio la toca (el Gate acepta el salto solo así); en push a main, en la nocturna y a pedido siempre. `!cancelled()` y no `always()`: una corrida cancelada no tiene que seguir corriendo",
   },
   mutacion: {
     si: "needs.mutacion-plan.outputs.hay == 'true'",
@@ -599,6 +605,30 @@ const CASOS: Caso[] = [
     nombre: "«estabilidad» pierde su matriz de copias",
     alterar: (t) => reemplazarUnico(t, /^ {8}corrida: .*\n/m, ""),
     esperado: ["estabilidad", "(ninguna)"],
+  },
+  {
+    nombre:
+      "«reloj» pierde su if (correría también en un pull request que no toca la suite crítica)",
+    alterar: (t) => enJob(t, "reloj", (b) => reemplazarUnico(b, /^ {4}if: .*\n/m, "")),
+    esperado: ["«reloj»", "debe ser"],
+  },
+  {
+    nombre: "«reloj» usa always() (seguiría corriendo cuando se cancela la corrida)",
+    alterar: (t) =>
+      reemplazarUnico(
+        t,
+        "if: ${{ !cancelled() && (github.event_name != 'pull_request' ||",
+        "if: ${{ always() && (github.event_name != 'pull_request' ||",
+      ),
+    esperado: ["«reloj»", "debe ser"],
+  },
+  {
+    nombre: "«reloj» no corre en push a main (el if lo limita a pull request)",
+    alterar: (t) =>
+      enJob(t, "reloj", (b) =>
+        reemplazarUnico(b, /^ {4}if: .*\n/m, "    if: github.event_name == 'pull_request'\n"),
+      ),
+    esperado: ["«reloj»", "debe ser"],
   },
   {
     nombre: "ampliar el if de «mutacion» para que además se saltee",

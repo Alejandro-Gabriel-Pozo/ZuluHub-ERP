@@ -1,0 +1,4 @@
+{
+  "motivo": "La suite crítica del reloj: las pruebas de integración que importan DIRECTO alguno de estos módulos (caja, cierre del día, planes, ventas y fiscal; los medios de pago y cobrar viven en caja y ventas). Dueño: 16/11/2026, tres noches de CI en rojo por mezclar el día de Argentina con el de la base. Por cierre completo de importaciones daría 352 de 360 archivos (la composición importa todo), por eso es import directo.",
+  "modulos": ["caja", "cierre", "planes", "ventas", "fiscal"]
+}

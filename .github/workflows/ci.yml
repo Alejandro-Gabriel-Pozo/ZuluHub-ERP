@@ -259,6 +259,47 @@ jobs:
             -c "SELECT pg_reload_conf()"
       - run: npx vitest run test/integracion
 
+  reloj:
+    # La suite crítica (las pruebas de integración de caja, cierre del día, planes, ventas y fiscal) con el reloj de las pruebas fijado POR DELANTE del real en tres momentos: las próximas
+    # 23:30 y las próximas 00:30 de Argentina (base en hora de Argentina) y el próximo cambio de día UTC con la base en UTC (la zona de Neon). Previene: tres noches de CI en rojo
+    # (13-16/11/2026) por mezclar el día de Argentina con el de la base (la bomba de reloj), que el reloj real solo muestra entre las 21:00 y las 24:00. En un pull request corre solo si el cambio
+    # toca esa suite (lo decide `mutacion-plan`, salida `reloj`); en push a `main`, en la nocturna y a pedido, siempre. Con el reloj ATRASADO respecto del real no se prueba: ver `arquitectura/reloj-critico.cjs`.
+    name: Reloj (suite crítica con el reloj fijado)
+    needs: mutacion-plan
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || needs.mutacion-plan.outputs.reloj == 'true') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PRUEBAS_DATABASE_URL: postgres://postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Registro de Postgres solo para fallos graves
+        run: |
+          psql "$PRUEBAS_DATABASE_URL" \
+            -c "ALTER SYSTEM SET log_min_messages = 'fatal'" \
+            -c "ALTER SYSTEM SET log_min_error_statement = 'panic'" \
+            -c "SELECT pg_reload_conf()"
+      - run: node arquitectura/reloj-critico.cjs correr
+
   mutacion-plan:
     # Decide qué grupos de mutación corren (y, con el mismo grafo, si Estabilidad se repite). En pull
     # requests solo los que alcanza el cambio (grafo de importaciones, ver arquitectura/planificar-mutacion.cjs);
@@ -273,6 +314,7 @@ jobs:
       grupos: ${{ steps.plan.outputs.grupos }}
       paquetes: ${{ steps.paquetes.outputs.paquetes }}
       estabilidad: ${{ steps.plan.outputs.estabilidad }}
+      reloj: ${{ steps.reloj.outputs.reloj }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -292,6 +334,9 @@ jobs:
         env:
           # Cada paso tiene su propio $GITHUB_OUTPUT: lo que eligió el plan llega por el contexto `steps`, no leyendo el archivo del otro paso.
           GRUPOS_DEL_PLAN: ${{ steps.plan.outputs.grupos }}
+      # Dice si un pull request toca la suite crítica del reloj (caja, cierre, planes, ventas, fiscal); en la nocturna y a pedido, siempre. Ver `arquitectura/reloj-critico.cjs`.
+      - id: reloj
+        run: node arquitectura/reloj-critico.cjs plan
 
   mutacion:
     # En paralelo por PAQUETES de grupos (arquitectura/mutacion/, un archivo por grupo; los chicos comparten job, ver `empaquetar-mutacion.cjs`):
@@ -333,6 +378,7 @@ jobs:
         flujos,
         dependencias,
         estabilidad,
+        reloj,
         mutacion-plan,
         mutacion,
         web,

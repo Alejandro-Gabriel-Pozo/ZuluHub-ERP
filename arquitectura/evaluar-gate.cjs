@@ -8,6 +8,8 @@
  * Con `estabilidad` (la integración repetida: 3 veces en un pull request, 12 en la nocturna y a pedido) pasa lo mismo, con una condición más: solo se acepta
  * saltada en un pull request y si el plan terminó bien y dijo `estabilidad == "false"`. En la corrida nocturna y a
  * pedido tiene que dar `success`, diga lo que diga el plan.
+ * `reloj` (la suite crítica de caja, cierre, planes, ventas y fiscal con el reloj de las pruebas fijado) pasa igual que Estabilidad: saltado solo en un pull request si el plan terminó
+ * bien y dijo `reloj == "false"`; en push a `main` (donde el plan no corre), en la nocturna y a pedido tiene que dar `success`.
  * En push a `main` corre solo lo rápido: el plan, la mutación y Estabilidad se aceptan SALTADOS (`SALTABLES_EN_PUSH`) y solo ahí;
  * si corrieron tienen que dar `success`, y todo lo demás (estático, guardián, pruebas, seguridad, flujos, web, componentes,
  * recorrido) sigue siendo obligatorio. Previene: ~795 min de máquina por merge repitiendo lo que ya corrió en el PR (28 % del
@@ -74,6 +76,16 @@ function evaluarGate(needs, evento) {
   if (!estabilidadAceptable) {
     problemas.push(`estabilidad: ${resultado("estabilidad") ?? "ausente"}`);
   }
+
+  // `reloj` (la suite crítica con el reloj fijado): como Estabilidad, saltado solo en un pull request si el plan terminó bien y dijo `reloj == "false"`.
+  // En push a `main`, en la nocturna y a pedido tiene que dar `success`.
+  const relojFiltrado =
+    evento === "pull_request" &&
+    resultado("mutacion-plan") === "success" &&
+    needs["mutacion-plan"]?.outputs?.["reloj"] === "false";
+  const relojAceptable =
+    resultado("reloj") === "success" || (relojFiltrado && resultado("reloj") === "skipped");
+  if (!relojAceptable) problemas.push(`reloj: ${resultado("reloj") ?? "ausente"}`);
   return problemas;
 }
 
