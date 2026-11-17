@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { instalarClaveDeContexto } from "../../src/adaptadores/postgres/contexto-firmado";
 import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
 import { sembrarAdminsDePrueba } from "./admins-de-prueba";
-import { crearBaseAparte, crearEmpresaActiva, crearEntornoDePrueba, cuitAlAzar } from "./entorno";
+import { crearBaseAparte, crearEmpresaActiva, crearEntornoDePrueba, cuitUnico } from "./entorno";
 import {
   crearDomicilio,
   crearMundo,
@@ -200,7 +200,7 @@ describe.skipIf(base === null)(
              values ($1, $2, $3, $4, $5) returning id`,
               [
                 tenant,
-                cuitAlAzar(),
+                cuitUnico(),
                 `empresa ${estado}`,
                 estado,
                 estado === "SUSPENDED" || estado === "CANCELLED" ? "prueba" : null,

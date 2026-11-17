@@ -25,10 +25,12 @@ export {
 
 // M4: lecturas de planes para los derechos de uso (solo lectura).
 export {
+  crearLecturaDeModulosActivados,
   crearLecturaDePlanes,
   interpretarAjustes,
   type AjusteGuardado,
   type AsignacionConVersion,
+  type LecturaDeModulosActivados,
   type LecturaDePlanes,
 } from "./persistencia/lecturas";
 export type { PlanesDb } from "./persistencia/tablas";

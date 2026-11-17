@@ -1,15 +1,15 @@
 /**
- * FICHA DEL DATO: TELÉFONO DE CONTACTO. (DECIDIDO = D-98, 2026-11-04; SUPUESTO = del ingeniero, revertible; SIN DECIDIR = falta la
+ * FICHA DEL DATO: TELÉFONO DE CONTACTO. (DECIDIDO = D-98, 2026-11-04; SUPUESTO (DEC-0044) = del ingeniero, revertible; SIN DECIDIR = falta la
  * decisión del dueño.)
  *
  * - Qué es: el teléfono de un local (hoy, el de la sucursal) que la factura impresa muestra si existe (D-98).
  * - Cómo se escribe: texto libre de UNA línea, sin formato fijo ("+54 11 4321-0000", "4321-0000 int. 2"). Normalización: solo se
  *   recortan los blancos de los extremos; no se tocan los dígitos ni los separadores. Sin caracteres de control. De 1 a
- *   `LARGO_MAXIMO_DEL_TELEFONO` (40) caracteres (SUPUESTO). Uno solo por local (SUPUESTO).
- * - Obligatorio/opcional: OPCIONAL (D-98). Vacío = «no tiene»: un texto en blanco o `null` borra el dato (SUPUESTO); en la base es
+ *   `LARGO_MAXIMO_DEL_TELEFONO` (40) caracteres (SUPUESTO (DEC-0044)). Uno solo por local (SUPUESTO).
+ * - Obligatorio/opcional: OPCIONAL (D-98). Vacío = «no tiene»: un texto en blanco o `null` borra el dato (SUPUESTO (DEC-0044)); en la base es
  *   NULL, nunca un texto vacío.
  * - Único: NO. La base no le pone unicidad (dos sucursales pueden tener el mismo teléfono). Si debe serlo: SIN DECIDIR.
- * - Quién lo cambia: quien edita la sucursal (permiso `sucursales.editar`: gerente y administrador; SUPUESTO).
+ * - Quién lo cambia: quien edita la sucursal (permiso `sucursales.editar`: gerente y administrador; SUPUESTO (DEC-0044)).
  * - Verificado o declarado: solo DECLARADO; nadie lo verifica.
  * - Se congela en comprobantes: SÍ, el vigente al darse de alta el comprobante (`comprobante.sucursal_telefono`, copiado por la
  *   base); no cambia nunca después. Los comprobantes anteriores a 0019 quedan sin teléfono (D-98).
@@ -33,7 +33,7 @@ import { esUnaLineaSinControl, largoEnCaracteres } from "./una-linea";
  * Solo nace de `telefonoDesdeTexto`. Es una primitiva y no del dominio de la sucursal porque lo usan también clientes y
  * proveedores: dos reglas de teléfono serían dos CHECK distintos para el mismo dato.
  *
- * El tope es un SUPUESTO del ingeniero (sin fuente del dueño): lo repite el CHECK `sucursal_telefono_ck` (0019) y un test
+ * El tope es un SUPUESTO (DEC-0044) del ingeniero (sin fuente del dueño): lo repite el CHECK `sucursal_telefono_ck` (0019) y un test
  * de integración prueba el borde en las dos puntas. Cambiarlo es cambiar acá y un CHECK nuevo en cada tabla que lo guarde.
  */
 export type Telefono = Marca<string, "Telefono">;

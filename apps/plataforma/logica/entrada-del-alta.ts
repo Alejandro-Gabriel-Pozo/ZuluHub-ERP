@@ -1,3 +1,5 @@
+import { LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL } from "../../../src/primitivas/texto/nombre-o-razon-social";
+
 /**
  * La forma de lo que el navegador manda al alta de una empresa. El navegador NO es de confianza: acá se comprueba
  * solo la FORMA (tipos y largos). El CUIT, el email y el resto de las reglas del alta los decide el caso de uso.
@@ -33,7 +35,7 @@ export function entradaDelAlta(
   }
   const campos = entrada as Record<string, unknown>;
   const claveDeIdempotencia = uuidDe(campos["claveDeIdempotencia"]);
-  const razonSocial = textoDe(campos["razonSocial"], 200);
+  const razonSocial = textoDe(campos["razonSocial"], LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL);
   const cuit = textoDe(campos["cuit"], 20);
   const marcaId = uuidDe(campos["marcaId"]);
   const emailGerente = textoDe(campos["emailGerente"], 254);

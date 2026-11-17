@@ -1,6 +1,6 @@
 /**
  * Los destinos de la barra inferior del mostrador: SIEMPRE de 3 a 5 ([01] §7). `Inicio` y `Cuenta` están
- * siempre; los módulos habilitados suman los suyos (hasta 3) entre los dos; mientras no haya ninguno, el
+ * siempre; las áreas del menú (`apps/web/ui/navegacion/menu.ts`) que la persona ve suman las suyas (hasta 3: el tope de áreas) entre los dos; mientras no haya ninguno, el
  * tercer lugar es `Empresa` (cambiar de empresa), que igual vive en la barra superior. Previene: una barra con
  * 1 o 2 destinos (la plantilla no la admite) o con 6 (no entra en el celular). Genérica en el destino: la
  * interfaz pone el ícono y el texto. Chequeo: `destinos.test.ts`.

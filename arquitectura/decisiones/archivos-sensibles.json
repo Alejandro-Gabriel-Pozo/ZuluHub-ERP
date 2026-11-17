@@ -1,0 +1,13 @@
+{
+  "sensibles": [
+    { "ruta": "src/capacidades/permisos/", "que": "la matriz de permisos" },
+    { "ruta": "src/capacidades/modulos/", "que": "la declaración de módulos" },
+    { "ruta": "src/capacidades/planes/", "que": "los planes y perillas" },
+    { "ruta": "src/primitivas/dinero/", "que": "el dinero y el redondeo" },
+    { "ruta": "src/capacidades/vocabulario/", "que": "los textos que ve el cliente" },
+    {
+      "ruta": "arquitectura/decisiones/archivos-sensibles.json",
+      "que": "la lista de archivos sensibles"
+    }
+  ]
+}

@@ -34,6 +34,26 @@ describe("el modelo del detalle", () => {
     });
   });
 
+  it("el renglón con unidad muestra «1,25 kg × $ 400,00»; sin unidad o con unidad nula, solo la cantidad", () => {
+    const renglon = (unidad: string | null | undefined) => ({
+      descripcion: "Pan de campo",
+      cantidad: "1.2500",
+      precioUnitario: "400.000000",
+      alicuota: "21",
+      importe: "500.00",
+      ...(unidad === undefined ? {} : { unidad }),
+    });
+    expect(armarElDetalle(con({ renglones: [renglon("kg")] })).renglones[0]?.cuenta).toBe(
+      "1,25 kg × $ 400,00",
+    );
+    expect(armarElDetalle(con({ renglones: [renglon(null)] })).renglones[0]?.cuenta).toBe(
+      "1,25 × $ 400,00",
+    );
+    expect(armarElDetalle(con({ renglones: [renglon(undefined)] })).renglones[0]?.cuenta).toBe(
+      "1,25 × $ 400,00",
+    );
+  });
+
   it("anulación parcial y total: etiqueta junto al estado, cifra y notas de crédito con su estado", () => {
     const parcial = armarElDetalle(
       con({

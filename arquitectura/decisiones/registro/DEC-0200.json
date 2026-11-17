@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0200",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El tope de textos del vocabulario por marca sube de 500 a 2000: el catálogo del código ya pasó de 500 y cada etapa suma textos.",
+  "que_cambia": "Cuántos textos propios puede tener una marca; no cambia ningún texto guardado.",
+  "donde": "migraciones/0041_tope_de_textos_por_marca.sql (vocabulario_valido_ampliado) y test/integracion/marcas-sql.test.ts"
+}

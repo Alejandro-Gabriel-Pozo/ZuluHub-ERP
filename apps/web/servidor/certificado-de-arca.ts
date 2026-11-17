@@ -10,7 +10,7 @@ import {
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { web } from "./composicion";
 import { cargarElEstadoDeLaConfiguracion } from "./configuracion-fiscal";
-import { conLaEmpresa } from "./facturacion";
+import { conLaEmpresa } from "./con-la-empresa";
 import { dependenciasDeSesion } from "./sesion";
 
 /**

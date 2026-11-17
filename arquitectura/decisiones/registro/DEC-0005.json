@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0005",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Una opción que consume insumo vendida por peso o litro se rechaza, y la merma de una receta se rechaza hasta que exista E6.",
+  "que_cambia": "Qué se puede vender hoy con receta o con insumo por peso.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A5 (E5)"
+}

@@ -1,0 +1,6 @@
+{
+  "grupo": "autenticación (ruta de ingreso, G8)",
+  "archivos": "src/composicion/ruta-de-ingreso.ts",
+  "minutos": 0.9,
+  "pruebas": "src/composicion/ruta-de-ingreso.test.ts"
+}

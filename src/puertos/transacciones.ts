@@ -32,6 +32,18 @@ export type ErrorDePersistencia =
   | { readonly tipo: "ConcurrenciaAgotada" }
   | { readonly tipo: "Inesperado"; readonly sqlstate: string | null; readonly mensaje: string };
 
+/**
+ * Las lecturas de UN pedido comparten una sola transacción de solo lectura. Dentro de `trabajo`, cada `ejecutar` que sea de lectura
+ * (`read committed`, `soloLectura`) y use ESTE mismo `contexto` (el mismo objeto, el que armó el servidor para este pedido) se une a la
+ * transacción abierta en vez de abrir la suya: una sola vez `BEGIN`, el contexto firmado y el `COMMIT` por pantalla, y los permisos
+ * que lee el guard se resuelven una vez. Cada consulta sigue pidiendo SU acción al guard: nada se autoriza por estar unida.
+ * Cualquier otra llamada (otro contexto, una escritura, otro aislamiento) abre la suya, como siempre. Nada se guarda al terminar el
+ * pedido: la unidad vive lo que dura `trabajo`, y un pedido concurrente no la ve (cada pedido tiene su propio contexto).
+ */
+export interface LecturasCompartidas {
+  conLecturasCompartidas<T>(contexto: Contexto, trabajo: () => Promise<T>): Promise<T>;
+}
+
 export interface Transacciones<Tx> {
   /**
    * Ejecuta `trabajo` en una transacción con el contexto fijado.

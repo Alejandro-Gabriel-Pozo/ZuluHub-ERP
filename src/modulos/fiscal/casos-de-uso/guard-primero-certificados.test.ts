@@ -1,3 +1,4 @@
+import { CUERPOS_CON_GUARD_PROPIO } from "../../../../test/utilidades/cuerpos-de-fiscal";
 import { describe, expect, it } from "vitest";
 import { clavesDe } from "../../../capacidades/modulos/activos";
 import { CATALOGO_DE_MODULOS, type ClaveAccion } from "../../../capacidades/modulos/catalogo";
@@ -240,6 +241,10 @@ describe("publico.ts: la puerta de los certificados", () => {
     expect(typeof publico.dondeSeGuardaLaClave).toBe("function");
     expect(typeof publico.dondeSeGuardaLaCredencial).toBe("function");
     expect(typeof publico.certificadosPorVencer).toBe("function");
-    expect(Object.keys(publico).filter((nombre) => /EnTx$/.test(nombre))).toEqual([]);
+    expect(
+      Object.keys(publico).filter(
+        (nombre) => /EnTx$/.test(nombre) && !CUERPOS_CON_GUARD_PROPIO.includes(nombre),
+      ),
+    ).toEqual([]);
   });
 });

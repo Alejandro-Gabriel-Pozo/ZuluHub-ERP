@@ -2,7 +2,7 @@ import {
   texto,
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { formatearPuntoDeVenta } from "./formato-fiscal";
+import { formatearPuntoDeVenta } from "../../patrones/formato-fiscal";
 
 /**
  * Los filtros del listado de comprobantes (contrato de la pantalla 1) y cómo viajan por la dirección: un formulario GET, así
@@ -22,8 +22,15 @@ export const direccionDelDetalle = (id: string): string => `${RUTA_DEL_LISTADO}/
 export const direccionDeAnular = (id: string): string => `${direccionDelDetalle(id)}/anular`;
 /** La vista previa para imprimir un comprobante: cuelga de su detalle. */
 export const direccionDeImprimir = (id: string): string => `${direccionDelDetalle(id)}/imprimir`;
+/** La descarga del PDF de un comprobante: cuelga de su detalle. */
+export const direccionDelPdf = (id: string): string => `${direccionDelDetalle(id)}/pdf`;
 /** La pantalla de emitir una factura. Un id de comprobante es un uuid: «emitir» no se confunde con ninguno. */
 export const direccionDeEmitir = (): string => `${RUTA_DEL_LISTADO}/emitir`;
+/** La lista de tickets cobrados pendientes de facturar. «pendientes» no es un uuid: no se confunde con el detalle de ningún comprobante. */
+export const direccionDePendientes = (): string => `${RUTA_DEL_LISTADO}/pendientes`;
+/** Emitir desde un ticket: su id es un uuid que sale de la consulta de ventas, nunca de un texto libre. */
+export const direccionDeEmitirDesdeUnTicket = (ticketId: string): string =>
+  `${direccionDeEmitir()}/venta/${ticketId}`;
 
 const PERIODOS = ["hoy", "7dias", "mes", "todo", "personalizado"] as const;
 type Periodo = (typeof PERIODOS)[number];

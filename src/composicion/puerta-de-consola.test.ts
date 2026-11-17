@@ -4,8 +4,10 @@ import { exigeSegundoFactorReciente } from "../capacidades/permisos/segundo-fact
 import type { ContextoDePlataforma } from "../contexto/contexto";
 import { DECLARACIONES_DE_ALTAS } from "../plataforma/casos-de-uso/altas";
 import { DECLARACIONES_DE_DOMINIOS } from "../plataforma/casos-de-uso/dominios";
+import { DECLARACIONES_DE_LISTAS } from "../plataforma/casos-de-uso/listas-del-sistema";
 import { DECLARACIONES_DE_MARCAS_Y_PLANES } from "../plataforma/casos-de-uso/marcas-y-planes";
 import { DECLARACIONES_DE_SOPORTE } from "../plataforma/casos-de-uso/soporte";
+import { DECLARACIONES_DE_CONSULTAS_DE_LISTAS } from "../plataforma/consultas/consultas-de-listas";
 import { DECLARACIONES_DE_CONSULTAS_DE_PLATAFORMA } from "../plataforma/consultas/declaraciones";
 import { DECLARACIONES_DE_CONSULTAS_DE_MARCAS_Y_PLANES } from "../plataforma/consultas/declaraciones-de-marcas-y-planes";
 import { adminPlataformaId, usuarioAuthId } from "../primitivas/identificadores/marca";
@@ -44,23 +46,30 @@ const sesion = (segundoFactorEn: Date | null): SesionAutenticada => ({
   cookiesDeRespuesta: [],
 });
 
-/** Los 20 nombres de caso que exigen el segundo factor reciente: los 19 del dueño (planes.asignar sirve a dos casos). */
+/**
+ * Los 24 nombres de caso que exigen el segundo factor reciente: los 19 del dueño (planes.asignar sirve a dos casos) y los 4 de las
+ * listas del sistema (`listas.editar`, criterio del ingeniero).
+ */
 const CASOS_QUE_LO_EXIGEN = [
   "activarDominio",
   "activarModuloDeEmpresa",
   "agregarDominio",
+  "agregarValorDeLista",
   "ajustarPerilla",
   "altaDeEmpresa",
   "asignarPlan",
   "cancelarAlta",
   "confirmarVersionDeMarca",
+  "corregirNombreDeValor",
   "desactivarDominio",
   "desactivarModuloDeEmpresa",
+  "desactivarValorDeLista",
   "migrarTenantsDeVersion",
   "publicarVersionDePlan",
   "reactivarEmpresa",
   "reactivarPersona",
   "reactivarTenant",
+  "reactivarValorDeLista",
   "retirarDominio",
   "suspenderEmpresa",
   "suspenderPersona",
@@ -82,12 +91,14 @@ const CASOS_QUE_NO_LO_EXIGEN = [
 const GRUPOS_DE_CASOS = [
   ["casosDeUsoDeAltas", DECLARACIONES_DE_ALTAS],
   ["casosDeUsoDeDominios", DECLARACIONES_DE_DOMINIOS],
+  ["casosDeUsoDeListas", DECLARACIONES_DE_LISTAS],
   ["casosDeUsoDeMarcasYPlanes", DECLARACIONES_DE_MARCAS_Y_PLANES],
   ["casosDeUsoDeSoporte", DECLARACIONES_DE_SOPORTE],
 ] as const;
 const GRUPOS_DE_CONSULTAS = [
   ["consultasDePlataforma", DECLARACIONES_DE_CONSULTAS_DE_PLATAFORMA],
   ["consultasDeMarcasYPlanes", DECLARACIONES_DE_CONSULTAS_DE_MARCAS_Y_PLANES],
+  ["consultasDeListas", DECLARACIONES_DE_CONSULTAS_DE_LISTAS],
 ] as const;
 
 /** Una puerta de plataforma de mentira: cada nombre es un espía que devuelve un resultado reconocible. */
@@ -152,8 +163,8 @@ describe("lo que la consola ofrece", () => {
     expect(casos).not.toContain("registrarReferenciaDeError");
   });
 
-  it("ofrece las 19 consultas, todas de lectura", () => {
-    expect(consultas).toHaveLength(19);
+  it("ofrece las 20 consultas, todas de lectura", () => {
+    expect(consultas).toHaveLength(20);
     for (const [nombre, accion] of Object.entries(ACCIONES_DE_LA_CONSOLA.consultas)) {
       expect(CATALOGO_DE_PLATAFORMA.plataforma.acciones[accion].efecto, nombre).toBe("LECTURA");
     }
@@ -176,7 +187,7 @@ describe("lo que la consola ofrece", () => {
     expect([...ofrecidas].sort()).toEqual(delCatalogo);
   });
 
-  it("los casos que exigen el segundo factor reciente son los 20 que corresponden a la lista del dueño", () => {
+  it("los casos que exigen el segundo factor reciente son los 24 que corresponden a la lista del dueño y a las listas del sistema", () => {
     const quienes = Object.entries(ACCIONES_DE_LA_CONSOLA.casos)
       .filter(([, accion]) => exigeSegundoFactorReciente(accion))
       .map(([nombre]) => nombre)

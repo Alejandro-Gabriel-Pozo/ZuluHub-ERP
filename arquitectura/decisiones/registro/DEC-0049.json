@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0049",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Textos del vocabulario fiscal que el dueño no aprobó tal cual: No activo suelto, mismo texto en Activar y Desactivar, Guardar borrador.",
+  "que_cambia": "Qué dicen esos botones y rótulos.",
+  "donde": "src/capacidades/vocabulario/catalogo-fiscal-configuracion.ts"
+}

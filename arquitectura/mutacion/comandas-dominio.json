@@ -1,0 +1,6 @@
+{
+  "grupo": "comandas (dominio)",
+  "archivos": "src/modulos/comandas/dominio/**/*.ts",
+  "minutos": 5,
+  "pruebas": "src/modulos/comandas/dominio"
+}

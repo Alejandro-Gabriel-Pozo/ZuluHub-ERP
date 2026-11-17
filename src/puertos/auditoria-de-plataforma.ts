@@ -35,6 +35,11 @@ export const ACCIONES_DE_PLATAFORMA = [
   "PERILLA_AJUSTADA",
   "MODULO_ACTIVADO",
   "MODULO_DESACTIVADO",
+  // Listas del sistema (e3 §3.7): una constancia por cada cambio real, con el valor de antes y el de después; lo idempotente no audita.
+  "VALOR_DE_LISTA_AGREGADO",
+  "VALOR_DE_LISTA_RENOMBRADO",
+  "VALOR_DE_LISTA_DESACTIVADO",
+  "VALOR_DE_LISTA_REACTIVADO",
   // Un administrador de plataforma nuevo: lo siembra el script del primer administrador con la conexión del dueño.
   "ADMIN_PLATAFORMA_ALTA",
   // El segundo factor de un administrador quedó bloqueado por intentos fallidos (P8a): la deja el sistema, sin

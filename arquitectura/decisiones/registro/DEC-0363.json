@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0363",
+  "fecha": "2026-11-13",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Sin departamento pedido: con 0 activos la cuenta queda sin departamento, con 1 toma ese y con 2 o más se exige elegir (Ventas cerrada hasta elegir; nunca «todos»).",
+  "que_cambia": "Una pantalla sin selector abre cuentas solo si hay 0 o 1 departamentos; con 2 o más tiene que mandar el elegido. Revertir: exigir elegir también con uno.",
+  "donde": "src/modulos/ventas/dominio/departamento.ts (A2c); confirmada por el dueño el 13/11/2026 (relatado)"
+}

@@ -250,7 +250,7 @@ describe("errores", () => {
     await render(pantalla());
     await campo("Teléfono").fill("x");
     tocar(boton("Guardar"));
-    await expect.element(page.getByText("No tiene permiso para hacer esto.")).toBeVisible();
+    await expect.element(page.getByText("No tenés permiso para hacer esto.")).toBeVisible();
     expect(document.querySelectorAll('[aria-invalid="true"]')).toHaveLength(0);
   });
 

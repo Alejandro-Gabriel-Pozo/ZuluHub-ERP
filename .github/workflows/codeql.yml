@@ -9,18 +9,28 @@ on:
 
 permissions:
   contents: read
-  security-events: write
+
+# Un pull request o un push a `main` cancela el análisis anterior de la misma rama: solo cuenta el del último commit (sin esto, cada push a un PR dejaba
+# otro análisis completo en la misma cola de ~40 máquinas que el CI: 63 corridas de PR para 43 ramas, 13-15/11/2026). La semanal (`schedule`) NUNCA
+# se cancela ni cancela a nadie: su grupo es propio (por SHA). Misma política que `ci.yml`; la fija `test/arquitectura/codeql-concurrencia.test.ts`.
+concurrency:
+  group: codeql-${{ github.event_name }}-${{ github.event_name == 'schedule' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
 
 jobs:
   analizar:
     name: Análisis de seguridad del código (CodeQL)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # `security-events: write` solo en el job que sube el análisis (mínimo privilegio; antes lo tenía todo el workflow).
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           languages: javascript-typescript
-      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1

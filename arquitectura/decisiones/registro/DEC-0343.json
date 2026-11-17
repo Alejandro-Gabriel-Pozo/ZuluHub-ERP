@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0343",
+  "fecha": "2026-11-12",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Los textos de error de caja llevan la clave caja.error.* (el prefijo de su módulo) y no la forma error.codigo de los demás códigos públicos.",
+  "que_cambia": "Solo el nombre de la clave del texto; la prueba de códigos públicos exceptúa los de caja. Revertir: renombrar dos claves y quitar la excepción.",
+  "donde": "src/capacidades/experiencia/respuesta-de-caja.ts; Pedernal-docs 11-especificaciones/00-registro-de-contratos.md; Aprobada por el dueño el 12/11/2026, decisiones-del-dueno-2026-11.md."
+}

@@ -1,0 +1,6 @@
+{
+  "grupo": "fiscal (datos y vigencia)",
+  "archivos": "src/modulos/fiscal/dominio/datos-fiscales.ts,src/modulos/fiscal/dominio/vigencia.ts",
+  "minutos": 5.6,
+  "pruebas": "src/modulos/fiscal"
+}

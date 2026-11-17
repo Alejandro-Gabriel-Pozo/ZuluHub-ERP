@@ -83,7 +83,7 @@ describe("anular, paso 1: qué anular", () => {
     await expect.element(boton("Siguiente")).toBeDisabled();
     await userEvent.type(campo("IVA 21 %"), "20000,50");
     await expect.element(boton("Siguiente")).toBeEnabled();
-    await userEvent.type(campo("IVA 10,5 %"), "40000.5");
+    await userEvent.type(campo("IVA 10,5 %"), "40000,5");
     // La suma es exacta y el aviso (pasarse de lo facturado en esa tasa) no bloquea.
     await expect.element(page.getByText("$ 60.001,00")).toBeVisible();
     await expect

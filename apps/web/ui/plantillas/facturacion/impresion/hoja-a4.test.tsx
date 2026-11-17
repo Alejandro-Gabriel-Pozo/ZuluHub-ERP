@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { cdp } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { violacionesDeAccesibilidad } from "../../../pruebas/ayudas";
-import { formatearImporte } from "../formato-fiscal";
+import { formatearImporte } from "../../../patrones/formato-fiscal";
 import {
   comprobanteDePrueba,
   esperarLasHojas,
@@ -230,6 +230,21 @@ describe("hoja A4: lo que dibuja según el comprobante", () => {
       expect(rL.top).toBeGreaterThanOrEqual(rE.top - 0.5);
       expect(rL.bottom).toBeLessThanOrEqual(rE.bottom + 0.5);
     }
+    await pruebas.pantalla.unmount();
+  });
+
+  it("leyenda de la condición del receptor: una fila sin rótulo, tal cual, justo bajo la condición frente al IVA", async () => {
+    const LEYENDA = "LEYENDA DE CONDICIÓN DE PRUEBA";
+    const pruebas = await dibujar({
+      letra: "A",
+      consumidorFinal: false,
+      leyendaDeCondicion: LEYENDA,
+    });
+    const fila = [...(pruebas.hojas[0]?.querySelectorAll("div") ?? [])].find(
+      (d) => d.textContent === LEYENDA,
+    );
+    expect(fila).toBeDefined();
+    expect(fila?.previousElementSibling?.textContent).toContain("IVA Responsable Inscripto");
     await pruebas.pantalla.unmount();
   });
 

@@ -10,7 +10,7 @@ import {
 
 /**
  * La lista de Configuración fiscal (D-43, opción C; carteles de D-64): qué cartel lleva cada fila. Un tema completo no lleva cartel;
- * el certificado muestra el estado más urgente de los ambientes en uso (SUPUESTO: Vencido, Falta cargar, Pendiente).
+ * el certificado muestra el estado más urgente de los ambientes en uso (SUPUESTO (DEC-0050): Vencido, Falta cargar, Pendiente).
  */
 type Certificado = EstadoParaLaLista["certificados"][number];
 const cert = (
@@ -41,7 +41,7 @@ describe("el cartel de los datos fiscales (D-64)", () => {
     ["SIN_CARGAR", "FALTA_CARGAR"],
     ["BORRADOR", "PENDIENTE"],
     ["VIGENTES", null],
-    // SUPUESTO del ingeniero; fuente D-61 (la web ya no puede producirlo): se sigue diciendo «Pendiente».
+    // SUPUESTO (DEC-0050) del ingeniero; fuente D-61 (la web ya no puede producirlo): se sigue diciendo «Pendiente».
     ["SOLO_FUTUROS", "PENDIENTE"],
   ] as const)("%s lleva %s", (entrada, esperado) => {
     expect(cartelDeDatosFiscales(entrada)).toBe(esperado);
@@ -110,7 +110,7 @@ describe("el cartel del certificado (D-64) según los ambientes en uso", () => {
     );
   });
 
-  it("SUPUESTO: sin ningún ambiente en uso cuentan los dos", () => {
+  it("SUPUESTO (DEC-0050): sin ningún ambiente en uso cuentan los dos", () => {
     expect(
       cartelDelCertificado(
         [],

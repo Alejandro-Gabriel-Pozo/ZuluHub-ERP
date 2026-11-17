@@ -2,18 +2,7 @@ import type { ContextoDePlataforma, ContextoOperativo } from "../contexto/contex
 import type { ClaveModulo } from "../capacidades/modulos/catalogo";
 import type { DerechosDeUso } from "../capacidades/planes/derechos";
 import type { ClavePerilla } from "../capacidades/planes/perillas";
-import type { ValorEfectivo } from "../capacidades/planes/valores";
-import type { EmpresaId, MarcaComercialId, TenantId } from "../primitivas/identificadores/marca";
-
-/**
- * Lo que la puerta pública de la carta por QR puede saber de una carta (marcas y planes, §B.2.5): solo
- * si el módulo de la carta está activo para la empresa dueña del enlace y el valor de `vidriera_por_qr`.
- * Nada del plan, de los ajustes ni de sus motivos llega a la respuesta pública.
- */
-export type DerechosDeVidrieraPublica = Readonly<{
-  moduloVidriera: "ACTIVO" | "SOLO_LECTURA" | "NO_ACTIVO";
-  vidrieraPorQr: ValorEfectivo;
-}>;
+import type { EmpresaId, TenantId } from "../primitivas/identificadores/marca";
 
 /**
  * Puerto ÚNICO de lectura de derechos de uso (marcas y planes, §B.5.3, corrección 13): lo que una empresa
@@ -50,21 +39,4 @@ export interface LecturaDeDerechosDeUso<
     contexto: ContextoDePlataforma,
     empresa: EmpresaId,
   ): Promise<DerechosDeUso<M, P> | null>;
-  /**
-   * Derechos SIN sesión, para la carta por QR pública. FALLA CERRADO: devuelve siempre `null` («carta no
-   * disponible», la misma respuesta que para un código inexistente) hasta que exista el módulo de
-   * catálogo con el enlace de carta, porque este método tiene que leer los derechos «alcanzables desde el
-   * enlace `EN_LINEA` con ese código exacto» (§B.2.5) y ese enlace es de catálogo (migración 0009). Sin
-   * él no hay forma de acotar la lectura a una sola empresa, así que no se lee nada. Queda por construir y
-   * probar: aislamiento entre empresas, enumeración de códigos y baja de plan.
-   *
-   * Recibe la MARCA por cuya puerta (host) llega el enlace, además del código: cuando se implemente, un
-   * código de una empresa cuyo tenant es de otra marca responde lo mismo que un código inexistente
-   * (`null`, sin distinguir), como en el resto de las puertas (marcas y planes, §B.2.4). Está en la
-   * firma desde ahora para que nadie tenga que cambiarla (y a todos sus llamadores) después.
-   */
-  deLaVidrieraPublica(
-    marcaId: MarcaComercialId,
-    codigo: string,
-  ): Promise<DerechosDeVidrieraPublica | null>;
 }

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0330",
+  "fecha": "2026-11-12",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Ocultar un producto escribe con INSERT que no pisa y, si ya había fila, un UPDATE en la misma transacción, no con ON CONFLICT DO UPDATE (prohibido por lint).",
+  "que_cambia": "Nada para el negocio (mismo resultado, una fila por alcance); si se corrige, se revisa el archivo en la lista de upserts permitidos.",
+  "donde": "src/modulos/catalogo/persistencia/repositorio-de-disponibilidad.ts; Pedernal-docs 11-especificaciones/carta-real-especificacion.md §3.2b"
+}

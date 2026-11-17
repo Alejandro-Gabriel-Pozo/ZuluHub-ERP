@@ -218,6 +218,8 @@ export type FiscalDb = {
     descuento: string | null;
     alicuota: string | null;
     importe: string;
+    /** 0029: el símbolo de la unidad que se imprime junto a la cantidad; nulo = sin unidad (todo lo anterior a 0029). */
+    unidad: string | null;
   };
   /** 0009: el desglose por alícuota que se informa a ARCA, de solo inserción. */
   comprobante_alicuota: {

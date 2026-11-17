@@ -18,8 +18,22 @@ import { ErrorDeMigracion } from "./migraciones.ts";
  */
 
 const MARCA = "***";
-/** Un fragmento más corto que esto no se tapa: borraría letras sueltas de cualquier mensaje. */
-const LARGO_MINIMO_DE_FRAGMENTO = 3;
+/** La cadena entera (lo que el llamador declaró secreto) se tapa desde este largo: más corta borraría letras sueltas de cualquier mensaje. */
+const LARGO_MINIMO_DE_LA_CADENA = 3;
+/**
+ * Piso POR COMPONENTE de lo que se saca de una cadena de conexión:
+ *  - La CONTRASEÑA (cruda y decodificada) se tapa desde `LARGO_MINIMO_DE_LA_CADENA` (3): es lo único que es secreto de por sí, y fallar
+ *    cerrado es tapar de más. Una clave real (Neon ≥ 32, las pruebas 36 hex) no aparece por azar dentro de un UUID, así que no reintroduce
+ *    la intermitencia.
+ *  - Usuario, host, primera etiqueta del host y la URL normalizada se tapan solo desde `LARGO_MINIMO_DE_TRAMO` (8). Por qué 8: un tramo corto
+ *    aparece solo, por azar, en textos que no son secretos. La primera etiqueta de `127.0.0.1` es `127`, hexadecimal: un UUID
+ *    (`empresaId: …`) que la contiene salía con `***` en el medio (prueba intermitente de `ejecutar-caso-de-plataforma`). Con 8 hex la chance
+ *    de que un UUID contenga un tramo dado es del orden de 2^-30 (8 hex seguidos solo caben en el primer grupo, que mide justo 8, y en 5
+ *    posiciones del último, de 12). Lo que queda por debajo (una IP, `localhost`, un usuario `app`) no es secreto: está en cualquier
+ *    archivo de configuración. El host `ep-…-NNNNNN` (más de 15) y los roles `pedernal_*` (12 o más) siguen tapados.
+ *  - La cadena ENTERA se tapa siempre desde 3, contenga lo que contenga.
+ */
+const LARGO_MINIMO_DE_TRAMO = 8;
 
 function decodificar(texto: string): string {
   try {
@@ -32,21 +46,26 @@ function decodificar(texto: string): string {
 /** Todo trozo de la cadena que no debe aparecer en un mensaje, del más largo al más corto. */
 export function fragmentosSecretos(cadena: string | undefined): string[] {
   if (cadena === undefined) return [];
-  const encontrados = new Set<string>([cadena, cadena.trim()]);
+  const enteras = new Set<string>([cadena, cadena.trim()]);
+  const claves = new Set<string>();
+  const tramos = new Set<string>();
   try {
     // `new URL` ignora los espacios y saltos de línea de los extremos (un secreto pegado con uno).
     const url = new URL(cadena);
-    for (const trozo of [url.password, url.username, url.hostname, url.href]) {
-      encontrados.add(trozo);
-      encontrados.add(decodificar(trozo));
+    for (const trozo of [url.password, decodificar(url.password)]) claves.add(trozo);
+    for (const trozo of [url.username, url.hostname, url.href]) {
+      tramos.add(trozo);
+      tramos.add(decodificar(trozo));
     }
-    encontrados.add(url.hostname.split(".")[0] as string);
+    tramos.add(url.hostname.split(".")[0] as string);
   } catch {
     // No es una URL: queda solo la cadena entera.
   }
-  return [...encontrados]
-    .filter((fragmento) => fragmento.length >= LARGO_MINIMO_DE_FRAGMENTO)
-    .sort((a, b) => b.length - a.length);
+  const elegidos = new Set<string>([
+    ...[...enteras, ...claves].filter((f) => f.length >= LARGO_MINIMO_DE_LA_CADENA),
+    ...[...tramos].filter((f) => f.length >= LARGO_MINIMO_DE_TRAMO),
+  ]);
+  return [...elegidos].sort((a, b) => b.length - a.length);
 }
 
 export function ocultarSecretos(texto: string, cadena: string | undefined): string {

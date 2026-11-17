@@ -387,7 +387,7 @@ describe("errores marcados en su campo (D-67)", () => {
     guardar.mockResolvedValue({ ok: false, error: errorDeCodigo("SIN_PERMISO") });
     await render(formulario());
     tocar(boton("Guardar borrador"));
-    await expect.element(page.getByText("No tiene permiso para hacer esto.")).toBeVisible();
+    await expect.element(page.getByText("No tenés permiso para hacer esto.")).toBeVisible();
     expect(document.body.textContent).not.toContain("SIN_PERMISO");
     expect(document.querySelectorAll('[aria-invalid="true"]')).toHaveLength(0);
   });

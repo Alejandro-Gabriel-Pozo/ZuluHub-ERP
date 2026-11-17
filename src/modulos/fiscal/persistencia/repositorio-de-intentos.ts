@@ -7,7 +7,7 @@ import {
   type ComprobanteId,
   type IntentoId,
 } from "../dominio/identificadores";
-import { deLaLista, type ErrorDeAlta, type ResultadoDeAlta } from "./repositorios";
+import { deLaLista, type ErrorDeAlta, type ResultadoDeAlta } from "./ayudas-de-repositorio";
 import type { FiscalDb } from "./tablas";
 
 /**

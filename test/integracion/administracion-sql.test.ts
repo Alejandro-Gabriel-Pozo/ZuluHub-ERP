@@ -22,7 +22,7 @@ import {
   crearEmpresaActiva,
   crearEntornoDePrueba,
   crearPropietario,
-  cuitAlAzar,
+  cuitUnico,
   type EmpresaDePrueba,
 } from "./entorno";
 import {
@@ -2800,7 +2800,7 @@ describe.skipIf(base === null)("administración: la migración 0005 contra una b
       const empresa = (
         await un<{ id: string }>(
           `insert into empresa (tenant_id, cuit, razon_social, estado) values ($1, $2, 'previa', 'ACTIVE') returning id`,
-          [tenant, cuitAlAzar()],
+          [tenant, cuitUnico()],
         )
       ).id;
       const sucursales: string[] = [];

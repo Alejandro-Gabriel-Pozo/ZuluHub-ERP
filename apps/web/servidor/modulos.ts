@@ -10,6 +10,12 @@ import {
 import type { ClaveDeTexto } from "../../../src/capacidades/vocabulario/catalogo";
 import { web } from "./composicion";
 import {
+  FILAS_DEL_MENU,
+  armarElMenu,
+  type ClaveDeFila,
+  type ItemDelMenu,
+} from "../ui/navegacion/menu";
+import {
   RUTAS_DE_CONFIGURACION,
   armarLaLista,
 } from "../ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta";
@@ -17,40 +23,70 @@ import type {
   AccionesDePuntosDeVenta,
   OfertaDeAccion,
 } from "../ui/plantillas/configuracion-fiscal/modelo-de-puntos-de-venta";
-import { RUTA_DEL_LISTADO } from "../ui/plantillas/facturacion/filtros-del-listado";
+import type { AccionesDeLista } from "../ui/plantillas/caja/lista-de-caja";
 import type { DestinoDeModulo } from "../ui/plantillas/sesion/ArmazonDeOperacion";
 import type { Pendiente } from "../ui/plantillas/sesion/PantallaDeInicio";
 
 /**
- * Lo que cada módulo suma al armazón: sus destinos de la barra inferior y lo que falta hacer en el inicio.
- * Hoy hay uno: el facturador (Comprobantes). Los demás tramos de los módulos agregan sus entradas acá.
- *
- * «Comprobantes» se muestra solo si la persona tiene hoy la acción `comprobantes.ver` Y el módulo `facturacion` está activo o en
- * solo lectura, según `permisosDelActor` (calculado por el servidor). SUPUESTO declarado: en solo lectura SÍ se muestra, porque el
- * Listado solo consulta (D-59 habla de botones apagados, no de ocultar consultas); revertirlo es quitar `enSoloLectura` de la
- * condición. Si `permisosDelActor` falla, la entrada NO se muestra (cierra, no abre) y la pantalla sigue andando. Ocultar no es
- * autorizar: la consulta vuelve a pasar por el guard.
+ * Los destinos de la barra inferior: las áreas del menú (`ui/navegacion/menu.ts`, la única tabla) con lo que la persona ve hoy. La barra
+ * admite como máximo `MAXIMO_DE_DESTINOS_DE_MODULOS` (3) áreas sin contar Cuenta, que es fija; el tope lo vigila
+ * `test/arquitectura/menu-por-areas.test.ts` para que alguien decida cómo se muestran las demás en vez de cortarlas en silencio
+ * (`destinosDeOperacion` recorta). La regla de cuándo se muestra una pantalla es una sola: `armarElMenu` (todo nace cerrado).
+ * Un área con una sola pantalla lleva directo a ella; con varias, abre una hoja con sus grupos.
  */
+export function destinosDeAreas(
+  permisos: PermisosLeidos | null,
+  departamentoElegido: string | null,
+): readonly DestinoDeModulo[] {
+  return armarElMenu(FILAS_DEL_MENU, permisos, departamentoElegido)
+    .filter((area) => !area.fija)
+    .map((area): DestinoDeModulo => {
+      const pantallas = area.grupos
+        .flatMap((g) => g.items)
+        .filter(
+          (i): i is ItemDelMenu & Readonly<{ href: string }> =>
+            i.tipo === "pantalla" && i.href !== null,
+        );
+      const [primera] = pantallas;
+      // Un área solo existe con al menos una pantalla visible; sin ella (solo acciones) no es un destino de la barra.
+      if (primera === undefined) throw new RangeError("menú: un área de la barra sin pantallas");
+      const base = { etiqueta: texto({}, area.etiqueta), icono: area.icono };
+      if (pantallas.length === 1) return { ...base, clave: primera.clave, href: primera.href };
+      return {
+        ...base,
+        clave: area.clave,
+        href: primera.href,
+        hoja: area.grupos.map((g) => ({
+          etiqueta: g.etiqueta === null ? null : texto({}, g.etiqueta),
+          enlaces: g.items
+            .filter((i): i is typeof i & Readonly<{ href: string }> => i.href !== null)
+            .map((i) => ({ clave: i.clave, etiqueta: texto({}, i.etiqueta), href: i.href })),
+        })),
+      };
+    });
+}
+
+/** Los destinos de las áreas que la persona ve hoy. Si `permisosDelActor` falla, ninguno (cierra, no abre) y la pantalla sigue andando. */
 export async function destinosDeModulos(
   contexto: ContextoOperativo,
 ): Promise<readonly DestinoDeModulo[]> {
-  const permisos = await permisosDeLaPersona(contexto);
-  const veComprobantes =
-    permisos !== null &&
-    permisos.acciones.includes("comprobantes.ver") &&
-    (permisos.modulos.activos.includes("facturacion") ||
-      permisos.modulos.enSoloLectura.includes("facturacion"));
-  return veComprobantes
-    ? [
-        {
-          clave: "comprobantes",
-          href: RUTA_DEL_LISTADO,
-          // Aprobado por el dueño el 2026-10-29 (respuesta en la sesión web del carril web): el título «Comprobantes» (ver el catálogo).
-          etiqueta: texto({}, "fiscal.pantalla.listado_titulo"),
-          icono: "comprobantes",
-        },
-      ]
-    : [];
+  // Sin departamento elegido: hoy ninguna fila lleva departamento (columna reservada, A2c) y sin elección nunca se asume «todos».
+  return destinosDeAreas(await permisosDeLaPersona(contexto), null);
+}
+
+/** Las pantallas del menú del área Cuenta que la persona ve hoy, por clave: la página de Cuenta las ofrece desde la misma tabla. */
+export async function pantallasDeCuenta(
+  contexto: ContextoOperativo,
+): Promise<ReadonlyMap<ClaveDeFila, Readonly<{ texto: string; href: string }>>> {
+  const cuenta = armarElMenu(FILAS_DEL_MENU, await permisosDeLaPersona(contexto), null).find(
+    (a) => a.clave === "cuenta",
+  );
+  const lista = (cuenta?.grupos ?? []).flatMap((g) => g.items);
+  return new Map(
+    lista.flatMap((i) =>
+      i.href === null ? [] : [[i.clave, { texto: texto({}, i.etiqueta), href: i.href }] as const],
+    ),
+  );
 }
 
 /**
@@ -104,7 +140,15 @@ const permisosDeLaPersona = cache(async (contexto: ContextoOperativo) => {
  * (`estadoDeLaConfiguracionFiscal`, solo el gerente). Previene: ofrecer la entrada a quien el servidor va a rechazar. Chequeo:
  * `test/web/modulos-de-la-barra.test.ts` la compara con la declaración de la consulta.
  */
-export const ACCION_DE_CONFIGURACION_FISCAL: ClaveAccion = "datos_fiscales.editar";
+export const ACCION_DE_CONFIGURACION_FISCAL: ClaveAccion = accionDeLaFila("configuracion-fiscal");
+
+/** La acción que la tabla del menú declara para una pantalla: una regla, un lugar. */
+function accionDeLaFila(clave: ClaveDeFila): ClaveAccion {
+  const fila = FILAS_DEL_MENU.find((f) => f.clave === clave);
+  if (fila === undefined || fila.tipo !== "pantalla")
+    throw new RangeError(`menú: la fila ${clave} no es una pantalla`);
+  return fila.accion;
+}
 
 /**
  * ¿La persona puede entrar a Configuración fiscal? Mismo permiso que la pantalla, según `permisosDelActor`. Si no se pudieron leer
@@ -126,6 +170,46 @@ export async function puedeEditarElContactoDeLaSucursal(
 ): Promise<boolean> {
   const permisos = await permisosDeLaPersona(contexto);
   return permisos !== null && ofertaDe("sucursales.editar", permisos).permitida;
+}
+
+/**
+ * ¿La persona puede guardar los datos de un producto? Es la oferta de `productos.editar` (gerente y administrador) que el servidor calcula con `ofertaDe`: con el módulo en solo
+ * lectura o sin el rol, no. Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: guardar vuelve a pasar por el guard. Es solo la ayuda que apaga
+ * «Guardar» (DEC-0346, aprobada por el dueño el 12/11/2026). Chequeo: `test/web/ficha-de-producto-acceso.test.ts`.
+ */
+export async function puedeEditarProductos(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("productos.editar", permisos).permitida;
+}
+
+/**
+ * ¿La persona puede crear un producto? Es la oferta de `productos.crear` (gerente y administrador) que el servidor calcula con `ofertaDe`: con el módulo en solo lectura o sin el rol, no.
+ * Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: crear vuelve a pasar por el guard. Es solo la ayuda que apaga «Guardar» (DEC-0346, aprobada
+ * por el dueño el 12/11/2026). Chequeo: `test/web/alta-de-producto-acceso.test.ts`.
+ */
+export async function puedeCrearProductos(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("productos.crear", permisos).permitida;
+}
+
+/**
+ * ¿La persona puede cambiar el precio de un producto? Es la oferta de `productos.cambiar_precio` (gerente y administrador) que el servidor calcula con `ofertaDe`: con el módulo en
+ * solo lectura o sin el rol, no. Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: cambiar vuelve a pasar por el guard. Es solo la ayuda que apaga
+ * «Guardar» (DEC-0346, aprobada por el dueño el 12/11/2026). Chequeo: `test/web/precios-de-producto-acceso.test.ts`.
+ */
+export async function puedeCambiarPrecios(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("productos.cambiar_precio", permisos).permitida;
+}
+
+/**
+ * ¿La persona puede administrar las mesas del salón? Es la oferta de `mesas.editar` (Gerente y Administrador, decisión del dueño) que el servidor calcula con `ofertaDe`: con el módulo
+ * en desarrollo, en solo lectura o sin el rol, no. Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: guardar vuelve a pasar por el guard.
+ * Chequeo: `test/web/mesas-acceso.test.ts`.
+ */
+export async function puedeAdministrarMesas(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("mesas.editar", permisos).permitida;
 }
 
 type PermisosLeidos = NonNullable<Awaited<ReturnType<typeof permisosDeLaPersona>>>;
@@ -195,6 +279,26 @@ export async function accionesDePuntosDeVenta(
     activar: de("puntos_de_venta.activar"),
     desactivar: de("puntos_de_venta.desactivar"),
     pasarAProduccion: de("puntos_de_venta.cambiar_ambiente"),
+  };
+}
+
+/**
+ * Qué botones de una lista de la configuración de caja se ofrecen activos hoy (`medios_de_pago.*`, `cuentas_de_cobro.*` o `cajas.*`, módulo `caja`): los que el SERVIDOR deja
+ * hacer según `permisosDelActor` (una lectura por pedido, el mismo cálculo que el guard). Con `caja` en desarrollo o no activo esa lista no trae sus acciones: todo apagado. Sin
+ * permisos leídos, todo apagado. Previene: ofrecer un botón que el guard va a rechazar. Es solo una ayuda: cada acción vuelve a pasar por el guard dentro de su transacción.
+ */
+export async function accionesDeLaListaDeCaja(
+  contexto: ContextoOperativo,
+  familia: "medios_de_pago" | "cuentas_de_cobro" | "cajas",
+): Promise<AccionesDeLista> {
+  const permisos = await permisosDeLaPersona(contexto);
+  const puede = (accion: ClaveAccion): boolean =>
+    permisos !== null && permisos.acciones.includes(accion);
+  return {
+    agregar: puede(`${familia}.crear`),
+    editar: puede(`${familia}.editar`),
+    desactivar: puede(`${familia}.desactivar`),
+    reactivar: puede(`${familia}.reactivar`),
   };
 }
 

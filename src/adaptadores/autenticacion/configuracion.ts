@@ -19,6 +19,7 @@ export const GOOGLE_CLIENT_SECRET_PLATAFORMA = "GOOGLE_CLIENT_SECRET_PLATAFORMA"
 export const PEDERNAL_HOST_DE_LA_CONSOLA = "PEDERNAL_HOST_DE_LA_CONSOLA";
 
 /** El secreto firma las cookies y cifra los tokens guardados: uno corto se adivina. */
+// fuente-unica: ajeno — coincide con el 32 del cupón; es el largo mínimo del secreto de cookies, dato sin relación
 export const LARGO_MINIMO_DEL_SECRETO = 32;
 
 /**

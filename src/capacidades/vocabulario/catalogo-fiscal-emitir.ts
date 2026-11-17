@@ -20,7 +20,7 @@
  *   D-93 / D-95 = filas del CONTRATO (Pedernal-docs), confirmadas por el dueño el 2026-11-03 (D-93) y el 2026-11-04 (D-95); cada texto cita su punto.
  *   ARCA-016   = `test/utilidades/arca-grabaciones/corrida1/016-FEParamGetCondicionIvaReceptor-respuesta-http200.xml` (los textos de la
  *                condición frente al IVA; la misma fuente que D-44 para los del emisor).
- *   SUPUESTO   = del ingeniero, sin fuente: el dueño no lo aprobó ni figura en un documento. Va en las preguntas pendientes del PR (hoy ninguno).
+ *   SUPUESTO (DEC-0049)   = del ingeniero, sin fuente: el dueño no lo aprobó ni figura en un documento. Va en las preguntas pendientes del PR (hoy ninguno).
  */
 export const TEXTOS_DE_FISCAL_EMITIR = {
   // PROTO-8B (figura en el prototipo aprobado, artboard «8 · Emitir una factura», columna «B · Por pasos»): el encabezado «Emitir factura»; CONTRATO, pantalla 3: el botón final «Emitir factura» (el mismo texto).
@@ -100,4 +100,15 @@ export const TEXTOS_DE_FISCAL_EMITIR = {
   "fiscal.pantalla.emitir_condicion_iva_no_alcanzado": { porDefecto: "IVA No Alcanzado" },
   // D-93 / D-95 (Pedernal-docs, `11-especificaciones/facturador-contratos-de-pantalla.md`, 2026-11-03), punto 3: se ofrecen las 11. ARCA-016, Id 5: «Consumidor Final».
   "fiscal.pantalla.emitir_condicion_consumidor_final": { porDefecto: "Consumidor Final" },
+
+  // E1 §10 (`Pedernal-docs/11-especificaciones/e1-facturador-especificacion.md`): textos de facturar un ticket. POR APROBAR por el dueño (S5 §3).
+  // «Venta» de `venta-rapida.html:352`; «N.º» de `ticket.html:24`; la combinación («Venta N.º 124») es la de `emitir.html?estado=venta` (prototipos-facturador).
+  "fiscal.pantalla.emitir_venta_numero": {
+    porDefecto: "Venta N.º {numero}",
+    marcadores: ["numero"],
+  },
+  // Encargo S5 (`orquestacion-ola-1.md`), decisión 57 (`catalogo-y-niveles-maqueta.md:1333`) y el prototipo `listado.html` (`index.html:11`): el título de la lista y el enlace que lleva a ella.
+  "fiscal.pantalla.pendientes_titulo": { porDefecto: "Pendientes de facturar" },
+  // Decisión 175 (lo menos posible) y el patrón del aviso vacío de `listado.html`; el vacío de comprobantes («Todavía no emitiste comprobantes») sería falso acá.
+  "fiscal.pantalla.pendientes_vacio": { porDefecto: "No hay ventas pendientes de facturar" },
 } as const;

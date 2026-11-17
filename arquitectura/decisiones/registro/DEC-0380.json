@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0380",
+  "fecha": "2026-11-14",
+  "quien": "dueño",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "Una mesa que ya recibió otra no se une como origen ni se divide (MESA_UNIDA); sí puede recibir también una tercera (B recibe A y C).",
+  "que_cambia": "Corrige el defecto D1 (B→C tras A→B, o dividir B, dejaban abierta la reserva de A). Fuente: respuestas del dueño del 14/11/2026, decisiones-del-dueno-2026-11.md (docs, líneas 146 y 151; Q6 confirma B12).",
+  "donde": "src/modulos/salon/dominio/union.ts; casos-de-uso/unir.ts y dividir.ts; test/integracion/salon-union-encadenada.test.ts"
+}

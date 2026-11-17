@@ -90,6 +90,7 @@ export function VerificarCodigo({ destino }: PropsDeVerificarCodigo) {
         )}
         {modo === "aplicacion" ? (
           <CampoDeCodigo
+            dato="pendiente"
             etiqueta="Código de la aplicación"
             ayuda="Los seis números que muestra tu aplicación de autenticación."
             valor={codigo}
@@ -98,6 +99,7 @@ export function VerificarCodigo({ destino }: PropsDeVerificarCodigo) {
           />
         ) : (
           <Campo
+            dato="pendiente"
             etiqueta="Código de recuperación"
             ayuda="Uno de los códigos que guardaste al configurar el segundo factor. Sirve una sola vez."
             valor={codigo}

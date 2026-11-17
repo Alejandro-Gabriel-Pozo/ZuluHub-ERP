@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0105",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Una entrada sin lotes de un artículo con control de lote entra al lote «sin asignar» en lugar de rechazarse.",
+  "que_cambia": "Si la pantalla puede cargar stock sin lote; una línea.",
+  "donde": "src/modulos/stock/casos-de-uso/lotes-del-libro.ts (E6, S-17)"
+}

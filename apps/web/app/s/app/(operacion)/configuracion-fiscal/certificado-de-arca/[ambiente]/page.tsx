@@ -11,7 +11,7 @@ import {
   armarElAmbiente,
   nombreDelAmbiente,
 } from "../../../../../../../ui/plantillas/configuracion-fiscal/modelo-de-certificado";
-import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import {
   cargarCertificadoAccion,
   generarPedidoDeCertificadoAccion,

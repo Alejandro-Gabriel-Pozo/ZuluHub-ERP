@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0027",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "Un egreso mayor al efectivo esperado se permite y deja un aviso en la auditoría.",
+  "que_cambia": "Si se puede sacar de caja más de lo que hay.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B2 (E3)"
+}

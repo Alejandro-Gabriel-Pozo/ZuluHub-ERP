@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0034",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Un lote vencido, en cuarentena, en revisión o rechazado nunca está disponible; lo que falta para cubrir una venta va a un lote sin asignar.",
+  "que_cambia": "De qué lote se descuenta una venta.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B9 (E6)"
+}

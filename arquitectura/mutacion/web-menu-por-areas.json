@@ -1,0 +1,6 @@
+{
+  "grupo": "web (menú por áreas)",
+  "archivos": "apps/web/ui/navegacion/menu.ts",
+  "minutos": 1,
+  "pruebas": "test/web/menu-por-areas.test.ts"
+}

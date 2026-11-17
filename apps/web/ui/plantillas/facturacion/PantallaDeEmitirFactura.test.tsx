@@ -36,6 +36,19 @@ async function enLosDosAnchos(alto = 1600): Promise<void> {
   legibleYTocable();
 }
 
+/** Pega `texto` sin tocar el portapapeles real: lanza el evento `paste` y, si el campo no lo cancela, lo inserta como lo haría el navegador. */
+async function pegarEn(destino: ReturnType<typeof campo>, texto: string): Promise<void> {
+  const datos = new DataTransfer();
+  datos.setData("text/plain", texto);
+  const evento = new ClipboardEvent("paste", {
+    clipboardData: datos,
+    bubbles: true,
+    cancelable: true,
+  });
+  destino.element().dispatchEvent(evento);
+  if (!evento.defaultPrevented) await userEvent.fill(destino, texto);
+}
+
 describe("paso 1: cliente", () => {
   it("el consumidor final por defecto: un solo selector, «Siguiente» siempre ofrecido; accesible y tocable (390 y 1280 px)", async () => {
     await render(enArmazon());
@@ -67,11 +80,65 @@ describe("paso 1: cliente", () => {
     // La condición arranca sin elegir y ofrece las once de ARCA.
     await expect.element(campo("Condición frente al IVA")).toHaveValue("");
     expect(campo("Condición frente al IVA").element().querySelectorAll("option")).toHaveLength(12);
-    // Cambiar el tipo cambia el rótulo del número y conserva lo escrito.
-    await userEvent.type(campo("CUIT"), "30-71234567-8");
+    // Cambiar el tipo cambia el rótulo del número y LIMPIA lo escrito: cada tipo tiene su forma y no se adivina (un CUIT recortado a DNI
+    // sería un documento válido pero equivocado).
+    await userEvent.type(campo("CUIT"), "30712345678");
+    await expect.element(campo("CUIT")).toHaveValue("30-71234567-8");
     await userEvent.selectOptions(campo("Documento"), "DNI");
-    await expect.element(campo("DNI")).toHaveValue("30-71234567-8");
+    await expect.element(campo("DNI")).toHaveValue("");
     await enLosDosAnchos();
+  });
+
+  it("el número del documento se formatea mientras se escribe: guiones del CUIT, puntos del DNI y el pasaporte en mayúsculas", async () => {
+    await render(enArmazon());
+    await userEvent.selectOptions(campo("Documento"), "CUIT");
+    await userEvent.type(campo("CUIT"), "30-7123.4567 8x");
+    await expect.element(campo("CUIT")).toHaveValue("30-71234567-8");
+    await userEvent.selectOptions(campo("Documento"), "DNI");
+    await userEvent.type(campo("DNI"), "0");
+    await expect.element(campo("DNI")).toHaveValue("");
+    await userEvent.type(campo("DNI"), "12345678");
+    await expect.element(campo("DNI")).toHaveValue("12.345.678");
+    await expect.element(campo("DNI")).toHaveAttribute("inputmode", "numeric");
+    await userEvent.selectOptions(campo("Documento"), "PASAPORTE");
+    await userEvent.type(campo("Pasaporte"), "abc-123 456");
+    await expect.element(campo("Pasaporte")).toHaveValue("ABC123456");
+    await expect.element(campo("Pasaporte")).toHaveAttribute("inputmode", "text");
+  });
+
+  it("pegar: con o sin guiones entra; lo que no es del tipo no cambia el campo", async () => {
+    await render(enArmazon());
+    await userEvent.selectOptions(campo("Documento"), "CUIT");
+    const cuit = campo("CUIT");
+    await userEvent.click(cuit);
+    await pegarEn(cuit, "20123456786");
+    await expect.element(cuit).toHaveValue("20-12345678-6");
+    await userEvent.clear(cuit);
+    await pegarEn(cuit, "20-12345678-6");
+    await expect.element(cuit).toHaveValue("20-12345678-6");
+    await userEvent.clear(cuit);
+    for (const rechazado of ["20.12345678.6", "20 12345678 6", "abc", "2012345678600"]) {
+      await pegarEn(cuit, rechazado);
+      await expect.element(cuit).toHaveValue("");
+    }
+  });
+
+  it("el cursor no salta al formatear y borrar un guion no cambia el número", async () => {
+    await render(enArmazon());
+    await userEvent.selectOptions(campo("Documento"), "CUIT");
+    const cuit = campo("CUIT");
+    const el = cuit.element() as HTMLInputElement;
+    await userEvent.type(cuit, "2012");
+    await expect.element(cuit).toHaveValue("20-12");
+    // Un dígito en el medio: el cursor queda detrás de él, no al final.
+    el.setSelectionRange(1, 1);
+    await userEvent.keyboard("9");
+    await expect.element(cuit).toHaveValue("29-012");
+    expect(el.selectionStart).toBe(2);
+    // Retroceso con el cursor detrás del guion: el número no cambia.
+    el.setSelectionRange(3, 3);
+    await userEvent.keyboard("{Backspace}");
+    await expect.element(cuit).toHaveValue("29-012");
   });
 
   it("volver a «Consumidor final» esconde los campos", async () => {
@@ -242,7 +309,7 @@ describe("navegar entre pasos", () => {
     await userEvent.click(boton("Volver"));
     expect(document.activeElement?.getAttribute("aria-label")).toBe("Cliente");
     await expect.element(campo("Nombre o razón social")).toHaveValue("Juan Pérez");
-    await expect.element(campo("DNI")).toHaveValue("27345678");
+    await expect.element(campo("DNI")).toHaveValue("27.345.678");
   });
 
   it("todo se hace con el teclado: Tab llega a cada control, Enter avanza y retrocede", async () => {

@@ -33,6 +33,18 @@ async function dibujar(opciones: OpcionesDelComprobante = {}) {
 }
 
 describe("ticket de 80 mm", () => {
+  it("leyenda de la condición del receptor: sale en el rollo, sin rótulo y tal cual", async () => {
+    const LEYENDA = "LEYENDA DE CONDICIÓN DE PRUEBA";
+    const { ticket, pantalla } = await dibujar({
+      letra: "A",
+      consumidorFinal: false,
+      leyendaDeCondicion: LEYENDA,
+    });
+    const filas = [...ticket.querySelectorAll("div")].filter((d) => d.textContent === LEYENDA);
+    expect(filas.length).toBeGreaterThan(0);
+    await pantalla.unmount();
+  });
+
   it("leyenda legal: texto normal después del aviso de homologación, fuera de su recuadro, tal cual y dentro del alto medido; sin ella no hay nada extra", async () => {
     const LEGAL = "  Texto legal de prueba (ficticio).  ";
     const medido = () => Number(/size: 80mm (\d+)mm/.exec(reglaDePaginaAdoptada())?.[1]);

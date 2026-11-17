@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0348",
+  "fecha": "2026-11-12",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La caja nueva se agrega a la sucursal elegida en el dispositivo, que fija el servidor; sin sucursal elegida sale el aviso genérico y nunca se asume «todas».",
+  "que_cambia": "Solo de dónde sale la sucursal de una caja nueva; la maqueta no tiene selector de sucursal en el formulario de caja. Revertir: sumar el selector como el de cuentas.",
+  "donde": "apps/web/servidor/cajas.ts; Pedernal-docs 11-especificaciones/caja-y-cobros.md"
+}

@@ -1,0 +1,6 @@
+{
+  "grupo": "fiscal (certificados)",
+  "archivos": "src/modulos/fiscal/dominio/certificado-carga.ts,src/modulos/fiscal/dominio/certificado-pedido.ts,src/modulos/fiscal/dominio/vencimiento-de-certificados.ts",
+  "minutos": 1.9,
+  "pruebas": "src/modulos/fiscal/dominio/certificado-carga.test.ts src/modulos/fiscal/dominio/certificado-pedido.test.ts src/modulos/fiscal/dominio/vencimiento-de-certificados.test.ts"
+}

@@ -135,6 +135,7 @@ export function idDeIntento(
   const h = sha256(
     JSON.stringify([comprobante, operacion, numero?.toString() ?? null, iniciadoEn.toISOString()]),
   );
+  // fuente-unica: ajeno — coincide con el 32 del cupón; es la posición final de un hash hexadecimal al formar un UUID, dato sin relación
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
 }
 

@@ -165,7 +165,7 @@ describe("la autocomprobación de ubicaciones (M3)", () => {
         linea: 1,
         contrato: null,
         motivo:
-          "Un falla con código «ruta-sin-clase» salió sin ubicación completa (archivo: undefined, línea: undefined): m1",
+          "Una falla con código «ruta-sin-clase» salió sin ubicación completa (archivo: undefined, línea: undefined): m1",
         correccion: CORRECCION_DE_UBICACION,
       },
     ]);
@@ -197,7 +197,7 @@ describe("la autocomprobación de ubicaciones (M3)", () => {
           archivo: "a.ts",
           linea: 1,
           contrato: "x-y",
-          motivo: `Un falla con código «ruta-sin-clase» salió sin ubicación completa ${detalle}: mm`,
+          motivo: `Una falla con código «ruta-sin-clase» salió sin ubicación completa ${detalle}: mm`,
           correccion: CORRECCION_DE_UBICACION,
         },
       ]);
@@ -229,7 +229,7 @@ describe("la autocomprobación de ubicaciones (M3)", () => {
         linea: 1,
         contrato: "z-w",
         motivo:
-          "Un falla con código «inventado» usa un código que no está en la lista cerrada de fallas del guardián: mm",
+          "Una falla con código «inventado» usa un código que no está en la lista cerrada de fallas del guardián: mm",
         correccion: CORRECCION_DE_CODIGO,
       },
     ]);
@@ -267,7 +267,7 @@ describe("la autocomprobación de ubicaciones (M3)", () => {
     expect(resultado.fallas.map((f) => [f.codigo, f.motivo])).toEqual([
       [
         "codigo-fuera-de-la-lista",
-        "Un falla con código «excepcion-por-vencer» usa un código que no está en la lista cerrada de fallas del guardián: z",
+        "Una falla con código «excepcion-por-vencer» usa un código que no está en la lista cerrada de fallas del guardián: z",
       ],
     ]);
   });

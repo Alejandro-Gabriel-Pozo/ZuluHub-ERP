@@ -1,0 +1,6 @@
+{
+  "grupo": "marcas (definición, versión y vigencia)",
+  "archivos": "src/modulos/marcas/dominio/**/*.ts,!src/modulos/marcas/dominio/host.ts,!src/modulos/marcas/dominio/tema.ts,!src/modulos/marcas/dominio/jerarquia.ts,!src/modulos/marcas/dominio/ciclo-de-dominio.ts,!src/modulos/marcas/dominio/marca-de-mail.ts,!src/modulos/marcas/dominio/configuracion-publica.ts",
+  "minutos": 3.9,
+  "pruebas": "src/modulos/marcas"
+}

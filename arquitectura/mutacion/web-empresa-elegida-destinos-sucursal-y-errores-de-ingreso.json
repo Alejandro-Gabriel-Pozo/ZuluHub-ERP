@@ -1,0 +1,6 @@
+{
+  "grupo": "web (empresa elegida, destinos, sucursal y errores de ingreso)",
+  "archivos": "src/capacidades/experiencia/empresa-elegida.ts,src/capacidades/experiencia/destinos.ts,src/capacidades/experiencia/sucursal.ts,src/capacidades/experiencia/errores-de-ingreso.ts",
+  "minutos": 1.2,
+  "pruebas": "src/capacidades/experiencia/empresa-elegida.test.ts src/capacidades/experiencia/destinos.test.ts src/capacidades/experiencia/sucursal.test.ts src/capacidades/experiencia/errores-de-ingreso.test.ts"
+}

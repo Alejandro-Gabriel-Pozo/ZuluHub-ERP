@@ -63,12 +63,27 @@ export type EstadoDeComprobante = "PENDIENTE" | "AUTORIZADO" | "RECHAZADO" | "IN
 export const TIPOS_DE_ORIGEN = [
   "MANUAL",
   "EJEMPLAR_DE_TICKET",
+  "REEMISION_DE_TICKET",
   "PROPINA_DE_TICKET",
   "CORRECCION_DE_TICKET",
   "SUSCRIPCION",
 ] as const;
 
 export type TipoDeOrigen = (typeof TIPOS_DE_ORIGEN)[number];
+
+/**
+ * Los orígenes con los que se factura un documento ya armado por otro módulo (`emitirFacturaDeOrigenEnTx`): el primer intento
+ * (`EJEMPLAR_DE_TICKET`) y la reemisión tras una factura que dejó de valer (`REEMISION_DE_TICKET`, D-F-2: una factura autorizada y
+ * acreditada por una nota total sigue «vigente» para la identidad `(origen, emisor, clase)`, así que reusar su origen devolvería la
+ * acreditada). Lista de permitidos: los demás tipos no se aceptan por esa puerta. Viven acá, el único archivo de fiscal que nombra
+ * los orígenes (`sin-ventas.test.ts`).
+ */
+export const TIPOS_DE_ORIGEN_DE_FACTURA_DE_ORIGEN = [
+  "EJEMPLAR_DE_TICKET",
+  "REEMISION_DE_TICKET",
+] as const satisfies readonly TipoDeOrigen[];
+
+export type TipoDeOrigenDeFacturaDeOrigen = (typeof TIPOS_DE_ORIGEN_DE_FACTURA_DE_ORIGEN)[number];
 
 export function esTipoDeOrigen(texto: string): texto is TipoDeOrigen {
   return (TIPOS_DE_ORIGEN as readonly string[]).includes(texto);

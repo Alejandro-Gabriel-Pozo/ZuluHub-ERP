@@ -170,6 +170,7 @@ export function FormularioDeDatosFiscales({
       error={errorEn(campoDelFormulario)}
       deshabilitado={bloqueado}
       {...extra}
+      dato="pendiente"
     />
   );
 
@@ -214,6 +215,7 @@ export function FormularioDeDatosFiscales({
         <DatosParaLeer filas={[filaDelCuit(cuit)]} />
         {campo("razonSocial", "fiscal.pantalla.config_df_razon_social")}
         <Selector
+          dato="pendiente"
           etiqueta={texto({}, "fiscal.pantalla.config_df_condicion_iva")}
           nombre="condicionIva"
           valor={valores.condicionIva}
@@ -242,6 +244,7 @@ export function FormularioDeDatosFiscales({
             autoComplete: "address-level2",
           })}
           <Selector
+            dato="pendiente"
             etiqueta={texto({}, "fiscal.pantalla.config_pv_provincia")}
             nombre="provincia"
             valor={valores.provincia}
@@ -258,6 +261,7 @@ export function FormularioDeDatosFiscales({
           })}
         </fieldset>
         <Selector
+          dato="pendiente"
           etiqueta={texto({}, "fiscal.pantalla.imprimir_ingresos_brutos")}
           nombre="ingresosBrutos"
           valor={valores.ingresosBrutos}

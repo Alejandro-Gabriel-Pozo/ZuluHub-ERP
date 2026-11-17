@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import pg from "pg";
@@ -17,6 +17,7 @@ import {
 } from "./marcas-apoyo";
 import { SesionDePrueba } from "./sesiones";
 import type { EstadoDeSolicitud } from "../../src/plataforma/captacion/dominio/estados";
+import { correoUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de la migración de captación (alta por solicitud, L1). Todo el armado de escenarios
@@ -181,7 +182,7 @@ export type OpcionesDeSolicitud = Readonly<{
   empresaCreadaId?: string;
 }>;
 
-export const emailAlAzar = (): string => `s${randomBytes(6).toString("hex")}@prueba.test`;
+export const emailAlAzar = (): string => correoUnico("s");
 
 /**
  * Una solicitud en el estado pedido, con todos sus datos coherentes. La inserta el DUEÑO, que puede

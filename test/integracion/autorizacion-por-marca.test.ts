@@ -45,6 +45,7 @@ import {
   type RolDePrueba,
 } from "./fixtures-identidad";
 import { crearMarca, crearMundoDeMarca } from "./marcas-apoyo";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Q1: la carga de autorización compara la MARCA DE ENTRADA del contexto con la marca del tenant de la
@@ -293,7 +294,12 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
           transacciones: entorno,
           reglas: REGLAS_DE_EMPRESA,
         }),
-        empresas: crearCasosDeUsoDeEmpresas({ transacciones: entorno, reglas: REGLAS_DE_EMPRESA }),
+        empresas: crearCasosDeUsoDeEmpresas({
+          transacciones: entorno,
+          reglas: REGLAS_DE_EMPRESA,
+          ganchosDeSucursal: [],
+          ganchosAlDesactivarSucursal: [],
+        }),
         consultasDeEmpresas: crearConsultasDeEmpresas({
           transacciones: entorno,
           reglas: REGLAS_DE_EMPRESA,
@@ -317,7 +323,7 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
     > = {
       invitarUsuario: (e, ctx) =>
         ops.identidad.invitarUsuario(ctx, {
-          email: `${randomUUID().slice(0, 12)}@prueba.test`,
+          email: `${sufijoUnico()}@prueba.test`,
           rol: "OPERADOR",
           sucursales: [sucursalId(e.sucursal)],
         }),
@@ -347,6 +353,8 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
       listarInvitacionesPendientes: (_e, ctx) =>
         ops.consultasDeIdentidad.listarInvitacionesPendientes(ctx),
       traspasoEnCurso: (_e, ctx) => ops.consultasDeIdentidad.traspasoEnCurso(ctx),
+      personasParaMostrar: (e, ctx) =>
+        ops.consultasDeIdentidad.personasParaMostrar(ctx, { ids: [e.otra] }),
     };
     const DE_EMPRESAS: Record<
       keyof typeof DECLARACIONES_DE_EMPRESAS,
@@ -522,7 +530,7 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
         puertas.map(async (marca) => {
           await barrera();
           return ops.identidad.invitarUsuario(e.ctx(e.persona("GERENTE"), marca), {
-            email: `${randomUUID().slice(0, 12)}@prueba.test`,
+            email: `${sufijoUnico()}@prueba.test`,
             rol: "OPERADOR",
             sucursales: [sucursalId(e.sucursal)],
           });

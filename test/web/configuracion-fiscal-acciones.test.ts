@@ -59,7 +59,7 @@ const apagada = (motivo: string): Oferta => ({ permitida: false, motivo });
 
 const EN_DESARROLLO = "Esta función todavía está en desarrollo.";
 const NO_ACTIVADA = "Esta función no está activada para la empresa.";
-const SIN_PERMISO = "No tiene permiso para hacer esto.";
+const SIN_PERMISO = "No tenés permiso para hacer esto.";
 // Dueño, 2026-11-03, D-82: cuando no se pueden verificar los permisos.
 const NO_PERMITIDA = "Esta acción no está permitida.";
 
@@ -98,7 +98,7 @@ describe("las acciones de Puntos de venta según el servidor", () => {
     expect((await acciones()).pasarAProduccion).toEqual(PERMITIDA);
   });
 
-  it("una acción que el rol no tiene, con el módulo activo: «No tiene permiso para hacer esto.»", async () => {
+  it("una acción que el rol no tiene, con el módulo activo: «No tenés permiso para hacer esto.»", async () => {
     permisos({ acciones: ["puntos_de_venta.activar", "puntos_de_venta.desactivar"] });
     const a = await acciones();
     expect(a.agregar).toEqual(apagada(SIN_PERMISO));
@@ -109,7 +109,7 @@ describe("las acciones de Puntos de venta según el servidor", () => {
     expect(a.pasarAProduccion).toEqual(apagada(NO_ACTIVADA));
   });
 
-  it("con la facturación activa, pasar a producción depende del rol: sin la acción, «No tiene permiso para hacer esto.»", async () => {
+  it("con la facturación activa, pasar a producción depende del rol: sin la acción, «No tenés permiso para hacer esto.»", async () => {
     permisos({ activos: ["administracion", "facturacion"] });
     expect((await acciones()).pasarAProduccion).toEqual(apagada(SIN_PERMISO));
   });

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0364",
+  "fecha": "2026-11-13",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Solo se unen cuentas del mismo departamento.",
+  "que_cambia": "Unir mesas de departamentos distintos se rechaza. Revertir: permitir y decidir a cuál pertenece lo unido.",
+  "donde": "src/modulos/salon/casos-de-uso/unir.ts (A2c); confirmada por el dueño el 13/11/2026 (relatado)"
+}

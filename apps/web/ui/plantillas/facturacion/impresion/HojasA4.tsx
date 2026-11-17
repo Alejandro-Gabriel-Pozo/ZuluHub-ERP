@@ -1,5 +1,5 @@
 import type { DiccionarioResuelto } from "../../../../../../src/capacidades/vocabulario/vocabulario";
-import { formatearImporte } from "../formato-fiscal";
+import { formatearImporte } from "../../../patrones/formato-fiscal";
 import { aplicarEstilos } from "../../../primitivas/aplicar-estilos";
 import estilos from "./HojaA4.module.css";
 import { variablesDeLaGeometria } from "./geometria";

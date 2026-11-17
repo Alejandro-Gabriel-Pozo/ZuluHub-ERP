@@ -155,7 +155,7 @@ export type CalculoDeAnulacion = Readonly<{
   aAnular: string;
   /** Hay algo escrito que no es un importe (con la pantalla actual no pasa: `CampoImporte` limpia lo tipeado). */
   hayInvalidos: boolean;
-  /** «Siguiente» anda: hay al menos un importe mayor que cero y ninguno inválido (SUPUESTO: no hay texto aprobado para un error). */
+  /** «Siguiente» anda: hay al menos un importe mayor que cero y ninguno inválido (SUPUESTO (DEC-0052): no hay texto aprobado para un error). */
   sePuedeSeguir: boolean;
 }>;
 

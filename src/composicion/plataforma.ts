@@ -40,6 +40,7 @@ import { CATALOGO_DE_MODULOS } from "../capacidades/modulos/catalogo";
 import { REGLAS_DE_EMPRESA } from "../capacidades/permisos/empresa";
 import { REGLAS_DE_PLATAFORMA } from "../capacidades/permisos/plataforma";
 import { CATALOGO_DE_PERILLAS } from "../capacidades/planes/perillas";
+import { crearRepositorioDeListas, type ListasDb } from "../modulos/listas/publico";
 import {
   crearRepositorioDeEmpresas,
   crearRepositorioDeSucursales,
@@ -79,6 +80,8 @@ import type { TxDeDominios } from "../plataforma/casos-de-uso/dominios-comun";
 import { crearCasosDeUsoDeDominios } from "../plataforma/casos-de-uso/dominios";
 import type { TxDeExplicar } from "../plataforma/casos-de-uso/explicar-por-que";
 import type { TxDeReenvioDelAlta } from "../plataforma/casos-de-uso/invitacion-del-alta";
+import type { TxDeListas } from "../plataforma/casos-de-uso/listas-comun";
+import { crearCasosDeUsoDeListas } from "../plataforma/casos-de-uso/listas-del-sistema";
 import { crearCasosDeUsoDeMarcasYPlanes } from "../plataforma/casos-de-uso/marcas-y-planes";
 import type { TxDeMarcasYPlanes } from "../plataforma/casos-de-uso/marcas-y-planes-comun";
 import type { TxDePersonas } from "../plataforma/casos-de-uso/personas";
@@ -86,6 +89,10 @@ import type { TxDeReferencias } from "../plataforma/casos-de-uso/registrar-refer
 import type { TxDeRevocacionDelAlta } from "../plataforma/casos-de-uso/invitacion-del-alta";
 import { crearCasosDeUsoDeSoporte } from "../plataforma/casos-de-uso/soporte";
 import { crearConsultasDePlataforma } from "../plataforma/consultas/consultas";
+import {
+  crearConsultasDeListas,
+  type TxDeConsultasDeListas,
+} from "../plataforma/consultas/consultas-de-listas";
 import type { TxDeConsultasDePlataforma } from "../plataforma/consultas/contrato";
 import type { TxDeConsultasDeMarcasYPlanes } from "../plataforma/consultas/contrato-de-marcas-y-planes";
 import { crearConsultasDeMarcasYPlanes } from "../plataforma/consultas/consultas-de-marcas-y-planes";
@@ -244,6 +251,21 @@ export function armarPlataforma(opciones: OpcionesDePlataforma = {}) {
     }),
   );
 
+  /** Las listas del sistema (e3 §3.7): sus casos y su consulta comparten la transacción (la consulta usa un recorte de ella). */
+  const transaccionesDeListas = transaccionesDe<TxDeListas & TxDeConsultasDeListas>(
+    (db, contexto) => ({
+      listas: crearRepositorioDeListas(db.withTables<ListasDb>()),
+      autorizacionDePlataforma: crearAutorizacionDePlataformaDePostgres(
+        db.withTables<AutorizacionDePlataformaDb>(),
+      ),
+      auditoriaDePlataforma: crearAuditoriaDePlataformaDePostgres(
+        db.withTables<AuditoriaDePlataformaDb>(),
+        contexto,
+      ),
+      idempotencia: crearIdempotenciaDePostgres(db.withTables<IdempotenciaDb>(), contexto),
+    }),
+  );
+
   const transaccionesDeDominiosYSoporte = transaccionesDe<TxDeDominiosYSoporte>((db, contexto) => ({
     dominios: crearRepositorioDeDominios(db.withTables<DominiosDb>()),
     soporte: crearLecturaDeSoporteDePostgres(db.withTables<SoporteDb>()),
@@ -309,6 +331,9 @@ export function armarPlataforma(opciones: OpcionesDePlataforma = {}) {
         ...catalogos,
       }),
     ),
+    casosDeUsoDeListas: perezoso(() =>
+      crearCasosDeUsoDeListas({ transacciones: transaccionesDeListas(), reglas }),
+    ),
     casosDeUsoDeDominios: perezoso(() =>
       crearCasosDeUsoDeDominios({ transacciones: transaccionesDeDominiosYSoporte(), reglas }),
     ),
@@ -329,6 +354,9 @@ export function armarPlataforma(opciones: OpcionesDePlataforma = {}) {
         catalogoDeEmpresa: CATALOGO_DE_MODULOS,
         catalogoDePerillas: CATALOGO_DE_PERILLAS,
       }),
+    ),
+    consultasDeListas: perezoso(() =>
+      crearConsultasDeListas({ transacciones: transaccionesDeListas(), reglas }),
     ),
     consultasDeMarcasYPlanes: perezoso(() =>
       crearConsultasDeMarcasYPlanes({

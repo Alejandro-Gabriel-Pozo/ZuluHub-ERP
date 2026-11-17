@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0332",
+  "fecha": "2026-11-12",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La carta tiene un mensaje de portada opcional (tercera línea, abajo de todo) de hasta 60 caracteres, con la lista de catálogo; sin mensaje se muestra el adorno de siempre.",
+  "que_cambia": "Se pidió el 12/11 que el adorno de la portada sea editable; el largo 60 es el del lema del prototipo y revertirlo cuesta poco (una constante y un CHECK).",
+  "donde": "Pedernal-docs 11-especificaciones/carta-real-especificacion.md §3.2; migraciones/0043_carta_publica.sql (carta_publica_mensaje_ck)"
+}

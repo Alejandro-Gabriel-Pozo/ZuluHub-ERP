@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0040",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La recepción entra al único depósito normal activo; solo se compra materia prima, insumo y reventa; con stock apagado la compra no genera entrada.",
+  "que_cambia": "Qué se puede comprar y dónde entra la mercadería.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B15 (E9)"
+}

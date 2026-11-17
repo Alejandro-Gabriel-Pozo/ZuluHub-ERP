@@ -167,10 +167,10 @@ export async function envejecerElSegundoFactor(
   ms: number,
 ): Promise<void> {
   await m.dueno.query(
-    `update autenticacion.session set segundo_factor_en = now() - ($2 || ' milliseconds')::interval
+    `update autenticacion.session set segundo_factor_en = $3::timestamptz - ($2 || ' milliseconds')::interval
       where segundo_factor_en is not null
         and "userId" in (select id from autenticacion."user" where email = $1)`,
-    [admin.email, String(ms)],
+    [admin.email, String(ms), new Date()],
   );
 }
 

@@ -11,6 +11,7 @@ import {
 } from "../adaptadores/correo/configuracion";
 import { crearAuditoriaDePostgres, type AuditoriaDb } from "../adaptadores/postgres/auditoria";
 import {
+  crearAutorizacionDeLecturaDePostgres,
   crearAutorizacionDePostgres,
   type AutorizacionDb,
 } from "../adaptadores/postgres/autorizacion";
@@ -29,7 +30,8 @@ import {
   leerClaveDeContexto,
 } from "../adaptadores/postgres/contexto-firmado";
 import { crearConfiguracionPublicaDeHost } from "../adaptadores/postgres/configuracion-publica-de-marca";
-import { crearResolucionDeHost, type TxPublica } from "../adaptadores/postgres/resolucion-de-host";
+import { crearResolucionDeHost } from "../adaptadores/postgres/resolucion-de-host";
+import { armarTxPublica, type TxPublicaCompleta } from "../adaptadores/postgres/vidriera-publica";
 import { crearLecturasDeSesionDePostgres, type SesionDb } from "../adaptadores/postgres/sesion";
 import { crearTrabajosDePostgres, type TrabajosDb } from "../adaptadores/postgres/trabajos";
 import {
@@ -38,6 +40,7 @@ import {
 } from "../adaptadores/postgres/transacciones-publicas";
 import {
   crearTransacciones,
+  type ConfiguracionDeTransacciones,
   type TransaccionesDePostgres,
 } from "../adaptadores/postgres/transacciones";
 import {
@@ -48,6 +51,7 @@ import {
 import type { TxDeCola } from "../adaptadores/trabajos/procesador";
 import type { NivelesDeControl } from "../capacidades/controles/niveles";
 import type { EmpresaId } from "../primitivas/identificadores/marca";
+import { crearRepositorioDeJornadas, type CierreDb } from "../modulos/cierre/publico";
 import {
   crearLecturaDeSucursalBloqueada,
   crearRepositorioDeEmpresas,
@@ -97,7 +101,6 @@ import {
   type RepositorioDeReglasDeEmisor,
   type RepositorioDeSeries,
 } from "../modulos/fiscal/publico";
-import { crearLecturaPublicaDeMarcas, type PublicoDb } from "../modulos/marcas/publico";
 import {
   crearRepositorioDeTenants,
   type RepositorioDeTenants,
@@ -105,7 +108,11 @@ import {
 } from "../modulos/tenants/publico";
 import type { Auditoria } from "../puertos/auditoria";
 import type { Autenticacion, BarridoDeAutenticacion } from "../puertos/autenticacion";
-import type { CargaDeAutorizacion } from "../puertos/autorizacion";
+import type {
+  CargaDeAutorizacion,
+  CargaDeAutorizacionDeLectura,
+  CargaDeAutorizacionSinMemoria,
+} from "../puertos/autorizacion";
 import type { CifradorDeSecretos } from "../puertos/cifrado-de-secretos";
 import type { Correo } from "../puertos/correo";
 import type { RevocacionDeSesiones } from "../puertos/revocacion-de-sesiones";
@@ -123,6 +130,8 @@ import {
 } from "./entorno";
 import { leerClaveDeCertificados } from "./clave-de-certificados";
 import { perezoso } from "./perezoso";
+import { armarPiezasDeCajaEnTx, type PiezasDeCajaEnTx } from "./tx-de-caja";
+import { armarPiezasDeModulosEnTx, type PiezasDeModulosEnTx } from "./tx-de-modulos";
 
 /**
  * Las piezas que necesitan entorno: transacciones por puerta, tokens y correo. Cada una se arma la
@@ -137,53 +146,53 @@ import { perezoso } from "./perezoso";
  * consultas de empresas e identidad. Cada caso de uso declara solo lo que usa (su `Tx` angosta), y este
  * tipo los contiene a todos.
  *
- * Es la `Tx` COMPUESTA (conciliación §3.3): los repositorios de varios módulos se arman sobre la MISMA
- * transacción de la base, así una operación que cruza módulos (cobrar: ventas, caja, stock, fiscal) es
- * atómica con un solo `ejecutar`. Un puerto `*EnTx` de otro módulo recibe esta misma `Tx` (que contiene
- * la suya, angosta) y nunca abre una propia. Cada módulo nuevo suma sus repositorios acá; que este tipo
- * contenga cada `Tx` angosta lo comprueba el compilador (`test/arquitectura/tipos-tx.test.ts`).
+ * Es la `Tx` COMPUESTA (conciliación §3.3): los repositorios de varios módulos se arman sobre la MISMA transacción, así una operación que
+ * cruza módulos (cobrar) es atómica con un solo `ejecutar`; un puerto `*EnTx` de otro módulo recibe esta misma `Tx`, nunca abre una propia. Cada módulo suma sus repositorios acá (los de caja, en `tx-de-caja.ts`, y los de catálogo, ventas y stock, en `tx-de-modulos.ts`, por el tope de líneas); `tipos-tx.test.ts` lo comprueba.
  */
-export type TxDeApp = Readonly<{
-  tenants: RepositorioDeTenants;
-  empresas: RepositorioDeEmpresas;
-  sucursales: RepositorioDeSucursales;
-  /** La sucursal leída con `FOR SHARE`: dar de alta un punto de venta exige que siga abierta (el cierre concurrente espera). */
-  sucursalBloqueada: LecturaDeSucursalBloqueada;
-  personas: RepositorioDePersonas;
-  membresias: RepositorioDeMembresias;
-  asignaciones: RepositorioDeAsignaciones;
-  invitaciones: RepositorioDeInvitaciones;
-  traspasos: RepositorioDeTraspasos;
-  /** Encola, y mira lo encolado (la validación de un comprobante se reencola con su número de intento). */
-  trabajos: TrabajosReencolables;
-  auditoria: Auditoria;
-  autorizacion: CargaDeAutorizacion;
-  /** Fiscal (H7): emisores, domicilios, datos fiscales, puntos de venta y series, comprobantes e intentos de ARCA. */
-  emisores: RepositorioDeEmisores;
-  domicilios: RepositorioDeDomicilios;
-  datosFiscales: RepositorioDeDatosFiscales;
-  reglasDeEmisor: RepositorioDeReglasDeEmisor;
-  puntosDeVenta: RepositorioDePuntosDeVenta;
-  series: RepositorioDeSeries;
-  comprobantes: RepositorioDeComprobantes;
-  intentos: RepositorioDeIntentos;
-  /** Las lecturas del listado y del detalle de comprobantes (solo `select`). */
-  lecturas: LecturasDeComprobantes;
-  /** Qué certificado cuenta hoy de un emisor en cada ambiente (D-42): solo `select`, sin columnas cifradas. */
-  lecturasDeCertificados: ReturnType<typeof crearLecturasDeCertificados>;
-  /** Certificados de ARCA y su ticket de acceso (columnas cifradas: solo las ve quien descifra, F7/F8). */
-  certificados: RepositorioDeCertificados;
-  accesos: RepositorioDeAccesos;
-  /**
-   * La marca con que se imprime un comprobante (solo la pide `modeloDeImpresion`). Hoy es `MARCA_DE_IMPRESION_VACIA` para todas las
-   * empresas (D-112); ver la constante.
-   */
-  marca: Readonly<{ deLaEmpresa(empresa: EmpresaId): Promise<MarcaParaImprimir> }>;
-  /** El nivel vigente de cada control (permitir, avisar, bloquear), leído en la misma transacción. */
-  niveles: NivelesDeControl;
-  /** Lo que lee la puerta `SESION` (la persona del usuario y sus empresas). */
-  sesion: LecturasDeSesion;
-}>;
+export type TxDeApp = PiezasDeModulosEnTx &
+  Readonly<{
+    tenants: RepositorioDeTenants;
+    empresas: RepositorioDeEmpresas;
+    sucursales: RepositorioDeSucursales;
+    jornadas: ReturnType<typeof crearRepositorioDeJornadas>;
+    /** La sucursal leída con `FOR SHARE`: dar de alta un punto de venta exige que siga abierta (el cierre concurrente espera). */
+    sucursalBloqueada: LecturaDeSucursalBloqueada;
+    personas: RepositorioDePersonas;
+    membresias: RepositorioDeMembresias;
+    asignaciones: RepositorioDeAsignaciones;
+    invitaciones: RepositorioDeInvitaciones;
+    traspasos: RepositorioDeTraspasos;
+    /** Encola, y mira lo encolado (la validación de un comprobante se reencola con su número de intento). */
+    trabajos: TrabajosReencolables;
+    auditoria: Auditoria;
+    autorizacion: CargaDeAutorizacion;
+    /** Fiscal (H7): emisores, domicilios, datos fiscales, puntos de venta y series, comprobantes e intentos de ARCA. */
+    emisores: RepositorioDeEmisores;
+    domicilios: RepositorioDeDomicilios;
+    datosFiscales: RepositorioDeDatosFiscales;
+    reglasDeEmisor: RepositorioDeReglasDeEmisor;
+    puntosDeVenta: RepositorioDePuntosDeVenta;
+    series: RepositorioDeSeries;
+    comprobantes: RepositorioDeComprobantes;
+    intentos: RepositorioDeIntentos;
+    /** Las lecturas del listado y del detalle de comprobantes (solo `select`). */
+    lecturas: LecturasDeComprobantes;
+    /** Qué certificado cuenta hoy de un emisor en cada ambiente (D-42): solo `select`, sin columnas cifradas. */
+    lecturasDeCertificados: ReturnType<typeof crearLecturasDeCertificados>;
+    /** Certificados de ARCA y su ticket de acceso (columnas cifradas: solo las ve quien descifra, F7/F8). */
+    certificados: RepositorioDeCertificados;
+    accesos: RepositorioDeAccesos;
+    /**
+     * La marca con que se imprime un comprobante (solo la pide `modeloDeImpresion`). Hoy es `MARCA_DE_IMPRESION_VACIA` para todas las
+     * empresas (D-112); ver la constante.
+     */
+    marca: Readonly<{ deLaEmpresa(empresa: EmpresaId): Promise<MarcaParaImprimir> }>;
+    /** El nivel vigente de cada control (permitir, avisar, bloquear), leído en la misma transacción. */
+    niveles: NivelesDeControl;
+    /** Lo que lee la puerta `SESION` (la persona del usuario y sus empresas). */
+    sesion: LecturasDeSesion;
+  }> &
+  PiezasDeCajaEnTx;
 
 export type Conexiones = Readonly<{
   /** Puertas `OPERATIVO`, `INVITACION` y `SESION` (`PEDERNAL_DB_APP`). */
@@ -191,7 +200,7 @@ export type Conexiones = Readonly<{
   /** Puerta `TRABAJOS` (`PEDERNAL_DB_TRABAJOS`): solo la cola. */
   transaccionesDeTrabajos: () => TransaccionesDePostgres<TxDeCola>;
   /** Puerta pública (`PEDERNAL_DB_PUBLICO`, rol `pedernal_publico`): solo lectura, sin sesión ni contexto. */
-  transaccionesPublicas: () => TransaccionesPublicasDePostgres<TxPublica>;
+  transaccionesPublicas: () => TransaccionesPublicasDePostgres<TxPublicaCompleta>;
   /** Resolución de un host a su dueño y su marca, sobre la puerta pública. */
   resolucionDeHost: () => ResolucionDeHost;
   /** Cómo se pinta la marca de un host (nombre, tema y host canónico), sobre la misma puerta pública. */
@@ -227,7 +236,7 @@ export type OpcionesDeConexiones = Readonly<{
 }>;
 
 /**
- * SUPUESTO provisorio (D-112, dueño, 2026-11-04): la primera entrega imprime SIN logo, SIN color y SIN nombre de fantasía (blanco y negro): ese
+ * SUPUESTO (DEC-0051) provisorio (D-112, dueño, 2026-11-04): la primera entrega imprime SIN logo, SIN color y SIN nombre de fantasía (blanco y negro): ese
  * nombre no existe como dato por empresa. La marca de impresión es vacía para todas las empresas y no lee la base (nada de la marca del
  * producto, p. ej. Pedernal, llega a la hoja). Previene: que la ruta de impresión falle siempre mientras el dueño no decide de dónde sale el
  * nombre comercial de la empresa o la sucursal. Chequeo: `test/integracion/fiscal-modelo-de-impresion-web.test.ts`.
@@ -242,6 +251,55 @@ const MARCA_DE_IMPRESION_VACIA: MarcaParaImprimir = {
 const marcaDeImpresion: TxDeApp["marca"] = {
   deLaEmpresa: () => Promise.resolve(MARCA_DE_IMPRESION_VACIA),
 };
+
+/**
+ * Lo que recibe el trabajo de una transacción de la puerta de la aplicación, con la carga de autorización que le toca: la que lee cada vez
+ * (escritura) o la que resuelve una vez lo que se repite (solo lectura). Es el ÚNICO lugar que arma `TxDeApp`.
+ */
+type ConexionDeTx = Parameters<ConfiguracionDeTransacciones<TxDeApp>["armar"]>[0];
+
+/** Escritura: solo acepta la carga que lee cada vez; la que memoriza no entra acá (`tsc` falla). */
+const armarTxDeEscritura = (db: ConexionDeTx, a: CargaDeAutorizacionSinMemoria): TxDeApp =>
+  armarTx(db, a);
+/** Lectura: solo acepta la carga que resuelve una vez lo que se repite. */
+const armarTxDeLectura = (db: ConexionDeTx, a: CargaDeAutorizacionDeLectura): TxDeApp =>
+  armarTx(db, a);
+
+function armarTx(db: ConexionDeTx, autorizacion: CargaDeAutorizacion): TxDeApp {
+  return {
+    tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
+    empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
+    sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
+    jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
+    sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
+    ...armarPiezasDeCajaEnTx(db),
+    personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
+    membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
+    asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
+    invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
+    traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
+    trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
+    auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
+    autorizacion,
+    // Fiscal sobre la MISMA conexión de la transacción (una operación que cruza módulos es atómica).
+    emisores: crearRepositorioDeEmisores(db.withTables<FiscalDb>()),
+    domicilios: crearRepositorioDeDomicilios(db.withTables<FiscalDb>()),
+    datosFiscales: crearRepositorioDeDatosFiscales(db.withTables<FiscalDb>()),
+    reglasDeEmisor: crearRepositorioDeReglasDeEmisor(db.withTables<FiscalDb>()),
+    puntosDeVenta: crearRepositorioDePuntosDeVenta(db.withTables<FiscalDb>()),
+    series: crearRepositorioDeSeries(db.withTables<FiscalDb>()),
+    comprobantes: crearRepositorioDeComprobantes(db.withTables<FiscalDb>()),
+    intentos: crearRepositorioDeIntentos(db.withTables<FiscalDb>()),
+    lecturas: crearLecturasDeComprobantes(db.withTables<FiscalDb>()),
+    lecturasDeCertificados: crearLecturasDeCertificados(db.withTables<FiscalDb>()),
+    certificados: crearRepositorioDeCertificados(db.withTables<FiscalDb>()),
+    accesos: crearRepositorioDeAccesos(db.withTables<FiscalDb>()),
+    marca: marcaDeImpresion,
+    ...armarPiezasDeModulosEnTx(db),
+    niveles: crearNivelesDeControlDePostgres(db.withTables<NivelesDeControlDb>()),
+    sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
+  };
+}
 
 export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones {
   const fuente = opciones.fuente ?? entornoDelProceso;
@@ -261,9 +319,9 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
     leerConfiguracionDeCorreo(valores),
   );
   const transaccionesPublicas = armarPieza("transacciones-publicas", (valores) =>
-    crearTransaccionesPublicas<TxPublica>({
+    crearTransaccionesPublicas<TxPublicaCompleta>({
       url: valores.PEDERNAL_DB_PUBLICO,
-      armar: (db) => ({ marcas: crearLecturaPublicaDeMarcas(db.withTables<PublicoDb>()) }),
+      armar: armarTxPublica,
     }),
   );
 
@@ -280,36 +338,15 @@ export function armarConexiones(opciones: OpcionesDeConexiones = {}): Conexiones
       crearTransacciones<TxDeApp>({
         urls: { OPERATIVO: valores.PEDERNAL_DB_APP },
         clave: leerClaveDeContexto(valores[PEDERNAL_CLAVE_CONTEXTO]),
-        armar: (db) => ({
-          tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
-          empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
-          sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
-          sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
-          personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
-          membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
-          asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
-          invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
-          traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
-          trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
-          auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
-          autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>()),
-          // Fiscal sobre la MISMA conexión de la transacción (una operación que cruza módulos es atómica).
-          emisores: crearRepositorioDeEmisores(db.withTables<FiscalDb>()),
-          domicilios: crearRepositorioDeDomicilios(db.withTables<FiscalDb>()),
-          datosFiscales: crearRepositorioDeDatosFiscales(db.withTables<FiscalDb>()),
-          reglasDeEmisor: crearRepositorioDeReglasDeEmisor(db.withTables<FiscalDb>()),
-          puntosDeVenta: crearRepositorioDePuntosDeVenta(db.withTables<FiscalDb>()),
-          series: crearRepositorioDeSeries(db.withTables<FiscalDb>()),
-          comprobantes: crearRepositorioDeComprobantes(db.withTables<FiscalDb>()),
-          intentos: crearRepositorioDeIntentos(db.withTables<FiscalDb>()),
-          lecturas: crearLecturasDeComprobantes(db.withTables<FiscalDb>()),
-          lecturasDeCertificados: crearLecturasDeCertificados(db.withTables<FiscalDb>()),
-          certificados: crearRepositorioDeCertificados(db.withTables<FiscalDb>()),
-          accesos: crearRepositorioDeAccesos(db.withTables<FiscalDb>()),
-          marca: marcaDeImpresion,
-          niveles: crearNivelesDeControlDePostgres(db.withTables<NivelesDeControlDb>()),
-          sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
-        }),
+        armar: (db) =>
+          armarTxDeEscritura(db, crearAutorizacionDePostgres(db.withTables<AutorizacionDb>())),
+        // En lectura, los permisos se resuelven una vez por transacción (o por pedido, con `conLecturasCompartidas`); al escribir, la
+        // fábrica no tiene cómo memorizar.
+        armarDeLectura: (db) =>
+          armarTxDeLectura(
+            db,
+            crearAutorizacionDeLecturaDePostgres(db.withTables<AutorizacionDb>()),
+          ),
       }),
     ),
     transaccionesDeTrabajos: armarPieza("transacciones-trabajos", (valores) =>

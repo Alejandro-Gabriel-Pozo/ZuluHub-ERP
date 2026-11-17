@@ -1,15 +1,6 @@
 import pg from "pg";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  inject,
-  it,
-  vi,
-} from "vitest";
+import { PERIODO_DE_TOTP_EN_SEGUNDOS } from "../../src/capacidades/autenticacion/totp";
+import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
   Navegador,
   levantarProveedorLocal,
@@ -24,6 +15,7 @@ import {
   instanciaDirectaDeLaConsola,
   otroNavegadorConLaSesion,
   type PlataformaDePrueba,
+  usarFechaQuietaDeTotp,
 } from "./autenticacion-plataforma-apoyo";
 import { crearBaseAparte } from "./entorno";
 
@@ -43,12 +35,13 @@ const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 120_000, hookTimeout: 120_000 });
 
 const MINUTO = 60_000;
-const PASO = 30_000;
+const PASO = PERIODO_DE_TOTP_EN_SEGUNDOS * 1000;
 /** El comienzo del paso de TOTP en que cae `instante` (milisegundos). */
 const comienzoDelPaso = (instante: number): number => Math.floor(instante / PASO) * PASO;
 type Alta = Readonly<{ qrSvg: string; secreto: string; codigosDeRecuperacion: string[] }>;
 
 describe.skipIf(base === null)("consola de plataforma: G2, G3 e intentos", () => {
+  usarFechaQuietaDeTotp();
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let dueno: pg.Client;
   let proveedor: ProveedorLocal;
@@ -72,16 +65,6 @@ describe.skipIf(base === null)("consola de plataforma: G2, G3 e intentos", () =>
     vi.unstubAllEnvs();
   });
 
-  // La fecha queda quieta en la mitad de un paso (a lo sumo 15 s de la real, lo que no mueve ninguna ventana de minutos).
-  beforeEach(() => {
-    const ahora = Date.now();
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(comienzoDelPaso(ahora) + PASO / 2);
-  });
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
   const pedir = (n: Navegador, metodo: "GET" | "POST", ruta: string, cuerpo?: unknown) =>
     n.pedir(p.autenticacion, HOST, metodo, ruta, cuerpo === undefined ? {} : { cuerpo });
   /** Un pedido desde otra IP con la misma sesión (el límite de pedidos de la librería es por IP y ruta). */
@@ -90,9 +73,6 @@ describe.skipIf(base === null)("consola de plataforma: G2, G3 e intentos", () =>
     const n = new Navegador();
     const r = await n.ingresarConGoogle(p.autenticacion, HOST, proveedor, admin);
     expect(r.ubicacion).toBe("/");
-    // Con la fecha quieta, dos sesiones del mismo administrador tendrían el mismo `createdAt` y `sesionDe` (la más reciente
-    // primero) no sabría cuál es cuál: cada ingreso avanza un milisegundo, muy lejos de mover el paso de 30 s.
-    vi.setSystemTime(Date.now() + 1);
     return n;
   }
   async function enrolado() {

@@ -27,6 +27,7 @@ const resolucion = fc.oneof(
       host: "x.test",
       superficie,
       marcaId: "m",
+      duenio: { tipo: "MARCA" },
       marca: { nombre: "M", tema: {}, hostDeApp: null },
     },
   })),

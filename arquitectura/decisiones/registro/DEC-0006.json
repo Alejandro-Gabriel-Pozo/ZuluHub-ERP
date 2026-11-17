@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0006",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "La merma se suma al neto (20 % sobre 1 kg es 1,2 kg), como el prototipo.",
+  "que_cambia": "El costo y el descuento de stock de las recetas con merma.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A6 (E6)"
+}

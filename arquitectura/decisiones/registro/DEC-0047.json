@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0047",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Los valores configurables de los datos fiscales no son requisitos verificados de ARCA sino supuestos del dominio.",
+  "que_cambia": "Qué datos fiscales acepta el sistema antes de que ARCA los rechace.",
+  "donde": "src/modulos/fiscal/dominio/datos-fiscales.ts y migraciones/0006_fiscal.sql"
+}

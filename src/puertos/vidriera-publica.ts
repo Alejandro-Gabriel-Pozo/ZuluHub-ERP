@@ -1,3 +1,4 @@
+import type { AlcanceDelHost } from "../capacidades/experiencia/puerta";
 import type { LetraBase } from "../capacidades/experiencia/vidriera/letra";
 import type { ProductoParaPrecios } from "../capacidades/experiencia/vidriera/precios";
 
@@ -49,10 +50,15 @@ export type VidrieraPublicada = Readonly<{
   id: string;
   codigo: string;
   nombre: string;
-  /** El rubro tal como se lee en la cabecera («Cafetería»). */
-  rubro: string;
+  /** El rubro tal como se lee en la cabecera («Cafetería»); `null` si el comerciante no lo cargó (la pantalla no pinta esa línea). */
+  rubro: string | null;
   /** Dónde está el local («Av. Belgrano 412»); `null` si el comerciante no lo cargó. */
   lugar: string | null;
+  /**
+   * La tercera línea de la portada (texto libre del comerciante); `null` si no cargó ninguno. SIEMPRE viaja: si se muestra o no es de la pantalla (solo con el
+   * modelo Libro), no una regla del servidor.
+   */
+  mensajeDePortada: string | null;
   /**
    * Perilla `letra_base` (D10): `NORMAL` (18 px) o `GRANDE` (≈ 22 px). El comensal parte de este valor y
    * el control «Letra» se suma encima; no hay otra forma de fijar un tamaño.
@@ -62,5 +68,9 @@ export type VidrieraPublicada = Readonly<{
 }>;
 
 export interface VidrieraPublica {
-  porCodigo(marcaId: string, codigo: string): Promise<VidrieraPublicada | null>;
+  /**
+   * `host` es el alcance de la puerta resuelta (S2, H-DOM-1), nunca un dato del cliente: la marca y el dueño del host. Si el dueño es una EMPRESA (host dedicado),
+   * solo se sirve la carta de ESA empresa; si es la marca (host compartido), la de cualquiera de sus empresas.
+   */
+  porCodigo(host: AlcanceDelHost, codigo: string): Promise<VidrieraPublicada | null>;
 }

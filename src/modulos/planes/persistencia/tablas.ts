@@ -17,6 +17,8 @@ import type {
  */
 export type PlanesDb = {
   tenant: { id: string };
+  /** Solo para leer qué módulos tiene activos una empresa (la puerta pública de la carta, T6): las tres columnas que 0050 le otorga al rol público. */
+  modulo_de_empresa: { empresa_id: string; modulo: string; activo: boolean };
   plan_de_tenant: {
     id: string;
     tenant_id: string;

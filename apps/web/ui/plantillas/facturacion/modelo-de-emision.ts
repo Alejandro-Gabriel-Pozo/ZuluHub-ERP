@@ -7,6 +7,7 @@ import {
   CONDICIONES_DE_IVA,
   type CondicionIva,
 } from "../../../../../src/primitivas/identificacion-fiscal/condicion-iva";
+import { numeroDeDocumentoDesdeTexto } from "../../../../../src/primitivas/identificacion-fiscal/documento";
 import {
   cantidadCanonica,
   DOCUMENTOS_PARA_ELEGIR,
@@ -20,7 +21,7 @@ import {
   formatearCantidad,
   formatearImporte,
   formatearPuntoDeVenta,
-} from "./formato-fiscal";
+} from "../../patrones/formato-fiscal";
 import { nombreDeLaFila } from "./modelo-de-anulacion";
 import { documentoDe, type TipoDeDocumentoVisible } from "./modelo-del-detalle";
 
@@ -97,15 +98,15 @@ export function puntoDeVentaElegido(
   return puntos.find((p) => p.id === elegido) ?? null;
 }
 
-const modoDelPunto = (puntos: readonly PuntoParaEmitir[]): "ninguno" | "uno" | "varios" => {
+export const modoDelPunto = (puntos: readonly PuntoParaEmitir[]): "ninguno" | "uno" | "varios" => {
   if (puntos.length === 0) return "ninguno";
   return puntos.length === 1 ? "uno" : "varios";
 };
 
-const esDePruebas = (p: PuntoParaEmitir): boolean => p.ambiente === "HOMOLOGACION";
+export const esDePruebas = (p: PuntoParaEmitir): boolean => p.ambiente === "HOMOLOGACION";
 
 /** «00002», o «00002 · Pruebas» si es de pruebas (D-87). */
-function etiquetaDelPunto(d: DiccionarioResuelto, p: PuntoParaEmitir): string {
+export function etiquetaDelPunto(d: DiccionarioResuelto, p: PuntoParaEmitir): string {
   const numero = formatearPuntoDeVenta(p.numero);
   return esDePruebas(p)
     ? texto(d, "fiscal.pantalla.emitir_punto_de_venta_con_marca", {
@@ -130,8 +131,11 @@ export type VistaDelCliente = Readonly<{
   identificacion: Readonly<{
     numero: string;
     nombre: string;
+    domicilio: string;
     condicion: Readonly<{ etiqueta: string; opciones: readonly OpcionDeLista[] }>;
   }> | null;
+  /** El aviso que se ve debajo del campo con error: uno solo, genérico, para todos los campos del cliente. */
+  campoInvalido: string;
 }>;
 
 export type VistaDeLosRenglones = Readonly<{
@@ -211,6 +215,8 @@ export function vistaDelCliente(d: DiccionarioResuelto, c: ClienteEscrito): Vist
         : {
             numero: texto(d, CLAVE_DE_DOCUMENTO[c.documento]),
             nombre: texto(d, "fiscal.pantalla.emitir_nombre"),
+            // «Domicilio»: el rótulo ya aprobado de Datos fiscales (D-82, dueño, 2026-11-03; `Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md`, fila D-82), sin texto nuevo.
+            domicilio: texto(d, "fiscal.pantalla.config_df_domicilio_fiscal"),
             condicion: {
               etiqueta: etiquetaDeCondicion,
               opciones: CONDICIONES_DE_IVA.map((valor) => ({
@@ -219,6 +225,9 @@ export function vistaDelCliente(d: DiccionarioResuelto, c: ClienteEscrito): Vist
               })),
             },
           },
+    // El texto ya aprobado de los errores marcados en su campo (D-67, «Revisá los datos marcados.»; clave de Datos fiscales). El dueño eligió
+    // usarlo y NO agregar «Revisá este dato.» (2026-11-06, mensaje directo al orquestador tras ver las capturas de #204: «Apruebo B. Seguir usando el texto que ya está»).
+    campoInvalido: texto(d, "error.fiscal_configuracion_datos_invalidos"),
   };
 }
 
@@ -248,7 +257,7 @@ export function vistaDeLosRenglones(
   };
 }
 
-function clienteDeLaRevision(
+export function clienteDeLaRevision(
   d: DiccionarioResuelto,
   c: ClienteEscrito,
 ): VistaDeLaRevision["cliente"] {
@@ -256,7 +265,12 @@ function clienteDeLaRevision(
   if (c.documento === "SIN_IDENTIFICAR") {
     return { rotulo, principal: texto(d, "fiscal.pantalla.consumidor_final"), secundario: null };
   }
-  const documento = documentoDe(d, { tipo: c.documento, numero: c.numero.replace(/\D/g, "") });
+  // El número como lo va a guardar el servidor (la misma primitiva); si no vale, se muestra lo escrito y el servidor lo rechaza marcando el campo.
+  const canonico = numeroDeDocumentoDesdeTexto(c.documento, c.numero.trim());
+  const documento = documentoDe(d, {
+    tipo: c.documento,
+    numero: canonico.ok ? canonico.valor : c.numero.trim(),
+  });
   return { rotulo, principal: c.nombre.trim(), secundario: documento };
 }
 

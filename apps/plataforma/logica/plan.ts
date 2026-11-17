@@ -6,12 +6,30 @@
 /** Las claves con rótulo propio: una prueba exige que todas existan en los catálogos reales. */
 export const ROTULO_DE_PERILLA: Readonly<Record<string, string>> = {
   empresas_por_tenant: "Empresas por cliente",
-  variantes_y_grupos_de_precio: "Variantes y grupos de precio",
-  elecciones_reutilizables: "Elecciones reutilizables",
   composiciones_con_perdida: "Composiciones con pérdida",
   subcomposiciones: "Subcomposiciones",
   conjuntos: "Conjuntos",
   composiciones_por_tamano: "Composiciones por tamaño",
+  // Decisión 175 (09/11/2026, textos delegados: lo más corto) + clave de la perilla (decisión 124).
+  cajas_por_sucursal: "Cajas por sucursal",
+  // E6: decisión 175 (textos delegados: lo más corto) + clave de la perilla (`lotes` y `calidad_de_lote`, e6-recetas-produccion-especificacion §3.7).
+  lotes: "Lotes",
+  calidad_de_lote: "Calidad de lote",
+  // Decisión 175 (lo más corto) + clave de la perilla; el módulo se llama «Producción» en el prototipo aprobado produccion.html.
+  produccion: "Producción",
+  // `salon`: el nombre del módulo extra de pago (DEC-0201), el mismo rótulo que el módulo.
+  salon: "Salón",
+  // `vidriera_por_qr`: «Carta en línea» es el nombre de la pantalla de la carta real (carta-real-especificacion §1 E4 y §11 Q4, 12/11/2026); decisión 175 (textos
+  // delegados: lo más corto). Texto de la consola de plataforma, pendiente del OK del dueño.
+  vidriera_por_qr: "Carta en línea",
+  // `venta_por_fracciones_y_peso` (A7): «Fracciones» y «Peso» son los rótulos de «Cómo se vende» aprobados por el dueño el 14/11/2026 (`decisiones-del-dueno-2026-11.md`);
+  // decisión 175 (textos delegados: lo más corto). Texto de la consola de plataforma, pendiente del OK del dueño (DEC-0372).
+  venta_por_fracciones_y_peso: "Fracciones y peso",
+  // `recepcion_separada` y `conciliacion_de_tres_vias` (compras N3 y N4): «Recepción separada» y «Tres vías» son los nombres de los niveles que el dueño ve en
+  // `01-vision/escaleras-resumen-para-el-dueno.md` (filas N3 y N4, repositorio de documentación); decisión 175 (textos delegados: lo más corto). Texto de la consola
+  // de plataforma, pendiente del OK del dueño (DEC-0702).
+  recepcion_separada: "Recepción separada",
+  conciliacion_de_tres_vias: "Tres vías",
 };
 
 export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {
@@ -19,7 +37,22 @@ export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {
   facturacion: "Facturación",
   catalogo: "Catálogo",
   stock: "Stock",
+  produccion: "Producción",
   vidriera: "Vidriera",
+  // Fuente de los tres rótulos: decisión 175 del dueño (09/11/2026, textos delegados: reutilizar lo aprobado, lo más corto).
+  // `caja`: nombre del módulo en los prototipos aprobados caja.html y medios.html. `ventas`: palabra del módulo y de las
+  // pantallas de venta aprobadas. `cierre`: nombre aprobado en las decisiones 158 y 163 y en la pantalla «Cierre del día».
+  caja: "Caja",
+  cierre: "Cierre del día",
+  ventas: "Ventas",
+  // `salon` y `comandas`: el nombre del módulo en E7 (mesas del salón y comandas a cocina; la maqueta `salon.html`) y en la decisión DEC-0014
+  // del registro de decisiones («Salón extra de pago y comandas en todos los planes»); pendiente del OK del dueño (DEC-0203).
+  salon: "Salón",
+  comandas: "Comandas",
+  // Fuente de los dos rótulos (DEC-0314): los nombres de los módulos en `e9-compras-especificacion.md` §3.0 y en `clientes-y-proveedores.md` («Clientes y
+  // proveedores», el directorio) y `compras.md` («Compras»); decisión 175 (textos delegados: lo más corto).
+  clientes: "Clientes y proveedores",
+  compras: "Compras",
 };
 
 const buscar = (tabla: Readonly<Record<string, string>>, clave: string): string =>

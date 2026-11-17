@@ -47,6 +47,10 @@ const cargar = (
   destinosDeModulos: (contexto: unknown) => Promise<readonly { clave: string }[]>;
   puedeEmitirNotasDeCredito: (contexto: unknown) => Promise<boolean>;
   puedeEmitirFacturas: (contexto: unknown) => Promise<boolean>;
+  destinosDeAreas: (
+    permisos: unknown,
+    departamento: string | null,
+  ) => readonly { clave: string; etiqueta: string; hoja?: unknown }[];
 }> => import(/* @vite-ignore */ ruta);
 
 const claves = async (): Promise<string[]> => {
@@ -81,7 +85,7 @@ describe("destinosDeModulos", () => {
     expect(mundo.contextos).toEqual([{ empresaId: "empresa-1" }]);
   });
 
-  it("SUPUESTO: con el módulo en solo lectura también aparece (el Listado solo consulta)", async () => {
+  it("SUPUESTO (DEC-0059): con el módulo en solo lectura también aparece (el Listado solo consulta)", async () => {
     permisos({ enSoloLectura: ["facturacion"] });
     expect(await claves()).toEqual(["comprobantes"]);
   });
@@ -104,6 +108,35 @@ describe("destinosDeModulos", () => {
   it("si la consulta falla con una excepción: no aparece y no rompe", async () => {
     mundo.falla = true;
     expect(await claves()).toEqual([]);
+  });
+});
+
+/**
+ * La barra se arma desde la tabla del menú por áreas (`apps/web/ui/navegacion/menu.ts`) con UNA regla (`armarElMenu`, probada en
+ * `menu.test.ts`): todo nace cerrado. Acá se prueba la forma de los destinos: un área con una sola pantalla lleva directo a ella; con varias,
+ * abre una hoja con sus grupos. Previene: que un área con varias pantallas muestre solo la primera (las demás quedarían inalcanzables).
+ */
+describe("destinosDeAreas (la barra desde la tabla del menú)", () => {
+  const todo = {
+    acciones: ["comprobantes.ver", "productos.ver"],
+    modulos: { activos: ["facturacion", "catalogo"], enSoloLectura: [] },
+  };
+  it("un área con una sola pantalla lleva directo a ella, con el nombre del área y sin hoja", async () => {
+    const { destinosDeAreas } = await cargar(RUTA);
+    const [ventas] = destinosDeAreas(todo, null);
+    expect(ventas).toMatchObject({ clave: "comprobantes", etiqueta: "Ventas" });
+    expect(ventas).not.toHaveProperty("hoja");
+  });
+  it("con permisos nulos no hay destinos (cierra)", async () => {
+    const { destinosDeAreas } = await cargar(RUTA);
+    expect(destinosDeAreas(null, null)).toEqual([]);
+  });
+  it("«Catálogo» es disponible (DEC-0463): aparece con la acción y el módulo activo; sin el módulo activo, no", async () => {
+    expect(CATALOGO_DE_MODULOS.catalogo.estado).toBe("disponible");
+    const { destinosDeAreas } = await cargar(RUTA);
+    expect(destinosDeAreas(todo, null).map((d) => d.etiqueta)).toEqual(["Ventas", "Catálogo"]);
+    const sinCatalogo = { ...todo, modulos: { activos: ["facturacion"], enSoloLectura: [] } };
+    expect(destinosDeAreas(sinCatalogo, null).map((d) => d.etiqueta)).toEqual(["Ventas"]);
   });
 });
 

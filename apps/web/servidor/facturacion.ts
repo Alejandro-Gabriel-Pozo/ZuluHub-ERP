@@ -15,7 +15,6 @@ import {
   reintentarComprobante,
   resincronizarSerie,
   verComprobante,
-  type ComprobanteEmitidoParaLaPantalla,
   type DependenciasDeFacturacionWeb,
   type DetalleParaLaPantalla,
 } from "../../../src/composicion/facturacion-web";
@@ -29,19 +28,19 @@ import {
   verModeloDeImpresion,
   type ModeloDeImpresionParaLaPantalla,
 } from "../../../src/composicion/modelo-de-impresion-web";
-import { resolverEmpresa } from "../../../src/composicion/sesion-y-empresa";
-import type { PaginaDeComprobantes } from "../../../src/modulos/fiscal/publico";
+import { comprobanteId, type PaginaDeComprobantes } from "../../../src/modulos/fiscal/publico";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
-import { marcaComercialId } from "../../../src/primitivas/identificadores/marca";
+import { sucursalId } from "../../../src/primitivas/identificadores/marca";
 import {
   RUTA_DEL_LISTADO,
   type PuntoDeVentaParaMostrar,
 } from "../ui/plantillas/facturacion/filtros-del-listado";
-import { pedidoDeLaAccion, type ResultadoDeAccion } from "./acciones";
+import { type ResultadoDeAccion } from "./acciones";
+import { conLaEmpresa } from "./con-la-empresa";
 import { web } from "./composicion";
-import { COOKIE_DE_EMPRESA, COOKIE_DE_SUCURSAL, OPCIONES_DE_COOKIE_DE_SUCURSAL } from "./cookies";
+import { COOKIE_DE_SUCURSAL, OPCIONES_DE_COOKIE_DE_SUCURSAL } from "./cookies";
 import { despacharPorClavesDespuesDeConfirmar } from "./despacho-inmediato";
-import { dependenciasDeSesion, sesionDelPedido } from "./sesion";
+import { dependenciasDeSesion } from "./sesion";
 import {
   elegidaEntre,
   sucursalDelPedido,
@@ -78,44 +77,15 @@ const dependencias: DependenciasDeFacturacionWeb = {
   respuesta: dependenciasDeSesion.respuesta,
 };
 
-/**
- * Corre `hacer` con el contexto operativo de la persona del pedido en su empresa, o devuelve por qué no se puede
- * (otro origen, sin sesión, sin empresa elegida, empresa que no es suya). Exportada para que las acciones de Configuración fiscal
- * (`servidor/configuracion-fiscal.ts`) no repitan esta resolución: una regla, un lugar.
- */
-export async function conLaEmpresa<D>(
-  hacer: (contexto: ContextoOperativo) => Promise<Respuesta<D>>,
-): Promise<Respuesta<D>> {
-  // Fuera del `try`: en un host que no es de la aplicación la puerta responde «no existe» (404), no un fallo.
-  const pedido = await pedidoDeLaAccion();
-  if (!pedido.ok) return pedido;
-  try {
-    const { sesion, puerta } = await sesionDelPedido();
-    if (sesion === null) return { ok: false, error: errorDeCodigo("SESION_VENCIDA") };
-    const cookieDeEmpresa = (await cookies()).get(COOKIE_DE_EMPRESA)?.value ?? null;
-    const entrada = await resolverEmpresa(dependenciasDeSesion, {
-      sesion,
-      marcaId: marcaComercialId(puerta.marcaId),
-      cookieDeEmpresa,
-    });
-    if (!entrada.ok) return entrada;
-    // Sin empresa elegida (o sin ninguna) no hay dónde actuar: el contexto solo existe con una empresa validada.
-    if (entrada.dato.tipo !== "ENTRA") return { ok: false, error: errorDeCodigo("SIN_PERMISO") };
-    return await hacer(entrada.dato.contexto);
-  } catch (excepcion) {
-    return aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta);
-  }
-}
-
-/** Pide el intento inmediato de un comprobante recién emitido, sin esperar ni cambiar lo que ve la persona. */
-function conIntentoInmediato(
+/** Pide el intento inmediato de un comprobante recién emitido, sin esperar ni cambiar lo que ve la persona. Exportada: facturar un ticket emite igual. */
+export function conIntentoInmediato<D extends Readonly<{ comprobanteId: string }>>(
   contexto: ContextoOperativo,
-  respuesta: Respuesta<ComprobanteEmitidoParaLaPantalla>,
-): Respuesta<ComprobanteEmitidoParaLaPantalla> {
+  respuesta: Respuesta<D>,
+): Respuesta<D> {
   if (respuesta.ok) {
     despacharPorClavesDespuesDeConfirmar(
       contexto.empresaId,
-      clavesDeLaValidacionInicial(respuesta.dato.comprobanteId),
+      clavesDeLaValidacionInicial(comprobanteId(respuesta.dato.comprobanteId)),
     );
   }
   return respuesta;
@@ -242,6 +212,21 @@ export async function puntosDeVentaParaEmitir(
     const sucursal = await sucursalDelPedido(contexto);
     if (!sucursal.ok) return sucursal;
     return await listarPuntosDeVentaParaEmitir(dependencias, contexto, sucursal.dato.elegida);
+  } catch (excepcion) {
+    return aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta);
+  }
+}
+
+/**
+ * Los puntos de venta activos de UNA sucursal dada (la de un ticket que se va a facturar), para elegir con cuál emitir. La sucursal sale del
+ * ticket guardado que leyó el servidor, nunca del navegador, y la consulta la verifica contra el alcance de la persona antes de leer nada.
+ */
+export async function puntosDeVentaParaEmitirDe(
+  contexto: ContextoOperativo,
+  sucursal: string,
+): Promise<Respuesta<PuntosDeVentaParaEmitirEnLaPantalla>> {
+  try {
+    return await listarPuntosDeVentaParaEmitir(dependencias, contexto, sucursalId(sucursal));
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, dependenciasDeSesion.respuesta);
   }

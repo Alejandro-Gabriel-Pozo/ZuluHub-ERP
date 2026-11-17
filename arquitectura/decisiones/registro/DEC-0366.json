@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0366",
+  "fecha": "2026-11-13",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Sin alcance por departamento en la primera versión: todos los roles con acceso a Ventas ven todos los departamentos y pueden abrir cuentas en cualquiera activo.",
+  "que_cambia": "No hay roles ni asignaciones por departamento todavía. Revertir: agregar alcance por departamento como el de sucursales.",
+  "donde": "src/modulos/ventas/casos-de-uso/abrir-cuenta.ts (A2c); confirmada por el dueño el 13/11/2026 (relatado por el orquestador)"
+}

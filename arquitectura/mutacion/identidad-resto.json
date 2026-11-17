@@ -1,0 +1,6 @@
+{
+  "grupo": "identidad (resto)",
+  "archivos": "src/modulos/identidad/dominio/**/*.ts,!src/modulos/identidad/dominio/invitacion.ts,!src/modulos/identidad/dominio/invitacion-tipos.ts",
+  "minutos": 4.5,
+  "pruebas": "src/modulos/identidad"
+}

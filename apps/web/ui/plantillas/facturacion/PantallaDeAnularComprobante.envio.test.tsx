@@ -184,7 +184,7 @@ describe("anular: el envío es idempotente por intento", () => {
     await render(enArmazon({ emitir: servidor.emitir }));
     await conMotivo("Primer motivo");
     tocar(boton("Anular comprobante"));
-    await expect.element(page.getByText("Escriba el motivo", { exact: false })).toBeVisible();
+    await expect.element(page.getByText("Escribí el motivo", { exact: false })).toBeVisible();
     expect(document.body.textContent).not.toContain("FISCAL_MOTIVO_INVALIDO");
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
     await expect.element(motivo()).toBeEnabled();

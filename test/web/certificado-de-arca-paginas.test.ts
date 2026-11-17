@@ -126,7 +126,7 @@ describe("la lista del certificado de ARCA", () => {
   it("sin permiso: dice «sin permiso» con el texto del catálogo y sin el código", async () => {
     servidor.certificados = { ok: false, error: errorDeCodigo("SIN_PERMISO") };
     const t = texto(await html("/page"));
-    expect(t).toContain("No tiene permiso para hacer esto.");
+    expect(t).toContain("No tenés permiso para hacer esto.");
     expect(t).not.toContain("SIN_PERMISO");
   });
 });
@@ -183,7 +183,7 @@ describe("la pantalla de un ambiente", () => {
   it("sin permiso: solo el texto del catálogo, sin pasos ni campos", async () => {
     servidor.certificados = { ok: false, error: errorDeCodigo("SIN_PERMISO") };
     const marcado = await html("/[ambiente]/page", "pruebas");
-    expect(texto(marcado)).toContain("No tiene permiso para hacer esto.");
+    expect(texto(marcado)).toContain("No tenés permiso para hacer esto.");
     expect(marcado).not.toContain("<form");
     expect(marcado).not.toContain("<textarea");
   });

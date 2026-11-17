@@ -70,7 +70,7 @@ const conBase = (url: string, nombre: string): string => {
 /** Una copia de la plantilla (las migraciones anteriores) con ese texto de 0010 aplicado; se destruye al terminar. */
 async function conMigracion<T>(sql: string, trabajo: (ctx: Ctx) => Promise<T>): Promise<T> {
   const b = base as BaseDePruebas;
-  const nombre = `pedernal_deb_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  const nombre = `pedernal_deb_${randomUUID().replaceAll("-", "")}`;
   await admin.query(`CREATE DATABASE ${nombre} TEMPLATE ${plantillaNombre}`);
   const carpeta = await carpetaCon(await migracionesPrevias());
   const copia: BaseDePruebas = {

@@ -46,6 +46,8 @@ vi.mock("../../apps/web/servidor/facturacion", () => ({
 }));
 // La guarda real (`pantallaDeOperacion`) y el armazón real: solo se simula lo externo, la sesión, la puerta y la empresa.
 vi.mock("../../apps/web/servidor/sesion", () => ({
+  // Sin lecturas compartidas: cada consulta abre la suya (la página las pide igual).
+  dependenciasDeSesion: {},
   empresaDelPedido: () =>
     Promise.resolve({
       puerta: { marca: { nombre: "Marca de prueba" } },
@@ -129,7 +131,7 @@ describe("la página del detalle de un comprobante", () => {
 
   it.each([
     ["FISCAL_COMPROBANTE_NO_ENCONTRADO", "No encontramos ese comprobante."],
-    ["SIN_PERMISO", "No tiene permiso para hacer esto."],
+    ["SIN_PERMISO", "No tenés permiso para hacer esto."],
     ["MODULO_EN_DESARROLLO", "Esta función todavía está en desarrollo."],
     ["SESION_VENCIDA", "Tu sesión venció"],
   ] as const)("el error %s se ve con su texto y sin el código", async (codigo, esperado) => {

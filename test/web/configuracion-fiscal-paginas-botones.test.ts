@@ -142,7 +142,7 @@ const botones = (marcado: string): { nombre: string; apagado: boolean; motivo: s
 const boton = (marcado: string, nombre: string) =>
   botones(marcado).find((b) => b.nombre === nombre);
 const NO_ACTIVADA = "Esta función no está activada para la empresa.";
-const SIN_PERMISO = "No tiene permiso para hacer esto.";
+const SIN_PERMISO = "No tenés permiso para hacer esto.";
 const EDICION = { id: ID, busqueda: { editar: "1" } };
 
 describe("los botones apagados según el servidor", () => {
@@ -178,7 +178,7 @@ describe("los botones apagados según el servidor", () => {
     expect(boton(marcado, "Editar")).toEqual({ nombre: "Editar", apagado: false, motivo: null });
   });
 
-  it("detalle: sin desactivar y sin editar, esos botones salen apagados con «No tiene permiso para hacer esto.»", async () => {
+  it("detalle: sin desactivar y sin editar, esos botones salen apagados con «No tenés permiso para hacer esto.»", async () => {
     servidor.permisos = sinPermisosDe("puntos_de_venta.desactivar", "puntos_de_venta.editar");
     const marcado = await html("/puntos-de-venta/[id]/page", { id: ID });
     expect(boton(marcado, "Desactivar")).toMatchObject({ apagado: true, motivo: SIN_PERMISO });

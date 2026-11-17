@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0203",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Los textos del salón y de las comandas (salon.texto.*, comandas.texto.*) salen de las maquetas; los que no están en la lista aprobada esperan tu OK.",
+  "que_cambia": "Los rótulos y avisos que ven mozos y cocina.",
+  "donde": "src/capacidades/vocabulario/catalogo-salon.ts y src/capacidades/vocabulario/catalogo-comandas.ts"
+}

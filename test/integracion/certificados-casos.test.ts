@@ -22,6 +22,7 @@ import {
   type ServiciosDePrueba,
 } from "./certificados-apoyo";
 import { crearMembresiaDeBase } from "./fixtures-identidad";
+import { sufijoUnico } from "./unicos";
 
 /**
  * H7 facturación, tramo F7: los casos de uso de certificados (generar el pedido y cargar el certificado) contra una
@@ -380,7 +381,7 @@ describe.skipIf(base === null)("certificados F7: casos de uso contra una base re
     it("un fallo de conexión (un rol que no existe) no deja la clave en el error", async () => {
       const p = await preparar();
       const url = new URL(propia.base.app);
-      url.username = `rol_que_no_existe_${randomUUID().slice(0, 8)}`;
+      url.username = `rol_que_no_existe_${sufijoUnico()}`;
       const roto = crearEntornoDeCertificados({ ...propia.base, app: url.toString() }, 2);
       try {
         const claves = servicios.clavesGeneradas.length;
@@ -1109,7 +1110,7 @@ describe.skipIf(base === null)("certificados F7: casos de uso contra una base re
         (
           await dueno.query<{ id: string }>(
             "insert into persona (email) values ($1) returning id",
-            [`${randomUUID().slice(0, 12)}@prueba.test`],
+            [`${sufijoUnico()}@prueba.test`],
           )
         ).rows[0]?.id ?? "";
       await crearMembresiaDeBase(dueno, p.e.empresa, admin, "ADMINISTRADOR");

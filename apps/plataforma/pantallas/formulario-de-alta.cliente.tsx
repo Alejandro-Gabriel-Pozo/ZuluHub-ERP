@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ZONA_DE_ARGENTINA } from "../../../src/primitivas/tiempo/fecha-civil-hasta-hoy";
 import { Aviso } from "../../web/ui/componentes/Aviso";
 import { Boton } from "../../web/ui/componentes/Boton.cliente";
 import { Campo } from "../../web/ui/componentes/Campo";
@@ -31,7 +32,7 @@ export type PropsDeFormularioDeAlta = Readonly<{
   planes: readonly PlanDelAlta[];
 }>;
 
-const ZONA_POR_DEFECTO = "America/Argentina/Buenos_Aires";
+const ZONA_POR_DEFECTO = ZONA_DE_ARGENTINA;
 const ZONAS_HORARIAS = [
   { valor: ZONA_POR_DEFECTO, etiqueta: "Buenos Aires (Argentina)" },
   { valor: "America/Argentina/Cordoba", etiqueta: "Córdoba (Argentina)" },
@@ -240,6 +241,7 @@ export function FormularioDeAlta({ submarcas, planes }: PropsDeFormularioDeAlta)
             </Aviso>
           ) : null}
           <Campo
+            dato="pendiente"
             etiqueta="Nombre de la empresa"
             nombre="razonSocial"
             obligatorio={OBLIGATORIO}
@@ -254,6 +256,7 @@ export function FormularioDeAlta({ submarcas, planes }: PropsDeFormularioDeAlta)
             deshabilitado={bloqueadaLaEdicion}
           />
           <Campo
+            dato="pendiente"
             etiqueta="CUIT"
             nombre="cuit"
             obligatorio={OBLIGATORIO}
@@ -270,6 +273,7 @@ export function FormularioDeAlta({ submarcas, planes }: PropsDeFormularioDeAlta)
             deshabilitado={bloqueadaLaEdicion}
           />
           <Selector
+            dato="pendiente"
             etiqueta="Submarca"
             nombre="marcaId"
             obligatorio={OBLIGATORIO}
@@ -290,6 +294,7 @@ export function FormularioDeAlta({ submarcas, planes }: PropsDeFormularioDeAlta)
             deshabilitado={bloqueadaLaEdicion}
           />
           <Selector
+            dato="pendiente"
             etiqueta="Plan"
             nombre="versionDePlanId"
             textoDeElegir={textoDelPlanPorDefecto}
@@ -304,6 +309,7 @@ export function FormularioDeAlta({ submarcas, planes }: PropsDeFormularioDeAlta)
             deshabilitado={bloqueadaLaEdicion}
           />
           <Campo
+            dato="pendiente"
             etiqueta="Email del primer gerente"
             nombre="emailGerente"
             tipo="email"
@@ -321,6 +327,7 @@ export function FormularioDeAlta({ submarcas, planes }: PropsDeFormularioDeAlta)
             deshabilitado={bloqueadaLaEdicion}
           />
           <Selector
+            dato="pendiente"
             etiqueta="Zona horaria"
             nombre="zonaHoraria"
             obligatorio={OBLIGATORIO}

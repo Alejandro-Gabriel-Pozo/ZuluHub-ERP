@@ -1,3 +1,6 @@
+import { domicilioLibreDesdeTexto } from "../../../../../src/primitivas/domicilio/domicilio-libre";
+import { numeroDeDocumentoDesdeTexto } from "../../../../../src/primitivas/identificacion-fiscal/documento";
+import { nombreODenominacionDesdeTexto } from "../../../../../src/primitivas/texto/nombre-o-razon-social";
 import { partirTipeado } from "../../../../../src/capacidades/experiencia/importe-tipeado";
 import { cantidadDesdeTexto } from "../../../../../src/primitivas/cantidad/cantidad";
 import { ErrorDeValor } from "../../../../../src/primitivas/cantidad/errores";
@@ -43,9 +46,11 @@ export function documentoElegidoDe(valor: string): DocumentoElegido | null {
 
 export type ClienteEscrito = Readonly<{
   documento: DocumentoElegido;
-  /** Lo tipeado: se limpia al armar el pedido (solo dígitos). */
+  /** El número en su forma canónica (solo dígitos, o el pasaporte en mayúsculas; el campo da el formato): el servidor lo vuelve a validar (`primitivas/identificacion-fiscal/documento`). */
   numero: string;
   nombre: string;
+  /** Una línea libre; solo se pide y se manda si el cliente no es el consumidor final. */
+  domicilio: string;
   /** El nombre de la condición frente al IVA del receptor, o `""` si todavía no se eligió. */
   condicionIva: string;
 }>;
@@ -54,15 +59,38 @@ export const clienteInicial: ClienteEscrito = {
   documento: "SIN_IDENTIFICAR",
   numero: "",
   nombre: "",
+  domicilio: "",
   condicionIva: "",
 };
 
 export function conDocumento(c: ClienteEscrito, documento: DocumentoElegido): ClienteEscrito {
-  return { ...c, documento };
+  // Cada tipo escribe y da formato distinto a su número: al cambiar de tipo se limpia (recortar un CUIT a DNI dejaría un documento válido pero equivocado).
+  return { ...c, documento, numero: "" };
 }
 
 /** El consumidor final no escribe nada más: se manda sin documento ni nombre y con su condición (D-24). */
 export const esConsumidorFinal = (c: ClienteEscrito): boolean => c.documento === "SIN_IDENTIFICAR";
+
+/**
+ * Qué campos del cliente no cumplen la regla de su dato (las MISMAS primitivas que usa el servidor: una sola fuente, no una copia). Solo
+ * mira la forma de lo escrito; si el domicilio falta, o si la condición no corresponde, lo decide el servidor al emitir (D-24; interfaz
+ * sobria: no se replican las reglas de negocio en la pantalla). El consumidor final sin identificar no escribe nada: nada que marcar.
+ * Previene el fallo real de la primera prueba en Preview: un nombre numérico y un CUIT escrito como nombre pasaban hasta el final.
+ */
+export type CamposDelClienteInvalidos = Readonly<{
+  numero: boolean;
+  nombre: boolean;
+  domicilio: boolean;
+}>;
+
+export function camposDelClienteInvalidos(c: ClienteEscrito): CamposDelClienteInvalidos {
+  if (c.documento === "SIN_IDENTIFICAR") return { numero: false, nombre: false, domicilio: false };
+  return {
+    numero: !numeroDeDocumentoDesdeTexto(c.documento, c.numero.trim()).ok,
+    nombre: !nombreODenominacionDesdeTexto(c.nombre.trim()).ok,
+    domicilio: !domicilioLibreDesdeTexto(c.domicilio).ok,
+  };
+}
 
 /** Un renglón tal como se está escribiendo. `id` identifica la fila al agregar y quitar (no viaja al servidor). */
 export type RenglonEscrito = Readonly<{
@@ -114,7 +142,7 @@ const ENTEROS_DE_LA_CANTIDAD = 14;
 /**
  * Lo que queda de lo tipeado en el campo «Cantidad»: dígitos con coma decimal (como el importe: un punto que agrupa de a tres es un
  * separador de miles, no un decimal), hasta cuatro decimales. Lo que no es un número se descarta al escribir.
- * SUPUESTO (del ingeniero, sin fuente del dueño): «1.000» es mil, por la convención es-AR de Anular (`partirTipeado`); revertirlo
+ * SUPUESTO (DEC-0052) (del ingeniero, sin fuente del dueño): «1.000» es mil, por la convención es-AR de Anular (`partirTipeado`); revertirlo
  * es cambiar `partirTipeado`, que también usa el importe.
  */
 export function limpiarCantidad(crudo: string): string {

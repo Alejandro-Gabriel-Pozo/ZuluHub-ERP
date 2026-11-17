@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0315",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "CORREGIDA",
+  "decision": "El tope de 500 textos por marca queda corregido por el padre con la migración 0041 (tope de 2000); el catálogo ya tiene 587.",
+  "que_cambia": "Cuántos textos puede redefinir una marca; no se agrega migración propia de compras.",
+  "donde": "migraciones/0041_tope_de_textos_por_marca.sql (rama orq/plan8-tope-de-textos)"
+}

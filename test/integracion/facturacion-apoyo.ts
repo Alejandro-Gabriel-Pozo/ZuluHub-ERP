@@ -131,6 +131,8 @@ export type Renglon = Readonly<{
   descuento: string | null;
   alicuota: string | null;
   importe: string;
+  /** 0029: el símbolo de la unidad que se imprime junto a la cantidad (opcional). */
+  unidad?: string | null;
 }>;
 export type Desglose = Readonly<{ alicuota: string; total: string; neto: string; iva: string }>;
 

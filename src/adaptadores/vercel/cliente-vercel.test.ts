@@ -235,6 +235,26 @@ describe("fallas de Vercel", () => {
     });
   });
 
+  it("si el valor es una cadena de conexión, su contraseña corta también sale tapada del mensaje (valor sintético)", async () => {
+    const valor = "postgresql://pedernal_app:ab3Xy9@127.0.0.1:5432/base";
+    const f = fetchFalso({
+      estado: 400,
+      cuerpo: {
+        error: { code: "bad_request", message: "valor inválido con clave ab3Xy9 y host 127" },
+      },
+    });
+    const { api } = cliente(f);
+    const r = await api.escribir("A", valor, "production");
+    expect(r).toEqual({
+      ok: false,
+      error: {
+        motivo:
+          "Vercel respondió 400: Vercel rechazó el pedido (bad_request: valor inválido con clave *** y host 127)",
+        incierta: false,
+      },
+    });
+  });
+
   it("una tira larga en el mensaje se oculta aunque no sea el token ni el valor", async () => {
     const f = fetchFalso({
       estado: 400,

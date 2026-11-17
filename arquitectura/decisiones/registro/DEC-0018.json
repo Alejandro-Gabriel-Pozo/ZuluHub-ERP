@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0018",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "El operador carga la compra y la factura pero no paga, anula ni corrige; confirmar una recepción, gerente y administrador.",
+  "que_cambia": "Quién puede pagar y corregir compras y quién recibe mercadería.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A18 (E9)"
+}

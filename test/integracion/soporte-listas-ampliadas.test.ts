@@ -89,7 +89,7 @@ describe.skipIf(base === null)("listas ampliadas de tenants y empresas: contra P
     return rows[0]?.id as string;
   }
 
-  /** Una empresa con CUIT conocido (el de `cuitAlAzar` ya está en la base: se lo lee). */
+  /** Una empresa con CUIT conocido (el de `cuitUnico` ya está en la base: se lo lee). */
   async function empresaDe(
     tenant: string,
     razonSocial: string,

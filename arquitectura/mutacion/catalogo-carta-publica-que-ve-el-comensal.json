@@ -1,0 +1,6 @@
+{
+  "grupo": "catálogo (carta pública que ve el comensal)",
+  "archivos": "src/modulos/catalogo/dominio/carta-publicada.ts,src/modulos/catalogo/dominio/carta-publica.ts,src/modulos/catalogo/dominio/fila-con-precio.ts,src/modulos/catalogo/dominio/identificadores.ts,src/modulos/catalogo/dominio/alcance-de-precio.ts",
+  "minutos": 1,
+  "pruebas": "src/modulos/catalogo/dominio"
+}

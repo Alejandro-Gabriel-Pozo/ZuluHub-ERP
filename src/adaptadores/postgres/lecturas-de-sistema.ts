@@ -1,5 +1,6 @@
-import pg from "pg";
+import type pg from "pg";
 import { ErrorDeConfiguracion } from "./errores";
+import { tomarPozo, type PozoTomado } from "./pozos";
 
 /**
  * Las dos preguntas que la web le hace a la base SIN contexto firmado y SIN tocar datos de nadie (web-armazon
@@ -40,38 +41,59 @@ export function crearLecturasDeSistema(
     throw new ErrorDeConfiguracion("falta la cadena de conexión de la aplicación");
   }
   const plazo = configuracion.plazoEnMs ?? PLAZO_POR_DEFECTO_EN_MS;
-  let pool: pg.Pool | null = null;
+  let tomado: PozoTomado | null = null;
 
+  /** El pozo del rol de la aplicación: el MISMO que usan las transacciones (misma cadena, mismo rol). Se toma con la primera consulta. */
   function conexion(): pg.Pool {
-    if (pool !== null) return pool;
-    const nuevo = new pg.Pool({
-      connectionString: configuracion.url,
-      max: 2,
-      connectionTimeoutMillis: plazo,
-      query_timeout: plazo,
+    tomado ??= tomarPozo({
+      url: configuracion.url,
+      ...(configuracion.alCortarseUnaConexionOciosa === undefined
+        ? {}
+        : { alCortarseUnaConexionOciosa: configuracion.alCortarseUnaConexionOciosa }),
     });
-    // Sin este oyente, el corte de una conexión ociosa tira abajo el proceso entero.
-    nuevo.on("error", (error) => configuracion.alCortarseUnaConexionOciosa?.(error));
-    pool = nuevo;
-    return nuevo;
+    return tomado.pozo;
+  }
+
+  /**
+   * Una consulta suelta con el plazo propio de esta pieza: la espera por una conexión y la consulta juntas no pasan de `plazo`
+   * (una base que no contesta no cuelga el pedido). El plazo de la consulta viaja con ella; el pozo es compartido y no lo fija.
+   */
+  async function consultar<T extends pg.QueryResultRow>(texto: string): Promise<T[]> {
+    let reloj: NodeJS.Timeout | undefined;
+    const vencido = new Promise<never>((_, rechazar) => {
+      reloj = setTimeout(() => rechazar(new Error("la base no contestó a tiempo")), plazo);
+    });
+    try {
+      // `query_timeout` lo lee `pg` por consulta, aunque el tipo de la consulta no lo declare.
+      const configuracionDeLaConsulta: pg.QueryConfig & { query_timeout: number } = {
+        text: texto,
+        query_timeout: plazo,
+      };
+      const consulta = conexion().query<T>(configuracionDeLaConsulta);
+      // Si el plazo gana, la consulta que sigue corriendo no puede quedar sin manejar.
+      consulta.catch(() => undefined);
+      return (await Promise.race([consulta, vencido])).rows;
+    } finally {
+      clearTimeout(reloj);
+    }
   }
 
   return {
     async ping() {
-      await conexion().query("SELECT 1");
+      await consultar("SELECT 1");
     },
 
     async ultimaMigracion() {
-      const { rows } = await conexion().query<{ nombre: string }>(
+      const filas = await consultar<{ nombre: string }>(
         "SELECT nombre FROM migracion ORDER BY nombre DESC LIMIT 1",
       );
-      return rows[0]?.nombre ?? null;
+      return filas[0]?.nombre ?? null;
     },
 
     async cerrar() {
-      const actual = pool;
-      pool = null;
-      if (actual !== null) await actual.end();
+      const actual = tomado;
+      tomado = null;
+      if (actual !== null) await actual.soltar();
     },
   };
 }

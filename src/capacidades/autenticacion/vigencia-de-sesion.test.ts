@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LIMITES_DE_INACTIVIDAD } from "../experiencia/inactividad";
 import {
+  SEGUNDOS_ENTRE_ESCRITURAS_DE_USO,
   LIMITES_DE_SESION,
   LIMITES_DE_SESION_DE_PLATAFORMA,
   LIMITES_DEL_BARRIDO,
@@ -298,5 +299,17 @@ describe("limitesDelBarrido", () => {
     const l = limitesDelBarrido(a, b);
     expect(Object.isFrozen(l)).toBe(true);
     expect(Object.isFrozen(l.inactividad)).toBe(true);
+  });
+});
+
+describe("SEGUNDOS_ENTRE_ESCRITURAS_DE_USO (decisión del dueño, 2026-11-07)", () => {
+  it("es de 1 minuto: la tolerancia aprobada del vencimiento por inactividad", () => {
+    expect(SEGUNDOS_ENTRE_ESCRITURAS_DE_USO).toBe(60);
+  });
+
+  it("es mucho menor que el aviso y que el vencimiento: el uso anotado nunca llega tarde para el «¿Seguís ahí?»", () => {
+    const enMs = SEGUNDOS_ENTRE_ESCRITURAS_DE_USO * 1000;
+    expect(enMs).toBeLessThan(LIMITES_DE_SESION.inactividad.avisoEnMs);
+    expect(enMs).toBeLessThan(LIMITES_DE_SESION.inactividad.vencimientoEnMs);
   });
 });

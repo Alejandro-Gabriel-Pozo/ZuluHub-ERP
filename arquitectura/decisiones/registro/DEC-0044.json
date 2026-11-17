@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0044",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Datos de contacto de la sucursal: teléfono hasta 40, correo hasta 254, web hasta 200 guardada sin esquema y enlazada siempre con https, vacío significa que no tiene, edita quien edita la sucursal.",
+  "que_cambia": "Qué contacto se puede cargar y cómo sale impreso.",
+  "donde": "src/primitivas/contacto"
+}

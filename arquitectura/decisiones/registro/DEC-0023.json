@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0023",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El tope de CI pasó de 15 a 25 minutos por job porque la integración ya tarda unos 13 minutos.",
+  "que_cambia": "Tiempo y costo del CI.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A23 (Infra)"
+}

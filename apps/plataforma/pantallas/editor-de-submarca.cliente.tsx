@@ -245,6 +245,7 @@ export function EditorDeSubmarca({ ficha }: PropsDeEditorDeSubmarca) {
           >
             <Pila separacion={5}>
               <Campo
+                dato="pendiente"
                 etiqueta="Nombre visible"
                 nombre="nombreVisible"
                 autoComplete="off"

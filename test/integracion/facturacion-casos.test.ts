@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
   crearManejadorDeReconciliar,
   crearManejadorDeValidarComprobante,
+  numeroDeDocumentoParaArca,
   puntoDeVentaId,
   type ComprobanteId,
   type DependenciasDeFacturacion,
@@ -255,6 +256,110 @@ describe.skipIf(base === null)("facturación F5: casos de uso contra una base re
           notaManual(idDe(pedido.clave), { clave: pedido.clave }),
         ),
       ).toEqual({ ok: false, error: "CLAVE_REUTILIZADA" });
+    });
+
+    describe("pasaporte con letras (Q5, dueño, 2026-11-06)", () => {
+      const turista = (numero: string) =>
+        ({
+          nombre: "Jane Doe",
+          documento: { tipo: "PASAPORTE", numero },
+          condicionIva: "CONSUMIDOR_FINAL",
+          domicilio: "5th Avenue 1",
+        }) as const;
+      const documentoGuardado = async (id: string) =>
+        (
+          await filas(
+            "select receptor_documento_tipo as tipo, receptor_documento_numero as numero from comprobante where id = $1",
+            [id],
+          )
+        )[0];
+
+      it("se guarda tal cual figura (minúsculas en mayúsculas), a ARCA va solo la parte numérica y el comprobante conserva el pasaporte completo", async () => {
+        const p = await preparar();
+        const entero = await p.emitir({ receptor: turista("ABC123456") });
+        const minusculas = await p.emitir({ receptor: turista("aab000123") });
+        expect(await documentoGuardado(entero.comprobanteId)).toEqual({
+          tipo: "PASAPORTE",
+          numero: "ABC123456",
+        });
+        expect(await documentoGuardado(minusculas.comprobanteId)).toEqual({
+          tipo: "PASAPORTE",
+          numero: "AAB000123",
+        });
+        await p.validar(entero.comprobanteId);
+        await p.validar(minusculas.comprobanteId);
+        const enviados = p.falsa.pedidos.map((x) => x.receptor.documento);
+        expect(enviados).toEqual([
+          { tipo: "PASAPORTE", numero: "ABC123456" },
+          { tipo: "PASAPORTE", numero: "AAB000123" },
+        ]);
+        expect(enviados.map((d) => numeroDeDocumentoParaArca(d))).toEqual([123456n, 123n]);
+        // Sigue guardado completo después de autorizar.
+        expect(await documentoGuardado(entero.comprobanteId)).toEqual({
+          tipo: "PASAPORTE",
+          numero: "ABC123456",
+        });
+      });
+
+      it("el mismo pedido con la misma clave, dos veces seguidas o a la vez, es un solo comprobante", async () => {
+        const p = await preparar();
+        const pedido = facturaManual(p.e, { receptor: turista("ABC123456") });
+        const [a, b] = await Promise.all([
+          p.casos.emitirComprobanteManual(p.como(), pedido),
+          p.casos.emitirComprobanteManual(p.como(), pedido),
+        ]);
+        const c = await p.casos.emitirComprobanteManual(p.como(), pedido);
+        expect(a.ok && b.ok && c.ok).toBe(true);
+        if (!a.ok || !b.ok || !c.ok) return;
+        expect(
+          new Set([a.valor.comprobanteId, b.valor.comprobanteId, c.valor.comprobanteId]).size,
+        ).toBe(1);
+        expect(c.valor.yaExistia).toBe(true);
+        expect(
+          await filas("select 1 from comprobante where empresa_id = $1", [p.e.empresa]),
+        ).toHaveLength(1);
+        expect(await auditorias(p.e, a.valor.comprobanteId)).toHaveLength(1);
+        expect(await trabajos(a.valor.comprobanteId)).toHaveLength(1);
+      });
+
+      it("sin cifra, con ceros, de 5 o de 10 caracteres o con otro carácter: RECEPTOR_INVALIDO marcando el documento y nada se escribe", async () => {
+        const p = await preparar();
+        for (const numero of [
+          "ABCDEF",
+          "ABC000000",
+          "ABC12",
+          "ABC1234567",
+          "ABC-12345",
+          "ABC 12345",
+        ]) {
+          expect(
+            await p.casos.emitirComprobanteManual(
+              p.como(),
+              facturaManual(p.e, { receptor: turista(numero) }),
+            ),
+            numero,
+          ).toEqual({ ok: false, error: { codigo: "RECEPTOR_INVALIDO", campo: "documento" } });
+        }
+        expect(
+          await filas("select 1 from comprobante where empresa_id = $1", [p.e.empresa]),
+        ).toHaveLength(0);
+      });
+
+      it("dos empresas con el mismo pasaporte: cada una ve solo el suyo", async () => {
+        const a = await preparar();
+        const b = await preparar();
+        const ra = await a.emitir({ receptor: turista("ABC123456") });
+        const rb = await b.emitir({ receptor: turista("ABC123456") });
+        expect(ra.comprobanteId).not.toBe(rb.comprobanteId);
+        const dueños = await filas<{ id: string; empresa_id: string }>(
+          "select id, empresa_id from comprobante where id = any($1) order by empresa_id",
+          [[ra.comprobanteId, rb.comprobanteId]],
+        );
+        expect(dueños.map((x) => x.empresa_id).sort()).toEqual([a.e.empresa, b.e.empresa].sort());
+        expect(
+          await b.casos.validarComprobante(b.sistema(), { comprobanteId: ra.comprobanteId }),
+        ).toEqual({ ok: false, error: "COMPROBANTE_NO_ENCONTRADO" });
+      });
     });
 
     it("sin certificado vigente del emisor en el ambiente del punto de venta: SIN_CERTIFICADO_VIGENTE", async () => {

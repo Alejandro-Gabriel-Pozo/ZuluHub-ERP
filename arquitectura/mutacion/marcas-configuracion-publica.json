@@ -1,0 +1,6 @@
+{
+  "grupo": "marcas (configuración pública)",
+  "archivos": "src/modulos/marcas/dominio/configuracion-publica.ts",
+  "minutos": 1.1,
+  "pruebas": "src/modulos/marcas/dominio/configuracion-publica.test.ts"
+}

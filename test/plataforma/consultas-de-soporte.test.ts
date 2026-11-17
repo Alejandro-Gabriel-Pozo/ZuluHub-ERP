@@ -704,9 +704,17 @@ describe("verConfiguracion", () => {
     if (!r.ok) return;
     expect(r.valor.modulos.map((m) => m.clave)).toEqual([
       "administracion",
+      "caja",
       "catalogo",
+      "cierre",
+      "clientes",
+      "comandas",
+      "compras",
       "facturacion",
+      "produccion",
+      "salon",
       "stock",
+      "ventas",
       "vidriera",
     ]);
     const modulo = r.valor.modulos.find((m) => m.clave === "administracion");

@@ -1,0 +1,6 @@
+{
+  "grupo": "vidriera (piezas puras)",
+  "archivos": "src/capacidades/experiencia/vidriera/**/*.ts",
+  "minutos": 5.4,
+  "pruebas": "src/capacidades/experiencia/vidriera"
+}

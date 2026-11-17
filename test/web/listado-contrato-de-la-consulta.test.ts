@@ -66,4 +66,30 @@ describe("la consulta del listado: lo que la pantalla recibe de #115", () => {
     );
     expect(respuesta.ok && respuesta.dato.items[0]?.puntoDeVentaNumero).toBe(7);
   });
+
+  it("la ventana de creación que pide la pantalla llega a la consulta tal cual (si el envoltorio la descartara, el servidor buscaría en toda la historia sin que nadie lo note)", async () => {
+    const pedidos: unknown[] = [];
+    const respuesta = await listarComprobantes(
+      dependencias(pedidos),
+      { empresaId: "empresa-1" } as never,
+      SUCURSAL as never,
+      { texto: "Aguirre", creadoDesde: "2025-11-07" },
+    );
+    expect(respuesta.ok).toBe(true);
+    expect(pedidos).toEqual([
+      { texto: "Aguirre", creadoDesde: "2025-11-07", sucursalElegida: SUCURSAL },
+    ]);
+  });
+
+  it("una ventana inválida no llega a la consulta: se rechaza con el campo", async () => {
+    const pedidos: unknown[] = [];
+    const respuesta = await listarComprobantes(
+      dependencias(pedidos),
+      { empresaId: "empresa-1" } as never,
+      SUCURSAL as never,
+      { texto: "x", creadoDesde: "2026-02-31" },
+    );
+    expect(respuesta.ok).toBe(false);
+    expect(pedidos).toEqual([]);
+  });
 });

@@ -1,0 +1,6 @@
+{
+  "grupo": "controles (nivel, decisión y catálogo)",
+  "archivos": "src/capacidades/controles/**/*.ts",
+  "minutos": 0.7,
+  "pruebas": "src/capacidades/controles"
+}

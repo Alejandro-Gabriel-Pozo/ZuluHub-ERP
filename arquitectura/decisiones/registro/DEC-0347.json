@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0347",
+  "fecha": "2026-11-12",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Al editar una cuenta de cobro el tipo no se cambia: el selector sale apagado, aunque el prototipo lo deja editable.",
+  "que_cambia": "Solo qué campos se pueden tocar al editar; el caso de uso de editar no admite el tipo. Revertir: sumar el tipo al caso de uso y a su auditoría.",
+  "donde": "apps/web/ui/plantillas/caja/FormularioDeCuenta.cliente.tsx; Pedernal-docs 10-ux-ui/prototipos-gastronomia/medios.html"
+}

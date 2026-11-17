@@ -21,6 +21,7 @@ import {
   pedidoDeCertificado,
   type ServiciosDePrueba,
 } from "./certificados-apoyo";
+import { sufijoUnico } from "./unicos";
 
 /**
  * H7 facturación, tramo F7: las credenciales de un emisor (certificado y clave descifrada SOLO en memoria) y el
@@ -544,7 +545,7 @@ describe.skipIf(base === null)(
         const c = await conCertificado();
         const { id } = await c.cargar();
         const url = new URL(propia.base.app);
-        url.username = `rol_que_no_existe_${randomUUID().slice(0, 8)}`;
+        url.username = `rol_que_no_existe_${sufijoUnico()}`;
         const roto = crearEntornoDeCertificados({ ...propia.base, app: url.toString() }, 2);
         try {
           const almacen = almacenDe(roto, servicios, c.reloj);

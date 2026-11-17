@@ -21,6 +21,8 @@ export type PropsDePantallaDeListadoDeComprobantes = Readonly<{
   error?: ReactNode;
   /** «+ Emitir» (contrato, «Acciones»): solo si la persona puede emitir; `null` o ausente, no se muestra. */
   emitir?: Readonly<{ href: string; texto: string }> | null;
+  /** «Pendientes de facturar» (E1 §3.6): la lista de ventas cobradas sin comprobante; solo si la persona puede emitir. */
+  pendientes?: Readonly<{ href: string; texto: string }> | null;
 }>;
 
 function Estados({ fila }: Readonly<{ fila: FilaArmada }>) {
@@ -113,6 +115,7 @@ export function PantallaDeListadoDeComprobantes({
   listado,
   error,
   emitir = null,
+  pendientes = null,
 }: PropsDePantallaDeListadoDeComprobantes) {
   return (
     <div className={estilos["raiz"]}>
@@ -120,6 +123,11 @@ export function PantallaDeListadoDeComprobantes({
         // El `div` evita que la columna estire el enlace a todo el ancho (sin CSS propio).
         <div>
           <EnlaceDeAccion href={emitir.href}>{emitir.texto}</EnlaceDeAccion>
+        </div>
+      )}
+      {pendientes === null ? null : (
+        <div>
+          <EnlaceDeAccion href={pendientes.href}>{pendientes.texto}</EnlaceDeAccion>
         </div>
       )}
       {eleccionDeSucursal === null ? null : (

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0004",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "El costo se declara solo en compras y carga inicial; un costo en cero se rechaza; devolución de cliente y otras entradas nacen sin costo.",
+  "que_cambia": "Cómo se calcula el costo promedio: un cero no diluye el promedio y las entradas sin costo no lo mueven.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A4 (E5)"
+}

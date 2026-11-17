@@ -59,6 +59,7 @@ export function esVariableProvisoria(variable: string): boolean {
 }
 
 const ALFABETO = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+// fuente-unica: ajeno — coincide con el 32 del cupón; es el largo de la clave generada de un rol de base, dato sin relación
 export const LARGO_DE_CLAVE = 32;
 // 62 × 4 = 248: un byte de 248 a 255 se descarta, porque `byte % 62` favorecería a las primeras letras.
 const LIMITE_SIN_SESGO = 248;

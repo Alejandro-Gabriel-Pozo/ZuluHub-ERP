@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0031",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "CORREGIDA",
+  "decision": "La baja por vencimiento exige gerente o administrador; el conteo físico no congela el depósito, así que lo vendido durante el conteo se pierde en la diferencia. Conteo corregido: lo reemplaza E5-T11.",
+  "que_cambia": "Quién da de baja por vencimiento y cómo salen las diferencias de inventario.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B6 (E5)"
+}

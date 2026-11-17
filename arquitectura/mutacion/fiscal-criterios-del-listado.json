@@ -1,0 +1,6 @@
+{
+  "grupo": "fiscal (criterios del listado)",
+  "archivos": "src/modulos/fiscal/consultas/criterios-de-listado.ts",
+  "minutos": 2,
+  "pruebas": "src/modulos/fiscal/consultas/criterios-de-listado.test.ts"
+}

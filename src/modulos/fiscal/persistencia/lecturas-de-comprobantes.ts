@@ -7,6 +7,7 @@ import {
   type SucursalId,
 } from "../../../primitivas/identificadores/marca";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
+import { ZONA_DE_ARGENTINA } from "../../../primitivas/tiempo/fecha-civil-hasta-hoy";
 import {
   TIPOS_DE_COMPROBANTE,
   TIPOS_DE_ORIGEN,
@@ -25,7 +26,8 @@ import { comprobanteId, type ComprobanteId } from "../dominio/identificadores";
 import { RANGO_DE_NUMERO_DE_PUNTO_DE_VENTA } from "../dominio/punto-de-venta";
 import type { DocumentoDelReceptor } from "../dominio/receptor";
 import { documentoDelReceptorDeLaBase } from "./documento-del-receptor";
-import { deLaLista } from "./repositorios";
+import { deLaLista } from "./ayudas-de-repositorio";
+import { crearLecturaDelOrigen, crearLecturaParaVigencia } from "./lecturas-de-vigencia";
 import type { FiscalDb } from "./tablas";
 
 /**
@@ -42,9 +44,6 @@ import type { FiscalDb } from "./tablas";
  *  - La «fecha» de un comprobante es la de su emisión; mientras no tiene (todavía sin numerar), el día de su
  *    creación en Argentina (`ZONA_DE_ARGENTINA`): ARCA es argentina y la fecha de un comprobante es civil.
  */
-
-/** La zona con la que se pasa un instante a día civil cuando el comprobante todavía no tiene fecha de emisión. */
-export const ZONA_DE_ARGENTINA = "America/Argentina/Buenos_Aires";
 
 /**
  * Lo que admiten los criterios de lista cerrada del filtro, tomado del dominio y no repetido a mano: las letras
@@ -76,6 +75,12 @@ export type FiltroDeListado = Readonly<{
   /** Primer día (inclusive) y último (inclusive) de la «fecha» del comprobante. */
   desde: FechaCivil | null;
   hasta: FechaCivil | null;
+  /**
+   * Solo los creados desde ese día civil de Argentina (inclusive): `creado_en >=` la medianoche de Argentina de ese día. Es una cota
+   * sobre la columna del índice de orden del listado, así que el recorrido empieza y TERMINA en la ventana (a diferencia de `desde`,
+   * que filtra una expresión y no acota el recorrido).
+   */
+  creadoDesde: FechaCivil | null;
   /**
    * La búsqueda de texto: el fragmento del nombre del receptor (sin distinguir mayúsculas) y, si el texto
    * puede ser un documento, su prefijo de solo dígitos. Basta que coincida uno de los dos.
@@ -158,6 +163,9 @@ export interface LecturasDeComprobantes {
     empresa: EmpresaId,
     ids: readonly ComprobanteId[],
   ): Promise<ReadonlyMap<ComprobanteId, readonly NotaParaAcreditar[]>>;
+  /** Las dos de la vigencia (por ids y por origen): ver `lecturas-de-vigencia.ts`. */
+  paraVigencia: ReturnType<typeof crearLecturaParaVigencia>;
+  paraVigenciaDelOrigen: ReturnType<typeof crearLecturaDelOrigen>;
 }
 
 const FECHA_DEL_LISTADO = sql<string>`coalesce(fecha_emision, (creado_en at time zone ${ZONA_DE_ARGENTINA})::date)`;
@@ -259,6 +267,12 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
       }
       if (filtro.hasta !== null) {
         consulta = consulta.where(sql<boolean>`${FECHA_DEL_LISTADO} <= ${filtro.hasta}::date`);
+      }
+      if (filtro.creadoDesde !== null) {
+        // La zona va como literal y el día como parámetro: la cota se calcula una vez y el planificador la usa como condición del índice.
+        consulta = consulta.where(
+          sql<boolean>`creado_en >= (${filtro.creadoDesde}::date::timestamp at time zone ${sql.lit(ZONA_DE_ARGENTINA)})`,
+        );
       }
       if (filtro.texto !== null) {
         const { nombre, documento } = filtro.texto;
@@ -377,5 +391,7 @@ export function crearLecturasDeComprobantes(db: Kysely<FiscalDb>): LecturasDeCom
       }
       return porId;
     },
+    paraVigencia: crearLecturaParaVigencia(db),
+    paraVigenciaDelOrigen: crearLecturaDelOrigen(db),
   };
 }

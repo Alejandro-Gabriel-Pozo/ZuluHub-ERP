@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0313",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las presentaciones de un producto (caja de 12, pieza de 4 kg) son un dato del catálogo, no de compras; las edita quien edita productos.",
+  "que_cambia": "Corrección del padre: la tabla sigue en la migración de compras pero el dato es del catálogo; mover otra vez exige tocar ambos módulos.",
+  "donde": "src/modulos/catalogo/casos-de-uso/presentaciones.ts"
+}

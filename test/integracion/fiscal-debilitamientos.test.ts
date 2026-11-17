@@ -1,7 +1,7 @@
 import pg from "pg";
 import { describe, expect, inject, it, vi } from "vitest";
 import { empresaId, personaId } from "../../src/primitivas/identificadores/marca";
-import { comoEmpresa, comoPlataforma, crearBaseAparte, cuitAlAzar } from "./entorno";
+import { comoEmpresa, comoPlataforma, crearBaseAparte, cuitUnico } from "./entorno";
 import {
   conAppDe,
   conPlataformaDe,
@@ -170,7 +170,7 @@ const SONDAS = {
       return conPlataformaDe(b, "SOPORTE", async (s) => {
         const r = await s.intentar(
           "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2)",
-          [m.empresa, cuitAlAzar()],
+          [m.empresa, cuitUnico()],
         );
         return !r.ok;
       });
@@ -221,7 +221,7 @@ const SONDAS = {
     conDueno(b, async (c) => {
       const m = await crearMundo(c);
       return deshacible(c, async () =>
-        seRechaza(c, "update emisor set cuit = $2 where id = $1", [m.emisor, cuitAlAzar()]),
+        seRechaza(c, "update emisor set cuit = $2 where id = $1", [m.emisor, cuitUnico()]),
       );
     }),
 
@@ -312,7 +312,7 @@ const SONDAS = {
       const secundario = (
         await c.query<{ id: string }>(
           "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-          [m.empresa, cuitAlAzar()],
+          [m.empresa, cuitUnico()],
         )
       ).rows[0]?.id;
       const pv = await crearPuntoDeVenta(c, m, { numero: 1 });
@@ -359,7 +359,7 @@ const SONDAS = {
       const secundario = (
         await c.query<{ id: string }>(
           "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-          [m.empresa, cuitAlAzar()],
+          [m.empresa, cuitUnico()],
         )
       ).rows[0]?.id as string;
       const pv = await crearPuntoDeVenta(c, m, { numero: 1, emisor: secundario });
@@ -379,7 +379,7 @@ const SONDAS = {
         );
         const pendiente = cambio.directo("update emisor set cuit = $2 where id = $1", [
           secundario,
-          cuitAlAzar(),
+          cuitUnico(),
         ]);
         const espero = await esperarBloqueo(c, cambio.pid, 1500);
         await reserva.confirmar();

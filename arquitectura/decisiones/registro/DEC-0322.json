@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0322",
+  "fecha": "2026-11-11",
+  "quien": "dueño",
+  "tipo": "DINERO",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El IVA de una compra es costo o crédito fiscal según la condición de la empresa: inscripta, costo neto; monotributista o exenta, costo con IVA; B o C, el importe de la línea.",
+  "que_cambia": "Cuánto cuesta lo comprado, el valor del stock y de las recetas, y cuánto crédito fiscal figura; el contador puede corregirlo (PC-1, PC-4) y las compras ya hechas se ajustan con una corrección de costo, no con una migración.",
+  "donde": "src/modulos/compras/dominio/comprobante.ts (alicuotaQueEntraAlCosto) y calcular-linea.ts"
+}

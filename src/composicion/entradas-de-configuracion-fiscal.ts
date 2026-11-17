@@ -39,7 +39,7 @@ import {
 
 /**
  * Leer con el esquema de la pantalla. Un dato sin la forma pedida sale con el código de Configuración fiscal y su campo (D-67:
- * «Revisá los datos marcados.», no el «Revise los datos del comprobante» de las facturas). Previene: el texto de las facturas en
+ * «Revisá los datos marcados.», no el «Revisá los datos del comprobante» de las facturas). Previene: el texto de las facturas en
  * Datos fiscales y Puntos de venta.
  */
 export function leer<S extends z.ZodType>(

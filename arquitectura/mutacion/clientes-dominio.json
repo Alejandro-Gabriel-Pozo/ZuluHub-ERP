@@ -1,0 +1,6 @@
+{
+  "grupo": "clientes (dominio)",
+  "archivos": "src/modulos/clientes/dominio/**/*.ts",
+  "minutos": 3,
+  "pruebas": "src/modulos/clientes"
+}

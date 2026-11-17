@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import pg from "pg";
 import {
@@ -22,6 +21,7 @@ import {
   type Interceptor,
   type VariableFalsa,
 } from "./vercel-falso";
+import { sufijoUnico } from "./unicos";
 
 /**
  * `--preparar-roles --vercel <destino>`: el mismo recorrido que `--preparar-roles`, pero las contraseñas
@@ -131,7 +131,7 @@ describe.skipIf(base === null)("migrar-base --vercel", () => {
 
   beforeEach(async () => {
     if (base === null) return;
-    const sufijo = randomBytes(4).toString("hex");
+    const sufijo = sufijoUnico();
     ROLES = [
       { rol: `zz_${sufijo}_app`, variable: "PEDERNAL_DB_APP" },
       { rol: `zz_${sufijo}_trabajos`, variable: "PEDERNAL_DB_TRABAJOS" },

@@ -8,6 +8,14 @@ export {
   type ErrorDeEmpresa,
 } from "./dominio/empresa";
 export { datosDeJornada } from "./datos-de-jornada";
+export type {
+  ErrorDeGancho,
+  ErrorDeGanchoAlDesactivar,
+  GanchoAlDesactivarSucursal,
+  GanchoDeSucursal,
+  GanchosAlDesactivarSucursal,
+  GanchosDeSucursal,
+} from "./ganchos-de-sucursal";
 export { DECLARACIONES as DECLARACIONES_DE_EMPRESAS } from "./casos-de-uso/declaraciones";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS } from "./consultas/declaraciones";
 export {
@@ -34,7 +42,12 @@ export {
   type Sucursal,
 } from "./dominio/sucursal";
 export { crearCasosDeUsoDeEmpresas, type CasosDeUsoDeEmpresas } from "./casos-de-uso/casos-de-uso";
-export type { DependenciasDeEmpresas, TxDeEmpresas } from "./casos-de-uso/contrato";
+export type {
+  DependenciasDeEmpresas,
+  LecturaDeEstados,
+  TxDeEmpresas,
+} from "./casos-de-uso/contrato";
+export { cargarEstadosDeLaEmpresa } from "./casos-de-uso/comun";
 export type {
   EntradaDeCrearSucursal,
   ErrorAlCrearSucursal,

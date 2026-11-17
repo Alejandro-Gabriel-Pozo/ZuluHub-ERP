@@ -1,0 +1,6 @@
+{
+  "grupo": "domicilio",
+  "archivos": "src/primitivas/domicilio/**/*.ts",
+  "minutos": 2.2,
+  "pruebas": "src/primitivas/domicilio"
+}

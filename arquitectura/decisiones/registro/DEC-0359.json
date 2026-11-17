@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0359",
+  "fecha": "2026-11-13",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Los íconos de las áreas reutilizan los que ya existen: Ventas con el de Comprobantes y Catálogo con el de Secciones, hasta que el dueño elija otros.",
+  "que_cambia": "Qué ícono ve la persona sobre el nombre de cada área en la barra. Revertir: cambiar una fila de la tabla del menú.",
+  "donde": "Pedernal-docs menu-por-areas.html (los íconos quedaron por definir, decisiones-del-dueno-2026-11.md 12/11/2026); apps/web/ui/navegacion/menu.ts"
+}

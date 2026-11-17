@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0101",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Abrir y cerrar una orden de producción: los tres roles; cancelar y anular: gerente y administrador; lotes y calidad: gerente y administrador, ver lotes los tres.",
+  "que_cambia": "Quién puede deshacer stock y costo de una producción. Todavía no está cargado en la matriz de roles: va con T8 y T9.",
+  "donde": "Pedernal-docs e6-recetas-produccion-especificacion.md P-2 (E6)"
+}

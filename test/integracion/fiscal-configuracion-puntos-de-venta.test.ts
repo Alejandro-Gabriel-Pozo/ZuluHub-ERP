@@ -5,7 +5,7 @@ import { emisorId, sucursalId } from "../../src/primitivas/identificadores/marca
 import { err, ok } from "../../src/primitivas/resultado/resultado";
 import type { Dato } from "../../src/puertos/sin-secretos";
 import { EmisionFalsa } from "../utilidades/emision-falsa";
-import { crearBaseAparte, cuitAlAzar } from "./entorno";
+import { crearBaseAparte, cuitUnico } from "./entorno";
 import {
   casosDeConfiguracion,
   crearEntornoDeConfiguracion,
@@ -122,7 +122,7 @@ describe.skipIf(base === null)("fiscal T5: puntos de venta del gerente", () => {
     (
       await filas<{ id: string }>(
         "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-        [empresa, cuitAlAzar()],
+        [empresa, cuitUnico()],
       )
     )[0]?.id as string;
 

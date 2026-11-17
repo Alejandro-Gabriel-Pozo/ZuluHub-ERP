@@ -267,7 +267,7 @@ describe.skipIf(base === null)("crear el primer administrador de plataforma", ()
 
   it("falla con una cadena que no conecta, sin dejar nada", async () => {
     const antes = await cantidadDeAdmins();
-    const cadena = `postgres://usuario:${randomBytes(6).toString("hex")}@127.0.0.1:1/base`;
+    const cadena = `postgres://usuario:${randomBytes(16).toString("hex")}@127.0.0.1:1/base`;
     await expect(crearPrimerAdmin(cadena, emailDeAdmin())).rejects.toBeInstanceOf(Error);
     expect(await cantidadDeAdmins()).toBe(antes);
   });

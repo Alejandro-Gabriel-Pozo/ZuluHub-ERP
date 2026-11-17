@@ -5,7 +5,28 @@ import type { ClaveAccion } from "../modulos/catalogo";
  * por qué no pasa por el guard. Lo comparten los módulos: una acción que no existe en el catálogo, o
  * una declaración vacía, no compila.
  */
-export type DeclaracionDeCaso = Readonly<{ accion: ClaveAccion }> | Readonly<{ sinGuard: string }>;
+export type DeclaracionDeCaso =
+  | Readonly<{
+      accion: ClaveAccion;
+      /**
+       * Las acciones de OTROS módulos que el caso usa por dentro (el salón orquesta ventas y comandas): X1 no deja que una carpeta declare como suya la acción de otro módulo,
+       * así que `accion` es la de su módulo y estas son las demás. El guard exige `accion` Y todas estas (`accionesDeCaso`): o puede con todas o no empieza.
+       */
+      tambien?: readonly ClaveAccion[];
+    }>
+  | Readonly<{ sinGuard: string }>;
+
+/**
+ * Las acciones que el guard de un caso exige: las que declara, ni más ni menos. Es el ÚNICO lugar donde se arma esa lista: el caso de uso la lee de su declaración y no escribe
+ * acciones a mano. Previene: la declaración dice una cosa y el guard exige otra (caso real: `anularItemEnviado` por la puerta de comandas exigía menos que por la del salón, y las
+ * declaraciones del salón decían `mesas.ver`/`comandas.enviar` mientras el guard exigía `cuentas.*`). Chequeo: `guard-primero-de-salon-y-comandas.test.ts` quita de a una acción y
+ * comprueba que el guard rechaza exactamente cuando falta una declarada.
+ */
+export function accionesDeCaso(
+  declaracion: Readonly<{ accion: ClaveAccion; tambien?: readonly ClaveAccion[] }>,
+): readonly [ClaveAccion, ...ClaveAccion[]] {
+  return [declaracion.accion, ...(declaracion.tambien ?? [])];
+}
 
 /**
  * Cómo se repite un caso de uso sin duplicar. Fuentes: ADR-015 §4 («cada operación declara por escrito cómo se repite sin

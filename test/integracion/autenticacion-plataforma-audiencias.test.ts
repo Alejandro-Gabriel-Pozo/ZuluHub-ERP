@@ -17,6 +17,7 @@ import {
   armarPlataformaDePrueba,
   codigoDeLaAplicacion,
   type PlataformaDePrueba,
+  usarFechaQuietaDeTotp,
 } from "./autenticacion-plataforma-apoyo";
 import { crearBaseAparte } from "./entorno";
 
@@ -36,6 +37,7 @@ const COOKIE_EMPRESA = "__Host-pd_emp.session_token";
 const COOKIE_CONSOLA = "__Host-pd_plat.session_token";
 
 describe.skipIf(base === null)("dos audiencias contra la misma base: empresa y consola", () => {
+  usarFechaQuietaDeTotp();
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let dueno: pg.Client;
   let proveedor: ProveedorLocal;

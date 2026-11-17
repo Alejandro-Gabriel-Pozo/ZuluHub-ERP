@@ -183,6 +183,14 @@ describe("exigirAccion", () => {
       "catalogo",
       "vidriera",
       "stock",
+      "caja",
+      "cierre",
+      "ventas",
+      "comandas",
+      "salon",
+      "clientes",
+      "compras",
+      "produccion",
     ];
     expect(claves).toEqual(Object.keys(CATALOGO_DE_MODULOS));
   });
@@ -368,11 +376,11 @@ describe("exigirAccion con las reglas de plataforma (H5 P1)", () => {
 });
 
 describe("accionesPermitidas", () => {
-  // `catalogo` sigue en desarrollo en el catálogo real: esta variante lo pone disponible para comparar las dos situaciones.
-  const CON_CATALOGO: ReglasDeEmpresa = {
+  // `catalogo` es disponible en el catálogo real (DEC-0463): esta variante lo pone en desarrollo para comparar las dos situaciones.
+  const CON_CATALOGO_EN_DESARROLLO: ReglasDeEmpresa = {
     catalogo: {
       ...CATALOGO_DE_MODULOS,
-      catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "disponible" },
+      catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "en_desarrollo" },
     },
     permisos: PERMISOS_DE_EMPRESA,
   };
@@ -402,7 +410,7 @@ describe("accionesPermitidas", () => {
   it.each(actores)(
     "%s: da exactamente lo que exigirAccion deja pasar, acción por acción (con y sin un módulo en desarrollo)",
     async (_nombre, actor) => {
-      for (const reglas of [REGLAS_DE_EMPRESA, CON_CATALOGO]) {
+      for (const reglas of [REGLAS_DE_EMPRESA, CON_CATALOGO_EN_DESARROLLO]) {
         const esperadas: ClaveAccion[] = [];
         for (const accion of TODAS) {
           const veredicto = await exigirAccion(reglas, accion, () => Promise.resolve(actor));
@@ -419,11 +427,11 @@ describe("accionesPermitidas", () => {
       modulosActivados: ["facturacion", "catalogo"],
       modulosHabilitados: ["facturacion", "catalogo"],
     };
-    const real = accionesPermitidas(REGLAS_DE_EMPRESA, gerente);
-    expect(real).not.toContain("productos.ver");
-    expect(real).toContain("usuarios.invitar");
-    expect(real).toContain("comprobantes.ver");
-    expect(accionesPermitidas(CON_CATALOGO, gerente)).toContain("productos.ver");
+    const enDesarrollo = accionesPermitidas(CON_CATALOGO_EN_DESARROLLO, gerente);
+    expect(enDesarrollo).not.toContain("productos.ver");
+    expect(enDesarrollo).toContain("usuarios.invitar");
+    expect(enDesarrollo).toContain("comprobantes.ver");
+    expect(accionesPermitidas(REGLAS_DE_EMPRESA, gerente)).toContain("productos.ver");
   });
 
   it("el módulo no alcanza: sin activar, o sin rol, no figura; fuera del plan solo lo que mira o cierra", () => {

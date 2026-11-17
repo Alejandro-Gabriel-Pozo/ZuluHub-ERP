@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -14,7 +14,7 @@ import { ejecutarReseteoDelSegundoFactor } from "../../scripts/ejecutar-resetear
 import { VARIABLE_DE_LA_CADENA } from "../../scripts/entrada-del-dueno";
 import { empresaConMiembro, personaConUsuario } from "./autenticacion-apoyo";
 import { Navegador } from "./autenticacion-ingreso-apoyo";
-import { codigoDeLaAplicacion } from "./autenticacion-plataforma-apoyo";
+import { codigoDeLaAplicacion, usarFechaQuietaDeTotp } from "./autenticacion-plataforma-apoyo";
 import {
   HOST_DE_LA_CONSOLA,
   HOST_DE_LA_WEB,
@@ -30,6 +30,7 @@ import {
   type Mundo,
 } from "./consola-apoyo";
 import { claveAlAzar } from "./plataforma-apoyo";
+import { sufijoUnico } from "./unicos";
 
 /**
  * La revocación de sesiones (P8b, h5-p8 §2.5), contra una base real y la autenticación real de la consola:
@@ -46,6 +47,7 @@ vi.setConfig({ testTimeout: 120_000, hookTimeout: 120_000 });
 const ejecutarArchivo = promisify(execFile);
 
 describe.skipIf(base === null)("la revocación de sesiones", () => {
+  usarFechaQuietaDeTotp();
   let m: Mundo;
 
   beforeAll(async () => {
@@ -232,7 +234,7 @@ describe.skipIf(base === null)("la revocación de sesiones", () => {
     });
 
     it("no imprime nunca la cadena ni el email, ni siquiera cuando la falla los repite", async () => {
-      const email = `centinela-${randomUUID().slice(0, 8)}@dominio-de-prueba.test`;
+      const email = `centinela-${sufijoUnico()}@dominio-de-prueba.test`;
       const clave = "clave-de-juguete-98765";
       const conexion = `postgres://usuario-juguete:${clave}@127.0.0.1:1/base-juguete`;
       const sinConexion = await correrBaja([email], { [VARIABLE_DE_LA_CADENA]: conexion });
@@ -461,7 +463,7 @@ describe.skipIf(base === null)("la revocación de sesiones", () => {
     });
 
     it("no imprime nunca la cadena ni el email, ni siquiera cuando la falla los repite", async () => {
-      const email = `centinela-${randomUUID().slice(0, 8)}@dominio-de-prueba.test`;
+      const email = `centinela-${sufijoUnico()}@dominio-de-prueba.test`;
       const conexion = "postgres://usuario-juguete:clave-de-juguete-4321@127.0.0.1:1/base-juguete";
       const sinConexion = await correrReseteo([email], { [VARIABLE_DE_LA_CADENA]: conexion });
       const repetidora = await correrReseteo([email], { [VARIABLE_DE_LA_CADENA]: conexion }, () =>
@@ -612,7 +614,7 @@ describe.skipIf(base === null)("la revocación de sesiones", () => {
       const sinUsuario = (
         await m.dueno.query<{ id: string }>(
           "insert into persona (email) values ($1) returning id",
-          [`sin-usuario-${randomUUID().slice(0, 8)}@dominio-de-prueba.test`],
+          [`sin-usuario-${sufijoUnico()}@dominio-de-prueba.test`],
         )
       ).rows[0]?.id as string;
       const r = await acceso.casos.suspenderPersona({

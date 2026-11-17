@@ -16,7 +16,7 @@ import {
   armarElPuntoDeVenta,
   tituloDelPuntoDeVenta,
 } from "../../../../../../../ui/plantillas/configuracion-fiscal/modelo-de-puntos-de-venta";
-import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import { cambiarAmbienteAccion } from "../../../../acciones-de-facturacion";
 import {
   activarPuntoDeVentaAccion,

@@ -28,6 +28,8 @@ export interface Paso {
   ejecutaGuardian: boolean;
   deudaSola: boolean;
   deudaConBase: boolean;
+  camposSola: boolean;
+  camposConBase: boolean;
   si: { valor: string; linea: number } | undefined;
 }
 export interface Job {

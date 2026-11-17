@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0111",
+  "tipo": "DINERO",
+  "decision": "Un ingrediente nunca comprado se costea con el promedio del depósito de venta con más cantidad valorizada; sin costo queda incompleto, nunca cero.",
+  "que_cambia": "Qué costo ve el gerente en una receta sin compras; la especificación no dice qué depósito si hay varias sucursales.",
+  "donde": "src/modulos/stock/persistencia/costos.ts promediosEnDepositosDeVenta (E6-T6)",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "estado": "PENDIENTE_DE_OK"
+}

@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { CORRECCION_DEL_QR_DE_FACTURA, qrDeFacturaComoSvg } from "./qr-de-factura";
+import {
+  CORRECCION_DEL_QR_DE_FACTURA,
+  qrDeFacturaComoMatriz,
+  qrDeFacturaComoSvg,
+} from "./qr-de-factura";
 import { matrizDelQr, svgDeLaMatriz } from "./qr-svg";
 
 /** La URL del QR de la factura B del golden de fiscal (la que arma `urlDelQr`; `qr-de-arca.test.ts` la verifica). */
@@ -62,5 +66,27 @@ describe("qrDeFacturaComoSvg", () => {
       "width",
       "xmlns",
     ]);
+  });
+});
+
+describe("qrDeFacturaComoMatriz", () => {
+  it("es la MISMA matriz que dibuja el SVG de la pantalla: el PDF y la pantalla no pueden diferir", () => {
+    const matriz = qrDeFacturaComoMatriz(URL_DE_LA_FACTURA_B);
+    expect(matriz.length).toBeGreaterThan(21);
+    expect(matriz.every((fila) => fila.length === matriz.length)).toBe(true);
+    expect(matriz).toEqual(matrizDelQr(URL_DE_LA_FACTURA_B, CORRECCION_DEL_QR_DE_FACTURA));
+    expect(svgDeLaMatriz(matriz)).toBe(qrDeFacturaComoSvg(URL_DE_LA_FACTURA_B));
+  });
+
+  it("el nivel de corrección se puede cambiar y cambia la matriz; otro texto, otra matriz", () => {
+    expect(qrDeFacturaComoMatriz(URL_DE_LA_FACTURA_B, "H")).toEqual(
+      matrizDelQr(URL_DE_LA_FACTURA_B, "H"),
+    );
+    expect(qrDeFacturaComoMatriz(URL_DE_LA_FACTURA_B, "H")).not.toEqual(
+      qrDeFacturaComoMatriz(URL_DE_LA_FACTURA_B, "M"),
+    );
+    expect(qrDeFacturaComoMatriz(`${URL_DE_LA_FACTURA_B}A`)).not.toEqual(
+      qrDeFacturaComoMatriz(URL_DE_LA_FACTURA_B),
+    );
   });
 });

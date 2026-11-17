@@ -54,7 +54,7 @@ describe("comprobanteParaLaHoja: lista blanca", () => {
   const m = modelo(imprimibleDe(facturaB, { contacto: SIN_CONTACTO }));
   const c = comprobanteParaLaHoja(m);
 
-  it("no imprime nombre de fantasía aunque el modelo lo traiga (SUPUESTO de la primera entrega)", () => {
+  it("no imprime nombre de fantasía aunque el modelo lo traiga (SUPUESTO (DEC-0051) de la primera entrega)", () => {
     expect(m.marca.nombreDeFantasia).toBe("La Panadería de Zulu");
     expect(c.marca).toEqual({ nombreDeFantasia: null });
     expect(hoja(m).nombreDeFantasia).toBeNull();
@@ -155,6 +155,37 @@ describe("comprobanteParaLaHoja: cada comprobante", () => {
     expect(c.transparenciaFiscal).toEqual(m.transparenciaFiscal);
     expect(hoja(m).transparencia).not.toBeNull();
     expect(precio(m)).toBe("Precio con IVA");
+  });
+
+  it("A a responsable inscripto: la leyenda de la condición pasa tal cual y la hoja la dibuja sin rótulo, bajo la condición", () => {
+    const m = modelo(imprimibleDe(facturaA("IVA_DISCRIMINADO")));
+    expect(m.receptor.leyendaDeCondicion).toBe("IVA RESPONSABLE INSCRITO");
+    expect(comprobanteParaLaHoja(m).receptor.leyendaDeCondicion).toBe("IVA RESPONSABLE INSCRITO");
+    const filas = hoja(m).receptor;
+    const i = filas.findIndex((f) => f.valor === "IVA RESPONSABLE INSCRITO");
+    expect(filas[i]?.rotulo).toBeNull();
+    expect(filas[i - 1]?.valor).toBe("IVA Responsable Inscripto");
+  });
+
+  it("consumidor final sin nombre: «A CONSUMIDOR FINAL» sale una sola vez; con nombre, sale como fila propia", () => {
+    const sinNombre = hoja(modelo(imprimibleDe(facturaB, { contacto: SIN_CONTACTO }))).receptor;
+    expect(sinNombre.filter((f) => f.valor === "A CONSUMIDOR FINAL")).toHaveLength(1);
+    const conNombre = hoja(
+      modelo(
+        imprimibleDe(facturaB, {
+          contacto: SIN_CONTACTO,
+          receptor: { ...consumidorFinal, nombre: "Juan Gómez" },
+        }),
+      ),
+    ).receptor;
+    expect(conNombre.filter((f) => f.valor === "A CONSUMIDOR FINAL")).toHaveLength(1);
+    expect(conNombre[0]?.valor).toBe("Juan Gómez");
+  });
+
+  it("v2: no trae leyenda de condición y la hoja no la dibuja (lo sellado con la 2 reimprime igual)", () => {
+    const m = modelo({ ...imprimibleDe(facturaA("IVA_DISCRIMINADO")), versionDeRepresentacion: 2 });
+    expect("leyendaDeCondicion" in m.receptor).toBe(false);
+    expect(hoja(m).receptor.some((f) => f.valor === "IVA RESPONSABLE INSCRITO")).toBe(false);
   });
 
   it("A: el encabezado del precio sigue al modo de precio, en las dos variantes", () => {

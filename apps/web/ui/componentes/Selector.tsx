@@ -1,9 +1,12 @@
+import type { DatoDeCampo } from "../../../../src/capacidades/datos/registro";
 import { CajaDeCampo } from "./CajaDeCampo";
 import estilos from "./Selector.module.css";
 
 type OpcionDeSelector = Readonly<{ valor: string; etiqueta: string }>;
 
 export type PropsDeSelector = Readonly<{
+  /** Qué dato pide el campo: un `IdDeDato` del registro de datos o `"pendiente"` (deuda registrada). Obligatorio: sin dato no hay campo. */
+  dato: DatoDeCampo;
   etiqueta: string;
   valor: string;
   alCambiar: (valor: string) => void;

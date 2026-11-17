@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0350",
+  "fecha": "2026-11-12",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El límite de cajas del plan, la caja con sesión abierta y la sucursal fuera de alcance salen con el aviso genérico, y el identificador inválido con su texto aprobado.",
+  "que_cambia": "Solo qué texto ve la persona; la maqueta aprobada tiene esos avisos. Revertir: mapear un código más y sumar su texto aprobado.",
+  "donde": "src/composicion/errores-de-caja.ts; Pedernal-docs 10-ux-ui/prototipos-gastronomia/medios.html"
+}

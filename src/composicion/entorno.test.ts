@@ -325,6 +325,9 @@ describe("valoresDeLaPieza", () => {
     ["xpostgres://u:c@h/b", "no empieza con el esquema"],
     ["postgress://u:c@h/b", "esquema mal escrito"],
     ["postgres://u:c@h/b\ncomando", "con un salto de línea"],
+    ["postgres://u:c@h/b\u200b", "con un carácter invisible"],
+    ["postgres://u:c@h/b\u202e", "con una marca de dirección de texto"],
+    ["postgres://u:cañ@h/b", "con una letra no ASCII"],
     ["", "vacía"],
   ])("la cadena de la base %j es inválida (%s)", (cadena) => {
     expect(() =>

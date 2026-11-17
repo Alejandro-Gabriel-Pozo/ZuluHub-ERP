@@ -1,7 +1,7 @@
 import { texto } from "../../../../../../../src/capacidades/vocabulario/vocabulario";
 import { pantallaDeOperacion } from "../../../../../pantallas/operacion";
 import { cargarElEstadoDeLaConfiguracion } from "../../../../../servidor/configuracion-fiscal";
-import { ErrorDelDetalle } from "../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../ui/patrones/ErrorDelDetalle";
 import { armarLaLista } from "../../../../../ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { PantallaDeConfiguracionFiscal } from "../../../../../ui/plantillas/configuracion-fiscal/PantallaDeConfiguracionFiscal";
 

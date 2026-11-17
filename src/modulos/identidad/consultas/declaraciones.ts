@@ -10,4 +10,7 @@ export const DECLARACIONES_DE_CONSULTAS = {
   listarMiembros: { accion: "usuarios.ver" },
   listarInvitacionesPendientes: { accion: "usuarios.ver" },
   traspasoEnCurso: { accion: "gerencia.ver_traspaso" },
+  // El correo con que se muestra a una persona en historiales y listas de cualquier pantalla: los tres roles (como `sucursalesElegibles`, es lo propio de quien opera,
+  // no administración). SUPUESTO DEC-0464: la acción es la misma que la de las sucursales elegibles; el alcance es la empresa del contexto.
+  personasParaMostrar: { accion: "permisos.ver_propios" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

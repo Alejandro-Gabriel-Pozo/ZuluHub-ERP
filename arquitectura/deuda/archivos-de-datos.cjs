@@ -1,7 +1,7 @@
 /**
  * Los archivos de DATOS de la deuda y del propio control, donde cada entrada es un marcador (contratos-
  * arquitectonicos.md §10, G5): `knip.json` (lo que deja pasar), las excepciones y exclusiones del guardián y los
- * grupos de mutación sin `pruebas`. Cada uno dice cómo reconocerlo y en qué línea cae cada entrada, a partir del
+ * grupos de mutación sin `pruebas` (un archivo por grupo en `arquitectura/mutacion/`). Cada uno dice cómo reconocerlo y en qué línea cae cada entrada, a partir del
  * árbol de `analizarJson` (`ubicacion.cjs`).
  */
 
@@ -35,16 +35,14 @@ function entradasDeKnip(nodo, salida) {
 const entradasDelGuardian = (raiz) =>
   (raiz.elementos ?? []).map((entrada) => entrada.miembros?.get("id")?.linea ?? entrada.inicio);
 
-/** Línea del `grupo` de cada elemento de la lista de grupos de mutación que no trae `pruebas` (o la trae vacía). */
-function gruposSinFiltro(raiz, valor) {
-  const lineas = [];
-  (raiz.elementos ?? []).forEach((grupo, posicion) => {
-    const pruebas = valor[posicion]?.pruebas;
-    if (typeof pruebas !== "string" || pruebas.trim() === "") {
-      lineas.push(grupo.miembros?.get("grupo")?.linea ?? grupo.inicio);
-    }
-  });
-  return lineas;
+/**
+ * Un archivo de `arquitectura/mutacion/` es UN grupo: cuenta como un marcador si no trae `pruebas` (o la trae vacía o que no es un texto) y, ante la duda, también si no es
+ * un objeto (nace cerrado: un archivo roto no esconde un grupo sin filtro). La línea es la de su `grupo`, o la de apertura del objeto si falta.
+ */
+function grupoSinFiltro(raiz, valor) {
+  const pruebas = valor?.pruebas;
+  if (typeof pruebas === "string" && pruebas.trim() !== "") return [];
+  return [raiz.miembros?.get("grupo")?.linea ?? raiz.inicio];
 }
 
 /** Los archivos de datos que son un marcador por entrada: cómo reconocerlos y cómo leer sus entradas. */
@@ -63,8 +61,8 @@ const ESPECIALES = Object.freeze([
   },
   {
     tipo: "mutacion-sin-filtro",
-    coincide: (ruta) => ruta === "arquitectura/grupos-de-mutacion.json",
-    lineas: gruposSinFiltro,
+    coincide: (ruta) => /^arquitectura\/mutacion\/[^/]+\.json$/.test(ruta),
+    lineas: grupoSinFiltro,
   },
 ]);
 

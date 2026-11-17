@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0064",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Caja: los textos libres usan la lista de signos de la explicación del cierre; el medio de pago exige sucursal; las semillas de medios son valores de ejemplo hasta que el dueño las confirme.",
+  "que_cambia": "Qué texto admite la caja y con qué medios arranca.",
+  "donde": "migraciones/0027_caja.sql"
+}

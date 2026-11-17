@@ -1,0 +1,6 @@
+{
+  "grupo": "guardián (vigilancia de la versión anterior, parte 1)",
+  "archivos": "arquitectura/contratos/no-debilitar.cjs:1-597",
+  "minutos": 17.7,
+  "pruebas": "test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-d-chequeos.test.ts test/arquitectura/guardian-mutantes-d-deuda.test.ts test/arquitectura/guardian-mutantes-d-lectura.test.ts test/arquitectura/guardian-mutantes-d-proceso.test.ts test/arquitectura/guardian-mutantes-g-vigilancia.test.ts test/arquitectura/guardian-no-debilitar.test.ts"
+}

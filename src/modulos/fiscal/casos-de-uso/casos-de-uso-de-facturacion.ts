@@ -6,6 +6,7 @@ import {
   armarEmitirNotaDeCredito,
   armarEmitirNotaDeDebito,
 } from "./emitir-comprobante";
+import { armarEmitirFacturaDeOrigen } from "./emitir-factura-de-origen";
 import { armarReconciliarComprobantes } from "./reconciliar-comprobantes";
 import {
   armarCambiarAmbienteDePuntoDeVenta,
@@ -22,6 +23,7 @@ import { armarValidarComprobante } from "./validar-comprobante";
 export function crearCasosDeUsoDeFacturacion(dependencias: DependenciasDeFacturacion) {
   return {
     emitirComprobanteManual: armarEmitirComprobanteManual(dependencias),
+    emitirFacturaDeOrigen: armarEmitirFacturaDeOrigen(dependencias),
     emitirNotaDeCredito: armarEmitirNotaDeCredito(dependencias),
     emitirNotaDeDebito: armarEmitirNotaDeDebito(dependencias),
     descartarComprobante: armarDescartarComprobante(dependencias),

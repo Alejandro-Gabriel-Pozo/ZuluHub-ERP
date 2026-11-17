@@ -23,6 +23,7 @@ import {
   codigoDeLaAplicacion,
   otroNavegadorConLaSesion,
   type PlataformaDePrueba,
+  usarFechaQuietaDeTotp,
 } from "./autenticacion-plataforma-apoyo";
 import { crearBaseAparte } from "./entorno";
 
@@ -41,6 +42,7 @@ vi.setConfig({ testTimeout: 120_000, hookTimeout: 120_000 });
 const MINUTO = 60_000;
 
 describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor", () => {
+  usarFechaQuietaDeTotp();
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let dueno: pg.Client;
   let proveedor: ProveedorLocal;
@@ -476,8 +478,8 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       const admin = await altaDeAdmin(dueno);
       const { n } = await ingresar(admin);
       await dueno.query(
-        `update autenticacion.session set "createdAt" = now() - interval '11 minutes' where id = $1`,
-        [(await filaDeSesion(admin))[0]?.id],
+        `update autenticacion.session set "createdAt" = $2::timestamptz - interval '11 minutes' where id = $1`,
+        [(await filaDeSesion(admin))[0]?.id, new Date()],
       );
       const r = await pedir(n, "POST", "/api/auth/two-factor/enable", {});
       expect(r.estado).toBe(403);
@@ -494,8 +496,8 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       const admin = await altaDeAdmin(dueno);
       const { n } = await ingresar(admin);
       await dueno.query(
-        `update autenticacion.session set "createdAt" = now() - interval '9 minutes' where id = $1`,
-        [(await filaDeSesion(admin))[0]?.id],
+        `update autenticacion.session set "createdAt" = $2::timestamptz - interval '9 minutes' where id = $1`,
+        [(await filaDeSesion(admin))[0]?.id, new Date()],
       );
       expect((await pedir(n, "POST", "/api/auth/two-factor/enable", {})).estado).toBe(200);
     });
@@ -753,8 +755,8 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       const { n } = await ingresar(admin);
       const [antes] = await filaDeSesion(admin);
       await dueno.query(
-        `update autenticacion.session set "updatedAt" = now() - interval '10 minutes', "expiresAt" = now() + interval '20 minutes' where id = $1`,
-        [antes?.id],
+        `update autenticacion.session set "updatedAt" = $2::timestamptz - interval '10 minutes', "expiresAt" = $2::timestamptz + interval '20 minutes' where id = $1`,
+        [antes?.id, new Date()],
       );
       const r = await pedir(n, "GET", "/api/auth/estado-de-sesion");
       expect(r.estado).toBe(200);
@@ -788,8 +790,8 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       const { admin, n } = await enrolado();
       const [antes] = await filaDeSesion(admin);
       await dueno.query(
-        `update autenticacion.session set "updatedAt" = now() - interval '10 minutes', "expiresAt" = now() + interval '20 minutes' where id = $1`,
-        [antes?.id],
+        `update autenticacion.session set "updatedAt" = $2::timestamptz - interval '10 minutes', "expiresAt" = $2::timestamptz + interval '20 minutes' where id = $1`,
+        [antes?.id, new Date()],
       );
       const r = await pedir(n, "GET", "/api/auth/get-session");
       expect(r.estado).toBe(200);
@@ -822,8 +824,8 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       expect(e1.segundoFactorRecienteHastaMs).toBeGreaterThan(5 * MINUTO - 10_000);
       expect(e1.segundoFactorRecienteHastaMs).toBeLessThanOrEqual(5 * MINUTO);
       await dueno.query(
-        `update autenticacion.session set segundo_factor_en = now() - interval '2 minutes' where id = $1`,
-        [(await filaDeSesion(admin))[0]?.id],
+        `update autenticacion.session set segundo_factor_en = $2::timestamptz - interval '2 minutes' where id = $1`,
+        [(await filaDeSesion(admin))[0]?.id, new Date()],
       );
       const e2 = (await pedir(n, "GET", "/api/auth/estado-de-sesion")).json() as {
         segundoFactorRecienteHastaMs: number;
@@ -831,8 +833,8 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       expect(e2.segundoFactorRecienteHastaMs).toBeGreaterThan(3 * MINUTO - 10_000);
       expect(e2.segundoFactorRecienteHastaMs).toBeLessThanOrEqual(3 * MINUTO);
       await dueno.query(
-        `update autenticacion.session set segundo_factor_en = now() - interval '6 minutes' where id = $1`,
-        [(await filaDeSesion(admin))[0]?.id],
+        `update autenticacion.session set segundo_factor_en = $2::timestamptz - interval '6 minutes' where id = $1`,
+        [(await filaDeSesion(admin))[0]?.id, new Date()],
       );
       const e3 = (await pedir(n, "GET", "/api/auth/estado-de-sesion")).json() as {
         segundoFactorRecienteHastaMs: number;
@@ -843,8 +845,8 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
     it("el tope de 8 horas: a las 7 h 55 informa que vence en unos 5 minutos por el tope (no se renueva)", async () => {
       const { admin, n } = await enrolado();
       await dueno.query(
-        `update autenticacion.session set "createdAt" = now() - interval '7 hours 55 minutes', "expiresAt" = now() + interval '5 minutes' where id = $1`,
-        [(await filaDeSesion(admin))[0]?.id],
+        `update autenticacion.session set "createdAt" = $2::timestamptz - interval '7 hours 55 minutes', "expiresAt" = $2::timestamptz + interval '5 minutes' where id = $1`,
+        [(await filaDeSesion(admin))[0]?.id, new Date()],
       );
       const e = (await pedir(n, "GET", "/api/auth/estado-de-sesion")).json() as {
         vigente: boolean;
@@ -860,8 +862,8 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
     it("`get-session` no renueva más allá del tope: a las 7 h 50 el nuevo vencimiento es el de las 8 horas", async () => {
       const { admin, n } = await enrolado();
       await dueno.query(
-        `update autenticacion.session set "createdAt" = now() - interval '7 hours 50 minutes', "expiresAt" = now() + interval '10 minutes' where id = $1`,
-        [(await filaDeSesion(admin))[0]?.id],
+        `update autenticacion.session set "createdAt" = $2::timestamptz - interval '7 hours 50 minutes', "expiresAt" = $2::timestamptz + interval '10 minutes' where id = $1`,
+        [(await filaDeSesion(admin))[0]?.id, new Date()],
       );
       const r = await pedir(n, "GET", "/api/auth/get-session");
       const e = r.json() as { vigente: boolean; venceEnMs: number; motivo: string };
@@ -878,8 +880,8 @@ describe.skipIf(base === null)("consola de plataforma: ingreso y segundo factor"
       const { admin, n } = await enrolado();
       const id = (await filaDeSesion(admin))[0]?.id;
       await dueno.query(
-        `update autenticacion.session set "updatedAt" = now() - interval '31 minutes', "expiresAt" = now() - interval '1 minute' where id = $1`,
-        [id],
+        `update autenticacion.session set "updatedAt" = $2::timestamptz - interval '31 minutes', "expiresAt" = $2::timestamptz - interval '1 minute' where id = $1`,
+        [id, new Date()],
       );
       const e = await pedir(n, "GET", "/api/auth/estado-de-sesion");
       expect(e.estado).toBe(200);

@@ -24,7 +24,11 @@ import {
   type EstadoDeSesionDePlataforma,
 } from "../../capacidades/autenticacion/estado-de-sesion-de-plataforma";
 import { usuarioAuthId } from "../../primitivas/identificadores/marca";
-import type { Autenticacion, AutenticacionDePlataforma } from "../../puertos/autenticacion";
+import type {
+  Autenticacion,
+  AutenticacionDePlataforma,
+  OpcionesDeSesionDe,
+} from "../../puertos/autenticacion";
 import { ErrorDeConfiguracion } from "../postgres/errores";
 import type { ClienteDeGoogle } from "./configuracion";
 import {
@@ -123,7 +127,7 @@ const POLITICA_DE_EMPRESA: PoliticaDeAudiencia = {
 
 type NucleoDeAutenticacion = Readonly<{
   autenticacion: Autenticacion;
-  instanciaDe: (host: string) => ReturnType<typeof betterAuth> | null;
+  instanciaDe: (host: string, renovarYa?: boolean) => ReturnType<typeof betterAuth> | null;
   falloInterno: (error: unknown) => ErrorInternoDeIngreso;
   reloj: () => Date;
 }>;
@@ -143,6 +147,7 @@ function crearNucleo(
     reloj: () => Date,
     registrar: (detalle: string) => void,
     rutaDeError: string,
+    renovarYa: boolean,
   ) => Parameters<typeof betterAuth>[0],
   conSegundoFactor: boolean,
 ): NucleoDeAutenticacion {
@@ -169,21 +174,28 @@ function crearNucleo(
     return new ErrorInternoDeIngreso(500);
   }
 
-  function crearInstancia(host: string) {
+  function crearInstancia(host: string, renovarYa: boolean) {
     const configuracion = configuracionDeHost(host);
     if (!configuracion.ok) throw new ErrorDeConfiguracion("el host de ingreso no es válido");
-    return betterAuth(opcionesDeAudiencia(host, configuracion, reloj, registrar, rutaDeError));
+    return betterAuth(
+      opcionesDeAudiencia(host, configuracion, reloj, registrar, rutaDeError, renovarYa),
+    );
   }
 
-  /** La instancia del host, o `null` si el host no es un nombre de host válido. */
-  function instanciaDe(host: string) {
+  /**
+   * La instancia del host, o `null` si el host no es un nombre de host válido. `renovarYa` pide la gemela que escribe el uso en
+   * cada lectura (el «Seguir»): misma configuración salvo `updateAge`, con su propia entrada en la caché (el `|` no puede estar en un host válido).
+   */
+  function instanciaDe(host: string, renovarYa = false) {
     if (!configuracionDeHost(host).ok) return null;
-    return cache.obtenerOCrear(host, () => crearInstancia(host));
+    return cache.obtenerOCrear(renovarYa ? `renovar|${host}` : host, () =>
+      crearInstancia(host, renovarYa),
+    );
   }
 
   const autenticacion: Autenticacion = {
-    async sesionDe(pedido, host) {
-      const instancia = instanciaDe(host);
+    async sesionDe(pedido, host, opciones?: OpcionesDeSesionDe) {
+      const instancia = instanciaDe(host, opciones?.renovarYa === true);
       if (instancia === null) return null;
       let leida;
       try {
@@ -234,7 +246,11 @@ function crearNucleo(
       const origen = new URL(pedido.url);
       if (!politica.rutaPermitida(pedido.method, origen.pathname)) return respuestaNeutra();
       const configuracion = configuracionDeHost(host);
-      const instancia = instanciaDe(host);
+      // `get-session` es el «Seguir» (leer y renovar a pedido): escribe el uso siempre, como `sesionDe` con `renovarYa`.
+      const instancia = instanciaDe(
+        host,
+        origen.pathname === `${RUTA_BASE_DE_INGRESO}/get-session`,
+      );
       if (!configuracion.ok || instancia === null) return respuestaNeutra();
 
       // El pedido se rearma sobre el origen FIJO de la instancia: lo que la librería ve no depende de
@@ -314,7 +330,7 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
     c,
     limites,
     POLITICA_DE_EMPRESA,
-    (_host, configuracion, reloj, registrar, rutaDeError) =>
+    (_host, configuracion, reloj, registrar, rutaDeError, renovarYa) =>
       opcionesDeInstancia({
         configuracion: configuracion.valor,
         db: c.db,
@@ -322,6 +338,8 @@ export function crearAutenticacionDeBetterAuth(c: ConfiguracionDeAutenticacion):
         google: c.google,
         limites,
         reloj,
+        // La gemela del «Seguir» escribe el uso en cada lectura; la de las vistas, como máximo una vez por minuto.
+        ...(renovarYa ? { segundosEntreEscrituras: 0 } : {}),
         ...(c.encabezadoDeIp === undefined ? {} : { encabezadoDeIp: c.encabezadoDeIp }),
         rutaDeError,
         registrar,
@@ -344,6 +362,7 @@ export function crearAutenticacionDePlataformaDeBetterAuth(
     limites,
     politicaDePlataforma({ reloj, limites }),
     (_host, configuracion, relojDeLaInstancia, registrar, rutaDeError) =>
+      // La consola escribe el uso en cada lectura siempre: `renovarYa` no le cambia nada.
       opcionesDeInstancia({
         audiencia: "PLATAFORMA",
         consola: c.consola,

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0048",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Leyendas del comprobante: sin leyenda en exportación y en otro caso sin norma; monotributista es solo la condición Monotributo.",
+  "que_cambia": "Qué leyenda sale en una factura.",
+  "donde": "src/modulos/fiscal/dominio/leyenda-de-condicion-del-receptor.ts"
+}

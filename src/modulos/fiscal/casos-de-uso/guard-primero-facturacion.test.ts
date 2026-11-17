@@ -1,3 +1,4 @@
+import { CUERPOS_CON_GUARD_PROPIO } from "../../../../test/utilidades/cuerpos-de-fiscal";
 import { describe, expect, it } from "vitest";
 import { clavesDe } from "../../../capacidades/modulos/activos";
 import { CATALOGO_DE_MODULOS, type ClaveAccion } from "../../../capacidades/modulos/catalogo";
@@ -11,7 +12,11 @@ import type { ContextoOperativo } from "../../../contexto/contexto";
 import { MARCA_PRINCIPAL_DE_PRUEBA } from "../../../../test/utilidades/marcas";
 import { EmisionFalsa } from "../../../../test/utilidades/emision-falsa";
 import { consumidorFinal, renglon } from "../../../../test/utilidades/facturacion";
-import { empresaId, personaId } from "../../../primitivas/identificadores/marca";
+import { cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
+import { importeDesdeTexto } from "../../../primitivas/dinero/importe";
+import { ARS } from "../../../primitivas/dinero/moneda";
+import { precioUnitarioDesdeTexto } from "../../../primitivas/dinero/precio-unitario";
+import { empresaId, personaId, sucursalId } from "../../../primitivas/identificadores/marca";
 import type { CargaDeAutorizacion, DatosDelActor } from "../../../puertos/autorizacion";
 import type { Transacciones } from "../../../puertos/transacciones";
 import { comprobanteId, puntoDeVentaId } from "../dominio/identificadores";
@@ -115,6 +120,25 @@ const nota = {
   motivo: "Devolución",
 } as const;
 
+const ORIGEN = "0b3a0c5e-8f7d-4c1b-9a2e-1d2c3b4a5f61";
+const deOrigen = {
+  origen: { tipo: "EJEMPLAR_DE_TICKET", id: ORIGEN },
+  comprobanteId: CLAVE,
+  puntoDeVentaId: PV,
+  sucursalEsperadaId: sucursalId("s-1"),
+  receptor: consumidorFinal,
+  renglones: [
+    {
+      descripcion: "Pan",
+      cantidad: cantidadDesdeTexto("1"),
+      unidad: null,
+      precioUnitario: precioUnitarioDesdeTexto("121.00"),
+      alicuota: "21",
+    },
+  ],
+  totalEsperado: importeDesdeTexto(ARS, "121.00"),
+} as const;
+
 /** Cómo se llama a cada caso de uso con acción. Uno nuevo con acción obliga a sumar su fila. */
 const LLAMADAS: Record<ConAccion, (casos: CasosDeUsoDeFacturacion) => Promise<unknown>> = {
   emitirComprobanteManual: (c) =>
@@ -127,6 +151,7 @@ const LLAMADAS: Record<ConAccion, (casos: CasosDeUsoDeFacturacion) => Promise<un
       receptor: consumidorFinal,
       renglones: [renglon("121.00", "1", "21")],
     }),
+  emitirFacturaDeOrigen: (c) => c.emitirFacturaDeOrigen(contexto, deOrigen),
   emitirNotaDeCredito: (c) => c.emitirNotaDeCredito(contexto, nota),
   emitirNotaDeDebito: (c) => c.emitirNotaDeDebito(contexto, nota),
   descartarComprobante: (c) =>
@@ -153,6 +178,7 @@ const NOMBRES = clavesDe(LLAMADAS);
 /** La matriz de §C: quién puede cada caso. */
 const ROLES_ESPERADOS: Record<ConAccion, readonly RolDeEmpresa[]> = {
   emitirComprobanteManual: ROLES_DE_EMPRESA,
+  emitirFacturaDeOrigen: ROLES_DE_EMPRESA,
   emitirNotaDeCredito: ROLES_DE_EMPRESA,
   emitirNotaDeDebito: ROLES_DE_EMPRESA,
   descartarComprobante: ROLES_DE_EMPRESA,
@@ -164,6 +190,8 @@ const ROLES_ESPERADOS: Record<ConAccion, readonly RolDeEmpresa[]> = {
 /** En solo lectura (baja de plan): no se crea nada nuevo; lo que cierra lo existente, sí (§C). */
 const EN_SOLO_LECTURA: Record<ConAccion, boolean> = {
   emitirComprobanteManual: false,
+  // `comprobantes.emitir` es COMPLETA_CIERRA: completa algo ya vendido, se puede aunque el plan haya bajado (E1 §3.1).
+  emitirFacturaDeOrigen: true,
   emitirNotaDeCredito: true,
   emitirNotaDeDebito: false,
   descartarComprobante: true,
@@ -183,22 +211,23 @@ const pasoElGuard = async (llamada: Promise<unknown>): Promise<boolean> => {
 };
 
 describe("P7: el guard va primero en cada caso de uso de facturación", () => {
-  it("hay siete casos con acción y dos trabajos de sistema", () => {
+  it("hay ocho casos con acción y dos trabajos de sistema", () => {
     expect([...NOMBRES].sort()).toEqual(
       Object.keys(DECLARACIONES_DE_FACTURACION)
         .filter((n) => "accion" in DECLARACIONES_DE_FACTURACION[n as ConAccion])
         .sort(),
     );
-    expect(NOMBRES).toHaveLength(7);
+    expect(NOMBRES).toHaveLength(8);
     expect(DECLARACIONES_DE_FACTURACION.validarComprobante).toHaveProperty("sinGuard");
     expect(DECLARACIONES_DE_FACTURACION.reconciliarComprobantes).toHaveProperty("sinGuard");
   });
 
-  it("cada caso exige la acción de §C (la NC, notas_de_credito.emitir; la factura y la ND, emitir_manual)", () => {
+  it("cada caso exige la acción de §C (la NC, notas_de_credito.emitir; la factura y la ND, emitir_manual; la de un documento de origen, comprobantes.emitir)", () => {
     expect(
       Object.fromEntries(NOMBRES.map((n) => [n, DECLARACIONES_DE_FACTURACION[n].accion])),
     ).toEqual({
       emitirComprobanteManual: "comprobantes.emitir_manual",
+      emitirFacturaDeOrigen: "comprobantes.emitir",
       emitirNotaDeCredito: "notas_de_credito.emitir",
       emitirNotaDeDebito: "comprobantes.emitir_manual",
       descartarComprobante: "comprobantes.descartar",
@@ -304,6 +333,105 @@ describe("emitir a mano exige una persona y una clave con forma de uuid", () => 
   });
 });
 
+describe("facturar un documento de origen: persona, origen y comprobante con forma permitida", () => {
+  it("un contexto de sistema no emite: RangeError sin abrir la transacción", async () => {
+    const vigilada = vigilar(actor("GERENTE"));
+    await expect(
+      casosCon(vigilada).emitirFacturaDeOrigen(contextoDeSistema, deOrigen),
+    ).rejects.toThrow(RangeError);
+    expect(vigilada.accesos).toEqual([]);
+  });
+
+  it.each([
+    [
+      "un tipo de origen que no es de la lista",
+      { ...deOrigen, origen: { tipo: "MANUAL", id: ORIGEN } },
+    ],
+    [
+      "un origen que no es un uuid",
+      { ...deOrigen, origen: { tipo: "EJEMPLAR_DE_TICKET", id: "ticket-1" } },
+    ],
+    [
+      "un origen con un uuid en mayúscula",
+      { ...deOrigen, origen: { tipo: "EJEMPLAR_DE_TICKET", id: ORIGEN.toUpperCase() } },
+    ],
+  ])("%s da ORIGEN_INVALIDO después del guard y sin leer nada", async (_nombre, entrada) => {
+    const vigilada = vigilar(actor("OPERADOR"));
+    expect(
+      await casosCon(vigilada).emitirFacturaDeOrigen(
+        contexto,
+        entrada as unknown as Parameters<CasosDeUsoDeFacturacion["emitirFacturaDeOrigen"]>[1],
+      ),
+    ).toEqual({ ok: false, error: "ORIGEN_INVALIDO" });
+    expect(vigilada.accesos).toEqual(["autorizacion"]);
+  });
+
+  it("un id de comprobante que no es un uuid da CLAVE_INVALIDA después del guard y sin leer nada", async () => {
+    const vigilada = vigilar(actor("OPERADOR"));
+    expect(
+      await casosCon(vigilada).emitirFacturaDeOrigen(contexto, {
+        ...deOrigen,
+        comprobanteId: "no-es-uuid",
+      }),
+    ).toEqual({ ok: false, error: "CLAVE_INVALIDA" });
+    expect(vigilada.accesos).toEqual(["autorizacion"]);
+  });
+
+  it("los dos orígenes permitidos pasan la validación y recién ahí se toca lo demás", async () => {
+    for (const tipo of ["EJEMPLAR_DE_TICKET", "REEMISION_DE_TICKET"] as const) {
+      const vigilada = vigilar(actor("OPERADOR"));
+      expect(
+        await pasoElGuard(
+          casosCon(vigilada).emitirFacturaDeOrigen(contexto, {
+            ...deOrigen,
+            origen: { tipo, id: ORIGEN },
+          }),
+        ),
+        tipo,
+      ).toBe(true);
+    }
+  });
+});
+
+describe("emitirFacturaDeOrigenEnTx: un cuerpo de transacción que sale del módulo y lleva su guard adentro", () => {
+  const llamar = (tx: TxDeFacturacion, reglas: ReglasDeEmpresa = CON_FACTURACION) =>
+    publico.emitirFacturaDeOrigenEnTx(
+      tx,
+      { ...contexto, personaId: personaId("p-1") },
+      deOrigen,
+      reglas,
+    );
+
+  it("los únicos exportados que terminan en EnTx son los declarados con guard propio", () => {
+    expect(
+      Object.keys(publico)
+        .filter((nombre) => /EnTx$/.test(nombre))
+        .sort(),
+    ).toEqual([...CUERPOS_CON_GUARD_PROPIO].sort());
+  });
+
+  it("sin rol da SIN_PERMISO sin leer ni escribir nada más", async () => {
+    const vigilada = vigilar(actor(null));
+    expect(await llamar(vigilada.tx)).toEqual({ ok: false, error: "SIN_PERMISO" });
+    expect(vigilada.accesos).toEqual(["autorizacion"]);
+  });
+
+  it("con el módulo sin activar da MODULO_NO_ACTIVO sin leer nada más", async () => {
+    const vigilada = vigilar({ rol: "OPERADOR", modulosActivados: [], modulosHabilitados: [] });
+    expect(await llamar(vigilada.tx, REGLAS_DE_EMPRESA)).toEqual({
+      ok: false,
+      error: "MODULO_NO_ACTIVO",
+    });
+    expect(vigilada.accesos).toEqual(["autorizacion"]);
+  });
+
+  it("con el guard aprobado recién ahí toca lo demás", async () => {
+    const vigilada = vigilar(actor("OPERADOR"));
+    await expect(llamar(vigilada.tx)).rejects.toBeInstanceOf(AccesoFueraDelGuard);
+    expect(vigilada.accesos[0]).toBe("autorizacion");
+  });
+});
+
 describe("los trabajos de sistema no pasan por el guard y no admiten persona", () => {
   it("validarComprobante con persona lanza RangeError sin tocar nada", async () => {
     const vigilada = vigilar(actor("GERENTE"));
@@ -349,6 +477,10 @@ describe("los trabajos de sistema no pasan por el guard y no admiten persona", (
     expect(typeof publico.crearManejadorDeReconciliar).toBe("function");
     expect(publico.TRABAJO_VALIDAR_COMPROBANTE).toBe("fiscal.validar_comprobante");
     expect(publico.TRABAJO_RECONCILIAR).toBe("fiscal.reconciliar");
-    expect(Object.keys(publico).filter((nombre) => /EnTx$/.test(nombre))).toEqual([]);
+    expect(
+      Object.keys(publico).filter(
+        (nombre) => /EnTx$/.test(nombre) && !CUERPOS_CON_GUARD_PROPIO.includes(nombre),
+      ),
+    ).toEqual([]);
   });
 });

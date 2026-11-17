@@ -1,4 +1,4 @@
-import { randomBytes, randomInt } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import pg from "pg";
 import type { Kysely } from "kysely";
@@ -16,11 +16,7 @@ import type {
   ContextoDeSesion,
   ContextoOperativo,
 } from "../../src/contexto/contexto";
-import {
-  digitoVerificadorDeCuit,
-  cuitDesdeTexto,
-  type Cuit,
-} from "../../src/primitivas/identificacion-fiscal/cuit";
+import { type Cuit } from "../../src/primitivas/identificacion-fiscal/cuit";
 import {
   personaId,
   type EmpresaId,
@@ -29,6 +25,22 @@ import {
   type TenantId,
   type UsuarioAuthId,
 } from "../../src/primitivas/identificadores/marca";
+import {
+  crearRepositorioDeCuentas,
+  crearRepositorioDeDocumentos,
+  crearRepositorioDeLecturas,
+  crearRepositorioDeTickets,
+  type LecturasDeVentas,
+  type RepositorioDeCuentas,
+  type RepositorioDeDocumentos,
+  type RepositorioDeTickets,
+  type VentasDb,
+} from "../../src/modulos/ventas/publico";
+import {
+  crearRepositorioDeJornadas,
+  type CierreDb,
+  type RepositorioDeJornadas,
+} from "../../src/modulos/cierre/publico";
 import {
   crearRepositorioDeEmpresas,
   crearRepositorioDeSucursales,
@@ -51,6 +63,7 @@ import {
   type TenantsDb,
 } from "../../src/modulos/tenants/publico";
 import {
+  crearAutorizacionDeLecturaDePostgres,
   crearAutorizacionDePostgres,
   type AutorizacionDb,
 } from "../../src/adaptadores/postgres/autorizacion";
@@ -89,7 +102,38 @@ import {
 import type { AdminsDePlataforma } from "../../src/puertos/admins-de-plataforma";
 import type { AuditoriaDePlataforma } from "../../src/puertos/auditoria-de-plataforma";
 import type { CargaDeAutorizacionDePlataforma } from "../../src/puertos/autorizacion-de-plataforma";
+import type { CargaDeAutorizacion } from "../../src/puertos/autorizacion";
 import type { ColaDeTrabajos } from "../../src/puertos/cola-de-trabajos";
+import {
+  crearRepositorioDeOpciones,
+  crearRepositorioDePrecios,
+  crearRepositorioDePresentaciones,
+  crearRepositorioDeCartas,
+  crearRepositorioDeDisponibilidad,
+  crearRepositorioDeFamilias,
+  type RepositorioDeFamilias,
+  crearRepositorioDeSecciones,
+  crearRepositorioDeClasificacion,
+  crearRepositorioDeUnidades,
+  crearLectorDeCarta,
+  type RepositorioDeCartas,
+  type RepositorioDeDisponibilidad,
+  type RepositorioDeSecciones,
+  type RepositorioDeClasificacion,
+  type RepositorioDeUnidades,
+  type LectorDeCarta,
+  crearRepositorioDeProductos,
+  type CatalogoDb,
+  type RepositorioDeOpciones,
+  type RepositorioDePrecios,
+  type RepositorioDePresentaciones,
+  type RepositorioDeProductos,
+} from "../../src/modulos/catalogo/publico";
+import { armarPiezasDeCajaEnTx, type PiezasDeCajaEnTx } from "../../src/composicion/tx-de-caja";
+import {
+  crearLecturaDeSucursalBloqueada,
+  type LecturaDeSucursalBloqueada,
+} from "../../src/modulos/empresas/publico";
 import type { LecturasDeSesion } from "../../src/puertos/sesion";
 import type { IdempotenciaDePlataforma } from "../../src/puertos/idempotencia";
 import type { ReferenciasDeError } from "../../src/puertos/referencias-de-error";
@@ -97,7 +141,7 @@ import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";
 import { ADMIN_DE_PRUEBA, sembrarAdminsDePrueba } from "./admins-de-prueba";
 import { sembrarMarcaPrincipalDePrueba } from "./marcas-de-prueba";
 import type { BaseDePruebas } from "./global";
-import { OPCIONES_DE_BASE } from "./opciones-de-base";
+import { OPCIONES_DE_BASE, fijarLaZonaDeLaBase } from "./opciones-de-base";
 
 /**
  * Armado común de las pruebas de integración. Lo que recibe un trabajo de prueba es lo que
@@ -111,6 +155,16 @@ export type TxDePrueba = Readonly<{
   tenants: RepositorioDeTenants;
   empresas: RepositorioDeEmpresas;
   sucursales: RepositorioDeSucursales;
+  /** La jornada de la sucursal y la foto de sus controles (E3b, 0026). */
+  jornadas: RepositorioDeJornadas;
+  /** Lo de caja (E3) que necesita ventas para cobrar sobre la misma transacción. */
+  sucursalBloqueada: LecturaDeSucursalBloqueada;
+  /** Ventas (E4, 0028). */
+  cuentas: RepositorioDeCuentas;
+  tickets: RepositorioDeTickets;
+  /** El puntero ticket → comprobante (E1, 0029). */
+  documentos: RepositorioDeDocumentos;
+  lecturasDeVentas: LecturasDeVentas;
   /** La cola de trabajos del procesador (H5); se usa con el contexto `TRABAJOS`. */
   cola: ColaDeTrabajos;
   /** Puertos de plataforma (H5 P4): el actor sale del contexto de la transacción. */
@@ -126,7 +180,23 @@ export type TxDePrueba = Readonly<{
   niveles: NivelesDeControl<string>;
   /** Lo que lee la puerta `SESION` (W3a): la persona del usuario y sus empresas. */
   sesion: LecturasDeSesion;
+  /** Catálogo (E2): los repositorios que arma la composición. */
+  productos: RepositorioDeProductos;
+  opciones: RepositorioDeOpciones;
+  precios: RepositorioDePrecios;
+  presentacionesDeProducto: RepositorioDePresentaciones;
+  /** La carta pública, el botón «Ocultar» y las secciones (0043 y T2 de la carta real). */
+  cartasPublicas: RepositorioDeCartas;
+  disponibilidadDeProductos: RepositorioDeDisponibilidad;
+  familias: RepositorioDeFamilias;
+  seccionesDeCarta: RepositorioDeSecciones;
+  /** La clasificación comercial (0045, A2b). */
+  clasificacion: RepositorioDeClasificacion;
+  /** Las unidades de medida (lista global, solo lectura). */
+  unidades: RepositorioDeUnidades;
+  lectorDeCarta: LectorDeCarta;
 }> &
+  PiezasDeCajaEnTx &
   TxDeIdentidad;
 
 /**
@@ -137,7 +207,58 @@ export function crearEntornoDePrueba(
   base: BaseDePruebas,
   maximoDeConexiones = 5,
   ajustar: (tx: TxDePrueba) => TxDePrueba = (tx) => tx,
+  plazoParaConseguirConexionEnMs?: number,
 ): TransaccionesDePostgres<TxDePrueba> {
+  const armarTx = (
+    db: Kysely<SinTablas>,
+    contexto: Contexto,
+    autorizacion: CargaDeAutorizacion,
+  ): TxDePrueba =>
+    ajustar({
+      db,
+      tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
+      empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
+      sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
+      jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
+      sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
+      ...armarPiezasDeCajaEnTx(db),
+      cuentas: crearRepositorioDeCuentas(db.withTables<VentasDb>()),
+      tickets: crearRepositorioDeTickets(db.withTables<VentasDb>()),
+      documentos: crearRepositorioDeDocumentos(db.withTables<VentasDb>()),
+      lecturasDeVentas: crearRepositorioDeLecturas(db.withTables<VentasDb>()),
+      personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
+      membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
+      asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
+      invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
+      traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
+      trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
+      auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
+      cola: crearColaDePostgres(db.withTables<ColaDb>()),
+      auditoriaDePlataforma: crearAuditoriaDePlataformaDePostgres(
+        db.withTables<AuditoriaDePlataformaDb>(),
+        contexto,
+      ),
+      idempotencia: crearIdempotenciaDePostgres(db.withTables<IdempotenciaDb>(), contexto),
+      autorizacionDePlataforma: crearAutorizacionDePlataformaDePostgres(
+        db.withTables<AutorizacionDePlataformaDb>(),
+      ),
+      admins: crearAdminsDePostgres(db.withTables<AdminsDb>()),
+      referenciasDeError: crearReferenciasDeErrorDePostgres(db.withTables<ReferenciasDeErrorDb>()),
+      autorizacion,
+      niveles: crearNivelesDeControlDePostgres<string>(db.withTables<NivelesDeControlDb>()),
+      sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
+      productos: crearRepositorioDeProductos(db.withTables<CatalogoDb>()),
+      opciones: crearRepositorioDeOpciones(db.withTables<CatalogoDb>()),
+      precios: crearRepositorioDePrecios(db.withTables<CatalogoDb>()),
+      presentacionesDeProducto: crearRepositorioDePresentaciones(db.withTables<CatalogoDb>()),
+      cartasPublicas: crearRepositorioDeCartas(db.withTables<CatalogoDb>()),
+      disponibilidadDeProductos: crearRepositorioDeDisponibilidad(db.withTables<CatalogoDb>()),
+      familias: crearRepositorioDeFamilias(db.withTables<CatalogoDb>()),
+      seccionesDeCarta: crearRepositorioDeSecciones(db.withTables<CatalogoDb>()),
+      clasificacion: crearRepositorioDeClasificacion(db.withTables<CatalogoDb>()),
+      unidades: crearRepositorioDeUnidades(db.withTables<CatalogoDb>()),
+      lectorDeCarta: crearLectorDeCarta(db.withTables<CatalogoDb>()),
+    });
   return crearTransacciones<TxDePrueba>({
     urls: {
       OPERATIVO: base.app,
@@ -146,36 +267,12 @@ export function crearEntornoDePrueba(
       TRABAJOS: base.trabajos,
     },
     armar: (db, contexto) =>
-      ajustar({
-        db,
-        tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
-        empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
-        sucursales: crearRepositorioDeSucursales(db.withTables<EmpresasDb>()),
-        personas: crearRepositorioDePersonas(db.withTables<IdentidadDb>()),
-        membresias: crearRepositorioDeMembresias(db.withTables<IdentidadDb>()),
-        asignaciones: crearRepositorioDeAsignaciones(db.withTables<IdentidadDb>()),
-        invitaciones: crearRepositorioDeInvitaciones(db.withTables<IdentidadDb>()),
-        traspasos: crearRepositorioDeTraspasos(db.withTables<IdentidadDb>()),
-        trabajos: crearTrabajosDePostgres(db.withTables<TrabajosDb>()),
-        auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
-        cola: crearColaDePostgres(db.withTables<ColaDb>()),
-        auditoriaDePlataforma: crearAuditoriaDePlataformaDePostgres(
-          db.withTables<AuditoriaDePlataformaDb>(),
-          contexto,
-        ),
-        idempotencia: crearIdempotenciaDePostgres(db.withTables<IdempotenciaDb>(), contexto),
-        autorizacionDePlataforma: crearAutorizacionDePlataformaDePostgres(
-          db.withTables<AutorizacionDePlataformaDb>(),
-        ),
-        admins: crearAdminsDePostgres(db.withTables<AdminsDb>()),
-        referenciasDeError: crearReferenciasDeErrorDePostgres(
-          db.withTables<ReferenciasDeErrorDb>(),
-        ),
-        autorizacion: crearAutorizacionDePostgres(db.withTables<AutorizacionDb>()),
-        niveles: crearNivelesDeControlDePostgres<string>(db.withTables<NivelesDeControlDb>()),
-        sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
-      }),
+      armarTx(db, contexto, crearAutorizacionDePostgres(db.withTables<AutorizacionDb>())),
+    // Como la composición real: en lectura se resuelven una vez los permisos; al escribir, nunca.
+    armarDeLectura: (db, contexto) =>
+      armarTx(db, contexto, crearAutorizacionDeLecturaDePostgres(db.withTables<AutorizacionDb>())),
     maximoDeConexiones,
+    ...(plazoParaConseguirConexionEnMs === undefined ? {} : { plazoParaConseguirConexionEnMs }),
     clave: base.clave,
   });
 }
@@ -243,20 +340,13 @@ export const comoSesion = (usuarioAuth: UsuarioAuthId): ContextoDeSesion => ({
 /** El `ahora` de las pruebas (el mismo de todos los contextos de este archivo). */
 export const AHORA_DE_PRUEBA = AHORA;
 
-/** CUIT válido al azar (único con altísima probabilidad dentro de una corrida). */
-export function cuitAlAzar(): Cuit {
-  for (;;) {
-    let diez = String(randomInt(20, 34));
-    while (diez.length < 10) diez += String(randomInt(0, 10));
-    const verificador = digitoVerificadorDeCuit(diez);
-    if (verificador === null) continue;
-    const resultado = cuitDesdeTexto(`${diez}${verificador}`);
-    if (resultado.ok) return resultado.valor;
-  }
-}
-
-export const nombreAlAzar = (prefijo: string): string =>
-  `${prefijo}-${randomBytes(4).toString("hex")}`;
+/**
+ * Los valores únicos de las pruebas (CUIT, nombres…) vienen del generador común, `unicos.ts`: la unicidad es determinista por construcción (un puesto por archivo de
+ * pruebas en la corrida), no probable. Se re-exportan acá porque este archivo es donde los buscan las pruebas.
+ */
+import { cuitUnico, nombreUnico } from "./unicos";
+import { correoUnico } from "./unicos";
+export { cuitUnico, nombreUnico };
 
 export type EmpresaDePrueba = Readonly<{ tenant: TenantId; empresa: EmpresaId; cuit: Cuit }>;
 
@@ -269,12 +359,12 @@ export async function crearEmpresaActiva(
     // El armado de datos no prueba aislamiento transaccional: no necesita SERIALIZABLE.
     { contexto: comoPlataforma(), aislamiento: "read committed" },
     async ({ tenants, empresas, db }) => {
-      const tenant = opciones.tenant ?? (await tenants.crear(nombreAlAzar("tenant"))).id;
-      const cuit = cuitAlAzar();
+      const tenant = opciones.tenant ?? (await tenants.crear(nombreUnico("tenant"))).id;
+      const cuit = cuitUnico();
       const creada = await empresas.crear({
         tenantId: tenant,
         cuit,
-        razonSocial: nombreAlAzar("empresa"),
+        razonSocial: nombreUnico("empresa"),
       });
       await sql`insert into sucursal (empresa_id, nombre)
                 values (${creada.id}, ${opciones.nombreDeSucursal ?? "Casa central"})`.execute(db);
@@ -299,12 +389,12 @@ export async function crearEmpresaEnAlta(
   const resultado = await entorno.ejecutar(
     { contexto: comoPlataforma(), aislamiento: "read committed" },
     async ({ tenants, empresas }) => {
-      const tenant = opciones.tenant ?? (await tenants.crear(nombreAlAzar("tenant"))).id;
-      const cuit = cuitAlAzar();
+      const tenant = opciones.tenant ?? (await tenants.crear(nombreUnico("tenant"))).id;
+      const cuit = cuitUnico();
       const creada = await empresas.crear({
         tenantId: tenant,
         cuit,
-        razonSocial: nombreAlAzar("empresa"),
+        razonSocial: nombreUnico("empresa"),
       });
       return { ok: true as const, valor: { tenant, empresa: creada.id, cuit } };
     },
@@ -324,7 +414,7 @@ export async function crearPropietario(
     { contexto: comoPlataforma(), aislamiento: "read committed" },
     async ({ db }) => {
       const { rows } = await sql<{ id: string }>`
-      insert into persona (email) values (${`${randomBytes(6).toString("hex")}@prueba.test`})
+      insert into persona (email) values (${correoUnico("")})
       returning id`.execute(db);
       const id = rows[0]?.id;
       if (id === undefined) throw new Error("no se creó la persona");
@@ -346,10 +436,11 @@ export async function crearBaseAparte(
   base: BaseDePruebas,
   opciones: { migrar?: boolean; sinClave?: boolean; sinMarcaDePrueba?: boolean } = {},
 ): Promise<{ base: BaseDePruebas; destruir: () => Promise<void> }> {
-  const nombre = `pedernal_it_${randomBytes(6).toString("hex")}`;
+  const nombre = `pedernal_it_${randomBytes(8).toString("hex")}`;
   const admin = new pg.Client({ connectionString: base.admin });
   await admin.connect();
   await admin.query(`CREATE DATABASE ${nombre} ${OPCIONES_DE_BASE}`);
+  await fijarLaZonaDeLaBase(admin, nombre);
   const conBase = (url: string) => {
     const u = new URL(url);
     u.pathname = `/${nombre}`;

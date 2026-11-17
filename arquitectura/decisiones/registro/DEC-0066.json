@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0066",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La reserva de un número de comprobante dura 5 minutos antes de poder reconciliarse.",
+  "que_cambia": "Cuánto espera el sistema antes de reconciliar un número reservado.",
+  "donde": "src/modulos/fiscal/dominio/numeracion.ts"
+}

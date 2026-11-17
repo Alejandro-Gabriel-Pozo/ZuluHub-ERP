@@ -10,6 +10,7 @@ import {
 import type { Resultado } from "../../src/primitivas/resultado/resultado";
 import { ADMIN_DE_PRUEBA, SOPORTE_DE_PRUEBA } from "./admins-de-prueba";
 import { comoPlataforma } from "./entorno";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de los adaptadores de plataforma (H5 P4): los actores, los administradores
@@ -34,7 +35,7 @@ export async function crearAdminDeBase(
   opciones: { rol?: "ADMIN" | "SOPORTE"; activo?: boolean; email?: string } = {},
 ): Promise<{ id: AdminPlataformaId; email: string }> {
   const id = randomUUID();
-  const email = opciones.email ?? `admin-${randomBytes(5).toString("hex")}@prueba.test`;
+  const email = opciones.email ?? `admin-${sufijoUnico()}@prueba.test`;
   await dueno.query(
     "insert into admin_plataforma (id, email, rol, activo) values ($1, $2, $3, $4)",
     [id, email, opciones.rol ?? "ADMIN", opciones.activo ?? true],

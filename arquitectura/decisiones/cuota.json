@@ -1,0 +1,47 @@
+{
+  "vigente_desde": "2026-11-14",
+  "negocio": 5,
+  "tecnicas": 10,
+  "excepciones": [
+    {
+      "id": "DEC-0700",
+      "fecha": "2026-11-16",
+      "fuente": "Mensaje del dueño en el chat del orquestador, 16/11/2026: «A para la cuota de #371», opción A (excepción para este PR) frente a B (partir el PR)"
+    },
+    {
+      "id": "DEC-0705",
+      "fecha": "2026-11-16",
+      "fuente": "Mensaje del dueño en el chat del orquestador, 16/11/2026: «A para la cuota de #371», opción A (excepción para este PR) frente a B (partir el PR)"
+    },
+    {
+      "id": "DEC-0707",
+      "fecha": "2026-11-16",
+      "fuente": "Mensaje del dueño en el chat del orquestador, 16/11/2026: «A para la cuota de #371», opción A (excepción para este PR) frente a B (partir el PR)"
+    },
+    {
+      "id": "DEC-0708",
+      "fecha": "2026-11-16",
+      "fuente": "Mensaje del dueño en el chat del orquestador, 16/11/2026: «A para la cuota de #371», opción A (excepción para este PR) frente a B (partir el PR)"
+    },
+    {
+      "id": "DEC-0710",
+      "fecha": "2026-11-16",
+      "fuente": "Mensaje del dueño en el chat del orquestador, 16/11/2026: «A para la cuota de #371», opción A (excepción para este PR) frente a B (partir el PR)"
+    },
+    {
+      "id": "DEC-0711",
+      "fecha": "2026-11-16",
+      "fuente": "Mensaje del dueño en el chat del orquestador, 16/11/2026: «A para la cuota de #371», opción A (excepción para este PR) frente a B (partir el PR)"
+    },
+    {
+      "id": "DEC-0712",
+      "fecha": "2026-11-16",
+      "fuente": "Mensaje del dueño en el chat del orquestador, 16/11/2026: «A para la cuota de #371», opción A (excepción para este PR) frente a B (partir el PR)"
+    },
+    {
+      "id": "DEC-0713",
+      "fecha": "2026-11-16",
+      "fuente": "Mensaje del dueño en el chat del orquestador, 16/11/2026: «A para la cuota de #371», opción A (excepción para este PR) frente a B (partir el PR)"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0339",
+  "fecha": "2026-11-12",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Poner la carta en línea sin la perilla devuelve el error estándar de plan (FUNCION_NO_INCLUIDA) y no un código propio PERILLA_APAGADA.",
+  "que_cambia": "Solo el nombre técnico del error; la pantalla lo traduce como los demás extras de pago. Revertir es renombrar un código.",
+  "donde": "src/modulos/catalogo/casos-de-uso/guardar-carta-publica.ts; Pedernal-docs 11-especificaciones/carta-real-especificacion.md §6.1"
+}

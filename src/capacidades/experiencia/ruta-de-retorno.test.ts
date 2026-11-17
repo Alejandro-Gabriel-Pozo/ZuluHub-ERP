@@ -46,6 +46,91 @@ describe("rutaDeRetorno: solo rutas propias", () => {
     expect(rutaDeRetorno(candidata)).toBe("/");
   });
 
+  it.each([
+    "/ventas/",
+    "/facturacion/comprobantes?periodo=mes&texto=Hotel+Sol&despues=abc-_.~*%3D",
+    "/facturacion/comprobantes?texto=a*b",
+    "/a?x=1#y",
+    "/a#y?z",
+    "/a?",
+    "/a#",
+  ])("deja pasar la consulta y el fragmento que arma la propia aplicación: %s", (ruta) => {
+    expect(rutaDeRetorno(ruta)).toBe(ruta);
+  });
+
+  it.each([
+    "/ventas?x=a:b",
+    "/ventas?x=a@b",
+    "/ventas?x=a,b",
+    "/ventas?x=a;b",
+    "/ventas?x=a'b",
+    "/ventas?x=a(b)",
+    "/ventas?x=a!b",
+    "/ventas?x=a$b",
+    "/ventas?x=a b",
+    "/ventas?x=a\\b",
+    "/ventas?x=a\nb",
+    "/ventas?x=a\tb",
+    "/ventas?x=a\u0000b",
+    "/ventas?x=a<b",
+    '/ventas?x=a"b',
+    "/ventas?x=ñ",
+    "/ventas?x=／evil.com",
+    "/ventas?x=a\u202eb",
+    "/ventas#a\nb",
+    "/ventas#a b",
+    "/ventas?a b#c",
+    "/ventas#a b?c",
+    "/ventas?a:b#c=d",
+  ])("la consulta o el fragmento con algo fuera del conjunto vuelve al inicio: %j", (ruta) => {
+    expect(rutaDeRetorno(ruta)).toBe("/");
+  });
+
+  it.each([
+    "//evil.com",
+    "/\\evil.com",
+    "/%2f%2fevil.com",
+    "/%2F%2Fevil.com",
+    "/%5cevil.com",
+    "/\t/evil.com",
+    "/\n/evil.com",
+    "/\r/evil.com",
+    "https:evil.com",
+    "https://evil.com",
+    "javascript:alert(1)",
+    "/javascript:alert(1)",
+    "/／evil.com",
+    "/∕evil.com",
+    "/⁄evil.com",
+    "/․․/x",
+    "/‮evil.com",
+    "/a\u0000b",
+    "/a%00b",
+    "/%252f%252fevil.com",
+    "///",
+    "/.//evil",
+    "/@evil.com",
+    "/a@evil.com",
+    "/user:pass@evil.com",
+    "/ingreso?volver=https://evil.com",
+    "/%69ngreso",
+    "/%49ngreso",
+    "/%61pi/auth",
+    "//evil.com?x=1",
+    "//evil.com#x",
+    "?x=//evil.com",
+    "#/evil.com",
+  ])("vector de redirección abierta, vuelve al inicio: %j", (ruta) => {
+    expect(rutaDeRetorno(ruta)).toBe("/");
+  });
+
+  it("el cambio de camino a consulta o fragmento se hace en el primer ? o # (el que viene antes)", () => {
+    expect(rutaDeRetorno("/a#b?c")).toBe("/a#b?c");
+    expect(rutaDeRetorno("/a?b#c")).toBe("/a?b#c");
+    expect(rutaDeRetorno("/a:b?x")).toBe("/");
+    expect(rutaDeRetorno("/a?x=:")).toBe("/");
+  });
+
   it("lo prohibido es solo al principio de la ruta, y los puntos dentro de un nombre no son «subir de nivel»", () => {
     for (const ruta of [
       "/ventas/api",
@@ -101,6 +186,56 @@ describe("rutaDeRetorno: solo rutas propias", () => {
         expect(ruta).not.toMatch(/[\u0000- \u007f]/);
         expect(() => new URL(ruta, "https://app.test")).not.toThrow();
         expect(new URL(ruta, "https://app.test").origin).toBe("https://app.test");
+      }),
+    );
+  });
+
+  it("propiedad: armada con piezas hostiles, vuelve al inicio o es exactamente la candidata y sigue en el mismo origen", () => {
+    const pieza = fc.constantFrom(
+      "/",
+      "//",
+      "\\",
+      "..",
+      ".",
+      "%2f",
+      "%5c",
+      "%2e",
+      "%00",
+      "%252f",
+      "a",
+      "ñ",
+      "@",
+      ":",
+      "?",
+      "#",
+      "=",
+      "&",
+      "+",
+      "*",
+      " ",
+      "\t",
+      "\n",
+      "／",
+      "∕",
+      "⁄",
+      "․",
+      "‮",
+      "https:",
+      "javascript:",
+      "ingreso",
+      "api",
+      "s",
+    );
+    fc.assert(
+      fc.property(fc.array(pieza, { maxLength: 8 }), (piezas) => {
+        const candidata = piezas.join("");
+        const ruta = rutaDeRetorno(candidata);
+        if (ruta === "/") return;
+        expect(ruta).toBe(candidata);
+        const url = new URL(ruta, "https://app.test");
+        expect(url.origin).toBe("https://app.test");
+        expect(url.pathname.startsWith("//")).toBe(false);
+        expect(decodeURIComponent(ruta.replace(/[?#].*/, ""))).not.toContain("//");
       }),
     );
   });

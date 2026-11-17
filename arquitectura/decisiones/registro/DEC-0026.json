@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0026",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "El cierre con diferencia y la jornada vencida se permiten siempre y dejan auditoría; no hay controles configurables todavía.",
+  "que_cambia": "Si la caja puede cerrar con diferencia sin que nadie lo frene.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B1 (E3)"
+}

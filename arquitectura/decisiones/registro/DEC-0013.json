@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0013",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Dividir la cuenta por ítems entra como último tramo separable.",
+  "que_cambia": "Cuándo estará disponible dividir por ítems.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A13 (E7)"
+}

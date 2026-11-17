@@ -1,0 +1,6 @@
+{
+  "grupo": "marcas (ciclo de vida de los dominios)",
+  "archivos": "src/modulos/marcas/dominio/ciclo-de-dominio.ts",
+  "minutos": 1.2,
+  "pruebas": "src/modulos/marcas/dominio/ciclo-de-dominio.test.ts"
+}

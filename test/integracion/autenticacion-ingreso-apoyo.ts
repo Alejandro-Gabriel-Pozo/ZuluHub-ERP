@@ -4,8 +4,11 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { crearConexionDeAutenticacion } from "../../src/adaptadores/postgres/conexion-de-autenticacion";
 import { crearAutenticacionDeBetterAuth } from "../../src/adaptadores/autenticacion/autenticacion-de-better-auth";
+import { vi } from "vitest";
 import type { Autenticacion } from "../../src/puertos/autenticacion";
 import type { BaseDePruebas } from "./global";
+import { sufijoUnico } from "./unicos";
+import { unicos } from "./unicos";
 
 /**
  * Apoyo de las pruebas del ingreso (W3b): un proveedor OIDC LOCAL que hace de Google, un bloqueo de la red
@@ -25,7 +28,7 @@ export type PerfilDePrueba = Readonly<{
 
 export const perfilAlAzar = (opciones: Partial<PerfilDePrueba> = {}): PerfilDePrueba => ({
   sub: `sub-${randomUUID()}`,
-  email: `ingreso-${randomUUID().slice(0, 8)}@ejemplo.test`,
+  email: `ingreso-${sufijoUnico()}@ejemplo.test`,
   emailVerificado: true,
   nombre: "Persona de prueba",
   ...opciones,
@@ -223,7 +226,8 @@ type Respuesta = Readonly<{
   json: () => unknown;
 }>;
 
-let contadorDeIp = Math.floor(Math.random() * 30_000);
+// Cada archivo de pruebas arranca en su propio bloque de 32 direcciones (su puesto de la corrida): dos archivos a la vez no se pisan. Pasadas las 32 sigue contando.
+let contadorDeIp = unicos().puesto * 32;
 /** Una IP distinta en cada llamada (rango de pruebas): la librería limita los pedidos por IP y dos navegadores no pueden compartirla por azar. */
 export function ipUnica(): string {
   contadorDeIp += 1;
@@ -329,7 +333,16 @@ export class Navegador {
       throw new Error(`el inicio de ingreso dio ${inicio.estado}: ${inicio.texto}`);
     const { url } = inicio.json() as { url: string };
     const retorno = new URL(proveedor.autorizar(url, perfil));
-    return this.pedir(autenticacion, host, "GET", `${retorno.pathname}${retorno.search}`);
+    const respuesta = await this.pedir(
+      autenticacion,
+      host,
+      "GET",
+      `${retorno.pathname}${retorno.search}`,
+    );
+    // Con la fecha quieta (`usarFechaQuietaDeTotp`), dos sesiones del mismo administrador tendrían el mismo `createdAt` y la
+    // «más reciente» no tendría desempate: cada ingreso avanza un milisegundo, muy lejos de mover el paso de 30 s.
+    if (vi.isFakeTimers()) vi.setSystemTime(Date.now() + 1);
+    return respuesta;
   }
 
   /** Igual, pero devuelve el retorno SIN haberlo seguido (para repetirlo o reordenarlo). */

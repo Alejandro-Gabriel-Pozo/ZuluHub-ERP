@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0368",
+  "fecha": "2026-11-13",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "La carta pública deja de verse sola si la empresa baja de plan o pierde el módulo; cada visita lo evalúa con la regla de derechos de uso, y el rol público lee solo columnas mínimas de plan y módulos.",
+  "que_cambia": "Cuatro permisos de lectura por columna y cuatro políticas por código de carta (0050); una prueba lista las columnas exactas. Revertir: reversión de 0050 (sin pérdida de datos) y mirar el plan solo al poner la carta en línea.",
+  "donde": "migraciones/0050_plan_en_la_lectura_publica_de_carta.sql; test/integracion/carta-publica-plan.test.ts y carta-publica-lectura.test.ts (C-6); carta-real-especificacion.md riesgo R3; decisiones-del-dueno-2026-11.md (13/11/2026, «Carta pública y plan (T6)»)"
+}

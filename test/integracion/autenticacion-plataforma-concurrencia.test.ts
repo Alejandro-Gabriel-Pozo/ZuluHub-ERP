@@ -14,6 +14,7 @@ import {
   otroNavegadorConLaSesion,
   type AdminDePrueba,
   type PlataformaDePrueba,
+  usarFechaQuietaDeTotp,
 } from "./autenticacion-plataforma-apoyo";
 import { crearBaseAparte } from "./entorno";
 
@@ -32,6 +33,7 @@ const SIMULTANEOS = 8;
 type Alta = Readonly<{ qrSvg: string; secreto: string; codigosDeRecuperacion: string[] }>;
 
 describe.skipIf(base === null)("consola de plataforma: concurrencia del segundo factor", () => {
+  usarFechaQuietaDeTotp();
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let dueno: pg.Client;
   let proveedor: ProveedorLocal;

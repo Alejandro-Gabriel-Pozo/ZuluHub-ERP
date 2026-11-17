@@ -12,7 +12,7 @@ import { PAGINA, SUCURSALES } from "../utilidades/listado-de-comprobantes";
  * fuera de alcance, vacío, errores (con la referencia, sin el código crudo) y clave de página que no sirve (vuelve a la primera).
  */
 vi.mock("server-only", () => ({}));
-// La barra pide los permisos de la persona (`permisosDelActor`): acá ve «Comprobantes» (el filtro se prueba en `modulos-de-la-barra.test.ts`).
+// La barra pide los permisos de la persona (`permisosDelActor`): acá ve «Ventas» (el área de Comprobantes; el filtro se prueba en `modulos-de-la-barra.test.ts`).
 const permisos = vi.hoisted(() => ({ acciones: ["comprobantes.ver"] as string[] }));
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
@@ -52,6 +52,8 @@ vi.mock("../../apps/web/servidor/facturacion", () => ({
   elegirLaSucursal: () => Promise.resolve({ error: null }),
 }));
 vi.mock("../../apps/web/servidor/sesion", () => ({
+  // Sin lecturas compartidas: cada consulta abre la suya (la página las pide igual).
+  dependenciasDeSesion: {},
   empresaDelPedido: () =>
     Promise.resolve({
       puerta: { marca: { nombre: "Marca de prueba" } },
@@ -193,12 +195,12 @@ describe("la página del listado de comprobantes", () => {
     expect(await texto()).toContain("Punto de venta");
   });
 
-  it("la barra marca «Comprobantes» como el destino actual y no marca ningún otro", async () => {
+  it("la barra marca el área «Ventas» (Comprobantes) como el destino actual y no marca ningún otro", async () => {
     const marcado = await html();
     const actuales = [
       ...marcado.matchAll(/<a[^>]*aria-current="page"[^>]*>(?:<[^>]+>)*([^<]+)/g),
     ].map((m) => m[1]);
-    expect(actuales).toEqual(["Comprobantes"]);
+    expect(actuales).toEqual(["Ventas"]);
   });
 
   it("pide el listado con el contexto de la empresa y «Este mes» al día de Argentina", async () => {
@@ -271,12 +273,12 @@ describe("la página del listado de comprobantes", () => {
       pagina: { ok: false, error: errorDeCodigo("FISCAL_SUCURSAL_FUERA_DE_ALCANCE") },
     });
     const marcado = await html();
-    expect(await texto()).toContain("Sucursal fuera de su alcance.");
+    expect(await texto()).toContain("Sucursal fuera de tu alcance.");
     expect(marcado).toContain('name="sucursalId"');
   });
 
   it.each([
-    ["SIN_PERMISO", "No tiene permiso para hacer esto."],
+    ["SIN_PERMISO", "No tenés permiso para hacer esto."],
     ["MODULO_EN_DESARROLLO", "Esta función todavía está en desarrollo."],
     ["SESION_VENCIDA", "Tu sesión venció"],
     ["FISCAL_FILTRO_INVALIDO", "Los filtros del listado no son válidos."],

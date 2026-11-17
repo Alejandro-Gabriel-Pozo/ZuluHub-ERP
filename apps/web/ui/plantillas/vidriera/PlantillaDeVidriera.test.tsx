@@ -716,6 +716,12 @@ describe("carta: forma", () => {
     expect(document.querySelectorAll("header p")).toHaveLength(1);
   });
 
+  it("sin rubro no hay línea de rubro (el rubro es opcional)", async () => {
+    await abrirVidriera(vidrieraDePrueba({ rubro: null }));
+    expect(document.querySelector("header")?.textContent).not.toContain("Cafetería");
+    expect(document.querySelectorAll("header p")).toHaveLength(1);
+  });
+
   it("la palabra más larga se parte y la descripción de varias líneas conserva sus saltos", async () => {
     await abrirVidriera();
     expect(LARGO.nombre.length).toBeGreaterThan(40);

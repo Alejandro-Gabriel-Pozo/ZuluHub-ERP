@@ -4,6 +4,7 @@
  * (`#rrggbb`), los valores del aspecto y las reglas de negocio los decide el caso de uso. Lo que no está en la
  * lista se descarta: una clave de más nunca llega al caso.
  */
+import { LARGO_MAXIMO_DEL_NOMBRE } from "../../../src/modulos/marcas/publico";
 import type { CambiosDelBorrador } from "./submarca";
 
 export type EntradaDelBorrador = Readonly<{
@@ -27,7 +28,6 @@ export type EntradaDeLaConfirmacion = Readonly<{
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
-const LARGO_MAXIMO_DE_NOMBRE = 200;
 const LARGO_MAXIMO_DE_COLOR = 20;
 const LARGO_MAXIMO_DE_ASPECTO = 40;
 const LARGO_MAXIMO_DEL_MOTIVO = 2000;
@@ -76,7 +76,7 @@ function cambiosDe(valor: unknown): CambiosDelBorrador | null {
     aspecto?: Record<(typeof TOKENS_DE_ASPECTO)[number], string>;
   } = {};
   if (Object.hasOwn(valor, "nombreVisible")) {
-    const nombre = textoDe(valor["nombreVisible"], LARGO_MAXIMO_DE_NOMBRE);
+    const nombre = textoDe(valor["nombreVisible"], LARGO_MAXIMO_DEL_NOMBRE);
     if (nombre === null) return null;
     cambios.nombreVisible = nombre;
   }

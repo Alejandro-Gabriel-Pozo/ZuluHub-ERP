@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL } from "../../../primitivas/texto/nombre-o-razon-social";
 import {
   DOMICILIO_1,
   DOMICILIO_2,
@@ -16,12 +17,16 @@ import {
   confirmarDatosFiscales,
   editarBorrador,
   esCondicionDeIibb,
-  fechaCivilValida,
   nuevoBorrador,
+  pedidoNoCambiaLoGuardado,
   type CambiosDeBorrador,
   type DatosFiscalesBorrador,
   type DatosFiscalesConfirmados,
 } from "./datos-fiscales";
+
+// 2026-10-12 12:00 en Argentina (UTC-3 = 15:00Z): el reloj del contexto que se le pasa al dominio.
+const AHORA = new Date("2026-10-12T15:00:00Z");
+const HOY = "2026-10-12";
 
 const vacio = nuevoBorrador({
   id: VERSION_1,
@@ -31,7 +36,7 @@ const vacio = nuevoBorrador({
 });
 
 function editado(cambios: CambiosDeBorrador, desde: DatosFiscalesBorrador = vacio) {
-  const r = editarBorrador(desde, cambios);
+  const r = editarBorrador(desde, cambios, AHORA);
   if (!r.ok) throw new Error(`se esperaba un borrador válido y dio ${JSON.stringify(r.error)}`);
   return r.valor;
 }
@@ -126,7 +131,7 @@ describe("borradores", () => {
 
   it("mandar un número y «No contribuyente» juntos es un error y no cambia nada", () => {
     expect(
-      editarBorrador(completo, { iibbNumero: "55", iibbCondicion: "NO_CONTRIBUYENTE" }),
+      editarBorrador(completo, { iibbNumero: "55", iibbCondicion: "NO_CONTRIBUYENTE" }, AHORA),
     ).toEqual({ ok: false, error: "IIBB_CONDICION_INVALIDA" });
     // Número vacío más «No contribuyente» no son dos elecciones: es borrar el número y elegir la condición.
     expect(editado({ iibbNumero: " ", iibbCondicion: "NO_CONTRIBUYENTE" }, completo)).toMatchObject(
@@ -139,7 +144,7 @@ describe("borradores", () => {
 
   it("las tres condiciones anteriores ya no se aceptan al editar, y un borrador que las trae las pierde", () => {
     for (const vieja of ["LOCAL", "CONVENIO_MULTILATERAL", "EXENTO"]) {
-      expect(editarBorrador(vacio, { iibbCondicion: vieja })).toEqual({
+      expect(editarBorrador(vacio, { iibbCondicion: vieja }, AHORA)).toEqual({
         ok: false,
         error: "IIBB_CONDICION_INVALIDA",
       });
@@ -164,6 +169,12 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
     ["razón social en blanco", { razonSocial: "   " }, "RAZON_SOCIAL_INVALIDA"],
     ["razón social con salto de línea", { razonSocial: "Sur\nSA" }, "RAZON_SOCIAL_INVALIDA"],
     ["razón social demasiado larga", { razonSocial: "a".repeat(201) }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social con arroba", { razonSocial: "Kiosco @ Mendoza" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social con emoji", { razonSocial: "Hotel & Spa ✨" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social con porcentaje", { razonSocial: "50% Off SRL" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social sin ninguna letra", { razonSocial: "30-71234567-1" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social que empieza con guion", { razonSocial: "-Norte SA" }, "RAZON_SOCIAL_INVALIDA"],
+    ["razón social de otro alfabeto", { razonSocial: "小林商事" }, "RAZON_SOCIAL_INVALIDA"],
     [
       "condición de IVA desconocida",
       { condicionIva: "CONSUMIDOR_FINAL" },
@@ -194,13 +205,23 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
   ];
 
   it.each(casos)("%s", (_nombre, cambios, error) => {
-    expect(editarBorrador(vacio, cambios)).toEqual({ ok: false, error });
+    expect(editarBorrador(vacio, cambios, AHORA)).toEqual({ ok: false, error });
   });
 
   it("los límites exactos entran", () => {
     expect(LIMITES_DE_DATOS_FISCALES).toEqual({ razonSocial: 200, iibbNumero: 30 });
     expect(editado({ razonSocial: "a".repeat(200) }).razonSocial).toHaveLength(200);
     expect(editado({ iibbNumero: "1".repeat(30) }).iibbNumero).toHaveLength(30);
+  });
+
+  it("la razón social usa la regla del dato «nombre o razón social» (Q10): una sola fuente para tope y caracteres", () => {
+    expect(LIMITES_DE_DATOS_FISCALES.razonSocial).toBe(LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL);
+    expect(editado({ razonSocial: "  Pérez   &  Hijos S.A. " }).razonSocial).toBe(
+      "Pérez & Hijos S.A.",
+    );
+    expect(editado({ razonSocial: "Cafe\u0301 Ñandú S.R.L." }).razonSocial).toBe(
+      "Café Ñandú S.R.L.",
+    );
   });
 
   it("gana el primer error: razón social, condición de IVA, inicio, número de IIBB, condición de IIBB", () => {
@@ -225,13 +246,13 @@ describe("editarBorrador: cada regla con su caso inválido", () => {
       { iibbNumero: "1" },
     ];
     for (const [i, error] of esperados.entries()) {
-      expect(editarBorrador(vacio, cambios)).toEqual({ ok: false, error });
+      expect(editarBorrador(vacio, cambios, AHORA)).toEqual({ ok: false, error });
       cambios = { ...cambios, ...arreglos[i] };
     }
   });
 
   it("un error no modifica el borrador original", () => {
-    editarBorrador(completo, { razonSocial: "" });
+    editarBorrador(completo, { razonSocial: "" }, AHORA);
     expect(completo.razonSocial).toBe("Hotel Sur SA");
   });
 });
@@ -250,57 +271,35 @@ describe("condiciones de IIBB", () => {
   });
 });
 
-describe("fechaCivilValida", () => {
-  it.each([
-    "2015-03-01",
-    "2024-02-29",
-    "2000-02-29",
-    "1999-12-31",
-    "2023-01-31",
-    "2023-04-30",
-    "0001-01-01",
-    "9999-12-31",
-  ])("%s es válida", (f) => {
-    expect(fechaCivilValida(f)).toBe(true);
+describe("inicio de actividades: entre 1900 y hoy en Argentina (Q17, Q18, Q20)", () => {
+  // Reemplaza a la copia de `fechaCivilValida` que vivía acá: el calendario lo prueba `fecha-civil.test.ts`.
+  it.each(["1900-01-01", "2015-03-01", "2024-02-29", "2026-10-11", HOY])("%s entra", (f) => {
+    expect(editado({ inicioActividades: f }).inicioActividades).toBe(f);
   });
 
   it.each([
-    "2023-02-29",
-    "1900-02-29",
-    "2100-02-29",
-    "2023-04-31",
-    "2023-06-31",
-    "2023-09-31",
-    "2023-11-31",
-    "2023-01-32",
-    "2023-13-01",
-    "2023-00-10",
-    "2023-01-00",
-    "0000-01-01",
-    "2023-1-01",
-    "2023-01-1",
-    "23-01-01",
-    "2023/01/01",
-    "2023-01-01 ",
-    " 2023-01-01",
-    "2023-01-01T00:00:00Z",
-    "",
-    "abc",
-  ])("%j no es válida", (f) => {
-    expect(fechaCivilValida(f)).toBe(false);
+    ["mañana", "2026-10-13"],
+    ["un año adelante", "2027-10-12"],
+    ["anterior a 1900", "1899-12-31"],
+    ["año 0001", "0001-01-01"],
+    ["29 de febrero que no existe", "2023-02-29"],
+  ])("%s se rechaza", (_nombre, f) => {
+    expect(editarBorrador(vacio, { inicioActividades: f }, AHORA)).toEqual({
+      ok: false,
+      error: "INICIO_DE_ACTIVIDADES_INVALIDO",
+    });
   });
 
-  it("los meses de 31 días llegan a 31 y febrero bisiesto a 29", () => {
-    for (const mes of ["01", "03", "05", "07", "08", "10", "12"]) {
-      expect(fechaCivilValida(`2023-${mes}-31`)).toBe(true);
-    }
-    for (const mes of ["04", "06", "09", "11"]) {
-      expect(fechaCivilValida(`2023-${mes}-30`)).toBe(true);
-      expect(fechaCivilValida(`2023-${mes}-31`)).toBe(false);
-    }
-    expect(fechaCivilValida("2023-02-28")).toBe(true);
-    expect(fechaCivilValida("2024-02-29")).toBe(true);
-    expect(fechaCivilValida("2024-02-30")).toBe(false);
+  it("el «hoy» es el de Argentina: pasada la medianoche de Buenos Aires el día nuevo ya entra", () => {
+    const antes = new Date("2026-10-13T02:59:00Z");
+    const despues = new Date("2026-10-13T03:00:00Z");
+    expect(editarBorrador(vacio, { inicioActividades: "2026-10-13" }, antes).ok).toBe(false);
+    expect(editarBorrador(vacio, { inicioActividades: "2026-10-13" }, despues).ok).toBe(true);
+  });
+
+  it("sin reloj válido no se acepta ninguna fecha (cierra)", () => {
+    const r = editarBorrador(vacio, { inicioActividades: "2015-03-01" }, new Date(Number.NaN));
+    expect(r).toEqual({ ok: false, error: "INICIO_DE_ACTIVIDADES_INVALIDO" });
   });
 });
 
@@ -469,5 +468,68 @@ describe("confirmarDatosFiscales", () => {
     expect(() => confirmar(completo, [ajena])).toThrow(
       new RangeError("las versiones confirmadas son de otro emisor"),
     );
+  });
+});
+
+describe("pedidoNoCambiaLoGuardado: el reintento sobre lo ya confirmado compara contra lo guardado", () => {
+  // Una razón social que se aceptó con reglas anteriores (doble espacio y arroba): hoy no pasaría la lista de permitidos.
+  const legado = { ...completo, razonSocial: "Kiosco  @ Mendoza" };
+
+  it("el valor guardado (recortado) es «no cambia», aunque hoy no se aceptaría", () => {
+    expect(editarBorrador(legado, { razonSocial: "Kiosco  @ Mendoza" }, AHORA).ok).toBe(false);
+    expect(pedidoNoCambiaLoGuardado(legado, { razonSocial: "Kiosco  @ Mendoza" })).toBe(true);
+    expect(pedidoNoCambiaLoGuardado(legado, { razonSocial: "  Kiosco  @ Mendoza\n" })).toBe(true);
+  });
+
+  it("también un inicio de actividades guardado que hoy se rechazaría (futuro)", () => {
+    const futuro = { ...completo, inicioActividades: "2030-01-01" };
+    expect(editarBorrador(futuro, { inicioActividades: "2030-01-01" }, AHORA).ok).toBe(false);
+    expect(pedidoNoCambiaLoGuardado(futuro, { inicioActividades: "2030-01-01" })).toBe(true);
+  });
+
+  it("un pedido vacío o con todo igual a lo guardado no cambia nada", () => {
+    expect(pedidoNoCambiaLoGuardado(completo, {})).toBe(true);
+    expect(
+      pedidoNoCambiaLoGuardado(completo, {
+        razonSocial: "Hotel Sur SA",
+        condicionIva: "RESPONSABLE_INSCRIPTO",
+        domicilioFiscalId: DOMICILIO_1,
+        inicioActividades: "2015-03-01",
+        iibbNumero: " 901-123456-7 ",
+      }),
+    ).toBe(true);
+  });
+
+  it.each([
+    ["otra razón social", { razonSocial: "Otra SA" }],
+    ["razón social en blanco", { razonSocial: "   " }],
+    ["otra condición de IVA", { condicionIva: "MONOTRIBUTO" }],
+    ["otro domicilio", { domicilioFiscalId: DOMICILIO_2 }],
+    ["otro inicio de actividades", { inicioActividades: "2015-03-02" }],
+    ["otro número de IIBB", { iibbNumero: "1" }],
+    ["borrar el número de IIBB que hay", { iibbNumero: null }],
+    ["borrar el número de IIBB con un blanco", { iibbNumero: "  " }],
+    ["elegir «No contribuyente» habiendo número", { iibbCondicion: "NO_CONTRIBUYENTE" }],
+  ])("%s sí cambia", (_nombre, cambios) => {
+    expect(pedidoNoCambiaLoGuardado(completo, cambios)).toBe(false);
+  });
+
+  it("borrar lo que ya no hay no cambia nada; poner lo que hay, tampoco", () => {
+    expect(pedidoNoCambiaLoGuardado(completo, { iibbCondicion: null })).toBe(true);
+    expect(pedidoNoCambiaLoGuardado(completo, { iibbCondicion: " " })).toBe(true);
+    expect(pedidoNoCambiaLoGuardado(completoNoContribuyente, { iibbNumero: null })).toBe(true);
+    expect(
+      pedidoNoCambiaLoGuardado(completoNoContribuyente, { iibbCondicion: "NO_CONTRIBUYENTE" }),
+    ).toBe(true);
+    expect(pedidoNoCambiaLoGuardado(completoNoContribuyente, { iibbNumero: "5" })).toBe(false);
+  });
+
+  it("basta que un campo cambie para que el pedido cambie", () => {
+    expect(
+      pedidoNoCambiaLoGuardado(completo, {
+        razonSocial: "Hotel Sur SA",
+        inicioActividades: "2016-01-01",
+      }),
+    ).toBe(false);
   });
 });

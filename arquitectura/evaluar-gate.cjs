@@ -5,9 +5,13 @@
  * caído cuente como verde (`skipped` solo vale donde el flujo lo prevé); (2) que la mutación
  * saltada porque el PR no toca ningún grupo bloquee el merge. Ese «saltado por filtro» se
  * distingue de cualquier otro por la salida `hay` del plan, que solo es `false` si el plan terminó bien.
- * Con `estabilidad` (la integración repetida 12 veces) pasa lo mismo, con una condición más: solo se acepta
- * saltada en un pull request y si el plan terminó bien y dijo `estabilidad == "false"`. En push a `main` y en
- * la corrida nocturna tiene que dar `success`, diga lo que diga el plan.
+ * Con `estabilidad` (la integración repetida: 3 veces en un pull request, 12 en la nocturna y a pedido) pasa lo mismo, con una condición más: solo se acepta
+ * saltada en un pull request y si el plan terminó bien y dijo `estabilidad == "false"`. En la corrida nocturna y a
+ * pedido tiene que dar `success`, diga lo que diga el plan.
+ * En push a `main` corre solo lo rápido: el plan, la mutación y Estabilidad se aceptan SALTADOS (`SALTABLES_EN_PUSH`) y solo ahí;
+ * si corrieron tienen que dar `success`, y todo lo demás (estático, guardián, pruebas, seguridad, flujos, web, componentes,
+ * recorrido) sigue siendo obligatorio. Previene: ~795 min de máquina por merge repitiendo lo que ya corrió en el PR (28 % del
+ * consumo medido el 13-16/11/2026) sin dejar pasar un push a main con las pruebas en rojo ni con un job saltado por otra causa.
  * El chequeo que falla si se quita: `test/arquitectura/evaluar-gate.test.ts`.
  */
 
@@ -21,9 +25,12 @@ const OBLIGATORIOS = [
   "mutacion-plan",
   "web",
   "componentes",
+  "recorrido",
 ];
 /** Jobs que solo corren en pull requests: en push a main quedan `skipped`. */
 const SOLO_EN_PULL_REQUEST = ["dependencias"];
+/** Jobs que en push a `main` NO corren (`if: github.event_name != 'push'`); en cualquier otro evento tienen que correr y dar `success`. */
+const SALTABLES_EN_PUSH = ["mutacion-plan", "mutacion", "estabilidad"];
 
 /**
  * @param {Readonly<Record<string, { result?: string, outputs?: Record<string, string> }>>} needs
@@ -33,9 +40,14 @@ const SOLO_EN_PULL_REQUEST = ["dependencias"];
 function evaluarGate(needs, evento) {
   const problemas = [];
   const resultado = (job) => needs[job]?.result;
+  // Solo con el evento `push` y solo para los tres jobs declarados, y solo `skipped` (un `failure` o un `cancelled` siguen en rojo).
+  const saltadoEnPush = (job) =>
+    evento === "push" && SALTABLES_EN_PUSH.includes(job) && resultado(job) === "skipped";
 
   for (const job of OBLIGATORIOS) {
-    if (resultado(job) !== "success") problemas.push(`${job}: ${resultado(job) ?? "ausente"}`);
+    if (resultado(job) !== "success" && !saltadoEnPush(job)) {
+      problemas.push(`${job}: ${resultado(job) ?? "ausente"}`);
+    }
   }
   for (const job of SOLO_EN_PULL_REQUEST) {
     if (resultado(job) !== "success" && resultado(job) !== "skipped") {
@@ -47,6 +59,7 @@ function evaluarGate(needs, evento) {
     needs["mutacion-plan"]?.outputs?.["hay"] === "false";
   const mutacionAceptable =
     resultado("mutacion") === "success" ||
+    saltadoEnPush("mutacion") ||
     (filtradoPorElPlan && resultado("mutacion") === "skipped");
   if (!mutacionAceptable) problemas.push(`mutacion: ${resultado("mutacion") ?? "ausente"}`);
 
@@ -56,6 +69,7 @@ function evaluarGate(needs, evento) {
     needs["mutacion-plan"]?.outputs?.["estabilidad"] === "false";
   const estabilidadAceptable =
     resultado("estabilidad") === "success" ||
+    saltadoEnPush("estabilidad") ||
     (estabilidadFiltrada && resultado("estabilidad") === "skipped");
   if (!estabilidadAceptable) {
     problemas.push(`estabilidad: ${resultado("estabilidad") ?? "ausente"}`);
@@ -63,8 +77,51 @@ function evaluarGate(needs, evento) {
   return problemas;
 }
 
+/** Un SHA de git completo: lo único que se acepta como «cabeza» (lo que no tiene esta forma no cuenta, y el Gate evalúa normal). */
+const SHA = /^[0-9a-f]{40}$/;
+
+/**
+ * ¿Esta corrida fue REEMPLAZADA por otra más nueva de la misma rama o PR? Solo si se cumplen TODAS: el evento es un pull request o un push (la
+ * nocturna nunca), la cabeza actual de la rama y la de esta corrida son SHA válidos y DISTINTOS (la rama ya avanzó), ningún job FALLÓ, y al menos uno fue
+ * cancelado (lo que hace `concurrency` al llegar un push nuevo). Cualquier duda (no se pudo leer la cabeza, mismo commit, un job fallido o ausente) da
+ * `false`: el Gate evalúa normal y sigue en rojo.
+ * Previene: 24 de 29 Gates rojos (13-15/11/2026) eran solo corridas reemplazadas; un rojo sobre un commit viejo parece una falla y esconde las reales.
+ * NO se usa `!cancelled()`: con la corrida del head actual cancelada a mano, el Gate quedaría omitido, y un job omitido cuenta como éxito para
+ * la protección de ramas. Con `always()` el Gate corre siempre y, con el commit vigente, cancelado o con timeout (el SHA no cambió), sigue en rojo.
+ *
+ * @param {{ needs: Readonly<Record<string, { result?: string }>>, evento?: string, actual?: string, deEstaCorrida?: string }} entrada
+ * @returns {boolean}
+ */
+function corridaReemplazada({ needs, evento, actual = "", deEstaCorrida = "" }) {
+  if (evento !== "pull_request" && evento !== "push") return false;
+  if (!SHA.test(actual) || !SHA.test(deEstaCorrida) || actual === deEstaCorrida) return false;
+  const resultados = Object.values(needs).map((job) => job?.result);
+  if (
+    resultados.some(
+      (resultado) =>
+        resultado !== "success" && resultado !== "cancelled" && resultado !== "skipped",
+    )
+  ) {
+    return false;
+  }
+  return resultados.includes("cancelled");
+}
+
 function principal() {
-  const problemas = evaluarGate(JSON.parse(process.env["NEEDS"] ?? "{}"), process.env["EVENTO"]);
+  const needs = JSON.parse(process.env["NEEDS"] ?? "{}");
+  const problemas = evaluarGate(needs, process.env["EVENTO"]);
+  const reemplazada = corridaReemplazada({
+    needs,
+    evento: process.env["EVENTO"],
+    actual: process.env["CABEZA_ACTUAL"],
+    deEstaCorrida: process.env["CABEZA_DE_ESTA_CORRIDA"],
+  });
+  if (problemas.length > 0 && reemplazada) {
+    process.stdout.write(
+      `::notice::Corrida reemplazada: la rama ya avanzó a ${process.env["CABEZA_ACTUAL"]} y esta corrida (de ${process.env["CABEZA_DE_ESTA_CORRIDA"]}) se canceló. No es un resultado de este commit; el que cuenta es el de la corrida nueva.\n`,
+    );
+    return;
+  }
   if (problemas.length > 0) {
     process.stderr.write(`Gate en rojo:\n${problemas.map((p) => `- ${p}`).join("\n")}\n`);
     process.exit(1);
@@ -72,6 +129,12 @@ function principal() {
   process.stdout.write("Gate en verde.\n");
 }
 
-module.exports = { evaluarGate, OBLIGATORIOS, SOLO_EN_PULL_REQUEST };
+module.exports = {
+  evaluarGate,
+  corridaReemplazada,
+  OBLIGATORIOS,
+  SOLO_EN_PULL_REQUEST,
+  SALTABLES_EN_PUSH,
+};
 
 if (require.main === module) principal();

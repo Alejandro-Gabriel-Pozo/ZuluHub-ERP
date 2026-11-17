@@ -18,7 +18,7 @@ import {
   crearBaseAparte,
   crearEmpresaActiva,
   crearEntornoDePrueba,
-  nombreAlAzar,
+  nombreUnico,
   type EmpresaDePrueba,
   type TxDePrueba,
 } from "./entorno";
@@ -92,7 +92,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
         [comoSoporte(), SOPORTE_DE_PRUEBA],
         [comoSistema(), "sistema"],
       ] as const) {
-        const entidadId = nombreAlAzar("aud-actor");
+        const entidadId = nombreUnico("aud-actor");
         expect(await registrarCon(contexto, entidadId)).toEqual({ ok: true, valor: null });
         const [fila] = await filas(
           "select actor, accion, entidad, entidad_id, antes, despues from auditoria_plataforma where entidad_id = $1",
@@ -110,7 +110,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
     });
 
     it("guarda antes y despues cuando vienen, y null cuando no", async () => {
-      const id = nombreAlAzar("aud-datos");
+      const id = nombreUnico("aud-datos");
       await entorno.ejecutar({ contexto: comoAdmin() }, async ({ auditoriaDePlataforma }) => {
         await auditoriaDePlataforma.registrar({
           accion: "EMPRESA_SUSPENDIDA",
@@ -141,7 +141,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
     });
 
     it("cada acción de la unión se puede registrar (la base no rechaza ninguna)", async () => {
-      const id = nombreAlAzar("aud-acciones");
+      const id = nombreUnico("aud-acciones");
       const r = await entorno.ejecutar(
         { contexto: comoAdmin() },
         async ({ auditoriaDePlataforma }) => {
@@ -160,7 +160,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
     it("un administrador dado de baja, uno inexistente: la base rechaza el registro", async () => {
       const baja = await crearAdminDeBase(dueno, { activo: false });
       for (const contexto of [comoAdminDe(baja.id), comoAdminDe(adminInexistente())]) {
-        const id = nombreAlAzar("aud-rechazo");
+        const id = nombreUnico("aud-rechazo");
         esperarAccesoDenegado(await registrarCon(contexto, id));
         expect(
           await cuenta("select count(*) as n from auditoria_plataforma where entidad_id = $1", [
@@ -171,7 +171,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
     });
 
     it("nadie audita a nombre de otro: con SQL directo, un actor ajeno al del contexto se rechaza", async () => {
-      const id = nombreAlAzar("aud-ajeno");
+      const id = nombreUnico("aud-ajeno");
       for (const [contexto, ajeno] of [
         [comoAdmin(), SOPORTE_DE_PRUEBA],
         [comoSoporte(), ADMIN_DE_PRUEBA],
@@ -191,7 +191,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
     });
 
     it("con un contexto que no es de plataforma lanza RangeError y no escribe nada", async () => {
-      const id = nombreAlAzar("aud-otro");
+      const id = nombreUnico("aud-otro");
       const registro = {
         accion: "TENANT_ALTA",
         entidad: "tenant",
@@ -218,7 +218,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
     });
 
     it("rechaza acciones desconocidas, entidades vacías y secretos (RangeError) sin escribir", async () => {
-      const id = nombreAlAzar("aud-invalido");
+      const id = nombreUnico("aud-invalido");
       const malos: { registro: Record<string, unknown>; mensaje: string }[] = [
         {
           registro: { accion: "INVENTADA", entidad: "x", entidadId: id },
@@ -277,7 +277,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
     });
 
     it("es de solo inserción: ni UPDATE ni DELETE ni TRUNCATE, ni para el administrador", async () => {
-      const id = nombreAlAzar("aud-inmutable");
+      const id = nombreUnico("aud-inmutable");
       await registrarCon(comoAdmin(), id);
       for (const texto of [
         sql`update auditoria_plataforma set accion = 'OTRA' where entidad_id = ${id}`,
@@ -299,7 +299,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
     });
 
     it("dos registros simultáneos de administradores distintos quedan con cada uno su actor", async () => {
-      const id = nombreAlAzar("aud-simultanea");
+      const id = nombreUnico("aud-simultanea");
       const barrera = crearBarrera(2);
       const de = (contexto: ReturnType<typeof comoAdmin>) =>
         entorno.ejecutar({ contexto }, async ({ auditoriaDePlataforma }) => {
@@ -378,7 +378,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
 
     it("la primera vez ejecuta; la repetición devuelve lo mismo sin escribir nada más", async () => {
       const clave = claveAlAzar();
-      const nombre = nombreAlAzar("alta-seq");
+      const nombre = nombreUnico("alta-seq");
       const primera = await alta(comoAdmin(), clave, nombre);
       expect(primera.ok).toBe(true);
       const segunda = await alta(comoAdmin(), clave, nombre);
@@ -420,9 +420,9 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
 
     it("la misma clave con otra entrada o con otra operación es CLAVE_REUTILIZADA y no escribe", async () => {
       const clave = claveAlAzar();
-      const nombre = nombreAlAzar("alta-reuso");
+      const nombre = nombreUnico("alta-reuso");
       expect((await alta(comoAdmin(), clave, nombre)).ok).toBe(true);
-      const otraEntrada = nombreAlAzar("alta-reuso-otra");
+      const otraEntrada = nombreUnico("alta-reuso-otra");
       expect(await alta(comoAdmin(), clave, otraEntrada)).toEqual({
         ok: false,
         error: "CLAVE_REUTILIZADA",
@@ -438,7 +438,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
 
     it("las claves son por administrador: la misma clave de dos administradores no choca ni se ve", async () => {
       const clave = claveAlAzar();
-      const nombre = nombreAlAzar("alta-dos-admins");
+      const nombre = nombreUnico("alta-dos-admins");
       const otro = await crearAdminDeBase(dueno);
       // El otro no ve la clave del primero: para él es NUEVA aunque el primero ya la usó.
       expect((await alta(comoAdmin(), clave, nombre)).ok).toBe(true);
@@ -576,7 +576,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
         await idempotencia.registrar(OPERACION, clave, { a: 1 }, { primero: true });
         return ok(null);
       });
-      const nombre = nombreAlAzar("tenant-duplicado");
+      const nombre = nombreUnico("tenant-duplicado");
       const r = await entorno.ejecutar({ contexto: comoAdmin() }, async (tx) => {
         await tx.tenants.crear(nombre);
         await tx.idempotencia.registrar(OPERACION, clave, { a: 1 }, { segundo: true });
@@ -593,7 +593,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
 
     it("las filas son de solo inserción, también para el administrador", async () => {
       const clave = claveAlAzar();
-      await alta(comoAdmin(), clave, nombreAlAzar("alta-inmutable"));
+      await alta(comoAdmin(), clave, nombreUnico("alta-inmutable"));
       for (const texto of [
         sql`update idempotencia_plataforma set resultado = '{}'::jsonb where clave = ${clave}`,
         sql`delete from idempotencia_plataforma where clave = ${clave}`,
@@ -613,7 +613,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
       for (const falla of ["tras-tenant", "tras-auditoria", "tras-registrar"] as const) {
         it(`falla ${falla}`, async () => {
           const clave = claveAlAzar();
-          const nombre = nombreAlAzar("alta-atomica");
+          const nombre = nombreUnico("alta-atomica");
           await expect(alta(comoAdmin(), clave, nombre, falla)).rejects.toThrow("falla forzada");
           expect(await tenantsCon(nombre)).toBe(0);
           expect(await auditoriasDe(nombre)).toBe(0);
@@ -628,10 +628,10 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
 
       it("una falla de la base al registrar (clave duplicada) también revierte la auditoría", async () => {
         const clave = claveAlAzar();
-        const primero = nombreAlAzar("alta-doble-a");
+        const primero = nombreUnico("alta-doble-a");
         expect((await alta(comoAdmin(), clave, primero)).ok).toBe(true);
         // Salta la consulta y fuerza el INSERT: simula al que perdió la carrera en un nivel menor.
-        const segundo = nombreAlAzar("alta-doble-b");
+        const segundo = nombreUnico("alta-doble-b");
         const r = await entorno.ejecutar({ contexto: comoAdmin() }, async (tx) => {
           const t = await tx.tenants.crear(segundo);
           await tx.auditoriaDePlataforma.registrar({
@@ -656,7 +656,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
     describe("concurrencia", () => {
       it("SERIALIZABLE: seis pedidos simultáneos con la misma clave hacen UN alta y devuelven lo mismo", async () => {
         const clave = claveAlAzar();
-        const nombre = nombreAlAzar("alta-simultanea");
+        const nombre = nombreUnico("alta-simultanea");
         const N = 6;
         const barrera = crearBarrera(N);
         const rs = await Promise.all(
@@ -689,7 +689,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
 
       it("READ COMMITTED: el choque sale como unicidad, gana uno solo y no se duplica nada", async () => {
         const clave = claveAlAzar();
-        const nombre = nombreAlAzar("alta-simultanea-rc");
+        const nombre = nombreUnico("alta-simultanea-rc");
         const N = 5;
         const barrera = crearBarrera(N);
         const rs = await Promise.all(
@@ -720,7 +720,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
 
       it("dos administradores con la MISMA clave a la vez hacen cada uno lo suyo", async () => {
         const clave = claveAlAzar();
-        const nombre = nombreAlAzar("alta-dos-a-la-vez");
+        const nombre = nombreUnico("alta-dos-a-la-vez");
         const otro = await crearAdminDeBase(dueno);
         const barrera = crearBarrera(2);
         const de = (contexto: ReturnType<typeof comoAdmin>) =>
@@ -739,7 +739,7 @@ describe.skipIf(base === null)("plataforma: auditoría, idempotencia y autorizac
       });
 
       it("claves distintas a la vez: ninguna se pierde", async () => {
-        const nombre = nombreAlAzar("alta-claves-distintas");
+        const nombre = nombreUnico("alta-claves-distintas");
         const claves = Array.from({ length: 6 }, () => claveAlAzar());
         const rs = await Promise.all(
           claves.map((clave, i) => alta(comoAdmin(), clave, `${nombre}-${i}`)),

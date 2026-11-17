@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0110",
+  "tipo": "DATOS",
+  "decision": "Los pasos de una receta son un texto de una línea de hasta 2000 caracteres, de la lista de permitidos; ausente o vacío es sin pasos.",
+  "que_cambia": "Cuánto y qué se puede escribir en la ficha de cocina; cambia una constante y un CHECK de la base.",
+  "donde": "src/primitivas/texto/pasos-de-receta.ts y migraciones/0032 composicion_pasos_ck (E6, S-7)",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "estado": "PENDIENTE_DE_OK"
+}

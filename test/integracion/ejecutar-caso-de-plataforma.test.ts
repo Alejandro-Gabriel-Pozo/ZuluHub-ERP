@@ -12,8 +12,9 @@ import {
 } from "../../scripts/ejecutar-caso-desde-archivo";
 import { armarPlataforma } from "../../src/composicion/plataforma";
 import { crearMarcaLista, type MarcaLista } from "./altas-apoyo";
-import { crearBaseAparte, cuitAlAzar } from "./entorno";
+import { crearBaseAparte, cuitUnico } from "./entorno";
 import { crearAdminDeBase, claveAlAzar } from "./plataforma-apoyo";
+import { sufijoUnico } from "./unicos";
 
 /**
  * `ejecutar-caso-de-plataforma` de punta a punta contra una base real, con la puerta de plataforma REAL
@@ -106,7 +107,7 @@ describe.skipIf(base === null)("ejecutar un caso de plataforma desde un archivo"
     r.salida.find((l) => l.startsWith(`  ${campo}: `))?.slice(campo.length + 4);
 
   describe("un recorrido completo: crear un plan, armarlo, publicarlo y dar de alta una empresa con él", () => {
-    const codigo = `plan-${randomBytes(3).toString("hex")}`;
+    const codigo = `plan-${sufijoUnico()}`;
     const pedidos = {
       crearPlan: { claveDeIdempotencia: claveAlAzar(), codigo },
       guardarBorradorDePlan: (planId: string) => ({
@@ -124,14 +125,14 @@ describe.skipIf(base === null)("ejecutar un caso de plataforma desde un archivo"
       }),
       altaDeEmpresa: (versionDePlanId: string) => ({
         claveDeIdempotencia: claveAlAzar(),
-        nombreDeTenant: `tenant-${randomBytes(3).toString("hex")}`,
+        nombreDeTenant: `tenant-${sufijoUnico()}`,
         marcaId: marca.marca,
         versionDePlanId,
-        cuit: cuitAlAzar(),
+        cuit: cuitUnico(),
         razonSocial: "Empresa del recorrido S.A.",
         zonaHoraria: "America/Argentina/Buenos_Aires",
         moneda: "ARS",
-        emailGerente: `gerente-${randomBytes(4).toString("hex")}@prueba.test`,
+        emailGerente: `gerente-${sufijoUnico()}@prueba.test`,
       }),
     };
     let ids: { planId: string; versionId: string };
@@ -259,7 +260,7 @@ describe.skipIf(base === null)("ejecutar un caso de plataforma desde un archivo"
   describe("sin un administrador válido, o con un pedido que no corresponde, no se ejecuta nada", () => {
     const archivoValido = () => ({
       claveDeIdempotencia: claveAlAzar(),
-      codigo: `cero-${randomBytes(3).toString("hex")}`,
+      codigo: `cero-${sufijoUnico()}`,
     });
 
     async function noEscribeNada<T>(accion: () => Promise<T>) {
@@ -360,7 +361,7 @@ describe.skipIf(base === null)("ejecutar un caso de plataforma desde un archivo"
     it("el mismo archivo dos veces a la vez: un solo plan, una sola constancia", async () => {
       const archivo = {
         claveDeIdempotencia: claveAlAzar(),
-        codigo: `a-la-vez-${randomBytes(3).toString("hex")}`,
+        codigo: `a-la-vez-${sufijoUnico()}`,
       };
       const antes = await huella();
       const [a, b, c] = await Promise.all([
@@ -377,7 +378,7 @@ describe.skipIf(base === null)("ejecutar un caso de plataforma desde un archivo"
     });
 
     it("el mismo plan con dos claves distintas a la vez: uno lo crea y el otro ve que ya existía", async () => {
-      const codigoCompartido = `compartido-${randomBytes(3).toString("hex")}`;
+      const codigoCompartido = `compartido-${sufijoUnico()}`;
       const [a, b] = await Promise.all([
         correr("crearPlan", { claveDeIdempotencia: claveAlAzar(), codigo: codigoCompartido }),
         correr("crearPlan", { claveDeIdempotencia: claveAlAzar(), codigo: codigoCompartido }),
@@ -392,13 +393,13 @@ describe.skipIf(base === null)("ejecutar un caso de plataforma desde un archivo"
     it("el mismo alta dos veces a la vez: una empresa, una invitación, un trabajo", async () => {
       const alta = {
         claveDeIdempotencia: claveAlAzar(),
-        nombreDeTenant: `tenant-${randomBytes(3).toString("hex")}`,
+        nombreDeTenant: `tenant-${sufijoUnico()}`,
         marcaId: marca.marca,
-        cuit: cuitAlAzar(),
+        cuit: cuitUnico(),
         razonSocial: "Alta simultánea S.A.",
         zonaHoraria: "America/Argentina/Buenos_Aires",
         moneda: "ARS",
-        emailGerente: `gerente-${randomBytes(4).toString("hex")}@prueba.test`,
+        emailGerente: `gerente-${sufijoUnico()}@prueba.test`,
       };
       const antes = await huella();
       const [a, b] = await Promise.all([
@@ -452,7 +453,7 @@ describe.skipIf(base === null)("ejecutar un caso de plataforma desde un archivo"
     it("arranca con Node sin compilar: ejecuta un caso, es idempotente y no imprime la cadena, la clave ni el secreto", async () => {
       const pedido = {
         claveDeIdempotencia: claveAlAzar(),
-        codigo: `node-${randomBytes(3).toString("hex")}`,
+        codigo: `node-${sufijoUnico()}`,
       };
       const ruta = archivo("crear-plan.json", pedido);
       const argumentos = ["crearPlan", ruta, "--admin-email", admin.email];

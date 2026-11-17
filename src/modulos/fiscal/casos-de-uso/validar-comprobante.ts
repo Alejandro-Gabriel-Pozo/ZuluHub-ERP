@@ -1,39 +1,21 @@
 import type { EmpresaNoOpera } from "../../../contexto/estados";
-import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { fechaDeNegocio } from "../../../primitivas/tiempo/fecha-de-negocio";
+import { ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ManejadorDeTrabajo, ResultadoDeManejador } from "../../../puertos/cola-de-trabajos";
 import type { Dato } from "../../../puertos/sin-secretos";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type {
   DesenlaceDeAutorizacion,
   EstadoDeComprobanteArca,
-  Mensaje,
-  ResultadoDeAutorizacionArca,
 } from "../dominio/estados-de-comprobante";
-import {
-  comprobanteId,
-  intentoId,
-  solicitudId,
-  type ComprobanteId,
-} from "../dominio/identificadores";
-import { importesParaArca } from "../dominio/importes-para-arca";
+import { comprobanteId, intentoId, type ComprobanteId } from "../dominio/identificadores";
 import { esFueraDeSecuencia } from "../dominio/numeracion";
-import type {
-  CambioDeComprobante,
-  ComprobanteGuardado,
-} from "../persistencia/repositorio-de-comprobantes";
-import type { MensajeDeIntento } from "../persistencia/repositorio-de-intentos";
 import type { ContextoDeSistema } from "./contrato";
 import {
   contextoDeSistema,
   opcionesDe,
   type DependenciasDeFacturacion,
 } from "./contrato-de-facturacion";
-import type {
-  ErrorDeEmision,
-  PuntoDeVentaParaEmision,
-  SolicitudDeAutorizacion,
-} from "./emision-electronica";
+import type { ErrorDeEmision } from "./emision-electronica";
 import {
   autorizarConLimite,
   huellaDe,
@@ -43,10 +25,17 @@ import {
 import {
   cerrarEnTx,
   cerrarFueraDeSecuenciaEnTx,
-  reservarEnTx,
   type ErrorPropioAlCerrar,
   type ErrorPropioAlReservar,
 } from "./numeracion-en-tx";
+import {
+  cierreDelComprobante,
+  intentoDelUltimo,
+  mensajesDeAutorizacion,
+  solicitudDe,
+  type ConsultaDelUltimo,
+} from "./validar-comprobante-piezas";
+import { tomarYReservar } from "./validar-comprobante-toma";
 
 /**
  * Trabajo `fiscal.validar_comprobante` (spec H7 facturación §B.4.5): lleva un comprobante `PENDIENTE` a ARCA. Sin
@@ -103,131 +92,6 @@ export type ErrorAlValidarComprobante =
   | ErrorDeEmision
   | ErrorDePersistencia;
 
-type Toma =
-  | Readonly<{ tipo: "NADA"; estado: EstadoDeComprobanteArca }>
-  | Readonly<{ tipo: "OCUPADA" | "BLOQUEADA" }>
-  | Readonly<{
-      tipo: "FALTA_LA_SERIE";
-      puntoDeVenta: PuntoDeVentaParaEmision;
-      comprobante: ComprobanteGuardado;
-    }>
-  | Readonly<{
-      tipo: "RESERVADO";
-      comprobante: ComprobanteGuardado;
-      puntoDeVenta: PuntoDeVentaParaEmision;
-    }>;
-
-/** Lo que `FECAESolicitar` necesita de un comprobante ya `EN_VALIDACION` (con su número y su fecha). */
-export function solicitudDe(
-  c: ComprobanteGuardado,
-  puntoDeVenta: PuntoDeVentaParaEmision,
-): SolicitudDeAutorizacion {
-  if (c.numeroReservado === null || c.fechaEmision === null) {
-    throw new RangeError("solo un comprobante con número reservado se pide a ARCA");
-  }
-  return {
-    puntoDeVenta,
-    tipo: c.tipo,
-    numero: c.numeroReservado,
-    solicitud: solicitudId(c.id),
-    fecha: c.fechaEmision,
-    concepto: c.concepto,
-    servicio: c.servicio,
-    receptor: { documento: c.receptor.documento, condicionIva: c.receptor.condicionIva },
-    importes: importesParaArca({ tipo: c.tipo, total: c.importes.total, desglose: c.desglose }),
-    asociado:
-      c.asociado === null
-        ? null
-        : {
-            tipo: c.asociado.tipo,
-            puntoDeVenta: c.asociado.puntoDeVenta,
-            numero: c.asociado.numero,
-            cuit: c.asociado.cuit,
-            fecha: c.asociado.fecha,
-          },
-  };
-}
-
-/** Los mensajes de ARCA tal como se guardan en el intento (crudos: código y texto). */
-export function mensajesDeAutorizacion(r: ResultadoDeAutorizacionArca): MensajeDeIntento[] {
-  const como = (clase: MensajeDeIntento["clase"]) => (m: Mensaje) => ({ clase, ...m });
-  switch (r.tipo) {
-    case "AUTORIZADO":
-      return r.observaciones.map(como("OBSERVACION"));
-    case "RECHAZADO":
-      return [...r.errores.map(como("ERROR")), ...r.observaciones.map(como("OBSERVACION"))];
-    case "INCIERTO":
-    case "NO_ENVIADO":
-      return [];
-  }
-}
-
-const codigos = (mensajes: readonly Mensaje[]): number[] => mensajes.map((m) => m.codigo);
-
-/** El cambio del comprobante y su auditoría según el desenlace (§B.2.2); sin textos de ARCA ni del receptor. */
-function cierreDelComprobante(
-  r: ResultadoDeAutorizacionArca,
-  ahora: Date,
-): Readonly<{ cambio: CambioDeComprobante; accion: string; datos: Record<string, Dato> }> {
-  switch (r.tipo) {
-    case "AUTORIZADO":
-      return {
-        cambio: {
-          a: "AUTORIZADO",
-          cae: r.codigo,
-          caeVence: r.vence,
-          autorizadoEn: ahora,
-          resueltoPor: "RESPUESTA",
-        },
-        accion: "COMPROBANTE_AUTORIZADO",
-        datos: { cae: r.codigo, caeVence: r.vence, observaciones: codigos(r.observaciones) },
-      };
-    case "RECHAZADO":
-      return {
-        cambio: { a: "RECHAZADO" },
-        accion: "COMPROBANTE_RECHAZADO",
-        datos: { errores: codigos(r.errores), observaciones: codigos(r.observaciones) },
-      };
-    case "INCIERTO":
-      return { cambio: { a: "INCIERTO" }, accion: "COMPROBANTE_INCIERTO", datos: {} };
-    case "NO_ENVIADO":
-      return { cambio: { a: "PENDIENTE" }, accion: "COMPROBANTE_NO_ENVIADO", datos: {} };
-  }
-}
-
-/** Lo que respondió ARCA al último autorizado tras un 10016, y cuándo empezó y terminó la llamada. */
-type ConsultaDelUltimo = Readonly<{
-  ultimo: Resultado<bigint, ErrorDeEmision>;
-  iniciadoEn: Date;
-  terminadoEn: Date;
-}>;
-
-/**
- * El intento que deja la consulta del último autorizado (`ULTIMO_AUTORIZADO`): `RESPONDIDO` con el número que
- * informó ARCA en `numero`, o `CONSULTA_FALLIDA` sin él. Su id sale de lo que lo identifica, así que repetir la
- * transacción no lo duplica.
- */
-function intentoDelUltimo(
-  empresaId: ContextoDeSistema["empresaId"],
-  comprobante: ComprobanteId,
-  reservado: bigint,
-  { ultimo, iniciadoEn, terminadoEn }: ConsultaDelUltimo,
-) {
-  return {
-    id: intentoId(idDeIntento(comprobante, "ULTIMO_AUTORIZADO", reservado, iniciadoEn)),
-    empresaId,
-    comprobanteId: comprobante,
-    operacion: "ULTIMO_AUTORIZADO" as const,
-    numero: ultimo.ok ? ultimo.valor : null,
-    desenlace: ultimo.ok ? ("RESPONDIDO" as const) : ("CONSULTA_FALLIDA" as const),
-    mensajes: [],
-    respuesta: null,
-    huellaDelPedido: null,
-    iniciadoEn,
-    duracionEnMs: Math.max(0, terminadoEn.getTime() - iniciadoEn.getTime()),
-  };
-}
-
 export function armarValidarComprobante(dependencias: DependenciasDeFacturacion) {
   const { transacciones, emision, reloj } = dependencias;
   const opciones = opcionesDe(dependencias);
@@ -245,75 +109,7 @@ export function armarValidarComprobante(dependencias: DependenciasDeFacturacion)
 
     // 1. TXa: tomar el comprobante y reservar su número.
     const tomar = (ultimoDelServicio: bigint | null) =>
-      transacciones.ejecutar(
-        { contexto },
-        async (
-          tx,
-        ): Promise<
-          Resultado<
-            Toma,
-            | "COMPROBANTE_NO_ENCONTRADO"
-            | Exclude<ErrorPropioAlReservar, "SERIE_OCUPADA" | "SERIE_BLOQUEADA">
-            | EmpresaNoOpera
-          >
-        > => {
-          const c = await tx.comprobantes.obtener(empresaId, entrada.comprobanteId);
-          if (c === null) return err("COMPROBANTE_NO_ENCONTRADO");
-          if (c.estado !== "PENDIENTE") return ok({ tipo: "NADA", estado: c.estado });
-          const reserva = await reservarEnTx(
-            tx,
-            contexto,
-            {
-              puntoDeVentaId: c.puntoDeVentaId,
-              tipo: c.tipo,
-              ambiente: c.ambiente,
-              solicitud: solicitudId(c.id),
-            },
-            ultimoDelServicio,
-            opciones.numeracion,
-          );
-          if (!reserva.ok) {
-            if (reserva.error === "SERIE_OCUPADA") return ok({ tipo: "OCUPADA" });
-            if (reserva.error === "SERIE_BLOQUEADA") return ok({ tipo: "BLOQUEADA" });
-            return err(reserva.error);
-          }
-          if (reserva.valor.tipo === "FALTA_LA_SERIE") {
-            return ok({
-              tipo: "FALTA_LA_SERIE",
-              puntoDeVenta: reserva.valor.puntoDeVenta,
-              comprobante: c,
-            });
-          }
-          const { numero, puntoDeVenta } = reserva.valor.salida;
-          // `reservarEnTx` ya comprobó que la empresa opera: es visible.
-          const empresa = await tx.empresas.obtener(empresaId);
-          if (empresa === null) throw new Error(`la empresa ${empresaId} no es visible`);
-          // La fecha del comprobante es el día civil de la empresa AL RESERVAR (§B.3.6).
-          const fecha = fechaDeNegocio(contexto.ahora, empresa.zonaHoraria, "00:00");
-          if (!fecha.ok) throw new RangeError(`no hay fecha del comprobante: ${fecha.error}`);
-          const movido = await tx.comprobantes.transicionar(empresaId, c.id, c.version, {
-            a: "EN_VALIDACION",
-            numeroReservado: numero,
-            fechaEmision: fecha.valor,
-          });
-          if (movido === null) throw new Error("el comprobante cambió dentro de la transacción");
-          await tx.auditoria.registrar({
-            empresaId,
-            actorPersonaId: null,
-            accion: "COMPROBANTE_EN_VALIDACION",
-            entidad: "comprobante",
-            entidadId: c.id,
-            antes: { estado: c.estado },
-            despues: {
-              estado: movido.estado,
-              numero: numero.toString(),
-              fecha: fecha.valor,
-              envio: movido.envios,
-            },
-          });
-          return ok({ tipo: "RESERVADO", comprobante: movido, puntoDeVenta });
-        },
-      );
+      tomarYReservar(transacciones, contexto, entrada, opciones, ultimoDelServicio);
 
     let toma = await tomar(null);
     if (toma.ok && toma.valor.tipo === "FALTA_LA_SERIE") {

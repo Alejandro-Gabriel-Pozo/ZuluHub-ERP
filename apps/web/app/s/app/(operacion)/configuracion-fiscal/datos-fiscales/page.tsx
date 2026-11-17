@@ -8,7 +8,7 @@ import {
 import { FormularioDeDatosFiscales } from "../../../../../../ui/plantillas/configuracion-fiscal/FormularioDeDatosFiscales.cliente";
 import { RUTAS_DE_CONFIGURACION } from "../../../../../../ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { ConMigas } from "../../../../../../ui/plantillas/configuracion-fiscal/MigasDeConfiguracion";
-import { ErrorDelDetalle } from "../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 import {
   confirmarDatosFiscalesAccion,
   guardarBorradorDeDatosFiscalesAccion,

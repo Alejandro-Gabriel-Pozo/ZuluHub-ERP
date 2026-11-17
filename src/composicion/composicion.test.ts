@@ -1,7 +1,44 @@
+import {
+  DECLARACIONES_DE_CATALOGO,
+  DECLARACIONES_DE_CONSULTAS_DE_CATALOGO,
+} from "../modulos/catalogo/publico";
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DECLARACIONES_DE_CAJA, DECLARACIONES_DE_CONSULTAS_DE_CAJA } from "../modulos/caja/publico";
+import {
+  DECLARACIONES_DE_CONSULTAS_DE_PRODUCCION,
+  DECLARACIONES_DE_PRODUCCION,
+} from "../modulos/produccion/publico";
+import {
+  DECLARACIONES_DE_STOCK,
+  DECLARACIONES_DE_CONSULTAS_DE_STOCK,
+} from "../modulos/stock/publico";
+import {
+  DECLARACIONES_DE_COMANDAS,
+  DECLARACIONES_DE_CONSULTAS_DE_COMANDAS,
+} from "../modulos/comandas/publico";
+import {
+  DECLARACIONES_DE_CONSULTAS_DE_SALON,
+  DECLARACIONES_DE_SALON,
+} from "../modulos/salon/publico";
+import {
+  DECLARACIONES_DE_CLIENTES,
+  DECLARACIONES_DE_CONSULTAS_DE_CLIENTES,
+} from "../modulos/clientes/publico";
+import {
+  DECLARACIONES_DE_COMPRAS,
+  DECLARACIONES_DE_CONSULTAS_DE_COMPRAS,
+} from "../modulos/compras/publico";
+import {
+  DECLARACIONES_DE_VENTAS,
+  DECLARACIONES_DE_CONSULTAS_DE_VENTAS,
+} from "../modulos/ventas/publico";
+import {
+  DECLARACIONES_DE_CIERRE,
+  DECLARACIONES_DE_CONSULTAS_DE_CIERRE,
+} from "../modulos/cierre/publico";
 import {
   DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS,
   DECLARACIONES_DE_EMPRESAS,
@@ -88,6 +125,11 @@ const PEDIDOS: { nombre: string; pedir: (c: Conexiones) => unknown; nombra: stri
   {
     nombre: "web.configuracionPublicaDeHost",
     pedir: (c) => armarWeb(c).configuracionPublicaDeHost(),
+    nombra: "PEDERNAL_DB_PUBLICO",
+  },
+  {
+    nombre: "web.vidrieraPublica",
+    pedir: (c) => armarWeb(c).vidrieraPublica(),
     nombra: "PEDERNAL_DB_PUBLICO",
   },
   {
@@ -594,8 +636,28 @@ function incumplimientosDeLaWeb(
 
 /** Una entrada nueva de `armarWeb` no compila hasta que se la decide acá. */
 const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
+  casosDeUsoDeCatalogo: { conGuard: DECLARACIONES_DE_CATALOGO },
+  consultasDeCatalogo: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CATALOGO },
   casosDeUsoDeEmpresas: { conGuard: DECLARACIONES_DE_EMPRESAS },
   consultasDeEmpresas: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_EMPRESAS },
+  casosDeUsoDeCaja: { conGuard: DECLARACIONES_DE_CAJA },
+  consultasDeCaja: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CAJA },
+  casosDeUsoDeCierre: { conGuard: DECLARACIONES_DE_CIERRE },
+  consultasDeCierre: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CIERRE },
+  casosDeUsoDeVentas: { conGuard: DECLARACIONES_DE_VENTAS },
+  consultasDeVentas: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_VENTAS },
+  casosDeUsoDeComandas: { conGuard: DECLARACIONES_DE_COMANDAS },
+  consultasDeComandas: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_COMANDAS },
+  casosDeUsoDeSalon: { conGuard: DECLARACIONES_DE_SALON },
+  consultasDeSalon: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_SALON },
+  casosDeUsoDeStock: { conGuard: DECLARACIONES_DE_STOCK },
+  consultasDeStock: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_STOCK },
+  casosDeUsoDeProduccion: { conGuard: DECLARACIONES_DE_PRODUCCION },
+  consultasDeProduccion: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_PRODUCCION },
+  casosDeUsoDeClientes: { conGuard: DECLARACIONES_DE_CLIENTES },
+  consultasDeClientes: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CLIENTES },
+  casosDeUsoDeCompras: { conGuard: DECLARACIONES_DE_COMPRAS },
+  consultasDeCompras: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_COMPRAS },
   casosDeUsoDeIdentidad: {
     conGuard: DECLARACIONES_DE_IDENTIDAD,
     exentos: {
@@ -611,8 +673,13 @@ const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
   // Sin guard por diseño. Fuentes: web.ts:23-26 (puerta pública), :36-38 (autenticación y barrido), :133 y de-la-sesion.ts:18-22 (sesión).
   resolucionDeHost: { sinGuard: "puerta pública: sin sesión, solo lectura" },
   configuracionPublicaDeHost: { sinGuard: "puerta pública: sin sesión, solo lectura" },
+  vidrieraPublica: { sinGuard: "puerta pública: sin sesión, solo lectura (la carta en línea)" },
   autenticacion: { sinGuard: "dice QUIÉN es (usuario y email verificado, por host)" },
   barridoDeAutenticacion: { sinGuard: "lo llama el cron, no una persona" },
+  lecturasCompartidas: {
+    sinGuard:
+      "no es una consulta: junta en una transacción de solo lectura las que ya hace el pedido, y cada una exige SU acción al guard",
+  },
   consultasDeSesion: { sinGuard: "contexto SESION: todavía no hay empresa; acota la base (RLS)" },
 };
 

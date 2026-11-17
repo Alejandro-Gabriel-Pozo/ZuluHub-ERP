@@ -99,7 +99,7 @@ const tieneLinea = (hallazgo) => Number.isInteger(hallazgo.linea) && hallazgo.li
  */
 function comprobarUbicaciones(fallas, avisos) {
   const propias = [];
-  const revisar = (lista, tipo, codigosValidos) =>
+  const revisar = (lista, nombre, plural, codigosValidos) =>
     lista.filter((hallazgo) => {
       const problemas = [];
       if (!tieneArchivo(hallazgo) || !tieneLinea(hallazgo)) {
@@ -113,7 +113,7 @@ function comprobarUbicaciones(fallas, avisos) {
       if (!codigosValidos.includes(hallazgo.codigo)) {
         problemas.push({
           codigo: "codigo-fuera-de-la-lista",
-          queOcurrio: `usa un código que no está en la lista cerrada de ${tipo}s del guardián`,
+          queOcurrio: `usa un código que no está en la lista cerrada de ${plural} del guardián`,
           correccion:
             "Agregá el código a codigos.cjs (con su regla de línea en ubicacion.cjs) o usá uno existente.",
         });
@@ -124,14 +124,14 @@ function comprobarUbicaciones(fallas, avisos) {
           archivo: tieneArchivo(hallazgo) ? hallazgo.archivo : ARCHIVO_DEL_GUARDIAN,
           linea: 1,
           contrato: hallazgo.contrato ?? null,
-          motivo: `Un ${tipo} con código «${hallazgo.codigo}» ${problema.queOcurrio}: ${hallazgo.motivo}`,
+          motivo: `${nombre} con código «${hallazgo.codigo}» ${problema.queOcurrio}: ${hallazgo.motivo}`,
           correccion: problema.correccion,
         });
       }
       return problemas.length === 0;
     });
-  const fallasValidas = revisar(fallas, "falla", CODIGOS_DE_FALLA);
-  const avisosValidos = revisar(avisos, "aviso", CODIGOS_DE_AVISO);
+  const fallasValidas = revisar(fallas, "Una falla", "fallas", CODIGOS_DE_FALLA);
+  const avisosValidos = revisar(avisos, "Un aviso", "avisos", CODIGOS_DE_AVISO);
   return { fallas: [...fallasValidas, ...propias], avisos: avisosValidos };
 }
 

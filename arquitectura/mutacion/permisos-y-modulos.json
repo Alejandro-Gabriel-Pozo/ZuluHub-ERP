@@ -1,0 +1,6 @@
+{
+  "grupo": "permisos y módulos",
+  "archivos": "src/capacidades/permisos/**/*.ts,src/capacidades/modulos/**/*.ts",
+  "minutos": 5.6,
+  "pruebas": "src/capacidades/permisos src/capacidades/modulos"
+}

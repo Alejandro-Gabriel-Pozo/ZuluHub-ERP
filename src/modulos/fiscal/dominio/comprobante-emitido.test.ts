@@ -59,6 +59,7 @@ describe("catálogo de orígenes", () => {
     expect(TIPOS_DE_ORIGEN).toEqual([
       "MANUAL",
       "EJEMPLAR_DE_TICKET",
+      "REEMISION_DE_TICKET",
       "PROPINA_DE_TICKET",
       "CORRECCION_DE_TICKET",
       "SUSCRIPCION",

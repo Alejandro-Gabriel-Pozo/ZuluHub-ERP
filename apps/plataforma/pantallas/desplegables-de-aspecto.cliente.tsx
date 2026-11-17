@@ -42,6 +42,7 @@ export function DesplegablesDeAspecto({
       <legend className={propios["leyenda"]}>Aspecto</legend>
       <Pila separacion={4}>
         <Selector
+          dato="pendiente"
           etiqueta="Estilo"
           nombre="estilo"
           opciones={ESTILOS}
@@ -53,6 +54,7 @@ export function DesplegablesDeAspecto({
           deshabilitado={deshabilitado}
         />
         <Selector
+          dato="pendiente"
           etiqueta="Superficie"
           nombre="superficie"
           opciones={SUPERFICIES}
@@ -64,6 +66,7 @@ export function DesplegablesDeAspecto({
           deshabilitado={deshabilitado}
         />
         <Selector
+          dato="pendiente"
           etiqueta="Esquinas"
           nombre="esquinas"
           opciones={ESQUINAS}
@@ -75,6 +78,7 @@ export function DesplegablesDeAspecto({
           deshabilitado={deshabilitado}
         />
         <Selector
+          dato="pendiente"
           etiqueta="Títulos"
           nombre="titulos"
           opciones={TITULOS}
@@ -86,6 +90,7 @@ export function DesplegablesDeAspecto({
           deshabilitado={deshabilitado}
         />
         <Selector
+          dato="pendiente"
           etiqueta="Ingreso"
           nombre="ingreso"
           opciones={INGRESOS}

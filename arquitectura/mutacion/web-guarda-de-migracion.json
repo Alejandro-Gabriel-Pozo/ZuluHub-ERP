@@ -1,0 +1,6 @@
+{
+  "grupo": "web (guarda de migración)",
+  "archivos": "src/composicion/guarda-de-migracion.ts",
+  "minutos": 0.7,
+  "pruebas": "src/composicion/guarda-de-migracion.test.ts"
+}

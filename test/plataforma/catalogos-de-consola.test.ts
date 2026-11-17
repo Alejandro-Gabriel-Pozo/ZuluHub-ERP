@@ -190,6 +190,22 @@ describe("catalogoDePerillas", () => {
     const r = await plataforma(CATALOGO_DE_PERILLAS).catalogoDePerillas(comoAdministrador);
     expect(r.ok && r.valor.perillas).toEqual([
       {
+        perilla: "cajas_por_sucursal",
+        tipo: "LIMITE",
+        ambito: "SUCURSAL",
+        valorBase: { tipo: "LIMITE", limite: 1 },
+        requiere: null,
+        modulo: "caja",
+      },
+      {
+        perilla: "calidad_de_lote",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "stock",
+      },
+      {
         perilla: "composiciones_con_perdida",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",
@@ -206,15 +222,15 @@ describe("catalogoDePerillas", () => {
         modulo: "stock",
       },
       {
-        perilla: "conjuntos",
+        perilla: "conciliacion_de_tres_vias",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",
         valorBase: { tipo: "INTERRUPTOR", encendida: false },
-        requiere: null,
-        modulo: "catalogo",
+        requiere: "recepcion_separada",
+        modulo: "compras",
       },
       {
-        perilla: "elecciones_reutilizables",
+        perilla: "conjuntos",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",
         valorBase: { tipo: "INTERRUPTOR", encendida: false },
@@ -230,6 +246,38 @@ describe("catalogoDePerillas", () => {
         modulo: "administracion",
       },
       {
+        perilla: "lotes",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "stock",
+      },
+      {
+        perilla: "produccion",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "produccion",
+      },
+      {
+        perilla: "recepcion_separada",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "compras",
+      },
+      {
+        perilla: "salon",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "salon",
+      },
+      {
         perilla: "subcomposiciones",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",
@@ -238,12 +286,20 @@ describe("catalogoDePerillas", () => {
         modulo: "stock",
       },
       {
-        perilla: "variantes_y_grupos_de_precio",
+        perilla: "venta_por_fracciones_y_peso",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",
         valorBase: { tipo: "INTERRUPTOR", encendida: false },
         requiere: null,
         modulo: "catalogo",
+      },
+      {
+        perilla: "vidriera_por_qr",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "vidriera",
       },
     ]);
   });

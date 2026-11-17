@@ -6,7 +6,7 @@ import { RUTAS_DE_CONFIGURACION } from "../../../../../../ui/plantillas/configur
 import { ConMigas } from "../../../../../../ui/plantillas/configuracion-fiscal/MigasDeConfiguracion";
 import { armarLaListaDeAmbientes } from "../../../../../../ui/plantillas/configuracion-fiscal/modelo-de-certificado";
 import { PantallaDeCertificados } from "../../../../../../ui/plantillas/configuracion-fiscal/PantallaDeCertificados";
-import { ErrorDelDetalle } from "../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 
 // `/configuracion-fiscal/certificado-de-arca`: una fila por ambiente (Pruebas, Producción) con su estado; tocarla abre el asistente de ese
 // ambiente. Solo el gerente: el servidor decide y, sin permiso, la pantalla dice «sin permiso» como las demás.

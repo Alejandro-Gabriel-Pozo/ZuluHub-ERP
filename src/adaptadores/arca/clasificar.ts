@@ -1,39 +1,35 @@
 import type {
-  DatosConsultados,
   ErrorDeEmision,
   Mensaje,
   ResultadoDeAutorizacionArca,
-  ResultadoDeConsulta,
 } from "../../modulos/fiscal/publico";
-import { importeDesdeTexto, type Importe } from "../../primitivas/dinero/importe";
-import { ARS } from "../../primitivas/dinero/moneda";
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
-import { fechaCivilDesdeTexto, type FechaCivil } from "../../primitivas/tiempo/fecha-civil";
-import { alicuotaDeId } from "./codigos";
+import type { FechaCivil } from "../../primitivas/tiempo/fecha-civil";
+import { clasificarConsulta, type EsperadoDeConsulta } from "./clasificar-consulta";
+import { codigoDeArca, enteroDeArca, FORMA_DEL_CAE, fechaDeArca } from "./conversiones-de-arca";
+import { cuerpoDe, motivoDeSinRespuesta, RESPUESTA_ILEGIBLE } from "./cuerpo-de-respuesta";
 import {
   codigoDeFallaDeWsaa,
   codigosComoTexto,
   errorDeFallaDeWsaa,
   hayCategoria,
-  soloSinDatos,
 } from "./errores-de-arca";
 import {
   leerAutorizacion,
-  leerConsulta,
   leerDummy,
   leerFallaSoap,
   leerTabla,
   leerTicketDeLoginCms,
   leerUltimoAutorizado,
-  type AlicuotaLeida,
-  type AsociadoLeido,
   type AutorizacionLeida,
-  type ComprobanteConsultadoLeido,
   type DetalleDeAutorizacionLeido,
   type FilaDeParametro,
 } from "./leer-respuestas";
 import { textoSeguro } from "./saneamiento";
 import type { RespuestaDeTransporte } from "./tipos";
+
+// La consulta vive en su archivo; se reexporta para que `clasificar` siga siendo la puerta de la clasificación.
+export { clasificarConsulta, type EsperadoDeConsulta };
 
 /**
  * Clasificación de lo que respondió ARCA (spec H7 facturación §B.5.4): de una respuesta del transporte a lo
@@ -48,79 +44,6 @@ import type { RespuestaDeTransporte } from "./tipos";
  * Los motivos que devuelve llevan solo códigos y textos fijos, y los `Msg` de ARCA ya saneados: ni un pedazo
  * del pedido, ni la respuesta, ni el texto de una excepción.
  */
-
-// ---------------------------------------------------------------------------------------------------------------
-// Conversiones de lo que viene de ARCA como texto
-// ---------------------------------------------------------------------------------------------------------------
-
-/** `yyyymmdd` (como lo manda ARCA) a fecha civil, o `null` si no es una fecha real. */
-function fechaDeArca(texto: string): FechaCivil | null {
-  const partes = /^([0-9]{4})([0-9]{2})([0-9]{2})$/.exec(texto);
-  if (partes === null) return null;
-  const fecha = fechaCivilDesdeTexto(`${partes[1]}-${partes[2]}-${partes[3]}`);
-  return fecha.ok ? fecha.valor : null;
-}
-
-/**
- * Un importe de ARCA (`231.5`, `0`, `100`, `10.50`) a `Importe` en pesos, o `null` si no es un decimal no
- * negativo con a lo sumo dos decimales significativos. Nunca pasa por `number`. Los ceros de más
- * (`10.500`) se descartan: no cambian el valor.
- */
-function importeDeArca(texto: string): Importe | null {
-  const partes = /^(0|[1-9][0-9]*)(?:\.([0-9]+))?$/.exec(texto);
-  if (partes === null) return null;
-  const decimales = (partes[2] ?? "").replace(/0+$/, "");
-  if (decimales.length > 2) return null;
-  return importeDesdeTexto(ARS, decimales === "" ? `${partes[1]}` : `${partes[1]}.${decimales}`);
-}
-
-/** Un entero sin signo de hasta `digitos` dígitos como `bigint`, o `null`. */
-function enteroDeArca(texto: string, digitos: number): bigint | null {
-  return new RegExp(`^[0-9]{1,${digitos}}$`).test(texto) ? BigInt(texto) : null;
-}
-
-/** Un código de ARCA (tipo, punto de venta, documento) como `number`: nunca es un importe. */
-function codigoDeArca(texto: string, digitos: number): number | null {
-  const entero = enteroDeArca(texto, digitos);
-  return entero === null ? null : Number(entero);
-}
-
-/** El CAE: 14 dígitos, como TEXTO (puede empezar con 0), como lo exige `comprobante_autorizado_ck`. */
-const FORMA_DEL_CAE = /^[0-9]{14}$/;
-
-// ---------------------------------------------------------------------------------------------------------------
-// Lo común: ¿hay una respuesta completa que leer?
-// ---------------------------------------------------------------------------------------------------------------
-
-type CuerpoOFalla =
-  | Readonly<{ ok: true; cuerpo: string }>
-  /** `llego`: ¿puede el pedido haber llegado a ARCA? (`false` solo si la conexión nunca se abrió). */
-  | Readonly<{ ok: false; llego: boolean; motivo: string }>;
-
-/** Por qué no hay respuesta completa que leer. */
-function motivoDeSinRespuesta(
-  respuesta: Exclude<RespuestaDeTransporte, { tipo: "RESPUESTA" }>,
-): string {
-  return respuesta.tipo === "NO_SALIO"
-    ? `no salió: ${textoSeguro(respuesta.motivo)}`
-    : `sin respuesta completa: ${textoSeguro(respuesta.motivo)}`;
-}
-
-/** Solo una respuesta HTTP 200 completa se lee; todo lo demás es una falla, con su motivo. */
-function cuerpoDe(respuesta: RespuestaDeTransporte): CuerpoOFalla {
-  if (respuesta.tipo !== "RESPUESTA") {
-    return {
-      ok: false,
-      llego: respuesta.tipo === "SIN_RESPUESTA",
-      motivo: motivoDeSinRespuesta(respuesta),
-    };
-  }
-  return respuesta.estadoHttp === 200
-    ? { ok: true, cuerpo: respuesta.cuerpo }
-    : { ok: false, llego: true, motivo: `HTTP ${respuesta.estadoHttp}` };
-}
-
-const RESPUESTA_ILEGIBLE = "la respuesta de ARCA no se pudo leer";
 
 // ---------------------------------------------------------------------------------------------------------------
 // FECAESolicitar
@@ -255,146 +178,6 @@ export function clasificarUltimoAutorizado(
     return noDisponible("ARCA respondió un último autorizado que no es el pedido");
   }
   return ok(ultimo);
-}
-
-// ---------------------------------------------------------------------------------------------------------------
-// FECompConsultar
-// ---------------------------------------------------------------------------------------------------------------
-
-/** Lo que se consultó: la respuesta tiene que ser de ESE número, y una nota tiene que traer su asociado. */
-export type EsperadoDeConsulta = Readonly<{
-  /** La CUIT del emisor: es la del comprobante asociado de una nota (una nota no asocia otro emisor). */
-  cuit: string;
-  puntoDeVenta: number;
-  tipoDeComprobante: number;
-  numero: bigint;
-  esNota: boolean;
-}>;
-
-const consultaFallida = (detalle: string): ResultadoDeConsulta => ({
-  tipo: "CONSULTA_FALLIDA",
-  detalle,
-});
-
-/** Falta o no se entiende un campo de lo registrado: no se sabe qué tiene ARCA, se reintenta. */
-const campoInvalido = (campo: string): ResultadoDeConsulta =>
-  consultaFallida(`la respuesta de ARCA no trae un ${campo} válido`);
-
-function alicuotasConsultadas(
-  leidas: readonly AlicuotaLeida[],
-): DatosConsultados["alicuotas"] | string {
-  const alicuotas: DatosConsultados["alicuotas"][number][] = [];
-  for (const leida of leidas) {
-    const alicuota = alicuotaDeId(leida.id);
-    const base = importeDeArca(leida.base);
-    const iva = importeDeArca(leida.importe);
-    if (alicuota === null || base === null || iva === null) return "Iva";
-    alicuotas.push({ alicuota, base, iva });
-  }
-  return alicuotas;
-}
-
-function asociadoConsultado(
-  leidos: readonly AsociadoLeido[],
-  esperado: EsperadoDeConsulta,
-): DatosConsultados["asociado"] | string {
-  const [leido] = leidos;
-  if (leido === undefined) return esperado.esNota ? "CbtesAsoc" : null;
-  const tipo = codigoDeArca(leido.tipoDeComprobante, 3);
-  const puntoDeVenta = codigoDeArca(leido.puntoDeVenta, 5);
-  const numero = enteroDeArca(leido.numero, 8);
-  // ARCA puede no repetir la CUIT: una nota solo asocia comprobantes de su propio emisor (§B.3.5).
-  const cuit = leido.cuit === "" ? esperado.cuit : leido.cuit;
-  const fecha = fechaDeArca(leido.fecha);
-  if (
-    leidos.length > 1 ||
-    tipo === null ||
-    puntoDeVenta === null ||
-    numero === null ||
-    !/^[0-9]{11}$/.test(cuit) ||
-    fecha === null
-  ) {
-    return "CbtesAsoc";
-  }
-  return { tipoDeComprobante: tipo, puntoDeVenta, numero, cuit, fecha };
-}
-
-/** Lo registrado en ARCA como `DatosConsultados`, o el nombre del primer campo que no sirve. */
-function datosConsultados(
-  c: ComprobanteConsultadoLeido,
-  esperado: EsperadoDeConsulta,
-): DatosConsultados | string {
-  const puntoDeVenta = codigoDeArca(c.puntoDeVenta, 5);
-  const tipoDeComprobante = codigoDeArca(c.tipoDeComprobante, 3);
-  const numero = enteroDeArca(c.desde, 8);
-  const hasta = enteroDeArca(c.hasta, 8);
-  const fecha = fechaDeArca(c.fecha);
-  const tipoDeDocumento = codigoDeArca(c.tipoDeDocumento, 2);
-  const numeroDeDocumento = enteroDeArca(c.numeroDeDocumento, 11);
-  const total = importeDeArca(c.total);
-  const neto = importeDeArca(c.neto);
-  const iva = importeDeArca(c.iva);
-  if (puntoDeVenta !== esperado.puntoDeVenta) return "PtoVta";
-  if (tipoDeComprobante !== esperado.tipoDeComprobante) return "CbteTipo";
-  if (numero !== esperado.numero || hasta !== esperado.numero) return "CbteDesde";
-  if (fecha === null) return "CbteFch";
-  if (tipoDeDocumento === null) return "DocTipo";
-  if (numeroDeDocumento === null) return "DocNro";
-  if (!/^[A-Z0-9]{3}$/.test(c.moneda)) return "MonId";
-  if (total === null) return "ImpTotal";
-  if (neto === null) return "ImpNeto";
-  if (iva === null) return "ImpIVA";
-  const alicuotas = alicuotasConsultadas(c.alicuotas);
-  if (typeof alicuotas === "string") return alicuotas;
-  const asociado = asociadoConsultado(c.asociados, esperado);
-  if (typeof asociado === "string") return asociado;
-  return {
-    tipoDeComprobante,
-    puntoDeVenta,
-    numero,
-    fecha,
-    tipoDeDocumento,
-    numeroDeDocumento,
-    moneda: c.moneda,
-    total,
-    neto,
-    iva,
-    alicuotas,
-    asociado,
-  };
-}
-
-/**
- * Lo que ARCA tiene de un número. `NO_ENCONTRADO` es solo el 602 (y solo el 602): un 601, un 500 o
- * cualquier otra falla es `CONSULTA_FALLIDA`, que se reintenta. Un registro que no es de ese número, que no
- * es `A` o cuyo CAE no tiene 14 dígitos tampoco se da por encontrado.
- */
-export function clasificarConsulta(
-  respuesta: RespuestaDeTransporte,
-  esperado: EsperadoDeConsulta,
-): ResultadoDeConsulta {
-  const cuerpo = cuerpoDe(respuesta);
-  if (!cuerpo.ok) return consultaFallida(cuerpo.motivo);
-  const leida = leerConsulta(cuerpo.cuerpo);
-  if (leida === null) return consultaFallida(RESPUESTA_ILEGIBLE);
-  const { errores, comprobante } = leida;
-  if (comprobante === null) {
-    if (soloSinDatos(errores)) return { tipo: "NO_ENCONTRADO" };
-    return consultaFallida(
-      errores.length === 0
-        ? "ARCA respondió sin datos ni errores"
-        : `ARCA respondió con errores (${codigosComoTexto(errores)})`,
-    );
-  }
-  const datos = datosConsultados(comprobante, esperado);
-  if (typeof datos === "string") return campoInvalido(datos);
-  const vence = fechaDeArca(comprobante.vencimiento);
-  if (comprobante.resultado !== "A") return campoInvalido("Resultado");
-  if (!FORMA_DEL_CAE.test(comprobante.codigo)) {
-    return campoInvalido("CodAutorizacion");
-  }
-  if (vence === null) return campoInvalido("FchVto");
-  return { tipo: "ENCONTRADO", datos, codigo: comprobante.codigo, vence };
 }
 
 // ---------------------------------------------------------------------------------------------------------------

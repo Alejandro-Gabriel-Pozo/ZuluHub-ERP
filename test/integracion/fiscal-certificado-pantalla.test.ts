@@ -27,6 +27,7 @@ import {
 } from "./fiscal-configuracion-apoyo";
 import { REGLAS_CON_FACTURACION } from "./fiscal-numeracion-apoyo";
 import { asignarPlan, crearPlanPublicado } from "./marcas-apoyo";
+import { sufijoUnico } from "./unicos";
 
 /**
  * La pantalla «Certificado de ARCA» (asistente de 3 pasos por ambiente) CONTRA EL BACKEND REAL: el recorrido que hace la pantalla con
@@ -131,7 +132,7 @@ describe.skipIf(base === null)(
 
     it("el recorrido de la pantalla: falta cargar → paso 1 → pedido (una vez) → paso 3 → vigente con su fecha → reemplazo con el mismo alias", async () => {
       const e = await nuevo();
-      const alias = `pedernal${randomBytes(3).toString("hex")}`;
+      const alias = `pedernal${sufijoUnico()}`;
 
       // Falta cargar: la pantalla arranca en el paso 1 y la lista dice «Falta cargar» en los dos ambientes.
       const inicial = await arranqueDe(e, "HOMOLOGACION");

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0344",
+  "fecha": "2026-11-12",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "En Medios de pago todo rechazo del dominio salvo el nombre repetido sale con el aviso genérico «Esta acción no está permitida».",
+  "que_cambia": "Solo qué texto ve la persona; la maqueta aprobada tiene esos dos avisos. Revertir: mapear un código más y sumar su texto aprobado.",
+  "donde": "src/composicion/errores-de-caja.ts; Pedernal-docs 10-ux-ui/prototipos-gastronomia/medios.html; Aprobada por el dueño el 12/11/2026, decisiones-del-dueno-2026-11.md."
+}

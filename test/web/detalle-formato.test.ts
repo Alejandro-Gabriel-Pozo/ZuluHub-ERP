@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   formatearAlicuota,
   formatearCantidad,
+  formatearCantidadConUnidad,
   formatearFecha,
   formatearImporte,
   formatearNumeroDeDocumento,
   formatearPuntoDeVenta,
-} from "../../apps/web/ui/plantillas/facturacion/formato-fiscal";
+} from "../../apps/web/ui/patrones/formato-fiscal";
 
 /** Formato de importes, fechas y documentos del detalle de un comprobante: solo cadenas, nunca `Number` ni `Date`. */
 
@@ -41,6 +42,14 @@ describe("formato de importes, fechas y documentos (solo cadenas)", () => {
     expect(formatearCantidad(entrada)).toBe(salida);
   });
 
+  it("la cantidad con unidad lleva el símbolo tal cual; sin unidad, solo la cantidad", () => {
+    expect(formatearCantidadConUnidad("1.2500", "kg")).toBe("1,25 kg");
+    expect(formatearCantidadConUnidad("1.2500", "kg")).toBe(`${formatearCantidad("1.2500")} kg`);
+    expect(formatearCantidadConUnidad("2.0000", "ml")).toBe("2 ml");
+    expect(formatearCantidadConUnidad("2.0000", null)).toBe("2");
+    expect(formatearCantidadConUnidad("2.0000")).toBe("2");
+  });
+
   it("las fechas se dan vuelta como texto, sin correr el día", () => {
     expect(formatearFecha("2026-10-14")).toBe("14/10/2026");
     expect(formatearFecha("2026-01-01")).toBe("01/01/2026");
@@ -54,6 +63,9 @@ describe("formato de importes, fechas y documentos (solo cadenas)", () => {
     expect(formatearNumeroDeDocumento("DNI", "12345678")).toBe("12.345.678");
     expect(formatearNumeroDeDocumento("DNI", "123456")).toBe("123.456");
     expect(formatearNumeroDeDocumento("PASAPORTE", "123456789")).toBe("123456789");
+    // Con letras sale tal cual figura (Q5, dueño, 2026-11-06).
+    expect(formatearNumeroDeDocumento("PASAPORTE", "ABC123456")).toBe("ABC123456");
+    expect(formatearNumeroDeDocumento("PASAPORTE", "A1B2C3D4")).toBe("A1B2C3D4");
   });
 
   it("punto de venta en cinco dígitos y alícuotas con coma", () => {

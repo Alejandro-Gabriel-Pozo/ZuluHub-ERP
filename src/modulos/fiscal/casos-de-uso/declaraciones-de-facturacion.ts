@@ -19,6 +19,17 @@ export const DECLARACIONES_DE_FACTURACION = {
       },
     },
   },
+  // Facturar un documento ya cobrado que armó otro módulo (E1): `comprobantes.emitir` (COMPLETA_CIERRA), no la acción de la factura libre.
+  emitirFacturaDeOrigen: {
+    accion: "comprobantes.emitir",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/facturacion-factura-de-origen.test.ts",
+        it: "el mismo origen con el mismo pedido devuelve la misma factura (yaExistia) sin escribir ni encolar nada más",
+      },
+    },
+  },
   emitirNotaDeCredito: {
     accion: "notas_de_credito.emitir",
     repeticion: {

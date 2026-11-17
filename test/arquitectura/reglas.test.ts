@@ -7,12 +7,15 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import { afterEach, describe, expect, it } from "vitest";
+import { duplicadosPorArchivo, topesDeDivisionEscritos } from "./fuente-unica-apoyo";
+import { contarProhibidosEnCodigo, contarProhibidosEnSql } from "./lista-de-permitidos-apoyo";
 
 /**
  * Cada regla de arquitectura tiene una violación inyectada a propósito que la rompe (ADR-003).
@@ -354,6 +357,15 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "datos-fragmentos-solo-desde-su-ensamblador",
+      archivos: {
+        "src/capacidades/datos/registro-de-caja.ts": exporta,
+        "apps/web/ui/plantillas/caja/Pantalla.tsx": importa(
+          "../../../../../src/capacidades/datos/registro-de-caja",
+        ),
+      },
+    },
+    {
       regla: "cliente-sin-servidor",
       archivos: {
         "apps/web/app/s/app/boton.cliente.tsx": importa("../../../servidor/composicion"),
@@ -388,6 +400,118 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "ventas-sin-fiscal",
+      archivos: {
+        "src/modulos/ventas/casos-de-uso/c.ts": importa("../../fiscal/publico"),
+        "src/modulos/fiscal/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "ventas-sin-stock",
+      archivos: {
+        "src/modulos/ventas/casos-de-uso/c.ts": importa("../../stock/publico"),
+        "src/modulos/stock/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "ventas-sin-salon-ni-comandas",
+      archivos: {
+        "src/modulos/ventas/casos-de-uso/c.ts": importa("../../salon/publico"),
+        "src/modulos/salon/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "comandas-sin-salon",
+      archivos: {
+        "src/modulos/comandas/casos-de-uso/c.ts": importa("../../salon/publico"),
+        "src/modulos/salon/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "base-sin-salon-ni-comandas",
+      archivos: {
+        "src/modulos/caja/dominio/d.ts": importa("../../comandas/publico"),
+        "src/modulos/comandas/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "base-sin-ventas",
+      archivos: {
+        "src/modulos/caja/dominio/d.ts": importa("../../ventas/publico"),
+        "src/modulos/ventas/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "catalogo-sin-caja-ni-stock",
+      archivos: {
+        "src/modulos/catalogo/dominio/d.ts": importa("../../caja/publico"),
+        "src/modulos/caja/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "caja-sin-negocio-ajeno",
+      archivos: {
+        "src/modulos/caja/dominio/d.ts": importa("../../fiscal/publico"),
+        "src/modulos/fiscal/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "cierre-sin-negocio",
+      archivos: {
+        "src/modulos/cierre/dominio/d.ts": importa("../../caja/publico"),
+        "src/modulos/caja/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "clientes-sin-negocio",
+      archivos: {
+        "src/modulos/clientes/dominio/d.ts": importa("../../compras/publico"),
+        "src/modulos/compras/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "compras-sin-fiscal-ventas-ni-caja",
+      archivos: {
+        "src/modulos/compras/dominio/d.ts": importa("../../caja/publico"),
+        "src/modulos/caja/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "stock-sin-compras",
+      archivos: {
+        "src/modulos/stock/dominio/d.ts": importa("../../compras/publico"),
+        "src/modulos/compras/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "catalogo-sin-compras",
+      archivos: {
+        "src/modulos/catalogo/dominio/d.ts": importa("../../compras/publico"),
+        "src/modulos/compras/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "produccion-solo-con-stock",
+      archivos: {
+        "src/modulos/produccion/dominio/d.ts": importa("../../ventas/publico"),
+        "src/modulos/ventas/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "negocio-sin-produccion",
+      archivos: {
+        "src/modulos/stock/dominio/d.ts": importa("../../produccion/publico"),
+        "src/modulos/produccion/publico.ts": exporta,
+      },
+    },
+    {
+      regla: "empresas-sin-negocio",
+      archivos: {
+        "src/modulos/empresas/casos-de-uso/c.ts": importa("../../caja/publico"),
+        "src/modulos/caja/publico.ts": exporta,
+      },
+    },
+    {
       regla: "arca-solo-en-su-adaptador",
       archivos: {
         "src/modulos/fiscal/dominio/d.ts": importa("pkijs"),
@@ -397,6 +521,18 @@ describe("reglas de arquitectura (ADR-001)", () => {
       regla: "qr-solo-en-su-adaptador",
       archivos: {
         "src/adaptadores/autenticacion/opciones.ts": importa("qrcode-generator"),
+      },
+    },
+    {
+      regla: "pdf-solo-en-su-adaptador",
+      archivos: {
+        "src/adaptadores/qr/qr-svg.ts": importa("pdfkit"),
+      },
+    },
+    {
+      regla: "lectores-de-pdf-solo-en-pruebas",
+      archivos: {
+        "src/composicion/pdf-de-la-factura-web.ts": importa("pdfjs-dist/legacy/build/pdf.mjs"),
       },
     },
     {
@@ -1027,6 +1163,29 @@ describe("R-W2: la composición solo se importa desde apps/web/servidor", () => 
   });
 });
 
+describe("datos por módulo: los fragmentos solo los importa su ensamblador", () => {
+  it("registro.ts y caminos.ts sí importan sus fragmentos, y una pantalla importa el ensamblador", async () => {
+    const v = await violacionesDe({
+      "src/capacidades/datos/registro-de-caja.ts": exporta,
+      "src/capacidades/datos/caminos-de-caja.ts": exporta,
+      "src/capacidades/datos/registro.ts": importa("./registro-de-caja"),
+      "src/capacidades/datos/caminos.ts": importa("./caminos-de-caja"),
+      "apps/web/ui/plantillas/caja/Pantalla.tsx": importa(
+        "../../../../../src/capacidades/datos/registro",
+      ),
+    });
+    expect(v).not.toContain("datos-fragmentos-solo-desde-su-ensamblador");
+  });
+
+  it("un fragmento tampoco importa a otro fragmento: se juntan solo en el ensamblador", async () => {
+    const v = await violacionesDe({
+      "src/capacidades/datos/registro-de-caja.ts": exporta,
+      "src/capacidades/datos/registro-de-facturacion.ts": importa("./registro-de-caja"),
+    });
+    expect(v).toContain("datos-fragmentos-solo-desde-su-ensamblador");
+  });
+});
+
 describe("R-W4: los archivos de cliente no importan nada del servidor", () => {
   it.each([
     [
@@ -1354,9 +1513,242 @@ describe("facturación F1: el facturador funciona solo (spec H7 facturación §B
       "src/modulos/fiscal/dominio/d.ts": exporta,
       "src/modulos/fiscal/casos-de-uso/c.ts": importa("../dominio/d"),
       "src/modulos/fiscal/publico.ts": importa("./casos-de-uso/c"),
-      "src/modulos/ventas/casos-de-uso/v.ts": importa("../../fiscal/publico"),
+      "src/composicion/c.ts": importa("../modulos/fiscal/publico"),
     });
     expect(v).not.toContain("fiscal-sin-negocio-ajeno");
+    expect(v).not.toContain("ventas-sin-fiscal");
+  });
+
+  it("ventas no importa fiscal, ni por su publico.ts; la composición sí toca los dos", async () => {
+    const v = await violacionesDe({
+      "src/modulos/ventas/casos-de-uso/c.ts": importa("../../fiscal/publico"),
+      "src/modulos/fiscal/publico.ts": exporta,
+    });
+    expect(v).toContain("ventas-sin-fiscal");
+    const ok = await violacionesDe({
+      "src/composicion/c.ts": importa("../modulos/fiscal/publico"),
+      "src/composicion/d.ts": importa("../modulos/ventas/publico"),
+      "src/modulos/fiscal/publico.ts": exporta,
+      "src/modulos/ventas/publico.ts": exporta,
+    });
+    expect(ok).not.toContain("ventas-sin-fiscal");
+  });
+});
+
+describe("E5-T12: ventas y stock solo se tocan en la composición", () => {
+  it("ventas no importa stock, ni por su publico.ts; la composición sí toca los dos", async () => {
+    const v = await violacionesDe({
+      "src/modulos/ventas/casos-de-uso/c.ts": importa("../../stock/publico"),
+      "src/modulos/stock/publico.ts": exporta,
+    });
+    expect(v).toContain("ventas-sin-stock");
+    const ok = await violacionesDe({
+      "src/composicion/c.ts": importa("../modulos/stock/publico"),
+      "src/composicion/d.ts": importa("../modulos/ventas/publico"),
+      "src/modulos/stock/publico.ts": exporta,
+      "src/modulos/ventas/publico.ts": exporta,
+    });
+    expect(ok).not.toContain("ventas-sin-stock");
+  });
+});
+
+describe("E0-T5: sentido de las dependencias entre módulos de base, ventas y cierre (e0 §3.6.2)", () => {
+  it("catalogo, caja y stock no importan ventas, ni por su publico.ts", async () => {
+    for (const modulo of ["catalogo", "caja", "stock"]) {
+      const v = await violacionesDe({
+        [`src/modulos/${modulo}/casos-de-uso/c.ts`]: importa("../../ventas/publico"),
+        "src/modulos/ventas/publico.ts": exporta,
+      });
+      expect(v, modulo).toContain("base-sin-ventas");
+    }
+  });
+
+  it("ventas sí usa catalogo y caja por su publico.ts (stock no: lo declara como puerto, ventas-sin-stock)", async () => {
+    const v = await violacionesDe({
+      "src/modulos/catalogo/publico.ts": exporta,
+      "src/modulos/caja/publico.ts": exporta,
+      "src/modulos/ventas/casos-de-uso/v.ts": [
+        importa("../../catalogo/publico"),
+        importa("../../caja/publico"),
+      ].join(""),
+    });
+    expect(v).not.toContain("base-sin-ventas");
+    expect(v).not.toContain("catalogo-sin-caja-ni-stock");
+  });
+
+  it("catalogo no importa caja ni stock, ni por su publico.ts", async () => {
+    for (const modulo of ["caja", "stock"]) {
+      const v = await violacionesDe({
+        "src/modulos/catalogo/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+      });
+      expect(v, modulo).toContain("catalogo-sin-caja-ni-stock");
+    }
+  });
+
+  it("caja no importa fiscal, reservas, clientes, catalogo ni stock, ni por su publico.ts; sí usa cierre y empresas", async () => {
+    for (const modulo of ["fiscal", "reservas", "clientes", "catalogo", "stock"]) {
+      const v = await violacionesDe({
+        "src/modulos/caja/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+      });
+      expect(v, modulo).toContain("caja-sin-negocio-ajeno");
+    }
+    const permitido = await violacionesDe({
+      "src/modulos/cierre/publico.ts": exporta,
+      "src/modulos/empresas/publico.ts": exporta,
+      "src/modulos/caja/dominio/d.ts":
+        'import "../../cierre/publico";\nimport "../../empresas/publico";\nexport const d = 1;\n',
+    });
+    expect(permitido).not.toContain("caja-sin-negocio-ajeno");
+  });
+
+  it("clientes no importa compras ni ningún otro módulo de negocio, ni por su publico.ts; sí usa empresas", async () => {
+    for (const modulo of [
+      "caja",
+      "catalogo",
+      "cierre",
+      "compras",
+      "fiscal",
+      "reservas",
+      "stock",
+      "ventas",
+    ]) {
+      const v = await violacionesDe({
+        "src/modulos/clientes/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+      });
+      expect(v, modulo).toContain("clientes-sin-negocio");
+    }
+    const permitido = await violacionesDe({
+      "src/modulos/empresas/publico.ts": exporta,
+      "src/modulos/clientes/casos-de-uso/c.ts":
+        'import "../../empresas/publico";\nexport const d = 1;\n',
+    });
+    expect(permitido).not.toContain("clientes-sin-negocio");
+  });
+
+  it("compras no importa fiscal, ventas ni caja; stock y catálogo no importan compras; compras sí usa stock, catálogo y clientes por su publico.ts", async () => {
+    for (const modulo of ["fiscal", "ventas", "caja"]) {
+      const v = await violacionesDe({
+        "src/modulos/compras/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+      });
+      expect(v, modulo).toContain("compras-sin-fiscal-ventas-ni-caja");
+    }
+    for (const [modulo, regla] of [
+      ["stock", "stock-sin-compras"],
+      ["catalogo", "catalogo-sin-compras"],
+    ] as const) {
+      const v = await violacionesDe({
+        [`src/modulos/${modulo}/casos-de-uso/c.ts`]: importa("../../compras/publico"),
+        "src/modulos/compras/publico.ts": exporta,
+      });
+      expect(v, modulo).toContain(regla);
+    }
+    for (const modulo of ["stock", "catalogo", "clientes", "empresas"]) {
+      const permitido = await violacionesDe({
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+        "src/modulos/compras/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+      });
+      expect(permitido, modulo).not.toContain("compras-sin-fiscal-ventas-ni-caja");
+    }
+  });
+
+  it("producción solo importa a stock (por su publico.ts) y ningún módulo de negocio importa producción", async () => {
+    for (const modulo of [
+      "catalogo",
+      "caja",
+      "ventas",
+      "fiscal",
+      "clientes",
+      "compras",
+      "cierre",
+    ]) {
+      const v = await violacionesDe({
+        [`src/modulos/produccion/casos-de-uso/c.ts`]: importa(`../../${modulo}/publico`),
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+      });
+      expect(v, modulo).toContain("produccion-solo-con-stock");
+    }
+    for (const modulo of [
+      "catalogo",
+      "caja",
+      "ventas",
+      "fiscal",
+      "clientes",
+      "compras",
+      "cierre",
+      "stock",
+    ]) {
+      const v = await violacionesDe({
+        [`src/modulos/${modulo}/casos-de-uso/c.ts`]: importa("../../produccion/publico"),
+        "src/modulos/produccion/publico.ts": exporta,
+      });
+      expect(v, modulo).toContain("negocio-sin-produccion");
+    }
+    const permitido = await violacionesDe({
+      "src/modulos/produccion/casos-de-uso/c.ts": importa("../../stock/publico"),
+      "src/modulos/stock/publico.ts": exporta,
+    });
+    expect(permitido).not.toContain("produccion-solo-con-stock");
+    expect(permitido).not.toContain("negocio-sin-produccion");
+  });
+
+  it("cierre no importa ningún módulo de negocio, ni por su publico.ts", async () => {
+    for (const modulo of [
+      "catalogo",
+      "caja",
+      "ventas",
+      "stock",
+      "fiscal",
+      "clientes",
+      "reservas",
+    ]) {
+      const v = await violacionesDe({
+        "src/modulos/cierre/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+        [`src/modulos/${modulo}/publico.ts`]: exporta,
+      });
+      expect(v, modulo).toContain("cierre-sin-negocio");
+    }
+  });
+
+  it("caja sí importa los tipos del puerto de empresas por su publico.ts; empresas no importa caja", async () => {
+    const permitido = await violacionesDe({
+      "src/modulos/empresas/publico.ts": exporta,
+      "src/modulos/caja/casos-de-uso/c.ts": importa("../../empresas/publico"),
+    });
+    expect(permitido).not.toContain("empresas-sin-negocio");
+    const prohibido = await violacionesDe({
+      "src/modulos/empresas/publico.ts": importa("../caja/publico"),
+      "src/modulos/caja/publico.ts": exporta,
+    });
+    expect(prohibido).toContain("empresas-sin-negocio");
+  });
+
+  it("el puerto de ganchos de sucursal (`ganchos-de-sucursal.ts`) tampoco puede importar caja: caja implementa el puerto, empresas no lo conoce", async () => {
+    const prohibido = await violacionesDe({
+      "src/modulos/empresas/ganchos-de-sucursal.ts": importa("./../caja/publico"),
+      "src/modulos/caja/publico.ts": exporta,
+    });
+    expect(prohibido).toContain("empresas-sin-negocio");
+    const permitido = await violacionesDe({
+      "src/modulos/empresas/publico.ts": exporta,
+      "src/modulos/caja/gancho-de-sucursal.ts": importa("../empresas/publico"),
+    });
+    expect(permitido).not.toContain("empresas-sin-negocio");
+  });
+
+  it("cierre sí usa empresas y los módulos de negocio sí usan cierre por su publico.ts", async () => {
+    const v = await violacionesDe({
+      "src/modulos/empresas/publico.ts": exporta,
+      "src/modulos/cierre/casos-de-uso/c.ts": importa("../../empresas/publico"),
+      "src/modulos/cierre/publico.ts": exporta,
+      "src/modulos/caja/casos-de-uso/c.ts": importa("../../cierre/publico"),
+      "src/modulos/ventas/casos-de-uso/v.ts": importa("../../cierre/publico"),
+    });
+    expect(v).not.toContain("cierre-sin-negocio");
+    expect(v).not.toContain("base-sin-ventas");
   });
 });
 
@@ -1400,6 +1792,62 @@ describe("facturación F6: las consultas del facturador (spec H7 facturación §
         "src/modulos/fiscal/consultas/c.ts": importa(`../dominio/${otro}`),
       });
       expect(prohibido, otro).toContain("consultas-sin-dominio");
+    }
+  });
+
+  it("una consulta de caja importa la anulación (e3 §3.10), pero ningún otro archivo del dominio ni la anulación de otro módulo", async () => {
+    const permitido = await violacionesDe({
+      "src/modulos/caja/dominio/anulacion.ts": exporta,
+      "src/modulos/caja/consultas/c.ts": importa("../dominio/anulacion"),
+    });
+    expect(permitido).not.toContain("consultas-sin-dominio");
+    // Lo vecino no entra por parecerse: ni otro archivo de la anulación, ni el arqueo o el movimiento, que son del dominio.
+    for (const otro of ["anulacion-de-otra-cosa", "arqueo", "movimiento", "sesion"]) {
+      const prohibido = await violacionesDe({
+        [`src/modulos/caja/dominio/${otro}.ts`]: exporta,
+        "src/modulos/caja/consultas/c.ts": importa(`../dominio/${otro}`),
+      });
+      expect(prohibido, otro).toContain("consultas-sin-dominio");
+    }
+    const ajena = await violacionesDe({
+      "src/modulos/empresas/dominio/anulacion.ts": exporta,
+      "src/modulos/empresas/consultas/c.ts": importa("../dominio/anulacion"),
+    });
+    expect(ajena).toContain("consultas-sin-dominio");
+  });
+
+  it("una consulta de salón importa el estado de la mesa y una de comandas, el papel y el estado del trabajo; ningún otro archivo del dominio ni los de otro módulo", async () => {
+    const casos: Record<string, readonly string[]> = {
+      salon: ["estado-de-mesa"],
+      comandas: ["documento", "impresion"],
+    };
+    for (const [modulo, permitidos] of Object.entries(casos)) {
+      for (const archivo of permitidos) {
+        const v = await violacionesDe({
+          [`src/modulos/${modulo}/dominio/${archivo}.ts`]: exporta,
+          [`src/modulos/${modulo}/consultas/c.ts`]: importa(`../dominio/${archivo}`),
+        });
+        expect(v, `${modulo}/${archivo}`).not.toContain("consultas-sin-dominio");
+        const ajeno = await violacionesDe({
+          [`src/modulos/empresas/dominio/${archivo}.ts`]: exporta,
+          "src/modulos/empresas/consultas/c.ts": importa(`../dominio/${archivo}`),
+        });
+        expect(ajeno, `empresas/${archivo}`).toContain("consultas-sin-dominio");
+      }
+    }
+    for (const [modulo, otro] of [
+      ["salon", "mesa"],
+      ["salon", "division"],
+      ["salon", "estado-de-mesa-de-otra-cosa"],
+      ["comandas", "envio"],
+      ["comandas", "huella"],
+      ["comandas", "documento-de-otra-cosa"],
+    ] as const) {
+      const prohibido = await violacionesDe({
+        [`src/modulos/${modulo}/dominio/${otro}.ts`]: exporta,
+        [`src/modulos/${modulo}/consultas/c.ts`]: importa(`../dominio/${otro}`),
+      });
+      expect(prohibido, `${modulo}/${otro}`).toContain("consultas-sin-dominio");
     }
   });
 
@@ -1952,6 +2400,75 @@ describe("P8c: el ingreso de la consola solo lo importa el servidor de la consol
  * adaptador de QR, la carpeta `src/adaptadores/qr/`, y nada más (ni siquiera el adaptador de autenticación, que ahora
  * le pide el dibujo como cualquier otro).
  */
+describe("PDF de la factura: la librería de PDF solo entra por su adaptador y los lectores de PDF solo en pruebas", () => {
+  it("lo importa el adaptador de PDF (y sus pruebas), y nadie más puede", async () => {
+    const v = await violacionesDe({
+      "src/adaptadores/pdf/pincel-del-pdf.ts": importa("pdfkit"),
+      "src/adaptadores/pdf/pdf-de-la-factura.test.ts": importa("pdfkit"),
+      "src/adaptadores/pdf/otro/archivo.ts": importa("pdfkit/js/pdfkit.js"),
+    });
+    expect(v).not.toContain("pdf-solo-en-su-adaptador");
+  });
+
+  it.each([
+    ["otro adaptador", "src/adaptadores/qr/qr-svg.ts"],
+    ["la composición", "src/composicion/pdf-de-la-factura-web.ts"],
+    ["un módulo de negocio", "src/modulos/fiscal/dominio/modelo-de-impresion.ts"],
+    ["la web", "apps/web/servidor/pdf-de-la-factura.ts"],
+    ["una pantalla de la web", "apps/web/pantallas/pdf-de-la-factura.ts"],
+    ["una ruta de la web", "apps/web/app/api/salud/route.ts"],
+    ["un script", "scripts/crear-pdf.ts"],
+  ])("%s no puede importar pdfkit (%s)", async (_nombre, origen) => {
+    const v = await violacionesDe({ [origen]: importa("pdfkit") });
+    expect(v).toContain("pdf-solo-en-su-adaptador");
+  });
+
+  it("también se ve el import de un archivo interno del paquete, y desde una carpeta que solo se parece", async () => {
+    expect(
+      await violacionesDe({ "src/adaptadores/qr/a.ts": importa("pdfkit/js/pdfkit.node.mjs") }),
+    ).toContain("pdf-solo-en-su-adaptador");
+    expect(await violacionesDe({ "src/adaptadores/pdfs/a.ts": importa("pdfkit") })).toContain(
+      "pdf-solo-en-su-adaptador",
+    );
+    expect(await violacionesDe({ "src/adaptadores/otra/pdf/a.ts": importa("pdfkit") })).toContain(
+      "pdf-solo-en-su-adaptador",
+    );
+  });
+
+  it.each(["pdfjs-dist", "pdfjs-dist/legacy/build/pdf.mjs", "jsqr"])(
+    "%s lo importan las pruebas, no el código de producción",
+    async (paquete) => {
+      expect(
+        await violacionesDe({ "src/adaptadores/pdf/pdf-de-la-factura.test.ts": importa(paquete) }),
+      ).not.toContain("lectores-de-pdf-solo-en-pruebas");
+      for (const origen of [
+        "src/adaptadores/pdf/pdf-de-la-factura.ts",
+        "src/composicion/pdf-de-la-factura-web.ts",
+        "apps/web/servidor/pdf-de-la-factura.ts",
+        "scripts/leer-pdf.ts",
+      ]) {
+        expect(await violacionesDe({ [origen]: importa(paquete) })).toContain(
+          "lectores-de-pdf-solo-en-pruebas",
+        );
+      }
+    },
+  );
+
+  it("las dependencias están fijadas en la versión exacta aprobada, sin rango; los lectores, solo en desarrollo", () => {
+    const paquete = JSON.parse(readFileSync("package.json", "utf8")) as {
+      dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+    expect(paquete.dependencies["pdfkit"]).toBe("0.20.2");
+    expect(paquete.devDependencies["pdfjs-dist"]).toBe("6.5.438");
+    expect(paquete.devDependencies["jsqr"]).toBe("1.4.0");
+    for (const lector of ["pdfjs-dist", "jsqr"]) {
+      expect(paquete.dependencies[lector]).toBeUndefined();
+    }
+    expect(paquete.devDependencies["pdfkit"]).toBeUndefined();
+  });
+});
+
 describe("P8a y F9: el generador de QR solo entra por el adaptador de QR", () => {
   it("lo importa el adaptador de QR (y sus pruebas), y nadie más puede", async () => {
     const v = await violacionesDe({
@@ -2048,5 +2565,103 @@ describe("la consola reutiliza solo la interfaz de la web", () => {
       "apps/plataforma/logica/ingreso.ts": exporta,
     });
     expect(v).toContain("apps-independientes");
+  });
+});
+
+/**
+ * El recorrido de punta a punta (`test/recorrido`) reemplaza ARCA con un módulo de pruebas que se carga con `NODE_OPTIONS=--import` solo
+ * en el proceso de `next start` que lanza la prueba. Falla que previene: que algo de producción (código de `src/`, de `apps/` o de los
+ * scripts, o la configuración de Vercel) nombre ese módulo, su variable o `NODE_OPTIONS`; ahí el «modo de prueba» dejaría de ser
+ * imposible en un despliegue real y habría una puerta que desvía las llamadas a ARCA. Todo nace cerrado: la única forma de activarlo es que
+ * la prueba lo cargue desde afuera, y esta regla impide que el código lo cargue por su cuenta.
+ */
+describe("el módulo de ARCA simulada del recorrido no puede llegar a producción", () => {
+  const RAIZ_REAL = join(import.meta.dirname, "../..");
+  const PROHIBIDO_EN_PRODUCCION = [
+    "conectar-arca-simulada",
+    "PEDERNAL_RECORRIDO",
+    "arca-simulada",
+    "NODE_OPTIONS",
+  ];
+  const referenciasProhibidas = (texto: string): string[] =>
+    texto
+      .split("\n")
+      .filter((linea) => PROHIBIDO_EN_PRODUCCION.some((p) => linea.includes(p)))
+      .map((linea) => linea.trim());
+  const IGNORAR = new Set(["node_modules", ".next", ".turbo"]);
+  const archivosDe = (carpeta: string): string[] =>
+    readdirSync(carpeta).flatMap((nombre) => {
+      if (IGNORAR.has(nombre)) return [];
+      const ruta = join(carpeta, nombre);
+      return statSync(ruta).isDirectory() ? archivosDe(ruta) : [ruta];
+    });
+
+  it("ningún archivo de src/, apps/ ni scripts/ lo nombra ni toca NODE_OPTIONS", () => {
+    const produccion = ["src", "apps", "scripts"]
+      .flatMap((carpeta) => archivosDe(join(RAIZ_REAL, carpeta)))
+      .filter((ruta) => !/\.(png|jpe?g|webp|ico|woff2?|svg)$/.test(ruta));
+    const halladas = produccion.flatMap((ruta) =>
+      referenciasProhibidas(readFileSync(ruta, "utf8")).map((linea) => `${ruta}: ${linea}`),
+    );
+    expect(halladas).toEqual([]);
+  });
+
+  it("vercel.json no lo nombra ni define NODE_OPTIONS", () => {
+    const vercel = readFileSync(join(RAIZ_REAL, "apps", "web", "vercel.json"), "utf8");
+    expect(referenciasProhibidas(vercel)).toEqual([]);
+  });
+
+  it("la regla detecta la violación inyectada (las cuatro formas)", () => {
+    for (const prohibido of PROHIBIDO_EN_PRODUCCION) {
+      expect(referenciasProhibidas(`const a = 1;\nimport "${prohibido}";\n`)).toEqual([
+        `import "${prohibido}";`,
+      ]);
+    }
+    expect(referenciasProhibidas("const todoBien = true;")).toEqual([]);
+  });
+});
+
+describe("validación de datos: lista de permitidos y fuente única (CLAUDE.md «Todo nace cerrado» y «Una regla, un lugar»)", () => {
+  // Las pruebas reales son `lista-de-permitidos.test.ts` y `fuente-unica.test.ts`; acá, la violación inyectada de cada una (el espejo
+  // que pide «una regla nueva trae su violación inyectada en reglas.test.ts»). El detalle de cada forma está en `*-evasiones.test.ts`.
+  it("validar por lista de prohibidos (código y SQL) se cuenta como deuda", () => {
+    expect(
+      contarProhibidosEnCodigo("x.ts", "export const v = (t: string) => !/\\p{Cc}/u.test(t);"),
+    ).toBe(1);
+    expect(contarProhibidosEnSql("CHECK (nombre !~ '[\\x01-\\x1F\\x7F-\\x9F]')")).toBe(1);
+  });
+
+  it("declarar lo permitido no se cuenta", () => {
+    expect(
+      contarProhibidosEnCodigo(
+        "x.ts",
+        "export const v = (t: string) => /^[A-Za-z ]{1,40}$/.test(t);",
+      ),
+    ).toBe(0);
+  });
+
+  it("un tope de largo escrito dos veces se cuenta como deuda", () => {
+    const duena = "export const LARGO_MAXIMO_DEL_NOMBRE = 80;\n";
+    const copia = new Map([
+      ["src/a.ts", duena],
+      ["apps/b.ts", duena],
+    ]);
+    expect([...duplicadosPorArchivo(copia)]).toEqual([["apps/b.ts", 1]]);
+    expect([...duplicadosPorArchivo(new Map([["src/a.ts", duena]]))]).toEqual([]);
+  });
+
+  it("un tope de dividir la cuenta escrito a mano fuera de su primitiva falla", () => {
+    const fuente = [
+      "src/primitivas/cuentas/limites-de-division.ts",
+      "export const MAXIMO_DE_CUENTAS_POR_ITEMS = 10;\nexport const MAXIMO_DE_PARTES_POR_PORCENTAJE = 12;\n",
+    ] as const;
+    expect(
+      topesDeDivisionEscritos(
+        new Map([fuente, ["src/x.ts", "if (partes > 10) throw new Error();\n"]]),
+      ),
+    ).toEqual(["src/x.ts:1"]);
+    expect(
+      topesDeDivisionEscritos(new Map([fuente, ["src/x.ts", "if (partes > MAXIMO) return;\n"]])),
+    ).toEqual([]);
   });
 });

@@ -1,0 +1,6 @@
+{
+  "grupo": "vocabulario",
+  "archivos": "src/capacidades/vocabulario/**/*.ts",
+  "minutos": 1.4,
+  "pruebas": "src/capacidades/vocabulario"
+}

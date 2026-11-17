@@ -160,7 +160,7 @@ describe.skipIf(base === null)("nombre de la sucursal en el comprobante: la migr
     expect(plano).toMatch(/DEPENDE de 0016/);
     expect(plano).toMatch(/0019 \(que queda INTACTA/);
     expect(plano).toContain(`reversiones/${await archivoDeLaReversion()}`);
-    expect(plano).toMatch(/SUPUESTO/);
+    expect(plano).toMatch(/SUPUESTO/); // DEC-0045
     const codigo = texto.replace(/--.*$/gm, "");
     expect(codigo).not.toMatch(
       /\b(DROP|TRUNCATE|CASCADE|DELETE|UPDATE\s+public|SECURITY\s+DEFINER|DISABLE\s+TRIGGER|REVOKE|GRANT|OR\s+REPLACE)\b/i,

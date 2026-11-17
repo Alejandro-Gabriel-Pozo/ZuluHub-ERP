@@ -6,18 +6,18 @@ import {
 import { esCondicionIva } from "../../../../../../src/primitivas/identificacion-fiscal/condicion-iva";
 import {
   formatearAlicuota,
-  formatearCantidad,
+  formatearCantidadConUnidad,
   formatearFecha,
   formatearImporte,
-} from "../formato-fiscal";
+} from "../../../patrones/formato-fiscal";
 import { CLAVE_DE_CONDICION } from "../modelo-de-emision";
 import { documentoDe, type TipoDeDocumentoVisible } from "../modelo-del-detalle";
+import { filaDeLeyenda } from "./fila-de-leyenda";
 
 /**
  * El modelo de vista de la hoja imprimible: de lo que trae el modelo de impresión (`ModeloImpreso` de fiscal, ya armado por el servidor),
- * TODO lo que la hoja dibuja y NADA más. La UI no importa `src/modulos/**`, así que el tipo es propio y estructural: el modelo de impresión
- * lo cumple tal cual (los importes y las fechas son texto). Es una lista blanca a propósito: `referencias`, `descuento`, la marca de
- * logo y color y la versión de representación no están, así que no se dibujan (D-109: primera entrega sin referencias ni estadía).
+ * TODO lo que la hoja dibuja y NADA más. La UI no importa `src/modulos/**`, así que el tipo es propio y estructural: el modelo de impresión lo cumple tal cual (los importes y las fechas son texto).
+ * Es una lista blanca a propósito: `referencias`, `descuento`, la marca de logo y color y la versión de representación no están, así que no se dibujan (D-109: primera entrega sin referencias ni estadía).
  * Previene: imprimir un dato que el dueño no aprobó, o un importe que pasó por `number` (ADR-006). Chequeo: `test/web/impresion-modelo.test.ts`.
  */
 
@@ -58,10 +58,12 @@ export type ComprobanteParaLaHoja = Readonly<{
     domicilio: string | null;
     /** «A CONSUMIDOR FINAL», del modelo (versión 2 en adelante). */
     leyenda?: string;
+    leyendaDeCondicion?: string; // versión 3: RG 1415 Anexo II A.II
   }>;
   renglones: readonly Readonly<{
     descripcion: string;
     cantidad: string;
+    unidad?: string; // versión 4 del modelo en adelante: «kg» junto a la cantidad
     precioUnitario: string;
     alicuota: string | null;
     importe: string;
@@ -246,6 +248,7 @@ function receptorDe(d: DiccionarioResuelto, c: ComprobanteParaLaHoja): readonly 
       rotulo: texto(d, "fiscal.pantalla.config_df_condicion_iva"),
       valor: condicionVisible(d, receptor.condicionIva),
     },
+    ...filaDeLeyenda(receptor.leyendaDeCondicion, nombre),
     ...(receptor.domicilio === null || receptor.domicilio === ""
       ? []
       : [
@@ -300,13 +303,11 @@ function renglonDe(d: DiccionarioResuelto, r: ComprobanteParaLaHoja["renglones"]
   const alicuota = r.alicuota === null ? null : formatearAlicuota(r.alicuota);
   const iva = alicuota === null ? null : texto(d, "fiscal.pantalla.renglon_iva", { alicuota });
   const precio = formatearImporte(r.precioUnitario);
-  const cuenta = texto(d, "fiscal.pantalla.renglon_cuenta", {
-    cantidad: formatearCantidad(r.cantidad),
-    precio,
-  });
+  const cantidad = formatearCantidadConUnidad(r.cantidad, r.unidad);
+  const cuenta = texto(d, "fiscal.pantalla.renglon_cuenta", { cantidad, precio });
   return {
     descripcion: r.descripcion,
-    cantidad: formatearCantidad(r.cantidad),
+    cantidad,
     precio,
     iva,
     importe: formatearImporte(r.importe),

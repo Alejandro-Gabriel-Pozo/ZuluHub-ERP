@@ -1,0 +1,6 @@
+{
+  "grupo": "web (Set-Cookie de la librería de ingreso)",
+  "archivos": "src/capacidades/experiencia/set-cookie.ts",
+  "minutos": 1.3,
+  "pruebas": "src/capacidades/experiencia/set-cookie.test.ts"
+}

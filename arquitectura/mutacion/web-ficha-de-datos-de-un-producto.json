@@ -1,0 +1,6 @@
+{
+  "grupo": "web (ficha de datos de un producto)",
+  "archivos": "src/composicion/entradas-de-ficha-de-producto.ts,src/composicion/errores-de-catalogo.ts,apps/web/ui/plantillas/catalogo/modelo-de-ficha-de-producto.ts",
+  "minutos": 1,
+  "pruebas": "src/composicion/entradas-de-ficha-de-producto.test.ts src/composicion/errores-de-catalogo.test.ts test/web/ficha-de-producto-modelo.test.ts"
+}

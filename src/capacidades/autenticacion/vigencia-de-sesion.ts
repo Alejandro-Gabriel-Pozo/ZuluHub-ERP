@@ -30,6 +30,17 @@ export const LIMITES_DE_SESION: LimitesDeSesion = Object.freeze({
 });
 
 /**
+ * Cada cuánto, como máximo, el uso de una sesión de EMPRESA se escribe en la base (`session.updatedAt` y `expiresAt`). Decisión del dueño
+ * (2026-11-07): el vencimiento por inactividad puede tener hasta 1 minuto de tolerancia a cambio de no escribir en la base en cada
+ * pantalla. La tolerancia cae del lado seguro: el uso se anota con hasta 60 s de atraso, así que la sesión se da por vencida hasta 60 s
+ * ANTES de los 15 minutos reales sin uso, nunca después. El «Seguir» y la renovación silenciosa de la cookie escriben siempre
+ * (`renovarYa`): son un pedido explícito de renovar, no una vista. La consola de plataforma no usa este valor (escribe en cada uso).
+ * Previene: una escritura de la sesión por cada pantalla (1 viaje a la base más por pedido). Chequeo: `vigencia-de-sesion.test.ts` y
+ * `test/integracion/autenticacion-uso-de-sesion.test.ts`.
+ */
+export const SEGUNDOS_ENTRE_ESCRITURAS_DE_USO = 60;
+
+/**
  * Los límites de la consola de plataforma (h5-p8 §1; DECIDIDO por el dueño): 8 horas absolutas y 30 minutos de
  * inactividad, con el aviso a los 25 (quedan 5). Los de empresa (`LIMITES_DE_SESION`) no cambian.
  */

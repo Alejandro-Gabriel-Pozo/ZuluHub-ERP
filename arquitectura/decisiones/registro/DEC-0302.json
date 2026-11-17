@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0302",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "Un precio de compra en cero se rechaza: cero se confundiría con «sin precio», que se guarda vacío.",
+  "que_cambia": "Si se admitiera cero, una compra sin costo entraría al promedio de stock; se corrige aflojando una comparación.",
+  "donde": "src/modulos/compras/dominio/calcular-linea.ts:34"
+}

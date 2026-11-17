@@ -1,0 +1,6 @@
+{
+  "grupo": "guardián (códigos de falla y de aviso)",
+  "archivos": "arquitectura/contratos/codigos.cjs",
+  "minutos": 1,
+  "pruebas": "test/arquitectura/guardian-codigos.test.ts"
+}

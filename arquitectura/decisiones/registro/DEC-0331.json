@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0331",
+  "fecha": "2026-11-12",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La lista de los seis signos nuevos es aparte de la base: la usan solo producto, sección, opción, descripción y carta; razón social, domicilio, notas y motivos no.",
+  "que_cambia": "Se decidió con el orquestador (12/11/2026) por los datos que viajan a ARCA; si se corrige, se pasa la bandera conSignosDeCatalogo al dato que lo pida.",
+  "donde": "src/primitivas/texto/texto-de-una-linea.ts; Pedernal-docs 11-especificaciones/carta-real-especificacion.md §13 H2"
+}

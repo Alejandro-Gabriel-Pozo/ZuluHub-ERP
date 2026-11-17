@@ -121,6 +121,7 @@ export function PantallaDeContactoDeLaSucursal({
           rechazo={rechazo !== null && lugar === null ? rechazo : null}
         />
         <Campo
+          dato="telefono"
           etiqueta={texto({}, "sucursal.telefono")}
           nombre="telefono"
           tipo="tel"
@@ -134,6 +135,7 @@ export function PantallaDeContactoDeLaSucursal({
           deshabilitado={bloqueado}
         />
         <Campo
+          dato="correo"
           etiqueta={texto({}, "sucursal.correo")}
           nombre="correo"
           tipo="email"
@@ -148,6 +150,7 @@ export function PantallaDeContactoDeLaSucursal({
           deshabilitado={bloqueado}
         />
         <Campo
+          dato="web"
           etiqueta={texto({}, "sucursal.web")}
           nombre="web"
           // Texto y no `url`: se guarda sin esquema, así que el navegador no debe exigir ni completar `https://`.

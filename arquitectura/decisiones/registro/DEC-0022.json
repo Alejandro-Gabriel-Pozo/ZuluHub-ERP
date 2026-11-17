@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0022",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Un ticket ya facturado por otra persona muestra ese comprobante sin error; Pendientes de facturar es una página aparte.",
+  "que_cambia": "Qué ve quien intenta facturar un ticket ya facturado.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A22 (E1)"
+}

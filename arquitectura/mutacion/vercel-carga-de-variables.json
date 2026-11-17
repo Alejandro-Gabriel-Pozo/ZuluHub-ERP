@@ -1,0 +1,6 @@
+{
+  "grupo": "vercel (carga de variables)",
+  "archivos": "src/adaptadores/vercel/**/*.ts",
+  "minutos": 5.8,
+  "pruebas": "src/adaptadores/vercel"
+}

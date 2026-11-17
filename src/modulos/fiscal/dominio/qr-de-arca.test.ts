@@ -94,7 +94,13 @@ describe("QR de ARCA: el JSON", () => {
     ]).toEqual([96, 12345678]);
     expect(j({ tipo: "CUIL", numero: CUIT_C })["tipoDocRec"]).toBe(86);
     expect(j({ tipo: "CDI", numero: CUIT_C })["tipoDocRec"]).toBe(87);
-    expect(j({ tipo: "PASAPORTE", numero: "123" })["tipoDocRec"]).toBe(94);
+    expect(j({ tipo: "PASAPORTE", numero: "123456" })["tipoDocRec"]).toBe(94);
+    // Con letras, el QR lleva solo la parte numérica, igual que el pedido a ARCA (una sola cuenta).
+    expect([
+      j({ tipo: "PASAPORTE", numero: "ABC123456" })["tipoDocRec"],
+      j({ tipo: "PASAPORTE", numero: "ABC123456" })["nroDocRec"],
+      j({ tipo: "PASAPORTE", numero: "AAB000123" })["nroDocRec"],
+    ]).toEqual([94, 123456, 123]);
   });
 
   it("los números largos salen sin ceros a la izquierda (un entero con ceros no es JSON)", () => {
@@ -180,5 +186,20 @@ describe("QR de ARCA: la URL", () => {
 
   it("un CAE inválido no arma URL", () => {
     expect(urlDelQr({ ...EJEMPLO, cae: "123" })).toEqual({ ok: false, error: "CAE_INVALIDO" });
+  });
+});
+
+describe("el QR de un comprobante ya emitido no valida el documento (dueño, 2026-11-07)", () => {
+  const nro = (documento: DatosParaQr["documento"]) => {
+    const r = jsonDelQr({ ...EJEMPLO, documento });
+    if (!r.ok) throw new Error("el QR de prueba no se armó");
+    return (JSON.parse(r.valor) as Record<string, unknown>)["nroDocRec"];
+  };
+
+  it("un pasaporte viejo en cero, sin cifras o un dato raro imprime 0 o sus cifras sin lanzar", () => {
+    expect(nro({ tipo: "PASAPORTE", numero: "0" })).toBe(0);
+    expect(nro({ tipo: "PASAPORTE", numero: "ABC000000" })).toBe(0);
+    expect(nro({ tipo: "PASAPORTE", numero: "ABCDEF" })).toBe(0);
+    expect(nro({ tipo: "DNI", numero: "ABC123456" })).toBe(123456);
   });
 });

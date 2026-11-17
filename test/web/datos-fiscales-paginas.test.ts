@@ -212,7 +212,7 @@ describe("la página «Datos fiscales» abre directo el formulario (D-88)", () =
     servidor.datos = falla("SIN_PERMISO");
     const marcado = await html();
     const t = texto(marcado);
-    expect(t).toContain("No tiene permiso para hacer esto.");
+    expect(t).toContain("No tenés permiso para hacer esto.");
     expect(t).not.toMatch(/SIN_PERMISO|CUIT|Distribuidora/);
     expect(marcado).not.toMatch(/<form|<button|<input|<select/);
     expect(redirigido.hacia).toEqual([]);

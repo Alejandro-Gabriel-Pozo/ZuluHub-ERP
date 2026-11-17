@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0311",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Ver costos por unidad de un producto con sus proveedores pide permiso de costos además de ver compras, así que el operador no los ve.",
+  "que_cambia": "El operador no ve costos; si se corrige, se le da el permiso de costos o se separa la consulta.",
+  "donde": "src/modulos/compras/consultas/ficha.ts"
+}

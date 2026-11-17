@@ -3,7 +3,9 @@
  * cerrados `ClaveModulo`, `ClaveAccion` y `ClaveCapacidad`, así que una acción sin módulo, o un
  * permiso para una acción que no existe, no compila.
  */
-
+import { ACCIONES_DE_LOTES, MODULO_DE_PRODUCCION } from "./catalogo-lotes-y-produccion";
+import { MODULO_DE_COMPRAS } from "./catalogo-compras";
+import { MODULOS_DE_SALON_Y_COMANDAS } from "./catalogo-salon-y-comandas";
 export type EstadoDeConstruccion = "disponible" | "en_desarrollo";
 
 /**
@@ -58,9 +60,8 @@ export type CatalogoComercial = Readonly<Record<string, DefinicionDeModulo>>;
  * define en `permisos/empresa.ts`.
  *
  * Es el NÚCLEO (empresas, sucursales, identidad y la configuración fiscal del gerente): no depende de un
- * plan, así que nunca queda en solo lectura (el guard ignora ese estado en los módulos obligatorios). Aun
- * así cada acción declara su `efecto`, para que el día que un módulo con plan copie el patrón no haya
- * acciones sin clasificar.
+ * plan, así que nunca queda en solo lectura (el guard ignora ese estado en los módulos obligatorios).
+ * Aun así cada acción declara su `efecto`, para que no haya acciones sin clasificar.
  * Criterio: lo que quita, cierra o responde algo ya iniciado (apagar, revocar o reenviar una
  * invitación, desactivar una sucursal, cancelar, aceptar o rechazar un traspaso) es `COMPLETA_CIERRA`;
  * lo que da de alta, cambia la configuración, reactiva o amplía un alcance (invitar, asignar
@@ -153,7 +154,7 @@ export const CATALOGO_DE_MODULOS = {
    * ediciones, reactivar, cambiar un precio, publicar, mover stock) es `CREA_AMPLIA`.
    */
   catalogo: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["administracion"],
     usaSiExiste: [],
@@ -172,15 +173,11 @@ export const CATALOGO_DE_MODULOS = {
       "categorias.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "categorias.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "categorias.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      // CE0: elecciones del producto (variantes, biblioteca de guarniciones y adicionales), grupos de
-      // precio y combos. Cambiar el precio de un grupo o de una variante es `productos.cambiar_precio`.
+      // CE0: elecciones del producto (variantes y combos). Cambiar el precio de una variante es
+      // `productos.cambiar_precio`. Decisión 138 (no hay precio por combinación) y decisión 133 (los grupos son
+      // del producto): no hay acciones de grupos de precio ni `opciones.asignar`; «copiar de otro producto» es
+      // `opciones.editar` (e0-cimientos-especificacion §3.1.3, pedido de S2).
       "variantes.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "opciones.asignar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "grupos_de_precio.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "grupos_de_precio.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "grupos_de_precio.asignar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "grupos_de_precio.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "grupos_de_precio.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "conjuntos.editar_contenido": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
@@ -210,7 +207,7 @@ export const CATALOGO_DE_MODULOS = {
     },
   },
   stock: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["catalogo"],
     usaSiExiste: [],
@@ -220,6 +217,8 @@ export const CATALOGO_DE_MODULOS = {
     acciones: {
       "stock.ver": { capacidad: null, efecto: "LECTURA" },
       "stock.verificar_saldos": { capacidad: null, efecto: "LECTURA" },
+      // E5-T10 (P-1, DECIDIDO): quien puede ver costos es el gerente y el administrador; sin esta acción cualquiera con `stock.ver` los vería.
+      "costos.ver": { capacidad: null, efecto: "LECTURA" },
       "stock.registrar_entrada": { capacidad: null, efecto: "CREA_AMPLIA" },
       "stock.registrar_salida": { capacidad: null, efecto: "CREA_AMPLIA" },
       "stock.transferir": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -229,7 +228,6 @@ export const CATALOGO_DE_MODULOS = {
       "depositos.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "depositos.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "depositos.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "depositos.asignar_emisor": { capacidad: null, efecto: "CREA_AMPLIA" },
       "articulos.controlar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "articulos.dejar_de_controlar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "composiciones.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -237,8 +235,124 @@ export const CATALOGO_DE_MODULOS = {
       "conteos.registrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "conteos.aplicar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
       "conteos.cancelar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      ...ACCIONES_DE_LOTES,
     },
   },
+  /**
+   * Caja (E3; `e0-cimientos-especificacion.md` §3.1.1, lista de `e3-caja-y-cobros-especificacion.md` §3.8 más las dos
+   * de `e3b-cierre-del-dia-especificacion.md` §4.7). Nace `en_desarrollo`: el guard rechaza todo con
+   * `MODULO_EN_DESARROLLO` hasta que E3 lo construya. `usaSiExiste` solo nombra módulos que existen (cruce X3):
+   * `clientes` se suma cuando exista (SUPUESTO (DEC-0058) S-1). Ninguna acción exige capacidad de sucursal: el alcance del
+   * operador lo valida el caso de uso con `exigirSucursal`. Cobrar un ticket NO es de caja: es `tickets.cobrar`
+   * (ventas). No existen `sesiones_caja.reabrir`, `arqueos.revisar` ni una acción de plataforma para crear cajas
+   * (decisiones del dueño, `caja-y-cobros.md:818-821`). Criterio de efectos: alta, edición, reactivar, abrir sesión y
+   * movimientos o ajustes nuevos crean o amplían; desactivar, cerrar, anular y corregir cierran lo ya iniciado.
+   * Elegir los datos opcionales de cada medio es `medios_de_pago.editar` (SUPUESTO (DEC-0056) S-2).
+   */
+  caja: {
+    estado: "disponible",
+    obligatorio: false,
+    requiere: ["administracion"],
+    usaSiExiste: ["facturacion"],
+    datosRequeridos: [],
+    implementadoPor: ["modulos/caja"],
+    acciones: {
+      "cajas.ver": { capacidad: null, efecto: "LECTURA" },
+      "cajas.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "cajas.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "cajas.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "cajas.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "medios_de_pago.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "medios_de_pago.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "medios_de_pago.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "medios_de_pago.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "cuentas_de_cobro.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "cuentas_de_cobro.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "cuentas_de_cobro.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "cuentas_de_cobro.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "sesiones_caja.abrir": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "sesiones_caja.iniciar_cierre": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "sesiones_caja.cancelar_cierre": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "sesiones_caja.cerrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "movimientos_caja.registrar_manual": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "movimientos_caja.ajustar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "movimientos_caja.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "movimientos_caja.anular_de_otros": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "cobros.corregir_medio": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "declaraciones_de_total.registrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+    },
+  },
+  /**
+   * Cierre del día (E3b; decisión 163; `e0-cimientos-especificacion.md` §3.1.2b, `e3b-cierre-del-dia-especificacion.md`
+   * §3.1 y §3.6). Módulo propio, separado de la caja: no importa ningún módulo comercial. `disponible` desde E3b: la jornada, los tres
+   * casos de uso (iniciar y cancelar la auditoría, cerrar) y las tres consultas existen; los aportes de caja y ventas los suman sus etapas.
+   * Iniciar y cancelar la auditoría y cerrar la jornada completan o cierran lo ya iniciado, y se permiten en solo lectura.
+   */
+  cierre: {
+    estado: "disponible",
+    obligatorio: false,
+    requiere: ["administracion"],
+    usaSiExiste: [],
+    datosRequeridos: [],
+    implementadoPor: ["modulos/cierre"],
+    acciones: {
+      "jornadas.ver": { capacidad: null, efecto: "LECTURA" },
+      "jornadas.iniciar_auditoria": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "jornadas.cancelar_auditoria": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "jornadas.cerrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+    },
+  },
+  /**
+   * Ventas (E4; `e0-cimientos-especificacion.md` §3.1.2, tabla de `e4-venta-rapida-especificacion.md` §3.14). Nace
+   * `en_desarrollo`. Las tres `ventas.configurar_*` de `ventas.md:610-611` quedan fuera hasta que haya stock
+   * (PP-5, decisión 132). Anular línea, anular cuenta y corregir ticket son de los tres roles con todo auditado
+   * (decisión 155). `tickets.cobrar` es la única acción para cobrar un ticket. `usaSiExiste` sin reservas ni
+   * clientes porque no existen (cruce X3, SUPUESTO (DEC-0058) S-1).
+   */
+  ventas: {
+    estado: "disponible",
+    obligatorio: false,
+    requiere: ["administracion", "catalogo", "caja"],
+    usaSiExiste: ["facturacion", "stock"],
+    datosRequeridos: [],
+    implementadoPor: ["modulos/ventas"],
+    acciones: {
+      "ventas.ver": { capacidad: null, efecto: "LECTURA" },
+      "cuentas.abrir": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "cuentas.agregar_linea": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "cuentas.cerrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "cuentas.anular_linea": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "cuentas.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "tickets.cobrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "tickets.corregir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+    },
+  },
+  ...MODULOS_DE_SALON_Y_COMANDAS,
+  /**
+   * Directorio de clientes y proveedores (E9; `e9-compras-especificacion.md` §3.0 y §3.9, F1 a F4 de `clientes-y-proveedores.md`). `disponible` y
+   * `obligatorio` desde E9-T4 (F5 del 12/10: siempre activo). Ocho acciones; sin `partes.anonimizar`: ningún caso de uso la usa
+   * (SUPUESTO S-3 de E9, DEC-0305). Mirar es `LECTURA`; desactivar cierra; el resto crea o amplía.
+   */
+  clientes: {
+    estado: "disponible",
+    obligatorio: true,
+    requiere: ["administracion"],
+    usaSiExiste: [],
+    datosRequeridos: [],
+    implementadoPor: ["modulos/clientes"],
+    acciones: {
+      "partes.ver": { capacidad: null, efecto: "LECTURA" },
+      "partes.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "partes.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "partes.cambiar_roles": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "partes.vincular_contacto": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "partes.desvincular_contacto": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "partes.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "partes.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
+    },
+  },
+  compras: MODULO_DE_COMPRAS,
+  produccion: MODULO_DE_PRODUCCION,
 } as const satisfies CatalogoComercial;
 
 type Catalogo = typeof CATALOGO_DE_MODULOS;

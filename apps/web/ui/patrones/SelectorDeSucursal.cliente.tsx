@@ -69,6 +69,7 @@ export function SelectorDeSucursal({
   }
   return (
     <Selector
+      dato="pendiente"
       etiqueta={texto(diccionario, "sucursal.etiqueta")}
       ayuda={texto(diccionario, "sucursal.ayuda")}
       valor={elegida ?? ""}

@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { copyFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,8 +5,9 @@ import pg from "pg";
 import { instalarClaveDeContexto } from "../../src/adaptadores/postgres/contexto-firmado";
 import { aplicarMigraciones } from "../../src/adaptadores/postgres/migraciones";
 import { ADMIN_DE_PRUEBA, sembrarAdminsDePrueba } from "./admins-de-prueba";
-import { cuitAlAzar, crearBaseAparte } from "./entorno";
+import { cuitUnico, crearBaseAparte } from "./entorno";
 import type { BaseDePruebas } from "./global";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Apoyo de las pruebas de la migración 0007 (marcas y planes). Todo se arma con el cliente del DUEÑO de la
@@ -40,10 +40,9 @@ const un = async <T extends Record<string, unknown>>(
 ): Promise<T> => (await c.query<T>(texto, parametros)).rows[0] as T;
 
 /** Un nombre de host válido y único. */
-export const hostAlAzar = (): string =>
-  `h${randomUUID().replaceAll("-", "").slice(0, 12)}.prueba.test`;
+export const hostAlAzar = (): string => `h${sufijoUnico()}.prueba.test`;
 /** Un código de marca o de plan válido y único. */
-export const codigoAlAzar = (prefijo = "m"): string => `${prefijo}-${randomUUID().slice(0, 8)}`;
+export const codigoAlAzar = (prefijo = "m"): string => `${prefijo}-${sufijoUnico()}`;
 
 export async function marcaPrincipal(c: pg.Client): Promise<string> {
   return (await un<{ id: string }>(c, "select id from marca where es_principal")).id;
@@ -289,6 +288,17 @@ export async function crearPlanPublicado(
 }
 
 /** Asigna una versión publicada a un tenant con el número siguiente (vigente desde hace 30 s por defecto). */
+/**
+ * Las asignaciones «ya vigentes» (desde <= 0) se escriben con `creado_en` y `vigente_desde` desplazados
+ * este tanto hacia atrás, parejo (el orden entre ellas no cambia). Sin esto, la vigencia era `now() - 30 s`
+ * y un reloj inyectado que va atrás (`ahoraDeLaCorrida`: una hora cerca de la medianoche argentina) las veía
+ * «programadas»: el módulo quedaba en solo lectura (`MODULO_EN_SOLO_LECTURA`) entre 00:00 y 03:00 UTC.
+ * El CHECK `*_vigencia_ck` exige vigente_desde >= creado_en - 1 min, por eso se mueven los dos.
+ */
+const RETROCESO_DE_VIGENCIAS_YA_RIGEN_SEGUNDOS = 2 * 3600;
+const retrocesoDe = (desdeSegundos: number): number =>
+  desdeSegundos <= 0 ? RETROCESO_DE_VIGENCIAS_YA_RIGEN_SEGUNDOS : 0;
+
 export async function asignarPlan(
   c: pg.Client,
   tenant: string,
@@ -297,8 +307,9 @@ export async function asignarPlan(
 ): Promise<number> {
   const fila = await un<{ numero: number }>(
     c,
-    `insert into plan_de_tenant (tenant_id, numero, version_de_plan_id, vigente_desde, origen, motivo, asignado_por)
-     select $1::uuid, coalesce(max(numero), 0) + 1, $2::uuid, now() + make_interval(secs => $3::int), $4::text, $5::text, $6::text
+    `insert into plan_de_tenant (tenant_id, numero, version_de_plan_id, vigente_desde, origen, motivo, asignado_por, creado_en)
+     select $1::uuid, coalesce(max(numero), 0) + 1, $2::uuid, now() + make_interval(secs => $3::int - $7::int), $4::text, $5::text, $6::text,
+            now() - make_interval(secs => $7::int)
        from plan_de_tenant where tenant_id = $1::uuid
      returning numero`,
     [
@@ -308,6 +319,7 @@ export async function asignarPlan(
       opciones.origen ?? "CAMBIO",
       opciones.motivo ?? "prueba",
       opciones.por ?? ACTOR_DE_PRUEBA,
+      retrocesoDe(opciones.desdeSegundos ?? -30),
     ],
   );
   return fila.numero;
@@ -324,8 +336,9 @@ export async function ajustarPerilla(
   const empresa = opciones.empresa ?? null;
   const fila = await un<{ numero: number }>(
     c,
-    `insert into ajuste_de_perilla (tenant_id, empresa_id, perilla, numero, valor, vigente_desde, motivo, asignado_por)
-     select $1::uuid, $2::uuid, $3::text, coalesce(max(numero), 0) + 1, $4::text, now() + make_interval(secs => $5::int), 'prueba', $6::text
+    `insert into ajuste_de_perilla (tenant_id, empresa_id, perilla, numero, valor, vigente_desde, motivo, asignado_por, creado_en)
+     select $1::uuid, $2::uuid, $3::text, coalesce(max(numero), 0) + 1, $4::text, now() + make_interval(secs => $5::int - $7::int), 'prueba', $6::text,
+            now() - make_interval(secs => $7::int)
        from ajuste_de_perilla where tenant_id = $1::uuid and empresa_id is not distinct from $2::uuid and perilla = $3::text
      returning numero`,
     [
@@ -335,6 +348,7 @@ export async function ajustarPerilla(
       valor,
       opciones.desdeSegundos ?? -30,
       opciones.por ?? ACTOR_DE_PRUEBA,
+      retrocesoDe(opciones.desdeSegundos ?? -30),
     ],
   );
   return fila.numero;
@@ -371,7 +385,7 @@ export async function crearMundoDeMarca(
       await un<{ id: string }>(
         c,
         "insert into tenant (nombre, marca_id) values ($1, $2) returning id",
-        [`tenant-${randomUUID().slice(0, 8)}`, marca],
+        [`tenant-${sufijoUnico()}`, marca],
       )
     ).id;
   const estado = opciones.estado ?? "ACTIVE";
@@ -382,8 +396,8 @@ export async function crearMundoDeMarca(
        values ($1, $2, $3, $4, $5) returning id`,
       [
         tenant,
-        cuitAlAzar(),
-        `empresa-${randomUUID().slice(0, 8)}`,
+        cuitUnico(),
+        `empresa-${sufijoUnico()}`,
         estado,
         estado === "SUSPENDED" ? "prueba" : null,
       ],
@@ -398,7 +412,7 @@ export async function crearMundoDeMarca(
   ).id;
   const persona = (
     await un<{ id: string }>(c, "insert into persona (email) values ($1) returning id", [
-      `${randomUUID().slice(0, 12)}@prueba.test`,
+      `${sufijoUnico()}@prueba.test`,
     ])
   ).id;
   return { marca, tenant, empresa, sucursal, persona };

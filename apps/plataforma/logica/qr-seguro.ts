@@ -11,6 +11,7 @@ export type DibujoDeQr = Readonly<{ lado: number; trazo: string }>;
 const LADO_MAXIMO = 200;
 
 const FORMA =
+  // fuente-unica: ajeno — el largo del aria-label del QR es otro dato que el nombre de cocina
   /^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 (\d{1,3}) (\d{1,3})" shape-rendering="crispEdges" role="img" aria-label="[A-Za-zÁÉÍÓÚáéíóúñÑ ]{1,80}"><rect width="(\d{1,3})" height="(\d{1,3})" fill="#ffffff"\/><path d="([Mhvz0-9 -]{1,40000})" fill="#000000"\/><\/svg>$/;
 
 export function dibujoDeQr(svg: string): DibujoDeQr | null {

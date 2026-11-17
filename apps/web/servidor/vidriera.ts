@@ -10,16 +10,17 @@ import {
   type VistaDeVidriera,
   type VistaDeProducto,
 } from "../../../src/capacidades/experiencia/vidriera/vista";
+import type { AlcanceDelHost } from "../../../src/capacidades/experiencia/puerta";
 import type { VidrieraPublica } from "../../../src/puertos/vidriera-publica";
-import { vidrieraPublicaFalsa } from "./vidriera-publica-falsa";
+import { web } from "./composicion";
 
 /**
  * Lo que las páginas de la carta piden al servidor (C-2). Es el único lugar que elige la implementación del
- * puerto `VidrieraPublica`: hoy el falso con las cartas de ejemplo; C-3 pone el adaptador real (la puerta pública
- * de la base) y no cambia nada de lo de abajo. Tampoco hay vocabulario de marca todavía (W4): los textos son
+ * puerto `VidrieraPublica`: el adaptador real de la composición (la puerta pública de la base, rol `pedernal_publico`, solo lectura; T3 y T5 de la
+ * carta real). Se pide en cada uso (el adaptador se arma perezoso y una sola vez). Tampoco hay vocabulario de marca todavía (W4): los textos son
  * los del catálogo.
  */
-const vidrieras: VidrieraPublica = vidrieraPublicaFalsa;
+const vidrieras = (): VidrieraPublica => web.vidrieraPublica();
 
 /** Los textos de la carta cuando no hay una carta a mano (las pantallas de «no está»). */
 export function textosPorDefectoDeLaVidriera(): TextosDeVidriera {
@@ -38,13 +39,14 @@ function rutaPublicaDe(codigo: string): string {
 
 /**
  * La carta lista para pintar, o `null` si no existe en ESA marca (misma respuesta para cualquier código malo).
- * `marcaId` es el de la puerta resuelta para el host del pedido (`exigirPuerta("CARTA")`), nunca un dato del cliente (S2).
+ * `puerta` es la resuelta para el host del pedido (`exigirPuerta("CARTA")`), nunca un dato del cliente (S2): lleva la marca y el dueño del host, y un host dedicado
+ * a una empresa solo sirve la de ella (H-DOM-1). Se pasa ENTERA: no hay forma de pedir una carta sin el dueño.
  */
 export async function vidrieraParaLaPantalla(
-  marcaId: string,
+  puerta: AlcanceDelHost,
   codigo: string,
 ): Promise<VidrieraParaLaPantalla | null> {
-  const vidriera = await vidrieras.porCodigo(marcaId, codigo);
+  const vidriera = await vidrieras().porCodigo(puerta, codigo);
   if (vidriera === null) return null;
   return {
     vista: armarVistaDeVidriera(vidriera, rutaPublicaDe(codigo)),
@@ -54,11 +56,11 @@ export async function vidrieraParaLaPantalla(
 
 /** Un producto de la carta por el último tramo de su dirección (`<slug>-<h8>`), o `null` si ya no está. */
 export async function productoParaLaPantalla(
-  marcaId: string,
+  puerta: AlcanceDelHost,
   codigo: string,
   segmento: string,
 ): Promise<(VidrieraParaLaPantalla & Readonly<{ producto: VistaDeProducto }>) | null> {
-  const vidriera = await vidrieras.porCodigo(marcaId, codigo);
+  const vidriera = await vidrieras().porCodigo(puerta, codigo);
   if (vidriera === null) return null;
   const vista = armarVistaDeVidriera(vidriera, rutaPublicaDe(codigo));
   const resuelto = resolverProductoPorSegmento(

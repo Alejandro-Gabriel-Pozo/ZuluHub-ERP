@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0305",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Ninguna acción de anonimizar partes del directorio: nadie puede anonimizar un cliente o proveedor hasta que el dueño lo pida.",
+  "que_cambia": "Quien necesite anonimizar por pedido de un titular no puede hacerlo desde el sistema; se corrige declarando la acción y su caso de uso.",
+  "donde": "src/capacidades/modulos/catalogo.ts:332"
+}

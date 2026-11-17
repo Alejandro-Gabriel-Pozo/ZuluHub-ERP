@@ -16,14 +16,14 @@ export type EmitirLaFactura = (
 
 type FacturaEmitida = Readonly<{ comprobanteId: string }>;
 
-export type EnvioDeLaEmision = Readonly<{
+export type EnvioDeLaEmision<P extends object = PedidoDeEmision> = Readonly<{
   envio: EnvioConClave<FacturaEmitida, ErrorPublico>;
   /**
    * Manda la factura con este pedido. En el PRIMER envío del intento el pedido se FIJA junto con la clave y se reusa, igual, en cada
    * reintento (doble toque, corte de red): un reintento con otros valores y la misma clave sería `FISCAL_PEDIDO_REPETIDO`; con otros
    * valores y otra clave, una segunda factura.
    */
-  emitir: (pedido: PedidoDeEmision) => void;
+  emitir: (pedido: P) => void;
   /** El último error inesperado devuelto como valor, mientras el intento sigue incierto (para mostrar su referencia `PD-…`). */
   inesperado: ErrorPublico | null;
 }>;
@@ -45,13 +45,13 @@ type Opciones = Readonly<{
  * Previene: dos facturas por un doble toque o un reintento (una factura emitida no se borra, se anula). Chequeo:
  * `PantallaDeEmitirFactura.envio.test.tsx` (doble toque, dos envíos simultáneos, corte de red, inesperado).
  */
-export function useEnvioDeLaEmision({
+export function useEnvioDeLaEmision<P extends object = PedidoDeEmision>({
   accion,
   diccionario,
   esperaEntreVerificacionesMs,
-}: Opciones): EnvioDeLaEmision {
-  const delToque = useRef<PedidoDeEmision | null>(null);
-  const fijado = useRef<PedidoDeEmision | null>(null);
+}: Opciones): EnvioDeLaEmision<P> {
+  const delToque = useRef<P | null>(null);
+  const fijado = useRef<P | null>(null);
   const [inesperado, setInesperado] = useState<ErrorPublico | null>(null);
 
   const envio = useEnvioConClave<FacturaEmitida, ErrorPublico>({

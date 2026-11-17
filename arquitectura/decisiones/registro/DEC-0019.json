@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0019",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Una orden de compra no necesita aprobación de una segunda persona.",
+  "que_cambia": "Si hace falta un segundo aprobador para comprar.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A19 (E9)"
+}

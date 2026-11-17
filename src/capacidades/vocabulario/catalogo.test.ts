@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { campoConPosibleSecreto, type Dato } from "../../puertos/sin-secretos";
 import type { EstadoEfectivo } from "../../contexto/estados";
@@ -303,6 +304,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "fiscal.pantalla.imprimir_transporte": "Transporte",
       "fiscal.pantalla.imprimir_hoja": "Hoja {k} de {n}",
       "fiscal.pantalla.imprimir_ingresos_brutos": "Ingresos Brutos",
+      "fiscal.pantalla.imprimir_descargar_pdf": "Descargar PDF",
     });
     expect(CATALOGO_DE_TEXTOS["fiscal.pantalla.imprimir_hoja"].marcadores).toEqual(["k", "n"]);
   });
@@ -350,6 +352,96 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     );
   });
 
+  it("los textos de clientes y de compras son los aprobados el 09/11/2026 en directorio.html, compra.html, control.html y orden.html (E9 §10), con sus errores", () => {
+    const de = (modulo: string) =>
+      Object.fromEntries(
+        claves
+          .filter((c) => c.startsWith(`${modulo}.`))
+          .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
+      );
+    expect(Object.keys(de("clientes"))).toHaveLength(20);
+    expect(Object.keys(de("compras"))).toHaveLength(116);
+    expect(de("clientes")).toMatchObject({
+      "clientes.lista.clientes_y_proveedores": "Clientes y proveedores",
+      "clientes.error.cuit_invalido": "El CUIT no es válido",
+      "clientes.error.documento_ya_registrado": "Ya existe una persona o empresa con ese documento",
+      "clientes.error.parte_inactiva_con_ese_documento": "Ya existe, pero está desactivada",
+    });
+    expect(de("compras")).toMatchObject({
+      "compras.compra.comprar_y_recibir": "Comprar y recibir",
+      "compras.compra.costo_por_unidad_de_stock": "Costo por unidad de stock",
+      "compras.recepcion.validar_recepcion": "Confirmar recepción",
+      "compras.error.remito_ya_registrado": "Ese remito ya está cargado",
+      "compras.error.comprobante_ya_registrado": "Esa factura ya está cargada",
+      "compras.error.punto_de_venta_no_declarado": "Falta declarar los puntos de venta",
+      "compras.error.total_no_coincide": "El total no coincide",
+      "compras.error.sin_permiso": "Esta acción no está permitida",
+    });
+  });
+
+  it("los textos de stock son exactamente los que el dueño aprobó el 09/11/2026 en stock.html «Textos nuevos» (D125), y ninguno más", () => {
+    expect(
+      Object.fromEntries(
+        claves
+          .filter((c) => c.startsWith("stock."))
+          .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
+      ),
+    ).toEqual({
+      "stock.pantalla.stock": "Stock",
+      "stock.pantalla.existencias": "Existencias",
+      "stock.pantalla.movimientos": "Movimientos",
+      "stock.pantalla.conteo": "Conteo",
+      "stock.pantalla.depositos": "Depósitos",
+      "stock.pantalla.existencia": "Existencia",
+      "stock.pantalla.disponible": "Disponible",
+      "stock.pantalla.negativa": "Negativa",
+      "stock.accion.entrada": "Entrada",
+      "stock.accion.salida": "Salida",
+      "stock.accion.transferir": "Transferir",
+      "stock.accion.ajustar": "Ajustar",
+      "stock.accion.anular": "Anular",
+      "stock.accion.motivo": "Motivo",
+      "stock.accion.detalle": "Detalle",
+      "stock.accion.cantidad": "Cantidad",
+      "stock.accion.costo_por_unidad": "Costo por unidad",
+      "stock.accion.sin_costo": "Sin costo",
+      "stock.accion.origen": "Origen",
+      "stock.accion.destino": "Destino",
+      "stock.accion.registrar": "Registrar",
+      "stock.motivo.compra": "Compra",
+      "stock.motivo.carga_inicial": "Carga inicial",
+      "stock.motivo.devolucion_de_cliente": "Devolución de cliente",
+      "stock.motivo.otra_entrada": "Otra entrada",
+      "stock.motivo.consumo_interno": "Consumo interno",
+      "stock.motivo.merma": "Merma",
+      "stock.motivo.rotura": "Rotura",
+      "stock.motivo.vencimiento": "Vencimiento",
+      "stock.motivo.otra_salida": "Otra salida",
+      "stock.motivo.correccion": "Corrección",
+      "stock.conteo.abrir": "Abrir conteo",
+      "stock.conteo.contado": "Contado",
+      "stock.conteo.aplicar": "Aplicar",
+      "stock.conteo.cancelar": "Cancelar conteo",
+      "stock.conteo.diferencia": "Diferencia",
+      "stock.conteo.aplicado": "Aplicado",
+      "stock.deposito.agregar": "Agregar depósito",
+      "stock.deposito.normal": "Normal",
+      "stock.deposito.cuarentena": "Cuarentena",
+      "stock.deposito.rechazo": "Rechazo",
+      "stock.deposito.de_venta": "De venta",
+      "stock.deposito.uso": "Uso",
+      "stock.error.control_avisa": "Va a quedar en negativo. ¿Confirmás?",
+      "stock.error.control_bloquea": "No hay stock suficiente",
+      "stock.error.transferencia_al_mismo_deposito":
+        "El origen y el destino no pueden ser el mismo",
+      "stock.error.detalle_requerido": "Escribí el detalle",
+      "stock.error.cantidad_invalida": "La cantidad tiene que ser mayor que cero",
+      "stock.error.conteo_en_curso": "Ya hay un conteo abierto en este depósito",
+      "stock.error.nombre_duplicado": "Ya existe un depósito con ese nombre",
+      "stock.error.sin_permiso": "Esta acción no está permitida",
+    });
+  });
+
   it("la referencia del error inesperado lleva su marcador", () => {
     expect(CATALOGO_DE_TEXTOS["error.referencia"].marcadores).toEqual(["referencia"]);
     expect(CATALOGO_DE_TEXTOS["error.referencia"].porDefecto).toContain("{referencia}");
@@ -363,5 +455,93 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     // @ts-expect-error esa clave no está en el catálogo
     const inventada: ClaveDeTexto = "reservas.estadia.singular";
     expect(inventada in CATALOGO_DE_TEXTOS).toBe(false);
+  });
+});
+
+/**
+ * El cableado de los textos por módulo (E0-T4): cada `catalogo-*.ts` se incluye en `catalogo.ts` una sola vez, sin pisar claves de otro, y
+ * los archivos de los módulos de E2, E3 y E4 nacen vacíos sin romper nada. Previene: un archivo de módulo que nadie importa (sus textos no
+ * se resuelven y la pantalla muestra la clave) o dos archivos con la misma clave (el último pisa al primero sin avisar).
+ */
+const CARPETA = new URL(".", import.meta.url);
+const ARCHIVOS_DE_MODULO = readdirSync(CARPETA)
+  .filter((nombre) => /^catalogo-.+\.ts$/.test(nombre) && !nombre.endsWith(".test.ts"))
+  .sort();
+const FUENTE_DE_CATALOGO = readFileSync(new URL("catalogo.ts", CARPETA), "utf8");
+
+const partes = await Promise.all(
+  ARCHIVOS_DE_MODULO.map(async (archivo) => {
+    const modulo = (await import(/* @vite-ignore */ `./${archivo}`)) as Record<string, unknown>;
+    const exportados = Object.entries(modulo);
+    return { archivo, exportados };
+  }),
+);
+
+describe("el catálogo de textos: cableado de los archivos por módulo", () => {
+  it("encuentra los archivos de módulo (fiscal y los tres vacíos de E2, E3 y E4)", () => {
+    for (const esperado of [
+      "catalogo-catalogo.ts",
+      "catalogo-caja.ts",
+      "catalogo-ventas.ts",
+      "catalogo-fiscal.ts",
+      "catalogo-stock.ts",
+      "catalogo-clientes.ts",
+      "catalogo-compras.ts",
+    ]) {
+      expect(ARCHIVOS_DE_MODULO).toContain(esperado);
+    }
+  });
+
+  it.each(ARCHIVOS_DE_MODULO)("%s: exporta un único objeto de textos", (archivo) => {
+    const parte = partes.find((p) => p.archivo === archivo);
+    expect(parte?.exportados).toHaveLength(1);
+  });
+
+  it.each(ARCHIVOS_DE_MODULO)(
+    "%s: se importa y se expande una sola vez en catalogo.ts",
+    (archivo) => {
+      const parte = partes.find((p) => p.archivo === archivo);
+      const nombre = parte?.exportados[0]?.[0] ?? "";
+      const base = archivo.replace(/\.ts$/, "");
+      expect(FUENTE_DE_CATALOGO.match(new RegExp(`from "\\./${base}";`, "g")) ?? []).toHaveLength(
+        1,
+      );
+      expect(FUENTE_DE_CATALOGO.match(new RegExp(`\\.\\.\\.${nombre}\\b`, "g")) ?? []).toHaveLength(
+        1,
+      );
+    },
+  );
+
+  it("ninguna clave está en dos archivos y el catálogo tiene exactamente la suma de los suyos y de los propios", () => {
+    const vistas = new Map<string, string>();
+    for (const { archivo, exportados } of partes) {
+      for (const clave of Object.keys(exportados[0]?.[1] ?? {})) {
+        expect(vistas.get(clave), `${clave} repetida en ${archivo}`).toBeUndefined();
+        vistas.set(clave, archivo);
+      }
+    }
+    for (const clave of vistas.keys()) {
+      expect(Object.keys(CATALOGO_DE_TEXTOS)).toContain(clave);
+    }
+    const propias = Object.keys(CATALOGO_DE_TEXTOS).filter((clave) => !vistas.has(clave));
+    expect(Object.keys(CATALOGO_DE_TEXTOS)).toHaveLength(vistas.size + propias.length);
+  });
+
+  it.each([
+    ["catalogo-catalogo.ts", "catalogo"],
+    ["catalogo-caja.ts", "caja"],
+    ["catalogo-ventas.ts", "ventas"],
+    ["catalogo-stock.ts", "stock"],
+    ["catalogo-clientes.ts", "clientes"],
+    ["catalogo-compras.ts", "compras"],
+  ])("%s: toda clave lleva el prefijo de su módulo (%s.)", (archivo, modulo) => {
+    const parte = partes.find((p) => p.archivo === archivo);
+    for (const clave of Object.keys(parte?.exportados[0]?.[1] ?? {})) {
+      expect(clave.startsWith(`${modulo}.`)).toBe(true);
+    }
+  });
+
+  it("el catálogo no queda vacío aunque un archivo de módulo no tenga textos todavía", () => {
+    expect(entradas.length).toBeGreaterThan(0);
   });
 });

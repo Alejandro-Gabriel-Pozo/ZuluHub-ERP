@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0361",
+  "fecha": "2026-11-13",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las operaciones sobre una sesión de caja reintentan hasta 20 veces ante un choque y todas las transacciones esperan con la misma política con azar completo.",
+  "que_cambia": "No cambia ningún importe, permiso ni texto: una persona deja de ver un error evitable de concurrencia cuando muchos puestos operan a la vez.",
+  "donde": "src/adaptadores/postgres/transacciones.ts y src/modulos/caja/casos-de-uso/comun.ts (A12c, aprobada por el orquestador el 13/11/2026)",
+  "motivo": "Es ajuste técnico de reintentos: la operación sigue siendo idempotente y no cambia ningún importe, permiso ni texto."
+}

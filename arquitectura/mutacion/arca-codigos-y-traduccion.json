@@ -1,0 +1,6 @@
+{
+  "grupo": "arca (códigos y traducción)",
+  "archivos": "src/adaptadores/arca/codigos.ts,src/adaptadores/arca/traducir.ts",
+  "minutos": 0.8,
+  "pruebas": "src/adaptadores/arca/codigos.test.ts src/adaptadores/arca/traducir.test.ts"
+}

@@ -22,6 +22,7 @@ describe("hoja A4 dentro de la plantilla de operación, al imprimir", () => {
         <PantallaDeImprimirComprobante
           comprobante={comprobanteDePrueba({ renglones: 3 })}
           qrSvg={QR_DE_PRUEBA}
+          urlDelPdf="/facturacion/comprobantes/x/pdf"
         />
       </ArmazonDeOperacion>,
     );

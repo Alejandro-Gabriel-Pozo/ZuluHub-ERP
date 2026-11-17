@@ -44,7 +44,7 @@ const TONO_DEL_CARTEL: Readonly<Record<CartelDeLaLista, TonoDeEstado>> = {
 };
 
 /**
- * D-64. SOLO_FUTUROS (datos que rigen más adelante) dice «Pendiente» (no «completo»): SUPUESTO del ingeniero; fuente D-61 (la web ya
+ * D-64. SOLO_FUTUROS (datos que rigen más adelante) dice «Pendiente» (no «completo»): SUPUESTO (DEC-0050) del ingeniero; fuente D-61 (la web ya
  * no puede producirlo).
  */
 export function cartelDeDatosFiscales(
@@ -75,7 +75,7 @@ export function cartelDePuntosDeVenta(
 }
 
 /**
- * De más a menos urgente. SUPUESTO del ingeniero: con varios ambientes la fila del certificado muestra UN solo cartel, el más urgente
+ * De más a menos urgente. SUPUESTO (DEC-0050) del ingeniero: con varios ambientes la fila del certificado muestra UN solo cartel, el más urgente
  * (Vencido, Falta cargar, Pendiente). Fuente: cuestionario B (21:11Z), pregunta 2 (la fila solo informa «Vencido», «Falta cargar» o
  * «Pendiente») y D-64, que no ordena los carteles del certificado; no se le preguntó al dueño cuál gana cuando hay más de uno.
  */
@@ -90,7 +90,7 @@ export function cartelDeUnCertificado(
 }
 
 /**
- * El cartel del certificado: el MÁS URGENTE entre los ambientes en uso (los de los puntos de venta activos). SUPUESTO del ingeniero:
+ * El cartel del certificado: el MÁS URGENTE entre los ambientes en uso (los de los puntos de venta activos). SUPUESTO (DEC-0050) del ingeniero:
  * sin ningún ambiente en uso (ningún punto de venta activo) cuentan los dos, porque la fila tiene que decir algo y no hay otro
  * criterio. Fuente: cuestionario B (21:11Z), pregunta 3, donde el dueño contestó que sin punto de venta activo «sigue faltando»; no se
  * le preguntó qué cartel lleva la fila del certificado en ese caso (esa falta ya la dice la fila de Puntos de venta: «Ninguno activo»).

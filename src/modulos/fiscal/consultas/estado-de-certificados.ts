@@ -52,7 +52,7 @@ export type SituacionDelCertificado =
       vencido: boolean;
       autorizacion: AutorizacionDelCertificado;
       /**
-       * La renovación en curso: el último pedido sin certificado de este ambiente, aunque ya haya un vigente. SUPUESTO del
+       * La renovación en curso: el último pedido sin certificado de este ambiente, aunque ya haya un vigente. SUPUESTO (DEC-0068) del
        * ingeniero (sin esto la pantalla no tiene el `certificadoId` para completar la renovación): es el último pedido
        * pendiente, sin mirar su antigüedad; los abandonados no se descartan en ningún caso de uso.
        */

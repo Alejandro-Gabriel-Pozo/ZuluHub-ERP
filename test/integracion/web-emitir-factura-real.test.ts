@@ -335,6 +335,7 @@ describe.skipIf(base === null)("Emitir (8B): la página y la acción contra el b
           documento: "CUIT",
           numero: CUIT_DEL_CLIENTE,
           nombre: "Distribuidora Sur SA",
+          domicilio: "Av. Siempreviva 742",
           condicionIva: "RESPONSABLE_INSCRIPTO",
         }),
         [renglon({})],
@@ -344,6 +345,26 @@ describe.skipIf(base === null)("Emitir (8B): la página y la acción contra el b
       clave: randomUUID(),
     });
     expect(conCuit).toMatchObject({ ok: true, dato: { tipo: "FACTURA_A" } });
+    // Sin domicilio, un receptor que no es consumidor final se rechaza marcando el campo (RG 1415 Anexo II A.II).
+    expect(
+      await acciones.emitirLaFactura({
+        ...armarElPedido(
+          cliente({
+            documento: "CUIT",
+            numero: CUIT_DEL_CLIENTE,
+            nombre: "Distribuidora Sur SA",
+            condicionIva: "RESPONSABLE_INSCRIPTO",
+          }),
+          [renglon({})],
+          ri.pv,
+          true,
+        ),
+        clave: randomUUID(),
+      }),
+    ).toMatchObject({
+      ok: false,
+      error: { codigo: "FISCAL_RECEPTOR_INVALIDO", campo: "receptor.domicilio" },
+    });
 
     const mono = await empresaFacturadora(persona, { condicionIva: "MONOTRIBUTO" });
     comoNavegador(yo, mono.empresa);
@@ -477,6 +498,48 @@ describe.skipIf(base === null)("Emitir (8B): la página y la acción contra el b
       }),
     ).toMatchObject({ ok: false, error: { codigo: "FISCAL_PEDIDO_REPETIDO" } });
     expect(await comprobantesDe(e.empresa)).toHaveLength(1);
+  });
+
+  it("reintento CON domicilio: el doble envío es UN comprobante y el domicilio queda en la base tal cual, recortado", async () => {
+    const { yo, persona } = await nuevaPersona();
+    const e = await empresaFacturadora(persona);
+    comoNavegador(yo, e.empresa);
+    const clave = randomUUID();
+    const pedido = {
+      ...armarElPedido(
+        cliente({
+          documento: "CUIT",
+          numero: CUIT_DEL_CLIENTE,
+          nombre: "Distribuidora Sur SA",
+          domicilio: "  Av. Siempreviva 742, Rosario  ",
+          condicionIva: "RESPONSABLE_INSCRIPTO",
+        }),
+        [renglon({})],
+        e.pv,
+        true,
+      ),
+      clave,
+    };
+    const [uno, dos] = await Promise.all([
+      acciones.emitirLaFactura(pedido),
+      acciones.emitirLaFactura(pedido),
+    ]);
+    expect(uno).toMatchObject({ ok: true, dato: { comprobanteId: clave } });
+    expect(dos).toMatchObject({ ok: true, dato: { comprobanteId: clave } });
+    expect(await comprobantesDe(e.empresa)).toHaveLength(1);
+    const { rows } = await mundo.dueno.query<{
+      receptor_domicilio: string | null;
+      receptor_documento_numero: string;
+    }>(
+      "select receptor_domicilio, receptor_documento_numero from comprobante where empresa_id = $1",
+      [e.empresa],
+    );
+    expect(rows).toEqual([
+      {
+        receptor_domicilio: "Av. Siempreviva 742, Rosario",
+        receptor_documento_numero: "30712345671",
+      },
+    ]);
   });
 
   it("con el catálogo REAL la facturación es disponible pero no nace activa: sin activarla en la empresa ni las lecturas de la página ni emitir pasan; activada, sí", async () => {

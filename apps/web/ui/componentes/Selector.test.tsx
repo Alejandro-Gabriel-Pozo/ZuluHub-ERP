@@ -14,6 +14,7 @@ function Probado({ error, deshabilitado }: { error?: string; deshabilitado?: boo
   const [valor, setValor] = useState("");
   return (
     <Selector
+      dato="pendiente"
       etiqueta="Medio de pago"
       valor={valor}
       alCambiar={setValor}
@@ -47,6 +48,7 @@ describe("Selector", () => {
   it("sin texto de elegir, no ofrece una opción vacía", async () => {
     await render(
       <Selector
+        dato="pendiente"
         etiqueta="Medio"
         valor="efectivo"
         alCambiar={() => undefined}

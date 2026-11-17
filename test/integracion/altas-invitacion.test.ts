@@ -28,7 +28,7 @@ import {
   tokensDePrueba,
   type TxDeAltaDePrueba,
 } from "./altas-apoyo";
-import { crearBarrera, crearBaseAparte, crearEntornoDePrueba, cuitAlAzar } from "./entorno";
+import { crearBarrera, crearBaseAparte, crearEntornoDePrueba, cuitUnico } from "./entorno";
 import { crearInvitacionDeBase, incluirEmpresa } from "./fixtures-identidad";
 import { claveAlAzar } from "./plataforma-apoyo";
 
@@ -245,7 +245,7 @@ describe.skipIf(base === null)("reenviar y revocar la invitación del alta", () 
       const empresa = (
         await dueno.query<{ id: string }>(
           "insert into empresa (tenant_id, cuit, razon_social) values ($1, $2, 'Vencida S.A.') returning id",
-          [mundo, cuitAlAzar()],
+          [mundo, cuitUnico()],
         )
       ).rows[0]?.id as string;
       const inv = await crearInvitacionDeBase(dueno, {
@@ -459,7 +459,7 @@ describe.skipIf(base === null)("reenviar y revocar la invitación del alta", () 
       const sinInvitacion = (
         await dueno.query<{ id: string }>(
           "insert into empresa (tenant_id, cuit, razon_social) values ($1, $2, 'Sin invitación S.A.') returning id",
-          [tenant, cuitAlAzar()],
+          [tenant, cuitUnico()],
         )
       ).rows[0]?.id as string;
       expect(falla(await revocar(sinInvitacion))).toBe("ALTA_SIN_INVITACION");

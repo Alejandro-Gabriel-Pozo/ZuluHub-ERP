@@ -9,7 +9,7 @@ import {
   type FacturaParaAnular,
   type ParteAAnular,
 } from "./eleccion-de-anulacion";
-import { formatearAlicuota } from "./formato-fiscal";
+import { formatearAlicuota } from "../../patrones/formato-fiscal";
 
 /**
  * El pedido de la nota de crédito (D-69, D-71): UN renglón por alícuota con importe, de cantidad 1 y con el TOTAL CON IVA a anular en

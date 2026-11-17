@@ -17,14 +17,25 @@
  *    caracteres de control; los marcadores van entre llaves (`{limite}`) y se insertan como texto.
  */
 
+import { TEXTOS_DE_CAJA } from "./catalogo-caja";
+import { TEXTOS_DE_CATALOGO } from "./catalogo-catalogo";
+import { TEXTOS_DE_COMANDAS } from "./catalogo-comandas";
+import { TEXTOS_DE_CLIENTES } from "./catalogo-clientes";
+import { TEXTOS_DE_COMPRAS } from "./catalogo-compras";
 import { TEXTOS_DE_FISCAL } from "./catalogo-fiscal";
 import { TEXTOS_DE_FISCAL_CONFIGURACION } from "./catalogo-fiscal-configuracion";
 import { TEXTOS_DE_FISCAL_EMITIR } from "./catalogo-fiscal-emitir";
 import { TEXTOS_DE_FISCAL_IMPRIMIR } from "./catalogo-fiscal-imprimir";
 import { TEXTOS_DE_FISCAL_PANTALLAS } from "./catalogo-fiscal-pantallas";
+import { TEXTOS_DE_LOTES } from "./catalogo-lotes";
+import { TEXTOS_DE_PRODUCCION } from "./catalogo-produccion";
+import { TEXTOS_DE_SALON } from "./catalogo-salon";
+import { TEXTOS_DE_STOCK } from "./catalogo-stock";
+import { TEXTOS_DE_VENTAS } from "./catalogo-ventas";
+import type { FuenteDeTexto, UsosDeTexto } from "./uso-y-fuente-de-texto";
 
 /** El largo máximo de un texto que no declara otro (la base admite hasta 200 en cualquier caso). */
-export const LARGO_MAXIMO_DE_TEXTO = 80;
+export const LARGO_MAXIMO_DE_TEXTO = 80; // fuente-unica: ajeno — el largo de un texto del vocabulario es otro dato que el nombre de cocina
 
 export type DefinicionDeTexto = Readonly<{
   /** El texto por defecto, en es-AR. Es el respaldo de toda la cadena de herencia de la marca. */
@@ -33,6 +44,13 @@ export type DefinicionDeTexto = Readonly<{
   largoMaximo?: number;
   /** Los marcadores que admite, sin llaves; los mismos que usa `porDefecto`. Omitido: ninguno. */
   marcadores?: readonly string[];
+  /**
+   * Quién consume el texto (inventario de textos, fila 173 de `decisiones-del-dueno-2026-11.md`). OPCIONAL por ahora: ningún chequeo
+   * lo exige; lo medirá el analizador de declaraciones (tramo U2). No se agrega a los catálogos existentes en este tramo.
+   */
+  usos?: UsosDeTexto;
+  /** De dónde salió el texto aprobado: un `DEC` aceptado o `HEREDADO`. OPCIONAL por ahora, igual que `usos`. */
+  fuente?: FuenteDeTexto;
 }>;
 
 export const CATALOGO_DE_TEXTOS = {
@@ -61,7 +79,7 @@ export const CATALOGO_DE_TEXTOS = {
     largoMaximo: 160,
   },
   "motivo.sin_permiso": {
-    porDefecto: "No tiene permiso para hacer esto.",
+    porDefecto: "No tenés permiso para hacer esto.",
     largoMaximo: 160,
   },
 
@@ -91,7 +109,7 @@ export const CATALOGO_DE_TEXTOS = {
   },
   "conexion.no_se_puede_enviar": {
     porDefecto: "No se puede enviar sin conexión.",
-    largoMaximo: 80,
+    largoMaximo: 80, // fuente-unica: ajeno — el largo de un texto del vocabulario es otro dato que el nombre de cocina
   },
   "conexion.enviando": { porDefecto: "Enviando…" },
   "conexion.verificando": { porDefecto: "Verificando si se registró…" },
@@ -229,6 +247,12 @@ export const CATALOGO_DE_TEXTOS = {
   "navegacion.inicio": { porDefecto: "Inicio" },
   "navegacion.empresa": { porDefecto: "Empresa" },
   "navegacion.cuenta": { porDefecto: "Cuenta" },
+  // Fuente: dueño, 12/11/2026, `Pedernal-docs/11-especificaciones/decisiones-del-dueno-2026-11.md`, fila «Menú por áreas, versión 4»: nombres de las
+  // áreas Ventas, Catálogo y Compras aprobados «por ahora». «Compras» se suma con su primera pantalla.
+  "navegacion.area.ventas": { porDefecto: "Ventas" },
+  "navegacion.area.catalogo": { porDefecto: "Catálogo" },
+  // Fuente: dueño, 13/11/2026, `decisiones-del-dueno-2026-11.md` línea 110, fila «Rótulos del menú por áreas aprobados»: el encabezado del grupo de la carta dentro de Catálogo es «Carta».
+  "navegacion.grupo.carta": { porDefecto: "Carta" },
   "inicio.titulo": { porDefecto: "Inicio" },
   "inicio.bienvenida": {
     porDefecto: "Estás en {empresa}.",
@@ -333,6 +357,17 @@ export const CATALOGO_DE_TEXTOS = {
   ...TEXTOS_DE_FISCAL_CONFIGURACION,
   ...TEXTOS_DE_FISCAL_EMITIR,
   ...TEXTOS_DE_FISCAL_IMPRIMIR,
+  // Módulos de E2, E3 y E4: nacen vacíos y cada etapa suma los suyos en su archivo (E0-T4).
+  ...TEXTOS_DE_CATALOGO,
+  ...TEXTOS_DE_CAJA,
+  ...TEXTOS_DE_VENTAS,
+  ...TEXTOS_DE_STOCK,
+  ...TEXTOS_DE_PRODUCCION,
+  ...TEXTOS_DE_LOTES,
+  ...TEXTOS_DE_SALON,
+  ...TEXTOS_DE_COMANDAS,
+  ...TEXTOS_DE_CLIENTES,
+  ...TEXTOS_DE_COMPRAS,
 } as const satisfies Record<string, DefinicionDeTexto>;
 
 export type ClaveDeTexto = keyof typeof CATALOGO_DE_TEXTOS;

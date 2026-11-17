@@ -7,7 +7,7 @@ import { VARIABLE_DEL_TOKEN } from "../src/adaptadores/vercel/plan-de-variables.
 import { VARIABLE_DE_LA_CADENA, ejecutarMigracion } from "./ejecutar-migracion.ts";
 
 /**
- * Migra la base de datos real. Lo corre el workflow `.github/workflows/migrar-base.yml` con
+ * Migra la base de datos real. Lo corre el workflow `.github/workflows/migrar.yml` con
  * `npm run migrar -- --ver` o `-- --aplicar`, y el dueño en su terminal con `-- --preparar-roles`
  * (con `--vercel <destino>` carga además las variables en Vercel, ver `ejecutar-migracion.ts`). La
  * cadena de conexión viene de la variable de entorno PEDERNAL_DB_MIGRACIONES (en GitHub, el secreto de

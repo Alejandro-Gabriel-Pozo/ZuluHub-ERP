@@ -49,6 +49,8 @@ vi.mock("../../apps/web/app/s/app/acciones-de-facturacion", () => ({
 }));
 const CONTEXTO = { id: "contexto-de-la-empresa" };
 vi.mock("../../apps/web/servidor/sesion", () => ({
+  // Sin lecturas compartidas: cada consulta abre la suya (la página las pide igual).
+  dependenciasDeSesion: {},
   empresaDelPedido: () =>
     Promise.resolve({
       puerta: { marca: { nombre: "Marca de prueba" } },
@@ -130,7 +132,7 @@ describe("la página de emitir", () => {
 
 describe("la página de emitir: lo que dice el servidor", () => {
   it.each([
-    ["SIN_PERMISO", "No tiene permiso para hacer esto."],
+    ["SIN_PERMISO", "No tenés permiso para hacer esto."],
     ["MODULO_EN_DESARROLLO", "Esta función todavía está en desarrollo."],
     ["MODULO_EN_SOLO_LECTURA", "Esta función quedó en solo lectura"],
     ["MODULO_NO_ACTIVO", "Esta función no está activada para la empresa."],
@@ -151,8 +153,8 @@ describe("la página de emitir: lo que dice el servidor", () => {
 
   it.each([
     ["FISCAL_SUCURSAL_NO_ELEGIDA", "Elegí una sucursal."],
-    ["FISCAL_SUCURSAL_FUERA_DE_ALCANCE", "Sucursal fuera de su alcance."],
-    ["SIN_PERMISO", "No tiene permiso para hacer esto."],
+    ["FISCAL_SUCURSAL_FUERA_DE_ALCANCE", "Sucursal fuera de tu alcance."],
+    ["SIN_PERMISO", "No tenés permiso para hacer esto."],
   ] as const)(
     "si no deja leer los puntos de venta (%s): se ve su motivo",
     async (codigo, esperado) => {

@@ -1,0 +1,6 @@
+{
+  "grupo": "web (modelos de la configuración de caja)",
+  "archivos": "apps/web/ui/plantillas/caja/modelo-de-medios-de-pago.ts,apps/web/ui/plantillas/caja/modelo-de-cuentas-de-cobro.ts,apps/web/ui/plantillas/caja/modelo-de-cajas.ts,apps/web/ui/plantillas/caja/lista-de-caja.ts,apps/web/ui/plantillas/caja/pestanas-de-caja.ts",
+  "minutos": 1,
+  "pruebas": "test/web/medios-de-pago-modelo.test.ts test/web/cuentas-y-cajas-modelo.test.ts"
+}

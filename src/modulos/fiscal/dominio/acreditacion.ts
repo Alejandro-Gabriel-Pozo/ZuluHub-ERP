@@ -37,6 +37,25 @@ export const CUENTA_COMO_ACREDITADA: Readonly<Record<EstadoDeComprobanteArca, bo
   DESCARTADO: false,
 };
 
+/**
+ * Qué estado de una nota de crédito cuenta como acreditado FIRME: la pregunta de «¿ese comprobante sigue valiendo?»
+ * (`vigenciaDeComprobantes`, D-F-1; decisión de diseño DD-2 de E1). Solo cuenta `AUTORIZADO`. Es una tabla aparte de
+ * `CUENTA_COMO_ACREDITADA` a propósito: aquella cuenta también las notas pendientes para no MOSTRAR de menos (D-15), pero para decidir que
+ * la factura dejó de valer, y que quien factura pueda emitir otra, una nota todavía sin autorizar no alcanza: si ARCA la rechazara, la
+ * factura original seguiría valiendo y se habría emitido una segunda (doble facturación). `Record` exhaustivo, igual que la otra: un
+ * estado nuevo del comprobante no compila hasta que alguien decida si cuenta. Chequeo: `acreditacion.test.ts` y
+ * `facturacion-vigencia.test.ts` (una nota en vuelo no deja la factura no vigente).
+ */
+export const CUENTA_COMO_ACREDITADA_FIRME: Readonly<Record<EstadoDeComprobanteArca, boolean>> = {
+  PENDIENTE: false,
+  EN_VALIDACION: false,
+  AUTORIZADO: true,
+  INCIERTO: false,
+  CONFLICTO: false,
+  RECHAZADO: false,
+  DESCARTADO: false,
+};
+
 /** Una nota que cita al comprobante, como la leen la consulta y el listado (o varias del mismo estado ya sumadas). */
 export type NotaParaAcreditar = Readonly<{
   tipo: TipoDeComprobante;
@@ -44,11 +63,18 @@ export type NotaParaAcreditar = Readonly<{
   total: Importe;
 }>;
 
-/** Lo acreditado: la suma exacta de las notas de crédito que cuentan (cero si ninguna). */
-export function acreditadoPor(notas: readonly NotaParaAcreditar[], total: Importe): Importe {
+/** Cuál de las dos tablas decide qué estado de una nota de crédito cuenta (`CUENTA_COMO_ACREDITADA` o `CUENTA_COMO_ACREDITADA_FIRME`). */
+export type CuentaDeAcreditacion = Readonly<Record<EstadoDeComprobanteArca, boolean>>;
+
+/** Lo acreditado: la suma exacta de las notas de crédito que cuentan según `cuenta` (cero si ninguna). */
+export function acreditadoPor(
+  notas: readonly NotaParaAcreditar[],
+  total: Importe,
+  cuenta: CuentaDeAcreditacion,
+): Importe {
   let acreditado = importeCero(total.moneda);
   for (const nota of notas) {
-    if (claseDeComprobante(nota.tipo) === "NOTA_CREDITO" && CUENTA_COMO_ACREDITADA[nota.estado]) {
+    if (claseDeComprobante(nota.tipo) === "NOTA_CREDITO" && cuenta[nota.estado]) {
       acreditado = sumar(acreditado, nota.total);
     }
   }
@@ -77,8 +103,37 @@ export function acreditacionDe(
   tipo: TipoDeComprobante,
   total: Importe,
   notas: readonly NotaParaAcreditar[],
+  cuenta: CuentaDeAcreditacion,
 ): Acreditacion | null {
   if (claseDeComprobante(tipo) === "NOTA_CREDITO") return null;
-  const acreditado = acreditadoPor(notas, total);
+  const acreditado = acreditadoPor(notas, total, cuenta);
   return { acreditado, etiqueta: etiquetaDeAcreditacion(total, acreditado) };
+}
+
+export const MOTIVOS_DE_NO_VIGENCIA = ["DESCARTADO", "RECHAZADO", "ACREDITADO_TOTAL"] as const;
+export type MotivoDeNoVigencia = (typeof MOTIVOS_DE_NO_VIGENCIA)[number];
+
+/**
+ * Por qué un comprobante dejó de valer, o `null` si sigue vigente (D-F-1): `DESCARTADO` y `RECHAZADO` salen del estado; un comprobante
+ * `AUTORIZADO` deja de valer si lo acreditan por completo notas de crédito AUTORIZADAS (`CUENTA_COMO_ACREDITADA_FIRME`, DD-2). Los
+ * demás estados (`PENDIENTE`, `EN_VALIDACION`, `INCIERTO` y `CONFLICTO`) son vigentes: están en camino a ARCA y no se factura dos veces.
+ * Una nota PARCIAL no lo deja de valer (decisión 175). Una nota de crédito no se acredita (`acreditacionDe` da `null`): vigente.
+ */
+export function motivoDeNoVigencia(
+  comprobante: Readonly<{
+    tipo: TipoDeComprobante;
+    estado: EstadoDeComprobanteArca;
+    total: Importe;
+  }>,
+  notas: readonly NotaParaAcreditar[],
+): MotivoDeNoVigencia | null {
+  if (comprobante.estado === "DESCARTADO") return "DESCARTADO";
+  if (comprobante.estado === "RECHAZADO") return "RECHAZADO";
+  const acreditacion = acreditacionDe(
+    comprobante.tipo,
+    comprobante.total,
+    notas,
+    CUENTA_COMO_ACREDITADA_FIRME,
+  );
+  return acreditacion?.etiqueta === "TOTAL" ? "ACREDITADO_TOTAL" : null;
 }

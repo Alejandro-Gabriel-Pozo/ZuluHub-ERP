@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0360",
+  "fecha": "2026-11-13",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En el menú entran solo pantallas que ya existen con su texto aprobado; Medios de pago usa su título actual y las demás pantallas de la maqueta se suman con su fila.",
+  "que_cambia": "El menú real muestra menos filas que la maqueta hasta que existan las pantallas. Medios de pago y cajas se rotula Medios de pago. Revertir: sumar filas a la tabla.",
+  "donde": "Pedernal-docs menu-por-areas.html (tabla de textos por aprobar); apps/web/ui/navegacion/menu.ts"
+}

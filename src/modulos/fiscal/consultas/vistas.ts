@@ -5,6 +5,7 @@ import { precioUnitarioATexto } from "../../../primitivas/dinero/precio-unitario
 import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import {
   acreditacionDe,
+  CUENTA_COMO_ACREDITADA,
   type EtiquetaDeAcreditacion,
   type NotaParaAcreditar,
 } from "../dominio/acreditacion";
@@ -75,7 +76,8 @@ export function resumenDe(
     total: importeATexto(fila.total),
     estado: fila.estado,
     ambiente: fila.ambiente,
-    acreditacion: acreditacionDe(fila.tipo, fila.total, notas)?.etiqueta ?? null,
+    acreditacion:
+      acreditacionDe(fila.tipo, fila.total, notas, CUENTA_COMO_ACREDITADA)?.etiqueta ?? null,
   };
 }
 
@@ -168,6 +170,8 @@ export type DetalleDeComprobante = Readonly<{
     posicion: number;
     descripcion: string;
     cantidad: string;
+    /** El símbolo de la unidad congelado al emitir («kg»); `null` si no se imprime. */
+    unidad: string | null;
     precioUnitario: string;
     descuento: string | null;
     alicuota: ComprobanteGuardado["renglones"][number]["alicuota"];
@@ -210,7 +214,12 @@ export function detalleDe(
     serie: SerieGuardada | null;
   }>,
 ): DetalleDeComprobante {
-  const acreditacion = acreditacionDe(c.tipo, c.importes.total, adicionales.notasQueLoCitan);
+  const acreditacion = acreditacionDe(
+    c.tipo,
+    c.importes.total,
+    adicionales.notasQueLoCitan,
+    CUENTA_COMO_ACREDITADA,
+  );
   return {
     id: c.id,
     emisorId: c.emisorId,
@@ -247,6 +256,7 @@ export function detalleDe(
       posicion: r.posicion,
       descripcion: r.descripcion,
       cantidad: cantidadATexto(r.cantidad),
+      unidad: r.unidad,
       precioUnitario: precioUnitarioATexto(r.precioUnitario),
       descuento: r.descuento === null ? null : porcentajeATexto(r.descuento),
       alicuota: r.alicuota,

@@ -23,6 +23,7 @@ import { err, type Resultado } from "../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../puertos/transacciones";
 import { aRespuesta, type DependenciasDeRespuesta } from "./a-respuesta";
 import { CAMPOS_DE_IIBB, ERRORES_DE_IIBB } from "./errores-fiscales-de-ingresos-brutos";
+import { campoDelReceptor } from "./errores-fiscales-del-receptor";
 import { ERRORES_DE_IMPRESION, type ErrorAlLeerComprobantes } from "./errores-fiscales-de-lectura";
 import {
   ERRORES_DE_CERTIFICADO,
@@ -132,7 +133,7 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
   // mismo código y mismo texto, que sigue provisorio («Sucursal cerrada.», confirmado por el dueño también para crear y mudar).
   SUCURSAL_CERRADA: "FISCAL_SUCURSAL_CERRADA",
   // Datos fiscales y puntos de venta (D-43): lo que la persona escribió mal sale como `FISCAL_CONFIGURACION_DATOS_INVALIDOS` con el campo
-  // (el formulario lo marca). Su texto, «Revisá los datos marcados.», es el de D-67 y reemplaza acá al «Revise los datos del comprobante»,
+  // (el formulario lo marca). Su texto, «Revisá los datos marcados.», es el de D-67 y reemplaza acá al «Revisá los datos del comprobante»,
   // que es de las facturas (`FISCAL_DATOS_INVALIDOS`). Un identificador de la pantalla mal armado es «no se pudo identificar el
   // pedido». Ingresos Brutos (D-115/D-116): `errores-fiscales-de-ingresos-brutos.ts`. Un número de versión repetido es defecto.
   RAZON_SOCIAL_INVALIDA: "FISCAL_CONFIGURACION_DATOS_INVALIDOS",
@@ -269,8 +270,6 @@ const campoDeRenglon = (posicion: unknown, campo: string): string | undefined =>
 
 function campoDeError(error: Readonly<Record<string, unknown>>): string | undefined {
   switch (error["codigo"]) {
-    case "RECEPTOR_INVALIDO":
-      return typeof error["campo"] === "string" ? `receptor.${error["campo"]}` : "receptor";
     case "RENGLON_INVALIDO":
       return typeof error["campo"] === "string"
         ? campoDeRenglon(error["posicion"], error["campo"])
@@ -287,7 +286,7 @@ function campoDeError(error: Readonly<Record<string, unknown>>): string | undefi
       return typeof primero === "string" ? (CAMPO_DE_OBLIGATORIO[primero] ?? undefined) : undefined;
     }
     default:
-      return undefined;
+      return campoDelReceptor(error);
   }
 }
 

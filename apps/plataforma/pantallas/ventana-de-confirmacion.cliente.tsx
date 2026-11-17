@@ -277,6 +277,7 @@ export function VentanaDeConfirmacion({
                 </Aviso>
               ) : null}
               <Campo
+                dato="pendiente"
                 etiqueta="Vigente desde"
                 nombre="vigenteDesde"
                 tipo="date"
@@ -292,6 +293,7 @@ export function VentanaDeConfirmacion({
                 deshabilitado={bloqueada}
               />
               <Campo
+                dato="pendiente"
                 etiqueta="Motivo del cambio"
                 nombre="motivo"
                 obligatorio="obligatorio"

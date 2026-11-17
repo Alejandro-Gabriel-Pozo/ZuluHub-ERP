@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0341",
+  "fecha": "2026-11-12",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "El rol público lee el precio de la carta con `precio_vigente` (como la caja): tiene SELECT sobre las 13 columnas de `precio_de_venta`, incluida `cargado_por`, que no sale del adaptador.",
+  "que_cambia": "Solo un privilegio de lectura; una prueba fija las 13 columnas. Revertir: arma la fila sin `cargado_por` en la función (medio día) o vigencia en TypeScript (un día). Deuda: antes del primer cliente.",
+  "donde": "migraciones/0044_lectura_publica_de_carta.sql; test/integracion/carta-publica-lectura.test.ts; carta-real-especificacion.md §3.3 y §4 (T-5); orquestador, opción a, 12/11/2026; Aprobada por el dueño el 12/11/2026, decisiones-del-dueno-2026-11.md."
+}

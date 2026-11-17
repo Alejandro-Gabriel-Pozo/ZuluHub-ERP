@@ -1,0 +1,6 @@
+{
+  "grupo": "marcas (host, tema y jerarquía)",
+  "archivos": "src/modulos/marcas/dominio/host.ts,src/modulos/marcas/dominio/tema.ts,src/modulos/marcas/dominio/jerarquia.ts",
+  "minutos": 3.4,
+  "pruebas": "src/modulos/marcas"
+}

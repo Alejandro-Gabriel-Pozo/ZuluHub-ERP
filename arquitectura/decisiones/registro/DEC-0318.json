@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0318",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El efectivo que sale por un pago se registra como un egreso manual de caja (con el motivo que escribe quien paga) y anular el pago lo devuelve con una anulación, solo si la caja sigue abierta.",
+  "que_cambia": "Si la caja ya está en cierre o cerrada el pago no se puede anular y la plata se corrige en caja; si se quisiera permitirlo, haría falta un ajuste de caja.",
+  "donde": "src/modulos/caja/egreso/egreso-por-origen.ts"
+}

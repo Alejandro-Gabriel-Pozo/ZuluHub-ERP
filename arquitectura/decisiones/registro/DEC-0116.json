@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0116",
+  "tipo": "PERMISOS",
+  "decision": "Las seis acciones de lotes se cargan con sus casos de uso: mirar (lotes.ver) los tres roles; controlar, dejar de controlar, cambiar calidad, corregir y reasignar, gerente y administrador.",
+  "que_cambia": "Quién cambia calidad y fechas de lotes; es la parte de lotes de la P-2 (DEC-0101), que quedaba para T9.",
+  "donde": "src/capacidades/permisos/empresa.ts y modulos/catalogo-lotes-y-produccion.ts (E6-T7)",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "estado": "PENDIENTE_DE_OK"
+}

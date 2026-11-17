@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0207",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La anulación parcial de un ítem enviado exige jornada abierta, como el resto de las anulaciones; no se permite con la jornada cerrada.",
+  "que_cambia": "Si un mozo puede anular una parte de un plato ya enviado con la jornada cerrada.",
+  "donde": "src/modulos/comandas/casos-de-uso/anulaciones.ts"
+}

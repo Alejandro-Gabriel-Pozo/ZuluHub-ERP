@@ -1,0 +1,6 @@
+{
+  "grupo": "guardián (excepciones)",
+  "archivos": "arquitectura/contratos/excepciones.cjs",
+  "minutos": 6.4,
+  "pruebas": "test/arquitectura/guardian-clasificacion.test.ts test/arquitectura/guardian-declaraciones.test.ts test/arquitectura/guardian-diagnostico.test.ts test/arquitectura/guardian-excepciones.test.ts test/arquitectura/guardian-matriz.test.ts test/arquitectura/guardian-mutantes-a-excepciones.test.ts test/arquitectura/guardian-nucleo.test.ts test/arquitectura/guardian-registro.test.ts"
+}

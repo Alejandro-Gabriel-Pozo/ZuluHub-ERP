@@ -37,6 +37,7 @@ import {
   revocarDeBase,
   sucursalDe,
 } from "./fixtures-identidad";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Los repositorios de identidad y los adaptadores de trabajos y auditoría contra una base real: las
@@ -441,7 +442,7 @@ describe.skipIf(base === null)("identidad: repositorios y adaptadores contra una
       const b = await escenario();
       expect(await encolar(a.empresa, "compartida")).toEqual({ ok: true, valor: "ENCOLADO" });
       expect(await encolar(b.empresa, "compartida")).toEqual({ ok: true, valor: "ENCOLADO" });
-      const clave = `plataforma-${randomBytes(4).toString("hex")}`;
+      const clave = `plataforma-${sufijoUnico()}`;
       expect(await encolar(null, clave)).toEqual({ ok: true, valor: "ENCOLADO" });
       expect(await encolar(null, clave)).toEqual({ ok: true, valor: "YA_ENCOLADO" });
     });

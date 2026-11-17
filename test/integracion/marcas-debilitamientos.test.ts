@@ -34,6 +34,7 @@ import {
   marcaPrincipal,
 } from "./marcas-apoyo";
 import { SesionDePrueba } from "./sesiones";
+import { referenciaDeErrorUnica, sufijoUnico } from "./unicos";
 
 /**
  * Marcas y planes (M3): los DEBILITAMIENTOS propios del SQL, y los de la especificación (§D). Cada caso rompe
@@ -95,7 +96,7 @@ const conBase = (url: string, nombre: string): string => {
 /** Una copia de la plantilla (0001 a 0006) con ese texto de 0007 aplicado; se destruye al terminar. */
 async function conMigracion<T>(sql: string, trabajo: (ctx: Ctx) => Promise<T>): Promise<T> {
   const b = base as BaseDePruebas;
-  const nombre = `pedernal_deb_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  const nombre = `pedernal_deb_${randomUUID().replaceAll("-", "")}`;
   await admin.query(`CREATE DATABASE ${nombre} TEMPLATE ${plantillaNombre}`);
   const carpeta = await carpetaCon([...HASTA_0006]);
   const copia: BaseDePruebas = {
@@ -625,11 +626,7 @@ const SONDAS = {
     conAdmin(
       ctx,
       async (s) =>
-        !(
-          await s.intentar("insert into marca (codigo) values ($1)", [
-            `s-${randomUUID().slice(0, 6)}`,
-          ])
-        ).ok,
+        !(await s.intentar("insert into marca (codigo) values ($1)", [`s-${sufijoUnico()}`])).ok,
       SOPORTE_DE_PRUEBA,
     ),
   soporteNoAsigna: async (ctx: Ctx) => {
@@ -731,7 +728,7 @@ const SONDAS = {
     );
     try {
       const r1 = await alta.directo("insert into marca (codigo, marca_padre_id) values ($1, $2)", [
-        `h-${randomUUID().slice(0, 6)}`,
+        `h-${sufijoUnico()}`,
         padre,
       ]);
       if (!r1.ok) return false;
@@ -755,7 +752,7 @@ const SONDAS = {
     const otra = (
       await ctx.dueno.query<{ id: string }>(
         "insert into persona (email) values ($1) returning id",
-        [`${randomUUID().slice(0, 10)}@prueba.test`],
+        [`${sufijoUnico()}@prueba.test`],
       )
     ).rows[0]?.id as string;
     const abrir = (persona: string) =>
@@ -808,7 +805,7 @@ const SONDAS = {
   /** La referencia de error no se repite. */
   referenciaUnica: async ({ dueno }: Ctx) =>
     sinConfirmar(dueno, async () => {
-      const r = `PD-${randomUUID().slice(0, 4).toUpperCase()}-${randomUUID().slice(0, 4).toUpperCase()}`;
+      const r = referenciaDeErrorUnica();
       const insertar = () =>
         intentoDelDueno(
           dueno,
@@ -903,7 +900,7 @@ const SONDAS = {
     const m = await crearMundoDeMarca(ctx.dueno);
     return conAdmin(ctx, async (s) => {
       const a = await s.intentar("insert into marca (codigo, es_principal) values ($1, true)", [
-        `p-${randomUUID().slice(0, 6)}`,
+        `p-${sufijoUnico()}`,
       ]);
       const b = await s.intentar("update tenant set marca_id = marca_id where id = $1", [m.tenant]);
       return (

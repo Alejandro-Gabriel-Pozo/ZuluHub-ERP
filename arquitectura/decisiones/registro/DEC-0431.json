@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0431",
+  "fecha": "2026-11-15",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "La receta lleva solo ingredientes (materia prima, elaborado y reventa); el packaging y la limpieza (clase insumo) no entran, y el servidor y la base lo rechazan.",
+  "que_cambia": "Guardar una receta con un artículo de clase insumo da COMPONENTE_ES_INSUMO. Las versiones ya guardadas con un insumo no se tocan y siguen calculándose igual. Revertir: quitar el chequeo del caso de uso y la reversión 0056 (una migración chica).",
+  "donde": "src/modulos/stock/casos-de-uso/composiciones.ts; migraciones/0056_receta_sin_insumos.sql; decisiones-del-dueno-2026-11.md, fila «Receta e insumos operativos» del 14/11/2026 (opción A)"
+}

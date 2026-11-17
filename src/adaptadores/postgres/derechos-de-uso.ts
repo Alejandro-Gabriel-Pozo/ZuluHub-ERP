@@ -1,5 +1,5 @@
 import type { DefinicionDeModulo } from "../../capacidades/modulos/catalogo";
-import { derechosDeUso } from "../../capacidades/planes/derechos";
+import { derechosDeUso, type DerechosDeUso } from "../../capacidades/planes/derechos";
 import type { DefinicionDePerilla } from "../../capacidades/planes/perillas";
 import { vigenteEn } from "../../capacidades/planes/vigencia";
 import {
@@ -9,6 +9,7 @@ import {
   type LecturaDePlanes,
 } from "../../modulos/planes/publico";
 import type { LecturaDeDerechosDeUso } from "../../puertos/derechos-de-uso";
+import type { EmpresaId, TenantId } from "../../primitivas/identificadores/marca";
 
 /**
  * `LecturaDeDerechosDeUso` sobre la lectura de planes (marcas y planes, §B.5.3). No tiene lógica de
@@ -25,6 +26,28 @@ export type CatalogosDeDerechos<M extends string, P extends string> = Readonly<{
   catalogoDeModulos: Readonly<Record<M, Pick<DefinicionDeModulo, "obligatorio">>>;
   catalogoDePerillas: Readonly<Record<P, DefinicionDePerilla>>;
 }>;
+
+/**
+ * Los derechos de una empresa de un tenant: el ÚNICO armado de los datos de la base (asignaciones, ajustes) para `derechosDeUso`. Lo usan la lectura de la propia
+ * empresa, la de la plataforma y la puerta pública de la carta (T6): una sola forma de calcular lo que la empresa puede usar.
+ */
+export async function derechosDeLaEmpresaDeUnTenant<M extends string, P extends string>(
+  planes: LecturaDePlanes,
+  catalogos: CatalogosDeDerechos<M, P>,
+  e: Readonly<{ tenant: TenantId; empresa: EmpresaId; ahora: Date }>,
+): Promise<DerechosDeUso<M, P>> {
+  const asignaciones = await planes.asignacionesDelTenant(e.tenant);
+  const ajustes = await planes.ajustesDelTenant(e.tenant, e.empresa);
+  return derechosDeUso({
+    catalogoDeModulos: catalogos.catalogoDeModulos,
+    catalogoDePerillas: catalogos.catalogoDePerillas,
+    tenantId: e.tenant,
+    empresaId: e.empresa,
+    versionDePlan: vigenteEn(asignaciones, e.ahora)?.version ?? null,
+    ajustes: interpretarAjustes(catalogos.catalogoDePerillas, ajustes),
+    ahora: e.ahora,
+  });
+}
 
 export function crearLecturaDeDerechosDeUso<M extends string, P extends string>(
   planes: LecturaDePlanes,
@@ -46,15 +69,9 @@ export function crearLecturaDeDerechosDeUso<M extends string, P extends string>(
           "la empresa del contexto no es visible: no se pueden leer sus derechos de uso",
         );
       }
-      const asignaciones = await planes.asignacionesDelTenant(tenant);
-      const ajustes = await planes.ajustesDelTenant(tenant, contexto.empresaId);
-      return derechosDeUso({
-        catalogoDeModulos,
-        catalogoDePerillas,
-        tenantId: tenant,
-        empresaId: contexto.empresaId,
-        versionDePlan: versionVigente(asignaciones, contexto.ahora),
-        ajustes: interpretar(ajustes),
+      return derechosDeLaEmpresaDeUnTenant(planes, catalogos, {
+        tenant,
+        empresa: contexto.empresaId,
         ahora: contexto.ahora,
       });
     },
@@ -77,22 +94,11 @@ export function crearLecturaDeDerechosDeUso<M extends string, P extends string>(
     async deLaEmpresaParaLaPlataforma(contexto, empresa) {
       const tenant = await planes.tenantDeLaEmpresa(empresa);
       if (tenant === null) return null;
-      const asignaciones = await planes.asignacionesDelTenant(tenant);
-      const ajustes = await planes.ajustesDelTenant(tenant, empresa);
-      return derechosDeUso({
-        catalogoDeModulos,
-        catalogoDePerillas,
-        tenantId: tenant,
-        empresaId: empresa,
-        versionDePlan: versionVigente(asignaciones, contexto.ahora),
-        ajustes: interpretar(ajustes),
+      return derechosDeLaEmpresaDeUnTenant(planes, catalogos, {
+        tenant,
+        empresa,
         ahora: contexto.ahora,
       });
-    },
-
-    deLaVidrieraPublica() {
-      // Falla cerrado hasta que exista el enlace de carta de catálogo: ver la nota del puerto.
-      return Promise.resolve(null);
     },
   };
 }

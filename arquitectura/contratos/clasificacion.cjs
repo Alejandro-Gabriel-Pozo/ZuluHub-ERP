@@ -81,7 +81,25 @@ const CLASES_ESPERADAS = Object.freeze([
   "pruebas",
 ]);
 
-const MODULOS_DE_NEGOCIO = ["empresas", "fiscal", "identidad", "marcas", "planes", "tenants"];
+const MODULOS_DE_NEGOCIO = [
+  "caja",
+  "catalogo",
+  "cierre",
+  "comandas",
+  "clientes",
+  "compras",
+  "empresas",
+  "fiscal",
+  "identidad",
+  "listas",
+  "marcas",
+  "planes",
+  "produccion",
+  "salon",
+  "stock",
+  "tenants",
+  "ventas",
+];
 const GRUPOS_DE_SRC = [
   "adaptadores",
   "capacidades",
@@ -102,7 +120,7 @@ const ARCHIVOS_DE_LA_RAIZ = [
   "knip.json",
   "neon.ts",
   "package.json",
-  "stryker.config.json",
+  "stryker.config.mjs",
   "tsconfig.json",
   "vitest.config.ts",
 ];

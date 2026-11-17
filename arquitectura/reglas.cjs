@@ -8,7 +8,6 @@
 const ORM =
   "^(node_modules/)?(kysely|drizzle-orm|drizzle-kit|@prisma/|prisma|pg|pg-pool|postgres|@neondatabase/)(/|$)";
 const FRAMEWORK = "^(node_modules/)?(zod|react|react-dom|next)(/|$)";
-
 const CAPAS_SUPERIORES_A_CAPACIDADES =
   "^src/(modulos|plataforma|consultas-de-grupo|composicion|adaptadores)/";
 
@@ -248,10 +247,9 @@ const reglas = [
     from: { path: "^src/modulos/[^/]+/consultas/" },
     to: {
       path: "^src/modulos/[^/]+/dominio/",
-      // Únicas excepciones (fiscal, funciones puras): el modelo de impresión (§B.7), la acreditación (D-16) y la vigencia
-      // de una versión (`versionVigente`, D-43), que consultas y casos de uso calculan con UNA regla. Previene: abrir todo
-      // el dominio de fiscal a las consultas. Chequeo: las violaciones inyectadas de reglas.test.ts.
-      pathNot: "^src/modulos/fiscal/dominio/(modelo-de-impresion|acreditacion|vigencia)\\.ts$",
+      // Únicas excepciones (funciones puras): en fiscal, el modelo de impresión (§B.7), la acreditación (D-16) y la vigencia (D-43); en caja, la anulación (e3 §3.10); en salón, el estado de la mesa (E7 §3.6); en comandas, el papel y el estado del trabajo (E7 §3.5): una sola regla. Previene un botón o un papel distinto del caso. Chequeo: reglas.test.ts.
+      pathNot:
+        "^src/modulos/(fiscal/dominio/(modelo-de-impresion|acreditacion|vigencia)|caja/dominio/anulacion|salon/dominio/estado-de-mesa|comandas/dominio/(documento|impresion))\\.ts$",
     },
   },
   {
@@ -550,5 +548,6 @@ const reglas = [
     to: { path: "^apps/", pathNot: "^apps/(plataforma/|web/ui/)" },
   },
 ];
-
-module.exports = { reglas };
+module.exports = {
+  reglas: reglas.concat(require("./reglas-de-pdf.cjs"), require("./reglas-de-modulos.cjs")),
+};

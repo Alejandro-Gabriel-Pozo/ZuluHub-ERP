@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0024",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las rondas de concurrencia de ventas bajaron de 20 a 8 por defecto, con 50 al cerrar cada etapa.",
+  "que_cambia": "Tiempo de CI, no el negocio.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A24 (Infra)"
+}

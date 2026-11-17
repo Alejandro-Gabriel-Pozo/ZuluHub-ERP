@@ -30,6 +30,7 @@ import { AHORA_DE_PRUEBA } from "./entorno";
 import { check, clave, denegado, intentoDelDueno, sinConfirmar } from "./fiscal-apoyo";
 import type { BaseDePruebas } from "./global";
 import { crearMarca, crearMundoDeMarca, marcaPrincipal } from "./marcas-apoyo";
+import { correoUnico } from "./unicos";
 
 /**
  * Alta por solicitud (L1): lo que la migración de captación DECLARA (rol, privilegios exactos por columna,
@@ -660,7 +661,7 @@ type Valores = Record<string, unknown>;
 function filaNueva(marca: string, cambios: Valores = {}): Valores {
   return {
     marca_id: marca,
-    email: `s${Math.random().toString(16).slice(2, 12)}@prueba.test`,
+    email: correoUnico("s"),
     nombre_contacto: "Ana Pérez",
     nombre_negocio: "Café Central",
     telefono: null,
@@ -1128,7 +1129,7 @@ describe.skipIf(base === null)(
       for (const primero of abiertos) {
         for (const segundo of abiertos) {
           await sinConfirmar(dueno, async () => {
-            const email = `dup${Math.random().toString(16).slice(2, 10)}@prueba.test`;
+            const email = correoUnico("dup");
             expect(
               (await insertar(dueno, filaNueva(marca, { email, ...camposDe(primero) }))).ok,
             ).toBe(true);
@@ -1143,7 +1144,7 @@ describe.skipIf(base === null)(
 
     it("solicitud_abierta_uk: cerradas, todas las que se quiera; y con una cerrada puede volver a pedir; otra marca u otro correo, siempre", async () => {
       await sinConfirmar(dueno, async () => {
-        const email = `ok${Math.random().toString(16).slice(2, 10)}@prueba.test`;
+        const email = correoUnico("ok");
         for (const estado of ["RECHAZADA", "SPAM", "ALTA_CREADA", "RECHAZADA", "SPAM"] as const) {
           await crearSolicitud(dueno, { estado, email, marca });
         }
@@ -1158,7 +1159,7 @@ describe.skipIf(base === null)(
 
     it("solicitud_abierta_uk: al cerrar la abierta (rechazarla) queda libre el lugar", async () => {
       await sinConfirmar(dueno, async () => {
-        const email = `lib${Math.random().toString(16).slice(2, 10)}@prueba.test`;
+        const email = correoUnico("lib");
         const a = await crearSolicitud(dueno, { estado: "NUEVA", email, marca });
         await dueno.query(
           `update solicitud_de_alta set estado = 'RECHAZADA', motivo_de_rechazo = 'OTRO', decidida_por = $2,

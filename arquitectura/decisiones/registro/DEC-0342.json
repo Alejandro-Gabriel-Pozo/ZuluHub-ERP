@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0342",
+  "fecha": "2026-11-12",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "La ficha del dato «nombre del medio de pago» es el dominio de caja (configuracion.ts) y no una primitiva nueva.",
+  "que_cambia": "Solo la ruta de la ficha en el registro de datos; el largo y el conjunto permitido ya viven ahí una vez. Revertir: mover la validación a una primitiva y apuntar la ruta.",
+  "donde": "src/capacidades/datos/registro.ts; Pedernal-docs 01-vision/primitivas-de-negocio.md regla 5; Aprobada por el dueño el 12/11/2026, decisiones-del-dueno-2026-11.md."
+}

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0112",
+  "tipo": "DATOS",
+  "decision": "Un elaborado como componente se guarda siempre como elaborado, aunque tenga stock propio; la venta decide si descuenta su stock o baja a sus ingredientes.",
+  "que_cambia": "Cambia cómo se guarda la receta ante un cambio de estado del elaborado; revertirlo exige migrar recetas.",
+  "donde": "src/modulos/stock/casos-de-uso/composiciones.ts (E6-T6, D94, D96)",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "estado": "PENDIENTE_DE_OK"
+}

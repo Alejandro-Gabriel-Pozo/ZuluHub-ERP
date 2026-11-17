@@ -56,15 +56,32 @@ function armar(
 }
 
 describe("armarFuenteDePuertas.consultarHost", () => {
-  it("pasa host y superficie al puerto y devuelve SOLO el marcaId (nada del dueño ni de la empresa)", async () => {
+  it("pasa host y superficie al puerto y devuelve SOLO el marcaId y el dueño del host (H-DOM-1; nada más del host)", async () => {
     const { fuente, pedidos } = armar(
       () => Promise.resolve(ok(resuelto)),
       () => Promise.resolve(ok(null)),
     );
     const r = await fuente.consultarHost("app.a.test", "APP");
-    expect(r).toEqual({ ok: true, valor: { marcaId: "marca-a" } });
-    expect(JSON.stringify(r)).not.toContain("empresa-secreta");
+    expect(r).toEqual({
+      ok: true,
+      valor: { marcaId: "marca-a", duenio: { tipo: "EMPRESA", empresaId: "empresa-secreta" } },
+    });
     expect(pedidos).toEqual(["resolucion|app.a.test|APP"]);
+  });
+
+  it("un host de marca devuelve dueño MARCA, sin ningún id de empresa", async () => {
+    const deMarca = {
+      ...resuelto,
+      duenio: { tipo: "MARCA", marcaId: "marca-a" },
+    } as unknown as HostResuelto;
+    const { fuente } = armar(
+      () => Promise.resolve(ok(deMarca)),
+      () => Promise.resolve(ok(null)),
+    );
+    expect(await fuente.consultarHost("app.a.test", "APP")).toEqual({
+      ok: true,
+      valor: { marcaId: "marca-a", duenio: { tipo: "MARCA" } },
+    });
   });
 
   it("el host que no se sirve es ok(null), sin leer la marca", async () => {

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0062",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En el registro de datos el estado de empresa es solo ACTIVE y un filtro de lectura se pone según lo declarado; a confirmar por el dueño.",
+  "que_cambia": "Qué datos se pueden leer según el estado de la empresa.",
+  "donde": "src/capacidades/datos/registro.ts"
+}

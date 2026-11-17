@@ -11,8 +11,8 @@ import {
   crearEmpresaActiva,
   crearEmpresaEnAlta,
   crearEntornoDePrueba,
-  cuitAlAzar,
-  nombreAlAzar,
+  cuitUnico,
+  nombreUnico,
   type EmpresaDePrueba,
 } from "./entorno";
 
@@ -31,20 +31,20 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
   const altaDeEmpresa = (tenant: string, cuit: string) =>
     entorno.ejecutar({ contexto: comoPlataforma() }, async ({ db }) => {
       await sql`insert into empresa (tenant_id, cuit, razon_social)
-                values (${tenant}, ${cuit}, ${nombreAlAzar("alta")})`.execute(db);
+                values (${tenant}, ${cuit}, ${nombreUnico("alta")})`.execute(db);
       return ok("creada" as const);
     });
 
   describe("dos altas con el mismo CUIT", () => {
     it("gana una sola, también cuando son de tenants distintos (20 rondas)", async () => {
       for (let ronda = 0; ronda < 20; ronda++) {
-        const cuit = cuitAlAzar();
+        const cuit = cuitUnico();
         const [t1, t2] = await Promise.all([
           entorno.ejecutar({ contexto: comoPlataforma() }, async ({ tenants }) =>
-            ok((await tenants.crear(nombreAlAzar("t"))).id),
+            ok((await tenants.crear(nombreUnico("t"))).id),
           ),
           entorno.ejecutar({ contexto: comoPlataforma() }, async ({ tenants }) =>
-            ok((await tenants.crear(nombreAlAzar("t"))).id),
+            ok((await tenants.crear(nombreUnico("t"))).id),
           ),
         ]);
         if (!t1.ok || !t2.ok) throw new Error("no se crearon los tenants");
@@ -65,10 +65,10 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
     // clave de idempotencia en una alta de plataforma): las repetidas se rechazan, no se "recuerdan".
     it("una ráfaga de altas con el mismo CUIT deja una sola empresa", async () => {
       const t = await entorno.ejecutar({ contexto: comoPlataforma() }, async ({ tenants }) =>
-        ok((await tenants.crear(nombreAlAzar("t"))).id),
+        ok((await tenants.crear(nombreUnico("t"))).id),
       );
       if (!t.ok) throw new Error("sin tenant");
-      const cuit = cuitAlAzar();
+      const cuit = cuitUnico();
       const rafaga = await Promise.all(
         Array.from({ length: 5 }, () => altaDeEmpresa(t.valor, cuit)),
       );
@@ -81,10 +81,10 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
 
     it("un CUIT de alta cancelada se puede volver a usar; antes de cancelar, no", async () => {
       const t = await entorno.ejecutar({ contexto: comoPlataforma() }, async ({ tenants }) =>
-        ok((await tenants.crear(nombreAlAzar("t"))).id),
+        ok((await tenants.crear(nombreUnico("t"))).id),
       );
       if (!t.ok) throw new Error("sin tenant");
-      const cuit = cuitAlAzar();
+      const cuit = cuitUnico();
       expect((await altaDeEmpresa(t.valor, cuit)).ok).toBe(true);
       expect(await altaDeEmpresa(t.valor, cuit)).toEqual({
         ok: false,
@@ -112,12 +112,12 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
 
     it("se rechaza con empresa_tenant_no_activo, y al reactivar el tenant se puede de nuevo", async () => {
       const t = await entorno.ejecutar({ contexto: comoPlataforma() }, async ({ tenants }) =>
-        ok((await tenants.crear(nombreAlAzar("t"))).id),
+        ok((await tenants.crear(nombreUnico("t"))).id),
       );
       if (!t.ok) throw new Error("sin tenant");
-      expect((await altaDeEmpresa(t.valor, cuitAlAzar())).ok).toBe(true);
+      expect((await altaDeEmpresa(t.valor, cuitUnico())).ok).toBe(true);
       expect((await suspender_(t.valor)).ok).toBe(true);
-      expect(await altaDeEmpresa(t.valor, cuitAlAzar())).toEqual({
+      expect(await altaDeEmpresa(t.valor, cuitUnico())).toEqual({
         ok: false,
         error: { tipo: "Check", restriccion: "empresa_tenant_no_activo" },
       });
@@ -127,11 +127,11 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
         );
         return ok(null);
       });
-      expect((await altaDeEmpresa(t.valor, cuitAlAzar())).ok).toBe(true);
+      expect((await altaDeEmpresa(t.valor, cuitUnico())).ok).toBe(true);
     });
 
     it("un tenant que no existe sigue dando el error de clave foránea, no el de estado", async () => {
-      expect(await altaDeEmpresa("00000000-0000-4000-8000-000000000000", cuitAlAzar())).toEqual({
+      expect(await altaDeEmpresa("00000000-0000-4000-8000-000000000000", cuitUnico())).toEqual({
         ok: false,
         error: { tipo: "Referencia", restriccion: "empresa_tenant_id_fkey" },
       });
@@ -139,7 +139,7 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
 
     it("una suspensión que llega durante un alta en curso espera a que esta termine", async () => {
       const t = await entorno.ejecutar({ contexto: comoPlataforma() }, async ({ tenants }) =>
-        ok((await tenants.crear(nombreAlAzar("t"))).id),
+        ok((await tenants.crear(nombreUnico("t"))).id),
       );
       if (!t.ok) throw new Error("sin tenant");
       let altaInsertada: () => void = () => undefined;
@@ -151,7 +151,7 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
         { contexto: comoPlataforma(), aislamiento: "read committed" },
         async ({ db }) => {
           await sql`insert into empresa (tenant_id, cuit, razon_social)
-                    values (${t.valor}, ${cuitAlAzar()}, ${nombreAlAzar("alta")})`.execute(db);
+                    values (${t.valor}, ${cuitUnico()}, ${nombreUnico("alta")})`.execute(db);
           altaInsertada();
           await puedeTerminar;
           return ok("creada" as const);
@@ -187,12 +187,12 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
         const alta = await entorno.ejecutar(
           { contexto: comoPlataforma() },
           async ({ tenants, empresas }) => {
-            const tenant = await tenants.crear(nombreAlAzar("t"));
+            const tenant = await tenants.crear(nombreUnico("t"));
             return ok(
               await empresas.crear({
                 tenantId: tenant.id,
-                cuit: cuitAlAzar(),
-                razonSocial: nombreAlAzar("e"),
+                cuit: cuitUnico(),
+                razonSocial: nombreUnico("e"),
               }),
             );
           },
@@ -328,7 +328,7 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
     it("nunca queda una sucursal a medias cuando se suspende y se opera a la vez (20 rondas)", async () => {
       for (let ronda = 0; ronda < 20; ronda++) {
         const e = await crearEmpresaActiva(entorno);
-        const nombre = nombreAlAzar("simultanea");
+        const nombre = nombreUnico("simultanea");
         const [operacion, suspension] = await Promise.all([
           crearSucursal(e, nombre),
           cambiarTenant(e, true),
@@ -360,7 +360,7 @@ describe.skipIf(base === null)("concurrencia e idempotencia de la base de tenanc
       try {
         const crear = () =>
           propio.ejecutar({ contexto: comoPlataforma() }, async ({ tenants }) =>
-            ok((await tenants.crear(nombreAlAzar("t"))).id),
+            ok((await tenants.crear(nombreUnico("t"))).id),
           );
 
         const enMulti = await Promise.all([crear(), crear()]);

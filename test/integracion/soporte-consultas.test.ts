@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import type { ContextoDePlataforma } from "../../src/contexto/contexto";
 import type { Resultado } from "../../src/primitivas/resultado/resultado";
 import { ADMIN_DE_PRUEBA, SOPORTE_DE_PRUEBA } from "./admins-de-prueba";
-import { crearBaseAparte, nombreAlAzar } from "./entorno";
+import { crearBaseAparte, nombreUnico } from "./entorno";
 import {
   crearInvitacionDeBase,
   crearMembresiaDeBase,
@@ -182,7 +182,7 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
     // Y uno que NO falló: no debe aparecer.
     await dueno.query(
       `insert into trabajo (tipo, clave_idempotencia, estado) values ('enviar_invitacion', $1, 'PENDIENTE')`,
-      [nombreAlAzar("clave-pendiente")],
+      [nombreUnico("clave-pendiente")],
     );
     s.claveDeUnTrabajo = (
       await dueno.query<{ clave_idempotencia: string }>(
@@ -290,7 +290,7 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
         vistos.push(...pagina.filas.map((t) => t.id));
         paginas += 1;
         // Llega un tenant nuevo en medio de la paginación: no duplica ni salta ninguno de los ya vistos.
-        if (paginas === 1) await sembrarTenant(dueno, { nombre: nombreAlAzar("nuevo") });
+        if (paginas === 1) await sembrarTenant(dueno, { nombre: nombreUnico("nuevo") });
         if (pagina.siguienteDespuesDeId === null) break;
         despuesDeId = pagina.siguienteDespuesDeId;
       }
@@ -619,20 +619,66 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
       const { modulos } = esperar(await consultas.verConfiguracion(soporte));
       expect(modulos.map((m) => m.clave)).toEqual([
         "administracion",
+        "caja",
         "catalogo",
+        "cierre",
+        "clientes",
+        "comandas",
+        "compras",
         "facturacion",
+        "produccion",
+        "salon",
         "stock",
+        "ventas",
         "vidriera",
       ]);
       expect(modulos[0]).toMatchObject({ estado: "disponible", obligatorio: true });
-      // `facturacion` es disponible desde 2026-11-04 (no obligatoria: cada empresa la activa); el resto sigue en desarrollo.
-      expect(modulos[2]).toMatchObject({
+      // `facturacion` es disponible desde 2026-11-04 (no obligatoria: cada empresa la activa); stock desde E5; el resto sigue en desarrollo.
+      expect(modulos[7]).toMatchObject({
         clave: "facturacion",
         estado: "disponible",
         obligatorio: false,
       });
+      // `clientes` es disponible y obligatorio (lo usan todos los planes); `compras` es disponible y no obligatorio (E9).
+      expect(modulos.find((m) => m.clave === "clientes")).toMatchObject({
+        estado: "disponible",
+        obligatorio: true,
+      });
+      expect(modulos.find((m) => m.clave === "compras")).toMatchObject({
+        estado: "disponible",
+        obligatorio: false,
+      });
+      // `cierre` es disponible desde E3b (no obligatorio: cada empresa lo activa).
+      expect(modulos[3]).toMatchObject({
+        clave: "cierre",
+        estado: "disponible",
+        obligatorio: false,
+      });
+      // `stock` es disponible desde E5 (no obligatorio: cada empresa lo activa).
+      expect(modulos.find((m) => m.clave === "stock")).toMatchObject({
+        estado: "disponible",
+        obligatorio: false,
+      });
+      // `catalogo`, `caja` y `ventas` son disponibles desde el 15/11/2026 (DEC-0463; no obligatorios: cada empresa los activa).
+      for (const clave of ["catalogo", "caja", "ventas"]) {
+        expect(modulos.find((m) => m.clave === clave)).toMatchObject({
+          estado: "disponible",
+          obligatorio: false,
+        });
+      }
       for (const modulo of modulos.filter(
-        (m) => m.clave !== "administracion" && m.clave !== "facturacion",
+        (m) =>
+          ![
+            "administracion",
+            "facturacion",
+            "cierre",
+            "stock",
+            "clientes",
+            "compras",
+            "catalogo",
+            "caja",
+            "ventas",
+          ].includes(m.clave),
       )) {
         expect(modulo, modulo.clave).toMatchObject({ estado: "en_desarrollo", obligatorio: false });
       }

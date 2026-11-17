@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0308",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En el nivel simple la compra no lleva factura; con el nivel de comprobante la factura es opcional; el nivel 3 y el 4 están apagados hasta tener perilla.",
+  "que_cambia": "Quien quiera cargar una factura tiene que subir el nivel; se corrige cambiando una regla del caso de uso.",
+  "donde": "src/modulos/compras/casos-de-uso/registrar-compra.ts"
+}

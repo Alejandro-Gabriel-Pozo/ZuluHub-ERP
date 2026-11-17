@@ -6,8 +6,7 @@ import { describe, expect, it } from "vitest";
  * `.github/workflows/migrar.yml` (web-armazon §5.7): la única forma en que las migraciones llegan a una base
  * real. Corre con secretos de la base y como el dueño de la base, así que estas propiedades lo mantienen
  * seguro; si alguien las quita, esta prueba se pone roja. Es una lectura del texto del archivo (no hay un lector
- * de YAML entre las dependencias); `zizmor` (job «flujos» del CI) revisa el resto. Complementa a
- * `workflow-migrar-base.test.ts`, que cuida el workflow anterior.
+ * de YAML entre las dependencias); `zizmor` (job «flujos» del CI) revisa el resto.
  */
 
 const TEXTO = readFileSync(join(import.meta.dirname, "../../.github/workflows/migrar.yml"), "utf8");

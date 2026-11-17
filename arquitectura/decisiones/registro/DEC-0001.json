@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0001",
+  "fecha": "2026-11-11",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Los costos (permiso costos.ver) los ven solo el gerente y el administrador; el operador no.",
+  "que_cambia": "El operador deja de ver costos; si se corrige, se amplía o se achica quién los ve.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila A1 (E5)"
+}

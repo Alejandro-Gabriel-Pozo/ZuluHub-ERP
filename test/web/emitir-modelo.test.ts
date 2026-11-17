@@ -205,6 +205,13 @@ describe("revisar", () => {
     });
   });
 
+  it("un pasaporte con letras se muestra completo y en mayúsculas, como lo va a guardar el servidor", () => {
+    expect(
+      revision([P1], "", cliente({ documento: "PASAPORTE", numero: "abc123456" })).cliente
+        .secundario,
+    ).toBe("Pasaporte ABC123456");
+  });
+
   it("sin IVA: los renglones no muestran alícuota aunque haya una escrita", () => {
     const v = revision([P1], "", clienteInicial, [renglon({ alicuota: "21" })], false);
     expect(v.renglones.filas[0]?.iva).toBeNull();
@@ -331,6 +338,7 @@ describe("los textos de Emitir: exactamente estos (cada uno con su fuente en el 
       emitir_condicion_iva_liberado: "IVA Liberado – Ley N° 19.640",
       emitir_condicion_iva_no_alcanzado: "IVA No Alcanzado",
       emitir_condicion_consumidor_final: "Consumidor Final",
+      emitir_venta_numero: "Venta N.º {numero}",
     });
   });
 

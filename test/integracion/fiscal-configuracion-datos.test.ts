@@ -9,7 +9,7 @@ import {
 import { emisorId } from "../../src/primitivas/identificadores/marca";
 import { err, ok } from "../../src/primitivas/resultado/resultado";
 import type { Dato } from "../../src/puertos/sin-secretos";
-import { cuitAlAzar, crearBaseAparte } from "./entorno";
+import { cuitUnico, crearBaseAparte } from "./entorno";
 import {
   casosDeConfiguracion,
   crearEntornoDeConfiguracion,
@@ -425,7 +425,7 @@ describe.skipIf(base === null)("fiscal T5: datos fiscales y regla del emisor", (
       const secundario = (
         await filas<{ id: string }>(
           "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-          [e.mundo.empresa, cuitAlAzar()],
+          [e.mundo.empresa, cuitUnico()],
         )
       )[0]?.id as string;
       const { borradorId } = await borradorCompleto(e);
@@ -782,7 +782,7 @@ describe.skipIf(base === null)("fiscal T5: datos fiscales y regla del emisor", (
       const secundario = (
         await filas<{ id: string }>(
           "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-          [e.mundo.empresa, cuitAlAzar()],
+          [e.mundo.empresa, cuitUnico()],
         )
       )[0]?.id as string;
       const { borradorId, version } = await borradorCompleto(e);

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0334",
+  "fecha": "2026-11-12",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Desactivar un producto se frena si tiene existencia distinta de cero o un conteo abierto con cargas; ocultar un producto con stock exige dejarlo en cero antes.",
+  "que_cambia": "Cambia una acción que ya estaba en main: antes desactivar dejaba pasar productos con stock.",
+  "donde": "Pedernal-docs 11-especificaciones/carta-real-especificacion.md §11 Q1 y §12 N-4 (12/11/2026); src/modulos/catalogo/casos-de-uso/editar-producto.ts"
+}

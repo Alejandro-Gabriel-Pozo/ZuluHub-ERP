@@ -20,10 +20,11 @@ import {
   crearBarrera,
   crearEmpresaActiva,
   crearEntornoDePrueba,
-  nombreAlAzar,
+  nombreUnico,
   type EmpresaDePrueba,
   type TxDePrueba,
 } from "./entorno";
+import { sufijoUnico } from "./unicos";
 
 /**
  * W6 contra una base real, con los roles limitados y el contexto firmado:
@@ -68,7 +69,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
     usuario = (
       await dueno.query<{ id: string }>(
         `insert into autenticacion."user" (name, email, "emailVerified") values ('Cron', $1, true) returning id`,
-        [`cron-${randomUUID().slice(0, 8)}@ejemplo.test`],
+        [`cron-${sufijoUnico()}@ejemplo.test`],
       )
     ).rows[0]?.id as string;
   });
@@ -94,7 +95,7 @@ describe.skipIf(base === null)("rutas de sistema contra una base real", () => {
   });
 
   const encolar = async (): Promise<string> => {
-    const clave = nombreAlAzar("clave");
+    const clave = nombreUnico("clave");
     const r = await entorno.ejecutar({ contexto: comoEmpresa(empresa.empresa) }, async (tx) =>
       ok(
         await tx.trabajos.encolar({

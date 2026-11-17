@@ -1,0 +1,6 @@
+{
+  "grupo": "identificación fiscal, resultado y estados",
+  "archivos": "src/primitivas/identificacion-fiscal/**/*.ts,src/primitivas/resultado/**/*.ts,src/contexto/estados.ts",
+  "minutos": 4.3,
+  "pruebas": "src/primitivas/identificacion-fiscal src/primitivas/resultado src/contexto"
+}

@@ -162,12 +162,12 @@ describe("las filas y el teclado", () => {
     await render(
       enArmazon(
         "Puntos de venta",
-        puntos(PUNTOS, { permitida: false, motivo: "No tiene permiso para hacer esto." }),
+        puntos(PUNTOS, { permitida: false, motivo: "No tenés permiso para hacer esto." }),
       ),
     );
     const agregar = page.getByRole("button", { name: "Nuevo punto de venta" });
     await expect.element(agregar).toBeDisabled();
-    await expect.element(page.getByText("No tiene permiso para hacer esto.")).toBeVisible();
+    await expect.element(page.getByText("No tenés permiso para hacer esto.")).toBeVisible();
     expect(page.getByRole("link", { name: "Nuevo punto de venta" }).elements()).toHaveLength(0);
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
   });

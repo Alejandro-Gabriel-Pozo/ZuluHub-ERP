@@ -41,8 +41,8 @@ import {
   crearBaseAparte,
   crearEntornoDePrueba,
   crearPropietario,
-  cuitAlAzar,
-  nombreAlAzar,
+  cuitUnico,
+  nombreUnico,
 } from "./entorno";
 import { crearMembresiaDeBase, crearPersonaDeBase } from "./fixtures-identidad";
 
@@ -184,7 +184,7 @@ describe.skipIf(base === null)("consultas de grupo: listarEmpresasDelGrupo", () 
     ahora: AHORA_DE_PRUEBA,
   });
 
-  const tenantNuevo = async (nombre: string = nombreAlAzar("grupo")): Promise<TenantId> => {
+  const tenantNuevo = async (nombre: string = nombreUnico("grupo")): Promise<TenantId> => {
     const r = await entorno.ejecutar(
       { contexto: comoPlataforma(), aislamiento: "read committed" },
       async ({ tenants }) => ({ ok: true as const, valor: (await tenants.crear(nombre)).id }),
@@ -218,7 +218,7 @@ describe.skipIf(base === null)("consultas de grupo: listarEmpresasDelGrupo", () 
     const r = await entorno.ejecutar(
       { contexto: comoPlataforma(), aislamiento: "read committed" },
       async ({ empresas }) => {
-        const cuit = cuitAlAzar();
+        const cuit = cuitUnico();
         let actual = await empresas.crear({ tenantId: tenant, cuit, razonSocial });
         for (const [paso, motivo] of CAMINOS[estado]) {
           const cambio = await empresas.cambiarEstado(actual.id, actual.version, {

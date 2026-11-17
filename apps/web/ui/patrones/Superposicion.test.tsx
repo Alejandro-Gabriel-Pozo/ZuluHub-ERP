@@ -5,6 +5,7 @@ import { page, userEvent } from "vitest/browser";
 import { Boton } from "../componentes/Boton.cliente";
 import { Campo } from "../componentes/Campo";
 import { violacionesDeAccesibilidad } from "../pruebas/ayudas";
+import { useEnvioConClave } from "./useEnvioConClave";
 import { Superposicion, type PropositoDeSuperposicion } from "./Superposicion";
 
 function Ejemplo({
@@ -39,7 +40,7 @@ function Ejemplo({
           setAbierta(false);
         }}
       >
-        <Campo etiqueta="Nombre" valor={nombre} alCambiar={setNombre} />
+        <Campo dato="pendiente" etiqueta="Nombre" valor={nombre} alCambiar={setNombre} />
         <Boton>Cobrar $ 100,00</Boton>
         <Boton variante="secundaria">Volver</Boton>
       </Superposicion>
@@ -62,6 +63,49 @@ async function abrir() {
 
 const dentro = (): boolean =>
   document.querySelector("dialog")?.contains(document.activeElement) ?? false;
+
+/**
+ * Un diálogo de confirmar con un envío de verdad: el servidor falso cuenta cuántos pedidos le llegan y con qué clave.
+ * Contesta cuando la prueba lo libera (`respuesta`), no a los N ms: un temporizador corto vence antes del Escape en una máquina
+ * cargada y el envío «termina» (el diálogo se puede cerrar) sin que la prueba haya mirado «no se cierra mientras envía» (caso real: #286, #332).
+ */
+function ConfirmarConEnvio({
+  pedidos,
+  respuesta,
+}: {
+  pedidos: string[];
+  respuesta: Promise<void>;
+}) {
+  const [abierta, setAbierta] = useState(false);
+  const envio = useEnvioConClave<string, string>({
+    enviar: async (clave) => {
+      pedidos.push(clave);
+      await respuesta;
+      return { ok: true, valor: "hecho" };
+    },
+    textos: { sinConexion: "Sin conexión", verificando: "Verificando" },
+  });
+  return (
+    <>
+      <button type="button" onClick={() => setAbierta(true)}>
+        Abrir
+      </button>
+      <Superposicion
+        abierta={abierta}
+        titulo="Medio de pago"
+        proposito="confirmar"
+        cerrable={!envio.enCurso}
+        etiquetaDeCerrar="Cerrar"
+        alCerrar={() => setAbierta(false)}
+      >
+        <Boton alTocar={envio.enviar} enviando={envio.enCurso} textoEnviando="Enviando…">
+          Cobrar $ 100,00
+        </Boton>
+        <output data-testid="estado">{envio.estado.tipo}</output>
+      </Superposicion>
+    </>
+  );
+}
 
 describe("Superposicion", () => {
   it.each(PROPOSITOS)(
@@ -97,6 +141,24 @@ describe("Superposicion", () => {
     const dialogo = document.querySelector("dialog");
     expect(dialogo?.matches(":modal")).toBe(true);
     expect(dialogo?.open).toBe(true);
+  });
+
+  it("doble toque en el botón de confirmar: un solo envío, con una sola clave; no se cierra mientras envía", async () => {
+    const pedidos: string[] = [];
+    let liberar: () => void = () => undefined;
+    const respuesta = new Promise<void>((resolver) => {
+      liberar = resolver;
+    });
+    await render(<ConfirmarConEnvio pedidos={pedidos} respuesta={respuesta} />);
+    await abrir();
+    await userEvent.dblClick(page.getByRole("button", { name: "Cobrar $ 100,00" }));
+    // Una pausa deliberada y larga: el envío sigue en curso hasta que la prueba lo libere, por lento que llegue el Escape.
+    await new Promise((r) => setTimeout(r, 120));
+    await userEvent.keyboard("{Escape}");
+    expect(document.querySelector("dialog")?.open).toBe(true);
+    liberar();
+    await expect.element(page.getByTestId("estado")).toHaveTextContent("hecho");
+    expect(pedidos).toHaveLength(1);
   });
 
   it("cerrada no tiene contenido ni se ve", async () => {

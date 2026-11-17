@@ -45,6 +45,13 @@ describe("armarPlataforma", () => {
       expect.arrayContaining(["crearMarca", "crearPlan", "asignarPlan", "activarModuloDeEmpresa"]),
     );
     expect(Object.keys(plataforma.casosDeUsoDeDominios())).toContain("agregarDominio");
+    expect(Object.keys(plataforma.casosDeUsoDeListas()).sort()).toEqual([
+      "agregarValorDeLista",
+      "corregirNombreDeValor",
+      "desactivarValorDeLista",
+      "reactivarValorDeLista",
+    ]);
+    expect(Object.keys(plataforma.consultasDeListas())).toEqual(["listarValoresDeLista"]);
     expect(Object.keys(plataforma.casosDeUsoDeSoporte())).toEqual(
       expect.arrayContaining(["explicarPorQue", "registrarReferenciaDeError"]),
     );

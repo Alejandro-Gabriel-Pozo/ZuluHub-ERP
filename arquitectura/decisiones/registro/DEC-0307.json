@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0307",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "El importe de un pago de factura es el total que dice el papel, no el calculado; un pago por factura, sin parciales, y por ahora no mueve la caja.",
+  "que_cambia": "Cambia cuánto figura pagado cuando el papel difiere del cálculo; si se corrige, el pago saldría de la caja o admitiría parciales.",
+  "donde": "src/modulos/compras/casos-de-uso/pagos.ts"
+}

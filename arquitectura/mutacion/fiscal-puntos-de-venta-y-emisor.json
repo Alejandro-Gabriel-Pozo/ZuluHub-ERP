@@ -1,0 +1,6 @@
+{
+  "grupo": "fiscal (puntos de venta y emisor)",
+  "archivos": "src/modulos/fiscal/dominio/punto-de-venta.ts,src/modulos/fiscal/dominio/resolucion-de-emisor.ts",
+  "minutos": 3.1,
+  "pruebas": "src/modulos/fiscal"
+}

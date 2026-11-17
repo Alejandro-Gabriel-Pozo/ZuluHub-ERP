@@ -1,0 +1,6 @@
+{
+  "grupo": "consola de plataforma (contexto de la sesión, puerta y host fijo, P8b y P8c)",
+  "archivos": "src/composicion/sesion-de-plataforma.ts,src/composicion/puerta-de-consola.ts,src/composicion/autenticacion-de-host-fijo.ts",
+  "minutos": 2.3,
+  "pruebas": "src/composicion/sesion-de-plataforma.test.ts src/composicion/puerta-de-consola.test.ts src/composicion/autenticacion-de-host-fijo.test.ts"
+}

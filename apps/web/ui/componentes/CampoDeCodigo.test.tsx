@@ -7,7 +7,15 @@ import { CampoDeCodigo } from "./CampoDeCodigo";
 
 function Controlado(props: { error?: string; ayuda?: string; deshabilitado?: boolean }) {
   const [valor, setValor] = useState("");
-  return <CampoDeCodigo etiqueta="Código" valor={valor} alCambiar={setValor} {...props} />;
+  return (
+    <CampoDeCodigo
+      etiqueta="Código"
+      valor={valor}
+      alCambiar={setValor}
+      {...props}
+      dato="pendiente"
+    />
+  );
 }
 
 describe("CampoDeCodigo", () => {

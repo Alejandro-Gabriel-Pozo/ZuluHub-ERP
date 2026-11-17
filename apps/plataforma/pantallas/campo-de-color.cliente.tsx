@@ -34,6 +34,7 @@ export function CampoDeColor({
         }}
       >
         <Campo
+          dato="pendiente"
           etiqueta={etiqueta}
           nombre={`color-${etiqueta}`}
           autoComplete="off"

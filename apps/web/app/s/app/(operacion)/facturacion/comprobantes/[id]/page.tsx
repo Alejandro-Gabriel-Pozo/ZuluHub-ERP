@@ -3,7 +3,7 @@ import { FORMA_DE_ID } from "../../../../../../../pantallas/comprobante-por-id";
 import { conTitulo, pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
 import { verElComprobante } from "../../../../../../../servidor/facturacion";
 import { puedeEmitirNotasDeCredito } from "../../../../../../../servidor/modulos";
-import { ErrorDelDetalle } from "../../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import {
   accionDeAnularDelDetalle,
   porQueNoSeAnula,

@@ -4,7 +4,40 @@ import {
   type CadenasDeConfianza,
 } from "../adaptadores/certificados/lector-x509";
 import { CADENAS_DE_CONFIANZA_DE_ARCA } from "./cadenas-de-confianza-de-arca";
+import { crearEgresoDeCaja } from "./egreso-de-caja";
+import { crearIvaDeLaEmpresa } from "./iva-de-la-empresa";
 import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../capacidades/permisos/empresa";
+import { CATALOGO_DE_MODULOS } from "../capacidades/modulos/catalogo";
+import { CATALOGO_DE_PERILLAS } from "../capacidades/planes/perillas";
+import {
+  crearCasosDeUsoDeCaja,
+  crearConsultasDeCaja,
+  ganchoDeSucursalDeCaja,
+} from "../modulos/caja/publico";
+import { crearCasosDeUsoDeCatalogo, crearConsultasDeCatalogo } from "../modulos/catalogo/publico";
+import { crearCasosDeUsoDeComandas, crearConsultasDeComandas } from "../modulos/comandas/publico";
+import { crearCasosDeUsoDeSalon, crearConsultasDeSalon } from "../modulos/salon/publico";
+import { crearCasosDeUsoDeClientes, crearConsultasDeClientes } from "../modulos/clientes/publico";
+import { crearCasosDeUsoDeCompras, crearConsultasDeCompras } from "../modulos/compras/publico";
+import {
+  crearCasosDeUsoDeProduccion,
+  crearConsultasDeProduccion,
+} from "../modulos/produccion/publico";
+import {
+  crearCasosDeUsoDeStock,
+  crearConsultasDeStock,
+  crearPuertosDeStock,
+} from "../modulos/stock/publico";
+import { crearCasosDeUsoDeVentas, crearConsultasDeVentas } from "../modulos/ventas/publico";
+import { crearFacturadorDeTickets } from "./facturacion-de-tickets";
+import { crearVidrieraPublica } from "../adaptadores/postgres/vidriera-publica";
+import { crearExistenciasDeCatalogo, generarCodigoDeCarta } from "./existencias-de-catalogo";
+import { crearStockDeVentas } from "./stock-de-ventas";
+import {
+  crearCasosDeUsoDeCierre,
+  crearConsultasDeCierre,
+  crearGanchoDeCierreAlDesactivar,
+} from "../modulos/cierre/publico";
 import { crearCasosDeUsoDeEmpresas, crearConsultasDeEmpresas } from "../modulos/empresas/publico";
 import {
   crearCasosDeUsoDeCertificados,
@@ -18,6 +51,9 @@ import {
   crearConsultasDeIdentidad,
   crearConsultasDeSesion,
 } from "../modulos/identidad/publico";
+import type { LecturasCompartidas } from "../puertos/transacciones";
+import { APORTES_AL_CIERRE } from "./aportes-al-cierre";
+import { ticketsPorCobranzaDeLaComposicion } from "./cierre-de-caja";
 import type { Conexiones } from "./conexiones";
 import { armarEmisionFiscal } from "./emision-fiscal";
 import { perezoso } from "./perezoso";
@@ -70,13 +106,183 @@ export function armarWeb(conexiones: Conexiones, opciones: OpcionesDeWeb = {}) {
   return {
     resolucionDeHost: () => conexiones.resolucionDeHost(),
     configuracionPublicaDeHost: () => conexiones.configuracionPublicaDeHost(),
+    /**
+     * La carta pública con datos REALES (T3 de la carta real): la misma puerta pública (`PEDERNAL_DB_PUBLICO`, rol `pedernal_publico`), solo lectura. Hoy `apps/web`
+     * sigue con la carta de ejemplo hasta que T5 la corte y la pantalla lea de acá.
+     */
+    vidrieraPublica: perezoso(() =>
+      crearVidrieraPublica(conexiones.transaccionesPublicas(), reloj, {
+        catalogoDeModulos: CATALOGO_DE_MODULOS,
+        catalogoDePerillas: CATALOGO_DE_PERILLAS,
+      }),
+    ),
     autenticacion: () => conexiones.autenticacion(),
     barridoDeAutenticacion: () => conexiones.barridoDeAutenticacion(),
+    /** Las lecturas de un pedido que comparten una transacción (ver `LecturasCompartidas`): la misma conexión que usan las consultas. */
+    lecturasCompartidas: (): LecturasCompartidas => conexiones.transaccionesDeApp(),
     casosDeUsoDeEmpresas: perezoso(() =>
-      crearCasosDeUsoDeEmpresas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+      crearCasosDeUsoDeEmpresas({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        // Lo que nace con cada sucursal (decisión 165): «Caja 1», en la misma transacción que la sucursal.
+        ganchosDeSucursal: [ganchoDeSucursalDeCaja],
+        // Desactivar una sucursal (decisión 178): no con la jornada en auditoría; abierta sin movimiento se cierra sola; con movimiento
+        // se pide el cierre del día. Pregunta a los mismos aportes que el cierre (hoy, caja; ventas lo suma E4).
+        ganchosAlDesactivarSucursal: [
+          crearGanchoDeCierreAlDesactivar({ reglas, aportes: APORTES_AL_CIERRE }),
+        ],
+      }),
     ),
     consultasDeEmpresas: perezoso(() =>
       crearConsultasDeEmpresas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
+     * El catálogo (E2 mínimo): productos, forma de venta, precios, opciones, consumo, copia y secciones de la carta, y sus consultas. Cada
+     * uno exige SU acción al guard dentro de la transacción. El módulo `catalogo` sigue `en_desarrollo`: el guard rechaza todo con
+     * `MODULO_EN_DESARROLLO` hasta que el dueño lo pase a disponible. `cotizarParaVender` no sale por acá: es el puerto de ventas.
+     */
+    casosDeUsoDeCatalogo: perezoso(() =>
+      crearCasosDeUsoDeCatalogo({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        existencias: crearExistenciasDeCatalogo(),
+        generarCodigoDeCarta,
+      }),
+    ),
+    consultasDeCatalogo: perezoso(() =>
+      crearConsultasDeCatalogo({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
+     * El cierre del día (E3b): iniciar y cancelar la auditoría y cerrar la jornada, cada uno con su acción de `cierre`. Los aportes de los
+     * módulos que tienen algo que revisar los registra cada etapa en `aportes`: hoy el de caja (E3, tramo 8; solo cuenta si la empresa tiene
+     * `caja` activo); el de ventas lo suma E4.
+     */
+    casosDeUsoDeCierre: perezoso(() =>
+      crearCasosDeUsoDeCierre({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        aportes: APORTES_AL_CIERRE,
+      }),
+    ),
+    consultasDeCierre: perezoso(() =>
+      crearConsultasDeCierre({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        aportes: APORTES_AL_CIERRE,
+      }),
+    ),
+    /**
+     * La configuración de caja (E3): cajas, medios de pago y cuentas de cobro, cada caso con su acción de `caja`. El módulo sigue «en
+     * desarrollo» en el catálogo: el guard lo rechaza con `MODULO_EN_DESARROLLO` hasta que el tramo final lo declare disponible.
+     * La operación (sesiones, movimientos, cobro) y el cierre del día de caja (corregir un medio, declarar totales, la conciliación) salen por acá.
+     */
+    casosDeUsoDeCaja: perezoso(() =>
+      crearCasosDeUsoDeCaja({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeCaja: perezoso(() =>
+      crearConsultasDeCaja({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        // El total vigente de los tickets, que ventas informará cuando exista (E4): hoy, fail-closed (`cierre-de-caja.ts`).
+        tickets: ticketsPorCobranzaDeLaComposicion,
+      }),
+    ),
+    /**
+     * Ventas (E4): abrir, cargar, anular y cerrar la cuenta y anular el ticket, cada uno con SU acción. El módulo sigue `en_desarrollo`: el
+     * guard rechaza todo con `MODULO_EN_DESARROLLO` hasta que el dueño lo pase a disponible.
+     */
+    casosDeUsoDeVentas: perezoso(() =>
+      crearCasosDeUsoDeVentas({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        // Facturar un ticket (E1 §3.4): la composición es el único lugar donde ventas y fiscal se tocan.
+        facturador: crearFacturadorDeTickets(reglas),
+        // Descontar y devolver stock al cerrar y anular un ticket (E5-T12): la composición es el único lugar donde ventas y stock se tocan.
+        stock: crearStockDeVentas(reglas),
+      }),
+    ),
+    consultasDeVentas: perezoso(() =>
+      crearConsultasDeVentas({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        facturador: crearFacturadorDeTickets(reglas),
+      }),
+    ),
+    /**
+     * Stock (E5): depósitos, artículos, movimientos, conteos y composiciones (casos de uso) y sus consultas, cada uno con SU acción de `stock`. El
+     * módulo sigue `en_desarrollo` hasta que el dueño lo pase a disponible: el guard rechaza todo con `MODULO_EN_DESARROLLO`. Los puertos que
+     * ofrece a ventas y a compras (`crearPuertosDeStock`) no salen por acá: corren en la transacción de quien los llama y no tienen acción propia.
+     */
+    casosDeUsoDeStock: perezoso(() =>
+      crearCasosDeUsoDeStock({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeStock: perezoso(() =>
+      crearConsultasDeStock({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
+     * Producción (E6): abrir, cerrar, cancelar y anular órdenes (casos de uso) y sus consultas, cada uno con SU acción de `transformaciones`. El módulo
+     * sigue `en_desarrollo` hasta que el dueño lo pase a disponible: el guard rechaza todo con `MODULO_EN_DESARROLLO`. Escribe el libro de stock por
+     * `stock/publico.ts`, dentro de la MISMA transacción de la orden.
+     */
+    casosDeUsoDeProduccion: perezoso(() =>
+      crearCasosDeUsoDeProduccion({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeProduccion: perezoso(() =>
+      crearConsultasDeProduccion({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
+     * Comandas (E7): enviar a cocina, pedir que salga, anular un ítem enviado, quitar sin enviar, las impresoras y los trabajos de impresión, cada uno con
+     * SU acción. El módulo sigue `en_desarrollo` y sin plan (pregunta abierta del dueño): el guard rechaza todo con `MODULO_EN_DESARROLLO`. El papel se
+     * imprime en el navegador con el diálogo del sistema: el servidor solo entrega el modelo (`documentoParaImprimir`).
+     */
+    casosDeUsoDeComandas: perezoso(() =>
+      crearCasosDeUsoDeComandas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeComandas: perezoso(() =>
+      crearConsultasDeComandas({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
+     * Salón (E7): las mesas y su plano, el pedido de la mesa, el envío a cocina desde la mesa, cambiar de mesa, unir, dividir y cobrar la mesa. Orquesta
+     * ventas y comandas en la MISMA transacción; descuenta stock por el mismo puerto que ventas (la composición es el único lugar donde se tocan). El
+     * módulo sigue `en_desarrollo` y sin plan: el guard rechaza todo con `MODULO_EN_DESARROLLO`.
+     */
+    casosDeUsoDeSalon: perezoso(() =>
+      crearCasosDeUsoDeSalon({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        stock: crearStockDeVentas(reglas),
+      }),
+    ),
+    consultasDeSalon: perezoso(() =>
+      crearConsultasDeSalon({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
+     * Clientes y proveedores (E9): el directorio de partes con sus roles y vínculos (casos de uso) y sus consultas, cada uno con SU acción de `partes`. El
+     * módulo es de la empresa, no de una sucursal. Los puertos que ofrece a compras (`crearDirectorioDePartes`, `crearRegistroDePartes`) no salen por acá:
+     * corren en la transacción de quien los llama.
+     */
+    casosDeUsoDeClientes: perezoso(() =>
+      crearCasosDeUsoDeClientes({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    consultasDeClientes: perezoso(() =>
+      crearConsultasDeClientes({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /**
+     * Compras (E9, N1 y N2): la ficha del proveedor, «Comprar y recibir» con su factura y su pago, anular, el nivel y las consultas, cada uno con SU acción de
+     * `compras`. Los puertos de stock (la entrada por origen, los artículos controlados y la existencia) los arma esta composición y compras los recibe:
+     * es el único lugar donde se tocan los dos módulos.
+     */
+    casosDeUsoDeCompras: perezoso(() =>
+      crearCasosDeUsoDeCompras({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        stock: crearPuertosDeStock({ reglas }),
+        egresoDeCaja: crearEgresoDeCaja(),
+        ivaDeLaEmpresa: crearIvaDeLaEmpresa(),
+      }),
+    ),
+    consultasDeCompras: perezoso(() =>
+      crearConsultasDeCompras({ transacciones: conexiones.transaccionesDeApp(), reglas }),
     ),
     casosDeUsoDeIdentidad: perezoso(() =>
       crearCasosDeUsoDeIdentidad({

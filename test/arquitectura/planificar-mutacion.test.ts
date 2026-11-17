@@ -32,6 +32,12 @@ type Plan = {
   grupos: { grupo: string; archivos: string; pruebas: string }[];
 };
 const require = createRequire(import.meta.url);
+const { cargarLosGrupos } = require("../../arquitectura/grupos-de-mutacion.cjs") as {
+  cargarLosGrupos: (raiz: string) => {
+    grupos: { id: string; grupo: string; archivos: string; minutos: number; pruebas?: string }[];
+    mutate: string[];
+  };
+};
 const {
   planificar,
   planificarEstabilidad,
@@ -40,7 +46,6 @@ const {
   partirCi,
   LECTURAS_DE_APPS,
   JOBS_AJENOS_A_LA_MUTACION,
-  JOBS_AJENOS_A_LA_INTEGRACION,
   expandir,
   archivoDe,
   conEnlacesDelGuardian,
@@ -53,18 +58,15 @@ const {
     ci?: Ci;
     lecturas?: Record<string, string[]>;
   }) => Plan;
-  planificarEstabilidad: (e: {
-    cambios: string[];
-    dependencias: Record<string, string[]>;
-    ci?: Ci;
-    lecturas?: Record<string, string[]>;
-  }) => { corre: boolean; motivo: string };
+  planificarEstabilidad: (e: { cambios: string[]; dependencias: Record<string, string[]> }) => {
+    corre: boolean;
+    motivo: string;
+  };
   ordenarPorDuracion: <G extends { minutos?: number }>(grupos: readonly G[]) => G[];
   cambioDeCiAfecta: (ci: Ci | undefined, ajenos: readonly string[]) => boolean;
   partirCi: (texto: string) => { cabecera: string; jobs: Map<string, string> } | null;
   LECTURAS_DE_APPS: Record<string, string[]>;
   JOBS_AJENOS_A_LA_MUTACION: string[];
-  JOBS_AJENOS_A_LA_INTEGRACION: string[];
   expandir: (patrones: string, raiz: string) => string[];
   archivoDe: (entrada: string) => string;
   conEnlacesDelGuardian: (
@@ -132,11 +134,12 @@ describe("planificador de mutación: qué grupos corren", () => {
   });
 
   it.each([
-    ["la configuración de Stryker", "stryker.config.json"],
+    ["la configuración de Stryker", "stryker.config.mjs"],
     ["las dependencias", "package.json"],
     ["la configuración de vitest", "vitest.config.ts"],
     ["el workflow", ".github/workflows/ci.yml"],
-    ["los grupos de mutación", "arquitectura/grupos-de-mutacion.json"],
+    ["un grupo de mutación", "arquitectura/mutacion/cantidad.json"],
+    ["el cargador de los grupos", "arquitectura/grupos-de-mutacion.cjs"],
     ["un archivo borrado (no está en el grafo)", "src/a/dominio/borrado.ts"],
   ])("si cambia %s corren todos los grupos completos", (_nombre, archivo) => {
     const p = plan([archivo]);
@@ -298,9 +301,7 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
   });
 
   it("con los archivos reales: cualquier cambio en el guardián alcanza a todos sus archivos mutados", () => {
-    const configuracion = JSON.parse(readFileSync(join(RAIZ, "stryker.config.json"), "utf8")) as {
-      mutate: string[];
-    };
+    const configuracion = { mutate: cargarLosGrupos(RAIZ).mutate };
     const mutadosDelGuardian = expandir(configuracion.mutate.join(","), RAIZ).filter(
       (a) => a.startsWith("arquitectura/contratos/") || a.startsWith("arquitectura/deuda/"),
     );
@@ -321,23 +322,43 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
       expect(archivosDelGuardian).toContain(dato);
     }
 
-    const grupos = (
-      require("../../arquitectura/grupos-de-mutacion.json") as {
-        grupo: string;
-        archivos: string;
-        pruebas?: string;
-      }[]
-    ).map((g) => ({ ...g, expandidos: expandir(g.archivos, RAIZ) }));
+    const grupos = cargarLosGrupos(RAIZ).grupos.map((g) => ({
+      ...g,
+      expandidos: expandir(g.archivos, RAIZ),
+    }));
     // El grafo mínimo que hace falta: cada prueba real del guardián importa a sus auxiliares reales.
     const pruebas = globSync("test/arquitectura/guardian-*.ts", { cwd: RAIZ });
     expect(pruebas.length).toBeGreaterThan(0);
     const auxiliares = pruebas.filter((p) => !p.endsWith(".test.ts"));
     expect(auxiliares.length).toBeGreaterThan(0);
+    // Cada prueba del filtro de un grupo ejerce los archivos de ese grupo (como en el grafo real): sin eso, un grupo cuyo filtro no
+    // es de `guardian-*` no tendría ninguna prueba que lo alcance y el plan por filtro lo saltearía con razón.
+    const delFiltro = globSync("test/arquitectura/*.test.ts", { cwd: RAIZ });
+    const ejercidos: Record<string, string[]> = {};
+    const delCodigo = (a: string) =>
+      a.startsWith("arquitectura/contratos/") || a.startsWith("arquitectura/deuda/");
+    // (Un grupo cuyo filtro no es de `guardian-*` no lee `ci.yml` ni los demás archivos del guardián: lo saltearía con razón.)
+    const delGuardian = (g: { pruebas?: string }) =>
+      (g.pruebas ?? "").split(/\s+/).every((p) => p.startsWith("test/arquitectura/guardian-"));
+    for (const g of grupos.filter((g) => g.expandidos.every(delCodigo) && delGuardian(g))) {
+      for (const entrada of (g.pruebas ?? "").split(/\s+/).filter(Boolean)) {
+        for (const prueba of delFiltro.filter((p) => p.includes(entrada))) {
+          ejercidos[prueba] = [...(ejercidos[prueba] ?? auxiliares), ...g.expandidos];
+        }
+      }
+    }
     const dependencias = conEnlacesDelGuardian(
-      Object.fromEntries(pruebas.map((p) => [p, p.endsWith(".test.ts") ? auxiliares : []])),
+      {
+        ...Object.fromEntries(pruebas.map((p) => [p, p.endsWith(".test.ts") ? auxiliares : []])),
+        ...ejercidos,
+      },
       archivosDelGuardian,
     );
-    for (const cambio of [...archivosDelGuardian, ...pruebas]) {
+    // Un DEC es dato: no enciende los grupos del guardián en un PR (ver `guardian-en-pr.test.ts`).
+    const tocanElGuardian = [...archivosDelGuardian, ...pruebas].filter(
+      (a) => !a.startsWith("arquitectura/decisiones/registro/"),
+    );
+    for (const cambio of tocanElGuardian) {
       // `ci.yml` es una entrada del guardián: sin cambio de contenido en sus jobs de mutación, solo corre el guardián.
       const p = planificar({
         cambios: [cambio],
@@ -347,7 +368,15 @@ describe("planificador de mutación: el código del guardián (arquitectura/cont
       });
       expect(p.completo, cambio).toBe(false);
       const corridos = [...new Set(p.grupos.flatMap((g) => g.archivos.split(",").map(archivoDe)))];
-      expect(corridos.sort(), cambio).toEqual([...mutadosDelGuardian].sort());
+      // Un cambio en una PRUEBA solo alcanza a los grupos que la tienen en su filtro (solo esas matan sus mutantes).
+      const esperados = cambio.endsWith(".test.ts")
+        ? grupos
+            // (los grupos con filtro fuera del grafo de juguete no se resuelven y conservan la regla ancha)
+            .filter((g) => !delGuardian(g) || (g.pruebas ?? "").split(/\s+/).includes(cambio))
+            .flatMap((g) => g.expandidos.map(archivoDe))
+            .filter((a) => mutadosDelGuardian.includes(a))
+        : mutadosDelGuardian;
+      expect(corridos.sort(), cambio).toEqual([...new Set(esperados)].sort());
     }
   });
 });
@@ -394,14 +423,8 @@ describe("planificador de mutación: archivos grandes repartidos por rango de l�
 });
 
 describe("grupos de mutación contra la configuración real", () => {
-  const configuracion = JSON.parse(readFileSync(join(RAIZ, "stryker.config.json"), "utf8")) as {
-    mutate: string[];
-  };
-  const grupos = require("../../arquitectura/grupos-de-mutacion.json") as {
-    grupo: string;
-    archivos: string;
-    pruebas?: string;
-  }[];
+  const { grupos, mutate } = cargarLosGrupos(RAIZ);
+  const configuracion = { mutate };
   const base = (entrada: string): string => archivoDe(entrada);
 
   it("cada archivo de `mutate` está en exactamente un grupo, o repartido por rangos que lo cubren entero", () => {
@@ -516,8 +539,12 @@ describe("planificador de mutación: apps/** (las aplicaciones importan de src, 
     "test/integracion/global.ts": [],
   };
   const lecturas = { "test/web/contraste.test.ts": ["apps/web/ui/tokens.css"] };
+  // El grupo «a» corre `test/web/pantalla.test.ts` además de lo suyo: sin eso el plan por filtro no lo alcanzaría por la pantalla.
+  const GRUPOS_APPS: Grupo[] = GRUPOS.map((g) =>
+    g.grupo === "a" ? { ...g, pruebas: "src/a test/web/pantalla" } : g,
+  );
   const enApps = (cambios: string[], ci?: Ci): Plan =>
-    planificar({ cambios, grupos: GRUPOS, dependencias, lecturas, ...(ci ? { ci } : {}) });
+    planificar({ cambios, grupos: GRUPOS_APPS, dependencias, lecturas, ...(ci ? { ci } : {}) });
 
   it.each([
     ["una pantalla que ninguna prueba importa", "apps/web/app/suelta.tsx"],
@@ -630,7 +657,7 @@ describe("planificador de mutación: apps/** (las aplicaciones importan de src, 
     );
     expect(
       sinDeclarar,
-      "estas pruebas mencionan `apps/` y leen archivos: si leen archivos de apps/ como texto, declaralas en LECTURAS_DE_APPS (arquitectura/planificar-mutacion.cjs)",
+      "estas pruebas mencionan `apps/` y leen archivos: si leen archivos de apps/ como texto, declaralas en LECTURAS_DE_APPS (arquitectura/lecturas-de-apps.json)",
     ).toEqual([]);
   });
 });
@@ -798,10 +825,6 @@ describe("planificador de mutación: ci.yml", () => {
       }
       // todo job ajeno existe de verdad (la lista no queda vieja) y el real es entendible por el planificador
       for (const id of JOBS_AJENOS_A_LA_MUTACION) expect(ids, id).toContain(id);
-      for (const id of JOBS_AJENOS_A_LA_INTEGRACION) expect(ids, id).toContain(id);
-      expect(JOBS_AJENOS_A_LA_INTEGRACION).not.toContain("estabilidad");
-      expect(JOBS_AJENOS_A_LA_INTEGRACION).not.toContain("pruebas");
-      expect(JOBS_AJENOS_A_LA_INTEGRACION).not.toContain("mutacion-plan");
     });
   });
 
@@ -868,11 +891,7 @@ describe("planificador de mutación: ci.yml", () => {
       ]) {
         expect(plan([ignorable]), ignorable).toMatchObject({ completo: false, grupos: [] });
       }
-      for (const archivo of [
-        ".github/workflows/migrar.yml",
-        ".github/workflows/migrar-base.yml",
-        ".github/CODEOWNERS",
-      ]) {
+      for (const archivo of [".github/workflows/migrar.yml", ".github/CODEOWNERS"]) {
         expect(plan([archivo]).completo, archivo).toBe(true);
       }
     });
@@ -929,14 +948,10 @@ describe("planificador de mutación: orden por duración descendente", () => {
   });
 
   it("con las duraciones reales: todos los grupos declaran su duración y el plan completo sale de mayor a menor", () => {
-    const reales = (
-      require("../../arquitectura/grupos-de-mutacion.json") as {
-        grupo: string;
-        archivos: string;
-        pruebas?: string;
-        minutos?: number;
-      }[]
-    ).map((x) => ({ ...x, expandidos: expandir(x.archivos, RAIZ) }));
+    const reales = cargarLosGrupos(RAIZ).grupos.map((x) => ({
+      ...x,
+      expandidos: expandir(x.archivos, RAIZ),
+    }));
     for (const x of reales) {
       expect(
         typeof x.minutos === "number" && x.minutos > 0,
@@ -954,41 +969,61 @@ describe("planificador de mutación: orden por duración descendente", () => {
 });
 
 describe("planificador: cuándo se repite la integración (Estabilidad x12)", () => {
+  // Regla del dueño (2026-11-07): en un PR corre SOLO si el cambio toca pruebas de integración, persistencia,
+  // migraciones, las reglas SQL o workflows; ante lo que no se puede explicar, corre (fail-closed).
   const dependencias: Record<string, string[]> = {
     "src/a/dominio/a.ts": [],
     "src/a/dominio/a.test.ts": ["src/a/dominio/a.ts"],
-    "src/b/persistencia/b.ts": ["src/a/dominio/a.ts"],
+    "src/modulos/b/persistencia/b.ts": ["src/a/dominio/a.ts"],
+    "src/modulos/b/aplicacion/servicio.ts": ["src/modulos/b/persistencia/b.ts"],
+    "src/adaptadores/postgres/pool.ts": [],
+    "src/adaptadores/pdf/pdf.ts": [],
     "src/solo-unidad/s.ts": [],
     "src/solo-unidad/s.test.ts": ["src/solo-unidad/s.ts"],
     "src/huerfano.ts": [],
-    "scripts/migrar-base.ts": [],
     "test/integracion/global.ts": [],
-    "test/integracion/topes.ts": [],
-    "test/integracion/b.test.ts": ["src/b/persistencia/b.ts", "test/integracion/global.ts"],
-    "test/web/contraste.test.ts": [],
+    "test/integracion/b.test.ts": [
+      "src/modulos/b/aplicacion/servicio.ts",
+      "src/a/dominio/a.ts",
+      "apps/web/app/importada.tsx",
+    ],
     "test/web/pantalla.test.ts": ["apps/web/app/pagina.tsx"],
     "apps/web/app/pagina.tsx": ["src/solo-unidad/s.ts"],
-    "apps/web/app/suelta.tsx": [],
-    "apps/web/ui/tokens.css": [],
-    "test/integracion/web.test.ts": ["apps/web/app/importada.tsx"],
     "apps/web/app/importada.tsx": [],
+    "apps/web/app/suelta.tsx": [],
+    "arquitectura/contratos/guardian.cjs": [],
+    "arquitectura/lint-sql.cjs": [],
+    "arquitectura/lint-web.cjs": [],
+    // Conocidos por el grafo a propósito: así solo la lista DISPARAN_ESTABILIDAD (y no el «desconocido corre») los hace correr,
+    // y quitar un patrón de la lista hace fallar su caso.
+    "migraciones/0009_algo.sql": [],
+    "scripts/migrar-base.ts": [],
+    ".github/workflows/ci.yml": [],
+    ".github/workflows/migrar.yml": [],
+    "test/integracion/nuevo-auxiliar.ts": [],
+    "test/integracion/borrada.test.ts": [],
+    "src/modulos/c/persistencia/nueva.ts": [],
   };
-  const lecturas = { "test/web/contraste.test.ts": ["apps/web/ui/tokens.css"] };
-  const e = (cambios: string[], ci?: Ci) =>
-    planificarEstabilidad({ cambios, dependencias, lecturas, ...(ci ? { ci } : {}) });
-  const CORRE = true;
+  const e = (cambios: string[]) => planificarEstabilidad({ cambios, dependencias });
 
   it.each([
     ["una prueba de integración", "test/integracion/b.test.ts"],
     ["lo que vitest carga antes de todo", "test/integracion/global.ts"],
-    ["los topes de la integración", "test/integracion/topes.ts"],
     ["un auxiliar nuevo de la integración", "test/integracion/nuevo-auxiliar.ts"],
+    ["una prueba de integración borrada", "test/integracion/borrada.test.ts"],
+    ["la persistencia de un módulo", "src/modulos/b/persistencia/b.ts"],
+    [
+      "la persistencia de un módulo (archivo nuevo, fuera del grafo)",
+      "src/modulos/c/persistencia/nueva.ts",
+    ],
+    ["el adaptador de Postgres", "src/adaptadores/postgres/pool.ts"],
     ["una migración", "migraciones/0009_algo.sql"],
+    ["las reglas SQL", "arquitectura/lint-sql.cjs"],
     ["un script (algunos los lanza la integración como proceso aparte)", "scripts/migrar-base.ts"],
-    ["un archivo de src/ que importa una prueba de integración", "src/b/persistencia/b.ts"],
-    ["lo que importa lo anterior (por cierre)", "src/a/dominio/a.ts"],
-    ["una pantalla que importa una prueba de integración", "apps/web/app/importada.tsx"],
-    ["la configuración de vitest", "vitest.config.ts"],
+    ["el workflow principal", ".github/workflows/ci.yml"],
+    ["el workflow de migración", ".github/workflows/migrar.yml"],
+    ["un workflow nuevo", ".github/workflows/nuevo.yml"],
+    ["la configuración de vitest (fuera del grafo)", "vitest.config.ts"],
     ["las dependencias", "package.json"],
     ["el lockfile", "package-lock.json"],
     ["el tsconfig", "tsconfig.json"],
@@ -996,31 +1031,33 @@ describe("planificador: cuándo se repite la integración (Estabilidad x12)", ()
     ["la configuración de una app", "apps/web/package.json"],
     ["un archivo cualquiera fuera del grafo", "neon.ts"],
     ["el CODEOWNERS", ".github/CODEOWNERS"],
-    ["los workflows de migración", ".github/workflows/migrar-base.yml"],
   ])("corre si cambia %s", (_nombre, archivo) => {
-    expect(e([archivo]).corre, archivo).toBe(CORRE);
+    expect(e([archivo]).corre, archivo).toBe(true);
   });
 
   it.each([
     ["documentación", "README.md"],
     ["dependabot", ".github/dependabot.yml"],
     ["otros workflows (codeql, gate rápido)", ".github/workflows/codeql.yml"],
+    [
+      "un servicio de aplicación que una prueba de integración ejercita",
+      "src/modulos/b/aplicacion/servicio.ts",
+    ],
+    ["un dominio que una prueba de integración ejercita", "src/a/dominio/a.ts"],
+    ["otro adaptador (no es el de Postgres)", "src/adaptadores/pdf/pdf.ts"],
+    ["una pantalla que una prueba de integración importa", "apps/web/app/importada.tsx"],
     ["una pantalla que ninguna prueba alcanza", "apps/web/app/suelta.tsx"],
-    ["una pantalla que solo importan pruebas que no son de integración", "apps/web/app/pagina.tsx"],
     ["un archivo de src/ que solo alcanzan pruebas de unidad", "src/solo-unidad/s.ts"],
     ["una prueba de unidad", "src/solo-unidad/s.test.ts"],
     ["un archivo de src/ que nadie importa", "src/huerfano.ts"],
-    [
-      "un archivo de apps/ que una prueba que no es de integración lee como texto",
-      "apps/web/ui/tokens.css",
-    ],
-    ["un vercel.json de una app", "apps/web/vercel.json"],
+    ["el código del guardián", "arquitectura/contratos/guardian.cjs"],
+    ["otra regla de arquitectura (no la de SQL)", "arquitectura/lint-web.cjs"],
   ])("NO corre si solo cambia %s", (_nombre, archivo) => {
     expect(e([archivo]).corre, archivo).toBe(false);
   });
 
-  it("lo desconocido gana: un cambio inocuo junto a uno que afecta, o a uno desconocido, corre", () => {
-    expect(e(["README.md", "src/b/persistencia/b.ts"]).corre).toBe(true);
+  it("lo desconocido gana: un cambio inocuo junto a uno que dispara, o a uno desconocido, corre", () => {
+    expect(e(["README.md", "src/modulos/b/persistencia/b.ts"]).corre).toBe(true);
     expect(e(["apps/web/app/suelta.tsx", "tsconfig.json"]).corre).toBe(true);
     expect(e(["src/solo-unidad/s.ts", "migraciones/0009_algo.sql"]).corre).toBe(true);
   });
@@ -1029,55 +1066,174 @@ describe("planificador: cuándo se repite la integración (Estabilidad x12)", ()
     expect(e([]).corre).toBe(false);
     expect(e(["README.md", ".gitleaks.toml", "skills-lock.json"]).corre).toBe(false);
   });
+});
 
-  describe("con cambios en ci.yml", () => {
-    const CI = [
-      "name: CI",
-      "jobs:",
-      "  estatico:",
-      "    steps:",
-      "      - run: npm run lint",
-      "  pruebas:",
-      "    steps:",
-      "      - run: npm test",
-      "  estabilidad:",
-      "    steps:",
-      "      - run: npx vitest run test/integracion",
-      "  mutacion:",
-      "    steps:",
-      "      - run: npx stryker run",
-      "",
-    ].join("\n");
-    const cambiando = (de: string, a: string): Ci => ({ antes: CI, despues: CI.replace(de, a) });
-    const ci = ".github/workflows/ci.yml";
+describe("planificador de mutación: el registro de decisiones (arquitectura/decisiones/registro/DEC-NNNN.json)", () => {
+  // Qué previene: un PR que solo suma una decisión (cada PR de las sesiones suma una) corría los ~97 grupos porque el grafo no conoce el JSON
+  // («que el grafo de importaciones no explica»): 17 de 33 planes de PR del 13 al 15/11/2026, ~520 min de máquina cada uno, y repetía la integración.
+  // Grafo de juguete: lectores del registro (una prueba del registro, una del guardián), una prueba de arquitectura que NO lo lee, y tres grupos.
+  const REGISTRO = ["arquitectura/decisiones/registro/DEC-0001.json"];
+  const DEC_NUEVA = "arquitectura/decisiones/registro/DEC-0002.json";
+  const BASE: Record<string, string[]> = {
+    "arquitectura/decisiones/decisiones.cjs": [],
+    "arquitectura/contratos/guardian.cjs": [],
+    "src/ajeno/dominio/ajeno.ts": [],
+    "src/ajeno/dominio/ajeno.test.ts": ["src/ajeno/dominio/ajeno.ts"],
+    "test/arquitectura/decisiones-control.test.ts": ["arquitectura/decisiones/decisiones.cjs"],
+    "test/arquitectura/guardian-nucleo.test.ts": ["arquitectura/contratos/guardian.cjs"],
+    "test/arquitectura/lint.test.ts": ["src/ajeno/dominio/ajeno.ts"],
+  };
+  const GRUPOS_REGISTRO: Grupo[] = [
+    {
+      grupo: "decisiones",
+      archivos: "arquitectura/decisiones/decisiones.cjs",
+      expandidos: ["arquitectura/decisiones/decisiones.cjs"],
+    },
+    {
+      grupo: "guardián",
+      archivos: "arquitectura/contratos/guardian.cjs",
+      expandidos: ["arquitectura/contratos/guardian.cjs"],
+    },
+    {
+      grupo: "ajeno",
+      archivos: "src/ajeno/dominio/*.ts",
+      expandidos: ["src/ajeno/dominio/ajeno.ts"],
+    },
+  ];
+  const grafo = (registro: string[]) =>
+    conEnlacesDelGuardian(BASE, ["arquitectura/contratos/guardian.cjs", ...registro]);
+  const corre = (cambios: string[], registro: string[] = [...REGISTRO, DEC_NUEVA]) =>
+    planificar({ cambios, grupos: GRUPOS_REGISTRO, dependencias: grafo(registro) });
 
-    it.each([
-      ["el job estabilidad", "test/integracion", "test/integracion --bail"],
-      ["el job pruebas (misma base y comando)", "npm test", "npm test -- --x"],
-      ["la cabecera", "name: CI", "name: CI2"],
-    ])("corre si cambia %s", (_nombre, de, a) => {
-      expect(e([ci], cambiando(de, a)).corre).toBe(true);
-    });
-
-    it.each([
-      ["el job estatico", "npm run lint", "npm run lint && x"],
-      ["el job de mutación", "npx stryker run", "npx stryker run --concurrency 2"],
-    ])("NO corre si solo cambia %s", (_nombre, de, a) => {
-      expect(e([ci], cambiando(de, a)).corre).toBe(false);
-    });
-
-    it("sin las dos versiones, o con un job nuevo desconocido, corre (fail-closed)", () => {
-      expect(e([ci]).corre).toBe(true);
-      expect(e([ci], { antes: null, despues: CI }).corre).toBe(true);
-      expect(
-        e([ci], { antes: CI, despues: `${CI}  nuevo:\n    steps:\n      - run: x\n` }).corre,
-      ).toBe(true);
-    });
+  it("un PR que solo agrega una decisión no corre ni el guardián ni todos (son los grupos del guardián, que en un PR dependen de tocarlo)", () => {
+    const p = corre([DEC_NUEVA]);
+    expect(p.completo).toBe(false);
+    expect(nombres(p)).toEqual([]);
+    expect(p.motivo).not.toContain("no explica");
   });
 
-  it("los workflows del repo real: las listas de jobs ajenos a la integración no incluyen a los que la ejecutan", () => {
-    for (const id of ["estabilidad", "pruebas", "mutacion-plan"]) {
-      expect(JOBS_AJENOS_A_LA_INTEGRACION, id).not.toContain(id);
+  it("si el PR toca además código, corre lo que ese código alcanza (la decisión no suma ni resta)", () => {
+    expect(nombres(corre(["src/ajeno/dominio/ajeno.ts"]))).toEqual(["ajeno"]);
+    expect(nombres(corre(["src/ajeno/dominio/ajeno.ts", DEC_NUEVA]))).toEqual(["ajeno"]);
+  });
+
+  it("una decisión BORRADA (ya no existe en disco, no es un nodo) corre todo", () => {
+    const p = corre([DEC_NUEVA], REGISTRO);
+    expect(p.completo).toBe(true);
+    expect(nombres(p).sort()).toEqual(["ajeno", "decisiones", "guardián"]);
+  });
+
+  it.each([
+    "arquitectura/decisiones/cuota.json",
+    "arquitectura/decisiones/archivos-sensibles.json",
+    "arquitectura/decisiones/registro.json",
+  ])("cualquier otro archivo de arquitectura/decisiones (%s) sigue corriendo todo", (archivo) => {
+    expect(corre([archivo]).completo).toBe(true);
+  });
+
+  it("una prueba de arquitectura que no lee el registro no entra: su grupo no corre por una decisión sola", () => {
+    expect(nombres(corre([DEC_NUEVA]))).not.toContain("ajeno");
+  });
+
+  it("la integración (Estabilidad x12) no se repite por una decisión sola, y sí si el PR toca la base", () => {
+    const dependencias = grafo([...REGISTRO, DEC_NUEVA]);
+    expect(planificarEstabilidad({ cambios: [DEC_NUEVA], dependencias }).corre).toBe(false);
+    expect(
+      planificarEstabilidad({ cambios: [DEC_NUEVA, "migraciones/0099_x.sql"], dependencias }).corre,
+    ).toBe(true);
+    expect(
+      planificarEstabilidad({ cambios: ["arquitectura/decisiones/cuota.json"], dependencias })
+        .corre,
+    ).toBe(true);
+  });
+
+  it("el árbol real: las decisiones están entre los archivos del guardián (todas con la forma DEC-NNNN.json)", () => {
+    const reales = leerArchivosDelGuardian(RAIZ).filter((a) =>
+      a.startsWith("arquitectura/decisiones/registro/"),
+    );
+    expect(reales.length).toBeGreaterThan(100);
+    for (const archivo of reales) {
+      expect(archivo).toMatch(/^arquitectura\/decisiones\/registro\/DEC-\d{4}\.json$/);
+    }
+  });
+
+  // Quién lee el registro: las pruebas que, con el mapa del guardián, quedan dependiendo de una decisión.
+  const leeElRegistro = (ruta: string) =>
+    conEnlacesDelGuardian({ [ruta]: [] }, REGISTRO)[ruta]?.includes(REGISTRO[0] as string) === true;
+
+  it("lo leen las pruebas del guardián, del registro, del nombre del producto, de los grupos y del planificador; no las demás", () => {
+    for (const ruta of [
+      "test/arquitectura/guardian-nucleo.test.ts",
+      "test/arquitectura/decisiones-control.test.ts",
+      "test/arquitectura/decisiones-apoyo.ts",
+      "test/arquitectura/nombre-del-producto.test.ts",
+      "test/arquitectura/grupos-de-mutacion.test.ts",
+      "test/arquitectura/planificar-mutacion.test.ts",
+    ]) {
+      expect(leeElRegistro(ruta), ruta).toBe(true);
+    }
+    for (const ruta of [
+      "test/arquitectura/lint.test.ts",
+      "test/arquitectura/reglas.test.ts",
+      "src/composicion/cadenas-de-confianza-de-arca.test.ts",
+    ]) {
+      expect(leeElRegistro(ruta), ruta).toBe(false);
+    }
+  });
+
+  // El hueco que no se puede cerrar del todo: una prueba NUEVA de test/arquitectura que recorra el repo y lea el registro sin llamarse como las
+  // de arriba quedaría afuera. Alarma para errores honestos, no un límite de seguridad: mira marcas de texto en las pruebas de esa carpeta.
+  // Quien la dispare, o suma su nombre a `PRUEBAS_DEL_GUARDIAN` (arquitectura/planificar-mutacion.cjs, si lee el registro) o la explica abajo
+  // (no lo lee). La corrida completa de `main` y la nocturna siguen corriendo todos los grupos: un olvido se ve a los minutos.
+  const NO_LEEN_EL_REGISTRO: Record<string, string> = {
+    "test/arquitectura/catalogo-modulos.test.ts":
+      "cita un identificador de decisión en un comentario; solo comprueba que existan carpetas (corrida sola y traza strace: 0 lecturas del registro)",
+    "test/arquitectura/compras-fuente-unica.test.ts":
+      "cita un identificador de decisión en un comentario; no abre el registro (corrida sola y traza strace: 0 lecturas)",
+    "test/arquitectura/lint.test.ts":
+      "su `readdirSync(..., { recursive })` recorre las fixtures del lint, no el repo",
+    "test/arquitectura/reglas.test.ts":
+      "su `readdirSync(..., { recursive })` recorre `src/` y `apps/`, no `arquitectura/`",
+  };
+  const MARCAS_DE_LECTURA_DEL_REPO = [
+    /ls-files/,
+    /decisiones\/registro/,
+    /\bDEC-\d{4}\b/,
+    /readdirSync\([^)]*recursive/,
+  ];
+  const sinDeclarar = (archivos: Record<string, string>) =>
+    Object.entries(archivos)
+      .filter(([ruta]) => !leeElRegistro(ruta) && !(ruta in NO_LEEN_EL_REGISTRO))
+      .filter(([, texto]) => MARCAS_DE_LECTURA_DEL_REPO.some((marca) => marca.test(texto)))
+      .map(([ruta]) => ruta);
+
+  it("ninguna prueba de test/arquitectura que recorra el repo queda sin declarar como lectora o como no lectora", () => {
+    const archivos = Object.fromEntries(
+      globSync("test/arquitectura/*.ts", { cwd: RAIZ }).map((a) => [
+        a,
+        readFileSync(join(RAIZ, a), "utf8"),
+      ]),
+    );
+    expect(
+      sinDeclarar(archivos),
+      "recorre el repo: sumá su nombre a PRUEBAS_DEL_GUARDIAN (arquitectura/planificar-mutacion.cjs) si lee el registro, o explicala en NO_LEEN_EL_REGISTRO",
+    ).toEqual([]);
+  });
+
+  it("violación inyectada: una prueba nueva con `git ls-files` que no está declarada se detecta; una lectora o una explicada, no", () => {
+    const ls = 'execFileSync("git", ["ls-files"])';
+    expect(sinDeclarar({ "test/arquitectura/escaner-nuevo.test.ts": ls })).toEqual([
+      "test/arquitectura/escaner-nuevo.test.ts",
+    ]);
+    expect(sinDeclarar({ "test/arquitectura/guardian-otro.test.ts": ls })).toEqual([]);
+    expect(
+      sinDeclarar({ "test/arquitectura/lint.test.ts": "readdirSync(d, { recursive: true })" }),
+    ).toEqual([]);
+  });
+
+  it("las pruebas explicadas como no lectoras existen (la lista no se pudre)", () => {
+    for (const ruta of Object.keys(NO_LEEN_EL_REGISTRO)) {
+      expect(existsSync(join(RAIZ, ruta)), ruta).toBe(true);
     }
   });
 });

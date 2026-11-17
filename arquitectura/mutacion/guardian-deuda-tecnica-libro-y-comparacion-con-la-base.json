@@ -1,0 +1,6 @@
+{
+  "grupo": "guardián (deuda técnica, libro y comparación con la base)",
+  "archivos": "arquitectura/deuda/libro.cjs,arquitectura/deuda/entradas.cjs,arquitectura/deuda/antes-y-despues.cjs",
+  "minutos": 7.2,
+  "pruebas": "test/arquitectura/guardian-deuda-comparacion.test.ts test/arquitectura/guardian-deuda-libro.test.ts"
+}

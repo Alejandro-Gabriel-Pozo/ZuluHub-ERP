@@ -1,0 +1,35 @@
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  min-width: 0;
+}
+
+.buscar {
+  min-width: 0;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+/* Escritorio: los tres campos y el botón en una fila. */
+@media (min-width: 64rem) {
+  .formulario {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .formulario > * {
+    flex: 0 1 14rem;
+    min-width: 10rem;
+  }
+
+  .formulario > .acciones {
+    flex: 0 0 auto;
+  }
+}

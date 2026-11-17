@@ -55,7 +55,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export const identificador = z.string().regex(UUID);
 const fecha = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 /** La forma canónica la comprueba la primitiva; acá solo se acota el largo de lo que se lee. */
-const decimal = z.string().max(40);
+export const decimal = z.string().max(40);
 /** Texto de formulario: la forma (que sea texto y no sea enorme); el largo y el contenido válidos los decide el dominio. */
 export const texto = z.string().max(1000);
 /** Un entero que un formulario manda como número o como texto de dígitos (nunca `"3.5"`, `"1e3"` ni `"-1"`). */
@@ -143,6 +143,7 @@ const formaDeListar = z.object({
   ambiente: z.enum(AMBIENTES).optional(),
   desde: fecha.optional(),
   hasta: fecha.optional(),
+  creadoDesde: fecha.optional(),
   texto: texto.optional(),
   letra: z.enum(["A", "B", "C"]).optional(),
   puntoDeVenta: entero.optional(),
@@ -220,6 +221,7 @@ function aRenglones(renglones: readonly FormaDeRenglon[]) {
       precioUnitario: precio.valor,
       descuento: descuento.valor,
       alicuota: r.alicuota,
+      unidad: null, // lo manual no lleva unidad: la trae quien factura un documento ya armado
     });
   }
   return ok(salida);
@@ -239,6 +241,9 @@ function aServicio(
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+
+/** El receptor de una factura tal como lo escribe la pantalla (`receptor` del formulario de emisión): la misma forma y los mismos límites. */
+export const receptorDeEntrada = (crudo: unknown) => leer(receptor, crudo);
 
 export function entradaDeFactura(
   crudo: unknown,
@@ -373,6 +378,9 @@ export function entradaDeListar(crudo: unknown): Resultado<PedidoDeListado, Erro
   if (!desde.ok) return desde;
   const hasta = l.hasta === undefined ? ok(undefined) : aFecha("hasta", l.hasta);
   if (!hasta.ok) return hasta;
+  const creadoDesde =
+    l.creadoDesde === undefined ? ok(undefined) : aFecha("creadoDesde", l.creadoDesde);
+  if (!creadoDesde.ok) return creadoDesde;
   // Solo se pasan las claves con valor: las opcionales del pedido no admiten `undefined` explícito.
   return ok({
     ...(l.estado === undefined ? {} : { estado: l.estado }),
@@ -380,6 +388,7 @@ export function entradaDeListar(crudo: unknown): Resultado<PedidoDeListado, Erro
     ...(l.ambiente === undefined ? {} : { ambiente: l.ambiente }),
     ...(desde.valor === undefined ? {} : { desde: desde.valor }),
     ...(hasta.valor === undefined ? {} : { hasta: hasta.valor }),
+    ...(creadoDesde.valor === undefined ? {} : { creadoDesde: creadoDesde.valor }),
     ...(l.texto === undefined ? {} : { texto: l.texto }),
     ...(l.letra === undefined ? {} : { letra: l.letra }),
     ...(l.puntoDeVenta === undefined ? {} : { puntoDeVenta: l.puntoDeVenta }),

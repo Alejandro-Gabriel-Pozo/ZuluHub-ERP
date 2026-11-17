@@ -8,7 +8,7 @@ import { MedidorDeLaHoja } from "./MedidorDeLaHoja.cliente";
 import { TicketDe80mm } from "./TicketDe80mm.cliente";
 import { VistaPrevia } from "./VistaPrevia.cliente";
 import { comprobanteDePrueba, QR_DE_PRUEBA } from "./ayudas-de-impresion";
-import { entradaDelPaginador, type Medidas } from "./medicion";
+import { entradaDelPaginador, type Medidas } from "./medidas-de-la-hoja";
 import { armarLaHoja } from "./modelo-de-la-hoja";
 import { paginar } from "./paginador";
 

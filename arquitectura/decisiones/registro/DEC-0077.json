@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0077",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Controlar un artículo exige alcance a todas las sucursales, porque el artículo es de la empresa.",
+  "que_cambia": "Quién puede controlar artículos.",
+  "donde": "src/modulos/stock/casos-de-uso/articulos.ts"
+}

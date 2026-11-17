@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0046",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Documento, pasaporte y domicilio del receptor: pasaporte en mayúsculas, domicilio libre hasta 300 caracteres, sin fuente de ARCA.",
+  "que_cambia": "Qué datos del receptor se aceptan.",
+  "donde": "src/primitivas/identificacion-fiscal y src/primitivas/domicilio"
+}

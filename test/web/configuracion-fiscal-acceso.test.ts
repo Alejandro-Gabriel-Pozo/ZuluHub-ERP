@@ -55,6 +55,8 @@ vi.mock("../../apps/web/servidor/empresas", () => ({
 }));
 vi.mock("../../apps/web/app/s/app/acciones", () => ({ cerrarSesionAccion: () => null }));
 vi.mock("../../apps/web/servidor/sesion", () => ({
+  // Sin lecturas compartidas: cada consulta abre la suya (la página las pide igual).
+  dependenciasDeSesion: {},
   empresaDelPedido: () =>
     Promise.resolve({
       puerta: { marca: { nombre: "Marca de prueba" } },

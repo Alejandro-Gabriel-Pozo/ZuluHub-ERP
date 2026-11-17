@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0069",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Un punto de venta de una sucursal cerrada no pasa a producción (mismo criterio que mudar y activar).",
+  "que_cambia": "Cuándo se puede pasar a producción.",
+  "donde": "src/modulos/fiscal/casos-de-uso/resincronizar-y-ambiente.ts"
+}

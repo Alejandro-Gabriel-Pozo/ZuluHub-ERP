@@ -707,10 +707,10 @@ describe.skipIf(base === null)("facturación: certificados, ticket de acceso e i
       const comprobante = await crearComprobante(dueno, e);
       await deshacible(async () => {
         denegado(await intento(dueno)("delete from comprobante where id = $1", [comprobante]));
-        // Vaciar una tabla a la que apuntan otras exige nombrarlas todas: el disparador frena el vaciado igual.
+        // Vaciar una tabla a la que apuntan otras exige nombrarlas todas (también el puntero de ventas de 0029): el disparador frena el vaciado igual.
         denegado(
           await intento(dueno)(
-            "truncate comprobante, comprobante_linea, comprobante_alicuota, intento_arca",
+            "truncate comprobante, comprobante_linea, comprobante_alicuota, intento_arca, documento_de_ticket",
           ),
         );
         const id = randomUUID();

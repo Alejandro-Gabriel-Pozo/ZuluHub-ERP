@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { cuitConGuiones, cuitDesdeTexto, digitoVerificadorDeCuit } from "./cuit";
+import {
+  cuitConGuiones,
+  cuitDesdeTexto,
+  cuitMientrasSeEscribe,
+  cuitParaMostrar,
+  digitoVerificadorDeCuit,
+  LARGO_DE_CUIT,
+} from "./cuit";
 
 describe("CUIT", () => {
   it.each([
@@ -62,5 +69,65 @@ describe("CUIT", () => {
   it("se muestra con guiones", () => {
     const r = cuitDesdeTexto("20123456786");
     expect(r.ok && cuitConGuiones(r.valor)).toBe("20-12345678-6");
+  });
+});
+
+describe("cuitParaMostrar", () => {
+  it("formatea 11 dígitos como XX-XXXXXXXX-X", () => {
+    expect(cuitParaMostrar("30701112223")).toBe("30-70111222-3");
+  });
+
+  it("si ya tiene guiones lo devuelve igual", () => {
+    expect(cuitParaMostrar("30-70111222-3")).toBe("30-70111222-3");
+  });
+
+  it.each([
+    "3070111222",
+    "307011122233",
+    "3070111222a",
+    "abcdefghijk",
+    "",
+    " ",
+    "30701112223 ",
+    " 30701112223",
+  ])("devuelve tal cual %j", (texto) => {
+    expect(cuitParaMostrar(texto)).toBe(texto);
+  });
+
+  it("no lanza con caracteres raros", () => {
+    for (const texto of [
+      "\n",
+      "\u0000",
+      "💥",
+      "３０７０１１１２２２３",
+      "30701112223\n",
+      "<b>x</b>",
+      "'; --",
+    ]) {
+      expect(() => cuitParaMostrar(texto)).not.toThrow();
+      expect(cuitParaMostrar(texto)).toBe(texto);
+    }
+  });
+});
+
+describe("cuitMientrasSeEscribe", () => {
+  it.each([
+    ["", ""],
+    ["2", "2"],
+    ["20", "20"],
+    ["201", "20-1"],
+    ["2012345678", "20-12345678"],
+    ["20123456786", "20-12345678-6"],
+  ])(
+    "«%s» se ve «%s» (el guion aparece recién cuando hay un dígito detrás)",
+    (digitos, visible) => {
+      expect(cuitMientrasSeEscribe(digitos)).toBe(visible);
+    },
+  );
+
+  it("con los dígitos de un CUIT es la forma con guiones: una sola función la arma", () => {
+    expect(LARGO_DE_CUIT).toBe(11);
+    const r = cuitDesdeTexto("20123456786");
+    expect(r.ok && cuitMientrasSeEscribe(r.valor)).toBe("20-12345678-6");
   });
 });

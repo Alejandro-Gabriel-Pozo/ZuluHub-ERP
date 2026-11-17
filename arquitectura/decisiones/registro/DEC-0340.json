@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0340",
+  "fecha": "2026-11-12",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En la consola de plataforma la perilla vidriera_por_qr se rotula «Carta en línea», el nombre de la pantalla de la carta.",
+  "que_cambia": "Solo el texto que ve el equipo de plataforma al habilitar el extra; sin fuente aprobada más corta (decisión 175).",
+  "donde": "apps/plataforma/logica/plan.ts; Pedernal-docs 11-especificaciones/carta-real-especificacion.md §1 E4"
+}

@@ -42,11 +42,10 @@ export type DefinicionDePerilla = ComunDeUnaPerilla &
  * la verifica (§B.5.1, catálogo consolidado). Catálogo y stock (T0 y CE0) declaran las suyas por
  * adelantado, antes de que existan los casos de uso que las verifican, para que ningún otro tramo
  * toque este archivo (catalogo-y-stock §E.2): son los extras de recetas (mermas, sub-recetas y factor
- * por tamaño) y los niveles de elecciones del catálogo (variantes con precio y grupos de precio,
- * combos, biblioteca). Cada tramo que las verifica con `exigirPerilla` las cubre; hasta entonces
- * ningún caso de uso las nombra (no existe todavía la prueba «toda perilla tiene un uso»). Todas son
- * interruptores de empresa con base apagada: si el plan no las nombra, no vienen. `vidriera_por_qr` y las
- * de la carta (fotos, modelos, estadísticas) se declaran cuando se construya la carta.
+ * por tamaño) y el nivel de combos del catálogo. Cada tramo que las verifica con `exigirPerilla` las
+ * cubre; hasta entonces ningún caso de uso las nombra (no existe todavía la prueba «toda perilla tiene
+ * un uso»). Esas son interruptores de empresa con base apagada: si el plan no las nombra, no vienen. `vidriera_por_qr` (T2 de la carta real) ya está declarada; las
+ * demás de la carta (fotos, modelos, estadísticas) se declaran cuando se construya la carta.
  */
 export const CATALOGO_DE_PERILLAS = {
   empresas_por_tenant: {
@@ -70,24 +69,32 @@ export const CATALOGO_DE_PERILLAS = {
     base: { encendida: false },
     modulo: "stock",
   },
+  // E6 (e6-recetas-produccion-especificacion §3.7, D146: la cafetería no usa producción): todo nace apagado (`produccion` se declara con su módulo). `lotes` y `calidad_de_lote` dejan controlar lotes y su calidad. Lo ya guardado se sigue aplicando si se apagan
+  // (baja de plan): lo que se rechaza es crear controles u órdenes nuevos.
+  lotes: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "stock",
+  },
+  calidad_de_lote: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "stock",
+  },
+  // E6-T8: producir en tandas (D146: la cafetería no lo usa). La verifica `abrirOrden`; es del módulo `produccion`.
+  produccion: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "produccion",
+  },
   // CE0 (catalogo-carta-niveles-y-elecciones §2.1): un interruptor por nivel extra de la escalera de
   // elecciones. El de stock (`composiciones_por_tamano`, N4) escala la receta por tamaño y suma la excepción
-  // por variante; los de catálogo (N1 a N3) habilitan precio por variante y grupos de precio, combos y
-  // la biblioteca de guarniciones y adicionales compartidos. N0 (la vidriera, con ejes por base más
-  // agregado) es estándar y no tiene perilla.
-  variantes_y_grupos_de_precio: {
-    ambito: "EMPRESA",
-    tipo: "INTERRUPTOR",
-    base: { encendida: false },
-    modulo: "catalogo",
-  },
+  // por variante; el de catálogo (`conjuntos`, combos) habilita los conjuntos. Las de variantes con grupos de
+  // precio y la biblioteca de elecciones compartidas se retiraron (decisiones 138 y 133: ya no existen).
   conjuntos: {
-    ambito: "EMPRESA",
-    tipo: "INTERRUPTOR",
-    base: { encendida: false },
-    modulo: "catalogo",
-  },
-  elecciones_reutilizables: {
     ambito: "EMPRESA",
     tipo: "INTERRUPTOR",
     base: { encendida: false },
@@ -98,6 +105,57 @@ export const CATALOGO_DE_PERILLAS = {
     tipo: "INTERRUPTOR",
     base: { encendida: false },
     modulo: "stock",
+  },
+  // Salón (E7, DEC-0201; respuesta del dueño del 11/11/2026 «extras excepto comanda»): el salón es un extra de pago y las comandas van en todos los
+  // planes. Base apagada: si el plan no la nombra, no viene. La verifican todos los casos de uso y consultas del salón con `exigirPerilla`.
+  salon: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "salon",
+  },
+  // A7 (decisión del dueño, 14/11/2026, `decisiones-del-dueno-2026-11.md`: «la venta por fracciones y por peso se construye ya, con perilla apagada por defecto»):
+  // vender un producto por fracciones (porciones 2, 4 y 8) o por peso (unidad de venta de masa). Base apagada: sin ella un producto solo se vende «por unidad,
+  // paso 1» (el piloto). La verifica `cambiarFormaDeVenta` al PONER una forma distinta del piloto; lo ya cargado se sigue vendiendo si se baja el plan.
+  venta_por_fracciones_y_peso: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "catalogo",
+  },
+  // Carta pública en línea (QR): extra de pago, apagado de base y se habilita por empresa, como `salon` (dueño, Q5 del 12/11/2026: «no se cobra desde el día 1,
+  // después sí seguro»; carta-real-especificacion §0 y §11). La verifica `guardarCartaPublica` al PONER la carta en línea; retirarla no la pide (una baja de
+  // plan no impide cerrar lo ya abierto). Que el comensal siga viendo la carta si el plan se baja lo decide la lectura pública por visita (T6).
+  vidriera_por_qr: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "vidriera",
+  },
+  // Compras N3 y N4 (E9 §3.8, D141; decisión del dueño del 16/11/2026: el bloque de stock, compras y recetas incluye N4): extras de pago apagados de base. La
+  // verifica `configurarCompras` al pasar la empresa a ese nivel y, desde ahí, cada caso de uso de N3 o N4. Bajar de plan no toca lo ya cargado (cada recepción
+  // sella su nivel). N4 requiere N3.
+  recepcion_separada: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "compras",
+  },
+  conciliacion_de_tres_vias: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "compras",
+    requiere: "recepcion_separada",
+  },
+  // Caja (decisión 124; caja-y-cobros.md:43, 69; registro de contratos :778; supuesto S-5 de E0: nombre y base 1 del
+  // registro de octubre): cuántas cajas activas puede tener una sucursal. Base 1 («Caja 1» nace con la sucursal, decisión
+  // 165); la sube la plataforma. Declara el tipo; `crearCaja` y `reactivarCaja` la verifican con `exigirPerilla` en E3.
+  cajas_por_sucursal: {
+    ambito: "SUCURSAL",
+    tipo: "LIMITE",
+    base: { limite: 1 },
+    modulo: "caja",
   },
 } as const satisfies Record<string, DefinicionDePerilla>;
 

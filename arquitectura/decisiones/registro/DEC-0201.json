@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0201",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Salón es un extra de pago (perilla `salon`, apagada de base) y comandas va en todos los planes; salón requiere comandas. Los módulos siguen en desarrollo y sin plan; permisos como DEC-0010.",
+  "que_cambia": "Qué se cobra aparte: sin la perilla `salon` no se opera el salón; las comandas funcionan igual.",
+  "donde": "src/capacidades/planes/perillas.ts, src/capacidades/modulos/catalogo.ts y src/capacidades/permisos/empresa.ts"
+}

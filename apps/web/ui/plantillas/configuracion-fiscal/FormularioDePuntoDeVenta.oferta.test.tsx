@@ -17,7 +17,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 const guardar = vi.fn<(pedido: unknown) => Promise<Respuesta<unknown>>>();
 const LISTA = "/configuracion-fiscal/puntos-de-venta";
-const SIN_PERMISO = "No tiene permiso para hacer esto.";
+const SIN_PERMISO = "No tenés permiso para hacer esto.";
 
 const formulario = (oferta: OfertaDeAccion = PERMITIDO) => (
   <FormularioDePuntoDeVenta

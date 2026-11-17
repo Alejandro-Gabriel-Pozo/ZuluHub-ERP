@@ -95,7 +95,7 @@ export const receptorMonotributista: Receptor = {
   nombre: "Ana Pérez",
   documento: { tipo: "CUIT", numero: CUIT_A },
   condicionIva: "MONOTRIBUTO",
-  domicilio: null,
+  domicilio: "Calle Falsa 123",
 };
 
 export function renglon(
@@ -111,6 +111,7 @@ export function renglon(
     precioUnitario: precioUnitarioDesdeTexto(precio),
     descuento: descuento === null ? null : porcentajeDesdeTexto(descuento),
     alicuota,
+    unidad: null,
   };
 }
 
@@ -162,6 +163,7 @@ export const renglonArbitrario = (
       { nil: null },
     ),
     alicuota: alicuotas,
+    unidad: fc.option(fc.constantFrom("kg", "g", "l", "ml", "m", "u", "cm2"), { nil: null }),
   });
 
 /**

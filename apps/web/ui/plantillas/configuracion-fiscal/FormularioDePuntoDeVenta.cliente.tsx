@@ -9,7 +9,7 @@ import { Campo } from "../../componentes/Campo";
 import { Selector } from "../../componentes/Selector";
 import { RegionDeEstado } from "../../patrones/RegionDeEstado";
 import { Pila } from "../../primitivas/Pila";
-import { ErrorDelDetalle } from "../facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../patrones/ErrorDelDetalle";
 import estilos from "./FormularioDePuntoDeVenta.module.css";
 import {
   OPCIONES_DE_PROVINCIA,
@@ -136,6 +136,7 @@ export function FormularioDePuntoDeVenta({
       error={errorEn(campoDelFormulario)}
       deshabilitado={bloqueado}
       {...extra}
+      dato="pendiente"
     />
   );
 
@@ -186,6 +187,7 @@ export function FormularioDePuntoDeVenta({
             : {})}
           error={errorEn("sucursalId")}
           deshabilitado={bloqueado}
+          dato="pendiente"
         />
         <fieldset className={estilos["domicilio"]} disabled={bloqueado}>
           <legend className={estilos["leyenda"]}>
@@ -203,6 +205,7 @@ export function FormularioDePuntoDeVenta({
             autoComplete: "address-level2",
           })}
           <Selector
+            dato="pendiente"
             etiqueta={texto({}, "fiscal.pantalla.config_pv_provincia")}
             nombre="provincia"
             valor={valores.provincia}

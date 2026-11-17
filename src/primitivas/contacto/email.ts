@@ -1,16 +1,16 @@
 /**
- * FICHA DEL DATO: CORREO ELECTRÓNICO. (DECIDIDO = D-98, 2026-11-04 o una decisión anterior ya implementada; SUPUESTO = del
+ * FICHA DEL DATO: CORREO ELECTRÓNICO. (DECIDIDO = D-98, 2026-11-04 o una decisión anterior ya implementada; SUPUESTO (DEC-0044) = del
  * ingeniero, revertible; SIN DECIDIR = falta la decisión del dueño.) Tiene dos usos con reglas distintas: el de PERSONA (invitaciones,
  * admins de plataforma, captación: `emailDesdeTexto`, ya vigente) y el de CONTACTO de un local (`emailDeContactoDesdeTexto`, 0019).
  *
  * - Qué es: una dirección de correo. Como contacto, la del local (hoy, la de la sucursal) que la factura impresa muestra si existe.
  * - Cómo se escribe: se recortan los blancos de los extremos y se pasa a MINÚSCULAS; al menos un carácter antes y uno después de
  *   una `@` (no es una validación de RFC: la verificación real es el enlace); sin blancos adentro. Como contacto, además: hasta
- *   `LARGO_MAXIMO_DEL_EMAIL_DE_CONTACTO` (254, SUPUESTO) caracteres y sin caracteres de control. El de persona NO tiene ese tope.
+ *   `LARGO_MAXIMO_DEL_EMAIL_DE_CONTACTO` (254, SUPUESTO (DEC-0044)) caracteres y sin caracteres de control. El de persona NO tiene ese tope.
  * - Obligatorio/opcional: de persona, OBLIGATORIO. De contacto, OPCIONAL (D-98): vacío = «no tiene»; un texto en blanco o `null`
- *   borra el dato (SUPUESTO); en la base es NULL, nunca un texto vacío.
+ *   borra el dato (SUPUESTO (DEC-0044)); en la base es NULL, nunca un texto vacío.
  * - Único: el de persona, sí (`persona_email_uk`, entre todas las personas). El de contacto, NO: la base no le pone unicidad.
- * - Quién lo cambia: el de contacto de la sucursal, quien edita la sucursal (`sucursales.editar`: gerente y administrador; SUPUESTO).
+ * - Quién lo cambia: el de contacto de la sucursal, quien edita la sucursal (`sucursales.editar`: gerente y administrador; SUPUESTO (DEC-0044)).
  *   El de persona lo definen los casos de uso de identidad (fuera de esta ficha).
  * - Verificado o declarado: el de persona se verifica con el enlace de la invitación. El de contacto es solo DECLARADO: no se
  *   le manda nada para comprobarlo.

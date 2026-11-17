@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0121",
+  "tipo": "DATOS",
+  "decision": "Anular una orden cerrada genera movimientos espejo (no borra); si el producto ya se usó, se frena con PRODUCTO_YA_USADO y no se deja saldo negativo.",
+  "que_cambia": "Si se permite anular cuando el producto ya se vendió o consumió.",
+  "donde": "src/modulos/produccion/casos-de-uso/cancelar-y-anular.ts (E6-T8)",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "estado": "PENDIENTE_DE_OK"
+}

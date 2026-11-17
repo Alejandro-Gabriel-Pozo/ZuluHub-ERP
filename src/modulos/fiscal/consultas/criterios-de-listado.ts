@@ -21,7 +21,7 @@ export const LIMITE_POR_DEFECTO = 20;
 /** El tope del spec: 50 comprobantes por página. */
 export const LIMITE_MAXIMO = 50;
 /** Largo máximo del texto de búsqueda (ASUMIDO): el nombre de un receptor y un CUIT con guiones entran de sobra. */
-export const LARGO_MAXIMO_DEL_TEXTO = 80;
+export const LARGO_MAXIMO_DEL_TEXTO = 80; // fuente-unica: ajeno — el texto de búsqueda del listado fiscal es otro dato que el nombre de cocina
 
 /** Largo máximo del identificador de origen: el del CHECK `comprobante_origen_id_ck` de la base (en caracteres). */
 export const LARGO_MAXIMO_DEL_ORIGEN_ID = 100;
@@ -33,6 +33,12 @@ export type PedidoDeListado = Readonly<{
   ambiente?: NonNullable<FiltroDeListado["ambiente"]>;
   desde?: FechaCivil;
   hasta?: FechaCivil;
+  /**
+   * Solo los comprobantes CREADOS desde ese día (Argentina, inclusive). Es la ventana de la búsqueda de texto sin período: acota por
+   * `creado_en`, que el listado ya recorre en orden (`comprobante_sucursal_listado_ix`), así que la búsqueda deja de leer toda la
+   * historia de la sucursal. No reemplaza a `desde`/`hasta` (que son por la fecha del comprobante).
+   */
+  creadoDesde?: FechaCivil;
   /** Busca por nombre o documento del receptor. */
   texto?: string;
   /** La letra del tipo de comprobante: `A`, `B` o `C` (en mayúscula). Con `tipo`, deben coincidir. */
@@ -185,6 +191,7 @@ export function criteriosDeListado(
     ambiente: pedido.ambiente ?? null,
     desde,
     hasta,
+    creadoDesde: pedido.creadoDesde ?? null,
     texto: texto.valor,
     letra: letra.valor,
     puntoDeVentaNumero: puntoDeVenta.valor,

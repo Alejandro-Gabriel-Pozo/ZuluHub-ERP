@@ -28,6 +28,7 @@ import {
   marcaPrincipal,
 } from "./marcas-apoyo";
 import { SesionDePrueba } from "./sesiones";
+import { sufijoUnico } from "./unicos";
 
 /**
  * Alta por solicitud (L1): los DEBILITAMIENTOS propios del SQL, y los que pide la especificación (§8). Cada caso rompe
@@ -92,7 +93,7 @@ const conBase = (url: string, nombre: string): string => {
 /** Una copia de la plantilla (0001 a 0007) con ese texto de la migración de captación aplicado; se destruye al terminar. */
 async function conMigracion<T2>(sql: string, trabajo: (ctx: Ctx) => Promise<T2>): Promise<T2> {
   const b = base as BaseDePruebas;
-  const nombre = `pedernal_deb_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  const nombre = `pedernal_deb_${randomUUID().replaceAll("-", "")}`;
   await admin.query(`CREATE DATABASE ${nombre} TEMPLATE ${plantillaNombre}`);
   const carpeta = await carpetaCon([...HASTA_0007]);
   const copia: BaseDePruebas = {
@@ -540,7 +541,7 @@ const SONDAS = {
       `insert into solicitud_de_alta (marca_id, email, nombre_contacto, nombre_negocio, rubro, version_de_terminos,
          version_de_privacidad, ultimo_envio_en, creada_en)
        values ($1, $2, 'Ana', 'Café', 'bar', '2026-10-13', '2026-10-13.1', $3, $3)`,
-      [marca, `sin-cuit-${randomBytes(4).toString("hex")}@prueba.test`, T],
+      [marca, `sin-cuit-${sufijoUnico()}@prueba.test`, T],
     ));
   },
 } satisfies Record<string, Sonda>;

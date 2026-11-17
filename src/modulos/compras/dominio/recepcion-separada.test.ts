@@ -1,0 +1,191 @@
+import { describe, expect, it } from "vitest";
+import {
+  esNivelDeRecepcionSeparada,
+  estadoDeFacturaSeparada,
+  estadoDeRecepcionSeparada,
+  huellaDeLaRecepcion,
+  type PedidoDeRecepcion,
+} from "./recepcion-separada";
+import { NIVELES_DE_COMPRA } from "./niveles";
+
+const renglon = {
+  productoId: "00000000-0000-4000-8000-000000000001",
+  presentacionId: null,
+  unidadDeCompraId: "KILOGRAMO",
+  cantidad: "10.0000",
+  pesoReal: null,
+  precioPor: "UNIDAD",
+  unidadDePrecioId: "KILOGRAMO",
+  precio: "100.000000",
+} as const;
+const base: PedidoDeRecepcion = {
+  sucursalId: "00000000-0000-4000-8000-0000000000a1",
+  proveedorId: "00000000-0000-4000-8000-0000000000b1",
+  hechoEn: null,
+  remito: null,
+  renglones: [renglon],
+  controles: [],
+};
+
+describe("huellaDeLaRecepcion: vínculos con la orden", () => {
+  const O = "00000000-0000-4000-8000-0000000000c1";
+  const un = (extra: Record<string, unknown> = {}) => ({
+    linea: 1,
+    ordenId: O,
+    lineaDeOrden: 1,
+    confirmoExceso: false,
+    ...extra,
+  });
+
+  it("sin vínculos (o vacío) la huella es la de siempre", () => {
+    expect(huellaDeLaRecepcion({ ...base, vinculos: [] })).toBe(huellaDeLaRecepcion(base));
+  });
+
+  it("cada dato del vínculo cuenta y el orden de la lista no", () => {
+    const h = huellaDeLaRecepcion({ ...base, vinculos: [un()] });
+    expect(h).not.toBe(huellaDeLaRecepcion(base));
+    for (const otro of [
+      un({ linea: 2 }),
+      un({ ordenId: "00000000-0000-4000-8000-0000000000c2" }),
+      un({ lineaDeOrden: 2 }),
+      un({ confirmoExceso: true }),
+    ]) {
+      expect(huellaDeLaRecepcion({ ...base, vinculos: [otro] })).not.toBe(h);
+    }
+    const dos = [un(), un({ linea: 2 })];
+    expect(huellaDeLaRecepcion({ ...base, vinculos: [...dos].reverse() })).toBe(
+      huellaDeLaRecepcion({ ...base, vinculos: dos }),
+    );
+  });
+});
+
+describe("esNivelDeRecepcionSeparada", () => {
+  it("solo N3 y N4", () => {
+    expect(NIVELES_DE_COMPRA.filter(esNivelDeRecepcionSeparada)).toEqual([
+      "RECEPCION_SEPARADA",
+      "TRES_VIAS",
+    ]);
+  });
+});
+
+describe("huellaDeLaRecepcion", () => {
+  it("es de 64 hex y el mismo pedido da la misma", () => {
+    expect(huellaDeLaRecepcion(base)).toMatch(/^[0-9a-f]{64}$/);
+    expect(huellaDeLaRecepcion({ ...base })).toBe(huellaDeLaRecepcion(base));
+  });
+
+  it("cada campo cuenta: otro dato, otra huella", () => {
+    const h = huellaDeLaRecepcion(base);
+    const distintos: PedidoDeRecepcion[] = [
+      { ...base, sucursalId: "00000000-0000-4000-8000-0000000000a2" },
+      { ...base, proveedorId: "00000000-0000-4000-8000-0000000000b2" },
+      { ...base, hechoEn: "2026-11-10T15:00:00.000Z" },
+      { ...base, remito: { puntoDeVenta: 1, numero: 2, fecha: "2026-11-10" } },
+      { ...base, renglones: [{ ...renglon, cantidad: "11.0000" }] },
+      {
+        ...base,
+        controles: [
+          {
+            linea: 1,
+            condicion: "CONFORME",
+            cantidadSegunRemito: null,
+            observacion: null,
+            temperaturaEnC: null,
+          },
+        ],
+      },
+    ];
+    for (const d of distintos) expect(huellaDeLaRecepcion(d)).not.toBe(h);
+    const con = (
+      obs: string | null,
+      temp: string | null,
+      remito: string | null,
+      condicion: "CONFORME" | "RECHAZADA",
+    ) => ({
+      ...base,
+      controles: [
+        {
+          linea: 1,
+          condicion,
+          cantidadSegunRemito: remito,
+          observacion: obs,
+          temperaturaEnC: temp,
+        },
+      ],
+    });
+    const c = huellaDeLaRecepcion(con(null, null, null, "CONFORME"));
+    expect(huellaDeLaRecepcion(con("x", null, null, "CONFORME"))).not.toBe(c);
+    expect(huellaDeLaRecepcion(con(null, "4", null, "CONFORME"))).not.toBe(c);
+    expect(huellaDeLaRecepcion(con(null, null, "2.0000", "CONFORME"))).not.toBe(c);
+    expect(huellaDeLaRecepcion(con("x", null, null, "RECHAZADA"))).not.toBe(
+      huellaDeLaRecepcion(con("x", null, null, "CONFORME")),
+    );
+  });
+
+  it("el contenido canónico no cambia (la huella de una recepción ya guardada tiene que seguir siendo la misma): sin remito y con remito", () => {
+    expect(huellaDeLaRecepcion(base)).toBe(
+      "1e017e2f66e0a55e99dc3d4aeb6972e157b4f55c0cc9d5b2fdb58ed822976b2d",
+    );
+    expect(
+      huellaDeLaRecepcion({ ...base, remito: { puntoDeVenta: 1, numero: 2, fecha: "2026-11-10" } }),
+    ).toBe("9b7a7feab97e031b1ed3dddfa955f1f70e43922083892a3c5a157b362c5b43c6");
+  });
+
+  it("el orden de los renglones y el de los controles no cambian el pedido", () => {
+    const otro = { ...renglon, productoId: "00000000-0000-4000-8000-000000000002" };
+    const ctl = (linea: number) => ({
+      linea,
+      condicion: "CONFORME" as const,
+      cantidadSegunRemito: null,
+      observacion: null,
+      temperaturaEnC: null,
+    });
+    expect(
+      huellaDeLaRecepcion({ ...base, renglones: [renglon, otro], controles: [ctl(1), ctl(2)] }),
+    ).toBe(
+      huellaDeLaRecepcion({ ...base, renglones: [otro, renglon], controles: [ctl(2), ctl(1)] }),
+    );
+  });
+
+  it("no se confunde con la huella de una compra común", () => {
+    expect(huellaDeLaRecepcion(base)).not.toBe(huellaDeLaRecepcion({ ...base, hechoEn: "" }));
+  });
+});
+
+describe("estadoDeRecepcionSeparada", () => {
+  it("anulada y pendiente mandan sobre lo conciliado; confirmada se deriva de lo asignado", () => {
+    expect(estadoDeRecepcionSeparada("ANULADA", "10.0000", "10.0000")).toBe("ANULADA");
+    expect(estadoDeRecepcionSeparada("PENDIENTE", "10.0000", "0.0000")).toBe(
+      "PENDIENTE_DE_CONFIRMAR",
+    );
+    expect(estadoDeRecepcionSeparada("CONFIRMADA", "10.0000", "0.0000")).toBe(
+      "RECIBIDA_SIN_FACTURAR",
+    );
+    expect(estadoDeRecepcionSeparada("CONFIRMADA", "10.0000", "0.0001")).toBe("FACTURADA_EN_PARTE");
+    expect(estadoDeRecepcionSeparada("CONFIRMADA", "10.0000", "9.9999")).toBe("FACTURADA_EN_PARTE");
+    expect(estadoDeRecepcionSeparada("CONFIRMADA", "10.0000", "10.0000")).toBe(
+      "RECIBIDA_Y_FACTURADA",
+    );
+    expect(estadoDeRecepcionSeparada("CONFIRMADA", "0.0000", "0.0000")).toBe(
+      "RECIBIDA_SIN_FACTURAR",
+    );
+  });
+
+  it("lo que no es un decimal válido no cuenta como facturado", () => {
+    expect(estadoDeRecepcionSeparada("CONFIRMADA", "abc", "5")).toBe("RECIBIDA_SIN_FACTURAR");
+    expect(estadoDeRecepcionSeparada("CONFIRMADA", "10", "abc")).toBe("RECIBIDA_SIN_FACTURAR");
+  });
+});
+
+describe("estadoDeFacturaSeparada", () => {
+  it("anulada manda; registrada se deriva de lo conciliado", () => {
+    expect(estadoDeFacturaSeparada("ANULADO", "10.0000", "10.0000")).toBe("ANULADA");
+    expect(estadoDeFacturaSeparada("REGISTRADO", "10.0000", "0.0000")).toBe(
+      "FACTURADA_FALTA_RECIBIR",
+    );
+    expect(estadoDeFacturaSeparada("REGISTRADO", "10.0000", "4.0000")).toBe("CONCILIADA_EN_PARTE");
+    expect(estadoDeFacturaSeparada("REGISTRADO", "10.0000", "10.0000")).toBe("CONCILIADA");
+    expect(estadoDeFacturaSeparada("REGISTRADO", "abc", "5")).toBe("FACTURADA_FALTA_RECIBIR");
+    expect(estadoDeFacturaSeparada("REGISTRADO", "10", "abc")).toBe("FACTURADA_FALTA_RECIBIR");
+  });
+});

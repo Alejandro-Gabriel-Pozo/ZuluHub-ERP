@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0075",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "El costo de un movimiento es por unidad de stock; con otra unidad habría que convertir y redondear.",
+  "que_cambia": "Cómo se carga un costo.",
+  "donde": "src/modulos/stock/casos-de-uso/movimientos-comun.ts"
+}

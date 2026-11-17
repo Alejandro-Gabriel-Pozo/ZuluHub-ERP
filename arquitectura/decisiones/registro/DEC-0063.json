@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0063",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En caja, una sucursal ajena o inexistente da el mismo error; el filtro por medio muestra los cobros cuyo medio original o vigente es ese; el informe del día usa las correcciones ya aplicadas.",
+  "que_cambia": "Qué muestran los informes y consultas de caja.",
+  "donde": "src/modulos/caja/consultas y src/modulos/caja/cobrar/estado-de-cajas.ts"
+}

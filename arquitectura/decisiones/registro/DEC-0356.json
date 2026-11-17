@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0356",
+  "fecha": "2026-11-13",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Editar la ficha de un producto no borra lo que no se manda: un campo ausente se conserva; null o vacío lo borra.",
+  "que_cambia": "Una pantalla que olvide mandar un campo guardado ya no lo borra en silencio; para borrarlo hay que mandarlo vacío. El nombre ausente se conserva. Revertir: volver a tratar ausente como vacío.",
+  "donde": "src/modulos/catalogo/casos-de-uso/editar-producto.ts; confirmada por el dueño el 13/11/2026 (relatado)"
+}

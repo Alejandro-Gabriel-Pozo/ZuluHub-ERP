@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0107",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La base ya admite stock propio de un elaborado o vendible y receta de un elaborado; la aplicación lo mantiene cerrado hasta que exista la perilla produccion (todo nace apagado).",
+  "que_cambia": "Quién puede producir; hay que declarar la perilla y el módulo en T9.",
+  "donde": "migraciones/0032_lotes_y_recetas.sql y src/modulos/stock/casos-de-uso/articulos.ts (E6, D146)"
+}

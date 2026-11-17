@@ -178,6 +178,45 @@ describe("coincideConLoRegistrado", () => {
     );
   });
 
+  it("un pasaporte con letras se compara por su parte numérica: lo que ARCA registró es 123456", () => {
+    const turista = {
+      nombre: "Jane Doe",
+      documento: { tipo: "PASAPORTE", numero: "ABC123456" },
+      condicionIva: "CONSUMIDOR_FINAL",
+      domicilio: "5th Avenue 1",
+    } as const;
+    const a = enVueloDe(facturaArmada(turista, [renglon("121.00", "1", "21")]));
+    const registrado = registradoDe(a);
+    expect(registrado.tipoDeDocumento).toBe(94);
+    expect(registrado.numeroDeDocumento).toBe(123456n);
+    expect(coincideConLoRegistrado(a, registrado)).toBe(true);
+    expect(coincideConLoRegistrado(a, { ...registrado, numeroDeDocumento: 0n })).toBe(false);
+  });
+
+  // Reconcilia contra lo que se ENVIÓ a ARCA: es estricta (dueño, 2026-11-07). Si alguien cambia `coincideConLoRegistrado` por la cuenta
+  // de lectura (la que no lanza), esta prueba falla.
+  it("un pasaporte sin cifras o todo en cero NO se reconcilia: lanza en lugar de comparar contra 0", () => {
+    // El tipo registrado es el del pasaporte para que la comparación llegue al número (si no, corta antes por el tipo).
+    const registrado = {
+      ...registradoDe(enVueloDe(facturaArmada(receptorInscripto, [renglon("121.00", "1", "21")]))),
+      tipoDeDocumento: CODIGO_DE_TIPO_DE_DOCUMENTO.PASAPORTE,
+    };
+    for (const numero of ["ABC000000", "ABCDEF"]) {
+      const raro = enVueloDe(facturaArmada(receptorInscripto, [renglon("121.00", "1", "21")]));
+      const conPasaporte = {
+        ...raro,
+        contenido: {
+          ...raro.contenido,
+          receptor: {
+            ...raro.contenido.receptor,
+            documento: { tipo: "PASAPORTE", numero },
+          },
+        },
+      } as typeof raro;
+      expect(() => coincideConLoRegistrado(conPasaporte, registrado), numero).toThrow(RangeError);
+    }
+  });
+
   describe("notas: también el comprobante asociado", () => {
     const autorizada = {
       empresaId: EMPRESA,

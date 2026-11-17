@@ -24,6 +24,7 @@ const VACIO: CriteriosDeListado = {
   ambiente: null,
   desde: null,
   hasta: null,
+  creadoDesde: null,
   texto: null,
   letra: null,
   puntoDeVentaNumero: null,
@@ -289,6 +290,18 @@ describe("criteriosDeListado: origen", () => {
 });
 
 describe("criteriosDeListado: los criterios nuevos se combinan con los de siempre", () => {
+  it("la ventana de creación pasa tal cual, sola o con las fechas del comprobante, y sin ella es nula", () => {
+    const c = fecha("2025-11-07");
+    expect(criterios({ creadoDesde: c })).toEqual({ ...VACIO, creadoDesde: c });
+    expect(criterios({ creadoDesde: c, desde: fecha("2026-01-01"), texto: "x" })).toEqual({
+      ...VACIO,
+      creadoDesde: c,
+      desde: fecha("2026-01-01"),
+      texto: { nombre: "x", documento: null },
+    });
+    expect(criterios({}).creadoDesde).toBeNull();
+  });
+
   it("todos juntos, y cada uno sigue siendo opcional", () => {
     const d = fecha("2026-10-01");
     const h = fecha("2026-10-31");
@@ -299,6 +312,7 @@ describe("criteriosDeListado: los criterios nuevos se combinan con los de siempr
         ambiente: "PRODUCCION",
         desde: d,
         hasta: h,
+        creadoDesde: d,
         texto: "Sur",
         letra: "A",
         puntoDeVenta: 7,
@@ -313,6 +327,7 @@ describe("criteriosDeListado: los criterios nuevos se combinan con los de siempr
       ambiente: "PRODUCCION",
       desde: d,
       hasta: h,
+      creadoDesde: d,
       texto: { nombre: "Sur", documento: null },
       letra: "A",
       puntoDeVentaNumero: 7,

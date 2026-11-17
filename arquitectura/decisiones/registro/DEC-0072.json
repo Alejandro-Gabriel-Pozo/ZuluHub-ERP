@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0072",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Copiar opciones deja afuera la variante entera si cambia la forma de venta y no trae precios de sucursal.",
+  "que_cambia": "Qué trae una copia de opciones.",
+  "donde": "src/modulos/catalogo/casos-de-uso/copiar-opciones.ts"
+}

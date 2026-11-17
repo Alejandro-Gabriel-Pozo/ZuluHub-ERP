@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0032",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Cuarentena y rechazo solo admiten transferencia, ajuste, conteo y anulación (E9 lo relaja).",
+  "que_cambia": "Qué se puede hacer con mercadería en cuarentena.",
+  "donde": "Pedernal-docs 11-especificaciones/decisiones-tomadas-sin-el-dueno-2026-11.md fila B7 (E5)"
+}

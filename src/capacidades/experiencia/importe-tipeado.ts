@@ -1,3 +1,9 @@
+import {
+  escribirNumero,
+  interpretarNumeroPegado,
+  type MotivoDePegadoRechazado as MotivoNumero,
+  type ReglaDeNumero,
+} from "./numero-argentino";
 import { importeATexto, importeDesdeTexto } from "../../primitivas/dinero/importe";
 import { ARS, decimalesDe } from "../../primitivas/dinero/moneda";
 
@@ -56,12 +62,48 @@ export function partirTipeado(crudo: string): { entera: string; decimal: string 
 export function interpretarImporteTipeado(crudo: string): ImporteTipeado {
   const { entera: cruda, decimal } = partirTipeado(crudo);
   if (cruda === "" && decimal === null) return { texto: "", canonico: "" };
+  return armarTipeado(cruda, decimal);
+}
+
+/** Acota la parte entera y los decimales a lo que admite la moneda y arma el texto del campo y el canónico. Una regla, un lugar. */
+function armarTipeado(cruda: string, decimal: string | null): ImporteTipeado {
   const entera = cruda.replace(/^0+(?=\d)/, "").slice(0, DIGITOS_ENTEROS_MAXIMOS) || "0";
   const fraccion = (decimal ?? "").slice(0, DECIMALES);
   const canonico = importeATexto(
     importeDesdeTexto(ARS, `${entera}.${fraccion.padEnd(DECIMALES, "0")}`),
   );
   return { texto: decimal === null ? entera : `${entera},${fraccion}`, canonico };
+}
+
+/** La regla del importe en pesos para el campo numérico: los decimales y los enteros que admite `numeric(18, 2)`; con ceros de relleno. */
+export const REGLA_DE_IMPORTE: ReglaDeNumero = {
+  decimales: DECIMALES,
+  enterosMaximos: DIGITOS_ENTEROS_MAXIMOS,
+  completarDecimales: true,
+};
+
+/**
+ * Lo que queda en el campo al ESCRIBIR (decisión 153): solo dígitos y una coma con hasta dos decimales, sin puntos de miles (el campo
+ * los muestra con `numero-argentino.ts`). Una regla, un lugar: la política vive en `escribirNumero`.
+ */
+export function filtrarImporteEscrito(crudo: string): ImporteTipeado {
+  const r = escribirNumero(crudo, crudo.length, REGLA_DE_IMPORTE);
+  return { texto: r.texto.replaceAll(".", ""), canonico: r.canonico };
+}
+
+/** Por qué se rechaza un pegado (decisión 153; supuesto S-6: más de dos decimales se rechaza, no se recorta). */
+export type MotivoDePegadoRechazado = MotivoNumero;
+
+export type ImportePegado =
+  | Readonly<{ ok: true; texto: string; canonico: string }>
+  | Readonly<{ ok: false; motivo: MotivoDePegadoRechazado }>;
+
+/** Interpreta lo PEGADO con la regla del campo (decisión 153). Una regla, un lugar: la política vive en `interpretarNumeroPegado`. */
+export function interpretarImportePegado(crudo: string): ImportePegado {
+  const r = interpretarNumeroPegado(crudo, REGLA_DE_IMPORTE);
+  return r.ok
+    ? { ok: true, texto: r.texto.replaceAll(".", ""), canonico: r.canonico }
+    : { ok: false, motivo: r.motivo };
 }
 
 /** El texto canónico con puntos de miles y coma decimal (`1234.5` → `1.234,50`). Vacío si no es un importe. */

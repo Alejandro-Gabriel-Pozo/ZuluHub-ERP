@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0114",
+  "tipo": "DATOS",
+  "decision": "Guardar una receta se rechaza si hace pasar de cinco niveles a una receta que ya la usa más arriba, no solo si la propia pasa de cinco.",
+  "que_cambia": "Qué recetas se pueden guardar; sin esto una venta puede fallar por RECETA_DEMASIADO_ANIDADA con una receta guardada sin error.",
+  "donde": "src/modulos/stock/casos-de-uso/arbol-de-recetas.ts (E6-T6, S-6)",
+  "fecha": "2026-11-11",
+  "quien": "sesión",
+  "estado": "PENDIENTE_DE_OK"
+}

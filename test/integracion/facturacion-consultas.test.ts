@@ -53,7 +53,7 @@ import {
 } from "./facturacion-persistencia-apoyo";
 import { reintentarSiAgotada } from "./concurrencia-apoyo";
 import { comoEmpresa } from "./entorno";
-import { cuitAlAzar } from "./entorno";
+import { cuitUnico } from "./entorno";
 import { crearMundo, crearPuntoDeVenta } from "./fiscal-apoyo";
 import {
   crearAsignacionDeBase,
@@ -1186,7 +1186,7 @@ describe.skipIf(base === null)("facturación F6: las consultas del facturador", 
       const otroEmisor = (
         await dueno.query<{ id: string }>(
           "insert into emisor (empresa_id, es_principal, cuit) values ($1, false, $2) returning id",
-          [e.x.empresa, cuitAlAzar()],
+          [e.x.empresa, cuitUnico()],
         )
       ).rows[0]?.id as string;
       await crearPuntoDeVenta(dueno, e.x, { numero: 5, emisor: otroEmisor, activo: true });

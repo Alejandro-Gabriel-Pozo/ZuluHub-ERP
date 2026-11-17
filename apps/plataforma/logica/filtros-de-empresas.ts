@@ -3,6 +3,8 @@
  * React. Lo inválido se descarta en silencio: la dirección la puede escribir cualquiera.
  */
 
+import { LARGO_MAXIMO_DE_FILTRO } from "../../../src/plataforma/dominio/soporte/consulta";
+
 export const ESTADOS_EFECTIVOS = [
   "OPERA",
   "EMPRESA_EN_ALTA",
@@ -22,7 +24,6 @@ export type FiltrosDeEmpresas = Readonly<{
   despuesDeId?: string;
 }>;
 
-const LARGO_MAXIMO_DE_BUSQUEDA = 200;
 const FORMA_DE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Consulta = Record<string, string | string[] | undefined>;
@@ -42,7 +43,7 @@ export function filtrosDeLaDireccion(consulta: Consulta): FiltrosDeEmpresas {
   const estado = primerValor(consulta, "estado");
   const submarca = primerValor(consulta, "submarca");
   const plan = primerValor(consulta, "plan");
-  const buscar = primerValor(consulta, "buscar")?.trim().slice(0, LARGO_MAXIMO_DE_BUSQUEDA).trim();
+  const buscar = primerValor(consulta, "buscar")?.trim().slice(0, LARGO_MAXIMO_DE_FILTRO).trim();
   const despues = primerValor(consulta, "despues");
   return {
     ...(estado !== undefined && esEstado(estado) ? { estadoEfectivo: estado } : {}),

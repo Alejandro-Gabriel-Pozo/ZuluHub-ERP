@@ -48,8 +48,8 @@ const CLASIFICACION: Clasificacion = {
   soloEnPullRequest: gate.SOLO_EN_PULL_REQUEST,
   // `mutacion` es la matriz por grupos: puede quedar `skipped` solo si el plan dijo `hay == false`
   // (regla de `mutacionAceptable` en evaluar-gate.cjs; se verifica abajo con `evaluarGate`).
-  // `estabilidad` (12 copias de la integración) puede quedar `skipped` solo en un pull request y si el plan
-  // dijo `estabilidad == "false"` (regla de `estabilidadAceptable`; `EVENTO` se verifica abajo).
+  // `estabilidad` (copias repetidas de la integración) puede quedar `skipped` en un pull request si el plan
+  // dijo `estabilidad == "false"` (regla de `estabilidadAceptable`) y en push a main (`SALTABLES_EN_PUSH`; `EVENTO` se verifica abajo).
   tratadosAparte: ["mutacion", "estabilidad"],
   gate: "gate",
 };
@@ -71,10 +71,15 @@ const SI_DE_JOB_ESPERADO: Readonly<Record<string, { si: string; motivo: string }
     motivo:
       "revisa lo que un pull request agrega; en push a main queda skipped (SOLO_EN_PULL_REQUEST)",
   },
-  estabilidad: {
-    si: "github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true'",
+  "mutacion-plan": {
+    si: "github.event_name != 'push'",
     motivo:
-      "corre siempre en push a main y en la nocturna; en un pull request, solo si el plan dice que el cambio puede afectar a la integración (el Gate acepta el salto solo así)",
+      "en push a main no corre (corre solo lo rápido; el Gate acepta el plan, la mutación y Estabilidad saltados solo en push: SALTABLES_EN_PUSH); en la nocturna, a pedido y en un pull request corre siempre",
+  },
+  estabilidad: {
+    si: "github.event_name != 'push' && (github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true')",
+    motivo:
+      "corre siempre en la nocturna y a pedido, nunca en push a main (corrió en su pull request); en un pull request, solo si el plan dice que el cambio puede afectar a la integración (el Gate acepta el salto solo así)",
   },
   mutacion: {
     si: "needs.mutacion-plan.outputs.hay == 'true'",
@@ -273,16 +278,27 @@ function verificarCI(texto: string, clasificacion: Clasificacion = CLASIFICACION
     }
   }
 
-  // (f) La política de concurrencia: los pull requests se cancelan entre sí, main y la nocturna no.
+  // (f) La política de concurrencia: los pull requests y los push a main se cancelan entre sí; la nocturna no.
   const concurrencia = leerConcurrencia(texto);
   if (concurrencia.grupo !== GRUPO_ESPERADO) {
     problemas.push(
-      `concurrencia: el \`group\` es ${concurrencia.grupo === undefined ? "(ninguno)" : `«${concurrencia.grupo}»`} y debe ser «${GRUPO_ESPERADO}» (push, nocturna y cada pull request en grupos propios)`,
+      `concurrencia: el \`group\` es ${concurrencia.grupo === undefined ? "(ninguno)" : `«${concurrencia.grupo}»`} y debe ser «${GRUPO_ESPERADO}» (push a main, nocturna y cada pull request en grupos propios)`,
     );
   }
   if (concurrencia.cancelar !== CANCELAR_ESPERADO) {
     problemas.push(
-      `concurrencia: \`cancel-in-progress\` es ${concurrencia.cancelar === undefined ? "(ninguno)" : `«${concurrencia.cancelar}»`} y debe ser «${CANCELAR_ESPERADO}» (solo los pull requests cancelan; main no se cancela a sí mismo)`,
+      `concurrencia: \`cancel-in-progress\` es ${concurrencia.cancelar === undefined ? "(ninguno)" : `«${concurrencia.cancelar}»`} y debe ser «${CANCELAR_ESPERADO}» (cancelan los pull requests y los push a main; la nocturna nunca)`,
+    );
+  }
+
+  // (h) `pruebas` en tres fragmentos (ver `PRUEBAS_EN_FRAGMENTOS`).
+  problemas.push(...problemasDeLosFragmentos(texto, "ci.yml"));
+
+  // (g) Las copias de Estabilidad por evento: 3 en un pull request, 12 en la nocturna y a pedido.
+  const matriz = leerMatrizDeEstabilidad(texto);
+  if (matriz !== MATRIZ_DE_ESTABILIDAD_ESPERADA) {
+    problemas.push(
+      `estabilidad: la matriz de copias es ${matriz === undefined ? "(ninguna)" : `«${matriz}»`} y debe ser «${MATRIZ_DE_ESTABILIDAD_ESPERADA}» (3 copias en un pull request, 12 en la nocturna y a pedido)`,
     );
   }
 
@@ -331,8 +347,82 @@ function verificarCI(texto: string, clasificacion: Clasificacion = CLASIFICACION
 // ---------------------------------------------------------------------------------------------
 
 const GRUPO_ESPERADO =
-  "ci-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || github.sha }}";
-const CANCELAR_ESPERADO = "${{ github.event_name == 'pull_request' }}";
+  "ci-${{ github.event_name }}-${{ github.event_name == 'schedule' && github.sha || github.ref }}";
+const CANCELAR_ESPERADO = "${{ github.event_name != 'schedule' }}";
+
+/**
+ * Cuántas copias de la integración repite `estabilidad` por evento (decisión del dueño, 16/11/2026: 3 en un pull request, 12 en la nocturna y a pedido; reemplaza
+ * las 12 fijas del 2026-11-07). Previene: pagar 12 máquinas (~188 min) en cada pull request que toca la base cuando 3 alcanzan para verlo antes de mergear y la
+ * nocturna sigue repitiendo 12 (el ahorro medido: ~140 min de máquina por pull request que la dispara). `push` no figura: el job no corre en push a main.
+ */
+const COPIAS_DE_ESTABILIDAD: Readonly<Record<string, number>> = {
+  pull_request: 3,
+  schedule: 12,
+  workflow_dispatch: 12,
+};
+/**
+ * `pruebas` corre en TRES fragmentos de la suite (`vitest --shard`; decisión del dueño, 17/11/2026, opción B). Previene: el timeout de un job monolítico al borde del límite
+ * (run 43989591478: 20 min 16 s y 20 min 5 s cancelados) y que un fragmento se pierda sin que nadie lo note: la matriz es EXACTAMENTE [1, 2, 3], el total sale de `strategy.job-total`
+ * (nunca un número escrito a mano que se desfase de la matriz), el fragmento llega por `PEDERNAL_FRAGMENTO` (lo lee `vitest.config.ts`; el paso sigue siendo `npm test`, que es lo que el guardián de contratos exige) y `fail-fast: false` deja correr y ver a todos. El resultado del job que ve el Gate (`needs.pruebas.result`) es
+ * el agregado de la matriz: success solo si TODOS los fragmentos dieron success; cualquiera fallido o cancelado lo deja en failure o cancelled (fail-closed).
+ */
+const PRUEBAS_EN_FRAGMENTOS = {
+  matriz: "[1, 2, 3]",
+  comando: "- run: npm test",
+  entorno: ["PEDERNAL_FRAGMENTO: ${{ matrix.shard }}/${{ strategy.job-total }}"],
+  topePorFragmento: 20,
+} as const;
+
+/** Las líneas de `strategy` del job `pruebas` y su comando de pruebas, o un motivo si no cumple. */
+function problemasDeLosFragmentos(texto: string, archivo: string): string[] {
+  const cuerpo = leerJobs(texto).get("pruebas")?.texto ?? "";
+  const problemas: string[] = [];
+  const esperado = (condicion: boolean, motivo: string) => {
+    if (!condicion) problemas.push(`${archivo}: pruebas: ${motivo}`);
+  };
+  const lineas = cuerpo.split("\n").map((l) => l.replace(/\s+#.*$/, "").trimEnd());
+  esperado(
+    lineas.includes(`        shard: ${PRUEBAS_EN_FRAGMENTOS.matriz}`),
+    `la matriz de fragmentos tiene que ser \`shard: ${PRUEBAS_EN_FRAGMENTOS.matriz}\` (tres fragmentos, ninguno de menos)`,
+  );
+  esperado(
+    lineas.includes("      fail-fast: false"),
+    "falta `fail-fast: false` (un fragmento caído no puede cancelar a los otros)",
+  );
+  esperado(
+    lineas.some((l) => l.trim() === PRUEBAS_EN_FRAGMENTOS.comando),
+    `el comando de pruebas tiene que ser \`${PRUEBAS_EN_FRAGMENTOS.comando.slice(2)}\` (cada fragmento corre solo el suyo y el total sale de la matriz)`,
+  );
+  for (const variable of PRUEBAS_EN_FRAGMENTOS.entorno) {
+    esperado(
+      lineas.some((l) => l.trim() === variable),
+      `falta \`${variable}\` en el paso de las pruebas`,
+    );
+  }
+  esperado(
+    !/PEDERNAL_FRAGMENTO:[^\n]*\/\d+\s*$/m.test(cuerpo.replace(/#[^\n]*/g, "")),
+    "falta `PEDERNAL_FRAGMENTO` con el total de la matriz: el total escrito a mano se desfasa de la matriz",
+  );
+  esperado(
+    lineas.includes(`    timeout-minutes: ${PRUEBAS_EN_FRAGMENTOS.topePorFragmento}`),
+    `el tope por fragmento tiene que ser ${PRUEBAS_EN_FRAGMENTOS.topePorFragmento} min (casi 3 veces los ~7 min esperados por fragmento)`,
+  );
+  esperado(
+    lineas.some((l) => l.trim() === "image: postgres:18"),
+    "cada fragmento tiene su propio Postgres 18 (service container del job)",
+  );
+  return problemas;
+}
+
+const MATRIZ_DE_ESTABILIDAD_ESPERADA =
+  "${{ fromJSON(github.event_name == 'pull_request' && '[1, 2, 3]' || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]') }}";
+
+/** La expresión de `matrix.corrida` del job `estabilidad`, tal como está escrita (sin comentarios). */
+function leerMatrizDeEstabilidad(texto: string): string | undefined {
+  const cuerpo = leerJobs(texto).get("estabilidad")?.texto ?? "";
+  const linea = cuerpo.split("\n").find((l) => /^ {8}corrida:/.test(l));
+  return linea === undefined ? undefined : escalar(linea.replace(/^ {8}corrida:[ \t]*/, ""));
+}
 
 /** El bloque `concurrency:` de primer nivel (`group` y `cancel-in-progress`), sin comentarios. */
 function leerConcurrencia(texto: string): {
@@ -365,8 +455,8 @@ function decisionDeConcurrencia(e: { evento: string; ref: string; sha: string })
   cancelar: boolean;
 } {
   return {
-    grupo: `ci-${e.evento}-${e.evento === "pull_request" ? e.ref : e.sha}`,
-    cancelar: e.evento === "pull_request",
+    grupo: `ci-${e.evento}-${e.evento === "schedule" ? e.sha : e.ref}`,
+    cancelar: e.evento !== "schedule",
   };
 }
 
@@ -479,12 +569,13 @@ const CASOS: Caso[] = [
   ...CLASIFICACION.obligatorios.map((id): Caso => ({
     nombre: `agregar if: false al job obligatorio «${id}»`,
     alterar: (t) => conPropiedad(t, id, "if: false"),
-    esperado: [`«${id}»`, "if: false"],
+    // `mutacion-plan` ya tiene un `if` permitido (no corre en push): un segundo `if` lo cambia y se dice «debe ser».
+    esperado: [`«${id}»`, id === "mutacion-plan" ? "debe ser" : "if: false"],
   })),
   {
     nombre: "agregar un if que saltea al job «mutacion-plan» con la forma del de dependencias",
     alterar: (t) => conPropiedad(t, "mutacion-plan", "if: github.event_name == 'pull_request'"),
-    esperado: ["«mutacion-plan»", "no debería"],
+    esperado: ["«mutacion-plan»", "debe ser"],
   },
   {
     nombre: "dejar «dependencias» siempre saltado (if: false)",
@@ -510,12 +601,123 @@ const CASOS: Caso[] = [
     esperado: ["«estabilidad»", "debe ser"],
   },
   {
-    nombre: "«estabilidad» se saltea en push a main (el if pierde la rama de «no es pull request»)",
+    nombre:
+      "«estabilidad» no corre en la nocturna ni a pedido (el if pierde la rama de «no es pull request»)",
     alterar: (t) =>
       enJob(t, "estabilidad", (b) =>
         reemplazarUnico(b, "github.event_name != 'pull_request' || ", ""),
       ),
     esperado: ["«estabilidad»", "debe ser"],
+  },
+  {
+    nombre: "«estabilidad» vuelve a correr en push a main (el if pierde la exclusión de push)",
+    alterar: (t) =>
+      enJob(t, "estabilidad", (b) =>
+        reemplazarUnico(
+          b,
+          /^ {4}if: .*\n/m,
+          "    if: github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true'\n",
+        ),
+      ),
+    esperado: ["«estabilidad»", "debe ser"],
+  },
+  {
+    nombre: "«mutacion-plan» vuelve a correr en push a main (pierde su if)",
+    alterar: (t) => enJob(t, "mutacion-plan", (b) => reemplazarUnico(b, /^ {4}if: .*\n/m, "")),
+    esperado: ["«mutacion-plan»", "debe ser"],
+  },
+  {
+    nombre:
+      "«mutacion-plan» solo en pull request (la nocturna y a pedido se quedarían sin mutación)",
+    alterar: (t) =>
+      enJob(t, "mutacion-plan", (b) =>
+        reemplazarUnico(b, /^ {4}if: .*\n/m, "    if: github.event_name == 'pull_request'\n"),
+      ),
+    esperado: ["«mutacion-plan»", "debe ser"],
+  },
+  {
+    nombre: "«pruebas» pierde un fragmento (la matriz queda en [1, 2])",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) => reemplazarUnico(b, "shard: [1, 2, 3]", "shard: [1, 2]")),
+    esperado: ["pruebas", "la matriz de fragmentos"],
+  },
+  {
+    nombre: "«pruebas» suma un fragmento sin decidirlo (la matriz queda en [1, 2, 3, 4])",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) => reemplazarUnico(b, "shard: [1, 2, 3]", "shard: [1, 2, 3, 4]")),
+    esperado: ["pruebas", "la matriz de fragmentos"],
+  },
+  {
+    nombre: "«pruebas» pierde `fail-fast: false` (un fragmento caído cancelaría a los otros)",
+    alterar: (t) => enJob(t, "pruebas", (b) => reemplazarUnico(b, "      fail-fast: false\n", "")),
+    esperado: ["pruebas", "fail-fast"],
+  },
+  {
+    nombre: "«pruebas» deja de correr `npm test` (el guardián de contratos lo exige)",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) =>
+        reemplazarUnico(b, "- run: npm test\n", "- run: npm run otra-cosa\n"),
+      ),
+    esperado: ["pruebas", "el comando de pruebas"],
+  },
+  {
+    nombre:
+      "«pruebas» escribe el total de fragmentos a mano (PEDERNAL_FRAGMENTO: ${{ matrix.shard }}/3)",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) =>
+        reemplazarUnico(
+          b,
+          "${{ matrix.shard }}/${{ strategy.job-total }}",
+          "${{ matrix.shard }}/3",
+        ),
+      ),
+    esperado: ["pruebas", "falta `PEDERNAL_FRAGMENTO"],
+  },
+  {
+    nombre: "«pruebas» pierde la variable del fragmento (cada job correría la suite entera)",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) =>
+        reemplazarUnico(
+          b,
+          "          PEDERNAL_FRAGMENTO: ${{ matrix.shard }}/${{ strategy.job-total }}\n",
+          "",
+        ),
+      ),
+    esperado: ["pruebas", "falta `PEDERNAL_FRAGMENTO"],
+  },
+  {
+    nombre: "«pruebas» sube el tope por fragmento a 25 (ya no es el decidido)",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) => reemplazarUnico(b, "timeout-minutes: 20", "timeout-minutes: 25")),
+    esperado: ["pruebas", "el tope por fragmento"],
+  },
+  {
+    nombre: "«pruebas» cambia de Postgres (la versión de Neon es la 18)",
+    alterar: (t) =>
+      enJob(t, "pruebas", (b) => reemplazarUnico(b, "image: postgres:18", "image: postgres:17")),
+    esperado: ["pruebas", "Postgres 18"],
+  },
+  {
+    nombre: "«estabilidad» vuelve a 12 copias en un pull request",
+    alterar: (t) =>
+      reemplazarUnico(t, "github.event_name == 'pull_request' && '[1, 2, 3]' || ", ""),
+    esperado: ["estabilidad", "la matriz de copias"],
+  },
+  {
+    nombre: "«estabilidad» queda con 3 copias también en la nocturna",
+    alterar: (t) =>
+      reemplazarUnico(t, "'[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]') }}", "'[1, 2, 3]') }}"),
+    esperado: ["estabilidad", "la matriz de copias"],
+  },
+  {
+    nombre: "«estabilidad» queda con una sola copia en un pull request",
+    alterar: (t) => reemplazarUnico(t, "'[1, 2, 3]' ||", "'[1]' ||"),
+    esperado: ["estabilidad", "la matriz de copias"],
+  },
+  {
+    nombre: "«estabilidad» pierde su matriz de copias",
+    alterar: (t) => reemplazarUnico(t, /^ {8}corrida: .*\n/m, ""),
+    esperado: ["estabilidad", "(ninguna)"],
   },
   {
     nombre: "ampliar el if de «mutacion» para que además se saltee",
@@ -631,17 +833,29 @@ const CASOS: Caso[] = [
     esperado: ["«gate»", "NEEDS"],
   },
   {
-    nombre: "volver a cancelar siempre (un push a main cancelaría al anterior y a la nocturna)",
+    nombre:
+      "cancelar solo los pull requests (un push a main no cancelaría al anterior: ~475 min de máquina en cola por merge)",
     alterar: (t) =>
       reemplazarUnico(
         t,
+        "cancel-in-progress: ${{ github.event_name != 'schedule' }}",
         "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
+      ),
+    esperado: ["concurrencia", "cancel-in-progress"],
+  },
+  {
+    nombre: "cancelar siempre (la corrida nocturna podría cancelarse)",
+    alterar: (t) =>
+      reemplazarUnico(
+        t,
+        "cancel-in-progress: ${{ github.event_name != 'schedule' }}",
         "cancel-in-progress: true",
       ),
     esperado: ["concurrencia", "cancel-in-progress"],
   },
   {
-    nombre: "un grupo único por rama (push y nocturna de main vuelven a compartir cola)",
+    nombre:
+      "un grupo único por rama (push y nocturna de main vuelven a compartir cola, y la nocturna cancelaría o sería cancelada)",
     alterar: (t) => reemplazarUnico(t, /^ {2}group: ci-.*\n/m, "  group: ci-${{ github.ref }}\n"),
     esperado: ["concurrencia", "group"],
   },
@@ -711,7 +925,7 @@ describe("ci.yml y el Gate", () => {
     expect(extrae).toBeGreaterThan(corre);
   });
 
-  it("la concurrencia: los pull requests cancelan a su corrida vieja; main y la nocturna nunca se cancelan entre sí", () => {
+  it("la concurrencia: los pull requests y los push a main cancelan a su corrida vieja; la nocturna nunca se cancela ni cancela", () => {
     const { grupo, cancelar } = leerConcurrencia(CI);
     expect(grupo).toBe(GRUPO_ESPERADO);
     expect(cancelar).toBe(CANCELAR_ESPERADO);
@@ -736,17 +950,38 @@ describe("ci.yml y el Gate", () => {
     expect(pr1.grupo).not.toBe(otroPr.grupo);
     const push1 = decisionDeConcurrencia({ evento: "push", ref: "refs/heads/main", sha: "a" });
     const push2 = decisionDeConcurrencia({ evento: "push", ref: "refs/heads/main", sha: "b" });
-    const noche = decisionDeConcurrencia({ evento: "schedule", ref: "refs/heads/main", sha: "b" });
-    expect(push1.cancelar).toBe(false);
-    expect(push2.cancelar).toBe(false);
-    expect(noche.cancelar).toBe(false);
-    expect(new Set([push1.grupo, push2.grupo, noche.grupo]).size).toBe(3); // ninguno comparte grupo
-    // En ningún grupo de main/nocturna pueden convivir dos corridas de SHA distinto bajo una misma cola con cancelación.
-    expect(push1.grupo).not.toBe(pr1.grupo);
+    expect(push1.grupo).toBe(push2.grupo); // dos merges seguidos: misma cola, la corrida del primero se cancela
+    expect(push1.cancelar).toBe(true);
+    expect(push2.cancelar).toBe(true);
+    const noche1 = decisionDeConcurrencia({ evento: "schedule", ref: "refs/heads/main", sha: "b" });
+    const noche2 = decisionDeConcurrencia({ evento: "schedule", ref: "refs/heads/main", sha: "c" });
+    expect(noche1.cancelar).toBe(false);
+    expect(noche1.grupo).not.toBe(noche2.grupo); // cada nocturna en su propio grupo: nada la reemplaza
+    // Ni un push a main ni un pull request comparten grupo con la nocturna ni entre sí.
+    expect(new Set([push1.grupo, noche1.grupo, pr1.grupo]).size).toBe(3);
   });
 
   it("el Gate recibe el evento (sin él no puede saber si saltar Estabilidad es legítimo)", () => {
     expect(leerJobs(CI).get("gate")?.texto).toContain("EVENTO: ${{ github.event_name }}");
+  });
+
+  it("estabilidad repite 3 copias en un pull request y 12 en la nocturna y a pedido (y sigue exigida por el Gate)", () => {
+    const expresion = leerMatrizDeEstabilidad(CI) ?? "";
+    const forma =
+      /^\$\{\{ fromJSON\(github\.event_name == 'pull_request' && '(\[[\d, ]+\])' \|\| '(\[[\d, ]+\])'\) \}\}$/.exec(
+        expresion,
+      );
+    expect(forma, expresion).not.toBeNull();
+    const [, enPr, enElResto] = forma ?? [];
+    const copias = (lista: string | undefined): number[] => JSON.parse(lista ?? "[]") as number[];
+    for (const [evento, cuantas] of Object.entries(COPIAS_DE_ESTABILIDAD)) {
+      const lista = copias(evento === "pull_request" ? enPr : enElResto);
+      expect(lista, evento).toEqual(Array.from({ length: cuantas }, (_, i) => i + 1));
+    }
+    // El job sigue siendo obligatorio para el Gate y espera al plan (el plan sigue decidiendo si corre en un pull request).
+    expect(gate.OBLIGATORIOS.concat(CLASIFICACION.tratadosAparte)).toContain("estabilidad");
+    expect(leerJobs(CI).get("estabilidad")?.needs).toEqual(["mutacion-plan"]);
+    expect(leerJobs(CI).get("gate")?.needs).toContain("estabilidad");
   });
 
   it("el workflow no usa pull_request_target ni secretos (la base y el PR corren sin credenciales)", () => {
@@ -765,6 +1000,41 @@ describe("ci.yml y el Gate", () => {
         gate.evaluarGate(caido).some((p) => p.startsWith(`${id}:`)),
         `si «${id}» cae, evaluarGate lo tiene que reportar`,
       ).toBe(true);
+    }
+  });
+});
+
+describe("gate-rapido.yml: sus pruebas se reparten igual que las de ci.yml", () => {
+  const RAPIDO = readFileSync(
+    join(import.meta.dirname, "../../.github/workflows/gate-rapido.yml"),
+    "utf8",
+  );
+  it("cumple la misma estructura de fragmentos", () => {
+    expect(problemasDeLosFragmentos(RAPIDO, "gate-rapido.yml")).toEqual([]);
+  });
+  it("sin la matriz o con otro tope, falla", () => {
+    expect(
+      problemasDeLosFragmentos(RAPIDO.replace("shard: [1, 2, 3]", "shard: [1]"), "gate-rapido.yml"),
+    ).toHaveLength(1);
+    expect(
+      problemasDeLosFragmentos(
+        RAPIDO.replace("timeout-minutes: 20\n    strategy", "timeout-minutes: 15\n    strategy"),
+        "gate-rapido.yml",
+      ).join(),
+    ).toContain("el tope por fragmento");
+  });
+});
+
+describe("el Gate ve el agregado de los fragmentos de `pruebas` (fail-closed)", () => {
+  it("un fragmento fallido, cancelado o saltado deja `pruebas` en rojo para el Gate", () => {
+    const verde: Record<string, { result: string; outputs?: Record<string, string> }> =
+      Object.fromEntries(SIN_GATE.map((id) => [id, { result: "success" }]));
+    verde["mutacion-plan"] = { result: "success", outputs: { hay: "true", reloj: "true" } };
+    expect(gate.evaluarGate(verde)).toEqual([]);
+    for (const result of ["failure", "cancelled", "skipped"]) {
+      expect(gate.evaluarGate({ ...verde, pruebas: { result } }), result).toContain(
+        `pruebas: ${result}`,
+      );
     }
   });
 });

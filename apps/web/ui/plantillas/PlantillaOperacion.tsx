@@ -3,6 +3,19 @@ import { Icono } from "../iconos/Icono";
 import type { ClaveDeIcono } from "../iconos/catalogo";
 import estilos from "./PlantillaOperacion.module.css";
 
+/** Una pantalla dentro de la hoja de un destino. */
+type EnlaceDeHoja = Readonly<{
+  etiqueta: string;
+  href: string;
+  actual?: boolean;
+}>;
+
+/** Un grupo de la hoja: con encabezado, o sin él (sus enlaces van sueltos) si `etiqueta` es `null`. */
+type GrupoDeHoja = Readonly<{
+  etiqueta: string | null;
+  enlaces: readonly EnlaceDeHoja[];
+}>;
+
 export type DestinoDeOperacion = Readonly<{
   /** El texto del destino, ya resuelto. Siempre se ve: el ícono solo no alcanza. */
   etiqueta: string;
@@ -10,6 +23,8 @@ export type DestinoDeOperacion = Readonly<{
   href: string;
   /** El destino actual (`aria-current="page"`). */
   actual?: boolean;
+  /** Si el destino reúne varias pantallas: se abre una hoja con sus grupos (sin JavaScript: `details`) en vez de ir a una sola. */
+  hoja?: readonly GrupoDeHoja[];
 }>;
 
 /** De 3 a 5 destinos ([01] §7): el tipo lo exige, no hace falta contarlos en tiempo de ejecución. */
@@ -40,6 +55,18 @@ export type PropsDePlantillaOperacion = Readonly<{
   barraDeAccion?: ReactNode;
   children: ReactNode;
 }>;
+
+function EnlaceDeLaHoja({ enlace }: Readonly<{ enlace: EnlaceDeHoja }>) {
+  return (
+    <a
+      href={enlace.href}
+      className={estilos["enlaceDeHoja"]}
+      aria-current={enlace.actual === true ? "page" : undefined}
+    >
+      {enlace.etiqueta}
+    </a>
+  );
+}
 
 /**
  * Armazón del mostrador en el celular: una tarea por pantalla, objetivos grandes y una barra inferior
@@ -76,14 +103,48 @@ export function PlantillaOperacion({
           <ul className={estilos["destinos"]}>
             {destinos.map((destino) => (
               <li key={destino.href} className={estilos["destino"]}>
-                <a
-                  href={destino.href}
-                  className={estilos["enlace"]}
-                  aria-current={destino.actual === true ? "page" : undefined}
-                >
-                  <Icono clave={destino.icono} tamano="grande" decorativo />
-                  <span>{destino.etiqueta}</span>
-                </a>
+                {destino.hoja === undefined ? (
+                  <a
+                    href={destino.href}
+                    className={estilos["enlace"]}
+                    aria-current={destino.actual === true ? "page" : undefined}
+                  >
+                    <Icono clave={destino.icono} tamano="grande" decorativo />
+                    <span>{destino.etiqueta}</span>
+                  </a>
+                ) : (
+                  <details className={estilos["hoja"]}>
+                    <summary
+                      className={`${estilos["enlace"] ?? ""} ${estilos["resumen"] ?? ""}`}
+                      aria-current={destino.actual === true ? "page" : undefined}
+                    >
+                      <Icono clave={destino.icono} tamano="grande" decorativo />
+                      <span>{destino.etiqueta}</span>
+                    </summary>
+                    <ul className={estilos["panel"]}>
+                      {destino.hoja.map((grupo, i) =>
+                        grupo.etiqueta === null ? (
+                          grupo.enlaces.map((e) => (
+                            <li key={e.href}>
+                              <EnlaceDeLaHoja enlace={e} />
+                            </li>
+                          ))
+                        ) : (
+                          <li key={`${grupo.etiqueta}-${String(i)}`} className={estilos["grupo"]}>
+                            <span className={estilos["grupoEtiqueta"]}>{grupo.etiqueta}</span>
+                            <ul className={estilos["enlacesDelGrupo"]}>
+                              {grupo.enlaces.map((e) => (
+                                <li key={e.href}>
+                                  <EnlaceDeLaHoja enlace={e} />
+                                </li>
+                              ))}
+                            </ul>
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  </details>
+                )}
               </li>
             ))}
           </ul>

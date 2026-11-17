@@ -5,7 +5,7 @@ import { accionesDePuntosDeVenta } from "../../../../../../servidor/modulos";
 import { RUTAS_DE_CONFIGURACION } from "../../../../../../ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { armarLaListaDePuntosDeVenta } from "../../../../../../ui/plantillas/configuracion-fiscal/modelo-de-puntos-de-venta";
 import { PantallaDePuntosDeVenta } from "../../../../../../ui/plantillas/configuracion-fiscal/PantallaDePuntosDeVenta";
-import { ErrorDelDetalle } from "../../../../../../ui/plantillas/facturacion/ErrorDelDetalle";
+import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 
 // `/configuracion-fiscal/puntos-de-venta`: todos los puntos de venta del emisor, también los que no están activos (D-60).
 export default async function PaginaDePuntosDeVenta() {
