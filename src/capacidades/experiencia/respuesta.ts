@@ -8,6 +8,11 @@ import {
   PARAMETROS_DE_CATALOGO,
   type CodigoDeCatalogo,
 } from "./respuesta-de-catalogo";
+import {
+  CLAVES_DE_ERRORES_DE_SALON,
+  PARAMETROS_DE_SALON,
+  type CodigoDeSalon,
+} from "./respuesta-de-salon";
 import { CLAVES_DE_ERRORES_DE_VENTAS, type CodigoDeVentas } from "./respuesta-de-ventas";
 import { CLAVES_DE_ERRORES_FISCALES, type CodigoFiscal } from "./respuesta-fiscal";
 
@@ -47,6 +52,7 @@ export type CodigoDeNegocio =
   | CodigoFiscal
   | CodigoDeCaja
   | CodigoDeCatalogo
+  | CodigoDeSalon
   | CodigoDeVentas;
 
 export type CodigoPublico =
@@ -85,6 +91,11 @@ const AVISOS_DE_CATALOGO = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_CATALOGO).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoDeCatalogo, DefinicionDeCodigo>>;
 
+/** Los códigos de la pantalla «Mesas» (`respuesta-de-salon.ts`): cada uno es un aviso con su texto del salón. */
+const AVISOS_DE_SALON = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_SALON).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeSalon, DefinicionDeCodigo>>;
+
 /** Los códigos de ventas (`respuesta-de-ventas.ts`): cada uno es un aviso con su texto `ventas.error.*`. */
 const AVISOS_DE_VENTAS = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_VENTAS).map(([codigo, clave]) => [codigo, aviso(clave)]),
@@ -107,6 +118,7 @@ export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo
   ...AVISOS_FISCALES,
   ...AVISOS_DE_CAJA,
   ...AVISOS_DE_CATALOGO,
+  ...AVISOS_DE_SALON,
   ...AVISOS_DE_VENTAS,
   MODULO_EN_DESARROLLO: motivo("motivo.modulo_en_desarrollo"),
   MODULO_NO_ACTIVO: motivo("motivo.modulo_no_activo"),
@@ -168,7 +180,9 @@ const SIN_PARAMETROS_VALIDOS: CodigoDeCatalogo = "CATALOGO_ACCION_NO_PERMITIDA";
 const declaradosDe = (codigo: CodigoPublico): readonly string[] | undefined =>
   Object.hasOwn(PARAMETROS_DE_CATALOGO, codigo)
     ? PARAMETROS_DE_CATALOGO[codigo as CodigoDeCatalogo]
-    : undefined;
+    : Object.hasOwn(PARAMETROS_DE_SALON, codigo)
+      ? PARAMETROS_DE_SALON[codigo as CodigoDeSalon]
+      : undefined;
 
 /**
  * Un parámetro público es un importe decimal en texto («13000.000000»): lo decide la primitiva de precios (`precioDeVentaDesdeTexto`, una regla en un solo lugar: forma canónica, hasta 6

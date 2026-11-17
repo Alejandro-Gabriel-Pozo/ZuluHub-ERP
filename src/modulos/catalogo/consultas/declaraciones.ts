@@ -13,6 +13,8 @@ export const DECLARACIONES_DE_CONSULTAS = {
   productosParaCopiar: { accion: "productos.ver" },
   listarSeccionesDeCarta: { accion: "productos.ver" },
   listarSeccionesParaGestionar: { accion: "productos.ver" },
+  listarFamilias: { accion: "productos.ver" },
+  verFamilia: { accion: "productos.ver" },
   listarUnidades: { accion: "productos.ver" },
   listarClasificacion: { accion: "productos.ver" },
   destinosParaMoverNodo: { accion: "productos.ver" },

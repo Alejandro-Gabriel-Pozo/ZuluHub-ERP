@@ -147,6 +147,9 @@ const DEL_OPERADOR_DE_CAJA_CIERRE_Y_VENTAS = [
 const DEL_OPERADOR_DE_CLIENTES_Y_COMPRAS = [
   "comprobantes_de_proveedor.registrar",
   "comprobantes_de_proveedor.ver",
+  "devoluciones_a_proveedor.ver",
+  "notas_de_credito_de_proveedor.ver",
+  "ordenes_de_compra.ver",
   "partes.cambiar_roles",
   "partes.crear",
   "partes.desvincular_contacto",
@@ -167,6 +170,21 @@ const DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS = [
   "partes.reactivar",
   "proveedores.editar_ficha",
   "recepciones.anular",
+  "recepciones.confirmar",
+  "comprobantes_de_proveedor.anular",
+  "conciliaciones.conciliar",
+  "conciliaciones.anular",
+  "conciliaciones.ver",
+  "ordenes_de_compra.crear",
+  "ordenes_de_compra.pedir",
+  "ordenes_de_compra.cerrar",
+  "ordenes_de_compra.anular",
+  "devoluciones_a_proveedor.registrar",
+  "devoluciones_a_proveedor.anular",
+  "notas_de_credito_de_proveedor.registrar",
+  "notas_de_credito_de_proveedor.anular",
+  "diferencias_de_compra.ver",
+  "diferencias_de_compra.resolver",
 ] as const;
 
 /** El nivel de operación de las compras es solo del gerente. */
@@ -295,9 +313,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 157 acciones: 34 de empresa, configuración fiscal y facturación, 48 de catálogo, carta y stock (39 de T0, 2 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 19 de clientes y compras y 16 de salón y comandas", () => {
+  it("hay 175 acciones: 34 de empresa, configuración fiscal y facturación, 48 de catálogo, carta y stock (39 de T0, 2 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 37 de clientes y compras y 16 de salón y comandas", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(157);
+    expect(todas).toHaveLength(175);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -347,7 +365,8 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("recepciones"),
       porPrefijo("comprobantes_de_proveedor"),
       porPrefijo("compras"),
-    ]).toEqual([8, 2, 3, 4, 2]);
+      porPrefijo("conciliaciones"),
+    ]).toEqual([8, 2, 4, 5, 2, 3]);
   });
 
   it("las acciones retiradas por las decisiones 138 y 133 ya no existen: ni en la matriz ni en el catálogo", () => {
