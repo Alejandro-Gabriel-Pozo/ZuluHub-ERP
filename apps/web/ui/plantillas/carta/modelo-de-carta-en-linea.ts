@@ -14,7 +14,7 @@ import {
  *  - **«No disponible»** se dice bajo la dirección cuando la carta está fuera de línea (lo que ve quien abre la dirección).
  */
 
-/** La pantalla y su única dirección. SUPUESTO (DEC-0462): la maqueta no fija la ruta; sigue el patrón de `/catalogo/secciones`. Revertir: cambiar esta constante y la carpeta de la página. */
+/** La pantalla y su única dirección. SUPUESTO (DEC-0547): la maqueta no fija la ruta; sigue el patrón de `/catalogo/secciones`. Revertir: cambiar esta constante y la carpeta de la página. */
 export const RUTA_DE_LA_CARTA_EN_LINEA = "/catalogo/carta-en-linea";
 
 /** Lo que entrega la composición (la misma forma, sin importar de dónde venga; la UI no importa los módulos). */
