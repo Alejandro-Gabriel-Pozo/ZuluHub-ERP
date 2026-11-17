@@ -15,8 +15,8 @@
  *    (el grafo lo ve) o lo lee como texto (`LECTURAS_DE_APPS`);
  *  - `.github/workflows/ci.yml`: ver `cambioDeCiAfecta`; solo un cambio en jobs que no son de mutación deja de correr todo, y aun así alcanza al guardián.
  *
- * El mismo grafo decide si la integración (`Estabilidad`, 12 copias) se repite: ver `planificarEstabilidad`. El orden del plan es por duración
- * descendente (`ordenarPorDuracion`). Chequeo: `test/arquitectura/planificar-mutacion.test.ts`.
+ * El mismo grafo (más una lista de rutas del dueño) decide si la integración (`Estabilidad`, 12 copias) tiene que repetirse: ver `planificarEstabilidad`.
+ * Orden de los grupos: duración descendente (`ordenarPorDuracion`); los del guardián solo entran si el PR lo toca (`guardian-en-pr.cjs`). Chequeo: `test/arquitectura/planificar-mutacion.test.ts`.
  */
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
