@@ -107,9 +107,20 @@ describe("la página de la ficha de datos de un producto", () => {
         valor: { acciones, modulos: { activos: ["catalogo", "vidriera"], enSoloLectura: [] } },
       };
     };
+    /** El texto de un marcado sin sus etiquetas: se recorre carácter por carácter (nada se «limpia» con una expresión regular). */
+    const sinEtiquetas = (marcado: string): string => {
+      let dentro = false;
+      let texto = "";
+      for (const c of marcado) {
+        if (c === "<") dentro = true;
+        else if (c === ">") dentro = false;
+        else if (!dentro) texto += c;
+      }
+      return texto;
+    };
     const botones = (marcado: string) =>
       [...marcado.matchAll(/<button\b([^>]*)>(.*?)<\/button>/g)].map((m) => ({
-        texto: (m[2] ?? "").replace(/<[^>]+>/g, "").trim(),
+        texto: sinEtiquetas(m[2] ?? "").trim(),
         apagado: /disabled/.test(m[1] ?? ""),
       }));
 
