@@ -20,7 +20,7 @@ describe("el registro de decisiones del repositorio", () => {
     expect(corrida.status).toBe(0);
   });
 
-  it("la cuota del dueño (11/11/2026) es 5 de negocio y 10 técnicas desde el 14/11/2026, sin excepciones", () => {
+  it("la cuota del dueño (11/11/2026) es 5 de negocio y 10 técnicas desde el 14/11/2026, con las excepciones del dueño", () => {
     const cuota: unknown = JSON.parse(
       readFileSync(join(RAIZ, "arquitectura/decisiones/cuota.json"), "utf8"),
     );
@@ -28,7 +28,13 @@ describe("el registro de decisiones del repositorio", () => {
       vigente_desde: "2026-11-14",
       negocio: 5,
       tecnicas: 10,
-      excepciones: [],
+      // #371 (Compras N3/N4): el dueño exceptuó las 8 decisiones de negocio del PR (16/11/2026, «A para la cuota de #371»).
+      excepciones: [700, 705, 707, 708, 710, 711, 712, 713].map((n) => ({
+        id: `DEC-${String(n).padStart(4, "0")}`,
+        fecha: "2026-11-16",
+        fuente:
+          "Mensaje del dueño en el chat del orquestador, 16/11/2026: «A para la cuota de #371», opción A (excepción para este PR) frente a B (partir el PR)",
+      })),
     });
   });
 
