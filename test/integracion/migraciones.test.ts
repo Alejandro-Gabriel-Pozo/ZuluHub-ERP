@@ -78,9 +78,17 @@ describe.skipIf(base === null)("migraciones", () => {
         "0056_receta_sin_insumos.sql",
         "0057_opcion_consume_elaborado.sql",
         "0058_oferta_vigente.sql",
+        "0063_compras_recepcion_separada.sql",
+        "0064_stock_entrada_de_compra_a_cuarentena_y_rechazo.sql",
+        "0065_producto_en_la_linea_de_la_factura.sql",
+        "0066_compras_ordenes.sql",
+        "0067_compras_diferencias.sql",
+        "0075_alicuota_del_producto.sql",
         "0077_identidad_de_la_carta.sql",
         "0078_portal_de_la_empresa.sql",
         "0083_portal_por_plan.sql",
+        "0084_compras_devoluciones.sql",
+        "0085_compras_notas_de_credito.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -140,9 +148,17 @@ describe.skipIf(base === null)("migraciones", () => {
           "0056_receta_sin_insumos.sql",
           "0057_opcion_consume_elaborado.sql",
           "0058_oferta_vigente.sql",
+          "0063_compras_recepcion_separada.sql",
+          "0064_stock_entrada_de_compra_a_cuarentena_y_rechazo.sql",
+          "0065_producto_en_la_linea_de_la_factura.sql",
+          "0066_compras_ordenes.sql",
+          "0067_compras_diferencias.sql",
+          "0075_alicuota_del_producto.sql",
           "0077_identidad_de_la_carta.sql",
           "0078_portal_de_la_empresa.sql",
           "0083_portal_por_plan.sql",
+          "0084_compras_devoluciones.sql",
+          "0085_compras_notas_de_credito.sql",
         ],
       });
     } finally {
@@ -307,9 +323,17 @@ describe.skipIf(base === null)("migraciones", () => {
         "0056_receta_sin_insumos.sql",
         "0057_opcion_consume_elaborado.sql",
         "0058_oferta_vigente.sql",
+        "0063_compras_recepcion_separada.sql",
+        "0064_stock_entrada_de_compra_a_cuarentena_y_rechazo.sql",
+        "0065_producto_en_la_linea_de_la_factura.sql",
+        "0066_compras_ordenes.sql",
+        "0067_compras_diferencias.sql",
+        "0075_alicuota_del_producto.sql",
         "0077_identidad_de_la_carta.sql",
         "0078_portal_de_la_empresa.sql",
         "0083_portal_por_plan.sql",
+        "0084_compras_devoluciones.sql",
+        "0085_compras_notas_de_credito.sql",
       ]);
     } finally {
       await aparte.destruir();

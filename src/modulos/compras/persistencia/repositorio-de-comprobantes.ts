@@ -14,6 +14,8 @@ export type ComprobanteGuardado = Readonly<{
   id: string;
   proveedorId: string;
   clase: string;
+  /** La factura que corrige (solo una nota de crédito). */
+  comprobanteAsociadoId: string | null;
   tipo: TipoDeComprobanteDeProveedor | null;
   puntoDeVenta: number | null;
   numero: number | null;
@@ -46,6 +48,8 @@ export type ComprobanteGuardado = Readonly<{
 export type AltaDeComprobante = Readonly<{
   proveedorId: string;
   clase: string;
+  /** La factura que corrige: obligatoria en una nota de crédito y ausente en lo demás (lo exige la base). */
+  comprobanteAsociadoId?: string | null;
   tipo: TipoDeComprobanteDeProveedor;
   puntoDeVenta: number;
   numero: number;
@@ -110,6 +114,7 @@ const COLUMNAS = [
   "id",
   "proveedor_id",
   "clase",
+  "comprobante_asociado_id",
   "tipo",
   "punto_de_venta",
   "numero",
@@ -143,6 +148,7 @@ type Fila = {
   id: string;
   proveedor_id: string;
   clase: string;
+  comprobante_asociado_id: string | null;
   tipo: string | null;
   punto_de_venta: number | null;
   numero: number | null;
@@ -184,6 +190,7 @@ function aComprobante(f: Fila): ComprobanteGuardado {
     id: f.id,
     proveedorId: f.proveedor_id,
     clase: f.clase,
+    comprobanteAsociadoId: f.comprobante_asociado_id,
     tipo: f.tipo,
     puntoDeVenta: f.punto_de_venta,
     numero: f.numero,
@@ -300,6 +307,7 @@ export function crearRepositorioDeComprobantes(db: Kysely<ComprasDb>): Repositor
           empresa_id: empresa,
           proveedor_id: alta.proveedorId,
           clase: alta.clase,
+          comprobante_asociado_id: alta.comprobanteAsociadoId ?? null,
           tipo: alta.tipo,
           punto_de_venta: alta.puntoDeVenta,
           numero: alta.numero,
