@@ -104,6 +104,11 @@ export const ERRORES_DE_CAJA_POR_RESTRICCION: Readonly<Record<string, string>> =
   movimiento_caja_anula_uk: "MOVIMIENTO_YA_ANULADO",
   movimiento_caja_clave_uk: "NO_TRADUCIDA",
   movimiento_caja_fondo_uk: "NO_TRADUCIDA",
+  // 0072: un movimiento no se anula a sí mismo y el origen (tipo, id, lista cerrada y sentido) lo arman los puertos por origen; un movimiento por origen y empresa.
+  movimiento_caja_anula_distinta_ck: "NO_TRADUCIDA",
+  movimiento_caja_origen_par_ck: "NO_TRADUCIDA",
+  movimiento_caja_origen_ck: "NO_TRADUCIDA",
+  movimiento_caja_origen_uk: "NO_TRADUCIDA",
   movimiento_caja_clase_ck: "NO_TRADUCIDA",
   movimiento_caja_moneda_ck: "NO_TRADUCIDA",
   movimiento_caja_tope_ck: "IMPORTE_INVALIDO",

@@ -230,6 +230,8 @@ export const COLUMNAS_DE_CAJA = {
     "clave_idempotencia",
     "huella",
     "creado_en",
+    "origen_tipo",
+    "origen_id",
   ],
   cobro: [
     "movimiento_id",

@@ -1359,6 +1359,8 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "registrado_por",
             "clave_idempotencia",
             "huella",
+            "origen_tipo",
+            "origen_id",
           ].map((c) => `movimiento_caja.${c}`),
           ...[
             "movimiento_id",
