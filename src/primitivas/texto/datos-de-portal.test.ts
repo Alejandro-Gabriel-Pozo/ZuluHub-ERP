@@ -1,45 +1,46 @@
 import { describe, expect, it } from "vitest";
+import { LARGO_MAXIMO_DEL_TELEFONO } from "../contacto/telefono";
 import { telefonoDeTarjetaDesdeTexto } from "./datos-de-portal";
 
 const ok = (t: string) => telefonoDeTarjetaDesdeTexto(t).ok;
 
-describe("teléfono de la tarjeta del portal: lista permitida", () => {
-  it("acepta los formatos reales", () => {
-    for (const t of [
-      "11 4321-0000",
-      "+54 (11) 4321-0000",
-      "4321-0000 int. 2",
-      "0800-555-1234",
-      "011/4321.0000",
-      "1",
-      "x".repeat(40),
-    ])
+describe("teléfono de la tarjeta del portal: solo números", () => {
+  it("acepta solo dígitos hasta el largo de la primitiva", () => {
+    for (const t of ["1143210000", "5491143210000", "0", "9".repeat(LARGO_MAXIMO_DEL_TELEFONO)])
       expect(ok(t)).toBe(true);
   });
   it("los espacios de los extremos se recortan (como la primitiva común), no se rechazan", () => {
-    const r = telefonoDeTarjetaDesdeTexto("  11 4321  ");
-    expect(r.ok && r.valor).toBe("11 4321");
+    const r = telefonoDeTarjetaDesdeTexto("  1143210000  ");
+    expect(r.ok && r.valor).toBe("1143210000");
   });
-  it("rechaza lo hostil o fuera de la lista", () => {
+  it("rechaza todo lo que no sea un dígito ASCII", () => {
     const malos = [
       "",
       "   ",
-
-      "a\nb",
-      "a\tb",
-      "a\u0000b",
-      "a​b",
-      "a b",
-      "a‮b",
-      "<script>",
-      "=cmd|' /C calc'!A0",
-      "@tel",
-      "11;12",
+      "11 4321",
+      "11-4321",
+      "+5411",
+      "(011)4321",
+      "int2",
+      "1143a",
       "Teléfono",
-      "📞 4321",
-      "'; drop table x; --",
-      "x".repeat(41),
+      "\n",
+      "1\n2",
+      "1\t2",
+      "1\u00012",
+      "1​2",
+      "1 2",
+      "1‮2",
+      "<1>",
+      "=1",
+      "@1",
+      "1;2",
+      "📞1",
       "１２３",
+      "١٢٣",
+      "1.5",
+      "1e5",
+      "9".repeat(LARGO_MAXIMO_DEL_TELEFONO + 1),
     ];
     for (const t of malos) expect(ok(t), JSON.stringify(t)).toBe(false);
   });
