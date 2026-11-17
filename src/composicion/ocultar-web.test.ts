@@ -4,6 +4,8 @@ import { err, ok } from "../primitivas/resultado/resultado";
 import {
   ocultarOMostrarUnProducto,
   verLaVisibilidadDelProducto,
+  verLosProductosOcultos,
+  volverAMostrarProductos,
   type DependenciasDeOcultarWeb,
 } from "./ocultar-web";
 
@@ -243,5 +245,202 @@ describe("ocultarOMostrarUnProducto", () => {
     expect(r.ok).toBe(false);
     expect(JSON.stringify(r)).not.toContain("boom con datos");
     expect(m.registrados).toHaveLength(1);
+  });
+});
+
+const filaN = (productoId: string, nombre: string, sucursalId: string | null) => ({
+  ...fila(productoId, sucursalId),
+  nombre,
+});
+const ID3 = "4f3d0e5c-6071-4293-8ebf-3a4b5c6d7e8f";
+
+describe("verLosProductosOcultos", () => {
+  it("con local: agrupa por producto (local y/o empresa), ignora locales ajenos y ordena por nombre y luego por id", async () => {
+    const { m, d } = montar({
+      ocultos: () =>
+        ok([
+          filaN(OTRO, "Zeta", LOCAL),
+          filaN(ID3, "Árbol", LOCAL),
+          filaN(ID, "Árbol", null),
+          filaN(ID, "Árbol", LOCAL),
+          filaN("5a4e1f6d-7182-43a4-9fc0-4b5c6d7e8f90", "Ajeno", OTRO_LOCAL),
+        ]),
+    });
+    const r = await verLosProductosOcultos(d, contexto, LOCAL);
+    expect(r).toEqual({
+      ok: true,
+      dato: [
+        { productoId: ID, nombre: "Árbol", local: true, empresa: true },
+        { productoId: ID3, nombre: "Árbol", local: true, empresa: false },
+        { productoId: OTRO, nombre: "Zeta", local: true, empresa: false },
+      ],
+    });
+    expect(m.llamadas).toEqual([{ que: "ocultos", entrada: { sucursalId: LOCAL } }]);
+  });
+
+  it("solo empresa: local false; el nombre se ordena en español (acento) y no por código", async () => {
+    const { d } = montar({
+      ocultos: () => ok([filaN(OTRO, "Zeta", null), filaN(ID, "Álamo", null)]),
+    });
+    const r = await verLosProductosOcultos(d, contexto, LOCAL);
+    expect(r).toEqual({
+      ok: true,
+      dato: [
+        { productoId: ID, nombre: "Álamo", local: false, empresa: true },
+        { productoId: OTRO, nombre: "Zeta", local: false, empresa: true },
+      ],
+    });
+  });
+
+  it("sin local: pregunta sin sucursal y lista solo lo oculto en toda la empresa", async () => {
+    const { m, d } = montar({
+      ocultos: () => ok([filaN(ID, "A", null), filaN(OTRO, "B", LOCAL)]),
+    });
+    const r = await verLosProductosOcultos(d, contexto, null);
+    expect(r).toEqual({
+      ok: true,
+      dato: [{ productoId: ID, nombre: "A", local: false, empresa: true }],
+    });
+    expect(m.llamadas).toEqual([{ que: "ocultos", entrada: {} }]);
+  });
+
+  it("nada oculto: lista vacía", async () => {
+    const { d } = montar();
+    expect(await verLosProductosOcultos(d, contexto, LOCAL)).toEqual({ ok: true, dato: [] });
+  });
+
+  it("rechazo de la consulta: su motivo o el genérico; fallo inesperado: sin detalle y registrado", async () => {
+    expect(
+      codigoDe(
+        await verLosProductosOcultos(
+          montar({ ocultos: () => err("MODULO_EN_DESARROLLO") }).d,
+          contexto,
+          LOCAL,
+        ),
+      ),
+    ).toBe("MODULO_EN_DESARROLLO");
+    expect(
+      codigoDe(
+        await verLosProductosOcultos(
+          montar({ ocultos: () => err("SUCURSAL_FUERA_DE_ALCANCE") }).d,
+          contexto,
+          LOCAL,
+        ),
+      ),
+    ).toBe(GENERICO);
+    const { m, d } = montar({
+      ocultos: () => {
+        throw new Error("detalle interno");
+      },
+    });
+    const r = await verLosProductosOcultos(d, contexto, LOCAL);
+    expect(r.ok).toBe(false);
+    expect(JSON.stringify(r)).not.toContain("detalle interno");
+    expect(m.registrados).toHaveLength(1);
+  });
+});
+
+describe("volverAMostrarProductos", () => {
+  const ocultoEn = (...f: ReturnType<typeof filaN>[]) => ({ ocultos: () => ok(f) });
+  const escrituras = (m: ReturnType<typeof montar>["m"]) =>
+    m.llamadas.filter((l) => l.que === "ocultar").map((l) => l.entrada);
+
+  it("oculto en el local y en la empresa: dos escrituras (local y luego empresa), con oculto=false, y cuenta un producto", async () => {
+    const { m, d } = montar(ocultoEn(filaN(ID, "A", LOCAL), filaN(ID, "A", null)));
+    const r = await volverAMostrarProductos(d, contexto, LOCAL, { productoIds: [ID] });
+    expect(r).toEqual({ ok: true, dato: { productoIds: [ID], mostrados: 1 } });
+    expect(escrituras(m)).toEqual([
+      { productoId: ID, alcance: { tipo: "SUCURSAL", sucursalId: LOCAL }, oculto: false },
+      { productoId: ID, alcance: { tipo: "EMPRESA" }, oculto: false },
+    ]);
+  });
+
+  it("oculto solo en la empresa y con local elegido: una sola escritura, la de la empresa (no se inventa la del local)", async () => {
+    const { m, d } = montar(ocultoEn(filaN(ID, "A", null)));
+    await volverAMostrarProductos(d, contexto, LOCAL, { productoIds: [ID] });
+    expect(escrituras(m)).toEqual([
+      { productoId: ID, alcance: { tipo: "EMPRESA" }, oculto: false },
+    ]);
+  });
+
+  it("sin local: solo el alcance empresa, nunca «todas»", async () => {
+    const { m, d } = montar(ocultoEn(filaN(ID, "A", null)));
+    const r = await volverAMostrarProductos(d, contexto, null, { productoIds: [ID] });
+    expect(r).toEqual({ ok: true, dato: { productoIds: [ID], mostrados: 1 } });
+    expect(escrituras(m)).toEqual([
+      { productoId: ID, alcance: { tipo: "EMPRESA" }, oculto: false },
+    ]);
+  });
+
+  it("los que ya están visibles no se escriben ni cuentan; los repetidos se piden una vez", async () => {
+    const { m, d } = montar(ocultoEn(filaN(ID, "A", LOCAL)));
+    const r = await volverAMostrarProductos(d, contexto, LOCAL, { productoIds: [ID, OTRO, ID] });
+    expect(r).toEqual({ ok: true, dato: { productoIds: [ID, OTRO], mostrados: 1 } });
+    expect(escrituras(m)).toHaveLength(1);
+  });
+
+  it("nada oculto: mostrados 0 y sin escrituras", async () => {
+    const { m, d } = montar();
+    const r = await volverAMostrarProductos(d, contexto, LOCAL, { productoIds: [ID] });
+    expect(r).toEqual({ ok: true, dato: { productoIds: [ID], mostrados: 0 } });
+    expect(escrituras(m)).toEqual([]);
+  });
+
+  it.each([
+    ["sin forma", null],
+    ["lista vacía", { productoIds: [] }],
+    ["id inválido", { productoIds: ["x"] }],
+    ["clave de más", { productoIds: [ID], sucursalId: LOCAL }],
+  ])("pedido inválido (%s): el genérico, sin leer ni escribir", async (_c, crudo) => {
+    const { m, d } = montar();
+    expect(codigoDe(await volverAMostrarProductos(d, contexto, LOCAL, crudo))).toBe(GENERICO);
+    expect(m.llamadas).toEqual([]);
+  });
+
+  it("si falla la lectura de ocultos: devuelve ese error y no escribe", async () => {
+    const { m, d } = montar({ ocultos: () => err("MODULO_EN_DESARROLLO") });
+    const r = await volverAMostrarProductos(d, contexto, LOCAL, { productoIds: [ID] });
+    expect(codigoDe(r)).toBe("MODULO_EN_DESARROLLO");
+    expect(escrituras(m)).toEqual([]);
+  });
+
+  it("si una escritura falla: sigue con las demás, no cuenta el producto incompleto y devuelve el PRIMER error", async () => {
+    let n = 0;
+    const { m, d } = montar({
+      ...ocultoEn(filaN(ID, "A", LOCAL), filaN(ID, "A", null), filaN(OTRO, "B", LOCAL)),
+      ocultar: () => {
+        n += 1;
+        if (n === 1) return err("PRODUCTO_CON_EXISTENCIA");
+        if (n === 2) return err("SIN_PERMISO");
+        return ok({ yaEstaba: false, sigueOcultoPor: null });
+      },
+    });
+    const r = await volverAMostrarProductos(d, contexto, LOCAL, { productoIds: [ID, OTRO] });
+    expect(codigoDe(r)).toBe("CATALOGO_PRODUCTO_CON_EXISTENCIA");
+    expect(escrituras(m)).toHaveLength(3);
+  });
+
+  it("una excepción en una escritura: no corta, queda registrada y sale sin detalle", async () => {
+    let n = 0;
+    const { m, d } = montar({
+      ...ocultoEn(filaN(ID, "A", LOCAL), filaN(OTRO, "B", LOCAL)),
+      ocultar: () => {
+        n += 1;
+        if (n === 1) throw new Error("detalle interno");
+        return ok({ yaEstaba: false, sigueOcultoPor: null });
+      },
+    });
+    const r = await volverAMostrarProductos(d, contexto, LOCAL, { productoIds: [ID, OTRO] });
+    expect(r.ok).toBe(false);
+    expect(JSON.stringify(r)).not.toContain("detalle interno");
+    expect(m.registrados).toHaveLength(1);
+    expect(escrituras(m)).toHaveLength(2);
+  });
+
+  it("repetir el pedido cuando ya no hay nada oculto no duplica nada", async () => {
+    const { m, d } = montar();
+    await volverAMostrarProductos(d, contexto, LOCAL, { productoIds: [ID] });
+    await volverAMostrarProductos(d, contexto, LOCAL, { productoIds: [ID] });
+    expect(escrituras(m)).toEqual([]);
   });
 });

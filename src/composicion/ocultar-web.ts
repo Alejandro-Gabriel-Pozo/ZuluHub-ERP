@@ -143,15 +143,11 @@ export async function verLosProductosOcultos(
     for (const o of ocultos.valor) {
       const esEmpresa = o.sucursalId === null;
       if (!esEmpresa && o.sucursalId !== sucursalId) continue;
-      const previo = porProducto.get(o.productoId) ?? {
-        nombre: o.nombre,
-        local: false,
-        empresa: false,
-      };
+      const previo = porProducto.get(o.productoId);
       porProducto.set(o.productoId, {
         nombre: o.nombre,
-        local: previo.local || !esEmpresa,
-        empresa: previo.empresa || esEmpresa,
+        local: previo?.local === true || !esEmpresa,
+        empresa: previo?.empresa === true || esEmpresa,
       });
     }
     const lista = [...porProducto].map(([productoId, v]) => ({ productoId, ...v }));
@@ -193,32 +189,30 @@ export async function volverAMostrarProductos(
   for (const productoId of pedido.valor.productoIds) {
     const oculto = hoy.get(productoId);
     if (oculto === undefined) continue;
+    const delLocal = oculto.local ? sucursalId : null;
     const alcances = [
-      ...(oculto.local && sucursalId !== null ? [{ tipo: "SUCURSAL", sucursalId } as const] : []),
+      ...(delLocal !== null ? [{ tipo: "SUCURSAL", sucursalId: delLocal } as const] : []),
       ...(oculto.empresa ? [{ tipo: "EMPRESA" } as const] : []),
     ];
-    let completo = true;
     for (const destino of alcances) {
+      let r: Respuesta<unknown>;
       try {
         const hecho = await d
           .casosDeUso()
           .ocultarProducto(contexto, { productoId, alcance: destino, oculto: false });
-        const r = aRespuesta(
+        r = aRespuesta(
           hecho.ok ? hecho : err(traducirErrorDeCatalogo(hecho.error)),
           d.respuesta,
+          // Stryker disable next-line ArrowFunction: el dato de una escritura que salió bien no se usa; solo importa si salió bien
           () => null,
         );
-        if (!r.ok) {
-          primerError ??= r.error;
-          completo = false;
-        }
       } catch (excepcion) {
-        const falla = aRespuestaDeExcepcion(excepcion, d.respuesta);
-        if (!falla.ok) primerError ??= falla.error;
-        completo = false;
+        r = aRespuestaDeExcepcion(excepcion, d.respuesta);
       }
+      if (!r.ok) primerError ??= r.error;
     }
-    if (completo && alcances.length > 0) mostrados += 1;
+    // Un producto oculto siempre tiene al menos un alcance (local o empresa): se cuenta uno por producto ya hecho. Si algo falló, el resultado es el error y el conteo no se usa.
+    mostrados += 1;
   }
   return primerError === null
     ? { ok: true, dato: { productoIds: pedido.valor.productoIds, mostrados } }
