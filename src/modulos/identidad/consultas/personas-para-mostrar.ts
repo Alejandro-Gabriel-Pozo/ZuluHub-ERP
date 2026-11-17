@@ -12,7 +12,7 @@ import type { DependenciasDeConsultasDeIdentidad } from "./contrato";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 
 /**
- * Cuántas personas se piden en una sola consulta. SUPUESTO DEC-0464: una pantalla (un historial, un cierre) muestra a unas pocas personas;
+ * Cuántas personas se piden en una sola consulta. Criterio técnico (a corregir): una pantalla (un historial, un cierre) muestra a unas pocas personas;
  * el tope evita una lectura sin límite. Una consulta que pide más se rechaza entera (`ENTRADA_INVALIDA`), no se recorta en silencio.
  */
 export const MAXIMO_DE_PERSONAS_POR_CONSULTA = 200;
@@ -25,7 +25,7 @@ export type ErrorAlPedirPersonasParaMostrar =
 /**
  * El valor con que se muestra a cada persona pedida, para las pantallas que hoy reciben solo ids (caja, ventas, cierre): su CORREO (el
  * dueño decidió que se muestre el correo, sin nombre: fila «Respuestas 24 a 27», 26A, del 15/11/2026). Pide `permisos.ver_propios` al guard
- * (los tres roles) dentro de su transacción (`read committed`, solo lectura). El alcance es la empresa del contexto: solo vuelven las
+ * (los tres roles, DEC-0464) dentro de su transacción (`read committed`, solo lectura). El alcance es la empresa del contexto: solo vuelven las
  * personas pedidas que tienen membresía en ella (activa o apagada: quien ya se fue sigue figurando en lo que hizo), así que no se filtra el
  * correo de nadie que no sea de la empresa; un id de otra empresa o inexistente no aparece, indistinguible entre sí. Cada id pedido aparece
  * una sola vez. Si algún día hay nombre propio, se cambia acá y no en cada pantalla.

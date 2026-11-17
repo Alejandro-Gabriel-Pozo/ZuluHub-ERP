@@ -77,6 +77,8 @@ describe.skipIf(base === null)("migraciones", () => {
         "0055_salon_copias_y_nombre_de_cocina.sql",
         "0056_receta_sin_insumos.sql",
         "0057_opcion_consume_elaborado.sql",
+        "0058_oferta_vigente.sql",
+        "0075_alicuota_del_producto.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -135,6 +137,8 @@ describe.skipIf(base === null)("migraciones", () => {
           "0055_salon_copias_y_nombre_de_cocina.sql",
           "0056_receta_sin_insumos.sql",
           "0057_opcion_consume_elaborado.sql",
+          "0058_oferta_vigente.sql",
+          "0075_alicuota_del_producto.sql",
         ],
       });
     } finally {
@@ -298,6 +302,8 @@ describe.skipIf(base === null)("migraciones", () => {
         "0055_salon_copias_y_nombre_de_cocina.sql",
         "0056_receta_sin_insumos.sql",
         "0057_opcion_consume_elaborado.sql",
+        "0058_oferta_vigente.sql",
+        "0075_alicuota_del_producto.sql",
       ]);
     } finally {
       await aparte.destruir();
