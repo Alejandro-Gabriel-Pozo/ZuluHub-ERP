@@ -57,7 +57,8 @@ export type ValorDeAuditoria = string | number | boolean | null;
 export type DatosDeAuditoria = Readonly<Partial<Record<ClaveDeAuditoria, ValorDeAuditoria>>>;
 
 /** Un texto de auditoría es un identificador: letras, dígitos y `. _ ~ : -`, de 1 a 200. Sin arroba. */
-const TEXTO_SEGURO = /^[A-Za-z0-9._~:-]{1,200}$/;
+const LARGO_MAXIMO_DEL_TEXTO_DE_AUDITORIA = 200; // fuente-unica: ajeno — el texto de auditoría es otro dato que el nombre o razón social
+const TEXTO_SEGURO = new RegExp(`^[A-Za-z0-9._~:-]{1,${LARGO_MAXIMO_DEL_TEXTO_DE_AUDITORIA}}$`);
 
 export function valorDeAuditoriaSeguro(valor: unknown): boolean {
   if (typeof valor === "string") return TEXTO_SEGURO.test(valor);

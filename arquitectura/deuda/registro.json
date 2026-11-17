@@ -539,8 +539,6 @@
       "src/modulos/fiscal/casos-de-uso/resincronizar-y-ambiente.ts",
       "src/modulos/fiscal/dominio/certificado-pedido.ts",
       "src/modulos/fiscal/dominio/datos-fiscales.ts",
-      "src/plataforma/captacion/dominio/atribucion.ts",
-      "src/plataforma/captacion/dominio/auditoria.ts",
       "src/plataforma/captacion/dominio/formulario.ts",
       "src/plataforma/dominio/soporte/consulta.ts",
       "src/primitivas/contacto/una-linea.ts",

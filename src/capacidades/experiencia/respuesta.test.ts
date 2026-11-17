@@ -4,6 +4,7 @@ import type { MotivoDeRechazo } from "../permisos/guard";
 import { CATALOGO_DE_TEXTOS, type ClaveDeTexto } from "../vocabulario/catalogo";
 import { CLAVES_DE_ERRORES_DE_CAJA } from "./respuesta-de-caja";
 import { CLAVES_DE_ERRORES_DE_CATALOGO, PARAMETROS_DE_CATALOGO } from "./respuesta-de-catalogo";
+import { CLAVES_DE_ERRORES_DE_SALON } from "./respuesta-de-salon";
 import { CLAVES_DE_ERRORES_DE_VENTAS } from "./respuesta-de-ventas";
 import {
   CODIGOS_PUBLICOS,
@@ -52,6 +53,7 @@ describe("CODIGOS_PUBLICOS: contrato exhaustivo", () => {
         presentacion === "AVISO" &&
         !Object.hasOwn(CLAVES_DE_ERRORES_DE_CAJA, codigo) &&
         !Object.hasOwn(CLAVES_DE_ERRORES_DE_CATALOGO, codigo) &&
+        !Object.hasOwn(CLAVES_DE_ERRORES_DE_SALON, codigo) &&
         !Object.hasOwn(CLAVES_DE_ERRORES_DE_VENTAS, codigo)
       )
         expect(clave).toBe(`error.${codigo.toLowerCase()}`);

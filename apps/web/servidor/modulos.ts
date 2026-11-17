@@ -222,6 +222,16 @@ export async function ofertaDeLaCartaEnLinea(
   };
 }
 
+/**
+ * ¿La persona puede administrar las mesas del salón? Es la oferta de `mesas.editar` (Gerente y Administrador, decisión del dueño) que el servidor calcula con `ofertaDe`: con el módulo
+ * en desarrollo, en solo lectura o sin el rol, no. Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: guardar vuelve a pasar por el guard.
+ * Chequeo: `test/web/mesas-acceso.test.ts`.
+ */
+export async function puedeAdministrarMesas(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("mesas.editar", permisos).permitida;
+}
+
 type PermisosLeidos = NonNullable<Awaited<ReturnType<typeof permisosDeLaPersona>>>;
 
 /** De una acción, su módulo, el estado de construcción de ese módulo y su efecto: el catálogo es el único dueño de esos datos. */
