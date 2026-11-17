@@ -107,14 +107,17 @@ function correr(
       },
     },
   );
-  let archivos: string[] = [];
+  return { codigo: r.status ?? 1, archivos: archivosEjecutados(salida, carpeta) };
+}
+
+/** Los archivos que Vitest dice haber ejecutado (su informe JSON), o ninguno si no llegó a escribirlo (por ejemplo, porque no arrancó). */
+function archivosEjecutados(salida: string, carpeta: string): string[] {
   try {
     const json = JSON.parse(readFileSync(salida, "utf8")) as { testResults: { name: string }[] };
-    archivos = json.testResults.map((t) => t.name.slice(carpeta.length + 1)).sort();
+    return json.testResults.map((t) => t.name.slice(carpeta.length + 1)).sort();
   } catch {
-    archivos = [];
+    return [];
   }
-  return { codigo: r.status ?? 1, archivos };
 }
 
 describe("fragmentos de la suite: cada archivo corre en uno y solo uno", () => {
