@@ -5,7 +5,9 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
 
 ## Antes de entregar
 
-- Correr `npm run gate` (tipos, lint, formato, arquitectura, código muerto, pruebas). Debe pasar completo.
+- Antes de entregar, solo comprobaciones rápidas locales: `npm run typecheck`, `npm run format:check`, `npm run lint`, `npm run arquitectura` y las
+  pruebas de lo que tocaste. El gate completo (`npm run gate`) lo corre el CI; local, solo para reproducir una falla del CI. Motivo: el gate
+  completo local tarda unos 20 minutos y repite lo que ya corre el CI (dueño, 17/11/2026, «4.-si»).
 - Cambios mínimos y enfocados; no inventar librerías ni APIs; avisar antes de sumar una dependencia.
 - Si tocás `apps/web/ui`, corré también `npm run test:componentes` (Chromium real: axe, foco y envío; el CI lo corre en el job
   `componentes`). Un entorno que ya trae su propio Chromium lo indica con `PEDERNAL_NAVEGADOR=<ruta del ejecutable>`.
