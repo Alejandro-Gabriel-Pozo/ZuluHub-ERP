@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0462",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO (Mesas): forma y tamaño con selector nativo, mesa nueva con Redonda y Chica, posición escrita a mano, y sin el dibujo del plano de la maqueta.",
+  "que_cambia": "Quien carga una mesa ve dos desplegables en vez de botones, escribe la posición a mano (no se propone la primera casilla libre) y no ve el dibujo del plano. Revertir: cambiar el componente de elección y sumar el dibujo, sin tocar el servidor ni los datos.",
+  "donde": "10-ux-ui/prototipos-gastronomia/mesas.html (vNueva y plano); apps/web/ui/plantillas/salon/modelo-de-mesas.ts; apps/web/ui/plantillas/salon/FormularioDeMesa.cliente.tsx"
+}
