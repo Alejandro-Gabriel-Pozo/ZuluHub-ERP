@@ -2,6 +2,7 @@ import {
   texto,
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
+import { armarElPlano, type MedidasDelSalon, type PlanoArmado } from "./modelo-del-plano";
 
 /**
  * El modelo de vista de la pantalla «Mesas» del salón (S-1; maqueta aprobada `mesas.html`, 09/11/2026): de lo que entrega la composición, lo que se ve en la lista y en el formulario, y NADA
@@ -11,6 +12,7 @@ import {
  *  - **Por número, activas y desactivadas** (la maqueta las lista todas, las desactivadas con la marca «Desactivada»); el orden lo da el servidor.
  *  - **Lo que cambia algo sale solo si la persona puede administrar las mesas** (`puedeAdministrar`, solo una ayuda: el guard decide): sin permiso «Agregar mesa» no se ofrece y
  *    «Editar mesa», «Desactivar» y «Reactivar» salen apagados. Todo lo que no sea exactamente `true` cierra.
+ *  - **El plano dibuja las mesas activas** (S-1b, `modelo-del-plano.ts`) con las medidas del salón que entrega el servidor; no decide nada: el servidor valida al guardar.
  *  - **Forma y tamaño son listas cerradas** que repiten los valores del dominio (`FORMAS_DE_MESA`, `TAMANOS_DE_MESA`): una prueba falla si difieren.
  */
 
@@ -76,6 +78,8 @@ type FilaDeMesa = Readonly<{
 }>;
 
 export type ListaDeMesasArmada = Readonly<{
+  /** El mapa chico del salón, arriba de la lista: las mesas activas; cada una lleva a su edición si la persona puede administrar. */
+  plano: PlanoArmado;
   filas: readonly FilaDeMesa[];
   /** «Agregar mesa»; `null` si la persona no puede administrar. */
   nueva: Readonly<{ href: string; texto: string }> | null;
@@ -87,10 +91,20 @@ const puede = (puedeAdministrar: boolean | undefined): boolean => puedeAdministr
 export function armarLaListaDeMesas(
   mesas: readonly MesaDeLaLista[],
   puedeAdministrar: boolean | undefined,
+  medidas: MedidasDelSalon,
   d: DiccionarioResuelto = {},
 ): ListaDeMesasArmada {
   const administra = puede(puedeAdministrar);
   return {
+    plano: armarElPlano(
+      {
+        medidas,
+        mesas: mesas
+          .filter((m) => m.activa)
+          .map((m) => ({ ...m, href: administra ? rutaDeLaMesa(m.id) : null })),
+      },
+      d,
+    ),
     filas: mesas.map((m) => ({
       id: m.id,
       titulo: texto(d, "salon.texto.admin_mesa_numero", { numero: String(m.numero) }),
@@ -117,6 +131,12 @@ export function armarLaListaDeMesas(
   };
 }
 
+/** Lo que el formulario necesita del salón para dibujar el plano: las medidas y las mesas de la sucursal (la que se edita se descuenta). */
+export type DatosDelSalonParaElPlano = Readonly<{
+  medidas: MedidasDelSalon;
+  mesas: readonly MesaDeLaLista[];
+}>;
+
 export type FormularioDeMesaArmado = Readonly<{
   titulo: string;
   numero: Readonly<{ etiqueta: string; valorInicial: string }>;
@@ -135,6 +155,14 @@ export type FormularioDeMesaArmado = Readonly<{
   guardar: string;
   cancelar: Readonly<{ href: string; texto: string }>;
   volver: Readonly<{ href: string; etiqueta: string }>;
+  /**
+   * El mapa chico: `base` con las demás mesas activas (ya con sus textos); el navegador le suma la mesa que se escribe (`conElBorrador`) con las `medidas` y el nombre ya armado.
+   */
+  plano: Readonly<{
+    base: PlanoArmado;
+    medidas: MedidasDelSalon;
+    nombreDelBorrador: string;
+  }>;
   /** Si el servidor deja guardar hoy: si no, «Guardar» sale apagado (solo una ayuda: el guard decide; DEC-0346). */
   puedeGuardar: boolean;
 }>;
@@ -146,13 +174,28 @@ export type FormularioDeMesaArmado = Readonly<{
 export function armarElFormularioDeMesa(
   mesa: MesaDeLaLista | null,
   puedeAdministrar: boolean | undefined,
+  salon: DatosDelSalonParaElPlano,
   d: DiccionarioResuelto = {},
 ): FormularioDeMesaArmado {
+  const titulo = texto(
+    d,
+    mesa === null ? "salon.texto.admin_agregar_mesa" : "salon.texto.admin_editar_mesa",
+  );
   return {
-    titulo: texto(
-      d,
-      mesa === null ? "salon.texto.admin_agregar_mesa" : "salon.texto.admin_editar_mesa",
-    ),
+    titulo,
+    plano: {
+      base: armarElPlano(
+        {
+          medidas: salon.medidas,
+          mesas: salon.mesas
+            .filter((m) => m.activa && m.id !== mesa?.id)
+            .map((m) => ({ ...m, href: null })),
+        },
+        d,
+      ),
+      medidas: salon.medidas,
+      nombreDelBorrador: titulo,
+    },
     numero: {
       etiqueta: texto(d, "salon.texto.admin_numero"),
       valorInicial: mesa === null ? "" : String(mesa.numero),
