@@ -4,10 +4,11 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { crearBaseAparte } from "./entorno";
 import type { BaseDePruebas } from "./global";
+import { paridadDeLista } from "./paridad-apoyo";
 import { aceptaLaBase, desplazado } from "./paridad-comportamiento";
 
 /**
- * Los topes de la base que el dominio no tiene como constante (`arquitectura/paridad/sin-constante-en-el-dominio.json`). Para esos topes NO hay con qué comparar, y la prueba no los pega como literal
+ * Los topes Y LAS LISTAS de la base que el dominio no tiene como constante (`arquitectura/paridad/sin-constante-en-el-dominio.json`). Para esos topes NO hay con qué comparar, y la prueba no los pega como literal
  * del dominio: los declara con la columna y el valor que hoy impone la base, y esta prueba comprueba POR COMPORTAMIENTO que la base sigue haciendo exactamente eso (acepta un paso por debajo, rechaza
  * el valor). Previene que la declaración se pudra: si la base cambia el tope, falla. La salida es que Código exporte la constante; ahí la entrada se borra y el tope pasa a `paridadDeRango`.
  */
@@ -21,12 +22,19 @@ type Tope = Readonly<{
   rechazaDesde: string;
   nota: string;
 }>;
+type Lista = Readonly<{
+  tabla: string;
+  restriccion: string;
+  columna: string;
+  valores: readonly string[];
+  nota: string;
+}>;
 const declarados = JSON.parse(
   readFileSync(
     join(__dirname, "../../arquitectura/paridad/sin-constante-en-el-dominio.json"),
     "utf8",
   ),
-) as Readonly<{ vence: string; topes: readonly Tope[] }>;
+) as Readonly<{ vence: string; topes: readonly Tope[]; listas: readonly Lista[] }>;
 
 describe("topes sin constante en el dominio: la declaración", () => {
   it("no está vencida y no repite una restricción", () => {
@@ -34,6 +42,9 @@ describe("topes sin constante en el dominio: la declaración", () => {
     const claves = declarados.topes.map((t) => `${t.tabla}.${t.restriccion}.${t.columna}`);
     expect(new Set(claves).size).toBe(claves.length);
     for (const t of declarados.topes) expect(t.nota.length, t.restriccion).toBeGreaterThan(0);
+    const listas = declarados.listas.map((l) => `${l.tabla}.${l.restriccion}`);
+    expect(new Set(listas).size).toBe(listas.length);
+    for (const l of declarados.listas) expect(l.valores.length, l.restriccion).toBeGreaterThan(0);
   });
 });
 
@@ -48,6 +59,15 @@ describe.skipIf(base === null)("topes sin constante en el dominio: la base real"
   afterAll(async () => {
     await c.end();
     await aparte.destruir();
+  });
+
+  it("cada lista declarada es EXACTAMENTE la de la base (valores aceptados y un valor ajeno rechazado)", async () => {
+    for (const l of declarados.listas) {
+      await paridadDeLista(c, l.tabla, l.restriccion, l.valores);
+      const ajeno = "__AJENO__";
+      const r = await aceptaLaBase(c, l.tabla, l.restriccion, l.columna, [...l.valores, ajeno]);
+      expect(r, `${l.tabla}.${l.restriccion}`).toEqual([...l.valores.map(() => true), false]);
+    }
   });
 
   it("la base acepta un paso por debajo de cada tope declarado y lo rechaza en el valor", async () => {

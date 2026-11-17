@@ -22,5 +22,320 @@
       "rechazaDesde": "1000000000000",
       "nota": "catálogo: tope de un precio de venta; el dominio solo acota por MAXIMO_DE_UNIDADES (10^18)"
     }
+  ],
+  "listas": [
+    {
+      "tabla": "acceso_arca",
+      "restriccion": "acceso_servicio_ck",
+      "columna": "servicio",
+      "valores": ["wsfe"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "auditoria_acceso_grupo",
+      "restriccion": "auditoria_acceso_grupo_resultado_ck",
+      "columna": "resultado",
+      "valores": ["DENEGADO", "PERMITIDO"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "carta_publica",
+      "restriccion": "carta_publica_estado_ck",
+      "columna": "estado",
+      "valores": ["EN_LINEA", "FUERA_DE_LINEA"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "cobranza_de_ticket",
+      "restriccion": "cobranza_destino_ck",
+      "columna": "destino",
+      "valores": ["SOLO_TICKET"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "comprobante_de_proveedor",
+      "restriccion": "cp_estado_ck",
+      "columna": "estado",
+      "valores": ["ANULADO", "REGISTRADO"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "conciliacion",
+      "restriccion": "conciliacion_acto_ck",
+      "columna": "acto",
+      "valores": ["ANULACION", "CONCILIACION"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "control_de_lote",
+      "restriccion": "control_de_lote_modo_ck",
+      "columna": "modo",
+      "valores": ["LOTE", "LOTE_Y_VENCIMIENTO"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "costo_de_renglon",
+      "restriccion": "costo_de_renglon_estado_ck",
+      "columna": "estado",
+      "valores": ["DEFINITIVO", "SIN_COSTO"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "cuenta_consumo",
+      "restriccion": "cuenta_momento_de_stock_ck",
+      "columna": "momento_de_stock",
+      "valores": ["AL_CERRAR"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "datos_fiscales",
+      "restriccion": "datos_fiscales_estado_ck",
+      "columna": "estado",
+      "valores": ["BORRADOR", "CONFIRMADA"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "devolucion_a_proveedor",
+      "restriccion": "devolucion_estado_ck",
+      "columna": "estado",
+      "valores": ["ANULADA", "CONFIRMADA"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "diferencia_de_compra",
+      "restriccion": "diferencia_estado_ck",
+      "columna": "estado",
+      "valores": ["ABIERTA", "ANULADA", "RESUELTA"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "diferencia_de_compra",
+      "restriccion": "diferencia_origen_referencia_ck",
+      "columna": "origen_del_precio_de_referencia",
+      "valores": ["ORDEN", "RECEPCION"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "diferencia_de_compra",
+      "restriccion": "diferencia_resolucion_ck",
+      "columna": "resolucion",
+      "valores": [
+        "ACEPTADA",
+        "CORREGIDA_POR_EL_PROVEEDOR",
+        "DENTRO_DE_TOLERANCIA",
+        "DEVOLUCION",
+        "FACTURA_COMPLEMENTARIA",
+        "NOTA_DE_CREDITO",
+        "NOTA_DE_DEBITO"
+      ],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "diferencia_de_compra",
+      "restriccion": "diferencia_tipo_ck",
+      "columna": "tipo",
+      "valores": [
+        "FACTURADO_DISTINTO_DE_LO_RECIBIDO",
+        "FACTURADO_Y_NO_RECIBIDO",
+        "PRECIO_DISTINTO"
+      ],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "grupo_de_elecciones",
+      "restriccion": "grupo_de_elecciones_clase_ck",
+      "columna": "clase",
+      "valores": ["ADICIONAL", "INCLUIDA", "VARIANTE"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "inspeccion_de_linea_de_recepcion",
+      "restriccion": "inspeccion_condicion_ck",
+      "columna": "condicion",
+      "valores": ["CONFORME", "CON_OBSERVACIONES", "RECHAZADA"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "instalacion",
+      "restriccion": "instalacion_modo_ck",
+      "columna": "modo",
+      "valores": ["MULTI", "SINGLE"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "linea_copiada",
+      "restriccion": "linea_copiada_modo_ck",
+      "columna": "modo",
+      "valores": ["COMPARTIDA", "COMPLETA", "POR_UNIDADES", "RESTO"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "linea_cuenta",
+      "restriccion": "linea_origen_del_precio_ck",
+      "columna": "origen_del_precio",
+      "valores": ["ABIERTO", "EMPRESA", "SUCURSAL"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "linea_cuenta_opcion",
+      "restriccion": "linea_opcion_clase_ck",
+      "columna": "clase",
+      "valores": ["ADICIONAL", "INCLUIDA"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "linea_de_recepcion",
+      "restriccion": "linea_de_recepcion_precio_por_ck",
+      "columna": "precio_por_tipo",
+      "valores": ["PRESENTACION", "UNIDAD"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "marca",
+      "restriccion": "marca_estado_ck",
+      "columna": "estado",
+      "valores": ["ACTIVA", "RETIRADA"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "motivo_de_diferencia",
+      "restriccion": "motivo_de_diferencia_sentido_ck",
+      "columna": "sentido",
+      "valores": ["FALTANTE", "SOBRANTE"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "oferta_de_proveedor",
+      "restriccion": "oferta_precio_por_tipo_ck",
+      "columna": "precio_por_tipo",
+      "valores": ["PRESENTACION", "UNIDAD"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "orden_de_compra",
+      "restriccion": "orden_cierre_motivo_ck",
+      "columna": "cierre_motivo",
+      "valores": ["COMPLETA", "CON_SALDO"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "orden_de_compra",
+      "restriccion": "orden_estado_ck",
+      "columna": "estado",
+      "valores": ["ANULADA", "BORRADOR", "CERRADA", "PEDIDA"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "orden_de_produccion",
+      "restriccion": "orden_costo_estado_ck",
+      "columna": "costo_estado",
+      "valores": ["DEFINITIVO", "SIN_COSTO"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "orden_de_produccion",
+      "restriccion": "orden_tipo_ck",
+      "columna": "tipo",
+      "valores": ["PRODUCCION"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "pago_de_comprobante",
+      "restriccion": "pago_estado_ck",
+      "columna": "estado",
+      "valores": ["ANULADO", "VIGENTE"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "pedido_de_ficha",
+      "restriccion": "pedido_de_ficha_estado_ck",
+      "columna": "estado",
+      "valores": ["APROBADO", "PENDIENTE", "RECHAZADO"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "pedido_de_ficha",
+      "restriccion": "pedido_de_ficha_objeto_ck",
+      "columna": "objeto",
+      "valores": ["COMPROBANTE", "PUNTO_DE_VENTA"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "plan",
+      "restriccion": "plan_estado_ck",
+      "columna": "estado",
+      "valores": ["ACTIVO", "RETIRADO"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "plan_de_tenant",
+      "restriccion": "plan_de_tenant_origen_ck",
+      "columna": "origen",
+      "valores": ["ALTA", "CAMBIO", "MIGRACION_DE_VERSION"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "producto",
+      "restriccion": "producto_tipo_ck",
+      "columna": "tipo",
+      "valores": ["BIEN"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "punto_de_venta",
+      "restriccion": "punto_de_venta_estado_ck",
+      "columna": "estado",
+      "valores": ["ACTIVO", "INACTIVO"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "recepcion",
+      "restriccion": "recepcion_estado_ck",
+      "columna": "estado",
+      "valores": ["ANULADA", "CONFIRMADA", "PENDIENTE"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "regla_emisor",
+      "restriccion": "regla_emisor_estado_ck",
+      "columna": "estado",
+      "valores": ["BORRADOR", "CONFIRMADA"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "ticket_correccion",
+      "restriccion": "correccion_tipo_ck",
+      "columna": "tipo",
+      "valores": ["ANULACION", "CORRECCION"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "ticket_ejemplar",
+      "restriccion": "ejemplar_tipo_ck",
+      "columna": "tipo",
+      "valores": ["ANULACION", "CORRECCION", "ORIGINAL"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "unidad_de_medida",
+      "restriccion": "unidad_dimension_ck",
+      "columna": "dimension",
+      "valores": ["CONTEO", "LONGITUD", "MASA", "SUPERFICIE", "TIEMPO", "VOLUMEN"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "version_de_marca",
+      "restriccion": "version_de_marca_estado_ck",
+      "columna": "estado",
+      "valores": ["BORRADOR", "CONFIRMADA"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    },
+    {
+      "tabla": "version_de_plan",
+      "restriccion": "version_de_plan_estado_ck",
+      "columna": "estado",
+      "valores": ["BORRADOR", "PUBLICADA"],
+      "nota": "sin constante exportada en el dominio: la lista vive solo en la base (o como unión de tipos de TypeScript)"
+    }
   ]
 }
