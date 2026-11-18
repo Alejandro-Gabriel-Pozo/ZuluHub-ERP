@@ -1,4 +1,12 @@
 import "server-only";
+/**
+ * FICHA
+ * QUÉ ES: La base común de las ofertas de botones: lee los permisos de la persona una vez por pedido y decide si una acción se ofrece y con qué motivo.
+ * QUÉ NO ES: No tiene la oferta de ningún módulo en particular (eso va en su ofertas-de-MODULO.ts) ni el menú (eso es modulos.ts). Es el único archivo de servidor/ que llama a permisosDelActor.
+ * QUÉ EXPORTA: permisosDeLaPersona, PermisosLeidos, ofertaDe, puedeLaAccion.
+ * QUÉ IMPORTA: composicion (web), el catálogo de módulos y el vocabulario. Lo consumen modulos.ts y todos los ofertas-de-MODULO.ts.
+ * Previene: que el archivo común de ofertas vuelva a ser el punto donde chocan todos los PR de pantallas y que una pantalla lea los permisos dos veces por pedido. Chequeo: test/arquitectura/ofertas-por-modulo.test.ts.
+ */
 import { cache } from "react";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { texto } from "../../../src/capacidades/vocabulario/vocabulario";

@@ -1,4 +1,12 @@
 import "server-only";
+/**
+ * FICHA
+ * QUÉ ES: Las ofertas de botones del módulo administración: contacto de la sucursal y puntos de venta.
+ * QUÉ NO ES: No lleva la lógica de otro módulo: cada módulo tiene su ofertas-de-MODULO.ts, y las lecturas de permisos pasan por permisos-de-la-persona.ts.
+ * QUÉ EXPORTA: puedeEditarElContactoDeLaSucursal, accionesDePuntosDeVenta.
+ * QUÉ IMPORTA: permisos-de-la-persona.ts, el vocabulario y los modelos de la pantalla. Lo consumen las páginas, por modulos.ts.
+ * Previene: que el archivo común de ofertas vuelva a ser el punto donde chocan todos los PR de pantallas y que una pantalla lea los permisos dos veces por pedido. Chequeo: test/arquitectura/ofertas-por-modulo.test.ts.
+ */
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { texto } from "../../../src/capacidades/vocabulario/vocabulario";
 import type { ClaveAccion } from "../../../src/capacidades/modulos/catalogo";

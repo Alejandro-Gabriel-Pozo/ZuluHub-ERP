@@ -1,4 +1,12 @@
 import "server-only";
+/**
+ * FICHA
+ * QUÉ ES: El menú de la barra y de Cuenta (la única lectura de la tabla del menú en el servidor) y la lista de reexportaciones de compatibilidad de las ofertas.
+ * QUÉ NO ES: No lleva funciones nuevas de ningún módulo: una oferta nueva va en apps/web/servidor/ofertas-de-MODULO.ts y no se reexporta acá. La lista de reexportaciones solo baja.
+ * QUÉ EXPORTA: destinosDeAreas, destinosDeModulos, pantallasDeCuenta, ACCION_DE_CONFIGURACION_FISCAL, puedeVerLaConfiguracionFiscal, pendientesDeLaEmpresa, accionesDePuntosDeVenta, puedeEditarElContactoDeLaSucursal, accionesDeLaListaDeCaja, puedeEditarProductos, puedeCrearProductos, puedeCambiarPrecios, OfertaDeLaCarta, ofertaDeLaCartaEnLinea, puedeOcultarEnElLocal, puedeOcultarEnLaEmpresa, puedeEmitirNotasDeCredito, puedeEmitirFacturas, puedeAdministrarMesas, puedeCambiarDeMesa, puedeUnirMesas, puedeDividirCuentas, puedeEnviarAComandas, puedeImprimir, puedeReimprimir, puedeAdministrarImpresoras.
+ * QUÉ IMPORTA: la tabla del menú, permisos-de-la-persona.ts y los ofertas-de-MODULO.ts (para reexportar). Lo consumen las páginas y la barra.
+ * Previene: que el archivo común de ofertas vuelva a ser el punto donde chocan todos los PR de pantallas y que una pantalla lea los permisos dos veces por pedido. Chequeo: test/arquitectura/ofertas-por-modulo.test.ts.
+ */
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { texto } from "../../../src/capacidades/vocabulario/vocabulario";
 import type { ClaveAccion } from "../../../src/capacidades/modulos/catalogo";
