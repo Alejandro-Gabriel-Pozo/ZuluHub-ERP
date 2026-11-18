@@ -94,8 +94,9 @@ export function leerLasFilasDeOpciones(
     const existente = clave.startsWith("e");
     const id = existente ? (idsLigados[Number(clave.slice(1))] ?? undefined) : null;
     if (id === undefined) continue;
-    if ((fila.nombre ?? "").trim() === "") continue;
-    salida.push({ clave, id, nombre: fila.nombre ?? "", recargo: fila.recargo ?? "" });
+    const nombre = fila.nombre ?? "";
+    if (nombre.trim() === "") continue;
+    salida.push({ clave, id, nombre, recargo: fila.recargo ?? "" });
   }
   return salida;
 }

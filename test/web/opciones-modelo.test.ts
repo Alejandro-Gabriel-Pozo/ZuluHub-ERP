@@ -293,6 +293,21 @@ describe("armarLaCopia", () => {
     );
     expect(armada.vistaPrevia.map((b) => b.titulo)).toEqual(["Variantes", "Grupos de opciones"]);
     expect(armada.vistaPrevia[0]?.lineas).toEqual(["Tamaño: Chica · Grande"]);
+    // La variante no se repite entre los grupos comunes (y la variante sola no abre un bloque de grupos).
+    expect(armada.vistaPrevia[1]?.lineas).toEqual([
+      "Guarnición: Papas fritas · Ensalada",
+      "Salsas: Mayonesa + $ 500,00 · Ketchup",
+    ]);
+    const solo = armarLaCopia(
+      {
+        ...COPIA,
+        vistaPrevia: [
+          { nombre: "Tamaño", clase: "VARIANTE", opciones: [{ nombre: "Chica", recargo: null }] },
+        ],
+      },
+      true,
+    );
+    expect(solo.vistaPrevia).toEqual([{ titulo: "Variantes", lineas: ["Tamaño: Chica"] }]);
   });
 
   it("«Copiar» sale apagado si no hay nada para traer o si la persona no puede editar; encendido solo con las dos", () => {

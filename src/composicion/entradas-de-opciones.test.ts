@@ -25,6 +25,15 @@ const PEDIDO = {
   ],
 };
 
+describe("leerElPedidoDeGrupo: la clase es una lista cerrada", () => {
+  it.each(["INCLUIDA", "ADICIONAL"])("%s se lee tal cual", (clase) => {
+    expect(leerElPedidoDeGrupo({ ...PEDIDO, clase })).toEqual({
+      ok: true,
+      valor: { ...PEDIDO, clase },
+    });
+  });
+});
+
 describe("leerElPedidoDeGrupo", () => {
   it("lee todo lo que declara y el recargo sigue siendo texto", () => {
     expect(leerElPedidoDeGrupo(PEDIDO)).toEqual({ ok: true, valor: PEDIDO });
