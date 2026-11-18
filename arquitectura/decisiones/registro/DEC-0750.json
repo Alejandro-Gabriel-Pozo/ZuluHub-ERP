@@ -4,7 +4,7 @@
   "quien": "padre",
   "tipo": "INFRAESTRUCTURA",
   "estado": "PENDIENTE_DE_OK",
-  "decision": "Las ofertas de botones de la web (¿puede la persona?) viven en un archivo por módulo, apps/web/servidor/ofertas-de-MODULO.ts; modulos.ts queda con el menú y una lista de reexportaciones que solo baja.",
-  "que_cambia": "Solo mueve código, sin cambiar conducta. Una prueba falla si modulos.ts suma exportaciones, si un ofertas-de archivo no es de un módulo del catálogo o si los permisos se leen fuera de permisos-de-la-persona.ts. Revertir: volver las funciones a modulos.ts.",
-  "donde": "apps/web/servidor/permisos-de-la-persona.ts; apps/web/servidor/ofertas-de-*.ts; test/arquitectura/ofertas-por-modulo.test.ts; brief PR-1 de escalabilidad, repo de documentos, 11-especificaciones/briefs/escalabilidad/PR-1-partir-modulos-ts.md"
+  "decision": "Las ofertas de botones de la web viven en un archivo por módulo, ofertas-de-MODULO.ts, y modulos.ts queda como archivo central con su ficha en centrales.json.",
+  "que_cambia": "Solo mueve código, sin cambiar conducta. Nace la regla general de archivos centrales: encabezado, exportaciones, importaciones y tamaño fijados por una prueba; modulos.ts es la primera entrada. Revertir: volver las funciones a modulos.ts y borrar la prueba.",
+  "donde": "apps/web/servidor/permisos-de-la-persona.ts; apps/web/servidor/ofertas-de-*.ts; arquitectura/centrales.json; test/arquitectura/archivos-centrales.test.ts; test/arquitectura/ofertas-por-modulo.test.ts; ficha-de-archivo-central.md y brief PR-1 de escalabilidad, repo de documentos, 11-especificaciones"
 }

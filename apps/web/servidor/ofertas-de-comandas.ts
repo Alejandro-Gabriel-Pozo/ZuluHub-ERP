@@ -1,11 +1,6 @@
 import "server-only";
 /**
- * FICHA
- * QUÉ ES: Las ofertas de botones del módulo comandas: enviar a cocina, imprimir, reimprimir y administrar impresoras.
- * QUÉ NO ES: No lleva la lógica de otro módulo: cada módulo tiene su ofertas-de-MODULO.ts, y las lecturas de permisos pasan por permisos-de-la-persona.ts.
- * QUÉ EXPORTA: puedeEnviarAComandas, puedeImprimir, puedeReimprimir, puedeAdministrarImpresoras.
- * QUÉ IMPORTA: permisos-de-la-persona.ts. Lo consumen las páginas, por modulos.ts.
- * Previene: que el archivo común de ofertas vuelva a ser el punto donde chocan todos los PR de pantallas y que una pantalla lea los permisos dos veces por pedido. Chequeo: test/arquitectura/ofertas-por-modulo.test.ts.
+ * Parte dedicada de `modulos.ts` (archivo central, ver su encabezado): Las ofertas de botones del módulo comandas: enviar a cocina, imprimir, reimprimir y administrar impresoras.
  */
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { puedeLaAccion } from "./permisos-de-la-persona";

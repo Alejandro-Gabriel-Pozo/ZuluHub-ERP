@@ -1,11 +1,11 @@
 import "server-only";
 /**
- * FICHA
- * QUÉ ES: El menú de la barra y de Cuenta (la única lectura de la tabla del menú en el servidor) y la lista de reexportaciones de compatibilidad de las ofertas.
- * QUÉ NO ES: No lleva funciones nuevas de ningún módulo: una oferta nueva va en apps/web/servidor/ofertas-de-MODULO.ts y no se reexporta acá. La lista de reexportaciones solo baja.
- * QUÉ EXPORTA: destinosDeAreas, destinosDeModulos, pantallasDeCuenta, ACCION_DE_CONFIGURACION_FISCAL, puedeVerLaConfiguracionFiscal, pendientesDeLaEmpresa, accionesDePuntosDeVenta, puedeEditarElContactoDeLaSucursal, accionesDeLaListaDeCaja, puedeEditarProductos, puedeCrearProductos, puedeCambiarPrecios, OfertaDeLaCarta, ofertaDeLaCartaEnLinea, puedeOcultarEnElLocal, puedeOcultarEnLaEmpresa, puedeEmitirNotasDeCredito, puedeEmitirFacturas, puedeAdministrarMesas, puedeCambiarDeMesa, puedeUnirMesas, puedeDividirCuentas, puedeEnviarAComandas, puedeImprimir, puedeReimprimir, puedeAdministrarImpresoras.
- * QUÉ IMPORTA: la tabla del menú, permisos-de-la-persona.ts y los ofertas-de-MODULO.ts (para reexportar). Lo consumen las páginas y la barra.
- * Previene: que el archivo común de ofertas vuelva a ser el punto donde chocan todos los PR de pantallas y que una pantalla lea los permisos dos veces por pedido. Chequeo: test/arquitectura/ofertas-por-modulo.test.ts.
+ * ARCHIVO CENTRAL
+ * QUÉ ES: el armado del menú para la persona (áreas, destinos de la barra, pantallas de Cuenta) y la lista de reexportaciones de compatibilidad de las ofertas de botones.
+ * QUÉ NO ES: el lugar de las funciones «¿puede…?» de cada pantalla: una oferta nueva va en su parte dedicada y no se reexporta acá.
+ * EXPORTA: destinosDeAreas, destinosDeModulos, pantallasDeCuenta, ACCION_DE_CONFIGURACION_FISCAL, puedeVerLaConfiguracionFiscal, pendientesDeLaEmpresa, accionesDePuntosDeVenta, puedeEditarElContactoDeLaSucursal, accionesDeLaListaDeCaja, puedeEditarProductos, puedeCrearProductos, puedeCambiarPrecios, OfertaDeLaCarta, ofertaDeLaCartaEnLinea, puedeOcultarEnElLocal, puedeOcultarEnLaEmpresa, puedeEmitirNotasDeCredito, puedeEmitirFacturas, puedeAdministrarMesas, puedeCambiarDeMesa, puedeUnirMesas, puedeDividirCuentas, puedeEnviarAComandas, puedeImprimir, puedeReimprimir, puedeAdministrarImpresoras.
+ * IMPORTA: server-only, src/contexto/contexto, src/capacidades/vocabulario/vocabulario, src/capacidades/modulos/catalogo, apps/web/ui/navegacion/menu, apps/web/ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta, apps/web/ui/plantillas/sesion/*, apps/web/servidor/permisos-de-la-persona, apps/web/servidor/ofertas-de-*, apps/web/servidor/configuracion-fiscal.
+ * PARTE DEDICADA: apps/web/servidor/ofertas-de-<módulo>.ts (las ofertas de cada módulo) y apps/web/servidor/permisos-de-la-persona.ts (la lectura de permisos).
  */
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { texto } from "../../../src/capacidades/vocabulario/vocabulario";

@@ -1,0 +1,50 @@
+{
+  "centrales": [
+    {
+      "ruta": "apps/web/servidor/modulos.ts",
+      "exporta": [
+        "destinosDeAreas",
+        "destinosDeModulos",
+        "pantallasDeCuenta",
+        "ACCION_DE_CONFIGURACION_FISCAL",
+        "puedeVerLaConfiguracionFiscal",
+        "pendientesDeLaEmpresa",
+        "accionesDePuntosDeVenta",
+        "puedeEditarElContactoDeLaSucursal",
+        "accionesDeLaListaDeCaja",
+        "puedeEditarProductos",
+        "puedeCrearProductos",
+        "puedeCambiarPrecios",
+        "OfertaDeLaCarta",
+        "ofertaDeLaCartaEnLinea",
+        "puedeOcultarEnElLocal",
+        "puedeOcultarEnLaEmpresa",
+        "puedeEmitirNotasDeCredito",
+        "puedeEmitirFacturas",
+        "puedeAdministrarMesas",
+        "puedeCambiarDeMesa",
+        "puedeUnirMesas",
+        "puedeDividirCuentas",
+        "puedeEnviarAComandas",
+        "puedeImprimir",
+        "puedeReimprimir",
+        "puedeAdministrarImpresoras"
+      ],
+      "importaDe": [
+        "server-only",
+        "src/contexto/contexto",
+        "src/capacidades/vocabulario/vocabulario",
+        "src/capacidades/modulos/catalogo",
+        "apps/web/ui/navegacion/menu",
+        "apps/web/ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta",
+        "apps/web/ui/plantillas/sesion/*",
+        "apps/web/servidor/permisos-de-la-persona",
+        "apps/web/servidor/ofertas-de-*",
+        "apps/web/servidor/configuracion-fiscal"
+      ],
+      "parteDedicada": "apps/web/servidor/ofertas-de-<módulo>.ts",
+      "soloJunta": false,
+      "lineas": 184
+    }
+  ]
+}
