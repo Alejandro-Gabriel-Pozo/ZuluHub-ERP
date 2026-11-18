@@ -566,7 +566,10 @@ describe("la causa de un error de ARCA elige el texto; el código sigue siendo e
       "toString",
       "constructor",
     ]) {
-      expect(traducirErrorFiscal(error("SERVICIO_NO_DISPONIBLE", causa)), String(causa)).toEqual({
+      expect(
+        traducirErrorFiscal(error("SERVICIO_NO_DISPONIBLE", causa)),
+        JSON.stringify(causa),
+      ).toEqual({
         codigo: "FISCAL_ARCA_NO_DISPONIBLE",
       });
     }
