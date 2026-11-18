@@ -208,6 +208,7 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "/catalogo/secciones",
         "catalogo.seccion.titulo",
       ],
+      ["mesas", "ventas", "salon", "salon", "mesas.ver", "/salon/mesas", "salon.texto.admin_mesas"],
       [
         "configuracion-fiscal",
         "cuenta",

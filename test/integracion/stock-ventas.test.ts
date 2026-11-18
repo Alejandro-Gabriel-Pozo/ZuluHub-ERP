@@ -1239,10 +1239,37 @@ describe.skipIf(base === null)("stock: puertos de venta", () => {
       }
     });
 
-    it("lleva las cantidades a la unidad de stock (exacta o se rechaza) y rechaza lo que no es una compra a un depósito normal, activo y de la empresa", async () => {
+    it("una compra recibida puede entrar directo a un depósito de cuarentena o de rechazo (compras N3); cualquier otro motivo u origen sigue rechazado, y no suma a lo disponible", async () => {
+      const harina = await insumo({ unidadBase: "GRAMO", dimension: "MASA" });
+      for (const uso of ["CUARENTENA", "RECHAZO"] as const) {
+        const deposito = await c.deposito(e, { uso });
+        const hecha = valorDe(
+          await recibir({
+            depositoId: deposito,
+            renglones: unRenglon(harina.producto, "3", "KILOGRAMO"),
+          }),
+        );
+        expect(hecha.yaExistia).toBe(false);
+        expect(await c.existencia(deposito, harina.articulo)).toBe("3000.0000");
+        // otro motivo a ese depósito sigue rechazado
+        const otroMotivo: Record<string, unknown> = {
+          clave: nuevoId(),
+          origen: { tipo: "RECEPCION", id: nuevoId() },
+          depositoId: deposito,
+          motivo: "OTRA_ENTRADA",
+          renglones: unRenglon(harina.producto),
+        };
+        expect(await recibir(otroMotivo)).toMatchObject({
+          ok: false,
+          error: "MOTIVO_NO_PERMITIDO",
+        });
+        expect(await c.existencia(deposito, harina.articulo)).toBe("3000.0000");
+      }
+    });
+
+    it("lleva las cantidades a la unidad de stock (exacta o se rechaza) y rechaza lo que no es una compra a un depósito activo y de la empresa", async () => {
       const harina = await insumo({ unidadBase: "GRAMO", dimension: "MASA" });
       const sinArticulo = await clase("INSUMO");
-      const cuarentena = await c.deposito(e, { uso: "CUARENTENA" });
       const inactivo = await c.deposito(e, { activo: false });
       const antes = await movimientos();
       expect(
@@ -1296,11 +1323,6 @@ describe.skipIf(base === null)("stock: puertos de venta", () => {
           "depósito de otra empresa",
           { depositoId: depDeOtra, renglones: unRenglon(harina.producto) },
           "DEPOSITO_NO_ENCONTRADO",
-        ],
-        [
-          "depósito de cuarentena",
-          { depositoId: cuarentena, renglones: unRenglon(harina.producto) },
-          "MOTIVO_NO_PERMITIDO",
         ],
         [
           "depósito inactivo",

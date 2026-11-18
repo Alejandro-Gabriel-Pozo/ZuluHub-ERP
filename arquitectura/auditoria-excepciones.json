@@ -1,0 +1,9 @@
+[
+  {
+    "id": "GHSA-fc5q-39xc-vjpf",
+    "paquete": "picomatch",
+    "motivo": "ReDoS en extglobs repetidos de picomatch <= 4.0.7; 4.0.7 es la última versión publicada (sin corrección). Solo desarrollo: llega por vitest, vite, tinyglobby y fdir (pruebas y compilación), dependency-cruiser y knip (reglas de arquitectura); vitest figura bajo better-auth únicamente como peer opcional (peerDependenciesMeta.vitest.optional), no como dependencia de producción. No llega a la aplicación: tras compilar apps/web, `grep -rlE 'picomatch|tinyglobby' apps/web/.next/server apps/web/.next/static` no devuelve ningún archivo (0 de 1213 y 0 de 52 el 17/11/2026). Entrada de picomatch: patrones escritos por el equipo en el repositorio, no del usuario.",
+    "fuente": "Decisión del dueño, 17/11/2026, opción «A» (vía el orquestador)",
+    "vence": "2026-12-17"
+  }
+]
