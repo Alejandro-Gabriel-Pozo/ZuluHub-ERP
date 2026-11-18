@@ -220,6 +220,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "comandas.texto.imprimir_impresoras",
       ],
       [
+        "stock",
+        "catalogo",
+        "stock",
+        "stock",
+        "stock.ver",
+        "/stock/depositos",
+        "stock.pantalla.stock",
+      ],
+      [
         "configuracion-fiscal",
         "cuenta",
         "empresa",
