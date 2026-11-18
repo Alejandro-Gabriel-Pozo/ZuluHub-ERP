@@ -71,6 +71,40 @@ describe.skipIf(base === null || !stockAbierto)("recorrido de depósitos de stoc
     expect(vigilante.tomar()).toEqual([]);
   });
 
+  it("al entrar a «Agregar depósito» la lista y las pestañas siguen a la vista y «Cancelar» vuelve sin crear nada", async () => {
+    await pagina.goto(`${mundo.url}/stock/depositos`);
+    await pagina.waitForLoadState("networkidle");
+    await pagina.getByRole("link", { name: "Agregar depósito" }).click();
+    await pagina.waitForURL("**/stock/depositos/nuevo");
+    const pestana = pagina.getByRole("main").getByRole("link", { name: "Depósitos" });
+    await pestana.waitFor();
+    expect(await pestana.getAttribute("aria-current")).toBe("page");
+    expect(await pagina.getByRole("heading", { name: "Depósitos" }).count()).toBe(1);
+    expect(await pagina.getByText("Cocina", { exact: true }).count()).toBe(1);
+    await pagina.getByLabel("Nombre", { exact: true }).waitFor();
+    await pagina.getByLabel("Nombre", { exact: true }).fill("No se crea");
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+
+    await pagina.getByRole("link", { name: "Cancelar" }).click();
+    await pagina.waitForURL((url) => url.pathname === "/stock/depositos");
+    await pagina.getByRole("link", { name: "Agregar depósito" }).waitFor();
+    expect(await pagina.getByText("No se crea", { exact: true }).count()).toBe(0);
+    expect(await pagina.getByText("Cocina", { exact: true }).count()).toBe(1);
+    expect(vigilante.tomar()).toEqual([]);
+  });
+
+  it("un doble clic en «Agregar depósito» deja un solo depósito", async () => {
+    await pagina.goto(`${mundo.url}/stock/depositos/nuevo`);
+    await pagina.waitForLoadState("networkidle");
+    await pagina.getByLabel("Nombre", { exact: true }).fill("Barra");
+    await pagina.getByRole("button", { name: "Agregar depósito" }).dblclick();
+    await pagina.waitForURL((url) => url.pathname === "/stock/depositos");
+    await pagina.getByText("Barra", { exact: true }).waitFor();
+    await pagina.waitForLoadState("networkidle");
+    expect(await pagina.getByText("Barra", { exact: true }).count()).toBe(1);
+    expect(vigilante.tomar()).toEqual([]);
+  });
+
   it("repetir el alta con el mismo nombre dice que ya existe y la lista sigue con uno solo", async () => {
     await pagina.goto(`${mundo.url}/stock/depositos/nuevo`);
     await pagina.waitForLoadState("networkidle");

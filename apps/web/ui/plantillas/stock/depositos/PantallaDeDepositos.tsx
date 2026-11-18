@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Boton } from "../../../componentes/Boton.cliente";
 import { EnlaceDeAccion } from "../../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../../componentes/Insignia";
@@ -11,17 +12,20 @@ export type PropsDePantallaDeDepositos = Readonly<{
   puedeAgregar: boolean;
   /** Adónde lleva «Agregar depósito». */
   hrefDeAgregar: string;
+  /** Lo que se dibuja al pie en lugar de «Agregar depósito» (el formulario del alta, que va debajo de la lista). Sin él, la lista muestra el botón. */
+  pie?: ReactNode;
 }>;
 
 /**
  * La lista de depósitos de la sucursal (maqueta `stock.html`, 09/11/2026): una tarjeta por depósito con su nombre, su uso y «De venta» si lo es; al pie, «Agregar depósito». Sin textos
- * propios: todos llegan resueltos. Sin permiso, el botón sale apagado (el servidor igual rechaza).
+ * propios: todos llegan resueltos. Sin permiso, el botón sale apagado (el servidor igual rechaza). El alta reutiliza esta misma lista y pasa su formulario como `pie`.
  */
 export function PantallaDeDepositos({
   filas,
   textos,
   puedeAgregar,
   hrefDeAgregar,
+  pie,
 }: PropsDePantallaDeDepositos) {
   return (
     <div className={estilos["raiz"]}>
@@ -37,7 +41,9 @@ export function PantallaDeDepositos({
         ))}
       </ul>
       <div>
-        {puedeAgregar ? (
+        {pie !== undefined ? (
+          pie
+        ) : puedeAgregar ? (
           <EnlaceDeAccion href={hrefDeAgregar}>{textos.agregar}</EnlaceDeAccion>
         ) : (
           <Boton deshabilitado>{textos.agregar}</Boton>

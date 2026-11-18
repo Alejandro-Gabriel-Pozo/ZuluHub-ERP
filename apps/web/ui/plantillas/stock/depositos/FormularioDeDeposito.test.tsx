@@ -7,9 +7,15 @@ import { FormularioDeDeposito } from "./FormularioDeDeposito.cliente";
 
 /**
  * El alta de un depósito en Chromium (maqueta `stock.html`, 09/11/2026): nombre y uso, «De venta» solo con el uso Normal (decisión del dueño, 18/11/2026); «Agregar depósito» espera a que
- * haya un nombre, el doble toque manda un solo envío y el error del servidor sale con su texto.
+ * haya un nombre, el doble toque manda un solo envío y el error del servidor sale con su texto. «Cancelar» es un enlace a la lista, a la izquierda de «Agregar depósito» (ajuste a la maqueta).
  */
-const TEXTOS = { nombre: "Nombre", uso: "Uso", deVenta: "De venta", guardar: "Agregar depósito" };
+const TEXTOS = {
+  nombre: "Nombre",
+  uso: "Uso",
+  deVenta: "De venta",
+  guardar: "Agregar depósito",
+  cancelar: "Cancelar",
+};
 const USOS = [
   { valor: "NORMAL", etiqueta: "Normal" },
   { valor: "CUARENTENA", etiqueta: "Cuarentena" },
@@ -21,6 +27,7 @@ const formulario = (accion: AccionDeFormulario = ok, puedeGuardar = true) => (
   <FormularioDeDeposito
     accion={accion}
     textos={TEXTOS}
+    hrefDeCancelar="/stock/depositos"
     opcionesDeUso={USOS}
     puedeGuardar={puedeGuardar}
   />
@@ -106,5 +113,33 @@ describe("FormularioDeDeposito", () => {
     await expect.element(aviso).toBeVisible();
     await expect.element(page.getByText("Ya existe un depósito con ese nombre")).toBeVisible();
     expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("«Cancelar» es un enlace a la lista, a la izquierda de «Agregar depósito», no dispara la acción y es accesible", async () => {
+    const accion = vi.fn(ok);
+    await render(formulario(accion));
+    const cancelar = page.getByRole("link", { name: "Cancelar" });
+    await expect.element(cancelar).toHaveAttribute("href", "/stock/depositos");
+    expect(page.getByRole("button", { name: "Cancelar" }).elements()).toHaveLength(0);
+    const izquierda = cancelar.element().getBoundingClientRect();
+    const derecha = page
+      .getByRole("button", { name: "Agregar depósito" })
+      .element()
+      .getBoundingClientRect();
+    expect(izquierda.right).toBeLessThanOrEqual(derecha.left);
+    await userEvent.fill(page.getByLabelText("Nombre"), "Cocina");
+    // El clic en un enlace navega; para no salir de la prueba se frena la navegación y se mira que no se envió nada.
+    cancelar.element().addEventListener("click", (evento) => evento.preventDefault());
+    await userEvent.click(cancelar);
+    expect(accion).not.toHaveBeenCalled();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("«Cancelar» sigue disponible aunque no haya permiso para guardar", async () => {
+    await render(formulario(ok, false));
+    await expect
+      .element(page.getByRole("link", { name: "Cancelar" }))
+      .toHaveAttribute("href", "/stock/depositos");
+    await expect.element(page.getByRole("button", { name: "Agregar depósito" })).toBeDisabled();
   });
 });
