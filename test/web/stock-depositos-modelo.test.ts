@@ -85,6 +85,12 @@ describe("las rutas y las pestañas de Stock", () => {
     expect(PESTANAS_CONSTRUIDAS).toEqual(["depositos"]);
   });
 
+  it("la marca de «actual» sigue a la pantalla en la que se está, no a la pestaña que hay", () => {
+    expect(pestanasDeStock("conteo").map((p) => [p.texto, p.actual])).toEqual([
+      ["Depósitos", false],
+    ]);
+  });
+
   it("ninguna pestaña apunta a una ruta fuera de las construidas", () => {
     const permitidas = PESTANAS_CONSTRUIDAS.map((clave) => RUTAS_DE_STOCK[clave]);
     for (const actual of ["existencias", "movimientos", "conteo", "depositos"] as const) {
