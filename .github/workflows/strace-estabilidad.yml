@@ -16,18 +16,6 @@ jobs:
     name: Strace de la integración
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_HOST_AUTH_METHOD: trust
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     env:
       PRUEBAS_DATABASE_URL: postgres://postgres@localhost:5432/postgres
     steps:
@@ -39,6 +27,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Postgres 18 (sin `services:`: así el registro del contenedor no se vuelca al final del log y el resumen queda a la vista)
+        run: |
+          docker run -d --name pg -e POSTGRES_HOST_AUTH_METHOD=trust -p 5432:5432 postgres:18 -c log_min_messages=fatal
+          for i in $(seq 1 30); do docker exec pg pg_isready -U postgres && break; sleep 2; done
       - name: Instalar strace
         run: sudo apt-get update -qq && sudo apt-get install -y -qq strace
       - name: Integración bajo strace (una copia)
