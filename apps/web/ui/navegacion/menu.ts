@@ -46,7 +46,7 @@ export type ClaveDeArea = (typeof AREAS_DEL_MENU)[number]["clave"];
  * muestra como una fila, sin encabezado repetido»).
  */
 export const GRUPOS_DEL_MENU = [
-  { clave: "venta", etiqueta: null },
+  { clave: "mostrador", etiqueta: "navegacion.grupo.mostrador" },
   { clave: "comprobantes", etiqueta: null },
   { clave: "productos", etiqueta: null },
   { clave: "salon", etiqueta: "salon.texto.grupo_salon" },
@@ -104,11 +104,11 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     tipo: "pantalla",
     clave: "venta-rapida",
     area: "ventas",
-    grupo: "venta",
+    grupo: "mostrador",
     modulo: "ventas",
     accion: "ventas.ver",
     href: RUTA_DE_LA_VENTA,
-    etiqueta: "ventas.venta.titulo",
+    etiqueta: "ventas.venta.menu",
     departamento: null,
   },
   {

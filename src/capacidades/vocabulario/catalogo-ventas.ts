@@ -9,9 +9,11 @@ export const TEXTOS_DE_VENTAS = {
 
   // PANTALLA «VENTA RÁPIDA» (maqueta `venta-rapida-v4.html`). Fuente de cada texto, salvo donde se dice otra cosa: `textos-mostrador-pendientes.md` (Pedernal-docs, 11-especificaciones) y la
   // fila 171 de `decisiones-del-dueno-2026-11.md` («Acepto todos los textos», 15/11/2026); «aprobado 09/11» = la versión aprobada de la venta rápida (`venta-rapida.html`, §4 de ese documento).
-  // «Venta»: título de la pantalla y de su entrada del menú. Figura en la maqueta aprobada de la venta rápida (`venta-rapida.html:551`, carpeta de prototipos de Pedernal-docs 10-ux-ui) y se mantiene en `venta-rapida-v4.html`;
+  // «Venta»: título de la pantalla. Figura en la maqueta aprobada de la venta rápida (`venta-rapida.html:551`, carpeta de prototipos de Pedernal-docs 10-ux-ui) y se mantiene en `venta-rapida-v4.html`;
   // no está en la lista de 302 textos (`textos-por-aprobar.html`): queda como pregunta de confirmación (DEC-0479).
   "ventas.venta.titulo": { porDefecto: "Venta" },
+  // «Venta rápida»: rótulo de la entrada del menú, dentro del grupo «Mostrador» (dueño, 13/11/2026, `decisiones-del-dueno-2026-11.md` línea 110: «no el título largo»).
+  "ventas.venta.menu": { porDefecto: "Venta rápida" },
   // «Buscar por nombre o código»: rótulo del buscador. Aprobado 09/11 (`textos-mostrador-pendientes.md` §4, línea 69); busca por nombre, código y código de barras (respuesta del orquestador, 15/11/2026).
   "ventas.venta.buscar": { porDefecto: "Buscar por nombre o código" },
   // Búsqueda sin coincidencias: los tres textos figuran en la maqueta aprobada de la venta rápida (`venta-rapida.html:548`); aceptados por el orquestador el 15/11/2026 (delegación del dueño, DDD filas 173 y 174).
