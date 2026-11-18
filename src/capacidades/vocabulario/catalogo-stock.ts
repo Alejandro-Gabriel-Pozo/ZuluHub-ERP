@@ -65,7 +65,6 @@ export const TEXTOS_DE_STOCK = {
   "stock.error.control_avisa": {
     porDefecto: "Va a quedar en negativo. ¿Confirmás?",
   },
-  "stock.error.control_bloquea": { porDefecto: "No hay stock suficiente" },
   "stock.error.transferencia_al_mismo_deposito": {
     porDefecto: "El origen y el destino no pueden ser el mismo",
   },

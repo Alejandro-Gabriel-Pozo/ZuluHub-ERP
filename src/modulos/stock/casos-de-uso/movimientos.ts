@@ -201,8 +201,7 @@ export const armarRegistrarEntrada = (d: DependenciasDeStock) =>
  * Registrar una salida (E5 §3.2): lo mismo que la entrada con guard `stock.registrar_salida`, motivos de salida (`VENTA` no se admite: solo
  * por el puerto de ventas; `VENCIMIENTO` exige además `stock.ajustar`, S-7) y el control `stock.existencia_negativa`: se lee su nivel de la
  * base (sin fila, `PERMITIR`) con los saldos ya bloqueados. `PERMITIR` deja pasar y audita cada renglón que queda en negativo; `AVISAR` sin
- * confirmar es `CONTROL_REQUIERE_CONFIRMACION` y con `confirmaciones: ["stock.existencia_negativa"]` pasa y se audita; `BLOQUEAR` es
- * `CONTROL_BLOQUEA`, con el detalle `[{ productoId, depositoId, existenciaResultante }]`.
+ * confirmar es `CONTROL_REQUIERE_CONFIRMACION` y con `confirmaciones: ["stock.existencia_negativa"]` pasa y se audita (el error lleva el detalle `[{ productoId, depositoId, existenciaResultante }]`).
  */
 export const armarRegistrarSalida = (d: DependenciasDeStock) =>
   armarEntradaOSalida<SalidaDeRegistrarSalida>(

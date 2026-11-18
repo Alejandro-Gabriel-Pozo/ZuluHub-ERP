@@ -48,7 +48,7 @@ function leerOrigen(valor: unknown): string | null {
  * La salida de mercadería por devolución al proveedor (E9 N4, `SalidaPorOrigen.registrarSalida`): corre en la transacción del llamador y no autoriza (la acción de compras que devuelve queda
  * guardada en el libro). La IDENTIDAD es el origen (la devolución): una segunda llamada de la misma devolución, aunque traiga otra clave, devuelve la salida existente con `yaExistia` (lo impone el
  * único de origen de la base). El motivo es `DEVOLUCION_A_PROVEEDOR`; el depósito es de cualquier uso (la base deja salir por devolución de cuarentena y de rechazo), está activo y en el alcance de quien
- * devuelve; cantidades exactas en la unidad de stock; el control `stock.existencia_negativa` decide si se puede devolver más de lo que hay (`PERMITIR` audita, `AVISAR` pide confirmación, `BLOQUEAR` rechaza).
+ * devuelve; cantidades exactas en la unidad de stock; el control `stock.existencia_negativa` decide si se puede devolver más de lo que hay (`PERMITIR` audita, `AVISAR` pide confirmación).
  * Con el módulo apagado devuelve el motivo y no escribe (la devolución sin stock no existe).
  */
 export async function registrarSalidaPorOrigen(

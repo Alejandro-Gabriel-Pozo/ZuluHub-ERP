@@ -11,7 +11,6 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  */
 export const CLAVES_DE_ERRORES_DE_STOCK = {
   STOCK_CONTROL_AVISA: "stock.error.control_avisa",
-  STOCK_CONTROL_BLOQUEA: "stock.error.control_bloquea",
   STOCK_TRANSFERENCIA_AL_MISMO_DEPOSITO: "stock.error.transferencia_al_mismo_deposito",
   STOCK_DETALLE_REQUERIDO: "stock.error.detalle_requerido",
   STOCK_CANTIDAD_INVALIDA: "stock.error.cantidad_invalida",

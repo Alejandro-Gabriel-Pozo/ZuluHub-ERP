@@ -2,8 +2,9 @@
  * Catálogo de controles (ADR-008). Es código, no base de datos: de acá sale el tipo cerrado
  * `ClaveDeControl`, así que un control mal escrito o sin catalogar no compila. Como las perillas, un
  * control que nadie verifica no se declara: cada módulo registra el suyo en el tramo que lo evalúa
- * (caja: `caja.cierre_con_diferencia`, `caja.devolucion_supera_cobro`, `caja.cobro_en_jornada_vencida`;
- * stock: `stock.existencia_negativa`; reservas y facturación, los suyos). Cada módulo suma SUS claves en líneas separadas.
+ * (caja: `caja.cierre_con_diferencia`, `caja.cobro_en_jornada_vencida`;
+ * stock: `stock.existencia_negativa`; reservas y facturación, los suyos). `caja.devolucion_supera_cobro` NO se declara nunca: devolver más de
+ * lo cobrado es integridad del dinero, un bloqueo fijo del sistema, y un control solo puede ser `PERMITIR` o `AVISAR` (ADR-008 opción b). Cada módulo suma SUS claves en líneas separadas.
  *
  * La clave es `modulo.nombre_del_control`, con la forma que exige el CHECK `nivel_de_control_control_ck`
  * de la base: una clave que no la cumpla no podría guardar nunca su nivel (la prueba de este archivo la

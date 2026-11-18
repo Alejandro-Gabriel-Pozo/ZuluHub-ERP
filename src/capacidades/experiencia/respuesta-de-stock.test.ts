@@ -11,7 +11,6 @@ describe("códigos públicos de stock", () => {
   it("son exactamente estos, con su texto exacto", () => {
     expect(CLAVES_DE_ERRORES_DE_STOCK).toEqual({
       STOCK_CONTROL_AVISA: "stock.error.control_avisa",
-      STOCK_CONTROL_BLOQUEA: "stock.error.control_bloquea",
       STOCK_TRANSFERENCIA_AL_MISMO_DEPOSITO: "stock.error.transferencia_al_mismo_deposito",
       STOCK_DETALLE_REQUERIDO: "stock.error.detalle_requerido",
       STOCK_CANTIDAD_INVALIDA: "stock.error.cantidad_invalida",
@@ -21,7 +20,6 @@ describe("códigos públicos de stock", () => {
     });
     const textos = {
       "stock.error.control_avisa": "Va a quedar en negativo. ¿Confirmás?",
-      "stock.error.control_bloquea": "No hay stock suficiente",
       "stock.error.transferencia_al_mismo_deposito":
         "El origen y el destino no pueden ser el mismo",
       "stock.error.detalle_requerido": "Escribí el detalle",

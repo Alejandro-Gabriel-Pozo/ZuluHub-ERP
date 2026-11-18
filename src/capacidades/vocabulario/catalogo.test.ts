@@ -462,7 +462,6 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "stock.deposito.de_venta": "De venta",
       "stock.deposito.uso": "Uso",
       "stock.error.control_avisa": "Va a quedar en negativo. ¿Confirmás?",
-      "stock.error.control_bloquea": "No hay stock suficiente",
       "stock.error.transferencia_al_mismo_deposito":
         "El origen y el destino no pueden ser el mismo",
       "stock.error.detalle_requerido": "Escribí el detalle",

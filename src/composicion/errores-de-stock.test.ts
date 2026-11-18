@@ -39,20 +39,14 @@ describe("traducirErrorDeStock", () => {
     expect(traducirErrorDeStock(error)).toEqual({ codigo: "STOCK_ACCION_NO_PERMITIDA" });
   });
 
-  it("el control de existencia negativa: avisa pide confirmar, bloquea dice que no hay stock; ninguno deja salir el detalle de los saldos", () => {
+  it("el control de existencia negativa: avisa pide confirmar y no deja salir el detalle de los saldos", () => {
     const detalle = [{ productoId: "p", depositoId: "d", existenciaResultante: "-3" }];
     const avisa = traducirErrorDeStock({
       error: "CONTROL_REQUIERE_CONFIRMACION",
       control: "stock.existencia_negativa",
       detalle,
     });
-    const bloquea = traducirErrorDeStock({
-      error: "CONTROL_BLOQUEA",
-      control: "stock.existencia_negativa",
-      detalle,
-    });
     expect(avisa).toEqual({ codigo: "STOCK_CONTROL_AVISA" });
-    expect(bloquea).toEqual({ codigo: "STOCK_CONTROL_BLOQUEA" });
   });
 
   it("una función que el plan no incluye sale como el genérico, sin la perilla", () => {
@@ -87,7 +81,7 @@ describe("traducirErrorDeStock", () => {
   });
 
   it("en un error con forma de objeto solo un TEXTO es el nombre: una lista que se lee como uno pasa sin cambios", () => {
-    const disfrazado = { error: ["CONTROL_BLOQUEA"] };
+    const disfrazado = { error: ["CONTROL_REQUIERE_CONFIRMACION"] };
     expect(traducirErrorDeStock(disfrazado)).toBe(disfrazado);
   });
 
