@@ -138,15 +138,15 @@ describe("«Secciones»: la fila del grupo «Carta» de Catálogo (A8)", () => {
     );
   });
 
-  it("un módulo «en desarrollo» no aparece aunque llegue la acción y figure activo (fila de prueba sobre `comandas`, que sigue en desarrollo)", () => {
+  it("un módulo «en desarrollo» no aparece aunque llegue la acción y figure activo (fila de prueba sobre `produccion`, que sigue en desarrollo)", () => {
     // Con catalogo, caja y ventas disponibles (DEC-0463) ninguna fila real del menú depende de un módulo en desarrollo: se prueba la regla con una fila armada.
-    const enDesarrollo = { ...productos, modulo: "comandas" as const };
-    expect(CATALOGO_DE_MODULOS.comandas.estado).toBe("en_desarrollo");
-    expect(armarElMenu([enDesarrollo], permisos(["productos.ver"], ["comandas"]), null)).toEqual(
+    const enDesarrollo = { ...productos, modulo: "produccion" as const };
+    expect(CATALOGO_DE_MODULOS.produccion.estado).toBe("en_desarrollo");
+    expect(armarElMenu([enDesarrollo], permisos(["productos.ver"], ["produccion"]), null)).toEqual(
       [],
     );
     expect(
-      armarElMenu([enDesarrollo], permisos(["productos.ver"], [], ["comandas"]), null),
+      armarElMenu([enDesarrollo], permisos(["productos.ver"], [], ["produccion"]), null),
     ).toEqual([]);
     // La misma fila con un módulo disponible sí se ve: lo que la oculta es el estado, no la forma de la fila.
     const disponible = { ...productos, modulo: "catalogo" as const };

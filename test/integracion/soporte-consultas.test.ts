@@ -660,7 +660,8 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
         obligatorio: false,
       });
       // `catalogo`, `caja` y `ventas` son disponibles desde el 15/11/2026 (DEC-0463; no obligatorios: cada empresa los activa).
-      for (const clave of ["catalogo", "caja", "ventas"]) {
+      // `comandas` y `salon`, desde S-0r (17/11/2026, DEC-0714).
+      for (const clave of ["catalogo", "caja", "ventas", "comandas", "salon"]) {
         expect(modulos.find((m) => m.clave === clave)).toMatchObject({
           estado: "disponible",
           obligatorio: false,
@@ -678,6 +679,8 @@ describe.skipIf(base === null)("soporte de plataforma: consultas de nivel 1", ()
             "catalogo",
             "caja",
             "ventas",
+            "comandas",
+            "salon",
           ].includes(m.clave),
       )) {
         expect(modulo, modulo.clave).toMatchObject({ estado: "en_desarrollo", obligatorio: false });
