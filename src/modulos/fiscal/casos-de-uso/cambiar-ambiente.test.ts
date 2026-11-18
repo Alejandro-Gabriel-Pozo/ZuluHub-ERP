@@ -48,7 +48,12 @@ const contexto: ContextoOperativo = {
   ahora: AHORA,
 };
 const PV = puntoDeVentaId("pv-1");
-const HABILITADO: PuntoDeVentaDeArca = { numero: 1, bloqueado: false, dadoDeBaja: false };
+const HABILITADO: PuntoDeVentaDeArca = {
+  numero: 1,
+  bloqueado: false,
+  dadoDeBaja: false,
+  emision: "CAE",
+};
 const VENCE_MAS_ADELANTE = new Date(AHORA.getTime() + 86_400_000);
 
 const CON_FACTURACION: ReglasDeEmpresa = {
@@ -295,10 +300,7 @@ describe("pasar a producción: el punto de venta existe en ARCA y está habilita
 
   it("la CUIT con la que pregunta es la de ESE emisor: ARCA que solo tiene el número para otra CUIT no lo habilita", async () => {
     const { casos, mundo } = armar({ cuitDelEmisor: CUIT_B });
-    expect(await pasar(casos)).toEqual({
-      ok: false,
-      error: "PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA",
-    });
+    expect(await pasar(casos)).toEqual({ ok: false, error: "SIN_PUNTOS_DE_VENTA_EN_ARCA" });
     sinCambios(mundo);
   });
 
@@ -321,41 +323,90 @@ describe("pasar a producción: el punto de venta existe en ARCA y está habilita
 });
 
 describe("pasar a producción: ARCA no lo tiene habilitado, no cambia nada", () => {
-  const rechazado = { ok: false, error: "PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA" } as const;
+  const rechazo = (error: string) => ({ ok: false, error }) as const;
 
-  it("el número no existe en ARCA (la lista no lo trae)", async () => {
+  it("el número no existe en ARCA (la lista no trae ese número)", async () => {
     const { casos, mundo } = armar({}, { arca: [{ ...HABILITADO, numero: 2 }] });
-    expect(await pasar(casos)).toEqual(rechazado);
+    expect(await pasar(casos)).toEqual(rechazo("PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA"));
     sinCambios(mundo);
   });
 
   it("ARCA no tiene ningún punto de venta para la CUIT (lista vacía)", async () => {
     const { casos, mundo } = armar({}, { arca: [] });
-    expect(await pasar(casos)).toEqual(rechazado);
+    expect(await pasar(casos)).toEqual(rechazo("SIN_PUNTOS_DE_VENTA_EN_ARCA"));
     sinCambios(mundo);
   });
 
   it("existe pero está bloqueado", async () => {
     const { casos, mundo } = armar({}, { arca: [{ ...HABILITADO, bloqueado: true }] });
-    expect(await pasar(casos)).toEqual(rechazado);
+    expect(await pasar(casos)).toEqual(rechazo("PUNTO_DE_VENTA_BLOQUEADO_EN_ARCA"));
     sinCambios(mundo);
   });
 
   it("existe pero está dado de baja", async () => {
     const { casos, mundo } = armar({}, { arca: [{ ...HABILITADO, dadoDeBaja: true }] });
-    expect(await pasar(casos)).toEqual(rechazado);
+    expect(await pasar(casos)).toEqual(rechazo("PUNTO_DE_VENTA_DADO_DE_BAJA_EN_ARCA"));
     sinCambios(mundo);
   });
 
   it("figura dos veces: no se sabe cuál vale", async () => {
     const { casos, mundo } = armar({}, { arca: [HABILITADO, { ...HABILITADO, bloqueado: true }] });
-    expect(await pasar(casos)).toEqual(rechazado);
+    expect(await pasar(casos)).toEqual(rechazo("PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA"));
+    sinCambios(mundo);
+  });
+
+  it("ARCA lo informa solo para CAEA (DEC-0742): no pasa, sin escribir ni auditar", async () => {
+    const { casos, mundo } = armar({}, { arca: [{ ...HABILITADO, emision: "CAEA" }] });
+    expect(await pasar(casos)).toEqual(rechazo("PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA"));
+    sinCambios(mundo);
+  });
+
+  it("solo CAEA y además bloqueado: manda el bloqueo (el orden de los motivos)", async () => {
+    const { casos, mundo } = armar(
+      {},
+      { arca: [{ ...HABILITADO, emision: "CAEA", bloqueado: true }] },
+    );
+    expect(await pasar(casos)).toEqual(rechazo("PUNTO_DE_VENTA_BLOQUEADO_EN_ARCA"));
+    sinCambios(mundo);
+  });
+
+  it("idempotencia: el mismo pedido dos veces con la lista vacía da el mismo error, cero escrituras y cero auditorías", async () => {
+    const { casos, mundo } = armar({}, { arca: [] });
+    const primero = await pasar(casos);
+    const segundo = await pasar(casos);
+    expect(primero).toEqual(rechazo("SIN_PUNTOS_DE_VENTA_EN_ARCA"));
+    expect(segundo).toEqual(primero);
+    sinCambios(mundo);
+  });
+
+  it("idempotencia: lo mismo con solo CAEA", async () => {
+    const { casos, mundo } = armar({}, { arca: [{ ...HABILITADO, emision: "CAEA" }] });
+    const primero = await pasar(casos);
+    expect(await pasar(casos)).toEqual(primero);
+    expect(primero).toEqual(rechazo("PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA"));
+    sinCambios(mundo);
+  });
+
+  it("concurrencia: dos pedidos a la vez con el punto de venta bloqueado, los dos rechazados y cero escrituras", async () => {
+    const { casos, mundo } = armar({}, { arca: [{ ...HABILITADO, bloqueado: true }] });
+    const [a, b] = await Promise.all([pasar(casos), pasar(casos)]);
+    expect(a).toEqual(rechazo("PUNTO_DE_VENTA_BLOQUEADO_EN_ARCA"));
+    expect(b).toEqual(a);
     sinCambios(mundo);
   });
 
   it("después del rechazo, cuando ARCA lo da de alta, el mismo pedido pasa (nada quedó a medias)", async () => {
     const { casos, mundo, falsa } = armar({}, { arca: [] });
-    expect(await pasar(casos)).toEqual(rechazado);
+    expect(await pasar(casos)).toEqual(rechazo("SIN_PUNTOS_DE_VENTA_EN_ARCA"));
+    falsa.declararPuntosDeVenta(CUIT_A, [HABILITADO]);
+    expect(await pasar(casos)).toEqual({ ok: true, valor: { yaEstaba: false } });
+    expect(mundo.pv.ambiente).toBe("PRODUCCION");
+    expect(mundo.auditoria).toHaveLength(1);
+  });
+
+  it("después de un solo CAEA, cuando ARCA lo informa como CAE, el mismo pedido pasa", async () => {
+    const { casos, mundo, falsa } = armar({}, { arca: [{ ...HABILITADO, emision: "CAEA" }] });
+    expect(await pasar(casos)).toEqual(rechazo("PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA"));
     falsa.declararPuntosDeVenta(CUIT_A, [HABILITADO]);
     expect(await pasar(casos)).toEqual({ ok: true, valor: { yaEstaba: false } });
     expect(mundo.pv.ambiente).toBe("PRODUCCION");

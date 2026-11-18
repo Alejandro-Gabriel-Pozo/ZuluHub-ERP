@@ -2579,6 +2579,7 @@ describe("el módulo de ARCA simulada del recorrido no puede llegar a producció
   const RAIZ_REAL = join(import.meta.dirname, "../..");
   const PROHIBIDO_EN_PRODUCCION = [
     "conectar-arca-simulada",
+    "activar-modulos-en-desarrollo",
     "PEDERNAL_RECORRIDO",
     "arca-simulada",
     "NODE_OPTIONS",

@@ -9,7 +9,12 @@ import {
   servidorFalso,
   type ServidorFalso,
 } from "../../../test/utilidades/arca-servidor";
-import { codigoDeError, crearTransporteHttp } from "./transporte-http";
+import {
+  codigoDeError,
+  crearTransporteHttp,
+  DOMINIOS_DE_ARCA_CON_TLS_COMPATIBLE,
+  esDominioConTlsCompatible,
+} from "./transporte-http";
 
 /**
  * El transporte real contra un servidor de loopback (127.0.0.1): nada sale de la máquina. Lo que se prueba es
@@ -392,5 +397,172 @@ describe("codigoDeError: el texto de OpenSSL solo cuenta con su forma completa",
     expect(
       codigoDeError({ code: "EPROTO", message: "error:0A000152:SSL routines::dh key too small:" }),
     ).toBe("EPROTO");
+  });
+});
+
+describe("modo compatible: qué dominios son elegibles", () => {
+  const elegible = (host: string) =>
+    esDominioConTlsCompatible(`https://${host}/wsfev1/service.asmx`);
+
+  it("la lista de dominios es exactamente la declarada", () => {
+    expect(DOMINIOS_DE_ARCA_CON_TLS_COMPATIBLE).toEqual(["afip.gov.ar", "arca.gob.ar"]);
+  });
+
+  it("el dominio y sus subdominios sí", () => {
+    for (const host of [
+      "servicios1.afip.gov.ar",
+      "wsaa.afip.gov.ar",
+      "aws.afip.gov.ar",
+      "servicios1.arca.gob.ar",
+      "afip.gov.ar",
+      "arca.gob.ar",
+      "SERVICIOS1.AFIP.GOV.AR",
+      "servicios1.afip.gov.ar:443",
+      "usuario:clave@servicios1.afip.gov.ar",
+    ]) {
+      expect(elegible(host), host).toBe(true);
+    }
+  });
+
+  it("todo lo demás no (violaciones inyectadas)", () => {
+    for (const host of [
+      "afip.gov.ar.evil.com",
+      "evilafip.gov.ar",
+      "xafip.gov.ar",
+      "afip.gov.ar@evil.com",
+      "afip.gov.ar.",
+      "servicios1.afip.gov.ar.",
+      "localhost",
+      "127.0.0.1",
+      "example.com",
+      "gov.ar",
+      "ar",
+      "afip.gov.ar.arca.gob.ar.evil.com",
+      "wsaahomo.afip.gov.ar.evil.com",
+    ]) {
+      expect(elegible(host), host).toBe(false);
+    }
+  });
+
+  it("no es elegible una URL sin https ni una ilegible: falla cerrado", () => {
+    expect(esDominioConTlsCompatible("http://servicios1.afip.gov.ar/")).toBe(false);
+    expect(esDominioConTlsCompatible("no es una url")).toBe(false);
+    expect(esDominioConTlsCompatible("")).toBe(false);
+  });
+});
+
+/**
+ * Parámetros DH de 1024 bits (públicos, generados con `openssl dhparam 1024` solo para esta prueba): el servidor de
+ * ARCA ofrece un DH de ese tamaño. Node 24 (OpenSSL 3.5) lo rechaza por defecto con «dh key too small»; Node 22 lo acepta.
+ */
+const DH_DE_1024_BITS = [
+  "-----BEGIN DH PARAMETERS-----",
+  "MIGHAoGBAMre8jV7gu/mONv3G/bnmCMfm3K0KtLK02BEIKpvmOYXti4kqB0/2k38",
+  "sVb4XyEIQYeYhXBOqA8fzE5nAaiMKVMY9qw2M+1OB9s+v3uOXY+48jRlXtdLje7I",
+  "sZhjVmJRiiuv0Lr+Mwcm9UN/CVTMvSW/t3R3rZToSyvXvbgxrCFvAgEC",
+  "-----END DH PARAMETERS-----",
+].join("\n");
+
+describe("modo compatible contra un servidor TLS local con DH de 1024 bits", () => {
+  /** Servidor que solo ofrece DHE (para que el DH cuente) y cuenta las conexiones TCP que recibe. */
+  const abrirServidorDeDh1024 = async () => {
+    const { credencial } = await credencialDePrueba();
+    const servidor = crearServidorTls(
+      {
+        key: credencial.clavePrivada.revelar(),
+        cert: credencial.certificadoPem,
+        maxVersion: "TLSv1.2",
+        ciphers: "DHE-RSA-AES128-SHA256:@SECLEVEL=0",
+        dhparam: DH_DE_1024_BITS,
+      },
+      (conexion) => conexion.end(),
+    );
+    servidor.on("tlsClientError", () => undefined);
+    const conexiones = { total: 0 };
+    servidor.on("connection", () => {
+      conexiones.total += 1;
+    });
+    await new Promise<void>((r) => servidor.listen(0, "127.0.0.1", r));
+    abiertos.push(() => new Promise<void>((r) => servidor.close(() => r())));
+    const { port } = servidor.address() as AddressInfo;
+    return { url: `https://127.0.0.1:${port}/`, conexiones };
+  };
+
+  it("un host que no es de ARCA: un solo intento y sin log, aunque falle por el DH", async () => {
+    const { url, conexiones } = await abrirServidorDeDh1024();
+    const avisos: string[] = [];
+    const respuesta = await crearTransporteHttp({ registrar: (a) => avisos.push(a) })(pedidoA(url));
+    expect(respuesta.tipo).toBe("NO_SALIO");
+    expect(conexiones.total).toBe(1);
+    expect(avisos).toEqual([]);
+  });
+
+  it("un host de ARCA con el motivo de la lista: UN reintento (nunca un tercero), con su línea de log", async () => {
+    const { url, conexiones } = await abrirServidorDeDh1024();
+    // El estricto: ¿este Node rechaza el DH de 1024 por defecto? (Node 24 sí; Node 22 no).
+    const estricto = await crearTransporteHttp({ dominiosConTlsCompatible: [] })(pedidoA(url));
+    const rechazaElDh =
+      estricto.tipo === "NO_SALIO" && estricto.motivo === "EPROTO_DH_KEY_TOO_SMALL";
+    conexiones.total = 0;
+
+    const avisos: string[] = [];
+    const respuesta = await crearTransporteHttp({
+      dominiosConTlsCompatible: ["127.0.0.1"],
+      registrar: (a) => avisos.push(a),
+    })(pedidoA(url));
+
+    if (!rechazaElDh) {
+      // Node que acepta el DH de 1024 por defecto: no hay fallo del que reintentar, ni reintento, ni log.
+      expect(conexiones.total).toBe(1);
+      expect(avisos).toEqual([]);
+      return;
+    }
+    // Se intentó estricto y UNA vez más, no más.
+    expect(conexiones.total).toBe(2);
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]).toMatch(
+      /^\[arca\] TLS en modo compatible \(SECLEVEL=1\) con 127\.0\.0\.1 por EPROTO_DH_KEY_TOO_SMALL: /,
+    );
+    // Con la opción el handshake PASÓ el DH: lo que lo frena ahora es el certificado autofirmado del servidor de
+    // prueba (que NO se aflojó), y el log lo dice. Como tampoco salió, se devuelve el error ORIGINAL.
+    expect(avisos[0]).toContain("tampoco salió (");
+    expect(avisos[0]).not.toMatch(/tampoco salió \(EPROTO_DH_KEY_TOO_SMALL\)/);
+    expect(respuesta).toEqual({ tipo: "NO_SALIO", motivo: "EPROTO_DH_KEY_TOO_SMALL" });
+  });
+
+  it("un motivo que no está en la lista no reintenta, aunque el host sea de ARCA", async () => {
+    const { credencial } = await credencialDePrueba();
+    const servidor = crearServidorHttps(
+      { key: credencial.clavePrivada.revelar(), cert: credencial.certificadoPem },
+      (_p, r) => r.end("<ok/>"),
+    );
+    const conexiones = { total: 0 };
+    servidor.on("connection", () => {
+      conexiones.total += 1;
+    });
+    await new Promise<void>((r) => servidor.listen(0, "127.0.0.1", r));
+    abiertos.push(() => new Promise<void>((r) => servidor.close(() => r())));
+    const { port } = servidor.address() as AddressInfo;
+    const avisos: string[] = [];
+    const respuesta = await crearTransporteHttp({
+      dominiosConTlsCompatible: ["127.0.0.1"],
+      registrar: (a) => avisos.push(a),
+    })(pedidoA(`https://127.0.0.1:${port}/`));
+    // Certificado que no es de confianza: otro motivo, un solo intento, sin log.
+    expect(respuesta.tipo).toBe("NO_SALIO");
+    expect(respuesta.tipo === "NO_SALIO" && respuesta.motivo.startsWith("EPROTO_DH")).toBe(false);
+    expect(conexiones.total).toBe(1);
+    expect(avisos).toEqual([]);
+  });
+
+  it("un registro que lanza no cambia lo que se devuelve", async () => {
+    const { url } = await abrirServidorDeDh1024();
+    const respuesta = await crearTransporteHttp({
+      dominiosConTlsCompatible: ["127.0.0.1"],
+      registrar: () => {
+        throw new Error("registro caído");
+      },
+    })(pedidoA(url));
+    expect(respuesta.tipo).toBe("NO_SALIO");
   });
 });

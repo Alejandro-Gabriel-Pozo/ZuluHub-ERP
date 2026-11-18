@@ -435,8 +435,8 @@ describe("las operaciones del puerto, con las respuestas reales", () => {
       expect(await adaptador.puntosDeVenta(CUIT)).toEqual({
         ok: true,
         valor: [
-          { numero: 1, bloqueado: false, dadoDeBaja: false },
-          { numero: 2, bloqueado: true, dadoDeBaja: true },
+          { numero: 1, bloqueado: false, dadoDeBaja: false, emision: "CAE" },
+          { numero: 2, bloqueado: true, dadoDeBaja: true, emision: "CAE" },
         ],
       });
       expect(transporte.pedidos).toEqual([
@@ -466,10 +466,99 @@ describe("las operaciones del puerto, con las respuestas reales", () => {
       expect(lista).toEqual({
         ok: true,
         valor: [
-          { numero: 1, bloqueado: false, dadoDeBaja: false },
-          { numero: 2, bloqueado: false, dadoDeBaja: true },
+          { numero: 1, bloqueado: false, dadoDeBaja: false, emision: "CAE" },
+          { numero: 2, bloqueado: false, dadoDeBaja: true, emision: "CAE" },
         ],
       });
+    });
+
+    it("602 (ARCA no tiene ningún punto de venta para la CUIT) es una lista vacía, no una falla: no deja línea de log", async () => {
+      const m = armar({
+        ambiente: "PRODUCCION",
+        transporte: wsfe([
+          "FEParamGetPtosVenta",
+          respuestaHttp(
+            respuestaDePtosVentaDelManual({
+              errores: [{ codigo: 602, texto: "Sin datos con rutas C:\\secreto" }],
+            }),
+          ),
+        ]),
+      });
+      expect(await m.adaptador.puntosDeVenta(CUIT)).toEqual({ ok: true, valor: [] });
+      expect(m.avisos).toEqual([]);
+    });
+
+    it("602 con un ResultGet vacío también es una lista vacía", async () => {
+      const m = armar({
+        ambiente: "PRODUCCION",
+        transporte: wsfe([
+          "FEParamGetPtosVenta",
+          respuestaHttp(
+            respuestaDePtosVentaDelManual({ puntos: [], errores: [{ codigo: 602, texto: "m" }] }),
+          ),
+        ]),
+      });
+      expect(await m.adaptador.puntosDeVenta(CUIT)).toEqual({ ok: true, valor: [] });
+      expect(m.avisos).toEqual([]);
+    });
+
+    it("602 junto a otro código sigue siendo una falla, con su línea de log", async () => {
+      const m = armar({
+        ambiente: "PRODUCCION",
+        transporte: wsfe([
+          "FEParamGetPtosVenta",
+          respuestaHttp(
+            respuestaDePtosVentaDelManual({
+              errores: [
+                { codigo: 602, texto: "m" },
+                { codigo: 500, texto: "m" },
+              ],
+            }),
+          ),
+        ]),
+      });
+      expect(await m.adaptador.puntosDeVenta(CUIT)).toEqual({
+        ok: false,
+        error: {
+          codigo: "SERVICIO_NO_DISPONIBLE",
+          detalle: "ARCA respondió con errores (602, 500)",
+        },
+      });
+      expect(m.avisos).toEqual([
+        "[arca] FEParamGetPtosVenta falló (SERVICIO_NO_DISPONIBLE): ARCA respondió con errores (602, 500)",
+      ]);
+    });
+
+    it("si EmisionTipo viene con una forma inesperada, el log lleva el valor recibido SANEADO (letras y dígitos, hasta 8) o FORMA_INVALIDA", async () => {
+      for (const [recibido, enElLog] of [
+        ["cae", "cae"],
+        ["CAEAX", "CAEAX"],
+        ["Z9", "Z9"],
+        ["CAE - CAEA", "FORMA_INVALIDA"],
+        ["ABCDEFGHI", "FORMA_INVALIDA"],
+        ["<b>CAE</b>", "FORMA_INVALIDA"],
+        ["rutas C:\\secreto", "FORMA_INVALIDA"],
+      ] as const) {
+        const m = armar({
+          ambiente: "PRODUCCION",
+          transporte: wsfe([
+            "FEParamGetPtosVenta",
+            respuestaHttp(
+              respuestaDePtosVentaDelManual({
+                puntos: [{ Nro: "1", EmisionTipo: recibido, Bloqueado: "N" }],
+              }),
+            ),
+          ]),
+        });
+        const r = await m.adaptador.puntosDeVenta(CUIT);
+        expect(r, recibido).toMatchObject({
+          ok: false,
+          error: { codigo: "SERVICIO_NO_DISPONIBLE" },
+        });
+        expect(m.avisos, recibido).toEqual([
+          `[arca] FEParamGetPtosVenta falló (SERVICIO_NO_DISPONIBLE): la lista de puntos de venta de ARCA no se pudo leer (EmisionTipo recibido: ${enElLog})`,
+        ]);
+      }
     });
 
     it("si la lista no se entiende queda UNA línea de log con operación, código y detalle, y sin el pedido ni el token ni la firma", async () => {
@@ -946,16 +1035,22 @@ describe("los puertos de F7: resultados con error, nunca excepciones", () => {
       "SIN_CERTIFICADO_VIGENTE",
       "SIN_CREDENCIAL",
       "el emisor no tiene un certificado vigente en este ambiente",
+      {},
     ],
-    ["CERTIFICADO_VENCIDO", "SIN_CREDENCIAL", "el certificado del emisor está vencido"],
-    ["CLAVE_ILEGIBLE", "SIN_CREDENCIAL", "la clave del certificado del emisor no se pudo leer"],
+    [
+      "CERTIFICADO_VENCIDO",
+      "SIN_CREDENCIAL",
+      "el certificado del emisor está vencido",
+      { causa: "CERTIFICADO_VENCIDO" },
+    ],
+    ["CLAVE_ILEGIBLE", "SIN_CREDENCIAL", "la clave del certificado del emisor no se pudo leer", {}],
   ] as const)(
     "credenciales: %s es %s con un texto fijo y no sale nada a la red",
-    async (causa, codigo, detalle) => {
+    async (causa, codigo, detalle, extra) => {
       const m = armar({ ticket: null, credencial: causa });
       expect(await m.adaptador.ultimoAutorizado(PUNTO_DE_VENTA, "FACTURA_B")).toEqual({
         ok: false,
-        error: { codigo, detalle },
+        error: { codigo, detalle, ...extra },
       });
       expect(await m.adaptador.autorizar(solicitudDeLaGrabacion())).toEqual({
         tipo: "NO_ENVIADO",
