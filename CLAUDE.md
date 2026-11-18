@@ -1,7 +1,7 @@
 # Pedernal ERP: instrucciones para trabajar en este repositorio
 
 Idioma: español rioplatense. El dueño define el negocio y no programa; la calidad técnica es responsabilidad
-del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 a 008 y casos de uso).
+del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 008 y casos de uso).
 
 ## Antes de entregar
 
@@ -14,6 +14,10 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
 - Si tocás `apps/web`, corré también `npm run test:recorrido` (app real, Chromium y Postgres; necesita `npm run build:web` hecho). Previene: un `Boton`
   sin `"use client"` rompe «Emitir» en el navegador (React #441) y ninguna prueba unitaria lo ve; lo cubre el job `recorrido` del Gate.
 - Una regla nueva de arquitectura trae su violación inyectada en `test/arquitectura/reglas.test.ts`.
+- **Parar la línea (dueño, 17/11/2026).** Si la nocturna (mutación completa, incluido el guardián) está roja, no se mergea producto hasta que
+  esté verde o explicada; el orquestador la mira cada mañana. Previene: un fallo del guardián que los PR ya no corren (solo la nocturna lo ve)
+  quede escondido bajo merges nuevos. Chequeo: `test/arquitectura/guardian-en-pr.test.ts` (que la nocturna corra todo); que el orquestador la
+  mire es proceso, no un test.
 
 ## Reglas que no se negocian
 
@@ -25,6 +29,16 @@ del ingeniero. Las decisiones están en el repositorio `Pedernal-docs` (ADR 001 
 - Todo cambio de datos: transacción, idempotencia, aislamiento por empresa, auditoría en la misma transacción.
 - Migraciones: SQL revisado; avisar antes de cualquier cambio destructivo.
 - No hacer commit de `.env`, claves ni cadenas de conexión.
+- **Ninguna sesión escribe en la base `production` (dueño, 2026-11-16, «respaldos A»).** Ningún agente, sesión, herramienta (incluido el MCP
+  de Neon) ni workflow distinto de `migrar.yml` ejecuta SQL de escritura contra la rama `production` de Neon ni crea, borra, resetea o
+  restaura ramas o snapshots de ese proyecto. Borrar o resetear una rama de Neon y restaurar (a un instante o desde un snapshot) lo hace solo
+  el dueño, en la consola. Las migraciones llegan a producción solo por `migrar.yml`, con su aprobación y con un **snapshot previo
+  obligatorio** (si no se puede crear, no se migra). Las sesiones usan Neon en solo lectura o contra `preview`. Previene: el MCP de Neon
+  estaba conectado en modo escritura (borrar proyecto, resetear, restaurar y SQL; medido el 16/11/2026) y la única cerradura era esta frase; y
+  una migración destructiva en producción sin punto de retorno. Chequeo: `test/arquitectura/` (tramo T3) falla si un workflow fuera de la
+  lista exacta usa `NEON_API_KEY` o `PEDERNAL_DB_DUENO_DIRECTA`, o si alguno llama a borrar, resetear o restaurar de la API de Neon, con
+  violación inyectada por cada caso. Lo que **no** puede chequear: el uso del MCP por una sesión (es regla de proceso; la cerradura real es la
+  rama protegida de Neon, que bloquea borrar y resetear pero no el SQL ni la restauración).
 - **Todo nace cerrado (denegar por defecto).** Nada se habilita sin declararlo, autorizarlo y dejar rastro; ante un error o una duda el
   sistema cierra (fail closed). Las capacidades son opt-in, con el mínimo privilegio y lista blanca: solo pasa lo declarado. Ejemplos: un
   módulo «en desarrollo» no da permisos a nadie; sin sucursal elegida nunca se asume «todas»; la barra que no puede leer permisos no
@@ -104,7 +118,7 @@ consume | Fuente | ¿Cambia dinero, permisos, fiscal o una decisión previa?` (l
 
 ## Justificar cada regla, abstracción y convención
 
-Fuente: `Pedernal-docs/01-vision/reglas-transversales.md` §8. El sistema lo construye y mantiene una IA: una regla sin motivo se
+Fuente: `01-vision/reglas-transversales.md` §8 del repositorio de documentos. El sistema lo construye y mantiene una IA: una regla sin motivo se
 obedece igual, se acumula y compite con otras.
 
 - Toda regla, abstracción o convención nueva se justifica por **la ambigüedad que elimina**, **la categoría concreta de fallos que
