@@ -77,7 +77,10 @@ export const DATOS_DE_FACTURACION = {
           "Pedernal-docs/11-especificaciones/emitir-plan-factura-a.md §1 (decisiones del dueño, 2026-11-06) y facturador-contratos-de-pantalla.md «Contrato de la pantalla 3: Emitir una factura» (paso 1, cliente)",
       },
     ],
-    consumidores: ["apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx"],
+    consumidores: [
+      "apps/web/ui/componentes/CampoDeDocumento.test.tsx",
+      "apps/web/ui/plantillas/facturacion/PasosDeEmision.tsx",
+    ],
     ponerPor: ["comprobantes.emitir"],
     requiere: REQUIERE_FACTURACION,
   },

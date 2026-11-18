@@ -8,7 +8,7 @@ function Controlado(props: { nombre?: string; alEntregar?: (valor: string) => vo
   const [valor, setValor] = useState("");
   return (
     <CampoDeDocumento
-      dato="pendiente"
+      dato="documento-de-identidad"
       nombre={props.nombre}
       etiqueta="Número"
       tipo="CUIT"
