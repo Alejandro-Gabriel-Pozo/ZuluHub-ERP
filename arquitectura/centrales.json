@@ -46,6 +46,25 @@
       "parteDedicada": "apps/web/servidor/ofertas-de-<módulo>.ts",
       "soloJunta": false,
       "lineas": 185
+    },
+    {
+      "ruta": "src/composicion/web.ts",
+      "exporta": ["OpcionesDeWeb", "armarWeb", "Web"],
+      "importaDe": [
+        "src/composicion/web-base",
+        "src/composicion/web-de-*",
+        "src/composicion/conexiones",
+        "src/composicion/emision-fiscal",
+        "src/composicion/cadenas-de-confianza-de-arca",
+        "src/capacidades/permisos/empresa",
+        "src/modulos/fiscal/publico",
+        "src/adaptadores/certificados/lector-x509",
+        "src/puertos/transacciones"
+      ],
+      "parteDedicada": "src/composicion/web-de-<módulo>.ts",
+      "soloJunta": false,
+      "lineas": 91,
+      "excepciones": ["empresas", "fiscal", "identidad"]
     }
   ]
 }
