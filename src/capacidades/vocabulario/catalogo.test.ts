@@ -144,6 +144,29 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     );
   });
 
+  it("los textos de errores de ARCA del 18/11/2026 declaran su consumidor y su fuente (DEC-0741)", () => {
+    const claves = [
+      "error.fiscal_punto_de_venta_no_habilitado_en_arca",
+      "error.fiscal_arca_sin_puntos_de_venta",
+      "error.fiscal_punto_de_venta_bloqueado_en_arca",
+      "error.fiscal_punto_de_venta_dado_de_baja_en_arca",
+      "error.fiscal_punto_de_venta_solo_caea_en_arca",
+      "error.fiscal_arca_cuit_no_representada",
+      "error.fiscal_arca_certificado_vencido",
+      "error.fiscal_arca_problema_del_sistema",
+    ] as const;
+    for (const clave of claves) {
+      expect(CATALOGO_DE_TEXTOS[clave].usos, clave).toEqual([
+        {
+          como: "FUNCION",
+          archivo: "src/composicion/errores-fiscales.ts",
+          nombre: "traducirErrorFiscal",
+        },
+      ]);
+      expect(CATALOGO_DE_TEXTOS[clave].fuente, clave).toEqual({ decision: "DEC-0741" });
+    }
+  });
+
   it("los errores del facturador son exactamente los códigos fiscales, y lo de ARCA sale traducido con su código como marcador", () => {
     expect(claves.filter((c) => c.startsWith("error.fiscal_")).sort()).toEqual(
       Object.values(CLAVES_DE_ERRORES_FISCALES).sort(),
