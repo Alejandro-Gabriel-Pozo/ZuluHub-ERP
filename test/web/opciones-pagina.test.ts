@@ -6,18 +6,30 @@ import { errorDeCodigo, type Respuesta } from "../../src/capacidades/experiencia
 /// <reference path="../../apps/web/ui/css-modules.d.ts" />
 
 /**
- * Las páginas de las opciones de un producto (A13, tramo Opciones): lista, grupo nuevo, editar un grupo y copiar. Cada una lee los ids de la dirección, pide lo suyo al servidor con el
- * contexto de la empresa y pinta cada situación con su texto del catálogo: los grupos con sus reglas y recargos, los enlaces de escribir solo con `opciones.editar`, los formularios con sus
- * campos, «Guardar» y «Copiar» activos o apagados según el permiso, y los errores (el del guard con su motivo; el genérico para lo que no está; el inesperado con la referencia).
- * Un solo `h1`: el nombre del producto. Sin entrada en la barra: se llega desde la ficha.
+ * Las páginas de las opciones de un producto (A13, tramo Opciones): la solapa (con la hoja de «Copiar de otro producto» si la dirección trae `?copiar=`), grupo nuevo y editar un grupo. Cada una
+ * lee los ids de la dirección, pide lo suyo al servidor con el contexto de la empresa y pinta cada situación con su texto del catálogo: los grupos con sus reglas y recargos, los botones de
+ * escribir SIEMPRE (apagados sin `opciones.editar`), los formularios con sus campos, «Guardar» y «Copiar» activos o apagados según el permiso, y los errores (el del guard con su motivo; el
+ * genérico para lo que no está; el inesperado con la referencia). Un solo `h1`: el nombre del producto en la solapa; «Agregar grupo» o «Editar» en la pantalla de un grupo. Sin entrada en la
+ * barra: se llega desde la ficha.
  */
 vi.mock("server-only", () => ({}));
+vi.mock("next/navigation", () => ({
+  redirect: () => undefined,
+  useRouter: () => ({ replace: () => undefined }),
+}));
 const mundo = vi.hoisted(
   (): {
     permisos: unknown;
-    llamadas: { pagina: string; contexto: unknown; id: string; grupoId?: string | null }[];
+    llamadas: {
+      pagina: string;
+      contexto: unknown;
+      id: string;
+      grupoId?: string | null;
+      origenPedido?: string | null;
+    }[];
     respuesta: unknown;
-  } => ({ permisos: null, llamadas: [], respuesta: null }),
+    respuestaCopia: unknown;
+  } => ({ permisos: null, llamadas: [], respuesta: null, respuestaCopia: null }),
 );
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
@@ -35,9 +47,9 @@ vi.mock("../../apps/web/servidor/opciones", () => ({
     mundo.llamadas.push({ pagina: "grupo", contexto, id, grupoId });
     return Promise.resolve(mundo.respuesta);
   },
-  cargarLaCopia: (contexto: unknown, id: string) => {
-    mundo.llamadas.push({ pagina: "copia", contexto, id });
-    return Promise.resolve(mundo.respuesta);
+  cargarLaCopia: (contexto: unknown, id: string, origenPedido: string | null) => {
+    mundo.llamadas.push({ pagina: "copia", contexto, id, origenPedido });
+    return Promise.resolve(mundo.respuestaCopia);
   },
   guardarElGrupo: () => Promise.resolve({ error: null }),
   copiarLasOpciones: () => Promise.resolve({ error: null }),
@@ -61,16 +73,29 @@ vi.mock("../../apps/web/servidor/sesion", () => ({
 const ID = "0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b";
 const GRUPO = "3e4f5a6b-7c8d-4e9f-8a1b-2c3d4e5f6a7b";
 const BASE = "../../apps/web/app/s/app/(operacion)/catalogo/productos/[id]/opciones";
-type Pagina = (p: { params: Promise<Record<string, string>> }) => Promise<unknown>;
+type Buscar = Record<string, string | string[] | undefined>;
+type Pagina = (p: {
+  params: Promise<Record<string, string>>;
+  searchParams: Promise<Buscar>;
+}) => Promise<unknown>;
 const cargar = (ruta: string): Promise<{ default: Pagina }> =>
   import(/* @vite-ignore */ `${BASE}${ruta}`);
 
-const html = async (ruta: string, params: Record<string, string> = { id: ID }) => {
+const html = async (
+  ruta: string,
+  params: Record<string, string> = { id: ID },
+  buscar: Buscar = {},
+) => {
   const { default: Pagina } = await cargar(ruta);
-  return renderToStaticMarkup((await Pagina({ params: Promise.resolve(params) })) as ReactNode);
+  return renderToStaticMarkup(
+    (await Pagina({
+      params: Promise.resolve(params),
+      searchParams: Promise.resolve(buscar),
+    })) as ReactNode,
+  );
 };
-const texto = async (ruta: string, params?: Record<string, string>) =>
-  (await html(ruta, params)).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+const texto = async (ruta: string, params?: Record<string, string>, buscar?: Buscar) =>
+  (await html(ruta, params, buscar)).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 
 const SALSAS = {
   id: GRUPO,
@@ -134,29 +159,33 @@ describe("la página de las opciones de un producto", () => {
     expect(mundo.llamadas).toEqual([{ pagina: "opciones", contexto: { id: "contexto" }, id: ID }]);
   });
 
-  it("los enlaces llevan a las pantallas de escribir", async () => {
+  it("los botones llevan a las pantallas de escribir (la copia, por `?copiar=`)", async () => {
     const marcado = await html("/page");
     expect(marcado).toContain(`href="/catalogo/productos/${ID}/opciones/${GRUPO}"`);
     expect(marcado).toContain(`href="/catalogo/productos/${ID}/opciones/nuevo"`);
-    expect(marcado).toContain(`href="/catalogo/productos/${ID}/opciones/copiar"`);
+    expect(marcado).toContain(`href="/catalogo/productos/${ID}/opciones?copiar=1"`);
   });
 
-  it("sin opciones.editar (un operador) se ven los grupos y no hay ningún enlace de escribir", async () => {
+  it("sin opciones.editar (un operador) se ven los grupos y los botones de escribir SIGUEN, apagados y sin enlace (maqueta: dis())", async () => {
     puede(["productos.ver"]);
     const marcado = await html("/page");
     const t = await texto("/page");
     expect(t).toContain("Salsas");
-    for (const prohibido of ["Editar", "Agregar grupo", "Copiar de otro producto"]) {
-      expect(t).not.toContain(prohibido);
+    for (const visible of ["Editar", "Agregar grupo", "Copiar de otro producto"]) {
+      expect(marcado).toMatch(new RegExp(`<button[^>]*disabled[^>]*>${visible}`));
     }
     expect(marcado.slice(marcado.indexOf("<main"), marcado.indexOf("</main>"))).not.toContain(
       "<a ",
     );
   });
 
-  it("si no se pudieron leer los permisos, tampoco hay enlaces (cierra, no abre)", async () => {
+  it("si no se pudieron leer los permisos, los botones de escribir van apagados (cierra, no abre)", async () => {
     mundo.permisos = { ok: false, error: "SIN_PERMISO" };
-    expect(await texto("/page")).not.toContain("Agregar grupo");
+    const marcado = await html("/page");
+    expect(marcado).toMatch(/<button[^>]*disabled[^>]*>Agregar grupo/);
+    expect(marcado.slice(marcado.indexOf("<main"), marcado.indexOf("</main>"))).not.toContain(
+      "<a ",
+    );
   });
 
   it("un producto sin grupos muestra el título de la sección y «Agregar grupo»", async () => {
@@ -184,6 +213,101 @@ describe("la página de las opciones de un producto", () => {
   });
 });
 
+describe("la solapa con la hoja de «Copiar de otro producto» (`?copiar=`)", () => {
+  const COPIA = {
+    id: ID,
+    nombre: "Milanesa",
+    versionDeOpciones: 4,
+    candidatos: [
+      { id: "a", nombre: "Hamburguesa" },
+      { id: "b", nombre: "Pizza" },
+    ],
+    origen: "a",
+    vistaPrevia: [
+      {
+        nombre: "Guarnición",
+        clase: "INCLUIDA",
+        opciones: [
+          { nombre: "Papas fritas", recargo: null },
+          { nombre: "Ensalada", recargo: null },
+        ],
+      },
+      {
+        nombre: "Salsas",
+        clase: "ADICIONAL",
+        opciones: [{ nombre: "Mayonesa", recargo: "500.00" }],
+      },
+    ],
+    claveDeLaCopia: "c",
+  };
+  beforeEach(() => {
+    responde({ ok: true, dato: OPCIONES });
+    mundo.respuestaCopia = { ok: true, dato: COPIA };
+  });
+
+  it("sin `copiar` no hay hoja ni se pide la copia", async () => {
+    const marcado = await html("/page");
+    expect(marcado).not.toContain("<dialog");
+    expect(mundo.llamadas.map((l) => l.pagina)).toEqual(["opciones"]);
+  });
+
+  it("con `copiar` la solapa se dibuja Y la hoja abierta: «Producto» con los candidatos, la vista previa, «Cancelar» y «Copiar»", async () => {
+    const marcado = await html("/page", { id: ID }, { copiar: "1" });
+    expect([...marcado.matchAll(/<h1\b[^>]*>(.*?)<\/h1>/g)].map((m) => m[1])).toEqual(["Milanesa"]);
+    expect(marcado).toContain("Grupos de opciones");
+    expect(marcado).toMatch(/<dialog[^>]*>/);
+    expect(marcado).toMatch(/<select[^>]*name="productoOrigenId"/);
+    expect(marcado).toContain(">Hamburguesa</option>");
+    expect(marcado).toContain(">Pizza</option>");
+    const t = await texto("/page", { id: ID }, { copiar: "1" });
+    expect(t).toContain("Guarnición: Papas fritas · Ensalada");
+    expect(t).toContain("Salsas: Mayonesa + $ 500,00");
+    expect(marcado).toMatch(/<button[^>]*>Cancelar/);
+    expect(marcado).toMatch(/<button[^>]*type="submit"[^>]*>Copiar/);
+  });
+
+  it("el origen de la dirección se pasa al servidor como pedido (solo si es un texto; `1` es «abrir») y nada más", async () => {
+    await html("/page", { id: ID }, { copiar: "1" });
+    await html("/page", { id: ID }, { copiar: "b" });
+    await html("/page", { id: ID }, { copiar: ["a", "b"] });
+    await html("/page", { id: ID }, { copiar: "' or 1=1 --" });
+    expect(mundo.llamadas.filter((l) => l.pagina === "copia")).toEqual([
+      { pagina: "copia", contexto: { id: "contexto" }, id: ID, origenPedido: null },
+      { pagina: "copia", contexto: { id: "contexto" }, id: ID, origenPedido: "b" },
+      { pagina: "copia", contexto: { id: "contexto" }, id: ID, origenPedido: null },
+      { pagina: "copia", contexto: { id: "contexto" }, id: ID, origenPedido: "' or 1=1 --" },
+    ]);
+  });
+
+  it("sin permiso «Copiar» sale apagado en la hoja; sin nada para traer, también; sin candidatos la hoja se abre con «Copiar» apagado", async () => {
+    puede(["productos.ver"]);
+    expect(await html("/page", { id: ID }, { copiar: "1" })).toMatch(
+      /<button[^>]*disabled[^>]*>Copiar</,
+    );
+    puede(["productos.ver", "opciones.editar"]);
+    mundo.respuestaCopia = { ok: true, dato: { ...COPIA, vistaPrevia: [] } };
+    expect(await html("/page", { id: ID }, { copiar: "1" })).toMatch(
+      /<button[^>]*disabled[^>]*>Copiar</,
+    );
+    mundo.respuestaCopia = {
+      ok: true,
+      dato: { ...COPIA, candidatos: [], origen: null, vistaPrevia: [] },
+    };
+    const sin = await html("/page", { id: ID }, { copiar: "1" });
+    expect(sin).toMatch(/<dialog[^>]*>/);
+    expect(sin).toMatch(/<button[^>]*disabled[^>]*>Copiar</);
+  });
+
+  it("si la copia no se puede leer sale el error (el genérico) en lugar de la hoja", async () => {
+    mundo.respuestaCopia = { ok: false, error: errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA") };
+    const marcado = await html("/page", { id: ID }, { copiar: "1" });
+    expect(marcado).not.toContain("<dialog");
+    expect(await texto("/page", { id: ID }, { copiar: "1" })).toContain(
+      "Esta acción no está permitida",
+    );
+  });
+});
+
 describe("la página de un grupo nuevo", () => {
   beforeEach(() => {
     responde({
@@ -192,42 +316,50 @@ describe("la página de un grupo nuevo", () => {
     });
   });
 
-  it("un solo h1; «Agregar grupo», el nombre, «Adicional», «Obligatorio», «Se puede elegir más de una», «No figura en la carta», la primera fila y «Guardar»", async () => {
+  it("un solo h1, «Agregar grupo»; el nombre, los dos botones «Incluida» y «Adicional», las tres casillas, las filas (sin «Quitar»), «Agregar opción» y «Guardar»", async () => {
     const marcado = await html("/nuevo/page");
     expect(mundo.llamadas).toEqual([
       { pagina: "grupo", contexto: { id: "contexto" }, id: ID, grupoId: null },
     ]);
-    expect([...marcado.matchAll(/<h1\b[^>]*>(.*?)<\/h1>/g)].map((m) => m[1])).toEqual(["Milanesa"]);
+    expect([...marcado.matchAll(/<h1\b[^>]*>(.*?)<\/h1>/g)].map((m) => m[1])).toEqual([
+      "Agregar grupo",
+    ]);
     const t = await texto("/nuevo/page");
     const orden = [
-      "Agregar grupo",
       "Nombre",
+      "Incluida",
       "Adicional",
       "Obligatorio",
       "Se puede elegir más de una",
       "No figura en la carta",
       "Recargo",
-      "Quitar",
       "Agregar opción",
       "Guardar",
     ].map((x) => t.indexOf(x));
     expect(orden.every((i) => i >= 0)).toBe(true);
     expect([...orden].sort((a, b) => a - b)).toEqual(orden);
+    expect(t).not.toContain("Quitar");
   });
 
-  it("los campos viajan por su nombre: el grupo, las casillas y la fila (el recargo como texto decimal canónico)", async () => {
+  it("los campos viajan por su nombre: el grupo, la clase (un botón de opción por valor, «Incluida» elegida), las casillas y las dos filas (el recargo como texto decimal canónico)", async () => {
     const marcado = await html("/nuevo/page");
-    for (const nombre of [
-      "nombre",
-      "esAdicional",
-      "esObligatorio",
-      "admiteVarias",
-      "fueraDeLaCarta",
-    ]) {
+    for (const nombre of ["nombre", "esObligatorio", "admiteVarias", "fueraDeLaCarta"]) {
       expect(marcado).toContain(`name="${nombre}"`);
     }
-    expect(marcado).toMatch(/<input[^>]*name="opcion_n0_nombre"/);
-    expect(marcado).toMatch(/<input[^>]*name="opcion_n0_recargo"[^>]*value="0.00"/);
+    expect(marcado).toMatch(/<input[^>]*type="radio"[^>]*name="clase"[^>]*value="INCLUIDA"/);
+    expect(marcado).toMatch(/<input[^>]*type="radio"[^>]*name="clase"[^>]*value="ADICIONAL"/);
+    const radios = marcado.match(/<input[^>]*type="radio"[^>]*>/g) ?? [];
+    expect(radios.filter((r) => r.includes('checked=""'))).toHaveLength(1);
+    expect(radios.find((r) => r.includes('value="INCLUIDA"'))).toContain('checked=""');
+    expect(radios.some((r) => r.includes("disabled"))).toBe(false);
+    expect(marcado).not.toContain('name="esAdicional"');
+    for (const fila of ["n0", "n1"]) {
+      expect(marcado).toMatch(new RegExp(`<input[^>]*name="opcion_${fila}_nombre"`));
+      expect(marcado).toMatch(
+        new RegExp(`<input[^>]*name="opcion_${fila}_recargo"[^>]*value="0.00"`),
+      );
+    }
+    expect(marcado).not.toContain('name="opcion_n2_nombre"');
   });
 
   it("«Guardar» sale activo con opciones.editar y apagado sin él, sin texto nuevo", async () => {
@@ -257,15 +389,23 @@ describe("la página de un grupo que ya existe", () => {
     });
   });
 
-  it("pide el grupo con los dos ids de la dirección; «Editar», la clase para leer (sin casilla «Adicional») y una fila por opción con su recargo", async () => {
+  it("pide el grupo con los dos ids de la dirección; «Editar» de título, «Incluida / Adicional» apagado con su valor (que viaja igual) y una fila por opción con su recargo", async () => {
     const params = { id: ID, grupoId: GRUPO };
     const marcado = await html("/[grupoId]/page", params);
     expect(mundo.llamadas).toEqual([
       { pagina: "grupo", contexto: { id: "contexto" }, id: ID, grupoId: GRUPO },
     ]);
+    expect([...marcado.matchAll(/<h1\b[^>]*>(.*?)<\/h1>/g)].map((m) => m[1])).toEqual(["Editar"]);
     const t = await texto("/[grupoId]/page", params);
-    expect(t).toContain("Editar");
+    expect(t).toContain("Incluida");
     expect(t).toContain("Adicional");
+    const radios = marcado.match(/<input[^>]*type="radio"[^>]*>/g) ?? [];
+    expect(radios).toHaveLength(2);
+    expect(radios.every((r) => r.includes('disabled=""'))).toBe(true);
+    expect(radios.find((r) => r.includes('value="ADICIONAL"'))).toContain('checked=""');
+    expect(radios.find((r) => r.includes('value="INCLUIDA"'))).not.toContain('checked=""');
+    expect(radios.some((r) => r.includes('name="clase"'))).toBe(false);
+    expect(marcado).toMatch(/<input[^>]*type="hidden"[^>]*name="clase"[^>]*value="ADICIONAL"/);
     expect(marcado).not.toContain('name="esAdicional"');
     expect(marcado).toMatch(/<input[^>]*name="nombre"[^>]*value="Salsas"/);
     expect(marcado).toMatch(/<input[^>]*name="opcion_e0_nombre"[^>]*value="Mayonesa"/);
@@ -279,44 +419,5 @@ describe("la página de un grupo que ya existe", () => {
     const params = { id: ID, grupoId: "no-existe" };
     expect(await html("/[grupoId]/page", params)).not.toContain("<form");
     expect(await texto("/[grupoId]/page", params)).toContain("Esta acción no está permitida");
-  });
-});
-
-describe("la página de copiar de otro producto", () => {
-  const COPIA = {
-    id: ID,
-    nombre: "Milanesa",
-    versionDeOpciones: 4,
-    candidatos: [
-      { id: "a", nombre: "Hamburguesa" },
-      { id: "b", nombre: "Pizza" },
-    ],
-    claveDeLaCopia: "c",
-  };
-  beforeEach(() => {
-    responde({ ok: true, dato: COPIA });
-  });
-
-  it("un solo h1; «Producto» con los candidatos y «Copiar»", async () => {
-    const marcado = await html("/copiar/page");
-    expect([...marcado.matchAll(/<h1\b[^>]*>(.*?)<\/h1>/g)].map((m) => m[1])).toEqual(["Milanesa"]);
-    expect(marcado).toMatch(/<select[^>]*name="productoOrigenId"/);
-    expect(marcado).toContain(">Hamburguesa</option>");
-    expect(marcado).toContain(">Pizza</option>");
-    expect(marcado).toMatch(/<button[^>]*type="submit"[^>]*>Copiar/);
-    expect(mundo.llamadas).toEqual([{ pagina: "copia", contexto: { id: "contexto" }, id: ID }]);
-  });
-
-  it("sin permiso «Copiar» sale apagado; sin candidatos no hay formulario", async () => {
-    puede(["productos.ver"]);
-    expect(await html("/copiar/page")).toMatch(/<button[^>]*disabled[^>]*>Copiar/);
-    puede(["productos.ver", "opciones.editar"]);
-    responde({ ok: true, dato: { ...COPIA, candidatos: [] } });
-    expect(await html("/copiar/page")).not.toContain("<form");
-  });
-
-  it("un producto que no está sale como el genérico", async () => {
-    responde({ ok: false, error: errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA") });
-    expect(await texto("/copiar/page")).toContain("Esta acción no está permitida");
   });
 });

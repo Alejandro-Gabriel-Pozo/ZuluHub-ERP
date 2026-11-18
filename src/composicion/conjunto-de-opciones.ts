@@ -115,7 +115,7 @@ export function armarElConjunto(
     actual === null
       ? {
           id: grupoId,
-          clase: pedido.esAdicional ? "ADICIONAL" : "INCLUIDA",
+          clase: pedido.clase,
           nombre: pedido.nombre,
           esTamano: false,
           esObligatorio: pedido.esObligatorio,

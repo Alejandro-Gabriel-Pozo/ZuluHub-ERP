@@ -20,8 +20,8 @@ const ALTA_PROPOSITO = (para: string): Proposito => ({
 });
 const FORMULARIO_DE_GRUPO =
   "apps/web/ui/plantillas/catalogo/FormularioDeGrupoDeOpciones.cliente.tsx";
-const FORMULARIO_DE_COPIA =
-  "apps/web/ui/plantillas/catalogo/FormularioDeCopiaDeOpciones.cliente.tsx";
+const PRUEBA_DE_OPCIONES_EXCLUYENTES = "apps/web/ui/componentes/OpcionesExcluyentes.test.tsx";
+const HOJA_DE_COPIA = "apps/web/ui/plantillas/catalogo/HojaDeCopiaDeOpciones.cliente.tsx";
 const OPCIONES_PROPOSITO = (para: string): Proposito => ({
   para,
   fuente:
@@ -238,14 +238,15 @@ export const DATOS_DE_PRODUCTOS = {
     requiere: REQUIERE_CATALOGO,
   },
   "clase-de-grupo-de-opciones": {
-    // La clase (incluida o adicional) es una lista cerrada del módulo de catálogo; se elige al crear el grupo y no se cambia (`editarOpciones` rechaza otra clase).
+    // La clase (incluida o adicional) es una lista cerrada del módulo de catálogo; se elige al crear el grupo y no se cambia (`editarOpciones` rechaza otra clase). La prueba del componente
+    // `OpcionesExcluyentes` figura como consumidor porque lo ejerce con este dato real (un componente de campo nuevo no puede sumar `pendiente`: el presupuesto de deuda solo baja).
     ficha: "src/modulos/catalogo/dominio/modelo.ts",
     propositos: [
       OPCIONES_PROPOSITO(
         "Clase de un grupo nuevo: incluida (viene con el producto, sin recargo) o adicional (se suma y puede llevar recargo). Se elige al crear el grupo y no se cambia después.",
       ),
     ],
-    consumidores: [FORMULARIO_DE_GRUPO],
+    consumidores: [FORMULARIO_DE_GRUPO, PRUEBA_DE_OPCIONES_EXCLUYENTES],
     ponerPor: ["opciones.editar"],
     requiere: REQUIERE_CATALOGO,
   },
@@ -288,7 +289,7 @@ export const DATOS_DE_PRODUCTOS = {
         "Producto del que se copian las opciones al producto de la pantalla («Copiar de otro producto»): uno activo de la empresa con opciones, distinto del destino.",
       ),
     ],
-    consumidores: [FORMULARIO_DE_COPIA],
+    consumidores: [HOJA_DE_COPIA],
     ponerPor: ["opciones.editar"],
     requiere: REQUIERE_CATALOGO,
   },

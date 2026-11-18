@@ -1,6 +1,10 @@
 import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
-import { vendeLaClase, type GrupoDeFicha } from "../modulos/catalogo/publico";
+import {
+  vendeLaClase,
+  type GrupoDeFicha,
+  type GrupoDeVistaPrevia,
+} from "../modulos/catalogo/publico";
 import { err } from "../primitivas/resultado/resultado";
 import {
   aRespuesta,
@@ -9,12 +13,7 @@ import {
   type DependenciasDeRespuesta,
 } from "./a-respuesta";
 import { armarElConjunto } from "./conjunto-de-opciones";
-import {
-  leerElPedidoDeCopia,
-  leerElPedidoDeGrupo,
-  nombreDeCampoDeOpcion,
-  type PedidoDeGrupo,
-} from "./entradas-de-opciones";
+import { leerElPedidoDeCopia, leerElPedidoDeGrupo } from "./entradas-de-opciones";
 import { identificador } from "./entradas-de-facturacion";
 import { traducirErrorDeCatalogo } from "./errores-de-catalogo";
 import type { Web } from "./web";
@@ -45,7 +44,7 @@ export type DependenciasDeOpcionesWeb = Readonly<{
   >;
   consultas: () => Pick<
     ReturnType<Web["consultasDeCatalogo"]>,
-    "verProducto" | "productosParaCopiar"
+    "verProducto" | "productosParaCopiar" | "vistaPreviaDeCopiaDeOpciones"
   >;
   respuesta: DependenciasDeRespuesta;
   /** Un identificador nuevo (uuid) para la clave del cambio; entra como dato para poder probarlo. */
@@ -90,6 +89,10 @@ export type OpcionesParaCopiar = Readonly<{
   versionDeOpciones: number;
   /** Los productos de los que se pueden copiar las opciones (activos, con opciones, distintos del destino). */
   candidatos: readonly Readonly<{ id: string; nombre: string }>[];
+  /** El producto de origen que se está mirando: el pedido si es un candidato; si no, el primero; `null` si no hay candidatos. */
+  origen: string | null;
+  /** Lo que la copia traería de ese origen (la misma regla que la copia: `loQueSeCopia`); vacía si no hay origen. */
+  vistaPrevia: readonly GrupoDeVistaPrevia[];
   claveDeLaCopia: string;
 }>;
 
@@ -176,11 +179,15 @@ export async function verUnGrupoDeOpciones(
   return { ok: true, dato: { id, nombre, versionDeOpciones, grupo, claveDelCambio } };
 }
 
-/** Los productos de los que se pueden copiar las opciones al producto de la pantalla. */
+/**
+ * Los productos de los que se pueden copiar las opciones al producto de la pantalla, y la vista previa de lo que traería el origen elegido. `origenPedido` viene de la dirección (`?copiar=`):
+ * solo se lo reconoce si es uno de los candidatos que devolvió el servidor; cualquier otro valor cae en el primero (lista de permitidos). Una lectura: no escribe ni audita.
+ */
 export async function verLasOpcionesParaCopiar(
   d: DependenciasDeOpcionesWeb,
   contexto: ContextoOperativo,
   productoId: string,
+  origenPedido: string | null,
 ): Promise<Respuesta<OpcionesParaCopiar>> {
   const leidas = await verLasOpcionesDeUnProducto(d, contexto, productoId);
   if (!leidas.ok) return leidas;
@@ -189,26 +196,32 @@ export async function verLasOpcionesParaCopiar(
       productoDestinoId: leidas.dato.id,
     });
     if (!candidatos.ok) return conError(candidatos.error, d.respuesta);
+    const lista = candidatos.valor.map((p) => ({ id: p.id, nombre: p.nombre }));
+    const origen = (lista.find((p) => p.id === origenPedido) ?? lista[0])?.id ?? null;
+    let vistaPrevia: readonly GrupoDeVistaPrevia[] = [];
+    if (origen !== null) {
+      const previa = await d.consultas().vistaPreviaDeCopiaDeOpciones(contexto, {
+        productoOrigenId: origen,
+        productoDestinoId: leidas.dato.id,
+      });
+      if (!previa.ok) return conError(previa.error, d.respuesta);
+      vistaPrevia = previa.valor;
+    }
     return {
       ok: true,
       dato: {
         id: leidas.dato.id,
         nombre: leidas.dato.nombre,
         versionDeOpciones: leidas.dato.versionDeOpciones,
-        candidatos: candidatos.valor.map((p) => ({ id: p.id, nombre: p.nombre })),
+        candidatos: lista,
+        origen,
+        vistaPrevia,
         claveDeLaCopia: leidas.dato.claveDelCambio,
       },
     };
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, d.respuesta);
   }
-}
-
-/** El primer campo vacío de nombre del pedido (el del grupo o el de una opción), para decir «Falta el nombre» donde corresponde. */
-function campoSinNombre(pedido: PedidoDeGrupo): string | null {
-  if (pedido.nombre.trim() === "") return "nombre";
-  const fila = pedido.opciones.find((o) => o.nombre.trim() === "");
-  return fila === undefined ? null : nombreDeCampoDeOpcion(fila.clave, "nombre");
 }
 
 /** Guarda un grupo (nuevo o existente) con sus opciones; devuelve el id del producto. Ver las reglas arriba. */
@@ -220,9 +233,8 @@ export async function guardarUnGrupoDeOpciones(
   const leido = leerElPedidoDeGrupo(crudo);
   if (!leido.ok) return { ok: false, error: GENERICO };
   const pedido = leido.valor;
-  // El nombre vacío tiene su texto aprobado («Falta el nombre»); cualquier otro nombre inválido es del dominio.
-  const vacio = campoSinNombre(pedido);
-  if (vacio !== null) return sinNombre(vacio, d.respuesta);
+  // El nombre vacío del grupo tiene su texto aprobado («Falta el nombre»); cualquier otro nombre inválido es del dominio. Las filas de opciones sin nombre ya no llegan: se descartaron al leerlas.
+  if (pedido.nombre.trim() === "") return sinNombre("nombre", d.respuesta);
   try {
     const ficha = await d.consultas().verProducto(contexto, { productoId: pedido.productoId });
     if (!ficha.ok) return conError(ficha.error, d.respuesta);

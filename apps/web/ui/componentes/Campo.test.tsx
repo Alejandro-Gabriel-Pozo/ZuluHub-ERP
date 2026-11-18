@@ -10,6 +10,7 @@ function Controlado(props: {
   ayuda?: string;
   obligatorio?: string;
   deshabilitado?: boolean;
+  rotuloSoloParaLector?: boolean;
 }) {
   const [valor, setValor] = useState("");
   return <Campo etiqueta="Nombre" valor={valor} alCambiar={setValor} {...props} dato="pendiente" />;
@@ -42,6 +43,18 @@ describe("Campo", () => {
     await render(<Controlado obligatorio="obligatorio" />);
     const campo = page.getByRole("textbox", { name: "Nombre (obligatorio)" });
     await expect.element(campo).toHaveAttribute("aria-required", "true");
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("con el rótulo solo para el lector, no se ve pero sigue nombrando al campo y deja su renglón", async () => {
+    await render(<Controlado rotuloSoloParaLector />);
+    const campo = page.getByRole("textbox", { name: "Nombre" });
+    await expect.element(campo).toBeVisible();
+    const etiqueta = document.querySelector("label");
+    expect(etiqueta?.textContent).toContain("Nombre");
+    expect(etiqueta?.getBoundingClientRect().height).toBeGreaterThan(0);
+    const visibleSolo = (etiqueta?.querySelector("span") as HTMLElement).getBoundingClientRect();
+    expect(visibleSolo.width).toBeLessThanOrEqual(1);
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 

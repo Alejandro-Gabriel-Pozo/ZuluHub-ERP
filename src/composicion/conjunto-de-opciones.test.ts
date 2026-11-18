@@ -66,7 +66,7 @@ const PEDIDO: PedidoDeGrupo = {
   claveDelCambio: CLAVE,
   grupoId: null,
   nombre: "Agregados",
-  esAdicional: true,
+  clase: "ADICIONAL",
   esObligatorio: true,
   admiteVarias: false,
   seMuestraEnCarta: true,
@@ -129,7 +129,7 @@ describe("armarElConjunto: un grupo nuevo", () => {
   });
 
   it("sin la casilla «Adicional» es un grupo incluido; sin grupos previos, el orden es 1", () => {
-    const { grupos } = armar([], { ...PEDIDO, esAdicional: false, seMuestraEnCarta: false });
+    const { grupos } = armar([], { ...PEDIDO, clase: "INCLUIDA", seMuestraEnCarta: false });
     expect(grupos).toEqual([
       expect.objectContaining({ clase: "INCLUIDA", orden: 1, seMuestraEnCarta: false }),
     ]);
@@ -209,7 +209,7 @@ describe("armarElConjunto: un grupo nuevo", () => {
     });
     const otraVez = armar([A, guardado], {
       ...PEDIDO,
-      esAdicional: false,
+      clase: "INCLUIDA",
       opciones: [
         { clave: "n0", id: null, nombre: "Queso", recargo: "500.00" },
         { clave: "n1", id: null, nombre: "Huevo", recargo: "300.00" },

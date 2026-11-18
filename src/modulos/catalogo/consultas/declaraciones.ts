@@ -11,6 +11,7 @@ export const DECLARACIONES_DE_CONSULTAS = {
   preciosDelProducto: { accion: "productos.ver" },
   productosParaConsumo: { accion: "productos.ver" },
   productosParaCopiar: { accion: "productos.ver" },
+  vistaPreviaDeCopiaDeOpciones: { accion: "productos.ver" },
   listarSeccionesDeCarta: { accion: "productos.ver" },
   listarSeccionesParaGestionar: { accion: "productos.ver" },
   listarFamilias: { accion: "productos.ver" },

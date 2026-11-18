@@ -56,7 +56,9 @@ describe("las rutas", () => {
     expect(rutaDeLasOpciones(ID)).toBe(`/catalogo/productos/${ID}/opciones`);
     expect(rutaDeUnGrupoNuevo(ID)).toBe(`/catalogo/productos/${ID}/opciones/nuevo`);
     expect(rutaDeUnGrupo(ID, GRUPO)).toBe(`/catalogo/productos/${ID}/opciones/${GRUPO}`);
-    expect(rutaDeLaCopia(ID)).toBe(`/catalogo/productos/${ID}/opciones/copiar`);
+    expect(rutaDeLaCopia(ID)).toBe(`/catalogo/productos/${ID}/opciones?copiar=1`);
+    expect(rutaDeLaCopia(ID, GRUPO)).toBe(`/catalogo/productos/${ID}/opciones?copiar=${GRUPO}`);
+    expect(rutaDeLaCopia(ID, "a b&c")).toBe(`/catalogo/productos/${ID}/opciones?copiar=a%20b%26c`);
   });
 });
 
@@ -74,7 +76,11 @@ describe("armarLasOpciones", () => {
             clase: "Adicional",
             reglas: "(opcional)",
             opciones: ["Mayonesa + $ 500,00", "Ketchup"],
-            editar: { href: `/catalogo/productos/${ID}/opciones/${GRUPO}`, texto: "Editar" },
+            editar: {
+              href: `/catalogo/productos/${ID}/opciones/${GRUPO}`,
+              texto: "Editar",
+              apagado: false,
+            },
           },
           {
             id: "g2",
@@ -82,23 +88,35 @@ describe("armarLasOpciones", () => {
             clase: "Incluida",
             reglas: "(obligatorio) · no figura en la carta",
             opciones: ["Jugoso"],
-            editar: { href: `/catalogo/productos/${ID}/opciones/g2`, texto: "Editar" },
+            editar: {
+              href: `/catalogo/productos/${ID}/opciones/g2`,
+              texto: "Editar",
+              apagado: false,
+            },
           },
         ],
       },
-      agregar: { href: `/catalogo/productos/${ID}/opciones/nuevo`, texto: "Agregar grupo" },
+      agregar: {
+        href: `/catalogo/productos/${ID}/opciones/nuevo`,
+        texto: "Agregar grupo",
+        apagado: false,
+      },
       copiar: {
-        href: `/catalogo/productos/${ID}/opciones/copiar`,
+        href: `/catalogo/productos/${ID}/opciones?copiar=1`,
         texto: "Copiar de otro producto",
+        apagado: false,
       },
     });
   });
 
-  it("sin permiso de editar no hay ningún enlace de escribir (nace cerrado), pero sí lo que se ve", () => {
+  it("sin permiso de editar los botones de escribir siguen, pero APAGADOS (maqueta: dis()): nace cerrado y se ve lo mismo", () => {
     const armadas = armarLasOpciones(OPCIONES, false);
-    expect(armadas.agregar).toBeNull();
-    expect(armadas.copiar).toBeNull();
-    expect(armadas.grupos.tarjetas.map((t) => t.editar)).toEqual([null, null]);
+    expect(armadas.agregar).toMatchObject({ texto: "Agregar grupo", apagado: true });
+    expect(armadas.copiar).toMatchObject({ texto: "Copiar de otro producto", apagado: true });
+    expect(armadas.grupos.tarjetas.map((t) => t.editar)).toMatchObject([
+      { texto: "Editar", apagado: true },
+      { texto: "Editar", apagado: true },
+    ]);
     expect(armadas.grupos.tarjetas.map((t) => t.nombre)).toEqual(["Salsas", "Punto de la carne"]);
   });
 
@@ -131,14 +149,18 @@ describe("armarElGrupo", () => {
   };
   const NUEVO: GrupoParaEditarDeLaPantalla = { ...EXISTENTE, grupo: null };
 
-  it("un grupo que existe: el título «Editar», lo guardado, la clase solo para leer y cada opción con su clave de fila", () => {
+  const OPCIONES_DE_CLASE = [
+    { valor: "INCLUIDA", etiqueta: "Incluida" },
+    { valor: "ADICIONAL", etiqueta: "Adicional" },
+  ];
+
+  it("un grupo que existe: el título «Editar», lo guardado, «Incluida / Adicional» con su valor y apagado, y cada opción con su clave de fila (sin «Quitar»)", () => {
     expect(armarElGrupo(EXISTENTE)).toEqual({
       id: ID,
       titulo: "Editar",
-      claseGuardada: "Adicional",
       esNuevo: false,
       nombre: { etiqueta: "Nombre", valor: "Salsas" },
-      adicional: { etiqueta: "Adicional", valor: false },
+      clase: { valor: "ADICIONAL", opciones: OPCIONES_DE_CLASE, apagado: true },
       obligatorio: { etiqueta: "Obligatorio", valor: false },
       varias: { etiqueta: "Se puede elegir más de una", valor: true },
       fueraDeLaCarta: { etiqueta: "No figura en la carta", valor: false },
@@ -151,29 +173,32 @@ describe("armarElGrupo", () => {
         ],
         nuevaFila: { clave: "n", nombre: "", recargo: "0.00" },
         agregar: "Agregar opción",
-        quitar: "Quitar",
       },
       guardar: "Guardar",
     });
   });
 
-  it("un grupo nuevo: el título «Agregar grupo», sin clase guardada, todo sin marcar y una fila vacía para empezar", () => {
+  it("un grupo nuevo (maqueta, «Agregar grupo»): nace en «Incluida», obligatorio, con dos filas vacías y la clase sin apagar", () => {
     expect(armarElGrupo(NUEVO)).toMatchObject({
       titulo: "Agregar grupo",
-      claseGuardada: null,
       esNuevo: true,
       nombre: { valor: "" },
-      adicional: { valor: false },
-      obligatorio: { valor: false },
+      clase: { valor: "INCLUIDA", opciones: OPCIONES_DE_CLASE, apagado: false },
+      obligatorio: { valor: true },
       varias: { valor: false },
       fueraDeLaCarta: { valor: false },
-      opciones: { filas: [{ clave: "n0", nombre: "", recargo: "0.00" }] },
+      opciones: {
+        filas: [
+          { clave: "n0", nombre: "", recargo: "0.00" },
+          { clave: "n1", nombre: "", recargo: "0.00" },
+        ],
+      },
     });
   });
 
   it("las reglas guardadas se marcan: obligatorio, varias, y «No figura en la carta» cuando NO se muestra en la carta", () => {
     expect(armarElGrupo({ ...EXISTENTE, grupo: PUNTO })).toMatchObject({
-      claseGuardada: "Incluida",
+      clase: { valor: "INCLUIDA", apagado: true },
       obligatorio: { valor: true },
       varias: { valor: false },
       fueraDeLaCarta: { valor: true },
@@ -200,26 +225,92 @@ describe("armarLaCopia", () => {
       { id: "a", nombre: "Hamburguesa" },
       { id: "b", nombre: "Pizza" },
     ],
+    origen: "a",
+    vistaPrevia: [
+      {
+        nombre: "Guarnición",
+        clase: "INCLUIDA",
+        opciones: [
+          { nombre: "Papas fritas", recargo: null },
+          { nombre: "Ensalada", recargo: null },
+        ],
+      },
+      {
+        nombre: "Salsas",
+        clase: "ADICIONAL",
+        opciones: [
+          { nombre: "Mayonesa", recargo: "500.00" },
+          { nombre: "Ketchup", recargo: null },
+        ],
+      },
+    ],
     claveDeLaCopia: "clave",
   };
 
-  it("el título, el selector con los productos y «Copiar»", () => {
-    expect(armarLaCopia(COPIA)).toEqual({
+  it("el título, el selector con el origen elegido, la vista previa en el formato de la maqueta, «Cancelar» y «Copiar»", () => {
+    expect(armarLaCopia(COPIA, true)).toEqual({
       id: ID,
       titulo: "Copiar de otro producto",
       producto: {
         etiqueta: "Producto",
+        valor: "a",
         opciones: [
           { valor: "a", etiqueta: "Hamburguesa" },
           { valor: "b", etiqueta: "Pizza" },
         ],
       },
+      vistaPrevia: [
+        {
+          titulo: "Grupos de opciones",
+          lineas: ["Guarnición: Papas fritas · Ensalada", "Salsas: Mayonesa + $ 500,00 · Ketchup"],
+        },
+      ],
+      cancelar: "Cancelar",
       copiar: "Copiar",
+      copiarApagado: false,
+      hrefDeCierre: `/catalogo/productos/${ID}/opciones`,
+      cerrar: "Cerrar",
     });
   });
 
-  it("sin productos de dónde copiar no hay selector", () => {
-    expect(armarLaCopia({ ...COPIA, candidatos: [] }).producto).toBeNull();
+  it("si la copia trae la variante, su bloque «Variantes» va primero, con los nombres de las opciones y sin recargo", () => {
+    const armada = armarLaCopia(
+      {
+        ...COPIA,
+        vistaPrevia: [
+          ...COPIA.vistaPrevia,
+          {
+            nombre: "Tamaño",
+            clase: "VARIANTE",
+            opciones: [
+              { nombre: "Chica", recargo: null },
+              { nombre: "Grande", recargo: "100.00" },
+            ],
+          },
+        ],
+      },
+      true,
+    );
+    expect(armada.vistaPrevia.map((b) => b.titulo)).toEqual(["Variantes", "Grupos de opciones"]);
+    expect(armada.vistaPrevia[0]?.lineas).toEqual(["Tamaño: Chica · Grande"]);
+  });
+
+  it("«Copiar» sale apagado si no hay nada para traer o si la persona no puede editar; encendido solo con las dos", () => {
+    expect(armarLaCopia({ ...COPIA, vistaPrevia: [] }, true)).toMatchObject({
+      vistaPrevia: [],
+      copiarApagado: true,
+    });
+    expect(armarLaCopia(COPIA, false).copiarApagado).toBe(true);
+    expect(armarLaCopia(COPIA, true).copiarApagado).toBe(false);
+  });
+
+  it("sin productos de dónde copiar la hoja igual se arma: selector vacío y «Copiar» apagado", () => {
+    expect(
+      armarLaCopia({ ...COPIA, candidatos: [], origen: null, vistaPrevia: [] }, true),
+    ).toMatchObject({
+      producto: { etiqueta: "Producto", valor: "", opciones: [] },
+      copiarApagado: true,
+    });
   });
 });
 

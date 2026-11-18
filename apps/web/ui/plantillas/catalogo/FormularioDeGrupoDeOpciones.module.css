@@ -1,9 +1,3 @@
-.titulo {
-  margin: 0;
-  font-size: inherit;
-  font-weight: var(--tipo-peso-fuerte);
-}
-
 .filas {
   display: flex;
   flex-direction: column;
@@ -13,12 +7,10 @@
   list-style: none;
 }
 
+/* Maqueta: cada opción es una fila de dos columnas, «Nombre» y «Recargo», alineadas por abajo (el rótulo vacío de las filas 2 en adelante deja su renglón). */
 .fila {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--espacio-2);
-  padding: var(--espacio-3);
-  border: var(--borde-grosor) solid var(--color-borde);
-  border-radius: var(--radio-base);
-  background: var(--color-superficie-elevada);
+  align-items: end;
 }

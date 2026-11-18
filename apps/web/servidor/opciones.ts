@@ -55,12 +55,13 @@ export function cargarUnGrupo(
   return verUnGrupoDeOpciones(dependencias, contexto, productoId, grupoId);
 }
 
-/** De dónde se pueden copiar las opciones al producto. */
+/** De dónde se pueden copiar las opciones al producto, con la vista previa de lo que traería el origen pedido en la dirección (si no es un candidato, el primero). */
 export function cargarLaCopia(
   contexto: ContextoOperativo,
   productoId: string,
+  origenPedido: string | null,
 ): Promise<Respuesta<OpcionesParaCopiar>> {
-  return verLasOpcionesParaCopiar(dependencias, contexto, productoId);
+  return verLasOpcionesParaCopiar(dependencias, contexto, productoId, origenPedido);
 }
 
 /** Lo que la página liga a la acción de guardar un grupo (cifrado por Next: no viaja en un campo). */
@@ -88,7 +89,7 @@ export async function guardarElGrupo(
       claveDelCambio: ligado.claveDelCambio,
       grupoId: ligado.grupoId,
       nombre: textoDe(datos, "nombre"),
-      esAdicional: marcada(datos, "esAdicional"),
+      clase: textoDe(datos, "clase"),
       esObligatorio: marcada(datos, "esObligatorio"),
       admiteVarias: marcada(datos, "admiteVarias"),
       seMuestraEnCarta: !marcada(datos, "fueraDeLaCarta"),

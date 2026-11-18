@@ -34,7 +34,16 @@ const mundo = vi.hoisted(
     resultado: unknown;
     producto: unknown;
     grupos: unknown[];
-  } => ({ contextos: [], ediciones: [], copias: [], resultado: null, producto: null, grupos: [] }),
+    vistasPrevias: unknown[];
+  } => ({
+    contextos: [],
+    ediciones: [],
+    copias: [],
+    resultado: null,
+    producto: null,
+    grupos: [],
+    vistasPrevias: [],
+  }),
 );
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
@@ -65,6 +74,18 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
           ),
         ),
       productosParaCopiar: () => Promise.resolve(ok([{ id: ORIGEN, nombre: "Hamburguesa" }])),
+      vistaPreviaDeCopiaDeOpciones: (_contexto: unknown, entrada: unknown) => {
+        mundo.vistasPrevias.push(entrada);
+        return Promise.resolve(
+          ok([
+            {
+              nombre: "Salsas",
+              clase: "ADICIONAL",
+              opciones: [{ nombre: "Ketchup", recargo: null }],
+            },
+          ]),
+        );
+      },
     }),
   },
 }));
@@ -128,6 +149,7 @@ beforeEach(() => {
     contextos: [],
     ediciones: [],
     copias: [],
+    vistasPrevias: [],
     resultado: ok({ versionDeOpciones: 5, yaEstaba: false }),
     producto: PRODUCTO,
     grupos: [GRUPO_GUARDADO],
@@ -151,8 +173,13 @@ describe("las lecturas", () => {
     expect(g.ok && g.dato.grupo?.nombre).toBe("Salsas");
     const nuevo = await cargarUnGrupo(CONTEXTO as never, ID, null);
     expect(nuevo.ok && nuevo.dato.grupo).toBeNull();
-    const c = await cargarLaCopia(CONTEXTO as never, ID);
+    const c = await cargarLaCopia(CONTEXTO as never, ID, null);
     expect(c.ok && c.dato.candidatos).toEqual([{ id: ORIGEN, nombre: "Hamburguesa" }]);
+    expect(c.ok && c.dato.origen).toBe(ORIGEN);
+    expect(c.ok && c.dato.vistaPrevia).toEqual([
+      { nombre: "Salsas", clase: "ADICIONAL", opciones: [{ nombre: "Ketchup", recargo: null }] },
+    ]);
+    expect(mundo.vistasPrevias).toEqual([{ productoOrigenId: ORIGEN, productoDestinoId: ID }]);
   });
 });
 
@@ -164,7 +191,7 @@ describe("guardarElGrupo", () => {
         LIGADO,
         formulario({
           nombre: "Agregados",
-          esAdicional: "on",
+          clase: "ADICIONAL",
           admiteVarias: "on",
           opcion_n0_nombre: "Queso",
           opcion_n0_recargo: "500.00",
@@ -199,6 +226,7 @@ describe("guardarElGrupo", () => {
         LIGADO,
         formulario({
           nombre: "Salsas",
+          clase: "INCLUIDA",
           esObligatorio: "on",
           fueraDeLaCarta: "on",
           opcion_n0_nombre: "Queso",
@@ -216,7 +244,7 @@ describe("guardarElGrupo", () => {
         LIGADO,
         formulario({
           nombre: "Otro",
-          esAdicional: "no",
+          clase: "INCLUIDA",
           opcion_n0_nombre: "A",
           opcion_n0_recargo: "0.00",
         }),
@@ -233,6 +261,7 @@ describe("guardarElGrupo", () => {
         { ...LIGADO, grupoId: GRUPO, idsDeOpciones: [OPCION] },
         formulario({
           nombre: "Salsas",
+          clase: "ADICIONAL",
           admiteVarias: "on",
           opcion_e0_nombre: "Mayonesa",
           opcion_e0_recargo: "12.00",
@@ -255,6 +284,7 @@ describe("guardarElGrupo", () => {
         LIGADO,
         formulario({
           nombre: "Agregados",
+          clase: "INCLUIDA",
           empresaId: "otra",
           personaId: "x",
           productoId: "otro",
@@ -269,8 +299,52 @@ describe("guardarElGrupo", () => {
     expect(JSON.stringify(mundo.ediciones[0])).not.toContain("otra");
   });
 
+  it.each([["falta"], ["VARIANTE"], ["adicional"], ["on"]])(
+    "una clase que no es de la lista (%s) no se acepta: sale el genérico, sin escribir",
+    async (clase) => {
+      mundo.grupos = [];
+      const datos = formulario({
+        nombre: "Agregados",
+        opcion_n0_nombre: "Queso",
+        opcion_n0_recargo: "1.00",
+        ...(clase === "falta" ? {} : { clase }),
+      });
+      const r = await guardarElGrupo(LIGADO, datos);
+      expect(r.error?.codigo).toBe("CATALOGO_ACCION_NO_PERMITIDA");
+      expect(mundo.ediciones).toEqual([]);
+    },
+  );
+
+  it("una fila de opción con el nombre vacío no se guarda (como la maqueta) y una opción guardada con el nombre vaciado no se manda: el caso de uso la desactiva", async () => {
+    await expect(
+      guardarElGrupo(
+        { ...LIGADO, grupoId: GRUPO, idsDeOpciones: [OPCION] },
+        formulario({
+          nombre: "Salsas",
+          clase: "ADICIONAL",
+          opcion_e0_nombre: "   ",
+          opcion_e0_recargo: "10.00",
+          opcion_n0_nombre: "",
+          opcion_n0_recargo: "0.00",
+          opcion_n1_nombre: "Ketchup",
+          opcion_n1_recargo: "5.00",
+        }),
+      ),
+    ).rejects.toThrow(REDIRIGIO);
+    // La opción con el nombre vaciado y la fila vacía no figuran en lo que se manda: el caso de uso desactiva lo que falta (nada se borra; se prueba en `opciones-web.test.ts`).
+    const [grupo] = (
+      mundo.ediciones[0] as { grupos: { opciones: { nombre: string; activa: boolean }[] }[] }
+    ).grupos;
+    expect(grupo?.opciones.map((o) => o.nombre)).toEqual(["Ketchup"]);
+    expect(JSON.stringify(mundo.ediciones[0])).not.toContain("Mayonesa");
+    expect(JSON.stringify(mundo.ediciones[0])).not.toContain('"nombre":""');
+  });
+
   it("un nombre que no es texto (un archivo) o que falta es vacío: «Falta el nombre», sin salir del formulario ni escribir", async () => {
-    for (const datos of [formulario({}), formulario({ nombre: new File(["x"], "n.txt") })]) {
+    for (const datos of [
+      formulario({ clase: "INCLUIDA" }),
+      formulario({ clase: "INCLUIDA", nombre: new File(["x"], "n.txt") }),
+    ]) {
       const r = await guardarElGrupo(LIGADO, datos);
       expect(r.error).toMatchObject({ codigo: "CATALOGO_FALTA_EL_NOMBRE", campo: "nombre" });
     }
@@ -282,7 +356,12 @@ describe("guardarElGrupo", () => {
     mundo.resultado = err("OPCIONES_DESACTUALIZADAS");
     const r = await guardarElGrupo(
       LIGADO,
-      formulario({ nombre: "Agregados", opcion_n0_nombre: "Queso", opcion_n0_recargo: "1.00" }),
+      formulario({
+        nombre: "Agregados",
+        clase: "INCLUIDA",
+        opcion_n0_nombre: "Queso",
+        opcion_n0_recargo: "1.00",
+      }),
     );
     expect(r.error?.codigo).toBe("CATALOGO_ACCION_NO_PERMITIDA");
     expect(revalidadas).toEqual([`/catalogo/productos/${ID}/opciones`]);
@@ -293,7 +372,12 @@ describe("guardarElGrupo", () => {
     mundo.resultado = err("SIN_PERMISO");
     const r = await guardarElGrupo(
       LIGADO,
-      formulario({ nombre: "Agregados", opcion_n0_nombre: "Queso", opcion_n0_recargo: "1.00" }),
+      formulario({
+        nombre: "Agregados",
+        clase: "INCLUIDA",
+        opcion_n0_nombre: "Queso",
+        opcion_n0_recargo: "1.00",
+      }),
     );
     expect(r.error?.codigo).toBe("SIN_PERMISO");
   });
@@ -301,7 +385,12 @@ describe("guardarElGrupo", () => {
   it("repetir el mismo guardado (doble toque) manda dos pedidos idénticos, con la misma clave: el caso de uso decide y ambos terminan igual", async () => {
     mundo.grupos = [];
     const datos = () =>
-      formulario({ nombre: "Agregados", opcion_n0_nombre: "Queso", opcion_n0_recargo: "1.00" });
+      formulario({
+        nombre: "Agregados",
+        clase: "INCLUIDA",
+        opcion_n0_nombre: "Queso",
+        opcion_n0_recargo: "1.00",
+      });
     await expect(guardarElGrupo(LIGADO, datos())).rejects.toThrow(REDIRIGIO);
     await expect(guardarElGrupo(LIGADO, datos())).rejects.toThrow(REDIRIGIO);
     expect(mundo.ediciones).toHaveLength(2);

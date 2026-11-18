@@ -22,8 +22,8 @@ const FORMULARIO_DE_SECCION_DE_CARTA =
 const FORMULARIO_DE_GRUPO_DE_OPCIONES =
   "apps/web/ui/plantillas/catalogo/FormularioDeGrupoDeOpciones.cliente.tsx";
 
-const FORMULARIO_DE_COPIA_DE_OPCIONES =
-  "apps/web/ui/plantillas/catalogo/FormularioDeCopiaDeOpciones.cliente.tsx";
+const HOJA_DE_COPIA_DE_OPCIONES =
+  "apps/web/ui/plantillas/catalogo/HojaDeCopiaDeOpciones.cliente.tsx";
 
 export const CAMINOS_DE_PRODUCTOS = {
   // Productos, precio de la empresa (A1, T3): el precio es el único dato; el producto, la clave del cambio y la fila vista los fija la página. El único error con campo es «Escribí
@@ -149,9 +149,9 @@ export const CAMINOS_DE_PRODUCTOS = {
     accion: { clave: "productos.editar", requiere: ["nombre-de-seccion-de-carta"], admite: [] },
     camposDeError: ["nombre"],
   },
-  // Productos, opciones (A13): un grupo con sus opciones. El nombre del grupo y el de cada opción son los únicos datos obligatorios; la clase se elige solo al crear el grupo (casilla
-  // «Adicional»; sin marcar es incluida) y no se cambia. Las opciones son filas repetidas (`opcion_<clave>_nombre` y `opcion_<clave>_recargo`): acá figuran como `opcion` y `recargo`.
-  // Los errores con campo son «Falta el nombre» (el del grupo o el de una fila), «Escribí un precio válido» (recargo mal escrito) y «Una opción incluida no lleva recargo».
+  // Productos, opciones (A13): un grupo con sus opciones. El nombre del grupo y el de cada opción son los únicos datos obligatorios; la clase se elige solo al crear el grupo (los botones de
+  // opción «Incluida» / «Adicional») y no se cambia. Las opciones son filas repetidas (`opcion_<clave>_nombre` y `opcion_<clave>_recargo`): acá figuran como `opcion` y `recargo`.
+  // Los errores con campo son «Falta el nombre» (el del grupo; una fila sin nombre no se guarda), «Escribí un precio válido» (recargo mal escrito) y «Una opción incluida no lleva recargo».
   "guardar-grupo-de-opciones": {
     funcion: "Guardar un grupo de opciones de un producto, con sus opciones y recargos",
     pantallas: [FORMULARIO_DE_GRUPO_DE_OPCIONES],
@@ -160,7 +160,7 @@ export const CAMINOS_DE_PRODUCTOS = {
         id: "datos-del-grupo",
         campos: {
           nombre: "nombre-de-grupo-de-opciones",
-          esAdicional: "clase-de-grupo-de-opciones",
+          clase: "clase-de-grupo-de-opciones",
           esObligatorio: "obligatoriedad-de-grupo-de-opciones",
           admiteVarias: "eleccion-multiple-de-grupo-de-opciones",
           fueraDeLaCarta: "visibilidad-en-la-carta-de-grupo-de-opciones",
@@ -191,7 +191,7 @@ export const CAMINOS_DE_PRODUCTOS = {
   // Productos, opciones: copiar los grupos de otro producto («Copiar de otro producto»). El único dato es el producto de origen; el destino, la versión y la clave de la copia los fija la página.
   "copiar-opciones-de-otro-producto": {
     funcion: "Copiar las opciones de otro producto al producto de la pantalla",
-    pantallas: [FORMULARIO_DE_COPIA_DE_OPCIONES],
+    pantallas: [HOJA_DE_COPIA_DE_OPCIONES],
     pasos: [
       {
         id: "producto-de-origen",

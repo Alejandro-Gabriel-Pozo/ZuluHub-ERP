@@ -17,7 +17,7 @@ export default async function PaginaDeUnGrupoNuevoDeOpciones({ params }: PropsDe
     if (!respuesta.ok) return <ErrorDelDetalle error={respuesta.error} />;
     const grupo = armarElGrupo(respuesta.dato);
     return conTitulo(
-      respuesta.dato.nombre,
+      grupo.titulo,
       <FormularioDeGrupoDeOpciones
         key={`${grupo.id}-${String(respuesta.dato.versionDeOpciones)}`}
         grupo={grupo}

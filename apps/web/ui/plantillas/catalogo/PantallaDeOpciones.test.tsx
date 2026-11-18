@@ -81,7 +81,7 @@ describe("PantallaDeOpciones", () => {
     await render(<PantallaDeOpciones opciones={armarLasOpciones(OPCIONES, true)} />);
     await expect
       .element(page.getByRole("link", { name: "Copiar de otro producto" }))
-      .toHaveAttribute("href", `/catalogo/productos/${ID}/opciones/copiar`);
+      .toHaveAttribute("href", `/catalogo/productos/${ID}/opciones?copiar=1`);
     await expect
       .element(page.getByRole("link", { name: "Agregar grupo" }))
       .toHaveAttribute("href", `/catalogo/productos/${ID}/opciones/nuevo`);
@@ -93,8 +93,14 @@ describe("PantallaDeOpciones", () => {
     ).toEqual([`/catalogo/productos/${ID}/opciones/g1`, `/catalogo/productos/${ID}/opciones/g2`]);
   });
 
-  it("sin permiso no hay ningún enlace", async () => {
+  it("sin permiso los botones se dibujan igual pero apagados: ni enlaces ni ausentes", async () => {
     await render(<PantallaDeOpciones opciones={armarLasOpciones(OPCIONES, false)} />);
     expect(document.querySelector("a")).toBeNull();
+    for (const nombre of ["Copiar de otro producto", "Agregar grupo"]) {
+      await expect.element(page.getByRole("button", { name: nombre })).toBeDisabled();
+    }
+    const editar = page.getByRole("button", { name: "Editar" }).elements();
+    expect(editar).toHaveLength(2);
+    expect(editar.every((e) => (e as HTMLButtonElement).disabled)).toBe(true);
   });
 });

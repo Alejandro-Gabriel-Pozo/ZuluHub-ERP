@@ -35,8 +35,8 @@ const FORMA_DEL_PEDIDO_DE_GRUPO = z.object({
   /** El grupo que se edita; `null` = un grupo nuevo (su id es la clave del cambio). */
   grupoId: identificador.nullable(),
   nombre: texto,
-  /** Solo cuenta al crear: la clase de un grupo que ya existe no se cambia. */
-  esAdicional: z.boolean(),
+  /** Lista cerrada. Solo cuenta al crear: la clase de un grupo que ya existe no se cambia. */
+  clase: z.enum(["INCLUIDA", "ADICIONAL"]),
   esObligatorio: z.boolean(),
   admiteVarias: z.boolean(),
   seMuestraEnCarta: z.boolean(),
@@ -66,19 +66,14 @@ export function leerElPedidoDeCopia(crudo: unknown): Resultado<PedidoDeCopia, "P
   return forma.ok ? forma : err("PEDIDO_INVALIDO");
 }
 
-/**
- * Cómo se llama cada campo de una fila de opciones en el formulario: `opcion_<clave>_nombre` y `opcion_<clave>_recargo` (con guion bajo: es la forma de un campo de error, ver
- * `respuesta.ts`). La clave es `e<i>` (la opción que ya existía, la i-ésima ligada por la página) o `n<j>` (una nueva).
- */
-export const nombreDeCampoDeOpcion = (clave: string, campo: "nombre" | "recargo"): string =>
-  `opcion_${clave}_${campo}`;
-
 const CAMPO_DE_OPCION = /^opcion_(e\d{1,3}|n\d{1,3})_(nombre|recargo)$/;
 
 /**
  * Las filas de opciones que mandó el formulario, en el orden en que aparecen (el del formulario). Una fila `e<i>` es la opción que la página ligó en la posición i de `idsLigados`;
  * una `e<i>` que no apunta a ninguna (más allá de lo ligado) no existe y se descarta, igual que todo campo cuyo nombre no tiene la forma pedida: lo que no se declara no se lee. Una fila
- * sin recargo trae el texto vacío (lo rechaza el dominio); una fila repetida conserva el primer valor de cada campo.
+ * sin recargo trae el texto vacío (lo rechaza el dominio); una fila repetida conserva el primer valor de cada campo. Una fila cuyo nombre queda vacío tras recortar NO es una opción
+ * (como en la maqueta, que no guarda las filas sin nombre): se descarta. Si era una opción guardada, al no figurar el caso de uso la desactiva (nada se borra); si no queda ninguna, el
+ * dominio rechaza el grupo sin opciones.
  */
 export function leerLasFilasDeOpciones(
   campos: Iterable<readonly [string, unknown]>,
@@ -99,6 +94,7 @@ export function leerLasFilasDeOpciones(
     const existente = clave.startsWith("e");
     const id = existente ? (idsLigados[Number(clave.slice(1))] ?? undefined) : null;
     if (id === undefined) continue;
+    if ((fila.nombre ?? "").trim() === "") continue;
     salida.push({ clave, id, nombre: fila.nombre ?? "", recargo: fila.recargo ?? "" });
   }
   return salida;

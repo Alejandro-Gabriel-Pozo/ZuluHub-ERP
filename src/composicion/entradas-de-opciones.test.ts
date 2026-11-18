@@ -3,7 +3,6 @@ import {
   leerElPedidoDeCopia,
   leerElPedidoDeGrupo,
   leerLasFilasDeOpciones,
-  nombreDeCampoDeOpcion,
 } from "./entradas-de-opciones";
 
 const ID = "0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b";
@@ -16,7 +15,7 @@ const PEDIDO = {
   claveDelCambio: CLAVE,
   grupoId: null,
   nombre: "Agregados",
-  esAdicional: true,
+  clase: "ADICIONAL",
   esObligatorio: false,
   admiteVarias: true,
   seMuestraEnCarta: true,
@@ -71,7 +70,10 @@ describe("leerElPedidoDeGrupo", () => {
     ["grupo ausente", { ...PEDIDO, grupoId: undefined }],
     ["nombre que no es texto", { ...PEDIDO, nombre: 5 }],
     ["nombre sin fin", { ...PEDIDO, nombre: "a".repeat(1001) }],
-    ["adicional que no es sí o no", { ...PEDIDO, esAdicional: "on" }],
+    ["clase que no es de la lista", { ...PEDIDO, clase: "VARIANTE" }],
+    ["clase en minúscula", { ...PEDIDO, clase: "adicional" }],
+    ["clase ausente", { ...PEDIDO, clase: undefined }],
+    ["clase que era un sí o no", { ...PEDIDO, clase: true }],
     ["obligatorio que no es sí o no", { ...PEDIDO, esObligatorio: 1 }],
     ["varias que no es sí o no", { ...PEDIDO, admiteVarias: "si" }],
     ["carta que no es sí o no", { ...PEDIDO, seMuestraEnCarta: null }],
@@ -167,13 +169,6 @@ describe("leerElPedidoDeCopia", () => {
   });
 });
 
-describe("nombreDeCampoDeOpcion", () => {
-  it("usa guion bajo (la forma de un campo de error) y dice la clave y el campo", () => {
-    expect(nombreDeCampoDeOpcion("e0", "nombre")).toBe("opcion_e0_nombre");
-    expect(nombreDeCampoDeOpcion("n12", "recargo")).toBe("opcion_n12_recargo");
-  });
-});
-
 describe("leerLasFilasDeOpciones", () => {
   const IDS = [ID, OTRO];
 
@@ -210,6 +205,36 @@ describe("leerLasFilasDeOpciones", () => {
     ).toEqual([{ clave: "n7", id: null, nombre: "Nueva", recargo: "1.00" }]);
   });
 
+  it("una fila cuyo nombre queda vacío tras recortar no es una opción: se descarta, y también la existente (el caso de uso la desactiva)", () => {
+    expect(
+      leerLasFilasDeOpciones(
+        [
+          ["opcion_e0_nombre", "   "],
+          ["opcion_e0_recargo", "10.00"],
+          ["opcion_e1_nombre", "Queda"],
+          ["opcion_e1_recargo", "20.00"],
+          ["opcion_n0_nombre", ""],
+          ["opcion_n0_recargo", "0.00"],
+          ["opcion_n1_nombre", "\t"],
+          ["opcion_n2_recargo", "5.00"],
+        ],
+        IDS,
+      ),
+    ).toEqual([{ clave: "e1", id: OTRO, nombre: "Queda", recargo: "20.00" }]);
+  });
+
+  it("si todas las filas están vacías no queda ninguna", () => {
+    expect(
+      leerLasFilasDeOpciones(
+        [
+          ["opcion_n0_nombre", ""],
+          ["opcion_n0_recargo", "0.00"],
+        ],
+        IDS,
+      ),
+    ).toEqual([]);
+  });
+
   it("las claves de fila admiten hasta tres dígitos: e12 se liga al id número 12 y n123 es una nueva; n1234 no existe", () => {
     const ids = Array.from({ length: 13 }, (_x, i) => `id-${String(i)}`);
     expect(
@@ -234,13 +259,11 @@ describe("leerLasFilasDeOpciones", () => {
     expect(leerLasFilasDeOpciones([["opcion_e0_nombre", "x"]], [])).toEqual([]);
   });
 
-  it("una fila sin recargo, o sin nombre, trae el texto vacío (lo rechaza el dominio)", () => {
+  it("una fila sin recargo trae el texto vacío (lo rechaza el dominio); una sin nombre no es una opción y se descarta", () => {
     expect(leerLasFilasDeOpciones([["opcion_n0_nombre", "Solo nombre"]], [])).toEqual([
       { clave: "n0", id: null, nombre: "Solo nombre", recargo: "" },
     ]);
-    expect(leerLasFilasDeOpciones([["opcion_n0_recargo", "1.00"]], [])).toEqual([
-      { clave: "n0", id: null, nombre: "", recargo: "1.00" },
-    ]);
+    expect(leerLasFilasDeOpciones([["opcion_n0_recargo", "1.00"]], [])).toEqual([]);
   });
 
   it("lo que no es un campo de una fila, o no es texto, no se lee: lo que no se declara no existe", () => {
@@ -281,12 +304,23 @@ describe("leerLasFilasDeOpciones", () => {
     expect(
       leerLasFilasDeOpciones(
         [
+          ["opcion_n0_nombre", "Uno"],
+          ["opcion_n0_recargo", ""],
+          ["opcion_n0_recargo", "2.00"],
+        ],
+        [],
+      ),
+    ).toEqual([{ clave: "n0", id: null, nombre: "Uno", recargo: "" }]);
+    // Y un nombre vacío que se repite con uno con texto sigue siendo vacío: la fila se descarta.
+    expect(
+      leerLasFilasDeOpciones(
+        [
           ["opcion_n0_nombre", ""],
           ["opcion_n0_nombre", "Otro"],
         ],
         [],
       ),
-    ).toEqual([{ clave: "n0", id: null, nombre: "", recargo: "" }]);
+    ).toEqual([]);
   });
 
   it("sin campos, sin filas", () => {

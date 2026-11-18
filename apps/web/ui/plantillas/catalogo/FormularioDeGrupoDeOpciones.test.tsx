@@ -13,8 +13,9 @@ import {
 } from "./modelo-de-opciones";
 
 /**
- * Un grupo de opciones en Chromium (maqueta `productos.html`, función `vGrupo`): los campos de un grupo nuevo y de uno guardado, lo que viaja al guardar (nombres, casillas y filas con el
- * recargo como texto decimal canónico), agregar y quitar opciones, el error asociado al campo de su fila, el doble toque, sin permiso, el teclado y axe, en 390 y 1280 px.
+ * Un grupo de opciones en Chromium (maqueta `productos.html`, función `vGrupo`): los campos de un grupo nuevo y de uno guardado, los dos botones «Incluida» / «Adicional» (apagados al
+ * editar), lo que viaja al guardar (nombres, clase, casillas y filas con el recargo como texto decimal canónico), «Agregar opción» sin «Quitar», el rótulo «Nombre» visible solo en la
+ * primera fila, el error del nombre asociado a su campo, el doble toque, sin permiso, el teclado y axe, en 390 y 1280 px.
  */
 const GUARDADO: GrupoParaEditarDeLaPantalla = {
   id: "0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b",
@@ -45,6 +46,12 @@ const formulario = (
   accion: AccionDeFormulario = ok,
   puedeGuardar = true,
 ) => <FormularioDeGrupoDeOpciones grupo={grupo} accion={accion} puedeGuardar={puedeGuardar} />;
+/** El nombre accesible del primer campo de texto de una fila: el texto de su rótulo, visible o solo para el lector. */
+const etiquetaDe = (fila: Element): string => {
+  const entrada = fila.querySelector("input[type=text]") as HTMLElement;
+  const rotulo = document.querySelector(`label[for="${entrada.id}"]`);
+  return (rotulo?.textContent ?? "").replace(/\u00a0/g, "").trim();
+};
 const guardar = () => page.getByRole("button", { name: "Guardar" });
 const enviado = (accion: ReturnType<typeof vi.fn>, llamada = 0) =>
   [...(accion.mock.calls[llamada]?.[1] as FormData).entries()] as [string, string][];
@@ -70,13 +77,15 @@ describe("FormularioDeGrupoDeOpciones", () => {
     }
   });
 
-  it("un grupo guardado: el título «Editar», el nombre, la clase para leer, las reglas marcadas y una fila por opción", async () => {
+  it("un grupo guardado: el nombre, «Incluida / Adicional» con su valor y apagado, las reglas marcadas y una fila por opción", async () => {
     await render(formulario());
-    await expect.element(page.getByRole("heading", { name: "Editar" })).toBeVisible();
     await expect
       .element(page.getByLabelText("Nombre", { exact: true }).first())
       .toHaveValue("Salsas");
-    await expect.element(page.getByText("Adicional")).toBeVisible();
+    const adicional = page.getByRole("radio", { name: "Adicional" });
+    await expect.element(adicional).toBeChecked();
+    await expect.element(adicional).toBeDisabled();
+    await expect.element(page.getByRole("radio", { name: "Incluida" })).toBeDisabled();
     expect(page.getByRole("checkbox", { name: "Adicional" }).elements()).toHaveLength(0);
     await expect.element(page.getByRole("checkbox", { name: "Obligatorio" })).toBeChecked();
     await expect
@@ -98,15 +107,52 @@ describe("FormularioDeGrupoDeOpciones", () => {
     ]);
   });
 
-  it("un grupo nuevo: «Agregar grupo», la casilla «Adicional» sin marcar y una fila vacía", async () => {
+  it("un grupo nuevo (maqueta): nace en «Incluida» (sin apagar), obligatorio, con dos filas vacías y sin «Quitar»", async () => {
     await render(formulario(armarElGrupo(NUEVO)));
-    await expect.element(page.getByRole("heading", { name: "Agregar grupo" })).toBeVisible();
-    await expect.element(page.getByRole("checkbox", { name: "Adicional" })).not.toBeChecked();
-    expect(page.getByLabelText("Nombre", { exact: true }).elements()).toHaveLength(2);
-    expect(page.getByRole("button", { name: "Quitar" }).elements()).toHaveLength(1);
+    const incluida = page.getByRole("radio", { name: "Incluida" });
+    await expect.element(incluida).toBeChecked();
+    await expect.element(incluida).toBeEnabled();
+    await expect.element(page.getByRole("radio", { name: "Adicional" })).not.toBeChecked();
+    await expect.element(page.getByRole("checkbox", { name: "Obligatorio" })).toBeChecked();
+    await expect
+      .element(page.getByRole("checkbox", { name: "Se puede elegir más de una" }))
+      .not.toBeChecked();
+    await expect
+      .element(page.getByRole("checkbox", { name: "No figura en la carta" }))
+      .not.toBeChecked();
+    expect(page.getByLabelText("Nombre", { exact: true }).elements()).toHaveLength(3);
+    expect(page.getByRole("button", { name: "Quitar" }).elements()).toHaveLength(0);
   });
 
-  it("al guardar manda los nombres, las casillas marcadas y cada fila por su clave, con el recargo como texto decimal canónico", async () => {
+  it("los botones «Incluida» y «Adicional» van lado a lado y sin rótulo de grupo", async () => {
+    await render(formulario(armarElGrupo(NUEVO)));
+    const a = page.getByText("Incluida").element().getBoundingClientRect();
+    const b = page.getByText("Adicional").element().getBoundingClientRect();
+    expect(Math.abs(a.top - b.top)).toBeLessThan(1);
+    expect(b.left).toBeGreaterThan(a.right - 1);
+    expect(document.querySelector("fieldset, legend, [role=radiogroup]")).toBeNull();
+  });
+
+  it("el rótulo «Nombre» de las opciones se ve solo sobre la primera fila; en las demás queda para el lector y el alto de la fila no cambia", async () => {
+    await render(formulario(armarElGrupo(NUEVO)));
+    const filas = [...document.querySelectorAll("ul > li")];
+    expect(filas).toHaveLength(2);
+    const visible = (fila: Element) => {
+      const etiqueta = fila.querySelector("label") as HTMLElement;
+      const texto = [...etiqueta.querySelectorAll("span")].find((x) => x.textContent === "Nombre");
+      return texto === undefined ? 0 : texto.getBoundingClientRect().width;
+    };
+    // La primera lo muestra (ancho real) y la segunda lo tiene recortado a un punto, pero con el mismo nombre accesible.
+    expect(etiquetaDe(filas[0] as Element)).toBe("Nombre");
+    expect(etiquetaDe(filas[1] as Element)).toBe("Nombre");
+    expect(visible(filas[1] as Element)).toBeLessThanOrEqual(1);
+    // Las dos columnas de cada fila quedan alineadas por abajo (la maqueta alinea con `align-items: end`).
+    const abajo = (fila: Element, columna: number) =>
+      (fila.children[columna] as HTMLElement).getBoundingClientRect().bottom;
+    for (const fila of filas) expect(Math.abs(abajo(fila, 0) - abajo(fila, 1))).toBeLessThan(1);
+  });
+
+  it("al guardar manda los nombres, la clase, las casillas marcadas y cada fila por su clave, con el recargo como texto decimal canónico", async () => {
     const accion = vi.fn(ok);
     await render(formulario(armarElGrupo(GUARDADO), accion));
     await userEvent.fill(page.getByLabelText("Nombre", { exact: true }).first(), "Salsas caseras");
@@ -114,8 +160,11 @@ describe("FormularioDeGrupoDeOpciones", () => {
     await userEvent.fill(page.getByLabelText("Recargo", { exact: true }).first(), "1234,5");
     tocar(guardar());
     await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    // Un solo `clase` (el valor de lo apagado viaja en un campo oculto, no dos veces) y la clase guardada: apagado no se cambia.
+    expect(enviado(accion).filter(([k]) => k === "clase")).toEqual([["clase", "ADICIONAL"]]);
     expect(Object.fromEntries(enviado(accion))).toEqual({
       nombre: "Salsas caseras",
+      clase: "ADICIONAL",
       admiteVarias: "on",
       fueraDeLaCarta: "on",
       opcion_e0_nombre: "Mayonesa",
@@ -125,7 +174,7 @@ describe("FormularioDeGrupoDeOpciones", () => {
     });
   });
 
-  it("«Agregar opción» suma una fila nueva con su clave y «Quitar» la saca del envío; las demás conservan lo escrito", async () => {
+  it("«Agregar opción» suma una fila nueva con su clave; las demás conservan lo escrito; y sin «Quitar», una fila con el nombre vaciado viaja vacía (el servidor no la guarda)", async () => {
     const accion = vi.fn(ok);
     await render(formulario(armarElGrupo(GUARDADO), accion));
     await userEvent.click(page.getByRole("button", { name: "Agregar opción" }));
@@ -134,52 +183,50 @@ describe("FormularioDeGrupoDeOpciones", () => {
     expect(nombres.elements()).toHaveLength(5);
     await userEvent.fill(nombres.nth(3), "Alioli");
     await userEvent.fill(nombres.nth(4), "Barbacoa");
-    // Se quita la primera existente (Mayonesa) y la nueva «Alioli».
-    await userEvent.click(page.getByRole("button", { name: "Quitar" }).first());
-    await userEvent.click(page.getByRole("button", { name: "Quitar" }).nth(1));
+    await userEvent.fill(nombres.nth(1), "");
     tocar(guardar());
     await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
-    expect(enviado(accion).map(([k, v]) => `${k}=${v}`)).toEqual([
-      "nombre=Salsas",
-      "esObligatorio=on",
-      "admiteVarias=on",
-      "fueraDeLaCarta=on",
-      "opcion_e1_nombre=Ketchup",
-      "opcion_e1_recargo=0.00",
-      "opcion_n1_nombre=Barbacoa",
-      "opcion_n1_recargo=0.00",
-    ]);
+    expect(Object.fromEntries(enviado(accion))).toMatchObject({
+      opcion_e0_nombre: "",
+      opcion_e1_nombre: "Ketchup",
+      opcion_n0_nombre: "Alioli",
+      opcion_n0_recargo: "0.00",
+      opcion_n1_nombre: "Barbacoa",
+      opcion_n1_recargo: "0.00",
+    });
   });
 
-  it("las filas nuevas no repiten clave aunque se agregue después de quitar", async () => {
+  it("las filas nuevas no repiten clave: un grupo nuevo arranca con n0 y n1 y la siguiente es n2", async () => {
     const accion = vi.fn(ok);
     await render(formulario(armarElGrupo(NUEVO), accion));
-    await userEvent.click(page.getByRole("button", { name: "Agregar opción" }));
-    await userEvent.click(page.getByRole("button", { name: "Quitar" }).first());
     await userEvent.click(page.getByRole("button", { name: "Agregar opción" }));
     const nombres = page.getByLabelText("Nombre", { exact: true });
     await userEvent.fill(nombres.nth(1), "Uno");
     await userEvent.fill(nombres.nth(2), "Dos");
+    await userEvent.fill(nombres.nth(3), "Tres");
     tocar(guardar());
     await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
     const claves = enviado(accion)
       .map(([k]) => k)
-      .filter((k) => k.endsWith("_nombre"));
-    expect(new Set(claves).size).toBe(claves.length);
-    expect(claves).toEqual(["opcion_n1_nombre", "opcion_n2_nombre"]);
+      .filter((k) => k.endsWith("_nombre") && k !== "nombre");
+    expect(claves).toEqual(["opcion_n0_nombre", "opcion_n1_nombre", "opcion_n2_nombre"]);
   });
 
-  it("un grupo nuevo manda «Adicional» solo si se marca", async () => {
+  it("un grupo nuevo manda «Incluida» por defecto y «Adicional» si se elige; con el teclado también", async () => {
     const accion = vi.fn(ok);
     await render(formulario(armarElGrupo(NUEVO), accion));
     await userEvent.fill(page.getByLabelText("Nombre", { exact: true }).first(), "Extras");
-    await userEvent.click(page.getByRole("checkbox", { name: "Adicional" }));
     tocar(guardar());
     await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
     expect(Object.fromEntries(enviado(accion))).toMatchObject({
       nombre: "Extras",
-      esAdicional: "on",
+      clase: "INCLUIDA",
     });
+    await userEvent.click(page.getByRole("radio", { name: "Adicional" }));
+    await expect.element(page.getByRole("radio", { name: "Adicional" })).toBeChecked();
+    tocar(guardar());
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(2));
+    expect(Object.fromEntries(enviado(accion, 1))).toMatchObject({ clase: "ADICIONAL" });
   });
 
   it("el segundo toque no manda un segundo envío", async () => {
@@ -223,25 +270,6 @@ describe("FormularioDeGrupoDeOpciones", () => {
       document.getElementById(entrada.getAttribute("aria-describedby") ?? "")?.textContent,
     ).toContain("Falta el nombre");
     expect(await violacionesDeAccesibilidad()).toEqual([]);
-  });
-
-  it("«Falta el nombre» de una opción se asocia al campo de ESA fila", async () => {
-    await render(
-      formulario(
-        armarElGrupo(GUARDADO),
-        rechazo({
-          codigo: "CATALOGO_FALTA_EL_NOMBRE",
-          clave: "catalogo.error.falta_el_nombre",
-          presentacion: "AVISO",
-          campo: "opcion_e1_nombre",
-        }),
-      ),
-    );
-    tocar(guardar());
-    await expect.element(page.getByText("Falta el nombre")).toBeVisible();
-    expect(document.body.textContent?.match(/Falta el nombre/g)).toHaveLength(1);
-    const nombres = page.getByLabelText("Nombre", { exact: true }).elements();
-    expect(nombres.map((e) => e.getAttribute("aria-invalid"))).toEqual([null, null, "true"]);
   });
 
   it("«Una opción incluida no lleva recargo» y el genérico salen debajo con el patrón común; ningún campo queda inválido", async () => {
@@ -296,39 +324,50 @@ describe("FormularioDeGrupoDeOpciones", () => {
 
   it("las casillas se marcan tocándolas o tocando su texto, y la fila alcanza el objetivo mínimo de 48 px de alto", async () => {
     await render(formulario(armarElGrupo(NUEVO)));
-    const casilla = page.getByRole("checkbox", { name: "Obligatorio" });
+    const casilla = page.getByRole("checkbox", { name: "Se puede elegir más de una" });
     await expect.element(casilla).not.toBeChecked();
-    await userEvent.click(page.getByText("Obligatorio"));
+    await userEvent.click(page.getByText("Se puede elegir más de una"));
     await expect.element(casilla).toBeChecked();
     await userEvent.click(casilla);
     await expect.element(casilla).not.toBeChecked();
     expect(
-      page.getByText("Obligatorio").element().parentElement?.getBoundingClientRect().height,
+      page.getByText("Se puede elegir más de una").element().parentElement?.getBoundingClientRect()
+        .height,
     ).toBeGreaterThanOrEqual(48);
   });
 
-  it("el teclado recorre el nombre, las casillas, las filas y llega a «Guardar»", async () => {
+  it("el teclado recorre el nombre, los botones de opción (una parada), las casillas, las filas y llega a «Guardar»", async () => {
     await render(formulario(armarElGrupo(NUEVO)));
     await userEvent.click(page.getByLabelText("Nombre", { exact: true }).first());
     const orden: string[] = [];
-    for (let i = 0; i < 9; i += 1) {
+    for (let i = 0; i < 10; i += 1) {
       await userEvent.tab();
       const activo = document.activeElement;
       orden.push(
-        activo instanceof HTMLInputElement && activo.type === "checkbox"
-          ? "casilla"
+        activo instanceof HTMLInputElement &&
+          (activo.type === "checkbox" || activo.type === "radio")
+          ? activo.type
           : (activo?.textContent ?? activo?.tagName ?? ""),
       );
     }
     expect(orden.at(-1)).toBe("Guardar");
-    expect(orden.filter((x) => x === "casilla")).toHaveLength(4);
-    // La casilla enfocada muestra el anillo de foco y se marca con la barra espaciadora.
+    expect(orden.filter((x) => x === "radio")).toHaveLength(1);
+    expect(orden.filter((x) => x === "checkbox")).toHaveLength(3);
+    // El botón de opción enfocado muestra el anillo de foco y se cambia con las flechas.
     await userEvent.click(page.getByLabelText("Nombre", { exact: true }).first());
     await userEvent.tab();
-    const primera = document.activeElement as HTMLInputElement;
-    expect(primera.type).toBe("checkbox");
-    expect(getComputedStyle(primera).outlineStyle).toBe("solid");
+    const opcion = document.activeElement as HTMLInputElement;
+    expect(opcion.type).toBe("radio");
+    expect(getComputedStyle(opcion.nextElementSibling as Element).outlineStyle).toBe("solid");
+    await userEvent.keyboard("{ArrowRight}");
+    await expect.element(page.getByRole("radio", { name: "Adicional" })).toBeChecked();
+    // La casilla enfocada muestra el anillo de foco y se marca con la barra espaciadora.
+    await userEvent.tab();
+    const casilla = document.activeElement as HTMLInputElement;
+    expect(casilla.type).toBe("checkbox");
+    expect(getComputedStyle(casilla).outlineStyle).toBe("solid");
+    const antes = casilla.checked;
     await userEvent.keyboard(" ");
-    expect(primera.checked).toBe(true);
+    expect(casilla.checked).toBe(!antes);
   });
 });
