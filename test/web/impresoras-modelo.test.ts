@@ -72,9 +72,12 @@ describe("modelo de «Impresoras»", () => {
     expect(lista.filas.map((f) => f.id)).toEqual(["i1"]);
   });
 
-  it("la lista vacía no dice nada y no inventa texto", () => {
-    const lista = armarLaListaDeImpresoras([], true);
-    expect(lista.filas).toEqual([]);
+  it("la lista vacía (o con todas quitadas) dice «No hay impresoras», como la maqueta; con alguna activa no dice nada", () => {
+    expect(armarLaListaDeImpresoras([], true).vacia).toBe("No hay impresoras");
+    expect(armarLaListaDeImpresoras([impresora({ activa: false })], true).vacia).toBe(
+      "No hay impresoras",
+    );
+    expect(armarLaListaDeImpresoras([impresora()], true).vacia).toBeNull();
   });
 
   it("sin permiso (o con duda) nada se ofrece: «Agregar impresora» ausente, nombre y «Quitar» apagados, mensaje genérico; «Imprimir prueba» sigue (no cambia datos)", () => {

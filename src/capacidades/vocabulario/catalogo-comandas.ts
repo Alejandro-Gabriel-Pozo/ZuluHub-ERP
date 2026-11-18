@@ -180,6 +180,12 @@ export const TEXTOS_DE_COMANDAS = {
     usos: [USO_EN_LA_LISTA],
     fuente: FUENTE_DE_IMPRIMIR,
   },
+  // imprimir.html, función `vConfig` (lista vacía, marcado como texto nuevo): «No hay impresoras».
+  "comandas.texto.imprimir_no_hay_impresoras": {
+    porDefecto: "No hay impresoras",
+    usos: [USO_EN_LA_LISTA],
+    fuente: FUENTE_DE_IMPRIMIR,
+  },
   "comandas.texto.imprimir_no_hay_impresora_para_la_comanda_de_cocina": {
     porDefecto: "No hay impresora para la comanda de cocina",
     usos: [USO_EN_EL_BOTON_DE_IMPRIMIR],

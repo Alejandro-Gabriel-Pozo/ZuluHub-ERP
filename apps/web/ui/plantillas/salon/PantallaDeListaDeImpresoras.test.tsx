@@ -96,6 +96,18 @@ describe("PantallaDeListaDeImpresoras", () => {
     expect(acciones).toEqual([cocina.id]);
   });
 
+  it("sin impresoras dice «No hay impresoras» y ofrece «Agregar impresora» a quien administra", async () => {
+    await render(
+      <PantallaDeListaDeImpresoras
+        lista={armarLaListaDeImpresoras([], true)}
+        accionDeQuitar={() => ok}
+      />,
+    );
+    await expect.element(page.getByText("No hay impresoras")).toBeVisible();
+    await expect.element(page.getByRole("link", { name: "Agregar impresora" })).toBeVisible();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
   it("una lista que no se pudo cargar muestra solo el error", async () => {
     await render(
       <PantallaDeListaDeImpresoras lista={null} accionDeQuitar={() => ok} error={<p>falló</p>} />,

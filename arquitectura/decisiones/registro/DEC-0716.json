@@ -3,8 +3,8 @@
   "fecha": "2026-11-17",
   "quien": "sesión",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
-  "decision": "SUPUESTO (Impresoras): «Quitar» desactiva la impresora sin borrarla, la edición se abre desde su nombre, la lista vacía no dice nada y la ruta es /salon/impresoras.",
-  "que_cambia": "Quitar sigue en la maqueta aprobada y la impresora deja de verse pero queda su registro. No hay palabra «Editar» ni «No hay impresoras» en el catálogo. Revertir: cambiar una clave o una constante, sin tocar datos.",
-  "donde": "apps/web/ui/plantillas/salon/modelo-de-impresoras.ts; apps/web/servidor/impresoras.ts; imprimir.html (vConfig); salon-s2-impresoras-plan.md §3 y §4"
+  "estado": "CONFIRMADA",
+  "decision": "SUPUESTO (Impresoras): «Quitar» desactiva la impresora sin borrarla, la edición se abre desde su nombre (la maqueta no dibuja Editar) y la ruta es /salon/impresoras.",
+  "que_cambia": "Quitar sigue en la maqueta aprobada y la impresora deja de verse pero queda su registro. No hay palabra Editar en la maqueta. Revertir: cambiar una clave o una constante, sin tocar datos.",
+  "donde": "modelo-de-impresoras.ts; servidor/impresoras.ts; imprimir.html (vConfig); salon-s2-impresoras-plan.md §3. Confirmada por el dueño 17/11/2026: decisiones-del-dueno-2026-11.md, fila «Salón y comandas: respuestas a Q1 a Q7»."
 }

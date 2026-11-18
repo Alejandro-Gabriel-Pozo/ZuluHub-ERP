@@ -38,6 +38,11 @@ export function PantallaDeListaDeImpresoras({
               <Texto>{lista.sinPermiso}</Texto>
             </Aviso>
           )}
+          {lista.vacia === null ? null : (
+            <p className={estilos["detalle"]}>
+              <strong>{lista.vacia}</strong>
+            </p>
+          )}
           <ul className={estilos["lista"]}>
             {lista.filas.map((fila) => (
               <li key={fila.id} className={estilos["fila"]}>

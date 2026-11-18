@@ -13,8 +13,7 @@ import { rotuloDelAncho } from "../../patrones/papel/hoja-del-papel";
  *  - **Lo que cambia algo sale solo si la persona puede administrar las impresoras** (`puedeAdministrar`, solo una ayuda: el guard decide): sin permiso «Agregar impresora» no se ofrece, y el nombre (que lleva a editar) y
  *    «Quitar» salen apagados. Todo lo que no sea exactamente `true` cierra. «Imprimir prueba» es solo del navegador (no cambia ningún dato): lo tienen los tres roles.
  *  - **Uso y papel son listas cerradas** que repiten los valores del dominio (`USOS_DE_IMPRESORA`, `PAPELES_EN_MM`): una prueba falla si difieren.
- * SUPUESTOS (DEC-0715 a DEC-0717): ruta `/salon/impresoras`; la edición se abre desde el nombre de la impresora (la maqueta no tiene «Editar»: no se suma ninguna palabra); la lista vacía no dice nada (la maqueta
- * dice «No hay impresoras», texto que no está en el catálogo aprobado).
+ * SUPUESTO (DEC-0716): ruta `/salon/impresoras`; la edición se abre desde el nombre de la impresora (la maqueta no dibuja «Editar»: no se suma ninguna palabra). La lista vacía dice «No hay impresoras», como la maqueta.
  */
 
 export const RUTA_DE_IMPRESORAS = "/salon/impresoras";
@@ -65,6 +64,8 @@ export type ListaDeImpresorasArmada = Readonly<{
   sinPermiso: string | null;
   /** «Imprimiendo»: lo que dice «Imprimir prueba» mientras corre. */
   imprimiendo: string;
+  /** «No hay impresoras» si la lista no tiene ninguna activa (maqueta, `vConfig`); `null` si hay. */
+  vacia: string | null;
 }>;
 
 /** Todo lo que no sea exactamente `true` (falso, ausente, dudoso) cierra. */
@@ -97,6 +98,9 @@ export function armarLaListaDeImpresoras(
       : null,
     sinPermiso: administra ? null : texto(d, "catalogo.error.accion_no_permitida"),
     imprimiendo: texto(d, "comandas.texto.imprimir_imprimiendo"),
+    vacia: impresoras.some((i) => i.activa)
+      ? null
+      : texto(d, "comandas.texto.imprimir_no_hay_impresoras"),
   };
 }
 

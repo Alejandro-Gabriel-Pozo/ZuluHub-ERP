@@ -81,6 +81,7 @@ describe.skipIf(base === null || !comandasAbierto)("recorrido de impresoras", ()
     const respuesta = await ir(pagina, "/salon/impresoras");
     expect(respuesta?.status()).toBe(200);
     await pagina.getByRole("heading", { name: "Impresoras", level: 1 }).waitFor();
+    await pagina.getByText("No hay impresoras").waitFor();
     await pagina.getByRole("link", { name: "Agregar impresora" }).waitFor();
     expect(await pagina.getByRole("button", { name: "Quitar" }).count()).toBe(0);
     expect(await violacionesGravesDeAxe(pagina)).toEqual([]);

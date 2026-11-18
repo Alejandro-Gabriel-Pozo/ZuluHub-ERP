@@ -82,6 +82,7 @@ export const FICHA_DE_IMPRESORAS = {
     ),
     "comandas.texto.imprimir_papel": textoDeLaMaqueta(USO_DEL_FORMULARIO),
     "comandas.texto.imprimir_imprimir_prueba": textoDeLaMaqueta(USO_DE_LA_LISTA),
+    "comandas.texto.imprimir_no_hay_impresoras": textoDeLaMaqueta(USO_DE_LA_LISTA),
     "comandas.texto.salida_quitar": textoDeLaMaqueta(USO_DE_LA_LISTA),
     "salon.texto.admin_guardar": textoDeLaMaqueta(USO_DEL_FORMULARIO),
     "comandas.texto.imprimir_imprimir": textoDeLaMaqueta(USO_DEL_BOTON),

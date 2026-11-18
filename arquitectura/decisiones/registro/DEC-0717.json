@@ -3,8 +3,8 @@
   "fecha": "2026-11-17",
   "quien": "sesión",
   "tipo": "INFRAESTRUCTURA",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "El papel sale con el diálogo de impresión del sistema (window.print), sin dependencia nueva, e Imprimir prueba es solo del navegador: una hoja fija sin trabajo registrado.",
   "que_cambia": "Se imprime desde cualquier celular o compu con el diálogo del sistema; imprimir directo en una térmica queda fuera. La prueba no guarda nada. Revertir: cambiar la pieza de impresión o sumar un valor de documento con migración.",
-  "donde": "apps/web/ui/patrones/papel/; apps/web/ui/plantillas/salon/BotonDePruebaDeImpresora.cliente.tsx; e7-salon-e-impresion-especificacion.md §3.10 (PP-1); salon-s2-impresoras-plan.md P-1 (opción A)"
+  "donde": "apps/web/ui/patrones/papel/; BotonDePruebaDeImpresora.cliente.tsx; e7 §3.10 (PP-1); plan S-2 P-1 (A). Confirmada por el dueño 17/11/2026: decisiones-del-dueno-2026-11.md, fila «Salón y comandas: respuestas a Q1 a Q7»."
 }
