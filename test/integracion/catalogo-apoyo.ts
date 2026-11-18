@@ -147,14 +147,16 @@ export async function opcionDeBase(
     recargo: string;
     factor: string;
     persona: string | null;
+    /** El lugar de la opción en su grupo (0 si no se dice). Con varias en el mismo grupo, dalo: con `orden` repetido el orden lo desempata el id, que es al azar. */
+    orden: number;
   }> = {},
 ): Promise<{ opcion: string; version: string }> {
   const opcion = datos.id ?? randomUUID();
   const version = randomUUID();
   const nombre = datos.nombre ?? nombreAlAzarDeProducto("Opcion");
   await c.query(
-    `insert into opcion (id, empresa_id, producto_id, grupo_id, nombre_clave, orden) values ($1, $2, $3, $4, $5, 0)`,
-    [opcion, empresa, producto, grupo, nombre.toLowerCase()],
+    `insert into opcion (id, empresa_id, producto_id, grupo_id, nombre_clave, orden) values ($1, $2, $3, $4, $5, $6)`,
+    [opcion, empresa, producto, grupo, nombre.toLowerCase(), datos.orden ?? 0],
   );
   await c.query(
     `insert into version_de_opcion (id, empresa_id, opcion_id, numero, nombre, recargo, factor_de_tamano, cargada_por, creado_en)
