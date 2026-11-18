@@ -10,8 +10,10 @@ import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
 import { ProveedorDeEnvioDeFormulario } from "../../patrones/EnvioDeFormulario.cliente";
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
 import { Pila } from "../../primitivas/Pila";
+import { PlanoDeMesas } from "./PlanoDeMesas.cliente";
 import estilos from "./PantallasDeMesas.module.css";
 import type { FormularioDeMesaArmado } from "./modelo-de-mesas";
+import { conElBorrador } from "./modelo-del-plano";
 
 export type PropsDeFormularioDeMesa = Readonly<{
   formulario: FormularioDeMesaArmado;
@@ -25,7 +27,8 @@ const SIN_ERROR: Readonly<{ error: ErrorPublico | null }> = { error: null };
  * Alta y edición de una mesa (maqueta `mesas.html`, «Agregar mesa» y «Editar mesa»: el mismo formulario): número, forma, tamaño, columna y fila, «Cancelar» y «Guardar». La validez la
  * decide el servidor (número de 1 a 99, que no se repita, que entre en el salón y que no se pise con otra mesa): acá solo se ofrece «Guardar» con los cinco datos completos. El error sale
  * debajo con el patrón común (los textos propios aprobados, o el genérico). Repetir el envío no duplica: la clave de creación (o la versión) va ligada a la acción por la página y el
- * botón ignora el segundo toque. Sin permiso, «Guardar» sale apagado.
+ * botón ignora el segundo toque. Sin permiso, «Guardar» sale apagado. Arriba va el mapa chico del salón (S-1b): las demás mesas activas y, encima, la que se escribe, redibujada en cada
+ * cambio; solo dibuja (no valida ni bloquea «Guardar»: eso lo decide el servidor).
  */
 export function FormularioDeMesa({ formulario, accion }: PropsDeFormularioDeMesa) {
   const [resultado, enviar, enviando] = useActionState(accion, SIN_ERROR);
@@ -34,6 +37,12 @@ export function FormularioDeMesa({ formulario, accion }: PropsDeFormularioDeMesa
   const [tamano, setTamano] = useState(formulario.tamano.valorInicial);
   const [columna, setColumna] = useState(formulario.columna.valorInicial);
   const [fila, setFila] = useState(formulario.fila.valorInicial);
+  const plano = conElBorrador(
+    formulario.plano.base,
+    formulario.plano.medidas,
+    { numero, forma, tamano, columna, fila },
+    formulario.plano.nombreDelBorrador,
+  );
   const completo = [numero, forma, tamano, columna, fila].every((v) => v.trim() !== "");
   return (
     <div className={estilos["raiz"]}>
@@ -47,6 +56,7 @@ export function FormularioDeMesa({ formulario, accion }: PropsDeFormularioDeMesa
       <form action={enviar}>
         <ProveedorDeEnvioDeFormulario value={enviando}>
           <Pila separacion={3}>
+            <PlanoDeMesas plano={plano} />
             <Campo
               dato="numero-de-mesa"
               etiqueta={formulario.numero.etiqueta}
