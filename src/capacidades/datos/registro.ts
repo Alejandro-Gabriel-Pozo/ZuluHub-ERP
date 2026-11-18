@@ -61,6 +61,7 @@ export type DatoDeCampo = IdDeDato | typeof DATO_PENDIENTE;
  * tiene que declarar la prop `dato: DatoDeCampo` (lo comprueba el chequeo). Un componente de campo nuevo se suma acá.
  */
 export const COMPONENTES_DE_CAMPO = [
+  "apps/web/ui/componentes/AreaDeTexto.tsx",
   "apps/web/ui/componentes/Campo.tsx",
   "apps/web/ui/componentes/CampoDeCodigo.tsx",
   "apps/web/ui/componentes/CampoDeDocumento.tsx",
