@@ -246,14 +246,12 @@ describe("auditoría de dependencias: la lista de excepciones declara lo permiti
     expect(r.fallas[0]).toContain("no es un campo permitido");
   });
 
-  it("la lista real del repositorio está bien formada, tiene el aviso de picomatch y vence el 2026-12-17", () => {
+  it("la lista real del repositorio está bien formada y ya no trae la excepción de picomatch (el aviso dejó de ser alto el 18/11/2026)", () => {
     const real = JSON.parse(
       readFileSync(join(RAIZ, "arquitectura/auditoria-excepciones.json"), "utf8"),
     ) as Excepcion[];
     expect(problemas(real)).toEqual([]);
-    expect(real.map((e) => e.id)).toEqual([ID]);
-    expect(real[0]?.vence).toBe("2026-12-17");
-    expect(real[0]?.motivo).toContain("grep -rlE");
+    expect(real.map((e) => e.id)).not.toContain(ID);
   });
 });
 
