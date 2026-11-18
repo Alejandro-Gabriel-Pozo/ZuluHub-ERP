@@ -472,6 +472,23 @@ describe("decidirPuerta: cabeceras de respuesta por superficie", () => {
     expect(d.encabezadosDeRespuesta["X-Robots-Tag"] === "noindex").toBe(noindex);
   });
 
+  it.each(["MARCA", "EMPRESA"] as const)(
+    "la carta de un host con dueño %s lleva noindex en producción (host compartido: nunca indexable)",
+    (tipo) => {
+      const estado: EstadoDeLaResolucion = {
+        tipo: "RESUELTA",
+        puerta: {
+          host: "carta.x.test",
+          superficie: "CARTA",
+          marcaId: "m1",
+          duenio: tipo === "MARCA" ? { tipo } : { tipo, empresaId: "e1" },
+          marca: { nombre: "Marca", tema: {}, hostDeApp: null },
+        },
+      };
+      expect(decidir("/", estado, {}, true).encabezadosDeRespuesta["X-Robots-Tag"]).toBe("noindex");
+    },
+  );
+
   it("la neutra es noindex aun en producción, y toda respuesta trae las cabeceras de seguridad", () => {
     for (const d of [
       decidir("/", HOST_DESCONOCIDO, {}, true),
