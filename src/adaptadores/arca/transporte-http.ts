@@ -49,7 +49,7 @@ const FORMA_DE_MOTIVO_TLS = /^[A-Za-z0-9_. ]{1,100}$/;
  * el `message` nunca sale.
  */
 const MOTIVO_EN_EL_TEXTO_DE_OPENSSL =
-  /error:[0-9A-Fa-f]{8}:[A-Za-z0-9_ ]{1,60}:[A-Za-z0-9_]{0,60}:([A-Za-z0-9_. ]{1,100}):[^:\s]*\.c:\d+:/;
+  /error:[0-9A-Fa-f]{8}:[A-Za-z0-9_ ]+:[A-Za-z0-9_]*:([A-Za-z0-9_. ]+):[A-Za-z0-9_./-]*\.c:\d+:/;
 
 function motivoTls(error: unknown): string | null {
   const propiedades = error as { reason?: unknown; message?: unknown } | null;
@@ -61,7 +61,7 @@ function motivoTls(error: unknown): string | null {
   if (motivo === null || !FORMA_DE_MOTIVO_TLS.test(motivo)) return null;
   const normalizado = motivo
     .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/[ .]+/g, "_")
     .replace(/^_+|_+$/g, "");
   return normalizado === "" ? null : normalizado;
 }
