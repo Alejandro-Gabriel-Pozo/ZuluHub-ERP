@@ -77,6 +77,37 @@ describe("metadatosDePagina: carta", () => {
   });
 });
 
+describe("metadatosDePagina: espacios sobrantes y largo justo", () => {
+  it("acortar: un texto del largo justo no se toca y uno que pasa por uno se corta con «…»", () => {
+    expect(acortar("abcde", 5)).toBe("abcde");
+    expect(acortar("abcdef", 5)).toBe("abcd…");
+  });
+
+  it("acortar: el corte no deja un espacio antes de «…» (se recorta al final, no al principio)", () => {
+    expect(acortar("ab cdef", 4)).toBe("ab…");
+    expect(acortar(" ab cdef", 5)).toBe(" ab…");
+  });
+
+  it("carta: el nombre se usa sin espacios en el título y en la descripción", () => {
+    const m = metadatosDePagina(base({ pagina: { ...CARTA, nombre: "  Los Andecitos  " } }));
+    expect(m.titulo).toBe("Los Andecitos · Hostería Los Andes");
+    expect(m.descripcion?.startsWith("Carta de Los Andecitos,")).toBe(true);
+  });
+
+  it("producto: el título usa el nombre del producto y el de la carta, cada uno sin espacios sobrantes", () => {
+    const m = metadatosDePagina(
+      base({
+        pagina: {
+          tipo: "PRODUCTO",
+          nombreDelProducto: "  Milanesa  ",
+          nombreDeLaCarta: "  Los Andecitos  ",
+        },
+      }),
+    );
+    expect(m.titulo).toBe("Milanesa · Los Andecitos");
+  });
+});
+
 describe("metadatosDePagina: indexable", () => {
   it("la carta toma lo que decide la única regla (esIndexable); no lo inventa", () => {
     expect(metadatosDePagina(base({ superficieIndexable: false })).indexable).toBe(false);
@@ -116,6 +147,7 @@ describe("metadatosDePagina: imagen para compartir", () => {
     ["una de ancho no entero", logo(300.5)],
     ["una que no es https", logo(600, "http://x.test/logo.png")],
     ["una con consulta", logo(600, "https://x.test/logo.png?v=1")],
+    ["una con ancla", logo(600, "https://x.test/logo.png#grande")],
     ["una que no es una dirección", logo(600, "logo.png")],
     ["ninguna", null],
   ])("sin imagen cuando hay %s", (_motivo, imagen) => {

@@ -5,15 +5,18 @@ import {
   CLASES_DEL_FILTRO,
   ESTADOS_DEL_FILTRO,
   FILTROS_POR_DEFECTO,
+  RUTA_DE_LOS_OCULTOS,
   RUTA_DE_PRODUCTOS,
   RUTA_DEL_ALTA_DE_PRODUCTO,
   armarLosFiltros,
   direccionDeLaLista,
   leerLaPagina,
   leerLosFiltros,
+  pideLosOcultos,
 } from "../../apps/web/ui/plantillas/catalogo/filtros-de-productos";
 import {
   armarElEnlaceDeAlta,
+  armarElFiltroDeOcultos,
   armarLaLista,
   type PaginaDeLaLista,
   type ProductoDeLaLista,
@@ -274,5 +277,61 @@ describe("«Nuevo producto»", () => {
   it("sin permiso o sin dato (ausente) no hay enlace: nace cerrado", () => {
     expect(armarElEnlaceDeAlta(false)).toBeNull();
     expect(armarElEnlaceDeAlta(undefined)).toBeNull();
+  });
+});
+
+describe("lo oculto en la lista de productos (C2)", () => {
+  const dos = [producto({ id: "a" }), producto({ id: "b" }), producto({ id: "c" })];
+  const avisos = (ocultos: ReadonlyMap<string, { local: boolean; empresa: boolean }>) =>
+    armarLaLista(pagina(dos), FILTROS_POR_DEFECTO, {}, ocultos).filas.map((f) => f.avisosDeOculto);
+
+  it("la dirección de la lista de ocultos es la de productos con `oculto=1`", () => {
+    expect(RUTA_DE_LOS_OCULTOS).toBe(`${RUTA_DE_PRODUCTOS}?oculto=1`);
+  });
+
+  it("la dirección pide los ocultos solo con el valor exacto «1» (el primero, si vienen varios)", () => {
+    expect(pideLosOcultos({ oculto: "1" })).toBe(true);
+    expect(pideLosOcultos({ oculto: ["1", "0"] })).toBe(true);
+    for (const params of [
+      {},
+      { oculto: "" },
+      { oculto: "0" },
+      { oculto: "true" },
+      { oculto: "11" },
+      { oculto: ["0", "1"] },
+      { otro: "1" },
+    ]) {
+      expect(pideLosOcultos(params), JSON.stringify(params)).toBe(false);
+    }
+  });
+
+  it("cada producto dice dónde está oculto: solo en el local, solo en la empresa, en ambos (la empresa primero) o en ninguno", () => {
+    expect(
+      avisos(
+        new Map([
+          ["a", { local: true, empresa: false }],
+          ["b", { local: false, empresa: true }],
+        ]),
+      ),
+    ).toEqual([["Oculto"], ["Oculto en toda la empresa"], []]);
+    expect(avisos(new Map([["a", { local: true, empresa: true }]]))[0]).toEqual([
+      "Oculto en toda la empresa",
+      "Oculto",
+    ]);
+    expect(avisos(new Map([["a", { local: false, empresa: false }]]))[0]).toEqual([]);
+  });
+
+  it("si no se pudo leer dónde está oculto, ninguna marca", () => {
+    expect(
+      armarLaLista(pagina(dos), FILTROS_POR_DEFECTO).filas.map((f) => f.avisosDeOculto),
+    ).toEqual([[], [], []]);
+  });
+
+  it("el filtro «Oculto» sale solo si se pudo leer, con su dirección y su texto; cierra ante la duda", () => {
+    expect(armarElFiltroDeOcultos(true)).toEqual({
+      href: "/catalogo/productos?oculto=1",
+      texto: "Oculto",
+    });
+    expect(armarElFiltroDeOcultos(false)).toBeNull();
   });
 });

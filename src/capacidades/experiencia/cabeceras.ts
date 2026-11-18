@@ -63,10 +63,14 @@ export type TipoDeDuenioDeHost = "MARCA" | "EMPRESA";
  * `EMPRESA` se abre cuando el dueño lo decida y haya dominio propio ACTIVO, cambiando esa única línea y su prueba; no hay perilla ni texto que lo active).
  * Previene: indexar por error las cartas del host compartido (códigos largos, duplicados al sumar el dominio propio, cartas que el cliente quiso discretas).
  */
-const CARTA_INDEXABLE_SEGUN_DUENIO: Readonly<Record<TipoDeDuenioDeHost, boolean>> = Object.freeze({
-  MARCA: false,
-  EMPRESA: false,
-});
+export const CARTA_INDEXABLE_SEGUN_DUENIO: Readonly<Record<TipoDeDuenioDeHost, boolean>> =
+  Object.freeze({
+    MARCA: false,
+    EMPRESA: false,
+  });
+
+/** La tabla de quién deja indexar su carta, como dato: `esIndexable` y `cabecerasDe` la reciben para poder probar la regla con la tabla abierta mientras la de producción sigue cerrada. */
+type TablaDeCartaIndexable = Readonly<Record<TipoDeDuenioDeHost, boolean>>;
 
 /**
  * ¿Se deja indexar? La landing en producción; la carta solo en producción y según el dueño del host (tabla de arriba: hoy nunca). La app y la neutra nunca.
@@ -76,10 +80,11 @@ export const esIndexable = (
   superficie: SuperficieDeRespuesta,
   produccion: boolean,
   duenio: TipoDeDuenioDeHost | null,
+  tabla: TablaDeCartaIndexable = CARTA_INDEXABLE_SEGUN_DUENIO,
 ): boolean => {
   if (!produccion) return false;
   if (superficie === "LANDING") return true;
-  return superficie === "CARTA" && duenio !== null && CARTA_INDEXABLE_SEGUN_DUENIO[duenio] === true;
+  return superficie === "CARTA" && duenio !== null && tabla[duenio] === true;
 };
 
 /**
@@ -96,7 +101,11 @@ export function cabecerasDe(
   superficie: SuperficieDeRespuesta,
   nonce: string,
   /** `duenio` solo importa para la carta; si falta, se cierra (nunca indexable). */
-  opciones: Readonly<{ produccion: boolean; duenio?: TipoDeDuenioDeHost | null }>,
+  opciones: Readonly<{
+    produccion: boolean;
+    duenio?: TipoDeDuenioDeHost | null;
+    tabla?: TablaDeCartaIndexable;
+  }>,
 ): Readonly<Record<string, string>> {
   return Object.freeze({
     "Content-Security-Policy": politicaDeContenido(nonce),
@@ -105,7 +114,7 @@ export function cabecerasDe(
     "Referrer-Policy": "same-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
     "Cache-Control": "private, no-store",
-    ...(esIndexable(superficie, opciones.produccion, opciones.duenio ?? null)
+    ...(esIndexable(superficie, opciones.produccion, opciones.duenio ?? null, opciones.tabla)
       ? {}
       : { "X-Robots-Tag": "noindex" }),
   });
