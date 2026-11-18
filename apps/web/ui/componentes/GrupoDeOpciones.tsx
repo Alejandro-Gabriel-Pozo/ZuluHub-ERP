@@ -29,6 +29,10 @@ export type PropsDeGrupoDeOpciones = Readonly<{
    * elegida una opción no se puede volver a ninguna.
    */
   etiquetaSinElegir?: string | undefined;
+  /** Lo que se lee junto al nombre, dentro de la misma leyenda («(obligatorio)»), ya resuelto. Sin él, nada cambia. */
+  aclaracion?: string | undefined;
+  /** Una línea dentro del grupo, debajo del nombre y antes de las opciones («Sin elegir» mientras no se eligió nada), ya resuelta. Sin ella, nada cambia. */
+  notaDelGrupo?: string | undefined;
   deshabilitado?: boolean;
 }>;
 
@@ -45,6 +49,8 @@ export function GrupoDeOpciones({
   alCambiar,
   varias,
   etiquetaSinElegir,
+  aclaracion,
+  notaDelGrupo,
   deshabilitado = false,
 }: PropsDeGrupoDeOpciones) {
   const grupo = useId();
@@ -54,7 +60,13 @@ export function GrupoDeOpciones({
     <fieldset className={estilos["grupo"]} disabled={deshabilitado}>
       <legend className={ocultarNombre ? estilos["soloLector"] : estilos["nombre"]}>
         {nombre}
+        {aclaracion === undefined || aclaracion === "" ? null : (
+          <span className={estilos["aclaracion"]}> {aclaracion}</span>
+        )}
       </legend>
+      {notaDelGrupo === undefined || notaDelGrupo === "" ? null : (
+        <p className={estilos["notaDelGrupo"]}>{notaDelGrupo}</p>
+      )}
       {!varias && etiquetaSinElegir !== undefined ? (
         <label className={estilos["fila"]}>
           <input

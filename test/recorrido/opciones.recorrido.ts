@@ -84,8 +84,10 @@ describe.skipIf(base === null)(
       await opcionDeBase(c, mundo.empresa, hamburguesa, salsas, {
         nombre: "Mayonesa",
         recargo: "400.00",
+        orden: 1,
       });
-      await opcionDeBase(c, mundo.empresa, hamburguesa, salsas, { nombre: "Ketchup" });
+      // Con `orden` distinto: con el mismo, las opciones salen en el orden de su id (al azar) y la vista previa («Mayonesa … · Ketchup») no sería siempre la misma.
+      await opcionDeBase(c, mundo.empresa, hamburguesa, salsas, { nombre: "Ketchup", orden: 2 });
 
       const ejecutable = process.env["PEDERNAL_NAVEGADOR"];
       navegador = await chromium.launch({

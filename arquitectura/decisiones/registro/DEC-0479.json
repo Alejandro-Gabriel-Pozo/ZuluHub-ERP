@@ -1,10 +1,10 @@
 {
   "id": "DEC-0479",
   "fecha": "2026-11-15",
-  "quien": "padre",
+  "quien": "dueño",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
-  "decision": "SUPUESTO: título «Venta», genérico con más de 1000 productos, producto sin precio no se agrega y buscador solo por nombre, hasta que el dueño conteste.",
+  "estado": "CONFIRMADA",
+  "decision": "Título «Venta»; con más de 1000 productos, mensaje genérico; el producto sin precio no se agrega («Sin precio», apagado). El buscador busca por nombre, código y código de barras.",
   "que_cambia": "Cómo se ve la venta rápida en esos casos. «Venta» está en la maqueta aprobada pero no en los 302 textos. Revertir: una línea por caso.",
-  "donde": "delegación del dueño, DDD filas 173 y 174; (operacion)/venta/page.tsx; modelo-de-venta-rapida.ts"
+  "donde": "dueño, 18/11/2026, decisiones-del-dueno-2026-11.md fila 307 («Ok»); busca por código por respuesta del dueño del 15/11; (operacion)/venta/page.tsx; modelo-de-venta-rapida.ts"
 }

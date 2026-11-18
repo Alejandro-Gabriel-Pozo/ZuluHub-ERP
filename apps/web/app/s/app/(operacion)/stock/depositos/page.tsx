@@ -1,7 +1,7 @@
 import { texto } from "../../../../../../../../src/capacidades/vocabulario/vocabulario";
 import { pantallaDeOperacion } from "../../../../../../pantallas/operacion";
 import { cargarLosDepositos } from "../../../../../../servidor/depositos-de-stock";
-import { puedeEnStock } from "../../../../../../servidor/stock";
+import { puedeEnStock } from "../../../../../../servidor/ofertas-de-stock";
 import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 import {
   armarLaListaDeDepositos,

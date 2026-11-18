@@ -5,7 +5,7 @@ import {
   cargarLosDepositos,
   USOS_PARA_ELEGIR,
 } from "../../../../../../../servidor/depositos-de-stock";
-import { puedeEnStock } from "../../../../../../../servidor/stock";
+import { puedeEnStock } from "../../../../../../../servidor/ofertas-de-stock";
 import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import { FormularioDeDeposito } from "../../../../../../../ui/plantillas/stock/depositos/FormularioDeDeposito.cliente";
 import {
