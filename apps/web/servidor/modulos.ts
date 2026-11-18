@@ -205,11 +205,7 @@ export async function puedeCambiarPrecios(contexto: ContextoOperativo): Promise<
 /** Qué botones de «Carta en línea» se ofrecen activos hoy (una sola lectura de permisos). */
 export type OfertaDeLaCarta = Readonly<{ guardar: boolean; poner: boolean; sacar: boolean }>;
 
-/**
- * ¿Qué puede hacer la persona con la carta en línea? Es la oferta de `vidrieras.editar` (guardar los textos), `vidrieras.publicar_en_linea` (ponerla en línea) y `vidrieras.retirar_de_linea` (sacarla)
- * que el servidor calcula con `ofertaDe`: con el módulo `vidriera` en desarrollo (hoy), sin activar o sin el rol, no. Si no se pudieron leer los permisos, todo `false` (cierra, no abre). Ocultar no es
- * autorizar: cada acción vuelve a pasar por el guard dentro de su transacción. Es solo la ayuda que apaga los botones. Chequeo: `test/web/carta-en-linea-acceso.test.ts`.
- */
+/** ¿Qué puede hacer con la carta en línea? La oferta de `vidrieras.editar`, `.publicar_en_linea` y `.retirar_de_linea`; sin permisos legibles, todo `false`. Solo apaga botones: el guard decide. Chequeo: `test/web/carta-en-linea-acceso.test.ts`. */
 export async function ofertaDeLaCartaEnLinea(
   contexto: ContextoOperativo,
 ): Promise<OfertaDeLaCarta> {
@@ -389,20 +385,13 @@ export async function pendientesDeLaEmpresa(
   }
 }
 
-/**
- * ¿La persona puede ocultar o volver a mostrar un producto en un local? Es la oferta de `vidrieras.marcar_disponibilidad` (los tres roles) que el servidor calcula con `ofertaDe`: con
- * el módulo en solo lectura, en desarrollo o sin el rol, no. Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar el botón no es autorizar: la acción vuelve a pasar
- * por el guard. Es solo la ayuda que apaga el botón (A15). Chequeo: `test/web/ocultar-acceso.test.ts`.
- */
+/** ¿Puede ocultar o volver a mostrar un producto en un local? La oferta de `vidrieras.marcar_disponibilidad`; sin permisos legibles, `false`. Solo apaga el botón (A15): el guard decide. Chequeo: `test/web/ocultar-acceso.test.ts`. */
 export async function puedeOcultarEnElLocal(contexto: ContextoOperativo): Promise<boolean> {
   const permisos = await permisosDeLaPersona(contexto);
   return permisos !== null && ofertaDe("vidrieras.marcar_disponibilidad", permisos).permitida;
 }
 
-/**
- * ¿La persona puede ocultar o volver a mostrar un producto en toda la empresa? Es la oferta de `vidrieras.ocultar_en_empresa` (gerente y administrador; dueño, 22A) que el servidor
- * calcula con `ofertaDe`. Las mismas reglas de cierre que `puedeOcultarEnElLocal`. Chequeo: `test/web/ocultar-acceso.test.ts`.
- */
+/** ¿Puede ocultar o volver a mostrar un producto en toda la empresa? La oferta de `vidrieras.ocultar_en_empresa` (dueño, 22A), con el mismo cierre. Chequeo: `test/web/ocultar-acceso.test.ts`. */
 export async function puedeOcultarEnLaEmpresa(contexto: ContextoOperativo): Promise<boolean> {
   const permisos = await permisosDeLaPersona(contexto);
   return permisos !== null && ofertaDe("vidrieras.ocultar_en_empresa", permisos).permitida;
