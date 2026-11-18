@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Boton } from "../../../componentes/Boton.cliente";
 import { Campo } from "../../../componentes/Campo";
-import { CampoDeCasilla } from "../../../componentes/CampoDeCasilla";
+import { Casilla } from "../../../componentes/Casilla";
 import { Selector } from "../../../componentes/Selector";
 import { BotonDeEnvio } from "../../../patrones/BotonDeEnvio.cliente";
 import {
@@ -67,7 +67,7 @@ export function FormularioDeDeposito({
         opciones={opcionesDeUso}
       />
       {uso === USO_DE_VENTA ? (
-        <CampoDeCasilla
+        <Casilla
           dato="deposito-de-venta"
           etiqueta={textos.deVenta}
           nombre="deVenta"

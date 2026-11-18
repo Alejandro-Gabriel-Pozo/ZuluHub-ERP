@@ -17,6 +17,7 @@ const fila = (clave: FilaDePantalla["clave"]): FilaDePantalla => {
   return f;
 };
 const comprobantes = fila("comprobantes");
+const ventaRapida = fila("venta-rapida");
 const productos = fila("productos");
 const secciones = fila("secciones");
 const fiscal = fila("configuracion-fiscal");
@@ -173,6 +174,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
       ),
     ).toEqual([
       [
+        "venta-rapida",
+        "ventas",
+        "mostrador",
+        "ventas",
+        "ventas.ver",
+        "/ventas/venta-rapida",
+        "ventas.venta.menu",
+      ],
+      [
         "comprobantes",
         "ventas",
         "comprobantes",
@@ -200,6 +210,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "catalogo.seccion.titulo",
       ],
       ["mesas", "ventas", "salon", "salon", "mesas.ver", "/salon/mesas", "salon.texto.admin_mesas"],
+      [
+        "impresoras",
+        "ventas",
+        "salon",
+        "comandas",
+        "impresoras.ver",
+        "/salon/impresoras",
+        "comandas.texto.imprimir_impresoras",
+      ],
       [
         "stock",
         "catalogo",
@@ -343,5 +362,21 @@ describe("problemasDelMenu: lo que la tabla real cumple y cada violación que se
     expect(problemas([comprobantes, { ...productos, href: comprobantes.href }])).toEqual([
       "productos: la ruta /facturacion/comprobantes está repetida",
     ]);
+  });
+});
+
+describe("«Venta rápida»: la fila del grupo «Mostrador» del área Ventas (dueño, 13/11/2026)", () => {
+  it("con `ventas.ver` y el módulo `ventas` activo, el área Ventas trae el grupo «Mostrador» con «Venta rápida»", () => {
+    const areas = armarElMenu([ventaRapida], permisos(["ventas.ver"], ["ventas"]), null);
+    expect(areas.map((a) => a.clave)).toEqual(["ventas"]);
+    expect(areas[0]?.grupos.map((g) => [g.clave, g.etiqueta, g.items.map((i) => i.clave)])).toEqual(
+      [["mostrador", "navegacion.grupo.mostrador", ["venta-rapida"]]],
+    );
+    expect(areas[0]?.grupos[0]?.items[0]).toMatchObject({ etiqueta: "ventas.venta.menu" });
+  });
+
+  it("sin el permiso o sin el módulo activo la entrada no aparece", () => {
+    expect(armarElMenu([ventaRapida], permisos([], ["ventas"]), null)).toEqual([]);
+    expect(armarElMenu([ventaRapida], permisos(["ventas.ver"]), null)).toEqual([]);
   });
 });

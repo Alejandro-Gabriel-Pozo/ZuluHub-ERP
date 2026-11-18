@@ -26,7 +26,8 @@ function archivos(carpeta: string, extension: RegExp): string[] {
 }
 const css = archivos(RAIZ, /\.css$/);
 /** El CSS de la hoja y del ticket impresos: es papel, tiene su propia regla (ver «el papel impreso» más abajo). */
-const esDelPapel = (ruta: string): boolean => ruta.includes("/plantillas/facturacion/impresion/");
+const esDelPapel = (ruta: string): boolean =>
+  ruta.includes("/plantillas/facturacion/impresion/") || ruta.includes("/patrones/papel/");
 const fuentes = archivos(RAIZ, /\.(tsx?|css)$/).filter(
   (f) => !f.endsWith(".test.ts") && !f.endsWith(".test.tsx"),
 );
@@ -75,7 +76,7 @@ describe("legibilidad de la aplicación (D4 y D10)", () => {
     // Previene: que la hoja cambie de tamaño con la letra del celular y el paginador corte donde no es (la vista previa escala la hoja entera).
     // Sin esto el papel quedaría exento de la regla de arriba sin ninguna otra; con esto solo puede usar `pt` (D4/D10 siguen valiendo en pantalla).
     const delPapel = css.filter(esDelPapel);
-    expect(delPapel.length).toBeGreaterThanOrEqual(3);
+    expect(delPapel.length).toBeGreaterThanOrEqual(4);
     const sueltos = delPapel.flatMap((f) =>
       [...readFileSync(f, "utf8").matchAll(/font-size:\s*([^;]+);/g)]
         .map((m) => (m[1] as string).trim())

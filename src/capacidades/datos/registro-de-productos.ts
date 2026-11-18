@@ -11,12 +11,22 @@ const REQUIERE_CATALOGO = { modulo: "catalogo", estadoDeEmpresa: ["ACTIVE"] } as
 const FUENTE_DE_LA_LISTA_DE_PRODUCTOS =
   "Pedernal-docs/11-especificaciones/fichas-de-modulo/a1-productos-y-precios.md §3 (consultas: `listarProductos` filtra por texto, clase, «falta completar» y activo) y la maqueta aprobada el 12/11/2026 (`productos.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)";
 
+const BUSCADOR_DE_LA_VENTA = "apps/web/ui/plantillas/venta/PantallaDeVentaRapida.cliente.tsx";
 const FICHA_DE_PRODUCTO = "apps/web/ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente.tsx";
 const ALTA_DE_PRODUCTO = "apps/web/ui/plantillas/catalogo/FormularioDeAltaDeProducto.cliente.tsx";
 const ALTA_PROPOSITO = (para: string): Proposito => ({
   para,
   fuente:
     "Pedernal-docs/11-especificaciones/fichas-de-modulo/a1-productos-y-precios.md §3 (`crearProducto`, permiso `productos.crear`), la maqueta aprobada el 12/11/2026 (`productos.html`, «Nuevo producto», carpeta de prototipos de Pedernal-docs 10-ux-ui) y 11-especificaciones/decisiones-del-dueno-2026-11.md (fila del 13/11/2026: «Se controla el stock» nace sin tildar y la clase no se cambia)",
+});
+const FORMULARIO_DE_GRUPO =
+  "apps/web/ui/plantillas/catalogo/FormularioDeGrupoDeOpciones.cliente.tsx";
+const PRUEBA_DE_OPCIONES_EXCLUYENTES = "apps/web/ui/componentes/OpcionesExcluyentes.test.tsx";
+const HOJA_DE_COPIA = "apps/web/ui/plantillas/catalogo/HojaDeCopiaDeOpciones.cliente.tsx";
+const OPCIONES_PROPOSITO = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs/11-especificaciones/pantallas-de-catalogo-restante-inventario.md §2.2 (`editarOpciones`, permiso `opciones.editar`) y la maqueta aprobada el 12/11/2026 (`productos.html`, solapa «Opciones», carpeta de prototipos de Pedernal-docs 10-ux-ui)",
 });
 const FICHA_PROPOSITO = (para: string): Proposito => ({
   para,
@@ -35,8 +45,13 @@ export const DATOS_DE_PRODUCTOS = {
         para: "Texto con el que se busca un producto por su nombre en la lista de productos (el buscador vacío muestra todo).",
         fuente: FUENTE_DE_LA_LISTA_DE_PRODUCTOS,
       },
+      {
+        para: "Texto con el que se busca un producto por su nombre, su código o su código de barras en la venta rápida del mostrador (se filtra la lista ya cargada; el buscador vacío muestra todo).",
+        fuente:
+          "Pedernal-docs/11-especificaciones/servidor-del-mostrador-minimo.md §7 (fila «Buscar por nombre o código») y la maqueta `venta-rapida-v4.html` (carpeta de prototipos de Pedernal-docs 10-ux-ui)",
+      },
     ],
-    consumidores: [LISTA_DE_PRODUCTOS],
+    consumidores: [LISTA_DE_PRODUCTOS, BUSCADOR_DE_LA_VENTA],
     ponerPor: ["productos.ver"],
     requiere: REQUIERE_CATALOGO,
   },
@@ -192,6 +207,96 @@ export const DATOS_DE_PRODUCTOS = {
     ],
     consumidores: ["apps/web/ui/plantillas/catalogo/FormularioDePrecioDeProducto.cliente.tsx"],
     ponerPor: ["productos.cambiar_precio"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "nombre-de-grupo-de-opciones": {
+    ficha: "src/primitivas/texto/nombre-de-eleccion.ts",
+    propositos: [
+      OPCIONES_PROPOSITO(
+        "Nombre de un grupo de opciones de un producto («Punto de la carne», «Agregados»): obligatorio, hasta 80 caracteres y único por producto.",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_GRUPO],
+    ponerPor: ["opciones.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "nombre-de-opcion-de-producto": {
+    ficha: "src/primitivas/texto/nombre-de-eleccion.ts",
+    propositos: [
+      OPCIONES_PROPOSITO(
+        "Nombre de una opción dentro de un grupo («Jugoso», «Queso extra»): obligatorio, hasta 80 caracteres y único dentro del grupo.",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_GRUPO],
+    ponerPor: ["opciones.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "recargo-de-opcion-de-producto": {
+    // El recargo se tipea en pesos con dos decimales (`CampoImporte`) y viaja como texto decimal; que sea válido (sin signo, hasta 6 decimales) y que solo lo lleve una opción adicional lo decide `editarOpciones`.
+    ficha: "src/primitivas/dinero/precio-de-venta.ts",
+    propositos: [
+      OPCIONES_PROPOSITO(
+        "Recargo de una opción, IVA incluido: lo que suma al precio cuando se elige. Una opción de un grupo incluido no lleva recargo.",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_GRUPO],
+    ponerPor: ["opciones.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "clase-de-grupo-de-opciones": {
+    // La clase (incluida o adicional) es una lista cerrada del módulo de catálogo; se elige al crear el grupo y no se cambia (`editarOpciones` rechaza otra clase). La prueba del componente
+    // `OpcionesExcluyentes` figura como consumidor porque lo ejerce con este dato real (un componente de campo nuevo no puede sumar `pendiente`: el presupuesto de deuda solo baja).
+    ficha: "src/modulos/catalogo/dominio/modelo.ts",
+    propositos: [
+      OPCIONES_PROPOSITO(
+        "Clase de un grupo nuevo: incluida (viene con el producto, sin recargo) o adicional (se suma y puede llevar recargo). Se elige al crear el grupo y no se cambia después.",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_GRUPO, PRUEBA_DE_OPCIONES_EXCLUYENTES],
+    ponerPor: ["opciones.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "obligatoriedad-de-grupo-de-opciones": {
+    ficha: "src/modulos/catalogo/dominio/modelo.ts",
+    propositos: [
+      OPCIONES_PROPOSITO(
+        "Si el grupo de opciones es obligatorio: quien vende tiene que elegir al menos una opción para poder agregar el producto.",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_GRUPO],
+    ponerPor: ["opciones.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "eleccion-multiple-de-grupo-de-opciones": {
+    ficha: "src/modulos/catalogo/dominio/modelo.ts",
+    propositos: [
+      OPCIONES_PROPOSITO("Si en el grupo de opciones se puede elegir más de una opción a la vez."),
+    ],
+    consumidores: [FORMULARIO_DE_GRUPO],
+    ponerPor: ["opciones.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "visibilidad-en-la-carta-de-grupo-de-opciones": {
+    ficha: "src/modulos/catalogo/dominio/modelo.ts",
+    propositos: [
+      OPCIONES_PROPOSITO(
+        "Si el grupo de opciones se muestra en la carta: un grupo que no figura en la carta solo lo ve quien vende y no puede llevar recargos.",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_GRUPO],
+    ponerPor: ["opciones.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "producto-de-origen-de-copia-de-opciones": {
+    // Una referencia a un producto activo de la empresa con opciones propias (no hay primitiva de texto: la fuente de la lista es `productosParaCopiar`).
+    ficha: "src/modulos/catalogo/consultas/consultas.ts",
+    propositos: [
+      OPCIONES_PROPOSITO(
+        "Producto del que se copian las opciones al producto de la pantalla («Copiar de otro producto»): uno activo de la empresa con opciones, distinto del destino.",
+      ),
+    ],
+    consumidores: [HOJA_DE_COPIA],
+    ponerPor: ["opciones.editar"],
     requiere: REQUIERE_CATALOGO,
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;

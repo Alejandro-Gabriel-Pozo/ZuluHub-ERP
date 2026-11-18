@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0741",
+  "fecha": "2026-11-18",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Ocho textos de errores de ARCA (sin puntos de venta, no habilitado, bloqueado, baja, solo CAEA, CUIT, certificado vencido, problema del sistema); el de no habilitado reemplaza al anterior.",
+  "que_cambia": "Pasar a producción y los accesos a ARCA dicen qué falta en vez de «ARCA no está disponible». El texto del certificado no reconocido está aprobado pero no se conecta hasta tener una grabación real. Revertir: quitar las claves y volver al texto anterior.",
+  "donde": "decisiones-del-dueno-2026-11.md, filas 305 («Apruebo: Aprobar o corregir los textos T1 a T8 del censo, y P2, P3, P4 y P5») y 306 («1. Ok .3 ok. 2- no puedo hoy que quede como deuda de producto»); catalogo-fiscal.ts; respuesta-fiscal.ts; errores-fiscales-de-arca.ts"
+}

@@ -8,10 +8,12 @@ import type { ClaveDeIcono } from "../iconos/catalogo";
 import { RUTAS_DE_CAJA } from "../plantillas/caja/lista-de-caja";
 import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
 import { RUTA_DE_SECCIONES } from "../plantillas/catalogo/modelo-de-secciones";
+import { RUTA_DE_IMPRESORAS } from "../plantillas/salon/modelo-de-impresoras";
 import { RUTA_DE_MESAS } from "../plantillas/salon/modelo-de-mesas";
 import { RUTAS_DE_CONFIGURACION } from "../plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
 import { RUTAS_DE_CUENTA } from "../plantillas/sesion/rutas-de-cuenta";
+import { RUTA_DE_LA_VENTA } from "../plantillas/venta/rutas-de-venta";
 import { RUTAS_DE_STOCK } from "../plantillas/stock/rutas-de-stock";
 
 /**
@@ -46,6 +48,7 @@ export type ClaveDeArea = (typeof AREAS_DEL_MENU)[number]["clave"];
  * muestra como una fila, sin encabezado repetido»).
  */
 export const GRUPOS_DEL_MENU = [
+  { clave: "mostrador", etiqueta: "navegacion.grupo.mostrador" },
   { clave: "comprobantes", etiqueta: null },
   { clave: "productos", etiqueta: null },
   { clave: "salon", etiqueta: "salon.texto.grupo_salon" },
@@ -69,10 +72,12 @@ export type FilaDePantalla = BaseDeFila &
   Readonly<{
     tipo: "pantalla";
     clave:
+      | "venta-rapida"
       | "comprobantes"
       | "productos"
       | "secciones"
       | "mesas"
+      | "impresoras"
       | "stock"
       | "configuracion-fiscal"
       | "medios-de-pago"
@@ -100,6 +105,17 @@ export type ClaveDeFila = FilaDelMenu["clave"];
  * maqueta dice «Medios de pago y cajas», que no tiene clave: va a preguntas pendientes.
  */
 export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
+  {
+    tipo: "pantalla",
+    clave: "venta-rapida",
+    area: "ventas",
+    grupo: "mostrador",
+    modulo: "ventas",
+    accion: "ventas.ver",
+    href: RUTA_DE_LA_VENTA,
+    etiqueta: "ventas.venta.menu",
+    departamento: null,
+  },
   {
     tipo: "pantalla",
     clave: "comprobantes",
@@ -145,6 +161,18 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     accion: "mesas.ver",
     href: RUTA_DE_MESAS,
     etiqueta: "salon.texto.admin_mesas",
+    departamento: null,
+  },
+  // «Impresoras» (S-2; `menu-por-areas.html`, grupo Salón del área Ventas): módulo `comandas` (disponible desde S-0r) y acción `impresoras.ver`.
+  {
+    tipo: "pantalla",
+    clave: "impresoras",
+    area: "ventas",
+    grupo: "salon",
+    modulo: "comandas",
+    accion: "impresoras.ver",
+    href: RUTA_DE_IMPRESORAS,
+    etiqueta: "comandas.texto.imprimir_impresoras",
     departamento: null,
   },
   {

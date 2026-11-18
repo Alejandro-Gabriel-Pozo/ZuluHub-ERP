@@ -1,6 +1,7 @@
 import { crearConsultasDeCarta } from "./consultas-de-carta";
 import { crearConsultasDeClasificacion } from "./consultas-de-clasificacion";
 import { crearConsultasDeFamilias } from "./consultas-de-familias";
+import { crearConsultasDeCopiaDeOpciones } from "./consultas-de-copia-de-opciones";
 import { crearConsultasDeClasificacionDeProducto } from "./consultas-de-clasificacion-de-producto";
 import { crearConsultasParaVender } from "./consultas-para-vender";
 import { exigirAccion } from "../../../capacidades/permisos/exigir";
@@ -366,6 +367,7 @@ export function crearConsultasDeCatalogo(d: DependenciasDeConsultasDeCatalogo) {
         })),
       ),
     ...crearConsultasDeCarta(d),
+    ...crearConsultasDeCopiaDeOpciones(d),
     ...crearConsultasDeClasificacion(d),
     ...crearConsultasDeClasificacionDeProducto(d),
     ...crearConsultasDeFamilias(d),
