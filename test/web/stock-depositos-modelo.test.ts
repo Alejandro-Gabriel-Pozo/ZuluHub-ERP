@@ -9,7 +9,10 @@ import {
   RUTAS_DE_DEPOSITOS,
 } from "../../apps/web/ui/plantillas/stock/depositos/modelo-de-depositos";
 import { pestanasDeStock } from "../../apps/web/ui/plantillas/stock/pestanas-de-stock";
-import { RUTAS_DE_STOCK } from "../../apps/web/ui/plantillas/stock/rutas-de-stock";
+import {
+  PESTANAS_CONSTRUIDAS,
+  RUTAS_DE_STOCK,
+} from "../../apps/web/ui/plantillas/stock/rutas-de-stock";
 
 const textoDe = (clave: Parameters<typeof texto>[1]) => texto({}, clave);
 const deposito = (extra: Record<string, unknown> = {}) => ({
@@ -75,14 +78,27 @@ describe("las opciones del uso", () => {
 });
 
 describe("las rutas y las pestañas de Stock", () => {
-  it("son las cuatro de la maqueta, en su orden, y solo la actual lleva la marca", () => {
-    const pestanas = pestanasDeStock("conteo");
-    expect(pestanas.map((p) => [p.texto, p.href, p.actual])).toEqual([
-      ["Existencias", "/stock/existencias", false],
-      ["Movimientos", "/stock/movimientos", false],
-      ["Conteo", "/stock/conteo", true],
-      ["Depósitos", "/stock/depositos", false],
+  it("solo se ofrecen las pestañas de pantallas construidas, y la actual lleva la marca", () => {
+    expect(pestanasDeStock("depositos").map((p) => [p.texto, p.href, p.actual])).toEqual([
+      ["Depósitos", "/stock/depositos", true],
     ]);
+    expect(PESTANAS_CONSTRUIDAS).toEqual(["depositos"]);
+  });
+
+  it("ninguna pestaña apunta a una ruta fuera de las construidas", () => {
+    const permitidas = PESTANAS_CONSTRUIDAS.map((clave) => RUTAS_DE_STOCK[clave]);
+    for (const actual of ["existencias", "movimientos", "conteo", "depositos"] as const) {
+      for (const pestana of pestanasDeStock(actual)) expect(permitidas).toContain(pestana.href);
+    }
+  });
+
+  it("las cuatro rutas de la maqueta siguen declaradas para las próximas pantallas", () => {
+    expect([
+      RUTAS_DE_STOCK.existencias,
+      RUTAS_DE_STOCK.movimientos,
+      RUTAS_DE_STOCK.conteo,
+      RUTAS_DE_STOCK.depositos,
+    ]).toEqual(["/stock/existencias", "/stock/movimientos", "/stock/conteo", "/stock/depositos"]);
   });
 
   it("el alta de un depósito cuelga de la lista, y el menú entra por una pantalla que existe", () => {

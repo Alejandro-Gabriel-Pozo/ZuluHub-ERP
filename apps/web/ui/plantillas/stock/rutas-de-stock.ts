@@ -12,5 +12,8 @@ export const RUTAS_DE_STOCK = {
   entrada: "/stock/depositos",
 } as const;
 
+// Previene una pestaña que lleva a un 404; cada pantalla de Stock suma su clave acá cuando entra. Chequeo: `PestanasDeStock.test.tsx`.
+export const PESTANAS_CONSTRUIDAS = ["depositos"] as const;
+
 /** Una pestaña de Stock: adónde lleva, su texto ya resuelto y si es la pantalla actual. */
 export type PestanaDeStock = Readonly<{ href: string; texto: string; actual: boolean }>;

@@ -1,9 +1,9 @@
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { RUTAS_DE_STOCK, type PestanaDeStock } from "./rutas-de-stock";
+import { PESTANAS_CONSTRUIDAS, RUTAS_DE_STOCK, type PestanaDeStock } from "./rutas-de-stock";
 
 type ClaveDePestana = Exclude<keyof typeof RUTAS_DE_STOCK, "entrada">;
 
-/** Las cuatro pestañas de Stock con sus textos (los títulos de cada pantalla, aprobados el 09/11/2026) y la actual marcada. El orden es el de la maqueta `stock.html`. */
+/** Las pestañas de Stock con sus textos (los títulos de cada pantalla, aprobados el 09/11/2026) y la actual marcada, solo las de pantallas construidas (`PESTANAS_CONSTRUIDAS`). El orden es el de la maqueta `stock.html`. */
 export function pestanasDeStock(actual: ClaveDePestana): readonly PestanaDeStock[] {
   return (
     [
@@ -12,9 +12,11 @@ export function pestanasDeStock(actual: ClaveDePestana): readonly PestanaDeStock
       { clave: "conteo", texto: texto({}, "stock.pantalla.conteo") },
       { clave: "depositos", texto: texto({}, "stock.pantalla.depositos") },
     ] as const
-  ).map((p) => ({
-    href: RUTAS_DE_STOCK[p.clave],
-    texto: p.texto,
-    actual: p.clave === actual,
-  }));
+  )
+    .filter((p) => (PESTANAS_CONSTRUIDAS as readonly string[]).includes(p.clave))
+    .map((p) => ({
+      href: RUTAS_DE_STOCK[p.clave],
+      texto: p.texto,
+      actual: p.clave === actual,
+    }));
 }
