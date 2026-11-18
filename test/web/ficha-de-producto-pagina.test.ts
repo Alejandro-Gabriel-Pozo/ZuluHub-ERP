@@ -301,6 +301,25 @@ describe("la página de la ficha de datos de un producto", () => {
     expect(t).toContain("Código de barras");
   });
 
+  it("un producto que se vende ofrece la solapa «Opciones» (un enlace a sus opciones); una clase que no se vende, no", async () => {
+    const marcado = await html();
+    expect(marcado).toMatch(
+      new RegExp(`<a [^>]*href="/catalogo/productos/${ID}/opciones"[^>]*>Opciones</a>`),
+    );
+    responde({
+      ok: true,
+      dato: {
+        ...FICHA,
+        claseDeUso: "INSUMO",
+        seVende: false,
+        nombreDeCocina: null,
+        alicuota: null,
+        seccion: null,
+      },
+    });
+    expect(await html()).not.toContain("/opciones");
+  });
+
   it("una alícuota guardada que el producto no ofrece se ve y su desplegable sale apagado", async () => {
     responde({ ok: true, dato: { ...FICHA, alicuota: "EXENTO" } });
     const marcado = await html();

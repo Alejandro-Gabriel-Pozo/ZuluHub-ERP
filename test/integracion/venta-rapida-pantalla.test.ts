@@ -288,6 +288,32 @@ describe.skipIf(base === null)(
       expect(await contarAuditoria()).toBe(antes);
     });
 
+    it("P9: lo que la hoja pide para «Agregar · $ …» (una línea sola, armada como la arma la hoja) lo cotiza el servidor, el importe es SUYO y repetirlo o pedirlo a la vez da lo mismo y no escribe nada", async () => {
+      const venta = await cargar();
+      const latte = porNombre(venta, "Latte");
+      const lineaDeLaHoja = agregarALaCuenta([], {
+        productoId: latte.id,
+        varianteId: ids.mediano,
+        opcionIds: [ids.almendras],
+        cantidad: 10000,
+      });
+      const contarAuditoria = () =>
+        m.contar("select count(*)::text as n from auditoria_empresa where empresa_id = $1", [
+          e.empresa,
+        ]);
+      const antes = await contarAuditoria();
+      const primera = ok(await cotizar(lineaDeLaHoja));
+      // 1 × (3800 + 700): el importe lo da el servidor, la hoja no suma recargos.
+      expect(primera.total.moneda).toBe("ARS");
+      expect(primera.total.monto).toMatch(/^4500(\.0+)?$/);
+      expect(primera.lineas).toHaveLength(1);
+      // La misma acción repetida (doble toque, reintento) y dos o más a la vez: el mismo resultado, sin escribir.
+      expect(ok(await cotizar(lineaDeLaHoja))).toEqual(primera);
+      const aLaVez = await Promise.all(Array.from({ length: 8 }, () => cotizar(lineaDeLaHoja)));
+      for (const r of aLaVez) expect(r).toEqual({ ok: true, dato: primera });
+      expect(await contarAuditoria()).toBe(antes);
+    });
+
     it("P6: lo de otra empresa no aparece en la lista ni se puede cotizar con la sucursal de ésta", async () => {
       const venta = await cargar();
       expect(venta.productos.map((p) => p.id)).not.toContain(otra.producto);

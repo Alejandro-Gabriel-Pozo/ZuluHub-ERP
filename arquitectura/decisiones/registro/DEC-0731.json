@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0731",
+  "fecha": "2026-11-18",
+  "quien": "padre",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La vista previa de «Copiar de otro producto» la calcula el servidor con la misma función que copia (loQueSeCopia); la hoja se abre por la dirección (?copiar=) para que el servidor la arme siempre.",
+  "que_cambia": "Lo que se ve antes de copiar es exactamente lo que se copia (una sola regla, sin copia en el navegador). Cambiar de producto en la hoja navega a otra dirección. Revertir: sacar la consulta y la hoja.",
+  "donde": "src/modulos/catalogo/dominio/copia-de-opciones.ts; src/modulos/catalogo/consultas/consultas.ts; la página opciones/page.tsx del producto en apps/web; brief PR-2 Catálogo"
+}

@@ -8,11 +8,13 @@ import type { ClaveDeIcono } from "../iconos/catalogo";
 import { RUTAS_DE_CAJA } from "../plantillas/caja/lista-de-caja";
 import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
 import { RUTA_DE_SECCIONES } from "../plantillas/catalogo/modelo-de-secciones";
+import { RUTA_DE_IMPRESORAS } from "../plantillas/salon/modelo-de-impresoras";
 import { RUTA_DE_MESAS } from "../plantillas/salon/modelo-de-mesas";
 import { RUTAS_DE_CONFIGURACION } from "../plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
 import { RUTAS_DE_CUENTA } from "../plantillas/sesion/rutas-de-cuenta";
 import { RUTA_DE_LA_VENTA } from "../plantillas/venta/rutas-de-venta";
+import { RUTAS_DE_STOCK } from "../plantillas/stock/rutas-de-stock";
 
 /**
  * EL MENÚ POR ÁREAS: una sola tabla declarativa (área → grupo → pantalla), una fila por pantalla. Es la ÚNICA fuente de qué hay en el
@@ -51,6 +53,7 @@ export const GRUPOS_DEL_MENU = [
   { clave: "productos", etiqueta: null },
   { clave: "salon", etiqueta: "salon.texto.grupo_salon" },
   { clave: "carta", etiqueta: "navegacion.grupo.carta" },
+  { clave: "stock", etiqueta: null },
   { clave: "empresa", etiqueta: "navegacion.empresa" },
   { clave: "sucursal", etiqueta: "sucursal.etiqueta" },
   { clave: "salir", etiqueta: null },
@@ -74,6 +77,8 @@ export type FilaDePantalla = BaseDeFila &
       | "productos"
       | "secciones"
       | "mesas"
+      | "impresoras"
+      | "stock"
       | "configuracion-fiscal"
       | "medios-de-pago"
       | "contacto";
@@ -156,6 +161,29 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     accion: "mesas.ver",
     href: RUTA_DE_MESAS,
     etiqueta: "salon.texto.admin_mesas",
+    departamento: null,
+  },
+  // «Impresoras» (S-2; `menu-por-areas.html`, grupo Salón del área Ventas): módulo `comandas` (disponible desde S-0r) y acción `impresoras.ver`.
+  {
+    tipo: "pantalla",
+    clave: "impresoras",
+    area: "ventas",
+    grupo: "salon",
+    modulo: "comandas",
+    accion: "impresoras.ver",
+    href: RUTA_DE_IMPRESORAS,
+    etiqueta: "comandas.texto.imprimir_impresoras",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
+    clave: "stock",
+    area: "catalogo",
+    grupo: "stock",
+    modulo: "stock",
+    accion: "stock.ver",
+    href: RUTAS_DE_STOCK.entrada,
+    etiqueta: "stock.pantalla.stock",
     departamento: null,
   },
   {

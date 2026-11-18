@@ -1,0 +1,15 @@
+.fila {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-height: var(--objetivo-minimo);
+  color: var(--color-texto);
+  cursor: pointer;
+}
+
+.casilla {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+  accent-color: var(--accion-primaria-fondo);
+}

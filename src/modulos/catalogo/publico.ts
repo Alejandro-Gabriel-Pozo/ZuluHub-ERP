@@ -5,6 +5,7 @@ export { DECLARACIONES as DECLARACIONES_DE_CATALOGO } from "./casos-de-uso/decla
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_CATALOGO } from "./consultas/declaraciones";
 export { crearCasosDeUsoDeCatalogo, type CasosDeUsoDeCatalogo } from "./casos-de-uso/casos-de-uso";
 export { crearConsultasDeCatalogo, type ConsultasDeCatalogo } from "./consultas/consultas";
+export type { GrupoDeVistaPrevia } from "./consultas/consultas-de-copia-de-opciones";
 export type {
   EstadoDeProducto,
   FichaDeProducto,

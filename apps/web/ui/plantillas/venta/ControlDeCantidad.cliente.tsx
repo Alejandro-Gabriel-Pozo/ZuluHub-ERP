@@ -21,8 +21,10 @@ export type PropsDeControlDeCantidad = Readonly<{
   textos: Readonly<{ cantidad: string; cantidadNoValida: string; borrar: string }>;
   /** El nombre de la unidad de venta (peso, volumen…), solo para la forma `MEDIDA`. */
   nombreDeLaUnidad: string | null;
-  /** Atajos de la hoja: los números del 1 al 6 en un producto por unidad. */
+  /** Atajos de la hoja: los números del 1 al 6 en un producto por unidad; en uno por fracciones, además de sus fracciones, el 1, 2 y 3 y «Borrar» (en la cuenta solo van las fracciones). */
   conAtajos: boolean;
+  /** El importe que dio el servidor para esta cantidad, ya con formato; solo se muestra en un producto por fracciones, a la derecha de la cantidad. Ausente: nada. */
+  importe?: string | undefined;
   /** Cada cambio: la cantidad si es una que el servidor aceptaría, o `null` (vacía o no válida). */
   alCambiar: (cantidad: number | null) => void;
 }>;
@@ -35,7 +37,7 @@ const REGLA_DE_MEDIDA = { decimales: 4, enterosMaximos: 4 } as const;
 /**
  * Cómo se carga la cantidad de un producto (decisiones 162 y 166; maqueta `venta-rapida-v4.html`), sin botones − ni +:
  *  - por unidad: se escribe el entero (o se toca un número del 1 al 6);
- *  - por fracciones: el entero va en el campo y cada toque en una fracción o en 1, 2, 3 SUMA a ese entero («4» y ½ da «4 ½»); «Borrar» deja la cantidad vacía;
+ *  - por fracciones: el entero va en el campo y cada toque en una fracción (o, en la hoja, en 1, 2, 3) SUMA a ese entero («4» y ½ da «4 ½»); «Borrar» (solo en la hoja) deja la cantidad vacía;
  *  - por peso, volumen…: un decimal con coma en la unidad del producto.
  * La cantidad es un campo con dato (`cantidad-de-venta`). El control solo arma la cantidad; si es válida (mayor que cero, hasta 9999, múltiplo del paso) la entrega, y si no, entrega `null`: el
  * servidor vuelve a validar todo. Sin textos propios: todos llegan resueltos.
@@ -46,6 +48,7 @@ export function ControlDeCantidad({
   textos,
   nombreDeLaUnidad,
   conAtajos,
+  importe,
   alCambiar,
 }: PropsDeControlDeCantidad) {
   const [escrito, setEscrito] = useState(inicial === null ? "" : deDiezmilesimos(inicial));
@@ -64,10 +67,12 @@ export function ControlDeCantidad({
     };
     const sumandos = [
       ...fraccionesOfrecidas(forma.porciones).map((f) => ({ valor: f.valor, rotulo: f.rotulo })),
-      ...ENTEROS_QUE_SUMAN.map((n) => ({
-        valor: n * DIEZMILESIMOS_POR_UNIDAD,
-        rotulo: String(n),
-      })),
+      ...(conAtajos
+        ? ENTEROS_QUE_SUMAN.map((n) => ({
+            valor: n * DIEZMILESIMOS_POR_UNIDAD,
+            rotulo: String(n),
+          }))
+        : []),
     ];
     return (
       <div className={estilos["cantidad"]}>
@@ -81,9 +86,14 @@ export function ControlDeCantidad({
           }}
           regla={REGLA_ENTERA}
         />
-        <p className={estilos["lectura"]} aria-live="polite">
-          {total === 0 ? "" : cantidadParaLeer(total, forma)}
-        </p>
+        <div className={estilos["resultadoDeFracciones"]}>
+          <p className={estilos["lectura"]} aria-live="polite">
+            {total === 0 ? "" : cantidadParaLeer(total, forma)}
+          </p>
+          {importe === undefined ? null : (
+            <p className={estilos["importeDeLaCantidad"]}>{importe}</p>
+          )}
+        </div>
         <div className={estilos["atajos"]} role="group" aria-label={textos.cantidad}>
           {sumandos.map((s) => (
             <button
@@ -98,16 +108,18 @@ export function ControlDeCantidad({
               {s.rotulo}
             </button>
           ))}
-          <button
-            type="button"
-            className={estilos["atajo"]}
-            disabled={total === 0}
-            onClick={() => {
-              poner(0);
-            }}
-          >
-            {textos.borrar}
-          </button>
+          {conAtajos ? (
+            <button
+              type="button"
+              className={estilos["atajo"]}
+              disabled={total === 0}
+              onClick={() => {
+                poner(0);
+              }}
+            >
+              {textos.borrar}
+            </button>
+          ) : null}
         </div>
       </div>
     );

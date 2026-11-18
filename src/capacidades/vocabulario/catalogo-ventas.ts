@@ -10,12 +10,16 @@ export const TEXTOS_DE_VENTAS = {
   // PANTALLA «VENTA RÁPIDA» (maqueta `venta-rapida-v4.html`). Fuente de cada texto, salvo donde se dice otra cosa: `textos-mostrador-pendientes.md` (Pedernal-docs, 11-especificaciones) y la
   // fila 171 de `decisiones-del-dueno-2026-11.md` («Acepto todos los textos», 15/11/2026); «aprobado 09/11» = la versión aprobada de la venta rápida (`venta-rapida.html`, §4 de ese documento).
   // «Venta»: título de la pantalla. Figura en la maqueta aprobada de la venta rápida (`venta-rapida.html:551`, carpeta de prototipos de Pedernal-docs 10-ux-ui) y se mantiene en `venta-rapida-v4.html`;
-  // no está en la lista de 302 textos (`textos-por-aprobar.html`): queda como pregunta de confirmación (DEC-0479).
+  // no está en la lista de 302 textos (`textos-por-aprobar.html`): confirmado por el dueño el 18/11/2026 (DEC-0479; `decisiones-del-dueno-2026-11.md` fila 307).
   "ventas.venta.titulo": { porDefecto: "Venta" },
   // «Venta rápida»: rótulo de la entrada del menú, dentro del grupo «Mostrador» (dueño, 13/11/2026, `decisiones-del-dueno-2026-11.md` línea 110: «no el título largo»).
   "ventas.venta.menu": { porDefecto: "Venta rápida" },
   // «Buscar por nombre o código»: rótulo del buscador. Aprobado 09/11 (`textos-mostrador-pendientes.md` §4, línea 69); busca por nombre, código y código de barras (respuesta del orquestador, 15/11/2026).
   "ventas.venta.buscar": { porDefecto: "Buscar por nombre o código" },
+  // «Todo»: primer botón de las secciones, elegido al entrar (maqueta aprobada `venta-rapida-v4.html:597` y `:740`, dueño 12/11/2026 DDD:52; regla «manda la maqueta», DDD:294, 18/11/2026).
+  "ventas.venta.todo": { porDefecto: "Todo" },
+  // «Incluido»: lo que dice una opción sin recargo en la hoja del producto (maqueta aprobada `venta-rapida-v4.html:757`; ya figura aprobado en `productos.html`, ver `catalogo-catalogo.ts`; DDD:294).
+  "ventas.venta.incluido": { porDefecto: "Incluido" },
   // Búsqueda sin coincidencias: los tres textos figuran en la maqueta aprobada de la venta rápida (`venta-rapida.html:548`); aceptados por el orquestador el 15/11/2026 (delegación del dueño, DDD filas 173 y 174).
   // El texto buscado se inserta como texto, nunca como código (R6 de e4 §3.9).
   "ventas.venta.sin_resultados": {

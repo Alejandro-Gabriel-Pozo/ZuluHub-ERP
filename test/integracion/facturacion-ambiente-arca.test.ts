@@ -205,14 +205,17 @@ describe.skipIf(base === null)(
       });
 
       it.each([
-        ["ARCA no tiene el número", { enArca: false }, "PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA"],
-        ["está bloqueado", { bloqueado: true }, "PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA"],
-        ["está dado de baja", { dadoDeBaja: true }, "PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA"],
+        ["ARCA no tiene ningún punto de venta", { enArca: false }, "SIN_PUNTOS_DE_VENTA_EN_ARCA"],
+        ["está bloqueado", { bloqueado: true }, "PUNTO_DE_VENTA_BLOQUEADO_EN_ARCA"],
+        ["está dado de baja", { dadoDeBaja: true }, "PUNTO_DE_VENTA_DADO_DE_BAJA_EN_ARCA"],
+        ["ARCA lo informa solo para CAEA", { emision: "CAEA" }, "PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA"],
       ] as const)(
         "%s: se rechaza y no se cambia ni se audita nada",
         async (_causa, como, error) => {
           const p = await preparar({ enArca: false });
-          if ("bloqueado" in como || "dadoDeBaja" in como) darDeAltaEnArca(p.produccion, p.e, como);
+          if ("bloqueado" in como || "dadoDeBaja" in como || "emision" in como) {
+            darDeAltaEnArca(p.produccion, p.e, como);
+          }
           expect(await p.pasar()).toEqual({ ok: false, error });
           await sinCambios(p.e, p.inicial);
         },

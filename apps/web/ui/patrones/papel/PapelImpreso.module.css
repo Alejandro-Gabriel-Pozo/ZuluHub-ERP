@@ -1,0 +1,57 @@
+/*
+ * El papel de una comanda o un ticket: largo continuo, sin hojas ni pie fijo. Es papel: letra en `pt` y de ancho fijo (columnas de impresora térmica); los colores salen de los tokens.
+ * El ancho lo fija `--papel-ancho`, la letra `data-ancho` (`hoja-del-papel.ts`); el largo lo mide `PapelImpreso` y la regla de página lo adopta (`EstiloDelPapel`).
+ */
+
+.papel {
+  box-sizing: border-box;
+  width: var(--papel-ancho);
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 3mm;
+  background: var(--color-superficie-elevada);
+  outline: var(--borde-grosor) solid var(--color-borde);
+  color: var(--color-texto);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 7pt;
+  line-height: 1.25;
+}
+
+/* En 58 mm la letra es un poco mayor: entran 32 columnas en vez de 48 (`columnasDelPapel` del dominio). */
+.papel[data-ancho="58"] {
+  font-size: 7.5pt;
+}
+
+.linea {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.negrita {
+  font-weight: 700;
+}
+
+.grande {
+  font-size: 14pt;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.papel[data-ancho="58"] .grande {
+  font-size: 15pt;
+}
+
+.separador {
+  margin: 1.5mm 0;
+  border: 0;
+  border-top: var(--borde-grosor) dashed var(--color-texto);
+}
+
+@media print {
+  .papel {
+    max-width: none;
+    margin: 0;
+    outline: 0;
+  }
+}
