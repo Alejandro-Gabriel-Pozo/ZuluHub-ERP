@@ -56,10 +56,18 @@ export type MundoDelRecorrido = Readonly<{
   cerrar(): Promise<void>;
 }>;
 
+/**
+ * `modulos`: los que el plan incluye y la empresa tiene prendidos (por defecto solo «facturacion», como siempre; el recorrido de Mesas pide también los de salón); `perillas`: las del plan (el salón es un
+ * extra de pago, apagado de base).
+ */
+export type OpcionesDelMundo = Readonly<{
+  modulos?: readonly string[];
+  perillas?: Readonly<Record<string, unknown>>;
+}>;
+
 export async function armarMundoDelRecorrido(
   base: BaseDePruebas,
-  /** Los módulos del plan y de la empresa: por defecto solo `facturacion`; un recorrido de otra pantalla suma el suyo (p. ej. `comandas`). */
-  modulos: readonly string[] = ["facturacion"],
+  { modulos = ["facturacion"], perillas = {} }: OpcionesDelMundo = {},
 ): Promise<MundoDelRecorrido> {
   const mundo = await armarMundoWeb(base);
   const propia = mundo.propia.base;
@@ -112,7 +120,10 @@ export async function armarMundoDelRecorrido(
     condicionIva: "RESPONSABLE_INSCRIPTO",
   };
   await cargarCertificado(propia, e, "HOMOLOGACION");
-  const { version } = await crearPlanPublicado(mundo.dueno, { modulos: [...modulos] });
+  const { version } = await crearPlanPublicado(mundo.dueno, {
+    modulos: [...modulos],
+    perillas: { ...perillas },
+  });
   await asignarPlan(mundo.dueno, m.tenant, version);
   for (const modulo of modulos) {
     await mundo.dueno.query("insert into modulo_de_empresa (empresa_id, modulo) values ($1, $2)", [

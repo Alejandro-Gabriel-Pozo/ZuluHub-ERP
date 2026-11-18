@@ -246,6 +246,18 @@ export function crearEmisionArca(
     }
   }
 
+  /**
+   * Deja rastro de una operación de WSFE que falló: operación, código y detalle del error ya saneado (los detalles de este adaptador se
+   * arman con códigos y textos fijos, nunca con el pedido ni el texto de ARCA). Nunca el pedido (lleva token y firma). No lanza.
+   */
+  function avisarFalla(operacion: string, error: ErrorDeEmision): void {
+    try {
+      registrar(`[arca] ${operacion} falló (${error.codigo}): ${error.detalle}`);
+    } catch {
+      // Un registro que falla no cambia lo que se devuelve.
+    }
+  }
+
   /** ARCA aceptó el ticket del certificado para la CUIT del emisor: se anota (la base lo garantiza una sola vez). No lanza. */
   async function aceptado(sesion: SesionDeWsfe): Promise<void> {
     try {
@@ -352,7 +364,9 @@ export function crearEmisionArca(
       if (!auth.ok) return auth;
       const pedido = pedidoFEParamGetPtosVenta(auth.valor.autenticacion);
       const respuesta = await llamarWsfe("FEParamGetPtosVenta", pedido);
-      return aPuntosDeVentaDeArca(clasificarParametros(respuesta, "FEParamGetPtosVenta"));
+      const lista = aPuntosDeVentaDeArca(clasificarParametros(respuesta, "FEParamGetPtosVenta"));
+      if (!lista.ok) avisarFalla("FEParamGetPtosVenta", lista.error);
+      return lista;
     },
 
     async estadoDelServicio(): Promise<Resultado<EstadoDelServicio, ErrorDeEmision>> {

@@ -60,7 +60,7 @@ describe.skipIf(base === null || !comandasAbierto)("recorrido de impresoras", ()
 
   beforeAll(async () => {
     if (base === null) return;
-    mundo = await armarMundoDelRecorrido(base, ["facturacion", "comandas"]);
+    mundo = await armarMundoDelRecorrido(base, { modulos: ["facturacion", "comandas"] });
     const ejecutable = process.env["PEDERNAL_NAVEGADOR"];
     navegador = await chromium.launch({
       ...(ejecutable === undefined || ejecutable === "" ? {} : { executablePath: ejecutable }),
