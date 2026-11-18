@@ -1,5 +1,6 @@
 import { createServer as crearServidorTcp, type Socket } from "node:net";
 import { createServer as crearServidorHttps } from "node:https";
+import { createServer as crearServidorTls } from "node:tls";
 import type { AddressInfo } from "node:net";
 import { afterEach, describe, expect, it } from "vitest";
 import { credencialDePrueba } from "../../../test/utilidades/arca-credencial";
@@ -276,5 +277,120 @@ describe("codigoDeError: nunca el texto de la excepción", () => {
 
   it("60 caracteres es el máximo", () => {
     expect(codigoDeError({ code: "A".repeat(60) })).toBe("A".repeat(60));
+  });
+});
+
+describe("codigoDeError: el motivo de OpenSSL de un EPROTO", () => {
+  const eproto = (extra: Record<string, unknown>) => ({ code: "EPROTO", ...extra });
+
+  it("con library y reason, el motivo queda normalizado", () => {
+    expect(
+      codigoDeError(
+        eproto({ library: "SSL routines", reason: "unsafe legacy renegotiation disabled" }),
+      ),
+    ).toBe("EPROTO_UNSAFE_LEGACY_RENEGOTIATION_DISABLED");
+    expect(codigoDeError(eproto({ reason: "dh key too small" }))).toBe("EPROTO_DH_KEY_TOO_SMALL");
+    expect(codigoDeError(eproto({ reason: "wrong.version_number" }))).toBe(
+      "EPROTO_WRONG_VERSION_NUMBER",
+    );
+  });
+
+  it("sin reason ni texto de OpenSSL queda EPROTO a secas", () => {
+    expect(codigoDeError(eproto({}))).toBe("EPROTO");
+    expect(codigoDeError(eproto({ library: "SSL routines" }))).toBe("EPROTO");
+    expect(codigoDeError(eproto({ reason: 42 }))).toBe("EPROTO");
+    expect(codigoDeError(eproto({ reason: "" }))).toBe("EPROTO");
+    expect(codigoDeError(eproto({ reason: "..." }))).toBe("EPROTO");
+  });
+
+  it("un reason con caracteres raros, demasiado largo o que intenta meter un token o una URL: EPROTO", () => {
+    expect(codigoDeError(eproto({ reason: "motivo\nnuevo línea" }))).toBe("EPROTO");
+    expect(codigoDeError(eproto({ reason: "<script>alert(1)</script>" }))).toBe("EPROTO");
+    expect(codigoDeError(eproto({ reason: "https://usuario:clave@host/ruta?token=abc" }))).toBe(
+      "EPROTO",
+    );
+    expect(codigoDeError(eproto({ reason: "token=abc;sign=def" }))).toBe("EPROTO");
+    expect(codigoDeError(eproto({ reason: "postgres://u:clave@host" }))).toBe("EPROTO");
+    expect(codigoDeError(eproto({ reason: "a".repeat(101) }))).toBe("EPROTO");
+  });
+
+  it("el código completo nunca pasa de 60 caracteres y cumple la forma de código", () => {
+    const codigo = codigoDeError(eproto({ reason: "palabra ".repeat(12).trim() }));
+    expect(codigo.length).toBeLessThanOrEqual(60);
+    expect(codigo).toMatch(/^[A-Z0-9_]{2,60}$/);
+    expect(codigo.startsWith("EPROTO_PALABRA_PALABRA")).toBe(true);
+    expect(codigo.endsWith("_")).toBe(false);
+  });
+
+  it("el reason solo se usa en un EPROTO: otro código se conserva tal cual", () => {
+    expect(codigoDeError({ code: "ECONNRESET", reason: "dh key too small" })).toBe("ECONNRESET");
+  });
+
+  it("sin la propiedad reason, el motivo se saca del texto de OpenSSL y el texto no sale", () => {
+    const mensaje =
+      "write EPROTO 80F7F0A7C47F0000:error:0A000152:SSL routines::unsafe legacy renegotiation disabled:../deps/openssl/openssl/ssl/statem/extensions.c:922:\n";
+    const codigo = codigoDeError(eproto({ message: mensaje }));
+    expect(codigo).toBe("EPROTO_UNSAFE_LEGACY_RENEGOTIATION_DISABLED");
+    expect(codigo).not.toContain("80F7F0A7C47F0000");
+    expect(codigo).not.toContain("DEPS");
+    expect(
+      codigoDeError(
+        eproto({
+          message:
+            "write EPROTO x:error:0A00042E:SSL routines:ssl3_read_bytes:tlsv1 alert protocol version:../d/x.c:1:",
+        }),
+      ),
+    ).toBe("EPROTO_TLSV1_ALERT_PROTOCOL_VERSION");
+  });
+
+  it("un texto que no tiene la forma de OpenSSL, o con un motivo fuera de la lista: EPROTO", () => {
+    expect(codigoDeError(eproto({ message: "write EPROTO postgres://u:clave@host" }))).toBe(
+      "EPROTO",
+    );
+    expect(
+      codigoDeError(
+        eproto({ message: "error:0A000152:SSL routines::https://a.b/c?token=zzz:../deps/x.c:1:" }),
+      ),
+    ).toBe("EPROTO");
+  });
+});
+
+describe("un handshake TLS real rechazado: el motivo sale normalizado y el texto no", () => {
+  it("un servidor que solo habla TLS 1.1 contra el cliente por defecto: NO_SALIO con el motivo de OpenSSL", async () => {
+    const { credencial } = await credencialDePrueba();
+    const servidor = crearServidorTls(
+      {
+        key: credencial.clavePrivada.revelar(),
+        cert: credencial.certificadoPem,
+        minVersion: "TLSv1",
+        maxVersion: "TLSv1.1",
+        ciphers: "DEFAULT:@SECLEVEL=0",
+      },
+      (conexion) => conexion.end(),
+    );
+    servidor.on("tlsClientError", () => undefined);
+    await new Promise<void>((r) => servidor.listen(0, "127.0.0.1", r));
+    abiertos.push(() => new Promise<void>((r) => servidor.close(() => r())));
+    const { port } = servidor.address() as AddressInfo;
+
+    const respuesta = await crearTransporteHttp()(pedidoA(`https://127.0.0.1:${port}/`));
+
+    expect(respuesta.tipo).toBe("NO_SALIO");
+    if (respuesta.tipo !== "NO_SALIO") return;
+    expect(respuesta.motivo).toBe("EPROTO_TLSV1_ALERT_PROTOCOL_VERSION");
+    expect(respuesta.motivo).toMatch(/^[A-Z0-9_]{2,60}$/);
+    // Ni el texto de la excepción ni su ruta interna ni su identificador de error.
+    expect(respuesta.motivo).not.toMatch(/WRITE|DEPS|OPENSSL|0A0/);
+  });
+});
+
+describe("codigoDeError: el texto de OpenSSL solo cuenta con su forma completa", () => {
+  it("un motivo sin el archivo y la línea que siguen en un texto real de OpenSSL: EPROTO", () => {
+    expect(
+      codigoDeError({ code: "EPROTO", message: "error:0A000152:SSL routines::https:otra cosa" }),
+    ).toBe("EPROTO");
+    expect(
+      codigoDeError({ code: "EPROTO", message: "error:0A000152:SSL routines::dh key too small:" }),
+    ).toBe("EPROTO");
   });
 });
