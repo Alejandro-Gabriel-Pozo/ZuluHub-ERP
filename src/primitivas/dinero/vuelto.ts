@@ -5,23 +5,26 @@ import {
   restar,
   sumar,
   type Importe,
-} from "../../../primitivas/dinero/importe";
-import { ARS } from "../../../primitivas/dinero/moneda";
-import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import type { TipoDeMedio } from "../../caja/publico";
-import { MAXIMO_DE_COBROS_POR_TICKET } from "./cobranza";
+} from "./importe";
+import { err, ok, type Resultado } from "../resultado/resultado";
 import { FORMA_DEL_IMPORTE } from "./forma-del-importe";
+import { MAXIMO_DE_COBROS_POR_TICKET } from "./limites-de-cobro";
+import { ARS } from "./moneda";
 
 /**
- * EL VUELTO (mostrador, K2), puro: es PRESENTACIÓN. Lo que el cliente entrega en efectivo y lo que queda en caja difieren en el vuelto; al servidor
+ * EL VUELTO (mostrador, K2), puro: es PRESENTACIÓN. Vive en `primitivas` porque la pantalla de cobro lo calcula en el navegador y la UI no puede importar `src/modulos`. Lo que el cliente entrega en efectivo y lo que queda en caja difieren en el vuelto; al servidor
  * se le manda siempre lo que queda (`netoEnEfectivo`), porque un sobrante sigue siendo `COBRO_NO_CUADRA { sobra }` (decisión 173): el vuelto nunca
  * se registra como un cobro de más. Dueño único de esta cuenta: la pantalla y quien arme el cobro la importan, nadie la repite.
  * Regla: solo hay vuelto si hay sobrante Y el efectivo entregado lo cubre entero; con tarjeta, transferencia, QR u otro nunca se paga de más
  * (ese sobrante queda en `sobra` y el servidor lo rechaza). Sin `number` para dinero: texto decimal con moneda, enteros exactos por dentro.
  * Códigos: `PAGOS_INVALIDOS` (ninguno o más de 50), `MONEDA_NO_SOPORTADA`, `IMPORTE_INVALIDO` (forma o cero en un pago; total mal escrito).
  */
+/** El único tipo de medio que da vuelto. Es el valor `EFECTIVO` de `TIPOS_DE_MEDIO` (caja): `vuelto.test.ts` lo comprueba para que no se desfasen. */
+export const TIPO_DE_MEDIO_CON_VUELTO = "EFECTIVO";
+
 export type PagoParaVuelto = Readonly<{
-  tipo: TipoDeMedio;
+  /** El tipo del medio (`TIPOS_DE_MEDIO` de caja). Solo `"EFECTIVO"` puede dar vuelto: el resto se paga justo. */
+  tipo: string;
   /** Importe de la frontera: `{ moneda: "ARS", monto: "1234.56" }`; lo que el cliente entrega con ese medio. */
   importe: Readonly<{ moneda: string; monto: string }>;
 }>;
@@ -65,7 +68,7 @@ export function calcularVuelto(entrada: EntradaDeVuelto): Resultado<Vuelto, Erro
     if (!importe.ok) return importe;
     if (importe.valor.unidades <= 0n) return err("IMPORTE_INVALIDO");
     entregado = sumar(entregado, importe.valor);
-    if (pago.tipo === "EFECTIVO") efectivo = sumar(efectivo, importe.valor);
+    if (pago.tipo === TIPO_DE_MEDIO_CON_VUELTO) efectivo = sumar(efectivo, importe.valor);
   }
   const cero = importeCero(ARS);
   // Stryker disable next-line EqualityOperator: con lo entregado igual al total, `<` y `<=` dan el mismo resultado (falta 0, sin sobra ni vuelto, neto = efectivo); el borde lo fija la prueba «exactamente igual al total».
