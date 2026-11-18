@@ -211,6 +211,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
       ],
       ["mesas", "ventas", "salon", "salon", "mesas.ver", "/salon/mesas", "salon.texto.admin_mesas"],
       [
+        "impresoras",
+        "ventas",
+        "salon",
+        "comandas",
+        "impresoras.ver",
+        "/salon/impresoras",
+        "comandas.texto.imprimir_impresoras",
+      ],
+      [
         "configuracion-fiscal",
         "cuenta",
         "empresa",

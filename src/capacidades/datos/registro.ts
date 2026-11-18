@@ -1,6 +1,7 @@
 import { DATOS_DE_ADMINISTRACION } from "./registro-de-administracion";
 import { DATOS_DE_CAJA } from "./registro-de-caja";
 import { DATOS_DE_CARTA } from "./registro-de-carta";
+import { DATOS_DE_COMANDAS } from "./registro-de-comandas";
 import { DATOS_DE_FACTURACION } from "./registro-de-facturacion";
 import { DATOS_DE_PRODUCTOS } from "./registro-de-productos";
 import { DATOS_DE_SALON } from "./registro-de-salon";
@@ -38,6 +39,7 @@ export const FRAGMENTOS_DEL_REGISTRO = {
   administracion: DATOS_DE_ADMINISTRACION,
   caja: DATOS_DE_CAJA,
   carta: DATOS_DE_CARTA,
+  comandas: DATOS_DE_COMANDAS,
   facturacion: DATOS_DE_FACTURACION,
   productos: DATOS_DE_PRODUCTOS,
   salon: DATOS_DE_SALON,
@@ -48,6 +50,7 @@ export const REGISTRO_DE_DATOS = {
   ...DATOS_DE_ADMINISTRACION,
   ...DATOS_DE_CAJA,
   ...DATOS_DE_CARTA,
+  ...DATOS_DE_COMANDAS,
   ...DATOS_DE_FACTURACION,
   ...DATOS_DE_PRODUCTOS,
   ...DATOS_DE_SALON,
