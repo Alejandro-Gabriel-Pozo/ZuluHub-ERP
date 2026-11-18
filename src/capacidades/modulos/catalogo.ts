@@ -7,7 +7,6 @@ import { ACCIONES_DE_LOTES, MODULO_DE_PRODUCCION } from "./catalogo-lotes-y-prod
 import { MODULO_DE_COMPRAS } from "./catalogo-compras";
 import { MODULOS_DE_SALON_Y_COMANDAS } from "./catalogo-salon-y-comandas";
 export type EstadoDeConstruccion = "disponible" | "en_desarrollo";
-
 /**
  * Qué hace una acción con lo que la empresa ya tiene (reglas transversales §7.9). Decide qué pasa
  * cuando un módulo queda en SOLO LECTURA (una baja de plan lo dejó fuera del techo):
@@ -197,6 +196,7 @@ export const CATALOGO_DE_MODULOS = {
     acciones: {
       "vidrieras.ver": { capacidad: null, efecto: "LECTURA" },
       "vidrieras.marcar_disponibilidad": { capacidad: null, efecto: "CREA_AMPLIA" },
+      "vidrieras.ocultar_en_empresa": { capacidad: null, efecto: "CREA_AMPLIA" },
       "vidrieras.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
       "vidrieras.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
       "vidrieras.publicar": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -204,6 +204,7 @@ export const CATALOGO_DE_MODULOS = {
       "vidrieras.publicar_en_linea": { capacidad: null, efecto: "CREA_AMPLIA" },
       "vidrieras.renovar_enlace": { capacidad: null, efecto: "CREA_AMPLIA" },
       "vidrieras.retirar_de_linea": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+      "vidrieras.administrar_portal": { capacidad: null, efecto: "CREA_AMPLIA" },
     },
   },
   stock: {
@@ -358,7 +359,6 @@ export const CATALOGO_DE_MODULOS = {
 type Catalogo = typeof CATALOGO_DE_MODULOS;
 
 export type ClaveModulo = keyof Catalogo;
-
 export type ClaveAccion = { [M in ClaveModulo]: keyof Catalogo[M]["acciones"] }[ClaveModulo];
 
 type CapacidadDe<D> = D extends { capacidad: infer C } ? C : never;

@@ -503,7 +503,7 @@ describe.skipIf(base === null)("comandas: envíos, anulaciones y salida", () => 
     expect(["SIN_PERMISO", "MODULO_NO_ACTIVO"]).toContain(
       codigo(await enviar(cuenta, {}, { ...e.gerente, personaId: null })),
     );
-    // Guard primero: con el catálogo real `comandas` está en desarrollo.
+    // Guard primero: con `comandas` en desarrollo (las reglas de `casosReales`) no pasa nada.
     const r = await m.casosReales.enviarACocina(e.gerente, {
       envioId: nuevoId(),
       cuentaId: cuenta,

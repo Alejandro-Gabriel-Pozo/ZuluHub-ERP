@@ -52,12 +52,40 @@ export function politicaDeContenido(nonce: string): string {
 }
 
 /**
- * ¿Se deja indexar? Solo la landing y solo en producción. La app y la neutra nunca; la carta tampoco por
- * ahora (en un host compartido no se indexa; en uno dedicado sí, pero esa diferencia llega con la carta:
- * hasta entonces se falla cerrado). Fuera de producción nada, sea cual sea la superficie.
+ * De quién es el host que responde: de una marca (host COMPARTIDO por todas sus empresas) o de una empresa (host dedicado,
+ * el dominio propio). Es el mismo valor que `DuenioDeLaPuerta["tipo"]`; se repite acá solo para no importar `puerta.ts` (que importa este archivo).
  */
-export const esIndexable = (superficie: SuperficieDeRespuesta, produccion: boolean): boolean =>
-  produccion && superficie === "LANDING";
+export type TipoDeDuenioDeHost = "MARCA" | "EMPRESA";
+
+/**
+ * Si la carta se deja indexar según de quién es el host. ÚNICO lugar de esta regla (la cabecera `X-Robots-Tag` y la etiqueta `<meta robots>` salen de `esIndexable`).
+ * Dueño, 16/11/2026: las cartas del host compartido siguen «no indexar» hasta que exista dominio propio. Hoy AMBAS entradas están cerradas (nace cerrado: la de
+ * `EMPRESA` se abre cuando el dueño lo decida y haya dominio propio ACTIVO, cambiando esa única línea y su prueba; no hay perilla ni texto que lo active).
+ * Previene: indexar por error las cartas del host compartido (códigos largos, duplicados al sumar el dominio propio, cartas que el cliente quiso discretas).
+ */
+export const CARTA_INDEXABLE_SEGUN_DUENIO: Readonly<Record<TipoDeDuenioDeHost, boolean>> =
+  Object.freeze({
+    MARCA: false,
+    EMPRESA: false,
+  });
+
+/** La tabla de quién deja indexar su carta, como dato: `esIndexable` y `cabecerasDe` la reciben para poder probar la regla con la tabla abierta mientras la de producción sigue cerrada. */
+type TablaDeCartaIndexable = Readonly<Record<TipoDeDuenioDeHost, boolean>>;
+
+/**
+ * ¿Se deja indexar? La landing en producción; la carta solo en producción y según el dueño del host (tabla de arriba: hoy nunca). La app y la neutra nunca.
+ * Fuera de producción nada, sea cual sea la superficie. Sin dueño conocido (`null`) o con uno que la tabla no conoce, se cierra.
+ */
+export const esIndexable = (
+  superficie: SuperficieDeRespuesta,
+  produccion: boolean,
+  duenio: TipoDeDuenioDeHost | null,
+  tabla: TablaDeCartaIndexable = CARTA_INDEXABLE_SEGUN_DUENIO,
+): boolean => {
+  if (!produccion) return false;
+  if (superficie === "LANDING") return true;
+  return superficie === "CARTA" && duenio !== null && tabla[duenio] === true;
+};
 
 /**
  * HSTS: solo el host que responde, SIN `includeSubDomains`. Los hosts son dominios de CLIENTES (APP, CARTA,
@@ -72,7 +100,12 @@ const HSTS = "max-age=31536000";
 export function cabecerasDe(
   superficie: SuperficieDeRespuesta,
   nonce: string,
-  opciones: Readonly<{ produccion: boolean }>,
+  /** `duenio` solo importa para la carta; si falta, se cierra (nunca indexable). */
+  opciones: Readonly<{
+    produccion: boolean;
+    duenio?: TipoDeDuenioDeHost | null;
+    tabla?: TablaDeCartaIndexable;
+  }>,
 ): Readonly<Record<string, string>> {
   return Object.freeze({
     "Content-Security-Policy": politicaDeContenido(nonce),
@@ -81,6 +114,8 @@ export function cabecerasDe(
     "Referrer-Policy": "same-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
     "Cache-Control": "private, no-store",
-    ...(esIndexable(superficie, opciones.produccion) ? {} : { "X-Robots-Tag": "noindex" }),
+    ...(esIndexable(superficie, opciones.produccion, opciones.duenio ?? null, opciones.tabla)
+      ? {}
+      : { "X-Robots-Tag": "noindex" }),
   });
 }

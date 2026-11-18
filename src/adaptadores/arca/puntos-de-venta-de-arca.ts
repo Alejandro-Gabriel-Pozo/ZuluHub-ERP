@@ -8,6 +8,8 @@ type PuntoDeVentaDeArca = Extract<ListaDePuntosDeVenta, Readonly<{ ok: true }>>[
 
 const NRO = /^[0-9]{1,5}$/;
 const FECHA_DE_BAJA = /^[0-9]{8}$/;
+/** El texto fijo que ARCA manda en `FchBaja` cuando el punto de venta no está dado de baja (ver el comentario de `aPuntosDeVentaDeArca`). */
+const SIN_BAJA_DE_ARCA = "NULL";
 
 function aPuntoDeVenta(fila: FilaDeParametro): PuntoDeVentaDeArca | null {
   const numero = fila["Nro"] ?? "";
@@ -15,8 +17,9 @@ function aPuntoDeVenta(fila: FilaDeParametro): PuntoDeVentaDeArca | null {
   const baja = fila["FchBaja"] ?? "";
   if (!NRO.test(numero)) return null;
   if (bloqueado !== "S" && bloqueado !== "N") return null;
-  if (baja !== "" && !FECHA_DE_BAJA.test(baja)) return null;
-  return { numero: Number(numero), bloqueado: bloqueado === "S", dadoDeBaja: baja !== "" };
+  const sinBaja = baja === "" || baja === SIN_BAJA_DE_ARCA;
+  if (!sinBaja && !FECHA_DE_BAJA.test(baja)) return null;
+  return { numero: Number(numero), bloqueado: bloqueado === "S", dadoDeBaja: !sinBaja };
 }
 
 /**
@@ -24,11 +27,13 @@ function aPuntoDeVenta(fila: FilaDeParametro): PuntoDeVentaDeArca | null {
  * venta que entiende el puerto. Valor puro. Solo se usa lo que el manual WSFE v4.8 (l. 3107-3114) dice de cada campo:
  *  - `Nro`: entero de hasta 5 dígitos;
  *  - `Bloqueado`: `S` o `N`, nada más;
- *  - `FchBaja`: opcional, de 8 caracteres (una fecha `yyyymmdd`); vacío o ausente es que no está dado de baja.
+ *  - `FchBaja`: opcional, de 8 caracteres (una fecha `yyyymmdd`); vacío, ausente o el texto exacto `NULL` es que no está dado de baja.
+ *    El `NULL` es lo que ARCA manda cuando no hay baja según conocimiento público (no está en el manual); se acepta SOLO ese texto, en
+ *    mayúsculas y sin espacios (`null`, ` NULL`, `Nulo`, 7 dígitos... se rechazan).
  * Lo que no tiene esa forma no se interpreta ni se completa con lo que se supone que ARCA querría decir: toda la respuesta es
  * `SERVICIO_NO_DISPONIBLE` (no se sabe, no se pasa). `EmisionTipo` no se lee: se ignora a propósito (D-77 no lo pide).
- * SIN VERIFICAR contra ARCA real: no hay una grabación de esta operación. Si ARCA manda algo distinto en `FchBaja` cuando no hay baja
- * (un texto fijo, por ejemplo), toda consulta se rechaza hasta ajustar este lector con la grabación.
+ * SIN VERIFICAR contra ARCA real: no hay una grabación de esta operación; el `NULL` de `FchBaja` es conocimiento público, no una
+ * grabación nuestra. Si ARCA manda algo distinto en `FchBaja` cuando no hay baja, toda consulta se rechaza hasta ajustar este lector.
  */
 export function aPuntosDeVentaDeArca(
   filas: Resultado<readonly FilaDeParametro[], ErrorDeEmision>,

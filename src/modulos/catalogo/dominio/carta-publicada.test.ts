@@ -74,7 +74,12 @@ function ensayo(cambios: Partial<CartaLeida> = {}): CartaLeida {
       mensajeDePortada: null,
       estado: "EN_LINEA",
       sucursalId: S1,
+      modelo: "LISTA",
+      cara: null,
+      colorPropio: null,
+      logo: null,
     },
+    colorDeLaEmpresa: null,
     sucursalActiva: true,
     empresaId: empresaId("00000000-0000-4000-8000-0000000000e1"),
     tenantId: tenantId("00000000-0000-4000-8000-0000000000f1"),
@@ -152,6 +157,43 @@ describe("L-1: lo que sale y en qué orden", () => {
     for (const p of sinNada?.secciones.flatMap((s) => s.productos) ?? []) {
       expect([p.agotado, p.foto]).toEqual([false, null]);
     }
+  });
+
+  it("la identidad de la carta lleva sus cinco datos tal cual, cada uno en su lugar (lo ELEGIDO, sin ajustar), y sin elegir sale con los vacíos", () => {
+    const logo = {
+      proveedor: "CLOUDINARY",
+      cuenta: "mi-cafe",
+      idPublico: "carta/logo",
+      version: "1712345678",
+      extension: "png",
+    } as const;
+    const v = armarVidrieraPublicada(
+      ensayo({
+        carta: {
+          ...ensayo().carta,
+          modelo: "LIBRO",
+          cara: "NOCHE",
+          colorPropio: "#112233",
+          logo,
+        },
+        colorDeLaEmpresa: "#445566",
+      }),
+      deLaMarca(MARCA),
+    );
+    expect(v?.identidad).toEqual({
+      modelo: "LIBRO",
+      cara: "NOCHE",
+      colorPropio: "#112233",
+      colorDeLaEmpresa: "#445566",
+      logo,
+    });
+    expect(armarVidrieraPublicada(ensayo(), deLaMarca(MARCA))?.identidad).toEqual({
+      modelo: "LISTA",
+      cara: null,
+      colorPropio: null,
+      colorDeLaEmpresa: null,
+      logo: null,
+    });
   });
 
   it("el orden de la entrada se respeta: dos productos de una sección salen como llegaron (la base los ordena por nombre y id)", () => {

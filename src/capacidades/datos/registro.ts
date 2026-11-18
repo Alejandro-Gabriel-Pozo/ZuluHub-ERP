@@ -1,8 +1,10 @@
 import { DATOS_DE_ADMINISTRACION } from "./registro-de-administracion";
 import { DATOS_DE_CAJA } from "./registro-de-caja";
+import { DATOS_DE_CARTA } from "./registro-de-carta";
 import { DATOS_DE_FACTURACION } from "./registro-de-facturacion";
 import { DATOS_DE_PRODUCTOS } from "./registro-de-productos";
 import { DATOS_DE_SALON } from "./registro-de-salon";
+import { DATOS_DE_VENTAS } from "./registro-de-ventas";
 import type { DefinicionDeDato } from "./tipos-de-datos";
 
 export type { DefinicionDeDato } from "./tipos-de-datos";
@@ -35,17 +37,21 @@ export const DATO_PENDIENTE = "pendiente" as const;
 export const FRAGMENTOS_DEL_REGISTRO = {
   administracion: DATOS_DE_ADMINISTRACION,
   caja: DATOS_DE_CAJA,
+  carta: DATOS_DE_CARTA,
   facturacion: DATOS_DE_FACTURACION,
   productos: DATOS_DE_PRODUCTOS,
   salon: DATOS_DE_SALON,
+  ventas: DATOS_DE_VENTAS,
 } as const;
 
 export const REGISTRO_DE_DATOS = {
   ...DATOS_DE_ADMINISTRACION,
   ...DATOS_DE_CAJA,
+  ...DATOS_DE_CARTA,
   ...DATOS_DE_FACTURACION,
   ...DATOS_DE_PRODUCTOS,
   ...DATOS_DE_SALON,
+  ...DATOS_DE_VENTAS,
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
 
 export type IdDeDato = keyof typeof REGISTRO_DE_DATOS;
@@ -58,10 +64,12 @@ export type DatoDeCampo = IdDeDato | typeof DATO_PENDIENTE;
  * tiene que declarar la prop `dato: DatoDeCampo` (lo comprueba el chequeo). Un componente de campo nuevo se suma acá.
  */
 export const COMPONENTES_DE_CAMPO = [
+  "apps/web/ui/componentes/AreaDeTexto.tsx",
   "apps/web/ui/componentes/Campo.tsx",
   "apps/web/ui/componentes/CampoDeCodigo.tsx",
   "apps/web/ui/componentes/CampoDeDocumento.tsx",
   "apps/web/ui/componentes/CampoImporte.tsx",
   "apps/web/ui/componentes/CampoNumero.tsx",
+  "apps/web/ui/componentes/GrupoDeOpciones.tsx",
   "apps/web/ui/componentes/Selector.tsx",
 ] as const;

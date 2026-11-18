@@ -10,7 +10,7 @@ import { exigirPuerta, nonceDelPedido, robotsDe } from "../../../servidor/pedido
 // si ya no es una landing, esto es la neutra.
 export async function generateMetadata(): Promise<Metadata> {
   const puerta = await exigirPuerta("LANDING");
-  return { title: puerta.marca.nombre, robots: robotsDe("LANDING") };
+  return { title: puerta.marca.nombre, robots: robotsDe(puerta) };
 }
 
 export default async function LayoutDeLanding({ children }: { children: ReactNode }) {
