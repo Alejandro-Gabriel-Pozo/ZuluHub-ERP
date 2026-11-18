@@ -5,10 +5,17 @@ import { page, userEvent } from "vitest/browser";
 import { matrizDeEstados, verificarFoco, violacionesDeAccesibilidad } from "../pruebas/ayudas";
 import { AreaDeTexto } from "./AreaDeTexto";
 
+// Dato de prueba provisorio: el textarea real usa el dato «nota» que registra Compras PR-2b; al llegar, este test pasa a ese dato y se quita este consumidor.
 function Controlado(props: { error?: string; deshabilitado?: boolean; nombre?: string }) {
   const [valor, setValor] = useState("");
   return (
-    <AreaDeTexto etiqueta="Nota" valor={valor} alCambiar={setValor} {...props} dato="pendiente" />
+    <AreaDeTexto
+      etiqueta="Nota"
+      valor={valor}
+      alCambiar={setValor}
+      {...props}
+      dato="domicilio-libre"
+    />
   );
 }
 
