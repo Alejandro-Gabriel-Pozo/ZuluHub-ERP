@@ -1,5 +1,6 @@
 "use server";
 
+import { cambiarModuloDeConsola } from "../../../../servidor/acciones-modulos";
 import { cambiarPlanDeConsola } from "../../../../servidor/acciones-plan";
 
 // La acción del servidor de la pantalla Plan de una empresa, expuesta a Next. Fina a propósito: la directiva
@@ -8,4 +9,9 @@ import { cambiarPlanDeConsola } from "../../../../servidor/acciones-plan";
 
 export async function cambiarPlanAccion(entrada: unknown) {
   return cambiarPlanDeConsola(entrada);
+}
+
+/** Activar o desactivar un módulo de la empresa; fina como la anterior. */
+export async function cambiarModuloAccion(entrada: unknown) {
+  return cambiarModuloDeConsola(entrada);
 }
