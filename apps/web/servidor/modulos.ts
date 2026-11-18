@@ -232,6 +232,35 @@ export async function puedeAdministrarMesas(contexto: ContextoOperativo): Promis
   return permisos !== null && ofertaDe("mesas.editar", permisos).permitida;
 }
 
+/**
+ * Los botones del salón y de las comandas (S-0r), uno por grupo de acciones: ¿la persona puede cambiar de mesa, unir, dividir, enviar a cocina, imprimir, reimprimir o administrar las impresoras? Cada una es la
+ * oferta de SU acción (`salon.cambiar_mesa`, `salon.unir`, `salon.dividir`, `comandas.enviar`, `impresiones.imprimir`, `impresiones.reimprimir`, `impresoras.editar`: Gerente y Administrador administran las
+ * impresoras; el resto, los tres roles) que el servidor calcula con `ofertaDe`: con el módulo en desarrollo, en solo lectura o sin el rol, no. Si no se pudieron leer los permisos, `false` (cierra, no abre).
+ * Ocultar no es autorizar: la acción vuelve a pasar por el guard. Es solo la ayuda que apaga el botón. Chequeo: `test/web/salon-acceso.test.ts`.
+ */
+async function puedeLaAccionDelSalon(
+  contexto: ContextoOperativo,
+  accion: ClaveAccion,
+): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe(accion, permisos).permitida;
+}
+
+export const puedeCambiarDeMesa = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "salon.cambiar_mesa");
+export const puedeUnirMesas = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "salon.unir");
+export const puedeDividirCuentas = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "salon.dividir");
+export const puedeEnviarAComandas = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "comandas.enviar");
+export const puedeImprimir = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "impresiones.imprimir");
+export const puedeReimprimir = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "impresiones.reimprimir");
+export const puedeAdministrarImpresoras = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "impresoras.editar");
+
 type PermisosLeidos = NonNullable<Awaited<ReturnType<typeof permisosDeLaPersona>>>;
 
 /** De una acción, su módulo, el estado de construcción de ese módulo y su efecto: el catálogo es el único dueño de esos datos. */

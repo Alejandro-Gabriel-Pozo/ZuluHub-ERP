@@ -25,7 +25,7 @@ import {
  * PENDIENTE en las superficies APP, LANDING, CARTA y CONSOLA, más una marca sin versión confirmada. Se
  * arma EXACTAMENTE como lo hace `apps/web/servidor/fuente-de-puertas.ts` (`armarWeb` sobre `armarConexiones`
  * con la cadena pública como única variable) y se recorre lo que garantiza W4: la página de un host trae
- * su marca y nada de la otra, lo no servible es la neutra 404 sin cookies, la base caída es la neutra 503
+ * su marca y nada de la otra, lo no servible es un 404 plano de la puerta sin cookies, la base caída es la neutra 503
  * sin detalle, la caché (≤ 60 s) no mezcla hosts ni guarda fallos y, bajo concurrencia, cada resolución
  * devuelve la marca de SU host.
  */
@@ -306,7 +306,7 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
   });
 
   // ---- 2. lo que no se sirve ---------------------------------------------------------------------
-  describe("lo que no se sirve es la neutra 404, sin cookies y sin marca", () => {
+  describe("lo que no se sirve es un 404 plano (sin reescritura ni cuerpo), sin cookies y sin marca", () => {
     it.each<[string, () => string]>([
       ["dominio retirado de A", () => A.retirado],
       ["dominio retirado de B", () => B.retirado],
@@ -323,8 +323,12 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
     ])("%s", async (_motivo, host) => {
       for (const ruta of ["/", "/panel?x=1", "/api/auth/signin"]) {
         const r = await (await import("../../apps/web/proxy")).proxy(pedido(host(), ruta));
-        expect(reescritura(r), `${host()} ${ruta}`).toBe("/s/neutra");
+        // Host que no se resuelve: la puerta contesta ella misma 404 en HTML y sin cuerpo, sin reescribir a ninguna página (con el encabezado de RSC del pedido interno de un `redirect()` la
+        // neutra salía como flujo RSC y el navegador mostraba «No encontrado» en lugar de la pantalla de destino).
+        expect(reescritura(r), `${host()} ${ruta}`).toBeNull();
         expect(r.status).toBe(404);
+        expect(r.headers.get("content-type")).toMatch(/^text\/html/);
+        expect(await r.text()).toBe("");
         expect(r.headers.get("set-cookie")).toBeNull();
         expect(r.headers.get("x-robots-tag")).toBe("noindex");
         // Todo lo que podría verse de una marca en la respuesta: sus cabeceras (menos el eco del host que mandó el cliente).
@@ -563,13 +567,14 @@ describe.skipIf(base === null)("la puerta real contra la base con el rol públic
           return [host, await proxy(pedido(host))] as const;
         }),
       );
-      const esperado: Record<string, string> = {
+      // Los hosts que no se resuelven (retirado, desconocido) no se reescriben: 404 plano de la puerta (`null`).
+      const esperado: Record<string, string | null> = {
         [A.app]: "/s/app",
         [B.app]: "/s/app",
         [A.landing]: "/s/landing",
         [B.landing]: "/s/landing",
-        [A.retirado]: "/s/neutra",
-        "otro.ejemplo.com": "/s/neutra",
+        [A.retirado]: null,
+        "otro.ejemplo.com": null,
       };
       for (const [host, r] of respuestas) {
         expect(reescritura(r), host).toBe(esperado[host]);

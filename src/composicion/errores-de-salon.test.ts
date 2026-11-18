@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { traducirErrorDeSalon } from "./errores-de-salon";
+import { err, ok } from "../primitivas/resultado/resultado";
+import { accionDelSalon, respuestaGenericaDeSalon, traducirErrorDeSalon } from "./errores-de-salon";
 
 const GENERICO = { codigo: "CATALOGO_ACCION_NO_PERMITIDA" };
 
@@ -45,5 +46,112 @@ describe("traducirErrorDeSalon", () => {
     expect(traducirErrorDeSalon("ERROR_DE_LA_BASE_NO_TRADUCIDO")).toBe(
       "ERROR_DE_LA_BASE_NO_TRADUCIDO",
     );
+  });
+});
+
+describe("accionDelSalon", () => {
+  const registrados: string[] = [];
+  const respuesta = {
+    registrar: (d: string) => registrados.push(d),
+    azar: () => new Uint8Array(4),
+  };
+  const leer = (crudo: unknown) =>
+    typeof crudo === "object" && crudo !== null && "n" in crudo
+      ? ok((crudo as { n: number }).n)
+      : err("forma");
+  const GENERICA = respuestaGenericaDeSalon();
+
+  it("sin sucursal de trabajo cierra con el genérico y no lee ni corre nada", async () => {
+    let corrio = false;
+    const r = await accionDelSalon(
+      respuesta,
+      "",
+      { n: 1 },
+      leer,
+      () => {
+        corrio = true;
+        return Promise.resolve(ok(1));
+      },
+      (n) => n,
+    );
+    expect(r).toEqual(GENERICA);
+    expect(corrio).toBe(false);
+  });
+
+  it("un pedido sin la forma pedida es el genérico y no corre nada", async () => {
+    let corrio = false;
+    const r = await accionDelSalon(
+      respuesta,
+      "s",
+      { x: 1 },
+      leer,
+      () => {
+        corrio = true;
+        return Promise.resolve(ok(1));
+      },
+      (n) => n,
+    );
+    expect(r).toEqual(GENERICA);
+    expect(corrio).toBe(false);
+  });
+
+  it("`null` (lo pedido no es de la sucursal) es el genérico, igual que si no existiera", async () => {
+    expect(
+      await accionDelSalon(
+        respuesta,
+        "s",
+        { n: 1 },
+        leer,
+        () => Promise.resolve(null),
+        (n) => n,
+      ),
+    ).toEqual(GENERICA);
+  });
+
+  it("un éxito sale presentado y un error del negocio sin texto propio, como el genérico", async () => {
+    expect(
+      await accionDelSalon(
+        respuesta,
+        "s",
+        { n: 2 },
+        leer,
+        (n) => Promise.resolve(ok(n * 2)),
+        (n) => ({ doble: n }),
+      ),
+    ).toEqual({ ok: true, dato: { doble: 4 } });
+    expect(
+      await accionDelSalon(
+        respuesta,
+        "s",
+        { n: 2 },
+        leer,
+        () => Promise.resolve(err("NADA_PARA_ENVIAR")),
+        (n) => n,
+      ),
+    ).toEqual(GENERICA);
+    expect(
+      await accionDelSalon(
+        respuesta,
+        "s",
+        { n: 2 },
+        leer,
+        () => Promise.resolve(err("SIN_PERMISO")),
+        (n) => n,
+      ),
+    ).toMatchObject({ ok: false, error: { codigo: "SIN_PERMISO" } });
+  });
+
+  it("una excepción sale sin detalle y con referencia (nunca el mensaje)", async () => {
+    const r = await accionDelSalon(
+      respuesta,
+      "s",
+      { n: 1 },
+      leer,
+      () => Promise.reject(new Error("secreto de la base")),
+      (n) => n,
+    );
+    expect(r).toMatchObject({ ok: false, error: { codigo: "ERROR_INTERNO" } });
+    expect(JSON.stringify(r)).not.toContain("secreto");
+    expect(registrados.some((x) => x.includes("secreto de la base"))).toBe(true);
   });
 });

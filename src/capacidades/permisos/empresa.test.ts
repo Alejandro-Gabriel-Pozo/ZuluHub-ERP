@@ -716,18 +716,16 @@ describe("el guard con las reglas reales", () => {
     (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
   );
 
-  it("todo módulo en desarrollo del catálogo incluye vidriera, comandas, salon y produccion (cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12 y catalogo, caja y ventas desde el 15/11/2026, DEC-0463)", () => {
-    expect([...ENDESARROLLO].sort()).toEqual(
-      ["comandas", "produccion", "salon", "vidriera"].sort(),
-    );
+  it("todo módulo en desarrollo del catálogo incluye vidriera y produccion (comandas y salon desde S-0r, 17/11/2026; cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12 y catalogo, caja y ventas desde el 15/11/2026, DEC-0463)", () => {
+    expect([...ENDESARROLLO].sort()).toEqual(["produccion", "vidriera"].sort());
   });
 
-  it("las 32 acciones sin construir (11 de carta, 16 de salón y comandas y 5 de producción) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  it("las 16 acciones sin construir (11 de carta y 5 de producción) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
     const sinConstruir = ENDESARROLLO.flatMap(
       (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
     );
-    expect(sinConstruir).toHaveLength(32);
+    expect(sinConstruir).toHaveLength(16);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(
