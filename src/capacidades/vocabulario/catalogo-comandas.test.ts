@@ -1,13 +1,11 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CATALOGO_DE_TEXTOS } from "./catalogo";
 import { TEXTOS_DE_COMANDAS } from "./catalogo-comandas";
 
 /**
- * Los textos de la pantalla «Impresoras» y del botón «Imprimir» (S-2) declaran dónde se usan (`usos`) y de dónde salen (`fuente`: DEC-0715, la maqueta `imprimir.html` aprobada el 09/11/2026). Esta prueba
- * afirma cada declaración EXACTA (valor, archivo, función y decisión) y que cada archivo declarado existe. Previene: un uso mal escrito (otro archivo o función) o una fuente cambiada que el inventario de textos no
- * detecta, y que la mutación del vocabulario deje sobrevivir esas constantes.
+ * Los textos de la pantalla «Impresoras» y del botón «Imprimir» (S-2) declaran dónde se usan (`usos`) y de dónde salen (`fuente`: DEC-0715, la maqueta `imprimir.html` aprobada el 09/11/2026). Esta prueba afirma cada
+ * declaración EXACTA (valor, archivo, función y decisión) y que están en el catálogo común. Que cada archivo declarado exista lo mide el inventario de textos (`declaracion-de-pantallas`, regla R4), sin leer archivos desde acá.
+ * Previene: un uso mal escrito (otro archivo u otra función) o una fuente cambiada, y que la mutación del vocabulario deje sobrevivir esas constantes.
  */
 const MODELO = "apps/web/ui/plantillas/salon/modelo-de-impresoras.ts";
 const PAGINAS = "apps/web/app/s/app/(operacion)/salon/impresoras";
@@ -70,12 +68,5 @@ describe("textos de «Impresoras» e «Imprimir» (comandas)", () => {
         TEXTOS_DE_COMANDAS[completa as keyof typeof TEXTOS_DE_COMANDAS],
       );
     }
-  });
-
-  it("cada archivo que un uso declara existe", () => {
-    const raiz = join(import.meta.dirname, "../../..");
-    const archivos = new Set(ESPERADOS.flatMap(([, , usos]) => usos.map((u) => u.archivo)));
-    expect(archivos.size).toBe(6);
-    for (const archivo of archivos) expect(existsSync(join(raiz, archivo)), archivo).toBe(true);
   });
 });
