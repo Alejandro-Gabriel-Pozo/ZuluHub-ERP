@@ -1659,6 +1659,16 @@ describe("causaDeTransporte: lo que es del sistema y no de la cuenta de ARCA", (
     expect(causaDeTransporte(sinRespuesta(motivo))).toBeNull();
   });
 
+  it("solo cuenta el motivo de una conexión que falló: una RESPUESTA con un `motivo` ajeno (dato mal armado) no tiene causa", () => {
+    const mal = {
+      tipo: "RESPUESTA",
+      estadoHttp: 200,
+      cuerpo: "",
+      motivo: "RESPUESTA_DEMASIADO_GRANDE",
+    } as unknown as RespuestaDeTransporte;
+    expect(causaDeTransporte(mal)).toBeNull();
+  });
+
   it("una respuesta con cualquier estado HTTP no tiene causa de transporte", () => {
     for (const estadoHttp of [200, 400, 403, 500, 503]) {
       expect(causaDeTransporte({ tipo: "RESPUESTA", estadoHttp, cuerpo: "" })).toBeNull();
