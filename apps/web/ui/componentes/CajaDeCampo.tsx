@@ -5,6 +5,11 @@ import estilos from "./CajaDeCampo.module.css";
 export type PropsDeCajaDeCampo = Readonly<{
   /** La etiqueta es visible SIEMPRE (no alcanza un texto de ejemplo adentro del campo). */
   etiqueta: string;
+  /**
+   * La etiqueta no se ve pero sigue nombrando al campo para el lector de pantalla, y deja su renglón (para alinear con los campos vecinos que sí la muestran). Solo para filas repetidas
+   * cuyo rótulo ya se ve en la primera (maqueta de Opciones); en cualquier otro campo la etiqueta se ve siempre.
+   */
+  rotuloSoloParaLector?: boolean | undefined;
   /** Si el dato es obligatorio, el texto que lo dice («obligatorio»): se marca con texto, no solo con `*`. */
   obligatorio?: string | undefined;
   ayuda?: string | undefined;
@@ -22,7 +27,14 @@ type DatosDelControl = Readonly<{
 }>;
 
 /** Etiqueta, ayuda y error alrededor de un control: lo común a Campo, CampoImporte y Selector. */
-export function CajaDeCampo({ etiqueta, obligatorio, ayuda, error, control }: PropsDeCajaDeCampo) {
+export function CajaDeCampo({
+  etiqueta,
+  rotuloSoloParaLector = false,
+  obligatorio,
+  ayuda,
+  error,
+  control,
+}: PropsDeCajaDeCampo) {
   const id = useId();
   const idAyuda = `${id}-ayuda`;
   const idError = `${id}-error`;
@@ -32,7 +44,14 @@ export function CajaDeCampo({ etiqueta, obligatorio, ayuda, error, control }: Pr
   return (
     <div className={estilos["caja"]}>
       <label htmlFor={id} className={estilos["etiqueta"]}>
-        {etiqueta}
+        {rotuloSoloParaLector ? (
+          <>
+            <span className={estilos["soloLector"]}>{etiqueta}</span>
+            <span aria-hidden="true">{"\u00a0"}</span>
+          </>
+        ) : (
+          etiqueta
+        )}
         {obligatorio !== undefined ? (
           <span className={estilos["obligatorio"]}> ({obligatorio})</span>
         ) : null}
