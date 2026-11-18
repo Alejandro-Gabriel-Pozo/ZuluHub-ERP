@@ -105,9 +105,12 @@ export type EntradaDePuerta = Readonly<{
 }>;
 
 export type DecisionDePuerta = Readonly<{
-  /** `REESCRIBIR`: el pedido sigue a `rutaInterna`; `SEGUIR`: sigue por su ruta (una API de un host APP). */
-  accion: "REESCRIBIR" | "SEGUIR";
-  /** A dónde se reescribe; `null` si la acción es `SEGUIR`. */
+  /**
+   * `REESCRIBIR`: el pedido sigue a `rutaInterna`; `SEGUIR`: sigue por su ruta (una API de un host APP); `RESPONDER`: la puerta contesta ella misma, con el estado y sin cuerpo (host que
+   * no se resuelve).
+   */
+  accion: "REESCRIBIR" | "SEGUIR" | "RESPONDER";
+  /** A dónde se reescribe; `null` si la acción es `SEGUIR` o `RESPONDER`. */
   rutaInterna: string | null;
   /** El estado que pone la puerta: 404 neutra, 503 si la base falló; `null` si lo decide la página. */
   estado: 404 | 503 | null;
@@ -176,6 +179,10 @@ export function decidirPuerta(entrada: EntradaDePuerta): DecisionDePuerta {
 
   // Antes que todo lo demás y sin mirar la resolución: ni la marca ni la base de marcas intervienen.
   if (esRutaDeSistema(ruta)) return armar("SEGUIR", null, null, "SISTEMA");
+  // Host que no se resuelve: 404 plano que contesta la puerta, sin reescribir a ninguna página. Una reescritura a la neutra, con el encabezado de RSC que pone Next en el pedido interno de un
+  // `redirect()` de una acción (a `localhost:<puerto>`), salía como flujo RSC y el navegador mostraba «No encontrado» en lugar de la pantalla de destino (caso real: «Guardar» una mesa del salón,
+  // 17/11/2026). No distingue `localhost` de ningún otro host desconocido y no abre ningún host ni ruta: sigue cerrando ante la duda. Chequeo: `puerta.test.ts` y `test/web/proxy.test.ts`.
+  if (resolucion.tipo === "DESCONOCIDO") return armar("RESPONDER", null, 404, "NEUTRA");
   const real = caminoDeRutaPropia(ruta);
   if (puerta === null || real === null || esRutaInterna(ruta, real)) return aLaNeutra();
   if (esRutaDeApi(ruta)) {
