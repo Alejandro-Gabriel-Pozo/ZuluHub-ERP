@@ -42,8 +42,11 @@ const IGNORABLES = [
   /^migraciones\//, // solo las lee la integración, que la mutación no corre (PEDERNAL_SIN_INTEGRACION=1)
 ];
 
-/** Los mismos, para la integración: las migraciones SÍ la afectan (las aplica), así que no están. */
-const IGNORABLES_DE_INTEGRACION = DOCUMENTACION_Y_AJENOS;
+/** Los mismos, para la integración (las migraciones SÍ la afectan: las aplica), más sus ajenos explícitos (`ajenos-a-la-integracion.cjs`). */
+const IGNORABLES_DE_INTEGRACION = [
+  ...DOCUMENTACION_Y_AJENOS,
+  ...require("./ajenos-a-la-integracion.cjs"),
+];
 
 const ARCHIVO_DE_CI = ".github/workflows/ci.yml";
 
@@ -353,12 +356,7 @@ function planificar({ cambios, grupos, dependencias, ci, lecturas = LECTURAS_DE_
   };
 }
 
-/**
- * Cambios que obligan a repetir la integración 12 veces en un pull request (decisión del dueño, 2026-11-07: la
- * repetición cuesta ~78 min de máquina por corrida y solo detecta fallas intermitentes de lo que toca la base).
- * Previene: gastar 12 máquinas en un cambio de pantalla o de dominio que no puede alterar la integración contra
- * Postgres. Es una lista de lo que SÍ la dispara; el resto se decide en `planificarEstabilidad`.
- */
+/** Cambios que obligan a repetir la integración (decisión del dueño, 2026-11-07: cuesta ~50 min de máquina por corrida y solo detecta fallas intermitentes de lo que toca la base). Previene: gastar esas máquinas en un cambio de pantalla o de dominio que no puede alterarla. Lista de lo que SÍ la dispara. */
 const DISPARAN_ESTABILIDAD = [
   /^test\/integracion\//,
   /^src\/(?:[^/]+\/)*persistencia\//, // src/**/persistencia/**

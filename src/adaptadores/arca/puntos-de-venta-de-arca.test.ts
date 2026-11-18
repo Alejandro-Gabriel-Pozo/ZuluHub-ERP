@@ -3,6 +3,7 @@ import {
   respuestaDePtosVentaDelManual,
   type PtoVentaDelManual,
 } from "../../../test/utilidades/arca-del-manual";
+import { ok } from "../../primitivas/resultado/resultado";
 import { clasificarParametros } from "./clasificar";
 import { aPuntosDeVentaDeArca } from "./puntos-de-venta-de-arca";
 import type { RespuestaDeTransporte } from "./tipos";
@@ -65,6 +66,18 @@ describe("los puntos de venta de ARCA, tal como los describe el manual", () => {
     }
   });
 
+  it("FchBaja con el texto exacto «NULL» (lo que ARCA manda sin baja, según conocimiento público; SIN VERIFICAR con grabación): no está dado de baja", () => {
+    expect(
+      leer(respuestaDePtosVentaDelManual({ puntos: [{ ...habilitado, FchBaja: "NULL" }] })),
+    ).toEqual({ ok: true, valor: [{ numero: 1, bloqueado: false, dadoDeBaja: false }] });
+  });
+
+  it("FchBaja de 8 dígitos: dado de baja", () => {
+    expect(
+      leer(respuestaDePtosVentaDelManual({ puntos: [{ ...habilitado, FchBaja: "20260131" }] })),
+    ).toEqual({ ok: true, valor: [{ numero: 1, bloqueado: false, dadoDeBaja: true }] });
+  });
+
   it("un ResultGet vacío es una lista vacía, no un error", () => {
     expect(leer(respuestaDePtosVentaDelManual({ puntos: [] }))).toEqual({ ok: true, valor: [] });
   });
@@ -97,14 +110,39 @@ describe("lo que no se entiende no se interpreta: toda la respuesta es «servici
     ["Bloqueado vacío", { ...habilitado, Bloqueado: "" }],
     ["Bloqueado ausente (el manual lo marca obligatorio)", { ...habilitado, Bloqueado: undefined }],
     ["FchBaja que no son 8 dígitos", { ...habilitado, FchBaja: "2026-01-31" }],
-    ["FchBaja con un texto cualquiera", { ...habilitado, FchBaja: "NULL" }],
+    ["FchBaja con un texto cualquiera", { ...habilitado, FchBaja: "cualquiera" }],
+    ["FchBaja «null» en minúscula", { ...habilitado, FchBaja: "null" }],
+    ["FchBaja «Null»", { ...habilitado, FchBaja: "Null" }],
+    ["FchBaja «NULO»", { ...habilitado, FchBaja: "NULO" }],
+    ["FchBaja de 7 dígitos (ceros)", { ...habilitado, FchBaja: "0000000" }],
+    ["FchBaja de 7 dígitos (fecha)", { ...habilitado, FchBaja: "2026111" }],
   ] as const)("%s", (_nombre, punto) => {
     expect(con(punto)).toEqual(NO_SE_ENTIENDE);
+  });
+
+  it("FchBaja « NULL» o «NULL » (con espacios): se rechaza (el lector XML recorta los espacios antes, por eso se prueba sobre las filas ya leídas)", () => {
+    for (const FchBaja of [" NULL", "NULL ", "NULL\n"]) {
+      const fila = { Nro: "1", Bloqueado: "N", FchBaja };
+      expect(aPuntosDeVentaDeArca(ok([fila]))).toEqual(NO_SE_ENTIENDE);
+    }
   });
 
   it("una sola fila ilegible invalida las demás (no se adivina cuál valía)", () => {
     expect(
       leer(respuestaDePtosVentaDelManual({ puntos: [habilitado, { ...habilitado, Nro: "x" }] })),
+    ).toEqual(NO_SE_ENTIENDE);
+  });
+
+  it("una fila buena con «NULL» y otra mala: toda la respuesta se rechaza", () => {
+    expect(
+      leer(
+        respuestaDePtosVentaDelManual({
+          puntos: [
+            { ...habilitado, FchBaja: "NULL" },
+            { ...habilitado, Nro: "2", FchBaja: "null" },
+          ],
+        }),
+      ),
     ).toEqual(NO_SE_ENTIENDE);
   });
 
