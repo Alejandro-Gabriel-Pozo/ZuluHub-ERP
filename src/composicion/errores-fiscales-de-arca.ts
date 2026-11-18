@@ -3,14 +3,13 @@ import type { CodigoFiscal } from "../capacidades/experiencia/respuesta-fiscal";
 
 /**
  * Los errores de ARCA al pasar un punto de venta a producción y la causa de un error de acceso (`ErrorDeEmision["causa"]`), con sus textos
- * aprobados por el dueño el 18/11/2026 (`decisiones-del-dueno-2026-11.md`, fila 305; DEC-0741). Viven aparte para que `errores-fiscales.ts`
+ * aprobados por el dueño el 18/11/2026 (`decisiones-del-dueno-2026-11.md`, filas 305 y 306; DEC-0741). Viven aparte para que `errores-fiscales.ts`
  * no pase del tope de líneas, como los de certificado e ingresos brutos.
  */
 
 /**
  * Por qué ARCA no habilita un punto de venta para pasar a producción (D-77 y la regla de solo CAEA, DEC-0742). Exhaustivo por tipo: un
- * motivo nuevo del caso de uso que nadie tradujo NO COMPILA. «Solo CAEA» muestra por ahora el de «no habilitado»: su texto propio está por
- * aprobar y no se inventa uno.
+ * motivo nuevo del caso de uso que nadie tradujo NO COMPILA.
  */
 export const ERRORES_AL_PASAR_A_PRODUCCION: Readonly<
   Record<
@@ -26,7 +25,7 @@ export const ERRORES_AL_PASAR_A_PRODUCCION: Readonly<
   SIN_PUNTOS_DE_VENTA_EN_ARCA: "FISCAL_ARCA_SIN_PUNTOS_DE_VENTA",
   PUNTO_DE_VENTA_BLOQUEADO_EN_ARCA: "FISCAL_PUNTO_DE_VENTA_BLOQUEADO_EN_ARCA",
   PUNTO_DE_VENTA_DADO_DE_BAJA_EN_ARCA: "FISCAL_PUNTO_DE_VENTA_DADO_DE_BAJA_EN_ARCA",
-  PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA",
+  PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA: "FISCAL_PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA",
 };
 
 /**

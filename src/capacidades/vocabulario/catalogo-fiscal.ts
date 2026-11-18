@@ -229,6 +229,13 @@ export const TEXTOS_DE_FISCAL = {
     usos: USOS_DE_ERROR_DE_ARCA,
     fuente: { decision: "DEC-0741" },
   },
+  "error.fiscal_punto_de_venta_solo_caea_en_arca": {
+    porDefecto:
+      "Este punto de venta es solo para CAEA en ARCA. Para facturar necesitás uno de CAE: dalo de alta en ARCA.",
+    largoMaximo: 200,
+    usos: USOS_DE_ERROR_DE_ARCA,
+    fuente: { decision: "DEC-0741" },
+  },
   // Por qué falló un acceso a ARCA, cuando se sabe con certeza (`causa` de `ErrorDeEmision`); sin causa sale el texto del código.
   "error.fiscal_arca_cuit_no_representada": {
     porDefecto:

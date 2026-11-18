@@ -58,6 +58,7 @@ export const CLAVES_DE_ERRORES_FISCALES = {
   FISCAL_ARCA_SIN_PUNTOS_DE_VENTA: "error.fiscal_arca_sin_puntos_de_venta",
   FISCAL_PUNTO_DE_VENTA_BLOQUEADO_EN_ARCA: "error.fiscal_punto_de_venta_bloqueado_en_arca",
   FISCAL_PUNTO_DE_VENTA_DADO_DE_BAJA_EN_ARCA: "error.fiscal_punto_de_venta_dado_de_baja_en_arca",
+  FISCAL_PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA: "error.fiscal_punto_de_venta_solo_caea_en_arca",
   FISCAL_ARCA_CUIT_NO_REPRESENTADA: "error.fiscal_arca_cuit_no_representada",
   FISCAL_ARCA_CERTIFICADO_VENCIDO: "error.fiscal_arca_certificado_vencido",
   FISCAL_ARCA_PROBLEMA_DEL_SISTEMA: "error.fiscal_arca_problema_del_sistema",

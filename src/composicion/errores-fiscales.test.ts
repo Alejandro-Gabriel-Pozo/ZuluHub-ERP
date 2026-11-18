@@ -183,8 +183,7 @@ describe("la configuración fiscal (D-43)", () => {
       ["SIN_PUNTOS_DE_VENTA_EN_ARCA", "FISCAL_ARCA_SIN_PUNTOS_DE_VENTA"],
       ["PUNTO_DE_VENTA_BLOQUEADO_EN_ARCA", "FISCAL_PUNTO_DE_VENTA_BLOQUEADO_EN_ARCA"],
       ["PUNTO_DE_VENTA_DADO_DE_BAJA_EN_ARCA", "FISCAL_PUNTO_DE_VENTA_DADO_DE_BAJA_EN_ARCA"],
-      // Solo CAEA muestra por ahora el de «no habilitado»: su texto propio está por aprobar (no se inventa uno).
-      ["PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA", "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA"],
+      ["PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA", "FISCAL_PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA"],
     ] as const;
     for (const [error, codigo] of casos) {
       expect(traducirErrorFiscal(error), error).toEqual({ codigo });
@@ -205,6 +204,8 @@ describe("la configuración fiscal (D-43)", () => {
         "Este punto de venta está bloqueado en ARCA. Regularizalo en ARCA y volvé a intentar.",
       "error.fiscal_punto_de_venta_dado_de_baja_en_arca":
         "Este punto de venta está dado de baja en ARCA. Dalo de alta de nuevo en ARCA o usá otro número.",
+      "error.fiscal_punto_de_venta_solo_caea_en_arca":
+        "Este punto de venta es solo para CAEA en ARCA. Para facturar necesitás uno de CAE: dalo de alta en ARCA.",
       "error.fiscal_arca_cuit_no_representada":
         "El certificado cargado no corresponde al CUIT de este emisor. Revisá el CUIT o cargá el certificado de ese CUIT.",
       "error.fiscal_arca_certificado_vencido":
