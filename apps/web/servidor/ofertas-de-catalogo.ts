@@ -3,7 +3,7 @@ import "server-only";
  * Parte dedicada de `modulos.ts` (archivo central, ver su encabezado): Las ofertas de botones del módulo catálogo: crear, editar y cambiar el precio de productos.
  */
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
-import { ofertaDe, permisosDeLaPersona } from "./permisos-de-la-persona";
+import { ofertaDe, permisosDeLaPersona, puedeLaAccion } from "./permisos-de-la-persona";
 
 /**
  * ¿La persona puede guardar los datos de un producto? Es la oferta de `productos.editar` (gerente y administrador) que el servidor calcula con `ofertaDe`: con el módulo en solo
@@ -34,3 +34,6 @@ export async function puedeCambiarPrecios(contexto: ContextoOperativo): Promise<
   const permisos = await permisosDeLaPersona(contexto);
   return permisos !== null && ofertaDe("productos.cambiar_precio", permisos).permitida;
 }
+
+export const puedeEditarOpciones = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccion(contexto, "opciones.editar"); // oferta de `opciones.editar` (gerente y administrador): solo apaga botones, el guard decide (DEC-0346); `test/web/opciones-acceso.test.ts`

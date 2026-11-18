@@ -15,6 +15,7 @@
         "puedeEditarProductos",
         "puedeCrearProductos",
         "puedeCambiarPrecios",
+        "puedeEditarOpciones",
         "OfertaDeLaCarta",
         "ofertaDeLaCartaEnLinea",
         "puedeOcultarEnElLocal",
@@ -44,7 +45,7 @@
       ],
       "parteDedicada": "apps/web/servidor/ofertas-de-<módulo>.ts",
       "soloJunta": false,
-      "lineas": 184
+      "lineas": 185
     }
   ]
 }

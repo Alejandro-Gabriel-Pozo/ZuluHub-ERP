@@ -3,7 +3,7 @@ import "server-only";
  * ARCHIVO CENTRAL
  * QUÉ ES: el armado del menú para la persona (áreas, destinos de la barra, pantallas de Cuenta) y la lista de reexportaciones de compatibilidad de las ofertas de botones.
  * QUÉ NO ES: el lugar de las funciones «¿puede…?» de cada pantalla: una oferta nueva va en su parte dedicada y no se reexporta acá.
- * EXPORTA: destinosDeAreas, destinosDeModulos, pantallasDeCuenta, ACCION_DE_CONFIGURACION_FISCAL, puedeVerLaConfiguracionFiscal, pendientesDeLaEmpresa, accionesDePuntosDeVenta, puedeEditarElContactoDeLaSucursal, accionesDeLaListaDeCaja, puedeEditarProductos, puedeCrearProductos, puedeCambiarPrecios, OfertaDeLaCarta, ofertaDeLaCartaEnLinea, puedeOcultarEnElLocal, puedeOcultarEnLaEmpresa, puedeEmitirNotasDeCredito, puedeEmitirFacturas, puedeAdministrarMesas, puedeCambiarDeMesa, puedeUnirMesas, puedeDividirCuentas, puedeEnviarAComandas, puedeImprimir, puedeReimprimir, puedeAdministrarImpresoras.
+ * EXPORTA: destinosDeAreas, destinosDeModulos, pantallasDeCuenta, ACCION_DE_CONFIGURACION_FISCAL, puedeVerLaConfiguracionFiscal, pendientesDeLaEmpresa, accionesDePuntosDeVenta, puedeEditarElContactoDeLaSucursal, accionesDeLaListaDeCaja, puedeEditarProductos, puedeCrearProductos, puedeCambiarPrecios, puedeEditarOpciones, OfertaDeLaCarta, ofertaDeLaCartaEnLinea, puedeOcultarEnElLocal, puedeOcultarEnLaEmpresa, puedeEmitirNotasDeCredito, puedeEmitirFacturas, puedeAdministrarMesas, puedeCambiarDeMesa, puedeUnirMesas, puedeDividirCuentas, puedeEnviarAComandas, puedeImprimir, puedeReimprimir, puedeAdministrarImpresoras.
  * IMPORTA: server-only, src/contexto/contexto, src/capacidades/vocabulario/vocabulario, src/capacidades/modulos/catalogo, apps/web/ui/navegacion/menu, apps/web/ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta, apps/web/ui/plantillas/sesion/*, apps/web/servidor/permisos-de-la-persona, apps/web/servidor/ofertas-de-*, apps/web/servidor/configuracion-fiscal.
  * PARTE DEDICADA: apps/web/servidor/ofertas-de-<módulo>.ts (las ofertas de cada módulo) y apps/web/servidor/permisos-de-la-persona.ts (la lectura de permisos).
  */
@@ -161,6 +161,7 @@ export { accionesDeLaListaDeCaja } from "./ofertas-de-caja";
 export {
   puedeCambiarPrecios,
   puedeCrearProductos,
+  puedeEditarOpciones,
   puedeEditarProductos,
 } from "./ofertas-de-catalogo";
 export {

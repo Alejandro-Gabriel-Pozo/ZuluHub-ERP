@@ -18,6 +18,7 @@ describe("códigos públicos de la ficha de un producto", () => {
       CATALOGO_FALTA_EL_NOMBRE: "catalogo.error.falta_el_nombre",
       CATALOGO_PRECIO_INVALIDO: "catalogo.error.precio_invalido",
       CATALOGO_PRECIO_DESACTUALIZADO: "catalogo.precio.vigente_ahora",
+      CATALOGO_INCLUIDA_CON_RECARGO: "catalogo.error.incluida_con_recargo",
       CATALOGO_ACCION_NO_PERMITIDA: "catalogo.error.accion_no_permitida",
       CATALOGO_PRODUCTO_CON_EXISTENCIA: "catalogo.error.primero_existencia_en_cero",
       CATALOGO_PRODUCTO_CON_CONTEO_ABIERTO: "catalogo.error.conteo_abierto_con_el_producto",
