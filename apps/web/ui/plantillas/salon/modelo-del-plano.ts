@@ -11,7 +11,8 @@ import {
  *  - **Las medidas no se copian acá.** La cuadrícula (14 × 9) y las casillas de cada forma y tamaño llegan del servidor (`medidasDelSalon`, que las toma del dominio de salón): una regla, un lugar.
  *  - **El plano solo dibuja; no decide.** No dice si una mesa «entra» ni si «se pisa»: eso lo decide el servidor al guardar (`MESA_FUERA_DEL_SALON`, `MESA_SUPERPUESTA`). Lo que se escribe se
  *    dibuja donde dice; si cae fuera del salón el marco lo corta, y si se encima con otra se ven las dos una sobre otra.
- *  - **Solo las mesas activas** (las desactivadas están en la lista, no en el plano).
+ *  - **Las desactivadas también se dibujan, atenuadas** (la maqueta, clase `off`: «queda en la lista, atenuada»): trazo punteado y colores suaves, y su nombre para el lector de pantalla lleva «Desactivada»; no se
+ *    comunican solo por color. No son enlaces (una mesa desactivada no se edita).
  *  - **Lo que no se puede ubicar no se dibuja:** forma o tamaño que no están en las medidas, o columna o fila que no son un número entero de una o dos cifras sin ceros a la izquierda (lista cerrada, cierra ante la duda).
  *  - **Los textos se resuelven en el servidor** (`armarElPlano`, con el diccionario de la empresa); en el navegador solo se suma el borrador (`conElBorrador`) con su nombre ya armado.
  *  - **El estado no es solo color:** cada mesa lleva su número a la vista y su nombre («Mesa 7») para el lector de pantalla; el borrador va con trazo punteado además del color.
@@ -32,6 +33,7 @@ export type MesaParaElPlano = Readonly<{
   tamano: string;
   columna: number;
   fila: number;
+  activa: boolean;
   href: string | null;
 }>;
 
@@ -59,6 +61,8 @@ export type MesaDelPlano = Readonly<{
   alto: number;
   href: string | null;
   borrador: boolean;
+  /** Mesa desactivada: se dibuja atenuada y su nombre lo dice. */
+  desactivada: boolean;
 }>;
 
 export type PlanoArmado = Readonly<{
@@ -114,11 +118,14 @@ export function armarElPlano(
       {
         clave: m.id,
         numero: String(m.numero),
-        nombre: texto(d, "salon.texto.admin_mesa_numero", { numero: String(m.numero) }),
+        nombre: m.activa
+          ? texto(d, "salon.texto.admin_mesa_numero", { numero: String(m.numero) })
+          : `${texto(d, "salon.texto.admin_mesa_numero", { numero: String(m.numero) })}, ${texto(d, "salon.texto.admin_desactivada")}`,
         forma: m.forma,
         ...r,
-        href: m.href,
+        href: m.activa ? m.href : null,
         borrador: false,
+        desactivada: !m.activa,
       },
     ];
   });
@@ -157,6 +164,7 @@ export function conElBorrador(
         ...r,
         href: null,
         borrador: true,
+        desactivada: false,
       },
     ],
   };

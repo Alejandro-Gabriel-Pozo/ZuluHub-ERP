@@ -103,3 +103,15 @@ a.contenido:focus-visible {
   stroke-width: 3px;
   stroke-dasharray: 6 4;
 }
+
+/* Una mesa desactivada (maqueta, clase `off`): atenuada con colores suaves y trazo punteado, sin `opacity` (restaría contraste al número); su nombre lleva «Desactivada» para el lector de pantalla. */
+.mesa[data-desactivada="si"] .contenido {
+  border-style: dashed;
+  background: var(--color-superficie);
+  color: var(--color-texto-suave);
+}
+
+.mesa[data-desactivada="si"] .elipse {
+  fill: var(--color-superficie);
+  stroke-dasharray: 6 4;
+}

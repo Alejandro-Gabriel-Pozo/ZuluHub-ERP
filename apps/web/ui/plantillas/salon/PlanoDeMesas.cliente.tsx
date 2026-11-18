@@ -35,6 +35,7 @@ function Mesa({ mesa }: Readonly<{ mesa: MesaDelPlano }>) {
       className={estilos["mesa"]}
       data-forma={mesa.forma}
       data-borrador={mesa.borrador ? "si" : "no"}
+      data-desactivada={mesa.desactivada ? "si" : "no"}
       ref={(elemento) => {
         aplicarEstilos(elemento, {
           "--izquierda": porcentaje(mesa.izquierda),

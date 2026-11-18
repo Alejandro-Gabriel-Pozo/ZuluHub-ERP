@@ -24,6 +24,7 @@ const mesa = (
   tamano: "CHICA",
   columna,
   fila: 1,
+  activa: true,
   href,
 });
 
@@ -97,6 +98,29 @@ describe("PlanoDeMesas", () => {
       ).strokeDasharray;
     expect(trazo("no")).toBe("none");
     expect(trazo("si")).not.toBe("none");
+  });
+
+  it("una mesa desactivada se dibuja atenuada (trazo punteado, sin opacity), dice «Desactivada» y no es enlace", async () => {
+    const plano = armarElPlano({
+      medidas: MEDIDAS_DE_PRUEBA,
+      mesas: [
+        mesa("a", 1, 1, "CUADRADA", "/salon/mesas/a"),
+        { ...mesa("b", 2, 5, "CUADRADA", "/salon/mesas/b"), activa: false },
+        { ...mesa("c", 3, 9, "REDONDA", "/salon/mesas/c"), activa: false },
+      ],
+    });
+    await render(<PlanoDeMesas plano={plano} />);
+    await expect.element(page.getByText("Mesa 2, Desactivada")).toBeInTheDocument();
+    await expect.element(page.getByText("Mesa 3, Desactivada")).toBeInTheDocument();
+    expect(document.querySelectorAll("a")).toHaveLength(1);
+    const apagada = document.querySelector('[data-forma="CUADRADA"][data-desactivada="si"] > *');
+    const activa = document.querySelector('[data-forma="CUADRADA"][data-desactivada="no"] > *');
+    expect(getComputedStyle(apagada as Element).borderTopStyle).toBe("dashed");
+    expect(getComputedStyle(activa as Element).borderTopStyle).toBe("solid");
+    expect(getComputedStyle(apagada as Element).opacity).toBe("1");
+    const elipse = document.querySelector('[data-forma="REDONDA"][data-desactivada="si"] svg');
+    expect(getComputedStyle(elipse as Element).strokeDasharray).not.toBe("none");
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 
   it("teclado: Tab llega a cada mesa que es enlace, en orden, y no a las que no lo son", async () => {

@@ -12,7 +12,7 @@ import { armarElPlano, type MedidasDelSalon, type PlanoArmado } from "./modelo-d
  *  - **Por número, activas y desactivadas** (la maqueta las lista todas, las desactivadas con la marca «Desactivada»); el orden lo da el servidor.
  *  - **Lo que cambia algo sale solo si la persona puede administrar las mesas** (`puedeAdministrar`, solo una ayuda: el guard decide): sin permiso «Agregar mesa» no se ofrece y
  *    «Editar mesa», «Desactivar» y «Reactivar» salen apagados. Todo lo que no sea exactamente `true` cierra.
- *  - **El plano dibuja las mesas activas** (S-1b, `modelo-del-plano.ts`) con las medidas del salón que entrega el servidor; no decide nada: el servidor valida al guardar.
+ *  - **El plano dibuja todas las mesas, las desactivadas atenuadas** (S-1b, `modelo-del-plano.ts`) con las medidas del salón que entrega el servidor; no decide nada: el servidor valida al guardar.
  *  - **Forma y tamaño son listas cerradas** que repiten los valores del dominio (`FORMAS_DE_MESA`, `TAMANOS_DE_MESA`): una prueba falla si difieren.
  */
 
@@ -78,7 +78,7 @@ type FilaDeMesa = Readonly<{
 }>;
 
 export type ListaDeMesasArmada = Readonly<{
-  /** El mapa chico del salón, arriba de la lista: las mesas activas; cada una lleva a su edición si la persona puede administrar. */
+  /** El mapa chico del salón, arriba de la lista: todas las mesas (las desactivadas atenuadas); cada activa lleva a su edición si la persona puede administrar. */
   plano: PlanoArmado;
   filas: readonly FilaDeMesa[];
   /** «Agregar mesa»; `null` si la persona no puede administrar. */
@@ -99,9 +99,7 @@ export function armarLaListaDeMesas(
     plano: armarElPlano(
       {
         medidas,
-        mesas: mesas
-          .filter((m) => m.activa)
-          .map((m) => ({ ...m, href: administra ? rutaDeLaMesa(m.id) : null })),
+        mesas: mesas.map((m) => ({ ...m, href: administra ? rutaDeLaMesa(m.id) : null })),
       },
       d,
     ),
@@ -187,9 +185,7 @@ export function armarElFormularioDeMesa(
       base: armarElPlano(
         {
           medidas: salon.medidas,
-          mesas: salon.mesas
-            .filter((m) => m.activa && m.id !== mesa?.id)
-            .map((m) => ({ ...m, href: null })),
+          mesas: salon.mesas.filter((m) => m.id !== mesa?.id).map((m) => ({ ...m, href: null })),
         },
         d,
       ),

@@ -11,7 +11,7 @@ import { MEDIDAS_DE_PRUEBA } from "../../apps/web/ui/pruebas/ayudas-de-mesas";
 
 /**
  * El modelo del mapa chico (S-1b, `mesas.html`): una mesa de cada forma y tamaño cae en su casilla con las casillas del dominio; lo que no se puede ubicar no se dibuja; lo que se sale o se encima
- * se dibuja donde dice (decide el servidor); solo las activas. Previene: la tabla de casillas desfasada del servidor y un plano que decide validez.
+ * se dibuja donde dice (decide el servidor); las desactivadas también, atenuadas y diciendo «Desactivada». Previene: la tabla de casillas desfasada del servidor y un plano que decide validez.
  */
 const medidas = medidasDelSalon();
 const mesa = (extra: Partial<Parameters<typeof armarElPlano>[0]["mesas"][number]> = {}) => ({
@@ -21,6 +21,7 @@ const mesa = (extra: Partial<Parameters<typeof armarElPlano>[0]["mesas"][number]
   tamano: "CHICA",
   columna: 1,
   fila: 1,
+  activa: true,
   href: null,
   ...extra,
 });
@@ -111,25 +112,28 @@ describe("plano de mesas", () => {
     );
   });
 
-  it("la lista dibuja solo las activas; cada una es enlace solo si la persona administra", () => {
+  it("la lista dibuja todas las mesas; solo las activas son enlace y solo si la persona administra", () => {
     const m = (id: string, activa: boolean) => ({
       id,
       numero: id === "a" ? 1 : 2,
       forma: "CUADRADA",
       tamano: "CHICA",
-      columna: 1,
+      columna: id === "a" ? 1 : 5,
       fila: 1,
       activa,
       version: 1,
     });
     const con = armarLaListaDeMesas([m("a", true), m("b", false)], true, medidas);
-    expect(con.plano.mesas.map((x) => [x.clave, x.href])).toEqual([["a", "/salon/mesas/a"]]);
+    expect(con.plano.mesas.map((x) => [x.clave, x.href, x.desactivada, x.nombre])).toEqual([
+      ["a", "/salon/mesas/a", false, "Mesa 1"],
+      ["b", null, true, "Mesa 2, Desactivada"],
+    ]);
     for (const puede of [false, undefined]) {
       expect(armarLaListaDeMesas([m("a", true)], puede, medidas).plano.mesas[0]?.href).toBeNull();
     }
   });
 
-  it("el formulario de edición descuenta la mesa que se edita y no deja enlaces; las desactivadas no entran", () => {
+  it("el formulario de edición descuenta la mesa que se edita, no deja enlaces y dibuja las desactivadas atenuadas", () => {
     const m = (id: string, activa: boolean) => ({
       id,
       numero: 1,
@@ -144,7 +148,10 @@ describe("plano de mesas", () => {
       medidas,
       mesas: [m("a", true), m("b", true), m("c", false)],
     });
-    expect(f.plano.base.mesas.map((x) => [x.clave, x.href])).toEqual([["b", null]]);
+    expect(f.plano.base.mesas.map((x) => [x.clave, x.href, x.desactivada])).toEqual([
+      ["b", null, false],
+      ["c", null, true],
+    ]);
     expect(f.plano.nombreDelBorrador).toBe("Editar mesa");
     expect(
       armarElFormularioDeMesa(null, true, { medidas, mesas: [] }).plano.nombreDelBorrador,
