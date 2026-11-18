@@ -3,6 +3,7 @@ import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../componentes/Insignia";
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
 import { FormularioDeEstadoDeMesa } from "./FormularioDeEstadoDeMesa.cliente";
+import { PlanoDeMesas } from "./PlanoDeMesas.cliente";
 import estilos from "./PantallasDeMesas.module.css";
 import type { ListaDeMesasArmada } from "./modelo-de-mesas";
 
@@ -18,7 +19,7 @@ export type PropsDePantallaDeListaDeMesas = Readonly<{
 /**
  * La lista de las mesas de la sucursal (S-1; maqueta `mesas.html`, aprobada el 09/11/2026): todas, también las desactivadas, por número, cada una con «Editar mesa» y «Desactivar» o
  * «Reactivar». «Agregar mesa» solo si llega armada, es decir, si la persona puede administrar. Sin textos propios: todos llegan resueltos. El `h1` lo pone el armazón.
- * Pendiente (no pedido en esta entrega): el dibujo del plano de la maqueta.
+ * Arriba de la lista va el mapa chico del salón (S-1b): lo que se dibuja y lo que se lista salen de las mismas mesas.
  */
 export function PantallaDeListaDeMesas({
   lista,
@@ -30,6 +31,7 @@ export function PantallaDeListaDeMesas({
       {error ?? null}
       {lista === null ? null : (
         <>
+          <PlanoDeMesas plano={lista.plano} />
           <ul className={estilos["lista"]}>
             {lista.filas.map((fila) => (
               <li key={fila.id} className={estilos["fila"]}>

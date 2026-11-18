@@ -26,6 +26,13 @@ function publicada(c: VidrieraDeEjemplo, lugar: string | null = null): VidrieraP
     rubro: c.rubro,
     lugar,
     mensajeDePortada: null,
+    identidad: {
+      modelo: "LISTA",
+      cara: null,
+      colorPropio: null,
+      colorDeLaEmpresa: null,
+      logo: null,
+    },
     letraBase: "NORMAL",
     secciones: c.secciones,
   };

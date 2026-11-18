@@ -489,6 +489,20 @@ describe("las operaciones del puerto, con las respuestas reales", () => {
       }
     });
 
+    it("un fallo TLS con motivo de OpenSSL llega completo a la línea de log (el que ve el dueño en producción)", async () => {
+      const m = armar({
+        ambiente: "PRODUCCION",
+        transporte: wsfe([
+          "FEParamGetPtosVenta",
+          { tipo: "NO_SALIO", motivo: "EPROTO_UNSAFE_LEGACY_RENEGOTIATION_DISABLED" },
+        ]),
+      });
+      expect((await m.adaptador.puntosDeVenta(CUIT)).ok).toBe(false);
+      expect(m.avisos).toEqual([
+        "[arca] FEParamGetPtosVenta falló (SERVICIO_NO_DISPONIBLE): no salió: EPROTO_UNSAFE_LEGACY_RENEGOTIATION_DISABLED",
+      ]);
+    });
+
     it("si registrar lanza, la respuesta sale igual", async () => {
       const respuesta = respuestaHttp("no es xml", 500);
       const { adaptador } = armar({

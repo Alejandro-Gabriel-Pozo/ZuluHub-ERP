@@ -78,6 +78,10 @@ describe.skipIf(base === null)(
       lugar: null,
       mensajeDePortada: null,
       estado: "FUERA_DE_LINEA" as const,
+      modelo: "LISTA" as const,
+      cara: null,
+      colorPropio: null,
+      logo: null,
       creadoPor: personaId(e.persona),
       ...datos,
     });
@@ -118,6 +122,10 @@ describe.skipIf(base === null)(
           lugar: "Huinganco",
           mensajeDePortada: "Desliza para ver el menú",
           estado: "FUERA_DE_LINEA",
+          modelo: "LISTA",
+          cara: null,
+          colorPropio: null,
+          logo: null,
           version: 1,
         });
         expect(
@@ -248,6 +256,10 @@ describe.skipIf(base === null)(
           lugar: null,
           mensajeDePortada: "¡Bienvenidos!",
           estado: "EN_LINEA" as const,
+          modelo: "LISTA" as const,
+          cara: null,
+          colorPropio: null,
+          logo: null,
         };
         const editada = valor(
           await como(a, (r) =>
@@ -299,6 +311,10 @@ describe.skipIf(base === null)(
                   lugar: null,
                   mensajeDePortada: null,
                   estado: "EN_LINEA",
+                  modelo: "LISTA",
+                  cara: null,
+                  colorPropio: null,
+                  logo: null,
                 }),
               ),
             (x) => {

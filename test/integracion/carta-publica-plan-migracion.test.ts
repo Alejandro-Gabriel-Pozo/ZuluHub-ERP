@@ -39,7 +39,7 @@ const permisos = (c: pg.Client) =>
   );
 const politicas = (c: pg.Client) =>
   c.query<{ policyname: string }>(
-    `select policyname from pg_policies where schemaname = 'public' and tablename = any($1) and roles = '{pedernal_publico}' order by policyname`,
+    `select policyname from pg_policies where schemaname = 'public' and tablename = any($1) and roles = '{pedernal_publico}' and policyname like '%\\_publico\\_de\\_carta' order by policyname`,
     [TABLAS],
   );
 

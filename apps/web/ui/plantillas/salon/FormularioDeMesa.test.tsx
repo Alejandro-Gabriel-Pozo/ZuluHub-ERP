@@ -7,6 +7,7 @@ import { tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
 import { FormularioDeMesa } from "./FormularioDeMesa.cliente";
 import { armarElFormularioDeMesa } from "./modelo-de-mesas";
+import { MEDIDAS_DE_PRUEBA } from "../../pruebas/ayudas-de-mesas";
 
 /**
  * El formulario de una mesa en Chromium (maqueta `mesas.html`, «Agregar mesa» y «Editar mesa»): los cinco campos, lo que viaja al guardar, el doble toque (un solo envío), sin permiso, el error
@@ -19,7 +20,10 @@ afterEach(async () => {
 });
 
 const formulario = (accion: AccionDeFormulario = ok, puede = true) => (
-  <FormularioDeMesa formulario={armarElFormularioDeMesa(null, puede)} accion={accion} />
+  <FormularioDeMesa
+    formulario={armarElFormularioDeMesa(null, puede, { medidas: MEDIDAS_DE_PRUEBA, mesas: [] })}
+    accion={accion}
+  />
 );
 const guardar = () => page.getByRole("button", { name: "Guardar" });
 const llenar = async () => {
@@ -84,6 +88,23 @@ describe("FormularioDeMesa", () => {
     liberar();
     await expect.element(guardar()).not.toHaveAttribute("aria-busy", "true");
     expect(accion).toHaveBeenCalledTimes(1);
+  });
+
+  it("el mapa chico se redibuja con lo que se escribe: aparece al poner columna y fila y se mueve al cambiarlas", async () => {
+    await render(formulario());
+    await expect.element(page.getByRole("list", { name: "Plano" })).toBeVisible();
+    expect(document.querySelector('[data-borrador="si"]')).toBeNull();
+    await llenar();
+    const borrador = () => document.querySelector<HTMLElement>('[data-borrador="si"]');
+    await vi.waitFor(() =>
+      expect(borrador()?.style.getPropertyValue("--izquierda")).toBe(`${String((2 / 14) * 100)}%`),
+    );
+    await userEvent.fill(page.getByLabelText("Columna", { exact: true }), "5");
+    await vi.waitFor(() =>
+      expect(borrador()?.style.getPropertyValue("--izquierda")).toBe(`${String((4 / 14) * 100)}%`),
+    );
+    await userEvent.fill(page.getByLabelText("Columna", { exact: true }), "");
+    await vi.waitFor(() => expect(borrador()).toBeNull());
   });
 
   it("sin permiso «Guardar» sale apagado aunque estén los datos", async () => {
