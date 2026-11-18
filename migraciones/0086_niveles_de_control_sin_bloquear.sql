@@ -2,10 +2,14 @@
 -- Empresas y sucursales eligen solo entre PERMITIR y AVISAR; el sistema mantiene un bloqueo FIJO solo para la integridad del dinero, que NO se declara como control.
 -- QUÉ HACE: (1) cuenta las filas de `nivel_de_control` con `BLOQUEAR` y deja la cuenta en un `RAISE NOTICE`; (2) las pasa a `AVISAR`; (3) reemplaza `nivel_de_control_nivel_ck` por `CHECK (nivel IN ('PERMITIR', 'AVISAR'))`.
 -- TOCA DATOS si la cuenta no es cero (el paso 2 cambia lo que una empresa o sucursal dejó guardado): AVISAR AL DUEÑO antes de aplicarla en una base con clientes. En una base sin clientes la cuenta debe ser cero.
--- NO toca los disparadores de existencia negativa (0030) ni de recepción contra orden (0066, 0067): tienen una rama `BLOQUEAR` que con el CHECK nuevo ya no se puede alcanzar (ninguna fila puede valer `BLOQUEAR`); quedan como código muerto inofensivo.
+-- HALLAZGO (decisión de la orquestadora, 18/11/2026: no se reescriben en este PR, son funciones sensibles a concurrencia): NO toca estas tres funciones de disparador, que siguen leyendo `nivel_de_control` y tienen una rama `BLOQUEAR`:
+--   · 0030 `stock`: el disparador del renglón (`renglon_aplicar`, restricción `stock_existencia_negativa_bloqueada`);
+--   · 0066 `compras_ordenes`: los dos disparadores de recepción contra orden (control `compras.recepcion_excede_la_orden`, que no está en el catálogo TS);
+--   · 0067 `compras_diferencias`: los mismos dos disparadores, redefinidos.
+--   Con el CHECK nuevo ninguna fila puede valer `BLOQUEAR`, así que esas ramas quedan muertas e inofensivas: limpiarlas es un PR aparte.
 -- Reversión: `migraciones/reversiones/0086_revertir_niveles_de_control_sin_bloquear.sql`. Vuelve a ampliar el CHECK, pero NO puede restituir qué filas eran `BLOQUEAR`: las que pasaron a `AVISAR` quedan en `AVISAR`
 -- (el único rastro es el `RAISE NOTICE` de la corrida de esta migración; la auditoría no registra este cambio porque lo hace la migración, no una persona).
--- Se puede repetir sin que cambie nada (el UPDATE no encuentra filas, el CHECK se reemplaza por el mismo). Sin SECURITY DEFINER, sin funciones nuevas.
+-- SUPUESTO (DEC-0761): el rol que la corre evade RLS (superusuario o BYPASSRLS; `nivel_de_control` tiene RLS forzada); si no, la migración se frena antes de tocar nada. Se puede repetir sin que cambie nada (el UPDATE no encuentra filas, el CHECK se reemplaza por el mismo). Sin SECURITY DEFINER, sin funciones nuevas.
 -- DEPENDE de 0007 (`nivel_de_control`). Probada por `test/integracion/niveles-de-control-migracion.test.ts`.
 
 DO $$

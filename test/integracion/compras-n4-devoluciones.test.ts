@@ -393,10 +393,10 @@ describe.skipIf(base === null)("compras N4: devoluciones al proveedor", () => {
     }
   });
 
-  it("atómica: si el control de existencia negativa bloquea la salida, no queda devolución ni línea ni movimiento", async () => {
+  it("atómica: si el control de existencia negativa frena la salida (AVISAR sin confirmar), no queda devolución ni línea ni movimiento", async () => {
     const m = await armar();
     await c.dueno.query(
-      "insert into nivel_de_control (empresa_id, sucursal_id, control, nivel) values ($1, null, 'stock.existencia_negativa', 'BLOQUEAR')",
+      "insert into nivel_de_control (empresa_id, sucursal_id, control, nivel) values ($1, null, 'stock.existencia_negativa', 'AVISAR')",
       [m.e.empresa],
     );
     const r = await c.casos.devolverAlProveedor(m.e.gerente, pedido(m, "10001"));
