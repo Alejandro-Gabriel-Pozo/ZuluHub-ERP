@@ -4,7 +4,7 @@ import { cantidadATexto, cantidadDesdeTexto } from "../../../primitivas/cantidad
 import { ErrorDeValor } from "../../../primitivas/cantidad/errores";
 import { importeAJson, type ImporteJson } from "../../../primitivas/dinero/importe";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { FORMA_DEL_IMPORTE } from "../dominio/forma-del-importe";
+import { FORMA_DEL_IMPORTE } from "../../../primitivas/dinero/forma-del-importe";
 import { cuentaId, lineaId } from "../dominio/identificadores";
 import type { ModoDeCopia } from "../persistencia/modelo-de-cuentas";
 import { aJson, calcularLasLineas } from "./calculo";
