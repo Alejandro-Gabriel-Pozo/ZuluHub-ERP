@@ -1,8 +1,9 @@
 import { request as pedirPorHttp, type IncomingMessage } from "node:http";
 import { request as pedirPorHttps } from "node:https";
 import type { Socket } from "node:net";
+import { DEFAULT_CIPHERS } from "node:tls";
 import { MAXIMO_DE_RESPUESTA_EN_BYTES, TIEMPO_LIMITE_DE_CONEXION_EN_MS } from "./constantes";
-import type { RespuestaDeTransporte, Transporte } from "./tipos";
+import type { PedidoDeTransporte, RespuestaDeTransporte, Transporte } from "./tipos";
 
 /**
  * Transporte HTTP del adaptador de ARCA sobre `node:http` y `node:https` (sin librerías), con un tiempo límite
@@ -10,9 +11,13 @@ import type { RespuestaDeTransporte, Transporte } from "./tipos";
  * Los SDK de terceros cancelan su temporizador al recibir las cabeceras: un servidor que manda las cabeceras y
  * se cuelga los deja esperando para siempre. Acá el temporizador corre hasta el último byte del cuerpo.
  *
- * TLS con los valores por defecto de Node: nada se afloja (si ARCA exigiera parámetros débiles, se le informa
- * al dueño, no se acepta). Una conexión nueva por pedido (`agent: false`): son pocas llamadas y así no hay
- * estado compartido entre pedidos.
+ * TLS con los valores por defecto de Node: por defecto nada se afloja. Excepción única, declarada, para los
+ * dominios de ARCA (`DOMINIOS_DE_ARCA_CON_TLS_COMPATIBLE`), por decisión del dueño del 18/11/2026: si el handshake
+ * estricto falla con un motivo de la lista cerrada (`EPROTO_DH_KEY_TOO_SMALL`: el servidor de ARCA ofrece un DH de
+ * 1024 bits y Node 24 pide más), y solo si no salió ni un byte del pedido (`NO_SALIO`), se reintenta UNA vez con
+ * `@SECLEVEL=1` (el piso mínimo que admite DH de 1024). Nunca se toca `rejectUnauthorized` ni la verificación del
+ * certificado, ni `minVersion`, ni se baja a SECLEVEL=0. Para apagarla: vaciar la constante de dominios.
+ * Una conexión nueva por pedido (`agent: false`): son pocas llamadas y así no hay estado compartido entre pedidos.
  *
  * Distingue en qué fase falló, que es lo que decide si un pedido «seguro no salió» o «no se sabe»:
  *  - antes de que la conexión (y el TLS) esté abierta, NO salió ni un byte del pedido: `NO_SALIO`;
@@ -27,7 +32,47 @@ export type OpcionesDelTransporte = Readonly<{
   conexionEnMs?: number;
   /** Tope de la respuesta; por defecto `MAXIMO_DE_RESPUESTA_EN_BYTES`. */
   maximoDeBytes?: number;
+  /** Deja rastro de que se usó el modo compatible y por qué (nunca datos del pedido). No lanza hacia afuera. */
+  registrar?: (detalle: string) => void;
+  /**
+   * SOLO PARA PRUEBAS: los dominios elegibles para el modo compatible. La composición no lo pasa: en producción
+   * rige `DOMINIOS_DE_ARCA_CON_TLS_COMPATIBLE`.
+   */
+  dominiosConTlsCompatible?: readonly string[];
 }>;
+
+/**
+ * Los dominios propios de ARCA donde se permite el reintento en modo compatible. Un hostname es elegible si es
+ * IGUAL al dominio o termina en `.` + dominio (el hostname sale de `new URL`: minúsculas, sin puerto ni usuario;
+ * `afip.gov.ar@evil.com` es el host `evil.com`; `afip.gov.ar.` con punto final NO es elegible: se declara así a
+ * propósito, la URL real de ARCA no lo lleva). Fuente única de la excepción. Chequeo: `transporte-http.test.ts`.
+ */
+export const DOMINIOS_DE_ARCA_CON_TLS_COMPATIBLE: readonly string[] = [
+  "afip.gov.ar",
+  "arca.gob.ar",
+];
+
+/** Los únicos motivos que habilitan el reintento (lista cerrada): lo demostrado con un servidor local de DH 1024. */
+const MOTIVOS_QUE_HABILITAN_EL_MODO_COMPATIBLE: readonly string[] = ["EPROTO_DH_KEY_TOO_SMALL"];
+
+/** Los cifrados por defecto de Node con el nivel de seguridad bajado a 1 (DH de 1024 bits), nada más. */
+const CIFRADOS_DEL_MODO_COMPATIBLE = `${DEFAULT_CIPHERS}:@SECLEVEL=1`;
+
+/** ¿El hostname de la URL es de un dominio de la lista (igual o subdominio)? Falla cerrado ante una URL ilegible. */
+export function esDominioConTlsCompatible(
+  url: string,
+  dominios: readonly string[] = DOMINIOS_DE_ARCA_CON_TLS_COMPATIBLE,
+): boolean {
+  let destino: URL;
+  try {
+    destino = new URL(url);
+  } catch {
+    return false;
+  }
+  if (destino.protocol !== "https:") return false;
+  const host = destino.hostname;
+  return dominios.some((dominio) => host === dominio || host.endsWith(`.${dominio}`));
+}
 
 const FORMA_DE_CODIGO = /^[A-Z0-9_]{2,60}$/;
 
@@ -81,8 +126,18 @@ export function codigoDeError(error: unknown): string {
 export function crearTransporteHttp(opciones: OpcionesDelTransporte = {}): Transporte {
   const conexionEnMs = opciones.conexionEnMs ?? TIEMPO_LIMITE_DE_CONEXION_EN_MS;
   const maximoDeBytes = opciones.maximoDeBytes ?? MAXIMO_DE_RESPUESTA_EN_BYTES;
+  const dominios = opciones.dominiosConTlsCompatible ?? DOMINIOS_DE_ARCA_CON_TLS_COMPATIBLE;
 
-  return (pedido) =>
+  const registrar = (detalle: string): void => {
+    try {
+      opciones.registrar?.(detalle);
+    } catch {
+      // Un registro que falla no cambia lo que se devuelve.
+    }
+  };
+
+  /** Un solo intento. `compatible`: con `@SECLEVEL=1`; si no, los valores por defecto de Node. */
+  const intentar = (pedido: PedidoDeTransporte, compatible: boolean) =>
     new Promise<RespuestaDeTransporte>((resolver) => {
       const destino = new URL(pedido.url);
       const esHttps = destino.protocol === "https:";
@@ -132,6 +187,7 @@ export function crearTransporteHttp(opciones: OpcionesDelTransporte = {}): Trans
         {
           method: "POST",
           agent: false,
+          ...(compatible ? { ciphers: CIFRADOS_DEL_MODO_COMPATIBLE } : {}),
           headers: {
             "Content-Type": "text/xml; charset=utf-8",
             "Content-Length": String(cuerpo.length),
@@ -154,4 +210,30 @@ export function crearTransporteHttp(opciones: OpcionesDelTransporte = {}): Trans
       pedidoHttp.on("error", (error) => fallar(codigoDeError(error)));
       pedidoHttp.end(cuerpo);
     });
+
+  /**
+   * El intento estricto y, solo si falló con un motivo de la lista cerrada, sin que saliera nada del pedido y contra
+   * un dominio de ARCA, UN reintento en modo compatible (nunca un tercero). Si el reintento tampoco abre la
+   * conexión, se devuelve el error ORIGINAL; si la abre y después falla, se devuelve esa falla (`SIN_RESPUESTA`:
+   * el pedido pudo haber llegado, y decir «no salió» sería falso).
+   */
+  return async (pedido) => {
+    const estricto = await intentar(pedido, false);
+    if (
+      estricto.tipo !== "NO_SALIO" ||
+      !MOTIVOS_QUE_HABILITAN_EL_MODO_COMPATIBLE.includes(estricto.motivo) ||
+      !esDominioConTlsCompatible(pedido.url, dominios)
+    ) {
+      return estricto;
+    }
+    const compatible = await intentar(pedido, true);
+    const resultado =
+      compatible.tipo === "NO_SALIO"
+        ? `tampoco salió (${compatible.motivo})`
+        : "la conexión se abrió";
+    registrar(
+      `[arca] TLS en modo compatible (SECLEVEL=1) con ${new URL(pedido.url).hostname} por ${estricto.motivo}: ${resultado}`,
+    );
+    return compatible.tipo === "NO_SALIO" ? estricto : compatible;
+  };
 }
