@@ -13,6 +13,17 @@
   font-weight: var(--tipo-peso-fuerte);
 }
 
+.aclaracion {
+  font-weight: normal;
+  color: var(--color-texto-suave);
+}
+
+.notaDelGrupo {
+  margin: 0;
+  font-weight: var(--tipo-peso-fuerte);
+  color: var(--color-texto-suave);
+}
+
 .soloLector {
   position: absolute;
   width: 1px;

@@ -121,9 +121,6 @@ function diferida<T>() {
   return { promesa, resolver };
 }
 
-const pedidoDe = (llamada: number, cotizar: ReturnType<typeof vi.fn>) =>
-  cotizar.mock.calls[llamada]?.[0] as { lineas: readonly Record<string, unknown>[] };
-
 async function pantalla(
   cotizar = vi.fn(() => Promise.resolve(ok(cotizacion("7777.00", ["7777.00"])))),
 ) {
@@ -138,7 +135,14 @@ async function pantalla(
   return cotizar;
 }
 
-const agregarEnLaHoja = () => userEvent.click(page.getByRole("button", { name: "Agregar" }));
+/** «Agregar», con o sin el importe que da el servidor («Agregar · $ 1.200,00»). */
+const botonAgregar = () => page.getByRole("button", { name: /^Agregar( ·|$)/ });
+const agregarEnLaHoja = () => userEvent.click(botonAgregar());
+/**
+ * `cotizar` lo llama la hoja (para el importe de «Agregar · $ …») y lo llama la cuenta. El último pedido tras tocar «Agregar» siempre es el de la cuenta: la hoja ya se cerró.
+ */
+const ultimoPedido = (cotizar: ReturnType<typeof vi.fn>) =>
+  cotizar.mock.calls.at(-1)?.[0] as { lineas: readonly Record<string, unknown>[] } | undefined;
 const total = () => page.getByRole("paragraph").filter({ hasText: "Total" });
 const textoDelTotal = () => document.querySelector("[data-total]")?.textContent ?? null;
 
@@ -186,8 +190,34 @@ describe("VentaRapida: lo que se ve", () => {
     await userEvent.click(page.getByRole("button", { name: "Cafés", exact: true }));
     expect(page.getByRole("button", { name: /Medialuna/ }).elements()).toHaveLength(0);
     await expect.element(page.getByRole("button", { name: /Latte/ })).toBeVisible();
-    await userEvent.click(page.getByRole("button", { name: "Cafés", exact: true }));
+    await userEvent.click(page.getByRole("button", { name: "Todo", exact: true }));
     await expect.element(page.getByRole("button", { name: /Medialuna/ })).toBeVisible();
+  });
+
+  it("«Todo» está elegido al entrar; tocar la sección elegida no la suelta y «Todo» vuelve a mostrar todo (maqueta v4:597 y :740)", async () => {
+    await pantalla();
+    const todo = page.getByRole("button", { name: "Todo", exact: true });
+    const cafes = page.getByRole("button", { name: "Cafés", exact: true });
+    await expect.element(todo).toHaveAttribute("aria-pressed", "true");
+    await expect.element(cafes).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(cafes);
+    await expect.element(cafes).toHaveAttribute("aria-pressed", "true");
+    await expect.element(todo).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(cafes); // tocar la elegida no hace nada
+    await expect.element(cafes).toHaveAttribute("aria-pressed", "true");
+    expect(page.getByRole("button", { name: /Medialuna/ }).elements()).toHaveLength(0);
+    await userEvent.click(todo);
+    await expect.element(todo).toHaveAttribute("aria-pressed", "true");
+    await expect.element(page.getByRole("button", { name: /Medialuna/ })).toBeVisible();
+  });
+
+  it("el grupo de secciones se llama «Secciones», no como el buscador", async () => {
+    await pantalla();
+    await expect.element(page.getByRole("group", { name: "Secciones" })).toBeVisible();
+    expect(page.getByRole("group", { name: "Buscar por nombre o código" }).elements()).toHaveLength(
+      0,
+    );
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 
   it("también busca por código y por código de barras", async () => {
@@ -229,12 +259,11 @@ describe("VentaRapida: la hoja y la cuenta", () => {
     await userEvent.click(page.getByRole("button", { name: /Medialuna/ }));
     const hoja = page.getByRole("dialog", { name: "Medialuna" });
     await expect.element(hoja).toBeVisible();
-    await expect.element(page.getByRole("button", { name: "Agregar" })).toBeEnabled();
+    await expect.element(botonAgregar()).toBeEnabled();
     await agregarEnLaHoja();
     await expect.element(page.getByText("Agregado · Medialuna")).toBeVisible();
     await expect.poll(textoDelTotal).toBe("$ 7.777,00");
-    expect(cotizar).toHaveBeenCalledTimes(1);
-    expect(pedidoDe(0, cotizar)).toEqual({
+    expect(ultimoPedido(cotizar)).toEqual({
       lineas: [{ productoId: "medialuna", opcionIds: [], cantidad: "1" }],
     });
   });
@@ -253,17 +282,19 @@ describe("VentaRapida: la hoja y la cuenta", () => {
   it("una respuesta vieja que llega tarde se descarta: solo vale la de la cuenta actual", async () => {
     const primera = diferida<Respuesta<CotizacionDeLaVenta>>();
     const segunda = diferida<Respuesta<CotizacionDeLaVenta>>();
-    const respuestas = [primera, segunda];
-    const cotizar = vi.fn(() => (respuestas.shift() ?? segunda).promesa);
+    const inmediata = () => Promise.resolve(ok(cotizacion("1.00", ["1.00"])));
+    // Orden de las llamadas: 1) la hoja de la medialuna, 2) la cuenta con la medialuna (la que llega tarde), 3) la hoja de la milanesa, 4) la cuenta con las dos (la vigente).
+    const respuestas = [inmediata, () => primera.promesa, inmediata, () => segunda.promesa];
+    const cotizar = vi.fn(() => (respuestas.shift() ?? inmediata)());
     await pantalla(cotizar);
     await userEvent.click(page.getByRole("button", { name: /Medialuna/ }));
     await agregarEnLaHoja();
-    await expect.poll(() => cotizar.mock.calls.length).toBe(1);
+    await expect.poll(() => cotizar.mock.calls.length).toBe(2);
     await new Promise((r) => setTimeout(r, 600)); // pasa la espera tras cerrar la hoja
     await userEvent.click(page.getByRole("button", { name: /Milanesa/ }));
-    await userEvent.click(page.getByRole("radio", { name: "Pollo" }));
+    await userEvent.click(page.getByRole("radio", { name: /Pollo/ }));
     await agregarEnLaHoja();
-    await expect.poll(() => cotizar.mock.calls.length).toBe(2);
+    await expect.poll(() => cotizar.mock.calls.length).toBe(4);
     segunda.resolver(ok(cotizacion("2000.00", ["1.00", "1999.00"])));
     await expect.poll(textoDelTotal).toBe("$ 2.000,00");
     primera.resolver(ok(cotizacion("1.00", ["1.00"])));
@@ -274,13 +305,13 @@ describe("VentaRapida: la hoja y la cuenta", () => {
   it("con medidas y opciones: «Agregar» espera lo obligatorio y manda los ids elegidos", async () => {
     const cotizar = await pantalla();
     await userEvent.click(page.getByRole("button", { name: /Latte/ }));
-    await expect.element(page.getByRole("button", { name: "Agregar" })).toBeDisabled();
+    await expect.element(botonAgregar()).toBeDisabled();
     await userEvent.click(page.getByRole("radio", { name: /Mediano/ }));
     await userEvent.click(page.getByRole("checkbox", { name: /Leche de almendras/ }));
-    await expect.element(page.getByRole("button", { name: "Agregar" })).toBeEnabled();
+    await expect.element(botonAgregar()).toBeEnabled();
     await agregarEnLaHoja();
-    await expect.poll(() => cotizar.mock.calls.length).toBe(1);
-    expect(pedidoDe(0, cotizar)).toEqual({
+    await expect.poll(textoDelTotal).toBe("$ 7.777,00");
+    expect(ultimoPedido(cotizar)).toEqual({
       lineas: [
         { productoId: "latte", varianteId: "mediano", opcionIds: ["almendras"], cantidad: "1" },
       ],
@@ -290,9 +321,9 @@ describe("VentaRapida: la hoja y la cuenta", () => {
   it("un grupo obligatorio sin elegir deja «Agregar» apagado", async () => {
     await pantalla();
     await userEvent.click(page.getByRole("button", { name: /Milanesa/ }));
-    await expect.element(page.getByRole("button", { name: "Agregar" })).toBeDisabled();
+    await expect.element(botonAgregar()).toBeDisabled();
     await userEvent.click(page.getByRole("radio", { name: /Vaca/ }));
-    await expect.element(page.getByRole("button", { name: "Agregar" })).toBeEnabled();
+    await expect.element(botonAgregar()).toBeEnabled();
   });
 
   it("por fracciones: el entero se escribe, cada fracción suma y se arma «4 ½»", async () => {
@@ -302,18 +333,21 @@ describe("VentaRapida: la hoja y la cuenta", () => {
     await userEvent.click(page.getByRole("button", { name: "½" }));
     await expect.element(page.getByText("4 ½", { exact: true })).toBeVisible();
     await agregarEnLaHoja();
-    await expect.poll(() => cotizar.mock.calls.length).toBe(1);
-    expect(pedidoDe(0, cotizar).lineas[0]).toMatchObject({ productoId: "muzza", cantidad: "4.5" });
+    await expect.poll(textoDelTotal).toBe("$ 7.777,00");
+    expect(ultimoPedido(cotizar)?.lineas[0]).toMatchObject({
+      productoId: "muzza",
+      cantidad: "4.5",
+    });
   });
 
   it("por fracciones: «Borrar» vacía la cantidad y apaga «Agregar»", async () => {
     await pantalla();
     await userEvent.click(page.getByRole("button", { name: /Muzzarella/ }));
-    await expect.element(page.getByRole("button", { name: "Agregar" })).toBeDisabled();
+    await expect.element(botonAgregar()).toBeDisabled();
     await userEvent.click(page.getByRole("button", { name: "¼" }));
-    await expect.element(page.getByRole("button", { name: "Agregar" })).toBeEnabled();
+    await expect.element(botonAgregar()).toBeEnabled();
     await userEvent.click(page.getByRole("button", { name: "Borrar" }));
-    await expect.element(page.getByRole("button", { name: "Agregar" })).toBeDisabled();
+    await expect.element(botonAgregar()).toBeDisabled();
   });
 
   it("por peso: se escribe con coma en la unidad del producto; lo que no es múltiplo del paso es «Cantidad no válida»", async () => {
@@ -323,12 +357,15 @@ describe("VentaRapida: la hoja y la cuenta", () => {
     const campo = page.getByRole("textbox", { name: "Cantidad" });
     await userEvent.fill(campo, "0,00005");
     await expect.element(page.getByText("Cantidad no válida")).toBeVisible();
-    await expect.element(page.getByRole("button", { name: "Agregar" })).toBeDisabled();
+    await expect.element(botonAgregar()).toBeDisabled();
     await userEvent.fill(campo, "0,25");
     await expect.element(page.getByText("Cantidad no válida")).not.toBeInTheDocument();
     await agregarEnLaHoja();
-    await expect.poll(() => cotizar.mock.calls.length).toBe(1);
-    expect(pedidoDe(0, cotizar).lineas[0]).toMatchObject({ productoId: "queso", cantidad: "0.25" });
+    await expect.poll(textoDelTotal).toBe("$ 7.777,00");
+    expect(ultimoPedido(cotizar)?.lineas[0]).toMatchObject({
+      productoId: "queso",
+      cantidad: "0.25",
+    });
   });
 
   it("un número del 1 al 6 elige la cantidad de un producto por unidad", async () => {
@@ -336,20 +373,22 @@ describe("VentaRapida: la hoja y la cuenta", () => {
     await userEvent.click(page.getByRole("button", { name: /Medialuna/ }));
     await userEvent.click(page.getByRole("button", { name: "3", exact: true }));
     await agregarEnLaHoja();
-    await expect.poll(() => cotizar.mock.calls.length).toBe(1);
-    expect(pedidoDe(0, cotizar).lineas[0]).toMatchObject({ cantidad: "3" });
+    await expect.poll(textoDelTotal).toBe("$ 7.777,00");
+    expect(ultimoPedido(cotizar)?.lineas[0]).toMatchObject({ cantidad: "3" });
   });
 
   it("DOBLE TOQUE en «Agregar»: la línea se agrega una sola vez", async () => {
     const cotizar = await pantalla();
     await userEvent.click(page.getByRole("button", { name: /Medialuna/ }));
-    const agregar = page.getByRole("button", { name: "Agregar" });
+    const agregar = botonAgregar();
+    await expect.element(agregar).toBeEnabled();
     tocar(agregar);
     tocar(agregar);
-    await expect.poll(() => cotizar.mock.calls.length).toBe(1);
+    await expect.poll(textoDelTotal).toBe("$ 7.777,00");
     await new Promise((r) => setTimeout(r, 200));
-    expect(cotizar).toHaveBeenCalledTimes(1);
-    expect(pedidoDe(0, cotizar).lineas).toEqual([
+    // Dos pedidos en total: el de la hoja (el importe de «Agregar · $ …») y el de la cuenta. Una línea agregada dos veces pediría un tercero, con cantidad 2.
+    expect(cotizar).toHaveBeenCalledTimes(2);
+    expect(ultimoPedido(cotizar)?.lineas).toEqual([
       { productoId: "medialuna", opcionIds: [], cantidad: "1" },
     ]);
   });
@@ -381,8 +420,8 @@ describe("VentaRapida: la hoja y la cuenta", () => {
     await userEvent.click(page.getByRole("button", { name: /Medialuna/ }));
     await userEvent.click(page.getByRole("button", { name: "2", exact: true }));
     await agregarEnLaHoja();
-    await expect.poll(() => cotizar.mock.calls.length).toBe(2);
-    expect(pedidoDe(1, cotizar).lineas).toEqual([
+    await expect.poll(() => ultimoPedido(cotizar)?.lineas[0]?.["cantidad"]).toBe("3");
+    expect(ultimoPedido(cotizar)?.lineas).toEqual([
       { productoId: "medialuna", opcionIds: [], cantidad: "3" },
     ]);
     await expect.element(page.getByRole("button", { name: "Ver cuenta 1" })).toBeVisible();
@@ -412,29 +451,27 @@ describe("VentaRapida: la hoja y la cuenta", () => {
     await expect.element(page.getByText("Los precios incluyen IVA.")).toBeVisible();
     const campos = page.getByRole("textbox", { name: "Cantidad" });
     await userEvent.fill(campos.first(), "4");
-    await expect.poll(() => cotizar.mock.calls.length).toBe(3);
-    expect(pedidoDe(2, cotizar as never).lineas[0]).toMatchObject({
-      productoId: "medialuna",
-      cantidad: "4",
-    });
+    await expect.poll(() => ultimoPedido(cotizar as never)?.lineas[0]?.["cantidad"]).toBe("4");
+    expect(ultimoPedido(cotizar as never)?.lineas[0]).toMatchObject({ productoId: "medialuna" });
+    const pedidos = cotizar.mock.calls.length;
     await userEvent.fill(campos.first(), "0");
     await expect.element(page.getByText("Cantidad no válida")).toBeVisible();
-    expect(cotizar).toHaveBeenCalledTimes(3); // lo no válido no se manda
+    expect(cotizar).toHaveBeenCalledTimes(pedidos); // lo no válido no se manda
     await userEvent.click(page.getByRole("button", { name: "Quitar" }).first());
-    await expect.poll(() => cotizar.mock.calls.length).toBe(4);
-    expect(pedidoDe(3, cotizar as never).lineas).toHaveLength(1);
+    await expect.poll(() => cotizar.mock.calls.length).toBe(pedidos + 1);
+    expect(ultimoPedido(cotizar as never)?.lineas).toHaveLength(1);
     await userEvent.click(page.getByRole("button", { name: "Quitar" }));
     await expect.element(page.getByText("La cuenta está vacía")).toBeVisible();
     await expect.element(page.getByText("Agregá productos desde la venta.")).toBeVisible();
-    await expect.poll(textoDelTotal).toBe("");
+    await expect.poll(textoDelTotal).toBe("$ 0,00");
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 
-  it("la cuenta vacía lo dice con los textos aprobados y el total queda sin importe", async () => {
+  it("la cuenta vacía lo dice con los textos aprobados y el total es «$ 0,00» (maqueta v4: la cuenta vacía suma cero)", async () => {
     await pantalla();
     await userEvent.click(page.getByRole("button", { name: "Ver cuenta" }));
     await expect.element(page.getByText("La cuenta está vacía")).toBeVisible();
-    expect(textoDelTotal()).toBe("");
+    expect(textoDelTotal()).toBe("$ 0,00");
   });
 
   it("un error del servidor al cotizar se muestra y no deja ningún total a la vista", async () => {
@@ -450,13 +487,10 @@ describe("VentaRapida: la hoja y la cuenta", () => {
   });
 
   it("un corte de red al cotizar sale como el genérico y no deja un total viejo", async () => {
-    const respuestas = [
-      () => Promise.resolve(ok(cotizacion("800.00", ["800.00"]))),
-      () => Promise.reject(new Error("red")),
-    ];
-    const cotizar = vi.fn(() =>
-      (respuestas.shift() as () => Promise<Respuesta<CotizacionDeLaVenta>>)(),
-    );
+    const bien = () => Promise.resolve(ok(cotizacion("800.00", ["800.00"])));
+    // Orden de las llamadas: 1) la hoja, 2) la cuenta (bien), 3) la hoja otra vez, 4) la cuenta con más cantidad (se corta la red).
+    const respuestas = [bien, bien, bien, () => Promise.reject(new Error("red"))];
+    const cotizar = vi.fn(() => (respuestas.shift() ?? bien)());
     await pantalla(cotizar);
     await userEvent.click(page.getByRole("button", { name: /Medialuna/ }));
     await agregarEnLaHoja();
@@ -475,6 +509,105 @@ describe("VentaRapida: la hoja y la cuenta", () => {
     await userEvent.click(page.getByRole("button", { name: "½" }));
     await agregarEnLaHoja();
     await expect.element(page.getByRole("button", { name: /Muzzarella.*½/ })).toBeVisible();
+  });
+
+  it("en la cuenta un producto por fracciones muestra solo sus fracciones; la hoja, además, el 1, 2, 3 y «Borrar» (maqueta v4:770 y :792-808)", async () => {
+    await pantalla();
+    await userEvent.click(page.getByRole("button", { name: /Muzzarella/ }));
+    for (const nombre of ["1", "2", "3"]) {
+      await expect.element(page.getByRole("button", { name: nombre, exact: true })).toBeVisible();
+    }
+    await expect.element(page.getByRole("button", { name: "Borrar", exact: true })).toBeVisible();
+    await userEvent.click(page.getByRole("button", { name: "½" }));
+    await agregarEnLaHoja();
+    await userEvent.click(page.getByRole("button", { name: /Ver cuenta/ }));
+    await expect.element(page.getByRole("button", { name: "½", exact: true })).toBeVisible();
+    await expect.element(page.getByRole("button", { name: "¼", exact: true })).toBeVisible();
+    for (const nombre of ["1", "2", "3", "Borrar"]) {
+      expect(page.getByRole("button", { name: nombre, exact: true }).elements()).toHaveLength(0);
+    }
+  });
+
+  it("la hoja dice «Sin elegir» mientras falta la medida, «(obligatorio)» u «(opcional)» en cada grupo e «Incluido» en la opción sin recargo (maqueta v4:750 y :757-759)", async () => {
+    await pantalla();
+    await userEvent.click(page.getByRole("button", { name: /Latte/ }));
+    // «Sin elegir» va DENTRO del grupo de la medida (maqueta v4:750), no como un texto suelto.
+    await expect
+      .element(page.getByRole("group", { name: "Medida" }).getByText("Sin elegir", { exact: true }))
+      .toBeVisible();
+    await expect.element(page.getByText("(opcional)", { exact: true })).toBeVisible();
+    await userEvent.click(page.getByRole("radio", { name: /Mediano/ }));
+    expect(page.getByText("Sin elegir", { exact: true }).elements()).toHaveLength(0);
+    await userEvent.click(page.getByRole("button", { name: "Cancelar" }));
+    await new Promise((r) => setTimeout(r, 600)); // pasa la espera tras cerrar la hoja
+    await userEvent.click(page.getByRole("button", { name: /Milanesa/ }));
+    await expect.element(page.getByText("(obligatorio)", { exact: true })).toBeVisible();
+    await expect.element(page.getByRole("radio", { name: /Pollo.*Incluido/ })).toBeVisible();
+    await expect.element(page.getByRole("radio", { name: /Vaca.*\+ \$ 500,00/ })).toBeVisible();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("«Agregar · $ …» muestra el importe que da el servidor (no una cuenta del navegador) y pide una sola línea", async () => {
+    const cotizar = await pantalla(
+      vi.fn(() => Promise.resolve(ok(cotizacion("1200.00", ["1200.00"])))),
+    );
+    await userEvent.click(page.getByRole("button", { name: /Medialuna/ }));
+    await expect.element(page.getByRole("button", { name: "Agregar · $ 1.200,00" })).toBeEnabled();
+    expect(ultimoPedido(cotizar)).toEqual({
+      lineas: [{ productoId: "medialuna", opcionIds: [], cantidad: "1" }],
+    });
+  });
+
+  it("sin la elección completa o sin respuesta, el botón dice solo «Agregar» y agregar no espera al importe", async () => {
+    const pendiente = diferida<Respuesta<CotizacionDeLaVenta>>();
+    await pantalla(vi.fn(() => pendiente.promesa));
+    await userEvent.click(page.getByRole("button", { name: /Latte/ }));
+    await expect.element(page.getByRole("button", { name: "Agregar", exact: true })).toBeDisabled();
+    await userEvent.click(page.getByRole("radio", { name: /Mediano/ }));
+    await expect.element(page.getByRole("button", { name: "Agregar", exact: true })).toBeEnabled();
+    await agregarEnLaHoja(); // la cotización de la hoja nunca llegó: igual se agrega
+    await expect.element(page.getByText("Agregado · Latte")).toBeVisible();
+  });
+
+  it("si falla la cotización de la hoja, el botón queda en «Agregar» y agrega igual", async () => {
+    const respuestas = [() => Promise.reject(new Error("red"))];
+    await pantalla(
+      vi.fn(() =>
+        (respuestas.shift() ?? (() => Promise.resolve(ok(cotizacion("800.00", ["800.00"])))))(),
+      ),
+    );
+    await userEvent.click(page.getByRole("button", { name: /Medialuna/ }));
+    await expect.element(page.getByRole("button", { name: "Agregar", exact: true })).toBeEnabled();
+    await agregarEnLaHoja();
+    await expect.element(page.getByText("Agregado · Medialuna")).toBeVisible();
+  });
+
+  it("una respuesta tardía de una elección anterior se descarta: el botón muestra el importe de la elección actual", async () => {
+    const chico = diferida<Respuesta<CotizacionDeLaVenta>>();
+    const mediano = diferida<Respuesta<CotizacionDeLaVenta>>();
+    // Orden de las llamadas de la hoja: 1) «Chico» (la que llega tarde), 2) «Mediano» (la vigente).
+    const respuestas = [chico, mediano];
+    const cotizar = vi.fn(() => (respuestas.shift() ?? mediano).promesa);
+    await pantalla(cotizar);
+    await userEvent.click(page.getByRole("button", { name: /Latte/ }));
+    await userEvent.click(page.getByRole("radio", { name: /Chico/ }));
+    await expect.poll(() => cotizar.mock.calls.length).toBe(1);
+    await userEvent.click(page.getByRole("radio", { name: /Mediano/ }));
+    await expect.poll(() => cotizar.mock.calls.length).toBe(2);
+    mediano.resolver(ok(cotizacion("3800.00", ["3800.00"])));
+    await expect.element(page.getByRole("button", { name: "Agregar · $ 3.800,00" })).toBeEnabled();
+    chico.resolver(ok(cotizacion("3200.00", ["3200.00"])));
+    await new Promise((r) => setTimeout(r, 100));
+    await expect.element(page.getByRole("button", { name: "Agregar · $ 3.800,00" })).toBeEnabled();
+    expect(page.getByRole("button", { name: /3\.200,00/ }).elements()).toHaveLength(0);
+  });
+
+  it("por fracciones, el importe del servidor se ve a la derecha de la cantidad (maqueta v4:767)", async () => {
+    await pantalla(vi.fn(() => Promise.resolve(ok(cotizacion("4500.00", ["4500.00"])))));
+    await userEvent.click(page.getByRole("button", { name: /Muzzarella/ }));
+    expect(page.getByText("$ 4.500,00", { exact: true }).elements()).toHaveLength(0);
+    await userEvent.click(page.getByRole("button", { name: "½" }));
+    await expect.element(page.getByText("$ 4.500,00", { exact: true })).toBeVisible();
   });
 
   it("la hoja se cierra con Escape y devuelve el foco a la tarjeta", async () => {
