@@ -1,10 +1,10 @@
 /**
  * ARCHIVO CENTRAL
  * QUÉ ES: la composición que usa la app web; arma la base común y junta lo que aporta cada módulo.
- * QUÉ NO ES: el lugar donde se conectan los casos de uso de un módulo.
+ * QUÉ NO ES: el lugar donde se conectan los casos de uso de un módulo: eso va en su parte dedicada.
  * EXPORTA: OpcionesDeWeb, armarWeb, Web
- * IMPORTA: solo de ./web-base, ./web-de-*, ./conexiones, ./emision-fiscal, ./cadenas-de-confianza-de-arca, la matriz de permisos y los tipos de las opciones.
- * PARTE DEDICADA: src/composicion/web-de-<carpeta de src/modulos>.ts
+ * IMPORTA: src/composicion/web-base, src/composicion/web-de-*, src/composicion/conexiones, src/composicion/emision-fiscal, src/composicion/cadenas-de-confianza-de-arca, src/capacidades/permisos/empresa, src/modulos/fiscal/publico, src/adaptadores/certificados/lector-x509, src/puertos/transacciones.
+ * PARTE DEDICADA: src/composicion/web-de-<módulo>.ts (una por carpeta de src/modulos; empresas, fiscal e identidad no son módulos del catálogo comercial y van en `excepciones`).
  */
 import type { CadenasDeConfianza } from "../adaptadores/certificados/lector-x509";
 import { REGLAS_DE_EMPRESA, type ReglasDeEmpresa } from "../capacidades/permisos/empresa";
