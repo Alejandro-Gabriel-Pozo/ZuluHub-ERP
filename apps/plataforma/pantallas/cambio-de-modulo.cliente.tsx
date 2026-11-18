@@ -42,7 +42,7 @@ function textoDelError(error: ErrorParaLaPantalla): string {
     case "OCULTAR_ACCION":
     case "SEGUNDO_FACTOR":
     case "INESPERADO":
-      return "No tenés permiso para hacer este cambio.";
+      return "Esta acción no está permitida.";
   }
 }
 
