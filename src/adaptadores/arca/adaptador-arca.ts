@@ -28,6 +28,7 @@ import {
   clasificarDummy,
   clasificarLoginCms,
   clasificarParametros,
+  clasificarPuntosDeVenta,
   clasificarUltimoAutorizado,
   type EstadoDelServicio,
 } from "./clasificar";
@@ -364,7 +365,7 @@ export function crearEmisionArca(
       if (!auth.ok) return auth;
       const pedido = pedidoFEParamGetPtosVenta(auth.valor.autenticacion);
       const respuesta = await llamarWsfe("FEParamGetPtosVenta", pedido);
-      const lista = aPuntosDeVentaDeArca(clasificarParametros(respuesta, "FEParamGetPtosVenta"));
+      const lista = aPuntosDeVentaDeArca(clasificarPuntosDeVenta(respuesta));
       if (!lista.ok) avisarFalla("FEParamGetPtosVenta", lista.error);
       return lista;
     },
