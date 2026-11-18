@@ -3,6 +3,7 @@ import { CODIGOS_PUBLICOS } from "../capacidades/experiencia/respuesta";
 import type { CodigoFiscal } from "../capacidades/experiencia/respuesta-fiscal";
 import { CATALOGO_DE_TEXTOS } from "../capacidades/vocabulario/catalogo";
 import { err, ok } from "../primitivas/resultado/resultado";
+import { FISCAL_POR_CAUSA_DE_ARCA } from "./errores-fiscales-de-arca";
 import {
   CODIGOS_DE_CONFIGURACION_SIN_TEXTO,
   FISCAL_POR_ERROR_CON_CODIGO,
@@ -69,6 +70,7 @@ describe("las tablas de traducción", () => {
     const usados = new Set<string>([
       ...conCodigoPublico(Object.values(FISCAL_POR_ERROR_DE_TEXTO)),
       ...Object.values(FISCAL_POR_ERROR_CON_CODIGO),
+      ...conCodigoPublico(Object.values(FISCAL_POR_CAUSA_DE_ARCA)),
     ]);
     // Los que arma la entrada de la web y no el módulo (`entradas-de-facturacion.ts`).
     const delBorde = new Set(["FISCAL_DATOS_INVALIDOS", "FISCAL_CONFIGURACION_DATOS_INVALIDOS"]);
@@ -175,26 +177,62 @@ describe("la configuración fiscal (D-43)", () => {
     );
   });
 
-  it("D-77: pasar a producción un punto de venta que ARCA no habilita sale con SU código y el texto ya aprobado del rechazo 10005", () => {
-    expect(traducirErrorFiscal("PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA")).toEqual({
-      codigo: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA",
-    });
-    const r = aRespuestaFiscal(
-      err("PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA"),
-      dependencias,
-      () => null,
-    );
-    expect(r).toMatchObject({
-      ok: false,
-      error: { codigo: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA" },
-    });
-    const texto =
-      CATALOGO_DE_TEXTOS["error.fiscal_punto_de_venta_no_habilitado_en_arca"].porDefecto;
-    expect(texto).toBe(
+  it("D-77: pasar a producción un punto de venta que ARCA no habilita sale con su código y su texto aprobado (DEC-0741)", () => {
+    const casos = [
+      ["PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA", "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA"],
+      ["SIN_PUNTOS_DE_VENTA_EN_ARCA", "FISCAL_ARCA_SIN_PUNTOS_DE_VENTA"],
+      ["PUNTO_DE_VENTA_BLOQUEADO_EN_ARCA", "FISCAL_PUNTO_DE_VENTA_BLOQUEADO_EN_ARCA"],
+      ["PUNTO_DE_VENTA_DADO_DE_BAJA_EN_ARCA", "FISCAL_PUNTO_DE_VENTA_DADO_DE_BAJA_EN_ARCA"],
+      ["PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA", "FISCAL_PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA"],
+    ] as const;
+    for (const [error, codigo] of casos) {
+      expect(traducirErrorFiscal(error), error).toEqual({ codigo });
+      const r = aRespuestaFiscal(err(error), dependencias, () => null);
+      expect(r, error).toMatchObject({ ok: false, error: { codigo } });
+      // Sale con su código público y no como un error inesperado.
+      expect(r, error).not.toMatchObject({ error: { codigo: "ERROR_INTERNO" } });
+    }
+  });
+
+  it("los textos aprobados el 18/11/2026 (DEC-0741), tal cual, con su uso y su fuente", () => {
+    const textos = {
+      "error.fiscal_punto_de_venta_no_habilitado_en_arca":
+        "ARCA no tiene este punto de venta para facturar por web services. Dalo de alta en ARCA con este número, o corregí el número.",
+      "error.fiscal_arca_sin_puntos_de_venta":
+        "Este CUIT no tiene ningún punto de venta para facturar por web services en ARCA. Dalo de alta en ARCA y volvé a intentar.",
+      "error.fiscal_punto_de_venta_bloqueado_en_arca":
+        "Este punto de venta está bloqueado en ARCA. Regularizalo en ARCA y volvé a intentar.",
+      "error.fiscal_punto_de_venta_dado_de_baja_en_arca":
+        "Este punto de venta está dado de baja en ARCA. Dalo de alta de nuevo en ARCA o usá otro número.",
+      "error.fiscal_punto_de_venta_solo_caea_en_arca":
+        "Este punto de venta es solo para CAEA en ARCA. Para facturar necesitás uno de CAE: dalo de alta en ARCA.",
+      "error.fiscal_arca_cuit_no_representada":
+        "El certificado cargado no corresponde al CUIT de este emisor. Revisá el CUIT o cargá el certificado de ese CUIT.",
+      "error.fiscal_arca_certificado_vencido":
+        "El certificado de ARCA está vencido. Generá uno nuevo en ARCA y cargalo.",
+      "error.fiscal_arca_problema_del_sistema":
+        "El sistema no pudo comunicarse con ARCA por un problema propio, no de tu cuenta en ARCA. Avisá a soporte.",
+    } as const;
+    for (const [clave, texto] of Object.entries(textos)) {
+      const definicion = CATALOGO_DE_TEXTOS[clave as keyof typeof textos];
+      expect(definicion.porDefecto, clave).toBe(texto);
+      expect(definicion.fuente, clave).toEqual({ decision: "DEC-0741" });
+      expect(definicion.usos, clave).toEqual([
+        {
+          como: "FUNCION",
+          archivo: "src/composicion/errores-fiscales.ts",
+          nombre: "traducirErrorFiscal",
+        },
+      ]);
+    }
+    // El texto del rechazo 10005 de una factura no cambia.
+    expect(CATALOGO_DE_TEXTOS["fiscal.arca.punto_de_venta_no_habilitado"].porDefecto).toBe(
       "El punto de venta no está habilitado en ARCA para facturar con web service.",
     );
-    // El mismo texto, palabra por palabra, que el dueño aprobó para el 10005 (no se inventa uno parecido).
-    expect(texto).toBe(CATALOGO_DE_TEXTOS["fiscal.arca.punto_de_venta_no_habilitado"].porDefecto);
+    // T7 está aprobado como texto pero NO se conecta en este cambio: la clave no existe.
+    expect(Object.keys(CATALOGO_DE_TEXTOS)).not.toContain(
+      "error.fiscal_arca_certificado_no_reconocido",
+    );
   });
 
   it("reusa lo ya aprobado: motivo obligatorio, identificador mal armado y versión desactualizada", () => {
@@ -466,5 +504,112 @@ describe("traducirMensajeDeArca: lo que ARCA contestó, sin su texto crudo", () 
         expect(Object.hasOwn(CATALOGO_DE_TEXTOS, salida.clave)).toBe(true);
       }
     }
+  });
+});
+
+describe("la causa de un error de ARCA elige el texto; el código sigue siendo el de siempre", () => {
+  const error = (codigo: string, causa?: unknown) => ({
+    codigo,
+    detalle: "el detalle no viaja",
+    ...(causa === undefined ? {} : { causa }),
+  });
+
+  it.each([
+    ["CUIT_NO_REPRESENTADA", "FISCAL_ARCA_CUIT_NO_REPRESENTADA"],
+    ["CERTIFICADO_VENCIDO", "FISCAL_ARCA_CERTIFICADO_VENCIDO"],
+    ["PROBLEMA_DEL_SISTEMA", "FISCAL_ARCA_PROBLEMA_DEL_SISTEMA"],
+  ] as const)(
+    "la causa %s sale como %s, con cualquiera de los códigos de ARCA",
+    (causa, esperado) => {
+      for (const codigo of [
+        "SERVICIO_NO_DISPONIBLE",
+        "SIN_CREDENCIAL",
+        "AUTORIZACION_DEL_SERVICIO_FALTANTE",
+      ]) {
+        expect(traducirErrorFiscal(error(codigo, causa)), `${codigo} ${causa}`).toEqual({
+          codigo: esperado,
+        });
+      }
+    },
+  );
+
+  it("las dos causas sin texto aprobado o sin conectar dan EXACTAMENTE lo mismo que sin causa", () => {
+    for (const causa of ["CERTIFICADO_NO_RECONOCIDO", "PUNTO_DE_VENTA_NO_HABILITADO"]) {
+      for (const codigo of [
+        "SERVICIO_NO_DISPONIBLE",
+        "SIN_CREDENCIAL",
+        "AUTORIZACION_DEL_SERVICIO_FALTANTE",
+      ]) {
+        expect(traducirErrorFiscal(error(codigo, causa)), `${codigo} ${causa}`).toEqual(
+          traducirErrorFiscal(error(codigo)),
+        );
+      }
+    }
+    expect(traducirErrorFiscal(error("SIN_CREDENCIAL", "CERTIFICADO_NO_RECONOCIDO"))).toEqual({
+      codigo: "FISCAL_ARCA_CERTIFICADO_NO_SIRVE",
+    });
+    expect(
+      traducirErrorFiscal(error("SERVICIO_NO_DISPONIBLE", "PUNTO_DE_VENTA_NO_HABILITADO")),
+    ).toEqual({
+      codigo: "FISCAL_ARCA_NO_DISPONIBLE",
+    });
+  });
+
+  it("una causa desconocida o mal formada se ignora: sale el texto del código", () => {
+    for (const causa of [
+      "OTRA",
+      "",
+      42,
+      null,
+      {},
+      ["CERTIFICADO_VENCIDO"],
+      "__proto__",
+      "toString",
+      "constructor",
+    ]) {
+      expect(
+        traducirErrorFiscal(error("SERVICIO_NO_DISPONIBLE", causa)),
+        JSON.stringify(causa),
+      ).toEqual({
+        codigo: "FISCAL_ARCA_NO_DISPONIBLE",
+      });
+    }
+  });
+
+  it("sin causa, cada código sale como siempre", () => {
+    expect(traducirErrorFiscal(error("SERVICIO_NO_DISPONIBLE"))).toEqual({
+      codigo: "FISCAL_ARCA_NO_DISPONIBLE",
+    });
+    expect(traducirErrorFiscal(error("SIN_CREDENCIAL"))).toEqual({
+      codigo: "FISCAL_ARCA_CERTIFICADO_NO_SIRVE",
+    });
+    expect(traducirErrorFiscal(error("AUTORIZACION_DEL_SERVICIO_FALTANTE"))).toEqual({
+      codigo: "FISCAL_ARCA_SERVICIO_NO_AUTORIZADO",
+    });
+    expect(traducirErrorFiscal(error("ACCESO_YA_EMITIDO"))).toEqual({
+      codigo: "FISCAL_ARCA_ACCESO_EN_CURSO",
+    });
+  });
+
+  it("un error que no es de ARCA no cambia por traer una causa, y la causa no hace aparecer un código desconocido", () => {
+    expect(traducirErrorFiscal(error("CODIGO_QUE_NO_EXISTE", "CERTIFICADO_VENCIDO"))).toEqual(
+      error("CODIGO_QUE_NO_EXISTE", "CERTIFICADO_VENCIDO"),
+    );
+  });
+
+  it("de punta a punta: sale con el código público, el aviso y sin el detalle", () => {
+    const r = aRespuestaFiscal(
+      err(error("SIN_CREDENCIAL", "CERTIFICADO_VENCIDO")),
+      dependencias,
+      () => null,
+    );
+    expect(r).toEqual({
+      ok: false,
+      error: {
+        codigo: "FISCAL_ARCA_CERTIFICADO_VENCIDO",
+        clave: "error.fiscal_arca_certificado_vencido",
+        presentacion: "AVISO",
+      },
+    });
   });
 });
