@@ -18,6 +18,8 @@ export type PropsDeCampoDeDocumento = Readonly<{
   /** El número en su forma canónica (solo dígitos, o el pasaporte en mayúsculas), o `""`. Es también lo que entrega `alCambiar`. */
   valor: string;
   alCambiar: (valor: string) => void;
+  /** El nombre con el que viaja en un formulario. Viaja el texto visible (con los guiones o los puntos): el servidor lo normaliza. */
+  nombre?: string | undefined;
   error?: string | undefined;
   deshabilitado?: boolean;
 }>;
@@ -33,6 +35,7 @@ export function CampoDeDocumento({
   tipo,
   valor,
   alCambiar,
+  nombre,
   error,
   deshabilitado = false,
 }: PropsDeCampoDeDocumento) {
@@ -57,6 +60,7 @@ export function CampoDeDocumento({
           ref={entrada}
           className={estilos["entrada"]}
           type="text"
+          name={nombre}
           // El pasaporte lleva letras (ABC123456, dueño, 2026-11-06): el teclado numérico no las deja escribir.
           inputMode={tipo === "PASAPORTE" ? "text" : "numeric"}
           autoCapitalize={tipo === "PASAPORTE" ? "characters" : "off"}
