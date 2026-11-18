@@ -1,5 +1,11 @@
-import { CODIGOS_PUBLICOS } from "../capacidades/experiencia/respuesta";
+import {
+  CODIGOS_PUBLICOS,
+  errorDeCodigo,
+  type Respuesta,
+} from "../capacidades/experiencia/respuesta";
 import type { CodigoDeSalon } from "../capacidades/experiencia/respuesta-de-salon";
+import { err, type Resultado } from "../primitivas/resultado/resultado";
+import { aRespuesta, aRespuestaDeExcepcion, type DependenciasDeRespuesta } from "./a-respuesta";
 
 /**
  * De un error del salón al código público que sale a la pantalla «Mesas» (ADR-016). Lista de permitidos: solo cuatro errores del dominio tienen un texto propio, los que la maqueta
@@ -40,4 +46,39 @@ export function traducirErrorDeSalon(error: unknown): unknown {
     if (typeof nombre === "string") return GENERICO;
   }
   return error;
+}
+
+/** El genérico del salón ya como respuesta: un pedido sin la forma pedida, sin sucursal con la que trabajar, o de una mesa, cuenta o impresora que no es de esa sucursal. */
+export const respuestaGenericaDeSalon = (): Respuesta<never> => ({
+  ok: false,
+  error: errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA"),
+});
+
+/**
+ * Lo que tienen en común las acciones web del salón y de las comandas: sin sucursal de trabajo (`""`) cierra (nunca «todas»), un pedido sin la forma pedida es el genérico, `hacer` corre
+ * el caso de uso (o devuelve `null` si lo pedido no es de la sucursal: el genérico, igual que si no existiera) y el resultado se traduce con `traducirErrorDeSalon`. Una excepción sale sin detalle y con
+ * referencia. Un solo lugar, igual que `accionDeVentas`.
+ */
+export async function accionDelSalon<E, S, D>(
+  respuesta: DependenciasDeRespuesta,
+  sucursalId: string,
+  crudo: unknown,
+  leerElPedido: (crudo: unknown) => Resultado<E, unknown>,
+  hacer: (pedido: E) => Promise<Resultado<S, unknown> | null>,
+  presentar: (salida: S) => D,
+): Promise<Respuesta<D>> {
+  if (sucursalId === "") return respuestaGenericaDeSalon();
+  const pedido = leerElPedido(crudo);
+  if (!pedido.ok) return respuestaGenericaDeSalon();
+  try {
+    const hecho = await hacer(pedido.valor);
+    if (hecho === null) return respuestaGenericaDeSalon();
+    return aRespuesta(
+      hecho.ok ? hecho : err(traducirErrorDeSalon(hecho.error)),
+      respuesta,
+      presentar,
+    );
+  } catch (excepcion) {
+    return aRespuestaDeExcepcion(excepcion, respuesta);
+  }
 }
