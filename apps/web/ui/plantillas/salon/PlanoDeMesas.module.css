@@ -1,0 +1,117 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  min-width: 0;
+}
+
+.etiqueta {
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+/* El marco: 14 columnas por 9 filas (`--columnas`, `--filas`), con la cuadrícula dibujada con líneas finas. Lo que se sale del marco queda cortado. */
+.plano {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  aspect-ratio: var(--columnas) / var(--filas);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border: 3px solid var(--color-texto);
+  border-radius: var(--radio-chico);
+  background-color: var(--color-fondo);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--color-borde), transparent 75%) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--color-borde), transparent 75%) 1px,
+      transparent 1px
+    );
+  background-size: calc(100% / var(--columnas)) calc(100% / var(--filas));
+}
+
+.mesa {
+  position: absolute;
+  left: var(--izquierda);
+  top: var(--arriba);
+  width: var(--ancho);
+  height: var(--alto);
+  box-sizing: border-box;
+}
+
+.contenido {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie-elevada);
+  color: var(--color-texto);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* La mesa redonda se dibuja con una elipse (SVG): el sistema de diseño no admite esquinas del 50 % (`tokens.test.ts`). */
+.mesa[data-forma="REDONDA"] .contenido {
+  position: relative;
+  border: 0;
+  background: none;
+}
+
+.elipse {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: var(--color-superficie-elevada);
+  stroke: var(--color-borde);
+  stroke-width: 2px;
+}
+
+.elipse ellipse {
+  vector-effect: non-scaling-stroke;
+}
+
+.numero {
+  position: relative;
+}
+
+a.contenido:focus-visible {
+  outline: 3px solid var(--color-foco);
+  outline-offset: -3px;
+}
+
+/* El borrador (lo que se está escribiendo): trazo punteado, fondo de color y encima de las demás; el trazo lo distingue aunque no se vea el color. */
+.mesa[data-borrador="si"] {
+  z-index: var(--capa-sobre-contenido);
+}
+
+.mesa[data-borrador="si"] .contenido {
+  border: 3px dashed var(--color-info);
+  background: var(--color-info-suave);
+}
+
+.mesa[data-borrador="si"] .elipse {
+  fill: var(--color-info-suave);
+  stroke: var(--color-info);
+  stroke-width: 3px;
+  stroke-dasharray: 6 4;
+}
+
+/* Una mesa desactivada (maqueta, clase `off`): atenuada con colores suaves y trazo punteado, sin `opacity` (restaría contraste al número); su nombre lleva «Desactivada» para el lector de pantalla. */
+.mesa[data-desactivada="si"] .contenido {
+  border-style: dashed;
+  background: var(--color-superficie);
+  color: var(--color-texto-suave);
+}
+
+.mesa[data-desactivada="si"] .elipse {
+  fill: var(--color-superficie);
+  stroke-dasharray: 6 4;
+}

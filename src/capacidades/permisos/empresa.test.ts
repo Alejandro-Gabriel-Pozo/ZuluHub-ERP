@@ -55,7 +55,7 @@ const DEL_OPERADOR_DE_CATALOGO_Y_STOCK = [
   "vidrieras.ver",
 ] as const;
 
-/** Lo que el administrador puede de más que el operador en catálogo, carta y stock (30 acciones). */
+/** Lo que el administrador puede de más que el operador en catálogo, carta y stock (31 acciones). */
 const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
   "articulos.controlar",
   "articulos.dejar_de_controlar",
@@ -80,8 +80,10 @@ const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
   "productos.reactivar",
   "stock.ajustar",
   "stock.anular",
+  "vidrieras.administrar_portal",
   "vidrieras.crear",
   "vidrieras.editar",
+  "vidrieras.ocultar_en_empresa",
   "vidrieras.publicar",
   "vidrieras.publicar_en_linea",
   "vidrieras.renovar_enlace",
@@ -313,9 +315,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 175 acciones: 34 de empresa, configuración fiscal y facturación, 48 de catálogo, carta y stock (39 de T0, 2 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 37 de clientes y compras y 16 de salón y comandas", () => {
+  it("hay 177 acciones: 34 de empresa, configuración fiscal y facturación, 50 de catálogo, carta y stock (39 de T0, 2 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 37 de clientes y compras y 16 de salón y comandas", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(175);
+    expect(todas).toHaveLength(177);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -345,7 +347,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("composiciones"),
       porPrefijo("conteos"),
       porPrefijo("costos"),
-    ]).toEqual([7, 4, 1, 1, 0, 1, 9, 7, 4, 2, 1, 4, 1]);
+    ]).toEqual([7, 4, 1, 1, 0, 1, 11, 7, 4, 2, 1, 4, 1]);
     expect([
       porPrefijo("cajas"),
       porPrefijo("medios_de_pago"),
@@ -718,12 +720,12 @@ describe("el guard con las reglas reales", () => {
     expect([...ENDESARROLLO].sort()).toEqual(["produccion", "vidriera"].sort());
   });
 
-  it("las 14 acciones sin construir (9 de carta y 5 de producción) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  it("las 16 acciones sin construir (11 de carta y 5 de producción) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
     const sinConstruir = ENDESARROLLO.flatMap(
       (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
     );
-    expect(sinConstruir).toHaveLength(14);
+    expect(sinConstruir).toHaveLength(16);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(

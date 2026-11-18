@@ -47,6 +47,10 @@ vi.mock("../../apps/web/servidor/productos", () => ({
     return Promise.resolve(servidor.respuesta);
   },
 }));
+// C2: dónde está oculto cada producto (la marca y el filtro «Oculto»); aquí, ninguno. La lectura de ocultos tiene sus propias pruebas.
+vi.mock("../../apps/web/servidor/ocultar", () => ({
+  cargarLosOcultos: () => Promise.resolve({ ok: true, dato: [] }),
+}));
 vi.mock("../../apps/web/servidor/sesion", () => ({
   dependenciasDeSesion: {},
   empresaDelPedido: () =>

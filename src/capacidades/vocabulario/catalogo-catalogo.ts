@@ -106,6 +106,19 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.error.accion_no_permitida": { porDefecto: "Esta acción no está permitida" },
   "catalogo.accion.cancelar": { porDefecto: "Cancelar" },
 
+  // Ocultar un producto (A15). Los cinco rótulos son T13 de `textos-nuevos-pendientes.md` (maqueta `productos.html:310-318`, `carta-real-especificacion.md` §10.6 punto 6), aprobados por el dueño el
+  // 15/11/2026 (`decisiones-del-dueno-2026-11.md`, DDD:165). «Oculto con existencia negativa», también de T13, no se construye en esta pantalla (hace falta leer la existencia: pregunta pendiente).
+  // Los dos mensajes de bloqueo los aprobó el dueño el 12/11/2026 (`productos.html:318`: «3.- sí», textos propuestos por el padre y aprobados): `PRODUCTO_CON_EXISTENCIA` y `PRODUCTO_CON_CONTEO_ABIERTO`.
+  "catalogo.ocultar.ocultar": { porDefecto: "Ocultar" },
+  "catalogo.ocultar.volver_a_mostrar": { porDefecto: "Volver a mostrar" },
+  "catalogo.ocultar.ocultar_en_la_empresa": { porDefecto: "Ocultar en toda la empresa" },
+  "catalogo.ocultar.oculto": { porDefecto: "Oculto" },
+  "catalogo.ocultar.oculto_en_la_empresa": { porDefecto: "Oculto en toda la empresa" },
+  "catalogo.error.primero_existencia_en_cero": { porDefecto: "Primero dejá la existencia en 0." },
+  "catalogo.error.conteo_abierto_con_el_producto": {
+    porDefecto: "Hay un conteo abierto con este producto.",
+  },
+
   // Secciones de la carta (A8, parte 1). Fuente: la maqueta APROBADA `Pedernal-docs/10-ux-ui/prototipos-gastronomia/productos-secciones.html` (aprobada por el dueño el 12/11/2026,
   // `decisiones-del-dueno-2026-11.md` fila del 12/11 «Maquetas del recorrido mínimo»), tabla «Textos nuevos» (`PA_REG`, líneas 327-334): «Secciones» (`sec.titulo`, línea 328: botón de la
   // ficha y título de la lista; también la fila «Secciones» del menú, fila del 13/11 «Rótulos del menú por áreas aprobados»), «Nueva sección» (`sec.nueva`, línea 329), «Subir» y «Bajar»
@@ -120,6 +133,27 @@ export const TEXTOS_DE_CATALOGO = {
   // SUPUESTO (DEC-0434; pendiente de aprobación del dueño: pregunta P1, opción A): nombre accesible del botón ‹ de la barra de las pantallas de una sección, `aria-label` «Volver a la lista» de la maqueta
   // (líneas 381 y 389). No figura en sus «Textos nuevos» ni en los reutilizados. Revertir: quitar el botón (se vuelve por el menú).
   "catalogo.seccion.volver_a_la_lista": { porDefecto: "Volver a la lista" },
+
+  // Carta en línea (C1). Fuente: la maqueta APROBADA `Pedernal-docs/10-ux-ui/prototipos-gastronomia/carta-en-linea.html` (aprobada por el dueño: filas 60 y 70 de `decisiones-del-dueno-2026-11.md`; sus
+  // «Textos por aprobar» llevan el visto bueno del 12/11/2026), tabla «Textos por aprobar» (`PA_REG`: «Carta en línea», «Rubro», «Lugar», «Poner en línea», «Sacar de línea», «En línea», «Fuera de línea»,
+  // «Dirección pública», «No habilitado», «Salen N productos» / «Sale 1 producto», «Sin sección», «Oculto», «No disponible», «Descargar QR») y de sus «Textos ya aprobados» («Nombre», «Guardar», «Copiar»,
+  // «Sin precio», «Desactivado», «Esta acción no está permitida»). NO están: «Frase final» (su rótulo no está confirmado: la propia maqueta lo marca «Pendiente») ni el aviso de «No habilitado» sin la perilla.
+  "catalogo.carta.titulo": { porDefecto: "Carta en línea" },
+  "catalogo.carta.rubro": { porDefecto: "Rubro" },
+  "catalogo.carta.lugar": { porDefecto: "Lugar" },
+  "catalogo.carta.poner": { porDefecto: "Poner en línea" },
+  "catalogo.carta.sacar": { porDefecto: "Sacar de línea" },
+  "catalogo.carta.en_linea": { porDefecto: "En línea" },
+  "catalogo.carta.fuera_de_linea": { porDefecto: "Fuera de línea" },
+  "catalogo.carta.direccion": { porDefecto: "Dirección pública" },
+  "catalogo.carta.descargar_qr": { porDefecto: "Descargar QR" },
+  "catalogo.carta.salen": { porDefecto: "Salen {cantidad} productos", marcadores: ["cantidad"] },
+  "catalogo.carta.sale_uno": { porDefecto: "Sale 1 producto" },
+  "catalogo.carta.sin_seccion": { porDefecto: "Sin sección" },
+  "catalogo.carta.oculto": { porDefecto: "Oculto" },
+  "catalogo.carta.no_disponible": { porDefecto: "No disponible" },
+  // «Copiar» ya existe en el vocabulario de fiscal (`fiscal.pantalla.config_cert_copiar`); se registra aparte por módulo, con el mismo texto y la misma maqueta (`productos.html`, «Textos nuevos», 09/11/2026).
+  "catalogo.accion.copiar": { porDefecto: "Copiar" },
 
   // Los nombres de las 14 unidades de medida (A2i). FUENTE ÚNICA: la constante `UNID` de la maqueta aprobada `Pedernal-docs/10-ux-ui/prototipos-gastronomia/productos.html` (~línea 421),
   // en el mismo orden que `src/primitivas/unidades/unidades.ts`; decisión del dueño del 13/11/2026 («las 14 unidades se muestran con los nombres de la maqueta de productos»,
