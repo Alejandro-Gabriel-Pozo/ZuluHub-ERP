@@ -31,10 +31,51 @@ export type OpcionesDelTransporte = Readonly<{
 
 const FORMA_DE_CODIGO = /^[A-Z0-9_]{2,60}$/;
 
-/** El código de un error de red de Node (`ECONNREFUSED`...), o uno genérico: nunca su mensaje. */
+/**
+ * Un error de protocolo TLS (`EPROTO`) solo dice «protocolo»: lo que sirve para saber qué hace falta es el MOTIVO de
+ * OpenSSL («unsafe legacy renegotiation disabled», «dh key too small»...). Es un texto fijo de OpenSSL, no del pedido
+ * ni de la respuesta. Se acepta solo con esta forma (lista de permitidos): letras, números, espacios, guiones bajos y
+ * puntos, hasta 100 caracteres; cualquier otra cosa deja `EPROTO` a secas. Previene: un log de producción que solo
+ * dice `EPROTO` y no permite decidir qué hace falta. Chequeo: `transporte-http.test.ts` (reasons raros, largos, con
+ * URL o token; un handshake real contra un servidor TLS local).
+ */
+const FORMA_DE_MOTIVO_TLS = /^[A-Za-z0-9_. ]{1,100}$/;
+
+/**
+ * Cómo Node entrega el motivo: en los errores de OpenSSL que llegan por la lectura, como propiedad `reason`; en los
+ * que llegan por la escritura (`write EPROTO`, lo que trae un handshake rechazado), la propiedad no existe y el
+ * motivo está SOLO dentro del `message`: `…:error:0A000152:SSL routines::unsafe legacy renegotiation disabled:../deps/…/archivo.c:922:`.
+ * De ese texto se extrae únicamente el segmento del motivo, que luego pasa por la misma lista de permitidos;
+ * el `message` nunca sale.
+ */
+const MOTIVO_EN_EL_TEXTO_DE_OPENSSL =
+  /error:[0-9A-Fa-f]{8}:[A-Za-z0-9_ ]+:[A-Za-z0-9_]*:([A-Za-z0-9_. ]+):[A-Za-z0-9_./-]*\.c:\d+:/;
+
+function motivoTls(error: unknown): string | null {
+  const propiedades = error as { reason?: unknown; message?: unknown } | null;
+  let motivo: string | null = null;
+  if (typeof propiedades?.reason === "string") motivo = propiedades.reason;
+  else if (typeof propiedades?.message === "string") {
+    motivo = MOTIVO_EN_EL_TEXTO_DE_OPENSSL.exec(propiedades.message)?.[1] ?? null;
+  }
+  if (motivo === null || !FORMA_DE_MOTIVO_TLS.test(motivo)) return null;
+  const normalizado = motivo
+    .toUpperCase()
+    .replace(/[ .]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return normalizado === "" ? null : normalizado;
+}
+
+/**
+ * El código de un error de red de Node (`ECONNREFUSED`...), o uno genérico: nunca su mensaje. Un `EPROTO` con motivo
+ * de OpenSSL conocido es `EPROTO_<MOTIVO>` (hasta 60 caracteres en total, que cumple `FORMA_DE_CODIGO`).
+ */
 export function codigoDeError(error: unknown): string {
   const codigo = (error as { code?: unknown } | null)?.code;
-  return typeof codigo === "string" && FORMA_DE_CODIGO.test(codigo) ? codigo : "FALLA_DE_RED";
+  if (typeof codigo !== "string" || !FORMA_DE_CODIGO.test(codigo)) return "FALLA_DE_RED";
+  if (codigo !== "EPROTO") return codigo;
+  const motivo = motivoTls(error);
+  return motivo === null ? codigo : `${codigo}_${motivo}`.slice(0, 60).replace(/_+$/, "");
 }
 
 export function crearTransporteHttp(opciones: OpcionesDelTransporte = {}): Transporte {
