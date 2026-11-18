@@ -10,7 +10,7 @@ import { exigirPuerta, nonceDelPedido, robotsDe } from "../../../servidor/pedido
 // lleva dentro de su barra superior, para que haya un solo encabezado por pantalla).
 export async function generateMetadata(): Promise<Metadata> {
   const puerta = await exigirPuerta("APP");
-  return { title: puerta.marca.nombre, robots: robotsDe("APP") };
+  return { title: puerta.marca.nombre, robots: robotsDe(puerta) };
 }
 
 export default async function LayoutDeApp({ children }: { children: ReactNode }) {

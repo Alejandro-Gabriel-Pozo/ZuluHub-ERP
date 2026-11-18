@@ -1,5 +1,8 @@
 import type { Kysely } from "kysely";
 import type { EmpresaId, PersonaId, SucursalId } from "../../../primitivas/identificadores/marca";
+import type { PartesDeDireccion } from "../../../capacidades/activos/direccion-externa";
+import type { CaraDeVidriera } from "../../../capacidades/experiencia/vidriera/caras";
+import type { ModeloDeVidriera } from "../../../capacidades/experiencia/vidriera/modelos";
 import type { CartaPublica, EstadoDeCarta } from "../dominio/carta-publica";
 import type { CartaPublicaId } from "../dominio/identificadores";
 import type { CatalogoDb } from "./esquema";
@@ -20,6 +23,10 @@ export type AltaDeCartaPublica = Readonly<{
   lugar: string | null;
   mensajeDePortada: string | null;
   estado: EstadoDeCarta;
+  modelo: ModeloDeVidriera;
+  cara: CaraDeVidriera | null;
+  colorPropio: string | null;
+  logo: PartesDeDireccion | null;
   creadoPor: PersonaId | null;
 }>;
 
@@ -29,7 +36,20 @@ export type CambiosDeCartaPublica = Readonly<{
   lugar: string | null;
   mensajeDePortada: string | null;
   estado: EstadoDeCarta;
+  modelo: ModeloDeVidriera;
+  cara: CaraDeVidriera | null;
+  colorPropio: string | null;
+  logo: PartesDeDireccion | null;
 }>;
+
+/** Las cinco columnas del logo (todas nulas o todas con valor: la base lo exige). */
+const columnasDelLogo = (logo: PartesDeDireccion | null) => ({
+  logo_proveedor: logo === null ? null : logo.proveedor,
+  logo_cuenta: logo === null ? null : logo.cuenta,
+  logo_id_publico: logo === null ? null : logo.idPublico,
+  logo_version: logo === null ? null : logo.version,
+  logo_extension: logo === null ? null : logo.extension,
+});
 
 /**
  * Las cartas públicas de la empresa (carta real §3.2): una por sucursal. Todo filtra por empresa y corre en la transacción de quien llama (que es quien
@@ -91,6 +111,10 @@ export function crearRepositorioDeCartas(db: Kysely<CatalogoDb>): RepositorioDeC
           lugar: alta.lugar,
           mensaje_de_portada: alta.mensajeDePortada,
           estado: alta.estado,
+          modelo: alta.modelo,
+          cara: alta.cara,
+          color_propio: alta.colorPropio,
+          ...columnasDelLogo(alta.logo),
           creado_por: alta.creadoPor,
         });
       const fila = await insertarIdempotente(
@@ -120,6 +144,10 @@ export function crearRepositorioDeCartas(db: Kysely<CatalogoDb>): RepositorioDeC
           lugar: cambios.lugar,
           mensaje_de_portada: cambios.mensajeDePortada,
           estado: cambios.estado,
+          modelo: cambios.modelo,
+          cara: cambios.cara,
+          color_propio: cambios.colorPropio,
+          ...columnasDelLogo(cambios.logo),
         })
         .where("empresa_id", "=", empresa)
         .where("id", "=", id)

@@ -1030,7 +1030,6 @@ describe("planificador: cuándo se repite la integración (Estabilidad x12)", ()
     ["un archivo de src/ borrado (no está en el grafo)", "src/borrado.ts"],
     ["la configuración de una app", "apps/web/package.json"],
     ["un archivo cualquiera fuera del grafo", "neon.ts"],
-    ["el CODEOWNERS", ".github/CODEOWNERS"],
   ])("corre si cambia %s", (_nombre, archivo) => {
     expect(e([archivo]).corre, archivo).toBe(true);
   });
@@ -1038,6 +1037,7 @@ describe("planificador: cuándo se repite la integración (Estabilidad x12)", ()
   it.each([
     ["documentación", "README.md"],
     ["dependabot", ".github/dependabot.yml"],
+    ["el CODEOWNERS (ajeno explícito)", ".github/CODEOWNERS"],
     ["otros workflows (codeql, gate rápido)", ".github/workflows/codeql.yml"],
     [
       "un servicio de aplicación que una prueba de integración ejercita",
@@ -1142,7 +1142,7 @@ describe("planificador de mutación: el registro de decisiones (arquitectura/dec
       planificarEstabilidad({ cambios: [DEC_NUEVA, "migraciones/0099_x.sql"], dependencias }).corre,
     ).toBe(true);
     expect(
-      planificarEstabilidad({ cambios: ["arquitectura/decisiones/cuota.json"], dependencias })
+      planificarEstabilidad({ cambios: ["arquitectura/lecturas-de-apps.json"], dependencias })
         .corre,
     ).toBe(true);
   });
@@ -1190,6 +1190,8 @@ describe("planificador de mutación: el registro de decisiones (arquitectura/dec
       "cita un identificador de decisión en un comentario; solo comprueba que existan carpetas (corrida sola y traza strace: 0 lecturas del registro)",
     "test/arquitectura/compras-fuente-unica.test.ts":
       "cita un identificador de decisión en un comentario; no abre el registro (corrida sola y traza strace: 0 lecturas)",
+    "test/arquitectura/estabilidad-ajenos.test.ts":
+      "`git ls-files` solo lista nombres (para ver que cada ajeno exista) y recorre test/integracion; no abre el registro (corrida sola y traza strace: 0 lecturas)",
     "test/arquitectura/lint.test.ts":
       "su `readdirSync(..., { recursive })` recorre las fixtures del lint, no el repo",
     "test/arquitectura/reglas.test.ts":

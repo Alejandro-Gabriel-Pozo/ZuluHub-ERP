@@ -170,7 +170,10 @@ export function decidirPuerta(entrada: EntradaDePuerta): DecisionDePuerta {
       estado,
       superficie,
       encabezadosDePedido,
-      encabezadosDeRespuesta: cabecerasDe(superficie, nonce, { produccion }),
+      encabezadosDeRespuesta: cabecerasDe(superficie, nonce, {
+        produccion,
+        duenio: puerta?.duenio.tipo ?? null,
+      }),
     };
   };
 

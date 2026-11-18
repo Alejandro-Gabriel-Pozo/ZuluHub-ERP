@@ -46,6 +46,7 @@ const MAQUETA_APROBADA: FuenteDeTexto = {
 };
 const USO_DEL_FORMULARIO = "FormularioDeMesa.cliente.tsx";
 const USO_DE_LA_LISTA = "modelo-de-mesas.ts (lista)";
+const USO_DEL_PLANO = "PlanoDeMesas.cliente.tsx (mapa chico del salón)";
 
 export const FICHA_DE_MESAS = {
   archivos: [
@@ -55,6 +56,8 @@ export const FICHA_DE_MESAS = {
     "apps/web/ui/plantillas/salon/PantallaDeListaDeMesas.tsx",
     "apps/web/ui/plantillas/salon/FormularioDeMesa.cliente.tsx",
     "apps/web/ui/plantillas/salon/FormularioDeEstadoDeMesa.cliente.tsx",
+    "apps/web/ui/plantillas/salon/PlanoDeMesas.cliente.tsx",
+    "apps/web/ui/plantillas/salon/modelo-del-plano.ts",
   ],
   rutas: ["/salon/mesas", "/salon/mesas/nueva", "/salon/mesas/[id]"],
   titulo: "salon.texto.admin_mesas",
@@ -111,8 +114,17 @@ export const FICHA_DE_MESAS = {
       usos: [USO_DE_LA_LISTA, "título de la edición"],
       fuente: MAQUETA_APROBADA,
     },
+    "salon.texto.admin_plano": {
+      usos: [USO_DEL_PLANO],
+      fuente: {
+        decidio:
+          "el dueño, 09/11/2026 (aprobó la maqueta `mesas.html`, tabla «Textos nuevos»: «Plano», rótulo del mapa chico arriba de la lista y del formulario)",
+        donde:
+          "Pedernal-docs 10-ux-ui, maqueta mesas.html (tabla «Textos nuevos», fila «Desactivar · Reactivar · Desactivada · Plano»; función `plano`)",
+      },
+    },
     "salon.texto.admin_mesa_numero": {
-      usos: [USO_DE_LA_LISTA],
+      usos: [USO_DE_LA_LISTA, USO_DEL_PLANO],
       fuente: {
         decidio:
           "el dueño, 09/11/2026 (maqueta `mesas.html`, rótulo de cada tarjeta; el mismo «Mesa 5» del papel de la comanda)",

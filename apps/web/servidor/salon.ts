@@ -16,6 +16,7 @@ import {
   cambiarElEstadoDeLaMesa,
   crearLaMesa,
   editarLaMesa,
+  medidasDelSalon,
   verLaMesa,
   verLasMesas,
   type DependenciasDeMesasWeb,
@@ -52,6 +53,8 @@ const dependenciasDeLaCuenta: DependenciasDeCuentaDeMesaWeb = {
   consultas: web.consultasDeSalon,
   respuesta: dependenciasDeSesion.respuesta,
 };
+
+export { medidasDelSalon };
 
 /** La clave de creación de UN intento de alta de una mesa: la fija la página al abrirse. Previene: que un doble toque o un reintento por red cortada creen dos mesas. */
 export const nuevaClaveDeMesa = (): string => crypto.randomUUID();
