@@ -1,3 +1,14 @@
+import type { UsosDeTexto } from "./uso-y-fuente-de-texto";
+
+/** Quién consume los textos de errores de ARCA del 18/11/2026 (DEC-0741): el traductor de errores fiscales. */
+const USOS_DE_ERROR_DE_ARCA: UsosDeTexto = [
+  {
+    como: "FUNCION",
+    archivo: "src/composicion/errores-fiscales.ts",
+    nombre: "traducirErrorFiscal",
+  },
+];
+
 /**
  * Los textos del facturador (H7 facturación) del catálogo de textos (`catalogo.ts`): los errores de negocio que puede ver la
  * persona al emitir, descartar, reintentar, resincronizar o cambiar el ambiente (`experiencia/respuesta-fiscal.ts`) y lo que
@@ -187,12 +198,57 @@ export const TEXTOS_DE_FISCAL = {
     porDefecto: "Un punto de venta que pasó a producción no vuelve al ambiente de pruebas.",
     largoMaximo: 160,
   },
-  // Pasar un punto de venta a producción que ARCA no tiene habilitado (D-77). Fuente del texto: el MISMO, palabra por palabra, que el dueño
-  // aprobó para el rechazo 10005 de una factura, `fiscal.arca.punto_de_venta_no_habilitado` (este archivo, más abajo). D-77 pide un aviso
-  // cuyo texto no estaba aprobado: se reutiliza el existente (decisión del ingeniero, a confirmar por el dueño).
+  // Pasar un punto de venta a producción cuando ARCA no lo habilita (D-77 y la regla de solo CAEA, DEC-0742). Los textos los aprobó el
+  // dueño el 18/11/2026 (`decisiones-del-dueno-2026-11.md`, fila 305; DEC-0741). El de «no habilitado» reemplaza al anterior, que era el del
+  // rechazo 10005 de una factura reutilizado «a confirmar por el dueño»; `fiscal.arca.punto_de_venta_no_habilitado` (el 10005) no cambia.
   "error.fiscal_punto_de_venta_no_habilitado_en_arca": {
-    porDefecto: "El punto de venta no está habilitado en ARCA para facturar con web service.",
-    largoMaximo: 160,
+    porDefecto:
+      "ARCA no tiene este punto de venta para facturar por web services. Dalo de alta en ARCA con este número, o corregí el número.",
+    largoMaximo: 200,
+    usos: USOS_DE_ERROR_DE_ARCA,
+    fuente: { decision: "DEC-0741" },
+  },
+  "error.fiscal_arca_sin_puntos_de_venta": {
+    porDefecto:
+      "Este CUIT no tiene ningún punto de venta para facturar por web services en ARCA. Dalo de alta en ARCA y volvé a intentar.",
+    largoMaximo: 200,
+    usos: USOS_DE_ERROR_DE_ARCA,
+    fuente: { decision: "DEC-0741" },
+  },
+  "error.fiscal_punto_de_venta_bloqueado_en_arca": {
+    porDefecto:
+      "Este punto de venta está bloqueado en ARCA. Regularizalo en ARCA y volvé a intentar.",
+    largoMaximo: 200,
+    usos: USOS_DE_ERROR_DE_ARCA,
+    fuente: { decision: "DEC-0741" },
+  },
+  "error.fiscal_punto_de_venta_dado_de_baja_en_arca": {
+    porDefecto:
+      "Este punto de venta está dado de baja en ARCA. Dalo de alta de nuevo en ARCA o usá otro número.",
+    largoMaximo: 200,
+    usos: USOS_DE_ERROR_DE_ARCA,
+    fuente: { decision: "DEC-0741" },
+  },
+  // Por qué falló un acceso a ARCA, cuando se sabe con certeza (`causa` de `ErrorDeEmision`); sin causa sale el texto del código.
+  "error.fiscal_arca_cuit_no_representada": {
+    porDefecto:
+      "El certificado cargado no corresponde al CUIT de este emisor. Revisá el CUIT o cargá el certificado de ese CUIT.",
+    largoMaximo: 200,
+    usos: USOS_DE_ERROR_DE_ARCA,
+    fuente: { decision: "DEC-0741" },
+  },
+  "error.fiscal_arca_certificado_vencido": {
+    porDefecto: "El certificado de ARCA está vencido. Generá uno nuevo en ARCA y cargalo.",
+    largoMaximo: 200,
+    usos: USOS_DE_ERROR_DE_ARCA,
+    fuente: { decision: "DEC-0741" },
+  },
+  "error.fiscal_arca_problema_del_sistema": {
+    porDefecto:
+      "El sistema no pudo comunicarse con ARCA por un problema propio, no de tu cuenta en ARCA. Avisá a soporte.",
+    largoMaximo: 200,
+    usos: USOS_DE_ERROR_DE_ARCA,
+    fuente: { decision: "DEC-0741" },
   },
   "error.fiscal_ya_emitio_en_produccion": {
     porDefecto: "Este punto de venta ya emitió en producción: no se puede cambiar de ambiente.",

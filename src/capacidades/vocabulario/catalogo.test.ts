@@ -153,11 +153,13 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     }
     // Nada del facturador habla en voseo: los textos de ARCA y de los errores van en castellano neutro. Salvo los dos del
     // listado que el dueño aprobó tal cual (CONTRATO del listado: «Probá con otro período…» y «Probá de nuevo.») y el aviso de
-    // conflicto de versión (voseo aprobado, 2026-11-04, D-113).
+    // conflicto de versión (voseo aprobado, 2026-11-04, D-113) y el del certificado vencido («cargalo»; textos T1 a T8 del dueño,
+    // 18/11/2026, fila 305, DEC-0741: el voseo es la regla vigente desde DEC-0352).
     const APROBADOS_EN_VOSEO = [
       "fiscal.pantalla.listado_vacio",
       "fiscal.pantalla.listado_error",
       "error.fiscal_version_desactualizada",
+      "error.fiscal_arca_certificado_vencido",
     ];
     for (const clave of claves.filter(
       (c) =>

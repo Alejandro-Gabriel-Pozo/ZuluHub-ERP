@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0742",
+  "fecha": "2026-11-18",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Un punto de venta que ARCA informa solo para CAEA no pasa a producción.",
+  "que_cambia": "Un punto de venta solo CAEA, que antes pasaba, ahora se rechaza al pasar a producción y no se escribe nada. Por ahora muestra el texto de no habilitado; el propio está por aprobar. Revertir: quitar el motivo SOLO_CAEA.",
+  "donde": "decisiones-del-dueno-2026-11.md, fila 305, «Apruebo: Aprobar o corregir los textos T1 a T8 del censo, y P2, P3, P4 y P5» (P4); src/modulos/fiscal/dominio/habilitacion-en-arca.ts; src/adaptadores/arca/puntos-de-venta-de-arca.ts"
+}

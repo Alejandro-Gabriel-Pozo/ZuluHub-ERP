@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { grabacion, respuestaDeLoginCms, respuestaHttp } from "../../../test/utilidades/arca";
+import { respuestaDePtosVentaDelManual } from "../../../test/utilidades/arca-del-manual";
 import { importeATexto } from "../../primitivas/dinero/importe";
 import { fechaCivilDesdeTexto } from "../../primitivas/tiempo/fecha-civil";
 import {
@@ -8,6 +9,7 @@ import {
   clasificarDummy,
   clasificarLoginCms,
   clasificarParametros,
+  clasificarPuntosDeVenta,
   clasificarUltimoAutorizado,
   type EsperadoDeConsulta,
 } from "./clasificar";
@@ -634,6 +636,7 @@ describe("FECompUltimoAutorizado", () => {
       error: {
         codigo: "SERVICIO_NO_DISPONIBLE",
         detalle: "ARCA respondió con errores (11002)",
+        causa: "PUNTO_DE_VENTA_NO_HABILITADO",
       },
     });
     expect(clasificarUltimoAutorizado(conErrores("500"), esperado(1, 6))).toMatchObject({
@@ -658,12 +661,17 @@ describe("FECompUltimoAutorizado", () => {
     expect(clasificarUltimoAutorizado(respuestaHttp("<x/>", 503), esperado(1, 6))).toEqual(
       noDisponible("HTTP 503"),
     );
-    expect(clasificarUltimoAutorizado(respuestaHttp("<a><b>"), esperado(1, 6))).toEqual(
-      noDisponible("la respuesta de ARCA no se pudo leer"),
-    );
-    expect(clasificarUltimoAutorizado(resp(1, "032"), esperado(1, 6))).toEqual(
-      noDisponible("la respuesta de ARCA no se pudo leer"),
-    );
+    // Una respuesta que no se puede interpretar es un problema del sistema (la causa elige el texto; el `codigo` es el de siempre).
+    const ilegible = {
+      ok: false,
+      error: {
+        codigo: "SERVICIO_NO_DISPONIBLE",
+        detalle: "la respuesta de ARCA no se pudo leer",
+        causa: "PROBLEMA_DEL_SISTEMA",
+      },
+    };
+    expect(clasificarUltimoAutorizado(respuestaHttp("<a><b>"), esperado(1, 6))).toEqual(ilegible);
+    expect(clasificarUltimoAutorizado(resp(1, "032"), esperado(1, 6))).toEqual(ilegible);
   });
 
   it("un error mal formado no se entiende", () => {
@@ -1155,7 +1163,11 @@ describe("loginCms (WSAA)", () => {
   it("una respuesta que no trae el ticket, o lo trae roto, no sirve", () => {
     const noSirve = {
       ok: false,
-      error: { codigo: "SERVICIO_NO_DISPONIBLE", detalle: "la respuesta de WSAA no se pudo leer" },
+      error: {
+        codigo: "SERVICIO_NO_DISPONIBLE",
+        detalle: "la respuesta de WSAA no se pudo leer",
+        causa: "PROBLEMA_DEL_SISTEMA",
+      },
     };
     expect(clasificarLoginCms(respuestaHttp(""))).toEqual(noSirve);
     expect(clasificarLoginCms(respuestaHttp("<a><b>"))).toEqual(noSirve);
@@ -1226,6 +1238,7 @@ describe("loginCms: fallas SOAP incompletas", () => {
       error: {
         codigo: "SERVICIO_NO_DISPONIBLE",
         detalle: "la respuesta de WSAA no se pudo leer",
+        causa: "PROBLEMA_DEL_SISTEMA",
       },
     });
   });
@@ -1327,7 +1340,11 @@ describe("FEParamGet*: las seis tablas, con TODOS los hijos de ResultGet", () =>
     });
     expect(clasificarParametros(resp(1, "014"), "FEParamGetTiposCbte")).toEqual({
       ok: false,
-      error: { codigo: "SERVICIO_NO_DISPONIBLE", detalle: "la respuesta de ARCA no se pudo leer" },
+      error: {
+        codigo: "SERVICIO_NO_DISPONIBLE",
+        detalle: "la respuesta de ARCA no se pudo leer",
+        causa: "PROBLEMA_DEL_SISTEMA",
+      },
     });
   });
 
@@ -1338,7 +1355,11 @@ describe("FEParamGet*: las seis tablas, con TODOS los hijos de ResultGet", () =>
       );
     const ilegible = {
       ok: false,
-      error: { codigo: "SERVICIO_NO_DISPONIBLE", detalle: "la respuesta de ARCA no se pudo leer" },
+      error: {
+        codigo: "SERVICIO_NO_DISPONIBLE",
+        detalle: "la respuesta de ARCA no se pudo leer",
+        causa: "PROBLEMA_DEL_SISTEMA",
+      },
     };
     expect(clasificarParametros(con("<Otra>x</Otra>"), "FEParamGetTiposIva")).toEqual(ilegible);
     expect(
@@ -1399,6 +1420,7 @@ describe("FEDummy", () => {
         error: {
           codigo: "SERVICIO_NO_DISPONIBLE",
           detalle: "la respuesta de ARCA no se pudo leer",
+          causa: "PROBLEMA_DEL_SISTEMA",
         },
       });
     }
@@ -1419,5 +1441,175 @@ describe("FEDummy", () => {
       ok: true,
       valor: { aplicacion: "OK", baseDeDatos: "CAIDO", autenticacion: "OK" },
     });
+  });
+});
+
+describe("FEParamGetPtosVenta: el 602 es «ninguno», no «ARCA caído» (clasificarPuntosDeVenta)", () => {
+  const conErrores = (...codigos: number[]) =>
+    respuestaHttp(
+      respuestaDePtosVentaDelManual({ errores: codigos.map((codigo) => ({ codigo, texto: "t" })) }),
+    );
+  const punto = { Nro: "1", EmisionTipo: "CAE", Bloqueado: "N" };
+
+  it("solo 602 y sin filas (con y sin ResultGet vacío): lista vacía", () => {
+    expect(clasificarPuntosDeVenta(conErrores(602))).toEqual({ ok: true, valor: [] });
+    expect(clasificarPuntosDeVenta(conErrores(602, 602))).toEqual({ ok: true, valor: [] });
+    expect(
+      clasificarPuntosDeVenta(
+        respuestaHttp(
+          respuestaDePtosVentaDelManual({ puntos: [], errores: [{ codigo: 602, texto: "t" }] }),
+        ),
+      ),
+    ).toEqual({ ok: true, valor: [] });
+  });
+
+  it("fail closed: 602 junto a otro código no es lista vacía", () => {
+    expect(clasificarPuntosDeVenta(conErrores(602, 601))).toMatchObject({
+      ok: false,
+      error: { codigo: "AUTORIZACION_DEL_SERVICIO_FALTANTE" },
+    });
+    expect(clasificarPuntosDeVenta(conErrores(602, 500))).toMatchObject({
+      ok: false,
+      error: { codigo: "SERVICIO_NO_DISPONIBLE" },
+    });
+  });
+
+  it("fail closed: 602 con una fila no es lista vacía", () => {
+    expect(
+      clasificarPuntosDeVenta(
+        respuestaHttp(
+          respuestaDePtosVentaDelManual({
+            puntos: [punto],
+            errores: [{ codigo: 602, texto: "t" }],
+          }),
+        ),
+      ),
+    ).toMatchObject({ ok: false, error: { codigo: "SERVICIO_NO_DISPONIBLE" } });
+  });
+
+  it("lo demás sigue como hoy: 600 solo, sin errores con filas, sin errores ni filas", () => {
+    expect(clasificarPuntosDeVenta(conErrores(600))).toMatchObject({
+      ok: false,
+      error: { codigo: "AUTORIZACION_DEL_SERVICIO_FALTANTE" },
+    });
+    expect(
+      clasificarPuntosDeVenta(respuestaHttp(respuestaDePtosVentaDelManual({ puntos: [punto] }))),
+    ).toEqual({ ok: true, valor: [{ Nro: "1", EmisionTipo: "CAE", Bloqueado: "N" }] });
+    expect(
+      clasificarPuntosDeVenta(respuestaHttp(respuestaDePtosVentaDelManual({ puntos: [] }))),
+    ).toEqual({ ok: true, valor: [] });
+  });
+
+  it("una respuesta ilegible, un HTTP que no es 200 y una conexión que no sale siguen siendo servicio no disponible", () => {
+    expect(clasificarPuntosDeVenta(respuestaHttp("<a><b>"))).toMatchObject({
+      ok: false,
+      error: { codigo: "SERVICIO_NO_DISPONIBLE" },
+    });
+    expect(
+      clasificarPuntosDeVenta(
+        respuestaHttp(
+          respuestaDePtosVentaDelManual({ errores: [{ codigo: 602, texto: "t" }] }),
+          500,
+        ),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { codigo: "SERVICIO_NO_DISPONIBLE", detalle: "HTTP 500" },
+    });
+    expect(clasificarPuntosDeVenta({ tipo: "NO_SALIO", motivo: "ECONNREFUSED" })).toEqual({
+      ok: false,
+      error: { codigo: "SERVICIO_NO_DISPONIBLE", detalle: "no salió: ECONNREFUSED" },
+    });
+  });
+
+  it("las tablas comunes no cambiaron: con 602 siguen siendo servicio no disponible", () => {
+    expect(clasificarParametros(conErrores(602), "FEParamGetPtosVenta")).toEqual({
+      ok: false,
+      error: { codigo: "SERVICIO_NO_DISPONIBLE", detalle: "ARCA respondió con errores (602)" },
+    });
+  });
+});
+
+describe("la causa elige el texto y nunca cambia el código (qué se reintenta y qué es definitivo)", () => {
+  const conCodigos = (...codigos: number[]) =>
+    respuestaHttp(
+      respuestaDePtosVentaDelManual({ errores: codigos.map((codigo) => ({ codigo, texto: "t" })) }),
+    );
+  const tabla = (r: ReturnType<typeof respuestaHttp>) =>
+    clasificarParametros(r, "FEParamGetPtosVenta");
+
+  it.each([
+    [[601], "AUTORIZACION_DEL_SERVICIO_FALTANTE", "CUIT_NO_REPRESENTADA"],
+    [[11002], "SERVICIO_NO_DISPONIBLE", "PUNTO_DE_VENTA_NO_HABILITADO"],
+    [[11000], "SERVICIO_NO_DISPONIBLE", "PROBLEMA_DEL_SISTEMA"],
+    [[11001], "SERVICIO_NO_DISPONIBLE", "PROBLEMA_DEL_SISTEMA"],
+  ] as const)("errores %j: código %s y causa %s", (codigos, codigo, causa) => {
+    const r = tabla(conCodigos(...codigos));
+    expect(r).toMatchObject({ ok: false, error: { codigo, causa } });
+  });
+
+  it.each([[[600]], [[601, 600]], [[11002, 500]], [[500]], [[6010]], [[11000, 11001]]])(
+    "errores %j: sin causa (la propiedad ni existe)",
+    (codigos) => {
+      const r = tabla(conCodigos(...codigos));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect("causa" in r.error).toBe(false);
+    },
+  );
+
+  it("loginCms: la falla de WSAA lleva la causa y el código de siempre", () => {
+    const falla = (codigo: string) =>
+      respuestaHttp(
+        `<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"><soapenv:Body><soapenv:Fault><faultcode xmlns:ns1="x">ns1:${codigo}</faultcode><faultstring>t</faultstring></soapenv:Fault></soapenv:Body></soapenv:Envelope>`,
+        500,
+      );
+    expect(clasificarLoginCms(falla("cms.cert.expired"))).toMatchObject({
+      error: { codigo: "SIN_CREDENCIAL", causa: "CERTIFICADO_VENCIDO" },
+    });
+    expect(clasificarLoginCms(falla("cms.cert.untrusted"))).toMatchObject({
+      error: { codigo: "SIN_CREDENCIAL", causa: "CERTIFICADO_NO_RECONOCIDO" },
+    });
+    expect(clasificarLoginCms(falla("xml.bad"))).toMatchObject({
+      error: { codigo: "SERVICIO_NO_DISPONIBLE", causa: "PROBLEMA_DEL_SISTEMA" },
+    });
+    for (const sinCausa of [
+      "coe.notAuthorized",
+      "coe.alreadyAuthenticated",
+      "cms.bad",
+      "xml.badX",
+    ]) {
+      const r = clasificarLoginCms(falla(sinCausa));
+      expect(r.ok, sinCausa).toBe(false);
+      if (!r.ok) expect("causa" in r.error, sinCausa).toBe(false);
+    }
+  });
+
+  it("transporte: una conexión segura que no se establece es del sistema; un corte o un tiempo, no, y el código es el mismo", () => {
+    const esperado = { puntoDeVenta: 1, tipoDeComprobante: 6 };
+    expect(
+      clasificarUltimoAutorizado({ tipo: "NO_SALIO", motivo: "EPROTO_DH_KEY_TOO_SMALL" }, esperado),
+    ).toEqual({
+      ok: false,
+      error: {
+        codigo: "SERVICIO_NO_DISPONIBLE",
+        detalle: "no salió: EPROTO_DH_KEY_TOO_SMALL",
+        causa: "PROBLEMA_DEL_SISTEMA",
+      },
+    });
+    for (const respuesta of [
+      { tipo: "NO_SALIO", motivo: "ECONNREFUSED" },
+      { tipo: "SIN_RESPUESTA", motivo: "TIEMPO_AGOTADO" },
+      { tipo: "SIN_RESPUESTA", motivo: "EPROTO_X" },
+    ] as const) {
+      const r = clasificarUltimoAutorizado(respuesta, esperado);
+      expect(r).toMatchObject({ ok: false, error: { codigo: "SERVICIO_NO_DISPONIBLE" } });
+      if (!r.ok) expect("causa" in r.error).toBe(false);
+    }
+    expect(clasificarDummy({ tipo: "NO_SALIO", motivo: "EPROTO" })).toMatchObject({
+      error: { causa: "PROBLEMA_DEL_SISTEMA" },
+    });
+    expect(
+      clasificarLoginCms({ tipo: "NO_SALIO", motivo: "ERR_TLS_CERT_ALTNAME_INVALID" }),
+    ).toMatchObject({ error: { codigo: "SERVICIO_NO_DISPONIBLE", causa: "PROBLEMA_DEL_SISTEMA" } });
   });
 });
