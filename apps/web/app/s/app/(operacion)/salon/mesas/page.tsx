@@ -1,6 +1,6 @@
 import { pantallaDeOperacion } from "../../../../../../pantallas/operacion";
 import { puedeAdministrarMesas } from "../../../../../../servidor/modulos";
-import { cargarLasMesas } from "../../../../../../servidor/salon";
+import { cargarLasMesas, medidasDelSalon } from "../../../../../../servidor/salon";
 import { armarLaListaDeMesas } from "../../../../../../ui/plantillas/salon/modelo-de-mesas";
 import { PantallaDeListaDeMesas } from "../../../../../../ui/plantillas/salon/PantallaDeListaDeMesas";
 import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
@@ -13,7 +13,11 @@ export default async function PaginaDeLaListaDeMesas() {
   return pantallaDeOperacion({ titulo: "salon.texto.admin_mesas" }, async ({ contexto }) => {
     const respuesta = await cargarLasMesas(contexto);
     const lista = respuesta.ok
-      ? armarLaListaDeMesas(respuesta.dato.mesas, await puedeAdministrarMesas(contexto))
+      ? armarLaListaDeMesas(
+          respuesta.dato.mesas,
+          await puedeAdministrarMesas(contexto),
+          medidasDelSalon(),
+        )
       : null;
     return (
       <PantallaDeListaDeMesas

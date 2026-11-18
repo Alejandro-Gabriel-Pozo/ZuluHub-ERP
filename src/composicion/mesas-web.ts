@@ -1,6 +1,14 @@
 import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
-import type { CasosDeUsoDeSalon, ConsultasDeSalon } from "../modulos/salon/publico";
+import {
+  COLUMNAS_DEL_SALON,
+  FILAS_DEL_SALON,
+  FORMAS_DE_MESA,
+  TAMANOS_DE_MESA,
+  huellaDeMesa,
+  type CasosDeUsoDeSalon,
+  type ConsultasDeSalon,
+} from "../modulos/salon/publico";
 import { err } from "../primitivas/resultado/resultado";
 import {
   aRespuesta,
@@ -53,6 +61,28 @@ export type MesaParaLaPantalla = Readonly<{
 }>;
 
 export type MesasParaLaPantalla = Readonly<{ mesas: readonly MesaParaLaPantalla[] }>;
+
+/** Las medidas del salón para dibujar el plano: la cuadrícula y las casillas que ocupa cada forma y tamaño (ancho × alto). */
+export type MedidasDelSalonParaLaPantalla = Readonly<{
+  columnas: number;
+  filas: number;
+  huellas: readonly Readonly<{ forma: string; tamano: string; ancho: number; alto: number }>[];
+}>;
+
+/**
+ * Las medidas que el navegador necesita para DIBUJAR el plano de mesas (S-1b). Salen del dominio de salón (`huellaDeMesa`, 14 × 9): una regla, un lugar; la pantalla solo dibuja y la
+ * validez de una mesa (que entre y que no se pise) la sigue decidiendo el servidor al guardar. Puro: sin base ni permisos, porque no lleva ningún dato de la empresa. Previene: la tabla
+ * de casillas copiada a mano en la pantalla, que se desfasa del servidor cuando cambia una medida.
+ */
+export function medidasDelSalon(): MedidasDelSalonParaLaPantalla {
+  return {
+    columnas: COLUMNAS_DEL_SALON,
+    filas: FILAS_DEL_SALON,
+    huellas: FORMAS_DE_MESA.flatMap((forma) =>
+      TAMANOS_DE_MESA.map((tamano) => ({ forma, tamano, ...huellaDeMesa(forma, tamano) })),
+    ),
+  };
+}
 
 const GENERICO = errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA");
 

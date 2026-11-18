@@ -202,6 +202,22 @@ export async function puedeCambiarPrecios(contexto: ContextoOperativo): Promise<
   return permisos !== null && ofertaDe("productos.cambiar_precio", permisos).permitida;
 }
 
+/** Qué botones de «Carta en línea» se ofrecen activos hoy (una sola lectura de permisos). */
+export type OfertaDeLaCarta = Readonly<{ guardar: boolean; poner: boolean; sacar: boolean }>;
+
+/** ¿Qué puede hacer con la carta en línea? La oferta de `vidrieras.editar`, `.publicar_en_linea` y `.retirar_de_linea`; sin permisos legibles, todo `false`. Solo apaga botones: el guard decide. Chequeo: `test/web/carta-en-linea-acceso.test.ts`. */
+export async function ofertaDeLaCartaEnLinea(
+  contexto: ContextoOperativo,
+): Promise<OfertaDeLaCarta> {
+  const permisos = await permisosDeLaPersona(contexto);
+  if (permisos === null) return { guardar: false, poner: false, sacar: false };
+  return {
+    guardar: ofertaDe("vidrieras.editar", permisos).permitida,
+    poner: ofertaDe("vidrieras.publicar_en_linea", permisos).permitida,
+    sacar: ofertaDe("vidrieras.retirar_de_linea", permisos).permitida,
+  };
+}
+
 /**
  * ¿La persona puede administrar las mesas del salón? Es la oferta de `mesas.editar` (Gerente y Administrador, decisión del dueño) que el servidor calcula con `ofertaDe`: con el módulo
  * en desarrollo, en solo lectura o sin el rol, no. Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: guardar vuelve a pasar por el guard.
@@ -211,6 +227,35 @@ export async function puedeAdministrarMesas(contexto: ContextoOperativo): Promis
   const permisos = await permisosDeLaPersona(contexto);
   return permisos !== null && ofertaDe("mesas.editar", permisos).permitida;
 }
+
+/**
+ * Los botones del salón y de las comandas (S-0r), uno por grupo de acciones: ¿la persona puede cambiar de mesa, unir, dividir, enviar a cocina, imprimir, reimprimir o administrar las impresoras? Cada una es la
+ * oferta de SU acción (`salon.cambiar_mesa`, `salon.unir`, `salon.dividir`, `comandas.enviar`, `impresiones.imprimir`, `impresiones.reimprimir`, `impresoras.editar`: Gerente y Administrador administran las
+ * impresoras; el resto, los tres roles) que el servidor calcula con `ofertaDe`: con el módulo en desarrollo, en solo lectura o sin el rol, no. Si no se pudieron leer los permisos, `false` (cierra, no abre).
+ * Ocultar no es autorizar: la acción vuelve a pasar por el guard. Es solo la ayuda que apaga el botón. Chequeo: `test/web/salon-acceso.test.ts`.
+ */
+async function puedeLaAccionDelSalon(
+  contexto: ContextoOperativo,
+  accion: ClaveAccion,
+): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe(accion, permisos).permitida;
+}
+
+export const puedeCambiarDeMesa = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "salon.cambiar_mesa");
+export const puedeUnirMesas = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "salon.unir");
+export const puedeDividirCuentas = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "salon.dividir");
+export const puedeEnviarAComandas = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "comandas.enviar");
+export const puedeImprimir = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "impresiones.imprimir");
+export const puedeReimprimir = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "impresiones.reimprimir");
+export const puedeAdministrarImpresoras = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "impresoras.editar");
 
 type PermisosLeidos = NonNullable<Awaited<ReturnType<typeof permisosDeLaPersona>>>;
 
@@ -338,4 +383,16 @@ export async function pendientesDeLaEmpresa(
     console.error(`[inicio] no se pudo leer la configuración fiscal: ${tipoDelError(excepcion)}`);
     return [];
   }
+}
+
+/** ¿Puede ocultar o volver a mostrar un producto en un local? La oferta de `vidrieras.marcar_disponibilidad`; sin permisos legibles, `false`. Solo apaga el botón (A15): el guard decide. Chequeo: `test/web/ocultar-acceso.test.ts`. */
+export async function puedeOcultarEnElLocal(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("vidrieras.marcar_disponibilidad", permisos).permitida;
+}
+
+/** ¿Puede ocultar o volver a mostrar un producto en toda la empresa? La oferta de `vidrieras.ocultar_en_empresa` (dueño, 22A), con el mismo cierre. Chequeo: `test/web/ocultar-acceso.test.ts`. */
+export async function puedeOcultarEnLaEmpresa(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("vidrieras.ocultar_en_empresa", permisos).permitida;
 }

@@ -40,6 +40,13 @@ export type {
   LineaDeLaFicha,
   MesaDelMapa,
 } from "./consultas/consultas";
+export {
+  COLUMNAS_DEL_SALON,
+  FILAS_DEL_SALON,
+  FORMAS_DE_MESA,
+  TAMANOS_DE_MESA,
+} from "./dominio/mesa";
+export { huellaDeMesa } from "./dominio/celdas";
 export { COLUMNAS_DE_SALON, type SalonDb } from "./persistencia/esquema";
 export { ERRORES_DE_SALON_POR_RESTRICCION } from "./persistencia/restricciones";
 export {
