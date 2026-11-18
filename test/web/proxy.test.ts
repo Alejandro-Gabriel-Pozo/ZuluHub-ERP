@@ -97,18 +97,30 @@ describe("P-2: host desconocido, retirado o inválido = la neutra", () => {
     ["solo un puerto", ":8080"],
   ];
 
-  it.each(HOSTILES)("%s (%j): 404 neutra, noindex, sin cookies", async (_motivo, host) => {
-    for (const ruta of ["/", "/panel?x=1", "/api/auth/signin", "/favicon.ico"]) {
-      const respuesta = await proxy(pedido(host, ruta));
-      expect(reescritura(respuesta), `${host} ${ruta}`).toBe("/s/neutra");
-      expect(respuesta.status).toBe(404);
-      expect(respuesta.headers.get("x-robots-tag")).toBe("noindex");
-      expect(respuesta.headers.get("set-cookie")).toBeNull();
-      expect(respuesta.cookies.getAll()).toEqual([]);
-      // La neutra no guarda ni la consulta del pedido.
-      expect(new URL(respuesta.headers.get("x-middleware-rewrite") as string).search).toBe("");
-    }
-  });
+  it.each(HOSTILES)(
+    "%s (%j): 404 plano en HTML, sin cuerpo, noindex, sin cookies",
+    async (_motivo, host) => {
+      for (const ruta of ["/", "/panel?x=1", "/api/auth/signin", "/favicon.ico"]) {
+        // Sin y con el encabezado de RSC: Next hace el pedido interno del `redirect()` de una acción con RSC y a `localhost:<puerto>`; con RSC la neutra salía como flujo RSC y el navegador
+        // la mostraba como si fuera la pantalla de destino («Guardar» terminaba en «No encontrado»).
+        for (const encabezados of [{}, { rsc: "1" }, { rsc: "1", "next-router-prefetch": "1" }]) {
+          const respuesta = await proxy(pedido(host, ruta, encabezados));
+          const donde = `${host} ${ruta} ${JSON.stringify(encabezados)}`;
+          expect(respuesta.status, donde).toBe(404);
+          // No se reescribe a ninguna página (ni a la neutra): no hay nada que Next pueda devolver como RSC.
+          expect(reescritura(respuesta), donde).toBeNull();
+          expect(respuesta.headers.get("x-middleware-next"), donde).toBeNull();
+          expect(respuesta.headers.get("content-type"), donde).toMatch(/^text\/html/);
+          expect(respuesta.headers.get("content-type"), donde).not.toMatch(/x-component/);
+          // Sin cuerpo informativo: ni nombres de superficie, ni host, ni ruta, ni motivo.
+          expect(await respuesta.text(), donde).toBe("");
+          expect(respuesta.headers.get("x-robots-tag"), donde).toBe("noindex");
+          expect(respuesta.headers.get("set-cookie"), donde).toBeNull();
+          expect(respuesta.cookies.getAll(), donde).toEqual([]);
+        }
+      }
+    },
+  );
 
   it("la neutra no trae ningún dato de ninguna marca, ni siquiera en las cabeceras", async () => {
     const respuesta = await proxy(pedido("viejo.hoteldellago.test"));
@@ -119,7 +131,8 @@ describe("P-2: host desconocido, retirado o inválido = la neutra", () => {
   it("host desconocido nunca cae en una marca: ni con producción", async () => {
     vi.stubEnv("VERCEL_ENV", "production");
     const respuesta = await proxy(pedido("otro.ejemplo.com"));
-    expect(reescritura(respuesta)).toBe("/s/neutra");
+    expect(respuesta.status).toBe(404);
+    expect(reescritura(respuesta)).toBeNull();
     expect(respuesta.headers.get("x-robots-tag")).toBe("noindex");
   });
 
@@ -129,6 +142,7 @@ describe("P-2: host desconocido, retirado o inválido = la neutra", () => {
       const r = await proxy(pedido(host, "/x"));
       expect(r.status).toBe(referencia.status);
       expect(reescritura(r)).toBe(reescritura(referencia));
+      expect(await r.text()).toBe(await referencia.text());
       const sinNonce = (x: Response) =>
         textoDeCabeceras(x)
           .replace(/nonce-[A-Za-z0-9+/=]+/g, "nonce-N")
@@ -178,10 +192,13 @@ describe("P-2: host desconocido, retirado o inválido = la neutra", () => {
   });
 
   it("el nombre de la superficie no filtra la existencia de un host", async () => {
+    // Un host conocido y uno desconocido contestan 404 a una URL interna; el desconocido ya no pasa por la neutra (404 plano de la puerta, sin cuerpo).
     const a = await proxy(pedido(HOST_APP_A, "/s/app"));
     const b = await proxy(pedido("no-existe.test", "/s/app"));
-    expect(reescritura(a)).toBe(reescritura(b));
-    expect(a.status).toBe(b.status);
+    expect(a.status).toBe(404);
+    expect(b.status).toBe(404);
+    expect(reescritura(a)).toBe("/s/neutra");
+    expect(reescritura(b)).toBeNull();
   });
 });
 
@@ -287,6 +304,12 @@ describe("P-4: cabeceras de seguridad", () => {
     expect(r.headers.get("cache-control")).toBe("private, no-store");
     expect(r.headers.get("x-powered-by")).toBeNull();
     // El mismo nonce llega a la página: por la CSP del pedido (Next marca sus scripts) y por el interno.
+    // (Un host desconocido no llega a ninguna página: lo contesta la puerta, con las mismas cabeceras y sin pedido que siga.)
+    if (host === "otro.test") {
+      expect(r.headers.get("x-middleware-rewrite")).toBeNull();
+      expect(r.headers.get("x-middleware-next")).toBeNull();
+      return;
+    }
     const siguen = encabezadosDePedidoQueSiguen(r);
     expect(siguen["x-pd-nonce"]).toBe(nonce);
     expect(siguen["content-security-policy"]).toBe(csp);
@@ -363,7 +386,8 @@ describe("P-5: encabezados que no se falsifican", () => {
 
   it("sin host, un X-Forwarded-Host bueno no abre nada", async () => {
     const r = await proxy(pedido("", "/", { "x-forwarded-host": HOST_APP_A }));
-    expect(reescritura(r)).toBe("/s/neutra");
+    expect(r.status).toBe(404);
+    expect(reescritura(r)).toBeNull();
   });
 });
 

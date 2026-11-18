@@ -167,6 +167,8 @@ function armar(
     /** Con `true` se usa la firma real (la de `firmar-cms.ts`) en lugar de una firma de mentira. */
     firmaReal?: boolean;
     transporte?: TransporteFalso;
+    /** Un registro propio (por ejemplo, uno que lanza); por defecto, el que junta los avisos. */
+    registrar?: (aviso: string) => void;
   }> = {},
 ): Mundo {
   const transporte = opciones.transporte ?? new TransporteFalso();
@@ -195,7 +197,7 @@ function armar(
     credenciales,
     tickets,
     verificacion,
-    registrar: (aviso) => avisos.push(aviso),
+    registrar: opciones.registrar ?? ((aviso) => void avisos.push(aviso)),
     transporte: (pedido) => {
       bitacora.push(`pedido:${TransporteFalso.operacionDe(pedido)}`);
       return enviar(pedido);
@@ -445,6 +447,60 @@ describe("las operaciones del puerto, con las respuestas reales", () => {
           limiteEnMs: 15_000,
         },
       ]);
+    });
+
+    it("FIXTURE CONSTRUIDO, NO GRABADO: con <FchBaja>NULL</FchBaja> la lista es válida (que `habilitadoEnArca` la acepta se prueba en `test/utilidades/puntos-de-venta-null.test.ts`)", async () => {
+      const respuesta = respuestaHttp(
+        respuestaDePtosVentaDelManual({
+          puntos: [
+            { Nro: "00001", EmisionTipo: "CAE", Bloqueado: "N", FchBaja: "NULL" },
+            { Nro: "2", EmisionTipo: "CAE", Bloqueado: "N", FchBaja: "20260131" },
+          ],
+        }),
+      );
+      const { adaptador } = armar({
+        ambiente: "PRODUCCION",
+        transporte: wsfe(["FEParamGetPtosVenta", respuesta]),
+      });
+      const lista = await adaptador.puntosDeVenta(CUIT);
+      expect(lista).toEqual({
+        ok: true,
+        valor: [
+          { numero: 1, bloqueado: false, dadoDeBaja: false },
+          { numero: 2, bloqueado: false, dadoDeBaja: true },
+        ],
+      });
+    });
+
+    it("si la lista no se entiende queda UNA línea de log con operación, código y detalle, y sin el pedido ni el token ni la firma", async () => {
+      const respuesta = respuestaHttp(
+        respuestaDePtosVentaDelManual({
+          puntos: [{ Nro: "1", EmisionTipo: "CAE", Bloqueado: "N", FchBaja: "Nulo" }],
+        }),
+      );
+      const m = armar({ transporte: wsfe(["FEParamGetPtosVenta", respuesta]) });
+      expect((await m.adaptador.puntosDeVenta(CUIT)).ok).toBe(false);
+      expect(m.avisos).toEqual([
+        "[arca] FEParamGetPtosVenta falló (SERVICIO_NO_DISPONIBLE): la lista de puntos de venta de ARCA no se pudo leer",
+      ]);
+      // Violación inyectada: el token y la firma del pedido (valores falsos de la prueba) no pueden estar en el log.
+      for (const prohibido of [...PROHIBIDOS, m.transporte.pedidos[0]?.cuerpo ?? "sin pedido"]) {
+        expect(m.avisos.join(" ")).not.toContain(prohibido);
+      }
+    });
+
+    it("si registrar lanza, la respuesta sale igual", async () => {
+      const respuesta = respuestaHttp("no es xml", 500);
+      const { adaptador } = armar({
+        transporte: wsfe(["FEParamGetPtosVenta", respuesta]),
+        registrar: () => {
+          throw new Error("registro caído");
+        },
+      });
+      expect(await adaptador.puntosDeVenta(CUIT)).toMatchObject({
+        ok: false,
+        error: { codigo: "SERVICIO_NO_DISPONIBLE" },
+      });
     });
 
     it("se manda UNA vez: sin reintento ni reenvío, sea cual sea la respuesta", async () => {
