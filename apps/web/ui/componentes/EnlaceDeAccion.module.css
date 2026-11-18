@@ -21,3 +21,14 @@
 .enlace:active {
   background: var(--accion-primaria-fondo-presionado);
 }
+
+.enlace[data-variante="secundaria"] {
+  background: var(--color-fondo);
+  border-color: var(--color-borde);
+  color: var(--color-texto);
+}
+
+.enlace[data-variante="secundaria"]:hover,
+.enlace[data-variante="secundaria"]:active {
+  background: var(--color-superficie);
+}

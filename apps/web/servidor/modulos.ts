@@ -256,6 +256,8 @@ export const puedeReimprimir = (contexto: ContextoOperativo): Promise<boolean> =
   puedeLaAccionDelSalon(contexto, "impresiones.reimprimir");
 export const puedeAdministrarImpresoras = (contexto: ContextoOperativo): Promise<boolean> =>
   puedeLaAccionDelSalon(contexto, "impresoras.editar");
+export const puedeEditarOpciones = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccionDelSalon(contexto, "opciones.editar"); // oferta de `opciones.editar` (gerente y administrador): solo apaga botones, el guard decide (DEC-0346); `test/web/opciones-acceso.test.ts`
 
 type PermisosLeidos = NonNullable<Awaited<ReturnType<typeof permisosDeLaPersona>>>;
 

@@ -1,3 +1,4 @@
+import { texto } from "../../../../../../../../../src/capacidades/vocabulario/vocabulario";
 import { conTitulo, pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
 import { cargarLaFicha } from "../../../../../../../servidor/ficha-de-producto";
 import { cargarLaVisibilidad } from "../../../../../../../servidor/ocultar";
@@ -6,8 +7,10 @@ import {
   puedeOcultarEnElLocal,
   puedeOcultarEnLaEmpresa,
 } from "../../../../../../../servidor/modulos";
+import { EnlaceDeAccion } from "../../../../../../../ui/componentes/EnlaceDeAccion";
 import { FormularioDeFichaDeProducto } from "../../../../../../../ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente";
 import { armarLaFicha } from "../../../../../../../ui/plantillas/catalogo/modelo-de-ficha-de-producto";
+import { rutaDeLasOpciones } from "../../../../../../../ui/plantillas/catalogo/modelo-de-opciones";
 import { armarLaVisibilidad } from "../../../../../../../ui/plantillas/catalogo/modelo-de-visibilidad-de-producto";
 import { VisibilidadDeLaFichaDeProducto } from "../../../../../../../ui/plantillas/catalogo/VisibilidadDeLaFichaDeProducto.cliente";
 import { Pila } from "../../../../../../../ui/primitivas/Pila";
@@ -53,6 +56,12 @@ export default async function PaginaDeLaFichaDeUnProducto({ params }: PropsDePag
               EMPRESA: ocultarOMostrarAccion.bind(null, ficha.id, "EMPRESA", !oculto.dato.empresa),
             }}
           />
+        ) : null}
+        {/* La solapa «Opciones» (A13): solo para lo que se vende, que es lo único que tiene opciones. */}
+        {respuesta.dato.seVende ? (
+          <EnlaceDeAccion href={rutaDeLasOpciones(ficha.id)}>
+            {texto({}, "catalogo.ficha.opciones")}
+          </EnlaceDeAccion>
         ) : null}
       </Pila>,
     );
