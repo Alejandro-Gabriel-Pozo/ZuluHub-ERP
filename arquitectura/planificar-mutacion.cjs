@@ -354,10 +354,7 @@ function planificar({ cambios, grupos, dependencias, ci, lecturas = LECTURAS_DE_
   };
 }
 
-/**
- * Cambios que obligan a repetir la integración (decisión del dueño, 2026-11-07: cuesta ~50 min de máquina por corrida y solo detecta fallas
- * intermitentes de lo que toca la base). Previene: gastar esas máquinas en un cambio de pantalla o de dominio que no puede alterarla. Lista de lo que SÍ la dispara.
- */
+/** Cambios que obligan a repetir la integración (decisión del dueño, 2026-11-07: cuesta ~50 min de máquina por corrida y solo detecta fallas intermitentes de lo que toca la base). Previene: gastar esas máquinas en un cambio de pantalla o de dominio que no puede alterarla. Lista de lo que SÍ la dispara. */
 const DISPARAN_ESTABILIDAD = [
   /^test\/integracion\//,
   /^src\/(?:[^/]+\/)*persistencia\//, // src/**/persistencia/**
