@@ -3,8 +3,8 @@
   "fecha": "2026-11-16",
   "quien": "padre",
   "tipo": "DINERO",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "SUPUESTO: cobrar usa la única caja abierta de la sucursal; sin caja abierta pide abrirla y con más de una abierta no cobra hasta que el dueño decida.",
   "que_cambia": "En qué caja se registra un cobro del mostrador. La maqueta tiene una sola. Revertir: elegir la caja en la hoja, con un selector y un texto aprobado.",
-  "donde": "delegación del dueño, DDD filas 173 y 174; PantallaDeCobro.cliente.tsx; modelo-de-cobro.ts"
+  "donde": "delegación del dueño, DDD filas 173 y 174; PantallaDeCobro.cliente.tsx; modelo-de-cobro.ts; aprobada por el dueño el 18/11/2026 (decisiones-del-dueno-2026-11.md, docs main 0db52d6)"
 }
