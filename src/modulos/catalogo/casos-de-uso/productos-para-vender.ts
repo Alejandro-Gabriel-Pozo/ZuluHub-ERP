@@ -47,6 +47,9 @@ export type GrupoParaVender = Readonly<{
 export type ProductoParaVender = Readonly<{
   id: string;
   nombre: string;
+  /** El código propio y el de barras del producto, para buscarlo en el mostrador; `null` si no los tiene. */
+  codigo: string | null;
+  codigoDeBarras: string | null;
   /** La sección ACTIVA de la carta del producto; `null` si no tiene o la suya está desactivada. */
   seccionId: string | null;
   unidadDeVentaId: string;
@@ -186,6 +189,8 @@ async function productoParaVender(
   return {
     id: p.id,
     nombre: p.nombre,
+    codigo: p.codigo,
+    codigoDeBarras: p.codigoDeBarras,
     seccionId:
       p.seccionDeCartaId !== null && seccionesActivas.has(p.seccionDeCartaId)
         ? p.seccionDeCartaId

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0479",
+  "fecha": "2026-11-15",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: título «Venta», genérico con más de 1000 productos, producto sin precio no se agrega y buscador solo por nombre, hasta que el dueño conteste.",
+  "que_cambia": "Cómo se ve la venta rápida en esos casos. «Venta» está en la maqueta aprobada pero no en los 302 textos. Revertir: una línea por caso.",
+  "donde": "delegación del dueño, DDD filas 173 y 174; (operacion)/venta/page.tsx; modelo-de-venta-rapida.ts"
+}

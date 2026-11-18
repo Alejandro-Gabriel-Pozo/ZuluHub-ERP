@@ -253,6 +253,8 @@ export const CATALOGO_DE_TEXTOS = {
   "navegacion.area.catalogo": { porDefecto: "Catálogo" },
   // Fuente: dueño, 13/11/2026, `decisiones-del-dueno-2026-11.md` línea 110, fila «Rótulos del menú por áreas aprobados»: el encabezado del grupo de la carta dentro de Catálogo es «Carta».
   "navegacion.grupo.carta": { porDefecto: "Carta" },
+  // Fuente: dueño, 13/11/2026, `decisiones-del-dueno-2026-11.md` línea 110: «Mostrador» es el grupo del área Ventas que contiene «Venta rápida».
+  "navegacion.grupo.mostrador": { porDefecto: "Mostrador" },
   "inicio.titulo": { porDefecto: "Inicio" },
   "inicio.bienvenida": {
     porDefecto: "Estás en {empresa}.",

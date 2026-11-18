@@ -11,6 +11,7 @@ const REQUIERE_CATALOGO = { modulo: "catalogo", estadoDeEmpresa: ["ACTIVE"] } as
 const FUENTE_DE_LA_LISTA_DE_PRODUCTOS =
   "Pedernal-docs/11-especificaciones/fichas-de-modulo/a1-productos-y-precios.md §3 (consultas: `listarProductos` filtra por texto, clase, «falta completar» y activo) y la maqueta aprobada el 12/11/2026 (`productos.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)";
 
+const BUSCADOR_DE_LA_VENTA = "apps/web/ui/plantillas/venta/PantallaDeVentaRapida.cliente.tsx";
 const FICHA_DE_PRODUCTO = "apps/web/ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente.tsx";
 const ALTA_DE_PRODUCTO = "apps/web/ui/plantillas/catalogo/FormularioDeAltaDeProducto.cliente.tsx";
 const ALTA_PROPOSITO = (para: string): Proposito => ({
@@ -44,8 +45,13 @@ export const DATOS_DE_PRODUCTOS = {
         para: "Texto con el que se busca un producto por su nombre en la lista de productos (el buscador vacío muestra todo).",
         fuente: FUENTE_DE_LA_LISTA_DE_PRODUCTOS,
       },
+      {
+        para: "Texto con el que se busca un producto por su nombre, su código o su código de barras en la venta rápida del mostrador (se filtra la lista ya cargada; el buscador vacío muestra todo).",
+        fuente:
+          "Pedernal-docs/11-especificaciones/servidor-del-mostrador-minimo.md §7 (fila «Buscar por nombre o código») y la maqueta `venta-rapida-v4.html` (carpeta de prototipos de Pedernal-docs 10-ux-ui)",
+      },
     ],
-    consumidores: [LISTA_DE_PRODUCTOS],
+    consumidores: [LISTA_DE_PRODUCTOS, BUSCADOR_DE_LA_VENTA],
     ponerPor: ["productos.ver"],
     requiere: REQUIERE_CATALOGO,
   },
