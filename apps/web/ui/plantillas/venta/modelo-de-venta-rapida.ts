@@ -177,6 +177,11 @@ export function nombreDeLaUnidad(codigo: string): string | null {
 
 export type TextosDeLaVenta = Readonly<{
   buscar: string;
+  todo: string;
+  secciones: string;
+  incluido: string;
+  obligatorio: string;
+  opcional: string;
   sinResultadosAyuda: string;
   borrarBusqueda: string;
   verCuenta: string;
@@ -206,6 +211,11 @@ export type TextosDeLaVenta = Readonly<{
 export function textosDeLaVenta(): TextosDeLaVenta {
   return {
     buscar: texto({}, "ventas.venta.buscar"),
+    todo: texto({}, "ventas.venta.todo"),
+    secciones: texto({}, "catalogo.seccion.titulo"),
+    incluido: texto({}, "ventas.venta.incluido"),
+    obligatorio: texto({}, "catalogo.campo.obligatorio"),
+    opcional: texto({}, "catalogo.campo.opcional"),
     sinResultadosAyuda: texto({}, "ventas.venta.sin_resultados_ayuda"),
     borrarBusqueda: texto({}, "ventas.venta.borrar_busqueda"),
     verCuenta: texto({}, "ventas.venta.ver_cuenta"),

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0715",
+  "fecha": "2026-11-17",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Los textos de Impresoras, del botón Imprimir y «No hay impresoras» son los de la maqueta imprimir.html aprobada el 09/11/2026: no hay textos nuevos y cada uno declara sus usos.",
+  "que_cambia": "Ninguna palabra nueva en pantalla. Cada texto de Impresoras, Imprimir, Imprimiendo, Impresa, No se pudo imprimir, Reintentar y Ver en pantalla declara dónde se usa y de dónde sale.",
+  "donde": "imprimir.html (Textos nuevos y vConfig, 09/11/2026); salon-s2-impresoras-plan.md §3; catalogo-comandas.ts. Confirmada por el dueño 17/11/2026: decisiones-del-dueno-2026-11.md, fila «Salón y comandas: respuestas a Q1 a Q7»."
+}

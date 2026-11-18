@@ -16,6 +16,8 @@ function Probado(props: {
   etiquetaSinElegir?: string;
   deshabilitado?: boolean;
   ocultarNombre?: boolean;
+  aclaracion?: string;
+  notaDelGrupo?: string;
   inicial?: readonly string[];
   alCambiarFuera?: (v: readonly string[]) => void;
 }) {
@@ -34,6 +36,8 @@ function Probado(props: {
       etiquetaSinElegir={props.etiquetaSinElegir}
       deshabilitado={props.deshabilitado ?? false}
       ocultarNombre={props.ocultarNombre ?? false}
+      aclaracion={props.aclaracion}
+      notaDelGrupo={props.notaDelGrupo}
     />
   );
 }
@@ -98,6 +102,35 @@ describe("GrupoDeOpciones", () => {
     const leyenda = grupo.element().querySelector("legend");
     expect(leyenda).not.toBeNull();
     expect(leyenda?.getBoundingClientRect().width).toBeLessThanOrEqual(1);
+  });
+
+  it("con «aclaración» se lee junto al nombre, dentro de la misma leyenda del grupo", async () => {
+    await render(<Probado varias={false} aclaracion="(obligatorio)" />);
+    await expect
+      .element(page.getByRole("group", { name: "Guarnición (obligatorio)" }))
+      .toBeVisible();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("con «nota del grupo» se lee dentro del grupo, antes de las opciones; sin ella, no hay nada", async () => {
+    await render(<Probado varias={false} notaDelGrupo="Sin elegir" />);
+    const grupo = page.getByRole("group", { name: "Guarnición" });
+    await expect.element(grupo.getByText("Sin elegir", { exact: true })).toBeVisible();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("sin «nota del grupo» no se dibuja ninguna línea aparte", async () => {
+    await render(<Probado varias={false} />);
+    await expect.element(page.getByRole("group", { name: "Guarnición" })).toBeVisible();
+    expect(document.querySelectorAll("fieldset p")).toHaveLength(0);
+  });
+
+  it("sin «aclaración» el nombre del grupo queda solo, como antes", async () => {
+    await render(<Probado varias={false} />);
+    await expect
+      .element(page.getByRole("group", { name: "Guarnición", exact: true }))
+      .toBeVisible();
+    expect(page.getByText("(obligatorio)").elements()).toHaveLength(0);
   });
 
   it("el objetivo táctil de cada opción es de 3 rem como mínimo", async () => {

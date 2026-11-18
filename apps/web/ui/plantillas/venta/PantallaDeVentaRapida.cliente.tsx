@@ -59,6 +59,8 @@ type Resultado = Readonly<{
 /** Tras cerrar la hoja se ignora un segundo toque sobre un producto: evita abrirla dos veces con un doble toque (decisión 171 y maqueta v4). */
 const ESPERA_TRAS_CERRAR_LA_HOJA_MS = 500;
 const DURACION_DEL_AVISO_MS = 2500;
+/** El total de una cuenta sin líneas: el cero de «no hay nada que cotizar» (no es un cálculo; con líneas el total es siempre el que da el servidor). */
+const TOTAL_SIN_LINEAS = "0.00";
 
 /**
  * La VENTA RÁPIDA del mostrador (maqueta `venta-rapida-v4.html`): los productos de la sucursal por sección, un buscador por nombre, la hoja del producto y la cuenta, con el total siempre a la
@@ -165,7 +167,17 @@ export function PantallaDeVentaRapida({
         alCambiar={setBusqueda}
       />
       {secciones.length === 0 ? null : (
-        <div className={estilos["secciones"]} role="group" aria-label={textos.buscar}>
+        <div className={estilos["secciones"]} role="group" aria-label={textos.secciones}>
+          <button
+            type="button"
+            className={estilos["seccion"]}
+            aria-pressed={seccionId === null}
+            onClick={() => {
+              setSeccionId(null);
+            }}
+          >
+            {textos.todo}
+          </button>
           {secciones.map((s) => (
             <button
               key={s.id}
@@ -173,7 +185,7 @@ export function PantallaDeVentaRapida({
               className={estilos["seccion"]}
               aria-pressed={seccionId === s.id}
               onClick={() => {
-                setSeccionId(seccionId === s.id ? null : s.id);
+                setSeccionId(s.id);
               }}
             >
               {s.nombre}
@@ -271,7 +283,11 @@ export function PantallaDeVentaRapida({
         <p className={estilos["total"]} aria-busy={estado.tipo === "PENDIENTE"}>
           <span>{textos.total}</span>
           <strong data-total>
-            {cotizacion === null ? "" : formatearImporte(cotizacion.total.monto)}
+            {estado.tipo === "SIN_CUENTA"
+              ? formatearImporte(TOTAL_SIN_LINEAS)
+              : cotizacion === null
+                ? ""
+                : formatearImporte(cotizacion.total.monto)}
           </strong>
         </p>
       </div>
@@ -290,6 +306,7 @@ export function PantallaDeVentaRapida({
             producto={abierto}
             forma={formaAbierta}
             textos={textos}
+            cotizar={cotizar}
             alAgregar={agregar}
             alCancelar={cerrarHoja}
           />

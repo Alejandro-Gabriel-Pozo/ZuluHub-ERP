@@ -257,6 +257,19 @@
   font-weight: var(--tipo-peso-fuerte);
 }
 
+.resultadoDeFracciones {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--espacio-3);
+}
+
+.importeDeLaCantidad {
+  margin: 0;
+  font-weight: var(--tipo-peso-fuerte);
+  font-variant-numeric: tabular-nums;
+}
+
 .atajos {
   display: flex;
   flex-wrap: wrap;

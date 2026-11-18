@@ -70,6 +70,14 @@ describe.skipIf(base === null)("recorrido de la venta rápida: de la lista al to
       desde: DESDE,
     });
     const latte = await productoDeBase(c, mundo.empresa, { nombre: "Latte" });
+    // Una sección de la carta con el Latte: así la pantalla ofrece «Todo» y la sección.
+    const cafes = (
+      await c.query<{ id: string }>(
+        "insert into seccion_de_carta (empresa_id, nombre, nombre_clave, orden) values ($1, 'Cafés', 'cafes', 1) returning id",
+        [mundo.empresa],
+      )
+    ).rows[0]?.id;
+    await c.query("update producto set seccion_de_carta_id = $1 where id = $2", [cafes, latte]);
     const medida = await grupoDeBase(c, mundo.empresa, latte, {
       clase: "VARIANTE",
       nombre: "Tamaño",
@@ -125,8 +133,22 @@ describe.skipIf(base === null)("recorrido de la venta rápida: de la lista al to
     expect(await tarjeta("Medialuna").innerText()).toContain("$ 800,00");
     expect(await tarjeta("Latte").innerText()).toContain("Según medida");
     expect(await tarjeta("Latte").innerText()).toContain("Con opciones");
-    expect(await total().innerText()).toBe("");
+    expect(await total().innerText()).toBe("$ 0,00"); // la cuenta vacía suma cero
     await sinViolacionesDeAxe();
+    pantallaLimpia();
+  });
+
+  it("«Todo» está elegido al entrar; una sección deja solo sus productos y «Todo» vuelve a mostrar todo", async () => {
+    const todo = pagina.getByRole("button", { name: "Todo", exact: true });
+    const cafes = pagina.getByRole("button", { name: "Cafés", exact: true });
+    expect(await todo.getAttribute("aria-pressed")).toBe("true");
+    await cafes.click();
+    expect(await cafes.getAttribute("aria-pressed")).toBe("true");
+    await tarjeta("Latte").waitFor();
+    expect(await tarjeta("Medialuna").count()).toBe(0);
+    await todo.click();
+    await tarjeta("Medialuna").waitFor();
+    expect(await todo.getAttribute("aria-pressed")).toBe("true");
     pantallaLimpia();
   });
 
@@ -134,6 +156,8 @@ describe.skipIf(base === null)("recorrido de la venta rápida: de la lista al to
     await tarjeta("Medialuna").click();
     await pagina.getByRole("dialog", { name: "Medialuna" }).waitFor();
     await sinViolacionesDeAxe();
+    // El importe del botón lo cotiza el servidor (lectura): la maqueta lo calcula en el navegador, esta pantalla no.
+    await pagina.getByRole("button", { name: "Agregar · $ 800,00" }).waitFor();
     await pagina.getByRole("button", { name: "Agregar" }).click();
     await expect.poll(() => total().innerText()).toBe("$ 800,00");
     pantallaLimpia();
