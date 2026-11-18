@@ -1,0 +1,59 @@
+name: Strace de la integración (TEMPORAL)
+
+# TEMPORAL: confirma con `strace` qué archivos del repositorio abre la integración (`vitest run test/integracion`) contra un Postgres real, para decidir la lista de
+# `arquitectura/ajenos-a-la-integracion.json`. Vive solo en la rama `integracion/strace-estabilidad` (que no dispara ningún otro CI) y se borra con el resultado. No toca el Gate ni `main`.
+# Dispara con un push a esa rama o a pedido (Actions → Run workflow, con la rama elegida). Nunca falla por lo que encuentra: lo imprime.
+on:
+  push:
+    branches: [integracion/strace-estabilidad]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  strace:
+    name: Strace de la integración
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PRUEBAS_DATABASE_URL: postgres://postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Instalar strace
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq strace
+      - name: Integración bajo strace (una copia)
+        run: >-
+          strace -f -qq -e trace=openat,statx,newfstatat,access,readlink,execve -o "$RUNNER_TEMP/trazas.txt"
+          npx vitest run test/integracion --reporter=dot
+        continue-on-error: true
+      - name: Qué archivos del repositorio abre la integración
+        run: |
+          echo "Líneas de traza: $(wc -l < "$RUNNER_TEMP/trazas.txt")"
+          for patron in '/\.gitignore' 'CODEOWNERS' 'arquitectura/paridad' 'paridad/copias' 'arquitectura/decisiones' 'arquitectura/mutacion' 'ajenos-a-la-integracion'; do
+            abiertos=$(grep -E "$patron" "$RUNNER_TEMP/trazas.txt" | grep -v ENOENT | grep -cE 'openat\(' || true)
+            consultados=$(grep -E "$patron" "$RUNNER_TEMP/trazas.txt" | grep -v ENOENT | grep -cvE 'openat\(' || true)
+            echo "== $patron: abiertos=$abiertos consultados(stat/access)=$consultados"
+            grep -E "$patron" "$RUNNER_TEMP/trazas.txt" | grep -v ENOENT | cut -c1-200 | sort | uniq -c | sort -rn | head -5
+          done
+          echo "== procesos hijos distintos de node/postgres (execve):"
+          grep -E 'execve' "$RUNNER_TEMP/trazas.txt" | grep -oE '"[^"]+"' | head -400 | sort | uniq -c | sort -rn | head -10 || true
