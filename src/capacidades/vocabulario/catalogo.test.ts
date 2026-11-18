@@ -404,7 +404,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     });
   });
 
-  it("los textos de stock son exactamente los que el dueño aprobó el 09/11/2026 en stock.html «Textos nuevos» (D125), y ninguno más", () => {
+  it("los textos de stock son exactamente los que el dueño aprobó (el 09/11/2026 en stock.html «Textos nuevos», D125, y los seis del conteo con hora el 14/11/2026), y ninguno más", () => {
     expect(
       Object.fromEntries(
         claves
@@ -449,6 +449,12 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "stock.conteo.cancelar": "Cancelar conteo",
       "stock.conteo.diferencia": "Diferencia",
       "stock.conteo.aplicado": "Aplicado",
+      "stock.conteo.hora": "Hora del conteo",
+      "stock.conteo.sistema_a_esa_hora": "Sistema a esa hora",
+      "stock.conteo.movido_desde": "Movido desde las {hora}",
+      "stock.conteo.ver_detalle": "Ver detalle",
+      "stock.conteo.ya_habia_ocurrido": "Ya había ocurrido cuando contaste",
+      "stock.conteo.motivo_venta_no_registrada": "Venta no registrada",
       "stock.deposito.agregar": "Agregar depósito",
       "stock.deposito.normal": "Normal",
       "stock.deposito.cuarentena": "Cuarentena",

@@ -14,6 +14,7 @@ import { RUTAS_DE_CONFIGURACION } from "../plantillas/configuracion-fiscal/lista
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
 import { RUTAS_DE_CUENTA } from "../plantillas/sesion/rutas-de-cuenta";
 import { RUTA_DE_LA_VENTA } from "../plantillas/venta/rutas-de-venta";
+import { RUTAS_DE_STOCK } from "../plantillas/stock/rutas-de-stock";
 
 /**
  * EL MENÚ POR ÁREAS: una sola tabla declarativa (área → grupo → pantalla), una fila por pantalla. Es la ÚNICA fuente de qué hay en el
@@ -52,6 +53,7 @@ export const GRUPOS_DEL_MENU = [
   { clave: "productos", etiqueta: null },
   { clave: "salon", etiqueta: "salon.texto.grupo_salon" },
   { clave: "carta", etiqueta: "navegacion.grupo.carta" },
+  { clave: "stock", etiqueta: null },
   { clave: "empresa", etiqueta: "navegacion.empresa" },
   { clave: "sucursal", etiqueta: "sucursal.etiqueta" },
   { clave: "salir", etiqueta: null },
@@ -76,6 +78,7 @@ export type FilaDePantalla = BaseDeFila &
       | "secciones"
       | "mesas"
       | "impresoras"
+      | "stock"
       | "configuracion-fiscal"
       | "medios-de-pago"
       | "contacto";
@@ -170,6 +173,17 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     accion: "impresoras.ver",
     href: RUTA_DE_IMPRESORAS,
     etiqueta: "comandas.texto.imprimir_impresoras",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
+    clave: "stock",
+    area: "catalogo",
+    grupo: "stock",
+    modulo: "stock",
+    accion: "stock.ver",
+    href: RUTAS_DE_STOCK.entrada,
+    etiqueta: "stock.pantalla.stock",
     departamento: null,
   },
   {

@@ -75,4 +75,15 @@ export const TEXTOS_DE_STOCK = {
   "stock.error.nombre_duplicado": { porDefecto: "Ya existe un depósito con ese nombre" },
   // stock.html, nota final de «Textos nuevos» («Esta acción no está permitida» ya estaba aprobado), sin el punto final de esa nota.
   "stock.error.sin_permiso": { porDefecto: "Esta acción no está permitida" },
+
+  // Conteo con hora: los seis textos que el dueño aprobó el 14/11/2026 (`decisiones-del-dueno-2026-11.md`, fila del 14/11, punto 2; mensaje del dueño del 14/11/2026). Los pide la
+  // pantalla de Conteo (`stock-conteo.html`); entran con la base para que Conteo y Movimientos no editen este archivo a la vez (`pantallas-de-stock-inventario.md` §2 B7 y §9).
+  // `{hora}` en «Movido desde las {hora}» es un marcador de implementación (el texto aprobado trae «10:00» de ejemplo; la hora es la de ese artículo).
+  "stock.conteo.hora": { porDefecto: "Hora del conteo" },
+  "stock.conteo.sistema_a_esa_hora": { porDefecto: "Sistema a esa hora" },
+  "stock.conteo.movido_desde": { porDefecto: "Movido desde las {hora}", marcadores: ["hora"] },
+  "stock.conteo.ver_detalle": { porDefecto: "Ver detalle" },
+  "stock.conteo.ya_habia_ocurrido": { porDefecto: "Ya había ocurrido cuando contaste" },
+  // Es un motivo de DIFERENCIA del conteo (faltante), no de un movimiento: por eso no es `stock.motivo.*`.
+  "stock.conteo.motivo_venta_no_registrada": { porDefecto: "Venta no registrada" },
 } as const;

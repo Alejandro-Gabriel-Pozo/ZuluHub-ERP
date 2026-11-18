@@ -23,6 +23,7 @@ import { cotizarVentaRapida } from "../casos-de-uso/cotizar-venta-rapida";
 import { cargarEstadosDeLaEmpresa } from "../../empresas/publico";
 import type { CursorDePendientes } from "../persistencia/repositorio-de-lecturas";
 import type { DependenciasDeConsultasDeVentas, TxDeConsultasDeVentas } from "./contrato";
+import { opcionesParaCobrar, type ErrorDeOpcionesParaCobrar } from "./opciones-para-cobrar";
 import { reunirPendientes } from "./pendientes-de-facturar";
 import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 
@@ -33,6 +34,7 @@ export type ErrorDeConsultaDeVentas =
   | ErrorDePersistencia
   | ErrorDeCotizacion
   | ErrorAlConsultarCajasParaCobrar
+  | ErrorDeOpcionesParaCobrar
   | "IDENTIFICADOR_INVALIDO"
   | "FECHA_INVALIDA"
   | "CANTIDAD_INVALIDA"
@@ -160,6 +162,10 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
         if (!alcance.ok) return alcance;
         return cajaParaVentas.estadoDeCajasParaCobrar(tx, contexto, entrada.sucursalId);
       }),
+
+    /** Qué ofrecer al cobrar con una caja (K1): medios, cuentas, datos que pide cada medio y marcas. Ver `opciones-para-cobrar.ts`. */
+    opcionesParaCobrar: (contexto: ContextoOperativo, entrada: Readonly<{ cajaId: string }>) =>
+      leer(contexto, (tx, p) => opcionesParaCobrar(tx, contexto, p.alcance, entrada)),
 
     fichaDeCuenta: (contexto: ContextoOperativo, entrada: Readonly<{ cuentaId: string }>) =>
       leer(contexto, async (tx, p) => {
