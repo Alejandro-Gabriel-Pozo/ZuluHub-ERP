@@ -201,6 +201,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
       ],
       ["mesas", "ventas", "salon", "salon", "mesas.ver", "/salon/mesas", "salon.texto.admin_mesas"],
       [
+        "stock",
+        "catalogo",
+        "stock",
+        "stock",
+        "stock.ver",
+        "/stock/depositos",
+        "stock.pantalla.stock",
+      ],
+      [
         "configuracion-fiscal",
         "cuenta",
         "empresa",
