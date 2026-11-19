@@ -48,6 +48,7 @@ const LISTO: CobroPreparado = {
         nombre: null,
         cuentas: [],
         datosQuePide: { cupon: false, ultimos4: false, marca: false, cuotas: false, dni: false },
+        datosQueSePiden: { cupon: false, ultimos4: false, marca: false, cuotas: false, dni: false },
       },
     ],
     marcasDeTarjeta: [],

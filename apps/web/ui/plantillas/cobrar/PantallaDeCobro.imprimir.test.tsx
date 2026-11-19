@@ -19,7 +19,16 @@ const LISTO: CobroPreparado = {
   estado: "LISTO",
   cajaId: "caja-1",
   opciones: {
-    medios: [{ id: "m-efectivo", tipo: "EFECTIVO", nombre: null, cuentas: [], datosQuePide: nada }],
+    medios: [
+      {
+        id: "m-efectivo",
+        tipo: "EFECTIVO",
+        nombre: null,
+        cuentas: [],
+        datosQuePide: nada,
+        datosQueSePiden: nada,
+      },
+    ],
     marcasDeTarjeta: [],
   },
 };

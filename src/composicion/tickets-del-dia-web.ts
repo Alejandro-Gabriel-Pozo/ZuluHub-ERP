@@ -100,6 +100,7 @@ export type FichaDelTicketParaLaPantalla = Readonly<{
     medioTipo: string;
     cuentaDeCobro: Readonly<{ id: string; nombre: string }> | null;
     importe: Importe;
+    datosPendientes: readonly string[];
   }>[];
   anulacion: Readonly<{ motivo: string; hechaPor: string | null; hechaEn: string }> | null;
   imprimible: boolean;
@@ -178,6 +179,7 @@ export function fichaDelTicketParaLaPantalla(
             ? null
             : { id: c.cuentaDeCobro.id, nombre: c.cuentaDeCobro.nombre },
         importe: importe(c.importe),
+        datosPendientes: [...c.datosPendientes],
       })),
       imprimible: f.imprimible,
       anulacion:

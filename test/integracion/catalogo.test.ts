@@ -763,6 +763,11 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "pide_marca",
             "pide_cuotas",
             "pide_dni",
+            "avisa_si_falta_cupon",
+            "avisa_si_falta_ultimos4",
+            "avisa_si_falta_marca",
+            "avisa_si_falta_cuotas",
+            "avisa_si_falta_dni",
           ].map((c) => `pedernal_app:medio_de_pago.${c}`),
           ...["nombre", "identificador_externo", "sucursal_id", "activa"].map(
             (c) => `pedernal_app:cuenta_de_cobro.${c}`,

@@ -42,6 +42,7 @@ export type MedioParaCobrar = Readonly<{
   nombre: string | null;
   cuentas: readonly Readonly<{ id: string; tipo: string; nombre: string }>[];
   datosQuePide: DatosQuePideElMedio;
+  datosQueSePiden: DatosQuePideElMedio; // De los que pide, cuáles «se piden»: se pueden dejar vacíos (PR-7).
 }>;
 
 export type OpcionesParaCobrar = Readonly<{
@@ -205,6 +206,17 @@ export type EstadoDelCobro = Readonly<{
 /** Los datos que cuentan: los que el medio admite, en el orden del servidor. */
 const datosAdmitidos = (medio: MedioParaCobrar | undefined): readonly DatoDelMedio[] =>
   medio === undefined ? [] : DATOS_EN_ORDEN.filter((d) => medio.datosQuePide[d]);
+
+/** Lo que el medio pide («se pide») y la fila dejó vacío: INFORMATIVO, no entra en `listo` (dueño, 18/11/2026: se advierte, no se exige); el pendiente real lo sella el servidor. */
+export function datosPendientes(
+  medio: MedioParaCobrar | undefined,
+  pago: PagoEnEdicion,
+): readonly DatoDelMedio[] {
+  // Sin medio no hay datos admitidos (la lista sale vacía) y el filtro no corre.
+  return datosAdmitidos(medio).filter(
+    (d) => (medio as MedioParaCobrar).datosQueSePiden[d] && pago.datos[d].trim() === "",
+  );
+}
 
 export function estadoDelCobro(
   total: Readonly<{ moneda: string; monto: string }>,

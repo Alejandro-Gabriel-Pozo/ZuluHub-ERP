@@ -112,6 +112,7 @@ describe.skipIf(base === null)("composición web: tickets del día", () => {
     expect(JSON.stringify(r.dato)).not.toContain(e.gerente.personaId as string);
     expect(r.dato.anulacion).toBeNull();
     expect(r.dato.cobros).toHaveLength(1);
+    expect(r.dato.cobros[0]?.datosPendientes).toEqual([]);
   });
 
   it("el pedido con una clave de más, o con un id mal escrito, se rechaza; un ticket ajeno, también", async () => {
