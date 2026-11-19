@@ -119,6 +119,33 @@ export type PlanesDePlataformaDb = {
   };
   empresa: { id: string; tenant_id: string; estado: string };
   tenant: { id: string; nombre: string; estado: string; marca_id: string };
+  /** H-14a (migración 0087): solo inserción. `creado_en` lo fija la base. */
+  politica_de_cambio_de_plan: {
+    version: number;
+    dias_de_anticipacion_de_suba: number;
+    dias_de_anticipacion_de_baja: number;
+    dias_de_arrepentimiento: number;
+    motivo: string;
+    definida_por: string;
+    creado_en: Generated<Date>;
+  };
+  condiciones_de_cambio_de_plan: {
+    tenant_id: string;
+    numero: number;
+    sentido: string;
+    politica_version: number;
+    /** `date` de Postgres: el adaptador la entrega como texto `YYYY-MM-DD` (ver `politica-de-cambio.ts`). */
+    arrepentimiento_hasta: string | null;
+    creado_en: Generated<Date>;
+  };
+  arrepentimiento_de_plan: {
+    tenant_id: string;
+    numero_arrepentido: number;
+    numero_nuevo: number;
+    motivo: string;
+    registrado_por: string;
+    creado_en: Generated<Date>;
+  };
 };
 
 type Iguales<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
