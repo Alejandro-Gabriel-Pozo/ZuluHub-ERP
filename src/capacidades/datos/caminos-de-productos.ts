@@ -206,4 +206,22 @@ export const CAMINOS_DE_PRODUCTOS = {
     },
     camposDeError: [],
   },
+  // Productos, ficha: el tilde «Se controla el stock» (PR-3 de Catálogo). Viaja en el mismo formulario y con el mismo «Guardar»; el servidor lo guarda primero (stock) y después la ficha (catálogo).
+  "controlar-el-stock-de-un-producto": {
+    funcion: "Marcar si se controla el stock de un producto",
+    pantallas: [FORMULARIO_DE_FICHA_DE_PRODUCTO],
+    pasos: [
+      {
+        id: "control-de-stock",
+        campos: { seControlaElStock: "control-de-stock-de-producto" },
+      },
+    ],
+    deriva: [],
+    accion: {
+      clave: "articulos.controlar",
+      requiere: ["control-de-stock-de-producto"],
+      admite: [],
+    },
+    camposDeError: [],
+  },
 } as const satisfies Readonly<Record<string, DefinicionDeCamino>>;

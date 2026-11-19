@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0798",
+  "fecha": "2026-11-19",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El tilde «Se controla el stock» y la ficha se guardan con un solo botón en dos transacciones: primero el control y después la ficha, y si el control falla no se guarda la ficha.",
+  "que_cambia": "Si el control entra y la ficha se rechaza (otra persona guardó antes), el tilde queda cambiado y la pantalla muestra el error de la ficha; repetir Guardar es seguro. Revertir: un caso de uso que haga ambas cosas.",
+  "donde": "apps/web/servidor/ficha-de-producto.ts; brief PR-3 de Catálogo §4.1 punto 5 y §8",
+  "motivo": "Técnica: son dos módulos (stock y catálogo) con transacciones propias; el tilde no depende de los datos de la ficha."
+}

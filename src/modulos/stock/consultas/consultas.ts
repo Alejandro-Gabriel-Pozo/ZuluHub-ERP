@@ -1,5 +1,6 @@
 import type { DependenciasDeConsultasDeStock } from "../casos-de-uso/contrato";
 import { crearLector } from "./comun";
+import { armarConsultasDeArticulos } from "./articulos";
 import { armarConsultasDeComposiciones } from "./composiciones";
 import { armarConsultasDeConteos } from "./conteos";
 import { armarConsultasDeCostos } from "./costos";
@@ -23,6 +24,8 @@ export function crearConsultasDeStock(d: DependenciasDeConsultasDeStock) {
     ...armarConsultasDeLibro(leer),
     // conteo físico (E5-T6)
     ...armarConsultasDeConteos(leer, d.reglas),
+    // el tilde «Se controla el stock» de la ficha del producto
+    ...armarConsultasDeArticulos(leer),
     // composiciones (E5-T7)
     ...armarConsultasDeComposiciones(leer),
     // ficha de receta con costo, comparar versiones, ficha de cocina (E6-T6)

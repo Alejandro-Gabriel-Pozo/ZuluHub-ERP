@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import type { ErrorPublico } from "../../../../../src/capacidades/experiencia/respuesta";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { Boton } from "../../componentes/Boton.cliente";
+import { Casilla } from "../../componentes/Casilla";
 import { Campo } from "../../componentes/Campo";
 import { Selector } from "../../componentes/Selector";
 import { BotonDeEnvio } from "../../patrones/BotonDeEnvio.cliente";
@@ -20,6 +21,11 @@ export type PropsDeFormularioDeFichaDeProducto = Readonly<{
   accion: AccionDeFormulario;
   /** Si el servidor deja guardar hoy: si no, «Guardar» sale apagado (solo una ayuda: el guard decide; DEC-0346). */
   puedeGuardar: boolean;
+  /**
+   * El tilde «Se controla el stock»: `null` si no se dibuja (clase que no se controla, producto desactivado, módulo `stock` sin activar o sin poder leerlo). Con `puedeCambiar` en `false`
+   * (sin `articulos.controlar`) se ve apagada, con su estado real.
+   */
+  controlDeStock: Readonly<{ marcada: boolean; puedeCambiar: boolean }> | null;
 }>;
 
 /** Los campos del formulario a los que un error puede apuntarse (los que muestran su propio error). */
@@ -47,6 +53,7 @@ export function FormularioDeFichaDeProducto({
   ficha,
   accion,
   puedeGuardar,
+  controlDeStock,
 }: PropsDeFormularioDeFichaDeProducto) {
   const [resultado, enviar, enviando] = useActionState(accion, SIN_ERROR);
   const [nombre, setNombre] = useState(ficha.nombre.valor);
@@ -55,6 +62,7 @@ export function FormularioDeFichaDeProducto({
   const [barras, setBarras] = useState(ficha.codigoDeBarras.valor);
   const [alicuota, setAlicuota] = useState(ficha.alicuota?.valor ?? "");
   const [seccion, setSeccion] = useState(ficha.seccion?.valor ?? "");
+  const [controlado, setControlado] = useState(controlDeStock?.marcada ?? false);
 
   const error = resultado.error;
   const campoDelError = error?.campo;
@@ -137,6 +145,16 @@ export function FormularioDeFichaDeProducto({
             <a className={estilos["enlace"]} href={ficha.enlaceDeSecciones.href}>
               {ficha.enlaceDeSecciones.texto}
             </a>
+          )}
+          {controlDeStock === null || ficha.etiquetaDelControlDeStock === null ? null : (
+            <Casilla
+              dato="control-de-stock-de-producto"
+              etiqueta={ficha.etiquetaDelControlDeStock}
+              nombre="seControlaElStock"
+              marcada={controlado}
+              alCambiar={setControlado}
+              apagada={!controlDeStock.puedeCambiar}
+            />
           )}
           {sinCampo ? <ErrorDeRespuesta error={error} /> : null}
           {puedeGuardar ? (
