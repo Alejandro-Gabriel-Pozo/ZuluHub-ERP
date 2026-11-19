@@ -117,6 +117,20 @@ export const DATOS_ADMITIDOS_POR_MEDIO: Readonly<Record<TipoDeMedio, readonly Da
 /** Qué datos pide un medio (`pide_*` de la tabla `medio_de_pago`). Un medio nuevo nace con todos en `false`. */
 export type DatosQuePideElMedio = Readonly<Record<DatoDelCobro, boolean>>;
 
+/**
+ * `editarMedioDePago` rechaza pedir («se pide») un dato que el medio no muestra (`pide`): el espejo de `medio_de_pago_avisa_ck` de la base.
+ * Pedir un dato no bloquea nunca el cobro (criterio del dueño, 18/11/2026): solo lo deja marcado como pendiente si queda vacío.
+ */
+export function validarLoQueSePide(
+  pide: DatosQuePideElMedio,
+  avisaSiFalta: DatosQuePideElMedio,
+): Resultado<null, Readonly<{ codigo: "DATO_PEDIDO_SIN_APARECER"; dato: DatoDelCobro }>> {
+  for (const dato of DATOS_DEL_COBRO) {
+    if (avisaSiFalta[dato] && !pide[dato]) return err({ codigo: "DATO_PEDIDO_SIN_APARECER", dato });
+  }
+  return ok(null);
+}
+
 /** `editarMedioDePago` rechaza habilitar un dato que el tipo no admite (el CHECK de la base es la defensa final). */
 export function validarDatosQuePide(
   tipoDeMedio: TipoDeMedio,

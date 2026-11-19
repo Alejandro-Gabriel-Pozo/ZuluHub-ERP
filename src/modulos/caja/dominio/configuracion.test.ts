@@ -51,6 +51,7 @@ const medio = (m: Partial<MedioDePago> = {}): MedioDePago => ({
   nombre: "Visa débito",
   activo: true,
   pide: NADA,
+  avisaSiFalta: NADA,
   version: 3,
   ...m,
 });
@@ -373,9 +374,14 @@ describe("decidirEdicionDeCaja", () => {
 });
 
 describe("decidirEdicionDeMedio", () => {
-  const cambios = (nombre: string | null, pide: Partial<DatosQuePideElMedio> = {}) => ({
+  const cambios = (
+    nombre: string | null,
+    pide: Partial<DatosQuePideElMedio> = {},
+    avisaSiFalta: Partial<DatosQuePideElMedio> = {},
+  ) => ({
     nombre,
     pide: { ...NADA, ...pide },
+    avisaSiFalta: { ...NADA, ...avisaSiFalta },
   });
 
   it("no existe → MEDIO_NO_ENCONTRADO", () => {

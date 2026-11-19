@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0792",
+  "fecha": "2026-11-19",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: la edición de un medio recibe lo que se pide como opcional, y omitido significa que no cambia lo que ya estaba.",
+  "que_cambia": "Nada visible hoy; evita que una edición sin ese dato borre lo que se pide.",
+  "donde": "src/modulos/caja/casos-de-uso/editar-medio-de-pago.ts"
+}

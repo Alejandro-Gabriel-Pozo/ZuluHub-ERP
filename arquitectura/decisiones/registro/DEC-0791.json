@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0791",
+  "fecha": "2026-11-19",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las columnas de «se pide» de un medio se llaman avisa si falta más el dato, para no confundirse con las de «el dato aparece».",
+  "que_cambia": "Solo nombres internos de la base; nada visible. Revertir: renombrar columnas en una migración.",
+  "donde": "src/modulos/caja/dominio/; src/modulos/caja/persistencia/; migraciones/0091_datos_que_se_piden.sql; brief PR-7-caja del repositorio de documentos y fila del 18/11 «PR-7» de decisiones-del-dueno-2026-11.md"
+}
