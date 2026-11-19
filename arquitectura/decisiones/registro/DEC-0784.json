@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0784",
+  "fecha": "2026-11-19",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La consola de plataforma tiene login PERMANENTE del rol pedernal_plataforma solo en preview: VALID UNTIL a 90 días, renovable por cargar-entorno-consola.yml; falla cerrado fuera de preview.",
+  "que_cambia": "Reemplaza, solo para este caso, el login temporal de 30 minutos (decisión del 05/11). Sin renovar, vence y la consola falla cerrada. Revertir: cerrar el login con ALTER ROLE NOLOGIN y quitar el flujo.",
+  "donde": "dueño 19/11 (pregunta directa al orquestador); .github/workflows/cargar-entorno-consola.yml; src/adaptadores/postgres/consola-de-plataforma.ts; test/integracion/consola-de-plataforma.test.ts"
+}

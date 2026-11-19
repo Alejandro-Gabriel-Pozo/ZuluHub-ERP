@@ -41,6 +41,32 @@ El despliegue automático está apagado (`vercel.json` → `deploymentEnabled: f
 Si falta alguna, el pedido falla cerrado con una referencia `PD-XXXX-XXXX`; el **nombre** de la variable que falta queda
 en los registros de la función, nunca en la pantalla.
 
+### 3.1 Cargar las cuatro variables de base y de claves sin ver ningún valor (solo `preview`)
+
+Las cuatro que son secretos de base o de firma (`PEDERNAL_DB_AUTENTICACION`, `PEDERNAL_DB_PLATAFORMA`, `PEDERNAL_CLAVE_CONTEXTO`,
+`PEDERNAL_SECRETO_INVITACIONES`) no se pegan a mano: las genera y las carga el flujo **Cargar entorno de la consola (solo preview)**
+(`cargar-entorno-consola.yml`), con tu aprobación en GitHub. Nadie ve ningún valor. Las otras cuatro (host, secreto de ingreso y
+cliente de Google) las seguís cargando vos; el flujo solo avisa por nombre si están o faltan.
+
+Una sola vez, antes de la primera corrida:
+
+1. **Migrar la base de preview.** En GitHub, Actions, **Migrar (preview y producción)**, elegí `main`, ambiente `preview` y `aplicar`.
+   Aplica la migración 0088 (el rol de ingreso propio de la consola). Si el Environment `preview` tiene el secreto
+   `PEDERNAL_CLAVE_CONTEXTO` con la clave de la web, dejalo como está: no hace falta tocarlo.
+2. **Crear el token de Vercel del flujo.** En vercel.com, Settings de tu cuenta, Tokens, **Create**: nombre `pedernal-consola-preview`, equipo
+   `alepozod`, **alcance a los dos proyectos** (`pedernal-erp` y `pedernal-plataforma`) y vencimiento corto (7 días). Copialo una vez.
+3. **Cargarlo en GitHub.** Settings del repositorio, Environments, `preview`, **Add secret**: nombre exacto `PEDERNAL_VERCEL_TOKEN_CONSOLA`
+   (no es el mismo que `PEDERNAL_VERCEL_TOKEN`). Pegá el token ahí y en ningún otro lugar. Cuando venza, creá otro y reemplazalo.
+4. **Correr el flujo.** Actions, **Cargar entorno de la consola (solo preview)**, `main`, escribí `CARGAR CONSOLA PREVIEW` y, **la primera
+   vez, marcá «rotar»** (los valores que cargaste a mano antes no se pueden leer ni comparar: se reemplazan por valores nuevos que
+   coinciden entre sí). Aprobá el Environment. El informe nombra qué se cargó; no muestra valores.
+5. **Redesplegar** el último despliegue de preview de la consola (y el de la web: el secreto de invitaciones cambió). Las invitaciones de
+   preview que estaban pendientes hay que **reenviarlas**.
+
+Después: corrida normal (sin «rotar») cada menos de 90 días. No cambia nada de lo cargado y renueva la vigencia del login de los dos roles; si
+pasan 90 días sin correrlo, la consola de preview deja de poder entrar a la base (falla cerrada) hasta que se corra de nuevo. Si una corrida
+falla a mitad, el informe nombra lo que ya quedó escrito en Vercel: repetirla con «rotar» lo deja consistente.
+
 ## 4. Primera vista previa: qué comprobar
 
 1. Abrir `/ingreso`: se ve «Ingresar con Google». Con una cuenta que **no** es de la lista aparece «No pudimos iniciar

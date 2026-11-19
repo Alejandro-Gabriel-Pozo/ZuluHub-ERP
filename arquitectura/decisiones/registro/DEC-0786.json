@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0786",
+  "fecha": "2026-11-19",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Excepción al tramo T3: cargar-entorno-consola.yml usa la cadena directa del dueño y un token de Vercel de dos proyectos, solo preview; rota el secreto de invitaciones de la web.",
+  "que_cambia": "Un flujo más con esas credenciales, con aprobación del dueño; las invitaciones pendientes de preview hay que reenviarlas. Revertir: borrar el flujo y su prueba.",
+  "donde": "dueño 19/11 (pregunta directa al orquestador); test/arquitectura/workflow-cargar-entorno-consola.test.ts"
+}
