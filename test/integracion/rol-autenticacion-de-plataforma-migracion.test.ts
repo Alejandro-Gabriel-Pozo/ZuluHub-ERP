@@ -179,5 +179,44 @@ describe.skipIf(base === null)(
         await aparte.destruir();
       }
     });
+
+    it("la reversión, con otra base del servidor usando el rol (como en la cadena de reversiones), suelta el rol de ESTA base sin fallar, lo conserva y se puede volver a aplicar", async () => {
+      const aparte = await crearBaseAparte(base!);
+      const cliente = new pg.Client({ connectionString: aparte.base.dueno });
+      await cliente.connect();
+      const reversion = await readFile(
+        join(
+          CARPETA_DE_MIGRACIONES,
+          "reversiones/0088_revertir_rol_autenticacion_de_plataforma.sql",
+        ),
+        "utf8",
+      );
+      const estado = async () =>
+        (
+          await cliente.query<{ politicas: number; puede: boolean; existe: boolean }>(
+            `select (select count(*)::int from pg_policies where roles = array['${NUEVO}']::name[]) as politicas,
+                    has_table_privilege('${NUEVO}', 'autenticacion.session', 'SELECT') as puede,
+                    exists (select 1 from pg_roles where rolname = '${NUEVO}') as existe`,
+          )
+        ).rows[0];
+      const revertir = async () => {
+        await cliente.query("begin");
+        await cliente.query(reversion);
+        await cliente.query("commit");
+      };
+      try {
+        expect(await estado()).toEqual({ politicas: 27, puede: true, existe: true });
+        await revertir();
+        // Esta base queda sin nada del rol; el rol sigue (la base de pruebas compartida todavía depende de él).
+        expect(await estado()).toEqual({ politicas: 0, puede: false, existe: true });
+        await revertir();
+        expect(await estado()).toEqual({ politicas: 0, puede: false, existe: true });
+        await cliente.query(sql);
+        expect(await estado()).toEqual({ politicas: 27, puede: true, existe: true });
+      } finally {
+        await cliente.end();
+        await aparte.destruir();
+      }
+    });
   },
 );
