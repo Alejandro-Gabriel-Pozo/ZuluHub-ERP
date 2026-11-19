@@ -11,7 +11,17 @@ import { Campo } from "../../componentes/Campo";
 import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
 import { Superposicion } from "../../patrones/Superposicion";
 import { formatearImporte } from "../../patrones/formato-fiscal";
+import { PantallaDeCobro } from "../cobrar/PantallaDeCobro.cliente";
+import {
+  esImporteValido,
+  type CobroPreparado,
+  type TicketAnulado,
+  type VentaCobrada,
+} from "../cobrar/modelo-de-cobro";
+import { type TextosDeCobrar } from "../cobrar/textos-de-cobrar";
 import { CuentaDeLaVenta } from "./CuentaDeLaVenta.cliente";
+import { useAperturaDelCobro } from "./useAperturaDelCobro.cliente";
+import { FranjaDeCaja } from "./FranjaDeCaja.cliente";
 import { HojaDeProducto, type LineaElegida } from "./HojaDeProducto.cliente";
 import estilos from "./VentaRapida.module.css";
 import {
@@ -42,6 +52,20 @@ export type PropsDePantallaDeVentaRapida = Readonly<{
   textos: TextosDeLaVenta;
   /** La cotización del servidor: la acción de servidor que llama a `cotizarElCarritoDeLaSucursal`. Es una lectura (repetirla no cambia nada). */
   cotizar: (pedido: unknown) => Promise<Respuesta<CotizacionDeLaVenta>>;
+  /**
+   * Cobrar la cuenta (pantalla «Cobrar», `../cobrar/`). Sin esto la pantalla solo arma la cuenta: lo que no se declara no se ofrece. La página lo resuelve en el servidor (qué caja, qué opciones o por qué
+   * no se puede cobrar); las acciones son las de servidor de cobrar y anular.
+   */
+  cobro?:
+    | Readonly<{
+        preparado: CobroPreparado;
+        textos: TextosDeCobrar;
+        cobrar: (pedido: unknown) => Promise<Respuesta<VentaCobrada>>;
+        anular: (pedido: unknown) => Promise<Respuesta<TicketAnulado>>;
+        /** Adónde lleva «Abrir caja» cuando no hay caja abierta (`RUTA_DE_LA_CAJA`); `null` si la persona no puede abrirla: entonces el aviso va sin botón (DEC-0502). */
+        rutaParaAbrirLaCaja: string | null;
+      }>
+    | undefined;
 }>;
 
 type EstadoDeLaCotizacion =
@@ -73,15 +97,23 @@ export function PantallaDeVentaRapida({
   productos,
   textos,
   cotizar,
+  cobro,
 }: PropsDePantallaDeVentaRapida) {
   const [busqueda, setBusqueda] = useState("");
   const [seccionId, setSeccionId] = useState<string | null>(null);
   const [abierto, setAbierto] = useState<ProductoDeLaVenta | null>(null);
   const [cuentaAbierta, setCuentaAbierta] = useState(false);
+  const [cobrando, setCobrando] = useState(false);
   const [cuenta, setCuenta] = useState<readonly LineaDeLaVenta[]>([]);
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [aviso, setAviso] = useState("");
   const hojaBloqueada = useRef(false);
+  const { esperaAlAbrirElCobro, envolturaDeCobrar, abrirElCobro } = useAperturaDelCobro(
+    cobrando,
+    () => {
+      setCobrando(true);
+    },
+  );
   const temporizadorDeLaHoja = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const porId = useMemo(() => new Map(productos.map((p) => [p.id, p])), [productos]);
@@ -156,6 +188,37 @@ export function PantallaDeVentaRapida({
   const cotizacion = estado.tipo === "LISTA" ? estado.cotizacion : null;
   const formaAbierta = abierto === null ? null : formaDeCantidad(abierto);
 
+  // El cobro es una vista de la pantalla (maqueta `vCobro`, DDD:294): mientras está abierto no se dibuja la venta; al volver, la cuenta sigue como estaba.
+  if (cobro !== undefined && cobrando && cotizacion !== null) {
+    return (
+      <div className={estilos["pantalla"]}>
+        <PantallaDeCobro
+          cuenta={cuenta}
+          total={cotizacion.total}
+          preparado={cobro.preparado}
+          textos={cobro.textos}
+          cobrar={cobro.cobrar}
+          anular={cobro.anular}
+          esperaAlAbrir={esperaAlAbrirElCobro}
+          alVolver={() => {
+            setCobrando(false);
+          }}
+          alNuevaVenta={() => {
+            // La venta terminó (cobrada o anulada): cuenta vacía, sin cotización vieja y la vista de cobro cerrada.
+            setCobrando(false);
+            setCuenta([]);
+            setResultado(null);
+            setCuentaAbierta(false);
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Sin caja abierta, o sin permiso, se avisa en la barra y «Cobrar» queda apagado; con el día en cierre o cerrado tampoco se arma la cuenta (maqueta `franjaCaja` y `bloqueaAgregar`).
+  const preparado = cobro?.preparado;
+  const sinJornada = preparado?.estado === "NO_PERMITIDO" && !preparado.jornadaAbierta;
+
   return (
     <div className={estilos["pantalla"]}>
       <Campo
@@ -221,7 +284,7 @@ export function PantallaDeVentaRapida({
                     type="button"
                     className={estilos["tarjeta"]}
                     data-en-la-cuenta={enLaCuenta > 0 ? "" : undefined}
-                    disabled={!sePuedeAgregar(p)}
+                    disabled={!sePuedeAgregar(p) || sinJornada}
                     onClick={() => {
                       abrirHoja(p);
                     }}
@@ -268,6 +331,9 @@ export function PantallaDeVentaRapida({
       ) : null}
 
       <div className={estilos["barra"]}>
+        {cobro === undefined || preparado === undefined ? null : (
+          <FranjaDeCaja preparado={preparado} cobro={cobro} />
+        )}
         <button
           type="button"
           className={estilos["verCuenta"]}
@@ -280,6 +346,20 @@ export function PantallaDeVentaRapida({
           {textos.verCuenta}
           {cuenta.length === 0 ? null : <span className={estilos["cuantas"]}>{cuenta.length}</span>}
         </button>
+        {cobro === undefined ? null : (
+          <div ref={envolturaDeCobrar} className={estilos["envolturaDeCobrar"]}>
+            <Boton
+              deshabilitado={
+                preparado?.estado !== "LISTO" ||
+                cotizacion === null ||
+                !esImporteValido(cotizacion.total.monto)
+              }
+              alTocar={abrirElCobro}
+            >
+              {cobro.textos.cobrar}
+            </Boton>
+          </div>
+        )}
         <p className={estilos["total"]} aria-busy={estado.tipo === "PENDIENTE"}>
           <span>{textos.total}</span>
           <strong data-total>

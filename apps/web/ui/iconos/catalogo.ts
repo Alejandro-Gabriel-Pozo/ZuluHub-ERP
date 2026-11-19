@@ -1,5 +1,6 @@
 import {
   Building2,
+  ChevronLeft,
   CircleCheck,
   Clock,
   FileText,
@@ -33,6 +34,8 @@ export const CATALOGO_DE_ICONOS = {
   // Patrones de la interfaz.
   "sin-conexion": WifiOff,
   cerrar: X,
+  // «‹» de la barra de una vista que vuelve a la anterior (cobro, maqueta `venta-rapida-v4.html:854`).
+  atras: ChevronLeft,
   reloj: Clock,
   // Navegación del mostrador y sesión (W5).
   inicio: House,

@@ -11,7 +11,8 @@ export type EstadoDeLasCajas = Readonly<{
 export type DecisionDeLaCaja =
   | Readonly<{ tipo: "LISTA"; cajaId: string }>
   | Readonly<{ tipo: "ABRIR_LA_CAJA" }>
-  | Readonly<{ tipo: "NO_PERMITIDO" }>;
+  /** `jornadaAbierta`: si el día de hoy sigue abierto (con el día en cierre o cerrado la venta ni arma la cuenta; maqueta `venta-rapida-v4.html`, `bloqueaAgregar`). */
+  | Readonly<{ tipo: "NO_PERMITIDO"; jornadaAbierta: boolean }>;
 
 /**
  * En qué caja se cobra, a partir de las cajas de la sucursal y la jornada de hoy. Nace cerrado (DEC-0502): se cobra solo con UNA caja abierta, de la jornada de hoy, con la jornada abierta. Sin ninguna
@@ -19,17 +20,17 @@ export type DecisionDeLaCaja =
  * es el genérico. Ante la duda cierra: nunca se asume una caja.
  */
 export function decidirLaCaja(estado: EstadoDeLasCajas): DecisionDeLaCaja {
-  if (estado.jornadaActual.estado !== "ABIERTA") return { tipo: "NO_PERMITIDO" };
+  const jornadaAbierta = estado.jornadaActual.estado === "ABIERTA";
+  const noPermitido = { tipo: "NO_PERMITIDO", jornadaAbierta } as const;
+  if (!jornadaAbierta) return noPermitido;
   const abiertas = estado.cajas.filter((c) => c.estado === "ABIERTA");
-  if (abiertas.length > 1) return { tipo: "NO_PERMITIDO" };
+  if (abiertas.length > 1) return noPermitido;
   const unica = abiertas[0];
   if (unica !== undefined) {
-    return unica.jornadaVencida
-      ? { tipo: "NO_PERMITIDO" }
-      : { tipo: "LISTA", cajaId: unica.cajaId };
+    return unica.jornadaVencida ? noPermitido : { tipo: "LISTA", cajaId: unica.cajaId };
   }
   if (estado.cajas.length === 0 || estado.cajas.some((c) => c.estado === "EN_CIERRE")) {
-    return { tipo: "NO_PERMITIDO" };
+    return noPermitido;
   }
   return { tipo: "ABRIR_LA_CAJA" };
 }
