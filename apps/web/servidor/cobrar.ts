@@ -4,8 +4,10 @@ import {
   anularElTicket,
   cobrarLaVenta,
   cobroParaLaPantalla,
+  papelDelTicket,
   type CobroPreparadoParaLaPantalla,
   type DependenciasDeCobrarWeb,
+  type PapelDelTicketParaLaPantalla,
   type TicketAnuladoParaLaPantalla,
   type VentaCobradaParaLaPantalla,
 } from "../../../src/composicion/cobrar-web";
@@ -23,7 +25,11 @@ import { sucursalDelPedido } from "./sucursal-elegida";
  * `entradas-de-cobrar.ts`: la clave de idempotencia y los ids de la venta los genera la pantalla una vez por intento y los repite en cada reintento.
  */
 
-export type { TicketAnuladoParaLaPantalla, VentaCobradaParaLaPantalla };
+export type {
+  PapelDelTicketParaLaPantalla,
+  TicketAnuladoParaLaPantalla,
+  VentaCobradaParaLaPantalla,
+};
 
 const dependencias: DependenciasDeCobrarWeb = {
   casosDeUso: web.casosDeUsoDeVentas,
@@ -68,4 +74,11 @@ export function anularElTicketDelMostrador(
   pedido: unknown,
 ): Promise<Respuesta<TicketAnuladoParaLaPantalla>> {
   return conLaEmpresa((contexto) => anularElTicket(dependencias, contexto, pedido));
+}
+
+/** El papel del ticket recién cobrado para imprimirlo (lectura). No pide sucursal: la consulta valida la del ticket contra el alcance de la persona. */
+export function papelDelTicketDelMostrador(
+  pedido: unknown,
+): Promise<Respuesta<PapelDelTicketParaLaPantalla>> {
+  return conLaEmpresa((contexto) => papelDelTicket(dependencias, contexto, pedido));
 }

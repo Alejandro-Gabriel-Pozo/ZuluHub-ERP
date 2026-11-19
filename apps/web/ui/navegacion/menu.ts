@@ -3,6 +3,7 @@ import {
   type ClaveAccion,
   type ClaveModulo,
 } from "../../../../src/capacidades/modulos/catalogo";
+import { seOfrece } from "../../../../src/capacidades/integracion/ofrecer";
 import type { ClaveDeTexto } from "../../../../src/capacidades/vocabulario/catalogo";
 import type { ClaveDeIcono } from "../iconos/catalogo";
 import { RUTAS_DE_CAJA, RUTA_DE_LA_CAJA } from "../plantillas/caja/lista-de-caja";
@@ -287,12 +288,7 @@ export function armarElMenu(
   const sePuedeVer = (f: FilaDelMenu): boolean => {
     if (f.departamento !== null && f.departamento !== departamentoElegido) return false;
     if (f.tipo === "accion") return true;
-    return (
-      CATALOGO_DE_MODULOS[f.modulo].estado === "disponible" &&
-      permisos.acciones.includes(f.accion) &&
-      (permisos.modulos.activos.includes(f.modulo) ||
-        permisos.modulos.enSoloLectura.includes(f.modulo))
-    );
+    return seOfrece(CATALOGO_DE_MODULOS, permisos, { modulo: f.modulo, accion: f.accion });
   };
   const visibles = filas.filter(sePuedeVer);
   const areas: AreaDelMenu[] = [];
