@@ -1,7 +1,14 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import "../../../test/propiedades/configuracion";
-import { diaDeLaSemana, diasEntre, fechaDeNumeroDeDia, numeroDeDia, sumarDias } from "./dias";
+import {
+  diaDeLaSemana,
+  diasEntre,
+  fechaDeNumeroDeDia,
+  numeroDeDia,
+  numeroDeDiaCivil,
+  sumarDias,
+} from "./dias";
 import { fechaCivilDesdeTexto, type FechaCivil } from "./fecha-civil";
 
 const f = (texto: string): FechaCivil => {
@@ -81,6 +88,18 @@ describe("días entre fechas civiles", () => {
     }
     expect(sumarDias(f("2000-02-28"), 1)).toEqual({ ok: true, valor: "2000-02-29" });
     expect(sumarDias(f("2400-02-29"), 1)).toEqual({ ok: true, valor: "2400-03-01" });
+  });
+
+  it("coincide con Date.UTC día por día en todo el rango (paso 1 de 1600 a 2800, paso 7 en el resto)", () => {
+    const inicio = numeroDeDiaCivil(1, 1, 1);
+    const fin = numeroDeDiaCivil(9999, 12, 31);
+    const finos = [numeroDeDiaCivil(1600, 1, 1), numeroDeDiaCivil(2800, 1, 1)] as const;
+    for (let n = inicio; n <= fin; n += n >= finos[0] && n < finos[1] ? 1 : 7) {
+      const fecha = new Date(n * 86_400_000).toISOString().slice(0, 10);
+      if (fechaDeNumeroDeDia(n) !== fecha || numeroDeDia(fechaDeNumeroDeDia(n)) !== n) {
+        throw new Error(`día ${n}: ${fechaDeNumeroDeDia(n)} ≠ ${fecha}`);
+      }
+    }
   });
 
   it("es pura: la misma entrada da la misma salida", () => {
