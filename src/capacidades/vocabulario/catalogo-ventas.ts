@@ -62,4 +62,53 @@ export const TEXTOS_DE_VENTAS = {
   "ventas.cantidad.fraccion_3_8": { porDefecto: "⅜" },
   "ventas.cantidad.fraccion_5_8": { porDefecto: "⅝" },
   "ventas.cantidad.fraccion_7_8": { porDefecto: "⅞" },
+
+  // PANTALLA «COBRAR» (maqueta `venta-rapida-v4.html`, zona cobro y resultado). Fuentes: `V4` = `venta-rapida-v4.html` (Pedernal-docs, 10-ux-ui/prototipos-gastronomia), tabla «Textos ya aprobados que
+  // se reutilizan» (líneas 411-418); `TMP` = `textos-mostrador-pendientes.md` (11-especificaciones); `DDD` = `decisiones-del-dueno-2026-11.md` (fila = n.º de línea). Nada es un texto nuevo.
+  // «Cobrar» y «Cobrado»: aprobados el 09/11/2026 en la versión anterior de la venta rápida (V4:411; `salon.html:361`).
+  "ventas.cobro.cobrar": { porDefecto: "Cobrar" },
+  "ventas.cobro.cobrado": { porDefecto: "Cobrado" },
+  // «Medio» e «Importe»: rótulos de cada fila de cobro de `salon.html:771-772` (maqueta aprobada el 09/11/2026; V4:416 la nombra como origen del cobro).
+  "ventas.cobro.medio": { porDefecto: "Medio" },
+  "ventas.cobro.importe": { porDefecto: "Importe" },
+  // «Cuenta de cobro», «Vuelto», «Falta cobrar», «Cobro completo» y «Sobran»: aprobados el 09/11/2026 (V4:416, `prototipo-salon.html`).
+  "ventas.cobro.cuenta_de_cobro": { porDefecto: "Cuenta de cobro" },
+  "ventas.cobro.vuelto": { porDefecto: "Vuelto" },
+  "ventas.cobro.falta_cobrar": { porDefecto: "Falta cobrar" },
+  "ventas.cobro.cobro_completo": { porDefecto: "Cobro completo" },
+  "ventas.cobro.sobran": { porDefecto: "Sobran" },
+  // «Importe no válido»: aprobado el 09/11/2026 (`prototipo-caja.html`; V4:415).
+  "ventas.cobro.importe_no_valido": { porDefecto: "Importe no válido" },
+  // «Abrí la caja para cobrar»: texto del dueño, decisión 145 (V4:414).
+  "ventas.cobro.abri_la_caja": { porDefecto: "Abrí la caja para cobrar" },
+  // M6 «Agregar otro medio»: aprobado el 15/11/2026 (DDD:171, alcance e; TMP §1, fila M6).
+  "ventas.cobro.agregar_otro_medio": { porDefecto: "Agregar otro medio" },
+  // «Volver»: aprobado en `imprimir.html:327` y `datos-cobro.html:282` (DDD:175). Acá es el botón que vuelve de «cobrar» a la cuenta: SUPUESTO (DEC-0500), la maqueta dice «Volver a la cuenta».
+  "ventas.cobro.volver": { porDefecto: "Volver" },
+  // Datos del cobro (decisión 129; aprobados el 09/11/2026 en `datos-cobro.html:270`, reutilizados en un lugar nuevo: DDD:175, `TMP` §6.1). Los rótulos llevan «(opcional)» como en `datos-cobro.html:321`.
+  "ventas.cobro.dato.cupon": { porDefecto: "Cupón" },
+  "ventas.cobro.dato.ultimos4": { porDefecto: "Últimos 4 dígitos" },
+  "ventas.cobro.dato.marca": { porDefecto: "Marca de la tarjeta" },
+  "ventas.cobro.dato.cuotas": { porDefecto: "Cuotas" },
+  "ventas.cobro.dato.dni": { porDefecto: "DNI" },
+  "ventas.cobro.dato.opcional": { porDefecto: "(opcional)" },
+  // Errores bajo el campo (`datos-cobro.html:270,337-342`; DDD:175). «Escribí cuotas de 1 a 36» lleva el tope como marcador `{maximo}`: vale `MAXIMO_DE_CUOTAS` (una regla, un lugar; DDD:183).
+  "ventas.cobro.error.cupon_es_tarjeta": {
+    porDefecto: "El cupón no puede ser un número de tarjeta",
+  },
+  "ventas.cobro.error.cupon_invalido": { porDefecto: "El cupón tiene caracteres no permitidos" },
+  "ventas.cobro.error.ultimos4": { porDefecto: "Escribí 4 dígitos" },
+  "ventas.cobro.error.cuotas": {
+    porDefecto: "Escribí cuotas de 1 a {maximo}",
+    marcadores: ["maximo"],
+  },
+  "ventas.cobro.error.dni": { porDefecto: "El DNI no es válido" },
+  // Resultado: «Ticket N.º 12» (V4 `ticket.numero`; «Ticket» de `imprimir.html` y «N.º» del facturador, DDD:175), «Anular», «Motivo» (APR n.º 214 y 215 de `prototipo-salon.html` y `caja.html:403,431`,
+  // TMP §1 nota), «Escribí el motivo» y «Anulado» (T5 y T4 de `textos-nuevos-pendientes.md`, aprobados: DDD fila 165, «T1 a T18 y T21 a T27»), «Nueva venta» (P10, aprobado el 15/11/2026: DDD:171, alcance f).
+  "ventas.ticket.numero": { porDefecto: "Ticket N.º {numero}", marcadores: ["numero"] },
+  "ventas.ticket.anular": { porDefecto: "Anular" },
+  "ventas.ticket.motivo": { porDefecto: "Motivo" },
+  "ventas.ticket.motivo_obligatorio": { porDefecto: "Escribí el motivo" },
+  "ventas.ticket.anulado": { porDefecto: "Anulado" },
+  "ventas.venta.nueva": { porDefecto: "Nueva venta" },
 } as const;
