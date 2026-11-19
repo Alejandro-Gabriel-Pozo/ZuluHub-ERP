@@ -65,6 +65,29 @@
       "soloJunta": false,
       "lineas": 91,
       "excepciones": ["empresas", "fiscal", "identidad"]
+    },
+    {
+      "ruta": "src/capacidades/integracion/contextos.ts",
+      "exporta": ["CONTEXTOS", "IdDeContexto"],
+      "importaDe": [
+        "src/capacidades/integracion/tipos",
+        "src/capacidades/integracion/contextos-de-*"
+      ],
+      "parteDedicada": "src/capacidades/integracion/contextos-de-<módulo>.ts",
+      "soloJunta": true,
+      "lineas": 13
+    },
+    {
+      "ruta": "src/capacidades/integracion/operaciones.ts",
+      "exporta": ["OPERACIONES"],
+      "importaDe": [
+        "src/capacidades/integracion/tipos",
+        "src/capacidades/integracion/contextos",
+        "src/capacidades/integracion/operaciones-de-*"
+      ],
+      "parteDedicada": "src/capacidades/integracion/operaciones-de-<módulo>.ts",
+      "soloJunta": true,
+      "lineas": 12
     }
   ]
 }

@@ -4,6 +4,7 @@ import {
   type Respuesta,
 } from "../capacidades/experiencia/respuesta";
 import type { CodigoDeCaja } from "../capacidades/experiencia/respuesta-de-caja";
+import type { CodigoDeVentas } from "../capacidades/experiencia/respuesta-de-ventas";
 import { err, type Resultado } from "../primitivas/resultado/resultado";
 import { aRespuesta, aRespuestaDeExcepcion, type DependenciasDeRespuesta } from "./a-respuesta";
 import type { ErrorDeEntrada } from "./entradas-de-facturacion";
@@ -12,7 +13,9 @@ import type { ErrorDeEntrada } from "./entradas-de-facturacion";
  * De un error de cobrar o anular en el mostrador al código público que sale a la pantalla (ADR-016). Regla del dueño (2026-10-30, «mensaje genérico antes
  * que uno por acción»): hoy NINGÚN error de negocio de cobrar tiene texto aprobado, así que todos salen como el genérico ya aprobado «Esta acción no está
  * permitida» (`CAJA_ACCION_NO_PERMITIDA`): el precio que cambió, el cobro que no cuadra, la caja sin sesión o en cierre, el ticket ya cobrado, un dato
- * del cobro mal escrito, la clave reutilizada con otro pedido, el ticket ya facturado… Tres cosas NO se vuelven genéricas, porque ya tienen su respuesta y
+ * del cobro mal escrito, la clave reutilizada con otro pedido… Con UNA excepción que sí tiene texto aprobado (DDD:171 c): anular un ticket con factura
+ * vigente (`TICKET_CON_COMPROBANTE_VIGENTE`) sale como `VENTAS_TICKET_CON_FACTURA_VIGENTE` («Primero acreditá la factura con una nota de crédito») y el
+ * `comprobanteId` no sale. Tres cosas NO se vuelven genéricas, porque ya tienen su respuesta y
  * esconderlas empeoraría el diagnóstico: los motivos del guard y la empresa que no opera (código público propio) y lo inesperado de la base o del propio
  * módulo (`INVARIANTE_DE_VENTAS`, `ERROR_DE_LA_BASE_NO_TRADUCIDO` y los `ErrorDePersistencia`), que salen con su referencia `PD-…` y el detalle al
  * registro. Falla cerrado: un error de ventas nuevo que no se nombró acá sale genérico, nunca crudo.
@@ -38,9 +41,21 @@ const TIPOS_DE_PERSISTENCIA: ReadonlySet<string> = new Set([
 
 const GENERICO = { codigo: "CAJA_ACCION_NO_PERMITIDA" satisfies CodigoDeCaja } as const;
 
+const CON_FACTURA_VIGENTE = {
+  codigo: "VENTAS_TICKET_CON_FACTURA_VIGENTE" satisfies CodigoDeVentas,
+} as const;
+
 /** El error tal como lo entiende `aRespuesta`: lo ya público o inesperado pasa igual; el resto del negocio, el genérico. */
 export function traducirErrorDeCobrar(error: unknown): unknown {
   if (clasificarError(error).tipo === "PUBLICO") return error;
+  // Lista blanca de UN error de negocio con texto propio: el comprobante no sale a la pantalla.
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { error?: unknown }).error === "TICKET_CON_COMPROBANTE_VIGENTE"
+  ) {
+    return CON_FACTURA_VIGENTE;
+  }
   if (typeof error === "string" && INESPERADOS_DEL_MODULO.has(error)) return error;
   if (
     typeof error === "object" &&

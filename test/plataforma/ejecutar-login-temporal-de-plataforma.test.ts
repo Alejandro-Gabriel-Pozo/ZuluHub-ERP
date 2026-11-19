@@ -130,6 +130,16 @@ describe("login temporal: cerrar", () => {
     expect(t.salida.join("\n")).toContain("CERRADO");
   });
 
+  it("si el login es el PERMANENTE de la consola, avisa que NO lo cerró y sale bien (no lo abrió este flujo)", async () => {
+    const t = armar({
+      accion: "cerrar",
+      cerrar: () => Promise.resolve({ claveVerificada: false, conservado: true }),
+    });
+    expect(await ejecutarLoginTemporal(t.entrada)).toBe(0);
+    expect(t.salida.join("\n")).toContain("NO SE CERRÓ");
+    expect(t.salida.join("\n")).not.toContain("CERRADO:");
+  });
+
   it("si el cierre no queda verificado, falla fuerte (código 1) sin repetir secretos", async () => {
     const t = armar({
       accion: "cerrar",

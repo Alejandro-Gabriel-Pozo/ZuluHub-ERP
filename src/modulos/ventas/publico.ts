@@ -94,6 +94,7 @@ export {
   type PagoParaVuelto,
   type Vuelto,
 } from "../../primitivas/dinero/vuelto";
+export { papelDelTicket, type ErrorDelPapelDelTicket } from "./casos-de-uso/papel-del-ticket";
 export { calcularLasLineas } from "./casos-de-uso/calculo";
 export { anclaValida, type Ancla } from "./dominio/ancla";
 export { esUuid } from "./dominio/identificadores";

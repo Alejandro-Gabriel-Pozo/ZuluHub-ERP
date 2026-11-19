@@ -3,6 +3,7 @@ import {
   type ClaveAccion,
   type ClaveModulo,
 } from "../../../../src/capacidades/modulos/catalogo";
+import { seOfrece } from "../../../../src/capacidades/integracion/ofrecer";
 import type { ClaveDeTexto } from "../../../../src/capacidades/vocabulario/catalogo";
 import type { ClaveDeIcono } from "../iconos/catalogo";
 import { RUTAS_DE_CAJA, RUTA_DE_LA_CAJA } from "../plantillas/caja/lista-de-caja";
@@ -13,7 +14,7 @@ import { RUTA_DE_MESAS } from "../plantillas/salon/modelo-de-mesas";
 import { RUTAS_DE_CONFIGURACION } from "../plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
 import { RUTAS_DE_CUENTA } from "../plantillas/sesion/rutas-de-cuenta";
-import { RUTA_DE_LA_VENTA } from "../plantillas/venta/rutas-de-venta";
+import { RUTA_DE_LA_VENTA, RUTA_DE_TICKETS_DEL_DIA } from "../plantillas/venta/rutas-de-venta";
 import { RUTAS_DE_STOCK } from "../plantillas/stock/rutas-de-stock";
 
 /**
@@ -74,6 +75,7 @@ export type FilaDePantalla = BaseDeFila &
     tipo: "pantalla";
     clave:
       | "venta-rapida"
+      | "tickets-del-dia"
       | "comprobantes"
       | "caja"
       | "productos"
@@ -116,6 +118,17 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     accion: "ventas.ver",
     href: RUTA_DE_LA_VENTA,
     etiqueta: "ventas.venta.menu",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
+    clave: "tickets-del-dia",
+    area: "ventas",
+    grupo: "mostrador",
+    modulo: "ventas",
+    accion: "ventas.ver",
+    href: RUTA_DE_TICKETS_DEL_DIA,
+    etiqueta: "ventas.tickets.menu",
     departamento: null,
   },
   {
@@ -287,12 +300,7 @@ export function armarElMenu(
   const sePuedeVer = (f: FilaDelMenu): boolean => {
     if (f.departamento !== null && f.departamento !== departamentoElegido) return false;
     if (f.tipo === "accion") return true;
-    return (
-      CATALOGO_DE_MODULOS[f.modulo].estado === "disponible" &&
-      permisos.acciones.includes(f.accion) &&
-      (permisos.modulos.activos.includes(f.modulo) ||
-        permisos.modulos.enSoloLectura.includes(f.modulo))
-    );
+    return seOfrece(CATALOGO_DE_MODULOS, permisos, { modulo: f.modulo, accion: f.accion });
   };
   const visibles = filas.filter(sePuedeVer);
   const areas: AreaDelMenu[] = [];

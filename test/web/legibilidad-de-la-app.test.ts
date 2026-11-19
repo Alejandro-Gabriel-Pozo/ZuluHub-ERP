@@ -248,6 +248,7 @@ describe("la vista imprimible: importes y fechas solo como texto (ADR-006)", () 
     "medicion.ts",
     "medidas-de-la-hoja.ts",
     "TicketDe80mm.cliente.tsx",
+    "useAltoDelTicket.cliente.tsx",
     "VistaPrevia.cliente.tsx",
   ];
   const SIN_REDONDEO_DE_DINERO = /\b(parseFloat|parseInt|Date|Intl|toFixed|toLocale\w*)\b/;
