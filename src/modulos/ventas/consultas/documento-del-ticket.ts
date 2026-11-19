@@ -32,6 +32,11 @@ export type ErrorDeDocumentoDelTicket =
 
 const ANCHO_POR_DEFECTO: PapelEnMm = 80;
 
+/** El papel para el cliente existe solo para un ticket que no está anulado ni es de cortesía. Una sola regla: la usan el papel y la ficha de «Tickets del día». */
+export function esImprimible(estado: string): boolean {
+  return estado !== "ANULADO" && estado !== "CORTESIA";
+}
+
 export async function documentoDelTicket(
   tx: TxDeConsultasDeVentas,
   contexto: ContextoOperativo,
@@ -48,7 +53,7 @@ export async function documentoDelTicket(
   if (ficha === null) return err("TICKET_NO_ENCONTRADO");
   const permitida = exigirSucursal(alcance, ficha.ticket.sucursalId);
   if (!permitida.ok) return permitida;
-  if (ficha.ticket.estado === "ANULADO" || ficha.ticket.estado === "CORTESIA") {
+  if (!esImprimible(ficha.ticket.estado)) {
     return err("TICKET_NO_IMPRIMIBLE");
   }
   const papel = papelDelTicket(ficha, ancho);

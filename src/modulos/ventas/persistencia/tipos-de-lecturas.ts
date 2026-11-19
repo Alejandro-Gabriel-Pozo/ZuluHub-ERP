@@ -135,6 +135,10 @@ export type FichaDeTicketLeida = Readonly<{
   /** Del más reciente al más antiguo; el primero es el vigente. */
   ejemplares: readonly Ejemplar[];
   renglonesDelVigente: readonly RenglonParaFacturar[];
+  /** Los renglones del ejemplar ORIGINAL (el 1): lo que se vendió, aunque el ticket se haya anulado después. Igual a los del vigente si hay un solo ejemplar. */
+  renglonesDelOriginal: readonly RenglonParaFacturar[];
+  /** La anulación vigente del ticket (`ticket_correccion` de tipo ANULACION), o `null` si no está anulado. */
+  anulacion: Readonly<{ motivo: string; hechaPor: string; hechaEn: Date }> | null;
   cobranza: Readonly<{
     id: string;
     cajaId: string;
