@@ -23,7 +23,9 @@ export function Casilla({ etiqueta, marcada, alCambiar, nombre, apagada }: Props
   const id = useId();
   const referencia = useRef<HTMLInputElement>(null);
   const ultima = useRef(marcada);
-  ultima.current = marcada;
+  useEffect(() => {
+    ultima.current = marcada;
+  }, [marcada]);
   // Al terminar una acción de formulario, React reinicia el formulario y el navegador desmarca la casilla aunque lo que la persona dejó siga siendo `marcada`: se vuelve a poner. Sin esto un guardado
   // rechazado dejaría la casilla mostrando lo contrario de lo que se eligió (y el siguiente envío mandaría eso).
   useEffect(() => {
