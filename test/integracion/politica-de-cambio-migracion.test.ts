@@ -12,7 +12,7 @@ import {
 } from "./marcas-apoyo";
 
 /**
- * La migración 0087 (política de cambio de plan, H-14a) contra una base real: deja la política 1 = 1, 1, 0; las tres tablas son de solo inserción; el tope de días
+ * La migración 0089 (política de cambio de plan, H-14a) contra una base real: deja la política 1 = 1, 1, 0; las tres tablas son de solo inserción; el tope de días
  * de la base es el de la primitiva (espejo); la base impone lo que el código también controla (versión consecutiva, cambio de origen CAMBIO, un solo arrepentimiento
  * por cambio); y la reversión borra solo lo suyo y se puede volver a aplicar. Previene: un tope que se desfasa entre el servidor y la base, o una tabla que admite
  * editar o borrar el historial.
@@ -21,15 +21,15 @@ import {
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 120_000 });
 
-const MIGRACION = "0087_politica_de_cambio_de_plan.sql";
-const REVERSION = "reversiones/0087_revertir_politica_de_cambio_de_plan.sql";
+const MIGRACION = "0089_politica_de_cambio_de_plan.sql";
+const REVERSION = "reversiones/0089_revertir_politica_de_cambio_de_plan.sql";
 const TABLAS = [
   "politica_de_cambio_de_plan",
   "condiciones_de_cambio_de_plan",
   "arrepentimiento_de_plan",
 ] as const;
 
-describe.skipIf(base === null)("0087 política de cambio de plan contra una base real", () => {
+describe.skipIf(base === null)("0089 política de cambio de plan contra una base real", () => {
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let dueno: pg.Client;
   let sql: { migracion: string; reversion: string };

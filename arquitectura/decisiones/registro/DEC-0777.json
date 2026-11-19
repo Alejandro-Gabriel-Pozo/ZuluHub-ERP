@@ -5,6 +5,6 @@
   "tipo": "DATOS",
   "estado": "PENDIENTE_DE_OK",
   "decision": "Tres tablas de solo inserción sin tocar plan_de_tenant; arrepentirse es una asignación nueva de origen CAMBIO. SUPUESTOS: tope 365 días; sin plan vigente es suba; hoy más plazo la baja ya rige.",
-  "que_cambia": "Migración 0087 provisoria; revertir con reversiones/0087 pierde lo registrado. Tope 365 es constante y CHECK (cambiarlo pide migración); estricto = sumar un día a la anticipación de baja.",
-  "donde": "migraciones/0087_politica_de_cambio_de_plan.sql; politica-de-cambio-de-plan.ts; dias-de-la-politica-de-plan.ts; politica-de-cambio.ts (decidirCondiciones)"
+  "que_cambia": "Migración 0089 provisoria; revertir con reversiones/0089 pierde lo registrado. Tope 365 es constante y CHECK (cambiarlo pide migración); estricto = sumar un día a la anticipación de baja.",
+  "donde": "migraciones/0089_politica_de_cambio_de_plan.sql; politica-de-cambio-de-plan.ts; dias-de-la-politica-de-plan.ts; politica-de-cambio.ts (decidirCondiciones)"
 }

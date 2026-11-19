@@ -223,7 +223,7 @@ export async function asignarAUnTenant(
         // El instante del contexto es válido (lo firma la puerta): si no lo es, no se decide nada.
         if (!hoy.ok) throw new RangeError("el instante del contexto no tiene día de Argentina");
         const politica = (await tx.planes.politicasDeCambio()).at(-1);
-        // La migración 0087 carga la versión 1: sin política la base está rota, no es un caso de negocio.
+        // La migración 0089 carga la versión 1: sin política la base está rota, no es un caso de negocio.
         if (politica === undefined)
           throw new RangeError("no hay política de cambio de plan cargada");
         const rige = vigenteEn(guardadas, contexto.ahora);

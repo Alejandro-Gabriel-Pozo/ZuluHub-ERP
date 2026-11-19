@@ -7,7 +7,7 @@ import type { PoliticaGuardada, RepositorioDePlanes } from "./tipos-de-planes";
 
 const SENTIDOS = ["SUBA", "BAJA"] as const;
 
-/** Política de cambio de plan, sus condiciones por cambio y los arrepentimientos (migración 0087, solo inserción). */
+/** Política de cambio de plan, sus condiciones por cambio y los arrepentimientos (migración 0089, solo inserción). */
 export function crearPoliticaDeCambioDePlanes(
   db: Kysely<PlanesDePlataformaDb>,
 ): Pick<

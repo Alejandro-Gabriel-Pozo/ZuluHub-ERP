@@ -63,7 +63,7 @@ const TABLAS_DE_NEGOCIO = [
   "version_de_plan",
   "version_de_marca",
   "plan_de_tenant",
-  // 0087 (política de cambio de plan)
+  // 0089 (política de cambio de plan)
   "politica_de_cambio_de_plan",
   "condiciones_de_cambio_de_plan",
   "arrepentimiento_de_plan",
@@ -602,9 +602,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "persona:SELECT",
           "plan:SELECT", // 0007
           "plan_de_tenant:SELECT", // 0007
-          "politica_de_cambio_de_plan:SELECT", // 0087
-          "condiciones_de_cambio_de_plan:SELECT", // 0087
-          "arrepentimiento_de_plan:SELECT", // 0087
+          "politica_de_cambio_de_plan:SELECT", // 0089
+          "condiciones_de_cambio_de_plan:SELECT", // 0089
+          "arrepentimiento_de_plan:SELECT", // 0089
           "referencia_de_error:SELECT",
           "serie_comprobante:SELECT", // 0006
           "solicitud_de_alta:SELECT", // captación
@@ -1306,7 +1306,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "motivo",
           "asignado_por",
         ].map((c) => `plan_de_tenant.${c}`),
-        // 0087 (política de cambio de plan)
+        // 0089 (política de cambio de plan)
         ...[
           "version",
           "dias_de_anticipacion_de_suba",

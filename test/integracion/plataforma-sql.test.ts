@@ -89,7 +89,7 @@ const TABLAS_LEGIBLES = [
   "plan",
   "version_de_plan",
   "plan_de_tenant",
-  "politica_de_cambio_de_plan", // 0087: la política de cambio de plan, sus condiciones por cambio y los arrepentimientos
+  "politica_de_cambio_de_plan", // 0089: la política de cambio de plan, sus condiciones por cambio y los arrepentimientos
   "condiciones_de_cambio_de_plan",
   "arrepentimiento_de_plan",
   "ajuste_de_perilla",

@@ -432,7 +432,7 @@ export async function sembrarMarcasYPlanes(
   await crearVersionDeMarcaConfirmada(c, principal, { nombreVisible: "Marca de prueba" });
   const { version } = await crearPlanPublicado(c, { modulos: [] });
   await asignarPlan(c, e.tenant, version, { origen: "ALTA" });
-  // 0087 (política de cambio de plan): un cambio con sus condiciones y su arrepentimiento (la vuelta al plan de alta). La política 1 la carga la migración.
+  // 0089 (política de cambio de plan): un cambio con sus condiciones y su arrepentimiento (la vuelta al plan de alta). La política 1 la carga la migración.
   const otra = await crearPlanPublicado(c, { modulos: [] });
   const cambio = await asignarPlan(c, e.tenant, otra.version, { origen: "CAMBIO" });
   const vuelta = await asignarPlan(c, e.tenant, version, { origen: "CAMBIO" });

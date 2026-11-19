@@ -1,10 +1,10 @@
--- 0087_politica_de_cambio_de_plan (número provisorio): política de cambio de plan configurable (H-14a, dueño 18/11/2026).
+-- 0089_politica_de_cambio_de_plan (número provisorio): política de cambio de plan configurable (H-14a, dueño 18/11/2026).
 -- QUÉ HACE: crea TRES tablas nuevas, todas de solo inserción, y carga la política versión 1 = 1, 1, 0 (anticipación de suba 1 día, de baja 1 día, arrepentimiento 0 días).
 --   · politica_de_cambio_de_plan: una política para toda la plataforma, con historial (versión consecutiva, la última rige).
 --   · condiciones_de_cambio_de_plan: con qué política nació cada cambio de plan (suba o baja) y hasta qué día se puede arrepentir; una fila por cambio.
 --   · arrepentimiento_de_plan: qué cambio se arrepintió y cuál es el cambio nuevo que lo deshizo; único por cambio arrepentido.
 -- NO TOCA `plan_de_tenant` ni ninguna tabla existente: es ADITIVA y no cambia datos. Los cambios anteriores a esta migración no tienen fila de condiciones (se tratan como «sin arrepentimiento»).
--- Reversión: `migraciones/reversiones/0087_revertir_politica_de_cambio_de_plan.sql` (borra SOLO las tres tablas nuevas y sus funciones; pierde lo que se haya registrado en ellas).
+-- Reversión: `migraciones/reversiones/0089_revertir_politica_de_cambio_de_plan.sql` (borra SOLO las tres tablas nuevas y sus funciones; pierde lo que se haya registrado en ellas).
 -- DEPENDE de 0001 (`solo_insercion`) y de 0004 y 0007 (`plan_de_tenant`, roles y políticas de plataforma). Probada por `test/integracion/politica-de-cambio-migracion.test.ts`.
 -- El tope de días (365) es `MAXIMO_DE_DIAS_DE_LA_POLITICA_DE_PLAN` en `src/primitivas/tiempo/dias-de-la-politica-de-plan.ts`: una prueba falla si difieren.
 

@@ -119,7 +119,7 @@ export type PlanesDePlataformaDb = {
   };
   empresa: { id: string; tenant_id: string; estado: string };
   tenant: { id: string; nombre: string; estado: string; marca_id: string };
-  /** H-14a (migración 0087): solo inserción. `creado_en` lo fija la base. */
+  /** H-14a (migración 0089): solo inserción. `creado_en` lo fija la base. */
   politica_de_cambio_de_plan: {
     version: number;
     dias_de_anticipacion_de_suba: number;

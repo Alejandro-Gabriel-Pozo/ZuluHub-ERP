@@ -39,7 +39,7 @@ export function armarVerPoliticaDeCambioDePlan({
         if (!permiso.ok) return permiso;
         const historial = [...(await tx.planes.politicasDeCambio())].reverse();
         const [vigente] = historial;
-        // La migración 0087 carga la versión 1: sin política la base está rota, no es un caso de negocio.
+        // La migración 0089 carga la versión 1: sin política la base está rota, no es un caso de negocio.
         if (vigente === undefined)
           throw new RangeError("no hay política de cambio de plan cargada");
         return ok({ vigente, historial });

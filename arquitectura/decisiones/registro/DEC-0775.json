@@ -6,5 +6,5 @@
   "estado": "CONFIRMADA",
   "decision": "Una política de cambio de plan para toda la plataforma, con 1, 1 y 0 días al nacer; se deshace una suba o baja dentro del plazo a pedido del cliente y la baja no rige antes de vencer.",
   "que_cambia": "El dueño fija desde la consola cuándo puede regir un cambio de plan y si se deshace. Mixto es baja; alta y migración no se arrepienten. Revertir: política en 0 días sin usar el arrepentimiento.",
-  "donde": "decisiones-del-dueno-2026-11.md, filas del 18/11 «Política de cambio de plan» (P-10, bloque E, W-1, S-1, S-2, S-3); politica-de-cambio.ts; 0087_politica_de_cambio_de_plan.sql"
+  "donde": "decisiones-del-dueno-2026-11.md, filas del 18/11 «Política de cambio de plan» (P-10, bloque E, W-1, S-1, S-2, S-3); politica-de-cambio.ts; 0089_politica_de_cambio_de_plan.sql"
 }
