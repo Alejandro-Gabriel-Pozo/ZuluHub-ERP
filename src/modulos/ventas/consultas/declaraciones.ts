@@ -10,6 +10,8 @@ export const DECLARACIONES_DE_CONSULTAS = {
   opcionesParaCobrar: { accion: "ventas.ver" },
   fichaDeCuenta: { accion: "ventas.ver" },
   fichaDeTicket: { accion: "ventas.ver" },
+  ticketsDelDia: { accion: "ventas.ver" },
+  fichaDelTicketDelDia: { accion: "ventas.ver" },
   listarTickets: { accion: "ventas.ver" },
   ticketsPendientesDeFacturar: { accion: "ventas.ver" },
   ticketParaFacturar: { accion: "ventas.ver" },

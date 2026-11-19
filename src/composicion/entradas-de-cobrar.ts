@@ -118,3 +118,12 @@ export function entradaDeOpcionesDeCobro(
 ): Resultado<Readonly<{ cajaId: string }>, ErrorDeEntrada> {
   return leer(formaDeOpciones, crudo);
 }
+
+const formaDeFichaDelTicket = z.strictObject({ ticketId: identificador });
+
+/** La ficha de un ticket del día: solo el id del ticket; la empresa y la persona salen del contexto del servidor. */
+export function entradaDeFichaDelTicket(
+  crudo: unknown,
+): Resultado<Readonly<{ ticketId: string }>, ErrorDeEntrada> {
+  return leer(formaDeFichaDelTicket, crudo);
+}
