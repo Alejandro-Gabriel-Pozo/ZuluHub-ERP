@@ -3,8 +3,8 @@
   "fecha": "2026-11-19",
   "quien": "dueño",
   "tipo": "PERMISOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "La consola usa su propio rol de base para la librería de ingreso (pedernal_autenticacion_plataforma, migración 0088 provisoria), con los mismos privilegios mínimos que el de la web.",
   "que_cambia": "Separa la CREDENCIAL, no los datos: la web y la consola comparten las tablas y las políticas siguen con USING (true). Revertir: reversiones/0088.",
-  "donde": "dueño 19/11 (pregunta directa al orquestador); migraciones/0088_rol_autenticacion_de_plataforma.sql; test/integracion/rol-autenticacion-de-plataforma-migracion.test.ts"
+  "donde": "fila del 19/11 «Consola de plataforma en preview» de decisiones-del-dueno-2026-11.md (repo de documentos, commit 07229d2); migraciones/0088_rol_autenticacion_de_plataforma.sql; test/integracion/rol-autenticacion-de-plataforma-migracion.test.ts"
 }

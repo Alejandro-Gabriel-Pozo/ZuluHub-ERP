@@ -63,6 +63,16 @@ Una sola vez, antes de la primera corrida:
 5. **Redesplegar** el último despliegue de preview de la consola (y el de la web: el secreto de invitaciones cambió). Las invitaciones de
    preview que estaban pendientes hay que **reenviarlas**.
 
+Orden completo para el dueño: **mergear** el cambio, **migrar preview** (paso 1), **crear el token** (pasos 2 y 3), **correr el flujo con «rotar»**
+(paso 4) y **redesplegar** (paso 5).
+
+Cosas que cambian y conviene saber:
+
+- El secreto `PEDERNAL_SECRETO_INVITACIONES` del Environment `preview` de GitHub (el que usa **Preparar la empresa de pruebas**) queda
+  **desactualizado** después de «rotar» y nadie puede leerlo para igualarlo: **borralo o dejá de usarlo**. Ese flujo queda en desuso con la
+  consola; si el rol de plataforma tiene el login permanente, **no puede abrirlo** (falla temprano, con un mensaje claro) y **no lo cierra**.
+- El login permanente de `pedernal_plataforma` existe **solo en preview** (decisión del 19/11) y vence a los 90 días si nadie corre el flujo.
+
 Después: corrida normal (sin «rotar») cada menos de 90 días. No cambia nada de lo cargado y renueva la vigencia del login de los dos roles; si
 pasan 90 días sin correrlo, la consola de preview deja de poder entrar a la base (falla cerrada) hasta que se corra de nuevo. Si una corrida
 falla a mitad, el informe nombra lo que ya quedó escrito en Vercel: repetirla con «rotar» lo deja consistente.

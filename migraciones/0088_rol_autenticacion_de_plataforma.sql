@@ -55,6 +55,7 @@ BEGIN
     );
   END IF;
 
+  -- Igual que en 0001: un rol limitado no puede heredar poderes de otro.
   SELECT string_agg(format('%s es miembro de %s', m.rolname, g.rolname), ', ' ORDER BY g.rolname)
     INTO ajenas
     FROM pg_auth_members am
@@ -88,6 +89,7 @@ BEGIN
     END IF;
   END LOOP;
 
+  -- Sin objetos temporales (cierra la suplantación por `pg_temp`, como en 0001).
   EXECUTE format('REVOKE TEMPORARY ON DATABASE %I FROM %I', current_database(), r);
 END
 $$;
