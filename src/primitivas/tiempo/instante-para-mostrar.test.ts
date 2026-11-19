@@ -16,6 +16,24 @@ describe("instante para mostrar (zona de Argentina)", () => {
     expect(fechaYHoraParaMostrar("2026-01-01T02:59:59Z")).toBe("31/12/2025 23:59");
     expect(horaParaMostrar("2026-01-01T02:59:59Z")).toBe("23:59");
   });
+  it("acepta el instante sin segundos y con fracción de segundo", () => {
+    expect(horaParaMostrar("2026-11-18T00:30Z")).toBe("21:30");
+    expect(horaParaMostrar("2026-11-18T00:30:15.123456Z")).toBe("21:30");
+  });
+  it("basura antes o después del instante lo rechaza, con su mensaje", () => {
+    for (const malo of [
+      "x2026-11-18T00:30:00Z",
+      "2026-11-18T00:30:00Zx",
+      " 2026-11-18T00:30:00Z",
+    ]) {
+      expect(() => horaParaMostrar(malo), malo).toThrow("no es un instante ISO 8601 con zona");
+    }
+  });
+  it("una fecha fuera del rango de las fechas civiles lanza con su mensaje", () => {
+    expect(() => fechaYHoraParaMostrar("0001-01-01T12:00:00Z")).toThrow(
+      "instante: fecha fuera de rango",
+    );
+  });
   it("lo que no es un instante ISO con zona lanza (nunca muestra a medias)", () => {
     for (const malo of [
       "",

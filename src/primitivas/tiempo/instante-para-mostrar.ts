@@ -10,6 +10,7 @@ import { fechaParaMostrar } from "./fecha-para-mostrar";
  * Previene: una hora mostrada en UTC (tres horas corrida) o en la zona de quien mira. Chequeo: `instante-para-mostrar.test.ts` (00:30 UTC es 21:30 del día anterior; 03:00 UTC es 00:00).
  */
 
+// Stryker disable next-line Regex: el analizador de fechas de JavaScript ya rechaza todo texto de más antes o después del instante, así que quitar un ancla no cambia ningún resultado (mutante equivalente); lo demás de la expresión lo cubre la prueba.
 const ISO_CON_ZONA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/;
 
 const FORMATEADOR = new Intl.DateTimeFormat("en-US", {
