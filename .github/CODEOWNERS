@@ -4,6 +4,10 @@
 # protección de `main` no esté activada la opción «Require review from Code Owners», este archivo no
 # bloquea ningún merge. La traba real es el chequeo `Gate`, obligatorio en `main`.
 
+# Todo el repositorio (pedido del dueño, 19/11/2026): solo aviso, GitHub lo pide como revisor de cada PR. Va PRIMERO porque en GitHub la última línea que alcanza una ruta gana.
+# NO activar «Require review from Code Owners» con esta línea: los PR los abre la misma cuenta y GitHub no deja aprobar el propio PR, así que ningún PR se podría mergear.
+*                                                @Alejandro-Gabriel-Pozo
+
 /arquitectura/contratos/                         @Alejandro-Gabriel-Pozo
 /arquitectura/evaluar-gate.cjs                   @Alejandro-Gabriel-Pozo
 /arquitectura/reglas.cjs                         @Alejandro-Gabriel-Pozo
