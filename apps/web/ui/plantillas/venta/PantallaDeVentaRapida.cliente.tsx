@@ -1,11 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  errorDeCodigo,
-  type ErrorPublico,
-  type Respuesta,
-} from "../../../../../src/capacidades/experiencia/respuesta";
+import { type Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
+import { FORMA_DEL_IMPORTE } from "../../../../../src/primitivas/dinero/forma-del-importe";
 import { Boton } from "../../componentes/Boton.cliente";
 import { Campo } from "../../componentes/Campo";
 import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
@@ -13,7 +10,6 @@ import { Superposicion } from "../../patrones/Superposicion";
 import { formatearImporte } from "../../patrones/formato-fiscal";
 import { PantallaDeCobro } from "../cobrar/PantallaDeCobro.cliente";
 import {
-  esImporteValido,
   type CobroPreparado,
   type TicketAnulado,
   type VentaCobrada,
@@ -22,9 +18,12 @@ import type { PapelDeTicket } from "../cobrar/PapelDelTicket.cliente";
 import { type TextosDeCobrar } from "../cobrar/textos-de-cobrar";
 import { CuentaDeLaVenta } from "./CuentaDeLaVenta.cliente";
 import { useAperturaDelCobro } from "./useAperturaDelCobro.cliente";
+import { DialogoDeVentaACero } from "./DialogoDeVentaACero.cliente";
 import { FranjaDeCaja } from "./FranjaDeCaja.cliente";
 import { HojaDeProducto, type LineaElegida } from "./HojaDeProducto.cliente";
 import estilos from "./VentaRapida.module.css";
+import { useCotizacionDeLaCuenta } from "./useCotizacionDeLaCuenta.cliente";
+import { useVentaACero } from "./useVentaACero.cliente";
 import {
   cantidadParaLeer,
   formaDeCantidad,
@@ -41,7 +40,7 @@ import {
   agregarALaCuenta,
   cambiarCantidad,
   cantidadDelProductoEnLaCuenta,
-  pedidoDeCotizacion,
+  confirmacionDeCero,
   quitarDeLaCuenta,
   type CotizacionDeLaVenta,
   type LineaDeLaVenta,
@@ -70,18 +69,6 @@ export type PropsDePantallaDeVentaRapida = Readonly<{
     | undefined;
 }>;
 
-type EstadoDeLaCotizacion =
-  | Readonly<{ tipo: "SIN_CUENTA" }>
-  | Readonly<{ tipo: "PENDIENTE" }>
-  | Readonly<{ tipo: "LISTA"; cotizacion: CotizacionDeLaVenta }>
-  | Readonly<{ tipo: "ERROR"; error: ErrorPublico }>;
-
-/** Lo que volvió del servidor y para QUÉ cuenta: una respuesta solo vale para la cuenta que la pidió. */
-type Resultado = Readonly<{
-  para: readonly LineaDeLaVenta[];
-  respuesta: Respuesta<CotizacionDeLaVenta>;
-}>;
-
 /** Tras cerrar la hoja se ignora un segundo toque sobre un producto: evita abrirla dos veces con un doble toque (decisión 171 y maqueta v4). */
 const ESPERA_TRAS_CERRAR_LA_HOJA_MS = 500;
 const DURACION_DEL_AVISO_MS = 2500;
@@ -107,7 +94,6 @@ export function PantallaDeVentaRapida({
   const [cuentaAbierta, setCuentaAbierta] = useState(false);
   const [cobrando, setCobrando] = useState(false);
   const [cuenta, setCuenta] = useState<readonly LineaDeLaVenta[]>([]);
-  const [resultado, setResultado] = useState<Resultado | null>(null);
   const [aviso, setAviso] = useState("");
   const hojaBloqueada = useRef(false);
   const { esperaAlAbrirElCobro, envolturaDeCobrar, abrirElCobro } = useAperturaDelCobro(
@@ -121,27 +107,8 @@ export function PantallaDeVentaRapida({
   const porId = useMemo(() => new Map(productos.map((p) => [p.id, p])), [productos]);
   const visibles = productosVisibles(productos, secciones, busqueda, seccionId);
 
-  // Cada cambio de la cuenta se cotiza en el servidor. Una respuesta solo vale para la cuenta que la pidió: si la cuenta cambió mientras tanto, se descarta (nunca un total de otra cuenta a la vista).
-  useEffect(() => {
-    if (cuenta.length === 0) return;
-    let vigente = true;
-    cotizar(pedidoDeCotizacion(cuenta))
-      .then((respuesta) => {
-        if (vigente) setResultado({ para: cuenta, respuesta });
-      })
-      .catch(() => {
-        // Un corte de red no deja una cotización a medias ni una vieja a la vista.
-        if (vigente) {
-          setResultado({
-            para: cuenta,
-            respuesta: { ok: false, error: errorDeCodigo("VENTAS_ACCION_NO_PERMITIDA") },
-          });
-        }
-      });
-    return () => {
-      vigente = false;
-    };
-  }, [cuenta, cotizar]);
+  const { estado, descartar: descartarLaCotizacion } = useCotizacionDeLaCuenta(cuenta, cotizar);
+  const cero = useVentaACero(cuenta);
 
   useEffect(
     () => () => {
@@ -149,15 +116,6 @@ export function PantallaDeVentaRapida({
     },
     [],
   );
-
-  const estado: EstadoDeLaCotizacion =
-    cuenta.length === 0
-      ? { tipo: "SIN_CUENTA" }
-      : resultado?.para !== cuenta
-        ? { tipo: "PENDIENTE" }
-        : resultado.respuesta.ok
-          ? { tipo: "LISTA", cotizacion: resultado.respuesta.dato }
-          : { tipo: "ERROR", error: resultado.respuesta.error };
 
   useEffect(() => {
     if (aviso === "") return;
@@ -188,10 +146,11 @@ export function PantallaDeVentaRapida({
   };
 
   const cotizacion = estado.tipo === "LISTA" ? estado.cotizacion : null;
+  const nombreDeLaLinea = (linea: LineaDeLaVenta) => porId.get(linea.productoId)?.nombre ?? "";
   const formaAbierta = abierto === null ? null : formaDeCantidad(abierto);
 
   // El cobro es una vista de la pantalla (maqueta `vCobro`, DDD:294): mientras está abierto no se dibuja la venta; al volver, la cuenta sigue como estaba.
-  if (cobro !== undefined && cobrando && cotizacion !== null) {
+  if (cobro !== undefined && (cobrando || cero.venta !== null) && cotizacion !== null) {
     return (
       <div className={estilos["pantalla"]}>
         <PantallaDeCobro
@@ -203,6 +162,8 @@ export function PantallaDeVentaRapida({
           anular={cobro.anular}
           imprimir={cobro.imprimir}
           esperaAlAbrir={esperaAlAbrirElCobro}
+          ventaCobrada={cero.venta ?? undefined}
+          confirmoCero={cero.confirmoCero}
           alVolver={() => {
             setCobrando(false);
           }}
@@ -210,7 +171,8 @@ export function PantallaDeVentaRapida({
             // La venta terminó (cobrada o anulada): cuenta vacía, sin cotización vieja y la vista de cobro cerrada.
             setCobrando(false);
             setCuenta([]);
-            setResultado(null);
+            descartarLaCotizacion();
+            cero.reiniciar();
             setCuentaAbierta(false);
           }}
         />
@@ -355,9 +317,17 @@ export function PantallaDeVentaRapida({
               deshabilitado={
                 preparado?.estado !== "LISTO" ||
                 cotizacion === null ||
-                !esImporteValido(cotizacion.total.monto)
+                !FORMA_DEL_IMPORTE.test(cotizacion.total.monto)
               }
-              alTocar={abrirElCobro}
+              alTocar={() => {
+                if (cotizacion === null) return;
+                const pide = confirmacionDeCero(cuenta, nombreDeLaLinea, cotizacion);
+                if (pide.tipo === "NINGUNA" || (pide.tipo === "LINEA" && cero.confirmoCero)) {
+                  abrirElCobro();
+                } else {
+                  cero.abrir(pide);
+                }
+              }}
             >
               {cobro.textos.cobrar}
             </Boton>
@@ -374,6 +344,24 @@ export function PantallaDeVentaRapida({
           </strong>
         </p>
       </div>
+
+      {cero.abierta === null || cobro === undefined || cotizacion === null ? null : (
+        <DialogoDeVentaACero
+          confirmacion={cero.abierta}
+          cuenta={cuenta}
+          total={cotizacion.total}
+          preparado={cobro.preparado}
+          textos={cobro.textos}
+          cobrar={cobro.cobrar}
+          alCancelar={cero.cerrar}
+          alConfirmarLinea={() => {
+            cero.confirmarLinea();
+            abrirElCobro();
+          }}
+          alCobrada={cero.registrar}
+          nuevoId={() => crypto.randomUUID()}
+        />
+      )}
 
       <Superposicion
         abierta={abierto !== null && formaAbierta !== null}

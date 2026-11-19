@@ -50,6 +50,8 @@ export const TEXTOS_DE_VENTAS = {
   "ventas.venta.cantidad": { porDefecto: "Cantidad" },
   "ventas.venta.quitar": { porDefecto: "Quitar" },
   "ventas.venta.cancelar": { porDefecto: "Cancelar" },
+  // «Confirmar» del diálogo de venta a $ 0 (PR-6): aprobado (DDD:171, alcance e, M1 a M14; `venta-rapida-v4.html:918`). Clave propia de ventas: la única otra, `fiscal.pantalla.config_df_que_rija`, es de otra función (SUPUESTO de PR-6, DEC-0788, a aceptar por el orquestador).
+  "ventas.venta.confirmar": { porDefecto: "Confirmar" },
   // «Cantidad no válida»: `prototipo-caja.html`, aprobado 09/11 (`venta-rapida-v4.html`, tabla «Textos ya aprobados que se reutilizan»; `e4-venta-rapida-especificacion.md` §3.16).
   "ventas.venta.cantidad_no_valida": { porDefecto: "Cantidad no válida" },
   // «La cuenta está vacía» y «Agregá productos desde la venta.»: aprobados 09/11 (`e4-venta-rapida-especificacion.md` §3.16, `ventas.cuenta.vacia`; `textos-mostrador-pendientes.md` §3).

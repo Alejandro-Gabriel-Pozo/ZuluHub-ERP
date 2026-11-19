@@ -119,3 +119,84 @@ export type CotizacionDeLaVenta = Readonly<{
     importe: Readonly<{ moneda: string; monto: string }>;
   }>[];
 }>;
+
+// ─── Venta a $ 0 (maqueta `venta-rapida-v4.html:1029`, decisión 155) ────────────────────────────────────
+
+const IMPORTE_EN_CERO = /^0+(\.0+)?$/;
+
+/** ¿Este importe en texto decimal es cero («0», «0.00», «0.000»)? Una sola definición: nunca `number` ni `parseFloat`. */
+export const esImporteEnCero = (importe: string): boolean => IMPORTE_EN_CERO.test(importe);
+
+/** Una línea de la cuenta cuyo precio unitario o importe da cero. `lineaId` es la clave de la línea de la cuenta. */
+export type LineaACero = Readonly<{ lineaId: string; nombre: string }>;
+
+/** Qué hay que confirmar antes de cobrar. Mira SOLO la cotización del servidor: la pantalla no calcula precios. */
+export type ConfirmacionDeCero =
+  | Readonly<{ tipo: "NINGUNA" }>
+  | Readonly<{ tipo: "TOTAL"; lineasACero: readonly LineaACero[] }>
+  | Readonly<{ tipo: "LINEA"; lineasACero: readonly LineaACero[] }>;
+
+/**
+ * Total $ 0 → `TOTAL` (se cierra sin cobro); alguna línea a $ 0 dentro de un total mayor → `LINEA` (se confirma y se pasa al cobro); nada a cero → `NINGUNA`.
+ * La cotización trae las líneas en el mismo orden que la cuenta. Una línea es «a cero» si su precio unitario o su importe lo es.
+ */
+export function confirmacionDeCero(
+  cuenta: readonly LineaDeLaVenta[],
+  nombreDe: (linea: LineaDeLaVenta) => string,
+  cotizacion: CotizacionDeLaVenta,
+): ConfirmacionDeCero {
+  const lineasACero = cuenta.flatMap((linea, indice) => {
+    const cotizada = cotizacion.lineas[indice];
+    return cotizada !== undefined &&
+      (esImporteEnCero(cotizada.precioUnitario.monto) || esImporteEnCero(cotizada.importe.monto))
+      ? [{ lineaId: linea.clave, nombre: nombreDe(linea) }]
+      : [];
+  });
+  if (esImporteEnCero(cotizacion.total.monto)) return { tipo: "TOTAL", lineasACero };
+  return lineasACero.length === 0 ? { tipo: "NINGUNA" } : { tipo: "LINEA", lineasACero };
+}
+
+/** La confirmación que el servidor exige para vender a $ 0 (la lista cerrada vive en el dominio de ventas, `CONFIRMACIONES_DE_VENTA`; el servidor rechaza cualquier otra). */
+export const CONFIRMACION_VENTA_A_CERO = "VENTA_A_CERO";
+
+/** Las líneas del pedido de venta (ids por clave de línea). `null` si a alguna le falta su id: nunca un pedido a medias. */
+export function lineasDelPedido(
+  idsDeLineas: ReadonlyMap<string, string>,
+  cuenta: readonly LineaDeLaVenta[],
+): readonly Readonly<Record<string, unknown>>[] | null {
+  const lineas = cuenta.map((l) => {
+    const lineaId = idsDeLineas.get(l.clave);
+    return lineaId === undefined
+      ? null
+      : {
+          lineaId,
+          productoId: l.productoId,
+          ...(l.varianteId === null ? {} : { varianteId: l.varianteId }),
+          opcionIds: l.opcionIds,
+          cantidad: deDiezmilesimos(l.cantidad),
+        };
+  });
+  return lineas.length === 0 || lineas.includes(null)
+    ? null
+    : (lineas as readonly Readonly<Record<string, unknown>>[]);
+}
+
+/** El pedido de la venta a $ 0: el mismo de cobrar, con `cobros` vacío y la confirmación. `null` si no hay nada que mandar. */
+export function pedidoDeVentaACero(entrada: {
+  ids: Readonly<{ cuentaId: string; ejemplarId: string; lineas: ReadonlyMap<string, string> }>;
+  cajaId: string;
+  cuenta: readonly LineaDeLaVenta[];
+  total: Readonly<{ moneda: string; monto: string }>;
+}): Readonly<Record<string, unknown>> | null {
+  const lineas = lineasDelPedido(entrada.ids.lineas, entrada.cuenta);
+  if (lineas === null) return null;
+  return {
+    cuentaId: entrada.ids.cuentaId,
+    ejemplarId: entrada.ids.ejemplarId,
+    lineas,
+    totalEsperado: { moneda: entrada.total.moneda, monto: entrada.total.monto },
+    cajaId: entrada.cajaId,
+    cobros: [],
+    confirmaciones: [CONFIRMACION_VENTA_A_CERO],
+  };
+}
