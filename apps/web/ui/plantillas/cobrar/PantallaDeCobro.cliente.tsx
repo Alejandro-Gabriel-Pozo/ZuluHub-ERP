@@ -16,6 +16,7 @@ import { formatearImporte } from "../../patrones/formato-fiscal";
 import type { LineaDeLaVenta } from "../venta/modelo-de-la-cuenta";
 import estilos from "./Cobrar.module.css";
 import { FilaDeCobro } from "./FilaDeCobro.cliente";
+import type { PapelDeTicket } from "./PapelDelTicket.cliente";
 import { ResultadoDelCobro } from "./ResultadoDelCobro.cliente";
 import {
   estadoDelCobro,
@@ -46,6 +47,8 @@ export type PropsDePantallaDeCobro = Readonly<{
   /** Las acciones de servidor (`acciones-de-cobrar.ts`). Cobrar mueve dinero y stock: la clave de idempotencia la pone la pantalla por intento. */
   cobrar: (pedido: unknown) => Promise<Respuesta<VentaCobrada>>;
   anular: (pedido: unknown) => Promise<Respuesta<TicketAnulado>>;
+  /** El papel del ticket cobrado (lectura): «Imprimir ticket» del resultado. */
+  imprimir: (pedido: unknown) => Promise<Respuesta<PapelDeTicket>>;
   /** Vuelve a la cuenta (la flecha «‹» de la barra; solo antes de cobrar). */
   alVolver: () => void;
   /** Termina la venta (tras cobrar o anular): la pantalla de venta empieza una cuenta vacía. */
@@ -75,6 +78,7 @@ export function PantallaDeCobro({
   textos,
   cobrar,
   anular,
+  imprimir,
   alVolver,
   alNuevaVenta,
   nuevoId = uuid,
@@ -99,6 +103,8 @@ export function PantallaDeCobro({
   });
 
   const idDelTitulo = useId();
+  // Con el ticket del cliente a la vista, la barra es la suya (`TicketDelCliente`): esta no se dibuja.
+  const [viendoElTicket, setViendoElTicket] = useState(false);
   const [rechazoYaVisto, setRechazoYaVisto] = useState<ErrorPublico | null>(null);
   const estado = estadoDelCobro(total, pagos, medios);
   const hecho = envio.estado.tipo === "hecho";
@@ -146,7 +152,7 @@ export function PantallaDeCobro({
   const tituloRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     tituloRef.current?.focus();
-  }, [enResultado]);
+  }, [enResultado, viendoElTicket]);
 
   const cuerpo =
     hecho && preparado.estado === "LISTO" ? (
@@ -156,6 +162,8 @@ export function PantallaDeCobro({
         vuelto={estado.vuelto?.vuelto ?? "0.00"}
         textos={textos}
         anular={anular}
+        imprimir={imprimir}
+        alCambiarLaVista={setViendoElTicket}
         alNuevaVenta={alNuevaVenta}
         nuevoId={nuevoId}
         esperaEntreVerificacionesMs={esperaEntreVerificacionesMs}
@@ -261,21 +269,26 @@ export function PantallaDeCobro({
     );
 
   return (
-    <section className={estilos["vista"]} aria-labelledby={idDelTitulo}>
+    <section
+      className={estilos["vista"]}
+      aria-labelledby={viendoElTicket ? undefined : idDelTitulo}
+    >
       <FranjaSinConexion texto={textos.sinConexion} />
-      <header className={estilos["encabezado"]}>
-        {enResultado ? null : (
-          <BotonIcono
-            etiqueta={textos.volverALaCuenta}
-            icono="atras"
-            deshabilitado={congelado}
-            alTocar={alVolver}
-          />
-        )}
-        <h2 id={idDelTitulo} ref={tituloRef} tabIndex={-1} className={estilos["titulo"]}>
-          {titulo}
-        </h2>
-      </header>
+      {viendoElTicket ? null : (
+        <header className={estilos["encabezado"]}>
+          {enResultado ? null : (
+            <BotonIcono
+              etiqueta={textos.volverALaCuenta}
+              icono="atras"
+              deshabilitado={congelado}
+              alTocar={alVolver}
+            />
+          )}
+          <h2 id={idDelTitulo} ref={tituloRef} tabIndex={-1} className={estilos["titulo"]}>
+            {titulo}
+          </h2>
+        </header>
+      )}
       {cuerpo}
     </section>
   );
