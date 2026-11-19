@@ -95,10 +95,9 @@ const CODIGO_DE_ERROR_PROPIO: Readonly<Record<ErrorPropio, CodigoDeStock>> = {
   SIN_CAMBIOS: GENERICO,
 };
 
-/** Los errores con forma de objeto que son del negocio de stock: el control de existencia negativa (avisa o bloquea) y la función que el plan no incluye (el genérico). */
+/** Los errores con forma de objeto que son del negocio de stock: el control de existencia negativa (avisa) y la función que el plan no incluye (el genérico). */
 const CODIGO_DE_ERROR_DE_OBJETO: Readonly<Record<string, CodigoDeStock>> = {
   CONTROL_REQUIERE_CONFIRMACION: "STOCK_CONTROL_AVISA",
-  CONTROL_BLOQUEA: "STOCK_CONTROL_BLOQUEA",
   FUNCION_NO_INCLUIDA: GENERICO,
 };
 

@@ -71,11 +71,6 @@ export type ErrorDeStock =
       control: ControlDeStock;
       detalle: readonly DetalleDeNegativo[];
     }>
-  | Readonly<{
-      error: "CONTROL_BLOQUEA";
-      control: ControlDeStock;
-      detalle: readonly DetalleDeNegativo[];
-    }>
   // conteos
   | "CONTEO_NO_ENCONTRADO"
   | "CONTEO_EN_CURSO"

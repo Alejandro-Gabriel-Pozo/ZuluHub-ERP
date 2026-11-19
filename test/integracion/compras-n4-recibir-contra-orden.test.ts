@@ -9,7 +9,7 @@ import { codigoDe } from "./concurrencia-apoyo";
 
 /**
  * Compras N4 (tramo N4-2): recibir contra una orden pedida. La recepción de N3 y N4 trae, por línea, contra qué línea de qué orden es; lo recibido (en la unidad base) se suma al saldo de la
- * orden con el control `compras.recepcion_excede_la_orden` (PERMITIR, AVISAR con confirmación, BLOQUEAR), anular la recepción lo devuelve y repetir el pedido no suma dos veces.
+ * orden con el control `compras.recepcion_excede_la_orden` (PERMITIR, AVISAR con confirmación), anular la recepción lo devuelve y repetir el pedido no suma dos veces.
  */
 
 const base = inject("baseDePruebas");
@@ -130,29 +130,10 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
     expect(await recibido(m)).toBe("3000.0000");
   });
 
-  it("sin control (PERMITIR) el exceso pasa; con BLOQUEAR nunca supera lo pedido, ni con confirmación; nada queda a medias", async () => {
+  it("sin control (PERMITIR) el exceso pasa y queda en el saldo", async () => {
     const m = await armar();
     await recibirYConfirmar(m, "12");
     expect(await recibido(m)).toBe("12000.0000");
-    const b = await armar();
-    await control(b, "BLOQUEAR");
-    await recibirYConfirmar(b, "6");
-    const antes = (
-      await c.dueno.query("select 1 from recepcion where empresa_id = $1", [b.e.empresa])
-    ).rowCount;
-    for (const extra of [
-      {},
-      { contraOrden: [{ linea: 1, ordenId: b.ordenId, lineaDeOrden: 1, confirmoExceso: true }] },
-    ]) {
-      expect(codigo(await recibir(b, "5", extra))).toBe("RECEPCION_EXCEDE_LA_ORDEN");
-    }
-    expect(await recibido(b)).toBe("6000.0000");
-    expect(
-      (await c.dueno.query("select 1 from recepcion where empresa_id = $1", [b.e.empresa]))
-        .rowCount,
-    ).toBe(antes);
-    await recibirYConfirmar(b, "4");
-    expect(await recibido(b)).toBe("10000.0000");
   });
 
   it("con AVISAR el exceso pide confirmación explícita y con ella pasa", async () => {
@@ -322,10 +303,10 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
     );
   });
 
-  it("dos recepciones pendientes que no caben juntas, confirmadas a la vez con BLOQUEAR: entra una sola y la otra falla cerrado y sigue pendiente", async () => {
+  it("dos recepciones pendientes que no caben juntas, confirmadas a la vez con AVISAR sin confirmar: entra una sola y la otra falla cerrado y sigue pendiente", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const m = await armar();
-      await control(m, "BLOQUEAR");
+      await control(m, "AVISAR");
       const a = valorDe(await recibir(m, "7")).recepcionId;
       const b = valorDe(await recibir(m, "7")).recepcionId;
       c.armarBarrera(2);
@@ -337,7 +318,7 @@ describe.skipIf(base === null)("compras N4: recibir contra la orden", () => {
       }
       expect(rs.filter((r) => r.ok)).toHaveLength(1);
       const perdedora = rs.find((r) => !r.ok);
-      expect(perdedora && codigo(perdedora)).toBe("RECEPCION_EXCEDE_LA_ORDEN");
+      expect(perdedora && codigo(perdedora)).toBe("RECEPCION_EXCEDE_LA_ORDEN_SIN_CONFIRMAR");
       expect(await recibido(m)).toBe("7000.0000");
       const pendientes = await c.dueno.query(
         "select 1 from recepcion where id = any($1) and estado = 'PENDIENTE'",

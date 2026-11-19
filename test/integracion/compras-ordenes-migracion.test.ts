@@ -22,7 +22,7 @@ import { esperarBloqueo } from "./sesiones";
 
 /**
  * La migración 0066 (compras N4, órdenes de compra) contra una base real: el alta siempre en borrador, las transiciones impuestas, el número al pedir (también con dos pedidos a la
- * vez), lo inmutable desde que se pide, el saldo por línea, recibir contra la orden con el control de exceso (BLOQUEAR, AVISAR con y sin confirmación, PERMITIR) y dos recepciones
+ * vez), lo inmutable desde que se pide, el saldo por línea, recibir contra la orden con el control de exceso (AVISAR con y sin confirmación, PERMITIR) y dos recepciones
  * simultáneas, la devolución al anular la recepción, el aislamiento por empresa y la reversión.
  */
 
@@ -598,20 +598,6 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
     check(await intentarVinculo(e, conRetirada, "1", { linea: 2 }), "linea_de_orden_retirada");
   });
 
-  it("control en BLOQUEAR: lo recibido nunca supera lo pedido, ni con confirmación (aviso al registrar y tope firme al confirmar)", async () => {
-    const e = await escenario();
-    await nivelDeControl(e.m, "BLOQUEAR");
-    const id = await orden(e, ["10"]);
-    await recibida(e, "6", { orden: id, linea: 1 });
-    check(await intentarVinculo(e, id, "5"), "recepcion_excede_la_orden_bloqueada");
-    check(
-      await intentarVinculo(e, id, "5", { confirmoExceso: true }),
-      "recepcion_excede_la_orden_bloqueada",
-    );
-    await recibida(e, "4", { orden: id, linea: 1 });
-    expect(await recibido(id)).toBe(10);
-  });
-
   it("control en AVISAR: pasa solo con la confirmación explícita; sin ella se rechaza", async () => {
     const e = await escenario();
     await nivelDeControl(e.m, "AVISAR");
@@ -635,7 +621,7 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
 
   it("registrar no suma nada: el saldo se mueve recién al confirmar, y una línea RECHAZADA por el control no cuenta (ni avisa del tope)", async () => {
     const e = await escenario();
-    await nivelDeControl(e.m, "BLOQUEAR");
+    await nivelDeControl(e.m, "AVISAR");
     const id = await orden(e, ["10"]);
     const pendiente = await recepcion(e, "6", { orden: id, linea: 1 });
     expect(await recibido(id)).toBe(0);
@@ -662,9 +648,9 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
     expect(cierre.rows[0]?.cierre_motivo).toBe("CON_SALDO");
   });
 
-  it("dos recepciones pendientes que caben cada una pero no juntas, confirmadas a la vez con BLOQUEAR: entra una sola y la otra queda pendiente", async () => {
+  it("dos recepciones pendientes que caben cada una pero no juntas, confirmadas a la vez con AVISAR sin confirmar: entra una sola y la otra queda pendiente", async () => {
     const e = await escenario();
-    await nivelDeControl(e.m, "BLOQUEAR");
+    await nivelDeControl(e.m, "AVISAR");
     const id = await orden(e, ["10"]);
     const r1 = await recepcion(e, "7", { orden: id, linea: 1 });
     const r2 = await recepcion(e, "7", { orden: id, linea: 1 });
@@ -677,7 +663,7 @@ describe.skipIf(base === null)("0066 compras N4: órdenes contra una base real",
         expect((await s1.confirmar()).ok).toBe(true);
         const r = await segunda;
         expect(r.ok).toBe(false);
-        expect(!r.ok && r.restriccion).toBe("recepcion_excede_la_orden_bloqueada");
+        expect(!r.ok && r.restriccion).toBe("recepcion_excede_la_orden_sin_confirmar");
       });
     });
     expect(await recibido(id)).toBe(7);
