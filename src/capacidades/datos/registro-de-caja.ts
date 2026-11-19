@@ -24,6 +24,17 @@ const CAJA_PROPOSITO = (para: string): Proposito => ({
   para,
   fuente: `Pedernal-docs/11-especificaciones/caja-y-cobros.md §B.6 (caja) y ${MAQUETA_DE_MEDIOS}`,
 });
+const APERTURA = "apps/web/ui/plantillas/caja/FormularioDeApertura.cliente.tsx";
+/**
+ * La pantalla «Caja» del mostrador: su formulario de apertura lo pide `caja.html` (maqueta aprobada, `vAbrir`, carpeta de prototipos de Pedernal-docs 10-ux-ui) y lo fija
+ * `e3-caja-y-cobros-especificacion.md` §3.2 y §3.9; los textos y la pantalla los aceptó el dueño el 15/11/2026 (`decisiones-del-dueno-2026-11.md`, filas del 15/11/2026: textos aceptados
+ * y «Aceptado por el orquestador, por delegación (filas 173 y 174): maqueta del cierre…», decisión 175).
+ */
+const MOSTRADOR_PROPOSITO = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs/11-especificaciones/e3-caja-y-cobros-especificacion.md §3.2 y §3.9, la maqueta aprobada `caja.html` (carpeta de prototipos de Pedernal-docs 10-ux-ui) y 11-especificaciones/decisiones-del-dueno-2026-11.md (filas del 15/11/2026: textos aceptados por el dueño y delegación de las filas 173 y 174)",
+});
 const MEDIOS_PROPOSITO_TIPO: Proposito = {
   para: "Tipo de un medio de pago, de una lista cerrada, al agregarlo (pantalla «Medios de pago»); no se cambia después.",
   fuente:
@@ -101,6 +112,19 @@ export const DATOS_DE_CAJA = {
     ],
     consumidores: [CAJA_FORMULARIO],
     ponerPor: ["cajas.crear", "cajas.editar"],
+    requiere: REQUIERE_CAJA,
+  },
+  // Pantalla «Caja» del mostrador. El importe se tipea sin signo (`CampoImporte`) y viaja como texto decimal; el tope, los decimales y el signo que admite cada operación los decide el dominio
+  // de caja dentro de la transacción (`importeDeEntrada`, `importes.ts`): la regla vive ahí una vez.
+  "importe-de-fondo-inicial": {
+    ficha: "src/modulos/caja/dominio/importes.ts",
+    propositos: [
+      MOSTRADOR_PROPOSITO(
+        "Fondo inicial de una caja al abrirla (pantalla «Caja»): importe en pesos, cero o más; entra como un movimiento «fondo inicial» que no se anula.",
+      ),
+    ],
+    consumidores: [APERTURA],
+    ponerPor: ["sesiones_caja.abrir"],
     requiere: REQUIERE_CAJA,
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;

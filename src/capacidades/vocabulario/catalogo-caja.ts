@@ -53,4 +53,17 @@ export const TEXTOS_DE_CAJA = {
   // MEDIOS, tabla «(reutilizados)»: los dos avisos de error de esta pantalla («Ya existe un medio con ese nombre» y el genérico).
   "caja.error.medio_repetido": { porDefecto: "Ya existe un medio con ese nombre" },
   "caja.error.accion_no_permitida": { porDefecto: "Esta acción no está permitida" },
+  // MOSTRADOR, lista «(reutilizados)» de `caja.html` (línea 282; ya aprobados en la versión anterior de la pantalla): título de la pantalla y de la barra, el estado de la caja y «Abrir caja».
+  // «Abierta» y «Cerrada» son las del estado de la sesión de caja (`caja.html`, `pillS`). «Jornada» y «Corte» arman la cabecera «Jornada {fecha} · Corte {hora}» (M14 de `textos-mostrador-pendientes.md`,
+  // aprobado el 15/11/2026, DDD:171). «Cancelar» es la de todos los modales (`catalogo.accion.cancelar`).
+  "caja.pantalla.titulo": { porDefecto: "Caja" },
+  "caja.estado.abierta": { porDefecto: "Abierta" },
+  "caja.estado.cerrada": { porDefecto: "Cerrada" },
+  "caja.sesion.abrir": { porDefecto: "Abrir caja" },
+  "caja.sesion.jornada": { porDefecto: "Jornada" },
+  "caja.sesion.corte": { porDefecto: "Corte" },
+  // SUPUESTO (DEC-0475): «Fondo inicial» no tiene fila propia en las tablas aprobadas (`servidor-del-mostrador-minimo.md` §8); se declara por delegación del dueño (DDD filas 173 y 174).
+  // Revertirlo es sacar esta clave y el rótulo del campo.
+  "caja.campo.fondo_inicial": { porDefecto: "Fondo inicial" },
+  "caja.accion.cancelar": { porDefecto: "Cancelar" },
 } as const;
