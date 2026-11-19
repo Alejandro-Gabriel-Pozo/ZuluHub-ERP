@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0770",
+  "fecha": "2026-11-19",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Una operación no declara campos en formularios ajenos: se resuelve en la pantalla de su módulo; la excepción dentro de la misma transacción se decide caso por caso.",
+  "que_cambia": "Fija la forma del tipo (sin campo, panel ni destino) con una prueba que falla si se suma una clave. Revertir: quitar la prueba de claves.",
+  "donde": "src/capacidades/integracion/; apps/web/servidor/integracion.ts; arquitectura/centrales.json; test/arquitectura/operaciones-contextuales.test.ts; brief PR-X1 y decisiones-del-dueno-2026-11.md (filas del 18/11), repo de documentos"
+}

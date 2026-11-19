@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0769",
+  "fecha": "2026-11-19",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La integración entre módulos usa operaciones contextuales en un registro único (src/capacidades/integracion/); la pantalla entrega su contexto y se ofrece nada, una operación directa o «Más».",
+  "que_cambia": "Nace el mecanismo, vacío y sin pantallas nuevas; el menú comparte la regla de qué se ofrece. Revertir: borrar la carpeta, el servidor/integracion.ts y volver la expresión a menu.ts.",
+  "donde": "src/capacidades/integracion/; apps/web/servidor/integracion.ts; arquitectura/centrales.json; test/arquitectura/operaciones-contextuales.test.ts; brief PR-X1 y decisiones-del-dueno-2026-11.md (filas del 18/11), repo de documentos"
+}
