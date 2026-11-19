@@ -46,7 +46,7 @@ const DE_LA_MAQUETA: FuenteDeTexto = {
   decidio:
     "el dueño, 09/11/2026 (aprobó la versión anterior de la venta rápida), 15/11/2026 (aceptó los textos propuestos, fila 171) y 18/11/2026 (regla «manda la maqueta», fila 294); decisiones-del-dueno-2026-11.md",
   donde:
-    "Pedernal-docs 10-ux-ui/prototipos-gastronomia/venta-rapida-v4.html (vCobro, vResultado, vDlg, franjaCaja); DEC-0500 y DEC-0769",
+    "Pedernal-docs 10-ux-ui, maqueta venta-rapida-v4.html (vCobro, vResultado, vDlg, franjaCaja); DEC-0500 y DEC-0769",
 };
 const USO = "apps/web/ui/plantillas/cobrar/";
 
