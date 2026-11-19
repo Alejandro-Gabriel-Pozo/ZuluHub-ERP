@@ -5,7 +5,7 @@ import {
 } from "../../../../src/capacidades/modulos/catalogo";
 import type { ClaveDeTexto } from "../../../../src/capacidades/vocabulario/catalogo";
 import type { ClaveDeIcono } from "../iconos/catalogo";
-import { RUTAS_DE_CAJA } from "../plantillas/caja/lista-de-caja";
+import { RUTAS_DE_CAJA, RUTA_DE_LA_CAJA } from "../plantillas/caja/lista-de-caja";
 import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
 import { RUTA_DE_SECCIONES } from "../plantillas/catalogo/modelo-de-secciones";
 import { RUTA_DE_IMPRESORAS } from "../plantillas/salon/modelo-de-impresoras";
@@ -50,6 +50,7 @@ export type ClaveDeArea = (typeof AREAS_DEL_MENU)[number]["clave"];
 export const GRUPOS_DEL_MENU = [
   { clave: "mostrador", etiqueta: "navegacion.grupo.mostrador" },
   { clave: "comprobantes", etiqueta: null },
+  { clave: "caja", etiqueta: null },
   { clave: "productos", etiqueta: null },
   { clave: "salon", etiqueta: "salon.texto.grupo_salon" },
   { clave: "carta", etiqueta: "navegacion.grupo.carta" },
@@ -74,6 +75,7 @@ export type FilaDePantalla = BaseDeFila &
     clave:
       | "venta-rapida"
       | "comprobantes"
+      | "caja"
       | "productos"
       | "secciones"
       | "mesas"
@@ -125,6 +127,19 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     accion: "comprobantes.ver",
     href: RUTA_DEL_LISTADO,
     etiqueta: "fiscal.pantalla.listado_titulo",
+    departamento: null,
+  },
+  // «Caja» (maqueta `menu-por-areas.html`: grupo «Caja» con «Caja» y «Cierre del día»; esta segunda no existe todavía y no se declara). Un grupo con una sola pantalla que se llama igual se
+  // muestra sin encabezado (`etiqueta: null`). Nace cerrada: el módulo `caja` está «en desarrollo» y no da permisos a nadie hasta que el dueño lo pase a «disponible».
+  {
+    tipo: "pantalla",
+    clave: "caja",
+    area: "ventas",
+    grupo: "caja",
+    modulo: "caja",
+    accion: "cajas.ver",
+    href: RUTA_DE_LA_CAJA,
+    etiqueta: "caja.pantalla.titulo",
     departamento: null,
   },
   {

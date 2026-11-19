@@ -1,4 +1,8 @@
 {
+  "test/web/ficha-de-caja.test.ts": [
+    "apps/web/app/s/app/(operacion)/caja/page.tsx",
+    "apps/web/ui/plantillas/caja/*"
+  ],
   "test/web/ficha-de-mesas.test.ts": [
     "apps/web/app/s/app/(operacion)/salon/mesas/**",
     "apps/web/ui/plantillas/salon/*"

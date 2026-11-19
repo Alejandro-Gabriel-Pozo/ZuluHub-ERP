@@ -24,6 +24,18 @@ const CAJA_PROPOSITO = (para: string): Proposito => ({
   para,
   fuente: `Pedernal-docs/11-especificaciones/caja-y-cobros.md §B.6 (caja) y ${MAQUETA_DE_MEDIOS}`,
 });
+const APERTURA = "apps/web/ui/plantillas/caja/FormularioDeApertura.cliente.tsx";
+const CIERRE = "apps/web/ui/plantillas/caja/FormularioDeCierre.cliente.tsx";
+/**
+ * La pantalla «Caja» del mostrador: sus formularios de apertura y cierre los pide `caja.html` (maqueta aprobada, `vAbrir` y `vCierre`, carpeta de prototipos de Pedernal-docs 10-ux-ui) y lo fija
+ * `e3-caja-y-cobros-especificacion.md` §3.2 (abrir, contar y cerrar) y §3.9; los textos y la pantalla los aceptó el dueño el 15/11/2026 (`decisiones-del-dueno-2026-11.md`, filas del 15/11/2026: textos aceptados
+ * y «Aceptado por el orquestador, por delegación (filas 173 y 174): maqueta del cierre…», decisión 175).
+ */
+const MOSTRADOR_PROPOSITO = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs/11-especificaciones/e3-caja-y-cobros-especificacion.md §3.2 y §3.9, la maqueta aprobada `caja.html` (carpeta de prototipos de Pedernal-docs 10-ux-ui) y 11-especificaciones/decisiones-del-dueno-2026-11.md (filas del 15/11/2026: textos aceptados por el dueño y delegación de las filas 173 y 174)",
+});
 const MEDIOS_PROPOSITO_TIPO: Proposito = {
   para: "Tipo de un medio de pago, de una lista cerrada, al agregarlo (pantalla «Medios de pago»); no se cambia después.",
   fuente:
@@ -101,6 +113,61 @@ export const DATOS_DE_CAJA = {
     ],
     consumidores: [CAJA_FORMULARIO],
     ponerPor: ["cajas.crear", "cajas.editar"],
+    requiere: REQUIERE_CAJA,
+  },
+  // Pantalla «Caja» del mostrador. El importe se tipea sin signo (`CampoImporte`) y viaja como texto decimal; el tope, los decimales y el signo que admite cada operación los decide el dominio
+  // de caja dentro de la transacción (`importeDeEntrada`, `importes.ts`): la regla vive ahí una vez.
+  "importe-de-fondo-inicial": {
+    ficha: "src/modulos/caja/dominio/importes.ts",
+    propositos: [
+      MOSTRADOR_PROPOSITO(
+        "Fondo inicial de una caja al abrirla (pantalla «Caja»): importe en pesos, cero o más; entra como un movimiento «fondo inicial» que no se anula.",
+      ),
+    ],
+    consumidores: [APERTURA],
+    ponerPor: ["sesiones_caja.abrir"],
+    requiere: REQUIERE_CAJA,
+  },
+  "cantidad-de-billetes": {
+    // Entero de 0 a `CANTIDAD_MAXIMA_DE_BILLETES` por cada denominación de `DENOMINACIONES_DE_BILLETES`; vacío es «sin billetes de ese valor» (la pantalla lo suma como cero).
+    ficha: "src/modulos/caja/dominio/arqueo.ts",
+    propositos: [
+      MOSTRADOR_PROPOSITO(
+        "Cantidad de billetes de una denominación al contar el efectivo en el cierre de caja (el efectivo se cuenta siempre por billetes y monedas).",
+      ),
+    ],
+    consumidores: [CIERRE],
+    ponerPor: ["sesiones_caja.cerrar"],
+    requiere: REQUIERE_CAJA,
+  },
+  "importe-de-monedas-contadas": {
+    ficha: "src/modulos/caja/dominio/arqueo.ts",
+    propositos: [
+      MOSTRADOR_PROPOSITO(
+        "Total de las monedas contadas, como un solo importe en pesos, al contar el efectivo en el cierre de caja; vacío es «sin monedas».",
+      ),
+    ],
+    consumidores: [CIERRE],
+    ponerPor: ["sesiones_caja.cerrar"],
+    requiere: REQUIERE_CAJA,
+  },
+  "importe-contado-de-medio": {
+    ficha: "src/modulos/caja/dominio/arqueo.ts",
+    propositos: [
+      MOSTRADOR_PROPOSITO(
+        "Total contado de un medio que no es efectivo (con su cuenta de cobro, si la tiene) en el cierre de caja; sin total escrito, el medio queda «sin declarar» o «conforme».",
+      ),
+    ],
+    consumidores: [CIERRE],
+    ponerPor: ["sesiones_caja.cerrar"],
+    requiere: REQUIERE_CAJA,
+  },
+  "observacion-de-cierre-de-caja": {
+    // Opcional; misma lista de permitidos y mismo largo que el motivo (`observacionOpcional`, `caja/dominio/texto.ts`; la base: `sesion_caja_observacion_ck`).
+    ficha: "src/modulos/cierre/dominio/explicacion.ts",
+    propositos: [MOSTRADOR_PROPOSITO("Observación, opcional, al cerrar una caja.")],
+    consumidores: [CIERRE],
+    ponerPor: ["sesiones_caja.cerrar"],
     requiere: REQUIERE_CAJA,
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;

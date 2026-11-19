@@ -191,6 +191,7 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "/facturacion/comprobantes",
         "fiscal.pantalla.listado_titulo",
       ],
+      ["caja", "ventas", "caja", "caja", "cajas.ver", "/caja", "caja.pantalla.titulo"],
       [
         "productos",
         "catalogo",

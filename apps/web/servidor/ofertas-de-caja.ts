@@ -4,7 +4,10 @@ import "server-only";
  */
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import type { ClaveAccion } from "../../../src/capacidades/modulos/catalogo";
-import type { AccionesDeLista } from "../ui/plantillas/caja/lista-de-caja";
+import type {
+  AccionesDeLaPantallaDeCaja,
+  AccionesDeLista,
+} from "../ui/plantillas/caja/lista-de-caja";
 import { permisosDeLaPersona } from "./permisos-de-la-persona";
 
 /**
@@ -24,5 +27,25 @@ export async function accionesDeLaListaDeCaja(
     editar: puede(`${familia}.editar`),
     desactivar: puede(`${familia}.desactivar`),
     reactivar: puede(`${familia}.reactivar`),
+  };
+}
+
+/**
+ * Qué acciones de la pantalla «Caja» del mostrador se ofrecen activas hoy: las que el SERVIDOR deja hacer según `permisosDelActor` (una lectura por pedido, el mismo cálculo que el guard).
+ * Con `caja` en desarrollo o no activo esa lista no trae sus acciones: todo apagado. Sin permisos leídos, todo apagado. También la consume Cobrar para ofrecer «Abrir caja» a quien puede
+ * (DEC-0502). Previene: ofrecer un botón que el guard va a rechazar. Es solo una ayuda: cada acción vuelve a pasar por el guard dentro de su transacción.
+ * Chequeo: `test/web/acciones-de-la-pantalla-de-caja.test.ts`.
+ */
+export async function accionesDeLaPantallaDeCaja(
+  contexto: ContextoOperativo,
+): Promise<AccionesDeLaPantallaDeCaja> {
+  const permisos = await permisosDeLaPersona(contexto);
+  const puede = (accion: ClaveAccion): boolean =>
+    permisos !== null && permisos.acciones.includes(accion);
+  return {
+    abrir: puede("sesiones_caja.abrir"),
+    iniciarCierre: puede("sesiones_caja.iniciar_cierre"),
+    cancelarCierre: puede("sesiones_caja.cancelar_cierre"),
+    cerrar: puede("sesiones_caja.cerrar"),
   };
 }
