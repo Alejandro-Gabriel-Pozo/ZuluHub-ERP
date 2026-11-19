@@ -21,7 +21,12 @@ export type TextosDeCobrar = Readonly<{
   abrirLaCaja: string;
   agregarOtroMedio: string;
   quitar: string;
-  volver: string;
+  titulo: string;
+  volverALaCuenta: string;
+  resultado: string;
+  noSePudo: string;
+  volverAlCobro: string;
+  abrirCaja: string;
   cupon: string;
   ultimos4: string;
   marca: string;
@@ -60,7 +65,12 @@ export function textosDeCobrar(): TextosDeCobrar {
     abrirLaCaja: texto({}, "ventas.cobro.abri_la_caja"),
     agregarOtroMedio: texto({}, "ventas.cobro.agregar_otro_medio"),
     quitar: texto({}, "ventas.venta.quitar"),
-    volver: texto({}, "ventas.cobro.volver"),
+    titulo: texto({}, "ventas.cobro.titulo"),
+    volverALaCuenta: texto({}, "ventas.cobro.volver_a_la_cuenta"),
+    resultado: texto({}, "ventas.cobro.resultado"),
+    noSePudo: texto({}, "ventas.cobro.no_se_pudo"),
+    volverAlCobro: texto({}, "ventas.cobro.volver_al_cobro"),
+    abrirCaja: texto({}, "caja.sesion.abrir"),
     cupon: texto({}, "ventas.cobro.dato.cupon"),
     ultimos4: texto({}, "ventas.cobro.dato.ultimos4"),
     marca: texto({}, "ventas.cobro.dato.marca"),

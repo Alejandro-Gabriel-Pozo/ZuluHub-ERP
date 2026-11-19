@@ -1,13 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
-import type { Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
+import { useEffect, useId, useRef, useState } from "react";
+import type {
+  CodigoPublico,
+  ErrorPublico,
+  Respuesta,
+} from "../../../../../src/capacidades/experiencia/respuesta";
 import { MAXIMO_DE_COBROS_POR_TICKET } from "../../../../../src/primitivas/dinero/limites-de-cobro";
 import { Aviso } from "../../componentes/Aviso";
 import { Boton } from "../../componentes/Boton.cliente";
+import { BotonIcono } from "../../componentes/BotonIcono";
 import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
 import { FranjaSinConexion } from "../../patrones/FranjaSinConexion.cliente";
-import { Superposicion } from "../../patrones/Superposicion";
 import { formatearImporte } from "../../patrones/formato-fiscal";
 import type { LineaDeLaVenta } from "../venta/modelo-de-la-cuenta";
 import estilos from "./Cobrar.module.css";
@@ -17,6 +21,7 @@ import {
   estadoDelCobro,
   lineaDeEstado,
   medioInicial,
+  nombreDelMedio,
   pagoAdicional,
   pagoNuevo,
   pedidoDeCobro,
@@ -41,19 +46,21 @@ export type PropsDePantallaDeCobro = Readonly<{
   /** Las acciones de servidor (`acciones-de-cobrar.ts`). Cobrar mueve dinero y stock: la clave de idempotencia la pone la pantalla por intento. */
   cobrar: (pedido: unknown) => Promise<Respuesta<VentaCobrada>>;
   anular: (pedido: unknown) => Promise<Respuesta<TicketAnulado>>;
-  /** Vuelve a la cuenta (solo antes de cobrar). */
+  /** Vuelve a la cuenta (la flecha «‹» de la barra; solo antes de cobrar). */
   alVolver: () => void;
   /** Termina la venta (tras cobrar o anular): la pantalla de venta empieza una cuenta vacía. */
   alNuevaVenta: () => void;
   /** Genera un identificador. Por defecto, un UUID del navegador. Las pruebas pasan uno propio. */
   nuevoId?: () => string;
   esperaEntreVerificacionesMs?: number | undefined;
+  /** Vale `true` durante los primeros instantes tras abrir la vista (lo maneja la pantalla de venta): un toque en «Cobrar» entonces se ignora. */
+  esperaAlAbrir?: Readonly<{ current: boolean }>;
 }>;
 
 const uuid = (): string => crypto.randomUUID();
 
 /**
- * La hoja de COBRAR (maqueta `venta-rapida-v4.html`): el total, una fila por medio de pago, «Agregar otro medio», lo que falta o el vuelto, y «Cobrar». El servidor decide todo lo que importa
+ * La vista de COBRAR (no una hoja: la maqueta la dibuja como una pantalla con «‹ Volver a la cuenta» y un pie fijo; DDD:294) (maqueta `venta-rapida-v4.html`): el total, una fila por medio de pago, «Agregar otro medio», lo que falta o el vuelto, y «Cobrar». El servidor decide todo lo que importa
  * (qué medios, cuentas y datos se ofrecen, si la caja está abierta, si el precio cambió, si los cobros cuadran): la pantalla solo ofrece lo que él ofreció y le manda el pedido. El vuelto es solo
  * presentación (`calcularVuelto`): al servidor llega lo que queda en caja. Cualquier error de negocio sale como el genérico ya aprobado.
  *
@@ -72,6 +79,7 @@ export function PantallaDeCobro({
   alNuevaVenta,
   nuevoId = uuid,
   esperaEntreVerificacionesMs,
+  esperaAlAbrir,
 }: PropsDePantallaDeCobro) {
   const medios = preparado.estado === "LISTO" ? preparado.opciones.medios : [];
   const [pagos, setPagos] = useState<readonly PagoEnEdicion[]>(() => {
@@ -90,6 +98,8 @@ export function PantallaDeCobro({
     esperaEntreVerificacionesMs,
   });
 
+  const idDelTitulo = useId();
+  const [rechazoYaVisto, setRechazoYaVisto] = useState<ErrorPublico | null>(null);
   const estado = estadoDelCobro(total, pagos, medios);
   const hecho = envio.estado.tipo === "hecho";
   // Con un envío en curso, incierto o hecho nada se edita ni se vuelve: otro pedido con la misma clave sería un error, y con otra clave podría cobrar dos veces.
@@ -104,6 +114,8 @@ export function PantallaDeCobro({
   };
 
   const alCobrar = () => {
+    // Los primeros instantes tras abrir la vista un toque se ignora: el segundo toque de un doble toque en «Cobrar» de la venta no cobra (decisión 171).
+    if (esperaAlAbrir?.current === true) return;
     if (preparado.estado !== "LISTO" || !estado.listo || estado.vuelto === null) return;
     const pedido = pedidoDeCobro({
       ids: idsDeLaVenta(),
@@ -121,102 +133,119 @@ export function PantallaDeCobro({
     setPagos((previos) => previos.map((p) => (p.clave === clave ? pago : p)));
   };
 
-  if (hecho && preparado.estado === "LISTO") {
-    return (
-      <Superposicion
-        abierta
-        titulo={textos.cobrado}
-        proposito="detalle"
-        alCerrar={alNuevaVenta}
-        cerrable={false}
-        etiquetaDeCerrar={textos.cerrar}
-      >
-        <ResultadoDelCobro
-          venta={envio.estado.valor}
-          medios={preparado.opciones.medios}
-          vuelto={estado.vuelto?.vuelto ?? "0.00"}
-          textos={textos}
-          anular={anular}
-          alNuevaVenta={alNuevaVenta}
-          nuevoId={nuevoId}
-          esperaEntreVerificacionesMs={esperaEntreVerificacionesMs}
-        />
-      </Superposicion>
-    );
-  }
+  const rechazoDelCobro =
+    envio.estado.tipo === "rechazado" &&
+    esElRechazoGenerico(envio.estado.rechazo) &&
+    envio.estado.rechazo !== rechazoYaVisto
+      ? envio.estado.rechazo
+      : null;
+  const enResultado = (hecho && preparado.estado === "LISTO") || rechazoDelCobro !== null;
+  const titulo = enResultado ? textos.resultado : textos.titulo;
 
-  return (
-    <Superposicion
-      abierta
-      titulo={textos.cobrar}
-      proposito="editar"
-      alCerrar={alVolver}
-      cerrable={!congelado}
-      etiquetaDeCerrar={textos.cerrar}
-    >
-      <FranjaSinConexion texto={textos.sinConexion} />
+  // El foco va al título al abrir la vista y cada vez que cambia de «Cobro» a «Resultado» (y al revés).
+  const tituloRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    tituloRef.current?.focus();
+  }, [enResultado]);
+
+  const cuerpo =
+    hecho && preparado.estado === "LISTO" ? (
+      <ResultadoDelCobro
+        venta={envio.estado.valor}
+        medios={preparado.opciones.medios}
+        vuelto={estado.vuelto?.vuelto ?? "0.00"}
+        textos={textos}
+        anular={anular}
+        alNuevaVenta={alNuevaVenta}
+        nuevoId={nuevoId}
+        esperaEntreVerificacionesMs={esperaEntreVerificacionesMs}
+      />
+    ) : rechazoDelCobro !== null ? (
       <div className={estilos["cuerpo"]}>
-        <p className={estilos["total"]}>
-          <span>{textos.total}</span>
-          <strong data-total-del-cobro>{formatearImporte(total.monto)}</strong>
-        </p>
-        {preparado.estado === "ABRIR_LA_CAJA" ? (
-          <Aviso tono="aviso">{textos.abrirLaCaja}</Aviso>
-        ) : null}
-        {preparado.estado === "NO_PERMITIDO" ? (
-          <Aviso tono="peligro">{textos.noPermitido}</Aviso>
-        ) : null}
-        {preparado.estado === "LISTO"
-          ? pagos.map((pago, indice) => (
-              <FilaDeCobro
-                key={pago.clave}
-                pago={pago}
-                estado={
-                  estado.filas[indice] ?? {
-                    clave: pago.clave,
-                    importeNoValido: true,
-                    erroresDeDatos: {},
+        <Aviso tono="peligro">{textos.noSePudo}</Aviso>
+        <ul className={estilos["resumen"]}>
+          <li>
+            <strong>{textos.total}</strong>
+            <strong>{formatearImporte(total.monto)}</strong>
+          </li>
+          {pagos.map((pago) => {
+            const medio = medios.find((m) => m.id === pago.medioId);
+            return (
+              <li key={pago.clave}>
+                <span>{medio === undefined ? "" : nombreDelMedio(medio)}</span>
+                <span>{formatearImporte(pago.importe)}</span>
+              </li>
+            );
+          })}
+        </ul>
+        <Boton
+          ancho="completo"
+          alTocar={() => {
+            setRechazoYaVisto(rechazoDelCobro);
+          }}
+        >
+          {textos.volverAlCobro}
+        </Boton>
+      </div>
+    ) : (
+      <>
+        <div className={estilos["cuerpo"]}>
+          <p className={estilos["total"]}>
+            <span>{textos.total}</span>
+            <strong data-total-del-cobro>{formatearImporte(total.monto)}</strong>
+          </p>
+          {preparado.estado === "LISTO"
+            ? pagos.map((pago, indice) => (
+                <FilaDeCobro
+                  key={pago.clave}
+                  pago={pago}
+                  estado={
+                    estado.filas[indice] ?? {
+                      clave: pago.clave,
+                      importeNoValido: true,
+                      erroresDeDatos: {},
+                    }
                   }
-                }
-                opciones={preparado.opciones}
-                textos={textos}
-                alCambiar={(nuevo) => {
-                  cambiarPago(pago.clave, nuevo);
-                }}
-                alQuitar={
-                  indice === 0
-                    ? null
-                    : () => {
-                        setPagos((previos) => previos.filter((p) => p.clave !== pago.clave));
-                      }
-                }
-                deshabilitado={congelado}
-              />
-            ))
-          : null}
-        {preparado.estado === "LISTO" && pagos.length < MAXIMO_DE_COBROS_POR_TICKET ? (
-          <Boton
-            variante="secundaria"
-            deshabilitado={congelado}
-            alTocar={() => {
-              const otro = pagoAdicional(
-                nuevoId(),
-                preparado.opciones.medios,
-                pagos,
-                estado.vuelto?.falta ?? null,
-              );
-              if (otro !== null) setPagos((previos) => [...previos, otro]);
-            }}
-          >
-            {textos.agregarOtroMedio}
-          </Boton>
-        ) : null}
-        <LineaDelEstado linea={lineaDeEstado(estado.vuelto)} textos={textos} />
-        {envio.estado.tipo === "rechazado" ? (
-          <ErrorDeRespuesta error={envio.estado.rechazo} />
-        ) : null}
-        {inesperado === null ? null : <ErrorDeRespuesta error={inesperado} />}
-        <div className={estilos["acciones"]}>
+                  opciones={preparado.opciones}
+                  textos={textos}
+                  alCambiar={(nuevo) => {
+                    cambiarPago(pago.clave, nuevo);
+                  }}
+                  alQuitar={
+                    indice === 0
+                      ? null
+                      : () => {
+                          setPagos((previos) => previos.filter((p) => p.clave !== pago.clave));
+                        }
+                  }
+                  deshabilitado={congelado}
+                />
+              ))
+            : null}
+          {preparado.estado === "LISTO" && pagos.length < MAXIMO_DE_COBROS_POR_TICKET ? (
+            <Boton
+              variante="secundaria"
+              deshabilitado={congelado}
+              alTocar={() => {
+                const otro = pagoAdicional(
+                  nuevoId(),
+                  preparado.opciones.medios,
+                  pagos,
+                  estado.vuelto?.falta ?? null,
+                );
+                if (otro !== null) setPagos((previos) => [...previos, otro]);
+              }}
+            >
+              {textos.agregarOtroMedio}
+            </Boton>
+          ) : null}
+          <LineaDelEstado linea={lineaDeEstado(estado.vuelto)} textos={textos} />
+          {envio.estado.tipo === "rechazado" && !esElRechazoGenerico(envio.estado.rechazo) ? (
+            <ErrorDeRespuesta error={envio.estado.rechazo} />
+          ) : null}
+          {inesperado === null ? null : <ErrorDeRespuesta error={inesperado} />}
+        </div>
+        <div className={estilos["pie"]}>
           <Boton
             ancho="completo"
             deshabilitado={preparado.estado !== "LISTO" || !estado.listo || envio.bloqueado}
@@ -227,19 +256,34 @@ export function PantallaDeCobro({
           >
             {textos.cobrar}
           </Boton>
-          <Boton
-            variante="secundaria"
-            ancho="completo"
+        </div>
+      </>
+    );
+
+  return (
+    <section className={estilos["vista"]} aria-labelledby={idDelTitulo}>
+      <FranjaSinConexion texto={textos.sinConexion} />
+      <header className={estilos["encabezado"]}>
+        {enResultado ? null : (
+          <BotonIcono
+            etiqueta={textos.volverALaCuenta}
+            icono="atras"
             deshabilitado={congelado}
             alTocar={alVolver}
-          >
-            {textos.volver}
-          </Boton>
-        </div>
-      </div>
-    </Superposicion>
+          />
+        )}
+        <h2 id={idDelTitulo} ref={tituloRef} tabIndex={-1} className={estilos["titulo"]}>
+          {titulo}
+        </h2>
+      </header>
+      {cuerpo}
+    </section>
   );
 }
+
+/** El genérico al que el servidor traduce todo rechazo de negocio del cobro (`errores-de-cobrar.ts`): el único que la maqueta dibuja como «No se pudo cobrar». */
+const esElRechazoGenerico = (error: ErrorPublico): boolean =>
+  error.codigo === ("CAJA_ACCION_NO_PERMITIDA" satisfies CodigoPublico);
 
 /** Lo que falta, lo que sobra, el vuelto o «Cobro completo»: siempre con su texto, nunca solo por color. */
 function LineaDelEstado({

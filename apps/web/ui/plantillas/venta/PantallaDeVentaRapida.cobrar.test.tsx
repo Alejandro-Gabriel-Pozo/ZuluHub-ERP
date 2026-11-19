@@ -9,7 +9,10 @@ import {
   type VentaCobrada,
 } from "../cobrar/modelo-de-cobro";
 import { textosDeCobrar } from "../cobrar/textos-de-cobrar";
-import { PantallaDeVentaRapida } from "./PantallaDeVentaRapida.cliente";
+import {
+  ESPERA_AL_ABRIR_EL_COBRO_MS,
+  PantallaDeVentaRapida,
+} from "./PantallaDeVentaRapida.cliente";
 import type { CotizacionDeLaVenta } from "./modelo-de-la-cuenta";
 import { textosDeLaVenta, type ProductoDeLaVenta } from "./modelo-de-venta-rapida";
 
@@ -67,7 +70,14 @@ const VENTA: VentaCobrada = {
   ],
 };
 
-async function pantalla(opciones: { conCobro?: boolean; total?: string } = {}) {
+async function pantalla(
+  opciones: {
+    conCobro?: boolean;
+    total?: string;
+    preparado?: CobroPreparado;
+    rutaParaAbrirLaCaja?: string | null;
+  } = {},
+) {
   const cobrar = vi.fn<(p: unknown) => Promise<Respuesta<VentaCobrada>>>(() =>
     Promise.resolve({ ok: true, dato: VENTA }),
   );
@@ -81,7 +91,13 @@ async function pantalla(opciones: { conCobro?: boolean; total?: string } = {}) {
       cobro={
         opciones.conCobro === false
           ? undefined
-          : { preparado: LISTO, textos: textosDeCobrar(), cobrar, anular }
+          : {
+              preparado: opciones.preparado ?? LISTO,
+              textos: textosDeCobrar(),
+              cobrar,
+              anular,
+              rutaParaAbrirLaCaja: opciones.rutaParaAbrirLaCaja ?? null,
+            }
       }
     />,
   );
@@ -90,7 +106,7 @@ async function pantalla(opciones: { conCobro?: boolean; total?: string } = {}) {
 
 const agregarUna = async () => {
   await userEvent.click(page.getByRole("button", { name: /Medialuna/ }));
-  await userEvent.click(page.getByRole("button", { name: "Agregar" }));
+  await userEvent.click(page.getByRole("button", { name: /^Agregar( ·|$)/ }));
 };
 const cobrarBoton = () => page.getByRole("button", { name: "Cobrar", exact: true });
 
@@ -116,21 +132,69 @@ describe("VentaRapida con cobro", () => {
     await expect.element(cobrarBoton()).toBeDisabled();
   });
 
-  it("abre la hoja con el total cotizado; «Volver» deja la cuenta como estaba; cobrada, «Nueva venta» la deja vacía", async () => {
+  it("el cobro es una vista: «Cobro» con «Volver a la cuenta», sin la venta debajo; volver deja la cuenta como estaba y el foco en «Cobrar»; cobrada, «Nueva venta» la deja vacía", async () => {
     const { cobrar } = await pantalla();
     await agregarUna();
     await userEvent.click(cobrarBoton());
     expect(document.querySelector("[data-total-del-cobro]")?.textContent).toBe("$ 800,00");
-    await userEvent.click(page.getByRole("button", { name: "Volver", exact: true }));
+    await expect.element(page.getByRole("heading", { name: "Cobro", level: 2 })).toHaveFocus();
+    expect(page.getByRole("button", { name: "Volver", exact: true }).elements()).toHaveLength(0);
+    expect(page.getByRole("button", { name: /Medialuna/ }).elements()).toHaveLength(0);
+    await userEvent.click(page.getByRole("button", { name: "Volver a la cuenta", exact: true }));
     expect(document.querySelector("[data-total]")?.textContent).toBe("$ 800,00");
+    await expect.element(cobrarBoton()).toHaveFocus();
     await userEvent.click(cobrarBoton());
-    await userEvent.click(
-      page.getByRole("dialog").getByRole("button", { name: "Cobrar", exact: true }),
-    );
+    // Pasada la espera de apertura, «Cobrar» de la vista cobra.
+    await new Promise((r) => setTimeout(r, ESPERA_AL_ABRIR_EL_COBRO_MS + 100));
+    await userEvent.click(cobrarBoton());
     await expect.element(page.getByText("Ticket N.º 7")).toBeVisible();
+    await expect.element(page.getByRole("heading", { name: "Resultado", level: 2 })).toBeVisible();
     expect(cobrar).toHaveBeenCalledTimes(1);
     await userEvent.click(page.getByRole("button", { name: "Nueva venta", exact: true }));
     await expect.element(cobrarBoton()).toBeDisabled();
-    expect(document.querySelector("[data-total]")?.textContent).toBe("");
+    expect(document.querySelector("[data-total]")?.textContent).toBe("$ 0,00");
+  });
+
+  it("DOBLE TOQUE en «Cobrar» de la venta: abre el cobro y NO cobra solo (el segundo toque dentro de la espera se ignora)", async () => {
+    const { cobrar } = await pantalla();
+    await agregarUna();
+    await userEvent.click(cobrarBoton());
+    await userEvent.click(cobrarBoton());
+    expect(cobrar).not.toHaveBeenCalled();
+    await new Promise((r) => setTimeout(r, ESPERA_AL_ABRIR_EL_COBRO_MS + 100));
+    await userEvent.click(cobrarBoton());
+    await expect.element(page.getByText("Ticket N.º 7")).toBeVisible();
+    expect(cobrar).toHaveBeenCalledTimes(1);
+  });
+
+  it("sin caja abierta la venta avisa «Abrí la caja para cobrar», ofrece «Abrir caja» a quien puede y «Cobrar» queda apagado", async () => {
+    await pantalla({ preparado: { estado: "ABRIR_LA_CAJA" }, rutaParaAbrirLaCaja: "/caja" });
+    await agregarUna();
+    await expect.element(page.getByText("Abrí la caja para cobrar")).toBeVisible();
+    await expect
+      .element(page.getByRole("link", { name: "Abrir caja" }))
+      .toHaveAttribute("href", "/caja");
+    await expect.element(cobrarBoton()).toBeDisabled();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("sin caja abierta y sin permiso para abrirla: el aviso va sin botón", async () => {
+    await pantalla({ preparado: { estado: "ABRIR_LA_CAJA" }, rutaParaAbrirLaCaja: null });
+    await expect.element(page.getByText("Abrí la caja para cobrar")).toBeVisible();
+    expect(page.getByRole("link", { name: "Abrir caja" }).elements()).toHaveLength(0);
+  });
+
+  it("no permitido: el genérico y «Cobrar» apagado, pero se puede armar la cuenta; con el día en cierre o cerrado las tarjetas quedan apagadas", async () => {
+    await pantalla({ preparado: { estado: "NO_PERMITIDO", jornadaAbierta: true } });
+    await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
+    await expect.element(cobrarBoton()).toBeDisabled();
+    await expect.element(page.getByRole("button", { name: /Medialuna/ })).toBeEnabled();
+  });
+
+  it("con el día en cierre las tarjetas de producto quedan apagadas", async () => {
+    await pantalla({ preparado: { estado: "NO_PERMITIDO", jornadaAbierta: false } });
+    await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
+    await expect.element(page.getByRole("button", { name: /Medialuna/ })).toBeDisabled();
+    await expect.element(cobrarBoton()).toBeDisabled();
   });
 });

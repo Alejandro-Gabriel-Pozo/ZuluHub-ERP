@@ -151,7 +151,7 @@ export function opcionesDeCobroDeLaCaja(
 export type CobroPreparadoParaLaPantalla =
   | Readonly<{ estado: "LISTO"; cajaId: string; opciones: OpcionesDeCobroParaLaPantalla }>
   | Readonly<{ estado: "ABRIR_LA_CAJA" }>
-  | Readonly<{ estado: "NO_PERMITIDO" }>;
+  | Readonly<{ estado: "NO_PERMITIDO"; jornadaAbierta: boolean }>;
 
 /**
  * Todo lo que la pantalla necesita para abrir la hoja de cobro: la caja que se usa y sus opciones (medios, cuentas, datos y marcas). Son LECTURAS (`ventas.ver`): no escriben ni auditan. Si una
@@ -165,9 +165,13 @@ export async function cobroParaLaPantalla(
   const cajas = await cajasParaCobrar(d, contexto, sucursalId);
   if (!cajas.ok) return { ok: false, error: cajas.error };
   const decision = decidirLaCaja(cajas.dato);
-  if (decision.tipo !== "LISTA") {
-    return { ok: true, dato: { estado: decision.tipo } };
+  if (decision.tipo === "NO_PERMITIDO") {
+    return {
+      ok: true,
+      dato: { estado: "NO_PERMITIDO", jornadaAbierta: decision.jornadaAbierta },
+    };
   }
+  if (decision.tipo === "ABRIR_LA_CAJA") return { ok: true, dato: { estado: "ABRIR_LA_CAJA" } };
   const opciones = await opcionesDeCobroDeLaCaja(d, contexto, { cajaId: decision.cajaId });
   if (!opciones.ok) return { ok: false, error: opciones.error };
   return { ok: true, dato: { estado: "LISTO", cajaId: decision.cajaId, opciones: opciones.dato } };

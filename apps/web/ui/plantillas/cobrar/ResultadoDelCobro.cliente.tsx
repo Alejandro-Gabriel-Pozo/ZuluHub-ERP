@@ -29,7 +29,7 @@ export type PropsDeResultadoDelCobro = Readonly<{
 
 /**
  * El resultado de cobrar (maqueta `venta-rapida-v4.html`, estado `ok`): «Cobrado», el número del ticket, cada medio con su importe tal como quedó en caja y el vuelto, con «Anular» y «Nueva venta».
- * No repite los datos de la tarjeta (decisión del dueño, DDD:175). «Anular» abre el motivo en el mismo lugar (`AnularElTicket`); «Imprimir ticket» todavía no está: depende del papel del ticket (K6) y
+ * No repite los datos de la tarjeta (decisión del dueño, DDD:175). «Anular» abre un cuadro de diálogo con el motivo (`AnularElTicket`); «Imprimir ticket» todavía no está: depende del papel del ticket (K6) y
  * lo que no está declarado no se ofrece.
  */
 export function ResultadoDelCobro({
@@ -43,24 +43,41 @@ export function ResultadoDelCobro({
   esperaEntreVerificacionesMs,
 }: PropsDeResultadoDelCobro) {
   const [anulando, setAnulando] = useState(false);
-  if (anulando) {
+  const [anulado, setAnulado] = useState<Readonly<{
+    ticket: TicketAnulado;
+    motivo: string;
+  }> | null>(null);
+  if (anulado !== null) {
     return (
-      <AnularElTicket
-        venta={venta}
-        textos={textos}
-        anular={anular}
-        alCancelar={() => {
-          setAnulando(false);
-        }}
-        alNuevaVenta={alNuevaVenta}
-        nuevoId={nuevoId}
-        esperaEntreVerificacionesMs={esperaEntreVerificacionesMs}
-      />
+      <div className={estilos["cuerpo"]}>
+        <Aviso tono="info" titulo={textos.anulado}>
+          <span data-ticket>{rotuloDelTicket(anulado.ticket.numero)}</span>
+          <span data-motivo-anulado>{anulado.motivo}</span>
+        </Aviso>
+        <Boton ancho="completo" alTocar={alNuevaVenta}>
+          {textos.nuevaVenta}
+        </Boton>
+      </div>
     );
   }
   const hayVuelto = !/^0+(\.0+)?$/.test(vuelto);
   return (
     <div className={estilos["cuerpo"]}>
+      {anulando ? (
+        <AnularElTicket
+          venta={venta}
+          textos={textos}
+          anular={anular}
+          alCancelar={() => {
+            setAnulando(false);
+          }}
+          alAnulado={(ticket, motivo) => {
+            setAnulado({ ticket, motivo });
+          }}
+          nuevoId={nuevoId}
+          esperaEntreVerificacionesMs={esperaEntreVerificacionesMs}
+        />
+      ) : null}
       <Aviso tono="exito" titulo={textos.cobrado}>
         <span data-ticket>{rotuloDelTicket(venta.numero)}</span>
       </Aviso>

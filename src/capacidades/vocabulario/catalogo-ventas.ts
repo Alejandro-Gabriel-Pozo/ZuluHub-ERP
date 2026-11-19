@@ -2,6 +2,13 @@
  * Los textos del módulo `ventas` (prefijo `ventas.`). Nació vacío (E0-T4): cada etapa que construye el módulo suma acá los suyos, cada uno con su
  * fuente verificable, sin tocar `catalogo.ts` (que ya lo incluye). Existe aparte para que E2, E3 y E4 no editen el mismo archivo.
  */
+const USO_DE_TEXTOS_DE_COBRAR = {
+  como: "FUNCION",
+  archivo: "apps/web/ui/plantillas/cobrar/textos-de-cobrar.ts",
+  nombre: "textosDeCobrar",
+} as const;
+const FUENTE_DE_COBRAR_COMO_LA_MAQUETA = { decision: "DEC-0769" } as const;
+
 export const TEXTOS_DE_VENTAS = {
   // El genérico aprobado por el dueño el 30/10/2026 («Interfaz sobria»: mensaje genérico antes que uno por acción; `CLAUDE.md`); el mismo texto ya aprobado de `caja.error.accion_no_permitida`
   // (maqueta `medios.html`, 09/11/2026). Fuente de que ventas lo use: `servidor-del-mostrador-minimo.md` §8, «Los seis avisos sin texto usan el genérico».
@@ -83,8 +90,33 @@ export const TEXTOS_DE_VENTAS = {
   "ventas.cobro.abri_la_caja": { porDefecto: "Abrí la caja para cobrar" },
   // M6 «Agregar otro medio»: aprobado el 15/11/2026 (DDD:171, alcance e; TMP §1, fila M6).
   "ventas.cobro.agregar_otro_medio": { porDefecto: "Agregar otro medio" },
-  // «Volver»: aprobado en `imprimir.html:327` y `datos-cobro.html:282` (DDD:175). Acá es el botón que vuelve de «cobrar» a la cuenta: SUPUESTO (DEC-0500), la maqueta dice «Volver a la cuenta».
-  "ventas.cobro.volver": { porDefecto: "Volver" },
+  // La vista «Cobro» como la maqueta (DDD:294: manda la maqueta): título «Cobro» y «Volver a la cuenta» (`venta-rapida-v4.html:854`), «Resultado» (`:877`), «No se pudo cobrar. No se cobró nada.» (aprobado
+  // el 09/11/2026: `textos-por-aprobar.html` n.º 13, `:401`) y «Volver al cobro» (`:880`). Reemplazan al supuesto «Volver» de DEC-0501 (la clave `ventas.cobro.volver` se quitó). Fuente: DEC-0769.
+  "ventas.cobro.titulo": {
+    porDefecto: "Cobro",
+    usos: [USO_DE_TEXTOS_DE_COBRAR],
+    fuente: FUENTE_DE_COBRAR_COMO_LA_MAQUETA,
+  },
+  "ventas.cobro.volver_a_la_cuenta": {
+    porDefecto: "Volver a la cuenta",
+    usos: [USO_DE_TEXTOS_DE_COBRAR],
+    fuente: FUENTE_DE_COBRAR_COMO_LA_MAQUETA,
+  },
+  "ventas.cobro.resultado": {
+    porDefecto: "Resultado",
+    usos: [USO_DE_TEXTOS_DE_COBRAR],
+    fuente: FUENTE_DE_COBRAR_COMO_LA_MAQUETA,
+  },
+  "ventas.cobro.no_se_pudo": {
+    porDefecto: "No se pudo cobrar. No se cobró nada.",
+    usos: [USO_DE_TEXTOS_DE_COBRAR],
+    fuente: FUENTE_DE_COBRAR_COMO_LA_MAQUETA,
+  },
+  "ventas.cobro.volver_al_cobro": {
+    porDefecto: "Volver al cobro",
+    usos: [USO_DE_TEXTOS_DE_COBRAR],
+    fuente: FUENTE_DE_COBRAR_COMO_LA_MAQUETA,
+  },
   // Datos del cobro (decisión 129; aprobados el 09/11/2026 en `datos-cobro.html:270`, reutilizados en un lugar nuevo: DDD:175, `TMP` §6.1). Los rótulos llevan «(opcional)» como en `datos-cobro.html:321`.
   "ventas.cobro.dato.cupon": { porDefecto: "Cupón" },
   "ventas.cobro.dato.ultimos4": { porDefecto: "Últimos 4 dígitos" },

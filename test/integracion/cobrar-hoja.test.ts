@@ -82,7 +82,7 @@ describe.skipIf(base === null)(
       const e = await m.escenario();
       await m.cajaAbierta(e);
       await m.cajaAbierta(e);
-      expect(await preparar(e)).toEqual({ estado: "NO_PERMITIDO" });
+      expect(await preparar(e)).toEqual({ estado: "NO_PERMITIDO", jornadaAbierta: true });
     });
 
     it("sin permiso o con una persona de otra sucursal, la lectura falla cerrada (no devuelve una caja)", async () => {

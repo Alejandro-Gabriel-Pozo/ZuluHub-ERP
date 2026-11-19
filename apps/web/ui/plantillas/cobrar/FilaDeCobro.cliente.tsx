@@ -28,7 +28,7 @@ export type PropsDeFilaDeCobro = Readonly<{
 }>;
 
 /**
- * Una fila de la hoja de cobro (maqueta `venta-rapida-v4.html`): el medio, la cuenta de cobro (solo si el medio tiene cuentas; es opcional, decisión 151), el importe con coma y, si el medio
+ * Una fila de la hoja de cobro (maqueta `venta-rapida-v4.html`): el medio y el importe lado a lado, debajo la cuenta de cobro (solo si el medio tiene cuentas; es opcional, decisión 151) y, si el medio
  * los admite, los datos opcionales. Solo ofrece lo que el servidor ofreció: medios activos, cuentas de la sucursal y marcas activas; no replica ninguna regla de negocio.
  */
 export function FilaDeCobro({
@@ -43,17 +43,29 @@ export function FilaDeCobro({
   const medio: MedioParaCobrar | undefined = opciones.medios.find((m) => m.id === pago.medioId);
   return (
     <div className={estilos["fila"]}>
-      <Selector
-        dato="medio-de-cobro"
-        etiqueta={textos.medio}
-        valor={pago.medioId}
-        alCambiar={(id) => {
-          const nuevo = opciones.medios.find((m) => m.id === id);
-          if (nuevo !== undefined) alCambiar(cambiarDeMedio(pago, nuevo));
-        }}
-        opciones={opciones.medios.map((m) => ({ valor: m.id, etiqueta: nombreDelMedio(m) }))}
-        deshabilitado={deshabilitado}
-      />
+      <div className={estilos["medioEImporte"]}>
+        <Selector
+          dato="medio-de-cobro"
+          etiqueta={textos.medio}
+          valor={pago.medioId}
+          alCambiar={(id) => {
+            const nuevo = opciones.medios.find((m) => m.id === id);
+            if (nuevo !== undefined) alCambiar(cambiarDeMedio(pago, nuevo));
+          }}
+          opciones={opciones.medios.map((m) => ({ valor: m.id, etiqueta: nombreDelMedio(m) }))}
+          deshabilitado={deshabilitado}
+        />
+        <CampoImporte
+          dato="importe-de-cobro"
+          etiqueta={textos.importe}
+          valor={pago.importe}
+          alCambiar={(importe) => {
+            alCambiar({ ...pago, importe, tocado: true });
+          }}
+          error={pago.tocado && estado.importeNoValido ? textos.importeNoValido : undefined}
+          deshabilitado={deshabilitado}
+        />
+      </div>
       {medio === undefined || medio.cuentas.length === 0 ? null : (
         <Selector
           dato="cuenta-de-cobro"
@@ -67,16 +79,6 @@ export function FilaDeCobro({
           deshabilitado={deshabilitado}
         />
       )}
-      <CampoImporte
-        dato="importe-de-cobro"
-        etiqueta={textos.importe}
-        valor={pago.importe}
-        alCambiar={(importe) => {
-          alCambiar({ ...pago, importe, tocado: true });
-        }}
-        error={pago.tocado && estado.importeNoValido ? textos.importeNoValido : undefined}
-        deshabilitado={deshabilitado}
-      />
       {medio === undefined ? null : (
         <DatosDelMedio
           admite={medio.datosQuePide}
@@ -91,9 +93,11 @@ export function FilaDeCobro({
         />
       )}
       {alQuitar === null ? null : (
-        <Boton variante="secundaria" alTocar={alQuitar} deshabilitado={deshabilitado}>
-          {textos.quitar}
-        </Boton>
+        <div className={estilos["quitar"]}>
+          <Boton variante="secundaria" alTocar={alQuitar} deshabilitado={deshabilitado}>
+            {textos.quitar}
+          </Boton>
+        </div>
       )}
     </div>
   );

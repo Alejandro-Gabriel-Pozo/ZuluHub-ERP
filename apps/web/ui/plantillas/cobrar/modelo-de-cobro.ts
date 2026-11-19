@@ -53,7 +53,7 @@ export type OpcionesParaCobrar = Readonly<{
 export type CobroPreparado =
   | Readonly<{ estado: "LISTO"; cajaId: string; opciones: OpcionesParaCobrar }>
   | Readonly<{ estado: "ABRIR_LA_CAJA" }>
-  | Readonly<{ estado: "NO_PERMITIDO" }>;
+  | Readonly<{ estado: "NO_PERMITIDO"; jornadaAbierta: boolean }>;
 
 // ─── Los datos opcionales de un cobro ──────────────────────────────────────────────────────────────────
 

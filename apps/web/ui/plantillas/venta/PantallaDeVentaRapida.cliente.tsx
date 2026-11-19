@@ -6,8 +6,10 @@ import {
   type ErrorPublico,
   type Respuesta,
 } from "../../../../../src/capacidades/experiencia/respuesta";
+import { Aviso } from "../../componentes/Aviso";
 import { Boton } from "../../componentes/Boton.cliente";
 import { Campo } from "../../componentes/Campo";
+import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
 import { Superposicion } from "../../patrones/Superposicion";
 import { formatearImporte } from "../../patrones/formato-fiscal";
@@ -60,6 +62,8 @@ export type PropsDePantallaDeVentaRapida = Readonly<{
         textos: TextosDeCobrar;
         cobrar: (pedido: unknown) => Promise<Respuesta<VentaCobrada>>;
         anular: (pedido: unknown) => Promise<Respuesta<TicketAnulado>>;
+        /** Adónde lleva «Abrir caja» cuando no hay caja abierta (`RUTA_DE_LA_CAJA`); `null` si la persona no puede abrirla: entonces el aviso va sin botón (DEC-0502). */
+        rutaParaAbrirLaCaja: string | null;
       }>
     | undefined;
 }>;
@@ -78,6 +82,8 @@ type Resultado = Readonly<{
 
 /** Tras cerrar la hoja se ignora un segundo toque sobre un producto: evita abrirla dos veces con un doble toque (decisión 171 y maqueta v4). */
 const ESPERA_TRAS_CERRAR_LA_HOJA_MS = 500;
+/** Tras abrir el cobro, un toque en «Cobrar» se ignora este rato: el segundo toque de un doble toque no cobra solo (decisión 171, `venta-rapida-v4.html:478`). */
+export const ESPERA_AL_ABRIR_EL_COBRO_MS = 500;
 const DURACION_DEL_AVISO_MS = 2500;
 /** El total de una cuenta sin líneas: el cero de «no hay nada que cotizar» (no es un cálculo; con líneas el total es siempre el que da el servidor). */
 const TOTAL_SIN_LINEAS = "0.00";
@@ -104,6 +110,10 @@ export function PantallaDeVentaRapida({
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [aviso, setAviso] = useState("");
   const hojaBloqueada = useRef(false);
+  const esperaAlAbrirElCobro = useRef(false);
+  const temporizadorDelCobro = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const envolturaDeCobrar = useRef<HTMLDivElement>(null);
+  const yaCobro = useRef(false);
   const temporizadorDeLaHoja = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const porId = useMemo(() => new Map(productos.map((p) => [p.id, p])), [productos]);
@@ -134,9 +144,19 @@ export function PantallaDeVentaRapida({
   useEffect(
     () => () => {
       if (temporizadorDeLaHoja.current !== null) clearTimeout(temporizadorDeLaHoja.current);
+      if (temporizadorDelCobro.current !== null) clearTimeout(temporizadorDelCobro.current);
     },
     [],
   );
+
+  // Al volver del cobro a la cuenta, el foco vuelve al botón «Cobrar» de la barra.
+  useEffect(() => {
+    if (cobrando) {
+      yaCobro.current = true;
+      return;
+    }
+    if (yaCobro.current) envolturaDeCobrar.current?.querySelector("button")?.focus();
+  }, [cobrando]);
 
   const estado: EstadoDeLaCotizacion =
     cuenta.length === 0
@@ -157,6 +177,14 @@ export function PantallaDeVentaRapida({
     };
   }, [aviso]);
 
+  const abrirElCobro = () => {
+    esperaAlAbrirElCobro.current = true;
+    if (temporizadorDelCobro.current !== null) clearTimeout(temporizadorDelCobro.current);
+    temporizadorDelCobro.current = setTimeout(() => {
+      esperaAlAbrirElCobro.current = false;
+    }, ESPERA_AL_ABRIR_EL_COBRO_MS);
+    setCobrando(true);
+  };
   const abrirHoja = (producto: ProductoDeLaVenta) => {
     if (hojaBloqueada.current) return;
     setAbierto(producto);
@@ -177,6 +205,37 @@ export function PantallaDeVentaRapida({
 
   const cotizacion = estado.tipo === "LISTA" ? estado.cotizacion : null;
   const formaAbierta = abierto === null ? null : formaDeCantidad(abierto);
+
+  // El cobro es una vista de la pantalla (maqueta `vCobro`, DDD:294): mientras está abierto no se dibuja la venta; al volver, la cuenta sigue como estaba.
+  if (cobro !== undefined && cobrando && cotizacion !== null) {
+    return (
+      <div className={estilos["pantalla"]}>
+        <PantallaDeCobro
+          cuenta={cuenta}
+          total={cotizacion.total}
+          preparado={cobro.preparado}
+          textos={cobro.textos}
+          cobrar={cobro.cobrar}
+          anular={cobro.anular}
+          esperaAlAbrir={esperaAlAbrirElCobro}
+          alVolver={() => {
+            setCobrando(false);
+          }}
+          alNuevaVenta={() => {
+            // La venta terminó (cobrada o anulada): cuenta vacía, sin cotización vieja y la vista de cobro cerrada.
+            setCobrando(false);
+            setCuenta([]);
+            setResultado(null);
+            setCuentaAbierta(false);
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Sin caja abierta, o sin permiso, se avisa en la barra y «Cobrar» queda apagado; con el día en cierre o cerrado tampoco se arma la cuenta (maqueta `franjaCaja` y `bloqueaAgregar`).
+  const preparado = cobro?.preparado;
+  const sinJornada = preparado?.estado === "NO_PERMITIDO" && !preparado.jornadaAbierta;
 
   return (
     <div className={estilos["pantalla"]}>
@@ -243,7 +302,7 @@ export function PantallaDeVentaRapida({
                     type="button"
                     className={estilos["tarjeta"]}
                     data-en-la-cuenta={enLaCuenta > 0 ? "" : undefined}
-                    disabled={!sePuedeAgregar(p)}
+                    disabled={!sePuedeAgregar(p) || sinJornada}
                     onClick={() => {
                       abrirHoja(p);
                     }}
@@ -290,6 +349,28 @@ export function PantallaDeVentaRapida({
       ) : null}
 
       <div className={estilos["barra"]}>
+        {cobro === undefined || preparado === undefined || preparado.estado === "LISTO" ? null : (
+          <div className={estilos["franjaDeCaja"]}>
+            {preparado.estado === "ABRIR_LA_CAJA" ? (
+              <Aviso
+                tono="aviso"
+                {...(cobro.rutaParaAbrirLaCaja === null
+                  ? {}
+                  : {
+                      accion: (
+                        <EnlaceDeAccion href={cobro.rutaParaAbrirLaCaja} variante="secundaria">
+                          {cobro.textos.abrirCaja}
+                        </EnlaceDeAccion>
+                      ),
+                    })}
+              >
+                {cobro.textos.abrirLaCaja}
+              </Aviso>
+            ) : (
+              <Aviso tono="peligro">{cobro.textos.noPermitido}</Aviso>
+            )}
+          </div>
+        )}
         <button
           type="button"
           className={estilos["verCuenta"]}
@@ -303,14 +384,18 @@ export function PantallaDeVentaRapida({
           {cuenta.length === 0 ? null : <span className={estilos["cuantas"]}>{cuenta.length}</span>}
         </button>
         {cobro === undefined ? null : (
-          <Boton
-            deshabilitado={cotizacion === null || !esImporteValido(cotizacion.total.monto)}
-            alTocar={() => {
-              setCobrando(true);
-            }}
-          >
-            {cobro.textos.cobrar}
-          </Boton>
+          <div ref={envolturaDeCobrar} className={estilos["envolturaDeCobrar"]}>
+            <Boton
+              deshabilitado={
+                preparado?.estado !== "LISTO" ||
+                cotizacion === null ||
+                !esImporteValido(cotizacion.total.monto)
+              }
+              alTocar={abrirElCobro}
+            >
+              {cobro.textos.cobrar}
+            </Boton>
+          </div>
         )}
         <p className={estilos["total"]} aria-busy={estado.tipo === "PENDIENTE"}>
           <span>{textos.total}</span>
@@ -323,27 +408,6 @@ export function PantallaDeVentaRapida({
           </strong>
         </p>
       </div>
-
-      {cobro !== undefined && cobrando && cotizacion !== null ? (
-        <PantallaDeCobro
-          cuenta={cuenta}
-          total={cotizacion.total}
-          preparado={cobro.preparado}
-          textos={cobro.textos}
-          cobrar={cobro.cobrar}
-          anular={cobro.anular}
-          alVolver={() => {
-            setCobrando(false);
-          }}
-          alNuevaVenta={() => {
-            // La venta terminó (cobrada o anulada): cuenta vacía, sin cotización vieja y la hoja cerrada.
-            setCobrando(false);
-            setCuenta([]);
-            setResultado(null);
-            setCuentaAbierta(false);
-          }}
-        />
-      ) : null}
 
       <Superposicion
         abierta={abierto !== null && formaAbierta !== null}

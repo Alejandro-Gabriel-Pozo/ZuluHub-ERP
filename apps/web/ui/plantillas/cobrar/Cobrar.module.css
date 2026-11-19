@@ -53,3 +53,53 @@
   justify-content: space-between;
   gap: var(--espacio-3);
 }
+
+.vista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  /* Lugar para el pie fijo. */
+  padding-bottom: calc(var(--objetivo-minimo) + var(--espacio-6));
+}
+
+.encabezado {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.titulo {
+  margin: 0;
+  font-size: var(--tipo-tamano-medio);
+}
+
+.titulo:focus-visible {
+  outline: var(--borde-grosor-fuerte) solid var(--accion-primaria-fondo);
+  outline-offset: var(--espacio-1);
+}
+
+.pie {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: var(--capa-franja-de-aviso);
+  padding: var(--espacio-3) var(--espacio-4);
+  background: var(--color-superficie-elevada);
+  box-shadow: var(--sombra-elevada);
+}
+
+/* Medio e importe lado a lado; en pantallas angostas se apilan (la maqueta no dice el ancho: 22 rem alcanza para dos campos). */
+.medioEImporte {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacio-3);
+}
+
+@media (max-width: 22rem) {
+  .medioEImporte {
+    grid-template-columns: 1fr;
+  }
+}
+
+.quitar {
+  align-self: flex-end;
+}

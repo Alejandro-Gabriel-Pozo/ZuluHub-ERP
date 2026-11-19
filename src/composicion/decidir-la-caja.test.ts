@@ -46,31 +46,35 @@ describe("decidirLaCaja (DEC-0502: nace cerrado, nunca se asume una caja)", () =
   it("más de una abierta: no se elige por la persona", () => {
     expect(decidirLaCaja(estado([caja("c1", "ABIERTA"), caja("c2", "ABIERTA")]))).toEqual({
       tipo: "NO_PERMITIDO",
+      jornadaAbierta: true,
     });
   });
 
   it("la caja en cierre, o en cierre junto a una sin sesión: no se permite", () => {
-    expect(decidirLaCaja(estado([caja("c1", "EN_CIERRE")]))).toEqual({ tipo: "NO_PERMITIDO" });
+    expect(decidirLaCaja(estado([caja("c1", "EN_CIERRE")]))).toEqual({ tipo: "NO_PERMITIDO", jornadaAbierta: true });
     expect(decidirLaCaja(estado([caja("c1", "EN_CIERRE"), caja("c2", "SIN_SESION")]))).toEqual({
       tipo: "NO_PERMITIDO",
+      jornadaAbierta: true,
     });
   });
 
   it("una sesión de una jornada vencida no cobra", () => {
-    expect(decidirLaCaja(estado([caja("c1", "ABIERTA", true)]))).toEqual({ tipo: "NO_PERMITIDO" });
+    expect(decidirLaCaja(estado([caja("c1", "ABIERTA", true)]))).toEqual({ tipo: "NO_PERMITIDO", jornadaAbierta: true });
   });
 
   it("sin ninguna caja no se permite", () => {
-    expect(decidirLaCaja(estado([]))).toEqual({ tipo: "NO_PERMITIDO" });
+    expect(decidirLaCaja(estado([]))).toEqual({ tipo: "NO_PERMITIDO", jornadaAbierta: true });
   });
 
   it("con el día en auditoría o cerrado no se permite, aunque haya una caja abierta o sin sesión", () => {
     for (const jornada of ["EN_AUDITORIA", "CERRADA"] as const) {
       expect(decidirLaCaja(estado([caja("c1", "ABIERTA")], jornada))).toEqual({
         tipo: "NO_PERMITIDO",
+        jornadaAbierta: false,
       });
       expect(decidirLaCaja(estado([caja("c1", "SIN_SESION")], jornada))).toEqual({
         tipo: "NO_PERMITIDO",
+        jornadaAbierta: false,
       });
     }
   });

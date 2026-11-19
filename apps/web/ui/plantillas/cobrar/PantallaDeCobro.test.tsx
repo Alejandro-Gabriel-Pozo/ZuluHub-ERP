@@ -114,6 +114,8 @@ async function hoja(
 }
 
 const boton = (nombre: string) => page.getByRole("button", { name: nombre, exact: true });
+const delCuadro = (nombre: string) =>
+  page.getByRole("dialog").getByRole("button", { name: nombre, exact: true });
 const campo = (nombre: string | RegExp) => page.getByRole("textbox", { name: nombre });
 const medio = () => page.getByRole("combobox", { name: "Medio" });
 const pedidoDe = (llamadas: { mock: { calls: unknown[][] } }, n: number) =>
@@ -124,7 +126,7 @@ afterEach(() => {
   restaurarConexion();
 });
 
-describe("PantallaDeCobro: la hoja", () => {
+describe("PantallaDeCobro: la vista", () => {
   it("abre con el total, el efectivo con el total como importe y «Cobro completo»; sin violaciones de accesibilidad", async () => {
     await hoja();
     expect(document.querySelector("[data-total-del-cobro]")?.textContent).toBe("$ 1.000,00");
@@ -227,24 +229,64 @@ describe("PantallaDeCobro: la hoja", () => {
     expect(page.getByRole("textbox", { name: "Importe" }).elements()).toHaveLength(1);
   });
 
-  it("sin caja abierta dice «Abrí la caja para cobrar» y no se cobra; en cualquier otro caso, el genérico", async () => {
-    const abrir = await hoja({ preparado: { estado: "ABRIR_LA_CAJA" } });
-    await expect.element(page.getByText("Abrí la caja para cobrar")).toBeVisible();
-    await expect.element(boton("Cobrar")).toBeDisabled();
-    expect(abrir.cobrar).not.toHaveBeenCalled();
-  });
+  it.each([
+    ["sin caja abierta", { estado: "ABRIR_LA_CAJA" }],
+    ["sin permiso o con el día cerrado", { estado: "NO_PERMITIDO", jornadaAbierta: false }],
+  ] as const)(
+    "%s la vista no dibuja avisos (la venta ya los dio) y «Cobrar» queda apagado: nace cerrado",
+    async (_caso, preparado) => {
+      const h = await hoja({ preparado });
+      await expect.element(boton("Cobrar")).toBeDisabled();
+      expect(page.getByText("Abrí la caja para cobrar").elements()).toHaveLength(0);
+      expect(page.getByText("Esta acción no está permitida").elements()).toHaveLength(0);
+      expect(h.cobrar).not.toHaveBeenCalled();
+      expect(await violacionesDeAccesibilidad()).toEqual([]);
+    },
+  );
 
-  it("caja no permitida: el genérico y «Cobrar» apagado", async () => {
-    await hoja({ preparado: { estado: "NO_PERMITIDO" } });
-    await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
-    await expect.element(boton("Cobrar")).toBeDisabled();
-    expect(await violacionesDeAccesibilidad()).toEqual([]);
-  });
-
-  it("«Volver» vuelve a la cuenta", async () => {
+  it("es una vista: «Cobro» con «‹ Volver a la cuenta» y sin «Volver» abajo; el foco va al título; «‹» vuelve a la cuenta", async () => {
     const { alVolver } = await hoja();
-    await userEvent.click(boton("Volver"));
+    await expect.element(page.getByRole("heading", { name: "Cobro", level: 2 })).toHaveFocus();
+    expect(page.getByRole("button", { name: "Volver", exact: true }).elements()).toHaveLength(0);
+    expect(page.getByRole("dialog").elements()).toHaveLength(0);
+    await userEvent.click(boton("Volver a la cuenta"));
     expect(alVolver).toHaveBeenCalledTimes(1);
+  });
+
+  it("Medio e Importe van lado a lado, antes que la cuenta de cobro", async () => {
+    await hoja();
+    await userEvent.selectOptions(medio(), "m-debito");
+    const y = (el: Element) => el.getBoundingClientRect();
+    const m = y(medio().element());
+    const i = y(campo("Importe").element());
+    const c = y(page.getByRole("combobox", { name: /Cuenta de cobro/ }).element());
+    expect(Math.abs(m.top - i.top)).toBeLessThan(4);
+    expect(i.left).toBeGreaterThan(m.left);
+    expect(c.top).toBeGreaterThan(m.top);
+  });
+
+  it("un toque en «Cobrar» durante la espera de apertura se ignora", async () => {
+    const espera = { current: true };
+    const cobrar = vi.fn<Cobrar>(() => Promise.resolve({ ok: true, dato: VENTA }));
+    await render(
+      <PantallaDeCobro
+        cuenta={cuenta}
+        total={TOTAL}
+        preparado={LISTO}
+        textos={textosDeCobrar()}
+        cobrar={cobrar}
+        anular={vi.fn<Anular>()}
+        alVolver={() => undefined}
+        alNuevaVenta={() => undefined}
+        nuevoId={nuevoId}
+        esperaAlAbrir={espera}
+      />,
+    );
+    await userEvent.click(boton("Cobrar"));
+    expect(cobrar).not.toHaveBeenCalled();
+    espera.current = false;
+    await userEvent.click(boton("Cobrar"));
+    await expect.poll(() => cobrar.mock.calls.length).toBe(1);
   });
 });
 
@@ -315,7 +357,7 @@ describe("PantallaDeCobro: cobrar", () => {
     expect(cobrar).toHaveBeenCalledTimes(1);
     // Mientras corre no se edita ni se vuelve.
     await expect.element(campo("Importe")).toBeDisabled();
-    await expect.element(boton("Volver")).toBeDisabled();
+    await expect.element(boton("Volver a la cuenta")).toBeDisabled();
     resolver({ ok: true, dato: VENTA });
     await expect.element(page.getByText("Ticket N.º 12")).toBeVisible();
     await expect.element(page.getByText("Cobrado", { exact: true }).first()).toBeVisible();
@@ -360,7 +402,7 @@ describe("PantallaDeCobro: cobrar", () => {
     expect(pedidoDe(cobrar, 1)["claveIdempotencia"]).toBe(pedidoDe(cobrar, 0)["claveIdempotencia"]);
   });
 
-  it("un rechazo del servidor sale como el genérico, la hoja se puede corregir y el siguiente intento lleva OTRA clave y los mismos ids", async () => {
+  it("un rechazo del servidor dice «No se pudo cobrar. No se cobró nada.» con el resumen y «Volver al cobro»; al volver todo sigue escrito y el siguiente intento lleva OTRA clave y los mismos ids", async () => {
     let intento = 0;
     const { cobrar } = await hoja({
       cobrar: () => {
@@ -368,10 +410,16 @@ describe("PantallaDeCobro: cobrar", () => {
         return Promise.resolve(intento === 1 ? GENERICO : { ok: true, dato: VENTA });
       },
     });
+    await userEvent.fill(campo("Importe"), "1000");
     await userEvent.click(boton("Cobrar"));
-    await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
-    await expect.element(campo("Importe")).toBeEnabled();
+    await expect.element(page.getByText("No se pudo cobrar. No se cobró nada.")).toBeVisible();
+    await expect.element(page.getByRole("heading", { name: "Resultado", level: 2 })).toBeVisible();
+    await expect.element(page.getByText("Efectivo")).toBeVisible();
+    expect(page.getByRole("button", { name: "Volver a la cuenta" }).elements()).toHaveLength(0);
     expect(await violacionesDeAccesibilidad()).toEqual([]);
+    await userEvent.click(boton("Volver al cobro"));
+    await expect.element(campo("Importe")).toHaveValue("1.000,00");
+    expect(page.getByText("Esta acción no está permitida").elements()).toHaveLength(0);
     await userEvent.click(boton("Cobrar"));
     await expect.element(page.getByText("Ticket N.º 12")).toBeVisible();
     const primero = pedidoDe(cobrar, 0);
@@ -380,6 +428,15 @@ describe("PantallaDeCobro: cobrar", () => {
     expect(segundo["cuentaId"]).toBe(primero["cuentaId"]);
     expect(segundo["ejemplarId"]).toBe(primero["ejemplarId"]);
     expect(segundo["lineas"]).toEqual(primero["lineas"]);
+  });
+
+  it("otro rechazo (permiso, empresa que no opera) se sigue mostrando en la vista de cobro, no como resultado", async () => {
+    await hoja({
+      cobrar: () => Promise.resolve({ ok: false, error: errorDeCodigo("EMPRESA_NO_OPERA") }),
+    });
+    await userEvent.click(boton("Cobrar"));
+    await expect.element(boton("Cobrar")).toBeVisible();
+    expect(page.getByText("No se pudo cobrar. No se cobró nada.").elements()).toHaveLength(0);
   });
 
   it("sin conexión no se puede enviar: «Cobrar» apagado con su motivo y la franja", async () => {
@@ -443,7 +500,7 @@ describe("PantallaDeCobro: el resultado y anular", () => {
   it("anular sin motivo dice «Escribí el motivo» y no envía nada", async () => {
     const { anular } = await cobrada();
     await userEvent.click(boton("Anular"));
-    await userEvent.click(boton("Anular"));
+    await userEvent.click(delCuadro("Anular"));
     await expect.element(page.getByText("Escribí el motivo")).toBeVisible();
     expect(anular).not.toHaveBeenCalled();
     expect(await violacionesDeAccesibilidad()).toEqual([]);
@@ -453,7 +510,7 @@ describe("PantallaDeCobro: el resultado y anular", () => {
     const { anular } = await cobrada();
     await userEvent.click(boton("Anular"));
     await userEvent.fill(campo("Motivo"), "  Se cobró de más  ");
-    await userEvent.click(boton("Anular"));
+    await userEvent.click(delCuadro("Anular"));
     await expect.element(page.getByText("Anulado", { exact: true }).first()).toBeVisible();
     await expect.element(page.getByText("Se cobró de más")).toBeVisible();
     expect(anular).toHaveBeenCalledTimes(1);
@@ -465,6 +522,7 @@ describe("PantallaDeCobro: el resultado y anular", () => {
     });
     expect(typeof pedido["ejemplarNuevoId"]).toBe("string");
     expect(typeof pedido["claveIdempotencia"]).toBe("string");
+    expect(page.getByRole("dialog").elements()).toHaveLength(0);
     expect(page.getByRole("button", { name: "Anular", exact: true }).elements()).toHaveLength(0);
     await expect.element(boton("Nueva venta")).toBeVisible();
   });
@@ -481,10 +539,10 @@ describe("PantallaDeCobro: el resultado y anular", () => {
     });
     await userEvent.click(boton("Anular"));
     await userEvent.fill(campo("Motivo"), "Error de carga");
-    const confirmar = boton("Anular");
+    const confirmar = delCuadro("Anular");
     tocar(confirmar);
     tocar(confirmar);
-    await expect.element(page.getByText("Nueva venta")).toBeVisible();
+    await expect.element(page.getByText("Error de carga")).toBeVisible();
     expect(anular).toHaveBeenCalledTimes(2);
     expect(pedidoDe(anular, 1)).toEqual(pedidoDe(anular, 0));
   });
@@ -493,9 +551,9 @@ describe("PantallaDeCobro: el resultado y anular", () => {
     await cobrada({ anular: () => Promise.resolve(GENERICO) });
     await userEvent.click(boton("Anular"));
     await userEvent.fill(campo("Motivo"), "Error");
-    await userEvent.click(boton("Anular"));
+    await userEvent.click(delCuadro("Anular"));
     await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
-    await userEvent.click(boton("Cancelar"));
+    await userEvent.click(delCuadro("Cancelar"));
     await expect.element(boton("Nueva venta")).toBeVisible();
     await expect.element(page.getByText("Ticket N.º 12")).toBeVisible();
   });

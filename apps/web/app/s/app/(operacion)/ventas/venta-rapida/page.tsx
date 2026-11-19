@@ -1,8 +1,10 @@
 import { errorDeCodigo } from "../../../../../../../../src/capacidades/experiencia/respuesta";
 import { pantallaDeOperacion } from "../../../../../../pantallas/operacion";
 import { cobroDeLaPagina } from "../../../../../../servidor/cobrar";
+import { accionesDeLaPantallaDeCaja } from "../../../../../../servidor/ofertas-de-caja";
 import { cargarLaVentaRapida } from "../../../../../../servidor/venta-rapida";
 import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
+import { RUTA_DE_LA_CAJA } from "../../../../../../ui/plantillas/caja/lista-de-caja";
 import { textosDeCobrar } from "../../../../../../ui/plantillas/cobrar/textos-de-cobrar";
 import { textosDeLaVenta } from "../../../../../../ui/plantillas/venta/modelo-de-venta-rapida";
 import { PantallaDeVentaRapida } from "../../../../../../ui/plantillas/venta/PantallaDeVentaRapida.cliente";
@@ -27,10 +29,15 @@ export default async function PaginaDeLaVentaRapida() {
         textos={textosDeLaVenta()}
         cotizar={cotizarElCarritoAccion}
         cobro={{
-          preparado: cobro.ok ? cobro.dato : { estado: "NO_PERMITIDO" },
+          // Si la lectura falla, la venta se arma igual y cobrar queda cerrado (la jornada se asume abierta: no se apaga la venta por una lectura caída).
+          preparado: cobro.ok ? cobro.dato : { estado: "NO_PERMITIDO", jornadaAbierta: true },
           textos: textosDeCobrar(),
           cobrar: cobrarLaVentaAccion,
           anular: anularElTicketAccion,
+          // «Abrir caja» solo a quien puede abrirla (DEC-0502); la pantalla de Caja vuelve a autorizar.
+          rutaParaAbrirLaCaja: (await accionesDeLaPantallaDeCaja(contexto)).abrir
+            ? RUTA_DE_LA_CAJA
+            : null,
         }}
       />
     );
