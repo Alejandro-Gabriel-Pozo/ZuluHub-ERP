@@ -27,6 +27,12 @@ import {
   armarDesactivarModuloDeEmpresa,
 } from "./modulos-de-empresa";
 import {
+  DECLARACION_DE_ARREPENTIR_CAMBIO_DE_PLAN,
+  DECLARACION_DE_DEFINIR_POLITICA_DE_CAMBIO_DE_PLAN,
+  armarArrepentirCambioDePlan,
+  armarDefinirPoliticaDeCambioDePlan,
+} from "./politica-de-cambio-de-plan";
+import {
   DECLARACION_DE_PUBLICAR_VERSION_DE_PLAN,
   armarPublicarVersionDePlan,
 } from "./publicar-version-de-plan";
@@ -45,6 +51,8 @@ export const DECLARACIONES_DE_MARCAS_Y_PLANES = {
   publicarVersionDePlan: DECLARACION_DE_PUBLICAR_VERSION_DE_PLAN,
   asignarPlan: DECLARACION_DE_ASIGNAR_PLAN,
   migrarTenantsDeVersion: DECLARACION_DE_MIGRAR_TENANTS_DE_VERSION,
+  definirPoliticaDeCambioDePlan: DECLARACION_DE_DEFINIR_POLITICA_DE_CAMBIO_DE_PLAN,
+  arrepentirCambioDePlan: DECLARACION_DE_ARREPENTIR_CAMBIO_DE_PLAN,
   ajustarPerilla: DECLARACION_DE_AJUSTAR_PERILLA,
   activarModuloDeEmpresa: DECLARACION_DE_ACTIVAR_MODULO_DE_EMPRESA,
   desactivarModuloDeEmpresa: DECLARACION_DE_DESACTIVAR_MODULO_DE_EMPRESA,
@@ -64,6 +72,8 @@ export function crearCasosDeUsoDeMarcasYPlanes(dependencias: DependenciasDeMarca
     publicarVersionDePlan: armarPublicarVersionDePlan(dependencias),
     asignarPlan: armarAsignarPlan(dependencias),
     migrarTenantsDeVersion: armarMigrarTenantsDeVersion(dependencias),
+    definirPoliticaDeCambioDePlan: armarDefinirPoliticaDeCambioDePlan(dependencias),
+    arrepentirCambioDePlan: armarArrepentirCambioDePlan(dependencias),
     ajustarPerilla: armarAjustarPerilla(dependencias),
     activarModuloDeEmpresa: armarActivarModuloDeEmpresa(dependencias),
     desactivarModuloDeEmpresa: armarDesactivarModuloDeEmpresa(dependencias),
