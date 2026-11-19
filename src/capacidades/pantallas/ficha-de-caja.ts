@@ -7,7 +7,7 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  * propio tipo local y la comprueba `test/web/ficha-de-caja.test.ts` contra el catálogo de textos, el de permisos y la tabla del menú, para que no se desfase. No crea acciones ni permisos.
  * Previene: un botón o un texto que nadie aprobó, y una ruta o una fila de menú que se mueve sin que la ficha lo note.
  *
- * DIFERENCIAS CON LA MAQUETA (`caja.html`, Pedernal-docs 10-ux-ui; la maqueta manda: cada desvío lleva su fundamento y lo decide el dueño; hoy ninguno tiene respuesta):
+ * DIFERENCIAS CON LA MAQUETA (`caja.html`, Pedernal-docs 10-ux-ui; la maqueta manda: cada desvío lleva su fundamento y lo decide el dueño). Los desvíos 1 a 3 están APROBADOS por el dueño (Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md, fila del 19/11/2026 «Caja, pantalla de apertura (PR-C1)», «Sí a las 3 diferencias como recomiendas»):
  *  1. Fondo sugerido: la maqueta rellena «Fondo inicial» con el efectivo contado en el último cierre y dice «Sugerido: el efectivo contado en el último cierre» (`vAbrir`; M15, aprobado
  *     el 15/11). Acá el campo nace vacío y no hay texto. Fundamento: es dinero que la pantalla propondría sin que nadie lo declare; falta decidir si se sugiere. Costo de cambiarlo: un valor
  *     inicial y una clave de texto (M15).
