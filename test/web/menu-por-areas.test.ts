@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import {
   AREAS_DEL_MENU,
@@ -513,10 +513,9 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     expect(FILAS_DEL_MENU.map((f) => f.clave)).toEqual(CLAVES_DE_HOY);
   });
   it("`ClaveDeFila` sigue cerrada: un nombre mal escrito no compila", () => {
-    const buena: ClaveDeFila = "venta-rapida";
-    // @ts-expect-error una clave que no está en la tabla no es una `ClaveDeFila`
-    const mala: ClaveDeFila = "pantalla-que-no-existe";
-    expect([buena, mala]).toHaveLength(2);
+    expectTypeOf<ClaveDeFila>().not.toEqualTypeOf<string>();
+    expectTypeOf<"venta-rapida">().toExtend<ClaveDeFila>();
+    expectTypeOf<"pantalla-que-no-existe">().not.toExtend<ClaveDeFila>();
   });
   it("el menú armado con la tabla real es el mismo que antes", () => {
     const acciones = [
