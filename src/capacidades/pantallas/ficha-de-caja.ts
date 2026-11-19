@@ -19,11 +19,11 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  *
  *  6. Sin ingreso, egreso, ajuste ni anulación de movimientos: la maqueta los trae y se reemplazan por el acto único de ingreso y salida de dinero (decisión del 18/11): no se construyen con la versión
  *     vieja. La lista de la jornada es solo de lectura; un ingreso o egreso manual viejo, si existiera, se rotula con su clase cruda.
- *  7. Cierre con diferencia: el arqueo muestra la diferencia con su signo (en rojo si falta, en aviso si sobra) y deja cerrar (criterio permisivo del 18/11, SUPUESTO P2, DEC-0765): no pide nota ni bloquea, y no suma texto.
+ *  7. Cierre con diferencia: el arqueo muestra la diferencia con su signo (en rojo si falta, en aviso si sobra) y deja cerrar (criterio permisivo del 18/11, SUPUESTO P2, DEC-0768): no pide nota ni bloquea, y no suma texto.
  *  8. «Volver» en «Contar» solo vuelve a la vista anterior y no cancela el cierre (SUPUESTO, DEC-0455).
  *
- * SUPUESTOS DE ESTE TRAMO (el dueño no los respondió; se declaran con su costo de revertir): P1 (DEC-0763), permisos del cierre = la tabla de a9 (`sesiones_caja.iniciar_cierre`, `cancelar_cierre`, `cerrar`,
- * confirmada por delegación el 15/11; revertir: cambiar la acción de cada botón, sin migración). P3 (DEC-0764), cada caja se abre por separado y tiene su propia sesión (un bloque por caja; revertir: pedir
+ * SUPUESTOS DE ESTE TRAMO (el dueño no los respondió; se declaran con su costo de revertir): P1 (DEC-0766), permisos del cierre = la tabla de a9 (`sesiones_caja.iniciar_cierre`, `cancelar_cierre`, `cerrar`,
+ * confirmada por delegación el 15/11; revertir: cambiar la acción de cada botón, sin migración). P3 (DEC-0767), cada caja se abre por separado y tiene su propia sesión (un bloque por caja; revertir: pedir
  * una sola abierta por sucursal en el servidor, y la pantalla no cambia). P2, lo de arriba (7).
  *
  * DEC-0502 (cobrar usa la única caja abierta; sin caja abierta pide abrirla): la oferta queda lista para Cobrar sin construir Cobrar: `RUTA_DE_LA_CAJA` (`lista-de-caja.ts`) es la
