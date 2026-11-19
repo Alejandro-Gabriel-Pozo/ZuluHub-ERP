@@ -211,8 +211,10 @@ export function datosPendientes(
   medio: MedioParaCobrar | undefined,
   pago: PagoEnEdicion,
 ): readonly DatoDelMedio[] {
-  const pedidos = medio === undefined ? [] : datosAdmitidos(medio);
-  return pedidos.filter((d) => medio?.datosQueSePiden[d] === true && pago.datos[d].trim() === "");
+  // Sin medio no hay datos admitidos (la lista sale vacía) y el filtro no corre.
+  return datosAdmitidos(medio).filter(
+    (d) => (medio as MedioParaCobrar).datosQueSePiden[d] && pago.datos[d].trim() === "",
+  );
 }
 
 export function estadoDelCobro(
