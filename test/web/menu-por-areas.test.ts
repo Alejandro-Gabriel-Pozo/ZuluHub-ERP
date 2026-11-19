@@ -6,6 +6,7 @@ import {
   GRUPOS_DEL_MENU,
   armarElMenu,
   problemasDelMenu,
+  type ClaveDeFila,
   type FilaDeAccion,
   type FilaDelMenu,
   type FilaDePantalla,
@@ -424,5 +425,123 @@ describe("«Mesas»: la fila declara la función de pago `salon` (X-1b)", () => 
     expect(claves(armarElMenu([ventaRapida], permisos(["ventas.ver"], ["ventas"]), null))).toEqual([
       ["ventas", [["venta-rapida"]]],
     ]);
+  });
+});
+
+describe("las claves de las filas salen de la tabla (E-5)", () => {
+  // Copiadas de `main` ANTES del cambio: una fila perdida, renombrada o reordenada rompe esta lista.
+  const CLAVES_DE_HOY = [
+    "venta-rapida",
+    "tickets-del-dia",
+    "comprobantes",
+    "caja",
+    "productos",
+    "secciones",
+    "mesas",
+    "impresoras",
+    "stock",
+    "configuracion-fiscal",
+    "medios-de-pago",
+    "contacto",
+    "cerrar-sesion",
+  ];
+  const MENU_DE_HOY = [
+    [
+      "ventas",
+      [
+        [
+          "mostrador",
+          [
+            ["pantalla", "venta-rapida", "/ventas/venta-rapida", "ventas.venta.menu"],
+            ["pantalla", "tickets-del-dia", "/ventas/tickets-del-dia", "ventas.tickets.menu"],
+          ],
+        ],
+        [
+          "comprobantes",
+          [
+            [
+              "pantalla",
+              "comprobantes",
+              "/facturacion/comprobantes",
+              "fiscal.pantalla.listado_titulo",
+            ],
+          ],
+        ],
+        ["caja", [["pantalla", "caja", "/caja", "caja.pantalla.titulo"]]],
+        [
+          "salon",
+          [
+            ["pantalla", "mesas", "/salon/mesas", "salon.texto.admin_mesas"],
+            ["pantalla", "impresoras", "/salon/impresoras", "comandas.texto.imprimir_impresoras"],
+          ],
+        ],
+      ],
+    ],
+    [
+      "catalogo",
+      [
+        ["productos", [["pantalla", "productos", "/catalogo/productos", "catalogo.lista.titulo"]]],
+        ["carta", [["pantalla", "secciones", "/catalogo/secciones", "catalogo.seccion.titulo"]]],
+        ["stock", [["pantalla", "stock", "/stock/depositos", "stock.pantalla.stock"]]],
+      ],
+    ],
+    [
+      "cuenta",
+      [
+        [
+          "empresa",
+          [
+            [
+              "pantalla",
+              "configuracion-fiscal",
+              "/configuracion-fiscal",
+              "fiscal.pantalla.config_titulo",
+            ],
+            ["pantalla", "medios-de-pago", "/caja/medios-de-pago", "caja.medios.titulo"],
+          ],
+        ],
+        [
+          "sucursal",
+          [["pantalla", "contacto", "/cuenta/contacto-de-la-sucursal", "sucursal.contacto_titulo"]],
+        ],
+        ["salir", [["accion", "cerrar-sesion", null, "cuenta.cerrar_sesion"]]],
+      ],
+    ],
+  ];
+
+  it("la tabla tiene los mismos nombres que antes, en el mismo orden", () => {
+    expect(FILAS_DEL_MENU.map((f) => f.clave)).toEqual(CLAVES_DE_HOY);
+  });
+  it("`ClaveDeFila` sigue cerrada: un nombre mal escrito no compila", () => {
+    const buena: ClaveDeFila = "venta-rapida";
+    // @ts-expect-error una clave que no está en la tabla no es una `ClaveDeFila`
+    const mala: ClaveDeFila = "pantalla-que-no-existe";
+    expect([buena, mala]).toHaveLength(2);
+  });
+  it("el menú armado con la tabla real es el mismo que antes", () => {
+    const acciones = [
+      ...new Set(Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones))),
+    ];
+    const todo = {
+      acciones,
+      modulos: { activos: Object.keys(CATALOGO_DE_MODULOS), enSoloLectura: [] },
+      funcionesEncendidas: ["salon"],
+    };
+    const areas = armarElMenu(FILAS_DEL_MENU, todo, null).map((a) => [
+      a.clave,
+      a.grupos.map((g) => [g.clave, g.items.map((i) => [i.tipo, i.clave, i.href, i.etiqueta])]),
+    ]);
+    expect(areas).toEqual(MENU_DE_HOY);
+    expect(armarElMenu(FILAS_DEL_MENU, null, null)).toEqual([]);
+  });
+  it("sigue aceptando filas de prueba con claves inventadas", () => {
+    const rara = { ...productos, clave: "fila-de-prueba", href: "/x" } as const;
+    const areas = armarElMenu([rara], permisos(["productos.ver"], ["catalogo"]), null);
+    expect(areas[0]?.grupos[0]?.items[0]?.clave).toBe("fila-de-prueba");
+    expect(
+      problemasDelMenu([rara, rara], AREAS_DEL_MENU, GRUPOS_DEL_MENU, 3).some((p) =>
+        p.includes("fila repetido"),
+      ),
+    ).toBe(true);
   });
 });

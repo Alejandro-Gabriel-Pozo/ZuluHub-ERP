@@ -77,19 +77,7 @@ type BaseDeFila = Readonly<{
 export type FilaDePantalla = BaseDeFila &
   Readonly<{
     tipo: "pantalla";
-    clave:
-      | "venta-rapida"
-      | "tickets-del-dia"
-      | "comprobantes"
-      | "caja"
-      | "productos"
-      | "secciones"
-      | "mesas"
-      | "impresoras"
-      | "stock"
-      | "configuracion-fiscal"
-      | "medios-de-pago"
-      | "contacto";
+    clave: string;
     modulo: ClaveModulo;
     accion: ClaveAccion;
     /** La función de pago (perilla) que tiene que estar encendida para ofrecerla; `null` = ninguna. Tiene que ser del mismo módulo de la fila. */
@@ -107,14 +95,13 @@ export type FilaDeAccion = BaseDeFila &
   Readonly<{ tipo: "accion"; clave: "cerrar-sesion"; departamento: null }>;
 
 export type FilaDelMenu = FilaDePantalla | FilaDeAccion;
-export type ClaveDeFila = FilaDelMenu["clave"];
 
 /**
  * LA TABLA. El orden de las filas es el orden de aparición. «Medios de pago» nace declarado y cerrado: su módulo (`caja`) está «en
  * desarrollo» y no da permisos a nadie. Su rótulo es el título aprobado de la pantalla, «Medios de pago» (`caja.medios.titulo`); la
  * maqueta dice «Medios de pago y cajas», que no tiene clave: va a preguntas pendientes.
  */
-export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
+export const FILAS_DEL_MENU = [
   {
     tipo: "pantalla",
     clave: "venta-rapida",
@@ -273,7 +260,10 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     etiqueta: "cuenta.cerrar_sesion",
     departamento: null,
   },
-];
+] as const satisfies readonly FilaDelMenu[];
+
+/** Las claves de las filas de la tabla: salen de ella (sumar una pantalla es una sola edición, la fila). */
+export type ClaveDeFila = (typeof FILAS_DEL_MENU)[number]["clave"];
 
 /** Lo que el menú necesita saber de los permisos de la persona (lo calcula el servidor: `permisosDelActor`). */
 export type PermisosParaElMenu = Readonly<{
@@ -283,24 +273,24 @@ export type PermisosParaElMenu = Readonly<{
   funcionesEncendidas?: readonly string[];
 }>;
 
-export type ItemDelMenu = Readonly<{
+export type ItemDelMenu<C extends string = ClaveDeFila> = Readonly<{
   tipo: FilaDelMenu["tipo"];
-  clave: ClaveDeFila;
+  clave: C;
   etiqueta: ClaveDeTexto;
   /** La ruta de la pantalla; `null` en una acción. */
   href: string | null;
 }>;
-type GrupoDelMenu = Readonly<{
+type GrupoDelMenu<C extends string = ClaveDeFila> = Readonly<{
   clave: ClaveDeGrupo;
   etiqueta: ClaveDeTexto | null;
-  items: readonly ItemDelMenu[];
+  items: readonly ItemDelMenu<C>[];
 }>;
-export type AreaDelMenu = Readonly<{
+export type AreaDelMenu<C extends string = ClaveDeFila> = Readonly<{
   clave: ClaveDeArea;
   etiqueta: ClaveDeTexto;
   icono: ClaveDeIcono;
   fija: boolean;
-  grupos: readonly GrupoDelMenu[];
+  grupos: readonly GrupoDelMenu<C>[];
 }>;
 
 /**
@@ -311,26 +301,26 @@ export type AreaDelMenu = Readonly<{
  * la fila se muestra solo si ese es el elegido; sin departamento elegido no se asume «todos». Un grupo aparece solo si le queda un ítem y
  * un área solo si le queda un grupo. Ocultar no es autorizar: cada pantalla vuelve a pasar por el guard.
  */
-export function armarElMenu(
-  filas: readonly FilaDelMenu[],
+export function armarElMenu<F extends FilaDelMenu>(
+  filas: readonly F[],
   permisos: PermisosParaElMenu | null,
   departamentoElegido: string | null,
-): readonly AreaDelMenu[] {
+): readonly AreaDelMenu<F["clave"]>[] {
   if (permisos === null) return [];
-  const sePuedeVer = (f: FilaDelMenu): boolean => {
+  const sePuedeVer = (f: F): boolean => {
     if (f.departamento !== null && f.departamento !== departamentoElegido) return false;
     if (f.tipo === "accion") return true;
     const { modulo, accion, perilla } = f;
     return seOfrece(CATALOGO_DE_MODULOS, permisos, { modulo, accion, perilla });
   };
   const visibles = filas.filter(sePuedeVer);
-  const areas: AreaDelMenu[] = [];
+  const areas: AreaDelMenu<F["clave"]>[] = [];
   for (const area of AREAS_DEL_MENU) {
-    const grupos: GrupoDelMenu[] = [];
+    const grupos: GrupoDelMenu<F["clave"]>[] = [];
     for (const grupo of GRUPOS_DEL_MENU) {
       const items = visibles
         .filter((f) => f.area === area.clave && f.grupo === grupo.clave)
-        .map((f): ItemDelMenu => ({
+        .map((f): ItemDelMenu<F["clave"]> => ({
           tipo: f.tipo,
           clave: f.clave,
           etiqueta: f.etiqueta,
