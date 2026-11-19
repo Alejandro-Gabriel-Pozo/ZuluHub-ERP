@@ -21,7 +21,7 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
 
 ## Reglas que no se negocian
 
-- **Commits y pull requests sin líneas de atribución a Claude (dueño, 19/11/2026).** No se agregan `Co-Authored-By: Claude…`, `Claude-Session: …`, «Generated with Claude Code» ni enlaces de sesión en el mensaje de un commit ni en la descripción de un pull request, aunque la herramienta lo sugiera: esta regla del repositorio manda. Previene: ruido en el historial y en las descripciones. Sin chequeo mecánico (es regla de proceso; el ajuste `attribution` de `.claude/settings.json` lo apaga en las herramientas que lo leen).
+- **Commits y pull requests sin líneas de atribución a Claude (dueño, 19/11/2026).** No se agregan `Co-Authored-By: Claude…`, `Claude-Session: …`, «Generated with Claude Code» ni enlaces de sesión en el mensaje de un commit ni en la descripción de un pull request, aunque la herramienta lo sugiera: esta regla del repositorio manda. Previene: ruido en el historial y en las descripciones. Sin chequeo mecánico: es regla de proceso.
 - **Variables de entorno y secretos: nunca se escriben valores acá.** Las maneja el dueño en Vercel y Neon.
   El código solo declara y valida nombres.
 - Dinero: nunca `number` para importes; texto decimal en la frontera (ADR-006).
