@@ -1,4 +1,4 @@
--- 0091_datos_que_se_piden (número PROVISORIO; lo asigna la orquestadora): PR-7-caja. Cada medio de pago puede marcar, dato por dato, que el dato «se pide», y cada cobro
+-- 0090_datos_que_se_piden (número PROVISORIO; lo asigna la orquestadora): PR-7-caja. Cada medio de pago puede marcar, dato por dato, que el dato «se pide», y cada cobro
 -- queda sellado, al registrarse, con los datos pedidos que quedaron vacíos (criterio permisivo del dueño, 18/11/2026: se registra y se etiqueta «pendiente»; nada se rechaza por un dato que falta).
 -- Reemplaza al tramo T1 de la parametrización de medios de pago (columnas `obligatorio_*` con rechazo), que quedó sin efecto y nunca se construyó.
 -- QUÉ HACE: (1) `medio_de_pago`: cinco columnas `avisa_si_falta_<dato>` (boolean NOT NULL DEFAULT false) y `medio_de_pago_avisa_ck` (no se puede pedir un dato que el medio no muestra, `pide_<dato>`);
@@ -7,7 +7,7 @@
 --   (los datos con `avisa_si_falta_<dato>` verdadero en el medio del movimiento y la columna del dato nula, en el orden fijo cupón, últimos 4, marca, cuotas, DNI). Ningún rechazo nuevo.
 -- NO ES ADITIVA en sentido estricto: reemplaza el cuerpo de una función (sin tocar datos). Lo demás son columnas nuevas con valor por defecto: los cobros existentes quedan con `{}` (correcto: nada se les pedía).
 -- NO DESTRUYE NADA. `cobro` sigue siendo de solo inserción: el sello no se cambia nunca, ni con una corrección de medio.
--- Reversión: `migraciones/reversiones/0091_revertir_datos_que_se_piden.sql` (restituye el cuerpo anterior y borra las seis columnas: PIERDE qué datos se pedían y qué cobros quedaron con datos pendientes; avisar al dueño antes de revertir con datos).
+-- Reversión: `migraciones/reversiones/0090_revertir_datos_que_se_piden.sql` (restituye el cuerpo anterior y borra las seis columnas: PIERDE qué datos se pedían y qué cobros quedaron con datos pendientes; avisar al dueño antes de revertir con datos).
 -- DEPENDE de 0027 (`medio_de_pago`, `cobro`, `cobro_validar_alta`). Probada por `test/integracion/caja-datos-que-se-piden-migracion.test.ts`.
 
 DO $$

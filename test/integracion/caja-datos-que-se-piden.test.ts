@@ -28,7 +28,7 @@ import { crearBaseAparte, crearEntornoDePrueba } from "./entorno";
 import { CARPETA_DE_MIGRACIONES } from "./marcas-apoyo";
 
 /**
- * PR-7-caja con una base real: los datos que «se piden» por medio y el sello de pendientes de cada cobro (0091). Nada se rechaza por un dato
+ * PR-7-caja con una base real: los datos que «se piden» por medio y el sello de pendientes de cada cobro (0090). Nada se rechaza por un dato
  * que falta (criterio del dueño, 18/11/2026); la base calcula el sello y el rol de la aplicación no puede escribirlo.
  */
 
@@ -37,10 +37,10 @@ vi.setConfig({ testTimeout: 120_000 });
 
 const NADIE = { cupon: false, ultimos4: false, marca: false, cuotas: false, dni: false };
 type Datos = typeof NADIE;
-const MIGRACION = "0091_datos_que_se_piden.sql";
-const REVERSION = "reversiones/0091_revertir_datos_que_se_piden.sql";
+const MIGRACION = "0090_datos_que_se_piden.sql";
+const REVERSION = "reversiones/0090_revertir_datos_que_se_piden.sql";
 
-describe.skipIf(base === null)("datos que se piden y sello de pendientes (0091)", () => {
+describe.skipIf(base === null)("datos que se piden y sello de pendientes (0090)", () => {
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
   let entornoBase: ReturnType<typeof crearEntornoDePrueba>;
   let entorno: ReturnType<typeof crearEntornoDeCaja>;

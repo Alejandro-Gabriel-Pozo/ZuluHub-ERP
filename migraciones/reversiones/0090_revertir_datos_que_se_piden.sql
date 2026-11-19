@@ -1,4 +1,4 @@
--- 0091_revertir_datos_que_se_piden: deshace 0091 (PR-7-caja).
+-- 0090_revertir_datos_que_se_piden: deshace 0090 (PR-7-caja).
 --
 -- PIERDE qué datos pedía cada medio (`avisa_si_falta_*`) y qué cobros quedaron con datos pendientes (`cobro.datos_pendientes`): AVISAR AL DUEÑO antes de revertir en una base con datos.
 -- Si hay medios con algún dato en «se pide» o cobros con datos pendientes, se frena salvo `SET LOCAL pedernal.confirmar_reversion = 'SI'` (con respaldo). Restituye el cuerpo anterior de
@@ -6,7 +6,7 @@
 -- No la aplica el ejecutor: se corre a mano, revisada, en una sola transacción y con el rol dueño de la base:
 --
 --     BEGIN;
---     \i migraciones/reversiones/0091_revertir_datos_que_se_piden.sql
+--     \i migraciones/reversiones/0090_revertir_datos_que_se_piden.sql
 --     COMMIT;
 --
 -- Se puede repetir sin que cambie nada. Solo borra su propia fila del registro `migracion`.
@@ -30,7 +30,7 @@ BEGIN
 END
 $$;
 
--- Cuerpo anterior (el de 0027): sin las columnas de 0091. Va antes de borrarlas.
+-- Cuerpo anterior (el de 0027): sin las columnas de 0090. Va antes de borrarlas.
 CREATE OR REPLACE FUNCTION cobro_validar_alta() RETURNS trigger LANGUAGE plpgsql
   SET search_path = pg_catalog, public, pg_temp AS
 $$
@@ -80,7 +80,7 @@ ALTER TABLE cobro DROP COLUMN IF EXISTS datos_pendientes;
 DO $$
 BEGIN
   IF to_regclass('public.migracion') IS NOT NULL THEN
-    DELETE FROM public.migracion WHERE nombre = '0091_datos_que_se_piden.sql';
+    DELETE FROM public.migracion WHERE nombre = '0090_datos_que_se_piden.sql';
   END IF;
 END
 $$;
