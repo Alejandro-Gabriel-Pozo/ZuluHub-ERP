@@ -251,6 +251,7 @@ describe.skipIf(base === null)("ventas: tickets del día y ficha del ticket", ()
       ejemplarVigenteId: t.ejemplarId,
       anulacion: null,
       facturado: false,
+      imprimible: true,
     });
     expect(f.emitidoEn).toMatch(/Z$/);
     expect(f.renglones).toHaveLength(1);
@@ -325,6 +326,7 @@ describe.skipIf(base === null)("ventas: tickets del día y ficha del ticket", ()
     const f = valorDe(await m.consultas.fichaDelTicketDelDia(e.operador, t));
     expect(f).toMatchObject({
       estado: "ANULADO",
+      imprimible: false,
       totalOriginal: monto("1000.00"),
       totalVigente: monto("0.00"),
       anulacion: { motivo: "Se cargó dos veces", hechaPor: e.gerente.personaId },

@@ -24,6 +24,11 @@ import { cargarEstadosDeLaEmpresa } from "../../empresas/publico";
 import type { CursorDePendientes } from "../persistencia/repositorio-de-lecturas";
 import type { DependenciasDeConsultasDeVentas, TxDeConsultasDeVentas } from "./contrato";
 import { opcionesParaCobrar, type ErrorDeOpcionesParaCobrar } from "./opciones-para-cobrar";
+import {
+  documentoDelTicket,
+  type EntradaDeDocumentoDelTicket,
+  type ErrorDeDocumentoDelTicket,
+} from "./documento-del-ticket";
 import { reunirPendientes } from "./pendientes-de-facturar";
 import {
   fichaDelTicketDelDia,
@@ -43,6 +48,7 @@ export type ErrorDeConsultaDeVentas =
   | ErrorDeOpcionesParaCobrar
   | ErrorDeTicketsDelDia
   | ErrorDeFichaDelTicketDelDia
+  | ErrorDeDocumentoDelTicket
   | "IDENTIFICADOR_INVALIDO"
   | "FECHA_INVALIDA"
   | "CANTIDAD_INVALIDA"
@@ -174,6 +180,10 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
     /** Qué ofrecer al cobrar con una caja (K1): medios, cuentas, datos que pide cada medio y marcas. Ver `opciones-para-cobrar.ts`. */
     opcionesParaCobrar: (contexto: ContextoOperativo, entrada: Readonly<{ cajaId: string }>) =>
       leer(contexto, (tx, p) => opcionesParaCobrar(tx, contexto, p.alcance, entrada)),
+
+    /** El papel del ticket para imprimir (K6). Ver `documento-del-ticket.ts`. */
+    documentoDelTicket: (contexto: ContextoOperativo, entrada: EntradaDeDocumentoDelTicket) =>
+      leer(contexto, (tx, p) => documentoDelTicket(tx, contexto, p.alcance, entrada)),
 
     fichaDeCuenta: (contexto: ContextoOperativo, entrada: Readonly<{ cuentaId: string }>) =>
       leer(contexto, async (tx, p) => {

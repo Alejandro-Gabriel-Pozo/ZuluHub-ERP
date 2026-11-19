@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EstadoDeCajasParaCobrar } from "../../caja/publico";
 import { fechaCivilDesdeTexto, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
+import { esImprimible } from "./documento-del-ticket";
 import { jornadaDeLosTickets } from "./tickets-del-dia";
 
 const fecha = (t: string): FechaCivil => {
@@ -43,5 +44,14 @@ describe("jornadaDeLosTickets: qué jornada muestra «Tickets del día»", () =>
   });
   it("dos abiertas: la del reloj (nunca se elige una al azar)", () => {
     expect(jornadaDeLosTickets(estado([caja("ABIERTA", AYER), caja("ABIERTA", HOY, 2)]))).toBe(HOY);
+  });
+});
+
+describe("esImprimible: la regla del papel que usa también la ficha", () => {
+  it("solo un ticket emitido o cobrado se imprime; el anulado y el de cortesía no", () => {
+    expect(esImprimible("EMITIDO")).toBe(true);
+    expect(esImprimible("COBRADO")).toBe(true);
+    expect(esImprimible("ANULADO")).toBe(false);
+    expect(esImprimible("CORTESIA")).toBe(false);
   });
 });

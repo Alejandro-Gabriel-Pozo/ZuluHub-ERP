@@ -13,6 +13,7 @@ import {
 import { ORIGEN_DEL_COBRO_DE_TICKET } from "../casos-de-uso/cobrar";
 import { esUuid, numeroDeCorreccion } from "../casos-de-uso/calculo";
 import type { RenglonParaFacturar, TicketDeJornada } from "../persistencia/tipos-de-lecturas";
+import { esImprimible } from "./documento-del-ticket";
 import type { DependenciasDeConsultasDeVentas, TxDeConsultasDeVentas } from "./contrato";
 
 /**
@@ -168,6 +169,8 @@ export type FichaDelTicketDelDia = Readonly<{
   caja: Readonly<{ id: string; nombre: string }> | null;
   cobros: readonly CobroDeLaFicha[];
   anulacion: Readonly<{ motivo: string; hechaPor: string; hechaEn: string }> | null;
+  /** false si está ANULADO o es de CORTESÍA (la misma regla que el papel del ticket). */
+  imprimible: boolean;
 }>;
 
 export type ErrorDeFichaDelTicketDelDia =
@@ -238,6 +241,7 @@ export async function fichaDelTicketDelDia(
     renglones: t.estado === "ANULADO" ? ficha.renglonesDelOriginal : ficha.renglonesDelVigente,
     caja,
     cobros,
+    imprimible: esImprimible(t.estado),
     anulacion:
       ficha.anulacion === null
         ? null

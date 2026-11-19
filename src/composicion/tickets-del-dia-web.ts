@@ -102,6 +102,7 @@ export type FichaDelTicketParaLaPantalla = Readonly<{
     importe: Importe;
   }>[];
   anulacion: Readonly<{ motivo: string; hechaPor: string | null; hechaEn: string }> | null;
+  imprimible: boolean;
 }>;
 
 const MOTIVOS_DE_RECHAZO: ReadonlySet<string> = new Set([
@@ -178,6 +179,7 @@ export function fichaDelTicketParaLaPantalla(
             : { id: c.cuentaDeCobro.id, nombre: c.cuentaDeCobro.nombre },
         importe: importe(c.importe),
       })),
+      imprimible: f.imprimible,
       anulacion:
         f.anulacion === null
           ? null
