@@ -94,6 +94,7 @@ async function pantalla(
               textos: textosDeCobrar(),
               cobrar,
               anular,
+              imprimir: vi.fn(),
               rutaParaAbrirLaCaja: opciones.rutaParaAbrirLaCaja ?? null,
             }
       }
