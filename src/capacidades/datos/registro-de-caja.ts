@@ -42,6 +42,15 @@ const MEDIOS_PROPOSITO_TIPO: Proposito = {
     "Pedernal-docs/11-especificaciones/caja-y-cobros.md §B.6 (medio de pago: lista cerrada de tipos) y la maqueta aprobada el 09/11/2026 (`medios.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)",
 };
 
+// La hoja de cobro del mostrador (módulo ventas) CONSUME estos dos datos, que son de caja (dueño, 17/11/2026, fila 247 de
+// `decisiones-del-dueno-2026-11.md`, punto 1: «medio de cobro» y «cuenta de cobro» van bajo el módulo caja; ventas los consume).
+const COBRO_FILA = "apps/web/ui/plantillas/cobrar/FilaDeCobro.cliente.tsx";
+const COBRO_PROPOSITO = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs/11-especificaciones/conceptos/pantalla-cobrar.md §2 y servidor-del-mostrador-minimo.md §7; la maqueta de venta rápida `venta-rapida-v4.html` (zona cobro, carpeta de prototipos de Pedernal-docs 10-ux-ui); fila 247 (punto 1) de 11-especificaciones/decisiones-del-dueno-2026-11.md",
+});
+
 export const DATOS_DE_CAJA = {
   "nombre-de-medio-de-pago": {
     // SUPUESTO (DEC-0342): la ficha es el dominio de caja, que ya tiene el largo y el conjunto permitido del nombre del medio; no se movió a `primitivas/`
@@ -168,6 +177,29 @@ export const DATOS_DE_CAJA = {
     propositos: [MOSTRADOR_PROPOSITO("Observación, opcional, al cerrar una caja.")],
     consumidores: [CIERRE],
     ponerPor: ["sesiones_caja.cerrar"],
+    requiere: REQUIERE_CAJA,
+  },
+  "medio-de-cobro": {
+    // Sin primitiva: es la elección de uno de los medios activos que el servidor ofrece para la caja (lista cerrada, como `eleccion-de-opcion-de-venta`).
+    ficha: "src/modulos/caja/cobrar/opciones-de-cobro.ts",
+    propositos: [
+      COBRO_PROPOSITO(
+        "Medio de pago de cada fila de la hoja de cobro, de entre los medios activos que el servidor ofrece para la caja.",
+      ),
+    ],
+    consumidores: [COBRO_FILA],
+    ponerPor: ["tickets.cobrar"],
+    requiere: REQUIERE_CAJA,
+  },
+  "cuenta-de-cobro": {
+    ficha: "src/modulos/caja/cobrar/opciones-de-cobro.ts",
+    propositos: [
+      COBRO_PROPOSITO(
+        "Cuenta de cobro, opcional, de la fila de cobro, de entre las cuentas activas de la sucursal que el servidor ofrece para ese medio.",
+      ),
+    ],
+    consumidores: [COBRO_FILA],
+    ponerPor: ["tickets.cobrar"],
     requiere: REQUIERE_CAJA,
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
