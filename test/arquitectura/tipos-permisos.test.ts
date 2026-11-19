@@ -406,6 +406,8 @@ describe("H5 P1: los tipos de plataforma salen de su catálogo y no se mezclan c
       | "planes.editar_borrador"
       | "planes.publicar_version"
       | "planes.asignar"
+      | "politica_de_plan.definir"
+      | "planes.arrepentir"
       | "perillas.ajustar"
       | "modulos_de_empresa.activar"
       | "modulos_de_empresa.desactivar"

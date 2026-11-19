@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import "../../../test/propiedades/configuracion";
-import { fechaCivilDesdeTexto } from "./fecha-civil";
+import { fechaCivilDesdeTexto, sumarDiasCiviles, type FechaCivil } from "./fecha-civil";
 
 const valida = (texto: string) => fechaCivilDesdeTexto(texto);
 
@@ -71,5 +71,34 @@ describe("fecha civil: lo que se rechaza", () => {
         },
       ),
     );
+  });
+});
+
+describe("sumarDiasCiviles", () => {
+  const f = (t: string): FechaCivil => {
+    const r = fechaCivilDesdeTexto(t);
+    if (!r.ok) throw new Error(t);
+    return r.valor;
+  };
+  it("suma y resta días cruzando mes, año y bisiesto", () => {
+    expect(sumarDiasCiviles(f("2026-11-19"), 0)).toEqual({ ok: true, valor: "2026-11-19" });
+    expect(sumarDiasCiviles(f("2026-11-30"), 1)).toEqual({ ok: true, valor: "2026-12-01" });
+    expect(sumarDiasCiviles(f("2026-12-31"), 1)).toEqual({ ok: true, valor: "2027-01-01" });
+    expect(sumarDiasCiviles(f("2028-02-28"), 1)).toEqual({ ok: true, valor: "2028-02-29" });
+    expect(sumarDiasCiviles(f("2027-02-28"), 1)).toEqual({ ok: true, valor: "2027-03-01" });
+    expect(sumarDiasCiviles(f("2027-01-01"), -1)).toEqual({ ok: true, valor: "2026-12-31" });
+    expect(sumarDiasCiviles(f("2026-01-01"), 365)).toEqual({ ok: true, valor: "2027-01-01" });
+  });
+  it("los años 0001 a 0099 no se leen como 1901 a 1999", () => {
+    expect(sumarDiasCiviles(f("0050-01-01"), 1)).toEqual({ ok: true, valor: "0050-01-02" });
+  });
+  it("fuera del calendario o con días no enteros es FECHA_CIVIL_INVALIDA", () => {
+    const invalida = { ok: false, error: "FECHA_CIVIL_INVALIDA" };
+    expect(sumarDiasCiviles(f("9999-12-31"), 1)).toEqual(invalida);
+    expect(sumarDiasCiviles(f("0001-01-01"), -1)).toEqual(invalida);
+    expect(sumarDiasCiviles(f("2026-11-19"), 1.5)).toEqual(invalida);
+    expect(sumarDiasCiviles(f("2026-11-19"), Number.NaN)).toEqual(invalida);
+    // Una marca falsificada (un texto que no es fecha) tampoco pasa.
+    expect(sumarDiasCiviles("no es una fecha" as FechaCivil, 1)).toEqual(invalida);
   });
 });

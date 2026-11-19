@@ -23,13 +23,21 @@ import { textosDeCobrar } from "./textos-de-cobrar";
 
 const nada = { cupon: false, ultimos4: false, marca: false, cuotas: false, dni: false };
 const MEDIOS: readonly MedioParaCobrar[] = [
-  { id: "m-efectivo", tipo: "EFECTIVO", nombre: null, cuentas: [], datosQuePide: nada },
+  {
+    id: "m-efectivo",
+    tipo: "EFECTIVO",
+    nombre: null,
+    cuentas: [],
+    datosQuePide: nada,
+    datosQueSePiden: nada,
+  },
   {
     id: "m-debito",
     tipo: "TARJETA_DEBITO",
     nombre: null,
     cuentas: [{ id: "c-posnet", tipo: "TERMINAL", nombre: "Posnet 1" }],
     datosQuePide: { ...nada, cupon: true, ultimos4: true, marca: true },
+    datosQueSePiden: nada,
   },
   {
     id: "m-credito",
@@ -37,6 +45,7 @@ const MEDIOS: readonly MedioParaCobrar[] = [
     nombre: null,
     cuentas: [],
     datosQuePide: { cupon: true, ultimos4: true, marca: true, cuotas: true, dni: false },
+    datosQueSePiden: nada,
   },
   {
     id: "m-transf",
@@ -44,6 +53,7 @@ const MEDIOS: readonly MedioParaCobrar[] = [
     nombre: null,
     cuentas: [],
     datosQuePide: { ...nada, dni: true },
+    datosQueSePiden: nada,
   },
 ];
 const LISTO: CobroPreparado = {

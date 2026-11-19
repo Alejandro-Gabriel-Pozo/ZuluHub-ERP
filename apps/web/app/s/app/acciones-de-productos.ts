@@ -13,11 +13,12 @@ import { cambiarElPrecio } from "../../../servidor/precios-de-producto";
 export async function guardarFichaAccion(
   productoId: string,
   versionEsperada: number,
+  controlVisto: boolean | null,
   previo: ResultadoDeAccion,
   datos: FormData,
 ): Promise<ResultadoDeAccion> {
   void previo;
-  return guardarLaFicha(productoId, versionEsperada, datos);
+  return guardarLaFicha(productoId, versionEsperada, controlVisto, datos);
 }
 
 export async function cambiarPrecioAccion(

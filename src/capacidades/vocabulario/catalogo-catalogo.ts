@@ -56,6 +56,12 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.dato.unidad": { porDefecto: "Unidad" },
   "catalogo.dato.alicuota_de_iva": { porDefecto: "Alícuota de IVA" },
   "catalogo.dato.seccion_de_la_carta": { porDefecto: "Sección de la carta" },
+  // PR-3 de Catálogo: la casilla de la ficha. Texto aprobado por el dueño el 09/11/2026 (`productos.html`, «Textos nuevos», fila «¿Qué es? · Todos · Se controla el stock · …»).
+  "catalogo.dato.se_controla_el_stock": {
+    porDefecto: "Se controla el stock",
+    usos: [{ como: "DATO", dato: "control-de-stock-de-producto" }],
+    fuente: { decision: "DEC-0797" },
+  },
   // Opción vacía de los desplegables de la ficha; el desplegable de la alícuota arranca ahí (dueño, 12/11/2026, pregunta 4). Distinto de «Elegí una opción» (`selector.elegir_una_opcion`).
   "catalogo.dato.sin_elegir": { porDefecto: "Sin elegir" },
 

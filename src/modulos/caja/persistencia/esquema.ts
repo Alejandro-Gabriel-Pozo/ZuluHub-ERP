@@ -29,6 +29,11 @@ export type CajaDb = TablasDelCierreDeCaja & {
     pide_marca: Generated<boolean>;
     pide_cuotas: Generated<boolean>;
     pide_dni: Generated<boolean>;
+    avisa_si_falta_cupon: Generated<boolean>;
+    avisa_si_falta_ultimos4: Generated<boolean>;
+    avisa_si_falta_marca: Generated<boolean>;
+    avisa_si_falta_cuotas: Generated<boolean>;
+    avisa_si_falta_dni: Generated<boolean>;
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
@@ -95,6 +100,8 @@ export type CajaDb = TablasDelCierreDeCaja & {
     marca_de_tarjeta_id: string | null;
     cuotas: number | null;
     dni: string | null;
+    /** El sello que calcula la base al insertar (PR-7-caja): los datos que el medio pide y quedaron vacíos. Nunca se escribe desde acá. */
+    datos_pendientes: Generated<string[]>;
     creado_en: Generated<Date>;
   };
   arqueo_caja: {
@@ -176,6 +183,11 @@ export const COLUMNAS_DE_CAJA = {
     "creado_en",
     "actualizado_en",
     "version",
+    "avisa_si_falta_cupon",
+    "avisa_si_falta_ultimos4",
+    "avisa_si_falta_marca",
+    "avisa_si_falta_cuotas",
+    "avisa_si_falta_dni",
   ],
   cuenta_de_cobro: [
     "id",
@@ -240,6 +252,7 @@ export const COLUMNAS_DE_CAJA = {
     "cuotas",
     "dni",
     "creado_en",
+    "datos_pendientes",
   ],
   arqueo_caja: [
     "empresa_id",

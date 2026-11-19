@@ -1,6 +1,6 @@
 import type { DefinicionDePerilla } from "./perillas";
 import { valorDePerilla } from "./derechos";
-import type { ValorEfectivo } from "./valores";
+import { estaEncendida, type ValorEfectivo } from "./valores";
 
 /**
  * Qué funciones de pago (perillas INTERRUPTOR) están encendidas para una empresa (escalabilidad X-1b). La pantalla las usa para no
@@ -29,9 +29,6 @@ export function funcionesEncendidasDe<P extends string>(
 ): readonly P[] {
   return (Object.keys(catalogo) as P[])
     .filter((clave) => catalogo[clave].tipo === "INTERRUPTOR")
-    .filter((clave) => {
-      const valor = valorDePerilla(derechos, clave);
-      return valor.tipo === "INTERRUPTOR" && valor.encendida;
-    })
+    .filter((clave) => estaEncendida(valorDePerilla(derechos, clave)))
     .sort();
 }

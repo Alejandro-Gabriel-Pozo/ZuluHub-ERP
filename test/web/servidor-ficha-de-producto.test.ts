@@ -65,6 +65,20 @@ vi.mock("../../apps/web/servidor/sesion", () => ({
     respuesta: { registrar: () => undefined, azar: () => new Uint8Array(4) },
   },
 }));
+const control = vi.hoisted((): { puede: boolean; pedidos: unknown[]; resultado: unknown } => ({
+  puede: true,
+  pedidos: [],
+  resultado: null,
+}));
+vi.mock("../../apps/web/servidor/control-de-stock", () => ({
+  fijarElControl: (_contexto: unknown, productoId: string, controlado: boolean) => {
+    control.pedidos.push({ productoId, controlado });
+    return Promise.resolve(control.resultado);
+  },
+}));
+vi.mock("../../apps/web/servidor/ofertas-de-catalogo", () => ({
+  puedeControlarElStock: () => Promise.resolve(control.puede),
+}));
 vi.mock("../../apps/web/servidor/con-la-empresa", () => ({
   conLaEmpresa: (hacer: (contexto: unknown) => unknown) => hacer(CONTEXTO),
 }));
@@ -92,6 +106,7 @@ beforeEach(() => {
     resultado: ok({ version: 5 }),
     producto: PRODUCTO,
   });
+  Object.assign(control, { puede: true, pedidos: [], resultado: ok({ yaEstaba: false }) });
 });
 
 describe("la lectura de la ficha", () => {
@@ -103,7 +118,7 @@ describe("la lectura de la ficha", () => {
 
 describe("guardarLaFicha", () => {
   it("si sale bien, vuelve a la ficha del producto (con la versión nueva) tras escribir una vez con el contexto del servidor", async () => {
-    await expect(guardarLaFicha(ID, 4, formulario(COMPLETO))).rejects.toThrow(
+    await expect(guardarLaFicha(ID, 4, null, formulario(COMPLETO))).rejects.toThrow(
       `${REDIRIGIO} /catalogo/productos/${ID}`,
     );
     expect(mundo.contextos).toEqual([CONTEXTO]);
@@ -127,6 +142,7 @@ describe("guardarLaFicha", () => {
       guardarLaFicha(
         ID,
         4,
+        null,
         formulario({
           ...COMPLETO,
           claseDeUso: "INSUMO",
@@ -158,7 +174,12 @@ describe("guardarLaFicha", () => {
 
   it("un campo que el formulario no mandó (el desplegable apagado) conserva lo guardado; uno que llegó vacío lo borra", async () => {
     await expect(
-      guardarLaFicha(ID, 4, formulario({ nombre: "Milanesa", nombreDeCocina: "", codigo: "" })),
+      guardarLaFicha(
+        ID,
+        4,
+        null,
+        formulario({ nombre: "Milanesa", nombreDeCocina: "", codigo: "" }),
+      ),
     ).rejects.toThrow(REDIRIGIO);
     expect(mundo.ediciones[0]).toMatchObject({
       nombreDeCocina: "",
@@ -174,6 +195,7 @@ describe("guardarLaFicha", () => {
       guardarLaFicha(
         ID,
         4,
+        null,
         formulario({ nombre: "Milanesa", alicuota: new File(["x"], "alicuota.txt") }),
       ),
     ).rejects.toThrow(REDIRIGIO);
@@ -181,7 +203,7 @@ describe("guardarLaFicha", () => {
   });
 
   it("sin nombre en el formulario: «Falta el nombre», sin escribir y sin volver", async () => {
-    const r = await guardarLaFicha(ID, 4, formulario({}));
+    const r = await guardarLaFicha(ID, 4, null, formulario({}));
     expect(r.error?.codigo).toBe("CATALOGO_FALTA_EL_NOMBRE");
     expect(r.error?.campo).toBe("nombre");
     expect(mundo.ediciones).toEqual([]);
@@ -189,7 +211,7 @@ describe("guardarLaFicha", () => {
 
   it("el error del servidor vuelve a la pantalla ya traducido, sin redirigir", async () => {
     mundo.resultado = err("PRODUCTO_DUPLICADO");
-    const r = await guardarLaFicha(ID, 4, formulario(COMPLETO));
+    const r = await guardarLaFicha(ID, 4, null, formulario(COMPLETO));
     expect(r).toEqual({
       error: {
         codigo: "CATALOGO_NOMBRE_REPETIDO",
@@ -202,21 +224,64 @@ describe("guardarLaFicha", () => {
 
   it("dos pestañas: la que llega con la versión vieja recibe el genérico y no vuelve a la ficha", async () => {
     mundo.resultado = err("VERSION_DESACTUALIZADA");
-    const r = await guardarLaFicha(ID, 3, formulario(COMPLETO));
+    const r = await guardarLaFicha(ID, 3, null, formulario(COMPLETO));
     expect(r.error?.codigo).toBe("CATALOGO_ACCION_NO_PERMITIDA");
     expect(mundo.ediciones[0]).toMatchObject({ versionEsperada: 3 });
   });
 
   it("un producto que no es de la empresa (no existe para ella) es el genérico y no se escribe", async () => {
     mundo.producto = null;
-    const r = await guardarLaFicha(ID, 4, formulario(COMPLETO));
+    const r = await guardarLaFicha(ID, 4, null, formulario(COMPLETO));
     expect(r.error?.codigo).toBe("CATALOGO_ACCION_NO_PERMITIDA");
     expect(mundo.ediciones).toEqual([]);
   });
 
   it("repetir el mismo guardado (doble toque) manda dos pedidos idénticos y el servidor decide: ambos terminan igual", async () => {
-    await expect(guardarLaFicha(ID, 4, formulario(COMPLETO))).rejects.toThrow(REDIRIGIO);
-    await expect(guardarLaFicha(ID, 4, formulario(COMPLETO))).rejects.toThrow(REDIRIGIO);
+    await expect(guardarLaFicha(ID, 4, null, formulario(COMPLETO))).rejects.toThrow(REDIRIGIO);
+    await expect(guardarLaFicha(ID, 4, null, formulario(COMPLETO))).rejects.toThrow(REDIRIGIO);
     expect(mundo.ediciones[0]).toEqual(mundo.ediciones[1]);
+  });
+});
+
+describe("el tilde «Se controla el stock»", () => {
+  const guardarConControl = (visto: boolean | null, campos: Record<string, string> = {}) =>
+    guardarLaFicha(ID, 4, visto, formulario({ ...COMPLETO, ...campos }));
+
+  it("sin casilla dibujada (control visto null) no toca el control, aunque el formulario traiga la marca", async () => {
+    await expect(guardarConControl(null, { seControlaElStock: "on" })).rejects.toThrow(REDIRIGIO);
+    expect(control.pedidos).toEqual([]);
+    expect(mundo.ediciones).toHaveLength(1);
+  });
+
+  it("sin permiso para cambiarlo (casilla apagada: no viaja) no toca el control y guarda la ficha", async () => {
+    control.puede = false;
+    await expect(guardarConControl(true)).rejects.toThrow(REDIRIGIO);
+    expect(control.pedidos).toEqual([]);
+    expect(mundo.ediciones).toHaveLength(1);
+  });
+
+  it("ofrecida y sin cambio: no llama al control", async () => {
+    await expect(guardarConControl(true, { seControlaElStock: "on" })).rejects.toThrow(REDIRIGIO);
+    await expect(guardarConControl(false)).rejects.toThrow(REDIRIGIO);
+    expect(control.pedidos).toEqual([]);
+  });
+
+  it("ofrecida y se marca: fija controlado = true y después guarda la ficha", async () => {
+    await expect(guardarConControl(false, { seControlaElStock: "on" })).rejects.toThrow(REDIRIGIO);
+    expect(control.pedidos).toEqual([{ productoId: ID, controlado: true }]);
+    expect(mundo.ediciones).toHaveLength(1);
+  });
+
+  it("ofrecida y se desmarca (la casilla no viaja): fija controlado = false y después guarda la ficha", async () => {
+    await expect(guardarConControl(true)).rejects.toThrow(REDIRIGIO);
+    expect(control.pedidos).toEqual([{ productoId: ID, controlado: false }]);
+    expect(mundo.ediciones).toHaveLength(1);
+  });
+
+  it("si el control falla, devuelve ese error y NO guarda la ficha", async () => {
+    control.resultado = { ok: false, error: { clave: "catalogo.error.accion_no_permitida" } };
+    const r = await guardarConControl(false, { seControlaElStock: "on" });
+    expect(r).toEqual({ error: { clave: "catalogo.error.accion_no_permitida" } });
+    expect(mundo.ediciones).toEqual([]);
   });
 });

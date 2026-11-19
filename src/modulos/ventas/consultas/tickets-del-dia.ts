@@ -8,6 +8,7 @@ import {
   cajaParaVentas,
   type EstadoDeCajasParaCobrar,
   type ErrorAlConsultarCajasParaCobrar,
+  type DatoDelCobro,
   type TipoDeMedio,
 } from "../../caja/publico";
 import { ORIGEN_DEL_COBRO_DE_TICKET } from "../casos-de-uso/cobrar";
@@ -147,6 +148,8 @@ export type CobroDeLaFicha = Readonly<{
   medioTipo: TipoDeMedio;
   cuentaDeCobro: Readonly<{ id: string; nombre: string }> | null;
   importe: ImporteJson;
+  /** Lo que selló caja al cobrar: los datos que el medio pedía y quedaron vacíos. Dibujarlo espera maqueta. */
+  datosPendientes: readonly DatoDelCobro[];
 }>;
 
 export type FichaDelTicketDelDia = Readonly<{
@@ -221,6 +224,7 @@ export async function fichaDelTicketDelDia(
           medioTipo: c.medioVigenteTipo,
           cuentaDeCobro: cuenta === undefined ? null : { id: cuenta.id, nombre: cuenta.nombre },
           importe: importeAJson(c.importe),
+          datosPendientes: c.datosPendientes,
         };
       });
   }

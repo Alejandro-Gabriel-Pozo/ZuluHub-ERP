@@ -37,3 +37,12 @@ export async function puedeCambiarPrecios(contexto: ContextoOperativo): Promise<
 
 export const puedeEditarOpciones = (contexto: ContextoOperativo): Promise<boolean> =>
   puedeLaAccion(contexto, "opciones.editar"); // oferta de `opciones.editar` (gerente y administrador): solo apaga botones, el guard decide (DEC-0346); `test/web/opciones-acceso.test.ts`
+
+/**
+ * ¿La persona puede cambiar el tilde «Se controla el stock»? Es la oferta de `articulos.controlar` (gerente y administrador) que el servidor calcula con `ofertaDe`; si no se pudieron leer los
+ * permisos, `false` (cierra, no abre). Ocultar no es autorizar: fijar el control vuelve a pasar por el guard. Es solo la ayuda que apaga la casilla. Chequeo: `test/web/control-de-stock-acceso.test.ts`.
+ */
+export async function puedeControlarElStock(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("articulos.controlar", permisos).permitida;
+}
