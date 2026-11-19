@@ -1,9 +1,9 @@
 {
   "id": "DEC-0770",
   "fecha": "2026-11-19",
-  "quien": "sesión",
+  "quien": "dueño",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "SUPUESTO: sin caja abierta, la venta ofrece «Abrir caja» (texto aprobado de Caja) como enlace a la pantalla de Caja, solo a quien puede abrirla.",
   "que_cambia": "Cómo se abre la caja desde la venta: la maqueta usa una pantalla con fondo inicial; acá se va a /caja. Revertir: quitar el enlace o construir PR-3c.",
   "donde": "src/capacidades/pantallas/ficha-de-cobrar.ts; DEC-0502; PR-3b §11"
