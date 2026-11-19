@@ -9,6 +9,8 @@ describe("traducirErrorDeCatalogo", () => {
     ["SECCION_DUPLICADA", "CATALOGO_SECCION_REPETIDA", "nombre"],
     ["CODIGO_DE_BARRAS_INVALIDO", "CATALOGO_CODIGO_DE_BARRAS_INVALIDO", "codigoDeBarras"],
     ["ALICUOTA_REQUERIDA", "CATALOGO_ELEGI_LA_ALICUOTA", "alicuota"],
+    ["RECARGO_INVALIDO", "CATALOGO_PRECIO_INVALIDO", "recargo"],
+    ["INCLUIDA_CON_RECARGO", "CATALOGO_INCLUIDA_CON_RECARGO", "recargo"],
   ])("%s sale como %s, asociado al campo %s", (error, codigo, campo) => {
     expect(traducirErrorDeCatalogo(error)).toEqual({ codigo, campo });
   });

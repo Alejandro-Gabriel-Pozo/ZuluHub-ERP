@@ -418,6 +418,8 @@ describe.skipIf(base === null)(
             error: {
               codigo: "AUTORIZACION_DEL_SERVICIO_FALTANTE",
               detalle: `ARCA no aceptó el token (error ${codigo})`,
+              // El 601 (CUIT representada fuera del token) lleva su causa; el 600 no.
+              ...(codigo === "601" ? { causa: "CUIT_NO_REPRESENTADA" } : {}),
             },
           });
           expect((await verificada(c.id))?.en).toBeNull();

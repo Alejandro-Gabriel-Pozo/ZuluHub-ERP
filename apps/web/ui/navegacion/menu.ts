@@ -5,13 +5,16 @@ import {
 } from "../../../../src/capacidades/modulos/catalogo";
 import type { ClaveDeTexto } from "../../../../src/capacidades/vocabulario/catalogo";
 import type { ClaveDeIcono } from "../iconos/catalogo";
-import { RUTAS_DE_CAJA } from "../plantillas/caja/lista-de-caja";
+import { RUTAS_DE_CAJA, RUTA_DE_LA_CAJA } from "../plantillas/caja/lista-de-caja";
 import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
 import { RUTA_DE_SECCIONES } from "../plantillas/catalogo/modelo-de-secciones";
+import { RUTA_DE_IMPRESORAS } from "../plantillas/salon/modelo-de-impresoras";
 import { RUTA_DE_MESAS } from "../plantillas/salon/modelo-de-mesas";
 import { RUTAS_DE_CONFIGURACION } from "../plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
 import { RUTAS_DE_CUENTA } from "../plantillas/sesion/rutas-de-cuenta";
+import { RUTA_DE_LA_VENTA } from "../plantillas/venta/rutas-de-venta";
+import { RUTAS_DE_STOCK } from "../plantillas/stock/rutas-de-stock";
 
 /**
  * EL MENÚ POR ÁREAS: una sola tabla declarativa (área → grupo → pantalla), una fila por pantalla. Es la ÚNICA fuente de qué hay en el
@@ -45,10 +48,13 @@ export type ClaveDeArea = (typeof AREAS_DEL_MENU)[number]["clave"];
  * muestra como una fila, sin encabezado repetido»).
  */
 export const GRUPOS_DEL_MENU = [
+  { clave: "mostrador", etiqueta: "navegacion.grupo.mostrador" },
   { clave: "comprobantes", etiqueta: null },
+  { clave: "caja", etiqueta: null },
   { clave: "productos", etiqueta: null },
   { clave: "salon", etiqueta: "salon.texto.grupo_salon" },
   { clave: "carta", etiqueta: "navegacion.grupo.carta" },
+  { clave: "stock", etiqueta: null },
   { clave: "empresa", etiqueta: "navegacion.empresa" },
   { clave: "sucursal", etiqueta: "sucursal.etiqueta" },
   { clave: "salir", etiqueta: null },
@@ -67,10 +73,14 @@ export type FilaDePantalla = BaseDeFila &
   Readonly<{
     tipo: "pantalla";
     clave:
+      | "venta-rapida"
       | "comprobantes"
+      | "caja"
       | "productos"
       | "secciones"
       | "mesas"
+      | "impresoras"
+      | "stock"
       | "configuracion-fiscal"
       | "medios-de-pago"
       | "contacto";
@@ -99,6 +109,17 @@ export type ClaveDeFila = FilaDelMenu["clave"];
 export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
   {
     tipo: "pantalla",
+    clave: "venta-rapida",
+    area: "ventas",
+    grupo: "mostrador",
+    modulo: "ventas",
+    accion: "ventas.ver",
+    href: RUTA_DE_LA_VENTA,
+    etiqueta: "ventas.venta.menu",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
     clave: "comprobantes",
     area: "ventas",
     grupo: "comprobantes",
@@ -106,6 +127,19 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     accion: "comprobantes.ver",
     href: RUTA_DEL_LISTADO,
     etiqueta: "fiscal.pantalla.listado_titulo",
+    departamento: null,
+  },
+  // «Caja» (maqueta `menu-por-areas.html`: grupo «Caja» con «Caja» y «Cierre del día»; esta segunda no existe todavía y no se declara). Un grupo con una sola pantalla que se llama igual se
+  // muestra sin encabezado (`etiqueta: null`). Nace cerrada: el módulo `caja` está «en desarrollo» y no da permisos a nadie hasta que el dueño lo pase a «disponible».
+  {
+    tipo: "pantalla",
+    clave: "caja",
+    area: "ventas",
+    grupo: "caja",
+    modulo: "caja",
+    accion: "cajas.ver",
+    href: RUTA_DE_LA_CAJA,
+    etiqueta: "caja.pantalla.titulo",
     departamento: null,
   },
   {
@@ -142,6 +176,29 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     accion: "mesas.ver",
     href: RUTA_DE_MESAS,
     etiqueta: "salon.texto.admin_mesas",
+    departamento: null,
+  },
+  // «Impresoras» (S-2; `menu-por-areas.html`, grupo Salón del área Ventas): módulo `comandas` (disponible desde S-0r) y acción `impresoras.ver`.
+  {
+    tipo: "pantalla",
+    clave: "impresoras",
+    area: "ventas",
+    grupo: "salon",
+    modulo: "comandas",
+    accion: "impresoras.ver",
+    href: RUTA_DE_IMPRESORAS,
+    etiqueta: "comandas.texto.imprimir_impresoras",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
+    clave: "stock",
+    area: "catalogo",
+    grupo: "stock",
+    modulo: "stock",
+    accion: "stock.ver",
+    href: RUTAS_DE_STOCK.entrada,
+    etiqueta: "stock.pantalla.stock",
     departamento: null,
   },
   {

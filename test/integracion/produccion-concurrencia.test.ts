@@ -155,10 +155,10 @@ describe.skipIf(base === null)("producción: concurrencia y atomicidad (E6-T8)",
     }
   });
 
-  it("C4 (BLOQUEAR): dos órdenes que necesitan el último kilo de harina: una cierra y la otra CONTROL_BLOQUEA sin dejar nada (ni lote, ni consumo parcial, ni cambio de estado)", async () => {
+  it("C4 (AVISAR): dos órdenes que necesitan el último kilo de harina: una cierra y la otra CONTROL_REQUIERE_CONFIRMACION sin dejar nada (ni lote, ni consumo parcial, ni cambio de estado)", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda += 1) {
       const p = await con("12", "4");
-      await c.fijarNivel(e.empresa, "BLOQUEAR");
+      await c.fijarNivel(e.empresa, "AVISAR");
       const a = valorDe(await abrir(p));
       const b = valorDe(await abrir(p));
       const rs = await aLaVez(
@@ -169,7 +169,7 @@ describe.skipIf(base === null)("producción: concurrencia y atomicidad (E6-T8)",
       expect(soloOk(rs), JSON.stringify(rs)).toBe(1);
       expect(rs.find((r) => !r.ok)).toMatchObject({
         ok: false,
-        error: { error: "CONTROL_BLOQUEA" },
+        error: { error: "CONTROL_REQUIERE_CONFIRMACION" },
       });
       const [gana, pierde] = (await estado(a.ordenId)) === "CERRADA" ? [a, b] : [b, a];
       expect(await estado(gana.ordenId)).toBe("CERRADA");
@@ -206,13 +206,13 @@ describe.skipIf(base === null)("producción: concurrencia y atomicidad (E6-T8)",
         (x) => x["entidad_id"] === consumo,
       ),
     ).toHaveLength(2);
-    await c.fijarNivel(e.empresa, "BLOQUEAR");
+    await c.fijarNivel(e.empresa, "AVISAR");
   });
 
   it("C12: anular una orden mientras otra sesión usa el producto: o se anula entera o PRODUCTO_YA_USADO; nunca queda el producto en negativo", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda += 1) {
       const p = await con("100", "50");
-      await c.fijarNivel(e.empresa, "BLOQUEAR");
+      await c.fijarNivel(e.empresa, "AVISAR");
       const a = valorDe(await abrir(p));
       valorDe(await cerrar(a.ordenId, p));
       const rs = await aLaVez<Mixto>(
@@ -243,7 +243,8 @@ describe.skipIf(base === null)("producción: concurrencia y atomicidad (E6-T8)",
       if (anulada) {
         expect(masa).toBe("0.0000");
         expect(
-          rs[0] && rs.some((r) => !r.ok && JSON.stringify(r).includes("CONTROL_BLOQUEA")),
+          rs[0] &&
+            rs.some((r) => !r.ok && JSON.stringify(r).includes("CONTROL_REQUIERE_CONFIRMACION")),
         ).toBe(true);
       } else {
         expect(masa).toBe("5.0000");
@@ -327,13 +328,13 @@ describe.skipIf(base === null)("producción: concurrencia y atomicidad (E6-T8)",
       expect(valorDe(await cerrar(a.ordenId, p)).yaExistia).toBe(false);
     });
 
-    it("un cierre con el segundo ingrediente bloqueado por el control no deja nada del primero", async () => {
+    it("un cierre con el segundo ingrediente frenado por el control (AVISAR sin confirmar) no deja nada del primero", async () => {
       const p = await con("100", "3"); // la manteca no alcanza: faltan 1 kg
       await c.fijarNivel(e.empresa, "PERMITIR");
       const a = valorDe(await abrir(p));
-      await c.fijarNivel(e.empresa, "BLOQUEAR");
+      await c.fijarNivel(e.empresa, "AVISAR");
       const r = await cerrar(a.ordenId, p);
-      expect(r).toMatchObject({ ok: false, error: { error: "CONTROL_BLOQUEA" } });
+      expect(r).toMatchObject({ ok: false, error: { error: "CONTROL_REQUIERE_CONFIRMACION" } });
       expect(await movimientos(a.ordenId)).toBe(0);
       expect(await c.existencia(p.origen, p.harina.articulo)).toBe("100.0000");
       expect(Number(await c.existencia(p.destino, p.masa.articulo))).toBe(0);

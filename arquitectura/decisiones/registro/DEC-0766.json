@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0766",
+  "fecha": "2026-11-19",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: iniciar el cierre, cancelarlo y cerrar la caja exigen sus tres acciones de permiso sesiones_caja.*, con la tabla ya confirmada el 15/11/2026.",
+  "que_cambia": "Quién ve activos «Cerrar caja», «Cancelar cierre» y el cierre del conteo. Revertir: cambiar la acción de cada botón en ofertas-de-caja.ts; no hay migración.",
+  "donde": "src/capacidades/pantallas/ficha-de-caja.ts; orquestadora, 19/11/2026 (supuestos P1, P2 y P3 de Caja C2)"
+}

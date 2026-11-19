@@ -11,7 +11,7 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import { cajaParaVentas } from "../../caja/publico";
 import { cuadrarCobros, normalizarCobros } from "../dominio/cobranza";
-import { FORMA_DEL_IMPORTE } from "../dominio/forma-del-importe";
+import { FORMA_DEL_IMPORTE } from "../../../primitivas/dinero/forma-del-importe";
 import { cuentaId, type EjemplarId, type TicketId } from "../dominio/identificadores";
 import type { EstadoDeTicket } from "../dominio/estados";
 import type { Ticket } from "../persistencia/repositorio-de-tickets";

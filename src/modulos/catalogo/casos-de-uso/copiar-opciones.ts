@@ -11,6 +11,7 @@ import {
 import { autorizar, exigirAlcanceTotal, traducir } from "./comun";
 import type { DependenciasDeCatalogo } from "./contrato";
 import type { ErrorDeCatalogo } from "./errores";
+import { leerLoQueTraeLaCopia } from "./lo-que-trae-la-copia";
 
 type R<S> = Resultado<S, ErrorDeCatalogo>;
 
@@ -83,37 +84,18 @@ export function armarCopiarOpciones(dependencias: DependenciasDeCatalogo) {
         if (entrada.versionDeOpcionesEsperada !== destino.versionDeOpciones)
           return err("OPCIONES_DESACTUALIZADAS");
 
-        const gruposOrigen = (await tx.opciones.gruposDelProducto(empresaId, origen.id)).filter(
-          (g) => g.grupo.activo,
-        );
-        const gruposDestino = await tx.opciones.gruposDelProducto(empresaId, destino.id);
-        const clavesDelDestino = new Set(gruposDestino.map((g) => claveDeNombre(g.grupo.nombre)));
-        const destinoTieneVariante = gruposDestino.some(
-          (g) => g.grupo.clase === "VARIANTE" && g.grupo.activo,
-        );
-        const precioDelDestino = await tx.precios.vigente(
+        const gruposACopiar = await leerLoQueTraeLaCopia(
+          tx,
           empresaId,
-          destino.id,
-          null,
-          null,
+          origen,
+          destino,
           contexto.ahora,
         );
-        const mismaForma =
-          origen.unidadDeVentaId === destino.unidadDeVentaId &&
-          origen.pasoMinimo === destino.pasoMinimo;
-        const puedeTraerLaVariante =
-          !destinoTieneVariante &&
-          (precioDelDestino === null || precioDelDestino.precio === null) &&
-          mismaForma;
 
         let gruposCopiados = 0;
         let opcionesCopiadas = 0;
         let preciosCopiados = 0;
-        for (const { grupo, opciones } of gruposOrigen) {
-          if (clavesDelDestino.has(claveDeNombre(grupo.nombre))) continue;
-          if (grupo.clase === "VARIANTE" && !puedeTraerLaVariante) continue;
-          const activas = opciones.filter((o) => o.activa);
-          if (activas.length === 0) continue;
+        for (const { grupo, opciones: activas } of gruposACopiar) {
           const nuevoGrupo = await tx.opciones.insertarGrupo(empresaId, destino.id, {
             clase: grupo.clase,
             esTamano: grupo.esTamano,

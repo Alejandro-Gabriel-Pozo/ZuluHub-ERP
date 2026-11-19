@@ -3,6 +3,8 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import "../../../../test/propiedades/configuracion";
 import { importeATexto, importeDesdeTexto } from "../../../primitivas/dinero/importe";
+import { TIPO_DE_MEDIO_CON_VUELTO } from "../../../primitivas/dinero/vuelto";
+import { TIPOS_DE_MEDIO } from "../../caja/publico";
 import { ARS } from "../../../primitivas/dinero/moneda";
 import {
   MAXIMO_DE_COBROS_POR_TICKET,
@@ -24,6 +26,12 @@ const cobro = (monto: string, medio = M1, cuenta: string | null = null): CobroPe
 });
 const total = (t: string) => importeDesdeTexto(ARS, t);
 const codigo = (r: { ok: boolean; error?: unknown }) => (r.ok ? "ok" : r.error);
+
+describe("el vuelto y caja hablan del mismo tipo de medio", () => {
+  it("el único tipo que da vuelto es uno de los tipos de medio de caja (si se renombra uno, esta prueba lo dice)", () => {
+    expect(TIPOS_DE_MEDIO as readonly string[]).toContain(TIPO_DE_MEDIO_CON_VUELTO);
+  });
+});
 
 describe("normalizarCobros", () => {
   it("acepta de 1 a 50 cobros válidos", () => {

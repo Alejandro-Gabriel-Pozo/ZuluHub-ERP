@@ -287,7 +287,7 @@ export async function montarStock(
   /** El nivel del control `stock.existencia_negativa` de la empresa (o de una sucursal): no admite borrado, así que se cambia con UPSERT. */
   const fijarNivel = async (
     empresa: string,
-    nivel: "PERMITIR" | "AVISAR" | "BLOQUEAR",
+    nivel: "PERMITIR" | "AVISAR",
     sucursal: string | null = null,
   ) => {
     await dueno.query(

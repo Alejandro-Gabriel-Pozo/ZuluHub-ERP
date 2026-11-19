@@ -12,6 +12,8 @@ import {
   textoDeValor,
 } from "../logica/plan";
 import { fechaArgentinaDeInstante, fechaLegible } from "../logica/vigencia";
+import { accionDelModulo } from "../logica/modulo-de-empresa";
+import { CambioDeModulo } from "./cambio-de-modulo.cliente";
 import { CambioDePlan } from "./cambio-de-plan.cliente";
 import estilos from "./empresas.module.css";
 import propios from "./plan.module.css";
@@ -112,6 +114,7 @@ export function PanelDePlan({ plan }: PropsDePanelDePlan) {
               <th scope="col">Módulo</th>
               <th scope="col">Incluido en el plan</th>
               <th scope="col">Estado</th>
+              <th scope="col">Acción</th>
             </tr>
           </thead>
           <tbody>
@@ -119,10 +122,21 @@ export function PanelDePlan({ plan }: PropsDePanelDePlan) {
               const estado = modulo.disponible
                 ? rotuloDeEstadoDeModulo(modulo.estado)
                 : { texto: "En desarrollo", tono: "info" as const };
+              const accion = accionDelModulo(modulo);
               return (
                 <tr key={modulo.modulo}>
                   <th scope="row" className={estilos["nombre"]}>
                     {rotuloDeModulo(modulo.modulo)}
+                    {modulo.requiere.length === 0 ? null : (
+                      <div className={propios["nota"]}>
+                        Requiere: {modulo.requiere.map(rotuloDeModulo).join(", ")}
+                      </div>
+                    )}
+                    {modulo.faltan.length === 0 ? null : (
+                      <div className={propios["nota"]}>
+                        Falta activar: {modulo.faltan.map(rotuloDeModulo).join(", ")}
+                      </div>
+                    )}
                   </th>
                   <td>
                     <span className={estilos["rotulo"]}>Incluido en el plan</span>
@@ -133,6 +147,17 @@ export function PanelDePlan({ plan }: PropsDePanelDePlan) {
                     <span>
                       <Insignia tono={estado.tono}>{estado.texto}</Insignia>
                     </span>
+                  </td>
+                  <td>
+                    <span className={estilos["rotulo"]}>Acción</span>
+                    {accion === null ? null : (
+                      <CambioDeModulo
+                        empresaId={plan.empresaId}
+                        empresa={plan.empresa}
+                        modulo={modulo.modulo}
+                        accion={accion}
+                      />
+                    )}
                   </td>
                 </tr>
               );
