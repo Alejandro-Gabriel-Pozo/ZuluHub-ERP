@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { VentaCobrada } from "../cobrar/modelo-de-cobro";
-import { esVentaACero } from "../cobrar/modelo-de-cobro";
+import type { VentaCobrada } from "../../apps/web/ui/plantillas/cobrar/modelo-de-cobro";
+import { esVentaACero } from "../../apps/web/ui/plantillas/cobrar/modelo-de-cobro";
 import {
   confirmacionDeCero,
   esImporteEnCero,
   pedidoDeVentaACero,
   type CotizacionDeLaVenta,
   type LineaDeLaVenta,
-} from "./modelo-de-la-cuenta";
+} from "../../apps/web/ui/plantillas/venta/modelo-de-la-cuenta";
 
 const linea = (clave: string): LineaDeLaVenta => ({
   clave,
@@ -70,6 +70,15 @@ describe("confirmacionDeCero (mira solo la cotización del servidor)", () => {
       ),
     ).toEqual({ tipo: "LINEA", lineasACero: [{ lineaId: "b", nombre: "Producto b" }] });
   });
+  it("una cotización con menos líneas que la cuenta no inventa líneas a cero", () => {
+    expect(
+      confirmacionDeCero(
+        [linea("a"), linea("b")],
+        nombre,
+        cotizacion("800.00", cotizada("800.00")),
+      ),
+    ).toEqual({ tipo: "NINGUNA" });
+  });
   it("nada a cero: NINGUNA", () => {
     expect(
       confirmacionDeCero([linea("a")], nombre, cotizacion("800.00", cotizada("800.00"))),
@@ -99,6 +108,10 @@ describe("esVentaACero", () => {
     expect(esVentaACero(venta("0.00", []))).toBe(true);
     expect(esVentaACero(venta("0", []))).toBe(true);
   });
+  it("con cobros no es venta a cero aunque el total sea cero", () => {
+    const cobro = { medioDePagoId: "m", cuentaDeCobroId: null, importe: importe("0.00") };
+    expect(esVentaACero(venta("0.00", [cobro]))).toBe(false);
+  });
   it("con cobros o con total positivo no", () => {
     const cobro = { medioDePagoId: "m", cuentaDeCobroId: null, importe: importe("800.00") };
     expect(esVentaACero(venta("800.00", [cobro]))).toBe(false);
@@ -120,6 +133,17 @@ describe("pedidoDeVentaACero", () => {
       cobros: [],
       confirmaciones: ["VENTA_A_CERO"],
     });
+  });
+  it("la medida elegida viaja con su id y una cuenta vacía no arma pedido", () => {
+    const conMedida = { ...linea("a"), varianteId: "mediana", opcionIds: ["x"] };
+    expect(
+      pedidoDeVentaACero({ ids, cajaId: "caja-1", cuenta: [conMedida], total: importe("0.00") }),
+    ).toMatchObject({
+      lineas: [{ lineaId: "la", productoId: "p-a", varianteId: "mediana", opcionIds: ["x"] }],
+    });
+    expect(
+      pedidoDeVentaACero({ ids, cajaId: "caja-1", cuenta: [], total: importe("0.00") }),
+    ).toBeNull();
   });
   it("sin id para una línea no hay pedido (nunca a medias)", () => {
     expect(
