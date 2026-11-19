@@ -12,7 +12,9 @@ export type ErrorDeImporteParaMostrar = "IMPORTE_NO_MOSTRABLE";
 
 export function importeParaMostrar(texto: string): Resultado<string, ErrorDeImporteParaMostrar> {
   if (!FORMA_DEL_IMPORTE.test(texto)) return err("IMPORTE_NO_MOSTRABLE");
-  const [enteros = "", decimales = ""] = texto.split(".");
+  const punto = texto.indexOf(".");
+  const enteros = punto === -1 ? texto : texto.slice(0, punto);
+  const decimales = punto === -1 ? "" : texto.slice(punto + 1);
   const conMiles = enteros.replace(/\B(?=(\d{3})+$)/g, ".");
   return ok(`${conMiles},${decimales.padEnd(2, "0")}`);
 }
