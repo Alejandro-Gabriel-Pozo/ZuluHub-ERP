@@ -130,6 +130,7 @@ describe.skipIf(base === null)("ficha de datos de un producto de la web", () => 
       claseDeUso: "VENDIBLE",
       unidadBaseId: "UNIDAD",
       seVende: true,
+      admiteControlDeStock: false,
       nombreDeCocina: "MILA",
       codigo: "MIL-1",
       codigoDeBarras: null,

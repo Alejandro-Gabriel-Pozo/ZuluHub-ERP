@@ -12,6 +12,8 @@ import { rutaDeLaFicha } from "../ui/plantillas/catalogo/modelo-de-ficha-de-prod
 import type { ResultadoDeAccion } from "./acciones";
 import { web } from "./composicion";
 import { conLaEmpresa } from "./con-la-empresa";
+import { fijarElControl } from "./control-de-stock";
+import { puedeControlarElStock } from "./ofertas-de-catalogo";
 import { textoDe } from "./formularios-de-caja";
 import { dependenciasDeSesion } from "./sesion";
 
@@ -21,6 +23,12 @@ import { dependenciasDeSesion } from "./sesion";
  * `productos.editar`) y la validez de cada dato los decide el servidor, dentro de la transacción: la pantalla no valida nada. Del formulario solo se toman los campos que la
  * acción declara; el id y la versión no viajan en el formulario: los fija la página al armar la acción (`bind`). Cómo se repite sin duplicar: guardar lo ya guardado no escribe;
  * con una versión vieja el servidor rechaza.
+ *
+ * El tilde «Se controla el stock» viaja en el mismo formulario y con el mismo «Guardar», pero son DOS transacciones, en este orden: primero el control (módulo `stock`) y después la ficha
+ * (módulo `catalogo`). Si el control falla, la ficha NO se guarda; si el control entra y la ficha se rechaza (otra persona guardó antes), el tilde queda cambiado y la pantalla muestra el
+ * error de la ficha: no es un estado inválido (el tilde no depende de los datos de la ficha) y repetir «Guardar» es seguro (los dos casos de uso responden «ya estaba» sin escribir). El
+ * control solo se toca si la página lo dibujó (`controlVisto !== null`) y la persona puede cambiarlo (`puedeControlarElStock`, calculado de nuevo acá: una casilla apagada no viaja en el
+ * formulario y no debe leerse como «desmarcar»). La casilla marcada viaja como `on`; desmarcada no viaja.
  */
 
 const dependencias: DependenciasDeFichaDeProductoWeb = {
@@ -45,10 +53,18 @@ const textoSiVino = (datos: FormData, nombre: string): string | undefined =>
 export async function guardarLaFicha(
   productoId: string,
   versionEsperada: number,
+  controlVisto: boolean | null,
   datos: FormData,
 ): Promise<ResultadoDeAccion> {
-  const respuesta = await conLaEmpresa((contexto) =>
-    guardarLaFichaDeProducto(dependencias, contexto, {
+  const respuesta = await conLaEmpresa(async (contexto) => {
+    if (controlVisto !== null && (await puedeControlarElStock(contexto))) {
+      const pedido = datos.get("seControlaElStock") === "on";
+      if (pedido !== controlVisto) {
+        const control = await fijarElControl(contexto, productoId, pedido);
+        if (!control.ok) return control;
+      }
+    }
+    return guardarLaFichaDeProducto(dependencias, contexto, {
       productoId,
       versionEsperada,
       nombre: textoDe(datos, "nombre"),
@@ -57,8 +73,8 @@ export async function guardarLaFicha(
       codigoDeBarras: textoSiVino(datos, "codigoDeBarras"),
       alicuota: textoSiVino(datos, "alicuota"),
       seccionDeCartaId: textoSiVino(datos, "seccionDeCartaId"),
-    }),
-  );
+    });
+  });
   if (!respuesta.ok) return { error: respuesta.error };
   redirect(rutaDeLaFicha(respuesta.dato.productoId));
 }
