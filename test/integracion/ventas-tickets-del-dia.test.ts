@@ -217,6 +217,32 @@ describe.skipIf(base === null)("ventas: tickets del día y ficha del ticket", ()
     expect(valorDe(await conTope(3)).tickets).toHaveLength(3);
   });
 
+  it("la ficha trae el sello de caja por cobro: lo que el medio pedía y quedó vacío; no cambia si después cambia la configuración", async () => {
+    const e = await escenarioFacturable(m);
+    const caja = await m.cajaAbierta(e);
+    await m.dueno.query(
+      "update medio_de_pago set pide_cupon = true, avisa_si_falta_cupon = true where empresa_id = $1 and tipo = 'TARJETA_DEBITO'",
+      [e.empresa],
+    );
+    const cuenta = await terminal(e, "Terminal 2");
+    const t = await vender(e, caja, {
+      total: "1000.00",
+      cobros: [
+        { tipo: "EFECTIVO", importe: "400.00" },
+        { tipo: "TARJETA_DEBITO", cuenta, importe: "600.00" },
+      ],
+    });
+    await m.dueno.query(
+      "update medio_de_pago set avisa_si_falta_cupon = false where empresa_id = $1 and tipo = 'TARJETA_DEBITO'",
+      [e.empresa],
+    );
+    const f = valorDe(await m.consultas.fichaDelTicketDelDia(e.operador, t));
+    expect(f.cobros.find((c) => c.medioTipo === "TARJETA_DEBITO")?.datosPendientes).toEqual([
+      "cupon",
+    ]);
+    expect(f.cobros.find((c) => c.medioTipo === "EFECTIVO")?.datosPendientes).toEqual([]);
+  });
+
   it("la ficha: renglones con medida y opciones, cobros con medio y cuenta, caja, quién y cuándo; una cuenta desactivada conserva su nombre; el medio corregido en el cierre se ve", async () => {
     const e = await escenarioFacturable(m);
     const caja = await m.cajaAbierta(e);

@@ -39,8 +39,7 @@ export type MedioParaCobrar = Readonly<{
   nombre: string | null;
   cuentas: readonly Readonly<{ id: string; tipo: string; nombre: string }>[];
   datosQuePide: DatosQuePideElMedio;
-  /** De los que pide, cuáles «se piden» (PR-7, criterio permisivo): se pueden dejar vacíos; el servidor registra el cobro y lo sella con el dato pendiente. */
-  datosQueSePiden: DatosQuePideElMedio;
+  datosQueSePiden: DatosQuePideElMedio; // De los que pide, cuáles «se piden»: se pueden dejar vacíos (PR-7).
 }>;
 
 export type OpcionesParaCobrar = Readonly<{
@@ -212,10 +211,8 @@ export function datosPendientes(
   medio: MedioParaCobrar | undefined,
   pago: PagoEnEdicion,
 ): readonly DatoDelMedio[] {
-  if (medio === undefined) return [];
-  return datosAdmitidos(medio).filter(
-    (d) => medio.datosQueSePiden[d] && pago.datos[d].trim() === "",
-  );
+  const pedidos = medio === undefined ? [] : datosAdmitidos(medio);
+  return pedidos.filter((d) => medio?.datosQueSePiden[d] === true && pago.datos[d].trim() === "");
 }
 
 export function estadoDelCobro(
