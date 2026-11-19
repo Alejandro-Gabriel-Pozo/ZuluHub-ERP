@@ -303,6 +303,11 @@ describe("problemasDelMenu: lo que la tabla real cumple y cada violación que se
   it("la tabla real no tiene problemas", () => {
     expect(problemas(FILAS_DEL_MENU)).toEqual([]);
   });
+  it("una fila con una función de otro módulo (violación inyectada)", () => {
+    expect(problemas([{ ...productos, perilla: "salon" }])).toEqual([
+      "productos: la función salon no es del módulo catalogo",
+    ]);
+  });
   it("sin filas es válida (reserva)", () => {
     expect(problemas([])).toEqual([]);
   });
@@ -388,5 +393,36 @@ describe("«Venta rápida»: la fila del grupo «Mostrador» del área Ventas (d
   it("sin el permiso o sin el módulo activo la entrada no aparece", () => {
     expect(armarElMenu([ventaRapida], permisos([], ["ventas"]), null)).toEqual([]);
     expect(armarElMenu([ventaRapida], permisos(["ventas.ver"]), null)).toEqual([]);
+  });
+});
+
+describe("«Mesas»: la fila declara la función de pago `salon` (X-1b)", () => {
+  const mesas = fila("mesas");
+  const conFunciones = (funciones?: readonly string[]) => ({
+    ...permisos(["mesas.ver"], ["salon"]),
+    ...(funciones === undefined ? {} : { funcionesEncendidas: funciones }),
+  });
+
+  it("lleva la función `salon` y es del mismo módulo", () => {
+    expect(mesas.perilla).toBe("salon");
+    expect(FILAS_DEL_MENU.filter((f) => f.tipo === "pantalla" && f.perilla !== null)).toHaveLength(
+      1,
+    );
+  });
+  it("con el módulo, la acción y la función encendida aparece", () => {
+    expect(claves(armarElMenu([mesas], conFunciones(["salon"]), null))).toEqual([
+      ["ventas", [["mesas"]]],
+    ]);
+  });
+  it("con la función apagada no aparece", () => {
+    expect(armarElMenu([mesas], conFunciones([]), null)).toEqual([]);
+  });
+  it("con las funciones sin leer (sin definir) no aparece", () => {
+    expect(armarElMenu([mesas], conFunciones(), null)).toEqual([]);
+  });
+  it("una fila sin función no depende de las funciones leídas", () => {
+    expect(claves(armarElMenu([ventaRapida], permisos(["ventas.ver"], ["ventas"]), null))).toEqual([
+      ["ventas", [["venta-rapida"]]],
+    ]);
   });
 });

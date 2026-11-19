@@ -1,4 +1,8 @@
 import {
+  CATALOGO_DE_PERILLAS,
+  type ClavePerilla,
+} from "../../../../src/capacidades/planes/perillas";
+import {
   CATALOGO_DE_MODULOS,
   type ClaveAccion,
   type ClaveModulo,
@@ -88,6 +92,8 @@ export type FilaDePantalla = BaseDeFila &
       | "contacto";
     modulo: ClaveModulo;
     accion: ClaveAccion;
+    /** La función de pago (perilla) que tiene que estar encendida para ofrecerla; `null` = ninguna. Tiene que ser del mismo módulo de la fila. */
+    perilla: ClavePerilla | null;
     href: string;
     /**
      * COLUMNA RESERVADA: el departamento (unidad de negocio) al que pertenece la fila; `null` = vale para todos. Hoy ninguna fila lo usa y
@@ -116,6 +122,7 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     grupo: "mostrador",
     modulo: "ventas",
     accion: "ventas.ver",
+    perilla: null,
     href: RUTA_DE_LA_VENTA,
     etiqueta: "ventas.venta.menu",
     departamento: null,
@@ -127,6 +134,7 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     grupo: "mostrador",
     modulo: "ventas",
     accion: "ventas.ver",
+    perilla: null,
     href: RUTA_DE_TICKETS_DEL_DIA,
     etiqueta: "ventas.tickets.menu",
     departamento: null,
@@ -138,6 +146,7 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     grupo: "comprobantes",
     modulo: "facturacion",
     accion: "comprobantes.ver",
+    perilla: null,
     href: RUTA_DEL_LISTADO,
     etiqueta: "fiscal.pantalla.listado_titulo",
     departamento: null,
@@ -151,6 +160,7 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     grupo: "caja",
     modulo: "caja",
     accion: "cajas.ver",
+    perilla: null,
     href: RUTA_DE_LA_CAJA,
     etiqueta: "caja.pantalla.titulo",
     departamento: null,
@@ -162,6 +172,7 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     grupo: "productos",
     modulo: "catalogo",
     accion: "productos.ver",
+    perilla: null,
     href: RUTA_DE_PRODUCTOS,
     etiqueta: "catalogo.lista.titulo",
     departamento: null,
@@ -175,6 +186,7 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     grupo: "carta",
     modulo: "catalogo",
     accion: "productos.ver",
+    perilla: null,
     href: RUTA_DE_SECCIONES,
     etiqueta: "catalogo.seccion.titulo",
     departamento: null,
@@ -187,6 +199,7 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     grupo: "salon",
     modulo: "salon",
     accion: "mesas.ver",
+    perilla: "salon",
     href: RUTA_DE_MESAS,
     etiqueta: "salon.texto.admin_mesas",
     departamento: null,
@@ -199,6 +212,7 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     grupo: "salon",
     modulo: "comandas",
     accion: "impresoras.ver",
+    perilla: null,
     href: RUTA_DE_IMPRESORAS,
     etiqueta: "comandas.texto.imprimir_impresoras",
     departamento: null,
@@ -210,6 +224,7 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     grupo: "stock",
     modulo: "stock",
     accion: "stock.ver",
+    perilla: null,
     href: RUTAS_DE_STOCK.entrada,
     etiqueta: "stock.pantalla.stock",
     departamento: null,
@@ -221,6 +236,7 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     grupo: "empresa",
     modulo: "administracion",
     accion: "datos_fiscales.editar",
+    perilla: null,
     href: RUTAS_DE_CONFIGURACION.lista,
     etiqueta: "fiscal.pantalla.config_titulo",
     departamento: null,
@@ -232,6 +248,7 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     grupo: "empresa",
     modulo: "caja",
     accion: "medios_de_pago.editar",
+    perilla: null,
     href: RUTAS_DE_CAJA.medios,
     etiqueta: "caja.medios.titulo",
     departamento: null,
@@ -243,6 +260,7 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
     grupo: "sucursal",
     modulo: "administracion",
     accion: "sucursales.editar",
+    perilla: null,
     href: RUTAS_DE_CUENTA.contactoDeLaSucursal,
     etiqueta: "sucursal.contacto_titulo",
     departamento: null,
@@ -261,6 +279,8 @@ export const FILAS_DEL_MENU: readonly FilaDelMenu[] = [
 export type PermisosParaElMenu = Readonly<{
   acciones: readonly string[];
   modulos: Readonly<{ activos: readonly string[]; enSoloLectura: readonly string[] }>;
+  /** Las funciones de pago encendidas; sin definir = no se leyeron (lo que pide función no se ofrece). */
+  funcionesEncendidas?: readonly string[];
 }>;
 
 export type ItemDelMenu = Readonly<{
@@ -300,7 +320,8 @@ export function armarElMenu(
   const sePuedeVer = (f: FilaDelMenu): boolean => {
     if (f.departamento !== null && f.departamento !== departamentoElegido) return false;
     if (f.tipo === "accion") return true;
-    return seOfrece(CATALOGO_DE_MODULOS, permisos, { modulo: f.modulo, accion: f.accion });
+    const { modulo, accion, perilla } = f;
+    return seOfrece(CATALOGO_DE_MODULOS, permisos, { modulo, accion, perilla });
   };
   const visibles = filas.filter(sePuedeVer);
   const areas: AreaDelMenu[] = [];
@@ -367,6 +388,8 @@ export function problemasDelMenu(
         : {};
       if (!Object.hasOwn(acciones, f.accion))
         problemas.push(`${f.clave}: la acción ${f.accion} no es del módulo ${f.modulo}`);
+      if (f.perilla !== null && CATALOGO_DE_PERILLAS[f.perilla].modulo !== f.modulo)
+        problemas.push(`${f.clave}: la función ${f.perilla} no es del módulo ${f.modulo}`);
       if (!f.href.startsWith("/")) problemas.push(`${f.clave}: la ruta tiene que empezar con /`);
       if (rutas.has(f.href)) problemas.push(`${f.clave}: la ruta ${f.href} está repetida`);
       rutas.add(f.href);
