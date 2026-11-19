@@ -108,6 +108,8 @@ describe.skipIf(base === null || !salonAbierto)(
     it("el plano arranca vacío, se redibuja al escribir y muestra la mesa recién creada", async () => {
       await pagina.goto(`${mundo.url}/salon/mesas`);
       await pagina.waitForLoadState("networkidle");
+      // Con el extra encendido el menú ofrece «Mesas» (X-1b); el caso sin el extra está abajo.
+      expect(await pagina.locator('a[href="/salon/mesas"]').count()).toBeGreaterThan(0);
       const plano = pagina.getByRole("list", { name: "Plano" });
       await plano.waitFor();
       expect(await plano.getByRole("listitem").count()).toBe(0);
@@ -134,6 +136,45 @@ describe.skipIf(base === null || !salonAbierto)(
 
       await planoGuardado.getByRole("link", { name: "Mesa 7" }).click();
       await pagina.waitForURL(/\/salon\/mesas\/[0-9a-f-]{36}$/);
+    });
+  },
+);
+
+/**
+ * X-1b: con `salon` abierto pero el extra de pago APAGADO (el plan no lo incluye), el menú no ofrece «Mesas» (entrada de menú con el extra apagado no se muestra,
+ * dueño 18/11/2026). El caso con el extra encendido (el menú SÍ la ofrece) lo cubre el recorrido del plano de arriba. Ocultar no es autorizar: la pantalla sigue exigiendo
+ * la función en el servidor.
+ */
+describe.skipIf(base === null || !salonAbierto)(
+  "recorrido del menú de «Mesas» sin el extra",
+  () => {
+    let mundo: MundoDelRecorrido;
+    let navegador: Browser;
+
+    beforeAll(async () => {
+      if (base === null) return;
+      mundo = await armarMundoDelRecorrido(base, {
+        modulos: ["facturacion", "catalogo", "caja", "ventas", "comandas", "salon"],
+        perillas: {},
+      });
+      const ejecutable = process.env["PEDERNAL_NAVEGADOR"];
+      navegador = await chromium.launch({
+        ...(ejecutable === undefined || ejecutable === "" ? {} : { executablePath: ejecutable }),
+        args: ["--no-proxy-server"],
+      });
+    });
+    afterAll(async () => {
+      await navegador?.close();
+      await mundo?.cerrar();
+    });
+
+    it("el menú no ofrece «Mesas» aunque el módulo esté activo", async () => {
+      const contexto = await navegador.newContext({ ignoreHTTPSErrors: true, viewport: CELULAR });
+      await contexto.addCookies([...mundo.cookies]);
+      const pagina = await contexto.newPage();
+      await pagina.goto(`${mundo.url}/ventas/venta-rapida`);
+      await pagina.waitForLoadState("networkidle");
+      expect(await pagina.locator('a[href="/salon/mesas"]').count()).toBe(0);
     });
   },
 );

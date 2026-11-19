@@ -1,7 +1,9 @@
 import { texto } from "../../../../../../../../../src/capacidades/vocabulario/vocabulario";
 import { conTitulo, pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
+import { cargarElControlDeStock } from "../../../../../../../servidor/control-de-stock";
 import { cargarLaFicha } from "../../../../../../../servidor/ficha-de-producto";
 import { cargarLaVisibilidad } from "../../../../../../../servidor/ocultar";
+import { puedeControlarElStock } from "../../../../../../../servidor/ofertas-de-catalogo";
 import {
   puedeEditarProductos,
   puedeOcultarEnElLocal,
@@ -31,13 +33,23 @@ export default async function PaginaDeLaFichaDeUnProducto({ params }: PropsDePag
     if (!respuesta.ok) return <ErrorDelDetalle error={respuesta.error} />;
     const ficha = armarLaFicha(respuesta.dato);
     const oculto = await cargarLaVisibilidad(contexto, ficha.id);
+    // El tilde «Se controla el stock» (PR-3): solo si la clase se controla, el producto está activo y se pudo leer (módulo `stock` activo, `stock.ver`); si no, no se dibuja nada.
+    const control = respuesta.dato.admiteControlDeStock
+      ? await cargarElControlDeStock(contexto, ficha.id)
+      : null;
+    const controlVisto = control?.ok === true ? control.dato.controlado : null;
     return conTitulo(
       ficha.titulo,
       <Pila separacion={5}>
         <FormularioDeFichaDeProducto
-          key={`${ficha.id}-${String(ficha.version)}`}
+          key={`${ficha.id}-${String(ficha.version)}-${String(controlVisto)}`}
           ficha={ficha}
-          accion={guardarFichaAccion.bind(null, ficha.id, ficha.version)}
+          accion={guardarFichaAccion.bind(null, ficha.id, ficha.version, controlVisto)}
+          controlDeStock={
+            controlVisto === null
+              ? null
+              : { marcada: controlVisto, puedeCambiar: await puedeControlarElStock(contexto) }
+          }
           puedeGuardar={await puedeEditarProductos(contexto)}
         />
         {oculto.ok ? (

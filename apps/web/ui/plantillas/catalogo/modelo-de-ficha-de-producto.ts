@@ -38,6 +38,8 @@ export type FichaDeLaPantalla = Readonly<{
   claseDeUso: string;
   unidadBaseId: string;
   seVende: boolean;
+  /** Si la ficha puede ofrecer el tilde «Se controla el stock» (lo calcula la composición con la regla del módulo). */
+  admiteControlDeStock: boolean;
   nombreDeCocina: string | null;
   codigo: string | null;
   codigoDeBarras: string | null;
@@ -75,6 +77,8 @@ export type FichaArmada = Readonly<{
   seccion: DesplegableArmado | null;
   /** «Secciones», junto al campo de la sección (A8, maqueta `productos-secciones.html`, línea 368); `null` si la clase no se vende (el campo no está). */
   enlaceDeSecciones: Readonly<{ href: string; texto: string }> | null;
+  /** Solo si el producto admite el tilde (la clase se controla y está activo): el texto de la casilla; si no, `null`. */
+  etiquetaDelControlDeStock: string | null;
   textoDeElegir: string;
   guardar: string;
 }>;
@@ -144,6 +148,9 @@ export function armarLaFicha(f: FichaDeLaPantalla, d: DiccionarioResuelto = {}):
       : null,
     enlaceDeSecciones: f.seVende
       ? { href: RUTA_DE_SECCIONES, texto: texto(d, "catalogo.seccion.titulo") }
+      : null,
+    etiquetaDelControlDeStock: f.admiteControlDeStock
+      ? texto(d, "catalogo.dato.se_controla_el_stock")
       : null,
     textoDeElegir: texto(d, "catalogo.dato.sin_elegir"),
     guardar: texto(d, "catalogo.accion.guardar"),

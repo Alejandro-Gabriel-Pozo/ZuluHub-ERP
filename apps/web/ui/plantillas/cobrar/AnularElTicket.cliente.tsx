@@ -18,6 +18,8 @@ export type PropsDeAnularElTicket = Readonly<{
   alCancelar: () => void;
   /** El ticket quedó anulado: la vista «Resultado» muestra «Anulado», el número, el motivo y «Nueva venta». */
   alAnulado: (ticket: TicketAnulado, motivo: string) => void;
+  /** El servidor rechazó la anulación (cualquier motivo): quien la abrió puede releer el ticket (en «Tickets del día», por si otra persona ya lo anuló). Una vez por rechazo. */
+  alRechazado?: (() => void) | undefined;
   nuevoId: () => string;
   esperaEntreVerificacionesMs?: number | undefined;
 }>;
@@ -26,7 +28,7 @@ export type PropsDeAnularElTicket = Readonly<{
  * Anular el ticket recién cobrado (decisión 172: «anular todo», con motivo; maqueta `venta-rapida-v4.html`). El motivo es obligatorio en la pantalla («Escribí el motivo») y el servidor decide el
  * resto (su largo, que el día siga abierto, que el ticket no tenga comprobante vigente): cualquier rechazo sale como el genérico. Idempotente por intento: el id del ejemplar de anulación se genera
  * UNA vez y se repite con la clave en cada reintento; un doble toque es una sola anulación. Es un cuadro de diálogo (`Superposicion`, propósito «confirmar»; maqueta `vDlg`, DDD:294): mientras el envío corre o
- * está incierto no se puede cerrar. Anulado, avisa a quien lo abrió (`alAnulado`) y la vista «Resultado» muestra el resto.
+ * está incierto no se puede cerrar. Orden de los botones: «Cancelar» y después «Anular» (el dueño, 18/11/2026: rige en todas las hojas de anular). Anulado, avisa a quien lo abrió (`alAnulado`) y la vista «Resultado» muestra el resto.
  */
 export function AnularElTicket({
   venta,
@@ -34,6 +36,7 @@ export function AnularElTicket({
   anular,
   alCancelar,
   alAnulado,
+  alRechazado,
   nuevoId,
   esperaEntreVerificacionesMs,
 }: PropsDeAnularElTicket) {
@@ -55,6 +58,15 @@ export function AnularElTicket({
     avisado.current = true;
     alAnulado(anulado, motivo.trim());
   }, [anulado, alAnulado, motivo]);
+
+  // Rechazado: avisa una sola vez por rechazo (un reintento con otro rechazo avisa de nuevo).
+  const rechazo = envio.estado.tipo === "rechazado" ? envio.estado.rechazo : null;
+  const rechazoAvisado = useRef<unknown>(null);
+  useEffect(() => {
+    if (rechazo === null || rechazoAvisado.current === rechazo) return;
+    rechazoAvisado.current = rechazo;
+    alRechazado?.();
+  }, [rechazo, alRechazado]);
 
   const alAnular = () => {
     const escrito = motivo.trim();
@@ -99,6 +111,14 @@ export function AnularElTicket({
         {inesperado === null ? null : <ErrorDeRespuesta error={inesperado} />}
         <div className={estilos["acciones"]}>
           <Boton
+            variante="secundaria"
+            ancho="completo"
+            deshabilitado={congelado}
+            alTocar={alCancelar}
+          >
+            {textos.cancelar}
+          </Boton>
+          <Boton
             variante="peligro"
             ancho="completo"
             deshabilitado={envio.bloqueado}
@@ -108,14 +128,6 @@ export function AnularElTicket({
             alTocar={alAnular}
           >
             {textos.anular}
-          </Boton>
-          <Boton
-            variante="secundaria"
-            ancho="completo"
-            deshabilitado={congelado}
-            alTocar={alCancelar}
-          >
-            {textos.cancelar}
           </Boton>
         </div>
       </div>

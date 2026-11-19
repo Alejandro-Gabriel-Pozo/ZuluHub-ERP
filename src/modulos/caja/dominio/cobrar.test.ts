@@ -202,7 +202,37 @@ describe("opcionDeMedioParaCobrar", () => {
   const qr = { id: "q", tipo: "QR", nombre: "QR 1" } as const;
   const banco = { id: "b", tipo: "CUENTA_BANCARIA", nombre: "Banco" } as const;
   const cuentas = [terminal, qr, banco];
-  const medio = (tipo: TipoDeMedio, pide = ninguno) => ({ id: "m", tipo, nombre: null, pide });
+  const medio = (tipo: TipoDeMedio, pide = ninguno, avisaSiFalta = ninguno) => ({
+    id: "m",
+    tipo,
+    nombre: null,
+    pide,
+    avisaSiFalta,
+  });
+
+  it("datosQueSePiden: lo que el medio pide Y muestra Y el tipo admite; datosQuePide no cambia", () => {
+    const opcion = opcionDeMedioParaCobrar(
+      medio("TARJETA_DEBITO", todos, { ...todos, cuotas: false }),
+      cuentas,
+    );
+    // El débito no admite cuotas ni DNI: ni se muestran ni se piden aunque la fila lo dijera.
+    expect(opcion.datosQuePide).toEqual({
+      cupon: true,
+      ultimos4: true,
+      marca: true,
+      cuotas: false,
+      dni: false,
+    });
+    expect(opcion.datosQueSePiden).toEqual({
+      cupon: true,
+      ultimos4: true,
+      marca: true,
+      cuotas: false,
+      dni: false,
+    });
+    const mostrando = opcionDeMedioParaCobrar(medio("TARJETA_CREDITO", todos, ninguno), cuentas);
+    expect(mostrando.datosQueSePiden).toEqual(ninguno);
+  });
 
   it("cada tipo ofrece solo las cuentas que admite (el efectivo, ninguna)", () => {
     const ids = (tipo: TipoDeMedio) =>

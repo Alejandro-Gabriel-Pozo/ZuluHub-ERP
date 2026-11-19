@@ -11,8 +11,11 @@ import { FORMATO_DE_DNI } from "../../../../../src/primitivas/identificacion-fis
 import { motivoDelCupon } from "../../../../../src/primitivas/texto/cupon-de-pago";
 import { ultimosCuatroDigitosDesdeTexto } from "../../../../../src/primitivas/texto/ultimos-cuatro-digitos";
 import { nombreDelTipo } from "../caja/modelo-de-medios-de-pago";
-import type { LineaDeLaVenta } from "../venta/modelo-de-la-cuenta";
-import { deDiezmilesimos } from "../venta/modelo-de-venta-rapida";
+import {
+  esImporteEnCero,
+  lineasDelPedido,
+  type LineaDeLaVenta,
+} from "../venta/modelo-de-la-cuenta";
 
 /**
  * El modelo de vista de la hoja de COBRAR (maqueta `venta-rapida-v4.html`, zona cobro): qué filas de pago hay, qué datos admite cada medio, si cada dato está bien escrito, cuánto falta o
@@ -39,6 +42,7 @@ export type MedioParaCobrar = Readonly<{
   nombre: string | null;
   cuentas: readonly Readonly<{ id: string; tipo: string; nombre: string }>[];
   datosQuePide: DatosQuePideElMedio;
+  datosQueSePiden: DatosQuePideElMedio; // De los que pide, cuáles «se piden»: se pueden dejar vacíos (PR-7).
 }>;
 
 export type OpcionesParaCobrar = Readonly<{
@@ -165,7 +169,7 @@ export function pagoAdicional(
   const elegido =
     medios.find((m) => !pagos.some((p) => p.medioId === m.id)) ?? medioInicial(medios);
   if (elegido === null) return null;
-  return pagoNuevo(clave, elegido.id, falta === null || esCero(falta) ? "" : falta);
+  return pagoNuevo(clave, elegido.id, falta === null || esImporteEnCero(falta) ? "" : falta);
 }
 
 export const cambiarUnDato = (
@@ -180,11 +184,9 @@ export const nombreDelMedio = (medio: MedioParaCobrar): string =>
 
 // ─── El estado del cobro ─────────────────────────────────────────────────────────────────────────────────
 
-const IMPORTE_EN_CERO = /^0+(\.0+)?$/;
-
 /** ¿Es un importe que el servidor aceptaría para UN cobro? Forma de importe y mayor que cero. */
 export const esImporteValido = (importe: string): boolean =>
-  FORMA_DEL_IMPORTE.test(importe) && !IMPORTE_EN_CERO.test(importe);
+  FORMA_DEL_IMPORTE.test(importe) && !esImporteEnCero(importe);
 
 export type EstadoDeUnaFila = Readonly<{
   clave: string;
@@ -204,6 +206,17 @@ export type EstadoDelCobro = Readonly<{
 /** Los datos que cuentan: los que el medio admite, en el orden del servidor. */
 const datosAdmitidos = (medio: MedioParaCobrar | undefined): readonly DatoDelMedio[] =>
   medio === undefined ? [] : DATOS_EN_ORDEN.filter((d) => medio.datosQuePide[d]);
+
+/** Lo que el medio pide («se pide») y la fila dejó vacío: INFORMATIVO, no entra en `listo` (dueño, 18/11/2026: se advierte, no se exige); el pendiente real lo sella el servidor. */
+export function datosPendientes(
+  medio: MedioParaCobrar | undefined,
+  pago: PagoEnEdicion,
+): readonly DatoDelMedio[] {
+  // Sin medio no hay datos admitidos (la lista sale vacía) y el filtro no corre.
+  return datosAdmitidos(medio).filter(
+    (d) => (medio as MedioParaCobrar).datosQueSePiden[d] && pago.datos[d].trim() === "",
+  );
+}
 
 export function estadoDelCobro(
   total: Readonly<{ moneda: string; monto: string }>,
@@ -237,11 +250,13 @@ export function estadoDelCobro(
   return {
     filas,
     vuelto: cuenta,
-    listo: cuenta !== null && sinDatosMalos && esCero(cuenta.falta) && esCero(cuenta.sobra),
+    listo:
+      cuenta !== null &&
+      sinDatosMalos &&
+      esImporteEnCero(cuenta.falta) &&
+      esImporteEnCero(cuenta.sobra),
   };
 }
-
-const esCero = (importe: string): boolean => IMPORTE_EN_CERO.test(importe);
 
 /** Lo que falta cobrar (si falta), lo que sobra sin vuelto (si sobra), el vuelto (si hay) o nada: la línea de estado de la hoja. */
 export type LineaDeEstado =
@@ -253,9 +268,9 @@ export type LineaDeEstado =
 
 export function lineaDeEstado(vuelto: Vuelto | null): LineaDeEstado {
   if (vuelto === null) return null;
-  if (!esCero(vuelto.vuelto)) return { tipo: "VUELTO", importe: vuelto.vuelto };
-  if (!esCero(vuelto.falta)) return { tipo: "FALTA", importe: vuelto.falta };
-  if (!esCero(vuelto.sobra)) return { tipo: "SOBRA", importe: vuelto.sobra };
+  if (!esImporteEnCero(vuelto.vuelto)) return { tipo: "VUELTO", importe: vuelto.vuelto };
+  if (!esImporteEnCero(vuelto.falta)) return { tipo: "FALTA", importe: vuelto.falta };
+  if (!esImporteEnCero(vuelto.sobra)) return { tipo: "SOBRA", importe: vuelto.sobra };
   return { tipo: "COMPLETO" };
 }
 
@@ -277,6 +292,8 @@ export type EntradaDelPedido = Readonly<{
   pagos: readonly PagoEnEdicion[];
   medios: readonly MedioParaCobrar[];
   vuelto: Vuelto;
+  /** Solo las que la persona confirmó en la venta (hoy: «VENTA_A_CERO» tras confirmar una línea a $ 0). */
+  confirmaciones?: readonly string[] | undefined;
 }>;
 
 /**
@@ -303,19 +320,8 @@ export function pedidoDeCobro(entrada: EntradaDelPedido): Readonly<Record<string
       ...datosParaEnviar(pago, medio),
     });
   }
-  const lineas = entrada.cuenta.map((l) => {
-    const lineaId = entrada.ids.lineas.get(l.clave);
-    return lineaId === undefined
-      ? null
-      : {
-          lineaId,
-          productoId: l.productoId,
-          ...(l.varianteId === null ? {} : { varianteId: l.varianteId }),
-          opcionIds: l.opcionIds,
-          cantidad: deDiezmilesimos(l.cantidad),
-        };
-  });
-  if (cobros.length === 0 || lineas.length === 0 || lineas.includes(null)) return null;
+  const lineas = lineasDelPedido(entrada.ids.lineas, entrada.cuenta);
+  if (cobros.length === 0 || lineas === null) return null;
   return {
     cuentaId: entrada.ids.cuentaId,
     ejemplarId: entrada.ids.ejemplarId,
@@ -323,6 +329,7 @@ export function pedidoDeCobro(entrada: EntradaDelPedido): Readonly<Record<string
     totalEsperado: { moneda: total.moneda, monto: total.monto },
     cajaId: entrada.cajaId,
     cobros,
+    ...(entrada.confirmaciones === undefined ? {} : { confirmaciones: entrada.confirmaciones }),
   };
 }
 
@@ -358,6 +365,10 @@ export type VentaCobrada = Readonly<{
     importe: Readonly<{ moneda: string; monto: string }>;
   }>[];
 }>;
+
+/** ¿La venta se cerró sin cobro y con total cero (cortesía)? Una sola condición para el resultado y para quien lo consulte. */
+export const esVentaACero = (venta: Pick<VentaCobrada, "cobros" | "total">): boolean =>
+  venta.cobros.length === 0 && esImporteEnCero(venta.total.monto);
 
 /** Lo que vuelve de anular (`anularElTicket`). */
 export type TicketAnulado = Readonly<{

@@ -63,6 +63,10 @@ const TABLAS_DE_NEGOCIO = [
   "version_de_plan",
   "version_de_marca",
   "plan_de_tenant",
+  // 0089 (política de cambio de plan)
+  "politica_de_cambio_de_plan",
+  "condiciones_de_cambio_de_plan",
+  "arrepentimiento_de_plan",
   "ajuste_de_perilla",
   "modulo_de_empresa",
   "nivel_de_control",
@@ -598,6 +602,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "persona:SELECT",
           "plan:SELECT", // 0007
           "plan_de_tenant:SELECT", // 0007
+          "politica_de_cambio_de_plan:SELECT", // 0089
+          "condiciones_de_cambio_de_plan:SELECT", // 0089
+          "arrepentimiento_de_plan:SELECT", // 0089
           "referencia_de_error:SELECT",
           "serie_comprobante:SELECT", // 0006
           "solicitud_de_alta:SELECT", // captación
@@ -756,6 +763,11 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "pide_marca",
             "pide_cuotas",
             "pide_dni",
+            "avisa_si_falta_cupon",
+            "avisa_si_falta_ultimos4",
+            "avisa_si_falta_marca",
+            "avisa_si_falta_cuotas",
+            "avisa_si_falta_dni",
           ].map((c) => `pedernal_app:medio_de_pago.${c}`),
           ...["nombre", "identificador_externo", "sucursal_id", "activa"].map(
             (c) => `pedernal_app:cuenta_de_cobro.${c}`,
@@ -1299,6 +1311,21 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "motivo",
           "asignado_por",
         ].map((c) => `plan_de_tenant.${c}`),
+        // 0089 (política de cambio de plan)
+        ...[
+          "version",
+          "dias_de_anticipacion_de_suba",
+          "dias_de_anticipacion_de_baja",
+          "dias_de_arrepentimiento",
+          "motivo",
+          "definida_por",
+        ].map((c) => `politica_de_cambio_de_plan.${c}`),
+        ...["tenant_id", "numero", "sentido", "politica_version", "arrepentimiento_hasta"].map(
+          (c) => `condiciones_de_cambio_de_plan.${c}`,
+        ),
+        ...["tenant_id", "numero_arrepentido", "numero_nuevo", "motivo", "registrado_por"].map(
+          (c) => `arrepentimiento_de_plan.${c}`,
+        ),
         ...[
           "tenant_id",
           "empresa_id",

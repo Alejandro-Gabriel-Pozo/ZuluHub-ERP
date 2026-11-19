@@ -17,7 +17,16 @@ const mundo = vi.hoisted(
     llamadas: { contexto: unknown; id: string }[];
     respuesta: unknown;
     visibilidad: unknown;
-  } => ({ permisos: null, llamadas: [], respuesta: null, visibilidad: null }),
+    control: unknown;
+    pedidosDeControl: string[];
+  } => ({
+    permisos: null,
+    llamadas: [],
+    respuesta: null,
+    visibilidad: null,
+    control: null,
+    pedidosDeControl: [],
+  }),
 );
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
@@ -32,6 +41,12 @@ vi.mock("../../apps/web/servidor/ficha-de-producto", () => ({
     return Promise.resolve(mundo.respuesta);
   },
   guardarLaFicha: () => Promise.resolve({ error: null }),
+}));
+vi.mock("../../apps/web/servidor/control-de-stock", () => ({
+  cargarElControlDeStock: (_contexto: unknown, id: string) => {
+    mundo.pedidosDeControl.push(id);
+    return Promise.resolve(mundo.control);
+  },
 }));
 vi.mock("../../apps/web/servidor/ocultar", () => ({
   cargarLaVisibilidad: () => Promise.resolve(mundo.visibilidad),
@@ -73,6 +88,7 @@ const FICHA = {
   claseDeUso: "VENDIBLE",
   unidadBaseId: "UNIDAD",
   seVende: true,
+  admiteControlDeStock: false,
   nombreDeCocina: "MILA",
   codigo: "MIL-1",
   codigoDeBarras: "12345678",
@@ -94,6 +110,8 @@ const puede = (acciones: string[]) => {
 describe("la página de la ficha de datos de un producto", () => {
   beforeEach(() => {
     mundo.llamadas = [];
+    mundo.pedidosDeControl = [];
+    mundo.control = { ok: true, dato: { controlado: false } };
     responde({ ok: true, dato: FICHA });
     puede(["productos.ver", "productos.editar"]);
     // Por defecto la tarjeta de «Ocultar» no se pudo leer (módulo sin activar): la ficha sigue sin ella.
@@ -348,5 +366,62 @@ describe("la página de la ficha de datos de un producto", () => {
     const t = await texto();
     expect(t).toContain("PD-ABC123");
     expect(t).not.toContain("ERROR_INTERNO");
+  });
+});
+
+describe("el tilde «Se controla el stock» en la página de la ficha (PR-3)", () => {
+  const INSUMO = { ...FICHA, claseDeUso: "INSUMO", seVende: false, admiteControlDeStock: true };
+  const conStock = (acciones: string[], activos = ["catalogo", "stock"]) => {
+    mundo.permisos = { ok: true, valor: { acciones, modulos: { activos, enSoloLectura: [] } } };
+  };
+  const casilla = (marcado: string) =>
+    /<input[^>]*name="seControlaElStock"[^>]*>/.exec(marcado)?.[0];
+
+  beforeEach(() => {
+    mundo.visibilidad = { ok: false, error: errorDeCodigo("MODULO_EN_DESARROLLO") };
+    mundo.control = { ok: true, dato: { controlado: false } };
+    mundo.pedidosDeControl = [];
+    responde({ ok: true, dato: INSUMO });
+  });
+
+  it("gerente: insumo sin tildar → casilla «Se controla el stock» desmarcada y activa", async () => {
+    conStock(["productos.ver", "productos.editar", "stock.ver", "articulos.controlar"]);
+    const marcado = await html();
+    expect(await texto()).toContain("Se controla el stock");
+    const c = casilla(marcado);
+    expect(c).toBeDefined();
+    expect(c).not.toMatch(/checked/);
+    expect(c).not.toMatch(/disabled/);
+    expect(mundo.pedidosDeControl).toContain(ID);
+  });
+
+  it("insumo tildado → casilla marcada", async () => {
+    conStock(["productos.ver", "productos.editar", "stock.ver", "articulos.controlar"]);
+    mundo.control = { ok: true, dato: { controlado: true } };
+    expect(casilla(await html())).toMatch(/checked/);
+  });
+
+  it("operador: se ve apagada, con su estado real", async () => {
+    conStock(["productos.ver", "stock.ver"]);
+    mundo.control = { ok: true, dato: { controlado: true } };
+    const c = casilla(await html());
+    expect(c).toMatch(/checked/);
+    expect(c).toMatch(/disabled/);
+  });
+
+  it("si la lectura falla (módulo sin activar, sin permiso) no se dibuja nada: ni casilla ni aviso", async () => {
+    conStock(["productos.ver", "productos.editar"]);
+    mundo.control = { ok: false, error: errorDeCodigo("MODULO_EN_DESARROLLO") };
+    const marcado = await html();
+    expect(casilla(marcado)).toBeUndefined();
+    expect(await texto()).not.toContain("Se controla el stock");
+    expect(marcado).not.toContain("MODULO_EN_DESARROLLO");
+  });
+
+  it("una clase que no se controla o un producto desactivado (admiteControlDeStock en falso): no se dibuja y ni se consulta el control", async () => {
+    conStock(["productos.ver", "productos.editar", "stock.ver", "articulos.controlar"]);
+    responde({ ok: true, dato: { ...INSUMO, admiteControlDeStock: false } });
+    expect(casilla(await html())).toBeUndefined();
+    expect(mundo.pedidosDeControl).toEqual([]);
   });
 });

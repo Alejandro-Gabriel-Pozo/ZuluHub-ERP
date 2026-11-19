@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0776",
+  "fecha": "2026-11-19",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Definir la política de cambio de plan y arrepentir un cambio de plan son dos acciones nuevas de plataforma, solo ADMIN y con segundo factor reciente; ver la política usa planes.ver.",
+  "que_cambia": "Un SOPORTE ve la política pero no la define ni deshace un cambio. Revertir: sacar las dos claves del catálogo y de la matriz de permisos de plataforma.",
+  "donde": "PR-H14-politica-de-cambio-de-plan.md §4.4; plataforma.ts (politica_de_plan.definir, planes.arrepentir)"
+}

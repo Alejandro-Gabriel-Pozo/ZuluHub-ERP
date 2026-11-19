@@ -71,6 +71,20 @@ export function datosCompletados(datos: DatosDelCobro): readonly DatoDelCobro[] 
 }
 
 /**
+ * Los datos que el medio pide («se pide») y el cobro dejó vacíos, en el orden fijo de `DATOS_DEL_COBRO`: lo mismo que sella la base al
+ * insertar (`cobro_validar_alta`). «Vacío» = ausente (la frontera convierte el campo vacío en ausente). Se usa para comprobar la paridad con
+ * la base y en pruebas; el valor guardado es el de la base, no este.
+ */
+export function datosPendientesDe(
+  datosQueSePiden: DatosQuePideElMedio,
+  datos: DatosDelCobro,
+): readonly DatoDelCobro[] {
+  return CAMPOS.filter(([dato, campo]) => datosQueSePiden[dato] && datos[campo] == null).map(
+    ([dato]) => dato,
+  );
+}
+
+/**
  * Valida los datos del cobro contra lo que el medio habilitó. Revisa en el orden cupón, últimos 4, marca, cuotas y DNI y devuelve el
  * primer error: primero si el dato no está habilitado, después si está mal escrito. Solo `undefined` es «no vino»: un texto vacío o un
  * `null` es un dato mal escrito (la frontera convierte el campo vacío en ausente).

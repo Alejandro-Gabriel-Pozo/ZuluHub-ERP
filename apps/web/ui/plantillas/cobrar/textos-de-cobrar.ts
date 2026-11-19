@@ -43,6 +43,7 @@ export type TextosDeCobrar = Readonly<{
   volver: string;
   nuevaVenta: string;
   cancelar: string;
+  confirmar: string;
   noPermitido: string;
   enviando: string;
   sinConexion: string;
@@ -91,6 +92,7 @@ export function textosDeCobrar(): TextosDeCobrar {
     volver: texto({}, "ventas.ticket.volver"),
     nuevaVenta: texto({}, "ventas.venta.nueva"),
     cancelar: texto({}, "ventas.venta.cancelar"),
+    confirmar: texto({}, "ventas.venta.validar"),
     noPermitido: texto({}, "ventas.error.accion_no_permitida"),
     enviando: texto({}, "conexion.enviando"),
     sinConexion: texto({}, "conexion.sin_conexion"),
