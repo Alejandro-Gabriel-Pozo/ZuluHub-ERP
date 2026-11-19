@@ -1,4 +1,5 @@
 import type { Kysely } from "kysely";
+import { nivelDeNacimientoDe } from "../../capacidades/controles/catalogo";
 import {
   leerNivelGuardado,
   resolverNivel,
@@ -26,6 +27,7 @@ export type NivelesDeControlDb = {
 
 export function crearNivelesDeControlDePostgres<C extends string>(
   db: Kysely<NivelesDeControlDb>,
+  nivelDeNacimiento: (control: C) => NivelDeControl = nivelDeNacimientoDe,
 ): NivelesDeControl<C> {
   return {
     async nivel(control, alcance, disponibleEnElPlan): Promise<NivelDeControl> {
@@ -50,6 +52,7 @@ export function crearNivelesDeControlDePostgres<C extends string>(
         disponibleEnElPlan,
         nivelDeLaEmpresa: guardado(false),
         nivelDeLaSucursal: guardado(true),
+        nivelDeNacimiento: nivelDeNacimiento(control),
       });
     },
   };

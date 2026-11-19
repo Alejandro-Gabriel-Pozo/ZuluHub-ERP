@@ -91,3 +91,36 @@ describe("leerNivelGuardado", () => {
     },
   );
 });
+
+describe("resolverNivel: nivel de nacimiento", () => {
+  const con = (
+    nivelDeLaEmpresa: NivelDeControl | null,
+    nivelDeLaSucursal: NivelDeControl | null,
+    disponibleEnElPlan = true,
+  ) =>
+    resolverNivel({
+      disponibleEnElPlan,
+      nivelDeLaEmpresa,
+      nivelDeLaSucursal,
+      nivelDeNacimiento: "AVISAR",
+    });
+
+  it("sin nada guardado rige el de nacimiento", () => {
+    expect(con(null, null)).toBe("AVISAR");
+  });
+  it("la sucursal en PERMITIR no afloja el nacimiento de la empresa", () => {
+    expect(con(null, "PERMITIR")).toBe("AVISAR");
+  });
+  it("lo que la empresa guardó reemplaza al de nacimiento", () => {
+    expect(con("PERMITIR", null)).toBe("PERMITIR");
+    expect(con("PERMITIR", "AVISAR")).toBe("AVISAR");
+  });
+  it("sin el control en el plan rige PERMITIR", () => {
+    expect(con(null, null, false)).toBe("PERMITIR");
+  });
+  it("sin nacimiento declarado, PERMITIR como siempre", () => {
+    expect(
+      resolverNivel({ disponibleEnElPlan: true, nivelDeLaEmpresa: null, nivelDeLaSucursal: null }),
+    ).toBe("PERMITIR");
+  });
+});
