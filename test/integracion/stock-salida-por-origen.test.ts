@@ -145,24 +145,24 @@ describe.skipIf(base === null)(
       }
     });
 
-    it("existencia negativa: sin fila el control permite y audita; con BLOQUEAR rechaza sin escribir", async () => {
+    it("existencia negativa: sin fila el control permite y audita; con AVISAR sin confirmar rechaza sin escribir", async () => {
       const a = await c.articulo(e);
       await meter(a.articulo, "2");
       const permitida = valorDe(traducirMovimiento(await salir(nuevoId(), a.producto, "5")));
       expect(permitida.excepciones).toHaveLength(1);
       expect(await c.existencia(dep, a.articulo)).toBe("-3.0000");
 
-      // Otra empresa con el control en BLOQUEAR (no toca a las demás pruebas).
+      // Otra empresa con el control en AVISAR (no toca a las demás pruebas).
       const b = await c.escenario();
       const depB = await c.deposito(b);
-      const bloqueada = await c.articulo(b);
+      const avisada = await c.articulo(b);
       await c.entrar(b.gerente, {
         depositoId: depB,
-        articuloId: bloqueada.articulo,
+        articuloId: avisada.articulo,
         cantidad: "2",
       });
       await c.dueno.query(
-        "insert into nivel_de_control (empresa_id, sucursal_id, control, nivel) values ($1, null, 'stock.existencia_negativa', 'BLOQUEAR')",
+        "insert into nivel_de_control (empresa_id, sucursal_id, control, nivel) values ($1, null, 'stock.existencia_negativa', 'AVISAR')",
         [b.empresa],
       );
       const r = await c.entorno.ejecutar({ contexto: b.gerente }, (tx) =>
@@ -172,11 +172,11 @@ describe.skipIf(base === null)(
           accion: "stock.registrar_salida",
           depositoId: depB,
           motivo: "DEVOLUCION_A_PROVEEDOR",
-          renglones: [{ productoId: bloqueada.producto, cantidad: "5", unidadId: "UNIDAD" }],
+          renglones: [{ productoId: avisada.producto, cantidad: "5", unidadId: "UNIDAD" }],
         }),
       );
-      expect(r.ok).toBe(false);
-      expect(await c.existencia(depB, bloqueada.articulo)).toBe("2.0000");
+      expect(r).toMatchObject({ ok: false, error: { error: "CONTROL_REQUIERE_CONFIRMACION" } });
+      expect(await c.existencia(depB, avisada.articulo)).toBe("2.0000");
       expect(
         await c.contar(
           "select count(*) as n from movimiento_de_stock where empresa_id = $1 and clase = 'SALIDA'",

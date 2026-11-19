@@ -662,10 +662,10 @@ describe.skipIf(base === null)("compras N4: tolerancias y diferencias", () => {
     }
   });
 
-  it("la tolerancia de recepción deja recibir hasta ese porcentaje sobre lo pedido con BLOQUEAR (al registrar y al confirmar) y ni un gramo más", async () => {
+  it("la tolerancia de recepción deja recibir hasta ese porcentaje sobre lo pedido con AVISAR sin confirmar (al registrar y al confirmar) y ni un gramo más", async () => {
     const m = await armar();
     await c.dueno.query(
-      "insert into nivel_de_control (empresa_id, control, nivel) values ($1, 'compras.recepcion_excede_la_orden', 'BLOQUEAR')",
+      "insert into nivel_de_control (empresa_id, control, nivel) values ($1, 'compras.recepcion_excede_la_orden', 'AVISAR')",
       [m.e.empresa],
     );
     valorDe(await tolerancias(m, { recepcion: "5" }));
@@ -694,12 +694,12 @@ describe.skipIf(base === null)("compras N4: tolerancias y diferencias", () => {
       ],
       contraOrden: [{ linea: 1, ordenId: m.ordenId, lineaDeOrden: 1 }],
     });
-    expect(codigo(excede)).toBe("RECEPCION_EXCEDE_LA_ORDEN");
+    expect(codigo(excede)).toBe("RECEPCION_EXCEDE_LA_ORDEN_SIN_CONFIRMAR");
     expect(await saldo()).toBe("10500.0000");
     // sin la tolerancia (otra empresa), 10,5 kg ya no entra
     const sin = await armar();
     await c.dueno.query(
-      "insert into nivel_de_control (empresa_id, control, nivel) values ($1, 'compras.recepcion_excede_la_orden', 'BLOQUEAR')",
+      "insert into nivel_de_control (empresa_id, control, nivel) values ($1, 'compras.recepcion_excede_la_orden', 'AVISAR')",
       [sin.e.empresa],
     );
     const r = await c.casos.registrarRecepcion(sin.e.operador, {
@@ -718,7 +718,7 @@ describe.skipIf(base === null)("compras N4: tolerancias y diferencias", () => {
       ],
       contraOrden: [{ linea: 1, ordenId: sin.ordenId, lineaDeOrden: 1 }],
     });
-    expect(codigo(r)).toBe("RECEPCION_EXCEDE_LA_ORDEN");
+    expect(codigo(r)).toBe("RECEPCION_EXCEDE_LA_ORDEN_SIN_CONFIRMAR");
   });
 
   it("la lista de diferencias filtra por estado, tipo y factura, se pagina, es de gerente y administrador y no mezcla empresas", async () => {

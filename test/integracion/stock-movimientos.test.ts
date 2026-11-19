@@ -489,60 +489,6 @@ describe.skipIf(base === null)("stock: movimientos", () => {
       expect(await c.auditoria(emp.empresa, "CONTROL_EXCEPCION")).toHaveLength(0);
     });
 
-    it("BLOQUEAR: CONTROL_BLOQUEA con el detalle de lo que quedaría en negativo, aunque venga la confirmación; no se escribe nada", async () => {
-      const emp = await c.escenario();
-      await c.fijarNivel(emp.empresa, "BLOQUEAR");
-      const dep = await c.deposito(emp);
-      const a = await c.articulo(emp);
-      const b = await c.articulo(emp);
-      valorDe(
-        await c.casos.registrarEntrada(emp.gerente, {
-          clave: nuevoId(),
-          depositoId: dep,
-          motivo: "COMPRA",
-          renglones: [pedido(a.producto, "1"), pedido(b.producto, "10")],
-        }),
-      );
-      const antes = await c.contar(
-        "select count(*) as n from movimiento_de_stock where empresa_id = $1",
-        [emp.empresa],
-      );
-      for (const confirmaciones of [undefined, [NEGATIVA]]) {
-        const r = await c.casos.registrarSalida(emp.gerente, {
-          clave: nuevoId(),
-          depositoId: dep,
-          motivo: "MERMA",
-          confirmaciones,
-          renglones: [pedido(a.producto, "3"), pedido(b.producto, "4")],
-        });
-        expect(r).toEqual({
-          ok: false,
-          error: {
-            error: "CONTROL_BLOQUEA",
-            control: NEGATIVA,
-            detalle: [{ productoId: a.producto, depositoId: dep, existenciaResultante: "-2.0000" }],
-          },
-        });
-      }
-      expect(
-        await c.contar("select count(*) as n from movimiento_de_stock where empresa_id = $1", [
-          emp.empresa,
-        ]),
-      ).toBe(antes);
-      expect(await c.existencia(dep, a.articulo)).toBe("1.0000");
-      expect(await c.existencia(dep, b.articulo)).toBe("10.0000");
-      // Lo que no deja en negativo pasa aunque el control bloquee.
-      valorDe(
-        await c.casos.registrarSalida(emp.gerente, {
-          clave: nuevoId(),
-          depositoId: dep,
-          motivo: "MERMA",
-          renglones: [pedido(a.producto, "1")],
-        }),
-      );
-      expect(await c.existencia(dep, a.articulo)).toBe("0.0000");
-    });
-
     it("AVISAR: sin confirmación CONTROL_REQUIERE_CONFIRMACION; con ella pasa, el renglón guarda la confirmación y la excepción se audita con el aviso aceptado", async () => {
       const emp = await c.escenario();
       await c.fijarNivel(emp.empresa, "AVISAR");
@@ -593,10 +539,10 @@ describe.skipIf(base === null)("stock: movimientos", () => {
       });
     });
 
-    it("la sucursal puede endurecer el nivel de la empresa: BLOQUEAR en una sucursal no bloquea a la otra", async () => {
+    it("la sucursal puede endurecer el nivel de la empresa: AVISAR en una sucursal no pide confirmación en la otra", async () => {
       const emp = await c.escenario();
       await c.fijarNivel(emp.empresa, "PERMITIR");
-      await c.fijarNivel(emp.empresa, "BLOQUEAR", emp.otraSucursal);
+      await c.fijarNivel(emp.empresa, "AVISAR", emp.otraSucursal);
       const enNorte = await c.deposito(emp, { sucursal: emp.otraSucursal });
       const enCentral = await c.deposito(emp);
       const a = await c.articulo(emp);
@@ -609,14 +555,14 @@ describe.skipIf(base === null)("stock: movimientos", () => {
         });
       expect(await salida(enNorte)).toMatchObject({
         ok: false,
-        error: { error: "CONTROL_BLOQUEA" },
+        error: { error: "CONTROL_REQUIERE_CONFIRMACION" },
       });
       valorDe(await salida(enCentral));
     });
 
     it("el ajuste y la anulación NUNCA se bloquean por existencia negativa (un conteo que encuentra menos tiene que poder aplicarse)", async () => {
       const emp = await c.escenario();
-      await c.fijarNivel(emp.empresa, "BLOQUEAR");
+      await c.fijarNivel(emp.empresa, "AVISAR");
       const dep = await c.deposito(emp);
       const a = await c.articulo(emp);
       const entrada = valorDe(
@@ -647,9 +593,9 @@ describe.skipIf(base === null)("stock: movimientos", () => {
       expect(await c.auditoria(emp.empresa, "CONTROL_EXCEPCION")).toHaveLength(0);
     });
 
-    it("la red de seguridad de la base: si el disparador rechaza por existencia negativa, el error sale como el del control (con el detalle vacío)", async () => {
+    it("la red de seguridad de la base: si el disparador rechaza por existencia negativa sin confirmar, el error sale como el del control (con el detalle vacío)", async () => {
       const emp = await c.escenario();
-      await c.fijarNivel(emp.empresa, "BLOQUEAR");
+      await c.fijarNivel(emp.empresa, "AVISAR");
       const dep = await c.deposito(emp);
       const a = await c.articulo(emp);
       const desdeLaBase = () =>
@@ -684,13 +630,6 @@ describe.skipIf(base === null)("stock: movimientos", () => {
           );
           return ok(null);
         });
-      expect(traducirMovimiento(await desdeLaBase())).toEqual({
-        ok: false,
-        error: { error: "CONTROL_BLOQUEA", control: NEGATIVA, detalle: [] },
-      });
-      await c.dueno.query("update nivel_de_control set nivel = 'AVISAR' where empresa_id = $1", [
-        emp.empresa,
-      ]);
       expect(traducirMovimiento(await desdeLaBase())).toEqual({
         ok: false,
         error: { error: "CONTROL_REQUIERE_CONFIRMACION", control: NEGATIVA, detalle: [] },
@@ -758,9 +697,9 @@ describe.skipIf(base === null)("stock: movimientos", () => {
       expect(await c.existencia(a.dep, a.articulo)).toBe("10.0000");
     });
 
-    it("el control de existencia negativa mira solo el origen: con BLOQUEAR no deja transferir más de lo que hay", async () => {
+    it("el control de existencia negativa mira solo el origen: con AVISAR no deja transferir más de lo que hay sin confirmar", async () => {
       const emp = await c.escenario();
-      await c.fijarNivel(emp.empresa, "BLOQUEAR");
+      await c.fijarNivel(emp.empresa, "AVISAR");
       const origen = await c.deposito(emp);
       const destino = await c.deposito(emp);
       const a = await c.articulo(emp);
@@ -782,7 +721,7 @@ describe.skipIf(base === null)("stock: movimientos", () => {
       expect(await mover("3")).toMatchObject({
         ok: false,
         error: {
-          error: "CONTROL_BLOQUEA",
+          error: "CONTROL_REQUIERE_CONFIRMACION",
           detalle: [
             { productoId: a.producto, depositoId: origen, existenciaResultante: "-1.0000" },
           ],

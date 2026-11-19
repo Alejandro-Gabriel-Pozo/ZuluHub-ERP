@@ -102,7 +102,7 @@ export async function articuloDeBase(
 export async function nivelDeBase(
   c: pg.Client,
   empresa: string,
-  nivel: "PERMITIR" | "AVISAR" | "BLOQUEAR",
+  nivel: "PERMITIR" | "AVISAR",
   sucursal: string | null = null,
 ): Promise<void> {
   await c.query(
