@@ -37,8 +37,13 @@ export type TextosDeCobrar = Readonly<{
   motivo: string;
   motivoObligatorio: string;
   anulado: string;
+  imprimirTicket: string;
+  ticketDelCliente: string;
+  imprimir: string;
+  volver: string;
   nuevaVenta: string;
   cancelar: string;
+  confirmar: string;
   noPermitido: string;
   enviando: string;
   sinConexion: string;
@@ -81,8 +86,13 @@ export function textosDeCobrar(): TextosDeCobrar {
     motivo: texto({}, "ventas.ticket.motivo"),
     motivoObligatorio: texto({}, "ventas.ticket.motivo_obligatorio"),
     anulado: texto({}, "ventas.ticket.anulado"),
+    imprimirTicket: texto({}, "ventas.ticket.imprimir_ticket"),
+    ticketDelCliente: texto({}, "ventas.ticket.del_cliente"),
+    imprimir: texto({}, "ventas.ticket.imprimir"),
+    volver: texto({}, "ventas.ticket.volver"),
     nuevaVenta: texto({}, "ventas.venta.nueva"),
     cancelar: texto({}, "ventas.venta.cancelar"),
+    confirmar: texto({}, "ventas.venta.validar"),
     noPermitido: texto({}, "ventas.error.accion_no_permitida"),
     enviando: texto({}, "conexion.enviando"),
     sinConexion: texto({}, "conexion.sin_conexion"),

@@ -50,6 +50,8 @@ export const TEXTOS_DE_VENTAS = {
   "ventas.venta.cantidad": { porDefecto: "Cantidad" },
   "ventas.venta.quitar": { porDefecto: "Quitar" },
   "ventas.venta.cancelar": { porDefecto: "Cancelar" },
+  // «Confirmar» del diálogo de venta a $ 0 (PR-6): aprobado (DDD:171, alcance e, M1 a M14; `venta-rapida-v4.html:918`). La clave dice «validar» porque el catálogo rechaza todo nombre que contenga «firma» (`NOMBRE_DE_SECRETO`), como `compras.recepcion.validar_recepcion`. Clave propia de ventas: la única otra, `fiscal.pantalla.config_df_que_rija`, es de otra función (SUPUESTO de PR-6, DEC-0788, a aceptar por el orquestador).
+  "ventas.venta.validar": { porDefecto: "Confirmar" },
   // «Cantidad no válida»: `prototipo-caja.html`, aprobado 09/11 (`venta-rapida-v4.html`, tabla «Textos ya aprobados que se reutilizan»; `e4-venta-rapida-especificacion.md` §3.16).
   "ventas.venta.cantidad_no_valida": { porDefecto: "Cantidad no válida" },
   // «La cuenta está vacía» y «Agregá productos desde la venta.»: aprobados 09/11 (`e4-venta-rapida-especificacion.md` §3.16, `ventas.cuenta.vacia`; `textos-mostrador-pendientes.md` §3).
@@ -142,5 +144,24 @@ export const TEXTOS_DE_VENTAS = {
   "ventas.ticket.motivo": { porDefecto: "Motivo" },
   "ventas.ticket.motivo_obligatorio": { porDefecto: "Escribí el motivo" },
   "ventas.ticket.anulado": { porDefecto: "Anulado" },
+  // Ticket del cliente (PR-5): «Imprimir ticket» (DDD:171, M5; venta-rapida-v4.html:889); «Ticket del cliente» e «Imprimir» (imprimir.html, aprobada el 09/11/2026, decisión 120; venta-rapida-v4.html:901 y :903);
+  // «Volver» (imprimir.html:327; venta-rapida-v4.html:901). Decisión: DEC-0772 (DDD:172 punto 4 B, DDD:175, DDD:286).
+  "ventas.ticket.imprimir_ticket": { porDefecto: "Imprimir ticket" },
+  "ventas.ticket.del_cliente": { porDefecto: "Ticket del cliente" },
+  "ventas.ticket.imprimir": { porDefecto: "Imprimir" },
+  "ventas.ticket.volver": { porDefecto: "Volver" },
   "ventas.venta.nueva": { porDefecto: "Nueva venta" },
+  // Tickets del día (PR-5 ter): los cinco textos nuevos los aceptó el orquestador por delegación (DDD:293, DEC-0782) y las cuatro palabras ya aprobadas con clave nueva se
+  // listan en el mismo DEC. «Primero acreditá la factura…»: DDD:171 (c), `textos-nuevos-pendientes.md` §2.1; explica una regla fiscal: confirmar con el orquestador antes de mergear.
+  "ventas.tickets.titulo": { porDefecto: "Tickets del día" },
+  "ventas.tickets.vacio": { porDefecto: "Todavía no hay tickets" },
+  "ventas.tickets.menu": { porDefecto: "Tickets del día" },
+  "ventas.tickets.jornada": { porDefecto: "Jornada {fecha}", marcadores: ["fecha"] },
+  "ventas.ticket.estado.cortesia": { porDefecto: "Cortesía" },
+  "ventas.ticket.estado.por_cobrar": { porDefecto: "Por cobrar" },
+  "ventas.ticket.estado.cobrado_y_facturado": { porDefecto: "Cobrado y facturado" },
+  "ventas.ticket.cobros": { porDefecto: "Cobros" },
+  "ventas.error.ticket_con_factura_vigente": {
+    porDefecto: "Primero acreditá la factura con una nota de crédito",
+  },
 } as const;

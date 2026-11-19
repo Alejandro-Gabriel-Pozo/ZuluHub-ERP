@@ -1,3 +1,4 @@
+import { PAPELES_EN_MM, type PapelEnMm } from "../../../primitivas/papel/modelo-de-papel";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 
 /**
@@ -18,8 +19,8 @@ export type UsoDeImpresora = (typeof USOS_DE_IMPRESORA)[number];
 export const TIPOS_DE_DOCUMENTO = ["COMANDA", "ANULACION", "TICKET"] as const;
 export type TipoDeDocumento = (typeof TIPOS_DE_DOCUMENTO)[number];
 
-export const PAPELES_EN_MM = [58, 80] as const;
-export type PapelEnMm = (typeof PAPELES_EN_MM)[number];
+// El ancho del rollo es de `primitivas/papel` (lo comparte el ticket de ventas); se reexporta con los mismos nombres.
+export { PAPELES_EN_MM, type PapelEnMm } from "../../../primitivas/papel/modelo-de-papel";
 
 export type IntentoDeImpresion = Readonly<{ numero: number; resultado: ResultadoDeIntento }>;
 

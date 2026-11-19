@@ -46,6 +46,23 @@ describe("traducirErrorDeCobrar", () => {
     }
   });
 
+  it("anular un ticket con factura vigente sale con su código propio y sin el comprobante; el resto de anular, genérico", () => {
+    const salida = traducirErrorDeCobrar({
+      error: "TICKET_CON_COMPROBANTE_VIGENTE",
+      comprobanteId: ID,
+    });
+    expect(salida).toEqual({ codigo: "VENTAS_TICKET_CON_FACTURA_VIGENTE" });
+    expect(JSON.stringify(salida)).not.toContain(ID);
+    for (const error of [
+      "TICKET_ANULADO",
+      "JORNADA_CERRADA",
+      "OTRO_INVENTADO",
+      { error: "OTRO_INVENTADO", comprobanteId: ID },
+    ]) {
+      expect(traducirErrorDeCobrar(error)).toEqual(GENERICO);
+    }
+  });
+
   it("nada del valor del error (ni el DNI ni el total) llega a la respuesta genérica", () => {
     expect(
       JSON.stringify(

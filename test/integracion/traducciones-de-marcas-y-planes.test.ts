@@ -131,6 +131,9 @@ describe.skipIf(base === null)("traducciones de marcas y de planes", () => {
         "plan_de_tenant",
         "ajuste_de_perilla",
         "modulo_de_empresa",
+        "politica_de_cambio_de_plan",
+        "condiciones_de_cambio_de_plan",
+        "arrepentimiento_de_plan",
       ],
       mapa: ERRORES_DE_PLANES_POR_RESTRICCION,
       disparadores: RESTRICCIONES_DE_DISPARADORES_DE_PLANES,
@@ -140,6 +143,8 @@ describe.skipIf(base === null)("traducciones de marcas y de planes", () => {
         "version_de_plan_validar_cambio",
         "plan_de_tenant_validar_alta",
         "ajuste_de_perilla_validar_alta",
+        "politica_de_cambio_de_plan_validar_alta",
+        "cambio_de_plan_validar_origen",
       ],
     },
   ];

@@ -24,6 +24,7 @@ const FICHA: FichaDeLaPantalla = {
   claseDeUso: "VENDIBLE",
   unidadBaseId: "UNIDAD",
   seVende: true,
+  admiteControlDeStock: false,
   nombreDeCocina: "MILA",
   codigo: "MIL-1",
   codigoDeBarras: "12345678",
@@ -45,7 +46,22 @@ const formulario = (
   ficha: FichaArmada = armarLaFicha(FICHA),
   accion: AccionDeFormulario = ok,
   puedeGuardar = true,
-) => <FormularioDeFichaDeProducto ficha={ficha} accion={accion} puedeGuardar={puedeGuardar} />;
+  controlDeStock: Readonly<{ marcada: boolean; puedeCambiar: boolean }> | null = null,
+) => (
+  <FormularioDeFichaDeProducto
+    ficha={ficha}
+    accion={accion}
+    puedeGuardar={puedeGuardar}
+    controlDeStock={controlDeStock}
+  />
+);
+const INSUMO: FichaDeLaPantalla = {
+  ...FICHA,
+  claseDeUso: "INSUMO",
+  seVende: false,
+  admiteControlDeStock: true,
+};
+const casilla = () => page.getByRole("checkbox", { name: "Se controla el stock" });
 const rechazo =
   (error: ErrorPublico): AccionDeFormulario =>
   () =>
@@ -335,5 +351,67 @@ describe("FormularioDeFichaDeProducto", () => {
     await expect.element(guardar()).toBeDisabled();
     tocar(guardar());
     expect(accion).not.toHaveBeenCalled();
+  });
+
+  it("«Se controla el stock»: sin control (null) no se dibuja; con control, va marcada o no según lo guardado", async () => {
+    const sin = await render(formulario(armarLaFicha(INSUMO)));
+    expect(document.querySelector("[name=seControlaElStock]")).toBeNull();
+    await sin.unmount();
+    const marcada = await render(
+      formulario(armarLaFicha(INSUMO), ok, true, { marcada: true, puedeCambiar: true }),
+    );
+    await expect.element(casilla()).toBeChecked();
+    await marcada.unmount();
+    await render(
+      formulario(armarLaFicha(INSUMO), ok, true, { marcada: false, puedeCambiar: true }),
+    );
+    await expect.element(casilla()).not.toBeChecked();
+  });
+
+  it("«Se controla el stock»: el teclado llega a la casilla justo antes de «Guardar» y la espacio la marca y la desmarca", async () => {
+    await render(
+      formulario(armarLaFicha(INSUMO), ok, true, { marcada: false, puedeCambiar: true }),
+    );
+    await userEvent.click(campo("Código de barras"));
+    await userEvent.tab();
+    expect(document.activeElement).toBe(casilla().element());
+    await userEvent.keyboard(" ");
+    await expect.element(casilla()).toBeChecked();
+    await userEvent.keyboard(" ");
+    await expect.element(casilla()).not.toBeChecked();
+    await userEvent.tab();
+    expect(document.activeElement?.textContent).toBe("Guardar");
+  });
+
+  it("«Se controla el stock»: marcada viaja como «on» con el mismo «Guardar»; desmarcada no viaja", async () => {
+    const accion = vi.fn(ok);
+    await render(
+      formulario(armarLaFicha(INSUMO), accion, true, { marcada: false, puedeCambiar: true }),
+    );
+    await userEvent.click(casilla());
+    tocar(guardar());
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    expect((accion.mock.calls[0]?.[1] as FormData).get("seControlaElStock")).toBe("on");
+    // Tras guardar (con o sin error) la casilla sigue mostrando lo que la persona dejó: el formulario no la desmarca por su cuenta.
+    await expect.element(guardar()).not.toHaveAttribute("aria-busy", "true");
+    await expect.element(casilla()).toBeChecked();
+    await userEvent.click(casilla());
+    await expect.element(casilla()).not.toBeChecked();
+    tocar(guardar());
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(2));
+    expect((accion.mock.calls[1]?.[1] as FormData).has("seControlaElStock")).toBe(false);
+  });
+
+  it("«Se controla el stock»: sin permiso se ve apagada con su estado real y no viaja, y axe no marca faltas", async () => {
+    const accion = vi.fn(ok);
+    await render(
+      formulario(armarLaFicha(INSUMO), accion, true, { marcada: true, puedeCambiar: false }),
+    );
+    await expect.element(casilla()).toBeChecked();
+    await expect.element(casilla()).toBeDisabled();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+    tocar(guardar());
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    expect((accion.mock.calls[0]?.[1] as FormData).has("seControlaElStock")).toBe(false);
   });
 });

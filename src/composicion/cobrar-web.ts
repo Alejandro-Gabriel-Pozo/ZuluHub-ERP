@@ -6,6 +6,7 @@ import type { DependenciasDeRespuesta } from "./a-respuesta";
 import {
   entradaDeAnularElTicket,
   entradaDeCobrarLaVenta,
+  entradaDeDocumentoDelTicket,
   entradaDeOpcionesDeCobro,
 } from "./entradas-de-cobrar";
 import { accionDeCobrar } from "./errores-de-cobrar";
@@ -32,7 +33,7 @@ export type DependenciasDeCobrarWeb = Readonly<{
   casosDeUso: () => Pick<ReturnType<Web["casosDeUsoDeVentas"]>, "venderYCobrar" | "anularTicket">;
   consultas: () => Pick<
     ReturnType<Web["consultasDeVentas"]>,
-    "estadoDeCajasParaCobrar" | "opcionesParaCobrar"
+    "estadoDeCajasParaCobrar" | "opcionesParaCobrar" | "documentoDelTicket"
   >;
   respuesta: DependenciasDeRespuesta;
 }>;
@@ -109,6 +110,14 @@ export type OpcionesDeCobroParaLaPantalla = Readonly<{
       cuotas: boolean;
       dni: boolean;
     }>;
+    /** De los que pide, cuáles «se piden»: se pueden dejar vacíos y el cobro queda con el dato pendiente (no apaga «Cobrar»). */
+    datosQueSePiden: Readonly<{
+      cupon: boolean;
+      ultimos4: boolean;
+      marca: boolean;
+      cuotas: boolean;
+      dni: boolean;
+    }>;
   }>[];
   marcasDeTarjeta: readonly Readonly<{ id: string; nombre: string }>[];
 }>;
@@ -137,6 +146,13 @@ export function opcionesDeCobroDeLaCaja(
           marca: m.datosQuePide.marca,
           cuotas: m.datosQuePide.cuotas,
           dni: m.datosQuePide.dni,
+        },
+        datosQueSePiden: {
+          cupon: m.datosQueSePiden.cupon,
+          ultimos4: m.datosQueSePiden.ultimos4,
+          marca: m.datosQueSePiden.marca,
+          cuotas: m.datosQueSePiden.cuotas,
+          dni: m.datosQueSePiden.dni,
         },
       })),
       marcasDeTarjeta: opciones.marcasDeTarjeta.map((m) => ({ id: m.id, nombre: m.nombre })),
@@ -283,6 +299,40 @@ export function anularElTicket(
       estado: anulado.estado,
       numeroDeCorreccion: anulado.numeroDeCorreccion,
       yaExistia: anulado.yaExistia,
+    }),
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// El papel del ticket del cliente (imprimir desde el resultado, K6)
+// ---------------------------------------------------------------------------------------------------------------
+
+export type PapelDelTicketParaLaPantalla = Readonly<{
+  ancho: 58 | 80;
+  lineas: readonly Readonly<{
+    texto: string;
+    estilo: "NORMAL" | "GRANDE" | "NEGRITA" | "SEPARADOR";
+  }>[];
+}>;
+
+/**
+ * El papel del ticket cobrado, armado por el servidor (`documentoDelTicket`, `ventas.ver`): la pantalla lo dibuja tal cual, sin formatear nada. Es una LECTURA: no escribe ni audita, y repetirla da lo mismo (doble toque,
+ * reintento). Del pedido solo viene el `ticketId` (el ancho queda en el de la consulta, 80 mm); la empresa y la sucursal del ticket las valida la consulta contra el contexto y el alcance. Un ticket inexistente, de otra
+ * sucursal, anulado o de cortesía sale como el genérico: no se distingue uno de otro.
+ */
+export function papelDelTicket(
+  d: DependenciasDeCobrarWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<PapelDelTicketParaLaPantalla>> {
+  return accionDeCobrar(
+    d.respuesta,
+    crudo,
+    entradaDeDocumentoDelTicket,
+    (entrada) => d.consultas().documentoDelTicket(contexto, { ticketId: entrada.ticketId }),
+    (papel) => ({
+      ancho: papel.ancho,
+      lineas: papel.lineas.map((l) => ({ texto: l.texto, estilo: l.estilo })),
     }),
   );
 }

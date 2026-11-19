@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0787",
+  "fecha": "2026-11-19",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "CONFIRMADA",
+  "decision": "La venta a $ 0 confirmada se envía por el mismo camino del cobro (misma acción de servidor, misma clave de idempotencia por intento), con cobros vacíos y la confirmación VENTA_A_CERO.",
+  "que_cambia": "Nada que vea el negocio: es cómo viaja la venta a $ 0 ya decidida (decisión 155). Revertir: quitar el diálogo y su envío.",
+  "donde": "apps/web/ui/plantillas/venta/DialogoDeVentaACero.cliente.tsx; brief PR-6 §4 y §8; venta-rapida-v4.html:1029-1033",
+  "motivo": "Técnica: reutiliza el servidor ya construido; no cambia dinero, permisos ni textos."
+}

@@ -4,7 +4,6 @@ import {
   columnasDelPapel,
   documentoDeAnulacion,
   documentoDeComanda,
-  documentoDeTicket,
   type AvisoParaElPapel,
   type EnvioParaElPapel,
   type RenglonDelPapel,
@@ -164,6 +163,18 @@ describe("documentoDeAnulacion", () => {
     detalle: ["Napolitana"],
     motivo: "Se equivocó el pedido",
   };
+  it("lo que queda ilegible es CANTIDAD_NO_IMPRIMIBLE, pero un defecto que no es un valor mal escrito se relanza", () => {
+    const sinLeer = documentoDeAnulacion({ ...aviso, quedan: "x" }, { copia: false, ancho: 58 });
+    expect(sinLeer).toEqual({ ok: false, error: "CANTIDAD_NO_IMPRIMIBLE" });
+    const explota = {
+      toString(): string {
+        throw new RangeError("ajeno");
+      },
+    } as unknown as string;
+    expect(() =>
+      documentoDeAnulacion({ ...aviso, quedan: explota }, { copia: false, ancho: 58 }),
+    ).toThrow(RangeError);
+  });
   it("dice ANULACIÓN · NO PREPARAR, cuánto se anuló, cuánto queda y el motivo", () => {
     const r = documentoDeAnulacion(aviso, { copia: false, ancho: 58 });
     const t = r.ok ? r.valor.lineas.map((l) => l.texto) : [];
@@ -191,39 +202,5 @@ describe("documentoDeAnulacion", () => {
         { copia: false, ancho: 58 },
       ).ok,
     ).toBe(false);
-  });
-});
-
-describe("documentoDeTicket", () => {
-  it("descripción a la izquierda, importe a la derecha y total en negrita", () => {
-    const m = documentoDeTicket(
-      {
-        numero: 12,
-        fecha: "09/11/2026",
-        lineas: [{ cantidad: "2", descripcion: "Milanesa", importe: "2300.00" }],
-        total: "2300.00",
-      },
-      { ancho: 58 },
-    );
-    expect(m.lineas[0]).toEqual({ texto: "Ticket N.º 12", estilo: "NEGRITA" });
-    const fila = m.lineas.find((l) => l.texto.startsWith("2 Milanesa"));
-    expect(fila?.texto.length).toBe(32);
-    expect(fila?.texto.endsWith("2300.00")).toBe(true);
-    const total = m.lineas.at(-1);
-    expect(total?.estilo).toBe("NEGRITA");
-    expect(total?.texto.startsWith("Total")).toBe(true);
-  });
-  it("una descripción que no entra en la fila pasa a renglones aparte", () => {
-    const m = documentoDeTicket(
-      {
-        numero: 1,
-        fecha: "f",
-        lineas: [{ cantidad: "1", descripcion: "X".repeat(40), importe: "1.00" }],
-        total: "1.00",
-      },
-      { ancho: 58 },
-    );
-    expect(m.lineas.some((l) => l.texto === "1.00")).toBe(true);
-    for (const l of m.lineas) expect(l.texto.length).toBeLessThanOrEqual(32);
   });
 });

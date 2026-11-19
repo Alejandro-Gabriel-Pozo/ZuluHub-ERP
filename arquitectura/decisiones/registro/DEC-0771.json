@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0771",
+  "fecha": "2026-11-19",
+  "quien": "padre",
+  "tipo": "SIN_DECISION",
+  "estado": "CONFIRMADA",
+  "decision": "El papel del ticket muestra los importes con formato argentino («3.000,00», sin signo), como la maqueta; función pura importeParaMostrar en primitivas de dinero.",
+  "que_cambia": "Solo cómo se escriben los importes en el papel del ticket; no cambia ningún importe ni cálculo. Revertir: quitar la función y volver a escribir el texto decimal de la base.",
+  "donde": "src/primitivas/dinero/importe-para-mostrar.ts; decisiones-del-dueno-2026-11.md fila 294 (manda la maqueta); venta-rapida-v4.html:899 (maqueta); brief PR-4 §4.2 y §8",
+  "motivo": "Formato de presentación; no cambia ningún importe ni cálculo."
+}

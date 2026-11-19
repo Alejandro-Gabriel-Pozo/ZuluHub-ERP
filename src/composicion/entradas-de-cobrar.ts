@@ -111,10 +111,28 @@ export function entradaDeAnularElTicket(
   return leer(formaDeAnular, crudo);
 }
 
+/** Del navegador solo viaja el ticket: el ancho del papel (80 mm) y la sucursal los decide el servidor. */
+const formaDelPapel = z.strictObject({ ticketId: identificador });
+
+export function entradaDeDocumentoDelTicket(
+  crudo: unknown,
+): Resultado<Readonly<{ ticketId: string }>, ErrorDeEntrada> {
+  return leer(formaDelPapel, crudo);
+}
+
 const formaDeOpciones = z.strictObject({ cajaId: identificador });
 
 export function entradaDeOpcionesDeCobro(
   crudo: unknown,
 ): Resultado<Readonly<{ cajaId: string }>, ErrorDeEntrada> {
   return leer(formaDeOpciones, crudo);
+}
+
+const formaDeFichaDelTicket = z.strictObject({ ticketId: identificador });
+
+/** La ficha de un ticket del día: solo el id del ticket; la empresa y la persona salen del contexto del servidor. */
+export function entradaDeFichaDelTicket(
+  crudo: unknown,
+): Resultado<Readonly<{ ticketId: string }>, ErrorDeEntrada> {
+  return leer(formaDeFichaDelTicket, crudo);
 }

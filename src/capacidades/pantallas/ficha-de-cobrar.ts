@@ -13,7 +13,9 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  *  2. «El precio cambió»: la maqueta lo avisa en la cuenta; el servidor no distingue ese rechazo y todo rechazo de negocio sale como «No se pudo cobrar. No se cobró nada.». Necesita un código público nuevo.
  *  3. «Sin elegir» en la cuenta de cobro, sin «= $ …» bajo el importe, «Enviando…» en el botón y sin edición con un envío sin respuesta: conservados (DDD:298, aceptados por el dueño el 18/11).
  *  4. Datos del cobro (cupón, últimos 4, marca, cuotas, DNI): todos «(opcional)»; el sistema registra y no bloquea por un dato que falta (criterio permisivo del dueño, 18/11/2026).
- *  5. Con el día en cierre o cerrado las tarjetas de producto se apagan (maqueta `bloqueaAgregar`): es la integridad de la jornada, no un control de la empresa.
+ *  5. Ticket del cliente (PR-5, `vTicket`): el papel va con letra de ancho fijo (lo arma el servidor en columnas), el botón «Imprimir ticket» queda ocupado hasta que el servidor responde, y medida y opciones van en renglones sangrados.
+ *     Fundamento: lo que se ve en pantalla es lo que se imprime (una sola forma de armar el papel). Aceptado por el dueño el 18/11/2026 (I3, I7 y T4).
+ *  6. Con el día en cierre o cerrado las tarjetas de producto se apagan (maqueta `bloqueaAgregar`): es la integridad de la jornada, no un control de la empresa.
  */
 
 type FuenteDeTexto = Readonly<{ decidio: string; donde: string }>;
@@ -25,6 +27,8 @@ type BotonDeFicha = Readonly<{
     | Readonly<{ navega: string }>
     | Readonly<{ envia: ClaveAccion }>
     | "abre-la-vista"
+    | "abre-el-ticket"
+    | "imprime-con-el-navegador"
     | "vuelve"
     | "abre-el-cuadro"
     | "agrega-una-fila";
@@ -61,6 +65,10 @@ export const FICHA_DE_COBRAR = {
     "apps/web/ui/plantillas/cobrar/DatosDelMedio.cliente.tsx",
     "apps/web/ui/plantillas/cobrar/ResultadoDelCobro.cliente.tsx",
     "apps/web/ui/plantillas/cobrar/AnularElTicket.cliente.tsx",
+    "apps/web/ui/plantillas/cobrar/TicketDelCliente.cliente.tsx",
+    "apps/web/ui/plantillas/cobrar/PapelDelTicket.cliente.tsx",
+    "apps/web/ui/plantillas/facturacion/impresion/PapelDelCliente.module.css",
+    "apps/web/ui/plantillas/facturacion/impresion/useAltoDelTicket.cliente.tsx",
     "apps/web/ui/plantillas/cobrar/modelo-de-cobro.ts",
     "apps/web/ui/plantillas/cobrar/textos-de-cobrar.ts",
   ],
@@ -102,6 +110,24 @@ export const FICHA_DE_COBRAR = {
       hace: "vuelve",
       sinPermiso: "APAGADO",
     },
+    {
+      id: "imprimir-ticket",
+      texto: "ventas.ticket.imprimir_ticket",
+      hace: "abre-el-ticket",
+      sinPermiso: "APAGADO",
+    },
+    {
+      id: "volver-del-ticket",
+      texto: "ventas.ticket.volver",
+      hace: "vuelve",
+      sinPermiso: "APAGADO",
+    },
+    {
+      id: "imprimir",
+      texto: "ventas.ticket.imprimir",
+      hace: "imprime-con-el-navegador",
+      sinPermiso: "APAGADO",
+    },
     { id: "anular", texto: "ventas.ticket.anular", hace: "abre-el-cuadro", sinPermiso: "APAGADO" },
     {
       id: "anular-ok",
@@ -137,6 +163,19 @@ export const FICHA_DE_COBRAR = {
     },
     "ventas.cobro.abri_la_caja": { usos: ["aviso de la barra de la venta"], fuente: DE_LA_MAQUETA },
     "ventas.cobro.agregar_otro_medio": { usos: ["botón de la vista"], fuente: DE_LA_MAQUETA },
+    "ventas.ticket.imprimir_ticket": {
+      usos: ["botón del resultado, solo con la venta cobrada, antes de «Anular»"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "ventas.ticket.del_cliente": {
+      usos: ["título de la vista del ticket y nombre accesible del papel"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "ventas.ticket.imprimir": {
+      usos: ["botón del pie de la vista del ticket (diálogo de impresión del navegador)"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "ventas.ticket.volver": { usos: ["«‹» de la vista del ticket"], fuente: DE_LA_MAQUETA },
     "ventas.ticket.anular": {
       usos: ["botón del resultado", "título y botón del cuadro"],
       fuente: DE_LA_MAQUETA,

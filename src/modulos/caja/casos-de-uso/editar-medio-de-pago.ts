@@ -25,6 +25,11 @@ export type EntradaDeEditarMedioDePago = Readonly<{
   nombre: string | null;
   /** Qué datos opcionales pide el medio al cobrar (decisión 129): el conjunto final, no solo lo que cambia. */
   datos: DatosQuePideElMedio;
+  /**
+   * De esos datos, cuáles «se piden» (PR-7-caja): el conjunto final. Un cobro sin ellos se registra igual y queda con el dato pendiente.
+   * Omitido = no cambia lo que ya estaba (SUPUESTO DEC-0792: la pantalla de configuración todavía no lo manda).
+   */
+  avisaSiFalta?: DatosQuePideElMedio;
 }>;
 
 export type SalidaDeEditarMedioDePago = Readonly<{
@@ -80,12 +85,18 @@ export function armarEditarMedioDePago({ transacciones, reglas }: DependenciasDe
         if (!nombre.ok) return nombre;
 
         const actual = await tx.mediosDePago.obtener(empresaId, entrada.medioDePagoId);
-        const decision = decidirEdicionDeMedio(actual, entrada.versionEsperada, {
-          nombre: nombre.valor,
-          pide: entrada.datos,
-        });
+        const avisaSiFalta = entrada.avisaSiFalta ?? actual?.avisaSiFalta;
+        const decision =
+          actual === null || avisaSiFalta === undefined
+            ? err("MEDIO_NO_ENCONTRADO" as const)
+            : decidirEdicionDeMedio(actual, entrada.versionEsperada, {
+                nombre: nombre.valor,
+                pide: entrada.datos,
+                avisaSiFalta,
+              });
         if (!decision.ok) return decision;
         if (actual === null) throw new Error("invariante rota: se decidió editar un medio nulo");
+        const avisaFinal = entrada.avisaSiFalta ?? actual.avisaSiFalta;
         if (decision.valor === "SIN_CAMBIOS") return ok({ version: actual.version });
 
         // Solo lo que cambia entra al UPDATE y a la auditoría.
@@ -93,9 +104,13 @@ export function armarEditarMedioDePago({ transacciones, reglas }: DependenciasDe
         const cambiaDatos = DATOS_DEL_COBRO.some(
           (dato) => actual.pide[dato] !== entrada.datos[dato],
         );
+        const cambiaSePide = DATOS_DEL_COBRO.some(
+          (dato) => actual.avisaSiFalta[dato] !== avisaFinal[dato],
+        );
         const editado = await tx.mediosDePago.editar(empresaId, actual.id, actual.version, {
           ...(cambiaNombre ? { nombre: nombre.valor } : {}),
           ...(cambiaDatos ? { pide: entrada.datos } : {}),
+          ...(cambiaSePide ? { avisaSiFalta: avisaFinal } : {}),
         });
         if (editado === null) return err("VERSION_DESACTUALIZADA");
         await dejarConstancia(tx, contexto, previo.valor.persona, {
@@ -105,10 +120,12 @@ export function armarEditarMedioDePago({ transacciones, reglas }: DependenciasDe
           antes: {
             ...(cambiaNombre ? { nombre: actual.nombre } : {}),
             ...(cambiaDatos ? { pide: datosParaAuditar(actual.pide) } : {}),
+            ...(cambiaSePide ? { sePide: datosParaAuditar(actual.avisaSiFalta) } : {}),
           },
           despues: {
             ...(cambiaNombre ? { nombre: editado.nombre } : {}),
             ...(cambiaDatos ? { pide: datosParaAuditar(editado.pide) } : {}),
+            ...(cambiaSePide ? { sePide: datosParaAuditar(editado.avisaSiFalta) } : {}),
           },
         });
         return ok({ version: editado.version });

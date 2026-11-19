@@ -154,6 +154,20 @@ export const DATOS_DE_PRODUCTOS = {
     ponerPor: ["productos.editar", "productos.crear"],
     requiere: REQUIERE_CATALOGO,
   },
+  "control-de-stock-de-producto": {
+    // El catálogo no guarda este dato: es la existencia de un artículo de stock activo del producto (`stock`); la regla de qué clases se controlan es `seControlaStockLaClase`.
+    ficha: "src/modulos/catalogo/dominio/clases.ts",
+    propositos: [
+      {
+        para: "Si de este producto se lleva existencia y movimientos en los depósitos (artículo de stock).",
+        fuente:
+          "Pedernal-docs/10-ux-ui productos.html (carpeta de prototipos) (tabla «Textos nuevos», aprobada el 09/11/2026: «Se controla el stock») y 11-especificaciones/decisiones-del-dueno-2026-11.md (filas del 13/11/2026: nace sin tildar; el alta no lo ofrece)",
+      },
+    ],
+    consumidores: [FICHA_DE_PRODUCTO],
+    ponerPor: ["articulos.controlar", "articulos.dejar_de_controlar"],
+    requiere: { modulo: "stock", estadoDeEmpresa: ["ACTIVE"] },
+  },
   "seccion-de-carta-de-producto": {
     // Una referencia a una sección activa de la carta de la empresa (no hay primitiva de texto: la fuente de las opciones es la consulta de secciones del catálogo).
     ficha: "src/modulos/catalogo/casos-de-uso/secciones.ts",

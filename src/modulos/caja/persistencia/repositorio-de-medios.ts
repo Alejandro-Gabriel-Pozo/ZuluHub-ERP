@@ -12,6 +12,7 @@ export type OpcionesDeListadoDeMedios = Readonly<{ incluirInactivos: boolean }>;
 export type CambiosPersistidosDeMedio = Readonly<{
   nombre?: string | null;
   pide?: DatosQuePideElMedio;
+  avisaSiFalta?: DatosQuePideElMedio;
 }>;
 
 /**
@@ -62,6 +63,13 @@ function aMedio(fila: Selectable<CajaDb["medio_de_pago"]>): MedioDePago {
       marca: fila.pide_marca,
       cuotas: fila.pide_cuotas,
       dni: fila.pide_dni,
+    },
+    avisaSiFalta: {
+      cupon: fila.avisa_si_falta_cupon,
+      ultimos4: fila.avisa_si_falta_ultimos4,
+      marca: fila.avisa_si_falta_marca,
+      cuotas: fila.avisa_si_falta_cuotas,
+      dni: fila.avisa_si_falta_dni,
     },
     version: fila.version,
   };
@@ -138,8 +146,8 @@ export function crearRepositorioDeMediosDePago(db: Kysely<CajaDb>): RepositorioD
     },
 
     async editar(empresa, id, versionEsperada, cambios) {
-      const { pide } = cambios;
-      if (cambios.nombre === undefined && pide === undefined) {
+      const { pide, avisaSiFalta } = cambios;
+      if (cambios.nombre === undefined && pide === undefined && avisaSiFalta === undefined) {
         throw new RangeError("editar un medio de pago exige al menos un cambio");
       }
       const fila = await actualizar(empresa, id, versionEsperada)
@@ -153,6 +161,15 @@ export function crearRepositorioDeMediosDePago(db: Kysely<CajaDb>): RepositorioD
                 pide_marca: pide.marca,
                 pide_cuotas: pide.cuotas,
                 pide_dni: pide.dni,
+              }),
+          ...(avisaSiFalta === undefined
+            ? {}
+            : {
+                avisa_si_falta_cupon: avisaSiFalta.cupon,
+                avisa_si_falta_ultimos4: avisaSiFalta.ultimos4,
+                avisa_si_falta_marca: avisaSiFalta.marca,
+                avisa_si_falta_cuotas: avisaSiFalta.cuotas,
+                avisa_si_falta_dni: avisaSiFalta.dni,
               }),
         })
         .returningAll()

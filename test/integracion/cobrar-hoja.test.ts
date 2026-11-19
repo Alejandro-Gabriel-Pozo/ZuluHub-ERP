@@ -200,6 +200,29 @@ describe.skipIf(base === null)(
       ]);
     });
 
+    it("con el DNI en «se pide»: la pantalla lo sabe, cobrar sin DNI cobra igual y la base sella el dato pendiente", async () => {
+      const e = await m.escenario();
+      const caja = await m.cajaAbierta(e);
+      await m.dueno.query(
+        "update medio_de_pago set pide_dni = true, avisa_si_falta_dni = true where id = $1",
+        [caja.medios["TRANSFERENCIA"]],
+      );
+      const p = await preparar(e);
+      if (p.estado !== "LISTO") throw new Error("se esperaba LISTO");
+      const transferencia = p.opciones.medios.find((x) => x.tipo === "TRANSFERENCIA");
+      expect(transferencia?.datosQueSePiden).toMatchObject({ dni: true, cupon: false });
+      const { respuesta } = await cobrarComoLaPantalla(e, p.opciones, p.cajaId, (medio) => [
+        pagoNuevo("a", medio("TRANSFERENCIA"), "1000.00"),
+      ]);
+      expect(respuesta.ok).toBe(true);
+      expect(
+        await m.filas<Record<string, unknown>>(
+          "select dni, datos_pendientes from cobro where empresa_id = $1",
+          [e.empresa],
+        ),
+      ).toEqual([{ dni: null, datos_pendientes: ["dni"] }]);
+    });
+
     it("con los datos habilitados, lo que la pantalla escribe llega al cobro; el DNI es de la transferencia", async () => {
       const e = await m.escenario();
       const caja = await m.cajaAbierta(e);

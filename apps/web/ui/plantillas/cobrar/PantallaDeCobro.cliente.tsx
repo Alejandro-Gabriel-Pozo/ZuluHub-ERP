@@ -13,9 +13,10 @@ import { BotonIcono } from "../../componentes/BotonIcono";
 import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
 import { FranjaSinConexion } from "../../patrones/FranjaSinConexion.cliente";
 import { formatearImporte } from "../../patrones/formato-fiscal";
-import type { LineaDeLaVenta } from "../venta/modelo-de-la-cuenta";
+import { CONFIRMACION_VENTA_A_CERO, type LineaDeLaVenta } from "../venta/modelo-de-la-cuenta";
 import estilos from "./Cobrar.module.css";
 import { FilaDeCobro } from "./FilaDeCobro.cliente";
+import type { PapelDeTicket } from "./PapelDelTicket.cliente";
 import { ResultadoDelCobro } from "./ResultadoDelCobro.cliente";
 import {
   estadoDelCobro,
@@ -46,6 +47,8 @@ export type PropsDePantallaDeCobro = Readonly<{
   /** Las acciones de servidor (`acciones-de-cobrar.ts`). Cobrar mueve dinero y stock: la clave de idempotencia la pone la pantalla por intento. */
   cobrar: (pedido: unknown) => Promise<Respuesta<VentaCobrada>>;
   anular: (pedido: unknown) => Promise<Respuesta<TicketAnulado>>;
+  /** El papel del ticket cobrado (lectura): «Imprimir ticket» del resultado. */
+  imprimir: (pedido: unknown) => Promise<Respuesta<PapelDeTicket>>;
   /** Vuelve a la cuenta (la flecha «‹» de la barra; solo antes de cobrar). */
   alVolver: () => void;
   /** Termina la venta (tras cobrar o anular): la pantalla de venta empieza una cuenta vacía. */
@@ -53,6 +56,10 @@ export type PropsDePantallaDeCobro = Readonly<{
   /** Genera un identificador. Por defecto, un UUID del navegador. Las pruebas pasan uno propio. */
   nuevoId?: () => string;
   esperaEntreVerificacionesMs?: number | undefined;
+  /** Una venta ya cerrada sin cobro (a $ 0, confirmada en la venta): la vista abre directo en el resultado. */
+  ventaCobrada?: VentaCobrada | undefined;
+  /** La persona confirmó en la venta una línea a $ 0: el cobro manda «VENTA_A_CERO» (y solo entonces). */
+  confirmoCero?: boolean | undefined;
   /** Vale `true` durante los primeros instantes tras abrir la vista (lo maneja la pantalla de venta): un toque en «Cobrar» entonces se ignora. */
   esperaAlAbrir?: Readonly<{ current: boolean }>;
 }>;
@@ -75,11 +82,14 @@ export function PantallaDeCobro({
   textos,
   cobrar,
   anular,
+  imprimir,
   alVolver,
   alNuevaVenta,
   nuevoId = uuid,
   esperaEntreVerificacionesMs,
   esperaAlAbrir,
+  ventaCobrada,
+  confirmoCero = false,
 }: PropsDePantallaDeCobro) {
   const medios = preparado.estado === "LISTO" ? preparado.opciones.medios : [];
   const [pagos, setPagos] = useState<readonly PagoEnEdicion[]>(() => {
@@ -99,9 +109,12 @@ export function PantallaDeCobro({
   });
 
   const idDelTitulo = useId();
+  // Con el ticket del cliente a la vista, la barra es la suya (`TicketDelCliente`): esta no se dibuja.
+  const [viendoElTicket, setViendoElTicket] = useState(false);
   const [rechazoYaVisto, setRechazoYaVisto] = useState<ErrorPublico | null>(null);
   const estado = estadoDelCobro(total, pagos, medios);
-  const hecho = envio.estado.tipo === "hecho";
+  const ventaHecha = ventaCobrada ?? (envio.estado.tipo === "hecho" ? envio.estado.valor : null);
+  const hecho = ventaHecha !== null;
   // Con un envío en curso, incierto o hecho nada se edita ni se vuelve: otro pedido con la misma clave sería un error, y con otra clave podría cobrar dos veces.
   const congelado = envio.enCurso || envio.estado.tipo === "incierto" || hecho;
 
@@ -125,6 +138,7 @@ export function PantallaDeCobro({
       pagos,
       medios: preparado.opciones.medios,
       vuelto: estado.vuelto,
+      confirmaciones: confirmoCero ? [CONFIRMACION_VENTA_A_CERO] : undefined,
     });
     if (pedido !== null) enviar(pedido);
   };
@@ -146,16 +160,18 @@ export function PantallaDeCobro({
   const tituloRef = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     tituloRef.current?.focus();
-  }, [enResultado]);
+  }, [enResultado, viendoElTicket]);
 
   const cuerpo =
-    hecho && preparado.estado === "LISTO" ? (
+    ventaHecha !== null && preparado.estado === "LISTO" ? (
       <ResultadoDelCobro
-        venta={envio.estado.valor}
+        venta={ventaHecha}
         medios={preparado.opciones.medios}
         vuelto={estado.vuelto?.vuelto ?? "0.00"}
         textos={textos}
         anular={anular}
+        imprimir={imprimir}
+        alCambiarLaVista={setViendoElTicket}
         alNuevaVenta={alNuevaVenta}
         nuevoId={nuevoId}
         esperaEntreVerificacionesMs={esperaEntreVerificacionesMs}
@@ -261,21 +277,26 @@ export function PantallaDeCobro({
     );
 
   return (
-    <section className={estilos["vista"]} aria-labelledby={idDelTitulo}>
+    <section
+      className={estilos["vista"]}
+      aria-labelledby={viendoElTicket ? undefined : idDelTitulo}
+    >
       <FranjaSinConexion texto={textos.sinConexion} />
-      <header className={estilos["encabezado"]}>
-        {enResultado ? null : (
-          <BotonIcono
-            etiqueta={textos.volverALaCuenta}
-            icono="atras"
-            deshabilitado={congelado}
-            alTocar={alVolver}
-          />
-        )}
-        <h2 id={idDelTitulo} ref={tituloRef} tabIndex={-1} className={estilos["titulo"]}>
-          {titulo}
-        </h2>
-      </header>
+      {viendoElTicket ? null : (
+        <header className={estilos["encabezado"]}>
+          {enResultado ? null : (
+            <BotonIcono
+              etiqueta={textos.volverALaCuenta}
+              icono="atras"
+              deshabilitado={congelado}
+              alTocar={alVolver}
+            />
+          )}
+          <h2 id={idDelTitulo} ref={tituloRef} tabIndex={-1} className={estilos["titulo"]}>
+            {titulo}
+          </h2>
+        </header>
+      )}
       {cuerpo}
     </section>
   );

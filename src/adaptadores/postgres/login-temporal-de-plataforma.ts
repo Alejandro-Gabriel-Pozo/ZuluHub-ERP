@@ -47,10 +47,20 @@ function revisarCadena(cadena: string): void {
   }
 }
 
-async function estaAbierto(cliente: ClienteDeBase, rol: string): Promise<boolean> {
+/**
+ * El login PERMANENTE de la consola de preview (decisión del dueño, 2026-11-19, `cargar-entorno-consola.yml`) vence a los 90 días;
+ * el temporal, a los 30 minutos. Un login con permiso de entrar y una vigencia mayor que la del temporal (más un margen) NO es de este
+ * flujo: no se reemplaza al abrir ni se cierra al cerrar. Falla que previene: que preparar la empresa de pruebas deje a la consola de
+ * preview sin base (el cierre siempre corre).
+ */
+const MARGEN_PARA_RECONOCER_EL_PERMANENTE_EN_MINUTOS = 5;
+
+type EstadoDelRol = Readonly<{ puede: boolean; permanente: boolean }>;
+
+async function estaAbierto(cliente: ClienteDeBase, rol: string): Promise<EstadoDelRol> {
   const { rows } = await cliente.query(
-    "SELECT rolcanlogin AS puede FROM pg_roles WHERE rolname = $1",
-    [rol],
+    "SELECT rolcanlogin AS puede, (rolcanlogin AND (rolvaliduntil IS NULL OR rolvaliduntil = 'infinity' OR rolvaliduntil > now() + make_interval(mins => $2::int))) AS permanente FROM pg_roles WHERE rolname = $1",
+    [rol, VIGENCIA_DEL_LOGIN_EN_MINUTOS + MARGEN_PARA_RECONOCER_EL_PERMANENTE_EN_MINUTOS],
   );
   const fila = rows[0];
   if (fila === undefined) {
@@ -58,7 +68,7 @@ async function estaAbierto(cliente: ClienteDeBase, rol: string): Promise<boolean
       `el rol ${rol} no existe: faltan aplicar las migraciones que lo crean`,
     );
   }
-  return fila["puede"] === true;
+  return { puede: fila["puede"] === true, permanente: fila["permanente"] === true };
 }
 
 /**
@@ -76,7 +86,13 @@ export async function abrirLoginDePlataforma(
   const cliente = (opciones.crearCliente ?? clienteReal)(cadenaDelDueno);
   await cliente.connect();
   try {
-    if (await estaAbierto(cliente, rol)) {
+    const abierto = await estaAbierto(cliente, rol);
+    if (abierto.puede && abierto.permanente) {
+      throw new ErrorDeConfiguracion(
+        `el rol ${rol} tiene el login PERMANENTE de la consola de preview (decisión del 19/11): este flujo temporal no lo toca ni lo reemplaza, así que no se puede preparar la empresa de pruebas con él. No se cambió nada`,
+      );
+    }
+    if (abierto.puede) {
       throw new ErrorDeConfiguracion(
         `el rol ${rol} ya tiene login (¿quedó de otra corrida?). No se toca; el cierre de este flujo lo deja cerrado: repetí el flujo`,
       );
@@ -104,6 +120,8 @@ export async function abrirLoginDePlataforma(
 }
 
 export type EstadoDelCierre = Readonly<{
+  /** `true` solo si el login era el PERMANENTE de la consola: no se tocó (este flujo no lo abrió). */
+  conservado?: true;
   /** `true`: se verificó que la clave es NULL; `false`: el rol de la conexión no puede mirarla (se verificó solo `NOLOGIN`). */
   claveVerificada: boolean;
 }>;
@@ -122,7 +140,9 @@ export async function cerrarLoginDePlataforma(
   await cliente.connect();
   try {
     // El rol tiene que existir (si no, no hay nada que cerrar y algo anda mal).
-    await estaAbierto(cliente, rol);
+    const antes = await estaAbierto(cliente, rol);
+    // El permanente de la consola no lo abrió este flujo: no se cierra (aunque «Abrir» haya fallado y el cierre corra igual).
+    if (antes.puede && antes.permanente) return { claveVerificada: false, conservado: true };
     const { rows } = await cliente.query(
       "SELECT format('ALTER ROLE %I WITH NOLOGIN PASSWORD NULL VALID UNTIL %L', $1::text, 'infinity') AS sentencia",
       [rol],
@@ -132,7 +152,7 @@ export async function cerrarLoginDePlataforma(
       throw new ErrorDeConfiguracion("no se pudo armar la sentencia que cierra el login");
     }
     await cliente.query(sentencia);
-    if (await estaAbierto(cliente, rol)) {
+    if ((await estaAbierto(cliente, rol)).puede) {
       throw new ErrorDeConfiguracion(
         `el rol ${rol} sigue pudiendo entrar después de cerrarlo: avisá al dueño y cerralo a mano`,
       );

@@ -123,7 +123,7 @@ export const DATOS_DE_VENTAS = {
     ficha: "src/modulos/ventas/dominio/motivo.ts",
     propositos: [
       PROPOSITO_DEL_COBRO(
-        "Motivo con el que se anula, desde el resultado de cobrar, un ticket recién cobrado (se anula entero; decisión 172).",
+        "Motivo con el que se anula un ticket entero (decisión 172), desde el resultado de cobrar o desde la ficha del ticket en «Tickets del día».",
       ),
     ],
     consumidores: [ANULAR_EL_TICKET],

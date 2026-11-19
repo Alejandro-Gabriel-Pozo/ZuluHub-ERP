@@ -8,11 +8,10 @@ import { sucursalId, type SucursalId } from "../../../primitivas/identificadores
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import { cargarEstadosDeLaEmpresa, datosDeJornada } from "../../empresas/publico";
-import { esUuid } from "../../ventas/publico";
+import { esUuid, papelDelTicket, type ErrorDelPapelDelTicket } from "../../ventas/publico";
 import {
   documentoDeAnulacion,
   documentoDeComanda,
-  documentoDeTicket,
   type ErrorDeCantidadParaPapel,
   type ModeloDePapel,
 } from "../dominio/documento";
@@ -31,6 +30,7 @@ export type ErrorDeConsultaDeComandas =
   | ErrorDeAlcance
   | ErrorDePersistencia
   | ErrorDeCantidadParaPapel
+  | ErrorDelPapelDelTicket
   | "IDENTIFICADOR_INVALIDO"
   | "DOCUMENTO_INVALIDO"
   | "ENVIO_NO_ENCONTRADO"
@@ -251,21 +251,7 @@ export function crearConsultasDeComandas(dependencias: DependenciasDeConsultasDe
           entrada.impresoraId,
         );
         if (!ancho.ok) return ancho;
-        return ok(
-          documentoDeTicket(
-            {
-              numero: ficha.ticket.numero,
-              fecha: ficha.ticket.fechaNegocio,
-              lineas: ficha.renglonesDelVigente.map((r) => ({
-                cantidad: r.cantidad,
-                descripcion: r.descripcion,
-                importe: r.importe,
-              })),
-              total: ficha.ejemplares[0]?.total ?? ficha.ticket.total,
-            },
-            { ancho: ancho.valor },
-          ),
-        );
+        return papelDelTicket(ficha, ancho.valor);
       }),
 
     trabajosDeImpresion: (

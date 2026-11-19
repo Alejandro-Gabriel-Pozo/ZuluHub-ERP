@@ -4,6 +4,8 @@ import type { Respuesta } from "../../../../../src/capacidades/experiencia/respu
 import {
   anularElTicketDelMostrador,
   cobrarLaVentaDelMostrador,
+  papelDelTicketDelMostrador,
+  type PapelDelTicketParaLaPantalla,
   type TicketAnuladoParaLaPantalla,
   type VentaCobradaParaLaPantalla,
 } from "../../../servidor/cobrar";
@@ -22,4 +24,11 @@ export async function anularElTicketAccion(
   pedido: unknown,
 ): Promise<Respuesta<TicketAnuladoParaLaPantalla>> {
   return anularElTicketDelMostrador(pedido);
+}
+
+/** El papel del ticket cobrado para «Imprimir ticket»: es una lectura (`ventas.ver`), repetirla no cambia nada. */
+export async function papelDelTicketAccion(
+  pedido: unknown,
+): Promise<Respuesta<PapelDelTicketParaLaPantalla>> {
+  return papelDelTicketDelMostrador(pedido);
 }

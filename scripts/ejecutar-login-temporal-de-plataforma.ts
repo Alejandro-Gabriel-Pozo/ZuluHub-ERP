@@ -73,6 +73,12 @@ export async function ejecutarLoginTemporal(entrada: EntradaDeLoginTemporal): Pr
   try {
     if (entrada.accion === "cerrar") {
       const estado = await (entrada.cerrar ?? cerrarLoginDePlataforma)(cadena);
+      if (estado.conservado === true) {
+        info(
+          "NO SE CERRÓ: el rol de plataforma tiene el login PERMANENTE de la consola de preview, que este flujo no abrió. No se cambió nada.",
+        );
+        return 0;
+      }
       info(
         estado.claveVerificada
           ? "CERRADO: el rol de plataforma quedó sin login y sin clave (verificado)."

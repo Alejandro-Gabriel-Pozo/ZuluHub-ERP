@@ -140,12 +140,33 @@ describe.skipIf(base === null)(
         [mundo.empresa],
       );
       expect(cobro[0]?.importe).toBe("800.00");
-      expect(
-        await enLaVista()
-          .getByRole("button", { name: /Imprimir/ })
-          .count(),
-      ).toBe(0);
+      await enLaVista().getByRole("button", { name: "Imprimir ticket", exact: true }).waitFor();
       await sinViolacionesDeAxe();
+      pantallaLimpia();
+    });
+
+    it("«Imprimir ticket» (doble toque) muestra el papel del servidor con el total en formato argentino, no escribe nada y «Volver» regresa al resultado", async () => {
+      const antes = [
+        await contar("ticket"),
+        await contar("cobro"),
+        await contar("movimiento_caja"),
+      ];
+      await enLaVista().getByRole("button", { name: "Imprimir ticket", exact: true }).dblclick();
+      await enLaVista().getByRole("heading", { name: "Ticket del cliente" }).waitFor();
+      const lineas = await pagina.locator("[data-linea-del-papel]").allInnerTexts();
+      expect(lineas[0]).toBe("Ticket N.º 1");
+      expect(lineas.at(-1)).toMatch(/^Total\s+800,00$/);
+      expect(lineas.join("\n")).toMatch(/\d{2}\/\d{2}\/\d{4}/);
+      await enLaVista().getByRole("button", { name: "Imprimir", exact: true }).waitFor();
+      expect([
+        await contar("ticket"),
+        await contar("cobro"),
+        await contar("movimiento_caja"),
+      ]).toEqual(antes);
+      await sinViolacionesDeAxe();
+      await enLaVista().getByRole("button", { name: "Volver", exact: true }).click();
+      await enLaVista().getByRole("button", { name: "Anular", exact: true }).waitFor();
+      await enLaVista().getByText("Cobrado", { exact: true }).first().waitFor();
       pantallaLimpia();
     });
 

@@ -54,6 +54,7 @@ export {
 } from "./dominio/medios";
 export {
   datosCompletados,
+  datosPendientesDe,
   datosEnFormaCompleta,
   validarDatosDelCobro,
   type DatosDelCobro,
