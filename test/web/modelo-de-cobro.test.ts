@@ -4,6 +4,7 @@ import {
   SIN_DATOS,
   cambiarDeMedio,
   cambiarUnDato,
+  datosPendientes,
   errorDeUnDato,
   esImporteValido,
   estadoDelCobro,
@@ -34,6 +35,7 @@ const EFECTIVO: MedioParaCobrar = {
   nombre: null,
   cuentas: [],
   datosQuePide: nada,
+  datosQueSePiden: nada,
 };
 const DEBITO: MedioParaCobrar = {
   id: "m-debito",
@@ -41,6 +43,7 @@ const DEBITO: MedioParaCobrar = {
   nombre: null,
   cuentas: [{ id: "c-posnet", tipo: "TERMINAL", nombre: "Posnet 1" }],
   datosQuePide: { ...nada, cupon: true, ultimos4: true, marca: true },
+  datosQueSePiden: nada,
 };
 const CREDITO: MedioParaCobrar = {
   id: "m-credito",
@@ -48,6 +51,7 @@ const CREDITO: MedioParaCobrar = {
   nombre: "Visa crédito",
   cuentas: [{ id: "c-posnet", tipo: "TERMINAL", nombre: "Posnet 1" }],
   datosQuePide: { cupon: true, ultimos4: true, marca: true, cuotas: true, dni: false },
+  datosQueSePiden: nada,
 };
 const TRANSFERENCIA: MedioParaCobrar = {
   id: "m-transf",
@@ -55,6 +59,7 @@ const TRANSFERENCIA: MedioParaCobrar = {
   nombre: null,
   cuentas: [],
   datosQuePide: { ...nada, dni: true },
+  datosQueSePiden: nada,
 };
 const MEDIOS = [EFECTIVO, DEBITO, CREDITO, TRANSFERENCIA];
 const TOTAL = { moneda: "ARS", monto: "1500.00" };
@@ -173,6 +178,36 @@ describe("esImporteValido", () => {
     for (const mal of ["", "0", "0.00", "00.00", "-1", "1,5", "1.234", "1000000000", "abc"]) {
       expect(esImporteValido(mal), mal).toBe(false);
     }
+  });
+});
+
+describe("datosPendientes (lo que «se pide» y quedó vacío; informativo, no bloquea)", () => {
+  const sePideCuotas: MedioParaCobrar = {
+    ...CREDITO,
+    datosQueSePiden: { ...nada, cuotas: true, dni: true },
+  };
+  it("pedido y vacío → pendiente; solo espacios → pendiente; completo → no", () => {
+    expect(datosPendientes(sePideCuotas, pago(sePideCuotas, "1500.00"))).toEqual(["cuotas"]);
+    expect(
+      datosPendientes(sePideCuotas, cambiarUnDato(pago(sePideCuotas, "1500.00"), "cuotas", "   ")),
+    ).toEqual(["cuotas"]);
+    expect(
+      datosPendientes(sePideCuotas, cambiarUnDato(pago(sePideCuotas, "1500.00"), "cuotas", "3")),
+    ).toEqual([]);
+  });
+  it("un dato que el medio no pide nunca es pendiente, aunque esté marcado; sin medio, nada", () => {
+    expect(datosPendientes(CREDITO, pago(CREDITO, "1500.00"))).toEqual([]);
+    expect(datosPendientes(undefined, pago(CREDITO, "1500.00"))).toEqual([]);
+  });
+  it("un dato mal escrito no es «pendiente»: es un error de forma y sí apaga el cobro", () => {
+    const mal = cambiarUnDato(pago(sePideCuotas, "1500.00"), "cuotas", "99");
+    expect(datosPendientes(sePideCuotas, mal)).toEqual([]);
+    expect(estadoDelCobro(TOTAL, [mal], [sePideCuotas]).listo).toBe(false);
+  });
+  it("«Cobrar» NO se apaga por un dato pedido y vacío: listo depende solo del importe y de datos bien escritos", () => {
+    const vacio = pago(sePideCuotas, "1500.00");
+    expect(datosPendientes(sePideCuotas, vacio)).toEqual(["cuotas"]);
+    expect(estadoDelCobro(TOTAL, [vacio], [sePideCuotas]).listo).toBe(true);
   });
 });
 

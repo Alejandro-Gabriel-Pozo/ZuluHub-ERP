@@ -110,6 +110,14 @@ export type OpcionesDeCobroParaLaPantalla = Readonly<{
       cuotas: boolean;
       dni: boolean;
     }>;
+    /** De los que pide, cuáles «se piden»: se pueden dejar vacíos y el cobro queda con el dato pendiente (no apaga «Cobrar»). */
+    datosQueSePiden: Readonly<{
+      cupon: boolean;
+      ultimos4: boolean;
+      marca: boolean;
+      cuotas: boolean;
+      dni: boolean;
+    }>;
   }>[];
   marcasDeTarjeta: readonly Readonly<{ id: string; nombre: string }>[];
 }>;
@@ -138,6 +146,13 @@ export function opcionesDeCobroDeLaCaja(
           marca: m.datosQuePide.marca,
           cuotas: m.datosQuePide.cuotas,
           dni: m.datosQuePide.dni,
+        },
+        datosQueSePiden: {
+          cupon: m.datosQueSePiden.cupon,
+          ultimos4: m.datosQueSePiden.ultimos4,
+          marca: m.datosQueSePiden.marca,
+          cuotas: m.datosQueSePiden.cuotas,
+          dni: m.datosQueSePiden.dni,
         },
       })),
       marcasDeTarjeta: opciones.marcasDeTarjeta.map((m) => ({ id: m.id, nombre: m.nombre })),
