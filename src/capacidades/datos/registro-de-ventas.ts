@@ -62,29 +62,6 @@ export const DATOS_DE_VENTAS = {
     ponerPor: ["tickets.cobrar"],
     requiere: REQUIERE_VENTAS,
   },
-  "medio-de-cobro": {
-    // Sin primitiva: es la elección de uno de los medios activos que el servidor ofrece para la caja (lista cerrada, como `eleccion-de-opcion-de-venta`).
-    ficha: "src/modulos/caja/cobrar/opciones-de-cobro.ts",
-    propositos: [
-      PROPOSITO_DEL_COBRO(
-        "Medio de pago de cada fila de la hoja de cobro, de entre los medios activos que el servidor ofrece para la caja.",
-      ),
-    ],
-    consumidores: [FILA_DE_COBRO],
-    ponerPor: ["tickets.cobrar"],
-    requiere: REQUIERE_VENTAS,
-  },
-  "cuenta-de-cobro": {
-    ficha: "src/modulos/caja/cobrar/opciones-de-cobro.ts",
-    propositos: [
-      PROPOSITO_DEL_COBRO(
-        "Cuenta de cobro, opcional, de la fila de cobro, de entre las cuentas activas de la sucursal que el servidor ofrece para ese medio.",
-      ),
-    ],
-    consumidores: [FILA_DE_COBRO],
-    ponerPor: ["tickets.cobrar"],
-    requiere: REQUIERE_VENTAS,
-  },
   "cupon-del-cobro": {
     ficha: "src/primitivas/texto/cupon-de-pago.ts",
     propositos: [
