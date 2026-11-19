@@ -52,12 +52,12 @@ describe("el ticket del cliente en el papel", () => {
         "NEGRITA | Ticket N.º 12",
         "NORMAL | 09/11/2026",
         "SEPARADOR | ",
-        "NORMAL | 2 Milanesa               3000.00",
+        "NORMAL | 2 Milanesa              3.000,00",
         "NORMAL | 1 Gaseosa de litro y medio sabor",
         "NORMAL | pomelo light",
-        "NORMAL | 1500.00",
+        "NORMAL | 1.500,00",
         "SEPARADOR | ",
-        "NEGRITA | Total                    4500.00",
+        "NEGRITA | Total                   4.500,00",
       ]
     `);
     expect(papel(dosRenglones, 80)).toMatchInlineSnapshot(`
@@ -65,11 +65,11 @@ describe("el ticket del cliente en el papel", () => {
         "NEGRITA | Ticket N.º 12",
         "NORMAL | 09/11/2026",
         "SEPARADOR | ",
-        "NORMAL | 2 Milanesa                               3000.00",
+        "NORMAL | 2 Milanesa                              3.000,00",
         "NORMAL | 1 Gaseosa de litro y medio sabor pomelo light",
-        "NORMAL | 1500.00",
+        "NORMAL | 1.500,00",
         "SEPARADOR | ",
-        "NEGRITA | Total                                    4500.00",
+        "NEGRITA | Total                                   4.500,00",
       ]
     `);
   });
@@ -118,7 +118,7 @@ describe("el ticket del cliente en el papel", () => {
       58,
     );
     expect(l.slice(3, -2)).toEqual([
-      "NORMAL | 1 Pizza                  1500.00",
+      "NORMAL | 1 Pizza                 1.500,00",
       "NORMAL |   Grande",
       "NORMAL |   Sin cebolla",
       "NORMAL |   Extra queso con aceitunas",
@@ -128,7 +128,7 @@ describe("el ticket del cliente en el papel", () => {
     expect(papel(ficha(), 58).slice(3, -2)).toHaveLength(1);
     expect(
       papel(ficha({ lineas: [renglon({ opciones: [{ nombre: "Sin sal" }] })] })).slice(3, -2),
-    ).toEqual(["NORMAL | 1 Milanesa               1500.00", "NORMAL |   Sin sal"]);
+    ).toEqual(["NORMAL | 1 Milanesa              1.500,00", "NORMAL |   Sin sal"]);
   });
 
   it("no lleva medios de pago, vuelto, empresa, sucursal ni hora", () => {
@@ -141,22 +141,24 @@ describe("el ticket del cliente en el papel", () => {
     expect(TEXTOS_DEL_TICKET).toEqual({ ticket: "Ticket N.º", total: "Total" });
   });
 
-  it("el borde: la descripción llena justo el lugar, y un lugar de una sola columna", () => {
+  it("el borde: la descripción llena justo el lugar que deja el importe ya formateado", () => {
     const una = (descripcion: string, importe: string) =>
       papel(ficha({ lineas: [renglon({ descripcion, importe })], total: "1.00" }), 58).slice(3, -2);
-    // importe de 6 → lugar = 32 − 6 − 1 = 25; «1 » + 23 = 25: justo
-    expect(una("a".repeat(23), "100.00")).toEqual(["NORMAL | 1 aaaaaaaaaaaaaaaaaaaaaaa 100.00"]);
+    // importe «100,00» de 6 → lugar = 32 − 6 − 1 = 25; «1 » + 23 = 25: justo
+    expect(una("a".repeat(23), "100.00")).toEqual(["NORMAL | 1 aaaaaaaaaaaaaaaaaaaaaaa 100,00"]);
     // un carácter más: no entra y se parte en dos renglones
     expect(una("a".repeat(24), "100.00")).toEqual([
       "NORMAL | 1 aaaaaaaaaaaaaaaaaaaaaaaa",
-      "NORMAL | 100.00",
+      "NORMAL | 100,00",
     ]);
-    // importe de 30 → lugar = 1: «1 a» no entra y se parte en dos renglones
-    expect(una("a", "9".repeat(30))).toEqual(["NORMAL | 1 a", `NORMAL | ${"9".repeat(30)}`]);
-    // importe de 29 → lugar = 2: «1 » (2) entra justo con descripción vacía
-    expect(una("", "9".repeat(29))).toEqual([`NORMAL | 1  ${"9".repeat(29)}`]);
-    // importe de 31 → lugar = 0: no hay lugar y se parte
-    expect(una("a", "9".repeat(31))).toEqual(["NORMAL | 1 a", `NORMAL | ${"9".repeat(31)}`]);
+    // el importe más ancho que existe, «999.999.999,99» (14) → lugar = 17; «1 » + 15 = 17: justo
+    expect(una("a".repeat(15), "999999999.99")).toEqual([
+      "NORMAL | 1 aaaaaaaaaaaaaaa 999.999.999,99",
+    ]);
+    expect(una("a".repeat(16), "999999999.99")).toEqual([
+      "NORMAL | 1 aaaaaaaaaaaaaaaa",
+      "NORMAL | 999.999.999,99",
+    ]);
   });
 
   it("ninguna línea pasa del ancho del papel", () => {
@@ -172,7 +174,7 @@ describe("el ticket del cliente en el papel", () => {
     }
   });
 
-  it("falla cerrada: una cantidad que no se puede mostrar o una fecha inválida no sacan un papel a medias", () => {
+  it("falla cerrada: una cantidad, una fecha o un importe que no se pueden mostrar no sacan un papel a medias", () => {
     const codigo = (f: FichaParaElTicket) => {
       const r = documentoDeTicket(f, { ancho: 58 });
       return r.ok ? "ok" : r.error;
@@ -185,6 +187,9 @@ describe("el ticket del cliente en el papel", () => {
       "CANTIDAD_NO_MOSTRABLE",
     );
     expect(codigo(ficha({ fechaNegocio: "2026-02-30" as FechaCivil }))).toBe("FECHA_INVALIDA");
+    expect(codigo(ficha({ lineas: [renglon({ importe: "1.234" })] }))).toBe("IMPORTE_NO_MOSTRABLE");
+    expect(codigo(ficha({ lineas: [renglon({ importe: "-5.00" })] }))).toBe("IMPORTE_NO_MOSTRABLE");
+    expect(codigo(ficha({ total: "abc" }))).toBe("IMPORTE_NO_MOSTRABLE");
     expect(codigo(ficha())).toBe("ok");
   });
 

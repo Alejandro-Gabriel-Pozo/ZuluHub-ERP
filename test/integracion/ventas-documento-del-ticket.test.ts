@@ -75,9 +75,9 @@ describe.skipIf(base === null)("ventas: documentoDelTicket", () => {
     expect(l[0]).toBe(`Ticket N.º ${v.numero}`);
     expect(l[1]).toBe(`${a}/${mes}/${d}`);
     expect(l.join("\n")).not.toMatch(/\d{4}-\d{2}-\d{2}/);
-    expect(l.find((x) => x.startsWith("1 "))?.endsWith("1000.00")).toBe(true);
+    expect(l.find((x) => x.startsWith("1 "))?.endsWith("1.000,00")).toBe(true);
     expect(l.at(-1)?.startsWith("Total")).toBe(true);
-    expect(l.at(-1)?.endsWith("1000.00")).toBe(true);
+    expect(l.at(-1)?.endsWith("1.000,00")).toBe(true);
     const antes = await m.contar(
       "select count(*) as n from auditoria_empresa where empresa_id = $1",
       [e.empresa],

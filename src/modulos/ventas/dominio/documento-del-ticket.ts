@@ -1,6 +1,7 @@
 import { fechaParaMostrar } from "../../../primitivas/tiempo/fecha-para-mostrar";
 import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import { cantidadParaMostrar } from "../../../primitivas/cantidad/cantidad-para-mostrar";
+import { importeParaMostrar } from "../../../primitivas/dinero/importe-para-mostrar";
 import {
   columnasDelPapel,
   envolver,
@@ -17,13 +18,14 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
  * el diálogo del sistema (PP-1). Sale de lo que YA tiene la ficha del ticket (foto del ejemplar vigente), nunca del catálogo vivo. Lleva: «Ticket N.º», la
  * fecha en DD/MM/AAAA (decisión del dueño, fila 178; una sola regla: `fechaParaMostrar`), cada línea con su cantidad como en pantalla («½», «1 ½», «350 g»: una sola
  * regla, `cantidadParaMostrar`; respuestas 24 a 27, 27A), la medida y las opciones elegidas en renglones sangrados (los textos salen de los datos del ticket, no
- * hay textos nuevos), el importe a la derecha y el «Total». SIN medios de pago ni vuelto ni empresa, sucursal u hora (supuesto del orquestador, a corregir por el dueño).
+ * hay textos nuevos), el importe a la derecha (formato argentino «3.000,00», sin «$»: `importeParaMostrar`) y el «Total». SIN medios de pago ni vuelto ni empresa, sucursal u hora (supuesto del orquestador, a corregir por el dueño).
  * Textos: «Ticket N.º» y «Total» son los aprobados del papel (E7 §10, `imprimir.html:298/300`, decisión 120), antes en `comandas/dominio/documento.ts`.
- * Falla cerrada: una cantidad que no se puede mostrar (un tercio) o una fecha que no es una fecha no sacan un papel a medias.
+ * Falla cerrada: una cantidad que no se puede mostrar (un tercio) o una fecha o un importe que no se pueden mostrar no sacan un papel a medias.
  */
 export const TEXTOS_DEL_TICKET = { ticket: "Ticket N.º", total: "Total" } as const;
 
-export type ErrorDelPapelDelTicket = "CANTIDAD_NO_MOSTRABLE" | "FECHA_INVALIDA";
+export type ErrorDelPapelDelTicket =
+  "CANTIDAD_NO_MOSTRABLE" | "FECHA_INVALIDA" | "IMPORTE_NO_MOSTRABLE";
 
 export type RenglonParaElTicket = Readonly<{
   /** Texto decimal exacto. */
@@ -74,15 +76,19 @@ export function documentoDeTicket(
   for (const l of ficha.lineas) {
     const cantidad = cantidadParaMostrar(l.cantidad, { unidadDeVenta: l.unidadDeVenta });
     if (!cantidad.ok) return err("CANTIDAD_NO_MOSTRABLE");
-    lineas.push(...dosColumnas(`${cantidad.valor} ${l.descripcion}`, l.importe));
+    const importe = importeParaMostrar(l.importe);
+    if (!importe.ok) return err("IMPORTE_NO_MOSTRABLE");
+    lineas.push(...dosColumnas(`${cantidad.valor} ${l.descripcion}`, importe.valor));
     const detalle = [
       ...(l.varianteNombre === null ? [] : [l.varianteNombre]),
       ...l.opciones.map((o) => o.nombre),
     ];
     for (const d of detalle) lineas.push(...sangrado(d, columnas));
   }
+  const total = importeParaMostrar(ficha.total);
+  if (!total.ok) return err("IMPORTE_NO_MOSTRABLE");
   lineas.push(SEPARADOR);
-  for (const l of dosColumnas(TEXTOS_DEL_TICKET.total, ficha.total)) {
+  for (const l of dosColumnas(TEXTOS_DEL_TICKET.total, total.valor)) {
     lineas.push({ ...l, estilo: "NEGRITA" });
   }
   return ok({ ancho: opciones.ancho, lineas });
