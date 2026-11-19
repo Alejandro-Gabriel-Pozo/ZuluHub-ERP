@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0765",
+  "fecha": "2026-11-19",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: cerrar la caja con diferencia en el arqueo advierte con la diferencia a la vista, deja constancia y deja cerrar, sin pedir nota ni sumar texto (criterio permisivo del 18/11/2026).",
+  "que_cambia": "Qué pasa al cerrar con faltante o sobrante. Revertir: pedir una observación o un permiso para cerrar con diferencia (texto nuevo aprobado).",
+  "donde": "src/capacidades/pantallas/ficha-de-caja.ts; orquestadora, 19/11/2026 (supuestos P1, P2 y P3 de Caja C2)"
+}

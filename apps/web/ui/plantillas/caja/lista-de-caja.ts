@@ -55,7 +55,11 @@ export const RUTA_DE_LA_CAJA = "/caja";
 
 /**
  * Qué acciones de la pantalla «Caja» del mostrador se ofrecen activas hoy, según lo que el SERVIDOR deja hacer (`permisosDelActor`; `servidor/ofertas-de-caja.ts`). Sin permiso, el botón sale
- * apagado: solo una ayuda, cada acción vuelve a pasar por el guard dentro de su transacción. Si no se pudieron leer los permisos, todo apagado (ante la duda el sistema cierra). Los
- * tramos siguientes suman acá las acciones de cerrar.
+ * apagado: solo una ayuda, cada acción vuelve a pasar por el guard dentro de su transacción. Si no se pudieron leer los permisos, todo apagado (ante la duda el sistema cierra).
  */
-export type AccionesDeLaPantallaDeCaja = Readonly<{ abrir: boolean }>;
+export type AccionesDeLaPantallaDeCaja = Readonly<{
+  abrir: boolean;
+  iniciarCierre: boolean;
+  cancelarCierre: boolean;
+  cerrar: boolean;
+}>;

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { err, ok } from "../../src/primitivas/resultado/resultado";
 
 /**
- * Qué acciones de la pantalla «Caja» del mostrador se ofrecen activas: «Abrir caja» sale activa solo si `permisosDelActor` (el mismo cálculo que el guard) incluye `sesiones_caja.abrir`.
+ * Qué acciones de la pantalla «Caja» del mostrador se ofrecen activas: cada acción (abrir, iniciar y cancelar el cierre, cerrar) sale activa solo si `permisosDelActor` (el mismo cálculo que el guard) incluye su acción de permiso.
  * Previene: ofrecer un botón a quien el servidor va a rechazar, con el módulo `caja` en desarrollo o sin activar (la lista no trae sus acciones) o si no se pudieron leer los permisos («todo
  * nace cerrado»). Es solo una ayuda: cada acción vuelve a pasar por el guard.
  */
@@ -22,7 +22,9 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
   },
 }));
 
-type Acciones = Record<"abrir", boolean>;
+type Acciones = Record<"abrir" | "iniciarCierre" | "cancelarCierre" | "cerrar", boolean>;
+const TODO: Acciones = { abrir: true, iniciarCierre: true, cancelarCierre: true, cerrar: true };
+const NADA: Acciones = { abrir: false, iniciarCierre: false, cancelarCierre: false, cerrar: false };
 // Se carga por una ruta en una variable: la prueba de tipos de `test/` no sigue la importación y no arrastra los componentes del navegador (igual que las otras pruebas de acceso).
 const RUTA = "../../apps/web/servidor/ofertas-de-caja";
 const acciones = async (): Promise<Acciones> => {
@@ -42,25 +44,40 @@ beforeEach(() => {
 });
 
 describe("accionesDeLaPantallaDeCaja", () => {
-  it("con el permiso de abrir: activo", async () => {
-    conPermisos(["cajas.ver", "sesiones_caja.abrir"]);
-    expect(await acciones()).toEqual({ abrir: true });
+  it("con todas las acciones de la sesión de caja: todo activo", async () => {
+    conPermisos([
+      "cajas.ver",
+      "sesiones_caja.abrir",
+      "sesiones_caja.iniciar_cierre",
+      "sesiones_caja.cancelar_cierre",
+      "sesiones_caja.cerrar",
+    ]);
+    expect(await acciones()).toEqual(TODO);
   });
 
-  it("solo ver la caja no alcanza para abrir", async () => {
+  it("cada acción depende de su propia acción de permiso", async () => {
+    conPermisos(["sesiones_caja.cerrar"]);
+    expect(await acciones()).toEqual({ ...NADA, cerrar: true });
+    conPermisos(["sesiones_caja.iniciar_cierre"]);
+    expect(await acciones()).toEqual({ ...NADA, iniciarCierre: true });
+    conPermisos(["sesiones_caja.cancelar_cierre"]);
+    expect(await acciones()).toEqual({ ...NADA, cancelarCierre: true });
+  });
+
+  it("solo ver la caja no alcanza para nada", async () => {
     conPermisos(["cajas.ver"]);
-    expect(await acciones()).toEqual({ abrir: false });
+    expect(await acciones()).toEqual(NADA);
   });
 
-  it("con el módulo en desarrollo o sin activar (la acción no figura): apagado", async () => {
+  it("con el módulo en desarrollo o sin activar (la acción no figura): todo apagado", async () => {
     conPermisos([], []);
-    expect(await acciones()).toEqual({ abrir: false });
+    expect(await acciones()).toEqual(NADA);
   });
 
-  it("si no se pudieron leer los permisos (rechazo o excepción): apagado", async () => {
+  it("si no se pudieron leer los permisos (rechazo o excepción): todo apagado", async () => {
     mundo.permisos = err({ codigo: "SIN_PERMISO" });
-    expect(await acciones()).toEqual({ abrir: false });
+    expect(await acciones()).toEqual(NADA);
     mundo.fallan = true;
-    expect(await acciones()).toEqual({ abrir: false });
+    expect(await acciones()).toEqual(NADA);
   });
 });

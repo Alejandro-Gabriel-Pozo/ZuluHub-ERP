@@ -40,5 +40,12 @@ export async function accionesDeLaPantallaDeCaja(
   contexto: ContextoOperativo,
 ): Promise<AccionesDeLaPantallaDeCaja> {
   const permisos = await permisosDeLaPersona(contexto);
-  return { abrir: permisos !== null && permisos.acciones.includes("sesiones_caja.abrir") };
+  const puede = (accion: ClaveAccion): boolean =>
+    permisos !== null && permisos.acciones.includes(accion);
+  return {
+    abrir: puede("sesiones_caja.abrir"),
+    iniciarCierre: puede("sesiones_caja.iniciar_cierre"),
+    cancelarCierre: puede("sesiones_caja.cancelar_cierre"),
+    cerrar: puede("sesiones_caja.cerrar"),
+  };
 }
