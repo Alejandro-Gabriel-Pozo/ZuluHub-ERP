@@ -1,10 +1,10 @@
 {
   "id": "DEC-0770",
   "fecha": "2026-11-19",
-  "quien": "padre",
-  "tipo": "INFRAESTRUCTURA",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
   "estado": "PENDIENTE_DE_OK",
-  "decision": "Una operación no declara campos en formularios ajenos: se resuelve en la pantalla de su módulo; la excepción dentro de la misma transacción se decide caso por caso.",
-  "que_cambia": "Fija la forma del tipo (sin campo, panel ni destino) con una prueba que falla si se suma una clave. Revertir: quitar la prueba de claves.",
-  "donde": "src/capacidades/integracion/; apps/web/servidor/integracion.ts; arquitectura/centrales.json; test/arquitectura/operaciones-contextuales.test.ts; brief PR-X1 y decisiones-del-dueno-2026-11.md (filas del 18/11), repo de documentos"
+  "decision": "SUPUESTO: sin caja abierta, la venta ofrece «Abrir caja» (texto aprobado de Caja) como enlace a la pantalla de Caja, solo a quien puede abrirla.",
+  "que_cambia": "Cómo se abre la caja desde la venta: la maqueta usa una pantalla con fondo inicial; acá se va a /caja. Revertir: quitar el enlace o construir PR-3c.",
+  "donde": "src/capacidades/pantallas/ficha-de-cobrar.ts; DEC-0502; PR-3b §11"
 }

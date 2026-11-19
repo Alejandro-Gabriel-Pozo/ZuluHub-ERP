@@ -116,6 +116,7 @@
 }
 
 .barra {
+  flex-wrap: wrap;
   position: fixed;
   inset: auto 0 0;
   z-index: var(--capa-franja-de-aviso);
@@ -310,4 +311,13 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--espacio-2);
+}
+
+/* El aviso de la caja va encima de «Ver cuenta» (maqueta `franjaCaja`): ocupa todo el ancho de la barra. */
+.franjaDeCaja {
+  flex-basis: 100%;
+}
+
+.envolturaDeCobrar {
+  display: contents;
 }
