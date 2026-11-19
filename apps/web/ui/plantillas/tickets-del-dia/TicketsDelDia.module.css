@@ -1,0 +1,86 @@
+.cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.jornada {
+  margin: 0;
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.vacio {
+  margin: 0;
+  color: var(--color-texto-suave);
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fila {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas:
+    "numero numero importe"
+    "estado hora importe";
+  gap: var(--espacio-1) var(--espacio-3);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  color: inherit;
+  text-decoration: none;
+}
+
+.fila:focus-visible {
+  outline: var(--borde-grosor-fuerte) solid var(--accion-primaria-fondo);
+  outline-offset: var(--espacio-1);
+}
+
+.numero {
+  grid-area: numero;
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.estado {
+  grid-area: estado;
+  color: var(--color-texto-suave);
+}
+
+.hora {
+  grid-area: hora;
+  color: var(--color-texto-suave);
+}
+
+.importe {
+  grid-area: importe;
+  align-self: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.renglon {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--espacio-1) var(--espacio-3);
+}
+
+.detalle {
+  grid-column: 1 / -1;
+  color: var(--color-texto-suave);
+}
+
+.suave {
+  margin: 0;
+  color: var(--color-texto-suave);
+}
+
+.seccion {
+  margin: 0;
+  font-size: var(--tipo-tamano-medio);
+}
