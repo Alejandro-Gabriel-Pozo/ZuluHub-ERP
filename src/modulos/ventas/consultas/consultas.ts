@@ -30,6 +30,12 @@ import {
   type ErrorDeDocumentoDelTicket,
 } from "./documento-del-ticket";
 import { reunirPendientes } from "./pendientes-de-facturar";
+import {
+  fichaDelTicketDelDia,
+  ticketsDelDia,
+  type ErrorDeFichaDelTicketDelDia,
+  type ErrorDeTicketsDelDia,
+} from "./tickets-del-dia";
 import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 
 export type ErrorDeConsultaDeVentas =
@@ -40,6 +46,8 @@ export type ErrorDeConsultaDeVentas =
   | ErrorDeCotizacion
   | ErrorAlConsultarCajasParaCobrar
   | ErrorDeOpcionesParaCobrar
+  | ErrorDeTicketsDelDia
+  | ErrorDeFichaDelTicketDelDia
   | ErrorDeDocumentoDelTicket
   | "IDENTIFICADOR_INVALIDO"
   | "FECHA_INVALIDA"
@@ -226,6 +234,14 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
           pendienteDeFacturar: t.estado === "COBRADO",
         });
       }),
+
+    ticketsDelDia: (contexto: ContextoOperativo, entrada: Readonly<{ sucursalId: string }>) =>
+      leer(contexto, (tx, p) => ticketsDelDia(tx, contexto, dependencias, p.alcance, entrada)),
+
+    fichaDelTicketDelDia: (contexto: ContextoOperativo, entrada: Readonly<{ ticketId: string }>) =>
+      leer(contexto, (tx, p) =>
+        fichaDelTicketDelDia(tx, contexto, dependencias, p.alcance, entrada),
+      ),
 
     listarTickets: deLaJornada(async (tx, contexto, sucursal, fecha) =>
       (await tx.lecturasDeVentas.ticketsDeLaJornada(contexto.empresaId, sucursal, fecha)).map(
