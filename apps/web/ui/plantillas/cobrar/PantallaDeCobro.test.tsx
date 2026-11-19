@@ -104,6 +104,7 @@ async function hoja(
       textos={textosDeCobrar()}
       cobrar={cobrar}
       anular={anular}
+      imprimir={vi.fn()}
       alVolver={alVolver}
       alNuevaVenta={alNuevaVenta}
       nuevoId={nuevoId}
@@ -276,6 +277,7 @@ describe("PantallaDeCobro: la vista", () => {
         textos={textosDeCobrar()}
         cobrar={cobrar}
         anular={vi.fn<Anular>()}
+        imprimir={vi.fn()}
         alVolver={() => undefined}
         alNuevaVenta={() => undefined}
         nuevoId={nuevoId}
@@ -461,7 +463,7 @@ describe("PantallaDeCobro: el resultado y anular", () => {
     return h;
   };
 
-  it("muestra el resumen, el vuelto y las dos salidas; todavía no ofrece «Imprimir ticket» (K6)", async () => {
+  it("muestra el resumen, el vuelto y las salidas: «Imprimir ticket» antes de «Anular» y «Nueva venta»", async () => {
     const { cobrar } = await hoja({
       cobrar: () =>
         Promise.resolve({
@@ -487,7 +489,10 @@ describe("PantallaDeCobro: el resultado y anular", () => {
     await expect.element(page.getByText("$ 200,00")).toBeVisible();
     await expect.element(boton("Anular")).toBeVisible();
     await expect.element(boton("Nueva venta")).toBeVisible();
-    expect(page.getByRole("button", { name: /Imprimir/ }).elements()).toHaveLength(0);
+    const botones = Array.from(document.querySelectorAll("button")).map((b) => b.textContent);
+    expect(botones.indexOf("Imprimir ticket")).toBeGreaterThanOrEqual(0);
+    expect(botones.indexOf("Imprimir ticket")).toBeLessThan(botones.indexOf("Anular"));
+    expect(botones.indexOf("Anular")).toBeLessThan(botones.indexOf("Nueva venta"));
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 

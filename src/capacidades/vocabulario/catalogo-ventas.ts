@@ -142,5 +142,11 @@ export const TEXTOS_DE_VENTAS = {
   "ventas.ticket.motivo": { porDefecto: "Motivo" },
   "ventas.ticket.motivo_obligatorio": { porDefecto: "Escribí el motivo" },
   "ventas.ticket.anulado": { porDefecto: "Anulado" },
+  // Ticket del cliente (PR-5): «Imprimir ticket» (DDD:171, M5; venta-rapida-v4.html:889); «Ticket del cliente» e «Imprimir» (imprimir.html, aprobada el 09/11/2026, decisión 120; venta-rapida-v4.html:901 y :903);
+  // «Volver» (imprimir.html:327; venta-rapida-v4.html:901). Decisión: DEC-0772 (DDD:172 punto 4 B, DDD:175, DDD:286).
+  "ventas.ticket.imprimir_ticket": { porDefecto: "Imprimir ticket" },
+  "ventas.ticket.del_cliente": { porDefecto: "Ticket del cliente" },
+  "ventas.ticket.imprimir": { porDefecto: "Imprimir" },
+  "ventas.ticket.volver": { porDefecto: "Volver" },
   "ventas.venta.nueva": { porDefecto: "Nueva venta" },
 } as const;
