@@ -183,6 +183,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "ventas.venta.menu",
       ],
       [
+        "tickets-del-dia",
+        "ventas",
+        "mostrador",
+        "ventas",
+        "ventas.ver",
+        "/ventas/tickets-del-dia",
+        "ventas.tickets.menu",
+      ],
+      [
         "comprobantes",
         "ventas",
         "comprobantes",
