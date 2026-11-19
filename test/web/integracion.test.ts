@@ -74,7 +74,7 @@ describe("armarOferta", () => {
     const o = armarOferta(
       registros([
         op("a", 1),
-        { ...op("b", 2), accion: "ventas.anular" } as OperacionContextual<string>,
+        { ...op("b", 2), accion: "ventas.anular" } as unknown as OperacionContextual<string>,
       ]),
       PERMISOS,
       REF,

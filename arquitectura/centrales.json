@@ -82,11 +82,12 @@
       "exporta": ["OPERACIONES"],
       "importaDe": [
         "src/capacidades/integracion/tipos",
+        "src/capacidades/integracion/contextos",
         "src/capacidades/integracion/operaciones-de-*"
       ],
       "parteDedicada": "src/capacidades/integracion/operaciones-de-<módulo>.ts",
       "soloJunta": true,
-      "lineas": 11
+      "lineas": 12
     }
   ]
 }

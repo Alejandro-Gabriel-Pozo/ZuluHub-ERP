@@ -1,7 +1,6 @@
 import type { ClaveAccion, ClaveModulo } from "../modulos/catalogo";
 import type { ClavePerilla } from "../planes/perillas";
 import type { ClaveDeTexto } from "../vocabulario/catalogo";
-import type { IdDeContexto } from "./contextos";
 
 /**
  * OPERACIÓN CONTEXTUAL: la primitiva con la que los módulos se integran sin tocar las pantallas de otros (escalabilidad X-1,
@@ -36,7 +35,7 @@ export type TipoDeContexto = Readonly<{
   loEntregan: readonly string[];
 }>;
 
-export type OperacionContextual<C extends string = IdDeContexto> = Readonly<{
+export type OperacionContextual<C extends string> = Readonly<{
   /** Único, forma `modulo.cosa`. */
   id: string;
   /** Quién la hace: tiene que estar disponible y activo para que se ofrezca. */
@@ -66,11 +65,11 @@ export const CLAVES_DE_UNA_OPERACION = [
   "orden",
   "seAbreEn",
   "alTerminar",
-] as const satisfies readonly (keyof OperacionContextual)[];
+] as const satisfies readonly (keyof OperacionContextual<string>)[];
 
 /** Falla al compilar si el tipo gana una clave que la lista fija no nombra (cierra el hueco de `satisfies`). */
 type _ClavesSinListar = Exclude<
-  keyof OperacionContextual,
+  keyof OperacionContextual<string>,
   (typeof CLAVES_DE_UNA_OPERACION)[number]
 >;
 export const CLAVES_COMPLETAS: [_ClavesSinListar] extends [never] ? true : false = true;

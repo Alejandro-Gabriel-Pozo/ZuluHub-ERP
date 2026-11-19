@@ -21,7 +21,7 @@ const viejo = (
   (p.modulos.activos.includes(f.modulo) || p.modulos.enSoloLectura.includes(f.modulo));
 
 const FILAS = FILAS_DEL_MENU.flatMap((f) =>
-  f.tipo === "accion" ? [] : [{ modulo: f.modulo, accion: f.accion as string }],
+  f.tipo === "accion" ? [] : [{ modulo: f.modulo, accion: f.accion }],
 );
 
 describe("seOfrece contra la expresión vieja del menú", () => {

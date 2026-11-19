@@ -39,7 +39,9 @@ describe("seOfrece", () => {
   });
   it("con función de pago: sin leer no, apagada no, encendida sí", () => {
     const pedido = { ...PEDIDO, perilla: "salon" };
-    expect(seOfrece(CATALOGO, { ...PERMISOS, funcionesEncendidas: undefined }, pedido)).toBe(false);
+    expect(
+      seOfrece(CATALOGO, { acciones: PERMISOS.acciones, modulos: PERMISOS.modulos }, pedido),
+    ).toBe(false);
     expect(seOfrece(CATALOGO, PERMISOS, pedido)).toBe(false);
     expect(seOfrece(CATALOGO, con({ funcionesEncendidas: ["salon"] }), pedido)).toBe(true);
   });
