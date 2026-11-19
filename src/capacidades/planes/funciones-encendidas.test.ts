@@ -3,6 +3,7 @@ import { CATALOGO_DE_MODULOS } from "../modulos/catalogo";
 import { tenantId } from "../../primitivas/identificadores/marca";
 import { derechosDeUso, type AjusteDePerilla } from "./derechos";
 import { funcionesEncendidasDe, modulosConInterruptores } from "./funciones-encendidas";
+import type { ValorEfectivo } from "./valores";
 import { CATALOGO_DE_PERILLAS, type DefinicionDePerilla } from "./perillas";
 
 const CATALOGO_DE_MENTIRA = {
@@ -55,7 +56,8 @@ describe("funcionesEncendidasDe", () => {
     );
   });
   it("con una perilla que los derechos no traen es un defecto: lanza, no inventa", () => {
-    expect(() => funcionesEncendidasDe(CATALOGO_DE_MENTIRA, { perillas: new Map() })).toThrow(
+    const sinPerillas: ReadonlyMap<keyof typeof CATALOGO_DE_MENTIRA, ValorEfectivo> = new Map();
+    expect(() => funcionesEncendidasDe(CATALOGO_DE_MENTIRA, { perillas: sinPerillas })).toThrow(
       RangeError,
     );
   });
