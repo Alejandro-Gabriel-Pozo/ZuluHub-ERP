@@ -8,7 +8,11 @@ import { RUTA_DE_LA_CAJA } from "../../../../../../ui/plantillas/caja/lista-de-c
 import { textosDeCobrar } from "../../../../../../ui/plantillas/cobrar/textos-de-cobrar";
 import { textosDeLaVenta } from "../../../../../../ui/plantillas/venta/modelo-de-venta-rapida";
 import { PantallaDeVentaRapida } from "../../../../../../ui/plantillas/venta/PantallaDeVentaRapida.cliente";
-import { anularElTicketAccion, cobrarLaVentaAccion } from "../../../acciones-de-cobrar";
+import {
+  anularElTicketAccion,
+  cobrarLaVentaAccion,
+  papelDelTicketAccion,
+} from "../../../acciones-de-cobrar";
 import { cotizarElCarritoAccion } from "../../../acciones-de-venta-rapida";
 
 // `/ventas/venta-rapida`: la venta rápida del mostrador (maqueta `venta-rapida-v4.html`): armar la cuenta y cobrarla (hoja de cobro, `ui/plantillas/cobrar/`). Muestra lo que el servidor ofrece en la sucursal elegida en este
@@ -34,6 +38,7 @@ export default async function PaginaDeLaVentaRapida() {
           textos: textosDeCobrar(),
           cobrar: cobrarLaVentaAccion,
           anular: anularElTicketAccion,
+          imprimir: papelDelTicketAccion,
           // «Abrir caja» solo a quien puede abrirla (DEC-0502); la pantalla de Caja vuelve a autorizar.
           rutaParaAbrirLaCaja: (await accionesDeLaPantallaDeCaja(contexto)).abrir
             ? RUTA_DE_LA_CAJA

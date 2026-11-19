@@ -18,6 +18,7 @@ import {
   type TicketAnulado,
   type VentaCobrada,
 } from "../cobrar/modelo-de-cobro";
+import type { PapelDeTicket } from "../cobrar/PapelDelTicket.cliente";
 import { type TextosDeCobrar } from "../cobrar/textos-de-cobrar";
 import { CuentaDeLaVenta } from "./CuentaDeLaVenta.cliente";
 import { useAperturaDelCobro } from "./useAperturaDelCobro.cliente";
@@ -62,6 +63,7 @@ export type PropsDePantallaDeVentaRapida = Readonly<{
         textos: TextosDeCobrar;
         cobrar: (pedido: unknown) => Promise<Respuesta<VentaCobrada>>;
         anular: (pedido: unknown) => Promise<Respuesta<TicketAnulado>>;
+        imprimir: (pedido: unknown) => Promise<Respuesta<PapelDeTicket>>;
         /** Adónde lleva «Abrir caja» cuando no hay caja abierta (`RUTA_DE_LA_CAJA`); `null` si la persona no puede abrirla: entonces el aviso va sin botón (DEC-0502). */
         rutaParaAbrirLaCaja: string | null;
       }>
@@ -199,6 +201,7 @@ export function PantallaDeVentaRapida({
           textos={cobro.textos}
           cobrar={cobro.cobrar}
           anular={cobro.anular}
+          imprimir={cobro.imprimir}
           esperaAlAbrir={esperaAlAbrirElCobro}
           alVolver={() => {
             setCobrando(false);
