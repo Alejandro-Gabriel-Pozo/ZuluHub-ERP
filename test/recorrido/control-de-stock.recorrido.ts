@@ -51,9 +51,7 @@ describe.skipIf(base === null || !stockAbierto)(
       await pagina.getByRole("button", { name: "Guardar", exact: true }).dblclick();
       await respuesta;
       // Y que la página termine de volver a pintarse (el botón deja de estar ocupado): recargar en medio de esa navegación la aborta.
-      await pagina.waitForFunction(
-        () => document.querySelector('button[aria-busy="true"]') === null,
-      );
+      await pagina.locator('button[aria-busy="true"]').waitFor({ state: "detached" });
       await pagina.waitForLoadState("networkidle");
     };
 
