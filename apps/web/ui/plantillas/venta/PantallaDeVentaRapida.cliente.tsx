@@ -6,10 +6,8 @@ import {
   type ErrorPublico,
   type Respuesta,
 } from "../../../../../src/capacidades/experiencia/respuesta";
-import { Aviso } from "../../componentes/Aviso";
 import { Boton } from "../../componentes/Boton.cliente";
 import { Campo } from "../../componentes/Campo";
-import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
 import { Superposicion } from "../../patrones/Superposicion";
 import { formatearImporte } from "../../patrones/formato-fiscal";
@@ -22,6 +20,8 @@ import {
 } from "../cobrar/modelo-de-cobro";
 import { type TextosDeCobrar } from "../cobrar/textos-de-cobrar";
 import { CuentaDeLaVenta } from "./CuentaDeLaVenta.cliente";
+import { useAperturaDelCobro } from "./useAperturaDelCobro.cliente";
+import { FranjaDeCaja } from "./FranjaDeCaja.cliente";
 import { HojaDeProducto, type LineaElegida } from "./HojaDeProducto.cliente";
 import estilos from "./VentaRapida.module.css";
 import {
@@ -82,8 +82,6 @@ type Resultado = Readonly<{
 
 /** Tras cerrar la hoja se ignora un segundo toque sobre un producto: evita abrirla dos veces con un doble toque (decisión 171 y maqueta v4). */
 const ESPERA_TRAS_CERRAR_LA_HOJA_MS = 500;
-/** Tras abrir el cobro, un toque en «Cobrar» se ignora este rato: el segundo toque de un doble toque no cobra solo (decisión 171, `venta-rapida-v4.html:478`). */
-export const ESPERA_AL_ABRIR_EL_COBRO_MS = 500;
 const DURACION_DEL_AVISO_MS = 2500;
 /** El total de una cuenta sin líneas: el cero de «no hay nada que cotizar» (no es un cálculo; con líneas el total es siempre el que da el servidor). */
 const TOTAL_SIN_LINEAS = "0.00";
@@ -110,10 +108,12 @@ export function PantallaDeVentaRapida({
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [aviso, setAviso] = useState("");
   const hojaBloqueada = useRef(false);
-  const esperaAlAbrirElCobro = useRef(false);
-  const temporizadorDelCobro = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const envolturaDeCobrar = useRef<HTMLDivElement>(null);
-  const yaCobro = useRef(false);
+  const { esperaAlAbrirElCobro, envolturaDeCobrar, abrirElCobro } = useAperturaDelCobro(
+    cobrando,
+    () => {
+      setCobrando(true);
+    },
+  );
   const temporizadorDeLaHoja = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const porId = useMemo(() => new Map(productos.map((p) => [p.id, p])), [productos]);
@@ -144,19 +144,9 @@ export function PantallaDeVentaRapida({
   useEffect(
     () => () => {
       if (temporizadorDeLaHoja.current !== null) clearTimeout(temporizadorDeLaHoja.current);
-      if (temporizadorDelCobro.current !== null) clearTimeout(temporizadorDelCobro.current);
     },
     [],
   );
-
-  // Al volver del cobro a la cuenta, el foco vuelve al botón «Cobrar» de la barra.
-  useEffect(() => {
-    if (cobrando) {
-      yaCobro.current = true;
-      return;
-    }
-    if (yaCobro.current) envolturaDeCobrar.current?.querySelector("button")?.focus();
-  }, [cobrando]);
 
   const estado: EstadoDeLaCotizacion =
     cuenta.length === 0
@@ -177,14 +167,6 @@ export function PantallaDeVentaRapida({
     };
   }, [aviso]);
 
-  const abrirElCobro = () => {
-    esperaAlAbrirElCobro.current = true;
-    if (temporizadorDelCobro.current !== null) clearTimeout(temporizadorDelCobro.current);
-    temporizadorDelCobro.current = setTimeout(() => {
-      esperaAlAbrirElCobro.current = false;
-    }, ESPERA_AL_ABRIR_EL_COBRO_MS);
-    setCobrando(true);
-  };
   const abrirHoja = (producto: ProductoDeLaVenta) => {
     if (hojaBloqueada.current) return;
     setAbierto(producto);
@@ -349,27 +331,8 @@ export function PantallaDeVentaRapida({
       ) : null}
 
       <div className={estilos["barra"]}>
-        {cobro === undefined || preparado === undefined || preparado.estado === "LISTO" ? null : (
-          <div className={estilos["franjaDeCaja"]}>
-            {preparado.estado === "ABRIR_LA_CAJA" ? (
-              <Aviso
-                tono="aviso"
-                {...(cobro.rutaParaAbrirLaCaja === null
-                  ? {}
-                  : {
-                      accion: (
-                        <EnlaceDeAccion href={cobro.rutaParaAbrirLaCaja} variante="secundaria">
-                          {cobro.textos.abrirCaja}
-                        </EnlaceDeAccion>
-                      ),
-                    })}
-              >
-                {cobro.textos.abrirLaCaja}
-              </Aviso>
-            ) : (
-              <Aviso tono="peligro">{cobro.textos.noPermitido}</Aviso>
-            )}
-          </div>
+        {cobro === undefined || preparado === undefined ? null : (
+          <FranjaDeCaja preparado={preparado} cobro={cobro} />
         )}
         <button
           type="button"

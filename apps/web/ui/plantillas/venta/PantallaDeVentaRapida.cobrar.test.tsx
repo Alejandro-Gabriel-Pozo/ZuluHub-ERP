@@ -9,12 +9,10 @@ import {
   type VentaCobrada,
 } from "../cobrar/modelo-de-cobro";
 import { textosDeCobrar } from "../cobrar/textos-de-cobrar";
-import {
-  ESPERA_AL_ABRIR_EL_COBRO_MS,
-  PantallaDeVentaRapida,
-} from "./PantallaDeVentaRapida.cliente";
+import { PantallaDeVentaRapida } from "./PantallaDeVentaRapida.cliente";
 import type { CotizacionDeLaVenta } from "./modelo-de-la-cuenta";
 import { textosDeLaVenta, type ProductoDeLaVenta } from "./modelo-de-venta-rapida";
+import { ESPERA_AL_ABRIR_EL_COBRO_MS } from "./useAperturaDelCobro.cliente";
 
 /**
  * La unión entre armar la cuenta y cobrarla: «Cobrar» solo existe si la página lo declara, se apaga sin cuenta o con total en cero, abre la hoja con el total que cotizó el servidor para ESTA cuenta y, al

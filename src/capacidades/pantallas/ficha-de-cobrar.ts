@@ -9,7 +9,7 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  *
  * DIFERENCIAS CON LA MAQUETA (`venta-rapida-v4.html`; la maqueta manda: cada desvío lleva su fundamento y lo decide el dueño):
  *  1. «Abrir caja»: la maqueta lo lleva a una pantalla «Abrir caja» con «Fondo inicial» dentro de la venta; acá es un enlace a la pantalla de Caja (`/caja`), solo para quien puede abrirla (`sesiones_caja.abrir`; DEC-0502).
- *     Fundamento: la pantalla de Caja ya existe y es el único lugar que abre sesiones. Costo de cambiarlo: un PR aparte (PR-3c). SUPUESTO, lo decide el dueño.
+ *     Fundamento: la pantalla de Caja ya existe y es el único lugar que abre sesiones. Costo de cambiarlo: un PR aparte (PR-3c). SUPUESTO (DEC-0770), lo decide el dueño.
  *  2. «El precio cambió»: la maqueta lo avisa en la cuenta; el servidor no distingue ese rechazo y todo rechazo de negocio sale como «No se pudo cobrar. No se cobró nada.». Necesita un código público nuevo.
  *  3. «Sin elegir» en la cuenta de cobro, sin «= $ …» bajo el importe, «Enviando…» en el botón y sin edición con un envío sin respuesta: conservados (DDD:298, aceptados por el dueño el 18/11).
  *  4. Datos del cobro (cupón, últimos 4, marca, cuotas, DNI): todos «(opcional)»; el sistema registra y no bloquea por un dato que falta (criterio permisivo del dueño, 18/11/2026).

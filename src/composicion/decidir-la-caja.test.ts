@@ -51,7 +51,10 @@ describe("decidirLaCaja (DEC-0502: nace cerrado, nunca se asume una caja)", () =
   });
 
   it("la caja en cierre, o en cierre junto a una sin sesión: no se permite", () => {
-    expect(decidirLaCaja(estado([caja("c1", "EN_CIERRE")]))).toEqual({ tipo: "NO_PERMITIDO", jornadaAbierta: true });
+    expect(decidirLaCaja(estado([caja("c1", "EN_CIERRE")]))).toEqual({
+      tipo: "NO_PERMITIDO",
+      jornadaAbierta: true,
+    });
     expect(decidirLaCaja(estado([caja("c1", "EN_CIERRE"), caja("c2", "SIN_SESION")]))).toEqual({
       tipo: "NO_PERMITIDO",
       jornadaAbierta: true,
@@ -59,7 +62,10 @@ describe("decidirLaCaja (DEC-0502: nace cerrado, nunca se asume una caja)", () =
   });
 
   it("una sesión de una jornada vencida no cobra", () => {
-    expect(decidirLaCaja(estado([caja("c1", "ABIERTA", true)]))).toEqual({ tipo: "NO_PERMITIDO", jornadaAbierta: true });
+    expect(decidirLaCaja(estado([caja("c1", "ABIERTA", true)]))).toEqual({
+      tipo: "NO_PERMITIDO",
+      jornadaAbierta: true,
+    });
   });
 
   it("sin ninguna caja no se permite", () => {
