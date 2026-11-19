@@ -456,7 +456,11 @@ describe("pedidoDeCobro", () => {
       ["l2", "linea-2"],
     ]),
   };
-  const armar = (pagos: readonly PagoEnEdicion[], medios = MEDIOS) => {
+  const armar = (
+    pagos: readonly PagoEnEdicion[],
+    medios = MEDIOS,
+    confirmaciones?: readonly string[],
+  ) => {
     const e = estadoDelCobro(TOTAL, pagos, medios);
     if (e.vuelto === null) throw new Error("sin cuenta");
     return pedidoDeCobro({
@@ -467,8 +471,16 @@ describe("pedidoDeCobro", () => {
       pagos,
       medios,
       vuelto: e.vuelto,
+      confirmaciones,
     });
   };
+
+  it("las confirmaciones viajan solo si la persona confirmó: sin ellas el pedido no trae la clave", () => {
+    expect(armar([pago(EFECTIVO, "1500.00")])).not.toHaveProperty("confirmaciones");
+    expect(armar([pago(EFECTIVO, "1500.00")], MEDIOS, ["VENTA_A_CERO"])).toMatchObject({
+      confirmaciones: ["VENTA_A_CERO"],
+    });
+  });
 
   it("arma el pedido: ids, líneas con la cantidad como texto, total esperado y la caja", () => {
     expect(armar([pago(EFECTIVO, "1500.00")])).toEqual({

@@ -144,4 +144,26 @@ describe.skipIf(base === null)("login temporal del rol de plataforma (base real)
       );
     }
   });
+
+  it("el login PERMANENTE (vigencia de 90 días) no se reemplaza al abrir ni se cierra al cerrar; el temporal sí se cierra", async () => {
+    await admin.query(
+      `ALTER ROLE ${ROL} WITH LOGIN PASSWORD 'permanente-de-prueba' VALID UNTIL '${new Date(Date.now() + 90 * 86_400_000).toISOString()}'`,
+    );
+    try {
+      await expect(abrirLoginDePlataforma(dueno, { rol: ROL })).rejects.toThrow(
+        /PERMANENTE de la consola/,
+      );
+      expect(await puede()).toBe(true);
+      const cierre = await cerrarLoginDePlataforma(dueno, { rol: ROL });
+      expect(cierre.conservado).toBe(true);
+      expect(await puede()).toBe(true);
+    } finally {
+      // El cierre del flujo ya no lo cierra a propósito: la prueba deja el rol cerrado por su cuenta.
+      await admin.query(`ALTER ROLE ${ROL} WITH NOLOGIN PASSWORD NULL VALID UNTIL 'infinity'`);
+    }
+    const abierto = await abrirLoginDePlataforma(dueno, { rol: ROL });
+    expect(abierto.clave).not.toBe("");
+    expect((await cerrarLoginDePlataforma(dueno, { rol: ROL })).conservado).toBeUndefined();
+    expect(await puede()).toBe(false);
+  });
 });

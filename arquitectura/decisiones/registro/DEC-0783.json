@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0783",
+  "fecha": "2026-11-19",
+  "quien": "padre",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Tickets del día: lista y ficha en dos rutas; ante un rechazo al anular se relee la ficha; el error de factura vigente deja de ser genérico (lista blanca de uno).",
+  "que_cambia": "Solo la forma interna de navegar y de reaccionar a un rechazo; no cambia dinero ni permisos. Revertir: una sola ruta con estado, o dejar de releer la ficha, o volver el error al genérico.",
+  "donde": "apps/web/app/s/app/(operacion)/ventas/tickets-del-dia; FichaDelTicket.cliente.tsx; src/composicion/errores-de-cobrar.ts; brief PR-5ter §8",
+  "motivo": "Decisiones técnicas aceptadas por la orquestadora por delegación (brief §12). Las rutas siguen la convención módulo/pantalla de la venta rápida (el brief decía /tickets-del-dia sin el módulo)."
+}

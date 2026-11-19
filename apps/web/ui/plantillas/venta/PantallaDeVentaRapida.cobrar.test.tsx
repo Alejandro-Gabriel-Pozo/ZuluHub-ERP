@@ -125,11 +125,11 @@ describe("VentaRapida con cobro", () => {
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 
-  it("con total cero no se cobra", async () => {
+  it("con total cero «Cobrar» pide la confirmación de la venta a $ 0 (PR-6; se prueba en `PantallaDeVentaRapida.cero.test.tsx`)", async () => {
     await pantalla({ total: "0.00" });
     await agregarUna();
     await expect.poll(() => document.querySelector("[data-total]")?.textContent).toBe("$ 0,00");
-    await expect.element(cobrarBoton()).toBeDisabled();
+    await expect.element(cobrarBoton()).toBeEnabled();
   });
 
   it("el cobro es una vista: «Cobro» con «Volver a la cuenta», sin la venta debajo; volver deja la cuenta como estaba y el foco en «Cobrar»; cobrada, «Nueva venta» la deja vacía", async () => {
