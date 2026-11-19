@@ -94,6 +94,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0085_compras_notas_de_credito.sql",
         "0086_niveles_de_control_sin_bloquear.sql",
         "0088_rol_autenticacion_de_plataforma.sql",
+        "0089_politica_de_cambio_de_plan.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -169,6 +170,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0085_compras_notas_de_credito.sql",
           "0086_niveles_de_control_sin_bloquear.sql",
           "0088_rol_autenticacion_de_plataforma.sql",
+          "0089_politica_de_cambio_de_plan.sql",
         ],
       });
     } finally {
@@ -350,6 +352,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0085_compras_notas_de_credito.sql",
         "0086_niveles_de_control_sin_bloquear.sql",
         "0088_rol_autenticacion_de_plataforma.sql",
+        "0089_politica_de_cambio_de_plan.sql",
       ]);
     } finally {
       await aparte.destruir();

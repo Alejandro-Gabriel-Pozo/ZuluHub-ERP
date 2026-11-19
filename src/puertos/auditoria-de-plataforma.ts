@@ -32,6 +32,9 @@ export const ACCIONES_DE_PLATAFORMA = [
   "PLAN_VERSION_PUBLICADA",
   "PLAN_ASIGNADO",
   "PLAN_MIGRADO_POR_LOTE",
+  // Política de cambio de plan (H-14a): la definición de una versión de la política y el arrepentimiento de un cambio de plan.
+  "POLITICA_DE_PLAN_DEFINIDA",
+  "PLAN_ARREPENTIDO",
   "PERILLA_AJUSTADA",
   "MODULO_ACTIVADO",
   "MODULO_DESACTIVADO",

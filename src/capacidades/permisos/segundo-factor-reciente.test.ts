@@ -39,8 +39,10 @@ const EXIGEN = [
   "perillas.ajustar", // ajustar perilla
   "personas.reactivar", // reactivar persona
   "personas.suspender", // suspender persona
+  "planes.arrepentir", // arrepentir un cambio de plan (H-14a)
   "planes.asignar", // asignar plan y migrar tenants de versión (una sola acción)
   "planes.publicar_version", // publicar versión de plan
+  "politica_de_plan.definir", // definir la política de cambio de plan (H-14a)
   "tenants.reactivar", // reactivar tenant
   "tenants.suspender", // suspender tenant
 ] as const satisfies readonly ClaveAccionDePlataforma[];
@@ -70,7 +72,7 @@ const TODAS = Object.keys(CATALOGO_DE_PLATAFORMA.plataforma.acciones) as ClaveAc
 
 describe("el catálogo declara el indicador en TODAS las acciones", () => {
   it("cada acción del catálogo tiene `segundoFactorReciente` declarado (true o false), ninguna sin declarar", () => {
-    expect(TODAS.length).toBe(37);
+    expect(TODAS.length).toBe(39);
     for (const accion of TODAS) {
       const definicion = CATALOGO_DE_PLATAFORMA.plataforma.acciones[accion] as Record<
         string,
@@ -86,8 +88,8 @@ describe("el catálogo declara el indicador en TODAS las acciones", () => {
     expect(new Set([...EXIGEN, ...NO_EXIGEN]).size).toBe(TODAS.length);
   });
 
-  it("las que lo exigen son EXACTAMENTE las 19 que dijo el dueño más `listas.editar` (criterio del ingeniero), ni una más ni una menos", () => {
-    expect(EXIGEN).toHaveLength(20);
+  it("las que lo exigen son EXACTAMENTE las 19 que dijo el dueño más `listas.editar` (criterio del ingeniero) y las 2 de la política de cambio de plan (H-14a), ni una más ni una menos", () => {
+    expect(EXIGEN).toHaveLength(22);
     expect(accionesConSegundoFactorReciente()).toEqual([...EXIGEN].sort());
   });
 
