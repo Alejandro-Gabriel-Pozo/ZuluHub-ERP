@@ -11,11 +11,13 @@ import estilos from "./Cobrar.module.css";
 import type { PapelDeTicket } from "./PapelDelTicket.cliente";
 import { TicketDelCliente } from "./TicketDelCliente.cliente";
 import {
+  esVentaACero,
   resumenDelCobro,
   type MedioParaCobrar,
   type TicketAnulado,
   type VentaCobrada,
 } from "./modelo-de-cobro";
+import { esImporteEnCero } from "../venta/modelo-de-la-cuenta";
 import { rotuloDelTicket, type TextosDeCobrar } from "./textos-de-cobrar";
 
 export type PropsDeResultadoDelCobro = Readonly<{
@@ -105,7 +107,9 @@ export function ResultadoDelCobro({
       />
     );
   }
-  const hayVuelto = !/^0+(\.0+)?$/.test(vuelto);
+  const hayVuelto = !esImporteEnCero(vuelto);
+  // Venta a $ 0 (maqueta `venta-rapida-v4.html:884-887`): franja informativa solo con el número, sin «Cobrado», sin medios ni vuelto y sin «Imprimir ticket».
+  const aCero = esVentaACero(venta);
   return (
     <div className={estilos["cuerpo"]}>
       {anulando ? (
@@ -123,7 +127,7 @@ export function ResultadoDelCobro({
           esperaEntreVerificacionesMs={esperaEntreVerificacionesMs}
         />
       ) : null}
-      <Aviso tono="exito" titulo={textos.cobrado}>
+      <Aviso tono={aCero ? "info" : "exito"} {...(aCero ? {} : { titulo: textos.cobrado })}>
         <span data-ticket>{rotuloDelTicket(venta.numero)}</span>
       </Aviso>
       <ul className={estilos["resumen"]}>
@@ -146,16 +150,18 @@ export function ResultadoDelCobro({
         ) : null}
       </ul>
       <div className={estilos["acciones"]}>
-        <Boton
-          variante="secundaria"
-          ancho="completo"
-          enviando={pidiendoElPapel}
-          alTocar={() => {
-            void alImprimirTicket();
-          }}
-        >
-          {textos.imprimirTicket}
-        </Boton>
+        {aCero ? null : (
+          <Boton
+            variante="secundaria"
+            ancho="completo"
+            enviando={pidiendoElPapel}
+            alTocar={() => {
+              void alImprimirTicket();
+            }}
+          >
+            {textos.imprimirTicket}
+          </Boton>
+        )}
         <Boton
           variante="secundaria"
           ancho="completo"

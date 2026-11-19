@@ -2,5 +2,5 @@
   "grupo": "web (venta rápida)",
   "archivos": "apps/web/ui/plantillas/venta/modelo-de-venta-rapida.ts,apps/web/ui/plantillas/venta/modelo-de-la-cuenta.ts",
   "minutos": 1,
-  "pruebas": "test/web/modelo-de-venta-rapida.test.ts"
+  "pruebas": "test/web/modelo-de-venta-rapida.test.ts test/web/modelo-de-venta-a-cero.test.ts"
 }
