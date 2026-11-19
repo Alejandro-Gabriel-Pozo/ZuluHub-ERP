@@ -1,10 +1,11 @@
 {
   "id": "DEC-0761",
   "fecha": "2026-11-18",
-  "quien": "sesión",
-  "tipo": "DATOS",
+  "quien": "padre",
+  "tipo": "SIN_DECISION",
   "estado": "PENDIENTE_DE_OK",
-  "decision": "La migración 0086 convierte a AVISAR las filas de nivel_de_control que valgan BLOQUEAR y angosta el CHECK a PERMITIR / AVISAR (ADR-008 opción b, fila del dueño del 18/11).",
-  "que_cambia": "Una empresa o sucursal que hubiera guardado «bloquear» pasa a «avisar»; en una base sin clientes la cuenta es cero. Revertir: reversiones/0086 amplía el CHECK, pero no restituye cuáles eran BLOQUEAR.",
-  "donde": "migraciones/0086_niveles_de_control_sin_bloquear.sql; test/integracion/niveles-de-control-migracion.test.ts"
+  "decision": "La consola ofrece activar y desactivar módulos en la pantalla del plan de una empresa; qué se ofrece lo decide accionDelModulo y el servidor lo vuelve a decidir.",
+  "que_cambia": "Solo la consola interna: una columna «Acción» en la tabla de módulos, sin cambiar el plan ni los casos de uso. Revertir: quitar la columna y la acción del servidor; nada se migra.",
+  "donde": "apps/plataforma (logica/modulo-de-empresa.ts, logica/entrada-del-modulo.ts, servidor/acciones-modulos.ts, pantallas/cambio-de-modulo.cliente.tsx); brief PR-C1 §4.1 del repositorio de documentos",
+  "motivo": "La decisión de negocio ya existe (fila del 18/11, bloque A: al subir de plan los módulos nuevos los enciende la plataforma desde la consola); esto es solo la forma interna de ofrecerlo."
 }

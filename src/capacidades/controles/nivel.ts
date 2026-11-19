@@ -18,7 +18,7 @@ export function esNivelDeControl(texto: string): texto is NivelDeControl {
 }
 
 /**
- * Lee un nivel guardado (DEC-0762): sin valor, `PERMITIR`; un valor que no es ninguno de los dos se lee como `AVISAR` (ante la duda no se habilita
+ * Lee un nivel guardado (DEC-0764): sin valor, `PERMITIR`; un valor que no es ninguno de los dos se lee como `AVISAR` (ante la duda no se habilita
  * en silencio, y tampoco se bloquea). Es la única lectura de un valor guardado: el adaptador y el dominio de stock la usan.
  */
 export function leerNivelGuardado(guardado: string | null): NivelDeControl {
