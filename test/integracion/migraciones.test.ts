@@ -93,6 +93,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0084_compras_devoluciones.sql",
         "0085_compras_notas_de_credito.sql",
         "0086_niveles_de_control_sin_bloquear.sql",
+        "0088_rol_autenticacion_de_plataforma.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -167,6 +168,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0084_compras_devoluciones.sql",
           "0085_compras_notas_de_credito.sql",
           "0086_niveles_de_control_sin_bloquear.sql",
+          "0088_rol_autenticacion_de_plataforma.sql",
         ],
       });
     } finally {
@@ -190,6 +192,7 @@ describe.skipIf(base === null)("migraciones", () => {
       expect(rows.map((r) => r.rolname)).toEqual([
         "pedernal_app",
         "pedernal_autenticacion",
+        "pedernal_autenticacion_plataforma",
         "pedernal_captacion",
         "pedernal_grupo",
         "pedernal_plataforma",
@@ -346,6 +349,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0084_compras_devoluciones.sql",
         "0085_compras_notas_de_credito.sql",
         "0086_niveles_de_control_sin_bloquear.sql",
+        "0088_rol_autenticacion_de_plataforma.sql",
       ]);
     } finally {
       await aparte.destruir();
