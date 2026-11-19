@@ -5,7 +5,7 @@ import { HOST_DEL_RECORRIDO, armarMundoDelRecorrido, type MundoDelRecorrido } fr
 import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilante";
 
 /**
- * COBRAR de punta a punta en la app REAL construida con un navegador real: la persona arma una cuenta, abre la hoja de cobro, paga con efectivo de más (vuelto), con DOBLE TOQUE en «Cobrar»
+ * COBRAR de punta a punta en la app REAL construida con un navegador real: la persona arma una cuenta, abre la vista de cobro, paga con efectivo de más (vuelto), con DOBLE TOQUE en «Cobrar»
  * queda un solo ticket y un solo cobro, el resultado dice «Cobrado» y el número, y «Anular» deja el ticket anulado. Lo que ven las pruebas de componentes y no esta: la página en el servidor
  * (qué caja y qué opciones), la acción de servidor, la CSP y que ningún componente rompa en el navegador (un `Boton` sin `"use client"`, React #441). La sesión de caja se siembra en la base
  * (abrir la caja es otra pantalla). Los módulos en desarrollo se leen «disponibles» SOLO en el proceso de la app (`activar-modulos-en-desarrollo.mjs`).
@@ -41,7 +41,9 @@ describe.skipIf(base === null)(
           )
         )[0]?.n,
       );
-    const enLaHoja = () => pagina.getByRole("dialog");
+    // El cobro es una vista de la pantalla (no un cuadro); solo «Anular» abre un cuadro de diálogo.
+    const enLaVista = () => pagina;
+    const enElCuadro = () => pagina.getByRole("dialog");
 
     beforeAll(async () => {
       if (base === null) return;
@@ -109,26 +111,28 @@ describe.skipIf(base === null)(
       await mundo?.cerrar();
     });
 
-    it("arma la cuenta y abre la hoja con el total del servidor, el efectivo y «Cobro completo»", async () => {
+    it("arma la cuenta y abre la vista de cobro con el total del servidor, el efectivo y «Cobro completo»", async () => {
       await ir("/ventas/venta-rapida");
       await pagina.getByRole("button", { name: /^Medialuna/ }).click();
       await pagina.getByRole("button", { name: "Agregar" }).click();
       await expect.poll(() => pagina.locator("[data-total]").innerText()).toBe("$ 800,00");
       await pagina.getByRole("button", { name: "Cobrar", exact: true }).click();
-      await enLaHoja().waitFor();
+      await pagina.getByRole("heading", { name: "Cobro", level: 2 }).waitFor();
       expect(await pagina.locator("[data-total-del-cobro]").innerText()).toBe("$ 800,00");
-      expect(await enLaHoja().getByRole("combobox", { name: "Medio" }).inputValue()).not.toBe("");
-      await enLaHoja().getByText("Cobro completo").waitFor();
+      expect(await enLaVista().getByRole("combobox", { name: "Medio" }).inputValue()).not.toBe("");
+      await enLaVista().getByText("Cobro completo").waitFor();
       await sinViolacionesDeAxe();
       pantallaLimpia();
     });
 
     it("efectivo de más: dice el vuelto; con DOBLE TOQUE en «Cobrar» queda un solo ticket y un solo cobro por el neto", async () => {
-      await enLaHoja().getByRole("textbox", { name: "Importe" }).fill("1000");
-      await enLaHoja().getByText("Vuelto $ 200,00").waitFor();
-      await enLaHoja().getByRole("button", { name: "Cobrar", exact: true }).dblclick();
-      await enLaHoja().getByText("Ticket N.º 1").waitFor();
-      await enLaHoja().getByText("Cobrado", { exact: true }).first().waitFor();
+      await enLaVista().getByRole("textbox", { name: "Importe" }).fill("1000");
+      await enLaVista().getByText("Vuelto $ 200,00").waitFor();
+      // Pasada la espera de apertura del cobro (500 ms), el doble toque en «Cobrar» manda UN solo cobro.
+      await pagina.waitForTimeout(700);
+      await enLaVista().getByRole("button", { name: "Cobrar", exact: true }).dblclick();
+      await enLaVista().getByText("Ticket N.º 1").waitFor();
+      await enLaVista().getByText("Cobrado", { exact: true }).first().waitFor();
       expect(await contar("ticket")).toBe(1);
       expect(await contar("cobro")).toBe(1);
       const cobro = await consulta<{ importe: string }>(
@@ -137,7 +141,7 @@ describe.skipIf(base === null)(
       );
       expect(cobro[0]?.importe).toBe("800.00");
       expect(
-        await enLaHoja()
+        await enLaVista()
           .getByRole("button", { name: /Imprimir/ })
           .count(),
       ).toBe(0);
@@ -146,20 +150,20 @@ describe.skipIf(base === null)(
     });
 
     it("anular con motivo deja el ticket anulado y «Nueva venta» vuelve a la cuenta vacía", async () => {
-      await enLaHoja().getByRole("button", { name: "Anular", exact: true }).click();
-      await enLaHoja().getByRole("button", { name: "Anular", exact: true }).click();
-      await enLaHoja().getByText("Escribí el motivo").waitFor();
-      await enLaHoja().getByRole("textbox", { name: "Motivo" }).fill("Error de carga");
-      await enLaHoja().getByRole("button", { name: "Anular", exact: true }).click();
-      await enLaHoja().getByText("Anulado", { exact: true }).first().waitFor();
+      await enLaVista().getByRole("button", { name: "Anular", exact: true }).click();
+      await enElCuadro().getByRole("button", { name: "Anular", exact: true }).click();
+      await enElCuadro().getByText("Escribí el motivo").waitFor();
+      await enElCuadro().getByRole("textbox", { name: "Motivo" }).fill("Error de carga");
+      await enElCuadro().getByRole("button", { name: "Anular", exact: true }).dblclick();
+      await enLaVista().getByText("Anulado", { exact: true }).first().waitFor();
       expect(await contar("ticket")).toBe(1); // la anulación es un ejemplar nuevo del mismo ticket
       const estados = await consulta<{ estado: string }>(
         "select estado from ticket where empresa_id = $1 order by numero",
         [mundo.empresa],
       );
       expect(estados.map((e) => e.estado)).toContain("ANULADO");
-      await enLaHoja().getByRole("button", { name: "Nueva venta", exact: true }).click();
-      await expect.poll(() => pagina.locator("[data-total]").innerText()).toBe("");
+      await enLaVista().getByRole("button", { name: "Nueva venta", exact: true }).click();
+      await expect.poll(() => pagina.locator("[data-total]").innerText()).toBe("$ 0,00");
       pantallaLimpia();
     });
   },

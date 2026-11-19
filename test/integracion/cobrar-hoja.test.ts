@@ -11,7 +11,16 @@ import {
   pedidoDeCobro,
   type OpcionesParaCobrar,
 } from "../../apps/web/ui/plantillas/cobrar/modelo-de-cobro";
-import { nuevaClave, nuevoId, montarVentas, type MundoDeVentas } from "./ventas-apoyo";
+import { aporteDeVentas } from "../../src/modulos/ventas/publico";
+import { crearCasosDeUsoDeCierre } from "../../src/modulos/cierre/publico";
+import {
+  FECHA_DE_NEGOCIO,
+  REGLAS_DE_PRUEBA,
+  nuevaClave,
+  nuevoId,
+  montarVentas,
+  type MundoDeVentas,
+} from "./ventas-apoyo";
 
 /**
  * La HOJA DE COBRAR de punta a punta contra la base real, sin navegador: (1) lo que la página resuelve (qué caja y qué opciones: lista, hay que abrirla o no se permite) y (2) que el pedido que arma el
@@ -83,6 +92,22 @@ describe.skipIf(base === null)(
       await m.cajaAbierta(e);
       await m.cajaAbierta(e);
       expect(await preparar(e)).toEqual({ estado: "NO_PERMITIDO", jornadaAbierta: true });
+    });
+
+    it("con el día en auditoría: no se permite y la lectura dice que la jornada ya no está abierta", async () => {
+      const e = await m.escenario();
+      await m.cajaAbierta(e);
+      const cierre = crearCasosDeUsoDeCierre({
+        transacciones: m.entorno,
+        reglas: REGLAS_DE_PRUEBA,
+        aportes: [aporteDeVentas],
+      });
+      const auditoria = await cierre.iniciarAuditoria(e.administrador, {
+        sucursalId: e.sucursal,
+        fechaDeNegocio: FECHA_DE_NEGOCIO,
+      });
+      expect(auditoria.ok).toBe(true);
+      expect(await preparar(e)).toEqual({ estado: "NO_PERMITIDO", jornadaAbierta: false });
     });
 
     it("sin permiso o con una persona de otra sucursal, la lectura falla cerrada (no devuelve una caja)", async () => {
