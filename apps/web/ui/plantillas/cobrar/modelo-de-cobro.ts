@@ -11,7 +11,8 @@ import { FORMATO_DE_DNI } from "../../../../../src/primitivas/identificacion-fis
 import { motivoDelCupon } from "../../../../../src/primitivas/texto/cupon-de-pago";
 import { ultimosCuatroDigitosDesdeTexto } from "../../../../../src/primitivas/texto/ultimos-cuatro-digitos";
 import { nombreDelTipo } from "../caja/modelo-de-medios-de-pago";
-import { deDiezmilesimos, type LineaDeLaVenta } from "../venta/modelo-de-venta-rapida";
+import type { LineaDeLaVenta } from "../venta/modelo-de-la-cuenta";
+import { deDiezmilesimos } from "../venta/modelo-de-venta-rapida";
 
 /**
  * El modelo de vista de la hoja de COBRAR (maqueta `venta-rapida-v4.html`, zona cobro): qué filas de pago hay, qué datos admite cada medio, si cada dato está bien escrito, cuánto falta o

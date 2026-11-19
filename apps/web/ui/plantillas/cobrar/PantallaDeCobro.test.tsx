@@ -11,7 +11,7 @@ import {
   tocar,
   violacionesDeAccesibilidad,
 } from "../../pruebas/ayudas";
-import type { LineaDeLaVenta } from "../venta/modelo-de-venta-rapida";
+import type { LineaDeLaVenta } from "../venta/modelo-de-la-cuenta";
 import { PantallaDeCobro } from "./PantallaDeCobro.cliente";
 import {
   type CobroPreparado,

@@ -25,7 +25,7 @@ import {
   textosDeCobrar,
 } from "../../apps/web/ui/plantillas/cobrar/textos-de-cobrar";
 import { MAXIMO_DE_COBROS_POR_TICKET } from "../../src/primitivas/dinero/limites-de-cobro";
-import type { LineaDeLaVenta } from "../../apps/web/ui/plantillas/venta/modelo-de-venta-rapida";
+import type { LineaDeLaVenta } from "../../apps/web/ui/plantillas/venta/modelo-de-la-cuenta";
 
 const nada = { cupon: false, ultimos4: false, marca: false, cuotas: false, dni: false };
 const EFECTIVO: MedioParaCobrar = {

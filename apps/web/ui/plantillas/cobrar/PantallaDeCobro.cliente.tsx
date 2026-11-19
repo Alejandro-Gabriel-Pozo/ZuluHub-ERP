@@ -9,7 +9,7 @@ import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
 import { FranjaSinConexion } from "../../patrones/FranjaSinConexion.cliente";
 import { Superposicion } from "../../patrones/Superposicion";
 import { formatearImporte } from "../../patrones/formato-fiscal";
-import type { LineaDeLaVenta } from "../venta/modelo-de-venta-rapida";
+import type { LineaDeLaVenta } from "../venta/modelo-de-la-cuenta";
 import estilos from "./Cobrar.module.css";
 import { FilaDeCobro } from "./FilaDeCobro.cliente";
 import { ResultadoDelCobro } from "./ResultadoDelCobro.cliente";
