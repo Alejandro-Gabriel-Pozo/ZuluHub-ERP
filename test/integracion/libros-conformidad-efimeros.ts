@@ -8,20 +8,19 @@ import { ROL_DE_LA_APLICACION, type CodigoDeInvariante } from "./libros-conformi
  * inyectada, la prueba no demuestra que detecta nada.
  */
 
-export const ESQUEMA_EFIMERO = "libros_efimeros";
-
 type Ddl = Readonly<{ tabla: string; sentencias: readonly string[] }>;
 
 /**
- * Las sentencias de un libro efímero que rompe `rota` (o ninguna invariante si es `null`). `tabla` es el nombre sin esquema. La tabla
+ * Las sentencias de un libro efímero que rompe `rota` (o ninguna invariante si es `null`). `esquema` es el de la corrida (nombre único) y `tabla` el nombre sin esquema. La tabla
  * madre (`<tabla>_madre`) existe para tener una clave foránea compuesta que probar.
  */
 export function ddlDeLibroEfimero(
+  esquema: string,
   tabla: string,
   medida: MedidaDeLibro,
   rota: CodigoDeInvariante | null,
 ): Ddl {
-  const e = ESQUEMA_EFIMERO;
+  const e = esquema;
   const t = `"${e}"."${tabla}"`;
   const madre = `"${e}"."${tabla}_madre"`;
   const sin = (codigo: CodigoDeInvariante): boolean => rota === codigo;

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { sql } from "kysely";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
@@ -13,7 +13,7 @@ import {
   violacionesSinDeclarar,
   type CodigoDeInvariante,
 } from "./libros-conformidad-apoyo";
-import { ESQUEMA_EFIMERO, ddlDeLibroEfimero, libroEfimero } from "./libros-conformidad-efimeros";
+import { ddlDeLibroEfimero, libroEfimero } from "./libros-conformidad-efimeros";
 
 /**
  * LB-2: conformidad de los libros contra el catálogo de la base (`primitiva-de-libro-diseno.md` §2.1 y §2.2). Todo libro registrado en
@@ -23,6 +23,8 @@ import { ESQUEMA_EFIMERO, ddlDeLibroEfimero, libroEfimero } from "./libros-confo
  */
 
 const base = inject("baseDePruebas");
+/** Un esquema por corrida: dos corridas contra la misma base (o un archivo repetido) no se pisan. */
+const ESQUEMA_EFIMERO = `libros_efimeros_${randomBytes(6).toString("hex")}`;
 
 /** Una entrada por invariante: si se suma una al tipo y no acá, no compila (cada invariante tiene su violación inyectada). */
 const INVARIANTES: Readonly<Record<CodigoDeInvariante, true>> = {
@@ -128,7 +130,8 @@ describe.skipIf(base === null)("conformidad de los libros contra el catálogo", 
         medida: "IMPORTE" | "CANTIDAD",
         rota: CodigoDeInvariante | null,
       ) => {
-        for (const s of ddlDeLibroEfimero(tabla, medida, rota).sentencias) await dueno.query(s);
+        for (const s of ddlDeLibroEfimero(ESQUEMA_EFIMERO, tabla, medida, rota).sentencias)
+          await dueno.query(s);
       };
       await armar("sano_importe", "IMPORTE", null);
       await armar("sano_cantidad", "CANTIDAD", null);
@@ -166,23 +169,31 @@ describe.skipIf(base === null)("conformidad de los libros contra el catálogo", 
     let a: Awaited<ReturnType<typeof crearEmpresaActiva>>;
     let b: Awaited<ReturnType<typeof crearEmpresaActiva>>;
     const huella = "a".repeat(64);
+    /** Lo sembrado, para borrarlo al terminar: no queda ninguna fila huérfana en la base compartida. */
+    const sembradas: { tabla: string; id: string }[] = [];
 
     /** Una fila mínima por empresa y por libro. Se siembra con el dueño y los disparadores y claves foráneas apagados: la prueba es de lectura. */
     const sembrar = async (empresa: string): Promise<void> => {
       await dueno.query("BEGIN");
       try {
         await dueno.query("SET LOCAL session_replication_role = replica");
+        const idDeStock = randomUUID();
+        const idDeCaja = randomUUID();
+        sembradas.push(
+          { tabla: "movimiento_de_stock", id: idDeStock },
+          { tabla: "movimiento_caja", id: idDeCaja },
+        );
         await dueno.query(
           `INSERT INTO movimiento_de_stock (id, empresa_id, clase, motivo, origen_tipo, deposito_id, accion, clave_idempotencia, huella,
                                             hecho_en, registrado_en, fecha_negocio, registrado_por)
            VALUES ($1, $2, 'ENTRADA', 'COMPRA', 'MANUAL', $3, 'stock.entrada', $4, $5, now(), now(), current_date, $6)`,
-          [randomUUID(), empresa, randomUUID(), `clave-${randomUUID()}`, huella, randomUUID()],
+          [idDeStock, empresa, randomUUID(), `clave-${randomUUID()}`, huella, randomUUID()],
         );
         await dueno.query(
           `INSERT INTO movimiento_caja (id, empresa_id, sesion_id, clase, medio_de_pago_id, moneda, importe, motivo, registrado_en,
                                         registrado_por, clave_idempotencia, huella)
            VALUES ($1, $2, $3, 'INGRESO_MANUAL', $4, 'ARS', 10, 'Prueba', now(), $5, $6, $7)`,
-          [randomUUID(), empresa, randomUUID(), randomUUID(), randomUUID(), randomUUID(), huella],
+          [idDeCaja, empresa, randomUUID(), randomUUID(), randomUUID(), randomUUID(), huella],
         );
         await dueno.query("COMMIT");
       } catch (falla) {
@@ -201,6 +212,19 @@ describe.skipIf(base === null)("conformidad de los libros contra el catálogo", 
     });
     afterAll(async () => {
       await entorno.cerrar();
+      // Los libros son de solo inserción (aun para el dueño): se borra lo sembrado con los disparadores apagados, igual que se sembró.
+      await dueno.query("BEGIN");
+      try {
+        await dueno.query("SET LOCAL session_replication_role = replica");
+        for (const { tabla, id } of sembradas) {
+          const borradas = await dueno.query(`DELETE FROM ${tabla} WHERE id = $1`, [id]);
+          expect(borradas.rowCount, `${tabla}: no se borró la fila sembrada`).toBe(1);
+        }
+        await dueno.query("COMMIT");
+      } catch (falla) {
+        await dueno.query("ROLLBACK");
+        throw falla;
+      }
     });
 
     /** Con el rol de la aplicación y el contexto de `quien`: cuántas filas del libro ve en total y cuántas son de `de`. */
