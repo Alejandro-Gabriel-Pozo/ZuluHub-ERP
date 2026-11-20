@@ -1,4 +1,4 @@
--- 0091_movimiento_de_dinero (número provisorio; lo asigna la orquestadora al revisar): M-1, el acto «movimiento de dinero» de Caja (PR-M1).
+-- 0091_movimiento_de_dinero: M-1, el acto «movimiento de dinero» de Caja (PR-M1).
 -- QUÉ HACE:
 --   1. Crea `movimiento_de_dinero` (solo inserción): ingresar o sacar plata de la caja sin ticket ni compra, en sus dos sentidos (ENTRADA / SALIDA),
 --      con categoría, quién pagó o recibió y, en una devolución, a qué ingreso corresponde. Nadie la escribe todavía (PR-S2, PR-E1, PR-D1).
@@ -336,8 +336,10 @@ BEGIN
       RAISE EXCEPTION 'la anulación tiene que ser el espejo exacto de un ingreso, egreso o ajuste'
         USING ERRCODE = '23514', CONSTRAINT = 'movimiento_caja_anulacion_invalida';
     END IF;
-    IF v_acto IS NOT NULL THEN
+    IF v_acto IS NOT NULL AND NOT EXISTS (
+         SELECT 1 FROM public.movimiento_caja a WHERE a.empresa_id = NEW.empresa_id AND a.anula_a = NEW.anula_a) THEN
       -- M-1: no se anula un cobro cuya plata ya se devolvió (el tope de devoluciones se sostiene también desde este lado; mismo bloqueo).
+      -- Un cobro ya anulado no se mide acá: lo rechaza `movimiento_caja_anula_uk`.
       PERFORM public.movimiento_de_dinero_bloquear_entrada(NEW.empresa_id, v_acto);
       IF public.movimiento_de_dinero_devolvible(NEW.empresa_id, v_acto) + NEW.importe < 0 THEN
         RAISE EXCEPTION 'el cobro ya se devolvió: se anula primero la devolución'

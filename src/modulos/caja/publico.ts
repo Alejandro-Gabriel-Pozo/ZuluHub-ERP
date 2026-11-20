@@ -40,6 +40,22 @@ export {
 } from "./dominio/importes";
 export { motivoObligatorio, observacionOpcional } from "./dominio/texto";
 export {
+  CATEGORIAS_DE_SALIDA,
+  CATEGORIAS_ELEGIBLES_DE_SALIDA,
+  LARGO_MAXIMO_DE_LA_REFERENCIA,
+  LARGO_MAXIMO_DEL_CONCEPTO,
+  ORIGEN_DEL_MOVIMIENTO_DE_DINERO,
+  SENTIDOS_DE_MOVIMIENTO_DE_DINERO,
+  conceptoDesdeTexto,
+  huellaDelMovimientoDeDinero,
+  referenciaDesdeTexto,
+  reglaDeLaCategoria,
+  type CamposDeLaHuellaDelMovimientoDeDinero,
+  type CategoriaDeSalida,
+  type ReglaDeCategoria,
+  type SentidoDeMovimientoDeDinero,
+} from "./dominio/movimiento-de-dinero";
+export {
   CUENTAS_ADMITIDAS,
   DATOS_ADMITIDOS_POR_MEDIO,
   cuentaAdmitidaPorMedio,
