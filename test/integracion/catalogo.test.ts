@@ -115,6 +115,7 @@ const TABLAS_DE_NEGOCIO = [
   "cuenta_de_cobro",
   "sesion_caja",
   "movimiento_caja",
+  "movimiento_de_dinero", // 0091
   "cobro",
   "arqueo_caja",
   "arqueo_billete",
@@ -457,6 +458,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "conciliacion_de_jornada",
             "conciliacion_de_cobro_por_origen",
           ].map((t) => `${t}:SELECT`),
+          "movimiento_de_dinero:SELECT", // 0091
           "cuenta_consumo:SELECT", // 0028
           "linea_cuenta:SELECT", // 0028
           "linea_cuenta_opcion:SELECT", // 0028
@@ -1603,6 +1605,27 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "clave_idempotencia",
             "huella",
           ].map((c) => `movimiento_caja.${c}`),
+          // 0091: el acto «movimiento de dinero» (la aplicación inserta por columna; `id` y `creado_en` los pone la base)
+          ...[
+            "empresa_id",
+            "sucursal_id",
+            "sesion_id",
+            "sentido",
+            "importe",
+            "moneda",
+            "categoria",
+            "concepto",
+            "motivo",
+            "tercero_nombre",
+            "tercero_persona_id",
+            "referencia",
+            "devuelve_a",
+            "movimiento_id",
+            "clave",
+            "huella",
+            "registrado_por",
+            "registrado_en",
+          ].map((c) => `movimiento_de_dinero.${c}`),
           ...[
             "movimiento_id",
             "empresa_id",
