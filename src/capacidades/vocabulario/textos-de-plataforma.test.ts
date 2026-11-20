@@ -2,11 +2,36 @@ import { describe, expect, it } from "vitest";
 import { TEXTOS_DE_PLATAFORMA } from "./textos-de-plataforma";
 
 /**
- * Los textos de la consola de plataforma (pantalla «Planes»): el texto de cada clave es el de la tabla §8 del brief o el de la maqueta, y ninguno cambia sin que esta prueba lo diga. Cada uno declara
+ * Los textos de la consola de plataforma (pantallas «Planes» y «Política de cambio de plan»): el texto de cada clave es el de la tabla §8 del brief o el de la maqueta, y ninguno cambia sin que esta prueba lo diga. Cada uno declara
  * los marcadores que usa (ni uno de más ni uno de menos), sus usos y su fuente. Previene: un texto que cambia sin pasar por quien lo aprueba y un marcador que el texto usa y la clave no declara.
  */
 const APROBADOS: Readonly<Record<string, string>> = {
   "plataforma.menu.planes": "Planes",
+  "plataforma.menu.politica": "Política de cambio de plan",
+  "plataforma.politica.titulo": "Política de cambio de plan",
+  "plataforma.politica.rotulo_suba": "Anticipación de una suba",
+  "plataforma.politica.rotulo_baja": "Anticipación de una baja",
+  "plataforma.politica.rotulo_arrepentimiento": "Plazo de arrepentimiento",
+  "plataforma.politica.unidad_dia": "día",
+  "plataforma.politica.unidad_dias": "días",
+  "plataforma.politica.pie_vigente": "Definida por {persona} el {fecha}. Motivo: {motivo}",
+  "plataforma.politica.historial": "Historial",
+  "plataforma.politica.col_fecha": "Fecha",
+  "plataforma.politica.col_suba": "Suba",
+  "plataforma.politica.col_baja": "Baja",
+  "plataforma.politica.col_arrepentimiento": "Arrepentimiento",
+  "plataforma.politica.col_definida_por": "Definida por",
+  "plataforma.politica.col_motivo": "Motivo",
+  "plataforma.politica.definir": "Definir versión nueva",
+  "plataforma.politica.falta_dias": "Ingresá un número entero de días entre 0 y 365.",
+  "plataforma.politica.falta_motivo": "Falta el motivo.",
+  "plataforma.politica.motivo_largo": "El motivo es demasiado largo.",
+  "plataforma.politica.guardar": "Guardar versión nueva",
+  "plataforma.politica.resumen": "Antes: {antes}. Después: {despues}.",
+  "plataforma.politica.no_modifica": "Los cambios de plan ya registrados no se modifican.",
+  "plataforma.politica.guardada": "Versión guardada.",
+  "plataforma.politica.conflicto":
+    "Otra persona cambió la política mientras tanto. Volvé a cargarla.",
   "plataforma.planes.titulo": "Planes",
   "plataforma.planes.nuevo_plan": "Nuevo plan",
   "plataforma.planes.crear_plan": "Crear plan",
@@ -106,7 +131,10 @@ describe("textos de la consola de plataforma", () => {
       const declarados = "marcadores" in definicion ? [...definicion.marcadores].sort() : [];
       expect(declarados).toEqual(usados);
       expect(definicion.usos).toEqual(["DE_FICHA"]);
-      expect(definicion.fuente).toEqual({ decision: "DEC-0805" });
+      // «Planes»: DEC-0805; «Política de cambio de plan» (H-14b, textos T-1 a T-18 aprobados el 20/11/2026): DEC-0814.
+      expect(definicion.fuente).toEqual({
+        decision: /^plataforma\.(menu\.politica|politica\.)/.test(_clave) ? "DEC-0814" : "DEC-0805",
+      });
     },
   );
 });
