@@ -17,4 +17,5 @@ export const DECLARACIONES_DE_CONSULTAS_DE_MARCAS_Y_PLANES = {
   derechosDeUsoDeEmpresa: { accion: "planes.ver" },
   diferenciaEntreVersiones: { accion: "planes.ver" },
   verPoliticaDeCambioDePlan: { accion: "planes.ver" },
+  condicionesDeCambioDePlan: { accion: "planes.ver" },
 } as const satisfies Record<string, DeclaracionDeAccionDePlataforma>;
