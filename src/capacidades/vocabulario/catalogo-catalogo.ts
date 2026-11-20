@@ -62,6 +62,19 @@ export const TEXTOS_DE_CATALOGO = {
     usos: [{ como: "DATO", dato: "control-de-stock-de-producto" }],
     fuente: { decision: "DEC-0797" },
   },
+  // Diálogo que confirma el cambio de la casilla (pedido del dueño del 20/11/2026; inventario aceptado por el orquestador, fila 173). Título, «Confirmar» y «Cancelar» reusan textos ya aprobados.
+  "catalogo.control_de_stock.activar": {
+    largoMaximo: 160,
+    porDefecto:
+      "Cada venta descuenta stock y se controla que no quede en negativo. Si se vende sin receta vigente, aparece «falta receta».",
+    usos: [{ como: "DATO", dato: "control-de-stock-de-producto" }],
+    fuente: { decision: "DEC-0813" },
+  },
+  "catalogo.control_de_stock.apagar": {
+    porDefecto: "Las ventas no descuentan nada y no hay conteo ni alertas de faltante.",
+    usos: [{ como: "DATO", dato: "control-de-stock-de-producto" }],
+    fuente: { decision: "DEC-0813" },
+  },
   // Opción vacía de los desplegables de la ficha; el desplegable de la alícuota arranca ahí (dueño, 12/11/2026, pregunta 4). Distinto de «Elegí una opción» (`selector.elegir_una_opcion`).
   "catalogo.dato.sin_elegir": { porDefecto: "Sin elegir" },
 
