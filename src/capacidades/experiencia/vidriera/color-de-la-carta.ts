@@ -13,6 +13,19 @@ import { COLOR_RRGGBB, razonDeContraste } from "../../../primitivas/color/contra
 /** Contraste mínimo del texto sobre el color de la carta (CYN 101 y 107, «ok» del dueño el 09/11). */
 export const CONTRASTE_MINIMO_DE_LA_CARTA = 7;
 
+/**
+ * Las seis paletas que ofrece la pantalla «Carta en línea», con el color principal de cada una: los valores de `PAL` de la maqueta aprobada `carta.html` (09/11/2026), copiados tal cual.
+ * UNA sola lista: la pantalla la importa y el servidor NO la usa para validar (cualquier `#rrggbb` es válido: «Otro color»). La clave arma el texto `catalogo.carta.paleta.<clave>`.
+ */
+export const PALETAS_DE_LA_CARTA = [
+  { clave: "azul", hex: "#1f4e79" },
+  { clave: "verde", hex: "#17562f" },
+  { clave: "bordo", hex: "#7a1f2b" },
+  { clave: "tostado", hex: "#6b3f1d" },
+  { clave: "negro", hex: "#1b1f24" },
+  { clave: "violeta", hex: "#4b2e83" },
+] as const;
+
 /** El texto que se pone sobre el color: lo elige el sistema, nunca la persona. */
 export type TextoSobreColor = "BLANCO" | "NEGRO";
 

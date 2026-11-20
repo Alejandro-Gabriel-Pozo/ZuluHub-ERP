@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { CONTRASTE_MINIMO_DE_LA_CARTA, colorDeLaCarta } from "./color-de-la-carta";
+import {
+  CONTRASTE_MINIMO_DE_LA_CARTA,
+  PALETAS_DE_LA_CARTA,
+  colorDeLaCarta,
+} from "./color-de-la-carta";
+import { COLOR_RRGGBB } from "../../../primitivas/color/contraste";
 
 const dar = (c: unknown) => {
   const r = colorDeLaCarta(c);
@@ -108,5 +113,27 @@ describe("colorDeLaCarta: lo que no es `#` + 6 hexadecimales se rechaza (lista d
     expect(() => colorDeLaCarta(Symbol("x"))).not.toThrow();
     expect(() => colorDeLaCarta("İİİİİİİ")).not.toThrow();
     expect(() => colorDeLaCarta("K".repeat(7))).not.toThrow();
+  });
+});
+
+describe("PALETAS_DE_LA_CARTA: las seis de la maqueta carta.html", () => {
+  it("son exactamente esas seis, en ese orden, con su clave y su color", () => {
+    expect(PALETAS_DE_LA_CARTA).toEqual([
+      { clave: "azul", hex: "#1f4e79" },
+      { clave: "verde", hex: "#17562f" },
+      { clave: "bordo", hex: "#7a1f2b" },
+      { clave: "tostado", hex: "#6b3f1d" },
+      { clave: "negro", hex: "#1b1f24" },
+      { clave: "violeta", hex: "#4b2e83" },
+    ]);
+  });
+
+  it("cada color tiene la forma #rrggbb, llega al contraste mínimo tal cual (no se ajusta) y ninguna se repite", () => {
+    for (const { clave, hex } of PALETAS_DE_LA_CARTA) {
+      expect(COLOR_RRGGBB.test(hex), clave).toBe(true);
+      expect(dar(hex), clave).toMatchObject({ hex, ajustado: false });
+    }
+    expect(new Set(PALETAS_DE_LA_CARTA.map((p) => p.hex)).size).toBe(6);
+    expect(new Set(PALETAS_DE_LA_CARTA.map((p) => p.clave)).size).toBe(6);
   });
 });

@@ -455,6 +455,173 @@ describe.skipIf(base === null)("carta en línea de la web", () => {
     ).toBe(0);
   });
 
+  describe("identidad: cara, color y logo", () => {
+    const LOGO = "https://res.cloudinary.com/demo/image/upload/v1700000000/logos/parador.png";
+    const IDENTIDAD = { cara: "BOLICHE", paleta: "otro", colorPropio: "#0e7490", logo: LOGO };
+    const guardarIdentidad = (
+      e: EscenarioDeCatalogo,
+      cartaId: string,
+      versionEsperada: number | null,
+      extra: Record<string, unknown>,
+      contexto = e.gerente,
+    ) =>
+      guardarLaCartaEnLinea(
+        d,
+        contexto,
+        pedidoDeGuardar(e, { cartaId, versionEsperada, ...extra }),
+        e.sucursal,
+      );
+
+    it("guardar la identidad la escribe (el color como se eligió, el logo en partes), la muestra al volver a ver y audita UNA vez", async () => {
+      const e = await conProductos();
+      const creada = await crear(e);
+      const r = await guardarIdentidad(e, creada.id, creada.version, {
+        ...IDENTIDAD,
+        paleta: "otro",
+        colorPropio: "#808080",
+      });
+      expect(r).toMatchObject({ ok: true, dato: { version: 2, yaExistia: false } });
+      expect(await fila(creada.id)).toMatchObject({
+        cara: "BOLICHE",
+        color_propio: "#808080",
+        logo_proveedor: "CLOUDINARY",
+        logo_cuenta: "demo",
+        logo_id_publico: "logos/parador",
+        logo_version: "1700000000",
+        logo_extension: "png",
+      });
+      expect((await ver(e)).carta).toMatchObject({
+        cara: "BOLICHE",
+        colorPropio: "#808080",
+        logo: LOGO,
+      });
+      expect(await auditorias(e, "CARTA_PUBLICA_EDITADA")).toBe(1);
+    });
+
+    it("el mismo formulario enviado dos veces (doble toque) escribe una sola vez: la segunda es «ya existía» y no audita", async () => {
+      const e = await conProductos();
+      const creada = await crear(e);
+      const a = await guardarIdentidad(e, creada.id, creada.version, IDENTIDAD);
+      const b = await guardarIdentidad(e, creada.id, creada.version, IDENTIDAD);
+      expect(a).toMatchObject({ ok: true, dato: { yaExistia: false, version: 2 } });
+      expect(b).toMatchObject({ ok: true, dato: { yaExistia: true, version: 2 } });
+      expect(await auditorias(e, "CARTA_PUBLICA_EDITADA")).toBe(1);
+      expect((await fila(creada.id))?.["version"]).toBe(2);
+    });
+
+    it("poner en línea y sacar de línea conservan la cara, el color y el logo", async () => {
+      const e = await conProductos();
+      const creada = await crear(e);
+      await guardarIdentidad(e, creada.id, creada.version, IDENTIDAD);
+      expect(await poner(e, creada.id, 2)).toMatchObject({ ok: true });
+      expect(await sacar(e, creada.id, 3)).toMatchObject({ ok: true });
+      expect(await fila(creada.id)).toMatchObject({
+        cara: "BOLICHE",
+        color_propio: "#0e7490",
+        logo_id_publico: "logos/parador",
+      });
+    });
+
+    it("guardar solo los textos (un pedido sin identidad) la conserva; con la identidad vacía la deja «sin elegir»", async () => {
+      const e = await conProductos();
+      const creada = await crear(e);
+      await guardarIdentidad(e, creada.id, creada.version, IDENTIDAD);
+      const soloTextos = await guardarLaCartaEnLinea(
+        d,
+        e.gerente,
+        pedidoDeGuardar(e, { cartaId: creada.id, versionEsperada: 2, nombre: "Solo el nombre" }),
+        e.sucursal,
+      );
+      expect(soloTextos).toMatchObject({ ok: true, dato: { version: 3 } });
+      expect(await fila(creada.id)).toMatchObject({
+        nombre: "Solo el nombre",
+        cara: "BOLICHE",
+        color_propio: "#0e7490",
+        logo_id_publico: "logos/parador",
+      });
+      const vaciada = await guardarIdentidad(e, creada.id, 3, {
+        cara: "",
+        paleta: "",
+        logo: "",
+      });
+      expect(vaciada).toMatchObject({ ok: true });
+      expect(await fila(creada.id)).toMatchObject({
+        cara: null,
+        color_propio: null,
+        logo_proveedor: null,
+        logo_id_publico: null,
+      });
+    });
+
+    it("dos administradores guardan una cara distinta con la MISMA versión A LA VEZ: gana uno, el otro recibe el genérico y la carta queda con una sola cara", async () => {
+      for (let ronda = 0; ronda < RONDAS; ronda++) {
+        const e = await conProductos();
+        const creada = await crear(e);
+        const r = await Promise.all([
+          guardarIdentidad(e, creada.id, creada.version, { cara: "NOCHE" }),
+          guardarIdentidad(e, creada.id, creada.version, { cara: "BOLICHE" }, e.administrador),
+        ]);
+        expect(
+          r.filter((x) => x.ok),
+          `ronda ${ronda}`,
+        ).toHaveLength(1);
+        expect(r.find((x) => !x.ok)).toMatchObject({ ok: false, error: { codigo: GENERICO } });
+        const f = await fila(creada.id);
+        expect(["NOCHE", "BOLICHE"]).toContain(f?.["cara"]);
+        expect(f?.["version"]).toBe(2);
+        expect(await auditorias(e, "CARTA_PUBLICA_EDITADA")).toBe(1);
+      }
+    });
+
+    it("el operador ve la identidad y no la cambia (SIN_PERMISO) y no se escribe nada", async () => {
+      const e = await conProductos();
+      const creada = await crear(e);
+      const r = await guardarIdentidad(e, creada.id, creada.version, IDENTIDAD, e.operador);
+      expect(r).toMatchObject({ ok: false, error: { codigo: "SIN_PERMISO" } });
+      expect(await fila(creada.id)).toMatchObject({ cara: null, color_propio: null });
+      expect((await ver(e, e.operador)).carta).toMatchObject({ cara: null });
+    });
+
+    it("aislamiento: con la sucursal de otra empresa no se cambia la identidad ni se ve la de otra carta", async () => {
+      const a = await conProductos();
+      const b = await conProductos();
+      const creada = await crear(a);
+      await guardarIdentidad(a, creada.id, creada.version, IDENTIDAD);
+      const intruso = await guardarLaCartaEnLinea(
+        d,
+        b.gerente,
+        pedidoDeGuardar(a, { cartaId: creada.id, versionEsperada: 2, cara: "NOCHE" }),
+        b.sucursal,
+      );
+      expect(intruso).toMatchObject({ ok: false, error: { codigo: GENERICO } });
+      expect((await fila(creada.id))?.["cara"]).toBe("BOLICHE");
+      expect((await ver(b)).carta).toBeNull();
+    });
+
+    it("valores raros (cara «X», color «#12345», un script en el color y un logo de otro proveedor) se rechazan con el genérico y no escriben nada", async () => {
+      const e = await conProductos();
+      const creada = await crear(e);
+      for (const malo of [
+        { cara: "X" },
+        { paleta: "#12345" },
+        { paleta: "otro", colorPropio: "<script>alert(1)</script>" },
+        { logo: "https://ejemplo.com/logo.png" },
+      ]) {
+        expect(
+          await guardarIdentidad(e, creada.id, creada.version, malo),
+          JSON.stringify(malo),
+        ).toMatchObject({ ok: false, error: { codigo: GENERICO } });
+      }
+      expect(await fila(creada.id)).toMatchObject({
+        cara: null,
+        color_propio: null,
+        logo_proveedor: null,
+        version: 1,
+      });
+      expect(await auditorias(e, "CARTA_PUBLICA_EDITADA")).toBe(0);
+    });
+  });
+
   it("ver es una lectura: no escribe ni audita", async () => {
     const e = await conProductos();
     await crear(e);

@@ -171,6 +171,104 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.carta.sin_seccion": { porDefecto: "Sin sección" },
   "catalogo.carta.oculto": { porDefecto: "Oculto" },
   "catalogo.carta.no_disponible": { porDefecto: "No disponible" },
+  // Identidad de la carta (V1: cara, color y logo en «Carta en línea»; inventario aceptado por el orquestador, fila 173). Fuente: las maquetas aprobadas el 09/11/2026 `carta.html` (grupo «Colores»,
+  // «Usar lo de la empresa», «Otro color», «Escribí el color como #0e7490», «El texto no se lee bien sobre este color», «Logo», «Quitar»), `carta-caras.html` y las paletas de `PAL`; «Dirección de la imagen»
+  // y «La dirección no sirve» son de la fila 171 (15/11/2026). SUPUESTO (DEC-0827): el rótulo «Cara» y los nombres «Día», «Boliche» y «Noche» (la maqueta los muestra, el rótulo exacto no está confirmado).
+  "catalogo.carta.cara": {
+    porDefecto: "Cara",
+    usos: [{ como: "DATO", dato: "cara-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.cara_dia": {
+    porDefecto: "Día",
+    usos: [{ como: "DATO", dato: "cara-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.cara_boliche": {
+    porDefecto: "Boliche",
+    usos: [{ como: "DATO", dato: "cara-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.cara_noche": {
+    porDefecto: "Noche",
+    usos: [{ como: "DATO", dato: "cara-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.colores": {
+    porDefecto: "Colores",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.usar_empresa": {
+    porDefecto: "Usar lo de la empresa",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.paleta_azul": {
+    porDefecto: "Azul",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.paleta_verde": {
+    porDefecto: "Verde",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.paleta_bordo": {
+    porDefecto: "Bordó",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.paleta_tostado": {
+    porDefecto: "Tostado",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.paleta_negro": {
+    porDefecto: "Negro",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.paleta_violeta": {
+    porDefecto: "Violeta",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.otro_color": {
+    porDefecto: "Otro color",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.contraste_aviso": {
+    porDefecto: "El texto no se lee bien sobre este color",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.color_invalido": {
+    porDefecto: "Escribí el color como #0e7490",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.logo": {
+    porDefecto: "Logo",
+    usos: [{ como: "DATO", dato: "logo-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.direccion_de_la_imagen": {
+    porDefecto: "Dirección de la imagen",
+    usos: [{ como: "DATO", dato: "logo-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.direccion_no_sirve": {
+    porDefecto: "La dirección no sirve",
+    usos: [{ como: "DATO", dato: "logo-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.quitar": {
+    porDefecto: "Quitar",
+    usos: [{ como: "DATO", dato: "logo-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
   // «Copiar» ya existe en el vocabulario de fiscal (`fiscal.pantalla.config_cert_copiar`); se registra aparte por módulo, con el mismo texto y la misma maqueta (`productos.html`, «Textos nuevos», 09/11/2026).
   "catalogo.accion.copiar": { porDefecto: "Copiar" },
 

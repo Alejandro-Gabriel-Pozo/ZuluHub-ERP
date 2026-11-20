@@ -25,7 +25,7 @@ import { textoDe } from "./formularios-de-caja";
  *
  * La sucursal la fija el SERVIDOR: es la elegida en este dispositivo (cookie validada contra las que la persona puede elegir, `sucursalDelPedido`), nunca la que diga el navegador; la que
  * la página mostró solo viaja ligada (`bind`, cifrada) y se COMPARA con la del servidor: si la persona cambió de sucursal en otra pestaña, el pedido se rechaza (el genérico) y no actúa
- * sobre la sucursal nueva. Del formulario solo se toman los tres textos; la carta, su versión y la sucursal las fija la página.
+ * sobre la sucursal nueva. Del formulario solo se toman los tres textos y la identidad (cara, paleta, color propio y logo); la carta, su versión y la sucursal las fija la página.
  *
  * Cómo se repite sin duplicar: guardar lleva la clave de la carta (la misma clave dos veces es una sola carta); poner y sacar piden un ESTADO (repetirlo no escribe ni audita de nuevo).
  * Tras CUALQUIER resultado se vuelve a pedir la página (`revalidatePath`): lo que sigue lleva la versión vigente y, si hubo un conflicto, se ve lo que cambió.
@@ -76,7 +76,16 @@ function seQuedaEnLaPantalla<D>(respuesta: Respuesta<D>): ResultadoDeAccion {
   return respuesta.ok ? { error: null } : { error: respuesta.error };
 }
 
-/** Guarda los tres textos; crea la carta fuera de línea si no existía. `versionEsperada` es `null` para una carta nueva. */
+/**
+ * Un campo de identidad del formulario: su texto, o `undefined` si el formulario no lo trajo (o trajo un archivo; un pedido que no lo trae conserva lo vigente; uno que lo trae vacío lo deja «sin elegir»). El
+ * valor lo valida `leerElPedidoDeGuardarLaCarta`: acá no se interpreta.
+ */
+const identidadDe = (datos: FormData, nombre: string): string | undefined => {
+  const valor = datos.get(nombre);
+  return typeof valor === "string" ? valor : undefined;
+};
+
+/** Guarda los textos y la identidad (cara, color y logo); crea la carta fuera de línea si no existía. `versionEsperada` es `null` para una carta nueva. */
 export async function guardarLosTextosDeLaCarta(
   ligado: Readonly<{ cartaId: string; sucursalId: string; versionEsperada: number | null }>,
   datos: FormData,
@@ -90,6 +99,10 @@ export async function guardarLosTextosDeLaCarta(
         nombre: textoDe(datos, "nombre"),
         rubro: textoDe(datos, "rubro"),
         lugar: textoDe(datos, "lugar"),
+        cara: identidadDe(datos, "cara"),
+        paleta: identidadDe(datos, "paleta"),
+        colorPropio: identidadDe(datos, "colorPropio"),
+        logo: identidadDe(datos, "logo"),
       },
       sucursalId,
     ),

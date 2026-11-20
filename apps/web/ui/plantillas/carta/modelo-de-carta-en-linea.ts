@@ -1,4 +1,10 @@
 import {
+  CARA_POR_DEFECTO,
+  CARAS_DE_VIDRIERA,
+} from "../../../../../src/capacidades/experiencia/vidriera/caras";
+import { PALETAS_DE_LA_CARTA } from "../../../../../src/capacidades/experiencia/vidriera/color-de-la-carta";
+import type { ClaveDeTexto } from "../../../../../src/capacidades/vocabulario/catalogo";
+import {
   texto,
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
@@ -12,6 +18,8 @@ import {
  *  - **«Poner en línea» sale apagado sin ningún producto que salga** (maqueta, «Supuestos»: el contador explica; la regla la vuelve a decidir el servidor). Sin carta guardada no hay estado ni botón.
  *  - **Los motivos de que un producto no salga se muestran con su cantidad, solo los que tienen alguno** (maqueta: «Sin precio», «Sin sección», «Desactivado», «Oculto»).
  *  - **«No disponible»** se dice bajo la dirección cuando la carta está fuera de línea (lo que ve quien abre la dirección).
+ *  - **Cara, color y logo (V1) se apagan sin permiso de editar** (todo lo que no sea exactamente `true` cierra). La cara sin elegir muestra la de siempre; el color sin elegir es «Usar lo de la empresa»,
+ *    uno de las seis paletas es esa paleta y cualquier otro es «Otro color» con su valor; el logo es la dirección guardada o vacío.
  */
 
 /** La pantalla y su única dirección. SUPUESTO (DEC-0547): la maqueta no fija la ruta; sigue el patrón de `/catalogo/secciones`. Revertir: cambiar esta constante y la carpeta de la página. */
@@ -26,6 +34,10 @@ export type CartaEnLineaDeLaPantalla = Readonly<{
     lugar: string | null;
     estado: "EN_LINEA" | "FUERA_DE_LINEA";
     version: number;
+    /** La identidad elegida: `null` es «sin elegir». El logo, como la dirección guardada. */
+    cara: string | null;
+    colorPropio: string | null;
+    logo: string | null;
   }> | null;
   direccion: string | null;
   qrSvg: string | null;
@@ -56,6 +68,30 @@ export type CartaEnLineaArmada = Readonly<{
     nombre: Readonly<{ etiqueta: string; valorInicial: string }>;
     rubro: Readonly<{ etiqueta: string; valorInicial: string }>;
     lugar: Readonly<{ etiqueta: string; valorInicial: string }>;
+    /** Cara, color y logo: se ven apagados sin permiso de editar. */
+    identidad: Readonly<{
+      apagada: boolean;
+      cara: Readonly<{
+        etiqueta: string;
+        valorInicial: string;
+        opciones: readonly Readonly<{ valor: string; etiqueta: string }>[];
+      }>;
+      color: Readonly<{
+        etiqueta: string;
+        /** `""` usar lo de la empresa, el `#rrggbb` de una paleta u `OTRO_COLOR`. */
+        valorInicial: string;
+        opciones: readonly Readonly<{ valor: string; etiqueta: string }>[];
+        otro: Readonly<{ etiqueta: string; valorInicial: string }>;
+        colorInvalido: string;
+        contrasteAviso: string;
+      }>;
+      logo: Readonly<{
+        etiqueta: string;
+        direccion: Readonly<{ etiqueta: string; valorInicial: string }>;
+        quitar: string;
+        direccionNoSirve: string;
+      }>;
+    }>;
     guardar: string;
     puedeGuardar: boolean;
   }>;
@@ -73,6 +109,31 @@ export type CartaEnLineaArmada = Readonly<{
 }>;
 
 const puede = (valor: boolean | undefined): boolean => valor === true;
+
+/** El valor de «Otro color» en el desplegable (el de las paletas es su `#rrggbb`). */
+export const OTRO_COLOR = "otro";
+
+const TEXTO_DE_LA_CARA: Readonly<Record<(typeof CARAS_DE_VIDRIERA)[number], ClaveDeTexto>> = {
+  DIA: "catalogo.carta.cara_dia",
+  BOLICHE: "catalogo.carta.cara_boliche",
+  NOCHE: "catalogo.carta.cara_noche",
+};
+const TEXTO_DE_LA_PALETA: Readonly<
+  Record<(typeof PALETAS_DE_LA_CARTA)[number]["clave"], ClaveDeTexto>
+> = {
+  azul: "catalogo.carta.paleta_azul",
+  verde: "catalogo.carta.paleta_verde",
+  bordo: "catalogo.carta.paleta_bordo",
+  tostado: "catalogo.carta.paleta_tostado",
+  negro: "catalogo.carta.paleta_negro",
+  violeta: "catalogo.carta.paleta_violeta",
+};
+
+/** Qué muestra el desplegable de colores para lo guardado: nada, una paleta o «otro». */
+function paletaDe(colorPropio: string | null): string {
+  if (colorPropio === null) return "";
+  return PALETAS_DE_LA_CARTA.some((p) => p.hex === colorPropio) ? colorPropio : OTRO_COLOR;
+}
 
 export function armarLaCartaEnLinea(
   dato: CartaEnLineaDeLaPantalla,
@@ -112,6 +173,45 @@ export function armarLaCartaEnLinea(
       nombre: { etiqueta: texto(d, "catalogo.dato.nombre"), valorInicial: carta?.nombre ?? "" },
       rubro: { etiqueta: texto(d, "catalogo.carta.rubro"), valorInicial: carta?.rubro ?? "" },
       lugar: { etiqueta: texto(d, "catalogo.carta.lugar"), valorInicial: carta?.lugar ?? "" },
+      identidad: {
+        apagada: !puede(oferta.guardar),
+        cara: {
+          etiqueta: texto(d, "catalogo.carta.cara"),
+          valorInicial: carta?.cara ?? CARA_POR_DEFECTO,
+          opciones: CARAS_DE_VIDRIERA.map((cara) => ({
+            valor: cara,
+            etiqueta: texto(d, TEXTO_DE_LA_CARA[cara]),
+          })),
+        },
+        color: {
+          etiqueta: texto(d, "catalogo.carta.colores"),
+          valorInicial: paletaDe(carta?.colorPropio ?? null),
+          opciones: [
+            { valor: "", etiqueta: texto(d, "catalogo.carta.usar_empresa") },
+            ...PALETAS_DE_LA_CARTA.map((p) => ({
+              valor: p.hex,
+              etiqueta: texto(d, TEXTO_DE_LA_PALETA[p.clave]),
+            })),
+            { valor: OTRO_COLOR, etiqueta: texto(d, "catalogo.carta.otro_color") },
+          ],
+          otro: {
+            etiqueta: texto(d, "catalogo.carta.otro_color"),
+            valorInicial:
+              paletaDe(carta?.colorPropio ?? null) === OTRO_COLOR ? (carta?.colorPropio ?? "") : "",
+          },
+          colorInvalido: texto(d, "catalogo.carta.color_invalido"),
+          contrasteAviso: texto(d, "catalogo.carta.contraste_aviso"),
+        },
+        logo: {
+          etiqueta: texto(d, "catalogo.carta.logo"),
+          direccion: {
+            etiqueta: texto(d, "catalogo.carta.direccion_de_la_imagen"),
+            valorInicial: carta?.logo ?? "",
+          },
+          quitar: texto(d, "catalogo.carta.quitar"),
+          direccionNoSirve: texto(d, "catalogo.carta.direccion_no_sirve"),
+        },
+      },
       guardar: texto(d, "catalogo.accion.guardar"),
       puedeGuardar: puede(oferta.guardar),
     },
