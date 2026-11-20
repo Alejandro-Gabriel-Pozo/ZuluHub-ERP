@@ -10,7 +10,7 @@ import { Pila } from "../../web/ui/primitivas/Pila";
 import { Texto } from "../../web/ui/primitivas/Texto";
 import { publicarVersionAccion } from "../app/planes/acciones";
 import { LARGO_MAXIMO_DEL_MOTIVO } from "../logica/entrada-del-plan";
-import { textoDePlanes } from "../logica/textos-de-planes";
+import { textoDePlanes, textoDelNucleo } from "../logica/textos-de-planes";
 import { useEnvioDePlanes } from "./usar-envio-de-planes.cliente";
 
 type Fijado = Readonly<{ planId: string; motivo: string }>;
@@ -43,8 +43,8 @@ export function PublicarVersion({
     accion: publicarVersionAccion,
     segundoFactor: true,
     textos: {
-      sinConexion: textoDePlanes("plataforma.planes.sin_conexion_publicar"),
-      verificando: textoDePlanes("plataforma.planes.verificando"),
+      sinConexion: textoDelNucleo("conexion.no_se_puede_enviar"),
+      verificando: textoDelNucleo("conexion.verificando"),
     },
   });
   const estado = envio.estado;
@@ -137,9 +137,7 @@ export function PublicarVersion({
                   )
                 }
               >
-                <Texto>
-                  {envio.motivoQueNoPuede ?? textoDePlanes("plataforma.planes.verificando")}
-                </Texto>
+                <Texto>{envio.motivoQueNoPuede ?? textoDelNucleo("conexion.verificando")}</Texto>
                 {referenciaIncierta === undefined ? null : (
                   <Texto>Código de referencia: {referenciaIncierta}</Texto>
                 )}
@@ -164,7 +162,7 @@ export function PublicarVersion({
               tipo="submit"
               ancho="completo"
               enviando={envio.enCurso}
-              textoEnviando={textoDePlanes("plataforma.planes.verificando")}
+              textoEnviando={textoDelNucleo("conexion.verificando")}
               deshabilitado={!envio.enCurso && envio.bloqueado}
               motivo={envio.motivoQueNoPuede}
             >

@@ -1,7 +1,7 @@
 import { ArmazonDeConsola } from "../../../pantallas/armazon-de-consola";
 import { AvisoDeError } from "../../../pantallas/aviso-de-error";
 import { FichaDePlan, type AvisoDeFicha } from "../../../pantallas/ficha-de-plan";
-import { textoDePlanes } from "../../../logica/textos-de-planes";
+import { textoDePlanes, textoDelNucleo } from "../../../logica/textos-de-planes";
 import { exigirAcceso } from "../../../servidor/acceso";
 import { fichaDelPlan } from "../../../servidor/planes";
 
@@ -36,7 +36,7 @@ export default async function PaginaDeFichaDePlan({ params, searchParams }: Prop
           error={ficha.error}
           referencia={ficha.referencia}
           reintentarHref={`/planes/${encodeURIComponent(id)}`}
-          textoInesperado={textoDePlanes("plataforma.planes.no_se_pudo_cargar")}
+          textoInesperado={textoDelNucleo("estado.error_titulo")}
         />
       )}
     </ArmazonDeConsola>

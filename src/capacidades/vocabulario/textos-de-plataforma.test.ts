@@ -26,7 +26,6 @@ const APROBADOS: Readonly<Record<string, string>> = {
   "plataforma.planes.col_perilla": "Perilla",
   "plataforma.planes.col_modulo": "Módulo",
   "plataforma.planes.sin_planes": "Todavía no hay planes.",
-  "plataforma.planes.no_se_pudo_cargar": "No pudimos cargar los planes.",
   "plataforma.planes.hay_borrador": "Hay un borrador",
   "plataforma.planes.ninguna": "Ninguna",
   "plataforma.planes.estado_activo": "Activo",
@@ -89,10 +88,6 @@ const APROBADOS: Readonly<Record<string, string>> = {
   "plataforma.planes.copiada_de": "Copiado de la v{n}. Un plan tiene a lo sumo un borrador.",
   "plataforma.planes.plan_creado": "Plan creado. Todavía no tiene versiones.",
   "plataforma.planes.plan_ya_existia": "El plan ya existía.",
-  "plataforma.planes.sin_conexion_publicar": "Sin conexión. Cuando vuelva, podés publicar.",
-  "plataforma.planes.sin_conexion_guardar": "Sin conexión. Cuando vuelva, podés guardar.",
-  "plataforma.planes.sin_conexion_crear": "Sin conexión. Cuando vuelva, podés crear el plan.",
-  "plataforma.planes.verificando": "Verificando si quedó registrado…",
 };
 
 describe("textos de la consola de plataforma", () => {

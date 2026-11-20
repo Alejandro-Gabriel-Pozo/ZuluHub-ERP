@@ -37,7 +37,6 @@ export const TEXTOS_DE_PLATAFORMA = {
   "plataforma.planes.col_perilla": T("Perilla"), // maqueta
   "plataforma.planes.col_modulo": T("Módulo"), // maqueta
   "plataforma.planes.sin_planes": T("Todavía no hay planes."), // nuevo: refleja «Todavía no hay submarcas.»
-  "plataforma.planes.no_se_pudo_cargar": T("No pudimos cargar los planes."), // nuevo: refleja los de Empresas y Submarcas
   "plataforma.planes.hay_borrador": T("Hay un borrador"), // maqueta
   "plataforma.planes.ninguna": T("Ninguna"), // maqueta
   "plataforma.planes.estado_activo": T("Activo"),
@@ -116,10 +115,6 @@ export const TEXTOS_DE_PLATAFORMA = {
   ]), // maqueta
   "plataforma.planes.plan_creado": T("Plan creado. Todavía no tiene versiones."), // maqueta
   "plataforma.planes.plan_ya_existia": T("El plan ya existía."), // maqueta
-  "plataforma.planes.sin_conexion_publicar": T("Sin conexión. Cuando vuelva, podés publicar."), // nuevo: patrón del cambio de plan
-  "plataforma.planes.sin_conexion_guardar": T("Sin conexión. Cuando vuelva, podés guardar."), // nuevo: patrón del cambio de plan
-  "plataforma.planes.sin_conexion_crear": T("Sin conexión. Cuando vuelva, podés crear el plan."), // nuevo: patrón del cambio de plan
-  "plataforma.planes.verificando": T("Verificando si quedó registrado…"), // nuevo: patrón del cambio de plan
 } as const satisfies Readonly<Record<string, DefinicionDeTexto>>;
 
 export type ClaveDeTextoDePlataforma = keyof typeof TEXTOS_DE_PLATAFORMA;

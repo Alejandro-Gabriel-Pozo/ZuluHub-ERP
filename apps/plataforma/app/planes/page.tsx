@@ -4,7 +4,7 @@ import { ListaDePlanes } from "../../pantallas/lista-de-planes";
 import { NuevoPlan } from "../../pantallas/nuevo-plan.cliente";
 import estilos from "../../pantallas/empresas.module.css";
 import { Texto } from "../../../web/ui/primitivas/Texto";
-import { textoDePlanes } from "../../logica/textos-de-planes";
+import { textoDePlanes, textoDelNucleo } from "../../logica/textos-de-planes";
 import { exigirAcceso } from "../../servidor/acceso";
 import { listaDePlanes } from "../../servidor/planes";
 
@@ -22,7 +22,7 @@ export default async function PaginaDePlanes() {
           error={lista.error}
           referencia={lista.referencia}
           reintentarHref="/planes"
-          textoInesperado={textoDePlanes("plataforma.planes.no_se_pudo_cargar")}
+          textoInesperado={textoDelNucleo("estado.error_titulo")}
         />
       ) : lista.planes.length === 0 ? (
         <div className={estilos["vacio"]}>

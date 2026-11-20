@@ -10,7 +10,7 @@ import { Pila } from "../../web/ui/primitivas/Pila";
 import { Texto } from "../../web/ui/primitivas/Texto";
 import { validarCodigoDePlan } from "../../../src/capacidades/planes/version-de-plan";
 import { crearPlanAccion } from "../app/planes/acciones";
-import { textoDePlanes } from "../logica/textos-de-planes";
+import { textoDePlanes, textoDelNucleo } from "../logica/textos-de-planes";
 import { useEnvioDePlanes } from "./usar-envio-de-planes.cliente";
 
 type Fijado = Readonly<{ codigo: string }>;
@@ -25,8 +25,8 @@ export function NuevoPlan() {
   const { envio, fijar, fijada, referenciaIncierta } = useEnvioDePlanes<Fijado, Hecho>({
     accion: crearPlanAccion,
     textos: {
-      sinConexion: textoDePlanes("plataforma.planes.sin_conexion_crear"),
-      verificando: textoDePlanes("plataforma.planes.verificando"),
+      sinConexion: textoDelNucleo("conexion.no_se_puede_enviar"),
+      verificando: textoDelNucleo("conexion.verificando"),
     },
   });
   const estado = envio.estado;
@@ -107,9 +107,7 @@ export function NuevoPlan() {
                   )
                 }
               >
-                <Texto>
-                  {envio.motivoQueNoPuede ?? textoDePlanes("plataforma.planes.verificando")}
-                </Texto>
+                <Texto>{envio.motivoQueNoPuede ?? textoDelNucleo("conexion.verificando")}</Texto>
                 {referenciaIncierta === undefined ? null : (
                   <Texto>Código de referencia: {referenciaIncierta}</Texto>
                 )}
@@ -135,7 +133,7 @@ export function NuevoPlan() {
               tipo="submit"
               ancho="completo"
               enviando={envio.enCurso}
-              textoEnviando={textoDePlanes("plataforma.planes.verificando")}
+              textoEnviando={textoDelNucleo("conexion.verificando")}
               deshabilitado={!envio.enCurso && envio.bloqueado}
               motivo={envio.motivoQueNoPuede}
             >

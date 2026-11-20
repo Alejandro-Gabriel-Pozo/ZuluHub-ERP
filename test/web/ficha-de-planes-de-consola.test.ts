@@ -40,6 +40,16 @@ describe("ficha de la pantalla «Planes» de la consola", () => {
     }
   });
 
+  it("los textos del núcleo que reusa existen en el catálogo común y el código los pide", () => {
+    for (const clave of FICHA.textosDelNucleo) {
+      expect(Object.keys(CATALOGO_DE_TEXTOS), clave).toContain(clave);
+      expect(
+        FICHA.archivos.some((a) => leer(a).includes(`"${clave}"`)),
+        clave,
+      ).toBe(true);
+    }
+  });
+
   it("todo texto de plataforma que cita el código de la consola está declarado en la ficha", () => {
     const citadas = new Set(
       [

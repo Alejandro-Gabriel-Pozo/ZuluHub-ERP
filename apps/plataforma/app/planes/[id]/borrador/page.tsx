@@ -1,6 +1,6 @@
 import { Aviso } from "../../../../../web/ui/componentes/Aviso";
 import { Texto } from "../../../../../web/ui/primitivas/Texto";
-import { textoDePlanes } from "../../../../logica/textos-de-planes";
+import { textoDePlanes, textoDelNucleo } from "../../../../logica/textos-de-planes";
 import { ArmazonDeConsola } from "../../../../pantallas/armazon-de-consola";
 import { AvisoDeError } from "../../../../pantallas/aviso-de-error";
 import { EditorDeBorrador } from "../../../../pantallas/editor-de-borrador.cliente";
@@ -21,7 +21,7 @@ export default async function PaginaDeBorradorDePlan({ params }: Props) {
           error={datos.error}
           referencia={datos.referencia}
           reintentarHref={`/planes/${encodeURIComponent(id)}/borrador`}
-          textoInesperado={textoDePlanes("plataforma.planes.no_se_pudo_cargar")}
+          textoInesperado={textoDelNucleo("estado.error_titulo")}
         />
       </ArmazonDeConsola>
     );

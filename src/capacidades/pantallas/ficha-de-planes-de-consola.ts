@@ -1,5 +1,6 @@
 import type { IdDeDato } from "../datos/registro";
 import type { ClaveAccionDePlataforma } from "../permisos/plataforma";
+import type { ClaveDeTexto } from "../vocabulario/catalogo";
 import type { ClaveDeTextoDePlataforma } from "../vocabulario/textos-de-plataforma";
 
 /**
@@ -42,6 +43,8 @@ export type FichaDePantallaDeConsola = Readonly<{
       Readonly<{ usos: readonly string[]; fuente: Readonly<{ decision: `DEC-${number}` }> }>
     >
   >;
+  /** Textos ya aprobados del núcleo (conexión, envío y estados) que la pantalla reusa: existen en el catálogo común. */
+  textosDelNucleo: readonly ClaveDeTexto[];
   estadoDeLaFicha: "EN_CONSTRUCCION" | "TERMINADA";
 }>;
 
@@ -171,12 +174,6 @@ export const FICHA_DE_PLANES_DE_CONSOLA = {
     "plataforma.planes.col_perilla": deLaMaqueta("apps/plataforma/pantallas/vista-de-version.tsx"),
     "plataforma.planes.col_modulo": deLaMaqueta("apps/plataforma/pantallas/vista-de-version.tsx"),
     "plataforma.planes.sin_planes": deLaMaqueta("apps/plataforma/app/planes/page.tsx"),
-    "plataforma.planes.no_se_pudo_cargar": deLaMaqueta(
-      "apps/plataforma/app/planes/[id]/borrador/page.tsx",
-      "apps/plataforma/app/planes/[id]/page.tsx",
-      "apps/plataforma/app/planes/[id]/version/[versionId]/page.tsx",
-      "apps/plataforma/app/planes/page.tsx",
-    ),
     "plataforma.planes.hay_borrador": deLaMaqueta("apps/plataforma/pantallas/lista-de-planes.tsx"),
     "plataforma.planes.ninguna": deLaMaqueta("apps/plataforma/pantallas/lista-de-planes.tsx"),
     "plataforma.planes.estado_activo": deLaMaqueta(
@@ -318,20 +315,7 @@ export const FICHA_DE_PLANES_DE_CONSOLA = {
     ),
     "plataforma.planes.plan_creado": deLaMaqueta("apps/plataforma/pantallas/ficha-de-plan.tsx"),
     "plataforma.planes.plan_ya_existia": deLaMaqueta("apps/plataforma/pantallas/ficha-de-plan.tsx"),
-    "plataforma.planes.sin_conexion_publicar": deLaMaqueta(
-      "apps/plataforma/pantallas/publicar-version.cliente.tsx",
-    ),
-    "plataforma.planes.sin_conexion_guardar": deLaMaqueta(
-      "apps/plataforma/pantallas/editor-de-borrador.cliente.tsx",
-    ),
-    "plataforma.planes.sin_conexion_crear": deLaMaqueta(
-      "apps/plataforma/pantallas/nuevo-plan.cliente.tsx",
-    ),
-    "plataforma.planes.verificando": deLaMaqueta(
-      "apps/plataforma/pantallas/editor-de-borrador.cliente.tsx",
-      "apps/plataforma/pantallas/nuevo-plan.cliente.tsx",
-      "apps/plataforma/pantallas/publicar-version.cliente.tsx",
-    ),
   },
+  textosDelNucleo: ["conexion.no_se_puede_enviar", "conexion.verificando", "estado.error_titulo"],
   estadoDeLaFicha: "EN_CONSTRUCCION",
 } as const satisfies FichaDePantallaDeConsola;

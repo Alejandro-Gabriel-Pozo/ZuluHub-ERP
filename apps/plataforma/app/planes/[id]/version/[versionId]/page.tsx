@@ -1,7 +1,7 @@
 import { ArmazonDeConsola } from "../../../../../pantallas/armazon-de-consola";
 import { AvisoDeError } from "../../../../../pantallas/aviso-de-error";
 import { VistaDeVersion } from "../../../../../pantallas/vista-de-version";
-import { textoDePlanes } from "../../../../../logica/textos-de-planes";
+import { textoDePlanes, textoDelNucleo } from "../../../../../logica/textos-de-planes";
 import { exigirAcceso } from "../../../../../servidor/acceso";
 import { versionDelPlan } from "../../../../../servidor/planes";
 
@@ -29,7 +29,7 @@ export default async function PaginaDeVersionDePlan({ params }: Props) {
           error={datos.ok ? { tipo: "INESPERADO" } : datos.error}
           referencia={datos.ok ? undefined : datos.referencia}
           reintentarHref={`/planes/${encodeURIComponent(id)}`}
-          textoInesperado={textoDePlanes("plataforma.planes.no_se_pudo_cargar")}
+          textoInesperado={textoDelNucleo("estado.error_titulo")}
         />
       )}
     </ArmazonDeConsola>

@@ -23,7 +23,7 @@ import {
   valorDe,
   type ContenidoDePlan,
 } from "../logica/editor-de-plan";
-import { textoDePlanes } from "../logica/textos-de-planes";
+import { textoDePlanes, textoDelNucleo } from "../logica/textos-de-planes";
 import { GrupoDeModulos, GrupoDePerillas } from "./grupos-del-plan.cliente";
 import estilos from "./planes.module.css";
 import { PublicarVersion } from "./publicar-version.cliente";
@@ -118,8 +118,8 @@ export function EditorDeBorrador({
       return respuesta;
     },
     textos: {
-      sinConexion: textoDePlanes("plataforma.planes.sin_conexion_guardar"),
-      verificando: textoDePlanes("plataforma.planes.verificando"),
+      sinConexion: textoDelNucleo("conexion.no_se_puede_enviar"),
+      verificando: textoDelNucleo("conexion.verificando"),
     },
   });
   const estado = envio.estado;
@@ -233,7 +233,7 @@ export function EditorDeBorrador({
             )
           }
         >
-          <Texto>{envio.motivoQueNoPuede ?? textoDePlanes("plataforma.planes.verificando")}</Texto>
+          <Texto>{envio.motivoQueNoPuede ?? textoDelNucleo("conexion.verificando")}</Texto>
           {referenciaIncierta === undefined ? null : (
             <Texto>Código de referencia: {referenciaIncierta}</Texto>
           )}
@@ -307,7 +307,7 @@ export function EditorDeBorrador({
             tocarGuardar();
           }}
           enviando={envio.enCurso}
-          textoEnviando={textoDePlanes("plataforma.planes.verificando")}
+          textoEnviando={textoDelNucleo("conexion.verificando")}
           deshabilitado={!envio.enCurso && envio.bloqueado}
           motivo={envio.motivoQueNoPuede}
         >
