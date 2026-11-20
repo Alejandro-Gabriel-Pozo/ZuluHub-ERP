@@ -39,6 +39,13 @@ describe.skipIf(base === null || !stockAbierto)(
         `select count(*)::text as n from auditoria_empresa a join articulo_de_stock s on s.id::text = a.entidad_id::text where a.empresa_id = $1 and s.producto_id = $2 and a.accion = '${accion}'`,
         producto,
       );
+    // Cambiar la casilla pide confirmación (DEC-0813): se toca y se confirma en el diálogo.
+    const cambiarYConfirmar = async (marcada: boolean) => {
+      await casilla().click();
+      await pagina.getByRole("button", { name: "Confirmar" }).click();
+      await casilla().waitFor();
+      expect(await casilla().isChecked()).toBe(marcada);
+    };
     const casilla = () => pagina.getByRole("checkbox", { name: "Se controla el stock" });
     const abrir = async (producto: string) => {
       const r = await pagina.goto(`${mundo.url}/catalogo/productos/${producto}`);
@@ -90,7 +97,7 @@ describe.skipIf(base === null || !stockAbierto)(
     });
 
     it("marcar y guardar con DOBLE TOQUE: queda UN artículo y UNA auditoría, y al recargar sigue marcada", async () => {
-      await casilla().check();
+      await cambiarYConfirmar(true);
       await guardarDosVeces();
       await abrir(insumo);
       expect(await casilla().isChecked()).toBe(true);
@@ -100,7 +107,7 @@ describe.skipIf(base === null || !stockAbierto)(
     });
 
     it("desmarcar y guardar: al recargar sigue desmarcada y el artículo queda inactivo", async () => {
-      await casilla().uncheck();
+      await cambiarYConfirmar(false);
       await guardarDosVeces();
       await abrir(insumo);
       expect(await casilla().isChecked()).toBe(false);
