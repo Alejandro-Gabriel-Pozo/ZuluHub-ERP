@@ -25,13 +25,14 @@ const contexto: Contexto = {
     cuit: {
       ficha: "f.ts",
       propositos: [{ para: "emitir", fuente: "doc.md §1" }],
-      consumidores: ["p/Emitir.tsx"],
+      consumidores: ["apps/web/p/Emitir.tsx"],
       ponerPor: ["comprobantes.emitir"],
       requiere: { modulo: "facturacion", estadoDeEmpresa: ["ACTIVE"] },
     },
   },
 };
-const analizar = (texto: string, ruta = "p/Emitir.tsx") => analizarArchivo(ruta, texto, contexto);
+const analizar = (texto: string, ruta = "apps/web/p/Emitir.tsx") =>
+  analizarArchivo(ruta, texto, contexto);
 const pantalla = (cuerpo: string, antes = "") =>
   `${antes}\nexport const P = () => <div>${cuerpo}</div>;`;
 const IMPORTA = `import { Campo } from "x/Campo";`;
@@ -94,7 +95,7 @@ describe("campos con dato: el dato del campo", () => {
 });
 
 describe("campos con dato: las evasiones fallan (fail-closed)", () => {
-  const cuenta = (texto: string, ruta = "p/Emitir.tsx") => analizar(texto, ruta).crudos;
+  const cuenta = (texto: string, ruta = "apps/web/p/Emitir.tsx") => analizar(texto, ruta).crudos;
 
   it("rechaza el alias del componente de campo (import, constante, referencia suelta)", () => {
     expect(
@@ -296,9 +297,56 @@ describe("campos con dato: las evasiones fallan (fail-closed)", () => {
 
 describe("campos con dato: el registro, la deuda y el componente", () => {
   const base = contexto.registro["cuit"] as Registro[string];
-  const usos = new Map([["p/Emitir.tsx", new Map([["cuit", 1]])]]);
+  const usos = new Map([["apps/web/p/Emitir.tsx", new Map([["cuit", 1]])]]);
   const siempre = () => true;
   const con = (parcial: object) => ({ cuit: { ...base, ...parcial } }) as Registro;
+
+  it("la consola y la web no se mezclan: cada ámbito solo lo piden sus apps y sus acciones son de su catálogo", () => {
+    const deConsola = (parcial: object) =>
+      ({
+        plan: {
+          ambito: "PLATAFORMA",
+          ficha: "f.ts",
+          propositos: [{ para: "planes", fuente: "doc.md §1" }],
+          consumidores: ["apps/plataforma/p/Editor.tsx"],
+          ponerPor: ["planes.editar_borrador"],
+          ...parcial,
+        },
+      }) as Registro;
+    const usosDeConsola = new Map([["apps/plataforma/p/Editor.tsx", new Map([["plan", 1]])]]);
+    expect(problemasDelRegistro(deConsola({}), usosDeConsola, siempre)).toEqual([]);
+    // Violación inyectada: un dato de plataforma pedido desde la web.
+    const desdeLaWeb = deConsola({ consumidores: ["apps/web/p/Editor.tsx"] });
+    expect(
+      problemasDelRegistro(
+        desdeLaWeb,
+        new Map([["apps/web/p/Editor.tsx", new Map([["plan", 1]])]]),
+        siempre,
+      ),
+    ).toHaveLength(1);
+    // Violación inyectada: un dato de empresa pedido desde la consola.
+    expect(
+      problemasDelRegistro(
+        con({ consumidores: ["apps/plataforma/p/Emitir.tsx"] }),
+        new Map([["apps/plataforma/p/Emitir.tsx", new Map([["cuit", 1]])]]),
+        siempre,
+      ),
+    ).toHaveLength(1);
+    // Una acción de empresa no vale para un dato de plataforma, ni al revés.
+    expect(
+      problemasDelRegistro(
+        deConsola({ ponerPor: ["comprobantes.emitir"] }),
+        usosDeConsola,
+        siempre,
+      ),
+    ).toHaveLength(1);
+    expect(
+      problemasDelRegistro(deConsola({ ponerPor: ["planes.inventada"] }), usosDeConsola, siempre),
+    ).toHaveLength(1);
+    expect(
+      problemasDelRegistro(con({ ponerPor: ["planes.editar_borrador"] }), usos, siempre),
+    ).toHaveLength(1);
+  });
 
   it("rechaza un dato huérfano, sin consumidores, o con ficha, acción o módulo inexistentes", () => {
     expect(problemasDelRegistro(contexto.registro, usos, siempre)).toEqual([]);

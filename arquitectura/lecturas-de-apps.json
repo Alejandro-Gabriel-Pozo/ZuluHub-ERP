@@ -45,5 +45,10 @@
   "test/arquitectura/archivos-centrales.test.ts": ["apps/web/servidor/*.ts"],
   "test/arquitectura/sin-importar-de-test.test.ts": ["apps/**"],
   "test/arquitectura/carta-con-duenio.test.ts": ["apps/web/app/s/carta/**"],
-  "test/arquitectura/operaciones-contextuales.test.ts": ["apps/web/**"]
+  "test/arquitectura/operaciones-contextuales.test.ts": ["apps/web/**"],
+  "test/web/ficha-de-planes-de-consola.test.ts": [
+    "apps/plataforma/app/planes/**",
+    "apps/plataforma/pantallas/*",
+    "apps/plataforma/logica/*"
+  ]
 }

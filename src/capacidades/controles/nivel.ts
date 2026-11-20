@@ -39,10 +39,13 @@ export function resolverNivel(
     disponibleEnElPlan: boolean;
     nivelDeLaEmpresa: NivelDeControl | null;
     nivelDeLaSucursal: NivelDeControl | null;
+    /** Con el que nace el control sin fila de la empresa (catálogo); ausente = `PERMITIR`. Un nivel guardado por la empresa lo reemplaza. */
+    nivelDeNacimiento?: NivelDeControl;
   }>,
 ): NivelDeControl {
   if (!entrada.disponibleEnElPlan) return NIVEL_POR_DEFECTO;
-  const guardados = [entrada.nivelDeLaEmpresa, entrada.nivelDeLaSucursal];
+  const deLaEmpresa = entrada.nivelDeLaEmpresa ?? entrada.nivelDeNacimiento ?? NIVEL_POR_DEFECTO;
+  const guardados = [deLaEmpresa, entrada.nivelDeLaSucursal];
   if (guardados.includes("AVISAR")) return "AVISAR";
   return NIVEL_POR_DEFECTO;
 }
