@@ -9,7 +9,7 @@ import {
   type TipoDeCuenta,
   type TipoDeMedio,
 } from "../estados";
-import { validarDatosQuePide, type DatosQuePideElMedio } from "./medios";
+import { validarDatosQuePide, validarLoQueSePide, type DatosQuePideElMedio } from "./medios";
 
 /**
  * Configuración de caja (e3 §3.2): cajas, medios de pago y cuentas de cobro. Puro: sin reloj ni azar. Nada se borra: se desactiva, y
@@ -35,6 +35,8 @@ export type MedioDePago = Readonly<{
   activo: boolean;
   /** Qué datos opcionales pide al cobrar (decisión 129); un medio nuevo nace sin ninguno. */
   pide: DatosQuePideElMedio;
+  /** De los datos que muestra, cuáles «se piden»: un cobro sin ellos se registra igual y queda con el dato pendiente. Un medio nuevo nace sin ninguno. */
+  avisaSiFalta: DatosQuePideElMedio;
   version: number;
 }>;
 
@@ -208,16 +210,21 @@ export function decidirEdicionDeCaja(
   return decidirConVersion(caja.nombre === nombre, caja.version, versionEsperada);
 }
 
-export type CambiosDeMedio = Readonly<{ nombre: string | null; pide: DatosQuePideElMedio }>;
+export type CambiosDeMedio = Readonly<{
+  nombre: string | null;
+  pide: DatosQuePideElMedio;
+  avisaSiFalta: DatosQuePideElMedio;
+}>;
 
 export type ErrorDeEdicionDeMedio =
   | "MEDIO_NO_ENCONTRADO"
   | "VERSION_DESACTUALIZADA"
-  | Readonly<{ codigo: "DATO_NO_ADMITIDO_POR_EL_MEDIO"; dato: DatoDelCobro }>;
+  | Readonly<{ codigo: "DATO_NO_ADMITIDO_POR_EL_MEDIO"; dato: DatoDelCobro }>
+  | Readonly<{ codigo: "DATO_PEDIDO_SIN_APARECER"; dato: DatoDelCobro }>;
 
 /**
  * Editar el nombre y los datos que pide un medio. Habilitar un dato que el tipo no admite se rechaza aunque no haya otro cambio (el
- * CHECK `medio_de_pago_datos_ck` de la base es la defensa final).
+ * CHECK `medio_de_pago_datos_ck` de la base es la defensa final); pedir un dato que el medio no muestra, también (`medio_de_pago_avisa_ck`).
  */
 export function decidirEdicionDeMedio(
   medio: MedioDePago | null,
@@ -227,9 +234,13 @@ export function decidirEdicionDeMedio(
   if (medio === null) return err("MEDIO_NO_ENCONTRADO");
   const admitido = validarDatosQuePide(medio.tipo, cambios.pide);
   if (!admitido.ok) return admitido;
+  const pedido = validarLoQueSePide(cambios.pide, cambios.avisaSiFalta);
+  if (!pedido.ok) return pedido;
   const igual =
     medio.nombre === cambios.nombre &&
-    DATOS_DEL_COBRO.every((d) => medio.pide[d] === cambios.pide[d]);
+    DATOS_DEL_COBRO.every(
+      (d) => medio.pide[d] === cambios.pide[d] && medio.avisaSiFalta[d] === cambios.avisaSiFalta[d],
+    );
   return decidirConVersion(igual, medio.version, versionEsperada);
 }
 

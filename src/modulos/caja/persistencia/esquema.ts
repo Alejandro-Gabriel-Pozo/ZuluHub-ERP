@@ -1,4 +1,8 @@
 import type { Generated } from "kysely";
+import type {
+  CategoriaDeSalida,
+  SentidoDeMovimientoDeDinero,
+} from "../dominio/movimiento-de-dinero";
 import type { ClaseDeMovimiento, EstadoDeSesion, TipoDeCuenta, TipoDeMedio } from "../estados";
 import { COLUMNAS_DEL_CIERRE_DE_CAJA, type TablasDelCierreDeCaja } from "./esquema-del-cierre";
 
@@ -29,6 +33,11 @@ export type CajaDb = TablasDelCierreDeCaja & {
     pide_marca: Generated<boolean>;
     pide_cuotas: Generated<boolean>;
     pide_dni: Generated<boolean>;
+    avisa_si_falta_cupon: Generated<boolean>;
+    avisa_si_falta_ultimos4: Generated<boolean>;
+    avisa_si_falta_marca: Generated<boolean>;
+    avisa_si_falta_cuotas: Generated<boolean>;
+    avisa_si_falta_dni: Generated<boolean>;
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
@@ -84,6 +93,28 @@ export type CajaDb = TablasDelCierreDeCaja & {
     huella: string | null;
     creado_en: Generated<Date>;
   };
+  movimiento_de_dinero: {
+    id: Generated<string>;
+    empresa_id: string;
+    sucursal_id: string;
+    sesion_id: string;
+    sentido: SentidoDeMovimientoDeDinero;
+    importe: string;
+    moneda: Generated<string>;
+    categoria: CategoriaDeSalida | null;
+    concepto: string | null;
+    motivo: string | null;
+    tercero_nombre: string | null;
+    tercero_persona_id: string | null;
+    referencia: string | null;
+    devuelve_a: string | null;
+    movimiento_id: string | null;
+    clave: string;
+    huella: string;
+    registrado_por: string;
+    registrado_en: Date;
+    creado_en: Generated<Date>;
+  };
   cobro: {
     movimiento_id: string;
     empresa_id: string;
@@ -95,6 +126,8 @@ export type CajaDb = TablasDelCierreDeCaja & {
     marca_de_tarjeta_id: string | null;
     cuotas: number | null;
     dni: string | null;
+    /** El sello que calcula la base al insertar (PR-7-caja): los datos que el medio pide y quedaron vacíos. Nunca se escribe desde acá. */
+    datos_pendientes: Generated<string[]>;
     creado_en: Generated<Date>;
   };
   arqueo_caja: {
@@ -176,6 +209,11 @@ export const COLUMNAS_DE_CAJA = {
     "creado_en",
     "actualizado_en",
     "version",
+    "avisa_si_falta_cupon",
+    "avisa_si_falta_ultimos4",
+    "avisa_si_falta_marca",
+    "avisa_si_falta_cuotas",
+    "avisa_si_falta_dni",
   ],
   cuenta_de_cobro: [
     "id",
@@ -240,6 +278,7 @@ export const COLUMNAS_DE_CAJA = {
     "cuotas",
     "dni",
     "creado_en",
+    "datos_pendientes",
   ],
   arqueo_caja: [
     "empresa_id",

@@ -288,6 +288,17 @@ export async function crearPlanPublicado(
 }
 
 /** Asigna una versión publicada a un tenant con el número siguiente (vigente desde hace 30 s por defecto). */
+/**
+ * Las asignaciones «ya vigentes» (desde <= 0) se escriben con `creado_en` y `vigente_desde` desplazados
+ * este tanto hacia atrás, parejo (el orden entre ellas no cambia). Sin esto, la vigencia era `now() - 30 s`
+ * y un reloj inyectado que va atrás (`ahoraDeLaCorrida`: una hora cerca de la medianoche argentina) las veía
+ * «programadas»: el módulo quedaba en solo lectura (`MODULO_EN_SOLO_LECTURA`) entre 00:00 y 03:00 UTC.
+ * El CHECK `*_vigencia_ck` exige vigente_desde >= creado_en - 1 min, por eso se mueven los dos.
+ */
+const RETROCESO_DE_VIGENCIAS_YA_RIGEN_SEGUNDOS = 2 * 3600;
+const retrocesoDe = (desdeSegundos: number): number =>
+  desdeSegundos <= 0 ? RETROCESO_DE_VIGENCIAS_YA_RIGEN_SEGUNDOS : 0;
+
 export async function asignarPlan(
   c: pg.Client,
   tenant: string,
@@ -296,8 +307,9 @@ export async function asignarPlan(
 ): Promise<number> {
   const fila = await un<{ numero: number }>(
     c,
-    `insert into plan_de_tenant (tenant_id, numero, version_de_plan_id, vigente_desde, origen, motivo, asignado_por)
-     select $1::uuid, coalesce(max(numero), 0) + 1, $2::uuid, now() + make_interval(secs => $3::int), $4::text, $5::text, $6::text
+    `insert into plan_de_tenant (tenant_id, numero, version_de_plan_id, vigente_desde, origen, motivo, asignado_por, creado_en)
+     select $1::uuid, coalesce(max(numero), 0) + 1, $2::uuid, now() + make_interval(secs => $3::int - $7::int), $4::text, $5::text, $6::text,
+            now() - make_interval(secs => $7::int)
        from plan_de_tenant where tenant_id = $1::uuid
      returning numero`,
     [
@@ -307,6 +319,7 @@ export async function asignarPlan(
       opciones.origen ?? "CAMBIO",
       opciones.motivo ?? "prueba",
       opciones.por ?? ACTOR_DE_PRUEBA,
+      retrocesoDe(opciones.desdeSegundos ?? -30),
     ],
   );
   return fila.numero;
@@ -323,8 +336,9 @@ export async function ajustarPerilla(
   const empresa = opciones.empresa ?? null;
   const fila = await un<{ numero: number }>(
     c,
-    `insert into ajuste_de_perilla (tenant_id, empresa_id, perilla, numero, valor, vigente_desde, motivo, asignado_por)
-     select $1::uuid, $2::uuid, $3::text, coalesce(max(numero), 0) + 1, $4::text, now() + make_interval(secs => $5::int), 'prueba', $6::text
+    `insert into ajuste_de_perilla (tenant_id, empresa_id, perilla, numero, valor, vigente_desde, motivo, asignado_por, creado_en)
+     select $1::uuid, $2::uuid, $3::text, coalesce(max(numero), 0) + 1, $4::text, now() + make_interval(secs => $5::int - $7::int), 'prueba', $6::text,
+            now() - make_interval(secs => $7::int)
        from ajuste_de_perilla where tenant_id = $1::uuid and empresa_id is not distinct from $2::uuid and perilla = $3::text
      returning numero`,
     [
@@ -334,6 +348,7 @@ export async function ajustarPerilla(
       valor,
       opciones.desdeSegundos ?? -30,
       opciones.por ?? ACTOR_DE_PRUEBA,
+      retrocesoDe(opciones.desdeSegundos ?? -30),
     ],
   );
   return fila.numero;
@@ -417,6 +432,18 @@ export async function sembrarMarcasYPlanes(
   await crearVersionDeMarcaConfirmada(c, principal, { nombreVisible: "Marca de prueba" });
   const { version } = await crearPlanPublicado(c, { modulos: [] });
   await asignarPlan(c, e.tenant, version, { origen: "ALTA" });
+  // 0089 (política de cambio de plan): un cambio con sus condiciones y su arrepentimiento (la vuelta al plan de alta). La política 1 la carga la migración.
+  const otra = await crearPlanPublicado(c, { modulos: [] });
+  const cambio = await asignarPlan(c, e.tenant, otra.version, { origen: "CAMBIO" });
+  const vuelta = await asignarPlan(c, e.tenant, version, { origen: "CAMBIO" });
+  await c.query(
+    "insert into condiciones_de_cambio_de_plan (tenant_id, numero, sentido, politica_version, arrepentimiento_hasta) values ($1, $2, 'BAJA', 1, current_date)",
+    [e.tenant, cambio],
+  );
+  await c.query(
+    "insert into arrepentimiento_de_plan (tenant_id, numero_arrepentido, numero_nuevo, motivo, registrado_por) values ($1, $2, $3, 'prueba', $4)",
+    [e.tenant, cambio, vuelta, ACTOR_DE_PRUEBA],
+  );
   await ajustarPerilla(c, e.tenant, "empresas_por_tenant", "2");
   await activarModulo(c, e.empresa, "modulo_de_prueba");
 }

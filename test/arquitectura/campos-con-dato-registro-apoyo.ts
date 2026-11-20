@@ -1,5 +1,6 @@
 import ts from "typescript";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
+import { CATALOGO_DE_PLATAFORMA } from "../../src/capacidades/permisos/plataforma";
 import type { Registro } from "./campos-con-dato-apoyo";
 
 /** Lo que `campos-con-dato.test.ts` comprueba además del código de las pantallas: el componente, el registro y la deuda. */
@@ -28,6 +29,9 @@ export function problemasDeComponente(ruta: string, texto: string): string[] {
 const accionesDelCatalogo = (): Set<string> =>
   new Set(Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones)));
 
+const accionesDePlataforma = (): Set<string> =>
+  new Set(Object.values(CATALOGO_DE_PLATAFORMA).flatMap((m) => Object.keys(m.acciones)));
+
 /** El registro contra la realidad: fichas, acciones, módulos, fuentes y consumidores que de verdad lo piden. */
 export function problemasDelRegistro(
   registro: Registro,
@@ -49,6 +53,12 @@ export function problemasDelRegistro(
     if (d.consumidores.length === 0)
       problemas.push(`${id}: dato huérfano, no tiene consumidores declarados`);
     for (const c of d.consumidores) {
+      // La consola y la web no se mezclan: un dato de plataforma solo lo pide `apps/plataforma` y uno de empresa, `apps/web`.
+      const carpeta = d.ambito === "PLATAFORMA" ? "apps/plataforma/" : "apps/web/";
+      if (!c.startsWith(carpeta))
+        problemas.push(
+          `${id}: el consumidor ${c} no es de ${carpeta} (el dato es de ${d.ambito ?? "EMPRESA"})`,
+        );
       if (!existe(c)) problemas.push(`${id}: el consumidor ${c} no existe`);
       else if ((usosPorArchivo.get(c)?.get(id) ?? 0) === 0) {
         problemas.push(
@@ -58,9 +68,11 @@ export function problemasDelRegistro(
     }
     if (d.ponerPor.length === 0) problemas.push(`${id}: no dice quién puede ponerlo`);
     for (const a of d.ponerPor) {
-      if (!acciones.has(a))
+      const conocidas = d.ambito === "PLATAFORMA" ? accionesDePlataforma() : acciones;
+      if (!conocidas.has(a))
         problemas.push(`${id}: la acción de permiso «${a}» no existe en el catálogo`);
     }
+    if (d.ambito === "PLATAFORMA") continue;
     if (!(d.requiere.modulo in CATALOGO_DE_MODULOS)) {
       problemas.push(`${id}: el módulo «${d.requiere.modulo}» no existe en el catálogo`);
     }

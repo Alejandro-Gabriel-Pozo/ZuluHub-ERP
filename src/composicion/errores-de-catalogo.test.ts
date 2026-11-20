@@ -6,8 +6,11 @@ describe("traducirErrorDeCatalogo", () => {
   it.each([
     ["PRODUCTO_DUPLICADO", "CATALOGO_NOMBRE_REPETIDO", "nombre"],
     ["CODIGO_DUPLICADO", "CATALOGO_CODIGO_REPETIDO", "codigo"],
+    ["SECCION_DUPLICADA", "CATALOGO_SECCION_REPETIDA", "nombre"],
     ["CODIGO_DE_BARRAS_INVALIDO", "CATALOGO_CODIGO_DE_BARRAS_INVALIDO", "codigoDeBarras"],
     ["ALICUOTA_REQUERIDA", "CATALOGO_ELEGI_LA_ALICUOTA", "alicuota"],
+    ["RECARGO_INVALIDO", "CATALOGO_PRECIO_INVALIDO", "recargo"],
+    ["INCLUIDA_CON_RECARGO", "CATALOGO_INCLUIDA_CON_RECARGO", "recargo"],
   ])("%s sale como %s, asociado al campo %s", (error, codigo, campo) => {
     expect(traducirErrorDeCatalogo(error)).toEqual({ codigo, campo });
   });
@@ -59,6 +62,22 @@ describe("traducirErrorDeCatalogo", () => {
     ]) {
       expect(traducirErrorDeCatalogo(error)).toBe(error);
     }
+  });
+});
+
+describe("traducirErrorDeCatalogo: ocultar (A15)", () => {
+  it("los dos bloqueos de ocultar salen con su texto propio y el resto sigue siendo el genérico", () => {
+    expect(traducirErrorDeCatalogo("PRODUCTO_CON_EXISTENCIA")).toEqual({
+      codigo: "CATALOGO_PRODUCTO_CON_EXISTENCIA",
+      campo: "ocultar",
+    });
+    expect(traducirErrorDeCatalogo("PRODUCTO_CON_CONTEO_ABIERTO")).toEqual({
+      codigo: "CATALOGO_PRODUCTO_CON_CONTEO_ABIERTO",
+      campo: "ocultar",
+    });
+    expect(traducirErrorDeCatalogo("SUCURSAL_NO_ENCONTRADA")).toEqual({
+      codigo: "CATALOGO_ACCION_NO_PERMITIDA",
+    });
   });
 });
 

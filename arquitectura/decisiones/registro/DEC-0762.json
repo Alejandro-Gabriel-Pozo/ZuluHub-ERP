@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0762",
+  "fecha": "2026-11-18",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Ficha de pantalla y textos de consola de «Activar y desactivar módulos de una empresa» (PR-C1) aceptados por la orquestadora por delegación.",
+  "que_cambia": "Textos internos de la consola de plataforma: Activar, Desactivar, Acción, Requiere, Falta activar, los títulos de la confirmación y los motivos de rechazo de módulos. Revertir: quitar los textos junto con la columna.",
+  "donde": "decisiones-del-dueno-2026-11.md filas 173 (textos) y 174 (pantallas) y fila del 18/11, bloque A; brief PR-C1 §4.1 y §6"
+}

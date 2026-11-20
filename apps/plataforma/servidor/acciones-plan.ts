@@ -1,7 +1,8 @@
 import "server-only";
 
 import { detalleDeFalla } from "../../../src/capacidades/experiencia/respuesta";
-import { errorParaLaPantalla } from "../logica/errores-de-plataforma";
+import { errorDelCambioDePlan } from "../logica/errores-de-cambio-de-plan";
+import { entradaDeArrepentir } from "../logica/arrepentimiento";
 import { entradaDelCambioDePlan } from "../logica/entrada-del-plan";
 import type { RespuestaDeConsola } from "../logica/respuesta-de-consola";
 import { instanteDeVigencia } from "../logica/vigencia";
@@ -18,7 +19,7 @@ const datosNoValidos = (): RespuestaDeConsola<never> => ({
 
 /** El error de un caso de uso para el navegador; lo inesperado va al registro con su referencia y sin datos del pedido. */
 function falla(error: unknown): Falla {
-  const paraLaPantalla = errorParaLaPantalla(error, "PLAN");
+  const paraLaPantalla = errorDelCambioDePlan(error);
   if (paraLaPantalla.tipo === "INESPERADO") {
     return fallaInesperada(ETIQUETA, detalleDeFalla(error));
   }
@@ -56,6 +57,27 @@ export async function cambiarPlanDeConsola(
       };
     }
     return falla(resultado.error);
+  } catch (excepcion) {
+    if (esRedireccion(excepcion)) throw excepcion;
+    return fallaInesperada(ETIQUETA, detalleDeFalla(excepcion));
+  }
+}
+
+/**
+ * Deshace por arrepentimiento el último cambio de plan de un cliente (solo ADMIN con segundo factor reciente: lo exige el caso de uso, no esta acción). La entrada viene del navegador: se valida la forma
+ * y el resto lo decide el caso de uso (que el cambio sea de ESE cliente, que sea el último, el plazo y que no se haya deshecho). La clave de idempotencia la fija el navegador (una por intento).
+ */
+export async function arrepentirCambioDeConsola(
+  entrada: unknown,
+): Promise<RespuestaDeConsola<{ numero: number }>> {
+  const forma = entradaDeArrepentir(entrada);
+  if (!forma.ok) return datosNoValidos();
+  try {
+    const acceso = await exigirAcceso();
+    const resultado = await acceso.casos.arrepentirCambioDePlan(forma.valor);
+    return resultado.ok
+      ? { ok: true, dato: { numero: resultado.valor.numero } }
+      : falla(resultado.error);
   } catch (excepcion) {
     if (esRedireccion(excepcion)) throw excepcion;
     return fallaInesperada(ETIQUETA, detalleDeFalla(excepcion));

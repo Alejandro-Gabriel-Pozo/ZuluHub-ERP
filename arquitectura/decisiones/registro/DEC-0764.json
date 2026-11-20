@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0764",
+  "fecha": "2026-11-18",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Un nivel de control guardado que no sea PERMITIR ni AVISAR se lee como AVISAR (leerNivelGuardado), en el adaptador y en stock.",
+  "que_cambia": "Ante un valor desconocido el sistema pide confirmación: ni habilita en silencio ni bloquea. Antes el adaptador fallaba y stock cerraba en BLOQUEAR. Revertir: un solo lugar, nivel.ts.",
+  "donde": "src/capacidades/controles/nivel.ts; test/integracion/niveles-de-control.test.ts"
+}

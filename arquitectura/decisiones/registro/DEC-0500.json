@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0500",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Textos de la pantalla Cobrar (ventas.cobro.*, ventas.ticket.* y Nueva venta), todos aprobados o reutilizados con fuente verificable; ninguno es nuevo.",
+  "que_cambia": "Qué lee la persona al cobrar: Cobrar, Cobrado, Medio, Importe, Vuelto, los datos de la tarjeta con sus errores, Ticket N.º, Anular y Nueva venta. La fuente de cada uno está junto a su clave.",
+  "donde": "delegación del dueño, DDD filas 173 y 174; filas 165, 171 y 175 de decisiones-del-dueno-2026-11.md; catalogo-ventas.ts"
+}

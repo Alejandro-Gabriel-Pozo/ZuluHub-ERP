@@ -9,7 +9,7 @@ export const MODULOS_DE_SALON_Y_COMANDAS = {
    * y las líneas por id; no sabe qué es una mesa. Anular un ítem ya enviado usa `cuentas.anular_linea` de ventas (los tres roles, decisión 155).
    */
   comandas: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["ventas"],
     usaSiExiste: ["stock"],
@@ -32,7 +32,7 @@ export const MODULOS_DE_SALON_Y_COMANDAS = {
    * las acciones de ventas, sin acción nueva.
    */
   salon: {
-    estado: "en_desarrollo",
+    estado: "disponible",
     obligatorio: false,
     requiere: ["ventas", "comandas"],
     usaSiExiste: [],

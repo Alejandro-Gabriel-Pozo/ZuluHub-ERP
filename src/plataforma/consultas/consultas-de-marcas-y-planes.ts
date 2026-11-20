@@ -1,6 +1,8 @@
 import { armarCatalogosDeMarca } from "./catalogos";
 import { armarFichaDeMarca, armarListarMarcas } from "./consultas-de-marcas";
 import { armarMarcasParaElAlta } from "./marcas-para-el-alta";
+import { armarCondicionesDeCambioDePlan } from "./condiciones-de-cambio-de-plan";
+import { armarVerPoliticaDeCambioDePlan } from "./politica-de-cambio-de-plan";
 import { armarTenantsConLaVersion } from "./tenants-con-la-version";
 import {
   armarDerechosDeUsoDeEmpresa,
@@ -32,6 +34,8 @@ export function crearConsultasDeMarcasYPlanes(
     planDelTenant: armarPlanDelTenant(dependencias),
     derechosDeUsoDeEmpresa: armarDerechosDeUsoDeEmpresa(dependencias),
     diferenciaEntreVersiones: armarDiferenciaEntreVersiones(dependencias),
+    verPoliticaDeCambioDePlan: armarVerPoliticaDeCambioDePlan(dependencias),
+    condicionesDeCambioDePlan: armarCondicionesDeCambioDePlan(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES_DE_CONSULTAS_DE_MARCAS_Y_PLANES, unknown>;
 }
 

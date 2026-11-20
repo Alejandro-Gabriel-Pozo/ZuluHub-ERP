@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0742",
+  "fecha": "2026-11-18",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Un punto de venta que ARCA informa solo para CAEA no pasa a producción.",
+  "que_cambia": "Un punto de venta solo CAEA, que antes pasaba, ahora se rechaza al pasar a producción con su propio texto y no se escribe nada. Revertir: quitar el motivo SOLO_CAEA.",
+  "donde": "decisiones-del-dueno-2026-11.md, fila 305 (P4); habilitacion-en-arca.ts; puntos-de-venta-de-arca.ts"
+}

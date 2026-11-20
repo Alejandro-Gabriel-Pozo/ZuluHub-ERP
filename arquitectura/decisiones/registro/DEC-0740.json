@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0740",
+  "fecha": "2026-11-18",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Un error de ARCA puede traer su causa (solo elige el texto); el 602 de la lista de puntos de venta es una lista vacía; pasar a producción distingue cuatro motivos de rechazo.",
+  "que_cambia": "Solo cambia qué error se informa: el código sigue decidiendo qué se reintenta. Revertir: quitar el campo causa, volver a clasificar el 602 como servicio no disponible y unir los rechazos.",
+  "donde": "src/adaptadores/arca (clasificar, errores-de-arca, cuerpo-de-respuesta); src/modulos/fiscal/casos-de-uso/emision-electronica.ts:88-89 y resincronizar-y-ambiente.ts; src/composicion/errores-fiscales.ts",
+  "motivo": "Es la forma interna de informar un error ya existente; el texto que ve el cliente lo aprobó el dueño aparte (DEC-0741) y no cambia ningún importe ni permiso."
+}

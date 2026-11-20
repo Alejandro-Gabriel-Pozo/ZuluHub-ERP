@@ -85,7 +85,7 @@ describe.skipIf(base === null)("stock: propiedad del saldo (P17)", () => {
   beforeAll(async () => {
     if (base === null) return;
     c = await montarStock(base);
-    for (const nivel of ["PERMITIR", "AVISAR", "BLOQUEAR"] as const) {
+    for (const nivel of ["PERMITIR", "AVISAR"] as const) {
       const e = await c.escenario();
       await c.fijarNivel(e.empresa, nivel);
       empresas.push(e);
@@ -98,7 +98,7 @@ describe.skipIf(base === null)("stock: propiedad del saldo (P17)", () => {
   it("P17: para historias aleatorias el saldo es la suma de los renglones en cada depósito, coincide con el modelo y verificarSaldos da vacío", async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.integer({ min: 0, max: 2 }),
+        fc.integer({ min: 0, max: 1 }),
         fc.array(orden, { minLength: 1, maxLength: 12 }),
         async (cualEmpresa, historia) => {
           const e = empresas[cualEmpresa] as EscenarioDeStock;
@@ -144,7 +144,7 @@ describe.skipIf(base === null)("stock: propiedad del saldo (P17)", () => {
                   anulado: false,
                 });
               } else {
-                expect(["CONTROL_BLOQUEA", "CONTROL_REQUIERE_CONFIRMACION"]).toContain(
+                expect(["CONTROL_REQUIERE_CONFIRMACION"]).toContain(
                   (r.error as { error: string }).error,
                 );
               }
@@ -170,7 +170,7 @@ describe.skipIf(base === null)("stock: propiedad del saldo (P17)", () => {
                   anulado: false,
                 });
               } else {
-                expect(["CONTROL_BLOQUEA", "CONTROL_REQUIERE_CONFIRMACION"]).toContain(
+                expect(["CONTROL_REQUIERE_CONFIRMACION"]).toContain(
                   (r.error as { error: string }).error,
                 );
               }

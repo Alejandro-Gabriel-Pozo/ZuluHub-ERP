@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0760",
+  "fecha": "2026-11-18",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Venta rápida: ajustes para igualar la maqueta aprobada (fila 294); textos «Todo» e «Incluido» tomados de la maqueta.",
+  "que_cambia": "Qué ve la persona en la venta: «Todo» y «Secciones», total en cero con la cuenta vacía, «Sin elegir», «(obligatorio)», «Incluido» y «Agregar» con el importe del servidor. Revertir: un ajuste por vez.",
+  "donde": "decisiones-del-dueno-2026-11.md filas 294 (manda la maqueta) y 52 (venta-rapida-v4 aprobada); venta-rapida-v4.html:597, :740, :750, :757-759, :767, :770; catalogo-ventas.ts"
+}

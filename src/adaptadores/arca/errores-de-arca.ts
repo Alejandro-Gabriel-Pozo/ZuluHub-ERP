@@ -68,3 +68,52 @@ export function errorDeFallaDeWsaa(faultcode: string): ErrorDeEmision["codigo"] 
   if (codigo.startsWith("cms.")) return "SIN_CREDENCIAL";
   return "SERVICIO_NO_DISPONIBLE";
 }
+
+/**
+ * Por qué falló un acceso o una lectura, cuando se sabe con certeza: elige el TEXTO que se muestra y nada más. El `codigo` del error sigue
+ * decidiendo qué se reintenta y qué es definitivo. Se deriva del tipo del puerto (`publico.ts` de fiscal no puede crecer).
+ */
+export type Causa = NonNullable<ErrorDeEmision["causa"]>;
+
+/** El error con su causa; sin causa es el mismo objeto (`exactOptionalPropertyTypes`: el campo se omite, nunca es `undefined`). */
+export function conCausa(error: ErrorDeEmision, causa: Causa | null): ErrorDeEmision {
+  return causa === null ? error : { ...error, causa };
+}
+
+/**
+ * Lista de permitidos (igualdad exacta, nunca prefijo) de las fallas SOAP de WSAA con causa conocida; el resto es `null` y sale el texto de
+ * hoy. `cms.cert.untrusted` se clasifica pero su texto no está conectado: su código viene de memoria del manual de WSAA, sin grabación.
+ * Previene: que una falla propia del sistema (la firma, el reloj, el pedido mal armado) se le muestre al cliente como «ARCA no está disponible».
+ */
+const CAUSA_DE_FALLA_DE_WSAA: ReadonlyMap<string, Causa> = new Map<string, Causa>([
+  ["cms.cert.expired", "CERTIFICADO_VENCIDO"],
+  ["cms.cert.untrusted", "CERTIFICADO_NO_RECONOCIDO"],
+  ["xml.generationTime.invalid", "PROBLEMA_DEL_SISTEMA"],
+  ["xml.expirationTime.invalid", "PROBLEMA_DEL_SISTEMA"],
+  ["xml.expirationTime.expired", "PROBLEMA_DEL_SISTEMA"],
+  ["xml.bad", "PROBLEMA_DEL_SISTEMA"],
+  ["xml.source.invalid", "PROBLEMA_DEL_SISTEMA"],
+  ["xml.destination.invalid", "PROBLEMA_DEL_SISTEMA"],
+  ["xml.version.notSupported", "PROBLEMA_DEL_SISTEMA"],
+  ["wsn.notFound", "PROBLEMA_DEL_SISTEMA"],
+]);
+
+/** La causa de una falla SOAP de WSAA por su `faultcode` (con o sin prefijo de espacio de nombres); `null` si no está en la lista. */
+export function causaDeFallaDeWsaa(faultcode: string): Causa | null {
+  return CAUSA_DE_FALLA_DE_WSAA.get(codigoDeFallaDeWsaa(faultcode)) ?? null;
+}
+
+/** Los códigos de WSFE con causa conocida (manual WSFE v4.8, l. 296-301 y 3538-3540). */
+const CAUSA_DE_CODIGO_DE_WSFE: ReadonlyMap<number, Causa> = new Map<number, Causa>([
+  [601, "CUIT_NO_REPRESENTADA"],
+  [11002, "PUNTO_DE_VENTA_NO_HABILITADO"],
+  [11000, "PROBLEMA_DEL_SISTEMA"],
+  [11001, "PROBLEMA_DEL_SISTEMA"],
+]);
+
+/** La causa de los errores de una respuesta de WSFE, SOLO si todos son el mismo código; con dos códigos distintos o uno desconocido, `null`. */
+export function causaDeErroresDeWsfe(mensajes: readonly Mensaje[]): Causa | null {
+  const [primero, ...resto] = mensajes;
+  if (primero === undefined || resto.some((m) => m.codigo !== primero.codigo)) return null;
+  return CAUSA_DE_CODIGO_DE_WSFE.get(primero.codigo) ?? null;
+}

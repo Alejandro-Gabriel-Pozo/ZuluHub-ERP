@@ -1,14 +1,15 @@
 import "server-only";
-import { cache } from "react";
+/**
+ * ARCHIVO CENTRAL
+ * QUÉ ES: el armado del menú para la persona (áreas, destinos de la barra, pantallas de Cuenta) y la lista de reexportaciones de compatibilidad de las ofertas de botones.
+ * QUÉ NO ES: el lugar de las funciones «¿puede…?» de cada pantalla: una oferta nueva va en su parte dedicada y no se reexporta acá.
+ * EXPORTA: destinosDeAreas, destinosDeModulos, pantallasDeCuenta, ACCION_DE_CONFIGURACION_FISCAL, puedeVerLaConfiguracionFiscal, pendientesDeLaEmpresa, accionesDePuntosDeVenta, puedeEditarElContactoDeLaSucursal, accionesDeLaListaDeCaja, puedeEditarProductos, puedeCrearProductos, puedeCambiarPrecios, puedeEditarOpciones, OfertaDeLaCarta, ofertaDeLaCartaEnLinea, puedeOcultarEnElLocal, puedeOcultarEnLaEmpresa, puedeEmitirNotasDeCredito, puedeEmitirFacturas, puedeAdministrarMesas, puedeCambiarDeMesa, puedeUnirMesas, puedeDividirCuentas, puedeEnviarAComandas, puedeImprimir, puedeReimprimir, puedeAdministrarImpresoras.
+ * IMPORTA: server-only, src/contexto/contexto, src/capacidades/vocabulario/vocabulario, src/capacidades/modulos/catalogo, apps/web/ui/navegacion/menu, apps/web/ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta, apps/web/ui/plantillas/sesion/*, apps/web/servidor/permisos-de-la-persona, apps/web/servidor/ofertas-de-*, apps/web/servidor/configuracion-fiscal.
+ * PARTE DEDICADA: apps/web/servidor/ofertas-de-<módulo>.ts (las ofertas de cada módulo) y apps/web/servidor/permisos-de-la-persona.ts (la lectura de permisos).
+ */
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { texto } from "../../../src/capacidades/vocabulario/vocabulario";
-import {
-  CATALOGO_DE_MODULOS,
-  type ClaveAccion,
-  type ClaveModulo,
-} from "../../../src/capacidades/modulos/catalogo";
-import type { ClaveDeTexto } from "../../../src/capacidades/vocabulario/catalogo";
-import { web } from "./composicion";
+import type { ClaveAccion } from "../../../src/capacidades/modulos/catalogo";
 import {
   FILAS_DEL_MENU,
   armarElMenu,
@@ -19,13 +20,9 @@ import {
   RUTAS_DE_CONFIGURACION,
   armarLaLista,
 } from "../ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta";
-import type {
-  AccionesDePuntosDeVenta,
-  OfertaDeAccion,
-} from "../ui/plantillas/configuracion-fiscal/modelo-de-puntos-de-venta";
-import type { AccionesDeLista } from "../ui/plantillas/caja/lista-de-caja";
 import type { DestinoDeModulo } from "../ui/plantillas/sesion/ArmazonDeOperacion";
 import type { Pendiente } from "../ui/plantillas/sesion/PantallaDeInicio";
+import { permisosDeLaPersona, type PermisosLeidos } from "./permisos-de-la-persona";
 
 /**
  * Los destinos de la barra inferior: las áreas del menú (`ui/navegacion/menu.ts`, la única tabla) con lo que la persona ve hoy. La barra
@@ -90,52 +87,6 @@ export async function pantallasDeCuenta(
 }
 
 /**
- * ¿La persona puede emitir notas de crédito hoy? Depende SOLO de que `permisosDelActor().acciones` incluya `notas_de_credito.emitir`:
- * esa lista sale del mismo cálculo que el guard, y esa acción es `COMPLETA_CIERRA` (`src/capacidades/modulos/catalogo.ts`), que el
- * guard deja pasar también con el módulo en solo lectura. Por eso el botón y la pantalla de anular SÍ se ofrecen en solo lectura
- * (corrección del dueño, 2026-10-29, cuestionario en la sesión web del carril web). Si `permisosDelActor` falla, no se ofrece
- * (cierra, no abre). Ocultar no es autorizar: la acción vuelve a pasar por el guard, dentro de su transacción.
- */
-export async function puedeEmitirNotasDeCredito(contexto: ContextoOperativo): Promise<boolean> {
-  const permisos = await permisosDeLaPersona(contexto);
-  return permisos !== null && permisos.acciones.includes("notas_de_credito.emitir");
-}
-
-/**
- * ¿La persona puede emitir una factura hoy? Depende SOLO de que `permisosDelActor().acciones` incluya `comprobantes.emitir_manual`, la
- * acción que el guard de emitir exige (`DECLARACIONES_DE_FACTURACION.emitirComprobanteManual`) y la de las dos lecturas de Emitir.
- * Esa lista sale del mismo cálculo que el guard (`accionesPermitidas`), así que sigue su regla sin repetirla: esa acción es
- * `CREA_AMPLIA` (`catalogo.ts`), que el guard rechaza con el módulo en solo lectura, y entonces el botón NO se ofrece ahí (a
- * diferencia de anular, que sí). Si `permisosDelActor` falla, no se ofrece (cierra, no abre). Ocultar no es autorizar: la acción vuelve a
- * pasar por el guard, dentro de su transacción. Chequeo: `test/web/modulos-de-la-barra.test.ts`.
- */
-export async function puedeEmitirFacturas(contexto: ContextoOperativo): Promise<boolean> {
-  const permisos = await permisosDeLaPersona(contexto);
-  return permisos !== null && permisos.acciones.includes("comprobantes.emitir_manual");
-}
-
-/**
- * Los permisos de la persona, o `null` si no se pudieron leer (un rechazo o una excepción): la barra y el botón de anular no abren
- * nada por las dudas. Una excepción no se traga en silencio: queda en el registro del servidor, con el mismo formato que los demás
- * (`[etiqueta] qué falló (Tipo)`), SOLO el tipo de la falla, nunca su texto (puede traer datos de la base). Previene: que una base
- * caída deje la barra vacía sin que nadie lo vea. Chequeo: `test/web/modulos-de-la-barra.test.ts`.
- *
- * Con `cache` de React se lee UNA vez por pedido: la barra y los botones de la página comparten el mismo `contexto` (la misma
- * referencia), así que la segunda llamada no vuelve a abrir una transacción. Previene: dos lecturas de los permisos por pantalla.
- */
-const permisosDeLaPersona = cache(async (contexto: ContextoOperativo) => {
-  try {
-    const permisos = await web.consultasDeEmpresas().permisosDelActor(contexto);
-    return permisos.ok ? permisos.valor : null;
-  } catch (error) {
-    console.error(
-      `[modulos] no se pudieron leer los permisos de la persona (${error instanceof Error ? error.name : "falla que no es un Error"})`,
-    );
-    return null;
-  }
-});
-
-/**
  * La acción con la que ya se protege la pantalla de Configuración fiscal: la consulta de su lista la exige al guard
  * (`estadoDeLaConfiguracionFiscal`, solo el gerente). Previene: ofrecer la entrada a quien el servidor va a rechazar. Chequeo:
  * `test/web/modulos-de-la-barra.test.ts` la compara con la declaración de la consulta.
@@ -157,139 +108,6 @@ function accionDeLaFila(clave: ClaveDeFila): ClaveAccion {
 export async function puedeVerLaConfiguracionFiscal(contexto: ContextoOperativo): Promise<boolean> {
   const permisos = await permisosDeLaPersona(contexto);
   return permisos !== null && permisos.acciones.includes(ACCION_DE_CONFIGURACION_FISCAL);
-}
-
-/**
- * ¿La persona puede editar el contacto de la sucursal (D-113)? Es la oferta de `sucursales.editar` (gerente y administrador) que el
- * servidor calcula con `ofertaDe`: con el módulo en solo lectura o sin el rol, no. Si no se pudieron leer los permisos, `false`
- * (cierra, no abre). Ocultar no es autorizar: la ficha y el guardado vuelven a pasar por el guard. Chequeo:
- * `test/web/contacto-de-sucursal-acceso.test.ts`.
- */
-export async function puedeEditarElContactoDeLaSucursal(
-  contexto: ContextoOperativo,
-): Promise<boolean> {
-  const permisos = await permisosDeLaPersona(contexto);
-  return permisos !== null && ofertaDe("sucursales.editar", permisos).permitida;
-}
-
-/**
- * ¿La persona puede guardar los datos de un producto? Es la oferta de `productos.editar` (gerente y administrador) que el servidor calcula con `ofertaDe`: con el módulo en solo
- * lectura o sin el rol, no. Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: guardar vuelve a pasar por el guard. Es solo la ayuda que apaga
- * «Guardar» (DEC-0346, aprobada por el dueño el 12/11/2026). Chequeo: `test/web/ficha-de-producto-acceso.test.ts`.
- */
-export async function puedeEditarProductos(contexto: ContextoOperativo): Promise<boolean> {
-  const permisos = await permisosDeLaPersona(contexto);
-  return permisos !== null && ofertaDe("productos.editar", permisos).permitida;
-}
-
-/**
- * ¿La persona puede crear un producto? Es la oferta de `productos.crear` (gerente y administrador) que el servidor calcula con `ofertaDe`: con el módulo en solo lectura o sin el rol, no.
- * Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: crear vuelve a pasar por el guard. Es solo la ayuda que apaga «Guardar» (DEC-0346, aprobada
- * por el dueño el 12/11/2026). Chequeo: `test/web/alta-de-producto-acceso.test.ts`.
- */
-export async function puedeCrearProductos(contexto: ContextoOperativo): Promise<boolean> {
-  const permisos = await permisosDeLaPersona(contexto);
-  return permisos !== null && ofertaDe("productos.crear", permisos).permitida;
-}
-
-/**
- * ¿La persona puede cambiar el precio de un producto? Es la oferta de `productos.cambiar_precio` (gerente y administrador) que el servidor calcula con `ofertaDe`: con el módulo en
- * solo lectura o sin el rol, no. Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: cambiar vuelve a pasar por el guard. Es solo la ayuda que apaga
- * «Guardar» (DEC-0346, aprobada por el dueño el 12/11/2026). Chequeo: `test/web/precios-de-producto-acceso.test.ts`.
- */
-export async function puedeCambiarPrecios(contexto: ContextoOperativo): Promise<boolean> {
-  const permisos = await permisosDeLaPersona(contexto);
-  return permisos !== null && ofertaDe("productos.cambiar_precio", permisos).permitida;
-}
-
-type PermisosLeidos = NonNullable<Awaited<ReturnType<typeof permisosDeLaPersona>>>;
-
-/** De una acción, su módulo, el estado de construcción de ese módulo y su efecto: el catálogo es el único dueño de esos datos. */
-function dondeVive(accion: ClaveAccion): {
-  modulo: ClaveModulo;
-  enDesarrollo: boolean;
-  creaAmplia: boolean;
-} {
-  for (const [modulo, definicion] of Object.entries(CATALOGO_DE_MODULOS) as [
-    ClaveModulo,
-    (typeof CATALOGO_DE_MODULOS)[ClaveModulo],
-  ][]) {
-    const acciones: Readonly<Record<string, { efecto: string }>> = definicion.acciones;
-    const propia = Object.hasOwn(acciones, accion) ? acciones[accion] : undefined;
-    if (propia !== undefined) {
-      return {
-        modulo,
-        enDesarrollo: definicion.estado === "en_desarrollo",
-        creaAmplia: propia.efecto === "CREA_AMPLIA",
-      };
-    }
-  }
-  throw new Error(`La acción ${accion} no está en el catálogo de módulos`);
-}
-
-/**
- * Si el servidor deja hacer `accion` hoy y, si no, el motivo con un texto que YA existe en el catálogo. Sigue el mismo orden que
- * el guard (`evaluarGuard`): en desarrollo, módulo no activo, módulo en solo lectura (solo para las acciones que crean o amplían) y,
- * por último, el rol. `permisosDelActor` no devuelve los módulos en desarrollo ni los no activos (ni sus acciones): por eso «en
- * desarrollo» se distingue mirando el catálogo.
- */
-function ofertaDe(accion: ClaveAccion, permisos: PermisosLeidos): OfertaDeAccion {
-  if (permisos.acciones.includes(accion)) return { permitida: true, motivo: null };
-  const { modulo, enDesarrollo, creaAmplia } = dondeVive(accion);
-  const enSoloLectura = permisos.modulos.enSoloLectura.includes(modulo);
-  let clave: ClaveDeTexto = "motivo.sin_permiso";
-  if (enDesarrollo) clave = "motivo.modulo_en_desarrollo";
-  else if (!enSoloLectura && !permisos.modulos.activos.includes(modulo))
-    clave = "motivo.modulo_no_activo";
-  else if (enSoloLectura && creaAmplia) clave = "motivo.modulo_en_solo_lectura";
-  return { permitida: false, motivo: texto({}, clave) };
-}
-
-/**
- * Qué botones de Puntos de venta se ofrecen activos hoy, según lo que el SERVIDOR deja hacer (`permisosDelActor`, una lectura por
- * pedido). «Pasar a producción» (`puntos_de_venta.cambiar_ambiente`) es del módulo `facturacion` (`disponible` desde 2026-11-04, pero
- * activo solo en las empresas donde la plataforma lo activó): sale apagado, con el motivo que da el servidor, si el módulo no está activo
- * para la empresa o el rol no alcanza; las demás son de `administracion`. Si no se pudieron leer los permisos, TODO sale apagado
- * con el genérico de D-82, «Esta acción no está permitida.» (ante un error o una duda el sistema cierra, `CLAUDE.md`; igual que
- * `puedeEmitirNotasDeCredito` y la barra).
- * Previene: ofrecer un botón que el guard va a rechazar sin saber si la persona puede. Es solo una ayuda: ocultar o apagar no es
- * autorizar, cada acción vuelve a pasar por el guard dentro de su transacción.
- */
-export async function accionesDePuntosDeVenta(
-  contexto: ContextoOperativo,
-): Promise<AccionesDePuntosDeVenta> {
-  const permisos = await permisosDeLaPersona(contexto);
-  const de = (accion: ClaveAccion): OfertaDeAccion =>
-    permisos === null
-      ? { permitida: false, motivo: texto({}, "fiscal.pantalla.config_pv_accion_no_permitida") }
-      : ofertaDe(accion, permisos);
-  return {
-    agregar: de("puntos_de_venta.crear"),
-    editar: de("puntos_de_venta.editar"),
-    activar: de("puntos_de_venta.activar"),
-    desactivar: de("puntos_de_venta.desactivar"),
-    pasarAProduccion: de("puntos_de_venta.cambiar_ambiente"),
-  };
-}
-
-/**
- * Qué botones de una lista de la configuración de caja se ofrecen activos hoy (`medios_de_pago.*`, `cuentas_de_cobro.*` o `cajas.*`, módulo `caja`): los que el SERVIDOR deja
- * hacer según `permisosDelActor` (una lectura por pedido, el mismo cálculo que el guard). Con `caja` en desarrollo o no activo esa lista no trae sus acciones: todo apagado. Sin
- * permisos leídos, todo apagado. Previene: ofrecer un botón que el guard va a rechazar. Es solo una ayuda: cada acción vuelve a pasar por el guard dentro de su transacción.
- */
-export async function accionesDeLaListaDeCaja(
-  contexto: ContextoOperativo,
-  familia: "medios_de_pago" | "cuentas_de_cobro" | "cajas",
-): Promise<AccionesDeLista> {
-  const permisos = await permisosDeLaPersona(contexto);
-  const puede = (accion: ClaveAccion): boolean =>
-    permisos !== null && permisos.acciones.includes(accion);
-  return {
-    agregar: puede(`${familia}.crear`),
-    editar: puede(`${familia}.editar`),
-    desactivar: puede(`${familia}.desactivar`),
-    reactivar: puede(`${familia}.reactivar`),
-  };
 }
 
 /** De un error, solo su TIPO para el registro: nunca el mensaje ni datos (pueden traer algo de la empresa). */
@@ -330,27 +148,38 @@ export async function pendientesDeLaEmpresa(
   }
 }
 
-/** Lo que la persona puede hacer en «Clientes y proveedores»; solo ayuda para ofrecer o apagar botones: cada acción vuelve a pasar por el guard. Sin permisos leídos, todo apagado. */
-export type AccionesDelDirectorio = Readonly<{
-  crear: boolean;
-  editar: boolean;
-  desactivar: boolean;
-  reactivar: boolean;
-  contactos: boolean;
-}>;
-
-export async function accionesDelDirectorio(
-  contexto: ContextoOperativo,
-): Promise<AccionesDelDirectorio> {
-  const permisos = await permisosDeLaPersona(contexto);
-  const puede = (accion: ClaveAccion): boolean =>
-    permisos !== null && permisos.acciones.includes(accion);
-  return {
-    crear: puede("partes.crear"),
-    // Editar guarda datos y roles juntos: hacen falta las dos.
-    editar: puede("partes.editar") && puede("partes.cambiar_roles"),
-    desactivar: puede("partes.desactivar"),
-    reactivar: puede("partes.reactivar"),
-    contactos: puede("partes.vincular_contacto") && puede("partes.desvincular_contacto"),
-  };
-}
+/**
+ * Compatibilidad: las ofertas de botones viven en `ofertas-de-<módulo>.ts` y se reexportan acá para que ninguna página ni prueba cambie
+ * su import. Esta lista solo baja: no se agregan nombres (una oferta nueva va en el archivo de su módulo). Chequeo:
+ * `test/arquitectura/ofertas-por-modulo.test.ts`.
+ */
+export {
+  accionesDePuntosDeVenta,
+  puedeEditarElContactoDeLaSucursal,
+} from "./ofertas-de-administracion";
+export { accionesDeLaListaDeCaja } from "./ofertas-de-caja";
+export {
+  puedeCambiarPrecios,
+  puedeCrearProductos,
+  puedeEditarOpciones,
+  puedeEditarProductos,
+} from "./ofertas-de-catalogo";
+export {
+  puedeAdministrarImpresoras,
+  puedeEnviarAComandas,
+  puedeImprimir,
+  puedeReimprimir,
+} from "./ofertas-de-comandas";
+export { puedeEmitirFacturas, puedeEmitirNotasDeCredito } from "./ofertas-de-facturacion";
+export {
+  puedeAdministrarMesas,
+  puedeCambiarDeMesa,
+  puedeDividirCuentas,
+  puedeUnirMesas,
+} from "./ofertas-de-salon";
+export {
+  ofertaDeLaCartaEnLinea,
+  puedeOcultarEnElLocal,
+  puedeOcultarEnLaEmpresa,
+  type OfertaDeLaCarta,
+} from "./ofertas-de-vidriera";

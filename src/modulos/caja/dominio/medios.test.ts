@@ -13,6 +13,7 @@ import {
   cuentaAdmitidaPorMedio,
   cuentaDeCobroRequerida,
   validarDatosQuePide,
+  validarLoQueSePide,
   validarParDeCobro,
   type CuentaVista,
   type DatosQuePideElMedio,
@@ -236,5 +237,28 @@ describe("validarParDeCobro sin exigir activos (declarar un total: el par pudo t
         exigirActivos: false,
       }),
     ).toEqual({ ok: false, error: "MEDIO_NO_ENCONTRADO" });
+  });
+});
+
+describe("validarLoQueSePide (espejo de medio_de_pago_avisa_ck)", () => {
+  const ninguno: DatosQuePideElMedio = {
+    cupon: false,
+    ultimos4: false,
+    marca: false,
+    cuotas: false,
+    dni: false,
+  };
+  it("sin nada pedido, o pidiendo solo lo que el medio muestra, pasa", () => {
+    expect(validarLoQueSePide(ninguno, ninguno).ok).toBe(true);
+    expect(validarLoQueSePide({ ...ninguno, cuotas: true }, { ...ninguno, cuotas: true }).ok).toBe(
+      true,
+    );
+    expect(validarLoQueSePide({ ...ninguno, cuotas: true }, ninguno).ok).toBe(true);
+  });
+  it("pedir un dato que el medio no muestra se rechaza, y informa el primero en el orden fijo", () => {
+    expect(validarLoQueSePide(ninguno, { ...ninguno, dni: true, marca: true })).toEqual({
+      ok: false,
+      error: { codigo: "DATO_PEDIDO_SIN_APARECER", dato: "marca" },
+    });
   });
 });
