@@ -15,3 +15,10 @@ export {
   type DecisionPorHuella,
   type RenglonDeHuella,
 } from "./huella";
+export {
+  LIBROS_REGISTRADOS,
+  type CodigoDeExcepcion,
+  type ExcepcionDeLibro,
+  type LibroRegistrado,
+  type MedidaDeLibro,
+} from "./registro";

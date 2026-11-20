@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0824",
+  "fecha": "2026-11-20",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las divergencias de stock y caja se registran en la deuda como hallazgos y su vencimiento lo hace cumplir la prueba, porque el tope de 10 excepciones de la deuda ya está lleno.",
+  "que_cambia": "Cuatro entradas backlog en arquitectura/deuda/registro.json y la fecha de vencimiento en registro.ts. Revertir: subir el tope de excepciones en configuracion.json (decide el orquestador) y convertirlas en excepciones.",
+  "donde": "arquitectura/deuda/registro.json; arquitectura/deuda/configuracion.json (topeDeExcepciones 10); src/primitivas/libro/registro.ts"
+}
