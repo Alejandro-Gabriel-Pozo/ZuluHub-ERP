@@ -3,8 +3,8 @@
   "fecha": "2026-11-16",
   "quien": "sesión",
   "tipo": "DATOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "La imagen del portal pesa como máximo 3 MB (decimales); se comprueba solo cuando el servidor pide los bytes, no al guardar la dirección.",
   "que_cambia": "Si el tope cambia, se cambia una constante; guardar el portal nunca descarga la imagen.",
-  "donde": "src/modulos/portal/dominio/portal.ts; carta-identidad-y-portal-datos-diseno.md §2.3"
+  "donde": "src/modulos/portal/dominio/portal.ts; carta-identidad-y-portal-datos-diseno.md §2.3; aprobada por el dueño el 20/11/2026 (DDD, fila «Alojamiento por sucursal; DEC-0481 a DEC-0483 aprobadas»)"
 }

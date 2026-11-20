@@ -3,8 +3,8 @@
   "fecha": "2026-11-20",
   "quien": "padre",
   "tipo": "INFRAESTRUCTURA",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "La consola no calcula fechas ni sentidos de un cambio de plan: los recibe del servidor (lectura condicionesDeCambioDePlan); la regla de suba o baja vive en un solo lugar (sentidoDeCambiarDeVersion).",
   "que_cambia": "Una sola regla de fechas y sentidos; la pantalla muestra lo que el servidor decidió. Revertir: no aplica sin duplicar la regla en la consola.",
-  "donde": "src/plataforma/consultas/condiciones-de-cambio-de-plan.ts; src/plataforma/consultas/sentido-del-cambio.ts; Pedernal-docs 11-especificaciones/briefs/escalabilidad/PR-H14b-consola-politica-de-cambio-de-plan.md §8"
+  "donde": "src/plataforma/consultas/condiciones-de-cambio-de-plan.ts; src/plataforma/consultas/sentido-del-cambio.ts; Pedernal-docs 11-especificaciones/briefs/escalabilidad/PR-H14b-consola-politica-de-cambio-de-plan.md §8; aprobada por el dueño el 20/11/2026 (DDD, fila «lista única de 15 preguntas», punto 6)"
 }
