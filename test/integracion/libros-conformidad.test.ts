@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { sql } from "kysely";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
@@ -13,6 +13,7 @@ import {
   violacionesSinDeclarar,
   type CodigoDeInvariante,
 } from "./libros-conformidad-apoyo";
+import { sufijoUnico } from "./unicos";
 import { ddlDeLibroEfimero, libroEfimero } from "./libros-conformidad-efimeros";
 
 /**
@@ -24,7 +25,7 @@ import { ddlDeLibroEfimero, libroEfimero } from "./libros-conformidad-efimeros";
 
 const base = inject("baseDePruebas");
 /** Un esquema por corrida: dos corridas contra la misma base (o un archivo repetido) no se pisan. */
-const ESQUEMA_EFIMERO = `libros_efimeros_${randomBytes(6).toString("hex")}`;
+const ESQUEMA_EFIMERO = `libros_efimeros_${sufijoUnico()}`;
 
 /** Una entrada por invariante: si se suma una al tipo y no acá, no compila (cada invariante tiene su violación inyectada). */
 const INVARIANTES: Readonly<Record<CodigoDeInvariante, true>> = {
