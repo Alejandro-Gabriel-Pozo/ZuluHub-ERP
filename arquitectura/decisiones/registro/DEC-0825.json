@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0825",
+  "fecha": "2026-11-20",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El registro de libros (registro.ts) queda fuera del grupo de mutación libro: son datos sin lógica y su prueba corre contra la base en el CI.",
+  "que_cambia": "Una línea en arquitectura/mutacion/libro.json. Sin la exclusión la mutación daba 0 de 40 en registro.ts, porque la mutación corre sin base; quitar una excepción declarada hace fallar la conformidad. Revertir: borrar la exclusión.",
+  "donde": "arquitectura/mutacion/libro.json; src/primitivas/libro/registro.ts; test/integracion/libros-conformidad.test.ts"
+}
