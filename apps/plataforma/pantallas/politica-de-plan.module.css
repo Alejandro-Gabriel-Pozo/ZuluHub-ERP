@@ -1,0 +1,32 @@
+.vigente {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--espacio-3);
+  margin: 0 0 var(--espacio-3);
+  padding: 0;
+}
+
+.dato {
+  padding: var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-base);
+}
+
+.dato dt {
+  color: var(--color-texto-suave);
+}
+
+.dato dd {
+  margin: var(--espacio-1) 0 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.pie {
+  margin: 0 0 var(--espacio-4);
+  color: var(--color-texto-suave);
+}
+
+.campoNumerico {
+  max-width: 14rem;
+}

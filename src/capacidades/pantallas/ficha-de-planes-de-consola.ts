@@ -37,10 +37,13 @@ export type FichaDePantallaDeConsola = Readonly<{
   }>[];
   /** El error y la falta de permiso salen con el mensaje genérico aprobado. */
   estados: Readonly<Record<"ERROR" | "SIN_PERMISO", ClaveDeTextoDePlataforma | "GENERICO">>;
+  /** Los textos de ESTA pantalla (el catálogo de la consola es uno solo y lo comparten todas: cada ficha declara los suyos). */
   textos: Readonly<
-    Record<
-      ClaveDeTextoDePlataforma,
-      Readonly<{ usos: readonly string[]; fuente: Readonly<{ decision: `DEC-${number}` }> }>
+    Partial<
+      Record<
+        ClaveDeTextoDePlataforma,
+        Readonly<{ usos: readonly string[]; fuente: Readonly<{ decision: `DEC-${number}` }> }>
+      >
     >
   >;
   /** Textos ya aprobados del núcleo (conexión, envío y estados) que la pantalla reusa: existen en el catálogo común. */
