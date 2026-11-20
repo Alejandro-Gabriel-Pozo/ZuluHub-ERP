@@ -15,6 +15,12 @@ import { TEXTOS_DE_PLATAFORMA } from "../../src/capacidades/vocabulario/textos-d
  * plataforma ofrecido a un cliente como reemplazable.
  */
 
+/** El catálogo de la consola es uno solo; cada ficha declara los textos de SU pantalla («Política de cambio de plan» y «Deshacer por arrepentimiento» tienen las suyas). */
+const DE_LA_POLITICA = /^plataforma\.(menu\.politica|politica\.|arrepentir\.)/;
+const textosDePlanes = Object.fromEntries(
+  Object.entries(TEXTOS_DE_PLATAFORMA).filter(([clave]) => !DE_LA_POLITICA.test(clave)),
+);
+
 const leer = (ruta: string): string => readFileSync(ruta, "utf8");
 const CLAVE = /"(plataforma\.[a-z_.]+)"/g;
 const claves = (texto: string): string[] => [...texto.matchAll(CLAVE)].map((m) => m[1] ?? "");
@@ -29,7 +35,7 @@ describe("ficha de la pantalla «Planes» de la consola", () => {
   });
 
   it("cada texto del catálogo está en la ficha y al revés, con usos que existen y que de verdad lo citan", () => {
-    expect(Object.keys(FICHA.textos).sort()).toEqual(Object.keys(TEXTOS_DE_PLATAFORMA).sort());
+    expect(Object.keys(FICHA.textos).sort()).toEqual(Object.keys(textosDePlanes).sort());
     for (const [clave, texto] of Object.entries(FICHA.textos)) {
       expect(texto.usos.length, clave).toBeGreaterThan(0);
       for (const uso of texto.usos) {
@@ -57,14 +63,16 @@ describe("ficha de la pantalla «Planes» de la consola", () => {
         "apps/plataforma/pantallas/armazon-de-consola.tsx",
         "apps/plataforma/logica/editor-de-plan.ts",
         "apps/plataforma/logica/errores-de-planes.ts",
-      ].flatMap((a) => claves(leer(a))),
+      ]
+        .flatMap((a) => claves(leer(a)))
+        .filter((clave) => !DE_LA_POLITICA.test(clave)),
     );
     expect(citadas.size).toBeGreaterThan(10);
     for (const clave of citadas) expect(Object.keys(FICHA.textos), clave).toContain(clave);
   });
 
   it("cada texto del catálogo trae sus usos, su fuente (la decisión que lo acepta, que existe) y el prefijo de la consola", () => {
-    for (const [clave, d] of Object.entries(TEXTOS_DE_PLATAFORMA)) {
+    for (const [clave, d] of Object.entries(textosDePlanes)) {
       expect(clave).toMatch(/^plataforma\.(menu|planes)\.[a-z_]+$/);
       expect(d).toMatchObject({ usos: ["DE_FICHA"], fuente: { decision: "DEC-0805" } });
     }

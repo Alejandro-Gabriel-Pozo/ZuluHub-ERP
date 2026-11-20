@@ -11,6 +11,11 @@ const SECCIONES = [
   { clave: "empresas", etiqueta: "Empresas", href: "/empresas" },
   { clave: "submarcas", etiqueta: "Submarcas", href: "/submarcas" },
   { clave: "planes", etiqueta: textoDePlanes("plataforma.menu.planes"), href: "/planes" },
+  {
+    clave: "politica",
+    etiqueta: textoDePlanes("plataforma.menu.politica"),
+    href: "/politica-de-plan",
+  },
 ] as const;
 
 export type PropsDeArmazonDeConsola = Readonly<{

@@ -252,4 +252,21 @@ describe("el tilde «Se controla el stock»", () => {
       armarLaFicha(ficha({ admiteControlDeStock: false })).etiquetaDelControlDeStock,
     ).toBeNull();
   });
+
+  it("con control, la confirmación trae los seis textos resueltos por clave; sin casilla no hay diálogo", () => {
+    expect(
+      armarLaFicha(ficha({ admiteControlDeStock: true })).confirmacionDelControlDeStock,
+    ).toEqual({
+      titulo: "Se controla el stock",
+      activar:
+        "Cada venta descuenta stock y se controla que no quede en negativo. Si se vende sin receta vigente, aparece «falta receta».",
+      apagar: "Las ventas no descuentan nada y no hay conteo ni alertas de faltante.",
+      confirmar: "Confirmar",
+      cancelar: "Cancelar",
+      cerrar: "Cerrar",
+    });
+    expect(
+      armarLaFicha(ficha({ admiteControlDeStock: false })).confirmacionDelControlDeStock,
+    ).toBeNull();
+  });
 });

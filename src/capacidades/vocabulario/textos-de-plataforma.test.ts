@@ -2,11 +2,58 @@ import { describe, expect, it } from "vitest";
 import { TEXTOS_DE_PLATAFORMA } from "./textos-de-plataforma";
 
 /**
- * Los textos de la consola de plataforma (pantalla «Planes»): el texto de cada clave es el de la tabla §8 del brief o el de la maqueta, y ninguno cambia sin que esta prueba lo diga. Cada uno declara
+ * Los textos de la consola de plataforma (pantallas «Planes» y «Política de cambio de plan»): el texto de cada clave es el de la tabla §8 del brief o el de la maqueta, y ninguno cambia sin que esta prueba lo diga. Cada uno declara
  * los marcadores que usa (ni uno de más ni uno de menos), sus usos y su fuente. Previene: un texto que cambia sin pasar por quien lo aprueba y un marcador que el texto usa y la clave no declara.
  */
 const APROBADOS: Readonly<Record<string, string>> = {
   "plataforma.menu.planes": "Planes",
+  "plataforma.arrepentir.puede_hasta": "Se puede deshacer hasta el {fecha}.",
+  "plataforma.arrepentir.etiqueta_suba": "Suba",
+  "plataforma.arrepentir.etiqueta_baja": "Baja",
+  "plataforma.arrepentir.deshecho": "Deshecho por arrepentimiento",
+  "plataforma.arrepentir.boton": "Deshacer por arrepentimiento",
+  "plataforma.arrepentir.vuelve": "La empresa vuelve al plan {plan} desde el {fecha}.",
+  "plataforma.arrepentir.consecuencia_baja":
+    "La baja no se aplica: la empresa sigue con el plan que tiene.",
+  "plataforma.arrepentir.consecuencia_suba":
+    "La suba no se aplica: la empresa vuelve al plan anterior y los módulos nuevos quedan en solo lectura con lo cargado.",
+  "plataforma.arrepentir.no_se_repite": "Un cambio deshecho no se puede deshacer de nuevo.",
+  "plataforma.arrepentir.del_cambio": "Arrepentimiento del cambio del {fecha}",
+  "plataforma.arrepentir.minima_suba": "Fecha mínima: hoy más {n} días de anticipación de suba.",
+  "plataforma.arrepentir.minima_baja":
+    "Fecha mínima: hoy más {n} días (el mayor entre la anticipación de baja y el plazo de arrepentimiento).",
+  "plataforma.arrepentir.falta_anticipacion":
+    "Falta anticipación. La primera fecha posible es el {fecha}.",
+  "plataforma.arrepentir.no_es_el_ultimo":
+    "Hubo un cambio posterior: solo se puede deshacer el último.",
+  "plataforma.arrepentir.sin_arrepentimiento": "Este cambio no admite arrepentimiento.",
+  "plataforma.arrepentir.plazo_vencido": "Venció el plazo para deshacer este cambio.",
+  "plataforma.arrepentir.ya_arrepentido": "Este cambio ya se deshizo.",
+  "plataforma.menu.politica": "Política de cambio de plan",
+  "plataforma.politica.titulo": "Política de cambio de plan",
+  "plataforma.politica.rotulo_suba": "Anticipación de una suba",
+  "plataforma.politica.rotulo_baja": "Anticipación de una baja",
+  "plataforma.politica.rotulo_arrepentimiento": "Plazo de arrepentimiento",
+  "plataforma.politica.unidad_dia": "día",
+  "plataforma.politica.unidad_dias": "días",
+  "plataforma.politica.pie_vigente": "Definida por {persona} el {fecha}. Motivo: {motivo}",
+  "plataforma.politica.historial": "Historial",
+  "plataforma.politica.col_fecha": "Fecha",
+  "plataforma.politica.col_suba": "Suba",
+  "plataforma.politica.col_baja": "Baja",
+  "plataforma.politica.col_arrepentimiento": "Arrepentimiento",
+  "plataforma.politica.col_definida_por": "Definida por",
+  "plataforma.politica.col_motivo": "Motivo",
+  "plataforma.politica.definir": "Definir versión nueva",
+  "plataforma.politica.falta_dias": "Ingresá un número entero de días entre 0 y 365.",
+  "plataforma.politica.falta_motivo": "Falta el motivo.",
+  "plataforma.politica.motivo_largo": "El motivo es demasiado largo.",
+  "plataforma.politica.guardar": "Guardar versión nueva",
+  "plataforma.politica.resumen": "Antes: {antes}. Después: {despues}.",
+  "plataforma.politica.no_modifica": "Los cambios de plan ya registrados no se modifican.",
+  "plataforma.politica.guardada": "Versión guardada.",
+  "plataforma.politica.conflicto":
+    "Otra persona cambió la política mientras tanto. Volvé a cargarla.",
   "plataforma.planes.titulo": "Planes",
   "plataforma.planes.nuevo_plan": "Nuevo plan",
   "plataforma.planes.crear_plan": "Crear plan",
@@ -106,7 +153,14 @@ describe("textos de la consola de plataforma", () => {
       const declarados = "marcadores" in definicion ? [...definicion.marcadores].sort() : [];
       expect(declarados).toEqual(usados);
       expect(definicion.usos).toEqual(["DE_FICHA"]);
-      expect(definicion.fuente).toEqual({ decision: "DEC-0805" });
+      // «Planes»: DEC-0805; «Política de cambio de plan» (T-1 a T-18): DEC-0814; «Deshacer por arrepentimiento» (T-19 a T-37): DEC-0817.
+      expect(definicion.fuente).toEqual({
+        decision: /^plataforma\.(menu\.politica|politica\.)/.test(_clave)
+          ? "DEC-0814"
+          : /^plataforma\.arrepentir\./.test(_clave)
+            ? "DEC-0817"
+            : "DEC-0805",
+      });
     },
   );
 });

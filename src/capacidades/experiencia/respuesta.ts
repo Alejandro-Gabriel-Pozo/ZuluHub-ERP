@@ -9,6 +9,8 @@ import {
   PARAMETROS_DE_CATALOGO,
   type CodigoDeCatalogo,
 } from "./respuesta-de-catalogo";
+import { CLAVES_DE_ERRORES_DE_CLIENTES, type CodigoDeClientes } from "./respuesta-de-clientes";
+import { CLAVES_DE_ERRORES_DE_COMPRAS, type CodigoDeCompras } from "./respuesta-de-compras";
 import {
   CLAVES_DE_ERRORES_DE_SALON,
   PARAMETROS_DE_SALON,
@@ -53,6 +55,8 @@ export type CodigoDeNegocio =
   | CodigoFiscal
   | CodigoDeCaja
   | CodigoDeCatalogo
+  | CodigoDeCompras
+  | CodigoDeClientes
   | CodigoDeSalon
   | CodigoDeVentas
   | CodigoDeStock;
@@ -87,6 +91,16 @@ const AVISOS_FISCALES = Object.fromEntries(
 const AVISOS_DE_CAJA = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_CAJA).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoDeCaja, DefinicionDeCodigo>>;
+
+/** Los códigos del directorio de clientes y proveedores (`respuesta-de-clientes.ts`): cada uno es un aviso con su texto `clientes.error.*`. */
+const AVISOS_DE_CLIENTES = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_CLIENTES).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeClientes, DefinicionDeCodigo>>;
+
+/** Los códigos de compras N1 y N2 (`respuesta-de-compras.ts`): cada uno es un aviso con su texto `compras.error.*`. */
+const AVISOS_DE_COMPRAS = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_COMPRAS).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeCompras, DefinicionDeCodigo>>;
 
 /** Los códigos de la ficha de datos de un producto (`respuesta-de-catalogo.ts`): cada uno es un aviso con su texto (`catalogo.error.*`, salvo el del precio vigente, `catalogo.precio.vigente_ahora`). */
 const AVISOS_DE_CATALOGO = Object.fromEntries(
@@ -125,6 +139,8 @@ export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo
   ...AVISOS_FISCALES,
   ...AVISOS_DE_CAJA,
   ...AVISOS_DE_CATALOGO,
+  ...AVISOS_DE_COMPRAS,
+  ...AVISOS_DE_CLIENTES,
   ...AVISOS_DE_SALON,
   ...AVISOS_DE_VENTAS,
   ...AVISOS_DE_STOCK,

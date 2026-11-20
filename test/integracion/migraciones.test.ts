@@ -96,6 +96,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0088_rol_autenticacion_de_plataforma.sql",
         "0089_politica_de_cambio_de_plan.sql",
         "0090_datos_que_se_piden.sql",
+        "0091_movimiento_de_dinero.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -173,6 +174,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0088_rol_autenticacion_de_plataforma.sql",
           "0089_politica_de_cambio_de_plan.sql",
           "0090_datos_que_se_piden.sql",
+          "0091_movimiento_de_dinero.sql",
         ],
       });
     } finally {
@@ -356,6 +358,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0088_rol_autenticacion_de_plataforma.sql",
         "0089_politica_de_cambio_de_plan.sql",
         "0090_datos_que_se_piden.sql",
+        "0091_movimiento_de_dinero.sql",
       ]);
     } finally {
       await aparte.destruir();

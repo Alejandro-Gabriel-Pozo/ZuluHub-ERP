@@ -13,12 +13,17 @@ import {
 } from "../logica/plan";
 import { fechaArgentinaDeInstante, fechaLegible } from "../logica/vigencia";
 import { accionDelModulo } from "../logica/modulo-de-empresa";
+import { Arrepentimiento, type PropsDeArrepentimiento } from "./arrepentimiento.cliente";
 import { CambioDeModulo } from "./cambio-de-modulo.cliente";
 import { CambioDePlan } from "./cambio-de-plan.cliente";
 import estilos from "./empresas.module.css";
 import propios from "./plan.module.css";
 
-export type PropsDePanelDePlan = Readonly<{ plan: PlanDeEmpresa }>;
+export type PropsDePanelDePlan = Readonly<{
+  plan: PlanDeEmpresa;
+  /** La acción de deshacer por arrepentimiento (la pasa la página); sin ella no se muestra ese bloque. */
+  accionDeArrepentir?: PropsDeArrepentimiento["accion"];
+}>;
 
 /** De un instante ISO al día argentino 'AAAA-MM-DD' que entiende `fechaLegible`. */
 const soloFecha = fechaArgentinaDeInstante;
@@ -27,7 +32,7 @@ const soloFecha = fechaArgentinaDeInstante;
  * La sección «Plan» de una empresa: plan actual, límites y módulos. Sin estado propio (se arma en el servidor);
  * solo el cambio de plan es interactivo. No se muestra el uso de usuarios ni de sucursales: el backend no lo conoce.
  */
-export function PanelDePlan({ plan }: PropsDePanelDePlan) {
+export function PanelDePlan({ plan, accionDeArrepentir }: PropsDePanelDePlan) {
   const { planActual, programada, empresasDelCliente } = plan;
   return (
     <div className={propios["panel"]}>
@@ -58,6 +63,15 @@ export function PanelDePlan({ plan }: PropsDePanelDePlan) {
               {programada.versionNumero} desde {fechaLegible(soloFecha(programada.vigenteDesde))}.
             </Texto>
           </Aviso>
+        )}
+        {plan.condiciones === undefined || accionDeArrepentir === undefined ? null : (
+          <Arrepentimiento
+            tenantId={plan.tenantId}
+            cambio={plan.condiciones.ultimoCambio}
+            hoy={plan.condiciones.hoy}
+            puedeArrepentir={plan.puedeArrepentir === true}
+            accion={accionDeArrepentir}
+          />
         )}
         <CambioDePlan plan={plan} />
       </section>

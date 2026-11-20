@@ -1,4 +1,5 @@
 import type { DependenciasDeClientes } from "./contrato";
+import { armarEditarParteConRoles } from "./editar-parte-con-roles";
 import type { DECLARACIONES } from "./declaraciones";
 import {
   armarCrearParte,
@@ -20,6 +21,7 @@ export function crearCasosDeUsoDeClientes(dependencias: DependenciasDeClientes) 
   return {
     crearParte: armarCrearParte(dependencias),
     editarParte: armarEditarParte(dependencias),
+    editarParteConRoles: armarEditarParteConRoles(dependencias),
     desactivarParte: armarDesactivarParte(dependencias),
     reactivarParte: armarReactivarParte(dependencias),
     cambiarRolesDeParte: armarCambiarRolesDeParte(dependencias),

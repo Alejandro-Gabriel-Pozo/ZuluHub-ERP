@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0823",
+  "fecha": "2026-11-20",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La violación inyectada de cada invariante de libro se arma con tablas efímeras en un esquema de prueba que se borra al terminar.",
+  "que_cambia": "Solo la prueba de conformidad: crea y borra un esquema en la base de pruebas, nunca en Neon. Revertir: borrar test/integracion/libros-conformidad-efimeros.ts y sus casos.",
+  "donde": "test/integracion/libros-conformidad-efimeros.ts; test/integracion/libros-conformidad.test.ts; brief PR-LB-2 §8, repo de documentos, 11-especificaciones"
+}

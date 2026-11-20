@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0814",
+  "fecha": "2026-11-20",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Textos T-1 a T-18 de la pantalla «Política de cambio de plan» de la consola, aprobados por el dueño con «h14b ok» (20/11/2026); T-38 reusa el texto de error que la consola ya tenía.",
+  "que_cambia": "Cada texto lleva usos y fuente en textos-de-plataforma.ts. Los T-19 a T-37 (arrepentir, fecha mínima) quedan para la parte que espera una lectura nueva en src/. Revertir: quitar las claves `plataforma.politica.*` del catálogo, de la ficha y de la pantalla.",
+  "donde": "src/capacidades/vocabulario/textos-de-plataforma.ts; src/capacidades/pantallas/ficha-de-politica-de-consola.ts; Pedernal-docs 11-especificaciones/h14b-textos-aprobados.md; decisiones-del-dueno-2026-11.md fila del 20/11/2026 «h14b ok»"
+}

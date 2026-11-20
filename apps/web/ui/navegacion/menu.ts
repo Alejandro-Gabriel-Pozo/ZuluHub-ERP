@@ -39,6 +39,9 @@ export const AREAS_DEL_MENU = [
   // versión 4»). Íconos: SUPUESTO (DEC-0359), se reutilizan los que ya existen (la maqueta deja los íconos por definir); revertirlo es cambiar una fila.
   { clave: "ventas", etiqueta: "navegacion.area.ventas", icono: "comprobantes", fija: false },
   { clave: "catalogo", etiqueta: "navegacion.area.catalogo", icono: "secciones", fija: false },
+  // Compras: «Compras» como área lo aprobó el dueño (DDD fila 110) y se reusa su texto, `compras.compra.compras` (`pantallas-de-compras-inventario.md` §5). Ícono: SUPUESTO (DEC-0359), el de
+  // «empresa», que ya existe; revertirlo es cambiar esta fila. Es el tercer y último lugar de la barra (`MAXIMO_DE_DESTINOS_DE_MODULOS`).
+  { clave: "compras", etiqueta: "compras.compra.compras", icono: "empresa", fija: false },
   { clave: "cuenta", etiqueta: "navegacion.cuenta", icono: "cuenta", fija: true },
 ] as const satisfies readonly Readonly<{
   clave: string;
@@ -58,6 +61,10 @@ export const GRUPOS_DEL_MENU = [
   { clave: "caja", etiqueta: null },
   { clave: "productos", etiqueta: null },
   { clave: "salon", etiqueta: "salon.texto.grupo_salon" },
+  // Una reserva por pantalla de Clientes y proveedores y de Compras: sin filas no aparecen (todo nace cerrado); cada pantalla suma su fila.
+  { clave: "clientes", etiqueta: null },
+  { clave: "proveedores", etiqueta: null },
+  { clave: "compras", etiqueta: null },
   { clave: "carta", etiqueta: "navegacion.grupo.carta" },
   { clave: "stock", etiqueta: null },
   { clave: "empresa", etiqueta: "navegacion.empresa" },
