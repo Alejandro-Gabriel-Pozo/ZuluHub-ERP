@@ -24,10 +24,12 @@ type BotonDeFichaDeConsola = Readonly<{
 export type FichaDePantallaDeConsola = Readonly<{
   archivos: readonly string[];
   rutas: readonly string[];
-  titulo: ClaveDeTextoDePlataforma;
+  /** Ausente si la ficha es de algo que se suma a una pantalla que ya tenía su título. */
+  titulo?: ClaveDeTextoDePlataforma;
   /** La acción que exige cada consulta de la pantalla y la fila del menú. */
   acceso: ClaveAccionDePlataforma;
-  menu: Readonly<{ clave: string; texto: ClaveDeTextoDePlataforma; href: string }>;
+  /** Ausente si la ficha es de algo que se suma a una pantalla que ya tenía su entrada de menú. */
+  menu?: Readonly<{ clave: string; texto: ClaveDeTextoDePlataforma; href: string }>;
   campos: readonly Readonly<{ dato: IdDeDato; archivo: string }>[];
   botones: readonly BotonDeFichaDeConsola[];
   modales: readonly Readonly<{
@@ -37,10 +39,13 @@ export type FichaDePantallaDeConsola = Readonly<{
   }>[];
   /** El error y la falta de permiso salen con el mensaje genérico aprobado. */
   estados: Readonly<Record<"ERROR" | "SIN_PERMISO", ClaveDeTextoDePlataforma | "GENERICO">>;
+  /** Los textos de ESTA pantalla (el catálogo de la consola es uno solo y lo comparten todas: cada ficha declara los suyos). */
   textos: Readonly<
-    Record<
-      ClaveDeTextoDePlataforma,
-      Readonly<{ usos: readonly string[]; fuente: Readonly<{ decision: `DEC-${number}` }> }>
+    Partial<
+      Record<
+        ClaveDeTextoDePlataforma,
+        Readonly<{ usos: readonly string[]; fuente: Readonly<{ decision: `DEC-${number}` }> }>
+      >
     >
   >;
   /** Textos ya aprobados del núcleo (conexión, envío y estados) que la pantalla reusa: existen en el catálogo común. */

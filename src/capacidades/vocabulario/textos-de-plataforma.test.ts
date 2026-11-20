@@ -7,6 +7,28 @@ import { TEXTOS_DE_PLATAFORMA } from "./textos-de-plataforma";
  */
 const APROBADOS: Readonly<Record<string, string>> = {
   "plataforma.menu.planes": "Planes",
+  "plataforma.arrepentir.puede_hasta": "Se puede deshacer hasta el {fecha}.",
+  "plataforma.arrepentir.etiqueta_suba": "Suba",
+  "plataforma.arrepentir.etiqueta_baja": "Baja",
+  "plataforma.arrepentir.deshecho": "Deshecho por arrepentimiento",
+  "plataforma.arrepentir.boton": "Deshacer por arrepentimiento",
+  "plataforma.arrepentir.vuelve": "La empresa vuelve al plan {plan} desde el {fecha}.",
+  "plataforma.arrepentir.consecuencia_baja":
+    "La baja no se aplica: la empresa sigue con el plan que tiene.",
+  "plataforma.arrepentir.consecuencia_suba":
+    "La suba no se aplica: la empresa vuelve al plan anterior y los módulos nuevos quedan en solo lectura con lo cargado.",
+  "plataforma.arrepentir.no_se_repite": "Un cambio deshecho no se puede deshacer de nuevo.",
+  "plataforma.arrepentir.del_cambio": "Arrepentimiento del cambio del {fecha}",
+  "plataforma.arrepentir.minima_suba": "Fecha mínima: hoy más {n} días de anticipación de suba.",
+  "plataforma.arrepentir.minima_baja":
+    "Fecha mínima: hoy más {n} días (el mayor entre la anticipación de baja y el plazo de arrepentimiento).",
+  "plataforma.arrepentir.falta_anticipacion":
+    "Falta anticipación. La primera fecha posible es el {fecha}.",
+  "plataforma.arrepentir.no_es_el_ultimo":
+    "Hubo un cambio posterior: solo se puede deshacer el último.",
+  "plataforma.arrepentir.sin_arrepentimiento": "Este cambio no admite arrepentimiento.",
+  "plataforma.arrepentir.plazo_vencido": "Venció el plazo para deshacer este cambio.",
+  "plataforma.arrepentir.ya_arrepentido": "Este cambio ya se deshizo.",
   "plataforma.planes.titulo": "Planes",
   "plataforma.planes.nuevo_plan": "Nuevo plan",
   "plataforma.planes.crear_plan": "Crear plan",
@@ -106,7 +128,10 @@ describe("textos de la consola de plataforma", () => {
       const declarados = "marcadores" in definicion ? [...definicion.marcadores].sort() : [];
       expect(declarados).toEqual(usados);
       expect(definicion.usos).toEqual(["DE_FICHA"]);
-      expect(definicion.fuente).toEqual({ decision: "DEC-0805" });
+      // «Planes»: DEC-0805; «Deshacer por arrepentimiento» (H-14b, textos T-19 a T-37 aprobados el 20/11/2026): DEC-0817.
+      expect(definicion.fuente).toEqual({
+        decision: /^plataforma\.arrepentir\./.test(_clave) ? "DEC-0817" : "DEC-0805",
+      });
     },
   );
 });

@@ -50,5 +50,10 @@
     "apps/plataforma/app/planes/**",
     "apps/plataforma/pantallas/*",
     "apps/plataforma/logica/*"
+  ],
+  "test/web/ficha-de-arrepentimiento-de-consola.test.ts": [
+    "apps/plataforma/app/empresas/**",
+    "apps/plataforma/pantallas/*",
+    "apps/plataforma/logica/*"
   ]
 }
