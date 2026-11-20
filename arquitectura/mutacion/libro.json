@@ -1,0 +1,6 @@
+{
+  "grupo": "libro",
+  "archivos": "src/primitivas/libro/**/*.ts",
+  "minutos": 1,
+  "pruebas": "src/primitivas/libro"
+}
