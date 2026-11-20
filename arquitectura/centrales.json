@@ -137,6 +137,20 @@
       "soloJunta": true,
       "lineas": 98,
       "excepciones": ["lotes-y-produccion", "salon-y-comandas"]
+    },
+    {
+      "ruta": "src/capacidades/permisos/empresa.ts",
+      "exporta": ["PERMISOS_DE_EMPRESA", "ReglasDeEmpresa", "REGLAS_DE_EMPRESA", "tablaDePermisos"],
+      "importaDe": [
+        "src/capacidades/permisos/permisos-de-*",
+        "src/capacidades/modulos/catalogo",
+        "src/capacidades/modulos/activos",
+        "src/capacidades/permisos/guard",
+        "src/capacidades/permisos/roles"
+      ],
+      "parteDedicada": "src/capacidades/permisos/permisos-de-<módulo>.ts",
+      "soloJunta": false,
+      "lineas": 80
     }
   ]
 }
