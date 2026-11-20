@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0824",
+  "fecha": "2026-11-20",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las divergencias de stock y caja se declaran solo en el registro de libros, con vencimiento que hace cumplir la prueba, y no en la deuda, porque el tope de 10 excepciones está lleno.",
+  "que_cambia": "Nada en arquitectura/deuda: las divergencias viven en registro.ts con su vencimiento. Subir el tope de excepciones es decisión del dueño; si lo sube, se pueden pasar a excepciones.",
+  "donde": "src/primitivas/libro/registro.ts; arquitectura/deuda/configuracion.json (topeDeExcepciones 10)"
+}
