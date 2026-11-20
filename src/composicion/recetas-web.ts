@@ -1,7 +1,11 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
-import { MAXIMO_DE_PERSONAS_POR_CONSULTA } from "../modulos/identidad/publico";
+import {
+  MAXIMO_DE_PERSONAS_POR_CONSULTA,
+  type ConsultasDeIdentidad,
+} from "../modulos/identidad/publico";
 import type {
+  ConsultasDeStock,
   PaginaDeIngredientes,
   PaginaDeRecetas,
   RecetaDeProducto,
@@ -17,7 +21,6 @@ import {
   type EntradaDeLosIngredientes,
 } from "./entradas-de-recetas";
 import { traducirErrorDeReceta } from "./errores-de-recetas";
-import type { Web } from "./web";
 
 /**
  * Las LECTURAS de la pantalla de Recetas (B1 a B5 de `recetas-pantalla.md` §8): la lista, una receta con su última versión, los ingredientes que se ofrecen, la vista previa de lo que se
@@ -39,14 +42,14 @@ import type { Web } from "./web";
 
 export type DependenciasDeRecetasWeb = Readonly<{
   consultas: () => Pick<
-    ReturnType<Web["consultasDeStock"]>,
+    ConsultasDeStock,
     | "listarRecetas"
     | "recetaDeProducto"
     | "ingredientesParaReceta"
     | "vistaPreviaDeReceta"
     | "versionesDeReceta"
   >;
-  personas: () => Pick<ReturnType<Web["consultasDeIdentidad"]>, "personasParaMostrar">;
+  personas: () => Pick<ConsultasDeIdentidad, "personasParaMostrar">;
   respuesta: DependenciasDeRespuesta;
 }>;
 

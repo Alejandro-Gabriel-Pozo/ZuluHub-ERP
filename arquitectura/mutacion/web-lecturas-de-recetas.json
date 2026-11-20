@@ -1,6 +1,6 @@
 {
   "grupo": "web (lecturas de recetas)",
-  "archivos": "src/composicion/entradas-de-recetas.ts,src/composicion/errores-de-recetas.ts",
+  "archivos": "src/composicion/recetas-web.ts,src/composicion/entradas-de-recetas.ts,src/composicion/errores-de-recetas.ts",
   "minutos": 1,
-  "pruebas": "src/composicion/entradas-de-recetas.test.ts src/composicion/errores-de-recetas.test.ts"
+  "pruebas": "src/composicion/recetas-web.test.ts src/composicion/entradas-de-recetas.test.ts src/composicion/errores-de-recetas.test.ts"
 }

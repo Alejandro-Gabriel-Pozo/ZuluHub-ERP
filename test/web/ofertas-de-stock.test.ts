@@ -23,7 +23,10 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
 const RUTA = "../../apps/web/servidor/ofertas-de-stock";
 type Puede = (contexto: never, accion: string) => Promise<boolean>;
 const cargar = async () =>
-  (await import(/* @vite-ignore */ RUTA)) as unknown as { puedeEnStock: Puede };
+  (await import(/* @vite-ignore */ RUTA)) as unknown as {
+    puedeEnStock: Puede;
+    puedeEditarRecetas: (contexto: never) => Promise<boolean>;
+  };
 const contexto = () => ({ empresaId: "e-1" }) as never;
 const conPermisos = (acciones: string[], activos: string[] = ["stock"]) => {
   mundo.permisos = ok({ acciones, modulos: { activos, enSoloLectura: [] } });
@@ -53,5 +56,22 @@ describe("puedeEnStock", () => {
     expect(await (await cargar()).puedeEnStock(contexto(), "depositos.crear")).toBe(false);
     mundo.fallan = true;
     expect(await (await cargar()).puedeEnStock(contexto(), "depositos.crear")).toBe(false);
+  });
+});
+
+describe("puedeEditarRecetas", () => {
+  it("gerente o administrador (composiciones.editar): sí", async () => {
+    conPermisos(["stock.ver", "composiciones.editar"]);
+    expect(await (await cargar()).puedeEditarRecetas(contexto())).toBe(true);
+  });
+  it("operador (solo stock.ver): no", async () => {
+    conPermisos(["stock.ver"]);
+    expect(await (await cargar()).puedeEditarRecetas(contexto())).toBe(false);
+  });
+  it("sin permisos leídos (error o falla): no", async () => {
+    mundo.permisos = err("SIN_PERMISO");
+    expect(await (await cargar()).puedeEditarRecetas(contexto())).toBe(false);
+    mundo.fallan = true;
+    expect(await (await cargar()).puedeEditarRecetas(contexto())).toBe(false);
   });
 });

@@ -3,8 +3,8 @@
   "fecha": "2026-11-16",
   "quien": "sesión",
   "tipo": "DINERO",
-  "estado": "PENDIENTE_DE_OK",
-  "decision": "SUPUESTO: el costo por unidad en la lista de recetas y de versiones sale como texto decimal con moneda ARS y precios de hoy; sin costo conocido es null, nunca cero.",
+  "estado": "CONFIRMADA",
+  "decision": "el costo por unidad en la lista de recetas y de versiones sale como texto decimal con moneda ARS y precios de hoy; sin costo conocido es null, nunca cero.",
   "que_cambia": "Una receta con un ingrediente sin costo muestra «Sin costo» en vez de un total parcial. Revertir: cambiar la regla de incompleto en costoPorUnidadDeLaVersion.",
-  "donde": "src/modulos/stock/casos-de-uso/lectura-de-recetas.ts; recetas-pantalla.md §8 B1 y B5; DDD 119 punto 3"
+  "donde": "src/modulos/stock/casos-de-uso/lectura-de-recetas.ts; recetas-pantalla.md §8 B1 y B5; DDD 119 punto 3; aprobada por el dueño el 18/11/2026 (DDD fila 299)"
 }
