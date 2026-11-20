@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0803",
+  "fecha": "2026-11-20",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El registro de datos admite datos de la consola (ámbito PLATAFORMA): solo se piden desde apps/plataforma y se ponen con acciones planes.* de plataforma.",
+  "que_cambia": "Un campo de la consola ya no necesita «pendiente» (deuda que solo baja); consola y web no mezclan datos, y los de plataforma no llevan módulo ni estado de empresa. Revertir: volver DefinicionDeDato a un solo tipo y quitar registro-de-plataforma.ts y la regla de ámbito.",
+  "donde": "src/capacidades/datos/tipos-de-datos.ts; src/capacidades/datos/registro-de-plataforma.ts; test/arquitectura/campos-con-dato-registro-apoyo.ts; delegación del orquestador 19/11/2026 (mensaje al construir «Planes» de la consola)"
+}

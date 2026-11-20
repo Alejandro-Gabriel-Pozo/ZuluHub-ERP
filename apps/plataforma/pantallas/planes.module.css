@@ -1,0 +1,50 @@
+.migas {
+  margin: 0 0 var(--espacio-4);
+  color: var(--color-texto-suave);
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+  margin-bottom: var(--espacio-4);
+}
+
+.seccion {
+  margin-top: var(--espacio-6);
+}
+
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--espacio-3);
+}
+
+.grupo {
+  margin: var(--espacio-4) 0;
+  padding: var(--espacio-3);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radio-base);
+}
+
+.grupo legend {
+  padding: 0 var(--espacio-2);
+  font-weight: 600;
+}
+
+.nota {
+  display: block;
+  margin-left: calc(var(--espacio-6) + var(--espacio-2));
+  color: var(--color-texto-suave);
+  font-size: 0.875rem;
+}
+
+.sinMargen {
+  margin: 0;
+  padding-left: var(--espacio-5);
+}
+
+.campoAncho {
+  max-width: 28rem;
+}

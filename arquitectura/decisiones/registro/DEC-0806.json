@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0806",
+  "fecha": "2026-11-20",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: los textos de la consola viven en `textos-de-plataforma.ts`, aparte de `CATALOGO_DE_TEXTOS`, y su ficha de pantalla lleva un tipo propio con acciones de plataforma.",
+  "que_cambia": "Si se sumaran a `CATALOGO_DE_TEXTOS`, `catalogosDeMarca` los ofrecería como vocabulario reemplazable de una marca. Revertir: moverlos a un `catalogo-*.ts` incluido en `CATALOGO_DE_TEXTOS` y ocultarlos del editor de submarcas.",
+  "donde": "src/capacidades/vocabulario/textos-de-plataforma.ts; src/plataforma/consultas/catalogos.ts"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0805",
+  "fecha": "2026-11-20",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Textos de «Planes» de la consola: los de la tabla §8 del brief, los de la maqueta que no están en la tabla y 1 nuevo («Todavía no hay planes.»).",
+  "que_cambia": "Cada texto lleva usos y fuente en textos-de-plataforma.ts; conexión, verificación y error de carga reusan los del núcleo. Revertir: quitar la clave del catálogo, de la ficha y de la pantalla.",
+  "donde": "src/capacidades/vocabulario/textos-de-plataforma.ts; src/capacidades/pantallas/ficha-de-planes-de-consola.ts; Pedernal-docs 11-especificaciones/briefs/plataforma/PR-planes-consola.md §8; decisiones-del-dueno-2026-11.md fila 173"
+}
