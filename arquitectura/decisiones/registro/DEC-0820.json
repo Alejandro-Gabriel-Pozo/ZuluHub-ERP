@@ -3,8 +3,8 @@
   "fecha": "2026-11-20",
   "quien": "padre",
   "tipo": "INFRAESTRUCTURA",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Los libros nuevos comparten un paquete puro (huella, decisión de repetición, clave, espejo) y no una tabla común de asientos (ya decidido el 16/11).",
   "que_cambia": "Solo código nuevo sin uso todavía: ni base, ni pantalla, ni caja, stock o compras. Revertir: borrar la carpeta src/primitivas/libro/.",
-  "donde": "src/primitivas/libro/; brief PR-LB-1 y primitiva-de-libro-diseno.md §2.2, repo de documentos, 11-especificaciones"
+  "donde": "src/primitivas/libro/; brief PR-LB-1 y primitiva-de-libro-diseno.md §2.2, repo de documentos, 11-especificaciones; aprobada por el dueño el 20/11/2026 (DDD, fila «lista única de 15 preguntas», punto 6)"
 }
