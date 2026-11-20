@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0769",
+  "fecha": "2026-11-19",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Cobrar: ajustes para igualar la maqueta (fila 294): vista «Cobro» con «Volver a la cuenta», «Resultado», «No se pudo cobrar. No se cobró nada.», «Volver al cobro»; reemplaza el supuesto de DEC-0501.",
+  "que_cambia": "Cómo se ve el cobro: una vista con título y flecha en lugar de una hoja, y un resultado propio cuando el cobro se rechaza. Revertir: volver a la hoja (un archivo) y a «Volver».",
+  "donde": "delegación del dueño, DDD:294 y DDD:175 de decisiones-del-dueno-2026-11.md; PR-3b-cobrar-como-la-maqueta.md"
+}

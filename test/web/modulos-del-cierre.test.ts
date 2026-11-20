@@ -22,7 +22,7 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
   },
 }));
 
-const RUTA = "../../apps/web/servidor/modulos";
+const RUTA = "../../apps/web/servidor/ofertas-de-cierre";
 const cargar = (
   ruta: string,
 ): Promise<{ accionesDelCierre: (contexto: unknown) => Promise<Record<string, boolean>> }> =>

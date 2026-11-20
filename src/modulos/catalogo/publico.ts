@@ -5,6 +5,7 @@ export { DECLARACIONES as DECLARACIONES_DE_CATALOGO } from "./casos-de-uso/decla
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_CATALOGO } from "./consultas/declaraciones";
 export { crearCasosDeUsoDeCatalogo, type CasosDeUsoDeCatalogo } from "./casos-de-uso/casos-de-uso";
 export { crearConsultasDeCatalogo, type ConsultasDeCatalogo } from "./consultas/consultas";
+export type { GrupoDeVistaPrevia } from "./consultas/consultas-de-copia-de-opciones";
 export type {
   EstadoDeProducto,
   FichaDeProducto,
@@ -58,6 +59,20 @@ export type {
   EntradaDeCopiarOpciones,
   SalidaDeCopiarOpciones,
 } from "./casos-de-uso/copiar-opciones";
+export type {
+  EntradaDeDestacarRenglon,
+  EntradaDeOrdenarRenglones,
+  SalidaDeDestacarRenglon,
+  SalidaDeOrdenarRenglones,
+} from "./casos-de-uso/orden-de-carta";
+export type {
+  EntradaDeCambiarMiembroDeFamilia,
+  EntradaDeCrearFamilia,
+  EntradaDeEditarFamilia,
+  SalidaDeCambiarMiembroDeFamilia,
+  SalidaDeCrearFamilia,
+  SalidaDeEditarFamilia,
+} from "./casos-de-uso/familias";
 export type {
   EntradaDeCrearSeccion,
   EntradaDeEditarSeccion,
@@ -139,6 +154,12 @@ export {
   type PublicoDeCartaDb,
 } from "./persistencia/lector-publico-de-carta";
 export { crearLectorDeCarta, type LectorDeCarta } from "./persistencia/lector-de-carta";
+export {
+  crearRepositorioDeFamilias,
+  type Familia,
+  type MiembroDeFamilia,
+  type RepositorioDeFamilias,
+} from "./persistencia/repositorio-de-familias";
 export {
   crearRepositorioDeSecciones,
   type RepositorioDeSecciones,

@@ -59,3 +59,24 @@ export function cuponDePagoDesdeTexto(texto: string): Resultado<CuponDePago, "CU
   }
   return ok(texto as CuponDePago);
 }
+
+/** Por qué un cupón no se acepta: `NUMERO_DE_TARJETA` si parece el número de una tarjeta (con o sin separadores), `FORMA` por cualquier otra razón. */
+export type MotivoDelCuponInvalido = "FORMA" | "NUMERO_DE_TARJETA";
+
+const SEPARADORES_DEL_CUPON = /[._/-]/g;
+const TIENE_LETRA_O_DIGITO = /[A-Za-z0-9]/;
+
+/**
+ * El motivo por el que un cupón no es válido, o `null` si lo es: la regla que usan el dominio de caja (dentro de la transacción) y la pantalla de cobro (al escribir). Es
+ * `cuponDePagoDesdeTexto` MÁS tres reglas de la base (`cobro_cupon_ck`) que la primitiva no tiene: sin espacios, no solo separadores, y ningún tramo de 13 dígitos una vez
+ * quitados los separadores (`4509-9535-6623-3704`). Una sola regla en un solo lugar (ficha de pantalla del cobro, F4): antes la copiaban caja y la maqueta.
+ * SUPUESTO (DEC-0065): alinear `cuponDePagoDesdeTexto` con la base sigue siendo trabajo aparte; acá se componen para rechazar lo mismo que la base.
+ */
+export function motivoDelCupon(valor: unknown): MotivoDelCuponInvalido | null {
+  if (typeof valor !== "string") return "FORMA";
+  if (valor.includes(" ") || !TIENE_LETRA_O_DIGITO.test(valor)) return "FORMA";
+  if (TRECE_DIGITOS_SEGUIDOS.test(valor.replace(SEPARADORES_DEL_CUPON, ""))) {
+    return "NUMERO_DE_TARJETA";
+  }
+  return cuponDePagoDesdeTexto(valor).ok ? null : "FORMA";
+}

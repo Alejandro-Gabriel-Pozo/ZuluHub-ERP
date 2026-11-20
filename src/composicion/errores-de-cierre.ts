@@ -114,6 +114,13 @@ const ERRORES_PROPIOS: Readonly<Record<ErrorPropio, CodigoDeCierre>> = {
   PRODUCTO_SIN_PRECIO: GENERICO,
   PRECIO_ABIERTO_NO_PERMITIDO: GENERICO,
   TICKET_NO_ENCONTRADO: GENERICO,
+  CAJA_NO_ENCONTRADA: GENERICO,
+  CAJA_INACTIVA: GENERICO,
+  CANTIDAD_NO_MOSTRABLE: GENERICO,
+  IMPORTE_NO_MOSTRABLE: GENERICO,
+  ANCHO_INVALIDO: GENERICO,
+  TICKET_NO_IMPRIMIBLE: GENERICO,
+  DEMASIADOS_TICKETS: GENERICO,
 };
 
 /** Los errores con forma de objeto y `codigo` que son del negocio (el de la empresa que no opera tiene su propio texto y pasa). */

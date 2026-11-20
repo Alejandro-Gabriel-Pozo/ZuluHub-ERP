@@ -56,6 +56,25 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.dato.unidad": { porDefecto: "Unidad" },
   "catalogo.dato.alicuota_de_iva": { porDefecto: "Alícuota de IVA" },
   "catalogo.dato.seccion_de_la_carta": { porDefecto: "Sección de la carta" },
+  // PR-3 de Catálogo: la casilla de la ficha. Texto aprobado por el dueño el 09/11/2026 (`productos.html`, «Textos nuevos», fila «¿Qué es? · Todos · Se controla el stock · …»).
+  "catalogo.dato.se_controla_el_stock": {
+    porDefecto: "Se controla el stock",
+    usos: [{ como: "DATO", dato: "control-de-stock-de-producto" }],
+    fuente: { decision: "DEC-0797" },
+  },
+  // Diálogo que confirma el cambio de la casilla (pedido del dueño del 20/11/2026; inventario aceptado por el orquestador, fila 173). Título, «Confirmar» y «Cancelar» reusan textos ya aprobados.
+  "catalogo.control_de_stock.activar": {
+    largoMaximo: 160,
+    porDefecto:
+      "Cada venta descuenta stock y se controla que no quede en negativo. Si se vende sin receta vigente, aparece «falta receta».",
+    usos: [{ como: "DATO", dato: "control-de-stock-de-producto" }],
+    fuente: { decision: "DEC-0813" },
+  },
+  "catalogo.control_de_stock.apagar": {
+    porDefecto: "Las ventas no descuentan nada y no hay conteo ni alertas de faltante.",
+    usos: [{ como: "DATO", dato: "control-de-stock-de-producto" }],
+    fuente: { decision: "DEC-0813" },
+  },
   // Opción vacía de los desplegables de la ficha; el desplegable de la alícuota arranca ahí (dueño, 12/11/2026, pregunta 4). Distinto de «Elegí una opción» (`selector.elegir_una_opcion`).
   "catalogo.dato.sin_elegir": { porDefecto: "Sin elegir" },
 
@@ -106,6 +125,19 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.error.accion_no_permitida": { porDefecto: "Esta acción no está permitida" },
   "catalogo.accion.cancelar": { porDefecto: "Cancelar" },
 
+  // Ocultar un producto (A15). Los cinco rótulos son T13 de `textos-nuevos-pendientes.md` (maqueta `productos.html:310-318`, `carta-real-especificacion.md` §10.6 punto 6), aprobados por el dueño el
+  // 15/11/2026 (`decisiones-del-dueno-2026-11.md`, DDD:165). «Oculto con existencia negativa», también de T13, no se construye en esta pantalla (hace falta leer la existencia: pregunta pendiente).
+  // Los dos mensajes de bloqueo los aprobó el dueño el 12/11/2026 (`productos.html:318`: «3.- sí», textos propuestos por el padre y aprobados): `PRODUCTO_CON_EXISTENCIA` y `PRODUCTO_CON_CONTEO_ABIERTO`.
+  "catalogo.ocultar.ocultar": { porDefecto: "Ocultar" },
+  "catalogo.ocultar.volver_a_mostrar": { porDefecto: "Volver a mostrar" },
+  "catalogo.ocultar.ocultar_en_la_empresa": { porDefecto: "Ocultar en toda la empresa" },
+  "catalogo.ocultar.oculto": { porDefecto: "Oculto" },
+  "catalogo.ocultar.oculto_en_la_empresa": { porDefecto: "Oculto en toda la empresa" },
+  "catalogo.error.primero_existencia_en_cero": { porDefecto: "Primero dejá la existencia en 0." },
+  "catalogo.error.conteo_abierto_con_el_producto": {
+    porDefecto: "Hay un conteo abierto con este producto.",
+  },
+
   // Secciones de la carta (A8, parte 1). Fuente: la maqueta APROBADA `Pedernal-docs/10-ux-ui/prototipos-gastronomia/productos-secciones.html` (aprobada por el dueño el 12/11/2026,
   // `decisiones-del-dueno-2026-11.md` fila del 12/11 «Maquetas del recorrido mínimo»), tabla «Textos nuevos» (`PA_REG`, líneas 327-334): «Secciones» (`sec.titulo`, línea 328: botón de la
   // ficha y título de la lista; también la fila «Secciones» del menú, fila del 13/11 «Rótulos del menú por áreas aprobados»), «Nueva sección» (`sec.nueva`, línea 329), «Subir» y «Bajar»
@@ -120,6 +152,27 @@ export const TEXTOS_DE_CATALOGO = {
   // SUPUESTO (DEC-0434; pendiente de aprobación del dueño: pregunta P1, opción A): nombre accesible del botón ‹ de la barra de las pantallas de una sección, `aria-label` «Volver a la lista» de la maqueta
   // (líneas 381 y 389). No figura en sus «Textos nuevos» ni en los reutilizados. Revertir: quitar el botón (se vuelve por el menú).
   "catalogo.seccion.volver_a_la_lista": { porDefecto: "Volver a la lista" },
+
+  // Carta en línea (C1). Fuente: la maqueta APROBADA `Pedernal-docs/10-ux-ui/prototipos-gastronomia/carta-en-linea.html` (aprobada por el dueño: filas 60 y 70 de `decisiones-del-dueno-2026-11.md`; sus
+  // «Textos por aprobar» llevan el visto bueno del 12/11/2026), tabla «Textos por aprobar» (`PA_REG`: «Carta en línea», «Rubro», «Lugar», «Poner en línea», «Sacar de línea», «En línea», «Fuera de línea»,
+  // «Dirección pública», «No habilitado», «Salen N productos» / «Sale 1 producto», «Sin sección», «Oculto», «No disponible», «Descargar QR») y de sus «Textos ya aprobados» («Nombre», «Guardar», «Copiar»,
+  // «Sin precio», «Desactivado», «Esta acción no está permitida»). NO están: «Frase final» (su rótulo no está confirmado: la propia maqueta lo marca «Pendiente») ni el aviso de «No habilitado» sin la perilla.
+  "catalogo.carta.titulo": { porDefecto: "Carta en línea" },
+  "catalogo.carta.rubro": { porDefecto: "Rubro" },
+  "catalogo.carta.lugar": { porDefecto: "Lugar" },
+  "catalogo.carta.poner": { porDefecto: "Poner en línea" },
+  "catalogo.carta.sacar": { porDefecto: "Sacar de línea" },
+  "catalogo.carta.en_linea": { porDefecto: "En línea" },
+  "catalogo.carta.fuera_de_linea": { porDefecto: "Fuera de línea" },
+  "catalogo.carta.direccion": { porDefecto: "Dirección pública" },
+  "catalogo.carta.descargar_qr": { porDefecto: "Descargar QR" },
+  "catalogo.carta.salen": { porDefecto: "Salen {cantidad} productos", marcadores: ["cantidad"] },
+  "catalogo.carta.sale_uno": { porDefecto: "Sale 1 producto" },
+  "catalogo.carta.sin_seccion": { porDefecto: "Sin sección" },
+  "catalogo.carta.oculto": { porDefecto: "Oculto" },
+  "catalogo.carta.no_disponible": { porDefecto: "No disponible" },
+  // «Copiar» ya existe en el vocabulario de fiscal (`fiscal.pantalla.config_cert_copiar`); se registra aparte por módulo, con el mismo texto y la misma maqueta (`productos.html`, «Textos nuevos», 09/11/2026).
+  "catalogo.accion.copiar": { porDefecto: "Copiar" },
 
   // Los nombres de las 14 unidades de medida (A2i). FUENTE ÚNICA: la constante `UNID` de la maqueta aprobada `Pedernal-docs/10-ux-ui/prototipos-gastronomia/productos.html` (~línea 421),
   // en el mismo orden que `src/primitivas/unidades/unidades.ts`; decisión del dueño del 13/11/2026 («las 14 unidades se muestran con los nombres de la maqueta de productos»,
@@ -139,4 +192,29 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.unidad.metro_cuadrado": { porDefecto: "Metro cuadrado" },
   "catalogo.unidad.minuto": { porDefecto: "Minuto" },
   "catalogo.unidad.hora": { porDefecto: "Hora" },
+
+  // A13, tramo Opciones. Fuente de todo este bloque: la maqueta aprobada `Pedernal-docs/10-ux-ui/prototipos-gastronomia/productos.html`, tabla «Textos nuevos» (`:308`, aprobados por el
+  // dueño el 09/11/2026): fila «Opciones» («Variantes · Agregar variante · Es la medida · Grupos de opciones · Agregar grupo · Incluida · Adicional · Obligatorio · Opcional · Se puede
+  // elegir más de una · Recargo · Agregar opción · Quitar») y fila «Copiar de otro producto · Copiar · Producto». «Agregar variante» y «Es la medida» son del tramo de medidas; «Quitar» de
+  // opciones vuelve con el de consumo (la maqueta no lo dibuja en el grupo: una opción se saca vaciando su nombre).
+  "catalogo.opciones.grupos": { porDefecto: "Grupos de opciones" },
+  "catalogo.opciones.agregar_grupo": { porDefecto: "Agregar grupo" },
+  "catalogo.opciones.incluida": { porDefecto: "Incluida" },
+  "catalogo.opciones.adicional": { porDefecto: "Adicional" },
+  "catalogo.opciones.obligatorio": { porDefecto: "Obligatorio" },
+  "catalogo.opciones.varias": { porDefecto: "Se puede elegir más de una" },
+  "catalogo.opciones.recargo": { porDefecto: "Recargo" },
+  "catalogo.opciones.agregar_opcion": { porDefecto: "Agregar opción" },
+  "catalogo.opciones.copiar_de_otro": { porDefecto: "Copiar de otro producto" },
+  "catalogo.opciones.copiar": { porDefecto: "Copiar" },
+  "catalogo.opciones.producto": { porDefecto: "Producto" },
+  // `productos.html:308`, fila «Opciones» («Variantes»): se usa solo como título del bloque de la vista previa de «Copiar de otro producto» cuando la copia trae la variante.
+  "catalogo.opciones.variantes": { porDefecto: "Variantes" },
+  // `productos.html:662` (`vGrupo`): la casilla del grupo dice «No figura en la carta»; el texto aprobado de la lista es «· no figura en la carta» (`catalogo.lista.no_figura_en_la_carta`):
+  // misma frase, sin el punto medio y con mayúscula inicial, tal como la dibuja la maqueta.
+  "catalogo.opciones.no_figura": { porDefecto: "No figura en la carta" },
+  // `productos.html:624` (botón «Editar» de la tarjeta de cada grupo) y `:662` (título de la pantalla al editar un grupo).
+  "catalogo.accion.editar": { porDefecto: "Editar" },
+  // `productos.html`, «Textos nuevos», fila «Errores»: «Una opción incluida no lleva recargo».
+  "catalogo.error.incluida_con_recargo": { porDefecto: "Una opción incluida no lleva recargo" },
 } as const;

@@ -1,34 +1,50 @@
 import { describe, expect, it } from "vitest";
-import { instanteParaMostrar } from "./instante-para-mostrar";
+import { fechaYHoraParaMostrar, horaParaMostrar } from "./instante-para-mostrar";
 
-describe("instanteParaMostrar («DD/MM/AAAA hh:mm» en la zona de Argentina)", () => {
-  it("lleva el instante UTC a la hora de Argentina (UTC-3)", () => {
-    expect(instanteParaMostrar(new Date("2026-11-10T01:09:00Z"))).toBe("09/11/2026 22:09");
+describe("instante para mostrar (zona de Argentina)", () => {
+  it("00:30 UTC es 21:30 del día anterior; 03:00 UTC es 00:00 del mismo día", () => {
+    expect(horaParaMostrar("2026-11-18T00:30:00.000Z")).toBe("21:30");
+    expect(fechaYHoraParaMostrar("2026-11-18T00:30:00.000Z")).toBe("17/11/2026 21:30");
+    expect(horaParaMostrar("2026-11-18T03:00:00.000Z")).toBe("00:00");
+    expect(fechaYHoraParaMostrar("2026-11-18T03:00:00.000Z")).toBe("18/11/2026 00:00");
   });
-
-  it("cruza la medianoche argentina: 02:59 UTC es 23:59 del día anterior y 03:00 UTC ya es el día siguiente", () => {
-    expect(instanteParaMostrar(new Date("2026-11-10T02:59:00Z"))).toBe("09/11/2026 23:59");
-    expect(instanteParaMostrar(new Date("2026-11-10T03:00:00Z"))).toBe("10/11/2026 00:00");
+  it("un instante con desfase se lleva a la hora de Argentina", () => {
+    expect(fechaYHoraParaMostrar("2026-11-17T21:14:00-03:00")).toBe("17/11/2026 21:14");
+    expect(horaParaMostrar("2026-11-18T09:05:07+00:00")).toBe("06:05");
   });
-
-  it("día, mes, hora y minuto siempre de dos dígitos y el año de cuatro", () => {
-    expect(instanteParaMostrar(new Date("2026-03-05T12:05:00Z"))).toBe("05/03/2026 09:05");
+  it("cierra la medianoche: 02:59 UTC sigue en el día anterior", () => {
+    expect(fechaYHoraParaMostrar("2026-01-01T02:59:59Z")).toBe("31/12/2025 23:59");
+    expect(horaParaMostrar("2026-01-01T02:59:59Z")).toBe("23:59");
   });
-
-  it("usa 24 horas: medianoche es 00:00, nunca 24:00", () => {
-    expect(instanteParaMostrar(new Date("2026-01-01T03:00:00Z"))).toBe("01/01/2026 00:00");
+  it("acepta el instante sin segundos y con fracción de segundo", () => {
+    expect(horaParaMostrar("2026-11-18T00:30Z")).toBe("21:30");
+    expect(horaParaMostrar("2026-11-18T00:30:15.123456Z")).toBe("21:30");
   });
-
-  it("respeta otra zona si se la pide y no depende de la zona del proceso", () => {
-    const instante = new Date("2026-11-10T01:09:00Z");
-    expect(instanteParaMostrar(instante, "UTC")).toBe("10/11/2026 01:09");
-    expect(instanteParaMostrar(instante, "America/Los_Angeles")).toBe("09/11/2026 17:09");
+  it("basura antes o después del instante lo rechaza, con su mensaje", () => {
+    for (const malo of [
+      "x2026-11-18T00:30:00Z",
+      "2026-11-18T00:30:00Zx",
+      " 2026-11-18T00:30:00Z",
+    ]) {
+      expect(() => horaParaMostrar(malo), malo).toThrow("no es un instante ISO 8601 con zona");
+    }
   });
-
-  it("falla cerrada: un instante inválido o una zona desconocida lanzan, no muestran una hora supuesta", () => {
-    expect(() => instanteParaMostrar(new Date("no es una fecha"))).toThrow(RangeError);
-    expect(() => instanteParaMostrar(new Date("2026-11-10T01:09:00Z"), "Marte/Olimpo")).toThrow(
-      RangeError,
+  it("una fecha fuera del rango de las fechas civiles lanza con su mensaje", () => {
+    expect(() => fechaYHoraParaMostrar("0001-01-01T12:00:00Z")).toThrow(
+      "instante: fecha fuera de rango",
     );
+  });
+  it("lo que no es un instante ISO con zona lanza (nunca muestra a medias)", () => {
+    for (const malo of [
+      "",
+      "17/11/2026 21:14",
+      "2026-11-18",
+      "2026-11-18T00:30:00",
+      "2026-13-40T00:00:00Z",
+      "ayer",
+    ]) {
+      expect(() => horaParaMostrar(malo), malo).toThrow(RangeError);
+      expect(() => fechaYHoraParaMostrar(malo), malo).toThrow(RangeError);
+    }
   });
 });

@@ -80,12 +80,16 @@ export async function comprobanteDeBase(
 ): Promise<string> {
   const id = randomUUID();
   const tipo = extra.tipo ?? "FACTURA_A";
+  // Una nota de crédito corrige una factura del mismo proveedor (0085): se crea la suya primero.
+  const asociado = tipo.startsWith("NOTA_CREDITO")
+    ? await comprobanteDeBase(c, m, proveedor)
+    : null;
   await c.query("begin");
   try {
     await c.query(
-      `insert into comprobante_de_proveedor (id, empresa_id, proveedor_id, clase, tipo, punto_de_venta, numero, fecha_del_comprobante, neto_gravado, no_gravado, exento,
+      `insert into comprobante_de_proveedor (id, empresa_id, proveedor_id, clase, comprobante_asociado_id, tipo, punto_de_venta, numero, fecha_del_comprobante, neto_gravado, no_gravado, exento,
          iva, tributos_total, credito_fiscal_computable, total_calculado, total_segun_factura, proveedor_razon_social, nivel, clave_idempotencia, huella, registrado_por)
-       values ($1, $2, $3, $10, $4, $5, $6, '2026-11-10', 1000, 0, 0, 210, 0, 210, 1210, 1210, 'Proveedor Sur', 'CON_COMPROBANTE', $7, $8, $9)`,
+       values ($1, $2, $3, $10, $11, $4, $5, $6, '2026-11-10', 1000, 0, 0, 210, 0, 210, 1210, 1210, 'Proveedor Sur', 'CON_COMPROBANTE', $7, $8, $9)`,
       [
         id,
         m.empresa,
@@ -97,6 +101,7 @@ export async function comprobanteDeBase(
         huellaAlAzar(),
         m.persona,
         tipo.startsWith("NOTA_CREDITO") ? "NOTA_DE_CREDITO" : "FACTURA",
+        asociado,
       ],
     );
     await c.query(

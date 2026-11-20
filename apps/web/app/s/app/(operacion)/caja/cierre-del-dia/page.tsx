@@ -1,7 +1,7 @@
 import { errorDeCodigo } from "../../../../../../../../src/capacidades/experiencia/respuesta";
 import { pantallaDeOperacion } from "../../../../../../pantallas/operacion";
 import { cargarElCierreDeLaSucursal } from "../../../../../../servidor/cierre-del-dia";
-import { accionesDelCierre } from "../../../../../../servidor/modulos";
+import { accionesDelCierre } from "../../../../../../servidor/ofertas-de-cierre";
 import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 import {
   armarElModeloDelCierre,

@@ -296,7 +296,7 @@ describe("el repositorio real", () => {
       "src/composicion/plataforma.ts",
       // Piloto B + D1 (2026-11-12): los esquemas de forma que comparten todas las fronteras de la web; lo importan entradas-de-caja y errores-de-caja.
       "src/composicion/entradas-de-facturacion.ts",
-      // Cierre del día (2026-11-16): el cableado `web.ts`; las fronteras del cierre importan solo su tipo `Web`.
+      // a18 (2026-11-16): la raíz de composición solo se importa como TIPO (`import type { Web }`) en directorio-web.ts; no tiene lógica que mutar.
       "src/composicion/web.ts",
     ]);
     expect(lista.cargasNoEstaticas.map((p) => p.archivo)).toEqual([

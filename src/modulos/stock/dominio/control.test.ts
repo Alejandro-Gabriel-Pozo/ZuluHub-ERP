@@ -7,7 +7,6 @@ import {
 import {
   decidirExistenciaNegativa,
   nivelDeExistenciaNegativa,
-  NIVELES_DE_EXISTENCIA_NEGATIVA,
   type NivelDeExistenciaNegativa,
   type RenglonAControlar,
 } from "./control";
@@ -37,22 +36,20 @@ describe("nivelDeExistenciaNegativa", () => {
     expect(nivelDeExistenciaNegativa(null)).toBe("PERMITIR");
   });
 
-  it("los tres niveles se reconocen", () => {
-    expect(NIVELES_DE_EXISTENCIA_NEGATIVA).toEqual(["PERMITIR", "AVISAR", "BLOQUEAR"]);
-    for (const nivel of NIVELES_DE_EXISTENCIA_NEGATIVA) {
-      expect(nivelDeExistenciaNegativa(nivel)).toBe(nivel);
-    }
+  it("los dos niveles se reconocen", () => {
+    expect(nivelDeExistenciaNegativa("PERMITIR")).toBe("PERMITIR");
+    expect(nivelDeExistenciaNegativa("AVISAR")).toBe("AVISAR");
   });
 
-  it("un valor desconocido cierra: BLOQUEAR", () => {
-    for (const raro of ["", "permitir", "PERMITIR ", "NINGUNO", "avisar"]) {
-      expect(nivelDeExistenciaNegativa(raro)).toBe("BLOQUEAR");
+  it("un valor desconocido se lee como AVISAR (también BLOQUEAR, que ya no existe)", () => {
+    for (const raro of ["", "permitir", "PERMITIR ", "NINGUNO", "avisar", "BLOQUEAR"]) {
+      expect(nivelDeExistenciaNegativa(raro)).toBe("AVISAR");
     }
   });
 });
 
 describe("decidirExistenciaNegativa", () => {
-  const niveles: NivelDeExistenciaNegativa[] = [...NIVELES_DE_EXISTENCIA_NEGATIVA];
+  const niveles: NivelDeExistenciaNegativa[] = ["PERMITIR", "AVISAR"];
 
   it("si ningún saldo queda negativo pasa, con cualquier nivel (también en cero justo)", () => {
     for (const nivel of niveles) {
@@ -65,7 +62,7 @@ describe("decidirExistenciaNegativa", () => {
   });
 
   it("sin renglones pasa", () => {
-    expect(decidirExistenciaNegativa("BLOQUEAR", "SALIDA", [])).toEqual({
+    expect(decidirExistenciaNegativa("AVISAR", "SALIDA", [])).toEqual({
       resultado: "PASA",
       negativos: [],
     });
@@ -81,21 +78,6 @@ describe("decidirExistenciaNegativa", () => {
         (r.negativos[0] as { existenciaResultante: CantidadConSigno }).existenciaResultante,
       ),
     ).toBe("-1.0000");
-  });
-
-  it("BLOQUEAR: rechaza aunque venga confirmado, con todos los saldos negativos", () => {
-    const r = decidirExistenciaNegativa("BLOQUEAR", "SALIDA", [
-      reng("-3", "1", true, "d1", "a"),
-      reng("-1", "9", true, "d1", "b"),
-      reng("-2.5", "-1", true, "d1", "c"),
-    ]);
-    expect(r.resultado).toBe("BLOQUEA");
-    expect(
-      r.negativos.map((n) => [n.articuloId, cantidadConSignoATexto(n.existenciaResultante)]),
-    ).toEqual([
-      ["a", "-2.0000"],
-      ["c", "-3.5000"],
-    ]);
   });
 
   it("AVISAR: sin confirmar pide confirmación; con todos confirmados pasa con excepción", () => {
@@ -123,8 +105,8 @@ describe("decidirExistenciaNegativa", () => {
   });
 
   it("una existencia que ya era negativa y baja más sigue contando; una que sube hacia cero sin llegar no es salida", () => {
-    expect(decidirExistenciaNegativa("BLOQUEAR", "SALIDA", [reng("-0.0001", "-1")]).resultado).toBe(
-      "BLOQUEA",
+    expect(decidirExistenciaNegativa("AVISAR", "SALIDA", [reng("-0.0001", "-1")]).resultado).toBe(
+      "REQUIERE_CONFIRMACION",
     );
   });
 
@@ -132,16 +114,16 @@ describe("decidirExistenciaNegativa", () => {
     it("la transferencia: el origen se controla; el destino no, aunque su saldo ya esté negativo", () => {
       const origen = reng("-5", "1", false, "d1");
       const destino = reng("5", "-10", false, "d2");
-      const r = decidirExistenciaNegativa("BLOQUEAR", "TRANSFERENCIA", [origen, destino]);
-      expect(r.resultado).toBe("BLOQUEA");
+      const r = decidirExistenciaNegativa("AVISAR", "TRANSFERENCIA", [origen, destino]);
+      expect(r.resultado).toBe("REQUIERE_CONFIRMACION");
       expect(r.negativos.map((n) => n.depositoId)).toEqual(["d1"]);
-      expect(decidirExistenciaNegativa("BLOQUEAR", "TRANSFERENCIA", [destino]).resultado).toBe(
+      expect(decidirExistenciaNegativa("AVISAR", "TRANSFERENCIA", [destino]).resultado).toBe(
         "PASA",
       );
     });
 
     it("un renglón en cero no se controla", () => {
-      expect(decidirExistenciaNegativa("BLOQUEAR", "SALIDA", [reng("0", "-1")]).resultado).toBe(
+      expect(decidirExistenciaNegativa("AVISAR", "SALIDA", [reng("0", "-1")]).resultado).toBe(
         "PASA",
       );
     });

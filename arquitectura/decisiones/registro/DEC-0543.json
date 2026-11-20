@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0543",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: ocultar y mostrar no llevan clave de idempotencia ni versión: el pedido fija un estado y repetirlo es yaEstaba, sin escribir ni auditar.",
+  "que_cambia": "Es lo que ya hace el caso de uso (FOR UPDATE y yaEstaba). Si se quiere clave por pedido hay que cambiar el caso de uso. Costo de revertir: medio.",
+  "donde": "src/composicion/ocultar-web.ts; test/integracion/ocultar-web.test.ts"
+}

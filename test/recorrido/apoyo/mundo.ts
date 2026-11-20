@@ -57,10 +57,16 @@ export type MundoDelRecorrido = Readonly<{
   cerrar(): Promise<void>;
 }>;
 
-/** Lo que un recorrido puede pedirle al mundo además de la facturación (sin pedido, el mundo es el de siempre). */
+/**
+ * Lo que un recorrido puede pedirle al mundo además de la facturación (sin pedido, el mundo es el de siempre).
+ * `modulos`: los que el plan incluye y la empresa tiene prendidos (por defecto solo «facturacion», como siempre; el recorrido de Mesas pide también los de salón); `modulosAdicionales`: más módulos
+ * que se suman a esos; `perillas`: las del plan (el salón es un extra de pago, apagado de base).
+ */
 export type OpcionesDelMundo = Readonly<{
-  /** Módulos que la empresa tiene activos por su plan, además de `facturacion`. */
+  modulos?: readonly string[];
+  /** Módulos que la empresa tiene activos por su plan, además de los de `modulos`. */
   modulosAdicionales?: readonly string[];
+  perillas?: Readonly<Record<string, unknown>>;
   /** Los módulos «en desarrollo» se leen como «disponibles» SOLO en el proceso de esta app (`activar-modulos-en-desarrollo.mjs`). */
   activarModulosEnDesarrollo?: boolean;
 }>;
@@ -69,7 +75,10 @@ export async function armarMundoDelRecorrido(
   base: BaseDePruebas,
   opciones: OpcionesDelMundo = {},
 ): Promise<MundoDelRecorrido> {
-  const modulos = ["facturacion", ...(opciones.modulosAdicionales ?? [])];
+  const { perillas = {} } = opciones;
+  const modulos = [
+    ...new Set([...(opciones.modulos ?? ["facturacion"]), ...(opciones.modulosAdicionales ?? [])]),
+  ];
   const mundo = await armarMundoWeb(base);
   const propia = mundo.propia.base;
   await crearVersionDeMarcaConfirmada(mundo.dueno, mundo.marcaA, { nombreVisible: "Zulú Pan" });
@@ -121,7 +130,10 @@ export async function armarMundoDelRecorrido(
     condicionIva: "RESPONSABLE_INSCRIPTO",
   };
   await cargarCertificado(propia, e, "HOMOLOGACION");
-  const { version } = await crearPlanPublicado(mundo.dueno, { modulos });
+  const { version } = await crearPlanPublicado(mundo.dueno, {
+    modulos: [...modulos],
+    perillas: { ...perillas },
+  });
   await asignarPlan(mundo.dueno, m.tenant, version);
   for (const modulo of modulos) {
     await mundo.dueno.query("insert into modulo_de_empresa (empresa_id, modulo) values ($1, $2)", [

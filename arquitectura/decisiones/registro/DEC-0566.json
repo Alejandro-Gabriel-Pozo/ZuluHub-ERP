@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0566",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Se cargan 11 textos del directorio aprobados el 09/11/2026 sin clave, y la clave propia del genérico «Esta acción no está permitida», ya aprobado.",
+  "que_cambia": "Qué lee quien usa Clientes y proveedores; ninguna redacción es nueva, y revertir es sacar las 12 claves de catalogo-clientes.ts.",
+  "donde": "src/capacidades/vocabulario/catalogo-clientes.ts; directorio.html:266; delegación del dueño, DDD filas 173 y 174"
+}

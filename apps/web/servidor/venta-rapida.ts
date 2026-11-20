@@ -14,6 +14,8 @@ import { conLaEmpresa } from "./con-la-empresa";
 import { dependenciasDeSesion } from "./sesion";
 import { sucursalDelPedido } from "./sucursal-elegida";
 
+export type { CarritoCotizado };
+
 /**
  * VENTA RÁPIDA del mostrador: la carga de lo que se ofrece y la cotización del carrito. Finas a propósito (ADR-015, punto 2): resuelven QUIÉN y DÓNDE actúa y llaman a
  * `src/composicion/venta-rapida-web.ts`, donde se prueba el resto. La sucursal la fija el SERVIDOR: es la elegida en este dispositivo (cookie validada contra las que la persona puede

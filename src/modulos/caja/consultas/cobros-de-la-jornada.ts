@@ -1,3 +1,4 @@
+import type { DatoDelCobro } from "../estados";
 import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { importeAJson, type ImporteJson } from "../../../primitivas/dinero/importe";
@@ -52,6 +53,8 @@ export type CobroDeLaJornadaVisto = Readonly<{
   origen: Readonly<{ tipo: string; id: string; orden: number }>;
   registradoEn: string;
   registradoPor: string;
+  /** Lo que selló la base al cobrar: la lista de la jornada y el control del cierre muestran «Pendiente» si no está vacío. */
+  datosPendientes: readonly DatoDelCobro[];
   /** De la primera a la última, con su motivo. */
   correcciones: readonly CorreccionDeUnCobroVista[];
   /** La jornada está en auditoría y el actor puede corregir el medio (la misma regla del caso de uso: la pantalla no decide). */
@@ -151,6 +154,7 @@ export function armarCobrosDeLaJornada({ transacciones, reglas }: DependenciasDe
             origen: c.origen,
             registradoEn: c.registradoEn.toISOString(),
             registradoPor: c.registradoPor,
+            datosPendientes: c.datosPendientes,
             correcciones: c.correcciones.map((k) => ({
               ...k,
               corregidaEn: k.corregidaEn.toISOString(),

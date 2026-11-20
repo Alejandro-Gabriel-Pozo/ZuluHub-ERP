@@ -144,6 +144,29 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     );
   });
 
+  it("los textos de errores de ARCA del 18/11/2026 declaran su consumidor y su fuente (DEC-0741)", () => {
+    const claves = [
+      "error.fiscal_punto_de_venta_no_habilitado_en_arca",
+      "error.fiscal_arca_sin_puntos_de_venta",
+      "error.fiscal_punto_de_venta_bloqueado_en_arca",
+      "error.fiscal_punto_de_venta_dado_de_baja_en_arca",
+      "error.fiscal_punto_de_venta_solo_caea_en_arca",
+      "error.fiscal_arca_cuit_no_representada",
+      "error.fiscal_arca_certificado_vencido",
+      "error.fiscal_arca_problema_del_sistema",
+    ] as const;
+    for (const clave of claves) {
+      expect(CATALOGO_DE_TEXTOS[clave].usos, clave).toEqual([
+        {
+          como: "FUNCION",
+          archivo: "src/composicion/errores-fiscales.ts",
+          nombre: "traducirErrorFiscal",
+        },
+      ]);
+      expect(CATALOGO_DE_TEXTOS[clave].fuente, clave).toEqual({ decision: "DEC-0741" });
+    }
+  });
+
   it("los errores del facturador son exactamente los códigos fiscales, y lo de ARCA sale traducido con su código como marcador", () => {
     expect(claves.filter((c) => c.startsWith("error.fiscal_")).sort()).toEqual(
       Object.values(CLAVES_DE_ERRORES_FISCALES).sort(),
@@ -153,11 +176,13 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     }
     // Nada del facturador habla en voseo: los textos de ARCA y de los errores van en castellano neutro. Salvo los dos del
     // listado que el dueño aprobó tal cual (CONTRATO del listado: «Probá con otro período…» y «Probá de nuevo.») y el aviso de
-    // conflicto de versión (voseo aprobado, 2026-11-04, D-113).
+    // conflicto de versión (voseo aprobado, 2026-11-04, D-113) y el del certificado vencido («cargalo»; textos T1 a T8 del dueño,
+    // 18/11/2026, fila 305, DEC-0741: el voseo es la regla vigente desde DEC-0352).
     const APROBADOS_EN_VOSEO = [
       "fiscal.pantalla.listado_vacio",
       "fiscal.pantalla.listado_error",
       "error.fiscal_version_desactualizada",
+      "error.fiscal_arca_certificado_vencido",
     ];
     for (const clave of claves.filter(
       (c) =>
@@ -359,8 +384,8 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
           .filter((c) => c.startsWith(`${modulo}.`))
           .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
       );
-    expect(Object.keys(de("clientes"))).toHaveLength(20);
-    expect(Object.keys(de("compras"))).toHaveLength(116);
+    expect(Object.keys(de("clientes"))).toHaveLength(32);
+    expect(Object.keys(de("compras"))).toHaveLength(139);
     expect(de("clientes")).toMatchObject({
       "clientes.lista.clientes_y_proveedores": "Clientes y proveedores",
       "clientes.error.cuit_invalido": "El CUIT no es válido",
@@ -379,7 +404,76 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     });
   });
 
-  it("los textos de stock son exactamente los que el dueño aprobó el 09/11/2026 en stock.html «Textos nuevos» (D125), y ninguno más", () => {
+  it("los 23 textos de compras que el dueño aprobó el 09/11/2026 en compra.html:332-341 y no tenían clave (DEC-0565) son exactamente estos", () => {
+    expect(
+      Object.fromEntries(
+        claves
+          .filter((c) =>
+            /^compras\.(ficha\.(ver_todas|por_ser|emite|condicion_no_define_la_letra|todavia_no_se_le_compro_nada|todavia_no_tiene_facturas|ninguno_cargado|sin_puntos_de_venta|ultima_compra|agregar_otro_comprobante|pedido_lo_aprueba_quien_administra|pedido_el|pedido_pendiente|falta_que_lo_apruebe|se_agrega_a_la_ficha_de|despues_solo_se_elige_entre_los_de_la_ficha|numero_del_punto_de_venta|las_facturas_cargadas_no_cambian|agregar)|factura\.(sin_iva_discriminado|neto_sin_iva_discriminado|neto_de_la_linea|falta_la_factura))$/.test(
+              c,
+            ),
+          )
+          .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
+      ),
+    ).toEqual({
+      "compras.ficha.ver_todas": "Ver todas",
+      "compras.ficha.por_ser": "Por ser",
+      "compras.ficha.emite": "emite",
+      "compras.ficha.condicion_no_define_la_letra":
+        "Su condición no define la letra: se elige a mano",
+      "compras.ficha.todavia_no_se_le_compro_nada": "Todavía no se le compró nada",
+      "compras.ficha.todavia_no_tiene_facturas": "Todavía no tiene facturas",
+      "compras.ficha.ninguno_cargado": "Ninguno cargado",
+      "compras.ficha.sin_puntos_de_venta": "Sin puntos de venta",
+      "compras.ficha.ultima_compra": "Última compra",
+      "compras.ficha.agregar_otro_comprobante": "Agregar otro comprobante",
+      "compras.ficha.pedido_lo_aprueba_quien_administra":
+        "Lo tiene que aprobar quien administra. Hasta entonces no se puede usar en una factura",
+      "compras.ficha.pedido_el": "Pedido el",
+      "compras.ficha.pedido_pendiente": "Pedido pendiente",
+      "compras.ficha.falta_que_lo_apruebe": "Falta que lo apruebe quien administra",
+      "compras.ficha.se_agrega_a_la_ficha_de": "Se agrega a la ficha de",
+      "compras.ficha.despues_solo_se_elige_entre_los_de_la_ficha":
+        "Después solo se puede elegir entre los puntos de venta de la ficha",
+      "compras.ficha.numero_del_punto_de_venta": "Número del punto de venta",
+      "compras.ficha.las_facturas_cargadas_no_cambian":
+        "Las facturas ya cargadas no cambian. Si el proveedor vuelve a usarlo, se agrega de nuevo",
+      "compras.ficha.agregar": "Agregar",
+      "compras.factura.sin_iva_discriminado": "Sin IVA discriminado: es un comprobante B o C",
+      "compras.factura.neto_sin_iva_discriminado": "Neto (sin IVA discriminado)",
+      "compras.factura.neto_de_la_linea": "Neto de la línea",
+      "compras.factura.falta_la_factura": "Falta la factura",
+    });
+  });
+
+  it("los 11 textos del directorio que el dueño aprobó el 09/11/2026 en directorio.html:266 y no tenían clave (DEC-0566) son exactamente estos", () => {
+    expect(
+      Object.fromEntries(
+        claves
+          .filter((c) =>
+            /^clientes\.(lista\.(nuevo|clientes|proveedores)|formulario\.[a-z_]+|error\.(dni_invalido|empresa_solo_cuit_o_extranjero))$/.test(
+              c,
+            ),
+          )
+          .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
+      ),
+    ).toEqual({
+      "clientes.lista.nuevo": "Nuevo",
+      "clientes.lista.clientes": "Clientes",
+      "clientes.lista.proveedores": "Proveedores",
+      "clientes.formulario.tipo_de_documento": "Tipo de documento",
+      "clientes.formulario.pais": "País",
+      "clientes.formulario.nota": "Nota",
+      "clientes.formulario.roles": "Roles",
+      "clientes.formulario.email": "Email",
+      "clientes.formulario.apellido": "Apellido",
+      "clientes.error.dni_invalido": "El DNI no es válido",
+      "clientes.error.empresa_solo_cuit_o_extranjero":
+        "Una empresa solo admite CUIT o documento extranjero",
+    });
+  });
+
+  it("los textos de stock son exactamente los que el dueño aprobó (el 09/11/2026 en stock.html «Textos nuevos», D125, y los seis del conteo con hora el 14/11/2026), y ninguno más", () => {
     expect(
       Object.fromEntries(
         claves
@@ -424,6 +518,12 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "stock.conteo.cancelar": "Cancelar conteo",
       "stock.conteo.diferencia": "Diferencia",
       "stock.conteo.aplicado": "Aplicado",
+      "stock.conteo.hora": "Hora del conteo",
+      "stock.conteo.sistema_a_esa_hora": "Sistema a esa hora",
+      "stock.conteo.movido_desde": "Movido desde las {hora}",
+      "stock.conteo.ver_detalle": "Ver detalle",
+      "stock.conteo.ya_habia_ocurrido": "Ya había ocurrido cuando contaste",
+      "stock.conteo.motivo_venta_no_registrada": "Venta no registrada",
       "stock.deposito.agregar": "Agregar depósito",
       "stock.deposito.normal": "Normal",
       "stock.deposito.cuarentena": "Cuarentena",
@@ -431,7 +531,6 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "stock.deposito.de_venta": "De venta",
       "stock.deposito.uso": "Uso",
       "stock.error.control_avisa": "Va a quedar en negativo. ¿Confirmás?",
-      "stock.error.control_bloquea": "No hay stock suficiente",
       "stock.error.transferencia_al_mismo_deposito":
         "El origen y el destino no pueden ser el mismo",
       "stock.error.detalle_requerido": "Escribí el detalle",

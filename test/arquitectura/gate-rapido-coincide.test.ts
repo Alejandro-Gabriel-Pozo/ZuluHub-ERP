@@ -282,3 +282,60 @@ describe("violaciones inyectadas: ci.yml y gate-rapido.yml", () => {
     ]);
   });
 });
+
+describe("el timeout de `pruebas` del Gate rápido no es menor que el de ci.yml", () => {
+  // Previene: la cancelación por timeout con la suite al borde de 20 min (run 43989591478 del 17/11/2026: 20 min 16 s y 20 min 5 s cancelados y un tercer intento que pasó con
+  // 19 min 27 s); ambos workflows corren la misma suite con el mismo Postgres y un límite menor en el aviso temprano lo deja «unstable» sin que nada falle de verdad.
+  /** Los minutos de `timeout-minutes` del job (a 4 espacios), o `null` si el job no existe o no lo declara. */
+  function timeoutDeJob(yaml: string, job: string): number | null {
+    const lineas = yaml.split("\n");
+    const inicio = lineas.findIndex((linea) => linea === `  ${job}:`);
+    if (inicio === -1) return null;
+    for (let i = inicio + 1; i < lineas.length; i += 1) {
+      const linea = lineas[i] as string;
+      if (/^ {2}\S/.test(linea) || /^\S/.test(linea)) return null;
+      const m = /^ {4}timeout-minutes:\s*(\d+)\s*(?:#.*)?$/.exec(linea);
+      if (m !== null) return Number(m[1]);
+    }
+    return null;
+  }
+  const faltaMargen = (ci: string, rapido: string): string | null => {
+    const enCi = timeoutDeJob(ci, "pruebas");
+    const enRapido = timeoutDeJob(rapido, "pruebas");
+    if (enCi === null || enRapido === null)
+      return "pruebas: falta `timeout-minutes` en ci.yml o en gate-rapido.yml";
+    return enRapido < enCi
+      ? `pruebas: gate-rapido.yml tiene ${enRapido} min y ci.yml ${enCi}: el aviso temprano se cancela antes que el CI final`
+      : null;
+  };
+
+  it("el job `pruebas` de gate-rapido.yml no tiene un timeout menor que el de ci.yml", () => {
+    expect(
+      faltaMargen(leer(".github/workflows/ci.yml"), leer(".github/workflows/gate-rapido.yml")),
+    ).toBeNull();
+    // Con `pruebas` en fragmentos (cada uno ~7 min) el tope por fragmento es 20 en los dos workflows; el piso de 25 era del job monolítico.
+    expect(
+      timeoutDeJob(leer(".github/workflows/gate-rapido.yml"), "pruebas"),
+    ).toBeGreaterThanOrEqual(
+      timeoutDeJob(leer(".github/workflows/ci.yml"), "pruebas") ?? Number.POSITIVE_INFINITY,
+    );
+  });
+
+  it("violaciones inyectadas: menor, ausente, job faltante y job que no declara el tope", () => {
+    const con = (minutos: number | null) =>
+      `jobs:\n  pruebas:\n    runs-on: x\n${minutos === null ? "" : `    timeout-minutes: ${minutos}\n`}  otro:\n    timeout-minutes: 99\n`;
+    expect(faltaMargen(con(25), con(20))).toBe(
+      "pruebas: gate-rapido.yml tiene 20 min y ci.yml 25: el aviso temprano se cancela antes que el CI final",
+    );
+    expect(faltaMargen(con(25), con(24))).not.toBeNull();
+    expect(faltaMargen(con(25), con(25))).toBeNull();
+    expect(faltaMargen(con(25), con(30))).toBeNull();
+    expect(faltaMargen(con(25), con(null))).toContain("falta `timeout-minutes`");
+    expect(faltaMargen(con(null), con(25))).toContain("falta `timeout-minutes`");
+    expect(faltaMargen(con(25), "jobs:\n  web:\n    timeout-minutes: 30\n")).toContain(
+      "falta `timeout-minutes`",
+    );
+    // el tope de OTRO job no cuenta
+    expect(timeoutDeJob(con(null), "pruebas")).toBeNull();
+  });
+});

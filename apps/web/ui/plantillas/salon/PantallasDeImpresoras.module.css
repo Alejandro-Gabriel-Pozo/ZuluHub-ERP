@@ -1,0 +1,8 @@
+/* El nombre de la impresora lleva a editarla: es un enlace con el alto mínimo de un objetivo táctil. El resto de la pantalla usa los estilos de «Mesas» (`PantallasDeMesas.module.css`). */
+.nombre {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--objetivo-minimo);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+}

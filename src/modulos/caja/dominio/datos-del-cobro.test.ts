@@ -3,6 +3,7 @@ import type { DatoDelCobro } from "../estados";
 import {
   datosCompletados,
   datosEnFormaCompleta,
+  datosPendientesDe,
   validarDatosDelCobro,
   type DatosDelCobro,
 } from "./datos-del-cobro";
@@ -249,5 +250,25 @@ describe("datosEnFormaCompleta: la forma completa sin juzgar", () => {
     });
     expect(datosEnFormaCompleta({ cuotas: 0 }).cuotas).toBe(0);
     expect(datosEnFormaCompleta({ cupon: "" }).cupon).toBe("");
+  });
+});
+
+describe("datosPendientesDe (el sello de la base: lo pedido que quedó vacío, en el orden fijo)", () => {
+  it("nada pedido → nada pendiente, aunque no venga ningún dato", () => {
+    expect(datosPendientesDe(NINGUNO, {})).toEqual([]);
+  });
+  it("pedido y ausente → pendiente; pedido y presente → no; no pedido y ausente → no", () => {
+    const sePide = { ...NINGUNO, cupon: true, cuotas: true, dni: true };
+    expect(datosPendientesDe(sePide, { cuotas: 3 })).toEqual(["cupon", "dni"]);
+    expect(datosPendientesDe(sePide, { cupon: "A-1", cuotas: 3, dni: "12345678" })).toEqual([]);
+  });
+  it("la marca se mira por su identificador", () => {
+    expect(datosPendientesDe({ ...NINGUNO, marca: true }, {})).toEqual(["marca"]);
+    expect(
+      datosPendientesDe(
+        { ...NINGUNO, marca: true },
+        { marcaDeTarjetaId: "5f0c1b1e-0000-4000-8000-000000000001" },
+      ),
+    ).toEqual([]);
   });
 });

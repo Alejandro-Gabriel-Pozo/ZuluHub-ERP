@@ -17,6 +17,8 @@ const CLAVE = "ClaveDeLaCorridaCentinela0123456789";
 type Estado = {
   existe: boolean;
   puede: boolean;
+  /** El login que tiene es el PERMANENTE de la consola de preview (vigencia de 90 días). */
+  permanente?: boolean;
   noCierra?: boolean;
   claveNula?: boolean;
   claveIlegible?: boolean;
@@ -45,7 +47,11 @@ function falso(estado: Estado) {
       }
       consultas.push(texto.startsWith("SELECT format") ? `format:${String(valores?.[0])}` : texto);
       if (texto.startsWith("SELECT rolcanlogin")) {
-        return Promise.resolve({ rows: estado.existe ? [{ puede: estado.puede }] : [] });
+        return Promise.resolve({
+          rows: estado.existe
+            ? [{ puede: estado.puede, permanente: estado.permanente === true }]
+            : [],
+        });
       }
       if (texto.includes("WITH LOGIN PASSWORD")) {
         return Promise.resolve({ rows: [{ sentencia: `ABRIR ${String(valores?.[0])}` }] });
@@ -91,7 +97,7 @@ describe("abrirLoginDePlataforma", () => {
     expect(url.password).toBe(CLAVE);
     expect(url.hostname).toBe("ep-prueba-123.sa-east-1.aws.neon.tech");
     expect(f.consultas).toEqual([
-      "SELECT rolcanlogin AS puede FROM pg_roles WHERE rolname = $1",
+      "SELECT rolcanlogin AS puede, (rolcanlogin AND (rolvaliduntil IS NULL OR rolvaliduntil = 'infinity' OR rolvaliduntil > now() + make_interval(mins => $2::int))) AS permanente FROM pg_roles WHERE rolname = $1",
       "format:pedernal_plataforma",
       "BEGIN",
       "ABRIR pedernal_plataforma",
@@ -111,6 +117,15 @@ describe("abrirLoginDePlataforma", () => {
     const f = falso({ existe: true, puede: true });
     await expect(abrirLoginDePlataforma(DUENO, opciones(f))).rejects.toThrow(/ya tiene login/);
     expect(f.consultas.some((c) => c.startsWith("ABRIR"))).toBe(false);
+    expect(f.estado().terminado).toBe(true);
+  });
+
+  it("si el rol tiene el login PERMANENTE de la consola, falla temprano con un mensaje claro y no cambia nada", async () => {
+    const f = falso({ existe: true, puede: true, permanente: true });
+    await expect(abrirLoginDePlataforma(DUENO, opciones(f))).rejects.toThrow(
+      /PERMANENTE de la consola/,
+    );
+    expect(f.consultas.some((c) => c.startsWith("ABRIR") || c === "BEGIN")).toBe(false);
     expect(f.estado().terminado).toBe(true);
   });
 
@@ -180,5 +195,22 @@ describe("cerrarLoginDePlataforma", () => {
   it("si el rol no existe, falla", async () => {
     const f = falso({ existe: false, puede: false });
     await expect(cerrarLoginDePlataforma(DUENO, opciones(f))).rejects.toThrow(/no existe/);
+  });
+});
+
+describe("cerrarLoginDePlataforma con el login permanente de la consola", () => {
+  it("NO lo cierra (no lo abrió este flujo): no manda ninguna sentencia que cambie el rol y avisa que lo conservó", async () => {
+    const f = falso({ existe: true, puede: true, permanente: true });
+    const estado = await cerrarLoginDePlataforma(DUENO, opciones(f));
+    expect(estado).toEqual({ claveVerificada: false, conservado: true });
+    expect(f.consultas.some((c) => c.startsWith("CERRAR") || c.startsWith("format:"))).toBe(false);
+    expect(f.estado().terminado).toBe(true);
+  });
+
+  it("el login temporal (no permanente) sí se cierra, como siempre", async () => {
+    const f = falso({ existe: true, puede: true, permanente: false });
+    const estado = await cerrarLoginDePlataforma(DUENO, opciones(f));
+    expect(estado.conservado).toBeUndefined();
+    expect(f.consultas).toContain("CERRAR pedernal_plataforma");
   });
 });

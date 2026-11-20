@@ -63,6 +63,10 @@ const TABLAS_DE_NEGOCIO = [
   "version_de_plan",
   "version_de_marca",
   "plan_de_tenant",
+  // 0089 (política de cambio de plan)
+  "politica_de_cambio_de_plan",
+  "condiciones_de_cambio_de_plan",
+  "arrepentimiento_de_plan",
   "ajuste_de_perilla",
   "modulo_de_empresa",
   "nivel_de_control",
@@ -91,6 +95,17 @@ const TABLAS_DE_NEGOCIO = [
   // La carta pública y el botón «Ocultar» (0043_carta_publica)
   "carta_publica",
   "disponibilidad_de_producto",
+  // La identidad de la carta: el color de la empresa para sus cartas (0077_identidad_de_la_carta)
+  "identidad_de_carta_empresa",
+  // El portal de la empresa (0078_portal_de_la_empresa)
+  "portal_de_empresa",
+  "portal_tarjeta",
+  "portal_zona",
+  // Familias de productos (0079, 0080 y 0081)
+  "familia_de_producto",
+  "miembro_de_familia",
+  "aplicacion_de_precio_de_familia",
+  "lugar_en_carta_de_producto",
   // Cierre del día (0026_cierre)
   "jornada_de_sucursal",
   "control_de_jornada_cerrada",
@@ -100,6 +115,7 @@ const TABLAS_DE_NEGOCIO = [
   "cuenta_de_cobro",
   "sesion_caja",
   "movimiento_caja",
+  "movimiento_de_dinero", // 0091
   "cobro",
   "arqueo_caja",
   "arqueo_billete",
@@ -188,6 +204,17 @@ const TABLAS_DE_NEGOCIO = [
   "presentacion_de_producto",
   "punto_de_venta_de_la_ficha",
   "recepcion",
+  "entrada_de_linea_de_recepcion",
+  "inspeccion_de_linea_de_recepcion",
+  "linea_de_orden",
+  "linea_de_recepcion_de_orden",
+  "orden_de_compra",
+  "saldo_de_linea_de_orden",
+  "diferencia_de_compra",
+  "devolucion_a_proveedor",
+  "linea_de_devolucion",
+  "tolerancia_aplicada_de_conciliacion",
+  "tolerancia_de_compras",
   "rol_de_parte",
   "saldo_de_linea_de_comprobante",
   "saldo_de_linea_de_recepcion",
@@ -431,6 +458,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "conciliacion_de_jornada",
             "conciliacion_de_cobro_por_origen",
           ].map((t) => `${t}:SELECT`),
+          "movimiento_de_dinero:SELECT", // 0091
           "cuenta_consumo:SELECT", // 0028
           "linea_cuenta:SELECT", // 0028
           "linea_cuenta_opcion:SELECT", // 0028
@@ -503,6 +531,17 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "presentacion_de_producto:SELECT",
           "punto_de_venta_de_la_ficha:SELECT",
           "recepcion:SELECT",
+          "entrada_de_linea_de_recepcion:SELECT",
+          "inspeccion_de_linea_de_recepcion:SELECT",
+          "linea_de_orden:SELECT",
+          "linea_de_recepcion_de_orden:SELECT",
+          "orden_de_compra:SELECT",
+          "saldo_de_linea_de_orden:SELECT",
+          "diferencia_de_compra:SELECT",
+          "devolucion_a_proveedor:SELECT",
+          "linea_de_devolucion:SELECT",
+          "tolerancia_aplicada_de_conciliacion:SELECT",
+          "tolerancia_de_compras:SELECT",
           "rol_de_parte:SELECT",
           "saldo_de_linea_de_comprobante:SELECT",
           "saldo_de_linea_de_recepcion:SELECT",
@@ -527,6 +566,14 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "clasificacion_de_producto:SELECT", // 0046
           "carta_publica:SELECT", // 0043
           "disponibilidad_de_producto:SELECT", // 0043
+          "identidad_de_carta_empresa:SELECT", // 0077
+          ...["portal_de_empresa", "portal_tarjeta", "portal_zona"].map(
+            (tabla) => `${tabla}:SELECT`,
+          ), // 0078
+          "familia_de_producto:SELECT", // 0079
+          "miembro_de_familia:SELECT", // 0079
+          "aplicacion_de_precio_de_familia:SELECT", // 0080
+          "lugar_en_carta_de_producto:SELECT", // 0081
         ].sort(),
       );
       expect(porRol("pedernal_grupo")).toEqual(
@@ -557,6 +604,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "persona:SELECT",
           "plan:SELECT", // 0007
           "plan_de_tenant:SELECT", // 0007
+          "politica_de_cambio_de_plan:SELECT", // 0089
+          "condiciones_de_cambio_de_plan:SELECT", // 0089
+          "arrepentimiento_de_plan:SELECT", // 0089
           "referencia_de_error:SELECT",
           "serie_comprobante:SELECT", // 0006
           "solicitud_de_alta:SELECT", // captación
@@ -715,6 +765,11 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "pide_marca",
             "pide_cuotas",
             "pide_dni",
+            "avisa_si_falta_cupon",
+            "avisa_si_falta_ultimos4",
+            "avisa_si_falta_marca",
+            "avisa_si_falta_cuotas",
+            "avisa_si_falta_dni",
           ].map((c) => `pedernal_app:medio_de_pago.${c}`),
           ...["nombre", "identificador_externo", "sucursal_id", "activa"].map(
             (c) => `pedernal_app:cuenta_de_cobro.${c}`,
@@ -836,18 +891,102 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "pedernal_app:pedido_de_ficha.estado",
           "pedernal_app:pedido_de_ficha.resuelto_en",
           "pedernal_app:pedido_de_ficha.resuelto_por",
-          ...["estado", "lugar", "mensaje_de_portada", "nombre", "rubro"].map(
-            (c) => `pedernal_app:carta_publica.${c}`,
-          ), // 0043
+          ...[
+            "cara",
+            "color_propio",
+            "estado",
+            "logo_cuenta",
+            "logo_extension",
+            "logo_id_publico",
+            "logo_proveedor",
+            "logo_version",
+            "lugar",
+            "mensaje_de_portada",
+            "modelo",
+            "nombre",
+            "rubro",
+          ].map((c) => `pedernal_app:carta_publica.${c}`), // 0043 y 0077
+          "pedernal_app:identidad_de_carta_empresa.color_principal", // 0077
+          ...[
+            "portal_de_empresa.color_detras",
+            "portal_de_empresa.color_encabezado",
+            "portal_de_empresa.color_pagina",
+            "portal_de_empresa.imagen_cuenta",
+            "portal_de_empresa.imagen_extension",
+            "portal_de_empresa.imagen_id_publico",
+            "portal_de_empresa.imagen_proveedor",
+            "portal_de_empresa.imagen_version",
+            "portal_de_empresa.linea_superior",
+            "portal_de_empresa.logo_visible",
+            "portal_de_empresa.titulo",
+            "portal_de_empresa.variante",
+            "portal_tarjeta.foto_cuenta",
+            "portal_tarjeta.foto_extension",
+            "portal_tarjeta.foto_id_publico",
+            "portal_tarjeta.foto_proveedor",
+            "portal_tarjeta.foto_version",
+            "portal_tarjeta.nombre",
+            "portal_tarjeta.orden",
+            "portal_tarjeta.telefono",
+            "portal_tarjeta.visible",
+            "portal_zona.alto",
+            "portal_zona.ancho",
+            "portal_zona.sucursal_id",
+            "portal_zona.visible",
+            "portal_zona.x",
+            "portal_zona.y",
+          ].map((c) => `pedernal_app:${c}`), // 0078
           ...["actualizado_en", "actualizado_por", "oculto"].map(
             (c) => `pedernal_app:disponibilidad_de_producto.${c}`,
           ), // 0043
+          ...[
+            "activa",
+            "agrupar_en_carta",
+            "agrupar_en_pos",
+            "destacada",
+            "nombre",
+            "nombre_clave",
+            "orden",
+          ].map((c) => `pedernal_app:familia_de_producto.${c}`), // 0079 y 0081
+          ...["actualizado_en", "actualizado_por", "destacado", "orden"].map(
+            (c) => `pedernal_app:lugar_en_carta_de_producto.${c}`,
+          ), // 0081
+          "pedernal_app:miembro_de_familia.quitado_en", // 0079
+          "pedernal_app:miembro_de_familia.quitado_por", // 0079
+          "pedernal_app:seccion_de_carta.orden_de_renglones", // 0081
+          "pedernal_app:seccion_de_carta.version_del_orden", // 0081
           "pedernal_app:presentacion_de_producto.activa",
           "pedernal_app:presentacion_de_producto.nombre",
           "pedernal_app:presentacion_de_producto.nombre_clave",
           "pedernal_app:punto_de_venta_de_la_ficha.activo",
           "pedernal_app:recepcion.anulada_en",
           "pedernal_app:recepcion.anulada_por",
+          "pedernal_app:recepcion.confirmada_en",
+          "pedernal_app:recepcion.confirmada_por",
+          "pedernal_app:orden_de_compra.proveedor_id",
+          "pedernal_app:orden_de_compra.sucursal_destino_id",
+          "pedernal_app:orden_de_compra.fecha_de_entrega_prevista",
+          "pedernal_app:orden_de_compra.estado",
+          "pedernal_app:orden_de_compra.pedida_por",
+          "pedernal_app:orden_de_compra.cerrada_por",
+          "pedernal_app:orden_de_compra.anulada_por",
+          "pedernal_app:orden_de_compra.motivo_de_anulacion",
+          "pedernal_app:linea_de_orden.cantidad_pedida",
+          "pedernal_app:linea_de_orden.precio_unitario",
+          "pedernal_app:linea_de_orden.retirada",
+          "pedernal_app:saldo_de_linea_de_orden.cantidad_recibida",
+          "pedernal_app:diferencia_de_compra.estado",
+          "pedernal_app:diferencia_de_compra.resolucion",
+          "pedernal_app:diferencia_de_compra.motivo",
+          "pedernal_app:diferencia_de_compra.resuelta_por",
+          "pedernal_app:devolucion_a_proveedor.estado",
+          "pedernal_app:devolucion_a_proveedor.anulada_por",
+          "pedernal_app:devolucion_a_proveedor.motivo_de_anulacion",
+          "pedernal_app:tolerancia_de_compras.tolerancia_de_cantidad",
+          "pedernal_app:tolerancia_de_compras.tolerancia_de_precio",
+          "pedernal_app:tolerancia_de_compras.tolerancia_de_importe",
+          "pedernal_app:tolerancia_de_compras.tolerancia_de_recepcion",
+          "pedernal_app:saldo_de_linea_de_orden.actualizado_en",
           "pedernal_app:recepcion.estado",
           "pedernal_app:recepcion.motivo_de_anulacion",
           "pedernal_app:saldo_de_linea_de_comprobante.cantidad_asignada",
@@ -1174,6 +1313,21 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "motivo",
           "asignado_por",
         ].map((c) => `plan_de_tenant.${c}`),
+        // 0089 (política de cambio de plan)
+        ...[
+          "version",
+          "dias_de_anticipacion_de_suba",
+          "dias_de_anticipacion_de_baja",
+          "dias_de_arrepentimiento",
+          "motivo",
+          "definida_por",
+        ].map((c) => `politica_de_cambio_de_plan.${c}`),
+        ...["tenant_id", "numero", "sentido", "politica_version", "arrepentimiento_hasta"].map(
+          (c) => `condiciones_de_cambio_de_plan.${c}`,
+        ),
+        ...["tenant_id", "numero_arrepentido", "numero_nuevo", "motivo", "registrado_por"].map(
+          (c) => `arrepentimiento_de_plan.${c}`,
+        ),
         ...[
           "tenant_id",
           "empresa_id",
@@ -1203,17 +1357,69 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         ),
         // 0043: la carta pública y el botón «Ocultar»
         ...[
+          "cara",
           "codigo",
+          "color_propio",
           "creado_por",
           "empresa_id",
           "estado",
           "id",
+          "logo_cuenta",
+          "logo_extension",
+          "logo_id_publico",
+          "logo_proveedor",
+          "logo_version",
           "lugar",
           "mensaje_de_portada",
+          "modelo",
           "nombre",
           "rubro",
           "sucursal_id",
-        ].map((c) => `carta_publica.${c}`),
+        ].map((c) => `carta_publica.${c}`), // 0043 y 0077
+        // 0077: el color de la empresa para sus cartas (una fila por empresa)
+        ...["color_principal", "creado_por", "empresa_id"].map(
+          (c) => `identidad_de_carta_empresa.${c}`,
+        ),
+        // 0078: el portal de la empresa, sus tarjetas (variante A) y sus zonas (variante B)
+        ...[
+          "portal_de_empresa.codigo",
+          "portal_de_empresa.color_detras",
+          "portal_de_empresa.color_encabezado",
+          "portal_de_empresa.color_pagina",
+          "portal_de_empresa.creado_por",
+          "portal_de_empresa.empresa_id",
+          "portal_de_empresa.id",
+          "portal_de_empresa.imagen_cuenta",
+          "portal_de_empresa.imagen_extension",
+          "portal_de_empresa.imagen_id_publico",
+          "portal_de_empresa.imagen_proveedor",
+          "portal_de_empresa.imagen_version",
+          "portal_de_empresa.linea_superior",
+          "portal_de_empresa.logo_visible",
+          "portal_de_empresa.titulo",
+          "portal_de_empresa.variante",
+          "portal_tarjeta.empresa_id",
+          "portal_tarjeta.foto_cuenta",
+          "portal_tarjeta.foto_extension",
+          "portal_tarjeta.foto_id_publico",
+          "portal_tarjeta.foto_proveedor",
+          "portal_tarjeta.foto_version",
+          "portal_tarjeta.nombre",
+          "portal_tarjeta.orden",
+          "portal_tarjeta.portal_id",
+          "portal_tarjeta.sucursal_id",
+          "portal_tarjeta.telefono",
+          "portal_tarjeta.visible",
+          "portal_zona.alto",
+          "portal_zona.ancho",
+          "portal_zona.empresa_id",
+          "portal_zona.id",
+          "portal_zona.portal_id",
+          "portal_zona.sucursal_id",
+          "portal_zona.visible",
+          "portal_zona.x",
+          "portal_zona.y",
+        ],
         ...[
           "actualizado_en",
           "actualizado_por",
@@ -1222,6 +1428,45 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "producto_id",
           "sucursal_id",
         ].map((c) => `disponibilidad_de_producto.${c}`),
+        ...[
+          "aplicada_en",
+          "aplicada_por",
+          "empresa_id",
+          "familia_id",
+          "huella",
+          "id",
+          "precios_escritos",
+          "precios_sin_cambio",
+        ].map((c) => `aplicacion_de_precio_de_familia.${c}`),
+        ...[
+          "activa",
+          "agrupar_en_carta",
+          "agrupar_en_pos",
+          "creado_por",
+          "destacada",
+          "empresa_id",
+          "id",
+          "nombre",
+          "nombre_clave",
+          "orden",
+        ].map((c) => `familia_de_producto.${c}`),
+        ...[
+          "actualizado_en",
+          "actualizado_por",
+          "destacado",
+          "empresa_id",
+          "orden",
+          "producto_id",
+        ].map((c) => `lugar_en_carta_de_producto.${c}`),
+        ...[
+          "agregado_en",
+          "agregado_por",
+          "empresa_id",
+          "familia_id",
+          "id",
+          "posicion",
+          "producto_id",
+        ].map((c) => `miembro_de_familia.${c}`),
         ...[
           "activo",
           "admite_varias",
@@ -1360,6 +1605,27 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "clave_idempotencia",
             "huella",
           ].map((c) => `movimiento_caja.${c}`),
+          // 0091: el acto «movimiento de dinero» (la aplicación inserta por columna; `id` y `creado_en` los pone la base)
+          ...[
+            "empresa_id",
+            "sucursal_id",
+            "sesion_id",
+            "sentido",
+            "importe",
+            "moneda",
+            "categoria",
+            "concepto",
+            "motivo",
+            "tercero_nombre",
+            "tercero_persona_id",
+            "referencia",
+            "devuelve_a",
+            "movimiento_id",
+            "clave",
+            "huella",
+            "registrado_por",
+            "registrado_en",
+          ].map((c) => `movimiento_de_dinero.${c}`),
           ...[
             "movimiento_id",
             "empresa_id",
@@ -1897,6 +2163,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "comprobante_de_la_ficha.tipo",
           "comprobante_de_proveedor.clase",
           "comprobante_de_proveedor.clave_idempotencia",
+          "comprobante_de_proveedor.comprobante_asociado_id",
           "comprobante_de_proveedor.credito_fiscal_computable",
           "comprobante_de_proveedor.empresa_id",
           "comprobante_de_proveedor.es_atajo",
@@ -1943,6 +2210,95 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "correccion_de_compra.precio_nuevo",
           "correccion_de_compra.recepcion_id",
           "correccion_de_compra.registrado_por",
+          "entrada_de_linea_de_recepcion.cantidad",
+          "entrada_de_linea_de_recepcion.deposito_id",
+          "entrada_de_linea_de_recepcion.empresa_id",
+          "entrada_de_linea_de_recepcion.linea",
+          "entrada_de_linea_de_recepcion.movimiento_id",
+          "entrada_de_linea_de_recepcion.recepcion_id",
+          "inspeccion_de_linea_de_recepcion.cantidad_segun_remito",
+          "inspeccion_de_linea_de_recepcion.condicion",
+          "inspeccion_de_linea_de_recepcion.empresa_id",
+          "inspeccion_de_linea_de_recepcion.linea",
+          "inspeccion_de_linea_de_recepcion.observacion",
+          "inspeccion_de_linea_de_recepcion.recepcion_id",
+          "inspeccion_de_linea_de_recepcion.temperatura_en_c",
+          "orden_de_compra.id",
+          "orden_de_compra.empresa_id",
+          "orden_de_compra.proveedor_id",
+          "orden_de_compra.sucursal_destino_id",
+          "orden_de_compra.fecha_de_entrega_prevista",
+          "orden_de_compra.clave_idempotencia",
+          "orden_de_compra.huella",
+          "orden_de_compra.creado_por",
+          "linea_de_orden.empresa_id",
+          "linea_de_orden.orden_id",
+          "linea_de_orden.numero",
+          "linea_de_orden.producto_id",
+          "linea_de_orden.cantidad_pedida",
+          "linea_de_orden.precio_unitario",
+          "saldo_de_linea_de_orden.empresa_id",
+          "saldo_de_linea_de_orden.orden_id",
+          "saldo_de_linea_de_orden.linea",
+          "saldo_de_linea_de_orden.cantidad_pedida",
+          "linea_de_recepcion_de_orden.empresa_id",
+          "linea_de_recepcion_de_orden.recepcion_id",
+          "linea_de_recepcion_de_orden.linea",
+          "linea_de_recepcion_de_orden.orden_id",
+          "linea_de_recepcion_de_orden.linea_de_orden",
+          "linea_de_recepcion_de_orden.confirmo_exceso",
+          "diferencia_de_compra.id",
+          "diferencia_de_compra.empresa_id",
+          "diferencia_de_compra.conciliacion_id",
+          "diferencia_de_compra.tipo",
+          "diferencia_de_compra.comprobante_id",
+          "diferencia_de_compra.linea_de_comprobante",
+          "diferencia_de_compra.recepcion_id",
+          "diferencia_de_compra.linea_de_recepcion",
+          "diferencia_de_compra.cantidad_de_diferencia",
+          "diferencia_de_compra.importe_de_diferencia",
+          "diferencia_de_compra.precio_facturado",
+          "diferencia_de_compra.precio_de_referencia",
+          "diferencia_de_compra.origen_del_precio_de_referencia",
+          "diferencia_de_compra.dentro_de_tolerancia",
+          "diferencia_de_compra.tolerancia_de_cantidad",
+          "diferencia_de_compra.tolerancia_de_precio",
+          "diferencia_de_compra.tolerancia_de_importe",
+          "diferencia_de_compra.estado",
+          "diferencia_de_compra.resolucion",
+          "diferencia_de_compra.motivo",
+          "diferencia_de_compra.resuelta_por",
+          "devolucion_a_proveedor.id",
+          "devolucion_a_proveedor.empresa_id",
+          "devolucion_a_proveedor.sucursal_id",
+          "devolucion_a_proveedor.proveedor_id",
+          "devolucion_a_proveedor.motivo_id",
+          "devolucion_a_proveedor.remito_de_devolucion_numero",
+          "devolucion_a_proveedor.remito_de_devolucion_fecha",
+          "devolucion_a_proveedor.clave_idempotencia",
+          "devolucion_a_proveedor.huella",
+          "devolucion_a_proveedor.hecho_en",
+          "devolucion_a_proveedor.registrado_por",
+          "linea_de_devolucion.empresa_id",
+          "linea_de_devolucion.devolucion_id",
+          "linea_de_devolucion.numero",
+          "linea_de_devolucion.deposito_id",
+          "linea_de_devolucion.articulo_id",
+          "linea_de_devolucion.cantidad",
+          "linea_de_devolucion.recepcion_id",
+          "linea_de_devolucion.linea_de_recepcion",
+          "linea_de_devolucion.movimiento_id",
+          "linea_de_devolucion.renglon_numero",
+          "tolerancia_aplicada_de_conciliacion.empresa_id",
+          "tolerancia_aplicada_de_conciliacion.conciliacion_id",
+          "tolerancia_aplicada_de_conciliacion.tolerancia_de_cantidad",
+          "tolerancia_aplicada_de_conciliacion.tolerancia_de_precio",
+          "tolerancia_aplicada_de_conciliacion.tolerancia_de_importe",
+          "tolerancia_de_compras.empresa_id",
+          "tolerancia_de_compras.tolerancia_de_cantidad",
+          "tolerancia_de_compras.tolerancia_de_precio",
+          "tolerancia_de_compras.tolerancia_de_importe",
+          "tolerancia_de_compras.tolerancia_de_recepcion",
           "ficha_de_compra_del_proveedor.empresa_id",
           "ficha_de_compra_del_proveedor.letra_esperada",
           "ficha_de_compra_del_proveedor.parte_id",
@@ -1961,6 +2317,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "linea_de_comprobante.neto_de_linea",
           "linea_de_comprobante.numero",
           "linea_de_comprobante.precio_neto",
+          "linea_de_comprobante.producto_id",
           "linea_de_comprobante.recepcion_id",
           "linea_de_comprobante.unidad",
           "linea_de_recepcion.cantidad_de_compra",
@@ -2050,6 +2407,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "recepcion.clave_idempotencia",
           "recepcion.empresa_id",
           "recepcion.es_atajo",
+          "recepcion.estado",
           "recepcion.hecho_en",
           "recepcion.huella",
           "recepcion.id",
@@ -2679,11 +3037,13 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         )
       ).rows;
 
-    it("toda restricción única de una tabla con empresa_id la incluye (nada de detectar datos de otro cliente), salvo las excepciones explícitas carta_publica_codigo_uk, emisor_cuit_uk y referencia_de_error_referencia_uk", async () => {
+    it("toda restricción única de una tabla con empresa_id la incluye (nada de detectar datos de otro cliente), salvo las excepciones explícitas carta_publica_codigo_uk, emisor_cuit_uk, portal_de_empresa_codigo_uk y referencia_de_error_referencia_uk", async () => {
       expect(await unicasSinEmpresa(dueno)).toEqual([
         // El código de una carta es la llave pública del QR: único en TODA la plataforma, o dos empresas tendrían el mismo QR (0043, carta real §3.2).
         { tabla: "carta_publica", indice: "carta_publica_codigo_uk" },
         { tabla: "emisor", indice: "emisor_cuit_uk" }, // el CUIT del secundario es único en toda la instalación
+        // El código del portal es la llave pública del QR de la empresa, única en toda la plataforma, como carta_publica_codigo_uk (0078).
+        { tabla: "portal_de_empresa", indice: "portal_de_empresa_codigo_uk" },
         // La referencia de error la sortea el servidor y quien la escribe no puede leer la tabla (0007, P5).
         { tabla: "referencia_de_error", indice: "referencia_de_error_referencia_uk" },
       ]);
@@ -2723,8 +3083,16 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       const politicasPublicas = await filas<{ policyname: string; qual: string }>(
         `select policyname, qual from pg_policies where tablename = 'carta_publica' and 'pedernal_publico' = any(roles)`,
       );
-      expect(politicasPublicas).toHaveLength(1);
-      expect(politicasPublicas[0]?.qual).toContain("app.codigo_de_carta");
+      // Dos políticas públicas: la de siempre por `app.codigo_de_carta` (UNA carta) y la del portal (0078), por `app.empresa_del_portal`, que solo deja ver las cartas EN LÍNEA
+      // de sucursales con una tarjeta o una zona del portal (ver `portal-lectura.test.ts`, «variante B»).
+      expect(politicasPublicas).toHaveLength(2);
+      const porCarta = politicasPublicas.find((p) => p.qual.includes("app.codigo_de_carta"));
+      const porPortal = politicasPublicas.find((p) => p.qual.includes("app.empresa_del_portal"));
+      expect(porCarta?.qual).not.toContain("app.empresa_del_portal");
+      expect(porPortal?.qual).not.toContain("app.codigo_de_carta");
+      expect(porPortal?.qual).toContain("portal_tarjeta");
+      expect(porPortal?.qual).toContain("portal_zona");
+      expect(porPortal?.qual).toContain("EN_LINEA");
     });
 
     it("la premisa de emisor_cuit_uk: solo la plataforma escribe emisor.cuit (si el cliente lo escribiera, el error de duplicado le mostraría los CUIT ajenos)", async () => {
@@ -2760,6 +3128,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         expect(await unicasSinEmpresa(cliente)).toEqual([
           { tabla: "carta_publica", indice: "carta_publica_codigo_uk" }, // la excepción explícita de 0043
           { tabla: "emisor", indice: "emisor_cuit_uk" }, // la excepción explícita de 0006
+          { tabla: "portal_de_empresa", indice: "portal_de_empresa_codigo_uk" }, // la excepción explícita de 0078
           { tabla: "producto_clave_propia", indice: "producto_clave_propia_pkey" },
           { tabla: "producto_mala", indice: "producto_mala_sku_key" },
           { tabla: "referencia_de_error", indice: "referencia_de_error_referencia_uk" }, // la de 0007

@@ -1,6 +1,7 @@
 import type { Kysely } from "kysely";
+import { nivelDeNacimientoDe } from "../../capacidades/controles/catalogo";
 import {
-  esNivelDeControl,
+  leerNivelGuardado,
   resolverNivel,
   type NivelDeControl,
 } from "../../capacidades/controles/nivel";
@@ -26,6 +27,7 @@ export type NivelesDeControlDb = {
 
 export function crearNivelesDeControlDePostgres<C extends string>(
   db: Kysely<NivelesDeControlDb>,
+  nivelDeNacimiento: (control: C) => NivelDeControl = nivelDeNacimientoDe,
 ): NivelesDeControl<C> {
   return {
     async nivel(control, alcance, disponibleEnElPlan): Promise<NivelDeControl> {
@@ -43,16 +45,14 @@ export function crearNivelesDeControlDePostgres<C extends string>(
       const guardado = (deLaSucursal: boolean): NivelDeControl | null => {
         const fila = filas.find((f) => (f.sucursal_id !== null) === deLaSucursal);
         if (fila === undefined) return null;
-        // Un valor que el CHECK de la base no deja pasar: si llega otro, algo se rompió.
-        if (!esNivelDeControl(fila.nivel)) {
-          throw new RangeError(`nivel de control desconocido en la base: ${fila.nivel}`);
-        }
-        return fila.nivel;
+        // El CHECK de la base solo deja PERMITIR y AVISAR; si llegara otro valor se lee como AVISAR (`leerNivelGuardado`), no se frena ni se habilita en silencio.
+        return leerNivelGuardado(fila.nivel);
       };
       return resolverNivel({
         disponibleEnElPlan,
         nivelDeLaEmpresa: guardado(false),
         nivelDeLaSucursal: guardado(true),
+        nivelDeNacimiento: nivelDeNacimiento(control),
       });
     },
   };

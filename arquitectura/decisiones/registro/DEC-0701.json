@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0701",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En compras N3 la recepción nace pendiente y el stock entra recién al confirmarla, una entrada por línea y depósito en una tabla propia.",
+  "que_cambia": "Migración 0063 aditiva: estado PENDIENTE, quién y cuándo confirmó, control de la mercadería por línea y entradas de stock por línea. La reversión frena si hay pendientes.",
+  "donde": "migraciones/0063_compras_recepcion_separada.sql; src/modulos/compras/dominio/control-de-recepcion.ts; decisión del dueño del 14/11/2026 (confirmar solo existe en N3)."
+}

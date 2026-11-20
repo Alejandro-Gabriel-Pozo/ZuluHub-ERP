@@ -1,4 +1,21 @@
 {
+  "test/web/ficha-de-caja.test.ts": [
+    "apps/web/app/s/app/(operacion)/caja/page.tsx",
+    "apps/web/ui/plantillas/caja/*"
+  ],
+  "test/web/ficha-de-mesas.test.ts": [
+    "apps/web/app/s/app/(operacion)/salon/mesas/**",
+    "apps/web/ui/plantillas/salon/*"
+  ],
+  "test/web/ficha-de-impresoras.test.ts": [
+    "apps/web/app/s/app/(operacion)/salon/impresoras/**",
+    "apps/web/ui/plantillas/salon/*",
+    "apps/web/ui/patrones/papel/*"
+  ],
+  "test/web/impresoras-modelo.test.ts": [
+    "apps/web/ui/plantillas/salon/*",
+    "apps/web/ui/patrones/papel/*"
+  ],
   "test/web/contraste-de-superficies.test.ts": ["apps/web/ui/tokens.css"],
   "test/web/legibilidad-de-la-app.test.ts": ["apps/web/**"],
   "src/adaptadores/pdf/medidas-del-papel.test.ts": ["apps/web/ui/**/*.css"],
@@ -12,6 +29,7 @@
   "test/web/sucursal-elegida.test.ts": ["apps/web/app/s/app/acciones-de-sucursal.ts"],
   "test/arquitectura/vercel-json.test.ts": ["apps/web/**"],
   "test/arquitectura/cargar-entorno-nombres.test.ts": ["apps/web/PRIMER-DESPLIEGUE.md"],
+  "test/arquitectura/carta-compartida-no-indexa.test.ts": ["apps/web/app/s/carta/**"],
   "test/arquitectura/reglas.test.ts": ["apps/**"],
   "test/arquitectura/lint.test.ts": ["apps/**"],
   "test/arquitectura/campos-con-dato.test.ts": ["apps/**"],
@@ -21,7 +39,26 @@
   "test/arquitectura/fuente-unica-limites-de-division.test.ts": ["apps/**"],
   "test/arquitectura/cuenta-de-documento.test.ts": ["apps/**"],
   "test/arquitectura/cobrar-no-expuesto.test.ts": ["apps/**"],
+  "test/arquitectura/sin-nivel-bloquear.test.ts": ["apps/**"],
   "test/arquitectura/menu-por-areas.test.ts": ["apps/**"],
+  "test/arquitectura/ofertas-por-modulo.test.ts": ["apps/web/servidor/*.ts"],
+  "test/arquitectura/archivos-centrales.test.ts": ["apps/web/servidor/*.ts"],
   "test/arquitectura/sin-importar-de-test.test.ts": ["apps/**"],
-  "test/arquitectura/carta-con-duenio.test.ts": ["apps/web/app/s/carta/**"]
+  "test/arquitectura/carta-con-duenio.test.ts": ["apps/web/app/s/carta/**"],
+  "test/arquitectura/operaciones-contextuales.test.ts": ["apps/web/**"],
+  "test/web/ficha-de-planes-de-consola.test.ts": [
+    "apps/plataforma/app/planes/**",
+    "apps/plataforma/pantallas/*",
+    "apps/plataforma/logica/*"
+  ],
+  "test/web/ficha-de-arrepentimiento-de-consola.test.ts": [
+    "apps/plataforma/app/empresas/**",
+    "apps/plataforma/pantallas/*",
+    "apps/plataforma/logica/*"
+  ],
+  "test/web/ficha-de-politica-de-consola.test.ts": [
+    "apps/plataforma/app/politica-de-plan/**",
+    "apps/plataforma/pantallas/*",
+    "apps/plataforma/logica/*"
+  ]
 }

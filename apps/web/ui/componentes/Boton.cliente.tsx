@@ -16,7 +16,7 @@ export type PropsDeBoton = Readonly<{
   enviando?: boolean;
   textoEnviando?: string | undefined;
   ancho?: "auto" | "completo";
-  /** Un botón que se marca y se desmarca (por ejemplo «Reconocer»): lo dice `aria-pressed` y se ve con borde y fondo, no solo con color. Sin él no es un botón de dos estados. */
+  /** Un botón que se enciende y se apaga («Conforme»): dice su estado al lector de pantalla (`aria-pressed`). Sin él, es un botón común. */
   presionado?: boolean | undefined;
 }>;
 

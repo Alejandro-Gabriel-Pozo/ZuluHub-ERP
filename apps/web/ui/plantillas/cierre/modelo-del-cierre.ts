@@ -3,7 +3,7 @@ import type { ClaveDeTexto } from "../../../../../src/capacidades/vocabulario/ca
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { fechaCivilDesdeTexto } from "../../../../../src/primitivas/tiempo/fecha-civil";
 import { fechaParaMostrar } from "../../../../../src/primitivas/tiempo/fecha-para-mostrar";
-import { instanteParaMostrar } from "../../../../../src/primitivas/tiempo/instante-para-mostrar";
+import { fechaYHoraParaMostrar } from "../../../../../src/primitivas/tiempo/instante-para-mostrar";
 import type { TonoDeEstado } from "../../componentes/Insignia";
 import { formatearImporte } from "../../patrones/formato-fiscal";
 import { nombreDelTipo } from "../caja/modelo-de-medios-de-pago";
@@ -167,7 +167,7 @@ const lineaDeQuien = (
 ): string | null =>
   quien === null || cuando === null
     ? null
-    : texto({}, clave, { persona: quien, cuando: instanteParaMostrar(new Date(cuando)) });
+    : texto({}, clave, { persona: quien, cuando: fechaYHoraParaMostrar(cuando) });
 
 function armarLosControles(
   cierre: CierreParaLaPantalla,

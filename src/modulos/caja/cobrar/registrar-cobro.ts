@@ -62,12 +62,17 @@ export async function registrarCobroEnTx(
     if (sesion === null) throw new Error("invariante rota: un cobro sin su sesión");
     const vencida = jornadaVencida(ahora, sesion, sesion.fechaDeNegocio);
     if (!vencida.ok) return vencida;
+    // El sello original: aunque el medio haya cambiado de configuración después, una repetición devuelve lo que se selló al cobrar.
+    const sellado = await tx.cobros.datosPendientes(empresaId, previa.id);
+    if (sellado === null)
+      throw new Error("invariante rota: un movimiento de cobro sin su fila de cobro");
     return ok({
       cobroId: previa.id,
       sesionId: sesion.id,
       fechaDeNegocio: sesion.fechaDeNegocio,
       jornadaVencida: vencida.valor,
       yaExistia: true,
+      datosPendientes: sellado,
     });
   };
 
@@ -134,14 +139,14 @@ export async function registrarCobroEnTx(
     }
     return yaHecho(ganadora);
   }
-  const insertado = await tx.cobros.insertar({
+  const sellado = await tx.cobros.insertar({
     empresa: empresaId,
     movimientoId: cobroId,
     origen: entrada.origen,
     origenOrden: entrada.origenOrden,
     datos,
   });
-  if (!insertado) {
+  if (sellado === null) {
     // Imposible sin chocar antes la clave del movimiento (se arma con el mismo origen y orden): se aborta todo antes que dejar un cobro sin fila.
     throw new Error("invariante rota: el origen ya tenía su cobro con otra clave");
   }
@@ -162,6 +167,8 @@ export async function registrarCobroEnTx(
       origenOrden: entrada.origenOrden,
       // Qué datos se completaron, nunca su valor (el DNI, el cupón y los últimos 4 no van a la auditoría).
       datosCompletados: [...datosCompletados(entrada.datos)],
+      // Qué datos pedidos quedaron vacíos (el sello de la base): son nombres de datos, nunca valores.
+      datosPendientes: [...sellado],
     },
   });
   if (vencida.valor) {
@@ -178,5 +185,6 @@ export async function registrarCobroEnTx(
     fechaDeNegocio: sesion.fechaDeNegocio,
     jornadaVencida: vencida.valor,
     yaExistia: false,
+    datosPendientes: sellado,
   });
 }

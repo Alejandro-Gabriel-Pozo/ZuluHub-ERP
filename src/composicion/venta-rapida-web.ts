@@ -51,6 +51,8 @@ export type CarritoCotizado = Readonly<{
 const productoParaLaPantalla = (p: ProductoParaVender): ProductoParaVender => ({
   id: p.id,
   nombre: p.nombre,
+  codigo: p.codigo,
+  codigoDeBarras: p.codigoDeBarras,
   seccionId: p.seccionId,
   unidadDeVentaId: p.unidadDeVentaId,
   pasoMinimo: p.pasoMinimo,

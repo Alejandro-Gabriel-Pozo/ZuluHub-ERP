@@ -1,3 +1,4 @@
+import type { DatoDelCobro } from "../estados";
 import { sql, type Kysely } from "kysely";
 import { importeDesdeTexto, type Importe } from "../../../primitivas/dinero/importe";
 import { ARS } from "../../../primitivas/dinero/moneda";
@@ -40,6 +41,8 @@ export type CobroDeLaJornada = Readonly<{
   origen: Readonly<{ tipo: string; id: string; orden: number }>;
   registradoEn: Date;
   registradoPor: PersonaId;
+  /** El sello de la base al cobrar (PR-7-caja): no cambia con las correcciones ni con la configuración posterior del medio. */
+  datosPendientes: readonly DatoDelCobro[];
   correcciones: readonly CorreccionDeUnCobro[];
 }>;
 
@@ -94,6 +97,7 @@ export function crearRepositorioDeCobrosDeLaJornada(
           "co.origen_orden as origen_orden",
           "m.registrado_en as registrado_en",
           "m.registrado_por as registrado_por",
+          "co.datos_pendientes as datos_pendientes",
         ]);
       if (filtro.medioDePagoId !== null) {
         const medio = filtro.medioDePagoId;
@@ -170,6 +174,7 @@ export function crearRepositorioDeCobrosDeLaJornada(
           origen: { tipo: c.origen_tipo, id: c.origen_id, orden: c.origen_orden },
           registradoEn: c.registrado_en,
           registradoPor: personaId(c.registrado_por),
+          datosPendientes: c.datos_pendientes as DatoDelCobro[],
           correcciones: suyas,
         };
       });

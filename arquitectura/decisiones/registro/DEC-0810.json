@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0810",
+  "fecha": "2026-11-20",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: una sola tabla `movimiento_de_dinero` guarda entrada y salida del acto de Caja sin ticket; las seis categorías de salida son lista cerrada en código y base.",
+  "que_cambia": "Una categoría nueva exige migración y cambio de código a la vez (una prueba de paridad lo vigila). Revertir: reversión 0091 (pierde los actos cargados; avisar al dueño) y volver a dos tablas.",
+  "donde": "migraciones/0091_movimiento_de_dinero.sql; src/modulos/caja/dominio/movimiento-de-dinero.ts; brief PR-M1 y D-1 = U, repo de documentos"
+}

@@ -15,6 +15,10 @@ export type {
 } from "./casos-de-uso/contrato";
 export type { ErrorDeClientes } from "./casos-de-uso/errores";
 export type {
+  EntradaDeEditarParteConRoles,
+  SalidaDeEditarParteConRoles,
+} from "./casos-de-uso/editar-parte-con-roles";
+export type {
   EntradaDeCambiarEstadoDeParte,
   EntradaDeCrearParte,
   EntradaDeEditarParte,

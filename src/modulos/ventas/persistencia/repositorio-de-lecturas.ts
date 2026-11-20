@@ -45,6 +45,13 @@ export interface LecturasDeVentas extends LecturasDeTicket {
     sucursal: SucursalId,
     fecha: FechaCivil,
   ): Promise<TicketDeJornada[]>;
+  /** Los tickets de la jornada del número mayor al menor, hasta `limite` (para «Tickets del día»). La misma consulta que `ticketsDeLaJornada`. */
+  ticketsDelDia(
+    empresa: EmpresaId,
+    sucursal: SucursalId,
+    jornada: FechaCivil,
+    limite: number,
+  ): Promise<TicketDeJornada[]>;
   ticketsPorCobranza(
     empresa: EmpresaId,
     cobranzas: readonly string[],
@@ -121,57 +128,71 @@ async function ticketsPorCobranza(
   }));
 }
 
+/** La consulta de los tickets de una jornada, escrita una sola vez: `ticketsDeLaJornada` (cierre del día, orden ascendente) y `ticketsDelDia` (la pantalla, descendente y con tope). */
+async function ticketsDeJornada(
+  db: Kysely<VentasDb>,
+  empresa: EmpresaId,
+  sucursal: SucursalId,
+  jornada: FechaCivil,
+  orden: "ASC" | "DESC",
+  limite: number | null,
+): Promise<TicketDeJornada[]> {
+  const filas = await sql<Fila>`
+    select t.id, t.numero, t.estado, t.ejemplar_vigente, ev.id as ejemplar_vigente_id, t.total::text as total_original,
+           (${VIGENTE})::text as total_vigente, (${COBRADO})::text as total_cobrado,
+           (case when c.id is null then 0::numeric(18,2) else (${COBRADO}) - (${VIGENTE}) end)::text as diferencia, c.id as cobranza_id, t.emitido_por, t.emitido_en
+      from ticket t
+      join ticket_ejemplar ev on ev.empresa_id = t.empresa_id and ev.ticket_id = t.id and ev.numero_de_ejemplar = t.ejemplar_vigente
+      left join cobranza_de_ticket c on c.empresa_id = t.empresa_id and c.ticket_id = t.id
+     where t.empresa_id = ${empresa} and t.sucursal_id = ${sucursal} and t.fecha_negocio = ${jornada}::date
+     ${orden === "ASC" ? sql`order by t.numero, t.id` : sql`order by t.numero desc, t.id desc`}
+     ${limite === null ? sql`` : sql`limit ${limite}`}`.execute(db);
+  const cobranzas = filas.rows.flatMap((f) =>
+    f["cobranza_id"] === null ? [] : [texto(f["cobranza_id"])],
+  );
+  const cobros = new Map<string, { cobroId: string; origenOrden: number; importe: string }[]>();
+  if (cobranzas.length > 0) {
+    const aplicaciones = await sql<Fila>`
+      select a.cobranza_id, a.cobro_id, a.orden, a.importe::text as importe
+        from aplicacion_de_cobro a
+       where a.empresa_id = ${empresa} and a.cobranza_id = any(${cobranzas}::uuid[])
+       order by a.cobranza_id, a.orden`.execute(db);
+    for (const a of aplicaciones.rows) {
+      const clave = texto(a["cobranza_id"]);
+      cobros.set(clave, [
+        ...(cobros.get(clave) ?? []),
+        {
+          cobroId: texto(a["cobro_id"]),
+          origenOrden: numero(a["orden"]),
+          importe: texto(a["importe"]),
+        },
+      ]);
+    }
+  }
+  return filas.rows.map((f) => ({
+    ticketId: texto(f["id"]),
+    numero: numero(f["numero"]),
+    estado: f["estado"] as EstadoDeTicket,
+    ejemplarVigente: numero(f["ejemplar_vigente"]),
+    ejemplarVigenteId: texto(f["ejemplar_vigente_id"]),
+    totalOriginal: texto(f["total_original"]),
+    totalVigente: texto(f["total_vigente"]),
+    totalCobrado: texto(f["total_cobrado"]),
+    diferencia: texto(f["diferencia"]),
+    cobranzaId: f["cobranza_id"] === null ? null : texto(f["cobranza_id"]),
+    cobros: f["cobranza_id"] === null ? [] : (cobros.get(texto(f["cobranza_id"])) ?? []),
+    emitidoPor: texto(f["emitido_por"]),
+    emitidoEn: fecha(f["emitido_en"]),
+  }));
+}
+
 export function crearRepositorioDeLecturas(db: Kysely<VentasDb>): LecturasDeVentas {
   return {
     ...crearLecturasDeTicket(db),
-    async ticketsDeLaJornada(empresa, sucursal, jornada) {
-      const filas = await sql<Fila>`
-        select t.id, t.numero, t.estado, t.ejemplar_vigente, ev.id as ejemplar_vigente_id, t.total::text as total_original,
-               (${VIGENTE})::text as total_vigente, (${COBRADO})::text as total_cobrado,
-               (case when c.id is null then 0::numeric(18,2) else (${COBRADO}) - (${VIGENTE}) end)::text as diferencia, c.id as cobranza_id, t.emitido_por, t.emitido_en
-          from ticket t
-          join ticket_ejemplar ev on ev.empresa_id = t.empresa_id and ev.ticket_id = t.id and ev.numero_de_ejemplar = t.ejemplar_vigente
-          left join cobranza_de_ticket c on c.empresa_id = t.empresa_id and c.ticket_id = t.id
-         where t.empresa_id = ${empresa} and t.sucursal_id = ${sucursal} and t.fecha_negocio = ${jornada}::date
-         order by t.numero, t.id`.execute(db);
-      const cobranzas = filas.rows.flatMap((f) =>
-        f["cobranza_id"] === null ? [] : [texto(f["cobranza_id"])],
-      );
-      const cobros = new Map<string, { cobroId: string; origenOrden: number; importe: string }[]>();
-      if (cobranzas.length > 0) {
-        const aplicaciones = await sql<Fila>`
-          select a.cobranza_id, a.cobro_id, a.orden, a.importe::text as importe
-            from aplicacion_de_cobro a
-           where a.empresa_id = ${empresa} and a.cobranza_id = any(${cobranzas}::uuid[])
-           order by a.cobranza_id, a.orden`.execute(db);
-        for (const a of aplicaciones.rows) {
-          const clave = texto(a["cobranza_id"]);
-          cobros.set(clave, [
-            ...(cobros.get(clave) ?? []),
-            {
-              cobroId: texto(a["cobro_id"]),
-              origenOrden: numero(a["orden"]),
-              importe: texto(a["importe"]),
-            },
-          ]);
-        }
-      }
-      return filas.rows.map((f) => ({
-        ticketId: texto(f["id"]),
-        numero: numero(f["numero"]),
-        estado: f["estado"] as EstadoDeTicket,
-        ejemplarVigente: numero(f["ejemplar_vigente"]),
-        ejemplarVigenteId: texto(f["ejemplar_vigente_id"]),
-        totalOriginal: texto(f["total_original"]),
-        totalVigente: texto(f["total_vigente"]),
-        totalCobrado: texto(f["total_cobrado"]),
-        diferencia: texto(f["diferencia"]),
-        cobranzaId: f["cobranza_id"] === null ? null : texto(f["cobranza_id"]),
-        cobros: f["cobranza_id"] === null ? [] : (cobros.get(texto(f["cobranza_id"])) ?? []),
-        emitidoPor: texto(f["emitido_por"]),
-        emitidoEn: fecha(f["emitido_en"]),
-      }));
-    },
+    ticketsDeLaJornada: (empresa, sucursal, jornada) =>
+      ticketsDeJornada(db, empresa, sucursal, jornada, "ASC", null),
+    ticketsDelDia: (empresa, sucursal, jornada, limite) =>
+      ticketsDeJornada(db, empresa, sucursal, jornada, "DESC", limite),
 
     ticketsPorCobranza: (empresa, cobranzas) =>
       ticketsPorCobranza(db, sql`${empresa}::uuid`, cobranzas),

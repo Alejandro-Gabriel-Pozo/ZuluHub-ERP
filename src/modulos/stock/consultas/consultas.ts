@@ -1,5 +1,6 @@
 import type { DependenciasDeConsultasDeStock } from "../casos-de-uso/contrato";
 import { crearLector } from "./comun";
+import { armarConsultasDeArticulos } from "./articulos";
 import { armarConsultasDeComposiciones } from "./composiciones";
 import { armarConsultasDeConteos } from "./conteos";
 import { armarConsultasDeCostos } from "./costos";
@@ -8,6 +9,7 @@ import { armarConsultasDeExistencias } from "./existencias";
 import { armarConsultasDeLibro } from "./libro";
 import { armarConsultasDeLotes } from "./lotes";
 import { armarConsultasDeRecetas } from "./recetas";
+import { armarConsultasDeRecetasParaPantalla } from "./recetas-para-pantalla";
 
 /**
  * Las consultas por pantalla de stock (ADR-005): solo lectura (`read committed`), cada una pide su acción al guard dentro de su transacción.
@@ -23,10 +25,14 @@ export function crearConsultasDeStock(d: DependenciasDeConsultasDeStock) {
     ...armarConsultasDeLibro(leer),
     // conteo físico (E5-T6)
     ...armarConsultasDeConteos(leer, d.reglas),
+    // el tilde «Se controla el stock» de la ficha del producto
+    ...armarConsultasDeArticulos(leer),
     // composiciones (E5-T7)
     ...armarConsultasDeComposiciones(leer),
     // ficha de receta con costo, comparar versiones, ficha de cocina (E6-T6)
     ...armarConsultasDeRecetas(leer, d.reglas),
+    // la pantalla de Recetas: lista, receta con última versión, ingredientes y vista previa (B1 a B4)
+    ...armarConsultasDeRecetasParaPantalla(leer, d.reglas),
     // lotes, vencimientos y trazabilidad (E6-T7)
     ...armarConsultasDeLotes(leer, d.reglas),
     // costos (E5-T10)

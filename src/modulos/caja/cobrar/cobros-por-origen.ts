@@ -25,6 +25,7 @@ export async function cobrosPorOrigen(
       medioVigenteTipo: medioVigenteTipo(c.medioTipo, c.correcciones),
       cuentaDeCobroId: c.cuentaDeCobroId,
       fechaDeNegocio: c.fechaDeNegocio,
+      datosPendientes: c.datosPendientes,
     })),
   };
 }
