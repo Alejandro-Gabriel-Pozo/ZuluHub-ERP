@@ -117,6 +117,26 @@
         "comandas.test",
         "produccion.test"
       ]
+    },
+    {
+      "ruta": "src/capacidades/modulos/catalogo.ts",
+      "exporta": [
+        "EstadoDeConstruccion",
+        "EfectoDeAccion",
+        "EFECTOS_DE_ACCION",
+        "DefinicionDeAccion",
+        "DefinicionDeModulo",
+        "CatalogoComercial",
+        "CATALOGO_DE_MODULOS",
+        "ClaveModulo",
+        "ClaveAccion",
+        "ClaveCapacidad"
+      ],
+      "importaDe": ["src/capacidades/modulos/catalogo-*"],
+      "parteDedicada": "src/capacidades/modulos/catalogo-<módulo>.ts",
+      "soloJunta": true,
+      "lineas": 98,
+      "excepciones": ["lotes-y-produccion", "salon-y-comandas"]
     }
   ]
 }

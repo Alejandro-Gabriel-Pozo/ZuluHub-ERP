@@ -1,11 +1,25 @@
 /**
- * Catálogo comercial de módulos (ADR-003). Es código, no base de datos: de acá salen los tipos
- * cerrados `ClaveModulo`, `ClaveAccion` y `ClaveCapacidad`, así que una acción sin módulo, o un
- * permiso para una acción que no existe, no compila.
+ * ARCHIVO CENTRAL
+ * QUÉ ES: la lista de los módulos comerciales (ADR-003); de acá salen los tipos cerrados `ClaveModulo`, `ClaveAccion` y `ClaveCapacidad`,
+ * así que una acción sin módulo, o un permiso para una acción que no existe, no compila. Es código, no base de datos.
+ * QUÉ NO ES: el lugar donde se escriben las acciones de un módulo.
+ * EXPORTA: EstadoDeConstruccion, EfectoDeAccion, EFECTOS_DE_ACCION, DefinicionDeAccion, DefinicionDeModulo, CatalogoComercial, CATALOGO_DE_MODULOS, ClaveModulo, ClaveAccion, ClaveCapacidad
+ * IMPORTA: src/capacidades/modulos/catalogo-*.
+ * PARTE DEDICADA: src/capacidades/modulos/catalogo-<módulo>.ts (lo de cada módulo va ahí).
  */
-import { ACCIONES_DE_LOTES, MODULO_DE_PRODUCCION } from "./catalogo-lotes-y-produccion";
+import { MODULO_DE_ADMINISTRACION } from "./catalogo-administracion";
+import { MODULO_DE_CAJA } from "./catalogo-caja";
+import { MODULO_DE_CATALOGO } from "./catalogo-catalogo";
+import { MODULO_DE_CIERRE } from "./catalogo-cierre";
+import { MODULO_DE_CLIENTES } from "./catalogo-clientes";
 import { MODULO_DE_COMPRAS } from "./catalogo-compras";
+import { MODULO_DE_FACTURACION } from "./catalogo-facturacion";
+import { MODULO_DE_PRODUCCION } from "./catalogo-lotes-y-produccion";
 import { MODULOS_DE_SALON_Y_COMANDAS } from "./catalogo-salon-y-comandas";
+import { MODULO_DE_STOCK } from "./catalogo-stock";
+import { MODULO_DE_VENTAS } from "./catalogo-ventas";
+import { MODULO_DE_VIDRIERA } from "./catalogo-vidriera";
+
 export type EstadoDeConstruccion = "disponible" | "en_desarrollo";
 /**
  * Qué hace una acción con lo que la empresa ya tiene (reglas transversales §7.9). Decide qué pasa
@@ -53,305 +67,17 @@ export type DefinicionDeModulo = Readonly<{
 
 export type CatalogoComercial = Readonly<Record<string, DefinicionDeModulo>>;
 
-/**
- * Un solo módulo real: `administracion`, obligatorio (no hay tabla de módulos activos: ver la
- * especificación de H4, §B.4). Una acción por caso de uso (cruce X1); quién puede cada una se
- * define en `permisos/empresa.ts`.
- *
- * Es el NÚCLEO (empresas, sucursales, identidad y la configuración fiscal del gerente): no depende de un
- * plan, así que nunca queda en solo lectura (el guard ignora ese estado en los módulos obligatorios).
- * Aun así cada acción declara su `efecto`, para que no haya acciones sin clasificar.
- * Criterio: lo que quita, cierra o responde algo ya iniciado (apagar, revocar o reenviar una
- * invitación, desactivar una sucursal, cancelar, aceptar o rechazar un traspaso) es `COMPLETA_CIERRA`;
- * lo que da de alta, cambia la configuración, reactiva o amplía un alcance (invitar, asignar
- * sucursales, crear, editar y reactivar sucursales, proponer un traspaso) es `CREA_AMPLIA`.
- */
 export const CATALOGO_DE_MODULOS = {
-  administracion: {
-    estado: "disponible",
-    obligatorio: true,
-    requiere: [],
-    usaSiExiste: [],
-    datosRequeridos: [],
-    implementadoPor: ["modulos/identidad", "modulos/empresas", "modulos/fiscal"],
-    acciones: {
-      "usuarios.invitar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "usuarios.reenviar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "usuarios.apagar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "usuarios.ver": { capacidad: null, efecto: "LECTURA" },
-      "usuarios.asignar_sucursales": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "usuarios.revocar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "sucursales.ver": { capacidad: null, efecto: "LECTURA" },
-      "sucursales.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "sucursales.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "sucursales.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "sucursales.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "gerencia.proponer_traspaso": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "gerencia.cancelar_traspaso": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "gerencia.ver_traspaso": { capacidad: null, efecto: "LECTURA" },
-      "gerencia.aceptar_traspaso": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "gerencia.rechazar_traspaso": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "modulos.ver": { capacidad: null, efecto: "LECTURA" },
-      "permisos.ver_propios": { capacidad: null, efecto: "LECTURA" },
-      // H7 fiscal §C (T5): la configuración fiscal del gerente. Vive acá y no en `facturacion` porque son los
-      // `datosRequeridos` de la facturación: si dependieran de ella (que cada empresa tiene que activar), el gerente nunca podría
-      // dejarlos listos. Guardar un borrador, crear, editar y activar un punto de venta o confirmar la regla del
-      // emisor crean o amplían; confirmar los datos fiscales y desactivar un punto de venta cierran.
-      "datos_fiscales.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "datos_fiscales.confirmar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "puntos_de_venta.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "puntos_de_venta.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "puntos_de_venta.activar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "puntos_de_venta.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "emisores.confirmar_regla": { capacidad: null, efecto: "CREA_AMPLIA" },
-    },
-  },
-  /**
-   * Facturación electrónica (H7, especificación §C). `disponible` (dueño, 2026-11-04) para probarla contra
-   * ARCA en homologación: NO la activa para nadie. Cada empresa la necesita activa (`modulo_de_empresa`, por
-   * la plataforma y dentro del techo de su plan) y la acción en su rol; si no, el guard rechaza con
-   * `MODULO_NO_ACTIVO` o `SIN_PERMISO`. Declara la acción que exigen los
-   * casos de uso de numeración (reservar y cerrar el número de un comprobante) y la de las consultas
-   * del facturador (F6). Emitir completa algo ya vendido o cobrado, así que es `COMPLETA_CIERRA` y
-   * una baja de plan no lo traba; mirar lo emitido es `LECTURA` y se puede siempre.
-   */
-  facturacion: {
-    estado: "disponible",
-    obligatorio: false,
-    requiere: ["administracion"],
-    usaSiExiste: [],
-    datosRequeridos: ["emisor_principal.datos_fiscales_confirmados", "punto_de_venta.activo"],
-    implementadoPor: ["modulos/fiscal"],
-    acciones: {
-      "comprobantes.emitir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "comprobantes.ver": { capacidad: null, efecto: "LECTURA" },
-      // H7 facturación §C (F5): emitir a mano CREA un cargo (la factura y la nota de débito) y no se permite en
-      // solo lectura; la nota de crédito, descartar, reintentar y resincronizar cierran lo que ya existe.
-      // Cambiar el ambiente habilita a emitir con valor fiscal: amplía.
-      "comprobantes.emitir_manual": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "notas_de_credito.emitir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "comprobantes.descartar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "comprobantes.reintentar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "series.resincronizar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "puntos_de_venta.cambiar_ambiente": { capacidad: null, efecto: "CREA_AMPLIA" },
-      // H7 facturación §C (F7): generar el pedido de un certificado y cargar el que devolvió ARCA son altas que
-      // habilitan a emitir con valor fiscal: crean y amplían, y no se permiten en solo lectura.
-      "certificados.gestionar": { capacidad: null, efecto: "CREA_AMPLIA" },
-    },
-  },
-  /**
-   * Catálogo comercial y stock (especificación `catalogo-y-stock.md` §C, tramo T0, con la escalera de
-   * la carta CE0 de `catalogo-carta-niveles-y-elecciones.md` §7.2). Los tres módulos nacen
-   * `en_desarrollo`: declararlos NO los hace vendibles, el guard rechaza sus acciones con
-   * `MODULO_EN_DESARROLLO` y el cierre (pasarlos a `disponible`) es el tramo T12. Una acción por caso
-   * de uso o consulta; quién puede cada una, en `permisos/empresa.ts`. Ninguna exige una capacidad de
-   * sucursal: el alcance del operador por sucursal lo verifica el caso de uso con `exigirSucursal`.
-   *
-   * Criterio de los efectos (`EfectoDeAccion`): mirar es `LECTURA`; lo que cierra, apaga, anula o
-   * completa algo ya iniciado (desactivar, retirar, aplicar o cancelar un conteo, anular un
-   * movimiento, contar) es `COMPLETA_CIERRA` y una baja de plan no lo traba; todo lo demás (altas,
-   * ediciones, reactivar, cambiar un precio, publicar, mover stock) es `CREA_AMPLIA`.
-   */
-  catalogo: {
-    estado: "disponible",
-    obligatorio: false,
-    requiere: ["administracion"],
-    usaSiExiste: [],
-    datosRequeridos: [],
-    implementadoPor: ["modulos/catalogo"],
-    acciones: {
-      "productos.ver": { capacidad: null, efecto: "LECTURA" },
-      "productos.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "productos.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "productos.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "productos.cambiar_precio": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "productos.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "productos.asignar_emisor": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "opciones.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "categorias.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "categorias.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "categorias.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "categorias.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      // CE0: elecciones del producto (variantes y combos). Cambiar el precio de una variante es
-      // `productos.cambiar_precio`. Decisión 138 (no hay precio por combinación) y decisión 133 (los grupos son
-      // del producto): no hay acciones de grupos de precio ni `opciones.asignar`; «copiar de otro producto» es
-      // `opciones.editar` (e0-cimientos-especificacion §3.1.3, pedido de S2).
-      "variantes.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "conjuntos.editar_contenido": { capacidad: null, efecto: "CREA_AMPLIA" },
-    },
-  },
-  /**
-   * La carta: una vista publicada del catálogo, que es otro módulo comercial pero lo implementa el
-   * mismo código (`modulos/catalogo`). Sola, sin stock ni ventas, es la vidriera (§F8). La publicación
-   * en línea (QR) es un extra de pago: lo decide la perilla `vidriera_por_qr`, que se declara cuando se
-   * construya la carta; las tres acciones `*_en_linea` y `renovar_enlace` ya se clasifican acá.
-   */
-  vidriera: {
-    estado: "en_desarrollo",
-    obligatorio: false,
-    requiere: ["catalogo"],
-    usaSiExiste: [],
-    datosRequeridos: [],
-    implementadoPor: ["modulos/catalogo"],
-    acciones: {
-      "vidrieras.ver": { capacidad: null, efecto: "LECTURA" },
-      "vidrieras.marcar_disponibilidad": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "vidrieras.ocultar_en_empresa": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "vidrieras.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "vidrieras.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "vidrieras.publicar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "vidrieras.retirar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "vidrieras.publicar_en_linea": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "vidrieras.renovar_enlace": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "vidrieras.retirar_de_linea": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "vidrieras.administrar_portal": { capacidad: null, efecto: "CREA_AMPLIA" },
-    },
-  },
-  stock: {
-    estado: "disponible",
-    obligatorio: false,
-    requiere: ["catalogo"],
-    usaSiExiste: [],
-    // El primer depósito lo crea la persona usuaria: stock no pide datos previos.
-    datosRequeridos: [],
-    implementadoPor: ["modulos/stock"],
-    acciones: {
-      "stock.ver": { capacidad: null, efecto: "LECTURA" },
-      "stock.verificar_saldos": { capacidad: null, efecto: "LECTURA" },
-      // E5-T10 (P-1, DECIDIDO): quien puede ver costos es el gerente y el administrador; sin esta acción cualquiera con `stock.ver` los vería.
-      "costos.ver": { capacidad: null, efecto: "LECTURA" },
-      "stock.registrar_entrada": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "stock.registrar_salida": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "stock.transferir": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "stock.ajustar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "stock.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "depositos.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "depositos.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "depositos.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "depositos.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "articulos.controlar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "articulos.dejar_de_controlar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "composiciones.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "conteos.abrir": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "conteos.registrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "conteos.aplicar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "conteos.cancelar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      ...ACCIONES_DE_LOTES,
-    },
-  },
-  /**
-   * Caja (E3; `e0-cimientos-especificacion.md` §3.1.1, lista de `e3-caja-y-cobros-especificacion.md` §3.8 más las dos
-   * de `e3b-cierre-del-dia-especificacion.md` §4.7). Nace `en_desarrollo`: el guard rechaza todo con
-   * `MODULO_EN_DESARROLLO` hasta que E3 lo construya. `usaSiExiste` solo nombra módulos que existen (cruce X3):
-   * `clientes` se suma cuando exista (SUPUESTO (DEC-0058) S-1). Ninguna acción exige capacidad de sucursal: el alcance del
-   * operador lo valida el caso de uso con `exigirSucursal`. Cobrar un ticket NO es de caja: es `tickets.cobrar`
-   * (ventas). No existen `sesiones_caja.reabrir`, `arqueos.revisar` ni una acción de plataforma para crear cajas
-   * (decisiones del dueño, `caja-y-cobros.md:818-821`). Criterio de efectos: alta, edición, reactivar, abrir sesión y
-   * movimientos o ajustes nuevos crean o amplían; desactivar, cerrar, anular y corregir cierran lo ya iniciado.
-   * Elegir los datos opcionales de cada medio es `medios_de_pago.editar` (SUPUESTO (DEC-0056) S-2).
-   */
-  caja: {
-    estado: "disponible",
-    obligatorio: false,
-    requiere: ["administracion"],
-    usaSiExiste: ["facturacion"],
-    datosRequeridos: [],
-    implementadoPor: ["modulos/caja"],
-    acciones: {
-      "cajas.ver": { capacidad: null, efecto: "LECTURA" },
-      "cajas.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cajas.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cajas.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cajas.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "medios_de_pago.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "medios_de_pago.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "medios_de_pago.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "medios_de_pago.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "cuentas_de_cobro.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cuentas_de_cobro.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cuentas_de_cobro.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cuentas_de_cobro.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "sesiones_caja.abrir": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "sesiones_caja.iniciar_cierre": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "sesiones_caja.cancelar_cierre": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "sesiones_caja.cerrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "movimientos_caja.registrar_manual": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "movimientos_caja.ajustar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "movimientos_caja.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "movimientos_caja.anular_de_otros": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "cobros.corregir_medio": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "declaraciones_de_total.registrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-    },
-  },
-  /**
-   * Cierre del día (E3b; decisión 163; `e0-cimientos-especificacion.md` §3.1.2b, `e3b-cierre-del-dia-especificacion.md`
-   * §3.1 y §3.6). Módulo propio, separado de la caja: no importa ningún módulo comercial. `disponible` desde E3b: la jornada, los tres
-   * casos de uso (iniciar y cancelar la auditoría, cerrar) y las tres consultas existen; los aportes de caja y ventas los suman sus etapas.
-   * Iniciar y cancelar la auditoría y cerrar la jornada completan o cierran lo ya iniciado, y se permiten en solo lectura.
-   */
-  cierre: {
-    estado: "disponible",
-    obligatorio: false,
-    requiere: ["administracion"],
-    usaSiExiste: [],
-    datosRequeridos: [],
-    implementadoPor: ["modulos/cierre"],
-    acciones: {
-      "jornadas.ver": { capacidad: null, efecto: "LECTURA" },
-      "jornadas.iniciar_auditoria": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "jornadas.cancelar_auditoria": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "jornadas.cerrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-    },
-  },
-  /**
-   * Ventas (E4; `e0-cimientos-especificacion.md` §3.1.2, tabla de `e4-venta-rapida-especificacion.md` §3.14). Nace
-   * `en_desarrollo`. Las tres `ventas.configurar_*` de `ventas.md:610-611` quedan fuera hasta que haya stock
-   * (PP-5, decisión 132). Anular línea, anular cuenta y corregir ticket son de los tres roles con todo auditado
-   * (decisión 155). `tickets.cobrar` es la única acción para cobrar un ticket. `usaSiExiste` sin reservas ni
-   * clientes porque no existen (cruce X3, SUPUESTO (DEC-0058) S-1).
-   */
-  ventas: {
-    estado: "disponible",
-    obligatorio: false,
-    requiere: ["administracion", "catalogo", "caja"],
-    usaSiExiste: ["facturacion", "stock"],
-    datosRequeridos: [],
-    implementadoPor: ["modulos/ventas"],
-    acciones: {
-      "ventas.ver": { capacidad: null, efecto: "LECTURA" },
-      "cuentas.abrir": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cuentas.agregar_linea": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "cuentas.cerrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "cuentas.anular_linea": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "cuentas.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "tickets.cobrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "tickets.corregir": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-    },
-  },
+  administracion: MODULO_DE_ADMINISTRACION,
+  facturacion: MODULO_DE_FACTURACION,
+  catalogo: MODULO_DE_CATALOGO,
+  vidriera: MODULO_DE_VIDRIERA,
+  stock: MODULO_DE_STOCK,
+  caja: MODULO_DE_CAJA,
+  cierre: MODULO_DE_CIERRE,
+  ventas: MODULO_DE_VENTAS,
   ...MODULOS_DE_SALON_Y_COMANDAS,
-  /**
-   * Directorio de clientes y proveedores (E9; `e9-compras-especificacion.md` §3.0 y §3.9, F1 a F4 de `clientes-y-proveedores.md`). `disponible` y
-   * `obligatorio` desde E9-T4 (F5 del 12/10: siempre activo). Ocho acciones; sin `partes.anonimizar`: ningún caso de uso la usa
-   * (SUPUESTO S-3 de E9, DEC-0305). Mirar es `LECTURA`; desactivar cierra; el resto crea o amplía.
-   */
-  clientes: {
-    estado: "disponible",
-    obligatorio: true,
-    requiere: ["administracion"],
-    usaSiExiste: [],
-    datosRequeridos: [],
-    implementadoPor: ["modulos/clientes"],
-    acciones: {
-      "partes.ver": { capacidad: null, efecto: "LECTURA" },
-      "partes.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "partes.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "partes.cambiar_roles": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "partes.vincular_contacto": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "partes.desvincular_contacto": { capacidad: null, efecto: "CREA_AMPLIA" },
-      "partes.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-      "partes.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
-    },
-  },
+  clientes: MODULO_DE_CLIENTES,
   compras: MODULO_DE_COMPRAS,
   produccion: MODULO_DE_PRODUCCION,
 } as const satisfies CatalogoComercial;
