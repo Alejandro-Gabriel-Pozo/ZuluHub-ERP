@@ -10,12 +10,13 @@ import { aRespuesta, aRespuestaDeExcepcion, type DependenciasDeRespuesta } from 
 import type { ErrorDeEntrada } from "./entradas-de-facturacion";
 
 /**
- * De un error de compras N1 y N2 al código público que sale a la pantalla (ADR-016). Seis respuestas con texto propio, las que las maquetas aprobadas del 09/11/2026 redactan
+ * De un error de compras (N1 a N4) al código público que sale a la pantalla (ADR-016). Seis respuestas con texto propio, las que las maquetas aprobadas del 09/11/2026 redactan
  * (`compra.html`, `orden.html`): el remito y la factura repetidos, los puntos de venta sin declarar, la cantidad, el precio y el proveedor. TODO lo demás que el dominio rechaza sale
  * como el genérico «Esta acción no está permitida» (dueño, 30/10/2026, interfaz sobria: genérico antes que uno por acción), también lo que vuelve de stock o del directorio y lo
  * que tiene forma de objeto con nombre de negocio (`COMPROBANTE_YA_PAGADO`, `FUNCION_NO_INCLUIDA`). El guard, la empresa que no opera y la base ya traen su propio código y pasan SIN
  * CAMBIOS. Los errores propios de compras van en una tabla exhaustiva por tipo: un error nuevo del módulo no compila hasta que se le dé su código (así N4 no puede sumar
  * `COMPROBANTE_CON_NOTA_DE_CREDITO` sin decidir qué ve la persona). Los de stock y del directorio no entran en la tabla: otro módulo puede sumar uno sin romper compras, y salen como el genérico.
+ * Los errores de N3 y N4 nacen con el genérico; cada pantalla que tenga un texto aprobado para uno lo cambia acá, con su fuente.
  * Previene: que un error de compras salga como un fallo inesperado, o que se invente un texto por cada regla del dominio. Chequeo: `errores-de-compras.test.ts`.
  */
 
