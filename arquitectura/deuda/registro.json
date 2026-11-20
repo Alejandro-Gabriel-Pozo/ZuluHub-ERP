@@ -552,49 +552,5 @@
     "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json. puerta.ts y ruta-de-retorno.ts ya se reescribieron con lista de permitidos (Deuda 4, #209 y #214) y salieron del presupuesto; configuracion.ts del correo y entorno.ts se reescribieron con lista de permitidos (Deuda 9) y salieron del presupuesto. entrada-del-plan.ts y filtros-de-empresas.ts salieron por P2 (fuente única: importan su tope del dueño, 500 y 200), no por lista de permitidos.",
     "aprobadoPor": "orquestador (PR 2 de C1 autorizado el 2026-11-06 por mensaje entre sesiones; decisión del dueño 2026-11-05). Reescribir YA lo existente que viola P1 (en vez de dejarlo pasar): el dueño, 2026-11-05 y 2026-11-06, conversación con el orquestador; constancia en `11-especificaciones/decisiones-del-dueno-2026-11.md` del repo de docs, fila «Principios P1 y P2 de validación».",
     "vence": "2027-01-05"
-  },
-  {
-    "id": "libro-excepcion--stock-clave-de-forma-distinta",
-    "archivos": ["src/primitivas/libro/registro.ts"],
-    "descripcion": "Libro de stock (conformidad de libros, LB-2): la clave de idempotencia de `movimiento_de_stock` admite 8 a 200 caracteres y la de los libros nuevos 16 a 128. Se declara como excepción en `registro.ts` y no se iguala porque rompería claves ya guardadas. Vence el 2027-01-19 (la prueba de conformidad falla después): se renueva o se decide aparte.",
-    "tipo": "backlog",
-    "responsable": "orquestador (brief PR-LB-2, 20/11/2026)",
-    "creada": "2026-11-20",
-    "verificacion": {
-      "contiene": "codigo: \"CLAVE_DE_FORMA_DISTINTA\""
-    }
-  },
-  {
-    "id": "libro-excepcion--caja-clave-nula-en-fondo-inicial",
-    "archivos": ["src/primitivas/libro/registro.ts"],
-    "descripcion": "Libro de caja (LB-2): el fondo inicial de una sesión no lleva clave ni huella (`movimiento_caja_idempotencia_ck`), por eso la clave admite NULL; su identidad es una por sesión. Excepción declarada en `registro.ts`; vence el 2027-01-19 (la prueba de conformidad falla después).",
-    "tipo": "backlog",
-    "responsable": "orquestador (brief PR-LB-2, 20/11/2026)",
-    "creada": "2026-11-20",
-    "verificacion": {
-      "contiene": "codigo: \"CLAVE_NULA_EN_FONDO_INICIAL\""
-    }
-  },
-  {
-    "id": "libro-excepcion--caja-sin-fecha-de-negocio",
-    "archivos": ["src/primitivas/libro/registro.ts"],
-    "descripcion": "Libro de caja (LB-2): `movimiento_caja` no guarda la fecha de negocio; es la de su sesión (`sesion_caja.fecha_negocio`). Excepción declarada en `registro.ts`; vence el 2027-01-19 (la prueba de conformidad falla después).",
-    "tipo": "backlog",
-    "responsable": "orquestador (brief PR-LB-2, 20/11/2026)",
-    "creada": "2026-11-20",
-    "verificacion": {
-      "contiene": "codigo: \"SIN_FECHA_DE_NEGOCIO\""
-    }
-  },
-  {
-    "id": "libro-excepcion--caja-magnitud-cero-permitida",
-    "archivos": ["src/primitivas/libro/registro.ts"],
-    "descripcion": "Libro de caja (LB-2): el fondo inicial puede ser cero (`movimiento_caja_signo_ck`), así que no hay un CHECK general de importe distinto de cero. Excepción declarada en `registro.ts`; vence el 2027-01-19 (la prueba de conformidad falla después).",
-    "tipo": "backlog",
-    "responsable": "orquestador (brief PR-LB-2, 20/11/2026)",
-    "creada": "2026-11-20",
-    "verificacion": {
-      "contiene": "codigo: \"MAGNITUD_CERO_PERMITIDA\""
-    }
   }
 ]

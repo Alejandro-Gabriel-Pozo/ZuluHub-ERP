@@ -9,7 +9,7 @@ import { FORMA_DE_CLAVE } from "./clave";
  *
  * Stock y caja entran TAL COMO ESTÁN (no se migran: unificar claves rompería las ya guardadas, §2.5). Sus divergencias conocidas son
  * `excepciones` con motivo y vencimiento; la prueba falla si una excepción ya no hace falta, si se quita (el libro deja de pasar) o si
- * vence sin renovarse. Cada excepción tiene su entrada en `arquitectura/deuda/registro.json`.
+ * vence sin renovarse. No van en `arquitectura/deuda/registro.json`: el tope de excepciones está lleno (DEC-0824).
  */
 
 export type MedidaDeLibro = "IMPORTE" | "CANTIDAD";
