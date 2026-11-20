@@ -165,8 +165,8 @@ describe("lo que la consola ofrece", () => {
     expect(casos).not.toContain("registrarReferenciaDeError");
   });
 
-  it("ofrece las 21 consultas, todas de lectura", () => {
-    expect(consultas).toHaveLength(21);
+  it("ofrece las 22 consultas, todas de lectura", () => {
+    expect(consultas).toHaveLength(22);
     for (const [nombre, accion] of Object.entries(ACCIONES_DE_LA_CONSOLA.consultas)) {
       expect(CATALOGO_DE_PLATAFORMA.plataforma.acciones[accion].efecto, nombre).toBe("LECTURA");
     }

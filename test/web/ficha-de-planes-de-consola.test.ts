@@ -15,8 +15,8 @@ import { TEXTOS_DE_PLATAFORMA } from "../../src/capacidades/vocabulario/textos-d
  * plataforma ofrecido a un cliente como reemplazable.
  */
 
-/** El catálogo de la consola es uno solo; cada ficha declara los textos de SU pantalla («Política de cambio de plan» tiene la suya: `ficha-de-politica-de-consola.test.ts`). */
-const DE_LA_POLITICA = /^plataforma\.(menu\.politica|politica\.)/;
+/** El catálogo de la consola es uno solo; cada ficha declara los textos de SU pantalla («Política de cambio de plan» y «Deshacer por arrepentimiento» tienen las suyas). */
+const DE_LA_POLITICA = /^plataforma\.(menu\.politica|politica\.|arrepentir\.)/;
 const textosDePlanes = Object.fromEntries(
   Object.entries(TEXTOS_DE_PLATAFORMA).filter(([clave]) => !DE_LA_POLITICA.test(clave)),
 );

@@ -51,6 +51,11 @@
     "apps/plataforma/pantallas/*",
     "apps/plataforma/logica/*"
   ],
+  "test/web/ficha-de-arrepentimiento-de-consola.test.ts": [
+    "apps/plataforma/app/empresas/**",
+    "apps/plataforma/pantallas/*",
+    "apps/plataforma/logica/*"
+  ],
   "test/web/ficha-de-politica-de-consola.test.ts": [
     "apps/plataforma/app/politica-de-plan/**",
     "apps/plataforma/pantallas/*",

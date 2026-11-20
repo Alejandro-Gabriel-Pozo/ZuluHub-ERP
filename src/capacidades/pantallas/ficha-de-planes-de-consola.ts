@@ -24,10 +24,12 @@ type BotonDeFichaDeConsola = Readonly<{
 export type FichaDePantallaDeConsola = Readonly<{
   archivos: readonly string[];
   rutas: readonly string[];
-  titulo: ClaveDeTextoDePlataforma;
+  /** Ausente si la ficha es de algo que se suma a una pantalla que ya tenía su título. */
+  titulo?: ClaveDeTextoDePlataforma;
   /** La acción que exige cada consulta de la pantalla y la fila del menú. */
   acceso: ClaveAccionDePlataforma;
-  menu: Readonly<{ clave: string; texto: ClaveDeTextoDePlataforma; href: string }>;
+  /** Ausente si la ficha es de algo que se suma a una pantalla que ya tenía su entrada de menú. */
+  menu?: Readonly<{ clave: string; texto: ClaveDeTextoDePlataforma; href: string }>;
   campos: readonly Readonly<{ dato: IdDeDato; archivo: string }>[];
   botones: readonly BotonDeFichaDeConsola[];
   modales: readonly Readonly<{
