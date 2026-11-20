@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0821",
+  "fecha": "2026-11-20",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Caja, stock y compras NO se migran al paquete nuevo de libro: conservan sus copias de la huella hasta que se decida aparte; los vectores dorados garantizan que las copias dan el mismo resultado.",
+  "que_cambia": "Nada en los tres módulos. Queda una copia más de decidirPorHuella (la del paquete nuevo). Revertir: no hay nada que revertir; migrarlos es un cambio futuro y separado.",
+  "donde": "src/primitivas/libro/huella.test.ts; brief PR-LB-1 §8 y primitiva-de-libro-diseno.md §2.5, repo de documentos, 11-especificaciones"
+}

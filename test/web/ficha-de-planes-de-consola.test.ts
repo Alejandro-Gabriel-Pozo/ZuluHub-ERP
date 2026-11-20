@@ -15,10 +15,10 @@ import { TEXTOS_DE_PLATAFORMA } from "../../src/capacidades/vocabulario/textos-d
  * plataforma ofrecido a un cliente como reemplazable.
  */
 
-/** El catálogo de la consola es uno solo; cada ficha declara los textos de SU pantalla (lo de H-14b tiene la suya: `ficha-de-arrepentimiento-de-consola.test.ts`). */
-const DE_OTRA_FICHA = /^plataforma\.arrepentir\./;
+/** El catálogo de la consola es uno solo; cada ficha declara los textos de SU pantalla («Política de cambio de plan» y «Deshacer por arrepentimiento» tienen las suyas). */
+const DE_LA_POLITICA = /^plataforma\.(menu\.politica|politica\.|arrepentir\.)/;
 const textosDePlanes = Object.fromEntries(
-  Object.entries(TEXTOS_DE_PLATAFORMA).filter(([clave]) => !DE_OTRA_FICHA.test(clave)),
+  Object.entries(TEXTOS_DE_PLATAFORMA).filter(([clave]) => !DE_LA_POLITICA.test(clave)),
 );
 
 const leer = (ruta: string): string => readFileSync(ruta, "utf8");
@@ -63,7 +63,9 @@ describe("ficha de la pantalla «Planes» de la consola", () => {
         "apps/plataforma/pantallas/armazon-de-consola.tsx",
         "apps/plataforma/logica/editor-de-plan.ts",
         "apps/plataforma/logica/errores-de-planes.ts",
-      ].flatMap((a) => claves(leer(a))),
+      ]
+        .flatMap((a) => claves(leer(a)))
+        .filter((clave) => !DE_LA_POLITICA.test(clave)),
     );
     expect(citadas.size).toBeGreaterThan(10);
     for (const clave of citadas) expect(Object.keys(FICHA.textos), clave).toContain(clave);

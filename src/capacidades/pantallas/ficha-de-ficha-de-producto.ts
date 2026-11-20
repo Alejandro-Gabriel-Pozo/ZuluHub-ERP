@@ -14,6 +14,8 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  *     ingeniero el 12/11/2026, a corregir por el dueño). Revertirlo cuesta cambiar `seControlaStockLaClase`.
  *  3. Sin permiso (`articulos.controlar`) la casilla se ve apagada con su estado real, sin texto extra (Interfaz sobria): decide el servidor al guardar.
  *  4. La casilla nace sin tildar y el alta no la ofrece (DDD filas 100 y 104).
+ *  5. Cambiar la casilla abre un diálogo de confirmación (pedido del dueño, 20/11/2026; DEC-0813): título «Se controla el stock», una frase por sentido, «Confirmar» y «Cancelar». Aplica el valor a la
+ *     casilla; no guarda (el guardado es «Guardar»). Cancelar la deja como estaba.
  */
 
 type FuenteDeTexto = Readonly<{ decidio: string; donde: string }>;
@@ -86,6 +88,14 @@ export const FICHA_DE_FICHA_DE_PRODUCTO = {
       usos: [
         "rótulo de la casilla, antes de «Guardar», solo si el producto admite control de stock",
       ],
+      fuente: DEL_DUENO,
+    },
+    "catalogo.control_de_stock.activar": {
+      usos: ["cuerpo del diálogo que confirma al tildar «Se controla el stock»"],
+      fuente: DEL_DUENO,
+    },
+    "catalogo.control_de_stock.apagar": {
+      usos: ["cuerpo del diálogo que confirma al destildar «Se controla el stock»"],
       fuente: DEL_DUENO,
     },
     "catalogo.error.accion_no_permitida": {

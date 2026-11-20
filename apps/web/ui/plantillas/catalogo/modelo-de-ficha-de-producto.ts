@@ -79,6 +79,15 @@ export type FichaArmada = Readonly<{
   enlaceDeSecciones: Readonly<{ href: string; texto: string }> | null;
   /** Solo si el producto admite el tilde (la clase se controla y está activo): el texto de la casilla; si no, `null`. */
   etiquetaDelControlDeStock: string | null;
+  /** Lo que dice el diálogo que confirma el cambio del control de stock; `null` cuando no hay casilla. */
+  confirmacionDelControlDeStock: Readonly<{
+    titulo: string;
+    activar: string;
+    apagar: string;
+    confirmar: string;
+    cancelar: string;
+    cerrar: string;
+  }> | null;
   textoDeElegir: string;
   guardar: string;
 }>;
@@ -151,6 +160,16 @@ export function armarLaFicha(f: FichaDeLaPantalla, d: DiccionarioResuelto = {}):
       : null,
     etiquetaDelControlDeStock: f.admiteControlDeStock
       ? texto(d, "catalogo.dato.se_controla_el_stock")
+      : null,
+    confirmacionDelControlDeStock: f.admiteControlDeStock
+      ? {
+          titulo: texto(d, "catalogo.dato.se_controla_el_stock"),
+          activar: texto(d, "catalogo.control_de_stock.activar"),
+          apagar: texto(d, "catalogo.control_de_stock.apagar"),
+          confirmar: texto(d, "ventas.venta.validar"),
+          cancelar: texto(d, "catalogo.accion.cancelar"),
+          cerrar: texto(d, "vidriera.producto.cerrar"),
+        }
       : null,
     textoDeElegir: texto(d, "catalogo.dato.sin_elegir"),
     guardar: texto(d, "catalogo.accion.guardar"),

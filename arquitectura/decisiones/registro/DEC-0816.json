@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0816",
+  "fecha": "2026-11-20",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La consola no calcula fechas ni sentidos (suba o baja) de un cambio de plan: los recibe del servidor; la pantalla de la política solo muestra lo que decidió el servidor.",
+  "que_cambia": "Una sola regla de fechas y sentidos (el dominio de H-14a); la consola no tiene una copia que se desfase. Revertir: no aplica sin duplicar la regla en la consola.",
+  "donde": "apps/plataforma/logica/politica-de-plan.ts; apps/plataforma/servidor/politica.ts; Pedernal-docs 11-especificaciones/briefs/escalabilidad/PR-H14b-consola-politica-de-cambio-de-plan.md §8"
+}

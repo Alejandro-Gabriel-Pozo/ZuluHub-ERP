@@ -16,6 +16,17 @@ const T = (porDefecto: string, marcadores?: readonly string[]): DefinicionDeText
 });
 
 /**
+ * «Política de cambio de plan» (H-14b). Fuente de todos: DEC-0814 (los textos T-1 a T-18 que el dueño aprobó el 20/11/2026 con «h14b ok», `11-especificaciones/h14b-textos-aprobados.md` del repositorio de documentos).
+ * El texto del error de versión desactualizada (T-38) no tiene clave propia: se reutiliza el que la consola ya tiene para ese código.
+ */
+const P = (porDefecto: string, marcadores?: readonly string[]): DefinicionDeTexto => ({
+  porDefecto,
+  ...(marcadores === undefined ? {} : { marcadores }),
+  usos: ["DE_FICHA"],
+  fuente: { decision: "DEC-0814" },
+});
+
+/**
  * «Deshacer por arrepentimiento» y fecha mínima del cambio de plan (H-14b, parte 2). Fuente de todos: DEC-0817 (textos T-19 a T-37 que el dueño aprobó el 20/11/2026 con «h14b ok»,
  * `11-especificaciones/h14b-textos-aprobados.md` del repositorio de documentos). T-27 y T-28 reusan «Motivo» y «Falta el motivo.» de «Planes» (mismo texto).
  */
@@ -28,6 +39,36 @@ const A = (porDefecto: string, marcadores?: readonly string[]): DefinicionDeText
 
 export const TEXTOS_DE_PLATAFORMA = {
   "plataforma.menu.planes": T("Planes"),
+  "plataforma.menu.politica": P("Política de cambio de plan"), // T-1
+  "plataforma.politica.titulo": P("Política de cambio de plan"), // T-2
+  "plataforma.politica.rotulo_suba": P("Anticipación de una suba"), // T-3
+  "plataforma.politica.rotulo_baja": P("Anticipación de una baja"), // T-4
+  "plataforma.politica.rotulo_arrepentimiento": P("Plazo de arrepentimiento"), // T-5
+  "plataforma.politica.unidad_dia": P("día"), // T-6
+  "plataforma.politica.unidad_dias": P("días"), // T-6
+  "plataforma.politica.pie_vigente": P("Definida por {persona} el {fecha}. Motivo: {motivo}", [
+    "persona",
+    "fecha",
+    "motivo",
+  ]), // T-7
+  "plataforma.politica.historial": P("Historial"), // T-8
+  "plataforma.politica.col_fecha": P("Fecha"), // T-9
+  "plataforma.politica.col_suba": P("Suba"), // T-9
+  "plataforma.politica.col_baja": P("Baja"), // T-9
+  "plataforma.politica.col_arrepentimiento": P("Arrepentimiento"), // T-9
+  "plataforma.politica.col_definida_por": P("Definida por"), // T-9
+  "plataforma.politica.col_motivo": P("Motivo"), // T-9
+  "plataforma.politica.definir": P("Definir versión nueva"), // T-10
+  "plataforma.politica.falta_dias": P("Ingresá un número entero de días entre 0 y 365."), // T-11
+  "plataforma.politica.falta_motivo": P("Falta el motivo."), // T-12
+  "plataforma.politica.motivo_largo": P("El motivo es demasiado largo."), // T-13
+  "plataforma.politica.guardar": P("Guardar versión nueva"), // T-14
+  "plataforma.politica.resumen": P("Antes: {antes}. Después: {despues}.", ["antes", "despues"]), // T-15
+  "plataforma.politica.no_modifica": P("Los cambios de plan ya registrados no se modifican."), // T-16
+  "plataforma.politica.guardada": P("Versión guardada."), // T-17
+  "plataforma.politica.conflicto": P(
+    "Otra persona cambió la política mientras tanto. Volvé a cargarla.",
+  ), // T-18
   "plataforma.arrepentir.puede_hasta": A("Se puede deshacer hasta el {fecha}.", ["fecha"]), // T-19
   "plataforma.arrepentir.etiqueta_suba": A("Suba"), // T-20
   "plataforma.arrepentir.etiqueta_baja": A("Baja"), // T-21

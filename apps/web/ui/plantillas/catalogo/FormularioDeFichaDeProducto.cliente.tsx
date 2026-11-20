@@ -9,9 +9,11 @@ import { Campo } from "../../componentes/Campo";
 import { Selector } from "../../componentes/Selector";
 import { BotonDeEnvio } from "../../patrones/BotonDeEnvio.cliente";
 import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
+import { Superposicion } from "../../patrones/Superposicion";
 import { ProveedorDeEnvioDeFormulario } from "../../patrones/EnvioDeFormulario.cliente";
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
 import { Pila } from "../../primitivas/Pila";
+import estilosDeCobrar from "../cobrar/Cobrar.module.css";
 import estilos from "./FormularioDeFichaDeProducto.module.css";
 import type { FichaArmada } from "./modelo-de-ficha-de-producto";
 
@@ -63,6 +65,9 @@ export function FormularioDeFichaDeProducto({
   const [alicuota, setAlicuota] = useState(ficha.alicuota?.valor ?? "");
   const [seccion, setSeccion] = useState(ficha.seccion?.valor ?? "");
   const [controlado, setControlado] = useState(controlDeStock?.marcada ?? false);
+  // El valor que la persona pidió y espera confirmación; `null` sin diálogo. La casilla no cambia hasta confirmar.
+  const [porConfirmar, setPorConfirmar] = useState<boolean | null>(null);
+  const confirmacion = ficha.confirmacionDelControlDeStock;
 
   const error = resultado.error;
   const campoDelError = error?.campo;
@@ -72,98 +77,138 @@ export function FormularioDeFichaDeProducto({
   const sinCampo = error !== null && !CAMPOS.includes(campoDelError ?? "");
 
   return (
-    <form action={enviar}>
-      <ProveedorDeEnvioDeFormulario value={enviando}>
-        <Pila separacion={3}>
-          <SoloLectura etiqueta={ficha.clase.etiqueta} valor={ficha.clase.valor} />
-          <Campo
-            dato="nombre-de-producto"
-            etiqueta={ficha.nombre.etiqueta}
-            nombre="nombre"
-            valor={nombre}
-            alCambiar={setNombre}
-            autoComplete="off"
-            error={errorDe("nombre")}
-          />
-          {ficha.nombreDeCocina === null ? null : (
+    <>
+      <form action={enviar}>
+        <ProveedorDeEnvioDeFormulario value={enviando}>
+          <Pila separacion={3}>
+            <SoloLectura etiqueta={ficha.clase.etiqueta} valor={ficha.clase.valor} />
             <Campo
-              dato="nombre-de-cocina-de-producto"
-              etiqueta={ficha.nombreDeCocina.etiqueta}
-              nombre="nombreDeCocina"
-              valor={cocina}
-              alCambiar={setCocina}
+              dato="nombre-de-producto"
+              etiqueta={ficha.nombre.etiqueta}
+              nombre="nombre"
+              valor={nombre}
+              alCambiar={setNombre}
               autoComplete="off"
+              error={errorDe("nombre")}
             />
-          )}
-          <Campo
-            dato="codigo-interno-de-producto"
-            etiqueta={ficha.codigo.etiqueta}
-            nombre="codigo"
-            valor={codigo}
-            alCambiar={setCodigo}
-            autoComplete="off"
-            autoCapitalize="off"
-            error={errorDe("codigo")}
-          />
-          <Campo
-            dato="codigo-de-barras-de-producto"
-            etiqueta={ficha.codigoDeBarras.etiqueta}
-            nombre="codigoDeBarras"
-            valor={barras}
-            alCambiar={setBarras}
-            autoComplete="off"
-            inputMode="numeric"
-            error={errorDe("codigoDeBarras")}
-          />
-          <SoloLectura etiqueta={ficha.unidad.etiqueta} valor={ficha.unidad.valor} />
-          {ficha.alicuota === null ? null : (
-            <Selector
-              dato="alicuota-de-iva-de-producto"
-              etiqueta={ficha.alicuota.etiqueta}
-              nombre="alicuota"
-              valor={alicuota}
-              alCambiar={setAlicuota}
-              opciones={ficha.alicuota.opciones}
-              textoDeElegir={ficha.textoDeElegir}
-              deshabilitado={ficha.alicuota.apagado}
-              error={errorDe("alicuota")}
+            {ficha.nombreDeCocina === null ? null : (
+              <Campo
+                dato="nombre-de-cocina-de-producto"
+                etiqueta={ficha.nombreDeCocina.etiqueta}
+                nombre="nombreDeCocina"
+                valor={cocina}
+                alCambiar={setCocina}
+                autoComplete="off"
+              />
+            )}
+            <Campo
+              dato="codigo-interno-de-producto"
+              etiqueta={ficha.codigo.etiqueta}
+              nombre="codigo"
+              valor={codigo}
+              alCambiar={setCodigo}
+              autoComplete="off"
+              autoCapitalize="off"
+              error={errorDe("codigo")}
             />
-          )}
-          {ficha.seccion === null ? null : (
-            <Selector
-              dato="seccion-de-carta-de-producto"
-              etiqueta={ficha.seccion.etiqueta}
-              nombre="seccionDeCartaId"
-              valor={seccion}
-              alCambiar={setSeccion}
-              opciones={ficha.seccion.opciones}
-              textoDeElegir={ficha.textoDeElegir}
-              deshabilitado={ficha.seccion.apagado}
+            <Campo
+              dato="codigo-de-barras-de-producto"
+              etiqueta={ficha.codigoDeBarras.etiqueta}
+              nombre="codigoDeBarras"
+              valor={barras}
+              alCambiar={setBarras}
+              autoComplete="off"
+              inputMode="numeric"
+              error={errorDe("codigoDeBarras")}
             />
-          )}
-          {ficha.enlaceDeSecciones === null ? null : (
-            <a className={estilos["enlace"]} href={ficha.enlaceDeSecciones.href}>
-              {ficha.enlaceDeSecciones.texto}
-            </a>
-          )}
-          {controlDeStock === null || ficha.etiquetaDelControlDeStock === null ? null : (
-            <Casilla
-              dato="control-de-stock-de-producto"
-              etiqueta={ficha.etiquetaDelControlDeStock}
-              nombre="seControlaElStock"
-              marcada={controlado}
-              alCambiar={setControlado}
-              apagada={!controlDeStock.puedeCambiar}
-            />
-          )}
-          {sinCampo ? <ErrorDeRespuesta error={error} /> : null}
-          {puedeGuardar ? (
-            <BotonDeEnvio>{ficha.guardar}</BotonDeEnvio>
-          ) : (
-            <Boton deshabilitado>{ficha.guardar}</Boton>
-          )}
-        </Pila>
-      </ProveedorDeEnvioDeFormulario>
-    </form>
+            <SoloLectura etiqueta={ficha.unidad.etiqueta} valor={ficha.unidad.valor} />
+            {ficha.alicuota === null ? null : (
+              <Selector
+                dato="alicuota-de-iva-de-producto"
+                etiqueta={ficha.alicuota.etiqueta}
+                nombre="alicuota"
+                valor={alicuota}
+                alCambiar={setAlicuota}
+                opciones={ficha.alicuota.opciones}
+                textoDeElegir={ficha.textoDeElegir}
+                deshabilitado={ficha.alicuota.apagado}
+                error={errorDe("alicuota")}
+              />
+            )}
+            {ficha.seccion === null ? null : (
+              <Selector
+                dato="seccion-de-carta-de-producto"
+                etiqueta={ficha.seccion.etiqueta}
+                nombre="seccionDeCartaId"
+                valor={seccion}
+                alCambiar={setSeccion}
+                opciones={ficha.seccion.opciones}
+                textoDeElegir={ficha.textoDeElegir}
+                deshabilitado={ficha.seccion.apagado}
+              />
+            )}
+            {ficha.enlaceDeSecciones === null ? null : (
+              <a className={estilos["enlace"]} href={ficha.enlaceDeSecciones.href}>
+                {ficha.enlaceDeSecciones.texto}
+              </a>
+            )}
+            {controlDeStock === null || ficha.etiquetaDelControlDeStock === null ? null : (
+              <Casilla
+                dato="control-de-stock-de-producto"
+                etiqueta={ficha.etiquetaDelControlDeStock}
+                nombre="seControlaElStock"
+                marcada={controlado}
+                alCambiar={(valor) => {
+                  if (valor !== controlado) setPorConfirmar(valor);
+                }}
+                apagada={!controlDeStock.puedeCambiar}
+              />
+            )}
+            {sinCampo ? <ErrorDeRespuesta error={error} /> : null}
+            {puedeGuardar ? (
+              <BotonDeEnvio>{ficha.guardar}</BotonDeEnvio>
+            ) : (
+              <Boton deshabilitado>{ficha.guardar}</Boton>
+            )}
+          </Pila>
+        </ProveedorDeEnvioDeFormulario>
+      </form>
+      {confirmacion === null || porConfirmar === null ? null : (
+        <Superposicion
+          abierta
+          titulo={confirmacion.titulo}
+          proposito="confirmar"
+          alCerrar={() => {
+            setPorConfirmar(null);
+          }}
+          cerrable
+          etiquetaDeCerrar={confirmacion.cerrar}
+        >
+          <div className={estilosDeCobrar["cuerpo"]}>
+            <p>{porConfirmar ? confirmacion.activar : confirmacion.apagar}</p>
+            <div className={estilosDeCobrar["acciones"]}>
+              <Boton
+                ancho="completo"
+                alTocar={() => {
+                  setControlado(porConfirmar);
+                  setPorConfirmar(null);
+                }}
+              >
+                {confirmacion.confirmar}
+              </Boton>
+              <Boton
+                variante="secundaria"
+                ancho="completo"
+                alTocar={() => {
+                  setPorConfirmar(null);
+                }}
+              >
+                {confirmacion.cancelar}
+              </Boton>
+            </div>
+          </div>
+        </Superposicion>
+      )}
+    </>
   );
 }

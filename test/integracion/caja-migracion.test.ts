@@ -932,7 +932,7 @@ describe.skipIf(base === null)(
         });
       });
 
-      it("ingresos y egresos manuales y el fondo, solo en efectivo", async () => {
+      it("el fondo y los ingresos manuales, solo en efectivo; el egreso manual admite cualquier medio", async () => {
         await conSesion(async (s, sesion) => {
           for (const tipo of ["TARJETA_DEBITO", "TRANSFERENCIA", "QR", "OTRO"] as const) {
             check(
@@ -944,14 +944,15 @@ describe.skipIf(base === null)(
               }),
               "movimiento_caja_solo_efectivo",
             );
-            check(
+            // Desde 0091 (dueño, 19/11) el egreso manual admite cualquier medio: lo que exige es su acto de salida al confirmar
+            // (`egreso_no_efectivo_sin_acto`, probado en `movimiento-de-dinero-migracion.test.ts`).
+            acepta(
               await movimiento(s, esc, sesion, {
                 clase: "EGRESO_MANUAL",
                 medio: tipo,
                 importe: "-5.00",
-                motivo: "No",
+                motivo: "Sí",
               }),
-              "movimiento_caja_solo_efectivo",
             );
           }
           // El ajuste sí vale en cualquier medio.
@@ -2395,7 +2396,13 @@ describe.skipIf(base === null)(
             join(CARPETA_DE_MIGRACIONES, "reversiones", "0084_revertir_compras_devoluciones.sql"),
             "utf8",
           );
+          // El acto «movimiento de dinero» (0091) apunta a los movimientos de caja: se baja primero.
+          const deMovimientosDeDinero = await readFile(
+            join(CARPETA_DE_MIGRACIONES, "reversiones", "0091_revertir_movimiento_de_dinero.sql"),
+            "utf8",
+          );
           await c.query("begin");
+          await c.query(deMovimientosDeDinero);
           await c.query(deDevoluciones);
           await c.query(sql);
           await c.query(sql); // repetirla no cambia nada
