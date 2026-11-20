@@ -90,6 +90,35 @@
       "lineas": 12
     },
     {
+      "ruta": "src/capacidades/vocabulario/catalogo.ts",
+      "exporta": [
+        "LARGO_MAXIMO_DE_TEXTO",
+        "DefinicionDeTexto",
+        "CATALOGO_DE_TEXTOS",
+        "ClaveDeTexto"
+      ],
+      "importaDe": [
+        "src/capacidades/vocabulario/catalogo-*",
+        "src/capacidades/vocabulario/uso-y-fuente-de-texto"
+      ],
+      "parteDedicada": "src/capacidades/vocabulario/catalogo-<módulo>.ts",
+      "soloJunta": true,
+      "lineas": 90,
+      "excepciones": [
+        "nucleo",
+        "carta-publica",
+        "sesion-y-empresa",
+        "fiscal",
+        "fiscal-configuracion",
+        "fiscal-emitir",
+        "fiscal-imprimir",
+        "fiscal-pantallas",
+        "lotes",
+        "comandas.test",
+        "produccion.test"
+      ]
+    },
+    {
       "ruta": "src/capacidades/modulos/catalogo.ts",
       "exporta": [
         "EstadoDeConstruccion",
