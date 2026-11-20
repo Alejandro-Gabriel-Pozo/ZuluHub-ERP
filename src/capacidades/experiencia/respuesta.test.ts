@@ -3,6 +3,7 @@ import type { EmpresaNoOpera } from "../../contexto/estados";
 import type { MotivoDeRechazo } from "../permisos/guard";
 import { CATALOGO_DE_TEXTOS, type ClaveDeTexto } from "../vocabulario/catalogo";
 import { CLAVES_DE_ERRORES_DE_CAJA } from "./respuesta-de-caja";
+import { CLAVES_DE_ERRORES_DE_RECETAS } from "./respuesta-de-recetas";
 import { CLAVES_DE_ERRORES_DE_STOCK } from "./respuesta-de-stock";
 import { CLAVES_DE_ERRORES_DE_CATALOGO, PARAMETROS_DE_CATALOGO } from "./respuesta-de-catalogo";
 import { CLAVES_DE_ERRORES_DE_CLIENTES } from "./respuesta-de-clientes";
@@ -51,7 +52,7 @@ describe("CODIGOS_PUBLICOS: contrato exhaustivo", () => {
   it("los errores de negocio usan `error.<código>` en minúsculas; los inesperados, el texto genérico", () => {
     for (const codigo of codigos) {
       const { clave, presentacion } = CODIGOS_PUBLICOS[codigo];
-      // Los códigos de caja, de catálogo, de ventas, de stock, de compras y de clientes viven en el archivo de textos de su módulo, que exige su prefijo a toda clave (`catalogo.test.ts`): `caja.error.<…>`, `catalogo.error.<…>`, `ventas.error.<…>`, `stock.error.<…>`, `compras.error.<…>` y `clientes.error.<…>`.
+      // Los códigos de caja, de catálogo, de ventas, de stock, de compras y de clientes viven en el archivo de textos de su módulo, que exige su prefijo a toda clave (`catalogo.test.ts`): `caja.error.<…>`, `catalogo.error.<…>`, `ventas.error.<…>`, `stock.error.<…>`, `compras.error.<…>` y `clientes.error.<…>`; y los de recetas, `receta.error.<…>`.
       if (
         presentacion === "AVISO" &&
         !Object.hasOwn(CLAVES_DE_ERRORES_DE_CAJA, codigo) &&
@@ -60,7 +61,8 @@ describe("CODIGOS_PUBLICOS: contrato exhaustivo", () => {
         !Object.hasOwn(CLAVES_DE_ERRORES_DE_CLIENTES, codigo) &&
         !Object.hasOwn(CLAVES_DE_ERRORES_DE_SALON, codigo) &&
         !Object.hasOwn(CLAVES_DE_ERRORES_DE_VENTAS, codigo) &&
-        !Object.hasOwn(CLAVES_DE_ERRORES_DE_STOCK, codigo)
+        !Object.hasOwn(CLAVES_DE_ERRORES_DE_STOCK, codigo) &&
+        !Object.hasOwn(CLAVES_DE_ERRORES_DE_RECETAS, codigo)
       )
         expect(clave).toBe(`error.${codigo.toLowerCase()}`);
     }

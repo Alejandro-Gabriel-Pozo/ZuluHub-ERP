@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0575",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La pantalla de Recetas rechaza con el genérico «Esta acción no está permitida», con clave propia del módulo: receta.error.accion_no_permitida (texto ya aprobado, repetido por módulo).",
+  "que_cambia": "Cambia solo la clave: el texto que ve el cliente es el de caja y catálogo. Revertir: sacar la clave y el código RECETA_ACCION_NO_PERMITIDA.",
+  "donde": "src/capacidades/vocabulario/catalogo-produccion.ts; recetas-pantalla.md §5 y §6"
+}

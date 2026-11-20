@@ -174,6 +174,17 @@ export type {
   ExistenciaValorizada,
   UltimoCostoDeCompra,
 } from "./consultas/costos";
+export type { FichaDeReceta, LineaDeFicha, VersionDeReceta } from "./consultas/recetas";
+export type {
+  EntradaDeIngredientes,
+  EntradaDeListarRecetas,
+  IngredienteParaReceta,
+  PaginaDeIngredientes,
+  PaginaDeRecetas,
+  RecetaDeLista,
+  RecetaDeProducto,
+  VistaPreviaDeReceta,
+} from "./consultas/recetas-para-pantalla";
 export type { DiferenciaDeSaldo } from "./persistencia/lecturas-del-libro";
 export { COLUMNAS_DE_STOCK, type StockDb } from "./persistencia/esquema";
 export { ERRORES_DE_STOCK_POR_RESTRICCION } from "./persistencia/errores-por-restriccion";
