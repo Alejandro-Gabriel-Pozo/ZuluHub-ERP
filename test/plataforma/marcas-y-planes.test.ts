@@ -12,6 +12,10 @@ import {
   OPERACION_ACTIVAR_MODULO_DE_EMPRESA,
   OPERACION_DESACTIVAR_MODULO_DE_EMPRESA,
 } from "../../src/plataforma/casos-de-uso/modulos-de-empresa";
+import {
+  OPERACION_ARREPENTIR_CAMBIO_DE_PLAN,
+  OPERACION_DEFINIR_POLITICA_DE_CAMBIO,
+} from "../../src/plataforma/casos-de-uso/politica-de-cambio-de-plan";
 import { OPERACION_PUBLICAR_VERSION_DE_PLAN } from "../../src/plataforma/casos-de-uso/publicar-version-de-plan";
 import type { Dato } from "../../src/puertos/sin-secretos";
 import {
@@ -186,6 +190,37 @@ const CASOS: readonly Caso[] = [
     guardado: { yaEstabaInactivo: false },
     repetido: { yaEstabaInactivo: true },
   },
+  {
+    nombre: "definirPoliticaDeCambioDePlan",
+    operacion: OPERACION_DEFINIR_POLITICA_DE_CAMBIO,
+    llamar: (c, claveDeIdempotencia, cambios = {}) =>
+      c.definirPoliticaDeCambioDePlan(CONTEXTO, {
+        claveDeIdempotencia,
+        versionEsperada: 1,
+        diasDeAnticipacionDeSuba: 1,
+        diasDeAnticipacionDeBaja: 1,
+        diasDeArrepentimiento: 3,
+        motivo: "política",
+        ...cambios,
+      }),
+    guardado: { version: 2, repetida: false },
+    repetido: { version: 2, repetida: true },
+  },
+  {
+    nombre: "arrepentirCambioDePlan",
+    operacion: OPERACION_ARREPENTIR_CAMBIO_DE_PLAN,
+    llamar: (c, claveDeIdempotencia, cambios = {}) =>
+      c.arrepentirCambioDePlan(CONTEXTO, {
+        claveDeIdempotencia,
+        tenantId: id(1),
+        numero: 2,
+        numeroEsperado: 2,
+        motivo: "el cliente se arrepintió",
+        ...cambios,
+      }),
+    guardado: { numero: 3, repetida: false },
+    repetido: { numero: 3, repetida: true },
+  },
 ];
 
 describe("las operaciones con que se guardan las claves", () => {
@@ -252,6 +287,18 @@ describe("la forma de la entrada se valida DESPUÉS del guard y ANTES de tocar n
     ["ajustarPerilla", { numeroEsperado: 0 }, "NUMERO_ESPERADO_INVALIDO"],
     ["activarModuloDeEmpresa", { empresaId: "x" }, "ID_INVALIDO"],
     ["desactivarModuloDeEmpresa", { empresaId: "x" }, "ID_INVALIDO"],
+    ["definirPoliticaDeCambioDePlan", { versionEsperada: 0 }, "VERSION_ESPERADA_INVALIDA"],
+    ["definirPoliticaDeCambioDePlan", { diasDeArrepentimiento: 366 }, "DIAS_DE_POLITICA_INVALIDOS"],
+    [
+      "definirPoliticaDeCambioDePlan",
+      { diasDeAnticipacionDeSuba: 1.5 },
+      "DIAS_DE_POLITICA_INVALIDOS",
+    ],
+    ["definirPoliticaDeCambioDePlan", { motivo: "  " }, "MOTIVO_OBLIGATORIO"],
+    ["arrepentirCambioDePlan", { tenantId: "x" }, "ID_INVALIDO"],
+    ["arrepentirCambioDePlan", { numero: 0 }, "NUMERO_INVALIDO"],
+    ["arrepentirCambioDePlan", { numeroEsperado: 0 }, "NUMERO_ESPERADO_INVALIDO"],
+    ["arrepentirCambioDePlan", { motivo: "m".repeat(501) }, "MOTIVO_DEMASIADO_LARGO"],
   ];
 
   it.each(MALAS)(
@@ -325,6 +372,8 @@ describe("la repetición de la clave devuelve lo guardado, marcado, sin tocar na
       ajustarPerilla: { motivo: "otro motivo" },
       activarModuloDeEmpresa: { modulo: "ventas" },
       desactivarModuloDeEmpresa: { modulo: "ventas" },
+      definirPoliticaDeCambioDePlan: { motivo: "otro motivo" },
+      arrepentirCambioDePlan: { motivo: "otro motivo" },
     };
     expect(await caso.llamar(armado.casos, CLAVE, OTRA[caso.nombre])).toEqual({
       ok: false,

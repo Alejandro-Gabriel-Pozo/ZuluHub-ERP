@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0822",
+  "fecha": "2026-11-20",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Stock y caja entran a la conformidad de libros tal como están, con sus divergencias declaradas como excepción con vencimiento, en vez de migrarlos.",
+  "que_cambia": "Solo datos y una prueba de lectura del catálogo: sin migración ni cambio en stock o caja; registro.ts queda fuera de la mutación (son datos). Revertir: borrar el registro y la prueba; pagar una excepción es una migración aparte.",
+  "donde": "src/primitivas/libro/registro.ts; test/integracion/libros-conformidad.test.ts; brief PR-LB-2 y primitiva-de-libro-diseno.md §2.5, repo de documentos, 11-especificaciones"
+}

@@ -4,6 +4,7 @@ import estilos from "../../../../pantallas/empresas.module.css";
 import { PanelDePlan } from "../../../../pantallas/panel-de-plan.cliente";
 import { exigirAcceso } from "../../../../servidor/acceso";
 import { planDeEmpresa } from "../../../../servidor/plan";
+import { arrepentirCambioAccion } from "./acciones-arrepentir";
 
 type PropsDePagina = Readonly<{ params: Promise<{ id: string }> }>;
 
@@ -35,7 +36,7 @@ export default async function PaginaDePlanDeEmpresa({ params }: PropsDePagina) {
       titulo={`${resultado.plan.empresa} · Plan`}
       acciones={volver}
     >
-      <PanelDePlan plan={resultado.plan} />
+      <PanelDePlan plan={resultado.plan} accionDeArrepentir={arrepentirCambioAccion} />
     </ArmazonDeConsola>
   );
 }

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0795",
+  "fecha": "2026-11-19",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Una entrada de menú cuya función de pago está apagada no se muestra: «Mesas» no aparece si el extra salón está apagado.",
+  "que_cambia": "El menú mira también la función de la fila; el servidor sigue exigiéndola al entrar. Revertir: quitar la función de la fila «Mesas».",
+  "donde": "decisiones-del-dueno-2026-11.md, fila del 18/11 «acepta la recomendación en las 40 preguntas», bloque A (P-2 = A); apps/web/ui/navegacion/menu.ts"
+}

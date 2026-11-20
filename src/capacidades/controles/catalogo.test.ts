@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CATALOGO_DE_CONTROLES,
+  nivelDeNacimientoDe,
   FORMA_DE_CLAVE_DE_CONTROL,
   type CatalogoDeControles,
 } from "./catalogo";
@@ -46,5 +47,24 @@ describe("CATALOGO_DE_CONTROLES", () => {
     for (const [clave, definicion] of Object.entries(catalogo)) {
       expect(definicion.descripcion.trim().length, clave).toBeGreaterThan(0);
     }
+  });
+
+  it("solo el ingreso sin identificar nace en AVISAR; el resto del catálogo nace en PERMITIR (ningún control existente cambió)", () => {
+    const nacen = Object.keys(CATALOGO_DE_CONTROLES).map((c) => [c, nivelDeNacimientoDe(c)]);
+    expect(nacen.filter(([, nivel]) => nivel === "AVISAR")).toEqual([
+      ["caja.ingreso_sin_identificar", "AVISAR"],
+    ]);
+    for (const clave of [
+      "stock.existencia_negativa",
+      "ventas.cobro_de_ticket_sin_identificar",
+      "caja.salida_sin_identificar",
+    ]) {
+      expect(nivelDeNacimientoDe(clave), clave).toBe("PERMITIR");
+    }
+  });
+
+  it("una clave fuera del catálogo (o heredada de Object) nace en PERMITIR", () => {
+    expect(nivelDeNacimientoDe("no.existe")).toBe("PERMITIR");
+    expect(nivelDeNacimientoDe("constructor")).toBe("PERMITIR");
   });
 });

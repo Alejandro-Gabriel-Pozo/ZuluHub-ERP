@@ -10,6 +10,7 @@ import type {
   ProductoLeido,
 } from "../dominio/carta-publicada";
 import { productoId } from "../dominio/identificadores";
+import { caraDeCarta, logoDeCarta, modeloDeCarta } from "./filas-de-carta";
 import type { CatalogoDb } from "./esquema";
 import { crearRepositorioDePrecios } from "./repositorio-de-precios";
 
@@ -18,6 +19,8 @@ export type PublicoDeCartaDb = {
   empresa: { id: string; tenant_id: string; estado: string };
   tenant: { id: string; estado: string; marca_id: string };
   sucursal: { id: string; empresa_id: string; activa: boolean };
+  /** 0077: solo el color y la empresa (la política deja ver la fila de la empresa de la carta pedida). */
+  identidad_de_carta_empresa: { empresa_id: string; color_principal: string | null };
 };
 
 /**
@@ -72,6 +75,14 @@ export function crearLecturaPublicaDeCartas(db: {
           "lugar",
           "mensaje_de_portada",
           "estado",
+          "modelo",
+          "cara",
+          "color_propio",
+          "logo_proveedor",
+          "logo_cuenta",
+          "logo_id_publico",
+          "logo_version",
+          "logo_extension",
         ])
         .where("codigo", "=", codigo)
         .executeTakeFirst();
@@ -96,11 +107,19 @@ export function crearLecturaPublicaDeCartas(db: {
         .executeTakeFirst();
       if (tenantFila === undefined) return null;
 
+      const identidadDeLaEmpresa = await k
+        .selectFrom("identidad_de_carta_empresa")
+        .select(["color_principal"])
+        .where("empresa_id", "=", empresa)
+        .executeTakeFirst();
+
       const secciones = await k
         .selectFrom("seccion_de_carta")
         .select(["id", "nombre", "activa"])
         .where("empresa_id", "=", empresa)
         .orderBy("orden")
+        // El rol público no lee `nombre_clave` (0044): el desempate es el mismo que el de gestión (`nombre_clave` = el nombre en minúsculas), con `id` si aun así empatan.
+        .orderBy(sql`lower(nombre)`)
         .orderBy("id")
         .execute();
       const productosFilas = await k
@@ -220,7 +239,12 @@ export function crearLecturaPublicaDeCartas(db: {
           mensajeDePortada: cartaFila.mensaje_de_portada,
           estado: estadoDe(["EN_LINEA", "FUERA_DE_LINEA"] as const, cartaFila.estado),
           sucursalId: sucursalDeLaCarta,
+          modelo: modeloDeCarta(cartaFila.modelo),
+          cara: caraDeCarta(cartaFila.cara),
+          colorPropio: cartaFila.color_propio,
+          logo: logoDeCarta(cartaFila),
         },
+        colorDeLaEmpresa: identidadDeLaEmpresa?.color_principal ?? null,
         sucursalActiva: sucursal.activa,
         empresaId: empresaId(empresa),
         tenantId: tenantId(tenantFila.id),

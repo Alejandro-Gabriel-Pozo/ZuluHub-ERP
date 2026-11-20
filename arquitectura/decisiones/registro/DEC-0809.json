@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0809",
+  "fecha": "2026-11-20",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La matriz de permisos de la empresa se escribe en un archivo por módulo; empresa.ts solo junta; la igualdad con la matriz anterior quedó probada combinación por combinación.",
+  "que_cambia": "Solo organización del código: quién puede qué no cambia (177 acciones, 531 combinaciones acción por rol, iguales). Revertir: volver a escribir las filas dentro de empresa.ts.",
+  "donde": "src/capacidades/permisos/empresa.ts, permisos-de-*.ts y matriz-igual.test.ts; arquitectura/centrales.json; brief PR-E4 de escalabilidad, repo de documentos, 11-especificaciones/briefs/escalabilidad"
+}

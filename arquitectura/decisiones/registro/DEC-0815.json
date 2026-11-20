@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0815",
+  "fecha": "2026-11-20",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "La pantalla «Política de cambio de plan» de la consola se aprueba con la ficha de pantalla de §4.2 del brief H-14b, sin maqueta dibujada.",
+  "que_cambia": "Pantalla nueva en /politica-de-plan: ver la política vigente y su historial (planes.ver) y definir una versión nueva (solo ADMIN con segundo factor reciente). Revertir: quitar la ruta, la entrada de menú y la ficha.",
+  "donde": "src/capacidades/pantallas/ficha-de-politica-de-consola.ts; apps/plataforma/app/politica-de-plan; Pedernal-docs 11-especificaciones/briefs/escalabilidad/PR-H14b-consola-politica-de-cambio-de-plan.md §4.2; decisiones-del-dueno-2026-11.md fila del 20/11/2026 «H14b-1»"
+}

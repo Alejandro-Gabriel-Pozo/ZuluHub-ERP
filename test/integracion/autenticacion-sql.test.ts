@@ -220,7 +220,7 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
       );
     });
 
-    it("RLS activa y forzada en las ocho tablas, con una política por comando (el que tiene concedido) solo para el rol de la librería", async () => {
+    it("RLS activa y forzada en las ocho tablas, con una política por comando (el que tiene concedido) solo para el rol de la librería de la web y otras tantas, con nombre propio, solo para el rol de la consola (0088)", async () => {
       const tablas = await consulta<{
         relname: string;
         relrowsecurity: boolean;
@@ -255,7 +255,34 @@ describe.skipIf(base === null)("autenticación: la migración 0010 contra una ba
           (COMANDOS_DE[t] ?? ["INSERT", "DELETE", "UPDATE", "SELECT"]).includes(cmd),
         ).map(([nombre, cmd]) => `${t}:${nombre}:${cmd}:PERMISSIVE:pedernal_autenticacion`),
       );
-      expect(politicas.map((p) => p.p)).toEqual(esperadas.sort());
+      // Cada política nombra a UN solo rol y ese es el de la web o el de la consola (0088): ningún otro.
+      const deLaWeb = politicas
+        .map((p) => p.p)
+        .filter((p) => p.endsWith(":pedernal_autenticacion"));
+      const deLaConsola = politicas
+        .map((p) => p.p)
+        .filter((p) => p.endsWith(":pedernal_autenticacion_plataforma"));
+      expect(deLaWeb.length + deLaConsola.length).toBe(politicas.length);
+      expect(deLaWeb).toEqual(esperadas.sort());
+      // 0088: una por comando CONCEDIDO al rol de la consola, con nombre propio. A diferencia del rol de la web, no tiene DELETE
+      // sobre `user`, `account` ni `twoFactor` (0013 y 0015), así que tampoco política de DELETE ahí.
+      const SIN_DELETE = new Set(["user", "account", "twoFactor"]);
+      const POR_COMANDO_DE_LA_CONSOLA = [
+        ["rol_autenticacion_plataforma_alta", "INSERT"],
+        ["rol_autenticacion_plataforma_borrar", "DELETE"],
+        ["rol_autenticacion_plataforma_cambiar", "UPDATE"],
+        ["rol_autenticacion_plataforma_leer", "SELECT"],
+      ] as const;
+      const SIN_UPDATE = new Set(["codigo_totp_usado", "intento_segundo_factor"]);
+      const esperadasDeLaConsola = TODAS_LAS_TABLAS.flatMap((t) =>
+        POR_COMANDO_DE_LA_CONSOLA.filter(
+          ([, cmd]) =>
+            (cmd !== "DELETE" || !SIN_DELETE.has(t)) && (cmd !== "UPDATE" || !SIN_UPDATE.has(t)),
+        ).map(
+          ([nombre, cmd]) => `${t}:${nombre}:${cmd}:PERMISSIVE:pedernal_autenticacion_plataforma`,
+        ),
+      );
+      expect(deLaConsola).toEqual(esperadasDeLaConsola.sort());
     });
 
     it("`session.host` es obligatorio y se guarda normalizado (sin él una cookie de una marca valdría en otra)", async () => {

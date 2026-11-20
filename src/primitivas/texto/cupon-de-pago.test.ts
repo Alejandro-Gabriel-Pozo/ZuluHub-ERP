@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import "../../../test/propiedades/configuracion";
-import { cuponDePagoDesdeTexto, LARGO_MAXIMO_DEL_CUPON } from "./cupon-de-pago";
+import { cuponDePagoDesdeTexto, LARGO_MAXIMO_DEL_CUPON, motivoDelCupon } from "./cupon-de-pago";
 
 const MALO = { ok: false, error: "CUPON_INVALIDO" } as const;
 
@@ -117,5 +117,43 @@ describe("cupón de pago", () => {
         },
       ),
     );
+  });
+});
+
+describe("motivoDelCupon (la regla que comparten caja y la pantalla de cobro)", () => {
+  it("un cupón común es válido", () => {
+    expect(motivoDelCupon("A-1234/56")).toBeNull();
+  });
+
+  it("lo que no es un texto es de forma incorrecta", () => {
+    expect(motivoDelCupon(undefined)).toBe("FORMA");
+    expect(motivoDelCupon(1234)).toBe("FORMA");
+    expect(motivoDelCupon(null)).toBe("FORMA");
+  });
+
+  it("con un espacio, aunque la primitiva lo permita, es de forma incorrecta (lo dice la base)", () => {
+    expect(motivoDelCupon("AB 12")).toBe("FORMA");
+  });
+
+  it("sin ninguna letra ni dígito (solo separadores) es de forma incorrecta", () => {
+    expect(motivoDelCupon("---")).toBe("FORMA");
+    expect(motivoDelCupon("")).toBe("FORMA");
+  });
+
+  it("13 dígitos seguidos, o 13 una vez quitados los separadores, es un número de tarjeta", () => {
+    expect(motivoDelCupon("4509953566233")).toBe("NUMERO_DE_TARJETA");
+    expect(motivoDelCupon("4509-9535-6623-3704")).toBe("NUMERO_DE_TARJETA");
+    expect(motivoDelCupon("45099.53566/233")).toBe("NUMERO_DE_TARJETA");
+    expect(motivoDelCupon("45099_53566_233")).toBe("NUMERO_DE_TARJETA");
+  });
+
+  it("12 dígitos con separadores todavía no lo son", () => {
+    expect(motivoDelCupon("4509-9535-6623")).toBeNull();
+  });
+
+  it("un carácter fuera de la lista permitida o un largo de más es de forma incorrecta", () => {
+    expect(motivoDelCupon("AB#1")).toBe("FORMA");
+    expect(motivoDelCupon("A".repeat(33))).toBe("FORMA");
+    expect(motivoDelCupon("A".repeat(32))).toBeNull();
   });
 });

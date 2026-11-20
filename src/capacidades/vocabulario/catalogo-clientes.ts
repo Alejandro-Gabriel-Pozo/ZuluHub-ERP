@@ -1,8 +1,8 @@
 /**
  * Los textos del módulo `clientes` (prefijo `clientes.`, E9-T15; `e9-compras-especificacion.md` §10). Ninguno es nuevo: todos salen de los que el
  * dueño aprobó el 09/11/2026 en el prototipo `directorio.html`, sección «Textos nuevos» (repositorio de documentos,
- * `10-ux-ui/prototipos-gastronomia/directorio.html`). Los rótulos del formulario («Nombre», «Apellido», «Email», «Teléfono»,
- * «Domicilio», etc.) no figuran en la lista de `e9-compras-especificacion.md` §10 y no se agregan acá (decisión D175).
+ * `10-ux-ui/prototipos-gastronomia/directorio.html`). Los rótulos del formulario no figuraban en la lista de
+ * `e9-compras-especificacion.md` §10 y la decisión D175 no los agregó; DEC-0566 carga los que no existían en ningún catálogo (los demás se reusan).
  */
 export const TEXTOS_DE_CLIENTES = {
   // directorio.html, «Textos nuevos» (09/11/2026), fila «Lista y ficha»
@@ -21,6 +21,18 @@ export const TEXTOS_DE_CLIENTES = {
   "clientes.lista.reactivar": { porDefecto: "Reactivar" },
   "clientes.lista.mostrar_desactivados": { porDefecto: "Mostrar desactivados" },
 
+  // directorio.html:266, «Textos nuevos» (aprobados el 09/11/2026, DEC-0566): los once que no tenían clave (`pantallas-de-compras-inventario.md` §5). Los demás rótulos del formulario
+  // («Nombre», «Domicilio», «Calle», «Guardar»…) ya existen en otros catálogos y se reusan.
+  "clientes.lista.nuevo": { porDefecto: "Nuevo" },
+  "clientes.lista.clientes": { porDefecto: "Clientes" },
+  "clientes.lista.proveedores": { porDefecto: "Proveedores" },
+  "clientes.formulario.tipo_de_documento": { porDefecto: "Tipo de documento" },
+  "clientes.formulario.pais": { porDefecto: "País" },
+  "clientes.formulario.nota": { porDefecto: "Nota" },
+  "clientes.formulario.roles": { porDefecto: "Roles" },
+  "clientes.formulario.email": { porDefecto: "Email" },
+  "clientes.formulario.apellido": { porDefecto: "Apellido" },
+
   // directorio.html, «Textos nuevos», fila «Errores»; los códigos DOCUMENTO_YA_REGISTRADO y PARTE_INACTIVA_CON_ESE_DOCUMENTO son de E9 §3.1
   "clientes.error.cuit_invalido": { porDefecto: "El CUIT no es válido" },
   "clientes.error.documento_ya_registrado": {
@@ -32,4 +44,10 @@ export const TEXTOS_DE_CLIENTES = {
   "clientes.error.falta_el_nombre": { porDefecto: "Falta el nombre" },
   "clientes.error.email_invalido": { porDefecto: "El email no es válido" },
   "clientes.error.telefono_invalido": { porDefecto: "El teléfono no es válido" },
+  "clientes.error.dni_invalido": { porDefecto: "El DNI no es válido" },
+  "clientes.error.empresa_solo_cuit_o_extranjero": {
+    porDefecto: "Una empresa solo admite CUIT o documento extranjero",
+  },
+  // El genérico que ya estaba aprobado (dueño, 30/10/2026; en las maquetas de caja, productos, stock y compras), con clave propia del módulo como los demás: no es un texto nuevo.
+  "clientes.error.sin_permiso": { porDefecto: "Esta acción no está permitida" },
 } as const;

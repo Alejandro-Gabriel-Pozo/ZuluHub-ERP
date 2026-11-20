@@ -1,3 +1,6 @@
+import type { PartesDeDireccion } from "../../../capacidades/activos/direccion-externa";
+import type { CaraDeVidriera } from "../../../capacidades/experiencia/vidriera/caras";
+import type { ModeloDeVidriera } from "../../../capacidades/experiencia/vidriera/modelos";
 import type { EmpresaId, PersonaId, SucursalId } from "../../../primitivas/identificadores/marca";
 import type { CartaPublicaId, ProductoId } from "./identificadores";
 
@@ -21,6 +24,12 @@ export type CartaPublica = Readonly<{
   /** La tercera línea de la portada (texto libre); nulo = sin mensaje y la pantalla muestra el adorno de siempre. */
   mensajeDePortada: string | null;
   estado: EstadoDeCarta;
+  /** Identidad de la carta (0077): lo que ELIGIÓ el gerente. Vacío = «usa lo de la empresa»; los colores ajustados por contraste se calculan al mostrar y no se guardan. */
+  modelo: ModeloDeVidriera;
+  cara: CaraDeVidriera | null;
+  colorPropio: string | null;
+  /** Las partes de la imagen en el proveedor (nunca la dirección pegada); nulo = usa el logo de la empresa. */
+  logo: PartesDeDireccion | null;
   version: number;
 }>;
 

@@ -1,7 +1,8 @@
+import { randomUUID } from "node:crypto";
 import { deLaMarca } from "../utilidades/alcance-del-host";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import type { BaseDePruebas } from "./global";
-import { montarCatalogo, valorDe, cotizarEnTx } from "./catalogo-apoyo";
+import { montarCatalogo, productoDeBase, valorDe, cotizarEnTx } from "./catalogo-apoyo";
 import { codigoAlAzar, comoPublico } from "./carta-publica-apoyo";
 import {
   AHORA_DE_LA_VISITA,
@@ -49,6 +50,45 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
   };
   const productosDe = (v: VidrieraPublicada) =>
     v.secciones.map((s) => s.productos.map((p) => p.nombre));
+
+  it("H3: dos secciones con el mismo `orden` salen siempre por nombre y luego id, igual que la lista de gestión (la carta no varía entre lecturas)", async () => {
+    const otro = await montarEnsayo(c);
+    // El id menor va a «Zeta»: si el desempate fuera el id, «Zeta» saldría antes que «Alfa».
+    const [idZeta, idAlfa] = [randomUUID(), randomUUID()].sort() as [string, string];
+    for (const [id, nombre, producto] of [
+      [idZeta, "Zeta", "Pan de zeta"],
+      [idAlfa, "Alfa", "Pan de alfa"],
+    ] as const) {
+      await c.dueno.query(
+        "insert into seccion_de_carta (id, empresa_id, nombre, nombre_clave, orden, activa) values ($1, $2, $3, $4, 9, true)",
+        [id, otro.e.empresa, nombre, nombre.toLowerCase()],
+      );
+      const idDeProducto = await productoDeBase(c.dueno, otro.e.empresa, { nombre: producto });
+      await c.dueno.query("update producto set seccion_de_carta_id = $2 where id = $1", [
+        idDeProducto,
+        id,
+      ]);
+      await precioDeBase(c.dueno, {
+        empresa: otro.e.empresa,
+        producto: idDeProducto,
+        precio: "100",
+        desde: "2026-10-01T00:00:00Z",
+      });
+    }
+    const leida = (await vidriera.porCodigo(
+      deLaMarca(MARCA_DEL_HOST),
+      otro.carta1.codigo,
+    )) as VidrieraPublicada;
+    const nombres = leida.secciones.map((x) => x.nombre);
+    expect(nombres.indexOf("Alfa")).toBeGreaterThan(-1);
+    expect(nombres.indexOf("Alfa")).toBeLessThan(nombres.indexOf("Zeta"));
+    // Y la lista de gestión (misma empresa) dice lo mismo.
+    const gestion = await c.dueno.query<{ nombre: string }>(
+      "select nombre from seccion_de_carta where empresa_id = $1 and orden = 9 order by orden, nombre_clave, id",
+      [otro.e.empresa],
+    );
+    expect(gestion.rows.map((r) => r.nombre)).toEqual(["Alfa", "Zeta"]);
+  });
 
   it("L-1: sale lo que corresponde, con las secciones en su orden y los productos por nombre", () => {
     expect(carta.secciones.map((s) => s.nombre)).toEqual([
@@ -233,21 +273,55 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
         ),
         // La carta (0043 y 0044).
         carta_publica: ordenadas(
+          "cara",
           "codigo",
+          "color_propio",
           "empresa_id",
           "estado",
           "id",
+          "logo_cuenta",
+          "logo_extension",
+          "logo_id_publico",
+          "logo_proveedor",
+          "logo_version",
           "lugar",
           "mensaje_de_portada",
+          "modelo",
           "nombre",
           "rubro",
           "sucursal_id",
         ),
+        // La identidad de la carta (0077): solo el color y la empresa; ni quién la creó, ni cuándo, ni la versión.
+        identidad_de_carta_empresa: ordenadas("color_principal", "empresa_id"),
         disponibilidad_de_producto: ordenadas("empresa_id", "oculto", "producto_id", "sucursal_id"),
         empresa: ordenadas("estado", "id", "tenant_id"),
         tenant: ordenadas("estado", "id", "marca_id"),
         sucursal: ordenadas("activa", "empresa_id", "id"),
-        seccion_de_carta: ordenadas("activa", "empresa_id", "id", "nombre", "orden"),
+        seccion_de_carta: ordenadas(
+          "activa",
+          "empresa_id",
+          "id",
+          "nombre",
+          "orden",
+          "orden_de_renglones",
+        ),
+        familia_de_producto: ordenadas(
+          "activa",
+          "agrupar_en_carta",
+          "destacada",
+          "empresa_id",
+          "id",
+          "nombre",
+          "orden",
+        ),
+        miembro_de_familia: ordenadas(
+          "empresa_id",
+          "familia_id",
+          "posicion",
+          "producto_id",
+          "quitado_en",
+        ),
+        lugar_en_carta_de_producto: ordenadas("destacado", "empresa_id", "orden", "producto_id"),
         producto: ordenadas(
           "activo",
           "clase_de_uso",
@@ -283,6 +357,49 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
           "tenant_id",
           "valor",
           "vigente_desde",
+        ),
+        // El portal de la empresa (0078, C8; decisión del dueño del 16/11/2026): lo mínimo para dibujarlo; sin autor ni fechas. Si esto cambia, que sea a propósito.
+        portal_de_empresa: ordenadas(
+          "codigo",
+          "color_detras",
+          "color_encabezado",
+          "color_pagina",
+          "empresa_id",
+          "id",
+          "imagen_cuenta",
+          "imagen_extension",
+          "imagen_id_publico",
+          "imagen_proveedor",
+          "imagen_version",
+          "linea_superior",
+          "logo_visible",
+          "titulo",
+          "variante",
+        ),
+        portal_tarjeta: ordenadas(
+          "empresa_id",
+          "foto_cuenta",
+          "foto_extension",
+          "foto_id_publico",
+          "foto_proveedor",
+          "foto_version",
+          "nombre",
+          "orden",
+          "portal_id",
+          "sucursal_id",
+          "telefono",
+          "visible",
+        ),
+        portal_zona: ordenadas(
+          "alto",
+          "ancho",
+          "empresa_id",
+          "id",
+          "portal_id",
+          "sucursal_id",
+          "visible",
+          "x",
+          "y",
         ),
         // DECISIÓN ACEPTADA (DEC-0341): las 13 columnas, incluida `cargado_por`, porque `precio_vigente` lee la fila entera. Si esto cambia, que sea a propósito.
         precio_de_venta: ordenadas(

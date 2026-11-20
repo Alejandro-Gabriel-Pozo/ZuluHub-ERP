@@ -7,8 +7,12 @@ import type { DeclaracionDeCaso } from "../../../capacidades/permisos/declaracio
 export const DECLARACIONES_DE_CONSULTAS = {
   cotizarVentaRapida: { accion: "ventas.ver" },
   estadoDeCajasParaCobrar: { accion: "ventas.ver" },
+  opcionesParaCobrar: { accion: "ventas.ver" },
+  documentoDelTicket: { accion: "ventas.ver" },
   fichaDeCuenta: { accion: "ventas.ver" },
   fichaDeTicket: { accion: "ventas.ver" },
+  ticketsDelDia: { accion: "ventas.ver" },
+  fichaDelTicketDelDia: { accion: "ventas.ver" },
   listarTickets: { accion: "ventas.ver" },
   ticketsPendientesDeFacturar: { accion: "ventas.ver" },
   ticketParaFacturar: { accion: "ventas.ver" },

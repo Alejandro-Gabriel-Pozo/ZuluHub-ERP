@@ -22,6 +22,14 @@ export {
   type PedidoDeAsignacion,
   type VersionDeDestino,
 } from "./dominio/asignacion";
+export {
+  decidirArrepentimiento,
+  decidirCondiciones,
+  sentidoDelCambio,
+  type ErrorDeArrepentimiento,
+  type PoliticaDeCambioDePlan,
+  type SentidoDelCambioDePlan,
+} from "./dominio/politica-de-cambio";
 
 // M4: lecturas de planes para los derechos de uso (solo lectura).
 export {
@@ -65,6 +73,11 @@ export {
   type TenantConLaVersionVigente,
   type VersionDePlanGuardada,
   type VersionPublicadaDePlan,
+} from "./persistencia/repositorio-de-planes";
+export type {
+  ArrepentimientoGuardado,
+  CondicionesGuardadas,
+  PoliticaGuardada,
 } from "./persistencia/repositorio-de-planes";
 export type { PlanesDePlataformaDb } from "./persistencia/tablas";
 

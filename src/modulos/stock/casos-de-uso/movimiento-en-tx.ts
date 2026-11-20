@@ -13,6 +13,7 @@ import { decidirExistenciaNegativa, type DecisionDeNegativo } from "../dominio/c
 import { decidirPorHuella } from "../dominio/huella";
 import {
   comprobarCoherencia,
+  ORIGEN_DEVOLUCION_A_PROVEEDOR,
   ORIGEN_EJEMPLAR_DE_TICKET,
   ORIGEN_MANUAL,
   ORIGEN_RECEPCION,
@@ -33,10 +34,11 @@ import type { ControlDeStock, DetalleDeNegativo, ErrorDeStock } from "./errores"
 /** El único control que mira el libro (D125, declarado en `capacidades/controles`). */
 export const CONTROL_DE_NEGATIVO: ControlDeStock = "stock.existencia_negativa";
 
-/** Lo que identifica un movimiento que viene de otro módulo: el ejemplar de un ticket (ventas), la recepción (compras) o la orden de producción. */
+/** Lo que identifica un movimiento que viene de otro módulo: el ejemplar de un ticket (ventas), la recepción (compras), la devolución al proveedor (compras) o la orden de producción. */
 const ORIGENES_DE_OTRO_MODULO: readonly string[] = [
   ORIGEN_EJEMPLAR_DE_TICKET,
   ORIGEN_RECEPCION,
+  ORIGEN_DEVOLUCION_A_PROVEEDOR,
   ORIGEN_TRANSFORMACION,
 ];
 
@@ -205,7 +207,7 @@ async function detalleDeNegativos(
  *     auditar; misma clave con otra huella es `CLAVE_REUTILIZADA`;
  *  2. coherencia del pedido (motivo de la clase, origen, signos, sin renglones repetidos, transferencia entre dos depósitos y de suma cero);
  *  3. los renglones en el orden canónico de bloqueos `(depósito, artículo, composición)`, y el control de existencia negativa leyendo el
- *     nivel de la base (`PERMITIR` sin fila) con los saldos ya bloqueados: `CONTROL_BLOQUEA` o `CONTROL_REQUIERE_CONFIRMACION` rechazan el
+ *     nivel de la base (`PERMITIR` sin fila) con los saldos ya bloqueados: `CONTROL_REQUIERE_CONFIRMACION` rechaza el
  *     movimiento entero, con el detalle de los saldos;
  *  4. la cabecera y los renglones (el saldo lo aplica el disparador de la base, y el movimiento se verifica entero al confirmar);
  *  5. el costo de cada renglón y el promedio de cada par, en la misma transacción (`costearMovimiento`: costo declarado, promedio congelado,
@@ -267,10 +269,9 @@ export async function registrarMovimientoEnTx(
     if (!decidido.ok) return decidido;
     decision = decidido.valor.decision;
     nivelVigente = decidido.valor.nivel;
-    if (decision.resultado === "BLOQUEA" || decision.resultado === "REQUIERE_CONFIRMACION") {
+    if (decision.resultado === "REQUIERE_CONFIRMACION") {
       return err({
-        error:
-          decision.resultado === "BLOQUEA" ? "CONTROL_BLOQUEA" : "CONTROL_REQUIERE_CONFIRMACION",
+        error: "CONTROL_REQUIERE_CONFIRMACION",
         control: CONTROL_DE_NEGATIVO,
         detalle: await detalleDeNegativos(tx, contexto, decision),
       });
@@ -324,7 +325,7 @@ export async function registrarMovimientoEnTx(
   const excepciones =
     decision.negativos.length === 0 ? [] : await detalleDeNegativos(tx, contexto, decision);
   // Con un control que permite (o avisa y se confirmó) cada renglón que queda en negativo es una excepción y queda en la auditoría.
-  if (nivelVigente !== "BLOQUEAR") {
+  {
     for (const [indice, negativo] of decision.negativos.entries()) {
       const registro = registroDeExcepcion(
         {

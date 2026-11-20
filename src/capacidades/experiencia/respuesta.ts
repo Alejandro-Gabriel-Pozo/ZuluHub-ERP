@@ -4,11 +4,20 @@ import type { MotivoDeRechazo } from "../permisos/guard";
 import type { ClaveDeTexto } from "../vocabulario/catalogo";
 import { CLAVES_DE_ERRORES_DE_CAJA, type CodigoDeCaja } from "./respuesta-de-caja";
 import { CLAVES_DE_ERRORES_DE_RECETAS, type CodigoDeReceta } from "./respuesta-de-recetas";
+import { CLAVES_DE_ERRORES_DE_STOCK, type CodigoDeStock } from "./respuesta-de-stock";
 import {
   CLAVES_DE_ERRORES_DE_CATALOGO,
   PARAMETROS_DE_CATALOGO,
   type CodigoDeCatalogo,
 } from "./respuesta-de-catalogo";
+import { CLAVES_DE_ERRORES_DE_CLIENTES, type CodigoDeClientes } from "./respuesta-de-clientes";
+import { CLAVES_DE_ERRORES_DE_COMPRAS, type CodigoDeCompras } from "./respuesta-de-compras";
+import {
+  CLAVES_DE_ERRORES_DE_SALON,
+  PARAMETROS_DE_SALON,
+  type CodigoDeSalon,
+} from "./respuesta-de-salon";
+import { CLAVES_DE_ERRORES_DE_VENTAS, type CodigoDeVentas } from "./respuesta-de-ventas";
 import { CLAVES_DE_ERRORES_FISCALES, type CodigoFiscal } from "./respuesta-fiscal";
 
 /**
@@ -47,6 +56,11 @@ export type CodigoDeNegocio =
   | CodigoFiscal
   | CodigoDeCaja
   | CodigoDeCatalogo
+  | CodigoDeCompras
+  | CodigoDeClientes
+  | CodigoDeSalon
+  | CodigoDeVentas
+  | CodigoDeStock
   | CodigoDeReceta;
 
 export type CodigoPublico =
@@ -80,11 +94,35 @@ const AVISOS_DE_CAJA = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_CAJA).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoDeCaja, DefinicionDeCodigo>>;
 
+/** Los códigos del directorio de clientes y proveedores (`respuesta-de-clientes.ts`): cada uno es un aviso con su texto `clientes.error.*`. */
+const AVISOS_DE_CLIENTES = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_CLIENTES).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeClientes, DefinicionDeCodigo>>;
+
+/** Los códigos de compras N1 y N2 (`respuesta-de-compras.ts`): cada uno es un aviso con su texto `compras.error.*`. */
+const AVISOS_DE_COMPRAS = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_COMPRAS).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeCompras, DefinicionDeCodigo>>;
+
 /** Los códigos de la ficha de datos de un producto (`respuesta-de-catalogo.ts`): cada uno es un aviso con su texto (`catalogo.error.*`, salvo el del precio vigente, `catalogo.precio.vigente_ahora`). */
 const AVISOS_DE_CATALOGO = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_CATALOGO).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoDeCatalogo, DefinicionDeCodigo>>;
 
+/** Los códigos de la pantalla «Mesas» (`respuesta-de-salon.ts`): cada uno es un aviso con su texto del salón. */
+const AVISOS_DE_SALON = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_SALON).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeSalon, DefinicionDeCodigo>>;
+
+/** Los códigos de ventas (`respuesta-de-ventas.ts`): cada uno es un aviso con su texto `ventas.error.*`. */
+const AVISOS_DE_VENTAS = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_VENTAS).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeVentas, DefinicionDeCodigo>>;
+
+/** Los códigos de las pantallas de stock (`respuesta-de-stock.ts`): cada uno es un aviso con su texto `stock.error.*`. */
+const AVISOS_DE_STOCK = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_STOCK).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeStock, DefinicionDeCodigo>>;
 /** Los códigos de la pantalla de Recetas (`respuesta-de-recetas.ts`): cada uno es un aviso con su texto `receta.error.*`. */
 const AVISOS_DE_RECETAS = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_RECETAS).map(([codigo, clave]) => [codigo, aviso(clave)]),
@@ -107,6 +145,11 @@ export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo
   ...AVISOS_FISCALES,
   ...AVISOS_DE_CAJA,
   ...AVISOS_DE_CATALOGO,
+  ...AVISOS_DE_COMPRAS,
+  ...AVISOS_DE_CLIENTES,
+  ...AVISOS_DE_SALON,
+  ...AVISOS_DE_VENTAS,
+  ...AVISOS_DE_STOCK,
   ...AVISOS_DE_RECETAS,
   MODULO_EN_DESARROLLO: motivo("motivo.modulo_en_desarrollo"),
   MODULO_NO_ACTIVO: motivo("motivo.modulo_no_activo"),
@@ -168,7 +211,9 @@ const SIN_PARAMETROS_VALIDOS: CodigoDeCatalogo = "CATALOGO_ACCION_NO_PERMITIDA";
 const declaradosDe = (codigo: CodigoPublico): readonly string[] | undefined =>
   Object.hasOwn(PARAMETROS_DE_CATALOGO, codigo)
     ? PARAMETROS_DE_CATALOGO[codigo as CodigoDeCatalogo]
-    : undefined;
+    : Object.hasOwn(PARAMETROS_DE_SALON, codigo)
+      ? PARAMETROS_DE_SALON[codigo as CodigoDeSalon]
+      : undefined;
 
 /**
  * Un parámetro público es un importe decimal en texto («13000.000000»): lo decide la primitiva de precios (`precioDeVentaDesdeTexto`, una regla en un solo lugar: forma canónica, hasta 6

@@ -23,7 +23,7 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
 }));
 
 // Se carga por una ruta en una variable: la prueba de tipos de `test/` no sigue la importación y no arrastra los componentes del navegador (igual que las otras pruebas de acceso).
-const RUTA = "../../apps/web/servidor/modulos";
+const RUTA = "../../apps/web/servidor/ofertas-de-stock";
 const puedeEditarRecetas = async (contexto: never): Promise<boolean> => {
   const modulo = (await import(/* @vite-ignore */ RUTA)) as {
     puedeEditarRecetas: (c: never) => Promise<boolean>;

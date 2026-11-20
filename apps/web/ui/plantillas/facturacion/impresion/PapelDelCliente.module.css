@@ -1,0 +1,38 @@
+/* El ticket del cliente en pantalla: es papel (letra en `pt`, de ancho fijo: las columnas las arma el servidor). Los colores salen de los tokens; no hay token de letra de ancho fijo, va la genérica del sistema. */
+.zona {
+  display: flex;
+  justify-content: center;
+}
+
+.papel {
+  box-sizing: border-box;
+  width: var(--ticket-ancho);
+  max-width: 100%;
+  padding: 3mm;
+  background: var(--color-superficie-elevada);
+  outline: var(--borde-grosor) solid var(--color-borde);
+  color: var(--color-texto);
+  /* 48 columnas en 80 mm (74 mm útiles): 74 mm / 48 = 1,54 mm por carácter; con letra de ancho fijo (0,6 em) son 7,2 pt como máximo. */
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 7pt;
+  line-height: 1.25;
+  overflow: hidden;
+}
+
+.linea {
+  white-space: pre;
+}
+
+.linea[data-estilo="NEGRITA"] {
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.linea[data-estilo="GRANDE"] {
+  font-size: 14pt;
+}
+
+.separador {
+  margin: 2mm 0;
+  border: 0;
+  border-top: var(--borde-grosor) dashed var(--color-texto);
+}

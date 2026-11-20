@@ -2,6 +2,7 @@ import { vigenteEn } from "../../capacidades/planes/vigencia";
 import type { ContextoDePlataforma } from "../../contexto/contexto";
 import {
   decidirAsignacion,
+  decidirCondiciones,
   traducirErroresDePlanes,
   type AsignacionDePlan,
   type ErrorDeAsignacion,
@@ -14,6 +15,9 @@ import {
   type VersionDePlanId,
 } from "../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
+import type { FechaCivil } from "../../primitivas/tiempo/fecha-civil";
+import { hoyEnArgentina, ZONA_DE_ARGENTINA } from "../../primitivas/tiempo/fecha-civil-hasta-hoy";
+import { fechaDeNegocio } from "../../primitivas/tiempo/fecha-de-negocio";
 import type { AccionDePlataforma } from "../../puertos/auditoria-de-plataforma";
 import type { DeclaracionDeAccionDePlataforma } from "../consultas/declaraciones";
 import {
@@ -21,6 +25,7 @@ import {
   validarNumeroEsperado,
   validarVigencia,
 } from "../dominio/formas-de-entrada";
+import { sentidoDeCambiarDeVersion } from "../consultas/sentido-del-cambio";
 import { uuidDesdeTexto } from "../dominio/soporte/consulta";
 import {
   auditarEnLasEmpresas,
@@ -84,7 +89,9 @@ type ErrorPropio =
   | "VIGENCIA_INVALIDA"
   | "MOTIVO_DEMASIADO_LARGO"
   | "TENANT_NO_ENCONTRADO"
-  | "VERSION_DE_PLAN_NO_ENCONTRADA";
+  | "VERSION_DE_PLAN_NO_ENCONTRADA"
+  /** H-14a: la fecha no cumple la política vigente; `primeraFechaValida` es la primera que sí. */
+  | Readonly<{ codigo: "ANTICIPACION_INSUFICIENTE"; primeraFechaValida: FechaCivil }>;
 
 export type ErrorAlAsignarPlan = ErrorPlano<
   ErrorComunDeMarcasYPlanes | ErrorPropio | (typeof MOTIVOS_DE_BASE_DE_ASIGNAR_PLAN)[number]
@@ -202,6 +209,45 @@ export async function asignarAUnTenant(
         });
       }
 
+      // H-14a: solo un cambio pedido (origen CAMBIO) pasa por la política vigente; el alta y la migración de versión no.
+      let condiciones: Readonly<{
+        sentido: "SUBA" | "BAJA";
+        politicaVersion: number;
+        arrepentimientoHasta: FechaCivil | null;
+      }> | null = null;
+      if (modo.origen === "CAMBIO") {
+        const hoy = hoyEnArgentina(contexto.ahora);
+        const desde = fechaDeNegocio(pedido.vigenteDesde, ZONA_DE_ARGENTINA, "00:00");
+        if (!desde.ok) return err("VIGENCIA_INVALIDA");
+        // El instante del contexto es válido (lo firma la puerta): si no lo es, no se decide nada.
+        if (!hoy.ok) throw new RangeError("el instante del contexto no tiene día de Argentina");
+        const politica = (await tx.planes.politicasDeCambio()).at(-1);
+        // La migración 0089 carga la versión 1: sin política la base está rota, no es un caso de negocio.
+        if (politica === undefined)
+          throw new RangeError("no hay política de cambio de plan cargada");
+        const rige = vigenteEn(guardadas, contexto.ahora);
+        const actual = rige === null ? null : await tx.planes.versionPorId(rige.versionDePlanId);
+        const sentido = sentidoDeCambiarDeVersion({
+          actual,
+          destino: version,
+          catalogoDeModulos: dependencias.catalogoDeModulos,
+          catalogoDePerillas: dependencias.catalogoDePerillas,
+          ahora: contexto.ahora,
+        });
+        const decidida = decidirCondiciones({
+          hoy: hoy.valor,
+          vigenteDesde: desde.valor,
+          sentido,
+          politica,
+        });
+        if (!decidida.ok) return decidida;
+        condiciones = {
+          sentido,
+          politicaVersion: politica.version,
+          arrepentimientoHasta: decidida.valor.arrepentimientoHasta,
+        };
+      }
+
       const asignada = await tx.planes.asignar({
         tenantId: pedido.tenantId,
         numero: decision.valor.numero,
@@ -211,6 +257,13 @@ export async function asignarAUnTenant(
         reemplazaProgramada: pedido.reemplazaProgramada,
         motivo: decision.valor.motivo,
       });
+      if (condiciones !== null) {
+        await tx.planes.registrarCondicionesDeCambio({
+          tenantId: pedido.tenantId,
+          numero: asignada.numero,
+          ...condiciones,
+        });
+      }
       const anterior = vigenteEn(guardadas, contexto.ahora);
       const constancia = {
         accion: modo.accionDeAuditoria,

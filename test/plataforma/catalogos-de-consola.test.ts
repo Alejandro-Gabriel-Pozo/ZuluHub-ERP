@@ -222,6 +222,14 @@ describe("catalogoDePerillas", () => {
         modulo: "stock",
       },
       {
+        perilla: "conciliacion_de_tres_vias",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: "recepcion_separada",
+        modulo: "compras",
+      },
+      {
         perilla: "conjuntos",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",
@@ -252,6 +260,14 @@ describe("catalogoDePerillas", () => {
         valorBase: { tipo: "INTERRUPTOR", encendida: false },
         requiere: null,
         modulo: "produccion",
+      },
+      {
+        perilla: "recepcion_separada",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "compras",
       },
       {
         perilla: "salon",

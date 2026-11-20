@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Icono } from "../../web/ui/iconos/Icono";
+import { textoDePlanes } from "../logica/textos-de-planes";
 import { CerrarSesion } from "./cerrar-sesion.cliente";
 import { MenuMovil } from "./menu-movil.cliente";
 import { VigilanteDeSesion } from "./vigilante-de-sesion.cliente";
@@ -9,6 +10,12 @@ import estilos from "./armazon-de-consola.module.css";
 const SECCIONES = [
   { clave: "empresas", etiqueta: "Empresas", href: "/empresas" },
   { clave: "submarcas", etiqueta: "Submarcas", href: "/submarcas" },
+  { clave: "planes", etiqueta: textoDePlanes("plataforma.menu.planes"), href: "/planes" },
+  {
+    clave: "politica",
+    etiqueta: textoDePlanes("plataforma.menu.politica"),
+    href: "/politica-de-plan",
+  },
 ] as const;
 
 export type PropsDeArmazonDeConsola = Readonly<{

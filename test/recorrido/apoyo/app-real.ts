@@ -31,10 +31,13 @@ async function puertoLibre(): Promise<number> {
 export async function levantarAppReal(
   entorno: Readonly<Record<string, string>>,
   puertoDeArca: number,
+  /** Módulos de pruebas adicionales que se cargan en el proceso de la app (rutas de archivo), además de la ARCA simulada. */
+  precargasAdicionales: readonly string[] = [],
 ): Promise<AppReal> {
   const puerto = await puertoLibre();
   const registro: string[] = [];
   const preparado = pathToFileURL(join(import.meta.dirname, "conectar-arca-simulada.mjs")).href;
+  const precargas = [preparado, ...precargasAdicionales.map((ruta) => pathToFileURL(ruta).href)];
   const proceso: ChildProcess = spawn(
     process.execPath,
     [join(RAIZ, "node_modules/next/dist/bin/next"), "start", "-p", String(puerto)],
@@ -46,7 +49,7 @@ export async function levantarAppReal(
         HOME: process.env["HOME"] ?? "",
         NODE_ENV: "production",
         NEXT_TELEMETRY_DISABLED: "1",
-        NODE_OPTIONS: `--import ${preparado}`,
+        NODE_OPTIONS: precargas.map((p) => `--import ${p}`).join(" "),
         PEDERNAL_RECORRIDO_ARCA_PUERTO: String(puertoDeArca),
         ...entorno,
       },
