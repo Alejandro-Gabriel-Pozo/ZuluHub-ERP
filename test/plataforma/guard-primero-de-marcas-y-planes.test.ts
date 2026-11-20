@@ -193,6 +193,8 @@ const CONSULTAS: Record<
   diferenciaEntreVersiones: (c) =>
     c.diferenciaEntreVersiones(comoAdministrador, { desde: uuid(1), hasta: uuid(2) }),
   verPoliticaDeCambioDePlan: (c) => c.verPoliticaDeCambioDePlan(comoAdministrador),
+  condicionesDeCambioDePlan: (c) =>
+    c.condicionesDeCambioDePlan(comoAdministrador, { tenantId: uuid(1), versionesDePlanIds: [] }),
 };
 
 /** Pasar el guard = tocar algo que no es la autorización. */

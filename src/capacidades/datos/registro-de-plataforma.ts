@@ -103,4 +103,17 @@ export const DATOS_DE_PLATAFORMA = {
     consumidores: [POLITICA],
     ponerPor: ["politica_de_plan.definir"],
   },
+  "motivo-de-arrepentimiento": {
+    ambito: "PLATAFORMA",
+    ficha: "src/plataforma/dominio/formas-de-entrada.ts",
+    propositos: [
+      {
+        para: "Motivo obligatorio de deshacer por arrepentimiento un cambio de plan (confirmación en «Plan de una empresa»).",
+        fuente:
+          "Pedernal-docs 11-especificaciones/briefs/escalabilidad/PR-H14b-consola-politica-de-cambio-de-plan.md §4.3",
+      },
+    ],
+    consumidores: ["apps/plataforma/pantallas/arrepentimiento.cliente.tsx"],
+    ponerPor: ["planes.arrepentir"],
+  },
 } as const satisfies Readonly<Record<string, DatoDeConsola>>;

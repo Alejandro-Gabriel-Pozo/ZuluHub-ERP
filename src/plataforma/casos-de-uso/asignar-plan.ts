@@ -1,10 +1,8 @@
-import { diferenciaEntreVersiones } from "../../capacidades/planes/diferencia";
 import { vigenteEn } from "../../capacidades/planes/vigencia";
 import type { ContextoDePlataforma } from "../../contexto/contexto";
 import {
   decidirAsignacion,
   decidirCondiciones,
-  sentidoDelCambio,
   traducirErroresDePlanes,
   type AsignacionDePlan,
   type ErrorDeAsignacion,
@@ -27,6 +25,7 @@ import {
   validarNumeroEsperado,
   validarVigencia,
 } from "../dominio/formas-de-entrada";
+import { sentidoDeCambiarDeVersion } from "../consultas/sentido-del-cambio";
 import { uuidDesdeTexto } from "../dominio/soporte/consulta";
 import {
   auditarEnLasEmpresas,
@@ -228,20 +227,13 @@ export async function asignarAUnTenant(
           throw new RangeError("no hay política de cambio de plan cargada");
         const rige = vigenteEn(guardadas, contexto.ahora);
         const actual = rige === null ? null : await tx.planes.versionPorId(rige.versionDePlanId);
-        // Sin plan que rija no hay nada que quitar: es una suba.
-        const sentido =
-          actual === null
-            ? "SUBA"
-            : sentidoDelCambio(
-                diferenciaEntreVersiones({
-                  catalogoDeModulos: dependencias.catalogoDeModulos,
-                  catalogoDePerillas: dependencias.catalogoDePerillas,
-                  desde: actual,
-                  hasta: version,
-                  tenants: [],
-                  ahora: contexto.ahora,
-                }),
-              );
+        const sentido = sentidoDeCambiarDeVersion({
+          actual,
+          destino: version,
+          catalogoDeModulos: dependencias.catalogoDeModulos,
+          catalogoDePerillas: dependencias.catalogoDePerillas,
+          ahora: contexto.ahora,
+        });
         const decidida = decidirCondiciones({
           hoy: hoy.valor,
           vigenteDesde: desde.valor,
