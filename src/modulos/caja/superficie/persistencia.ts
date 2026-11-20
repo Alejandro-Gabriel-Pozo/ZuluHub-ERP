@@ -92,3 +92,9 @@ export {
   type OrigenGuardado,
   type RepositorioDeFotos,
 } from "../persistencia/repositorio-de-fotos";
+export {
+  crearRepositorioDeMovimientosDeDinero,
+  type MovimientoDeDineroGuardado,
+  type MovimientoDeDineroNuevo,
+  type RepositorioDeMovimientosDeDinero,
+} from "../persistencia/repositorio-de-movimientos-de-dinero";

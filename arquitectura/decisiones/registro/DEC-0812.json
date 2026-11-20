@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0812",
+  "fecha": "2026-11-20",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: el tope de devoluciones se protege con un bloqueo consultivo por entrada; el cuadre también corre con los cobros del acto; no se anula un cobro ya devuelto.",
+  "que_cambia": "La aplicación no tiene UPDATE sobre la tabla (solo inserción), así que `FOR UPDATE` no se puede usar. Revertir: quitar el bloqueo (dos devoluciones a la vez podrían superar lo cobrado), el disparador de `cobro` o la comprobación de anulación.",
+  "donde": "migraciones/0091_movimiento_de_dinero.sql (movimiento_de_dinero_bloquear_entrada, movimiento_de_dinero_verificar_cuadre, movimiento_caja_validar_alta)"
+}

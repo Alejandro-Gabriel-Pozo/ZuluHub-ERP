@@ -1,4 +1,8 @@
 import type { Generated } from "kysely";
+import type {
+  CategoriaDeSalida,
+  SentidoDeMovimientoDeDinero,
+} from "../dominio/movimiento-de-dinero";
 import type { ClaseDeMovimiento, EstadoDeSesion, TipoDeCuenta, TipoDeMedio } from "../estados";
 import { COLUMNAS_DEL_CIERRE_DE_CAJA, type TablasDelCierreDeCaja } from "./esquema-del-cierre";
 
@@ -87,6 +91,28 @@ export type CajaDb = TablasDelCierreDeCaja & {
     registrado_por: string;
     clave_idempotencia: string | null;
     huella: string | null;
+    creado_en: Generated<Date>;
+  };
+  movimiento_de_dinero: {
+    id: Generated<string>;
+    empresa_id: string;
+    sucursal_id: string;
+    sesion_id: string;
+    sentido: SentidoDeMovimientoDeDinero;
+    importe: string;
+    moneda: Generated<string>;
+    categoria: CategoriaDeSalida | null;
+    concepto: string | null;
+    motivo: string | null;
+    tercero_nombre: string | null;
+    tercero_persona_id: string | null;
+    referencia: string | null;
+    devuelve_a: string | null;
+    movimiento_id: string | null;
+    clave: string;
+    huella: string;
+    registrado_por: string;
+    registrado_en: Date;
     creado_en: Generated<Date>;
   };
   cobro: {
