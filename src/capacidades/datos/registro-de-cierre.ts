@@ -3,8 +3,8 @@ import type { DefinicionDeDato, Proposito } from "./tipos-de-datos";
 /**
  * Los datos de la pantalla «Cierre del día» del registro de datos (ver `registro.ts`), en su propio archivo para que dos ramas que suman datos de módulos distintos no
  * toquen las mismas líneas. Un dato no puede estar en dos fragmentos (lo comprueba `test/arquitectura/datos-por-modulo.test.ts`). Son los campos de la maqueta aceptada
- * (`cierre-del-dia.html`, DDD:175 y DDD:183): la observación opcional al reconocer un control, el medio, la cuenta y el motivo al corregir el medio de un cobro y el
- * importe que se declara por medio. La OBSERVACIÓN GENERAL del día NO está: la maqueta no la dibuja, así que no tiene campo ni dato (un dato sin consumidor falla): pregunta
+ * (`cierre-del-dia.html`, DDD:175 y DDD:183): la observación opcional al reconocer un control, el motivo al corregir el medio de un cobro y el
+ * importe que se declara por medio; el medio y la cuenta del diálogo «Corregir medio» son los datos `medio-de-cobro` y `cuenta-de-cobro`, que viven en `registro-de-caja.ts` (un dato, una definición). La OBSERVACIÓN GENERAL del día NO está: la maqueta no la dibuja, así que no tiene campo ni dato (un dato sin consumidor falla): pregunta
  * pendiente al dueño (`conceptos/pantalla-cierre-del-dia.md` §3).
  */
 
@@ -29,28 +29,6 @@ export const DATOS_DE_CIERRE = {
     consumidores: [MODAL_DE_RECONOCER],
     ponerPor: ["jornadas.cerrar"],
     requiere: REQUIERE_CIERRE,
-  },
-  "medio-de-cobro": {
-    ficha: "src/modulos/caja/dominio/identificadores.ts",
-    propositos: [
-      PROPOSITO_DE_CORREGIR(
-        "Medio al que pasa un cobro (elección cerrada entre los medios activos de la empresa que ofrece el servidor) en el diálogo «Corregir medio».",
-      ),
-    ],
-    consumidores: [MODAL_DE_CORREGIR],
-    ponerPor: ["cobros.corregir_medio"],
-    requiere: REQUIERE_CAJA,
-  },
-  "cuenta-de-cobro": {
-    ficha: "src/modulos/caja/dominio/identificadores.ts",
-    propositos: [
-      PROPOSITO_DE_CORREGIR(
-        "Cuenta de cobro de la corrección (elección cerrada entre las cuentas activas de la sucursal que admite el medio, o «Sin cuenta») en el diálogo «Corregir medio».",
-      ),
-    ],
-    consumidores: [MODAL_DE_CORREGIR],
-    ponerPor: ["cobros.corregir_medio"],
-    requiere: REQUIERE_CAJA,
   },
   "motivo-de-correccion-de-medio": {
     ficha: "src/modulos/caja/dominio/texto.ts",

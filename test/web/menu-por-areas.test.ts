@@ -205,7 +205,7 @@ describe("la tabla real: lo declarado por pantalla", () => {
       [
         "cierre-del-dia",
         "ventas",
-        "cierre",
+        "caja",
         "cierre",
         "jornadas.ver",
         "/caja/cierre-del-dia",
@@ -444,6 +444,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "tickets-del-dia",
     "comprobantes",
     "caja",
+    "cierre-del-dia",
     "productos",
     "secciones",
     "mesas",
@@ -476,7 +477,13 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
             ],
           ],
         ],
-        ["caja", [["pantalla", "caja", "/caja", "caja.pantalla.titulo"]]],
+        [
+          "caja",
+          [
+            ["pantalla", "caja", "/caja", "caja.pantalla.titulo"],
+            ["pantalla", "cierre-del-dia", "/caja/cierre-del-dia", "cierre.titulo"],
+          ],
+        ],
         [
           "salon",
           [

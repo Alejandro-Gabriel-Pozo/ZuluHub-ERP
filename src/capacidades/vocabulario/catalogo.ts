@@ -7,15 +7,13 @@
  * PARTE DEDICADA: src/capacidades/vocabulario/catalogo-<módulo>.ts (lo de cada módulo va ahí).
  */
 /**
- * Catálogo de textos por defecto (marcas y planes, §B.4). Es código, no base de datos: de acá sale el
- * tipo cerrado `ClaveDeTexto`, así que una pantalla que pide una clave inexistente NO compila y, como
- * el catálogo es total por tipo, nunca falta un texto. La marca (el producto) solo reemplaza la
- * redacción; el CÓDIGO de un error o de un motivo es estable y se muestra junto al texto.
+ * Catálogo de textos por defecto (marcas y planes, §B.4). Es código, no base de datos: de acá sale el tipo cerrado `ClaveDeTexto`, así que una pantalla que pide una clave
+ * inexistente NO compila y, como el catálogo es total por tipo, nunca falta un texto. La marca (el producto) solo reemplaza la redacción; el CÓDIGO de un error o de un motivo
+ * es estable y se muestra junto al texto.
  *
- * Hoy trae las claves del módulo `administracion` (su nombre y los roles fijos de empresa), los cinco
- * motivos del guard (un solo lugar para el texto de cada rechazo) y los errores nuevos de este módulo
- * que puede ver una empresa o la puerta de entrada. Cada módulo suma las suyas en el tramo que lo
- * construye, con el prefijo del módulo dueño (`reservas.estadia.singular`).
+ * Hoy trae las claves del módulo `administracion` (su nombre y los roles fijos de empresa), los cinco motivos del guard (un solo lugar para el texto de cada rechazo) y los
+ * errores nuevos de este módulo que puede ver una empresa o la puerta de entrada. Cada módulo suma las suyas en el tramo que lo construye, con el prefijo del módulo dueño
+ * (`reservas.estadia.singular`).
  *
  * Reglas de las claves y de los textos (las repite la base como defensa en profundidad, sin conocer el
  * catálogo):
