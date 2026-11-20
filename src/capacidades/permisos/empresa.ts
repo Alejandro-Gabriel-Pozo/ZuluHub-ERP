@@ -1,3 +1,11 @@
+/**
+ * ARCHIVO CENTRAL
+ * QUÉ ES: la matriz rol → acciones de la empresa, armada con lo que aporta cada módulo.
+ * QUÉ NO ES: el lugar donde se listan las acciones de un módulo.
+ * EXPORTA: PERMISOS_DE_EMPRESA, ReglasDeEmpresa, REGLAS_DE_EMPRESA, tablaDePermisos
+ * IMPORTA: src/capacidades/permisos/permisos-de-*, src/capacidades/modulos/catalogo, src/capacidades/modulos/activos, src/capacidades/permisos/guard, src/capacidades/permisos/roles.
+ * PARTE DEDICADA: src/capacidades/permisos/permisos-de-<módulo>.ts (las filas de cada módulo van ahí).
+ */
 import { clavesDe } from "../modulos/activos";
 import {
   CATALOGO_DE_MODULOS,
@@ -6,6 +14,19 @@ import {
   type ClaveModulo,
 } from "../modulos/catalogo";
 import type { ReglasDelGuard } from "./guard";
+import { PERMISOS_DE_ADMINISTRACION } from "./permisos-de-administracion";
+import { PERMISOS_DE_CAJA } from "./permisos-de-caja";
+import { PERMISOS_DE_CATALOGO } from "./permisos-de-catalogo";
+import { PERMISOS_DE_CIERRE } from "./permisos-de-cierre";
+import { PERMISOS_DE_CLIENTES } from "./permisos-de-clientes";
+import { PERMISOS_DE_COMANDAS } from "./permisos-de-comandas";
+import { PERMISOS_DE_COMPRAS } from "./permisos-de-compras";
+import { PERMISOS_DE_FACTURACION } from "./permisos-de-facturacion";
+import { PERMISOS_DE_PRODUCCION } from "./permisos-de-produccion";
+import { PERMISOS_DE_SALON } from "./permisos-de-salon";
+import { PERMISOS_DE_STOCK } from "./permisos-de-stock";
+import { PERMISOS_DE_VENTAS } from "./permisos-de-ventas";
+import { PERMISOS_DE_VIDRIERA } from "./permisos-de-vidriera";
 import type { RolDeEmpresa } from "./roles";
 
 /**
@@ -24,230 +45,19 @@ import type { RolDeEmpresa } from "./roles";
  * administrador, el gerente.
  */
 export const PERMISOS_DE_EMPRESA = {
-  "usuarios.invitar": ["GERENTE", "ADMINISTRADOR"],
-  "usuarios.reenviar_invitacion": ["GERENTE", "ADMINISTRADOR"],
-  "usuarios.apagar": ["GERENTE", "ADMINISTRADOR"],
-  "usuarios.ver": ["GERENTE", "ADMINISTRADOR"],
-  "usuarios.asignar_sucursales": ["GERENTE", "ADMINISTRADOR"],
-  "usuarios.revocar_invitacion": ["GERENTE", "ADMINISTRADOR"],
-  "sucursales.ver": ["GERENTE", "ADMINISTRADOR"],
-  "sucursales.crear": ["GERENTE", "ADMINISTRADOR"],
-  "sucursales.editar": ["GERENTE", "ADMINISTRADOR"],
-  "sucursales.desactivar": ["GERENTE"],
-  "sucursales.reactivar": ["GERENTE"],
-  "gerencia.proponer_traspaso": ["GERENTE"],
-  "gerencia.cancelar_traspaso": ["GERENTE"],
-  "gerencia.ver_traspaso": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "gerencia.aceptar_traspaso": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "gerencia.rechazar_traspaso": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "modulos.ver": ["GERENTE", "ADMINISTRADOR"],
-  "permisos.ver_propios": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  // H7 fiscal §C (T5), DECIDIDO (C11): la configuración fiscal es solo del gerente, igual que certificados. El
-  // administrador y el operador ni confirman datos fiscales ni activan puntos de venta.
-  "datos_fiscales.editar": ["GERENTE"],
-  "datos_fiscales.confirmar": ["GERENTE"],
-  "puntos_de_venta.crear": ["GERENTE"],
-  "puntos_de_venta.editar": ["GERENTE"],
-  "puntos_de_venta.activar": ["GERENTE"],
-  "puntos_de_venta.desactivar": ["GERENTE"],
-  "emisores.confirmar_regla": ["GERENTE"],
-  // H7 (especificación §C): quien cobra puede emitir el comprobante en el mismo acto, los tres roles.
-  "comprobantes.emitir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  // H7 facturación §B.4.9 (F6): las consultas del facturador; mirar lo emitido lo pueden los tres roles.
-  "comprobantes.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  // Catálogo, carta y stock (catalogo-y-stock §C, T0; propuesta A de F6, F7 e I.4, pendientes de
-  // veto del dueño). El operador mira, marca «agotado», mueve stock y cuenta en sus sucursales (el
-  // alcance lo verifica el caso de uso con `exigirSucursal`); definir el catálogo, los precios, las
-  // opciones y la carta, corregir stock y exponer la carta a internet es del gerente y el
-  // administrador; lo que toca la estructura fiscal o la verificación de saldos es solo del gerente.
-  "productos.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "vidrieras.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "stock.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "vidrieras.marcar_disponibilidad": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "stock.registrar_entrada": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "stock.registrar_salida": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "stock.transferir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "conteos.registrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "productos.crear": ["GERENTE", "ADMINISTRADOR"],
-  "productos.editar": ["GERENTE", "ADMINISTRADOR"],
-  "productos.reactivar": ["GERENTE", "ADMINISTRADOR"],
-  "productos.cambiar_precio": ["GERENTE", "ADMINISTRADOR"],
-  "opciones.editar": ["GERENTE", "ADMINISTRADOR"],
-  "productos.desactivar": ["GERENTE", "ADMINISTRADOR"],
-  "categorias.crear": ["GERENTE", "ADMINISTRADOR"],
-  "categorias.editar": ["GERENTE", "ADMINISTRADOR"],
-  "categorias.reactivar": ["GERENTE", "ADMINISTRADOR"],
-  "vidrieras.crear": ["GERENTE", "ADMINISTRADOR"],
-  "vidrieras.editar": ["GERENTE", "ADMINISTRADOR"],
-  "vidrieras.ocultar_en_empresa": ["GERENTE", "ADMINISTRADOR"],
-  "vidrieras.publicar": ["GERENTE", "ADMINISTRADOR"],
-  "categorias.desactivar": ["GERENTE", "ADMINISTRADOR"],
-  "vidrieras.retirar": ["GERENTE", "ADMINISTRADOR"],
-  "depositos.crear": ["GERENTE", "ADMINISTRADOR"],
-  "depositos.editar": ["GERENTE", "ADMINISTRADOR"],
-  "depositos.reactivar": ["GERENTE", "ADMINISTRADOR"],
-  "articulos.controlar": ["GERENTE", "ADMINISTRADOR"],
-  "composiciones.editar": ["GERENTE", "ADMINISTRADOR"],
-  // E6 (T7, P-2): lotes y calidad. Mirar lo ven los tres; el resto, gerente y administrador.
-  "lotes.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "lotes.controlar": ["GERENTE", "ADMINISTRADOR"],
-  "lotes.dejar_de_controlar": ["GERENTE", "ADMINISTRADOR"],
-  "lotes.cambiar_calidad": ["GERENTE", "ADMINISTRADOR"],
-  "lotes.corregir": ["GERENTE", "ADMINISTRADOR"],
-  "lotes.reasignar": ["GERENTE", "ADMINISTRADOR"],
-  // E6 (T8, P-2, DEC-0101): producción. Mirar y abrir una orden, los tres roles; cerrar, cancelar y anular (deshacer stock y costo), gerente y administrador.
-  // Cerrar: decisión del dueño del 14/11/2026 (auditoría Q10, DEC-0430): el operador carga la orden pero no la cierra.
-  "transformaciones.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "transformaciones.abrir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "transformaciones.cerrar": ["GERENTE", "ADMINISTRADOR"],
-  "transformaciones.cancelar": ["GERENTE", "ADMINISTRADOR"],
-  "transformaciones.anular": ["GERENTE", "ADMINISTRADOR"],
-  "depositos.desactivar": ["GERENTE", "ADMINISTRADOR"],
-  "articulos.dejar_de_controlar": ["GERENTE", "ADMINISTRADOR"],
-  "stock.ajustar": ["GERENTE", "ADMINISTRADOR"],
-  "conteos.abrir": ["GERENTE", "ADMINISTRADOR"],
-  "stock.anular": ["GERENTE", "ADMINISTRADOR"],
-  "conteos.aplicar": ["GERENTE", "ADMINISTRADOR"],
-  "conteos.cancelar": ["GERENTE", "ADMINISTRADOR"],
-  "vidrieras.publicar_en_linea": ["GERENTE", "ADMINISTRADOR"],
-  "vidrieras.renovar_enlace": ["GERENTE", "ADMINISTRADOR"],
-  "vidrieras.retirar_de_linea": ["GERENTE", "ADMINISTRADOR"],
-  "vidrieras.administrar_portal": ["GERENTE", "ADMINISTRADOR"],
-  "productos.asignar_emisor": ["GERENTE"],
-  "stock.verificar_saldos": ["GERENTE"],
-  // E5-T10 (P-1, DECIDIDO: e5-stock-especificacion §8): ver costos, de gerente y administrador; el operador no los ve nunca.
-  "costos.ver": ["GERENTE", "ADMINISTRADOR"],
-  // CE0 (catalogo-carta-niveles-y-elecciones §7.2): quien carga productos y opciones también edita las
-  // variantes y los combos (F6, opción A). El operador no. Sin acciones de grupos de precio ni
-  // `opciones.asignar` (decisiones 138 y 133).
-  "variantes.editar": ["GERENTE", "ADMINISTRADOR"],
-  "conjuntos.editar_contenido": ["GERENTE", "ADMINISTRADOR"],
-  // H7 facturación §C (F5). Emitir a mano (P10, DECIDIDO), la nota de crédito (P9, recomendada A), descartar y
-  // reintentar (ASUMIDO): los tres roles. Resincronizar una serie (QF1) y cambiar el ambiente de un punto de venta
-  // (QF2): solo el gerente (DECIDIDO, dueño 2026-10-13).
-  "comprobantes.emitir_manual": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "notas_de_credito.emitir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "comprobantes.descartar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "comprobantes.reintentar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "series.resincronizar": ["GERENTE"],
-  "puntos_de_venta.cambiar_ambiente": ["GERENTE"],
-  // H7 facturación §C (F7), DECIDIDO: solo el gerente genera el pedido y carga el certificado de ARCA.
-  "certificados.gestionar": ["GERENTE"],
-  // E0-T1 (e0-cimientos-especificacion §3.1). Los tres módulos están `en_desarrollo`: el guard rechaza todo antes de
-  // mirar esta tabla, así que estas filas no dan permiso a nadie hasta que E3, E3b y E4 los construyan. Roles fijos
-  // (decisión 18); el operador hace el cierre del día (161) y anula y corrige con todo auditado (155).
-  // Caja (e3 §3.8 y e3b §4.7; fuente de cada fila: `e0-cimientos-especificacion.md` §3.1.1). Las cajas adicionales las
-  // habilita el plan y las crea el gerente (decisión 124).
-  "cajas.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "cajas.crear": ["GERENTE"],
-  "cajas.reactivar": ["GERENTE"],
-  "cajas.desactivar": ["GERENTE"],
-  "cajas.editar": ["GERENTE", "ADMINISTRADOR"],
-  // Medios de pago y cuentas de cobro (decisión 124); `medios_de_pago.editar` cubre elegir qué datos opcionales
-  // pide cada medio (decisión 129, SUPUESTO (DEC-0056) S-2).
-  "medios_de_pago.crear": ["GERENTE", "ADMINISTRADOR"],
-  "medios_de_pago.editar": ["GERENTE", "ADMINISTRADOR"],
-  "medios_de_pago.reactivar": ["GERENTE", "ADMINISTRADOR"],
-  "medios_de_pago.desactivar": ["GERENTE", "ADMINISTRADOR"],
-  "cuentas_de_cobro.crear": ["GERENTE", "ADMINISTRADOR"],
-  "cuentas_de_cobro.editar": ["GERENTE", "ADMINISTRADOR"],
-  "cuentas_de_cobro.reactivar": ["GERENTE", "ADMINISTRADOR"],
-  "cuentas_de_cobro.desactivar": ["GERENTE", "ADMINISTRADOR"],
-  // Sesiones de caja: decisión 123 (fondo declarado) y 145 (el operador debe poder abrirla). Iniciar y cancelar el
-  // cierre: la 123 no los menciona, lo confirma E3.
-  "sesiones_caja.abrir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "sesiones_caja.iniciar_cierre": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "sesiones_caja.cancelar_cierre": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "sesiones_caja.cerrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  // Movimientos manuales (decisión 123): el ajuste es de quien administra o gerencia; el operador anula solo lo suyo
-  // (lo valida el caso de uso).
-  "movimientos_caja.registrar_manual": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "movimientos_caja.ajustar": ["GERENTE", "ADMINISTRADOR"],
-  "movimientos_caja.anular": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "movimientos_caja.anular_de_otros": ["GERENTE", "ADMINISTRADOR"],
-  // e3b §4.7 y decisión 161: los tres roles.
-  "cobros.corregir_medio": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "declaraciones_de_total.registrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  // Cierre del día (e3b §3.6, decisión 161): los tres roles, en solo lectura se permiten las que cierran.
-  "jornadas.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "jornadas.iniciar_auditoria": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "jornadas.cancelar_auditoria": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "jornadas.cerrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  // Ventas (e4 §3.14, tabla exacta de S4). Anular línea, anular cuenta y corregir ticket: decisión 155, el operador
-  // puede, todo auditado.
-  "ventas.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "cuentas.abrir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "cuentas.agregar_linea": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "cuentas.cerrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "cuentas.anular_linea": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "cuentas.anular": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "tickets.cobrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "tickets.corregir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  // E7 (spec §3.13, PP-2 decidido por el padre el 10/11/2026): unir, dividir, cambiar de mesa, enviar a cocina e imprimir, los tres roles con todo
-  // auditado (como la decisión 155); armar el plano de mesas y las impresoras, el gerente y el administrador (el operador solo las mira).
-  "mesas.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "mesas.crear": ["GERENTE", "ADMINISTRADOR"],
-  "mesas.editar": ["GERENTE", "ADMINISTRADOR"],
-  "mesas.reactivar": ["GERENTE", "ADMINISTRADOR"],
-  "mesas.desactivar": ["GERENTE", "ADMINISTRADOR"],
-  "salon.cambiar_mesa": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "salon.unir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "salon.dividir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "comandas.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "comandas.enviar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "impresiones.imprimir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "impresiones.reimprimir": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "impresoras.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "impresoras.crear": ["GERENTE", "ADMINISTRADOR"],
-  "impresoras.editar": ["GERENTE", "ADMINISTRADOR"],
-  "impresoras.desactivar": ["GERENTE", "ADMINISTRADOR"],
-  // E9-T1 (e9-compras-especificacion §3.9). Los dos módulos están `en_desarrollo`: el guard rechaza todo antes de mirar
-  // esta tabla. Directorio (F1, decidido): el operador busca, da de alta y edita; desactivar y reactivar, no.
-  "partes.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "partes.crear": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "partes.editar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "partes.cambiar_roles": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "partes.vincular_contacto": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "partes.desvincular_contacto": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "partes.desactivar": ["GERENTE", "ADMINISTRADOR"],
-  "partes.reactivar": ["GERENTE", "ADMINISTRADOR"],
-  // Compras (P-3, DECIDIDO por el padre el 10/11/2026, corregible): el operador carga la compra y la factura y pide
-  // puntos de venta o comprobantes; no paga, no anula, no corrige ni configura. Aprobar la ficha es de quien administra
-  // (D111); el nivel de operación es solo del gerente.
-  "proveedores.editar_ficha": ["GERENTE", "ADMINISTRADOR"],
-  "proveedores.pedir_ficha": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "recepciones.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "recepciones.registrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "recepciones.anular": ["GERENTE", "ADMINISTRADOR"],
-  "recepciones.confirmar": ["GERENTE", "ADMINISTRADOR"],
-  "comprobantes_de_proveedor.anular": ["GERENTE", "ADMINISTRADOR"],
-  "conciliaciones.ver": ["GERENTE", "ADMINISTRADOR"],
-  "conciliaciones.conciliar": ["GERENTE", "ADMINISTRADOR"],
-  "conciliaciones.anular": ["GERENTE", "ADMINISTRADOR"],
-  "comprobantes_de_proveedor.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "comprobantes_de_proveedor.registrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "comprobantes_de_proveedor.pagar": ["GERENTE", "ADMINISTRADOR"],
-  "comprobantes_de_proveedor.anular_pago": ["GERENTE", "ADMINISTRADOR"],
-  // Órdenes de compra (N4, decisión del dueño del 16/11/2026): crear, pedir, cerrar y anular una orden es de quien administra o gerencia, no del operador; mirarla es de los tres
-  // (el operador la ve sin precios: los precios piden además `costos.ver`).
-  "ordenes_de_compra.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "ordenes_de_compra.crear": ["GERENTE", "ADMINISTRADOR"],
-  "ordenes_de_compra.pedir": ["GERENTE", "ADMINISTRADOR"],
-  "ordenes_de_compra.cerrar": ["GERENTE", "ADMINISTRADOR"],
-  "ordenes_de_compra.anular": ["GERENTE", "ADMINISTRADOR"],
-  // Devoluciones de mercadería al proveedor (N4): mirarlas es de los tres roles (como la orden); devolver y anular una devolución es de quien administra o gerencia. SUPUESTO a confirmar por el dueño (16/11/2026, DEC-0712).
-  "devoluciones_a_proveedor.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "devoluciones_a_proveedor.registrar": ["GERENTE", "ADMINISTRADOR"],
-  "devoluciones_a_proveedor.anular": ["GERENTE", "ADMINISTRADOR"],
-  // Notas de crédito del proveedor (N4, comprobante sin saldo): cargarlas y anularlas es de quien administra o gerencia; verlas, de los tres roles. SUPUESTO a confirmar por el dueño (16/11/2026, DEC-0713).
-  "notas_de_credito_de_proveedor.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
-  "notas_de_credito_de_proveedor.registrar": ["GERENTE", "ADMINISTRADOR"],
-  "notas_de_credito_de_proveedor.anular": ["GERENTE", "ADMINISTRADOR"],
-  // Diferencias de la conciliación de tres vías (N4): verlas y resolverlas es de quien administra o gerencia. SUPUESTO a confirmar por el dueño (16/11/2026, DEC-0710).
-  "diferencias_de_compra.ver": ["GERENTE", "ADMINISTRADOR"],
-  "diferencias_de_compra.resolver": ["GERENTE", "ADMINISTRADOR"],
-  "compras.configurar": ["GERENTE"],
-  "compras.corregir": ["GERENTE", "ADMINISTRADOR"],
+  ...PERMISOS_DE_ADMINISTRACION,
+  ...PERMISOS_DE_FACTURACION,
+  ...PERMISOS_DE_CATALOGO,
+  ...PERMISOS_DE_VIDRIERA,
+  ...PERMISOS_DE_STOCK,
+  ...PERMISOS_DE_CAJA,
+  ...PERMISOS_DE_CIERRE,
+  ...PERMISOS_DE_VENTAS,
+  ...PERMISOS_DE_COMANDAS,
+  ...PERMISOS_DE_SALON,
+  ...PERMISOS_DE_CLIENTES,
+  ...PERMISOS_DE_COMPRAS,
+  ...PERMISOS_DE_PRODUCCION,
 } as const satisfies Record<ClaveAccion, readonly RolDeEmpresa[]>;
 
 export type ReglasDeEmpresa = ReglasDelGuard<ClaveModulo, ClaveAccion, ClaveCapacidad>;
