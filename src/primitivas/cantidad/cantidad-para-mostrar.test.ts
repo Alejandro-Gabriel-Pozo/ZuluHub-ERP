@@ -125,6 +125,16 @@ describe("cantidadParaMostrar: propiedades", () => {
       }),
     );
   });
+  it("una cantidad menor que 1 con fracción exacta se muestra sin entero (caso que la propiedad encontró con 0,6250)", () => {
+    for (const [texto, esperado] of [
+      ["0.5000", "½"],
+      ["0.6250", "⅝"],
+      ["0.8750", "⅞"],
+    ] as const) {
+      const r = cantidadParaMostrar(texto, { unidadDeVenta: "UNIDAD" });
+      expect(r.ok && r.valor).toBe(esperado);
+    }
+  });
   it("nunca devuelve una fracción que no sea de 2, 4 u 8, ni un texto vacío", () => {
     fc.assert(
       fc.property(fc.integer({ min: 1, max: 200_000 }), (diezmilesimos) => {
@@ -132,7 +142,7 @@ describe("cantidadParaMostrar: propiedades", () => {
         const r = cantidadParaMostrar(texto, { unidadDeVenta: "UNIDAD" });
         if (r.ok) {
           expect(r.valor.length).toBeGreaterThan(0);
-          expect(r.valor).toMatch(/^(\d+)( ?[½¼¾⅛⅜⅝⅞])?$/);
+          expect(r.valor).toMatch(/^(?:\d+(?: ?[½¼¾⅛⅜⅝⅞])?|[½¼¾⅛⅜⅝⅞])$/);
         } else {
           expect(r.error).toBe("CANTIDAD_NO_MOSTRABLE");
         }
