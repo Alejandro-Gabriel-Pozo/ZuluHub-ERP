@@ -375,7 +375,6 @@
       "apps/web/ui/componentes/Selector.test.tsx",
       "apps/web/ui/patrones/SelectorDeSucursal.cliente.tsx",
       "apps/web/ui/patrones/Superposicion.test.tsx",
-      "apps/web/ui/patrones/borrador-de-pagina.test.tsx",
       "apps/web/ui/plantillas/configuracion-fiscal/FormularioDeDatosFiscales.cliente.tsx",
       "apps/web/ui/plantillas/configuracion-fiscal/FormularioDePuntoDeVenta.cliente.tsx",
       "apps/web/ui/plantillas/configuracion-fiscal/PasoGenerarPedido.cliente.tsx",
@@ -540,7 +539,7 @@
     "responsable": "agente (a pedido del dueño)",
     "creada": "2026-11-21",
     "motivo": "Entregar el logo por la ruta propia sin sumar una migración ni una pantalla nueva en el mismo PR. Se paga con una tabla de cuentas por empresa y la validación al guardar y al traer (armarDestinoDeLogo ya recibe la lista de cuentas declaradas). DEC-0831.",
-    "aprobadoPor": "orquestador (V1c: diferir las cuentas declaradas como deuda con vencimiento, mensajes entre sesiones del 2026-11-20 y 2026-11-21; cupo liberado pagando campos-sin-dato--web-select)",
+    "aprobadoPor": "orquestador (V1c: diferir las cuentas declaradas como deuda con vencimiento, mensajes entre sesiones del 2026-11-20 y 2026-11-21; cupo liberado pagando campos-sin-dato--web-select (select crudo quitado de borrador-de-pagina.test.tsx))",
     "vence": "2027-01-20"
   }
 ]
