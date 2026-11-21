@@ -41,7 +41,7 @@ describe("dibujos de la carta: la identidad llega a todos", () => {
         Dibujo({
           vista: {
             ...vidrieraDePrueba(),
-            identidad: { cara: "BOLICHE", tema: tema.valor, inicial: "L" },
+            identidad: { cara: "BOLICHE", tema: tema.valor, inicial: "L", logo: null },
           },
           textos: TEXTOS,
         }),

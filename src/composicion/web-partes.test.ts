@@ -68,7 +68,9 @@ const CLAVES_DE_WEB = [
   "consultasDeSesion",
   "consultasDeStock",
   "consultasDeVentas",
+  "imagenesExternas",
   "lecturasCompartidas",
+  "memoriaDeLogos",
   "resolucionDeHost",
   "vidrieraPublica",
 ];
