@@ -548,6 +548,5 @@ const reglas = [
     to: { path: "^apps/", pathNot: "^apps/(plataforma/|web/ui/)" },
   },
 ];
-module.exports = {
-  reglas: reglas.concat(require("./reglas-de-pdf.cjs"), require("./reglas-de-modulos.cjs")),
-};
+const aparte = ["pdf", "modulos", "red"].map((n) => require(`./reglas-de-${n}.cjs`));
+module.exports = { reglas: reglas.concat(...aparte) };
