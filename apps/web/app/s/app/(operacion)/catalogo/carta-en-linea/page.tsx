@@ -14,8 +14,8 @@ import { estadoDeLaCartaAccion, guardarLosTextosAccion } from "../../../acciones
 
 // `/catalogo/carta-en-linea`: la carta en línea de UNA sucursal (maqueta `carta-en-linea.html`, aprobada: filas 60 y 70 de `decisiones-del-dueno-2026-11.md`). La sucursal la fija el servidor (la elegida
 // en el dispositivo, o la única abierta); sin ninguna, se pide elegirla en la pantalla que ya existe (`/sucursal`), nunca se asume «todas». La empresa y la persona las pone el servidor y los
-// permisos (`vidrieras.ver` y, para cambiar algo, `vidrieras.editar` / `publicar_en_linea` / `retirar_de_linea`) los decide la consulta o el caso de uso; con `vidriera` en desarrollo (hoy) sale el
-// motivo del guard. La página fija UNA clave de creación al abrirse y liga a las acciones la carta, la sucursal mostrada y su versión: el doble toque y el reintento son una sola alta.
+// permisos (`vidrieras.ver` y, para cambiar algo, `vidrieras.editar` / `publicar_en_linea` / `retirar_de_linea`) los decide la consulta o el caso de uso; sin permiso o sin la perilla
+// `vidriera_por_qr` sale el motivo del guard. La página fija UNA clave de creación al abrirse y liga a las acciones la carta, la sucursal mostrada y su versión: el doble toque y el reintento son una sola alta.
 export default async function PaginaDeLaCartaEnLinea() {
   return pantallaDeOperacion({ titulo: "catalogo.carta.titulo" }, async ({ contexto }) => {
     const sucursalId = await sucursalDeLaCarta(contexto);

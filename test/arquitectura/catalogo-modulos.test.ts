@@ -97,7 +97,7 @@ const carpetaExiste = (carpeta: string): boolean => {
 type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
 /** Los módulos declarados en el catálogo cuyas carpetas y casos de uso todavía no existen (T0). */
-const SIN_CONSTRUIR: readonly string[] = ["vidriera", "produccion"];
+const SIN_CONSTRUIR: readonly string[] = ["produccion"];
 
 /**
  * Acciones de un módulo YA disponible que ninguna declaración de caso de uso nombra (X1 inverso), con lista exacta. Nació con DEC-0463
@@ -106,11 +106,18 @@ const SIN_CONSTRUIR: readonly string[] = ["vidriera", "produccion"];
  * - Pedidas DENTRO del caso de uso con `autorizar`/`exigirAccion` además de la principal (el chequeo lee la fuente): el escáner solo lee
  *   la acción principal de cada declaración.
  * - Sin caso de uso todavía (deuda declarada, no se construye en este cambio): `productos.asignar_emisor`, `categorias.*` y
- *   `conjuntos.editar_contenido` (catálogo).
+ *   `conjuntos.editar_contenido` (catálogo); `vidrieras.publicar` y `vidrieras.retirar` (modelo viejo, H7) y `vidrieras.renovar_enlace`
+ *   (VYP-2, no se hace ahora). Nacieron con DEC-0826 (vidriera pasa a disponible).
  */
 const ACCIONES_PEDIDAS_DENTRO_DEL_CASO: Readonly<Record<string, string>> = {
   "variantes.editar": "src/modulos/catalogo/casos-de-uso/editar-opciones.ts",
   "movimientos_caja.anular_de_otros": "src/modulos/caja/casos-de-uso/anular-movimiento.ts",
+  "vidrieras.ocultar_en_empresa": "src/modulos/catalogo/casos-de-uso/ocultar-producto.ts",
+  "vidrieras.crear": "src/modulos/catalogo/casos-de-uso/guardar-carta-publica.ts",
+  "vidrieras.publicar_en_linea": "src/modulos/catalogo/casos-de-uso/guardar-carta-publica.ts",
+  "vidrieras.retirar_de_linea": "src/modulos/catalogo/casos-de-uso/guardar-carta-publica.ts",
+  // La declara `modulos/portal`, carpeta que `vidriera` todavía no lista en `implementadoPor` (lo mira el PR del portal).
+  "vidrieras.administrar_portal": "src/modulos/portal/casos-de-uso/declaraciones.ts",
 };
 const ACCIONES_SIN_CASO_DE_USO: readonly string[] = [
   "productos.asignar_emisor",
@@ -119,6 +126,9 @@ const ACCIONES_SIN_CASO_DE_USO: readonly string[] = [
   "categorias.reactivar",
   "categorias.desactivar",
   "conjuntos.editar_contenido",
+  "vidrieras.publicar",
+  "vidrieras.retirar",
+  "vidrieras.renovar_enlace",
 ];
 const ACCIONES_PERDONADAS_DE_X1: readonly string[] = [
   ...Object.keys(ACCIONES_PEDIDAS_DENTRO_DEL_CASO),
@@ -412,9 +422,9 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual([]);
   });
 
-  it("carta y producción son los únicos módulos sin construir, y siguen en desarrollo; stock salió con E5, clientes con E9-T4, compras con E9-T12, catálogo, caja y ventas el 15/11/2026 (DEC-0463) y comandas y salón con S-0r (17/11/2026, Q-S0-3), y son disponibles", () => {
-    expect([...SIN_CONSTRUIR]).toEqual(["vidriera", "produccion"]);
-    for (const clave of ["catalogo", "caja", "ventas", "comandas", "salon"] as const) {
+  it("producción es el único módulo sin construir y sigue en desarrollo; vidriera salió el 20/11/2026 (DEC-0826), stock salió con E5, clientes con E9-T4, compras con E9-T12, catálogo, caja y ventas el 15/11/2026 (DEC-0463) y comandas y salón con S-0r (17/11/2026, Q-S0-3), y son disponibles", () => {
+    expect([...SIN_CONSTRUIR]).toEqual(["produccion"]);
+    for (const clave of ["catalogo", "caja", "ventas", "comandas", "salon", "vidriera"] as const) {
       expect(SIN_CONSTRUIR).not.toContain(clave);
       expect(CATALOGO_DE_MODULOS[clave].estado, clave).toBe("disponible");
     }
@@ -472,10 +482,13 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
   });
 
   it("violación inyectada: un módulo en desarrollo fuera de SIN_CONSTRUIR rompe X1 (ningún caso de uso exige sus acciones)", () => {
-    const sinCarta = SIN_CONSTRUIR.filter((clave) => clave !== "vidriera");
-    const problemas = crucesDelCatalogo(CATALOGO_DE_MODULOS, declaradas, carpetaExiste, sinCarta);
-    // `vidrieras.ver` ya la exige una consulta de la carta (T2 de la carta real); `vidrieras.publicar` sigue sin uso (modelo viejo, H7).
-    expect(problemas).toContain("X1: la acción vidrieras.publicar no la exige ningún caso de uso");
+    const sinCasosDeProduccion: AccionesPorCarpeta = { ...declaradas, "modulos/produccion": [] };
+    expect(
+      crucesDelCatalogo(CATALOGO_DE_MODULOS, sinCasosDeProduccion, carpetaExiste, SIN_CONSTRUIR),
+    ).not.toContain("X1: la acción transformaciones.ver no la exige ningún caso de uso");
+    expect(
+      crucesDelCatalogo(CATALOGO_DE_MODULOS, sinCasosDeProduccion, carpetaExiste, []),
+    ).toContain("X1: la acción transformaciones.ver no la exige ningún caso de uso");
   });
 
   it("violación inyectada: stock, ya disponible, rompe X4 (su carpeta no existe) y X1 (ningún caso de uso exige sus acciones) si se le quita lo que lo implementa (E5-T8)", () => {
@@ -515,11 +528,16 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
   });
 
   it("sin la lista de módulos sin construir, X1 SÍ reclama sus acciones (el perdón es solo de ellos)", () => {
-    const problemas = crucesDelCatalogo(CATALOGO_DE_MODULOS, declaradas);
-    const exigidas = new Set(Object.values(declaradas).flat());
+    const sinCasosDeLosPendientes: AccionesPorCarpeta = Object.fromEntries(
+      Object.entries(declaradas).map(([carpeta, acciones]) => [
+        carpeta,
+        carpeta === "modulos/produccion" ? [] : acciones,
+      ]),
+    );
+    const problemas = crucesDelCatalogo(CATALOGO_DE_MODULOS, sinCasosDeLosPendientes);
     const pendientes = SIN_CONSTRUIR.flatMap((clave) =>
       Object.keys(CATALOGO_DE_MODULOS[clave as keyof typeof CATALOGO_DE_MODULOS].acciones),
-    ).filter((accion) => !exigidas.has(accion));
+    );
     expect(pendientes.length).toBeGreaterThan(0);
     for (const accion of pendientes) {
       expect(problemas, accion).toContain(`X1: la acción ${accion} no la exige ningún caso de uso`);
