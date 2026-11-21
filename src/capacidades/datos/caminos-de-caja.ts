@@ -10,6 +10,8 @@ const FORMULARIO_DE_DATOS_DEL_MEDIO =
   "apps/web/ui/plantillas/caja/FormularioDeDatosDelMedio.cliente.tsx";
 const FORMULARIO_DE_CUENTA = "apps/web/ui/plantillas/caja/FormularioDeCuenta.cliente.tsx";
 const FORMULARIO_DE_CAJA = "apps/web/ui/plantillas/caja/FormularioDeCaja.cliente.tsx";
+const FORMULARIO_DE_APERTURA = "apps/web/ui/plantillas/caja/FormularioDeApertura.cliente.tsx";
+const FORMULARIO_DE_CIERRE = "apps/web/ui/plantillas/caja/FormularioDeCierre.cliente.tsx";
 
 export const CAMINOS_DE_CAJA = {
   // Medios de pago, alta: el tipo es obligatorio (lista cerrada) y el nombre es opcional. Sin `campo` de error: los rechazos de esta pantalla son el aviso genérico y el del nombre
@@ -129,6 +131,43 @@ export const CAMINOS_DE_CAJA = {
     pasos: [{ id: "nombre-de-la-caja", campos: { nombre: "nombre-de-caja" } }],
     deriva: [],
     accion: { clave: "cajas.editar", requiere: ["nombre-de-caja"], admite: [] },
+    camposDeError: [],
+  },
+  // Pantalla «Caja» del mostrador (maqueta `caja.html`, `vAbrir`). La acción no devuelve un error con `campo`: lo que no tiene la forma pedida es el genérico «Esta acción no está permitida»
+  // (`accionDeCaja`, `errores-de-caja.ts`) y el importe inválido lo avisa la pantalla antes de enviar; por eso `camposDeError` va vacío.
+  // Abrir: solo el fondo inicial; la caja y la sucursal las fija el servidor.
+  "abrir-caja": {
+    funcion: "Abrir la caja con su fondo inicial",
+    pantallas: [FORMULARIO_DE_APERTURA],
+    pasos: [{ id: "fondo-inicial", campos: { fondoInicial: "importe-de-fondo-inicial" } }],
+    deriva: [],
+    accion: { clave: "sesiones_caja.abrir", requiere: ["importe-de-fondo-inicial"], admite: [] },
+    camposDeError: [],
+  },
+  // Cerrar: el efectivo se cuenta siempre (billetes y monedas), los demás medios se declaran o se aceptan «conforme» (un botón, no un dato) y la observación es opcional. Cada parte del conteo
+  // admite vacío (la pantalla suma lo no escrito como cero); que el efectivo se haya contado lo exige el dominio (`CONTEO_DE_EFECTIVO_FALTANTE`, e3 §3.2), no el formulario.
+  "cerrar-caja": {
+    funcion: "Contar el efectivo y los demás medios y cerrar la caja",
+    pantallas: [FORMULARIO_DE_CIERRE],
+    pasos: [
+      {
+        id: "efectivo",
+        campos: { billetes: "cantidad-de-billetes", monedas: "importe-de-monedas-contadas" },
+      },
+      { id: "otros-medios", campos: { contado: "importe-contado-de-medio" } },
+      { id: "observacion", campos: { observacion: "observacion-de-cierre-de-caja" } },
+    ],
+    deriva: [],
+    accion: {
+      clave: "sesiones_caja.cerrar",
+      requiere: [],
+      admite: [
+        "cantidad-de-billetes",
+        "importe-de-monedas-contadas",
+        "importe-contado-de-medio",
+        "observacion-de-cierre-de-caja",
+      ],
+    },
     camposDeError: [],
   },
 } as const satisfies Readonly<Record<string, DefinicionDeCamino>>;

@@ -1,21 +1,15 @@
-.casilla {
+.fila {
   display: flex;
   align-items: center;
-  gap: var(--espacio-2);
+  gap: var(--espacio-3);
   min-height: var(--objetivo-minimo);
+  color: var(--color-texto);
+  cursor: pointer;
 }
 
-.control {
+.casilla {
+  width: 1.5rem;
+  height: 1.5rem;
   flex: none;
-  width: var(--objetivo-minimo);
-  height: var(--objetivo-minimo);
-  margin: 0;
-}
-
-.etiqueta {
-  font-weight: var(--tipo-peso-fuerte);
-}
-
-.deshabilitada .etiqueta {
-  color: var(--color-sobre-deshabilitado);
+  accent-color: var(--accion-primaria-fondo);
 }

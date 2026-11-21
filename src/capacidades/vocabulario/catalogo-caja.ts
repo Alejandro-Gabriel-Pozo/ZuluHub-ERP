@@ -61,4 +61,44 @@ export const TEXTOS_DE_CAJA = {
   // MEDIOS, tabla «(reutilizados)»: los dos avisos de error de esta pantalla («Ya existe un medio con ese nombre» y el genérico).
   "caja.error.medio_repetido": { porDefecto: "Ya existe un medio con ese nombre" },
   "caja.error.accion_no_permitida": { porDefecto: "Esta acción no está permitida" },
+  // MOSTRADOR, lista «(reutilizados)» de `caja.html` (línea 282; ya aprobados en la versión anterior de la pantalla): título de la pantalla y de la barra, el estado de la caja y «Abrir caja».
+  // «Abierta» y «Cerrada» son las del estado de la sesión de caja (`caja.html`, `pillS`). «Jornada» y «Corte» arman la cabecera «Jornada {fecha} · Corte {hora}» (M14 de `textos-mostrador-pendientes.md`,
+  // aprobado el 15/11/2026, DDD:171). «Cancelar» es la de todos los modales (`catalogo.accion.cancelar`).
+  "caja.pantalla.titulo": { porDefecto: "Caja" },
+  "caja.estado.abierta": { porDefecto: "Abierta" },
+  "caja.estado.cerrada": { porDefecto: "Cerrada" },
+  "caja.sesion.abrir": { porDefecto: "Abrir caja" },
+  "caja.sesion.jornada": { porDefecto: "Jornada" },
+  "caja.sesion.corte": { porDefecto: "Corte" },
+  // SUPUESTO (DEC-0475): «Fondo inicial» no tiene fila propia en las tablas aprobadas (`servidor-del-mostrador-minimo.md` §8); se declara por delegación del dueño (DDD filas 173 y 174).
+  // Revertirlo es sacar esta clave y el rótulo del campo.
+  "caja.campo.fondo_inicial": { porDefecto: "Fondo inicial" },
+  "caja.accion.cancelar": { porDefecto: "Cancelar" },
+  // MOSTRADOR, «(reutilizados)»: cerrar caja, cancelar el cierre y contar.
+  "caja.sesion.cerrar": { porDefecto: "Cerrar caja" },
+  "caja.sesion.cancelar_cierre": { porDefecto: "Cancelar cierre" },
+  "caja.sesion.contar": { porDefecto: "Contar" },
+  // MOSTRADOR, «(reutilizados)»: Contar, columnas del arqueo («Observación» lleva «(opcional)» como en `caja.html`, `vCierre`, y como `caja.campo.nombre_opcional`), el efectivo por billetes y monedas y su total.
+  "caja.arqueo.esperado": { porDefecto: "Esperado" },
+  "caja.arqueo.contado": { porDefecto: "Contado" },
+  "caja.arqueo.diferencia": { porDefecto: "Diferencia" },
+  "caja.arqueo.observacion_opcional": { porDefecto: "Observación (opcional)" },
+  "caja.arqueo.billetes": { porDefecto: "Billetes" },
+  "caja.arqueo.cantidad": { porDefecto: "Cantidad" },
+  "caja.arqueo.monedas": { porDefecto: "Monedas" },
+  "caja.arqueo.total_contado": { porDefecto: "Total contado" },
+  // MOSTRADOR, tabla «Textos nuevos» de `caja.html` (decisión 175 + e3b §8.1 filas 21 y 22, que reutilizan «Conforme», «Conforme general» y «Sin declarar» ya aprobados el 14/11/2026;
+  // «Sin cuenta», decisión 151 y e3 §3.3): las claves son las que esa tabla declara.
+  "caja.conforme": { porDefecto: "Conforme" },
+  "caja.conforme_general": { porDefecto: "Conforme general" },
+  "caja.sin_declarar": { porDefecto: "Sin declarar" },
+  "caja.sin_cuenta": { porDefecto: "Sin cuenta" },
+  // MOSTRADOR, M12 y T4 (aprobados el 15/11/2026, DDD:171 y DDD:165): resumen de la última sesión y «Anulado» (`caja.html:405`).
+  "caja.sesion.ultima": { porDefecto: "Última sesión" },
+  "caja.estado.anulado": { porDefecto: "Anulado" },
+  // SUPUESTO (DEC-0476): rótulos de la clase de cada movimiento de la lista; la maqueta aprobada los muestra («Fondo inicial», `caja.html` línea 382; «Cobro», línea 383; «Anulación», línea 502) y no
+  // tienen fila propia en las tablas aprobadas. Revertirlo es sacar estas tres claves y el rótulo de la clase en `modelo-de-la-caja.ts`.
+  "caja.movimiento.cobro": { porDefecto: "Cobro" },
+  "caja.movimiento.fondo_inicial": { porDefecto: "Fondo inicial" },
+  "caja.movimiento.anulacion": { porDefecto: "Anulación" },
 } as const;

@@ -130,6 +130,24 @@ describe("pedidos exactos", () => {
     }
   });
 
+  it("con `proyecto`, todos los pedidos van al otro proyecto (la consola); sin él, a la web", async () => {
+    const f = fetchFalso({ cuerpo: { envs: [] } });
+    const consola = cliente(f, { proyecto: "prj_OtroProyecto" }).api;
+    await consola.listar();
+    await consola.escribir("A", "x", "preview");
+    await consola.borrar("id1");
+    await consola.quitarDestinos("id1", ["preview"]);
+    expect(f.llamadas.map((l) => new URL(l.url).pathname)).toEqual([
+      "/v10/projects/prj_OtroProyecto/env",
+      "/v10/projects/prj_OtroProyecto/env",
+      "/v9/projects/prj_OtroProyecto/env/id1",
+      "/v9/projects/prj_OtroProyecto/env/id1",
+    ]);
+    const g = fetchFalso({ cuerpo: { envs: [] } });
+    await cliente(g).api.listar();
+    expect(new URL(g.llamadas[0]?.url ?? "").pathname).toBe(`/v10/projects/${PROYECTO}/env`);
+  });
+
   it("borrar: DELETE de esa variable, con el id codificado y sin cuerpo", async () => {
     const f = fetchFalso({});
     const { api } = cliente(f);

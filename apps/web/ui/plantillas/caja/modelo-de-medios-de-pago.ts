@@ -41,7 +41,7 @@ const EFECTIVO = "EFECTIVO";
 export const TIPOS_DE_MEDIO_CON_TEXTO: readonly string[] = Object.keys(TIPOS);
 
 /** El texto de un tipo; un tipo que la pantalla no conoce se dice con su propio valor (nunca se esconde un medio por no saber nombrarlo). */
-const nombreDelTipo = (tipo: string): string =>
+export const nombreDelTipo = (tipo: string): string =>
   Object.hasOwn(TIPOS, tipo) ? texto({}, TIPOS[tipo] as ClaveDeTexto) : tipo;
 
 export function armarLaListaDeMedios(medios: readonly MedioDeLaLista[]): readonly FilaDeLista[] {

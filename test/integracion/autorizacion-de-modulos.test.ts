@@ -127,6 +127,22 @@ describe.skipIf(base === null)("autorización: los módulos reales de la empresa
       expect(await guard(m.ctx(), "comprobantes.emitir_manual")).toBe("OK");
     });
 
+    it("un plan «ya vigente» rige también con el reloj inyectado una hora atrás (cerca de la medianoche argentina) y con un reloj de hace un día", async () => {
+      // Bomba de reloj (16/11/2026): la asignación nacía con vigencia `now() - 30 s` y `ahoraDeLaCorrida()` se atrasa una hora entre 02:40 y 03:00 UTC;
+      // el plan «todavía no regía», el módulo quedaba en solo lectura y las pruebas de caja fallaban con MODULO_EN_SOLO_LECTURA.
+      const m = await mundo({ plan: ["facturacion"] });
+      await activar(m.empresa, "facturacion");
+      const HORA = 3_600_000;
+      for (const atras of [0, HORA, 90 * 60_000]) {
+        const ctx = contexto(m.empresa, m.persona, new Date(Date.now() - atras));
+        expect(await modulosDe(ctx)).toEqual({
+          activados: ["facturacion"],
+          habilitados: ["facturacion"],
+        });
+        expect(await guard(ctx, "comprobantes.emitir_manual")).toBe("OK");
+      }
+    });
+
     it("activado pero NO incluido en el plan: queda activado y no habilitado (solo lectura)", async () => {
       const m = await mundo({ plan: [] });
       await activar(m.empresa, "facturacion");
@@ -208,8 +224,8 @@ describe.skipIf(base === null)("autorización: los módulos reales de la empresa
       // Dos horas después: manda la de mayor número que ya empezó («la última decisión manda»).
       const luego = new Date(Date.now() + 2 * 3_600_000);
       expect((await modulosDe(contexto(m.empresa, m.persona, luego))).habilitados).toEqual([]);
-      // Antes de toda asignación: ninguna rige, sin techo.
-      const antes = new Date(Date.now() - 3_600_000);
+      // Antes de toda asignación: ninguna rige, sin techo. Las «ya vigentes» del apoyo empiezan 2 h atrás (ver `RETROCESO_DE_VIGENCIAS_YA_RIGEN_SEGUNDOS`).
+      const antes = new Date(Date.now() - 3 * 3_600_000);
       expect(await modulosDe(contexto(m.empresa, m.persona, antes))).toEqual({
         activados: ["facturacion"],
         habilitados: [],

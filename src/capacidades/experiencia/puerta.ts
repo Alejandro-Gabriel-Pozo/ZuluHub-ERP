@@ -105,9 +105,12 @@ export type EntradaDePuerta = Readonly<{
 }>;
 
 export type DecisionDePuerta = Readonly<{
-  /** `REESCRIBIR`: el pedido sigue a `rutaInterna`; `SEGUIR`: sigue por su ruta (una API de un host APP). */
-  accion: "REESCRIBIR" | "SEGUIR";
-  /** A dónde se reescribe; `null` si la acción es `SEGUIR`. */
+  /**
+   * `REESCRIBIR`: el pedido sigue a `rutaInterna`; `SEGUIR`: sigue por su ruta (una API de un host APP); `RESPONDER`: la puerta contesta ella misma, con el estado y sin cuerpo (host que
+   * no se resuelve).
+   */
+  accion: "REESCRIBIR" | "SEGUIR" | "RESPONDER";
+  /** A dónde se reescribe; `null` si la acción es `SEGUIR` o `RESPONDER`. */
   rutaInterna: string | null;
   /** El estado que pone la puerta: 404 neutra, 503 si la base falló; `null` si lo decide la página. */
   estado: 404 | 503 | null;
@@ -146,6 +149,13 @@ function esRutaInterna(ruta: string, decodificada: string): boolean {
   return candidatas.some((r) => r === "/s" || r.startsWith("/s/"));
 }
 
+/**
+ * ¿Es la ruta del logo de la carta (`/<código>/logo/<versión>.webp`)? Lista de permitidos y exacta: código de letras, dígitos, `_` y `-`; versión solo de dígitos; nada más
+ * (ni barra final, ni mayúsculas en `logo`, ni otra extensión, ni escapes). Es lo único que la puerta deja decidir su caché a la propia ruta.
+ */
+export const esRutaDelLogoDeLaCarta = (ruta: string): boolean =>
+  /^\/[A-Za-z0-9_-]{1,64}\/logo\/[0-9]{1,12}\.webp$/.test(ruta);
+
 const esRutaDeApi = (ruta: string): boolean => ruta === "/api" || ruta.startsWith("/api/");
 
 export function decidirPuerta(entrada: EntradaDePuerta): DecisionDePuerta {
@@ -156,6 +166,7 @@ export function decidirPuerta(entrada: EntradaDePuerta): DecisionDePuerta {
     rutaInterna: string | null,
     estado: DecisionDePuerta["estado"],
     superficie: SuperficieDeRespuesta,
+    cacheDelLogo = false,
   ): DecisionDePuerta => {
     const encabezadosDePedido = sinEncabezadosInternos(encabezados);
     // El nonce llega a Next por la propia CSP (así marca sus scripts) y a nuestro servidor por el interno.
@@ -167,7 +178,11 @@ export function decidirPuerta(entrada: EntradaDePuerta): DecisionDePuerta {
       estado,
       superficie,
       encabezadosDePedido,
-      encabezadosDeRespuesta: cabecerasDe(superficie, nonce, { produccion }),
+      encabezadosDeRespuesta: cabecerasDe(superficie, nonce, {
+        produccion,
+        duenio: puerta?.duenio.tipo ?? null,
+        cacheDelLogo,
+      }),
     };
   };
 
@@ -176,11 +191,22 @@ export function decidirPuerta(entrada: EntradaDePuerta): DecisionDePuerta {
 
   // Antes que todo lo demás y sin mirar la resolución: ni la marca ni la base de marcas intervienen.
   if (esRutaDeSistema(ruta)) return armar("SEGUIR", null, null, "SISTEMA");
+  // Host que no se resuelve: 404 plano que contesta la puerta, sin reescribir a ninguna página. Una reescritura a la neutra, con el encabezado de RSC que pone Next en el pedido interno de un
+  // `redirect()` de una acción (a `localhost:<puerto>`), salía como flujo RSC y el navegador mostraba «No encontrado» en lugar de la pantalla de destino (caso real: «Guardar» una mesa del salón,
+  // 17/11/2026). No distingue `localhost` de ningún otro host desconocido y no abre ningún host ni ruta: sigue cerrando ante la duda. Chequeo: `puerta.test.ts` y `test/web/proxy.test.ts`.
+  if (resolucion.tipo === "DESCONOCIDO") return armar("RESPONDER", null, 404, "NEUTRA");
   const real = caminoDeRutaPropia(ruta);
   if (puerta === null || real === null || esRutaInterna(ruta, real)) return aLaNeutra();
   if (esRutaDeApi(ruta)) {
     return puerta.superficie === "APP" ? armar("SEGUIR", null, null, "APP") : aLaNeutra();
   }
   const prefijo = RUTA_INTERNA_DE[puerta.superficie];
-  return armar("REESCRIBIR", ruta === "/" ? prefijo : `${prefijo}${ruta}`, null, puerta.superficie);
+  const cacheDelLogo = puerta.superficie === "CARTA" && esRutaDelLogoDeLaCarta(ruta);
+  return armar(
+    "REESCRIBIR",
+    ruta === "/" ? prefijo : `${prefijo}${ruta}`,
+    null,
+    puerta.superficie,
+    cacheDelLogo,
+  );
 }

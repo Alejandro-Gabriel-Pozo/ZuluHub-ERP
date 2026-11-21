@@ -1,6 +1,6 @@
 import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
-import { vendeLaClase } from "../modulos/catalogo/publico";
+import { seControlaStockLaClase, vendeLaClase } from "../modulos/catalogo/publico";
 import { ALICUOTAS_DEL_PRODUCTO } from "../modulos/fiscal/publico";
 import { err } from "../primitivas/resultado/resultado";
 import {
@@ -52,6 +52,8 @@ export type FichaParaLaPantalla = Readonly<{
   unidadBaseId: string;
   /** Si la clase lleva nombre de cocina, alícuota y sección. */
   seVende: boolean;
+  /** Si la ficha puede ofrecer el tilde «Se controla el stock»: la clase se controla y el producto está activo (una sola regla: `seControlaStockLaClase`). */
+  admiteControlDeStock: boolean;
   nombreDeCocina: string | null;
   codigo: string | null;
   codigoDeBarras: string | null;
@@ -88,6 +90,7 @@ export async function verLaFichaDeProducto(
         claseDeUso: p.claseDeUso,
         unidadBaseId: p.unidadBaseId,
         seVende: vendeLaClase(p.claseDeUso),
+        admiteControlDeStock: p.activo && seControlaStockLaClase(p.claseDeUso),
         nombreDeCocina: p.nombreDeCocina,
         codigo: p.codigo,
         codigoDeBarras: p.codigoDeBarras,

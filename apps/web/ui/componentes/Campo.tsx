@@ -6,6 +6,8 @@ export type PropsDeCampo = Readonly<{
   /** Qué dato pide el campo: un `IdDeDato` del registro de datos o `"pendiente"` (deuda registrada). Obligatorio: sin dato no hay campo. */
   dato: DatoDeCampo;
   etiqueta: string;
+  /** La etiqueta solo para el lector de pantalla (ver `CajaDeCampo`): para las filas repetidas que ya muestran el rótulo arriba. */
+  rotuloSoloParaLector?: boolean | undefined;
   valor: string;
   alCambiar: (valor: string) => void;
   nombre?: string | undefined;
@@ -25,6 +27,7 @@ export type PropsDeCampo = Readonly<{
 /** Campo de texto con etiqueta visible y el error asociado por ARIA. Para importes está `CampoImporte`. */
 export function Campo({
   etiqueta,
+  rotuloSoloParaLector,
   valor,
   alCambiar,
   nombre,
@@ -41,6 +44,7 @@ export function Campo({
   return (
     <CajaDeCampo
       etiqueta={etiqueta}
+      rotuloSoloParaLector={rotuloSoloParaLector}
       obligatorio={obligatorio}
       ayuda={ayuda}
       error={error}

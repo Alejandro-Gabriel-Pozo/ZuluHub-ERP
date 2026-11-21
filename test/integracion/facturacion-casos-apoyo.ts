@@ -202,7 +202,7 @@ export async function cargarCertificado(
 
 /**
  * ARCA (el falso) tiene dado de alta el punto de venta del escenario: lo que D-77 pide para pasarlo a producción. Con `cambios`, se lo
- * ve bloqueado o dado de baja. (La CUIT es la del emisor del escenario; el falso la guarda por CUIT.)
+ * ve bloqueado, dado de baja o solo CAEA. (La CUIT es la del emisor del escenario; el falso la guarda por CUIT.)
  */
 export function darDeAltaEnArca(
   falsa: EmisionFalsa,
@@ -212,7 +212,7 @@ export function darDeAltaEnArca(
   const cuit = cuitDesdeTexto(e.cuit);
   if (!cuit.ok) throw new Error("el CUIT del escenario de prueba no es válido");
   falsa.declararPuntosDeVenta(cuit.valor, [
-    { numero: e.pvNumero, bloqueado: false, dadoDeBaja: false, ...cambios },
+    { numero: e.pvNumero, bloqueado: false, dadoDeBaja: false, emision: "CAE", ...cambios },
   ]);
 }
 

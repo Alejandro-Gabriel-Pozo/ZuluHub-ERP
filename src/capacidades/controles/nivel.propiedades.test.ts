@@ -8,6 +8,19 @@ const nivel = fc.constantFrom(...NIVELES_DE_CONTROL);
 const guardado = fc.option(nivel, { nil: null });
 
 describe("resolverNivel: propiedades", () => {
+  it("nunca devuelve otra cosa que PERMITIR o AVISAR", () => {
+    fc.assert(
+      fc.property(fc.boolean(), guardado, guardado, (disponibleEnElPlan, e, s) => {
+        const regido = resolverNivel({
+          disponibleEnElPlan,
+          nivelDeLaEmpresa: e,
+          nivelDeLaSucursal: s,
+        });
+        return regido === "PERMITIR" || regido === "AVISAR";
+      }),
+    );
+  });
+
   it("sin el control en el plan siempre rige PERMITIR", () => {
     fc.assert(
       fc.property(guardado, guardado, (nivelDeLaEmpresa, nivelDeLaSucursal) => {

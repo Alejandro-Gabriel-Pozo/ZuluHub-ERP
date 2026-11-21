@@ -1,7 +1,7 @@
 import { cuotasDesdeTexto } from "../../../primitivas/cantidad/cuotas";
 import { FORMATO_DE_DNI } from "../../../primitivas/identificacion-fiscal/documento";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { cuponDePagoDesdeTexto } from "../../../primitivas/texto/cupon-de-pago";
+import { motivoDelCupon } from "../../../primitivas/texto/cupon-de-pago";
 import { ultimosCuatroDigitosDesdeTexto } from "../../../primitivas/texto/ultimos-cuatro-digitos";
 import type { DatoDelCobro } from "../estados";
 import { esUuid } from "./identificadores";
@@ -44,25 +44,6 @@ export type ErrorDeDatoDelCobro =
       motivo: MotivoDeDatoInvalido;
     }>;
 
-const SEPARADORES_DEL_CUPON = /[._/-]/g;
-const TRECE_DIGITOS_SEGUIDOS = /[0-9]{13}/;
-const TIENE_LETRA_O_DIGITO = /[A-Za-z0-9]/;
-
-/**
- * El cupón de la decisión 129: la primitiva `cuponDePagoDesdeTexto` (largo, letras sin tilde, dígitos y `. _ / -`, y que no sea un número
- * de tarjeta por Luhn) MÁS tres reglas de la base (`cobro_cupon_ck`) que la primitiva no tiene: sin espacios, no solo separadores, y
- * ningún tramo de 13 dígitos una vez quitados los separadores (`4509-9535-6623-3704`). SUPUESTO (DEC-0065): alinear la primitiva con la base es
- * trabajo aparte (ver informe); acá se componen para que el dominio rechace lo mismo que la base.
- */
-function motivoDelCupon(valor: unknown): MotivoDeDatoInvalido | null {
-  if (typeof valor !== "string") return "FORMA";
-  if (valor.includes(" ") || !TIENE_LETRA_O_DIGITO.test(valor)) return "FORMA";
-  if (TRECE_DIGITOS_SEGUIDOS.test(valor.replace(SEPARADORES_DEL_CUPON, ""))) {
-    return "NUMERO_DE_TARJETA";
-  }
-  return cuponDePagoDesdeTexto(valor).ok ? null : "FORMA";
-}
-
 const VALIDADORES: Readonly<Record<DatoDelCobro, (valor: unknown) => MotivoDeDatoInvalido | null>> =
   {
     cupon: motivoDelCupon,
@@ -87,6 +68,20 @@ const CAMPOS: readonly (readonly [DatoDelCobro, keyof DatosDelCobro])[] = [
 /** Los datos que el cobro trae (la lista que va a la auditoría: nunca los valores, e3 §3.6). */
 export function datosCompletados(datos: DatosDelCobro): readonly DatoDelCobro[] {
   return CAMPOS.filter(([, campo]) => datos[campo] !== undefined).map(([dato]) => dato);
+}
+
+/**
+ * Los datos que el medio pide («se pide») y el cobro dejó vacíos, en el orden fijo de `DATOS_DEL_COBRO`: lo mismo que sella la base al
+ * insertar (`cobro_validar_alta`). «Vacío» = ausente (la frontera convierte el campo vacío en ausente). Se usa para comprobar la paridad con
+ * la base y en pruebas; el valor guardado es el de la base, no este.
+ */
+export function datosPendientesDe(
+  datosQueSePiden: DatosQuePideElMedio,
+  datos: DatosDelCobro,
+): readonly DatoDelCobro[] {
+  return CAMPOS.filter(([dato, campo]) => datosQueSePiden[dato] && datos[campo] == null).map(
+    ([dato]) => dato,
+  );
 }
 
 /**

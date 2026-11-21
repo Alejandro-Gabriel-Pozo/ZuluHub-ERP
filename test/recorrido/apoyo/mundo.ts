@@ -57,19 +57,30 @@ export type MundoDelRecorrido = Readonly<{
   cerrar(): Promise<void>;
 }>;
 
-/** Lo que un recorrido puede pedirle al mundo además de la facturación (sin pedido, el mundo es el de siempre). */
+/**
+ * Lo que un recorrido puede pedirle al mundo además de la facturación (sin pedido, el mundo es el de siempre).
+ * `modulos`: los que el plan incluye y la empresa tiene prendidos (por defecto solo «facturacion», como siempre; el recorrido de Mesas pide también los de salón); `modulosAdicionales`: más módulos
+ * que se suman a esos; `perillas`: las del plan (el salón es un extra de pago, apagado de base).
+ */
 export type OpcionesDelMundo = Readonly<{
-  /** Módulos que la empresa tiene activos por su plan, además de `facturacion`. */
+  modulos?: readonly string[];
+  /** Módulos que la empresa tiene activos por su plan, además de los de `modulos`. */
   modulosAdicionales?: readonly string[];
+  perillas?: Readonly<Record<string, unknown>>;
   /** Los módulos «en desarrollo» se leen como «disponibles» SOLO en el proceso de esta app (`activar-modulos-en-desarrollo.mjs`). */
   activarModulosEnDesarrollo?: boolean;
+  /** El puerto del proveedor de imágenes simulado: SOLO en el proceso de esta app, `res.cloudinary.com` se atiende ahí (`conectar-proveedor-de-imagenes-simulado.mjs`). */
+  proveedorDeImagenes?: number;
 }>;
 
 export async function armarMundoDelRecorrido(
   base: BaseDePruebas,
   opciones: OpcionesDelMundo = {},
 ): Promise<MundoDelRecorrido> {
-  const modulos = ["facturacion", ...(opciones.modulosAdicionales ?? [])];
+  const { perillas = {} } = opciones;
+  const modulos = [
+    ...new Set([...(opciones.modulos ?? ["facturacion"]), ...(opciones.modulosAdicionales ?? [])]),
+  ];
   const mundo = await armarMundoWeb(base);
   const propia = mundo.propia.base;
   await crearVersionDeMarcaConfirmada(mundo.dueno, mundo.marcaA, { nombreVisible: "Zulú Pan" });
@@ -88,6 +99,9 @@ export async function armarMundoDelRecorrido(
     PEDERNAL_SECRETO_INVITACIONES: randomBytes(32).toString("hex"),
     PEDERNAL_CLAVE_CERTIFICADOS: claveDeCertificados,
     CRON_SECRET: randomBytes(24).toString("hex"),
+    ...(opciones.proveedorDeImagenes === undefined
+      ? {}
+      : { PEDERNAL_RECORRIDO_PROVEEDOR_PUERTO: String(opciones.proveedorDeImagenes) }),
   };
 
   // La persona entra de verdad y su empresa factura: datos fiscales confirmados, punto de venta y certificado de homologación.
@@ -121,7 +135,10 @@ export async function armarMundoDelRecorrido(
     condicionIva: "RESPONSABLE_INSCRIPTO",
   };
   await cargarCertificado(propia, e, "HOMOLOGACION");
-  const { version } = await crearPlanPublicado(mundo.dueno, { modulos });
+  const { version } = await crearPlanPublicado(mundo.dueno, {
+    modulos: [...modulos],
+    perillas: { ...perillas },
+  });
   await asignarPlan(mundo.dueno, m.tenant, version);
   for (const modulo of modulos) {
     await mundo.dueno.query("insert into modulo_de_empresa (empresa_id, modulo) values ($1, $2)", [
@@ -167,13 +184,14 @@ export async function armarMundoDelRecorrido(
   }
 
   const arca = await levantarArcaSimulada();
-  const app = await levantarAppReal(
-    entorno,
-    arca.puerto,
-    opciones.activarModulosEnDesarrollo === true
+  const app = await levantarAppReal(entorno, arca.puerto, [
+    ...(opciones.activarModulosEnDesarrollo === true
       ? [join(import.meta.dirname, "activar-modulos-en-desarrollo.mjs")]
-      : [],
-  );
+      : []),
+    ...(opciones.proveedorDeImagenes === undefined
+      ? []
+      : [join(import.meta.dirname, "conectar-proveedor-de-imagenes-simulado.mjs")]),
+  ]);
   const fachada = await levantarFachadaHttps(HOST_DEL_RECORRIDO, app.puerto);
   const cookies = yo.navegador.cookiesDe(HOST_DEL_RECORRIDO).map((c) => ({
     name: c.nombre,

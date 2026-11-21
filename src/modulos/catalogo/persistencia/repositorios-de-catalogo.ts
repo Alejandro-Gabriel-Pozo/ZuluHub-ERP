@@ -11,6 +11,7 @@ import {
   crearRepositorioDeDisponibilidad,
   type RepositorioDeDisponibilidad,
 } from "./repositorio-de-disponibilidad";
+import { crearRepositorioDeFamilias, type RepositorioDeFamilias } from "./repositorio-de-familias";
 import { crearRepositorioDeOpciones, type RepositorioDeOpciones } from "./repositorio-de-opciones";
 import { crearRepositorioDePrecios, type RepositorioDePrecios } from "./repositorio-de-precios";
 import {
@@ -34,6 +35,7 @@ export type RepositoriosDeCatalogo = Readonly<{
   presentacionesDeProducto: RepositorioDePresentaciones;
   cartasPublicas: RepositorioDeCartas;
   disponibilidadDeProductos: RepositorioDeDisponibilidad;
+  familias: RepositorioDeFamilias;
   seccionesDeCarta: RepositorioDeSecciones;
   clasificacion: RepositorioDeClasificacion;
   unidades: RepositorioDeUnidades;
@@ -51,6 +53,7 @@ export function crearRepositoriosDeCatalogo(db: {
     presentacionesDeProducto: crearRepositorioDePresentaciones(conexion),
     cartasPublicas: crearRepositorioDeCartas(conexion),
     disponibilidadDeProductos: crearRepositorioDeDisponibilidad(conexion),
+    familias: crearRepositorioDeFamilias(conexion),
     seccionesDeCarta: crearRepositorioDeSecciones(conexion),
     clasificacion: crearRepositorioDeClasificacion(conexion),
     unidades: crearRepositorioDeUnidades(conexion),

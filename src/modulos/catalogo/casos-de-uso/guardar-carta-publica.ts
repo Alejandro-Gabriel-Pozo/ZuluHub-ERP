@@ -1,3 +1,19 @@
+import {
+  sonPartesValidas,
+  type PartesDeDireccion,
+} from "../../../capacidades/activos/direccion-externa";
+import {
+  esCaraDeVidriera,
+  type CaraDeVidriera,
+} from "../../../capacidades/experiencia/vidriera/caras";
+import {
+  CATALOGO_DE_MODELOS_DE_VIDRIERA,
+  MODELO_DE_RESERVA,
+  esModeloDeVidriera,
+  type ModeloDeVidriera,
+} from "../../../capacidades/experiencia/vidriera/modelos";
+import { CATALOGO_DE_PERILLAS } from "../../../capacidades/planes/perillas";
+import { COLOR_RRGGBB } from "../../../primitivas/color/contraste";
 import { exigirAcciones } from "../../../capacidades/permisos/exigir";
 import type { ClaveAccion } from "../../../capacidades/modulos/catalogo";
 import { exigirPerilla } from "../../../capacidades/planes/derechos";
@@ -32,6 +48,15 @@ export type EntradaDeGuardarCartaPublica = Readonly<{
   /** La tercera línea de la portada (texto libre); vacío = sin mensaje. */
   mensajeDePortada?: string | null;
   estado: EstadoDeCarta;
+  /**
+   * Identidad de la carta (0077). Como el rubro: ausente o vacío es «sin elegir» (`LISTA`, y sin cara, sin color propio y sin logo propio = usa lo de la empresa);
+   * si trae algo tiene que ser de la lista permitida o tener la forma exacta. El color se guarda COMO LO ELIGIÓ la persona (`#rrggbb` en minúsculas): el
+   * ajuste por contraste se calcula al mostrar y no se guarda. El logo llega en PARTES (las que lee `leerDireccionPegada`), nunca como dirección.
+   */
+  modelo?: string | null;
+  cara?: string | null;
+  colorPropio?: string | null;
+  logo?: PartesDeDireccion | null;
   /** Obligatoria para CAMBIAR una carta que ya existe; repetir lo ya guardado no la pide. */
   versionEsperada?: number;
 }>;
@@ -51,7 +76,44 @@ type Datos = Readonly<{
   lugar: string | null;
   mensajeDePortada: string | null;
   estado: EstadoDeCarta;
+  modelo: ModeloDeVidriera;
+  cara: CaraDeVidriera | null;
+  colorPropio: string | null;
+  logo: PartesDeDireccion | null;
 }>;
+
+/** Un texto o una elección opcional: ausente o en blanco es `null`. */
+const enBlanco = (v: unknown): boolean =>
+  v === undefined || v === null || (typeof v === "string" && v.trim() === "");
+
+/** El logo recibido, rearmado con SOLO las cinco partes y validado con la regla única de `direccion-externa.ts`; cualquier otra cosa se rechaza. */
+function logoValido(v: unknown): R<PartesDeDireccion | null> {
+  if (v === undefined || v === null) return ok(null);
+  if (typeof v !== "object") return err("LOGO_DE_CARTA_INVALIDO");
+  const o = v as Record<string, unknown>;
+  const { proveedor, cuenta, idPublico, version, extension } = o;
+  if (
+    typeof proveedor !== "string" ||
+    typeof cuenta !== "string" ||
+    typeof idPublico !== "string" ||
+    typeof version !== "string" ||
+    typeof extension !== "string"
+  )
+    return err("LOGO_DE_CARTA_INVALIDO");
+  const partes = { proveedor, cuenta, idPublico, version, extension };
+  if (partes.proveedor !== "CLOUDINARY" || !sonPartesValidas(partes as PartesDeDireccion))
+    return err("LOGO_DE_CARTA_INVALIDO");
+  return ok({ ...partes, proveedor: "CLOUDINARY" });
+}
+
+const mismoLogo = (a: PartesDeDireccion | null, b: PartesDeDireccion | null): boolean =>
+  a === null || b === null
+    ? a === b
+    : a.proveedor === b.proveedor &&
+      a.cuenta === b.cuenta &&
+      a.idPublico === b.idPublico &&
+      a.version === b.version &&
+      a.extension === b.extension;
 
 /** Un texto opcional: ausente o en blanco es «sin esa línea» (`null`); si trae algo tiene que ser válido. */
 function opcional(
@@ -79,12 +141,26 @@ function validar(entrada: EntradaDeGuardarCartaPublica): R<Datos> {
   if (!mensaje.ok) return mensaje;
   if (entrada.estado !== "EN_LINEA" && entrada.estado !== "FUERA_DE_LINEA")
     return err("ESTADO_DE_CARTA_INVALIDO");
+  const elModelo = enBlanco(entrada.modelo) ? MODELO_DE_RESERVA : entrada.modelo;
+  if (typeof elModelo !== "string" || !esModeloDeVidriera(elModelo))
+    return err("MODELO_DE_CARTA_INVALIDO");
+  const laCara = enBlanco(entrada.cara) ? null : entrada.cara;
+  if (laCara !== null && !esCaraDeVidriera(laCara)) return err("CARA_DE_CARTA_INVALIDA");
+  const elColor = enBlanco(entrada.colorPropio) ? null : entrada.colorPropio;
+  if (elColor !== null && (typeof elColor !== "string" || !COLOR_RRGGBB.test(elColor)))
+    return err("COLOR_DE_CARTA_INVALIDO");
+  const elLogo = logoValido(entrada.logo);
+  if (!elLogo.ok) return elLogo;
   return ok({
     nombre: nombre.valor,
     rubro: rubro.valor,
     lugar: lugar.valor,
     mensajeDePortada: mensaje.valor,
     estado: entrada.estado,
+    modelo: elModelo,
+    cara: laCara,
+    colorPropio: elColor,
+    logo: elLogo.valor,
   });
 }
 
@@ -93,7 +169,11 @@ const igual = (c: CartaPublica, d: Datos): boolean =>
   c.rubro === d.rubro &&
   c.lugar === d.lugar &&
   c.mensajeDePortada === d.mensajeDePortada &&
-  c.estado === d.estado;
+  c.estado === d.estado &&
+  c.modelo === d.modelo &&
+  c.cara === d.cara &&
+  c.colorPropio === d.colorPropio &&
+  mismoLogo(c.logo, d.logo);
 
 const aDato = (c: Datos | CartaPublica) => ({
   nombre: c.nombre,
@@ -101,7 +181,40 @@ const aDato = (c: Datos | CartaPublica) => ({
   lugar: c.lugar,
   mensajeDePortada: c.mensajeDePortada,
   estado: c.estado,
+  modelo: c.modelo,
+  cara: c.cara,
+  colorPropio: c.colorPropio,
+  logo:
+    c.logo === null
+      ? null
+      : {
+          proveedor: c.logo.proveedor,
+          cuenta: c.logo.cuenta,
+          idPublico: c.logo.idPublico,
+          version: c.logo.version,
+          extension: c.logo.extension,
+        },
 });
+
+/**
+ * Elegir un modelo con perilla de plan (LIBRO: `vidriera_modelo_libro`; CUADRICULA: `vidriera_modelo_cuadricula`) la exige AL ELEGIRLO; volver a Lista, o seguir con el que ya tenía, no la pide (una baja
+ * de plan no traba la edición de lo demás; qué modelo se DIBUJA lo decide el lector con `modeloEfectivo`). Si la perilla todavía no está declarada en el catálogo
+ * de perillas, el modelo no se puede elegir (cierra): la declara la rama del Libro y esta rama la usa sin cambios.
+ */
+async function exigirPerillaDelModelo(
+  tx: TxDeCatalogo,
+  contexto: ContextoOperativo,
+  modelo: ModeloDeVidriera,
+): Promise<R<null>> {
+  const { perilla } = CATALOGO_DE_MODELOS_DE_VIDRIERA[modelo];
+  if (perilla === null) return ok(null);
+  if (!Object.hasOwn(CATALOGO_DE_PERILLAS, perilla)) return err("MODELO_DE_CARTA_INVALIDO");
+  return exigirPerilla(
+    await tx.derechos.deLaEmpresa(contexto),
+    perilla as keyof typeof CATALOGO_DE_PERILLAS,
+    { empresaId: contexto.empresaId },
+  );
+}
 
 /**
  * Poner la carta EN LÍNEA exige, en esta transacción y en este orden: que la sucursal exista, esté abierta y sea del alcance de quien pide; la perilla
@@ -161,6 +274,10 @@ export function armarGuardarCartaPublica(dependencias: DependenciasDeCatalogo) {
           if (existente.sucursalId !== sucursal) return err("ID_REUTILIZADO");
           if (igual(existente, datos.valor)) return ok(salida(existente, true));
           if (entrada.versionEsperada !== existente.version) return err("VERSION_DESACTUALIZADA");
+          if (datos.valor.modelo !== existente.modelo) {
+            const perilla = await exigirPerillaDelModelo(tx, contexto, datos.valor.modelo);
+            if (!perilla.ok) return perilla;
+          }
           const cambiaElEstado = existente.estado !== datos.valor.estado;
           if (cambiaElEstado) {
             const exige = await pedir([
@@ -208,6 +325,10 @@ export function armarGuardarCartaPublica(dependencias: DependenciasDeCatalogo) {
         if (!abierta.ok) return abierta;
         if ((await tx.cartasPublicas.deLaSucursal(empresaId, sucursal)) !== null)
           return err("CARTA_DE_LA_SUCURSAL_YA_EXISTE");
+        if (datos.valor.modelo !== MODELO_DE_RESERVA) {
+          const perilla = await exigirPerillaDelModelo(tx, contexto, datos.valor.modelo);
+          if (!perilla.ok) return perilla;
+        }
         if (datos.valor.estado === "EN_LINEA") {
           const puede = await exigirPoderPonerEnLinea(tx, contexto, sucursal);
           if (!puede.ok) return puede;

@@ -3,7 +3,6 @@ import {
   cantidadParaPapel,
   documentoDeAnulacion,
   documentoDeComanda,
-  documentoDeTicket,
   type AvisoParaElPapel,
   type EnvioParaElPapel,
   type RenglonDelPapel,
@@ -302,96 +301,6 @@ describe("el aviso de anulación en el papel", () => {
         { copia: false, ancho: 58 },
       ),
     ).toEqual(no);
-  });
-});
-
-describe("el ticket del cliente en el papel", () => {
-  const ficha = {
-    numero: 12,
-    fecha: "09/11/2026 22:30",
-    lineas: [
-      { cantidad: "2", descripcion: "Milanesa", importe: "3000.00" },
-      {
-        cantidad: "1",
-        descripcion: "Gaseosa de litro y medio sabor pomelo light",
-        importe: "1500.00",
-      },
-    ],
-    total: "4500.00",
-  };
-  it("descripción a la izquierda e importe a la derecha, en los dos anchos", () => {
-    expect(papel(documentoDeTicket(ficha, { ancho: 58 }))).toMatchInlineSnapshot(`
-      [
-        "NEGRITA | Ticket N.º 12",
-        "NORMAL | 09/11/2026 22:30",
-        "SEPARADOR | ",
-        "NORMAL | 2 Milanesa               3000.00",
-        "NORMAL | 1 Gaseosa de litro y medio sabor",
-        "NORMAL | pomelo light",
-        "NORMAL | 1500.00",
-        "SEPARADOR | ",
-        "NEGRITA | Total                    4500.00",
-      ]
-    `);
-    expect(papel(documentoDeTicket(ficha, { ancho: 80 }))).toMatchInlineSnapshot(`
-      [
-        "NEGRITA | Ticket N.º 12",
-        "NORMAL | 09/11/2026 22:30",
-        "SEPARADOR | ",
-        "NORMAL | 2 Milanesa                               3000.00",
-        "NORMAL | 1 Gaseosa de litro y medio sabor pomelo light",
-        "NORMAL | 1500.00",
-        "SEPARADOR | ",
-        "NEGRITA | Total                                    4500.00",
-      ]
-    `);
-  });
-  it("el borde: la descripción llena justo el lugar, y un lugar de una sola columna", () => {
-    const una = (descripcion: string, importe: string) =>
-      papel(
-        documentoDeTicket(
-          {
-            numero: 1,
-            fecha: "f",
-            lineas: [{ cantidad: "1", descripcion, importe }],
-            total: "1.00",
-          },
-          { ancho: 58 },
-        ),
-      ).slice(3, -2);
-    // importe de 6 → lugar = 32 − 6 − 1 = 25; «1 » + 23 = 25: justo
-    expect(una("a".repeat(23), "100.00")).toMatchInlineSnapshot(`
-      [
-        "NORMAL | 1 aaaaaaaaaaaaaaaaaaaaaaa 100.00",
-      ]
-    `);
-    // un carácter más: no entra y se parte en dos renglones
-    expect(una("a".repeat(24), "100.00")).toMatchInlineSnapshot(`
-      [
-        "NORMAL | 1 aaaaaaaaaaaaaaaaaaaaaaaa",
-        "NORMAL | 100.00",
-      ]
-    `);
-    // importe de 30 → lugar = 1: «1 a» no entra y se parte en dos renglones
-    expect(una("a", "9".repeat(30))).toMatchInlineSnapshot(`
-      [
-        "NORMAL | 1 a",
-        "NORMAL | 999999999999999999999999999999",
-      ]
-    `);
-    // importe de 29 → lugar = 2: «1 » (2) entra justo con descripción vacía
-    expect(una("", "9".repeat(29))).toMatchInlineSnapshot(`
-      [
-        "NORMAL | 1  99999999999999999999999999999",
-      ]
-    `);
-    // importe de 31 → lugar = 0: no hay lugar y se parte
-    expect(una("a", "9".repeat(31))).toMatchInlineSnapshot(`
-      [
-        "NORMAL | 1 a",
-        "NORMAL | 9999999999999999999999999999999",
-      ]
-    `);
   });
 });
 

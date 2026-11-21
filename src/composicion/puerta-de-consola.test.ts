@@ -47,8 +47,8 @@ const sesion = (segundoFactorEn: Date | null): SesionAutenticada => ({
 });
 
 /**
- * Los 24 nombres de caso que exigen el segundo factor reciente: los 19 del dueño (planes.asignar sirve a dos casos) y los 4 de las
- * listas del sistema (`listas.editar`, criterio del ingeniero).
+ * Los 26 nombres de caso que exigen el segundo factor reciente: los 19 del dueño (planes.asignar sirve a dos casos) y los 4 de las
+ * listas del sistema (`listas.editar`, criterio del ingeniero) y los 2 de la política de cambio de plan (H-14a).
  */
 const CASOS_QUE_LO_EXIGEN = [
   "activarDominio",
@@ -57,12 +57,14 @@ const CASOS_QUE_LO_EXIGEN = [
   "agregarValorDeLista",
   "ajustarPerilla",
   "altaDeEmpresa",
+  "arrepentirCambioDePlan",
   "asignarPlan",
   "cancelarAlta",
   "confirmarVersionDeMarca",
   "corregirNombreDeValor",
   "desactivarDominio",
   "desactivarModuloDeEmpresa",
+  "definirPoliticaDeCambioDePlan",
   "desactivarValorDeLista",
   "migrarTenantsDeVersion",
   "publicarVersionDePlan",
@@ -163,8 +165,8 @@ describe("lo que la consola ofrece", () => {
     expect(casos).not.toContain("registrarReferenciaDeError");
   });
 
-  it("ofrece las 20 consultas, todas de lectura", () => {
-    expect(consultas).toHaveLength(20);
+  it("ofrece las 22 consultas, todas de lectura", () => {
+    expect(consultas).toHaveLength(22);
     for (const [nombre, accion] of Object.entries(ACCIONES_DE_LA_CONSOLA.consultas)) {
       expect(CATALOGO_DE_PLATAFORMA.plataforma.acciones[accion].efecto, nombre).toBe("LECTURA");
     }
@@ -187,7 +189,7 @@ describe("lo que la consola ofrece", () => {
     expect([...ofrecidas].sort()).toEqual(delCatalogo);
   });
 
-  it("los casos que exigen el segundo factor reciente son los 24 que corresponden a la lista del dueño y a las listas del sistema", () => {
+  it("los casos que exigen el segundo factor reciente son los 26 que corresponden a la lista del dueño, a las listas del sistema y a la política de cambio de plan", () => {
     const quienes = Object.entries(ACCIONES_DE_LA_CONSOLA.casos)
       .filter(([, accion]) => exigeSegundoFactorReciente(accion))
       .map(([nombre]) => nombre)

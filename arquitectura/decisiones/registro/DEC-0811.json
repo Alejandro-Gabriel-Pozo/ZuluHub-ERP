@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0811",
+  "fecha": "2026-11-20",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: la migración 0091 reemplaza el disparador de alta de `movimiento_caja`: se anula un cobro de entrada de dinero y el egreso manual admite cualquier medio (dueño, 19/11).",
+  "que_cambia": "No es aditiva: cambia una función de caja ya aplicada. Revertir: reversión 0091, que restituye el cuerpo de 0027 y falla si ya hay egresos no efectivos o anulaciones de esos cobros.",
+  "donde": "migraciones/0091_movimiento_de_dinero.sql y reversiones/0091_revertir_movimiento_de_dinero.sql; brief PR-M1 AVISOS 3 y 4"
+}

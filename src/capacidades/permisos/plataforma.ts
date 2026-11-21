@@ -52,7 +52,7 @@ type CatalogoDePlataforma = Readonly<
  * declarar no compila). `true`: la acción tiene efecto sobre clientes o es de alto alcance y la puerta de la consola
  * la rechaza con `segundo_factor_reciente_requerido` si el segundo factor de la sesión tiene más de 5 minutos. Lo
  * decide el servidor por acción, nunca la pantalla. Exigen: confirmar versión de marca; publicar versión de plan;
- * asignar plan y migrar tenants de versión (`planes.asignar`); ajustar perilla; alta de empresa; cancelar alta;
+ * asignar plan y migrar tenants de versión (`planes.asignar`); definir la política de cambio de plan y arrepentir un cambio de plan (H-14a); ajustar perilla; alta de empresa; cancelar alta;
  * suspender y reactivar tenant, empresa y persona; agregar, verificar, activar, desactivar y retirar dominio; activar y
  * desactivar módulo de empresa. NO exigen: toda lectura y consulta; guardar borrador de marca y de plan (no tienen
  * efecto hasta confirmar o publicar, y pedir el código en cada guardado volvería inusable la edición); reenviar y
@@ -150,6 +150,13 @@ export const CATALOGO_DE_PLATAFORMA = {
         segundoFactorReciente: true,
       },
       "planes.asignar": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
+      // Política de cambio de plan (H-14a): definirla cambia lo que pueden pedir todos los clientes; arrepentir deshace el último cambio de un cliente.
+      "politica_de_plan.definir": {
+        capacidad: null,
+        efecto: "CREA_AMPLIA",
+        segundoFactorReciente: true,
+      },
+      "planes.arrepentir": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
       "perillas.ajustar": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
       "modulos_de_empresa.activar": {
         capacidad: null,
@@ -226,6 +233,8 @@ export const PERMISOS_DE_PLATAFORMA = {
   "planes.editar_borrador": ["ADMIN"],
   "planes.publicar_version": ["ADMIN"],
   "planes.asignar": ["ADMIN"],
+  "politica_de_plan.definir": ["ADMIN"],
+  "planes.arrepentir": ["ADMIN"],
   "perillas.ajustar": ["ADMIN"],
   "modulos_de_empresa.activar": ["ADMIN"],
   "modulos_de_empresa.desactivar": ["ADMIN"],

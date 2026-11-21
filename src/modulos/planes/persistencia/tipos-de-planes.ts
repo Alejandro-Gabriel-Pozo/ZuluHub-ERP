@@ -6,8 +6,34 @@ import type {
   VersionDePlanId,
 } from "../../../primitivas/identificadores/marca";
 import type { OrigenDeAsignacion } from "../dominio/asignacion";
+import type { PoliticaDeCambioDePlan, SentidoDelCambioDePlan } from "../dominio/politica-de-cambio";
+import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 
 export type EstadoDePlan = "ACTIVO" | "RETIRADO";
+
+/** Una versión de la política de cambio de plan tal como está guardada (solo inserción). */
+export type PoliticaGuardada = PoliticaDeCambioDePlan &
+  Readonly<{ motivo: string; definidaPor: string; creadoEn: Date }>;
+
+export type PoliticaPorEscribir = Omit<PoliticaGuardada, "definidaPor" | "creadoEn">;
+
+/** Con qué política nació un cambio de plan y hasta cuándo se puede arrepentir (`null`: no se puede). */
+export type CondicionesGuardadas = Readonly<{
+  tenantId: TenantId;
+  numero: number;
+  sentido: SentidoDelCambioDePlan;
+  politicaVersion: number;
+  arrepentimientoHasta: FechaCivil | null;
+}>;
+
+export type ArrepentimientoGuardado = Readonly<{
+  tenantId: TenantId;
+  numeroArrepentido: number;
+  numeroNuevo: number;
+  motivo: string;
+  registradoPor: string;
+  creadoEn: Date;
+}>;
 
 export type PlanGuardado = Readonly<{
   id: PlanId;
@@ -232,4 +258,20 @@ export interface RepositorioDePlanes {
   ): Promise<ModuloDeEmpresaGuardado | null>;
   /** Desactiva el módulo solo si la versión coincide. `null`: la fila cambió. */
   desactivarModulo(existente: ModuloDeEmpresaGuardado): Promise<ModuloDeEmpresaGuardado | null>;
+
+  // --- política de cambio de plan (H-14a) ------------------------------------------------------------
+  /** Todas las versiones de la política, por versión ascendente (nunca vacío: la migración carga la 1). */
+  politicasDeCambio(): Promise<readonly PoliticaGuardada[]>;
+  /** Inserta la política (la versión la impone la base: la siguiente). */
+  insertarPoliticaDeCambio(nueva: PoliticaPorEscribir): Promise<PoliticaGuardada>;
+  /** Guarda con qué política nació un cambio de plan. */
+  registrarCondicionesDeCambio(condiciones: CondicionesGuardadas): Promise<void>;
+  /** Las condiciones del cambio, o `null` si es anterior a la política o no es de origen CAMBIO. */
+  condicionesDeCambio(tenant: TenantId, numero: number): Promise<CondicionesGuardadas | null>;
+  /** El arrepentimiento de ese cambio, o `null` si no se arrepintió. */
+  arrepentimientoDe(tenant: TenantId, numero: number): Promise<ArrepentimientoGuardado | null>;
+  /** Guarda el arrepentimiento (quién lo registra lo pone la base desde el actor firmado). */
+  registrarArrepentimiento(
+    arrepentimiento: Omit<ArrepentimientoGuardado, "registradoPor" | "creadoEn">,
+  ): Promise<void>;
 }

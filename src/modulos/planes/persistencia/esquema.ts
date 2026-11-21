@@ -112,6 +112,27 @@ export const ERRORES_DE_PLANES_POR_RESTRICCION = {
   version_de_plan_inmutable: "NO_TRADUCIDA", // lo lanza un disparador
   version_de_plan_publicada_inmutable: "NO_TRADUCIDA", // lo lanza un disparador
   version_de_plan_numero_invalido: "NO_TRADUCIDA", // lo lanza un disparador
+  // Las carreras (dos versiones iguales, dos arrepentimientos del mismo cambio) las resuelve el reintento de la plantilla: la segunda pasada ve al ganador y decide con el dominio.
+  politica_de_cambio_de_plan_pkey: "NO_TRADUCIDA",
+  politica_de_cambio_de_plan_version_invalida: "NO_TRADUCIDA", // lo lanza un disparador
+  politica_de_cambio_de_plan_version_ck: "NO_TRADUCIDA",
+  politica_de_cambio_de_plan_suba_ck: "NO_TRADUCIDA",
+  politica_de_cambio_de_plan_baja_ck: "NO_TRADUCIDA",
+  politica_de_cambio_de_plan_arrepentimiento_ck: "NO_TRADUCIDA",
+  politica_de_cambio_de_plan_motivo_ck: "NO_TRADUCIDA",
+  politica_de_cambio_de_plan_definida_por_ck: "NO_TRADUCIDA",
+  condiciones_de_cambio_de_plan_pkey: "NO_TRADUCIDA",
+  condiciones_de_cambio_de_plan_sentido_ck: "NO_TRADUCIDA",
+  condiciones_de_cambio_de_plan_politica_fkey: "NO_TRADUCIDA",
+  condiciones_de_cambio_de_plan_cambio_fkey: "NO_TRADUCIDA",
+  cambio_de_plan_origen_invalido: "NO_TRADUCIDA", // lo lanza un disparador
+  arrepentimiento_de_plan_pkey: "NO_TRADUCIDA",
+  arrepentimiento_de_plan_nuevo_uk: "NO_TRADUCIDA",
+  arrepentimiento_de_plan_motivo_ck: "NO_TRADUCIDA",
+  arrepentimiento_de_plan_registrado_por_ck: "NO_TRADUCIDA",
+  arrepentimiento_de_plan_orden_ck: "NO_TRADUCIDA",
+  arrepentimiento_de_plan_arrepentido_fkey: "NO_TRADUCIDA",
+  arrepentimiento_de_plan_nuevo_fkey: "NO_TRADUCIDA",
   plan_de_tenant_pkey: "NO_TRADUCIDA",
   plan_de_tenant_tenant_id_fkey: "TENANT_NO_ENCONTRADO",
   plan_de_tenant_version_de_plan_id_fkey: "NO_TRADUCIDA",
@@ -153,6 +174,8 @@ export const RESTRICCIONES_DE_DISPARADORES_DE_PLANES = [
   "plan_de_tenant_version_no_publicada",
   "ajuste_de_perilla_empresa_de_otro_tenant",
   "ajuste_de_perilla_numero_invalido",
+  "politica_de_cambio_de_plan_version_invalida",
+  "cambio_de_plan_origen_invalido",
 ] as const satisfies readonly (keyof typeof ERRORES_DE_PLANES_POR_RESTRICCION)[];
 
 type Mapa = typeof ERRORES_DE_PLANES_POR_RESTRICCION;

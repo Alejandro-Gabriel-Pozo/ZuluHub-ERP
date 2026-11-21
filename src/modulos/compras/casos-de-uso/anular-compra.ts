@@ -19,6 +19,7 @@ import {
   origenDeLaEntradaDeStock,
 } from "../dominio/registrar-compra";
 import { autorizar, exigirAlcanceDeSucursal, traducir } from "./comun";
+import { rehacerOfertasDeLaCompraAnulada } from "./oferta-del-proveedor";
 import type { DependenciasDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
 
@@ -219,6 +220,15 @@ export function armarAnularCompra(dependencias: DependenciasDeCompras) {
             motivo: motivo.valor,
           });
           if (!hecho) throw new Error("la recepción ya no estaba confirmada bajo bloqueo");
+          // Lo que el proveedor cobró (la oferta) vuelve a lo de la última compra vigente, o queda no vigente si no hay otra (D11b, 0058).
+          const ofertas = await rehacerOfertasDeLaCompraAnulada(
+            tx,
+            contexto,
+            dependencias,
+            { id: recepcion.id, proveedorId: recepcion.proveedorId },
+            lineas,
+          );
+          if (!ofertas.ok) return ofertas;
           await tx.auditoria.registrar({
             empresaId,
             actorPersonaId: persona,
@@ -226,7 +236,12 @@ export function armarAnularCompra(dependencias: DependenciasDeCompras) {
             entidad: "recepcion",
             entidadId: recepcion.id,
             antes: { estado: "CONFIRMADA" },
-            despues: { estado: "ANULADA", motivo: motivo.valor },
+            despues: {
+              estado: "ANULADA",
+              motivo: motivo.valor,
+              ofertasRehechas: ofertas.valor.rehechas,
+              ofertasNoVigentes: ofertas.valor.noVigentes,
+            },
           });
           return ok({ anulada: true });
         },

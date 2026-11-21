@@ -20,12 +20,19 @@ export const DECLARACIONES_DE_CONSULTAS = {
   listarConteos: { accion: "stock.ver" },
   // La receta es de la empresa, no de una sucursal: la ve quien puede mirar stock (E5-T7).
   composicionDeProducto: { accion: "stock.ver" },
+  // El tilde «Se controla el stock» de la ficha del producto: si tiene un artículo de stock activo.
+  controlDeStockDelProducto: { accion: "stock.ver" },
   // E6: la ficha, la comparación, las versiones y la ficha de cocina. Los costos de la ficha y de la comparación viajan solo con `costos.ver`:
   // lo decide la consulta con el rol de la misma transacción, no la pantalla.
   fichaDeReceta: { accion: "stock.ver" },
   compararVersiones: { accion: "stock.ver" },
   versionesDeReceta: { accion: "stock.ver" },
   fichaDeCocina: { accion: "stock.ver" },
+  // La pantalla de Recetas (B1 a B4): la lista, una receta con su última versión, los ingredientes que se ofrecen y la vista previa de lo que se arma. Los costos viajan solo con `costos.ver`.
+  listarRecetas: { accion: "stock.ver" },
+  recetaDeProducto: { accion: "stock.ver" },
+  ingredientesParaReceta: { accion: "stock.ver" },
+  vistaPreviaDeReceta: { accion: "stock.ver" },
   // E6-T7: lotes, lo que vence y la trazabilidad. Mirar es de los tres roles; el importe de lo vencido viaja solo con `costos.ver`.
   lotesDeArticulo: { accion: "lotes.ver" },
   vencimientosProximos: { accion: "lotes.ver" },

@@ -1,4 +1,5 @@
 import {
+  ORIGEN_DEVOLUCION_A_PROVEEDOR,
   ORIGEN_EJEMPLAR_DE_TICKET,
   ORIGEN_TRANSFORMACION,
   type ClaseDeMovimiento,
@@ -51,11 +52,14 @@ export const MOTIVOS_DE_MOVIMIENTO: readonly MotivoSembrado[] = [
   // E6 (0032): la producción en lote. Solo los escribe la orden de producción (origen `TRANSFORMACION`), nunca una persona.
   motivo("ENTRADA", "PRODUCTO_DE_TRANSFORMACION", { entraConCosto: true }),
   motivo("SALIDA", "CONSUMO_DE_TRANSFORMACION", { entregaMercaderia: true }),
+  // E9 N4 (0084): la devolución de mercadería al proveedor. Solo la escribe el puerto de compras (origen `DEVOLUCION_A_PROVEEDOR`), nunca una persona; no entrega mercadería a un uso.
+  motivo("SALIDA", "DEVOLUCION_A_PROVEEDOR"),
 ];
 
 export const MOTIVO_DE_VENTA = "VENTA";
 export const MOTIVO_PRODUCTO_DE_TRANSFORMACION = "PRODUCTO_DE_TRANSFORMACION";
 export const MOTIVO_CONSUMO_DE_TRANSFORMACION = "CONSUMO_DE_TRANSFORMACION";
+export const MOTIVO_DE_DEVOLUCION_A_PROVEEDOR = "DEVOLUCION_A_PROVEEDOR";
 
 const esMotivoDeTransformacion = (codigo: string): boolean =>
   codigo === MOTIVO_PRODUCTO_DE_TRANSFORMACION || codigo === MOTIVO_CONSUMO_DE_TRANSFORMACION;
@@ -65,14 +69,15 @@ export const buscarMotivo = (clase: string, codigo: string): MotivoSembrado | nu
   MOTIVOS_DE_MOVIMIENTO.find((m) => m.clase === clase && m.codigo === codigo) ?? null;
 
 /**
- * ¿Lo puede elegir una persona en `registrarEntrada` o `registrarSalida`? Solo entradas y salidas sembradas, y `VENTA` no: la salida
- * por venta entra únicamente por el puerto de ventas (E5 §3.2). Lista de permitidos: lo que no está sembrado no pasa.
+ * ¿Lo puede elegir una persona en `registrarEntrada` o `registrarSalida`? Solo entradas y salidas sembradas, y `VENTA`, la producción y
+ * `DEVOLUCION_A_PROVEEDOR` no: entran únicamente por sus puertos (E5 §3.2, E9 N4). Lista de permitidos: lo que no está sembrado no pasa.
  */
 export function motivoManualPermitido(clase: ClaseDeMovimiento, codigo: string): boolean {
   if (clase !== "ENTRADA" && clase !== "SALIDA") return false;
   return (
     buscarMotivo(clase, codigo) !== null &&
     codigo !== MOTIVO_DE_VENTA &&
+    codigo !== MOTIVO_DE_DEVOLUCION_A_PROVEEDOR &&
     !esMotivoDeTransformacion(codigo)
   );
 }
@@ -94,4 +99,7 @@ export const origenCoherenteConElMotivo = (
     (clase === "SALIDA" && origenTipo === ORIGEN_EJEMPLAR_DE_TICKET) &&
   // E6: los motivos de la producción van con el origen de la orden, y ese origen solo con ellos (una anulación puede llevarlo).
   esMotivoDeTransformacion(codigo) ===
-    ((clase === "ENTRADA" || clase === "SALIDA") && origenTipo === ORIGEN_TRANSFORMACION);
+    ((clase === "ENTRADA" || clase === "SALIDA") && origenTipo === ORIGEN_TRANSFORMACION) &&
+  // E9 N4: la salida por devolución va con el origen de la devolución y ese origen solo con ella (una anulación puede llevarlo).
+  (codigo === MOTIVO_DE_DEVOLUCION_A_PROVEEDOR) ===
+    ((clase === "ENTRADA" || clase === "SALIDA") && origenTipo === ORIGEN_DEVOLUCION_A_PROVEEDOR);

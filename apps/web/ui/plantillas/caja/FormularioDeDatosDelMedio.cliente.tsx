@@ -47,7 +47,7 @@ export function FormularioDeDatosDelMedio({
             nombre="datos"
             valor={c.dato}
             marcada={marcados.has(c.dato)}
-            deshabilitada={!puedeGuardar}
+            apagada={!puedeGuardar}
             alCambiar={(marcada) => {
               setMarcados((previo) => {
                 const siguiente = new Set(previo);

@@ -9,7 +9,7 @@ import {
 import { decidirRoles, rolesPedidos, type RolDeParte } from "../dominio/roles";
 import { esUuid } from "../persistencia/filas";
 import { autorizar, traducir } from "./comun";
-import type { DependenciasDeClientes } from "./contrato";
+import type { DependenciasDeClientes, TxDeClientes } from "./contrato";
 import type { ErrorDeClientes } from "./errores";
 
 type R<S> = Resultado<S, ErrorDeClientes>;
@@ -26,6 +26,45 @@ export type SalidaDeCambiarRolesDeParte = Readonly<{
 }>;
 
 /**
+ * Cambiar los roles de una parte DENTRO de la transacción que ya abrió quien llama (el caso de uso `cambiarRolesDeParte` y `editarParteConRoles`). NO autoriza: quien llama ya pidió
+ * la acción al guard. La parte se bloquea (`FOR UPDATE`); si ya estaba bloqueada en la misma transacción, el bloqueo se mantiene.
+ */
+export async function cambiarRolesDentro(
+  tx: TxDeClientes,
+  contexto: ContextoOperativo,
+  entrada: EntradaDeCambiarRolesDeParte,
+): Promise<R<SalidaDeCambiarRolesDeParte>> {
+  const { empresaId } = contexto;
+  const pedidos = rolesPedidos(entrada.roles);
+  if (pedidos === null) return err("ROL_DE_PARTE_INVALIDO");
+  const parte = await tx.partes.bloquear(empresaId, entrada.parteId);
+  if (parte === null) return err("PARTE_NO_ENCONTRADA");
+  const cambio = decidirRoles(await tx.partes.rolesDe(empresaId, [parte.id]), pedidos);
+  for (const rol of cambio.agregados) await tx.partes.insertarRol(empresaId, parte.id, rol);
+  for (const rol of cambio.reactivados) {
+    await tx.partes.cambiarActivoDeRol(empresaId, parte.id, rol, true);
+  }
+  for (const rol of cambio.quitados) {
+    await tx.partes.cambiarActivoDeRol(empresaId, parte.id, rol, false);
+  }
+  if (cambio.agregados.length + cambio.reactivados.length + cambio.quitados.length > 0) {
+    await tx.auditoria.registrar({
+      empresaId,
+      actorPersonaId: contexto.personaId,
+      accion: "PARTE_ROLES_CAMBIADOS",
+      entidad: "parte",
+      entidadId: parte.id,
+      despues: {
+        agregados: [...cambio.agregados],
+        reactivados: [...cambio.reactivados],
+        quitados: [...cambio.quitados],
+      },
+    });
+  }
+  return ok(cambio);
+}
+
+/**
  * Cambiar los roles de una parte (E9 §3.1): se pide el conjunto FINAL de roles activos. Guard `partes.cambiar_roles`; la parte se bloquea. Los roles no se
  * borran: se apagan y se reactivan. Repetición (`SIN_CAMBIOS`): pedir lo que ya está da las tres listas vacías sin escribir ni auditar.
  */
@@ -34,7 +73,6 @@ export function armarCambiarRolesDeParte(dependencias: DependenciasDeClientes) {
     contexto: ContextoOperativo,
     entrada: EntradaDeCambiarRolesDeParte,
   ): Promise<R<SalidaDeCambiarRolesDeParte>> {
-    const { empresaId } = contexto;
     const resultado = await dependencias.transacciones.ejecutar(
       { contexto },
       async (tx): Promise<R<SalidaDeCambiarRolesDeParte>> => {
@@ -42,33 +80,7 @@ export function armarCambiarRolesDeParte(dependencias: DependenciasDeClientes) {
           "partes.cambiar_roles",
         ]);
         if (!permiso.ok) return permiso;
-        const pedidos = rolesPedidos(entrada.roles);
-        if (pedidos === null) return err("ROL_DE_PARTE_INVALIDO");
-        const parte = await tx.partes.bloquear(empresaId, entrada.parteId);
-        if (parte === null) return err("PARTE_NO_ENCONTRADA");
-        const cambio = decidirRoles(await tx.partes.rolesDe(empresaId, [parte.id]), pedidos);
-        for (const rol of cambio.agregados) await tx.partes.insertarRol(empresaId, parte.id, rol);
-        for (const rol of cambio.reactivados) {
-          await tx.partes.cambiarActivoDeRol(empresaId, parte.id, rol, true);
-        }
-        for (const rol of cambio.quitados) {
-          await tx.partes.cambiarActivoDeRol(empresaId, parte.id, rol, false);
-        }
-        if (cambio.agregados.length + cambio.reactivados.length + cambio.quitados.length > 0) {
-          await tx.auditoria.registrar({
-            empresaId,
-            actorPersonaId: contexto.personaId,
-            accion: "PARTE_ROLES_CAMBIADOS",
-            entidad: "parte",
-            entidadId: parte.id,
-            despues: {
-              agregados: [...cambio.agregados],
-              reactivados: [...cambio.reactivados],
-              quitados: [...cambio.quitados],
-            },
-          });
-        }
-        return ok(cambio);
+        return cambiarRolesDentro(tx, contexto, entrada);
       },
     );
     return traducir(resultado);

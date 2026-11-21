@@ -36,11 +36,11 @@ export const PLAZO_POR_DEFECTO_EN_MS = 15_000;
 export const INTENTOS_DE_LECTURA = 3;
 const ESPERA_ENTRE_LECTURAS_EN_MS = 500;
 
-const RUTAS = {
-  listar: `/v10/projects/${PROYECTO_DE_VERCEL}/env`,
-  crear: `/v10/projects/${PROYECTO_DE_VERCEL}/env`,
-  variable: (id: string) => `/v9/projects/${PROYECTO_DE_VERCEL}/env/${encodeURIComponent(id)}`,
-};
+const rutasDe = (proyecto: string) => ({
+  listar: `/v10/projects/${proyecto}/env`,
+  crear: `/v10/projects/${proyecto}/env`,
+  variable: (id: string) => `/v9/projects/${proyecto}/env/${encodeURIComponent(id)}`,
+});
 
 export type FallaDeVercel = Readonly<{
   /** Ya limpio: se puede mostrar. */
@@ -68,6 +68,8 @@ export type OpcionesDeEscritura = Readonly<{ pisar: boolean }>;
 export type OpcionesDelCliente = Readonly<{
   token: string;
   fetch: typeof fetch;
+  /** El proyecto de Vercel (`prj_…`). Por defecto, `pedernal-erp` (la web); la consola de plataforma pasa el suyo. */
+  proyecto?: string;
   /** Tiempo límite de cada pedido. */
   plazoEnMs?: number;
   /** Se inyecta en las pruebas para no esperar de verdad entre reintentos. */
@@ -97,6 +99,7 @@ function pistaDe(estado: number): string {
 
 export function crearClienteVercel(opciones: OpcionesDelCliente): ClienteDeVariables {
   const { token } = opciones;
+  const RUTAS = rutasDe(opciones.proyecto ?? PROYECTO_DE_VERCEL);
   const plazo = opciones.plazoEnMs ?? PLAZO_POR_DEFECTO_EN_MS;
   const esperar =
     opciones.esperar ?? ((ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms)));

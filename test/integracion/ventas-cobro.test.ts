@@ -826,6 +826,43 @@ describe.skipIf(base === null)("ventas: cobrar y venderYCobrar", () => {
     ).toEqual({ error: "COBRO_NO_CUADRA", sobra: "10.00" });
   });
 
+  it("PR-6 CONCURRENCIA: dos confirmaciones a la vez de la misma venta a $ 0 (misma clave) dejan UN ticket y la segunda ve el mismo número; la cortesía se puede anular", async () => {
+    const e = await m.escenario();
+    const caja = await m.cajaAbierta(e);
+    const gratis = await m.productoVendible(e.empresa, "0");
+    const p = {
+      ...pedido(e, caja, {
+        lineas: [{ lineaId: nuevoId(), productoId: gratis, opcionIds: [], cantidad: "1" }],
+        totalEsperado: monto("0.00"),
+        cobro: { cajaId: caja.cajaId, cobros: [] },
+      }),
+      confirmaciones: ["VENTA_A_CERO"],
+    };
+    const [a, b] = await Promise.all([
+      m.casos.venderYCobrar(e.gerente, p),
+      m.casos.venderYCobrar(e.gerente, p),
+    ]);
+    const va = valorDe(a);
+    const vb = valorDe(b);
+    expect(vb.ticketId).toBe(va.ticketId);
+    expect(vb.numero).toBe(va.numero);
+    expect([va.yaExistia, vb.yaExistia].sort()).toEqual([false, true]);
+    expect(await contar("ticket", e.empresa)).toBe(1);
+    expect(await contar("cobro", e.empresa)).toBe(0);
+    // Anular la cortesía desde el resultado (el botón «Anular» de la maqueta).
+    expect(
+      valorDe(
+        await m.casos.anularTicket(e.gerente, {
+          claveIdempotencia: nuevaClave(),
+          ticketId: va.ticketId,
+          ejemplarBaseId: va.ejemplarId,
+          ejemplarNuevoId: nuevoId(),
+          motivo: "Error de carga",
+        }),
+      ),
+    ).toMatchObject({ estado: "ANULADO" });
+  });
+
   // ---- la fecha de negocio por sesión (P17) ---------------------------------------------------------------------------------------
 
   it("P17: con la caja abierta pasada la hora de corte, venderYCobrar toma la jornada de la SESIÓN y cerrarCuenta sin cobro la del reloj", async () => {

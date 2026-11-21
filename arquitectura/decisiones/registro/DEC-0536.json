@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0536",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Nombre accesible «Categoría de» más el nombre del padre para los niveles 2 a 4 repetidos de la clasificación comercial: solo lector de pantalla, no se ve.",
+  "que_cambia": "Qué lee un lector de pantalla en cada selector y fila de Categoría de la ficha del producto. Revertir: quitar la clave catalogo.clasificacion.categoria_de y los aria-label.",
+  "donde": "catalogo-catalogo.ts; delegación del dueño, DDD filas 173 y 174; supuesto S14 de clasificacion.html; aprobado por el orquestador el 16/11/2026"
+}

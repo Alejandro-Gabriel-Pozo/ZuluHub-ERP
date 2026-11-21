@@ -5,18 +5,26 @@ on:
     branches: [main]
   pull_request:
   schedule:
-    # Corrida completa de toda la mutación cada noche (06:17 UTC): en los pull requests solo corren
-    # los grupos que el cambio alcanza (ver `mutacion-plan`), y esto es la red que lo respalda.
+    # Corrida completa de toda la mutación y de la integración repetida cada noche (06:17 UTC): en los pull requests solo corren
+    # los grupos que el cambio alcanza (ver `mutacion-plan`) y en push a `main` no corren (ver abajo); esta es la red que lo respalda.
     - cron: "17 6 * * *"
+  # La misma corrida completa a pedido (Actions → CI → Run workflow), por si hay que verla antes de la noche.
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 # Un pull request cancela su corrida anterior cuando recibe un push nuevo, y un push a `main` cancela la corrida
-# anterior de `main` (la última es la que cuenta; sin esto, cada merge dejaba una corrida completa de ~475 min de
-# máquina en cola aunque ya hubiera otra más nueva). La corrida nocturna (`schedule`) NUNCA se cancela y tampoco
+# anterior de `main` (la última es la que cuenta). La corrida nocturna (`schedule`) NUNCA se cancela y tampoco
 # cancela a nadie: su grupo es propio (por SHA) y su `cancel-in-progress` es falso. La prueba
 # `test/arquitectura/gate-coincide-con-ci.test.ts` fija esta política.
+#
+# Un push a `main` corre solo lo rápido (estático, guardián, pruebas con Postgres, seguridad, flujos, web, componentes, recorrido): la mutación
+# y Estabilidad (12 copias de la integración) ya corrieron sobre el mismo cambio en su pull request y corren completas cada noche y a pedido.
+# Previene: ~795 min de máquina por cada merge a `main` (28 % del consumo medido el 13-16/11/2026) repitiendo lo que el PR ya había
+# verificado, con la cola de los PR esperando detrás. Lo que se pierde: ver un choque de mutación o una falla intermitente entre dos PR paralelos
+# al minuto del merge (queda a ≤ 24 h, en la nocturna); lo que NO se pierde: las pruebas, el estático y el recorrido sí corren en cada push.
+# El Gate acepta saltados `mutacion-plan`, `mutacion` y `estabilidad` solo en `push` (ver `arquitectura/evaluar-gate.cjs`).
 concurrency:
   group: ci-${{ github.event_name }}-${{ github.event_name == 'schedule' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name != 'schedule' }}
@@ -111,8 +119,14 @@ jobs:
   pruebas:
     name: Pruebas (con Postgres real)
     runs-on: ubuntu-latest
-    # 25 y no 15: la suite de integración pasó de ~13 a más de 15 min con E4, E1 y E5 (ver #253 y #255); el tope de 15 canceló el job.
-    timeout-minutes: 25
+    # Tres fragmentos de la suite en paralelo (`vitest` con `shard`, por archivo; cada uno con su propio Postgres): con un solo job la suite (17-20 min, p90 de 19-22) se cancelaba por timeout al borde del límite
+    # (run 43989591478 del 17/11/2026: tres intentos de 20 min 16 s, 20 min 5 s y 19 min 27 s) y dejaba el PR «unstable». Por fragmento se esperan ~7 min con el arranque (la suite se reparte casi pareja: ver `pruebas-en-shards.test.ts`); el tope de 20 es casi 3 veces eso.
+    # Chequeo: `gate-coincide-con-ci.test.ts` fija la matriz y el comando; `pruebas-en-shards.test.ts` comprueba con vitest de verdad que los fragmentos cubren cada archivo una sola vez.
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     services:
       postgres:
         # Misma versión mayor que Neon. Sin contraseña: es una base descartable del CI.
@@ -147,6 +161,9 @@ jobs:
             -c "ALTER SYSTEM SET log_min_error_statement = 'panic'" \
             -c "SELECT pg_reload_conf()"
       - run: npm test
+        env:
+          # El fragmento de este job (`i/n`): lo lee `vitest.config.ts` (`arquitectura/fragmento-de-pruebas.cjs`) y corre solo sus archivos; el total sale del tamaño de la matriz.
+          PEDERNAL_FRAGMENTO: ${{ matrix.shard }}/${{ strategy.job-total }}
 
   seguridad:
     name: Seguridad (dependencias y secretos)
@@ -163,7 +180,9 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm audit --audit-level=high
+      - name: Auditoría de dependencias (altos y críticos, con excepciones que vencen)
+        # Reemplaza a `npm audit --audit-level=high`: igual de estricta, pero admite excepciones con id, motivo, fuente y vencimiento (`arquitectura/auditoria-excepciones.json`).
+        run: node arquitectura/auditoria-de-dependencias.cjs
       - name: Firmas de los paquetes
         run: npm audit signatures
       - name: Secretos en el historial (gitleaks)
@@ -201,21 +220,22 @@ jobs:
           deny-licenses: AGPL-3.0-only, AGPL-3.0-or-later, GPL-3.0-only, GPL-3.0-or-later
 
   estabilidad:
-    # Repite la integración en paralelo (12 copias) para detectar fallas intermitentes. En push a main y en la
-    # corrida nocturna corre SIEMPRE; en un pull request, solo si el cambio toca pruebas de integración, persistencia,
-    # migraciones, las reglas SQL o workflows, o algo que no se puede explicar (decisión del dueño, 2026-11-07; lo decide
-    # `mutacion-plan` en la salida `estabilidad`, ver `planificarEstabilidad`). Saltearlo por esa salida es válido solo en
-    # un pull request y lo verifica `arquitectura/evaluar-gate.cjs`.
+    # Repite la integración en paralelo para detectar fallas intermitentes: 12 copias en la corrida nocturna y a pedido (corre SIEMPRE), 3 en un pull
+    # request (decisión del dueño, 16/11/2026, que reemplaza las 12 del 2026-11-07; ahorra ~140 min de máquina por pull request que la dispara). En push a `main`
+    # nunca (corrió en su pull request). En un pull request, solo si el cambio toca pruebas de integración, persistencia,
+    # migraciones, las reglas SQL o workflows, o algo que no se puede explicar (lo decide `mutacion-plan` en la salida `estabilidad`, ver
+    # `planificarEstabilidad`). Saltearlo por esa salida es válido solo en un pull request y lo verifica `arquitectura/evaluar-gate.cjs`.
     name: Estabilidad (integración, copia ${{ matrix.corrida }})
     needs: mutacion-plan
-    if: github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true'
+    if: github.event_name != 'push' && (github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true')
     runs-on: ubuntu-latest
     # 25 y no 15: la suite de integración pasó de ~13 a más de 15 min con E4, E1 y E5 (ver #253 y #255); el tope de 15 canceló el job.
     timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
-        corrida: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        # El número de copias por evento está fijado en `test/arquitectura/gate-coincide-con-ci.test.ts` (`COPIAS_DE_ESTABILIDAD`).
+        corrida: ${{ fromJSON(github.event_name == 'pull_request' && '[1, 2, 3]' || '[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]') }}
     services:
       postgres:
         image: postgres:18
@@ -253,14 +273,16 @@ jobs:
   mutacion-plan:
     # Decide qué grupos de mutación corren (y, con el mismo grafo, si Estabilidad se repite). En pull
     # requests solo los que alcanza el cambio (grafo de importaciones, ver arquitectura/planificar-mutacion.cjs);
-    # en push a main y en la corrida nocturna, todos completos. Si este job falla, el Gate falla: nunca se
-    # saltea por error.
+    # en la corrida nocturna y a pedido, todos completos. En push a `main` no corre (ni la mutación ni Estabilidad: ver el
+    # comentario de `concurrency`). Si este job falla, el Gate falla: nunca se saltea por error.
     name: Mutación (plan)
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
       hay: ${{ steps.plan.outputs.hay }}
       grupos: ${{ steps.plan.outputs.grupos }}
+      paquetes: ${{ steps.paquetes.outputs.paquetes }}
       estabilidad: ${{ steps.plan.outputs.estabilidad }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -275,11 +297,18 @@ jobs:
       - run: npm ci
       - id: plan
         run: node arquitectura/planificar-mutacion.cjs
+      # Agrupa los grupos chicos en el mismo job (cada job paga ~1 min de arranque); no cambia qué se muta. Ver `arquitectura/empaquetar-mutacion.cjs`.
+      - id: paquetes
+        run: node arquitectura/empaquetar-mutacion.cjs
+        env:
+          # Cada paso tiene su propio $GITHUB_OUTPUT: lo que eligió el plan llega por el contexto `steps`, no leyendo el archivo del otro paso.
+          GRUPOS_DEL_PLAN: ${{ steps.plan.outputs.grupos }}
 
   mutacion:
-    # En paralelo por grupos de archivos (arquitectura/mutacion/, un archivo por grupo): el tiempo total es
-    # el del grupo más lento. Cada grupo exige 100 % (thresholds.break en stryker.config.mjs).
-    name: Mutación (${{ matrix.grupo }})
+    # En paralelo por PAQUETES de grupos (arquitectura/mutacion/, un archivo por grupo; los chicos comparten job, ver `empaquetar-mutacion.cjs`):
+    # el tiempo total es el del grupo más lento, que va solo. Cada grupo exige 100 % (thresholds.break en stryker.config.mjs) y se nombra
+    # en el log, en el resumen y en su error (`correr-paquete-de-mutacion.cjs`); si uno falla, los demás igual corren.
+    name: Mutación (${{ matrix.etiqueta }})
     needs: mutacion-plan
     if: needs.mutacion-plan.outputs.hay == 'true'
     runs-on: ubuntu-latest
@@ -287,7 +316,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.mutacion-plan.outputs.grupos) }}
+        include: ${{ fromJSON(needs.mutacion-plan.outputs.paquetes) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -297,13 +326,11 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx stryker run --mutate "$ARCHIVOS,!src/**/*.test.ts"
+      - run: node arquitectura/correr-paquete-de-mutacion.cjs
         env:
           FC_SEMILLA: "20261011"
-          # Filtro de archivos de prueba que corre cada mutante (vacío = toda la suite unitaria). Los
-          # grupos grandes lo acotan a las pruebas de su módulo para entrar en el tiempo del job.
-          PEDERNAL_FILTRO_PRUEBAS: ${{ matrix.pruebas }}
-          ARCHIVOS: ${{ matrix.archivos }}
+          # Los grupos de este paquete (nombre, archivos a mutar y filtro de pruebas de cada uno); el script los valida y corre Stryker por cada uno.
+          GRUPOS_DEL_PAQUETE: ${{ toJSON(matrix.grupos) }}
 
   gate:
     name: Gate
@@ -329,14 +356,33 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # La cabeza actual de la rama o del PR: si ya avanzó, esta corrida fue reemplazada (cancelada por `concurrency`) y su Gate no es un resultado de
+      # este commit. `ls-remote` de un repositorio público no necesita credenciales; si falla, queda vacío y el Gate evalúa normal (rojo ante la duda).
+      - name: Cabeza actual de la rama
+        id: cabeza
+        run: |
+          case "$GITHUB_EVENT_NAME" in
+            pull_request) ref="${GITHUB_REF%/merge}/head" ;;
+            push) ref="$GITHUB_REF" ;;
+            *) ref="" ;;
+          esac
+          actual=""
+          if [ -n "$ref" ]; then
+            actual="$(git ls-remote origin "$ref" 2>/dev/null | cut -f1 || true)"
+          fi
+          echo "actual=${actual}" >> "$GITHUB_OUTPUT"
       # «Saltado por filtro» (la mutación sin grupos que correr) es correcto; «fallido» o «cancelado»
       # no. La lógica y sus casos están en arquitectura/evaluar-gate.cjs y su prueba.
       - name: Todos los jobs en verde
         run: node arquitectura/evaluar-gate.cjs
         env:
           NEEDS: ${{ toJSON(needs) }}
-          # Estabilidad saltada por el plan solo vale en un pull request; en push a main y en la nocturna no.
+          # Estabilidad saltada por el plan solo vale en un pull request; en push a main se aceptan saltados el plan, la mutación y Estabilidad (y solo
+          # ahí); en la nocturna y a pedido, ninguno.
           EVENTO: ${{ github.event_name }}
+          # Con la cabeza actual y la de esta corrida, el Gate distingue «reemplazada por un push nuevo» de una falla real.
+          CABEZA_ACTUAL: ${{ steps.cabeza.outputs.actual }}
+          CABEZA_DE_ESTA_CORRIDA: ${{ github.event.pull_request.head.sha || github.sha }}
 
   web:
     # P-12: la web y la consola de plataforma compilan sin ningún secreto. Las variables viven en Vercel y se

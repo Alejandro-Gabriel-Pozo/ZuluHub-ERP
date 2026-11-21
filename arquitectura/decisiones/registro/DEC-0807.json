@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0807",
+  "fecha": "2026-11-19",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Cada módulo comercial se declara en su propio archivo del catálogo; el archivo común del catálogo solo junta.",
+  "que_cambia": "Solo organización del código: los módulos, las acciones y los permisos no cambian. Revertir: volver a escribir los nueve módulos dentro de catalogo.ts.",
+  "donde": "src/capacidades/modulos/catalogo.ts y catalogo-*.ts; arquitectura/centrales.json; brief PR-E3 de escalabilidad, repo de documentos, 11-especificaciones/briefs/escalabilidad"
+}

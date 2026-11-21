@@ -1,3 +1,4 @@
+import type { PartesDeDireccion } from "../../../capacidades/activos/direccion-externa";
 import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import { exigirSucursal } from "../../../capacidades/permisos/alcance";
 import type { ContextoOperativo } from "../../../contexto/contexto";
@@ -29,6 +30,11 @@ export type CartaParaAdministrar = Readonly<{
   lugar: string | null;
   mensajeDePortada: string | null;
   estado: EstadoDeCarta;
+  /** Identidad de la carta (0077), tal como la eligió quien la administra: `null` es «sin elegir» (usa lo de la empresa). */
+  modelo: string;
+  cara: string | null;
+  colorPropio: string | null;
+  logo: PartesDeDireccion | null;
   version: number;
 }>;
 
@@ -101,6 +107,10 @@ export function crearConsultasDeCarta(d: DependenciasDeConsultasDeCatalogo) {
                   lugar: carta.lugar,
                   mensajeDePortada: carta.mensajeDePortada,
                   estado: carta.estado,
+                  modelo: carta.modelo,
+                  cara: carta.cara,
+                  colorPropio: carta.colorPropio,
+                  logo: carta.logo,
                   version: carta.version,
                 },
           sucursalActiva: fila.activa,

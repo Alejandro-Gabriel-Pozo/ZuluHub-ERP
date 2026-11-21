@@ -1,4 +1,4 @@
-import { esCodigoDeAlicuota } from "../../fiscal/publico";
+import { esAlicuotaDelProducto } from "../../fiscal/publico";
 import { descripcionDeCartaDesdeTexto } from "../../../primitivas/texto/descripcion-de-carta";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import {
@@ -59,7 +59,8 @@ function opcional(texto: string | null | undefined): string | null {
 
 /**
  * Valida la ficha según la clase (§3.3): el nombre siempre; código y código de barras si vienen; y, si la clase NO vende, nada de
- * alícuota, sección, nombre de cocina ni descripción (`CAMPO_NO_ADMITIDO_POR_LA_CLASE`). Si la clase vende, la alícuota es obligatoria
+ * alícuota, sección, nombre de cocina ni descripción (`CAMPO_NO_ADMITIDO_POR_LA_CLASE`). La alícuota es una de las seis con IVA (`ALICUOTAS_DEL_PRODUCTO`:
+ * «EXENTO» y «NO_GRAVADO» solo se emiten, no se guardan en un producto; dueño, 12/11/2026). Si la clase vende, la alícuota es obligatoria
  * salvo en el alta rápida (`exigirAlicuota: false`), que deja el producto en «Falta completar». Un id de sección que no es uuid no puede
  * existir: `SECCION_NO_ENCONTRADA`; que exista en la empresa lo verifica el caso de uso.
  */
@@ -115,7 +116,7 @@ export function validarFicha(
     if (!valido.ok) return valido;
     codigoDeBarras = valido.valor;
   }
-  if (alicuota !== null && !esCodigoDeAlicuota(alicuota)) return err("ALICUOTA_INVALIDA");
+  if (alicuota !== null && !esAlicuotaDelProducto(alicuota)) return err("ALICUOTA_INVALIDA");
   if (vende && exigirAlicuota && alicuota === null) return err("ALICUOTA_REQUERIDA");
   if (seccion !== null && !esUuid(seccion)) return err("SECCION_NO_ENCONTRADA");
 

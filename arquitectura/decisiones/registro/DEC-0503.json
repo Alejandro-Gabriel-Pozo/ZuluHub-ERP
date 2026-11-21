@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0503",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El vuelto, la forma del importe y el tope de cobros por ticket pasan de ventas a primitivas de dinero, y la regla del cupón pasa de caja a la primitiva del cupón.",
+  "que_cambia": "No cambia lo que ve el negocio.",
+  "donde": "src/primitivas/dinero/vuelto.ts; src/primitivas/dinero/forma-del-importe.ts; src/primitivas/texto/cupon-de-pago.ts",
+  "motivo": "Mudanza sin cambio de comportamiento: la pantalla calcula el vuelto y valida el cupón en el navegador y la interfaz no puede importar módulos; una regla, un lugar."
+}

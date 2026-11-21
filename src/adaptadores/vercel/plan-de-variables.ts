@@ -18,6 +18,8 @@ import { randomBytes } from "node:crypto";
 /** No son secretos: identifican el proyecto `pedernal-erp` y el equipo donde vive. */
 export const PROYECTO_DE_VERCEL = "prj_BZ5e86RcBcfYCAzSW2vVbPpkj7jG";
 export const EQUIPO_DE_VERCEL = "alepozod";
+/** El proyecto de Vercel de la consola de plataforma (`pedernal-plataforma`, mismo equipo). */
+export const PROYECTO_DE_VERCEL_DE_LA_CONSOLA = "prj_g74KJiMT3BPQZrtABltcHJQAaUIk";
 
 /** El NOMBRE de la variable de entorno de la terminal con el token de la API de Vercel. */
 export const VARIABLE_DEL_TOKEN = "PEDERNAL_VERCEL_TOKEN";
