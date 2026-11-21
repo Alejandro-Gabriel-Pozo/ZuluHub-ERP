@@ -18,3 +18,6 @@ arquitectura/contratos/informe.json
 
 # Informe de evidencia del control de deuda técnica (se genera en cada corrida).
 arquitectura/deuda/informe.json
+
+# Informe de la medición de declaraciones de textos y pantallas (se genera en cada corrida).
+arquitectura/declaraciones/informe.json

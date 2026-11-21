@@ -12,6 +12,7 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
 export const CLAVES_DE_ERRORES_DE_CATALOGO = {
   CATALOGO_NOMBRE_REPETIDO: "catalogo.error.nombre_repetido",
   CATALOGO_CODIGO_REPETIDO: "catalogo.error.codigo_repetido",
+  CATALOGO_SECCION_REPETIDA: "catalogo.error.seccion_repetida",
   CATALOGO_CODIGO_DE_BARRAS_INVALIDO: "catalogo.error.codigo_de_barras_invalido",
   CATALOGO_ELEGI_LA_ALICUOTA: "catalogo.error.elegi_la_alicuota",
   CATALOGO_FALTA_EL_NOMBRE: "catalogo.error.falta_el_nombre",
@@ -21,7 +22,12 @@ export const CLAVES_DE_ERRORES_DE_CATALOGO = {
   CATALOGO_PRECIO_DESACTUALIZADO: "catalogo.precio.vigente_ahora",
   // Clasificación comercial (A14): «Primero desactivá lo que tiene adentro.» (DDD, fila del 12/11/2026, línea 92; DEC-0535), al desactivar un nodo con hijos activos.
   CATALOGO_PRIMERO_DESACTIVA: "catalogo.error.primero_desactiva",
+  // Opciones (A13): «Una opción incluida no lleva recargo» es de la misma fila «Errores» de «Textos nuevos» de `productos.html` (09/11/2026).
+  CATALOGO_INCLUIDA_CON_RECARGO: "catalogo.error.incluida_con_recargo",
   CATALOGO_ACCION_NO_PERMITIDA: "catalogo.error.accion_no_permitida",
+  // Ocultar (A15): los dos bloqueos con texto propio, aprobados por el dueño el 12/11/2026 (`productos.html:318`). Valen igual para desactivar.
+  CATALOGO_PRODUCTO_CON_EXISTENCIA: "catalogo.error.primero_existencia_en_cero",
+  CATALOGO_PRODUCTO_CON_CONTEO_ABIERTO: "catalogo.error.conteo_abierto_con_el_producto",
 } as const satisfies Record<string, ClaveDeTexto>;
 
 export type CodigoDeCatalogo = keyof typeof CLAVES_DE_ERRORES_DE_CATALOGO;

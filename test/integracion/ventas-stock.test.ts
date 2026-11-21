@@ -202,7 +202,7 @@ describe.skipIf(base === null)("ventas con stock: cerrar descuenta, anular devue
         lineaId,
       ])
     )[0]?.c;
-  const fijarNivel = (empresa: string, nivel: "PERMITIR" | "AVISAR" | "BLOQUEAR") =>
+  const fijarNivel = (empresa: string, nivel: "PERMITIR" | "AVISAR") =>
     m.dueno.query(
       `insert into nivel_de_control (empresa_id, sucursal_id, control, nivel) values ($1, null, 'stock.existencia_negativa', $2)
        on conflict on constraint nivel_de_control_uk do update set nivel = excluded.nivel`,
@@ -481,18 +481,18 @@ describe.skipIf(base === null)("ventas con stock: cerrar descuenta, anular devue
     expect(await existencia(dep, a.articulo)).toBe("4.0000");
   });
 
-  it("con el control en BLOQUEAR una salida que deja la existencia en negativo frena TODO el cierre (CONTROL_BLOQUEA) y no queda ni ticket ni salida; en PERMITIR pasa", async () => {
+  it("con el control en AVISAR una salida que deja la existencia en negativo frena TODO el cierre (CONTROL_REQUIERE_CONFIRMACION) y no queda ni ticket ni salida; en PERMITIR pasa", async () => {
     const mundo = await mundoNuevo();
     const { e, dep } = mundo;
     const a = await reventa(mundo, "1");
-    await fijarNivel(e.empresa, "BLOQUEAR");
+    await fijarNivel(e.empresa, "AVISAR");
     const { cuenta } = await cuentaCon(e, [{ producto: a.producto, cantidad: "2" }]);
     const antes = await sinCambios(e);
 
     const r = await cerrar(e.gerente, cuenta);
     expect(r).toMatchObject({
       ok: false,
-      error: { error: "STOCK_FALLIDO", causa: { error: "CONTROL_BLOQUEA" } },
+      error: { error: "STOCK_FALLIDO", causa: { error: "CONTROL_REQUIERE_CONFIRMACION" } },
     });
     expect(await sinCambios(e)).toEqual(antes);
     expect(await existencia(dep, a.articulo)).toBe("1.0000");
@@ -670,11 +670,11 @@ describe.skipIf(base === null)("ventas con stock: cerrar descuenta, anular devue
     expect(await sinCambios(e)).toEqual(antes);
   });
 
-  it("venderYCobrar con una existencia que el control bloquea no cobra: ni cuenta, ni ticket, ni movimiento de caja, ni salida", async () => {
+  it("venderYCobrar con una existencia que el control frena (AVISAR sin confirmar) no cobra: ni cuenta, ni ticket, ni movimiento de caja, ni salida", async () => {
     const mundo = await mundoNuevo();
     const { e, dep } = mundo;
     const a = await reventa(mundo, "1");
-    await fijarNivel(e.empresa, "BLOQUEAR");
+    await fijarNivel(e.empresa, "AVISAR");
     const caja = await m.cajaAbierta(e);
     const antes = await sinCambios(e);
     const r = await m.casos.venderYCobrar(
@@ -683,7 +683,7 @@ describe.skipIf(base === null)("ventas con stock: cerrar descuenta, anular devue
     );
     expect(r).toMatchObject({
       ok: false,
-      error: { error: "STOCK_FALLIDO", causa: { error: "CONTROL_BLOQUEA" } },
+      error: { error: "STOCK_FALLIDO", causa: { error: "CONTROL_REQUIERE_CONFIRMACION" } },
     });
     expect(await sinCambios(e)).toEqual(antes);
     expect(await existencia(dep, a.articulo)).toBe("1.0000");

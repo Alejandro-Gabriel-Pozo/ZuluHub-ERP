@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0761",
+  "fecha": "2026-11-18",
+  "quien": "padre",
+  "tipo": "SIN_DECISION",
+  "estado": "CONFIRMADA",
+  "decision": "La consola ofrece activar y desactivar módulos en la pantalla del plan de una empresa; qué se ofrece lo decide accionDelModulo y el servidor lo vuelve a decidir.",
+  "que_cambia": "Solo la consola interna: una columna «Acción» en la tabla de módulos, sin cambiar el plan ni los casos de uso. Revertir: quitar la columna y la acción del servidor; nada se migra.",
+  "donde": "apps/plataforma (logica/modulo-de-empresa.ts, logica/entrada-del-modulo.ts, servidor/acciones-modulos.ts, pantallas/cambio-de-modulo.cliente.tsx); brief PR-C1 §4.1 del repositorio de documentos",
+  "motivo": "La decisión de negocio ya existe (fila del 18/11, bloque A: al subir de plan los módulos nuevos los enciende la plataforma desde la consola); esto es solo la forma interna de ofrecerlo. OK de la orquestadora por pedido del dueño del 19/11/2026 (chat)."
+}

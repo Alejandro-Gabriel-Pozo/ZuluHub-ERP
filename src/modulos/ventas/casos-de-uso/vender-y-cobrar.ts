@@ -5,7 +5,7 @@ import { sucursalId } from "../../../primitivas/identificadores/marca";
 import { err, type Resultado } from "../../../primitivas/resultado/resultado";
 import { traducirErroresDelCobro } from "../../caja/publico";
 import { cuadrarCobros, decidirPrecioDeLaVenta, normalizarCobros } from "../dominio/cobranza";
-import { FORMA_DEL_IMPORTE } from "../dominio/forma-del-importe";
+import { FORMA_DEL_IMPORTE } from "../../../primitivas/dinero/forma-del-importe";
 import { cuentaId } from "../dominio/identificadores";
 import { abrirCuentaEnTx } from "./abrir-cuenta";
 import { agregarLineaEnTx } from "./agregar-linea";

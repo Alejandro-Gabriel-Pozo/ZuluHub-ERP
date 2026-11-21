@@ -217,6 +217,41 @@ function entradaCanonica(origen: Parte | DatosDeParte): DatosDeParte {
 }
 
 /**
+ * Editar los datos de una parte DENTRO de la transacción que ya abrió quien llama (`editarParte` y `editarParteConRoles`). NO autoriza: quien llama ya pidió la acción al guard. La
+ * parte se bloquea (`FOR UPDATE`); lo que no viene en `cambios` no cambia. Repetición (`SIN_CAMBIOS`): si lo pedido ya es lo guardado devuelve lo vigente con `yaEstaba` sin escribir
+ * ni auditar, aunque la versión esperada sea vieja; si no, compara `versionEsperada` (`VERSION_DESACTUALIZADA`).
+ */
+export async function editarParteDentro(
+  tx: TxDeClientes,
+  contexto: ContextoOperativo,
+  entrada: EntradaDeEditarParte,
+): Promise<R<SalidaDeEditarParte>> {
+  const { empresaId } = contexto;
+  const actual = await tx.partes.bloquear(empresaId, entrada.parteId);
+  if (actual === null) return err("PARTE_NO_ENCONTRADA");
+  const datos = datosValidos({ ...entradaDeParte(actual), ...entrada.cambios });
+  if (!datos.ok) return datos;
+  if (mismosDatos(actual, datos.valor)) {
+    return ok({ version: actual.version, yaEstaba: true, posiblesDuplicados: [] });
+  }
+  if (entrada.versionEsperada !== actual.version) return err("VERSION_DESACTUALIZADA");
+  const ocupado = await documentoOcupado(tx, contexto, datos.valor, actual.id);
+  if (ocupado !== null) return err(ocupado);
+  const editada = await tx.partes.actualizar(empresaId, actual.id, actual.version, datos.valor);
+  if (editada === null) return err("VERSION_DESACTUALIZADA");
+  const posiblesDuplicados = await buscarDuplicados(tx, contexto, datos.valor, actual.id);
+  await tx.auditoria.registrar({
+    empresaId,
+    actorPersonaId: contexto.personaId,
+    accion: "PARTE_EDITADA",
+    entidad: "parte",
+    entidadId: actual.id,
+    despues: { campos: camposCambiados(actual, datos.valor) },
+  });
+  return ok({ version: editada.version, yaEstaba: false, posiblesDuplicados });
+}
+
+/**
  * Editar los datos de una parte (E9 §3.1). Guard `partes.editar`; la parte se bloquea (`FOR UPDATE`); lo que no viene en `cambios` no cambia. Repetición
  * (`SIN_CAMBIOS`): si lo pedido ya es lo guardado devuelve lo vigente con `yaEstaba` sin escribir ni auditar, aunque la versión esperada sea vieja, así
  * un reintento tras un éxito no falla; si no, compara `versionEsperada` (`VERSION_DESACTUALIZADA`).
@@ -226,39 +261,12 @@ export function armarEditarParte(dependencias: DependenciasDeClientes) {
     contexto: ContextoOperativo,
     entrada: EntradaDeEditarParte,
   ): Promise<R<SalidaDeEditarParte>> {
-    const { empresaId } = contexto;
     const resultado = await dependencias.transacciones.ejecutar(
       { contexto },
       async (tx): Promise<R<SalidaDeEditarParte>> => {
         const permiso = await autorizar(tx, contexto, dependencias.reglas, ["partes.editar"]);
         if (!permiso.ok) return permiso;
-        const actual = await tx.partes.bloquear(empresaId, entrada.parteId);
-        if (actual === null) return err("PARTE_NO_ENCONTRADA");
-        const datos = datosValidos({ ...entradaDeParte(actual), ...entrada.cambios });
-        if (!datos.ok) return datos;
-        if (mismosDatos(actual, datos.valor)) {
-          return ok({ version: actual.version, yaEstaba: true, posiblesDuplicados: [] });
-        }
-        if (entrada.versionEsperada !== actual.version) return err("VERSION_DESACTUALIZADA");
-        const ocupado = await documentoOcupado(tx, contexto, datos.valor, actual.id);
-        if (ocupado !== null) return err(ocupado);
-        const editada = await tx.partes.actualizar(
-          empresaId,
-          actual.id,
-          actual.version,
-          datos.valor,
-        );
-        if (editada === null) return err("VERSION_DESACTUALIZADA");
-        const posiblesDuplicados = await buscarDuplicados(tx, contexto, datos.valor, actual.id);
-        await tx.auditoria.registrar({
-          empresaId,
-          actorPersonaId: contexto.personaId,
-          accion: "PARTE_EDITADA",
-          entidad: "parte",
-          entidadId: actual.id,
-          despues: { campos: camposCambiados(actual, datos.valor) },
-        });
-        return ok({ version: editada.version, yaEstaba: false, posiblesDuplicados });
+        return editarParteDentro(tx, contexto, entrada);
       },
     );
     return traducir(resultado);

@@ -41,6 +41,8 @@ export const ERRORES_DE_CAJA_POR_RESTRICCION: Readonly<Record<string, string>> =
   medio_de_pago_efectivo_activo_ck: "EFECTIVO_NO_SE_DESACTIVA",
   // Sin traducción: el error de negocio lleva el dato (`DATO_NO_ADMITIDO_POR_EL_MEDIO { dato }`) y lo decide el dominio antes.
   medio_de_pago_datos_ck: "NO_TRADUCIDA",
+  // Lo repite el dominio (`DATO_PEDIDO_SIN_APARECER { dato }`) antes de escribir: la base es la defensa final.
+  medio_de_pago_avisa_ck: "NO_TRADUCIDA",
   medio_de_pago_efectivo_uk: "EFECTIVO_YA_EXISTE",
   medio_de_pago_nombre_uk: "MEDIO_DUPLICADO",
   medio_de_pago_sin_nombre_uk: "MEDIO_DUPLICADO",
@@ -150,6 +152,8 @@ export const ERRORES_DE_CAJA_POR_RESTRICCION: Readonly<Record<string, string>> =
   cobro_ultimos4_ck: "NO_TRADUCIDA",
   cobro_cuotas_ck: "NO_TRADUCIDA",
   cobro_dni_ck: "NO_TRADUCIDA",
+  // El sello lo calcula la base: nadie lo escribe, esta restricción es solo su red de seguridad.
+  cobro_datos_pendientes_ck: "NO_TRADUCIDA",
   // Los lanza `cobro_validar_alta`: red de seguridad de la base.
   cobro_clase_invalida: "NO_TRADUCIDA",
   cobro_dato_no_habilitado: "NO_TRADUCIDA",

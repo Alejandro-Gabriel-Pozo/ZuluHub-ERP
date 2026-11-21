@@ -155,6 +155,23 @@ const LLAMADAS: Record<
       empresaId: uuid(1),
       modulo: "caja",
     }),
+  definirPoliticaDeCambioDePlan: (c) =>
+    c.definirPoliticaDeCambioDePlan(comoAdministrador, {
+      claveDeIdempotencia: CLAVE,
+      versionEsperada: 1,
+      diasDeAnticipacionDeSuba: 1,
+      diasDeAnticipacionDeBaja: 1,
+      diasDeArrepentimiento: 0,
+      motivo: "política",
+    }),
+  arrepentirCambioDePlan: (c) =>
+    c.arrepentirCambioDePlan(comoAdministrador, {
+      claveDeIdempotencia: CLAVE,
+      tenantId: uuid(1),
+      numero: 2,
+      numeroEsperado: 2,
+      motivo: "arrepentimiento",
+    }),
 };
 
 /** Y cada consulta, con una entrada VÁLIDA. */
@@ -175,6 +192,9 @@ const CONSULTAS: Record<
     c.derechosDeUsoDeEmpresa(comoAdministrador, { empresaId: uuid(1) }),
   diferenciaEntreVersiones: (c) =>
     c.diferenciaEntreVersiones(comoAdministrador, { desde: uuid(1), hasta: uuid(2) }),
+  verPoliticaDeCambioDePlan: (c) => c.verPoliticaDeCambioDePlan(comoAdministrador),
+  condicionesDeCambioDePlan: (c) =>
+    c.condicionesDeCambioDePlan(comoAdministrador, { tenantId: uuid(1), versionesDePlanIds: [] }),
 };
 
 /** Pasar el guard = tocar algo que no es la autorización. */
@@ -304,7 +324,8 @@ describe("las acciones que exigen son las del catálogo de plataforma", () => {
     ]);
     const deMarcasYPlanes = delCatalogo.filter(
       (a) =>
-        /^(marcas|planes|dominios|perillas|modulos_de_empresa)\./.test(a) && !deH5.has(a as never),
+        /^(marcas|planes|dominios|perillas|modulos_de_empresa|politica_de_plan)\./.test(a) &&
+        !deH5.has(a as never),
     );
     expect([...usadas].sort()).toEqual([...deMarcasYPlanes].sort());
   });

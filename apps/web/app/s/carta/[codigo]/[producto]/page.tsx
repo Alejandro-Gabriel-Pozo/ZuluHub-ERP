@@ -3,23 +3,32 @@ import { notFound } from "next/navigation";
 import { ContenedorDeLetra } from "../../../../../ui/plantillas/vidriera/ContenedorDeLetra.cliente";
 import { PaginaDeProducto } from "../../../../../ui/plantillas/vidriera/PaginaDeProducto";
 import { productoParaLaPantalla } from "../../../../../servidor/vidriera";
-import { exigirPuerta } from "../../../../../servidor/pedido";
+import {
+  METADATOS_DE_CARTA_NO_DISPONIBLE,
+  metadatosDeLaCarta,
+} from "../../../../../servidor/metadatos-de-carta";
+import { exigirPuerta, nonceDelPedido } from "../../../../../servidor/pedido";
+import { cssDelTemaDeLaCarta } from "../../../../../../../src/capacidades/experiencia/vidriera/tema-de-la-carta";
+import { EstiloDeMarca } from "../../../../../ui/componentes/EstiloDeMarca";
 
 type Props = Readonly<{ params: Promise<{ codigo: string; producto: string }> }>;
 
-// "{producto} · {carta}" (§8). Siempre `noindex`: decenas de páginas casi iguales a la carta no se indexan.
-// La descripción y la imagen social las trae C-3 con `metadatosDePagina`; acá no se inventa ninguna.
+// «{producto} · {carta}», siempre sin indexar (decenas de páginas casi iguales a la carta) y sin descripción propia (no hay texto aprobado): lo arma `metadatosDeLaCarta` (C3).
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { codigo, producto } = await params;
   // S2 y H-DOM-1: la carta se busca en la marca y en el dueño de ESTE host (la puerta entera); en un host que no es de carta, la neutra.
   const puerta = await exigirPuerta("CARTA");
   const datos = await productoParaLaPantalla(puerta, codigo, producto);
-  return datos === null
-    ? { robots: { index: false, follow: false } }
-    : {
-        title: `${datos.producto.nombre} · ${datos.vista.nombre}`,
-        robots: { index: false, follow: false },
-      };
+  if (datos === null) return METADATOS_DE_CARTA_NO_DISPONIBLE;
+  return metadatosDeLaCarta(
+    puerta,
+    {
+      tipo: "PRODUCTO",
+      nombreDelProducto: datos.producto.nombre,
+      nombreDeLaCarta: datos.vista.nombre,
+    },
+    `${datos.vista.hrefDeLaVidriera.replace(/\/$/, "")}/${encodeURIComponent(datos.producto.segmento)}`,
+  );
 }
 
 export default async function PaginaDelProducto({ params }: Props) {
@@ -28,14 +37,21 @@ export default async function PaginaDelProducto({ params }: Props) {
   const datos = await productoParaLaPantalla(puerta, codigo, producto);
   if (datos === null) notFound();
   const { vista, textos } = datos;
+  const { tema } = vista.identidad;
   return (
-    <ContenedorDeLetra letraBase={vista.letraBase}>
-      <PaginaDeProducto
-        producto={datos.producto}
-        vidriera={vista.nombre}
-        hrefDeLaVidriera={`${vista.hrefDeLaVidriera}#${datos.producto.seccion}`}
-        textos={textos}
+    <>
+      <EstiloDeMarca
+        css={tema === null ? "" : cssDelTemaDeLaCarta(tema)}
+        nonce={await nonceDelPedido()}
       />
-    </ContenedorDeLetra>
+      <ContenedorDeLetra letraBase={vista.letraBase}>
+        <PaginaDeProducto
+          producto={datos.producto}
+          vidriera={vista.nombre}
+          hrefDeLaVidriera={`${vista.hrefDeLaVidriera}#${datos.producto.seccion}`}
+          textos={textos}
+        />
+      </ContenedorDeLetra>
+    </>
   );
 }

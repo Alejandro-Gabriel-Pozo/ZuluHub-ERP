@@ -1,0 +1,5 @@
+.botones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}

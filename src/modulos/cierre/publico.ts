@@ -87,6 +87,11 @@ export {
 } from "./consultas/listar-jornadas";
 export type { EstadoDeLaJornada } from "./consultas/estado-de-jornada";
 export type {
+  EntradaDeJornadaDeHoy,
+  ErrorAlPedirLaJornadaDeHoy,
+  JornadaDeHoy,
+} from "./consultas/jornada-de-hoy";
+export type {
   ControlDeLaPantalla,
   ControlesDeLaJornada,
 } from "./consultas/controles-de-la-jornada";

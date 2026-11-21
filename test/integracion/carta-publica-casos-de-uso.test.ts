@@ -584,7 +584,11 @@ describe.skipIf(base === null)("carta pública y «Ocultar»: casos de uso", () 
       expect(
         await ocultar(e.operador, p.flan, { tipo: "SUCURSAL", sucursalId: e.otraSucursal }),
       ).toEqual({ ok: false, error: "SUCURSAL_FUERA_DE_ALCANCE" });
-      expect(await ocultar(e.operador, p.flan, { tipo: "EMPRESA" })).toMatchObject({ ok: false });
+      // 22A: ocultar en toda la empresa pide `vidrieras.ocultar_en_empresa` (gerente y administrador); al operador se la niega el permiso, no el alcance.
+      expect(await ocultar(e.operador, p.flan, { tipo: "EMPRESA" })).toEqual({
+        ok: false,
+        error: "SIN_PERMISO",
+      });
       expect(await ocultar(e.administradorDeUnaSucursal, p.flan, { tipo: "EMPRESA" })).toEqual({
         ok: false,
         error: "SUCURSAL_FUERA_DE_ALCANCE",
@@ -702,6 +706,11 @@ describe.skipIf(base === null)("carta pública y «Ocultar»: casos de uso", () 
         lugar: null,
         mensajeDePortada: "¡Bienvenidos!",
         estado: "FUERA_DE_LINEA",
+        // La identidad sin elegir (V1): el modelo de siempre y nada propio.
+        modelo: "LISTA",
+        cara: null,
+        colorPropio: null,
+        logo: null,
         version: 1,
       });
       await c.dueno.query("update sucursal set activa = false where id = $1", [e.sucursal]);

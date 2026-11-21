@@ -9,6 +9,9 @@ import type { CodigoDeCatalogo } from "../capacidades/experiencia/respuesta-de-c
  * los errores con forma de objeto sin nombre de negocio (la empresa que no opera, la base) y `ERROR_DE_LA_BASE_NO_TRADUCIDO`, que es un defecto y sale como inesperado, con referencia.
  * Previene: que un error del catálogo salga como un fallo inesperado, o que un defecto de la base se disfrace de «no permitido».
  * Clasificación (A14): suma «Primero desactivá lo que tiene adentro.». Precios (A1, T3): suma «Escribí un precio válido» y la frase aprobada del precio que otra persona cambió antes (lleva el importe vigente, el único dato que sale).
+ * Precios (A1, T3): suma «Escribí un precio válido» y la frase aprobada del precio que otra persona cambió antes (lleva el importe vigente, el único dato que sale).
+ * Ocultar (A15): suma los dos bloqueos con texto propio aprobado el 12/11/2026 (existencia y conteo abierto).
+ * Opciones (A13): suma «Una opción incluida no lleva recargo» y reusa «Escribí un precio válido» para un recargo mal escrito.
  * Chequeo: `errores-de-catalogo.test.ts`.
  */
 
@@ -23,6 +26,8 @@ type ErrorConTexto = Readonly<{
 const CON_TEXTO_PROPIO: Readonly<Record<string, ErrorConTexto>> = {
   PRODUCTO_DUPLICADO: { codigo: "CATALOGO_NOMBRE_REPETIDO", campo: "nombre" },
   CODIGO_DUPLICADO: { codigo: "CATALOGO_CODIGO_REPETIDO", campo: "codigo" },
+  // Secciones de la carta: el texto es `sec.duplicada` de productos-secciones.html:333 (aprobado por el dueño el 12/11/2026).
+  SECCION_DUPLICADA: { codigo: "CATALOGO_SECCION_REPETIDA", campo: "nombre" },
   CODIGO_DE_BARRAS_INVALIDO: {
     codigo: "CATALOGO_CODIGO_DE_BARRAS_INVALIDO",
     campo: "codigoDeBarras",
@@ -32,6 +37,13 @@ const CON_TEXTO_PROPIO: Readonly<Record<string, ErrorConTexto>> = {
   PRECIO_INVALIDO: { codigo: "CATALOGO_PRECIO_INVALIDO", campo: "precio" },
   // Clasificación comercial (A14): el único texto propio es «Primero desactivá lo que tiene adentro.» (DDD, línea 92); ciclo, tope, versión vieja, nombre inválido y lo demás: el genérico.
   TIENE_HIJOS_ACTIVOS: { codigo: "CATALOGO_PRIMERO_DESACTIVA" },
+  // Ocultar (A15): los dos bloqueos con texto propio aprobado el 12/11/2026 (`productos.html:318`); no apuntan a un campo (la pantalla no tiene formulario).
+  PRODUCTO_CON_EXISTENCIA: { codigo: "CATALOGO_PRODUCTO_CON_EXISTENCIA", campo: "ocultar" },
+  PRODUCTO_CON_CONTEO_ABIERTO: { codigo: "CATALOGO_PRODUCTO_CON_CONTEO_ABIERTO", campo: "ocultar" },
+  // Opciones (A13): el recargo es un importe, así que un recargo mal escrito usa el mismo texto aprobado («Escribí un precio válido»); «Una opción incluida no lleva recargo» es de la
+  // misma fila «Errores» de `productos.html`. Los demás errores de las opciones (grupo repetido, versión vieja…) salen como el genérico.
+  RECARGO_INVALIDO: { codigo: "CATALOGO_PRECIO_INVALIDO", campo: "recargo" },
+  INCLUIDA_CON_RECARGO: { codigo: "CATALOGO_INCLUIDA_CON_RECARGO", campo: "recargo" },
 };
 
 /** Un defecto: la base devolvió una restricción que el módulo no sabe traducir. No es de negocio. */

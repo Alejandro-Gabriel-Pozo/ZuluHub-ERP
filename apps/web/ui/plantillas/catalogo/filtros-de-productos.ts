@@ -17,6 +17,13 @@ export const RUTA_DE_PRODUCTOS = "/catalogo/productos";
 /** La pantalla del alta (T6): la única dirección que dice adónde lleva «Nuevo producto». */
 export const RUTA_DEL_ALTA_DE_PRODUCTO = `${RUTA_DE_PRODUCTOS}/nuevo`;
 
+/** La lista de productos ocultos (C2): la misma lista con el filtro «Oculto»; la dirección lo dice con `oculto=1`. */
+export const RUTA_DE_LOS_OCULTOS = `${RUTA_DE_PRODUCTOS}?oculto=1`;
+
+/** ¿La dirección pide la lista de ocultos? Solo el valor exacto `1`; cualquier otra cosa es la lista común. */
+export const pideLosOcultos = (params: ParametrosDeLaDireccion): boolean =>
+  primero(params, "oculto") === "1";
+
 /** Las cinco clases, en el orden de la maqueta (`CLASES`), cada una con la clave de su texto. */
 export const CLAVE_DE_CLASE = {
   MATERIA_PRIMA: "catalogo.clase.materia_prima",

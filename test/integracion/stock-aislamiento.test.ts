@@ -256,9 +256,9 @@ describe.skipIf(base === null)("stock: aislamiento entre empresas", () => {
   });
 
   it("P15: el control de existencia negativa de una empresa no rige en la otra", async () => {
-    const bloqueada = await c.escenario();
+    const avisada = await c.escenario();
     const libre = await c.escenario();
-    await c.fijarNivel(bloqueada.empresa, "BLOQUEAR");
+    await c.fijarNivel(avisada.empresa, "AVISAR");
     const salida = async (m: EscenarioDeStock) => {
       const dep = await c.deposito(m);
       const art = await c.articulo(m);
@@ -269,9 +269,9 @@ describe.skipIf(base === null)("stock: aislamiento entre empresas", () => {
         renglones: [renglon(art.producto, "1")],
       });
     };
-    expect(await salida(bloqueada)).toMatchObject({
+    expect(await salida(avisada)).toMatchObject({
       ok: false,
-      error: { error: "CONTROL_BLOQUEA" },
+      error: { error: "CONTROL_REQUIERE_CONFIRMACION" },
     });
     expect(valorDe(await salida(libre)).excepciones).toHaveLength(1);
   });

@@ -14,6 +14,7 @@ import { Boton } from "../../componentes/Boton.cliente";
 import { BuscarEnVidriera } from "./BuscarEnVidriera";
 import { ControlDeLetra } from "./ControlDeLetra";
 import escala from "./EscalaDeLetra.module.css";
+import { atributosDeLaCara, PlacaDeLaCarta } from "./IdentidadDeLaCarta";
 import { BotonFlotanteDeSecciones, IndiceDeSecciones } from "./IndiceDeSecciones";
 import { ListaDeVidriera } from "./ListaDeVidriera";
 import estilos from "./PlantillaDeVidriera.module.css";
@@ -102,11 +103,15 @@ export function PlantillaDeVidriera({ vista, textos }: PropsDePlantillaDeVidrier
       className={[escala["escala"], estilos["raiz"]].join(" ")}
       data-letra-base={vista.letraBase}
       data-letra={paso}
+      {...atributosDeLaCara(vista.identidad)}
     >
       <header className={estilos["cabecera"]}>
-        {vista.rubro === null ? null : <p className={estilos["rubro"]}>{vista.rubro}</p>}
-        <h1 className={estilos["nombre"]}>{vista.nombre}</h1>
-        {vista.lugar === null ? null : <p className={estilos["lugar"]}>{vista.lugar}</p>}
+        <PlacaDeLaCarta identidad={vista.identidad} />
+        <div className={estilos["titulos"]}>
+          {vista.rubro === null ? null : <p className={estilos["rubro"]}>{vista.rubro}</p>}
+          <h1 className={estilos["nombre"]}>{vista.nombre}</h1>
+          {vista.lugar === null ? null : <p className={estilos["lugar"]}>{vista.lugar}</p>}
+        </div>
       </header>
 
       <div className={estilos["herramientas"]} data-busqueda={conBusqueda ? "si" : "no"}>

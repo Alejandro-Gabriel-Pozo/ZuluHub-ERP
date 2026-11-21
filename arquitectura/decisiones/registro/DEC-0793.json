@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0793",
+  "fecha": "2026-11-19",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En la hoja de cobrar, un dato que se pide y quedó vacío no entra en el listo del cobro: solo lo dice una función informativa; el servidor sella el pendiente.",
+  "que_cambia": "Nada visible: la pantalla de cobro no cambia. Revertir: quitar la función informativa y el campo que se pide del modelo de la hoja.",
+  "donde": "apps/web/ui/plantillas/cobrar/modelo-de-cobro.ts; src/composicion/cobrar-web.ts; brief PR-7 de Ventas del repositorio de documentos"
+}

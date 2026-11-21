@@ -1,5 +1,6 @@
 import type { Cantidad } from "../../../primitivas/cantidad/cantidad";
 import { cantidadATexto } from "../../../primitivas/cantidad/cantidad";
+import { esMermaPermitida } from "../../../primitivas/cantidad/merma";
 import { porcentajeDesdeTexto, type Porcentaje } from "../../../primitivas/cantidad/porcentaje";
 import { dividirRedondeando } from "../../../primitivas/cantidad/redondeo-entero";
 import { POLITICA_VIGENTE } from "../../../primitivas/dinero/redondeo";
@@ -19,8 +20,10 @@ export const SIN_MERMA: Porcentaje = porcentajeDesdeTexto("0");
  * para el plato y se rechaza con un error (la base lo impide con `componente_perdida_ck`, 0 ≤ p < 100); nunca se acota en silencio.
  */
 export function netoDeBruto(bruto: Cantidad, merma: Porcentaje | null): Cantidad {
+  if (merma !== null && !esMermaPermitida(merma)) {
+    throw new RangeError("merma: tiene que ser menor que 100 %");
+  }
   const puntos = merma === null ? 0n : merma.unidades;
-  if (puntos >= CIEN) throw new RangeError("merma: tiene que ser menor que 100 %");
   return cantidadDeUnidades(
     dividirRedondeando(bruto.unidades * (CIEN - puntos), CIEN, POLITICA_VIGENTE),
   );

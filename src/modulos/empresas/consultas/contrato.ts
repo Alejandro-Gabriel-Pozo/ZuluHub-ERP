@@ -1,5 +1,6 @@
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
+import type { LecturaDeDerechosDeUso } from "../../../puertos/derechos-de-uso";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { RepositorioDeEmpresas } from "../persistencia/repositorios";
 import type { RepositorioDeSucursales } from "../persistencia/repositorio-de-sucursales";
@@ -12,6 +13,8 @@ export type TxDeConsultasDeEmpresas = Readonly<{
   sucursales: Pick<RepositorioDeSucursales, "obtener" | "listar" | "listarActivas">;
   empresas: Pick<RepositorioDeEmpresas, "obtener">;
   autorizacion: CargaDeAutorizacion;
+  /** Las funciones de pago que la empresa tiene encendidas (`permisosDelActor`), leídas en esta transacción y sin caché. */
+  derechos: Pick<LecturaDeDerechosDeUso, "deLaEmpresa">;
 }>;
 
 export type DependenciasDeConsultasDeEmpresas = Readonly<{

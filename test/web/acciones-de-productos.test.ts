@@ -39,13 +39,13 @@ describe("la acción de servidor de los productos expuesta a Next", () => {
     expect(acciones.crearProductoAccion.constructor.name).toBe("AsyncFunction");
   });
 
-  it("delega con el id, la versión y el formulario, sin el estado anterior", async () => {
+  it("delega con el id, la versión, el control visto y el formulario, sin el estado anterior", async () => {
     const datos = new FormData();
     datos.set("nombre", "Milanesa");
-    expect(await acciones.guardarFichaAccion("id-1", 4, { error: null }, datos)).toEqual({
+    expect(await acciones.guardarFichaAccion("id-1", 4, true, { error: null }, datos)).toEqual({
       error: null,
     });
-    expect(delegadas.llamadas).toEqual([["id-1", 4, datos]]);
+    expect(delegadas.llamadas).toEqual([["id-1", 4, true, datos]]);
   });
 
   it("el precio delega con el producto, la clave del cambio, la fila vista y el formulario, sin el estado anterior", async () => {

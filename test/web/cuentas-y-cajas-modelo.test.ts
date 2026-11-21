@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { TIPOS_DE_CUENTA } from "../../src/modulos/caja/publico";
-import { RUTAS_DE_CAJA, estadoDeLista } from "../../apps/web/ui/plantillas/caja/lista-de-caja";
+import {
+  RUTAS_DE_CAJA,
+  RUTA_DE_LA_CAJA,
+  estadoDeLista,
+} from "../../apps/web/ui/plantillas/caja/lista-de-caja";
 import {
   armarLaListaDeCajas,
   RUTAS_DE_CAJAS,
@@ -47,6 +51,8 @@ describe("lo común de las listas", () => {
       cuentas: "/caja/cuentas-de-cobro",
       cajas: "/caja/cajas",
     });
+    // La pantalla «Caja» del mostrador cuelga de `/caja` (no es una pestaña); Cobrar lleva ahí a quien no tiene caja abierta (DEC-0502).
+    expect(RUTA_DE_LA_CAJA).toBe("/caja");
   });
 
   it("las pestañas llevan el título de cada pantalla, en orden, y marcan solo la actual", () => {

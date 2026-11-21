@@ -22,7 +22,7 @@
     },
     {
       "archivo": "src/composicion/web.ts",
-      "motivo": "Cableado de las dependencias de la web (`armarWeb`): `clasificacion-web.ts` solo importa su TIPO (`Web`) para declarar sus dependencias; lo ejercen las pruebas de integración, que la mutación no corre (PEDERNAL_SIN_INTEGRACION=1). Agregado con A14 (2026-11-16)."
+      "motivo": "Raíz de composición que solo cablea módulos y conexiones reales (sin lógica propia); los archivos mutados lo importan únicamente como TIPO (`import type { Web }`) para declarar sus dependencias. Lo ejercen las pruebas de integración."
     }
   ],
   "cargasNoEstaticas": [

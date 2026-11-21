@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0481",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Un portal tiene como máximo una zona por sucursal (variante B).",
+  "que_cambia": "Si el dueño quiere dos zonas hacia la misma sucursal, se quita la restricción portal_zona_destino_uk y su error. Revertir: una migración nueva.",
+  "donde": "migraciones/0078_portal_de_la_empresa.sql; carta-identidad-y-portal-datos-diseno.md §2.5; aprobada por el dueño el 20/11/2026 (DDD, fila «Alojamiento por sucursal; DEC-0481 a DEC-0483 aprobadas»)"
+}

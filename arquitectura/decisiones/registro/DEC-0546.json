@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0546",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La dirección pública de la carta, y lo que codifica el QR, es el host de la aplicación de la marca más el código de la carta; sin host, solo el camino y sin QR.",
+  "que_cambia": "Qué dirección ve y copia el cliente y qué lleva el QR que imprima. Si el host público de la carta resulta ser otro, los QR ya impresos con este host dejarían de andar: hay que decidirlo ANTES de entregar QR a un cliente real. Revertir el código: una función.",
+  "donde": "src/composicion/carta-en-linea-web.ts (direccionPublicaDeLaCarta); apps/web/servidor/vidriera.ts (rutaPublicaDe); carta-real-especificacion.md §6.2"
+}

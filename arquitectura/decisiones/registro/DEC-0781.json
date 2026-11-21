@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0781",
+  "fecha": "2026-11-19",
+  "quien": "padre",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Tickets del día: tope de 1000 tickets por jornada; si se supera, la lectura falla (no se recorta) hasta decidir cómo mostrar una lista larga.",
+  "que_cambia": "Una jornada con más de 1000 tickets no muestra la lista (sale el genérico) en lugar de una lista que parezca completa. Revertir: cambiar la constante MAXIMO_DE_TICKETS_DEL_DIA o sumar paginado.",
+  "donde": "src/modulos/ventas/consultas/tickets-del-dia.ts; tickets-del-dia.html línea 229 del repositorio de documentos; brief PR-5bis §8",
+  "motivo": "Tope técnico de una lectura sin paginado; no cambia dinero ni permisos."
+}

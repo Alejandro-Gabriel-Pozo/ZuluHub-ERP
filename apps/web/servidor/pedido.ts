@@ -29,8 +29,12 @@ export async function nonceDelPedido(): Promise<string | null> {
   return nonce !== null && esNonceValido(nonce) ? nonce : null;
 }
 
+/** ¿Se deja indexar lo que sirve esta puerta? La misma función que decide el encabezado `X-Robots-Tag` (`cabeceras.ts`): una sola regla. */
+export const puertaEsIndexable = (puerta: PuertaResuelta): boolean =>
+  esIndexable(puerta.superficie, despliegueEsProduccion(), puerta.duenio.tipo);
+
 /** El `robots` de la etiqueta `<meta>` (respaldo del encabezado `X-Robots-Tag` de la puerta). */
-export function robotsDe(superficie: SuperficieServible): NonNullable<Metadata["robots"]> {
-  const indexa = esIndexable(superficie, despliegueEsProduccion());
+export function robotsDe(puerta: PuertaResuelta): NonNullable<Metadata["robots"]> {
+  const indexa = puertaEsIndexable(puerta);
   return { index: indexa, follow: indexa };
 }

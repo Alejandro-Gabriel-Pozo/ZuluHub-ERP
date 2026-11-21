@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0790",
+  "fecha": "2026-11-19",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El sello de datos pendientes de un cobro lo calcula la base al insertarlo y va como arreglo en la tabla cobro; el rol de la aplicación no puede escribirlo.",
+  "que_cambia": "Qué ve el negocio: cada cobro queda marcado «Pendiente» con la configuración vigente al cobrar y nada lo cambia después. Revertir: migración de reversión 0090 (pierde los sellos).",
+  "donde": "src/modulos/caja/dominio/; src/modulos/caja/persistencia/; migraciones/0090_datos_que_se_piden.sql; brief PR-7-caja del repositorio de documentos y fila del 18/11 «PR-7» de decisiones-del-dueno-2026-11.md"
+}
