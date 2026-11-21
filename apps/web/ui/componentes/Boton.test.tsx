@@ -33,6 +33,21 @@ describe("Boton", () => {
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 
+  it("presionado: se anuncia como botón de dos estados (aria-pressed) y sin él no lo es", async () => {
+    const { rerender } = await render(<Boton presionado>✓ Reconocer</Boton>);
+    const boton = page.getByRole("button", { name: "✓ Reconocer" });
+    await expect.element(boton).toHaveAttribute("aria-pressed", "true");
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+    await rerender(<Boton presionado={false}>Reconocer</Boton>);
+    await expect
+      .element(page.getByRole("button", { name: "Reconocer" }))
+      .toHaveAttribute("aria-pressed", "false");
+    await rerender(<Boton>Cobrar</Boton>);
+    expect(
+      page.getByRole("button", { name: "Cobrar" }).element().hasAttribute("aria-pressed"),
+    ).toBe(false);
+  });
+
   it("enviando: dice el texto de envío, se anuncia ocupado, conserva el foco y no repite el toque", async () => {
     const alTocar = vi.fn();
     const { rerender } = await render(

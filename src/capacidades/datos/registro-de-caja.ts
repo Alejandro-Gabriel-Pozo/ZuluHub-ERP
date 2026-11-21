@@ -24,6 +24,13 @@ const CAJA_PROPOSITO = (para: string): Proposito => ({
   para,
   fuente: `Pedernal-docs/11-especificaciones/caja-y-cobros.md §B.6 (caja) y ${MAQUETA_DE_MEDIOS}`,
 });
+const MODAL_DE_CORREGIR_MEDIO = "apps/web/ui/plantillas/cierre/ModalDeCorregirMedio.cliente.tsx";
+/** Los propósitos que el cierre del día suma a los datos del cobro que ya son de caja: un dato, una definición (los consumidores y propósitos de las dos pantallas viven juntos). */
+const CORRECCION_PROPOSITO = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs/11-especificaciones/conceptos/pantalla-cierre-del-dia.md §3 y la maqueta aceptada `cierre-del-dia.html` (decisiones del dueño, DDD:175 y DDD:183)",
+});
 const APERTURA = "apps/web/ui/plantillas/caja/FormularioDeApertura.cliente.tsx";
 const CIERRE = "apps/web/ui/plantillas/caja/FormularioDeCierre.cliente.tsx";
 /**
@@ -186,9 +193,12 @@ export const DATOS_DE_CAJA = {
       COBRO_PROPOSITO(
         "Medio de pago de cada fila de la hoja de cobro, de entre los medios activos que el servidor ofrece para la caja.",
       ),
+      CORRECCION_PROPOSITO(
+        "Medio al que pasa un cobro (elección cerrada entre los medios activos de la empresa que ofrece el servidor) en el diálogo «Corregir medio» del cierre del día.",
+      ),
     ],
-    consumidores: [COBRO_FILA],
-    ponerPor: ["tickets.cobrar"],
+    consumidores: [COBRO_FILA, MODAL_DE_CORREGIR_MEDIO],
+    ponerPor: ["tickets.cobrar", "cobros.corregir_medio"],
     requiere: REQUIERE_CAJA,
   },
   "cuenta-de-cobro": {
@@ -197,9 +207,12 @@ export const DATOS_DE_CAJA = {
       COBRO_PROPOSITO(
         "Cuenta de cobro, opcional, de la fila de cobro, de entre las cuentas activas de la sucursal que el servidor ofrece para ese medio.",
       ),
+      CORRECCION_PROPOSITO(
+        "Cuenta de cobro de la corrección (elección cerrada entre las cuentas activas de la sucursal que admite el medio, o «Sin cuenta») en el diálogo «Corregir medio» del cierre del día.",
+      ),
     ],
-    consumidores: [COBRO_FILA],
-    ponerPor: ["tickets.cobrar"],
+    consumidores: [COBRO_FILA, MODAL_DE_CORREGIR_MEDIO],
+    ponerPor: ["tickets.cobrar", "cobros.corregir_medio"],
     requiere: REQUIERE_CAJA,
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
