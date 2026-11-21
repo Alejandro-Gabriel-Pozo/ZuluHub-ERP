@@ -154,7 +154,8 @@ function finDeAutoridad(texto: string): number {
   return Math.min(texto.length, ...posiciones);
 }
 
-function direccionCanonica(p: PartesDeDireccion): string {
+/** La dirección canónica de unas partes (la misma que arma `leerDireccionPegada`): lo que la pantalla de la carta muestra como logo guardado. */
+export function direccionCanonica(p: PartesDeDireccion): string {
   return `https://${CLOUDINARY.host}/${p.cuenta}/${CLOUDINARY.recurso}/${CLOUDINARY.entrega}/v${p.version}/${p.idPublico}.${p.extension}`;
 }
 

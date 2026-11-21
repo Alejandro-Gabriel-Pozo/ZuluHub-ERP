@@ -15,6 +15,8 @@ import type { DefinicionDeDato, Proposito } from "./tipos-de-datos";
 const FORMULARIO_DE_CARTA = "apps/web/ui/plantillas/carta/FormularioDeCartaEnLinea.cliente.tsx";
 const REQUIERE_VIDRIERA = { modulo: "vidriera", estadoDeEmpresa: ["ACTIVE"] } as const;
 const PONER_POR = ["vidrieras.editar", "vidrieras.crear"] as const;
+const FUENTE_DE_IDENTIDAD =
+  "Pedernal-docs 10-ux-ui (carpeta de prototipos), carta.html y carta-caras.html (maquetas aprobadas el 09/11/2026) y carta-identidad-y-portal-datos-diseno.md §2.1 y §7; filas 232 y 235 de decisiones-del-dueno-2026-11.md (colores libres con contraste 7:1; logo por dirección externa)";
 
 const PROPOSITO = (para: string): Proposito => ({
   para,
@@ -51,6 +53,42 @@ export const DATOS_DE_CARTA = {
       PROPOSITO(
         `Lugar de la carta en línea (la línea de abajo del nombre en la portada): texto libre y opcional, hasta ${LARGO_MAXIMO_DEL_LUGAR_DE_CARTA} caracteres.`,
       ),
+    ],
+    consumidores: [FORMULARIO_DE_CARTA],
+    ponerPor: PONER_POR,
+    requiere: REQUIERE_VIDRIERA,
+  },
+  "cara-de-la-carta": {
+    ficha: "src/capacidades/experiencia/vidriera/caras.ts",
+    propositos: [
+      {
+        para: "Cara de la carta en línea (el aspecto general): una de la lista cerrada de la plataforma; sin elegir rige la de siempre.",
+        fuente: FUENTE_DE_IDENTIDAD,
+      },
+    ],
+    consumidores: [FORMULARIO_DE_CARTA],
+    ponerPor: PONER_POR,
+    requiere: REQUIERE_VIDRIERA,
+  },
+  "color-de-la-carta": {
+    ficha: "src/capacidades/experiencia/vidriera/color-de-la-carta.ts",
+    propositos: [
+      {
+        para: "Color propio de la carta en línea: una de las seis paletas u otro color con la forma #rrggbb; sin elegir usa lo de la empresa. El contraste mínimo de 7:1 lo asegura el sistema al mostrarla.",
+        fuente: FUENTE_DE_IDENTIDAD,
+      },
+    ],
+    consumidores: [FORMULARIO_DE_CARTA],
+    ponerPor: PONER_POR,
+    requiere: REQUIERE_VIDRIERA,
+  },
+  "logo-de-la-carta": {
+    ficha: "src/capacidades/activos/direccion-externa.ts",
+    propositos: [
+      {
+        para: "Logo propio de la carta en línea, por dirección de la imagen en un proveedor permitido (no se suben archivos); vacío usa el logo de la empresa.",
+        fuente: FUENTE_DE_IDENTIDAD,
+      },
     ],
     consumidores: [FORMULARIO_DE_CARTA],
     ponerPor: PONER_POR,
