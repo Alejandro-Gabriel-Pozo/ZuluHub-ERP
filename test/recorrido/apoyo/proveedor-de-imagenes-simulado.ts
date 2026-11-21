@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import type { AddressInfo } from "node:net";
+import type { AddressInfo, Socket } from "node:net";
 import { join } from "node:path";
 
 /**
@@ -8,7 +8,7 @@ import { join } from "node:path";
  * que se le programan (la transformación de logo de la carta) y todo lo demás es 404. Guarda cada pedido con sus cabeceras, para que la prueba vea qué sale
  * de la app hacia afuera: cuántos viajes y con qué cabeceras. La app lo alcanza por `conectar-proveedor-de-imagenes-simulado.mjs` (solo de pruebas).
  */
-export type PedidoAlProveedor = Readonly<{
+type PedidoAlProveedor = Readonly<{
   ruta: string;
   cabeceras: IncomingMessage["headers"];
   hostDelProveedor: string;
@@ -35,7 +35,7 @@ export const webpDelProveedor = (res: ServerResponse): void => {
 export async function levantarProveedorDeImagenesSimulado(): Promise<ProveedorDeImagenesSimulado> {
   const pedidos: PedidoAlProveedor[] = [];
   const rutas = new Map<string, (res: ServerResponse) => void>();
-  const sockets = new Set<import("node:net").Socket>();
+  const sockets = new Set<Socket>();
   const servidor = createServer((req, res) => {
     const ruta = req.url ?? "";
     pedidos.push({

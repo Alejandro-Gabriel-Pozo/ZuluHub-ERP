@@ -8,6 +8,7 @@ import http from "node:http";
 import https from "node:https";
 import { syncBuiltinESMExports } from "node:module";
 import process from "node:process";
+import { URL } from "node:url";
 
 const puerto = Number(process.env.PEDERNAL_RECORRIDO_PROVEEDOR_PUERTO);
 if (!Number.isInteger(puerto) || puerto <= 0) {

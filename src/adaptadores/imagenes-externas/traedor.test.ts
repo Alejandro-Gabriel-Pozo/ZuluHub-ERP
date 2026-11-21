@@ -351,13 +351,13 @@ describe("con una solicitud de mentira: cierres y temporizadores", () => {
       return solicitud;
     }) as unknown as DependenciasDelTraedor["solicitar"];
     const responder = (cambios: Partial<Respuesta> = {}): Respuesta => {
-      const respuesta = Object.assign(new EventEmitter(), {
+      const respuesta: Respuesta = Object.assign(new EventEmitter(), {
         statusCode: 200,
         headers: { "content-type": "image/webp" },
         complete: true,
         destroy: vi.fn(),
         ...cambios,
-      }) as Respuesta;
+      });
       alResponder?.(respuesta as unknown as IncomingMessage);
       return respuesta;
     };
@@ -394,7 +394,7 @@ describe("con una solicitud de mentira: cierres y temporizadores", () => {
   ])("%s: devuelve el error y cierra la respuesta y la solicitud", async (_n, cambios, error) => {
     const falsa = armarFalsa();
     const { pedido } = await arrancar(falsa);
-    const respuesta = falsa.responder(cambios as Partial<Respuesta>);
+    const respuesta = falsa.responder(cambios);
     expect(await pedido).toEqual({ ok: false, error });
     expect(respuesta.destroy).toHaveBeenCalledTimes(1);
     expect(falsa.solicitud.destroy).toHaveBeenCalledTimes(1);
