@@ -113,8 +113,10 @@ describe.skipIf(base === null)("recorrido del logo de la carta pública", () => 
     expect(r.status()).toBe(200);
     expect(r.headers()["content-type"]).toBe("image/webp");
     expect(r.headers()["x-content-type-options"]).toBe("nosniff");
-    // HALLAZGO: la puerta fija `Cache-Control: private, no-store` en TODA respuesta (`cabeceras.ts`) y pisa el `public, max-age=86400` de la ruta; hoy el logo no se guarda en el navegador.
-    expect(r.headers()["cache-control"]).toBe("private, no-store");
+    // Excepción declarada de la puerta: solo el 200 de ESTA ruta se guarda (un día); sin cookies ni `Vary` que dependan de la persona.
+    expect(r.headers()["cache-control"]).toBe("public, max-age=86400");
+    expect(r.headers()["set-cookie"]).toBeUndefined();
+    expect(r.headers()["vary"] ?? "").not.toMatch(/cookie|authorization/i);
     const cuerpo = await r.body();
     expect(cuerpo.subarray(0, 4).toString("latin1")).toBe("RIFF");
     expect(cuerpo.subarray(8, 12).toString("latin1")).toBe("WEBP");
@@ -158,6 +160,17 @@ describe.skipIf(base === null)("recorrido del logo de la carta pública", () => 
       expect((await r.body()).length).toBe(0);
     }
     expect(proveedor.pedidos).toHaveLength(antes);
+  });
+
+  it("la excepción de caché no se extiende: la página de la carta y su 404 siguen private, no-store", async () => {
+    const pagina = await contexto.request.get(
+      `https://127.0.0.1:${fachadaDeLaCarta.puerto}/${carta.codigo}`,
+      { headers: { host: `${HOST_DE_LA_CARTA}:${fachadaDeLaCarta.puerto}` } },
+    );
+    expect(pagina.status()).toBe(200);
+    expect(pagina.headers()["cache-control"]).toBe("private, no-store");
+    const otraImagen = await pedirLogo("1700000000.png".replace(".png", "x"));
+    expect(otraImagen.headers()["cache-control"]).toBe("private, no-store");
   });
 
   it("20 visitas a la vez al logo nuevo: UN solo viaje al proveedor y la misma imagen para todas", async () => {

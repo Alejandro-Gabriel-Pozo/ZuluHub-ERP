@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nonceDe } from "./cabeceras";
+import { nonceDe, politicaDeContenido } from "./cabeceras";
 import {
   ENCABEZADO_DE_NONCE,
   HOST_DESCONOCIDO,
@@ -11,6 +11,7 @@ import {
   SUPERFICIES_SERVIBLES,
   decidirPuerta,
   esRutaDeSistema,
+  esRutaDelLogoDeLaCarta,
   hostDelPedido,
   sinEncabezadosInternos,
   type EstadoDeLaResolucion,
@@ -43,6 +44,70 @@ const decidir = (
     produccion,
     nonce: NONCE,
   });
+
+describe("la excepción de caché del logo de la carta (V1c)", () => {
+  const RUTA = "/aGD6JLL9SFT82W9bSN1byw/logo/1700000000.webp";
+  const cache = (ruta: string, superficie: SuperficieServible) =>
+    decidir(ruta, resuelta(superficie)).encabezadosDeRespuesta["Cache-Control"];
+
+  it("la ruta exacta del logo, en la carta, no lleva Cache-Control de la puerta (lo decide la ruta)", () => {
+    const d = decidir(RUTA, resuelta("CARTA"));
+    expect(d.accion).toBe("REESCRIBIR");
+    expect(d.rutaInterna).toBe(`/s/carta${RUTA}`);
+    expect("Cache-Control" in d.encabezadosDeRespuesta).toBe(false);
+    // Todo lo demás de la puerta sigue: CSP, HSTS, nosniff, noindex.
+    expect(d.encabezadosDeRespuesta["X-Content-Type-Options"]).toBe("nosniff");
+    expect(d.encabezadosDeRespuesta["Content-Security-Policy"]).toBe(politicaDeContenido(NONCE));
+    expect(d.encabezadosDeRespuesta["X-Robots-Tag"]).toBe("noindex");
+  });
+
+  it.each(["APP", "LANDING"] as const)(
+    "la misma ruta en una superficie %s sigue private, no-store",
+    (s) => {
+      expect(cache(RUTA, s)).toBe("private, no-store");
+    },
+  );
+
+  it.each([
+    ["la carta misma", "/aGD6JLL9SFT82W9bSN1byw"],
+    ["un producto", "/aGD6JLL9SFT82W9bSN1byw/flan-ab12cd34"],
+    ["la carpeta del logo", "/aGD6JLL9SFT82W9bSN1byw/logo"],
+    ["la carpeta con barra", "/aGD6JLL9SFT82W9bSN1byw/logo/"],
+    ["otra extensión", "/aGD6JLL9SFT82W9bSN1byw/logo/1700000000.png"],
+    ["sin extensión", "/aGD6JLL9SFT82W9bSN1byw/logo/1700000000"],
+    ["versión con letras", "/aGD6JLL9SFT82W9bSN1byw/logo/17a.webp"],
+    ["versión vacía", "/aGD6JLL9SFT82W9bSN1byw/logo/.webp"],
+    ["versión larguísima", "/aGD6JLL9SFT82W9bSN1byw/logo/1234567890123.webp"],
+    ["un tramo de más", "/aGD6JLL9SFT82W9bSN1byw/logo/1700000000.webp/x"],
+    ["barra final", `${RUTA}/`],
+    ["otro nombre de carpeta", "/aGD6JLL9SFT82W9bSN1byw/logos/1700000000.webp"],
+    ["Logo en mayúscula", "/aGD6JLL9SFT82W9bSN1byw/Logo/1700000000.webp"],
+    ["sin código", "/logo/1700000000.webp"],
+    ["código con escape", "/a%2fb/logo/1700000000.webp"],
+    ["código con punto", "/a.b/logo/1700000000.webp"],
+    ["código de 65", `/${"a".repeat(65)}/logo/1700000000.webp`],
+    ["una ruta que lo contiene", `/x${RUTA}`],
+    ["la raíz", "/"],
+  ])("%s en la carta sigue private, no-store", (_n, ruta) => {
+    expect(cache(ruta, "CARTA")).toBe("private, no-store");
+  });
+
+  it("esRutaDelLogoDeLaCarta: acepta los topes (código de 64, versión de 12)", () => {
+    expect(esRutaDelLogoDeLaCarta(`/${"a".repeat(64)}/logo/${"9".repeat(12)}.webp`)).toBe(true);
+    expect(esRutaDelLogoDeLaCarta("/a_-Z9/logo/1.webp")).toBe(true);
+    expect(esRutaDelLogoDeLaCarta("/a/logo/1.webp\n")).toBe(false);
+  });
+
+  it("un host que no se resuelve o una ruta interna no reciben la excepción", () => {
+    for (const r of [HOST_DESCONOCIDO, HOST_NO_DISPONIBLE]) {
+      expect(decidir(RUTA, r).encabezadosDeRespuesta["Cache-Control"]).toBe("private, no-store");
+    }
+    expect(
+      decidir("/s/carta/aGD6JLL9SFT82W9bSN1byw/logo/1.webp", resuelta("CARTA"))
+        .encabezadosDeRespuesta["Cache-Control"],
+    ).toBe("private, no-store");
+  });
+});
 
 describe("constantes de la puerta", () => {
   it("son las esperadas", () => {

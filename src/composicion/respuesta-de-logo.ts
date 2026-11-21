@@ -10,11 +10,17 @@ export const CABECERAS_DEL_LOGO_SERVIDO = {
   "Cache-Control": "public, max-age=86400",
 } as const;
 
+/** Todo lo que no es el 200 de la imagen: nunca se guarda (la puerta deja a ESTA ruta decidir su caché, así que lo dice ella). */
+const NO_SE_GUARDA = { "Cache-Control": "private, no-store" } as const;
+
 export function respuestaDelLogo(bytes: Uint8Array | null): Response {
-  if (bytes === null)
-    return new Response(null, { status: 404, headers: { "Cache-Control": "no-store" } });
+  if (bytes === null) return new Response(null, { status: 404, headers: NO_SE_GUARDA });
   return new Response(Buffer.from(bytes), {
     status: 200,
     headers: { ...CABECERAS_DEL_LOGO_SERVIDO, "Content-Length": String(bytes.length) },
   });
 }
+
+/** Un fallo de la lectura (la base caída, por ejemplo) no se disfraza de «no está»: es un 500, y tampoco se guarda. */
+export const respuestaDeFalloDelLogo = (): Response =>
+  new Response(null, { status: 500, headers: NO_SE_GUARDA });

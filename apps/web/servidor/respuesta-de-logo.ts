@@ -1,7 +1,10 @@
 import "server-only";
 
 import type { AlcanceDelHost } from "../../../src/capacidades/experiencia/puerta";
-import { respuestaDelLogo } from "../../../src/composicion/respuesta-de-logo";
+import {
+  respuestaDeFalloDelLogo,
+  respuestaDelLogo,
+} from "../../../src/composicion/respuesta-de-logo";
 import { logoDeLaVidriera } from "./vidriera";
 
 /**
@@ -13,7 +16,13 @@ export async function atenderElLogo(
   codigo: string,
   tramoDeVersion: string,
 ): Promise<Response> {
-  return respuestaDelLogo(
-    puerta === null ? null : await logoDeLaVidriera(puerta, codigo, tramoDeVersion),
-  );
+  try {
+    return respuestaDelLogo(
+      puerta === null ? null : await logoDeLaVidriera(puerta, codigo, tramoDeVersion),
+    );
+  } catch {
+    // Sin detalle: puede traer datos de conexión. La referencia y el motivo de una caída ya quedan en el registro de la conexión.
+    console.error("[carta] no se pudo atender el logo");
+    return respuestaDeFalloDelLogo();
+  }
 }

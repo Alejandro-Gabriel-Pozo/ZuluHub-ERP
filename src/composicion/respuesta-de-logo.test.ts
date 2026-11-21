@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { CABECERAS_DEL_LOGO_SERVIDO, respuestaDelLogo } from "./respuesta-de-logo";
+import {
+  CABECERAS_DEL_LOGO_SERVIDO,
+  respuestaDeFalloDelLogo,
+  respuestaDelLogo,
+} from "./respuesta-de-logo";
 
 const cabecerasDe = (r: Response): Record<string, string> =>
   Object.fromEntries(r.headers.entries());
@@ -30,10 +34,34 @@ describe("respuestaDelLogo", () => {
     const r = respuestaDelLogo(null);
     expect(r.status).toBe(404);
     expect(await r.text()).toBe("");
-    expect(cabecerasDe(r)).toEqual({ "cache-control": "no-store" });
+    expect(cabecerasDe(r)).toEqual({ "cache-control": "private, no-store" });
   });
 
   it("el largo es el de los bytes, no el de un texto", () => {
     expect(cabecerasDe(respuestaDelLogo(new Uint8Array(1_234)))["content-length"]).toBe("1234");
+  });
+
+  it("un fallo es un 500 sin cuerpo y sin guardarse (no se disfraza de «no está»)", async () => {
+    const r = respuestaDeFalloDelLogo();
+    expect(r.status).toBe(500);
+    expect(await r.text()).toBe("");
+    expect(cabecerasDe(r)).toEqual({ "cache-control": "private, no-store" });
+  });
+
+  it("solo el 200 de la imagen es guardable: ninguna otra respuesta lleva `public`", () => {
+    for (const r of [respuestaDelLogo(null), respuestaDeFalloDelLogo()]) {
+      expect(r.headers.get("cache-control")).toBe("private, no-store");
+    }
+    expect(respuestaDelLogo(new Uint8Array(1)).headers.get("cache-control")).toBe(
+      "public, max-age=86400",
+    );
+    for (const r of [
+      respuestaDelLogo(null),
+      respuestaDelLogo(new Uint8Array(1)),
+      respuestaDeFalloDelLogo(),
+    ]) {
+      expect(r.headers.has("set-cookie")).toBe(false);
+      expect(r.headers.has("vary")).toBe(false);
+    }
   });
 });
