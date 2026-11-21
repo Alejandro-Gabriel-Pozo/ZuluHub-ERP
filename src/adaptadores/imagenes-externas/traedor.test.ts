@@ -17,6 +17,7 @@ import {
   construirRiff,
   datosVp8,
   datosVp8x,
+  fixture,
   fragmentoRiff,
   webpVp8,
 } from "../../../test/utilidades/imagenes";
@@ -100,6 +101,15 @@ describe("una imagen buena", () => {
       "accept-encoding": "identity",
       "user-agent": "pedernal-carta/1",
       connection: "close",
+    });
+  });
+
+  it("un WebP real (con pérdida, 120 por 120) pasa tal cual", async () => {
+    const real = fixture("activos", "logo-carta-120.webp");
+    const s = await servidor((_p, r) => enviar(r, real));
+    expect(await crearTraedor(enBucleLocal(s.puerto)).traerLogo(destino)).toEqual({
+      ok: true,
+      valor: real,
     });
   });
 

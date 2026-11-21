@@ -2658,6 +2658,8 @@ describe("el módulo de ARCA simulada del recorrido no puede llegar a producció
   const RAIZ_REAL = join(import.meta.dirname, "../..");
   const PROHIBIDO_EN_PRODUCCION = [
     "conectar-arca-simulada",
+    "conectar-proveedor-de-imagenes-simulado",
+    "proveedor-de-imagenes-simulado",
     "activar-modulos-en-desarrollo",
     "PEDERNAL_RECORRIDO",
     "arca-simulada",
@@ -2691,7 +2693,7 @@ describe("el módulo de ARCA simulada del recorrido no puede llegar a producció
     expect(referenciasProhibidas(vercel)).toEqual([]);
   });
 
-  it("la regla detecta la violación inyectada (las cuatro formas)", () => {
+  it("la regla detecta la violación inyectada (cada nombre prohibido)", () => {
     for (const prohibido of PROHIBIDO_EN_PRODUCCION) {
       expect(referenciasProhibidas(`const a = 1;\nimport "${prohibido}";\n`)).toEqual([
         `import "${prohibido}";`,
