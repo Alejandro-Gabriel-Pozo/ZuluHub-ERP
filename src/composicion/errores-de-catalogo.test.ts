@@ -137,3 +137,27 @@ describe("traducirErrorDeCatalogo: precios (A1, T3)", () => {
     ).toEqual({ codigo: "CATALOGO_ACCION_NO_PERMITIDA" });
   });
 });
+
+describe("traducirErrorDeCatalogo: clasificación comercial (A14)", () => {
+  it("desactivar un nodo con hijos activos sale con su aviso propio y sin campo", () => {
+    expect(traducirErrorDeCatalogo("TIENE_HIJOS_ACTIVOS")).toEqual({
+      codigo: "CATALOGO_PRIMERO_DESACTIVA",
+    });
+  });
+
+  it.each([
+    "CICLO",
+    "TOPE_DE_NIVELES",
+    "DEPARTAMENTO_NO_SE_MUEVE",
+    "PADRE_DESACTIVADO",
+    "PADRE_INEXISTENTE",
+    "ARBOL_INCONSISTENTE",
+    "NODO_INEXISTENTE",
+    "NODO_DESACTIVADO",
+    "NOMBRE_DE_NODO_INVALIDO",
+    "VERSION_DESACTUALIZADA",
+    "ID_REUTILIZADO",
+  ])("%s sale como el genérico: no tiene texto propio", (error) => {
+    expect(traducirErrorDeCatalogo(error)).toEqual({ codigo: "CATALOGO_ACCION_NO_PERMITIDA" });
+  });
+});
