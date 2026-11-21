@@ -45,7 +45,7 @@ const correr = async (c: pg.Client, sql: string, confirmar = false) => {
   }
 };
 
-describe.skipIf(base === null)("migraciones 0078 y 0083: portal de la empresa", () => {
+describe.skipIf(base === null)("migraciones 0078 y 0083: portal de la vidriera", () => {
   it("variante A: toda única y clave de las tablas del portal lleva empresa_id (salvo el código del QR) y no se puede apuntar a un portal o una sucursal de otra empresa", async () => {
     const c = await montarPortal(base as BaseDePruebas);
     try {
@@ -69,7 +69,7 @@ describe.skipIf(base === null)("migraciones 0078 y 0083: portal de la empresa", 
       const a = await empresaConPortal(c);
       const b = await empresaConPortal(c);
       const portalA = valorDe(
-        await c.casos.guardarPortalDeLaEmpresa(a.e.gerente, {
+        await c.casos.guardarPortalDeLaVidriera(a.e.gerente, {
           id: nuevoId(),
           variante: "A",
           logoVisible: true,
@@ -103,7 +103,7 @@ describe.skipIf(base === null)("migraciones 0078 y 0083: portal de la empresa", 
     try {
       const m = await empresaConPortal(c);
       valorDe(
-        await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+        await c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
           id: nuevoId(),
           variante: "A",
           logoVisible: true,
@@ -229,7 +229,7 @@ describe.skipIf(base === null)("migraciones 0078 y 0083: portal de la empresa", 
       const r78 = await readFile(join(CARPETA, "0078_revertir_portal_de_la_empresa.sql"), "utf8");
       const m = await empresaConPortal(c);
       valorDe(
-        await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+        await c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
           id: nuevoId(),
           variante: "A",
           logoVisible: true,

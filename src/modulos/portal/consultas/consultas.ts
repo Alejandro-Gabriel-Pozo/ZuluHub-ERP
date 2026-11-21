@@ -29,8 +29,8 @@ export type PortalParaAdministrar = Readonly<{ portal: Portal; rutaPublica: stri
  */
 export function crearConsultasDePortal(d: DependenciasDeConsultasDePortal) {
   return {
-    /** El portal de la empresa del contexto (o `null` si todavía no lo creó). */
-    verPortalDeLaEmpresa(
+    /** El portal de la vidriera del contexto (o `null` si todavía no lo creó). */
+    verPortalDeLaVidriera(
       contexto: ContextoOperativo,
     ): Promise<Resultado<PortalParaAdministrar | null, MotivoDeRechazo | ErrorDePersistencia>> {
       return d.transacciones.ejecutar(
@@ -38,7 +38,7 @@ export function crearConsultasDePortal(d: DependenciasDeConsultasDePortal) {
         async (tx) => {
           const permiso = await exigirAccion(
             d.reglas,
-            DECLARACIONES_DE_CONSULTAS.verPortalDeLaEmpresa.accion,
+            DECLARACIONES_DE_CONSULTAS.verPortalDeLaVidriera.accion,
             () => tx.autorizacion.delActor(contexto),
           );
           if (!permiso.ok) return permiso;

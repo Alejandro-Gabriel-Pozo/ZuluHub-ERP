@@ -1,7 +1,7 @@
 import type { Generated } from "kysely";
 
 /**
- * Las tres tablas del portal de la empresa (migración 0078; diseño `carta-identidad-y-portal-datos-diseno.md` §2.3 a §2.5). Las comparan las pruebas de integración contra la
+ * Las tres tablas del portal de la vidriera (migración 0078; diseño `carta-identidad-y-portal-datos-diseno.md` §2.3 a §2.5). Las comparan las pruebas de integración contra la
  * base real: si una columna o restricción cambia en el SQL, esto tiene que cambiar con ella.
  */
 export type TablasDePortal = {

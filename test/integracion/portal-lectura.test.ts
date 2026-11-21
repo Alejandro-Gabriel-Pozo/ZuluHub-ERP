@@ -35,7 +35,7 @@ describe.skipIf(base === null)("lectura pública del portal (0078 y 0083)", () =
   const empresaConPortalGuardado = async () => {
     const m = await empresaConPortal(c);
     const g = valorDe(
-      await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+      await c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
         id: nuevoId(),
         variante: "A",
         lineaSuperior: "Nuestros locales",
@@ -100,7 +100,7 @@ describe.skipIf(base === null)("lectura pública del portal (0078 y 0083)", () =
   it("las dos variantes se ofrecen: guardada como B (imagen con zonas) se lee igual, y volver a A y otra vez a B no pierde lo cargado en la otra", async () => {
     const m = await empresaConPortalGuardado();
     const pedir = (variante: "A" | "B", version: number) =>
-      c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+      c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
         id: m.portalId,
         variante,
         logoVisible: true,
@@ -119,7 +119,7 @@ describe.skipIf(base === null)("lectura pública del portal (0078 y 0083)", () =
     valorDe(await pedir("B", a.version));
     expect((await vista(m.codigoDePortal))?.zonas).toHaveLength(1);
     // `null` SÍ quita la imagen; ausente la conserva.
-    const sin = await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+    const sin = await c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
       id: m.portalId,
       variante: "B",
       logoVisible: true,
@@ -216,7 +216,7 @@ describe.skipIf(base === null)("lectura pública del portal (0078 y 0083)", () =
     const m = await empresaConPortal(c);
     // Solo la sucursal 1 tiene tarjeta; la sucursal 2 tiene una carta en línea pero ninguna tarjeta ni zona.
     const g = valorDe(
-      await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+      await c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
         id: nuevoId(),
         variante: "A",
         logoVisible: true,
@@ -250,7 +250,7 @@ describe.skipIf(base === null)("lectura pública del portal (0078 y 0083)", () =
       visible: true,
     };
     const v2 = valorDe(
-      await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+      await c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
         id: g.portalId,
         variante: "B",
         logoVisible: true,
@@ -262,7 +262,7 @@ describe.skipIf(base === null)("lectura pública del portal (0078 y 0083)", () =
       [m.carta1.codigo, m.carta2.codigo].sort(),
     );
     valorDe(
-      await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+      await c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
         id: g.portalId,
         variante: "B",
         logoVisible: true,

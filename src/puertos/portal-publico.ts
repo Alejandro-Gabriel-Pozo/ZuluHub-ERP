@@ -2,7 +2,7 @@ import type { AlcanceDelHost } from "../capacidades/experiencia/puerta";
 import type { PartesDeDireccion } from "../capacidades/activos/direccion-externa";
 
 /**
- * Puerto `PortalPublico` (portal de la empresa, migraciones 0078 y 0083): la lectura PÚBLICA del portal por su código propio (el del QR de la empresa) DENTRO DE UNA MARCA.
+ * Puerto `PortalPublico` (portal de la vidriera, migraciones 0078 y 0083): la lectura PÚBLICA del portal por su código propio (el del QR de la empresa) DENTRO DE UNA MARCA.
  * Solo lectura y sin sesión. Devuelve `null` si el código no existe en esa marca o el portal no está disponible (empresa que no opera, o que bajó de plan o perdió el
  * módulo `vidriera` o la perilla `vidriera_por_qr`), sin distinguir los casos: la respuesta neutra no es un oráculo. Las imágenes llegan como PARTES de la dirección
  * externa (nunca la dirección pegada): quien las muestra arma la dirección con el proveedor de la lista cerrada.
@@ -43,7 +43,7 @@ export type PortalPublicado = Readonly<{
 export interface PortalPublico {
   porCodigo(host: AlcanceDelHost, codigo: string): Promise<PortalPublicado | null>;
   /**
-   * El código del portal de la empresa de UNA carta, para el enlace «← PORTAL» (`hrefDelPortal`). `null` si el código no es de una carta del host, la empresa no tiene
+   * El código del portal de la vidriera de UNA carta, para el enlace «← PORTAL» (`hrefDelPortal`). `null` si el código no es de una carta del host, la empresa no tiene
    * portal o el portal no se sirve (mismo plan y mismo estado que `porCodigo`): sin portal servible no hay flecha.
    */
   codigoDelPortalDeLaCarta(host: AlcanceDelHost, codigoDeCarta: string): Promise<string | null>;
