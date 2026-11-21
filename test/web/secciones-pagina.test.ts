@@ -6,7 +6,7 @@ import { errorDeCodigo, type Respuesta } from "../../src/capacidades/experiencia
 /// <reference path="../../apps/web/ui/css-modules.d.ts" />
 
 /**
- * Las páginas de «Secciones de la carta» (A8, parte 1): la lista, la sección con sus productos, el alta y el nombre. Cada una pide al servidor lo suyo con el contexto de la empresa, liga a la
+ * Las páginas de «Secciones de la carta» (A8, partes 1 y 2): la lista, la sección con sus productos, el alta, el nombre y «Agregar producto». Cada una pide al servidor lo suyo con el contexto de la empresa, liga a la
  * acción lo que la persona vio (la clave de creación, la sección y su versión, las secciones activas) y pinta cada situación con su texto del catálogo: «Guardar», las flechas y los botones
  * activos o apagados según el permiso, y los errores (el del guard con su motivo; el genérico para una sección que no está ahí; el inesperado con la referencia y sin el código crudo).
  * Un solo `h1` por página.
@@ -38,6 +38,7 @@ vi.mock("../../apps/web/servidor/secciones", () => ({
   cargarLasSecciones: lectura("lista"),
   cargarUnaSeccion: lectura("una"),
   cargarLaSeccion: lectura("sola"),
+  cargarLosCandidatos: lectura("candidatos"),
   nuevaClaveDeSeccion: () => {
     const clave = `clave-${String(mundo.claves.length + 1)}`;
     mundo.claves.push(clave);
@@ -56,6 +57,8 @@ vi.mock("../../apps/web/app/s/app/acciones-de-secciones", () => ({
   moverSeccionAccion: accion("mover"),
   desactivarSeccionAccion: accion("desactivar"),
   reactivarSeccionAccion: accion("reactivar"),
+  quitarProductoDeSeccionAccion: accion("quitar"),
+  agregarProductoASeccionAccion: accion("agregar"),
 }));
 vi.mock("../../apps/web/servidor/sesion", () => ({
   dependenciasDeSesion: {},
@@ -107,8 +110,17 @@ const BEBIDAS = { id: C, nombre: "Bebidas", activa: true, version: 5 };
 const UNA = (seccion = CAFES) => ({
   seccion,
   productos: [
-    { id: "p1", nombre: "Cortado" },
-    { id: "p2", nombre: "Espresso" },
+    { id: "p1", nombre: "Cortado", version: 4 },
+    { id: "p2", nombre: "Espresso", version: 9 },
+  ],
+  siguiente: null,
+});
+const CANDIDATOS = (seccion = CAFES) => ({
+  seccion,
+  candidatos: [
+    { id: "p3", nombre: "Budín", version: 2, faltaCompletar: true, seccion: null },
+    { id: "p4", nombre: "Flan", version: 6, faltaCompletar: false, seccion: "Postres" },
+    { id: "p5", nombre: "Milanesa", version: 1, faltaCompletar: false, seccion: null },
   ],
   siguiente: null,
 });
@@ -122,6 +134,7 @@ beforeEach(() => {
   responde("lista", { ok: true, dato: { secciones: [CAFES, POSTRES, BEBIDAS] } });
   responde("una", { ok: true, dato: UNA() });
   responde("sola", { ok: true, dato: CAFES });
+  responde("candidatos", { ok: true, dato: CANDIDATOS() });
   puede(["productos.ver", "productos.editar"]);
 });
 
@@ -239,12 +252,69 @@ describe("la página de una sección", () => {
       new RegExp(`<a [^>]*href="/catalogo/secciones/${A}/nombre"[^>]*>Nombre</a>`),
     );
     expect(marcado).toMatch(/<button[^>]*type="submit"[^>]*>Desactivar/);
-    expect([...principal(marcado).matchAll(/<li\b[^>]*>(.*?)<\/li>/g)].map((m) => m[1])).toEqual([
-      "Cortado",
-      "Espresso",
+    expect(
+      [...principal(marcado).matchAll(/<li\b[^>]*>(.*?)<\/li>/g)].map((m) =>
+        (m[1] ?? "")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/\s+/g, " ")
+          .trim(),
+      ),
+    ).toEqual(["Cortado Quitar", "Espresso Quitar"]);
+  });
+
+  it("«Agregar producto» lleva a elegir; «Quitar» sale en cada producto y viaja con el id del producto en su valor, no con la versión", async () => {
+    const marcado = await html(RUTA, PROPS_DE_UNA());
+    expect(marcado).toMatch(
+      new RegExp(`<a [^>]*href="/catalogo/secciones/${A}/agregar"[^>]*>Agregar producto</a>`),
+    );
+    const quitar = [...marcado.matchAll(/<button\b([^>]*)>Quitar<\/button>/g)].map(
+      (m) => m[1] ?? "",
+    );
+    expect(quitar).toHaveLength(2);
+    expect(quitar.map((a) => /name="quitar"/.test(a))).toEqual([true, true]);
+    expect(quitar.map((a) => /value="([^"]*)"/.exec(a)?.[1])).toEqual(["p1", "p2"]);
+    expect(quitar.map((a) => /aria-label="([^"]*)"/.exec(a)?.[1])).toEqual([
+      "Quitar Cortado",
+      "Quitar Espresso",
     ]);
-    expect(marcado).not.toContain("Agregar producto");
-    expect(marcado).not.toContain("Quitar");
+    expect(quitar.every((a) => /type="submit"/.test(a) && !/\bdisabled\b/.test(a))).toBe(true);
+    expect(marcado).not.toContain("versionEsperada");
+    expect(marcado).not.toMatch(/value="(4|9)"/);
+  });
+
+  it("liga a «Quitar» la sección y los productos como se ven, con su versión", async () => {
+    await html(RUTA, PROPS_DE_UNA());
+    expect(mundo.ligadas).toContainEqual({
+      accion: "quitar",
+      args: [
+        null,
+        A,
+        [
+          { productoId: "p1", versionEsperada: 4 },
+          { productoId: "p2", versionEsperada: 9 },
+        ],
+      ],
+    });
+  });
+
+  it("sin productos.editar (un operador) «Agregar producto» y «Quitar» salen apagados, pero los productos se ven", async () => {
+    puede(["productos.ver"]);
+    const marcado = await html(RUTA, PROPS_DE_UNA());
+    expect(marcado).not.toContain("/agregar");
+    expect(marcado).toMatch(/<button[^>]*disabled[^>]*>Agregar producto/);
+    const quitar = [...marcado.matchAll(/<button\b([^>]*)>Quitar<\/button>/g)].map(
+      (m) => m[1] ?? "",
+    );
+    expect(quitar).toHaveLength(2);
+    expect(quitar.every((a) => /\bdisabled\b/.test(a))).toBe(true);
+    expect(await texto(RUTA, PROPS_DE_UNA())).toContain("Cortado");
+  });
+
+  it("si no se pudieron leer los permisos, «Agregar producto» y «Quitar» salen apagados (cierra, no abre)", async () => {
+    mundo.permisos = { ok: false, error: "SIN_PERMISO" };
+    const marcado = await html(RUTA, PROPS_DE_UNA());
+    expect(marcado).not.toContain("/agregar");
+    expect(marcado).toMatch(/<button[^>]*disabled[^>]*>Agregar producto/);
   });
 
   it("el botón ‹ vuelve a la lista con su nombre accesible", async () => {
@@ -263,20 +333,22 @@ describe("la página de una sección", () => {
   });
 
   it("una sección activa liga «Desactivar» a la sección; una desactivada, «Reactivar», con su marca", async () => {
+    const deEstado = () => mundo.ligadas.filter((l) => l.accion !== "quitar");
     await html(RUTA, PROPS_DE_UNA());
-    expect(mundo.ligadas).toEqual([{ accion: "desactivar", args: [null, A] }]);
+    expect(deEstado()).toEqual([{ accion: "desactivar", args: [null, A] }]);
     mundo.ligadas = [];
     responde("una", { ok: true, dato: UNA(POSTRES) });
     const marcado = await html(RUTA, PROPS_DE_UNA(B));
-    expect(mundo.ligadas).toEqual([{ accion: "reactivar", args: [null, B] }]);
+    expect(deEstado()).toEqual([{ accion: "reactivar", args: [null, B] }]);
     expect(marcado).toMatch(/<button[^>]*type="submit"[^>]*>Reactivar/);
     expect(await texto(RUTA, PROPS_DE_UNA(B))).toContain("Desactivado");
   });
 
-  it("una sección sin productos no dice nada", async () => {
+  it("una sección sin productos no dice nada, pero ofrece «Agregar producto»", async () => {
     responde("una", { ok: true, dato: { seccion: CAFES, productos: [], siguiente: null } });
     const marcado = await html(RUTA, PROPS_DE_UNA());
     expect(principal(marcado)).not.toContain("<li");
+    expect(marcado).toContain("Agregar producto");
     expect(await texto(RUTA, PROPS_DE_UNA())).not.toContain("Sin resultados");
   });
 
@@ -375,5 +447,127 @@ describe("la página del nombre de una sección", () => {
     const marcado = await html(RUTA, props(C));
     expect(marcado).not.toContain("<form");
     expect(await texto(RUTA, props(C))).toContain("Esta acción no está permitida");
+  });
+});
+
+describe("la página de «Agregar producto»", () => {
+  const RUTA = "/[id]/agregar/page";
+
+  it("un solo h1, «Agregar producto»; el buscador «Buscar» con su botón, una fila por candidato con su sección al lado y «Cancelar» a la sección", async () => {
+    const marcado = await html(RUTA, PROPS_DE_UNA());
+    expect(h1(marcado)).toEqual(["Agregar producto"]);
+    expect(marcado).toMatch(
+      /<form[^>]*action="\/catalogo\/secciones\/[^"]+\/agregar"[^>]*method="get"/,
+    );
+    expect(marcado).toMatch(/<label[^>]*>Buscar<\/label>/);
+    expect(marcado).toMatch(/<input[^>]*type="search"[^>]*name="texto"/);
+    expect(marcado).toMatch(/<button[^>]*type="submit"[^>]*>Buscar<\/button>/);
+    const filas = [
+      ...principal(marcado).matchAll(/<button\b[^>]*name="agregar"[^>]*>(.*?)<\/button>/g),
+    ].map((m) =>
+      (m[1] ?? "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    );
+    expect(filas).toEqual(["Budín Falta completar", "Flan Postres", "Milanesa Sin elegir"]);
+    expect(marcado).toMatch(
+      new RegExp(`<a [^>]*href="/catalogo/secciones/${A}"[^>]*>Cancelar</a>`),
+    );
+  });
+
+  it("cada candidato viaja con su id en el valor; el que falta completar sale apagado y los demás no", async () => {
+    const marcado = await html(RUTA, PROPS_DE_UNA());
+    const botones = [...marcado.matchAll(/<button\b([^>]*name="agregar"[^>]*)>/g)].map(
+      (m) => m[1] ?? "",
+    );
+    expect(botones.map((a) => /value="([^"]*)"/.exec(a)?.[1])).toEqual(["p3", "p4", "p5"]);
+    expect(botones.map((a) => /\bdisabled\b/.test(a))).toEqual([true, false, false]);
+    expect(marcado).not.toMatch(/value="(2|6|1)"/);
+  });
+
+  it("pide los candidatos con el contexto del servidor, el id, el texto y la página de la dirección; el texto vuelve al campo", async () => {
+    const marcado = await html(RUTA, PROPS_DE_UNA(A, { texto: " fla ", despues: `${B}:flan` }));
+    expect(mundo.llamadas).toEqual([
+      { que: "candidatos", args: [{ id: "contexto" }, A, "fla", `${B}:flan`] },
+    ]);
+    expect(marcado).toMatch(/<input[^>]*name="texto"[^>]*value="fla"/);
+    mundo.llamadas = [];
+    await html(RUTA, PROPS_DE_UNA(A));
+    expect(mundo.llamadas[0]?.args).toEqual([{ id: "contexto" }, A, "", ""]);
+  });
+
+  it("liga a la acción la sección y los candidatos como se ven, con su versión", async () => {
+    await html(RUTA, PROPS_DE_UNA());
+    expect(mundo.ligadas).toEqual([
+      {
+        accion: "agregar",
+        args: [
+          null,
+          A,
+          [
+            { productoId: "p3", versionEsperada: 2 },
+            { productoId: "p4", versionEsperada: 6 },
+            { productoId: "p5", versionEsperada: 1 },
+          ],
+        ],
+      },
+    ]);
+  });
+
+  it("sin productos.editar todos los candidatos salen apagados, pero se ven; sin poder leer los permisos, también", async () => {
+    for (const cierre of [
+      () => puede(["productos.ver"]),
+      () => (mundo.permisos = { ok: false, error: "SIN_PERMISO" }),
+    ]) {
+      cierre();
+      const marcado = await html(RUTA, PROPS_DE_UNA());
+      const botones = [...marcado.matchAll(/<button\b([^>]*name="agregar"[^>]*)>/g)].map(
+        (m) => m[1] ?? "",
+      );
+      expect(botones).toHaveLength(3);
+      expect(botones.every((a) => /\bdisabled\b/.test(a))).toBe(true);
+    }
+  });
+
+  it("«Página siguiente» conserva el texto buscado", async () => {
+    responde("candidatos", { ok: true, dato: { ...CANDIDATOS(), siguiente: `${B}:flan` } });
+    const marcado = await html(RUTA, PROPS_DE_UNA(A, { texto: "fla" }));
+    expect(marcado).toContain(
+      `href="/catalogo/secciones/${A}/agregar?texto=fla&amp;despues=${encodeURIComponent(`${B}:flan`)}"`,
+    );
+    expect(marcado).toContain("Página siguiente");
+  });
+
+  it("una lista sin candidatos no dice nada, pero el buscador y «Cancelar» siguen", async () => {
+    responde("candidatos", { ok: true, dato: { seccion: CAFES, candidatos: [], siguiente: null } });
+    const marcado = await html(RUTA, PROPS_DE_UNA());
+    expect(marcado).not.toContain('name="agregar"');
+    expect(await texto(RUTA, PROPS_DE_UNA())).not.toContain("Sin resultados");
+    expect(marcado).toContain("Cancelar");
+  });
+
+  it("una sección que no es de la empresa sale como el genérico, sin formulario ni candidatos", async () => {
+    responde("candidatos", { ok: false, error: errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA") });
+    const marcado = await html(RUTA, PROPS_DE_UNA(C));
+    expect(marcado).not.toContain("<form");
+    expect(await texto(RUTA, PROPS_DE_UNA(C))).toContain("Esta acción no está permitida");
+  });
+
+  it("el motivo del guard (el módulo en desarrollo) sale con su texto y sin lista", async () => {
+    responde("candidatos", { ok: false, error: errorDeCodigo("MODULO_EN_DESARROLLO") });
+    const marcado = await html(RUTA, PROPS_DE_UNA());
+    expect(marcado).not.toContain("<form");
+    expect(await texto(RUTA, PROPS_DE_UNA())).toContain("Esta función todavía está en desarrollo.");
+  });
+
+  it("un fallo inesperado sale con su referencia y sin el código crudo", async () => {
+    responde("candidatos", {
+      ok: false,
+      error: { ...errorDeCodigo("ERROR_INTERNO"), referencia: "PD-ABC123" },
+    });
+    const t = await texto(RUTA, PROPS_DE_UNA());
+    expect(t).toContain("PD-ABC123");
+    expect(t).not.toContain("ERROR_INTERNO");
   });
 });

@@ -19,6 +19,8 @@ vi.mock("../../apps/web/servidor/secciones", () => ({
   guardarElNombreDeLaSeccion: delegadas.delegar("nombre"),
   moverLaSeccion: delegadas.delegar("mover"),
   cambiarElEstadoDeLaSeccionDeCarta: delegadas.delegar("estado"),
+  quitarElProductoDeLaSeccion: delegadas.delegar("quitar"),
+  agregarElProductoALaSeccion: delegadas.delegar("agregar"),
 }));
 
 import * as acciones from "../../apps/web/app/s/app/acciones-de-secciones";
@@ -26,13 +28,15 @@ import * as acciones from "../../apps/web/app/s/app/acciones-de-secciones";
 const previo = { error: null };
 
 describe("las acciones de servidor de las secciones expuestas a Next", () => {
-  it("exporta solo las cinco acciones, asíncronas", () => {
+  it("exporta solo las siete acciones, asíncronas", () => {
     expect(Object.keys(acciones)).toEqual([
       "crearSeccionAccion",
       "renombrarSeccionAccion",
       "moverSeccionAccion",
       "desactivarSeccionAccion",
       "reactivarSeccionAccion",
+      "quitarProductoDeSeccionAccion",
+      "agregarProductoASeccionAccion",
     ]);
     for (const accion of Object.values(acciones)) {
       expect(accion.constructor.name).toBe("AsyncFunction");
@@ -53,6 +57,23 @@ describe("las acciones de servidor de las secciones expuestas a Next", () => {
     delegadas.llamadas.length = 0;
     expect(await acciones.renombrarSeccionAccion("s-1", 4, previo, datos)).toEqual({ error: null });
     expect(delegadas.llamadas).toEqual([["nombre", "s-1", 4, datos]]);
+  });
+
+  it("«Quitar» y «Agregar producto» delegan con la sección, los productos que se vieron y el formulario, sin el estado anterior", async () => {
+    const vistas = [{ productoId: "p-1", versionEsperada: 4 }];
+    const datos = new FormData();
+    datos.set("quitar", "p-1");
+    delegadas.llamadas.length = 0;
+    expect(await acciones.quitarProductoDeSeccionAccion("s-1", vistas, previo, datos)).toEqual({
+      error: null,
+    });
+    expect(await acciones.agregarProductoASeccionAccion("s-1", vistas, previo, datos)).toEqual({
+      error: null,
+    });
+    expect(delegadas.llamadas).toEqual([
+      ["quitar", "s-1", vistas, datos],
+      ["agregar", "s-1", vistas, datos],
+    ]);
   });
 
   it("una flecha delega con las secciones que se vieron y el formulario, sin el estado anterior", async () => {

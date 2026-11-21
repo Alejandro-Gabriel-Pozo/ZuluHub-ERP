@@ -4,8 +4,11 @@ import {
   leerElPedidoDeCrearSeccion,
   leerElPedidoDeMover,
   leerElPedidoDeRenombrarSeccion,
+  leerElPedidoDeTocarProducto,
   leerElPedidoDeUnaSeccion,
+  leerLaBusquedaDeCandidatos,
   ordenDeLaSeccionNueva,
+  versionVistaDelProducto,
   type PedidoDeMover,
 } from "./entradas-de-secciones";
 
@@ -197,5 +200,119 @@ describe("entradaDeReordenar", () => {
     const original = vistas.map((v) => ({ ...v }));
     entradaDeReordenar(pedido(B, "ARRIBA"));
     expect(vistas).toEqual(original);
+  });
+});
+
+describe("tocar un producto de la sección (agregar y quitar)", () => {
+  const vistasDeProductos = [
+    { productoId: A, versionEsperada: 4 },
+    { productoId: B, versionEsperada: "7" },
+  ];
+  const pedidoDeProducto = (productoId: string) => ({
+    seccionId: C,
+    vistas: vistasDeProductos,
+    productoId,
+  });
+
+  it("lee la sección, lo que se vio y el producto tocado, y descarta lo demás (la empresa, la versión suelta, la sección del producto)", () => {
+    expect(
+      leerElPedidoDeTocarProducto({
+        ...pedidoDeProducto(B),
+        empresaId: "otra",
+        versionEsperada: 1,
+      }),
+    ).toEqual({
+      ok: true,
+      valor: {
+        seccionId: C,
+        vistas: [
+          { productoId: A, versionEsperada: 4 },
+          { productoId: B, versionEsperada: 7 },
+        ],
+        productoId: B,
+      },
+    });
+  });
+
+  it.each([
+    ["sin sección", { vistas: [], productoId: A }],
+    ["con una sección que no es un id", { ...pedidoDeProducto(A), seccionId: "x" }],
+    ["con un producto que no es un id", pedidoDeProducto("x")],
+    ["con lo visto que no es una lista", { ...pedidoDeProducto(A), vistas: "x" }],
+    [
+      "con una versión que no es un entero",
+      { ...pedidoDeProducto(A), vistas: [{ productoId: A, versionEsperada: "1.5" }] },
+    ],
+    [
+      "con más de 500 productos vistos",
+      {
+        ...pedidoDeProducto(A),
+        vistas: Array.from({ length: 501 }, () => ({ productoId: A, versionEsperada: 1 })),
+      },
+    ],
+  ])("%s es PEDIDO_INVALIDO", (_nombre, crudo) => {
+    expect(leerElPedidoDeTocarProducto(crudo)).toEqual({ ok: false, error: "PEDIDO_INVALIDO" });
+  });
+
+  it("con 500 productos vistos todavía pasa (la cota es de forma, no de negocio)", () => {
+    const vistas = Array.from({ length: 500 }, () => ({ productoId: A, versionEsperada: 1 }));
+    expect(leerElPedidoDeTocarProducto({ ...pedidoDeProducto(A), vistas }).ok).toBe(true);
+  });
+
+  it("la versión sale de lo que la persona vio de ESE producto", () => {
+    const pedido = leerElPedidoDeTocarProducto(pedidoDeProducto(B));
+    expect(pedido.ok && versionVistaDelProducto(pedido.valor)).toEqual({
+      productoId: B,
+      versionEsperada: 7,
+    });
+  });
+
+  it("un producto que la persona no vio no tiene versión (null): no se inventa una", () => {
+    const pedido = leerElPedidoDeTocarProducto(pedidoDeProducto(C));
+    expect(pedido.ok && versionVistaDelProducto(pedido.valor)).toBeNull();
+  });
+});
+
+describe("la búsqueda de candidatos para «Agregar producto»", () => {
+  const pedido = (cambios: Record<string, unknown> = {}) => ({
+    seccionId: A,
+    texto: "",
+    despues: "",
+    ...cambios,
+  });
+
+  it("un texto vacío o de blancos es «sin filtro» (undefined) y la página vacía es la primera", () => {
+    expect(leerLaBusquedaDeCandidatos(pedido({ texto: "   " }))).toEqual({
+      ok: true,
+      valor: { seccionId: A, consulta: { texto: undefined, despues: "" } },
+    });
+  });
+
+  it("el texto se valida con la primitiva de búsqueda de productos (se recorta) y la página pasa como vino", () => {
+    expect(
+      leerLaBusquedaDeCandidatos(pedido({ texto: "  Cor ", despues: `${B}:cortado` })),
+    ).toEqual({
+      ok: true,
+      valor: { seccionId: A, consulta: { texto: "Cor", despues: `${B}:cortado` } },
+    });
+  });
+
+  it.each(["+uno", "-uno", "a\u0000b", "a".repeat(500)])(
+    "un texto inválido (%j) no ensancha el filtro: consulta null, con la sección igual",
+    (texto) => {
+      expect(leerLaBusquedaDeCandidatos(pedido({ texto }))).toEqual({
+        ok: true,
+        valor: { seccionId: A, consulta: null },
+      });
+    },
+  );
+
+  it.each([
+    ["sin la forma pedida", { seccionId: A }],
+    ["con una sección que no es un id", pedido({ seccionId: "x" })],
+    ["con un texto enorme (más de 1000)", pedido({ texto: "a".repeat(1001) })],
+    ["null", null],
+  ])("%s es PEDIDO_INVALIDO", (_nombre, crudo) => {
+    expect(leerLaBusquedaDeCandidatos(crudo)).toEqual({ ok: false, error: "PEDIDO_INVALIDO" });
   });
 });

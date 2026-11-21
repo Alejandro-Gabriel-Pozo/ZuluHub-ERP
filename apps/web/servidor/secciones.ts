@@ -3,6 +3,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
+  agregarElProducto,
+  quitarElProducto,
+  verLosCandidatos,
+  type CandidatosParaLaPantalla,
+  type DependenciasDeProductosDeSeccionWeb,
+} from "../../../src/composicion/productos-de-seccion-web";
+import {
   cambiarElEstadoDeLaSeccion,
   crearLaSeccion,
   moverUnaSeccion,
@@ -17,10 +24,14 @@ import {
 } from "../../../src/composicion/secciones-web";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import {
+  CAMPO_DE_AGREGAR,
   CAMPO_DE_BAJAR,
+  CAMPO_DE_QUITAR,
   CAMPO_DE_SUBIR,
   RUTA_DE_SECCIONES,
+  rutaDeAgregarProducto,
   rutaDeLaSeccion,
+  type VistaDeProducto,
   type VistaDeSeccion,
 } from "../ui/plantillas/catalogo/modelo-de-secciones";
 import type { ResultadoDeAccion } from "./acciones";
@@ -30,7 +41,7 @@ import { textoDe } from "./formularios-de-caja";
 import { dependenciasDeSesion } from "./sesion";
 
 /**
- * Las secciones de la carta (A8, parte 1): las lecturas y las acciones de crear, renombrar, mover, desactivar y reactivar. Finas a propósito (ADR-015, punto 2): resuelven QUIÉN y DÓNDE actúa
+ * Las secciones de la carta (A8, partes 1 y 2): las lecturas y las acciones de crear, renombrar, mover, desactivar, reactivar, agregar y quitar productos. Finas a propósito (ADR-015, punto 2): resuelven QUIÉN y DÓNDE actúa
  * (`conLaEmpresa`: sesión, origen propio y empresa elegida, nunca los que diga el navegador) y llaman a `src/composicion/secciones-web.ts`, donde se prueba el resto. El permiso (`productos.ver` /
  * `productos.editar`) y la validez de cada dato los decide el servidor, dentro de la transacción: la pantalla no valida nada. Del formulario solo se toman los campos que la acción declara; la
  * clave de creación, la sección, su versión y lo que la persona vio de la lista no viajan en el formulario: los fija la página al armar la acción (`bind`).
@@ -40,7 +51,7 @@ import { dependenciasDeSesion } from "./sesion";
  * reactivar) se vuelve a pedir la página (`revalidatePath`): lo que sigue lleva las versiones vigentes y, si hubo un conflicto, se ve lo que cambió.
  */
 
-const dependencias: DependenciasDeSeccionesWeb = {
+const dependencias: DependenciasDeSeccionesWeb & DependenciasDeProductosDeSeccionWeb = {
   casosDeUso: web.casosDeUsoDeCatalogo,
   consultas: web.consultasDeCatalogo,
   respuesta: dependenciasDeSesion.respuesta,
@@ -66,6 +77,16 @@ export function cargarUnaSeccion(
   despues: string,
 ): Promise<Respuesta<UnaSeccionParaLaPantalla>> {
   return verUnaSeccion(dependencias, contexto, { seccionId, despues });
+}
+
+/** Una página de los productos que se le pueden agregar a la sección, filtrados por el texto buscado (`despues` es la clave de la dirección; `""` es la primera). */
+export function cargarLosCandidatos(
+  contexto: ContextoOperativo,
+  seccionId: string,
+  texto: string,
+  despues: string,
+): Promise<Respuesta<CandidatosParaLaPantalla>> {
+  return verLosCandidatos(dependencias, contexto, { seccionId, texto, despues });
 }
 
 /** Una sección de la empresa sola (para renombrarla), con el contexto que ya resolvió la página. */
@@ -137,4 +158,43 @@ export async function cambiarElEstadoDeLaSeccionDeCarta(
     cambiarElEstadoDeLaSeccion(dependencias, contexto, { seccionId }, activa),
   );
   return seQuedaEnLaPantalla(respuesta, rutaDeLaSeccion(seccionId));
+}
+
+/**
+ * «Quitar»: el producto tocado (el valor de `quitar`) sobre los productos de la sección que la persona vio, con su versión. Se queda en la pantalla y la vuelve a pedir con éxito o sin él: lo que
+ * sigue lleva las versiones vigentes y, si hubo un conflicto, se ve lo que cambió.
+ */
+export async function quitarElProductoDeLaSeccion(
+  seccionId: string,
+  vistas: readonly VistaDeProducto[],
+  datos: FormData,
+): Promise<ResultadoDeAccion> {
+  const respuesta = await conLaEmpresa((contexto) =>
+    quitarElProducto(dependencias, contexto, {
+      seccionId,
+      vistas,
+      productoId: textoDe(datos, CAMPO_DE_QUITAR),
+    }),
+  );
+  return seQuedaEnLaPantalla(respuesta, rutaDeLaSeccion(seccionId));
+}
+
+/**
+ * «Agregar producto»: el candidato elegido (el valor de `agregar`) sobre los candidatos que la persona vio, con su versión. Si sale bien vuelve a la sección; si no, se queda en la pantalla
+ * (la vuelve a pedir, con las versiones vigentes) y devuelve el error ya traducido.
+ */
+export async function agregarElProductoALaSeccion(
+  seccionId: string,
+  vistas: readonly VistaDeProducto[],
+  datos: FormData,
+): Promise<ResultadoDeAccion> {
+  const respuesta = await conLaEmpresa((contexto) =>
+    agregarElProducto(dependencias, contexto, {
+      seccionId,
+      vistas,
+      productoId: textoDe(datos, CAMPO_DE_AGREGAR),
+    }),
+  );
+  if (!respuesta.ok) return seQuedaEnLaPantalla(respuesta, rutaDeAgregarProducto(seccionId));
+  redirect(rutaDeLaSeccion(seccionId));
 }
