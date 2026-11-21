@@ -16,7 +16,7 @@ describe("el catálogo comercial de módulos", () => {
     expect(conCapacidad).toEqual([]);
   });
 
-  it("tiene trece módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, caja y ventas (disponibles desde el 15/11/2026, DEC-0463), compras (disponible desde E9-T12), carta (en desarrollo), comandas y salon (disponibles desde S-0r, 17/11/2026, Q-S0-3), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
+  it("tiene trece módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, caja y ventas (disponibles desde el 15/11/2026, DEC-0463), compras (disponible desde E9-T12), vidriera (disponible desde el 20/11/2026, DEC-0826), comandas y salon (disponibles desde S-0r, 17/11/2026, Q-S0-3), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
     expect(CATALOGO_DE_MODULOS).toEqual({
       administracion: {
         estado: "disponible",
@@ -97,7 +97,7 @@ describe("el catálogo comercial de módulos", () => {
         },
       },
       vidriera: {
-        estado: "en_desarrollo",
+        estado: "disponible",
         obligatorio: false,
         requiere: ["catalogo"],
         usaSiExiste: [],
@@ -376,11 +376,19 @@ describe("el catálogo comercial de módulos", () => {
     expect([...bajaDePlan.modulosEnSoloLectura]).toEqual(["facturacion"]);
   });
 
-  it("la carta sigue en desarrollo: no se activa ni aunque se active y el plan la incluya", () => {
-    const todos = ["vidriera"];
-    const estado = estadoDeModulos(CATALOGO_DE_MODULOS, todos, todos);
-    expect([...estado.modulosActivos]).toEqual(["administracion", "clientes"]);
-    expect([...estado.modulosEnSoloLectura]).toEqual([]);
+  it("vidriera es disponible (DEC-0826) pero NO nace activa: sin activarla y sin plan la empresa no la tiene; activada y en el plan opera", () => {
+    expect(CATALOGO_DE_MODULOS.vidriera.estado).toBe("disponible");
+    expect([...estadoDeModulos(CATALOGO_DE_MODULOS, [], ["vidriera"]).modulosActivos]).toEqual([
+      "administracion",
+      "clientes",
+    ]);
+    expect([...estadoDeModulos(CATALOGO_DE_MODULOS, ["vidriera"], []).modulosActivos]).toEqual([
+      "administracion",
+      "clientes",
+    ]);
+    expect(
+      [...estadoDeModulos(CATALOGO_DE_MODULOS, ["vidriera"], ["vidriera"]).modulosActivos].sort(),
+    ).toEqual(["administracion", "clientes", "vidriera"]);
   });
 
   it("catalogo, caja y ventas son disponibles (DEC-0463) pero NO nacen activos: sin activarlos y sin plan la empresa no los tiene; activados y en el plan operan", () => {

@@ -18,7 +18,7 @@ import {
 /**
  * La pantalla «Carta en línea» de la web (`carta-en-linea-web.ts`, C1) contra una base real y los roles reales: lo que la pantalla recibe, qué se escribe y qué se audita; crear y poner en línea
  * dos veces (una sola carta, una sola auditoría), dos «Poner en línea» A LA VEZ, dos altas A LA VEZ con la misma clave, una versión vieja, el aislamiento entre empresas y el permiso del servidor
- * (el operador ve y no cambia; con `vidriera` en desarrollo, hoy, nadie cambia nada). Los casos de uso en sí tienen sus pruebas en `carta-publica-casos-de-uso.test.ts` y `carta-publica-concurrencia.test.ts`.
+ * (el operador ve y no cambia; sin la perilla del QR nadie pone una carta en línea). Los casos de uso en sí tienen sus pruebas en `carta-publica-casos-de-uso.test.ts` y `carta-publica-concurrencia.test.ts`.
  */
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 120_000 });
@@ -34,7 +34,7 @@ describe.skipIf(base === null)("carta en línea de la web", () => {
   beforeAll(async () => {
     if (base === null) return;
     c = await montarCatalogo(base);
-    // El catálogo real: `vidriera` sigue `en_desarrollo` y el guard rechaza todo.
+    // El catálogo real: `vidriera` es disponible (DEC-0826) y rechaza quien no tiene permiso o no tiene la perilla `vidriera_por_qr`.
     cerrado = await montarCatalogo(base, {
       reglas: { catalogo: CATALOGO_DE_MODULOS, permisos: PERMISOS_DE_EMPRESA },
     });
@@ -417,42 +417,66 @@ describe.skipIf(base === null)("carta en línea de la web", () => {
     expect((await fila(creada.id))?.["estado"]).toBe("FUERA_DE_LINEA");
   });
 
-  it("con `vidriera` en desarrollo (hoy, en el catálogo real) todos reciben MODULO_EN_DESARROLLO y ningún dato", async () => {
+  it("con el catálogo real (`vidriera` disponible, DEC-0826): el gerente guarda y pone en línea con la perilla encendida; el operador no cambia nada; sin la perilla no se pone en línea", async () => {
     const x = await cerrado.escenario();
     const dependencias: DependenciasDeCartaEnLineaWeb = {
       ...d,
       casosDeUso: () => cerrado.casos,
       consultas: () => cerrado.consultas,
     };
-    for (const contexto of [x.gerente, x.administrador, x.operador]) {
-      const resultados = [
-        await verLaCartaEnLinea(dependencias, contexto, {
-          sucursalId: x.sucursal,
-          hostDeApp: HOST,
-        }),
-        await guardarLaCartaEnLinea(
-          dependencias,
-          contexto,
-          pedidoDeGuardar(x, { nombre: "Cerrada" }),
-          x.sucursal,
-        ),
-        await cambiarElEstadoDeLaCartaEnLinea(
-          dependencias,
-          contexto,
-          { cartaId: randomUUID(), sucursalId: x.sucursal, versionEsperada: 1, estado: "EN_LINEA" },
-          x.sucursal,
-        ),
-      ];
-      for (const r of resultados) {
-        expect(r).toMatchObject({ ok: false, error: { codigo: "MODULO_EN_DESARROLLO" } });
-        expect(JSON.stringify(r)).not.toContain("Cerrada");
-      }
-    }
+    // Un producto que sale (con sección y precio): así lo único que cambia entre rechazar y aceptar es la perilla.
+    const seccionId = randomUUID();
+    await cerrado.dueno.query(
+      "insert into seccion_de_carta (id, empresa_id, nombre, nombre_clave, orden) values ($1, $2, 'Postres', 'postres', 0)",
+      [seccionId, x.empresa],
+    );
+    const productoId = await productoDeBase(cerrado.dueno, x.empresa, { nombre: "Flan" });
+    await cerrado.dueno.query("update producto set seccion_de_carta_id = $2 where id = $1", [
+      productoId,
+      seccionId,
+    ]);
+    await precioDeBase(cerrado.dueno, {
+      empresa: x.empresa,
+      producto: productoId,
+      precio: "1000",
+      desde: "2026-10-01T00:00:00Z",
+    });
+    const pedido = pedidoDeGuardar(x);
+    const delOperador = await guardarLaCartaEnLinea(dependencias, x.operador, pedido, x.sucursal);
+    expect(delOperador).toMatchObject({ ok: false, error: { codigo: "SIN_PERMISO" } });
     expect(
       await cerrado.contar("select count(*) as n from carta_publica where empresa_id = $1", [
         x.empresa,
       ]),
     ).toBe(0);
+    const creada = await guardarLaCartaEnLinea(dependencias, x.gerente, pedido, x.sucursal);
+    expect(creada).toMatchObject({ ok: true, dato: { estado: "FUERA_DE_LINEA", version: 1 } });
+    const ponerEnLinea = (version: number) =>
+      cambiarElEstadoDeLaCartaEnLinea(
+        dependencias,
+        x.gerente,
+        {
+          cartaId: pedido.cartaId,
+          sucursalId: x.sucursal,
+          versionEsperada: version,
+          estado: "EN_LINEA",
+        },
+        x.sucursal,
+      );
+    cerrado.perillaDeCarta(false);
+    try {
+      expect(await ponerEnLinea(1)).toMatchObject({ ok: false, error: { codigo: GENERICO } });
+    } finally {
+      cerrado.perillaDeCarta(true);
+    }
+    expect(await ponerEnLinea(1)).toMatchObject({ ok: true, dato: { estado: "EN_LINEA" } });
+    const otra = await cerrado.escenario();
+    expect(
+      await verLaCartaEnLinea(dependencias, otra.gerente, {
+        sucursalId: otra.sucursal,
+        hostDeApp: HOST,
+      }),
+    ).toMatchObject({ ok: true, dato: { carta: null } });
   });
 
   describe("identidad: cara, color y logo", () => {

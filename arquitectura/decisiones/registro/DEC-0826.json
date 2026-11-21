@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0826",
+  "fecha": "2026-11-20",
+  "quien": "dueño",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "El módulo vidriera pasa de «en desarrollo» a «disponible»: cada empresa lo activa por su plan y el cambio no activa nada por sí solo.",
+  "que_cambia": "Las empresas con vidriera en su plan y la perilla vidriera_por_qr encendida pueden poner su carta en línea. Revertir: volver el estado a en_desarrollo en una línea.",
+  "donde": "src/capacidades/modulos/catalogo-vidriera.ts; decisiones-del-dueno-2026-11.md, fila 180 del 15/11/2026 (pregunta 21, opción A) y fila 232 del 16/11/2026 (P2, opción A); como DEC-0463"
+}

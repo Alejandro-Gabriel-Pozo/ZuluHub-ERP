@@ -1,11 +1,12 @@
 /**
  * La carta: una vista publicada del catálogo, que es otro módulo comercial pero lo implementa el
  * mismo código (`modulos/catalogo`). Sola, sin stock ni ventas, es la vidriera (§F8). La publicación
- * en línea (QR) es un extra de pago: lo decide la perilla `vidriera_por_qr`, que se declara cuando se
- * construya la carta; las tres acciones `*_en_linea` y `renovar_enlace` ya se clasifican acá.
+ * en línea (QR) es un extra de pago: lo decide la perilla `vidriera_por_qr`; las tres acciones
+ * `*_en_linea` y `renovar_enlace` se clasifican acá. «Disponible» no activa nada por sí solo: cada empresa
+ * lo activa por su plan (DEC-0826).
  */
 export const MODULO_DE_VIDRIERA = {
-  estado: "en_desarrollo",
+  estado: "disponible",
   obligatorio: false,
   requiere: ["catalogo"],
   usaSiExiste: [],
