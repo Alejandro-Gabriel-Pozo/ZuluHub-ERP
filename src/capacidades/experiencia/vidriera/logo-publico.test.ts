@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { PartesDeDireccion } from "../../activos/direccion-externa";
 import { crearMemoriaDeLogos } from "../../activos/memoria-de-logos";
 import type { ImagenesExternas } from "../../../puertos/imagenes-externas";
-import type { VidrieraPublica, VidrieraPublicada } from "../../../puertos/vidriera-publica";
+import type { VidrieraPublicada } from "../../../puertos/vidriera-publica";
 import { err, ok } from "../../../primitivas/resultado/resultado";
 import type { AlcanceDelHost } from "../puerta";
 import {
@@ -27,12 +27,12 @@ const vidrieraConLogo = (logo: PartesDeDireccion | null, codigo = "cafe-1"): Vid
 
 function armar(
   vidriera: VidrieraPublicada | null,
-  traedor: ImagenesExternas["traerLogo"] = async () => ok(BYTES),
+  traedor: ImagenesExternas["traerLogo"] = () => Promise.resolve(ok(BYTES)),
 ) {
-  const porCodigo = vi.fn(async () => vidriera);
+  const porCodigo = vi.fn(() => Promise.resolve(vidriera));
   const traerLogo = vi.fn(traedor);
   const dependencias: DependenciasDelLogoPublico = {
-    vidriera: { porCodigo } as Pick<VidrieraPublica, "porCodigo">,
+    vidriera: { porCodigo },
     traedor: { traerLogo },
     memoria: crearMemoriaDeLogos(() => 0),
   };
@@ -129,8 +129,8 @@ describe("logoPublicoDeLaCarta: todo lo demás es la misma respuesta vacía", ()
 
 describe("logoPublicoDeLaCarta: cuando el tercero falla", () => {
   it("un fallo se recuerda: la visita siguiente no vuelve a salir (corte de 5 minutos)", async () => {
-    const { dependencias, traerLogo } = armar(vidrieraConLogo(PARTES), async () =>
-      err("TIEMPO_AGOTADO"),
+    const { dependencias, traerLogo } = armar(vidrieraConLogo(PARTES), () =>
+      Promise.resolve(err("TIEMPO_AGOTADO")),
     );
     expect(await logoPublicoDeLaCarta(dependencias, HOST, "cafe-1", "1700000000.webp")).toBeNull();
     expect(await logoPublicoDeLaCarta(dependencias, HOST, "cafe-1", "1700000000.webp")).toBeNull();
@@ -139,8 +139,8 @@ describe("logoPublicoDeLaCarta: cuando el tercero falla", () => {
 
   it("«ocupado» no se recuerda: es del momento, no del logo", async () => {
     let llamadas = 0;
-    const { dependencias, traerLogo } = armar(vidrieraConLogo(PARTES), async () =>
-      ++llamadas === 1 ? err("OCUPADO") : ok(BYTES),
+    const { dependencias, traerLogo } = armar(vidrieraConLogo(PARTES), () =>
+      Promise.resolve(++llamadas === 1 ? err("OCUPADO" as const) : ok(BYTES)),
     );
     expect(await logoPublicoDeLaCarta(dependencias, HOST, "cafe-1", "1700000000.webp")).toBeNull();
     expect(await logoPublicoDeLaCarta(dependencias, HOST, "cafe-1", "1700000000.webp")).toBe(BYTES);
@@ -149,11 +149,13 @@ describe("logoPublicoDeLaCarta: cuando el tercero falla", () => {
 
   it("un logo cambiado no hereda el fallo ni los bytes del anterior", async () => {
     const memoria = crearMemoriaDeLogos(() => 0);
-    const traerLogo = vi.fn<ImagenesExternas["traerLogo"]>(async (d) =>
-      d.url.includes("/v1700000000/") ? err("NO_ES_UNA_IMAGEN") : ok(BYTES),
+    const traerLogo = vi.fn<ImagenesExternas["traerLogo"]>((d) =>
+      Promise.resolve(
+        d.url.includes("/v1700000000/") ? err("NO_ES_UNA_IMAGEN" as const) : ok(BYTES),
+      ),
     );
     const con = (logo: PartesDeDireccion): DependenciasDelLogoPublico => ({
-      vidriera: { porCodigo: async () => vidrieraConLogo(logo) },
+      vidriera: { porCodigo: () => Promise.resolve(vidrieraConLogo(logo)) },
       traedor: { traerLogo },
       memoria,
     });
@@ -164,9 +166,9 @@ describe("logoPublicoDeLaCarta: cuando el tercero falla", () => {
 
   it("la misma imagen en otra carta se trae aparte (la clave lleva el código)", async () => {
     const memoria = crearMemoriaDeLogos(() => 0);
-    const traerLogo = vi.fn(async () => ok(BYTES));
+    const traerLogo = vi.fn(() => Promise.resolve(ok(BYTES)));
     const de = (codigo: string): DependenciasDelLogoPublico => ({
-      vidriera: { porCodigo: async () => vidrieraConLogo(PARTES, codigo) },
+      vidriera: { porCodigo: () => Promise.resolve(vidrieraConLogo(PARTES, codigo)) },
       traedor: { traerLogo },
       memoria,
     });

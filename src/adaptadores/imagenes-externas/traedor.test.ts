@@ -69,7 +69,7 @@ const enBucleLocal = (
   puerto: number,
   cambios: Partial<DependenciasDelTraedor> = {},
 ): DependenciasDelTraedor => ({
-  resolver: async () => ["127.0.0.1"],
+  resolver: () => Promise.resolve(["127.0.0.1"]),
   direccionPermitida: () => true,
   solicitar: pedirPorHttp,
   puerto,
@@ -406,7 +406,7 @@ describe("el destino del nombre (S3 a S6)", () => {
     const { llamadas, solicitar } = espia();
     const r = await crearTraedor({
       ...DEPENDENCIAS_DE_PRODUCCION,
-      resolver: async () => [ip],
+      resolver: () => Promise.resolve([ip]),
       solicitar,
     }).traerLogo(destino);
     expect(r).toEqual({ ok: false, error: "DIRECCION_NO_PERMITIDA" });
@@ -421,7 +421,7 @@ describe("el destino del nombre (S3 a S6)", () => {
     ]) {
       const r = await crearTraedor({
         ...DEPENDENCIAS_DE_PRODUCCION,
-        resolver: async () => lista,
+        resolver: () => Promise.resolve(lista),
         solicitar,
       }).traerLogo(destino);
       expect(r).toEqual({ ok: false, error: "DIRECCION_NO_PERMITIDA" });
@@ -432,10 +432,8 @@ describe("el destino del nombre (S3 a S6)", () => {
   it("sin direcciones, o con el DNS caído, no hay a dónde ir", async () => {
     const { llamadas, solicitar } = espia();
     for (const resolver of [
-      async () => [] as string[],
-      async () => {
-        throw new Error("ENOTFOUND");
-      },
+      () => Promise.resolve([] as string[]),
+      () => Promise.reject(new Error("ENOTFOUND")),
     ]) {
       const r = await crearTraedor({
         ...DEPENDENCIAS_DE_PRODUCCION,
@@ -461,7 +459,7 @@ describe("el destino del nombre (S3 a S6)", () => {
   it("reenlace de DNS: se resuelve UNA vez y se conecta a esa dirección, con el nombre solo para SNI y Host", async () => {
     const { llamadas, solicitar } = espia();
     const respuestas = [[publica], ["127.0.0.1"], ["127.0.0.1"]];
-    const resolver = vi.fn(async () => respuestas.shift() ?? ["127.0.0.1"]);
+    const resolver = vi.fn(() => Promise.resolve(respuestas.shift() ?? ["127.0.0.1"]));
     void crearTraedor({
       ...DEPENDENCIAS_DE_PRODUCCION,
       resolver,
@@ -565,7 +563,7 @@ describe("TLS de verdad (certificado autofirmado de prueba)", () => {
     const t = await conTls("res.cloudinary.com");
     const r = await crearTraedor({
       ...DEPENDENCIAS_DE_PRODUCCION,
-      resolver: async () => ["127.0.0.1"],
+      resolver: () => Promise.resolve(["127.0.0.1"]),
       direccionPermitida: () => true,
       puerto: t.puerto,
       limites: { ...LIMITES_DE_PRUEBA },

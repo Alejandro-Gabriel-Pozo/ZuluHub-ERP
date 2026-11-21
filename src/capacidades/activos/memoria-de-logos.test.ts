@@ -7,9 +7,9 @@ import {
 } from "./memoria-de-logos";
 
 const bytes = (n: number): Uint8Array => new Uint8Array([n]);
-const bueno = (n: number) => vi.fn(async () => ok(bytes(n)));
-const definitivo = () => vi.fn(async () => err("DEFINITIVO" as const));
-const transitorio = () => vi.fn(async () => err("TRANSITORIO" as const));
+const bueno = (n: number) => vi.fn(() => Promise.resolve(ok(bytes(n))));
+const definitivo = () => vi.fn(() => Promise.resolve(err("DEFINITIVO" as const)));
+const transitorio = () => vi.fn(() => Promise.resolve(err("TRANSITORIO" as const)));
 
 describe("los valores de producción", () => {
   it("200 logos y 5 minutos de fallo", () => {
@@ -158,7 +158,7 @@ describe("los pedidos a la vez", () => {
 
   it("un viaje que falla de forma definitiva da null a todos los que esperaban", async () => {
     const memoria = crearMemoriaDeLogos(() => 0);
-    const traer = vi.fn(async () => err("DEFINITIVO" as const));
+    const traer = vi.fn(() => Promise.resolve(err("DEFINITIVO" as const)));
     const todos = await Promise.all([memoria.obtener("a", traer), memoria.obtener("a", traer)]);
     expect(todos).toEqual([null, null]);
     expect(traer).toHaveBeenCalledTimes(1);
@@ -166,11 +166,9 @@ describe("los pedidos a la vez", () => {
 
   it("si `traer` lanza, el error llega y el lugar del viaje se libera", async () => {
     const memoria = crearMemoriaDeLogos(() => 0);
-    await expect(
-      memoria.obtener("a", async () => {
-        throw new Error("se cayó");
-      }),
-    ).rejects.toThrow("se cayó");
+    await expect(memoria.obtener("a", () => Promise.reject(new Error("se cayó")))).rejects.toThrow(
+      "se cayó",
+    );
     const bien = bueno(1);
     expect(await memoria.obtener("a", bien)).toEqual(bytes(1));
     expect(bien).toHaveBeenCalledTimes(1);
