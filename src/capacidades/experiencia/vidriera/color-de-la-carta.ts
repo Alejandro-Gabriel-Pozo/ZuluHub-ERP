@@ -13,6 +13,9 @@ import { COLOR_RRGGBB, razonDeContraste } from "../../../primitivas/color/contra
 /** Contraste mínimo del texto sobre el color de la carta (CYN 101 y 107, «ok» del dueño el 09/11). */
 export const CONTRASTE_MINIMO_DE_LA_CARTA = 7;
 
+/** El color con que se arma el tema de una carta que eligió cara pero ningún color (ni propio ni de la empresa): el azul de la maqueta `carta.html` (`PAL.azul`). Un solo lugar. */
+export const COLOR_POR_DEFECTO_DE_LA_CARTA = "#1f4e79";
+
 /** El texto que se pone sobre el color: lo elige el sistema, nunca la persona. */
 export type TextoSobreColor = "BLANCO" | "NEGRO";
 
@@ -38,7 +41,7 @@ const canal = (hex: string, inicio: number): number =>
   Number.parseInt(hex.slice(inicio, inicio + 2), 16);
 
 /** `#rrggbb` → [matiz 0-360, saturación 0-100, luminosidad 0-100]. */
-function aHsl(hex: string): readonly [number, number, number] {
+export function aHsl(hex: string): readonly [number, number, number] {
   const r = canal(hex, 1) / 255;
   const g = canal(hex, 3) / 255;
   const b = canal(hex, 5) / 255;
@@ -57,7 +60,7 @@ function aHsl(hex: string): readonly [number, number, number] {
 }
 
 /** [matiz, saturación, luminosidad] → `#rrggbb` en minúsculas (cada canal redondeado al entero más cercano). */
-function deHsl(matiz: number, saturacion: number, luminosidad: number): string {
+export function deHsl(matiz: number, saturacion: number, luminosidad: number): string {
   const s = saturacion / 100;
   const l = luminosidad / 100;
   const a = s * Math.min(l, 1 - l);

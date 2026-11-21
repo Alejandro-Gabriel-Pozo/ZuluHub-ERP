@@ -6,7 +6,9 @@ import {
   METADATOS_DE_CARTA_NO_DISPONIBLE,
   metadatosDeLaCarta,
 } from "../../../../servidor/metadatos-de-carta";
-import { exigirPuerta } from "../../../../servidor/pedido";
+import { exigirPuerta, nonceDelPedido } from "../../../../servidor/pedido";
+import { cssDelTemaDeLaCarta } from "../../../../../../src/capacidades/experiencia/vidriera/tema-de-la-carta";
+import { EstiloDeMarca } from "../../../../ui/componentes/EstiloDeMarca";
 
 type Props = Readonly<{ params: Promise<{ codigo: string }> }>;
 
@@ -24,5 +26,14 @@ export default async function PaginaDeLaVidriera({ params }: Props) {
   const puerta = await exigirPuerta("CARTA");
   const vidriera = await vidrieraParaLaPantalla(puerta, (await params).codigo);
   if (vidriera === null) notFound();
-  return <PlantillaDeVidriera vista={vidriera.vista} textos={vidriera.textos} />;
+  const { tema } = vidriera.vista.identidad;
+  return (
+    <>
+      <EstiloDeMarca
+        css={tema === null ? "" : cssDelTemaDeLaCarta(tema)}
+        nonce={await nonceDelPedido()}
+      />
+      <PlantillaDeVidriera vista={vidriera.vista} textos={vidriera.textos} />
+    </>
+  );
 }

@@ -97,16 +97,26 @@ export function PlantillaDeVidriera({ vista, textos }: PropsDePlantillaDeVidrier
         ? textos.buscarUnResultado
         : textos.buscarResultados.replace("{cantidad}", () => String(filtrado.total));
 
+  // Con identidad elegida (cara o color) la carta lleva su cara y la placa con la inicial; sin elegir nada se ve como siempre.
+  const conIdentidad = vista.identidad.tema !== null;
   return (
     <main
       className={[escala["escala"], estilos["raiz"]].join(" ")}
       data-letra-base={vista.letraBase}
       data-letra={paso}
+      data-cara={conIdentidad ? vista.identidad.cara : undefined}
     >
       <header className={estilos["cabecera"]}>
-        {vista.rubro === null ? null : <p className={estilos["rubro"]}>{vista.rubro}</p>}
-        <h1 className={estilos["nombre"]}>{vista.nombre}</h1>
-        {vista.lugar === null ? null : <p className={estilos["lugar"]}>{vista.lugar}</p>}
+        {conIdentidad ? (
+          <span className={estilos["placa"]} aria-hidden="true" data-placa="">
+            {vista.identidad.inicial}
+          </span>
+        ) : null}
+        <div className={estilos["titulos"]}>
+          {vista.rubro === null ? null : <p className={estilos["rubro"]}>{vista.rubro}</p>}
+          <h1 className={estilos["nombre"]}>{vista.nombre}</h1>
+          {vista.lugar === null ? null : <p className={estilos["lugar"]}>{vista.lugar}</p>}
+        </div>
       </header>
 
       <div className={estilos["herramientas"]} data-busqueda={conBusqueda ? "si" : "no"}>
