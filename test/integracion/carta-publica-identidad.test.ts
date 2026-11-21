@@ -96,9 +96,10 @@ describe.skipIf(base === null)("la identidad de la carta llega a la carta públi
   it("un color de bajo contraste se guardó como se eligió y se muestra ajustado (7:1 con su texto)", async () => {
     const m = await empresaConCarta();
     await elegir(m.carta.id, { cara: "DIA", color_propio: "#808080" });
-    const { rows } = await c.dueno.query("select color_propio from carta_publica where id = $1", [
-      m.carta.id,
-    ]);
+    const { rows } = await c.dueno.query<{ color_propio: string | null }>(
+      "select color_propio from carta_publica where id = $1",
+      [m.carta.id],
+    );
     expect(rows[0]?.["color_propio"]).toBe("#808080");
     const { identidad } = await vistaDe(m.carta.codigo);
     expect(identidad.tema?.primariaFondo).not.toBe("#808080");

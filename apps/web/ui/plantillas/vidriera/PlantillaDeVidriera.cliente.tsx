@@ -14,6 +14,7 @@ import { Boton } from "../../componentes/Boton.cliente";
 import { BuscarEnVidriera } from "./BuscarEnVidriera";
 import { ControlDeLetra } from "./ControlDeLetra";
 import escala from "./EscalaDeLetra.module.css";
+import { atributosDeLaCara, PlacaDeLaCarta } from "./IdentidadDeLaCarta";
 import { BotonFlotanteDeSecciones, IndiceDeSecciones } from "./IndiceDeSecciones";
 import { ListaDeVidriera } from "./ListaDeVidriera";
 import estilos from "./PlantillaDeVidriera.module.css";
@@ -97,21 +98,15 @@ export function PlantillaDeVidriera({ vista, textos }: PropsDePlantillaDeVidrier
         ? textos.buscarUnResultado
         : textos.buscarResultados.replace("{cantidad}", () => String(filtrado.total));
 
-  // Con identidad elegida (cara o color) la carta lleva su cara y la placa con la inicial; sin elegir nada se ve como siempre.
-  const conIdentidad = vista.identidad.tema !== null;
   return (
     <main
       className={[escala["escala"], estilos["raiz"]].join(" ")}
       data-letra-base={vista.letraBase}
       data-letra={paso}
-      data-cara={conIdentidad ? vista.identidad.cara : undefined}
+      {...atributosDeLaCara(vista.identidad)}
     >
       <header className={estilos["cabecera"]}>
-        {conIdentidad ? (
-          <span className={estilos["placa"]} aria-hidden="true" data-placa="">
-            {vista.identidad.inicial}
-          </span>
-        ) : null}
+        <PlacaDeLaCarta identidad={vista.identidad} />
         <div className={estilos["titulos"]}>
           {vista.rubro === null ? null : <p className={estilos["rubro"]}>{vista.rubro}</p>}
           <h1 className={estilos["nombre"]}>{vista.nombre}</h1>

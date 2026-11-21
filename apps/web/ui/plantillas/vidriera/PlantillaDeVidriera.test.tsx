@@ -750,9 +750,10 @@ describe("carta: identidad elegida (V1b)", () => {
   async function abrirConIdentidad(cara: (typeof CARAS_DE_VIDRIERA)[number], color: string) {
     const tema = temaDeLaCarta(cara, color);
     if (!tema.ok) throw new Error("color válido esperado");
-    const estilo = document.createElement("style");
-    estilo.textContent = cssDelTemaDeLaCarta(tema.valor);
-    document.head.append(estilo);
+    // El tema como una hoja adoptada (en la página real es un `<style nonce>` del servidor): los mismos tokens, sobre `:root`.
+    const estilo = new CSSStyleSheet();
+    estilo.replaceSync(cssDelTemaDeLaCarta(tema.valor));
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, estilo];
     const pantalla = await abrirVidriera({
       ...vidrieraDePrueba(),
       identidad: { cara, tema: tema.valor, inicial: "L" },
@@ -768,7 +769,7 @@ describe("carta: identidad elegida (V1b)", () => {
       expect(placa?.textContent).toBe("L");
       expect(placa?.getAttribute("aria-hidden")).toBe("true");
       await pantalla.unmount();
-      estilo.remove();
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter((h) => h !== estilo);
     }
   });
 
@@ -786,7 +787,7 @@ describe("carta: identidad elegida (V1b)", () => {
     expect(cabecera).not.toBeNull();
     expect(getComputedStyle(cabecera as Element).backgroundColor).not.toBe("rgb(31, 78, 121)");
     await pantalla.unmount();
-    estilo.remove();
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter((h) => h !== estilo);
   });
 
   it("sin violaciones de axe (contraste incluido) con cada cara y colores de todos los tonos, también los claros y los oscuros", async () => {
@@ -806,7 +807,7 @@ describe("carta: identidad elegida (V1b)", () => {
           `${cara} ${color}`,
         ).toEqual([]);
         await pantalla.unmount();
-        estilo.remove();
+        document.adoptedStyleSheets = document.adoptedStyleSheets.filter((h) => h !== estilo);
       }
     }
   });

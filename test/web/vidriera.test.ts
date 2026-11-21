@@ -81,13 +81,13 @@ const cargar = <P>(ruta: string): Promise<ModuloDePagina<P>> =>
  * La página devuelve un fragmento: el estilo del tema (si la carta eligió identidad) y la plantilla. De la plantilla salen las `props` que estas pruebas miran (la carta que se ve).
  */
 const laPlantilla = (pagina: ReactElement | null): { vista: { nombre: string } } => {
-  const hijos = (pagina?.props as { children?: unknown }).children;
-  const plantilla = (Array.isArray(hijos) ? hijos : [pagina]).find(
-    (h): h is ReactElement<{ vista: { nombre: string } }> =>
-      typeof h === "object" && h !== null && "props" in h && "vista" in (h.props as object),
-  );
-  if (plantilla === undefined) throw new Error("la página no trae la plantilla de la carta");
-  return plantilla.props;
+  const hijos = (pagina?.props as { children?: unknown } | undefined)?.children;
+  const candidatos: readonly unknown[] = Array.isArray(hijos) ? (hijos as unknown[]) : [pagina];
+  for (const candidato of candidatos) {
+    const props = (candidato as { props?: { vista?: { nombre: string } } } | null)?.props;
+    if (props?.vista !== undefined) return props as { vista: { nombre: string } };
+  }
+  throw new Error("la página no trae la plantilla de la carta");
 };
 
 async function paginaDeLaVidriera(codigo: string) {

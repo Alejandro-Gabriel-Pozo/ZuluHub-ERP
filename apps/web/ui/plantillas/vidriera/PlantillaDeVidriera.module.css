@@ -19,27 +19,7 @@
   min-width: 0;
 }
 
-/* La placa de la cabecera: la inicial del nombre dentro de un recuadro del color del texto de la banda (el mismo par que la banda, así que llega a 7:1). El logo no se pinta todavía. */
-.placa {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  min-width: 3.2em;
-  height: 3.2em;
-  border-radius: var(--radio-base);
-  border: var(--borde-grosor-fuerte) solid currentcolor;
-  color: inherit;
-  font-family: var(--tipo-familia-titulos);
-  font-size: 1.1em;
-  font-weight: 700;
-}
-
 /* Las tres caras (V1b): lo que cambia de una a otra son la forma y la letra de los títulos; los colores salen del tema (`:root`) y valen para las tres. */
-.raiz[data-cara="DIA"] .placa {
-  border-radius: 999px;
-}
-
 .raiz[data-cara="BOLICHE"] {
   --radio-base: 0.125rem;
   --tipo-familia-titulos: Georgia, "Times New Roman", serif;
