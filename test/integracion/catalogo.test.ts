@@ -97,7 +97,7 @@ const TABLAS_DE_NEGOCIO = [
   "disponibilidad_de_producto",
   // La identidad de la carta: el color de la empresa para sus cartas (0077_identidad_de_la_carta)
   "identidad_de_carta_empresa",
-  // El portal de la empresa (0078_portal_de_la_empresa)
+  // El portal de la vidriera (0078_portal_de_la_empresa)
   "portal_de_empresa",
   "portal_tarjeta",
   "portal_zona",
@@ -1380,7 +1380,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         ...["color_principal", "creado_por", "empresa_id"].map(
           (c) => `identidad_de_carta_empresa.${c}`,
         ),
-        // 0078: el portal de la empresa, sus tarjetas (variante A) y sus zonas (variante B)
+        // 0078: el portal de la vidriera, sus tarjetas (variante A) y sus zonas (variante B)
         ...[
           "portal_de_empresa.codigo",
           "portal_de_empresa.color_detras",
