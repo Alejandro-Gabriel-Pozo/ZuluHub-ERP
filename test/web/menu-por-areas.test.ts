@@ -5,12 +5,12 @@ import {
   FILAS_DEL_MENU,
   GRUPOS_DEL_MENU,
   armarElMenu,
-  problemasDelMenu,
   type ClaveDeFila,
   type FilaDeAccion,
   type FilaDelMenu,
   type FilaDePantalla,
 } from "../../apps/web/ui/navegacion/menu";
+import { problemasDelMenu } from "../../apps/web/ui/navegacion/problemas-del-menu";
 
 const fila = (clave: FilaDePantalla["clave"]): FilaDePantalla => {
   const f = FILAS_DEL_MENU.find((x) => x.clave === clave);
@@ -249,6 +249,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "stock.pantalla.stock",
       ],
       [
+        "produccion",
+        "catalogo",
+        "produccion",
+        "produccion",
+        "transformaciones.ver",
+        "/catalogo/produccion",
+        "produccion.pantalla.produccion",
+      ],
+      [
         "configuracion-fiscal",
         "cuenta",
         "empresa",
@@ -450,6 +459,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "mesas",
     "impresoras",
     "stock",
+    "produccion",
     "configuracion-fiscal",
     "medios-de-pago",
     "contacto",
