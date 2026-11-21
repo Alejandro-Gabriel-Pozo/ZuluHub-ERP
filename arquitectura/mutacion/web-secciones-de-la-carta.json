@@ -1,6 +1,6 @@
 {
   "grupo": "web (secciones de la carta)",
-  "archivos": "src/composicion/entradas-de-secciones.ts,src/composicion/secciones-web.ts,apps/web/ui/plantillas/catalogo/modelo-de-secciones.ts",
+  "archivos": "src/composicion/entradas-de-secciones.ts,src/composicion/secciones-web.ts,src/composicion/productos-de-seccion-web.ts,apps/web/ui/plantillas/catalogo/modelo-de-secciones.ts",
   "minutos": 1,
-  "pruebas": "src/composicion/entradas-de-secciones.test.ts src/composicion/secciones-web.test.ts test/web/secciones-modelo.test.ts"
+  "pruebas": "src/composicion/entradas-de-secciones.test.ts src/composicion/secciones-web.test.ts src/composicion/productos-de-seccion-web.test.ts test/web/secciones-modelo.test.ts"
 }

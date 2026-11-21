@@ -185,13 +185,27 @@ describe("verLaSeccion", () => {
 describe("verUnaSeccion", () => {
   const PRODUCTOS = {
     productos: [
-      { id: "p1", nombre: "Cortado", estado: "ACTIVO", precio: null, seccion: { id: A } },
-      { id: "p2", nombre: "Espresso", estado: "ACTIVO", precio: null, seccion: { id: A } },
+      {
+        id: "p1",
+        nombre: "Cortado",
+        version: 4,
+        estado: "ACTIVO",
+        precio: null,
+        seccion: { id: A },
+      },
+      {
+        id: "p2",
+        nombre: "Espresso",
+        version: 9,
+        estado: "ACTIVO",
+        precio: null,
+        seccion: { id: A },
+      },
     ],
     siguiente: null,
   };
 
-  it("trae la sección y sus productos activos (solo id y nombre) con el filtro de la sección", async () => {
+  it("trae la sección y sus productos activos (solo id, nombre y versión) con el filtro de la sección", async () => {
     const { m, d } = montar({ productos: () => ok(PRODUCTOS) });
     const r = await verUnaSeccion(d, contexto, { seccionId: A, despues: "" });
     expect(r).toEqual({
@@ -199,8 +213,8 @@ describe("verUnaSeccion", () => {
       dato: {
         seccion: { id: A, nombre: "Cafés", activa: true, version: 3 },
         productos: [
-          { id: "p1", nombre: "Cortado" },
-          { id: "p2", nombre: "Espresso" },
+          { id: "p1", nombre: "Cortado", version: 4 },
+          { id: "p2", nombre: "Espresso", version: 9 },
         ],
         siguiente: null,
       },
