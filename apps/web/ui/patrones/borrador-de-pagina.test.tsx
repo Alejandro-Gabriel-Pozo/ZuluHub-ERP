@@ -1,19 +1,29 @@
+import { useState } from "react";
 import { describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
+import { Selector } from "../componentes/Selector";
 import { leerCamposDeLaPagina, restaurarCamposDeLaPagina } from "./borrador-de-pagina";
 
 /** Lo tipeado en la página que se guarda al vencer la sesión y vuelve después: solo texto, nunca secretos. */
 function Formulario() {
+  const [mesa, setMesa] = useState("4");
   return (
     <>
       <main>
         <form>
           <input aria-label="Nota" name="nota" defaultValue="medialunas" />
           <textarea aria-label="Detalle" name="detalle" defaultValue="sin azúcar" />
-          <select aria-label="Mesa" name="mesa" defaultValue="4">
-            <option value="3">3</option>
-            <option value="4">4</option>
-          </select>
+          <Selector
+            dato="pendiente"
+            etiqueta="Mesa"
+            nombre="mesa"
+            valor={mesa}
+            alCambiar={setMesa}
+            opciones={[
+              { valor: "3", etiqueta: "3" },
+              { valor: "4", etiqueta: "4" },
+            ]}
+          />
           <input aria-label="Vacío" name="vacio" defaultValue="" />
           <input aria-label="Sin nombre" defaultValue="sin name" />
           <input aria-label="Contraseña" name="clave_de_acceso" defaultValue="secreta" />
