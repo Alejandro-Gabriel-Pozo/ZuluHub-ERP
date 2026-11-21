@@ -132,7 +132,7 @@ export function ListaDeValores({ lista, valores, puedeEditar }: PropsDeListaDeVa
             {modo?.tipo === "AGREGAR" ? "Agregar valor" : "Editar nombre"}
           </Texto>
           <Campo
-            dato="pendiente"
+            dato="nombre-de-valor-de-lista"
             etiqueta="Nombre"
             valor={nombre}
             alCambiar={setNombre}

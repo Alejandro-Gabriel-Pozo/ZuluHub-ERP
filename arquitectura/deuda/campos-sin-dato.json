@@ -39,11 +39,6 @@
     "crudos": 0,
     "dinamicos": 0
   },
-  "apps/plataforma/pantallas/lista-de-valores.cliente.tsx": {
-    "pendientes": 1,
-    "crudos": 0,
-    "dinamicos": 0
-  },
   "apps/plataforma/pantallas/ventana-de-codigo.cliente.tsx": {
     "pendientes": 2,
     "crudos": 0,
