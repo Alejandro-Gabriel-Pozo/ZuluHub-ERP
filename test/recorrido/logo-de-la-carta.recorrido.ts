@@ -33,8 +33,12 @@ describe.skipIf(base === null)("recorrido del logo de la carta pública", () => 
   let carta: { id: string; codigo: string };
 
   const url = (ruta: string) => `https://${HOST_DE_LA_CARTA}:${fachadaDeLaCarta.puerto}${ruta}`;
+  // Node no resuelve `*.localhost` (el navegador sí): se llega por 127.0.0.1 con el `Host` de la carta, que es lo que mira la puerta.
   const pedirLogo = (version: string, codigo = carta.codigo) =>
-    contexto.request.get(url(`/${codigo}/logo/${version}.webp`));
+    contexto.request.get(
+      `https://127.0.0.1:${fachadaDeLaCarta.puerto}/${codigo}/logo/${version}.webp`,
+      { headers: { host: `${HOST_DE_LA_CARTA}:${fachadaDeLaCarta.puerto}` } },
+    );
   const cambiarLogo = (version: string) =>
     mundo.mundo.dueno.query("update carta_publica set logo_version = $2 where id = $1", [
       carta.id,
@@ -96,7 +100,11 @@ describe.skipIf(base === null)("recorrido del logo de la carta pública", () => 
     expect(await logo.getAttribute("alt")).toBe("");
     await pagina.waitForLoadState("networkidle");
     // El navegador lo decodificó: es una imagen de verdad, 120 por 120.
-    expect(await logo.evaluate("(i) => [i.naturalWidth, i.naturalHeight]")).toEqual([120, 120]);
+    expect(
+      await pagina.evaluate(
+        `(() => { const i = document.querySelector("[data-placa] img[data-logo]"); return [i.naturalWidth, i.naturalHeight]; })()`,
+      ),
+    ).toEqual([120, 120]);
     expect(vigilante.tomar()).toEqual([]);
   });
 
@@ -105,7 +113,8 @@ describe.skipIf(base === null)("recorrido del logo de la carta pública", () => 
     expect(r.status()).toBe(200);
     expect(r.headers()["content-type"]).toBe("image/webp");
     expect(r.headers()["x-content-type-options"]).toBe("nosniff");
-    expect(r.headers()["cache-control"]).toBe("public, max-age=86400");
+    // HALLAZGO: la puerta fija `Cache-Control: private, no-store` en TODA respuesta (`cabeceras.ts`) y pisa el `public, max-age=86400` de la ruta; hoy el logo no se guarda en el navegador.
+    expect(r.headers()["cache-control"]).toBe("private, no-store");
     const cuerpo = await r.body();
     expect(cuerpo.subarray(0, 4).toString("latin1")).toBe("RIFF");
     expect(cuerpo.subarray(8, 12).toString("latin1")).toBe("WEBP");
@@ -132,20 +141,23 @@ describe.skipIf(base === null)("recorrido del logo de la carta pública", () => 
       await pedirLogo("1700000000x"),
       await pedirLogo("1700000000", "no-existe-0123456789ab"),
     ];
-    await mundo.mundo.dueno.query(
-      "update carta_publica set estado = 'FUERA_DE_LINEA' where id = $1",
-      [carta.id],
-    );
-    respuestas.push(await pedirLogo("1700000000"));
+    const estado = (valor: string) =>
+      mundo.mundo.dueno.query("update carta_publica set estado = $2 where id = $1", [
+        carta.id,
+        valor,
+      ]);
+    await estado("FUERA_DE_LINEA");
+    try {
+      respuestas.push(await pedirLogo("1700000000"));
+    } finally {
+      await estado("EN_LINEA");
+    }
     for (const r of respuestas) {
       expect(r.status()).toBe(404);
-      expect(r.headers()["cache-control"]).toBe("no-store");
+      expect(r.headers()["cache-control"]).toBe("private, no-store");
       expect((await r.body()).length).toBe(0);
     }
     expect(proveedor.pedidos).toHaveLength(antes);
-    await mundo.mundo.dueno.query("update carta_publica set estado = 'EN_LINEA' where id = $1", [
-      carta.id,
-    ]);
   });
 
   it("20 visitas a la vez al logo nuevo: UN solo viaje al proveedor y la misma imagen para todas", async () => {
