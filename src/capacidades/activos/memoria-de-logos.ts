@@ -34,11 +34,11 @@ export function crearMemoriaDeLogos(
   const fallos = new Map<string, number>();
   const enCurso = new Map<string, Promise<Uint8Array | null>>();
 
+  /** Saca los menos usados hasta que quepan. */
   const acotar = <V>(mapa: Map<string, V>): void => {
-    while (mapa.size > capacidad) {
-      const [masViejo] = mapa.keys();
-      if (masViejo === undefined) return;
-      mapa.delete(masViejo);
+    for (const clave of mapa.keys()) {
+      if (mapa.size <= capacidad) return;
+      mapa.delete(clave);
     }
   };
 
@@ -72,11 +72,9 @@ export function crearMemoriaDeLogos(
         buenos.set(clave, guardado);
         return Promise.resolve(guardado);
       }
-      const venceElFallo = fallos.get(clave);
-      if (venceElFallo !== undefined) {
-        if (ahora() < venceElFallo) return Promise.resolve(null);
-        fallos.delete(clave);
-      }
+      // Un fallo vencido queda hasta que lo pise otro o lo saque el tope: no cambia ninguna respuesta.
+      const venceElFallo = fallos.get(clave) ?? Number.NEGATIVE_INFINITY;
+      if (ahora() < venceElFallo) return Promise.resolve(null);
       const viajando = enCurso.get(clave);
       if (viajando !== undefined) return viajando;
       const nuevo = viajar(clave, traer);
