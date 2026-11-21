@@ -10,6 +10,7 @@ import {
   PARAMETROS_DE_CATALOGO,
   type CodigoDeCatalogo,
 } from "./respuesta-de-catalogo";
+import { CLAVES_DE_ERRORES_DE_CIERRE, type CodigoDeCierre } from "./respuesta-de-cierre";
 import { CLAVES_DE_ERRORES_DE_CLIENTES, type CodigoDeClientes } from "./respuesta-de-clientes";
 import { CLAVES_DE_ERRORES_DE_COMPRAS, type CodigoDeCompras } from "./respuesta-de-compras";
 import {
@@ -56,6 +57,7 @@ export type CodigoDeNegocio =
   | CodigoFiscal
   | CodigoDeCaja
   | CodigoDeCatalogo
+  | CodigoDeCierre
   | CodigoDeCompras
   | CodigoDeClientes
   | CodigoDeSalon
@@ -109,6 +111,11 @@ const AVISOS_DE_CATALOGO = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_CATALOGO).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoDeCatalogo, DefinicionDeCodigo>>;
 
+/** Los códigos de la pantalla del cierre del día (`respuesta-de-cierre.ts`): cada uno es un aviso con su texto (`cierre.error.*` o el genérico de caja). */
+const AVISOS_DE_CIERRE = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_CIERRE).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeCierre, DefinicionDeCodigo>>;
+
 /** Los códigos de la pantalla «Mesas» (`respuesta-de-salon.ts`): cada uno es un aviso con su texto del salón. */
 const AVISOS_DE_SALON = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_SALON).map(([codigo, clave]) => [codigo, aviso(clave)]),
@@ -145,6 +152,7 @@ export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo
   ...AVISOS_FISCALES,
   ...AVISOS_DE_CAJA,
   ...AVISOS_DE_CATALOGO,
+  ...AVISOS_DE_CIERRE,
   ...AVISOS_DE_COMPRAS,
   ...AVISOS_DE_CLIENTES,
   ...AVISOS_DE_SALON,

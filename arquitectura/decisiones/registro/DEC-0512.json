@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0512",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: la pantalla opera la jornada más vieja sin cerrar entre las últimas 100 de la sucursal; si no hay ninguna, la de hoy (el tope de 100 es el de listarJornadas).",
+  "que_cambia": "Una jornada sin cerrar más vieja que las últimas 100 no se ve desde la pantalla. Revertir: pedir otro rango o paginar.",
+  "donde": "src/composicion/cierre-del-dia-web.ts (jornadaAOperar); DDD fila 183 (P1)"
+}

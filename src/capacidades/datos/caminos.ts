@@ -1,4 +1,5 @@
 import { CAMINOS_DE_CAJA } from "./caminos-de-caja";
+import { CAMINOS_DE_CIERRE } from "./caminos-de-cierre";
 import { CAMINOS_DE_PRODUCTOS } from "./caminos-de-productos";
 import { CAMINOS_DE_STOCK_DEPOSITOS } from "./caminos-de-stock-depositos";
 import type { DefinicionDeCamino } from "./tipos-de-caminos";
@@ -26,12 +27,14 @@ export type { DefinicionDeCamino, PasoDeCamino } from "./tipos-de-caminos";
  */
 export const FRAGMENTOS_DE_CAMINOS = {
   caja: CAMINOS_DE_CAJA,
+  cierre: CAMINOS_DE_CIERRE,
   productos: CAMINOS_DE_PRODUCTOS,
   "stock-depositos": CAMINOS_DE_STOCK_DEPOSITOS,
 } as const;
 
 export const CAMINOS = {
   ...CAMINOS_DE_CAJA,
+  ...CAMINOS_DE_CIERRE,
   ...CAMINOS_DE_PRODUCTOS,
   ...CAMINOS_DE_STOCK_DEPOSITOS,
 } as const satisfies Readonly<Record<string, DefinicionDeCamino>>;

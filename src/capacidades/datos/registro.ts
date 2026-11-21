@@ -1,5 +1,6 @@
 import { DATOS_DE_ADMINISTRACION } from "./registro-de-administracion";
 import { DATOS_DE_CAJA } from "./registro-de-caja";
+import { DATOS_DE_CIERRE } from "./registro-de-cierre";
 import { DATOS_DE_CARTA } from "./registro-de-carta";
 import { DATOS_DE_COMANDAS } from "./registro-de-comandas";
 import { DATOS_DE_FACTURACION } from "./registro-de-facturacion";
@@ -40,6 +41,7 @@ export const DATO_PENDIENTE = "pendiente" as const;
 export const FRAGMENTOS_DEL_REGISTRO = {
   administracion: DATOS_DE_ADMINISTRACION,
   caja: DATOS_DE_CAJA,
+  cierre: DATOS_DE_CIERRE,
   carta: DATOS_DE_CARTA,
   comandas: DATOS_DE_COMANDAS,
   facturacion: DATOS_DE_FACTURACION,
@@ -53,6 +55,7 @@ export const FRAGMENTOS_DEL_REGISTRO = {
 export const REGISTRO_DE_DATOS = {
   ...DATOS_DE_ADMINISTRACION,
   ...DATOS_DE_CAJA,
+  ...DATOS_DE_CIERRE,
   ...DATOS_DE_CARTA,
   ...DATOS_DE_COMANDAS,
   ...DATOS_DE_FACTURACION,
