@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { campoConPosibleSecreto } from "../../puertos/sin-secretos";
-import {
-  decidirControl,
-  registroDeExcepcion,
-  registroDeIntentoBloqueado,
-  type ErrorDeControl,
-} from "./decision";
+import { decidirControl, registroDeExcepcion } from "./decision";
+import { NIVELES_DE_CONTROL } from "./nivel";
 
 type Clave = "caja.cierre_con_diferencia" | "stock.existencia_negativa";
 const CIERRE: Clave = "caja.cierre_con_diferencia";
@@ -47,18 +43,13 @@ describe("decidirControl", () => {
     });
   });
 
-  it("BLOQUEAR rechaza y nombra el control", () => {
-    expect(decidirControl<Clave>(STOCK, "BLOQUEAR", [])).toEqual({
-      ok: false,
-      error: { codigo: "CONTROL_BLOQUEA", control: STOCK },
-    });
-  });
-
-  it("BLOQUEAR rechaza aunque venga la confirmación: confirmar no desbloquea", () => {
-    expect(decidirControl<Clave>(STOCK, "BLOQUEAR", [STOCK])).toEqual({
-      ok: false,
-      error: { codigo: "CONTROL_BLOQUEA", control: STOCK },
-    });
+  it("no existe un resultado de bloqueo: ningún nivel devuelve CONTROL_BLOQUEA", () => {
+    for (const nivel of NIVELES_DE_CONTROL) {
+      for (const confirmaciones of [[], [STOCK]] as const) {
+        const r = decidirControl<Clave>(STOCK, nivel, confirmaciones);
+        expect(r.ok || r.error.codigo === "CONTROL_REQUIERE_CONFIRMACION").toBe(true);
+      }
+    }
   });
 
   it("ninguna decisión modifica las confirmaciones recibidas", () => {
@@ -86,37 +77,11 @@ describe("registro de auditoría de un control", () => {
     ).toEqual({ control: STOCK, nivel: "PERMITIR", avisoAceptado: false });
   });
 
-  it("el intento bloqueado lleva su propia acción y el nivel BLOQUEAR", () => {
-    const error = { codigo: "CONTROL_BLOQUEA", control: STOCK } as const;
-    expect(registroDeIntentoBloqueado(error, documento)).toEqual({
-      accion: "CONTROL_BLOQUEADO",
-      entidad: "sesion_caja",
-      entidadId: "11111111-1111-4111-8111-111111111111",
-      despues: { control: STOCK, nivel: "BLOQUEAR", avisoAceptado: false },
-    });
-  });
-
   it("ningún campo del registro parece un secreto (la auditoría los rechaza por nombre)", () => {
     const excepcion = registroDeExcepcion(
       { control: CIERRE, nivel: "AVISAR", confirmado: true },
       documento,
     );
-    const intento = registroDeIntentoBloqueado(
-      { codigo: "CONTROL_BLOQUEA", control: STOCK },
-      documento,
-    );
     expect(campoConPosibleSecreto(excepcion.despues)).toBeNull();
-    expect(campoConPosibleSecreto(intento.despues)).toBeNull();
-  });
-
-  it("un error que no es de bloqueo no es un intento bloqueado (no compila)", () => {
-    const pide: ErrorDeControl<Clave> = {
-      codigo: "CONTROL_REQUIERE_CONFIRMACION",
-      control: CIERRE,
-    };
-    const noSeEjecuta = () =>
-      // @ts-expect-error pedir confirmación no es un bloqueo
-      registroDeIntentoBloqueado(pide, documento);
-    expect(noSeEjecuta).toBeTypeOf("function");
   });
 });

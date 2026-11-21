@@ -132,6 +132,22 @@ export const CATALOGO_DE_PERILLAS = {
     base: { encendida: false },
     modulo: "vidriera",
   },
+  // Compras N3 y N4 (E9 §3.8, D141; decisión del dueño del 16/11/2026: el bloque de stock, compras y recetas incluye N4): extras de pago apagados de base. La
+  // verifica `configurarCompras` al pasar la empresa a ese nivel y, desde ahí, cada caso de uso de N3 o N4. Bajar de plan no toca lo ya cargado (cada recepción
+  // sella su nivel). N4 requiere N3.
+  recepcion_separada: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "compras",
+  },
+  conciliacion_de_tres_vias: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "compras",
+    requiere: "recepcion_separada",
+  },
   // Caja (decisión 124; caja-y-cobros.md:43, 69; registro de contratos :778; supuesto S-5 de E0: nombre y base 1 del
   // registro de octubre): cuántas cajas activas puede tener una sucursal. Base 1 («Caja 1» nace con la sucursal, decisión
   // 165); la sube la plataforma. Declara el tipo; `crearCaja` y `reactivarCaja` la verifican con `exigirPerilla` en E3.

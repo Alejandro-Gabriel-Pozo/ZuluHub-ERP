@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nonceDe } from "./cabeceras";
+import { nonceDe, politicaDeContenido } from "./cabeceras";
 import {
   ENCABEZADO_DE_NONCE,
   HOST_DESCONOCIDO,
@@ -11,6 +11,7 @@ import {
   SUPERFICIES_SERVIBLES,
   decidirPuerta,
   esRutaDeSistema,
+  esRutaDelLogoDeLaCarta,
   hostDelPedido,
   sinEncabezadosInternos,
   type EstadoDeLaResolucion,
@@ -43,6 +44,70 @@ const decidir = (
     produccion,
     nonce: NONCE,
   });
+
+describe("la excepción de caché del logo de la carta (V1c)", () => {
+  const RUTA = "/aGD6JLL9SFT82W9bSN1byw/logo/1700000000.webp";
+  const cache = (ruta: string, superficie: SuperficieServible) =>
+    decidir(ruta, resuelta(superficie)).encabezadosDeRespuesta["Cache-Control"];
+
+  it("la ruta exacta del logo, en la carta, no lleva Cache-Control de la puerta (lo decide la ruta)", () => {
+    const d = decidir(RUTA, resuelta("CARTA"));
+    expect(d.accion).toBe("REESCRIBIR");
+    expect(d.rutaInterna).toBe(`/s/carta${RUTA}`);
+    expect("Cache-Control" in d.encabezadosDeRespuesta).toBe(false);
+    // Todo lo demás de la puerta sigue: CSP, HSTS, nosniff, noindex.
+    expect(d.encabezadosDeRespuesta["X-Content-Type-Options"]).toBe("nosniff");
+    expect(d.encabezadosDeRespuesta["Content-Security-Policy"]).toBe(politicaDeContenido(NONCE));
+    expect(d.encabezadosDeRespuesta["X-Robots-Tag"]).toBe("noindex");
+  });
+
+  it.each(["APP", "LANDING"] as const)(
+    "la misma ruta en una superficie %s sigue private, no-store",
+    (s) => {
+      expect(cache(RUTA, s)).toBe("private, no-store");
+    },
+  );
+
+  it.each([
+    ["la carta misma", "/aGD6JLL9SFT82W9bSN1byw"],
+    ["un producto", "/aGD6JLL9SFT82W9bSN1byw/flan-ab12cd34"],
+    ["la carpeta del logo", "/aGD6JLL9SFT82W9bSN1byw/logo"],
+    ["la carpeta con barra", "/aGD6JLL9SFT82W9bSN1byw/logo/"],
+    ["otra extensión", "/aGD6JLL9SFT82W9bSN1byw/logo/1700000000.png"],
+    ["sin extensión", "/aGD6JLL9SFT82W9bSN1byw/logo/1700000000"],
+    ["versión con letras", "/aGD6JLL9SFT82W9bSN1byw/logo/17a.webp"],
+    ["versión vacía", "/aGD6JLL9SFT82W9bSN1byw/logo/.webp"],
+    ["versión larguísima", "/aGD6JLL9SFT82W9bSN1byw/logo/1234567890123.webp"],
+    ["un tramo de más", "/aGD6JLL9SFT82W9bSN1byw/logo/1700000000.webp/x"],
+    ["barra final", `${RUTA}/`],
+    ["otro nombre de carpeta", "/aGD6JLL9SFT82W9bSN1byw/logos/1700000000.webp"],
+    ["Logo en mayúscula", "/aGD6JLL9SFT82W9bSN1byw/Logo/1700000000.webp"],
+    ["sin código", "/logo/1700000000.webp"],
+    ["código con escape", "/a%2fb/logo/1700000000.webp"],
+    ["código con punto", "/a.b/logo/1700000000.webp"],
+    ["código de 65", `/${"a".repeat(65)}/logo/1700000000.webp`],
+    ["una ruta que lo contiene", `/x${RUTA}`],
+    ["la raíz", "/"],
+  ])("%s en la carta sigue private, no-store", (_n, ruta) => {
+    expect(cache(ruta, "CARTA")).toBe("private, no-store");
+  });
+
+  it("esRutaDelLogoDeLaCarta: acepta los topes (código de 64, versión de 12)", () => {
+    expect(esRutaDelLogoDeLaCarta(`/${"a".repeat(64)}/logo/${"9".repeat(12)}.webp`)).toBe(true);
+    expect(esRutaDelLogoDeLaCarta("/a_-Z9/logo/1.webp")).toBe(true);
+    expect(esRutaDelLogoDeLaCarta("/a/logo/1.webp\n")).toBe(false);
+  });
+
+  it("un host que no se resuelve o una ruta interna no reciben la excepción", () => {
+    for (const r of [HOST_DESCONOCIDO, HOST_NO_DISPONIBLE]) {
+      expect(decidir(RUTA, r).encabezadosDeRespuesta["Cache-Control"]).toBe("private, no-store");
+    }
+    expect(
+      decidir("/s/carta/aGD6JLL9SFT82W9bSN1byw/logo/1.webp", resuelta("CARTA"))
+        .encabezadosDeRespuesta["Cache-Control"],
+    ).toBe("private, no-store");
+  });
+});
 
 describe("constantes de la puerta", () => {
   it("son las esperadas", () => {
@@ -135,12 +200,35 @@ describe("decidirPuerta: a dónde va cada host", () => {
     expect(decidir("/favicon.ico", resuelta("APP")).rutaInterna).toBe("/s/app/favicon.ico");
   });
 
-  it("host desconocido: la neutra con 404", () => {
-    const d = decidir("/panel", HOST_DESCONOCIDO);
+  // Next resuelve el `redirect()` de una acción con un pedido interno a `localhost:<puerto>` (host que la puerta no conoce) y, si la respuesta es un flujo RSC, se la da al navegador como
+  // si fuera la pantalla a la que vuelve la acción: «Guardar» terminaba en «No encontrado» (caso real, mesas del salón, 17/11/2026). Por eso un host que no se resuelve se rechaza con un
+  // 404 plano, sin reescribir a ninguna página (que con el encabezado de RSC saldría como RSC). Cierra igual que antes: no abre ningún host ni ruta.
+  it.each([
+    ["sin encabezado de RSC", {}],
+    ["con el encabezado de RSC", { rsc: "1" }],
+    ["con RSC y de prefetch", { rsc: "1", "next-router-prefetch": "1" }],
+  ])("host desconocido (%s): 404 plano, sin reescribir a ninguna página", (_cual, encabezados) => {
+    for (const ruta of ["/", "/panel", "/salon/mesas", "/api/auth/signin", "/s/app", "/s/neutra"]) {
+      const d = decidir(ruta, HOST_DESCONOCIDO, encabezados);
+      expect(d.accion, ruta).toBe("RESPONDER");
+      expect(d.rutaInterna, ruta).toBeNull();
+      expect(d.estado, ruta).toBe(404);
+      expect(d.superficie, ruta).toBe("NEUTRA");
+    }
+  });
+
+  it("la base caída sigue siendo la neutra con 503 (no es un host desconocido)", () => {
+    const d = decidir("/panel", HOST_NO_DISPONIBLE, { rsc: "1" });
+    expect(d.accion).toBe("REESCRIBIR");
+    expect(d.rutaInterna).toBe("/s/neutra");
+    expect(d.estado).toBe(503);
+  });
+
+  it("un host conocido con una ruta que no existe sigue siendo la neutra con 404", () => {
+    const d = decidir("/s/app", resuelta("APP"));
     expect(d.accion).toBe("REESCRIBIR");
     expect(d.rutaInterna).toBe("/s/neutra");
     expect(d.estado).toBe(404);
-    expect(d.superficie).toBe("NEUTRA");
   });
 
   it("la base caída: la neutra con 503 (no se confunde con desconocido ni cae en una marca)", () => {
@@ -278,8 +366,10 @@ describe("decidirPuerta: /api solo en un host APP", () => {
     }
   });
 
-  it("/api en un host desconocido es la neutra", () => {
-    expect(decidir("/api/auth/signin", HOST_DESCONOCIDO).rutaInterna).toBe("/s/neutra");
+  it("/api en un host desconocido se rechaza con el 404 plano", () => {
+    const d = decidir("/api/auth/signin", HOST_DESCONOCIDO);
+    expect(d.accion).toBe("RESPONDER");
+    expect(d.rutaInterna).toBeNull();
   });
 
   it.each(["/apix", "/API/auth", "/apis/x", "/%61pi/auth"])(
@@ -375,7 +465,10 @@ describe("rutas de sistema: el cron y la salud responden en cualquier host", () 
         ([, r]) => r.tipo !== "RESUELTA" || r.puerta.superficie !== "APP",
       )) {
         const d = decidir(ruta, resolucion);
-        expect(d.rutaInterna, `${cual} ${ruta}`).toBe("/s/neutra");
+        // Host desconocido: el 404 plano que contesta la puerta; base caída o host de otra superficie: la neutra.
+        expect(d.rutaInterna, `${cual} ${ruta}`).toBe(
+          resolucion.tipo === "DESCONOCIDO" ? null : "/s/neutra",
+        );
         expect(d.superficie).toBe("NEUTRA");
       }
     }
@@ -443,6 +536,23 @@ describe("decidirPuerta: cabeceras de respuesta por superficie", () => {
     const d = decidir("/", resuelta(s), {}, produccion);
     expect(d.encabezadosDeRespuesta["X-Robots-Tag"] === "noindex").toBe(noindex);
   });
+
+  it.each(["MARCA", "EMPRESA"] as const)(
+    "la carta de un host con dueño %s lleva noindex en producción (host compartido: nunca indexable)",
+    (tipo) => {
+      const estado: EstadoDeLaResolucion = {
+        tipo: "RESUELTA",
+        puerta: {
+          host: "carta.x.test",
+          superficie: "CARTA",
+          marcaId: "m1",
+          duenio: tipo === "MARCA" ? { tipo } : { tipo, empresaId: "e1" },
+          marca: { nombre: "Marca", tema: {}, hostDeApp: null },
+        },
+      };
+      expect(decidir("/", estado, {}, true).encabezadosDeRespuesta["X-Robots-Tag"]).toBe("noindex");
+    },
+  );
 
   it("la neutra es noindex aun en producción, y toda respuesta trae las cabeceras de seguridad", () => {
     for (const d of [

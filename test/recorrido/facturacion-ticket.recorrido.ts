@@ -153,22 +153,18 @@ describe.skipIf(base === null)(
       pantallaLimpia();
     });
 
-    // FALLA CONOCIDA (2026-11-15, hallada por este recorrido): Pendientes reutiliza el CSS del Listado, que desde 64 rem OCULTA las tarjetas y las
-    // reemplaza por una tabla; Pendientes no tiene tabla, así que en escritorio la pantalla queda VACÍA (ni la venta ni el aviso de «no hay»). Cuando
-    // se arregle, esta prueba se pone roja y hay que pasarla a `it` común.
-    it.fails(
-      "Pendientes en escritorio: la venta cobrada se ve (hoy la pantalla queda vacía)",
-      async () => {
-        await pagina.setViewportSize(ESCRITORIO);
-        try {
-          await ir("/facturacion/comprobantes/pendientes");
-          await tarjetaDeLaVenta().waitFor({ timeout: 3_000 });
-        } finally {
-          await pagina.setViewportSize(CELULAR);
-          vigilante.tomar();
-        }
-      },
-    );
+    // Antes marcada como falla conocida (`it.fails`: en escritorio la pantalla quedaba vacía). Con catalogo, caja y ventas «disponible» (DEC-0463)
+    // pasa: la marca de falla esperada ya no corresponde y se quitó.
+    it("Pendientes en escritorio: la venta cobrada se ve", async () => {
+      await pagina.setViewportSize(ESCRITORIO);
+      try {
+        await ir("/facturacion/comprobantes/pendientes");
+        await tarjetaDeLaVenta().waitFor({ timeout: 3_000 });
+      } finally {
+        await pagina.setViewportSize(CELULAR);
+        vigilante.tomar();
+      }
+    });
 
     it("Emitir desde la venta: los renglones son los del ticket y no se pueden editar", async () => {
       await tarjetaDeLaVenta().click();

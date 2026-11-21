@@ -1,0 +1,30 @@
+/* La placa de la cabecera: la inicial del nombre dentro de un recuadro del color del texto de la banda (el mismo par que la banda, así que llega a 7:1). El logo (si lo hay) se pinta encima, sobre la superficie de la carta. */
+.placa {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  min-width: 3.2em;
+  height: 3.2em;
+  border: var(--borde-grosor-fuerte) solid currentcolor;
+  border-radius: var(--radio-base);
+  color: inherit;
+  font-family: var(--tipo-familia-titulos);
+  font-size: 1.1em;
+  font-weight: 700;
+}
+
+.placa[data-cara="DIA"] {
+  border-radius: var(--radio-grande);
+}
+
+.logo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--color-superficie);
+}

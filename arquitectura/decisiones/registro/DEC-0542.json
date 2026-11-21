@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0542",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Ocultar con existencia o con un conteo abierto sale con sus dos mensajes propios, no con el genérico: Primero dejá la existencia en 0. y Hay un conteo abierto con este producto.",
+  "que_cambia": "Textos aprobados por el dueño el 12/11/2026 (productos.html:318). Los comparte desactivar. Revertir: quitar los dos códigos y volverían al genérico.",
+  "donde": "src/capacidades/vocabulario/catalogo-catalogo.ts; src/capacidades/experiencia/respuesta-de-catalogo.ts; errores-de-catalogo.ts; delegación del dueño, DDD filas 173 y 174"
+}

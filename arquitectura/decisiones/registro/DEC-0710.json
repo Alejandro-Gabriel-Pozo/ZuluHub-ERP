@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0710",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En N4 ver y resolver las diferencias de la conciliación lo hacen gerente y administrador; fijar las tolerancias es solo del gerente (compras.configurar). El operador no.",
+  "que_cambia": "Dos permisos nuevos diferencias_de_compra.ver y .resolver (nacen cerrados). SUPUESTO del ingeniero, a confirmar. Revertir: cambiar la matriz de roles; no toca datos.",
+  "donde": "src/capacidades/permisos/empresa.ts; src/capacidades/modulos/catalogo-compras.ts; decisiones-del-dueno-2026-11.md (16/11/2026); tramo N4-3 de compras."
+}

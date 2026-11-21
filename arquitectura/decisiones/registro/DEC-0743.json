@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0743",
+  "fecha": "2026-11-18",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La composición web se arma por partes: un archivo web-de-(carpeta).ts por módulo y web.ts solo junta.",
+  "que_cambia": "Es una mudanza sin cambio de comportamiento: mismas claves, mismos tipos y misma pereza. Un módulo nuevo suma su archivo en vez de crecer web.ts. Revertir: volver a armar todo en web.ts.",
+  "donde": "src/composicion/web.ts; web-base.ts; web-de-(carpeta).ts; web-partes.test.ts; brief PR-E2 (escalabilidad)"
+}

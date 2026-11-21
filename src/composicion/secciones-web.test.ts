@@ -83,6 +83,15 @@ const GENERICO = {
     presentacion: "AVISO",
   },
 };
+const SECCION_REPETIDA = {
+  ok: false,
+  error: {
+    codigo: "CATALOGO_SECCION_REPETIDA",
+    clave: "catalogo.error.seccion_repetida",
+    presentacion: "AVISO",
+    campo: "nombre",
+  },
+};
 const FALTA_EL_NOMBRE = {
   ok: false,
   error: {
@@ -176,27 +185,13 @@ describe("verLaSeccion", () => {
 describe("verUnaSeccion", () => {
   const PRODUCTOS = {
     productos: [
-      {
-        id: "p1",
-        nombre: "Cortado",
-        version: 4,
-        estado: "ACTIVO",
-        precio: null,
-        seccion: { id: A },
-      },
-      {
-        id: "p2",
-        nombre: "Espresso",
-        version: 9,
-        estado: "ACTIVO",
-        precio: null,
-        seccion: { id: A },
-      },
+      { id: "p1", nombre: "Cortado", estado: "ACTIVO", precio: null, seccion: { id: A } },
+      { id: "p2", nombre: "Espresso", estado: "ACTIVO", precio: null, seccion: { id: A } },
     ],
     siguiente: null,
   };
 
-  it("trae la sección y sus productos activos (solo id, nombre y versión) con el filtro de la sección", async () => {
+  it("trae la sección y sus productos activos (solo id y nombre) con el filtro de la sección", async () => {
     const { m, d } = montar({ productos: () => ok(PRODUCTOS) });
     const r = await verUnaSeccion(d, contexto, { seccionId: A, despues: "" });
     expect(r).toEqual({
@@ -204,8 +199,8 @@ describe("verUnaSeccion", () => {
       dato: {
         seccion: { id: A, nombre: "Cafés", activa: true, version: 3 },
         productos: [
-          { id: "p1", nombre: "Cortado", version: 4 },
-          { id: "p2", nombre: "Espresso", version: 9 },
+          { id: "p1", nombre: "Cortado" },
+          { id: "p2", nombre: "Espresso" },
         ],
         siguiente: null,
       },
@@ -353,11 +348,7 @@ describe("crearLaSeccion", () => {
 
   it("un nombre repetido sale con su texto aprobado, atado al campo «nombre» (no es el genérico)", async () => {
     const { d } = montar({ crear: () => err("SECCION_DUPLICADA") });
-    const r = await crearLaSeccion(d, contexto, PEDIDO);
-    expect(r).toMatchObject({
-      ok: false,
-      error: { codigo: "CATALOGO_SECCION_REPETIDA", campo: "nombre" },
-    });
+    expect(await crearLaSeccion(d, contexto, PEDIDO)).toEqual(SECCION_REPETIDA);
   });
 
   it.each(["ID_REUTILIZADO", "NOMBRE_DE_SECCION_INVALIDO", "ORDEN_INVALIDO"])(
@@ -448,11 +439,7 @@ describe("renombrarLaSeccion", () => {
 
   it("renombrar con el nombre de otra sección sale con el texto de nombre repetido, atado al campo «nombre»", async () => {
     const { d } = montar({ editar: () => err("SECCION_DUPLICADA") });
-    const r = await renombrarLaSeccion(d, contexto, PEDIDO);
-    expect(r).toMatchObject({
-      ok: false,
-      error: { codigo: "CATALOGO_SECCION_REPETIDA", campo: "nombre" },
-    });
+    expect(await renombrarLaSeccion(d, contexto, PEDIDO)).toEqual(SECCION_REPETIDA);
   });
 
   it.each(["VERSION_DESACTUALIZADA", "SECCION_NO_ENCONTRADA"])(

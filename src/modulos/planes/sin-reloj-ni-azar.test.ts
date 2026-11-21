@@ -17,7 +17,12 @@ const nombres = fuentes.map((ruta) => ruta.slice(ruta.lastIndexOf("/") + 1));
 
 describe("el dominio de planes no usa reloj ni aleatoriedad", () => {
   it("encuentra los archivos a revisar", () => {
-    expect(nombres.sort()).toEqual(["activacion.ts", "ajuste.ts", "asignacion.ts"]);
+    expect(nombres.sort()).toEqual([
+      "activacion.ts",
+      "ajuste.ts",
+      "asignacion.ts",
+      "politica-de-cambio.ts",
+    ]);
   });
 
   it.each(fuentes)("%s no usa reloj ni aleatoriedad", (ruta) => {

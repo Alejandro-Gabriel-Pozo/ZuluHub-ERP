@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0799",
+  "fecha": "2026-11-19",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: la ficha no manda un campo oculto para saber si la casilla se ofreció encendida; al guardar, el servidor vuelve a calcular si la persona puede cambiar el control y solo entonces lo toca.",
+  "que_cambia": "Una casilla apagada no viaja y no se lee como desmarcar. El brief proponía un campo oculto, que la regla de campos con dato no admite. Revertir: sumar un componente de campo oculto con su dato.",
+  "donde": "apps/web/servidor/ficha-de-producto.ts; apps/web/ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente.tsx; brief PR-3 de Catálogo §4.4",
+  "motivo": "Técnica: la oferta ya la calcula el servidor con el mismo permiso; un input crudo falla campos-con-dato."
+}

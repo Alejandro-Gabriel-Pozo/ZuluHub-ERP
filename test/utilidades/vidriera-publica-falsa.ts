@@ -72,6 +72,13 @@ function comoVidrieraPublicada(vidriera: VidrieraDeEjemplo): VidrieraPublicada {
     nombre: vidriera.nombre,
     rubro: RUBROS[vidriera.rubro],
     mensajeDePortada: null,
+    identidad: {
+      modelo: "LISTA",
+      cara: null,
+      colorPropio: null,
+      colorDeLaEmpresa: null,
+      logo: null,
+    },
     ...complemento,
     secciones: vidriera.secciones.map((s) => ({
       ...s,

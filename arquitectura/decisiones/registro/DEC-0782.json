@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0782",
+  "fecha": "2026-11-19",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Tickets del día: textos nuevos (título, lista vacía, Cortesía, Por cobrar, menú, Cobrado y facturado, Jornada) y «Primero acreditá la factura con una nota de crédito» al anular con factura vigente.",
+  "que_cambia": "Los textos de la lista y la ficha de tickets del día y el aviso de factura vigente al anular. Revertir: quitar las claves de catalogo-ventas.ts (y el código de respuesta-de-ventas.ts); el rechazo con factura vuelve al genérico.",
+  "donde": "DDD:293 y DDD:173 (delegación del dueño); DDD:171 (c) para el texto de la factura (regla fiscal: confirmar antes de mergear); brief PR-5ter §6. SUPUESTO: sin la clave «Caja», solo el nombre de la caja."
+}

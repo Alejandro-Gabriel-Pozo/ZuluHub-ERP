@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0772",
+  "fecha": "2026-11-19",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Ticket del cliente en el mostrador: vista e «Imprimir» con la impresión del navegador; textos «Imprimir ticket», «Ticket del cliente», «Imprimir» y «Volver» reutilizados de maquetas aprobadas.",
+  "que_cambia": "Tras cobrar, el resultado ofrece «Imprimir ticket»: abre «Ticket del cliente» con el papel del servidor y «Imprimir» (diálogo del navegador). Revertir: quitar el botón y la vista.",
+  "donde": "decisiones-del-dueno-2026-11.md filas 172 (punto 4 B), 175 y 286 (VTA-4); venta-rapida-v4.html:888-904; imprimir.html (09/11/2026, decisión 120); brief PR-5 §6 y §8"
+}

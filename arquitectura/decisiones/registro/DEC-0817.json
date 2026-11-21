@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0817",
+  "fecha": "2026-11-20",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Textos T-19 a T-37 de «Plan de una empresa» (deshacer por arrepentimiento, fecha mínima): aprobados por el dueño con «h14b ok»; T-26 corregido con «apruebo t26» (20/11/2026).",
+  "que_cambia": "Cada texto lleva usos y fuente en textos-de-plataforma.ts. T-26 es el corregido por el dueño (fila del 20/11/2026 «apruebo t26») y vive en una sola clave (`plataforma.arrepentir.consecuencia_suba`). Revertir: quitar las claves `plataforma.arrepentir.*` del catálogo, de la ficha y de la pantalla.",
+  "donde": "src/capacidades/vocabulario/textos-de-plataforma.ts; src/capacidades/pantallas/ficha-de-arrepentimiento-de-consola.ts; Pedernal-docs 11-especificaciones/h14b-textos-aprobados.md; decisiones-del-dueno-2026-11.md fila del 20/11/2026 «h14b ok»"
+}

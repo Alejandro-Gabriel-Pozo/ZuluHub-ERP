@@ -54,7 +54,13 @@ export async function proxy(pedido: NextRequest): Promise<NextResponse> {
   });
   const opciones = { request: { headers: decision.encabezadosDePedido } };
   let respuesta: NextResponse;
-  if (decision.accion === "SEGUIR" || decision.rutaInterna === null) {
+  if (decision.accion === "RESPONDER") {
+    // 404 plano en HTML y sin cuerpo: nada de nombres de superficie, hosts, rutas ni motivos, y nada que Next pueda devolver como flujo RSC.
+    respuesta = new NextResponse(null, {
+      status: decision.estado ?? 404,
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  } else if (decision.accion === "SEGUIR" || decision.rutaInterna === null) {
     respuesta = NextResponse.next(opciones);
   } else {
     const destino = pedido.nextUrl.clone();

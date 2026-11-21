@@ -46,3 +46,20 @@ export const RUTAS_DE_CAJA = {
   cuentas: "/caja/cuentas-de-cobro",
   cajas: "/caja/cajas",
 } as const;
+
+/**
+ * La dirección de la pantalla «Caja» del mostrador (maqueta `caja.html`). Aparte de `RUTAS_DE_CAJA`, que son las tres pantallas de configuración con sus pestañas: esta no es una pestaña.
+ * No choca con ellas (`/caja/medios-de-pago`, `/caja/cuentas-de-cobro` y `/caja/cajas` cuelgan de `/caja`). Es también a donde Cobrar lleva a quien no tiene caja abierta (DEC-0502).
+ */
+export const RUTA_DE_LA_CAJA = "/caja";
+
+/**
+ * Qué acciones de la pantalla «Caja» del mostrador se ofrecen activas hoy, según lo que el SERVIDOR deja hacer (`permisosDelActor`; `servidor/ofertas-de-caja.ts`). Sin permiso, el botón sale
+ * apagado: solo una ayuda, cada acción vuelve a pasar por el guard dentro de su transacción. Si no se pudieron leer los permisos, todo apagado (ante la duda el sistema cierra).
+ */
+export type AccionesDeLaPantallaDeCaja = Readonly<{
+  abrir: boolean;
+  iniciarCierre: boolean;
+  cancelarCierre: boolean;
+  cerrar: boolean;
+}>;

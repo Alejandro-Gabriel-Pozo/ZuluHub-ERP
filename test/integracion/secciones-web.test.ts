@@ -12,12 +12,6 @@ import {
   type DependenciasDeSeccionesWeb,
 } from "../../src/composicion/secciones-web";
 import {
-  agregarElProducto,
-  quitarElProducto,
-  verLosCandidatos,
-  type DependenciasDeProductosDeSeccionWeb,
-} from "../../src/composicion/productos-de-seccion-web";
-import {
   montarCatalogo,
   nombreAlAzarDeProducto,
   nuevoId,
@@ -43,14 +37,20 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
   let cerrado: Awaited<ReturnType<typeof montarCatalogo>>;
   let e: EscenarioDeCatalogo;
   let registrados: string[];
-  let d: DependenciasDeSeccionesWeb & DependenciasDeProductosDeSeccionWeb;
+  let d: DependenciasDeSeccionesWeb;
 
   beforeAll(async () => {
     if (base === null) return;
     c = await montarCatalogo(base);
-    // El catálogo real: `catalogo` sigue `en_desarrollo` y el guard rechaza todo.
+    // El catálogo real con `catalogo` forzado a `en_desarrollo` (en el real es disponible, DEC-0463): el guard rechaza todo.
     cerrado = await montarCatalogo(base, {
-      reglas: { catalogo: CATALOGO_DE_MODULOS, permisos: PERMISOS_DE_EMPRESA },
+      reglas: {
+        catalogo: {
+          ...CATALOGO_DE_MODULOS,
+          catalogo: { ...CATALOGO_DE_MODULOS.catalogo, estado: "en_desarrollo" },
+        },
+        permisos: PERMISOS_DE_EMPRESA,
+      },
     });
     e = await c.escenario();
     registrados = [];
@@ -187,7 +187,12 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
     );
     expect(await crear(nom.toUpperCase(), x)).toMatchObject({
       ok: false,
-      error: { codigo: "CATALOGO_SECCION_REPETIDA", campo: "nombre" },
+      error: {
+        codigo: "CATALOGO_SECCION_REPETIDA",
+        clave: "catalogo.error.seccion_repetida",
+        presentacion: "AVISO",
+        campo: "nombre",
+      },
     });
     expect(await crear("   ", x)).toMatchObject({
       ok: false,
@@ -250,7 +255,12 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
       await renombrarLaSeccion(d, x.gerente, { seccionId: a, versionEsperada: v, nombre: otra }),
     ).toMatchObject({
       ok: false,
-      error: { codigo: "CATALOGO_SECCION_REPETIDA", campo: "nombre" },
+      error: {
+        codigo: "CATALOGO_SECCION_REPETIDA",
+        clave: "catalogo.error.seccion_repetida",
+        presentacion: "AVISO",
+        campo: "nombre",
+      },
     });
     expect(await fila(a)).toEqual(antes);
   });
@@ -316,8 +326,7 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
     expect(nombres).toEqual(
       [...nombres].sort((m, n) => m.toLowerCase().localeCompare(n.toLowerCase())),
     );
-    for (const p of r.dato.productos)
-      expect(Object.keys(p).sort()).toEqual(["id", "nombre", "version"]);
+    for (const p of r.dato.productos) expect(Object.keys(p).sort()).toEqual(["id", "nombre"]);
     expect(r.dato.siguiente).toBeNull();
     // Una sección desactivada se ve, con sus productos.
     valorDe(await c.casos.desactivarSeccionDeCarta(x.gerente, { seccionId: b }));
@@ -524,7 +533,7 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
     ).toBe("OK");
   });
 
-  it("con el catálogo en desarrollo (hoy, en el catálogo real) todos reciben MODULO_EN_DESARROLLO y ningún dato", async () => {
+  it("con el catálogo en desarrollo (forzado: en el catálogo real es disponible, DEC-0463) todos reciben MODULO_EN_DESARROLLO y ningún dato", async () => {
     const x = await cerrado.escenario();
     const dependencias: DependenciasDeSeccionesWeb = {
       ...d,
@@ -555,320 +564,6 @@ describe.skipIf(base === null)("secciones de la carta de la web", () => {
         error: { codigo: "MODULO_EN_DESARROLLO", presentacion: "POR_QUE_NO_PUEDO" },
       });
     }
-  });
-
-  // ---------- Parte 2: agregar y quitar productos de una sección ----------
-
-  /** Un producto de la clase dada, con o sin sección; devuelve su id y su versión vigente. */
-  const productoDe = async (
-    x: EscenarioDeCatalogo,
-    seccionDeCartaId: string | null,
-    claseDeUso: "VENDIBLE" | "REVENTA" | "INSUMO" = "VENDIBLE",
-    parte = "Producto",
-  ) => {
-    const id = nuevoId();
-    valorDe(
-      await c.casos.crearProducto(x.gerente, {
-        id,
-        claseDeUso,
-        nombre: nombreAlAzarDeProducto(parte),
-        unidadBaseId: "UNIDAD",
-        ...(claseDeUso === "INSUMO" ? {} : { alicuota: "21" }),
-        ...(seccionDeCartaId === null ? {} : { seccionDeCartaId }),
-      }),
-    );
-    return id;
-  };
-  const productoEnBase = (id: string) =>
-    c
-      .filas("select seccion_de_carta_id, version from producto where id = $1", [id])
-      .then((f) => f[0] as { seccion_de_carta_id: string | null; version: number });
-  const auditoriasDelProducto = (id: string) => auditorias(id, "PRODUCTO_EDITADO");
-  /** Lo que la pantalla de la sección o de «Agregar» liga a la acción: el producto como se vio, con su versión. */
-  const visto = async (id: string) => [
-    { productoId: id, versionEsperada: (await productoEnBase(id)).version },
-  ];
-  const tocar = async (
-    que: typeof agregarElProducto,
-    x: EscenarioDeCatalogo,
-    seccionId: string,
-    productoId: string,
-    vistasDe?: { productoId: string; versionEsperada: number }[],
-  ) => que(d, x.gerente, { seccionId, vistas: vistasDe ?? (await visto(productoId)), productoId });
-
-  it("agregar pone el producto en la sección (aunque estuviera en otra), sube su versión una vez y audita una; la sección se ve en su lista", async () => {
-    const x = await c.escenario();
-    const a = await nueva(nombre("Cafés"), x);
-    const b = await nueva(nombre("Postres"), x);
-    const p = await productoDe(x, b);
-    const antes = await productoEnBase(p);
-    const r = await tocar(agregarElProducto, x, a, p);
-    expect(r).toEqual({ ok: true, dato: { productoId: p, version: antes.version + 1 } });
-    expect((await productoEnBase(p)).seccion_de_carta_id).toBe(a);
-    expect(await auditoriasDelProducto(p)).toBe(1);
-    const enLaSeccion = await verUnaSeccion(d, x.gerente, { seccionId: a, despues: "" });
-    expect(enLaSeccion.ok && enLaSeccion.dato.productos.map((q) => q.id)).toEqual([p]);
-  });
-
-  it("quitar deja el producto sin sección (no lo desactiva ni lo borra), sube su versión una vez y audita una", async () => {
-    const x = await c.escenario();
-    const a = await nueva(nombre("Cafés"), x);
-    const p = await productoDe(x, a);
-    const antes = await productoEnBase(p);
-    expect(await tocar(quitarElProducto, x, a, p)).toEqual({
-      ok: true,
-      dato: { productoId: p, version: antes.version + 1 },
-    });
-    expect((await productoEnBase(p)).seccion_de_carta_id).toBeNull();
-    expect((await c.filas("select activo from producto where id = $1", [p]))[0]?.["activo"]).toBe(
-      true,
-    );
-    expect(await auditoriasDelProducto(p)).toBe(1);
-  });
-
-  it("IDEMPOTENCIA: agregar o quitar dos veces seguidas con lo mismo que vio la pantalla escribe y audita UNA vez; la segunda es éxito sin escribir", async () => {
-    const x = await c.escenario();
-    const a = await nueva(nombre("Cafés"), x);
-    const p = await productoDe(x, null);
-    const vistaVieja = await visto(p);
-    for (let i = 0; i < 2; i++) {
-      expect(codigoDe(await tocar(agregarElProducto, x, a, p, vistaVieja))).toBe("OK");
-    }
-    const tras = await productoEnBase(p);
-    expect(tras.seccion_de_carta_id).toBe(a);
-    expect(tras.version).toBe((vistaVieja[0]?.versionEsperada as number) + 1);
-    expect(await auditoriasDelProducto(p)).toBe(1);
-    const vistaDeQuitar = await visto(p);
-    for (let i = 0; i < 2; i++) {
-      expect(codigoDe(await tocar(quitarElProducto, x, a, p, vistaDeQuitar))).toBe("OK");
-    }
-    expect((await productoEnBase(p)).seccion_de_carta_id).toBeNull();
-    expect((await productoEnBase(p)).version).toBe(tras.version + 1);
-    expect(await auditoriasDelProducto(p)).toBe(2);
-  });
-
-  it("CONCURRENCIA: dos «Agregar» a la vez del mismo producto (misma versión) dejan UNA escritura, una auditoría y la sección elegida", async () => {
-    for (let ronda = 0; ronda < RONDAS; ronda++) {
-      const x = await c.escenario();
-      const a = await nueva(nombre("Cafés"), x);
-      const p = await productoDe(x, null);
-      const vistaDe = await visto(p);
-      const r = await Promise.all([
-        tocar(agregarElProducto, x, a, p, vistaDe),
-        tocar(agregarElProducto, x, a, p, vistaDe),
-      ]);
-      expect(r.map(codigoDe)).toEqual(["OK", "OK"]);
-      expect((await productoEnBase(p)).seccion_de_carta_id).toBe(a);
-      expect((await productoEnBase(p)).version).toBe((vistaDe[0]?.versionEsperada as number) + 1);
-      expect(await auditoriasDelProducto(p)).toBe(1);
-    }
-  });
-
-  it("CONCURRENCIA: dos personas llevan el MISMO producto a secciones distintas a la vez: una gana, la otra recibe el genérico, y no se pisa (queda la ganadora)", async () => {
-    for (let ronda = 0; ronda < RONDAS; ronda++) {
-      const x = await c.escenario();
-      const a = await nueva(nombre("Cafés"), x);
-      const b = await nueva(nombre("Postres"), x);
-      const p = await productoDe(x, null);
-      const vistaDe = await visto(p);
-      const r = await Promise.all([
-        tocar(agregarElProducto, x, a, p, vistaDe),
-        tocar(agregarElProducto, x, b, p, vistaDe),
-      ]);
-      expect(r.map(codigoDe).sort()).toEqual([GENERICO, "OK"]);
-      const ganadora = r[0]?.ok ? a : b;
-      expect((await productoEnBase(p)).seccion_de_carta_id).toBe(ganadora);
-      expect(await auditoriasDelProducto(p)).toBe(1);
-    }
-  });
-
-  it("con una versión vieja (otra persona editó el producto antes) se rechaza como el genérico, sin escribir ni auditar de más; quitar lo que otra persona ya movió también", async () => {
-    const x = await c.escenario();
-    const a = await nueva(nombre("Cafés"), x);
-    const b = await nueva(nombre("Postres"), x);
-    const p = await productoDe(x, a);
-    const vistaVieja = await visto(p);
-    // Otra persona lo pasa a «Postres» (sube la versión).
-    valorDe(
-      await c.casos.editarProducto(x.gerente, {
-        productoId: p,
-        versionEsperada: vistaVieja[0]?.versionEsperada as number,
-        seccionDeCartaId: b,
-      }),
-    );
-    const antes = await productoEnBase(p);
-    expect(codigoDe(await tocar(quitarElProducto, x, a, p, vistaVieja))).toBe(GENERICO);
-    expect(codigoDe(await tocar(agregarElProducto, x, a, p, vistaVieja))).toBe(GENERICO);
-    expect(await productoEnBase(p)).toEqual(antes);
-    expect(await auditoriasDelProducto(p)).toBe(1);
-  });
-
-  it("una versión que la persona no vio (el producto no está en lo ligado) no escribe: el genérico", async () => {
-    const x = await c.escenario();
-    const a = await nueva(nombre("Cafés"), x);
-    const p = await productoDe(x, null);
-    const otro = await productoDe(x, null);
-    const antes = await productoEnBase(p);
-    expect(codigoDe(await tocar(agregarElProducto, x, a, p, await visto(otro)))).toBe(GENERICO);
-    expect(await productoEnBase(p)).toEqual(antes);
-  });
-
-  it("agregar a una sección desactivada o de otra empresa, o un producto de otra empresa o desactivado, es el genérico y no escribe", async () => {
-    const x = await c.escenario();
-    const y = await c.escenario();
-    const a = await nueva(nombre("Cafés"), x);
-    const apagada = await nueva(nombre("Apagada"), x);
-    valorDe(await c.casos.desactivarSeccionDeCarta(x.gerente, { seccionId: apagada }));
-    const ajena = await nueva(nombre("Ajena"), y);
-    const p = await productoDe(x, null);
-    const pAjeno = await productoDe(y, null);
-    const inactivo = await productoDe(x, null);
-    valorDe(await c.casos.desactivarProducto(x.gerente, { productoId: inactivo }));
-    const antes = [
-      await productoEnBase(p),
-      await productoEnBase(pAjeno),
-      await productoEnBase(inactivo),
-    ];
-    expect(codigoDe(await tocar(agregarElProducto, x, apagada, p))).toBe(GENERICO);
-    expect(codigoDe(await tocar(agregarElProducto, x, ajena, p))).toBe(GENERICO);
-    expect(codigoDe(await tocar(agregarElProducto, x, a, pAjeno))).toBe(GENERICO);
-    expect(codigoDe(await tocar(agregarElProducto, x, a, inactivo))).toBe(GENERICO);
-    expect(codigoDe(await tocar(quitarElProducto, x, a, pAjeno))).toBe(GENERICO);
-    expect([
-      await productoEnBase(p),
-      await productoEnBase(pAjeno),
-      await productoEnBase(inactivo),
-    ]).toEqual(antes);
-  });
-
-  it("los candidatos: solo lo que se vende (vendible y reventa), activo, sin los que ya están en la sección, con su sección de hoy; los insumos no aparecen y la búsqueda filtra por nombre", async () => {
-    const x = await c.escenario();
-    const a = await nueva(nombre("Cafés"), x);
-    const b = await nueva(nombre("Postres"), x);
-    const marca = nombre("Zzcand");
-    const vendible = await productoDe(x, null, "VENDIBLE", marca);
-    const reventa = await productoDe(x, b, "REVENTA", marca);
-    const yaEsta = await productoDe(x, a, "VENDIBLE", marca);
-    await productoDe(x, null, "INSUMO", marca);
-    const inactivo = await productoDe(x, null, "VENDIBLE", marca);
-    valorDe(await c.casos.desactivarProducto(x.gerente, { productoId: inactivo }));
-    const r = await verLosCandidatos(d, x.gerente, { seccionId: a, texto: marca, despues: "" });
-    if (!r.ok) throw new Error(r.error.codigo);
-    expect(r.dato.candidatos.map((q) => q.id).sort()).toEqual([vendible, reventa].sort());
-    expect(r.dato.candidatos.find((q) => q.id === yaEsta)).toBeUndefined();
-    expect(r.dato.candidatos.find((q) => q.id === reventa)?.seccion).toBe(
-      (await lista(x.gerente)).find((s) => s.id === b)?.nombre,
-    );
-    expect(r.dato.candidatos.find((q) => q.id === vendible)?.seccion).toBeNull();
-    for (const q of r.dato.candidatos)
-      expect(Object.keys(q).sort()).toEqual([
-        "faltaCompletar",
-        "id",
-        "nombre",
-        "seccion",
-        "version",
-      ]);
-    const sinCoincidencia = await verLosCandidatos(d, x.gerente, {
-      seccionId: a,
-      texto: `${marca}-no-existe`,
-      despues: "",
-    });
-    expect(sinCoincidencia.ok && sinCoincidencia.dato.candidatos).toEqual([]);
-  });
-
-  it("los candidatos no mezclan empresas: una sección de otra empresa es el genérico y los productos de otra no salen", async () => {
-    const x = await c.escenario();
-    const y = await c.escenario();
-    const a = await nueva(nombre("Cafés"), x);
-    const ajena = await nueva(nombre("Ajena"), y);
-    const marca = nombre("Zzaislado");
-    await productoDe(y, null, "VENDIBLE", marca);
-    expect(
-      codigoDe(await verLosCandidatos(d, x.gerente, { seccionId: ajena, texto: "", despues: "" })),
-    ).toBe(GENERICO);
-    const r = await verLosCandidatos(d, x.gerente, { seccionId: a, texto: marca, despues: "" });
-    expect(r.ok && r.dato.candidatos).toEqual([]);
-  });
-
-  it("el permiso lo decide el caso de uso: el operador ve los candidatos pero no agrega ni quita; el administrador de una sola sucursal tampoco (alcance)", async () => {
-    const x = await c.escenario();
-    const a = await nueva(nombre("Cafés"), x);
-    const p = await productoDe(x, null);
-    const q = await productoDe(x, a);
-    const antes = [await productoEnBase(p), await productoEnBase(q)];
-    expect(
-      (await verLosCandidatos(d, x.operador, { seccionId: a, texto: "", despues: "" })).ok,
-    ).toBe(true);
-    for (const contexto of [x.operador, x.administradorDeUnaSucursal]) {
-      const agregado = await agregarElProducto(d, contexto, {
-        seccionId: a,
-        vistas: await visto(p),
-        productoId: p,
-      });
-      const quitado = await quitarElProducto(d, contexto, {
-        seccionId: a,
-        vistas: await visto(q),
-        productoId: q,
-      });
-      expect(agregado.ok || quitado.ok).toBe(false);
-    }
-    expect(
-      await agregarElProducto(d, x.operador, {
-        seccionId: a,
-        vistas: await visto(p),
-        productoId: p,
-      }),
-    ).toMatchObject({ ok: false, error: { codigo: "SIN_PERMISO" } });
-    expect([await productoEnBase(p), await productoEnBase(q)]).toEqual(antes);
-  });
-
-  it("con el catálogo en desarrollo (hoy, en el catálogo real) agregar, quitar y los candidatos reciben MODULO_EN_DESARROLLO y ningún dato", async () => {
-    const x = await cerrado.escenario();
-    const dependencias: DependenciasDeSeccionesWeb & DependenciasDeProductosDeSeccionWeb = {
-      ...d,
-      casosDeUso: () => cerrado.casos,
-      consultas: () => cerrado.consultas,
-    };
-    const ids = {
-      seccionId: nuevoId(),
-      vistas: [] as { productoId: string; versionEsperada: number }[],
-      productoId: nuevoId(),
-    };
-    ids.vistas.push({ productoId: ids.productoId, versionEsperada: 1 });
-    for (const contexto of [x.gerente, x.administrador, x.operador]) {
-      for (const r of [
-        await verLosCandidatos(dependencias, contexto, {
-          seccionId: ids.seccionId,
-          texto: "",
-          despues: "",
-        }),
-        await agregarElProducto(dependencias, contexto, ids),
-        await quitarElProducto(dependencias, contexto, ids),
-      ]) {
-        expect(r).toMatchObject({ ok: false });
-      }
-    }
-    expect(await agregarElProducto(dependencias, x.gerente, ids)).toMatchObject({
-      error: { codigo: "MODULO_EN_DESARROLLO" },
-    });
-  });
-
-  it("ver los candidatos es una lectura: no escribe ni audita", async () => {
-    const x = await c.escenario();
-    const a = await nueva(nombre("Cafés"), x);
-    const p = await productoDe(x, null);
-    const auditoriaAntes = await c.contar(
-      "select count(*) as n from auditoria_empresa where empresa_id = $1",
-      [x.empresa],
-    );
-    const antes = await productoEnBase(p);
-    await verLosCandidatos(d, x.gerente, { seccionId: a, texto: "", despues: "" });
-    expect(
-      await c.contar("select count(*) as n from auditoria_empresa where empresa_id = $1", [
-        x.empresa,
-      ]),
-    ).toBe(auditoriaAntes);
-    expect(await productoEnBase(p)).toEqual(antes);
   });
 
   it("ver es una lectura: no escribe ni audita", async () => {

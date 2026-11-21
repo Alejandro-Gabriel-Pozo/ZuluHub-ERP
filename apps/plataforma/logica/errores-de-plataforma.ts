@@ -4,6 +4,8 @@
  * como texto: lo que no se reconoce es INESPERADO y el servidor le pone una referencia.
  */
 
+import { rotuloDeModulo } from "./plan";
+
 export type CampoDelAlta =
   "razonSocial" | "cuit" | "marcaId" | "versionDePlanId" | "emailGerente" | "zonaHoraria";
 
@@ -181,6 +183,17 @@ const POR_CODIGO_DE_PLAN: Readonly<Record<string, ErrorParaLaPantalla>> = {
   ConcurrenciaAgotada: general("Se estaba guardando otro cambio a la vez. Probá de nuevo."),
 };
 
+/** En la pantalla «Plan de una empresa», al activar o desactivar un módulo. */
+const POR_CODIGO_DE_MODULOS: Readonly<Record<string, ErrorParaLaPantalla>> = {
+  ID_INVALIDO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_PLAN_VIEJO },
+  MODULO_DESCONOCIDO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_PLAN_VIEJO },
+  MODULO_OBLIGATORIO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_PLAN_VIEJO },
+  MODULO_EN_DESARROLLO: general("Este módulo todavía está en desarrollo."),
+  MODULO_FUERA_DEL_PLAN: general("El plan de la empresa no incluye este módulo."),
+  EMPRESA_NO_ENCONTRADA: general("No encontramos esa empresa."),
+  ConcurrenciaAgotada: general("Se estaba guardando otro cambio a la vez. Probá de nuevo."),
+};
+
 const CAMPO_DE_TEMA: Readonly<Record<string, CampoDeSubmarca>> = {
   primary: "primary",
   "on-primary": "onPrimary",
@@ -277,7 +290,7 @@ function textoDeLimiteDelPlan(datos: Record<string, unknown>): string {
  */
 export function errorParaLaPantalla(
   error: unknown,
-  contexto: "GENERAL" | "SUBMARCA" | "PLAN" = "GENERAL",
+  contexto: "GENERAL" | "SUBMARCA" | "PLAN" | "MODULOS" = "GENERAL",
 ): ErrorParaLaPantalla {
   let codigo: string;
   let datos: Record<string, unknown> = {};
@@ -298,6 +311,18 @@ export function errorParaLaPantalla(
   }
   if (contexto === "PLAN" && Object.hasOwn(POR_CODIGO_DE_PLAN, codigo)) {
     return POR_CODIGO_DE_PLAN[codigo] ?? INESPERADO;
+  }
+  if (contexto === "MODULOS") {
+    // El módulo implicado se rotula con la tabla cerrada de la consola; una clave que no se conoce vuelve tal cual.
+    if (codigo === "REQUIERE_INACTIVO" && typeof datos["modulo"] === "string") {
+      return general(`Primero hay que activar ${rotuloDeModulo(datos["modulo"])}.`);
+    }
+    if (codigo === "ES_REQUERIDO_POR" && typeof datos["modulo"] === "string") {
+      return general(`No se puede desactivar: ${rotuloDeModulo(datos["modulo"])} lo necesita.`);
+    }
+    if (Object.hasOwn(POR_CODIGO_DE_MODULOS, codigo)) {
+      return POR_CODIGO_DE_MODULOS[codigo] ?? INESPERADO;
+    }
   }
   if (codigo === "LIMITE_DEL_PLAN") return general(textoDeLimiteDelPlan(datos));
   if (!Object.hasOwn(POR_CODIGO, codigo)) return INESPERADO;

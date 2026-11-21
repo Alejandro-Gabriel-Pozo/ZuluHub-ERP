@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { PROVEEDORES_DE_IMAGEN, VARIANTES_DE_FOTO } from "./proveedores-de-imagen";
+import {
+  LADO_MAXIMO_DE_LOGO_EXTERNO,
+  PESO_MAXIMO_DE_LOGO_EXTERNO,
+  PROVEEDORES_DE_IMAGEN,
+  VARIANTES_DE_FOTO,
+} from "./proveedores-de-imagen";
 
 /** El catálogo es una lista CERRADA y literal (§5.7.1): cualquier cambio tiene que pasar por esta prueba. */
 
@@ -31,6 +36,14 @@ describe("PROVEEDORES_DE_IMAGEN", () => {
     );
     expect(PROVEEDORES_DE_IMAGEN.CLOUDINARY.transformacion(1200)).toBe(
       "c_fill,ar_4:3,w_1200,f_webp,q_80",
+    );
+  });
+
+  it("el logo: lado máximo 240, peso máximo 100 KB y una transformación que achica sin agrandar ni recortar", () => {
+    expect(LADO_MAXIMO_DE_LOGO_EXTERNO).toBe(240);
+    expect(PESO_MAXIMO_DE_LOGO_EXTERNO).toBe(100_000);
+    expect(PROVEEDORES_DE_IMAGEN.CLOUDINARY.transformacionDeLogo).toBe(
+      "c_limit,w_240,h_240,f_webp,q_80",
     );
   });
 });

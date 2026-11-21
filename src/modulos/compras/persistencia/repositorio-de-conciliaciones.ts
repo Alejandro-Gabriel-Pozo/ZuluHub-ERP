@@ -9,6 +9,14 @@ export type ConciliacionGuardada = Readonly<{
   acto: "CONCILIACION" | "ANULACION";
   anulaA: string | null;
   comprobanteId: string;
+  /** `true`: la del atajo de N1 y N2 (nace con la compra); no se anula por separado. */
+  esAtajo: boolean;
+}>;
+
+export type SaldoDeLineaFacturada = Readonly<{
+  linea: number;
+  facturada: string;
+  asignada: string;
 }>;
 
 export type AsignacionGuardada = Readonly<{
@@ -30,6 +38,14 @@ export interface RepositorioDeConciliaciones {
     empresa: EmpresaId,
     comprobanteId: string,
   ): Promise<readonly ConciliacionGuardada[]>;
+  /** La conciliación (o su espejo) con esa clave de idempotencia. */
+  porClave(empresa: EmpresaId, clave: string): Promise<ConciliacionGuardada | null>;
+  obtener(empresa: EmpresaId, id: string): Promise<ConciliacionGuardada | null>;
+  /** Lo facturado y lo ya asignado de cada línea del comprobante (los saldos que mantiene la base). */
+  saldosDeFactura(
+    empresa: EmpresaId,
+    comprobanteId: string,
+  ): Promise<readonly SaldoDeLineaFacturada[]>;
   insertarConciliacion(
     empresa: EmpresaId,
     alta: Readonly<{
@@ -57,6 +73,24 @@ export interface RepositorioDeConciliaciones {
   ): Promise<readonly AsignacionGuardada[]>;
 }
 
+const COLUMNAS_DE_CONCILIACION = ["id", "acto", "anula_a", "comprobante_id", "es_atajo"] as const;
+
+function aConciliacion(f: {
+  id: string;
+  acto: string;
+  anula_a: string | null;
+  comprobante_id: string;
+  es_atajo: boolean;
+}): ConciliacionGuardada {
+  return {
+    id: f.id,
+    acto: f.acto === "ANULACION" ? "ANULACION" : "CONCILIACION",
+    anulaA: f.anula_a,
+    comprobanteId: f.comprobante_id,
+    esAtajo: f.es_atajo,
+  };
+}
+
 export function crearRepositorioDeConciliaciones(
   db: Kysely<ComprasDb>,
 ): RepositorioDeConciliaciones {
@@ -65,18 +99,47 @@ export function crearRepositorioDeConciliaciones(
       if (!esUuid(comprobanteId)) return [];
       const filas = await db
         .selectFrom("conciliacion")
-        .select(["id", "acto", "anula_a", "comprobante_id"])
+        .select(["id", "acto", "anula_a", "comprobante_id", "es_atajo"])
         .where("empresa_id", "=", empresa)
         .where("comprobante_id", "=", comprobanteId)
         .orderBy("registrado_en")
         .orderBy("acto")
         .execute();
-      return filas.map((f) => ({
-        id: f.id,
-        acto: f.acto === "ANULACION" ? "ANULACION" : "CONCILIACION",
-        anulaA: f.anula_a,
-        comprobanteId: f.comprobante_id,
-      }));
+      return filas.map(aConciliacion);
+    },
+    async porClave(empresa, clave) {
+      const fila = await db
+        .selectFrom("conciliacion")
+        .select(COLUMNAS_DE_CONCILIACION)
+        .where("empresa_id", "=", empresa)
+        .where("clave_idempotencia", "=", clave)
+        .executeTakeFirst();
+      return fila === undefined ? null : aConciliacion(fila);
+    },
+    async obtener(empresa, id) {
+      if (!esUuid(id)) return null;
+      const fila = await db
+        .selectFrom("conciliacion")
+        .select(COLUMNAS_DE_CONCILIACION)
+        .where("empresa_id", "=", empresa)
+        .where("id", "=", id)
+        .executeTakeFirst();
+      return fila === undefined ? null : aConciliacion(fila);
+    },
+    async saldosDeFactura(empresa, comprobanteId) {
+      if (!esUuid(comprobanteId)) return [];
+      const filas = await db
+        .selectFrom("saldo_de_linea_de_comprobante")
+        .select([
+          "numero",
+          sql<string>`cantidad_facturada::text`.as("facturada"),
+          sql<string>`cantidad_asignada::text`.as("asignada"),
+        ])
+        .where("empresa_id", "=", empresa)
+        .where("comprobante_id", "=", comprobanteId)
+        .orderBy("numero")
+        .execute();
+      return filas.map((f) => ({ linea: f.numero, facturada: f.facturada, asignada: f.asignada }));
     },
     async insertarConciliacion(empresa, alta) {
       const fila = await db

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0832",
+  "fecha": "2026-11-21",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El traedor de imágenes toma el logo ya achicado por el proveedor (c_limit, 240 por 240, WebP, calidad 80) y exige 100 KB como máximo; la memoria guarda 200 logos y recuerda un fallo 5 minutos.",
+  "que_cambia": "Sin variantes de 480 y 1200 para el logo. Los topes viven una vez en proveedores-de-imagen.ts y memoria-de-logos.ts. Revertir: cambiar esas constantes; el traedor y la ruta no se tocan.",
+  "donde": "src/capacidades/activos/proveedores-de-imagen.ts; src/capacidades/activos/memoria-de-logos.ts; documentación de transformaciones de Cloudinary (c_limit, w_, h_, f_webp, q_80); mensaje del orquestador del 20/11/2026 (punto C)"
+}

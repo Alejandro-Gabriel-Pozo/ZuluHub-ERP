@@ -1,4 +1,7 @@
 import type { AlcanceDelHost } from "../capacidades/experiencia/puerta";
+import type { PartesDeDireccion } from "../capacidades/activos/direccion-externa";
+import type { CaraDeVidriera } from "../capacidades/experiencia/vidriera/caras";
+import type { ModeloDeVidriera } from "../capacidades/experiencia/vidriera/modelos";
 import type { LetraBase } from "../capacidades/experiencia/vidriera/letra";
 import type { ProductoParaPrecios } from "../capacidades/experiencia/vidriera/precios";
 
@@ -46,6 +49,19 @@ export type SeccionPublicada = Readonly<{
   productos: readonly ProductoPublicado[];
 }>;
 
+/**
+ * Lo que la carta ELIGIÓ para su aspecto (identidad de la carta, 0077), sin resolver: los colores van tal cual se guardaron y el ajuste por contraste (7:1) lo
+ * calcula quien arma la vista con la primitiva de la sesión C5. Vacío = «usa lo de la empresa»: `cara` nula rige `DIA`, `colorPropio` nulo rige `colorDeLaEmpresa`,
+ * y este nulo rige el color de la marca; `logo` nulo rige el logo de la empresa (y sin ese, la inicial).
+ */
+export type IdentidadPublicada = Readonly<{
+  modelo: ModeloDeVidriera;
+  cara: CaraDeVidriera | null;
+  colorPropio: string | null;
+  colorDeLaEmpresa: string | null;
+  logo: PartesDeDireccion | null;
+}>;
+
 export type VidrieraPublicada = Readonly<{
   id: string;
   codigo: string;
@@ -59,6 +75,7 @@ export type VidrieraPublicada = Readonly<{
    * modelo Libro), no una regla del servidor.
    */
   mensajeDePortada: string | null;
+  identidad: IdentidadPublicada;
   /**
    * Perilla `letra_base` (D10): `NORMAL` (18 px) o `GRANDE` (≈ 22 px). El comensal parte de este valor y
    * el control «Letra» se suma encima; no hay otra forma de fijar un tamaño.

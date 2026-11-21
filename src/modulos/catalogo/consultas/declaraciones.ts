@@ -6,12 +6,16 @@ import type { DeclaracionDeCaso } from "../../../capacidades/permisos/declaracio
  */
 export const DECLARACIONES_DE_CONSULTAS = {
   listarProductos: { accion: "productos.ver" },
+  productosParaVender: { accion: "productos.ver" },
   verProducto: { accion: "productos.ver" },
   preciosDelProducto: { accion: "productos.ver" },
   productosParaConsumo: { accion: "productos.ver" },
   productosParaCopiar: { accion: "productos.ver" },
+  vistaPreviaDeCopiaDeOpciones: { accion: "productos.ver" },
   listarSeccionesDeCarta: { accion: "productos.ver" },
   listarSeccionesParaGestionar: { accion: "productos.ver" },
+  listarFamilias: { accion: "productos.ver" },
+  verFamilia: { accion: "productos.ver" },
   listarUnidades: { accion: "productos.ver" },
   listarClasificacion: { accion: "productos.ver" },
   destinosParaMoverNodo: { accion: "productos.ver" },

@@ -27,3 +27,24 @@ export function fechaCivilDesdeTexto(texto: string): Resultado<FechaCivil, Error
   if (dia > (diasDelMes[mes - 1] ?? 0)) return err("FECHA_CIVIL_INVALIDA");
   return ok(texto as FechaCivil);
 }
+
+/**
+ * La fecha civil `dias` días después de `fecha` (negativo: antes). Aritmética del calendario gregoriano, sin hora ni zona;
+ * fuera del rango 0001 a 9999 es `FECHA_CIVIL_INVALIDA`.
+ */
+export function sumarDiasCiviles(
+  fecha: FechaCivil,
+  dias: number,
+): Resultado<FechaCivil, ErrorDeFechaCivil> {
+  const partes = FORMATO.exec(fecha);
+  if (partes === null || !Number.isSafeInteger(dias)) return err("FECHA_CIVIL_INVALIDA");
+  const resultado = new Date(0);
+  // `setUTCFullYear` (y no `Date.UTC`) para que los años 0001 a 0099 no se lean como 1901 a 1999.
+  resultado.setUTCFullYear(Number(partes[1]), Number(partes[2]) - 1, Number(partes[3]) + dias);
+  const anio = resultado.getUTCFullYear();
+  // Un año fuera de 0001 a 9999 (o inválido) no tiene la forma `AAAA` y lo rechaza `fechaCivilDesdeTexto`.
+  const dos = (n: number): string => String(n).padStart(2, "0");
+  return fechaCivilDesdeTexto(
+    `${String(anio).padStart(4, "0")}-${dos(resultado.getUTCMonth() + 1)}-${dos(resultado.getUTCDate())}`,
+  );
+}

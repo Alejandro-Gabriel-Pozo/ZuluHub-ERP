@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0831",
+  "fecha": "2026-11-21",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: hasta que las empresas declaren sus cuentas del proveedor, el logo acepta la cuenta que cargó quien edita la carta. Riesgo aceptado: mostrar la imagen de una cuenta ajena.",
+  "que_cambia": "Solo afecta a quien edita la carta con permiso y solo muestra una imagen pública del proveedor. Se salda con una tabla de cuentas por empresa y validación al guardar y al traer; vence el 20/01/2027.",
+  "donde": "src/capacidades/experiencia/vidriera/logo-publico.ts; mensaje del orquestador del 20/11/2026 (supuesto B); la deuda en registro.json queda pendiente por el tope de 10 excepciones"
+}

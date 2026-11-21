@@ -97,6 +97,7 @@ describe("verLaFichaDeProducto", () => {
         claseDeUso: "VENDIBLE",
         unidadBaseId: "UNIDAD",
         seVende: true,
+        admiteControlDeStock: false,
         nombreDeCocina: "MILA",
         codigo: "MIL-1",
         codigoDeBarras: null,
@@ -152,6 +153,30 @@ describe("verLaFichaDeProducto", () => {
     });
     const r = await verLaFichaDeProducto(d, contexto, ID);
     expect(r.ok && r.dato.seVende).toBe(false);
+  });
+
+  it("admiteControlDeStock: solo la clase que se controla y el producto activo (materia prima, insumo y reventa); el elaborado, el vendible y el desactivado, no", async () => {
+    const caso = async (cambios: Record<string, unknown>) => {
+      const { d } = montar({
+        ver: () =>
+          ok({
+            producto: { ...PRODUCTO, alicuota: null, ...cambios },
+            seccion: null,
+            grupos: [],
+            preciosVigentes: [],
+            historial: [],
+          }),
+      });
+      const r = await verLaFichaDeProducto(d, contexto, ID);
+      return r.ok && r.dato.admiteControlDeStock;
+    };
+    for (const claseDeUso of ["MATERIA_PRIMA", "INSUMO", "REVENTA"]) {
+      expect(await caso({ claseDeUso })).toBe(true);
+      expect(await caso({ claseDeUso, activo: false })).toBe(false);
+    }
+    for (const claseDeUso of ["ELABORADO", "VENDIBLE"]) {
+      expect(await caso({ claseDeUso })).toBe(false);
+    }
   });
 
   it("un id que no tiene forma de uuid no se consulta: el genérico", async () => {

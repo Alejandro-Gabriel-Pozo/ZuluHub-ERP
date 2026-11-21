@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0475",
+  "fecha": "2026-11-15",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "la pantalla Caja usa el rótulo «Fondo inicial» de la maqueta caja.html, que no tiene fila propia aprobada.",
+  "que_cambia": "La persona ve ese rótulo en el formulario de apertura de la pantalla Caja. Revertir: sacar la clave caja.campo.fondo_inicial y poner el rótulo que apruebe el dueño.",
+  "donde": "src/capacidades/vocabulario/catalogo-caja.ts; textos-mostrador-pendientes.md (M11) y servidor-del-mostrador-minimo.md sección 8; delegación del dueño, DDD filas 173/174; la maqueta aprobada caja.html: «Fondo inicial» línea 420"
+}

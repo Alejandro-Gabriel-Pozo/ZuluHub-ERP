@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0545",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: «Volver a mostrar» varios hace una transacción por producto y alcance; cada una fija un estado, así que repetir termina lo que faltó.",
+  "que_cambia": "Si falla entre local y empresa de un producto, queda oculto en uno hasta repetir. Revertir: un caso de uso que muestre ambos en una transacción.",
+  "donde": "src/composicion/ocultar-web.ts (volverAMostrarProductos); apps/web/servidor/ocultar.ts"
+}

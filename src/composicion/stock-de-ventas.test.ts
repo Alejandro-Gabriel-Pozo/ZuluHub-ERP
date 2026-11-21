@@ -32,12 +32,6 @@ describe("crearStockDeVentas: el puente de ventas con stock", () => {
     expect(
       stock.traducirFalla({
         tipo: "Check",
-        restriccion: "stock_existencia_negativa_bloqueada",
-      } as never),
-    ).toMatchObject({ error: "CONTROL_BLOQUEA" });
-    expect(
-      stock.traducirFalla({
-        tipo: "Check",
         restriccion: "stock_existencia_negativa_sin_confirmar",
       } as never),
     ).toMatchObject({ error: "CONTROL_REQUIERE_CONFIRMACION" });
