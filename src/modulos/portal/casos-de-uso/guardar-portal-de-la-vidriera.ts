@@ -103,15 +103,15 @@ async function exigirSucursalesDeLaEmpresa(
 }
 
 /**
- * Guardar el portal de la empresa (portal de la empresa §2.3 a §2.5): UNA acción que lo crea (uno por empresa), edita su texto, colores, imagen, tarjetas (variante A) y
+ * Guardar el portal de la vidriera (portal de la vidriera §2.3 a §2.5): UNA acción que lo crea (uno por empresa), edita su texto, colores, imagen, tarjetas (variante A) y
  * zonas (variante B) y cambia de variante SIN perder lo cargado en la otra. Siempre `vidrieras.administrar_portal` (gerente y administrador) y alcance TODAS: el portal
  * es de toda la empresa. El `id` lo manda la aplicación: repetir el mismo alta devuelve lo guardado (`yaExistia`) sin exigir versión; el código lo genera el puerto de
  * azar SOLO al crear y no cambia nunca. Editar un portal existente exige la versión, que es la de TODO el portal (datos, tarjetas y zonas): dos ediciones a la vez se
  * turnan por el bloqueo de la fila y la que llega con la versión vieja recibe `VERSION_DESACTUALIZADA`. Las tarjetas y zonas enviadas se agregan o cambian por su
  * sucursal o su id; lo que no se envía queda como está y nunca se borra (se oculta con `visible: false`). Cada sucursal tiene que ser de la empresa.
  */
-export function armarGuardarPortalDeLaEmpresa(d: DependenciasDePortal) {
-  return async function guardarPortalDeLaEmpresa(
+export function armarGuardarPortalDeLaVidriera(d: DependenciasDePortal) {
+  return async function guardarPortalDeLaVidriera(
     contexto: ContextoOperativo,
     entrada: EntradaDeGuardarPortal,
   ): Promise<R<SalidaDeGuardarPortal>> {
@@ -123,7 +123,7 @@ export function armarGuardarPortalDeLaEmpresa(d: DependenciasDePortal) {
           tx,
           contexto,
           d.reglas,
-          DECLARACIONES.guardarPortalDeLaEmpresa.accion,
+          DECLARACIONES.guardarPortalDeLaVidriera.accion,
         );
         if (!permiso.ok) return permiso;
         const alcance = await exigirAlcanceTotal(tx, contexto);

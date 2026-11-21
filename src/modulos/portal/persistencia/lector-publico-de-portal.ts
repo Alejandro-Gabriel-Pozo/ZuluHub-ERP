@@ -29,7 +29,7 @@ export interface LecturaPublicaDePortales {
   /** `null` si el código no es de un portal (la misma respuesta para todo: sin oráculo). */
   porCodigo(codigo: string): Promise<PortalLeido | null>;
   /**
-   * El código del portal de la empresa de UNA carta, para el enlace «← PORTAL» (`hrefDelPortal`). `null` si el código no es de una carta o su empresa no tiene portal.
+   * El código del portal de la vidriera de UNA carta, para el enlace «← PORTAL» (`hrefDelPortal`). `null` si el código no es de una carta o su empresa no tiene portal.
    * Usa la política `portal_de_empresa_publico_de_carta` (0078): quien lee una carta con su código lee el portal de SU empresa y de ninguna otra.
    */
   codigoDelPortalDeLaCarta(codigoDeCarta: string): Promise<string | null>;

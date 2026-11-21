@@ -358,7 +358,7 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
           "valor",
           "vigente_desde",
         ),
-        // El portal de la empresa (0078, C8; decisión del dueño del 16/11/2026): lo mínimo para dibujarlo; sin autor ni fechas. Si esto cambia, que sea a propósito.
+        // El portal de la vidriera (0078, C8; decisión del dueño del 16/11/2026): lo mínimo para dibujarlo; sin autor ni fechas. Si esto cambia, que sea a propósito.
         portal_de_empresa: ordenadas(
           "codigo",
           "color_detras",

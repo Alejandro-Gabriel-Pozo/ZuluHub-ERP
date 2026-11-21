@@ -24,12 +24,12 @@ export type AltaDePortal = Readonly<{
 }>;
 
 /**
- * El portal de la empresa (0078): UNO por empresa, con sus tarjetas (variante A) y zonas (variante B). Todo filtra por empresa y corre en la transacción de quien llama
+ * El portal de la vidriera (0078): UNO por empresa, con sus tarjetas (variante A) y zonas (variante B). Todo filtra por empresa y corre en la transacción de quien llama
  * (que es quien autoriza y audita). Nada se borra: lo que ya no se muestra se oculta (`visible = false`). El código, la empresa y la sucursal de una tarjeta no cambian:
  * no hay forma de pasarlos a un cambio y la base lo impone con disparadores.
  */
 export interface RepositorioDePortales {
-  /** El portal de la empresa con sus tarjetas y zonas, o `null` si todavía no lo creó. */
+  /** El portal de la vidriera con sus tarjetas y zonas, o `null` si todavía no lo creó. */
   delaEmpresa(empresa: EmpresaId): Promise<Portal | null>;
   /** Como `delaEmpresa`, tomando la fila del portal (`FOR UPDATE`): dos ediciones del mismo portal se turnan. */
   bloquearDeLaEmpresa(empresa: EmpresaId): Promise<Portal | null>;

@@ -3,8 +3,8 @@
   "fecha": "2026-11-16",
   "quien": "padre",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "SUPUESTO: siete textos de la maqueta de producción que no tenían fila aprobada pasan al vocabulario con su fuente (produccion.html, líneas 341, 361, 370, 372, 373, 389 y 402).",
   "que_cambia": "Se aceptaron por delegación del dueño, DDD filas 173 y 174 (orquestador, 16/11/2026); si el dueño corrige un texto, se cambia su porDefecto en catalogo-produccion.ts.",
-  "donde": "src/capacidades/vocabulario/catalogo-produccion.ts; Pedernal-docs 10-ux-ui/prototipos-gastronomia/produccion.html"
+  "donde": "src/capacidades/vocabulario/catalogo-produccion.ts; Pedernal-docs 10-ux-ui/prototipos-gastronomia/produccion.html; decisiones-del-dueno-2026-11.md, fila del 21/11/2026"
 }

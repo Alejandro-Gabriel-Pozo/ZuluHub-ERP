@@ -1,5 +1,5 @@
 /**
- * Entrada pública del módulo del portal de la empresa (ADR-001; migraciones 0078 y 0083): el dominio puro, el repositorio, el guardado, la consulta de administración y la
+ * Entrada pública del módulo del portal de la vidriera (ADR-001; migraciones 0078 y 0083): el dominio puro, el repositorio, el guardado, la consulta de administración y la
  * lectura pública por código. La ruta pública y las pantallas son de los tramos siguientes.
  */
 export { crearCasosDeUsoDePortal, type CasosDeUsoDePortal } from "./casos-de-uso/casos-de-uso";
@@ -14,7 +14,7 @@ export {
 export type {
   EntradaDeGuardarPortal,
   SalidaDeGuardarPortal,
-} from "./casos-de-uso/guardar-portal-de-la-empresa";
+} from "./casos-de-uso/guardar-portal-de-la-vidriera";
 export type { DependenciasDePortal, TxDePortal } from "./casos-de-uso/contrato";
 export type { ErrorDeGuardarPortal } from "./casos-de-uso/errores";
 export {
