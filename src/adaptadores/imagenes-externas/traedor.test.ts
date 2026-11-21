@@ -13,6 +13,7 @@ import {
   BANDERA_EXIF,
   BANDERA_XMP,
   ascii,
+  construirJpeg,
   construirPng,
   construirRiff,
   datosVp8,
@@ -326,6 +327,157 @@ describe("el tiempo", () => {
   });
 });
 
+/**
+ * Con una solicitud de mentira (sin sockets): lo que no se ve desde afuera. Que el traedor CIERRE la respuesta y la solicitud cuando corta (no solo que devuelva el
+ * error: una conexión abierta con un tercero que sigue mandando bytes es justo lo que el tope tiene que impedir) y que no deje temporizadores vivos.
+ */
+describe("con una solicitud de mentira: cierres y temporizadores", () => {
+  type Respuesta = EventEmitter & {
+    statusCode: number;
+    headers: Record<string, string>;
+    complete: boolean;
+    destroy: ReturnType<typeof vi.fn>;
+  };
+  const armarFalsa = (socket: EventEmitter = new EventEmitter()) => {
+    let alResponder: ((r: IncomingMessage) => void) | undefined;
+    const solicitud = Object.assign(new EventEmitter(), {
+      destroy: vi.fn(),
+      end: () => {
+        solicitud.emit("socket", socket);
+      },
+    });
+    const solicitar = ((_opciones: unknown, cb: (r: IncomingMessage) => void) => {
+      alResponder = cb;
+      return solicitud;
+    }) as unknown as DependenciasDelTraedor["solicitar"];
+    const responder = (cambios: Partial<Respuesta> = {}): Respuesta => {
+      const respuesta = Object.assign(new EventEmitter(), {
+        statusCode: 200,
+        headers: { "content-type": "image/webp" },
+        complete: true,
+        destroy: vi.fn(),
+        ...cambios,
+      }) as Respuesta;
+      alResponder?.(respuesta as unknown as IncomingMessage);
+      return respuesta;
+    };
+    return { solicitar, solicitud, responder, socket };
+  };
+  const traedorDe = (solicitar: DependenciasDelTraedor["solicitar"]) =>
+    crearTraedor(enBucleLocal(1, { solicitar }));
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Arranca un pedido y deja correr lo asíncrono hasta que la solicitud queda abierta. */
+  const arrancar = async (falsa: ReturnType<typeof armarFalsa>) => {
+    vi.useFakeTimers();
+    const pedido = traedorDe(falsa.solicitar).traerLogo(destino);
+    await vi.advanceTimersByTimeAsync(0);
+    // En un objeto: devolver la promesa a secas la haría esperar acá.
+    return { pedido };
+  };
+
+  it.each([
+    ["un estado que no es 200", { statusCode: 404 }, "ESTADO_INESPERADO"],
+    [
+      "un tipo que no es image/webp",
+      { headers: { "content-type": "image/png" } },
+      "TIPO_NO_PERMITIDO",
+    ],
+    [
+      "un Content-Length pasado del tope",
+      { headers: { "content-type": "image/webp", "content-length": "100001" } },
+      "DEMASIADO_GRANDE",
+    ],
+  ])("%s: devuelve el error y cierra la respuesta y la solicitud", async (_n, cambios, error) => {
+    const falsa = armarFalsa();
+    const { pedido } = await arrancar(falsa);
+    const respuesta = falsa.responder(cambios as Partial<Respuesta>);
+    expect(await pedido).toEqual({ ok: false, error });
+    expect(respuesta.destroy).toHaveBeenCalledTimes(1);
+    expect(falsa.solicitud.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("un Content-Length justo en el tope no corta; el cuerpo que se pasa del tope cierra ambas", async () => {
+    const falsa = armarFalsa();
+    const { pedido } = await arrancar(falsa);
+    const respuesta = falsa.responder({
+      headers: { "content-type": "image/webp", "content-length": "100000" },
+    });
+    expect(respuesta.destroy).not.toHaveBeenCalled();
+    respuesta.emit("data", Buffer.alloc(60_000));
+    respuesta.emit("data", Buffer.alloc(40_000));
+    expect(respuesta.destroy).not.toHaveBeenCalled();
+    respuesta.emit("data", Buffer.alloc(1));
+    expect(await pedido).toEqual({ ok: false, error: "DEMASIADO_GRANDE" });
+    expect(respuesta.destroy).toHaveBeenCalledTimes(1);
+    expect(falsa.solicitud.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("una respuesta que se cierra sin terminar es «sin conexión»; terminada y completa, la imagen", async () => {
+    const cortada = armarFalsa();
+    const { pedido: p1 } = await arrancar(cortada);
+    cortada.responder().emit("close");
+    expect(await p1).toEqual({ ok: false, error: "SIN_CONEXION" });
+
+    const buena = armarFalsa();
+    const { pedido: p2 } = await arrancar(buena);
+    const respuesta = buena.responder();
+    respuesta.emit("data", Buffer.from(WEBP));
+    respuesta.emit("end");
+    respuesta.emit("close");
+    expect(await p2).toEqual({ ok: true, valor: WEBP });
+  });
+
+  it("al terminar no queda ningún temporizador vivo (ni el total ni el de conexión), ni con éxito ni con error", async () => {
+    const falsa = armarFalsa();
+    const { pedido } = await arrancar(falsa);
+    // Mientras se espera: el tiempo total y el de conexión.
+    expect(vi.getTimerCount()).toBe(2);
+    falsa.responder({ statusCode: 500 });
+    await pedido;
+    expect(vi.getTimerCount()).toBe(0);
+
+    const buena = armarFalsa();
+    const { pedido: p2 } = await arrancar(buena);
+    buena.socket.emit("connect");
+    const respuesta = buena.responder();
+    respuesta.emit("data", Buffer.from(WEBP));
+    respuesta.emit("end");
+    expect((await p2).ok).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("conectar apaga el tiempo de conexión y deja el total; en TLS no alcanza con abrir el TCP", async () => {
+    const plano = armarFalsa();
+    const { pedido: p1 } = await arrancar(plano);
+    expect(vi.getTimerCount()).toBe(2);
+    plano.socket.emit("connect");
+    expect(vi.getTimerCount()).toBe(1);
+    plano.responder({ statusCode: 404 });
+    await p1;
+
+    const tls = armarFalsa(Object.assign(new EventEmitter(), { encrypted: true }));
+    const { pedido: p2 } = await arrancar(tls);
+    tls.socket.emit("connect");
+    expect(vi.getTimerCount()).toBe(2);
+    tls.socket.emit("secureConnect");
+    expect(vi.getTimerCount()).toBe(1);
+    tls.responder({ statusCode: 404 });
+    await p2;
+  });
+
+  it("si la conexión no se abre a tiempo, cierra la solicitud y devuelve el tiempo agotado", async () => {
+    const falsa = armarFalsa();
+    const { pedido } = await arrancar(falsa);
+    await vi.advanceTimersByTimeAsync(LIMITES_DE_PRUEBA.conexionMs);
+    expect(await pedido).toEqual({ ok: false, error: "TIEMPO_AGOTADO" });
+    expect(falsa.solicitud.destroy).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("lo que no es una imagen buena", () => {
   const sirve = async (cuerpo: Uint8Array, tipo = "image/webp") => {
     const s = await servidor((_p, r) => enviar(r, cuerpo, tipo));
@@ -351,9 +503,13 @@ describe("lo que no es una imagen buena", () => {
     expect(await sirve(falso)).toEqual({ ok: false, error: "NO_ES_UNA_IMAGEN" });
   });
 
-  it("un JPEG con tipo de WebP", async () => {
-    const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 4, 0, 0, 0xff, 0xd9]);
-    expect(await sirve(jpeg)).toEqual({ ok: false, error: "NO_ES_UNA_IMAGEN" });
+  it("un JPEG con tipo de WebP, aunque sea un JPEG bien formado y chico", async () => {
+    expect(await sirve(construirJpeg({ ancho: 100, alto: 100 }))).toEqual({
+      ok: false,
+      error: "NO_ES_UNA_IMAGEN",
+    });
+    const roto = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 4, 0, 0, 0xff, 0xd9]);
+    expect(await sirve(roto)).toEqual({ ok: false, error: "NO_ES_UNA_IMAGEN" });
   });
 
   it("un cuerpo vacío", async () => {
@@ -629,6 +785,14 @@ describe("la configuración de producción", () => {
     });
     expect(LIMITES_DEL_TRAEDOR).toEqual(DEPENDENCIAS_DE_PRODUCCION.limites);
     expect(typeof crearTraedorDeProduccion().traerLogo).toBe("function");
+  });
+
+  it("el DNS de producción devuelve TODAS las direcciones como texto", async () => {
+    const direcciones = await DEPENDENCIAS_DE_PRODUCCION.resolver("localhost");
+    expect(Array.isArray(direcciones)).toBe(true);
+    expect(direcciones.length).toBeGreaterThan(0);
+    expect(direcciones.every((d) => typeof d === "string")).toBe(true);
+    expect(direcciones.some((d) => d === "127.0.0.1" || d === "::1")).toBe(true);
   });
 
   it("el DNS de producción rechaza un nombre que no existe sin lanzar", async () => {

@@ -13,7 +13,8 @@ import type { Resultado } from "../../primitivas/resultado/resultado";
 export const CAPACIDAD_DE_LA_MEMORIA_DE_LOGOS = 200;
 export const RETENCION_DE_FALLOS_MS = 300_000;
 
-export type FalloDeTraida = "DEFINITIVO" | "TRANSITORIO";
+/** `transitorio`: el fallo es del momento («no hay lugar ahora») y no se recuerda; si no, es del logo y se recuerda. */
+export type FalloDeTraida = Readonly<{ transitorio: boolean }>;
 
 export type MemoriaDeLogos = Readonly<{
   /** Los bytes del logo, o `null` si no se pudo. `traer` no se llama si ya hay bytes, si hay un fallo vigente o si ya hay otro viaje en curso con la misma clave. */
@@ -53,7 +54,7 @@ export function crearMemoriaDeLogos(
         acotar(buenos);
         return traido.valor;
       }
-      if (traido.error === "DEFINITIVO") {
+      if (!traido.error.transitorio) {
         fallos.set(clave, ahora() + retencion);
         acotar(fallos);
       }

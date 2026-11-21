@@ -55,7 +55,6 @@ export async function logoPublicoDeLaCarta(
   return dependencias.memoria.obtener(clave, async () => {
     const traido = await dependencias.traedor.traerLogo(destino.valor);
     if (traido.ok) return ok(traido.valor);
-    const fallo: FalloDeTraida = traido.error === "OCUPADO" ? "TRANSITORIO" : "DEFINITIVO";
-    return err(fallo);
+    return err<FalloDeTraida>({ transitorio: traido.error === "OCUPADO" });
   });
 }

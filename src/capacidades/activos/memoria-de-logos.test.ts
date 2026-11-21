@@ -8,8 +8,8 @@ import {
 
 const bytes = (n: number): Uint8Array => new Uint8Array([n]);
 const bueno = (n: number) => vi.fn(() => Promise.resolve(ok(bytes(n))));
-const definitivo = () => vi.fn(() => Promise.resolve(err("DEFINITIVO" as const)));
-const transitorio = () => vi.fn(() => Promise.resolve(err("TRANSITORIO" as const)));
+const definitivo = () => vi.fn(() => Promise.resolve(err({ transitorio: false })));
+const transitorio = () => vi.fn(() => Promise.resolve(err({ transitorio: true })));
 
 describe("los valores de producción", () => {
   it("200 logos y 5 minutos de fallo", () => {
@@ -158,7 +158,7 @@ describe("los pedidos a la vez", () => {
 
   it("un viaje que falla de forma definitiva da null a todos los que esperaban", async () => {
     const memoria = crearMemoriaDeLogos(() => 0);
-    const traer = vi.fn(() => Promise.resolve(err("DEFINITIVO" as const)));
+    const traer = vi.fn(() => Promise.resolve(err({ transitorio: false })));
     const todos = await Promise.all([memoria.obtener("a", traer), memoria.obtener("a", traer)]);
     expect(todos).toEqual([null, null]);
     expect(traer).toHaveBeenCalledTimes(1);

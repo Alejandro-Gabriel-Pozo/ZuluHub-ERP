@@ -56,7 +56,7 @@ const CABECERAS_DE_SALIDA = {
 } as const;
 
 async function resolverPorDns(host: string): Promise<readonly string[]> {
-  const direcciones = await lookup(host, { all: true, verbatim: true });
+  const direcciones = await lookup(host, { all: true });
   return direcciones.map((d) => d.address);
 }
 
@@ -74,8 +74,10 @@ function validarImagen(bytes: Uint8Array): Resultado<Uint8Array, ErrorDeTraida> 
   const { cabecera } = analisis.valor;
   if (cabecera.formato !== "webp") return err("NO_ES_UNA_IMAGEN");
   const { ancho, alto, animado } = cabecera;
-  const dentro = (lado: number): boolean => lado >= 1 && lado <= LADO_MAXIMO_DE_LOGO_EXTERNO;
-  if (animado || !dentro(ancho) || !dentro(alto)) return err("IMAGEN_NO_PERMITIDA");
+  // El lector de cabeceras ya garantiza lado mínimo 1: solo falta el máximo.
+  if (animado || ancho > LADO_MAXIMO_DE_LOGO_EXTERNO || alto > LADO_MAXIMO_DE_LOGO_EXTERNO) {
+    return err("IMAGEN_NO_PERMITIDA");
+  }
   return ok(analisis.valor.bytes);
 }
 
@@ -86,11 +88,9 @@ function pedirBytes(
   senal: AbortSignal,
 ): Promise<Resultado<Uint8Array, ErrorDeTraida>> {
   return new Promise((resolver) => {
-    let terminado = false;
     let esperaDeConexion: ReturnType<typeof setTimeout> | undefined;
     const terminar = (resultado: Resultado<Uint8Array, ErrorDeTraida>): void => {
-      if (terminado) return;
-      terminado = true;
+      // Resolver dos veces una promesa no hace nada: el primer resultado manda y los siguientes caen solos.
       clearTimeout(esperaDeConexion);
       resolver(resultado);
     };
@@ -114,7 +114,7 @@ function pedirBytes(
           terminar(err(error));
         };
         if (respuesta.statusCode !== 200) return cortar("ESTADO_INESPERADO");
-        if (String(respuesta.headers["content-type"]).trim().toLowerCase() !== TIPO_ADMITIDO) {
+        if (String(respuesta.headers["content-type"]).toLowerCase() !== TIPO_ADMITIDO) {
           return cortar("TIPO_NO_PERMITIDO");
         }
         const declarado = Number(respuesta.headers["content-length"]);
@@ -129,7 +129,7 @@ function pedirBytes(
         respuesta.on("end", () => {
           terminar(respuesta.complete ? ok(new Uint8Array(Buffer.concat(trozos))) : err(falla()));
         });
-        respuesta.on("error", () => terminar(err(falla())));
+        // Sin escucha de «error»: Node no lo lanza si nadie lo escucha, y el corte llega por «close» (con `complete` en falso).
         respuesta.on("close", () => terminar(err(falla())));
       },
     );
@@ -154,7 +154,7 @@ async function direccionPublicaDe(
   senal: AbortSignal,
 ): Promise<Resultado<string, ErrorDeTraida>> {
   const aborto = new Promise<never>((_, rechazar) => {
-    senal.addEventListener("abort", () => rechazar(new Error("tiempo")), { once: true });
+    senal.addEventListener("abort", rechazar);
   });
   let direcciones: readonly string[];
   try {
