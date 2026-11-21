@@ -41,7 +41,8 @@ afterEach(async () => {
 const pantalla = (modelo = modeloDe()) =>
   enPagina(<PantallaDelCierre modelo={modelo} servidor={servidor.acciones} />);
 const boton = (nombre: string | RegExp) => page.getByRole("button", { name: nombre });
-const siguiente = () => boton("Siguiente");
+// El botón de avance lleva el nombre del paso al que va: no hay «Siguiente» (decisión del dueño, 21/11/2026).
+const siguiente = () => boton(/^(Conciliación por medio|Hay que reconocer)/);
 const irAlPaso = async (n: 2 | 3) => {
   await siguiente().click();
   if (n === 3) await siguiente().click();
@@ -177,17 +178,18 @@ describe("en cierre: un paso por vez", () => {
     expect(document.body.textContent).not.toContain("Cerrar el día");
   });
 
-  it("un solo botón lleno por pantalla: «Siguiente» (primario); «Cancelar cierre» es secundario", async () => {
+  it("un solo botón lleno por pantalla: el de avance (primario); «Cancelar cierre» es secundario", async () => {
     await render(pantalla());
-    const primario = (n: string) =>
+    const primario = (n: string | RegExp) =>
       boton(n).element().closest("[data-variante]")?.getAttribute("data-variante") ??
       boton(n).element().getAttribute("data-variante");
-    expect(primario("Siguiente")).toBe("primaria");
+    expect(primario(/^Conciliación por medio/)).toBe("primaria");
     expect(primario("Cancelar cierre")).toBe("secundaria");
   });
 
-  it("«Siguiente» lleva al paso 2 (conciliación por medio) y de ahí al 3; «Volver» retrocede; el título del paso recibe el foco", async () => {
+  it("el botón de avance lleva el nombre del paso al que va («Conciliación por medio», «Hay que reconocer»); la flecha «‹» retrocede; el título del paso recibe el foco", async () => {
     await render(pantalla());
+    await expect.element(boton("Conciliación por medio")).toBeVisible();
     await siguiente().click();
     await expect
       .element(page.getByRole("heading", { name: "Conciliación por medio" }))
@@ -198,10 +200,12 @@ describe("en cierre: un paso por vez", () => {
     expect(
       [...document.querySelectorAll("ol > li")].map((p) => p.getAttribute("aria-current")),
     ).toEqual([null, "step", null]);
+    await expect.element(boton("Hay que reconocer")).toBeVisible();
     await siguiente().click();
     await expect.element(page.getByRole("heading", { name: "Hay que reconocer" })).toBeVisible();
     await expect.element(boton("Cerrar el día")).toBeVisible();
     expect(document.body.textContent).not.toContain("Siguiente");
+    expect(document.body.textContent).not.toContain("Volver");
     await boton("Volver").click();
     await expect
       .element(page.getByRole("heading", { name: "Conciliación por medio" }))

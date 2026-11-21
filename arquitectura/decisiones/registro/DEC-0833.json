@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0833",
+  "fecha": "2026-11-21",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Cierre del día: el avance lleva el nombre del paso (sin «Siguiente» ni «Volver») y Caja y Venta avisan cuando el día está en cierre o cerrado.",
+  "que_cambia": "Qué lee la persona en los botones de avance y al abrir caja, cobrar o vender con el día en cierre o cerrado (antes, el genérico). Además 13 textos del cierre usan claves de caja y ventas. Revertir: recargar las claves en catalogo-cierre.ts y las tablas de errores.",
+  "donde": "decisiones-del-dueno-2026-11.md, fila del 21/11/2026 (avisos de día en cierre y avance sin «Siguiente» ni «Volver»); catalogo-cierre.ts; errores-de-caja.ts, errores-de-cobrar.ts, errores-de-ventas.ts"
+}

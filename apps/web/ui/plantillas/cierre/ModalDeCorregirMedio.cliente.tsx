@@ -71,16 +71,16 @@ export function ModalDeCorregirMedio({ cobro, medios, corregir, alCorregir, alCa
         {cuentas.length === 0 ? null : (
           <Selector
             dato="cuenta-de-cobro"
-            etiqueta={texto({}, "cierre.cuenta_de_cobro")}
+            etiqueta={texto({}, "ventas.cobro.cuenta_de_cobro")}
             valor={cuentaId}
             alCambiar={setCuentaId}
-            textoDeElegir={texto({}, "cierre.sin_cuenta")}
+            textoDeElegir={texto({}, "caja.sin_cuenta")}
             opciones={cuentas.map((c) => ({ valor: c.id, etiqueta: c.nombre }))}
           />
         )}
         <Campo
           dato="motivo-de-correccion-de-medio"
-          etiqueta={texto({}, "cierre.motivo")}
+          etiqueta={texto({}, "ventas.ticket.motivo")}
           valor={motivo}
           alCambiar={setMotivo}
         />
