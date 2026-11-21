@@ -584,6 +584,14 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "conexiones-salientes-solo-en-adaptadores-de-red",
+      archivos: { "src/composicion/c.ts": importa("node:https") },
+    },
+    {
+      regla: "dns-solo-en-imagenes-externas",
+      archivos: { "src/adaptadores/arca/a.ts": importa("node:dns/promises") },
+    },
+    {
       regla: "plataforma-solo-importa-la-interfaz-de-la-web",
       archivos: {
         "apps/plataforma/servidor/a.ts": importa("../../web/servidor/sesion"),
@@ -1941,6 +1949,81 @@ describe("facturación F8: el adaptador real de ARCA (spec H7 facturación §B.5
   });
 });
 
+describe("V1c: las conexiones salientes viven en dos adaptadores y el DNS en uno", () => {
+  const MODULOS_DE_RED = [
+    "node:https",
+    "node:http",
+    "node:http2",
+    "node:net",
+    "node:tls",
+    "node:dgram",
+    "node:dns",
+    "node:dns/promises",
+    "https",
+    "dns",
+  ];
+  const DNS = ["node:dns", "node:dns/promises", "dns"];
+
+  it("el traedor y el adaptador de ARCA sí pueden abrir conexiones", async () => {
+    for (const modulo of MODULOS_DE_RED.filter((m) => !m.includes("dns"))) {
+      for (const ruta of ["src/adaptadores/imagenes-externas/a.ts", "src/adaptadores/arca/a.ts"]) {
+        const v = await violacionesDe({ [ruta]: importa(modulo) });
+        expect(v, `${modulo} desde ${ruta}`).not.toContain(
+          "conexiones-salientes-solo-en-adaptadores-de-red",
+        );
+      }
+    }
+  });
+
+  it(
+    "cualquier otro lugar que las importe rompe la regla (otro adaptador, módulos, composición, apps, scripts, primitivas)",
+    { timeout: 60_000 },
+    async () => {
+      for (const modulo of MODULOS_DE_RED) {
+        for (const ruta of [
+          "src/adaptadores/correo/a.ts",
+          "src/adaptadores/postgres/a.ts",
+          "src/adaptadores/vercel/a.ts",
+          "src/modulos/catalogo/persistencia/p.ts",
+          "src/modulos/catalogo/casos-de-uso/c.ts",
+          "src/capacidades/activos/a.ts",
+          "src/composicion/c.ts",
+          "src/primitivas/p.ts",
+          "apps/web/servidor/s.ts",
+          "apps/web/app/s/carta/r.ts",
+          "scripts/s.ts",
+        ]) {
+          const v = await violacionesDe({ [ruta]: importa(modulo) });
+          expect(v, `${modulo} desde ${ruta}`).toContain(
+            "conexiones-salientes-solo-en-adaptadores-de-red",
+          );
+        }
+      }
+    },
+  );
+
+  it("node:dns solo en el traedor: ni siquiera el adaptador de ARCA", async () => {
+    for (const modulo of DNS) {
+      const permitido = await violacionesDe({
+        "src/adaptadores/imagenes-externas/a.ts": importa(modulo),
+      });
+      expect(permitido, modulo).not.toContain("dns-solo-en-imagenes-externas");
+      for (const ruta of ["src/adaptadores/arca/a.ts", "src/composicion/c.ts", "scripts/s.ts"]) {
+        const v = await violacionesDe({ [ruta]: importa(modulo) });
+        expect(v, `${modulo} desde ${ruta}`).toContain("dns-solo-en-imagenes-externas");
+      }
+    }
+  });
+
+  it("lo que no es de red sigue libre (node:fs, node:crypto, node:path)", async () => {
+    for (const modulo of ["node:fs", "node:crypto", "node:path"]) {
+      const v = await violacionesDe({ "src/composicion/c.ts": importa(modulo) });
+      expect(v, modulo).not.toContain("conexiones-salientes-solo-en-adaptadores-de-red");
+      expect(v, modulo).not.toContain("dns-solo-en-imagenes-externas");
+    }
+  });
+});
+
 /**
  * C-2 (D10): ningún `font-size` en `px` dentro de `apps/web/ui/plantillas/vidriera`. Previene que un CSS de la
  * carta fije la letra e ignore el tamaño del celular del comensal y el control «Letra» (ESLint no mira CSS:
@@ -2579,6 +2662,8 @@ describe("el módulo de ARCA simulada del recorrido no puede llegar a producció
   const RAIZ_REAL = join(import.meta.dirname, "../..");
   const PROHIBIDO_EN_PRODUCCION = [
     "conectar-arca-simulada",
+    "conectar-proveedor-de-imagenes-simulado",
+    "proveedor-de-imagenes-simulado",
     "activar-modulos-en-desarrollo",
     "PEDERNAL_RECORRIDO",
     "arca-simulada",
@@ -2612,7 +2697,7 @@ describe("el módulo de ARCA simulada del recorrido no puede llegar a producció
     expect(referenciasProhibidas(vercel)).toEqual([]);
   });
 
-  it("la regla detecta la violación inyectada (las cuatro formas)", () => {
+  it("la regla detecta la violación inyectada (cada nombre prohibido)", () => {
     for (const prohibido of PROHIBIDO_EN_PRODUCCION) {
       expect(referenciasProhibidas(`const a = 1;\nimport "${prohibido}";\n`)).toEqual([
         `import "${prohibido}";`,

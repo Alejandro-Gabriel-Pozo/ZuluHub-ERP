@@ -516,7 +516,7 @@ describe("armarVistaDeVidriera: identidad (V1b)", () => {
   };
 
   it("sin nada elegido: la cara de siempre y NINGÚN tema (la carta se ve como siempre)", () => {
-    expect(con({})).toEqual({ cara: "DIA", tema: null, inicial: "L" });
+    expect(con({})).toEqual({ cara: "DIA", tema: null, inicial: "L", logo: null });
   });
 
   it("cara y color propio: el tema de esa cara con ese color", () => {
@@ -524,6 +524,7 @@ describe("armarVistaDeVidriera: identidad (V1b)", () => {
       cara: "NOCHE",
       tema: tema("NOCHE", "#1f4e79"),
       inicial: "L",
+      logo: null,
     });
   });
 
@@ -550,11 +551,32 @@ describe("armarVistaDeVidriera: identidad (V1b)", () => {
     });
   });
 
+  it("el logo es una dirección PROPIA de la carta, con su versión: nunca la del proveedor", () => {
+    const partes = {
+      proveedor: "CLOUDINARY",
+      cuenta: "demo",
+      idPublico: "logos/cafe",
+      version: "1700000000",
+      extension: "png",
+    } as const;
+    expect(con({ logo: partes }).logo).toBe("/x/logo/1700000000.webp");
+    expect(con({ logo: null }).logo).toBeNull();
+    // Solo el logo no elige cara ni color: la carta no tiene tema, pero sí placa con su logo.
+    expect(con({ logo: partes })).toMatchObject({ cara: "DIA", tema: null });
+    expect(
+      armarVistaDeVidriera(
+        { ...publicada(CAFETERIA), identidad: { ...publicada(CAFETERIA).identidad, logo: partes } },
+        "",
+      ).identidad.logo,
+    ).toBe("/logo/1700000000.webp");
+  });
+
   it("un color que no es `#rrggbb` (no debería llegar de la base) deja la carta sin tema, sin romper", () => {
     expect(con({ cara: "NOCHE", colorPropio: "rojo" })).toEqual({
       cara: "NOCHE",
       tema: null,
       inicial: "L",
+      logo: null,
     });
   });
 

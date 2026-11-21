@@ -105,6 +105,11 @@ export function cabecerasDe(
     produccion: boolean;
     duenio?: TipoDeDuenioDeHost | null;
     tabla?: TablaDeCartaIndexable;
+    /**
+     * EXCEPCIÓN declarada (V1c): la ruta del logo de la carta decide su propio `Cache-Control` (`public, max-age=86400` solo en el 200 de la imagen; todo lo demás, `private, no-store`).
+     * Quien la pasa es `decidirPuerta`, solo para la superficie CARTA y la ruta exacta del logo; sin ella rige siempre `private, no-store`.
+     */
+    cacheDelLogo?: boolean;
   }>,
 ): Readonly<Record<string, string>> {
   return Object.freeze({
@@ -113,7 +118,7 @@ export function cabecerasDe(
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "same-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-    "Cache-Control": "private, no-store",
+    ...(opciones.cacheDelLogo === true ? {} : { "Cache-Control": "private, no-store" }),
     ...(esIndexable(superficie, opciones.produccion, opciones.duenio ?? null, opciones.tabla)
       ? {}
       : { "X-Robots-Tag": "noindex" }),

@@ -69,6 +69,8 @@ export type OpcionesDelMundo = Readonly<{
   perillas?: Readonly<Record<string, unknown>>;
   /** Los módulos «en desarrollo» se leen como «disponibles» SOLO en el proceso de esta app (`activar-modulos-en-desarrollo.mjs`). */
   activarModulosEnDesarrollo?: boolean;
+  /** El puerto del proveedor de imágenes simulado: SOLO en el proceso de esta app, `res.cloudinary.com` se atiende ahí (`conectar-proveedor-de-imagenes-simulado.mjs`). */
+  proveedorDeImagenes?: number;
 }>;
 
 export async function armarMundoDelRecorrido(
@@ -97,6 +99,9 @@ export async function armarMundoDelRecorrido(
     PEDERNAL_SECRETO_INVITACIONES: randomBytes(32).toString("hex"),
     PEDERNAL_CLAVE_CERTIFICADOS: claveDeCertificados,
     CRON_SECRET: randomBytes(24).toString("hex"),
+    ...(opciones.proveedorDeImagenes === undefined
+      ? {}
+      : { PEDERNAL_RECORRIDO_PROVEEDOR_PUERTO: String(opciones.proveedorDeImagenes) }),
   };
 
   // La persona entra de verdad y su empresa factura: datos fiscales confirmados, punto de venta y certificado de homologación.
@@ -179,13 +184,14 @@ export async function armarMundoDelRecorrido(
   }
 
   const arca = await levantarArcaSimulada();
-  const app = await levantarAppReal(
-    entorno,
-    arca.puerto,
-    opciones.activarModulosEnDesarrollo === true
+  const app = await levantarAppReal(entorno, arca.puerto, [
+    ...(opciones.activarModulosEnDesarrollo === true
       ? [join(import.meta.dirname, "activar-modulos-en-desarrollo.mjs")]
-      : [],
-  );
+      : []),
+    ...(opciones.proveedorDeImagenes === undefined
+      ? []
+      : [join(import.meta.dirname, "conectar-proveedor-de-imagenes-simulado.mjs")]),
+  ]);
   const fachada = await levantarFachadaHttps(HOST_DEL_RECORRIDO, app.puerto);
   const cookies = yo.navegador.cookiesDe(HOST_DEL_RECORRIDO).map((c) => ({
     name: c.nombre,

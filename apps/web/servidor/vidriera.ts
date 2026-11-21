@@ -11,6 +11,7 @@ import {
   type VistaDeProducto,
 } from "../../../src/capacidades/experiencia/vidriera/vista";
 import type { AlcanceDelHost } from "../../../src/capacidades/experiencia/puerta";
+import { logoPublicoDeLaCarta } from "../../../src/capacidades/experiencia/vidriera/logo-publico";
 import type { VidrieraPublica } from "../../../src/puertos/vidriera-publica";
 import { web } from "./composicion";
 
@@ -75,4 +76,25 @@ export async function productoParaLaPantalla(
     .flatMap((s) => s.productos)
     .find((p) => p.segmento === resuelto.valor.direccion.segmento);
   return producto === undefined ? null : { vista, textos: textosDeVidriera({}), producto };
+}
+
+/**
+ * Los bytes del logo de la carta, o `null` (la ruta responde un 404 neutro). La carta se mira con la misma puerta que la página; el resto es `logoPublicoDeLaCarta`.
+ * `puerta` es la resuelta para el host del pedido (S2), nunca un dato del cliente.
+ */
+export async function logoDeLaVidriera(
+  puerta: AlcanceDelHost,
+  codigo: string,
+  tramoDeVersion: string,
+): Promise<Uint8Array | null> {
+  return logoPublicoDeLaCarta(
+    {
+      vidriera: vidrieras(),
+      traedor: web.imagenesExternas(),
+      memoria: web.memoriaDeLogos(),
+    },
+    puerta,
+    codigo,
+    tramoDeVersion,
+  );
 }

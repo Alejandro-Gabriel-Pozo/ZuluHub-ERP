@@ -24,7 +24,7 @@ import { armarWebDeVentas } from "./web-de-ventas";
  *  2. ninguna clave aparece en dos partes ni en las de infraestructura (un spread que pisa a otro en silencio: TypeScript no avisa);
  *  3. armar no lee nada (perder la pereza rompería `next build`, que corre sin secretos);
  *  4. las listas blancas de fiscal, una por una (agregar o quitar una función cambia lo que la web puede llamar).
- * Las claves de abajo son las de `web.ts` antes de partirlo (35, contadas en `main` b4f3f0b).
+ * Las claves de abajo son las de `web.ts` antes de partirlo (35, contadas en `main` b4f3f0b; 37 desde V1c: `imagenesExternas` y `memoriaDeLogos` de la carta).
  */
 
 const CLAVES_DE_INFRAESTRUCTURA = [
@@ -68,7 +68,9 @@ const CLAVES_DE_WEB = [
   "consultasDeSesion",
   "consultasDeStock",
   "consultasDeVentas",
+  "imagenesExternas",
   "lecturasCompartidas",
+  "memoriaDeLogos",
   "resolucionDeHost",
   "vidrieraPublica",
 ];
@@ -154,7 +156,7 @@ describe("armarWeb por partes: las mismas claves que antes", () => {
   it("la lista de claves de Web es exactamente la de antes de partir el archivo", () => {
     const web = armarWeb(conexionesQueLanzan());
     expect(Object.keys(web).sort()).toEqual([...CLAVES_DE_WEB].sort());
-    expect(CLAVES_DE_WEB).toHaveLength(35);
+    expect(CLAVES_DE_WEB).toHaveLength(37);
   });
 
   it("cada entrada de Web se pide como función (no hay valores sueltos)", () => {

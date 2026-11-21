@@ -756,7 +756,7 @@ describe("carta: identidad elegida (V1b)", () => {
     document.adoptedStyleSheets = [...document.adoptedStyleSheets, estilo];
     const pantalla = await abrirVidriera({
       ...vidrieraDePrueba(),
-      identidad: { cara, tema: tema.valor, inicial: "L" },
+      identidad: { cara, tema: tema.valor, inicial: "L", logo: null },
     });
     return { pantalla, estilo };
   }
@@ -777,6 +777,54 @@ describe("carta: identidad elegida (V1b)", () => {
     await abrirVidriera();
     expect(document.querySelector("main")?.hasAttribute("data-cara")).toBe(false);
     expect(document.querySelector("[data-placa]")).toBeNull();
+  });
+
+  it("con logo: la imagen decorativa va sobre la inicial, con la dirección propia de la carta", async () => {
+    const logo = fotoDePrueba(210, 240, 240).direccion;
+    const pantalla = await abrirVidriera({
+      ...vidrieraDePrueba(),
+      identidad: { cara: "DIA", tema: null, inicial: "L", logo },
+    });
+    const placa = document.querySelector("[data-placa]");
+    expect(placa).not.toBeNull();
+    expect(placa?.textContent).toBe("L");
+    const imagen = placa?.querySelector("img[data-logo]");
+    expect(imagen?.getAttribute("src")).toBe(logo);
+    expect(imagen?.getAttribute("alt")).toBe("");
+    expect(placa?.getAttribute("aria-hidden")).toBe("true");
+    await pantalla.unmount();
+  });
+
+  it("un logo que no llega se quita y queda la inicial, sin imagen rota", async () => {
+    const pantalla = await abrirVidriera({
+      ...vidrieraDePrueba(),
+      identidad: { cara: "DIA", tema: null, inicial: "L", logo: "/no-existe-nunca/logo/1.webp" },
+    });
+    await vi.waitFor(() => {
+      expect(document.querySelector("[data-placa] img")).toBeNull();
+    });
+    expect(document.querySelector("[data-placa]")?.textContent).toBe("L");
+    await pantalla.unmount();
+  });
+
+  it("el logo cubre la placa entera, sin deformarse", async () => {
+    const pantalla = await abrirVidriera({
+      ...vidrieraDePrueba(),
+      identidad: {
+        cara: "DIA",
+        tema: null,
+        inicial: "L",
+        logo: fotoDePrueba(10, 240, 120).direccion,
+      },
+    });
+    const placa = document.querySelector("[data-placa]") as HTMLElement;
+    const imagen = placa.querySelector("img") as HTMLImageElement;
+    expect(imagen.getBoundingClientRect().width).toBeCloseTo(
+      placa.getBoundingClientRect().width - 2 * parseFloat(getComputedStyle(placa).borderLeftWidth),
+      0,
+    );
+    expect(getComputedStyle(imagen).objectFit).toBe("contain");
+    await pantalla.unmount();
   });
 
   it("los colores del tema llegan a la pantalla: la cabecera y el fondo toman los de la cara", async () => {
