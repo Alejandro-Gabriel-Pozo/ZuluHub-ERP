@@ -1,3 +1,4 @@
+import { puertaOpcional } from "../../../../../../servidor/pedido";
 import { atenderElLogo } from "../../../../../../servidor/respuesta-de-logo";
 
 // `/<código>/logo/<versión>.webp`: el logo de la carta, traído del proveedor por el servidor y entregado desde la dirección de la propia carta (la CSP solo deja
@@ -13,5 +14,7 @@ export async function GET(
   { params }: { params: Promise<{ codigo: string; version: string }> },
 ): Promise<Response> {
   const { codigo, version } = await params;
-  return atenderElLogo(codigo, version);
+  // S2 y H-DOM-1: el host se resuelve OTRA VEZ acá y la carta se busca en la marca y en el dueño de ESTE host (la puerta entera).
+  const puerta = await puertaOpcional("CARTA");
+  return atenderElLogo(puerta, codigo, version);
 }

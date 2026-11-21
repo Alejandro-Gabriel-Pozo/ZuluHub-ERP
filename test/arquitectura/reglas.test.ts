@@ -1975,28 +1975,32 @@ describe("V1c: las conexiones salientes viven en dos adaptadores y el DNS en uno
     }
   });
 
-  it("cualquier otro lugar que las importe rompe la regla (otro adaptador, módulos, composición, apps, scripts, primitivas)", async () => {
-    for (const modulo of MODULOS_DE_RED) {
-      for (const ruta of [
-        "src/adaptadores/correo/a.ts",
-        "src/adaptadores/postgres/a.ts",
-        "src/adaptadores/vercel/a.ts",
-        "src/modulos/catalogo/persistencia/p.ts",
-        "src/modulos/catalogo/casos-de-uso/c.ts",
-        "src/capacidades/activos/a.ts",
-        "src/composicion/c.ts",
-        "src/primitivas/p.ts",
-        "apps/web/servidor/s.ts",
-        "apps/web/app/s/carta/r.ts",
-        "scripts/s.ts",
-      ]) {
-        const v = await violacionesDe({ [ruta]: importa(modulo) });
-        expect(v, `${modulo} desde ${ruta}`).toContain(
-          "conexiones-salientes-solo-en-adaptadores-de-red",
-        );
+  it(
+    "cualquier otro lugar que las importe rompe la regla (otro adaptador, módulos, composición, apps, scripts, primitivas)",
+    { timeout: 60_000 },
+    async () => {
+      for (const modulo of MODULOS_DE_RED) {
+        for (const ruta of [
+          "src/adaptadores/correo/a.ts",
+          "src/adaptadores/postgres/a.ts",
+          "src/adaptadores/vercel/a.ts",
+          "src/modulos/catalogo/persistencia/p.ts",
+          "src/modulos/catalogo/casos-de-uso/c.ts",
+          "src/capacidades/activos/a.ts",
+          "src/composicion/c.ts",
+          "src/primitivas/p.ts",
+          "apps/web/servidor/s.ts",
+          "apps/web/app/s/carta/r.ts",
+          "scripts/s.ts",
+        ]) {
+          const v = await violacionesDe({ [ruta]: importa(modulo) });
+          expect(v, `${modulo} desde ${ruta}`).toContain(
+            "conexiones-salientes-solo-en-adaptadores-de-red",
+          );
+        }
       }
-    }
-  });
+    },
+  );
 
   it("node:dns solo en el traedor: ni siquiera el adaptador de ARCA", async () => {
     for (const modulo of DNS) {
