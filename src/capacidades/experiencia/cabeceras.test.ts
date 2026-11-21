@@ -213,7 +213,8 @@ describe("cabecerasDe", () => {
     for (const s of SUPERFICIES) {
       const con = cabecerasDe(s, NONCE, { produccion: true, cacheDelLogo: true });
       expect("Cache-Control" in con).toBe(false);
-      const { "Cache-Control": _fuera, ...resto } = cabecerasDe(s, NONCE, { produccion: true });
+      const resto: Record<string, string> = { ...cabecerasDe(s, NONCE, { produccion: true }) };
+      delete resto["Cache-Control"];
       expect(con).toEqual(resto);
       expect(
         cabecerasDe(s, NONCE, { produccion: true, cacheDelLogo: false })["Cache-Control"],
