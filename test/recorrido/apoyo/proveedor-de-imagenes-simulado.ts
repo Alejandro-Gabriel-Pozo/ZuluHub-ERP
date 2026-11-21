@@ -17,8 +17,8 @@ type PedidoAlProveedor = Readonly<{
 export type ProveedorDeImagenesSimulado = Readonly<{
   puerto: number;
   pedidos: PedidoAlProveedor[];
-  /** Programa lo que devuelve una ruta (de ahí en más). */
-  servir(ruta: string, respuesta: (res: ServerResponse) => void): void;
+  /** Programa que esa ruta devuelve la imagen real (de ahí en más). Es un dato, no una función: nada se invoca desde un valor traído con la ruta del pedido. */
+  servir(ruta: string): void;
   cerrar(): Promise<void>;
 }>;
 
@@ -27,14 +27,14 @@ const WEBP_REAL = readFileSync(
 );
 
 /** Una imagen WebP real (120 por 120), la que el navegador sí sabe dibujar. */
-export const webpDelProveedor = (res: ServerResponse): void => {
+const responderConElWebp = (res: ServerResponse): void => {
   res.writeHead(200, { "Content-Type": "image/webp", "Content-Length": String(WEBP_REAL.length) });
   res.end(WEBP_REAL);
 };
 
 export async function levantarProveedorDeImagenesSimulado(): Promise<ProveedorDeImagenesSimulado> {
   const pedidos: PedidoAlProveedor[] = [];
-  const rutas = new Map<string, (res: ServerResponse) => void>();
+  const rutas = new Set<string>();
   const sockets = new Set<Socket>();
   const servidor = createServer((req, res) => {
     const ruta = req.url ?? "";
@@ -43,14 +43,13 @@ export async function levantarProveedorDeImagenesSimulado(): Promise<ProveedorDe
       cabeceras: req.headers,
       hostDelProveedor: String(req.headers["x-recorrido-host"] ?? ""),
     });
-    const respuesta = rutas.get(ruta);
-    if (respuesta === undefined) {
+    if (!rutas.has(ruta)) {
       res.writeHead(404);
       res.end();
       return;
     }
     // Un viaje lento a propósito: 20 visitas simultáneas se juntan mientras éste no vuelve.
-    setTimeout(() => respuesta(res), 150);
+    setTimeout(() => responderConElWebp(res), 150);
   });
   servidor.on("connection", (socket) => {
     sockets.add(socket);
@@ -60,8 +59,8 @@ export async function levantarProveedorDeImagenesSimulado(): Promise<ProveedorDe
   return {
     puerto: (servidor.address() as AddressInfo).port,
     pedidos,
-    servir: (ruta, respuesta) => {
-      rutas.set(ruta, respuesta);
+    servir: (ruta) => {
+      rutas.add(ruta);
     },
     cerrar: () =>
       new Promise<void>((resolver) => {

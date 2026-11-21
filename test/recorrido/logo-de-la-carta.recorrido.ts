@@ -6,7 +6,6 @@ import { levantarFachadaHttps, type FachadaHttps } from "./apoyo/fachada-https";
 import { armarMundoDelRecorrido, type MundoDelRecorrido } from "./apoyo/mundo";
 import {
   levantarProveedorDeImagenesSimulado,
-  webpDelProveedor,
   type ProveedorDeImagenesSimulado,
 } from "./apoyo/proveedor-de-imagenes-simulado";
 import { vigilar, type Vigilante } from "./apoyo/vigilante";
@@ -48,8 +47,8 @@ describe.skipIf(base === null)("recorrido del logo de la carta pública", () => 
   beforeAll(async () => {
     if (base === null) return;
     proveedor = await levantarProveedorDeImagenesSimulado();
-    proveedor.servir(RUTA_DEL_PROVEEDOR("1700000000"), webpDelProveedor);
-    proveedor.servir(RUTA_DEL_PROVEEDOR("1800000000"), webpDelProveedor);
+    proveedor.servir(RUTA_DEL_PROVEEDOR("1700000000"));
+    proveedor.servir(RUTA_DEL_PROVEEDOR("1800000000"));
     mundo = await armarMundoDelRecorrido(base, {
       modulosAdicionales: ["catalogo", "vidriera"],
       perillas: { vidriera_por_qr: { tipo: "INTERRUPTOR", encendida: true } },
