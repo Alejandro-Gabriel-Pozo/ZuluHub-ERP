@@ -3,8 +3,8 @@
   "fecha": "2026-11-16",
   "quien": "sesión",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "SUPUESTO: «Ticket» y el número (plano) rotulan cada fila de «Cobrado contra el ticket»: figura en la maqueta aceptada pero no en su tabla de textos aprobados.",
   "que_cambia": "Cómo se lee la línea del ticket con diferencia. Revertir: quitar la clave cierre.ticket_numero y mostrar solo la diferencia.",
-  "donde": "cierre-del-dia.html línea 426; DDD fila 183; catalogo-cierre.ts (clave cierre.ticket_numero)"
+  "donde": "cierre-del-dia.html línea 426; DDD fila 183; catalogo-cierre.ts (clave cierre.ticket_numero); decisiones-del-dueno-2026-11.md, fila del 21/11/2026 («Si a todos mis pendientes menos 5 y 2»)"
 }

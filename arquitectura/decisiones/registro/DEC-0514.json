@@ -3,8 +3,8 @@
   "fecha": "2026-11-16",
   "quien": "sesión",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "SUPUESTO: los tres controles de stock no se muestran y cualquier otro control sin texto aprobado hace fallar la pantalla entera con el genérico (no se esconde algo que exige actuar).",
   "que_cambia": "Si aparece un control nuevo de caja o ventas sin texto, la pantalla sale con el genérico hasta aprobarlo. Revertir: ocultarlo en vez de fallar.",
-  "donde": "apps/web/ui/plantillas/cierre/modelo-del-cierre.ts; DDD fila 183 (P3)"
+  "donde": "apps/web/ui/plantillas/cierre/modelo-del-cierre.ts; DDD fila 183 (P3); decisiones-del-dueno-2026-11.md, fila del 21/11/2026 («Si a todos mis pendientes menos 5 y 2»)"
 }
