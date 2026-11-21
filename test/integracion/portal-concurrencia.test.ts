@@ -7,7 +7,7 @@ import { empresaConPortal, montarPortal, nuevoId, type Montaje } from "./portal-
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 180_000, hookTimeout: 180_000 });
 
-describe.skipIf(base === null)("portal de la empresa: concurrencia (0078)", () => {
+describe.skipIf(base === null)("portal de la vidriera: concurrencia (0078)", () => {
   let c: Montaje;
   beforeAll(async () => {
     c = await montarPortal(base as BaseDePruebas);
@@ -19,7 +19,7 @@ describe.skipIf(base === null)("portal de la empresa: concurrencia (0078)", () =
   it("dos administradores lo crean a la vez con ids distintos: queda UN portal y un solo código; el que llegó segundo no crea otro", async () => {
     const m = await empresaConPortal(c);
     const pedir = (quien: typeof m.e.gerente, titulo: string) =>
-      c.casos.guardarPortalDeLaEmpresa(quien, {
+      c.casos.guardarPortalDeLaVidriera(quien, {
         id: nuevoId(),
         variante: "A",
         titulo,
@@ -39,10 +39,14 @@ describe.skipIf(base === null)("portal de la empresa: concurrencia (0078)", () =
     const m = await empresaConPortal(c);
     const id = nuevoId();
     const a = valorDe(
-      await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, { id, variante: "A", logoVisible: true }),
+      await c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
+        id,
+        variante: "A",
+        logoVisible: true,
+      }),
     );
     const editar = (titulo: string) =>
-      c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+      c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
         id,
         variante: "A",
         logoVisible: true,
@@ -70,8 +74,8 @@ describe.skipIf(base === null)("portal de la empresa: concurrencia (0078)", () =
       tarjetas: [{ sucursalId: m.e.sucursal, orden: 0, visible: true }],
     } as const;
     const r = await Promise.all([
-      c.casos.guardarPortalDeLaEmpresa(m.e.gerente, entrada),
-      c.casos.guardarPortalDeLaEmpresa(m.e.gerente, entrada),
+      c.casos.guardarPortalDeLaVidriera(m.e.gerente, entrada),
+      c.casos.guardarPortalDeLaVidriera(m.e.gerente, entrada),
     ]);
     const [x, y] = r.map((q) => valorDe(q));
     expect(x?.codigo).toBe(y?.codigo);

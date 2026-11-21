@@ -29,7 +29,7 @@ import { montarCatalogo, REGLAS_DE_PRUEBA, type EscenarioDeCatalogo } from "./ca
 import type { BaseDePruebas } from "./global";
 
 /**
- * Apoyo de las pruebas del portal de la empresa (0078 y 0083): se arma sobre el montaje del catálogo (mismas personas, roles y planes de prueba) y se le suma el repositorio
+ * Apoyo de las pruebas del portal de la vidriera (0078 y 0083): se arma sobre el montaje del catálogo (mismas personas, roles y planes de prueba) y se le suma el repositorio
  * del portal, que el entorno compartido de las pruebas no trae. El escenario se monta con SQL del dueño de la base (que evade RLS); lo que se prueba pasa por el rol real.
  */
 export type Montaje = Awaited<ReturnType<typeof montarPortal>>;

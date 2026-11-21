@@ -11,13 +11,13 @@ import {
 } from "./portal-apoyo";
 
 /**
- * El caso de uso `guardarPortalDeLaEmpresa` contra una base real: permiso nuevo y alcance total, validación, idempotencia, versión, atomicidad, aislamiento entre
+ * El caso de uso `guardarPortalDeLaVidriera` contra una base real: permiso nuevo y alcance total, validación, idempotencia, versión, atomicidad, aislamiento entre
  * empresas y trazabilidad. Los roles, las personas y el plan salen del montaje del catálogo; el escenario, con SQL del dueño (que evade RLS).
  */
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 180_000, hookTimeout: 180_000 });
 
-describe.skipIf(base === null)("guardarPortalDeLaEmpresa (0078)", () => {
+describe.skipIf(base === null)("guardarPortalDeLaVidriera (0078)", () => {
   let c: Montaje;
   beforeAll(async () => {
     c = await montarPortal(base as BaseDePruebas);
@@ -36,7 +36,7 @@ describe.skipIf(base === null)("guardarPortalDeLaEmpresa (0078)", () => {
   const contarPortales = (empresa: string) =>
     c.contar("select count(*) as n from portal_de_empresa where empresa_id = $1", [empresa]);
 
-  it("P-1: guardarPortalDeLaEmpresa con el mismo id dos veces deja UN portal, un solo código y una entrada de auditoría; la segunda es yaExistia", async () => {
+  it("P-1: guardarPortalDeLaVidriera con el mismo id dos veces deja UN portal, un solo código y una entrada de auditoría; la segunda es yaExistia", async () => {
     const m = await empresaConPortal(c);
     const id = nuevoId();
     const entrada = {
@@ -44,8 +44,8 @@ describe.skipIf(base === null)("guardarPortalDeLaEmpresa (0078)", () => {
       id,
       tarjetas: [{ sucursalId: m.e.sucursal, orden: 0, visible: true, telefono: "1143210000" }],
     };
-    const a = valorDe(await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, entrada));
-    const b = valorDe(await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, entrada));
+    const a = valorDe(await c.casos.guardarPortalDeLaVidriera(m.e.gerente, entrada));
+    const b = valorDe(await c.casos.guardarPortalDeLaVidriera(m.e.gerente, entrada));
     expect(a.yaExistia).toBe(false);
     expect(b).toEqual({ ...a, yaExistia: true });
     expect(await contarPortales(m.e.empresa)).toBe(1);
@@ -61,27 +61,27 @@ describe.skipIf(base === null)("guardarPortalDeLaEmpresa (0078)", () => {
   it("gerente y administrador (con todas las sucursales) lo guardan; el administrador de una sola sucursal y el operador no", async () => {
     const m = await empresaConPortal(c);
     const entrada = (id: string) => ({ ...portalBase, id });
-    const o = await c.casos.guardarPortalDeLaEmpresa(m.e.operador, entrada(nuevoId()));
+    const o = await c.casos.guardarPortalDeLaVidriera(m.e.operador, entrada(nuevoId()));
     expect(o).toMatchObject({ ok: false });
-    const una = await c.casos.guardarPortalDeLaEmpresa(
+    const una = await c.casos.guardarPortalDeLaVidriera(
       m.e.administradorDeUnaSucursal,
       entrada(nuevoId()),
     );
     expect(una).toEqual({ ok: false, error: "SUCURSAL_FUERA_DE_ALCANCE" });
     expect(await contarPortales(m.e.empresa)).toBe(0);
-    valorDe(await c.casos.guardarPortalDeLaEmpresa(m.e.administrador, entrada(nuevoId())));
+    valorDe(await c.casos.guardarPortalDeLaVidriera(m.e.administrador, entrada(nuevoId())));
     expect(await contarPortales(m.e.empresa)).toBe(1);
   });
 
   it("la consulta de administración la hacen los tres roles (el operador solo ve) y devuelve null sin portal", async () => {
     const m = await empresaConPortal(c);
     for (const quien of [m.e.operador, m.e.gerente, m.e.administrador]) {
-      expect(valorDe(await c.consultas.verPortalDeLaEmpresa(quien))).toBeNull();
+      expect(valorDe(await c.consultas.verPortalDeLaVidriera(quien))).toBeNull();
     }
     const g = valorDe(
-      await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, { ...portalBase, id: nuevoId() }),
+      await c.casos.guardarPortalDeLaVidriera(m.e.gerente, { ...portalBase, id: nuevoId() }),
     );
-    const visto = valorDe(await c.consultas.verPortalDeLaEmpresa(m.e.operador));
+    const visto = valorDe(await c.consultas.verPortalDeLaVidriera(m.e.operador));
     expect(visto?.portal.codigo).toBe(g.codigo);
     expect(visto?.rutaPublica).toBe(`/s/portal/${g.codigo}`);
   });
@@ -89,7 +89,7 @@ describe.skipIf(base === null)("guardarPortalDeLaEmpresa (0078)", () => {
   it("valida con lista de permitidos: variante, largos, colores, imagen fuera de la lista cerrada, teléfono, orden y zonas fuera de la imagen", async () => {
     const m = await empresaConPortal(c);
     const intentar = async (cambio: Record<string, unknown>) =>
-      c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+      c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
         ...portalBase,
         id: nuevoId(),
         ...cambio,
@@ -138,13 +138,13 @@ describe.skipIf(base === null)("guardarPortalDeLaEmpresa (0078)", () => {
   it("aislamiento: una tarjeta o zona hacia una sucursal de OTRA empresa se rechaza y no guarda nada (atomicidad)", async () => {
     const m = await empresaConPortal(c);
     const ajena = await empresaConPortal(c);
-    const r = await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+    const r = await c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
       ...portalBase,
       id: nuevoId(),
       tarjetas: [{ sucursalId: ajena.e.sucursal, orden: 0, visible: true }],
     });
     expect(r).toEqual({ ok: false, error: "SUCURSAL_NO_ENCONTRADA" });
-    const z = await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+    const z = await c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
       ...portalBase,
       id: nuevoId(),
       tarjetas: [{ sucursalId: m.e.sucursal, orden: 0, visible: true }],
@@ -168,14 +168,14 @@ describe.skipIf(base === null)("guardarPortalDeLaEmpresa (0078)", () => {
   it("editar exige la versión: sin ella o con una vieja, VERSION_DESACTUALIZADA; con la actual cambia, sube la versión y audita antes y después", async () => {
     const m = await empresaConPortal(c);
     const id = nuevoId();
-    const a = valorDe(await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, { ...portalBase, id }));
+    const a = valorDe(await c.casos.guardarPortalDeLaVidriera(m.e.gerente, { ...portalBase, id }));
     const cambio = { ...portalBase, id, titulo: "Otro título" };
-    expect(await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, cambio)).toEqual({
+    expect(await c.casos.guardarPortalDeLaVidriera(m.e.gerente, cambio)).toEqual({
       ok: false,
       error: "VERSION_DESACTUALIZADA",
     });
     const b = valorDe(
-      await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+      await c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
         ...cambio,
         versionEsperada: a.version,
       }),
@@ -183,7 +183,7 @@ describe.skipIf(base === null)("guardarPortalDeLaEmpresa (0078)", () => {
     expect(b.version).toBeGreaterThan(a.version);
     expect(b.codigo).toBe(a.codigo);
     expect(
-      await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+      await c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
         ...cambio,
         titulo: "Un tercero",
         versionEsperada: a.version,
@@ -210,7 +210,7 @@ describe.skipIf(base === null)("guardarPortalDeLaEmpresa (0078)", () => {
       visible: true,
     };
     const a = valorDe(
-      await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+      await c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
         ...portalBase,
         id,
         variante: "B",
@@ -220,7 +220,7 @@ describe.skipIf(base === null)("guardarPortalDeLaEmpresa (0078)", () => {
       }),
     );
     const vuelta = valorDe(
-      await c.casos.guardarPortalDeLaEmpresa(m.e.gerente, {
+      await c.casos.guardarPortalDeLaVidriera(m.e.gerente, {
         ...portalBase,
         id,
         variante: "A",
@@ -228,13 +228,13 @@ describe.skipIf(base === null)("guardarPortalDeLaEmpresa (0078)", () => {
       }),
     );
     expect(vuelta.version).toBeGreaterThan(a.version);
-    const leido = valorDe(await c.consultas.verPortalDeLaEmpresa(m.e.gerente))?.portal;
+    const leido = valorDe(await c.consultas.verPortalDeLaVidriera(m.e.gerente))?.portal;
     expect(leido?.datos.variante).toBe("A");
     expect(leido?.zonas).toEqual([{ ...zona, x: 1050, y: 2000, ancho: 3000, alto: 2525 }]);
     expect(leido?.tarjetas).toHaveLength(1);
     // La misma persona crea el portal de OTRA empresa con un id ya usado: la base lo rechaza (clave) y vuelve tipado.
     const otra = await empresaConPortal(c);
-    const r = await c.casos.guardarPortalDeLaEmpresa(otra.e.gerente, { ...portalBase, id });
+    const r = await c.casos.guardarPortalDeLaVidriera(otra.e.gerente, { ...portalBase, id });
     expect(r.ok).toBe(false);
     expect(randomUUID()).toBeTruthy();
   });
