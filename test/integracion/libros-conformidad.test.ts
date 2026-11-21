@@ -180,9 +180,11 @@ describe.skipIf(base === null)("conformidad de los libros contra el catálogo", 
         await dueno.query("SET LOCAL session_replication_role = replica");
         const idDeStock = randomUUID();
         const idDeCaja = randomUUID();
+        const idDeSaldos = randomUUID();
         sembradas.push(
           { tabla: "movimiento_de_stock", id: idDeStock },
           { tabla: "movimiento_caja", id: idDeCaja },
+          { tabla: "asiento_de_saldo", id: idDeSaldos },
         );
         await dueno.query(
           `INSERT INTO movimiento_de_stock (id, empresa_id, clase, motivo, origen_tipo, deposito_id, accion, clave_idempotencia, huella,
@@ -195,6 +197,12 @@ describe.skipIf(base === null)("conformidad de los libros contra el catálogo", 
                                         registrado_por, clave_idempotencia, huella)
            VALUES ($1, $2, $3, 'INGRESO_MANUAL', $4, 'ARS', 10, 'Prueba', now(), $5, $6, $7)`,
           [idDeCaja, empresa, randomUUID(), randomUUID(), randomUUID(), randomUUID(), huella],
+        );
+        await dueno.query(
+          `INSERT INTO asiento_de_saldo (id, empresa_id, parte_id, sentido, clase, importe, origen_tipo, origen_id, clave_idempotencia,
+                                         huella, hecho_en, fecha_negocio, registrado_por)
+           VALUES ($1, $2, $3, 'A_PAGAR', 'CARGO_DE_FACTURA_DE_COMPRA', 10, 'compras.factura', $4, $5, $6, now(), current_date, $7)`,
+          [idDeSaldos, empresa, randomUUID(), randomUUID(), randomUUID(), huella, randomUUID()],
         );
         await dueno.query("COMMIT");
       } catch (falla) {

@@ -116,6 +116,15 @@ const TABLAS_DE_NEGOCIO = [
   "sesion_caja",
   "movimiento_caja",
   "movimiento_de_dinero", // 0091
+  // Libro de saldos por parte (0092): `clase_de_asiento` es global y sembrada (sin `empresa_id`); los cuatro `saldo_*` los escribe solo un disparador
+  "clase_de_asiento",
+  "asiento_de_saldo",
+  "distribucion_de_asiento",
+  "imputacion_de_saldo",
+  "saldo_de_asiento",
+  "saldo_de_imputacion",
+  "saldo_de_parte",
+  "saldo_de_parte_por_centro_de_costo",
   "cobro",
   "arqueo_caja",
   "arqueo_billete",
@@ -459,6 +468,16 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "conciliacion_de_cobro_por_origen",
           ].map((t) => `${t}:SELECT`),
           "movimiento_de_dinero:SELECT", // 0091
+          ...[
+            "clase_de_asiento",
+            "asiento_de_saldo",
+            "distribucion_de_asiento",
+            "imputacion_de_saldo",
+            "saldo_de_asiento",
+            "saldo_de_imputacion",
+            "saldo_de_parte",
+            "saldo_de_parte_por_centro_de_costo",
+          ].map((t) => `${t}:SELECT`), // 0092
           "cuenta_consumo:SELECT", // 0028
           "linea_cuenta:SELECT", // 0028
           "linea_cuenta_opcion:SELECT", // 0028
@@ -815,6 +834,12 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ),
           "pedernal_app:articulo_de_stock.activo",
           "pedernal_app:saldo_de_stock.existencia",
+          // 0092: los cuatro saldos del libro de saldos los escribe solo un disparador (guardia de profundidad); los libros no se actualizan
+          "pedernal_app:saldo_de_asiento.importe_imputado",
+          "pedernal_app:saldo_de_asiento.anulado",
+          "pedernal_app:saldo_de_imputacion.importe",
+          "pedernal_app:saldo_de_parte.saldo",
+          "pedernal_app:saldo_de_parte_por_centro_de_costo.saldo",
           // 0031: el promedio de costo cambia (el costo congelado de cada renglón no se modifica)
           "pedernal_app:costo_de_articulo.costo_unitario",
           "pedernal_app:costo_de_articulo.cantidad_valorizada",
@@ -1626,6 +1651,54 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "registrado_por",
             "registrado_en",
           ].map((c) => `movimiento_de_dinero.${c}`),
+          // 0092: el libro de saldos (la aplicación inserta por columna; `id`, `registrado_en` y `fecha_negocio` los pone la base)
+          ...[
+            "empresa_id",
+            "parte_id",
+            "sentido",
+            "clase",
+            "naturaleza",
+            "importe",
+            "moneda",
+            "origen_tipo",
+            "origen_id",
+            "origen_orden",
+            "referencia_tipo",
+            "referencia_id",
+            "vence_el",
+            "detalle",
+            "anula_a",
+            "clave_idempotencia",
+            "huella",
+            "hecho_en",
+            "registrado_por",
+          ].map((c) => `asiento_de_saldo.${c}`),
+          ...["empresa_id", "asiento_id", "sucursal_id", "importe", "moneda"].map(
+            (c) => `distribucion_de_asiento.${c}`,
+          ),
+          ...[
+            "empresa_id",
+            "numero",
+            "saldante_id",
+            "saldado_id",
+            "parte_id",
+            "sentido",
+            "importe",
+            "moneda",
+            "clave_idempotencia",
+            "huella",
+            "registrado_por",
+          ].map((c) => `imputacion_de_saldo.${c}`),
+          ...["empresa_id", "asiento_id", "tope"].map((c) => `saldo_de_asiento.${c}`),
+          ...["empresa_id", "saldante_id", "saldado_id", "importe"].map(
+            (c) => `saldo_de_imputacion.${c}`,
+          ),
+          ...["empresa_id", "parte_id", "sentido", "moneda", "saldo"].map(
+            (c) => `saldo_de_parte.${c}`,
+          ),
+          ...["empresa_id", "parte_id", "sentido", "moneda", "sucursal_id", "saldo"].map(
+            (c) => `saldo_de_parte_por_centro_de_costo.${c}`,
+          ),
           ...[
             "movimiento_id",
             "empresa_id",
