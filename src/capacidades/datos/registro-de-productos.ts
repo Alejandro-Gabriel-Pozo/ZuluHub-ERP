@@ -7,6 +7,8 @@ import type { DefinicionDeDato, Proposito } from "./tipos-de-datos";
 
 const LISTA_DE_PRODUCTOS =
   "apps/web/ui/plantillas/catalogo/FormularioDeFiltrosDeProductos.cliente.tsx";
+const BUSCADOR_DE_CANDIDATOS =
+  "apps/web/ui/plantillas/catalogo/FormularioDeBuscadorDeCandidatos.cliente.tsx";
 const REQUIERE_CATALOGO = { modulo: "catalogo", estadoDeEmpresa: ["ACTIVE"] } as const;
 const FUENTE_DE_LA_LISTA_DE_PRODUCTOS =
   "Pedernal-docs/11-especificaciones/fichas-de-modulo/a1-productos-y-precios.md §3 (consultas: `listarProductos` filtra por texto, clase, «falta completar» y activo) y la maqueta aprobada el 12/11/2026 (`productos.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)";
@@ -54,12 +56,17 @@ export const DATOS_DE_PRODUCTOS = {
         fuente: FUENTE_DE_LA_LISTA_DE_PRODUCTOS,
       },
       {
+        para: "Texto con el que se busca un producto por su nombre para agregarlo a una sección de la carta (el buscador vacío muestra todos los que se pueden agregar).",
+        fuente:
+          "la maqueta `productos-secciones.html` líneas 399 y 490, carpeta de prototipos de Pedernal-docs 10-ux-ui (cuadro «Agregar producto», campo «Buscar», aprobada el 12/11/2026) y 11-especificaciones/conceptos/secciones-de-la-carta-pantalla.md §4",
+      },
+      {
         para: "Texto con el que se busca un producto por su nombre, su código o su código de barras en la venta rápida del mostrador (se filtra la lista ya cargada; el buscador vacío muestra todo).",
         fuente:
           "Pedernal-docs/11-especificaciones/servidor-del-mostrador-minimo.md §7 (fila «Buscar por nombre o código») y la maqueta `venta-rapida-v4.html` (carpeta de prototipos de Pedernal-docs 10-ux-ui)",
       },
     ],
-    consumidores: [LISTA_DE_PRODUCTOS, BUSCADOR_DE_LA_VENTA],
+    consumidores: [LISTA_DE_PRODUCTOS, BUSCADOR_DE_CANDIDATOS, BUSCADOR_DE_LA_VENTA],
     ponerPor: ["productos.ver"],
     requiere: REQUIERE_CATALOGO,
   },

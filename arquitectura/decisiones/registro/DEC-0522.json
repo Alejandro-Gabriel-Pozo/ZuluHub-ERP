@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0522",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "El nombre accesible de «Quitar» en cada producto de una sección lleva el nombre del producto («Quitar Cortado»), como «Subir Cafés».",
+  "que_cambia": "Solo lo que lee quien usa lector de pantalla; en pantalla sigue diciendo «Quitar». Revertir: quitar la clave catalogo.seccion.quitar_producto y el aria-label.",
+  "donde": "src/capacidades/vocabulario/catalogo-catalogo.ts; apps/web/ui/plantillas/catalogo/modelo-de-secciones.ts; pregunta P1 de pantalla-secciones-2.md; delegación del dueño, DDD filas 173 y 174"
+}
