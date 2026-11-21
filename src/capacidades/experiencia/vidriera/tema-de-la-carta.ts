@@ -52,15 +52,12 @@ const dePorDefecto = (
   primariaTexto: sobre,
 });
 
-/** Un rojo claro para «Agotado» que llega a 7:1 sobre el fondo oscuro Y sobre su superficie (el matiz de la superficie la aclara): se sube la luminosidad de a un punto hasta llegar (con el blanco puro termina siempre). */
-function agotadoDeNoche(fondo: string, superficie: string): string {
-  const llega = (luminosidad: number): boolean => {
-    const candidato = deHsl(0, 90, luminosidad);
-    return razonDeContraste(candidato, fondo) >= 7 && razonDeContraste(candidato, superficie) >= 7;
-  };
+/** Un rojo claro para «Agotado» que llega a 7:1 sobre la superficie (la más clara de las dos: llegar sobre ella es llegar también sobre el fondo oscuro): se sube la luminosidad de a un punto desde 78 hasta llegar. */
+function agotadoDeNoche(superficie: string): string {
   let luminosidad = 78;
-  // Stryker disable next-line EqualityOperator: en 100 el candidato es el blanco puro, que ya llega a 7:1 sobre cualquier fondo de la noche; `<` y `<=` dan el mismo color.
-  while (luminosidad < 100 && !llega(luminosidad)) luminosidad++;
+  // Stryker disable next-line EqualityOperator,ConditionalExpression: en 100 el candidato es el blanco puro, que llega a 7:1 sobre cualquier superficie de la noche, así que el tope no se alcanza (`<`, `<=` y quitarlo dan el mismo color); y una razón real nunca cae justo en 7.
+  while (luminosidad < 100 && razonDeContraste(deHsl(0, 90, luminosidad), superficie) < 7)
+    luminosidad++;
   return deHsl(0, 90, luminosidad);
 }
 
@@ -77,7 +74,7 @@ function deNoche(banda: string): TemaDeLaCarta {
     textoSuave: deHsl(matiz, 30, 82),
     borde: deHsl(matiz, 20, 62),
     foco: deHsl(matiz, 45, 95),
-    agotado: agotadoDeNoche(fondo, superficie),
+    agotado: agotadoDeNoche(superficie),
     acento: claro,
     primariaFondo: claro,
     primariaTexto: fondo,

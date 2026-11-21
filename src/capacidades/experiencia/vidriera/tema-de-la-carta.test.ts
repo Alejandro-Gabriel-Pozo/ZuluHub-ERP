@@ -132,6 +132,16 @@ describe("cssDelTemaDeLaCarta", () => {
     const malo = { ...dar("DIA", "#1f4e79"), fondo: "red;}body{display:none" } as TemaDeLaCarta;
     expect(cssDelTemaDeLaCarta(malo)).toBe("");
     expect(cssDelTemaDeLaCarta({ ...dar("DIA", "#1f4e79"), texto: "#FFF" })).toBe("");
+    // El color tiene que ser EXACTAMENTE `#rrggbb`: nada antes ni después.
+    expect(cssDelTemaDeLaCarta({ ...dar("DIA", "#1f4e79"), texto: "x#1f4e79" })).toBe("");
+    expect(cssDelTemaDeLaCarta({ ...dar("DIA", "#1f4e79"), texto: "#1f4e79;}" })).toBe("");
+    // Ni algo que no es texto pero se escribe como un color (un arreglo de un color).
+    expect(
+      cssDelTemaDeLaCarta({
+        ...dar("DIA", "#1f4e79"),
+        foco: ["#1f4e79"],
+      } as unknown as TemaDeLaCarta),
+    ).toBe("");
     expect(
       cssDelTemaDeLaCarta({ ...dar("DIA", "#1f4e79"), foco: 3 } as unknown as TemaDeLaCarta),
     ).toBe("");

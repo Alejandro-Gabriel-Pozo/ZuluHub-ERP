@@ -15,5 +15,5 @@
 }
 
 .placa[data-cara="DIA"] {
-  border-radius: 999px;
+  border-radius: var(--radio-grande);
 }
