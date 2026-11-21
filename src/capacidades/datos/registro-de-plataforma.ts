@@ -111,7 +111,7 @@ export const DATOS_DE_PLATAFORMA = {
       {
         para: "Nombre de un valor de una lista del sistema (marcas de tarjeta), al agregarlo o corregirlo en la pantalla «Listas» de la consola; único dentro de la lista.",
         fuente:
-          "Pedernal-docs 10-ux-ui/prototipos-gastronomia/listas.html (aprobada el 09/11/2026 y ajustada el 15/11: «Textos nuevos», «Agregar valor» y «Editar nombre»)",
+          "Pedernal-docs 11-especificaciones/conceptos/pantalla-listas-del-sistema-marcas.md (maqueta `listas.html`, aprobada el 09/11/2026 y ajustada el 15/11: «Agregar valor» y «Editar nombre»)",
       },
     ],
     consumidores: ["apps/plataforma/pantallas/lista-de-valores.cliente.tsx"],
