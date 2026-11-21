@@ -15,6 +15,9 @@ const CARTA = {
   lugar: null,
   estado: "FUERA_DE_LINEA" as const,
   version: 3,
+  cara: null,
+  colorPropio: null,
+  logo: null,
 };
 const dato = (extra: Partial<CartaEnLineaDeLaPantalla> = {}): CartaEnLineaDeLaPantalla => ({
   carta: CARTA,
@@ -97,6 +100,80 @@ describe("armarLaCartaEnLinea", () => {
       rubro: { etiqueta: "Rubro", valorInicial: "" },
       lugar: { etiqueta: "Lugar", valorInicial: "" },
       guardar: "Guardar",
+    });
+  });
+
+  it("la identidad: sin elegir muestra la cara de siempre, «Usar lo de la empresa» y el logo vacío; con lo elegido, sus valores", () => {
+    const sin = armarLaCartaEnLinea(dato(), TODO).formulario.identidad;
+    expect(sin.cara.valorInicial).toBe("DIA");
+    expect(sin.cara.opciones).toEqual([
+      { valor: "DIA", etiqueta: "Día" },
+      { valor: "BOLICHE", etiqueta: "Boliche" },
+      { valor: "NOCHE", etiqueta: "Noche" },
+    ]);
+    expect(sin.color.valorInicial).toBe("");
+    expect(sin.color.opciones.map((o) => o.etiqueta)).toEqual([
+      "Usar lo de la empresa",
+      "Azul",
+      "Verde",
+      "Bordó",
+      "Tostado",
+      "Negro",
+      "Violeta",
+      "Otro color",
+    ]);
+    expect(sin.color.opciones.map((o) => o.valor)).toEqual([
+      "",
+      "#1f4e79",
+      "#17562f",
+      "#7a1f2b",
+      "#6b3f1d",
+      "#1b1f24",
+      "#4b2e83",
+      "otro",
+    ]);
+    expect(sin.logo.direccion.valorInicial).toBe("");
+    const LOGO = "https://res.cloudinary.com/demo/image/upload/v1/x.png";
+    const con = armarLaCartaEnLinea(
+      dato({ carta: { ...CARTA, cara: "NOCHE", colorPropio: "#17562f", logo: LOGO } }),
+      TODO,
+    ).formulario.identidad;
+    expect(con.cara.valorInicial).toBe("NOCHE");
+    expect(con.color.valorInicial).toBe("#17562f");
+    expect(con.color.otro.valorInicial).toBe("");
+    expect(con.logo.direccion.valorInicial).toBe(LOGO);
+    const otro = armarLaCartaEnLinea(dato({ carta: { ...CARTA, colorPropio: "#0e7490" } }), TODO)
+      .formulario.identidad.color;
+    expect(otro.valorInicial).toBe("otro");
+    expect(otro.otro.valorInicial).toBe("#0e7490");
+  });
+
+  it("los tres controles salen apagados sin permiso de editar: todo lo que no sea exactamente `true` cierra", () => {
+    expect(armarLaCartaEnLinea(dato(), TODO).formulario.identidad.apagada).toBe(false);
+    for (const oferta of [
+      { ...TODO, guardar: false },
+      { poner: true, sacar: true } as never,
+      { ...TODO, guardar: undefined } as never,
+      { ...TODO, guardar: "true" } as never,
+      { ...TODO, guardar: 1 } as never,
+    ])
+      expect(armarLaCartaEnLinea(dato(), oferta).formulario.identidad.apagada).toBe(true);
+  });
+
+  it("los textos de la identidad son los del catálogo aprobado", () => {
+    const { identidad } = armarLaCartaEnLinea(dato(), TODO).formulario;
+    expect(identidad.cara.etiqueta).toBe("Cara");
+    expect(identidad.color).toMatchObject({
+      etiqueta: "Colores",
+      colorInvalido: "Escribí el color como #0e7490",
+      contrasteAviso: "El texto no se lee bien sobre este color",
+      otro: { etiqueta: "Otro color" },
+    });
+    expect(identidad.logo).toMatchObject({
+      etiqueta: "Logo",
+      direccion: { etiqueta: "Dirección de la imagen" },
+      quitar: "Quitar",
+      direccionNoSirve: "La dirección no sirve",
     });
   });
 });

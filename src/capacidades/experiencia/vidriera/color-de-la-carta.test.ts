@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { CONTRASTE_MINIMO_DE_LA_CARTA, colorDeLaCarta } from "./color-de-la-carta";
+import { globSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  COLOR_POR_DEFECTO_DE_LA_CARTA,
+  CONTRASTE_MINIMO_DE_LA_CARTA,
+  PALETAS_DE_LA_CARTA,
+  colorDeLaCarta,
+} from "./color-de-la-carta";
+import { COLOR_RRGGBB } from "../../../primitivas/color/contraste";
 
 const dar = (c: unknown) => {
   const r = colorDeLaCarta(c);
@@ -108,5 +116,53 @@ describe("colorDeLaCarta: lo que no es `#` + 6 hexadecimales se rechaza (lista d
     expect(() => colorDeLaCarta(Symbol("x"))).not.toThrow();
     expect(() => colorDeLaCarta("İİİİİİİ")).not.toThrow();
     expect(() => colorDeLaCarta("K".repeat(7))).not.toThrow();
+  });
+});
+
+describe("PALETAS_DE_LA_CARTA: las seis de la maqueta carta.html", () => {
+  it("son exactamente esas seis, en ese orden, con su clave y su color", () => {
+    expect(PALETAS_DE_LA_CARTA).toEqual([
+      { clave: "azul", hex: "#1f4e79" },
+      { clave: "verde", hex: "#17562f" },
+      { clave: "bordo", hex: "#7a1f2b" },
+      { clave: "tostado", hex: "#6b3f1d" },
+      { clave: "negro", hex: "#1b1f24" },
+      { clave: "violeta", hex: "#4b2e83" },
+    ]);
+  });
+
+  it("cada color tiene la forma #rrggbb, llega al contraste mínimo tal cual (no se ajusta) y ninguna se repite", () => {
+    for (const { clave, hex } of PALETAS_DE_LA_CARTA) {
+      expect(COLOR_RRGGBB.test(hex), clave).toBe(true);
+      expect(dar(hex), clave).toMatchObject({ hex, ajustado: false });
+    }
+    expect(new Set(PALETAS_DE_LA_CARTA.map((p) => p.hex)).size).toBe(6);
+    expect(new Set(PALETAS_DE_LA_CARTA.map((p) => p.clave)).size).toBe(6);
+  });
+});
+
+describe("COLOR_POR_DEFECTO_DE_LA_CARTA: una regla, un lugar", () => {
+  it("es el primer color de las paletas (el azul de la maqueta)", () => {
+    expect(COLOR_POR_DEFECTO_DE_LA_CARTA).toBe(PALETAS_DE_LA_CARTA[0].hex);
+    expect(COLOR_POR_DEFECTO_DE_LA_CARTA).toBe("#1f4e79");
+  });
+
+  it("el azul `#1f4e79` está escrito UNA sola vez en el código de la carta (no se repite en otro archivo ni en la plantilla): sale de la lista de paletas", () => {
+    const RAIZ = join(import.meta.dirname, "../../../..");
+    const archivos = [
+      ...globSync("src/capacidades/experiencia/vidriera/*.ts", { cwd: RAIZ }),
+      ...globSync("apps/web/ui/plantillas/carta/*.{ts,tsx}", { cwd: RAIZ }),
+      ...globSync("apps/web/ui/plantillas/vidriera/*.{ts,tsx}", { cwd: RAIZ }),
+    ].filter((archivo) => !/\.test\.tsx?$/.test(archivo) && !archivo.endsWith("datosDePrueba.ts"));
+    const escritos = archivos.filter((archivo) =>
+      readFileSync(join(RAIZ, archivo), "utf8").includes("#1f4e79"),
+    );
+    expect(escritos.sort()).toEqual(["src/capacidades/experiencia/vidriera/color-de-la-carta.ts"]);
+    // Una vez en la lista; las otras son los comentarios que lo nombran.
+    expect(
+      readFileSync(join(RAIZ, escritos[0] as string), "utf8")
+        .split("\n")
+        .filter((linea) => linea.includes('"#1f4e79"')),
+    ).toHaveLength(1);
   });
 });

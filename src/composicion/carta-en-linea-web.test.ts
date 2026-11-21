@@ -28,8 +28,19 @@ const VIGENTE = {
   lugar: null,
   mensajeDePortada: "Desliza para ver el menú",
   estado: "FUERA_DE_LINEA",
+  modelo: "LISTA",
+  cara: "BOLICHE",
+  colorPropio: "#1f4e79",
+  logo: {
+    proveedor: "CLOUDINARY",
+    cuenta: "demo",
+    idPublico: "logos/parador",
+    version: "1700000000",
+    extension: "png",
+  },
   version: 3,
 };
+const LOGO_DIRECCION = "https://res.cloudinary.com/demo/image/upload/v1700000000/logos/parador.png";
 const VISIBILIDAD = {
   salen: 12,
   faltan: { desactivados: 1, ocultos: 2, sinSeccion: 3, sinPrecio: 4 },
@@ -102,6 +113,9 @@ describe("verLaCartaEnLinea", () => {
       lugar: null,
       estado: "FUERA_DE_LINEA",
       version: 3,
+      cara: "BOLICHE",
+      colorPropio: "#1f4e79",
+      logo: LOGO_DIRECCION,
     });
     expect(r.dato.direccion).toBe(`https://app.ejemplo.test/${CODIGO}`);
     expect(r.dato.qrSvg).toMatch(/^<svg /);
@@ -178,8 +192,69 @@ describe("guardarLaCartaEnLinea", () => {
       lugar: "Huinganco",
       mensajeDePortada: "Desliza para ver el menú",
       estado: "FUERA_DE_LINEA",
+      modelo: "LISTA",
+      cara: "BOLICHE",
+      colorPropio: "#1f4e79",
+      logo: VIGENTE.logo,
       versionEsperada: 3,
     });
+  });
+
+  it("la identidad del pedido reemplaza a la vigente: la cara, la paleta o «otro» color y el logo como PARTES; vacío es «sin elegir»; el modelo es siempre el vigente", async () => {
+    const { m, d } = montar();
+    await guardarLaCartaEnLinea(
+      d,
+      contexto,
+      pedido({
+        cara: "NOCHE",
+        paleta: "otro",
+        colorPropio: "#0e7490",
+        logo: LOGO_DIRECCION.replace("parador", "nuevo"),
+        modelo: "LIBRO",
+      }),
+      SUCURSAL,
+    );
+    expect(m.llamadas[1]?.entrada).toMatchObject({
+      modelo: "LISTA",
+      cara: "NOCHE",
+      colorPropio: "#0e7490",
+      logo: { ...VIGENTE.logo, idPublico: "logos/nuevo" },
+    });
+    await guardarLaCartaEnLinea(d, contexto, pedido({ cara: "", paleta: "", logo: "" }), SUCURSAL);
+    expect(m.llamadas[3]?.entrada).toMatchObject({ cara: null, colorPropio: null, logo: null });
+    await guardarLaCartaEnLinea(d, contexto, pedido({ paleta: "#17562f" }), SUCURSAL);
+    expect(m.llamadas[5]?.entrada).toMatchObject({ colorPropio: "#17562f" });
+  });
+
+  it("valores fuera de la lista: cara «X», color «#12345», «otro» sin color, un script en el color y un logo de otro proveedor son el genérico y no se llama a nada", async () => {
+    const { m, d } = montar();
+    for (const malo of [
+      { cara: "X" },
+      { paleta: "#12345" },
+      { paleta: "otro", colorPropio: "#12345" },
+      { paleta: "otro" },
+      { paleta: "otro", colorPropio: "<script>" },
+      { paleta: "<script>alert(1)</script>" },
+      { logo: "https://ejemplo.com/logo.png" },
+      { logo: "javascript:alert(1)" },
+    ]) {
+      expect(
+        await guardarLaCartaEnLinea(d, contexto, pedido(malo), SUCURSAL),
+        JSON.stringify(malo),
+      ).toEqual(GENERICO);
+    }
+    expect(m.llamadas).toEqual([]);
+  });
+
+  it("un color de bajo contraste se guarda como se eligió (el ajuste se calcula al mostrar)", async () => {
+    const { m, d } = montar();
+    await guardarLaCartaEnLinea(
+      d,
+      contexto,
+      pedido({ paleta: "otro", colorPropio: "#808080" }),
+      SUCURSAL,
+    );
+    expect(m.llamadas[1]?.entrada).toMatchObject({ colorPropio: "#808080" });
   });
 
   it("una carta nueva se pide fuera de línea y sin versión", async () => {
@@ -195,6 +270,10 @@ describe("guardarLaCartaEnLinea", () => {
       lugar: "Huinganco",
       mensajeDePortada: null,
       estado: "FUERA_DE_LINEA",
+      modelo: null,
+      cara: null,
+      colorPropio: null,
+      logo: null,
     });
   });
 
@@ -254,6 +333,10 @@ describe("cambiarElEstadoDeLaCartaEnLinea", () => {
       lugar: null,
       mensajeDePortada: "Desliza para ver el menú",
       estado: "EN_LINEA",
+      modelo: "LISTA",
+      cara: "BOLICHE",
+      colorPropio: "#1f4e79",
+      logo: VIGENTE.logo,
       versionEsperada: 3,
     });
   });

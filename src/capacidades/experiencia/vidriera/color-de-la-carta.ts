@@ -13,8 +13,24 @@ import { COLOR_RRGGBB, razonDeContraste } from "../../../primitivas/color/contra
 /** Contraste mínimo del texto sobre el color de la carta (CYN 101 y 107, «ok» del dueño el 09/11). */
 export const CONTRASTE_MINIMO_DE_LA_CARTA = 7;
 
-/** El color con que se arma el tema de una carta que eligió cara pero ningún color (ni propio ni de la empresa): el azul de la maqueta `carta.html` (`PAL.azul`). Un solo lugar. */
-export const COLOR_POR_DEFECTO_DE_LA_CARTA = "#1f4e79";
+/**
+ * Las seis paletas que ofrece la pantalla «Carta en línea», con el color principal de cada una: los valores de `PAL` de la maqueta aprobada `carta.html` (09/11/2026), copiados tal cual.
+ * UNA sola lista: la pantalla la importa y el servidor NO la usa para validar (cualquier `#rrggbb` es válido: «Otro color»). La clave arma el texto `catalogo.carta.paleta.<clave>`.
+ */
+export const PALETAS_DE_LA_CARTA = [
+  { clave: "azul", hex: "#1f4e79" },
+  { clave: "verde", hex: "#17562f" },
+  { clave: "bordo", hex: "#7a1f2b" },
+  { clave: "tostado", hex: "#6b3f1d" },
+  { clave: "negro", hex: "#1b1f24" },
+  { clave: "violeta", hex: "#4b2e83" },
+] as const;
+
+/**
+ * El color con que se arma el tema de una carta que eligió cara pero ningún color (ni propio ni de la empresa): el primero de las paletas, el azul de la maqueta `carta.html` (`PAL.azul`).
+ * Sale de la lista de arriba (una regla, un lugar): `color-de-la-carta.test.ts` falla si el azul se vuelve a escribir en otro archivo.
+ */
+export const COLOR_POR_DEFECTO_DE_LA_CARTA: string = PALETAS_DE_LA_CARTA[0].hex;
 
 /** El texto que se pone sobre el color: lo elige el sistema, nunca la persona. */
 export type TextoSobreColor = "BLANCO" | "NEGRO";
