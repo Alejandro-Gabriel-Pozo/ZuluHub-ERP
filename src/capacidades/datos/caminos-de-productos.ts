@@ -17,6 +17,14 @@ const FORMULARIO_DE_PRECIO_DE_PRODUCTO =
 const FORMULARIO_DE_ALTA_DE_PRODUCTO =
   "apps/web/ui/plantillas/catalogo/FormularioDeAltaDeProducto.cliente.tsx";
 
+const FORMULARIO_DE_SECCION_DE_CARTA =
+  "apps/web/ui/plantillas/catalogo/FormularioDeSeccionDeCarta.cliente.tsx";
+const FORMULARIO_DE_GRUPO_DE_OPCIONES =
+  "apps/web/ui/plantillas/catalogo/FormularioDeGrupoDeOpciones.cliente.tsx";
+
+const HOJA_DE_COPIA_DE_OPCIONES =
+  "apps/web/ui/plantillas/catalogo/HojaDeCopiaDeOpciones.cliente.tsx";
+
 export const CAMINOS_DE_PRODUCTOS = {
   // Productos, precio de la empresa (A1, T3): el precio es el único dato; el producto, la clave del cambio y la fila vista los fija la página. El único error con campo es «Escribí
   // un precio válido» (y la frase del precio que otra persona cambió antes, que se muestra en el mismo campo), ambos de la maqueta `productos.html`.
@@ -122,5 +130,98 @@ export const CAMINOS_DE_PRODUCTOS = {
       ],
     },
     camposDeError: ["nombre", "codigo", "codigoDeBarras", "alicuota"],
+  },
+  // Secciones de la carta (A8, parte 1; maqueta aprobada `productos-secciones.html`, 12/11/2026): el nombre es el único dato, para crear y para renombrar. El orden lo calcula el servidor al crear y las
+  // flechas no son un campo; la sección y su versión las fija la página. El único error con campo, por ahora, es «Falta el nombre» (el de nombre repetido, «Ya existe una sección con ese nombre», es de la parte 2: hasta entonces sale el genérico).
+  "crear-seccion-de-carta": {
+    funcion: "Crear una sección de la carta de la empresa",
+    pantallas: [FORMULARIO_DE_SECCION_DE_CARTA],
+    pasos: [{ id: "nombre-de-la-seccion", campos: { nombre: "nombre-de-seccion-de-carta" } }],
+    deriva: [],
+    accion: { clave: "productos.editar", requiere: ["nombre-de-seccion-de-carta"], admite: [] },
+    camposDeError: ["nombre"],
+  },
+  "renombrar-seccion-de-carta": {
+    funcion: "Renombrar una sección de la carta de la empresa",
+    pantallas: [FORMULARIO_DE_SECCION_DE_CARTA],
+    pasos: [{ id: "nombre-de-la-seccion", campos: { nombre: "nombre-de-seccion-de-carta" } }],
+    deriva: [],
+    accion: { clave: "productos.editar", requiere: ["nombre-de-seccion-de-carta"], admite: [] },
+    camposDeError: ["nombre"],
+  },
+  // Productos, opciones (A13): un grupo con sus opciones. El nombre del grupo y el de cada opción son los únicos datos obligatorios; la clase se elige solo al crear el grupo (los botones de
+  // opción «Incluida» / «Adicional») y no se cambia. Las opciones son filas repetidas (`opcion_<clave>_nombre` y `opcion_<clave>_recargo`): acá figuran como `opcion` y `recargo`.
+  // Los errores con campo son «Falta el nombre» (el del grupo; una fila sin nombre no se guarda), «Escribí un precio válido» (recargo mal escrito) y «Una opción incluida no lleva recargo».
+  "guardar-grupo-de-opciones": {
+    funcion: "Guardar un grupo de opciones de un producto, con sus opciones y recargos",
+    pantallas: [FORMULARIO_DE_GRUPO_DE_OPCIONES],
+    pasos: [
+      {
+        id: "datos-del-grupo",
+        campos: {
+          nombre: "nombre-de-grupo-de-opciones",
+          clase: "clase-de-grupo-de-opciones",
+          esObligatorio: "obligatoriedad-de-grupo-de-opciones",
+          admiteVarias: "eleccion-multiple-de-grupo-de-opciones",
+          fueraDeLaCarta: "visibilidad-en-la-carta-de-grupo-de-opciones",
+        },
+      },
+      {
+        id: "opciones-del-grupo",
+        campos: {
+          opcion: "nombre-de-opcion-de-producto",
+          recargo: "recargo-de-opcion-de-producto",
+        },
+      },
+    ],
+    deriva: [],
+    accion: {
+      clave: "opciones.editar",
+      requiere: ["nombre-de-grupo-de-opciones", "nombre-de-opcion-de-producto"],
+      admite: [
+        "clase-de-grupo-de-opciones",
+        "obligatoriedad-de-grupo-de-opciones",
+        "eleccion-multiple-de-grupo-de-opciones",
+        "visibilidad-en-la-carta-de-grupo-de-opciones",
+        "recargo-de-opcion-de-producto",
+      ],
+    },
+    camposDeError: ["nombre", "recargo"],
+  },
+  // Productos, opciones: copiar los grupos de otro producto («Copiar de otro producto»). El único dato es el producto de origen; el destino, la versión y la clave de la copia los fija la página.
+  "copiar-opciones-de-otro-producto": {
+    funcion: "Copiar las opciones de otro producto al producto de la pantalla",
+    pantallas: [HOJA_DE_COPIA_DE_OPCIONES],
+    pasos: [
+      {
+        id: "producto-de-origen",
+        campos: { productoOrigenId: "producto-de-origen-de-copia-de-opciones" },
+      },
+    ],
+    deriva: [],
+    accion: {
+      clave: "opciones.editar",
+      requiere: ["producto-de-origen-de-copia-de-opciones"],
+      admite: [],
+    },
+    camposDeError: [],
+  },
+  // Productos, ficha: el tilde «Se controla el stock» (PR-3 de Catálogo). Viaja en el mismo formulario y con el mismo «Guardar»; el servidor lo guarda primero (stock) y después la ficha (catálogo).
+  "controlar-el-stock-de-un-producto": {
+    funcion: "Marcar si se controla el stock de un producto",
+    pantallas: [FORMULARIO_DE_FICHA_DE_PRODUCTO],
+    pasos: [
+      {
+        id: "control-de-stock",
+        campos: { seControlaElStock: "control-de-stock-de-producto" },
+      },
+    ],
+    deriva: [],
+    accion: {
+      clave: "articulos.controlar",
+      requiere: ["control-de-stock-de-producto"],
+      admite: [],
+    },
+    camposDeError: [],
   },
 } as const satisfies Readonly<Record<string, DefinicionDeCamino>>;

@@ -1,5 +1,5 @@
 import { conTitulo, pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
-import { accionesDeProduccion } from "../../../../../../../servidor/modulos";
+import { accionesDeProduccion } from "../../../../../../../servidor/ofertas-de-produccion";
 import { cargarLaOrden } from "../../../../../../../servidor/produccion";
 import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import { armarLaOrden } from "../../../../../../../ui/plantillas/produccion/modelo-de-orden";

@@ -36,8 +36,8 @@ const SIN_SUCURSAL = {
   error: errorDeCodigo("CAJA_ACCION_NO_PERMITIDA"),
 } as const;
 
-/** La sucursal con la que trabaja la persona, o el genérico si no hay ninguna. */
-async function laSucursal(contexto: ContextoOperativo): Promise<Respuesta<string>> {
+/** La sucursal con la que trabaja la persona, o el genérico si no hay ninguna. La usa también la pantalla «Caja» (`sesion-de-caja.ts`): una regla, un lugar. */
+export async function laSucursal(contexto: ContextoOperativo): Promise<Respuesta<string>> {
   const sucursal = await sucursalDelPedido(contexto);
   if (!sucursal.ok) return sucursal;
   return sucursal.dato.efectiva === "" ? SIN_SUCURSAL : { ok: true, dato: sucursal.dato.efectiva };

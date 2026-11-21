@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0797",
+  "fecha": "2026-11-19",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El texto «Se controla el stock» de la casilla de la ficha del producto es el aprobado por el dueño el 09/11/2026 en la maqueta de productos, y lo consume el dato control-de-stock-de-producto.",
+  "que_cambia": "Solo de dónde sale la palabra: no se crea ningún texto nuevo. Revertir: quitar la clave catalogo.dato.se_controla_el_stock y la casilla.",
+  "donde": "src/capacidades/vocabulario/catalogo-catalogo.ts, productos.html tabla Textos nuevos (fila Qué es, Todos), decisiones-del-dueno-2026-11.md filas 100 y 104, brief PR-3 de Catálogo §6"
+}

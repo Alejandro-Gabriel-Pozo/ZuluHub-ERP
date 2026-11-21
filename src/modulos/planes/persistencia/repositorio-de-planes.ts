@@ -4,6 +4,7 @@ import type { RepositorioDePlanes } from "./tipos-de-planes";
 import { crearPlanesYVersiones } from "./planes-y-versiones";
 import { crearAsignacionesDePlanes } from "./asignaciones-de-planes";
 import { crearAjustesYModulosDePlanes } from "./ajustes-y-modulos-de-planes";
+import { crearPoliticaDeCambioDePlanes } from "./politica-de-cambio";
 
 /**
  * Repositorio de planes, asignaciones, ajustes y módulos de empresa para la PLATAFORMA (ADR-005, ADR-009;
@@ -23,11 +24,15 @@ export type {
   AjustePorEscribir,
   AsignacionBasica,
   AsignacionGuardada,
+  ArrepentimientoGuardado,
   AsignacionPorEscribir,
+  CondicionesGuardadas,
   ContenidoDeVersionDePlanGuardable,
   EstadoDePlan,
   ModuloDeEmpresaGuardado,
   PlanGuardado,
+  PoliticaGuardada,
+  PoliticaPorEscribir,
   PublicacionPorEscribir,
   RepositorioDePlanes,
   TenantConLaVersionVigente,
@@ -40,5 +45,6 @@ export function crearRepositorioDePlanes(db: Kysely<PlanesDePlataformaDb>): Repo
     ...crearPlanesYVersiones(db),
     ...crearAsignacionesDePlanes(db),
     ...crearAjustesYModulosDePlanes(db),
+    ...crearPoliticaDeCambioDePlanes(db),
   };
 }

@@ -25,6 +25,7 @@ const ficha = (cambios: Partial<FichaDeLaPantalla> = {}): FichaDeLaPantalla => (
   claseDeUso: "VENDIBLE",
   unidadBaseId: "UNIDAD",
   seVende: true,
+  admiteControlDeStock: false,
   nombreDeCocina: "MILA",
   codigo: "MIL-1",
   codigoDeBarras: "12345678",
@@ -126,6 +127,25 @@ describe("armarLaFicha de un producto que se vende", () => {
   });
 });
 
+describe("el enlace «Secciones» de la ficha (A8)", () => {
+  it("un producto que se vende lleva el enlace a la lista de secciones, con el texto aprobado", () => {
+    expect(armarLaFicha(ficha()).enlaceDeSecciones).toEqual({
+      href: "/catalogo/secciones",
+      texto: "Secciones",
+    });
+  });
+
+  it("un producto que no se vende no lo lleva: el campo de la sección tampoco está", () => {
+    expect(armarLaFicha(ficha({ seVende: false })).enlaceDeSecciones).toBeNull();
+  });
+
+  it("usa el diccionario si se lo dan", () => {
+    expect(
+      armarLaFicha(ficha(), { "catalogo.seccion.titulo": "Cartas" }).enlaceDeSecciones?.texto,
+    ).toBe("Cartas");
+  });
+});
+
 describe("armarLaFicha de un producto que no se vende", () => {
   it("no lleva nombre de cocina, alícuota ni sección; sí el nombre y los códigos", () => {
     const f = armarLaFicha(
@@ -220,5 +240,33 @@ describe("un valor guardado que la pantalla no ofrece", () => {
 describe("las direcciones", () => {
   it("la ficha vive bajo la lista de productos", () => {
     expect(rutaDeLaFicha(ID)).toBe(`/catalogo/productos/${ID}`);
+  });
+});
+
+describe("el tilde «Se controla el stock»", () => {
+  it("si el producto lo admite, la ficha trae el texto aprobado «Se controla el stock»; si no, nada", () => {
+    expect(armarLaFicha(ficha({ admiteControlDeStock: true })).etiquetaDelControlDeStock).toBe(
+      "Se controla el stock",
+    );
+    expect(
+      armarLaFicha(ficha({ admiteControlDeStock: false })).etiquetaDelControlDeStock,
+    ).toBeNull();
+  });
+
+  it("con control, la confirmación trae los seis textos resueltos por clave; sin casilla no hay diálogo", () => {
+    expect(
+      armarLaFicha(ficha({ admiteControlDeStock: true })).confirmacionDelControlDeStock,
+    ).toEqual({
+      titulo: "Se controla el stock",
+      activar:
+        "Cada venta descuenta stock y se controla que no quede en negativo. Si se vende sin receta vigente, aparece «falta receta».",
+      apagar: "Las ventas no descuentan nada y no hay conteo ni alertas de faltante.",
+      confirmar: "Confirmar",
+      cancelar: "Cancelar",
+      cerrar: "Cerrar",
+    });
+    expect(
+      armarLaFicha(ficha({ admiteControlDeStock: false })).confirmacionDelControlDeStock,
+    ).toBeNull();
   });
 });

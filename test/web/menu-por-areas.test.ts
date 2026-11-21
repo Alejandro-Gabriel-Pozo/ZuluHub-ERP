@@ -1,14 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import {
   AREAS_DEL_MENU,
   FILAS_DEL_MENU,
   GRUPOS_DEL_MENU,
   armarElMenu,
-  problemasDelMenu,
+  type ClaveDeFila,
   type FilaDeAccion,
   type FilaDelMenu,
   type FilaDePantalla,
 } from "../../apps/web/ui/navegacion/menu";
+import { problemasDelMenu } from "../../apps/web/ui/navegacion/problemas-del-menu";
 
 const fila = (clave: FilaDePantalla["clave"]): FilaDePantalla => {
   const f = FILAS_DEL_MENU.find((x) => x.clave === clave);
@@ -16,7 +18,9 @@ const fila = (clave: FilaDePantalla["clave"]): FilaDePantalla => {
   return f;
 };
 const comprobantes = fila("comprobantes");
+const ventaRapida = fila("venta-rapida");
 const productos = fila("productos");
+const secciones = fila("secciones");
 const fiscal = fila("configuracion-fiscal");
 const medios = fila("medios-de-pago");
 const contacto = fila("contacto");
@@ -54,9 +58,16 @@ describe("armarElMenu: todo nace cerrado", () => {
     expect(claves(armarElMenu([comprobantes], a, null))).toEqual([["ventas", [["comprobantes"]]]]);
   });
 
-  it("un módulo «en desarrollo» no aparece aunque llegue la acción y figure activo", () => {
+  it("catálogo y caja son disponibles (DEC-0463): aparecen solo con el módulo activo y la acción; sin cualquiera de las dos, nada", () => {
     const a = permisos(["productos.ver", "medios_de_pago.editar"], ["catalogo", "caja"]);
-    expect(armarElMenu([productos, medios], a, null)).toEqual([]);
+    const conTodo = claves(armarElMenu([productos, medios], a, null)).flatMap(([, grupos]) =>
+      (grupos as string[][]).flat(),
+    );
+    expect(conTodo.sort()).toEqual(["medios-de-pago", "productos"]);
+    const sinModulos = permisos(["productos.ver", "medios_de_pago.editar"]);
+    expect(armarElMenu([productos, medios], sinModulos, null)).toEqual([]);
+    const sinAcciones = permisos([], ["catalogo", "caja"]);
+    expect(armarElMenu([productos, medios], sinAcciones, null)).toEqual([]);
   });
 
   it("las acciones («Cerrar sesión») aparecen siempre que se leyeron los permisos, sin ruta", () => {
@@ -103,6 +114,57 @@ describe("armarElMenu: todo nace cerrado", () => {
   });
 });
 
+describe("«Secciones»: la fila del grupo «Carta» de Catálogo (A8)", () => {
+  it("exige el mismo módulo y la misma acción que «Productos» (las de su consulta, `productos.ver`)", () => {
+    expect([secciones.modulo, secciones.accion, secciones.area]).toEqual([
+      productos.modulo,
+      productos.accion,
+      productos.area,
+    ]);
+  });
+
+  it("con el módulo disponible (simulado: hoy `catalogo` está en desarrollo y no se ve) el área Catálogo trae dos grupos: «Productos» sin encabezado y «Carta» con el suyo", () => {
+    // El módulo `catalogo` sigue «en desarrollo» y no se ve; para mirar el armado se usa un módulo disponible con la acción de su consulta.
+    const disponibles = [productos, secciones].map((f) => ({
+      ...f,
+      modulo: comprobantes.modulo,
+      accion: comprobantes.accion,
+    }));
+    const areas = armarElMenu(disponibles, permisos(["comprobantes.ver"], ["facturacion"]), null);
+    expect(areas.map((a) => a.clave)).toEqual(["catalogo"]);
+    expect(areas[0]?.grupos.map((g) => [g.clave, g.etiqueta, g.items.map((i) => i.clave)])).toEqual(
+      [
+        ["productos", null, ["productos"]],
+        ["carta", "navegacion.grupo.carta", ["secciones"]],
+      ],
+    );
+  });
+
+  it("un módulo «en desarrollo» no aparece aunque llegue la acción y figure activo (fila de prueba sobre `produccion`, que sigue en desarrollo)", () => {
+    // Con catalogo, caja y ventas disponibles (DEC-0463) ninguna fila real del menú depende de un módulo en desarrollo: se prueba la regla con una fila armada.
+    const enDesarrollo = { ...productos, modulo: "produccion" as const };
+    expect(CATALOGO_DE_MODULOS.produccion.estado).toBe("en_desarrollo");
+    expect(armarElMenu([enDesarrollo], permisos(["productos.ver"], ["produccion"]), null)).toEqual(
+      [],
+    );
+    expect(
+      armarElMenu([enDesarrollo], permisos(["productos.ver"], [], ["produccion"]), null),
+    ).toEqual([]);
+    // La misma fila con un módulo disponible sí se ve: lo que la oculta es el estado, no la forma de la fila.
+    const disponible = { ...productos, modulo: "catalogo" as const };
+    expect(armarElMenu([disponible], permisos(["productos.ver"], ["catalogo"]), null)).not.toEqual(
+      [],
+    );
+  });
+
+  it("con `catalogo` disponible (DEC-0463) se ve con la acción y el módulo activo; sin cualquiera de las dos, no", () => {
+    const conTodo = armarElMenu([secciones], permisos(["productos.ver"], ["catalogo"]), null);
+    expect(claves(conTodo)).toEqual([["catalogo", [["secciones"]]]]);
+    expect(armarElMenu([secciones], permisos([], ["catalogo"]), null)).toEqual([]);
+    expect(armarElMenu([secciones], permisos(["productos.ver"]), null)).toEqual([]);
+  });
+});
+
 describe("la tabla real: lo declarado por pantalla", () => {
   it("cada fila lleva su área, grupo, módulo, acción, ruta y rótulo aprobados", () => {
     expect(
@@ -113,6 +175,24 @@ describe("la tabla real: lo declarado por pantalla", () => {
       ),
     ).toEqual([
       [
+        "venta-rapida",
+        "ventas",
+        "mostrador",
+        "ventas",
+        "ventas.ver",
+        "/ventas/venta-rapida",
+        "ventas.venta.menu",
+      ],
+      [
+        "tickets-del-dia",
+        "ventas",
+        "mostrador",
+        "ventas",
+        "ventas.ver",
+        "/ventas/tickets-del-dia",
+        "ventas.tickets.menu",
+      ],
+      [
         "comprobantes",
         "ventas",
         "comprobantes",
@@ -120,6 +200,16 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "comprobantes.ver",
         "/facturacion/comprobantes",
         "fiscal.pantalla.listado_titulo",
+      ],
+      ["caja", "ventas", "caja", "caja", "cajas.ver", "/caja", "caja.pantalla.titulo"],
+      [
+        "cierre-del-dia",
+        "ventas",
+        "caja",
+        "cierre",
+        "jornadas.ver",
+        "/caja/cierre-del-dia",
+        "cierre.titulo",
       ],
       [
         "productos",
@@ -129,6 +219,34 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "productos.ver",
         "/catalogo/productos",
         "catalogo.lista.titulo",
+      ],
+      [
+        "secciones",
+        "catalogo",
+        "carta",
+        "catalogo",
+        "productos.ver",
+        "/catalogo/secciones",
+        "catalogo.seccion.titulo",
+      ],
+      ["mesas", "ventas", "salon", "salon", "mesas.ver", "/salon/mesas", "salon.texto.admin_mesas"],
+      [
+        "impresoras",
+        "ventas",
+        "salon",
+        "comandas",
+        "impresoras.ver",
+        "/salon/impresoras",
+        "comandas.texto.imprimir_impresoras",
+      ],
+      [
+        "stock",
+        "catalogo",
+        "stock",
+        "stock",
+        "stock.ver",
+        "/stock/depositos",
+        "stock.pantalla.stock",
       ],
       [
         "produccion",
@@ -204,6 +322,11 @@ describe("problemasDelMenu: lo que la tabla real cumple y cada violación que se
   it("la tabla real no tiene problemas", () => {
     expect(problemas(FILAS_DEL_MENU)).toEqual([]);
   });
+  it("una fila con una función de otro módulo (violación inyectada)", () => {
+    expect(problemas([{ ...productos, perilla: "salon" }])).toEqual([
+      "productos: la función salon no es del módulo catalogo",
+    ]);
+  });
   it("sin filas es válida (reserva)", () => {
     expect(problemas([])).toEqual([]);
   });
@@ -273,5 +396,177 @@ describe("problemasDelMenu: lo que la tabla real cumple y cada violación que se
     expect(problemas([comprobantes, { ...productos, href: comprobantes.href }])).toEqual([
       "productos: la ruta /facturacion/comprobantes está repetida",
     ]);
+  });
+});
+
+describe("«Venta rápida»: la fila del grupo «Mostrador» del área Ventas (dueño, 13/11/2026)", () => {
+  it("con `ventas.ver` y el módulo `ventas` activo, el área Ventas trae el grupo «Mostrador» con «Venta rápida»", () => {
+    const areas = armarElMenu([ventaRapida], permisos(["ventas.ver"], ["ventas"]), null);
+    expect(areas.map((a) => a.clave)).toEqual(["ventas"]);
+    expect(areas[0]?.grupos.map((g) => [g.clave, g.etiqueta, g.items.map((i) => i.clave)])).toEqual(
+      [["mostrador", "navegacion.grupo.mostrador", ["venta-rapida"]]],
+    );
+    expect(areas[0]?.grupos[0]?.items[0]).toMatchObject({ etiqueta: "ventas.venta.menu" });
+  });
+
+  it("sin el permiso o sin el módulo activo la entrada no aparece", () => {
+    expect(armarElMenu([ventaRapida], permisos([], ["ventas"]), null)).toEqual([]);
+    expect(armarElMenu([ventaRapida], permisos(["ventas.ver"]), null)).toEqual([]);
+  });
+});
+
+describe("«Mesas»: la fila declara la función de pago `salon` (X-1b)", () => {
+  const mesas = fila("mesas");
+  const conFunciones = (funciones?: readonly string[]) => ({
+    ...permisos(["mesas.ver"], ["salon"]),
+    ...(funciones === undefined ? {} : { funcionesEncendidas: funciones }),
+  });
+
+  it("lleva la función `salon` y es del mismo módulo", () => {
+    expect(mesas.perilla).toBe("salon");
+    expect(FILAS_DEL_MENU.filter((f) => f.tipo === "pantalla" && f.perilla !== null)).toHaveLength(
+      1,
+    );
+  });
+  it("con el módulo, la acción y la función encendida aparece", () => {
+    expect(claves(armarElMenu([mesas], conFunciones(["salon"]), null))).toEqual([
+      ["ventas", [["mesas"]]],
+    ]);
+  });
+  it("con la función apagada no aparece", () => {
+    expect(armarElMenu([mesas], conFunciones([]), null)).toEqual([]);
+  });
+  it("con las funciones sin leer (sin definir) no aparece", () => {
+    expect(armarElMenu([mesas], conFunciones(), null)).toEqual([]);
+  });
+  it("una fila sin función no depende de las funciones leídas", () => {
+    expect(claves(armarElMenu([ventaRapida], permisos(["ventas.ver"], ["ventas"]), null))).toEqual([
+      ["ventas", [["venta-rapida"]]],
+    ]);
+  });
+});
+
+describe("las claves de las filas salen de la tabla (E-5)", () => {
+  // Copiadas de `main` ANTES del cambio: una fila perdida, renombrada o reordenada rompe esta lista.
+  const CLAVES_DE_HOY = [
+    "venta-rapida",
+    "tickets-del-dia",
+    "comprobantes",
+    "caja",
+    "cierre-del-dia",
+    "productos",
+    "secciones",
+    "mesas",
+    "impresoras",
+    "stock",
+    "produccion",
+    "configuracion-fiscal",
+    "medios-de-pago",
+    "contacto",
+    "cerrar-sesion",
+  ];
+  const MENU_DE_HOY = [
+    [
+      "ventas",
+      [
+        [
+          "mostrador",
+          [
+            ["pantalla", "venta-rapida", "/ventas/venta-rapida", "ventas.venta.menu"],
+            ["pantalla", "tickets-del-dia", "/ventas/tickets-del-dia", "ventas.tickets.menu"],
+          ],
+        ],
+        [
+          "comprobantes",
+          [
+            [
+              "pantalla",
+              "comprobantes",
+              "/facturacion/comprobantes",
+              "fiscal.pantalla.listado_titulo",
+            ],
+          ],
+        ],
+        [
+          "caja",
+          [
+            ["pantalla", "caja", "/caja", "caja.pantalla.titulo"],
+            ["pantalla", "cierre-del-dia", "/caja/cierre-del-dia", "cierre.titulo"],
+          ],
+        ],
+        [
+          "salon",
+          [
+            ["pantalla", "mesas", "/salon/mesas", "salon.texto.admin_mesas"],
+            ["pantalla", "impresoras", "/salon/impresoras", "comandas.texto.imprimir_impresoras"],
+          ],
+        ],
+      ],
+    ],
+    [
+      "catalogo",
+      [
+        ["productos", [["pantalla", "productos", "/catalogo/productos", "catalogo.lista.titulo"]]],
+        ["carta", [["pantalla", "secciones", "/catalogo/secciones", "catalogo.seccion.titulo"]]],
+        ["stock", [["pantalla", "stock", "/stock/depositos", "stock.pantalla.stock"]]],
+      ],
+    ],
+    [
+      "cuenta",
+      [
+        [
+          "empresa",
+          [
+            [
+              "pantalla",
+              "configuracion-fiscal",
+              "/configuracion-fiscal",
+              "fiscal.pantalla.config_titulo",
+            ],
+            ["pantalla", "medios-de-pago", "/caja/medios-de-pago", "caja.medios.titulo"],
+          ],
+        ],
+        [
+          "sucursal",
+          [["pantalla", "contacto", "/cuenta/contacto-de-la-sucursal", "sucursal.contacto_titulo"]],
+        ],
+        ["salir", [["accion", "cerrar-sesion", null, "cuenta.cerrar_sesion"]]],
+      ],
+    ],
+  ];
+
+  it("la tabla tiene los mismos nombres que antes, en el mismo orden", () => {
+    expect(FILAS_DEL_MENU.map((f) => f.clave)).toEqual(CLAVES_DE_HOY);
+  });
+  it("`ClaveDeFila` sigue cerrada: un nombre mal escrito no compila", () => {
+    expectTypeOf<ClaveDeFila>().not.toEqualTypeOf<string>();
+    expectTypeOf<"venta-rapida">().toExtend<ClaveDeFila>();
+    expectTypeOf<"pantalla-que-no-existe">().not.toExtend<ClaveDeFila>();
+  });
+  it("el menú armado con la tabla real es el mismo que antes", () => {
+    const acciones = [
+      ...new Set(Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones))),
+    ];
+    const todo = {
+      acciones,
+      modulos: { activos: Object.keys(CATALOGO_DE_MODULOS), enSoloLectura: [] },
+      funcionesEncendidas: ["salon"],
+    };
+    const areas = armarElMenu(FILAS_DEL_MENU, todo, null).map((a) => [
+      a.clave,
+      a.grupos.map((g) => [g.clave, g.items.map((i) => [i.tipo, i.clave, i.href, i.etiqueta])]),
+    ]);
+    expect(areas).toEqual(MENU_DE_HOY);
+    expect(armarElMenu(FILAS_DEL_MENU, null, null)).toEqual([]);
+  });
+  it("sigue aceptando filas de prueba con claves inventadas", () => {
+    const rara = { ...productos, clave: "fila-de-prueba", href: "/x" } as const;
+    const areas = armarElMenu([rara], permisos(["productos.ver"], ["catalogo"]), null);
+    expect(areas[0]?.grupos[0]?.items[0]?.clave).toBe("fila-de-prueba");
+    expect(
+      problemasDelMenu([rara, rara], AREAS_DEL_MENU, GRUPOS_DEL_MENU, 3).some((p) =>
+        p.includes("fila repetido"),
+      ),
+    ).toBe(true);
   });
 });

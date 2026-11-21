@@ -62,6 +62,16 @@ export type ErrorDeEmision = Readonly<{
     | "AUTORIZACION_DEL_SERVICIO_FALTANTE"
     | "ACCESO_YA_EMITIDO";
   detalle: string;
+  /**
+   * Por qué, cuando se sabe con certeza: solo elige el TEXTO que ve la persona. `codigo` sigue decidiendo qué se reintenta y qué es
+   * definitivo. Se omite (nunca `undefined`) cuando no se sabe: sale el texto del `codigo`.
+   */
+  causa?:
+    | "CUIT_NO_REPRESENTADA"
+    | "CERTIFICADO_VENCIDO"
+    | "CERTIFICADO_NO_RECONOCIDO"
+    | "PUNTO_DE_VENTA_NO_HABILITADO"
+    | "PROBLEMA_DEL_SISTEMA";
 }>;
 
 export interface EmisionElectronica {

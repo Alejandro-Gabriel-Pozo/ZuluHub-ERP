@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0788",
+  "fecha": "2026-11-19",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El botón «Confirmar» del diálogo de venta a $ 0 usa una clave propia de ventas (ventas.venta.validar) con el texto ya aprobado «Confirmar», porque ventas no tenía clave para ese texto.",
+  "que_cambia": "Solo de dónde sale la palabra «Confirmar»; el texto es el aprobado (DDD:171, alcance e). Revertir: usar otra clave ya existente o quitar la nueva.",
+  "donde": "src/capacidades/vocabulario/catalogo-ventas.ts; decisiones-del-dueno-2026-11.md fila 171 (alcance e, M1 a M14); venta-rapida-v4.html:918; brief PR-6 §6"
+}

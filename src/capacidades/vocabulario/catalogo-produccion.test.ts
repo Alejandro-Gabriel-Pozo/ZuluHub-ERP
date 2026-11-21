@@ -72,6 +72,7 @@ describe("los textos de producción, receta y lotes", () => {
       "Versiones",
       "Comparar",
       "Ficha de cocina",
+      "Esta acción no está permitida",
     ]);
   });
   it("lotes: los de control.html «Textos nuevos»", () => {

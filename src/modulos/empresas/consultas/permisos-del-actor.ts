@@ -2,6 +2,11 @@ import { accionesPermitidas, exigirAccion } from "../../../capacidades/permisos/
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import { estadoDeModulos } from "../../../capacidades/modulos/activos";
 import type { ClaveAccion, ClaveModulo } from "../../../capacidades/modulos/catalogo";
+import {
+  funcionesEncendidasDe,
+  modulosConInterruptores,
+} from "../../../capacidades/planes/funciones-encendidas";
+import { CATALOGO_DE_PERILLAS, type ClavePerilla } from "../../../capacidades/planes/perillas";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
@@ -17,7 +22,14 @@ export type PermisosDelActor = Readonly<{
   acciones: readonly ClaveAccion[];
   /** Los módulos de la empresa: los que operan sin restricción y los que quedaron en solo lectura por una baja de plan (ordenados). */
   modulos: Readonly<{ activos: readonly ClaveModulo[]; enSoloLectura: readonly ClaveModulo[] }>;
+  /**
+   * Las funciones de pago (interruptores) que la empresa tiene ENCENDIDAS hoy, ordenadas (plan vigente más ajustes, con el `ahora` del
+   * contexto). Los límites no entran. Solo se leen si algún módulo de la empresa es dueño de una función; si no, `[]` sin tocar la base.
+   */
+  funcionesEncendidas: readonly ClavePerilla[];
 }>;
+
+const MODULOS_CON_FUNCIONES = modulosConInterruptores(CATALOGO_DE_PERILLAS);
 
 export type ErrorAlPedirLosPermisosDelActor = MotivoDeRechazo | ErrorDePersistencia;
 
@@ -54,7 +66,15 @@ export function armarPermisosDelActor({
           actor.modulosActivados,
           actor.modulosHabilitados,
         );
+        const hayQueLeer = [...modulos.modulosActivos, ...modulos.modulosEnSoloLectura].some((m) =>
+          MODULOS_CON_FUNCIONES.has(m),
+        );
+        // Sin lectura, o con la lectura rota (empresa no visible: defecto), no se inventa nada: `[]` o la excepción sale como siempre.
+        const funcionesEncendidas = hayQueLeer
+          ? funcionesEncendidasDe(CATALOGO_DE_PERILLAS, await tx.derechos.deLaEmpresa(contexto))
+          : [];
         return ok({
+          funcionesEncendidas,
           acciones: accionesPermitidas(reglas, actor),
           modulos: {
             activos: [...modulos.modulosActivos].sort(),

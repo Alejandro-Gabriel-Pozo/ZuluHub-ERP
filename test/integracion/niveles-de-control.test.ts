@@ -103,11 +103,11 @@ describe.skipIf(base === null)("niveles de control: el adaptador contra una base
 
   it("la sucursal endurece el nivel de la empresa, solo en esa sucursal", async () => {
     const e = await escenario();
-    await fijar(e.empresa, CONTROL, "AVISAR");
-    await fijar(e.empresa, CONTROL, "BLOQUEAR", e.central);
-    expect(await nivelDe(e.empresa, e.central)).toBe("BLOQUEAR");
-    expect(await nivelDe(e.empresa, e.otra)).toBe("AVISAR");
-    expect(await nivelDe(e.empresa, null)).toBe("AVISAR");
+    await fijar(e.empresa, CONTROL, "PERMITIR");
+    await fijar(e.empresa, CONTROL, "AVISAR", e.central);
+    expect(await nivelDe(e.empresa, e.central)).toBe("AVISAR");
+    expect(await nivelDe(e.empresa, e.otra)).toBe("PERMITIR");
+    expect(await nivelDe(e.empresa, null)).toBe("PERMITIR");
   });
 
   it("la sucursal sin nivel de empresa también endurece (la empresa rige PERMITIR)", async () => {
@@ -117,39 +117,39 @@ describe.skipIf(base === null)("niveles de control: el adaptador contra una base
     expect(await nivelDe(e.empresa, e.otra)).toBe("PERMITIR");
   });
 
-  it("la sucursal no afloja lo que la empresa bloqueó", async () => {
+  it("la sucursal no afloja lo que la empresa avisó", async () => {
     const e = await escenario();
-    await fijar(e.empresa, CONTROL, "BLOQUEAR");
+    await fijar(e.empresa, CONTROL, "AVISAR");
     await fijar(e.empresa, CONTROL, "PERMITIR", e.central);
-    expect(await nivelDe(e.empresa, e.central)).toBe("BLOQUEAR");
+    expect(await nivelDe(e.empresa, e.central)).toBe("AVISAR");
   });
 
   it("sin la sucursal en la pregunta, los niveles de sus sucursales no cuentan", async () => {
     const e = await escenario();
-    await fijar(e.empresa, CONTROL, "BLOQUEAR", e.central);
+    await fijar(e.empresa, CONTROL, "AVISAR", e.central);
     expect(await nivelDe(e.empresa, null)).toBe("PERMITIR");
   });
 
   it("si el plan no incluye el control rige PERMITIR, aunque haya un nivel guardado", async () => {
     const e = await escenario();
-    await fijar(e.empresa, CONTROL, "BLOQUEAR");
-    await fijar(e.empresa, CONTROL, "BLOQUEAR", e.central);
+    await fijar(e.empresa, CONTROL, "AVISAR");
+    await fijar(e.empresa, CONTROL, "AVISAR", e.central);
     expect(await nivelDe(e.empresa, e.central, false)).toBe("PERMITIR");
-    expect(await nivelDe(e.empresa, e.central, true)).toBe("BLOQUEAR");
+    expect(await nivelDe(e.empresa, e.central, true)).toBe("AVISAR");
   });
 
   it("cada control tiene su propio nivel", async () => {
     const e = await escenario();
-    await fijar(e.empresa, CONTROL, "BLOQUEAR");
+    await fijar(e.empresa, CONTROL, "AVISAR");
     expect(await nivelDe(e.empresa, null, true, OTRO_CONTROL)).toBe("PERMITIR");
-    expect(await nivelDe(e.empresa, null, true, CONTROL)).toBe("BLOQUEAR");
+    expect(await nivelDe(e.empresa, null, true, CONTROL)).toBe("AVISAR");
   });
 
   it("aislamiento: el nivel de otra empresa no rige, ni preguntando por su sucursal", async () => {
     const mia = await escenario();
     const ajena = await escenario();
-    await fijar(ajena.empresa, CONTROL, "BLOQUEAR");
-    await fijar(ajena.empresa, CONTROL, "BLOQUEAR", ajena.central);
+    await fijar(ajena.empresa, CONTROL, "AVISAR");
+    await fijar(ajena.empresa, CONTROL, "AVISAR", ajena.central);
     expect(await nivelDe(mia.empresa, null)).toBe("PERMITIR");
     expect(await nivelDe(mia.empresa, ajena.central)).toBe("PERMITIR");
     // Y preguntar por la empresa ajena desde mi contexto tampoco la deja ver (la RLS la oculta).
@@ -174,13 +174,13 @@ describe.skipIf(base === null)("niveles de control: el adaptador contra una base
     });
     expect(r).toEqual({ ok: true, valor: { antes: "PERMITIR", despues: "AVISAR" } });
     await dueno.query(
-      "update nivel_de_control set nivel = 'BLOQUEAR' where empresa_id = $1 and control = $2",
+      "update nivel_de_control set nivel = 'PERMITIR' where empresa_id = $1 and control = $2",
       [e.empresa, CONTROL],
     );
-    expect(await nivelDe(e.empresa, null)).toBe("BLOQUEAR");
+    expect(await nivelDe(e.empresa, null)).toBe("PERMITIR");
   });
 
-  it("un nivel desconocido en la base es una falla (no se decide por omisión)", async () => {
+  it("un nivel desconocido en la base se lee como AVISAR (ni se habilita en silencio ni se bloquea)", async () => {
     const aparte = await crearBaseAparte(base!);
     const cliente = new pg.Client({ connectionString: aparte.base.dueno });
     const entornoAparte = crearEntornoDePrueba(aparte.base, 2);
@@ -196,7 +196,7 @@ describe.skipIf(base === null)("niveles de control: el adaptador contra una base
         entornoAparte.ejecutar({ contexto: comoEmpresa(empresa) }, async (tx) =>
           ok(await tx.niveles.nivel(CONTROL, { empresaId: empresa, sucursalId: null }, true)),
         ),
-      ).rejects.toThrow("nivel de control desconocido en la base: SUSPENDER");
+      ).resolves.toEqual({ ok: true, valor: "AVISAR" });
     } finally {
       await cliente.end();
       await entornoAparte.cerrar();
@@ -219,6 +219,16 @@ describe.skipIf(base === null)("niveles de control: el adaptador contra una base
       expect([...def.matchAll(/'([A-Z]+)'/g)].map((m) => m[1] ?? "").sort()).toEqual(
         [...NIVELES_DE_CONTROL].sort(),
       );
+    });
+
+    it("el CHECK rechaza BLOQUEAR: la base no admite un nivel que bloquee (ADR-008 opción b)", async () => {
+      const e = await escenario();
+      await expect(
+        dueno.query(
+          "insert into nivel_de_control (empresa_id, control, nivel) values ($1, $2, 'BLOQUEAR')",
+          [e.empresa, CONTROL],
+        ),
+      ).rejects.toMatchObject({ constraint: "nivel_de_control_nivel_ck" });
     });
 
     it("la forma de la clave de control es la del CHECK nivel_de_control_control_ck (misma decisión sobre muchas claves)", async () => {
@@ -272,7 +282,7 @@ describe.skipIf(base === null)("niveles de control: el adaptador contra una base
         const escribir = async () => {
           await barrera();
           await dueno.query(
-            "update nivel_de_control set nivel = 'BLOQUEAR' where empresa_id = $1 and control = $2",
+            "update nivel_de_control set nivel = 'AVISAR' where empresa_id = $1 and control = $2",
             [e.empresa, CONTROL],
           );
         };
@@ -282,9 +292,9 @@ describe.skipIf(base === null)("niveles de control: el adaptador contra una base
         ]);
         for (const visto of vistos) {
           expect(visto.ok, `ronda ${n}`).toBe(true);
-          expect(["PERMITIR", "BLOQUEAR"], `ronda ${n}`).toContain(visto.ok ? visto.valor : "");
+          expect(["PERMITIR", "AVISAR"], `ronda ${n}`).toContain(visto.ok ? visto.valor : "");
         }
-        expect(await nivelDe(e.empresa, null), `ronda ${n}`).toBe("BLOQUEAR");
+        expect(await nivelDe(e.empresa, null), `ronda ${n}`).toBe("AVISAR");
       }
     });
 
@@ -300,7 +310,7 @@ describe.skipIf(base === null)("niveles de control: el adaptador contra una base
                       values (${e.empresa}, ${CONTROL}, ${nivel})`.execute(tx.db);
             return ok(nivel);
           });
-        const [x, y] = await Promise.all([alta("AVISAR"), alta("BLOQUEAR")]);
+        const [x, y] = await Promise.all([alta("AVISAR"), alta("PERMITIR")]);
         expect([x.ok, y.ok].sort(), `ronda ${n}`).toEqual([false, true]);
         const perdedor = x.ok ? y : x;
         expect(perdedor, `ronda ${n}`).toMatchObject({
@@ -312,7 +322,7 @@ describe.skipIf(base === null)("niveles de control: el adaptador contra una base
           [e.empresa, CONTROL],
         );
         expect(rows, `ronda ${n}`).toHaveLength(1);
-        expect(await nivelDe(e.empresa, null)).toBe(x.ok ? "AVISAR" : "BLOQUEAR");
+        expect(await nivelDe(e.empresa, null)).toBe(x.ok ? "AVISAR" : "PERMITIR");
       }
     });
   });

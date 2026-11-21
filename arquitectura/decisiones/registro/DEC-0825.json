@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0825",
+  "fecha": "2026-11-20",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "CONFIRMADA",
+  "decision": "El registro de libros (registro.ts) queda fuera del grupo de mutación libro: son datos sin lógica y su prueba corre contra la base en el CI.",
+  "que_cambia": "El grupo libro lista sus archivos en vez de la carpeta entera (arquitectura/mutacion/libro.json). Sin eso la mutación daba 0 de 40 en registro.ts, porque corre sin base. Revertir: volver al patrón de la carpeta.",
+  "donde": "arquitectura/mutacion/libro.json; src/primitivas/libro/registro.ts; test/integracion/libros-conformidad.test.ts; aprobada por el dueño el 20/11/2026 (DDD, fila «lista única de 15 preguntas», punto 6)"
+}

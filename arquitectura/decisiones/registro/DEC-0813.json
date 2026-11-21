@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0813",
+  "fecha": "2026-11-20",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Cambiar la casilla «Se controla el stock» de la ficha del producto pide confirmación, con una frase por sentido (activar y apagar); el guardado sigue siendo el «Guardar» de siempre.",
+  "que_cambia": "Solo la pantalla, ninguna regla del servidor. Dos textos nuevos; el resto reusa lo aprobado. SUPUESTO: se confirma al tocar la casilla. Revertir: quitar el diálogo y las claves catalogo.control_de_stock.*.",
+  "donde": "Pedido del dueño del 20/11/2026 en el chat con el orquestador; inventario aceptado por delegación (decisiones-del-dueno-2026-11.md fila 173); apps/web/ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente.tsx; src/capacidades/vocabulario/catalogo-catalogo.ts"
+}

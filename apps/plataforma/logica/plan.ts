@@ -25,6 +25,11 @@ export const ROTULO_DE_PERILLA: Readonly<Record<string, string>> = {
   // `venta_por_fracciones_y_peso` (A7): «Fracciones» y «Peso» son los rótulos de «Cómo se vende» aprobados por el dueño el 14/11/2026 (`decisiones-del-dueno-2026-11.md`);
   // decisión 175 (textos delegados: lo más corto). Texto de la consola de plataforma, pendiente del OK del dueño (DEC-0372).
   venta_por_fracciones_y_peso: "Fracciones y peso",
+  // `recepcion_separada` y `conciliacion_de_tres_vias` (compras N3 y N4): «Recepción separada» y «Tres vías» son los nombres de los niveles que el dueño ve en
+  // `01-vision/escaleras-resumen-para-el-dueno.md` (filas N3 y N4, repositorio de documentación); decisión 175 (textos delegados: lo más corto). Texto de la consola
+  // de plataforma, pendiente del OK del dueño (DEC-0702).
+  recepcion_separada: "Recepción separada",
+  conciliacion_de_tres_vias: "Tres vías",
 };
 
 export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {

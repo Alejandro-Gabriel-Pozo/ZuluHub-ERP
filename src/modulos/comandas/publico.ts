@@ -14,6 +14,7 @@ export type {
 export type { ErrorDeComandas } from "./casos-de-uso/errores";
 export type { ErrorDeConsultaDeComandas } from "./consultas/consultas";
 export { enviarACocinaEnTx, pedirQueSalgaEnTx } from "./casos-de-uso/envios";
+export { exigirClave } from "./casos-de-uso/comun";
 export { anularItemEnviadoEnTx } from "./casos-de-uso/anulaciones";
 export type {
   EntradaDeEnviarACocina,
@@ -51,7 +52,7 @@ export {
   type EstadoDeComandaDeLinea,
 } from "./casos-de-uso/lineas-de-comanda";
 export type { ModeloDePapel } from "./dominio/documento";
-export type { SalidaDeLinea } from "./dominio/envio";
+export { SALIDAS_DE_LINEA, type SalidaDeLinea } from "./dominio/envio";
 export { COLUMNAS_DE_COMANDAS, type ComandasDb } from "./persistencia/esquema";
 export { ERRORES_DE_COMANDAS_POR_RESTRICCION } from "./persistencia/restricciones";
 export {

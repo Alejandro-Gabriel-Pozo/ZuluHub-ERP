@@ -24,6 +24,7 @@ const FICHA: FichaDeLaPantalla = {
   claseDeUso: "VENDIBLE",
   unidadBaseId: "UNIDAD",
   seVende: true,
+  admiteControlDeStock: false,
   nombreDeCocina: "MILA",
   codigo: "MIL-1",
   codigoDeBarras: "12345678",
@@ -45,13 +46,34 @@ const formulario = (
   ficha: FichaArmada = armarLaFicha(FICHA),
   accion: AccionDeFormulario = ok,
   puedeGuardar = true,
-) => <FormularioDeFichaDeProducto ficha={ficha} accion={accion} puedeGuardar={puedeGuardar} />;
+  controlDeStock: Readonly<{ marcada: boolean; puedeCambiar: boolean }> | null = null,
+) => (
+  <FormularioDeFichaDeProducto
+    ficha={ficha}
+    accion={accion}
+    puedeGuardar={puedeGuardar}
+    controlDeStock={controlDeStock}
+  />
+);
+const INSUMO: FichaDeLaPantalla = {
+  ...FICHA,
+  claseDeUso: "INSUMO",
+  seVende: false,
+  admiteControlDeStock: true,
+};
+const casilla = () => page.getByRole("checkbox", { name: "Se controla el stock" });
 const rechazo =
   (error: ErrorPublico): AccionDeFormulario =>
   () =>
     Promise.resolve({ error });
 const campo = (etiqueta: string) => page.getByLabelText(etiqueta, { exact: true });
 const guardar = () => page.getByRole("button", { name: "Guardar" });
+const confirmar = () => page.getByRole("button", { name: "Confirmar" });
+const cancelar = () => page.getByRole("button", { name: "Cancelar" });
+const dialogo = () => page.getByRole("dialog", { name: "Se controla el stock" });
+const ACTIVAR =
+  "Cada venta descuenta stock y se controla que no quede en negativo. Si se vende sin receta vigente, aparece «falta receta».";
+const APAGAR = "Las ventas no descuentan nada y no hay conteo ni alertas de faltante.";
 
 describe("FormularioDeFichaDeProducto", () => {
   it("axe, tamaños y sin desborde en 390 y 1280 px", async () => {
@@ -98,7 +120,7 @@ describe("FormularioDeFichaDeProducto", () => {
     await render(formulario());
     await userEvent.click(campo("Nombre"));
     const recorrido: string[] = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 7; i++) {
       await userEvent.tab();
       recorrido.push(
         document.activeElement?.getAttribute("name") ?? document.activeElement?.textContent ?? "?",
@@ -110,8 +132,22 @@ describe("FormularioDeFichaDeProducto", () => {
       "codigoDeBarras",
       "alicuota",
       "seccionDeCartaId",
+      "Secciones",
       "Guardar",
     ]);
+  });
+
+  it("«Secciones» es un enlace a la lista de secciones, junto al campo de la sección (maqueta `productos-secciones.html`), que no envía nada", async () => {
+    const accion = vi.fn(ok);
+    await render(formulario(armarLaFicha(FICHA), accion));
+    const enlace = page.getByRole("link", { name: "Secciones" });
+    await expect.element(enlace).toHaveAttribute("href", "/catalogo/secciones");
+    const campoDeLaSeccion = campo("Sección de la carta").element();
+    expect(
+      campoDeLaSeccion.compareDocumentPosition(enlace.element()) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(accion).not.toHaveBeenCalled();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 
   it("al guardar manda los seis campos por su nombre, con lo editado", async () => {
@@ -170,6 +206,7 @@ describe("FormularioDeFichaDeProducto", () => {
     await expect.element(campo("Nombre")).toBeVisible();
     await expect.element(campo("Código de barras")).toBeVisible();
     expect(document.querySelector("[name=nombreDeCocina], [name=alicuota], select")).toBeNull();
+    expect(document.querySelector('a[href="/catalogo/secciones"]')).toBeNull();
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 
@@ -320,5 +357,124 @@ describe("FormularioDeFichaDeProducto", () => {
     await expect.element(guardar()).toBeDisabled();
     tocar(guardar());
     expect(accion).not.toHaveBeenCalled();
+  });
+
+  it("«Se controla el stock»: sin control (null) no se dibuja; con control, va marcada o no según lo guardado", async () => {
+    const sin = await render(formulario(armarLaFicha(INSUMO)));
+    expect(document.querySelector("[name=seControlaElStock]")).toBeNull();
+    await sin.unmount();
+    const marcada = await render(
+      formulario(armarLaFicha(INSUMO), ok, true, { marcada: true, puedeCambiar: true }),
+    );
+    await expect.element(casilla()).toBeChecked();
+    await marcada.unmount();
+    await render(
+      formulario(armarLaFicha(INSUMO), ok, true, { marcada: false, puedeCambiar: true }),
+    );
+    await expect.element(casilla()).not.toBeChecked();
+  });
+
+  it("«Se controla el stock»: el teclado llega a la casilla justo antes de «Guardar» y la espacio la marca y la desmarca", async () => {
+    await render(
+      formulario(armarLaFicha(INSUMO), ok, true, { marcada: false, puedeCambiar: true }),
+    );
+    await userEvent.click(campo("Código de barras"));
+    await userEvent.tab();
+    expect(document.activeElement).toBe(casilla().element());
+    await userEvent.keyboard(" ");
+    await expect.element(dialogo()).toBeVisible();
+    await userEvent.click(confirmar());
+    await expect.element(casilla()).toBeChecked();
+    expect(document.activeElement).toBe(casilla().element());
+    await userEvent.keyboard(" ");
+    await userEvent.click(confirmar());
+    await expect.element(casilla()).not.toBeChecked();
+    await userEvent.tab();
+    expect(document.activeElement?.textContent).toBe("Guardar");
+  });
+
+  it("«Se controla el stock»: marcada viaja como «on» con el mismo «Guardar»; desmarcada no viaja", async () => {
+    const accion = vi.fn(ok);
+    await render(
+      formulario(armarLaFicha(INSUMO), accion, true, { marcada: false, puedeCambiar: true }),
+    );
+    await userEvent.click(casilla());
+    await userEvent.click(confirmar());
+    tocar(guardar());
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    expect((accion.mock.calls[0]?.[1] as FormData).get("seControlaElStock")).toBe("on");
+    // Tras guardar (con o sin error) la casilla sigue mostrando lo que la persona dejó: el formulario no la desmarca por su cuenta.
+    await expect.element(guardar()).not.toHaveAttribute("aria-busy", "true");
+    await expect.element(casilla()).toBeChecked();
+    await userEvent.click(casilla());
+    await userEvent.click(confirmar());
+    await expect.element(casilla()).not.toBeChecked();
+    tocar(guardar());
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(2));
+    expect((accion.mock.calls[1]?.[1] as FormData).has("seControlaElStock")).toBe(false);
+  });
+
+  it("«Se controla el stock»: sin permiso se ve apagada con su estado real y no viaja, y axe no marca faltas", async () => {
+    const accion = vi.fn(ok);
+    await render(
+      formulario(armarLaFicha(INSUMO), accion, true, { marcada: true, puedeCambiar: false }),
+    );
+    await expect.element(casilla()).toBeChecked();
+    await expect.element(casilla()).toBeDisabled();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+    tocar(guardar());
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    expect((accion.mock.calls[0]?.[1] as FormData).has("seControlaElStock")).toBe(false);
+  });
+
+  it("«Se controla el stock»: tildar pide confirmación con la frase de activar; Cancelar y Escape dejan la casilla como estaba y no guardan", async () => {
+    const accion = vi.fn(ok);
+    await render(
+      formulario(armarLaFicha(INSUMO), accion, true, { marcada: false, puedeCambiar: true }),
+    );
+    await userEvent.click(casilla());
+    await expect.element(dialogo()).toBeVisible();
+    await expect.element(page.getByText(ACTIVAR)).toBeVisible();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+    await userEvent.click(cancelar());
+    await expect.element(casilla()).not.toBeChecked();
+    expect(document.activeElement).toBe(casilla().element());
+    await userEvent.click(casilla());
+    await userEvent.keyboard("{Escape}");
+    await expect.element(casilla()).not.toBeChecked();
+    expect(document.querySelector("dialog[open]")).toBeNull();
+    expect(accion).not.toHaveBeenCalled();
+  });
+
+  it("«Se controla el stock»: destildar pide confirmación con la frase de apagar; Confirmar lo aplica sin guardar, y un doble toque es un solo cambio", async () => {
+    const accion = vi.fn(ok);
+    await render(
+      formulario(armarLaFicha(INSUMO), accion, true, { marcada: true, puedeCambiar: true }),
+    );
+    await userEvent.click(casilla());
+    await expect.element(page.getByText(APAGAR)).toBeVisible();
+    await expect.element(casilla()).toBeChecked();
+    const boton = confirmar().element() as HTMLElement;
+    boton.click();
+    boton.click();
+    await expect.element(casilla()).not.toBeChecked();
+    expect(document.querySelector("dialog[open]")).toBeNull();
+    expect(accion).not.toHaveBeenCalled();
+    tocar(guardar());
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    expect((accion.mock.calls[0]?.[1] as FormData).has("seControlaElStock")).toBe(false);
+  });
+
+  it("«Se controla el stock»: sin permiso no hay diálogo y sin casilla tampoco", async () => {
+    const apagada = await render(
+      formulario(armarLaFicha(INSUMO), ok, true, { marcada: true, puedeCambiar: false }),
+    );
+    await casilla()
+      .click({ force: true })
+      .catch(() => undefined);
+    expect(document.querySelector("dialog")?.open ?? false).toBe(false);
+    await apagada.unmount();
+    await render(formulario(armarLaFicha(INSUMO)));
+    expect(document.querySelector("dialog")).toBeNull();
   });
 });

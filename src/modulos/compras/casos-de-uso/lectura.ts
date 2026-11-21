@@ -48,11 +48,11 @@ type RLectura<S> = Resultado<
 >;
 
 /** Cuántas compras trae una página. */
-const TAMANO_DE_PAGINA = 50;
+export const TAMANO_DE_PAGINA = 50;
 
-const FORMA_DEL_CURSOR = /^(\d{4}-\d{2}-\d{2})\|([0-9a-f-]{36})$/;
+export const FORMA_DEL_CURSOR = /^(\d{4}-\d{2}-\d{2})\|([0-9a-f-]{36})$/;
 
-function fechaOpcional(texto: string | undefined): string | null | undefined {
+export function fechaOpcional(texto: string | undefined): string | null | undefined {
   if (texto === undefined) return null;
   return fechaCivilDesdeTexto(texto).ok ? texto : undefined;
 }

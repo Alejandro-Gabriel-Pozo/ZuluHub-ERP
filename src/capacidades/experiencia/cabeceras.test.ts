@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BYTES_DE_UN_NONCE,
   cabecerasDe,
+  CARTA_INDEXABLE_SEGUN_DUENIO,
   esIndexable,
   esNonceValido,
   nonceDe,
@@ -111,14 +112,87 @@ describe("politicaDeContenido", () => {
 });
 
 describe("esIndexable", () => {
-  it("solo la landing y solo en producción", () => {
-    for (const s of SUPERFICIES) {
+  const DUENIOS = ["MARCA", "EMPRESA", null] as const;
+
+  it("la landing solo en producción; la app, la neutra y el sistema nunca", () => {
+    for (const s of SUPERFICIES.filter((x) => x !== "CARTA")) {
       for (const produccion of [true, false]) {
-        expect(esIndexable(s, produccion), `${s} ${String(produccion)}`).toBe(
-          s === "LANDING" && produccion,
-        );
+        for (const duenio of DUENIOS) {
+          expect(
+            esIndexable(s, produccion, duenio),
+            `${s} ${String(produccion)} ${String(duenio)}`,
+          ).toBe(s === "LANDING" && produccion);
+        }
       }
     }
+  });
+
+  it("la carta del host COMPARTIDO (dueño MARCA) nunca se indexa, en producción o no (dueño, 16/11/2026)", () => {
+    expect(esIndexable("CARTA", true, "MARCA")).toBe(false);
+    expect(esIndexable("CARTA", false, "MARCA")).toBe(false);
+  });
+
+  it("la carta de un dominio propio (dueño EMPRESA) nace cerrada: hoy tampoco se indexa", () => {
+    // Cuando el dueño lo decida, se abre en `CARTA_INDEXABLE_SEGUN_DUENIO` y esta prueba cambia a `true` solo para producción.
+    expect(esIndexable("CARTA", true, "EMPRESA")).toBe(false);
+    expect(esIndexable("CARTA", false, "EMPRESA")).toBe(false);
+  });
+
+  it("la carta sin dueño conocido se cierra", () => {
+    expect(esIndexable("CARTA", true, null)).toBe(false);
+  });
+});
+
+describe("esIndexable: la regla con la tabla abierta (hoy cerrada en producción)", () => {
+  const ABIERTA = { MARCA: true, EMPRESA: true } as const;
+  const SOLO_EMPRESA = { MARCA: false, EMPRESA: true } as const;
+
+  it("la tabla de producción es exactamente esta: ambos dueños cerrados, y no se puede cambiar en caliente", () => {
+    expect(CARTA_INDEXABLE_SEGUN_DUENIO).toEqual({ MARCA: false, EMPRESA: false });
+    expect(Object.isFrozen(CARTA_INDEXABLE_SEGUN_DUENIO)).toBe(true);
+  });
+
+  it("con la tabla abierta, la carta con dueño conocido se indexa en producción, y solo ahí", () => {
+    for (const duenio of ["MARCA", "EMPRESA"] as const) {
+      expect(esIndexable("CARTA", true, duenio, ABIERTA)).toBe(true);
+      expect(esIndexable("CARTA", false, duenio, ABIERTA)).toBe(false);
+    }
+  });
+
+  it("con la tabla abierta, sin dueño conocido sigue cerrada, y la app, la neutra y el sistema no se abren por eso", () => {
+    expect(esIndexable("CARTA", true, null, ABIERTA)).toBe(false);
+    for (const s of ["APP", "NEUTRA", "SISTEMA"] as const) {
+      for (const duenio of ["MARCA", "EMPRESA", null] as const) {
+        expect(esIndexable(s, true, duenio, ABIERTA), `${s} ${String(duenio)}`).toBe(false);
+      }
+    }
+  });
+
+  it("sin dueño conocido no se consulta la tabla: ni una tabla con una entrada «null» abre la carta", () => {
+    const rara = { MARCA: true, EMPRESA: true, null: true } as unknown as typeof ABIERTA;
+    expect(esIndexable("CARTA", true, null, rara)).toBe(false);
+  });
+
+  it("la tabla se consulta por el dueño: abierta solo para la empresa, la marca sigue cerrada", () => {
+    expect(esIndexable("CARTA", true, "EMPRESA", SOLO_EMPRESA)).toBe(true);
+    expect(esIndexable("CARTA", true, "MARCA", SOLO_EMPRESA)).toBe(false);
+  });
+
+  it("`cabecerasDe` pasa el dueño y la tabla: carta indexable sin `X-Robots-Tag`; sin dueño, con `noindex`", () => {
+    const con = cabecerasDe("CARTA", NONCE, {
+      produccion: true,
+      duenio: "EMPRESA",
+      tabla: SOLO_EMPRESA,
+    });
+    expect(con["X-Robots-Tag"]).toBeUndefined();
+    const sinDuenio = cabecerasDe("CARTA", NONCE, { produccion: true, tabla: SOLO_EMPRESA });
+    expect(sinDuenio["X-Robots-Tag"]).toBe("noindex");
+    const marca = cabecerasDe("CARTA", NONCE, {
+      produccion: true,
+      duenio: "MARCA",
+      tabla: SOLO_EMPRESA,
+    });
+    expect(marca["X-Robots-Tag"]).toBe("noindex");
   });
 });
 

@@ -270,12 +270,11 @@ export async function comprobarFecha(
   return !pedida.ok || pedida.valor < hoy.valor ? err("FECHA_PASADA_NO_ADMITIDA") : ok(hechoEn);
 }
 
-const RESTRICCION_BLOQUEADA = "stock_existencia_negativa_bloqueada";
 const RESTRICCION_SIN_CONFIRMAR = "stock_existencia_negativa_sin_confirmar";
 
 /**
- * `traducir` de los comandos de movimientos, más los dos errores del control de existencia negativa que la base repite en el disparador
- * del renglón (`stock_existencia_negativa_*`). El caso de uso decide el control ANTES de escribir, con los saldos bloqueados y con el
+ * `traducir` de los comandos de movimientos, más el error del control de existencia negativa que la base repite en el disparador
+ * del renglón (`stock_existencia_negativa_sin_confirmar`). El caso de uso decide el control ANTES de escribir, con los saldos bloqueados y con el
  * detalle (`registrarMovimientoEnTx`); la base es la red de seguridad si alguien escribe sin pasar por ahí o cambió el nivel en medio:
  * como esa transacción ya está abortada no hay saldos que leer, así que el error sale con el detalle vacío. Cualquier otra restricción
  * sigue por `ERRORES_DE_STOCK_POR_RESTRICCION` (la cuarentena, `MOTIVO_NO_PERMITIDO`; el depósito inactivo, `DEPOSITO_INACTIVO`...).
@@ -284,9 +283,6 @@ export function traducirMovimiento<T>(resultado: R<T>): R<T> {
   if (resultado.ok) return resultado;
   const error = resultado.error;
   if (typeof error === "object" && "tipo" in error && error.tipo === "Check") {
-    if (error.restriccion === RESTRICCION_BLOQUEADA) {
-      return err({ error: "CONTROL_BLOQUEA", control: CONTROL_DE_NEGATIVO, detalle: [] });
-    }
     if (error.restriccion === RESTRICCION_SIN_CONFIRMAR) {
       return err({
         error: "CONTROL_REQUIERE_CONFIRMACION",

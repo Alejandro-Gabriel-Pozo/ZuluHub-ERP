@@ -5,6 +5,7 @@ import {
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { CLAVE_DE_TEXTO_DE_UNIDAD } from "../../../../../src/capacidades/vocabulario/unidades-de-medida";
 import { CLAVE_DE_CLASE, RUTA_DE_PRODUCTOS } from "./filtros-de-productos";
+import { RUTA_DE_SECCIONES } from "./modelo-de-secciones";
 
 /**
  * El modelo de vista de la ficha de datos de un producto (A1, T2a; maqueta aprobada `productos.html`, función `vDatos`): de lo que entrega la composición, los campos que se ven,
@@ -37,6 +38,8 @@ export type FichaDeLaPantalla = Readonly<{
   claseDeUso: string;
   unidadBaseId: string;
   seVende: boolean;
+  /** Si la ficha puede ofrecer el tilde «Se controla el stock» (lo calcula la composición con la regla del módulo). */
+  admiteControlDeStock: boolean;
   nombreDeCocina: string | null;
   codigo: string | null;
   codigoDeBarras: string | null;
@@ -72,6 +75,19 @@ export type FichaArmada = Readonly<{
   alicuota: DesplegableArmado | null;
   /** `null` si la clase no se vende. */
   seccion: DesplegableArmado | null;
+  /** «Secciones», junto al campo de la sección (A8, maqueta `productos-secciones.html`, línea 368); `null` si la clase no se vende (el campo no está). */
+  enlaceDeSecciones: Readonly<{ href: string; texto: string }> | null;
+  /** Solo si el producto admite el tilde (la clase se controla y está activo): el texto de la casilla; si no, `null`. */
+  etiquetaDelControlDeStock: string | null;
+  /** Lo que dice el diálogo que confirma el cambio del control de stock; `null` cuando no hay casilla. */
+  confirmacionDelControlDeStock: Readonly<{
+    titulo: string;
+    activar: string;
+    apagar: string;
+    confirmar: string;
+    cancelar: string;
+    cerrar: string;
+  }> | null;
   textoDeElegir: string;
   guardar: string;
 }>;
@@ -138,6 +154,22 @@ export function armarLaFicha(f: FichaDeLaPantalla, d: DiccionarioResuelto = {}):
           f.seccion === null ? null : { valor: f.seccion.id, etiqueta: f.seccion.nombre },
           f.secciones.map((s) => ({ valor: s.id, etiqueta: s.nombre })),
         )
+      : null,
+    enlaceDeSecciones: f.seVende
+      ? { href: RUTA_DE_SECCIONES, texto: texto(d, "catalogo.seccion.titulo") }
+      : null,
+    etiquetaDelControlDeStock: f.admiteControlDeStock
+      ? texto(d, "catalogo.dato.se_controla_el_stock")
+      : null,
+    confirmacionDelControlDeStock: f.admiteControlDeStock
+      ? {
+          titulo: texto(d, "catalogo.dato.se_controla_el_stock"),
+          activar: texto(d, "catalogo.control_de_stock.activar"),
+          apagar: texto(d, "catalogo.control_de_stock.apagar"),
+          confirmar: texto(d, "ventas.venta.validar"),
+          cancelar: texto(d, "catalogo.accion.cancelar"),
+          cerrar: texto(d, "vidriera.producto.cerrar"),
+        }
       : null,
     textoDeElegir: texto(d, "catalogo.dato.sin_elegir"),
     guardar: texto(d, "catalogo.accion.guardar"),

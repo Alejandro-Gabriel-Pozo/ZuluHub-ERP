@@ -605,7 +605,7 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       expect(await cambiosDeAmbiente(e)).toBe(0);
     });
 
-    it("D-77: si ARCA no tiene el punto de venta no pasa y nada cambia; la respuesta es FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA (texto ya aprobado del 10005), no el nombre interno", async () => {
+    it("D-77: si ARCA no tiene ningún punto de venta para la CUIT no pasa y nada cambia; la respuesta es FISCAL_ARCA_SIN_PUNTOS_DE_VENTA (texto aprobado, DEC-0741), no el nombre interno", async () => {
       const e = await empresaConFacturacion("GERENTE");
       await cargarCertificado(propia.base, e, "PRODUCCION");
       const version = (await estadoDelPunto(e))?.version ?? 0;
@@ -619,8 +619,8 @@ describe.skipIf(base === null)("cableado fiscal: la web y la cola con la composi
       expect(respuesta).toEqual({
         ok: false,
         error: {
-          codigo: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA",
-          clave: "error.fiscal_punto_de_venta_no_habilitado_en_arca",
+          codigo: "FISCAL_ARCA_SIN_PUNTOS_DE_VENTA",
+          clave: "error.fiscal_arca_sin_puntos_de_venta",
           presentacion: "AVISO",
         },
       });

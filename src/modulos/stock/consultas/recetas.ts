@@ -1,9 +1,8 @@
-import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../../contexto/contexto";
-import type { TxDeConsultasDeStock } from "../casos-de-uso/contrato";
 import {
   comparacionDeVersiones,
+  costoPorUnidadDeLaVersion,
   fichaDeCocinaDe,
   fichaDeLaVersion,
   type ComparacionDeVersiones,
@@ -12,9 +11,9 @@ import {
   type VersionDeReceta,
 } from "../casos-de-uso/lectura-de-recetas";
 import { esUuid } from "../persistencia/filas";
-import type { ComposicionGuardada } from "../persistencia/modelo";
 import { type Lector, type RDeConsulta } from "./comun";
 import { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
+import { veLosCostos, versionPedida } from "./recetas-para-pantalla";
 
 export type {
   CambioDeComponente,
@@ -27,8 +26,6 @@ export type {
   VersionDeReceta,
 } from "../casos-de-uso/lectura-de-recetas";
 
-type Tx = TxDeConsultasDeStock;
-
 /**
  * Las consultas de recetas (E6 §3.5): la ficha con costo, comparar versiones, la lista de versiones y la ficha de cocina. Mirar es de quien
  * puede mirar stock (`stock.ver`: la receta es de la empresa, no de una sucursal); los COSTOS viajan solo con `costos.ver` (el rol de la misma
@@ -37,8 +34,7 @@ type Tx = TxDeConsultasDeStock;
  * consulta no importa el dominio (ADR-005).
  */
 export function armarConsultasDeRecetas(leer: Lector, reglas: ReglasDeEmpresa) {
-  const veCostos = async (tx: Tx, contexto: ContextoOperativo): Promise<boolean> =>
-    (await exigirAccion(reglas, "costos.ver", () => tx.autorizacion.delActor(contexto))).ok;
+  const veCostos = veLosCostos(reglas);
 
   return {
     /** La ficha de una versión (la vigente si no se dice): componentes con bruto cargado, merma y neto; con `costos.ver`, costo por línea y de la receta. */
@@ -88,24 +84,51 @@ export function armarConsultasDeRecetas(leer: Lector, reglas: ReglasDeEmpresa) {
         );
       }),
 
-    /** Las versiones de la receta de un producto, de la más nueva a la más vieja. */
+    /**
+     * Las versiones de la receta de un producto, de la más nueva a la más vieja. Con `costos.ver`, cada una trae el costo de una unidad con los precios de HOY (`costoPorUnidad`,
+     * en `moneda`; `null` si no se sabe, p. ej. la versión que retiró la receta). Quién la guardó sale como persona (`creadaPor`): ponerle nombre es de la composición.
+     */
     versionesDeReceta: (
       contexto: ContextoOperativo,
       entrada: Readonly<{ productoId: string }>,
     ): Promise<RDeConsulta<readonly VersionDeReceta[]>> =>
-      leer(contexto, DECLARACIONES_DE_CONSULTAS.versionesDeReceta.accion, async (tx) => {
+      leer(contexto, DECLARACIONES_DE_CONSULTAS.versionesDeReceta.accion, async (tx, alcance) => {
         if (typeof entrada.productoId !== "string" || !esUuid(entrada.productoId)) return [];
         const versiones = await tx.composicionesDeStock.versionesDe(
           contexto.empresaId,
           entrada.productoId,
         );
-        return versiones.map((v) => ({
-          version: v.numero,
-          rinde: v.rinde,
-          pasos: v.pasos,
-          creadaPor: v.creadaPor,
-          creadaEn: v.creadaEn,
-        }));
+        const conCostos = await veCostos(tx, contexto);
+        const memo = new Map<string, bigint | null>();
+        const lista: VersionDeReceta[] = [];
+        for (const v of versiones) {
+          const base = {
+            version: v.numero,
+            rinde: v.rinde,
+            pasos: v.pasos,
+            creadaPor: v.creadaPor,
+            creadaEn: v.creadaEn,
+          };
+          if (!conCostos) {
+            lista.push(base);
+            continue;
+          }
+          // La lista no trae los componentes: la versión completa se lee de a una (todas dentro de la misma transacción).
+          const completa = await tx.composicionesDeStock.porNumero(
+            contexto.empresaId,
+            entrada.productoId,
+            v.numero,
+          );
+          lista.push({
+            ...base,
+            moneda: "ARS",
+            costoPorUnidad:
+              completa === null
+                ? null
+                : await costoPorUnidadDeLaVersion(tx, contexto, alcance, completa, memo),
+          });
+        }
+        return lista;
       }),
 
     /** La ficha de cocina de la versión vigente: cantidades BRUTAS y pasos, sin costos ni precios (D99, idea 6). */
@@ -122,15 +145,4 @@ export function armarConsultasDeRecetas(leer: Lector, reglas: ReglasDeEmpresa) {
         return version === null ? null : fichaDeCocinaDe(tx, contexto, version);
       }),
   };
-}
-
-/** Una versión por número de ese producto; el número tiene que ser un entero positivo (si no, no existe). */
-async function versionPedida(
-  tx: Tx,
-  contexto: ContextoOperativo,
-  productoId: string,
-  numero: unknown,
-): Promise<ComposicionGuardada | null> {
-  if (typeof numero !== "number" || !Number.isSafeInteger(numero) || numero < 1) return null;
-  return tx.composicionesDeStock.porNumero(contexto.empresaId, productoId, numero);
 }

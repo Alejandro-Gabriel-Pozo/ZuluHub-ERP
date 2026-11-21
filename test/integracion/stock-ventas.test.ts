@@ -846,7 +846,7 @@ describe.skipIf(base === null)("stock: puertos de venta", () => {
 
   describe("el control de existencia negativa en la venta", () => {
     /** Una empresa con su nivel y su depósito de venta; el nivel no admite borrado. */
-    const conNivel = async (nivel: "PERMITIR" | "AVISAR" | "BLOQUEAR") => {
+    const conNivel = async (nivel: "PERMITIR" | "AVISAR") => {
       const m = await c.escenario();
       await c.fijarNivel(m.empresa, nivel);
       const deposito = await c.deposito(m, { deVenta: true });
@@ -872,8 +872,8 @@ describe.skipIf(base === null)("stock: puertos de venta", () => {
         ),
       );
 
-    it("BLOQUEAR: la venta que dejaría el saldo en negativo es CONTROL_BLOQUEA con el detalle, y no escribe nada", async () => {
-      const x = await conNivel("BLOQUEAR");
+    it("AVISAR sin confirmar: la venta que dejaría el saldo en negativo es CONTROL_REQUIERE_CONFIRMACION con el detalle, y no escribe nada", async () => {
+      const x = await conNivel("AVISAR");
       await c.entrar(x.m.gerente, {
         depositoId: x.deposito,
         articuloId: x.articulo,
@@ -883,7 +883,7 @@ describe.skipIf(base === null)("stock: puertos de venta", () => {
       expect(await venderDe(x, "3")).toEqual({
         ok: false,
         error: {
-          error: "CONTROL_BLOQUEA",
+          error: "CONTROL_REQUIERE_CONFIRMACION",
           control: "stock.existencia_negativa",
           detalle: [
             { productoId: x.producto, depositoId: x.deposito, existenciaResultante: "-1.0000" },
@@ -1239,10 +1239,37 @@ describe.skipIf(base === null)("stock: puertos de venta", () => {
       }
     });
 
-    it("lleva las cantidades a la unidad de stock (exacta o se rechaza) y rechaza lo que no es una compra a un depósito normal, activo y de la empresa", async () => {
+    it("una compra recibida puede entrar directo a un depósito de cuarentena o de rechazo (compras N3); cualquier otro motivo u origen sigue rechazado, y no suma a lo disponible", async () => {
+      const harina = await insumo({ unidadBase: "GRAMO", dimension: "MASA" });
+      for (const uso of ["CUARENTENA", "RECHAZO"] as const) {
+        const deposito = await c.deposito(e, { uso });
+        const hecha = valorDe(
+          await recibir({
+            depositoId: deposito,
+            renglones: unRenglon(harina.producto, "3", "KILOGRAMO"),
+          }),
+        );
+        expect(hecha.yaExistia).toBe(false);
+        expect(await c.existencia(deposito, harina.articulo)).toBe("3000.0000");
+        // otro motivo a ese depósito sigue rechazado
+        const otroMotivo: Record<string, unknown> = {
+          clave: nuevoId(),
+          origen: { tipo: "RECEPCION", id: nuevoId() },
+          depositoId: deposito,
+          motivo: "OTRA_ENTRADA",
+          renglones: unRenglon(harina.producto),
+        };
+        expect(await recibir(otroMotivo)).toMatchObject({
+          ok: false,
+          error: "MOTIVO_NO_PERMITIDO",
+        });
+        expect(await c.existencia(deposito, harina.articulo)).toBe("3000.0000");
+      }
+    });
+
+    it("lleva las cantidades a la unidad de stock (exacta o se rechaza) y rechaza lo que no es una compra a un depósito activo y de la empresa", async () => {
       const harina = await insumo({ unidadBase: "GRAMO", dimension: "MASA" });
       const sinArticulo = await clase("INSUMO");
-      const cuarentena = await c.deposito(e, { uso: "CUARENTENA" });
       const inactivo = await c.deposito(e, { activo: false });
       const antes = await movimientos();
       expect(
@@ -1296,11 +1323,6 @@ describe.skipIf(base === null)("stock: puertos de venta", () => {
           "depósito de otra empresa",
           { depositoId: depDeOtra, renglones: unRenglon(harina.producto) },
           "DEPOSITO_NO_ENCONTRADO",
-        ],
-        [
-          "depósito de cuarentena",
-          { depositoId: cuarentena, renglones: unRenglon(harina.producto) },
-          "MOTIVO_NO_PERMITIDO",
         ],
         [
           "depósito inactivo",

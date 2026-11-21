@@ -1,13 +1,19 @@
 /**
- * Catálogo de textos por defecto (marcas y planes, §B.4). Es código, no base de datos: de acá sale el
- * tipo cerrado `ClaveDeTexto`, así que una pantalla que pide una clave inexistente NO compila y, como
- * el catálogo es total por tipo, nunca falta un texto. La marca (el producto) solo reemplaza la
- * redacción; el CÓDIGO de un error o de un motivo es estable y se muestra junto al texto.
+ * ARCHIVO CENTRAL
+ * QUÉ ES: el catálogo de todos los textos que ve una persona; de acá sale el tipo `ClaveDeTexto`.
+ * QUÉ NO ES: el lugar donde se escriben los textos de un módulo ni los del núcleo.
+ * EXPORTA: LARGO_MAXIMO_DE_TEXTO, DefinicionDeTexto, CATALOGO_DE_TEXTOS, ClaveDeTexto
+ * IMPORTA: src/capacidades/vocabulario/catalogo-*, src/capacidades/vocabulario/uso-y-fuente-de-texto.
+ * PARTE DEDICADA: src/capacidades/vocabulario/catalogo-<módulo>.ts (lo de cada módulo va ahí).
+ */
+/**
+ * Catálogo de textos por defecto (marcas y planes, §B.4). Es código, no base de datos: de acá sale el tipo cerrado `ClaveDeTexto`, así que una pantalla que pide una clave
+ * inexistente NO compila y, como el catálogo es total por tipo, nunca falta un texto. La marca (el producto) solo reemplaza la redacción; el CÓDIGO de un error o de un motivo
+ * es estable y se muestra junto al texto.
  *
- * Hoy trae las claves del módulo `administracion` (su nombre y los roles fijos de empresa), los cinco
- * motivos del guard (un solo lugar para el texto de cada rechazo) y los errores nuevos de este módulo
- * que puede ver una empresa o la puerta de entrada. Cada módulo suma las suyas en el tramo que lo
- * construye, con el prefijo del módulo dueño (`reservas.estadia.singular`).
+ * Hoy trae las claves del módulo `administracion` (su nombre y los roles fijos de empresa), los cinco motivos del guard (un solo lugar para el texto de cada rechazo) y los
+ * errores nuevos de este módulo que puede ver una empresa o la puerta de entrada. Cada módulo suma las suyas en el tramo que lo construye, con el prefijo del módulo dueño
+ * (`reservas.estadia.singular`).
  *
  * Reglas de las claves y de los textos (las repite la base como defensa en profundidad, sin conocer el
  * catálogo):
@@ -19,6 +25,7 @@
 
 import { TEXTOS_DE_CAJA } from "./catalogo-caja";
 import { TEXTOS_DE_CATALOGO } from "./catalogo-catalogo";
+import { TEXTOS_DE_CIERRE } from "./catalogo-cierre";
 import { TEXTOS_DE_COMANDAS } from "./catalogo-comandas";
 import { TEXTOS_DE_CLIENTES } from "./catalogo-clientes";
 import { TEXTOS_DE_COMPRAS } from "./catalogo-compras";
@@ -32,6 +39,10 @@ import { TEXTOS_DE_PRODUCCION } from "./catalogo-produccion";
 import { TEXTOS_DE_SALON } from "./catalogo-salon";
 import { TEXTOS_DE_STOCK } from "./catalogo-stock";
 import { TEXTOS_DE_VENTAS } from "./catalogo-ventas";
+import { TEXTOS_DE_CARTA_PUBLICA } from "./catalogo-carta-publica";
+import { TEXTOS_DEL_NUCLEO } from "./catalogo-nucleo";
+import { TEXTOS_DE_SESION_Y_EMPRESA } from "./catalogo-sesion-y-empresa";
+import type { FuenteDeTexto, UsosDeTexto } from "./uso-y-fuente-de-texto";
 
 /** El largo máximo de un texto que no declara otro (la base admite hasta 200 en cualquier caso). */
 export const LARGO_MAXIMO_DE_TEXTO = 80; // fuente-unica: ajeno — el largo de un texto del vocabulario es otro dato que el nombre de cocina
@@ -43,304 +54,19 @@ export type DefinicionDeTexto = Readonly<{
   largoMaximo?: number;
   /** Los marcadores que admite, sin llaves; los mismos que usa `porDefecto`. Omitido: ninguno. */
   marcadores?: readonly string[];
+  /**
+   * Quién consume el texto (inventario de textos, fila 173 de `decisiones-del-dueno-2026-11.md`). OPCIONAL por ahora: ningún chequeo
+   * lo exige; lo medirá el analizador de declaraciones (tramo U2). No se agrega a los catálogos existentes en este tramo.
+   */
+  usos?: UsosDeTexto;
+  /** De dónde salió el texto aprobado: un `DEC` aceptado o `HEREDADO`. OPCIONAL por ahora, igual que `usos`. */
+  fuente?: FuenteDeTexto;
 }>;
 
 export const CATALOGO_DE_TEXTOS = {
-  // Administración: el núcleo y los roles fijos de empresa (decisión 18).
-  "modulo.administracion.nombre": { porDefecto: "Administración" },
-  "rol.gerente.nombre": { porDefecto: "Gerente" },
-  "rol.administrador.nombre": { porDefecto: "Administrador" },
-  "rol.operador.nombre": { porDefecto: "Operador" },
-
-  // Los motivos con que el guard rechaza una acción (reemplazan al `TEXTOS_DE_MOTIVO` previsto en H4).
-  "motivo.modulo_en_desarrollo": {
-    porDefecto: "Esta función todavía está en desarrollo.",
-    largoMaximo: 160,
-  },
-  "motivo.modulo_no_activo": {
-    porDefecto: "Esta función no está activada para la empresa.",
-    largoMaximo: 160,
-  },
-  "motivo.modulo_en_solo_lectura": {
-    porDefecto:
-      "Esta función quedó en solo lectura porque el plan ya no la incluye. Todo lo cargado se conserva.",
-    largoMaximo: 200,
-  },
-  "motivo.sin_capacidad": {
-    porDefecto: "Esta sucursal no tiene habilitada esta función.",
-    largoMaximo: 160,
-  },
-  "motivo.sin_permiso": {
-    porDefecto: "No tenés permiso para hacer esto.",
-    largoMaximo: 160,
-  },
-
-  // Errores nuevos de marcas y planes que puede ver una empresa o la puerta de entrada.
-  "error.limite_del_plan": {
-    porDefecto: "El plan de la empresa llegó a su límite: {limite}.",
-    largoMaximo: 160,
-    marcadores: ["limite"],
-  },
-  "error.funcion_no_incluida": {
-    porDefecto: "Esta función no está incluida en el plan de la empresa.",
-    largoMaximo: 160,
-  },
-  "error.empresa_de_otra_marca": {
-    porDefecto: "Esta empresa no se puede abrir desde este sitio.",
-    largoMaximo: 160,
-  },
-  "error.invitacion_de_otra_marca": {
-    porDefecto: "Esta invitación no se puede aceptar desde este sitio.",
-    largoMaximo: 160,
-  },
-  // Interfaz base (W2): lo que dicen los patrones de conexión, de envío y de sesión. La interfaz recibe
-  // estos textos ya resueltos; nacen acá para que cada pantalla no invente los suyos.
-  "conexion.sin_conexion": {
-    porDefecto: "Sin conexión. Cuando vuelva, podés seguir: no se envió nada.",
-    largoMaximo: 120,
-  },
-  "conexion.no_se_puede_enviar": {
-    porDefecto: "No se puede enviar sin conexión.",
-    largoMaximo: 80, // fuente-unica: ajeno — el largo de un texto del vocabulario es otro dato que el nombre de cocina
-  },
-  "conexion.enviando": { porDefecto: "Enviando…" },
-  "conexion.verificando": { porDefecto: "Verificando si se registró…" },
-  "sesion.aviso_titulo": { porDefecto: "¿Seguís ahí?" },
-  "sesion.aviso_detalle": {
-    porDefecto: "Por seguridad, la sesión se cierra si no se usa. Tocá «Seguir» para mantenerla.",
-    largoMaximo: 160,
-  },
-  "sesion.seguir": { porDefecto: "Seguir" },
-  "sesion.vencida_titulo": { porDefecto: "Tu sesión venció" },
-  "sesion.vencida_detalle": {
-    porDefecto: "Lo que tipeaste quedó guardado en esta pestaña. Volvé a ingresar y lo recuperás.",
-    largoMaximo: 160,
-  },
-  "sesion.ingresar_de_nuevo": { porDefecto: "Ingresar de nuevo" },
-  "error.inesperado": {
-    porDefecto: "No se pudo completar. Podés reintentar: es seguro, no se duplica.",
-    largoMaximo: 120,
-  },
-  "error.referencia": {
-    porDefecto: "Referencia: {referencia}",
-    marcadores: ["referencia"],
-  },
-  // Carta pública (C-2): lo que lee el comensal. La interfaz recibe estos textos ya resueltos.
-  "vidriera.letra.etiqueta": { porDefecto: "Letra" },
-  "vidriera.letra.grupo": { porDefecto: "Tamaño de la letra" },
-  "vidriera.letra.normal": { porDefecto: "Letra normal" },
-  "vidriera.letra.grande": { porDefecto: "Letra grande" },
-  "vidriera.letra.muy_grande": { porDefecto: "Letra muy grande" },
-  "vidriera.buscar.etiqueta": { porDefecto: "Buscar en la carta" },
-  "vidriera.buscar.un_resultado": { porDefecto: "1 resultado" },
-  "vidriera.buscar.resultados": { porDefecto: "{cantidad} resultados", marcadores: ["cantidad"] },
-  "vidriera.buscar.sin_resultados": {
-    porDefecto: "No hay nada que diga «{texto}».",
-    largoMaximo: 120,
-    marcadores: ["texto"],
-  },
-  "vidriera.buscar.limpiar": { porDefecto: "Limpiar búsqueda" },
-  "vidriera.indice.titulo": { porDefecto: "Secciones" },
-  "vidriera.indice.ir": { porDefecto: "Ir al índice de secciones" },
-  "vidriera.producto.agotado": { porDefecto: "Agotado" },
-  "vidriera.producto.precios": { porDefecto: "Precios" },
-  "vidriera.producto.cerrar": { porDefecto: "Cerrar" },
-  "vidriera.producto.volver": { porDefecto: "Volver a la carta" },
-  "vidriera.producto.ver_toda": { porDefecto: "Ver toda la carta" },
-  "vidriera.producto.compartir": { porDefecto: "Compartir" },
-  "vidriera.producto.enlace_copiado": { porDefecto: "Enlace copiado" },
-  "vidriera.producto.enlace_no_copiado": {
-    porDefecto: "No se pudo copiar el enlace. Probá de nuevo.",
-    largoMaximo: 120,
-  },
-  "vidriera.producto.no_esta": { porDefecto: "Este producto ya no está en la carta." },
-  "vidriera.pie.iva": { porDefecto: "Los precios incluyen IVA." },
-  // Sesión y empresa (W5): ingreso, invitación, elegir empresa, shell y estados. La interfaz recibe estos
-  // textos ya resueltos; cada código de error público (`experiencia/respuesta.ts`) tiene el suyo.
-  "ingreso.titulo": { porDefecto: "Ingresá a {marca}", marcadores: ["marca"] },
-  "ingreso.detalle": { porDefecto: "Usá tu cuenta de Google para entrar.", largoMaximo: 120 },
-  "ingreso.boton": { porDefecto: "Ingresar con Google" },
-  "ingreso.enviando": { porDefecto: "Abriendo Google…" },
-  "ingreso.error.cancelado": {
-    porDefecto: "Cancelaste el ingreso con Google. Podés volver a intentarlo.",
-    largoMaximo: 120,
-  },
-  "ingreso.error.email_no_verificado": {
-    porDefecto: "Google no confirmó tu email. Verificalo en tu cuenta de Google y probá de nuevo.",
-    largoMaximo: 160,
-  },
-  "ingreso.error.interrumpido": {
-    porDefecto: "El ingreso se interrumpió. Probá de nuevo.",
-    largoMaximo: 120,
-  },
-  "ingreso.error.cuenta_no_valida": {
-    porDefecto: "Esa cuenta de Google no se puede usar acá. Probá con otra.",
-    largoMaximo: 120,
-  },
-  "ingreso.error.generico": {
-    porDefecto: "No se pudo ingresar. Podés reintentar.",
-    largoMaximo: 120,
-  },
-  "invitacion.titulo": { porDefecto: "Invitación a {marca}", marcadores: ["marca"] },
-  "invitacion.detalle_sin_sesion": {
-    porDefecto:
-      "Para aceptar la invitación, primero ingresá con la cuenta de Google a la que llegó el mail.",
-    largoMaximo: 160,
-  },
-  "invitacion.detalle_con_sesion": {
-    porDefecto:
-      "Tocá «Aceptar invitación» para sumarte a la empresa. Si ya la aceptaste, no pasa nada.",
-    largoMaximo: 160,
-  },
-  "invitacion.aceptar": { porDefecto: "Aceptar invitación" },
-  "invitacion.aceptando": { porDefecto: "Aceptando…" },
-  "invitacion.sin_enlace": {
-    porDefecto: "Falta el enlace de la invitación. Abrilo de nuevo desde el mail.",
-    largoMaximo: 120,
-  },
-  "invitacion.aceptada": { porDefecto: "Listo, ya sos parte de la empresa.", largoMaximo: 120 },
-  "invitacion.ya_aceptada": { porDefecto: "Esta invitación ya estaba aceptada.", largoMaximo: 120 },
-  "invitacion.continuar": { porDefecto: "Continuar" },
-  "empresa.elegir_titulo": { porDefecto: "Elegí la empresa" },
-  "empresa.elegir_detalle": { porDefecto: "Con cuál querés trabajar ahora.", largoMaximo: 120 },
-  "empresa.entrar": { porDefecto: "Entrar a la empresa" },
-  "empresa.entrando": { porDefecto: "Entrando…" },
-  "empresa.sin_empresas": {
-    porDefecto: "No tenés empresas en {marca}. Si te invitaron, abrí el enlace del mail.",
-    largoMaximo: 160,
-    marcadores: ["marca"],
-  },
-  "empresa.sin_empresas_titulo": { porDefecto: "Sin empresas" },
-  "empresa.cambiar": { porDefecto: "Cambiar de empresa" },
-  "empresa.etiqueta": { porDefecto: "Empresa" },
-  "empresa.rol_etiqueta": { porDefecto: "Tu rol" },
-  "motivo.empresa.empresa_en_alta": {
-    porDefecto: "La empresa todavía no terminó de darse de alta.",
-    largoMaximo: 160,
-  },
-  "motivo.empresa.empresa_suspendida": {
-    porDefecto: "La empresa está suspendida.",
-    largoMaximo: 160,
-  },
-  "motivo.empresa.empresa_cancelada": {
-    porDefecto: "La empresa fue cancelada.",
-    largoMaximo: 160,
-  },
-  "motivo.empresa.empresa_en_baja": {
-    porDefecto: "La empresa se está dando de baja.",
-    largoMaximo: 160,
-  },
-  "motivo.empresa.tenant_suspendido": {
-    porDefecto: "El servicio de la empresa está suspendido.",
-    largoMaximo: 160,
-  },
-  "navegacion.etiqueta": { porDefecto: "Navegación principal" },
-  "navegacion.saltar": { porDefecto: "Saltar al contenido" },
-  "navegacion.inicio": { porDefecto: "Inicio" },
-  "navegacion.empresa": { porDefecto: "Empresa" },
-  "navegacion.cuenta": { porDefecto: "Cuenta" },
-  // Fuente: dueño, 12/11/2026, `Pedernal-docs/11-especificaciones/decisiones-del-dueno-2026-11.md`, fila «Menú por áreas, versión 4»: nombres de las
-  // áreas Ventas, Catálogo y Compras aprobados «por ahora». «Compras» se suma con su primera pantalla.
-  "navegacion.area.ventas": { porDefecto: "Ventas" },
-  "navegacion.area.catalogo": { porDefecto: "Catálogo" },
-  "inicio.titulo": { porDefecto: "Inicio" },
-  "inicio.bienvenida": {
-    porDefecto: "Estás en {empresa}.",
-    largoMaximo: 120,
-    marcadores: ["empresa"],
-  },
-  "inicio.pendientes_titulo": { porDefecto: "Lo que falta" },
-  "inicio.pendientes_vacio": { porDefecto: "No hay nada pendiente por ahora.", largoMaximo: 120 },
-  "cuenta.titulo": { porDefecto: "Cuenta" },
-  "cuenta.cerrar_sesion": { porDefecto: "Cerrar sesión" },
-  "cuenta.cerrando": { porDefecto: "Cerrando sesión…" },
-  "sucursal.etiqueta": { porDefecto: "Sucursal" },
-  "sucursal.elegir": { porDefecto: "Elegí una sucursal" },
-  // Fuente: Dueño, 2026-11-05: primera prueba real en Preview (el desplegable de Ingresos Brutos arrancaba sin invitar a elegir); texto aprobado «Elegí una opción».
-  "selector.elegir_una_opcion": { porDefecto: "Elegí una opción" },
-  // Fuente: Dueño, 2026-11-05: prototipo B de «Elegir sucursal al ingresar» (https://claude.ai/artifact/EjPJnzT6Ai6iZnXARXqqij), que trae el botón «Continuar» textual.
-  "sucursal.continuar": { porDefecto: "Continuar" },
-  "sucursal.ayuda": { porDefecto: "Se recuerda en este dispositivo.", largoMaximo: 120 },
-  // Contacto de la sucursal (D-98, alcance A de D-113). El contacto es de la sucursal, no fiscal: familia `sucursal.*`.
-  // Fuente de las cuatro claves: Dueño, 2026-11-04, D-113, Pedernal-docs/11-especificaciones/facturador-contratos-de-pantalla.md.
-  "sucursal.contacto_titulo": { porDefecto: "Contacto de la sucursal" },
-  "sucursal.telefono": { porDefecto: "Teléfono" },
-  "sucursal.correo": { porDefecto: "Correo" },
-  "sucursal.web": { porDefecto: "Web" },
-  "sesion.estado_activa": { porDefecto: "Sesión activa" },
-  "sesion.estado_por_vencer": { porDefecto: "Sesión por vencer" },
-  "sesion.estado_vencida": { porDefecto: "Sesión vencida" },
-  "estado.cargando": { porDefecto: "Cargando…" },
-  "estado.reintentar": { porDefecto: "Reintentar" },
-  "estado.volver_al_inicio": { porDefecto: "Volver al inicio" },
-  "estado.no_encontrado_titulo": { porDefecto: "No encontrado" },
-  "estado.no_encontrado_detalle": {
-    porDefecto: "La página que buscás no existe.",
-    largoMaximo: 120,
-  },
-  "estado.mantenimiento_titulo": { porDefecto: "En mantenimiento" },
-  "estado.mantenimiento_detalle": {
-    porDefecto: "Estamos haciendo una mejora. Volvé a intentar en unos minutos.",
-    largoMaximo: 160,
-  },
-  "estado.sin_permiso_titulo": { porDefecto: "Sin permiso" },
-  "estado.error_titulo": { porDefecto: "Algo salió mal" },
-  "error.sesion_vencida": {
-    porDefecto: "Tu sesión venció. Volvé a ingresar para seguir.",
-    largoMaximo: 120,
-  },
-  "error.no_disponible": {
-    porDefecto: "El sistema no está disponible por el momento. Probá de nuevo en unos minutos.",
-    largoMaximo: 160,
-  },
-  "error.invitacion_no_encontrada": {
-    porDefecto: "No encontramos esa invitación. Revisá el enlace del mail.",
-    largoMaximo: 160,
-  },
-  "error.invitacion_revocada": {
-    porDefecto: "Esa invitación fue cancelada. Pedí una nueva.",
-    largoMaximo: 160,
-  },
-  "error.invitacion_no_pendiente": {
-    porDefecto: "Esa invitación ya no está pendiente.",
-    largoMaximo: 160,
-  },
-  "error.invitacion_vencida": {
-    porDefecto: "Esa invitación venció. Pedí una nueva.",
-    largoMaximo: 160,
-  },
-  "error.invitacion_de_otro_email": {
-    porDefecto:
-      "Esa invitación es para otro email. Ingresá con la cuenta de Google a la que llegó el mail.",
-    largoMaximo: 160,
-  },
-  "error.alta_no_pendiente": {
-    porDefecto: "El alta de esa empresa ya no está pendiente.",
-    largoMaximo: 160,
-  },
-  "error.persona_suspendida": {
-    porDefecto: "Tu usuario está suspendido. Consultá con el gerente de la empresa.",
-    largoMaximo: 160,
-  },
-  "error.persona_de_otro_usuario": {
-    porDefecto:
-      "Ese email ya está vinculado con otra cuenta de Google. Escribinos y lo resolvemos.",
-    largoMaximo: 160,
-  },
-  "error.usuario_de_otra_persona": {
-    porDefecto:
-      "Esta cuenta de Google ya está vinculada con otro email. Escribinos y lo resolvemos.",
-    largoMaximo: 160,
-  },
-  "error.ya_es_miembro": { porDefecto: "Ya sos parte de esta empresa.", largoMaximo: 120 },
-  "error.rol_distinto_al_anterior": {
-    porDefecto: "Ya tuviste otro rol en esta empresa. Pedile al gerente que lo resuelva.",
-    largoMaximo: 160,
-  },
-  "error.empresa_no_opera": {
-    porDefecto: "La empresa no está operando en este momento.",
-    largoMaximo: 160,
-  },
+  ...TEXTOS_DEL_NUCLEO,
+  ...TEXTOS_DE_CARTA_PUBLICA,
+  ...TEXTOS_DE_SESION_Y_EMPRESA,
   // Facturador (H7 facturación): sus errores de negocio y lo que informa ARCA, traducido (`catalogo-fiscal.ts`).
   ...TEXTOS_DE_FISCAL,
   ...TEXTOS_DE_FISCAL_PANTALLAS,
@@ -350,6 +76,7 @@ export const CATALOGO_DE_TEXTOS = {
   // Módulos de E2, E3 y E4: nacen vacíos y cada etapa suma los suyos en su archivo (E0-T4).
   ...TEXTOS_DE_CATALOGO,
   ...TEXTOS_DE_CAJA,
+  ...TEXTOS_DE_CIERRE,
   ...TEXTOS_DE_VENTAS,
   ...TEXTOS_DE_STOCK,
   ...TEXTOS_DE_PRODUCCION,
