@@ -138,9 +138,9 @@ const ESTADO_DE_LA_PANTALLA = {
 } as const;
 
 const ETIQUETA_DE_ESTADO = {
-  ABIERTA: "cierre.estado.abierta",
+  ABIERTA: "caja.estado.abierta",
   EN_AUDITORIA: "cierre.estado.en_auditoria",
-  CERRADA: "cierre.estado.cerrada",
+  CERRADA: "caja.estado.cerrada",
 } as const satisfies Readonly<Record<ModeloDelCierre["estado"], ClaveDeTexto>>;
 
 const TONO_DE_ESTADO = {
@@ -174,8 +174,8 @@ function armarLosControles(
 ): readonly (ControlVisto & Readonly<{ severidad: string }>)[] | null {
   const filasDeTicket = (cierre.conciliacion?.cobradoContraTicket ?? []).map((t) =>
     t.ticketNumero === null
-      ? `${texto({}, "cierre.conciliacion.diferencia")} ${formatearImporte(t.diferencia)}`
-      : `${texto({}, "cierre.ticket_numero", { numero: String(t.ticketNumero) })} · ${texto({}, "cierre.conciliacion.diferencia")} ${formatearImporte(t.diferencia)}`,
+      ? `${texto({}, "caja.arqueo.diferencia")} ${formatearImporte(t.diferencia)}`
+      : `${texto({}, "cierre.ticket_numero", { numero: String(t.ticketNumero) })} · ${texto({}, "caja.arqueo.diferencia")} ${formatearImporte(t.diferencia)}`,
   );
   // Stryker disable next-line ArrayDeclaration: un elemento ajeno sin severidad no entra en ningún grupo (`de` filtra por severidad), así que el arreglo inicial vacío no se distingue de uno con ese elemento.
   const controles: (ControlVisto & Readonly<{ severidad: string }>)[] = [];
@@ -207,8 +207,8 @@ function armarLaLinea(
 ): LineaVista {
   const declarable = l.estadoDeConteo !== "CONTADO";
   const conDato = l.estadoDeConteo === "CONTADO" || l.estadoDeConteo === "DECLARADO";
-  let diferencia = texto({}, "cierre.conciliacion.sin_dato");
-  if (l.estadoDeConteo === "CONFORME") diferencia = texto({}, "cierre.conciliacion.conforme");
+  let diferencia = texto({}, "caja.sin_declarar");
+  if (l.estadoDeConteo === "CONFORME") diferencia = texto({}, "caja.conforme");
   else if (l.diferencia !== null) diferencia = formatearImporte(l.diferencia);
   const negativa = l.diferencia !== null && l.diferencia.startsWith("-");
   return {

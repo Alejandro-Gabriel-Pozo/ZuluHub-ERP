@@ -33,8 +33,8 @@ const pantalla = () =>
   enPagina(<PantallaDelCierre modelo={modeloDe()} servidor={servidor.acciones} />);
 const boton = (nombre: string) => page.getByRole("button", { name: nombre });
 const alPaso3 = async () => {
-  await boton("Siguiente").click();
-  await boton("Siguiente").click();
+  await boton("Conciliación por medio").click();
+  await boton("Hay que reconocer").click();
 };
 const abrirLaCorreccion = async () => {
   await page
