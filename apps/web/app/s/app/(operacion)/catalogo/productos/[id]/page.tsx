@@ -1,5 +1,6 @@
 import { texto } from "../../../../../../../../../src/capacidades/vocabulario/vocabulario";
 import { conTitulo, pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
+import { cargarLaClasificacionDelProducto } from "../../../../../../../servidor/clasificacion";
 import { cargarElControlDeStock } from "../../../../../../../servidor/control-de-stock";
 import { cargarLaFicha } from "../../../../../../../servidor/ficha-de-producto";
 import { cargarLaVisibilidad } from "../../../../../../../servidor/ocultar";
@@ -10,13 +11,16 @@ import {
   puedeOcultarEnLaEmpresa,
 } from "../../../../../../../servidor/modulos";
 import { EnlaceDeAccion } from "../../../../../../../ui/componentes/EnlaceDeAccion";
+import { ClasificacionDelProducto } from "../../../../../../../ui/plantillas/catalogo/ClasificacionDelProducto.cliente";
 import { FormularioDeFichaDeProducto } from "../../../../../../../ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente";
+import { armarLaClasificacionDelProducto } from "../../../../../../../ui/plantillas/catalogo/modelo-de-clasificacion";
 import { armarLaFicha } from "../../../../../../../ui/plantillas/catalogo/modelo-de-ficha-de-producto";
 import { rutaDeLasOpciones } from "../../../../../../../ui/plantillas/catalogo/modelo-de-opciones";
 import { armarLaVisibilidad } from "../../../../../../../ui/plantillas/catalogo/modelo-de-visibilidad-de-producto";
 import { VisibilidadDeLaFichaDeProducto } from "../../../../../../../ui/plantillas/catalogo/VisibilidadDeLaFichaDeProducto.cliente";
 import { Pila } from "../../../../../../../ui/primitivas/Pila";
 import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
+import { clasificarProductoAccion } from "../../../../acciones-de-clasificacion";
 import { ocultarOMostrarAccion } from "../../../../acciones-de-ocultar";
 import { guardarFichaAccion } from "../../../../acciones-de-productos";
 
@@ -32,6 +36,9 @@ export default async function PaginaDeLaFichaDeUnProducto({ params }: PropsDePag
     const respuesta = await cargarLaFicha(contexto, id);
     if (!respuesta.ok) return <ErrorDelDetalle error={respuesta.error} />;
     const ficha = armarLaFicha(respuesta.dato);
+    const puedeEditar = await puedeEditarProductos(contexto);
+    // La clasificación comercial (A14) reemplaza al campo suelto «Categoría» (dueño, 12/11/2026): una sección propia debajo de los datos, con su hoja «Cambiar».
+    const clasificacion = await cargarLaClasificacionDelProducto(contexto, ficha.id);
     const oculto = await cargarLaVisibilidad(contexto, ficha.id);
     // El tilde «Se controla el stock» (PR-3): solo si la clase se controla, el producto está activo y se pudo leer (módulo `stock` activo, `stock.ver`); si no, no se dibuja nada.
     const control = respuesta.dato.admiteControlDeStock
@@ -50,8 +57,17 @@ export default async function PaginaDeLaFichaDeUnProducto({ params }: PropsDePag
               ? null
               : { marcada: controlVisto, puedeCambiar: await puedeControlarElStock(contexto) }
           }
-          puedeGuardar={await puedeEditarProductos(contexto)}
+          puedeGuardar={puedeEditar}
         />
+        {clasificacion.ok ? (
+          <ClasificacionDelProducto
+            clasificacion={armarLaClasificacionDelProducto(clasificacion.dato)}
+            accion={clasificarProductoAccion}
+            puedeCambiar={puedeEditar}
+          />
+        ) : (
+          <ErrorDelDetalle error={clasificacion.error} />
+        )}
         {oculto.ok ? (
           <VisibilidadDeLaFichaDeProducto
             filas={armarLaVisibilidad(oculto.dato, {

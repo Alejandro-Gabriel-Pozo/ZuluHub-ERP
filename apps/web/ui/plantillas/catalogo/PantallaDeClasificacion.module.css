@@ -1,0 +1,67 @@
+.arbol {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie-elevada);
+}
+
+.fila {
+  display: flex;
+  align-items: stretch;
+  padding-inline-start: calc(var(--nivel) * var(--espacio-4));
+  border-bottom: var(--borde-grosor) solid var(--color-borde);
+}
+
+.fila:last-child {
+  border-bottom: 0;
+}
+
+.chevron {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--objetivo-minimo);
+  min-block-size: var(--objetivo-minimo);
+  border: 0;
+  background: none;
+  color: var(--color-texto-suave);
+  font: inherit;
+  cursor: pointer;
+}
+
+.nombre {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-block-size: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-3) var(--espacio-2) 0;
+  border: 0;
+  background: none;
+  color: var(--color-texto);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.texto {
+  overflow-wrap: anywhere;
+}
+
+.fila[data-desactivado] .texto {
+  color: var(--color-texto-suave);
+  text-decoration: line-through;
+}
+
+.marca {
+  padding: var(--espacio-1) var(--espacio-2);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  color: var(--color-texto-suave);
+}

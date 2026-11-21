@@ -2,7 +2,12 @@ import type { DatoDeCampo } from "../../../../src/capacidades/datos/registro";
 import { CajaDeCampo } from "./CajaDeCampo";
 import estilos from "./Selector.module.css";
 
-type OpcionDeSelector = Readonly<{ valor: string; etiqueta: string }>;
+type OpcionDeSelector = Readonly<{
+  valor: string;
+  etiqueta: string;
+  /** La opción se ve pero no se puede elegir (por ejemplo, un destino que el servidor no admite). */
+  apagada?: boolean;
+}>;
 
 export type PropsDeSelector = Readonly<{
   /** Qué dato pide el campo: un `IdDeDato` del registro de datos o `"pendiente"` (deuda registrada). Obligatorio: sin dato no hay campo. */
@@ -18,6 +23,8 @@ export type PropsDeSelector = Readonly<{
   ayuda?: string | undefined;
   error?: string | undefined;
   deshabilitado?: boolean;
+  /** Un nombre accesible más preciso que la etiqueta visible (varios selectores con la misma etiqueta, como los niveles «Categoría»): solo para lectores de pantalla, no se ve. */
+  nombreAccesible?: string | undefined;
   /** El navegador no deja enviar el formulario con la opción vacía (`required`). Sin texto visible: el aviso lo da el navegador. */
   requerido?: boolean;
 }>;
@@ -34,6 +41,7 @@ export function Selector({
   ayuda,
   error,
   deshabilitado = false,
+  nombreAccesible,
   requerido = false,
 }: PropsDeSelector) {
   return (
@@ -49,6 +57,7 @@ export function Selector({
           name={nombre}
           value={valor}
           disabled={deshabilitado}
+          aria-label={nombreAccesible}
           required={requerido}
           onChange={(evento) => {
             alCambiar(evento.target.value);
@@ -56,7 +65,7 @@ export function Selector({
         >
           {textoDeElegir !== undefined ? <option value="">{textoDeElegir}</option> : null}
           {opciones.map((opcion) => (
-            <option key={opcion.valor} value={opcion.valor}>
+            <option key={opcion.valor} value={opcion.valor} disabled={opcion.apagada === true}>
               {opcion.etiqueta}
             </option>
           ))}

@@ -36,6 +36,14 @@ const FICHA_PROPOSITO = (para: string): Proposito => ({
     "Pedernal-docs/11-especificaciones/fichas-de-modulo/a1-productos-y-precios.md §5 (datos del producto y sus primitivas) y la maqueta aprobada el 12/11/2026 (`productos.html`, solapa «Datos», carpeta de prototipos de Pedernal-docs 10-ux-ui)",
 });
 
+const HOJAS_DE_CLASIFICACION = "apps/web/ui/plantillas/catalogo/HojasDeClasificacion.cliente.tsx";
+const CLASIFICACION_DEL_PRODUCTO =
+  "apps/web/ui/plantillas/catalogo/ClasificacionDelProducto.cliente.tsx";
+const CLASIFICACION_PROPOSITO = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs/11-especificaciones/pantallas-de-catalogo-restante-inventario.md §2.5 (Clasificación), la maqueta aprobada el 12/11/2026 (`clasificacion.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui) y 11-especificaciones/decisiones-del-dueno-2026-11.md (filas del 12/11 y 13/11/2026: árbol departamento → categoría de hasta 4 niveles; el cambio de un producto rige solo desde ahora)",
+});
 const FORMULARIO_DE_SECCION_DE_CARTA =
   "apps/web/ui/plantillas/catalogo/FormularioDeSeccionDeCarta.cliente.tsx";
 
@@ -228,6 +236,42 @@ export const DATOS_DE_PRODUCTOS = {
     ],
     consumidores: ["apps/web/ui/plantillas/catalogo/FormularioDePrecioDeProducto.cliente.tsx"],
     ponerPor: ["productos.cambiar_precio"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "nombre-de-nodo-de-clasificacion": {
+    // Es el mismo texto que el nombre de una sección de la carta (1 a 80): una sola regla, la de `nombre-de-eleccion.ts`, reexportada por esta primitiva.
+    ficha: "src/primitivas/clasificacion/nombre-de-nodo.ts",
+    propositos: [
+      CLASIFICACION_PROPOSITO(
+        "Nombre de un departamento o de una categoría de la clasificación comercial, al crearlo y al renombrarlo (único entre hermanos; no hereda la alícuota).",
+      ),
+    ],
+    consumidores: [HOJAS_DE_CLASIFICACION],
+    ponerPor: ["productos.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "padre-de-nodo-de-clasificacion": {
+    // Una referencia a un nodo activo de la empresa que no sea el propio nodo ni uno de sus descendientes y que no pase el tope de niveles: las reglas viven una vez, en `arbol.ts`.
+    ficha: "src/primitivas/clasificacion/arbol.ts",
+    propositos: [
+      CLASIFICACION_PROPOSITO(
+        "Nuevo padre de una categoría que se mueve en el árbol de la clasificación comercial: un nodo activo que no sea ella ni lo que tiene adentro y que no pase el tope de niveles; un departamento no se mueve.",
+      ),
+    ],
+    consumidores: [HOJAS_DE_CLASIFICACION],
+    ponerPor: ["productos.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "nodo-de-clasificacion-de-producto": {
+    // Una referencia a un nodo activo de la clasificación de la empresa (un selector por nivel, encadenados); vacío es «Sin elegir». Rige desde ahora: no hay fecha (dueño, 13/11/2026).
+    ficha: "src/modulos/catalogo/casos-de-uso/clasificar-producto.ts",
+    propositos: [
+      CLASIFICACION_PROPOSITO(
+        "Departamento o categoría de un producto en su ficha, en la hoja «Cambiar»: un selector por nivel, encadenados; elegir «Sin elegir» lo deja sin clasificar. El cambio rige desde ahora y el vínculo anterior queda en el historial.",
+      ),
+    ],
+    consumidores: [CLASIFICACION_DEL_PRODUCTO],
+    ponerPor: ["productos.editar"],
     requiere: REQUIERE_CATALOGO,
   },
   "nombre-de-grupo-de-opciones": {

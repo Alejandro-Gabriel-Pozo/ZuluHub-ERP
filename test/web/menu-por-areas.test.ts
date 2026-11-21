@@ -220,6 +220,16 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "/catalogo/productos",
         "catalogo.lista.titulo",
       ],
+      // Clasificación comercial (A14): solo quien edita productos (gerente y administrador); el operador no ve la entrada.
+      [
+        "clasificacion",
+        "catalogo",
+        "productos",
+        "catalogo",
+        "productos.editar",
+        "/catalogo/clasificacion",
+        "catalogo.clasificacion.titulo",
+      ],
       [
         "secciones",
         "catalogo",
@@ -455,6 +465,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "caja",
     "cierre-del-dia",
     "productos",
+    "clasificacion",
     "secciones",
     "mesas",
     "impresoras",
@@ -506,7 +517,18 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     [
       "catalogo",
       [
-        ["productos", [["pantalla", "productos", "/catalogo/productos", "catalogo.lista.titulo"]]],
+        [
+          "productos",
+          [
+            ["pantalla", "productos", "/catalogo/productos", "catalogo.lista.titulo"],
+            [
+              "pantalla",
+              "clasificacion",
+              "/catalogo/clasificacion",
+              "catalogo.clasificacion.titulo",
+            ],
+          ],
+        ],
         ["carta", [["pantalla", "secciones", "/catalogo/secciones", "catalogo.seccion.titulo"]]],
         ["stock", [["pantalla", "stock", "/stock/depositos", "stock.pantalla.stock"]]],
       ],
