@@ -12,6 +12,7 @@ import type { ClaveDeTexto } from "../../../../src/capacidades/vocabulario/catal
 import type { ClaveDeIcono } from "../iconos/catalogo";
 import { RUTAS_DE_CAJA, RUTA_DE_LA_CAJA } from "../plantillas/caja/lista-de-caja";
 import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
+import { RUTA_DEL_CIERRE } from "../plantillas/cierre/ruta-del-cierre";
 import { RUTA_DE_SECCIONES } from "../plantillas/catalogo/modelo-de-secciones";
 import { RUTA_DE_IMPRESORAS } from "../plantillas/salon/modelo-de-impresoras";
 import { RUTA_DE_MESAS } from "../plantillas/salon/modelo-de-mesas";
@@ -22,25 +23,22 @@ import { RUTA_DE_LA_VENTA, RUTA_DE_TICKETS_DEL_DIA } from "../plantillas/venta/r
 import { RUTAS_DE_STOCK } from "../plantillas/stock/rutas-de-stock";
 
 /**
- * EL MENÚ POR ÁREAS: una sola tabla declarativa (área → grupo → pantalla), una fila por pantalla. Es la ÚNICA fuente de qué hay en el
- * menú, en qué área y grupo, qué módulo y qué acción exige: mover una pantalla de grupo o de área es cambiar UNA fila, y sumar un rubro es
- * sumar un área y sus filas (dueño, 12/11/2026: «siempre tiene que estar presente la escalabilidad o el posible cambio de rumbo al tema
- * de la organización de la pantalla», `decisiones-del-dueno-2026-11.md`, fila «Menú por áreas, versión 4»). Estructura «B: por módulo»
- * (12/11/2026): Ventas, Catálogo, Compras y Cuenta; maqueta `10-ux-ui/prototipos-gastronomia/menu-por-areas.html` (versión 5).
+ * EL MENÚ POR ÁREAS: una sola tabla declarativa (área → grupo → pantalla), una fila por pantalla. Es la ÚNICA fuente de qué hay en el menú, en qué área y grupo, qué módulo y
+ * qué acción exige: mover una pantalla de grupo o de área es cambiar UNA fila, y sumar un rubro es sumar un área y sus filas (dueño, 12/11/2026: «siempre tiene que estar
+ * presente la escalabilidad o el posible cambio de rumbo al tema de la organización de la pantalla», `decisiones-del-dueno-2026-11.md`, fila «Menú por áreas, versión 4»).
+ * Estructura «B: por módulo» (12/11/2026): Ventas, Catálogo, Compras y Cuenta; maqueta `10-ux-ui/prototipos-gastronomia/menu-por-areas.html` (versión 5).
  *
- * Solo entra una fila con RUTA real y texto aprobado: una pantalla sin construir no se declara (una fila sin ruta daría un 404 a quien
- * tenga el permiso) y un rótulo sin aprobar no se inventa. Las pantallas de la maqueta que todavía no existen se suman con su fila cuando
- * existan. Previene: componentes que fijan áreas o grupos a mano (`test/arquitectura/menu-por-areas.test.ts`).
+ * Solo entra una fila con RUTA real y texto aprobado: una pantalla sin construir no se declara (una fila sin ruta daría un 404 a quien tenga el permiso) y un rótulo sin
+ * aprobar no se inventa. Las pantallas de la maqueta que todavía no existen se suman con su fila cuando existan. Previene: componentes que fijan áreas o grupos a mano
+ * (`test/arquitectura/menu-por-areas.test.ts`).
  */
 
 /** Las áreas, en el orden en que se ofrecen. `Cuenta` es fija: no ocupa lugar entre las áreas de la barra. */
 export const AREAS_DEL_MENU = [
-  // Los nombres de las áreas los aprobó el dueño «por ahora» el 12/11/2026 (`decisiones-del-dueno-2026-11.md`, fila «Menú por áreas,
-  // versión 4»). Íconos: SUPUESTO (DEC-0359), se reutilizan los que ya existen (la maqueta deja los íconos por definir); revertirlo es cambiar una fila.
+  // Los nombres de las áreas los aprobó el dueño «por ahora» el 12/11/2026 (`decisiones-del-dueno-2026-11.md`, fila «Menú por áreas, versión 4»). Íconos: SUPUESTO (DEC-0359), se reutilizan los que ya existen (la maqueta deja los íconos por definir); revertirlo es cambiar una fila.
   { clave: "ventas", etiqueta: "navegacion.area.ventas", icono: "comprobantes", fija: false },
   { clave: "catalogo", etiqueta: "navegacion.area.catalogo", icono: "secciones", fija: false },
-  // Compras: «Compras» como área lo aprobó el dueño (DDD fila 110) y se reusa su texto, `compras.compra.compras` (`pantallas-de-compras-inventario.md` §5). Ícono: SUPUESTO (DEC-0359), el de
-  // «empresa», que ya existe; revertirlo es cambiar esta fila. Es el tercer y último lugar de la barra (`MAXIMO_DE_DESTINOS_DE_MODULOS`).
+  // Compras: «Compras» como área lo aprobó el dueño (DDD fila 110) y se reusa su texto, `compras.compra.compras` (`pantallas-de-compras-inventario.md` §5). Ícono: SUPUESTO (DEC-0359), el de «empresa», que ya existe; revertirlo es cambiar esta fila. Es el tercer y último lugar de la barra (`MAXIMO_DE_DESTINOS_DE_MODULOS`).
   { clave: "compras", etiqueta: "compras.compra.compras", icono: "empresa", fija: false },
   { clave: "cuenta", etiqueta: "navegacion.cuenta", icono: "cuenta", fija: true },
 ] as const satisfies readonly Readonly<{
@@ -51,10 +49,7 @@ export const AREAS_DEL_MENU = [
 }>[];
 export type ClaveDeArea = (typeof AREAS_DEL_MENU)[number]["clave"];
 
-/**
- * Los grupos. Un grupo con `etiqueta: null` se muestra sin encabezado (maqueta v5: «un grupo con una sola pantalla que se llama igual se
- * muestra como una fila, sin encabezado repetido»).
- */
+/** Los grupos. Un grupo con `etiqueta: null` se muestra sin encabezado (maqueta v5: una sola pantalla que se llama igual se muestra como una fila). */
 export const GRUPOS_DEL_MENU = [
   { clave: "mostrador", etiqueta: "navegacion.grupo.mostrador" },
   { clave: "comprobantes", etiqueta: null },
@@ -104,9 +99,9 @@ export type FilaDeAccion = BaseDeFila &
 export type FilaDelMenu = FilaDePantalla | FilaDeAccion;
 
 /**
- * LA TABLA. El orden de las filas es el orden de aparición. «Medios de pago» nace declarado y cerrado: su módulo (`caja`) está «en
- * desarrollo» y no da permisos a nadie. Su rótulo es el título aprobado de la pantalla, «Medios de pago» (`caja.medios.titulo`); la
- * maqueta dice «Medios de pago y cajas», que no tiene clave: va a preguntas pendientes.
+ * LA TABLA. El orden de las filas es el orden de aparición. «Medios de pago» nace declarado y cerrado: su módulo (`caja`) está «en desarrollo» y no da permisos a nadie. Su
+ * rótulo es el título aprobado de la pantalla, «Medios de pago» (`caja.medios.titulo`); la maqueta dice «Medios de pago y cajas», que no tiene clave: va a preguntas
+ * pendientes.
  */
 export const FILAS_DEL_MENU = [
   {
@@ -145,8 +140,7 @@ export const FILAS_DEL_MENU = [
     etiqueta: "fiscal.pantalla.listado_titulo",
     departamento: null,
   },
-  // «Caja» (maqueta `menu-por-areas.html`: grupo «Caja» con «Caja» y «Cierre del día»; esta segunda no existe todavía y no se declara). Un grupo con una sola pantalla que se llama igual se
-  // muestra sin encabezado (`etiqueta: null`). Nace cerrada: el módulo `caja` está «en desarrollo» y no da permisos a nadie hasta que el dueño lo pase a «disponible».
+  // «Caja» (maqueta `menu-por-areas.html`: grupo «Caja» con «Caja» y «Cierre del día»). El grupo se muestra sin encabezado (`etiqueta: null`). Nace cerrada: cada fila se ofrece solo a quien tiene la acción de su módulo.
   {
     tipo: "pantalla",
     clave: "caja",
@@ -161,6 +155,18 @@ export const FILAS_DEL_MENU = [
   },
   {
     tipo: "pantalla",
+    clave: "cierre-del-dia",
+    area: "ventas",
+    grupo: "caja",
+    modulo: "cierre",
+    accion: "jornadas.ver",
+    perilla: null,
+    href: RUTA_DEL_CIERRE,
+    etiqueta: "cierre.titulo",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
     clave: "productos",
     area: "catalogo",
     grupo: "productos",
@@ -171,8 +177,7 @@ export const FILAS_DEL_MENU = [
     etiqueta: "catalogo.lista.titulo",
     departamento: null,
   },
-  // «Secciones» (A8; dueño, 13/11/2026, `decisiones-del-dueno-2026-11.md` línea 110): en Catálogo, grupo «Carta». Módulo `catalogo` y acción `productos.ver`, las de su consulta (S7 de la ficha:
-  // la celda de la maqueta del menú dice `vidriera` y `vidrieras.ver`, pero el servidor resuelve estas).
+  // «Secciones» (A8; dueño, 13/11/2026, `decisiones-del-dueno-2026-11.md` línea 110): en Catálogo, grupo «Carta». Módulo `catalogo` y acción `productos.ver`, las de su consulta (S7 de la ficha: la celda de la maqueta del menú dice `vidriera` y `vidrieras.ver`, pero el servidor resuelve estas).
   {
     tipo: "pantalla",
     clave: "secciones",
@@ -301,12 +306,11 @@ export type AreaDelMenu<C extends string = ClaveDeFila> = Readonly<{
 }>;
 
 /**
- * Todo nace cerrado: una pantalla se muestra solo si su módulo está `disponible` en el catálogo (uno «en desarrollo» no da permisos a
- * nadie), la empresa lo tiene activo o en solo lectura y la persona tiene la acción según `permisosDelActor`. SUPUESTO (DEC-0059): en
- * solo lectura SÍ se muestra (las pantallas del menú solo consultan; el guard rechaza lo que escribe). Sin permisos leídos (`null`) no se
- * muestra nada. Las acciones («Cerrar sesión») aparecen siempre que se leyeron los permisos. Con un departamento declarado en la fila,
- * la fila se muestra solo si ese es el elegido; sin departamento elegido no se asume «todos». Un grupo aparece solo si le queda un ítem y
- * un área solo si le queda un grupo. Ocultar no es autorizar: cada pantalla vuelve a pasar por el guard.
+ * Todo nace cerrado: una pantalla se muestra solo si su módulo está `disponible` en el catálogo (uno «en desarrollo» no da permisos a nadie), la empresa lo tiene activo o en
+ * solo lectura y la persona tiene la acción según `permisosDelActor`. SUPUESTO (DEC-0059): en solo lectura SÍ se muestra (las pantallas del menú solo consultan; el guard
+ * rechaza lo que escribe). Sin permisos leídos (`null`) no se muestra nada. Las acciones («Cerrar sesión») aparecen siempre que se leyeron los permisos. Con un departamento
+ * declarado en la fila, la fila se muestra solo si ese es el elegido; sin departamento elegido no se asume «todos». Un grupo aparece solo si le queda un ítem y un área solo
+ * si le queda un grupo. Ocultar no es autorizar: cada pantalla vuelve a pasar por el guard.
  */
 export function armarElMenu<F extends FilaDelMenu>(
   filas: readonly F[],
@@ -341,10 +345,9 @@ export function armarElMenu<F extends FilaDelMenu>(
 }
 
 /**
- * Los problemas de una tabla (vacío = bien). Lo usa `test/arquitectura/menu-por-areas.test.ts` sobre la tabla real y sobre violaciones
- * inyectadas. Toda fila tiene área y grupo declarados, clave única, módulo y acción reales del catálogo (la acción es del módulo
- * declarado), ruta propia que empieza con `/` y no se repite, y solo Ventas puede llevar departamento. Un área o grupo declarado sin filas
- * es una reserva válida: no aparece (todo nace cerrado).
+ * Los problemas de una tabla (vacío = bien). Lo usa `test/arquitectura/menu-por-areas.test.ts` sobre la tabla real y sobre violaciones inyectadas. Toda fila tiene área y
+ * grupo declarados, clave única, módulo y acción reales del catálogo (la acción es del módulo declarado), ruta propia que empieza con `/` y no se repite, y solo Ventas puede
+ * llevar departamento. Un área o grupo declarado sin filas es una reserva válida: no aparece (todo nace cerrado).
  */
 export function problemasDelMenu(
   filas: readonly FilaDelMenu[],
