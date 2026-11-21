@@ -54,12 +54,14 @@ const dePorDefecto = (
 
 /** Un rojo claro para «Agotado» que llega a 7:1 sobre el fondo oscuro Y sobre su superficie (el matiz de la superficie la aclara): se sube la luminosidad de a un punto hasta llegar (con el blanco puro termina siempre). */
 function agotadoDeNoche(fondo: string, superficie: string): string {
-  for (let luminosidad = 78; luminosidad <= 100; luminosidad++) {
+  const llega = (luminosidad: number): boolean => {
     const candidato = deHsl(0, 90, luminosidad);
-    if (razonDeContraste(candidato, fondo) >= 7 && razonDeContraste(candidato, superficie) >= 7)
-      return candidato;
-  }
-  return BLANCO;
+    return razonDeContraste(candidato, fondo) >= 7 && razonDeContraste(candidato, superficie) >= 7;
+  };
+  let luminosidad = 78;
+  // Stryker disable next-line EqualityOperator: en 100 el candidato es el blanco puro, que ya llega a 7:1 sobre cualquier fondo de la noche; `<` y `<=` dan el mismo color.
+  while (luminosidad < 100 && !llega(luminosidad)) luminosidad++;
+  return deHsl(0, 90, luminosidad);
 }
 
 /** El matiz del color elegido ya ajustado, y el fondo oscuro, la superficie y los textos claros que salen de él (NOCHE). */
