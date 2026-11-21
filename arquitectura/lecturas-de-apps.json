@@ -66,5 +66,9 @@
     "apps/web/app/s/app/acciones-de-carta-en-linea.ts",
     "apps/web/servidor/carta-en-linea.ts",
     "apps/web/ui/plantillas/carta/*"
+  ],
+  "src/capacidades/experiencia/vidriera/color-de-la-carta.test.ts": [
+    "apps/web/ui/plantillas/carta/*",
+    "apps/web/ui/plantillas/vidriera/*"
   ]
 }

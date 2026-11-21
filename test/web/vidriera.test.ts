@@ -77,6 +77,19 @@ const RAIZ_DE_LA_VIDRIERA = "../../apps/web/app/s/carta/";
 const cargar = <P>(ruta: string): Promise<ModuloDePagina<P>> =>
   import(/* @vite-ignore */ `${RAIZ_DE_LA_VIDRIERA}${ruta}`) as Promise<ModuloDePagina<P>>;
 
+/**
+ * La página devuelve un fragmento: el estilo del tema (si la carta eligió identidad) y la plantilla. De la plantilla salen las `props` que estas pruebas miran (la carta que se ve).
+ */
+const laPlantilla = (pagina: ReactElement | null): { vista: { nombre: string } } => {
+  const hijos = (pagina?.props as { children?: unknown } | undefined)?.children;
+  const candidatos: readonly unknown[] = Array.isArray(hijos) ? (hijos as unknown[]) : [pagina];
+  for (const candidato of candidatos) {
+    const props = (candidato as { props?: { vista?: { nombre: string } } } | null)?.props;
+    if (props?.vista !== undefined) return props as { vista: { nombre: string } };
+  }
+  throw new Error("la página no trae la plantilla de la carta");
+};
+
 async function paginaDeLaVidriera(codigo: string) {
   const { default: Pagina } = await cargar<{ codigo: string }>("[codigo]/page");
   return conNoEncontrada(
@@ -122,7 +135,7 @@ describe("la carta es de la marca del dominio (S2)", () => {
   it("en el dominio de la marca A se ve su carta; la de B, con su código, no", async () => {
     comoPedido(HOST_VIDRIERA_A);
     const propia = await paginaDeLaVidriera(CAFETERIA);
-    expect((propia?.props as { vista: { nombre: string } }).vista.nombre).toBe("La Esquina Café");
+    expect(laPlantilla(propia).vista.nombre).toBe("La Esquina Café");
     expect(await paginaDeLaVidriera(PANADERIA)).toBeNull();
     expect(await metadatosDeLaVidriera(PANADERIA)).toMatchObject({
       robots: { index: false, follow: false },
@@ -135,9 +148,7 @@ describe("la carta es de la marca del dominio (S2)", () => {
     expect(await paginaDeLaVidriera(CAFETERIA)).toBeNull();
     expect(await metadatosDeLaVidriera(CAFETERIA)).not.toHaveProperty("title");
     const propia = await paginaDeLaVidriera(PANADERIA);
-    expect((propia?.props as { vista: { nombre: string } }).vista.nombre).toBe(
-      "Panadería El Trigal",
-    );
+    expect(laPlantilla(propia).vista.nombre).toBe("Panadería El Trigal");
   });
 
   it("un producto de la carta de A no sale desde el dominio de B, ni su título en los metadatos", async () => {

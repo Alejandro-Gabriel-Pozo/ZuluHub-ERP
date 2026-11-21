@@ -7,7 +7,9 @@ import {
   METADATOS_DE_CARTA_NO_DISPONIBLE,
   metadatosDeLaCarta,
 } from "../../../../../servidor/metadatos-de-carta";
-import { exigirPuerta } from "../../../../../servidor/pedido";
+import { exigirPuerta, nonceDelPedido } from "../../../../../servidor/pedido";
+import { cssDelTemaDeLaCarta } from "../../../../../../../src/capacidades/experiencia/vidriera/tema-de-la-carta";
+import { EstiloDeMarca } from "../../../../../ui/componentes/EstiloDeMarca";
 
 type Props = Readonly<{ params: Promise<{ codigo: string; producto: string }> }>;
 
@@ -35,14 +37,21 @@ export default async function PaginaDelProducto({ params }: Props) {
   const datos = await productoParaLaPantalla(puerta, codigo, producto);
   if (datos === null) notFound();
   const { vista, textos } = datos;
+  const { tema } = vista.identidad;
   return (
-    <ContenedorDeLetra letraBase={vista.letraBase}>
-      <PaginaDeProducto
-        producto={datos.producto}
-        vidriera={vista.nombre}
-        hrefDeLaVidriera={`${vista.hrefDeLaVidriera}#${datos.producto.seccion}`}
-        textos={textos}
+    <>
+      <EstiloDeMarca
+        css={tema === null ? "" : cssDelTemaDeLaCarta(tema)}
+        nonce={await nonceDelPedido()}
       />
-    </ContenedorDeLetra>
+      <ContenedorDeLetra letraBase={vista.letraBase}>
+        <PaginaDeProducto
+          producto={datos.producto}
+          vidriera={vista.nombre}
+          hrefDeLaVidriera={`${vista.hrefDeLaVidriera}#${datos.producto.seccion}`}
+          textos={textos}
+        />
+      </ContenedorDeLetra>
+    </>
   );
 }
