@@ -14,7 +14,7 @@ import type { MotivoDeTextoInvalido } from "../../../primitivas/texto/texto-de-u
 import { esColorDeMarca } from "../../../capacidades/experiencia/tema-css";
 
 /**
- * El portal de la empresa (migración 0078; diseño `carta-identidad-y-portal-datos-diseno.md` §2.3 a §2.5): la hoja que el QR de la empresa abre y desde la que
+ * El portal de la vidriera (migración 0078; diseño `carta-identidad-y-portal-datos-diseno.md` §2.3 a §2.5): la hoja que el QR de la empresa abre y desde la que
  * el comensal elige un restaurante. Dominio PURO: valida y compara; no lee la base ni el reloj. Todo lo opcional vacío es `null` («usa el valor por defecto»).
  */
 

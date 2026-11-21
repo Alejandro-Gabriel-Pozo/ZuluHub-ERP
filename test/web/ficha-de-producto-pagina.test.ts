@@ -16,6 +16,8 @@ const mundo = vi.hoisted(
     permisos: unknown;
     llamadas: { contexto: unknown; id: string }[];
     respuesta: unknown;
+    clasificacion: unknown;
+    clasificaciones: { contexto: unknown; id: string }[];
     visibilidad: unknown;
     control: unknown;
     pedidosDeControl: string[];
@@ -23,6 +25,8 @@ const mundo = vi.hoisted(
     permisos: null,
     llamadas: [],
     respuesta: null,
+    clasificacion: null,
+    clasificaciones: [],
     visibilidad: null,
     control: null,
     pedidosDeControl: [],
@@ -41,6 +45,18 @@ vi.mock("../../apps/web/servidor/ficha-de-producto", () => ({
     return Promise.resolve(mundo.respuesta);
   },
   guardarLaFicha: () => Promise.resolve({ error: null }),
+}));
+vi.mock("../../apps/web/servidor/clasificacion", () => ({
+  cargarLaClasificacionDelProducto: (contexto: unknown, id: string) => {
+    mundo.clasificaciones.push({ contexto, id });
+    return Promise.resolve(mundo.clasificacion);
+  },
+  clasificarElProducto: () => Promise.resolve({ ok: true, dato: {} }),
+  crearElNodoDeClasificacion: () => Promise.resolve({ ok: true, dato: {} }),
+  renombrarElNodoDeClasificacion: () => Promise.resolve({ ok: true, dato: {} }),
+  moverElNodoDeClasificacion: () => Promise.resolve({ ok: true, dato: {} }),
+  desactivarElNodoDeClasificacion: () => Promise.resolve({ ok: true, dato: {} }),
+  reactivarElNodoDeClasificacion: () => Promise.resolve({ ok: true, dato: {} }),
 }));
 vi.mock("../../apps/web/servidor/control-de-stock", () => ({
   cargarElControlDeStock: (_contexto: unknown, id: string) => {
@@ -97,6 +113,20 @@ const FICHA = {
   alicuotas: ["21", "10.5", "27", "5", "2.5", "0"],
   secciones: [{ id: SECCION, nombre: "Minutas" }],
 };
+const CLASIFICACION = {
+  productoId: ID,
+  vigente: {
+    desde: "2026-11-02",
+    camino: [
+      { id: "d1", nombre: "Restaurante", activo: true },
+      { id: "c1", nombre: "Comidas", activo: true },
+    ],
+  },
+  nodos: [
+    { id: "d1", padreId: null, nombre: "Restaurante" },
+    { id: "c1", padreId: "d1", nombre: "Comidas" },
+  ],
+};
 const responde = (r: Respuesta<unknown>) => {
   mundo.respuesta = r;
 };
@@ -110,6 +140,8 @@ const puede = (acciones: string[]) => {
 describe("la página de la ficha de datos de un producto", () => {
   beforeEach(() => {
     mundo.llamadas = [];
+    mundo.clasificaciones = [];
+    mundo.clasificacion = { ok: true, dato: CLASIFICACION };
     mundo.pedidosDeControl = [];
     mundo.control = { ok: true, dato: { controlado: false } };
     responde({ ok: true, dato: FICHA });
@@ -208,7 +240,7 @@ describe("la página de la ficha de datos de un producto", () => {
         .replace(/\s+/g, " ")
         .trim(),
     );
-    expect(rotulos.filter((r) => r !== "" && !/^(Inicio|Cuenta)/.test(r)).slice(-9)).toEqual([
+    expect(rotulos.filter((r) => r !== "" && !/^(Inicio|Cuenta)/.test(r)).slice(-13)).toEqual([
       "¿Qué es?",
       "Nombre",
       "Nombre de cocina",
@@ -218,7 +250,66 @@ describe("la página de la ficha de datos de un producto", () => {
       "Alícuota de IVA",
       "Sección de la carta",
       "Guardar",
+      // La clasificación comercial (A14) va debajo de los datos: una fila por nivel, «Vigente desde» y «Cambiar».
+      "Departamento",
+      "Categoría",
+      "Vigente desde",
+      "Cambiar",
     ]);
+  });
+
+  it("la clasificación vigente se ve con su camino y «Vigente desde» en DD/MM/AAAA, y se pide con el contexto del servidor y el id de la dirección", async () => {
+    const t = await texto();
+    expect(t).toContain("Departamento Restaurante");
+    expect(t).toContain("Categoría Comidas");
+    expect(t).toContain("Vigente desde 02/11/2026");
+    expect(mundo.clasificaciones).toEqual([{ contexto: { id: "contexto" }, id: ID }]);
+  });
+
+  it("sin clasificar se ve «Departamento: Sin elegir», sin «Vigente desde»", async () => {
+    mundo.clasificacion = { ok: true, dato: { ...CLASIFICACION, vigente: null } };
+    const t = await texto();
+    expect(t).toContain("Departamento Sin elegir");
+    expect(t).not.toContain("Vigente desde");
+  });
+
+  it("un nodo desactivado que el producto conserva se ve con «Desactivado»", async () => {
+    mundo.clasificacion = {
+      ok: true,
+      dato: {
+        ...CLASIFICACION,
+        vigente: {
+          desde: "2026-11-02",
+          camino: [{ id: "d1", nombre: "Restaurante", activo: false }],
+        },
+      },
+    };
+    expect(await texto()).toContain("Desactivado");
+  });
+
+  const cambiar = (marcado: string) =>
+    /<button\b([^>]*)>(?:<[^>]+>)*Cambiar</.exec(marcado)?.[1] ?? "";
+
+  it("«Cambiar» sale activo con productos.editar y apagado sin él, sin texto nuevo", async () => {
+    expect(cambiar(await html())).not.toContain("disabled");
+    puede(["productos.ver"]);
+    const sinPermiso = await html();
+    expect(cambiar(sinPermiso)).toContain("disabled");
+    expect(sinPermiso).not.toContain("no está permitida");
+  });
+
+  it("sin departamentos cargados «Cambiar» sale apagado y el producto queda «Sin elegir»", async () => {
+    mundo.clasificacion = { ok: true, dato: { ...CLASIFICACION, vigente: null, nodos: [] } };
+    const marcado = await html();
+    expect(cambiar(marcado)).toContain("disabled");
+    expect(await texto()).toContain("Sin elegir");
+  });
+
+  it("si la clasificación no se pudo leer, sale su error (con su motivo) y la ficha sigue a la vista", async () => {
+    mundo.clasificacion = { ok: false, error: errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA") };
+    const t = await texto();
+    expect(t).toContain("Esta acción no está permitida");
+    expect(t).toContain("Milanesa");
   });
 
   it("pide la ficha con el contexto del servidor y el id de la dirección, y nada más", async () => {

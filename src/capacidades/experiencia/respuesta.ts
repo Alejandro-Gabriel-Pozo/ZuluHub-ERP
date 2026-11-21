@@ -3,12 +3,18 @@ import { precioDeVentaDesdeTexto } from "../../primitivas/dinero/precio-de-venta
 import type { MotivoDeRechazo } from "../permisos/guard";
 import type { ClaveDeTexto } from "../vocabulario/catalogo";
 import { CLAVES_DE_ERRORES_DE_CAJA, type CodigoDeCaja } from "./respuesta-de-caja";
+import { CLAVES_DE_ERRORES_DE_RECETAS, type CodigoDeReceta } from "./respuesta-de-recetas";
 import { CLAVES_DE_ERRORES_DE_STOCK, type CodigoDeStock } from "./respuesta-de-stock";
 import {
   CLAVES_DE_ERRORES_DE_CATALOGO,
   PARAMETROS_DE_CATALOGO,
   type CodigoDeCatalogo,
 } from "./respuesta-de-catalogo";
+import {
+  CLAVES_DE_ERRORES_DE_PRODUCCION,
+  type CodigoDeProduccion,
+} from "./respuesta-de-produccion";
+import { CLAVES_DE_ERRORES_DE_CIERRE, type CodigoDeCierre } from "./respuesta-de-cierre";
 import { CLAVES_DE_ERRORES_DE_CLIENTES, type CodigoDeClientes } from "./respuesta-de-clientes";
 import { CLAVES_DE_ERRORES_DE_COMPRAS, type CodigoDeCompras } from "./respuesta-de-compras";
 import {
@@ -55,11 +61,14 @@ export type CodigoDeNegocio =
   | CodigoFiscal
   | CodigoDeCaja
   | CodigoDeCatalogo
+  | CodigoDeProduccion
+  | CodigoDeCierre
   | CodigoDeCompras
   | CodigoDeClientes
   | CodigoDeSalon
   | CodigoDeVentas
-  | CodigoDeStock;
+  | CodigoDeStock
+  | CodigoDeReceta;
 
 export type CodigoPublico =
   CodigoDeNegocio | MotivoDeRechazo | "SESION_VENCIDA" | "ERROR_INTERNO" | "NO_DISPONIBLE";
@@ -107,6 +116,16 @@ const AVISOS_DE_CATALOGO = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_CATALOGO).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoDeCatalogo, DefinicionDeCodigo>>;
 
+/** Los códigos de las pantallas de producción (`respuesta-de-produccion.ts`): cada uno es un aviso con su texto ya aprobado. */
+const AVISOS_DE_PRODUCCION = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_PRODUCCION).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeProduccion, DefinicionDeCodigo>>;
+
+/** Los códigos de la pantalla del cierre del día (`respuesta-de-cierre.ts`): cada uno es un aviso con su texto (`cierre.error.*` o el genérico de caja). */
+const AVISOS_DE_CIERRE = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_CIERRE).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeCierre, DefinicionDeCodigo>>;
+
 /** Los códigos de la pantalla «Mesas» (`respuesta-de-salon.ts`): cada uno es un aviso con su texto del salón. */
 const AVISOS_DE_SALON = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_SALON).map(([codigo, clave]) => [codigo, aviso(clave)]),
@@ -121,6 +140,10 @@ const AVISOS_DE_VENTAS = Object.fromEntries(
 const AVISOS_DE_STOCK = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_STOCK).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoDeStock, DefinicionDeCodigo>>;
+/** Los códigos de la pantalla de Recetas (`respuesta-de-recetas.ts`): cada uno es un aviso con su texto `receta.error.*`. */
+const AVISOS_DE_RECETAS = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_RECETAS).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeReceta, DefinicionDeCodigo>>;
 
 /** La tabla de los códigos públicos: código estable → clave del texto, presentación y estado HTTP. */
 export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo>> = Object.freeze({
@@ -139,11 +162,14 @@ export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo
   ...AVISOS_FISCALES,
   ...AVISOS_DE_CAJA,
   ...AVISOS_DE_CATALOGO,
+  ...AVISOS_DE_PRODUCCION,
+  ...AVISOS_DE_CIERRE,
   ...AVISOS_DE_COMPRAS,
   ...AVISOS_DE_CLIENTES,
   ...AVISOS_DE_SALON,
   ...AVISOS_DE_VENTAS,
   ...AVISOS_DE_STOCK,
+  ...AVISOS_DE_RECETAS,
   MODULO_EN_DESARROLLO: motivo("motivo.modulo_en_desarrollo"),
   MODULO_NO_ACTIVO: motivo("motivo.modulo_no_activo"),
   MODULO_EN_SOLO_LECTURA: motivo("motivo.modulo_en_solo_lectura"),

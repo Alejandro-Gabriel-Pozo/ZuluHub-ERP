@@ -5,12 +5,12 @@ import {
   FILAS_DEL_MENU,
   GRUPOS_DEL_MENU,
   armarElMenu,
-  problemasDelMenu,
   type ClaveDeFila,
   type FilaDeAccion,
   type FilaDelMenu,
   type FilaDePantalla,
 } from "../../apps/web/ui/navegacion/menu";
+import { problemasDelMenu } from "../../apps/web/ui/navegacion/problemas-del-menu";
 
 const fila = (clave: FilaDePantalla["clave"]): FilaDePantalla => {
   const f = FILAS_DEL_MENU.find((x) => x.clave === clave);
@@ -203,6 +203,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
       ],
       ["caja", "ventas", "caja", "caja", "cajas.ver", "/caja", "caja.pantalla.titulo"],
       [
+        "cierre-del-dia",
+        "ventas",
+        "caja",
+        "cierre",
+        "jornadas.ver",
+        "/caja/cierre-del-dia",
+        "cierre.titulo",
+      ],
+      [
         "productos",
         "catalogo",
         "productos",
@@ -210,6 +219,16 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "productos.ver",
         "/catalogo/productos",
         "catalogo.lista.titulo",
+      ],
+      // Clasificación comercial (A14): solo quien edita productos (gerente y administrador); el operador no ve la entrada.
+      [
+        "clasificacion",
+        "catalogo",
+        "productos",
+        "catalogo",
+        "productos.editar",
+        "/catalogo/clasificacion",
+        "catalogo.clasificacion.titulo",
       ],
       [
         "secciones",
@@ -238,6 +257,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "stock.ver",
         "/stock/depositos",
         "stock.pantalla.stock",
+      ],
+      [
+        "produccion",
+        "catalogo",
+        "produccion",
+        "produccion",
+        "transformaciones.ver",
+        "/catalogo/produccion",
+        "produccion.pantalla.produccion",
       ],
       [
         "configuracion-fiscal",
@@ -435,11 +463,14 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "tickets-del-dia",
     "comprobantes",
     "caja",
+    "cierre-del-dia",
     "productos",
+    "clasificacion",
     "secciones",
     "mesas",
     "impresoras",
     "stock",
+    "produccion",
     "configuracion-fiscal",
     "medios-de-pago",
     "contacto",
@@ -467,7 +498,13 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
             ],
           ],
         ],
-        ["caja", [["pantalla", "caja", "/caja", "caja.pantalla.titulo"]]],
+        [
+          "caja",
+          [
+            ["pantalla", "caja", "/caja", "caja.pantalla.titulo"],
+            ["pantalla", "cierre-del-dia", "/caja/cierre-del-dia", "cierre.titulo"],
+          ],
+        ],
         [
           "salon",
           [
@@ -480,7 +517,18 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     [
       "catalogo",
       [
-        ["productos", [["pantalla", "productos", "/catalogo/productos", "catalogo.lista.titulo"]]],
+        [
+          "productos",
+          [
+            ["pantalla", "productos", "/catalogo/productos", "catalogo.lista.titulo"],
+            [
+              "pantalla",
+              "clasificacion",
+              "/catalogo/clasificacion",
+              "catalogo.clasificacion.titulo",
+            ],
+          ],
+        ],
         ["carta", [["pantalla", "secciones", "/catalogo/secciones", "catalogo.seccion.titulo"]]],
         ["stock", [["pantalla", "stock", "/stock/depositos", "stock.pantalla.stock"]]],
       ],

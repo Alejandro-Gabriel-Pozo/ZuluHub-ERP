@@ -1,5 +1,6 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import { CODIGOS_PUBLICOS, errorDeCodigo } from "../capacidades/experiencia/respuesta";
+import { codigoDeJornada } from "../capacidades/experiencia/respuesta-de-cierre";
 import type { CodigoDeVentas } from "../capacidades/experiencia/respuesta-de-ventas";
 import { err, type Resultado } from "../primitivas/resultado/resultado";
 import { aRespuesta, aRespuestaDeExcepcion, type DependenciasDeRespuesta } from "./a-respuesta";
@@ -10,7 +11,7 @@ import type { ErrorDeEntrada } from "./entradas-de-facturacion";
  * texto aprobado (los motivos del guard y los códigos públicos, `EMPRESA_NO_OPERA`) y los fallos de la base (`tipo`: salen como inesperados, con referencia; nunca disfrazados de «no
  * permitido»). TODO lo demás que el negocio rechaza (producto oculto o inexistente, opciones incompletas, cantidad que no es múltiplo del paso, precio sin cargar, sucursal ajena,
  * un id mal formado…) sale como el genérico «Esta acción no está permitida» (dueño, 30/10/2026, «Interfaz sobria»): ningún texto específico del mostrador está aprobado todavía
- * (`textos-mostrador-pendientes.md` §2, P5 y P9). Un error nuevo del dominio cae solo en el genérico: cierra, no se filtra crudo. Previene: que un error de ventas salga crudo a la
+ * (`textos-mostrador-pendientes.md` §2, P5 y P9), salvo el día en cierre o cerrado (`JORNADA_EN_AUDITORIA`, `JORNADA_CERRADA`), que tienen sus dos avisos aprobados (CD-4). Un error nuevo del dominio cae solo en el genérico: cierra, no se filtra crudo. Previene: que un error de ventas salga crudo a la
  * pantalla o que se invente un texto por cada regla. Chequeo: `errores-de-ventas.test.ts`.
  */
 
@@ -24,6 +25,9 @@ const esObjeto = (x: unknown): x is Readonly<Record<string, unknown>> =>
 
 /** El error de una consulta o caso de uso tal como lo entiende `aRespuesta`. */
 export function traducirErrorDeVentas(error: unknown): unknown {
+  // Con el día en cierre o cerrado: los dos avisos aprobados (CD-4), no el genérico.
+  const delDia = codigoDeJornada(error);
+  if (delDia !== null) return { codigo: delDia };
   if (typeof error === "string") {
     return Object.hasOwn(CODIGOS_PUBLICOS, error) || error === DEFECTO_DE_LA_BASE
       ? error

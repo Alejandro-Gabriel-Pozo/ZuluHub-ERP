@@ -209,6 +209,19 @@ describe("cabecerasDe", () => {
     expect(c["Cache-Control"]).toBe("private, no-store");
   });
 
+  it("la excepción del logo solo quita Cache-Control (el resto de las cabeceras de seguridad siguen) y solo con `cacheDelLogo` en verdadero", () => {
+    for (const s of SUPERFICIES) {
+      const con = cabecerasDe(s, NONCE, { produccion: true, cacheDelLogo: true });
+      expect("Cache-Control" in con).toBe(false);
+      const resto: Record<string, string> = { ...cabecerasDe(s, NONCE, { produccion: true }) };
+      delete resto["Cache-Control"];
+      expect(con).toEqual(resto);
+      expect(
+        cabecerasDe(s, NONCE, { produccion: true, cacheDelLogo: false })["Cache-Control"],
+      ).toBe("private, no-store");
+    }
+  });
+
   it("nunca manda X-Powered-By ni cookies", () => {
     for (const s of SUPERFICIES) {
       const nombres = Object.keys(cabecerasDe(s, NONCE, { produccion: true })).map((n) =>

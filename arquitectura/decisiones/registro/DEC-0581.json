@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0581",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Una merma con cero a la izquierda («05») pasa de lanzar una excepción a rechazarse como PERDIDA_INVALIDA: la forma de la merma es el decimal canónico.",
+  "que_cambia": "Nada visible para quien escribe bien; quien manda «05» recibe el genérico en vez de un fallo inesperado.",
+  "donde": "src/primitivas/cantidad/merma.ts",
+  "motivo": "Defecto hallado al unificar la regla de la merma: la forma vieja aceptaba «05» y la primitiva de porcentaje lo rechazaba con una excepción."
+}

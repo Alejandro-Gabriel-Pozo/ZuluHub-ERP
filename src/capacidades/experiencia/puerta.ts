@@ -149,6 +149,13 @@ function esRutaInterna(ruta: string, decodificada: string): boolean {
   return candidatas.some((r) => r === "/s" || r.startsWith("/s/"));
 }
 
+/**
+ * ¿Es la ruta del logo de la carta (`/<código>/logo/<versión>.webp`)? Lista de permitidos y exacta: código de letras, dígitos, `_` y `-`; versión solo de dígitos; nada más
+ * (ni barra final, ni mayúsculas en `logo`, ni otra extensión, ni escapes). Es lo único que la puerta deja decidir su caché a la propia ruta.
+ */
+export const esRutaDelLogoDeLaCarta = (ruta: string): boolean =>
+  /^\/[A-Za-z0-9_-]{1,64}\/logo\/[0-9]{1,12}\.webp$/.test(ruta);
+
 const esRutaDeApi = (ruta: string): boolean => ruta === "/api" || ruta.startsWith("/api/");
 
 export function decidirPuerta(entrada: EntradaDePuerta): DecisionDePuerta {
@@ -159,6 +166,7 @@ export function decidirPuerta(entrada: EntradaDePuerta): DecisionDePuerta {
     rutaInterna: string | null,
     estado: DecisionDePuerta["estado"],
     superficie: SuperficieDeRespuesta,
+    cacheDelLogo = false,
   ): DecisionDePuerta => {
     const encabezadosDePedido = sinEncabezadosInternos(encabezados);
     // El nonce llega a Next por la propia CSP (así marca sus scripts) y a nuestro servidor por el interno.
@@ -173,6 +181,7 @@ export function decidirPuerta(entrada: EntradaDePuerta): DecisionDePuerta {
       encabezadosDeRespuesta: cabecerasDe(superficie, nonce, {
         produccion,
         duenio: puerta?.duenio.tipo ?? null,
+        cacheDelLogo,
       }),
     };
   };
@@ -192,5 +201,12 @@ export function decidirPuerta(entrada: EntradaDePuerta): DecisionDePuerta {
     return puerta.superficie === "APP" ? armar("SEGUIR", null, null, "APP") : aLaNeutra();
   }
   const prefijo = RUTA_INTERNA_DE[puerta.superficie];
-  return armar("REESCRIBIR", ruta === "/" ? prefijo : `${prefijo}${ruta}`, null, puerta.superficie);
+  const cacheDelLogo = puerta.superficie === "CARTA" && esRutaDelLogoDeLaCarta(ruta);
+  return armar(
+    "REESCRIBIR",
+    ruta === "/" ? prefijo : `${prefijo}${ruta}`,
+    null,
+    puerta.superficie,
+    cacheDelLogo,
+  );
 }

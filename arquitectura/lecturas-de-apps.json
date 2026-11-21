@@ -60,5 +60,15 @@
     "apps/plataforma/app/politica-de-plan/**",
     "apps/plataforma/pantallas/*",
     "apps/plataforma/logica/*"
+  ],
+  "test/web/ficha-de-carta-en-linea.test.ts": [
+    "apps/web/app/s/app/(operacion)/catalogo/carta-en-linea/**",
+    "apps/web/app/s/app/acciones-de-carta-en-linea.ts",
+    "apps/web/servidor/carta-en-linea.ts",
+    "apps/web/ui/plantillas/carta/*"
+  ],
+  "src/capacidades/experiencia/vidriera/color-de-la-carta.test.ts": [
+    "apps/web/ui/plantillas/carta/*",
+    "apps/web/ui/plantillas/vidriera/*"
   ]
 }

@@ -75,7 +75,7 @@ export interface DestinoValidado {
   readonly ruta: string;
   /** Siempre `https://` + host + ruta. */
   readonly url: string;
-  readonly variante: VarianteDeFoto;
+  readonly variante: VarianteDeFoto | "LOGO";
 }
 
 const CLOUDINARY = PROVEEDORES_DE_IMAGEN.CLOUDINARY;
@@ -154,7 +154,8 @@ function finDeAutoridad(texto: string): number {
   return Math.min(texto.length, ...posiciones);
 }
 
-function direccionCanonica(p: PartesDeDireccion): string {
+/** La dirección canónica de unas partes (la misma que arma `leerDireccionPegada`): lo que la pantalla de la carta muestra como logo guardado. */
+export function direccionCanonica(p: PartesDeDireccion): string {
   return `https://${CLOUDINARY.host}/${p.cuenta}/${CLOUDINARY.recurso}/${CLOUDINARY.entrega}/v${p.version}/${p.idPublico}.${p.extension}`;
 }
 
@@ -244,6 +245,22 @@ export function sonPartesValidas(partes: PartesDeDireccion): boolean {
   );
 }
 
+function destinoDe(
+  partes: PartesDeDireccion,
+  transformacion: string,
+  variante: DestinoValidado["variante"],
+): DestinoValidado {
+  const ruta = `/${partes.cuenta}/${CLOUDINARY.recurso}/${CLOUDINARY.entrega}/${transformacion}/v${partes.version}/${partes.idPublico}.${partes.extension}`;
+  const destino = {
+    proveedor: partes.proveedor,
+    host: CLOUDINARY.host,
+    ruta,
+    url: `https://${CLOUDINARY.host}${ruta}`,
+    variante,
+  };
+  return destino as DestinoValidado;
+}
+
 /**
  * Arma el destino a pedir (S1) desde partes y la plantilla del proveedor, SIN seguir redirecciones ni
  * resolver nombres. Vuelve a validar las partes (también cuando salen de la base: defensa en
@@ -257,13 +274,15 @@ export function armarDestino(
   if (!sonPartesValidas(partes)) return err("PARTES_INVALIDAS");
   if (!VARIANTES_DE_FOTO.includes(variante)) return err("VARIANTE_INVALIDA");
   if (!cuentasDeclaradas.includes(partes.cuenta)) return err("CUENTA_NO_DECLARADA");
-  const ruta = `/${partes.cuenta}/${CLOUDINARY.recurso}/${CLOUDINARY.entrega}/${CLOUDINARY.transformacion(variante)}/v${partes.version}/${partes.idPublico}.${partes.extension}`;
-  const destino = {
-    proveedor: partes.proveedor,
-    host: CLOUDINARY.host,
-    ruta,
-    url: `https://${CLOUDINARY.host}${ruta}`,
-    variante,
-  };
-  return ok(destino as DestinoValidado);
+  return ok(destinoDe(partes, CLOUDINARY.transformacion(variante), variante));
+}
+
+/** Lo mismo para el logo de la carta (§5.7.5): una sola variante, con la transformación de logo del proveedor. */
+export function armarDestinoDeLogo(
+  partes: PartesDeDireccion,
+  cuentasDeclaradas: readonly string[],
+): Resultado<DestinoValidado, ErrorDeDestino> {
+  if (!sonPartesValidas(partes)) return err("PARTES_INVALIDAS");
+  if (!cuentasDeclaradas.includes(partes.cuenta)) return err("CUENTA_NO_DECLARADA");
+  return ok(destinoDe(partes, CLOUDINARY.transformacionDeLogo, "LOGO"));
 }

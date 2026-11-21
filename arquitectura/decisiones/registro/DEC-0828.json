@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0828",
+  "fecha": "2026-11-20",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Guardar o cambiar el estado de la carta conserva su identidad vigente (cara, color, logo): ni un pedido sin ella ni poner o sacar de línea la borran.",
+  "que_cambia": "Antes, poner la carta en línea borraba la cara, el color y el logo. La consulta de la carta ahora devuelve esa identidad. Revertir: sacar las líneas de identidad de carta-en-linea-web.ts; la pantalla pisaría lo elegido.",
+  "donde": "src/composicion/carta-en-linea-web.ts; src/modulos/catalogo/consultas/consultas-de-carta.ts; src/composicion/entradas-de-carta-en-linea.ts; decisiones-del-dueno-2026-11.md, fila del 21/11/2026 («Si a todos mis pendientes menos 5 y 2»)"
+}

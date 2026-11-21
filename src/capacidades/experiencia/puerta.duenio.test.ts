@@ -49,12 +49,14 @@ beforeEach(() => {
 describe("decidirPuerta: el dueño del host llega a las cabeceras", () => {
   it.each(["MARCA", "EMPRESA"] as const)("host de %s: se pasa ese tipo y la producción", (tipo) => {
     decidir(resuelta(tipo), true);
-    expect(llamadas.opciones).toEqual([{ produccion: true, duenio: tipo }]);
+    expect(llamadas.opciones).toEqual([{ produccion: true, duenio: tipo, cacheDelLogo: false }]);
   });
 
   it("la producción se pasa tal cual (no se fija)", () => {
     decidir(resuelta("MARCA"), false);
-    expect(llamadas.opciones).toEqual([{ produccion: false, duenio: "MARCA" }]);
+    expect(llamadas.opciones).toEqual([
+      { produccion: false, duenio: "MARCA", cacheDelLogo: false },
+    ]);
   });
 
   it("sin host resuelto: dueño `null` (nunca `undefined`, que no se distingue de «falta»)", () => {

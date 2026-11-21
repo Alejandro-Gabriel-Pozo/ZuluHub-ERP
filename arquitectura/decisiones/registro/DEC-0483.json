@@ -3,8 +3,8 @@
   "fecha": "2026-11-16",
   "quien": "sesión",
   "tipo": "DATOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Largos del portal: línea superior 40, título 60, nombre de tarjeta 80 (los dos primeros son supuesto del orquestador, tomados de la maqueta).",
   "que_cambia": "Cambiar un largo es cambiar una constante y un CHECK de la base.",
-  "donde": "src/primitivas/texto/datos-de-portal.ts; carta-identidad-y-portal-datos-diseno.md §2.3 y §2.4"
+  "donde": "src/primitivas/texto/datos-de-portal.ts; carta-identidad-y-portal-datos-diseno.md §2.3 y §2.4; aprobada por el dueño el 20/11/2026 (DDD, fila «Alojamiento por sucursal; DEC-0481 a DEC-0483 aprobadas»)"
 }

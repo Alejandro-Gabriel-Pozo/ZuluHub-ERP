@@ -191,6 +191,7 @@ export function vidrieraDePrueba(
     mensajeDePortada: null,
     lugar,
     letraBase,
+    identidad: { cara: "DIA", tema: null, inicial: "L", logo: null },
     hrefDeLaVidriera: RUTA,
     secciones,
     totalDeProductos: secciones.reduce((n, s) => n + s.productos.length, 0),

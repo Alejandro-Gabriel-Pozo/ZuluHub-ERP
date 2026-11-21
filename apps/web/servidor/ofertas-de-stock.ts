@@ -12,3 +12,11 @@ import { puedeLaAccion } from "./permisos-de-la-persona";
  */
 export const puedeEnStock = (contexto: ContextoOperativo, accion: ClaveAccion): Promise<boolean> =>
   puedeLaAccion(contexto, accion);
+
+/**
+ * ¿La persona puede guardar recetas (crear una, agregar o quitar ingredientes, nueva versión)? Es la oferta de `composiciones.editar` (gerente y administrador): con el módulo en solo lectura o sin el
+ * rol, no. Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: guardar vuelve a pasar por el guard, con alcance de todas las sucursales. Es solo la ayuda que apaga
+ * «Nueva receta», «Editar», «Agregar ingrediente», «Quitar» y «Guardar» (B8, `recetas-pantalla.md` §3). Chequeo: `test/web/recetas-acceso.test.ts`.
+ */
+export const puedeEditarRecetas = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeEnStock(contexto, "composiciones.editar");

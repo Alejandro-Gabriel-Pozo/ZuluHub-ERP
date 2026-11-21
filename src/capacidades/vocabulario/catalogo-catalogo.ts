@@ -171,6 +171,104 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.carta.sin_seccion": { porDefecto: "Sin sección" },
   "catalogo.carta.oculto": { porDefecto: "Oculto" },
   "catalogo.carta.no_disponible": { porDefecto: "No disponible" },
+  // Identidad de la carta (V1: cara, color y logo en «Carta en línea»; inventario aceptado por el orquestador, fila 173). Fuente: las maquetas aprobadas el 09/11/2026 `carta.html` (grupo «Colores»,
+  // «Usar lo de la empresa», «Otro color», «Escribí el color como #0e7490», «El texto no se lee bien sobre este color», «Logo», «Quitar»), `carta-caras.html` y las paletas de `PAL`; «Dirección de la imagen»
+  // y «La dirección no sirve» son de la fila 171 (15/11/2026). SUPUESTO (DEC-0827): el rótulo «Cara» y los nombres «Día», «Boliche» y «Noche» (la maqueta los muestra, el rótulo exacto no está confirmado).
+  "catalogo.carta.cara": {
+    porDefecto: "Cara",
+    usos: [{ como: "DATO", dato: "cara-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.cara_dia": {
+    porDefecto: "Día",
+    usos: [{ como: "DATO", dato: "cara-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.cara_boliche": {
+    porDefecto: "Boliche",
+    usos: [{ como: "DATO", dato: "cara-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.cara_noche": {
+    porDefecto: "Noche",
+    usos: [{ como: "DATO", dato: "cara-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.colores": {
+    porDefecto: "Colores",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.usar_empresa": {
+    porDefecto: "Usar lo de la empresa",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.paleta_azul": {
+    porDefecto: "Azul",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.paleta_verde": {
+    porDefecto: "Verde",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.paleta_bordo": {
+    porDefecto: "Bordó",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.paleta_tostado": {
+    porDefecto: "Tostado",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.paleta_negro": {
+    porDefecto: "Negro",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.paleta_violeta": {
+    porDefecto: "Violeta",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.otro_color": {
+    porDefecto: "Otro color",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.contraste_aviso": {
+    porDefecto: "El texto no se lee bien sobre este color",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.color_invalido": {
+    porDefecto: "Escribí el color como #0e7490",
+    usos: [{ como: "DATO", dato: "color-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.logo": {
+    porDefecto: "Logo",
+    usos: [{ como: "DATO", dato: "logo-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.direccion_de_la_imagen": {
+    porDefecto: "Dirección de la imagen",
+    usos: [{ como: "DATO", dato: "logo-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.direccion_no_sirve": {
+    porDefecto: "La dirección no sirve",
+    usos: [{ como: "DATO", dato: "logo-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
+  "catalogo.carta.quitar": {
+    porDefecto: "Quitar",
+    usos: [{ como: "DATO", dato: "logo-de-la-carta" }],
+    fuente: { decision: "DEC-0827" },
+  },
   // «Copiar» ya existe en el vocabulario de fiscal (`fiscal.pantalla.config_cert_copiar`); se registra aparte por módulo, con el mismo texto y la misma maqueta (`productos.html`, «Textos nuevos», 09/11/2026).
   "catalogo.accion.copiar": { porDefecto: "Copiar" },
 
@@ -193,6 +291,24 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.unidad.minuto": { porDefecto: "Minuto" },
   "catalogo.unidad.hora": { porDefecto: "Hora" },
 
+  // Clasificación comercial (A14; maqueta aprobada `clasificacion.html`). FUENTE de los ocho textos: `decisiones-del-dueno-2026-11.md`, fila del 12/11/2026 «Maqueta de clasificación comercial
+  // aprobada» (línea 92: «Clasificación comercial», «Departamento», «Categoría», «Crear», «Renombrar», «Mover», «Cambiar» y «Primero desactivá lo que tiene adentro.») y fila del 13/11/2026
+  // (línea 95: los niveles 2 a 4 se llaman todos «Categoría»); DEC-0535 (aceptados por el orquestador, delegación del dueño, filas 173 y 174). El resto de la pantalla reutiliza claves que ya
+  // existen: Desactivar y Reactivar (`catalogo.accion.*`), Guardar, Cancelar, Nombre, Sin elegir, Desactivado, «Vigente desde» (`catalogo.precio.vigente_desde`) y el genérico «Esta acción no está permitida».
+  "catalogo.clasificacion.titulo": { porDefecto: "Clasificación comercial" },
+  "catalogo.clasificacion.departamento": { porDefecto: "Departamento" },
+  "catalogo.clasificacion.categoria": { porDefecto: "Categoría" },
+  "catalogo.clasificacion.crear": { porDefecto: "Crear" },
+  "catalogo.clasificacion.renombrar": { porDefecto: "Renombrar" },
+  "catalogo.clasificacion.mover": { porDefecto: "Mover" },
+  "catalogo.clasificacion.cambiar": { porDefecto: "Cambiar" },
+  // Nombre accesible (solo lector de pantalla, no se ve) de los niveles repetidos «Categoría»: «Categoría de Restaurante». S14 de `clasificacion.html`; aprobado por el orquestador, por delegación del dueño
+  // (DDD filas 173 y 174), el 16/11/2026: usa la palabra aprobada «Categoría», mismo criterio que «Subir {nombre}»; DEC-0536.
+  "catalogo.clasificacion.categoria_de": {
+    porDefecto: "Categoría de {padre}",
+    marcadores: ["padre"],
+  },
+  "catalogo.error.primero_desactiva": { porDefecto: "Primero desactivá lo que tiene adentro." },
   // A13, tramo Opciones. Fuente de todo este bloque: la maqueta aprobada `Pedernal-docs/10-ux-ui/prototipos-gastronomia/productos.html`, tabla «Textos nuevos» (`:308`, aprobados por el
   // dueño el 09/11/2026): fila «Opciones» («Variantes · Agregar variante · Es la medida · Grupos de opciones · Agregar grupo · Incluida · Adicional · Obligatorio · Opcional · Se puede
   // elegir más de una · Recargo · Agregar opción · Quitar») y fila «Copiar de otro producto · Copiar · Producto». «Agregar variante» y «Es la medida» son del tramo de medidas; «Quitar» de

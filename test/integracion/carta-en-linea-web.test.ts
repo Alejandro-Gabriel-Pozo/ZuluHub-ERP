@@ -18,7 +18,7 @@ import {
 /**
  * La pantalla «Carta en línea» de la web (`carta-en-linea-web.ts`, C1) contra una base real y los roles reales: lo que la pantalla recibe, qué se escribe y qué se audita; crear y poner en línea
  * dos veces (una sola carta, una sola auditoría), dos «Poner en línea» A LA VEZ, dos altas A LA VEZ con la misma clave, una versión vieja, el aislamiento entre empresas y el permiso del servidor
- * (el operador ve y no cambia; con `vidriera` en desarrollo, hoy, nadie cambia nada). Los casos de uso en sí tienen sus pruebas en `carta-publica-casos-de-uso.test.ts` y `carta-publica-concurrencia.test.ts`.
+ * (el operador ve y no cambia; sin la perilla del QR nadie pone una carta en línea). Los casos de uso en sí tienen sus pruebas en `carta-publica-casos-de-uso.test.ts` y `carta-publica-concurrencia.test.ts`.
  */
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 120_000 });
@@ -34,7 +34,7 @@ describe.skipIf(base === null)("carta en línea de la web", () => {
   beforeAll(async () => {
     if (base === null) return;
     c = await montarCatalogo(base);
-    // El catálogo real: `vidriera` sigue `en_desarrollo` y el guard rechaza todo.
+    // El catálogo real: `vidriera` es disponible (DEC-0826) y rechaza quien no tiene permiso o no tiene la perilla `vidriera_por_qr`.
     cerrado = await montarCatalogo(base, {
       reglas: { catalogo: CATALOGO_DE_MODULOS, permisos: PERMISOS_DE_EMPRESA },
     });
@@ -417,42 +417,233 @@ describe.skipIf(base === null)("carta en línea de la web", () => {
     expect((await fila(creada.id))?.["estado"]).toBe("FUERA_DE_LINEA");
   });
 
-  it("con `vidriera` en desarrollo (hoy, en el catálogo real) todos reciben MODULO_EN_DESARROLLO y ningún dato", async () => {
+  it("con el catálogo real (`vidriera` disponible, DEC-0826): el gerente guarda y pone en línea con la perilla encendida; el operador no cambia nada; sin la perilla no se pone en línea", async () => {
     const x = await cerrado.escenario();
     const dependencias: DependenciasDeCartaEnLineaWeb = {
       ...d,
       casosDeUso: () => cerrado.casos,
       consultas: () => cerrado.consultas,
     };
-    for (const contexto of [x.gerente, x.administrador, x.operador]) {
-      const resultados = [
-        await verLaCartaEnLinea(dependencias, contexto, {
-          sucursalId: x.sucursal,
-          hostDeApp: HOST,
-        }),
-        await guardarLaCartaEnLinea(
-          dependencias,
-          contexto,
-          pedidoDeGuardar(x, { nombre: "Cerrada" }),
-          x.sucursal,
-        ),
-        await cambiarElEstadoDeLaCartaEnLinea(
-          dependencias,
-          contexto,
-          { cartaId: randomUUID(), sucursalId: x.sucursal, versionEsperada: 1, estado: "EN_LINEA" },
-          x.sucursal,
-        ),
-      ];
-      for (const r of resultados) {
-        expect(r).toMatchObject({ ok: false, error: { codigo: "MODULO_EN_DESARROLLO" } });
-        expect(JSON.stringify(r)).not.toContain("Cerrada");
-      }
-    }
+    // Un producto que sale (con sección y precio): así lo único que cambia entre rechazar y aceptar es la perilla.
+    const seccionId = randomUUID();
+    await cerrado.dueno.query(
+      "insert into seccion_de_carta (id, empresa_id, nombre, nombre_clave, orden) values ($1, $2, 'Postres', 'postres', 0)",
+      [seccionId, x.empresa],
+    );
+    const productoId = await productoDeBase(cerrado.dueno, x.empresa, { nombre: "Flan" });
+    await cerrado.dueno.query("update producto set seccion_de_carta_id = $2 where id = $1", [
+      productoId,
+      seccionId,
+    ]);
+    await precioDeBase(cerrado.dueno, {
+      empresa: x.empresa,
+      producto: productoId,
+      precio: "1000",
+      desde: "2026-10-01T00:00:00Z",
+    });
+    const pedido = pedidoDeGuardar(x);
+    const delOperador = await guardarLaCartaEnLinea(dependencias, x.operador, pedido, x.sucursal);
+    expect(delOperador).toMatchObject({ ok: false, error: { codigo: "SIN_PERMISO" } });
     expect(
       await cerrado.contar("select count(*) as n from carta_publica where empresa_id = $1", [
         x.empresa,
       ]),
     ).toBe(0);
+    const creada = await guardarLaCartaEnLinea(dependencias, x.gerente, pedido, x.sucursal);
+    expect(creada).toMatchObject({ ok: true, dato: { estado: "FUERA_DE_LINEA", version: 1 } });
+    const ponerEnLinea = (version: number) =>
+      cambiarElEstadoDeLaCartaEnLinea(
+        dependencias,
+        x.gerente,
+        {
+          cartaId: pedido.cartaId,
+          sucursalId: x.sucursal,
+          versionEsperada: version,
+          estado: "EN_LINEA",
+        },
+        x.sucursal,
+      );
+    cerrado.perillaDeCarta(false);
+    try {
+      expect(await ponerEnLinea(1)).toMatchObject({ ok: false, error: { codigo: GENERICO } });
+    } finally {
+      cerrado.perillaDeCarta(true);
+    }
+    expect(await ponerEnLinea(1)).toMatchObject({ ok: true, dato: { estado: "EN_LINEA" } });
+    const otra = await cerrado.escenario();
+    expect(
+      await verLaCartaEnLinea(dependencias, otra.gerente, {
+        sucursalId: otra.sucursal,
+        hostDeApp: HOST,
+      }),
+    ).toMatchObject({ ok: true, dato: { carta: null } });
+  });
+
+  describe("identidad: cara, color y logo", () => {
+    const LOGO = "https://res.cloudinary.com/demo/image/upload/v1700000000/logos/parador.png";
+    const IDENTIDAD = { cara: "BOLICHE", paleta: "otro", colorPropio: "#0e7490", logo: LOGO };
+    const guardarIdentidad = (
+      e: EscenarioDeCatalogo,
+      cartaId: string,
+      versionEsperada: number | null,
+      extra: Record<string, unknown>,
+      contexto = e.gerente,
+    ) =>
+      guardarLaCartaEnLinea(
+        d,
+        contexto,
+        pedidoDeGuardar(e, { cartaId, versionEsperada, ...extra }),
+        e.sucursal,
+      );
+
+    it("guardar la identidad la escribe (el color como se eligió, el logo en partes), la muestra al volver a ver y audita UNA vez", async () => {
+      const e = await conProductos();
+      const creada = await crear(e);
+      const r = await guardarIdentidad(e, creada.id, creada.version, {
+        ...IDENTIDAD,
+        paleta: "otro",
+        colorPropio: "#808080",
+      });
+      expect(r).toMatchObject({ ok: true, dato: { version: 2, yaExistia: false } });
+      expect(await fila(creada.id)).toMatchObject({
+        cara: "BOLICHE",
+        color_propio: "#808080",
+        logo_proveedor: "CLOUDINARY",
+        logo_cuenta: "demo",
+        logo_id_publico: "logos/parador",
+        logo_version: "1700000000",
+        logo_extension: "png",
+      });
+      expect((await ver(e)).carta).toMatchObject({
+        cara: "BOLICHE",
+        colorPropio: "#808080",
+        logo: LOGO,
+      });
+      expect(await auditorias(e, "CARTA_PUBLICA_EDITADA")).toBe(1);
+    });
+
+    it("el mismo formulario enviado dos veces (doble toque) escribe una sola vez: la segunda es «ya existía» y no audita", async () => {
+      const e = await conProductos();
+      const creada = await crear(e);
+      const a = await guardarIdentidad(e, creada.id, creada.version, IDENTIDAD);
+      const b = await guardarIdentidad(e, creada.id, creada.version, IDENTIDAD);
+      expect(a).toMatchObject({ ok: true, dato: { yaExistia: false, version: 2 } });
+      expect(b).toMatchObject({ ok: true, dato: { yaExistia: true, version: 2 } });
+      expect(await auditorias(e, "CARTA_PUBLICA_EDITADA")).toBe(1);
+      expect((await fila(creada.id))?.["version"]).toBe(2);
+    });
+
+    it("poner en línea y sacar de línea conservan la cara, el color y el logo", async () => {
+      const e = await conProductos();
+      const creada = await crear(e);
+      await guardarIdentidad(e, creada.id, creada.version, IDENTIDAD);
+      expect(await poner(e, creada.id, 2)).toMatchObject({ ok: true });
+      expect(await sacar(e, creada.id, 3)).toMatchObject({ ok: true });
+      expect(await fila(creada.id)).toMatchObject({
+        cara: "BOLICHE",
+        color_propio: "#0e7490",
+        logo_id_publico: "logos/parador",
+      });
+    });
+
+    it("guardar solo los textos (un pedido sin identidad) la conserva; con la identidad vacía la deja «sin elegir»", async () => {
+      const e = await conProductos();
+      const creada = await crear(e);
+      await guardarIdentidad(e, creada.id, creada.version, IDENTIDAD);
+      const soloTextos = await guardarLaCartaEnLinea(
+        d,
+        e.gerente,
+        pedidoDeGuardar(e, { cartaId: creada.id, versionEsperada: 2, nombre: "Solo el nombre" }),
+        e.sucursal,
+      );
+      expect(soloTextos).toMatchObject({ ok: true, dato: { version: 3 } });
+      expect(await fila(creada.id)).toMatchObject({
+        nombre: "Solo el nombre",
+        cara: "BOLICHE",
+        color_propio: "#0e7490",
+        logo_id_publico: "logos/parador",
+      });
+      const vaciada = await guardarIdentidad(e, creada.id, 3, {
+        cara: "",
+        paleta: "",
+        logo: "",
+      });
+      expect(vaciada).toMatchObject({ ok: true });
+      expect(await fila(creada.id)).toMatchObject({
+        cara: null,
+        color_propio: null,
+        logo_proveedor: null,
+        logo_id_publico: null,
+      });
+    });
+
+    it("dos administradores guardan una cara distinta con la MISMA versión A LA VEZ: gana uno, el otro recibe el genérico y la carta queda con una sola cara", async () => {
+      for (let ronda = 0; ronda < RONDAS; ronda++) {
+        const e = await conProductos();
+        const creada = await crear(e);
+        const r = await Promise.all([
+          guardarIdentidad(e, creada.id, creada.version, { cara: "NOCHE" }),
+          guardarIdentidad(e, creada.id, creada.version, { cara: "BOLICHE" }, e.administrador),
+        ]);
+        expect(
+          r.filter((x) => x.ok),
+          `ronda ${ronda}`,
+        ).toHaveLength(1);
+        expect(r.find((x) => !x.ok)).toMatchObject({ ok: false, error: { codigo: GENERICO } });
+        const f = await fila(creada.id);
+        expect(["NOCHE", "BOLICHE"]).toContain(f?.["cara"]);
+        expect(f?.["version"]).toBe(2);
+        expect(await auditorias(e, "CARTA_PUBLICA_EDITADA")).toBe(1);
+      }
+    });
+
+    it("el operador ve la identidad y no la cambia (SIN_PERMISO) y no se escribe nada", async () => {
+      const e = await conProductos();
+      const creada = await crear(e);
+      const r = await guardarIdentidad(e, creada.id, creada.version, IDENTIDAD, e.operador);
+      expect(r).toMatchObject({ ok: false, error: { codigo: "SIN_PERMISO" } });
+      expect(await fila(creada.id)).toMatchObject({ cara: null, color_propio: null });
+      expect((await ver(e, e.operador)).carta).toMatchObject({ cara: null });
+    });
+
+    it("aislamiento: con la sucursal de otra empresa no se cambia la identidad ni se ve la de otra carta", async () => {
+      const a = await conProductos();
+      const b = await conProductos();
+      const creada = await crear(a);
+      await guardarIdentidad(a, creada.id, creada.version, IDENTIDAD);
+      const intruso = await guardarLaCartaEnLinea(
+        d,
+        b.gerente,
+        pedidoDeGuardar(a, { cartaId: creada.id, versionEsperada: 2, cara: "NOCHE" }),
+        b.sucursal,
+      );
+      expect(intruso).toMatchObject({ ok: false, error: { codigo: GENERICO } });
+      expect((await fila(creada.id))?.["cara"]).toBe("BOLICHE");
+      expect((await ver(b)).carta).toBeNull();
+    });
+
+    it("valores raros (cara «X», color «#12345», un script en el color y un logo de otro proveedor) se rechazan con el genérico y no escriben nada", async () => {
+      const e = await conProductos();
+      const creada = await crear(e);
+      for (const malo of [
+        { cara: "X" },
+        { paleta: "#12345" },
+        { paleta: "otro", colorPropio: "<script>alert(1)</script>" },
+        { logo: "https://ejemplo.com/logo.png" },
+      ]) {
+        expect(
+          await guardarIdentidad(e, creada.id, creada.version, malo),
+          JSON.stringify(malo),
+        ).toMatchObject({ ok: false, error: { codigo: GENERICO } });
+      }
+      expect(await fila(creada.id)).toMatchObject({
+        cara: null,
+        color_propio: null,
+        logo_proveedor: null,
+        version: 1,
+      });
+      expect(await auditorias(e, "CARTA_PUBLICA_EDITADA")).toBe(0);
+    });
   });
 
   it("ver es una lectura: no escribe ni audita", async () => {

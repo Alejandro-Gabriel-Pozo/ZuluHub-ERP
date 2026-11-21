@@ -1,4 +1,4 @@
-import type { Kysely, Selectable } from "kysely";
+import { type Kysely, type Selectable, sql } from "kysely";
 import type { PartesDeDireccion } from "../../../capacidades/activos/direccion-externa";
 import { PROVEEDORES_DE_IMAGEN } from "../../../capacidades/activos/proveedores-de-imagen";
 import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
@@ -24,12 +24,12 @@ export type AltaDePortal = Readonly<{
 }>;
 
 /**
- * El portal de la empresa (0078): UNO por empresa, con sus tarjetas (variante A) y zonas (variante B). Todo filtra por empresa y corre en la transacción de quien llama
+ * El portal de la vidriera (0078): UNO por empresa, con sus tarjetas (variante A) y zonas (variante B). Todo filtra por empresa y corre en la transacción de quien llama
  * (que es quien autoriza y audita). Nada se borra: lo que ya no se muestra se oculta (`visible = false`). El código, la empresa y la sucursal de una tarjeta no cambian:
  * no hay forma de pasarlos a un cambio y la base lo impone con disparadores.
  */
 export interface RepositorioDePortales {
-  /** El portal de la empresa con sus tarjetas y zonas, o `null` si todavía no lo creó. */
+  /** El portal de la vidriera con sus tarjetas y zonas, o `null` si todavía no lo creó. */
   delaEmpresa(empresa: EmpresaId): Promise<Portal | null>;
   /** Como `delaEmpresa`, tomando la fila del portal (`FOR UPDATE`): dos ediciones del mismo portal se turnan. */
   bloquearDeLaEmpresa(empresa: EmpresaId): Promise<Portal | null>;
@@ -169,6 +169,12 @@ export const aDatosDelPortal = (
 
 export function crearRepositorioDePortales(db: Kysely<PortalDb>): RepositorioDePortales {
   async function leer(empresa: EmpresaId, bloquear: boolean): Promise<Portal | null> {
+    // `FOR UPDATE` no bloquea una fila que todavía no existe: dos altas a la vez de la misma empresa llegaban juntas al `insert` y la perdedora recibía una unicidad
+    // (`id_empresa_uk`, sin traducir) en vez de la respuesta de «ya estaba». El candado por empresa las turna: la segunda espera, relee y entra por el camino de «ya existe».
+    if (bloquear)
+      await sql`select pg_advisory_xact_lock(hashtextextended(${`portal:${empresa}`}, 0))`.execute(
+        db,
+      );
     let consulta = db.selectFrom("portal_de_empresa").selectAll().where("empresa_id", "=", empresa);
     if (bloquear) consulta = consulta.forUpdate();
     const fila = await consulta.executeTakeFirst();

@@ -56,14 +56,6 @@
     "creada": "2026-10-22"
   },
   {
-    "id": "ts-expect-error--src-capacidades-controles-decision-test-ts",
-    "archivos": ["src/capacidades/controles/decision.test.ts"],
-    "descripcion": "Pruebas negativas de tipos: `@ts-expect-error` afirma que algo NO compila (técnica deliberada, con su razón en el comentario). El detector no distingue una supresión deliberada de una deuda; si se decide eximirlas, se cambia el detector, no estas entradas.",
-    "tipo": "ts-expect-error",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-10-22"
-  },
-  {
     "id": "eslint-disable--src-capacidades-experiencia-ruta-de-retorno-test-ts",
     "archivos": ["src/capacidades/experiencia/ruta-de-retorno.test.ts"],
     "descripcion": "Supresión de una regla de ESLint con su razón escrita en el propio comentario (`-- motivo`): se prueba o se busca a propósito algo que la regla prohíbe. Decidir si es deuda o excepción permanente.",
@@ -441,20 +433,6 @@
     "vence": "2027-01-04"
   },
   {
-    "id": "campos-sin-dato--web-select",
-    "archivos": ["apps/web/ui/patrones/borrador-de-pagina.test.tsx"],
-    "descripcion": "Controles crudos <select> de la web fuera de un componente de campo (pantallas y tests): todavía no pasan por el registro de datos. Se saldan por módulo; la cuenta por archivo solo baja.",
-    "tipo": "backlog",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-11-05",
-    "verificacion": {
-      "contiene": "<select"
-    },
-    "motivo": "Introducir el registro de datos (regla 5, C1) sin reescribir de una vez todas las pantallas existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento. La cuenta por archivo (que solo baja) está en arquitectura/deuda/campos-sin-dato.json.",
-    "aprobadoPor": "orquestador (decisión del dueño 2026-11-05)",
-    "vence": "2027-01-04"
-  },
-  {
     "id": "campos-sin-dato--web-otros",
     "archivos": [
       "apps/web/ui/iconos/Icono.tsx",
@@ -552,5 +530,16 @@
     "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json. puerta.ts y ruta-de-retorno.ts ya se reescribieron con lista de permitidos (Deuda 4, #209 y #214) y salieron del presupuesto; configuracion.ts del correo y entorno.ts se reescribieron con lista de permitidos (Deuda 9) y salieron del presupuesto. entrada-del-plan.ts y filtros-de-empresas.ts salieron por P2 (fuente única: importan su tope del dueño, 500 y 200), no por lista de permitidos.",
     "aprobadoPor": "orquestador (PR 2 de C1 autorizado el 2026-11-06 por mensaje entre sesiones; decisión del dueño 2026-11-05). Reescribir YA lo existente que viola P1 (en vez de dejarlo pasar): el dueño, 2026-11-05 y 2026-11-06, conversación con el orquestador; constancia en `11-especificaciones/decisiones-del-dueno-2026-11.md` del repo de docs, fila «Principios P1 y P2 de validación».",
     "vence": "2027-01-05"
+  },
+  {
+    "id": "logo-de-carta--cuentas-declaradas",
+    "archivos": ["src/capacidades/experiencia/vidriera/logo-publico.ts"],
+    "descripcion": "El logo de la carta acepta la cuenta del proveedor que cargó quien edita la carta: todavía no existe la tabla de cuentas declaradas por empresa (spec de la carta 5.7.2). Riesgo: una carta podría mostrar la imagen pública de la cuenta de otra empresa.",
+    "tipo": "backlog",
+    "responsable": "agente (a pedido del dueño)",
+    "creada": "2026-11-21",
+    "motivo": "Entregar el logo por la ruta propia sin sumar una migración ni una pantalla nueva en el mismo PR. Se paga con una tabla de cuentas por empresa y la validación al guardar y al traer (armarDestinoDeLogo ya recibe la lista de cuentas declaradas). DEC-0831.",
+    "aprobadoPor": "orquestador (V1c: diferir las cuentas declaradas como deuda con vencimiento, mensajes entre sesiones del 2026-11-20 y 2026-11-21; cupo liberado pagando campos-sin-dato--web-select (select crudo quitado de borrador-de-pagina.test.tsx))",
+    "vence": "2027-01-20"
   }
 ]
