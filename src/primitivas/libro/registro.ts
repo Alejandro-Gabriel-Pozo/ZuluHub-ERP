@@ -4,8 +4,8 @@ import { FORMA_DE_CLAVE } from "./clave";
  * El registro de los libros que la prueba de conformidad (`test/integracion/libros-conformidad.test.ts`) comprueba contra el catálogo de
  * la base (`primitiva-de-libro-diseno.md` §2.1 y §2.2). Son datos: no leen la base ni el reloj.
  *
- * Previene: un libro nuevo que se olvida del espejo único, del `TRUNCATE` o de la RLS. Un libro que no figura acá no se comprueba: el
- * libro de saldos se suma en su propio PR (LB-3), para que pase la conformidad desde el primer día.
+ * Previene: un libro nuevo que se olvida del espejo único, del `TRUNCATE` o de la RLS. Un libro que no figura acá no se comprueba: cada
+ * libro nuevo se suma en el PR de su migración (el de saldos, en LB-3), para que pase la conformidad desde el primer día.
  *
  * Stock y caja entran TAL COMO ESTÁN (no se migran: unificar claves rompería las ya guardadas, §2.5). Sus divergencias conocidas son
  * `excepciones` con motivo y vencimiento; la prueba falla si una excepción ya no hace falta, si se quita (el libro deja de pasar) o si
@@ -104,5 +104,19 @@ export const LIBROS_REGISTRADOS: readonly LibroRegistrado[] = [
         vence: VENCE,
       },
     ],
+  },
+  {
+    nombre: "saldos",
+    tabla: "asiento_de_saldo",
+    medida: "IMPORTE",
+    tablaDeMedida: "asiento_de_saldo",
+    columnaDeMedida: "importe",
+    columnaDeClave: "clave_idempotencia",
+    formaDeClave: FORMA_DE_CLAVE.source,
+    columnaDeMomento: "registrado_en",
+    columnaDeFecha: "fecha_negocio",
+    // El espejo comparte origen con su original: por eso la identidad es un índice parcial (`WHERE anula_a IS NULL`).
+    identidadPorOrigen: ["empresa_id", "origen_tipo", "origen_id", "origen_orden"],
+    excepciones: [],
   },
 ];
