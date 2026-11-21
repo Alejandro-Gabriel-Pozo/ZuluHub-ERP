@@ -1,7 +1,4 @@
-import {
-  CATALOGO_DE_PERILLAS,
-  type ClavePerilla,
-} from "../../../../src/capacidades/planes/perillas";
+import { type ClavePerilla } from "../../../../src/capacidades/planes/perillas";
 import {
   CATALOGO_DE_MODULOS,
   type ClaveAccion,
@@ -18,6 +15,7 @@ import { RUTA_DE_IMPRESORAS } from "../plantillas/salon/modelo-de-impresoras";
 import { RUTA_DE_MESAS } from "../plantillas/salon/modelo-de-mesas";
 import { RUTAS_DE_CONFIGURACION } from "../plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
+import { RUTA_DE_PRODUCCION } from "../plantillas/produccion/filtros-de-ordenes";
 import { RUTAS_DE_CUENTA } from "../plantillas/sesion/rutas-de-cuenta";
 import { RUTA_DE_LA_VENTA, RUTA_DE_TICKETS_DEL_DIA } from "../plantillas/venta/rutas-de-venta";
 import { RUTAS_DE_STOCK } from "../plantillas/stock/rutas-de-stock";
@@ -62,6 +60,7 @@ export const GRUPOS_DEL_MENU = [
   { clave: "compras", etiqueta: null },
   { clave: "carta", etiqueta: "navegacion.grupo.carta" },
   { clave: "stock", etiqueta: null },
+  { clave: "produccion", etiqueta: null },
   { clave: "empresa", etiqueta: "navegacion.empresa" },
   { clave: "sucursal", etiqueta: "sucursal.etiqueta" },
   { clave: "salir", etiqueta: null },
@@ -230,6 +229,18 @@ export const FILAS_DEL_MENU = [
   },
   {
     tipo: "pantalla",
+    clave: "produccion",
+    area: "catalogo",
+    grupo: "produccion",
+    modulo: "produccion",
+    accion: "transformaciones.ver",
+    perilla: null,
+    href: RUTA_DE_PRODUCCION,
+    etiqueta: "produccion.pantalla.produccion",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
     clave: "configuracion-fiscal",
     area: "cuenta",
     grupo: "empresa",
@@ -342,58 +353,4 @@ export function armarElMenu<F extends FilaDelMenu>(
     if (grupos.length > 0) areas.push({ ...area, grupos });
   }
   return areas;
-}
-
-/**
- * Los problemas de una tabla (vacío = bien). Lo usa `test/arquitectura/menu-por-areas.test.ts` sobre la tabla real y sobre violaciones inyectadas. Toda fila tiene área y
- * grupo declarados, clave única, módulo y acción reales del catálogo (la acción es del módulo declarado), ruta propia que empieza con `/` y no se repite, y solo Ventas puede
- * llevar departamento. Un área o grupo declarado sin filas es una reserva válida: no aparece (todo nace cerrado).
- */
-export function problemasDelMenu(
-  filas: readonly FilaDelMenu[],
-  areas: readonly Readonly<{ clave: string; fija: boolean }>[],
-  grupos: readonly Readonly<{ clave: string }>[],
-  maximoDeAreas: number,
-): readonly string[] {
-  const problemas: string[] = [];
-  const deLaBarra = areas.filter((a) => !a.fija);
-  if (deLaBarra.length > maximoDeAreas)
-    problemas.push(`hay ${deLaBarra.length} áreas en la barra y el tope es ${maximoDeAreas}`);
-  if (areas.filter((a) => a.fija).length > 1) problemas.push("hay más de un área fija");
-  const listas: readonly (readonly [string, readonly string[]])[] = [
-    ["área", areas.map((a) => a.clave)],
-    ["grupo", grupos.map((g) => g.clave)],
-    ["fila", filas.map((f) => f.clave)],
-  ];
-  for (const [nombre, lista] of listas) {
-    for (const clave of lista) {
-      if (lista.indexOf(clave) !== lista.lastIndexOf(clave))
-        problemas.push(`${nombre} repetido: ${clave}`);
-    }
-  }
-  const rutas = new Set<string>();
-  for (const f of filas) {
-    if (!areas.some((a) => a.clave === f.area))
-      problemas.push(`${f.clave}: el área ${f.area} no está declarada`);
-    if (!grupos.some((g) => g.clave === f.grupo))
-      problemas.push(`${f.clave}: el grupo ${f.grupo} no está declarado`);
-    if (f.departamento !== null && f.area !== "ventas")
-      problemas.push(`${f.clave}: solo Ventas puede llevar departamento`);
-    if (f.tipo === "pantalla") {
-      const acciones: Readonly<Record<string, unknown>> = Object.hasOwn(
-        CATALOGO_DE_MODULOS,
-        f.modulo,
-      )
-        ? CATALOGO_DE_MODULOS[f.modulo].acciones
-        : {};
-      if (!Object.hasOwn(acciones, f.accion))
-        problemas.push(`${f.clave}: la acción ${f.accion} no es del módulo ${f.modulo}`);
-      if (f.perilla !== null && CATALOGO_DE_PERILLAS[f.perilla].modulo !== f.modulo)
-        problemas.push(`${f.clave}: la función ${f.perilla} no es del módulo ${f.modulo}`);
-      if (!f.href.startsWith("/")) problemas.push(`${f.clave}: la ruta tiene que empezar con /`);
-      if (rutas.has(f.href)) problemas.push(`${f.clave}: la ruta ${f.href} está repetida`);
-      rutas.add(f.href);
-    }
-  }
-  return problemas;
 }

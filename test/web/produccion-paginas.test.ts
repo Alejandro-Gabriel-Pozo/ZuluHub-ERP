@@ -1,0 +1,283 @@
+import type { ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { errorDeCodigo, type Respuesta } from "../../src/capacidades/experiencia/respuesta";
+
+/// <reference path="../../apps/web/ui/css-modules.d.ts" />
+
+/**
+ * Las páginas de producción (lista de órdenes y ficha de una orden): leen lo único que viene de la dirección (el filtro y el id), piden al servidor con el contexto de la empresa y pintan
+ * cada situación con su texto del catálogo: la lista con sus filtros y sus filas (con el filtro pedido), la ficha con «Cancelar la orden» o «Anular la orden» solo si el servidor deja, y los
+ * errores (el del guard con su motivo; el genérico para una orden que no está; el inesperado con la referencia y sin el código crudo). Un solo `h1`. Sin entrada en la barra de la página.
+ */
+vi.mock("server-only", () => ({}));
+const mundo = vi.hoisted(
+  (): {
+    permisos: unknown;
+    pedidos: { quien: string; contexto: unknown; dato: unknown }[];
+    lista: unknown;
+    orden: unknown;
+  } => ({ permisos: null, pedidos: [], lista: null, orden: null }),
+);
+vi.mock("../../apps/web/servidor/composicion", () => ({
+  web: {
+    consultasDeEmpresas: () => ({
+      permisosDelActor: () => Promise.resolve(mundo.permisos),
+    }),
+  },
+}));
+vi.mock("../../apps/web/servidor/produccion", () => ({
+  cargarLasOrdenes: (contexto: unknown, entrada: unknown) => {
+    mundo.pedidos.push({ quien: "lista", contexto, dato: entrada });
+    return Promise.resolve(mundo.lista);
+  },
+  cargarLaOrden: (contexto: unknown, id: string) => {
+    mundo.pedidos.push({ quien: "orden", contexto, dato: id });
+    return Promise.resolve(mundo.orden);
+  },
+  cancelarLaOrdenDeLaFicha: () => Promise.resolve({ error: null }),
+  anularLaOrdenDeLaFicha: () => Promise.resolve({ error: null }),
+}));
+vi.mock("../../apps/web/servidor/sesion", () => ({
+  dependenciasDeSesion: {},
+  empresaDelPedido: () =>
+    Promise.resolve({
+      puerta: { marca: { nombre: "Marca de prueba" } },
+      entrada: {
+        ok: true,
+        dato: {
+          tipo: "ENTRA",
+          empresa: { nombre: "Empresa de prueba" },
+          contexto: { id: "contexto" },
+        },
+      },
+    }),
+}));
+
+const ID = "0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b";
+const RUTA_DE_LA_LISTA = "../../apps/web/app/s/app/(operacion)/catalogo/produccion/page";
+const RUTA_DE_LA_FICHA = "../../apps/web/app/s/app/(operacion)/catalogo/produccion/[id]/page";
+
+type Params = Record<string, string | string[] | undefined>;
+const cargarLista = (): Promise<{
+  default: (p: { searchParams: Promise<Params> }) => Promise<unknown>;
+}> => import(/* @vite-ignore */ RUTA_DE_LA_LISTA);
+const cargarFicha = (): Promise<{
+  default: (p: { params: Promise<{ id: string }> }) => Promise<unknown>;
+}> => import(/* @vite-ignore */ RUTA_DE_LA_FICHA);
+
+const htmlDeLaLista = async (params: Params = {}) => {
+  const { default: Pagina } = await cargarLista();
+  return renderToStaticMarkup(
+    (await Pagina({ searchParams: Promise.resolve(params) })) as ReactNode,
+  );
+};
+const htmlDeLaFicha = async (id = ID) => {
+  const { default: Pagina } = await cargarFicha();
+  return renderToStaticMarkup((await Pagina({ params: Promise.resolve({ id }) })) as ReactNode);
+};
+const aTexto = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+const ORDENES = {
+  ordenes: [
+    {
+      id: ID,
+      numero: 14,
+      estado: "ABIERTA",
+      nombre: "Masa de medialuna",
+      cantidad: "10.0000",
+      unidadId: "KILOGRAMO",
+    },
+    {
+      id: "22222222-2222-4222-8222-222222222222",
+      numero: 13,
+      estado: "CERRADA",
+      nombre: "Medialuna",
+      cantidad: "100.0000",
+      unidadId: "UNIDAD",
+    },
+  ],
+};
+const FICHA = {
+  id: ID,
+  numero: 14,
+  estado: "ABIERTA",
+  nombre: "Masa de medialuna",
+  unidadId: "KILOGRAMO",
+  cantidadEsperada: "10.0000",
+  cantidadObtenida: null,
+  mermaDeLote: null,
+  recetaCambiada: false,
+  vence: null,
+  lote: null,
+  renglones: [{ nombre: "Harina 000", esperado: "6.0000", real: null, unidadId: "KILOGRAMO" }],
+};
+const respondeLista = (r: Respuesta<unknown>) => {
+  mundo.lista = r;
+};
+const respondeOrden = (r: Respuesta<unknown>) => {
+  mundo.orden = r;
+};
+const puede = (acciones: string[]) => {
+  mundo.permisos = {
+    ok: true,
+    valor: { acciones, modulos: { activos: ["produccion"], enSoloLectura: [] } },
+  };
+};
+
+beforeEach(() => {
+  mundo.pedidos = [];
+  respondeLista({ ok: true, dato: ORDENES });
+  respondeOrden({ ok: true, dato: FICHA });
+  puede(["transformaciones.ver", "transformaciones.cancelar", "transformaciones.anular"]);
+});
+
+describe("la página de la lista de órdenes de producción", () => {
+  it("un solo h1, «Producción», con los filtros y una fila por orden que lleva a su ficha", async () => {
+    const html = await htmlDeLaLista();
+    expect([...html.matchAll(/<h1\b[^>]*>(.*?)<\/h1>/g)].map((m) => m[1])).toEqual(["Producción"]);
+    const t = aTexto(html);
+    expect(t).toContain("Todas");
+    expect(t).toContain("Orden 14 · Masa de medialuna");
+    expect(t).toContain("10 Kilogramo");
+    expect(t).toContain("Orden 13 · Medialuna");
+    expect(t).toContain("100 Unidad");
+    expect(html).toContain(`href="/catalogo/produccion/${ID}"`);
+    expect(html).toContain('href="/catalogo/produccion?estado=ABIERTA"');
+    expect(html).not.toContain("<form");
+    expect(html).not.toContain("<input");
+  });
+
+  it("pide la lista con el contexto del servidor y el filtro de la dirección, y nada más", async () => {
+    await htmlDeLaLista({ estado: "ABIERTA" });
+    expect(mundo.pedidos).toEqual([
+      { quien: "lista", contexto: { id: "contexto" }, dato: { estado: "ABIERTA" } },
+    ]);
+  });
+
+  it("un filtro que no es una opción conocida vuelve a «Todas»: pide sin filtro", async () => {
+    await htmlDeLaLista({ estado: "CERRADA" });
+    expect(mundo.pedidos).toEqual([
+      { quien: "lista", contexto: { id: "contexto" }, dato: { estado: "" } },
+    ]);
+  });
+
+  it("el filtro pedido queda marcado como el actual", async () => {
+    const html = await htmlDeLaLista({ estado: "ABIERTA" });
+    expect(html.match(/aria-current="page"/g)).toHaveLength(1);
+    expect(html).toMatch(/aria-current="page"[^>]*>Abiertas</);
+  });
+
+  it("sin órdenes, «Sin resultados»", async () => {
+    respondeLista({ ok: true, dato: { ordenes: [] } });
+    expect(aTexto(await htmlDeLaLista())).toContain("Sin resultados");
+  });
+
+  it("el motivo del guard (el módulo en desarrollo) sale con su texto y sin lista ni filtros", async () => {
+    respondeLista({ ok: false, error: errorDeCodigo("MODULO_EN_DESARROLLO") });
+    const html = await htmlDeLaLista();
+    expect(html).not.toContain("MODULO_EN_DESARROLLO");
+    expect(aTexto(html)).toContain("Esta función todavía está en desarrollo.");
+    expect(html).not.toContain("estado=ABIERTA");
+  });
+
+  it("sin sucursal elegida (el genérico) sale como «Esta acción no está permitida»", async () => {
+    respondeLista({ ok: false, error: errorDeCodigo("PRODUCCION_ACCION_NO_PERMITIDA") });
+    expect(aTexto(await htmlDeLaLista())).toContain("Esta acción no está permitida");
+  });
+
+  it("un fallo inesperado sale con su referencia y sin el código crudo", async () => {
+    respondeLista({
+      ok: false,
+      error: { ...errorDeCodigo("ERROR_INTERNO"), referencia: "PD-ABC123" },
+    });
+    const t = aTexto(await htmlDeLaLista());
+    expect(t).toContain("PD-ABC123");
+    expect(t).not.toContain("ERROR_INTERNO");
+  });
+});
+
+describe("la página de la ficha de una orden de producción", () => {
+  it("un solo h1, «Orden N», con el producto, el estado y «Consume»", async () => {
+    const html = await htmlDeLaFicha();
+    expect([...html.matchAll(/<h1\b[^>]*>(.*?)<\/h1>/g)].map((m) => m[1])).toEqual(["Orden 14"]);
+    const t = aTexto(html);
+    expect(t).toContain("Masa de medialuna");
+    expect(t).toContain("10 Kilogramo");
+    expect(t).toContain("Abierta");
+    expect(t).toContain("Consume");
+    expect(t).toContain("Harina 000");
+    expect(t).toContain("6 Kilogramo");
+  });
+
+  it("pide la orden con el contexto del servidor y el id de la dirección, y nada más", async () => {
+    await htmlDeLaFicha();
+    expect(mundo.pedidos).toEqual([{ quien: "orden", contexto: { id: "contexto" }, dato: ID }]);
+  });
+
+  it("una orden abierta ofrece «Cancelar la orden» y no «Anular la orden»", async () => {
+    const t = aTexto(await htmlDeLaFicha());
+    expect(t).toContain("Cancelar la orden");
+    expect(t).not.toContain("Anular la orden");
+  });
+
+  it("una orden cerrada ofrece «Anular la orden» y no «Cancelar la orden»", async () => {
+    respondeOrden({
+      ok: true,
+      dato: { ...FICHA, estado: "CERRADA", cantidadObtenida: "9.5000", lote: "OP-14" },
+    });
+    const t = aTexto(await htmlDeLaFicha());
+    expect(t).toContain("Anular la orden");
+    expect(t).not.toContain("Cancelar la orden");
+    expect(t).toContain("Lote");
+    expect(t).toContain("OP-14");
+  });
+
+  it("sin transformaciones.cancelar ni anular (un operador) no hay botones: abre y mira", async () => {
+    puede(["transformaciones.ver", "transformaciones.abrir"]);
+    expect(aTexto(await htmlDeLaFicha())).not.toMatch(/Cancelar la orden|Anular la orden/);
+    respondeOrden({ ok: true, dato: { ...FICHA, estado: "CERRADA", cantidadObtenida: "9.5000" } });
+    expect(aTexto(await htmlDeLaFicha())).not.toMatch(/Cancelar la orden|Anular la orden/);
+  });
+
+  it("si no se pudieron leer los permisos, no hay botones (cierra, no abre)", async () => {
+    mundo.permisos = { ok: false, error: "SIN_PERMISO" };
+    expect(aTexto(await htmlDeLaFicha())).not.toMatch(/Cancelar la orden|Anular la orden/);
+  });
+
+  it("una orden cancelada o anulada no ofrece ningún botón", async () => {
+    for (const estado of ["CANCELADA", "ANULADA"]) {
+      respondeOrden({ ok: true, dato: { ...FICHA, estado } });
+      expect(aTexto(await htmlDeLaFicha())).not.toMatch(/Cancelar la orden|Anular la orden/);
+    }
+  });
+
+  it("el aviso de receta cambiada sale en una abierta", async () => {
+    respondeOrden({ ok: true, dato: { ...FICHA, recetaCambiada: true } });
+    expect(aTexto(await htmlDeLaFicha())).toContain("La receta cambió desde que abriste la orden");
+  });
+
+  it("el motivo del guard sale con su texto y sin la ficha", async () => {
+    respondeOrden({ ok: false, error: errorDeCodigo("MODULO_EN_DESARROLLO") });
+    const html = await htmlDeLaFicha();
+    expect(aTexto(html)).toContain("Esta función todavía está en desarrollo.");
+    expect(html).not.toContain("Consume");
+  });
+
+  it("una orden que no está (ajena, inexistente) sale como el genérico, sin botones", async () => {
+    respondeOrden({ ok: false, error: errorDeCodigo("PRODUCCION_ACCION_NO_PERMITIDA") });
+    const t = aTexto(await htmlDeLaFicha("no-existe"));
+    expect(t).toContain("Esta acción no está permitida");
+    expect(t).not.toMatch(/Cancelar la orden|Anular la orden/);
+  });
+
+  it("un fallo inesperado sale con su referencia y sin el código crudo", async () => {
+    respondeOrden({
+      ok: false,
+      error: { ...errorDeCodigo("ERROR_INTERNO"), referencia: "PD-ABC123" },
+    });
+    const t = aTexto(await htmlDeLaFicha());
+    expect(t).toContain("PD-ABC123");
+    expect(t).not.toContain("ERROR_INTERNO");
+  });
+});
