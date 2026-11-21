@@ -18,9 +18,19 @@ import { despliegueEsProduccion, resolverPuerta } from "./puerta";
  * página no existiera. `notFound()` desde un layout cae en la neutra de la raíz (`app/not-found.tsx`).
  */
 export async function exigirPuerta(superficie: SuperficieServible): Promise<PuertaResuelta> {
+  const puerta = await puertaOpcional(superficie);
+  if (puerta === null) notFound();
+  return puerta;
+}
+
+/** Lo mismo sin cortar: `null` si el host no es de esa superficie. Para una ruta (`route.ts`) que arma ella misma su 404. */
+export async function puertaOpcional(
+  superficie: SuperficieServible,
+): Promise<PuertaResuelta | null> {
   const estado = await resolverPuerta(hostDelPedido(await headers()));
-  if (estado.tipo !== "RESUELTA" || estado.puerta.superficie !== superficie) notFound();
-  return estado.puerta;
+  return estado.tipo === "RESUELTA" && estado.puerta.superficie === superficie
+    ? estado.puerta
+    : null;
 }
 
 /** El nonce que puso la puerta para este pedido; `null` si no vino o no tiene la forma de un nonce. */

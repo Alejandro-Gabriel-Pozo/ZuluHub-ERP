@@ -1,4 +1,6 @@
+import { crearTraedorDeProduccion } from "../adaptadores/imagenes-externas/traedor";
 import { crearVidrieraPublica } from "../adaptadores/postgres/vidriera-publica";
+import { crearMemoriaDeLogos } from "../capacidades/activos/memoria-de-logos";
 import { CATALOGO_DE_MODULOS } from "../capacidades/modulos/catalogo";
 import { CATALOGO_DE_PERILLAS } from "../capacidades/planes/perillas";
 import { crearCasosDeUsoDeCatalogo, crearConsultasDeCatalogo } from "../modulos/catalogo/publico";
@@ -18,6 +20,12 @@ export function armarWebDeCatalogo({ conexiones, reglas, reloj }: BaseDeWeb) {
         catalogoDePerillas: CATALOGO_DE_PERILLAS,
       }),
     ),
+    /**
+     * El logo de la carta por dirección externa (§5.7.5): el traedor seguro de imágenes y la memoria de lo traído (acotada, con corte de fallos). Una sola de cada una por
+     * instancia del servidor: el contador de conexiones salientes y la memoria tienen que ser compartidos por todos los pedidos.
+     */
+    imagenesExternas: perezoso(() => crearTraedorDeProduccion()),
+    memoriaDeLogos: perezoso(() => crearMemoriaDeLogos(() => reloj.ahora().getTime())),
     /**
      * El catálogo (E2 mínimo): productos, forma de venta, precios, opciones, consumo, copia y secciones de la carta, y sus consultas. Cada
      * uno exige SU acción al guard dentro de la transacción. El módulo `catalogo` sigue `en_desarrollo`: el guard rechaza todo con

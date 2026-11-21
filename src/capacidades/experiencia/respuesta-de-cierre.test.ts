@@ -31,6 +31,9 @@ describe("códigos públicos del cierre", () => {
     for (const otro of ["SIN_PERMISO", "constructor", { error: "JORNADA_CERRADA" }, 7, null]) {
       expect(codigoDeJornada(otro)).toBeNull();
     }
+    // Solo un TEXTO es un error de jornada: un objeto que se lee como uno (`toString`) no se traduce.
+    expect(codigoDeJornada({ toString: () => "JORNADA_CERRADA" })).toBeNull();
+    expect(codigoDeJornada(undefined)).toBeNull();
   });
 
   it("entran en la tabla de códigos como avisos, con el texto aprobado y el estado HTTP de un rechazo de negocio", () => {

@@ -549,5 +549,5 @@ const reglas = [
   },
 ];
 module.exports = {
-  reglas: reglas.concat(require("./reglas-de-pdf.cjs"), require("./reglas-de-modulos.cjs")),
+  reglas: reglas.concat(require("./reglas-aparte.cjs")),
 };

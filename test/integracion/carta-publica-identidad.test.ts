@@ -78,6 +78,7 @@ describe.skipIf(base === null)("la identidad de la carta llega a la carta públi
       cara: "NOCHE",
       tema: (temaDeLaCarta("NOCHE", "#1f4e79") as { valor: unknown }).valor,
       inicial: "P",
+      logo: null,
     });
   });
 
@@ -123,10 +124,11 @@ describe.skipIf(base === null)("la identidad de la carta llega a la carta públi
       cara: "DIA",
       tema: null,
       inicial: "P",
+      logo: null,
     });
   });
 
-  it("el logo elegido no cambia lo que se dibuja todavía (la CSP no deja imágenes de afuera) y no se cuela en la vista", async () => {
+  it("el logo elegido llega como una ruta PROPIA de la carta, con su versión: nada del proveedor se cuela en la vista", async () => {
     const m = await empresaConCarta();
     await elegir(m.carta.id, {
       cara: "DIA",
@@ -137,6 +139,7 @@ describe.skipIf(base === null)("la identidad de la carta llega a la carta públi
       logo_extension: "png",
     });
     const vista = await vistaDe(m.carta.codigo);
+    expect(vista.identidad.logo).toBe(`/${m.carta.codigo}/logo/1700000000.webp`);
     expect(JSON.stringify(vista)).not.toContain("cloudinary");
     expect(JSON.stringify(vista)).not.toContain("logos/parador");
   });
@@ -149,6 +152,7 @@ describe.skipIf(base === null)("la identidad de la carta llega a la carta públi
       cara: "DIA",
       tema: null,
       inicial: "B",
+      logo: null,
     });
     expect((await vistaDe(a.carta.codigo)).identidad.cara).toBe("NOCHE");
   });

@@ -1,0 +1,6 @@
+{
+  "grupo": "imágenes externas (traedor seguro)",
+  "archivos": "src/adaptadores/imagenes-externas/traedor.ts",
+  "minutos": 6,
+  "pruebas": "src/adaptadores/imagenes-externas/traedor.test.ts"
+}
