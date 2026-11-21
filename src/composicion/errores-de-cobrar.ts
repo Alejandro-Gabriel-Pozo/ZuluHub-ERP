@@ -4,6 +4,7 @@ import {
   type Respuesta,
 } from "../capacidades/experiencia/respuesta";
 import type { CodigoDeCaja } from "../capacidades/experiencia/respuesta-de-caja";
+import { codigoDeJornada } from "../capacidades/experiencia/respuesta-de-cierre";
 import type { CodigoDeVentas } from "../capacidades/experiencia/respuesta-de-ventas";
 import { err, type Resultado } from "../primitivas/resultado/resultado";
 import { aRespuesta, aRespuestaDeExcepcion, type DependenciasDeRespuesta } from "./a-respuesta";
@@ -48,6 +49,9 @@ const CON_FACTURA_VIGENTE = {
 /** El error tal como lo entiende `aRespuesta`: lo ya público o inesperado pasa igual; el resto del negocio, el genérico. */
 export function traducirErrorDeCobrar(error: unknown): unknown {
   if (clasificarError(error).tipo === "PUBLICO") return error;
+  // Con el día en cierre o cerrado: los dos avisos aprobados (CD-4), no el genérico.
+  const delDia = codigoDeJornada(error);
+  if (delDia !== null) return { codigo: delDia };
   // Lista blanca de UN error de negocio con texto propio: el comprobante no sale a la pantalla.
   if (
     typeof error === "object" &&

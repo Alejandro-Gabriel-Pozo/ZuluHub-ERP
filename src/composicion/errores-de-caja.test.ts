@@ -53,8 +53,6 @@ describe("traducirErrorDeCaja", () => {
     "LIMITE_INVALIDO",
     "CLAVE_REUTILIZADA",
     "IMPORTE_INVALIDO",
-    "JORNADA_EN_AUDITORIA",
-    "JORNADA_CERRADA",
     "CAJA_REQUERIDA",
     "SESION_NO_ENCONTRADA",
     "SESION_CERRADA",
@@ -74,6 +72,16 @@ describe("traducirErrorDeCaja", () => {
   ])("la operación de la caja: %j sale como el genérico (sin texto propio aprobado)", (error) => {
     expect(traducirErrorDeCaja(error)).toEqual({ codigo: "CAJA_ACCION_NO_PERMITIDA" });
   });
+
+  it.each([
+    ["JORNADA_EN_AUDITORIA", "CIERRE_DIA_EN_CIERRE"],
+    ["JORNADA_CERRADA", "CIERRE_DIA_CERRADO"],
+  ])(
+    "con el día en cierre o cerrado (%s) sale su aviso propio, no el genérico",
+    (error, codigo) => {
+      expect(traducirErrorDeCaja(error)).toEqual({ codigo });
+    },
+  );
 
   it("un dato que el medio no admite sale como el genérico", () => {
     expect(

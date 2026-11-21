@@ -32,6 +32,21 @@ describe("traducirErrorDeCobrar", () => {
     expect(traducirErrorDeCobrar(error)).toEqual(GENERICO);
   });
 
+  it.each([
+    ["JORNADA_EN_AUDITORIA", "CIERRE_DIA_EN_CIERRE"],
+    ["JORNADA_CERRADA", "CIERRE_DIA_CERRADO"],
+  ])(
+    "con el día en cierre o cerrado (%s) sale su aviso propio, no el genérico",
+    (error, codigo) => {
+      expect(traducirErrorDeCobrar(error)).toEqual({ codigo });
+    },
+  );
+
+  it("solo un texto con ese nombre es el día en cierre: un objeto o el nombre heredado no lo son", () => {
+    expect(traducirErrorDeCobrar({ error: "JORNADA_CERRADA" })).toEqual(GENERICO);
+    expect(traducirErrorDeCobrar("constructor")).toEqual(GENERICO);
+  });
+
   it("los errores con forma de objeto del negocio también (precio que cambió, cobro que no cuadra, dato mal escrito, confirmación)", () => {
     for (const error of [
       { error: "PRECIO_CAMBIO", totalActual: { moneda: "ARS", monto: "1.00" }, lineas: [] },
@@ -55,7 +70,6 @@ describe("traducirErrorDeCobrar", () => {
     expect(JSON.stringify(salida)).not.toContain(ID);
     for (const error of [
       "TICKET_ANULADO",
-      "JORNADA_CERRADA",
       "OTRO_INVENTADO",
       { error: "OTRO_INVENTADO", comprobanteId: ID },
     ]) {

@@ -82,7 +82,7 @@ export function LineaDeConciliacion({
         </div>
       )}
       <div className={estilos["renglon"]}>
-        <span className={estilos["suave"]}>{texto({}, "cierre.conciliacion.diferencia")}</span>
+        <span className={estilos["suave"]}>{texto({}, "caja.arqueo.diferencia")}</span>
         <strong className={estilos["monto"]} data-tono={linea.tonoDeDiferencia}>
           {linea.diferencia}
         </strong>

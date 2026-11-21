@@ -34,7 +34,7 @@ export function ModalDeReconocer({ control, alMarcar, alCancelar }: Props) {
       <div className={estilos["formulario"]}>
         <Campo
           dato="texto-de-reconocimiento"
-          etiqueta={texto({}, "cierre.observacion_opcional")}
+          etiqueta={texto({}, "caja.arqueo.observacion_opcional")}
           valor={observacion}
           alCambiar={setObservacion}
         />
