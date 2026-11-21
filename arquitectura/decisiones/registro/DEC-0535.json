@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0535",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Textos de la pantalla de clasificación comercial: título, Departamento, Categoría, Crear, Renombrar, Mover, Cambiar y el aviso «Primero desactivá lo que tiene adentro.».",
+  "que_cambia": "Lo que ve la persona en el árbol de clasificación y en la ficha del producto. Revertir: quitar las ocho claves catalogo.clasificacion.* y catalogo.error.primero_desactiva.",
+  "donde": "catalogo-catalogo.ts; delegación del dueño, DDD filas 173 y 174; textos aprobados por el dueño el 12/11/2026 (DDD fila 92) y el 13/11/2026 (fila 95); clasificacion.html"
+}

@@ -9,6 +9,7 @@ import type { ClaveDeTexto } from "../../../../src/capacidades/vocabulario/catal
 import type { ClaveDeIcono } from "../iconos/catalogo";
 import { RUTAS_DE_CAJA, RUTA_DE_LA_CAJA } from "../plantillas/caja/lista-de-caja";
 import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
+import { RUTA_DE_CLASIFICACION } from "../plantillas/catalogo/modelo-de-clasificacion";
 import { RUTA_DEL_CIERRE } from "../plantillas/cierre/ruta-del-cierre";
 import { RUTA_DE_SECCIONES } from "../plantillas/catalogo/modelo-de-secciones";
 import { RUTA_DE_IMPRESORAS } from "../plantillas/salon/modelo-de-impresoras";
@@ -175,7 +176,20 @@ export const FILAS_DEL_MENU = [
     href: RUTA_DE_PRODUCTOS,
     etiqueta: "catalogo.lista.titulo",
     departamento: null,
+  }, // Clasificación comercial (A14): solo gerente y administrador (`productos.editar`; maqueta `clasificacion.html`: el operador no ve la entrada). Su rótulo es el título aprobado «Clasificación comercial».
+  {
+    tipo: "pantalla",
+    clave: "clasificacion",
+    area: "catalogo",
+    grupo: "productos",
+    modulo: "catalogo",
+    accion: "productos.editar",
+    perilla: null,
+    href: RUTA_DE_CLASIFICACION,
+    etiqueta: "catalogo.clasificacion.titulo",
+    departamento: null,
   },
+
   // «Secciones» (A8; dueño, 13/11/2026, `decisiones-del-dueno-2026-11.md` línea 110): en Catálogo, grupo «Carta». Módulo `catalogo` y acción `productos.ver`, las de su consulta (S7 de la ficha: la celda de la maqueta del menú dice `vidriera` y `vidrieras.ver`, pero el servidor resuelve estas).
   {
     tipo: "pantalla",
