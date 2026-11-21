@@ -1,4 +1,5 @@
 import { qrComoSvg } from "../adaptadores/qr/qr-svg";
+import { direccionCanonica } from "../capacidades/activos/direccion-externa";
 import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type { CasosDeUsoDeCatalogo, ConsultasDeCatalogo } from "../modulos/catalogo/publico";
@@ -28,7 +29,7 @@ import {
  *  - **Repetir no duplica.** Guardar lleva la clave de la carta (la fija la página): la misma otra vez devuelve la carta ya creada. Poner y sacar piden un ESTADO, no alternan: dos «Poner en
  *    línea» a la vez dejan UNA carta en línea y UNA auditoría; el segundo recibe «ya estaba».
  *  - **Dos cambios a la vez no se pisan.** Guardar y cambiar el estado llevan la versión que la persona vio; con una vieja el caso de uso rechaza sin escribir (el genérico) y la página recarga.
- *  - **Los textos que la pantalla no edita no se pierden.** El mensaje de portada (sin campo en esta pantalla: pregunta pendiente) y el estado se toman de lo vigente al guardar.
+ *  - **Lo que la pantalla no edita no se pierde.** El mensaje de portada (sin campo en esta pantalla: pregunta pendiente), el estado y el modelo se toman de lo vigente al guardar; poner o sacar de línea conserva también la cara, el color y el logo.
  *  - **Todo resultado sale por el camino común** (`aRespuesta`, ADR-016, con `traducirErrorDeCatalogo`): un fallo inesperado sale sin detalle y con referencia; un nombre inválido sale con el genérico.
  */
 
@@ -46,6 +47,10 @@ export type CartaDeLaPantalla = Readonly<{
   lugar: string | null;
   estado: "EN_LINEA" | "FUERA_DE_LINEA";
   version: number;
+  /** La identidad que eligió la persona (V1): `null` es «sin elegir» (usa lo de la empresa); el logo, como la dirección guardada. */
+  cara: string | null;
+  colorPropio: string | null;
+  logo: string | null;
 }>;
 
 export type CartaEnLineaParaLaPantalla = Readonly<{
@@ -123,6 +128,9 @@ export async function verLaCartaEnLinea(
                 lugar: carta.lugar,
                 estado: carta.estado,
                 version: carta.version,
+                cara: carta.cara,
+                colorPropio: carta.colorPropio,
+                logo: carta.logo === null ? null : direccionCanonica(carta.logo),
               },
         direccion,
         // El QR de la dirección completa; nivel «H» (el de la maqueta: deja sumar el logo después sin cambiar la dirección). Sin host, no hay dirección completa que codificar.
@@ -179,6 +187,11 @@ export async function guardarLaCartaEnLinea(
       lugar: p.lugar,
       mensajeDePortada: vigente?.mensajeDePortada ?? null,
       estado: vigente?.estado ?? ("FUERA_DE_LINEA" as const),
+      // La identidad: lo que el pedido trae, o lo vigente si no la trae (el modelo siempre es el vigente: la pantalla no lo ofrece, VYP-3).
+      modelo: vigente?.modelo ?? null,
+      cara: p.cara === undefined ? (vigente?.cara ?? null) : p.cara,
+      colorPropio: p.colorPropio === undefined ? (vigente?.colorPropio ?? null) : p.colorPropio,
+      logo: p.logo === undefined ? (vigente?.logo ?? null) : p.logo,
       ...(p.versionEsperada === null ? {} : { versionEsperada: p.versionEsperada }),
     };
     const guardada = await d.casosDeUso().guardarCartaPublica(contexto, entrada);
@@ -225,6 +238,11 @@ export async function cambiarElEstadoDeLaCartaEnLinea(
       lugar: vigente.lugar,
       mensajeDePortada: vigente.mensajeDePortada,
       estado: p.estado,
+      // Solo cambia el estado: la identidad vigente viaja igual (si no, poner en línea la borraría).
+      modelo: vigente.modelo,
+      cara: vigente.cara,
+      colorPropio: vigente.colorPropio,
+      logo: vigente.logo,
       versionEsperada: p.versionEsperada,
     });
     return aRespuesta(

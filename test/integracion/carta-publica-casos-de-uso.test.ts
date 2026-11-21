@@ -706,6 +706,11 @@ describe.skipIf(base === null)("carta pública y «Ocultar»: casos de uso", () 
         lugar: null,
         mensajeDePortada: "¡Bienvenidos!",
         estado: "FUERA_DE_LINEA",
+        // La identidad sin elegir (V1): el modelo de siempre y nada propio.
+        modelo: "LISTA",
+        cara: null,
+        colorPropio: null,
+        logo: null,
         version: 1,
       });
       await c.dueno.query("update sucursal set activa = false where id = $1", [e.sucursal]);

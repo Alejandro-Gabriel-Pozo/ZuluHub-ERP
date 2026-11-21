@@ -77,6 +77,115 @@ describe("guardar los textos", () => {
   });
 });
 
+describe("guardar la identidad (cara, color y logo)", () => {
+  const base = {
+    cartaId: CARTA,
+    sucursalId: SUCURSAL,
+    versionEsperada: 3,
+    nombre: "P",
+    rubro: "",
+    lugar: "",
+  };
+  const LOGO = "https://res.cloudinary.com/demo/image/upload/v1700000000/logos/parador.png";
+
+  it("sin identidad en el pedido no la trae (conserva lo vigente): ni undefined ni vacío se inventan", () => {
+    const r = leerElPedidoDeGuardarLaCarta(base);
+    expect(r).toEqual({ ok: true, valor: base });
+    expect(r.ok && Object.keys(r.valor)).not.toContain("cara");
+  });
+
+  it("la cara es una de la lista cerrada o vacía («sin elegir»)", () => {
+    for (const cara of ["DIA", "BOLICHE", "NOCHE"])
+      expect(leerElPedidoDeGuardarLaCarta({ ...base, cara })).toMatchObject({
+        ok: true,
+        valor: { cara },
+      });
+    expect(leerElPedidoDeGuardarLaCarta({ ...base, cara: "" })).toMatchObject({
+      ok: true,
+      valor: { cara: null },
+    });
+    for (const mala of ["X", "dia", "Día", " DIA", "DIA ", 3, null])
+      expect(leerElPedidoDeGuardarLaCarta({ ...base, cara: mala })).toEqual({
+        ok: false,
+        error: "PEDIDO_INVALIDO",
+      });
+  });
+
+  it("la paleta vacía es «usar lo de la empresa»; un `#rrggbb` es ese color; «otro» toma `colorPropio`", () => {
+    expect(leerElPedidoDeGuardarLaCarta({ ...base, paleta: "" })).toMatchObject({
+      valor: { colorPropio: null },
+    });
+    expect(leerElPedidoDeGuardarLaCarta({ ...base, paleta: "#1f4e79" })).toMatchObject({
+      valor: { colorPropio: "#1f4e79" },
+    });
+    expect(
+      leerElPedidoDeGuardarLaCarta({ ...base, paleta: "otro", colorPropio: "#0e7490" }),
+    ).toMatchObject({ valor: { colorPropio: "#0e7490" } });
+    // `colorPropio` solo cuenta con «otro»: con una paleta se ignora.
+    expect(
+      leerElPedidoDeGuardarLaCarta({ ...base, paleta: "#1f4e79", colorPropio: "#000000" }),
+    ).toMatchObject({ valor: { colorPropio: "#1f4e79" } });
+  });
+
+  it("colores fuera de la forma `#rrggbb` en minúsculas se rechazan, también un script", () => {
+    for (const malo of [
+      { paleta: "#12345" },
+      { paleta: "#1F4E79" },
+      { paleta: "1f4e79" },
+      { paleta: "rgb(0,0,0)" },
+      { paleta: "<script>alert(1)</script>" },
+      { paleta: "otro" },
+      { paleta: "otro", colorPropio: "" },
+      { paleta: "otro", colorPropio: "#12345" },
+      { paleta: "otro", colorPropio: "<script>" },
+      { paleta: "otro", colorPropio: "#0e74900" },
+    ])
+      expect(leerElPedidoDeGuardarLaCarta({ ...base, ...malo }), JSON.stringify(malo)).toEqual({
+        ok: false,
+        error: "PEDIDO_INVALIDO",
+      });
+  });
+
+  it("el logo viaja en PARTES (nunca la dirección pegada); vacío lo quita; otro proveedor o lo que no es una dirección se rechaza", () => {
+    expect(leerElPedidoDeGuardarLaCarta({ ...base, logo: LOGO })).toMatchObject({
+      ok: true,
+      valor: {
+        logo: {
+          proveedor: "CLOUDINARY",
+          cuenta: "demo",
+          idPublico: "logos/parador",
+          version: "1700000000",
+          extension: "png",
+        },
+      },
+    });
+    expect(JSON.stringify(leerElPedidoDeGuardarLaCarta({ ...base, logo: LOGO }))).not.toContain(
+      "https:",
+    );
+    expect(leerElPedidoDeGuardarLaCarta({ ...base, logo: "  " })).toMatchObject({
+      valor: { logo: null },
+    });
+    for (const malo of [
+      "https://ejemplo.com/logo.png",
+      "javascript:alert(1)",
+      "<img src=x>",
+      "https://res.cloudinary.com/demo/video/upload/v1/x.png",
+      "x".repeat(1001),
+    ])
+      expect(leerElPedidoDeGuardarLaCarta({ ...base, logo: malo })).toEqual({
+        ok: false,
+        error: "PEDIDO_INVALIDO",
+      });
+  });
+
+  it("el modelo y el estado no viajan: se descartan", () => {
+    expect(leerElPedidoDeGuardarLaCarta({ ...base, modelo: "LIBRO", estado: "EN_LINEA" })).toEqual({
+      ok: true,
+      valor: base,
+    });
+  });
+});
+
 describe("poner en línea o sacar de línea", () => {
   it("lee la carta, la sucursal, la versión y el estado pedido, y descarta lo demás", () => {
     expect(

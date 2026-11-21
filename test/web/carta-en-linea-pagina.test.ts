@@ -113,6 +113,9 @@ const EXISTENTE = {
   lugar: null,
   estado: "FUERA_DE_LINEA",
   version: 3,
+  cara: "NOCHE",
+  colorPropio: "#17562f",
+  logo: "https://res.cloudinary.com/demo/image/upload/v1700000000/logos/parador.png",
 };
 const puede = (acciones: string[]) => {
   mundo.permisos = {
@@ -171,6 +174,12 @@ describe("la página «Carta en línea»", () => {
     expect(t).not.toContain("Sin sección ·");
     expect(marcado).toContain('value="Parador"');
     expect(marcado).toContain('value="Parrilla"');
+    // La identidad guardada: la cara elegida, la paleta y el logo.
+    expect(marcado).toMatch(/<input(?=[^>]*value="NOCHE")(?=[^>]*checked)[^>]*>/);
+    expect(marcado).toMatch(/<option(?=[^>]*value="#17562f")(?=[^>]*selected)[^>]*>/);
+    expect(marcado).toContain(
+      'value="https://res.cloudinary.com/demo/image/upload/v1700000000/logos/parador.png"',
+    );
     expect(marcado).toContain('download="qr-de-la-carta.svg"');
   });
 
