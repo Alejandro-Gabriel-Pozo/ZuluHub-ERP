@@ -6,6 +6,7 @@ import type { ErrorPublico, Respuesta } from "../../../../../src/capacidades/exp
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { Aviso } from "../../componentes/Aviso";
 import { Boton } from "../../componentes/Boton.cliente";
+import { BotonIcono } from "../../componentes/BotonIcono";
 import { Insignia } from "../../componentes/Insignia";
 import { ErrorDelDetalle } from "../../patrones/ErrorDelDetalle";
 import { BotonDeAccionDelCierre, type AccionDelCierre } from "./BotonDeAccionDelCierre.cliente";
@@ -105,7 +106,7 @@ export function PantallaDelCierre({ modelo, servidor }: Props) {
     <div className={estilos["cabecera"]}>
       <div className={estilos["fila"]}>
         <span className={estilos["jornada"]}>
-          {texto({}, "cierre.jornada")} {modelo.fecha}
+          {texto({}, "caja.sesion.jornada")} {modelo.fecha}
         </span>
         {cerrada ? null : <Insignia tono={modelo.tonoDeEstado}>{modelo.etiquetaDeEstado}</Insignia>}
       </div>
@@ -136,7 +137,7 @@ export function PantallaDelCierre({ modelo, servidor }: Props) {
         setMarcas({});
       })}
     >
-      {texto({}, "cierre.accion.cancelar")}
+      {texto({}, "caja.sesion.cancelar_cierre")}
     </BotonDeAccionDelCierre>
   );
 
@@ -158,6 +159,7 @@ export function PantallaDelCierre({ modelo, servidor }: Props) {
       </BotonDeAccionDelCierre>
     );
   } else if (enCierre) {
+    // El botón de avance lleva el nombre aprobado del paso al que va (decisión del dueño, 21/11/2026), con el «›» de la maqueta; no hay «Siguiente».
     const siguiente = (
       <Boton
         ancho="completo"
@@ -166,14 +168,18 @@ export function PantallaDelCierre({ modelo, servidor }: Props) {
           setMensaje(null);
         }}
       >
-        {texto({}, "cierre.accion.siguiente")}
+        {texto(
+          {},
+          paso === 1 ? "cierre.control.conciliacion_por_medio" : "cierre.severidad.reconocible",
+        )}{" "}
+        <span aria-hidden="true">›</span>
       </Boton>
     );
     if (paso === 1) {
       cuerpo = (
         <>
           <h2 ref={titulo} tabIndex={-1} className={estilos["paso"]}>
-            {texto({}, "cierre.cobros")}
+            {texto({}, "ventas.ticket.cobros")}
           </h2>
           <ListaDeCobros
             cobros={modelo.cobros ?? []}
@@ -204,7 +210,7 @@ export function PantallaDelCierre({ modelo, servidor }: Props) {
             armarPedido={() => ({ fechaDeNegocio: modelo.fechaDeNegocio })}
             alResponder={responder()}
           >
-            {texto({}, "cierre.conforme_general")}
+            {texto({}, "caja.conforme_general")}
           </BotonDeAccionDelCierre>
           <Lista>
             {(modelo.lineas ?? []).map((linea) => (
@@ -286,7 +292,7 @@ export function PantallaDelCierre({ modelo, servidor }: Props) {
             ))}
           </Lista>
         </Plegable>
-        <Plegable rotulo={texto({}, "cierre.cobros")}>
+        <Plegable rotulo={texto({}, "ventas.ticket.cobros")}>
           <ListaDeCobros
             cobros={modelo.cobros ?? []}
             editable={false}
@@ -301,15 +307,14 @@ export function PantallaDelCierre({ modelo, servidor }: Props) {
     <div ref={raiz} tabIndex={-1} className={estilos["raiz"]}>
       {enCierre && paso > 1 ? (
         <div className={estilos["volver"]}>
-          <Boton
-            variante="secundaria"
+          <BotonIcono
+            etiqueta={texto({}, "ventas.ticket.volver")}
+            icono="atras"
             alTocar={() => {
               setPaso(paso === 3 ? 2 : 1);
               setMensaje(null);
             }}
-          >
-            {texto({}, "cierre.accion.volver")}
-          </Boton>
+          />
         </div>
       ) : null}
       {cabecera}

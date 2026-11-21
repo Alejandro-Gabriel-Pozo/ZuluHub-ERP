@@ -1,6 +1,10 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import { errorDeCodigo } from "../capacidades/experiencia/respuesta";
 import type { CodigoDeCaja } from "../capacidades/experiencia/respuesta-de-caja";
+import {
+  CODIGO_DE_JORNADA,
+  type CodigoDeCierre,
+} from "../capacidades/experiencia/respuesta-de-cierre";
 import type { MotivoDeRechazo } from "../capacidades/permisos/guard";
 import type {
   ErrorAlAbrirSesion,
@@ -77,7 +81,7 @@ type ErrorDeCaja =
 /** Los errores del dominio que son un texto propio de caja (los motivos del guard y los códigos de otros módulos tienen el suyo). */
 type ErrorPropio = Exclude<Extract<ErrorDeCaja, string>, MotivoDeRechazo>;
 
-const CODIGO_DE_ERROR_PROPIO: Readonly<Record<ErrorPropio, CodigoDeCaja>> = {
+const CODIGO_DE_ERROR_PROPIO: Readonly<Record<ErrorPropio, CodigoDeCaja | CodigoDeCierre>> = {
   MEDIO_DUPLICADO: "CAJA_MEDIO_REPETIDO",
   MEDIO_INACTIVO_CON_ESE_NOMBRE: "CAJA_MEDIO_REPETIDO",
   CUENTA_DUPLICADA: "CAJA_CUENTA_REPETIDA",
@@ -107,8 +111,8 @@ const CODIGO_DE_ERROR_PROPIO: Readonly<Record<ErrorPropio, CodigoDeCaja>> = {
   HORA_DE_CORTE_INVALIDA: "CAJA_ACCION_NO_PERMITIDA",
   ZONA_HORARIA_INVALIDA: "CAJA_ACCION_NO_PERMITIDA",
   INSTANTE_INVALIDO: "CAJA_ACCION_NO_PERMITIDA",
-  JORNADA_EN_AUDITORIA: "CAJA_ACCION_NO_PERMITIDA",
-  JORNADA_CERRADA: "CAJA_ACCION_NO_PERMITIDA",
+  JORNADA_EN_AUDITORIA: CODIGO_DE_JORNADA.JORNADA_EN_AUDITORIA,
+  JORNADA_CERRADA: CODIGO_DE_JORNADA.JORNADA_CERRADA,
   CAJA_REQUERIDA: "CAJA_ACCION_NO_PERMITIDA",
   CAJA_INACTIVA: "CAJA_ACCION_NO_PERMITIDA",
   SESION_NO_ENCONTRADA: "CAJA_ACCION_NO_PERMITIDA",

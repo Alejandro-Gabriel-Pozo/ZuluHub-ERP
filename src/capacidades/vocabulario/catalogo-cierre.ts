@@ -22,15 +22,9 @@
  */
 export const TEXTOS_DE_CIERRE = {
   "cierre.titulo": { porDefecto: "Cierre del día" },
-  "cierre.jornada": { porDefecto: "Jornada" },
-  "cierre.estado.abierta": { porDefecto: "Abierta" },
   "cierre.estado.en_auditoria": { porDefecto: "En cierre" },
-  "cierre.estado.cerrada": { porDefecto: "Cerrada" },
   "cierre.accion.iniciar": { porDefecto: "Empezar el cierre" },
   "cierre.accion.cerrar": { porDefecto: "Cerrar el día" },
-  "cierre.accion.cancelar": { porDefecto: "Cancelar cierre" },
-  "cierre.accion.siguiente": { porDefecto: "Siguiente" },
-  "cierre.accion.volver": { porDefecto: "Volver" },
   "cierre.severidad.bloquea": { porDefecto: "Impide cerrar" },
   "cierre.severidad.reconocible": { porDefecto: "Hay que reconocer" },
   "cierre.severidad.informa": { porDefecto: "Solo informa" },
@@ -47,7 +41,6 @@ export const TEXTOS_DE_CIERRE = {
   "cierre.control.cobros_corregidos": { porDefecto: "Cobros corregidos" },
   "cierre.control.ajustes_a_jornadas_cerradas": { porDefecto: "Ajustes de días cerrados" },
   "cierre.reconocer": { porDefecto: "Reconocer" },
-  "cierre.observacion_opcional": { porDefecto: "Observación (opcional)" },
   "cierre.reconocido_por": {
     porDefecto: "Reconocido por {persona} · {cuando}",
     largoMaximo: 120,
@@ -61,16 +54,8 @@ export const TEXTOS_DE_CIERRE = {
   "cierre.conciliacion.registrado": { porDefecto: "Registrado" },
   "cierre.conciliacion.correcciones": { porDefecto: "Correcciones" },
   "cierre.conciliacion.declarado": { porDefecto: "Declarado" },
-  "cierre.conciliacion.diferencia": { porDefecto: "Diferencia" },
-  "cierre.conciliacion.conforme": { porDefecto: "Conforme" },
-  "cierre.conciliacion.sin_dato": { porDefecto: "Sin declarar" },
-  "cierre.conforme_general": { porDefecto: "Conforme general" },
-  "cierre.cobros": { porDefecto: "Cobros" },
   "cierre.corregir_medio": { porDefecto: "Corregir medio" },
   "cierre.medio_correcto": { porDefecto: "Medio correcto" },
-  "cierre.cuenta_de_cobro": { porDefecto: "Cuenta de cobro" },
-  "cierre.sin_cuenta": { porDefecto: "Sin cuenta" },
-  "cierre.motivo": { porDefecto: "Motivo" },
   "cierre.corregido_por": {
     porDefecto: "Corregido por {persona} · {cuando}",
     largoMaximo: 120,
@@ -78,6 +63,11 @@ export const TEXTOS_DE_CIERRE = {
   },
   "cierre.ticket_numero": { porDefecto: "Ticket {numero}", marcadores: ["numero"] },
   "cierre.error.accion_no_permitida": { porDefecto: "Esta acción no está permitida" },
+  "cierre.error.en_cierre": {
+    porDefecto: "El día está en cierre. Cancelá el cierre para seguir",
+    largoMaximo: 120,
+  },
+  "cierre.error.cerrada": { porDefecto: "El día ya está cerrado" },
   "cierre.error.controles_cambiaron": {
     porDefecto: "Cambió algo mientras mirabas. Revisá y volvé a cerrar",
     largoMaximo: 120,

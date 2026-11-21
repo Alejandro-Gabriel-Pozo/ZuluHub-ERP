@@ -131,7 +131,7 @@ describe.skipIf(base === null)(
     });
 
     it("paso 2, «Conciliación por medio»: lo registrado, lo corregido y lo declarado; declarar el total del débito se guarda una vez", async () => {
-      await boton("Siguiente").click();
+      await boton("Conciliación por medio").click();
       await titulo("Conciliación por medio").waitFor();
       await sinViolacionesDeAxe();
       expect(await pagina.getByText("Sin declarar").count()).toBe(1);
@@ -152,7 +152,7 @@ describe.skipIf(base === null)(
     });
 
     it("paso 3: cerrar SIN reconocer lo que hay que reconocer es el genérico del servidor y no cierra nada", async () => {
-      await boton("Siguiente").click();
+      await boton("Hay que reconocer").click();
       await titulo("Hay que reconocer").waitFor();
       await pagina.getByRole("group", { name: "Conciliación por medio · 1" }).waitFor();
       await sinViolacionesDeAxe();
