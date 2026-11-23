@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0796",
+  "fecha": "2026-11-19",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La clave de una fila del menú se deriva de la tabla: sumar una pantalla es una sola edición, la fila.",
+  "que_cambia": "Solo tipos: el menú que ve cada persona no cambia. Revertir: volver a escribir la lista de nombres a mano en FilaDePantalla.",
+  "donde": "apps/web/ui/navegacion/menu.ts; test/web/menu-por-areas.test.ts; brief PR-E5 de escalabilidad, repo de documentos, 11-especificaciones/briefs/escalabilidad"
+}

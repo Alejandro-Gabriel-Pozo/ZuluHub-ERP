@@ -19,6 +19,10 @@
     {
       "archivo": "src/composicion/entradas-de-facturacion.ts",
       "motivo": "Esquemas de forma de la frontera (zod: identificador, texto, entero) y el tipo de error de entrada, compartidos por todas las fronteras de la web; su comportamiento lo ejerce cada frontera con sus propias pruebas. Lo importan entradas-de-caja y errores-de-caja (2026-11-12, piloto B + D1)."
+    },
+    {
+      "archivo": "src/composicion/web.ts",
+      "motivo": "Raíz de composición que solo cablea módulos y conexiones reales (sin lógica propia); los archivos mutados lo importan únicamente como TIPO (`import type { Web }`) para declarar sus dependencias. Lo ejercen las pruebas de integración."
     }
   ],
   "cargasNoEstaticas": [

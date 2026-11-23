@@ -81,10 +81,14 @@ describe.skipIf(base === null)("un pozo por rol", () => {
     return condicion();
   };
 
-  /** Cuántas conexiones de OTRAS sesiones (cualquier rol, menos la del observador) tiene la base propia de este archivo, según el SERVIDOR. */
+  /**
+   * Cuántas conexiones de OTRAS sesiones (cualquier rol, menos la del observador) tiene la base propia de este archivo, según el SERVIDOR.
+   * Solo cuentan las de clientes (`backend_type = 'client backend'`): un worker de autovacuum o de análisis también aparece en `pg_stat_activity` con el
+   * `datname` de la base que procesa (una base recién migrada lo atrae) y no es una conexión de la aplicación (falla vista en el CI: `expected 1 to be +0`).
+   */
   async function conexionesAjenas(): Promise<number> {
     const { rows } = await observador.query<{ n: string }>(
-      `select count(*)::text as n from pg_stat_activity where datname = $1 and pid <> pg_backend_pid()`,
+      `select count(*)::text as n from pg_stat_activity where datname = $1 and backend_type = 'client backend' and pid <> pg_backend_pid()`,
       [nombreDeLaBase],
     );
     return Number(rows[0]?.n ?? 0);

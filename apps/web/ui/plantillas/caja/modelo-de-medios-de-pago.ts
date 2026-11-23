@@ -41,7 +41,7 @@ const EFECTIVO = "EFECTIVO";
 export const TIPOS_DE_MEDIO_CON_TEXTO: readonly string[] = Object.keys(TIPOS);
 
 /** El texto de un tipo; un tipo que la pantalla no conoce se dice con su propio valor (nunca se esconde un medio por no saber nombrarlo). */
-const nombreDelTipo = (tipo: string): string =>
+export const nombreDelTipo = (tipo: string): string =>
   Object.hasOwn(TIPOS, tipo) ? texto({}, TIPOS[tipo] as ClaveDeTexto) : tipo;
 
 export function armarLaListaDeMedios(medios: readonly MedioDeLaLista[]): readonly FilaDeLista[] {
@@ -71,4 +71,29 @@ export function opcionesDeTipo(original: MedioDeLaLista | null): readonly Opcion
   const tipos =
     original === null ? TIPOS_DE_MEDIO_CON_TEXTO.filter((t) => t !== EFECTIVO) : [original.tipo];
   return tipos.map((valor) => ({ valor, etiqueta: nombreDelTipo(valor) }));
+}
+
+/** Un dato del cobro que el tipo del medio admite y si el medio lo pide (como lo entrega la composición, ya filtrado por el techo del tipo). */
+export type DatoDelMedio = Readonly<{ dato: string; pide: boolean }>;
+
+/** Los rótulos de los datos del cobro. Una prueba compara esta lista con la del dominio (`DATOS_DEL_COBRO`): un dato nuevo sin texto no pasa. */
+const DATOS: Readonly<Record<string, ClaveDeTexto>> = {
+  cupon: "caja.dato.cupon",
+  ultimos4: "caja.dato.ultimos4",
+  marca: "caja.dato.marca",
+  cuotas: "caja.dato.cuotas",
+  dni: "caja.dato.dni",
+};
+
+export const DATOS_DEL_COBRO_CON_TEXTO: readonly string[] = Object.keys(DATOS);
+
+/** Una casilla por dato admitido; un dato que la pantalla no sabe nombrar no se ofrece (nace cerrado: nada sin texto aprobado). */
+export function casillasDeDatos(datos: readonly DatoDelMedio[]) {
+  return datos
+    .filter((d) => Object.hasOwn(DATOS, d.dato))
+    .map((d) => ({
+      dato: d.dato,
+      etiqueta: texto({}, DATOS[d.dato] as ClaveDeTexto),
+      pide: d.pide,
+    }));
 }

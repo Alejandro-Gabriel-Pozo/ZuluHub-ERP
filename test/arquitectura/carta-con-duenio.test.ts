@@ -6,11 +6,11 @@ import { afterEach, describe, expect, it } from "vitest";
 /**
  * H-DOM-1: toda ruta pública de la carta bajo `apps/web/app/s/carta` pide la carta con la PUERTA ENTERA (marca + dueño del host), nunca con la marca sola.
  * Previene: un host dedicado a la empresa A servía la carta de la B de la misma marca porque la página pasaba solo `puerta.marcaId`. El tipo de
- * `vidrieraParaLaPantalla`/`productoParaLaPantalla` ya exige el dueño; esto cubre el atajo de volver a pasar un string suelto o de resolver la carta por otro camino.
+ * `vidrieraParaLaPantalla`/`productoParaLaPantalla`/`atenderElLogo` ya exige el dueño; esto cubre el atajo de volver a pasar un string suelto o de resolver la carta por otro camino.
  * Límite que NO ve: una ruta de la carta que arme el alcance a mano (`{ marcaId, duenio: { tipo: "MARCA" } }`) o que llame al puerto por otro nombre; el revisor lo mira.
  */
 const CARPETA_DE_LA_CARTA = "apps/web/app/s/carta";
-const AYUDANTES = ["vidrieraParaLaPantalla", "productoParaLaPantalla"] as const;
+const AYUDANTES = ["vidrieraParaLaPantalla", "productoParaLaPantalla", "atenderElLogo"] as const;
 
 const sinComentarios = (fuente: string): string =>
   fuente.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");

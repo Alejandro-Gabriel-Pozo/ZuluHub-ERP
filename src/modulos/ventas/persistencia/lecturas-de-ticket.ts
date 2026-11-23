@@ -83,6 +83,12 @@ export function crearLecturasDeTicket(db: Kysely<VentasDb>): LecturasDeTicket {
       const vigente = ejemplares.rows.find(
         (e) => numero(e["numero_de_ejemplar"]) === numero(f["ejemplar_vigente"]),
       );
+      const original = ejemplares.rows.find((e) => numero(e["numero_de_ejemplar"]) === 1);
+      const anulaciones = await sql<Fila>`
+        select k.motivo, k.hecha_por, k.hecha_en from ticket_correccion k
+         where k.empresa_id = ${empresa} and k.ticket_id = ${ticketId} and k.tipo = 'ANULACION'
+         order by k.hecha_en desc limit 1`.execute(db);
+      const anulacion = anulaciones.rows[0];
       const cobranza = await sql<Fila>`
         select c.id, c.caja_id, c.creada_en from cobranza_de_ticket c where c.empresa_id = ${empresa} and c.ticket_id = ${ticketId}`.execute(
         db,
@@ -102,6 +108,16 @@ export function crearLecturasDeTicket(db: Kysely<VentasDb>): LecturasDeTicket {
         ejemplares: ejemplares.rows.map(aEjemplarDeFila),
         renglonesDelVigente:
           vigente === undefined ? [] : await renglonesDe(empresa, texto(vigente["id"])),
+        renglonesDelOriginal:
+          original === undefined ? [] : await renglonesDe(empresa, texto(original["id"])),
+        anulacion:
+          anulacion === undefined
+            ? null
+            : {
+                motivo: texto(anulacion["motivo"]),
+                hechaPor: texto(anulacion["hecha_por"]),
+                hechaEn: fecha(anulacion["hecha_en"]),
+              },
         cobranza:
           c === undefined
             ? null

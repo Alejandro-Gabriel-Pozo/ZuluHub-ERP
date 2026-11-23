@@ -2,34 +2,28 @@
  * Planificador de la mutación en los pull requests: decide qué grupos de mutación (un archivo por grupo; ver `grupos-de-mutacion.cjs`)
  * corren y con qué archivos, a partir de los archivos que cambió el PR y del grafo de importaciones.
  *
- * Previene: que un PR deje sin re-mutar un archivo de dominio cuyo resultado cambió por algo que
- * NO es él mismo (una primitiva que importa, un auxiliar de pruebas compartido, el cuerpo de una
- * prueba). El modo `--incremental` de Stryker no lo ve: solo compara el texto del archivo mutado y
- * el de cada `it`, y con `coverageAnalysis: "off"` reutiliza todo. Acá la regla es otra y se puede
- * razonar: un archivo mutado D queda afectado si alguna prueba t que lo importa (directa o
- * indirectamente) tiene en su cierre de importaciones algún archivo cambiado. Si D no está
- * afectado, ni su código ni ninguna prueba que lo cubre ni lo que esas pruebas importan cambió:
- * el resultado de sus mutantes no puede haber cambiado.
+ * Previene: que un PR deje sin re-mutar un archivo de dominio cuyo resultado cambió por algo que NO es él mismo (una primitiva que importa, un
+ * auxiliar de pruebas compartido, el cuerpo de una prueba). El modo `--incremental` de Stryker no lo ve. Regla: un archivo mutado D queda
+ * afectado si alguna prueba t que lo importa (directa o indirectamente) tiene en su cierre de importaciones algún archivo cambiado.
+ * Después, `grupos-por-filtro.cjs` descarta los grupos cuyo filtro de pruebas no alcanza lo cambiado, y `guardian-en-pr.cjs` los del guardián
+ * si el PR no lo toca. Solo restan: nunca agregan un grupo.
  *
- * Cualquier cosa que el grafo no explica (un archivo que no es TypeScript de `src/`, `apps/` o `test/`, uno
- * borrado, la configuración) hace correr TODOS los grupos completos: ante la duda, no se saltea.
- * Las excepciones son EXPLÍCITAS y cada una dice por qué es segura:
- *  - el guardián de contratos: sus pruebas copian, lanzan y leen archivos que el grafo no ve, y un mapa fijo
- *    lo declara (ver `PRUEBAS_DEL_GUARDIAN`);
- *  - `apps/**`: las aplicaciones importan de `src/`, nunca al revés, y los grupos solo mutan `src/**` y
- *    `arquitectura/contratos/*.cjs`. Un archivo de `apps/` solo puede cambiar un resultado de mutación si una
- *    prueba lo importa (el grafo lo ve) o lo lee como texto (ver `LECTURAS_DE_APPS`);
- *  - `.github/workflows/ci.yml`: ver `cambioDeCiAfecta`; solo un cambio en jobs que no son de mutación deja
- *    de correr todo, y aun así alcanza al guardián, cuyas pruebas leen ese archivo.
+ * Cualquier cosa que el grafo no explica (un archivo que no es TypeScript de `src/`, `apps/` o `test/`, uno borrado, la configuración) hace
+ * correr TODOS los grupos completos: ante la duda, no se saltea. Las excepciones son EXPLÍCITAS y cada una dice por qué es segura:
+ *  - el guardián de contratos: sus pruebas copian, lanzan y leen archivos que el grafo no ve, y un mapa fijo lo declara (`PRUEBAS_DEL_GUARDIAN`);
+ *  - `apps/**`: las aplicaciones importan de `src/`, nunca al revés; un archivo de `apps/` solo cambia un resultado si una prueba lo importa
+ *    (el grafo lo ve) o lo lee como texto (`LECTURAS_DE_APPS`);
+ *  - `.github/workflows/ci.yml`: ver `cambioDeCiAfecta`; solo un cambio en jobs que no son de mutación deja de correr todo, y aun así alcanza al guardián.
  *
  * El mismo grafo (más una lista de rutas del dueño) decide si la integración (`Estabilidad`, 12 copias) tiene que repetirse: ver `planificarEstabilidad`.
- * El orden de los grupos que sale del plan es el de duración descendente (ver `ordenarPorDuracion`).
- * El chequeo que falla si se quita una de estas decisiones es `test/arquitectura/planificar-mutacion.test.ts`.
+ * Orden de los grupos: duración descendente (`ordenarPorDuracion`); los del guardián solo entran si el PR lo toca (`guardian-en-pr.cjs`). Chequeo: `test/arquitectura/planificar-mutacion.test.ts`.
  */
 const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const { cargarLosGrupos } = require("./grupos-de-mutacion.cjs");
+const { gruposDelPlan } = require("./guardian-en-pr.cjs");
+const { decidirPorFiltro } = require("./grupos-por-filtro.cjs");
 
 /**
  * Cambios que ninguna prueba lee de un modo que cambie un resultado: ni la mutación ni la integración los notan. Los dos workflows de acá no los lee ninguna prueba salvo el escaneo de nombres, que no ejerce código mutado.
@@ -48,8 +42,11 @@ const IGNORABLES = [
   /^migraciones\//, // solo las lee la integración, que la mutación no corre (PEDERNAL_SIN_INTEGRACION=1)
 ];
 
-/** Los mismos, para la integración: las migraciones SÍ la afectan (las aplica), así que no están. */
-const IGNORABLES_DE_INTEGRACION = DOCUMENTACION_Y_AJENOS;
+/** Los mismos, para la integración (las migraciones SÍ la afectan: las aplica), más sus ajenos explícitos (`ajenos-a-la-integracion.cjs`). */
+const IGNORABLES_DE_INTEGRACION = [
+  ...DOCUMENTACION_Y_AJENOS,
+  ...require("./ajenos-a-la-integracion.cjs"),
+];
 
 const ARCHIVO_DE_CI = ".github/workflows/ci.yml";
 
@@ -61,11 +58,8 @@ const CONFIGURACION_DE_APPS = /^apps\/[^/]+\/(package\.json|tsconfig[^/]*\.json)
  */
 const LECTURAS_DE_APPS = require("./lecturas-de-apps.json");
 
-/**
- * Lo que vitest ejecuta antes de TODAS las pruebas: entra en el alcance de cada una. Solo el archivo
- * mismo: lo que importa corre en el proceso principal, sin el mutante activo, y no cambia el resultado.
- */
-const RAICES_GLOBALES = ["test/integracion/global.ts"];
+/** Lo que vitest ejecuta antes de TODAS las pruebas (`globalSetup`, `setupFiles`): entra en el alcance de cada una. Solo el archivo mismo: lo que importa un `globalSetup` falla en la carga para todo el filtro (medido a mano) y es del grupo dueño. */
+const RAICES_GLOBALES = ["test/integracion/global.ts", "test/integracion/topes.ts"];
 
 const esPrueba = (archivo) => archivo.endsWith(".test.ts");
 
@@ -336,31 +330,33 @@ function planificar({ cambios, grupos, dependencias, ci, lecturas = LECTURAS_DE_
   }
 
   const afectados = new Set(enElGrafo);
-  for (const alcance of pruebasAfectadas({ enElGrafo, enApps, dependencias, lecturas }).values()) {
+  const afectadas = pruebasAfectadas({ enElGrafo, enApps, dependencias, lecturas });
+  for (const alcance of afectadas.values()) {
     for (const importado of alcance) afectados.add(importado);
   }
 
   const elegidos = [];
-  for (const { grupo, pruebas, expandidos } of ordenarPorDuracion(grupos)) {
+  const saltados = [];
+  const contexto = { dependencias, afectadas, enElGrafo, esPruebaDeNode, archivoDe };
+  const porFiltro = decidirPorFiltro(contexto);
+  for (const { grupo, pruebas, expandidos } of ordenarPorDuracion(gruposDelPlan(grupos, cambios))) {
     const archivos = expandidos.filter((entrada) => afectados.has(archivoDe(entrada)));
-    if (archivos.length > 0) {
+    if (archivos.length === 0) continue;
+    const decision = porFiltro({ grupo, pruebas, expandidos });
+    if (decision.corre)
       elegidos.push({ grupo, archivos: archivos.join(","), pruebas: pruebas ?? "" });
-    }
+    else saltados.push(`${grupo}: ${decision.motivo}`);
   }
   const alcanzan = new Set([...enElGrafo, ...enApps]).size;
   return {
     completo: false,
     motivo: `${alcanzan} archivo(s) cambiado(s) alcanzan a ${elegidos.length} grupo(s)`,
     grupos: elegidos,
+    saltados,
   };
 }
 
-/**
- * Cambios que obligan a repetir la integración 12 veces en un pull request (decisión del dueño, 2026-11-07: la
- * repetición cuesta ~78 min de máquina por corrida y solo detecta fallas intermitentes de lo que toca la base).
- * Previene: gastar 12 máquinas en un cambio de pantalla o de dominio que no puede alterar la integración contra
- * Postgres. Es una lista de lo que SÍ la dispara; el resto se decide en `planificarEstabilidad`.
- */
+/** Cambios que obligan a repetir la integración (decisión del dueño, 2026-11-07: cuesta ~50 min de máquina por corrida y solo detecta fallas intermitentes de lo que toca la base). Previene: gastar esas máquinas en un cambio de pantalla o de dominio que no puede alterarla. Lista de lo que SÍ la dispara. */
 const DISPARAN_ESTABILIDAD = [
   /^test\/integracion\//,
   /^src\/(?:[^/]+\/)*persistencia\//, // src/**/persistencia/**
@@ -531,6 +527,7 @@ function principal() {
   const resumen = [
     `Mutación: ${plan.motivo}.`,
     ...plan.grupos.map((g) => `- ${g.grupo}: ${g.archivos}`),
+    ...(plan.saltados ?? []).map((s) => `- se saltea ${s}`),
     `Estabilidad (integración x12): ${estabilidad.corre ? "corre" : "se saltea"}: ${estabilidad.motivo}.`,
   ].join("\n");
   process.stdout.write(`${resumen}\n`);

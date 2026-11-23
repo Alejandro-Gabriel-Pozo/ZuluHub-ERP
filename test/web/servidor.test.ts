@@ -76,7 +76,9 @@ describe("apps/web/servidor/composicion.ts", () => {
       "consultasDeSesion",
       "consultasDeStock",
       "consultasDeVentas",
+      "imagenesExternas",
       "lecturasCompartidas",
+      "memoriaDeLogos",
       "resolucionDeHost",
       "vidrieraPublica",
     ]);

@@ -144,8 +144,16 @@ describe.skipIf(base === null)("ventas: datos del cobro", () => {
         e.empresa,
       ]),
     );
-    for (const secreto of ["ZX-9981", "4242", "30123456", k.clave]) {
+    // Los ids y las horas de la auditoría son hexadecimales y pueden contener «4242» por azar: los números se buscan como valor entero
+    // (sin hexadecimales ni guiones pegados), no como pedazo de otro texto.
+    for (const secreto of ["ZX-9981", k.clave]) {
       expect(auditoria.includes(secreto), secreto).toBe(false);
+    }
+    for (const secreto of ["4242", "30123456"]) {
+      expect(
+        new RegExp(`(?<![0-9a-f-])${secreto}(?![0-9a-f-])`, "i").test(auditoria),
+        secreto,
+      ).toBe(false);
     }
   });
 

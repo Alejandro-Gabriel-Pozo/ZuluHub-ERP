@@ -1,5 +1,12 @@
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import {
+  COLOR_RRGGBB,
+  luminanciaRelativa,
+  razonDeContraste,
+} from "../../../primitivas/color/contraste";
 import type { SuperficieDeAspecto } from "./aspecto";
+
+export { luminanciaRelativa, razonDeContraste };
 
 /**
  * Los únicos tokens de color de una marca (marcas y planes, §B.3): una lista CERRADA, sin CSS libre. Cada
@@ -17,7 +24,7 @@ export type TemaCompleto = Readonly<Record<TokenDeTema, string>>;
 export type ErrorDeTema = Readonly<{ codigo: "TEMA_INVALIDO"; token: string }>;
 
 /** Un color es `#rrggbb` con letras minúsculas: nada de `#fff`, `rgb()`, `url()` ni nombres. */
-export const COLOR_DEL_TEMA = /^#[0-9a-f]{6}$/;
+export { COLOR_RRGGBB as COLOR_DEL_TEMA };
 
 export const esTokenDeTema = (token: string): token is TokenDeTema =>
   (TOKENS_DE_TEMA as readonly string[]).includes(token);
@@ -31,7 +38,7 @@ export function validarTema(
   entrada: Readonly<Record<string, unknown>>,
 ): Resultado<Tema, ErrorDeTema> {
   for (const [token, valor] of Object.entries(entrada)) {
-    if (!esTokenDeTema(token) || typeof valor !== "string" || !COLOR_DEL_TEMA.test(valor)) {
+    if (!esTokenDeTema(token) || typeof valor !== "string" || !COLOR_RRGGBB.test(valor)) {
       return err({ codigo: "TEMA_INVALIDO", token });
     }
   }
@@ -41,39 +48,6 @@ export function validarTema(
     if (valor !== undefined) tema[token] = valor as string;
   }
   return ok(tema);
-}
-
-/** El canal de dos dígitos hexadecimales que empieza en `inicio` de un `#rrggbb`. */
-const canalEn = (color: string, inicio: number): number =>
-  Number.parseInt(color.slice(inicio, inicio + 2), 16);
-
-/**
- * Un canal sRGB (0 a 255) pasado a luz lineal (WCAG 2.x). El corte entre el tramo recto y la curva está
- * entre el canal 10 y el 11 (0,03928 · 255 = 10,02), igual que con 0,04045 de la norma sRGB: se compara
- * el canal entero y no el cociente, que nunca cae justo en el corte.
- */
-function canalLineal(canal: number): number {
-  const c = canal / 255;
-  return canal <= 10 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-}
-
-/** La luminancia relativa WCAG de un color `#rrggbb`: 0 el negro, 1 el blanco. */
-export function luminanciaRelativa(color: string): number {
-  return (
-    0.2126 * canalLineal(canalEn(color, 1)) +
-    0.7152 * canalLineal(canalEn(color, 3)) +
-    0.0722 * canalLineal(canalEn(color, 5))
-  );
-}
-
-/**
- * La razón de contraste WCAG entre dos colores `#rrggbb`, de 1 (iguales) a 21 (negro y blanco). No
- * depende del orden. Sin redondear: 4,499 no pasa por 4,5.
- */
-export function razonDeContraste(a: string, b: string): number {
-  const la = luminanciaRelativa(a);
-  const lb = luminanciaRelativa(b);
-  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
 /** ¿Alcanza el contraste mínimo? Igual al mínimo pasa (WCAG: «al menos»). */

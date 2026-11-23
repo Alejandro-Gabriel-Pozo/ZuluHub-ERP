@@ -19,7 +19,7 @@ import {
 
 /**
  * E5-T5, concurrencia real (P1 a P4, P5, P6, P7 y P13) con las dependencias reales y varias transacciones a la vez (una barrera hace que todas hayan
- * leído antes de que cualquiera escriba). Rondas: `PEDERNAL_RONDAS` (3 por defecto). Cada nivel del control (`PERMITIR`, `AVISAR`, `BLOQUEAR`)
+ * leído antes de que cualquiera escriba). Rondas: `PEDERNAL_RONDAS` (3 por defecto). Cada nivel del control (`PERMITIR`, `AVISAR`)
  * vive en su propia empresa: el nivel no admite borrado.
  */
 
@@ -32,15 +32,12 @@ describe.skipIf(base === null)("stock: concurrencia de movimientos", () => {
   let c: MontajeDeStock;
   let permitir: EscenarioDeStock;
   let avisar: EscenarioDeStock;
-  let bloquear: EscenarioDeStock;
   beforeAll(async () => {
     if (base === null) return;
     c = await montarStock(base);
     permitir = await c.escenario();
     avisar = await c.escenario();
-    bloquear = await c.escenario();
     await c.fijarNivel(avisar.empresa, "AVISAR");
-    await c.fijarNivel(bloquear.empresa, "BLOQUEAR");
   });
   afterAll(async () => {
     if (base !== null) await c.cerrar();
@@ -82,12 +79,12 @@ describe.skipIf(base === null)("stock: concurrencia de movimientos", () => {
       [m.empresa, dep],
     );
 
-  it("P1: existencia 1 con BLOQUEAR y dos salidas de 1 a la vez (dos cajeros venden el último): una pasa, la otra CONTROL_BLOQUEA, existencia 0 y nunca −1", async () => {
+  it("P1: existencia 1 con AVISAR y dos salidas de 1 a la vez sin confirmar (dos cajeros venden el último): una pasa, la otra CONTROL_REQUIERE_CONFIRMACION, existencia 0 y nunca −1", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda += 1) {
-      const a = await conExistencia(bloquear, "1");
+      const a = await conExistencia(avisar, "1");
       const resultados = await aLaVez(
         c,
-        [salida(bloquear, a.dep, a.producto, "1"), salida(bloquear, a.dep, a.producto, "1")],
+        [salida(avisar, a.dep, a.producto, "1"), salida(avisar, a.dep, a.producto, "1")],
         ronda,
       );
       expect(soloOk(resultados), JSON.stringify(resultados)).toBe(1);
@@ -95,13 +92,13 @@ describe.skipIf(base === null)("stock: concurrencia de movimientos", () => {
       expect(perdedor).toMatchObject({
         ok: false,
         error: {
-          error: "CONTROL_BLOQUEA",
+          error: "CONTROL_REQUIERE_CONFIRMACION",
           control: NEGATIVA,
           detalle: [{ productoId: a.producto, depositoId: a.dep, existenciaResultante: "-1.0000" }],
         },
       });
       expect(await c.existencia(a.dep, a.articulo)).toBe("0.0000");
-      expect(await salidasDe(bloquear, a.dep)).toBe(1);
+      expect(await salidasDe(avisar, a.dep)).toBe(1);
     }
   });
 

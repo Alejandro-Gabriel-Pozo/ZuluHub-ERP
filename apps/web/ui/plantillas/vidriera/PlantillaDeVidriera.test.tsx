@@ -3,7 +3,12 @@ import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
+import { CARAS_DE_VIDRIERA } from "../../../../../src/capacidades/experiencia/vidriera/caras";
 import { CLAVE_DE_LETRA_GUARDADA } from "../../../../../src/capacidades/experiencia/vidriera/letra";
+import {
+  cssDelTemaDeLaCarta,
+  temaDeLaCarta,
+} from "../../../../../src/capacidades/experiencia/vidriera/tema-de-la-carta";
 import type { VistaDeVidriera } from "../../../../../src/capacidades/experiencia/vidriera/vista";
 import { violacionesDeAccesibilidad } from "../../pruebas/ayudas";
 import { PlantillaDeVidriera } from "./PlantillaDeVidriera.cliente";
@@ -737,5 +742,121 @@ describe("carta: forma", () => {
   it("el pie dice que los precios incluyen IVA", async () => {
     await abrirVidriera();
     await expect.element(page.getByText("Los precios incluyen IVA.")).toBeVisible();
+  });
+});
+
+describe("carta: identidad elegida (V1b)", () => {
+  /** La carta de prueba con la cara y el color elegidos, y el tema puesto como lo pone la página (un `<style>` con los tokens). */
+  async function abrirConIdentidad(cara: (typeof CARAS_DE_VIDRIERA)[number], color: string) {
+    const tema = temaDeLaCarta(cara, color);
+    if (!tema.ok) throw new Error("color válido esperado");
+    // El tema como una hoja adoptada (en la página real es un `<style nonce>` del servidor): los mismos tokens, sobre `:root`.
+    const estilo = new CSSStyleSheet();
+    estilo.replaceSync(cssDelTemaDeLaCarta(tema.valor));
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, estilo];
+    const pantalla = await abrirVidriera({
+      ...vidrieraDePrueba(),
+      identidad: { cara, tema: tema.valor, inicial: "L", logo: null },
+    });
+    return { pantalla, estilo };
+  }
+
+  it("lleva la cara elegida y la placa con la inicial (decorativa)", async () => {
+    for (const cara of CARAS_DE_VIDRIERA) {
+      const { pantalla, estilo } = await abrirConIdentidad(cara, "#1f4e79");
+      expect(document.querySelector("main")?.getAttribute("data-cara")).toBe(cara);
+      const placa = document.querySelector("[data-placa]");
+      expect(placa?.textContent).toBe("L");
+      expect(placa?.getAttribute("aria-hidden")).toBe("true");
+      await pantalla.unmount();
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter((h) => h !== estilo);
+    }
+  });
+
+  it("sin identidad elegida no hay cara ni placa", async () => {
+    await abrirVidriera();
+    expect(document.querySelector("main")?.hasAttribute("data-cara")).toBe(false);
+    expect(document.querySelector("[data-placa]")).toBeNull();
+  });
+
+  it("con logo: la imagen decorativa va sobre la inicial, con la dirección propia de la carta", async () => {
+    const logo = fotoDePrueba(210, 240, 240).direccion;
+    const pantalla = await abrirVidriera({
+      ...vidrieraDePrueba(),
+      identidad: { cara: "DIA", tema: null, inicial: "L", logo },
+    });
+    const placa = document.querySelector("[data-placa]");
+    expect(placa).not.toBeNull();
+    expect(placa?.textContent).toBe("L");
+    const imagen = placa?.querySelector("img[data-logo]");
+    expect(imagen?.getAttribute("src")).toBe(logo);
+    expect(imagen?.getAttribute("alt")).toBe("");
+    expect(placa?.getAttribute("aria-hidden")).toBe("true");
+    await pantalla.unmount();
+  });
+
+  it("un logo que no llega se quita y queda la inicial, sin imagen rota", async () => {
+    const pantalla = await abrirVidriera({
+      ...vidrieraDePrueba(),
+      identidad: { cara: "DIA", tema: null, inicial: "L", logo: "/no-existe-nunca/logo/1.webp" },
+    });
+    await vi.waitFor(() => {
+      expect(document.querySelector("[data-placa] img")).toBeNull();
+    });
+    expect(document.querySelector("[data-placa]")?.textContent).toBe("L");
+    await pantalla.unmount();
+  });
+
+  it("el logo cubre la placa entera, sin deformarse", async () => {
+    const pantalla = await abrirVidriera({
+      ...vidrieraDePrueba(),
+      identidad: {
+        cara: "DIA",
+        tema: null,
+        inicial: "L",
+        logo: fotoDePrueba(10, 240, 120).direccion,
+      },
+    });
+    const placa = document.querySelector("[data-placa]") as HTMLElement;
+    const imagen = placa.querySelector("img") as HTMLImageElement;
+    expect(imagen.getBoundingClientRect().width).toBeCloseTo(
+      placa.getBoundingClientRect().width - 2 * parseFloat(getComputedStyle(placa).borderLeftWidth),
+      0,
+    );
+    expect(getComputedStyle(imagen).objectFit).toBe("contain");
+    await pantalla.unmount();
+  });
+
+  it("los colores del tema llegan a la pantalla: la cabecera y el fondo toman los de la cara", async () => {
+    const { pantalla, estilo } = await abrirConIdentidad("NOCHE", "#1f4e79");
+    const raiz = getComputedStyle(document.documentElement);
+    expect(raiz.getPropertyValue("--color-fondo").trim()).toBe("#101a23");
+    const cabecera = document.querySelector("header");
+    expect(cabecera).not.toBeNull();
+    expect(getComputedStyle(cabecera as Element).backgroundColor).not.toBe("rgb(31, 78, 121)");
+    await pantalla.unmount();
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter((h) => h !== estilo);
+  });
+
+  it("sin violaciones de axe (contraste incluido) con cada cara y colores de todos los tonos, también los claros y los oscuros", async () => {
+    for (const cara of CARAS_DE_VIDRIERA) {
+      for (const color of [
+        "#1f4e79",
+        "#e0a800",
+        "#808080",
+        "#000000",
+        "#ffffff",
+        "#00ae00",
+        "#ff00ff",
+      ]) {
+        const { pantalla, estilo } = await abrirConIdentidad(cara, color);
+        expect(
+          await violacionesDeAccesibilidad(document.body, { pagina: true }),
+          `${cara} ${color}`,
+        ).toEqual([]);
+        await pantalla.unmount();
+        document.adoptedStyleSheets = document.adoptedStyleSheets.filter((h) => h !== estilo);
+      }
+    }
   });
 });

@@ -24,6 +24,9 @@ name: Preparar la empresa de pruebas (preview)
 #    VIGENTE en `contexto_clave` pero nadie la conoce). El login vence solo a los 30 minutos (`VALID UNTIL`) por si el runner muere. El paso «Cerrar» corre SIEMPRE (`if: always()`, también si un paso
 #    intermedio falla o se cancela), deja el rol `NOLOGIN` y sin clave, VERIFICA el estado final y falla fuerte si no quedó cerrado.
 #    Solo existe para `preview`; no toca `--preparar-roles`.
+#    Si el rol tiene el login PERMANENTE de la consola de preview (decisión del 2026-11-19, `cargar-entorno-consola.yml`: vigencia de 90 días), «Abrir»
+#    falla temprano con un mensaje claro y «Cerrar» NO lo cierra (lo reconoce por su vigencia, no por lo que haya pasado antes en este flujo): este
+#    flujo queda en desuso con la consola. Falla que previene: dejar la consola de preview sin base por correr este flujo.
 #  - NO aplica migraciones: se corta si hay pendientes (eso es de `migrar.yml`).
 #  - Concurrencia: comparte el grupo `migrar-preview` con `migrar.yml` y `cargar-entorno.yml` (misma base).
 #  - El Environment `preview` exige la APROBACIÓN DEL DUEÑO (revisores obligatorios y solo `main`, PRIMER-DESPLIEGUE.md, B.1).

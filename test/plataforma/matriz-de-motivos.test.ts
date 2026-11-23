@@ -27,8 +27,8 @@ const actores: Actor[] = [
 ];
 
 describe("plataforma: acción × actor → permitido o SIN_PERMISO", () => {
-  it("hay 37 acciones y 5 actores: 185 combinaciones", () => {
-    expect(acciones.length * actores.length).toBe(185);
+  it("hay 39 acciones y 5 actores: 195 combinaciones", () => {
+    expect(acciones.length * actores.length).toBe(195);
   });
 
   it("solo un administrador ACTIVO con un rol que la matriz incluye puede; todo el resto es SIN_PERMISO", async () => {

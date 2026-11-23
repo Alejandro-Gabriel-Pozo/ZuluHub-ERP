@@ -184,9 +184,9 @@ describe.skipIf(base === null)("stock: idempotencia de los movimientos", () => {
     expect(await c.existencia(dep, a.articulo)).toBe("-2.0000");
   });
 
-  it("I5: repetir una salida que el control bloqueó vuelve a bloquear (no escribió nada la primera vez)", async () => {
+  it("I5: repetir una salida que el control frenó por falta de confirmación vuelve a pedirla (no escribió nada la primera vez)", async () => {
     const emp = await c.escenario();
-    await c.fijarNivel(emp.empresa, "BLOQUEAR");
+    await c.fijarNivel(emp.empresa, "AVISAR");
     const dep = await c.deposito(emp);
     const a = await c.articulo(emp);
     const pedido = {
@@ -198,7 +198,7 @@ describe.skipIf(base === null)("stock: idempotencia de los movimientos", () => {
     for (let i = 0; i < 2; i += 1) {
       expect(await c.casos.registrarSalida(emp.gerente, pedido)).toMatchObject({
         ok: false,
-        error: { error: "CONTROL_BLOQUEA" },
+        error: { error: "CONTROL_REQUIERE_CONFIRMACION" },
       });
     }
     expect(

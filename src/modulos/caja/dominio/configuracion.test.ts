@@ -51,6 +51,7 @@ const medio = (m: Partial<MedioDePago> = {}): MedioDePago => ({
   nombre: "Visa débito",
   activo: true,
   pide: NADA,
+  avisaSiFalta: NADA,
   version: 3,
   ...m,
 });
@@ -373,9 +374,34 @@ describe("decidirEdicionDeCaja", () => {
 });
 
 describe("decidirEdicionDeMedio", () => {
-  const cambios = (nombre: string | null, pide: Partial<DatosQuePideElMedio> = {}) => ({
+  const cambios = (
+    nombre: string | null,
+    pide: Partial<DatosQuePideElMedio> = {},
+    avisaSiFalta: Partial<DatosQuePideElMedio> = {},
+  ) => ({
     nombre,
     pide: { ...NADA, ...pide },
+    avisaSiFalta: { ...NADA, ...avisaSiFalta },
+  });
+
+  it("pedir un dato que el medio no muestra se rechaza; cambiar solo lo que se pide es editar, no «sin cambios»", () => {
+    const debito = medio({ pide: { ...NADA, cupon: true }, avisaSiFalta: NADA });
+    expect(
+      decidirEdicionDeMedio(debito, 3, cambios("Visa débito", { cupon: true }, { marca: true })),
+    ).toEqual({
+      ok: false,
+      error: { codigo: "DATO_PEDIDO_SIN_APARECER", dato: "marca" },
+    });
+    expect(
+      decidirEdicionDeMedio(debito, 3, cambios("Visa débito", { cupon: true }, { cupon: true })),
+    ).toEqual({
+      ok: true,
+      valor: "EDITAR",
+    });
+    expect(decidirEdicionDeMedio(debito, 3, cambios("Visa débito", { cupon: true }))).toEqual({
+      ok: true,
+      valor: "SIN_CAMBIOS",
+    });
   });
 
   it("no existe → MEDIO_NO_ENCONTRADO", () => {

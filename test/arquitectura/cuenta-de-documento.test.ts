@@ -33,14 +33,24 @@ const PERMITIDOS: Readonly<Record<string, readonly string[]>> = {
   ],
 };
 
+/**
+ * Lo ya mirado por (nombre, ruta): cada caso inyectado cambia UN archivo del código real y mirar los demás de nuevo costaba ~1,6 s por caso (más de 5 s con la
+ * máquina cargada: el timeout de #383 y #384). Se reutiliza solo si el texto es idéntico: un archivo inyectado o distinto se vuelve a mirar.
+ */
+const YA_MIRADOS = new Map<string, { texto: string; hay: boolean }>();
+
 /** Los identificadores `nombre` de un archivo (no cuentan los comentarios ni los textos). */
 function aparece(ruta: string, texto: string, nombre: string): boolean {
+  const clave = `${nombre}|${ruta}`;
+  const previo = YA_MIRADOS.get(clave);
+  if (previo?.texto === texto) return previo.hay;
   let hay = false;
   const visitar = (nodo: ts.Node): void => {
     if (ts.isIdentifier(nodo) && nodo.text === nombre) hay = true;
     if (!hay) ts.forEachChild(nodo, visitar);
   };
   visitar(ts.createSourceFile(ruta, texto, ts.ScriptTarget.Latest, true));
+  YA_MIRADOS.set(clave, { texto, hay });
   return hay;
 }
 
@@ -74,15 +84,21 @@ function codigoDe(carpeta: string, salida: Map<string, string>): void {
   }
 }
 
+let LEIDO: ReadonlyMap<string, string> | undefined;
+/** El código real (una lectura del disco por corrida; cada caso recibe su copia para poder cambiarla). */
 const real = (): Map<string, string> => {
-  const archivos = new Map<string, string>();
-  codigoDe("src", archivos);
-  codigoDe("apps", archivos);
-  return archivos;
+  if (LEIDO === undefined) {
+    const archivos = new Map<string, string>();
+    codigoDe("src", archivos);
+    codigoDe("apps", archivos);
+    LEIDO = archivos;
+  }
+  return new Map(LEIDO);
 };
 
 describe("las dos cuentas del número de documento", () => {
-  it("el código real cumple la lista de permitidos", () => {
+  // El único caso que mira TODOS los archivos (los demás reutilizan lo ya mirado): 30 s para la máquina cargada del CI.
+  it("el código real cumple la lista de permitidos", { timeout: 30_000 }, () => {
     const archivos = real();
     expect(archivos.size).toBeGreaterThan(500);
     expect(problemasDeLaCuenta(archivos)).toEqual([]);

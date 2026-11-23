@@ -363,10 +363,10 @@ describe.skipIf(base === null)("0025 catálogo: la migración contra una base re
       },
     );
 
-    it("una alícuota fuera de los ocho códigos, un código de barras mal formado y un tipo que no es BIEN se rechazan", async () => {
+    it("una alícuota fuera de los seis códigos, un código de barras mal formado y un tipo que no es BIEN se rechazan", async () => {
       await sinConfirmar(dueno, async () => {
         check(await insertar("VENDIBLE", { alicuota: "20" }), "producto_alicuota_ck");
-        for (const codigo of ["0", "2.5", "5", "10.5", "21", "27", "EXENTO", "NO_GRAVADO"]) {
+        for (const codigo of ["0", "2.5", "5", "10.5", "21", "27"]) {
           acepta(await insertar("VENDIBLE", { alicuota: codigo }));
         }
         check(

@@ -44,6 +44,7 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
       desactivarSeccionDeCarta: hacer("desactivar"),
       reactivarSeccionDeCarta: hacer("reactivar"),
       reordenarSeccionesDeCarta: hacer("reordenar"),
+      editarProducto: hacer("producto"),
     }),
     consultasDeCatalogo: () => ({
       listarSeccionesParaGestionar: hacer("lista"),
@@ -61,7 +62,9 @@ vi.mock("../../apps/web/servidor/con-la-empresa", () => ({
 }));
 
 import {
+  agregarElProductoALaSeccion,
   cambiarElEstadoDeLaSeccionDeCarta,
+  cargarLosCandidatos,
   cargarLaSeccion,
   cargarLasSecciones,
   cargarUnaSeccion,
@@ -69,6 +72,7 @@ import {
   guardarElNombreDeLaSeccion,
   moverLaSeccion,
   nuevaClaveDeSeccion,
+  quitarElProductoDeLaSeccion,
 } from "../../apps/web/servidor/secciones";
 
 const formulario = (campos: Record<string, string | File>): FormData => {
@@ -104,6 +108,7 @@ beforeEach(() => {
       desactivar: ok({ yaEstaba: false }),
       reactivar: ok({ yaEstaba: false }),
       reordenar: ok({ movidas: 2 }),
+      producto: ok({ version: 8 }),
     },
   });
 });
@@ -189,10 +194,22 @@ describe("darDeAltaLaSeccion", () => {
     expect(escrituras()).toEqual([]);
   });
 
-  it("el error del servidor vuelve a la pantalla ya traducido, sin redirigir (un nombre repetido sale genérico)", async () => {
-    mundo.resultados["crear"] = err("SECCION_DUPLICADA");
+  it("el error del servidor vuelve a la pantalla ya traducido, sin redirigir", async () => {
+    mundo.resultados["crear"] = err("VERSION_DESACTUALIZADA");
     expect(await darDeAltaLaSeccion(CLAVE, formulario({ nombre: "Cafés" }))).toEqual({
       error: GENERICO,
+    });
+  });
+
+  it("un nombre repetido vuelve a la pantalla con su texto aprobado, atado al campo «nombre», sin redirigir", async () => {
+    mundo.resultados["crear"] = err("SECCION_DUPLICADA");
+    expect(await darDeAltaLaSeccion(CLAVE, formulario({ nombre: "Cafés" }))).toEqual({
+      error: {
+        codigo: "CATALOGO_SECCION_REPETIDA",
+        clave: "catalogo.error.seccion_repetida",
+        presentacion: "AVISO",
+        campo: "nombre",
+      },
     });
   });
 
@@ -333,5 +350,118 @@ describe("cambiarElEstadoDeLaSeccionDeCarta", () => {
     mundo.resultados["desactivar"] = err("SECCION_NO_ENCONTRADA");
     expect(await cambiarElEstadoDeLaSeccionDeCarta(B, false)).toEqual({ error: GENERICO });
     expect(mundo.revalidadas).toEqual([`/catalogo/secciones/${B}`]);
+  });
+});
+
+const P1 = "1a1a1a1a-1111-4222-8333-944455556666";
+const P2 = "2b2b2b2b-1111-4222-8333-944455556666";
+const VISTAS_DE_PRODUCTOS = [
+  { productoId: P1, versionEsperada: 2 },
+  { productoId: P2, versionEsperada: 7 },
+];
+
+describe("cargarLosCandidatos", () => {
+  it("pide la lista de la empresa de la sesión, con el texto y la página de la dirección", async () => {
+    mundo.resultados["productos"] = ok({
+      productos: [{ id: P1, nombre: "Flan", version: 2, estado: "ACTIVO", seccion: null }],
+      siguiente: null,
+    });
+    const r = await cargarLosCandidatos(CONTEXTO as never, A, "fla", "");
+    expect(r.ok && r.dato.candidatos.map((c) => c.id)).toEqual([P1]);
+    expect(mundo.llamadas.at(-1)).toEqual({
+      que: "productos",
+      entrada: { claseDeUso: ["VENDIBLE", "REVENTA"], activo: true, texto: "fla" },
+    });
+    expect(escrituras()).toEqual([]);
+  });
+});
+
+describe("quitarElProductoDeLaSeccion", () => {
+  it("quita el producto tocado con SU versión vista, con el contexto del servidor, y la sección se vuelve a pedir", async () => {
+    expect(
+      await quitarElProductoDeLaSeccion(A, VISTAS_DE_PRODUCTOS, formulario({ quitar: P2 })),
+    ).toEqual({ error: null });
+    expect(escrituras()).toEqual([
+      { que: "producto", entrada: { productoId: P2, versionEsperada: 7, seccionDeCartaId: null } },
+    ]);
+    expect(mundo.contextos).toEqual([CONTEXTO]);
+    expect(mundo.revalidadas).toEqual([`/catalogo/secciones/${A}`]);
+  });
+
+  it("un formulario sin producto, o con uno que la persona no vio, no escribe: el genérico, y la página igual se vuelve a pedir", async () => {
+    expect(await quitarElProductoDeLaSeccion(A, VISTAS_DE_PRODUCTOS, formulario({}))).toEqual({
+      error: GENERICO,
+    });
+    expect(
+      await quitarElProductoDeLaSeccion(A, VISTAS_DE_PRODUCTOS, formulario({ quitar: CLAVE })),
+    ).toEqual({ error: GENERICO });
+    expect(escrituras()).toEqual([]);
+    expect(mundo.revalidadas).toEqual([`/catalogo/secciones/${A}`, `/catalogo/secciones/${A}`]);
+  });
+
+  it("un conflicto (otra persona cambió el producto antes) vuelve como el genérico y la página se vuelve a pedir", async () => {
+    mundo.resultados["producto"] = err("VERSION_DESACTUALIZADA");
+    expect(
+      await quitarElProductoDeLaSeccion(A, VISTAS_DE_PRODUCTOS, formulario({ quitar: P1 })),
+    ).toEqual({ error: GENERICO });
+    expect(mundo.revalidadas).toEqual([`/catalogo/secciones/${A}`]);
+  });
+
+  it("repetir el mismo toque (doble toque) manda dos pedidos idénticos con la MISMA versión", async () => {
+    await quitarElProductoDeLaSeccion(A, VISTAS_DE_PRODUCTOS, formulario({ quitar: P1 }));
+    await quitarElProductoDeLaSeccion(A, VISTAS_DE_PRODUCTOS, formulario({ quitar: P1 }));
+    const [primero, segundo] = escrituras();
+    expect(primero).toEqual(segundo);
+    expect(primero?.entrada).toMatchObject({ versionEsperada: 2 });
+  });
+});
+
+describe("agregarElProductoALaSeccion", () => {
+  it("agrega el candidato elegido a ESA sección con SU versión vista y vuelve a la sección", async () => {
+    await expect(
+      agregarElProductoALaSeccion(A, VISTAS_DE_PRODUCTOS, formulario({ agregar: P2 })),
+    ).rejects.toThrow(`${REDIRIGIO} /catalogo/secciones/${A}`);
+    expect(escrituras()).toEqual([
+      { que: "producto", entrada: { productoId: P2, versionEsperada: 7, seccionDeCartaId: A } },
+    ]);
+    expect(mundo.contextos).toEqual([CONTEXTO]);
+  });
+
+  it("con un error se queda en la pantalla de agregar, la vuelve a pedir y devuelve el error ya traducido", async () => {
+    mundo.resultados["producto"] = err("SECCION_NO_ENCONTRADA");
+    expect(
+      await agregarElProductoALaSeccion(A, VISTAS_DE_PRODUCTOS, formulario({ agregar: P1 })),
+    ).toEqual({ error: GENERICO });
+    expect(mundo.revalidadas).toEqual([`/catalogo/secciones/${A}/agregar`]);
+  });
+
+  it("un candidato que la persona no vio, o un formulario vacío, no escribe: el genérico", async () => {
+    expect(
+      await agregarElProductoALaSeccion(A, VISTAS_DE_PRODUCTOS, formulario({ agregar: CLAVE })),
+    ).toEqual({ error: GENERICO });
+    expect(await agregarElProductoALaSeccion(A, VISTAS_DE_PRODUCTOS, formulario({}))).toEqual({
+      error: GENERICO,
+    });
+    expect(escrituras()).toEqual([]);
+  });
+
+  it("el motivo del guard sale tal cual, sin redirigir", async () => {
+    mundo.resultados["producto"] = err("SIN_PERMISO");
+    const r = await agregarElProductoALaSeccion(
+      A,
+      VISTAS_DE_PRODUCTOS,
+      formulario({ agregar: P1 }),
+    );
+    expect(r.error?.codigo).toBe("SIN_PERMISO");
+  });
+
+  it("repetir el mismo toque (doble toque) manda dos pedidos idénticos; ambos vuelven a la sección", async () => {
+    for (let i = 0; i < 2; i++) {
+      await expect(
+        agregarElProductoALaSeccion(A, VISTAS_DE_PRODUCTOS, formulario({ agregar: P1 })),
+      ).rejects.toThrow(`${REDIRIGIO} /catalogo/secciones/${A}`);
+    }
+    const [primero, segundo] = escrituras();
+    expect(primero).toEqual(segundo);
   });
 });

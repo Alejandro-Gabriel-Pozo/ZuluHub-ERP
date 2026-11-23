@@ -85,7 +85,7 @@ function leerConfirmaciones(valor: unknown): R<readonly ControlDeStock[]> {
  * anidada de stock, sin el stock propio del producto: se explota SU receta), sumado por insumo; la versión de la receta queda SELLADA en la orden y
  * no se relee (S-2). Guard `transformaciones.abrir`, módulo `produccion` y perilla `produccion`; las dos sucursales de los depósitos en el alcance
  * de quien pide; ambos depósitos normales y activos. El producto tiene artículo activo (`PRODUCTO_NO_SE_PRODUCE`) y receta vigente no vacía
- * (`PRODUCTO_SIN_RECETA`). Los faltantes se informan y el control `stock.existencia_negativa` decide como en cualquier salida: `BLOQUEAR` rechaza,
+ * (`PRODUCTO_SIN_RECETA`). Los faltantes se informan y el control `stock.existencia_negativa` decide como en cualquier salida:
  * `AVISAR` pide confirmar («Producir igual»), `PERMITIR` pasa; lo que pasa con faltante queda auditado como excepción. El NÚMERO lo asigna la base
  * (correlativo por empresa, sin huecos por una carrera ni por un rollback: S-18). Repetición: el mismo `id` con el mismo contenido devuelve la
  * orden existente con `yaExistia`, sin escribir ni auditar; con otro contenido, `ID_REUTILIZADO`. Dos altas del mismo `id` a la vez: la base
@@ -258,12 +258,9 @@ export function armarAbrirOrden(dependencias: DependenciasDeProduccion) {
           necesario: texto(necesarioDe.get(f.articuloId) ?? 0n),
           unidadId: insumoDe.get(f.articuloId)?.unidadDeStockId ?? "",
         }));
-        if (evaluacion.decision === "BLOQUEA" || evaluacion.decision === "REQUIERE_CONFIRMACION") {
+        if (evaluacion.decision === "REQUIERE_CONFIRMACION") {
           return err({
-            error:
-              evaluacion.decision === "BLOQUEA"
-                ? "CONTROL_BLOQUEA"
-                : "CONTROL_REQUIERE_CONFIRMACION",
+            error: "CONTROL_REQUIERE_CONFIRMACION",
             control: CONTROL_DE_NEGATIVO,
             detalle: evaluacion.faltantes.map((f) => ({
               productoId: insumoDe.get(f.articuloId)?.productoId ?? f.articuloId,
@@ -311,7 +308,7 @@ export function armarAbrirOrden(dependencias: DependenciasDeProduccion) {
           },
         });
         // Lo que pasa con faltante porque el control lo permite o la persona lo confirmó: una excepción auditada por insumo.
-        if (evaluacion.decision === "PASA_CON_EXCEPCION" && evaluacion.nivel !== "BLOQUEAR") {
+        if (evaluacion.decision === "PASA_CON_EXCEPCION") {
           for (const f of evaluacion.faltantes) {
             const registro = registroDeExcepcion(
               {

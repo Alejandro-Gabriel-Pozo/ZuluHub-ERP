@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0808",
+  "fecha": "2026-11-19",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Los textos del núcleo viven en tres archivos propios del vocabulario; el archivo común del catálogo de textos solo junta.",
+  "que_cambia": "Solo organización del código: ningún texto ni clave cambia. Revertir: volver a escribir los tres archivos dentro de catalogo.ts.",
+  "donde": "src/capacidades/vocabulario/catalogo.ts, catalogo-nucleo.ts, catalogo-carta-publica.ts y catalogo-sesion-y-empresa.ts; arquitectura/centrales.json; brief PR-E3b de escalabilidad, repo de documentos, 11-especificaciones/briefs/escalabilidad"
+}

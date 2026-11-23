@@ -1,3 +1,5 @@
+import { exigirPerilla } from "../../../capacidades/planes/derechos";
+import type { ClavePerilla } from "../../../capacidades/planes/perillas";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { esNivelDeCompra, PERILLA_DEL_NIVEL, type NivelDeCompra } from "../dominio/niveles";
@@ -12,8 +14,8 @@ export type SalidaDeConfigurarCompras = Readonly<{ nivel: NivelDeCompra; version
 
 /**
  * Cambiar el nivel de operación de las compras (E9 §3.3): lo hace el gerente (`compras.configurar`) y rige HACIA ADELANTE (cada compra sella el nivel con que
- * nació; nada de lo cargado se toca). N3 y N4 son extras de pago apagados por perilla (P-4): hasta que existan sus perillas, pedirlos es `FUNCION_NO_INCLUIDA`
- * con el nombre de la perilla. Repetición (`SIN_CAMBIOS`): pedir el nivel que ya está devuelve lo vigente aunque la versión esperada sea vieja, sin escribir ni
+ * nació; nada de lo cargado se toca). N3 y N4 son extras de pago apagados por perilla (P-4): pedirlos con la perilla apagada en el plan de la empresa es `FUNCION_NO_INCLUIDA`
+ * con el nombre de la perilla (N4 requiere N3: sin la de N3 vale apagada). Repetición (`SIN_CAMBIOS`): pedir el nivel que ya está devuelve lo vigente aunque la versión esperada sea vieja, sin escribir ni
  * auditar; con otro nivel y versión vieja, `VERSION_DESACTUALIZADA`.
  */
 export function armarConfigurarCompras(dependencias: DependenciasDeCompras) {
@@ -32,7 +34,14 @@ export function armarConfigurarCompras(dependencias: DependenciasDeCompras) {
           if (!permiso.ok) return permiso;
           if (!esNivelDeCompra(entrada.nivel)) return err("NIVEL_INVALIDO");
           const perilla = PERILLA_DEL_NIVEL[entrada.nivel];
-          if (perilla !== null) return err({ error: "FUNCION_NO_INCLUIDA", perilla });
+          if (perilla !== null) {
+            const derechos = await tx.derechos.deLaEmpresa(contexto);
+            // El nombre de cada perilla es una clave del catálogo: lo fija `niveles.test.ts` (el dominio no importa capacidades).
+            const incluida = exigirPerilla(derechos, perilla as ClavePerilla, { empresaId });
+            if (!incluida.ok) {
+              return err({ error: "FUNCION_NO_INCLUIDA", perilla: incluida.error.perilla });
+            }
+          }
           const actual = await tx.configuracionDeCompras.bloquear(empresaId);
           if (actual.nivel === entrada.nivel) return ok(actual);
           if (actual.version !== entrada.versionEsperada) return err("VERSION_DESACTUALIZADA");

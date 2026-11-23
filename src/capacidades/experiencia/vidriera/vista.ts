@@ -4,7 +4,11 @@ import type {
   FotoPublicada,
   ProductoPublicado,
 } from "../../../puertos/vidriera-publica";
+import { CARA_POR_DEFECTO, type CaraDeVidriera } from "./caras";
+import { COLOR_POR_DEFECTO_DE_LA_CARTA } from "./color-de-la-carta";
 import { direccionesDeVidriera, slugDeNombre } from "./direccion";
+import { rutaDelLogoServido } from "./logo-publico";
+import { temaDeLaCarta, type TemaDeLaCarta } from "./tema-de-la-carta";
 import { unirConO } from "./unir-con-o";
 import type { LetraBase } from "./letra";
 import { listaDePreciosDelProducto, type GrupoDePrecios, type ListaDePrecios } from "./precios";
@@ -58,6 +62,18 @@ export type VistaDeSeccion = Readonly<{
   productos: readonly VistaDeProducto[];
 }>;
 
+/**
+ * Cómo se ve la carta (V1b): la cara que rige, los colores que salen de ella y del color elegido, y la inicial del nombre para la placa de la cabecera. `tema` es `null` si la carta no eligió
+ * nada (ni cara, ni color propio ni de la empresa): se ve como siempre. `logo` es la dirección PROPIA de la carta desde donde se sirve su logo (`/<código>/logo/<versión>.webp`, §5.7.5:
+ * la CSP solo deja imágenes propias), o `null` si la carta no cargó uno.
+ */
+export type VistaDeIdentidad = Readonly<{
+  cara: CaraDeVidriera;
+  tema: TemaDeLaCarta | null;
+  inicial: string;
+  logo: string | null;
+}>;
+
 export type VistaDeVidriera = Readonly<{
   nombre: string;
   rubro: string | null;
@@ -65,6 +81,7 @@ export type VistaDeVidriera = Readonly<{
   /** La tercera línea de la portada; `null` si no hay (la pantalla decide si la muestra). */
   mensajeDePortada: string | null;
   letraBase: LetraBase;
+  identidad: VistaDeIdentidad;
   /** La dirección de la carta, para volver a ella desde un producto. */
   hrefDeLaVidriera: string;
   secciones: readonly VistaDeSeccion[];
@@ -171,6 +188,28 @@ function productoParaLaVista(
 }
 
 /**
+ * Lo que la carta eligió para su aspecto. Elegir cara O color alcanza para que rija un tema; la cara sin elegir es `DIA` y el color sin elegir (propio y de la empresa) es el azul de la maqueta (la marca todavía no aporta su color a la vista). Un color que no sea `#rrggbb` (no debería llegar de la base) deja la carta sin tema: se ve como siempre.
+ */
+function identidadParaLaVista(vidriera: VidrieraPublicada, rutaPublica: string): VistaDeIdentidad {
+  const { cara, colorPropio, colorDeLaEmpresa } = vidriera.identidad;
+  const elegido = colorPropio ?? colorDeLaEmpresa;
+  const rige = cara ?? CARA_POR_DEFECTO;
+  const tema =
+    cara === null && elegido === null
+      ? null
+      : temaDeLaCarta(rige, elegido ?? COLOR_POR_DEFECTO_DE_LA_CARTA);
+  return {
+    cara: rige,
+    tema: tema !== null && tema.ok ? tema.valor : null,
+    inicial: Array.from(vidriera.nombre.trim())[0]?.toUpperCase() ?? "",
+    logo:
+      vidriera.identidad.logo === null
+        ? null
+        : rutaDelLogoServido(rutaPublica, vidriera.identidad.logo.version),
+  };
+}
+
+/**
  * Arma la vista de una carta. `rutaPublica` es el camino de la carta en la dirección pública: `/<código>` en
  * el host compartido y `""` en el host dedicado (§3.3); de ella salen todos los enlaces.
  *
@@ -205,6 +244,7 @@ export function armarVistaDeVidriera(
     lugar: vidriera.lugar,
     mensajeDePortada: vidriera.mensajeDePortada,
     letraBase: vidriera.letraBase,
+    identidad: identidadParaLaVista(vidriera, rutaPublica),
     hrefDeLaVidriera: rutaPublica === "" ? "/" : rutaPublica,
     secciones,
     totalDeProductos: secciones.reduce((n, s) => n + s.productos.length, 0),

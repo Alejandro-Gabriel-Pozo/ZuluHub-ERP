@@ -1,0 +1,16 @@
+import type { ClaveDeTexto } from "../vocabulario/catalogo";
+
+/**
+ * Los códigos públicos de negocio de las pantallas de producción (ADR-016): lo ÚNICO que sale hacia la pantalla cuando cancelar o anular una orden no puede
+ * completarse por una regla del negocio. Hay uno solo, el genérico «Esta acción no está permitida» (`lotes.error.sin_permiso`, ya aprobado): para los errores
+ * de la orden (`ORDEN_YA_CERRADA`, `ORDEN_CANCELADA`, `PRODUCTO_YA_USADO`…) no hay texto aprobado y la regla es genérico antes que uno por acción
+ * (`CLAUDE.md`, «Interfaz sobria»; E6 §10, D175). Cómo se llega de un error del módulo a este lo decide `src/composicion/errores-de-produccion.ts`.
+ *
+ * Previene: que un error de producción sin texto aprobado salga crudo a la pantalla o que se invente un texto por cada regla de la orden. Chequeo:
+ * `respuesta.test.ts` (todo código tiene su texto) y `errores-de-produccion.test.ts` (todo error del módulo se traduce).
+ */
+export const CLAVES_DE_ERRORES_DE_PRODUCCION = {
+  PRODUCCION_ACCION_NO_PERMITIDA: "lotes.error.sin_permiso",
+} as const satisfies Record<string, ClaveDeTexto>;
+
+export type CodigoDeProduccion = keyof typeof CLAVES_DE_ERRORES_DE_PRODUCCION;

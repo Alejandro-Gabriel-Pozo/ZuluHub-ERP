@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0827",
+  "fecha": "2026-11-20",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Carta en línea suma 19 textos de identidad (cara, colores, paletas, logo y avisos) de las maquetas; SUPUESTO: el rótulo Cara y los nombres Día, Boliche y Noche.",
+  "que_cambia": "Solo lo que lee quien edita la carta. Si el dueño cambia el rótulo o los nombres de las caras se cambian cuatro textos del catálogo. Revertir: quitar las claves catalogo.carta de identidad y sus usos en la ficha y el formulario.",
+  "donde": "src/capacidades/vocabulario/catalogo-catalogo.ts; src/capacidades/pantallas/ficha-de-carta-en-linea.ts; maquetas carta.html y carta-caras.html; decisiones-del-dueno-2026-11.md, filas del 15/11 (171, 173) y del 21/11/2026"
+}

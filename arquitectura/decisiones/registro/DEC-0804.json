@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0804",
+  "fecha": "2026-11-20",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Planes de la consola: módulo en desarrollo o perilla sin su módulo se permiten con aviso; 2.º factor solo al publicar; sin retirar plan ni descartar borrador; asignar solo desde la empresa.",
+  "que_cambia": "La pantalla avisa y etiqueta; el servidor no rechaza esos casos. «Nuevo plan» está incluido. Revertir: pedir al servidor que rechace la perilla sin su módulo.",
+  "donde": "Pedernal-docs 11-especificaciones/briefs/plataforma/PR-planes-consola.md §10 (decisiones del dueño del 19/11/2026, rama plan-pantallas/consola-planes)"
+}

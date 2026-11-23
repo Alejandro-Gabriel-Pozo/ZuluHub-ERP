@@ -2,6 +2,7 @@ import "server-only";
 import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   agregarElMedioDePago,
+  cambiarLosDatosDelMedio,
   desactivarElMedioDePago,
   editarElMedioDePago,
   listarLosMediosDePago,
@@ -18,7 +19,7 @@ import { aLaLista, textoDe } from "./formularios-de-caja";
 import { dependenciasDeSesion } from "./sesion";
 
 /**
- * «Medios de pago» de la configuración de caja: la lectura de la lista y las acciones de agregar, editar el nombre, desactivar y reactivar. Finas a
+ * «Medios de pago» de la configuración de caja: la lectura de la lista y las acciones de agregar, editar el nombre, cambiar los datos que se piden al cobrar, desactivar y reactivar. Finas a
  * propósito (ADR-015, punto 2): resuelven QUIÉN y DÓNDE actúa (`conLaEmpresa`: sesión, origen propio y empresa elegida, nunca los que diga el
  * navegador) y llaman a `src/composicion/medios-de-pago-web.ts`, donde se prueba el resto. El permiso (`cajas.ver` / `medios_de_pago.*`) y la validez del
  * nombre y del tipo los decide el servidor, dentro de la transacción: la pantalla no valida nada. Del formulario solo se toman los campos que la acción
@@ -62,6 +63,24 @@ export async function editarElMedio(
         medioDePagoId,
         versionEsperada,
         nombre: textoDe(datos, "nombre"),
+      }),
+    ),
+    RUTAS_DE_MEDIOS.lista,
+  );
+}
+
+/** Qué datos se piden al cobrar con el medio: del formulario se toman solo los valores del campo `datos` (uno por casilla tildada); el servidor los valida contra la lista de los cinco datos. */
+export async function cambiarLosDatosDelMedioDePago(
+  medioDePagoId: string,
+  versionEsperada: number,
+  datos: FormData,
+): Promise<ResultadoDeAccion> {
+  return aLaLista(
+    await conLaEmpresa((contexto) =>
+      cambiarLosDatosDelMedio(dependencias, contexto, {
+        medioDePagoId,
+        versionEsperada,
+        datos: datos.getAll("datos").filter((valor) => typeof valor === "string"),
       }),
     ),
     RUTAS_DE_MEDIOS.lista,

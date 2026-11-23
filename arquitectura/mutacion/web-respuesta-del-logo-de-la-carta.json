@@ -1,0 +1,6 @@
+{
+  "grupo": "web (respuesta del logo de la carta)",
+  "archivos": "src/composicion/respuesta-de-logo.ts",
+  "minutos": 1,
+  "pruebas": "src/composicion/respuesta-de-logo.test.ts"
+}

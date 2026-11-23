@@ -72,6 +72,41 @@ export const TEXTOS_DE_COMPRAS = {
   "compras.ficha.proveedores_del_producto": { porDefecto: "Proveedores del producto" },
   "compras.ficha.mas_barato_por_unidad": { porDefecto: "Más barato por unidad" },
 
+  // compra.html:332-333 (aprobados el 09/11/2026, DEC-0565): ficha del proveedor, sin clave hasta C0 (`pantallas-de-compras-inventario.md` §5)
+  "compras.ficha.ver_todas": { porDefecto: "Ver todas" },
+  "compras.ficha.por_ser": { porDefecto: "Por ser" },
+  "compras.ficha.emite": { porDefecto: "emite" },
+  "compras.ficha.condicion_no_define_la_letra": {
+    porDefecto: "Su condición no define la letra: se elige a mano",
+  },
+  "compras.ficha.todavia_no_se_le_compro_nada": { porDefecto: "Todavía no se le compró nada" },
+  "compras.ficha.todavia_no_tiene_facturas": { porDefecto: "Todavía no tiene facturas" },
+  "compras.ficha.ninguno_cargado": { porDefecto: "Ninguno cargado" },
+  "compras.ficha.sin_puntos_de_venta": { porDefecto: "Sin puntos de venta" },
+  "compras.ficha.ultima_compra": { porDefecto: "Última compra" },
+  "compras.ficha.agregar_otro_comprobante": { porDefecto: "Agregar otro comprobante" },
+
+  // compra.html:334-335 (aprobados el 09/11/2026, DEC-0565): pedidos de quien carga compras y modales de confirmación («Cancelar» es de uso común y ya existe)
+  "compras.ficha.pedido_lo_aprueba_quien_administra": {
+    porDefecto:
+      "Lo tiene que aprobar quien administra. Hasta entonces no se puede usar en una factura",
+    largoMaximo: 120,
+  },
+  "compras.ficha.pedido_el": { porDefecto: "Pedido el" },
+  "compras.ficha.pedido_pendiente": { porDefecto: "Pedido pendiente" },
+  "compras.ficha.falta_que_lo_apruebe": { porDefecto: "Falta que lo apruebe quien administra" },
+  "compras.ficha.se_agrega_a_la_ficha_de": { porDefecto: "Se agrega a la ficha de" },
+  "compras.ficha.despues_solo_se_elige_entre_los_de_la_ficha": {
+    porDefecto: "Después solo se puede elegir entre los puntos de venta de la ficha",
+  },
+  "compras.ficha.numero_del_punto_de_venta": { porDefecto: "Número del punto de venta" },
+  "compras.ficha.las_facturas_cargadas_no_cambian": {
+    porDefecto:
+      "Las facturas ya cargadas no cambian. Si el proveedor vuelve a usarlo, se agrega de nuevo",
+    largoMaximo: 120,
+  },
+  "compras.ficha.agregar": { porDefecto: "Agregar" },
+
   // compra.html, «Textos aprobados», filas «Compra y carga de factura», «Carga de factura» y «Carga de la nota de crédito»
   "compras.factura.cargar_factura": { porDefecto: "Cargar factura" },
   "compras.factura.comprobante": { porDefecto: "Comprobante" },
@@ -93,6 +128,14 @@ export const TEXTOS_DE_COMPRAS = {
   "compras.factura.solicitada": { porDefecto: "Solicitada" },
   "compras.factura.recibida": { porDefecto: "Recibida" },
   "compras.factura.aplicada": { porDefecto: "Aplicada" },
+
+  // compra.html:336, 340 y 341 (aprobados el 09/11/2026, DEC-0565; «Falta la factura» es de la decisión 35 del dueño, compra.html:340): carga de factura
+  "compras.factura.sin_iva_discriminado": {
+    porDefecto: "Sin IVA discriminado: es un comprobante B o C",
+  },
+  "compras.factura.neto_sin_iva_discriminado": { porDefecto: "Neto (sin IVA discriminado)" },
+  "compras.factura.neto_de_la_linea": { porDefecto: "Neto de la línea" },
+  "compras.factura.falta_la_factura": { porDefecto: "Falta la factura" },
 
   // control.html, «Textos nuevos» (09/11/2026), N3 apagado por perilla (T13): se declaran juntos para que el catálogo quede completo con lo aprobado
   "compras.control.lote": { porDefecto: "Lote" },

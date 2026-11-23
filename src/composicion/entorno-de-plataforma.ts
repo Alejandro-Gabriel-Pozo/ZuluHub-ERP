@@ -30,7 +30,7 @@ import {
 export const PEDERNAL_DB_PLATAFORMA = "PEDERNAL_DB_PLATAFORMA";
 
 /**
- * La cadena del rol `pedernal_autenticacion` (las tablas de la librería de ingreso). Es el MISMO nombre que usa la web
+ * La cadena del rol `pedernal_autenticacion_plataforma` (las tablas de la librería de ingreso; rol PROPIO de la consola, 0088). Es el MISMO nombre de variable que usa la web
  * (`entorno.ts`): la consola es otro proyecto de Vercel y la carga por su cuenta; se declara acá porque la consola no
  * puede leer la lista de la web.
  */

@@ -76,7 +76,7 @@ export function armarEmisionFiscal(
 ): ProveedorDeEmision {
   const reloj = opciones.reloj ?? { ahora: () => new Date() };
   const registrar = opciones.registrar ?? (() => undefined);
-  const transporte = opciones.transporte ?? crearTransporteHttp();
+  const transporte = opciones.transporte ?? crearTransporteHttp({ registrar });
   const esperar = opciones.esperar ?? esperarDeVerdad;
 
   /** Las piezas sin estado que comparten todos los clientes; se piden (y validan) la primera vez. */
