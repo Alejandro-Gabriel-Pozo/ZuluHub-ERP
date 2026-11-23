@@ -5,6 +5,13 @@ import {
   LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL,
   nombreODenominacionDesdeTexto,
 } from "../../../primitivas/texto/nombre-o-razon-social";
+import {
+  CONDICION_NO_CONTRIBUYENTE,
+  CONDICIONES_DE_IIBB,
+  LARGO_MAXIMO_DEL_NUMERO_DE_IIBB,
+  esCondicionDeIibb,
+  type CondicionIibb,
+} from "../../../primitivas/identificacion-fiscal/ingresos-brutos";
 import { esCondicionDeIva, type CondicionIva } from "./emisor";
 import type { DomicilioId, EmisorId, VersionId } from "./identificadores";
 import { confirmarVersion, type ErrorDeConfirmacion } from "./vigencia";
@@ -28,23 +35,10 @@ import { confirmarVersion, type ErrorDeConfirmacion } from "./vigencia";
  */
 export const LIMITES_DE_DATOS_FISCALES = {
   razonSocial: LARGO_MAXIMO_DEL_NOMBRE_O_RAZON_SOCIAL,
-  iibbNumero: 30,
+  iibbNumero: LARGO_MAXIMO_DEL_NUMERO_DE_IIBB,
 } as const;
 
-export const CONDICION_NO_CONTRIBUYENTE = "NO_CONTRIBUYENTE" as const;
-
-export const CONDICIONES_DE_IIBB = [
-  "LOCAL",
-  "CONVENIO_MULTILATERAL",
-  "EXENTO",
-  CONDICION_NO_CONTRIBUYENTE,
-] as const;
-
-export type CondicionIibb = (typeof CONDICIONES_DE_IIBB)[number];
-
-export function esCondicionDeIibb(texto: string): texto is CondicionIibb {
-  return (CONDICIONES_DE_IIBB as readonly string[]).includes(texto);
-}
+export { CONDICION_NO_CONTRIBUYENTE, CONDICIONES_DE_IIBB, esCondicionDeIibb, type CondicionIibb };
 
 /**
  * De una condición guardada, la única que sigue vigente: «No contribuyente». Las tres anteriores se descartan al armar un
