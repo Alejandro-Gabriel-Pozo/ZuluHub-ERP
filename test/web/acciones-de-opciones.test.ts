@@ -21,7 +21,11 @@ import * as acciones from "../../apps/web/app/s/app/acciones-de-opciones";
 
 describe("las acciones de servidor de las opciones expuestas a Next", () => {
   it("exporta solo guardarGrupoAccion y copiarOpcionesAccion, asíncronas", () => {
-    expect(Object.keys(acciones)).toEqual(["guardarGrupoAccion", "copiarOpcionesAccion"]);
+    expect(Object.keys(acciones)).toEqual([
+      "guardarGrupoAccion",
+      "guardarVarianteAccion",
+      "copiarOpcionesAccion",
+    ]);
     expect(acciones.guardarGrupoAccion.constructor.name).toBe("AsyncFunction");
     expect(acciones.copiarOpcionesAccion.constructor.name).toBe("AsyncFunction");
   });
@@ -66,6 +70,35 @@ describe("las acciones de servidor de las opciones expuestas a Next", () => {
       new FormData(),
     );
     expect(delegadas.guardar[0]?.[0]).toMatchObject({ grupoId: null, idsDeOpciones: [] });
+  });
+
+  it("la variante delega igual, marcada como variante por la acción (no por el formulario)", async () => {
+    delegadas.guardar.length = 0;
+    const datos = new FormData();
+    expect(
+      await acciones.guardarVarianteAccion(
+        "p-1",
+        4,
+        "v-1",
+        "clave-1",
+        ["o-1"],
+        { error: null },
+        datos,
+      ),
+    ).toEqual({ error: null });
+    expect(delegadas.guardar).toEqual([
+      [
+        {
+          productoId: "p-1",
+          versionDeOpciones: 4,
+          grupoId: "v-1",
+          esVariante: true,
+          claveDelCambio: "clave-1",
+          idsDeOpciones: ["o-1"],
+        },
+        datos,
+      ],
+    ]);
   });
 
   it("copiar delega con el producto, la versión, la clave de la copia y el formulario, sin el estado anterior", async () => {

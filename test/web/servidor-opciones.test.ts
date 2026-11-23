@@ -100,6 +100,7 @@ vi.mock("../../apps/web/servidor/con-la-empresa", () => ({
 
 import {
   cargarLaCopia,
+  cargarLaVariante,
   cargarLasOpciones,
   cargarUnGrupo,
   copiarLasOpciones,
@@ -166,6 +167,14 @@ describe("las lecturas", () => {
     expect(a.ok && a.dato.claveDelCambio).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
     );
+  });
+
+  it("la variante para editar, o la hoja de una nueva", async () => {
+    const v = await cargarLaVariante(CONTEXTO as never, ID);
+    expect(v.ok && v.dato.grupo).toBeNull();
+    mundo.grupos = [{ ...GRUPO_GUARDADO, clase: "VARIANTE", esTamano: true }];
+    const w = await cargarLaVariante(CONTEXTO as never, ID);
+    expect(w.ok && w.dato.grupo?.esTamano).toBe(true);
   });
 
   it("un grupo para editar, la hoja de uno nuevo y de dónde copiar", async () => {
@@ -395,6 +404,61 @@ describe("guardarElGrupo", () => {
     await expect(guardarElGrupo(LIGADO, datos())).rejects.toThrow(REDIRIGIO);
     expect(mundo.ediciones).toHaveLength(2);
     expect(mundo.ediciones[0]).toEqual(mundo.ediciones[1]);
+  });
+});
+
+describe("guardarElGrupo: la variante", () => {
+  it("la acción la marca como variante; la medida viene de la casilla y el formulario no puede cambiar la clase", async () => {
+    mundo.grupos = [];
+    await expect(
+      guardarElGrupo(
+        { ...LIGADO, esVariante: true },
+        formulario({
+          nombre: "Tamaño",
+          esTamano: "on",
+          esAdicional: "on",
+          esVariante: "no",
+          opcion_n0_nombre: "Chico",
+          opcion_n0_recargo: "99.00",
+        }),
+      ),
+    ).rejects.toThrow(REDIRIGIO);
+    expect(mundo.ediciones[0]).toMatchObject({
+      grupos: [
+        {
+          id: CLAVE,
+          clase: "VARIANTE",
+          esTamano: true,
+          esObligatorio: true,
+          admiteVarias: false,
+          opciones: [{ nombre: "Chico", recargo: "0.00" }],
+        },
+      ],
+    });
+  });
+
+  it("sin la casilla no es la medida; sin la marca de la acción es un grupo y esTamano se ignora", async () => {
+    mundo.grupos = [];
+    await expect(
+      guardarElGrupo(
+        { ...LIGADO, esVariante: true },
+        formulario({ nombre: "Porción", opcion_n0_nombre: "Media" }),
+      ),
+    ).rejects.toThrow(REDIRIGIO);
+    expect(mundo.ediciones[0]).toMatchObject({ grupos: [{ clase: "VARIANTE", esTamano: false }] });
+    await expect(
+      guardarElGrupo(
+        LIGADO,
+        formulario({
+          nombre: "G",
+          clase: "INCLUIDA",
+          esTamano: "on",
+          opcion_n0_nombre: "A",
+          opcion_n0_recargo: "0.00",
+        }),
+      ),
+    ).rejects.toThrow(REDIRIGIO);
+    expect(mundo.ediciones[1]).toMatchObject({ grupos: [{ clase: "INCLUIDA", esTamano: false }] });
   });
 });
 

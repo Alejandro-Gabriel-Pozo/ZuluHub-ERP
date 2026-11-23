@@ -56,7 +56,9 @@ export type OpcionParaLaPantalla = Readonly<{ id: string; nombre: string; recarg
 export type GrupoParaLaPantalla = Readonly<{
   id: string;
   nombre: string;
-  clase: "INCLUIDA" | "ADICIONAL";
+  clase: "INCLUIDA" | "ADICIONAL" | "VARIANTE";
+  /** Solo de la variante: si es la medida. */
+  esTamano: boolean;
   esObligatorio: boolean;
   admiteVarias: boolean;
   seMuestraEnCarta: boolean;
@@ -70,6 +72,8 @@ export type OpcionesParaLaPantalla = Readonly<{
   versionDeOpciones: number;
   /** Los grupos activos de clase incluida o adicional, en el orden de la carta, con sus opciones activas. */
   grupos: readonly GrupoParaLaPantalla[];
+  /** La variante activa (la medida), con sus opciones activas; `null` si el producto no tiene. */
+  variante: GrupoParaLaPantalla | null;
   /** La clave del próximo cambio: una por pantalla armada. */
   claveDelCambio: string;
 }>;
@@ -109,11 +113,12 @@ const sinNombre = (campo: string, respuesta: DependenciasDeRespuesta): Respuesta
 });
 
 function deLaPantalla(g: GrupoDeFicha): GrupoParaLaPantalla | null {
-  if (g.clase === "VARIANTE" || !g.activo) return null;
+  if (!g.activo) return null;
   return {
     id: g.id,
     nombre: g.nombre,
     clase: g.clase,
+    esTamano: g.esTamano,
     esObligatorio: g.esObligatorio,
     admiteVarias: g.admiteVarias,
     seMuestraEnCarta: g.seMuestraEnCarta,
@@ -128,7 +133,7 @@ function deLaPantalla(g: GrupoDeFicha): GrupoParaLaPantalla | null {
 function gruposDeLaPantalla(grupos: readonly GrupoDeFicha[]): readonly GrupoParaLaPantalla[] {
   return [...grupos]
     .sort((a, b) => a.orden - b.orden || a.id.localeCompare(b.id))
-    .flatMap((g) => deLaPantalla(g) ?? []);
+    .flatMap((g) => (g.clase === "VARIANTE" ? [] : (deLaPantalla(g) ?? [])));
 }
 
 /** Las opciones de un producto de la empresa. Es una LECTURA: no escribe ni audita. */
@@ -144,6 +149,7 @@ export async function verLasOpcionesDeUnProducto(
     if (!ficha.ok) return conError(ficha.error, d.respuesta);
     if (ficha.valor === null) return { ok: false, error: GENERICO };
     const { producto, grupos } = ficha.valor;
+    const variante = grupos.find((g) => g.clase === "VARIANTE" && g.activo);
     // Una clase que no se vende no tiene solapa de opciones (maqueta): sale como un producto que no está.
     if (!vendeLaClase(producto.claseDeUso)) return { ok: false, error: GENERICO };
     return {
@@ -153,6 +159,7 @@ export async function verLasOpcionesDeUnProducto(
         nombre: producto.nombre,
         versionDeOpciones: producto.versionDeOpciones,
         grupos: gruposDeLaPantalla(grupos),
+        variante: variante === undefined ? null : deLaPantalla(variante),
         claveDelCambio: d.nuevoId(),
       },
     };
@@ -177,6 +184,18 @@ export async function verUnGrupoDeOpciones(
   if (grupoId !== null && grupo === null) return { ok: false, error: GENERICO };
   const { id, nombre, versionDeOpciones, claveDelCambio } = leidas.dato;
   return { ok: true, dato: { id, nombre, versionDeOpciones, grupo, claveDelCambio } };
+}
+
+/** La variante (la medida) del producto para editarla, o la hoja de una nueva si no tiene (`grupo` nulo). */
+export async function verLaVariante(
+  d: DependenciasDeOpcionesWeb,
+  contexto: ContextoOperativo,
+  productoId: string,
+): Promise<Respuesta<GrupoParaEditar>> {
+  const leidas = await verLasOpcionesDeUnProducto(d, contexto, productoId);
+  if (!leidas.ok) return leidas;
+  const { id, nombre, versionDeOpciones, claveDelCambio, variante } = leidas.dato;
+  return { ok: true, dato: { id, nombre, versionDeOpciones, grupo: variante, claveDelCambio } };
 }
 
 /**
