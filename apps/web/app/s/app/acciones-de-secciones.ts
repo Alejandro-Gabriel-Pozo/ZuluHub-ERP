@@ -2,12 +2,17 @@
 
 import type { ResultadoDeAccion } from "../../../servidor/acciones";
 import {
+  agregarElProductoALaSeccion,
   cambiarElEstadoDeLaSeccionDeCarta,
   darDeAltaLaSeccion,
   guardarElNombreDeLaSeccion,
   moverLaSeccion,
+  quitarElProductoDeLaSeccion,
 } from "../../../servidor/secciones";
-import type { VistaDeSeccion } from "../../../ui/plantillas/catalogo/modelo-de-secciones";
+import type {
+  VistaDeProducto,
+  VistaDeSeccion,
+} from "../../../ui/plantillas/catalogo/modelo-de-secciones";
 
 // Las acciones de servidor de las secciones de la carta, expuestas a Next. Finas a propósito (ADR-015, punto 2): la directiva `"use server"` tiene que ser lo primero de este archivo, así que lo
 // que hacen vive en `servidor/secciones.ts`. Las de formulario reciben el estado anterior que pasa `useActionState`. La clave de creación, la sección, su versión y las secciones activas que la
@@ -58,4 +63,26 @@ export async function reactivarSeccionAccion(
 ): Promise<ResultadoDeAccion> {
   void previo;
   return cambiarElEstadoDeLaSeccionDeCarta(seccionId, true);
+}
+
+/** «Quitar»: la sección y los productos que se vieron, con su versión, los liga la página con `.bind`; el formulario trae el producto tocado. */
+export async function quitarProductoDeSeccionAccion(
+  seccionId: string,
+  vistas: readonly VistaDeProducto[],
+  previo: ResultadoDeAccion,
+  datos: FormData,
+): Promise<ResultadoDeAccion> {
+  void previo;
+  return quitarElProductoDeLaSeccion(seccionId, vistas, datos);
+}
+
+/** «Agregar producto»: la sección y los candidatos que se vieron, con su versión, los liga la página con `.bind`; el formulario trae el candidato elegido. */
+export async function agregarProductoASeccionAccion(
+  seccionId: string,
+  vistas: readonly VistaDeProducto[],
+  previo: ResultadoDeAccion,
+  datos: FormData,
+): Promise<ResultadoDeAccion> {
+  void previo;
+  return agregarElProductoALaSeccion(seccionId, vistas, datos);
 }

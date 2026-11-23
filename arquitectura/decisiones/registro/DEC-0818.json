@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0818",
+  "fecha": "2026-11-20",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "CONFIRMADA",
+  "decision": "SUPUESTO: «Plan de una empresa» no tiene historial; T-22 y T-30 se muestran en un bloque junto al plan actual (insignia y línea del último cambio si nació de un arrepentimiento), sin lista nueva.",
+  "que_cambia": "Si el dueño quiere un historial completo de cambios hacen falta textos aprobados para sus filas normales. Revertir: quitar `arrepentimiento.cliente.tsx` y su línea en el panel.",
+  "donde": "apps/plataforma/pantallas/arrepentimiento.cliente.tsx; Pedernal-docs 11-especificaciones/briefs/escalabilidad/PR-H14b-consola-politica-de-cambio-de-plan.md §4.3; aprobada por el dueño el 20/11/2026 (DDD, fila «lista única de 15 preguntas», punto 6)"
+}

@@ -23,6 +23,7 @@
     "deuda": "node arquitectura/deuda/deuda.cjs",
     "decisiones": "node arquitectura/decisiones/resumen.cjs",
     "decisiones:verificar": "node arquitectura/decisiones/decisiones.cjs",
+    "integracion:documento": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/escribir-operaciones-contextuales.ts",
     "analizar:muerto": "knip",
     "mutacion": "stryker run",
     "migrar": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/migrar-base.ts",
@@ -34,6 +35,7 @@
     "plataforma:primer-admin": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/crear-primer-admin.ts",
     "plataforma:caso": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/ejecutar-caso-de-plataforma.ts",
     "plataforma:preparar-prueba": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/preparar-empresa-de-pruebas.ts",
+    "consola:cargar-entorno": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/cargar-entorno-consola.ts",
     "plataforma:login-temporal": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/login-temporal-de-plataforma.ts",
     "plataforma:baja-admin": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/baja-de-admin.ts",
     "plataforma:resetear-segundo-factor": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/resetear-segundo-factor.ts"

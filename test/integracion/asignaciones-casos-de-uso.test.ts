@@ -22,6 +22,7 @@ import {
   exito,
   falla,
   huellaDeEscrituras,
+  sinAnticipacionDeCambioDePlan,
   type TxDeMarcasYPlanesDePrueba,
 } from "./marcas-y-planes-apoyo";
 
@@ -45,6 +46,7 @@ describe.skipIf(base === null)("asignaciones y ajustes: casos de uso contra Post
     propia = await crearBaseAparte(base);
     dueno = new pg.Client({ connectionString: propia.base.dueno });
     await dueno.connect();
+    await sinAnticipacionDeCambioDePlan(dueno);
     entorno = crearEntornoDeMarcasYPlanes(propia.base);
     casos = crearCasosDeMarcasYPlanes(entorno);
   });

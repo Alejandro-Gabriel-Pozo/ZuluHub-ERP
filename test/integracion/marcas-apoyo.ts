@@ -432,6 +432,18 @@ export async function sembrarMarcasYPlanes(
   await crearVersionDeMarcaConfirmada(c, principal, { nombreVisible: "Marca de prueba" });
   const { version } = await crearPlanPublicado(c, { modulos: [] });
   await asignarPlan(c, e.tenant, version, { origen: "ALTA" });
+  // 0089 (política de cambio de plan): un cambio con sus condiciones y su arrepentimiento (la vuelta al plan de alta). La política 1 la carga la migración.
+  const otra = await crearPlanPublicado(c, { modulos: [] });
+  const cambio = await asignarPlan(c, e.tenant, otra.version, { origen: "CAMBIO" });
+  const vuelta = await asignarPlan(c, e.tenant, version, { origen: "CAMBIO" });
+  await c.query(
+    "insert into condiciones_de_cambio_de_plan (tenant_id, numero, sentido, politica_version, arrepentimiento_hasta) values ($1, $2, 'BAJA', 1, current_date)",
+    [e.tenant, cambio],
+  );
+  await c.query(
+    "insert into arrepentimiento_de_plan (tenant_id, numero_arrepentido, numero_nuevo, motivo, registrado_por) values ($1, $2, $3, 'prueba', $4)",
+    [e.tenant, cambio, vuelta, ACTOR_DE_PRUEBA],
+  );
   await ajustarPerilla(c, e.tenant, "empresas_por_tenant", "2");
   await activarModulo(c, e.empresa, "modulo_de_prueba");
 }

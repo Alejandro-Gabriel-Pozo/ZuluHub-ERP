@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { EntradaDeReordenarSecciones } from "../modulos/catalogo/publico";
-import { err, type Resultado } from "../primitivas/resultado/resultado";
+import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
+import { textoDeBusquedaDeProductoDesdeTexto } from "../primitivas/texto/termino-de-busqueda-de-producto";
 import { entero, identificador, leer, texto } from "./entradas-de-facturacion";
 
 /**
@@ -18,6 +19,11 @@ import { entero, identificador, leer, texto } from "./entradas-de-facturacion";
  *  - **Reordenar lleva TODAS las activas con la versión que la persona vio**: el caso de uso rechaza si falta una, si una versión cambió o si una se repite; acá solo se pide la forma.
  *    El orden nuevo lo arma `entradaDeReordenar` desde esa lista (un toque cambia a la sección con su vecina; en la primera o la última, el mismo orden: el caso de uso lo ve como
  *    ya aplicado). Previene: que dos toques seguidos o un reintento con la misma lista dejen el orden en otro lugar (el orden se calcula de lo que la persona vio, no de lo vigente).
+ * Parte 2 (agregar y quitar productos de una sección), dos reglas más:
+ *  - **El producto tocado y su versión salen de lo que la persona vio** (`versionVistaDelProducto`): el pedido trae los productos de la página con su versión (ligados por la página, no en un campo) y
+ *    cuál se tocó; una versión que la persona no vio no se inventa (`null`: el genérico). Previene: que un botón armado a mano mande la versión de otro producto o una cualquiera.
+ *  - **La búsqueda de candidatos pasa por la primitiva de búsqueda de productos** (`leerLaBusquedaDeCandidatos`): el texto y la página se aceptan solo con la forma que esa primitiva permite; algo
+ *    inválido no ensancha el filtro (`null`: lista vacía). Previene: un filtro libre que llega sin validar a la consulta.
  * Chequeo: `entradas-de-secciones.test.ts`.
  */
 
@@ -38,10 +44,24 @@ const FORMA_DE_MOVER = z.object({
   sentido: z.enum(["ARRIBA", "ABAJO"]),
 });
 
+/**
+ * Un toque sobre un producto de una sección («Agregar» o «Quitar»): los productos de la página como la persona los vio (con su versión), cuál tocó y de qué sección. Una cota de FORMA (que no
+ * sea una lista enorme): las páginas son de 50.
+ */
+const FORMA_DE_TOCAR_PRODUCTO = z.object({
+  seccionId: identificador,
+  vistas: z.array(z.object({ productoId: identificador, versionEsperada: entero })).max(500),
+  productoId: identificador,
+});
+/** La búsqueda de candidatos de una sección: lo que dice la dirección (texto y página), sin validar. */
+const FORMA_DE_LA_BUSQUEDA = z.object({ seccionId: identificador, texto, despues: texto });
+
 export type PedidoDeCrearSeccion = z.output<typeof FORMA_DE_CREAR>;
 export type PedidoDeRenombrarSeccion = z.output<typeof FORMA_DE_RENOMBRAR>;
 export type PedidoDeUnaSeccion = z.output<typeof FORMA_DE_UNA_SECCION>;
 export type PedidoDeMover = z.output<typeof FORMA_DE_MOVER>;
+export type PedidoDeTocarProducto = z.output<typeof FORMA_DE_TOCAR_PRODUCTO>;
+export type PedidoDeLaBusqueda = z.output<typeof FORMA_DE_LA_BUSQUEDA>;
 
 type Pedido<T> = Resultado<T, "PEDIDO_INVALIDO">;
 
@@ -59,6 +79,38 @@ export const leerElPedidoDeUnaSeccion = (crudo: unknown): Pedido<PedidoDeUnaSecc
   leido(FORMA_DE_UNA_SECCION, crudo);
 export const leerElPedidoDeMover = (crudo: unknown): Pedido<PedidoDeMover> =>
   leido(FORMA_DE_MOVER, crudo);
+export const leerElPedidoDeTocarProducto = (crudo: unknown): Pedido<PedidoDeTocarProducto> =>
+  leido(FORMA_DE_TOCAR_PRODUCTO, crudo);
+
+/** Lo que la persona vio del producto que tocó: su id y su versión; `null` si no estaba entre lo que vio. */
+export function versionVistaDelProducto(
+  pedido: PedidoDeTocarProducto,
+): Readonly<{ productoId: string; versionEsperada: number }> | null {
+  const vista = pedido.vistas.find((v) => v.productoId === pedido.productoId);
+  return vista === undefined
+    ? null
+    : { productoId: vista.productoId, versionEsperada: vista.versionEsperada };
+}
+
+/**
+ * La búsqueda de candidatos: la sección y, si el texto es un texto de búsqueda válido, el texto (`undefined` si está vacío: sin filtro) y el texto de la página (`""` es la primera); `consulta` es
+ * `null` si el texto no es válido (nada puede coincidir: lista vacía). `PEDIDO_INVALIDO` si no tiene la forma pedida.
+ */
+export type BusquedaDeCandidatos = Readonly<{
+  seccionId: string;
+  consulta: Readonly<{ texto: string | undefined; despues: string }> | null;
+}>;
+
+export function leerLaBusquedaDeCandidatos(crudo: unknown): Pedido<BusquedaDeCandidatos> {
+  const forma = leido(FORMA_DE_LA_BUSQUEDA, crudo);
+  if (!forma.ok) return forma;
+  const { seccionId, texto: escrito, despues } = forma.valor;
+  const buscado = textoDeBusquedaDeProductoDesdeTexto(escrito);
+  return ok({
+    seccionId,
+    consulta: buscado.ok ? { texto: buscado.valor ?? undefined, despues } : null,
+  });
+}
 
 /**
  * El `orden` con el que se crea una sección: el mayor de la lista más uno (0 si no hay ninguna), salvo que el `id` ya esté en la lista (la misma creación repetida): entonces el que ya

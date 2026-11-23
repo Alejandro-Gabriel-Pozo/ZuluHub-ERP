@@ -16,6 +16,8 @@ export type PropsDeBoton = Readonly<{
   enviando?: boolean;
   textoEnviando?: string | undefined;
   ancho?: "auto" | "completo";
+  /** Un botón que se enciende y se apaga («Conforme»): dice su estado al lector de pantalla (`aria-pressed`). Sin él, es un botón común. */
+  presionado?: boolean | undefined;
 }>;
 
 export function Boton({
@@ -28,6 +30,7 @@ export function Boton({
   enviando = false,
   textoEnviando,
   ancho = "auto",
+  presionado,
 }: PropsDeBoton) {
   const idDelMotivo = useId();
   const hayMotivo = motivo !== undefined && motivo !== "";
@@ -41,6 +44,7 @@ export function Boton({
         // Enviando: no se usa `disabled` para no perder el foco; el toque se ignora y se anuncia.
         aria-disabled={enviando ? "true" : undefined}
         aria-busy={enviando ? "true" : undefined}
+        aria-pressed={presionado}
         aria-describedby={hayMotivo ? idDelMotivo : undefined}
         onClick={(evento) => {
           if (enviando) {

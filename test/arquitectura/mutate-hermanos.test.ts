@@ -288,7 +288,7 @@ describe("el repositorio real", () => {
     ).toEqual([]);
   });
 
-  it("la lista no crece en silencio: 5 hermanos y 1 carga no estática (subirlo es editar esta prueba)", () => {
+  it("la lista no crece en silencio: 6 hermanos y 1 carga no estática (subirlo es editar esta prueba)", () => {
     expect(lista.hermanosSinMutar.map((p) => p.archivo)).toEqual([
       "arquitectura/contratos/contratos.cjs",
       "src/adaptadores/arca/tipos.ts",
@@ -296,6 +296,8 @@ describe("el repositorio real", () => {
       "src/composicion/plataforma.ts",
       // Piloto B + D1 (2026-11-12): los esquemas de forma que comparten todas las fronteras de la web; lo importan entradas-de-caja y errores-de-caja.
       "src/composicion/entradas-de-facturacion.ts",
+      // a18 (2026-11-16): la raíz de composición solo se importa como TIPO (`import type { Web }`) en directorio-web.ts; no tiene lógica que mutar.
+      "src/composicion/web.ts",
     ]);
     expect(lista.cargasNoEstaticas.map((p) => p.archivo)).toEqual([
       "arquitectura/contratos/no-debilitar.cjs",

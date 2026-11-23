@@ -139,11 +139,59 @@ describe("armarPlanDeEmpresa", () => {
         habilitadoPorElPlan: true,
         activado: true,
         estado: "ACTIVO",
+        requiere: ["administracion", "catalogo", "caja"],
+        // La lista de la prueba solo trae «ventas»: lo que no viene cuenta como faltante.
+        faltan: ["administracion", "catalogo", "caja"],
       },
     ]);
     expect(r.perillas).toEqual([
       { perilla: "usuarios", valor: { tipo: "LIMITE", limite: 5 }, origen: "PLAN" },
     ]);
+  });
+
+  it("requiere y faltan: salón pide ventas y comandas; falta el que no está activo (o que la lista no trae)", () => {
+    const base = entradas([]);
+    const fila = (modulo: string, estado: string) => ({
+      modulo,
+      obligatorio: false,
+      disponible: true,
+      habilitadoPorElPlan: true,
+      activado: estado !== "NO_ACTIVO",
+      estado,
+    });
+    const r = armarPlanDeEmpresa({
+      ...base,
+      derechos: {
+        ...base.derechos,
+        modulos: [
+          fila("ventas", "ACTIVO"),
+          fila("comandas", "NO_ACTIVO"),
+          fila("salon", "NO_ACTIVO"),
+        ],
+      },
+    } as EntradasDelPlanDeEmpresa);
+    const salon = r.modulos.find((m) => m.modulo === "salon");
+    expect(salon?.requiere).toEqual(["ventas", "comandas"]);
+    expect(salon?.faltan).toEqual(["comandas"]);
+    expect(r.modulos.find((m) => m.modulo === "comandas")).toMatchObject({
+      requiere: ["ventas"],
+      faltan: [],
+    });
+    // Un requerido en solo lectura tampoco está activo para operar.
+    const enLectura = armarPlanDeEmpresa({
+      ...base,
+      derechos: {
+        ...base.derechos,
+        modulos: [fila("ventas", "SOLO_LECTURA"), fila("comandas", "ACTIVO")],
+      },
+    } as EntradasDelPlanDeEmpresa);
+    expect(enLectura.modulos.find((m) => m.modulo === "comandas")?.faltan).toEqual(["ventas"]);
+    // Una clave que el catálogo no conoce no pide nada.
+    const desconocido = armarPlanDeEmpresa({
+      ...base,
+      derechos: { ...base.derechos, modulos: [fila("inventado", "ACTIVO")] },
+    } as EntradasDelPlanDeEmpresa);
+    expect(desconocido.modulos[0]).toMatchObject({ requiere: [], faltan: [] });
   });
 
   it("empresas del cliente: presentes o null si faltan", () => {

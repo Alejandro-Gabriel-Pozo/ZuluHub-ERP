@@ -23,7 +23,19 @@ import { cotizarVentaRapida } from "../casos-de-uso/cotizar-venta-rapida";
 import { cargarEstadosDeLaEmpresa } from "../../empresas/publico";
 import type { CursorDePendientes } from "../persistencia/repositorio-de-lecturas";
 import type { DependenciasDeConsultasDeVentas, TxDeConsultasDeVentas } from "./contrato";
+import { opcionesParaCobrar, type ErrorDeOpcionesParaCobrar } from "./opciones-para-cobrar";
+import {
+  documentoDelTicket,
+  type EntradaDeDocumentoDelTicket,
+  type ErrorDeDocumentoDelTicket,
+} from "./documento-del-ticket";
 import { reunirPendientes } from "./pendientes-de-facturar";
+import {
+  fichaDelTicketDelDia,
+  ticketsDelDia,
+  type ErrorDeFichaDelTicketDelDia,
+  type ErrorDeTicketsDelDia,
+} from "./tickets-del-dia";
 import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 
 export type ErrorDeConsultaDeVentas =
@@ -33,6 +45,10 @@ export type ErrorDeConsultaDeVentas =
   | ErrorDePersistencia
   | ErrorDeCotizacion
   | ErrorAlConsultarCajasParaCobrar
+  | ErrorDeOpcionesParaCobrar
+  | ErrorDeTicketsDelDia
+  | ErrorDeFichaDelTicketDelDia
+  | ErrorDeDocumentoDelTicket
   | "IDENTIFICADOR_INVALIDO"
   | "FECHA_INVALIDA"
   | "CANTIDAD_INVALIDA"
@@ -161,6 +177,14 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
         return cajaParaVentas.estadoDeCajasParaCobrar(tx, contexto, entrada.sucursalId);
       }),
 
+    /** Qué ofrecer al cobrar con una caja (K1): medios, cuentas, datos que pide cada medio y marcas. Ver `opciones-para-cobrar.ts`. */
+    opcionesParaCobrar: (contexto: ContextoOperativo, entrada: Readonly<{ cajaId: string }>) =>
+      leer(contexto, (tx, p) => opcionesParaCobrar(tx, contexto, p.alcance, entrada)),
+
+    /** El papel del ticket para imprimir (K6). Ver `documento-del-ticket.ts`. */
+    documentoDelTicket: (contexto: ContextoOperativo, entrada: EntradaDeDocumentoDelTicket) =>
+      leer(contexto, (tx, p) => documentoDelTicket(tx, contexto, p.alcance, entrada)),
+
     fichaDeCuenta: (contexto: ContextoOperativo, entrada: Readonly<{ cuentaId: string }>) =>
       leer(contexto, async (tx, p) => {
         if (!esUuid(entrada.cuentaId)) return err("IDENTIFICADOR_INVALIDO");
@@ -210,6 +234,14 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
           pendienteDeFacturar: t.estado === "COBRADO",
         });
       }),
+
+    ticketsDelDia: (contexto: ContextoOperativo, entrada: Readonly<{ sucursalId: string }>) =>
+      leer(contexto, (tx, p) => ticketsDelDia(tx, contexto, dependencias, p.alcance, entrada)),
+
+    fichaDelTicketDelDia: (contexto: ContextoOperativo, entrada: Readonly<{ ticketId: string }>) =>
+      leer(contexto, (tx, p) =>
+        fichaDelTicketDelDia(tx, contexto, dependencias, p.alcance, entrada),
+      ),
 
     listarTickets: deLaJornada(async (tx, contexto, sucursal, fecha) =>
       (await tx.lecturasDeVentas.ticketsDeLaJornada(contexto.empresaId, sucursal, fecha)).map(

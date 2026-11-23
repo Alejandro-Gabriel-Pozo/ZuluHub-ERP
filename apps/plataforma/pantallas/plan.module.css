@@ -43,3 +43,11 @@
   margin: 0;
   color: var(--color-texto-suave);
 }
+
+.arrepentimiento {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+  margin: var(--espacio-3) 0;
+}

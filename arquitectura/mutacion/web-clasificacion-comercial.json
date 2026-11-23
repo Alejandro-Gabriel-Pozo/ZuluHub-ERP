@@ -1,0 +1,6 @@
+{
+  "grupo": "web (clasificación comercial)",
+  "archivos": "src/composicion/entradas-de-clasificacion.ts,src/composicion/clasificacion-web.ts,apps/web/ui/plantillas/catalogo/modelo-de-clasificacion.ts",
+  "minutos": 2,
+  "pruebas": "src/composicion/entradas-de-clasificacion.test.ts src/composicion/clasificacion-web.test.ts src/composicion/errores-de-catalogo.test.ts test/web/clasificacion-modelo.test.ts"
+}

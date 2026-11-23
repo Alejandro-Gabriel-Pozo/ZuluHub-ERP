@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0711",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Conciliar en N4 calcula la cantidad facturada de más y el precio contra la orden (o la recepción si no hay orden); dentro de la tolerancia queda resuelta con rastro; sin tolerancia, abierta.",
+  "que_cambia": "Dentro de tolerancia = cumple TODOS los topes definidos (porcentaje e importe) y al menos uno; sin tolerancias definidas nunca. Resolver pide motivo; las 6 resoluciones manuales. Revertir: migración 0067.",
+  "donde": "migraciones/0067_compras_diferencias.sql; src/modulos/compras/dominio/diferencias.ts; decisiones del dueño del 14 y 16/11/2026; tramo N4-3."
+}

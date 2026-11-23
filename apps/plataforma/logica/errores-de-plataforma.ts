@@ -1,8 +1,12 @@
+import { LARGO_MAXIMO_DEL_NOMBRE_DE_VALOR } from "../../../src/modulos/listas/publico";
+
 /**
  * Traductor de errores de la consola de plataforma. `aRespuesta` de la web no conoce los códigos de plataforma,
  * así que la consola traduce acá. Puro: sin Next ni React. Nunca devuelve un código técnico ni datos de la base
  * como texto: lo que no se reconoce es INESPERADO y el servidor le pone una referencia.
  */
+
+import { rotuloDeModulo } from "./plan";
 
 export type CampoDelAlta =
   "razonSocial" | "cuit" | "marcaId" | "versionDePlanId" | "emailGerente" | "zonaHoraria";
@@ -21,8 +25,10 @@ export type CampoDeSubmarca =
   | "vigenteDesde"
   | "motivo";
 
+type CampoDeLista = "nombre";
+
 export type ErrorParaLaPantalla =
-  | { tipo: "CAMPO"; campo: CampoDelAlta | CampoDeSubmarca; texto: string }
+  | { tipo: "CAMPO"; campo: CampoDelAlta | CampoDeSubmarca | CampoDeLista; texto: string }
   | { tipo: "GENERAL"; texto: string }
   | { tipo: "SEGUNDO_FACTOR" }
   | { tipo: "PANTALLA_VIEJA"; texto: string }
@@ -37,7 +43,10 @@ const TEXTO_FILTROS = "Los filtros no son válidos. Probá quitarlos.";
 const TEXTO_MARCA = "Esa submarca no está lista para dar de alta empresas. Elegí otra.";
 const TEXTO_PLAN = "No se puede usar ese plan. Elegí otra versión de plan.";
 
-const campo = (c: CampoDelAlta | CampoDeSubmarca, texto: string): ErrorParaLaPantalla => ({
+const campo = (
+  c: CampoDelAlta | CampoDeSubmarca | CampoDeLista,
+  texto: string,
+): ErrorParaLaPantalla => ({
   tipo: "CAMPO",
   campo: c,
   texto,
@@ -181,6 +190,37 @@ const POR_CODIGO_DE_PLAN: Readonly<Record<string, ErrorParaLaPantalla>> = {
   ConcurrenciaAgotada: general("Se estaba guardando otro cambio a la vez. Probá de nuevo."),
 };
 
+// Listas del sistema. Textos aprobados el 09/11/2026 (`listas.html`, «Textos nuevos»): «Ya existe un valor con ese nombre», «Escribí un nombre de hasta N caracteres» (el N es
+// el tope del dominio, `LARGO_MAXIMO_DEL_NOMBRE_DE_VALOR`: no se escribe a mano) y «Esta acción no está permitida» para todo lo demás (interfaz sobria: un genérico, no uno por motivo).
+const TEXTO_LISTA_NO_PERMITIDA = "Esta acción no está permitida";
+
+/** En la pantalla «Listas» estos códigos tienen su propio destino; el resto (versión vieja, clave, segundo factor, permiso) sigue la tabla común. */
+const POR_CODIGO_DE_LISTA: Readonly<Record<string, ErrorParaLaPantalla>> = {
+  VALOR_DUPLICADO: campo("nombre", "Ya existe un valor con ese nombre"),
+  NOMBRE_INVALIDO: campo(
+    "nombre",
+    `Escribí un nombre de hasta ${String(LARGO_MAXIMO_DEL_NOMBRE_DE_VALOR)} caracteres`,
+  ),
+  VALOR_FIJO: general(TEXTO_LISTA_NO_PERMITIDA),
+  LISTA_INVALIDA: general(TEXTO_LISTA_NO_PERMITIDA),
+  // Un valor no se borra: si no está o su id no sirve, la pantalla quedó vieja.
+  VALOR_NO_ENCONTRADO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_PANTALLA_VIEJA },
+  ID_INVALIDO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_PANTALLA_VIEJA },
+  // La pantalla siempre manda una versión válida: si el servidor la rechaza es un error nuestro.
+  VERSION_ESPERADA_INVALIDA: { tipo: "INESPERADO" },
+};
+
+/** En la pantalla «Plan de una empresa», al activar o desactivar un módulo. */
+const POR_CODIGO_DE_MODULOS: Readonly<Record<string, ErrorParaLaPantalla>> = {
+  ID_INVALIDO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_PLAN_VIEJO },
+  MODULO_DESCONOCIDO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_PLAN_VIEJO },
+  MODULO_OBLIGATORIO: { tipo: "PANTALLA_VIEJA", texto: TEXTO_PLAN_VIEJO },
+  MODULO_EN_DESARROLLO: general("Este módulo todavía está en desarrollo."),
+  MODULO_FUERA_DEL_PLAN: general("El plan de la empresa no incluye este módulo."),
+  EMPRESA_NO_ENCONTRADA: general("No encontramos esa empresa."),
+  ConcurrenciaAgotada: general("Se estaba guardando otro cambio a la vez. Probá de nuevo."),
+};
+
 const CAMPO_DE_TEMA: Readonly<Record<string, CampoDeSubmarca>> = {
   primary: "primary",
   "on-primary": "onPrimary",
@@ -277,7 +317,7 @@ function textoDeLimiteDelPlan(datos: Record<string, unknown>): string {
  */
 export function errorParaLaPantalla(
   error: unknown,
-  contexto: "GENERAL" | "SUBMARCA" | "PLAN" = "GENERAL",
+  contexto: "GENERAL" | "SUBMARCA" | "PLAN" | "MODULOS" | "LISTA" = "GENERAL",
 ): ErrorParaLaPantalla {
   let codigo: string;
   let datos: Record<string, unknown> = {};
@@ -298,6 +338,21 @@ export function errorParaLaPantalla(
   }
   if (contexto === "PLAN" && Object.hasOwn(POR_CODIGO_DE_PLAN, codigo)) {
     return POR_CODIGO_DE_PLAN[codigo] ?? INESPERADO;
+  }
+  if (contexto === "LISTA" && Object.hasOwn(POR_CODIGO_DE_LISTA, codigo)) {
+    return POR_CODIGO_DE_LISTA[codigo] ?? INESPERADO;
+  }
+  if (contexto === "MODULOS") {
+    // El módulo implicado se rotula con la tabla cerrada de la consola; una clave que no se conoce vuelve tal cual.
+    if (codigo === "REQUIERE_INACTIVO" && typeof datos["modulo"] === "string") {
+      return general(`Primero hay que activar ${rotuloDeModulo(datos["modulo"])}.`);
+    }
+    if (codigo === "ES_REQUERIDO_POR" && typeof datos["modulo"] === "string") {
+      return general(`No se puede desactivar: ${rotuloDeModulo(datos["modulo"])} lo necesita.`);
+    }
+    if (Object.hasOwn(POR_CODIGO_DE_MODULOS, codigo)) {
+      return POR_CODIGO_DE_MODULOS[codigo] ?? INESPERADO;
+    }
   }
   if (codigo === "LIMITE_DEL_PLAN") return general(textoDeLimiteDelPlan(datos));
   if (!Object.hasOwn(POR_CODIGO, codigo)) return INESPERADO;

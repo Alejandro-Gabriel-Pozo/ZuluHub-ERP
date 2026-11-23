@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0501",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: volver de cobrar a la cuenta dice «Volver» y la hoja no lleva título «Cobro», porque ese texto no tiene fuente aprobada.",
+  "que_cambia": "Cómo se ve la hoja de cobro. La maqueta dice «Volver a la cuenta» y «Cobro», sin fila aprobada. Revertir: una clave en catalogo-ventas.ts.",
+  "donde": "delegación del dueño, DDD filas 173 y 174; ventas.cobro.volver; PantallaDeCobro.cliente.tsx"
+}

@@ -14,7 +14,11 @@ export function errorDeCredenciales(error: ErrorDeCredenciales): ErrorDeEmision 
         detalle: "el emisor no tiene un certificado vigente en este ambiente",
       };
     case "CERTIFICADO_VENCIDO":
-      return { codigo: "SIN_CREDENCIAL", detalle: "el certificado del emisor está vencido" };
+      return {
+        codigo: "SIN_CREDENCIAL",
+        detalle: "el certificado del emisor está vencido",
+        causa: "CERTIFICADO_VENCIDO",
+      };
     case "CLAVE_ILEGIBLE":
       return {
         codigo: "SIN_CREDENCIAL",

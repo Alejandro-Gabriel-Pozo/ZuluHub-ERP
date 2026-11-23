@@ -9,6 +9,8 @@ describe("traducirErrorDeCatalogo", () => {
     ["SECCION_DUPLICADA", "CATALOGO_SECCION_REPETIDA", "nombre"],
     ["CODIGO_DE_BARRAS_INVALIDO", "CATALOGO_CODIGO_DE_BARRAS_INVALIDO", "codigoDeBarras"],
     ["ALICUOTA_REQUERIDA", "CATALOGO_ELEGI_LA_ALICUOTA", "alicuota"],
+    ["RECARGO_INVALIDO", "CATALOGO_PRECIO_INVALIDO", "recargo"],
+    ["INCLUIDA_CON_RECARGO", "CATALOGO_INCLUIDA_CON_RECARGO", "recargo"],
   ])("%s sale como %s, asociado al campo %s", (error, codigo, campo) => {
     expect(traducirErrorDeCatalogo(error)).toEqual({ codigo, campo });
   });
@@ -60,6 +62,22 @@ describe("traducirErrorDeCatalogo", () => {
     ]) {
       expect(traducirErrorDeCatalogo(error)).toBe(error);
     }
+  });
+});
+
+describe("traducirErrorDeCatalogo: ocultar (A15)", () => {
+  it("los dos bloqueos de ocultar salen con su texto propio y el resto sigue siendo el genérico", () => {
+    expect(traducirErrorDeCatalogo("PRODUCTO_CON_EXISTENCIA")).toEqual({
+      codigo: "CATALOGO_PRODUCTO_CON_EXISTENCIA",
+      campo: "ocultar",
+    });
+    expect(traducirErrorDeCatalogo("PRODUCTO_CON_CONTEO_ABIERTO")).toEqual({
+      codigo: "CATALOGO_PRODUCTO_CON_CONTEO_ABIERTO",
+      campo: "ocultar",
+    });
+    expect(traducirErrorDeCatalogo("SUCURSAL_NO_ENCONTRADA")).toEqual({
+      codigo: "CATALOGO_ACCION_NO_PERMITIDA",
+    });
   });
 });
 
@@ -117,5 +135,29 @@ describe("traducirErrorDeCatalogo: precios (A1, T3)", () => {
     expect(
       traducirErrorDeCatalogo({ error: "OTRO", vigente: { precioId: "x", precio: "1.000000" } }),
     ).toEqual({ codigo: "CATALOGO_ACCION_NO_PERMITIDA" });
+  });
+});
+
+describe("traducirErrorDeCatalogo: clasificación comercial (A14)", () => {
+  it("desactivar un nodo con hijos activos sale con su aviso propio y sin campo", () => {
+    expect(traducirErrorDeCatalogo("TIENE_HIJOS_ACTIVOS")).toEqual({
+      codigo: "CATALOGO_PRIMERO_DESACTIVA",
+    });
+  });
+
+  it.each([
+    "CICLO",
+    "TOPE_DE_NIVELES",
+    "DEPARTAMENTO_NO_SE_MUEVE",
+    "PADRE_DESACTIVADO",
+    "PADRE_INEXISTENTE",
+    "ARBOL_INCONSISTENTE",
+    "NODO_INEXISTENTE",
+    "NODO_DESACTIVADO",
+    "NOMBRE_DE_NODO_INVALIDO",
+    "VERSION_DESACTUALIZADA",
+    "ID_REUTILIZADO",
+  ])("%s sale como el genérico: no tiene texto propio", (error) => {
+    expect(traducirErrorDeCatalogo(error)).toEqual({ codigo: "CATALOGO_ACCION_NO_PERMITIDA" });
   });
 });

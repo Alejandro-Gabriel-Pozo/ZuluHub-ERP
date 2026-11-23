@@ -20,8 +20,8 @@ import {
 } from "./entradas-de-secciones";
 
 /**
- * La pantalla «Secciones de la carta» (A8, parte 1; maqueta aprobada `productos-secciones.html`): la lista con todas las secciones, la de una sección con sus productos, y crear, renombrar,
- * desactivar, reactivar y reordenar. Vive acá, y no en `apps/web`, para probarse con la base real sin levantar Next (igual que `ficha-de-producto-web.ts`).
+ * La pantalla «Secciones de la carta» (A8, parte 1; maqueta aprobada `productos-secciones.html`): la lista con todas las secciones, la de una sección con sus productos, crear, renombrar,
+ * desactivar, reactivar y reordenar. Agregar y quitar productos de una sección (parte 2) viven en `productos-de-seccion-web.ts`. Vive acá, y no en `apps/web`, para probarse con la base real sin levantar Next (igual que `ficha-de-producto-web.ts`).
  *
  * Reglas que cumple (cada una con su prueba en `test/integracion/secciones-web.test.ts`):
  *  - **El permiso es del caso de uso y de la consulta.** Ver exige `productos.ver` y cambiar `productos.editar` (con alcance sobre todas las sucursales) al guard dentro de su transacción:
@@ -31,8 +31,8 @@ import {
  *    orden que se calcule ahora sea otro (`ordenDeLaSeccionNueva`). Renombrar y reordenar con lo ya aplicado no escriben; desactivar y reactivar devuelven `yaEstaba`.
  *  - **Dos cambios a la vez no se pisan.** Renombrar y reordenar llevan la versión que la persona vio; con una vieja el caso de uso rechaza sin escribir (el genérico) y la pantalla recarga.
  *  - **Nada de más sale.** Lista blanca campo por campo: de una sección, su id, nombre, estado y versión; de un producto, su id y nombre. Ni el orden, ni la cantidad de productos, ni el resto.
- *  - **Todo resultado sale por el camino común** (`aRespuesta`, ADR-016, con `traducirErrorDeCatalogo`): un fallo inesperado sale sin detalle y con referencia. Un nombre repetido sale con el
- *    genérico (su texto propio es de la parte 2).
+ *  - **Todo resultado sale por el camino común** (`aRespuesta`, ADR-016, con `traducirErrorDeCatalogo`): un fallo inesperado sale sin detalle y con referencia. Un nombre repetido sale con su
+ *    texto aprobado «Ya existe una sección con ese nombre», atado al campo «nombre» (`SECCION_DUPLICADA`, traducido en `errores-de-catalogo.ts`).
  */
 
 export type DependenciasDeSeccionesWeb = Readonly<{
@@ -48,6 +48,12 @@ export type DependenciasDeSeccionesWeb = Readonly<{
   respuesta: DependenciasDeRespuesta;
 }>;
 
+/** Lo que necesitan las lecturas y la traducción de errores (también las usa `productos-de-seccion-web.ts`). */
+export type DependenciasDeLecturaDeSecciones = Pick<
+  DependenciasDeSeccionesWeb,
+  "consultas" | "respuesta"
+>;
+
 export type SeccionParaLaPantalla = Readonly<{
   id: string;
   nombre: string;
@@ -61,14 +67,19 @@ export type SeccionesParaLaPantalla = Readonly<{ secciones: readonly SeccionPara
 /** Una sección con sus productos activos, en orden alfabético (una página de 50). */
 export type UnaSeccionParaLaPantalla = Readonly<{
   seccion: SeccionParaLaPantalla;
-  productos: readonly Readonly<{ id: string; nombre: string }>[];
+  /** De cada producto, su id, su nombre y su versión (la que «Quitar» lleva). */
+  productos: readonly Readonly<{ id: string; nombre: string; version: number }>[];
   /** La clave de la página que sigue (`despues` en la dirección); `null` en la última. */
   siguiente: string | null;
 }>;
 
-const GENERICO = errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA");
+/** El genérico «Esta acción no está permitida» (también lo usa `productos-de-seccion-web.ts`). */
+export const GENERICO = errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA");
 
-const conError = (error: unknown, d: DependenciasDeSeccionesWeb): Respuesta<never> => ({
+export const conError = (
+  error: unknown,
+  d: DependenciasDeLecturaDeSecciones,
+): Respuesta<never> => ({
   ok: false,
   error: errorAPublico(traducirErrorDeCatalogo(error), d.respuesta),
 });
@@ -103,8 +114,8 @@ export async function verLasSecciones(
 }
 
 /** Una sección de la empresa por su `id`. Un `id` que no tiene forma de id, o que no es de una sección de la empresa, es el genérico (el mismo para ambos casos). */
-async function buscarLaSeccion(
-  d: DependenciasDeSeccionesWeb,
+export async function buscarLaSeccion(
+  d: DependenciasDeLecturaDeSecciones,
   contexto: ContextoOperativo,
   seccionId: string,
 ): Promise<Respuesta<SeccionParaLaPantalla>> {
@@ -164,7 +175,11 @@ export async function verUnaSeccion(
       ok: true,
       dato: {
         seccion: seccion.dato,
-        productos: productos.valor.productos.map((p) => ({ id: p.id, nombre: p.nombre })),
+        productos: productos.valor.productos.map((p) => ({
+          id: p.id,
+          nombre: p.nombre,
+          version: p.version,
+        })),
         siguiente:
           productos.valor.siguiente === null ? null : codificarLaPagina(productos.valor.siguiente),
       },

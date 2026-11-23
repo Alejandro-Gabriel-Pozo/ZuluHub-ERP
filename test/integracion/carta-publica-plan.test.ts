@@ -178,16 +178,18 @@ describe.skipIf(base === null)("carta pública y plan de la empresa (0050)", () 
     expect(await sirve(m.carta.codigo)).toBe(true);
   });
 
-  it("con el catálogo real (el módulo de la carta sigue en desarrollo) ninguna carta se sirve: todo nace cerrado", async () => {
+  it("con el catálogo real (módulo disponible, DEC-0826) la carta se sirve solo con módulo y perilla en el plan: todo nace cerrado", async () => {
     const m = await empresaConCarta();
     const real = adaptadorReal(c, despues, {
       catalogoDeModulos: CATALOGO_DE_MODULOS,
       catalogoDePerillas: CATALOGO_DE_PERILLAS,
     });
     try {
-      expect(CATALOGO_DE_MODULOS.vidriera.estado).toBe("en_desarrollo");
+      expect(CATALOGO_DE_MODULOS.vidriera.estado).toBe("disponible");
+      expect(await sirve(m.carta.codigo, real.vidriera)).toBe(true);
+      const sinCarta = await versionDeLaCarta(c, { conModulo: false, conPerilla: false });
+      await asignarVersion(c, m.tenant, sinCarta, haceSegundos(60));
       expect(await sirve(m.carta.codigo, real.vidriera)).toBe(false);
-      expect(await sirve(m.carta.codigo)).toBe(true);
     } finally {
       await real.publicas.cerrar();
     }

@@ -1,4 +1,4 @@
-import { FORMA_DEL_IMPORTE } from "./forma-del-importe";
+import { FORMA_DEL_IMPORTE } from "../../../primitivas/dinero/forma-del-importe";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import {
   precioUnitarioDesdeTexto,

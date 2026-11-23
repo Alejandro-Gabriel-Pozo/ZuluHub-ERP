@@ -5,6 +5,7 @@ import {
   type Cantidad,
 } from "../../../primitivas/cantidad/cantidad";
 import { cantidadConSignoDesdeTexto } from "../../../primitivas/cantidad/con-signo";
+import { mermaDesdeTexto } from "../../../primitivas/cantidad/merma";
 import {
   porcentajeATexto,
   porcentajeDesdeTexto,
@@ -36,9 +37,6 @@ type R<S> = Resultado<S, ErrorDeStock>;
  * el tope solo evita mandar a la base una lista que no entra.
  */
 export const MAXIMO_DE_COMPONENTES = 32_767;
-
-/** Lo que dice un puntaje de pérdida permitido: de 0 a 99,9999 (la base exige menos de 100), con hasta 4 decimales. */
-const FORMA_DE_LA_PERDIDA = /^[0-9]{1,2}(\.[0-9]{1,4})?$/;
 
 export type ComponenteLeido = Readonly<{
   productoId: string;
@@ -99,10 +97,9 @@ export function leerComponentes(valor: unknown): R<readonly ComponenteLeido[]> {
     const textoDePerdida = componente["perdida"];
     let perdida: Porcentaje | null = null;
     if (textoDePerdida !== undefined && textoDePerdida !== null) {
-      if (typeof textoDePerdida !== "string" || !FORMA_DE_LA_PERDIDA.test(textoDePerdida)) {
-        return err("PERDIDA_INVALIDA");
-      }
-      perdida = porcentajeDesdeTexto(textoDePerdida);
+      const merma = typeof textoDePerdida === "string" ? mermaDesdeTexto(textoDePerdida) : null;
+      if (merma === null || !merma.ok) return err("PERDIDA_INVALIDA");
+      perdida = merma.valor;
     }
     leidos.push({
       productoId: productoId.toLowerCase(),

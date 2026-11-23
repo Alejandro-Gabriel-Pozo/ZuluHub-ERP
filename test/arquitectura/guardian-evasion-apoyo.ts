@@ -168,11 +168,25 @@ function entornoBase(): Entorno {
 }
 
 async function git(cwd: string, ...argumentos: string[]): Promise<void> {
-  const r = await correr("git", ["-c", "commit.gpgsign=false", ...argumentos], {
-    cwd,
-    env: entornoBase(),
-    limiteMs: 60_000,
-  });
+  // `gc.auto` y `maintenance.auto` apagados: un `git commit` puede dejar un proceso de mantenimiento en segundo plano que sigue escribiendo en `.git` mientras el caso sin repositorio
+  // (EV-010) lo borra, y con la máquina cargada (el CI en paralelo) git todavía encontraba un repositorio: falla intermitente vista dos veces el 21/11/2026 (#451 y #462).
+  const r = await correr(
+    "git",
+    [
+      "-c",
+      "commit.gpgsign=false",
+      "-c",
+      "gc.auto=0",
+      "-c",
+      "maintenance.auto=false",
+      ...argumentos,
+    ],
+    {
+      cwd,
+      env: entornoBase(),
+      limiteMs: 60_000,
+    },
+  );
   if (r.estado !== 0) throw new Error(`git ${argumentos.join(" ")} falló: ${r.stderr}`);
 }
 const commitear = async (cwd: string, mensaje: string): Promise<void> => {
@@ -865,7 +879,11 @@ async function correrCaso(caso: Caso, contexto: Contexto): Promise<Observado> {
     await aplicar(pr, despues, contexto.ahora, true);
     const entorno: Entorno = { ...entornoBase() };
     if (caso.sinGit === true) {
-      rmSync(join(pr, ".git"), { recursive: true, force: true });
+      // Se borra con reintentos y se espera a que de verdad no quede: un escritor tardío o un borrado interrumpido dejaba un `.git` válido para el chequeo de abajo.
+      for (let intento = 0; intento < 5 && existsSync(join(pr, ".git")); intento++) {
+        rmSync(join(pr, ".git"), { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+        if (existsSync(join(pr, ".git"))) await new Promise((r) => setTimeout(r, 200));
+      }
       // Sin `.git` propio, git sigue buscando un repositorio en las carpetas de arriba (el temporal y lo que
       // haya por encima en el entorno donde corre la prueba): el caso exige que NO encuentre ninguno, así que
       // se le pone un techo en la carpeta del caso y se comprueba que de verdad falla antes de correr el job.

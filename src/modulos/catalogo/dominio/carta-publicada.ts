@@ -11,6 +11,9 @@ import type {
   VidrieraPublicada,
 } from "../../../puertos/vidriera-publica";
 import type { AlcanceDelHost } from "../../../capacidades/experiencia/puerta";
+import type { PartesDeDireccion } from "../../../capacidades/activos/direccion-externa";
+import type { CaraDeVidriera } from "../../../capacidades/experiencia/vidriera/caras";
+import type { ModeloDeVidriera } from "../../../capacidades/experiencia/vidriera/modelos";
 import { ocultoPor, type Disponibilidad, type EstadoDeCarta } from "./carta-publica";
 import { filaConPrecio } from "./fila-con-precio";
 
@@ -65,7 +68,14 @@ export type CartaLeida = Readonly<{
     mensajeDePortada: string | null;
     estado: EstadoDeCarta;
     sucursalId: SucursalId;
+    /** Lo que eligió la carta (0077), tal cual está guardado. Vacío = usa lo de la empresa. */
+    modelo: ModeloDeVidriera;
+    cara: CaraDeVidriera | null;
+    colorPropio: string | null;
+    logo: PartesDeDireccion | null;
   }>;
+  /** El color de la empresa para sus cartas (`identidad_de_carta_empresa.color_principal`); `null` si no cargó ninguno (rige el color de la marca). */
+  colorDeLaEmpresa: string | null;
   sucursalActiva: boolean;
   /** La empresa dueña de la carta y su tenant: con ellos la puerta pública lee el plan (T6), siempre acotado por el código de la carta. */
   empresaId: EmpresaId;
@@ -189,6 +199,15 @@ export function armarVidrieraPublicada(
     rubro: leida.carta.rubro,
     lugar: leida.carta.lugar,
     mensajeDePortada: leida.carta.mensajeDePortada,
+    // Lo ELEGIDO, sin ajustar. Punto de enganche de los tokens ya resueltos (color ajustado por contraste 7:1, texto blanco o negro, tema por cara): los calcula la
+    // primitiva pura de la sesión C5 al armar la vista; no se duplica acá ni se guarda.
+    identidad: {
+      modelo: leida.carta.modelo,
+      cara: leida.carta.cara,
+      colorPropio: leida.carta.colorPropio,
+      colorDeLaEmpresa: leida.colorDeLaEmpresa,
+      logo: leida.carta.logo,
+    },
     letraBase: "NORMAL",
     secciones,
   };

@@ -1,5 +1,9 @@
 import "server-only";
 
+import {
+  PERMISOS_DE_PLATAFORMA,
+  type RolDePlataforma,
+} from "../../../src/capacidades/permisos/plataforma";
 import { armarPlanDeEmpresa, type PlanDeEmpresa } from "../logica/plan-de-empresa";
 import { detalleDeFalla } from "../../../src/capacidades/experiencia/respuesta";
 import { errorParaLaPantalla } from "../logica/errores-de-plataforma";
@@ -60,14 +64,28 @@ export async function planDeEmpresa(empresaId: string): Promise<ResultadoDelPlan
       if (tenants.ok) cliente = tenants.valor.filas.find((t) => t.id === tenantId) ?? null;
     }
 
+    const base = {
+      derechos: derechos.valor,
+      plan: plan.valor,
+      planes: planes.valor,
+      razonSocial: fila?.razonSocial ?? null,
+      cliente,
+    };
+    // Lo que decide el servidor sobre el cambio (sentido, primera fecha válida de cada opción, si se puede deshacer hoy): una lectura aparte con los planes que el formulario ofrece.
+    // Si no llega, la pantalla sigue como antes (sin fecha por opción ni botón de deshacer) y el servidor valida igual: nada se decide acá.
+    const elegibles = armarPlanDeEmpresa(base).planesElegibles.map((p) => p.versionDePlanId);
+    const condiciones = await acceso.consultas.condicionesDeCambioDePlan({
+      tenantId,
+      versionesDePlanIds: elegibles,
+    });
     return {
       ok: true as const,
       plan: armarPlanDeEmpresa({
-        derechos: derechos.valor,
-        plan: plan.valor,
-        planes: planes.valor,
-        razonSocial: fila?.razonSocial ?? null,
-        cliente,
+        ...base,
+        condiciones: condiciones.ok ? condiciones.valor : null,
+        puedeArrepentir: (
+          PERMISOS_DE_PLATAFORMA["planes.arrepentir"] as readonly RolDePlataforma[]
+        ).includes(acceso.admin.rol),
       }),
     };
   });

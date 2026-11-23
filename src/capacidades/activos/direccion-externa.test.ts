@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   LARGO_MAXIMO_DE_DIRECCION,
   armarDestino,
+  armarDestinoDeLogo,
   leerDireccionPegada,
   type DestinoValidado,
   type ErrorDeDireccion,
@@ -1091,5 +1092,65 @@ describe("armarDestino", () => {
       variante: 480,
     };
     expect(falso.host).toBe("evil.com");
+  });
+});
+
+describe("armarDestinoDeLogo", () => {
+  const declaradas = ["otra", "mi-cafe"];
+
+  it("arma el destino del logo (golden): transformación c_limit de 240, WebP y calidad fija, variante LOGO", () => {
+    expect(armarDestinoDeLogo(PARTES, declaradas)).toEqual({
+      ok: true,
+      valor: {
+        proveedor: "CLOUDINARY",
+        host: "res.cloudinary.com",
+        ruta: "/mi-cafe/image/upload/c_limit,w_240,h_240,f_webp,q_80/v1712345678/carta/flan.jpg",
+        url: "https://res.cloudinary.com/mi-cafe/image/upload/c_limit,w_240,h_240,f_webp,q_80/v1712345678/carta/flan.jpg",
+        variante: "LOGO",
+      },
+    });
+  });
+
+  it("descarta las transformaciones de lo pegado y sale siempre por https", () => {
+    const r = leerDireccionPegada(
+      "HTTP://res.cloudinary.com/mi-cafe/image/upload/e_blur:900,w_9000/v1712345678/carta/flan.JPG",
+    );
+    if (!r.ok) throw new Error("debía leerse");
+    const d = armarDestinoDeLogo(r.valor.partes, declaradas);
+    expect(d.ok && d.valor.url).toBe(
+      "https://res.cloudinary.com/mi-cafe/image/upload/c_limit,w_240,h_240,f_webp,q_80/v1712345678/carta/flan.jpg",
+    );
+  });
+
+  it("una cuenta no declarada no arma destino", () => {
+    for (const lista of [["otra"], [], ["mi-caf"], ["mi-cafe2"]]) {
+      expect(armarDestinoDeLogo(PARTES, lista)).toEqual({
+        ok: false,
+        error: "CUENTA_NO_DECLARADA",
+      });
+    }
+  });
+
+  it("vuelve a validar las partes, y esa validación va antes que la de las cuentas", () => {
+    for (const mala of [
+      { cuenta: "Mi-Cafe" },
+      { idPublico: "../x" },
+      { version: "0" },
+      { extension: "gif" },
+      { proveedor: "IMAGEKIT" },
+    ]) {
+      const partes = { ...PARTES, ...mala } as PartesDeDireccion;
+      expect(
+        armarDestinoDeLogo(partes, [PARTES.cuenta, partes.cuenta]),
+        JSON.stringify(mala),
+      ).toEqual({
+        ok: false,
+        error: "PARTES_INVALIDAS",
+      });
+      expect(armarDestinoDeLogo(partes, []), JSON.stringify(mala)).toEqual({
+        ok: false,
+        error: "PARTES_INVALIDAS",
+      });
+    }
   });
 });

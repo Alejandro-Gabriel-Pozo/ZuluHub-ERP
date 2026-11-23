@@ -1,4 +1,5 @@
 import type { ColumnType, Generated } from "kysely";
+import type { EsquemaDeDevoluciones } from "./esquema-de-devoluciones";
 
 /** Una columna que fija la base: se lee, no se escribe. */
 type DeLaBase<T> = ColumnType<T, never, never>;
@@ -95,7 +96,29 @@ export type ComprasDb = {
     anulada_por: string | null;
     anulada_en: Date | null;
     motivo_de_anulacion: string | null;
+    /** Solo N3 y N4 (0063): quién confirmó la recepción pendiente; la hora la fija la base. */
+    confirmada_por: string | null;
+    confirmada_en: DeLaBase<Date | null>;
     version: Generated<number>;
+  };
+  inspeccion_de_linea_de_recepcion: {
+    empresa_id: string;
+    recepcion_id: string;
+    linea: number;
+    cantidad_segun_remito: string | null;
+    condicion: string;
+    observacion: string | null;
+    temperatura_en_c: string | null;
+    registrado_en: DeLaBase<Date>;
+  };
+  entrada_de_linea_de_recepcion: {
+    empresa_id: string;
+    recepcion_id: string;
+    linea: number;
+    deposito_id: string;
+    movimiento_id: string;
+    cantidad: string;
+    registrado_en: DeLaBase<Date>;
   };
   linea_de_recepcion: {
     empresa_id: string;
@@ -129,6 +152,8 @@ export type ComprasDb = {
     empresa_id: string;
     proveedor_id: string;
     clase: string;
+    /** N4 (0085): la factura que corrige una nota de crédito (solo la clase NOTA_DE_CREDITO la lleva). */
+    comprobante_asociado_id: string | null;
     tipo: string | null;
     punto_de_venta: number | null;
     numero: number | null;
@@ -172,6 +197,8 @@ export type ComprasDb = {
     iva_de_linea: string;
     recepcion_id: string | null;
     linea_de_recepcion: number | null;
+    /** Solo la factura de N3 lo trae (0065); las de N1 y N2 quedan en `null`. */
+    producto_id: string | null;
     registrado_en: DeLaBase<Date>;
   };
   importe_por_alicuota: {
@@ -256,4 +283,95 @@ export type ComprasDb = {
     registrado_en: DeLaBase<Date>;
     registrado_por: string;
   };
-};
+  /** N4 (0066): la orden de compra al proveedor. El número, los momentos y el motivo de cierre los fija la base al cambiar de estado. */
+  orden_de_compra: {
+    id: Generated<string>;
+    empresa_id: string;
+    numero: DeLaBase<number | null>;
+    proveedor_id: string;
+    sucursal_destino_id: string | null;
+    fecha_de_entrega_prevista: string | null;
+    estado: Generated<string>;
+    cierre_motivo: DeLaBase<string | null>;
+    clave_idempotencia: SoloAlInsertar<string>;
+    huella: SoloAlInsertar<string>;
+    creado_por: SoloAlInsertar<string>;
+    creado_en: DeLaBase<Date>;
+    pedida_por: string | null;
+    pedida_en: DeLaBase<Date | null>;
+    fecha_negocio: DeLaBase<string | null>;
+    cerrada_por: string | null;
+    cerrada_en: DeLaBase<Date | null>;
+    anulada_por: string | null;
+    anulada_en: DeLaBase<Date | null>;
+    motivo_de_anulacion: string | null;
+    version: Generated<number>;
+  };
+  linea_de_orden: {
+    empresa_id: string;
+    orden_id: string;
+    numero: number;
+    producto_id: SoloAlInsertar<string>;
+    cantidad_pedida: string;
+    precio_unitario: string | null;
+    retirada: Generated<boolean>;
+  };
+  saldo_de_linea_de_orden: {
+    empresa_id: string;
+    orden_id: string;
+    linea: number;
+    cantidad_pedida: DeLaBase<string>;
+    cantidad_recibida: DeLaBase<string>;
+  };
+  linea_de_recepcion_de_orden: {
+    empresa_id: string;
+    recepcion_id: string;
+    linea: number;
+    orden_id: string;
+    linea_de_orden: number;
+    confirmo_exceso: Generated<boolean>;
+  };
+  /** N4 (0067): las tolerancias de la empresa; `null` = no definida (no es cero). */
+  tolerancia_de_compras: {
+    empresa_id: string;
+    tolerancia_de_cantidad: string | null;
+    tolerancia_de_precio: string | null;
+    tolerancia_de_importe: string | null;
+    tolerancia_de_recepcion: string | null;
+    version: Generated<number>;
+  };
+  /** Los umbrales vigentes al conciliar, copiados a la conciliación (solo inserción). */
+  tolerancia_aplicada_de_conciliacion: {
+    empresa_id: string;
+    conciliacion_id: string;
+    tolerancia_de_cantidad: string | null;
+    tolerancia_de_precio: string | null;
+    tolerancia_de_importe: string | null;
+  };
+  diferencia_de_compra: {
+    id: Generated<string>;
+    empresa_id: string;
+    conciliacion_id: SoloAlInsertar<string>;
+    tipo: SoloAlInsertar<string>;
+    comprobante_id: SoloAlInsertar<string>;
+    linea_de_comprobante: SoloAlInsertar<number | null>;
+    recepcion_id: SoloAlInsertar<string | null>;
+    linea_de_recepcion: SoloAlInsertar<number | null>;
+    cantidad_de_diferencia: SoloAlInsertar<string | null>;
+    importe_de_diferencia: SoloAlInsertar<string | null>;
+    precio_facturado: SoloAlInsertar<string | null>;
+    precio_de_referencia: SoloAlInsertar<string | null>;
+    origen_del_precio_de_referencia: SoloAlInsertar<string | null>;
+    dentro_de_tolerancia: SoloAlInsertar<boolean>;
+    tolerancia_de_cantidad: SoloAlInsertar<string | null>;
+    tolerancia_de_precio: SoloAlInsertar<string | null>;
+    tolerancia_de_importe: SoloAlInsertar<string | null>;
+    estado: Generated<string>;
+    resolucion: string | null;
+    motivo: string | null;
+    resuelta_por: string | null;
+    resuelta_en: DeLaBase<Date | null>;
+    registrado_en: DeLaBase<Date>;
+    version: Generated<number>;
+  };
+} & EsquemaDeDevoluciones;

@@ -1,5 +1,6 @@
 import type { Cantidad } from "../../../primitivas/cantidad/cantidad";
-import { porcentajeDesdeTexto, type Porcentaje } from "../../../primitivas/cantidad/porcentaje";
+import { esMermaPermitida } from "../../../primitivas/cantidad/merma";
+import type { Porcentaje } from "../../../primitivas/cantidad/porcentaje";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { convertirCantidad } from "../../../primitivas/unidades/convertir-cantidad";
 import { UNIDADES, type CodigoDeUnidad } from "../../../primitivas/unidades/unidades";
@@ -49,9 +50,6 @@ export type ComponenteValido = Readonly<{
   perdida: Porcentaje | null;
 }>;
 
-/** La pérdida es un porcentaje de 0 a menos de 100 (la base: `componente_perdida_ck`; un `Porcentaje` ya no es negativo): 100 % no dejaría nada para el plato. */
-const CIEN_PUNTOS = porcentajeDesdeTexto("100").unidades;
-
 export type ComposicionValida = Readonly<{
   rinde: Cantidad;
   componentes: readonly ComponenteValido[];
@@ -84,7 +82,8 @@ export function validarComposicion(
   }
   const validos: ComponenteValido[] = [];
   for (const c of componentes) {
-    if (c.perdida !== null && c.perdida.unidades >= CIEN_PUNTOS) {
+    // La merma es de 0 a menos de 100 (una sola regla: `primitivas/cantidad/merma.ts`; la base: `componente_perdida_ck`).
+    if (c.perdida !== null && !esMermaPermitida(c.perdida)) {
       return err({ codigo: "PERDIDA_INVALIDA" });
     }
     if (c.perdida !== null && c.perdida.unidades !== 0n && !perillas.composiciones_con_perdida) {

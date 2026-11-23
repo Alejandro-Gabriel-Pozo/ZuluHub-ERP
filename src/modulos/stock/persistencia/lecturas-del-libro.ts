@@ -90,7 +90,7 @@ export interface LecturasDelLibro {
 }
 
 /** Escapa `%`, `_` y `\` de lo que se busca con `LIKE`: el texto es del usuario. */
-const comoPrefijo = (texto: string): string => `${texto.replace(/[\\%_]/g, "\\$&")}%`;
+export const comoPrefijo = (texto: string): string => `${texto.replace(/[\\%_]/g, "\\$&")}%`;
 
 export function crearLecturasDelLibro(db: Kysely<StockDb>): LecturasDelLibro {
   return {

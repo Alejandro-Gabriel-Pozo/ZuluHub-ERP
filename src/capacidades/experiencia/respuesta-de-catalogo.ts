@@ -20,7 +20,14 @@ export const CLAVES_DE_ERRORES_DE_CATALOGO = {
   // (`decisiones-del-dueno-2026-11.md`, respuestas chicas, punto 5). Esta última lleva el importe vigente como parámetro (`PARAMETROS_DE_CATALOGO`).
   CATALOGO_PRECIO_INVALIDO: "catalogo.error.precio_invalido",
   CATALOGO_PRECIO_DESACTUALIZADO: "catalogo.precio.vigente_ahora",
+  // Clasificación comercial (A14): «Primero desactivá lo que tiene adentro.» (DDD, fila del 12/11/2026, línea 92; DEC-0535), al desactivar un nodo con hijos activos.
+  CATALOGO_PRIMERO_DESACTIVA: "catalogo.error.primero_desactiva",
+  // Opciones (A13): «Una opción incluida no lleva recargo» es de la misma fila «Errores» de «Textos nuevos» de `productos.html` (09/11/2026).
+  CATALOGO_INCLUIDA_CON_RECARGO: "catalogo.error.incluida_con_recargo",
   CATALOGO_ACCION_NO_PERMITIDA: "catalogo.error.accion_no_permitida",
+  // Ocultar (A15): los dos bloqueos con texto propio, aprobados por el dueño el 12/11/2026 (`productos.html:318`). Valen igual para desactivar.
+  CATALOGO_PRODUCTO_CON_EXISTENCIA: "catalogo.error.primero_existencia_en_cero",
+  CATALOGO_PRODUCTO_CON_CONTEO_ABIERTO: "catalogo.error.conteo_abierto_con_el_producto",
 } as const satisfies Record<string, ClaveDeTexto>;
 
 export type CodigoDeCatalogo = keyof typeof CLAVES_DE_ERRORES_DE_CATALOGO;

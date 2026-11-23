@@ -1,0 +1,7 @@
+[
+  "arquitectura/decisiones/**",
+  "arquitectura/mutacion/*.json",
+  "arquitectura/paridad/**",
+  ".github/CODEOWNERS",
+  ".gitignore"
+]
