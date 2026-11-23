@@ -1,0 +1,1804 @@
+{
+  "version": 1,
+  "docs": {
+    "repositorio": "github.com/Alejandro-Gabriel-Pozo/ZuluHub-docs",
+    "commit": "1845ff1671155c62e7fcc11e81621315ad71a71d"
+  },
+  "maquetas": [
+    {
+      "id": "prototipos-facturador/anular.html",
+      "nombre": "anular.html",
+      "carpeta": "prototipos-facturador"
+    },
+    {
+      "id": "prototipos-facturador/detalle.html",
+      "nombre": "detalle.html",
+      "carpeta": "prototipos-facturador"
+    },
+    {
+      "id": "prototipos-facturador/emitir.html",
+      "nombre": "emitir.html",
+      "carpeta": "prototipos-facturador"
+    },
+    {
+      "id": "prototipos-facturador/impresion-a4.html",
+      "nombre": "impresion-a4.html",
+      "carpeta": "prototipos-facturador"
+    },
+    {
+      "id": "prototipos-facturador/index.html",
+      "nombre": "index.html",
+      "carpeta": "prototipos-facturador"
+    },
+    {
+      "id": "prototipos-facturador/listado.html",
+      "nombre": "listado.html",
+      "carpeta": "prototipos-facturador"
+    },
+    {
+      "id": "prototipos-facturador/receptor.html",
+      "nombre": "receptor.html",
+      "carpeta": "prototipos-facturador"
+    },
+    {
+      "id": "prototipos-facturador/ticket.html",
+      "nombre": "ticket.html",
+      "carpeta": "prototipos-facturador"
+    },
+    {
+      "id": "prototipos-gastronomia/caja.html",
+      "nombre": "caja.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/carta-caras.html",
+      "nombre": "carta-caras.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/carta-en-linea.html",
+      "nombre": "carta-en-linea.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/carta-libro.html",
+      "nombre": "carta-libro.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/carta.html",
+      "nombre": "carta.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/cierre-del-dia.html",
+      "nombre": "cierre-del-dia.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/clasificacion.html",
+      "nombre": "clasificacion.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/cobrar-en-partes.html",
+      "nombre": "cobrar-en-partes.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/combo-elecciones.html",
+      "nombre": "combo-elecciones.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/combos.html",
+      "nombre": "combos.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/compra-corregir-anular.html",
+      "nombre": "compra-corregir-anular.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/compra-nivel.html",
+      "nombre": "compra-nivel.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/compra-pago.html",
+      "nombre": "compra-pago.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/compra-tolerancias.html",
+      "nombre": "compra-tolerancias.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/compra.html",
+      "nombre": "compra.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/control.html",
+      "nombre": "control.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/datos-cobro-tres-estados.html",
+      "nombre": "datos-cobro-tres-estados.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/datos-cobro.html",
+      "nombre": "datos-cobro.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/directorio.html",
+      "nombre": "directorio.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/duplicar-producto.html",
+      "nombre": "duplicar-producto.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/elaborado-en-tanda.html",
+      "nombre": "elaborado-en-tanda.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/escritorio.html",
+      "nombre": "escritorio.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/estados-de-plan.html",
+      "nombre": "estados-de-plan.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/familias.html",
+      "nombre": "familias.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/hoja-de-mas.html",
+      "nombre": "hoja-de-mas.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/imprimir.html",
+      "nombre": "imprimir.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/indice.html",
+      "nombre": "indice.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/ingreso-de-dinero.html",
+      "nombre": "ingreso-de-dinero.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/listas.html",
+      "nombre": "listas.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/maqueta-recargo.html",
+      "nombre": "maqueta-recargo.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/medios.html",
+      "nombre": "medios.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/menu-por-areas.html",
+      "nombre": "menu-por-areas.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/mesas.html",
+      "nombre": "mesas.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/movimientos-de-dinero-de-la-jornada.html",
+      "nombre": "movimientos-de-dinero-de-la-jornada.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/orden.html",
+      "nombre": "orden.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/portal-de-la-empresa.html",
+      "nombre": "portal-de-la-empresa.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/produccion.html",
+      "nombre": "produccion.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/productos-secciones.html",
+      "nombre": "productos-secciones.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/productos.html",
+      "nombre": "productos.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/promos-lugares-propuesta.html",
+      "nombre": "promos-lugares-propuesta.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/receta-duplicar.html",
+      "nombre": "receta-duplicar.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/receta.html",
+      "nombre": "receta.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/salida-de-dinero.html",
+      "nombre": "salida-de-dinero.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/salida.html",
+      "nombre": "salida.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/salon.html",
+      "nombre": "salon.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/seo-y-metadatos.html",
+      "nombre": "seo-y-metadatos.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/sitio-publico.html",
+      "nombre": "sitio-publico.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/stock-conteo.html",
+      "nombre": "stock-conteo.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/stock.html",
+      "nombre": "stock.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/textos-por-aprobar.html",
+      "nombre": "textos-por-aprobar.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/tickets-del-dia.html",
+      "nombre": "tickets-del-dia.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/unir.html",
+      "nombre": "unir.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/venta-rapida-v2.html",
+      "nombre": "venta-rapida-v2.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/venta-rapida-v4.html",
+      "nombre": "venta-rapida-v4.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-gastronomia/venta-rapida.html",
+      "nombre": "venta-rapida.html",
+      "carpeta": "prototipos-gastronomia"
+    },
+    {
+      "id": "prototipos-integrados/agenda-de-turnos.html",
+      "nombre": "agenda-de-turnos.html",
+      "carpeta": "prototipos-integrados"
+    },
+    {
+      "id": "prototipos-integrados/calendario-pms.html",
+      "nombre": "calendario-pms.html",
+      "carpeta": "prototipos-integrados"
+    },
+    {
+      "id": "prototipos-integrados/maqueta-integrada.html",
+      "nombre": "maqueta-integrada.html",
+      "carpeta": "prototipos-integrados"
+    },
+    {
+      "id": "prototipos-integrados/maqueta-reservas-por-acciones.html",
+      "nombre": "maqueta-reservas-por-acciones.html",
+      "carpeta": "prototipos-integrados"
+    },
+    {
+      "id": "prototipos-integrados/maqueta-reservas-v3.html",
+      "nombre": "maqueta-reservas-v3.html",
+      "carpeta": "prototipos-integrados"
+    },
+    {
+      "id": "prototipos-libro/cuenta-corriente-proveedores.html",
+      "nombre": "cuenta-corriente-proveedores.html",
+      "carpeta": "prototipos-libro"
+    },
+    {
+      "id": "prototipos-libro/cuentas-bancarias-empresa.html",
+      "nombre": "cuentas-bancarias-empresa.html",
+      "carpeta": "prototipos-libro"
+    },
+    {
+      "id": "prototipos-plataforma/planes.html",
+      "nombre": "planes.html",
+      "carpeta": "prototipos-plataforma"
+    }
+  ],
+  "briefs": [
+    {
+      "id": "escalabilidad/MAQUETA-estados-de-plan",
+      "pack": "escalabilidad",
+      "archivo": "11-especificaciones/briefs/escalabilidad/MAQUETA-estados-de-plan.md",
+      "tipo": "maqueta",
+      "titulo": "Brief de maqueta: `estados-de-plan.html` (cómo se ve lo que el plan no incluye)",
+      "acciones": [
+        "error.limite_del_plan",
+        "motivo.modulo_en_solo_lectura",
+        "motivo.modulo_no_activo"
+      ],
+      "rutas": [],
+      "maquetas": [
+        "caja.html",
+        "carta-caras.html",
+        "carta-en-linea.html",
+        "combos.html",
+        "compra-nivel.html",
+        "elaborado-en-tanda.html",
+        "emitir.html",
+        "estados-de-plan.html",
+        "medios.html",
+        "menu-por-areas.html",
+        "portal-de-la-empresa.html",
+        "venta-rapida-v4.html"
+      ],
+      "funciones": [],
+      "tablas": []
+    },
+    {
+      "id": "escalabilidad/MAQUETA-hoja-de-mas",
+      "pack": "escalabilidad",
+      "archivo": "11-especificaciones/briefs/escalabilidad/MAQUETA-hoja-de-mas.md",
+      "tipo": "maqueta",
+      "titulo": "Brief de maqueta: `hoja-de-mas.html` (la entrada «Más» y su pantalla)",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": [
+        "directorio.html",
+        "hoja-de-mas.html",
+        "menu-por-areas.html",
+        "salon.html",
+        "venta-rapida-v4.html"
+      ],
+      "funciones": [],
+      "tablas": []
+    },
+    {
+      "id": "escalabilidad/PR-1-partir-modulos-ts",
+      "pack": "escalabilidad",
+      "archivo": "11-especificaciones/briefs/escalabilidad/PR-1-partir-modulos-ts.md",
+      "tipo": "brief",
+      "titulo": "Brief PR-1 (Escalabilidad): partir `apps/web/servidor/modulos.ts` en un archivo por módulo",
+      "acciones": ["acciones.includes", "puntos_de_venta.cambiar_ambiente", "vi.mock"],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "accionDeLaFila",
+        "accionesDeLaListaDeCaja",
+        "accionesDePuntosDeVenta",
+        "conLaEmpresa",
+        "destinosDeAreas",
+        "destinosDeModulos",
+        "dondeVive",
+        "ofertaDe",
+        "pantallasDeCuenta",
+        "pendientesDeLaEmpresa",
+        "permisosDeLaPersona",
+        "permisosDelActor",
+        "puedeAdministrarImpresoras",
+        "puedeAdministrarMesas",
+        "puedeCambiarDeMesa",
+        "puedeCambiarPrecios",
+        "puedeCrearProductos",
+        "puedeDividirCuentas",
+        "puedeEditarElContactoDeLaSucursal",
+        "puedeEditarProductos",
+        "puedeEnviarAComandas",
+        "puedeImprimir",
+        "puedeLaAccion",
+        "puedeLaAccionDelSalon",
+        "puedeOcultarEnElLocal",
+        "puedeOcultarEnLaEmpresa",
+        "puedeReimprimir",
+        "puedeUnirMesas",
+        "puedeVerLaConfiguracionFiscal",
+        "tipoDelError",
+        "topeDeLineasPorArchivo"
+      ],
+      "tablas": []
+    },
+    {
+      "id": "escalabilidad/PR-C1-modulos-de-la-empresa-en-la-consola",
+      "pack": "escalabilidad",
+      "archivo": "11-especificaciones/briefs/escalabilidad/PR-C1-modulos-de-la-empresa-en-la-consola.md",
+      "tipo": "brief",
+      "titulo": "Brief PR-C1 (Consola): activar y desactivar módulos de una empresa",
+      "acciones": ["acceso.casos", "modulos_de_empresa.activar"],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "accionDelModulo",
+        "activarModuloDeEmpresa",
+        "ajustarPerilla",
+        "armarPlanDeEmpresa",
+        "asignarPlan",
+        "cambiarPlanAccion",
+        "cambiarPlanDeConsola",
+        "claveDeIdempotencia",
+        "desactivarModuloDeEmpresa",
+        "empresaId",
+        "entradaDelCambioDeModulo",
+        "exigirAcceso",
+        "habilitadoPorElPlan",
+        "permisosDelActor",
+        "useEnvioDelCambio"
+      ],
+      "tablas": ["modulo_de_empresa"]
+    },
+    {
+      "id": "escalabilidad/PR-E2-partir-web-ts",
+      "pack": "escalabilidad",
+      "archivo": "11-especificaciones/briefs/escalabilidad/PR-E2-partir-web-ts.md",
+      "tipo": "brief",
+      "titulo": "Brief PR-E2 (Escalabilidad): `src/composicion/web.ts` en un archivo por módulo",
+      "acciones": ["conexiones.tokens"],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "armarWeb",
+        "barridoDeAutenticacion",
+        "casosDeUsoDeCaja",
+        "casosDeUsoDeCatalogo",
+        "casosDeUsoDeCertificados",
+        "casosDeUsoDeCierre",
+        "casosDeUsoDeClientes",
+        "casosDeUsoDeComandas",
+        "casosDeUsoDeCompras",
+        "casosDeUsoDeConfiguracionFiscal",
+        "casosDeUsoDeEmpresas",
+        "casosDeUsoDeFacturacion",
+        "casosDeUsoDeIdentidad",
+        "casosDeUsoDeProduccion",
+        "casosDeUsoDeSalon",
+        "casosDeUsoDeStock",
+        "casosDeUsoDeVentas",
+        "configuracionPublicaDeHost",
+        "consultasDeCaja",
+        "consultasDeCatalogo",
+        "consultasDeCierre",
+        "consultasDeClientes",
+        "consultasDeComandas",
+        "consultasDeCompras",
+        "consultasDeEmpresas",
+        "consultasDeFacturacion",
+        "consultasDeIdentidad",
+        "consultasDeProduccion",
+        "consultasDeSalon",
+        "consultasDeSesion",
+        "consultasDeStock",
+        "consultasDeVentas",
+        "crearEgresoDeCaja",
+        "crearExistenciasDeCatalogo",
+        "crearFacturadorDeTickets",
+        "crearGanchoDeCierreAlDesactivar",
+        "crearIvaDeLaEmpresa",
+        "crearPuertosDeStock",
+        "crearStockDeVentas",
+        "crearVidrieraPublica",
+        "ganchoDeSucursalDeCaja",
+        "generarCodigoDeCarta",
+        "lecturasCompartidas",
+        "resolucionDeHost",
+        "ticketsPorCobranzaDeLaComposicion",
+        "vidrieraPublica"
+      ],
+      "tablas": []
+    },
+    {
+      "id": "escalabilidad/PR-H14-politica-de-cambio-de-plan",
+      "pack": "escalabilidad",
+      "archivo": "11-especificaciones/briefs/escalabilidad/PR-H14-politica-de-cambio-de-plan.md",
+      "tipo": "brief",
+      "titulo": "Brief H-14: política de cambio de plan configurable (tres PR)",
+      "acciones": ["planes.arrepentir", "planes.ver", "politica_de_plan.definir"],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "arrepentimientoHasta",
+        "asignarAUnTenant",
+        "asignarPlan",
+        "decidirArrepentimiento",
+        "decidirAsignacion",
+        "decidirCambio",
+        "decidirCondiciones",
+        "definirPolitica",
+        "diferenciaEntreVersiones",
+        "ejecutarCasoDeMarcasYPlanes",
+        "estadoDeDecision",
+        "instanteDeVigencia",
+        "numeroEsperado",
+        "versionEsperada",
+        "vigenteDesde",
+        "vigenteEn"
+      ],
+      "tablas": [
+        "arrepentimiento_de_plan",
+        "arrepentimiento_hasta",
+        "condiciones_de_cambio_de_plan",
+        "creado_en",
+        "definida_por",
+        "dias_de_anticipacion_de_baja",
+        "dias_de_anticipacion_de_suba",
+        "dias_de_arrepentimiento",
+        "numero_arrepentido",
+        "numero_nuevo",
+        "plan_de_tenant",
+        "politica_de_cambio_de_plan",
+        "politica_version",
+        "registrado_por",
+        "tenant_id"
+      ]
+    },
+    {
+      "id": "escalabilidad/PR-X1-registro-de-puntos-de-integracion",
+      "pack": "escalabilidad",
+      "archivo": "11-especificaciones/briefs/escalabilidad/PR-X1-registro-de-puntos-de-integracion.md",
+      "tipo": "brief",
+      "titulo": "Brief PR-X1 (Escalabilidad): registro de operaciones contextuales («oráculo») y contrato de la hoja «Más»",
+      "acciones": ["clientes.parte", "modulo.cosa", "ventas.cuenta", "ventas.ticket"],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "armarElMenu",
+        "enSoloLectura",
+        "esUuid",
+        "funcionesEncendidas",
+        "ganchosDeSucursal",
+        "loEntregan",
+        "operacionesDeLaHoja",
+        "operacionesPara",
+        "permisosDelActor",
+        "problemasDeIntegracion",
+        "rutaDeRetorno",
+        "seAbreEn",
+        "seOfrece",
+        "sePuedeVer"
+      ],
+      "tablas": []
+    },
+    {
+      "id": "escalabilidad/PR-X1b-funciones-encendidas-en-los-permisos",
+      "pack": "escalabilidad",
+      "archivo": "11-especificaciones/briefs/escalabilidad/PR-X1b-funciones-encendidas-en-los-permisos.md",
+      "tipo": "brief",
+      "titulo": "Brief PR-X1b (Escalabilidad): las funciones de pago encendidas llegan a la pantalla",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "armarElMenu",
+        "contribucionesPara",
+        "crearConsultasDeEmpresas",
+        "deLaEmpresa",
+        "exigirPerilla",
+        "funcionesEncendidas",
+        "hayFuncionesQueLeer",
+        "permisosDeLaPersona",
+        "permisosDelActor",
+        "problemasDelMenu",
+        "seOfrece",
+        "sePuedeVer",
+        "valorDePerilla"
+      ],
+      "tablas": ["cajas_por_sucursal", "empresas_por_tenant"]
+    },
+    {
+      "id": "libro/ENMIENDA-PR-CC-centro-de-costo",
+      "pack": "libro",
+      "archivo": "11-especificaciones/briefs/libro/ENMIENDA-PR-CC-centro-de-costo.md",
+      "tipo": "otro",
+      "titulo": "Enmienda a PR-CC (cuenta corriente del cliente): centro de costo en el libro",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [],
+      "tablas": ["cuenta_del_cliente"]
+    },
+    {
+      "id": "libro/PR-CB-cuentas-bancarias-de-la-empresa-y-niveles-de-informe",
+      "pack": "libro",
+      "archivo": "11-especificaciones/briefs/libro/PR-CB-cuentas-bancarias-de-la-empresa-y-niveles-de-informe.md",
+      "tipo": "brief",
+      "titulo": "PR-CB (Cuentas bancarias) — Cuenta bancaria de la empresa, dimensión sucursal en el libro y niveles de informe",
+      "acciones": [
+        "cajas.crear",
+        "cajas.ver",
+        "cuenta_de_cobro.cuenta_bancaria_id",
+        "cuentas_bancarias.crear",
+        "cuentas_bancarias.registrar_movimiento",
+        "cuentas_bancarias.saldo_teorico",
+        "cuentas_bancarias.ver",
+        "informes_de_empresa.ver"
+      ],
+      "rutas": [],
+      "maquetas": ["cuentas-bancarias-empresa.html"],
+      "funciones": ["informeDeCajaDelDia"],
+      "tablas": [
+        "alcance_del_movimiento",
+        "anula_a",
+        "aporte_de_sucursal_a_cuenta",
+        "comprobante_de_proveedor",
+        "conciliacion_de_jornada",
+        "cuenta_bancaria_de_la_empresa",
+        "cuenta_bancaria_id",
+        "cuenta_bancaria_sucursal",
+        "cuenta_de_cobro",
+        "cuenta_de_cobro_validar_cambio",
+        "cuenta_id",
+        "distribucion_de_asiento",
+        "empresa_id",
+        "fecha_negocio",
+        "medio_de_pago",
+        "movimiento_bancario",
+        "movimiento_caja",
+        "movimiento_de_dinero",
+        "saldo_de_cuenta_bancaria",
+        "saldo_de_parte_por_centro_de_costo",
+        "saldos_de_partes",
+        "sesion_caja",
+        "sucursal_id"
+      ]
+    },
+    {
+      "id": "libro/PR-CF-caja-fuerte-de-la-sucursal",
+      "pack": "libro",
+      "archivo": "11-especificaciones/briefs/libro/PR-CF-caja-fuerte-de-la-sucursal.md",
+      "tipo": "brief",
+      "titulo": "PR-CF (Caja fuerte) — Caja fuerte de la sucursal: resguardo de efectivo y traslados con la caja diaria y con el banco",
+      "acciones": [
+        "caja.traslado_de_fuerte",
+        "cajas.crear",
+        "cajas_fuertes.arquear",
+        "cajas_fuertes.crear",
+        "cajas_fuertes.mover",
+        "cajas_fuertes.ver",
+        "cuentas_bancarias.registrar_movimiento"
+      ],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "cajaFuerteId",
+        "claveIdempotencia",
+        "confirmarDeposito",
+        "cuentaBancariaId",
+        "cuentaPrevistaId",
+        "exigirSucursal",
+        "fechaDelDeposito",
+        "importeDepositado",
+        "informeDeCajaDelDia",
+        "llevadoPor",
+        "motivoDeDiferencia",
+        "retirarParaDepositar",
+        "retiroId"
+      ],
+      "tablas": [
+        "anula_a",
+        "caja_fuerte",
+        "caja_fuerte_id",
+        "conciliacion_de_jornada",
+        "confirmacion_de_deposito",
+        "declaracion_de_total",
+        "empresa_id",
+        "fecha_negocio",
+        "movimiento_caja",
+        "movimiento_de_caja_fuerte",
+        "movimiento_de_dinero",
+        "retiro_para_depositar",
+        "saldo_de_caja_fuerte",
+        "sesion_caja",
+        "sucursal_id"
+      ]
+    },
+    {
+      "id": "libro/PR-CP-cuenta-corriente-de-proveedores",
+      "pack": "libro",
+      "archivo": "11-especificaciones/briefs/libro/PR-CP-cuenta-corriente-de-proveedores.md",
+      "tipo": "brief",
+      "titulo": "PR-CP (Cuenta corriente de proveedores) — Cuentas a pagar sobre el libro de saldos: facturas a pagar, notas de crédito, pagos y saldo a favor",
+      "acciones": [
+        "compras.comprobante",
+        "compras.pago_a_proveedor",
+        "compras.reintegro_de_proveedor",
+        "compras.retencion_de_pago",
+        "comprobantes_de_proveedor.anular",
+        "comprobantes_de_proveedor.anular_pago",
+        "comprobantes_de_proveedor.pagar",
+        "comprobantes_de_proveedor.registrar",
+        "comprobantes_de_proveedor.ver",
+        "cuenta_de_proveedor.ajustar",
+        "notas_de_credito_de_proveedor.anular",
+        "notas_de_credito_de_proveedor.registrar",
+        "notas_de_credito_de_proveedor.ver"
+      ],
+      "rutas": [],
+      "maquetas": [
+        "compra-pago.html",
+        "compra.html",
+        "cuenta-corriente-proveedores.html",
+        "directorio.html"
+      ],
+      "funciones": [
+        "ajustarSaldoDeProveedor",
+        "anularPago",
+        "anularPagoACuenta",
+        "anularRetencionDePago",
+        "cargosAbiertos",
+        "confirmaExceso",
+        "creditosAbiertos",
+        "declararPago",
+        "declararPagoACuenta",
+        "esClasePagable",
+        "fechaDePago",
+        "proveedorId",
+        "registrarAnticipoAProveedor",
+        "registrarAsientoEnTx",
+        "totalSegunLaFactura"
+      ],
+      "tablas": [
+        "anula_a",
+        "clave_idempotencia",
+        "comprobante_asociado_id",
+        "comprobante_de_proveedor",
+        "credito_insuficiente",
+        "empresa_id",
+        "fecha_de_vencimiento_de_pago",
+        "movimiento_de_dinero",
+        "pago_a_proveedor",
+        "pago_de_comprobante",
+        "pago_id",
+        "pago_vigente_uk",
+        "proveedor_id",
+        "registrado_en",
+        "registrado_por",
+        "retencion_de_pago",
+        "saldos_de_partes",
+        "vence_el"
+      ]
+    },
+    {
+      "id": "libro/PR-LB-1-primitiva-de-libro-pura",
+      "pack": "libro",
+      "archivo": "11-especificaciones/briefs/libro/PR-LB-1-primitiva-de-libro-pura.md",
+      "tipo": "brief",
+      "titulo": "PR-LB-1 (Libro) — Primitiva pura de libro: huella, decisión de repetición, forma de clave y reglas de espejo",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "anulaA",
+        "decidirPorHuella",
+        "empresaId",
+        "exigirClave",
+        "fechaNegocio",
+        "hechoEn",
+        "huellaDeCampos",
+        "huellaDeComando",
+        "origenId",
+        "origenOrden",
+        "origenTipo",
+        "registradoPor"
+      ],
+      "tablas": ["pago_clave_ck", "saldos_de_partes"]
+    },
+    {
+      "id": "libro/PR-LB-2-conformidad-de-libros",
+      "pack": "libro",
+      "archivo": "11-especificaciones/briefs/libro/PR-LB-2-conformidad-de-libros.md",
+      "tipo": "brief",
+      "titulo": "PR-LB-2 (Libro) — Registro de libros y prueba de conformidad contra la base",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [],
+      "tablas": [
+        "anula_a",
+        "app_empresa_id",
+        "empresa_id",
+        "fecha_de_negocio",
+        "fecha_negocio",
+        "hecho_en",
+        "information_schema",
+        "movimiento_caja",
+        "movimiento_de_stock",
+        "movimiento_de_stock_clave_ck",
+        "pg_catalog",
+        "pg_get_constraintdef",
+        "registrado_en",
+        "registrado_por",
+        "solo_insercion"
+      ]
+    },
+    {
+      "id": "libro/PR-LB-3-migracion-del-libro-de-saldos",
+      "pack": "libro",
+      "archivo": "11-especificaciones/briefs/libro/PR-LB-3-migracion-del-libro-de-saldos.md",
+      "tipo": "brief",
+      "titulo": "PR-LB-3 (Libro) — Migración del libro de saldos por parte: asientos, imputaciones y saldos derivados",
+      "acciones": ["saldos.tope_de_deuda"],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [],
+      "tablas": [
+        "anula_a",
+        "app_empresa_id",
+        "app_persona_id",
+        "asiento_de_saldo",
+        "asiento_id",
+        "asignacion_aplicar",
+        "clase_de_asiento",
+        "clave_idempotencia",
+        "credito_insuficiente",
+        "distribucion_de_asiento",
+        "empresa_id",
+        "es_imputable",
+        "exige_detalle",
+        "exige_origen",
+        "fecha_de_negocio",
+        "fecha_negocio",
+        "hecho_en",
+        "imputacion_de_saldo",
+        "libro_saldo_guardia",
+        "origen_orden",
+        "origen_tipo",
+        "parte_id",
+        "parte_id_empresa_uk",
+        "pedernal_app",
+        "referencia_id",
+        "referencia_tipo",
+        "registrado_en",
+        "registrado_por",
+        "saldado_id",
+        "saldante_id",
+        "saldo_de_asiento",
+        "saldo_de_parte",
+        "saldo_de_parte_por_centro_de_costo",
+        "search_path",
+        "solo_insercion",
+        "sucursal_id",
+        "vence_el"
+      ]
+    },
+    {
+      "id": "libro/PR-LB-4-modulo-saldos-de-partes",
+      "pack": "libro",
+      "archivo": "11-especificaciones/briefs/libro/PR-LB-4-modulo-saldos-de-partes.md",
+      "tipo": "brief",
+      "titulo": "PR-LB-4 (Libro) — Módulo `saldos_de_partes`: dominio, persistencia, casos de uso y consultas",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "anularAsientoEnTx",
+        "deshacerImputacionEnTx",
+        "distribuirPorCentroDeCosto",
+        "esImputable",
+        "estaVencida",
+        "estadoDeCuenta",
+        "repartirLoMasAntiguo",
+        "saldoDeParte",
+        "saldoPorCentroDeCosto",
+        "venceEl",
+        "yaExistia"
+      ],
+      "tablas": [
+        "distribucion_de_asiento",
+        "empresa_id",
+        "registrado_en",
+        "saldos_de_partes",
+        "sucursal_id",
+        "vence_el"
+      ]
+    },
+    {
+      "id": "maquetas/M1-ingreso-de-dinero",
+      "pack": "maquetas",
+      "archivo": "11-especificaciones/briefs/maquetas/M1-ingreso-de-dinero.md",
+      "tipo": "brief",
+      "titulo": "Maqueta M1 — Ingreso de dinero (sin ticket)",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": ["tickets-del-dia.html", "venta-rapida-v4.html"],
+      "funciones": [],
+      "tablas": []
+    },
+    {
+      "id": "maquetas/M2-salida-de-dinero",
+      "pack": "maquetas",
+      "archivo": "11-especificaciones/briefs/maquetas/M2-salida-de-dinero.md",
+      "tipo": "brief",
+      "titulo": "Maqueta M2 — Salida de dinero (sin compra)",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": ["tickets-del-dia.html"],
+      "funciones": [],
+      "tablas": []
+    },
+    {
+      "id": "maquetas/M3-movimientos-de-dinero-de-la-jornada",
+      "pack": "maquetas",
+      "archivo": "11-especificaciones/briefs/maquetas/M3-movimientos-de-dinero-de-la-jornada.md",
+      "tipo": "brief",
+      "titulo": "Maqueta M3 — Ingresos y salidas de la jornada, devolución y lo que se ve en el cierre",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": ["tickets-del-dia.html"],
+      "funciones": [],
+      "tablas": []
+    },
+    {
+      "id": "maquetas/M4-cobrar-en-partes",
+      "pack": "maquetas",
+      "archivo": "11-especificaciones/briefs/maquetas/M4-cobrar-en-partes.md",
+      "tipo": "brief",
+      "titulo": "Maqueta M4 — Cobrar un ticket en partes (importe y saldo)",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": ["tickets-del-dia.html"],
+      "funciones": [],
+      "tablas": []
+    },
+    {
+      "id": "maquetas/M5-correccion-datos-del-cobro",
+      "pack": "maquetas",
+      "archivo": "11-especificaciones/briefs/maquetas/M5-correccion-datos-del-cobro.md",
+      "tipo": "brief",
+      "titulo": "Maqueta M5 — Corrección de `datos-cobro-tres-estados.html` y `datos-cobro.html`",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": ["datos-cobro-tres-estados.html", "datos-cobro.html", "tickets-del-dia.html"],
+      "funciones": [],
+      "tablas": []
+    },
+    {
+      "id": "plataforma/PR-planes-consola",
+      "pack": "plataforma",
+      "archivo": "11-especificaciones/briefs/plataforma/PR-planes-consola.md",
+      "tipo": "brief",
+      "titulo": "Brief: pantalla «Planes» de la consola de plataforma",
+      "acciones": [
+        "planes.asignar",
+        "planes.crear",
+        "planes.editar_borrador",
+        "planes.publicar_version",
+        "planes.ver",
+        "version_de_plan.estado"
+      ],
+      "rutas": [],
+      "maquetas": ["planes.html"],
+      "funciones": [
+        "asignarPlan",
+        "claveDeIdempotencia",
+        "crearPlan",
+        "guardarBorradorDePlan",
+        "listarPlanes",
+        "migrarTenantsDeVersion",
+        "publicarVersionDePlan",
+        "tenantsConLaVersion",
+        "validarCodigoDePlan",
+        "versionEsperada",
+        "yaExistia"
+      ],
+      "tablas": [
+        "cajas_por_sucursal",
+        "calidad_de_lote",
+        "codigo_invalido",
+        "col_borrador",
+        "col_clientes",
+        "col_estado",
+        "col_ultima",
+        "conciliacion_de_tres_vias",
+        "dif_perilla",
+        "dif_quita",
+        "en_desarrollo",
+        "estado_retirado",
+        "falta_motivo",
+        "recepcion_separada",
+        "venta_por_fracciones_y_peso",
+        "version_publicada",
+        "vidriera_por_qr"
+      ]
+    },
+    {
+      "id": "transversal/PR-ADR008b-bloquear-deja-de-ofrecerse",
+      "pack": "transversal",
+      "archivo": "11-especificaciones/briefs/transversal/PR-ADR008b-bloquear-deja-de-ofrecerse.md",
+      "tipo": "brief",
+      "titulo": "PR-ADR008b — Controles: «bloquear» deja de ofrecerse a empresas y sucursales",
+      "acciones": [
+        "caja.cierre_con_diferencia",
+        "caja.cobro_en_jornada_vencida",
+        "caja.devolucion_supera_cobro",
+        "stock.existencia_negativa"
+      ],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": ["decidirControl", "registroDeIntentoBloqueado", "resolverNivel"],
+      "tablas": ["nivel_de_control", "nivel_de_control_nivel_ck"]
+    },
+    {
+      "id": "ventas/COMBOS-reparto-orden-y-brief-de-ventas",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/COMBOS-reparto-orden-y-brief-de-ventas.md",
+      "tipo": "otro",
+      "titulo": "Combos al vender: reparto por módulo, orden y brief de la parte de Ventas",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": ["combo-elecciones.html", "combos.html", "promos-lugares-propuesta.html"],
+      "funciones": [
+        "agregarLinea",
+        "agregarLineaDeConjunto",
+        "agregarLineaDeConjuntoEnTx",
+        "agregarLineaEnTx",
+        "aplicarCambios",
+        "cerrarCuentaEnTx",
+        "cotizarConjunto",
+        "cotizarVentaRapida",
+        "cuentaId",
+        "elegiblesDeLugar",
+        "elegiblesDeSeccion",
+        "elegiblesDelComponente",
+        "guardarConjunto",
+        "huellaDeLineaDeConjunto",
+        "lineaId",
+        "partesFiscales",
+        "precioAbierto",
+        "productosParaVender",
+        "repartirPrecioDelConjunto",
+        "ticketParaFacturar",
+        "validarContenidoDeConjunto",
+        "varianteId",
+        "venderYCobrar",
+        "versionDeConjuntoId"
+      ],
+      "tablas": [
+        "cambio_de_linea",
+        "componente_de_linea_opcion",
+        "ejemplar_linea_componente",
+        "linea_cuenta_componente",
+        "linea_cuenta_conjunto",
+        "se_vende"
+      ]
+    },
+    {
+      "id": "ventas/DISENO-ingreso-y-salida-de-dinero-y-cobro-en-partes",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/DISENO-ingreso-y-salida-de-dinero-y-cobro-en-partes.md",
+      "tipo": "otro",
+      "titulo": "Diseño: ingreso de dinero sin ticket, salida de dinero sin compra y cobrar un ticket en partes",
+      "acciones": [
+        "aplicacion_de_cobro.cobro_id",
+        "caja.ingreso_sin_identificar",
+        "caja.ingreso_sin_ticket",
+        "caja.ingreso_sin_ticket_sin_identificar",
+        "caja.ingresos_sin_ticket",
+        "caja.movimiento_de_dinero",
+        "caja.salida_sin_identificar",
+        "caja.salidas_sin_compra",
+        "ingresos_de_dinero.registrar",
+        "movimientos_caja.anular",
+        "movimientos_caja.registrar_manual",
+        "parte.apellido",
+        "salidas_de_dinero.registrar",
+        "tickets.cobrar",
+        "ventas.cobranza_sin_destino",
+        "ventas.cobro_de_ticket_sin_identificar"
+      ],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "cumpleElNivel",
+        "decidirControl",
+        "devolverIngresoSinTicket",
+        "importeACobrar",
+        "ingresosSinTicketDeLaJornada",
+        "registrarCobroEnTx",
+        "registrarIngresoSinTicket",
+        "registrarMovimientoManual",
+        "registrarSalidaDeDinero",
+        "venderYCobrar"
+      ],
+      "tablas": [
+        "ajuste_de_perilla",
+        "cobranza_de_ticket",
+        "cobranza_sin_destino",
+        "cobranza_ticket_uk",
+        "cobrar_en_partes",
+        "conciliacion_de_cobro_por_origen",
+        "conciliacion_de_cobro_por_ticket",
+        "detalle_de_movimiento_manual",
+        "devuelve_a",
+        "empresa_id",
+        "identificacion_minima",
+        "ingreso_sin_ticket",
+        "medio_de_pago",
+        "movimiento_caja",
+        "movimiento_caja_anulacion_con_origen",
+        "movimiento_caja_solo_efectivo",
+        "movimiento_de_dinero",
+        "movimiento_id",
+        "nivel_de_control",
+        "registrado_en",
+        "registrado_por",
+        "sesion_id",
+        "sucursal_id",
+        "tercero_documento_numero",
+        "tercero_documento_tipo",
+        "tercero_nombre",
+        "tercero_parte_id",
+        "tercero_persona_id",
+        "ticket_cobrado"
+      ]
+    },
+    {
+      "id": "ventas/PR-1-venta-rapida",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-1-venta-rapida.md",
+      "tipo": "brief",
+      "titulo": "PR-1 · Venta rápida del mostrador: la pantalla (armar la cuenta; sin cobrar)",
+      "acciones": [
+        "cuentas.agregar_linea",
+        "p.mostrador",
+        "p.venta",
+        "productos.ver",
+        "ventas.ver"
+      ],
+      "rutas": ["/ventas/venta-rapida"],
+      "maquetas": [
+        "menu-por-areas.html",
+        "productos.html",
+        "textos-por-aprobar.html",
+        "venta-rapida-v4.html",
+        "venta-rapida.html"
+      ],
+      "funciones": [
+        "aDiezmilesimos",
+        "agregarALaCuenta",
+        "cambiarCantidad",
+        "cantidadDelProductoEnLaCuenta",
+        "cantidadParaLeer",
+        "cargarLaVentaRapida",
+        "claveDeLinea",
+        "cotizarElCarritoDeLaSucursal",
+        "deDiezmilesimos",
+        "detalleDeLaLinea",
+        "esCantidadValida",
+        "formaDeCantidad",
+        "fraccionesOfrecidas",
+        "nombreDeLaUnidad",
+        "pedidoDeCotizacion",
+        "productosVisibles",
+        "quitarDeLaCuenta",
+        "rotuloDeFraccion",
+        "sucursalDelPedido",
+        "sumarCantidades",
+        "textosDeLaVenta"
+      ],
+      "tablas": []
+    },
+    {
+      "id": "ventas/PR-1b-venta-rapida-como-la-maqueta",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-1b-venta-rapida-como-la-maqueta.md",
+      "tipo": "brief",
+      "titulo": "PR-1b · Venta rápida igual a la maqueta (7 ajustes y un octavo que depende de Catálogo)",
+      "acciones": ["g.obligatorio", "ventas.ver"],
+      "rutas": [],
+      "maquetas": ["productos.html", "venta-rapida-v4.html"],
+      "funciones": [
+        "alCambiar",
+        "barraCobro",
+        "conAtajos",
+        "datosHoja",
+        "esCantidadValida",
+        "gramosADiezmilesimosDeKilo",
+        "lineasHtml",
+        "nombreDeLaUnidad",
+        "parseFloat",
+        "pedidoDeCotizacion",
+        "precioDeLaTarjeta",
+        "productoParaLaPantalla",
+        "seMuestraEnCarta",
+        "seccionId",
+        "simboloDeUnidad",
+        "textosDeLaVenta",
+        "vHoja",
+        "vVenta"
+      ],
+      "tablas": []
+    },
+    {
+      "id": "ventas/PR-2-cobrar-servidor",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-2-cobrar-servidor.md",
+      "tipo": "brief",
+      "titulo": "PR-2 · Cobrar en el mostrador: servidor (sin pantalla)",
+      "acciones": [
+        "cuentas.abrir",
+        "cuentas.agregar_linea",
+        "cuentas.cerrar",
+        "tickets.cobrar",
+        "tickets.corregir",
+        "ventas.ver"
+      ],
+      "rutas": [],
+      "maquetas": ["venta-rapida-v4.html"],
+      "funciones": [
+        "anularTicket",
+        "calcularVuelto",
+        "decidirLaCaja",
+        "fechaNegocio",
+        "motivoDelCupon",
+        "opcionesParaCobrar",
+        "sucursalDelPedido",
+        "vCobro",
+        "venderYCobrar"
+      ],
+      "tablas": []
+    },
+    {
+      "id": "ventas/PR-3-cobrar-pantalla",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-3-cobrar-pantalla.md",
+      "tipo": "brief",
+      "titulo": "PR-3 · Cobrar en el mostrador: la pantalla (hoja de cobro, resultado y anular)",
+      "acciones": [
+        "cuentas.abrir",
+        "cuentas.agregar_linea",
+        "cuentas.cerrar",
+        "tickets.cobrar",
+        "tickets.corregir",
+        "ventas.ver"
+      ],
+      "rutas": [],
+      "maquetas": [
+        "datos-cobro.html",
+        "imprimir.html",
+        "prototipo-caja.html",
+        "salon.html",
+        "textos-por-aprobar.html",
+        "venta-rapida-v4.html"
+      ],
+      "funciones": [
+        "anularTicket",
+        "calcularVuelto",
+        "cambiarDeMedio",
+        "datosQuePide",
+        "documentoDelTicket",
+        "errorDeUnDato",
+        "esImporteValido",
+        "estadoDelCobro",
+        "lineaDeEstado",
+        "motivoDelCupon",
+        "nombreDelTipo",
+        "pagoAdicional",
+        "pagoNuevo",
+        "ponerPor",
+        "resumenDelCobro",
+        "textosDeLaVenta",
+        "useEnvioConClave",
+        "useEnvioDelPedido",
+        "vCobro",
+        "venderYCobrar"
+      ],
+      "tablas": ["node_modules"]
+    },
+    {
+      "id": "ventas/PR-3b-cobrar-como-la-maqueta",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-3b-cobrar-como-la-maqueta.md",
+      "tipo": "brief",
+      "titulo": "PR-3b · Cobrar igual a la maqueta (5 ajustes)",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": ["textos-por-aprobar.html", "venta-rapida-v4.html"],
+      "funciones": [
+        "anularTicket",
+        "barraCobro",
+        "bloqueaAgregar",
+        "cobroParaLaPantalla",
+        "ejemplarNuevoId",
+        "franjaCaja",
+        "jornadaAbierta",
+        "useEnvioDelPedido",
+        "vCobro",
+        "vDlg",
+        "vResultado",
+        "venderYCobrar"
+      ],
+      "tablas": []
+    },
+    {
+      "id": "ventas/PR-4-papel-del-ticket-servidor",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-4-papel-del-ticket-servidor.md",
+      "tipo": "brief",
+      "titulo": "PR-4 · Papel del ticket del mostrador: servidor (sin pantalla)",
+      "acciones": ["ventas.ver"],
+      "rutas": [],
+      "maquetas": ["imprimir.html", "venta-rapida-v4.html"],
+      "funciones": [
+        "cantidadParaMostrar",
+        "documentoDelTicket",
+        "dosColumnas",
+        "fechaParaMostrar",
+        "importeParaMostrar",
+        "opcionesParaCobrar",
+        "papelDelTicket",
+        "parseFloat",
+        "toLocaleString",
+        "vTicket"
+      ],
+      "tablas": []
+    },
+    {
+      "id": "ventas/PR-5-ticket-impreso-pantalla",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-5-ticket-impreso-pantalla.md",
+      "tipo": "brief",
+      "titulo": "PR-5 · «Imprimir ticket»: la vista del ticket del cliente y el botón en el resultado del cobro",
+      "acciones": ["ventas.ver", "window.print"],
+      "rutas": [],
+      "maquetas": ["imprimir.html", "venta-rapida-v4.html"],
+      "funciones": [
+        "accionDeCobrar",
+        "alVolver",
+        "aplicarEstilos",
+        "entradaDeDocumentoDelTicket",
+        "imprimirTicket",
+        "papelDelTicket",
+        "papelDelTicketAccion",
+        "sucursalId",
+        "ticketDelCliente",
+        "ticketId",
+        "useAltoDelTicket",
+        "useEnvioConClave",
+        "variablesDelTicket"
+      ],
+      "tablas": ["cobranza_de_ticket"]
+    },
+    {
+      "id": "ventas/PR-5bis-tickets-del-dia-servidor",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-5bis-tickets-del-dia-servidor.md",
+      "tipo": "brief",
+      "titulo": "PR-5 bis · Tickets del día y ficha del ticket: servidor (lecturas; sin pantalla)",
+      "acciones": [
+        "dependencias.facturador",
+        "ficha.anulacion",
+        "permisos.ver_propios",
+        "ventas.ver"
+      ],
+      "rutas": [],
+      "maquetas": ["tickets-del-dia.html"],
+      "funciones": [
+        "accionDeCobrar",
+        "anularTicket",
+        "cuentaDeCobroId",
+        "emitidoEn",
+        "emitidoPor",
+        "entradaDeFichaDelTicket",
+        "fechaDeNegocio",
+        "fechaNegocio",
+        "fichaDeTicket",
+        "fichaDelTicketDelDia",
+        "jornadaDeLosTickets",
+        "listarTickets",
+        "medioVigenteTipo",
+        "numeroDeCorreccion",
+        "origenOrden",
+        "personasParaMostrar",
+        "renglonesDe",
+        "sucursalDelPedido",
+        "ticketsDeLaJornada",
+        "ticketsDelDia",
+        "totalOriginal",
+        "totalVigente",
+        "vigenciaEnTx"
+      ],
+      "tablas": ["cobranza_de_ticket", "empresa_id", "ticket_correccion", "ticket_ejemplar"]
+    },
+    {
+      "id": "ventas/PR-5ter-tickets-del-dia-pantallas",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-5ter-tickets-del-dia-pantallas.md",
+      "tipo": "brief",
+      "titulo": "PR-5 ter (Ventas) — «Tickets del día»: lista, ficha, reimprimir y anular",
+      "acciones": ["router.refresh", "ventas.ver"],
+      "rutas": [],
+      "maquetas": ["caja.html", "textos-por-aprobar.html", "tickets-del-dia.html"],
+      "funciones": [
+        "cantidadParaMostrar",
+        "comprobanteId",
+        "ejemplarVigenteId",
+        "estadoEscrito",
+        "fechaNegocio",
+        "fichaDelTicketDeLaPagina",
+        "formatearImporte",
+        "horaDeArgentina",
+        "papelDelTicketAccion",
+        "ticketId",
+        "ticketsDelDiaDeLaPagina",
+        "toLocaleString",
+        "totalOriginal",
+        "totalVigente",
+        "traducirErrorDeCobrar",
+        "vFicha",
+        "vLista"
+      ],
+      "tablas": []
+    },
+    {
+      "id": "ventas/PR-6-venta-a-cero",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-6-venta-a-cero.md",
+      "tipo": "brief",
+      "titulo": "PR-6 (Ventas) — Venta a $ 0: confirmación y resultado sin cobro",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": ["venta-rapida-v4.html"],
+      "funciones": [
+        "alCancelar",
+        "alConfirmar",
+        "cajaId",
+        "cajaParaCobrar",
+        "cobrarLaVenta",
+        "confirmacionDeCero",
+        "confirmoCero",
+        "cotizarVentaRapida",
+        "cuentaId",
+        "esCero",
+        "esVentaACero",
+        "exigirJornadaAbierta",
+        "lineasACero",
+        "parseFloat",
+        "totalEsperado",
+        "useEnvioDelPedido",
+        "venderYCobrar"
+      ],
+      "tablas": []
+    },
+    {
+      "id": "ventas/PR-7-caja-datos-que-se-piden-y-sello-de-pendientes",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-7-caja-datos-que-se-piden-y-sello-de-pendientes.md",
+      "tipo": "brief",
+      "titulo": "PR-7-caja (Caja) — Datos que «se piden» por medio de pago y sello de los pendientes en cada cobro",
+      "acciones": ["medios_de_pago.editar"],
+      "rutas": [],
+      "maquetas": ["datos-cobro-tres-estados.html", "datos-cobro.html"],
+      "funciones": [
+        "avisaSiFalta",
+        "cobrosPorOrigen",
+        "datosPendientes",
+        "datosPendientesDe",
+        "datosQuePide",
+        "datosQueSePiden",
+        "editarMedioDePago",
+        "opcionDeMedioParaCobrar",
+        "opcionesDeCobro",
+        "registrarCobroEnTx"
+      ],
+      "tablas": [
+        "avisa_si_falta_cupon",
+        "avisa_si_falta_x",
+        "cobro_validar_alta",
+        "datos_pendientes",
+        "medio_de_pago",
+        "medio_de_pago_avisa_ck",
+        "medio_de_pago_datos_ck",
+        "movimiento_caja",
+        "pide_x"
+      ]
+    },
+    {
+      "id": "ventas/PR-7-datos-que-se-piden-al-cobrar",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-7-datos-que-se-piden-al-cobrar.md",
+      "tipo": "brief",
+      "titulo": "PR-7 (Ventas) — Datos que «se piden» al cobrar: se advierte, no se exige",
+      "acciones": ["cobro.datos_pendientes"],
+      "rutas": [],
+      "maquetas": ["datos-cobro-tres-estados.html"],
+      "funciones": ["datosPendientes", "datosQuePide", "datosQueSePiden", "opcionesDeCobro"],
+      "tablas": ["cobro_dato_obligatorio_faltante"]
+    },
+    {
+      "id": "ventas/PR-8-fichas-de-pantalla-de-ventas",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-8-fichas-de-pantalla-de-ventas.md",
+      "tipo": "brief",
+      "titulo": "PR-8 (Ventas) — Fichas de pantalla en el código: Venta rápida, Cobro, Tickets del día y Ficha del ticket",
+      "acciones": ["tickets.cobrar", "tickets.corregir", "ventas.ver"],
+      "rutas": [],
+      "maquetas": ["tickets-del-dia.html", "venta-rapida-v4.html"],
+      "funciones": ["entradaDeMenu", "estadoDeLaFicha", "sinPermiso"],
+      "tablas": []
+    },
+    {
+      "id": "ventas/PR-C1-cobro-en-partes-base",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-C1-cobro-en-partes-base.md",
+      "tipo": "brief",
+      "titulo": "PR-C1 (Ventas) — Cobrar en partes: la base (migración M-3)",
+      "acciones": ["cobranza.importe"],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": ["cobrarTicketEnTx", "cuadrarCobros", "decidirCobrar", "venderYCobrar"],
+      "tablas": [
+        "aplicacion_de_cobro",
+        "cobranza_cuadra",
+        "cobranza_de_ticket",
+        "cobranza_ticket_uk",
+        "cobranza_validar_alta",
+        "cobranza_validar_cambio",
+        "ticket_cobrado",
+        "ticket_validar_cambio"
+      ]
+    },
+    {
+      "id": "ventas/PR-C2-cobro-en-partes-caso-de-uso",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-C2-cobro-en-partes-caso-de-uso.md",
+      "tipo": "brief",
+      "titulo": "PR-C2 (Ventas) — Cobrar un ticket en partes: el caso de uso",
+      "acciones": ["tickets.cobrar"],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "cobrarTicketEnTx",
+        "decidirCobrar",
+        "huellaDeCobranza",
+        "importeACobrar",
+        "venderYCobrar"
+      ],
+      "tablas": ["cobrar_en_partes", "ticket_cobrado"]
+    },
+    {
+      "id": "ventas/PR-C3-cobro-en-partes-lecturas",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-C3-cobro-en-partes-lecturas.md",
+      "tipo": "brief",
+      "titulo": "PR-C3 (Ventas) — Cobrar en partes: saldo y «parcialmente cobrado» en las lecturas",
+      "acciones": ["ticket.fecha_negocio"],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "cobrosPorOrigen",
+        "fichaDeTicket",
+        "ticketsDeLaJornada",
+        "ticketsDelDia",
+        "totalCobradoPorTickets"
+      ],
+      "tablas": []
+    },
+    {
+      "id": "ventas/PR-C4-cobro-en-partes-cierre",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-C4-cobro-en-partes-cierre.md",
+      "tipo": "brief",
+      "titulo": "PR-C4 (Caja) — Cobrar en partes: el cierre del día compara contra lo que el ticket dice haber cobrado (migración M-4)",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": ["compararContraTickets", "importeDelActo"],
+      "tablas": [
+        "cobrado_en_caja",
+        "cobrado_segun_ventas",
+        "conciliacion_de_cobro_por_origen",
+        "conciliacion_de_cobro_por_ticket",
+        "saldo_pendiente"
+      ]
+    },
+    {
+      "id": "ventas/PR-D1-devolver-un-ingreso",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-D1-devolver-un-ingreso.md",
+      "tipo": "brief",
+      "titulo": "PR-D1 (Caja) — Devolver otro día un ingreso de dinero sin ticket",
+      "acciones": ["salidas_de_dinero.registrar"],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": ["quedaPorDevolver"],
+      "tablas": []
+    },
+    {
+      "id": "ventas/PR-E1-registrar-ingreso-de-dinero",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-E1-registrar-ingreso-de-dinero.md",
+      "tipo": "brief",
+      "titulo": "PR-E1 (Caja) — Registrar un ingreso de dinero sin ticket y anularlo el mismo día",
+      "acciones": [
+        "caja.ingreso_sin_identificar",
+        "ingresos_de_dinero.registrar",
+        "movimientos_caja.anular",
+        "tickets.cobrar"
+      ],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": ["origenOrden", "registrarCobroEnTx", "registrarMovimientoManual"],
+      "tablas": []
+    },
+    {
+      "id": "ventas/PR-I1-tercero-identificado",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-I1-tercero-identificado.md",
+      "tipo": "brief",
+      "titulo": "PR-I1 — «Tercero identificado»: la regla única de quién pagó o quién recibió",
+      "acciones": [
+        "caja.ingreso_sin_identificar",
+        "caja.salida_sin_identificar",
+        "modulo.nombre",
+        "ventas.cobro_de_ticket_sin_identificar"
+      ],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "decidirControl",
+        "esUuid",
+        "nivelPorDefecto",
+        "nombreORazonSocialDesdeTexto",
+        "personaId",
+        "terceroDesdeEntrada",
+        "terceroQueFalta"
+      ],
+      "tablas": ["nivel_de_control"]
+    },
+    {
+      "id": "ventas/PR-L1-lista-de-la-jornada-y-cierre",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-L1-lista-de-la-jornada-y-cierre.md",
+      "tipo": "brief",
+      "titulo": "PR-L1 (Caja) — Ingresos y salidas de dinero: lista de la jornada y dos controles del cierre",
+      "acciones": [
+        "caja.cobros_con_datos_pendientes",
+        "caja.ingresos_sin_ticket",
+        "caja.salidas_sin_compra"
+      ],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "cobrosConDatosPendientesDeLaJornada",
+        "datosPendientes",
+        "personasParaMostrar"
+      ],
+      "tablas": ["datos_pendientes"]
+    },
+    {
+      "id": "ventas/PR-M1-acto-de-movimiento-de-dinero",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-M1-acto-de-movimiento-de-dinero.md",
+      "tipo": "brief",
+      "titulo": "PR-M1 (Caja) — El acto «movimiento de dinero»: tabla, reglas de la base y categorías",
+      "acciones": ["caja.movimiento_de_dinero", "ventas.cobranza_de_ticket"],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "conceptoDesdeTexto",
+        "deLaJornada",
+        "exigeIngresoOriginal",
+        "eximeDeTercero",
+        "motivoPropio",
+        "porClave",
+        "referenciaDesdeTexto",
+        "reglaDeLaCategoria"
+      ],
+      "tablas": [
+        "cobranza_de_ticket",
+        "devolucion_supera_lo_cobrado",
+        "devuelve_a",
+        "movimiento_caja",
+        "movimiento_de_dinero",
+        "movimiento_de_dinero_no_cuadra",
+        "movimiento_id",
+        "search_path",
+        "sesion_caja",
+        "solo_insercion",
+        "tercero_nombre",
+        "tercero_persona_id"
+      ]
+    },
+    {
+      "id": "ventas/PR-S2-registrar-salida-de-dinero",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/PR-S2-registrar-salida-de-dinero.md",
+      "tipo": "brief",
+      "titulo": "PR-S2 (Caja) — Registrar una salida de dinero sin compra",
+      "acciones": [
+        "caja.salida_sin_identificar",
+        "movimientos_caja.registrar_manual",
+        "salidas_de_dinero.registrar"
+      ],
+      "rutas": [],
+      "maquetas": [],
+      "funciones": [
+        "anularMovimiento",
+        "personaId",
+        "registrarMovimientoManual",
+        "registroDeExcepcion",
+        "terceroDesdeEntrada",
+        "yaExistia"
+      ],
+      "tablas": []
+    },
+    {
+      "id": "ventas/comparacion-con-la-maqueta",
+      "pack": "ventas",
+      "archivo": "11-especificaciones/briefs/ventas/comparacion-con-la-maqueta.md",
+      "tipo": "otro",
+      "titulo": "Venta rápida y Cobrar: lo construido contra la maqueta aprobada (IGUAL o DIFIERE)",
+      "acciones": [],
+      "rutas": [],
+      "maquetas": ["venta-rapida-v4.html"],
+      "funciones": [
+        "barraCobro",
+        "cajonCuenta",
+        "franjaCaja",
+        "lineasHtml",
+        "pantallaDeOperacion",
+        "vAbrirCaja",
+        "vCobro",
+        "vDlg",
+        "vHoja",
+        "vResultado",
+        "vVenta"
+      ],
+      "tablas": []
+    }
+  ]
+}
