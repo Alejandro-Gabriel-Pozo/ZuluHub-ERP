@@ -46,7 +46,7 @@ const DE_LA_MAQUETA: FuenteDeTexto = {
   decidio:
     "el dueño: textos del prototipo aprobado de compras (09/11/2026, compra.html) y la maqueta compra-corregir-anular.html aceptada por delegación (DDD:187); los reusados de otro módulo tienen el mismo texto aprobado en su clave (DDD:388)",
   donde:
-    "Pedernal-docs 10-ux-ui, prototipos-gastronomia/compra-corregir-anular.html (vLista, vFicha) y compra.html; 11-especificaciones/briefs/compras/PR-3-lista-y-ficha-de-compra.md §6",
+    "Pedernal-docs 10-ux-ui, maquetas compra-corregir-anular.html (vLista, vFicha) y compra.html; 11-especificaciones/briefs/compras/PR-3-lista-y-ficha-de-compra.md §6",
 };
 const USO = "apps/web/ui/plantillas/compras/";
 
