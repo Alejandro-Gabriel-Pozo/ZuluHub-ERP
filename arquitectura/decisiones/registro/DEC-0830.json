@@ -3,8 +3,8 @@
   "fecha": "2026-11-21",
   "quien": "sesión",
   "tipo": "DATOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "SUPUESTO: el logo no guarda huella (hash) de la imagen: se sirve lo que el proveedor devuelve hoy para esa versión, ya validado por el traedor.",
   "que_cambia": "No hay columna de huella. Reabrir esto costaría una migración (columna nueva, nula, sin tocar datos) y comparar al traer. Se acepta porque la versión del proveedor cambia con cada imagen nueva y los bytes pasan por validación estricta.",
-  "donde": "src/capacidades/experiencia/vidriera/logo-publico.ts; src/adaptadores/imagenes-externas/traedor.ts; ver spec de la carta 5.7.5 y mensaje del orquestador del 20/11/2026 (supuesto A)"
+  "donde": "src/capacidades/experiencia/vidriera/logo-publico.ts; src/adaptadores/imagenes-externas/traedor.ts; ver spec de la carta 5.7.5 y mensaje del orquestador del 20/11/2026 (supuesto A); confirmada: DDD fila del 23/11/2026"
 }
