@@ -2,6 +2,7 @@ import type { ReglasDeEmpresa } from "../../capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../contexto/contexto";
 import type { EmpresaId } from "../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
+import { nombreParaMostrar } from "./casos-de-uso/busqueda";
 import { autorizar } from "./casos-de-uso/comun";
 import type { TxDeClientes } from "./casos-de-uso/contrato";
 import type { ErrorDeClientes } from "./casos-de-uso/errores";
@@ -45,6 +46,15 @@ export type ErrorDeParteParaOperacion =
   "PARTE_NO_ENCONTRADA" | "PARTE_INACTIVA" | "PARTE_SIN_ROL" | "PARTE_ANONIMIZADA";
 
 export interface DirectorioDePartes {
+  /**
+   * El nombre para mostrar de varias partes de la empresa, en UNA lectura (sin N+1). Una parte desactivada se muestra igual con su nombre; una anonimizada,
+   * una de otra empresa o un id que no existe salen como `null` (nunca un nombre inventado). Solo lee: no exige rol ni estado.
+   */
+  nombresParaMostrar(
+    tx: Pick<TxDeClientes, "partes">,
+    empresa: EmpresaId,
+    parteIds: readonly string[],
+  ): Promise<ReadonlyMap<string, string | null>>;
   /** La parte de la empresa, activa y con el rol que se exige, o el motivo por el que no sirve. */
   parteParaOperacion(
     tx: Pick<TxDeClientes, "partes">,
@@ -56,6 +66,14 @@ export interface DirectorioDePartes {
 
 export function crearDirectorioDePartes(): DirectorioDePartes {
   return {
+    async nombresParaMostrar(tx, empresa, parteIds) {
+      const partes = await tx.partes.obtenerVarias(empresa, parteIds);
+      const nombres = new Map<string, string | null>(parteIds.map((id) => [id, null]));
+      for (const p of partes) {
+        nombres.set(p.id, p.estado === "ANONIMIZADA" ? null : nombreParaMostrar(p) || null);
+      }
+      return nombres;
+    },
     async parteParaOperacion(tx, empresa, parteId, exigirRol) {
       if (!esUuid(parteId)) return err("PARTE_NO_ENCONTRADA");
       const parte = await tx.partes.obtener(empresa, parteId);

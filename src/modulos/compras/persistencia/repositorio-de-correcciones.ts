@@ -44,6 +44,11 @@ export interface RepositorioDeCorrecciones {
   ): Promise<CorreccionGuardada | null>;
   /** Todas las correcciones de la compra, por línea y número. */
   deLaRecepcion(empresa: EmpresaId, recepcionId: string): Promise<readonly CorreccionGuardada[]>;
+  /** La última corrección (la de mayor número) de CADA línea corregida de esas recepciones, en UNA consulta; las líneas sin corrección no aparecen. */
+  ultimasDeVarias(
+    empresa: EmpresaId,
+    recepcionIds: readonly string[],
+  ): Promise<readonly CorreccionGuardada[]>;
   insertar(empresa: EmpresaId, alta: AltaDeCorreccion): Promise<boolean>;
 }
 
@@ -119,6 +124,21 @@ export function crearRepositorioDeCorrecciones(db: Kysely<ComprasDb>): Repositor
         .where("recepcion_id", "=", recepcionId)
         .orderBy("linea")
         .orderBy("numero")
+        .execute();
+      return filas.map(aCorreccion);
+    },
+    async ultimasDeVarias(empresa, recepcionIds) {
+      const validos = [...new Set(recepcionIds.filter(esUuid))];
+      if (validos.length === 0) return [];
+      const filas = await db
+        .selectFrom("correccion_de_compra")
+        .select(COLUMNAS)
+        .distinctOn(["recepcion_id", "linea"])
+        .where("empresa_id", "=", empresa)
+        .where("recepcion_id", "in", validos)
+        .orderBy("recepcion_id")
+        .orderBy("linea")
+        .orderBy("numero", "desc")
         .execute();
       return filas.map(aCorreccion);
     },

@@ -91,6 +91,11 @@ export interface RepositorioDeRecepciones {
     lineas: readonly LineaDeRecepcion[],
   ): Promise<void>;
   lineasDe(empresa: EmpresaId, recepcionId: string): Promise<readonly LineaDeRecepcion[]>;
+  /** Las líneas de varias recepciones en UNA consulta (sin N+1), cada una con su recepción, por recepción y número de línea. Un id que no es UUID no devuelve filas. */
+  lineasDeVarias(
+    empresa: EmpresaId,
+    recepcionIds: readonly string[],
+  ): Promise<readonly (LineaDeRecepcion & Readonly<{ recepcionId: string }>)[]>;
   /**
    * La última línea CON PRECIO de una compra NO anulada de ese proveedor para ese producto y presentación (la compra más nueva por `hecho_en`, luego `id`; dentro de la compra, la línea de
    * número más alto: como `registrarCompra`, la última gana). Es de donde se rehace la oferta del proveedor al anular una compra (0058). `null` si no queda ninguna.
@@ -206,6 +211,44 @@ const COLUMNAS_DE_LINEA = [
   "movimiento_id",
 ] as const;
 
+/** La fila de `linea_de_recepcion` (las columnas de `COLUMNAS_DE_LINEA`) como línea del dominio: la usan `lineasDe` y `lineasDeVarias`. */
+const aLinea = (f: {
+  numero: number;
+  producto_id: string;
+  presentacion_id: string | null;
+  unidad_de_compra_id: string;
+  cantidad_de_compra: string;
+  de_peso_variable: boolean;
+  peso_real: string | null;
+  cantidad_en_stock: string;
+  precio_por_tipo: string | null;
+  unidad_de_precio_id: string | null;
+  precio: string | null;
+  importe: string | null;
+  costo_por_unidad_de_stock: string | null;
+  deposito_id: string | null;
+  movimiento_id: string | null;
+}): LineaDeRecepcion => ({
+  numero: f.numero,
+  productoId: f.producto_id,
+  presentacionId: f.presentacion_id,
+  unidadDeCompraId: f.unidad_de_compra_id,
+  cantidadDeCompra: f.cantidad_de_compra,
+  dePesoVariable: f.de_peso_variable,
+  pesoReal: f.peso_real,
+  cantidadEnStock: f.cantidad_en_stock,
+  precioPorTipo:
+    f.precio_por_tipo === "PRESENTACION" || f.precio_por_tipo === "UNIDAD"
+      ? f.precio_por_tipo
+      : null,
+  unidadDePrecioId: f.unidad_de_precio_id,
+  precio: f.precio,
+  importe: f.importe,
+  costoPorUnidadDeStock: f.costo_por_unidad_de_stock,
+  depositoId: f.deposito_id,
+  movimientoId: f.movimiento_id,
+});
+
 export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): RepositorioDeRecepciones {
   /** N1 y N2: una recepción de N3 o N4 no se ve: para estos caminos «no existe» (falla cerrada). */
   async function leer(empresa: EmpresaId, id: string, bloquear: boolean) {
@@ -305,26 +348,20 @@ export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): Repositori
         .where("recepcion_id", "=", recepcionId)
         .orderBy("numero")
         .execute();
-      return filas.map((f) => ({
-        numero: f.numero,
-        productoId: f.producto_id,
-        presentacionId: f.presentacion_id,
-        unidadDeCompraId: f.unidad_de_compra_id,
-        cantidadDeCompra: f.cantidad_de_compra,
-        dePesoVariable: f.de_peso_variable,
-        pesoReal: f.peso_real,
-        cantidadEnStock: f.cantidad_en_stock,
-        precioPorTipo:
-          f.precio_por_tipo === "PRESENTACION" || f.precio_por_tipo === "UNIDAD"
-            ? f.precio_por_tipo
-            : null,
-        unidadDePrecioId: f.unidad_de_precio_id,
-        precio: f.precio,
-        importe: f.importe,
-        costoPorUnidadDeStock: f.costo_por_unidad_de_stock,
-        depositoId: f.deposito_id,
-        movimientoId: f.movimiento_id,
-      }));
+      return filas.map(aLinea);
+    },
+    async lineasDeVarias(empresa, recepcionIds) {
+      const validos = [...new Set(recepcionIds.filter(esUuid))];
+      if (validos.length === 0) return [];
+      const filas = await db
+        .selectFrom("linea_de_recepcion")
+        .select([...COLUMNAS_DE_LINEA, "recepcion_id"])
+        .where("empresa_id", "=", empresa)
+        .where("recepcion_id", "in", validos)
+        .orderBy("recepcion_id")
+        .orderBy("numero")
+        .execute();
+      return filas.map((f) => ({ ...aLinea(f), recepcionId: f.recepcion_id }));
     },
     async ultimaLineaVigenteDe(empresa, clave) {
       if (!esUuid(clave.proveedorId) || !esUuid(clave.productoId)) return null;

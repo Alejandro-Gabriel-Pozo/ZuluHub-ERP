@@ -29,6 +29,11 @@ export type AltaDePresentacion = Readonly<{
 export interface RepositorioDePresentaciones {
   obtener(empresa: EmpresaId, id: string): Promise<PresentacionGuardada | null>;
   bloquear(empresa: EmpresaId, id: string): Promise<PresentacionGuardada | null>;
+  /** Las presentaciones de la empresa con esos ids (activas o no), en UNA consulta; un id repetido, que no es UUID o de otra empresa no devuelve fila. */
+  obtenerVarias(
+    empresa: EmpresaId,
+    ids: readonly string[],
+  ): Promise<readonly PresentacionGuardada[]>;
   porNombre(
     empresa: EmpresaId,
     productoId: string,
@@ -100,6 +105,17 @@ export function crearRepositorioDePresentaciones(
   return {
     obtener: (empresa, id) => leer(empresa, id, false),
     bloquear: (empresa, id) => leer(empresa, id, true),
+    async obtenerVarias(empresa, ids) {
+      const validos = [...new Set(ids.filter(esUuid))];
+      if (validos.length === 0) return [];
+      const filas = await db
+        .selectFrom("presentacion_de_producto")
+        .select(COLUMNAS)
+        .where("empresa_id", "=", empresa)
+        .where("id", "in", validos)
+        .execute();
+      return filas.map(aPresentacion);
+    },
     async porNombre(empresa, productoId, nombreClave) {
       if (!esUuid(productoId)) return null;
       const fila = await db
