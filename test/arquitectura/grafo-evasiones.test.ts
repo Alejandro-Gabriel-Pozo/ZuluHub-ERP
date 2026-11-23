@@ -30,6 +30,8 @@ const brief = (
   id,
   pack: "p",
   archivo: `briefs/p/${id}.md`,
+  procedencia: "main",
+  ramas: [],
   titulo: id,
   acciones: [],
   rutas: [],
@@ -243,6 +245,16 @@ const MUNDO: EntradaDelGrafo = {
     brief("sin-enlace"),
     brief("solo-un-archivo", { acciones: ["menu.ts"] }),
     brief("por-funcion", { funciones: ["abrir"] }),
+    brief("en-rama-con-codigo", {
+      acciones: ["caja.ver"],
+      procedencia: "rama",
+      ramas: ["plan-pantallas/x"],
+    }),
+    brief("en-rama-sin-codigo", {
+      rutas: ["/reservas"],
+      procedencia: "rama",
+      ramas: ["plan-pantallas/y"],
+    }),
   ],
 };
 
@@ -347,6 +359,8 @@ describe("el grafo: cada categoría ve su violación inyectada", () => {
       "sin-enlace": "SIN_ENLACE",
       "solo-un-archivo": "SIN_ENLACE",
       "por-funcion": "CON_CODIGO",
+      "en-rama-con-codigo": "CON_CODIGO",
+      "en-rama-sin-codigo": "SIN_CODIGO",
     });
     const sinCodigo = informe.briefsContraElCodigo.find((b) => b.id === "sin-codigo");
     expect(sinCodigo?.faltantes).toEqual(["accion:caja.nueva", "ruta:/compras/lista"]);
@@ -354,6 +368,20 @@ describe("el grafo: cada categoría ve su violación inyectada", () => {
     expect(ids("brief_parcial")).toEqual(["brief:parcial"]);
     expect(ids("brief_sin_codigo")).toEqual(["brief:sin-codigo"]);
     expect(ids("brief_sin_enlace")).toEqual(["brief:sin-enlace", "brief:solo-un-archivo"]);
+    // Lo que solo vive en una rama es «brief no integrado»: otra lista, no cuenta como faltante real de `main`.
+    expect(ids("brief_no_integrado_con_codigo")).toEqual(["brief:en-rama-con-codigo"]);
+    expect(ids("brief_no_integrado_sin_codigo")).toEqual(["brief:en-rama-sin-codigo"]);
+    expect(informe.briefsNoIntegradosPorPack["p"]).toEqual({
+      CON_CODIGO: 1,
+      PARCIAL: 0,
+      SIN_CODIGO: 1,
+      SIN_ENLACE: 0,
+    });
+    expect(informe.medidas.briefsEnMain).toBe(6);
+    expect(informe.medidas.briefsSoloEnRama).toBe(2);
+    expect(informe.briefsContraElCodigo.find((b) => b.id === "en-rama-sin-codigo")?.ramas).toEqual([
+      "plan-pantallas/y",
+    ]);
     expect(informe.briefsPorPack["p"]).toEqual({
       CON_CODIGO: 2,
       PARCIAL: 1,

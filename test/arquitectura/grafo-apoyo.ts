@@ -115,11 +115,14 @@ export type EntradaDeTabla = Readonly<{
 
 type EntradaDeMaqueta = Readonly<{ id: string; nombre: string; carpeta: string }>;
 
-/** Lo que cada brief nombra (extraído del texto por `generar-indice-de-docs.cjs`; es una heurística por nombre, no un enlace declarado). */
+/** Lo que cada brief nombra (extraído del texto por `scripts/indice-de-docs.ts`; es una heurística por nombre, no un enlace declarado). */
 export type EntradaDeBrief = Readonly<{
   id: string;
   pack: string;
   archivo: string;
+  /** `main`: está en `main` de docs (faltante real si no tiene código). `rama`: solo vive en rama(s) sin integrar (brief no integrado). */
+  procedencia: "main" | "rama";
+  ramas: readonly string[];
   titulo: string;
   acciones: readonly string[];
   rutas: readonly string[];
@@ -313,6 +316,7 @@ export function construirGrafo(entrada: EntradaDelGrafo): Grafo {
   }
   for (const b of entrada.briefs) {
     const nodoBrief = nodo("brief", b.id, null, {
+      procedencia: b.procedencia,
       pack: b.pack,
       titulo: b.titulo,
       archivo: b.archivo,
@@ -366,6 +370,10 @@ export const CATEGORIAS = [
   "brief_parcial",
   "brief_sin_codigo",
   "brief_sin_enlace",
+  "brief_no_integrado_con_codigo",
+  "brief_no_integrado_parcial",
+  "brief_no_integrado_sin_codigo",
+  "brief_no_integrado_sin_enlace",
   "caso_sin_brief_por_nombre",
   "caso_sin_brief",
   "tabla_sin_brief",
@@ -386,6 +394,8 @@ type CruceDeBrief = Readonly<{
   id: string;
   pack: string;
   titulo: string;
+  procedencia: "main" | "rama";
+  ramas: readonly string[];
   estado: EstadoDeBrief;
   existentes: readonly string[];
   faltantes: readonly string[];
@@ -403,11 +413,16 @@ export type InformeDelGrafo = Readonly<{
     maquetas: number;
     tablas: number;
     briefs: number;
+    briefsEnMain: number;
+    briefsSoloEnRama: number;
   }>;
   categorias: Readonly<Record<Categoria, ResultadoDeCategoria>>;
   /** El cruce «briefs sin código» (diseño §7): cada brief contra el código de hoy. */
   briefsContraElCodigo: readonly CruceDeBrief[];
+  /** Solo los de `main`: lo que figura sin código acá es faltante real. */
   briefsPorPack: Readonly<Record<string, Readonly<Record<EstadoDeBrief, number>>>>;
+  /** Los que solo viven en rama: «brief no integrado», otra lista (el dueño no decidió qué ramas se integran). */
+  briefsNoIntegradosPorPack: Readonly<Record<string, Readonly<Record<EstadoDeBrief, number>>>>;
 }>;
 
 /** Lo que viene después del punto en un nombre que parece una acción pero es un archivo (`menu.ts`): no es una acción prometida. */
@@ -591,24 +606,26 @@ export function analizarGrafo(grafo: Grafo, entrada: EntradaDelGrafo): InformeDe
       id: b.id,
       pack: b.pack,
       titulo: b.titulo,
+      procedencia: b.procedencia,
+      ramas: b.ramas,
       estado,
       existentes: [...new Set(existentes)].sort(porTexto),
       faltantes: [...new Set(faltantes)].sort(porTexto),
     });
   }
   cruces.sort((a, b) => porTexto(a.id, b.id));
-  const briefsPorPack: Record<string, Record<EstadoDeBrief, number>> = {};
-  for (const c of cruces) {
-    const fila = (briefsPorPack[c.pack] ??= {
-      CON_CODIGO: 0,
-      PARCIAL: 0,
-      SIN_CODIGO: 0,
-      SIN_ENLACE: 0,
-    });
-    fila[c.estado] += 1;
-  }
-  const deEstado = (e: EstadoDeBrief): readonly string[] =>
-    cruces.filter((c) => c.estado === e).map((c) => `brief:${c.id}`);
+  const porPack = (procedencia: "main" | "rama"): Record<string, Record<EstadoDeBrief, number>> => {
+    const fila: Record<string, Record<EstadoDeBrief, number>> = {};
+    for (const c of cruces.filter((x) => x.procedencia === procedencia)) {
+      const f = (fila[c.pack] ??= { CON_CODIGO: 0, PARCIAL: 0, SIN_CODIGO: 0, SIN_ENLACE: 0 });
+      f[c.estado] += 1;
+    }
+    return fila;
+  };
+  const deEstado = (e: EstadoDeBrief, procedencia: "main" | "rama"): readonly string[] =>
+    cruces
+      .filter((c) => c.estado === e && c.procedencia === procedencia)
+      .map((c) => `brief:${c.id}`);
 
   // ---- Código sin brief (diseño §7, cruce 2): ningún brief lo nombra.
   const declarado = new Set<string>();
@@ -651,10 +668,14 @@ export function analizarGrafo(grafo: Grafo, entrada: EntradaDelGrafo): InformeDe
     tabla_sin_lector_en_el_codigo: lista(tablaSinLector),
     tabla_retirada: lista(tablaRetirada),
     migracion_sin_tabla_escrita: lista(migracionSinTablaEscrita),
-    brief_con_codigo: lista(deEstado("CON_CODIGO")),
-    brief_parcial: lista(deEstado("PARCIAL")),
-    brief_sin_codigo: lista(deEstado("SIN_CODIGO")),
-    brief_sin_enlace: lista(deEstado("SIN_ENLACE")),
+    brief_con_codigo: lista(deEstado("CON_CODIGO", "main")),
+    brief_parcial: lista(deEstado("PARCIAL", "main")),
+    brief_sin_codigo: lista(deEstado("SIN_CODIGO", "main")),
+    brief_sin_enlace: lista(deEstado("SIN_ENLACE", "main")),
+    brief_no_integrado_con_codigo: lista(deEstado("CON_CODIGO", "rama")),
+    brief_no_integrado_parcial: lista(deEstado("PARCIAL", "rama")),
+    brief_no_integrado_sin_codigo: lista(deEstado("SIN_CODIGO", "rama")),
+    brief_no_integrado_sin_enlace: lista(deEstado("SIN_ENLACE", "rama")),
     caso_sin_brief_por_nombre: lista(casoSinBriefPorNombre.map((c) => c.id)),
     caso_sin_brief: lista(casoSinBrief),
     tabla_sin_brief: lista(tablaSinBrief),
@@ -674,9 +695,12 @@ export function analizarGrafo(grafo: Grafo, entrada: EntradaDelGrafo): InformeDe
       maquetas: de("maqueta").length,
       tablas: tablas.length,
       briefs: entrada.briefs.length,
+      briefsEnMain: entrada.briefs.filter((b) => b.procedencia === "main").length,
+      briefsSoloEnRama: entrada.briefs.filter((b) => b.procedencia === "rama").length,
     },
     categorias,
     briefsContraElCodigo: cruces,
-    briefsPorPack,
+    briefsPorPack: porPack("main"),
+    briefsNoIntegradosPorPack: porPack("rama"),
   };
 }

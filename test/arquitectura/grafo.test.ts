@@ -190,6 +190,8 @@ async function armarLaEntrada(): Promise<EntradaDelGrafo> {
       id: b.id,
       pack: b.pack,
       archivo: b.archivo,
+      procedencia: b.procedencia,
+      ramas: b.ramas,
       titulo: b.titulo,
       acciones: b.acciones,
       rutas: b.rutas,
@@ -267,7 +269,18 @@ describe("el grafo del sistema: el código real (solo mide)", async () => {
     };
     writeFileSync(
       join(carpeta, "informe.json"),
-      `${JSON.stringify({ medidas: informe.medidas, contraLaReferenciaDel21_11: medidosContraLaReferencia, categorias: informe.categorias, briefsPorPack: informe.briefsPorPack, briefsContraElCodigo: informe.briefsContraElCodigo }, null, 1)}\n`,
+      `${JSON.stringify(
+        {
+          medidas: informe.medidas,
+          contraLaReferenciaDel21_11: medidosContraLaReferencia,
+          categorias: informe.categorias,
+          briefsPorPack: informe.briefsPorPack,
+          briefsNoIntegradosPorPack: informe.briefsNoIntegradosPorPack,
+          briefsContraElCodigo: informe.briefsContraElCodigo,
+        },
+        null,
+        1,
+      )}\n`,
     );
     writeFileSync(join(carpeta, "grafo.json"), `${JSON.stringify(grafo)}\n`);
     expect(
@@ -275,7 +288,13 @@ describe("el grafo del sistema: el código real (solo mide)", async () => {
         cuenta("brief_parcial") +
         cuenta("brief_sin_codigo") +
         cuenta("brief_sin_enlace"),
-    ).toBe(informe.medidas.briefs);
+    ).toBe(informe.medidas.briefsEnMain);
+    expect(
+      cuenta("brief_no_integrado_con_codigo") +
+        cuenta("brief_no_integrado_parcial") +
+        cuenta("brief_no_integrado_sin_codigo") +
+        cuenta("brief_no_integrado_sin_enlace"),
+    ).toBe(informe.medidas.briefsSoloEnRama);
     expect(cuenta("accion_con_pantalla") + cuenta("accion_sin_pantalla")).toBe(
       informe.medidas.acciones,
     );

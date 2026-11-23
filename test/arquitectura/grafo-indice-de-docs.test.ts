@@ -29,6 +29,19 @@ describe("índice de docs del grafo", () => {
     expect(indice.briefs.filter((b) => b.tipo === "brief").length).toBeGreaterThan(20);
   });
 
+  it("cada brief dice de dónde sale: los de rama nombran su rama y esa rama figura con su commit; los de main no llevan ramas", () => {
+    const ramasDelIndice = new Set(indice.docs.ramas.map((r) => r.nombre));
+    for (const r of indice.docs.ramas) expect(r.commit, r.nombre).toMatch(/^[0-9a-f]{40}$/);
+    for (const b of indice.briefs) {
+      if (b.procedencia === "main") expect(b.ramas, b.id).toEqual([]);
+      else {
+        expect(b.ramas.length, b.id).toBeGreaterThan(0);
+        for (const r of b.ramas) expect(ramasDelIndice.has(r), `${b.id} en ${r}`).toBe(true);
+      }
+    }
+    expect(indice.briefs.some((b) => b.procedencia === "rama")).toBe(true);
+  });
+
   it("los ids son únicos y están ordenados (regenerar no cambia el orden)", () => {
     for (const lista of [indice.maquetas.map((m) => m.id), indice.briefs.map((b) => b.id)]) {
       expect(new Set(lista).size).toBe(lista.length);
