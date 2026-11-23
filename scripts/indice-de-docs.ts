@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 /**
- * El índice versionado de lo que vive en el repositorio de documentos y el código no puede importar (SUPUESTO (DEC-0835) del grafo, etapa 0;
+ * El índice versionado de lo que vive en el repositorio de documentos y el código no puede importar (SUPUESTO (DEC-0836) del grafo, etapa 0;
  * orden del dueño del 23/11/2026): maquetas y briefs. `arquitectura/grafo/indice-de-docs.json` es una FOTO de esos documentos a un
  * commit de docs; el grafo la lee como un registro más. Se regenera a mano con `npm run grafo:indice -- <carpeta de docs> [--rama=<nombre>@<commit>=<carpeta>…]` y se commitea; cada rama es un árbol de docs con el commit del que sale.
  * Costo de revertirlo: borrar el archivo y su lector; el grafo mide igual sin briefs ni maquetas (esas categorías quedan en cero).
