@@ -185,11 +185,11 @@ jobs:
         run: node arquitectura/auditoria-de-dependencias.cjs
       - name: Firmas de los paquetes
         # El registro de npm a veces contesta «OK» en vez de JSON al pedir las atestaciones (23/11/2026: FETCH_ERROR en 3 de 5 corridas del día, con main verde).
-        # Se repite SOLO ese error de red, hasta 4 intentos con espera creciente. Una firma inválida o cualquier otro error falla de inmediato, y agotados los intentos también falla.
+        # Se repite SOLO ese error de red, hasta 4 intentos con espera creciente y una caché de npm limpia en cada uno (con la caché compartida, el mismo «OK» se volvía a leer en los 4 intentos: #472, 23/11/2026, axe-core@4.14.0 cuatro veces seguidas). Una firma inválida o cualquier otro error falla de inmediato, y agotados los intentos también falla.
         # Chequeo: `test/arquitectura/firmas-de-paquetes.test.ts` corre este paso contra un `npm` simulado.
         run: |
           for intento in 1 2 3 4; do
-            if npm audit signatures > "$RUNNER_TEMP/firmas.txt" 2>&1; then
+            if npm audit signatures --cache "$RUNNER_TEMP/npm-firmas-$intento" > "$RUNNER_TEMP/firmas.txt" 2>&1; then
               cat "$RUNNER_TEMP/firmas.txt"
               exit 0
             fi

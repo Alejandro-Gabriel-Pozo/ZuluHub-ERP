@@ -42,6 +42,7 @@ type Respuesta = { codigo: number; texto: string };
 function correr(respuestas: Respuesta[]): {
   codigo: number | null;
   llamadas: number;
+  argumentos: string[];
   salida: string;
 } {
   const carpeta = mkdtempSync(join(tmpdir(), "firmas-"));
@@ -58,6 +59,7 @@ function correr(respuestas: Respuesta[]): {
 cuenta="${carpeta}/cuenta"
 n=$(cat "$cuenta" 2>/dev/null || echo 0)
 echo $((n + 1)) > "$cuenta"
+echo "$@" >> "${carpeta}/argumentos"
 i=$n
 if [ "$i" -ge ${respuestas.length} ]; then i=${respuestas.length - 1}; fi
 cat "${carpeta}/r$i.txt"
@@ -79,7 +81,18 @@ exit "$(cat "${carpeta}/c$i")"
   } catch {
     llamadas = 0;
   }
-  return { codigo: resultado.status, llamadas, salida: resultado.stdout + resultado.stderr };
+  let argumentos: string[];
+  try {
+    argumentos = readFileSync(join(carpeta, "argumentos"), "utf8").trim().split("\n");
+  } catch {
+    argumentos = [];
+  }
+  return {
+    codigo: resultado.status,
+    llamadas,
+    argumentos,
+    salida: resultado.stdout + resultado.stderr,
+  };
 }
 
 const BIEN: Respuesta = { codigo: 0, texto: "audited 495 packages\n" };
@@ -110,6 +123,15 @@ describe("firmas de los paquetes: reintento solo del error de red", () => {
     const r = correr([ERROR_DE_RED]);
     expect(r.codigo).not.toBe(0);
     expect(r.llamadas).toBe(4);
+  });
+
+  it("cada intento usa una caché de npm distinta y limpia (la misma respuesta mala no se vuelve a leer)", () => {
+    const r = correr([ERROR_DE_RED]);
+    expect(r.argumentos).toHaveLength(4);
+    const caches = r.argumentos.map((a) => a.match(/--cache (\S+)/)?.[1]);
+    expect(caches.every((c) => typeof c === "string")).toBe(true);
+    expect(new Set(caches).size).toBe(4);
+    expect(r.argumentos.every((a) => a.startsWith("audit signatures"))).toBe(true);
   });
 
   it("una firma inválida falla de inmediato, sin repetir", () => {
