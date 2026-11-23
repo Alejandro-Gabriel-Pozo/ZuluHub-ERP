@@ -27,7 +27,7 @@ export type UsuarioParaLaPantalla = Readonly<{
   activo: boolean;
 }>;
 
-export type InvitacionParaLaPantalla = Readonly<{
+type InvitacionParaLaPantalla = Readonly<{
   invitacionId: string;
   email: string;
   rol: RolDeEmpresa;
@@ -41,9 +41,9 @@ export type ListaDeUsuariosParaLaPantalla = Readonly<{
 }>;
 
 /** Una insignia: el texto del estado y su tono (`null` en `tono` no existe: «Pendiente» es neutra). */
-export type InsigniaArmada = Readonly<{ tono: TonoDeEstado | "neutro"; texto: string }>;
+type InsigniaArmada = Readonly<{ tono: TonoDeEstado | "neutro"; texto: string }>;
 
-export type FilaDeUsuarioArmada = Readonly<{
+type FilaDeUsuarioArmada = Readonly<{
   personaId: string;
   email: string;
   /** El rol, traducido. */
@@ -54,7 +54,7 @@ export type FilaDeUsuarioArmada = Readonly<{
   insignia: InsigniaArmada | null;
 }>;
 
-export type FilaDeInvitacionArmada = Readonly<{
+type FilaDeInvitacionArmada = Readonly<{
   invitacionId: string;
   email: string;
   rol: string;
