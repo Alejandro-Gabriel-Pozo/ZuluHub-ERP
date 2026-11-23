@@ -25,7 +25,7 @@ import ts from "typescript";
  * Es pura salvo `leerAccionesUsadas`, que lee el código de `src/modulos` y entrega el mismo resultado que `accionesUsadasEnCodigo`.
  */
 
-export type ModuloDelCatalogo = Readonly<{
+type ModuloDelCatalogo = Readonly<{
   estado: string;
   acciones: Readonly<Record<string, unknown>>;
 }>;
@@ -282,7 +282,7 @@ export function accionesUsadasEnCodigo(
 }
 
 /** Los archivos de código (sin pruebas) de los casos de uso y las consultas de cada módulo. */
-export function archivosDeCasosDeUso(raiz: string): string[] {
+function archivosDeCasosDeUso(raiz: string): string[] {
   const salida: string[] = [];
   const recorrer = (carpeta: string): void => {
     for (const entrada of readdirSync(carpeta, { withFileTypes: true })) {
