@@ -3,8 +3,8 @@
   "fecha": "2026-11-16",
   "quien": "sesión",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "SUPUESTO (S6 de la ficha): «Agregar producto» es una pantalla con el campo «Buscar» y su botón «Buscar» (ya aprobado), no un cuadro que busca en cada letra.",
   "que_cambia": "Quien agrega escribe y toca Buscar; la maqueta filtra en cada tecla. Revertir: pasar a un cuadro (Superposicion) con una lectura disparada desde el navegador, costo medio.",
-  "donde": "Pedernal-docs 11-especificaciones/conceptos/secciones-de-la-carta-pantalla.md §3 (S6); productos-secciones.html:393-400; apps/web/ui/plantillas/catalogo/FormularioDeBuscadorDeCandidatos.cliente.tsx"
+  "donde": "Pedernal-docs 11-especificaciones/conceptos/secciones-de-la-carta-pantalla.md §3 (S6); productos-secciones.html:393-400; apps/web/ui/plantillas/catalogo/FormularioDeBuscadorDeCandidatos.cliente.tsx; confirmada: DDD fila del 23/11/2026"
 }
