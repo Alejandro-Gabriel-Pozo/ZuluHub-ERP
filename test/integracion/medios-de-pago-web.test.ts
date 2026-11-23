@@ -2,6 +2,7 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
   agregarElMedioDePago,
+  cambiarLosDatosDelMedio,
   desactivarElMedioDePago,
   editarElMedioDePago,
   listarLosMediosDePago,
@@ -75,7 +76,7 @@ describe.skipIf(base === null)("medios de pago de la web", () => {
   const contar = async (texto: string, parametros: unknown[] = []) =>
     Number(((await dueno.query<{ n: string }>(texto, parametros)).rows[0] ?? { n: "0" }).n);
 
-  it("la lista trae TODOS los medios de la empresa, también los desactivados, y solo id, tipo, nombre, estado y versión", async () => {
+  it("la lista trae TODOS los medios de la empresa, también los desactivados, y solo id, tipo, nombre, estado, versión y los datos que el tipo admite", async () => {
     const m = await mundo();
     const qr = await alta(m, "QR", "Mercado Pago");
     await alta(m, "TRANSFERENCIA");
@@ -88,7 +89,14 @@ describe.skipIf(base === null)("medios de pago de la web", () => {
       ].sort(),
     );
     for (const medio of medios) {
-      expect(Object.keys(medio).sort()).toEqual(["activo", "id", "nombre", "tipo", "version"]);
+      expect(Object.keys(medio).sort()).toEqual([
+        "activo",
+        "datos",
+        "id",
+        "nombre",
+        "tipo",
+        "version",
+      ]);
     }
   });
 
@@ -166,7 +174,7 @@ describe.skipIf(base === null)("medios de pago de la web", () => {
     const m = await mundo();
     const id = await alta(m, "TARJETA_DEBITO");
     const inicial = (await lista(m))[0] as MedioParaLaPantalla;
-    // Los datos del cobro los fija otra pantalla (decisión 129): acá se cargan por el caso de uso, no por la pantalla de medios.
+    // Los datos del cobro se cargan con su propia acción (decisión 129); acá se hace por el caso de uso para probar que editar el nombre los conserva.
     const conDatos = await armarCaja(entorno).casos.editarMedioDePago(m.ctx(), {
       medioDePagoId: id,
       versionEsperada: inicial.version,
@@ -218,6 +226,157 @@ describe.skipIf(base === null)("medios de pago de la web", () => {
     ]);
     expect([a.ok, b.ok].sort()).toEqual([false, true]);
     expect(["Uno", "Dos"]).toContain((await lista(m))[0]?.nombre);
+  });
+
+  it("los datos que se piden al cobrar: la lista trae solo los que el TIPO admite, todos apagados en un medio nuevo", async () => {
+    const m = await mundo();
+    for (const tipo of ["TARJETA_DEBITO", "TARJETA_CREDITO", "TRANSFERENCIA", "QR", "OTRO"]) {
+      await alta(m, tipo);
+    }
+    const porTipo = new Map((await lista(m)).map((x) => [x.tipo, x.datos]));
+    const apagados = (...datos: string[]) => datos.map((dato) => ({ dato, pide: false }));
+    expect(porTipo.get("TARJETA_DEBITO")).toEqual(apagados("cupon", "ultimos4", "marca"));
+    expect(porTipo.get("TARJETA_CREDITO")).toEqual(
+      apagados("cupon", "ultimos4", "marca", "cuotas"),
+    );
+    expect(porTipo.get("TRANSFERENCIA")).toEqual(apagados("dni"));
+    expect(porTipo.get("QR")).toEqual([]);
+    expect(porTipo.get("OTRO")).toEqual([]);
+  });
+
+  it("cambiar los datos del cobro: guarda el conjunto final, conserva el nombre y audita; repetirlo no escribe ni audita de nuevo", async () => {
+    const m = await mundo();
+    const id = await alta(m, "TARJETA_CREDITO", "Posnet");
+    const v0 = ((await lista(m))[0] as MedioParaLaPantalla).version;
+    const auditorias = () =>
+      contar(
+        "select count(*) as n from auditoria_empresa where accion = 'MEDIO_DE_PAGO_EDITADO' and entidad_id = $1",
+        [id],
+      );
+    const pedido = { medioDePagoId: id, versionEsperada: v0, datos: ["cupon", "cuotas"] };
+    const primera = await cambiarLosDatosDelMedio(d, m.ctx(), pedido);
+    expect(primera.ok).toBe(true);
+    const medio = (await lista(m))[0] as MedioParaLaPantalla;
+    expect(medio.nombre).toBe("Posnet");
+    expect(medio.datos.filter((x) => x.pide).map((x) => x.dato)).toEqual(["cupon", "cuotas"]);
+    expect(medio.version).toBeGreaterThan(v0);
+    expect(await auditorias()).toBe(1);
+    // Clic doble o reintento: el mismo pedido otra vez (con la versión que ya quedó vieja) no escribe ni audita.
+    const repetida = await cambiarLosDatosDelMedio(d, m.ctx(), pedido);
+    expect(repetida.ok).toBe(true);
+    expect(await auditorias()).toBe(1);
+    expect(((await lista(m))[0] as MedioParaLaPantalla).version).toBe(medio.version);
+    // Apagar todo es válido: el medio vuelve a no pedir nada.
+    const apagado = await cambiarLosDatosDelMedio(d, m.ctx(), {
+      medioDePagoId: id,
+      versionEsperada: medio.version,
+      datos: [],
+    });
+    expect(apagado.ok).toBe(true);
+    expect(((await lista(m))[0] as MedioParaLaPantalla).datos.some((x) => x.pide)).toBe(false);
+  });
+
+  it("cambiar los datos del cobro: lo que el tipo no admite, un dato desconocido y un pedido sin forma salen sin escribir", async () => {
+    const m = await mundo();
+    const transferencia = await alta(m, "TRANSFERENCIA");
+    const qr = await alta(m, "QR");
+    const version = async (id: string) =>
+      ((await lista(m)).find((x) => x.id === id) as MedioParaLaPantalla).version;
+    // La transferencia no admite cupón; el QR no admite ninguno (el servidor lo rechaza aunque la pantalla no lo ofrezca).
+    expect(
+      codigoDe(
+        await cambiarLosDatosDelMedio(d, m.ctx(), {
+          medioDePagoId: transferencia,
+          versionEsperada: await version(transferencia),
+          datos: ["cupon"],
+        }),
+      ),
+    ).toBe("CAJA_ACCION_NO_PERMITIDA");
+    expect(
+      codigoDe(
+        await cambiarLosDatosDelMedio(d, m.ctx(), {
+          medioDePagoId: qr,
+          versionEsperada: await version(qr),
+          datos: ["dni"],
+        }),
+      ),
+    ).toBe("CAJA_ACCION_NO_PERMITIDA");
+    for (const datos of [["cliente"], ["__proto__"], "cupon", [1], null]) {
+      const r = await cambiarLosDatosDelMedio(d, m.ctx(), {
+        medioDePagoId: transferencia,
+        versionEsperada: await version(transferencia),
+        datos,
+      });
+      expect(r.ok, JSON.stringify(datos)).toBe(false);
+    }
+    expect(await cambiarLosDatosDelMedio(d, m.ctx(), "no es un pedido")).toMatchObject({
+      ok: false,
+    });
+    expect((await lista(m)).flatMap((x) => x.datos).filter((x) => x.pide)).toEqual([]);
+  });
+
+  it("cambiar los datos del cobro con la versión vieja no escribe; dos cambios a la vez con la misma versión: uno gana y el otro no pisa", async () => {
+    const m = await mundo();
+    const id = await alta(m, "TARJETA_DEBITO");
+    const version = ((await lista(m))[0] as MedioParaLaPantalla).version;
+    const [a, b] = await Promise.all([
+      cambiarLosDatosDelMedio(d, m.ctx(), {
+        medioDePagoId: id,
+        versionEsperada: version,
+        datos: ["cupon"],
+      }),
+      cambiarLosDatosDelMedio(d, m.ctx(), {
+        medioDePagoId: id,
+        versionEsperada: version,
+        datos: ["marca"],
+      }),
+    ]);
+    expect([a.ok, b.ok].sort()).toEqual([false, true]);
+    const pide = ((await lista(m))[0] as MedioParaLaPantalla).datos
+      .filter((x) => x.pide)
+      .map((x) => x.dato);
+    expect(pide).toHaveLength(1);
+    expect(["cupon", "marca"]).toContain(pide[0]);
+    // Con la versión que ya quedó vieja, nada se escribe.
+    const vieja = await cambiarLosDatosDelMedio(d, m.ctx(), {
+      medioDePagoId: id,
+      versionEsperada: version,
+      datos: ["ultimos4"],
+    });
+    expect(codigoDe(vieja)).toBe("CAJA_ACCION_NO_PERMITIDA");
+    expect(
+      ((await lista(m))[0] as MedioParaLaPantalla).datos.filter((x) => x.pide).map((x) => x.dato),
+    ).toEqual(pide);
+  });
+
+  it("cambiar los datos del cobro: el operador no puede (SIN_PERMISO) y un medio de otra empresa no existe", async () => {
+    const m = await mundo();
+    const otra = await mundo();
+    const id = await alta(m, "TARJETA_DEBITO");
+    const ajeno = await alta(otra, "TARJETA_DEBITO");
+    const version = ((await lista(m))[0] as MedioParaLaPantalla).version;
+    const operador = await sumarPersona(dueno, m, "OPERADOR", true);
+    expect(
+      codigoDe(
+        await cambiarLosDatosDelMedio(d, operador(), {
+          medioDePagoId: id,
+          versionEsperada: version,
+          datos: ["cupon"],
+        }),
+      ),
+    ).toBe("SIN_PERMISO");
+    const aVer = ((await lista(otra))[0] as MedioParaLaPantalla).version;
+    expect(
+      codigoDe(
+        await cambiarLosDatosDelMedio(d, m.ctx(), {
+          medioDePagoId: ajeno,
+          versionEsperada: aVer,
+          datos: ["cupon"],
+        }),
+      ),
+    ).toBe("CAJA_ACCION_NO_PERMITIDA");
+    expect((await lista(m)).flatMap((x) => x.datos).some((x) => x.pide)).toBe(false);
+    expect((await lista(otra)).flatMap((x) => x.datos).some((x) => x.pide)).toBe(false);
   });
 
   it("desactivar y reactivar son botones distintos y cada uno es un solo efecto aunque se repita; el efectivo no se desactiva", async () => {

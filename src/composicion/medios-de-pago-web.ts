@@ -1,10 +1,17 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
+import {
+  DATOS_ADMITIDOS_POR_MEDIO,
+  DATOS_DEL_COBRO,
+  type DatoDelCobro,
+  type TipoDeMedio,
+} from "../modulos/caja/publico";
 import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
 import { accionDeCaja } from "./errores-de-caja";
 import {
   entradaDeAltaDeMedio,
+  entradaDeDatosDelMedio,
   entradaDeEdicionDeMedio,
   entradaDeEstadoDeMedio,
 } from "./entradas-de-caja";
@@ -22,9 +29,11 @@ import type { Web } from "./web";
  *  - **Repetir no duplica.** Agregar lo que ya existe activo devuelve el existente sin escribir (`yaExistia`); desactivar lo desactivado o reactivar lo
  *    activo no escribe ni audita. Por eso el pedido no lleva clave de idempotencia: es la regla natural del caso de uso.
  *  - **Dos a la vez no se pisan.** Editar lleva la versión que la pantalla vio: con una vieja el caso de uso rechaza sin escribir.
- *  - **Editar solo toca el nombre.** Los datos opcionales del cobro del medio (decisión 129) los fija otra pantalla: acá se vuelven a mandar los que el
- *    medio tiene. Si cambiaron en el medio, la versión ya no coincide y no se escribe.
- *  - **Nada de más sale.** Lista blanca campo por campo: id, tipo, nombre, estado y versión.
+ *  - **Editar el nombre solo toca el nombre.** Se vuelven a mandar los datos que el medio ya pide; si cambiaron, la versión ya no coincide y no se escribe.
+ *  - **Los datos que se piden al cobrar (decisión 129) se cambian con su propia acción** (`cambiarLosDatosDelMedio`): manda el conjunto final de los que
+ *    aparecen y deja el nombre como está. Solo se ofrecen (y se muestran) los datos que el TIPO admite: el techo (`DATOS_ADMITIDOS_POR_MEDIO`) sale del
+ *    servidor y la pantalla no lo repite; el servidor lo rechaza igual si llega uno de más.
+ *  - **Nada de más sale.** Lista blanca campo por campo: id, tipo, nombre, estado, versión y los datos que el tipo admite (con si el medio los pide).
  *  - **Todo resultado sale por el camino común** (`accionDeCaja`, ADR-016), sin texto nuevo.
  */
 
@@ -37,14 +46,32 @@ export type DependenciasDeMediosDePagoWeb = Readonly<{
   respuesta: DependenciasDeRespuesta;
 }>;
 
-/** Un medio de pago para la pantalla: sin los datos que pide al cobrar (no son de esta pantalla). */
+/** Un dato del cobro que el tipo del medio admite, y si el medio lo pide (casilla «aparece»). */
+export type DatoDelMedioParaLaPantalla = Readonly<{ dato: DatoDelCobro; pide: boolean }>;
+
+/** Un medio de pago para la pantalla. `datos`: solo los que el tipo admite, en el orden de `DATOS_DEL_COBRO` (vacío: el tipo no admite ninguno). */
 export type MedioParaLaPantalla = Readonly<{
   id: string;
   tipo: string;
   nombre: string | null;
   activo: boolean;
   version: number;
+  datos: readonly DatoDelMedioParaLaPantalla[];
 }>;
+
+/** Los datos que un tipo admite con su estado; un tipo que el dominio no conoce no admite ninguno (ante la duda, nada). */
+function datosAdmitidos(
+  tipo: string,
+  pide: Readonly<Record<DatoDelCobro, boolean>>,
+): readonly DatoDelMedioParaLaPantalla[] {
+  const admitidos: readonly DatoDelCobro[] = Object.hasOwn(DATOS_ADMITIDOS_POR_MEDIO, tipo)
+    ? DATOS_ADMITIDOS_POR_MEDIO[tipo as TipoDeMedio]
+    : [];
+  return DATOS_DEL_COBRO.filter((dato) => admitidos.includes(dato)).map((dato) => ({
+    dato,
+    pide: pide[dato],
+  }));
+}
 
 export type MediosParaLaPantalla = Readonly<{ medios: readonly MedioParaLaPantalla[] }>;
 
@@ -65,6 +92,7 @@ export async function listarLosMediosDePago(
         nombre: m.nombre,
         activo: m.activo,
         version: m.version,
+        datos: datosAdmitidos(m.tipo, m.datos),
       })),
     }),
   );
@@ -105,6 +133,32 @@ export function editarElMedioDePago(
         versionEsperada: entrada.versionEsperada,
         nombre: entrada.nombre,
         datos: actual.datos,
+      });
+    },
+    (salida) => ({ version: salida.version }),
+  );
+}
+
+/** Cambia qué datos pide el medio al cobrar (el conjunto final); el nombre queda como está. Devuelve la versión vigente. */
+export function cambiarLosDatosDelMedio(
+  d: DependenciasDeMediosDePagoWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<Readonly<{ version: number }>>> {
+  return accionDeCaja(
+    d.respuesta,
+    crudo,
+    entradaDeDatosDelMedio,
+    async (entrada): Promise<Resultado<Readonly<{ version: number }>, unknown>> => {
+      const lista = await d.consultas().listarMediosDePago(contexto, { incluirInactivos: true });
+      if (!lista.ok) return lista;
+      const actual = lista.valor.medios.find((m) => m.id === entrada.medioDePagoId);
+      if (actual === undefined) return err("MEDIO_NO_ENCONTRADO");
+      return d.casosDeUso().editarMedioDePago(contexto, {
+        medioDePagoId: entrada.medioDePagoId,
+        versionEsperada: entrada.versionEsperada,
+        nombre: actual.nombre,
+        datos: entrada.pide,
       });
     },
     (salida) => ({ version: salida.version }),

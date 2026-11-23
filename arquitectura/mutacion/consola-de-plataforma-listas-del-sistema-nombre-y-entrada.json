@@ -1,0 +1,6 @@
+{
+  "grupo": "consola de plataforma (listas del sistema: nombre y entrada)",
+  "archivos": "apps/plataforma/logica/listas-del-sistema.ts,apps/plataforma/logica/entrada-de-lista.ts",
+  "minutos": 3,
+  "pruebas": "test/plataforma/entrada-de-lista.test.ts test/plataforma/listas-del-sistema.test.ts"
+}

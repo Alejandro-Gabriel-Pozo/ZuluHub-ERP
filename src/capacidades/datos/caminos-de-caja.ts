@@ -6,6 +6,8 @@ import type { DefinicionDeCamino } from "./tipos-de-caminos";
  */
 
 const FORMULARIO_DE_MEDIO = "apps/web/ui/plantillas/caja/FormularioDeMedio.cliente.tsx";
+const FORMULARIO_DE_DATOS_DEL_MEDIO =
+  "apps/web/ui/plantillas/caja/FormularioDeDatosDelMedio.cliente.tsx";
 const FORMULARIO_DE_CUENTA = "apps/web/ui/plantillas/caja/FormularioDeCuenta.cliente.tsx";
 const FORMULARIO_DE_CAJA = "apps/web/ui/plantillas/caja/FormularioDeCaja.cliente.tsx";
 const FORMULARIO_DE_APERTURA = "apps/web/ui/plantillas/caja/FormularioDeApertura.cliente.tsx";
@@ -38,6 +40,31 @@ export const CAMINOS_DE_CAJA = {
     pasos: [{ id: "nombre-del-medio", campos: { nombre: "nombre-de-medio-de-pago" } }],
     deriva: [],
     accion: { clave: "medios_de_pago.editar", requiere: [], admite: ["nombre-de-medio-de-pago"] },
+    camposDeError: [],
+  },
+  // Medios de pago, datos que se piden al cobrar (T4a): una casilla por dato que el tipo admite, todas del mismo dato registrado. Los rechazos (versión vieja, dato no admitido, sin permiso) salen como el aviso
+  // genérico (interfaz sobria): ningún error apunta a un campo.
+  "editar-datos-del-cobro-del-medio": {
+    funcion: "Elegir qué datos se piden al cobrar con un medio de pago",
+    pantallas: [FORMULARIO_DE_DATOS_DEL_MEDIO],
+    pasos: [
+      {
+        id: "datos-del-cobro",
+        campos: {
+          cupon: "estado-de-dato-del-cobro-del-medio",
+          ultimos4: "estado-de-dato-del-cobro-del-medio",
+          marca: "estado-de-dato-del-cobro-del-medio",
+          cuotas: "estado-de-dato-del-cobro-del-medio",
+          dni: "estado-de-dato-del-cobro-del-medio",
+        },
+      },
+    ],
+    deriva: [],
+    accion: {
+      clave: "medios_de_pago.editar",
+      requiere: [],
+      admite: ["estado-de-dato-del-cobro-del-medio"],
+    },
     camposDeError: [],
   },
   // Cuentas de cobro, alta: el tipo, el nombre y la sucursal son obligatorios; el identificador es opcional. Los rechazos que apuntan a un campo: el identificador con forma de credencial.
