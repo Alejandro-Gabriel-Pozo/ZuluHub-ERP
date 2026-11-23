@@ -11,6 +11,8 @@ export type PropsDeCasilla = Readonly<{
   alCambiar: (marcada: boolean) => void;
   /** El nombre con el que viaja en el formulario: marcada manda `"on"`, desmarcada no manda nada (lo de siempre de una casilla del navegador). */
   nombre?: string | undefined;
+  /** El valor con el que viaja marcada (para varias casillas con el mismo `nombre`, un valor por casilla); sin él, `"on"`. */
+  valor?: string | undefined;
   /** Apagada: se ve con su estado real y no se puede cambiar (el navegador no la manda en el formulario). */
   apagada?: boolean | undefined;
 }>;
@@ -19,7 +21,7 @@ export type PropsDeCasilla = Readonly<{
  * Casilla de verificación nativa con su etiqueta: para un sí o un no del negocio (por ejemplo «Obligatorio»). El área tocable es toda la fila (objetivo mínimo). Es un componente de
  * campo (`COMPONENTES_DE_CAMPO`): quien la usa dice qué dato pide.
  */
-export function Casilla({ etiqueta, marcada, alCambiar, nombre, apagada }: PropsDeCasilla) {
+export function Casilla({ etiqueta, marcada, alCambiar, nombre, valor, apagada }: PropsDeCasilla) {
   const id = useId();
   const referencia = useRef<HTMLInputElement>(null);
   const ultima = useRef(marcada);
@@ -49,6 +51,7 @@ export function Casilla({ etiqueta, marcada, alCambiar, nombre, apagada }: Props
         className={estilos["casilla"]}
         type="checkbox"
         name={nombre}
+        value={valor}
         checked={marcada}
         disabled={apagada === true}
         onChange={(evento) => {

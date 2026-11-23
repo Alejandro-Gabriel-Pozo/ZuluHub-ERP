@@ -142,9 +142,15 @@ export const TEXTOS_DE_CATALOGO = {
   // `decisiones-del-dueno-2026-11.md` fila del 12/11 «Maquetas del recorrido mínimo»), tabla «Textos nuevos» (`PA_REG`, líneas 327-334): «Secciones» (`sec.titulo`, línea 328: botón de la
   // ficha y título de la lista; también la fila «Secciones» del menú, fila del 13/11 «Rótulos del menú por áreas aprobados»), «Nueva sección» (`sec.nueva`, línea 329), «Subir» y «Bajar»
   // (`sec.subir`, `sec.bajar`, líneas 331-332: nombre accesible de las flechas). Todo lo demás de la pantalla es de la tabla «Reutilizados» de la misma maqueta (Nombre, Guardar, Cancelar,
-  // Desactivar, Reactivar, Desactivado, «Esta acción no está permitida»). «Agregar producto», «Quitar» y «Ya existe una sección con ese nombre» NO están: son de la parte 2 de la pantalla.
+  // Desactivar, Reactivar, Desactivado, «Esta acción no está permitida»). Parte 2 (DEC-0520): «Agregar producto» (`sec.agregar`, línea 330: botón de la sección y título del cuadro de elegir producto) y «Quitar»
+  // (aprobado en `productos.html:593`, tabla «Textos nuevos»; la maqueta de secciones lo lista entre los reutilizados). «Ya existe una sección con ese nombre» es `catalogo.error.seccion_repetida` (DEC-0453).
   "catalogo.seccion.titulo": { porDefecto: "Secciones" },
   "catalogo.seccion.nueva": { porDefecto: "Nueva sección" },
+  "catalogo.seccion.agregar_producto": { porDefecto: "Agregar producto" },
+  "catalogo.accion.quitar": { porDefecto: "Quitar" },
+  // Nombre accesible de «Quitar» en cada producto (DEC-0522): lleva el nombre del producto, como «Subir {nombre}» (DEC-0433). Aprobado por el orquestador por delegación (DDD filas 173 y 174), misma fuente
+  // que las flechas (T22/T23). Lo ve en pantalla solo «Quitar»; el nombre completo lo lee quien usa lector de pantalla. Revertir: quitar la clave y el aria-label.
+  "catalogo.seccion.quitar_producto": { porDefecto: "Quitar {nombre}", marcadores: ["nombre"] },
   // SUPUESTO (DEC-0433; pendiente de aprobación del dueño: ficha de la pantalla §5 y pregunta P1, opción A): el nombre accesible de las flechas se compone con el nombre de la sección, como lo hace la
   // maqueta (`aria-label="Subir ' + esc(x.n)`, línea 374: «Subir Cafés»). Lo aprobado es «Subir» y «Bajar» solos; sin el nombre, dos flechas de filas distintas se llaman igual. Revertir: quitar el marcador.
   "catalogo.seccion.subir": { porDefecto: "Subir {nombre}", marcadores: ["nombre"] },

@@ -24,6 +24,7 @@ const CAJA_PROPOSITO = (para: string): Proposito => ({
   para,
   fuente: `Pedernal-docs/11-especificaciones/caja-y-cobros.md §B.6 (caja) y ${MAQUETA_DE_MEDIOS}`,
 });
+const MEDIOS_DATOS_FORMULARIO = "apps/web/ui/plantillas/caja/FormularioDeDatosDelMedio.cliente.tsx";
 const MODAL_DE_CORREGIR_MEDIO = "apps/web/ui/plantillas/cierre/ModalDeCorregirMedio.cliente.tsx";
 /** Los propósitos que el cierre del día suma a los datos del cobro que ya son de caja: un dato, una definición (los consumidores y propósitos de las dos pantallas viven juntos). */
 const CORRECCION_PROPOSITO = (para: string): Proposito => ({
@@ -73,6 +74,21 @@ export const DATOS_DE_CAJA = {
     propositos: [MEDIOS_PROPOSITO_TIPO],
     consumidores: [MEDIOS_FORMULARIO],
     ponerPor: ["medios_de_pago.crear"],
+    requiere: REQUIERE_CAJA,
+  },
+  // Un solo dato con cinco campos (uno por dato del cobro): el conjunto vive una vez, en `DATOS_DEL_COBRO` (estados.ts). Hoy solo «aparece / no aparece»; el selector «Opcional / Obligatorio»
+  // (T4b) amplía este mismo dato cuando exista «obligatorio» en el servidor.
+  "estado-de-dato-del-cobro-del-medio": {
+    ficha: "src/modulos/caja/estados.ts",
+    propositos: [
+      {
+        para: "Si cada dato que el tipo del medio admite (cupón, últimos 4 dígitos, marca, cuotas, DNI) aparece al cobrar con ese medio (pantalla «Datos que se piden al cobrar»).",
+        fuente:
+          "Pedernal-docs/11-especificaciones/parametrizacion-de-medios-de-pago.md §3.4 (T4a) y la maqueta aprobada el 09/11/2026 (`datos-cobro.html`, ajustada el 15/11, carpeta de prototipos de Pedernal-docs 10-ux-ui)",
+      },
+    ],
+    consumidores: [MEDIOS_DATOS_FORMULARIO],
+    ponerPor: ["medios_de_pago.editar"],
     requiere: REQUIERE_CAJA,
   },
   "nombre-de-cuenta-de-cobro": {

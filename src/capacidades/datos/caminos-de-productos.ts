@@ -8,6 +8,9 @@ import type { DefinicionDeCamino } from "./tipos-de-caminos";
 const LISTA_DE_PRODUCTOS =
   "apps/web/ui/plantillas/catalogo/FormularioDeFiltrosDeProductos.cliente.tsx";
 
+const BUSCADOR_DE_CANDIDATOS =
+  "apps/web/ui/plantillas/catalogo/FormularioDeBuscadorDeCandidatos.cliente.tsx";
+
 const FORMULARIO_DE_FICHA_DE_PRODUCTO =
   "apps/web/ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente.tsx";
 
@@ -64,6 +67,20 @@ export const CAMINOS_DE_PRODUCTOS = {
       clave: "productos.ver",
       requiere: [],
       admite: ["texto-de-busqueda-de-producto", "clase-de-uso-de-producto", "estado-de-producto"],
+    },
+    camposDeError: [],
+  },
+  // Secciones de la carta, «Agregar producto»: buscar entre los productos que se pueden agregar a una sección. Es una lectura (`productos.ver`) y ningún dato es obligatorio (vacío es «todos»). Sin
+  // `campo` de error: un texto que no puede coincidir devuelve la lista vacía, no un error (`entradas-de-secciones.ts`).
+  "buscar-productos-para-seccion": {
+    funcion: "Buscar por nombre los productos que se pueden agregar a una sección de la carta",
+    pantallas: [BUSCADOR_DE_CANDIDATOS],
+    pasos: [{ id: "buscador-de-candidatos", campos: { texto: "texto-de-busqueda-de-producto" } }],
+    deriva: [],
+    accion: {
+      clave: "productos.ver",
+      requiere: [],
+      admite: ["texto-de-busqueda-de-producto"],
     },
     camposDeError: [],
   },
