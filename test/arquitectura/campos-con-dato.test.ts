@@ -156,7 +156,8 @@ describe("campos con dato: el código real", () => {
     const fuera = archivosFueraDeLasApps(archivos);
     expect(problemasFueraDeLasApps(fuera, CONTEXTO)).toEqual([]);
     // lee y analiza todo `src/` (más de mil archivos): en el CI, con la base de datos al lado, tarda más que los 5 s por defecto
-  }, 30_000);
+    // (estabilidad bajo carga, 23/11/2026: 8,4 s medido solo y 36 s con la máquina cargada, que vencía los 30 s anteriores)
+  }, 120_000);
 
   it("todo componente de campo declara la prop dato", () => {
     const problemas = COMPONENTES_DE_CAMPO.flatMap((c) =>
