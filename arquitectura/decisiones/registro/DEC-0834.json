@@ -4,7 +4,7 @@
   "quien": "sesión",
   "tipo": "PERMISOS",
   "estado": "PENDIENTE_DE_OK",
-  "decision": "Se quitan del catálogo y de la matriz 6 permisos que ningún caso de uso usa (crear, editar, reactivar y desactivar categorías, asignar emisor a un producto y editar el contenido de un combo); no se quitan «anular movimientos de otros» ni «editar variantes», que el código sí exige.",
-  "que_cambia": "Ningún rol pierde una función viva: los 6 permisos no se pedían en ninguna operación. Quienes eran gerente o administrador dejan de tenerlos en la matriz. Revertir: volver a declararlos en catalogo-catalogo.ts y permisos-de-catalogo.ts (y construir el caso de uso).",
-  "donde": "decisiones-del-dueno-2026-11.md, filas del 21/11/2026 («12 permisos del catálogo sin caso de uso: se quitan, salvo los de vidriera» y «tercera pata»); src/capacidades/modulos/catalogo-catalogo.ts; src/capacidades/permisos/permisos-de-catalogo.ts. Corrección de la medición del 21/11: anular_de_otros y variantes.editar sí tienen uso (decisión técnica del orquestador, a confirmar)."
+  "decision": "Se quitan 6 permisos que ningún caso de uso usa (4 de categorías, asignar emisor y contenido de combo); anular de otros y editar variantes se quedan.",
+  "que_cambia": "Ningún rol pierde una función viva: esos 6 no se pedían en ninguna operación. Revertir: volver a declararlos en el catálogo y en la matriz, y construir el caso.",
+  "donde": "decisiones-del-dueno-2026-11.md, filas del 21/11/2026 (12 permisos sin caso de uso; tercera pata); catalogo-catalogo.ts; permisos-de-catalogo.ts"
 }
