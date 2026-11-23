@@ -11,6 +11,18 @@
 export const TEXTOS_DE_COMPRAS = {
   // compra.html, «Textos aprobados» (09/11/2026), filas «Lista» y «Nueva compra» (D175: «Recibida sin facturar» y «Comprar y recibir» son de la decisión 35)
   "compras.compra.compras": { porDefecto: "Compras" },
+  // «Compra» antes del número («Compra 5 · Carnes del Sur», título de la ficha): `compra-corregir-anular.html` (`vLista`, `vFicha`), aceptada por delegación (DDD:187). Distinta de `stock.motivo.compra` (motivo de un movimiento): otro uso, otra clave.
+  "compras.compra.compra": {
+    porDefecto: "Compra",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/textos-de-compras.ts",
+        nombre: "textosDeCompras",
+      },
+    ],
+    fuente: { decision: "DEC-0834" },
+  },
   "compras.compra.por_recibir": { porDefecto: "Por recibir" },
   "compras.compra.sin_facturar": { porDefecto: "Sin facturar" },
   "compras.compra.pedida": { porDefecto: "Pedida" },

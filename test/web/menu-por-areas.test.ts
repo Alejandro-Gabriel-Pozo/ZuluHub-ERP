@@ -268,6 +268,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "produccion.pantalla.produccion",
       ],
       [
+        "compras",
+        "compras",
+        "compras",
+        "compras",
+        "recepciones.ver",
+        "/compras",
+        "compras.compra.compras",
+      ],
+      [
         "configuracion-fiscal",
         "cuenta",
         "empresa",
@@ -471,6 +480,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "impresoras",
     "stock",
     "produccion",
+    "compras",
     "configuracion-fiscal",
     "medios-de-pago",
     "contacto",
@@ -533,6 +543,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
         ["stock", [["pantalla", "stock", "/stock/depositos", "stock.pantalla.stock"]]],
       ],
     ],
+    ["compras", [["compras", [["pantalla", "compras", "/compras", "compras.compra.compras"]]]]],
     [
       "cuenta",
       [

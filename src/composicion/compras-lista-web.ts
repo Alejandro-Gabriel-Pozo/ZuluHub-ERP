@@ -43,6 +43,12 @@ export type ListaDeComprasParaLaPantalla = Readonly<{
   }>[];
   /** El cursor de la página que sigue; `null` en la última. */
   siguiente: string | null;
+  /** El filtro que se aplicó (lo permitido de la dirección): la pantalla muestra ESTE, nunca reinterpreta la dirección. */
+  filtros: Readonly<{
+    estado: "TODAS" | "SIN_FACTURAR";
+    desde: string | null;
+    hasta: string | null;
+  }>;
 }>;
 
 /** La lista de compras de la sucursal que fija el servidor, con el filtro de la dirección (lo no permitido vuelve al valor por defecto). */
@@ -56,15 +62,18 @@ export function listarLasCompras(
     d.respuesta,
     crudo,
     entradaDeListarCompras,
-    (entrada) =>
-      d.consultas().listarCompras(contexto, {
+    async (entrada) => {
+      const r = await d.consultas().listarCompras(contexto, {
         sucursalId,
         ...(entrada.estado === "SIN_FACTURAR" ? { estado: "RECIBIDA_SIN_FACTURAR" as const } : {}),
         ...(entrada.desde === null ? {} : { desde: entrada.desde }),
         ...(entrada.hasta === null ? {} : { hasta: entrada.hasta }),
         ...(entrada.despuesDe === null ? {} : { despuesDe: entrada.despuesDe }),
-      }),
-    (pagina) => ({
+      });
+      return r.ok ? ok({ pagina: r.valor, entrada }) : r;
+    },
+    ({ pagina, entrada }) => ({
+      filtros: { estado: entrada.estado, desde: entrada.desde, hasta: entrada.hasta },
       compras: pagina.compras.map((c) => ({
         recepcionId: c.recepcionId,
         numero: c.numero,
