@@ -423,6 +423,8 @@ describe("la variante", () => {
     expect(armarLaVariante({ ...base, grupo: V })).toMatchObject({
       esVariante: true,
       titulo: "Editar",
+      // La variante guardada no lleva una clase de la lista: el valor es uno válido y no cuenta.
+      clase: { valor: "INCLUIDA" },
       esTamano: { valor: true },
     });
     expect(armarElGrupo({ ...base, grupo: null }).esVariante).toBe(false);
