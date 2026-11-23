@@ -721,9 +721,9 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       expect(directo).toContain("No hay nada pendiente por ahora.");
       expect(directo).toContain("Sesión activa");
       expect(directo).not.toContain(NOMBRE_B);
-      // Tres destinos: inicio, empresa y cuenta; el actual marcado.
+      // Cuatro destinos: inicio, Ventas, Compras («Proveedores», del módulo obligatorio `clientes`) y cuenta; el actual marcado.
       expect(directo).toContain('aria-current="page"');
-      expect([...directo.matchAll(/<li class="[^"]*destino/g)]).toHaveLength(3);
+      expect([...directo.matchAll(/<li class="[^"]*destino/g)]).toHaveLength(4);
 
       // Con una segunda empresa y sin cookie: a elegir.
       await empresaDeLaMarca(mundo, mundo.marcaA, persona, "OPERADOR");
