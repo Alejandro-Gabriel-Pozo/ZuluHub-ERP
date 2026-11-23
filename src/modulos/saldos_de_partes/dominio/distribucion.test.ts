@@ -33,7 +33,7 @@ function repartir(
 }
 
 describe("distribuirPorCentroDeCosto", () => {
-  it("10,00 «a cuenta» con el mismo pendiente en tres centros: 3,34 / 3,33 / 3,33 (el centavo de más, al primero por orden fijo)", () => {
+  it("10,00 «a cuenta» con el mismo pendiente en tres centros: 3,34 / 3,33 / 3,33 (el sobrante, al primero por orden fijo)", () => {
     const r = repartir(
       "10.00",
       [],
@@ -44,6 +44,20 @@ describe("distribuirPorCentroDeCosto", () => {
       ],
     );
     expect(r.ok && texto(r.valor)).toEqual([`${A}=3.34`, `${B}=3.33`, `${C}=3.33`]);
+  });
+
+  it("TODO el sobrante del redondeo va al primero por orden fijo, aunque sea más de un centavo (0,10 entre siete centros iguales: 0,04 y seis de 0,01)", () => {
+    const centros = ["a", "b", "c", "d", "e", "f", "g"].map(
+      (c) => `00000000-0000-4000-8000-00000000000${c.charCodeAt(0) - 96}`,
+    );
+    const r = repartir(
+      "0.10",
+      [],
+      centros.map((c) => [c, "10.00"]),
+    );
+    expect(r.ok && texto(r.valor)).toEqual(
+      centros.map((c, i) => `${c}=${i === 0 ? "0.04" : "0.01"}`),
+    );
   });
 
   it("lo que se imputa a comprobantes hereda su centro de costo; el resto va proporcional a lo pendiente", () => {

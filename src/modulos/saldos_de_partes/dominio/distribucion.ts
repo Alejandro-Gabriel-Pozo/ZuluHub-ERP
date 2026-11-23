@@ -1,5 +1,5 @@
 import { importeCero, restar, sumar, type Importe } from "../../../primitivas/dinero/importe";
-import { prorratear } from "../../../primitivas/dinero/prorrateo";
+import { prorratearConSobranteAlPrimero } from "../../../primitivas/dinero/prorrateo";
 import { exactoDeImporte } from "../../../primitivas/dinero/monto-exacto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 
@@ -13,12 +13,12 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
  *
  *  1. Lo que el asiento imputa a comprobantes concretos hereda el centro de costo de cada comprobante (`imputaciones`).
  *  2. El resto («a cuenta», saldo inicial) se reparte proporcional a lo pendiente de cada centro, SOLO entre los centros con pendiente POSITIVO
- *     (decisión del dueño, 21/11), con `prorratear` (restos mayores; ante un empate gana el primero del orden fijo). Los centros van en orden
+ *     (decisión del dueño, 21/11), con `prorratearConSobranteAlPrimero` (cada parte es el piso en centavos y TODO el sobrante va al primero del orden fijo). Los centros van en orden
  *     fijo: por id de sucursal ascendente y `null` al final.
  *  3. Si ningún centro tiene pendiente positivo, el resto va todo a «sin centro de costo».
- * Ejemplo (decisión del dueño, 21/11): 10,00 «a cuenta» con el mismo pendiente en tres centros = 3,34 / 3,33 / 3,33 (el centavo de más, al primero).
+ * Ejemplo (decisión del dueño, 21/11): 10,00 «a cuenta» con el mismo pendiente en tres centros = 3,34 / 3,33 / 3,33 (el sobrante, al primero).
  *
- * Una regla, un lugar: el reparto con resto mayor es `prorratear` (primitiva de dinero); acá solo se arma qué pesos y en qué orden.
+ * Una regla, un lugar: el reparto con el sobrante al primero es `prorratearConSobranteAlPrimero` (primitiva de dinero, junto a `prorratear`); acá solo se arma qué pesos y en qué orden.
  */
 export type CentroDeCosto = string | null;
 
@@ -82,7 +82,7 @@ export function distribuirPorCentroDeCosto(
     if (pesos.length === 0) {
       renglones.push({ centroDeCosto: null, importe: resto });
     } else {
-      const partes = prorratear(
+      const partes = prorratearConSobranteAlPrimero(
         resto,
         pesos.map((p) => exactoDeImporte(p.importe)),
       );

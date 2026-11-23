@@ -3,7 +3,7 @@ import { ErrorDeValor } from "../cantidad/errores";
 import { importeATexto, importeDesdeTexto } from "./importe";
 import { ARS } from "./moneda";
 import { exactoDeImporte } from "./monto-exacto";
-import { prorratear } from "./prorrateo";
+import { prorratear, prorratearConSobranteAlPrimero } from "./prorrateo";
 
 const ars = (t: string) => importeDesdeTexto(ARS, t);
 const pesos = (...textos: string[]) => textos.map((t) => exactoDeImporte(ars(t)));
@@ -86,5 +86,47 @@ describe("prorratear", () => {
   it("acepta pesos fraccionarios (montos exactos intermedios)", () => {
     const m = exactoDeImporte(ars("0.01"));
     expect(prorratear(ars("0.01"), [m, m, m]).map(importeATexto)).toEqual(["0.01", "0.00", "0.00"]);
+  });
+});
+
+describe("prorratearConSobranteAlPrimero", () => {
+  const sobrante = (total: string, ...p: string[]) =>
+    prorratearConSobranteAlPrimero(ars(total), pesos(...p)).map(importeATexto);
+
+  it("10,00 entre tres pesos iguales → 3,34 / 3,33 / 3,33 (lo que confirmó el dueño el 21/11)", () => {
+    expect(sobrante("10.00", "1", "1", "1")).toEqual(["3.34", "3.33", "3.33"]);
+  });
+
+  it("TODO el sobrante va al primero, aunque sea más de un centavo (0,10 entre siete pesos iguales: 0,04 y seis de 0,01)", () => {
+    expect(sobrante("0.10", "1", "1", "1", "1", "1", "1", "1")).toEqual([
+      "0.04",
+      "0.01",
+      "0.01",
+      "0.01",
+      "0.01",
+      "0.01",
+      "0.01",
+    ]);
+  });
+
+  it("con pesos desiguales cada parte es el piso de su proporción y el sobrante, al primero (no al mayor resto)", () => {
+    // 1,00 en 1:1:1:7 → exactas 0,10 / 0,10 / 0,10 / 0,70: sin sobrante. 0,07 en 5:5:5:1 → pisos 0,02 / 0,02 / 0,02 / 0,00; el centavo que sobra, al primero.
+    expect(sobrante("1.00", "1", "1", "1", "7")).toEqual(["0.10", "0.10", "0.10", "0.70"]);
+    expect(sobrante("0.07", "5", "5", "5", "1")).toEqual(["0.03", "0.02", "0.02", "0.00"]);
+    // 0,05 en 1:9 → pisos 0,00 y 0,04; el centavo que sobra va al primero, no al de mayor resto.
+    expect(sobrante("0.05", "1", "9")).toEqual(["0.01", "0.04"]);
+  });
+
+  it("el sobrante va al primero con peso POSITIVO (uno con peso cero no recibe nada)", () => {
+    expect(sobrante("0.10", "0", "1", "1", "1")).toEqual(["0.00", "0.04", "0.03", "0.03"]);
+  });
+
+  it("total cero devuelve ceros; todos los pesos en cero con un total distinto de cero es PESOS_INVALIDOS; un total negativo, FUERA_DE_RANGO", () => {
+    expect(sobrante("0.00", "1", "2")).toEqual(["0.00", "0.00"]);
+    expect(codigoDe(() => sobrante("1.00", "0", "0"))).toBe("PESOS_INVALIDOS");
+    expect(codigoDe(() => sobrante("-1.00", "1"))).toBe("FUERA_DE_RANGO");
+    expect(
+      codigoDe(() => prorratearConSobranteAlPrimero(ars("1.00"), [exactoDeImporte(ars("-1.00"))])),
+    ).toBeDefined();
   });
 });
