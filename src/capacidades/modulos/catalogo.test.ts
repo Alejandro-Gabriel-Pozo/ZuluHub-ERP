@@ -86,14 +86,8 @@ describe("el catálogo comercial de módulos", () => {
           "productos.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "productos.cambiar_precio": { capacidad: null, efecto: "CREA_AMPLIA" },
           "productos.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-          "productos.asignar_emisor": { capacidad: null, efecto: "CREA_AMPLIA" },
           "opciones.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-          "categorias.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
-          "categorias.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-          "categorias.reactivar": { capacidad: null, efecto: "CREA_AMPLIA" },
-          "categorias.desactivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "variantes.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
-          "conjuntos.editar_contenido": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
       vidriera: {
@@ -335,11 +329,11 @@ describe("el catálogo comercial de módulos", () => {
     expect(carpetas).toEqual([["modulos/catalogo"], ["modulos/catalogo"], ["modulos/stock"]]);
   });
 
-  it("el catálogo tiene 50 acciones de catálogo, carta y stock (14 + 11 + 25), 35 de caja, cierre y ventas (23 + 4 + 8) y 18 de clientes y compras (8 + 10), sin repetir ninguna", () => {
+  it("el catálogo tiene 44 acciones de catálogo, carta y stock (8 + 11 + 25), 35 de caja, cierre y ventas (23 + 4 + 8) y 18 de clientes y compras (8 + 10), sin repetir ninguna", () => {
     const cuantas = (
       m: "catalogo" | "vidriera" | "stock" | "caja" | "cierre" | "ventas" | "clientes" | "compras",
     ) => Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
-    expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([14, 11, 25]);
+    expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([8, 11, 25]);
     expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
     expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 29]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
@@ -347,7 +341,7 @@ describe("el catálogo comercial de módulos", () => {
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 49 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
     // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A y `vidrieras.administrar_portal` del portal), 35 de caja, cierre y ventas (E0-T1), 37 de clientes y compras (E9-T1, T11, N3-2b, N3-4, N4-1, N4-3, N4-4 y N4-5), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 177 en total.
-    expect(todas).toHaveLength(25 + 9 + 50 + 35 + 37 + 16 + 5);
+    expect(todas).toHaveLength(25 + 9 + 44 + 35 + 37 + 16 + 5);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -515,9 +509,6 @@ const EFECTOS_DE_EMPRESA = {
     "cajas.crear",
     "cajas.editar",
     "cajas.reactivar",
-    "categorias.crear",
-    "categorias.editar",
-    "categorias.reactivar",
     "certificados.gestionar",
     "comandas.enviar",
     "composiciones.editar",
@@ -526,7 +517,6 @@ const EFECTOS_DE_EMPRESA = {
     "comprobantes.emitir_manual",
     "comprobantes_de_proveedor.pagar",
     "comprobantes_de_proveedor.registrar",
-    "conjuntos.editar_contenido",
     "conteos.abrir",
     "cuentas.abrir",
     "cuentas.agregar_linea",
@@ -565,7 +555,6 @@ const EFECTOS_DE_EMPRESA = {
     "partes.editar",
     "partes.reactivar",
     "partes.vincular_contacto",
-    "productos.asignar_emisor",
     "productos.cambiar_precio",
     "productos.crear",
     "productos.editar",
@@ -601,7 +590,6 @@ const EFECTOS_DE_EMPRESA = {
   COMPLETA_CIERRA: [
     "articulos.dejar_de_controlar",
     "cajas.desactivar",
-    "categorias.desactivar",
     "cobros.corregir_medio",
     "comprobantes.descartar",
     "comprobantes.emitir",
