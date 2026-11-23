@@ -38,6 +38,7 @@ import { TEXTOS_DE_LOTES } from "./catalogo-lotes";
 import { TEXTOS_DE_PRODUCCION } from "./catalogo-produccion";
 import { TEXTOS_DE_SALON } from "./catalogo-salon";
 import { TEXTOS_DE_STOCK } from "./catalogo-stock";
+import { TEXTOS_DE_USUARIOS } from "./catalogo-usuarios";
 import { TEXTOS_DE_VENTAS } from "./catalogo-ventas";
 import { TEXTOS_DE_CARTA_PUBLICA } from "./catalogo-carta-publica";
 import { TEXTOS_DEL_NUCLEO } from "./catalogo-nucleo";
@@ -85,6 +86,7 @@ export const CATALOGO_DE_TEXTOS = {
   ...TEXTOS_DE_COMANDAS,
   ...TEXTOS_DE_CLIENTES,
   ...TEXTOS_DE_COMPRAS,
+  ...TEXTOS_DE_USUARIOS,
 } as const satisfies Record<string, DefinicionDeTexto>;
 
 export type ClaveDeTexto = keyof typeof CATALOGO_DE_TEXTOS;

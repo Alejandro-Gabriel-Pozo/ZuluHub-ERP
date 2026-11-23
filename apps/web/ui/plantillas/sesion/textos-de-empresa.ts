@@ -13,7 +13,7 @@ export type EmpresaParaMostrar = Readonly<{
   estadoEfectivo: EstadoEfectivo;
 }>;
 
-/** «Gerente», «Administrador», «Operador»: el texto del rol, que la marca puede redactar a su manera. */
+/** «Gerente», «Administrador», «Empleado»: el texto del rol, que la marca puede redactar a su manera. */
 export function textoDelRol(rol: RolDeEmpresa, diccionario: DiccionarioResuelto): string {
   return texto(diccionario, `rol.${rol.toLowerCase() as Lowercase<RolDeEmpresa>}.nombre`);
 }
