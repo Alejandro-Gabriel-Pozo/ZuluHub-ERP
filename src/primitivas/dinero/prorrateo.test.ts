@@ -129,4 +129,27 @@ describe("prorratearConSobranteAlPrimero", () => {
       codigoDe(() => prorratearConSobranteAlPrimero(ars("1.00"), [exactoDeImporte(ars("-1.00"))])),
     ).toBeDefined();
   });
+
+  it("total cero con todos los pesos en cero (o sin pesos) devuelve ceros, uno por peso", () => {
+    expect(sobrante("0.00", "0", "0")).toEqual(["0.00", "0.00"]);
+    expect(sobrante("0.00")).toEqual([]);
+  });
+
+  it("los mensajes de error dicen qué pasó", () => {
+    expect(() => sobrante("-1.00", "1")).toThrow("prorrateo: el total no puede ser negativo");
+    expect(() => sobrante("1.00", "0", "0")).toThrow("prorrateo: los pesos no suman nada");
+    expect(() => sobrante("1.00")).toThrow("prorrateo: los pesos no suman nada");
+    expect(() =>
+      prorratearConSobranteAlPrimero(ars("1.00"), [exactoDeImporte(ars("-1.00"))]),
+    ).toThrow("prorrateo: peso negativo");
+  });
+
+  it("MONEDA_DISTINTA: un peso de otra moneda se rechaza", () => {
+    const otra = { ...exactoDeImporte(ars("1.00")), moneda: "USD" } as unknown as ReturnType<
+      typeof exactoDeImporte
+    >;
+    expect(codigoDe(() => prorratearConSobranteAlPrimero(ars("1.00"), [otra]))).toBe(
+      "MONEDA_DISTINTA",
+    );
+  });
 });
