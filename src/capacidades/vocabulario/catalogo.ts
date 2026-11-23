@@ -55,10 +55,7 @@ export type DefinicionDeTexto = Readonly<{
   largoMaximo?: number;
   /** Los marcadores que admite, sin llaves; los mismos que usa `porDefecto`. Omitido: ninguno. */
   marcadores?: readonly string[];
-  /**
-   * Quién consume el texto (inventario de textos, fila 173 de `decisiones-del-dueno-2026-11.md`). OPCIONAL por ahora: ningún chequeo
-   * lo exige; lo medirá el analizador de declaraciones (tramo U2). No se agrega a los catálogos existentes en este tramo.
-   */
+  /** Quién consume el texto (fila 173 de `decisiones-del-dueno-2026-11.md`). OPCIONAL por ahora: ningún chequeo lo exige; lo mide el analizador de declaraciones. */
   usos?: UsosDeTexto;
   /** De dónde salió el texto aprobado: un `DEC` aceptado o `HEREDADO`. OPCIONAL por ahora, igual que `usos`. */
   fuente?: FuenteDeTexto;

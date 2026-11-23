@@ -1,6 +1,7 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { crearMundoDeMarca } from "../integracion/marcas-apoyo";
+import { ingresarEn, personaVinculada } from "../integracion/web-apoyo";
 import {
   crearInvitacionDeBase,
   crearMembresiaDeBase,
@@ -27,7 +28,6 @@ describe.skipIf(base === null)("recorrido de la lista de usuarios", () => {
   let contexto: BrowserContext;
   let pagina: Page;
   let vigilante: Vigilante;
-  let miPersona = "";
   let sofia = "";
   let deOtraEmpresa = "";
 
@@ -43,12 +43,6 @@ describe.skipIf(base === null)("recorrido de la lista de usuarios", () => {
     if (base === null) return;
     mundo = await armarMundoDelRecorrido(base);
     const c = mundo.mundo.dueno;
-    miPersona = (
-      await c.query<{ persona_id: string }>(
-        "select persona_id from membresia where empresa_id = $1",
-        [mundo.empresa],
-      )
-    ).rows[0]?.persona_id as string;
     const tenant = (
       await c.query<{ tenant_id: string }>("select tenant_id from empresa where id = $1", [
         mundo.empresa,
@@ -104,13 +98,10 @@ describe.skipIf(base === null)("recorrido de la lista de usuarios", () => {
     await pagina.waitForLoadState("networkidle");
     await pagina.getByRole("heading", { name: "Invitaciones" }).waitFor();
 
-    const filas = await pagina
-      .getByRole("link", { name: /@lacteos\.test|@prueba\.test|@/ })
-      .allInnerTexts();
-    const texto = filas.join("\n");
-    expect(texto).toContain("diego@lacteos.test Administrador");
-    expect(texto).toContain("sofia@lacteos.test Empleado");
-    expect(texto).toContain("ana@lacteos.test Empleado Desactivado");
+    const fila = (nombre: string) => pagina.getByRole("link", { name: nombre, exact: true });
+    expect(await fila("diego@lacteos.test Administrador").count()).toBe(1);
+    expect(await fila("sofia@lacteos.test Empleado").count()).toBe(1);
+    expect(await fila("ana@lacteos.test Empleado Desactivado").count()).toBe(1);
     expect(await pagina.getByText("Gerente", { exact: false }).count()).toBeGreaterThan(0);
     await pagina.getByText("Empleado · Vence el", { exact: false }).first().waitFor();
     expect(await pagina.getByText("Vencida").count()).toBe(1);
@@ -143,10 +134,24 @@ describe.skipIf(base === null)("recorrido de la lista de usuarios", () => {
   });
 
   it("un empleado no tiene la entrada «Usuarios» y, abriendo la dirección a mano, recibe el genérico y ninguna fila", async () => {
-    await mundo.mundo.dueno.query(
-      "update membresia set rol = 'OPERADOR' where empresa_id = $1 and persona_id = $2",
-      [mundo.empresa, miPersona],
+    // Otra persona que entra de verdad (misma app y misma base) y es EMPLEADA de la empresa.
+    const otra = await ingresarEn(mundo.mundo, HOST_DEL_RECORRIDO);
+    const empleada = await personaVinculada(mundo.mundo, otra.sesion);
+    await crearMembresiaDeBase(mundo.mundo.dueno, mundo.empresa, empleada, "OPERADOR");
+    const suContexto = await navegador.newContext({ ignoreHTTPSErrors: true, viewport: CELULAR });
+    await suContexto.addCookies(
+      otra.navegador.cookiesDe(HOST_DEL_RECORRIDO).map((c) => ({
+        name: c.nombre,
+        value: c.valor,
+        domain: HOST_DEL_RECORRIDO,
+        path: "/" as const,
+        httpOnly: true as const,
+        secure: true as const,
+      })),
     );
+    pagina = await suContexto.newPage();
+    vigilante = await vigilar(pagina, HOST_DEL_RECORRIDO);
+
     await ir("/cuenta");
     await pagina.getByRole("button", { name: "Cerrar sesión" }).waitFor();
     expect(await pagina.getByRole("link", { name: "Usuarios" }).count()).toBe(0);
@@ -161,5 +166,6 @@ describe.skipIf(base === null)("recorrido de la lista de usuarios", () => {
     expect(await pagina.getByText("sofia@lacteos.test").count()).toBe(0);
     await sinViolacionesDeAxe();
     pantallaLimpia();
+    await suContexto.close();
   });
 });
