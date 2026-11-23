@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0834",
+  "fecha": "2026-11-23",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Clientes y proveedores sale sin contactos ni «ID extranjero», y con los rótulos «Persona / Empresa» y «Roles» en sus dos selectores.",
+  "que_cambia": "Qué ve quien usa Clientes y proveedores respecto de la maqueta del 09/11/2026: faltan los contactos y un tipo de documento, y los dos selectores que la maqueta dibuja como botones o pestañas sin rótulo llevan uno. Revertir es sumar las piezas que faltan o sacar los dos rótulos.",
+  "donde": "apps/web/ui/plantillas/clientes/ (lista, filtros, formulario y estado de la parte); 10-ux-ui/prototipos-gastronomia/directorio.html"
+}

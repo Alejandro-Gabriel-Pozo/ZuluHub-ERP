@@ -8,6 +8,7 @@ import { seOfrece } from "../../../../src/capacidades/integracion/ofrecer";
 import type { ClaveDeTexto } from "../../../../src/capacidades/vocabulario/catalogo";
 import type { ClaveDeIcono } from "../iconos/catalogo";
 import { RUTAS_DE_CAJA, RUTA_DE_LA_CAJA } from "../plantillas/caja/lista-de-caja";
+import { RUTA_DE_CLIENTES } from "../plantillas/clientes/modelo-de-directorio";
 import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
 import { RUTA_DE_CLASIFICACION } from "../plantillas/catalogo/modelo-de-clasificacion";
 import { RUTA_DEL_CIERRE } from "../plantillas/cierre/ruta-del-cierre";
@@ -227,6 +228,31 @@ export const FILAS_DEL_MENU = [
     perilla: null,
     href: RUTA_DE_IMPRESORAS,
     etiqueta: "comandas.texto.imprimir_impresoras",
+    departamento: null,
+  },
+  // «Clientes» (área Ventas) y «Proveedores» (área Compras) abren la misma pantalla con el filtro por rol (dueño, `decisiones-del-dueno-2026-11.md` fila 110): módulo `clientes` y acción `partes.ver`.
+  {
+    tipo: "pantalla",
+    clave: "clientes",
+    area: "ventas",
+    grupo: "clientes",
+    modulo: "clientes",
+    accion: "partes.ver",
+    perilla: null,
+    href: `${RUTA_DE_CLIENTES}?rol=cliente`,
+    etiqueta: "clientes.lista.clientes",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
+    clave: "proveedores",
+    area: "compras",
+    grupo: "proveedores",
+    modulo: "clientes",
+    accion: "partes.ver",
+    perilla: null,
+    href: `${RUTA_DE_CLIENTES}?rol=proveedor`,
+    etiqueta: "clientes.lista.proveedores",
     departamento: null,
   },
   {
