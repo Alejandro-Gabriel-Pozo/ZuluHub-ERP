@@ -113,20 +113,27 @@ function problemasDeExposicion(archivos: Readonly<Record<string, string>>): stri
 }
 
 describe("el puerto «cobrar» de caja no es una acción de servidor ni una ruta", () => {
-  it("el repositorio real lo cumple, y la prueba recorre archivos de las dos carpetas", () => {
-    const archivos: Record<string, string> = {};
-    for (const carpeta of ["apps", "src"]) {
-      for (const ruta of archivosDe(join(RAIZ, carpeta))) {
-        archivos[relative(RAIZ, ruta)] = readFileSync(ruta, "utf8");
+  // Tope propio (estabilidad bajo carga, 23/11/2026): recorre y lee todo `apps/` y `src/`; 2,9 s medidos solo, y con la máquina cargada (CI con Postgres al lado, varios archivos a la vez) llegó a 8,2 s y vencía los 5 s por defecto.
+  it(
+    "el repositorio real lo cumple, y la prueba recorre archivos de las dos carpetas",
+    { timeout: 30_000 },
+    () => {
+      const archivos: Record<string, string> = {};
+      for (const carpeta of ["apps", "src"]) {
+        for (const ruta of archivosDe(join(RAIZ, carpeta))) {
+          archivos[relative(RAIZ, ruta)] = readFileSync(ruta, "utf8");
+        }
       }
-    }
-    expect(Object.keys(archivos).filter((r) => r.startsWith("apps/")).length).toBeGreaterThan(50);
-    expect(Object.keys(archivos).filter((r) => r.startsWith("src/")).length).toBeGreaterThan(500);
-    // Hay acciones de servidor reales en apps (la prueba las ve) y el puerto existe en caja (no es una búsqueda vacía).
-    expect(Object.values(archivos).some((t) => t.includes('"use server"'))).toBe(true);
-    expect(archivos["src/modulos/caja/cobrar/caja-para-ventas.ts"]).toContain("registrarCobroEnTx");
-    expect(problemasDeExposicion(archivos)).toEqual([]);
-  });
+      expect(Object.keys(archivos).filter((r) => r.startsWith("apps/")).length).toBeGreaterThan(50);
+      expect(Object.keys(archivos).filter((r) => r.startsWith("src/")).length).toBeGreaterThan(500);
+      // Hay acciones de servidor reales en apps (la prueba las ve) y el puerto existe en caja (no es una búsqueda vacía).
+      expect(Object.values(archivos).some((t) => t.includes('"use server"'))).toBe(true);
+      expect(archivos["src/modulos/caja/cobrar/caja-para-ventas.ts"]).toContain(
+        "registrarCobroEnTx",
+      );
+      expect(problemasDeExposicion(archivos)).toEqual([]);
+    },
+  );
 
   it("detecta una acción de servidor que cobra: el import, la llamada y el nombre", () => {
     const problemas = problemasDeExposicion({
