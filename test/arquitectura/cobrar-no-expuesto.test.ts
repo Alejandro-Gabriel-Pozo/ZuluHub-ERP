@@ -14,6 +14,9 @@ import { describe, expect, it } from "vitest";
  * Lo mismo vale para los puertos de venta de stock (E5-T7: `ConsumoDeStock`, `ReversionDeStock`, `DepositoDeVenta`, `ArticulosDeVenta`,
  * `ExistenciaParaMostrar` y `EntradaPorOrigen`): corren en la transacción de ventas o de compras, no tienen acción propia y no pasan por el
  * guard de stock; llamarlos desde una acción de servidor descontaría, devolvería o mostraría stock sin permiso.
+ * Y el libro de saldos (LB-4b, `saldos_de_partes`): sus casos de uso (`registrarAsientoEnTx`, `imputarEnTx`, `deshacerImputacionEnTx`,
+ * `anularAsientoEnTx`) corren en la transacción de Compras o de la cuenta corriente y NO autorizan (cada módulo que los llama usa su guard antes);
+ * por eso ningún archivo de `apps/` importa el módulo (ni por un camino con `saldos_de_partes`) ni nombra esas funciones: movería saldos sin permiso.
  * Previene: un cobro sin guard. Quien llamara a `registrarCobroEnTx` desde una acción de servidor dejaría cobrar a cualquiera que pueda
  * invocar esa acción, sin permiso de ventas, sin ticket y sin que el módulo `ventas` lo valide. La ventas (E4) lo usa desde su caso de uso,
  * con su propio guard, y la composición lo cablea sin exponerlo.
@@ -47,7 +50,16 @@ const NOMBRES_DEL_PUERTO: ReadonlySet<string> = new Set([
   "crearExistenciaParaMostrar",
   "EntradaPorOrigen",
   "crearEntradaPorOrigen",
+  // El libro de saldos (fuente: `src/modulos/saldos_de_partes/publico.ts`). Las consultas (`saldoDeParte`, `estadoDeCuenta`…) no van por nombre: son nombres corrientes; las cubre la ruta del import.
+  "registrarAsientoEnTx",
+  "imputarEnTx",
+  "deshacerImputacionEnTx",
+  "anularAsientoEnTx",
+  "TxDeSaldos",
 ]);
+
+/** El módulo del libro de saldos: ningún archivo de `apps/` lo importa (un camino con esa carpeta, en un import, un `require`, un `import()` o un texto). */
+const CARPETA_DEL_LIBRO = /(^|\/)saldos_de_partes(\/|$)/;
 
 const fuenteDe = (nombre: string, texto: string): ts.SourceFile =>
   ts.createSourceFile(nombre, texto, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -61,6 +73,10 @@ function usosDelPuerto(nombre: string, texto: string): string[] {
       ts.isIdentifier(nodo) || ts.isStringLiteralLike(nodo) || ts.isPrivateIdentifier(nodo)
         ? nodo.text
         : null;
+    if (ts.isStringLiteralLike(nodo) && CARPETA_DEL_LIBRO.test(nodo.text)) {
+      const linea = fuente.getLineAndCharacterOfPosition(nodo.getStart(fuente)).line + 1;
+      usos.push(`${nombre}:${linea} importa el módulo del libro de saldos «${nodo.text}»`);
+    }
     if (nombrado !== null && NOMBRES_DEL_PUERTO.has(nombrado)) {
       const linea = fuente.getLineAndCharacterOfPosition(nodo.getStart(fuente)).line + 1;
       usos.push(`${nombre}:${linea} nombra «${nombrado}»`);
@@ -212,6 +228,45 @@ describe("el puerto «cobrar» de caja no es una acción de servidor ni una ruta
           "export const g = (c: { cobrosPorOrigen: unknown }) => c.cobrosPorOrigen;",
       }).length,
     ).toBeGreaterThan(0);
+  });
+
+  it("detecta el libro de saldos en apps: el import por el camino, el `require`, el `import()` y las funciones por nombre", () => {
+    expect(
+      problemasDeExposicion({
+        "apps/web/servidor/mover.ts": [
+          '"use server";',
+          'import { saldoDeParte } from "../../../src/modulos/saldos_de_partes/publico";',
+          "export const x = saldoDeParte;",
+        ].join("\n"),
+      }),
+    ).toEqual([
+      "apps/web/servidor/mover.ts:2 importa el módulo del libro de saldos «../../../src/modulos/saldos_de_partes/publico»",
+    ]);
+    expect(
+      problemasDeExposicion({
+        "apps/web/a.ts": 'const m = require("../../src/modulos/saldos_de_partes/publico");',
+        "apps/web/b.ts": 'export const f = () => import("../../src/modulos/saldos_de_partes");',
+        "apps/plataforma/c.ts": 'export * from "../../src/modulos/saldos_de_partes/publico";',
+      }),
+    ).toHaveLength(3);
+    expect(
+      problemasDeExposicion({
+        "apps/web/servidor/pagar.ts":
+          "export const g = (l: { imputarEnTx: unknown; anularAsientoEnTx: unknown }) => [l.imputarEnTx, l.anularAsientoEnTx];",
+      }),
+    ).toHaveLength(4);
+    // Lo que no es el módulo: un nombre parecido, un comentario, y su uso desde otro módulo de src.
+    expect(
+      problemasDeExposicion({
+        "apps/web/servidor/ok.ts": [
+          "// saldos_de_partes se usa desde compras, nunca desde acá.",
+          'export const carpeta = "saldos_de_partes_x";',
+          "export const estadoDeCuenta = 1;",
+        ].join("\n"),
+        "src/modulos/compras/casos-de-uso/x.ts":
+          'import { imputarEnTx } from "../../saldos_de_partes/publico";\nexport const c = imputarEnTx;\n',
+      }),
+    ).toEqual([]);
   });
 
   it('detecta un archivo de src/ con "use server": lo que exporta sería una acción invocable desde el navegador', () => {
