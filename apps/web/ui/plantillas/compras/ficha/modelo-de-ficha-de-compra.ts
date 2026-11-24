@@ -55,7 +55,7 @@ export type FichaDeCompraParaLaPantalla = Readonly<{
 
 const SIN_DATO = "—";
 
-export type LineaDeFichaArmada = Readonly<{
+type LineaDeFichaArmada = Readonly<{
   clave: number;
   nombre: string;
   importe: string;

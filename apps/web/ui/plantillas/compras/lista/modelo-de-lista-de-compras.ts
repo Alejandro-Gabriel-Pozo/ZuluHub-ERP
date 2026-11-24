@@ -48,7 +48,7 @@ export function nombreDeLaFactura(
 export const totalParaMostrar = (importe: Importe | null, textos: TextosDeCompras): string =>
   importe === null ? textos.sinPrecio : formatearImporte(importe.monto);
 
-export type FilaDeCompraArmada = Readonly<{
+type FilaDeCompraArmada = Readonly<{
   id: string;
   href: string;
   /** «Compra 5 · Carnes del Sur»; sin proveedor que mostrar, «—». */
