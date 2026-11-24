@@ -481,8 +481,9 @@ describe.skipIf(base === null)("identidad: concurrencia de los casos de uso (K1 
       expect(activos, `ronda ${n}: quedó sin admin`).toBeGreaterThanOrEqual(1);
       expect(exitos, `ronda ${n}: se apagaron los dos`).toBeLessThanOrEqual(1);
       expect(activos, `ronda ${n}: cada éxito apaga a uno`).toBe(2 - exitos);
+      // Apagarse a sí mismo es `ES_UNO_MISMO` (H3); apagar al otro sale bien (quien pide cuenta como admin que queda).
       perdedorAceptable(resultados, {
-        esperados: ["SIN_PERMISO", "ULTIMO_ADMIN"],
+        esperados: ["SIN_PERMISO", "ULTIMO_ADMIN", "ES_UNO_MISMO"],
         contexto: `ronda ${n}`,
       });
     }
@@ -542,7 +543,7 @@ describe.skipIf(base === null)("identidad: concurrencia de los casos de uso (K1 
     expect(resultados.acepto + resultados.rechazo).toBe(RONDAS);
   });
 
-  it("K8: el último admin se apaga a sí mismo mientras otra persona acepta ser admin: nunca queda sin admin", async () => {
+  it("K8: el único admin no puede apagarse a sí mismo (ES_UNO_MISMO), tampoco mientras otra persona acepta ser admin: nunca queda sin admin", async () => {
     for (let n = 0; n < RONDAS; n++) {
       const e = await crearEmpresaActiva(entorno);
       const x = await crearPersonaDeBase(dueno);
@@ -563,19 +564,9 @@ describe.skipIf(base === null)("identidad: concurrencia de los casos de uso (K1 
         [e.empresa],
       );
       expect(admins, `ronda ${n}: quedó sin admin`).toBeGreaterThanOrEqual(1);
-      // Si apagó, es porque la aceptación ya estaba confirmada en su foto: el otro admin existe.
-      if (apagado.ok) {
-        expect(admins).toBe(1);
-        expect(
-          await contar(
-            "select count(*) as n from membresia where empresa_id = $1 and activo and persona_id = $2",
-            [e.empresa, x.id],
-          ),
-        ).toBe(0);
-      } else {
-        expect(apagado.error).toBe("ULTIMO_ADMIN");
-        expect(admins).toBe(2);
-      }
+      // Nadie se apaga a sí mismo (H3): el pedido falla siempre, sea cual sea el orden con la aceptación, y quedan los dos.
+      expect(apagado, `ronda ${n}`).toEqual({ ok: false, error: "ES_UNO_MISMO" });
+      expect(admins).toBe(2);
     }
   });
 
