@@ -1141,6 +1141,11 @@ describe("decidirInvitacionDeUsuario", () => {
     );
   });
 
+  it("una pendiente vigente que no incluye a esta empresa no es la misma invitación: se rechaza sin romper", () => {
+    const deOtra = invitacion({ venceEn: mas(T0, 7 * DIA), empresas: [asignacion(E2)] });
+    expect(decidir({ pendiente: deOtra })).toEqual(error("INVITACION_VIGENTE_CON_OTRO_ROL"));
+  });
+
   it("el último milisegundo de vigencia todavía es vigente; el vencimiento exacto ya no", () => {
     const hasta = (ms: number) => invitacion({ venceEn: new Date(ahora.getTime() + ms) });
     expect(decidir({ pendiente: hasta(1) })).toEqual({
