@@ -68,7 +68,7 @@ describe("los roles que cuentan como admin para ULTIMO_ADMIN son los que gestion
   for (const rol of ROLES_DE_EMPRESA.filter((r) => r !== "GERENTE")) {
     it(`${rol}: apagarlo siendo el único activo da ULTIMO_ADMIN ⇔ puede gestionar usuarios`, () => {
       const objetivo = unico(rol);
-      const decision = decidirApagado(objetivo, [objetivo]);
+      const decision = decidirApagado(objetivo, [objetivo], personaId("p-quien-pide"));
       expect(decision.ok === false && decision.error === "ULTIMO_ADMIN").toBe(
         gestionaUsuarios(rol),
       );
@@ -78,6 +78,9 @@ describe("los roles que cuentan como admin para ULTIMO_ADMIN son los que gestion
   it("el gerente gestiona usuarios (y el dominio no deja apagarlo)", () => {
     expect(gestionaUsuarios("GERENTE")).toBe(true);
     const gerente = unico("GERENTE");
-    expect(decidirApagado(gerente, [gerente])).toEqual({ ok: false, error: "ES_EL_GERENTE" });
+    expect(decidirApagado(gerente, [gerente], personaId("p-quien-pide"))).toEqual({
+      ok: false,
+      error: "ES_EL_GERENTE",
+    });
   });
 });

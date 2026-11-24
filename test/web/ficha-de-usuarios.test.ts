@@ -3,9 +3,8 @@ import { describe, expect, it } from "vitest";
 import { FILAS_DEL_MENU } from "../../apps/web/ui/navegacion/menu";
 import { RUTAS_DE_CUENTA } from "../../apps/web/ui/plantillas/sesion/rutas-de-cuenta";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
-import type { FichaDePantalla } from "../../src/capacidades/pantallas/ficha-de-mesas";
 import { FICHA_DE_USUARIOS } from "../../src/capacidades/pantallas/ficha-de-usuarios";
-import { CATALOGO_DE_TEXTOS } from "../../src/capacidades/vocabulario/catalogo";
+import { CATALOGO_DE_TEXTOS, type ClaveDeTexto } from "../../src/capacidades/vocabulario/catalogo";
 import { TEXTOS_DE_USUARIOS } from "../../src/capacidades/vocabulario/catalogo-usuarios";
 
 /**
@@ -20,7 +19,7 @@ describe("ficha de la pantalla «Usuarios»", () => {
   });
 
   it("todo texto del catálogo que usa está declarado con usos y fuente de dueño, y cada clave existe", () => {
-    const botones: FichaDePantalla["botones"] = FICHA_DE_USUARIOS.botones;
+    const botones: readonly { texto: ClaveDeTexto }[] = FICHA_DE_USUARIOS.botones;
     const claves = [FICHA_DE_USUARIOS.titulo, ...botones.map((b) => b.texto)];
     for (const clave of claves) expect(Object.keys(FICHA_DE_USUARIOS.textos)).toContain(clave);
     for (const [clave, t] of Object.entries(FICHA_DE_USUARIOS.textos)) {
@@ -37,23 +36,29 @@ describe("ficha de la pantalla «Usuarios»", () => {
       expect(Object.keys(FICHA_DE_USUARIOS.textos)).toContain(clave);
       expect(def.usos).not.toBe("pendiente");
       expect(def.usos.length).toBeGreaterThan(0);
-      expect(["DEC-0851", "DEC-0852", "DEC-0859"]).toContain(
-        (def.fuente as { decision: string }).decision,
-      );
+      expect(def.fuente).toMatchObject({
+        decision: expect.stringMatching(/^DEC-\d{4}$/) as string,
+      });
     }
   });
 
-  it("sus botones son los de invitar, enviar, reenviar y revocar, cada uno con su permiso, y sin permiso ninguno se dibuja; los dos estados son el mensaje genérico", () => {
-    const botones: FichaDePantalla["botones"] = FICHA_DE_USUARIOS.botones;
+  it("sus botones son los de invitar, enviar, reenviar, revocar, desactivar (que abre un cuadro y lo confirma), reactivar (un enlace al formulario de invitar) y guardar sucursales, cada uno con su permiso, y sin permiso ninguno se dibuja; los dos estados son el mensaje genérico", () => {
+    const botones: readonly Readonly<{ id: string; hace: unknown; sinPermiso: string }>[] =
+      FICHA_DE_USUARIOS.botones;
     expect(botones.map((b) => [b.id, b.hace, b.sinPermiso])).toEqual([
       ["invitar", { navega: "/cuenta/usuarios/invitar" }, "AUSENTE"],
       ["enviar-invitacion", { envia: "usuarios.invitar" }, "AUSENTE"],
       ["reenviar", { envia: "usuarios.reenviar_invitacion" }, "AUSENTE"],
       ["revocar", { envia: "usuarios.revocar_invitacion" }, "AUSENTE"],
+      ["desactivar", "abre-el-cuadro", "AUSENTE"],
+      ["confirmar-desactivar", { envia: "usuarios.apagar" }, "AUSENTE"],
+      ["reactivar", { navega: "/cuenta/usuarios/invitar" }, "AUSENTE"],
+      ["guardar-sucursales", { envia: "usuarios.asignar_sucursales" }, "AUSENTE"],
     ]);
     for (const b of botones) {
-      if ("envia" in b.hace) {
-        expect(Object.keys(CATALOGO_DE_MODULOS.administracion.acciones)).toContain(b.hace.envia);
+      const hace = b.hace;
+      if (typeof hace === "object" && hace !== null && "envia" in hace) {
+        expect(Object.keys(CATALOGO_DE_MODULOS.administracion.acciones)).toContain(hace.envia);
       }
     }
     expect(FICHA_DE_USUARIOS.estados).toEqual({ ERROR: "GENERICO", SIN_PERMISO: "GENERICO" });

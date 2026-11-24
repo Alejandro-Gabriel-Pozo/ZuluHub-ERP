@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0865",
+  "fecha": "2026-11-24",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Se puede reactivar a una persona desactivada desde su ficha: es una invitación nueva con el mismo rol.",
+  "que_cambia": "El gerente y el administrador ven «Reactivar» en la ficha de quien está desactivado: abre invitar con su email y su rol fijos y sale una invitación; vuelve al aceptarla. No cambia permisos ni datos. Revertir: quitar el enlace.",
+  "donde": "decisiones-del-dueno-2026-11.md, fila del 23/11/2026 (Usuarios de la empresa; recomendación 3); usuarios-desactivar-y-reactivar-web.ts, ficha-de-usuarios.ts, invitar/page.tsx, FormularioDeInvitacion.cliente.tsx; confirmada: DDD fila del 24/11/2026"
+}

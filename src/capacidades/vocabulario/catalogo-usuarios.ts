@@ -7,11 +7,13 @@ import type { FuenteDeTexto } from "./uso-y-fuente-de-texto";
  * asientan con la fila citada. Lo que la pantalla ya podía decir con un texto existente NO tiene clave nueva (una regla, un lugar): «Desactivado»
  * (`catalogo.estado.desactivado`), «Activo» (`caja.estado.activo`), «Pendiente» (`fiscal.pantalla.config_cartel_pendiente`), «Estado»
  * (`fiscal.pantalla.listado_rotulo_estado`) y los tres roles (`rol.*.nombre`).
- * Los textos de desactivar y de sucursales son de los tramos U3 y U4: no se declaran acá hasta que haya quien los consuma.
+ * Los textos de desactivar (U3) son los dos de la confirmación; el rótulo «Sucursales» de la ficha del empleado (U4, DEC-0856) es el mismo texto que ya usa invitar.
  */
 const FUENTE_DEL_DUENO: FuenteDeTexto = { decision: "DEC-0851" };
 const FUENTE_DE_INVITAR: FuenteDeTexto = { decision: "DEC-0852" };
 const FUENTE_DEL_AVISO_DE_GOOGLE: FuenteDeTexto = { decision: "DEC-0859" };
+/** Los textos de desactivar (tramo U3): la misma fila del dueño (23/11/2026, pregunta 2: pide confirmar), asentada por DEC-0857. */
+const FUENTE_DE_DESACTIVAR: FuenteDeTexto = { decision: "DEC-0857" };
 
 const MODELO = "apps/web/ui/plantillas/usuarios/modelo-de-usuarios.ts";
 const MODELO_DE_INVITACIONES = "apps/web/ui/plantillas/usuarios/modelo-de-invitaciones.ts";
@@ -71,6 +73,19 @@ export const TEXTOS_DE_USUARIOS = {
     ],
     fuente: FUENTE_DEL_DUENO,
   },
+  // Título de la confirmación de desactivar (el email de la persona de la ficha).
+  "usuarios.desactivar.titulo": {
+    porDefecto: "¿Desactivar a {email}?",
+    marcadores: ["email"],
+    usos: [{ como: "FUNCION", archivo: MODELO, nombre: "armarLaFichaDeUsuario" }],
+    fuente: FUENTE_DE_DESACTIVAR,
+  },
+  // Detalle de la confirmación: lo que pasa al confirmar.
+  "usuarios.desactivar.detalle": {
+    porDefecto: "Se corta su acceso ahora.",
+    usos: [{ como: "FUNCION", archivo: MODELO, nombre: "armarLaFichaDeUsuario" }],
+    fuente: FUENTE_DE_DESACTIVAR,
+  },
   // El genérico que ya estaba aprobado (30/10/2026), con clave propia del módulo como los demás: no es un texto nuevo.
   "usuarios.error.accion_no_permitida": {
     porDefecto: "Esta acción no está permitida",
@@ -89,12 +104,14 @@ export const TEXTOS_DE_USUARIOS = {
     usos: [{ como: "FUNCION", archivo: MODELO, nombre: "armarLaListaDeUsuarios" }],
     fuente: FUENTE_DE_INVITAR,
   },
-  // Rótulo del grupo de casillas de sucursales (solo con el rol Empleado) y renglón de la ficha de la invitación.
+  // Rótulo del grupo de casillas de sucursales (solo con el rol Empleado), renglón de la ficha de la invitación y nombre del grupo de casillas de las sucursales de un empleado en su ficha (U4).
   "usuarios.campo.sucursales": {
     porDefecto: "Sucursales",
     usos: [
+      { como: "FUNCION", archivo: MODELO, nombre: "armarElEditorDeSucursales" },
       { como: "FUNCION", archivo: MODELO_DE_INVITACIONES, nombre: "armarElFormularioDeInvitacion" },
       { como: "FUNCION", archivo: MODELO_DE_INVITACIONES, nombre: "armarLaFichaDeInvitacion" },
+      { como: "FUNCION", archivo: MODELO, nombre: "armarElEditorDeSucursales" },
     ],
     fuente: FUENTE_DE_INVITAR,
   },
