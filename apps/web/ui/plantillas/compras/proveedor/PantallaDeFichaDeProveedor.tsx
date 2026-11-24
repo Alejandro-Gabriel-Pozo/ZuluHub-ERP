@@ -19,7 +19,7 @@ type Accion = (
 ) => Promise<ResultadoDeFichaDeProveedor>;
 
 /** Las acciones de servidor ya ligadas al proveedor (`.bind` en la página): la pantalla no conoce ids de otra cosa que lo que dibuja. */
-export type AccionesLigadasDeLaFicha = Readonly<{
+type AccionesLigadasDeLaFicha = Readonly<{
   agregarPuntoDeVenta: Accion;
   pedirPuntoDeVenta: Accion;
   agregarComprobante: Accion;

@@ -61,7 +61,7 @@ const FACTURAS_EN_LA_FICHA = 3;
 
 export const rutaDeLaFichaDelProveedor = (parteId: string): string =>
   `${RUTA_DE_COMPRAS}/proveedores/${parteId}`;
-export const rutaDeLasFacturasDelProveedor = (parteId: string): string =>
+const rutaDeLasFacturasDelProveedor = (parteId: string): string =>
   `${rutaDeLaFichaDelProveedor(parteId)}/facturas`;
 
 /** El nombre del tipo de comprobante («Factura A», «Nota de crédito B»), con el texto del catálogo. */
