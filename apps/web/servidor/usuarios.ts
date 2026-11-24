@@ -5,13 +5,11 @@ import { sucursalesDeLaEmpresa } from "../../../src/composicion/sesion-y-empresa
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import {
   asignarSucursalesDeUsuario,
-  desactivarUsuario,
   editorDeSucursalesDeUsuario,
   fichaDeInvitacion,
   fichaDeUsuario,
   invitar,
   listarUsuarios,
-  reactivarUsuario,
   reenviar,
   revocar,
   type DependenciasDeSucursalesDeUsuarioWeb,
@@ -22,6 +20,10 @@ import {
   type OpcionDeSucursalParaLaPantalla,
   type UsuarioParaLaPantalla,
 } from "../../../src/composicion/usuarios-web";
+import {
+  desactivarUsuario,
+  reactivarUsuario,
+} from "../../../src/composicion/usuarios-desactivar-y-reactivar-web";
 import {
   RUTAS_DE_CUENTA,
   rutaDeLaFichaDeInvitacion,

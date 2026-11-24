@@ -6,8 +6,8 @@ import { armarConexiones, type Conexiones } from "../../src/composicion/conexion
 import {
   desactivarUsuario,
   reactivarUsuario,
-  type DependenciasDeUsuariosWeb,
-} from "../../src/composicion/usuarios-web";
+} from "../../src/composicion/usuarios-desactivar-y-reactivar-web";
+import type { DependenciasDeUsuariosWeb } from "../../src/composicion/usuarios-web";
 import { armarWeb } from "../../src/composicion/web";
 import { personaId } from "../../src/primitivas/identificadores/marca";
 import { MARCA_PRINCIPAL_DE_PRUEBA } from "../utilidades/marcas";

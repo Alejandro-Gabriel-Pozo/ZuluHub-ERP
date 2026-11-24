@@ -2,28 +2,22 @@ import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { RolDeEmpresa } from "../capacidades/permisos/roles";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type { SucursalDeLista } from "../modulos/empresas/publico";
-import type {
-  InvitacionPendienteDeLaLista,
-  MiembroDeLista,
-  SalidaDeInvitarUsuario,
-} from "../modulos/identidad/publico";
+import type { InvitacionPendienteDeLaLista, MiembroDeLista } from "../modulos/identidad/publico";
 import type { PersonaId } from "../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
 import {
   entradaDeAsignarSucursalesDeUsuario,
-  entradaDeDesactivarUsuario,
   entradaDeFichaDeUsuario,
   entradaDeInvitacion,
   entradaDeInvitar,
-  entradaDeReactivarUsuario,
 } from "./entradas-de-usuarios";
 import { accionDeUsuarios, lecturaDeUsuarios } from "./errores-de-usuarios";
 import type { Web } from "./web";
 
 /**
  * La pantalla «Usuarios» de /cuenta: la lista de quienes tienen acceso a la empresa con sus invitaciones pendientes, la ficha de una persona (tramo U1, solo lectura), desde el tramo U2 invitar,
- * reenviar y revocar una invitación y, desde el tramo U3, desactivar a una persona.
+ * reenviar y revocar una invitación y, desde el tramo U3, desactivar y reactivar (en `usuarios-desactivar-y-reactivar-web.ts`).
  * Vive acá, y no en `apps/web`, por la misma razón que `contacto-de-sucursal-web.ts`: probarse con la base real sin levantar Next.
  *
  * Reglas que cumple (cada una con su prueba en `test/integracion/usuarios-web.test.ts`):
@@ -184,37 +178,6 @@ export function invitar(
   );
 }
 
-/**
- * Reactivar a una persona desactivada (`usuarios.ver` y `usuarios.invitar`): una INVITACIÓN NUEVA con el mismo rol (la persona vuelve al aceptarla). `crudo`: `{ personaId, sucursales }`. El email y el rol los toma el
- * servidor de la membresía de esa persona en la empresa de la sesión: el navegador no los manda (un rol distinto lo rechaza igual el caso de uso, `ROL_DISTINTO_AL_ANTERIOR`). Una persona ajena, inexistente, ya activa o el
- * gerente salen como el genérico. Repetir devuelve la misma invitación (`yaExistia`), sin segunda fila ni otro mail. Si en el medio dejó de estar desactivada, el caso de uso lo rechaza (`YA_ES_MIEMBRO`).
- */
-export function reactivarUsuario(
-  d: DependenciasDeUsuariosWeb,
-  contexto: ContextoOperativo,
-  crudo: unknown,
-): Promise<Respuesta<InvitacionEmitida>> {
-  return accionDeUsuarios(
-    d.respuesta,
-    crudo,
-    entradaDeReactivarUsuario,
-    async (entrada): Promise<Resultado<SalidaDeInvitarUsuario, unknown>> => {
-      const miembros = await d.consultas().listarMiembros(contexto);
-      if (!miembros.ok) return miembros;
-      const miembro = miembros.valor.find((m) => m.personaId === entrada.personaId);
-      if (miembro === undefined) return err("MEMBRESIA_NO_ENCONTRADA");
-      if (miembro.activo) return err("NO_ESTA_DESACTIVADA");
-      if (miembro.rol === "GERENTE") return err("ROL_NO_INVITABLE");
-      return d.casosDeUso().invitarUsuario(contexto, {
-        email: miembro.email,
-        rol: miembro.rol,
-        sucursales: miembro.rol === "OPERADOR" ? entrada.sucursales : [],
-      });
-    },
-    (salida) => ({ invitacionId: salida.invitacionId, yaExistia: salida.yaExistia }),
-  );
-}
-
 /** Lo que devuelve reenviar: la invitación vigente (la nueva, o la que ya había reemplazado a la de origen). */
 export type InvitacionReenviada = Readonly<{ invitacionId: string; yaEstabaReenviada: boolean }>;
 
@@ -251,27 +214,6 @@ export function revocar(
     entradaDeInvitacion,
     (entrada) => d.casosDeUso().revocarInvitacion(contexto, entrada),
     (salida) => ({ yaEstabaRevocada: salida.yaEstabaRevocada }),
-  );
-}
-
-/** Lo que la pantalla necesita de una desactivación: solo si ya estaba hecha (la ficha se vuelve a leer). */
-export type DesactivacionParaLaPantalla = Readonly<{ yaEstabaApagada: boolean }>;
-
-/**
- * Desactivar a una persona de la empresa (`usuarios.apagar`): corta el acceso, apaga sus sucursales y revoca las invitaciones pendientes a su email, todo en una transacción.
- * `crudo`: `{ personaId }`, el de la ficha. Una persona de otra empresa o inexistente, el gerente, uno mismo y el último administrador salen todos como el genérico, sin decir cuál fue.
- */
-export function desactivarUsuario(
-  d: DependenciasDeUsuariosWeb,
-  contexto: ContextoOperativo,
-  crudo: unknown,
-): Promise<Respuesta<DesactivacionParaLaPantalla>> {
-  return accionDeUsuarios(
-    d.respuesta,
-    crudo,
-    entradaDeDesactivarUsuario,
-    (entrada) => d.casosDeUso().apagarMembresia(contexto, { personaId: entrada.personaId }),
-    (salida) => ({ yaEstabaApagada: salida.yaEstabaApagada }),
   );
 }
 

@@ -3,11 +3,8 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import type { Respuesta } from "../../src/capacidades/experiencia/respuesta";
 import { armarConexiones, type Conexiones } from "../../src/composicion/conexiones";
-import {
-  desactivarUsuario,
-  listarUsuarios,
-  type DependenciasDeUsuariosWeb,
-} from "../../src/composicion/usuarios-web";
+import { desactivarUsuario } from "../../src/composicion/usuarios-desactivar-y-reactivar-web";
+import { listarUsuarios, type DependenciasDeUsuariosWeb } from "../../src/composicion/usuarios-web";
 import { armarWeb } from "../../src/composicion/web";
 import { personaId } from "../../src/primitivas/identificadores/marca";
 import { crearBaseAparte } from "./entorno";
