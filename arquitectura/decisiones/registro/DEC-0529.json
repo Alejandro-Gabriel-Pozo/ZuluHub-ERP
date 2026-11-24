@@ -3,8 +3,8 @@
   "fecha": "2026-11-16",
   "quien": "padre",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Textos de Consumo: Qué consume, Insumo, Cantidad, Escala con la medida, Agregar insumo, Ese insumo ya está cargado y La cantidad tiene que ser mayor que cero (de la maqueta productos.html, de Motor2).",
   "que_cambia": "Qué lee quien carga lo que consume cada opción. No tienen fila de aprobación propia; los acepta el orquestador por delegación. Revertir: quitar las claves catalogo.consumo.* y los dos errores de catalogo-catalogo.ts.",
-  "donde": "src/capacidades/vocabulario/catalogo-catalogo.ts; productos.html decisiones 138 y 139; delegación del dueño, DDD filas 173 y 174"
+  "donde": "src/capacidades/vocabulario/catalogo-catalogo.ts; productos.html decisiones 138 y 139; delegación del dueño, DDD filas 173 y 174; confirmada: DDD fila del 23/11/2026"
 }
