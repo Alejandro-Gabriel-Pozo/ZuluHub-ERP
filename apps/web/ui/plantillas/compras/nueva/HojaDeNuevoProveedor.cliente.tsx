@@ -31,7 +31,7 @@ export type PropsDeHojaDeNuevoProveedor = Readonly<{
   abierta: boolean;
   alCerrar: () => void;
   /** Quedó guardado: la compra lo elige y la hoja se cierra. El nombre es el que se escribió. */
-  alAgregar: (proveedor: Readonly<{ id: string; nombre: string }>) => void;
+  alAgregar: (proveedor: Readonly<{ id: string; nombre: string; tieneCuit: boolean }>) => void;
   accion: AgregarProveedor;
   textos: TextosDeNuevaCompra;
 }>;
@@ -82,7 +82,8 @@ export function HojaDeNuevoProveedor({
         clave.current = null;
         setNombre("");
         setHayParecidos(false);
-        alAgregar(agregado);
+        // Un proveedor recién agregado no tiene CUIT: la primera factura lo pide.
+        alAgregar({ ...agregado, tieneCuit: false });
       }
     } catch {
       // Sin respuesta: no se sabe si quedó guardado. La clave se conserva: otro toque repite el MISMO alta y el servidor devuelve el mismo proveedor.

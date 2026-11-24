@@ -10,6 +10,7 @@ import { Selector } from "../../../componentes/Selector";
 import { ErrorDelDetalle } from "../../../patrones/ErrorDelDetalle";
 import { Texto } from "../../../primitivas/Texto";
 import { rutaDeLaCompra } from "../rutas-de-compras";
+import { BloqueDeFactura } from "./BloqueDeFactura.cliente";
 import { HojaDeNuevoProveedor, type AgregarProveedor } from "./HojaDeNuevoProveedor.cliente";
 import {
   armarElPedido,
@@ -28,6 +29,13 @@ import {
   type RemitoEscrito,
   type RenglonEscrito,
 } from "./modelo-de-nueva-compra";
+import {
+  FACTURA_VACIA,
+  facturaParaCotizar,
+  facturaParaElServidor,
+  type FacturaCotizada,
+  type FacturaEscrita,
+} from "./modelo-de-factura";
 import { TarjetaDeRenglon } from "./TarjetaDeRenglon.cliente";
 import { anuncioDeResultados, type TextosDeNuevaCompra } from "./textos-de-nueva-compra";
 import { useEnvioDeLaCompra, type RegistrarLaCompra } from "./useEnvioDeLaCompra.cliente";
@@ -40,8 +48,12 @@ export type PropsDePantallaDeNuevaCompra = Readonly<{
   buscarProductos: (texto: string) => Promise<Respuesta<ProductosParaElegir>>;
   buscarProveedores: (texto: string) => Promise<Respuesta<readonly ProveedorParaElegir[]>>;
   cotizar: (renglones: unknown) => Promise<Respuesta<CompraCotizada>>;
+  /** Las cuentas de la factura que hace el servidor con lo escrito (solo «Con factura»). */
+  cotizarFactura?: (factura: unknown) => Promise<Respuesta<FacturaCotizada>>;
   registrar: RegistrarLaCompra;
   agregarProveedor: AgregarProveedor;
+  /** La empresa compra «Con factura»: lo dice el servidor (`nivelParaComprar`); la pantalla dibuja el bloque de la factura y no guarda sin ella. */
+  conFactura?: boolean;
   /** La persona puede dar de alta un proveedor (`partes.crear`): sin permiso no hay botón. Lo lee el servidor; el alta vuelve a pedir el permiso. */
   puedeAgregarProveedor: boolean;
   /** Los depósitos de uso normal y activos de la sucursal, SOLO si hay más de uno (con uno, el servidor lo toma). */
@@ -51,6 +63,10 @@ export type PropsDePantallaDeNuevaCompra = Readonly<{
   esperaEntreVerificacionesMs?: number | undefined;
   esperaDeLaLecturaMs?: number | undefined;
 }>;
+
+/** Sin cuentas de factura (la empresa compra «Sin factura»): nunca se llama, porque no hay nada que cotizar. */
+const sinCotizarFactura = (): Promise<Respuesta<FacturaCotizada>> =>
+  Promise.reject(new Error("la factura no se cotiza en «Sin factura»"));
 
 const irAPorDefecto = (ruta: string): void => {
   window.location.assign(ruta);
@@ -67,8 +83,10 @@ export function PantallaDeNuevaCompra({
   buscarProductos,
   buscarProveedores,
   cotizar,
+  cotizarFactura,
   registrar,
   agregarProveedor,
+  conFactura = false,
   puedeAgregarProveedor,
   depositos,
   irA = irAPorDefecto,
@@ -82,6 +100,7 @@ export function PantallaDeNuevaCompra({
   const [renglones, setRenglones] = useState<readonly RenglonEscrito[]>([]);
   const [remito, setRemito] = useState<RemitoEscrito>(REMITO_VACIO);
   const [depositoId, setDepositoId] = useState("");
+  const [factura, setFactura] = useState<FacturaEscrita>(FACTURA_VACIA);
   const { envio, comprar, inesperado } = useEnvioDeLaCompra({
     accion: registrar,
     diccionario: {},
@@ -104,6 +123,20 @@ export function PantallaDeNuevaCompra({
     cotizar,
     esperaDeLaLecturaMs,
   );
+
+  const cotizados = new Map((cotizacion.dato?.renglones ?? []).map((r) => [r.productoId, r]));
+  const paraCotizarLaFactura = conFactura
+    ? facturaParaCotizar(factura, renglones, cotizados)
+    : null;
+  const cuentasDeLaFactura = useLecturaDemorada(
+    paraCotizarLaFactura,
+    cotizarFactura ?? sinCotizarFactura,
+    esperaDeLaLecturaMs,
+  );
+  const pideCuit = conFactura && proveedor !== null && !proveedor.tieneCuit;
+  const facturaParaGuardar = conFactura
+    ? facturaParaElServidor(factura, renglones, cotizados, pideCuit)
+    : null;
 
   const { estado } = envio;
   const hecho = estado.tipo === "hecho";
@@ -135,18 +168,26 @@ export function PantallaDeNuevaCompra({
     [productos.dato, renglones],
   );
 
-  const cotizados = new Map((cotizacion.dato?.renglones ?? []).map((r) => [r.productoId, r]));
   const total = totalDelPie(renglones, cotizacion.dato, textos.sinPrecio);
   const hayDepositoAElegir = depositos.length > 1;
   const listo =
     proveedor !== null &&
     renglones.length > 0 &&
     renglones.every((r) => r.cantidad !== "") &&
-    (!hayDepositoAElegir || depositoId !== "");
+    (!hayDepositoAElegir || depositoId !== "") &&
+    (!conFactura || facturaParaGuardar !== null);
 
   const tocarComprar = () => {
     if (!editable || !listo) return;
-    comprar(armarElPedido(proveedor.id, hayDepositoAElegir ? depositoId : null, remito, renglones));
+    comprar(
+      armarElPedido(
+        proveedor.id,
+        hayDepositoAElegir ? depositoId : null,
+        remito,
+        renglones,
+        conFactura ? facturaParaGuardar : undefined,
+      ),
+    );
   };
 
   const agregarElProducto = (productoId: string) => {
@@ -260,6 +301,22 @@ export function PantallaDeNuevaCompra({
           }}
         />
       </fieldset>
+
+      {conFactura ? (
+        <BloqueDeFactura
+          factura={factura}
+          alCambiar={(nueva) => {
+            setFactura(nueva);
+            editado();
+          }}
+          renglones={renglones}
+          cotizados={cotizados}
+          cuentas={cuentasDeLaFactura.dato}
+          pideCuit={pideCuit}
+          textos={textos}
+          deshabilitado={!editable}
+        />
+      ) : null}
 
       {hayDepositoAElegir ? (
         <Selector

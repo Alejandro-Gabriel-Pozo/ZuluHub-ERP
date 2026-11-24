@@ -4,6 +4,7 @@ import { ok } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
 import {
   entradaDeCotizarCompra,
+  entradaDeCotizarFactura,
   entradaDeProductosParaComprar,
   entradaDeRegistrarCompra,
 } from "./entradas-de-comprar";
@@ -21,7 +22,7 @@ import type { Web } from "./web";
 export type DependenciasDeComprarWeb = Readonly<{
   consultas: () => Pick<
     ReturnType<Web["consultasDeCompras"]>,
-    "productosParaComprar" | "cotizarCompra"
+    "productosParaComprar" | "cotizarCompra" | "nivelParaComprar" | "cotizarFactura"
   >;
   respuesta: DependenciasDeRespuesta;
 }>;
@@ -121,6 +122,69 @@ export function cotizarLaCompra(
         costoPorUnidadDeStock: r.costoPorUnidadDeStock,
         dePesoVariable: r.dePesoVariable,
       })),
+    }),
+  );
+}
+
+export type NivelParaComprarEnLaPantalla = Readonly<{ conFactura: boolean }>;
+
+/** Si la empresa compra «Con factura» (para dibujar el bloque de la factura): SOLO ese dato. Es una LECTURA: no escribe, no crea la fila de la configuración y no toca `compras.configurar`. */
+export function leerElNivelParaComprar(
+  d: DependenciasDeComprarWeb,
+  contexto: ContextoOperativo,
+): Promise<Respuesta<NivelParaComprarEnLaPantalla>> {
+  return accionDeCompras(
+    d.respuesta,
+    {},
+    () => ok({}),
+    () => d.consultas().nivelParaComprar(contexto),
+    (nivel) => ({ conFactura: nivel.conFactura }),
+  );
+}
+
+export type FacturaCotizadaParaLaPantalla = Readonly<{
+  /** El neto y el IVA de cada línea, en el orden en que vinieron (texto decimal de 2 decimales). */
+  lineas: readonly Readonly<{ netoDeLinea: string; ivaDeLinea: string }>[];
+  /** Neto e IVA por alícuota (la lista de alícuotas, solo las que tienen importe). */
+  importesPorAlicuota: readonly Readonly<{ alicuota: string; neto: string; iva: string }>[];
+  netoGravado: string;
+  iva: string;
+  tributosTotal: string;
+  /** La suma que calcula el servidor. */
+  totalCalculado: string;
+  /** El total que dice el papel, tal como se escribió. */
+  totalSegunFactura: string;
+  /** `false`: no coincide (a lo sumo un centavo de diferencia es «coincide»); avisa y la factura se carga igual. */
+  totalCoincide: boolean;
+}>;
+
+/**
+ * Las cuentas de la factura mientras se carga y ANTES de guardarla: la misma función del dominio que el alta (`calcularComprobante`); la pantalla solo muestra (nunca suma ni redondea). Es una LECTURA: no escribe, no audita,
+ * no bloquea. Pide `comprobantes_de_proveedor.registrar` dentro de su transacción.
+ */
+export function cotizarLaFactura(
+  d: DependenciasDeComprarWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<FacturaCotizadaParaLaPantalla>> {
+  return accionDeCompras(
+    d.respuesta,
+    crudo,
+    entradaDeCotizarFactura,
+    (entrada) => d.consultas().cotizarFactura(contexto, entrada),
+    (c) => ({
+      lineas: c.lineas.map((l) => ({ netoDeLinea: l.netoDeLinea, ivaDeLinea: l.ivaDeLinea })),
+      importesPorAlicuota: c.importesPorAlicuota.map((i) => ({
+        alicuota: i.alicuota,
+        neto: i.neto,
+        iva: i.iva,
+      })),
+      netoGravado: c.netoGravado,
+      iva: c.iva,
+      tributosTotal: c.tributosTotal,
+      totalCalculado: c.totalCalculado,
+      totalSegunFactura: c.totalSegunFactura,
+      totalCoincide: c.totalCoincide,
     }),
   );
 }

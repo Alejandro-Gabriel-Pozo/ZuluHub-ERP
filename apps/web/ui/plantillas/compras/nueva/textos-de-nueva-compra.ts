@@ -1,4 +1,10 @@
 import { texto } from "../../../../../../src/capacidades/vocabulario/vocabulario";
+import {
+  ALICUOTAS_PARA_ELEGIR,
+  CLAVE_DE_TEXTO_DE_LA_ALICUOTA,
+  CLAVE_DE_TEXTO_DEL_TIPO,
+  TIPOS_DE_FACTURA,
+} from "./modelo-de-factura";
 
 /**
  * Los textos de «Nueva compra» ya resueltos (Compras PR 6b). Acá no se arma ningún texto nuevo: se eligen los aprobados del catálogo (cada uno con su fuente en su catálogo; los de compras salen de
@@ -35,6 +41,26 @@ export type TextosDeNuevaCompra = Readonly<{
   enviando: string;
   reintentar: string;
   sinResultados: string;
+  /** La factura («Con factura»). */
+  comprobante: string;
+  tipo: string;
+  fechaDeLaFactura: string;
+  vencimientoDePago: string;
+  cantidadFacturada: string;
+  precioNeto: string;
+  iva: string;
+  netoDeLaLinea: string;
+  sinIvaDiscriminado: string;
+  importes: string;
+  percepciones: string;
+  totalCalculado: string;
+  totalSegunLaFactura: string;
+  totalCoincide: string;
+  totalNoCoincide: string;
+  cuit: string;
+  /** El texto de cada tipo de factura y de cada alícuota, por su valor. Son datos y no funciones: los textos viajan de una página de servidor a un componente de cliente. */
+  tiposDeFactura: Readonly<Record<string, string>>;
+  alicuotas: Readonly<Record<string, string>>;
 }>;
 
 export function textosDeNuevaCompra(): TextosDeNuevaCompra {
@@ -69,6 +95,28 @@ export function textosDeNuevaCompra(): TextosDeNuevaCompra {
     enviando: texto({}, "conexion.enviando"),
     reintentar: texto({}, "estado.reintentar"),
     sinResultados: texto({}, "catalogo.lista.sin_resultados"),
+    comprobante: texto({}, "compras.factura.comprobante"),
+    tipo: texto({}, "compras.factura.tipo"),
+    fechaDeLaFactura: texto({}, "compras.factura.fecha_de_la_factura"),
+    vencimientoDePago: texto({}, "compras.factura.vencimiento_de_pago"),
+    cantidadFacturada: texto({}, "compras.factura.cantidad_facturada"),
+    precioNeto: texto({}, "compras.factura.precio_neto"),
+    iva: texto({}, "compras.factura.iva"),
+    netoDeLaLinea: texto({}, "compras.factura.neto_de_la_linea"),
+    sinIvaDiscriminado: texto({}, "compras.factura.sin_iva_discriminado"),
+    importes: texto({}, "compras.factura.importes"),
+    percepciones: texto({}, "compras.factura.percepciones"),
+    totalCalculado: texto({}, "compras.factura.total_calculado"),
+    totalSegunLaFactura: texto({}, "compras.factura.total_segun_la_factura"),
+    totalCoincide: texto({}, "compras.error.total_coincide"),
+    totalNoCoincide: texto({}, "compras.error.total_no_coincide"),
+    cuit: texto({}, "compras.ficha.cuit"),
+    tiposDeFactura: Object.fromEntries(
+      TIPOS_DE_FACTURA.map((t) => [t, texto({}, CLAVE_DE_TEXTO_DEL_TIPO[t])]),
+    ),
+    alicuotas: Object.fromEntries(
+      ALICUOTAS_PARA_ELEGIR.map((a) => [a, texto({}, CLAVE_DE_TEXTO_DE_LA_ALICUOTA[a])]),
+    ),
   };
 }
 

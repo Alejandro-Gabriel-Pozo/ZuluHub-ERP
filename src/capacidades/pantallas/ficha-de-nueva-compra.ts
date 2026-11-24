@@ -17,6 +17,15 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  *  6. «Agregar producto» es un buscador (la maqueta lo dibuja como un desplegable con todos los productos); mismo texto aprobado. Sin «Agregar producto nuevo»: para un producto nuevo se usa el alta de Catálogo.
  *  7. Cada renglón lleva «Quitar» (la maqueta no lo dibuja): reusa el texto ya aprobado de ventas y catálogo; respuesta del orquestador por delegación de textos (DDD:173), 24/11/2026.
  *  8. Con más de un depósito de uso normal en la sucursal aparece un selector rotulado «Depósito» (singular de «Depósitos», aceptado por delegación el 24/11/2026; DEC-0864).
+ *  Compras PR 7, la factura («Con factura», DEC-0895; orden del orquestador del 24/11/2026; el dueño las ve en el PR):
+ *  9. La factura se carga en un BLOQUE de esta misma pantalla, solo si la empresa compra «Con factura» (lo dice `nivelParaComprar`), y no en una pantalla aparte desde una compra ya recibida: ese es el flujo de recepción
+ *     separada (N3, fase 5 pausada). Un solo envío idempotente para la compra y la factura; sin factura no se guarda.
+ * 10. Cada línea de la factura corresponde a un renglón de la compra y va en la unidad base; cantidad y precio neto se precargan del renglón y se ajustan. El «Precio neto» admite hasta 4 decimales (los de la cantidad;
+ *     el dominio acepta 6): SUPUESTO, revertir es una regla de campo.
+ * 11. Sin «Condición frente al IVA» del proveedor nuevo (la maqueta la pide junto al CUIT): solo el CUIT, que el brief PR-7 declara; sin importes por alícuota («Neto 21 %», «IVA 21 %»: sin texto aprobado) y sin el aviso
+ *     de la letra esperada en vivo («Este proveedor emite»): ese aviso lo sabe el servidor al guardar. Interfaz sobria.
+ * 12. «Exento» y «No gravado» son dos opciones (textos ya aprobados) y no una sola «Exento o no gravado» de la maqueta: el dominio las distingue (alícuotas EXENTO y NO_GRAVADO) y una sola opción no sabría cuál guardar.
+ * 13. «Factura A», «Factura B» y «Factura C» (el selector «Tipo») salen del arreglo `TIPOS` de la maqueta y NO figuran en sus «Textos aprobados»: quedan SIN APROBAR hasta que el dueño los acepte (DEC-0896).
  */
 
 type FuenteDeTexto = Readonly<{ decidio: string; donde: string }>;
@@ -46,6 +55,12 @@ const DE_LA_MAQUETA: FuenteDeTexto = {
   donde:
     "Pedernal-docs 10-ux-ui, maqueta compra.html (estados nueva, como, remito, prov-nuevo, prov-repetido, sinconexion); 11-especificaciones/compras-siguientes-tramos-2026-11-23.md §4; brief PR-6 de Compras",
 };
+const SIN_APROBAR: FuenteDeTexto = {
+  decidio:
+    "SIN APROBAR por el dueño: rótulos del arreglo TIPOS de la maqueta compra.html, que no figuran en sus «Textos aprobados» (término fiscal; DEC-0896); el orquestador los acepta para construir y los lleva al dueño",
+  donde:
+    "Pedernal-docs 10-ux-ui, maqueta compra.html (arreglo TIPOS del estado factura); brief PR-7-factura-en-la-compra.md de Compras",
+};
 const USO = "apps/web/ui/plantillas/compras/nueva/";
 
 export const FICHA_DE_NUEVA_COMPRA = {
@@ -58,6 +73,8 @@ export const FICHA_DE_NUEVA_COMPRA = {
     `${USO}TarjetaDeRenglon.cliente.tsx`,
     `${USO}HojaDeNuevoProveedor.cliente.tsx`,
     `${USO}modelo-de-nueva-compra.ts`,
+    `${USO}modelo-de-factura.ts`,
+    `${USO}BloqueDeFactura.cliente.tsx`,
     `${USO}textos-de-nueva-compra.ts`,
     `${USO}useEnvioDeLaCompra.cliente.tsx`,
     `${USO}useLecturaDemorada.ts`,
@@ -106,6 +123,80 @@ export const FICHA_DE_NUEVA_COMPRA = {
     VERIFICANDO: "conexion.verificando",
   },
   textos: {
+    "compras.factura.comprobante": {
+      usos: ["título del bloque de la factura"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.factura.tipo": { usos: ["rótulo del tipo de factura"], fuente: DE_LA_MAQUETA },
+    "compras.factura.fecha_de_la_factura": {
+      usos: ["rótulo de la fecha de la factura"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.factura.vencimiento_de_pago": {
+      usos: ["rótulo del vencimiento de pago"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.factura.cantidad_facturada": {
+      usos: ["rótulo de la cantidad de cada línea de la factura"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.factura.precio_neto": {
+      usos: ["rótulo del precio neto de cada línea"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.factura.iva": {
+      usos: ["rótulo de la alícuota de cada línea de una factura A"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.factura.neto_de_la_linea": {
+      usos: ["neto de cada línea, calculado por el servidor"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.factura.sin_iva_discriminado": {
+      usos: ["línea de una factura B o C"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.factura.percepciones": { usos: ["rótulo de las percepciones"], fuente: DE_LA_MAQUETA },
+    "compras.factura.total_calculado": {
+      usos: ["total que calculó el servidor"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.factura.total_segun_la_factura": {
+      usos: ["total que dice el papel"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.error.total_coincide": { usos: ["aviso: el total coincide"], fuente: DE_LA_MAQUETA },
+    "compras.error.total_no_coincide": {
+      usos: ["aviso: el total no coincide, se carga igual"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.ficha.cuit": {
+      usos: ["rótulo del CUIT en la primera factura de un proveedor sin CUIT"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "catalogo.alicuota.21": { usos: ["opción de alícuota 21 %"], fuente: DE_LA_MAQUETA },
+    "catalogo.alicuota.10_5": { usos: ["opción de alícuota 10,5 %"], fuente: DE_LA_MAQUETA },
+    "catalogo.alicuota.27": { usos: ["opción de alícuota 27 %"], fuente: DE_LA_MAQUETA },
+    "fiscal.pantalla.anular_alicuota_exento": {
+      usos: ["opción de alícuota Exento"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "fiscal.pantalla.anular_alicuota_no_gravado": {
+      usos: ["opción de alícuota No gravado"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.factura.tipo_factura_a": {
+      usos: ["opción «Factura A» del tipo de factura"],
+      fuente: SIN_APROBAR,
+    },
+    "compras.factura.tipo_factura_b": {
+      usos: ["opción «Factura B» del tipo de factura"],
+      fuente: SIN_APROBAR,
+    },
+    "compras.factura.tipo_factura_c": {
+      usos: ["opción «Factura C» del tipo de factura"],
+      fuente: SIN_APROBAR,
+    },
     "compras.compra.nueva_compra": {
       usos: ["título de la pantalla y estado sin productos"],
       fuente: DE_LA_MAQUETA,

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0896",
+  "fecha": "2026-11-24",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Compras PR 7: los rótulos «Factura A», «Factura B» y «Factura C» del selector de tipo salen de compra.html pero no figuran en sus textos aprobados.",
+  "que_cambia": "Quedan marcados sin aprobar hasta que el dueño los acepte. Revertir: cambiar el texto de las tres claves compras.factura.tipo_factura en catalogo-compras.ts.",
+  "donde": "Orden del orquestador del 24/11/2026 (respuesta B); compra.html arreglo TIPOS; catalogo-compras.ts, textos-de-nueva-compra.ts"
+}

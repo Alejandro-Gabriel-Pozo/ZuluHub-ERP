@@ -49,6 +49,17 @@ const DE_PAGAR_UNA_FACTURA = (para: string): Proposito => ({
     "Pedernal-docs, brief `PR-8-pago-de-una-factura.md` de Compras (rama de planificación de la Ola 1) y maqueta `compra-pago.html` (aceptada por delegación, DDD:187 y 188); quién: gerente y administrador (comprobantes_de_proveedor.pagar y anular_pago); el efectivo siempre sale de una caja abierta (dueño, 16/11/2026, 3A)",
 });
 
+const BLOQUE_DE_FACTURA = "apps/web/ui/plantillas/compras/nueva/BloqueDeFactura.cliente.tsx";
+const REGISTRAR_COMPRA_CON_FACTURA = [
+  "recepciones.registrar",
+  "comprobantes_de_proveedor.registrar",
+] as const;
+const DE_LA_FACTURA = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs, brief `PR-7-factura-en-la-compra.md` de Compras (rama de planificación de la Ola 1) y maqueta `compra.html` (estados `factura` y `factura-total`); el bloque va dentro de «Nueva compra» (respuesta del orquestador, 24/11/2026); quién: los tres roles (recepciones.registrar y comprobantes_de_proveedor.registrar)",
+});
+
 const HOJA_DE_LA_FICHA = "apps/web/ui/plantillas/compras/proveedor/HojaDeCambioDeFicha.cliente.tsx";
 const EDITAR_O_PEDIR_FICHA = ["proveedores.editar_ficha", "proveedores.pedir_ficha"] as const;
 const DE_LA_FICHA_DEL_PROVEEDOR = (para: string): Proposito => ({
@@ -126,6 +137,117 @@ export const DATOS_DE_COMPRAS = {
     ],
     consumidores: [FORMULARIO_DE_PAGO],
     ponerPor: PAGAR_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "tipo-de-comprobante-de-compra": {
+    ficha: "src/modulos/compras/dominio/comprobante.ts",
+    propositos: [
+      DE_LA_FACTURA(
+        "Tipo de la factura del proveedor (A, B o C): de la lista cerrada de comprobantes; la nota de crédito y la de débito no se cargan acá.",
+      ),
+    ],
+    consumidores: [BLOQUE_DE_FACTURA],
+    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "punto-de-venta-de-factura": {
+    ficha: "src/modulos/compras/dominio/comprobante.ts",
+    propositos: [
+      DE_LA_FACTURA(
+        "Punto de venta impreso en la factura; tiene que estar declarado en la ficha del proveedor (lo valida el servidor).",
+      ),
+    ],
+    consumidores: [BLOQUE_DE_FACTURA],
+    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "numero-de-factura": {
+    ficha: "src/modulos/compras/dominio/comprobante.ts",
+    propositos: [
+      DE_LA_FACTURA(
+        "Número impreso en la factura; la misma factura (proveedor, tipo, punto de venta y número) no se carga dos veces.",
+      ),
+    ],
+    consumidores: [BLOQUE_DE_FACTURA],
+    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "fecha-de-factura": {
+    ficha: "src/primitivas/tiempo/fecha-civil.ts",
+    propositos: [DE_LA_FACTURA("Fecha impresa en la factura.")],
+    consumidores: [BLOQUE_DE_FACTURA],
+    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "vencimiento-de-pago": {
+    ficha: "src/primitivas/tiempo/fecha-civil.ts",
+    propositos: [DE_LA_FACTURA("Fecha de vencimiento de pago de la factura (opcional).")],
+    consumidores: [BLOQUE_DE_FACTURA],
+    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "cantidad-facturada-de-linea": {
+    ficha: "src/modulos/compras/dominio/decimal.ts",
+    propositos: [
+      DE_LA_FACTURA(
+        "Cantidad facturada de cada línea, en la unidad base del producto (se precarga con la del renglón).",
+      ),
+    ],
+    consumidores: [BLOQUE_DE_FACTURA],
+    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "precio-neto-de-linea": {
+    ficha: "src/modulos/compras/dominio/decimal.ts",
+    propositos: [
+      DE_LA_FACTURA(
+        "Precio neto de cada línea, por la unidad base del producto, sin IVA (se precarga con el del renglón si se paga por la unidad base).",
+      ),
+    ],
+    consumidores: [BLOQUE_DE_FACTURA],
+    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "alicuota-de-linea": {
+    ficha: "src/modulos/compras/dominio/comprobante.ts",
+    propositos: [
+      DE_LA_FACTURA("Alícuota de IVA de cada línea de una factura A (lista cerrada del dominio)."),
+    ],
+    consumidores: [BLOQUE_DE_FACTURA],
+    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  percepciones: {
+    ficha: "src/modulos/compras/dominio/factura.ts",
+    propositos: [
+      DE_LA_FACTURA(
+        "Importe de percepciones de la factura (opcional; se guarda como un tributo sin clasificar).",
+      ),
+    ],
+    consumidores: [BLOQUE_DE_FACTURA],
+    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "total-segun-la-factura": {
+    ficha: "src/modulos/compras/dominio/comprobante.ts",
+    propositos: [
+      DE_LA_FACTURA(
+        "Total que dice el papel de la factura; si no coincide con la suma del servidor avisa y se carga igual.",
+      ),
+    ],
+    consumidores: [BLOQUE_DE_FACTURA],
+    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "cuit-de-proveedor-nuevo": {
+    ficha: "src/primitivas/identificacion-fiscal/cuit.ts",
+    propositos: [
+      DE_LA_FACTURA(
+        "CUIT del proveedor, solo en su primera factura (sin CUIT en su ficha): queda guardado en la ficha del proveedor.",
+      ),
+    ],
+    consumidores: [BLOQUE_DE_FACTURA],
+    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
     requiere: REQUIERE_COMPRAS,
   },
   "numero-de-punto-de-venta": {

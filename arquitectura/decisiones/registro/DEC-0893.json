@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0893",
+  "fecha": "2026-11-24",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Compras PR 7: una lectura mínima, nivelParaComprar, dice a quien carga compras si la empresa compra «Con factura» (solo ese dato).",
+  "que_cambia": "Quien opera puede saber si «Nueva compra» pide la factura sin poder ver ni cambiar la configuración. Reusa el permiso recepciones.registrar; no crea ni mueve permisos. Revertir: sacar la lectura y mostrar siempre el bloque o nunca.",
+  "donde": "Orden del orquestador del 24/11/2026 (opción A de la pregunta 4); lectura-para-comprar.ts, consultas-para-comprar.ts, declaraciones.ts; compras-factura-para-comprar-web.test.ts"
+}

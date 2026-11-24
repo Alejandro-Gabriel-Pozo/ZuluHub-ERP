@@ -144,6 +144,45 @@ export type FacturaWebDeRegistrarCompra = Readonly<{
   condicionIva: string | null;
 }>;
 
+/**
+ * La frontera de «cotizar la factura» (las cuentas antes de guardar; Compras PR 7): solo lo que entra en la cuenta (el tipo, cada línea con su cantidad, su precio neto y su alícuota, las percepciones y el total según la factura),
+ * con las mismas formas y listas que la factura de «Comprar y recibir». Todo como TEXTO decimal. Lo que la cuenta rechaza lo dice el servidor con el mismo error del alta.
+ */
+const formaDeCotizarFactura = z.strictObject({
+  tipo: z.enum(TIPOS_DE_COMPROBANTE_DE_PROVEEDOR),
+  lineas: z.array(formaDeLineaDeFactura.omit({ renglon: true })).min(1),
+  percepciones: decimal.nullish(),
+  totalSegunFactura: decimal,
+});
+
+export type EntradaWebDeCotizarFactura = Readonly<{
+  tipo: (typeof TIPOS_DE_COMPROBANTE_DE_PROVEEDOR)[number];
+  lineas: readonly Readonly<{
+    cantidadFacturada: string;
+    precioNeto: string;
+    alicuota: string | null;
+  }>[];
+  percepciones: string | null;
+  totalSegunFactura: string;
+}>;
+
+export function entradaDeCotizarFactura(
+  crudo: unknown,
+): Resultado<EntradaWebDeCotizarFactura, ErrorDeEntrada> {
+  const forma = leer(formaDeCotizarFactura, crudo);
+  if (!forma.ok) return forma;
+  return ok({
+    tipo: forma.valor.tipo,
+    lineas: forma.valor.lineas.map((l) => ({
+      cantidadFacturada: l.cantidadFacturada,
+      precioNeto: l.precioNeto,
+      alicuota: l.alicuota ?? null,
+    })),
+    percepciones: enBlancoEsNada(forma.valor.percepciones),
+    totalSegunFactura: forma.valor.totalSegunFactura,
+  });
+}
+
 const formaDeRegistrar = z.object({
   clave: identificador,
   proveedorId: identificador,

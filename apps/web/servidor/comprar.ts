@@ -3,8 +3,11 @@ import { errorDeCodigo, type Respuesta } from "../../../src/capacidades/experien
 import {
   buscarLosProductosParaComprar,
   cotizarLaCompra,
+  cotizarLaFactura,
+  leerElNivelParaComprar,
   registrarLaCompra,
   type CompraCotizadaParaLaPantalla,
+  type FacturaCotizadaParaLaPantalla,
   type CompraRegistradaParaLaPantalla,
   type DependenciasDeComprarWeb,
   type DependenciasDeRegistrarCompraWeb,
@@ -46,6 +49,13 @@ export function cotizarLaCompraDelFormulario(
   return conLaEmpresa((contexto) => cotizarLaCompra(dependencias, contexto, { renglones }));
 }
 
+/** Las cuentas de la factura que se está cargando, antes de guardar: la misma función del dominio que el alta. No escribe; se vuelve a validar en la composición. */
+export function cotizarLaFacturaDelFormulario(
+  factura: unknown,
+): Promise<Respuesta<FacturaCotizadaParaLaPantalla>> {
+  return conLaEmpresa((contexto) => cotizarLaFactura(dependencias, contexto, factura));
+}
+
 const dependenciasDeRegistrar: DependenciasDeRegistrarCompraWeb = {
   casosDeUso: web.casosDeUsoDeCompras,
   respuesta: dependenciasDeSesion.respuesta,
@@ -69,10 +79,16 @@ export function registrarLaCompraDelFormulario(
 }
 
 /** Un proveedor de la lista de «Nueva compra»: solo el id y el nombre. */
-export type ProveedorParaElegir = Readonly<{ id: string; nombre: string }>;
+export type ProveedorParaElegir = Readonly<{
+  id: string;
+  nombre: string;
+  /** Si ya tiene su CUIT: sin él, la primera factura lo pide en la misma pantalla (y queda guardado en su ficha). */
+  tieneCuit: boolean;
+}>;
 
 export type {
   CompraCotizadaParaLaPantalla,
+  FacturaCotizadaParaLaPantalla,
   CompraRegistradaParaLaPantalla,
   ProductosParaComprarEnLaPantalla,
   ResultadoDeGuardar,
@@ -86,7 +102,9 @@ export async function buscarProveedoresParaComprar(
   if (!r.ok) return r;
   return {
     ok: true,
-    dato: r.dato.partes.filter((p) => p.activa).map((p) => ({ id: p.id, nombre: p.nombre })),
+    dato: r.dato.partes
+      .filter((p) => p.activa)
+      .map((p) => ({ id: p.id, nombre: p.nombre, tieneCuit: p.documento?.tipo === "CUIT" })),
   };
 }
 
@@ -105,6 +123,8 @@ export type LoDeNuevaCompra = Readonly<{
   /** Los depósitos de uso normal y activos de la sucursal, SOLO si hay más de uno (con uno, la compra lo toma sola; con ninguno o sin poder leerlos, no se ofrece elegir). */
   depositos: readonly Readonly<{ id: string; nombre: string }>[];
   puedeAgregarProveedor: boolean;
+  /** La empresa compra «Con factura»: la pantalla dibuja el bloque de la factura. Lo dice el servidor (`nivelParaComprar`); la pantalla no lo decide. */
+  conFactura: boolean;
 }>;
 
 /**
@@ -115,6 +135,8 @@ export async function cargarLoDeNuevaCompra(
   contexto: ContextoOperativo,
 ): Promise<Respuesta<LoDeNuevaCompra>> {
   if (!(await puedeLaAccion(contexto, "recepciones.registrar"))) return SIN_SUCURSAL;
+  const nivel = await leerElNivelParaComprar(dependencias, contexto);
+  if (!nivel.ok) return nivel;
   const puedeAgregarProveedor = await puedeLaAccion(contexto, "partes.crear");
   const lista = await cargarLosDepositos(contexto);
   const normales = lista.ok
@@ -124,6 +146,10 @@ export async function cargarLoDeNuevaCompra(
     : [];
   return {
     ok: true,
-    dato: { depositos: normales.length > 1 ? normales : [], puedeAgregarProveedor },
+    dato: {
+      depositos: normales.length > 1 ? normales : [],
+      puedeAgregarProveedor,
+      conFactura: nivel.dato.conFactura,
+    },
   };
 }
