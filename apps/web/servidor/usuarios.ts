@@ -11,10 +11,12 @@ import {
   fichaDeUsuario,
   invitar,
   listarUsuarios,
+  reactivarUsuario,
   reenviar,
   revocar,
   type DependenciasDeSucursalesDeUsuarioWeb,
   type DependenciasDeUsuariosWeb,
+  type InvitacionEmitida,
   type InvitacionParaLaFicha,
   type ListaDeUsuariosParaLaPantalla,
   type OpcionDeSucursalParaLaPantalla,
@@ -102,6 +104,11 @@ export async function invitarAUnUsuario(datos: FormData): Promise<ResultadoDeInv
       sucursales: textosDe(datos, "sucursales"),
     }),
   );
+  return aResultadoDeInvitar(respuesta);
+}
+
+/** De la respuesta de invitar o de reactivar a lo que dibuja el formulario. */
+function aResultadoDeInvitar(respuesta: Respuesta<InvitacionEmitida>): ResultadoDeInvitar {
   if (!respuesta.ok) {
     // Con otra invitación vigente de otro rol el servidor no hace pasar por hecho lo pedido, pero a la persona se le dice lo mismo que cuando es del mismo rol: ya había una.
     return respuesta.error.codigo === "USUARIOS_YA_HABIA_INVITACION"
@@ -109,6 +116,25 @@ export async function invitarAUnUsuario(datos: FormData): Promise<ResultadoDeInv
       : { estado: "ERROR", error: respuesta.error };
   }
   return respuesta.dato.yaExistia ? { estado: "YA_HABIA" } : { estado: "HECHO" };
+}
+
+/**
+ * Reactivar a una persona desactivada (tramo U3, parte B): una invitación nueva con el MISMO rol. El id de la persona viene ligado con `.bind` en la acción (Next lo cifra); del formulario solo se toman las
+ * sucursales tildadas. El email y el rol NO viajan: los toma el servidor de la membresía de esa persona. Repetir (doble toque, dos pestañas) devuelve la misma invitación: ni una segunda fila ni otro mail.
+ * Como invitar, no llama a `revalidatePath`: el formulario navega con una carga completa a la lista, que lee de nuevo.
+ */
+export async function reactivarAUnUsuario(
+  personaId: string,
+  datos: unknown,
+): Promise<ResultadoDeInvitar> {
+  const respuesta = await conLaEmpresa((contexto) =>
+    reactivarUsuario(dependencias, contexto, {
+      personaId,
+      // Un pedido que no es un formulario no es «ninguna tildada»: se manda sin forma y el servidor lo rechaza.
+      sucursales: datos instanceof FormData ? textosDe(datos, "sucursales") : undefined,
+    }),
+  );
+  return aResultadoDeInvitar(respuesta);
 }
 
 /**

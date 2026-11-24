@@ -205,3 +205,31 @@ describe("el bloque «Sucursales» de la ficha de un empleado", () => {
     expect(envios).toHaveLength(1);
   });
 });
+
+describe("«Reactivar» en la ficha de una persona desactivada (U3, parte B)", () => {
+  const desactivada = lista.usuarios[0] as (typeof lista.usuarios)[number];
+  const MIRA = { personaId: "quien-mira", puedeDesactivar: true, puedeReactivar: true };
+
+  it("es un enlace (no un botón) al formulario de invitar con el id de la persona, de 48 px o más, y no ofrece «Desactivar»; sin violaciones graves de accesibilidad", async () => {
+    const ficha = armarLaFichaDeUsuario(desactivada, {}, MIRA);
+    await render(conArmazon(ficha.email, <PantallaDeFichaDeUsuario ficha={ficha} />));
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    const enlace = page.getByRole("link", { name: "Reactivar" });
+    await expect.element(enlace).toBeVisible();
+    await expect
+      .element(enlace)
+      .toHaveAttribute("href", `/cuenta/usuarios/invitar?reactivar=${desactivada.personaId}`);
+    expect(enlace.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(48);
+    expect(page.getByRole("button").elements()).toHaveLength(0);
+    await expect.element(page.getByText("Desactivado")).toBeVisible();
+  });
+
+  it("sin permiso para invitar, o si la persona está activa, no hay enlace", async () => {
+    await render(
+      <PantallaDeFichaDeUsuario
+        ficha={armarLaFichaDeUsuario(desactivada, {}, { ...MIRA, puedeReactivar: false })}
+      />,
+    );
+    expect(page.getByRole("link", { name: "Reactivar" }).elements()).toHaveLength(0);
+  });
+});

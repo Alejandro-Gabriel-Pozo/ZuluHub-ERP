@@ -2,7 +2,11 @@ import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { RolDeEmpresa } from "../capacidades/permisos/roles";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type { SucursalDeLista } from "../modulos/empresas/publico";
-import type { InvitacionPendienteDeLaLista, MiembroDeLista } from "../modulos/identidad/publico";
+import type {
+  InvitacionPendienteDeLaLista,
+  MiembroDeLista,
+  SalidaDeInvitarUsuario,
+} from "../modulos/identidad/publico";
 import type { PersonaId } from "../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
@@ -12,6 +16,7 @@ import {
   entradaDeFichaDeUsuario,
   entradaDeInvitacion,
   entradaDeInvitar,
+  entradaDeReactivarUsuario,
 } from "./entradas-de-usuarios";
 import { accionDeUsuarios, lecturaDeUsuarios } from "./errores-de-usuarios";
 import type { Web } from "./web";
@@ -29,11 +34,9 @@ import type { Web } from "./web";
  *    y si venció. Nunca el token ni su hash (la consulta ya no los trae) ni quién la emitió.
  *  - **Todo o nada.** Si una de las dos consultas falla, falla la pantalla entera: no hay lista a medias.
  *  - **Todo resultado sale por el camino común** (`aRespuesta`, ADR-016): un rechazo es el genérico y un fallo de la base sale con referencia, sin detalle.
- *  - **Solo lectura, salvo desactivar.** La lista y la ficha no escriben ni auditan. Desactivar (`apagarMembresia`, `usuarios.apagar`) toma SOLO el id de la persona: quién la pide sale
- *    del contexto de la sesión, y el servidor no deja que nadie se desactive a sí mismo (`ES_UNO_MISMO`), ni al gerente (`ES_EL_GERENTE`), ni al último administrador (`ULTIMO_ADMIN`). Esta capa
- *    NO agrega ninguna regla de quién puede desactivar a quién: las imponen el guard y el dominio. Repetir no duplica: la segunda vez es ok sin escribir ni auditar (`yaEstabaApagada`),
- *    así que la acción no lleva clave; dos a la vez las ordena la transacción serializable del caso de uso.
- *
+ *  - **Solo lectura, salvo desactivar.** La lista y la ficha no escriben ni auditan. Desactivar (`apagarMembresia`, `usuarios.apagar`) toma SOLO el id de la persona: quién la pide sale del contexto, y el
+ *    servidor no deja desactivarse a uno mismo (`ES_UNO_MISMO`), ni al gerente (`ES_EL_GERENTE`), ni al último administrador (`ULTIMO_ADMIN`): esta capa no agrega reglas de quién puede desactivar a quién. Repetir
+ *    no duplica (la segunda es ok sin escribir ni auditar: `yaEstabaApagada`), así que no lleva clave; dos a la vez las ordena la transacción serializable del caso de uso.
  * El tramo U4 suma abajo las sucursales del empleado (`editorDeSucursalesDeUsuario` y `asignarSucursalesDeUsuario`); sus reglas están en el comentario de esa sección.
  */
 
@@ -181,6 +184,37 @@ export function invitar(
   );
 }
 
+/**
+ * Reactivar a una persona desactivada (`usuarios.ver` y `usuarios.invitar`): una INVITACIÓN NUEVA con el mismo rol (la persona vuelve al aceptarla). `crudo`: `{ personaId, sucursales }`. El email y el rol los toma el
+ * servidor de la membresía de esa persona en la empresa de la sesión: el navegador no los manda (un rol distinto lo rechaza igual el caso de uso, `ROL_DISTINTO_AL_ANTERIOR`). Una persona ajena, inexistente, ya activa o el
+ * gerente salen como el genérico. Repetir devuelve la misma invitación (`yaExistia`), sin segunda fila ni otro mail. Si en el medio dejó de estar desactivada, el caso de uso lo rechaza (`YA_ES_MIEMBRO`).
+ */
+export function reactivarUsuario(
+  d: DependenciasDeUsuariosWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<InvitacionEmitida>> {
+  return accionDeUsuarios(
+    d.respuesta,
+    crudo,
+    entradaDeReactivarUsuario,
+    async (entrada): Promise<Resultado<SalidaDeInvitarUsuario, unknown>> => {
+      const miembros = await d.consultas().listarMiembros(contexto);
+      if (!miembros.ok) return miembros;
+      const miembro = miembros.valor.find((m) => m.personaId === entrada.personaId);
+      if (miembro === undefined) return err("MEMBRESIA_NO_ENCONTRADA");
+      if (miembro.activo) return err("NO_ESTA_DESACTIVADA");
+      if (miembro.rol === "GERENTE") return err("ROL_NO_INVITABLE");
+      return d.casosDeUso().invitarUsuario(contexto, {
+        email: miembro.email,
+        rol: miembro.rol,
+        sucursales: miembro.rol === "OPERADOR" ? entrada.sucursales : [],
+      });
+    },
+    (salida) => ({ invitacionId: salida.invitacionId, yaExistia: salida.yaExistia }),
+  );
+}
+
 /** Lo que devuelve reenviar: la invitación vigente (la nueva, o la que ya había reemplazado a la de origen). */
 export type InvitacionReenviada = Readonly<{ invitacionId: string; yaEstabaReenviada: boolean }>;
 
@@ -220,7 +254,7 @@ export function revocar(
   );
 }
 
-/** Lo que la pantalla necesita saber de una desactivación: nada de lo que el servidor devuelve se muestra (la ficha se vuelve a leer), solo si ya estaba hecha. */
+/** Lo que la pantalla necesita de una desactivación: solo si ya estaba hecha (la ficha se vuelve a leer). */
 export type DesactivacionParaLaPantalla = Readonly<{ yaEstabaApagada: boolean }>;
 
 /**

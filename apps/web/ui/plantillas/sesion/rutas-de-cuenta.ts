@@ -13,3 +13,7 @@ export const rutaDeLaFichaDeUsuario = (personaId: string): string =>
 /** La ficha de una invitación pendiente: `/cuenta/usuarios/invitaciones/<invitacionId>`. */
 export const rutaDeLaFichaDeInvitacion = (invitacionId: string): string =>
   `${RUTAS_DE_CUENTA.usuarios}/invitaciones/${invitacionId}`;
+
+/** Reactivar a una persona desactivada: el formulario de invitar con su id (`?reactivar=<personaId>`); el servidor busca ahí su email y su rol, el navegador no los manda. */
+export const rutaDeReactivarUsuario = (personaId: string): string =>
+  `${RUTAS_DE_CUENTA.invitarUsuario}?reactivar=${encodeURIComponent(personaId)}`;

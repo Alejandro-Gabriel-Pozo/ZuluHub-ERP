@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 /**
- * El archivo `"use server"` de «Usuarios» (`apps/web/app/s/app/acciones-de-usuarios.ts`, tramos U2 y U3): fino a propósito. Exporta cinco funciones asíncronas y delega en `servidor/usuarios.ts`.
+ * El archivo `"use server"` de «Usuarios» (`apps/web/app/s/app/acciones-de-usuarios.ts`, tramos U2 y U3): fino a propósito. Exporta seis funciones asíncronas y delega en `servidor/usuarios.ts`.
  * El id de la invitación o de la persona llega del `.bind` (Next lo cifra), NO del formulario: aunque el formulario traiga otro, se usa el ligado. Las de invitaciones no redirigen; desactivar tampoco
  * (se queda en la pantalla y vuelve a pedirla) y no acepta ni rol ni email del navegador.
  */
@@ -24,6 +24,10 @@ vi.mock("../../apps/web/servidor/usuarios", () => ({
     delegadas.llamadas.push(["desactivar", ...args]);
     return Promise.resolve({ error: null });
   },
+  reactivarAUnUsuario: (...args: unknown[]) => {
+    delegadas.llamadas.push(["reactivar", ...args]);
+    return Promise.resolve({ estado: "HECHO" });
+  },
   guardarLasSucursalesDeUnEmpleado: (...args: unknown[]) => {
     delegadas.llamadas.push(["sucursales", ...args]);
     return Promise.resolve({ error: null });
@@ -40,11 +44,12 @@ import * as acciones from "../../apps/web/app/s/app/acciones-de-usuarios";
 const INICIAL = { estado: "INICIAL" } as const;
 
 describe("las acciones de servidor de «Usuarios» expuestas a Next", () => {
-  it("exporta solo las cinco, asíncronas", () => {
+  it("exporta solo las seis, asíncronas", () => {
     expect(Object.keys(acciones).sort()).toEqual([
       "asignarSucursalesAccion",
       "desactivarUsuarioAccion",
       "invitarUsuarioAccion",
+      "reactivarUsuarioAccion",
       "reenviarInvitacionAccion",
       "revocarInvitacionAccion",
     ]);
@@ -99,5 +104,17 @@ describe("las acciones de servidor de «Usuarios» expuestas a Next", () => {
     const accion = acciones.asignarSucursalesAccion.bind(null, "la-ligada");
     expect(await accion({ error: null }, datos)).toEqual({ error: null });
     expect(delegadas.llamadas).toEqual([["sucursales", "la-ligada", datos]]);
+  });
+
+  it("reactivar (U3, parte B) usa la persona ligada con `.bind` y NO acepta email ni rol del formulario: lo delega tal cual para que el servidor tome solo las sucursales", async () => {
+    const datos = new FormData();
+    datos.set("email", "otro@x.test");
+    datos.set("rol", "ADMINISTRADOR");
+    datos.set("personaId", "la-del-formulario");
+    datos.append("sucursales", "s-1");
+    delegadas.llamadas.length = 0;
+    const accion = acciones.reactivarUsuarioAccion.bind(null, "la-ligada");
+    expect(await accion(INICIAL, datos)).toEqual({ estado: "HECHO" });
+    expect(delegadas.llamadas).toEqual([["reactivar", "la-ligada", datos]]);
   });
 });

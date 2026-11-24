@@ -10,6 +10,7 @@ import {
   RUTAS_DE_CUENTA,
   rutaDeLaFichaDeInvitacion,
   rutaDeLaFichaDeUsuario,
+  rutaDeReactivarUsuario,
 } from "../sesion/rutas-de-cuenta";
 import { textoDelRol } from "../sesion/textos-de-empresa";
 
@@ -167,13 +168,20 @@ export type FichaDeUsuarioArmada = Readonly<{
   }>[];
   /** Los textos del botón y del cuadro; `null` si la ficha no ofrece desactivar (no se dibuja nada). */
   desactivar: DesactivarArmado | null;
+  /** «Reactivar»: un enlace al formulario de invitar con la persona (la reactivación es una invitación nueva con el mismo rol); `null` si la ficha no lo ofrece (no se dibuja nada). */
+  reactivar: Readonly<{ texto: string; href: string }> | null;
 }>;
 
 /**
- * Quién mira y qué puede: lo único que decide si la ficha OFRECE «Desactivar». Sin esto no se ofrece (todo nace cerrado). Es una ayuda, no una autorización: la acción vuelve a pasar por el guard y el
- * dominio, que imponen quién puede desactivar a quién; acá solo se evita ofrecer lo que nunca va a funcionar (el gerente, uno mismo, quien ya está desactivado, quien no tiene el permiso). Si no se sabe quién mira (`personaId` nulo) tampoco se ofrece: no se puede asegurar que no sea uno mismo.
+ * Quién mira y qué puede: lo único que decide si la ficha OFRECE «Desactivar» o «Reactivar». Sin esto no se ofrece nada (todo nace cerrado). Es una ayuda, no una autorización: las acciones vuelven a pasar por el
+ * guard y el dominio, que imponen quién puede desactivar a quién; acá solo se evita ofrecer lo que nunca va a funcionar (el gerente, uno mismo, quien ya está desactivado, quien no tiene el permiso). Si no se sabe quién
+ * mira (`personaId` nulo) tampoco se ofrece desactivar: no se puede asegurar que no sea uno mismo. «Reactivar» es una invitación nueva: lo ofrece quien puede invitar (`puedeReactivar`) y solo en una persona desactivada.
  */
-export type QuienMiraLaFicha = Readonly<{ personaId: string | null; puedeDesactivar: boolean }>;
+export type QuienMiraLaFicha = Readonly<{
+  personaId: string | null;
+  puedeDesactivar: boolean;
+  puedeReactivar: boolean;
+}>;
 
 export function armarLaFichaDeUsuario(
   u: UsuarioParaLaPantalla,
@@ -187,6 +195,8 @@ export function armarLaFichaDeUsuario(
     u.activo &&
     u.rol !== "GERENTE" &&
     u.personaId !== quienMira.personaId;
+  const seOfreceReactivar =
+    quienMira !== null && quienMira.puedeReactivar && !u.activo && u.rol !== "GERENTE";
   return {
     email: u.email,
     renglones: [
@@ -212,6 +222,12 @@ export function armarLaFichaDeUsuario(
           cancelar: texto(diccionario, "caja.accion.cancelar"),
           cerrar: texto(diccionario, "vidriera.producto.cerrar"),
           enviando: texto(diccionario, "conexion.enviando"),
+        }
+      : null,
+    reactivar: seOfreceReactivar
+      ? {
+          texto: texto(diccionario, "caja.accion.reactivar"),
+          href: rutaDeReactivarUsuario(u.personaId),
         }
       : null,
   };

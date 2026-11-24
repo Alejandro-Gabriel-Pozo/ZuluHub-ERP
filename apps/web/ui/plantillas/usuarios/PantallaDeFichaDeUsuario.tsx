@@ -1,3 +1,4 @@
+import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../componentes/Insignia";
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
 import {
@@ -21,8 +22,8 @@ export type PropsDePantallaDeFichaDeUsuario = Readonly<{
 
 /**
  * La ficha de una persona (maqueta `usuarios.html`, `vUsuario`): el email es el título de la pantalla (lo pone la página) y debajo van el rol y el estado. Un empleado activo suma el bloque «Sucursales»
- * con «Guardar» (tramo U4). Al pie, «Desactivar» (con su confirmación, tramo U3) solo si el modelo la ofrece (activa, no es el gerente, no es quien mira y quien mira tiene el permiso); «Reactivar» lo suma
- * la parte B. El estado se dice con texto en su insignia. Es una página de servidor: lo interactivo está en `ConfirmacionDeDesactivar.cliente.tsx` y `FormularioDeSucursalesDeUsuario.cliente.tsx`.
+ * con «Guardar» (tramo U4). Al pie, «Desactivar» (con su confirmación, tramo U3) solo si el modelo la ofrece (activa, no es el gerente, no es quien mira y quien mira tiene el permiso); «Reactivar» (parte B) es un enlace al formulario de invitar, solo en una persona desactivada
+ * y solo si el modelo lo ofrece (quien mira puede invitar). El estado se dice con texto en su insignia. Es una página de servidor: lo interactivo está en `ConfirmacionDeDesactivar.cliente.tsx` y `FormularioDeSucursalesDeUsuario.cliente.tsx`.
  */
 export function PantallaDeFichaDeUsuario({
   ficha,
@@ -59,6 +60,11 @@ export function PantallaDeFichaDeUsuario({
       {ficha.desactivar === null || desactivar === undefined ? null : (
         <div className={estilos["acciones"]}>
           <ConfirmacionDeDesactivar accion={desactivar} textos={ficha.desactivar} />
+        </div>
+      )}
+      {ficha.reactivar === null ? null : (
+        <div className={estilos["acciones"]}>
+          <EnlaceDeAccion href={ficha.reactivar.href}>{ficha.reactivar.texto}</EnlaceDeAccion>
         </div>
       )}
     </div>

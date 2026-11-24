@@ -5,6 +5,7 @@ import {
   desactivarElUsuario,
   guardarLasSucursalesDeUnEmpleado,
   invitarAUnUsuario,
+  reactivarAUnUsuario,
   reenviarUnaInvitacion,
   revocarUnaInvitacion,
 } from "../../../servidor/usuarios";
@@ -62,4 +63,14 @@ export async function asignarSucursalesAccion(
 ): Promise<ResultadoDeAccion> {
   void previo;
   return guardarLasSucursalesDeUnEmpleado(personaId, datos);
+}
+
+/** Reactivar (tramo U3, parte B): una invitación nueva con el mismo rol. La persona la liga la página con `.bind`; del formulario solo se toman las sucursales (el email y el rol no viajan). */
+export async function reactivarUsuarioAccion(
+  personaId: string,
+  previo: ResultadoDeInvitar,
+  datos: FormData,
+): Promise<ResultadoDeInvitar> {
+  void previo;
+  return reactivarAUnUsuario(personaId, datos);
 }

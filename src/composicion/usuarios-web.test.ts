@@ -7,6 +7,7 @@ import {
   editorDeSucursalesDeUsuario,
   fichaDeUsuario,
   listarUsuarios,
+  reactivarUsuario,
   type DependenciasDeSucursalesDeUsuarioWeb,
   type DependenciasDeUsuariosWeb,
 } from "./usuarios-web";
@@ -379,5 +380,104 @@ describe("las sucursales de un empleado (U4)", () => {
       personaId: A,
     });
     expect(r).toMatchObject({ ok: false, error: { codigo: "USUARIOS_NO_PERMITIDO" } });
+  });
+});
+
+describe("reactivarUsuario (U3, parte B)", () => {
+  const S1 = "0b0b0b0b-1111-4222-8333-444444444451";
+
+  /** Una empresa con una persona desactivada (el email y el rol los tiene la membresía, no el pedido) y un invitarUsuario falso que anota lo que recibe. */
+  function conMiembros(
+    miembros: unknown,
+    invitar: () => Promise<unknown> = () =>
+      Promise.resolve(ok({ invitacionId: "i-1", yaExistia: false })),
+  ) {
+    const pedidos: unknown[][] = [];
+    const d: DependenciasDeUsuariosWeb = {
+      ...dependencias(miembros, ok([])),
+      casosDeUso: () =>
+        ({
+          invitarUsuario: (...args: unknown[]) => {
+            pedidos.push(args);
+            return invitar();
+          },
+        }) as unknown as ReturnType<DependenciasDeUsuariosWeb["casosDeUso"]>,
+    };
+    return { d, pedidos };
+  }
+  const desactivado = (rol: string, activo = false) => ({
+    ...miembro(A, "ana@x.test", activo),
+    rol,
+  });
+
+  it("invita con el email y el rol DE LA MEMBRESÍA, aunque el pedido traiga otros", async () => {
+    const { d, pedidos } = conMiembros(ok([desactivado("OPERADOR")]));
+    const r = await reactivarUsuario(d, CONTEXTO, {
+      personaId: A,
+      sucursales: [S1],
+      email: "otro@x.test",
+      rol: "ADMINISTRADOR",
+    });
+    expect(r).toEqual({ ok: true, dato: { invitacionId: "i-1", yaExistia: false } });
+    expect(pedidos).toEqual([
+      [CONTEXTO, { email: "ana@x.test", rol: "OPERADOR", sucursales: [S1] }],
+    ]);
+  });
+
+  it("un administrador vuelve como administrador y sin sucursales (trabaja en todas), aunque se manden", async () => {
+    const { d, pedidos } = conMiembros(ok([desactivado("ADMINISTRADOR")]));
+    await reactivarUsuario(d, CONTEXTO, { personaId: A, sucursales: [S1] });
+    expect(pedidos).toEqual([
+      [CONTEXTO, { email: "ana@x.test", rol: "ADMINISTRADOR", sucursales: [] }],
+    ]);
+  });
+
+  it("repetir devuelve la misma invitación (`yaExistia`), sin que la pantalla lo trate como error", async () => {
+    const { d } = conMiembros(ok([desactivado("OPERADOR")]), () =>
+      Promise.resolve(ok({ invitacionId: "i-1", yaExistia: true })),
+    );
+    expect(await reactivarUsuario(d, CONTEXTO, { personaId: A })).toEqual({
+      ok: true,
+      dato: { invitacionId: "i-1", yaExistia: true },
+    });
+  });
+
+  it.each([
+    [
+      "una persona que no está en la empresa (o de otra)",
+      ok([desactivado("OPERADOR")]),
+      { personaId: B },
+    ],
+    ["una persona ya activa", ok([desactivado("OPERADOR", true)]), { personaId: A }],
+    ["el gerente", ok([desactivado("GERENTE")]), { personaId: A }],
+    ["un id que no es un identificador", ok([desactivado("OPERADOR")]), { personaId: "xx" }],
+    ["sin permiso para ver a las personas", err("SIN_PERMISO"), { personaId: A }],
+  ])("%s sale como el genérico y no invita a nadie", async (_caso, miembros, crudo) => {
+    const { d, pedidos } = conMiembros(miembros);
+    expect(await reactivarUsuario(d, CONTEXTO, crudo)).toMatchObject({
+      ok: false,
+      error: { codigo: "USUARIOS_NO_PERMITIDO" },
+    });
+    expect(pedidos).toEqual([]);
+  });
+
+  it("los rechazos del caso de uso de invitar que no tienen texto propio salen como el genérico (el rol distinto al anterior, por ejemplo)", async () => {
+    const { d } = conMiembros(ok([desactivado("OPERADOR")]), () =>
+      Promise.resolve(err({ codigo: "ROL_DISTINTO_AL_ANTERIOR", empresaId: "e-1" })),
+    );
+    expect(await reactivarUsuario(d, CONTEXTO, { personaId: A })).toMatchObject({
+      ok: false,
+      error: { codigo: "USUARIOS_NO_PERMITIDO" },
+    });
+  });
+
+  it("si en el medio ya es parte de la empresa, el aviso es el propio («Ya es parte de la empresa»)", async () => {
+    const { d } = conMiembros(ok([desactivado("OPERADOR")]), () =>
+      Promise.resolve(err("YA_ES_MIEMBRO")),
+    );
+    expect(await reactivarUsuario(d, CONTEXTO, { personaId: A })).toMatchObject({
+      ok: false,
+      error: { codigo: "USUARIOS_YA_ES_MIEMBRO" },
+    });
   });
 });

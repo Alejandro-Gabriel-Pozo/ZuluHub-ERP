@@ -23,7 +23,7 @@ type FichaConCuadro = Omit<FichaDePantalla, "botones"> &
  *
  * BOTONES (U2): «Invitar» (navega al formulario), «Enviar invitación», «Reenviar» y «Revocar». BOTONES (U3, parte A): «Desactivar» abre un cuadro de confirmación («¿Desactivar a {email}?», «Se corta su acceso ahora.»,
  * «Cancelar» y «Desactivar») y su confirmación envía `usuarios.apagar`. Se ofrece solo a quien tiene el permiso, y solo en una persona activa que no es el gerente ni quien está mirando (el servidor lo impide
- * igual: `ES_EL_GERENTE`, `ES_UNO_MISMO`). BOTÓN (U4): «Guardar» las sucursales de un empleado activo (`usuarios.asignar_sucursales`). Reactivar (U3, parte B) suma el suyo cuando se construya. Sin permiso, ningún
+ * igual: `ES_EL_GERENTE`, `ES_UNO_MISMO`). BOTÓN (U4): «Guardar» las sucursales de un empleado activo (`usuarios.asignar_sucursales`). BOTÓN (U3, parte B): «Reactivar», en la ficha de una persona DESACTIVADA, lleva al formulario de invitar con su email y su rol fijos (es una invitación nueva con el mismo rol; se ofrece a quien puede invitar y se envía con «Enviar invitación»). Sin permiso, ningún
  * botón se dibuja (`AUSENTE`: todo nace cerrado; es solo una ayuda, el servidor vuelve a exigir cada permiso al guard). Estados del bloque de sucursales: solo un empleado ACTIVO lo ve; para el gerente, el
  * administrador o un desactivado la ficha no dice nada de sucursales (pregunta 8 del plan, aprobada el 23/11/2026); una sucursal desactivada no se ofrece ni aparece tildada. «Guardar» lo mismo no cambia nada.
  * Ante cualquier falla sale el mensaje genérico «Esta acción no está permitida», sin filas.
@@ -141,6 +141,12 @@ export const FICHA_DE_USUARIOS = {
       sinPermiso: "AUSENTE",
     },
     {
+      id: "reactivar",
+      texto: "caja.accion.reactivar",
+      hace: { navega: "/cuenta/usuarios/invitar" },
+      sinPermiso: "AUSENTE",
+    },
+    {
       id: "guardar-sucursales",
       texto: "catalogo.accion.guardar",
       hace: { envia: "usuarios.asignar_sucursales" },
@@ -234,6 +240,13 @@ export const FICHA_DE_USUARIOS = {
     },
     "caja.accion.desactivar": {
       usos: [USO_DE_LA_CONFIRMACION, "botón «Desactivar» de la ficha y botón que confirma"],
+      fuente: REUSADO,
+    },
+    "caja.accion.reactivar": {
+      usos: [
+        "botón «Reactivar» de la ficha de una persona desactivada (enlace al formulario de invitar con su email y su rol fijos)",
+        "título del formulario al reactivar",
+      ],
       fuente: REUSADO,
     },
     "caja.accion.cancelar": { usos: [USO_DE_LA_CONFIRMACION], fuente: REUSADO },

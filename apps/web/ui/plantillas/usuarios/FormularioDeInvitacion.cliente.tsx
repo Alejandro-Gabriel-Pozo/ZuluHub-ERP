@@ -25,6 +25,11 @@ export type PropsDeFormularioDeInvitacion = Readonly<{
   accion: (previo: ResultadoDeInvitar, datos: FormData) => Promise<ResultadoDeInvitar>;
   /** Adónde se va al terminar y con «Cancelar»: la lista. */
   rutaDeLaLista: string;
+  /**
+   * Reactivar (tramo U3, parte B): el email y el rol de la persona desactivada, FIJOS (de solo lectura): la reactivación es una invitación nueva con el mismo rol. Solo se muestran: no viajan, el servidor los toma
+   * de la membresía. Las sucursales (si es Empleado) sí se eligen. Sin esto, es el formulario de invitar de siempre.
+   */
+  reactivar?: Readonly<{ email: string; rol: RolInvitable }>;
 }>;
 
 /**
@@ -34,16 +39,18 @@ export type PropsDeFormularioDeInvitacion = Readonly<{
  *    y el aviso «Ya había una invitación pendiente para ese email», no un error y sin otro mail.
  *  - Hecho: vuelve a la lista con `window.location.assign`, donde la invitación ya figura (esa es la confirmación; la acción no redirige).
  *  - Las sucursales solo viajan con el rol Empleado: al cambiar a Administrador no se mandan (el servidor además las descarta).
+ * Con `reactivar` (tramo U3, parte B) el email y el rol vienen fijos y deshabilitados (no se mandan: el servidor los toma de la persona) y la acción es la de reactivar.
  * El estado del formulario es de la pantalla; los permisos no se replican (la lista solo ofrece «Invitar» a quien puede, y el servidor lo vuelve a exigir).
  */
 export function FormularioDeInvitacion({
   formulario,
   accion,
   rutaDeLaLista,
+  reactivar,
 }: PropsDeFormularioDeInvitacion) {
   const [resultado, enviar, enviando] = useActionState(accion, INVITAR_INICIAL);
-  const [email, setEmail] = useState("");
-  const [rol, setRol] = useState<RolInvitable>(ROL_INICIAL_DE_LA_INVITACION);
+  const [email, setEmail] = useState(reactivar?.email ?? "");
+  const [rol, setRol] = useState<RolInvitable>(reactivar?.rol ?? ROL_INICIAL_DE_LA_INVITACION);
   const [elegidas, setElegidas] = useState<readonly string[]>([]);
   const hecho = resultado.estado === "HECHO";
 
@@ -70,6 +77,7 @@ export function FormularioDeInvitacion({
             autoCapitalize="off"
             valor={email}
             alCambiar={setEmail}
+            deshabilitado={reactivar !== undefined}
           />
           <Selector
             dato="rol-de-invitacion"
@@ -81,6 +89,7 @@ export function FormularioDeInvitacion({
               if (elegido !== undefined) setRol(elegido.valor);
             }}
             opciones={formulario.roles.map((r) => ({ valor: r.valor, etiqueta: r.etiqueta }))}
+            deshabilitado={reactivar !== undefined}
           />
           {rol === ROL_CON_SUCURSALES ? (
             <fieldset className={estilos["grupo"]}>

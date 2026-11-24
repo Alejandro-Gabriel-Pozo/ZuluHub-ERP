@@ -110,3 +110,28 @@ export function entradaDeAsignarSucursalesDeUsuario(
       })
     : forma;
 }
+
+/**
+ * Reactivar a una persona desactivada (tramo U3, parte B): el pedido lleva SOLO el id de la persona (la dirección) y las sucursales tildadas. El email y el rol NO se leen del pedido: los toma el servidor de la
+ * membresía de esa persona (la reactivación es una invitación nueva con el MISMO rol; un rol distinto lo rechaza el servidor igual). Las sucursales solo valen para el Empleado; el tope es defensivo, como en invitar.
+ */
+const formaDeReactivar = z.object({
+  personaId: identificador,
+  sucursales: z.array(identificador).max(MAXIMO_DE_SUCURSALES_POR_PEDIDO).default([]),
+});
+
+export type EntradaDeReactivarUsuario = Readonly<{
+  personaId: PersonaId;
+  sucursales: readonly SucursalId[];
+}>;
+
+export function entradaDeReactivarUsuario(
+  crudo: unknown,
+): Resultado<EntradaDeReactivarUsuario, ErrorDeEntrada> {
+  const forma = leer(formaDeReactivar, crudo);
+  if (!forma.ok) return forma;
+  return ok({
+    personaId: personaId(forma.valor.personaId),
+    sucursales: [...new Set(forma.valor.sucursales)].map(sucursalId),
+  });
+}

@@ -18,7 +18,7 @@ import type { ResultadoDeAccionDeInvitacion, ResultadoDeInvitar } from "./result
  * Invitar, reenviar y revocar (tramo U2) en Chromium real: el formulario sin violaciones graves de accesibilidad, las sucursales solo con el rol Empleado, lo que viaja a la acción, el doble toque
  * (un solo envío), el aviso «Ya había una invitación pendiente para ese email» (un aviso, no un error) y el error del servidor debajo; la ficha de la invitación con su estado dicho con texto y sus
  * botones solo si hay permiso; y «Invitar» y las filas de invitaciones en la lista. Previene: un doble toque que mande dos invitaciones, una casilla de sucursal que viaje con el rol equivocado y un
- * botón ofrecido a quien el servidor va a rechazar.
+ * botón ofrecido a quien el servidor va a rechazar. Tramo U3 parte B: el mismo formulario al reactivar, con el email y el rol FIJOS (deshabilitados, no viajan) y las sucursales editables solo del Empleado.
  */
 const LISTA = "/cuenta/usuarios";
 const SUCURSALES = [
@@ -244,5 +244,66 @@ describe("la lista con «Invitar» y las invitaciones como enlaces", () => {
     const fila = page.getByRole("link", { name: /julia@lacteos\.test/ });
     await expect.element(fila).toHaveAttribute("href", "/cuenta/usuarios/invitaciones/i-1");
     expect(fila.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(48);
+  });
+});
+
+describe("FormularioDeInvitacion al reactivar (U3, parte B)", () => {
+  const reactivar = (accion: Accion, rol: "OPERADOR" | "ADMINISTRADOR" = "OPERADOR") => (
+    <FormularioDeInvitacion
+      formulario={armarElFormularioDeInvitacion(SUCURSALES)}
+      accion={accion}
+      rutaDeLaLista={LISTA}
+      reactivar={{ email: "ana@lacteos.test", rol }}
+    />
+  );
+
+  it("el email y el rol vienen fijos y deshabilitados; las sucursales se eligen (Empleado); sin violaciones graves de accesibilidad", async () => {
+    await render(conArmazon(reactivar(() => Promise.resolve(INICIAL))));
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    const email = page.getByLabelText("Email");
+    await expect.element(email).toHaveValue("ana@lacteos.test");
+    await expect.element(email).toBeDisabled();
+    const rol = page.getByLabelText("Rol");
+    await expect.element(rol).toHaveValue("OPERADOR");
+    await expect.element(rol).toBeDisabled();
+    await expect.element(page.getByRole("group", { name: "Sucursales" })).toBeVisible();
+    await expect.element(page.getByLabelText("Centro")).toBeEnabled();
+    await expect.element(page.getByRole("button", { name: "Enviar invitación" })).toBeVisible();
+  });
+
+  it("un administrador vuelve como administrador: sin sucursales", async () => {
+    await render(reactivar(() => Promise.resolve(INICIAL), "ADMINISTRADOR"));
+    await expect.element(page.getByLabelText("Rol")).toHaveValue("ADMINISTRADOR");
+    expect(page.getByRole("group", { name: "Sucursales" }).elements()).toHaveLength(0);
+  });
+
+  it("enviar manda SOLO las sucursales tildadas: el email y el rol deshabilitados no viajan", async () => {
+    const accion = vi.fn<Accion>(() => Promise.resolve(INICIAL));
+    await render(reactivar(accion));
+    await userEvent.click(page.getByLabelText("Norte"));
+    tocar(page.getByRole("button", { name: "Enviar invitación" }));
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    const datos = accion.mock.calls[0]?.[1] as FormData;
+    expect(datos.getAll("sucursales")).toEqual([SUCURSALES[1]?.id]);
+    expect(datos.has("email")).toBe(false);
+    expect(datos.has("rol")).toBe(false);
+  });
+
+  it("el doble toque manda un solo envío y el aviso «Ya había una invitación pendiente para ese email» es informativo", async () => {
+    let liberar: () => void = () => undefined;
+    const accion = vi.fn<Accion>(
+      () =>
+        new Promise<ResultadoDeInvitar>((resolver) => {
+          liberar = () => resolver({ estado: "YA_HABIA" });
+        }),
+    );
+    await render(reactivar(accion));
+    const enviar = page.getByRole("button", { name: "Enviar invitación" });
+    await userEvent.dblClick(enviar);
+    liberar();
+    await expect
+      .element(page.getByText("Ya había una invitación pendiente para ese email"))
+      .toBeVisible();
+    expect(accion).toHaveBeenCalledTimes(1);
   });
 });

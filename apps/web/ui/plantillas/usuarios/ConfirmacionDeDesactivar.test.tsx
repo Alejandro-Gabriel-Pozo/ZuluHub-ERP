@@ -16,8 +16,11 @@ const persona = {
   rol: "OPERADOR",
   activo: true,
 } as const;
-const textos = armarLaFichaDeUsuario(persona, {}, { personaId: "otra", puedeDesactivar: true })
-  .desactivar as DesactivarArmado;
+const textos = armarLaFichaDeUsuario(
+  persona,
+  {},
+  { personaId: "otra", puedeDesactivar: true, puedeReactivar: false },
+).desactivar as DesactivarArmado;
 
 type Resultado = Readonly<{
   error: null | { codigo: string; clave: string; presentacion: string };

@@ -18,7 +18,7 @@ import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilan
  * con su rol («Gerente», «Administrador», «Empleado»), a la desactivada con su texto y las invitaciones con «Vence el …», «Vencida» o «Pendiente»; abre la ficha de una persona; nunca ve a nadie de otra empresa (la
  * ficha de una ajena dice lo mismo que una inexistente). Después la misma persona pasa a ser empleada: la entrada «Usuarios» desaparece de Cuenta y, abriendo la dirección a mano, el servidor responde con el
  * mensaje genérico, sin filas. Tramo U3 (desactivar): R1 el gerente desactiva a una persona CON confirmación («Cancelar» no hace nada) y la ficha pasa a «Desactivado», con sus sucursales apagadas y su invitación revocada; R2 confirmar en dos pestañas
- * deja una sola desactivación; R3 un administrador no ve «Desactivar» en la ficha del gerente ni en la propia (sí en la de otro administrador). Lo que esta prueba ve y las de componentes no: la página en el servidor (el permiso y la lectura de la base), la fila del menú y que los componentes no rompan en el navegador.
+ * deja una sola desactivación; R4 (parte B) reactivar: la ficha de un desactivado ofrece «Reactivar», que abre el formulario de invitar con su email y su rol fijos, y al enviar queda UNA invitación pendiente y un mail (una activa, una ajena o el gerente dan el genérico); R3 un administrador no ve «Desactivar» en la ficha del gerente ni en la propia (sí en la de otro administrador). Lo que esta prueba ve y las de componentes no: la página en el servidor (el permiso y la lectura de la base), la fila del menú y que los componentes no rompan en el navegador.
  * El tramo U4 suma las sucursales del empleado: tildar y guardar (R1), guardar sin cambios no deja constancia (R2) y dos pestañas dejan la última edición completa (R3).
  */
 const base = inject("baseDePruebas");
@@ -410,6 +410,67 @@ describe.skipIf(base === null)("recorrido de la lista de usuarios", () => {
     expect(await pag.getByRole("button", { name: "Desactivar" }).count()).toBe(0);
     await ver(diego);
     expect(await pag.getByRole("button", { name: "Desactivar" }).count()).toBe(1);
+    expect(vig.tomar()).toEqual([]);
+    await ctx.close();
+  });
+  it("R4 reactivar: la ficha del desactivado ofrece «Reactivar», abre el formulario con su email y su rol fijos, y al enviar queda UNA invitación pendiente con el mismo rol y un solo mail", async () => {
+    const c = mundo.mundo.dueno;
+    const rita = await crearPersonaDeBase(c, "rita@lacteos.test");
+    await crearMembresiaDeBase(c, mundo.empresa, rita.id, "OPERADOR", false);
+    const { ctx, pag, vig } = await comoElGerente();
+
+    await pag.goto(`${mundo.url}/cuenta/usuarios/${rita.id}`);
+    await pag.waitForLoadState("networkidle");
+    await pag.getByRole("heading", { name: "rita@lacteos.test" }).waitFor();
+    await pag.getByText("Desactivado").first().waitFor();
+    expect(await pag.getByRole("button", { name: "Desactivar" }).count()).toBe(0);
+    await pag.getByRole("link", { name: "Reactivar" }).click();
+    await pag.waitForURL(/\/cuenta\/usuarios\/invitar\?reactivar=/);
+    await pag.waitForLoadState("networkidle");
+
+    // El mismo formulario de invitar, con el email y el rol FIJOS de la persona; las sucursales se eligen.
+    await pag.getByRole("heading", { name: "Reactivar" }).waitFor();
+    expect(await pag.getByLabel("Email").inputValue()).toBe("rita@lacteos.test");
+    expect(await pag.getByLabel("Email").isDisabled()).toBe(true);
+    expect(await pag.getByLabel("Rol").inputValue()).toBe("OPERADOR");
+    expect(await pag.getByLabel("Rol").isDisabled()).toBe(true);
+    await pag.getByRole("group", { name: "Sucursales" }).waitFor();
+    expect(await violacionesGravesDeAxe(pag)).toEqual([]);
+
+    await pag.getByRole("button", { name: "Enviar invitación" }).click();
+    await pag.waitForURL(/\/cuenta\/usuarios$/);
+    await pag.waitForLoadState("networkidle");
+    await pag.getByRole("heading", { name: "Invitaciones" }).waitFor();
+    await pag.getByText("rita@lacteos.test").first().waitFor();
+    const invitaciones = await aDeLaBase(
+      `select i.id, i.estado, ie.rol from invitacion i join invitacion_empresa ie on ie.invitacion_id = i.id
+        where ie.empresa_id = $1 and i.email = 'rita@lacteos.test'`,
+      [mundo.empresa],
+    );
+    expect(invitaciones.map((i) => [i["estado"], i["rol"]])).toEqual([["PENDIENTE", "OPERADOR"]]);
+    expect(
+      await aDeLaBase(
+        "select id from trabajo where empresa_id = $1 and tipo = 'enviar_invitacion' and clave_idempotencia = $2",
+        [mundo.empresa, `invitacion:${String(invitaciones[0]?.["id"])}:envio`],
+      ),
+    ).toHaveLength(1);
+    // La persona sigue desactivada hasta que acepte.
+    expect(
+      (await aDeLaBase("select activo from membresia where persona_id = $1", [rita.id]))[0],
+    ).toEqual({ activo: false });
+
+    // Una persona activa, una ajena y una que no existe no se reactivan: el genérico y sin formulario.
+    for (const id of [
+      sofia,
+      deOtraEmpresa,
+      "0b0b0b0b-1111-4222-8333-4444444444ee",
+      "no-es-un-id",
+    ]) {
+      await pag.goto(`${mundo.url}/cuenta/usuarios/invitar?reactivar=${id}`);
+      await pag.waitForLoadState("networkidle");
+      await pag.getByText(GENERICO).first().waitFor();
+      expect(await pag.getByRole("button", { name: "Enviar invitación" }).count()).toBe(0);
+    }
     expect(vig.tomar()).toEqual([]);
     await ctx.close();
   });
