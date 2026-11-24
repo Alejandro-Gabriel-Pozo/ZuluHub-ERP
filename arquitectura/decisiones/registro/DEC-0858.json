@@ -3,8 +3,8 @@
   "fecha": "2026-11-24",
   "quien": "padre",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "El servidor no deja que una persona se desactive a sí misma.",
   "que_cambia": "Si alguien intenta desactivarse a sí mismo (por la pantalla o por fuera de ella), el servidor lo rechaza con ES_UNO_MISMO y no escribe nada; antes lo permitía y un administrador podía quedarse sin acceso. No cambia permisos. Revertir: quitar la comprobación en decidirApagado (sin migración).",
-  "donde": "decisiones-del-dueno-2026-11.md, fila del 23/11/2026 (Usuarios de la empresa; recomendación 4, hallazgo H3); src/modulos/identidad/dominio/membresia.ts (decidirApagado), apagar-membresia.ts"
+  "donde": "decisiones-del-dueno-2026-11.md, fila del 23/11/2026 (Usuarios de la empresa; recomendación 4, hallazgo H3); src/modulos/identidad/dominio/membresia.ts (decidirApagado), apagar-membresia.ts; confirmada: DDD fila del 23/11/2026"
 }
