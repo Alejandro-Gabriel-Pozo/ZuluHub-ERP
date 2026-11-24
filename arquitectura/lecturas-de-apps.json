@@ -13,6 +13,11 @@
     "apps/web/app/s/app/(operacion)/salon/mesas/**",
     "apps/web/ui/plantillas/salon/*"
   ],
+  "test/web/ficha-de-directorio.test.ts": [
+    "apps/web/app/s/app/(operacion)/clientes/**",
+    "apps/web/app/s/app/acciones-de-directorio.ts",
+    "apps/web/ui/plantillas/clientes/*"
+  ],
   "test/web/ficha-de-impresoras.test.ts": [
     "apps/web/app/s/app/(operacion)/salon/impresoras/**",
     "apps/web/ui/plantillas/salon/*",

@@ -8,6 +8,7 @@ import { seOfrece } from "../../../../src/capacidades/integracion/ofrecer";
 import type { ClaveDeTexto } from "../../../../src/capacidades/vocabulario/catalogo";
 import type { ClaveDeIcono } from "../iconos/catalogo";
 import { RUTAS_DE_CAJA, RUTA_DE_LA_CAJA } from "../plantillas/caja/lista-de-caja";
+import { RUTA_DE_CLIENTES } from "../plantillas/clientes/modelo-de-directorio";
 import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
 import { RUTA_DE_CLASIFICACION } from "../plantillas/catalogo/modelo-de-clasificacion";
 import { RUTA_DEL_CIERRE } from "../plantillas/cierre/ruta-del-cierre";
@@ -25,8 +26,6 @@ import { RUTAS_DE_STOCK } from "../plantillas/stock/rutas-de-stock";
  * EL MENÚ POR ÁREAS: una sola tabla declarativa (área → grupo → pantalla), una fila por pantalla. Es la ÚNICA fuente de qué hay en el menú, en qué área y grupo, qué módulo y
  * qué acción exige: mover una pantalla de grupo o de área es cambiar UNA fila, y sumar un rubro es sumar un área y sus filas (dueño, 12/11/2026: «siempre tiene que estar
  * presente la escalabilidad o el posible cambio de rumbo al tema de la organización de la pantalla», `decisiones-del-dueno-2026-11.md`, fila «Menú por áreas, versión 4»).
- * Estructura «B: por módulo» (12/11/2026): Ventas, Catálogo, Compras y Cuenta; maqueta `10-ux-ui/prototipos-gastronomia/menu-por-areas.html` (versión 5).
- *
  * Solo entra una fila con RUTA real y texto aprobado: una pantalla sin construir no se declara (una fila sin ruta daría un 404 a quien tenga el permiso) y un rótulo sin
  * aprobar no se inventa. Las pantallas de la maqueta que todavía no existen se suman con su fila cuando existan. Previene: componentes que fijan áreas o grupos a mano
  * (`test/arquitectura/menu-por-areas.test.ts`).
@@ -55,7 +54,6 @@ export const GRUPOS_DEL_MENU = [
   { clave: "caja", etiqueta: null },
   { clave: "productos", etiqueta: null },
   { clave: "salon", etiqueta: "salon.texto.grupo_salon" },
-  // Una reserva por pantalla de Clientes y proveedores y de Compras: sin filas no aparecen (todo nace cerrado); cada pantalla suma su fila.
   { clave: "clientes", etiqueta: null },
   { clave: "proveedores", etiqueta: null },
   { clave: "compras", etiqueta: null },
@@ -98,11 +96,7 @@ export type FilaDeAccion = BaseDeFila &
 
 export type FilaDelMenu = FilaDePantalla | FilaDeAccion;
 
-/**
- * LA TABLA. El orden de las filas es el orden de aparición. «Medios de pago» nace declarado y cerrado: su módulo (`caja`) está «en desarrollo» y no da permisos a nadie. Su
- * rótulo es el título aprobado de la pantalla, «Medios de pago» (`caja.medios.titulo`); la maqueta dice «Medios de pago y cajas», que no tiene clave: va a preguntas
- * pendientes.
- */
+/** LA TABLA. El orden de las filas es el de aparición. «Medios de pago» nace declarado y cerrado: su módulo (`caja`) está «en desarrollo». Su rótulo es el título aprobado, `caja.medios.titulo`; la maqueta dice «Medios de pago y cajas», que no tiene clave (va a preguntas pendientes). */
 export const FILAS_DEL_MENU = [
   {
     tipo: "pantalla",
@@ -227,6 +221,30 @@ export const FILAS_DEL_MENU = [
     perilla: null,
     href: RUTA_DE_IMPRESORAS,
     etiqueta: "comandas.texto.imprimir_impresoras",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
+    clave: "clientes",
+    area: "ventas",
+    grupo: "clientes",
+    modulo: "clientes",
+    accion: "partes.ver",
+    perilla: null,
+    href: `${RUTA_DE_CLIENTES}?rol=cliente`,
+    etiqueta: "clientes.lista.clientes",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
+    clave: "proveedores",
+    area: "compras",
+    grupo: "proveedores",
+    modulo: "clientes",
+    accion: "partes.ver",
+    perilla: null,
+    href: `${RUTA_DE_CLIENTES}?rol=proveedor`,
+    etiqueta: "clientes.lista.proveedores",
     departamento: null,
   },
   {
