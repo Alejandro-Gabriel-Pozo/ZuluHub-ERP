@@ -116,7 +116,7 @@ export function crearRepositorioDeLecturasDeCompras(
         .where("estado", "=", "CONFIRMADA")
         .where("nivel", "in", NIVELES_DE_RECEPCION_INMEDIATA)
         .where(
-          sql<boolean>`exists (select 1 from linea_de_recepcion l where l.empresa_id = recepcion.empresa_id and l.recepcion_id = recepcion.id and l.precio is null)`,
+          sql<boolean>`exists (select 1 from linea_de_recepcion l where l.empresa_id = recepcion.empresa_id and l.recepcion_id = recepcion.id and l.precio is null and not exists (select 1 from correccion_de_compra c where c.empresa_id = l.empresa_id and c.recepcion_id = l.recepcion_id and c.linea = l.numero and c.precio_nuevo is not null))`,
         );
       if (sucursales !== "TODAS") consulta = consulta.where("sucursal_id", "in", [...sucursales]);
       const filas = await consulta
