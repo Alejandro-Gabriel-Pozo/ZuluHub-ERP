@@ -21,7 +21,7 @@ export const TEXTOS_DE_COMPRAS = {
         nombre: "textosDeCompras",
       },
     ],
-    fuente: { decision: "DEC-0834" },
+    fuente: { decision: "DEC-0838" },
   },
   "compras.compra.por_recibir": { porDefecto: "Por recibir" },
   "compras.compra.sin_facturar": { porDefecto: "Sin facturar" },

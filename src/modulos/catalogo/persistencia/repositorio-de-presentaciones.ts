@@ -45,6 +45,11 @@ export interface RepositorioDePresentaciones {
     productoId: string,
     incluirApagadas: boolean,
   ): Promise<readonly PresentacionGuardada[]>;
+  /** Las presentaciones ACTIVAS de varios productos en una sola lectura (por producto y nombre): para mostrar una página de productos sin una consulta por cada uno. */
+  deLosProductos(
+    empresa: EmpresaId,
+    productoIds: readonly string[],
+  ): Promise<readonly PresentacionGuardada[]>;
   insertar(empresa: EmpresaId, alta: AltaDePresentacion): Promise<PresentacionGuardada>;
   /** `null` si la versión ya no es la esperada. */
   actualizar(
@@ -136,6 +141,21 @@ export function crearRepositorioDePresentaciones(
         .where("producto_id", "=", productoId);
       if (!incluirApagadas) consulta = consulta.where("activa", "=", true);
       const filas = await consulta.orderBy("nombre_clave").orderBy("id").execute();
+      return filas.map(aPresentacion);
+    },
+    async deLosProductos(empresa, productoIds) {
+      const ids = productoIds.filter(esUuid);
+      if (ids.length === 0) return [];
+      const filas = await db
+        .selectFrom("presentacion_de_producto")
+        .select(COLUMNAS)
+        .where("empresa_id", "=", empresa)
+        .where("producto_id", "in", ids)
+        .where("activa", "=", true)
+        .orderBy("producto_id")
+        .orderBy("nombre_clave")
+        .orderBy("id")
+        .execute();
       return filas.map(aPresentacion);
     },
     async insertar(empresa, alta) {

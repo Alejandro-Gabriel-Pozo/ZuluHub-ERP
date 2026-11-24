@@ -38,6 +38,7 @@ import { TEXTOS_DE_LOTES } from "./catalogo-lotes";
 import { TEXTOS_DE_PRODUCCION } from "./catalogo-produccion";
 import { TEXTOS_DE_SALON } from "./catalogo-salon";
 import { TEXTOS_DE_STOCK } from "./catalogo-stock";
+import { TEXTOS_DE_USUARIOS } from "./catalogo-usuarios";
 import { TEXTOS_DE_VENTAS } from "./catalogo-ventas";
 import { TEXTOS_DE_CARTA_PUBLICA } from "./catalogo-carta-publica";
 import { TEXTOS_DEL_NUCLEO } from "./catalogo-nucleo";
@@ -54,10 +55,7 @@ export type DefinicionDeTexto = Readonly<{
   largoMaximo?: number;
   /** Los marcadores que admite, sin llaves; los mismos que usa `porDefecto`. Omitido: ninguno. */
   marcadores?: readonly string[];
-  /**
-   * Quién consume el texto (inventario de textos, fila 173 de `decisiones-del-dueno-2026-11.md`). OPCIONAL por ahora: ningún chequeo
-   * lo exige; lo medirá el analizador de declaraciones (tramo U2). No se agrega a los catálogos existentes en este tramo.
-   */
+  /** Quién consume el texto (fila 173 de `decisiones-del-dueno-2026-11.md`). OPCIONAL por ahora: ningún chequeo lo exige; lo mide el analizador de declaraciones. */
   usos?: UsosDeTexto;
   /** De dónde salió el texto aprobado: un `DEC` aceptado o `HEREDADO`. OPCIONAL por ahora, igual que `usos`. */
   fuente?: FuenteDeTexto;
@@ -85,6 +83,7 @@ export const CATALOGO_DE_TEXTOS = {
   ...TEXTOS_DE_COMANDAS,
   ...TEXTOS_DE_CLIENTES,
   ...TEXTOS_DE_COMPRAS,
+  ...TEXTOS_DE_USUARIOS,
 } as const satisfies Record<string, DefinicionDeTexto>;
 
 export type ClaveDeTexto = keyof typeof CATALOGO_DE_TEXTOS;
