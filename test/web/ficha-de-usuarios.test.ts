@@ -36,7 +36,7 @@ describe("ficha de la pantalla «Usuarios»", () => {
       expect(Object.keys(FICHA_DE_USUARIOS.textos)).toContain(clave);
       expect(def.usos).not.toBe("pendiente");
       expect(def.usos.length).toBeGreaterThan(0);
-      expect([{ decision: "DEC-0851" }, { decision: "DEC-0856" }]).toContainEqual(def.fuente);
+      expect([{ decision: "DEC-0851" }, { decision: "DEC-0857" }]).toContainEqual(def.fuente);
     }
   });
 

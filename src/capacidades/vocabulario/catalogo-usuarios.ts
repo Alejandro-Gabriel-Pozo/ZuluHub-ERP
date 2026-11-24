@@ -10,8 +10,8 @@ import type { FuenteDeTexto } from "./uso-y-fuente-de-texto";
  * Los textos de invitar, reenviar, revocar y sucursales son de los tramos U2, U4: no se declaran acá hasta que haya quien los consuma. Los de desactivar (U3) son los dos de la confirmación.
  */
 const FUENTE_DEL_DUENO: FuenteDeTexto = { decision: "DEC-0851" };
-/** Los textos de desactivar (tramo U3): la misma fila del dueño (23/11/2026, pregunta 2: pide confirmar), asentada por DEC-0856. */
-const FUENTE_DE_DESACTIVAR: FuenteDeTexto = { decision: "DEC-0856" };
+/** Los textos de desactivar (tramo U3): la misma fila del dueño (23/11/2026, pregunta 2: pide confirmar), asentada por DEC-0857. */
+const FUENTE_DE_DESACTIVAR: FuenteDeTexto = { decision: "DEC-0857" };
 
 const MODELO = "apps/web/ui/plantillas/usuarios/modelo-de-usuarios.ts";
 

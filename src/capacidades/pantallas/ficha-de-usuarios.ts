@@ -49,10 +49,10 @@ const REUSADO = {
     "Pedernal-docs 10-ux-ui, maqueta usuarios.html (vLista, vUsuario); 11-especificaciones/plan-de-pantallas-usuarios-2026-11-23.md §7",
 } as const;
 
-/** Los textos de la confirmación de desactivar: la misma fila del dueño (23/11/2026, pregunta 2: pide confirmar), asentada por DEC-0856. */
+/** Los textos de la confirmación de desactivar: la misma fila del dueño (23/11/2026, pregunta 2: pide confirmar), asentada por DEC-0857. */
 const CONFIRMACION_APROBADA = {
   decidio:
-    "el dueño, 23/11/2026 (aprobó la maqueta `usuarios.html`, incluida la confirmación de desactivar, y la recomendación 2: pide confirmar; Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md, fila del 23/11/2026 «Usuarios de la empresa…»); DEC-0856",
+    "el dueño, 23/11/2026 (aprobó la maqueta `usuarios.html`, incluida la confirmación de desactivar, y la recomendación 2: pide confirmar; Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md, fila del 23/11/2026 «Usuarios de la empresa…»); DEC-0857",
   donde:
     "Pedernal-docs 10-ux-ui, maqueta usuarios.html (estado «Confirmar desactivar») y 11-especificaciones/plan-de-pantallas-usuarios-2026-11-23.md §7 y §9 (pregunta 2)",
 } as const;
