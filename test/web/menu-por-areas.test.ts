@@ -276,15 +276,6 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "produccion.pantalla.produccion",
       ],
       [
-        "proveedores",
-        "compras",
-        "proveedores",
-        "clientes",
-        "partes.ver",
-        "/clientes?rol=proveedor",
-        "clientes.lista.proveedores",
-      ],
-      [
         "compras",
         "compras",
         "compras",
@@ -292,6 +283,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "recepciones.ver",
         "/compras",
         "compras.compra.compras",
+      ],
+      [
+        "proveedores",
+        "compras",
+        "proveedores",
+        "clientes",
+        "partes.ver",
+        "/clientes?rol=proveedor",
+        "clientes.lista.proveedores",
       ],
       [
         "configuracion-fiscal",
@@ -507,8 +507,8 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "secciones",
     "stock",
     "produccion",
-    "proveedores",
     "compras",
+    "proveedores",
     "configuracion-fiscal",
     "medios-de-pago",
     "usuarios",
@@ -579,11 +579,11 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     [
       "compras",
       [
+        ["compras", [["pantalla", "compras", "/compras", "compras.compra.compras"]]],
         [
           "proveedores",
           [["pantalla", "proveedores", "/clientes?rol=proveedor", "clientes.lista.proveedores"]],
         ],
-        ["compras", [["pantalla", "compras", "/compras", "compras.compra.compras"]]],
       ],
     ],
     [
