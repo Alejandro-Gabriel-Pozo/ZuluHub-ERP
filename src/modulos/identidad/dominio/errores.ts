@@ -72,8 +72,9 @@ export type ErrorDeAceptacion =
   | EmpresaNoOpera
   | RolDistintoAlAnterior;
 
-/** Apagado de una membresía. */
-export type ErrorDeMembresia = "MEMBRESIA_NO_ENCONTRADA" | "ES_EL_GERENTE" | "ULTIMO_ADMIN";
+/** Apagado de una membresía. `ES_UNO_MISMO`: quien pide el apagado es la persona a apagar (H3, dueño 23/11/2026). */
+export type ErrorDeMembresia =
+  "MEMBRESIA_NO_ENCONTRADA" | "ES_UNO_MISMO" | "ES_EL_GERENTE" | "ULTIMO_ADMIN";
 
 /**
  * Traspaso de gerencia (H6, especificación §B.3). Los errores de cada decisión: `TRASPASO_RESUELTO`

@@ -10,7 +10,7 @@ import { rutaDeLaFichaDeUsuario } from "../sesion/rutas-de-cuenta";
 import { textoDelRol } from "../sesion/textos-de-empresa";
 
 /**
- * El modelo de «Usuarios» (maqueta `usuarios.html`, `vLista` y `vUsuario`): de lo que entrega el servidor a lo que dibuja la pantalla, con todo el texto ya resuelto. Puro: sin React ni servidor.
+ * El modelo de «Usuarios» (maqueta `usuarios.html`, `vLista`, `vUsuario` y la confirmación de desactivar): de lo que entrega el servidor a lo que dibuja la pantalla, con todo el texto ya resuelto. Puro: sin React ni servidor.
  * El orden es el del servidor (email). El estado se dice SIEMPRE con texto (la insignia lleva su texto; el color solo no alcanza). Una invitación vencida se marca por lo que dice el servidor
  * (`vencida`, calculado con su reloj): acá no se vuelve a decidir. El vencimiento llega como instante ISO UTC y se muestra dd/mm/aaaa en la zona de Argentina con la regla de fechas del
  * proyecto (`hoyEnArgentina` + `fechaParaMostrar`): un vencimiento a las 02:00 UTC es todavía el día anterior en Argentina.
@@ -126,7 +126,22 @@ export function armarLaListaDeUsuarios(
   };
 }
 
-/** La ficha de solo lectura de una persona: su email es el título; el rol y el estado, en dos renglones. */
+/** Lo que dice el cuadro de confirmar desactivar y sus botones, todo ya resuelto. */
+export type DesactivarArmado = Readonly<{
+  /** El botón de la ficha que abre el cuadro («Desactivar»). */
+  boton: string;
+  /** «¿Desactivar a ana@x.test?»: el título del cuadro. */
+  titulo: string;
+  /** «Se corta su acceso ahora.» */
+  detalle: string;
+  /** El botón que envía («Desactivar»). */
+  confirmar: string;
+  cancelar: string;
+  cerrar: string;
+  enviando: string;
+}>;
+
+/** La ficha de una persona: su email es el título; el rol y el estado, en dos renglones; y, si corresponde, el botón de desactivar. */
 export type FichaDeUsuarioArmada = Readonly<{
   email: string;
   renglones: readonly Readonly<{
@@ -134,12 +149,28 @@ export type FichaDeUsuarioArmada = Readonly<{
     valor: string | null;
     insignia: InsigniaArmada | null;
   }>[];
+  /** Los textos del botón y del cuadro; `null` si la ficha no ofrece desactivar (no se dibuja nada). */
+  desactivar: DesactivarArmado | null;
 }>;
+
+/**
+ * Quién mira y qué puede: lo único que decide si la ficha OFRECE «Desactivar». Sin esto no se ofrece (todo nace cerrado). Es una ayuda, no una autorización: la acción vuelve a pasar por el guard y el
+ * dominio, que imponen quién puede desactivar a quién; acá solo se evita ofrecer lo que nunca va a funcionar (el gerente, uno mismo, quien ya está desactivado, quien no tiene el permiso). Si no se sabe quién mira (`personaId` nulo) tampoco se ofrece: no se puede asegurar que no sea uno mismo.
+ */
+export type QuienMiraLaFicha = Readonly<{ personaId: string | null; puedeDesactivar: boolean }>;
 
 export function armarLaFichaDeUsuario(
   u: UsuarioParaLaPantalla,
   diccionario: DiccionarioResuelto = {},
+  quienMira: QuienMiraLaFicha | null = null,
 ): FichaDeUsuarioArmada {
+  const seOfrece =
+    quienMira !== null &&
+    quienMira.puedeDesactivar &&
+    quienMira.personaId !== null &&
+    u.activo &&
+    u.rol !== "GERENTE" &&
+    u.personaId !== quienMira.personaId;
   return {
     email: u.email,
     renglones: [
@@ -156,5 +187,16 @@ export function armarLaFichaDeUsuario(
           : { tono: "aviso", texto: texto(diccionario, "catalogo.estado.desactivado") },
       },
     ],
+    desactivar: seOfrece
+      ? {
+          boton: texto(diccionario, "caja.accion.desactivar"),
+          titulo: texto(diccionario, "usuarios.desactivar.titulo", { email: u.email }),
+          detalle: texto(diccionario, "usuarios.desactivar.detalle"),
+          confirmar: texto(diccionario, "caja.accion.desactivar"),
+          cancelar: texto(diccionario, "caja.accion.cancelar"),
+          cerrar: texto(diccionario, "vidriera.producto.cerrar"),
+          enviando: texto(diccionario, "conexion.enviando"),
+        }
+      : null,
   };
 }

@@ -30,6 +30,9 @@ describe("traducirErrorDeUsuarios", () => {
 
   it.each([
     "MEMBRESIA_NO_ENCONTRADA",
+    "ES_UNO_MISMO",
+    "ES_EL_GERENTE",
+    "ULTIMO_ADMIN",
     "EMPRESA_NO_OPERA",
     "INVITACION_NO_ENCONTRADA",
     "UN_ERROR_QUE_NADIE_CONOCE",
@@ -37,6 +40,16 @@ describe("traducirErrorDeUsuarios", () => {
   ])("cualquier otro texto de error (%s) sale como el genérico", (error) => {
     expect(traducirErrorDeUsuarios(error)).toEqual(GENERICO);
   });
+
+  it.each([
+    { codigo: "EMPRESA_NO_OPERA", empresaId: "e-1", motivo: "EMPRESA_SUSPENDIDA" },
+    { codigo: "ROL_DISTINTO_AL_ANTERIOR", empresaId: "e-1" },
+  ])(
+    "un error de negocio con datos (%j) sale como el genérico, sin decir cuál empresa ni por qué",
+    (error) => {
+      expect(traducirErrorDeUsuarios(error)).toEqual(GENERICO);
+    },
+  );
 
   it("un error de la base (objeto) pasa sin cambios para que salga como fallo inesperado", () => {
     const error = { tipo: "Inesperado", sqlstate: "XX000", mensaje: "relation does not exist" };

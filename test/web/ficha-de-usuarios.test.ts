@@ -3,9 +3,8 @@ import { describe, expect, it } from "vitest";
 import { FILAS_DEL_MENU } from "../../apps/web/ui/navegacion/menu";
 import { RUTAS_DE_CUENTA } from "../../apps/web/ui/plantillas/sesion/rutas-de-cuenta";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
-import type { FichaDePantalla } from "../../src/capacidades/pantallas/ficha-de-mesas";
 import { FICHA_DE_USUARIOS } from "../../src/capacidades/pantallas/ficha-de-usuarios";
-import { CATALOGO_DE_TEXTOS } from "../../src/capacidades/vocabulario/catalogo";
+import { CATALOGO_DE_TEXTOS, type ClaveDeTexto } from "../../src/capacidades/vocabulario/catalogo";
 import { TEXTOS_DE_USUARIOS } from "../../src/capacidades/vocabulario/catalogo-usuarios";
 
 /**
@@ -20,7 +19,7 @@ describe("ficha de la pantalla «Usuarios»", () => {
   });
 
   it("todo texto del catálogo que usa está declarado con usos y fuente de dueño, y cada clave existe", () => {
-    const botones: FichaDePantalla["botones"] = FICHA_DE_USUARIOS.botones;
+    const botones: readonly { texto: ClaveDeTexto }[] = FICHA_DE_USUARIOS.botones;
     const claves = [FICHA_DE_USUARIOS.titulo, ...botones.map((b) => b.texto)];
     for (const clave of claves) expect(Object.keys(FICHA_DE_USUARIOS.textos)).toContain(clave);
     for (const [clave, t] of Object.entries(FICHA_DE_USUARIOS.textos)) {
@@ -37,12 +36,26 @@ describe("ficha de la pantalla «Usuarios»", () => {
       expect(Object.keys(FICHA_DE_USUARIOS.textos)).toContain(clave);
       expect(def.usos).not.toBe("pendiente");
       expect(def.usos.length).toBeGreaterThan(0);
-      expect(def.fuente).toEqual({ decision: "DEC-0851" });
+      expect([{ decision: "DEC-0851" }, { decision: "DEC-0856" }]).toContainEqual(def.fuente);
     }
   });
 
-  it("no tiene botones y los dos estados son el mensaje genérico", () => {
-    expect(FICHA_DE_USUARIOS.botones).toEqual([]);
+  it("sus únicos botones son los de desactivar (U3): uno abre el cuadro y otro envía `usuarios.apagar`, y sin permiso no se dibujan; los dos estados son el mensaje genérico", () => {
+    expect(FICHA_DE_USUARIOS.botones).toEqual([
+      {
+        id: "desactivar",
+        texto: "caja.accion.desactivar",
+        hace: "abre-el-cuadro",
+        sinPermiso: "AUSENTE",
+      },
+      {
+        id: "confirmar-desactivar",
+        texto: "caja.accion.desactivar",
+        hace: { envia: "usuarios.apagar" },
+        sinPermiso: "AUSENTE",
+      },
+    ]);
+    expect(Object.keys(CATALOGO_DE_MODULOS.administracion.acciones)).toContain("usuarios.apagar");
     expect(FICHA_DE_USUARIOS.estados).toEqual({ ERROR: "GENERICO", SIN_PERMISO: "GENERICO" });
   });
 

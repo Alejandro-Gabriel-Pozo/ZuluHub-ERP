@@ -25,6 +25,15 @@ export async function puedeEditarElContactoDeLaSucursal(
 }
 
 /**
+ * ¿La persona puede desactivar usuarios (`usuarios.apagar`, gerente y administrador)? Es la oferta que el servidor calcula con `ofertaDe`: con el módulo en solo lectura o sin el rol, no. Si no se
+ * pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: la acción vuelve a pasar por el guard dentro de su transacción. Chequeo: `test/web/usuarios-desactivar-acceso.test.ts`.
+ */
+export async function puedeDesactivarUsuarios(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && ofertaDe("usuarios.apagar", permisos).permitida;
+}
+
+/**
  * Qué botones de Puntos de venta se ofrecen activos hoy, según lo que el SERVIDOR deja hacer (`permisosDelActor`, una lectura por
  * pedido). «Pasar a producción» (`puntos_de_venta.cambiar_ambiente`) es del módulo `facturacion` (`disponible` desde 2026-11-04, pero
  * activo solo en las empresas donde la plataforma lo activó): sale apagado, con el motivo que da el servidor, si el módulo no está activo

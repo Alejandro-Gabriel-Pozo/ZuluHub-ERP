@@ -7,9 +7,11 @@ import type { FuenteDeTexto } from "./uso-y-fuente-de-texto";
  * asienta con la fila citada. Lo que la pantalla ya podía decir con un texto existente NO tiene clave nueva (una regla, un lugar): «Desactivado»
  * (`catalogo.estado.desactivado`), «Activo» (`caja.estado.activo`), «Pendiente» (`fiscal.pantalla.config_cartel_pendiente`), «Estado»
  * (`fiscal.pantalla.listado_rotulo_estado`) y los tres roles (`rol.*.nombre`).
- * Los textos de invitar, reenviar, revocar, desactivar y sucursales son de los tramos U2 a U4: no se declaran acá hasta que haya quien los consuma.
+ * Los textos de invitar, reenviar, revocar y sucursales son de los tramos U2, U4: no se declaran acá hasta que haya quien los consuma. Los de desactivar (U3) son los dos de la confirmación.
  */
 const FUENTE_DEL_DUENO: FuenteDeTexto = { decision: "DEC-0851" };
+/** Los textos de desactivar (tramo U3): la misma fila del dueño (23/11/2026, pregunta 2: pide confirmar), asentada por DEC-0856. */
+const FUENTE_DE_DESACTIVAR: FuenteDeTexto = { decision: "DEC-0856" };
 
 const MODELO = "apps/web/ui/plantillas/usuarios/modelo-de-usuarios.ts";
 
@@ -56,6 +58,19 @@ export const TEXTOS_DE_USUARIOS = {
     marcadores: ["fecha"],
     usos: [{ como: "FUNCION", archivo: MODELO, nombre: "armarLaListaDeUsuarios" }],
     fuente: FUENTE_DEL_DUENO,
+  },
+  // Título de la confirmación de desactivar (el email de la persona de la ficha).
+  "usuarios.desactivar.titulo": {
+    porDefecto: "¿Desactivar a {email}?",
+    marcadores: ["email"],
+    usos: [{ como: "FUNCION", archivo: MODELO, nombre: "armarLaFichaDeUsuario" }],
+    fuente: FUENTE_DE_DESACTIVAR,
+  },
+  // Detalle de la confirmación: lo que pasa al confirmar.
+  "usuarios.desactivar.detalle": {
+    porDefecto: "Se corta su acceso ahora.",
+    usos: [{ como: "FUNCION", archivo: MODELO, nombre: "armarLaFichaDeUsuario" }],
+    fuente: FUENTE_DE_DESACTIVAR,
   },
   // El genérico que ya estaba aprobado (30/10/2026), con clave propia del módulo como los demás: no es un texto nuevo.
   "usuarios.error.accion_no_permitida": {

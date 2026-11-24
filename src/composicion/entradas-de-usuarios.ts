@@ -20,3 +20,15 @@ export function entradaDeFichaDeUsuario(
   const forma = leer(formaDeFicha, crudo);
   return forma.ok ? ok({ personaId: personaId(forma.valor.personaId) }) : forma;
 }
+
+/**
+ * Desactivar a una persona: el pedido lleva SOLO su id (el de la ficha). La empresa y quién pide salen de la sesión; el rol, el email y cualquier otro dato no se leen del
+ * navegador (lista blanca). Misma forma que la ficha: una regla, un lugar.
+ */
+export type EntradaDeDesactivarUsuario = EntradaDeFichaDeUsuario;
+
+export function entradaDeDesactivarUsuario(
+  crudo: unknown,
+): Resultado<EntradaDeDesactivarUsuario, ErrorDeEntrada> {
+  return entradaDeFichaDeUsuario(crudo);
+}

@@ -7,7 +7,7 @@ import type { ErrorDeEntrada } from "./entradas-de-facturacion";
 
 /**
  * De un error de la pantalla «Usuarios» al código público que sale a la pantalla (ADR-016). Todo error de NEGOCIO (los motivos del guard, la persona que no está en
- * la empresa, cualquier texto de error) sale como el genérico «Esta acción no está permitida» (dueño, 30/10/2026, interfaz sobria; maqueta `usuarios.html` del 23/11/2026),
+ * la empresa, la empresa que no opera, cualquier texto de error) sale como el genérico «Esta acción no está permitida» (dueño, 30/10/2026, interfaz sobria; maqueta `usuarios.html` del 23/11/2026),
  * sin decir cuál fue: una persona de otra empresa y una inexistente dan lo mismo. Los errores de la base (objetos, no textos) pasan SIN CAMBIOS: `aRespuesta` los vuelve
  * un fallo inesperado con referencia `PD-…` y el detalle va al registro del servidor, nunca a la pantalla.
  * Previene: que un motivo del guard con su texto propio, un error sin traducir o el detalle de la base lleguen al navegador. Chequeo: `errores-de-usuarios.test.ts`.
@@ -15,9 +15,19 @@ import type { ErrorDeEntrada } from "./entradas-de-facturacion";
 
 const GENERICO = { codigo: "USUARIOS_NO_PERMITIDO" satisfies CodigoDeUsuarios } as const;
 
-/** El error de la consulta tal como lo entiende `aRespuesta`: un texto de negocio es el genérico; un error de la base sigue como está. */
+/** Un error de NEGOCIO con datos (`EMPRESA_NO_OPERA`, `ROL_DISTINTO_AL_ANTERIOR`): un objeto con su `codigo` de texto. Los de la base traen `tipo`, no `codigo`. */
+const esErrorDeNegocioConDatos = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "codigo" in error &&
+  typeof error.codigo === "string";
+
+/**
+ * El error de la consulta o del caso de uso tal como lo entiende `aRespuesta`: un error de negocio (un texto, o un objeto con su `codigo` como `EMPRESA_NO_OPERA`, que dice cuál empresa y por qué)
+ * es el genérico; un error de la base sigue como está. La empresa suspendida o en alta no se distingue del resto: «Esta acción no está permitida».
+ */
 export function traducirErrorDeUsuarios(error: unknown): unknown {
-  return typeof error === "string" ? GENERICO : error;
+  return typeof error === "string" || esErrorDeNegocioConDatos(error) ? GENERICO : error;
 }
 
 /**

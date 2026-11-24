@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { ContextoOperativo } from "../contexto/contexto";
 import { err, ok } from "../primitivas/resultado/resultado";
-import { fichaDeUsuario, listarUsuarios, type DependenciasDeUsuariosWeb } from "./usuarios-web";
+import {
+  desactivarUsuario,
+  fichaDeUsuario,
+  listarUsuarios,
+  type DependenciasDeUsuariosWeb,
+} from "./usuarios-web";
 
 /**
  * La composición de «Usuarios» con consultas falsas: la lista blanca (nada de más sale aunque la consulta traiga más), el todo o nada y la ficha buscada entre las de la empresa.
@@ -38,6 +43,9 @@ function dependencias(
   llamadas: string[] = [],
 ): DependenciasDeUsuariosWeb {
   return {
+    casosDeUso: () => {
+      throw new Error("las lecturas no escriben: no tocan los casos de uso");
+    },
     consultas: () =>
       ({
         listarMiembros: () => {
@@ -148,5 +156,86 @@ describe("fichaDeUsuario", () => {
       personaId: A,
     });
     expect(r).toMatchObject({ ok: false, error: { codigo: "USUARIOS_NO_PERMITIDO" } });
+  });
+});
+
+describe("desactivarUsuario", () => {
+  /** Los dos errores de texto que `apagarMembresia` puede devolver, más los motivos del guard y la empresa que no opera: ninguno puede salir con su texto. */
+  const ERRORES = [
+    "MEMBRESIA_NO_ENCONTRADA",
+    "ES_UNO_MISMO",
+    "ES_EL_GERENTE",
+    "ULTIMO_ADMIN",
+    "SIN_PERMISO",
+    "MODULO_NO_ACTIVO",
+    "EMPRESA_NO_OPERA",
+  ];
+
+  function conApagado(resultado: () => Promise<unknown>) {
+    const pedidos: unknown[][] = [];
+    const d: DependenciasDeUsuariosWeb = {
+      ...dependencias(ok([]), ok([])),
+      casosDeUso: () =>
+        ({
+          apagarMembresia: (...args: unknown[]) => {
+            pedidos.push(args);
+            return resultado();
+          },
+        }) as unknown as ReturnType<DependenciasDeUsuariosWeb["casosDeUso"]>,
+    };
+    return { d, pedidos };
+  }
+
+  it("manda al caso de uso SOLO el id de la persona y el contexto del servidor, aunque el pedido traiga más", async () => {
+    const { d, pedidos } = conApagado(() =>
+      Promise.resolve(ok({ yaEstabaApagada: false, invitacionesRevocadas: 2 })),
+    );
+    const r = await desactivarUsuario(d, CONTEXTO, {
+      personaId: A,
+      empresaId: "otra-empresa",
+      rol: "GERENTE",
+      actor: B,
+      email: "x@x.test",
+    });
+    expect(r).toEqual({ ok: true, dato: { yaEstabaApagada: false } });
+    expect(pedidos).toEqual([[CONTEXTO, { personaId: A }]]);
+  });
+
+  it("repetir devuelve ok sin que la pantalla note la diferencia (el caso de uso no escribe la segunda vez)", async () => {
+    const { d } = conApagado(() =>
+      Promise.resolve(ok({ yaEstabaApagada: true, invitacionesRevocadas: 0 })),
+    );
+    expect(await desactivarUsuario(d, CONTEXTO, { personaId: A })).toEqual({
+      ok: true,
+      dato: { yaEstabaApagada: true },
+    });
+  });
+
+  it.each(ERRORES)("el error %s sale como el genérico, sin decir cuál fue", async (error) => {
+    const { d } = conApagado(() => Promise.resolve(err(error)));
+    expect(await desactivarUsuario(d, CONTEXTO, { personaId: A })).toMatchObject({
+      ok: false,
+      error: { codigo: "USUARIOS_NO_PERMITIDO" },
+    });
+  });
+
+  it("un id que no tiene la forma de un identificador no llega al caso de uso", async () => {
+    const { d, pedidos } = conApagado(() => Promise.resolve(err("NO_DEBERIA_LLEGAR")));
+    for (const crudo of [{ personaId: "xx" }, { personaId: 7 }, {}, null, "texto"]) {
+      expect(await desactivarUsuario(d, CONTEXTO, crudo)).toMatchObject({
+        ok: false,
+        error: { codigo: "USUARIOS_NO_PERMITIDO" },
+      });
+    }
+    expect(pedidos).toEqual([]);
+  });
+
+  it("una excepción de la base sale con referencia y sin detalle", async () => {
+    registro.length = 0;
+    const { d } = conApagado(() => Promise.reject(new Error("fallo con datos: ana@x.test")));
+    const r = await desactivarUsuario(d, CONTEXTO, { personaId: A });
+    expect(r.ok).toBe(false);
+    expect(JSON.stringify(r)).not.toContain("ana@x.test");
+    expect(registro.join(" ")).toContain("ana@x.test");
   });
 });

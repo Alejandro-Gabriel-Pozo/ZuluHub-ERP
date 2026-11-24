@@ -90,3 +90,14 @@ a.fila:focus-visible {
   text-align: right;
   overflow-wrap: anywhere;
 }
+
+.acciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.detalle-de-confirmar {
+  margin: 0;
+  color: var(--color-texto-suave);
+}
