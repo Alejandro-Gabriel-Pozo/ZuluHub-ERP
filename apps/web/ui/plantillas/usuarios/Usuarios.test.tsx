@@ -13,7 +13,7 @@ import { PantallaDeListaDeUsuarios } from "./PantallaDeListaDeUsuarios";
 
 /**
  * «Usuarios» (tramo U1) en Chromium real: la lista sin violaciones graves de accesibilidad, el estado «Desactivado» y «Vencida» dichos con texto (no solo con color), las filas de personas como
- * enlaces a su ficha (de 48 px o más), las de invitaciones sin enlace, el bloque de invitaciones ausente si no hay ninguna y la ficha de solo lectura sin botones.
+ * enlaces a su ficha (de 48 px o más), el bloque de invitaciones ausente si no hay ninguna y la ficha de solo lectura sin botones. Las invitaciones y «Invitar» (tramo U2) están en `Invitaciones.test.tsx`.
  * Previene: un estado que solo se vea por color y una fila que no se pueda tocar en el celular.
  */
 const P = (n: number) => `0b0b0b0b-1111-4222-8333-44444444444${n}`;
@@ -75,16 +75,13 @@ describe("PantallaDeListaDeUsuarios", () => {
     expect(page.getByText("Desactivado").elements()).toHaveLength(1);
   });
 
-  it("las invitaciones: encabezado, «Vence el …» en hora de Argentina, «Vencida» y «Pendiente» como texto, y sin enlace", async () => {
+  it("las invitaciones: encabezado, «Vence el …» en hora de Argentina, «Vencida» y «Pendiente» como texto", async () => {
     await render(<PantallaDeListaDeUsuarios lista={armarLaListaDeUsuarios(lista)} />);
     await expect.element(page.getByRole("heading", { name: "Invitaciones" })).toBeVisible();
     await expect.element(page.getByText("Empleado · Vence el 29/11/2026")).toBeVisible();
     await expect.element(page.getByText("Administrador · Vence el 21/11/2026")).toBeVisible();
     await expect.element(page.getByText("Vencida")).toBeVisible();
     await expect.element(page.getByText("Pendiente")).toBeVisible();
-    expect(
-      page.getByRole("link", { name: /julia@lacteos\.test|pablo@lacteos\.test/ }).elements(),
-    ).toHaveLength(0);
   });
 
   it("sin invitaciones no se dibuja el bloque ni su encabezado", async () => {
@@ -94,9 +91,10 @@ describe("PantallaDeListaDeUsuarios", () => {
     expect(page.getByRole("heading", { name: "Invitaciones" }).elements()).toHaveLength(0);
   });
 
-  it("no ofrece ningún botón: en este tramo solo muestra", async () => {
+  it("sin el permiso de invitar no ofrece ningún botón ni enlace de «Invitar»", async () => {
     await render(<PantallaDeListaDeUsuarios lista={armarLaListaDeUsuarios(lista)} />);
     expect(page.getByRole("button").elements()).toHaveLength(0);
+    expect(page.getByRole("link", { name: "Invitar" }).elements()).toHaveLength(0);
   });
 });
 

@@ -1,5 +1,4 @@
 import "server-only";
-import { revalidatePath } from "next/cache";
 import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import { sucursalesDeLaEmpresa } from "../../../src/composicion/sesion-y-empresa";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
@@ -97,11 +96,14 @@ export async function invitarAUnUsuario(datos: FormData): Promise<ResultadoDeInv
       ? { estado: "YA_HABIA" }
       : { estado: "ERROR", error: respuesta.error };
   }
-  revalidatePath(RUTAS_DE_CUENTA.usuarios);
   return respuesta.dato.yaExistia ? { estado: "YA_HABIA" } : { estado: "HECHO" };
 }
 
-/** Reenviar una invitación (el id viene ligado con `.bind` en la acción, no del formulario). Después va a la ficha de la invitación NUEVA. */
+/**
+ * Reenviar una invitación (el id viene ligado con `.bind` en la acción, no del formulario). Después va a la ficha de la invitación NUEVA.
+ * Ninguna de las tres acciones llama a `revalidatePath`: la pantalla navega con una carga completa (`window.location.assign`) a páginas dinámicas, que leen de nuevo; revalidar acá
+ * volvería a dibujar la ficha de la invitación YA reenviada o revocada (da el genérico) y desmontaría el botón antes de navegar. Chequeo: `test/recorrido/usuarios-invitar.recorrido.ts` (R3 y R4).
+ */
 export async function reenviarUnaInvitacion(
   invitacionId: string,
 ): Promise<ResultadoDeAccionDeInvitacion> {
@@ -109,7 +111,6 @@ export async function reenviarUnaInvitacion(
     reenviar(dependencias, contexto, { invitacionId }),
   );
   if (!respuesta.ok) return { estado: "ERROR", error: respuesta.error };
-  revalidatePath(RUTAS_DE_CUENTA.usuarios);
   return { estado: "HECHO", ruta: rutaDeLaFichaDeInvitacion(respuesta.dato.invitacionId) };
 }
 
@@ -121,7 +122,6 @@ export async function revocarUnaInvitacion(
     revocar(dependencias, contexto, { invitacionId }),
   );
   if (!respuesta.ok) return { estado: "ERROR", error: respuesta.error };
-  revalidatePath(RUTAS_DE_CUENTA.usuarios);
   return { estado: "HECHO", ruta: RUTAS_DE_CUENTA.usuarios };
 }
 
