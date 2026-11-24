@@ -14,7 +14,7 @@ export type TipoDeFactura = (typeof TIPOS_DE_FACTURA)[number];
 
 /** Las alícuotas que se ofrecen en una factura A (de la lista del dominio, `ALICUOTAS_DE_COMPRA`; la prueba falla si una no existe allá). */
 export const ALICUOTAS_PARA_ELEGIR = ["21", "10.5", "27", "EXENTO", "NO_GRAVADO"] as const;
-export const ALICUOTA_INICIAL = "21";
+const ALICUOTA_INICIAL = "21";
 
 export const CLAVE_DE_TEXTO_DEL_TIPO: Readonly<Record<TipoDeFactura, ClaveDeTexto>> = {
   FACTURA_A: "compras.factura.tipo_factura_a",
@@ -65,7 +65,7 @@ export const FACTURA_VACIA: FacturaEscrita = {
   lineas: {},
 };
 
-export const esTipoDeFactura = (valor: string): valor is TipoDeFactura =>
+const esTipoDeFactura = (valor: string): valor is TipoDeFactura =>
   (TIPOS_DE_FACTURA as readonly string[]).includes(valor);
 
 /** Una factura A discrimina el IVA (cada línea lleva su alícuota); una B o C no. Es solo qué se dibuja: la cuenta y la validación son del servidor (`discriminaIva` del dominio; la prueba compara). */

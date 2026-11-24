@@ -118,7 +118,7 @@ export const SIN_ACCIONES_DE_LA_COMPRA: AccionesDeLaCompraParaLaPantalla = {
 };
 
 /** Un pago de la factura ya armado para mostrar: «Transferencia · 24/11/2026», su importe, quién y cuándo, y, si se anuló, «Anulado» con su motivo, quién y cuándo. */
-export type PagoArmado = Readonly<{
+type PagoArmado = Readonly<{
   clave: string;
   titulo: string;
   importe: string;
