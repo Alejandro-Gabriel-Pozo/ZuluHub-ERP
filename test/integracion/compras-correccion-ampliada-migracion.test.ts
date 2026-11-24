@@ -119,6 +119,15 @@ describe.skipIf(base === null)("0093: correccion_de_compra ampliada", () => {
         await insertar({ precio_nuevo: "5", precio_por_tipo: "OTRO" }),
         "correccion_de_compra_precio_por_ck",
       );
+      // Una unidad de precio sin «precio por» es un estado inválido (el CHECK no puede dar NULL y pasar): con precio anterior, el primer término vale y solo el segundo lo frena.
+      check(
+        await insertar({
+          precio_anterior: "4",
+          precio_nuevo: "5",
+          unidad_de_precio_id: "KILOGRAMO",
+        }),
+        "correccion_de_compra_precio_por_completa_ck",
+      );
     });
   });
 

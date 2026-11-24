@@ -32,7 +32,7 @@ ALTER TABLE correccion_de_compra
 ALTER TABLE correccion_de_compra
   ADD CONSTRAINT correccion_de_compra_precio_por_completa_ck CHECK (
     (precio_por_tipo IS NOT NULL) = (precio_anterior IS NULL AND precio_nuevo IS NOT NULL)
-    AND (unidad_de_precio_id IS NOT NULL) = (precio_por_tipo = 'UNIDAD')),
+    AND (unidad_de_precio_id IS NOT NULL) = (precio_por_tipo IS NOT DISTINCT FROM 'UNIDAD')),
   -- El peso real viaja de a pares: lo que era y lo que pasa a ser.
   ADD CONSTRAINT correccion_de_compra_peso_par_ck CHECK ((peso_real_anterior IS NULL) = (peso_real_nuevo IS NULL));
 
