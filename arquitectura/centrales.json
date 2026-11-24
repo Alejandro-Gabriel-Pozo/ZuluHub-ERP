@@ -114,6 +114,7 @@
         "fiscal-imprimir",
         "fiscal-pantallas",
         "lotes",
+        "usuarios",
         "cierre.test",
         "comandas.test",
         "produccion.test"
