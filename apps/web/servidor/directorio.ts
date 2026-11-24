@@ -13,6 +13,7 @@ import {
   type FichaParaLaPantalla,
   type PartesParaLaLista,
   type PosibleDuplicadoParaLaPantalla,
+  type ResultadoDeGuardar,
 } from "../../../src/composicion/directorio-web";
 import type { ResultadoDeAccion } from "./acciones";
 import { web } from "./composicion";
@@ -107,6 +108,30 @@ export async function guardarLaParteDelFormulario(
     return { error: null, guardada: false, duplicados: r.dato.duplicados };
   }
   return { error: null, guardada: true, duplicados: [] };
+}
+
+/**
+ * El alta rápida de un proveedor desde «Nueva compra» (maqueta `compra.html`, «Agregar proveedor»): solo el nombre y si es persona o empresa, con el rol Proveedor y nada más (DDD 15/11/2026, 8a).
+ * Es el MISMO alta del directorio (`guardarLaParte`), con su clave de creación (idempotencia) y su aviso de duplicados, que no bloquea (8b): sin `guardarIgual` y con una parte parecida no se escribe nada
+ * y vuelven las coincidencias. La empresa y la persona salen de la sesión.
+ */
+export function altaRapidaDeProveedor(
+  clave: string,
+  naturaleza: string,
+  nombre: string,
+  guardarIgual: boolean,
+): Promise<Respuesta<ResultadoDeGuardar>> {
+  return conLaEmpresa((contexto) =>
+    guardarLaParte(dependencias, contexto, {
+      idempotencia: clave,
+      parteId: null,
+      versionEsperada: null,
+      guardarIgual,
+      naturaleza,
+      nombre,
+      roles: ["PROVEEDOR"],
+    }),
+  );
 }
 
 /** Termina una acción sobre una parte: el error ya traducido o nada. No redirige: la pantalla decide adónde ir. */

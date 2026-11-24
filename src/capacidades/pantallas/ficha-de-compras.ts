@@ -68,6 +68,12 @@ export const FICHA_DE_COMPRAS = {
   rutas: ["/compras", "/compras/[id]"],
   botones: [
     {
+      id: "nueva-compra",
+      texto: "compras.compra.nueva_compra",
+      hace: { navega: "/compras/nueva" },
+      sinPermiso: "AUSENTE",
+    },
+    {
       id: "aplicar-filtros",
       texto: "fiscal.pantalla.listado_aplicar",
       hace: "aplica-el-filtro",
@@ -101,6 +107,12 @@ export const FICHA_DE_COMPRAS = {
     FICHA_ANULADA: "compras.orden.anulada",
   },
   textos: {
+    "compras.compra.nueva_compra": {
+      usos: [
+        "enlace de la lista hacia «Nueva compra» (Compras PR 6b), solo con permiso de registrar",
+      ],
+      fuente: DE_LA_MAQUETA,
+    },
     "compras.compra.compras": {
       usos: [`${USO}textos-de-compras.ts`, "título de la lista y entrada del menú Compras"],
       fuente: DE_LA_MAQUETA,

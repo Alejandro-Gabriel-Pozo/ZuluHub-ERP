@@ -1,0 +1,70 @@
+.pantalla {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie);
+}
+
+.producto {
+  margin: 0;
+  font-size: var(--tipo-tamano-medio);
+}
+
+.resumen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+}
+
+.resumen p,
+.remito {
+  margin: 0;
+}
+
+.destacado {
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.suave {
+  color: var(--color-texto-suave);
+}
+
+.importe {
+  font-weight: var(--tipo-peso-fuerte);
+  font-variant-numeric: tabular-nums;
+}
+
+.remito {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+}
+
+.remito h3 {
+  margin: 0;
+  font-size: var(--tipo-tamano-medio);
+}
+
+.fila {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--espacio-3);
+}
+
+.proveedor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0863",
+  "fecha": "2026-11-24",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Con más de un depósito de uso normal en la sucursal, «Nueva compra» obliga a elegir uno con un selector rotulado «Depósitos» (el texto aprobado de stock; el singular no tiene).",
+  "que_cambia": "Con un solo depósito no cambia nada; con dos o más, hay que elegir dónde entra la mercadería para guardar. Revertir: aprobar el texto «Depósito» y cambiar el rótulo.",
+  "donde": "PantallaDeNuevaCompra.cliente.tsx, servidor/comprar.ts (cargarLoDeNuevaCompra), ficha-de-nueva-compra.ts (diferencia 9)"
+}
