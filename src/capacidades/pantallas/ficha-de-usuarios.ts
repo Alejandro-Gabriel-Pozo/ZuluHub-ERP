@@ -6,7 +6,9 @@ import type { FichaDePantalla } from "./ficha-de-mesas";
  * `test/web/ficha-de-usuarios.test.ts` contra el catálogo de textos, el de permisos y la tabla del menú, para que no se desfase. No crea acciones ni permisos: declara los que ya existen
  * (`usuarios.ver`, del módulo `administracion`: gerente y administrador).
  *
- * SIN BOTONES a propósito: invitar, reenviar, revocar (U2), desactivar y reactivar (U3) y asignar sucursales (U4) suman los suyos a esta ficha cuando se construyan. Sin permiso y ante cualquier falla
+ * BOTONES: hoy uno, «Guardar» las sucursales de un empleado activo (U4, `usuarios.asignar_sucursales`: gerente y administrador). Sin ese permiso el bloque entero NO se dibuja («AUSENTE»: sin permiso no hay botón ni casillas).
+ * Invitar, reenviar, revocar (U2) y desactivar y reactivar (U3) suman los suyos a esta ficha cuando se construyan. Estados del bloque de sucursales: solo un empleado ACTIVO lo ve; para el gerente, el administrador o un desactivado la ficha
+ * no dice nada de sucursales (pregunta 8 del plan, aprobada el 23/11/2026); una sucursal desactivada no se ofrece ni aparece tildada. «Guardar» lo mismo no cambia nada. Sin permiso y ante cualquier falla
  * sale el mensaje genérico «Esta acción no está permitida», sin filas.
  *
  * DIFERENCIAS CON LA MAQUETA (`usuarios.html`; la maqueta manda y toda diferencia la decide el dueño): ninguna de diseño. Lo que la maqueta dibuja y este tramo NO construye (botón «Invitar», ficha de la
@@ -35,6 +37,7 @@ const REUSADO = {
 
 const USO_DE_LA_LISTA = "modelo-de-usuarios.ts (armarLaListaDeUsuarios)";
 const USO_DE_LA_FICHA = "modelo-de-usuarios.ts (armarLaFichaDeUsuario)";
+const USO_DEL_EDITOR = "modelo-de-usuarios.ts (armarElEditorDeSucursales)";
 
 export const FICHA_DE_USUARIOS = {
   archivos: [
@@ -45,6 +48,8 @@ export const FICHA_DE_USUARIOS = {
     "apps/web/servidor/usuarios.ts",
     "apps/web/ui/plantillas/usuarios/PantallaDeListaDeUsuarios.tsx",
     "apps/web/ui/plantillas/usuarios/PantallaDeFichaDeUsuario.tsx",
+    "apps/web/ui/plantillas/usuarios/FormularioDeSucursalesDeUsuario.cliente.tsx",
+    "apps/web/app/s/app/acciones-de-usuarios.ts",
     "apps/web/ui/plantillas/usuarios/modelo-de-usuarios.ts",
     "src/composicion/usuarios-web.ts",
     "src/composicion/entradas-de-usuarios.ts",
@@ -53,7 +58,14 @@ export const FICHA_DE_USUARIOS = {
   rutas: ["/cuenta/usuarios", "/cuenta/usuarios/[personaId]"],
   titulo: "usuarios.lista.titulo",
   acceso: "usuarios.ver",
-  botones: [],
+  botones: [
+    {
+      id: "guardar-sucursales",
+      texto: "catalogo.accion.guardar",
+      hace: { envia: "usuarios.asignar_sucursales" },
+      sinPermiso: "AUSENTE",
+    },
+  ],
   estados: { ERROR: "GENERICO", SIN_PERMISO: "GENERICO" },
   textos: {
     "usuarios.lista.titulo": {
@@ -64,6 +76,14 @@ export const FICHA_DE_USUARIOS = {
           "el nombre de la entrada de menú lo aprobó el dueño (DDD:82 y DDD:83, decisiones-del-dueno-2026-11.md); maqueta usuarios.html (barra «Usuarios»)",
       },
     },
+    "usuarios.campo.sucursales": {
+      usos: [USO_DEL_EDITOR],
+      fuente: {
+        decidio: `${MAQUETA_APROBADA.decidio}; U4 lo asienta en DEC-0856`,
+        donde: MAQUETA_APROBADA.donde,
+      },
+    },
+    "catalogo.accion.guardar": { usos: [USO_DEL_EDITOR], fuente: REUSADO },
     "usuarios.lista.invitaciones": { usos: [USO_DE_LA_LISTA], fuente: MAQUETA_APROBADA },
     "usuarios.campo.rol": { usos: [USO_DE_LA_FICHA], fuente: MAQUETA_APROBADA },
     "usuarios.invitacion.vencida": { usos: [USO_DE_LA_LISTA], fuente: MAQUETA_APROBADA },

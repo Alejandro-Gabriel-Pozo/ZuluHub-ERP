@@ -37,12 +37,20 @@ describe("ficha de la pantalla «Usuarios»", () => {
       expect(Object.keys(FICHA_DE_USUARIOS.textos)).toContain(clave);
       expect(def.usos).not.toBe("pendiente");
       expect(def.usos.length).toBeGreaterThan(0);
-      expect(def.fuente).toEqual({ decision: "DEC-0851" });
+      expect(def.fuente).toMatchObject({
+        decision: expect.stringMatching(/^DEC-\d{4}$/) as string,
+      });
     }
   });
 
-  it("no tiene botones y los dos estados son el mensaje genérico", () => {
-    expect(FICHA_DE_USUARIOS.botones).toEqual([]);
+  it("sus botones envían una acción que existe en administracion y los dos estados son el mensaje genérico", () => {
+    for (const boton of FICHA_DE_USUARIOS.botones) {
+      expect(boton.hace).toHaveProperty("envia");
+      expect(Object.keys(CATALOGO_DE_MODULOS.administracion.acciones)).toContain(
+        (boton.hace as { envia: string }).envia,
+      );
+    }
+    expect(FICHA_DE_USUARIOS.botones.map((b) => b.id)).toContain("guardar-sucursales");
     expect(FICHA_DE_USUARIOS.estados).toEqual({ ERROR: "GENERICO", SIN_PERMISO: "GENERICO" });
   });
 

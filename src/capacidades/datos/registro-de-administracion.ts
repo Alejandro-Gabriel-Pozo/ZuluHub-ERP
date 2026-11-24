@@ -16,6 +16,9 @@ const REQUIERE_ADMINISTRACION = {
   estadoDeEmpresa: ["ACTIVE"],
 } as const;
 
+const FICHA_DE_USUARIO =
+  "apps/web/ui/plantillas/usuarios/FormularioDeSucursalesDeUsuario.cliente.tsx";
+
 export const DATOS_DE_ADMINISTRACION = {
   correo: {
     ficha: "src/primitivas/contacto/email.ts",
@@ -36,6 +39,19 @@ export const DATOS_DE_ADMINISTRACION = {
     propositos: [CONTACTO_PROPOSITO],
     consumidores: [CONTACTO],
     ponerPor: ["sucursales.editar"],
+    requiere: REQUIERE_ADMINISTRACION,
+  },
+  "sucursales-de-usuario": {
+    ficha: "src/modulos/identidad/dominio/asignacion.ts",
+    propositos: [
+      {
+        para: "Las sucursales en las que trabaja un empleado: el conjunto final de casillas de su ficha, vacío permitido (pantalla «Usuarios»).",
+        fuente:
+          "Pedernal-docs/11-especificaciones/plan-de-pantallas-usuarios-2026-11-23.md §2 (flujo 6) y §9 (pregunta 8); maqueta usuarios.html (vUsuario)",
+      },
+    ],
+    consumidores: [FICHA_DE_USUARIO],
+    ponerPor: ["usuarios.asignar_sucursales"],
     requiere: REQUIERE_ADMINISTRACION,
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;

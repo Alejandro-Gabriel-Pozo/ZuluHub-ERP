@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import { violacionesDeAccesibilidad } from "../../pruebas/ayudas";
 import { ArmazonDeOperacion } from "../sesion/ArmazonDeOperacion";
 import {
+  armarElEditorDeSucursales,
   armarLaFichaDeUsuario,
   armarLaListaDeUsuarios,
   type ListaDeUsuariosParaLaPantalla,
@@ -117,5 +119,91 @@ describe("PantallaDeFichaDeUsuario", () => {
     await render(<PantallaDeFichaDeUsuario ficha={ficha} />);
     await expect.element(page.getByText("Desactivado")).toBeVisible();
     expect(page.getByText("Activo").elements()).toHaveLength(0);
+  });
+});
+
+describe("el bloque «Sucursales» de la ficha de un empleado", () => {
+  const editor = armarElEditorDeSucursales([
+    { id: "s-1", nombre: "Centro", marcada: true },
+    { id: "s-2", nombre: "Norte", marcada: false },
+  ]);
+  const empleado = lista.usuarios[3] as (typeof lista.usuarios)[number];
+
+  /** Una acción que guarda cada envío (lo que recibiría el servidor) y tarda un poco, como una de verdad. */
+  function accionDePrueba() {
+    const envios: string[][] = [];
+    const accion: AccionDeFormulario = async (_previo, datos) => {
+      envios.push(datos.getAll("sucursales").map(String));
+      await new Promise((r) => setTimeout(r, 150));
+      return { error: null };
+    };
+    return { envios, accion };
+  }
+
+  it("sin sucursales (gerente, administrador, desactivado o sin permiso) la ficha no dice nada de sucursales ni ofrece botón", async () => {
+    await render(
+      <PantallaDeFichaDeUsuario ficha={armarLaFichaDeUsuario(empleado)} sucursales={null} />,
+    );
+    expect(page.getByRole("button").elements()).toHaveLength(0);
+    expect(page.getByText("Sucursales").elements()).toHaveLength(0);
+  });
+
+  it("dibuja una casilla por sucursal con las tildes del servidor y «Guardar», sin violaciones graves de accesibilidad", async () => {
+    const { accion } = accionDePrueba();
+    await render(
+      conArmazon(
+        empleado.email,
+        <PantallaDeFichaDeUsuario
+          ficha={armarLaFichaDeUsuario(empleado)}
+          sucursales={{ editor, accion }}
+        />,
+      ),
+    );
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    await expect.element(page.getByRole("group", { name: "Sucursales" })).toBeVisible();
+    await expect.element(page.getByRole("checkbox", { name: "Centro" })).toBeChecked();
+    await expect.element(page.getByRole("checkbox", { name: "Norte" })).not.toBeChecked();
+    const guardar = page.getByRole("button", { name: "Guardar" });
+    await expect.element(guardar).toBeVisible();
+    expect(guardar.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(48);
+  });
+
+  it("«Guardar» manda lo tildado; destildar todo manda el conjunto vacío (envío explícito, no un campo que falta)", async () => {
+    const { envios, accion } = accionDePrueba();
+    await render(
+      <PantallaDeFichaDeUsuario
+        ficha={armarLaFichaDeUsuario(empleado)}
+        sucursales={{ editor, accion }}
+      />,
+    );
+
+    await page.getByRole("checkbox", { name: "Norte" }).click();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await expect.poll(() => envios.length).toBe(1);
+    expect(envios[0]).toEqual(["s-1", "s-2"]);
+    await expect
+      .poll(() => page.getByRole("button", { name: "Guardar" }).element().hasAttribute("disabled"))
+      .toBe(false);
+
+    await page.getByRole("checkbox", { name: "Centro" }).click();
+    await page.getByRole("checkbox", { name: "Norte" }).click();
+    await page.getByRole("button", { name: "Guardar" }).click();
+    await expect.poll(() => envios.length).toBe(2);
+    expect(envios[1]).toEqual([]);
+  });
+
+  it("el doble toque en «Guardar» manda un solo envío", async () => {
+    const { envios, accion } = accionDePrueba();
+    await render(
+      <PantallaDeFichaDeUsuario
+        ficha={armarLaFichaDeUsuario(empleado)}
+        sucursales={{ editor, accion }}
+      />,
+    );
+    const guardar = page.getByRole("button", { name: "Guardar" });
+    await guardar.click();
+    await guardar.click({ force: true });
+    await new Promise((r) => setTimeout(r, 400));
+    expect(envios).toHaveLength(1);
   });
 });

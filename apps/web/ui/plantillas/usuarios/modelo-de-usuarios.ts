@@ -158,3 +158,29 @@ export function armarLaFichaDeUsuario(
     ],
   };
 }
+
+/** Una casilla del editor de sucursales: solo las sucursales ACTIVAS se ofrecen; viene tildada si el empleado la tiene asignada. */
+export type OpcionDeSucursalDelEditor = Readonly<{ id: string; nombre: string; marcada: boolean }>;
+
+export type EditorDeSucursalesArmado = Readonly<{
+  /** «Sucursales», el nombre del grupo de casillas. */
+  rotulo: string;
+  /** «Guardar». */
+  guardar: string;
+  opciones: readonly OpcionDeSucursalDelEditor[];
+}>;
+
+/**
+ * El editor de sucursales de la ficha de un empleado (maqueta `usuarios.html`, `vUsuario` y `checks`): una casilla por sucursal activa y «Guardar». Las tildadas son las del servidor (asignación
+ * efectiva). Puro: el servidor decide qué sucursales se ofrecen y si la persona puede guardar.
+ */
+export function armarElEditorDeSucursales(
+  opciones: readonly OpcionDeSucursalDelEditor[],
+  diccionario: DiccionarioResuelto = {},
+): EditorDeSucursalesArmado {
+  return {
+    rotulo: texto(diccionario, "usuarios.campo.sucursales"),
+    guardar: texto(diccionario, "catalogo.accion.guardar"),
+    opciones,
+  };
+}

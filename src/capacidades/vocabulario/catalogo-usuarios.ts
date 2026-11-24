@@ -7,9 +7,11 @@ import type { FuenteDeTexto } from "./uso-y-fuente-de-texto";
  * asienta con la fila citada. Lo que la pantalla ya podía decir con un texto existente NO tiene clave nueva (una regla, un lugar): «Desactivado»
  * (`catalogo.estado.desactivado`), «Activo» (`caja.estado.activo`), «Pendiente» (`fiscal.pantalla.config_cartel_pendiente`), «Estado»
  * (`fiscal.pantalla.listado_rotulo_estado`) y los tres roles (`rol.*.nombre`).
- * Los textos de invitar, reenviar, revocar, desactivar y sucursales son de los tramos U2 a U4: no se declaran acá hasta que haya quien los consuma.
+ * Los textos de invitar, reenviar, revocar y desactivar son de los tramos U2 y U3: no se declaran acá hasta que haya quien los consuma. El de sucursales es del tramo U4 (DEC-0856).
  */
 const FUENTE_DEL_DUENO: FuenteDeTexto = { decision: "DEC-0851" };
+/** U4: las sucursales del empleado; mismo dueño y misma fila del 23/11/2026, asentadas en su propia decisión. */
+const FUENTE_DE_SUCURSALES: FuenteDeTexto = { decision: "DEC-0856" };
 
 const MODELO = "apps/web/ui/plantillas/usuarios/modelo-de-usuarios.ts";
 
@@ -43,6 +45,12 @@ export const TEXTOS_DE_USUARIOS = {
     porDefecto: "Rol",
     usos: [{ como: "FUNCION", archivo: MODELO, nombre: "armarLaFichaDeUsuario" }],
     fuente: FUENTE_DEL_DUENO,
+  },
+  // Nombre del grupo de casillas de las sucursales de un empleado (U4); U2 lo usa también en el formulario de invitar.
+  "usuarios.campo.sucursales": {
+    porDefecto: "Sucursales",
+    usos: [{ como: "FUNCION", archivo: MODELO, nombre: "armarElEditorDeSucursales" }],
+    fuente: FUENTE_DE_SUCURSALES,
   },
   // Insignia de la invitación que llegó a su vencimiento.
   "usuarios.invitacion.vencida": {
