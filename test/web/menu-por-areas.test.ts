@@ -250,6 +250,24 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "comandas.texto.imprimir_impresoras",
       ],
       [
+        "clientes",
+        "ventas",
+        "clientes",
+        "clientes",
+        "partes.ver",
+        "/clientes?rol=cliente",
+        "clientes.lista.clientes",
+      ],
+      [
+        "proveedores",
+        "compras",
+        "proveedores",
+        "clientes",
+        "partes.ver",
+        "/clientes?rol=proveedor",
+        "clientes.lista.proveedores",
+      ],
+      [
         "stock",
         "catalogo",
         "stock",
@@ -266,6 +284,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "transformaciones.ver",
         "/catalogo/produccion",
         "produccion.pantalla.produccion",
+      ],
+      [
+        "compras",
+        "compras",
+        "compras",
+        "compras",
+        "recepciones.ver",
+        "/compras",
+        "compras.compra.compras",
       ],
       [
         "configuracion-fiscal",
@@ -478,8 +505,11 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "secciones",
     "mesas",
     "impresoras",
+    "clientes",
+    "proveedores",
     "stock",
     "produccion",
+    "compras",
     "configuracion-fiscal",
     "medios-de-pago",
     "usuarios",
@@ -522,6 +552,10 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
             ["pantalla", "impresoras", "/salon/impresoras", "comandas.texto.imprimir_impresoras"],
           ],
         ],
+        [
+          "clientes",
+          [["pantalla", "clientes", "/clientes?rol=cliente", "clientes.lista.clientes"]],
+        ],
       ],
     ],
     [
@@ -541,6 +575,16 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
         ],
         ["carta", [["pantalla", "secciones", "/catalogo/secciones", "catalogo.seccion.titulo"]]],
         ["stock", [["pantalla", "stock", "/stock/depositos", "stock.pantalla.stock"]]],
+      ],
+    ],
+    ["compras", [["compras", [["pantalla", "compras", "/compras", "compras.compra.compras"]]]]],
+    [
+      "compras",
+      [
+        [
+          "proveedores",
+          [["pantalla", "proveedores", "/clientes?rol=proveedor", "clientes.lista.proveedores"]],
+        ],
       ],
     ],
     [

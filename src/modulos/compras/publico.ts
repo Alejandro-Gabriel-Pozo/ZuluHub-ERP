@@ -20,6 +20,13 @@ export {
   type CondicionDeIvaDeLaEmpresa,
 } from "./dominio/comprobante";
 export type { ErrorDeCompras } from "./casos-de-uso/errores";
+export {
+  FORMA_DEL_CURSOR as FORMA_DEL_CURSOR_DE_COMPRAS,
+  type CompraDeLista,
+  type FacturaDeLista,
+  type FichaDeCompra,
+  type PaginaDeCompras,
+} from "./casos-de-uso/lectura";
 export type {
   EntradaDeComprobanteDeFicha,
   EntradaDePuntoDeVenta,

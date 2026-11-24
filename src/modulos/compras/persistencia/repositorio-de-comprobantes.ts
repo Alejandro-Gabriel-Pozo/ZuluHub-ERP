@@ -93,6 +93,11 @@ export interface RepositorioDeComprobantes {
   bloquear(empresa: EmpresaId, id: string): Promise<ComprobanteGuardado | null>;
   /** El comprobante vigente (registrado si lo hay; si no, el más nuevo) de una recepción, por el puntero de sus líneas. */
   delaRecepcion(empresa: EmpresaId, recepcionId: string): Promise<ComprobanteGuardado | null>;
+  /** Lo mismo que `delaRecepcion` para varias recepciones en UNA consulta (sin N+1): el comprobante vigente de cada una, con su recepción; las que no tienen no aparecen. */
+  deVariasRecepciones(
+    empresa: EmpresaId,
+    recepcionIds: readonly string[],
+  ): Promise<readonly (ComprobanteGuardado & Readonly<{ recepcionId: string }>)[]>;
   /** Los comprobantes de un proveedor, los más nuevos primero (hasta `limite`). */
   delProveedor(
     empresa: EmpresaId,
@@ -272,6 +277,31 @@ export function crearRepositorioDeComprobantes(db: Kysely<ComprasDb>): Repositor
         .limit(1)
         .executeTakeFirst();
       return fila === undefined ? null : aComprobante(fila);
+    },
+    async deVariasRecepciones(empresa, recepcionIds) {
+      const validos = [...new Set(recepcionIds.filter(esUuid))];
+      if (validos.length === 0) return [];
+      const apunta = sql<
+        string | null
+      >`(select l.recepcion_id from linea_de_comprobante l where l.empresa_id = comprobante_de_proveedor.empresa_id
+        and l.comprobante_id = comprobante_de_proveedor.id and l.recepcion_id in (${sql.join(validos)}) limit 1)`;
+      const filas = await db
+        .selectFrom("comprobante_de_proveedor")
+        .select([...COLUMNAS, apunta.as("recepcion_id")])
+        .where("empresa_id", "=", empresa)
+        .where(sql<boolean>`${apunta} is not null`)
+        // El mismo criterio que `delaRecepcion`: el registrado primero y, entre iguales, el más nuevo; el primero de cada recepción es el vigente.
+        .orderBy(sql`(estado = 'REGISTRADO')`, "desc")
+        .orderBy("registrado_en", "desc")
+        .execute();
+      const vistas = new Set<string>();
+      const vigentes: (ComprobanteGuardado & Readonly<{ recepcionId: string }>)[] = [];
+      for (const f of filas) {
+        if (f.recepcion_id === null || vistas.has(f.recepcion_id)) continue;
+        vistas.add(f.recepcion_id);
+        vigentes.push({ ...aComprobante(f), recepcionId: f.recepcion_id });
+      }
+      return vigentes;
     },
     async delProveedor(empresa, proveedorId, limite) {
       if (!esUuid(proveedorId)) return [];

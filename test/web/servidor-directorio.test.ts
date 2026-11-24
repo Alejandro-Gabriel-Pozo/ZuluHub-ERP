@@ -10,6 +10,8 @@ import { errorDeCodigo } from "../../src/capacidades/experiencia/respuesta";
 vi.mock("server-only", () => ({}));
 const redirige = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ redirect: redirige }));
+const revalidar = vi.hoisted(() => vi.fn());
+vi.mock("next/cache", () => ({ revalidatePath: revalidar }));
 
 const CONTEXTO = { empresaId: "empresa-de-la-sesion" };
 const PARTE = "11111111-1111-4111-8111-111111111111";
@@ -65,6 +67,7 @@ type Directorio = {
   ) => Promise<{ error: unknown; guardada: boolean; duplicados: unknown[] }>;
   desactivarLaParteDelDirectorio: (parteId: string) => Promise<unknown>;
   reactivarLaParteDelDirectorio: (parteId: string) => Promise<unknown>;
+  nuevaClaveDeParte: () => string;
   agregarUnContacto: (deParteId: string, datos: FormData) => Promise<unknown>;
   quitarUnContacto: (deParteId: string, contactoId: string, tipo: string) => Promise<unknown>;
 };
@@ -91,6 +94,7 @@ beforeEach(() => {
   mundo.dependencias = [];
   mundo.respuesta = { ok: true, dato: {} };
   redirige.mockClear();
+  revalidar.mockClear();
 });
 
 describe("servidor del directorio: la lista", () => {
@@ -262,6 +266,26 @@ describe("servidor del directorio: desactivar, reactivar y contactos", () => {
     });
     expect(await reactivarLaParteDelDirectorio(PARTE)).toEqual({ error: null });
     expect(ultima()).toMatchObject({ nombre: "reactivarLaParte", entrada: { parteId: PARTE } });
+  });
+
+  it("cambiar el estado vuelve a pedir la lista, y solo si salió bien", async () => {
+    const d = await cargar();
+    await d.desactivarLaParteDelDirectorio(PARTE);
+    await d.reactivarLaParteDelDirectorio(PARTE);
+    expect(revalidar.mock.calls).toEqual([["/clientes"], ["/clientes"]]);
+    revalidar.mockClear();
+    mundo.respuesta = { ok: false, error: ERROR };
+    await d.desactivarLaParteDelDirectorio(PARTE);
+    await d.reactivarLaParteDelDirectorio(PARTE);
+    expect(revalidar).not.toHaveBeenCalled();
+  });
+
+  it("la clave de creación de un intento es un UUID y es distinta cada vez", async () => {
+    const { nuevaClaveDeParte } = await cargar();
+    const a = nuevaClaveDeParte();
+    const b = nuevaClaveDeParte();
+    expect(a).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(a).not.toBe(b);
   });
 
   it("agregar un contacto toma el contacto y el cargo del formulario y la parte, del id ligado", async () => {

@@ -46,7 +46,7 @@ export const ALICUOTAS_PARA_ELEGIR: readonly string[] = [
   "NO_GRAVADO",
 ];
 
-const CLAVE_DE_DOCUMENTO = {
+export const CLAVE_DE_DOCUMENTO = {
   CUIT: "fiscal.pantalla.documento_cuit",
   CUIL: "fiscal.pantalla.documento_cuil",
   CDI: "fiscal.pantalla.documento_cdi",

@@ -65,6 +65,8 @@ export type DatosParaBuscarDuplicados = Readonly<{
 
 export interface RepositorioDePartes {
   obtener(empresa: EmpresaId, id: string): Promise<Parte | null>;
+  /** Las partes de la empresa con esos ids (activas o no), en UNA consulta; los ids que no son UUID, repetidos o de otra empresa no devuelven fila. */
+  obtenerVarias(empresa: EmpresaId, ids: readonly string[]): Promise<readonly Parte[]>;
   /** La parte con `SELECT … FOR UPDATE`: serializa editar, desactivar y cambiar roles de la misma parte. `null` si no existe o es de otra empresa. */
   bloquear(empresa: EmpresaId, id: string): Promise<Parte | null>;
   porIdempotencia(empresa: EmpresaId, idempotencia: string): Promise<Parte | null>;
@@ -134,6 +136,15 @@ export function crearRepositorioDePartes(db: Kysely<ClientesDb>): RepositorioDeP
         .where("id", "=", id)
         .executeTakeFirst();
       return fila === undefined ? null : aParte(fila);
+    },
+    async obtenerVarias(empresa, ids) {
+      const validos = [...new Set(ids.filter(esUuid))];
+      if (validos.length === 0) return [];
+      const filas = await partes()
+        .where("empresa_id", "=", empresa)
+        .where("id", "in", validos)
+        .execute();
+      return filas.map(aParte);
     },
     async bloquear(empresa, id) {
       if (!esUuid(id)) return null;

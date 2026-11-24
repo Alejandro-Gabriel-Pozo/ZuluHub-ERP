@@ -1,0 +1,125 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  min-width: 0;
+}
+
+.volver {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-width: var(--objetivo-minimo);
+  min-height: var(--objetivo-minimo);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+  text-decoration: none;
+}
+
+.filtros {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  min-width: 0;
+}
+
+.buscar {
+  min-width: 0;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+/* Escritorio: los campos y el botón en una fila. */
+@media (min-width: 64rem) {
+  .filtros {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+
+  .filtros > * {
+    flex: 0 1 14rem;
+    min-width: 10rem;
+  }
+
+  .filtros > .acciones {
+    flex: 0 0 auto;
+  }
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Cada fila es un enlace a la ficha: toda la tarjeta se toca. */
+.fila {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie-elevada);
+  color: var(--color-texto);
+  text-decoration: none;
+}
+
+.renglon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.nombre {
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.documento {
+  color: var(--color-texto-suave);
+  overflow-wrap: anywhere;
+}
+
+.siguiente {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-width: var(--objetivo-minimo);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-5);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+  text-decoration: none;
+}
+
+.seccion {
+  margin: 0;
+  font-size: var(--tipo-tamano-cuerpo);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.duplicados {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+}
