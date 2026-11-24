@@ -20,7 +20,7 @@ export type FiltroDeCompras = Readonly<{
   /** Fechas de negocio, `YYYY-MM-DD`, ambas inclusive. */
   desde: string | null;
   hasta: string | null;
-  despuesDe: Readonly<{ fechaNegocio: string; id: string }> | null;
+  despuesDe: Readonly<{ fechaNegocio: string; numero: number }> | null;
   limite: number;
 }>;
 
@@ -93,12 +93,13 @@ export function crearRepositorioDeLecturasDeCompras(
       if (filtro.despuesDe !== null) {
         const c = filtro.despuesDe;
         consulta = consulta.where(
-          sql<boolean>`(fecha_negocio, id) < (${c.fechaNegocio}::date, ${c.id}::uuid)`,
+          sql<boolean>`(fecha_negocio, numero) < (${c.fechaNegocio}::date, ${c.numero}::integer)`,
         );
       }
+      // `numero` es único por empresa y lo asigna la base en orden de carga: el orden es el de carga y el cursor es estable (el `id` es un UUID al azar).
       const filas = await consulta
         .orderBy(sql`fecha_negocio`, "desc")
-        .orderBy("id", "desc")
+        .orderBy("numero", "desc")
         .limit(filtro.limite)
         .execute();
       return filas.map((f) => ({
@@ -115,7 +116,7 @@ export function crearRepositorioDeLecturasDeCompras(
         .where("estado", "=", "CONFIRMADA")
         .where("nivel", "in", NIVELES_DE_RECEPCION_INMEDIATA)
         .where(
-          sql<boolean>`exists (select 1 from linea_de_recepcion l where l.empresa_id = recepcion.empresa_id and l.recepcion_id = recepcion.id and l.precio is null)`,
+          sql<boolean>`exists (select 1 from linea_de_recepcion l where l.empresa_id = recepcion.empresa_id and l.recepcion_id = recepcion.id and l.precio is null and not exists (select 1 from correccion_de_compra c where c.empresa_id = l.empresa_id and c.recepcion_id = l.recepcion_id and c.linea = l.numero and c.precio_nuevo is not null))`,
         );
       if (sucursales !== "TODAS") consulta = consulta.where("sucursal_id", "in", [...sucursales]);
       const filas = await consulta

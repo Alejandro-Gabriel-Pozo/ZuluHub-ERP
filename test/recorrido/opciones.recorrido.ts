@@ -26,6 +26,7 @@ describe.skipIf(base === null)(
     let vigilante: Vigilante;
     let milanesa = "";
     let hamburguesa = "";
+    let latte = "";
 
     const ir = async (ruta: string) => {
       const respuesta = await pagina.goto(`${mundo.url}${ruta}`);
@@ -74,6 +75,7 @@ describe.skipIf(base === null)(
       });
       const c = mundo.mundo.dueno;
       milanesa = await productoDeBase(c, mundo.empresa, { nombre: "Milanesa" });
+      latte = await productoDeBase(c, mundo.empresa, { nombre: "Latte" });
       hamburguesa = await productoDeBase(c, mundo.empresa, { nombre: "Hamburguesa" });
       const salsas = await grupoDeBase(c, mundo.empresa, hamburguesa, {
         clase: "ADICIONAL",
@@ -88,6 +90,10 @@ describe.skipIf(base === null)(
       });
       // Con `orden` distinto: con el mismo, las opciones salen en el orden de su id (al azar) y la vista previa («Mayonesa … · Ketchup») no sería siempre la misma.
       await opcionDeBase(c, mundo.empresa, hamburguesa, salsas, { nombre: "Ketchup", orden: 2 });
+      await productoDeBase(c, mundo.empresa, {
+        nombre: "Mayonesa base",
+        clase: "MATERIA_PRIMA",
+      } as never);
 
       const ejecutable = process.env["PEDERNAL_NAVEGADOR"];
       navegador = await chromium.launch({
@@ -194,6 +200,94 @@ describe.skipIf(base === null)(
       expect(await gruposDe(milanesa)).toHaveLength(1);
       expect(await auditorias(milanesa)).toBe(2);
       await sinViolacionesDeAxe();
+      pantallaLimpia();
+    });
+
+    it("la medida: agrega la variante «Tamaño» (es la medida) con dos opciones sin recargo y, desde «Precios» → «Según medida», carga el precio de cada una; con DOBLE TOQUE se escribe una sola vez", async () => {
+      await ir(`/catalogo/productos/${latte}/opciones`);
+      await pagina.getByRole("link", { name: "Agregar variante" }).click();
+      await pagina.waitForURL("**/opciones/variante");
+      expect(await pagina.getByLabel("Recargo", { exact: true }).count()).toBe(0);
+      await pagina.getByLabel("Nombre", { exact: true }).first().fill("Tamaño");
+      await pagina.getByRole("checkbox", { name: "Es la medida" }).check();
+      await pagina.getByLabel("Nombre", { exact: true }).nth(1).fill("Chico");
+      await pagina.getByLabel("Nombre", { exact: true }).nth(2).fill("Grande");
+      await sinViolacionesDeAxe();
+      await pagina.getByRole("button", { name: "Guardar" }).dblclick();
+      await pagina.waitForURL(`**/catalogo/productos/${latte}/opciones`);
+      await ir(`/catalogo/productos/${latte}/opciones`);
+      await pagina.getByText("Es la medida").waitFor();
+      await pagina.getByText("Chico · Grande").waitFor();
+      expect(await gruposDe(latte)).toEqual([
+        { nombre: "Tamaño", clase: "VARIANTE", activo: true },
+      ]);
+      expect(await auditorias(latte)).toBe(1);
+
+      await ir(`/catalogo/productos/${latte}/precios`);
+      await pagina.getByRole("link", { name: "Según medida" }).click();
+      await pagina.waitForURL("**/precios/medidas");
+      await pagina.getByLabel("Chico", { exact: true }).fill("3200");
+      await pagina.getByLabel("Grande", { exact: true }).fill("3800");
+      await sinViolacionesDeAxe();
+      await pagina.getByRole("button", { name: "Guardar" }).dblclick();
+      // La acción vuelve a la misma dirección: se espera lo que escribió, no la dirección.
+      const filas = async () =>
+        (
+          await consultar<{ n: string }>(
+            "select count(*)::text as n from precio_de_venta where producto_id = $1 and opcion_id is not null and sucursal_id is null",
+            [latte],
+          )
+        )[0]?.n;
+      await expect.poll(filas).toBe("2");
+      // La acción termina navegando sola a la misma dirección (en este arnés, a veces a «No encontrado»): pedir la pantalla a mano choca con esa navegación. Se la vuelve a pedir hasta que
+      // salga lo que se escribió.
+      const chico = async () => {
+        try {
+          await ir(`/catalogo/productos/${latte}/precios/medidas`);
+          return await pagina.getByLabel("Chico", { exact: true }).inputValue({ timeout: 2000 });
+        } catch {
+          return null;
+        }
+      };
+      await expect.poll(chico, { timeout: 20000 }).toBe("3.200,00");
+      expect(await pagina.getByLabel("Chico", { exact: true }).inputValue()).toBe("3.200,00");
+      expect(await pagina.getByLabel("Grande", { exact: true }).inputValue()).toBe("3.800,00");
+      expect(await filas()).toBe("2");
+      pantallaLimpia();
+    });
+
+    it("qué consume: desde «Qué consume» de un grupo carga un insumo y una cantidad en una opción, con DOBLE TOQUE en «Guardar» se escribe una sola vez y la opción sella una versión nueva", async () => {
+      await ir(`/catalogo/productos/${hamburguesa}/opciones`);
+      await pagina.getByRole("link", { name: "Qué consume" }).click();
+      await pagina.waitForURL("**/consumo");
+      await pagina.getByRole("heading", { name: "Qué consume · Salsas" }).waitFor();
+      await pagina.getByRole("button", { name: "Agregar insumo" }).first().click();
+      await pagina.getByLabel("Cantidad (u)", { exact: true }).first().fill("2,5");
+      await sinViolacionesDeAxe();
+      await pagina.getByRole("button", { name: "Guardar" }).dblclick();
+      await pagina.waitForURL(`**/catalogo/productos/${hamburguesa}/opciones`);
+      const lineas = async () =>
+        (
+          await consultar<{ n: string }>(
+            "select count(*)::text as n from consumo_de_opcion k join version_de_opcion v on v.id = k.version_de_opcion_id join opcion o on o.id = v.opcion_id where o.producto_id = $1",
+            [hamburguesa],
+          )
+        )[0]?.n;
+      await expect.poll(lineas).toBe("1");
+      expect(
+        (
+          await consultar<{ cantidad: string }>(
+            "select k.cantidad::text as cantidad from consumo_de_opcion k join version_de_opcion v on v.id = k.version_de_opcion_id join opcion o on o.id = v.opcion_id where o.producto_id = $1",
+            [hamburguesa],
+          )
+        )[0]?.cantidad,
+      ).toBe("2.5000");
+      await ir(`/catalogo/productos/${hamburguesa}/opciones`);
+      await pagina.getByRole("link", { name: "Qué consume" }).click();
+      await pagina.waitForURL("**/consumo");
+      expect(await pagina.getByLabel("Cantidad (u)", { exact: true }).first().inputValue()).toBe(
+        "2,5",
+      );
       pantallaLimpia();
     });
 

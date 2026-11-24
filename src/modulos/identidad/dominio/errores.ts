@@ -34,7 +34,9 @@ export type ErrorDeInvitacion =
   | "REENVIO_NO_PERMITIDO"
   | "ALTA_YA_TIENE_INVITACION"
   // Invitar a quien ya es miembro activo de la empresa.
-  | "YA_ES_MIEMBRO";
+  | "YA_ES_MIEMBRO"
+  // Invitar con un rol distinto al de la invitación vigente que ya hay para ese email: no se pisa ni se hace pasar por hecho.
+  | "INVITACION_VIGENTE_CON_OTRO_ROL";
 
 /**
  * Revocación de una invitación de usuario desde la empresa (H6): no existe (o no la ve esta

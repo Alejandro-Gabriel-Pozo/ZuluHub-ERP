@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0834",
+  "fecha": "2026-11-23",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Se quitan 6 permisos que ningún caso de uso usa (4 de categorías, asignar emisor y contenido de combo); anular de otros y editar variantes se quedan.",
+  "que_cambia": "Ningún rol pierde una función viva: esos 6 no se pedían en ninguna operación. Revertir: volver a declararlos en el catálogo y en la matriz, y construir el caso.",
+  "donde": "decisiones-del-dueno-2026-11.md, filas del 21/11/2026 (12 permisos sin caso de uso; tercera pata); catalogo-catalogo.ts; permisos-de-catalogo.ts; confirmada: DDD fila del 23/11/2026"
+}

@@ -1,4 +1,5 @@
 import "server-only";
+import { revalidatePath } from "next/cache";
 import type { ErrorPublico, Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   agregarElContacto,
@@ -18,6 +19,7 @@ import { web } from "./composicion";
 import { conLaEmpresa } from "./con-la-empresa";
 import { textoDe } from "./formularios-de-caja";
 import { dependenciasDeSesion } from "./sesion";
+import { RUTA_DE_CLIENTES } from "../ui/plantillas/clientes/modelo-de-directorio";
 
 /**
  * «Clientes y proveedores»: la lectura de la lista y de la ficha y las acciones de guardar, desactivar, reactivar y los contactos. Finas a propósito (ADR-015, punto 2): resuelven QUIÉN
@@ -112,16 +114,21 @@ function terminar(respuesta: Respuesta<unknown>): ResultadoDeAccion {
   return { error: respuesta.ok ? null : respuesta.error };
 }
 
+/** Cambiar el estado vuelve a pedir la lista (`revalidatePath`): lo que sigue lleva el estado vigente. Solo si salió bien. */
 export async function desactivarLaParteDelDirectorio(parteId: string): Promise<ResultadoDeAccion> {
-  return terminar(
+  const resultado = terminar(
     await conLaEmpresa((contexto) => desactivarLaParte(dependencias, contexto, { parteId })),
   );
+  if (resultado.error === null) revalidatePath(RUTA_DE_CLIENTES);
+  return resultado;
 }
 
 export async function reactivarLaParteDelDirectorio(parteId: string): Promise<ResultadoDeAccion> {
-  return terminar(
+  const resultado = terminar(
     await conLaEmpresa((contexto) => reactivarLaParte(dependencias, contexto, { parteId })),
   );
+  if (resultado.error === null) revalidatePath(RUTA_DE_CLIENTES);
+  return resultado;
 }
 
 export async function agregarUnContacto(
@@ -150,3 +157,6 @@ export async function quitarUnContacto(
     ),
   );
 }
+
+/** La clave de creación de UN intento de alta: la fija la página al abrirse. Previene: que un doble toque o un reintento por red cortada creen dos partes. */
+export const nuevaClaveDeParte = (): string => crypto.randomUUID();

@@ -21,6 +21,9 @@ export const rutaDeLasOpciones = (id: string): string => `${RUTA_DE_PRODUCTOS}/$
 export const rutaDeUnGrupoNuevo = (id: string): string => `${rutaDeLasOpciones(id)}/nuevo`;
 export const rutaDeUnGrupo = (id: string, grupoId: string): string =>
   `${rutaDeLasOpciones(id)}/${grupoId}`;
+export const rutaDelConsumo = (id: string, grupoId: string): string =>
+  `${rutaDeUnGrupo(id, grupoId)}/consumo`;
+export const rutaDeLaVariante = (id: string): string => `${rutaDeLasOpciones(id)}/variante`;
 /** La solapa con la hoja de «Copiar de otro producto» abierta; `origen` es el producto que se está mirando (sin él, el servidor toma el primero). */
 export const rutaDeLaCopia = (id: string, origen: string | null = null): string =>
   `${rutaDeLasOpciones(id)}?copiar=${origen === null ? "1" : encodeURIComponent(origen)}`;
@@ -29,7 +32,9 @@ export const rutaDeLaCopia = (id: string, origen: string | null = null): string 
 export type GrupoDeLaPantalla = Readonly<{
   id: string;
   nombre: string;
-  clase: "INCLUIDA" | "ADICIONAL";
+  clase: "INCLUIDA" | "ADICIONAL" | "VARIANTE";
+  /** Solo de la variante: si es la medida. */
+  esTamano: boolean;
   esObligatorio: boolean;
   admiteVarias: boolean;
   seMuestraEnCarta: boolean;
@@ -41,6 +46,7 @@ export type OpcionesDeLaPantalla = Readonly<{
   nombre: string;
   versionDeOpciones: number;
   grupos: readonly GrupoDeLaPantalla[];
+  variante: GrupoDeLaPantalla | null;
   claveDelCambio: string;
 }>;
 
@@ -78,9 +84,24 @@ const claseDe = (c: GrupoDeLaPantalla["clase"], d: DiccionarioResuelto): string 
 /** Un botón que lleva a otra pantalla; `apagado` si la persona no puede editar (se ve igual, no se puede tocar). */
 export type BotonDeNavegacion = Readonly<{ href: string; texto: string; apagado: boolean }>;
 
+/** La tarjeta de la variante: su nombre, «Es la medida» si lo es y sus opciones (sin recargo: el precio de cada medida es propio). */
+const tarjetaDeLaVariante = (v: GrupoDeLaPantalla, d: DiccionarioResuelto) => ({
+  id: v.id,
+  nombre: v.nombre,
+  esLaMedida: v.esTamano ? texto(d, "catalogo.opciones.es_la_medida") : null,
+  opciones: v.opciones.map((o) => o.nombre),
+});
+
 export type OpcionesArmadas = Readonly<{
   id: string;
   titulo: string;
+  /** «Variantes»: la variante del producto (una sola) con «Editar», o «Agregar variante» si no tiene. */
+  variantes: Readonly<{
+    titulo: string;
+    tarjeta: ReturnType<typeof tarjetaDeLaVariante> | null;
+    editar: BotonDeNavegacion | null;
+    agregar: BotonDeNavegacion | null;
+  }>;
   grupos: Readonly<{
     titulo: string;
     tarjetas: readonly Readonly<{
@@ -92,6 +113,8 @@ export type OpcionesArmadas = Readonly<{
       /** Cada opción con su recargo: «Queso extra + $ 500,00». */
       opciones: readonly string[];
       editar: BotonDeNavegacion;
+      /** «Qué consume»: se ve siempre; sin permiso va apagado. */
+      consumo: BotonDeNavegacion;
     }>[];
   }>;
   agregar: BotonDeNavegacion;
@@ -111,6 +134,15 @@ export function armarLasOpciones(
   return {
     id: o.id,
     titulo: o.nombre,
+    variantes: {
+      titulo: texto(d, "catalogo.opciones.variantes"),
+      tarjeta: o.variante === null ? null : tarjetaDeLaVariante(o.variante, d),
+      editar: o.variante === null ? null : boton(rutaDeLaVariante(o.id), "catalogo.accion.editar"),
+      agregar:
+        o.variante === null
+          ? boton(rutaDeLaVariante(o.id), "catalogo.opciones.agregar_variante")
+          : null,
+    },
     grupos: {
       titulo: texto(d, "catalogo.opciones.grupos"),
       tarjetas: o.grupos.map((g) => ({
@@ -125,6 +157,7 @@ export function armarLasOpciones(
             `${op.nombre}${llevaRecargo(op.recargo) ? ` + ${formatearImporte(op.recargo)}` : ""}`,
         ),
         editar: boton(rutaDeUnGrupo(o.id, g.id), "catalogo.accion.editar"),
+        consumo: boton(rutaDelConsumo(o.id, g.id), "catalogo.consumo.que_consume"),
       })),
     },
     agregar: boton(rutaDeUnGrupoNuevo(o.id), "catalogo.opciones.agregar_grupo"),
@@ -144,6 +177,9 @@ export type GrupoArmado = Readonly<{
   id: string;
   /** «Agregar grupo» o «Editar»: es el título de la pantalla (lo pone la página con `conTitulo`). */
   titulo: string;
+  /** La variante (la medida): sin recargo, sin reglas de elección y con la casilla «Es la medida». */
+  esVariante: boolean;
+  esTamano: Readonly<{ etiqueta: string; valor: boolean }>;
   esNuevo: boolean;
   nombre: Readonly<{ etiqueta: string; valor: string }>;
   /** Los dos botones de opción «Incluida» / «Adicional»: un grupo nuevo nace en «Incluida»; al editar se ve con su valor y apagado (la clase no se cambia después de crear el grupo). */
@@ -170,18 +206,24 @@ export type GrupoArmado = Readonly<{
 export function armarElGrupo(
   g: GrupoParaEditarDeLaPantalla,
   d: DiccionarioResuelto = {},
+  esVariante = false,
 ): GrupoArmado {
   const guardado = g.grupo;
+  const nuevo = esVariante
+    ? "catalogo.opciones.agregar_variante"
+    : "catalogo.opciones.agregar_grupo";
   return {
     id: g.id,
-    titulo: texto(
-      d,
-      guardado === null ? "catalogo.opciones.agregar_grupo" : "catalogo.accion.editar",
-    ),
+    titulo: texto(d, guardado === null ? nuevo : "catalogo.accion.editar"),
+    esVariante,
+    esTamano: {
+      etiqueta: texto(d, "catalogo.opciones.es_la_medida"),
+      valor: guardado?.esTamano ?? false,
+    },
     esNuevo: guardado === null,
     nombre: { etiqueta: texto(d, "catalogo.dato.nombre"), valor: guardado?.nombre ?? "" },
     clase: {
-      valor: guardado?.clase ?? "INCLUIDA",
+      valor: guardado === null || guardado.clase === "VARIANTE" ? "INCLUIDA" : guardado.clase,
       opciones: [
         { valor: "INCLUIDA", etiqueta: texto(d, "catalogo.opciones.incluida") },
         { valor: "ADICIONAL", etiqueta: texto(d, "catalogo.opciones.adicional") },
@@ -225,6 +267,12 @@ export function armarElGrupo(
 
 /** Un bloque de la vista previa de la hoja de copia: su título («Variantes» o «Grupos de opciones») y una línea por grupo («Guarnición: Papas fritas · Ensalada + $ 500,00»). */
 type BloqueDeVistaPrevia = Readonly<{ titulo: string; lineas: readonly string[] }>;
+
+/** La variante (la medida) de un producto para editar, con los textos de la maqueta. */
+export const armarLaVariante = (
+  g: GrupoParaEditarDeLaPantalla,
+  d: DiccionarioResuelto = {},
+): GrupoArmado => armarElGrupo(g, d, true);
 
 export type CopiaArmada = Readonly<{
   id: string;

@@ -18,7 +18,7 @@ export const DECLARACIONES = {
       regla: "YA_ESTABA",
       prueba: {
         archivo: "test/integracion/identidad-casos-de-uso.test.ts",
-        it: "con una pendiente vigente devuelve esa, sea cual sea el rol pedido, y no escribe (D2)",
+        it: "con una pendiente vigente del mismo rol devuelve esa y no escribe (D2)",
       },
     },
   },

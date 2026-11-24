@@ -45,6 +45,7 @@ function dependencias(
   llamadas: string[] = [],
 ): DependenciasDeUsuariosWeb {
   return {
+    casosDeUso: () => ({}) as unknown as ReturnType<DependenciasDeUsuariosWeb["casosDeUso"]>,
     consultas: () =>
       ({
         listarMiembros: () => {

@@ -44,6 +44,11 @@ const CON_TEXTO_PROPIO: Readonly<Record<string, ErrorConTexto>> = {
   // misma fila «Errores» de `productos.html`. Los demás errores de las opciones (grupo repetido, versión vieja…) salen como el genérico.
   RECARGO_INVALIDO: { codigo: "CATALOGO_PRECIO_INVALIDO", campo: "recargo" },
   INCLUIDA_CON_RECARGO: { codigo: "CATALOGO_INCLUIDA_CON_RECARGO", campo: "recargo" },
+  // Variante (A13, tramo Medidas): un producto admite una sola variante (decisión 138; texto de `productos.html`, tabla «por aprobar», DEC-0527).
+  // Consumo (A13, tramo Consumo): «Ese insumo ya está cargado» y «La cantidad tiene que ser mayor que cero» (`productos.html`, funciones `vConsumo` y `validarConsumo`; DEC-0529).
+  CONSUMO_REPETIDO: { codigo: "CATALOGO_CONSUMO_REPETIDO", campo: "insumo" },
+  CANTIDAD_INVALIDA: { codigo: "CATALOGO_CANTIDAD_INVALIDA", campo: "cantidad" },
+  SEGUNDA_VARIANTE: { codigo: "CATALOGO_SEGUNDA_VARIANTE", campo: "nombre" },
 };
 
 /** Un defecto: la base devolvió una restricción que el módulo no sabe traducir. No es de negocio. */
