@@ -21,6 +21,8 @@ export const rutaDeLasOpciones = (id: string): string => `${RUTA_DE_PRODUCTOS}/$
 export const rutaDeUnGrupoNuevo = (id: string): string => `${rutaDeLasOpciones(id)}/nuevo`;
 export const rutaDeUnGrupo = (id: string, grupoId: string): string =>
   `${rutaDeLasOpciones(id)}/${grupoId}`;
+export const rutaDelConsumo = (id: string, grupoId: string): string =>
+  `${rutaDeUnGrupo(id, grupoId)}/consumo`;
 export const rutaDeLaVariante = (id: string): string => `${rutaDeLasOpciones(id)}/variante`;
 /** La solapa con la hoja de «Copiar de otro producto» abierta; `origen` es el producto que se está mirando (sin él, el servidor toma el primero). */
 export const rutaDeLaCopia = (id: string, origen: string | null = null): string =>
@@ -111,6 +113,8 @@ export type OpcionesArmadas = Readonly<{
       /** Cada opción con su recargo: «Queso extra + $ 500,00». */
       opciones: readonly string[];
       editar: BotonDeNavegacion;
+      /** «Qué consume»: se ve siempre; sin permiso va apagado. */
+      consumo: BotonDeNavegacion;
     }>[];
   }>;
   agregar: BotonDeNavegacion;
@@ -153,6 +157,7 @@ export function armarLasOpciones(
             `${op.nombre}${llevaRecargo(op.recargo) ? ` + ${formatearImporte(op.recargo)}` : ""}`,
         ),
         editar: boton(rutaDeUnGrupo(o.id, g.id), "catalogo.accion.editar"),
+        consumo: boton(rutaDelConsumo(o.id, g.id), "catalogo.consumo.que_consume"),
       })),
     },
     agregar: boton(rutaDeUnGrupoNuevo(o.id), "catalogo.opciones.agregar_grupo"),

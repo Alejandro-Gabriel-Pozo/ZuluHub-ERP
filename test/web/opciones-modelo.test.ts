@@ -96,6 +96,11 @@ describe("armarLasOpciones", () => {
               texto: "Editar",
               apagado: false,
             },
+            consumo: {
+              href: `/catalogo/productos/${ID}/opciones/${GRUPO}/consumo`,
+              texto: "Qué consume",
+              apagado: false,
+            },
           },
           {
             id: "g2",
@@ -106,6 +111,11 @@ describe("armarLasOpciones", () => {
             editar: {
               href: `/catalogo/productos/${ID}/opciones/g2`,
               texto: "Editar",
+              apagado: false,
+            },
+            consumo: {
+              href: `/catalogo/productos/${ID}/opciones/g2/consumo`,
+              texto: "Qué consume",
               apagado: false,
             },
           },
@@ -131,6 +141,10 @@ describe("armarLasOpciones", () => {
     expect(armadas.grupos.tarjetas.map((t) => t.editar)).toMatchObject([
       { texto: "Editar", apagado: true },
       { texto: "Editar", apagado: true },
+    ]);
+    expect(armadas.grupos.tarjetas.map((t) => t.consumo)).toMatchObject([
+      { texto: "Qué consume", apagado: true },
+      { texto: "Qué consume", apagado: true },
     ]);
     expect(armadas.grupos.tarjetas.map((t) => t.nombre)).toEqual(["Salsas", "Punto de la carne"]);
   });

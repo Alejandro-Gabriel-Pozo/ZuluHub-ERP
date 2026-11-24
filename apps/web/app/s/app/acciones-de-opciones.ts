@@ -1,6 +1,7 @@
 "use server";
 
 import type { ResultadoDeAccion } from "../../../servidor/acciones";
+import { guardarElConsumo } from "../../../servidor/consumo";
 import { copiarLasOpciones, guardarElGrupo } from "../../../servidor/opciones";
 
 // Las acciones de servidor de las opciones de un producto, expuestas a Next. Finas a propósito (ADR-015, punto 2): la directiva `"use server"` tiene que ser lo primero de este archivo, así que
@@ -49,4 +50,17 @@ export async function copiarOpcionesAccion(
 ): Promise<ResultadoDeAccion> {
   void previo;
   return copiarLasOpciones(productoId, versionDeOpciones, claveDeLaCopia, datos);
+}
+
+/** Lo que consume cada opción de un grupo: el producto, la versión de las opciones, el grupo y los ids de las opciones que se vieron los liga la página con `.bind`; del formulario solo vienen las líneas. */
+export async function guardarConsumoAccion(
+  productoId: string,
+  versionDeOpciones: number,
+  grupoId: string,
+  idsDeOpciones: readonly string[],
+  previo: ResultadoDeAccion,
+  datos: FormData,
+): Promise<ResultadoDeAccion> {
+  void previo;
+  return guardarElConsumo({ productoId, versionDeOpciones, grupoId, idsDeOpciones }, datos);
 }

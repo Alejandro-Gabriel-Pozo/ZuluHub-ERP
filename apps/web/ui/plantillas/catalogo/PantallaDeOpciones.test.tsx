@@ -94,6 +94,15 @@ describe("PantallaDeOpciones", () => {
         .elements()
         .map((e) => e.getAttribute("href")),
     ).toEqual([`/catalogo/productos/${ID}/opciones/g1`, `/catalogo/productos/${ID}/opciones/g2`]);
+    expect(
+      page
+        .getByRole("link", { name: "Qué consume" })
+        .elements()
+        .map((e) => e.getAttribute("href")),
+    ).toEqual([
+      `/catalogo/productos/${ID}/opciones/g1/consumo`,
+      `/catalogo/productos/${ID}/opciones/g2/consumo`,
+    ]);
   });
 
   it("la variante: su tarjeta con «Es la medida» y «Editar»; sin variante, «Agregar variante»; sin permiso se ven apagados, no ausentes", async () => {
