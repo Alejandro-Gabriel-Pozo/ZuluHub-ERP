@@ -2,7 +2,7 @@ import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import { ok } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
-import { entradaDeProductosParaComprar } from "./entradas-de-comprar";
+import { entradaDeCotizarCompra, entradaDeProductosParaComprar } from "./entradas-de-comprar";
 import { accionDeCompras } from "./errores-de-compras";
 import type { Web } from "./web";
 
@@ -15,7 +15,10 @@ import type { Web } from "./web";
  */
 
 export type DependenciasDeComprarWeb = Readonly<{
-  consultas: () => Pick<ReturnType<Web["consultasDeCompras"]>, "productosParaComprar">;
+  consultas: () => Pick<
+    ReturnType<Web["consultasDeCompras"]>,
+    "productosParaComprar" | "cotizarCompra"
+  >;
   respuesta: DependenciasDeRespuesta;
 }>;
 
@@ -69,6 +72,47 @@ export function buscarLosProductosParaComprar(
           cantidad: x.cantidad,
           dePesoVariable: x.dePesoVariable,
         })),
+      })),
+    }),
+  );
+}
+
+export type RenglonCotizadoParaLaPantalla = Readonly<{
+  productoId: string;
+  /** Texto decimal de 4 decimales, en la unidad base del producto («Entra a tu stock»). */
+  cantidadEnStock: string;
+  /** Texto decimal de 2 decimales; `null` sin precio (nunca cero). */
+  importe: string | null;
+  /** Texto decimal de 6 decimales; `null` sin precio («Costo por unidad de stock»). */
+  costoPorUnidadDeStock: string | null;
+  dePesoVariable: boolean;
+}>;
+
+export type CompraCotizadaParaLaPantalla = Readonly<{
+  renglones: readonly RenglonCotizadoParaLaPantalla[];
+}>;
+
+/**
+ * Cuánto entra al stock y cuánto cuesta cada renglón, mientras se carga la compra y ANTES de guardarla. Es una LECTURA con la misma cuenta que el alta: no escribe, no audita, no
+ * bloquea. La empresa sale de la sesión; un renglón que el alta rechazaría se rechaza igual (el genérico o el texto propio de la cantidad y el precio).
+ */
+export function cotizarLaCompra(
+  d: DependenciasDeComprarWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<CompraCotizadaParaLaPantalla>> {
+  return accionDeCompras(
+    d.respuesta,
+    crudo,
+    entradaDeCotizarCompra,
+    (entrada) => d.consultas().cotizarCompra(contexto, entrada),
+    (cotizada) => ({
+      renglones: cotizada.renglones.map((r) => ({
+        productoId: r.productoId,
+        cantidadEnStock: r.cantidadEnStock,
+        importe: r.importe,
+        costoPorUnidadDeStock: r.costoPorUnidadDeStock,
+        dePesoVariable: r.dePesoVariable,
       })),
     }),
   );

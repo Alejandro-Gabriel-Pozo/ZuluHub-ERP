@@ -23,7 +23,7 @@ import {
 } from "../dominio/factura";
 import { alicuotaQueEntraAlCosto } from "../dominio/iva-en-el-costo";
 import type { RenglonDeCompra } from "../dominio/registrar-compra";
-import type { DependenciasDeCompras, TxDeCompras } from "./contrato";
+import type { DependenciasDeCompras, TxDeCompras, TxDeConsultasDeCompras } from "./contrato";
 export { guardarFactura } from "./guardar-factura";
 import type { ErrorDeCompras } from "./errores";
 import type {
@@ -169,14 +169,21 @@ export async function prepararFactura(
   });
 }
 
-/** Valida el producto y la presentación de un renglón y hace su cuenta exacta (`calcularLinea`). */
+/**
+ * Valida el producto y la presentación de un renglón y hace su cuenta exacta (`calcularLinea`). La usan el alta (que bloquea el producto en modo compartido hasta el fin
+ * de su transacción) y la cotización de «Nueva compra» (`cotizarCompra`, solo lectura: `bloquear: false`, porque un bloqueo no se puede pedir en una transacción de solo lectura):
+ * una sola cuenta para las dos, así lo que se ve antes de guardar es lo que se guarda.
+ */
 export async function calcularRenglon(
-  tx: TxDeCompras,
+  tx: Pick<TxDeConsultasDeCompras, "productosParaCompras" | "presentacionesDeProducto">,
   empresaId: EmpresaId,
   renglon: RenglonDeCompra,
   alicuotaDeIvaEnElCosto: AlicuotaDeCompra | null = null,
+  bloquear = true,
 ): Promise<R<LineaCalculada>> {
-  const producto = await tx.productosParaCompras.bloquearCompartido(empresaId, renglon.productoId);
+  const producto = bloquear
+    ? await tx.productosParaCompras.bloquearCompartido(empresaId, renglon.productoId)
+    : await tx.productosParaCompras.obtener(empresaId, renglon.productoId);
   if (producto === null) return err("PRODUCTO_NO_ENCONTRADO");
   if (!producto.activo || !esClaseComprable(producto.claseDeUso))
     return err("PRODUCTO_NO_COMPRABLE");

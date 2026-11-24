@@ -2,6 +2,8 @@ import "server-only";
 import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   buscarLosProductosParaComprar,
+  cotizarLaCompra,
+  type CompraCotizadaParaLaPantalla,
   type DependenciasDeComprarWeb,
   type ProductosParaComprarEnLaPantalla,
 } from "../../../src/composicion/comprar-web";
@@ -26,4 +28,11 @@ export function buscarProductosParaComprar(
   return conLaEmpresa((contexto) =>
     buscarLosProductosParaComprar(dependencias, contexto, texto === undefined ? {} : { texto }),
   );
+}
+
+/** Cuánto entra al stock y cuánto cuesta cada renglón de lo que se está cargando, antes de guardar. No escribe; se vuelve a validar en la composición. */
+export function cotizarLaCompraDelFormulario(
+  renglones: unknown,
+): Promise<Respuesta<CompraCotizadaParaLaPantalla>> {
+  return conLaEmpresa((contexto) => cotizarLaCompra(dependencias, contexto, { renglones }));
 }

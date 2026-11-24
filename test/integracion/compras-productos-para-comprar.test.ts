@@ -221,4 +221,174 @@ describe.skipIf(base === null)("compras: productos para comprar", () => {
       expect(new Set(ids(lectura))).toEqual(new Set([producto, otro]));
     }
   });
+  describe("cotizarCompra", () => {
+    const renglonDe = (productoId: string, extra: Record<string, unknown> = {}) => ({
+      productoId,
+      unidadDeCompraId: "KILOGRAMO",
+      cantidad: "2.5",
+      precioPor: "UNIDAD",
+      unidadDePrecioId: "KILOGRAMO",
+      precio: "1234.5678",
+      ...extra,
+    });
+    const armar = async () => {
+      const e = await c.escenario();
+      const deposito = await c.deposito(e);
+      const { producto, articulo } = await c.articulo(e, {
+        unidadBase: "GRAMO",
+        dimension: "MASA",
+      });
+      const proveedor = await c.proveedor(e.operador);
+      return { e, deposito, producto, articulo, proveedor };
+    };
+    const cotizar = (quien: EscenarioDeCompras["gerente"], renglones: unknown) =>
+      c.consultas.cotizarCompra(quien, { renglones });
+    const huella = (e: EscenarioDeCompras) =>
+      Promise.all([
+        c.contar("select count(*) as n from auditoria_empresa where empresa_id = $1", [e.empresa]),
+        c.contar("select count(*) as n from recepcion where empresa_id = $1", [e.empresa]),
+        c.contar("select count(*) as n from linea_de_recepcion where empresa_id = $1", [e.empresa]),
+        c.contar("select count(*) as n from movimiento_de_stock where empresa_id = $1", [
+          e.empresa,
+        ]),
+        c.contar("select count(*) as n from oferta_de_proveedor where empresa_id = $1", [
+          e.empresa,
+        ]),
+        c.contar("select count(*) as n from configuracion_de_compras where empresa_id = $1", [
+          e.empresa,
+        ]),
+      ]);
+
+    it("da exactamente lo mismo que el alta con los mismos datos, como texto decimal", async () => {
+      const m = await armar();
+      // el alta no admite el mismo producto dos veces (lo rechaza stock al dar la entrada): tres productos distintos
+      const segundo = await c.articulo(m.e, { unidadBase: "GRAMO", dimension: "MASA" });
+      const tercero = await c.articulo(m.e, { unidadBase: "GRAMO", dimension: "MASA" });
+      const renglones = [
+        renglonDe(m.producto),
+        renglonDe(segundo.producto, { cantidad: "0.333", precio: "999.999999" }),
+        renglonDe(tercero.producto, { precio: null }),
+      ];
+      const cotizada = valorDe(await cotizar(m.e.operador, renglones));
+      expect(cotizada.renglones).toHaveLength(3);
+      expect(cotizada.renglones[2]).toMatchObject({ importe: null, costoPorUnidadDeStock: null });
+      const alta = valorDe(
+        await c.casos.registrarCompra(m.e.operador, {
+          clave: nuevoId(),
+          sucursalId: m.e.sucursal,
+          proveedorId: m.proveedor,
+          depositoId: m.deposito,
+          renglones,
+        }),
+      );
+      const guardadas = await c.filas<Record<string, string | null>>(
+        `select cantidad_en_stock::text as stock, importe::text as importe, costo_por_unidad_de_stock::text as costo
+           from linea_de_recepcion where recepcion_id = $1 order by numero`,
+        [alta.recepcionId],
+      );
+      expect(
+        cotizada.renglones.map((r) => ({
+          stock: r.cantidadEnStock,
+          importe: r.importe,
+          costo: r.costoPorUnidadDeStock,
+        })),
+      ).toEqual(guardadas);
+    });
+
+    it("no escribe: ni filas, ni movimientos de stock, ni auditoría, ni nivel de compras", async () => {
+      const m = await armar();
+      const antes = await huella(m.e);
+      valorDe(await cotizar(m.e.operador, [renglonDe(m.producto)]));
+      valorDe(await cotizar(m.e.gerente, [renglonDe(m.producto, { precio: null })]));
+      expect(await cotizar(m.e.operador, [renglonDe(m.producto, { cantidad: "0" })])).toMatchObject(
+        {
+          ok: false,
+        },
+      );
+      expect(await huella(m.e)).toEqual(antes);
+      expect(await c.existencia(m.deposito, m.articulo)).toBe("0");
+    });
+
+    it("rechaza lo mismo que el alta: otra empresa, vendible, desactivado, cantidad, precio cero, unidad de otra dimensión", async () => {
+      const m = await armar();
+      const otra = await c.escenario();
+      const ajeno = await nuevo(otra, "MATERIA_PRIMA");
+      const vendible = await nuevo(m.e, "VENDIBLE", { unidadBase: "UNIDAD", dimension: "CONTEO" });
+      const apagado = await nuevo(m.e, "MATERIA_PRIMA", { activo: false });
+      const error = async (renglon: Record<string, unknown>) => {
+        const r = await cotizar(m.e.operador, [renglon]);
+        return r.ok ? null : r.error;
+      };
+      expect(await error(renglonDe(ajeno))).toBe("PRODUCTO_NO_ENCONTRADO");
+      expect(await error(renglonDe(vendible))).toBe("PRODUCTO_NO_COMPRABLE");
+      expect(await error(renglonDe(apagado))).toBe("PRODUCTO_NO_COMPRABLE");
+      expect(await error(renglonDe(m.producto, { cantidad: "0" }))).toBe("CANTIDAD_INVALIDA");
+      expect(await error(renglonDe(m.producto, { cantidad: "2,5" }))).toBe("CANTIDAD_INVALIDA");
+      expect(await error(renglonDe(m.producto, { precio: "0" }))).toBe("PRECIO_INVALIDO");
+      expect(await error(renglonDe(m.producto, { unidadDeCompraId: "LITRO" }))).toBe(
+        "DIMENSION_DISTINTA",
+      );
+      expect(await cotizar(m.e.operador, [])).toEqual({ ok: false, error: "RENGLONES_INVALIDOS" });
+      // y el alta con el mismo renglón de otra empresa rechaza igual
+      expect(
+        await c.casos.registrarCompra(m.e.operador, {
+          clave: nuevoId(),
+          sucursalId: m.e.sucursal,
+          proveedorId: m.proveedor,
+          depositoId: m.deposito,
+          renglones: [renglonDe(ajeno)],
+        }),
+      ).toEqual({ ok: false, error: "PRODUCTO_NO_ENCONTRADO" });
+    });
+
+    it("aislamiento y permisos: la empresa sale del contexto; sin persona o con el módulo apagado, no cotiza", async () => {
+      const m = await armar();
+      const otra = await c.escenario();
+      // el producto de m.e visto desde otra empresa no existe
+      expect(await cotizar(otra.gerente, [renglonDe(m.producto)])).toEqual({
+        ok: false,
+        error: "PRODUCTO_NO_ENCONTRADO",
+      });
+      for (const quien of [m.e.operador, m.e.gerente, m.e.administrador]) {
+        expect((await cotizar(quien, [renglonDe(m.producto)])).ok).toBe(true);
+      }
+      expect(
+        await cotizar({ ...m.e.operador, personaId: null }, [renglonDe(m.producto)]),
+      ).toMatchObject({ ok: false });
+      c.apagarModulo("compras");
+      try {
+        expect(await cotizar(m.e.gerente, [renglonDe(m.producto)])).toMatchObject({ ok: false });
+      } finally {
+        c.encenderModulo("compras");
+      }
+    });
+
+    it("concurrencia: cotizaciones simultáneas con el alta de la misma compra no fallan y dan lo mismo que lo guardado", async () => {
+      const m = await armar();
+      const renglones = [renglonDe(m.producto)];
+      const [alta, ...cotizadas] = await Promise.all([
+        c.casos.registrarCompra(m.e.operador, {
+          clave: nuevoId(),
+          sucursalId: m.e.sucursal,
+          proveedorId: m.proveedor,
+          depositoId: m.deposito,
+          renglones,
+        }),
+        cotizar(m.e.operador, renglones),
+        cotizar(m.e.gerente, renglones),
+        cotizar(m.e.administrador, renglones),
+        cotizar(m.e.operador, renglones),
+      ]);
+      expect(alta.ok).toBe(true);
+      const primera = valorDe(cotizadas[0]);
+      for (const cotizada of cotizadas) {
+        expect(valorDe(cotizada)).toEqual(primera);
+      }
+      expect(primera.renglones[0]).toMatchObject({
+        cantidadEnStock: "2500.0000",
+        importe: "3086.42",
+        costoPorUnidadDeStock: "1.234568",
+      });
+    });
+  });
 });
