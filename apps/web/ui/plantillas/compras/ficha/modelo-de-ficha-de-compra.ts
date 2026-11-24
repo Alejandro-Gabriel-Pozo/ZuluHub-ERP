@@ -1,11 +1,13 @@
 import { cantidadConUnidad } from "../../produccion/modelo-de-ordenes";
+import { CLAVE_DE_TEXTO_DE_UNIDAD } from "../../../../../../src/capacidades/vocabulario/unidades-de-medida";
+import { texto as textoDelCatalogo } from "../../../../../../src/capacidades/vocabulario/vocabulario";
 import { fechaYHoraParaMostrar } from "../../../../../../src/primitivas/tiempo/instante-para-mostrar";
 import {
   formatearCantidad,
   formatearFecha,
   formatearImporte,
 } from "../../../patrones/formato-fiscal";
-import { RUTA_DE_COMPRAS } from "../rutas-de-compras";
+import { RUTA_DE_COMPRAS, rutaDeCorregirLaLinea } from "../rutas-de-compras";
 import {
   nombreDeLaFactura,
   numeroImpreso,
@@ -41,6 +43,16 @@ export type FichaDeCompraParaLaPantalla = Readonly<{
     unidadDeStockId: string | null;
     importe: Importe | null;
     costoPorUnidadDeStock: Importe | null;
+    precioPor: Readonly<{ tipo: "PRESENTACION" | "UNIDAD"; unidadId: string | null }> | null;
+    correccionesVistas: number;
+    correcciones: readonly Readonly<{
+      numero: number;
+      precioAnterior: Importe | null;
+      precioNuevo: Importe;
+      motivo: string;
+      hechaPor: string | null;
+      hechaEn: string;
+    }>[];
   }>[];
   total: Importe | null;
   factura: Readonly<{
@@ -63,7 +75,25 @@ type LineaDeFichaArmada = Readonly<{
   cantidad: string;
   /** «Costo por unidad de stock: $ 1.140,00»; `null` si la línea no tiene precio. */
   costo: string | null;
+  /** Adónde lleva «Corregir» (el formulario de la línea); `null` si no se ofrece (sin permiso, sin precio o compra anulada). */
+  corregir: string | null;
+  /** Las correcciones de precio de la línea, de la más vieja a la más nueva. */
+  correcciones: readonly Readonly<{
+    clave: number;
+    /** «Corregido por ana@ejemplo.com · 24/11/2026 21:14»; sin correo que mostrar, solo el momento no se dibuja. */
+    quien: string | null;
+    /** «Antes: $ 1.000,00»; `null` si no había precio anterior. */
+    antes: string | null;
+    motivo: string;
+  }>[];
 }>;
+
+/** Lo que la persona puede hacer sobre una compra (solo ayuda para ofrecer botones: cada acción vuelve a pasar por el guard del servidor). Sin permisos leídos, todo cerrado. */
+export type AccionesDeLaCompraParaLaPantalla = Readonly<{ corregir: boolean; anular: boolean }>;
+export const SIN_ACCIONES_DE_LA_COMPRA: AccionesDeLaCompraParaLaPantalla = {
+  corregir: false,
+  anular: false,
+};
 
 export type FichaArmada = Readonly<{
   /** «Compra 5». */
@@ -84,6 +114,10 @@ export type FichaArmada = Readonly<{
   /** «correo · 17/11/2026 21:14»; `null` sin correo que mostrar. */
   quien: string | null;
   volver: Readonly<{ texto: string; href: string }>;
+  /** «Anular» al pie: solo con el permiso y si la compra no está anulada. */
+  anular: boolean;
+  /** Adónde lleva «Corregir» junto al aviso de una compra ya consumida: la primera línea que se puede corregir; `null` si ninguna. */
+  corregirLaPrimera: string | null;
 }>;
 
 /** «2 Kilogramo» sin presentación; «2 Caja de 12» con ella: la cantidad de compra con el nombre de lo que se compró. */
@@ -98,10 +132,45 @@ const conUnidadDeStock = (l: FichaDeCompraParaLaPantalla["lineas"][number]): str
     ? formatearCantidad(l.cantidadEnStock)
     : cantidadConUnidad(l.cantidadEnStock, l.unidadDeStockId);
 
+/** El nombre de la unidad como lo dice el catálogo; una que la pantalla no conoce se dice con su propio valor (nunca se esconde). */
+const nombreDeLaUnidad = (unidadId: string): string =>
+  Object.hasOwn(CLAVE_DE_TEXTO_DE_UNIDAD, unidadId)
+    ? textoDelCatalogo(
+        {},
+        CLAVE_DE_TEXTO_DE_UNIDAD[unidadId as keyof typeof CLAVE_DE_TEXTO_DE_UNIDAD],
+      )
+    : unidadId;
+
+/** «Precio por Caja de 12» o «Precio por Kilogramo»: el rótulo del precio de una línea que ya tiene precio. Sin «precio por» conocido, solo «Precio». */
+export function rotuloDelPrecio(
+  linea: FichaDeCompraParaLaPantalla["lineas"][number],
+  textos: TextosDeCompras,
+): string {
+  if (linea.precioPor === null) return textos.precio;
+  const por =
+    linea.precioPor.tipo === "PRESENTACION"
+      ? linea.presentacion
+      : linea.precioPor.unidadId === null
+        ? null
+        : nombreDeLaUnidad(linea.precioPor.unidadId);
+  return por === null ? textos.precio : `${textos.precioPor} ${por}`;
+}
+
+/** Una línea se puede corregir si ya tiene precio (completar «Sin precio» es de otro tramo) y la compra no está anulada. */
+const sePuedeCorregir = (
+  ficha: FichaDeCompraParaLaPantalla,
+  linea: FichaDeCompraParaLaPantalla["lineas"][number],
+): boolean => ficha.estado !== "ANULADA" && linea.importe !== null;
+
 export function armarLaFicha(
   ficha: FichaDeCompraParaLaPantalla,
   textos: TextosDeCompras,
+  acciones: AccionesDeLaCompraParaLaPantalla = SIN_ACCIONES_DE_LA_COMPRA,
 ): FichaArmada {
+  const hrefDeCorregir = (l: FichaDeCompraParaLaPantalla["lineas"][number]): string | null =>
+    acciones.corregir && sePuedeCorregir(ficha, l)
+      ? rutaDeCorregirLaLinea(ficha.recepcionId, l.numero)
+      : null;
   const quien = (por: string | null, en: string): string | null =>
     por === null ? null : `${por} · ${fechaYHoraParaMostrar(en)}`;
   return {
@@ -132,6 +201,19 @@ export function armarLaFicha(
         l.costoPorUnidadDeStock === null
           ? null
           : `${textos.costoPorUnidadDeStock}: ${formatearImporte(l.costoPorUnidadDeStock.monto)}`,
+      corregir: hrefDeCorregir(l),
+      correcciones: l.correcciones.map((c) => ({
+        clave: c.numero,
+        quien:
+          c.hechaPor === null
+            ? null
+            : textos.corregidoPor(c.hechaPor, fechaYHoraParaMostrar(c.hechaEn)),
+        antes:
+          c.precioAnterior === null
+            ? null
+            : `${textos.antes}: ${formatearImporte(c.precioAnterior.monto)}`,
+        motivo: c.motivo,
+      })),
     })),
     total: { rotulo: textos.total, valor: totalParaMostrar(ficha.total, textos) },
     factura:
@@ -153,5 +235,8 @@ export function armarLaFicha(
           },
     quien: quien(ficha.registradaPor, ficha.registradaEn),
     volver: { texto: textos.volver, href: RUTA_DE_COMPRAS },
+    anular: acciones.anular && ficha.estado !== "ANULADA",
+    corregirLaPrimera:
+      ficha.lineas.map((l) => hrefDeCorregir(l)).find((href) => href !== null) ?? null,
   };
 }

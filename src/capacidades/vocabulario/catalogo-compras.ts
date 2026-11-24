@@ -58,6 +58,29 @@ export const TEXTOS_DE_COMPRAS = {
     ],
     fuente: { decision: "DEC-0870" },
   },
+  // «Corregir» y «Antes» (Compras PR 10; `compra-corregir-anular.html`): «Corregir» es el verbo de corregir una línea (aceptado por delegación, DDD:173/174; ya no hay otro «Corregir» solo en el catálogo) y «Antes» el del precio de antes de una corrección (aprobado el 09/11/2026, `compra.html:373`).
+  "compras.correccion.corregir": {
+    porDefecto: "Corregir",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/textos-de-compras.ts",
+        nombre: "textosDeCompras",
+      },
+    ],
+    fuente: { decision: "DEC-0871" },
+  },
+  "compras.correccion.antes": {
+    porDefecto: "Antes",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/textos-de-compras.ts",
+        nombre: "textosDeCompras",
+      },
+    ],
+    fuente: { decision: "DEC-0871" },
+  },
   "compras.compra.por_recibir": { porDefecto: "Por recibir" },
   "compras.compra.sin_facturar": { porDefecto: "Sin facturar" },
   "compras.compra.pedida": { porDefecto: "Pedida" },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useRef, useState, type FormEvent } from "react";
 import { Boton } from "../../../componentes/Boton.cliente";
 import { Selector } from "../../../componentes/Selector";
 import { ProveedorDeEnvioDeFormulario } from "../../../patrones/EnvioDeFormulario.cliente";
@@ -57,8 +57,16 @@ export function FormularioDeNivelDeCompras({
     setResultadoVisto(resultado);
     setElegido(vigente);
   }
+  // El envío NO usa `<form action>`: un envío con acción de servidor reinicia el formulario al terminar (React 19) y el selector del navegador volvería a su primera opción aunque el estado diga otra.
+  const alEnviar = (evento: FormEvent<HTMLFormElement>) => {
+    evento.preventDefault();
+    const datos = new FormData(evento.currentTarget);
+    startTransition(() => {
+      enviar(datos);
+    });
+  };
   return (
-    <form action={enviar}>
+    <form onSubmit={alEnviar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={3}>
           <Selector

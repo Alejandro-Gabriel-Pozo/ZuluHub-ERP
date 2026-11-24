@@ -15,6 +15,14 @@
     "apps/web/servidor/nivel-de-compras.ts",
     "apps/web/ui/plantillas/compras/nivel/*"
   ],
+  "test/web/ficha-de-correccion-de-compras.test.ts": [
+    "apps/web/app/s/app/(operacion)/compras/**",
+    "apps/web/app/s/app/acciones-de-correccion-de-compra.ts",
+    "apps/web/servidor/correccion-de-compra.ts",
+    "apps/web/servidor/ofertas-de-compras.ts",
+    "apps/web/ui/plantillas/compras/correccion/*",
+    "apps/web/ui/plantillas/compras/ficha/*"
+  ],
   "test/web/ficha-de-mesas.test.ts": [
     "apps/web/app/s/app/(operacion)/salon/mesas/**",
     "apps/web/ui/plantillas/salon/*"

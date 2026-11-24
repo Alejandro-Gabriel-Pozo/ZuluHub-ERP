@@ -1,12 +1,22 @@
 import { EnlaceDeAccion } from "../../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../../componentes/Insignia";
+import { HojaDeAnularCompra } from "../correccion/HojaDeAnularCompra.cliente";
+import type { ResultadoDeAnular } from "../correccion/resultado-de-correccion";
 import type { TextosDeCompras } from "../textos-de-compras";
-import { armarLaFicha, type FichaDeCompraParaLaPantalla } from "./modelo-de-ficha-de-compra";
+import {
+  armarLaFicha,
+  type AccionesDeLaCompraParaLaPantalla,
+  type FichaDeCompraParaLaPantalla,
+} from "./modelo-de-ficha-de-compra";
 import estilos from "../Compras.module.css";
 
 export type PropsDePantallaDeFichaDeCompra = Readonly<{
   ficha: FichaDeCompraParaLaPantalla;
   textos: TextosDeCompras;
+  /** Lo que la persona puede hacer; sin decirlo, nada (todo nace cerrado). */
+  acciones?: AccionesDeLaCompraParaLaPantalla;
+  /** `anularCompraAccion` con la compra ya ligada; sin ella no se dibuja «Anular». */
+  accionDeAnular?: (previo: ResultadoDeAnular, datos: FormData) => Promise<ResultadoDeAnular>;
 }>;
 
 /**
@@ -14,8 +24,13 @@ export type PropsDePantallaDeFichaDeCompra = Readonly<{
  * lo que entra a tu stock y su costo por unidad de stock, el total y la factura si la hay; si está anulada, el motivo, quién y cuándo. SOLO LECTURA: ningún botón de acción, solo «Volver».
  * Sin estado ni hooks: es una página de servidor. «Anulada» se dice con texto, no solo con color. El `h1` («Compra 5») lo pone el armazón.
  */
-export function PantallaDeFichaDeCompra({ ficha, textos }: PropsDePantallaDeFichaDeCompra) {
-  const f = armarLaFicha(ficha, textos);
+export function PantallaDeFichaDeCompra({
+  ficha,
+  textos,
+  acciones,
+  accionDeAnular,
+}: PropsDePantallaDeFichaDeCompra) {
+  const f = armarLaFicha(ficha, textos, acciones);
   return (
     <div className={estilos["cuerpo"]}>
       <EnlaceDeAccion href={f.volver.href} variante="secundaria">
@@ -45,6 +60,16 @@ export function PantallaDeFichaDeCompra({ ficha, textos }: PropsDePantallaDeFich
             <span className={estilos["importe"]}>{l.importe}</span>
             <span className={estilos["detalle"]}>{l.cantidad}</span>
             {l.costo === null ? null : <span className={estilos["detalle"]}>{l.costo}</span>}
+            {l.correcciones.map((c) => (
+              <span key={c.clave} className={estilos["detalle"]}>
+                {[c.quien, c.antes, c.motivo].filter((x): x is string => x !== null).join(" · ")}
+              </span>
+            ))}
+            {l.corregir === null ? null : (
+              <EnlaceDeAccion href={l.corregir} variante="secundaria">
+                {textos.corregir}
+              </EnlaceDeAccion>
+            )}
           </li>
         ))}
       </ul>
@@ -65,6 +90,13 @@ export function PantallaDeFichaDeCompra({ ficha, textos }: PropsDePantallaDeFich
         </section>
       )}
       {f.quien === null ? null : <p className={estilos["suave"]}>{f.quien}</p>}
+      {f.anular && accionDeAnular !== undefined ? (
+        <HojaDeAnularCompra
+          accion={accionDeAnular}
+          corregirLaPrimera={f.corregirLaPrimera}
+          textos={textos}
+        />
+      ) : null}
     </div>
   );
 }

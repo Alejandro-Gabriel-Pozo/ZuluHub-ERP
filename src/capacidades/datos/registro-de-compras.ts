@@ -23,7 +23,45 @@ const REGISTRAR_COMPRA = ["recepciones.registrar"] as const;
 const FORMULARIO_DEL_NIVEL =
   "apps/web/ui/plantillas/compras/nivel/FormularioDeNivelDeCompras.cliente.tsx";
 
+const FORMULARIO_DE_CORREGIR =
+  "apps/web/ui/plantillas/compras/correccion/FormularioDeCorregirLinea.cliente.tsx";
+const HOJA_DE_ANULAR = "apps/web/ui/plantillas/compras/correccion/HojaDeAnularCompra.cliente.tsx";
+const CORREGIR_COMPRA = ["compras.corregir"] as const;
+const ANULAR_COMPRA = ["recepciones.anular"] as const;
+const DE_CORREGIR_Y_ANULAR = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs, brief `PR-10-corregir-y-anular-pantalla.md` de Compras (rama de planificación de la Ola 1) y maqueta `compra-corregir-anular.html` (`vForm`, `vHoja`); quién: gerente y administrador (compras.corregir y recepciones.anular, DDD:187)",
+});
+
 export const DATOS_DE_COMPRAS = {
+  "precio-corregido-de-compra": {
+    // El precio nuevo de una línea que ya tiene precio, como texto decimal; qué es válido (mayor que cero, hasta 6 decimales) lo decide `leerCorreccion` al correr el caso de uso: la pantalla no copia la regla.
+    ficha: "src/modulos/compras/dominio/correccion.ts",
+    propositos: [
+      DE_CORREGIR_Y_ANULAR(
+        "Precio nuevo de una línea de una compra ya hecha, en el mismo «precio por» de la línea.",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_CORREGIR],
+    ponerPor: CORREGIR_COMPRA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "motivo-de-correccion-de-compra": {
+    // La regla del motivo (1 a 500 caracteres, de una línea, con una letra) vive UNA vez en el dominio: corregir y anular usan la misma `motivoDeAnulacionDesdeTexto`.
+    ficha: "src/modulos/compras/dominio/registrar-compra.ts",
+    propositos: [DE_CORREGIR_Y_ANULAR("Motivo obligatorio de corregir el precio de una línea.")],
+    consumidores: [FORMULARIO_DE_CORREGIR],
+    ponerPor: CORREGIR_COMPRA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "motivo-de-anulacion-de-compra": {
+    ficha: "src/modulos/compras/dominio/registrar-compra.ts",
+    propositos: [DE_CORREGIR_Y_ANULAR("Motivo obligatorio de anular una compra entera.")],
+    consumidores: [HOJA_DE_ANULAR],
+    ponerPor: ANULAR_COMPRA,
+    requiere: REQUIERE_COMPRAS,
+  },
   "nivel-de-compras": {
     // La lista de niveles que se eligen vive UNA vez en el dominio (`NIVELES_ESTANDAR_DE_COMPRA`, N1 y N2): el servidor la ofrece y el pedido solo se acepta con uno de ella.
     ficha: "src/modulos/compras/dominio/niveles.ts",

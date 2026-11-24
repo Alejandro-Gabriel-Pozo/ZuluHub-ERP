@@ -9,6 +9,10 @@ export const RUTA_DEL_NIVEL_DE_COMPRAS = `${RUTA_DE_COMPRAS}/nivel`;
 
 export const rutaDeLaCompra = (recepcionId: string): string => `${RUTA_DE_COMPRAS}/${recepcionId}`;
 
+/** El formulario de «Corregir» una línea de la compra (Compras PR 10): el número de línea es un entero que sale de la ficha. */
+export const rutaDeCorregirLaLinea = (recepcionId: string, linea: number): string =>
+  `${rutaDeLaCompra(recepcionId)}/corregir/${String(linea)}`;
+
 export type FiltroAplicado = Readonly<{
   estado: "TODAS" | "SIN_FACTURAR";
   desde: string | null;

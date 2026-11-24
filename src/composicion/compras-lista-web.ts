@@ -119,6 +119,19 @@ export type FichaDeCompraParaLaPantalla = Readonly<{
     /** El importe vigente (con la última corrección de precio); `null` = «Sin precio». */
     importe: Importe | null;
     costoPorUnidadDeStock: Importe | null;
+    /** El «precio por» de la línea: la presentación o la unidad (`unidadId`); `null` sin precio. */
+    precioPor: Readonly<{ tipo: "PRESENTACION" | "UNIDAD"; unidadId: string | null }> | null;
+    /** Cuántas correcciones tenía la línea cuando se miró (0 si ninguna): la versión que lleva «Corregir» para detectar que otra persona corrigió antes. */
+    correccionesVistas: number;
+    /** Las correcciones de PRECIO de la línea, de la más vieja a la más nueva: el precio de antes y el de ahora, el motivo, y quién y cuándo (el correo; `null` si no se puede mostrar). */
+    correcciones: readonly Readonly<{
+      numero: number;
+      precioAnterior: Importe | null;
+      precioNuevo: Importe;
+      motivo: string;
+      hechaPor: string | null;
+      hechaEn: string;
+    }>[];
   }>[];
   total: Importe | null;
   factura: Readonly<{
@@ -158,6 +171,7 @@ export function fichaDeLaCompra(
         ...new Set([
           ficha.valor.registradoPor,
           ...(ficha.valor.anuladaPor === null ? [] : [ficha.valor.anuladaPor]),
+          ...ficha.valor.correcciones.map((c) => c.registradoPor),
         ]),
       ];
       const personas = await d.consultasDeIdentidad().personasParaMostrar(contexto, { ids });
@@ -203,6 +217,22 @@ export function fichaDeLaCompra(
         unidadDeStockId: l.unidadDeStockId,
         importe: enPesos(l.importeVigente),
         costoPorUnidadDeStock: enPesos(l.costoVigente),
+        precioPor:
+          l.precioPorTipo === null ? null : { tipo: l.precioPorTipo, unidadId: l.unidadDePrecioId },
+        correccionesVistas: Math.max(
+          0,
+          ...f.correcciones.filter((c) => c.linea === l.numero).map((c) => c.numero),
+        ),
+        correcciones: f.correcciones
+          .filter((c) => c.linea === l.numero && c.precioNuevo !== null)
+          .map((c) => ({
+            numero: c.numero,
+            precioAnterior: enPesos(c.precioAnterior),
+            precioNuevo: { moneda: MONEDA, monto: c.precioNuevo as string },
+            motivo: c.motivo,
+            hechaPor: correoDe(c.registradoPor),
+            hechaEn: c.registradoEn,
+          })),
       })),
       total: enPesos(f.total),
       factura:
