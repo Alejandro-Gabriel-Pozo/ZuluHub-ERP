@@ -55,14 +55,10 @@ const DEL_OPERADOR_DE_CATALOGO_Y_STOCK = [
   "vidrieras.ver",
 ] as const;
 
-/** Lo que el administrador puede de más que el operador en catálogo, carta y stock (31 acciones). */
+/** Lo que el administrador puede de más que el operador en catálogo, carta y stock (27 acciones). */
 const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
   "articulos.controlar",
   "articulos.dejar_de_controlar",
-  "categorias.crear",
-  "categorias.desactivar",
-  "categorias.editar",
-  "categorias.reactivar",
   "composiciones.editar",
   "conteos.abrir",
   "conteos.aplicar",
@@ -92,10 +88,11 @@ const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
 ] as const;
 
 /**
- * Las 2 acciones que quedan de CE0 (catalogo-carta-niveles-y-elecciones §7.2): gerente y administrador. Las 6 de grupos de
- * precio y `opciones.asignar` se retiraron en E0-T1 (decisiones 138 y 133; «copiar de otro producto» es `opciones.editar`).
+ * La acción que queda de CE0 (catalogo-carta-niveles-y-elecciones §7.2): gerente y administrador. Las 6 de grupos de
+ * precio y `opciones.asignar` se retiraron en E0-T1 (decisiones 138 y 133; «copiar de otro producto» es `opciones.editar`) y
+ * `conjuntos.editar_contenido` se quitó el 23/11/2026 por no tener caso de uso (tercera pata, decisión del dueño del 21/11).
  */
-const DE_LA_ESCALERA_DE_ELECCIONES = ["conjuntos.editar_contenido", "variantes.editar"] as const;
+const DE_LA_ESCALERA_DE_ELECCIONES = ["variantes.editar"] as const;
 
 /**
  * Caja, cierre y ventas (E0-T1, e0-cimientos-especificacion §3.1): los tres módulos pasaron a `disponible` (caja y ventas el 15/11/2026, DEC-0463); esta tabla fija quién puede cada acción.
@@ -244,11 +241,8 @@ const DEL_OPERADOR = [
   ...DEL_OPERADOR_DE_SALON_Y_COMANDAS,
 ] as const;
 
-/** Estructura fiscal y verificación de saldos: solo el gerente. */
-const SOLO_DEL_GERENTE_DE_CATALOGO_Y_STOCK = [
-  "productos.asignar_emisor",
-  "stock.verificar_saldos",
-] as const;
+/** Verificación de saldos: solo el gerente. */
+const SOLO_DEL_GERENTE_DE_CATALOGO_Y_STOCK = ["stock.verificar_saldos"] as const;
 
 /**
  * Configuración fiscal (H7 fiscal §C, T5; C11): confirmar datos fiscales, activar un punto de venta y confirmar
@@ -315,9 +309,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 177 acciones: 34 de empresa, configuración fiscal y facturación, 50 de catálogo, carta y stock (39 de T0, 2 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 37 de clientes y compras y 16 de salón y comandas", () => {
+  it("hay 171 acciones: 34 de empresa, configuración fiscal y facturación, 44 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 37 de clientes y compras y 16 de salón y comandas", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(177);
+    expect(todas).toHaveLength(171);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -347,7 +341,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("composiciones"),
       porPrefijo("conteos"),
       porPrefijo("costos"),
-    ]).toEqual([7, 4, 1, 1, 0, 1, 11, 7, 4, 2, 1, 4, 1]);
+    ]).toEqual([6, 0, 1, 1, 0, 0, 11, 7, 4, 2, 1, 4, 1]);
     expect([
       porPrefijo("cajas"),
       porPrefijo("medios_de_pago"),
@@ -416,7 +410,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     }
   });
 
-  it("asignar un emisor a un producto o a un depósito y verificar los saldos son solo del gerente (estructura fiscal y control)", () => {
+  it("verificar los saldos es solo del gerente (control)", () => {
     for (const accion of SOLO_DEL_GERENTE_DE_CATALOGO_Y_STOCK) {
       expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE"]);
     }
@@ -445,8 +439,8 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     }
   });
 
-  it("CE0: las dos acciones que quedan de la escalera de elecciones no las puede el operador", () => {
-    expect(DE_LA_ESCALERA_DE_ELECCIONES).toHaveLength(2);
+  it("CE0: la acción que queda de la escalera de elecciones no la puede el operador", () => {
+    expect(DE_LA_ESCALERA_DE_ELECCIONES).toHaveLength(1);
     const operador = tablaDePermisos(PERMISOS_DE_EMPRESA).OPERADOR as readonly string[];
     for (const accion of DE_LA_ESCALERA_DE_ELECCIONES) {
       expect(operador, accion).not.toContain(accion);
