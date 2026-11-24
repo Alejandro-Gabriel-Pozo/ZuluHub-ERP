@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0864",
+  "fecha": "2026-11-24",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "«Depósito» (singular de «Depósitos», ya aprobado) rotula el selector del depósito en «Nueva compra»; el orquestador lo aceptó por delegación de textos.",
+  "que_cambia": "Con más de un depósito normal, el selector dice «Depósito» y no «Depósitos». Revertir: volver a stock.pantalla.depositos y quitar la clave.",
+  "donde": "catalogo-compras.ts (compras.compra.deposito), textos-de-nueva-compra.ts, PantallaDeNuevaCompra.cliente.tsx; delegación de textos DDD:173, mensaje del orquestador del 24/11/2026"
+}

@@ -173,6 +173,17 @@ describe("Nueva compra: lo que se ve y lo que calcula el servidor", () => {
     }
   });
 
+  it("«Quitar» saca el renglón y el producto vuelve a poder agregarse; sin renglones no se puede comprar", async () => {
+    await render(pantalla(servidorFalso()));
+    await cargarLaCompra();
+    await expect.element(boton("Comprar y recibir")).toBeEnabled();
+    await userEvent.click(boton("Quitar"));
+    expect(page.getByLabelText("Cantidad").elements()).toHaveLength(0);
+    await expect.element(boton("Comprar y recibir")).toBeDisabled();
+    await agregarElBife();
+    await expect.element(page.getByLabelText("Cantidad")).toBeVisible();
+  });
+
   it("un producto ya agregado no se ofrece otra vez", async () => {
     await render(pantalla(servidorFalso()));
     await elegirElProveedor();
@@ -243,7 +254,7 @@ describe("Nueva compra: lo que se ve y lo que calcula el servidor", () => {
     );
     await cargarLaCompra();
     await expect.element(boton("Comprar y recibir")).toBeDisabled();
-    await userEvent.selectOptions(page.getByRole("combobox", { name: "Depósitos" }), "d2");
+    await userEvent.selectOptions(page.getByRole("combobox", { name: "Depósito" }), "d2");
     await expect.element(boton("Comprar y recibir")).toBeEnabled();
     tocar(boton("Comprar y recibir"));
     await vi.waitFor(() => expect(servidor.pedidos).toHaveLength(1));

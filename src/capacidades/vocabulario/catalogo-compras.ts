@@ -60,6 +60,18 @@ export const TEXTOS_DE_COMPRAS = {
   "compras.recepcion.remito_del_proveedor": { porDefecto: "Remito del proveedor" },
   "compras.recepcion.sin_remito": { porDefecto: "Sin remito" },
   "compras.recepcion.fecha_del_remito": { porDefecto: "Fecha del remito" },
+  // «Depósito» (singular de «Depósitos», `stock.pantalla.depositos`): selector del depósito de «Nueva compra» (Compras PR 6b). Aceptado por delegación de textos (DDD:173), el 24/11/2026.
+  "compras.compra.deposito": {
+    porDefecto: "Depósito",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/nueva/textos-de-nueva-compra.ts",
+        nombre: "textosDeNuevaCompra",
+      },
+    ],
+    fuente: { decision: "DEC-0864" },
+  },
   // «Número» del remito (compra.html, «Textos aprobados», fila «Remito del proveedor · Punto de venta · Número · Fecha del remito · Sin remito», aprobada el 09/11/2026): Compras PR 6b.
   "compras.recepcion.numero": {
     porDefecto: "Número",

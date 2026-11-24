@@ -1,6 +1,7 @@
 "use client";
 
 import { REGLA_DE_CANTIDAD } from "../../../../../../src/capacidades/experiencia/reglas-de-cantidad";
+import { Boton } from "../../../componentes/Boton.cliente";
 import { CampoImporte } from "../../../componentes/CampoImporte";
 import { CampoNumero } from "../../../componentes/CampoNumero";
 import { Selector } from "../../../componentes/Selector";
@@ -17,6 +18,7 @@ export type PropsDeTarjetaDeRenglon = Readonly<{
   /** Lo que vuelve del servidor para este renglón (cuánto entra al stock y cuánto cuesta); `null` mientras falta la cantidad. */
   resumen: ResumenDeRenglon | null;
   alCambiar: (cambios: Partial<Omit<RenglonEscrito, "id" | "productoId">>) => void;
+  alQuitar: () => void;
   textos: TextosDeNuevaCompra;
   deshabilitada: boolean;
 }>;
@@ -30,6 +32,7 @@ export function TarjetaDeRenglon({
   renglon,
   resumen,
   alCambiar,
+  alQuitar,
   textos,
   deshabilitada,
 }: PropsDeTarjetaDeRenglon) {
@@ -85,6 +88,14 @@ export function TarjetaDeRenglon({
           <p className={estilos["importe"]}>{resumen.importe}</p>
         </div>
       )}
+      <Boton
+        variante="secundaria"
+        ancho="completo"
+        deshabilitado={deshabilitada}
+        alTocar={alQuitar}
+      >
+        {textos.quitar}
+      </Boton>
     </section>
   );
 }

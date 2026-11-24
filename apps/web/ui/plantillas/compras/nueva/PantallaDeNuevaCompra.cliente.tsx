@@ -200,6 +200,10 @@ export function PantallaDeNuevaCompra({
             setRenglones(conRenglon(renglones, renglon.id, cambios));
             editado();
           }}
+          alQuitar={() => {
+            setRenglones(renglones.filter((r) => r.id !== renglon.id));
+            editado();
+          }}
           textos={textos}
           deshabilitada={!editable}
         />
@@ -258,7 +262,7 @@ export function PantallaDeNuevaCompra({
       {hayDepositoAElegir ? (
         <Selector
           dato="deposito-de-compra"
-          etiqueta={textos.depositos}
+          etiqueta={textos.deposito}
           valor={depositoId}
           alCambiar={(id) => {
             setDepositoId(id);

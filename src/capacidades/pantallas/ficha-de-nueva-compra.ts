@@ -16,8 +16,8 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  *  5. Sin «Total» al pie: el servidor devuelve el importe de cada línea y no la suma de la compra; la pantalla no suma dinero (la suma está en la ficha de la compra al guardar).
  *  6. «Agregar proveedor» es un botón debajo del buscador y no la última opción del desplegable (el proveedor se elige buscando, no con un desplegable: la lista del directorio no cabe en uno).
  *  7. «Agregar producto» es un buscador (la maqueta lo dibuja como un desplegable con todos los productos); mismo texto aprobado. Sin «Agregar producto nuevo»: para un producto nuevo se usa el alta de Catálogo.
- *  8. Sin quitar un renglón: la maqueta no dibuja «Quitar» ni tiene un texto aprobado para eso en compras (queda como pregunta pendiente; ver el informe del PR).
- *  9. Con más de un depósito de uso normal en la sucursal aparece un selector con el texto «Depósitos» (el único aprobado de stock; «Depósito» en singular no tiene texto aprobado: pregunta pendiente).
+ *  8. Cada renglón lleva «Quitar» (la maqueta no lo dibuja): reusa el texto ya aprobado de ventas y catálogo; respuesta del orquestador por delegación de textos (DDD:173), 24/11/2026.
+ *  9. Con más de un depósito de uso normal en la sucursal aparece un selector rotulado «Depósito» (singular de «Depósitos», aceptado por delegación el 24/11/2026; DEC-0864).
  */
 
 type FuenteDeTexto = Readonly<{ decidio: string; donde: string }>;
@@ -72,6 +72,12 @@ export const FICHA_DE_NUEVA_COMPRA = {
       id: "comprar-y-recibir",
       texto: "compras.compra.comprar_y_recibir",
       hace: { envia: "recepciones.registrar" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "quitar-renglon",
+      texto: "catalogo.accion.quitar",
+      hace: { navega: "/compras/nueva" },
       sinPermiso: "AUSENTE",
     },
     {
@@ -175,7 +181,8 @@ export const FICHA_DE_NUEVA_COMPRA = {
     },
     "compras.recepcion.numero": { usos: ["número del remito"], fuente: DE_LA_MAQUETA },
     "compras.recepcion.fecha_del_remito": { usos: ["fecha del remito"], fuente: DE_LA_MAQUETA },
-    "stock.pantalla.depositos": {
+    "catalogo.accion.quitar": { usos: ["saca un renglón de la compra"], fuente: DE_LA_MAQUETA },
+    "compras.compra.deposito": {
       usos: ["selector del depósito, solo con más de uno de uso normal"],
       fuente: DE_LA_MAQUETA,
     },

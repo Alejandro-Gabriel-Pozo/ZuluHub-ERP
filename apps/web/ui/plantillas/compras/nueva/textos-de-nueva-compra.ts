@@ -27,7 +27,8 @@ export type TextosDeNuevaCompra = Readonly<{
   puntoDeVenta: string;
   numero: string;
   fechaDelRemito: string;
-  depositos: string;
+  deposito: string;
+  quitar: string;
   sinElegir: string;
   comprarYRecibir: string;
   enviando: string;
@@ -59,7 +60,8 @@ export function textosDeNuevaCompra(): TextosDeNuevaCompra {
     puntoDeVenta: texto({}, "fiscal.pantalla.rotulo_punto_de_venta"),
     numero: texto({}, "compras.recepcion.numero"),
     fechaDelRemito: texto({}, "compras.recepcion.fecha_del_remito"),
-    depositos: texto({}, "stock.pantalla.depositos"),
+    deposito: texto({}, "compras.compra.deposito"),
+    quitar: texto({}, "catalogo.accion.quitar"),
     sinElegir: texto({}, "catalogo.dato.sin_elegir"),
     comprarYRecibir: texto({}, "compras.compra.comprar_y_recibir"),
     enviando: texto({}, "conexion.enviando"),
