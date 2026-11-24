@@ -3,8 +3,8 @@
   "fecha": "2026-11-16",
   "quien": "padre",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Textos del tramo Medidas: Agregar variante y Es la medida (aprobados 09/11) y Un producto admite una sola variante (tabla por aprobar de productos.html).",
   "que_cambia": "Qué lee quien edita la medida de un producto. El último texto es del ingeniero y espera confirmación. Revertir: quitar las tres claves de catalogo-catalogo.ts y el código SEGUNDA_VARIANTE.",
-  "donde": "src/capacidades/vocabulario/catalogo-catalogo.ts; productos.html decisiones 138 y 12/11; delegación del dueño, DDD filas 173 y 174"
+  "donde": "src/capacidades/vocabulario/catalogo-catalogo.ts; productos.html decisiones 138 y 12/11; delegación del dueño, DDD filas 173 y 174; confirmada: DDD fila del 23/11/2026"
 }
