@@ -51,6 +51,7 @@ const ficha = (cambios: Record<string, unknown> = {}) =>
     lineas: [linea(1), linea(2, { importe: null, costoPorUnidadDeStock: null, precioPor: null })],
     total: null,
     factura: null,
+    pagos: [],
     ...cambios,
   }) as FichaDeCompraParaLaPantalla;
 
@@ -77,7 +78,7 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
       <PantallaDeFichaDeCompra
         ficha={ficha()}
         textos={textosDeCompras()}
-        acciones={{ corregir: true, anular: true }}
+        acciones={{ corregir: true, anular: true, pagar: false, anularPago: false }}
         accionDeAnular={() => Promise.resolve({ estado: "INICIAL" })}
       />,
     );
@@ -100,7 +101,7 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
           },
         })}
         textos={textosDeCompras()}
-        acciones={{ corregir: true, anular: true }}
+        acciones={{ corregir: true, anular: true, pagar: false, anularPago: false }}
         accionDeAnular={() => Promise.resolve({ estado: "INICIAL" })}
       />,
     );
@@ -120,7 +121,7 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
       <PantallaDeFichaDeCompra
         ficha={ficha()}
         textos={textosDeCompras()}
-        acciones={{ corregir: false, anular: true }}
+        acciones={{ corregir: false, anular: true, pagar: false, anularPago: false }}
         accionDeAnular={accion}
       />,
     );
@@ -150,7 +151,7 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
       <PantallaDeFichaDeCompra
         ficha={ficha()}
         textos={textosDeCompras()}
-        acciones={{ corregir: true, anular: true }}
+        acciones={{ corregir: true, anular: true, pagar: false, anularPago: false }}
         accionDeAnular={accion}
       />,
     );

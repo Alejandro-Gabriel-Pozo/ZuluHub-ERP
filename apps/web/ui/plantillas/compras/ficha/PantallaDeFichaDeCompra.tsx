@@ -2,6 +2,8 @@ import { EnlaceDeAccion } from "../../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../../componentes/Insignia";
 import { HojaDeAnularCompra } from "../correccion/HojaDeAnularCompra.cliente";
 import type { ResultadoDeAnular } from "../correccion/resultado-de-correccion";
+import { HojaDeAnularPago } from "../pago/HojaDeAnularPago.cliente";
+import type { ResultadoDeAnularPago } from "../pago/resultado-de-pago";
 import type { TextosDeCompras } from "../textos-de-compras";
 import {
   armarLaFicha,
@@ -17,6 +19,10 @@ export type PropsDePantallaDeFichaDeCompra = Readonly<{
   acciones?: AccionesDeLaCompraParaLaPantalla;
   /** `anularCompraAccion` con la compra ya ligada; sin ella no se dibuja «Anular». */
   accionDeAnular?: (previo: ResultadoDeAnular, datos: FormData) => Promise<ResultadoDeAnular>;
+  /** `anularElPagoAccion` con la compra ya ligada; recibe el pago a anular y devuelve la acción con los dos ligados. Sin ella no se dibuja «Anular» del pago. */
+  accionDeAnularPago?: (
+    pagoId: string,
+  ) => (previo: ResultadoDeAnularPago, datos: FormData) => Promise<ResultadoDeAnularPago>;
 }>;
 
 /**
@@ -29,6 +35,7 @@ export function PantallaDeFichaDeCompra({
   textos,
   acciones,
   accionDeAnular,
+  accionDeAnularPago,
 }: PropsDePantallaDeFichaDeCompra) {
   const f = armarLaFicha(ficha, textos, acciones);
   return (
@@ -88,6 +95,46 @@ export function PantallaDeFichaDeCompra({
             <span className={estilos["importe"]}>{f.factura.total}</span>
           </p>
         </section>
+      )}
+      {f.pagos.length === 0 ? null : (
+        <section className={estilos["tarjeta"]}>
+          {f.pagos.map((p) => (
+            <div key={p.clave}>
+              <p className={estilos["renglon"]}>
+                <span>{p.titulo}</span>
+                <span className={estilos["importe"]}>{p.importe}</span>
+              </p>
+              {p.quien === null ? null : <p className={estilos["suave"]}>{p.quien}</p>}
+              {p.anulado === null ? null : (
+                <>
+                  <Insignia tono="peligro">{p.anulado.rotulo}</Insignia>
+                  {p.anulado.motivo === null ? null : (
+                    <p className={estilos["suave"]}>{p.anulado.motivo}</p>
+                  )}
+                  {p.anulado.quien === null ? null : (
+                    <p className={estilos["suave"]}>{p.anulado.quien}</p>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+          {f.anularPagoId !== null && accionDeAnularPago !== undefined ? (
+            <HojaDeAnularPago
+              accion={accionDeAnularPago(f.anularPagoId)}
+              textos={{
+                anular: textos.anular,
+                motivo: textos.motivo,
+                cancelar: textos.cancelar,
+                cerrar: textos.cerrar,
+              }}
+            />
+          ) : null}
+        </section>
+      )}
+      {f.declararPago === null ? null : (
+        <EnlaceDeAccion href={f.declararPago.href} variante="primaria">
+          {f.declararPago.texto}
+        </EnlaceDeAccion>
       )}
       {f.quien === null ? null : <p className={estilos["suave"]}>{f.quien}</p>}
       {f.anular && accionDeAnular !== undefined ? (

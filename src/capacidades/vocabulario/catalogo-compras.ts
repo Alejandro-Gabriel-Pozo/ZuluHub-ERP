@@ -286,4 +286,16 @@ export const TEXTOS_DE_COMPRAS = {
   "compras.error.precio_invalido": { porDefecto: "Escribí un precio válido" },
   "compras.error.proveedor_no_encontrado": { porDefecto: "El proveedor ya no está disponible" },
   "compras.error.sin_permiso": { porDefecto: "Esta acción no está permitida" },
+  // compra-pago.html, «Textos nuevos»: el botón del pago de una factura, elegido por el dueño el 16/11/2026 (2A, `DEC-0891`): Compras PR 8.
+  "compras.pago.declarar": {
+    porDefecto: "Declarar pago",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/textos-de-compras.ts",
+        nombre: "textosDeCompras",
+      },
+    ],
+    fuente: { decision: "DEC-0891" },
+  },
 } as const;

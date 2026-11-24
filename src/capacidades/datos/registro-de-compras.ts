@@ -38,6 +38,17 @@ const DE_CORREGIR_Y_ANULAR = (para: string): Proposito => ({
     "Pedernal-docs, brief `PR-10-corregir-y-anular-pantalla.md` de Compras (rama de planificación de la Ola 1) y maqueta `compra-corregir-anular.html` (`vForm`, `vHoja`); quién: gerente y administrador (compras.corregir y recepciones.anular, DDD:187)",
 });
 
+const FORMULARIO_DE_PAGO =
+  "apps/web/ui/plantillas/compras/pago/FormularioDeDeclararPago.cliente.tsx";
+const HOJA_DE_ANULAR_PAGO = "apps/web/ui/plantillas/compras/pago/HojaDeAnularPago.cliente.tsx";
+const PAGAR_FACTURA = ["comprobantes_de_proveedor.pagar"] as const;
+const ANULAR_PAGO = ["comprobantes_de_proveedor.anular_pago"] as const;
+const DE_PAGAR_UNA_FACTURA = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs, brief `PR-8-pago-de-una-factura.md` de Compras (rama de planificación de la Ola 1) y maqueta `compra-pago.html` (aceptada por delegación, DDD:187 y 188); quién: gerente y administrador (comprobantes_de_proveedor.pagar y anular_pago); el efectivo siempre sale de una caja abierta (dueño, 16/11/2026, 3A)",
+});
+
 const HOJA_DE_LA_FICHA = "apps/web/ui/plantillas/compras/proveedor/HojaDeCambioDeFicha.cliente.tsx";
 const EDITAR_O_PEDIR_FICHA = ["proveedores.editar_ficha", "proveedores.pedir_ficha"] as const;
 const DE_LA_FICHA_DEL_PROVEEDOR = (para: string): Proposito => ({
@@ -72,9 +83,49 @@ export const DATOS_DE_COMPRAS = {
   },
   "motivo-de-anulacion-de-compra": {
     ficha: "src/modulos/compras/dominio/registrar-compra.ts",
-    propositos: [DE_CORREGIR_Y_ANULAR("Motivo obligatorio de anular una compra entera.")],
-    consumidores: [HOJA_DE_ANULAR],
-    ponerPor: ANULAR_COMPRA,
+    propositos: [
+      DE_CORREGIR_Y_ANULAR("Motivo obligatorio de anular una compra entera."),
+      DE_PAGAR_UNA_FACTURA("Motivo obligatorio de anular el pago de una factura."),
+    ],
+    consumidores: [HOJA_DE_ANULAR, HOJA_DE_ANULAR_PAGO],
+    ponerPor: [...ANULAR_COMPRA, ...ANULAR_PAGO],
+    requiere: REQUIERE_COMPRAS,
+  },
+  "fecha-de-pago-de-compra": {
+    // Que la fecha sea real y no futura (el «hoy» de Argentina) lo decide el servidor (`leerPago`); la pantalla solo ofrece la de hoy y tope en hoy como ayuda.
+    ficha: "src/primitivas/tiempo/fecha-civil.ts",
+    propositos: [DE_PAGAR_UNA_FACTURA("Fecha en que se pagó la factura (por defecto, hoy).")],
+    consumidores: [FORMULARIO_DE_PAGO],
+    ponerPor: PAGAR_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "medio-de-pago-de-compra": {
+    // La lista cerrada vive UNA vez, en el dominio (`MEDIOS_DE_PAGO`, la misma de los tipos de medio de caja): la pantalla la importa.
+    ficha: "src/modulos/compras/dominio/pago.ts",
+    propositos: [DE_PAGAR_UNA_FACTURA("Con qué medio se pagó la factura (lista cerrada).")],
+    consumidores: [FORMULARIO_DE_PAGO],
+    ponerPor: PAGAR_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "caja-de-pago-de-compra": {
+    ficha: "src/modulos/compras/dominio/pago.ts",
+    propositos: [
+      DE_PAGAR_UNA_FACTURA(
+        "Caja abierta de la sucursal de la que sale el efectivo (solo con el medio efectivo, y obligatoria).",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_PAGO],
+    ponerPor: PAGAR_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "motivo-de-egreso-de-compra": {
+    // La regla del motivo (1 a 500 caracteres, de una línea, con una letra) vive UNA vez en el dominio: el egreso de caja, corregir y anular usan la misma `motivoDeAnulacionDesdeTexto`.
+    ficha: "src/modulos/compras/dominio/registrar-compra.ts",
+    propositos: [
+      DE_PAGAR_UNA_FACTURA("Motivo del egreso de caja de un pago en efectivo (obligatorio)."),
+    ],
+    consumidores: [FORMULARIO_DE_PAGO],
+    ponerPor: PAGAR_FACTURA,
     requiere: REQUIERE_COMPRAS,
   },
   "numero-de-punto-de-venta": {

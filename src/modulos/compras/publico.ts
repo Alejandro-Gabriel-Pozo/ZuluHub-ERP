@@ -25,6 +25,7 @@ export {
   CONDICIONES_DE_IVA_DE_LA_EMPRESA,
   type CondicionDeIvaDeLaEmpresa,
 } from "./dominio/comprobante";
+export { MEDIOS_DE_PAGO, type MedioDePago } from "./dominio/pago";
 export type { ErrorDeCompras } from "./casos-de-uso/errores";
 export {
   NIVELES_DE_COMPRA,
