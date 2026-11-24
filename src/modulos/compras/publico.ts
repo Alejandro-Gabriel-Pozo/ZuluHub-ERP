@@ -16,10 +16,24 @@ export type {
   TxDeConsultasDeCompras,
 } from "./casos-de-uso/contrato";
 export {
+  PUNTO_DE_VENTA_MAXIMO,
+  PUNTO_DE_VENTA_MINIMO,
+  TIPOS_DE_COMPROBANTE_DE_PROVEEDOR,
+  type TipoDeComprobanteDeProveedor,
+} from "./dominio/comprobante";
+export {
   CONDICIONES_DE_IVA_DE_LA_EMPRESA,
   type CondicionDeIvaDeLaEmpresa,
 } from "./dominio/comprobante";
 export type { ErrorDeCompras } from "./casos-de-uso/errores";
+export {
+  NIVELES_DE_COMPRA,
+  NIVELES_ESTANDAR_DE_COMPRA,
+  NIVEL_INICIAL_DE_COMPRA,
+  esNivelDeCompra,
+  type NivelDeCompra,
+} from "./dominio/niveles";
+export type { NivelDeComprasVigente } from "./consultas/nivel";
 export {
   FORMA_DEL_CURSOR as FORMA_DEL_CURSOR_DE_COMPRAS,
   type CompraDeLista,

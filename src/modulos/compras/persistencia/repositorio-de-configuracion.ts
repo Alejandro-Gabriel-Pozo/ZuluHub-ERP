@@ -10,6 +10,8 @@ export type ConfiguracionDeCompras = Readonly<{ nivel: NivelDeCompra; version: n
  * `FOR UPDATE`: cambiar el nivel y registrar una compra a la vez se serializan, y cada compra sella el nivel con que nació.
  */
 export interface RepositorioDeConfiguracionDeCompras {
+  /** La configuración vigente SIN crearla: `null` si la empresa todavía no tiene fila. Es la lectura de las pantallas (mirar no escribe). */
+  obtener(empresa: EmpresaId): Promise<ConfiguracionDeCompras | null>;
   /** La configuración vigente (la crea con el valor inicial si todavía no existe). */
   leer(empresa: EmpresaId): Promise<ConfiguracionDeCompras>;
   /** Igual que `leer`, con la fila bloqueada hasta el fin de la transacción. */
@@ -52,6 +54,14 @@ export function crearRepositorioDeConfiguracionDeCompras(
     return aConfiguracion(creada);
   }
   return {
+    async obtener(empresa) {
+      const fila = await db
+        .selectFrom("configuracion_de_compras")
+        .select(["nivel", "version"])
+        .where("empresa_id", "=", empresa)
+        .executeTakeFirst();
+      return fila === undefined ? null : aConfiguracion(fila);
+    },
     leer: (empresa) => asegurar(empresa, false),
     bloquear: (empresa) => asegurar(empresa, true),
     async cambiarNivel(empresa, nivel, versionEsperada) {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 import { violacionesDeAccesibilidad } from "../../pruebas/ayudas";
@@ -12,6 +12,9 @@ import { textosDeCompras } from "./textos-de-compras";
  * «Compras» y «Compra» (Compras PR 3) en un navegador real: la lista (filas-enlace con su nombre accesible, «Sin precio» y nunca cero, chips y fechas dentro de un formulario GET que anda sin JavaScript,
  * «Página siguiente», lista vacía) y la ficha (líneas, total, factura, anulada). Solo lectura: ningún botón de acción. Sin violaciones de accesibilidad (axe) y con foco visible.
  */
+
+// La hoja de «Anular» recarga la ficha con el enrutador de Next: acá se reemplaza (precedente de «Tickets del día»).
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
 const UUID = "0b0b0b0b-1111-4222-8333-444444444444";
 const pesos = (monto: string) => ({ moneda: "ARS", monto });
@@ -158,6 +161,9 @@ const FICHA: FichaDeCompraParaLaPantalla = {
       unidadDeStockId: "KILOGRAMO",
       importe: pesos("512600.00"),
       costoPorUnidadDeStock: pesos("11000.000000"),
+      precioPor: { tipo: "PRESENTACION", unidadId: null },
+      correccionesVistas: 0,
+      correcciones: [],
     },
     {
       numero: 2,
@@ -169,6 +175,9 @@ const FICHA: FichaDeCompraParaLaPantalla = {
       unidadDeStockId: "LITRO",
       importe: null,
       costoPorUnidadDeStock: null,
+      precioPor: null,
+      correccionesVistas: 0,
+      correcciones: [],
     },
   ],
   total: null,

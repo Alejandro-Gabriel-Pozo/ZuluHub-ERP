@@ -28,6 +28,15 @@ export type TextosDeCompras = Readonly<{
   total: string;
   vence: string;
   noPermitido: string;
+  corregir: string;
+  antes: string;
+  anular: string;
+  cancelar: string;
+  cerrar: string;
+  precio: string;
+  precioPor: string;
+  /** «Corregido por ana@ejemplo.com · 24/11/2026 21:14». */
+  corregidoPor: (persona: string, cuando: string) => string;
   nuevaCompra: string;
 }>;
 
@@ -56,6 +65,14 @@ export function textosDeCompras(): TextosDeCompras {
     total: texto({}, "fiscal.pantalla.rotulo_total"),
     vence: texto({}, "compras.control.vence"),
     noPermitido: texto({}, "compras.error.sin_permiso"),
+    corregir: texto({}, "compras.correccion.corregir"),
+    antes: texto({}, "compras.correccion.antes"),
+    anular: texto({}, "ventas.ticket.anular"),
+    cancelar: texto({}, "catalogo.accion.cancelar"),
+    cerrar: texto({}, "vidriera.producto.cerrar"),
+    precio: texto({}, "fiscal.pantalla.emitir_precio"),
+    precioPor: texto({}, "compras.compra.precio_por"),
+    corregidoPor: (persona, cuando) => texto({}, "cierre.corregido_por", { persona, cuando }),
     nuevaCompra: texto({}, "compras.compra.nueva_compra"),
   };
 }

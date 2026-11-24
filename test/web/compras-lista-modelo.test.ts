@@ -156,6 +156,9 @@ const ficha = (cambios: Record<string, unknown> = {}) =>
         unidadDeStockId: "KILOGRAMO",
         importe: { moneda: "ARS", monto: "512600.00" },
         costoPorUnidadDeStock: { moneda: "ARS", monto: "11000.000000" },
+        precioPor: { tipo: "PRESENTACION" as const, unidadId: null },
+        correccionesVistas: 0,
+        correcciones: [],
       },
     ],
     total: { moneda: "ARS", monto: "512600.00" },
@@ -176,6 +179,9 @@ describe("la ficha de una compra", () => {
         importe: "$ 512.600,00",
         cantidad: "2 Caja · Entra a tu stock: 46,6 Kilogramo",
         costo: "Costo por unidad de stock: $ 11.000,00",
+        // Sin permisos no se ofrece «Corregir» (nace cerrado) y sin correcciones no hay nada que mostrar.
+        corregir: null,
+        correcciones: [],
       },
     ]);
     expect(f.total).toEqual({ rotulo: "Total", valor: "$ 512.600,00" });
