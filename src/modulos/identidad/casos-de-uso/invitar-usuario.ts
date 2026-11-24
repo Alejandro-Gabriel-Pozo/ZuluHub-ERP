@@ -6,7 +6,11 @@ import type { InvitacionId, SucursalId } from "../../../primitivas/identificador
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import { emailDesdeTexto } from "../../../primitivas/contacto/email";
-import type { ErrorDeInvitacion, ErrorDeSucursalesDeInvitacion } from "../dominio/errores";
+import type {
+  ErrorDeInvitacion,
+  ErrorDeSucursalesDeInvitacion,
+  RolDistintoAlAnterior,
+} from "../dominio/errores";
 import {
   decidirInvitacionDeUsuario,
   decidirSucursalesDeInvitacion,
@@ -39,6 +43,7 @@ export type ErrorAlInvitarUsuario =
   | MotivoDeRechazo
   | EmpresaNoOpera
   | ErrorDeSucursalesDeInvitacion
+  | RolDistintoAlAnterior
   | "SUCURSAL_NO_ES_DE_LA_EMPRESA"
   | ErrorDePersistencia;
 
@@ -57,7 +62,9 @@ const RESTRICCIONES_ADMITIDAS = [
  *
  *  - alguna sucursal está desactivada → `SUCURSAL_INACTIVA`;
  *  - ya es miembro activo → `YA_ES_MIEMBRO`;
- *  - ya hay una pendiente vigente para ese email → se devuelve esa (`yaExistia: true`), sin escribir;
+ *  - tuvo una membresía apagada con OTRO rol → `ROL_DISTINTO_AL_ANTERIOR` (H1: antes fallaba recién al aceptar);
+ *  - ya hay una pendiente vigente para ese email con el mismo rol → se devuelve esa (`yaExistia: true`), sin escribir; con otro rol →
+ *    `INVITACION_VIGENTE_CON_OTRO_ROL` (H2: antes devolvía la que estaba como si se hubiera hecho lo pedido);
  *  - hay una pendiente VENCIDA → se revoca (queda `reemplazada_por`) y nace otra;
  *  - si no, nace la invitación (7 días) con sus empresas y sucursales, el trabajo `enviar_invitacion`
  *    (datos `{invitacionId}`, sin el token) y la auditoría.
@@ -84,7 +91,11 @@ export function crearInvitarUsuario({ transacciones, tokens, reglas }: Dependenc
       ): Promise<
         Resultado<
           SalidaDeInvitarUsuario,
-          ErrorDeInvitacion | ErrorDeSucursalesDeInvitacion | MotivoDeRechazo | EmpresaNoOpera
+          | ErrorDeInvitacion
+          | ErrorDeSucursalesDeInvitacion
+          | RolDistintoAlAnterior
+          | MotivoDeRechazo
+          | EmpresaNoOpera
         >
       > => {
         const permiso = await exigirAccion(reglas, DECLARACIONES.invitarUsuario.accion, () =>
@@ -131,7 +142,10 @@ export function crearInvitarUsuario({ transacciones, tokens, reglas }: Dependenc
 
         const decision = decidirInvitacionDeUsuario({
           ahora,
+          empresaId,
+          rolPedido: entrada.rol,
           esMiembroActivo: membresia?.activo === true,
+          rolAnterior: membresia !== null && !membresia.activo ? membresia.rol : null,
           pendiente,
         });
         if (!decision.ok) return decision;

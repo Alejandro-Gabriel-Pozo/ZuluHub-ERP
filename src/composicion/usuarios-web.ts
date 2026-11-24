@@ -4,12 +4,18 @@ import type { ContextoOperativo } from "../contexto/contexto";
 import type { InvitacionPendienteDeLaLista, MiembroDeLista } from "../modulos/identidad/publico";
 import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
-import { entradaDeDesactivarUsuario, entradaDeFichaDeUsuario } from "./entradas-de-usuarios";
+import {
+  entradaDeDesactivarUsuario,
+  entradaDeFichaDeUsuario,
+  entradaDeInvitacion,
+  entradaDeInvitar,
+} from "./entradas-de-usuarios";
 import { accionDeUsuarios, lecturaDeUsuarios } from "./errores-de-usuarios";
 import type { Web } from "./web";
 
 /**
- * La pantalla «Usuarios» de /cuenta: la lista de quienes tienen acceso a la empresa con sus invitaciones pendientes, la ficha de una persona (tramo U1, solo lectura) y desactivarla (tramo U3, parte A).
+ * La pantalla «Usuarios» de /cuenta: la lista de quienes tienen acceso a la empresa con sus invitaciones pendientes, la ficha de una persona (tramo U1, solo lectura), desde el tramo U2 invitar,
+ * reenviar y revocar una invitación y, desde el tramo U3, desactivar a una persona.
  * Vive acá, y no en `apps/web`, por la misma razón que `contacto-de-sucursal-web.ts`: probarse con la base real sin levantar Next.
  *
  * Reglas que cumple (cada una con su prueba en `test/integracion/usuarios-web.test.ts`):
@@ -27,7 +33,10 @@ import type { Web } from "./web";
  */
 
 export type DependenciasDeUsuariosWeb = Readonly<{
-  casosDeUso: () => Pick<ReturnType<Web["casosDeUsoDeIdentidad"]>, "apagarMembresia">;
+  casosDeUso: () => Pick<
+    ReturnType<Web["casosDeUsoDeIdentidad"]>,
+    "apagarMembresia" | "invitarUsuario" | "reenviarInvitacion" | "revocarInvitacion"
+  >;
   consultas: () => Pick<
     ReturnType<Web["consultasDeIdentidad"]>,
     "listarMiembros" | "listarInvitacionesPendientes"
@@ -116,6 +125,93 @@ export function fichaDeUsuario(
       return miembro === undefined ? err("MEMBRESIA_NO_ENCONTRADA") : ok(miembro);
     },
     delUsuario,
+  );
+}
+
+/** La ficha de una invitación pendiente: la de la lista más las sucursales a las que se invitó (ids; la página las traduce a nombres con las de la empresa). `venceEn` es un instante ISO UTC. */
+export type InvitacionParaLaFicha = InvitacionParaLaPantalla &
+  Readonly<{ sucursales: readonly string[] }>;
+
+/**
+ * La ficha de una invitación pendiente (`usuarios.ver`). `crudo`: `{ invitacionId }`, el de la dirección. Se busca entre las pendientes de la empresa de la sesión: si no está (inexistente,
+ * de otra empresa, ya aceptada o revocada) es el genérico, sin decir cuál de las cosas pasó.
+ */
+export function fichaDeInvitacion(
+  d: DependenciasDeUsuariosWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<InvitacionParaLaFicha>> {
+  return accionDeUsuarios(
+    d.respuesta,
+    crudo,
+    entradaDeInvitacion,
+    async (entrada): Promise<Resultado<InvitacionPendienteDeLaLista, unknown>> => {
+      const invitaciones = await d.consultas().listarInvitacionesPendientes(contexto);
+      if (!invitaciones.ok) return invitaciones;
+      const invitacion = invitaciones.valor.find((i) => i.invitacionId === entrada.invitacionId);
+      return invitacion === undefined ? err("INVITACION_NO_ENCONTRADA") : ok(invitacion);
+    },
+    (i) => ({ ...delaInvitacion(i), sucursales: [...i.sucursales] }),
+  );
+}
+
+/** Lo que devuelve invitar. `yaExistia: true` NO es un error: ya había una invitación vigente del mismo rol para ese email, sin escribir ni mandar otro mail. */
+export type InvitacionEmitida = Readonly<{ invitacionId: string; yaExistia: boolean }>;
+
+/**
+ * Invitar por mail (`usuarios.invitar`). `crudo`: `{ email, rol, sucursales }`. El resultado es la invitación que quedó (la nueva, o la que ya había: dos toques o dos personas a la vez dan
+ * la MISMA). Con otra invitación vigente de OTRO rol no se hace pasar por hecho lo pedido: sale `USUARIOS_YA_HABIA_INVITACION`. Quien ya es parte: `USUARIOS_YA_ES_MIEMBRO`.
+ */
+export function invitar(
+  d: DependenciasDeUsuariosWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<InvitacionEmitida>> {
+  return accionDeUsuarios(
+    d.respuesta,
+    crudo,
+    entradaDeInvitar,
+    (entrada) => d.casosDeUso().invitarUsuario(contexto, entrada),
+    (salida) => ({ invitacionId: salida.invitacionId, yaExistia: salida.yaExistia }),
+  );
+}
+
+/** Lo que devuelve reenviar: la invitación vigente (la nueva, o la que ya había reemplazado a la de origen). */
+export type InvitacionReenviada = Readonly<{ invitacionId: string; yaEstabaReenviada: boolean }>;
+
+/** Reenviar una invitación (`usuarios.reenviar_invitacion`), vigente o vencida: el enlace anterior deja de servir y sale un mail nuevo. Repetirlo devuelve la misma nueva, sin otro mail. */
+export function reenviar(
+  d: DependenciasDeUsuariosWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<InvitacionReenviada>> {
+  return accionDeUsuarios(
+    d.respuesta,
+    crudo,
+    entradaDeInvitacion,
+    (entrada) => d.casosDeUso().reenviarInvitacion(contexto, entrada),
+    (salida) => ({
+      invitacionId: salida.invitacionId,
+      yaEstabaReenviada: salida.yaEstabaReenviada,
+    }),
+  );
+}
+
+/** Lo que devuelve revocar. */
+export type InvitacionRevocada = Readonly<{ yaEstabaRevocada: boolean }>;
+
+/** Revocar una invitación (`usuarios.revocar_invitacion`). Repetirlo no escribe ni audita otra vez. Una ya aceptada no se revoca: el genérico (se desactiva a la persona). */
+export function revocar(
+  d: DependenciasDeUsuariosWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<InvitacionRevocada>> {
+  return accionDeUsuarios(
+    d.respuesta,
+    crudo,
+    entradaDeInvitacion,
+    (entrada) => d.casosDeUso().revocarInvitacion(contexto, entrada),
+    (salida) => ({ yaEstabaRevocada: salida.yaEstabaRevocada }),
   );
 }
 

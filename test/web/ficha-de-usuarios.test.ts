@@ -36,26 +36,29 @@ describe("ficha de la pantalla «Usuarios»", () => {
       expect(Object.keys(FICHA_DE_USUARIOS.textos)).toContain(clave);
       expect(def.usos).not.toBe("pendiente");
       expect(def.usos.length).toBeGreaterThan(0);
-      expect([{ decision: "DEC-0851" }, { decision: "DEC-0857" }]).toContainEqual(def.fuente);
+      expect(["DEC-0851", "DEC-0852", "DEC-0857", "DEC-0859"]).toContain(
+        (def.fuente as { decision: string }).decision,
+      );
     }
   });
 
-  it("sus únicos botones son los de desactivar (U3): uno abre el cuadro y otro envía `usuarios.apagar`, y sin permiso no se dibujan; los dos estados son el mensaje genérico", () => {
-    expect(FICHA_DE_USUARIOS.botones).toEqual([
-      {
-        id: "desactivar",
-        texto: "caja.accion.desactivar",
-        hace: "abre-el-cuadro",
-        sinPermiso: "AUSENTE",
-      },
-      {
-        id: "confirmar-desactivar",
-        texto: "caja.accion.desactivar",
-        hace: { envia: "usuarios.apagar" },
-        sinPermiso: "AUSENTE",
-      },
+  it("sus botones son los de invitar, enviar, reenviar, revocar y desactivar (que abre un cuadro y lo confirma), cada uno con su permiso, y sin permiso ninguno se dibuja; los dos estados son el mensaje genérico", () => {
+    const botones: readonly Readonly<{ id: string; hace: unknown; sinPermiso: string }>[] =
+      FICHA_DE_USUARIOS.botones;
+    expect(botones.map((b) => [b.id, b.hace, b.sinPermiso])).toEqual([
+      ["invitar", { navega: "/cuenta/usuarios/invitar" }, "AUSENTE"],
+      ["enviar-invitacion", { envia: "usuarios.invitar" }, "AUSENTE"],
+      ["reenviar", { envia: "usuarios.reenviar_invitacion" }, "AUSENTE"],
+      ["revocar", { envia: "usuarios.revocar_invitacion" }, "AUSENTE"],
+      ["desactivar", "abre-el-cuadro", "AUSENTE"],
+      ["confirmar-desactivar", { envia: "usuarios.apagar" }, "AUSENTE"],
     ]);
-    expect(Object.keys(CATALOGO_DE_MODULOS.administracion.acciones)).toContain("usuarios.apagar");
+    for (const b of botones) {
+      const hace = b.hace;
+      if (typeof hace === "object" && hace !== null && "envia" in hace) {
+        expect(Object.keys(CATALOGO_DE_MODULOS.administracion.acciones)).toContain(hace.envia);
+      }
+    }
     expect(FICHA_DE_USUARIOS.estados).toEqual({ ERROR: "GENERICO", SIN_PERMISO: "GENERICO" });
   });
 
@@ -75,6 +78,7 @@ describe("ficha de la pantalla «Usuarios»", () => {
       departamento: null,
     });
     expect(RUTAS_DE_CUENTA.usuarios).toBe(FICHA_DE_USUARIOS.rutas[0]);
+    expect(RUTAS_DE_CUENTA.invitarUsuario).toBe(FICHA_DE_USUARIOS.rutas[2]);
   });
 
   it("las rutas de la ficha existen como páginas", () => {

@@ -67,19 +67,24 @@ const problemasDe = (archivos: Readonly<Record<string, string>>): string[] =>
     .flatMap(([ruta, texto]) => apariciones(ruta, texto));
 
 describe("ningún archivo de src/ ni de apps/ escribe «BLOQUEAR» como nivel de control", () => {
-  it("el repositorio real lo cumple, y la prueba recorre archivos de las dos carpetas", () => {
-    const archivos: Record<string, string> = {};
-    for (const carpeta of ["apps", "src"]) {
-      for (const ruta of archivosDe(join(RAIZ, carpeta))) {
-        archivos[relative(RAIZ, ruta)] = readFileSync(ruta, "utf8");
+  // Tope propio (estabilidad bajo carga, 23/11/2026): recorre y lee todo `apps/` y `src/`; 1,8 s medidos solo, y con la máquina cargada (CI con Postgres al lado, varios archivos a la vez) llegó a 6,5 s y vencía los 5 s por defecto.
+  it(
+    "el repositorio real lo cumple, y la prueba recorre archivos de las dos carpetas",
+    { timeout: 30_000 },
+    () => {
+      const archivos: Record<string, string> = {};
+      for (const carpeta of ["apps", "src"]) {
+        for (const ruta of archivosDe(join(RAIZ, carpeta))) {
+          archivos[relative(RAIZ, ruta)] = readFileSync(ruta, "utf8");
+        }
       }
-    }
-    expect(Object.keys(archivos).filter((r) => r.startsWith("apps/")).length).toBeGreaterThan(50);
-    expect(Object.keys(archivos).filter((r) => r.startsWith("src/")).length).toBeGreaterThan(500);
-    // Los niveles reales existen en el código (no es una búsqueda vacía).
-    expect(archivos["src/capacidades/controles/nivel.ts"]).toContain('"AVISAR"');
-    expect(problemasDe(archivos)).toEqual([]);
-  });
+      expect(Object.keys(archivos).filter((r) => r.startsWith("apps/")).length).toBeGreaterThan(50);
+      expect(Object.keys(archivos).filter((r) => r.startsWith("src/")).length).toBeGreaterThan(500);
+      // Los niveles reales existen en el código (no es una búsqueda vacía).
+      expect(archivos["src/capacidades/controles/nivel.ts"]).toContain('"AVISAR"');
+      expect(problemasDe(archivos)).toEqual([]);
+    },
+  );
 
   const inyectada = (texto: string, ruta = "src/modulos/stock/dominio/x.ts"): string[] =>
     problemasDe({ [ruta]: texto });

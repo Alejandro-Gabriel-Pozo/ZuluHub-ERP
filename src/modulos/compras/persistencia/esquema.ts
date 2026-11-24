@@ -277,6 +277,12 @@ export type ComprasDb = {
     precio_nuevo: string | null;
     cantidad_anterior: string | null;
     cantidad_nueva: string | null;
+    /** 0093: el «precio por» del precio nuevo; solo al completar una línea «Sin precio». */
+    precio_por_tipo: string | null;
+    unidad_de_precio_id: string | null;
+    /** 0093: el peso real de antes y de después (peso variable). */
+    peso_real_anterior: string | null;
+    peso_real_nuevo: string | null;
     motivo: string;
     clave_idempotencia: string;
     huella: string;

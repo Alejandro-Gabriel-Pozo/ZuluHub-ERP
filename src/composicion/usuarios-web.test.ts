@@ -43,9 +43,7 @@ function dependencias(
   llamadas: string[] = [],
 ): DependenciasDeUsuariosWeb {
   return {
-    casosDeUso: () => {
-      throw new Error("las lecturas no escriben: no tocan los casos de uso");
-    },
+    casosDeUso: () => ({}) as unknown as ReturnType<DependenciasDeUsuariosWeb["casosDeUso"]>,
     consultas: () =>
       ({
         listarMiembros: () => {

@@ -91,7 +91,9 @@ describe("menú por áreas: la tabla real", () => {
   it("cada pantalla apunta a una ruta que existe", () => {
     for (const f of FILAS_DEL_MENU) {
       if (f.tipo !== "pantalla") continue;
-      const pagina = join(APP_WEB, "app/s/app/(operacion)", f.href, "page.tsx");
+      // La dirección puede llevar un filtro (`/clientes?rol=proveedor`): la página es la de la ruta sin él.
+      const ruta = f.href.split("?")[0] ?? f.href;
+      const pagina = join(APP_WEB, "app/s/app/(operacion)", ruta, "page.tsx");
       expect(existsSync(pagina), `${f.clave}: ${f.href}`).toBe(true);
     }
   });

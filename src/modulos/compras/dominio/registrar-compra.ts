@@ -33,7 +33,7 @@ export type RenglonDeCompra = Readonly<{
   precio: string | null;
 }>;
 
-const esUnidad = (valor: unknown): valor is CodigoDeUnidad =>
+export const esUnidad = (valor: unknown): valor is CodigoDeUnidad =>
   typeof valor === "string" && Object.hasOwn(UNIDADES, valor);
 
 const comoRegistro = (valor: unknown): Record<string, unknown> =>
