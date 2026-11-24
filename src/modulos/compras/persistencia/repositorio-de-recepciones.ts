@@ -2,6 +2,9 @@ import { sql, type Kysely } from "kysely";
 import type { EmpresaId, PersonaId, SucursalId } from "../../../primitivas/identificadores/marca";
 import { esNivelDeCompra, type NivelDeCompra } from "../dominio/niveles";
 import type { Remito } from "../dominio/registrar-compra";
+import { COLUMNAS_DE_LINEA, aLinea, type LineaDeRecepcion } from "./linea-de-recepcion";
+
+export type { LineaDeRecepcion };
 import type { ComprasDb } from "./esquema";
 import { esUuid } from "./filas";
 
@@ -49,25 +52,6 @@ export type AltaDeRecepcion = Readonly<{
   registradoPor: PersonaId;
 }>;
 
-export type LineaDeRecepcion = Readonly<{
-  numero: number;
-  productoId: string;
-  presentacionId: string | null;
-  unidadDeCompraId: string;
-  cantidadDeCompra: string;
-  dePesoVariable: boolean;
-  pesoReal: string | null;
-  /** Lo que entra al stock, en la unidad base del producto (texto decimal de 4 decimales). */
-  cantidadEnStock: string;
-  precioPorTipo: "PRESENTACION" | "UNIDAD" | null;
-  unidadDePrecioId: string | null;
-  precio: string | null;
-  importe: string | null;
-  costoPorUnidadDeStock: string | null;
-  depositoId: string | null;
-  movimientoId: string | null;
-}>;
-
 /**
  * Las recepciones de compras (E9 §3.3). El alta es idempotente: `insertar` usa `ON CONFLICT DO NOTHING` sin objetivo (cubre la clave, el remito y el número) y
  * devuelve `undefined` si chocó; quien llama decide qué fue (repetición, remito repetido, o carrera por el número, que se reintenta). La línea solo entra en la
@@ -91,6 +75,11 @@ export interface RepositorioDeRecepciones {
     lineas: readonly LineaDeRecepcion[],
   ): Promise<void>;
   lineasDe(empresa: EmpresaId, recepcionId: string): Promise<readonly LineaDeRecepcion[]>;
+  /** Las líneas de varias recepciones en UNA consulta (sin N+1), cada una con su recepción, por recepción y número de línea. Un id que no es UUID no devuelve filas. */
+  lineasDeVarias(
+    empresa: EmpresaId,
+    recepcionIds: readonly string[],
+  ): Promise<readonly (LineaDeRecepcion & Readonly<{ recepcionId: string }>)[]>;
   /**
    * La última línea CON PRECIO de una compra NO anulada de ese proveedor para ese producto y presentación (la compra más nueva por `hecho_en`, luego `id`; dentro de la compra, la línea de
    * número más alto: como `registrarCompra`, la última gana). Es de donde se rehace la oferta del proveedor al anular una compra (0058). `null` si no queda ninguna.
@@ -187,24 +176,6 @@ export function aRecepcion(f: FilaDeRecepcion): Recepcion {
     version: f.version,
   };
 }
-
-const COLUMNAS_DE_LINEA = [
-  "numero",
-  "producto_id",
-  "presentacion_id",
-  "unidad_de_compra_id",
-  "cantidad_de_compra",
-  "de_peso_variable",
-  "peso_real",
-  "cantidad_en_stock",
-  "precio_por_tipo",
-  "unidad_de_precio_id",
-  "precio",
-  "importe",
-  "costo_por_unidad_de_stock",
-  "deposito_id",
-  "movimiento_id",
-] as const;
 
 export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): RepositorioDeRecepciones {
   /** N1 y N2: una recepción de N3 o N4 no se ve: para estos caminos «no existe» (falla cerrada). */
@@ -305,26 +276,20 @@ export function crearRepositorioDeRecepciones(db: Kysely<ComprasDb>): Repositori
         .where("recepcion_id", "=", recepcionId)
         .orderBy("numero")
         .execute();
-      return filas.map((f) => ({
-        numero: f.numero,
-        productoId: f.producto_id,
-        presentacionId: f.presentacion_id,
-        unidadDeCompraId: f.unidad_de_compra_id,
-        cantidadDeCompra: f.cantidad_de_compra,
-        dePesoVariable: f.de_peso_variable,
-        pesoReal: f.peso_real,
-        cantidadEnStock: f.cantidad_en_stock,
-        precioPorTipo:
-          f.precio_por_tipo === "PRESENTACION" || f.precio_por_tipo === "UNIDAD"
-            ? f.precio_por_tipo
-            : null,
-        unidadDePrecioId: f.unidad_de_precio_id,
-        precio: f.precio,
-        importe: f.importe,
-        costoPorUnidadDeStock: f.costo_por_unidad_de_stock,
-        depositoId: f.deposito_id,
-        movimientoId: f.movimiento_id,
-      }));
+      return filas.map(aLinea);
+    },
+    async lineasDeVarias(empresa, recepcionIds) {
+      const validos = [...new Set(recepcionIds.filter(esUuid))];
+      if (validos.length === 0) return [];
+      const filas = await db
+        .selectFrom("linea_de_recepcion")
+        .select([...COLUMNAS_DE_LINEA, "recepcion_id"])
+        .where("empresa_id", "=", empresa)
+        .where("recepcion_id", "in", validos)
+        .orderBy("recepcion_id")
+        .orderBy("numero")
+        .execute();
+      return filas.map((f) => ({ ...aLinea(f), recepcionId: f.recepcion_id }));
     },
     async ultimaLineaVigenteDe(empresa, clave) {
       if (!esUuid(clave.proveedorId) || !esUuid(clave.productoId)) return null;

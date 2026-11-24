@@ -867,10 +867,8 @@ describe.skipIf(base === null)(
             [a.recepcionId, "ANULADA"],
           ].sort(porId),
         );
-        // misma jornada: el desempate es el id, de mayor a menor
-        expect(todas.compras.map((x) => x.recepcionId)).toEqual(
-          [a.recepcionId, b.recepcionId].sort().reverse(),
-        );
+        // misma jornada: el desempate es el número de la compra (el orden de carga), de mayor a menor; el id es un UUID al azar y no sirve para ordenar
+        expect(todas.compras.map((x) => x.recepcionId)).toEqual([b.recepcionId, a.recepcionId]);
         expect(
           valorDe(await c.consultas.listarCompras(otra.gerente, { estado: "ANULADA" })).compras.map(
             (x) => x.recepcionId,

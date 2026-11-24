@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0838",
+  "fecha": "2026-11-23",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Compras: la palabra «Compra» antes del número en la lista y en el título de la ficha, con clave propia compras.compra.compra.",
+  "que_cambia": "Qué lee la persona en cada fila de la lista (la palabra «Compra» y el número) y en el título de la ficha. El texto sale de la maqueta compra-corregir-anular.html. Revertir: sacar la clave y el uso en textos-de-compras.ts.",
+  "donde": "decisiones-del-dueno-2026-11.md, fila 187 (maqueta compra-corregir-anular.html aceptada por delegación); catalogo-compras.ts; textos-de-compras.ts; confirmada: DDD fila del 23/11/2026"
+}

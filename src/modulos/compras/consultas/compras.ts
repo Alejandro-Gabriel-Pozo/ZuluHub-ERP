@@ -16,7 +16,8 @@ export function armarConsultasDeCompras(leer: Lector) {
       contexto: Parameters<Lector>[0],
       entrada: EntradaDeListarCompras = {},
     ): Promise<RDeConsulta<PaginaDeCompras>> {
-      const r = await leer(contexto, ["recepciones.ver"], (tx) =>
+      // La fila nombra la factura vigente: además de `recepciones.ver` pide `comprobantes_de_proveedor.ver`, como la ficha.
+      const r = await leer(contexto, ["recepciones.ver", "comprobantes_de_proveedor.ver"], (tx) =>
         listarComprasDentro(tx, contexto, entrada),
       );
       return r.ok ? r.valor : r;
@@ -35,7 +36,9 @@ export function armarConsultasDeCompras(leer: Lector) {
     comprasSinPrecio(
       contexto: Parameters<Lector>[0],
     ): Promise<RDeConsulta<readonly CompraDeLista[]>> {
-      return leer(contexto, ["recepciones.ver"], (tx) => comprasSinPrecioDentro(tx, contexto));
+      return leer(contexto, ["recepciones.ver", "comprobantes_de_proveedor.ver"], (tx) =>
+        comprasSinPrecioDentro(tx, contexto),
+      );
     },
   };
 }

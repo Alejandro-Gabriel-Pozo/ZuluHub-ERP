@@ -17,6 +17,7 @@ import { RUTA_DE_IMPRESORAS } from "../plantillas/salon/modelo-de-impresoras";
 import { RUTA_DE_MESAS } from "../plantillas/salon/modelo-de-mesas";
 import { RUTAS_DE_CONFIGURACION } from "../plantillas/configuracion-fiscal/lista-de-lo-que-falta";
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
+import { RUTA_DE_COMPRAS } from "../plantillas/compras/rutas-de-compras";
 import { RUTA_DE_PRODUCCION } from "../plantillas/produccion/filtros-de-ordenes";
 import { RUTAS_DE_CUENTA } from "../plantillas/sesion/rutas-de-cuenta";
 import { RUTA_DE_LA_VENTA, RUTA_DE_TICKETS_DEL_DIA } from "../plantillas/venta/rutas-de-venta";
@@ -269,6 +270,19 @@ export const FILAS_DEL_MENU = [
     perilla: null,
     href: RUTA_DE_PRODUCCION,
     etiqueta: "produccion.pantalla.produccion",
+    departamento: null,
+  },
+  // «Compras» (Compras PR 3): la lista de compras de la sucursal, solo lectura. Módulo `compras` y la acción de su consulta (`recepciones.ver`, los tres roles); nace cerrada: sin la acción no se ofrece.
+  {
+    tipo: "pantalla",
+    clave: "compras",
+    area: "compras",
+    grupo: "compras",
+    modulo: "compras",
+    accion: "recepciones.ver",
+    perilla: null,
+    href: RUTA_DE_COMPRAS,
+    etiqueta: "compras.compra.compras",
     departamento: null,
   },
   {
