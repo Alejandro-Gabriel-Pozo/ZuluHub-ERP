@@ -673,7 +673,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       expect(paginaA).not.toContain(NOMBRE_B);
       expect(paginaA).toContain("Entrar a la empresa");
       expect(paginaA).toContain("Gerente");
-      expect(paginaA).toContain("Operador");
+      expect(paginaA).toContain("Empleado");
 
       // La misma persona por B ve solo la suya; otra persona sin vínculo, el vacío.
       const enB = await ingresarEn(mundo, HOST_B, enA.perfil);
@@ -805,7 +805,7 @@ describe.skipIf(base === null)("web: acciones, rutas y páginas de sesión y emp
       comoNavegador(HOST_A);
       const paginaO = html(await Cuenta());
       expect(paginaO).not.toContain("Casa central");
-      expect(paginaO).toContain("Operador");
+      expect(paginaO).toContain("Empleado");
     });
 
     it("un fallo de la base en una página sale con referencia y sin detalle; el detalle va al registro", async () => {

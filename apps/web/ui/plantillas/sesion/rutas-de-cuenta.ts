@@ -2,4 +2,9 @@
 export const RUTAS_DE_CUENTA = {
   cuenta: "/cuenta",
   contactoDeLaSucursal: "/cuenta/contacto-de-la-sucursal",
+  usuarios: "/cuenta/usuarios",
 } as const;
+
+/** La ficha de una persona de la empresa: `/cuenta/usuarios/<personaId>`. */
+export const rutaDeLaFichaDeUsuario = (personaId: string): string =>
+  `${RUTAS_DE_CUENTA.usuarios}/${personaId}`;

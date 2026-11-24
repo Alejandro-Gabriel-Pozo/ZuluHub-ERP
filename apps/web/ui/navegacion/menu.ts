@@ -305,6 +305,18 @@ export const FILAS_DEL_MENU = [
   },
   {
     tipo: "pantalla",
+    clave: "usuarios",
+    area: "cuenta",
+    grupo: "empresa",
+    modulo: "administracion",
+    accion: "usuarios.ver",
+    perilla: null,
+    href: RUTAS_DE_CUENTA.usuarios,
+    etiqueta: "usuarios.lista.titulo",
+    departamento: null,
+  },
+  {
+    tipo: "pantalla",
     clave: "contacto",
     area: "cuenta",
     grupo: "sucursal",
