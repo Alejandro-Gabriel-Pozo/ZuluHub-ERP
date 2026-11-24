@@ -23,6 +23,7 @@
     "deuda": "node arquitectura/deuda/deuda.cjs",
     "decisiones": "node arquitectura/decisiones/resumen.cjs",
     "decisiones:verificar": "node arquitectura/decisiones/decisiones.cjs",
+    "grafo:indice": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/ejecutar-indice-de-docs.ts",
     "integracion:documento": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/escribir-operaciones-contextuales.ts",
     "analizar:muerto": "knip",
     "mutacion": "stryker run",

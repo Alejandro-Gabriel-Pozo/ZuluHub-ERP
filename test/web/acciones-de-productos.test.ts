@@ -18,6 +18,12 @@ vi.mock("../../apps/web/servidor/precios-de-producto", () => ({
     return Promise.resolve({ error: null });
   },
 }));
+vi.mock("../../apps/web/servidor/precios-por-medida", () => ({
+  cambiarLosPreciosDeLasMedidas: (...args: unknown[]) => {
+    delegadas.llamadas.push(["medidas", ...args]);
+    return Promise.resolve({ error: null });
+  },
+}));
 vi.mock("../../apps/web/servidor/alta-de-producto", () => ({
   darDeAltaElProducto: (...args: unknown[]) => {
     delegadas.altas.push(args);
@@ -33,13 +39,33 @@ describe("la acción de servidor de los productos expuesta a Next", () => {
       "guardarFichaAccion",
       "cambiarPrecioAccion",
       "crearProductoAccion",
+      "cambiarPreciosPorMedidaAccion",
     ]);
     expect(acciones.guardarFichaAccion.constructor.name).toBe("AsyncFunction");
     expect(acciones.cambiarPrecioAccion.constructor.name).toBe("AsyncFunction");
     expect(acciones.crearProductoAccion.constructor.name).toBe("AsyncFunction");
   });
 
+  it("los precios por medida delegan con lo ligado por la página (producto, clave, medidas) y el formulario, sin el estado anterior", async () => {
+    delegadas.llamadas.length = 0;
+    const datos = new FormData();
+    const medidas = [{ opcionId: "o", precioIdEsperado: null }];
+    expect(
+      await acciones.cambiarPreciosPorMedidaAccion(
+        "p-1",
+        "clave-1",
+        medidas,
+        { error: null },
+        datos,
+      ),
+    ).toEqual({ error: null });
+    expect(delegadas.llamadas).toEqual([
+      ["medidas", { productoId: "p-1", claveDelCambio: "clave-1", medidas }, datos],
+    ]);
+  });
+
   it("delega con el id, la versión, el control visto y el formulario, sin el estado anterior", async () => {
+    delegadas.llamadas.length = 0;
     const datos = new FormData();
     datos.set("nombre", "Milanesa");
     expect(await acciones.guardarFichaAccion("id-1", 4, true, { error: null }, datos)).toEqual({

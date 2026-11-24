@@ -73,16 +73,21 @@ function archivosDe(carpeta: string): string[] {
 }
 
 describe("nada de producción importa de test/", () => {
-  it("ningún archivo de apps/ o src/ que no es una prueba importa de test/", () => {
-    const sospechosos = [...archivosDe(join(RAIZ, "apps")), ...archivosDe(join(RAIZ, "src"))]
-      .filter((ruta) => !esDePrueba(ruta))
-      .flatMap((ruta) =>
-        importacionesDeTest(ruta, readFileSync(ruta, "utf8")).map(
-          (i) => `${relative(RAIZ, ruta)}: ${i}`,
-        ),
-      );
-    expect(sospechosos).toEqual([]);
-  });
+  // Tope propio (estabilidad bajo carga, 23/11/2026): recorre y lee todo `apps/` y `src/`; 2,4 s medidos solo, y con la máquina cargada (CI con Postgres al lado, varios archivos a la vez) llegó a 7,4 s y vencía los 5 s por defecto.
+  it(
+    "ningún archivo de apps/ o src/ que no es una prueba importa de test/",
+    { timeout: 30_000 },
+    () => {
+      const sospechosos = [...archivosDe(join(RAIZ, "apps")), ...archivosDe(join(RAIZ, "src"))]
+        .filter((ruta) => !esDePrueba(ruta))
+        .flatMap((ruta) =>
+          importacionesDeTest(ruta, readFileSync(ruta, "utf8")).map(
+            (i) => `${relative(RAIZ, ruta)}: ${i}`,
+          ),
+        );
+      expect(sospechosos).toEqual([]);
+    },
+  );
 
   describe("el analizador ve cada forma (violaciones inyectadas)", () => {
     const desde = join(RAIZ, "apps/web/servidor/x.ts");

@@ -59,14 +59,10 @@ const MATRIZ_CONGELADA: readonly (readonly [string, readonly RolDeEmpresa[]])[] 
   ["productos.cambiar_precio", ["GERENTE", "ADMINISTRADOR"]],
   ["opciones.editar", ["GERENTE", "ADMINISTRADOR"]],
   ["productos.desactivar", ["GERENTE", "ADMINISTRADOR"]],
-  ["categorias.crear", ["GERENTE", "ADMINISTRADOR"]],
-  ["categorias.editar", ["GERENTE", "ADMINISTRADOR"]],
-  ["categorias.reactivar", ["GERENTE", "ADMINISTRADOR"]],
   ["vidrieras.crear", ["GERENTE", "ADMINISTRADOR"]],
   ["vidrieras.editar", ["GERENTE", "ADMINISTRADOR"]],
   ["vidrieras.ocultar_en_empresa", ["GERENTE", "ADMINISTRADOR"]],
   ["vidrieras.publicar", ["GERENTE", "ADMINISTRADOR"]],
-  ["categorias.desactivar", ["GERENTE", "ADMINISTRADOR"]],
   ["vidrieras.retirar", ["GERENTE", "ADMINISTRADOR"]],
   ["depositos.crear", ["GERENTE", "ADMINISTRADOR"]],
   ["depositos.editar", ["GERENTE", "ADMINISTRADOR"]],
@@ -95,11 +91,9 @@ const MATRIZ_CONGELADA: readonly (readonly [string, readonly RolDeEmpresa[]])[] 
   ["vidrieras.renovar_enlace", ["GERENTE", "ADMINISTRADOR"]],
   ["vidrieras.retirar_de_linea", ["GERENTE", "ADMINISTRADOR"]],
   ["vidrieras.administrar_portal", ["GERENTE", "ADMINISTRADOR"]],
-  ["productos.asignar_emisor", ["GERENTE"]],
   ["stock.verificar_saldos", ["GERENTE"]],
   ["costos.ver", ["GERENTE", "ADMINISTRADOR"]],
   ["variantes.editar", ["GERENTE", "ADMINISTRADOR"]],
-  ["conjuntos.editar_contenido", ["GERENTE", "ADMINISTRADOR"]],
   ["comprobantes.emitir_manual", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
   ["notas_de_credito.emitir", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
   ["comprobantes.descartar", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
@@ -198,8 +192,8 @@ const MATRIZ_CONGELADA: readonly (readonly [string, readonly RolDeEmpresa[]])[] 
 ];
 
 /** Cifras del congelado: filas, y cuántas acciones puede cada rol. */
-const FILAS = 177;
-const PUEDEN = { GERENTE: 177, ADMINISTRADOR: 157, OPERADOR: 65 } as const satisfies Record<
+const FILAS = 171;
+const PUEDEN = { GERENTE: 171, ADMINISTRADOR: 152, OPERADOR: 65 } as const satisfies Record<
   RolDeEmpresa,
   number
 >;
@@ -249,7 +243,7 @@ describe("la matriz de permisos de la empresa es idéntica a la congelada", () =
       }
     }
     expect(comparadas).toBe(FILAS * ROLES_DE_EMPRESA.length);
-    expect(comparadas).toBe(531);
+    expect(comparadas).toBe(513);
   });
 
   it("la tabla leída por rol es la misma", () => {

@@ -48,6 +48,7 @@ export function FormularioDeGrupoDeOpciones({
   const [obligatorio, setObligatorio] = useState(grupo.obligatorio.valor);
   const [varias, setVarias] = useState(grupo.varias.valor);
   const [fuera, setFuera] = useState(grupo.fueraDeLaCarta.valor);
+  const [esMedida, setEsMedida] = useState(grupo.esTamano.valor);
   const [filas, setFilas] = useState<readonly FilaDeOpcionArmada[]>(grupo.opciones.filas);
   const [siguiente, setSiguiente] = useState(grupo.esNuevo ? grupo.opciones.filas.length : 0);
 
@@ -75,35 +76,47 @@ export function FormularioDeGrupoDeOpciones({
             autoComplete="off"
             error={errorDe(CAMPO_DEL_GRUPO)}
           />
-          <OpcionesExcluyentes
-            dato="clase-de-grupo-de-opciones"
-            nombre="clase"
-            valor={clase}
-            alCambiar={setClase}
-            opciones={grupo.clase.opciones}
-            apagado={grupo.clase.apagado}
-          />
-          <Casilla
-            dato="obligatoriedad-de-grupo-de-opciones"
-            etiqueta={grupo.obligatorio.etiqueta}
-            nombre="esObligatorio"
-            marcada={obligatorio}
-            alCambiar={setObligatorio}
-          />
-          <Casilla
-            dato="eleccion-multiple-de-grupo-de-opciones"
-            etiqueta={grupo.varias.etiqueta}
-            nombre="admiteVarias"
-            marcada={varias}
-            alCambiar={setVarias}
-          />
-          <Casilla
-            dato="visibilidad-en-la-carta-de-grupo-de-opciones"
-            etiqueta={grupo.fueraDeLaCarta.etiqueta}
-            nombre="fueraDeLaCarta"
-            marcada={fuera}
-            alCambiar={setFuera}
-          />
+          {grupo.esVariante ? (
+            <Casilla
+              dato="medida-de-variante-de-producto"
+              etiqueta={grupo.esTamano.etiqueta}
+              nombre="esTamano"
+              marcada={esMedida}
+              alCambiar={setEsMedida}
+            />
+          ) : (
+            <>
+              <OpcionesExcluyentes
+                dato="clase-de-grupo-de-opciones"
+                nombre="clase"
+                valor={clase}
+                alCambiar={setClase}
+                opciones={grupo.clase.opciones}
+                apagado={grupo.clase.apagado}
+              />
+              <Casilla
+                dato="obligatoriedad-de-grupo-de-opciones"
+                etiqueta={grupo.obligatorio.etiqueta}
+                nombre="esObligatorio"
+                marcada={obligatorio}
+                alCambiar={setObligatorio}
+              />
+              <Casilla
+                dato="eleccion-multiple-de-grupo-de-opciones"
+                etiqueta={grupo.varias.etiqueta}
+                nombre="admiteVarias"
+                marcada={varias}
+                alCambiar={setVarias}
+              />
+              <Casilla
+                dato="visibilidad-en-la-carta-de-grupo-de-opciones"
+                etiqueta={grupo.fueraDeLaCarta.etiqueta}
+                nombre="fueraDeLaCarta"
+                marcada={fuera}
+                alCambiar={setFuera}
+              />
+            </>
+          )}
           <ul className={estilos["filas"]}>
             {filas.map((fila, posicion) => (
               <li key={fila.clave} className={estilos["fila"]}>
@@ -118,15 +131,17 @@ export function FormularioDeGrupoDeOpciones({
                   }}
                   autoComplete="off"
                 />
-                <CampoImporte
-                  dato="recargo-de-opcion-de-producto"
-                  etiqueta={grupo.opciones.recargoDelCampo}
-                  nombre={`opcion_${fila.clave}_recargo`}
-                  valor={fila.recargo}
-                  alCambiar={(valor) => {
-                    cambiarFila(fila.clave, { recargo: valor });
-                  }}
-                />
+                {grupo.esVariante ? null : (
+                  <CampoImporte
+                    dato="recargo-de-opcion-de-producto"
+                    etiqueta={grupo.opciones.recargoDelCampo}
+                    nombre={`opcion_${fila.clave}_recargo`}
+                    valor={fila.recargo}
+                    alCambiar={(valor) => {
+                      cambiarFila(fila.clave, { recargo: valor });
+                    }}
+                  />
+                )}
               </li>
             ))}
           </ul>
