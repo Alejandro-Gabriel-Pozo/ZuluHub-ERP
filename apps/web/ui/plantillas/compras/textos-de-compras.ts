@@ -28,6 +28,7 @@ export type TextosDeCompras = Readonly<{
   total: string;
   vence: string;
   noPermitido: string;
+  nuevaCompra: string;
 }>;
 
 export function textosDeCompras(): TextosDeCompras {
@@ -55,5 +56,6 @@ export function textosDeCompras(): TextosDeCompras {
     total: texto({}, "fiscal.pantalla.rotulo_total"),
     vence: texto({}, "compras.control.vence"),
     noPermitido: texto({}, "compras.error.sin_permiso"),
+    nuevaCompra: texto({}, "compras.compra.nueva_compra"),
   };
 }

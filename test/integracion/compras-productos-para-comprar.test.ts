@@ -295,6 +295,52 @@ describe.skipIf(base === null)("compras: productos para comprar", () => {
       ).toEqual(guardadas);
     });
 
+    it("el total cotizado coincide EXACTO con el total que muestra la ficha al guardar (varios ejemplos, también con redondeo y «Sin precio»)", async () => {
+      const ejemplos: Record<string, unknown>[][] = [
+        [{}],
+        [{ cantidad: "0.333", precio: "999.999999" }],
+        [
+          { cantidad: "3", precio: "33.335" },
+          { cantidad: "1.5", precio: "10.005" },
+          { cantidad: "0.0001", precio: "1" },
+        ],
+        [
+          { cantidad: "7", precio: "0.01" },
+          { cantidad: "2", precio: null },
+        ],
+        [
+          { cantidad: "1000", precio: "123456.789012" },
+          { cantidad: "12.3456", precio: "0.999999" },
+        ],
+      ];
+      for (const lineas of ejemplos) {
+        const m = await armar();
+        const renglones: ReturnType<typeof renglonDe>[] = [];
+        for (const extra of lineas) {
+          const p = await c.articulo(m.e, { unidadBase: "GRAMO", dimension: "MASA" });
+          renglones.push(renglonDe(p.producto, extra));
+        }
+        const cotizada = valorDe(await cotizar(m.e.operador, renglones));
+        const alta = valorDe(
+          await c.casos.registrarCompra(m.e.operador, {
+            clave: nuevoId(),
+            sucursalId: m.e.sucursal,
+            proveedorId: m.proveedor,
+            depositoId: m.deposito,
+            renglones,
+          }),
+        );
+        const ficha = valorDe(
+          await c.consultas.fichaDeCompra(m.e.operador, { recepcionId: alta.recepcionId }),
+        );
+        expect(ficha).not.toBeNull();
+        expect(cotizada.total).toBe(ficha?.total);
+        // Con una línea «Sin precio» el total no aparenta estar completo: es null, nunca un parcial ni cero.
+        if (lineas.some((l) => l["precio"] === null)) expect(cotizada.total).toBeNull();
+        else expect(cotizada.total).toMatch(/^\d+\.\d{2}$/);
+      }
+    });
+
     it("no escribe: ni filas, ni movimientos de stock, ni auditoría, ni nivel de compras", async () => {
       const m = await armar();
       const antes = await huella(m.e);

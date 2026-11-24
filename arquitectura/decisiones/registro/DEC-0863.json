@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0863",
+  "fecha": "2026-11-24",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Con más de un depósito de uso normal en la sucursal, «Nueva compra» obliga a elegir uno con un selector rotulado «Depósito» (singular aceptado por delegación, DEC-0864).",
+  "que_cambia": "Con un solo depósito no cambia nada; con dos o más, hay que elegir dónde entra la mercadería para guardar. Revertir: guardar sin elegir y que el servidor pida elegir.",
+  "donde": "PantallaDeNuevaCompra.cliente.tsx, servidor/comprar.ts (cargarLoDeNuevaCompra), ficha-de-nueva-compra.ts (diferencia 9); confirmada: DDD fila del 24/11/2026"
+}
