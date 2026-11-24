@@ -2,7 +2,11 @@ import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import { ok } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
-import { entradaDeCotizarCompra, entradaDeProductosParaComprar } from "./entradas-de-comprar";
+import {
+  entradaDeCotizarCompra,
+  entradaDeProductosParaComprar,
+  entradaDeRegistrarCompra,
+} from "./entradas-de-comprar";
 import { accionDeCompras } from "./errores-de-compras";
 import type { Web } from "./web";
 
@@ -90,6 +94,8 @@ export type RenglonCotizadoParaLaPantalla = Readonly<{
 
 export type CompraCotizadaParaLaPantalla = Readonly<{
   renglones: readonly RenglonCotizadoParaLaPantalla[];
+  /** Texto decimal de 2 decimales, la suma que calcula el servidor; `null` si algún renglón no tiene precio (nunca un total parcial ni cero). */
+  total: string | null;
 }>;
 
 /**
@@ -107,6 +113,7 @@ export function cotizarLaCompra(
     entradaDeCotizarCompra,
     (entrada) => d.consultas().cotizarCompra(contexto, entrada),
     (cotizada) => ({
+      total: cotizada.total,
       renglones: cotizada.renglones.map((r) => ({
         productoId: r.productoId,
         cantidadEnStock: r.cantidadEnStock,
@@ -115,5 +122,46 @@ export function cotizarLaCompra(
         dePesoVariable: r.dePesoVariable,
       })),
     }),
+  );
+}
+
+export type DependenciasDeRegistrarCompraWeb = Readonly<{
+  casosDeUso: () => Pick<ReturnType<Web["casosDeUsoDeCompras"]>, "registrarCompra">;
+  respuesta: DependenciasDeRespuesta;
+}>;
+
+export type CompraRegistradaParaLaPantalla = Readonly<{
+  recepcionId: string;
+  /** `true`: era la misma compra de un envío anterior (doble toque, reintento): no se escribió ni se auditó nada de nuevo. */
+  yaExistia: boolean;
+}>;
+
+/**
+ * «Comprar y recibir» (compras PR 6b): registra la compra y su entrada de stock con el caso de uso `registrarCompra`, que es UNA transacción (la compra, sus líneas, la entrada de stock y la
+ * oferta del proveedor, todo o nada) y que ya trae la idempotencia: la misma clave con el mismo contenido devuelve la compra hecha (`yaExistia`) sin escribir; la misma clave con otro contenido
+ * y el mismo remito del mismo proveedor con otra clave se rechazan. Acá solo se arma el pedido: la empresa y la persona salen del contexto, la sucursal la pone el servidor (la elegida y validada
+ * de la persona, nunca la que diga el navegador), y el permiso (`recepciones.registrar`), el alcance de la sucursal, el depósito y toda cuenta los decide el caso de uso adentro.
+ * Previene: una compra duplicada por doble toque o reintento, y una compra en una sucursal o empresa que dijo el navegador. Chequeo: `test/integracion/compras-comprar-web.test.ts`.
+ */
+export function registrarLaCompra(
+  d: DependenciasDeRegistrarCompraWeb,
+  contexto: ContextoOperativo,
+  sucursalId: string,
+  crudo: unknown,
+): Promise<Respuesta<CompraRegistradaParaLaPantalla>> {
+  return accionDeCompras(
+    d.respuesta,
+    crudo,
+    entradaDeRegistrarCompra,
+    (entrada) =>
+      d.casosDeUso().registrarCompra(contexto, {
+        clave: entrada.clave,
+        sucursalId,
+        proveedorId: entrada.proveedorId,
+        depositoId: entrada.depositoId,
+        remito: entrada.remito,
+        renglones: entrada.renglones,
+      }),
+    (salida) => ({ recepcionId: salida.recepcionId, yaExistia: salida.yaExistia }),
   );
 }

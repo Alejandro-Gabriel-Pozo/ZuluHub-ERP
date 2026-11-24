@@ -37,6 +37,7 @@ export type TextosDeCompras = Readonly<{
   precioPor: string;
   /** «Corregido por ana@ejemplo.com · 24/11/2026 21:14». */
   corregidoPor: (persona: string, cuando: string) => string;
+  nuevaCompra: string;
 }>;
 
 export function textosDeCompras(): TextosDeCompras {
@@ -72,5 +73,6 @@ export function textosDeCompras(): TextosDeCompras {
     precio: texto({}, "fiscal.pantalla.emitir_precio"),
     precioPor: texto({}, "compras.compra.precio_por"),
     corregidoPor: (persona, cuando) => texto({}, "cierre.corregido_por", { persona, cuando }),
+    nuevaCompra: texto({}, "compras.compra.nueva_compra"),
   };
 }

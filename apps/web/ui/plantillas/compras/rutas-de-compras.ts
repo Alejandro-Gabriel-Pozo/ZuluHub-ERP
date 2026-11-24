@@ -6,6 +6,8 @@
 export const RUTA_DE_COMPRAS = "/compras";
 
 export const RUTA_DEL_NIVEL_DE_COMPRAS = `${RUTA_DE_COMPRAS}/nivel`;
+/** «Nueva compra» (Compras PR 6b). */
+export const RUTA_DE_NUEVA_COMPRA = `${RUTA_DE_COMPRAS}/nueva`;
 
 export const rutaDeLaCompra = (recepcionId: string): string => `${RUTA_DE_COMPRAS}/${recepcionId}`;
 

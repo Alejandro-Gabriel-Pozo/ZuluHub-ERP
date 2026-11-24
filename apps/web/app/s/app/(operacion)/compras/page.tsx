@@ -1,5 +1,6 @@
 import { pantallaDeOperacion } from "../../../../../pantallas/operacion";
 import { cargarLasCompras } from "../../../../../servidor/compras";
+import { puedeLaAccion } from "../../../../../servidor/permisos-de-la-persona";
 import { ErrorDelDetalle } from "../../../../../ui/patrones/ErrorDelDetalle";
 import { PantallaDeListaDeCompras } from "../../../../../ui/plantillas/compras/lista/PantallaDeListaDeCompras";
 import { textosDeCompras } from "../../../../../ui/plantillas/compras/textos-de-compras";
@@ -16,6 +17,12 @@ export default async function PaginaDeCompras({
   return pantallaDeOperacion({ titulo: "compras.compra.compras" }, async ({ contexto }) => {
     const lista = await cargarLasCompras(contexto, parametros);
     if (!lista.ok) return <ErrorDelDetalle error={lista.error} />;
-    return <PantallaDeListaDeCompras lista={lista.dato} textos={textosDeCompras()} />;
+    return (
+      <PantallaDeListaDeCompras
+        lista={lista.dato}
+        textos={textosDeCompras()}
+        puedeCargarUnaCompra={await puedeLaAccion(contexto, "recepciones.registrar")}
+      />
+    );
   });
 }

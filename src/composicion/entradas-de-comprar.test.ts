@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { entradaDeCotizarCompra, entradaDeProductosParaComprar } from "./entradas-de-comprar";
+import {
+  entradaDeCotizarCompra,
+  entradaDeProductosParaComprar,
+  entradaDeRegistrarCompra,
+} from "./entradas-de-comprar";
 
 describe("entradaDeProductosParaComprar", () => {
   it.each([undefined, {}, { texto: "" }, { texto: "   " }])(
@@ -112,4 +116,98 @@ describe("entradaDeCotizarCompra", () => {
       expect(entradaDeCotizarCompra(crudo)).toMatchObject({ ok: false });
     },
   );
+});
+
+describe("entradaDeRegistrarCompra", () => {
+  const ID = "0b0b0b0b-1111-4222-8333-444444444444";
+  const CLAVE = "5a5a5a5a-1111-4222-8333-444444444444";
+  const renglon = {
+    productoId: ID,
+    unidadDeCompraId: "KILOGRAMO",
+    cantidad: "2.5",
+    precioPor: "UNIDAD",
+    unidadDePrecioId: "KILOGRAMO",
+    precio: "1234.50",
+  };
+  const pedido = { clave: CLAVE, proveedorId: ID, renglones: [renglon] };
+
+  it("toma la clave, el proveedor y los renglones, y no inventa remito ni depósito", () => {
+    expect(entradaDeRegistrarCompra(pedido)).toEqual({
+      ok: true,
+      valor: {
+        clave: CLAVE,
+        proveedorId: ID,
+        depositoId: null,
+        remito: null,
+        renglones: [{ ...renglon, presentacionId: null, pesoReal: null }],
+      },
+    });
+  });
+
+  it("un remito todo en blanco es «sin remito»", () => {
+    expect(
+      entradaDeRegistrarCompra({ ...pedido, remito: { puntoDeVenta: "", numero: " ", fecha: "" } }),
+    ).toMatchObject({ ok: true, valor: { remito: null } });
+  });
+
+  it("un remito completo llega con el punto de venta y el número como enteros", () => {
+    expect(
+      entradaDeRegistrarCompra({
+        ...pedido,
+        remito: { puntoDeVenta: "2", numero: "7842", fecha: "2026-11-05" },
+      }),
+    ).toMatchObject({
+      ok: true,
+      valor: { remito: { puntoDeVenta: 2, numero: 7842, fecha: "2026-11-05" } },
+    });
+  });
+
+  it.each([
+    { puntoDeVenta: "2", numero: "", fecha: "" },
+    { puntoDeVenta: "", numero: "7842", fecha: "2026-11-05" },
+    { puntoDeVenta: "2x", numero: "7842", fecha: "2026-11-05" },
+    { puntoDeVenta: "-2", numero: "7842", fecha: "2026-11-05" },
+    { puntoDeVenta: "2", numero: "1e3", fecha: "2026-11-05" },
+  ])(
+    "un remito a medio llenar o mal escrito (%j) se rechaza: no se guarda la compra sin él",
+    (remito) => {
+      expect(entradaDeRegistrarCompra({ ...pedido, remito })).toMatchObject({ ok: false });
+    },
+  );
+
+  it.each([
+    { ...pedido, clave: "no-es-un-uuid" },
+    { ...pedido, proveedorId: "no-es-un-uuid" },
+    { ...pedido, depositoId: "no-es-un-uuid" },
+    { ...pedido, renglones: [] },
+    { clave: CLAVE, proveedorId: ID },
+    { ...pedido, renglones: [{ ...renglon, cantidad: 2.5 }] },
+    { ...pedido, renglones: [{ ...renglon, precio: 1234.5 }] },
+    { ...pedido, renglones: [{ ...renglon, precioPor: "CAJA" }] },
+    { ...pedido, renglones: [{ ...renglon, unidadDeCompraId: "PARSEC" }] },
+  ])("un pedido sin la forma pedida (%j) es un dato inválido", (crudo) => {
+    expect(entradaDeRegistrarCompra(crudo)).toMatchObject({ ok: false });
+  });
+
+  it("ignora lo que el navegador mande de más: la empresa, la persona y la sucursal las pone el servidor", () => {
+    const r = entradaDeRegistrarCompra({
+      ...pedido,
+      empresaId: "otra",
+      personaId: "otra",
+      sucursalId: ID,
+      hechoEn: "2020-01-01T00:00:00Z",
+      factura: { total: "1" },
+      pago: { medio: "EFECTIVO" },
+    });
+    expect(r).toMatchObject({ ok: true });
+    if (r.ok) {
+      expect(Object.keys(r.valor).sort()).toEqual([
+        "clave",
+        "depositoId",
+        "proveedorId",
+        "remito",
+        "renglones",
+      ]);
+    }
+  });
 });
