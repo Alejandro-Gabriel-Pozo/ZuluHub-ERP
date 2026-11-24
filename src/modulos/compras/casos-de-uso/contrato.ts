@@ -3,7 +3,7 @@ import type { CondicionDeIvaDeLaEmpresa } from "../dominio/comprobante";
 import type { Resultado } from "../../../primitivas/resultado/resultado";
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { Transacciones } from "../../../puertos/transacciones";
-import type { RepositorioDePresentaciones } from "../../catalogo/publico";
+import type { RepositorioDePresentaciones, RepositorioDeProductos } from "../../catalogo/publico";
 import type { RepositoriosDeClientes } from "../../clientes/publico";
 import type { PuertosDeStock, TxDeStock } from "../../stock/publico";
 import type { RepositoriosDeCompras } from "../persistencia/repositorios-de-compras";
@@ -94,7 +94,11 @@ export type DependenciasDeCompras = Readonly<{
 export type TxDeConsultasDeCompras = Pick<TxDeStock, "autorizacion"> &
   RepositoriosDeCompras &
   RepositoriosDeClientes &
-  Readonly<{ presentacionesDeProducto: RepositorioDePresentaciones }>;
+  Readonly<{
+    presentacionesDeProducto: RepositorioDePresentaciones;
+    /** Solo la lista del catálogo: «productos para comprar» busca con la MISMA regla de nombre que el catálogo (una regla, un lugar). */
+    productos: Pick<RepositorioDeProductos, "listar">;
+  }>;
 
 export type DependenciasDeConsultasDeCompras = Readonly<{
   transacciones: Transacciones<TxDeConsultasDeCompras>;
