@@ -42,6 +42,7 @@ describe.skipIf(base === null)("usuarios: lista y ficha de la empresa (web)", ()
   const registrados: string[] = [];
 
   const d = (): DependenciasDeUsuariosWeb => ({
+    casosDeUso: web.casosDeUsoDeIdentidad,
     consultas: web.consultasDeIdentidad,
     respuesta: { registrar: (x) => registrados.push(x) },
   });

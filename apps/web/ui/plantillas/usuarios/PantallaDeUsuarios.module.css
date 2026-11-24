@@ -90,3 +90,30 @@ a.fila:focus-visible {
   text-align: right;
   overflow-wrap: anywhere;
 }
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+}
+
+.grupo legend {
+  padding: 0 var(--espacio-1);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  align-items: center;
+}
+
+.vence {
+  margin: 0;
+  color: var(--color-texto-suave);
+}

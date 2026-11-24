@@ -37,12 +37,25 @@ describe("ficha de la pantalla «Usuarios»", () => {
       expect(Object.keys(FICHA_DE_USUARIOS.textos)).toContain(clave);
       expect(def.usos).not.toBe("pendiente");
       expect(def.usos.length).toBeGreaterThan(0);
-      expect(def.fuente).toEqual({ decision: "DEC-0851" });
+      expect(["DEC-0851", "DEC-0852", "DEC-0859"]).toContain(
+        (def.fuente as { decision: string }).decision,
+      );
     }
   });
 
-  it("no tiene botones y los dos estados son el mensaje genérico", () => {
-    expect(FICHA_DE_USUARIOS.botones).toEqual([]);
+  it("sus botones son los de invitar, enviar, reenviar y revocar, cada uno con su permiso, y sin permiso ninguno se dibuja; los dos estados son el mensaje genérico", () => {
+    const botones: FichaDePantalla["botones"] = FICHA_DE_USUARIOS.botones;
+    expect(botones.map((b) => [b.id, b.hace, b.sinPermiso])).toEqual([
+      ["invitar", { navega: "/cuenta/usuarios/invitar" }, "AUSENTE"],
+      ["enviar-invitacion", { envia: "usuarios.invitar" }, "AUSENTE"],
+      ["reenviar", { envia: "usuarios.reenviar_invitacion" }, "AUSENTE"],
+      ["revocar", { envia: "usuarios.revocar_invitacion" }, "AUSENTE"],
+    ]);
+    for (const b of botones) {
+      if ("envia" in b.hace) {
+        expect(Object.keys(CATALOGO_DE_MODULOS.administracion.acciones)).toContain(b.hace.envia);
+      }
+    }
     expect(FICHA_DE_USUARIOS.estados).toEqual({ ERROR: "GENERICO", SIN_PERMISO: "GENERICO" });
   });
 
@@ -62,6 +75,7 @@ describe("ficha de la pantalla «Usuarios»", () => {
       departamento: null,
     });
     expect(RUTAS_DE_CUENTA.usuarios).toBe(FICHA_DE_USUARIOS.rutas[0]);
+    expect(RUTAS_DE_CUENTA.invitarUsuario).toBe(FICHA_DE_USUARIOS.rutas[2]);
   });
 
   it("las rutas de la ficha existen como páginas", () => {
