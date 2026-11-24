@@ -77,24 +77,13 @@ export function leerCorreccion(valor: unknown): Resultado<CorreccionPedida, Erro
   }
   // Un campo que no viene (`undefined`) es «no cambia»; uno que viene tiene que ser válido (`null` o vacío no es «no cambia»: se rechaza).
   const precio = v["precio"];
-  const unidadesDePrecio =
-    precio === undefined ? null : typeof precio === "string" ? leerPrecioPositivo(precio) : null;
+  const unidadesDePrecio = typeof precio === "string" ? leerPrecioPositivo(precio) : null;
   if (precio !== undefined && unidadesDePrecio === null) return err("PRECIO_INVALIDO");
   const cantidad = v["cantidad"];
-  const unidadesDeCantidad =
-    cantidad === undefined
-      ? null
-      : typeof cantidad === "string"
-        ? leerCantidadPositiva(cantidad)
-        : null;
+  const unidadesDeCantidad = typeof cantidad === "string" ? leerCantidadPositiva(cantidad) : null;
   if (cantidad !== undefined && unidadesDeCantidad === null) return err("CANTIDAD_INVALIDA");
   const pesoReal = v["pesoReal"];
-  const unidadesDePeso =
-    pesoReal === undefined
-      ? null
-      : typeof pesoReal === "string"
-        ? leerCantidadPositiva(pesoReal)
-        : null;
+  const unidadesDePeso = typeof pesoReal === "string" ? leerCantidadPositiva(pesoReal) : null;
   if (pesoReal !== undefined && unidadesDePeso === null) return err("PESO_REAL_INVALIDO");
   const precioPor = v["precioPor"];
   const unidadDePrecio = v["unidadDePrecio"];

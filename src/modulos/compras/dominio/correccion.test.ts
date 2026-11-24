@@ -166,11 +166,13 @@ describe("leerCorreccion: cantidad, peso real y «precio por» (ampliada, 15/11/
     expect(error({ cantidad: "3", motivo: "" })).toBe("MOTIVO_REQUERIDO");
   });
   it("la huella: solo precio conserva los campos de antes de la ampliación; con otros campos, todos, y el mismo pedido da la misma huella", () => {
-    const pedido = (cambio: Record<string, unknown>) => {
+    const pedidoLeido = (cambio: Record<string, unknown>) => {
       const r = leer(cambio);
       if (!r.ok) throw new Error("el pedido válido no se leyó");
-      return camposDeHuellaDeCorreccion(r.valor);
+      return r.valor;
     };
+    const pedido = (cambio: Record<string, unknown>) =>
+      camposDeHuellaDeCorreccion(pedidoLeido(cambio));
     expect(pedido({ precio: "1200" })).toEqual([RECEPCION, 1, 0, "1200.000000", "Se contó mal"]);
     expect(pedido({ cantidad: "3" })).toEqual([
       RECEPCION,
@@ -194,6 +196,36 @@ describe("leerCorreccion: cantidad, peso real y «precio por» (ampliada, 15/11/
       "KILOGRAMO",
       "Se contó mal",
     ]);
+    // «Solo precio» exige que ningún otro campo venga: con cantidad, con peso real o sin precio, la huella lleva todos.
+    expect(pedido({ precio: "10", cantidad: "3" })).toEqual([
+      RECEPCION,
+      1,
+      0,
+      "10.000000",
+      "3.0000",
+      "",
+      "",
+      "",
+      "Se contó mal",
+    ]);
+    expect(pedido({ precio: "10", pesoReal: "3" })).toEqual([
+      RECEPCION,
+      1,
+      0,
+      "10.000000",
+      "",
+      "3.0000",
+      "",
+      "",
+      "Se contó mal",
+    ]);
+    const sinNada = pedidoLeido({ precio: "10" });
+    expect(
+      camposDeHuellaDeCorreccion({
+        ...sinNada,
+        precio: null,
+      }),
+    ).toEqual([RECEPCION, 1, 0, "", "", "", "", "", "Se contó mal"]);
     expect(pedido({ cantidad: "3" })).toEqual(pedido({ cantidad: "3.0" }));
     expect(pedido({ cantidad: "3" })).not.toEqual(pedido({ pesoReal: "3" }));
   });
