@@ -55,6 +55,11 @@ describe("importeVigenteDeLinea", () => {
     expect(valor(importeVigenteDeLinea(linea, { precioNuevo: null }, kilo))).toBeNull();
   });
 
+  it("una corrección sin precio nuevo da «Sin precio» aunque falten el producto y el tipo de precio", () => {
+    const sinTipo = { ...linea, precioPorTipo: null };
+    expect(valor(importeVigenteDeLinea(sinTipo, { precioNuevo: null }, null))).toBeNull();
+  });
+
   it("con corrección y sin producto falla cerrado", () => {
     const r = importeVigenteDeLinea(linea, { precioNuevo: "120" }, null);
     expect(r).toEqual({ ok: false, error: "FALTA_EL_PRODUCTO" });

@@ -40,17 +40,17 @@ export function importeVigenteDeLinea(
   producto: ProductoParaImporte | null,
 ): Resultado<string | null, ErrorDeImporteVigente> {
   if (correccion === null) return ok(linea.importe);
+  // Una corrección sin precio nuevo deja la línea «Sin precio»: no hay cuenta que hacer.
+  if (correccion.precioNuevo === null) return ok(null);
   if (producto === null) return err("FALTA_EL_PRODUCTO");
-  if (correccion.precioNuevo !== null && linea.precioPorTipo === null) {
-    return err("LINEA_CORREGIDA_SIN_PRECIO_POR");
-  }
+  if (linea.precioPorTipo === null) return err("LINEA_CORREGIDA_SIN_PRECIO_POR");
   const cuenta = calcularLinea({
     unidadBase: producto.unidadBase,
     presentacion: producto.presentacion,
     unidadDeCompra: linea.unidadDeCompraId as CodigoDeUnidad,
     cantidadDeCompra: linea.cantidadDeCompra,
     pesoReal: linea.pesoReal,
-    precioPor: linea.precioPorTipo ?? "UNIDAD",
+    precioPor: linea.precioPorTipo,
     unidadDePrecio: linea.unidadDePrecioId as CodigoDeUnidad | null,
     precio: correccion.precioNuevo,
   });
