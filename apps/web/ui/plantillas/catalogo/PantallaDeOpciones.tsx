@@ -30,6 +30,34 @@ export function PantallaDeOpciones({ opciones }: PropsDePantallaDeOpciones) {
       <div>
         <BotonDeNavegacionDeOpciones boton={opciones.copiar} />
       </div>
+      <section className={estilos["seccion"]} aria-labelledby="variantes-del-producto">
+        <h2 id="variantes-del-producto" className={estilos["titulo"]}>
+          {opciones.variantes.titulo}
+        </h2>
+        {opciones.variantes.tarjeta === null ? null : (
+          <div className={estilos["tarjeta"]}>
+            <div className={estilos["renglon"]}>
+              <strong className={estilos["nombre"]}>{opciones.variantes.tarjeta.nombre}</strong>
+              {opciones.variantes.tarjeta.esLaMedida === null ? null : (
+                <Insignia tono="exito">{opciones.variantes.tarjeta.esLaMedida}</Insignia>
+              )}
+            </div>
+            <span className={estilos["suave"]}>
+              {opciones.variantes.tarjeta.opciones.join(" · ")}
+            </span>
+            {opciones.variantes.editar === null ? null : (
+              <div>
+                <BotonDeNavegacionDeOpciones boton={opciones.variantes.editar} />
+              </div>
+            )}
+          </div>
+        )}
+        {opciones.variantes.agregar === null ? null : (
+          <div>
+            <BotonDeNavegacionDeOpciones boton={opciones.variantes.agregar} />
+          </div>
+        )}
+      </section>
       <section className={estilos["seccion"]} aria-labelledby="grupos-de-opciones">
         <h2 id="grupos-de-opciones" className={estilos["titulo"]}>
           {opciones.grupos.titulo}
@@ -43,8 +71,9 @@ export function PantallaDeOpciones({ opciones }: PropsDePantallaDeOpciones) {
               </div>
               <span className={estilos["suave"]}>{tarjeta.reglas}</span>
               <span className={estilos["suave"]}>{tarjeta.opciones.join(" · ")}</span>
-              <div>
+              <div className={estilos["acciones"]}>
                 <BotonDeNavegacionDeOpciones boton={tarjeta.editar} />
+                <BotonDeNavegacionDeOpciones boton={tarjeta.consumo} />
               </div>
             </li>
           ))}

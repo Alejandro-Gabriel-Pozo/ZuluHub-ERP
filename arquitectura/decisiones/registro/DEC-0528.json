@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0528",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "SUPUESTO: guardar los precios de varias medidas se aplica medida por medida (cada una atómica); no es una sola transacción y se corta en la primera que falla.",
+  "que_cambia": "Un guardado que falla a la mitad deja cambiadas las medidas anteriores y la pantalla lo muestra al recargar. Hacerlo atómico pide un caso de uso nuevo en el catálogo. Revertir: cambiar a un caso de uso único.",
+  "donde": "src/composicion/precios-por-medida-web.ts; pantalla de precios por medida; delegación del dueño, DDD filas 173 y 174; confirmada: DDD fila del 23/11/2026"
+}

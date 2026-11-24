@@ -5,6 +5,7 @@ import { DATOS_DE_CLIENTES } from "./registro-de-clientes";
 import { DATOS_DE_CARTA } from "./registro-de-carta";
 import { DATOS_DE_COMANDAS } from "./registro-de-comandas";
 import { DATOS_DE_COMPRAS } from "./registro-de-compras";
+import { DATOS_DE_CONSUMO_DE_OPCION } from "./registro-de-consumo";
 import { DATOS_DE_FACTURACION } from "./registro-de-facturacion";
 import { DATOS_DE_FISCAL } from "./registro-de-fiscal";
 import { DATOS_DE_PRODUCCION } from "./registro-de-produccion";
@@ -50,6 +51,7 @@ export const FRAGMENTOS_DEL_REGISTRO = {
   carta: DATOS_DE_CARTA,
   comandas: DATOS_DE_COMANDAS,
   compras: DATOS_DE_COMPRAS,
+  consumo: DATOS_DE_CONSUMO_DE_OPCION,
   facturacion: DATOS_DE_FACTURACION,
   fiscal: DATOS_DE_FISCAL,
   produccion: DATOS_DE_PRODUCCION,
@@ -68,6 +70,7 @@ export const REGISTRO_DE_DATOS = {
   ...DATOS_DE_CARTA,
   ...DATOS_DE_COMANDAS,
   ...DATOS_DE_COMPRAS,
+  ...DATOS_DE_CONSUMO_DE_OPCION,
   ...DATOS_DE_FACTURACION,
   ...DATOS_DE_FISCAL,
   ...DATOS_DE_PRODUCCION,

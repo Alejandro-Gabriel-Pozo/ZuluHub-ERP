@@ -3,6 +3,8 @@ import { puedeCambiarPrecios } from "../../../../../../../../servidor/modulos";
 import { cargarLosPrecios } from "../../../../../../../../servidor/precios-de-producto";
 import { FormularioDePrecioDeProducto } from "../../../../../../../../ui/plantillas/catalogo/FormularioDePrecioDeProducto.cliente";
 import { armarLosPrecios } from "../../../../../../../../ui/plantillas/catalogo/modelo-de-precios-de-producto";
+import { EnlaceDeAccion } from "../../../../../../../../ui/componentes/EnlaceDeAccion";
+import { rutaDeLosPreciosPorMedida } from "../../../../../../../../ui/plantillas/catalogo/modelo-de-precios-por-medida";
 import { ErrorDelDetalle } from "../../../../../../../../ui/patrones/ErrorDelDetalle";
 import { cambiarPrecioAccion } from "../../../../../acciones-de-productos";
 
@@ -18,6 +20,15 @@ export default async function PaginaDeLosPreciosDeUnProducto({ params }: PropsDe
     const respuesta = await cargarLosPrecios(contexto, id);
     if (!respuesta.ok) return <ErrorDelDetalle error={respuesta.error} />;
     const precios = armarLosPrecios(respuesta.dato);
+    // Un producto con variante: «Según medida» lleva a los precios de cada medida (A13).
+    if (precios.segunMedida !== null) {
+      return conTitulo(
+        precios.titulo,
+        <EnlaceDeAccion href={rutaDeLosPreciosPorMedida(precios.id)}>
+          {precios.segunMedida}
+        </EnlaceDeAccion>,
+      );
+    }
     return conTitulo(
       precios.titulo,
       <FormularioDePrecioDeProducto

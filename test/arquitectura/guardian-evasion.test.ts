@@ -57,8 +57,8 @@ const { crearUbicador } = require("../../arquitectura/contratos/ubicacion.cjs") 
  * límite de cada proceso (`correr`, 120 s).
  */
 const PRESUPUESTO_DE_PROCESOS = 650;
-/** Cota de pared holgada (la CI saturada llegó a 111 a 122 s): detecta un guardián lento, que el conteo de procesos no ve. */
-const COTA_DE_TIEMPO_EN_MS = 180_000;
+/** Cota de pared holgada (la CI saturada llegó a 111 a 122 s; con la máquina al triple de su capacidad, 204 s y falló la de 180 s): detecta un guardián lento (de 17 s solo a más de 400 s), que el conteo de procesos no ve. */
+const COTA_DE_TIEMPO_EN_MS = 420_000;
 
 const { texto: TEXTO_DEL_CATALOGO, casos: CASOS } = leerCatalogo();
 const { casos: EXTERNOS } = leerCatalogo(ARCHIVO_DE_LOS_EXTERNOS);
@@ -74,7 +74,9 @@ beforeAll(async () => {
   resultados = await correrLaBateria(CASOS, contexto);
   duracionEnMs = Date.now() - inicio;
   procesosDeLaBateria = cantidadDeProcesosLanzados();
-}, 240_000);
+  // Estabilidad bajo carga (23/11/2026): 17 s medida sola; con 12 procesos quemando CPU sobre 4 núcleos tardó 204 s, cerca de los 240 s anteriores
+  // (si el gancho vence, fallan todos los casos juntos). 600 s sigue cortando un guardián colgado de verdad (cada proceso tiene además su límite de 120 s).
+}, 600_000);
 
 afterAll(() => {
   limpiarContexto(contexto);

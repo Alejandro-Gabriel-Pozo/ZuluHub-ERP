@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import "../../../test/propiedades/configuracion";
 import { crearImporte, crearMontoExacto, crearPrecioUnitario } from "./interno";
 import { ARS } from "./moneda";
-import { prorratear, repartirPrecioUnitario } from "./prorrateo";
+import { prorratear, prorratearConSobranteAlPrimero, repartirPrecioUnitario } from "./prorrateo";
 
 /**
  * Propiedades de `repartirPrecioUnitario` y de su núcleo compartido con `prorratear`. El oráculo es
@@ -236,6 +236,48 @@ describe("repartirPrecioUnitario y prorratear comparten el núcleo", () => {
         });
         expect(suma(enMicro)).toBe(suma(enCentavos) * 10_000n);
       }),
+    );
+  });
+});
+
+describe("prorratearConSobranteAlPrimero (propiedades)", () => {
+  it("la suma de las partes es exactamente el total, cada parte es el piso de la suya y TODO el sobrante está en la primera con peso positivo", () => {
+    fc.assert(
+      fc.property(pesosEnteros, totales, (pesos, total) => {
+        const suma = pesos.reduce((a, p) => a + p, 0n);
+        fc.pre(suma > 0n);
+        const partes = prorratearConSobranteAlPrimero(
+          crearImporte(ARS, total),
+          pesos.map((p) => exacto(p)),
+        ).map((i) => i.unidades);
+        expect(partes.reduce((a, p) => a + p, 0n)).toBe(total);
+        const pisos = pesos.map((p) => (total * p) / suma);
+        const primero = pesos.findIndex((p) => p > 0n);
+        const sobrante = total - pisos.reduce((a, p) => a + p, 0n);
+        partes.forEach((parte, i) => {
+          expect(parte).toBe(i === primero ? (pisos[i] ?? 0n) + sobrante : pisos[i]);
+        });
+        // Nadie queda por debajo de su piso; solo la primera sube.
+        expect(partes.every((p, i) => i === primero || p === pisos[i])).toBe(true);
+      }),
+    );
+  });
+
+  it("con pesos iguales suma exacto y, con una o dos partes, coincide con `prorratear`", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 6 }),
+        fc.bigInt({ min: 0n, max: 100_000n }),
+        (n, total) => {
+          const pesos = Array.from({ length: n }, () => exacto(1n));
+          const sobrante = prorratearConSobranteAlPrimero(crearImporte(ARS, total), pesos).map(
+            (i) => i.unidades,
+          );
+          const restos = prorratear(crearImporte(ARS, total), pesos).map((i) => i.unidades);
+          if (n <= 2) expect(sobrante).toEqual(restos);
+          expect(sobrante.reduce((a, p) => a + p, 0n)).toBe(total);
+        },
+      ),
     );
   });
 });

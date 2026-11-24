@@ -21,3 +21,7 @@ arquitectura/deuda/informe.json
 
 # Informe de la medición de declaraciones de textos y pantallas (se genera en cada corrida).
 arquitectura/declaraciones/informe.json
+
+# Informe y grafo de la medición del grafo del sistema, etapa 0 (se generan en cada corrida de `test/arquitectura/grafo.test.ts`).
+arquitectura/grafo/informe.json
+arquitectura/grafo/grafo.json

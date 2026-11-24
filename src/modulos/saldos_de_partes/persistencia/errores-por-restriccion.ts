@@ -1,0 +1,132 @@
+/**
+ * Restricción de la base → error de negocio del libro (ADR-004). Un test exige que no falte ninguna ni sobre ninguna: cubre las restricciones del
+ * catálogo de las ocho tablas de `0092` y las que lanzan los disparadores (`RESTRICCIONES_DE_DISPARADORES_DEL_LIBRO`, que no están en el catálogo).
+ * `NO_TRADUCIDA` = la red de seguridad de la base, que el dominio ya rechaza antes (o que nadie dispara): sale como el error de persistencia tipado.
+ *
+ * Dos llegan distinto de lo común: `distribucion_de_asiento_no_cuadra` y `distribucion_de_asiento_espejo_no_cuadra` los lanza el disparador DIFERIDO,
+ * así que el error aparece al confirmar (en el `COMMIT`), no en el `INSERT`; y `CLAVE_YA_USADA` significa que otro pedido con la misma clave ganó
+ * mientras este corría: el llamador repite el caso completo y ve `yaExistia`.
+ */
+export const ERRORES_DEL_LIBRO_POR_RESTRICCION: Readonly<Record<string, string>> = {
+  // clase_de_asiento (sembrada: nadie la escribe)
+  clase_de_asiento_pkey: "NO_TRADUCIDA",
+  clase_de_asiento_sentido_ck: "NO_TRADUCIDA",
+  clase_de_asiento_clase_ck: "NO_TRADUCIDA",
+  clase_de_asiento_signo_ck: "NO_TRADUCIDA",
+  clase_de_asiento_ajuste_ck: "NO_TRADUCIDA",
+  // asiento_de_saldo
+  asiento_de_saldo_pkey: "NO_TRADUCIDA",
+  asiento_de_saldo_ancla_uk: "NO_TRADUCIDA",
+  asiento_de_saldo_empresa_fkey: "NO_TRADUCIDA",
+  asiento_de_saldo_parte_fkey: "PARTE_NO_ENCONTRADA",
+  asiento_de_saldo_clase_fkey: "CLASE_NO_ADMITIDA",
+  asiento_de_saldo_anula_fkey: "ASIENTO_NO_ENCONTRADO",
+  asiento_de_saldo_registrado_por_fkey: "NO_TRADUCIDA",
+  asiento_de_saldo_clave_uk: "CLAVE_YA_USADA",
+  asiento_de_saldo_origen_uk: "ORIGEN_YA_REGISTRADO",
+  asiento_de_saldo_anula_uk: "ASIENTO_YA_ANULADO",
+  asiento_de_saldo_sentido_ck: "NO_TRADUCIDA",
+  asiento_de_saldo_naturaleza_ck: "NO_TRADUCIDA",
+  asiento_de_saldo_espejo_ck: "NO_TRADUCIDA",
+  asiento_de_saldo_espejo_detalle_ck: "DETALLE_OBLIGATORIO",
+  asiento_de_saldo_importe_no_cero_ck: "IMPORTE_INVALIDO",
+  asiento_de_saldo_importe_tope_ck: "IMPORTE_INVALIDO",
+  asiento_de_saldo_moneda_ck: "MONEDA_NO_ADMITIDA",
+  asiento_de_saldo_origen_tipo_ck: "ORIGEN_INVALIDO",
+  asiento_de_saldo_origen_orden_ck: "ORIGEN_INVALIDO",
+  asiento_de_saldo_referencia_ck: "REFERENCIA_INVALIDA",
+  asiento_de_saldo_vence_el_ck: "VENCIMIENTO_INVALIDO",
+  asiento_de_saldo_hecho_en_ck: "FECHA_INVALIDA",
+  asiento_de_saldo_detalle_ck: "DETALLE_INVALIDO",
+  asiento_de_saldo_clave_ck: "CLAVE_INVALIDA",
+  asiento_de_saldo_huella_ck: "NO_TRADUCIDA",
+  // distribucion_de_asiento
+  distribucion_de_asiento_pkey: "NO_TRADUCIDA",
+  distribucion_de_asiento_asiento_uk: "DISTRIBUCION_INVALIDA",
+  distribucion_de_asiento_empresa_fkey: "NO_TRADUCIDA",
+  distribucion_de_asiento_asiento_fkey: "ASIENTO_NO_ENCONTRADO",
+  distribucion_de_asiento_sucursal_fkey: "SUCURSAL_NO_ENCONTRADA",
+  distribucion_de_asiento_importe_no_cero_ck: "DISTRIBUCION_INVALIDA",
+  distribucion_de_asiento_importe_tope_ck: "DISTRIBUCION_INVALIDA",
+  distribucion_de_asiento_moneda_ck: "MONEDA_NO_ADMITIDA",
+  // imputacion_de_saldo
+  imputacion_de_saldo_pkey: "NO_TRADUCIDA",
+  imputacion_de_saldo_clave_uk: "CLAVE_YA_USADA",
+  imputacion_de_saldo_empresa_fkey: "NO_TRADUCIDA",
+  imputacion_de_saldo_saldante_fkey: "IMPUTACION_INVALIDA",
+  imputacion_de_saldo_saldado_fkey: "IMPUTACION_INVALIDA",
+  imputacion_de_saldo_registrado_por_fkey: "NO_TRADUCIDA",
+  imputacion_de_saldo_sentido_ck: "NO_TRADUCIDA",
+  imputacion_de_saldo_numero_ck: "NO_TRADUCIDA",
+  imputacion_de_saldo_distintos_ck: "IMPUTACION_INVALIDA",
+  imputacion_de_saldo_importe_no_cero_ck: "IMPORTE_INVALIDO",
+  imputacion_de_saldo_importe_tope_ck: "IMPORTE_INVALIDO",
+  imputacion_de_saldo_moneda_ck: "MONEDA_NO_ADMITIDA",
+  imputacion_de_saldo_clave_ck: "CLAVE_INVALIDA",
+  imputacion_de_saldo_huella_ck: "NO_TRADUCIDA",
+  // saldo_de_asiento (derivado)
+  saldo_de_asiento_pkey: "NO_TRADUCIDA",
+  saldo_de_asiento_empresa_fkey: "NO_TRADUCIDA",
+  saldo_de_asiento_asiento_fkey: "NO_TRADUCIDA",
+  saldo_de_asiento_tope_positivo_ck: "NO_TRADUCIDA",
+  saldo_de_asiento_no_negativo_ck: "DESHACER_SUPERA_LO_IMPUTADO",
+  saldo_de_asiento_tope_ck: "CREDITO_INSUFICIENTE",
+  // Solo lo dispara la anulación: una imputación sobre un asiento anulado tiene su propio error (`imputacion_de_saldo_asiento_anulado`).
+  saldo_de_asiento_anulado_ck: "ASIENTO_CON_IMPUTACIONES",
+  // saldo_de_imputacion (derivado)
+  saldo_de_imputacion_pkey: "NO_TRADUCIDA",
+  saldo_de_imputacion_empresa_fkey: "NO_TRADUCIDA",
+  saldo_de_imputacion_saldante_fkey: "NO_TRADUCIDA",
+  saldo_de_imputacion_saldado_fkey: "NO_TRADUCIDA",
+  saldo_de_imputacion_no_negativo_ck: "DESHACER_SUPERA_LO_IMPUTADO",
+  // saldo_de_parte (derivado)
+  saldo_de_parte_pkey: "NO_TRADUCIDA",
+  saldo_de_parte_empresa_fkey: "NO_TRADUCIDA",
+  saldo_de_parte_parte_fkey: "PARTE_NO_ENCONTRADA",
+  saldo_de_parte_sentido_ck: "NO_TRADUCIDA",
+  saldo_de_parte_moneda_ck: "NO_TRADUCIDA",
+  // saldo_de_parte_por_centro_de_costo (derivado)
+  saldo_de_parte_por_centro_pkey: "NO_TRADUCIDA",
+  saldo_de_parte_por_centro_uk: "NO_TRADUCIDA",
+  saldo_de_parte_por_centro_empresa_fkey: "NO_TRADUCIDA",
+  saldo_de_parte_por_centro_parte_fkey: "PARTE_NO_ENCONTRADA",
+  saldo_de_parte_por_centro_sucursal_fkey: "SUCURSAL_NO_ENCONTRADA",
+  saldo_de_parte_por_centro_sentido_ck: "NO_TRADUCIDA",
+  saldo_de_parte_por_centro_moneda_ck: "NO_TRADUCIDA",
+  // Los que lanzan los disparadores (`CONSTRAINT = '…'`): no existen en el catálogo.
+  asiento_de_saldo_parte_anonimizada: "PARTE_ANONIMIZADA",
+  asiento_de_saldo_parte_inactiva: "PARTE_INACTIVA",
+  asiento_de_saldo_signo_de_la_clase: "SIGNO_DEL_IMPORTE_INVALIDO",
+  asiento_de_saldo_detalle_obligatorio: "DETALLE_OBLIGATORIO",
+  asiento_de_saldo_detalle_no_admitido: "DETALLE_NO_ADMITIDO",
+  asiento_de_saldo_vencimiento_no_admitido: "VENCIMIENTO_NO_ADMITIDO",
+  asiento_de_saldo_espejo_invalido: "ESPEJO_INVALIDO",
+  imputacion_de_saldo_signos_invalidos: "IMPUTACION_INVALIDA",
+  imputacion_de_saldo_asiento_anulado: "ASIENTO_ANULADO",
+  distribucion_de_asiento_no_cuadra: "DISTRIBUCION_INVALIDA",
+  distribucion_de_asiento_espejo_no_cuadra: "DISTRIBUCION_INVALIDA",
+  // La guardia de los derivados: red de seguridad (nadie la dispara si el repositorio no escribe los derivados).
+  saldo_de_asiento_solo_por_disparadores: "NO_TRADUCIDA",
+  saldo_de_imputacion_solo_por_disparadores: "NO_TRADUCIDA",
+  saldo_de_parte_solo_por_disparadores: "NO_TRADUCIDA",
+  saldo_de_parte_por_centro_de_costo_solo_por_disparadores: "NO_TRADUCIDA",
+};
+
+/** Los nombres con que los disparadores de `0092` lanzan sus errores: no figuran en el catálogo de la base. */
+export const RESTRICCIONES_DE_DISPARADORES_DEL_LIBRO: readonly string[] = [
+  "asiento_de_saldo_parte_anonimizada",
+  "asiento_de_saldo_parte_inactiva",
+  "asiento_de_saldo_signo_de_la_clase",
+  "asiento_de_saldo_detalle_obligatorio",
+  "asiento_de_saldo_detalle_no_admitido",
+  "asiento_de_saldo_vencimiento_no_admitido",
+  "asiento_de_saldo_espejo_invalido",
+  "imputacion_de_saldo_signos_invalidos",
+  "imputacion_de_saldo_asiento_anulado",
+  "distribucion_de_asiento_no_cuadra",
+  "distribucion_de_asiento_espejo_no_cuadra",
+  "saldo_de_asiento_solo_por_disparadores",
+  "saldo_de_imputacion_solo_por_disparadores",
+  "saldo_de_parte_solo_por_disparadores",
+  "saldo_de_parte_por_centro_de_costo_solo_por_disparadores",
+];
