@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0860",
+  "fecha": "2026-11-24",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El libro de saldos (saldos_de_partes) no autoriza, anular un asiento deshace antes sus imputaciones, y el módulo no declara acciones.",
+  "que_cambia": "(1) No autoriza: el módulo que lo llama usa su guard antes. (2) Anular deshace primero las imputaciones y recién ahí inserta el espejo. (3) Sin acciones ni permisos propios y fuera del catálogo de módulos (no hay pantalla ni plan).",
+  "donde": "src/modulos/saldos_de_partes/casos-de-uso/anular-asiento.ts y contrato.ts; sin entrada en src/capacidades/modulos/catalogo.ts; test/arquitectura/cobrar-no-expuesto.test.ts (apps no lo importa)"
+}
