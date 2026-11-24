@@ -1,10 +1,10 @@
 {
   "id": "DEC-0881",
   "fecha": "2026-11-24",
-  "quien": "sesión",
+  "quien": "padre",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Compras PR 4: ficha del proveedor de compras (ver, editar y pedir) con los textos aprobados el 09/11/2026 que ya tienen clave; se llega desde el directorio.",
   "que_cambia": "Quien compra ve la ficha del proveedor; gerente y administrador agregan, dejan de usar y resuelven pedidos; quien opera pide. SUPUESTO: el acceso es un enlace en la ficha del directorio, solo si la parte es proveedor. Revertir: sacar el enlace y las rutas /compras/proveedores.",
-  "donde": "decisiones-del-dueno-2026-11.md, fila del 23/11/2026 «Compras: el dueño aprueba las recomendaciones del plan a las 10 preguntas»; compra.html (textos aprobados 09/11/2026); ficha-de-proveedor-de-compras.ts"
+  "donde": "decisiones-del-dueno-2026-11.md, fila del 23/11/2026 «Compras: el dueño aprueba las recomendaciones del plan a las 10 preguntas»; compra.html (textos aprobados 09/11/2026); ficha-de-proveedor-de-compras.ts; confirmada: DDD fila del 24/11/2026"
 }
