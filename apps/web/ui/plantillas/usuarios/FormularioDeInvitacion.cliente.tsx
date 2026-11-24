@@ -62,6 +62,7 @@ export function FormularioDeInvitacion({
           <Campo
             dato="email-de-invitacion"
             etiqueta={formulario.textos.email}
+            ayuda={formulario.textos.emailDeGoogle}
             nombre="email"
             tipo="email"
             inputMode="email"

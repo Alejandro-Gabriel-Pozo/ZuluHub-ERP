@@ -37,6 +37,8 @@ export type FormularioDeInvitacionArmado = Readonly<{
     cancelar: string;
     /** El aviso informativo: ya había una invitación vigente, quedó la que estaba. */
     yaHabia: string;
+    /** La ayuda bajo el campo Email: tiene que ser de una cuenta de Google (el único ingreso). */
+    emailDeGoogle: string;
   }>;
   roles: readonly Readonly<{ valor: RolInvitable; etiqueta: string }>[];
   sucursales: readonly SucursalParaElegir[];
@@ -54,6 +56,7 @@ export function armarElFormularioDeInvitacion(
       enviar: texto(diccionario, "usuarios.invitar.enviar"),
       cancelar: texto(diccionario, "fiscal.pantalla.config_pv_cancelar"),
       yaHabia: texto(diccionario, "usuarios.invitar.ya_habia"),
+      emailDeGoogle: texto(diccionario, "usuarios.invitar.email_de_google"),
     },
     roles: ROLES_INVITABLES.map((valor) => ({ valor, etiqueta: textoDelRol(valor, diccionario) })),
     sucursales,

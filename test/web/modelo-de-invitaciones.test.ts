@@ -30,6 +30,7 @@ describe("armarElFormularioDeInvitacion", () => {
       enviar: "Enviar invitación",
       cancelar: "Cancelar",
       yaHabia: "Ya había una invitación pendiente para ese email",
+      emailDeGoogle: "El email tiene que ser de una cuenta de Google",
     });
     expect(f.sucursales).toEqual([CENTRO, NORTE]);
   });

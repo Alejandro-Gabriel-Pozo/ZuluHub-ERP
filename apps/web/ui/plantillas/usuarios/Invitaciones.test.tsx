@@ -47,6 +47,9 @@ describe("FormularioDeInvitacion", () => {
     await render(conArmazon(formulario(() => Promise.resolve(INICIAL))));
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
     await expect.element(page.getByLabelText("Email")).toBeVisible();
+    await expect
+      .element(page.getByText("El email tiene que ser de una cuenta de Google"))
+      .toBeVisible();
     await expect.element(page.getByLabelText("Rol")).toHaveValue("OPERADOR");
     const opciones = page.getByLabelText("Rol").element().querySelectorAll("option");
     expect([...opciones].map((o) => o.textContent)).toEqual(["Administrador", "Empleado"]);

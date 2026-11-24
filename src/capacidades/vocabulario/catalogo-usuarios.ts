@@ -11,6 +11,7 @@ import type { FuenteDeTexto } from "./uso-y-fuente-de-texto";
  */
 const FUENTE_DEL_DUENO: FuenteDeTexto = { decision: "DEC-0851" };
 const FUENTE_DE_INVITAR: FuenteDeTexto = { decision: "DEC-0852" };
+const FUENTE_DEL_AVISO_DE_GOOGLE: FuenteDeTexto = { decision: "DEC-0859" };
 
 const MODELO = "apps/web/ui/plantillas/usuarios/modelo-de-usuarios.ts";
 const MODELO_DE_INVITACIONES = "apps/web/ui/plantillas/usuarios/modelo-de-invitaciones.ts";
@@ -134,5 +135,13 @@ export const TEXTOS_DE_USUARIOS = {
       { como: "FUNCION", archivo: MODELO_DE_INVITACIONES, nombre: "armarLaFichaDeInvitacion" },
     ],
     fuente: FUENTE_DE_INVITAR,
+  },
+  // Ayuda bajo el campo Email del formulario de invitar: el único ingreso es con Google, y quien no tiene cuenta de Google en ese email no puede aceptar (pregunta 11 del plan).
+  "usuarios.invitar.email_de_google": {
+    porDefecto: "El email tiene que ser de una cuenta de Google",
+    usos: [
+      { como: "FUNCION", archivo: MODELO_DE_INVITACIONES, nombre: "armarElFormularioDeInvitacion" },
+    ],
+    fuente: FUENTE_DEL_AVISO_DE_GOOGLE,
   },
 } as const;

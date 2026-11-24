@@ -129,6 +129,15 @@ export const FICHA_DE_USUARIOS = {
       usos: [USO_DEL_FORMULARIO, USO_DE_LA_INVITACION],
       fuente: MAQUETA_APROBADA,
     },
+    "usuarios.invitar.email_de_google": {
+      usos: [USO_DEL_FORMULARIO + " (ayuda bajo el campo Email)"],
+      fuente: {
+        decidio:
+          "el dueño, 23/11/2026 (punto 11: se avisa que el email tiene que ser de Google; fila «Usuarios de la empresa…»)",
+        donde:
+          "Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md, fila del 23/11/2026, punto 11; redacción por delegación DDD:173 (orquestador); DEC-0859",
+      },
+    },
     "usuarios.invitar.enviar": { usos: [USO_DEL_FORMULARIO], fuente: MAQUETA_APROBADA },
     "usuarios.invitar.ya_habia": {
       usos: [USO_DEL_FORMULARIO, "respuesta-de-usuarios.ts (código USUARIOS_YA_HABIA_INVITACION)"],
