@@ -153,7 +153,7 @@ describe.skipIf(base === null)(
               versionEsperada: 1,
             }),
           );
-          const deposito = await c.deposito(x);
+          await c.deposito(x);
           const { producto } = await c.articulo(x, { unidadBase: "GRAMO", dimension: "MASA" });
           const proveedor = await c.proveedor(x.operador, {
             condicionIva: "RESPONSABLE_INSCRIPTO",

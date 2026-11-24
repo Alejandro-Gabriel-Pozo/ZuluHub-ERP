@@ -21,7 +21,7 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  *  9. La factura se carga en un BLOQUE de esta misma pantalla, solo si la empresa compra «Con factura» (lo dice `nivelParaComprar`), y no en una pantalla aparte desde una compra ya recibida: ese es el flujo de recepción
  *     separada (N3, fase 5 pausada). Un solo envío idempotente para la compra y la factura; sin factura no se guarda.
  * 10. Cada línea de la factura corresponde a un renglón de la compra y va en la unidad base; cantidad y precio neto se precargan del renglón y se ajustan. El «Precio neto» admite hasta 4 decimales (los de la cantidad;
- *     el dominio acepta 6): SUPUESTO, revertir es una regla de campo.
+ *     el dominio acepta 6): SUPUESTO (DEC-0895), revertir es una regla de campo.
  * 11. Sin «Condición frente al IVA» del proveedor nuevo (la maqueta la pide junto al CUIT): solo el CUIT, que el brief PR-7 declara; sin importes por alícuota («Neto 21 %», «IVA 21 %»: sin texto aprobado) y sin el aviso
  *     de la letra esperada en vivo («Este proveedor emite»): ese aviso lo sabe el servidor al guardar. Interfaz sobria.
  * 12. «Exento» y «No gravado» son dos opciones (textos ya aprobados) y no una sola «Exento o no gravado» de la maqueta: el dominio las distingue (alícuotas EXENTO y NO_GRAVADO) y una sola opción no sabría cuál guardar.

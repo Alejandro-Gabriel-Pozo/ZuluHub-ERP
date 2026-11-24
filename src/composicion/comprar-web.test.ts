@@ -190,6 +190,7 @@ describe("registrarLaCompra", () => {
 
   const montarRegistro = (resultado: () => unknown) => {
     const llamadas: { contexto: unknown; entrada: Record<string, unknown> }[] = [];
+    const llamadasConFactura: { contexto: unknown; entrada: Record<string, unknown> }[] = [];
     const registrados: string[] = [];
     const d = {
       casosDeUso: () => ({
@@ -197,10 +198,14 @@ describe("registrarLaCompra", () => {
           llamadas.push({ contexto: c, entrada });
           return Promise.resolve(resultado());
         },
+        registrarCompraConFactura: (c: unknown, entrada: Record<string, unknown>) => {
+          llamadasConFactura.push({ contexto: c, entrada });
+          return Promise.resolve(resultado());
+        },
       }),
       respuesta: { registrar: (detalle: string) => registrados.push(detalle) },
     } as unknown as DependenciasDeRegistrarCompraWeb;
-    return { d, llamadas, registrados };
+    return { d, llamadas, llamadasConFactura, registrados };
   };
   const hecha = {
     recepcionId: "r1",
@@ -215,7 +220,7 @@ describe("registrarLaCompra", () => {
     const { d, llamadas } = montarRegistro(() => ok(hecha));
     expect(await registrarLaCompra(d, contexto, SUCURSAL_DEL_SERVIDOR, pedido)).toEqual({
       ok: true,
-      dato: { recepcionId: "r1", yaExistia: false },
+      dato: { recepcionId: "r1", yaExistia: false, avisos: [] },
     });
     expect(llamadas).toHaveLength(1);
     expect(llamadas[0]?.contexto).toBe(contexto);
@@ -236,7 +241,6 @@ describe("registrarLaCompra", () => {
       sucursalId: ID,
       empresaId: ID,
       personaId: ID,
-      factura: { total: "1" },
     });
     expect(llamadas[0]?.entrada["sucursalId"]).toBe(SUCURSAL_DEL_SERVIDOR);
     expect(Object.keys(llamadas[0]?.entrada ?? {}).sort()).toEqual([
@@ -253,8 +257,61 @@ describe("registrarLaCompra", () => {
     const { d } = montarRegistro(() => ok({ ...hecha, yaExistia: true }));
     expect(await registrarLaCompra(d, contexto, SUCURSAL_DEL_SERVIDOR, pedido)).toEqual({
       ok: true,
-      dato: { recepcionId: "r1", yaExistia: true },
+      dato: { recepcionId: "r1", yaExistia: true, avisos: [] },
     });
+  });
+
+  const factura = {
+    tipo: "FACTURA_A",
+    puntoDeVenta: "5",
+    numero: "1187",
+    fecha: "2026-10-31",
+    lineas: [{ renglon: 1, cantidadFacturada: "2000", precioNeto: "1.5", alicuota: "21" }],
+    totalSegunFactura: "3630.00",
+  };
+
+  it("con factura llama al caso de uso «Con factura» (y no al de siempre), con la factura armada campo por campo y la sucursal del SERVIDOR", async () => {
+    const { d, llamadas, llamadasConFactura } = montarRegistro(() =>
+      ok({ ...hecha, comprobanteId: "c1", avisos: [{ tipo: "TOTAL_NO_COINCIDE" }] }),
+    );
+    expect(
+      await registrarLaCompra(d, contexto, SUCURSAL_DEL_SERVIDOR, {
+        ...pedido,
+        sucursalId: ID,
+        factura,
+      }),
+    ).toEqual({
+      ok: true,
+      dato: { recepcionId: "r1", yaExistia: false, avisos: [{ tipo: "TOTAL_NO_COINCIDE" }] },
+    });
+    expect(llamadas).toHaveLength(0);
+    expect(llamadasConFactura).toHaveLength(1);
+    expect(llamadasConFactura[0]?.entrada["sucursalId"]).toBe(SUCURSAL_DEL_SERVIDOR);
+    expect(llamadasConFactura[0]?.entrada["factura"]).toMatchObject({
+      tipo: "FACTURA_A",
+      puntoDeVenta: 5,
+      numero: 1187,
+      percepciones: null,
+      cuitDelProveedor: null,
+    });
+    expect(Object.keys(llamadasConFactura[0]?.entrada ?? {})).not.toContain("pago");
+  });
+
+  it("una factura con la forma mal (campo de más, tipo fuera de la lista) es el genérico y no llama a ningún caso de uso", async () => {
+    const { d, llamadas, llamadasConFactura } = montarRegistro(() => ok(hecha));
+    for (const mala of [
+      { ...factura, pago: { medio: "QR" } },
+      { ...factura, tipo: "OTRA" },
+      { total: "1" },
+    ]) {
+      const r = await registrarLaCompra(d, contexto, SUCURSAL_DEL_SERVIDOR, {
+        ...pedido,
+        factura: mala,
+      });
+      expect(r).toMatchObject({ ok: false, error: { codigo: "COMPRAS_ACCION_NO_PERMITIDA" } });
+    }
+    expect(llamadas).toHaveLength(0);
+    expect(llamadasConFactura).toHaveLength(0);
   });
 
   it("un pedido sin la forma pedida es el genérico y no llama al caso de uso", async () => {

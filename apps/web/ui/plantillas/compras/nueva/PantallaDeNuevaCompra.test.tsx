@@ -502,7 +502,7 @@ describe("Nueva compra «Con factura» (Compras PR 7)", () => {
     expect(
       (servidor.pedidos[0] as { factura: { cuitDelProveedor: string } }).factura.cuitDelProveedor,
     ).toBe("20123456786");
-    unmount();
+    await unmount();
     const conCuit = servidorFalso();
     await render(conFactura(conCuit, true).pantalla);
     await cargarLaCompra("2", "11000");
