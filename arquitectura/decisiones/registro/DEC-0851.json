@@ -3,8 +3,8 @@
   "fecha": "2026-11-23",
   "quien": "padre",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Se agrega la lista de Usuarios en Cuenta, de solo lectura, con su ficha, y el rol «Operador» se muestra como «Empleado» (aprobado el 16/11/2026).",
   "que_cambia": "Quien administra ve a su gente y las invitaciones desde Cuenta; todas las pantallas dicen «Empleado» donde decían «Operador». No cambia permisos ni datos. SUPUESTO: la ficha queda local, sin alta en FICHAS. Revertir: quitar la fila del menú y el texto.",
-  "donde": "decisiones-del-dueno-2026-11.md, fila del 23/11/2026 (Usuarios de la empresa; DDD:82, 83, 205 y 206); catalogo-usuarios.ts, catalogo-nucleo.ts, menu.ts, ficha-de-usuarios.ts"
+  "donde": "decisiones-del-dueno-2026-11.md, fila del 23/11/2026 (Usuarios de la empresa; DDD:82, 83, 205 y 206); catalogo-usuarios.ts, catalogo-nucleo.ts, menu.ts, ficha-de-usuarios.ts; confirmada: DDD fila del 23/11/2026"
 }
