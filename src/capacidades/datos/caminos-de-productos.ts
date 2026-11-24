@@ -264,6 +264,41 @@ export const CAMINOS_DE_PRODUCTOS = {
     },
     camposDeError: ["nombre", "recargo"],
   },
+  // Productos, precios por medida (A13): un precio por medida (campos `precio_<i>`, acá `precio`); el producto, la clave del cambio y por medida su id y la fila vista los fija la página.
+  "cambiar-precios-por-medida": {
+    funcion: "Cambiar el precio de la empresa de cada medida de un producto",
+    pantallas: ["apps/web/ui/plantillas/catalogo/FormularioDePreciosPorMedida.cliente.tsx"],
+    pasos: [{ id: "precios-por-medida", campos: { precio: "precio-de-medida-de-producto" } }],
+    deriva: [],
+    accion: {
+      clave: "productos.cambiar_precio",
+      requiere: ["precio-de-medida-de-producto"],
+      admite: [],
+    },
+    camposDeError: ["precio"],
+  },
+  // Productos, variante (A13, tramo Medidas): la variante del producto (la medida) con sus opciones, sin recargos. Mismo formulario que el grupo; el servidor pide además `variantes.editar`.
+  "guardar-variante-de-producto": {
+    funcion: "Guardar la variante (la medida) de un producto, con sus opciones",
+    pantallas: [FORMULARIO_DE_GRUPO_DE_OPCIONES],
+    pasos: [
+      {
+        id: "datos-de-la-variante",
+        campos: {
+          nombre: "nombre-de-grupo-de-opciones",
+          esTamano: "medida-de-variante-de-producto",
+          opcion: "nombre-de-opcion-de-producto",
+        },
+      },
+    ],
+    deriva: [],
+    accion: {
+      clave: "variantes.editar",
+      requiere: ["nombre-de-grupo-de-opciones", "nombre-de-opcion-de-producto"],
+      admite: ["medida-de-variante-de-producto"],
+    },
+    camposDeError: ["nombre"],
+  },
   // Productos, opciones: copiar los grupos de otro producto («Copiar de otro producto»). El único dato es el producto de origen; el destino, la versión y la clave de la copia los fija la página.
   "copiar-opciones-de-otro-producto": {
     funcion: "Copiar las opciones de otro producto al producto de la pantalla",

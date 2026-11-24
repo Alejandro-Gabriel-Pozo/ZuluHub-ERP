@@ -23,6 +23,23 @@ export async function guardarGrupoAccion(
   );
 }
 
+/** Igual que `guardarGrupoAccion`, pero lo que se guarda es la variante (la medida) del producto. */
+export async function guardarVarianteAccion(
+  productoId: string,
+  versionDeOpciones: number,
+  grupoId: string | null,
+  claveDelCambio: string,
+  idsDeOpciones: readonly string[],
+  previo: ResultadoDeAccion,
+  datos: FormData,
+): Promise<ResultadoDeAccion> {
+  void previo;
+  return guardarElGrupo(
+    { productoId, versionDeOpciones, grupoId, esVariante: true, claveDelCambio, idsDeOpciones },
+    datos,
+  );
+}
+
 export async function copiarOpcionesAccion(
   productoId: string,
   versionDeOpciones: number,

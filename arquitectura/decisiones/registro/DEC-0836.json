@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0836",
+  "fecha": "2026-11-23",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: briefs y maquetas (repo de docs) entran al grafo, etapa 0, como foto versionada en arquitectura/grafo/indice-de-docs.json; el vínculo brief-código se infiere por los nombres entre comillas.",
+  "que_cambia": "El informe mide briefs sin código y código sin brief sin depender de docs. Brief sin nombres entre comillas: «sin enlace». Revertir: borrar el índice, scripts/indice-de-docs.ts y su lector; esas categorías quedan en cero.",
+  "donde": "orden del dueño del 23/11/2026 (construir solo la etapa 0 del grafo); diseno-del-grafo-del-sistema-2026-11-21.md §3, §6 y §7; scripts/indice-de-docs.ts; test/arquitectura/grafo.test.ts"
+}

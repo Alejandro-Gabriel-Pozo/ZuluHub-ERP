@@ -1,0 +1,13 @@
+[
+  "fiscal.pantalla.imprimir_a_transportar",
+  "fiscal.pantalla.imprimir_boton",
+  "fiscal.pantalla.imprimir_codigo",
+  "fiscal.pantalla.imprimir_descargar_pdf",
+  "fiscal.pantalla.imprimir_formato_a4",
+  "fiscal.pantalla.imprimir_formato_ticket",
+  "fiscal.pantalla.imprimir_hoja",
+  "fiscal.pantalla.imprimir_ingresos_brutos",
+  "fiscal.pantalla.imprimir_neto_gravado",
+  "fiscal.pantalla.imprimir_rotulo_importe",
+  "fiscal.pantalla.imprimir_transporte"
+]

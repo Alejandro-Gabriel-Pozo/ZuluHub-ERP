@@ -117,6 +117,8 @@ describe.skipIf(base === null)("opciones de un producto de la web", () => {
     claveDelCambio: vista.claveDelCambio,
     grupoId: null,
     nombre: "Agregados",
+    esVariante: false,
+    esTamano: false,
     clase: "ADICIONAL",
     esObligatorio: false,
     admiteVarias: true,
@@ -170,6 +172,7 @@ describe.skipIf(base === null)("opciones de un producto de la web", () => {
         id: incluida,
         nombre: "Guarnición",
         clase: "INCLUIDA",
+        esTamano: false,
         esObligatorio: true,
         admiteVarias: false,
         seMuestraEnCarta: false,
@@ -179,6 +182,7 @@ describe.skipIf(base === null)("opciones de un producto de la web", () => {
         id: adicional,
         nombre: "Extras",
         clase: "ADICIONAL",
+        esTamano: false,
         esObligatorio: false,
         admiteVarias: false,
         seMuestraEnCarta: false,
@@ -622,6 +626,99 @@ describe.skipIf(base === null)("opciones de un producto de la web", () => {
         e.empresa,
       ]),
     ).toBe(antes);
+  });
+
+  describe("la variante (la medida)", () => {
+    const filasDeMedida = (...nombres: string[]) =>
+      nombres.map((nombre, i) => ({ clave: `n${String(i)}`, id: null, nombre, recargo: "" }));
+    const variante = (
+      id: string,
+      vista: Pick<Vista, "versionDeOpciones" | "claveDelCambio">,
+      resto = {},
+    ) =>
+      guardar(id, vista, {
+        nombre: "Tamaño",
+        esVariante: true,
+        esTamano: true,
+        opciones: filasDeMedida("Chico", "Grande"),
+        ...resto,
+      });
+
+    it("se ofrece sin variante y, al crearla, sale como la medida con sus opciones sin recargo; el producto pasa a «según medida»", async () => {
+      const id = await nuevoProducto();
+      const v0 = await opciones(id);
+      expect(v0.variante).toBeNull();
+      expect(await variante(id, v0)).toEqual({ ok: true, dato: { productoId: id } });
+      const v1 = await opciones(id);
+      expect(v1.variante).toMatchObject({
+        id: v0.claveDelCambio,
+        nombre: "Tamaño",
+        clase: "VARIANTE",
+        esTamano: true,
+        opciones: [
+          { nombre: "Chico", recargo: "0.000000" },
+          { nombre: "Grande", recargo: "0.000000" },
+        ],
+      });
+      expect(v1.grupos).toEqual([]);
+      expect(await auditorias(id)).toBe(1);
+    });
+
+    it("repetirla (doble toque) escribe una sola vez; con otra clave una segunda variante sale como «Un producto admite una sola variante»", async () => {
+      const id = await nuevoProducto();
+      const v0 = await opciones(id);
+      expect(await variante(id, v0)).toMatchObject({ ok: true });
+      expect(await variante(id, v0)).toMatchObject({ ok: true });
+      expect(await auditorias(id)).toBe(1);
+      const v1 = await opciones(id);
+      expect(await variante(id, v1, { nombre: "Otra" })).toMatchObject({
+        ok: false,
+        error: { codigo: "CATALOGO_SEGUNDA_VARIANTE", campo: "nombre" },
+      });
+      expect(await gruposDe(id)).toHaveLength(1);
+    });
+
+    it("editar la variante: cambia el nombre, deja de ser la medida y quita una opción; el grupo común no se toca y la variante no se edita como grupo", async () => {
+      const id = await nuevoProducto();
+      expect(await guardar(id, await opciones(id))).toMatchObject({ ok: true });
+      expect(await variante(id, await opciones(id), { grupoId: null })).toMatchObject({ ok: true });
+      const v = await opciones(id);
+      const m = v.variante;
+      expect(m).not.toBeNull();
+      expect(await guardar(id, v, { grupoId: m?.id ?? "" })).toMatchObject({
+        ok: false,
+        error: { codigo: GENERICO },
+      });
+      expect(
+        await variante(id, v, {
+          grupoId: m?.id ?? "",
+          nombre: "Porción",
+          esTamano: false,
+          opciones: [{ clave: "e0", id: m?.opciones[0]?.id ?? "", nombre: "Chico", recargo: "" }],
+        }),
+      ).toMatchObject({ ok: true });
+      const v2 = await opciones(id);
+      expect(v2.variante).toMatchObject({
+        nombre: "Porción",
+        esTamano: false,
+        opciones: [{ nombre: "Chico" }],
+      });
+      expect(v2.grupos.map((g) => g.nombre)).toEqual(["Agregados"]);
+    });
+
+    it("pide también `variantes.editar` (gerente y administrador): el operador no la crea", async () => {
+      const id = await nuevoProducto();
+      expect(await variante(id, await opciones(id)).then(() => true)).toBe(true);
+      const otro = await nuevoProducto();
+      const vo = await opciones(otro);
+      const r = await guardarUnGrupoDeOpciones(
+        d,
+        e.operador,
+        pedido(otro, vo, { nombre: "T", esVariante: true, opciones: filasDeMedida("Chico") }),
+      );
+      expect(r).toMatchObject({ ok: false, error: { codigo: "SIN_PERMISO" } });
+      expect(await gruposDe(otro)).toEqual([]);
+    });
   });
 
   describe("copiar de otro producto", () => {
