@@ -10,6 +10,7 @@ import {
   REMITO_VACIO,
   resumenDeRenglon,
   sinLosYaAgregados,
+  totalDelPie,
 } from "../../apps/web/ui/plantillas/compras/nueva/modelo-de-nueva-compra";
 
 const TEXTOS = {
@@ -116,5 +117,16 @@ describe("modelo de «Nueva compra»", () => {
     expect(idSiguiente([a, renglonNuevo(7, bife)])).toBe(8);
     expect(conRenglon([a], 1, { cantidad: "3" })[0]?.cantidad).toBe("3");
     expect(conRenglon([a], 99, { cantidad: "3" })[0]?.cantidad).toBe("");
+  });
+
+  it("el total del pie es el del servidor: «Sin precio» si falta algún precio, y nada hasta que todos los renglones tengan cantidad", () => {
+    const con = { ...renglonNuevo(1, bife), cantidad: "2" };
+    const sin = renglonNuevo(2, { ...bife, productoId: "p2" });
+    const cotizada = (total: string | null) => ({ renglones: [], total });
+    expect(totalDelPie([con], cotizada("22000.00"), "Sin precio")).toBe("$ 22.000,00");
+    expect(totalDelPie([con], cotizada(null), "Sin precio")).toBe("Sin precio");
+    expect(totalDelPie([con, sin], cotizada("22000.00"), "Sin precio")).toBeNull();
+    expect(totalDelPie([], cotizada("1.00"), "Sin precio")).toBeNull();
+    expect(totalDelPie([con], null, "Sin precio")).toBeNull();
   });
 });

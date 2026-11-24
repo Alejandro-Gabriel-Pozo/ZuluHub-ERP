@@ -26,6 +26,13 @@
 }
 
 .resumen p,
+.total {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  font-weight: var(--tipo-peso-fuerte);
+}
+
 .remito {
   margin: 0;
 }

@@ -94,6 +94,7 @@ describe("cotizarLaCompra", () => {
     precio: "1000",
   };
   const COTIZADA = {
+    total: "2000.00",
     renglones: [
       {
         productoId: ID,
@@ -128,6 +129,19 @@ describe("cotizarLaCompra", () => {
         renglones: [{ ...renglon, presentacionId: null, pesoReal: null }],
       },
     ]);
+  });
+
+  it("el total sale tal cual lo calculó el servidor, como texto; sin precio en algún renglón es null (nunca un parcial ni cero)", async () => {
+    const { d } = montarCotizar(() => ok(COTIZADA));
+    expect(await cotizarLaCompra(d, contexto, { renglones: [renglon] })).toMatchObject({
+      ok: true,
+      dato: { total: "2000.00" },
+    });
+    const sin = montarCotizar(() => ok({ ...COTIZADA, total: null }));
+    expect(await cotizarLaCompra(sin.d, contexto, { renglones: [renglon] })).toMatchObject({
+      ok: true,
+      dato: { total: null },
+    });
   });
 
   it("un pedido sin la forma pedida es el genérico y no consulta", async () => {

@@ -130,6 +130,7 @@ describe.skipIf(base === null)("recorrido de «Nueva compra»: de la lista a la 
     await cargar(pagina, "2", "11000");
     await pagina.getByText("Entra a tu stock: 2 Kilogramo").waitFor();
     await pagina.getByText("Costo por unidad de stock: $ 11.000,00").waitFor();
+    await pagina.getByText("Total", { exact: true }).waitFor();
     await sinViolacionesDeAxe();
     expect(await recepciones()).toBe(0);
     await pagina.getByRole("button", { name: "Comprar y recibir" }).dblclick();

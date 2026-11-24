@@ -94,6 +94,8 @@ export type RenglonCotizadoParaLaPantalla = Readonly<{
 
 export type CompraCotizadaParaLaPantalla = Readonly<{
   renglones: readonly RenglonCotizadoParaLaPantalla[];
+  /** Texto decimal de 2 decimales, la suma que calcula el servidor; `null` si algún renglón no tiene precio (nunca un total parcial ni cero). */
+  total: string | null;
 }>;
 
 /**
@@ -111,6 +113,7 @@ export function cotizarLaCompra(
     entradaDeCotizarCompra,
     (entrada) => d.consultas().cotizarCompra(contexto, entrada),
     (cotizada) => ({
+      total: cotizada.total,
       renglones: cotizada.renglones.map((r) => ({
         productoId: r.productoId,
         cantidadEnStock: r.cantidadEnStock,

@@ -129,7 +129,11 @@ export type RenglonCotizado = Readonly<{
 }>;
 
 /** Lo que devuelve `cotizarCompra` (la misma forma que `CompraCotizadaParaLaPantalla` de la composición: la UI no importa la composición). */
-export type CompraCotizada = Readonly<{ renglones: readonly RenglonCotizado[] }>;
+export type CompraCotizada = Readonly<{
+  renglones: readonly RenglonCotizado[];
+  /** La suma que calcula el servidor (la pantalla no suma dinero); `null` si algún renglón no tiene precio. */
+  total: string | null;
+}>;
 
 /** Un producto que se puede comprar, tal como lo entrega `productosParaComprar` (la misma forma que `ProductosParaComprarEnLaPantalla`). */
 type ProductoParaElegir = Readonly<{
@@ -176,6 +180,21 @@ export function resumenDeRenglon(
     }`,
     importe: cotizado.importe === null ? textos.sinPrecio : formatearImporte(cotizado.importe),
   };
+}
+
+/**
+ * El total del pie: el que calculó el servidor, o «Sin precio» si algún renglón no tiene precio (la misma regla y el mismo texto que la lista y la ficha: nunca un total parcial ni cero). Solo se
+ * muestra cuando TODOS los renglones tienen cantidad (con uno sin cantidad la cotización no los trae a todos y el total estaría incompleto) y ya hay cotización de lo que se ve.
+ */
+export function totalDelPie(
+  renglones: readonly RenglonEscrito[],
+  cotizada: CompraCotizada | null,
+  sinPrecio: string,
+): string | null {
+  if (cotizada === null || renglones.length === 0 || renglones.some((r) => r.cantidad === "")) {
+    return null;
+  }
+  return cotizada.total === null ? sinPrecio : formatearImporte(cotizada.total);
 }
 
 /** Los productos que quedan para elegir: los que ya están en la compra no se ofrecen otra vez (una línea por producto). */

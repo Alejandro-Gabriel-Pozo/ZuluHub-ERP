@@ -22,6 +22,7 @@ import {
   resumenDeRenglon,
   REMITO_VACIO,
   sinLosYaAgregados,
+  totalDelPie,
   type ProductosParaElegir,
   type ProveedorParaElegir,
   type RemitoEscrito,
@@ -135,6 +136,7 @@ export function PantallaDeNuevaCompra({
   );
 
   const cotizados = new Map((cotizacion.dato?.renglones ?? []).map((r) => [r.productoId, r]));
+  const total = totalDelPie(renglones, cotizacion.dato, textos.sinPrecio);
   const hayDepositoAElegir = depositos.length > 1;
   const listo =
     proveedor !== null &&
@@ -273,6 +275,12 @@ export function PantallaDeNuevaCompra({
           deshabilitado={!editable}
         />
       ) : null}
+
+      {total === null ? null : (
+        <p className={estilos["total"]}>
+          <span>{textos.total}</span> <span className={estilos["importe"]}>{total}</span>
+        </p>
+      )}
 
       {estado.tipo === "rechazado" ? <ErrorDelDetalle error={estado.rechazo} /> : null}
       {estado.tipo !== "rechazado" && cotizacion.error !== null ? (

@@ -13,11 +13,10 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  *  3. «Entra a tu stock» y «Costo por unidad de stock» se muestran ANTES de guardar, con la cuenta del servidor (`cotizarCompra`), no con una cuenta de la pantalla (dueño, 23/11/2026, pregunta 7).
  *  4. El remito se carga en esta misma pantalla, antes de «Comprar y recibir» (la maqueta lo pide en una segunda pantalla, «Recibir»): el brief PR-6 lo pone como un paso de la misma pantalla y evita
  *     una pantalla intermedia sin función propia en la primera versión.
- *  5. Sin «Total» al pie: el servidor devuelve el importe de cada línea y no la suma de la compra; la pantalla no suma dinero (la suma está en la ficha de la compra al guardar).
- *  6. «Agregar proveedor» es un botón debajo del buscador y no la última opción del desplegable (el proveedor se elige buscando, no con un desplegable: la lista del directorio no cabe en uno).
- *  7. «Agregar producto» es un buscador (la maqueta lo dibuja como un desplegable con todos los productos); mismo texto aprobado. Sin «Agregar producto nuevo»: para un producto nuevo se usa el alta de Catálogo.
- *  8. Cada renglón lleva «Quitar» (la maqueta no lo dibuja): reusa el texto ya aprobado de ventas y catálogo; respuesta del orquestador por delegación de textos (DDD:173), 24/11/2026.
- *  9. Con más de un depósito de uso normal en la sucursal aparece un selector rotulado «Depósito» (singular de «Depósitos», aceptado por delegación el 24/11/2026; DEC-0864).
+ *  5. «Agregar proveedor» es un botón debajo del buscador y no la última opción del desplegable (el proveedor se elige buscando, no con un desplegable: la lista del directorio no cabe en uno).
+ *  6. «Agregar producto» es un buscador (la maqueta lo dibuja como un desplegable con todos los productos); mismo texto aprobado. Sin «Agregar producto nuevo»: para un producto nuevo se usa el alta de Catálogo.
+ *  7. Cada renglón lleva «Quitar» (la maqueta no lo dibuja): reusa el texto ya aprobado de ventas y catálogo; respuesta del orquestador por delegación de textos (DDD:173), 24/11/2026.
+ *  8. Con más de un depósito de uso normal en la sucursal aparece un selector rotulado «Depósito» (singular de «Depósitos», aceptado por delegación el 24/11/2026; DEC-0864).
  */
 
 type FuenteDeTexto = Readonly<{ decidio: string; donde: string }>;

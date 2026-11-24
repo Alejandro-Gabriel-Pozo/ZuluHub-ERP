@@ -69,6 +69,7 @@ function servidorFalso(
       return Promise.resolve({
         ok: true,
         dato: {
+          total: lista.some((r) => r.precio === null) ? null : "22000.00",
           renglones: lista.map((r) => ({
             productoId: r.productoId,
             cantidadEnStock: "2.0000",
@@ -135,7 +136,9 @@ describe("Nueva compra: lo que se ve y lo que calcula el servidor", () => {
     await cargarLaCompra();
     await expect.element(page.getByText("Entra a tu stock: 2 Kilogramo")).toBeVisible();
     await expect.element(page.getByText("Costo por unidad de stock: $ 11.000,00")).toBeVisible();
-    await expect.element(page.getByText("$ 22.000,00", { exact: true })).toBeVisible();
+    await expect.element(page.getByText("$ 22.000,00", { exact: true }).first()).toBeVisible();
+    // «Total» al pie: lo calcula el servidor (la pantalla no suma dinero).
+    await expect.element(page.getByText("Total", { exact: true })).toBeVisible();
     // La cuenta es del servidor: lo que la pantalla le manda es texto, nunca `number`.
     expect(servidor.cotizaciones.at(-1)).toEqual([
       {
@@ -156,6 +159,11 @@ describe("Nueva compra: lo que se ve y lo que calcula el servidor", () => {
     await agregarElBife();
     await userEvent.type(page.getByLabelText("Cantidad"), "2");
     await expect.element(page.getByText("Costo por unidad de stock: Sin precio")).toBeVisible();
+    // Con una línea sin precio el total no aparenta estar completo: dice «Sin precio», nunca cero.
+    await expect.element(page.getByText("Total", { exact: true })).toBeVisible();
+    expect(page.getByText("Sin precio", { exact: true }).elements().length).toBeGreaterThanOrEqual(
+      2,
+    );
     expect(document.body.textContent).not.toContain("$ 0,00");
   });
 

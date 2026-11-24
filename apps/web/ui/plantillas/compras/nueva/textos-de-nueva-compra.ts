@@ -23,6 +23,7 @@ export type TextosDeNuevaCompra = Readonly<{
   entraATuStock: string;
   costoPorUnidadDeStock: string;
   sinPrecio: string;
+  total: string;
   remitoDelProveedor: string;
   puntoDeVenta: string;
   numero: string;
@@ -56,6 +57,7 @@ export function textosDeNuevaCompra(): TextosDeNuevaCompra {
     entraATuStock: texto({}, "compras.compra.entra_a_tu_stock"),
     costoPorUnidadDeStock: texto({}, "compras.compra.costo_por_unidad_de_stock"),
     sinPrecio: texto({}, "catalogo.precio.sin_precio"),
+    total: texto({}, "fiscal.pantalla.rotulo_total"),
     remitoDelProveedor: texto({}, "compras.recepcion.remito_del_proveedor"),
     puntoDeVenta: texto({}, "fiscal.pantalla.rotulo_punto_de_venta"),
     numero: texto({}, "compras.recepcion.numero"),
