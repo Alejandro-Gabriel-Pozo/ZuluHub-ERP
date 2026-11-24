@@ -17,6 +17,7 @@ import type {
   ErrorDeReenvioDeAlta,
   ErrorDeRevocacion,
   ErrorDeSucursalesDeInvitacion,
+  RolDistintoAlAnterior,
 } from "./errores";
 import type { Persona, RolDeEmpresa } from "./membresia";
 import {
@@ -148,8 +149,13 @@ export function decidirAceptacion(
 
 export type DatosDeInvitacionDeUsuario = Readonly<{
   ahora: Date;
+  empresaId: EmpresaId;
+  /** El rol con el que se pide invitar. */
+  rolPedido: RolDeEmpresa;
   /** El email ya pertenece a un miembro ACTIVO de la empresa. */
   esMiembroActivo: boolean;
+  /** El rol de la membresía APAGADA que esa persona tuvo en la empresa; `null` si nunca la tuvo (o está activa). */
+  rolAnterior: RolDeEmpresa | null;
   /**
    * La invitación guardada como `PENDIENTE` que ya incluye a esa empresa para ese email. La base
    * admite a lo sumo una (índice único parcial); puede estar vencida (el vencimiento no se guarda).
@@ -166,20 +172,34 @@ export type DecisionDeInvitacionDeUsuario =
 
 /**
  * Decide si se emite una invitación de usuario a una empresa. Orden: quien ya es miembro activo
- * (`YA_ES_MIEMBRO`); sin pendiente se crea; con una vigente se devuelve esa; con una vencida se
- * reemplaza. Una invitación que no está guardada como `PENDIENTE` es un error del llamador y lanza.
+ * (`YA_ES_MIEMBRO`); quien tuvo una membresía apagada con otro rol (`ROL_DISTINTO_AL_ANTERIOR`: el
+ * rol de una membresía no se cambia, así que se rechaza al invitar y no recién al aceptar, hasta 7
+ * días después); sin pendiente se crea; con una vigente del MISMO rol se devuelve esa y con una
+ * vigente de OTRO rol se rechaza (`INVITACION_VIGENTE_CON_OTRO_ROL`: no se hace pasar por hecho lo
+ * que no se hizo); con una vencida se reemplaza. Una invitación que no está guardada como
+ * `PENDIENTE` es un error del llamador y lanza.
  */
 export function decidirInvitacionDeUsuario(
   datos: DatosDeInvitacionDeUsuario,
-): Resultado<DecisionDeInvitacionDeUsuario, "YA_ES_MIEMBRO"> {
-  const { ahora, esMiembroActivo, pendiente } = datos;
+): Resultado<
+  DecisionDeInvitacionDeUsuario,
+  "YA_ES_MIEMBRO" | "INVITACION_VIGENTE_CON_OTRO_ROL" | RolDistintoAlAnterior
+> {
+  const { ahora, empresaId, rolPedido, esMiembroActivo, rolAnterior, pendiente } = datos;
   if (esMiembroActivo) return err("YA_ES_MIEMBRO");
+  if (rolAnterior !== null && rolAnterior !== rolPedido) {
+    return err({ codigo: "ROL_DISTINTO_AL_ANTERIOR", empresaId });
+  }
   if (pendiente === null) return ok({ tipo: "CREAR" });
   if (pendiente.estado !== "PENDIENTE") {
     throw new RangeError(`la invitación ${pendiente.id} no está pendiente`);
   }
-  return estadoDeInvitacion(pendiente, ahora) === "VENCIDA"
-    ? ok({ tipo: "REEMPLAZAR_VENCIDA", vencida: pendiente.id })
+  if (estadoDeInvitacion(pendiente, ahora) === "VENCIDA") {
+    return ok({ tipo: "REEMPLAZAR_VENCIDA", vencida: pendiente.id });
+  }
+  const rolDeLaPendiente = pendiente.empresas.find((e) => e.empresaId === empresaId)?.rol;
+  return rolDeLaPendiente !== rolPedido
+    ? err("INVITACION_VIGENTE_CON_OTRO_ROL")
     : ok({ tipo: "YA_EXISTE", invitacion: pendiente.id });
 }
 

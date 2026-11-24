@@ -689,7 +689,11 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
     it("reactivar con OTRO rol no se soporta: ROL_DISTINTO_AL_ANTERIOR y no se escribe nada", async () => {
       const e = await escenario();
       const p = await miembro(e, "OPERADOR", false);
-      const { id, token } = await invitar(e, { email: p.email, rol: "ADMINISTRADOR" });
+      // Por `invitarUsuario` ya no nace (H1: se rechaza al invitar); la aceptación sigue defendiéndose de una invitación que existía antes de que la membresía se apagara.
+      const {
+        inv: { id },
+        token,
+      } = await invitacionMultiempresa([{ e, rol: "ADMINISTRADOR" }], p.email);
       const antes = await foto([e.empresa], [p.email]);
       expect(await aceptar(token, p.email)).toEqual({
         ok: false,
@@ -779,19 +783,64 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
       ).toBe(1);
     });
 
-    it("con una pendiente vigente devuelve esa, sea cual sea el rol pedido, y no escribe (D2)", async () => {
+    it("con una pendiente vigente del mismo rol devuelve esa y no escribe (D2)", async () => {
       const e = await escenario();
       const primera = await invitar(e, { rol: "OPERADOR" });
       const despues = await foto([e.empresa]);
       const repetida = await casos.invitarUsuario(e.ctx, {
         email: primera.email.toUpperCase(),
-        rol: "ADMINISTRADOR",
+        rol: "OPERADOR",
         sucursales: [],
       });
       expect(repetida).toEqual({ ok: true, valor: { invitacionId: primera.id, yaExistia: true } });
       expect(await foto([e.empresa])).toBe(despues);
       expect(await trabajos(e.empresa)).toHaveLength(1);
       expect(await auditoria(e.empresa)).toHaveLength(1);
+    });
+
+    it("con una pendiente vigente de OTRO rol se rechaza (H2) y no escribe: no se hace pasar por hecho lo que no se hizo", async () => {
+      const e = await escenario();
+      const primera = await invitar(e, { rol: "OPERADOR" });
+      const despues = await foto([e.empresa]);
+      const repetida = await casos.invitarUsuario(e.ctx, {
+        email: primera.email,
+        rol: "ADMINISTRADOR",
+        sucursales: [],
+      });
+      expect(repetida).toEqual({ ok: false, error: "INVITACION_VIGENTE_CON_OTRO_ROL" });
+      expect(await foto([e.empresa])).toBe(despues);
+      expect(await invitacion(primera.id)).toMatchObject({ estado: "PENDIENTE" });
+    });
+
+    it("invitar a quien tiene la membresía apagada con OTRO rol se rechaza al invitar (H1) y no deja invitación ni mail", async () => {
+      const e = await escenario();
+      const p = await miembro(e, "OPERADOR", false);
+      const antes = await foto([e.empresa], [p.email]);
+      const r = await casos.invitarUsuario(e.ctx, {
+        email: p.email,
+        rol: "ADMINISTRADOR",
+        sucursales: [],
+      });
+      expect(r).toEqual({
+        ok: false,
+        error: { codigo: "ROL_DISTINTO_AL_ANTERIOR", empresaId: e.empresa },
+      });
+      expect(await foto([e.empresa], [p.email])).toBe(antes);
+      expect(await trabajos(e.empresa)).toHaveLength(0);
+    });
+
+    it("invitar a quien tiene la membresía apagada con el MISMO rol funciona (es la forma de reactivar)", async () => {
+      const e = await escenario();
+      const p = await miembro(e, "OPERADOR", false);
+      const r = await casos.invitarUsuario(e.ctx, {
+        email: p.email,
+        rol: "OPERADOR",
+        sucursales: [],
+      });
+      expect(r).toEqual({
+        ok: true,
+        valor: { invitacionId: cualquierTexto, yaExistia: false },
+      });
     });
 
     it("una pendiente vencida se revoca y se reemplaza por una nueva", async () => {

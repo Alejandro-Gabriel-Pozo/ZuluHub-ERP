@@ -1096,53 +1096,101 @@ describe("decidirInvitacionDeUsuario", () => {
   const ahora = mas(T0, DIA);
   const vigente = invitacion({ venceEn: mas(T0, 7 * DIA) });
   const vencida = invitacion({ venceEn: ahora });
+  const decidir = (
+    resto: Partial<Parameters<typeof decidirInvitacionDeUsuario>[0]> & {
+      pendiente: Invitacion | null;
+    },
+  ) =>
+    decidirInvitacionDeUsuario({
+      ahora,
+      empresaId: E1,
+      rolPedido: "OPERADOR",
+      esMiembroActivo: false,
+      rolAnterior: null,
+      ...resto,
+    });
 
   it("sin pendiente se crea", () => {
-    expect(decidirInvitacionDeUsuario({ ahora, esMiembroActivo: false, pendiente: null })).toEqual({
+    expect(decidir({ pendiente: null })).toEqual({ ok: true, valor: { tipo: "CREAR" } });
+  });
+
+  it("con una pendiente vigente del mismo rol devuelve esa, sin crear otra", () => {
+    expect(decidir({ pendiente: vigente })).toEqual({
+      ok: true,
+      valor: { tipo: "YA_EXISTE", invitacion: vigente.id },
+    });
+  });
+
+  it("con una pendiente vigente de OTRO rol se rechaza: no se hace pasar por hecho lo que no se hizo (H2)", () => {
+    expect(decidir({ pendiente: vigente, rolPedido: "ADMINISTRADOR" })).toEqual(
+      error("INVITACION_VIGENTE_CON_OTRO_ROL"),
+    );
+  });
+
+  it("el rol de la pendiente que se compara es el de ESTA empresa", () => {
+    const deOtraEmpresa = invitacion({
+      venceEn: mas(T0, 7 * DIA),
+      empresas: [asignacion(E2, "ADMINISTRADOR"), asignacion(E1, "OPERADOR")],
+    });
+    expect(decidir({ pendiente: deOtraEmpresa })).toEqual({
+      ok: true,
+      valor: { tipo: "YA_EXISTE", invitacion: deOtraEmpresa.id },
+    });
+    expect(decidir({ pendiente: deOtraEmpresa, rolPedido: "ADMINISTRADOR" })).toEqual(
+      error("INVITACION_VIGENTE_CON_OTRO_ROL"),
+    );
+  });
+
+  it("el último milisegundo de vigencia todavía es vigente; el vencimiento exacto ya no", () => {
+    const hasta = (ms: number) => invitacion({ venceEn: new Date(ahora.getTime() + ms) });
+    expect(decidir({ pendiente: hasta(1) })).toEqual({
+      ok: true,
+      valor: { tipo: "YA_EXISTE", invitacion: vigente.id },
+    });
+    expect(decidir({ pendiente: hasta(0) })).toEqual({
+      ok: true,
+      valor: { tipo: "REEMPLAZAR_VENCIDA", vencida: vencida.id },
+    });
+  });
+
+  it("con una pendiente vencida la reemplaza, sea cual sea el rol pedido", () => {
+    for (const rolPedido of ["OPERADOR", "ADMINISTRADOR"] as const) {
+      expect(decidir({ pendiente: vencida, rolPedido })).toEqual({
+        ok: true,
+        valor: { tipo: "REEMPLAZAR_VENCIDA", vencida: vencida.id },
+      });
+    }
+  });
+
+  it("YA_ES_MIEMBRO le gana a todo: sin pendiente, con vigente o con vencida", () => {
+    for (const pendiente of [null, vigente, vencida]) {
+      expect(decidir({ esMiembroActivo: true, pendiente })).toEqual(error("YA_ES_MIEMBRO"));
+    }
+    expect(
+      decidir({ esMiembroActivo: true, rolAnterior: "ADMINISTRADOR", pendiente: null }),
+    ).toEqual(error("YA_ES_MIEMBRO"));
+  });
+
+  it("quien tuvo la membresía apagada con otro rol se rechaza al invitar (H1), con la empresa", () => {
+    for (const pendiente of [null, vigente, vencida]) {
+      expect(decidir({ rolAnterior: "ADMINISTRADOR", pendiente })).toEqual(
+        error({ codigo: "ROL_DISTINTO_AL_ANTERIOR", empresaId: E1 }),
+      );
+    }
+  });
+
+  it("quien tuvo la membresía apagada con el mismo rol se invita (es la forma de reactivar)", () => {
+    expect(decidir({ rolAnterior: "OPERADOR", pendiente: null })).toEqual({
       ok: true,
       valor: { tipo: "CREAR" },
     });
   });
 
-  it("con una pendiente vigente devuelve esa, sin crear otra", () => {
-    expect(
-      decidirInvitacionDeUsuario({ ahora, esMiembroActivo: false, pendiente: vigente }),
-    ).toEqual({ ok: true, valor: { tipo: "YA_EXISTE", invitacion: vigente.id } });
-  });
-
-  it("el último milisegundo de vigencia todavía es vigente; el vencimiento exacto ya no", () => {
-    const hasta = (ms: number) => invitacion({ venceEn: new Date(ahora.getTime() + ms) });
-    expect(
-      decidirInvitacionDeUsuario({ ahora, esMiembroActivo: false, pendiente: hasta(1) }),
-    ).toEqual({ ok: true, valor: { tipo: "YA_EXISTE", invitacion: vigente.id } });
-    expect(
-      decidirInvitacionDeUsuario({ ahora, esMiembroActivo: false, pendiente: hasta(0) }),
-    ).toEqual({ ok: true, valor: { tipo: "REEMPLAZAR_VENCIDA", vencida: vencida.id } });
-  });
-
-  it("con una pendiente vencida la reemplaza", () => {
-    expect(
-      decidirInvitacionDeUsuario({ ahora, esMiembroActivo: false, pendiente: vencida }),
-    ).toEqual({ ok: true, valor: { tipo: "REEMPLAZAR_VENCIDA", vencida: vencida.id } });
-  });
-
-  it("YA_ES_MIEMBRO le gana a todo: sin pendiente, con vigente o con vencida", () => {
-    for (const pendiente of [null, vigente, vencida]) {
-      expect(decidirInvitacionDeUsuario({ ahora, esMiembroActivo: true, pendiente })).toEqual(
-        error("YA_ES_MIEMBRO"),
-      );
-    }
-  });
-
   it("una invitación que no está guardada como pendiente es un error del llamador", () => {
     for (const estado of ["ACEPTADA", "REVOCADA"] as const) {
-      expect(() =>
-        decidirInvitacionDeUsuario({
-          ahora,
-          esMiembroActivo: false,
-          pendiente: invitacion({ estado }),
-        }),
-      ).toThrow(new RangeError(`la invitación ${invitacion().id} no está pendiente`));
+      expect(() => decidir({ pendiente: invitacion({ estado }) })).toThrow(
+        new RangeError(`la invitación ${invitacion().id} no está pendiente`),
+      );
     }
   });
 });

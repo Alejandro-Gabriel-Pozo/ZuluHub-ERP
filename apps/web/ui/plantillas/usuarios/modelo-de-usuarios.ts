@@ -6,7 +6,11 @@ import {
 import { fechaParaMostrar } from "../../../../../src/primitivas/tiempo/fecha-para-mostrar";
 import { hoyEnArgentina } from "../../../../../src/primitivas/tiempo/fecha-civil-hasta-hoy";
 import type { TonoDeEstado } from "../../componentes/Insignia";
-import { rutaDeLaFichaDeUsuario } from "../sesion/rutas-de-cuenta";
+import {
+  RUTAS_DE_CUENTA,
+  rutaDeLaFichaDeInvitacion,
+  rutaDeLaFichaDeUsuario,
+} from "../sesion/rutas-de-cuenta";
 import { textoDelRol } from "../sesion/textos-de-empresa";
 
 /**
@@ -56,6 +60,8 @@ type FilaDeUsuarioArmada = Readonly<{
 
 type FilaDeInvitacionArmada = Readonly<{
   invitacionId: string;
+  /** Adónde lleva la fila (la ficha de la invitación, donde se reenvía o se revoca). */
+  href: string;
   email: string;
   rol: string;
   /** «Vence el 29/11/2026». */
@@ -65,13 +71,15 @@ type FilaDeInvitacionArmada = Readonly<{
 }>;
 
 export type ListaDeUsuariosArmada = Readonly<{
+  /** El botón «Invitar»: solo con el permiso (`usuarios.invitar`); `null` sin él, no se dibuja (todo nace cerrado). */
+  invitar: Readonly<{ texto: string; href: string }> | null;
   usuarios: readonly FilaDeUsuarioArmada[];
   /** El bloque de invitaciones; `null` si no hay ninguna (no se dibuja ni el encabezado). */
   invitaciones: Readonly<{ encabezado: string; filas: readonly FilaDeInvitacionArmada[] }> | null;
 }>;
 
 /** La fecha civil de Argentina del instante, dd/mm/aaaa. Un instante que no se puede leer lanza: falla cerrada, nunca un valor a medias. */
-function fechaDeVencimiento(venceEn: string): string {
+export function fechaDeVencimiento(venceEn: string): string {
   const fecha = hoyEnArgentina(new Date(venceEn));
   if (!fecha.ok) throw new RangeError("vencimiento: no es un instante válido");
   return fechaParaMostrar(fecha.valor);
@@ -98,6 +106,7 @@ function filaDeInvitacion(
 ): FilaDeInvitacionArmada {
   return {
     invitacionId: i.invitacionId,
+    href: rutaDeLaFichaDeInvitacion(i.invitacionId),
     email: i.email,
     rol: textoDelRol(i.rol, diccionario),
     vence: texto(diccionario, "usuarios.invitacion.vence_el", {
@@ -109,12 +118,19 @@ function filaDeInvitacion(
   };
 }
 
-/** La lista de usuarios y, debajo, las invitaciones pendientes (solo si hay). */
+/** La lista de usuarios y, debajo, las invitaciones pendientes (solo si hay). «Invitar» solo si `puedeInvitar` (la oferta de `usuarios.invitar`, que el servidor vuelve a exigir al invitar). */
 export function armarLaListaDeUsuarios(
   lista: ListaDeUsuariosParaLaPantalla,
   diccionario: DiccionarioResuelto = {},
+  puedeInvitar = false,
 ): ListaDeUsuariosArmada {
   return {
+    invitar: puedeInvitar
+      ? {
+          texto: texto(diccionario, "usuarios.lista.invitar"),
+          href: RUTAS_DE_CUENTA.invitarUsuario,
+        }
+      : null,
     usuarios: lista.usuarios.map((u) => filaDeUsuario(u, diccionario)),
     invitaciones:
       lista.invitaciones.length === 0
