@@ -143,7 +143,8 @@ describe.skipIf(base === null)(
       await sinViolacionesDeAxe();
       await selector.selectOption("CON_COMPROBANTE");
       await pagina.getByRole("button", { name: "Guardar" }).dblclick();
-      // Mientras envía el botón no está apagado (`aria-disabled`); apagado de verdad = terminó y no hay nada distinto de lo vigente.
+      // Se espera a lo que de verdad importa: que el cambio quede hecho (y UNO solo, aunque el segundo toque llegue tarde).
+      await expect.poll(() => auditorias("COMPRAS_NIVEL_CAMBIADO")).toBe(1);
       await expect
         .poll(() => pagina.getByRole("button", { name: "Guardar" }).isDisabled())
         .toBe(true);
@@ -256,9 +257,9 @@ describe.skipIf(base === null)(
       pantallaLimpia();
     });
 
-    it("la ficha de un proveedor que no existe o mal escrito responde el genérico", async () => {
+    it("la ficha de un proveedor que no existe dice que ya no está disponible y la de un id mal escrito responde el genérico", async () => {
       await ir("/compras/proveedores/0b0b0b0b-1111-4222-8333-444444444444");
-      await pagina.getByText(GENERICO).waitFor();
+      await pagina.getByText("El proveedor ya no está disponible").waitFor();
       await ir("/compras/proveedores/no-es-un-id");
       await pagina.getByText(GENERICO).waitFor();
     });

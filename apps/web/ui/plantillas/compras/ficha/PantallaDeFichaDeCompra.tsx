@@ -94,7 +94,14 @@ export function PantallaDeFichaDeCompra({
         <HojaDeAnularCompra
           accion={accionDeAnular}
           corregirLaPrimera={f.corregirLaPrimera}
-          textos={textos}
+          // Solo los textos que usa la hoja: a un componente de cliente no puede pasarse una función (los `textos` completos traen `corregidoPor`).
+          textos={{
+            anular: textos.anular,
+            motivo: textos.motivo,
+            cancelar: textos.cancelar,
+            cerrar: textos.cerrar,
+            corregir: textos.corregir,
+          }}
         />
       ) : null}
     </div>
