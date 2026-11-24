@@ -71,8 +71,9 @@ export function PantallaDeOpciones({ opciones }: PropsDePantallaDeOpciones) {
               </div>
               <span className={estilos["suave"]}>{tarjeta.reglas}</span>
               <span className={estilos["suave"]}>{tarjeta.opciones.join(" · ")}</span>
-              <div>
+              <div className={estilos["acciones"]}>
                 <BotonDeNavegacionDeOpciones boton={tarjeta.editar} />
+                <BotonDeNavegacionDeOpciones boton={tarjeta.consumo} />
               </div>
             </li>
           ))}
