@@ -1,10 +1,13 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { RolDeEmpresa } from "../capacidades/permisos/roles";
 import type { ContextoOperativo } from "../contexto/contexto";
+import type { SucursalDeLista } from "../modulos/empresas/publico";
 import type { InvitacionPendienteDeLaLista, MiembroDeLista } from "../modulos/identidad/publico";
+import type { PersonaId } from "../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
 import {
+  entradaDeAsignarSucursalesDeUsuario,
   entradaDeDesactivarUsuario,
   entradaDeFichaDeUsuario,
   entradaDeInvitacion,
@@ -30,6 +33,8 @@ import type { Web } from "./web";
  *    del contexto de la sesión, y el servidor no deja que nadie se desactive a sí mismo (`ES_UNO_MISMO`), ni al gerente (`ES_EL_GERENTE`), ni al último administrador (`ULTIMO_ADMIN`). Esta capa
  *    NO agrega ninguna regla de quién puede desactivar a quién: las imponen el guard y el dominio. Repetir no duplica: la segunda vez es ok sin escribir ni auditar (`yaEstabaApagada`),
  *    así que la acción no lleva clave; dos a la vez las ordena la transacción serializable del caso de uso.
+ *
+ * El tramo U4 suma abajo las sucursales del empleado (`editorDeSucursalesDeUsuario` y `asignarSucursalesDeUsuario`); sus reglas están en el comentario de esa sección.
  */
 
 export type DependenciasDeUsuariosWeb = Readonly<{
@@ -233,5 +238,129 @@ export function desactivarUsuario(
     entradaDeDesactivarUsuario,
     (entrada) => d.casosDeUso().apagarMembresia(contexto, { personaId: entrada.personaId }),
     (salida) => ({ yaEstabaApagada: salida.yaEstabaApagada }),
+  );
+}
+
+/* ── U4: las sucursales de un empleado ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
+
+export type DependenciasDeSucursalesDeUsuarioWeb = Readonly<{
+  consultas: () => Pick<ReturnType<Web["consultasDeIdentidad"]>, "listarMiembros">;
+  consultasDeEmpresas: () => Pick<ReturnType<Web["consultasDeEmpresas"]>, "listarSucursales">;
+  casosDeUso: () => Pick<ReturnType<Web["casosDeUsoDeIdentidad"]>, "asignarSucursales">;
+  respuesta: DependenciasDeRespuesta;
+}>;
+
+/** Una sucursal ACTIVA que se ofrece en el editor, con su casilla: tildada si la persona la tiene en su asignación efectiva (asignación activa y sucursal activa). */
+export type OpcionDeSucursalParaLaPantalla = Readonly<{
+  id: string;
+  nombre: string;
+  marcada: boolean;
+}>;
+
+/** Lo que cambió al guardar (las tres listas del caso de uso, vacías si se guardó lo mismo). */
+export type CambioDeSucursalesParaLaPantalla = Readonly<{
+  agregadas: readonly string[];
+  reactivadas: readonly string[];
+  quitadas: readonly string[];
+}>;
+
+/**
+ * Las sucursales de un EMPLEADO activo (rol `OPERADOR`), en el editor de su ficha, y el guardado de su conjunto final (tramo U4; dueño, 23/11/2026, preguntas 8 y 10 de
+ * `plan-de-pantallas-usuarios-2026-11-23.md`: un empleado puede quedar sin sucursales; el editor es solo del empleado; dos ediciones a la vez: gana la última).
+ * Reglas que cumple (cada una con su prueba en `test/integracion/usuarios-web-sucursales.test.ts`):
+ *  - **La empresa y quien actúa salen de la sesión.** Del navegador solo viajan el id de la persona (la dirección, ligado con `bind`) y los ids de las casillas tildadas (lista blanca). Una persona
+ *    o una sucursal de otra empresa es indistinguible de una inexistente: el genérico, sin escribir.
+ *  - **El permiso es del servidor.** Las consultas (`usuarios.ver`, `sucursales.ver`) y el caso de uso (`usuarios.asignar_sucursales`) lo exigen al guard dentro de su transacción: sin permiso no sale
+ *    ninguna casilla ni se escribe nada, aunque se llame por fuera de la pantalla. La pantalla no replica ninguna regla.
+ *  - **Solo el empleado.** Para el gerente, el administrador o un empleado desactivado no hay editor ni se guarda nada (el genérico): ellos trabajan en todas las sucursales (H6 F1).
+ *  - **Se manda el conjunto final**, no los cambios. Vacío es válido (se quitan todas, quedan apagadas, nunca borradas). Repetir el mismo conjunto, en otro orden o con repetidos, no escribe ni audita.
+ *  - **Dos ediciones a la vez** dejan UNO de los dos conjuntos completo, nunca una mezcla (el caso de uso corre serializable y repite sobre el resultado de la primera).
+ *  - **Todo o nada.** Las altas, reactivaciones, bajas y la auditoría `ASIGNACIONES_CAMBIADAS` salen en una transacción del caso de uso.
+ *  - **Todo resultado sale por el camino común** (`aRespuesta`): un rechazo es el genérico y un fallo de la base sale con referencia, sin detalle.
+ */
+
+/** El miembro de la empresa de la sesión, o `MEMBRESIA_NO_ENCONTRADA` (la de otra empresa es indistinguible de la inexistente). */
+async function miembroDeLaEmpresa(
+  d: Pick<DependenciasDeSucursalesDeUsuarioWeb, "consultas">,
+  contexto: ContextoOperativo,
+  persona: PersonaId,
+): Promise<Resultado<MiembroDeLista, unknown>> {
+  const miembros = await d.consultas().listarMiembros(contexto);
+  if (!miembros.ok) return miembros;
+  const miembro = miembros.valor.find((m) => m.personaId === persona);
+  return miembro === undefined ? err("MEMBRESIA_NO_ENCONTRADA") : ok(miembro);
+}
+
+const esEmpleadoActivo = (m: MiembroDeLista): boolean => m.activo && m.rol === "OPERADOR";
+
+/**
+ * Las casillas del editor de sucursales de la ficha de una persona (`usuarios.ver` y `sucursales.ver`). `crudo`: `{ personaId }`, el de la dirección. `null` si la persona no es un empleado
+ * activo (no hay editor: la ficha no dice nada de sucursales). Solo se ofrecen las sucursales ACTIVAS; una asignación a una sucursal desactivada no cuenta y no se muestra.
+ */
+export function editorDeSucursalesDeUsuario(
+  d: DependenciasDeSucursalesDeUsuarioWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<readonly OpcionDeSucursalParaLaPantalla[] | null>> {
+  return accionDeUsuarios(
+    d.respuesta,
+    crudo,
+    entradaDeFichaDeUsuario,
+    async (
+      entrada,
+    ): Promise<
+      Resultado<
+        Readonly<{ miembro: MiembroDeLista; sucursales: readonly SucursalDeLista[] }> | null,
+        unknown
+      >
+    > => {
+      const miembro = await miembroDeLaEmpresa(d, contexto, entrada.personaId);
+      if (!miembro.ok) return miembro;
+      if (!esEmpleadoActivo(miembro.valor)) return ok(null);
+      const sucursales = await d.consultasDeEmpresas().listarSucursales(contexto, {
+        incluirInactivas: false,
+      });
+      if (!sucursales.ok) return sucursales;
+      return ok({ miembro: miembro.valor, sucursales: sucursales.valor });
+    },
+    (salida) => {
+      if (salida === null) return null;
+      const tildadas = new Set<string>(salida.miembro.sucursales);
+      return salida.sucursales.map((s) => ({
+        id: s.id,
+        nombre: s.nombre,
+        marcada: tildadas.has(s.id),
+      }));
+    },
+  );
+}
+
+/**
+ * Guarda el conjunto final de sucursales de un empleado activo (`usuarios.asignar_sucursales`). `crudo`: `{ personaId, sucursales }`; `sucursales` son los ids tildados (puede ser `[]`).
+ * Una persona que no es un empleado activo de la empresa de la sesión es el genérico, sin escribir.
+ */
+export function asignarSucursalesDeUsuario(
+  d: DependenciasDeSucursalesDeUsuarioWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<CambioDeSucursalesParaLaPantalla>> {
+  return accionDeUsuarios(
+    d.respuesta,
+    crudo,
+    entradaDeAsignarSucursalesDeUsuario,
+    async (entrada) => {
+      const miembro = await miembroDeLaEmpresa(d, contexto, entrada.personaId);
+      if (!miembro.ok) return miembro;
+      if (!esEmpleadoActivo(miembro.valor)) return err("MEMBRESIA_NO_ES_DE_UN_EMPLEADO");
+      return d.casosDeUso().asignarSucursales(contexto, {
+        personaId: entrada.personaId,
+        sucursales: entrada.sucursales,
+      });
+    },
+    (cambio) => ({
+      agregadas: [...cambio.agregadas],
+      reactivadas: [...cambio.reactivadas],
+      quitadas: [...cambio.quitadas],
+    }),
   );
 }

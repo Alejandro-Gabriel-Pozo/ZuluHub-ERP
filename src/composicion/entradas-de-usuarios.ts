@@ -83,3 +83,30 @@ export function entradaDeDesactivarUsuario(
 ): Resultado<EntradaDeDesactivarUsuario, ErrorDeEntrada> {
   return entradaDeFichaDeUsuario(crudo);
 }
+
+const formaDeAsignarSucursales = z.object({
+  personaId: identificador,
+  sucursales: z.array(identificador),
+});
+
+export type EntradaDeAsignarSucursalesDeUsuario = Readonly<{
+  personaId: PersonaId;
+  /** El conjunto FINAL de sucursales de la persona; vacío es válido (quita todas). Sin repetidos ni orden: lo decide el caso de uso. */
+  sucursales: readonly SucursalId[];
+}>;
+
+/**
+ * Lo que se guarda en la ficha de un empleado: la persona (la dirección) y el conjunto final de sucursales tildadas. Una forma que no es un identificador no llega a la base; de qué
+ * empresa es cada id lo decide el servidor (una ajena es indistinguible de una inexistente).
+ */
+export function entradaDeAsignarSucursalesDeUsuario(
+  crudo: unknown,
+): Resultado<EntradaDeAsignarSucursalesDeUsuario, ErrorDeEntrada> {
+  const forma = leer(formaDeAsignarSucursales, crudo);
+  return forma.ok
+    ? ok({
+        personaId: personaId(forma.valor.personaId),
+        sucursales: forma.valor.sucursales.map(sucursalId),
+      })
+    : forma;
+}

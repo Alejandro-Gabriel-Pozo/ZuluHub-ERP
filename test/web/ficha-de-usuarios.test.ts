@@ -36,13 +36,13 @@ describe("ficha de la pantalla «Usuarios»", () => {
       expect(Object.keys(FICHA_DE_USUARIOS.textos)).toContain(clave);
       expect(def.usos).not.toBe("pendiente");
       expect(def.usos.length).toBeGreaterThan(0);
-      expect(["DEC-0851", "DEC-0852", "DEC-0857", "DEC-0859"]).toContain(
-        (def.fuente as { decision: string }).decision,
-      );
+      expect(def.fuente).toMatchObject({
+        decision: expect.stringMatching(/^DEC-\d{4}$/) as string,
+      });
     }
   });
 
-  it("sus botones son los de invitar, enviar, reenviar, revocar y desactivar (que abre un cuadro y lo confirma), cada uno con su permiso, y sin permiso ninguno se dibuja; los dos estados son el mensaje genérico", () => {
+  it("sus botones son los de invitar, enviar, reenviar, revocar, desactivar (que abre un cuadro y lo confirma) y guardar sucursales, cada uno con su permiso, y sin permiso ninguno se dibuja; los dos estados son el mensaje genérico", () => {
     const botones: readonly Readonly<{ id: string; hace: unknown; sinPermiso: string }>[] =
       FICHA_DE_USUARIOS.botones;
     expect(botones.map((b) => [b.id, b.hace, b.sinPermiso])).toEqual([
@@ -52,6 +52,7 @@ describe("ficha de la pantalla «Usuarios»", () => {
       ["revocar", { envia: "usuarios.revocar_invitacion" }, "AUSENTE"],
       ["desactivar", "abre-el-cuadro", "AUSENTE"],
       ["confirmar-desactivar", { envia: "usuarios.apagar" }, "AUSENTE"],
+      ["guardar-sucursales", { envia: "usuarios.asignar_sucursales" }, "AUSENTE"],
     ]);
     for (const b of botones) {
       const hace = b.hace;

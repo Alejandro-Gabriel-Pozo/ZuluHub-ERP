@@ -19,6 +19,7 @@ import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilan
  * ficha de una ajena dice lo mismo que una inexistente). Después la misma persona pasa a ser empleada: la entrada «Usuarios» desaparece de Cuenta y, abriendo la dirección a mano, el servidor responde con el
  * mensaje genérico, sin filas. Tramo U3 (desactivar): R1 el gerente desactiva a una persona CON confirmación («Cancelar» no hace nada) y la ficha pasa a «Desactivado», con sus sucursales apagadas y su invitación revocada; R2 confirmar en dos pestañas
  * deja una sola desactivación; R3 un administrador no ve «Desactivar» en la ficha del gerente ni en la propia (sí en la de otro administrador). Lo que esta prueba ve y las de componentes no: la página en el servidor (el permiso y la lectura de la base), la fila del menú y que los componentes no rompan en el navegador.
+ * El tramo U4 suma las sucursales del empleado: tildar y guardar (R1), guardar sin cambios no deja constancia (R2) y dos pestañas dejan la última edición completa (R3).
  */
 const base = inject("baseDePruebas");
 const CELULAR = { width: 390, height: 844 } as const;
@@ -32,6 +33,7 @@ describe.skipIf(base === null)("recorrido de la lista de usuarios", () => {
   let pagina: Page;
   let vigilante: Vigilante;
   let sofia = "";
+  let diego = "";
   let deOtraEmpresa = "";
 
   const ir = async (ruta: string) => {
@@ -56,7 +58,7 @@ describe.skipIf(base === null)("recorrido de la lista de usuarios", () => {
       await crearMembresiaDeBase(c, mundo.empresa, persona.id, rol, activo);
       return persona.id;
     };
-    await sumar("diego@lacteos.test", "ADMINISTRADOR");
+    diego = await sumar("diego@lacteos.test", "ADMINISTRADOR");
     sofia = await sumar("sofia@lacteos.test", "OPERADOR");
     await sumar("ana@lacteos.test", "OPERADOR", false);
     const ahora = Date.now();
@@ -123,10 +125,18 @@ describe.skipIf(base === null)("recorrido de la lista de usuarios", () => {
     await pagina.getByRole("heading", { name: "sofia@lacteos.test" }).waitFor();
     await pagina.getByText("Empleado").first().waitFor();
     await pagina.getByText("Activo").first().waitFor();
-    // El gerente puede desactivar a un empleado activo: el único botón de la ficha es «Desactivar» (aún sin confirmar nada).
-    expect(await pagina.getByRole("button").count()).toBe(1);
+    // Un empleado activo trae el bloque «Sucursales» con su «Guardar» (tramo U4) y, para el gerente, el botón «Desactivar» (tramo U3); sus pruebas completas son las de los bloques siguientes.
+    await pagina.getByRole("group", { name: "Sucursales" }).waitFor();
     expect(await pagina.getByRole("button", { name: "Desactivar" }).count()).toBe(1);
     await sinViolacionesDeAxe();
+
+    // El administrador y el gerente trabajan en todas las sucursales: su ficha no dice nada de sucursales. Al administrador el gerente sí lo puede desactivar (único botón).
+    await ir(`/cuenta/usuarios/${diego}`);
+    await pagina.getByRole("heading", { name: "diego@lacteos.test" }).waitFor();
+    await pagina.getByText("Administrador").first().waitFor();
+    expect(await pagina.getByRole("button").count()).toBe(1);
+    expect(await pagina.getByRole("button", { name: "Desactivar" }).count()).toBe(1);
+    expect(await pagina.getByText("Sucursales").count()).toBe(0);
 
     await ir(`/cuenta/usuarios/${deOtraEmpresa}`);
     await pagina.getByText(GENERICO).first().waitFor();
@@ -135,6 +145,89 @@ describe.skipIf(base === null)("recorrido de la lista de usuarios", () => {
     await pagina.getByText(GENERICO).first().waitFor();
     await ir("/cuenta/usuarios/no-es-un-id");
     await pagina.getByText(GENERICO).first().waitFor();
+    pantallaLimpia();
+  });
+
+  it("U4: tildar sucursales en la ficha del empleado y guardar; guardar lo mismo no deja constancia nueva; dos pestañas dejan la última, completa", async () => {
+    const c = mundo.mundo.dueno;
+    const norte = (
+      await c.query<{ id: string }>(
+        "insert into sucursal (empresa_id, nombre) values ($1, 'Norte') returning id",
+        [mundo.empresa],
+      )
+    ).rows[0]?.id as string;
+    const sur = (
+      await c.query<{ id: string }>(
+        "insert into sucursal (empresa_id, nombre) values ($1, 'Sur') returning id",
+        [mundo.empresa],
+      )
+    ).rows[0]?.id as string;
+    await c.query(
+      "insert into sucursal (empresa_id, nombre, activa) values ($1, 'Cerrada', false)",
+      [mundo.empresa],
+    );
+    const asignadas = async () =>
+      (
+        await c.query<{ sucursal_id: string }>(
+          "select sucursal_id from asignacion_sucursal where empresa_id = $1 and persona_id = $2 and activa order by sucursal_id",
+          [mundo.empresa, sofia],
+        )
+      ).rows.map((f) => f.sucursal_id);
+    const auditorias = async () =>
+      Number(
+        (
+          await c.query<{ n: string }>(
+            "select count(*) as n from auditoria_empresa where empresa_id = $1 and accion = 'ASIGNACIONES_CAMBIADAS' and entidad_id = $2",
+            [mundo.empresa, sofia],
+          )
+        ).rows[0]?.n,
+      );
+    const guardar = async (p: Page) => {
+      await p.getByRole("button", { name: "Guardar" }).click();
+      await p.waitForLoadState("networkidle");
+    };
+
+    // R1: tildar «Norte» y «Sur», guardar, recargar y verlas tildadas; la desactivada no se ofrece.
+    await ir(`/cuenta/usuarios/${sofia}`);
+    const grupo = pagina.getByRole("group", { name: "Sucursales" });
+    await grupo.waitFor();
+    expect(await grupo.getByRole("checkbox").count()).toBe(3);
+    expect(await pagina.getByText("Cerrada").count()).toBe(0);
+    await grupo.getByRole("checkbox", { name: "Norte" }).check();
+    await grupo.getByRole("checkbox", { name: "Sur" }).check();
+    await guardar(pagina);
+    await expect.poll(asignadas).toEqual([norte, sur].sort());
+    await ir(`/cuenta/usuarios/${sofia}`);
+    expect(await grupo.getByRole("checkbox", { name: "Norte" }).isChecked()).toBe(true);
+    expect(await grupo.getByRole("checkbox", { name: "Sur" }).isChecked()).toBe(true);
+    expect(await auditorias()).toBe(1);
+
+    // R2: guardar sin cambios no deja constancia nueva.
+    await guardar(pagina);
+    await guardar(pagina);
+    expect(await auditorias()).toBe(1);
+    expect(await asignadas()).toEqual([norte, sur].sort());
+
+    // R3: dos pestañas con la ficha vieja; la que guarda última deja su conjunto, completo y sin mezclar.
+    const otraPestana = await contexto.newPage();
+    try {
+      await otraPestana.goto(`${mundo.url}/cuenta/usuarios/${sofia}`);
+      await otraPestana.waitForLoadState("networkidle");
+      await ir(`/cuenta/usuarios/${sofia}`);
+      await grupo.getByRole("checkbox", { name: "Norte" }).uncheck();
+      await guardar(pagina); // queda solo «Sur»
+      await expect.poll(asignadas).toEqual([sur]);
+      const suya = otraPestana.getByRole("group", { name: "Sucursales" });
+      await suya.getByRole("checkbox", { name: "Sur" }).uncheck(); // la vista vieja tenía Norte y Sur: queda solo «Norte»
+      await guardar(otraPestana); // gana la última (sin aviso: pregunta 10 del plan), con su conjunto completo
+      await expect.poll(asignadas).toEqual([norte]);
+      await ir(`/cuenta/usuarios/${sofia}`);
+      expect(await grupo.getByRole("checkbox", { checked: true }).count()).toBe(1);
+      expect(await grupo.getByRole("checkbox", { name: "Norte" }).isChecked()).toBe(true);
+    } finally {
+      await otraPestana.close();
+    }
+    await sinViolacionesDeAxe();
     pantallaLimpia();
   });
 

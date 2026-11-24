@@ -4,16 +4,20 @@ import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import { sucursalesDeLaEmpresa } from "../../../src/composicion/sesion-y-empresa";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import {
+  asignarSucursalesDeUsuario,
   desactivarUsuario,
+  editorDeSucursalesDeUsuario,
   fichaDeInvitacion,
   fichaDeUsuario,
   invitar,
   listarUsuarios,
   reenviar,
   revocar,
+  type DependenciasDeSucursalesDeUsuarioWeb,
   type DependenciasDeUsuariosWeb,
   type InvitacionParaLaFicha,
   type ListaDeUsuariosParaLaPantalla,
+  type OpcionDeSucursalParaLaPantalla,
   type UsuarioParaLaPantalla,
 } from "../../../src/composicion/usuarios-web";
 import {
@@ -28,6 +32,7 @@ import type {
 import type { ResultadoDeAccion } from "./acciones";
 import { web } from "./composicion";
 import { conLaEmpresa } from "./con-la-empresa";
+import { puedeLaAccion } from "./permisos-de-la-persona";
 import { dependenciasDeSesion } from "./sesion";
 
 /**
@@ -140,6 +145,47 @@ export async function desactivarElUsuario(personaId: string): Promise<ResultadoD
     desactivarUsuario(dependencias, contexto, { personaId }),
   );
   revalidatePath(RUTAS_DE_CUENTA.usuarios);
+  revalidatePath(rutaDeLaFichaDeUsuario(personaId));
+  return respuesta.ok ? { error: null } : { error: respuesta.error };
+}
+
+const dependenciasDeSucursales: DependenciasDeSucursalesDeUsuarioWeb = {
+  consultas: web.consultasDeIdentidad,
+  consultasDeEmpresas: web.consultasDeEmpresas,
+  casosDeUso: web.casosDeUsoDeIdentidad,
+  respuesta: dependenciasDeSesion.respuesta,
+};
+
+/**
+ * Las sucursales de la persona de la ficha para el editor (U4): `null` si no es un empleado activo (la ficha no dice nada de sucursales) o si quien mira no puede asignarlas (sin permiso no hay
+ * bloque). Las casillas las arma el servidor entre las sucursales ACTIVAS de la empresa de la sesión.
+ */
+export async function cargarElEditorDeSucursales(
+  contexto: ContextoOperativo,
+  personaId: string,
+): Promise<Respuesta<readonly OpcionDeSucursalParaLaPantalla[] | null>> {
+  if (!(await puedeLaAccion(contexto, "usuarios.asignar_sucursales")))
+    return { ok: true, dato: null };
+  return editorDeSucursalesDeUsuario(dependenciasDeSucursales, contexto, { personaId });
+}
+
+/**
+ * Guardar las sucursales de un empleado (U4): `datos` trae las casillas tildadas (`sucursales`, una por sucursal); ninguna tildada es el conjunto vacío, válido. La persona viene ligada con `.bind`
+ * (Next la cifra) y la empresa y quien actúa salen de la SESIÓN. Sin importar el resultado se vuelve a pedir la ficha: muestra lo guardado, o lo que otra persona dejó si hubo conflicto.
+ * Cómo se repite sin duplicar: el mismo conjunto no escribe ni audita (el caso de uso lo resuelve); no lleva clave.
+ */
+export async function guardarLasSucursalesDeUnEmpleado(
+  personaId: string,
+  datos: unknown,
+): Promise<ResultadoDeAccion> {
+  const sucursales = datos instanceof FormData ? datos.getAll("sucursales") : null;
+  const respuesta = await conLaEmpresa((contexto) =>
+    asignarSucursalesDeUsuario(dependenciasDeSucursales, contexto, {
+      personaId,
+      // Un pedido que no es un formulario no es «ninguna tildada»: se manda sin forma y el servidor lo rechaza.
+      sucursales: sucursales?.filter((valor): valor is string => typeof valor === "string"),
+    }),
+  );
   revalidatePath(rutaDeLaFichaDeUsuario(personaId));
   return respuesta.ok ? { error: null } : { error: respuesta.error };
 }

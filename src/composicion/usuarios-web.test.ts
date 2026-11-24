@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { ContextoOperativo } from "../contexto/contexto";
 import { err, ok } from "../primitivas/resultado/resultado";
 import {
+  asignarSucursalesDeUsuario,
   desactivarUsuario,
+  editorDeSucursalesDeUsuario,
   fichaDeUsuario,
   listarUsuarios,
+  type DependenciasDeSucursalesDeUsuarioWeb,
   type DependenciasDeUsuariosWeb,
 } from "./usuarios-web";
 
@@ -235,5 +238,146 @@ describe("desactivarUsuario", () => {
     expect(r.ok).toBe(false);
     expect(JSON.stringify(r)).not.toContain("ana@x.test");
     expect(registro.join(" ")).toContain("ana@x.test");
+  });
+});
+
+describe("las sucursales de un empleado (U4)", () => {
+  const sucursalDeLista = (id: string, nombre: string) => ({
+    id,
+    nombre,
+    activa: true,
+    horaDeCorte: "00:00",
+    contacto: { telefono: "no-tiene-que-salir", correo: null, web: null },
+    version: 3,
+    zonaHoraria: "America/Argentina/Buenos_Aires",
+  });
+
+  function deps(
+    miembros: unknown,
+    asignar: unknown = ok({ agregadas: [], reactivadas: [], quitadas: [] }),
+    llamadas: unknown[] = [],
+  ): DependenciasDeSucursalesDeUsuarioWeb {
+    return {
+      consultas: () =>
+        ({ listarMiembros: () => Promise.resolve(miembros) }) as unknown as ReturnType<
+          DependenciasDeSucursalesDeUsuarioWeb["consultas"]
+        >,
+      consultasDeEmpresas: () =>
+        ({
+          listarSucursales: (_c: unknown, entrada: unknown) => {
+            llamadas.push(["listarSucursales", entrada]);
+            return Promise.resolve(
+              ok([sucursalDeLista("suc-1", "Centro"), sucursalDeLista("suc-2", "Norte")]),
+            );
+          },
+        }) as unknown as ReturnType<DependenciasDeSucursalesDeUsuarioWeb["consultasDeEmpresas"]>,
+      casosDeUso: () =>
+        ({
+          asignarSucursales: (_c: unknown, entrada: unknown) => {
+            llamadas.push(["asignarSucursales", entrada]);
+            return Promise.resolve(asignar);
+          },
+        }) as unknown as ReturnType<DependenciasDeSucursalesDeUsuarioWeb["casosDeUso"]>,
+      respuesta: { registrar: (x) => registro.push(x), azar: () => new Uint8Array(4) },
+    };
+  }
+  const gerente = { ...miembro(B, "g@x.test"), rol: "GERENTE", sucursales: [] };
+
+  it("el editor ofrece solo las sucursales ACTIVAS con id, nombre y si están tildadas (lista blanca), pidiendo solo las activas", async () => {
+    const llamadas: unknown[] = [];
+    const r = await editorDeSucursalesDeUsuario(
+      deps(ok([{ ...miembro(A, "a@x.test"), sucursales: ["suc-2"] }]), undefined, llamadas),
+      CONTEXTO,
+      { personaId: A },
+    );
+    expect(r).toEqual({
+      ok: true,
+      dato: [
+        { id: "suc-1", nombre: "Centro", marcada: false },
+        { id: "suc-2", nombre: "Norte", marcada: true },
+      ],
+    });
+    expect(llamadas).toEqual([["listarSucursales", { incluirInactivas: false }]]);
+    expect(JSON.stringify(r)).not.toMatch(/no-tiene-que-salir|zonaHoraria|version|horaDeCorte/);
+  });
+
+  it("para un gerente, un administrador o un desactivado no hay editor (null) y ni se piden las sucursales", async () => {
+    for (const quien of [
+      gerente,
+      { ...miembro(B, "b@x.test"), rol: "ADMINISTRADOR" },
+      miembro(B, "b@x.test", false),
+    ]) {
+      const llamadas: unknown[] = [];
+      const r = await editorDeSucursalesDeUsuario(
+        deps(ok([quien]), undefined, llamadas),
+        CONTEXTO,
+        {
+          personaId: B,
+        },
+      );
+      expect(r).toEqual({ ok: true, dato: null });
+      expect(llamadas).toEqual([]);
+    }
+  });
+
+  it("guardar manda el conjunto final al caso de uso con la persona de la dirección y devuelve solo las tres listas", async () => {
+    const llamadas: unknown[] = [];
+    const r = await asignarSucursalesDeUsuario(
+      deps(
+        ok([miembro(A, "a@x.test")]),
+        ok({ agregadas: ["suc-1"], reactivadas: [], quitadas: ["suc-9"], interna: "no-sale" }),
+        llamadas,
+      ),
+      CONTEXTO,
+      { personaId: A, sucursales: [], empresaId: "otra" },
+    );
+    expect(r).toEqual({
+      ok: true,
+      dato: { agregadas: ["suc-1"], reactivadas: [], quitadas: ["suc-9"] },
+    });
+    expect(llamadas).toEqual([["asignarSucursales", { personaId: A, sucursales: [] }]]);
+  });
+
+  it("a un gerente, un administrador, un desactivado o alguien que no es de la empresa NO se le guarda nada: el genérico, sin llamar al caso de uso", async () => {
+    for (const miembros of [
+      [gerente],
+      [{ ...miembro(B, "b@x.test"), rol: "ADMINISTRADOR" }],
+      [miembro(B, "b@x.test", false)],
+      [miembro(A, "a@x.test")],
+    ]) {
+      const llamadas: unknown[] = [];
+      const r = await asignarSucursalesDeUsuario(
+        deps(ok(miembros), undefined, llamadas),
+        CONTEXTO,
+        {
+          personaId: B,
+          sucursales: [],
+        },
+      );
+      expect(r).toMatchObject({ ok: false, error: { codigo: "USUARIOS_NO_PERMITIDO" } });
+      expect(llamadas).toEqual([]);
+    }
+  });
+
+  it("todo error de negocio del caso de uso (sucursal inactiva, ajena, sin permiso…) sale como el MISMO genérico, sin decir cuál", async () => {
+    const salidas = [];
+    for (const motivo of ["SUCURSAL_INACTIVA", "SUCURSAL_NO_ES_DE_LA_EMPRESA", "SIN_PERMISO"]) {
+      salidas.push(
+        await asignarSucursalesDeUsuario(
+          deps(ok([miembro(A, "a@x.test")]), err(motivo)),
+          CONTEXTO,
+          { personaId: A, sucursales: [] },
+        ),
+      );
+    }
+    expect(new Set(salidas.map((s) => JSON.stringify(s))).size).toBe(1);
+    expect(salidas[0]).toMatchObject({ ok: false, error: { codigo: "USUARIOS_NO_PERMITIDO" } });
+  });
+
+  it("sin permiso para leer la lista no sale ninguna casilla", async () => {
+    const r = await editorDeSucursalesDeUsuario(deps(err("SIN_PERMISO")), CONTEXTO, {
+      personaId: A,
+    });
+    expect(r).toMatchObject({ ok: false, error: { codigo: "USUARIOS_NO_PERMITIDO" } });
   });
 });

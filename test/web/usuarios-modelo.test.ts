@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ListaDeUsuariosParaLaPantalla } from "../../src/composicion/usuarios-web";
 import {
+  armarElEditorDeSucursales,
   armarLaFichaDeUsuario,
   armarLaListaDeUsuarios,
 } from "../../apps/web/ui/plantillas/usuarios/modelo-de-usuarios";
@@ -174,6 +175,20 @@ describe("armarLaFichaDeUsuario: el botón «Desactivar»", () => {
       cancelar: "Cancelar",
       cerrar: "Cerrar",
       enviando: "Enviando…",
+    });
+  });
+});
+
+describe("armarElEditorDeSucursales", () => {
+  it("dice «Sucursales» y «Guardar» con textos del catálogo y conserva el orden y las tildes del servidor", () => {
+    const opciones = [
+      { id: "s-1", nombre: "Centro", marcada: true },
+      { id: "s-2", nombre: "Norte", marcada: false },
+    ];
+    expect(armarElEditorDeSucursales(opciones)).toEqual({
+      rotulo: "Sucursales",
+      guardar: "Guardar",
+      opciones,
     });
   });
 });

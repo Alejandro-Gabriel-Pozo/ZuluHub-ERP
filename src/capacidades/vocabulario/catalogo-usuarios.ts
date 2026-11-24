@@ -7,7 +7,7 @@ import type { FuenteDeTexto } from "./uso-y-fuente-de-texto";
  * asientan con la fila citada. Lo que la pantalla ya podía decir con un texto existente NO tiene clave nueva (una regla, un lugar): «Desactivado»
  * (`catalogo.estado.desactivado`), «Activo» (`caja.estado.activo`), «Pendiente» (`fiscal.pantalla.config_cartel_pendiente`), «Estado»
  * (`fiscal.pantalla.listado_rotulo_estado`) y los tres roles (`rol.*.nombre`).
- * Los textos de sucursales son del tramo U4: no se declaran acá hasta que haya quien los consuma. Los de desactivar (U3) son los dos de la confirmación.
+ * Los textos de desactivar (U3) son los dos de la confirmación; el rótulo «Sucursales» de la ficha del empleado (U4, DEC-0856) es el mismo texto que ya usa invitar.
  */
 const FUENTE_DEL_DUENO: FuenteDeTexto = { decision: "DEC-0851" };
 const FUENTE_DE_INVITAR: FuenteDeTexto = { decision: "DEC-0852" };
@@ -104,10 +104,11 @@ export const TEXTOS_DE_USUARIOS = {
     usos: [{ como: "FUNCION", archivo: MODELO, nombre: "armarLaListaDeUsuarios" }],
     fuente: FUENTE_DE_INVITAR,
   },
-  // Rótulo del grupo de casillas de sucursales (solo con el rol Empleado) y renglón de la ficha de la invitación.
+  // Rótulo del grupo de casillas de sucursales (solo con el rol Empleado), renglón de la ficha de la invitación y nombre del grupo de casillas de las sucursales de un empleado en su ficha (U4).
   "usuarios.campo.sucursales": {
     porDefecto: "Sucursales",
     usos: [
+      { como: "FUNCION", archivo: MODELO, nombre: "armarElEditorDeSucursales" },
       { como: "FUNCION", archivo: MODELO_DE_INVITACIONES, nombre: "armarElFormularioDeInvitacion" },
       { como: "FUNCION", archivo: MODELO_DE_INVITACIONES, nombre: "armarLaFichaDeInvitacion" },
     ],

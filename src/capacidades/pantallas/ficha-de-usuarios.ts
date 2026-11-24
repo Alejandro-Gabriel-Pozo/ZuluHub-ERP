@@ -23,8 +23,10 @@ type FichaConCuadro = Omit<FichaDePantalla, "botones"> &
  *
  * BOTONES (U2): «Invitar» (navega al formulario), «Enviar invitación», «Reenviar» y «Revocar». BOTONES (U3, parte A): «Desactivar» abre un cuadro de confirmación («¿Desactivar a {email}?», «Se corta su acceso ahora.»,
  * «Cancelar» y «Desactivar») y su confirmación envía `usuarios.apagar`. Se ofrece solo a quien tiene el permiso, y solo en una persona activa que no es el gerente ni quien está mirando (el servidor lo impide
- * igual: `ES_EL_GERENTE`, `ES_UNO_MISMO`). Reactivar (U3, parte B) y asignar sucursales (U4) suman los suyos cuando se construyan. Sin permiso, ningún botón se dibuja (`AUSENTE`: todo nace cerrado; es solo
- * una ayuda, el servidor vuelve a exigir cada permiso al guard); ante cualquier falla sale el mensaje genérico «Esta acción no está permitida», sin filas.
+ * igual: `ES_EL_GERENTE`, `ES_UNO_MISMO`). BOTÓN (U4): «Guardar» las sucursales de un empleado activo (`usuarios.asignar_sucursales`). Reactivar (U3, parte B) suma el suyo cuando se construya. Sin permiso, ningún
+ * botón se dibuja (`AUSENTE`: todo nace cerrado; es solo una ayuda, el servidor vuelve a exigir cada permiso al guard). Estados del bloque de sucursales: solo un empleado ACTIVO lo ve; para el gerente, el
+ * administrador o un desactivado la ficha no dice nada de sucursales (pregunta 8 del plan, aprobada el 23/11/2026); una sucursal desactivada no se ofrece ni aparece tildada. «Guardar» lo mismo no cambia nada.
+ * Ante cualquier falla sale el mensaje genérico «Esta acción no está permitida», sin filas.
  *
  * DIFERENCIAS CON LA MAQUETA (`usuarios.html`; la maqueta manda y toda diferencia la decide el dueño), tramo U2: (1) la ficha de la invitación dibuja el estado como la lista, con la insignia «Pendiente» o «Vencida»
  * (la maqueta decía «Vigente», un texto que no existe en el catálogo) y «Vence el dd/mm/aaaa» como línea debajo en vez de una fila con rótulo; (2) sin permiso los botones no se dibujan (la maqueta no los apaga:
@@ -65,6 +67,7 @@ const USO_DEL_FORMULARIO = "modelo-de-invitaciones.ts (armarElFormularioDeInvita
 const USO_DE_LA_INVITACION = "modelo-de-invitaciones.ts (armarLaFichaDeInvitacion)";
 const USO_DE_LA_FICHA = "modelo-de-usuarios.ts (armarLaFichaDeUsuario)";
 const USO_DE_LA_CONFIRMACION = "ConfirmacionDeDesactivar.cliente.tsx (vía armarLaFichaDeUsuario)";
+const USO_DEL_EDITOR = "modelo-de-usuarios.ts (armarElEditorDeSucursales)";
 
 export const FICHA_DE_USUARIOS = {
   archivos: [
@@ -77,6 +80,7 @@ export const FICHA_DE_USUARIOS = {
     "apps/web/ui/plantillas/usuarios/PantallaDeListaDeUsuarios.tsx",
     "apps/web/ui/plantillas/usuarios/PantallaDeFichaDeUsuario.tsx",
     "apps/web/ui/plantillas/usuarios/ConfirmacionDeDesactivar.cliente.tsx",
+    "apps/web/ui/plantillas/usuarios/FormularioDeSucursalesDeUsuario.cliente.tsx",
     "apps/web/ui/plantillas/usuarios/modelo-de-usuarios.ts",
     "apps/web/app/s/app/(operacion)/cuenta/usuarios/invitar/page.tsx",
     "apps/web/app/s/app/(operacion)/cuenta/usuarios/invitaciones/[id]/page.tsx",
@@ -136,6 +140,12 @@ export const FICHA_DE_USUARIOS = {
       hace: { envia: "usuarios.apagar" },
       sinPermiso: "AUSENTE",
     },
+    {
+      id: "guardar-sucursales",
+      texto: "catalogo.accion.guardar",
+      hace: { envia: "usuarios.asignar_sucursales" },
+      sinPermiso: "AUSENTE",
+    },
   ],
   estados: { ERROR: "GENERICO", SIN_PERMISO: "GENERICO" },
   textos: {
@@ -147,6 +157,7 @@ export const FICHA_DE_USUARIOS = {
           "el nombre de la entrada de menú lo aprobó el dueño (DDD:82 y DDD:83, decisiones-del-dueno-2026-11.md); maqueta usuarios.html (barra «Usuarios»)",
       },
     },
+    "catalogo.accion.guardar": { usos: [USO_DEL_EDITOR], fuente: REUSADO },
     "usuarios.lista.invitaciones": { usos: [USO_DE_LA_LISTA], fuente: MAQUETA_APROBADA },
     "usuarios.campo.rol": {
       usos: [USO_DE_LA_FICHA, USO_DEL_FORMULARIO, USO_DE_LA_INVITACION],
@@ -165,7 +176,7 @@ export const FICHA_DE_USUARIOS = {
       fuente: MAQUETA_APROBADA,
     },
     "usuarios.campo.sucursales": {
-      usos: [USO_DEL_FORMULARIO, USO_DE_LA_INVITACION],
+      usos: [USO_DEL_FORMULARIO, USO_DE_LA_INVITACION, USO_DEL_EDITOR],
       fuente: MAQUETA_APROBADA,
     },
     "usuarios.invitar.email_de_google": {
