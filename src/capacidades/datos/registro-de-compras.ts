@@ -34,6 +34,14 @@ const DE_CORREGIR_Y_ANULAR = (para: string): Proposito => ({
     "Pedernal-docs, brief `PR-10-corregir-y-anular-pantalla.md` de Compras (rama de planificación de la Ola 1) y maqueta `compra-corregir-anular.html` (`vForm`, `vHoja`); quién: gerente y administrador (compras.corregir y recepciones.anular, DDD:187)",
 });
 
+const HOJA_DE_LA_FICHA = "apps/web/ui/plantillas/compras/proveedor/HojaDeCambioDeFicha.cliente.tsx";
+const EDITAR_O_PEDIR_FICHA = ["proveedores.editar_ficha", "proveedores.pedir_ficha"] as const;
+const DE_LA_FICHA_DEL_PROVEEDOR = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs, brief `PR-4-ficha-del-proveedor-de-compras.md` de Compras (rama de planificación de la Ola 1) §4b y maqueta `compra.html` (modales `addpv` y `addtipo`); quién: gerente y administrador agregan, quien carga compras pide (proveedores.editar_ficha y proveedores.pedir_ficha)",
+});
+
 export const DATOS_DE_COMPRAS = {
   "precio-corregido-de-compra": {
     // El precio nuevo de una línea que ya tiene precio, como texto decimal; qué es válido (mayor que cero, hasta 6 decimales) lo decide `leerCorreccion` al correr el caso de uso: la pantalla no copia la regla.
@@ -60,6 +68,30 @@ export const DATOS_DE_COMPRAS = {
     propositos: [DE_CORREGIR_Y_ANULAR("Motivo obligatorio de anular una compra entera.")],
     consumidores: [HOJA_DE_ANULAR],
     ponerPor: ANULAR_COMPRA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "numero-de-punto-de-venta": {
+    // El rango (1 a 99998) vive UNA vez, en el dominio (`esPuntoDeVentaValido`, `PUNTO_DE_VENTA_MAXIMO`): la pantalla toma de ahí el largo del campo y el servidor vuelve a validar el número.
+    ficha: "src/modulos/compras/dominio/comprobante.ts",
+    propositos: [
+      DE_LA_FICHA_DEL_PROVEEDOR(
+        "Número del punto de venta que se agrega a la ficha de un proveedor o que se pide agregar (el pedido lo aprueba quien administra).",
+      ),
+    ],
+    consumidores: [HOJA_DE_LA_FICHA],
+    ponerPor: EDITAR_O_PEDIR_FICHA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "tipo-de-comprobante-de-ficha": {
+    // Los nueve tipos viven UNA vez, en el dominio (`TIPOS_DE_COMPROBANTE_DE_PROVEEDOR`): el servidor los ofrece y el pedido solo se acepta con uno de ellos.
+    ficha: "src/modulos/compras/dominio/comprobante.ts",
+    propositos: [
+      DE_LA_FICHA_DEL_PROVEEDOR(
+        "Tipo de comprobante (factura, nota de débito o de crédito, A, B o C) que se agrega a la ficha de un proveedor o que se pide agregar.",
+      ),
+    ],
+    consumidores: [HOJA_DE_LA_FICHA],
+    ponerPor: EDITAR_O_PEDIR_FICHA,
     requiere: REQUIERE_COMPRAS,
   },
   "nivel-de-compras": {

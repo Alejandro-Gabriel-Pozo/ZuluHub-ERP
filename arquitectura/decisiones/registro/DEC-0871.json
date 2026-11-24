@@ -5,6 +5,6 @@
   "tipo": "CLIENTE",
   "estado": "CONFIRMADA",
   "decision": "Compras PR 10: «Corregir» el precio de una línea y «Anular» una compra con motivo desde la ficha; textos nuevos «Corregir» y «Antes».",
-  "que_cambia": "Gerente y administrador corrigen el precio de una línea y anulan una compra con motivo; quien opera no ve los botones. «Corregir» y «Antes» salen de la maqueta compra-corregir-anular.html. Revertir: sacar las claves compras.correccion.*, las rutas /compras/[id]/corregir y los botones de la ficha.",
+  "que_cambia": "Gerente y administrador corrigen el precio de una línea y anulan una compra con motivo; quien opera no ve los botones. Revertir: sacar las dos claves compras.correccion, la ruta de corregir una línea y los botones de la ficha.",
   "donde": "decisiones-del-dueno-2026-11.md, filas 173, 174 y 187 (maqueta compra-corregir-anular.html aceptada por delegación) y fila del 23/11/2026; catalogo-compras.ts; confirmada: DDD fila del 23/11/2026"
 }

@@ -23,6 +23,13 @@
     "apps/web/ui/plantillas/compras/correccion/*",
     "apps/web/ui/plantillas/compras/ficha/*"
   ],
+  "test/web/ficha-de-proveedor-de-compras.test.ts": [
+    "apps/web/app/s/app/(operacion)/compras/proveedores/**",
+    "apps/web/app/s/app/acciones-de-ficha-de-proveedor.ts",
+    "apps/web/servidor/ficha-de-proveedor.ts",
+    "apps/web/servidor/acciones-de-la-ficha-del-proveedor.ts",
+    "apps/web/ui/plantillas/compras/proveedor/*"
+  ],
   "test/web/ficha-de-mesas.test.ts": [
     "apps/web/app/s/app/(operacion)/salon/mesas/**",
     "apps/web/ui/plantillas/salon/*"

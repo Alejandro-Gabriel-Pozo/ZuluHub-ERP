@@ -16,6 +16,12 @@ export type {
   TxDeConsultasDeCompras,
 } from "./casos-de-uso/contrato";
 export {
+  PUNTO_DE_VENTA_MAXIMO,
+  PUNTO_DE_VENTA_MINIMO,
+  TIPOS_DE_COMPROBANTE_DE_PROVEEDOR,
+  type TipoDeComprobanteDeProveedor,
+} from "./dominio/comprobante";
+export {
   CONDICIONES_DE_IVA_DE_LA_EMPRESA,
   type CondicionDeIvaDeLaEmpresa,
 } from "./dominio/comprobante";

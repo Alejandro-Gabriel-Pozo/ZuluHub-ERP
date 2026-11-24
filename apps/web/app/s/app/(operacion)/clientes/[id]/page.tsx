@@ -1,6 +1,9 @@
 import { conTitulo, pantallaDeOperacion } from "../../../../../../pantallas/operacion";
 import { cargarLaParte, nuevaClaveDeParte } from "../../../../../../servidor/directorio";
 import { accionesDelDirectorio } from "../../../../../../servidor/ofertas-de-clientes";
+import { texto } from "../../../../../../../../src/capacidades/vocabulario/vocabulario";
+import { EnlaceDeAccion } from "../../../../../../ui/componentes/EnlaceDeAccion";
+import { rutaDeLaFichaDelProveedor } from "../../../../../../ui/plantillas/compras/proveedor/modelo-de-ficha-de-proveedor";
 import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 import { FormularioDeParte } from "../../../../../../ui/plantillas/clientes/FormularioDeParte.cliente";
 import {
@@ -28,14 +31,21 @@ export default async function PaginaDeLaParte({ params }: PropsDePagina) {
       const ficha = respuesta.dato;
       return conTitulo(
         nombreDeLaFicha(ficha),
-        <FormularioDeParte
-          formulario={armarElFormularioDeParte(ficha, await accionesDelDirectorio(contexto))}
-          accion={editarParteAccion.bind(null, ficha.id, ficha.version, nuevaClaveDeParte())}
-          accionDeEstado={(ficha.activa ? desactivarParteAccion : reactivarParteAccion).bind(
-            null,
-            ficha.id,
-          )}
-        />,
+        <>
+          {ficha.roles.includes("PROVEEDOR") ? (
+            <EnlaceDeAccion href={rutaDeLaFichaDelProveedor(ficha.id)} variante="secundaria">
+              {texto({}, "compras.ficha.facturas_y_notas")}
+            </EnlaceDeAccion>
+          ) : null}
+          <FormularioDeParte
+            formulario={armarElFormularioDeParte(ficha, await accionesDelDirectorio(contexto))}
+            accion={editarParteAccion.bind(null, ficha.id, ficha.version, nuevaClaveDeParte())}
+            accionDeEstado={(ficha.activa ? desactivarParteAccion : reactivarParteAccion).bind(
+              null,
+              ficha.id,
+            )}
+          />
+        </>,
       );
     },
   );
