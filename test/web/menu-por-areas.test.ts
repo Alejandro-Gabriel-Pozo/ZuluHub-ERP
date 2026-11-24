@@ -285,6 +285,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "compras.compra.compras",
       ],
       [
+        "nivel-de-compras",
+        "compras",
+        "compras",
+        "compras",
+        "compras.configurar",
+        "/compras/nivel",
+        "compras.nivel.titulo",
+      ],
+      [
         "proveedores",
         "compras",
         "proveedores",
@@ -508,6 +517,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "stock",
     "produccion",
     "compras",
+    "nivel-de-compras",
     "proveedores",
     "configuracion-fiscal",
     "medios-de-pago",
@@ -579,7 +589,13 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     [
       "compras",
       [
-        ["compras", [["pantalla", "compras", "/compras", "compras.compra.compras"]]],
+        [
+          "compras",
+          [
+            ["pantalla", "compras", "/compras", "compras.compra.compras"],
+            ["pantalla", "nivel-de-compras", "/compras/nivel", "compras.nivel.titulo"],
+          ],
+        ],
         [
           "proveedores",
           [["pantalla", "proveedores", "/clientes?rol=proveedor", "clientes.lista.proveedores"]],

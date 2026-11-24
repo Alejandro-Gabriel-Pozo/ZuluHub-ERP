@@ -5,6 +5,8 @@
 
 export const RUTA_DE_COMPRAS = "/compras";
 
+export const RUTA_DEL_NIVEL_DE_COMPRAS = `${RUTA_DE_COMPRAS}/nivel`;
+
 export const rutaDeLaCompra = (recepcionId: string): string => `${RUTA_DE_COMPRAS}/${recepcionId}`;
 
 export type FiltroAplicado = Readonly<{

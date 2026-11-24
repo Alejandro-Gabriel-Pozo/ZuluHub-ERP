@@ -1,5 +1,5 @@
 import { RUTA_DE_CLIENTES } from "../plantillas/clientes/modelo-de-directorio";
-import { RUTA_DE_COMPRAS } from "../plantillas/compras/rutas-de-compras";
+import { RUTA_DE_COMPRAS, RUTA_DEL_NIVEL_DE_COMPRAS } from "../plantillas/compras/rutas-de-compras";
 
 /**
  * Las filas del área Compras del menú (compras y proveedores, en el orden de la maqueta `menu-por-areas.html`: «Compras» y después «Proveedores»). Es SOLO una parte de la tabla del menú (`menu.ts`, que las compone en el orden de las áreas y es la única fuente que lee el resto): sumar una pantalla de este
@@ -18,6 +18,19 @@ export const FILAS_DE_COMPRAS = [
     perilla: null,
     href: RUTA_DE_COMPRAS,
     etiqueta: "compras.compra.compras",
+    departamento: null,
+  },
+  // «Nivel de compras» (Compras PR 11): el gerente elige «Sin factura» o «Con factura». Módulo `compras` y la acción de su lectura (`compras.configurar`, solo gerente); nace cerrada: sin la acción no se ofrece.
+  {
+    tipo: "pantalla",
+    clave: "nivel-de-compras",
+    area: "compras",
+    grupo: "compras",
+    modulo: "compras",
+    accion: "compras.configurar",
+    perilla: null,
+    href: RUTA_DEL_NIVEL_DE_COMPRAS,
+    etiqueta: "compras.nivel.titulo",
     departamento: null,
   },
   {

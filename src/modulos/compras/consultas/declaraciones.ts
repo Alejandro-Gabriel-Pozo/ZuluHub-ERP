@@ -25,4 +25,5 @@ export const DECLARACIONES_DE_CONSULTAS = {
   obtenerNotaDeCredito: { accion: "notas_de_credito_de_proveedor.ver" },
   listarDiferencias: { accion: "diferencias_de_compra.ver" },
   obtenerTolerancias: { accion: "diferencias_de_compra.ver" },
+  nivelDeCompras: { accion: "compras.configurar" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

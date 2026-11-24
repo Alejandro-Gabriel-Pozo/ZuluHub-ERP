@@ -20,7 +20,24 @@ const DEL_FILTRO = (para: string): Proposito => ({
 const PRUEBA_DEL_BUSCADOR = "apps/web/ui/componentes/BuscadorEnLista.test.tsx";
 const REGISTRAR_COMPRA = ["recepciones.registrar"] as const;
 
+const FORMULARIO_DEL_NIVEL =
+  "apps/web/ui/plantillas/compras/nivel/FormularioDeNivelDeCompras.cliente.tsx";
+
 export const DATOS_DE_COMPRAS = {
+  "nivel-de-compras": {
+    // La lista de niveles que se eligen vive UNA vez en el dominio (`NIVELES_ESTANDAR_DE_COMPRA`, N1 y N2): el servidor la ofrece y el pedido solo se acepta con uno de ella.
+    ficha: "src/modulos/compras/dominio/niveles.ts",
+    propositos: [
+      {
+        para: "Nivel con el que la empresa carga sus compras: «Sin factura» o «Con factura». Rige hacia adelante: cada compra guarda el nivel con que nació.",
+        fuente:
+          "Pedernal-docs, brief `PR-11-nivel-de-compras-pantalla.md` de Compras (rama de planificación de la Ola 1) y maqueta `compra-nivel.html`; decisión del dueño del 23/11/2026 (pregunta 9) y orden del 24/11/2026 (solo N1 y N2); quién: solo el gerente (compras.configurar)",
+      },
+    ],
+    consumidores: [FORMULARIO_DEL_NIVEL],
+    ponerPor: ["compras.configurar"],
+    requiere: REQUIERE_COMPRAS,
+  },
   "producto-de-compra": {
     // Sin primitiva: es la elección de UN producto entre los que el servidor ofrece para comprar (`productosParaComprar`); la pantalla solo manda el id y el servidor vuelve a validar que sea de la empresa y comprable.
     ficha: "src/modulos/compras/casos-de-uso/lectura-para-comprar.ts",

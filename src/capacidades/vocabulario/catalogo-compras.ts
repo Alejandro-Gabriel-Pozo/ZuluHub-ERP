@@ -23,6 +23,41 @@ export const TEXTOS_DE_COMPRAS = {
     ],
     fuente: { decision: "DEC-0838" },
   },
+  // «Nivel de compras» (Compras PR 11): el nombre de la pantalla y los dos niveles que se eligen (N1 y N2). Los tres los aprobó el dueño tal cual el 24/11/2026 (`compra-nivel.html`; nombres de DDD:120 punto 3). «Recepción separada» y «Tres vías» (aprobados) son de la fase 5, pausada: no tienen clave hasta que se construyan.
+  "compras.nivel.titulo": {
+    porDefecto: "Nivel de compras",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/nivel/textos-de-nivel-de-compras.ts",
+        nombre: "textosDeNivelDeCompras",
+      },
+      { como: "FUNCION", archivo: "apps/web/ui/navegacion/menu.ts", nombre: "FILAS_DEL_MENU" },
+    ],
+    fuente: { decision: "DEC-0870" },
+  },
+  "compras.nivel.compra_simple": {
+    porDefecto: "Sin factura",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/nivel/textos-de-nivel-de-compras.ts",
+        nombre: "textosDeNivelDeCompras",
+      },
+    ],
+    fuente: { decision: "DEC-0870" },
+  },
+  "compras.nivel.con_comprobante": {
+    porDefecto: "Con factura",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/nivel/textos-de-nivel-de-compras.ts",
+        nombre: "textosDeNivelDeCompras",
+      },
+    ],
+    fuente: { decision: "DEC-0870" },
+  },
   "compras.compra.por_recibir": { porDefecto: "Por recibir" },
   "compras.compra.sin_facturar": { porDefecto: "Sin facturar" },
   "compras.compra.pedida": { porDefecto: "Pedida" },

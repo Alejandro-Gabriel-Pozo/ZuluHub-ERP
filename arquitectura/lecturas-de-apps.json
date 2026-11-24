@@ -9,6 +9,12 @@
     "apps/web/ui/plantillas/sesion/PantallaDeCuenta.tsx",
     "apps/web/ui/plantillas/usuarios/*"
   ],
+  "test/web/ficha-de-nivel-de-compras.test.ts": [
+    "apps/web/app/s/app/(operacion)/compras/nivel/**",
+    "apps/web/app/s/app/acciones-de-nivel-de-compras.ts",
+    "apps/web/servidor/nivel-de-compras.ts",
+    "apps/web/ui/plantillas/compras/nivel/*"
+  ],
   "test/web/ficha-de-mesas.test.ts": [
     "apps/web/app/s/app/(operacion)/salon/mesas/**",
     "apps/web/ui/plantillas/salon/*"

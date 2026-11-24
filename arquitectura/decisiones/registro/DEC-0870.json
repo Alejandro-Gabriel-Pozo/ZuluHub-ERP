@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0870",
+  "fecha": "2026-11-24",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Compras PR 11: «Nivel de compras», el gerente elige «Sin factura» o «Con factura» (textos aprobados tal cual); los niveles de la fase 5 no se ofrecen.",
+  "que_cambia": "El gerente ve y cambia el nivel con que compra la empresa; rige hacia adelante y lo ya cargado conserva su nivel. «Recepción separada» y «Tres vías» (aprobados) no se construyen: fase 5 pausada. Revertir: sacar las claves compras.nivel.*, la ruta /compras/nivel y su fila del menú.",
+  "donde": "decisiones-del-dueno-2026-11.md, fila del 23/11/2026 «Compras: el dueño aprueba las recomendaciones del plan a las 10 preguntas» (pregunta 9) y orden del 24/11/2026 (PR 11 solo N1 y N2); compra-nivel.html; catalogo-compras.ts; confirmada: DDD fila del 23/11/2026"
+}
