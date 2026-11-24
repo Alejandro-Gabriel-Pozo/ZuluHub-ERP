@@ -3,8 +3,8 @@
   "fecha": "2026-11-23",
   "quien": "sesión",
   "tipo": "DINERO",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "entre centros de costo con pendientes desiguales, cada parte es el piso de su proporción en centavos y todo el sobrante va a la primera sucursal por orden fijo (10,00 en tres = 3,34 / 3,33 / 3,33).",
   "que_cambia": "Un pago «a cuenta» repartido entre centros de costo deja el centavo (o los centavos) de más en la primera sucursal por orden fijo, no en la de mayor resto. Revertir: cambiar una función (prorratearConSobranteAlPrimero) por prorratear en distribuirPorCentroDeCosto.",
-  "donde": "src/primitivas/dinero/prorrateo.ts; saldos_de_partes/dominio/distribucion.ts; regla del dueño del 21/11/2026 extendida por el orquestador a pendientes desiguales (SUPUESTO ante el dueño)"
+  "donde": "src/primitivas/dinero/prorrateo.ts; saldos_de_partes/dominio/distribucion.ts; regla del dueño del 21/11/2026 extendida por el orquestador a pendientes desiguales (SUPUESTO ante el dueño); confirmada: DDD fila del 23/11/2026"
 }
