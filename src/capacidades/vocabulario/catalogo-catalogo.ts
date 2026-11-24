@@ -339,4 +339,10 @@ export const TEXTOS_DE_CATALOGO = {
   "catalogo.accion.editar": { porDefecto: "Editar" },
   // `productos.html`, «Textos nuevos», fila «Errores»: «Una opción incluida no lleva recargo».
   "catalogo.error.incluida_con_recargo": { porDefecto: "Una opción incluida no lleva recargo" },
+  // A13, tramo Medidas (DEC-0527). `productos.html`, «Textos nuevos», fila «Opciones» (aprobados 09/11/2026): «Variantes · Agregar variante · Es la medida». En lo que se ve, «medida» y nunca
+  // «tamaño» (dueño, 12/11/2026).
+  "catalogo.opciones.agregar_variante": { porDefecto: "Agregar variante" },
+  "catalogo.opciones.es_la_medida": { porDefecto: "Es la medida" },
+  // `productos.html`, segunda tabla de «Textos nuevos» (decisiones 138, 139 y 147; «por aprobar», los redactó el ingeniero): «Un producto admite una sola variante» (decisión 138: una sola variante).
+  "catalogo.error.una_sola_variante": { porDefecto: "Un producto admite una sola variante" },
 } as const;

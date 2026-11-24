@@ -352,6 +352,32 @@ export const DATOS_DE_PRODUCTOS = {
     ponerPor: ["opciones.editar"],
     requiere: REQUIERE_CATALOGO,
   },
+  "precio-de-medida-de-producto": {
+    // El importe se tipea en pesos con dos decimales (`CampoImporte`) y viaja como texto decimal; la validez la decide esta primitiva dentro de `cambiarPrecio`.
+    ficha: "src/primitivas/dinero/precio-de-venta.ts",
+    propositos: [
+      {
+        para: "Precio de venta de la empresa de una medida de un producto con variante, IVA incluido, en la solapa «Precios»: se cambia agregando una fila al historial de esa medida.",
+        fuente:
+          "Pedernal-docs/11-especificaciones/pantallas-de-catalogo-restante-inventario.md §2.3 (`cambiarPrecio` con `opcionId`) y la maqueta aprobada el 12/11/2026 (`productos.html`, función `vPrecios`, carpeta de prototipos de Pedernal-docs 10-ux-ui); fila 98 de decisiones-del-dueno-2026-11.md (13/11/2026)",
+      },
+    ],
+    consumidores: ["apps/web/ui/plantillas/catalogo/FormularioDePreciosPorMedida.cliente.tsx"],
+    ponerPor: ["productos.cambiar_precio"],
+    requiere: REQUIERE_CATALOGO,
+  },
+  "medida-de-variante-de-producto": {
+    // Un sí o un no del negocio del módulo de catálogo: si la variante del producto es la medida (decisión 138: una sola variante, y solo ella puede ser la medida).
+    ficha: "src/modulos/catalogo/dominio/modelo.ts",
+    propositos: [
+      OPCIONES_PROPOSITO(
+        "Si la variante del producto es la medida (chica, mediana, grande…): solo la medida lleva un precio propio por cada opción y escala el consumo.",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_GRUPO],
+    ponerPor: ["variantes.editar"],
+    requiere: REQUIERE_CATALOGO,
+  },
   "producto-de-origen-de-copia-de-opciones": {
     // Una referencia a un producto activo de la empresa con opciones propias (no hay primitiva de texto: la fuente de la lista es `productosParaCopiar`).
     ficha: "src/modulos/catalogo/consultas/consultas.ts",

@@ -118,7 +118,8 @@ describe("operaciones contextuales: registros reales", () => {
       documentoDeIntegracion(CONTEXTOS, OPERACIONES),
     );
   });
-  it("3. nadie fuera de servidor/integracion.ts importa los registros", () => {
+  // Tope propio (estabilidad bajo carga, 23/11/2026): lee y analiza todo `apps/web`; 0,6 a 1 s medido solo y 5,09 s en el CI (push a main 36713cf8, job «Pruebas (con Postgres real) (3)»), que vencía los 5 s por defecto.
+  it("3. nadie fuera de servidor/integracion.ts importa los registros", { timeout: 30_000 }, () => {
     const web = archivosDe("apps/web").filter((a) => /\.(ts|tsx)$/.test(a));
     expect(
       saltanElRegistro(
