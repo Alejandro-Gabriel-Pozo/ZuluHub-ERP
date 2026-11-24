@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { errorDeCodigo } from "../../src/capacidades/experiencia/respuesta";
 import {
   armarElGrupo,
+  armarLaVariante,
+  rutaDeLaVariante,
   armarLaCopia,
   armarLasOpciones,
   rutaDeLaCopia,
@@ -26,6 +28,7 @@ const SALSAS: GrupoDeLaPantalla = {
   id: GRUPO,
   nombre: "Salsas",
   clase: "ADICIONAL",
+  esTamano: false,
   esObligatorio: false,
   admiteVarias: true,
   seMuestraEnCarta: true,
@@ -38,6 +41,7 @@ const PUNTO: GrupoDeLaPantalla = {
   id: "g2",
   nombre: "Punto de la carne",
   clase: "INCLUIDA",
+  esTamano: false,
   esObligatorio: true,
   admiteVarias: false,
   seMuestraEnCarta: false,
@@ -48,6 +52,7 @@ const OPCIONES: OpcionesDeLaPantalla = {
   nombre: "Milanesa",
   versionDeOpciones: 4,
   grupos: [SALSAS, PUNTO],
+  variante: null,
   claveDelCambio: "clave",
 };
 
@@ -67,6 +72,16 @@ describe("armarLasOpciones", () => {
     expect(armarLasOpciones(OPCIONES, true)).toEqual({
       id: ID,
       titulo: "Milanesa",
+      variantes: {
+        titulo: "Variantes",
+        tarjeta: null,
+        editar: null,
+        agregar: {
+          href: `/catalogo/productos/${ID}/opciones/variante`,
+          texto: "Agregar variante",
+          apagado: false,
+        },
+      },
       grupos: {
         titulo: "Grupos de opciones",
         tarjetas: [
@@ -157,6 +172,8 @@ describe("armarElGrupo", () => {
   it("un grupo que existe: el título «Editar», lo guardado, «Incluida / Adicional» con su valor y apagado, y cada opción con su clave de fila (sin «Quitar»)", () => {
     expect(armarElGrupo(EXISTENTE)).toEqual({
       id: ID,
+      esVariante: false,
+      esTamano: { etiqueta: "Es la medida", valor: false },
       titulo: "Editar",
       esNuevo: false,
       nombre: { etiqueta: "Nombre", valor: "Salsas" },
@@ -338,5 +355,78 @@ describe("textoDelError", () => {
     expect(textoDelError(errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA"))).toBe(
       "Esta acción no está permitida",
     );
+  });
+});
+
+describe("la variante", () => {
+  const V: GrupoDeLaPantalla = {
+    id: "v1",
+    nombre: "Tamaño",
+    clase: "VARIANTE",
+    esTamano: true,
+    esObligatorio: true,
+    admiteVarias: false,
+    seMuestraEnCarta: true,
+    opciones: [
+      { id: "a", nombre: "Chico", recargo: "0.000000" },
+      { id: "b", nombre: "Grande", recargo: "0.000000" },
+    ],
+  };
+  const lista = (variante: GrupoDeLaPantalla | null, puede = true) =>
+    armarLasOpciones({ ...OPCIONES, variante }, puede).variantes;
+
+  it("la ruta cuelga de las opciones", () => {
+    expect(rutaDeLaVariante(ID)).toBe(`/catalogo/productos/${ID}/opciones/variante`);
+  });
+
+  it("con variante: la tarjeta con «Es la medida» y «Editar»; sin «Agregar variante»", () => {
+    expect(lista(V)).toEqual({
+      titulo: "Variantes",
+      tarjeta: {
+        id: "v1",
+        nombre: "Tamaño",
+        esLaMedida: "Es la medida",
+        opciones: ["Chico", "Grande"],
+      },
+      editar: {
+        href: `/catalogo/productos/${ID}/opciones/variante`,
+        texto: "Editar",
+        apagado: false,
+      },
+      agregar: null,
+    });
+  });
+
+  it("una variante que no es la medida no lleva la marca; sin variante, «Agregar variante»; sin permiso, apagados (no ausentes)", () => {
+    expect(lista({ ...V, esTamano: false }).tarjeta?.esLaMedida).toBeNull();
+    expect(lista(null)).toEqual({
+      titulo: "Variantes",
+      tarjeta: null,
+      editar: null,
+      agregar: {
+        href: `/catalogo/productos/${ID}/opciones/variante`,
+        texto: "Agregar variante",
+        apagado: false,
+      },
+    });
+    expect(lista(V, false)).toMatchObject({ editar: { apagado: true }, agregar: null });
+    expect(lista(null, false).agregar).toMatchObject({ apagado: true });
+  });
+
+  it("armar la variante: «Agregar variante» si es nueva, «Editar» si existe; la medida marcada según lo guardado", () => {
+    const base = { id: ID, nombre: "Latte", versionDeOpciones: 1, claveDelCambio: "c" };
+    expect(armarLaVariante({ ...base, grupo: null })).toMatchObject({
+      esVariante: true,
+      titulo: "Agregar variante",
+      esTamano: { etiqueta: "Es la medida", valor: false },
+    });
+    expect(armarLaVariante({ ...base, grupo: V })).toMatchObject({
+      esVariante: true,
+      titulo: "Editar",
+      // La variante guardada no lleva una clase de la lista: el valor es uno válido y no cuenta.
+      clase: { valor: "INCLUIDA" },
+      esTamano: { valor: true },
+    });
+    expect(armarElGrupo({ ...base, grupo: null }).esVariante).toBe(false);
   });
 });
