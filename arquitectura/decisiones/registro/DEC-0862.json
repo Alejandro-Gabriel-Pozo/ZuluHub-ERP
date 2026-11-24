@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0862",
+  "fecha": "2026-11-24",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "«Nueva compra» se aparta de la maqueta: remito en la misma pantalla, proveedor y producto elegidos buscando, y «Agregar proveedor» como botón.",
+  "que_cambia": "Todo se carga en una pantalla con un solo botón. El «Total» al pie SÍ está (lo calcula el servidor). Revertir: pantalla «Recibir» aparte para el remito, desplegables.",
+  "donde": "ficha-de-nueva-compra.ts (diferencias 4, 5 y 6), PantallaDeNuevaCompra.cliente.tsx; maqueta compra.html, estado nueva; brief PR-6 de Compras; confirmada: DDD fila del 24/11/2026"
+}

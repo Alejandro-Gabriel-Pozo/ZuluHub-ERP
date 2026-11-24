@@ -1,6 +1,7 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { CLASES_COMPRABLES } from "../../catalogo/publico";
+import { totalDeCompra } from "../dominio/importe-vigente";
 import { leerRenglonesDeCompra } from "../dominio/registrar-compra";
 import type { TxDeConsultasDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
@@ -97,7 +98,14 @@ export type RenglonCotizado = Readonly<{
   dePesoVariable: boolean;
 }>;
 
-export type CompraCotizada = Readonly<{ renglones: readonly RenglonCotizado[] }>;
+export type CompraCotizada = Readonly<{
+  renglones: readonly RenglonCotizado[];
+  /**
+   * El total de la compra: la suma de los importes de los renglones, con la MISMA regla que el total de la lista y de la ficha (`totalDeCompra`: centavos enteros, nunca `number`). `null` si algún
+   * renglón no tiene precio: nunca un total parcial ni cero. Coincide EXACTO con el total que muestra la ficha de la compra al guardarla (sin correcciones todavía).
+   */
+  total: string | null;
+}>;
 
 export async function cotizarCompraDentro(
   tx: TxDeConsultasDeCompras,
@@ -118,5 +126,5 @@ export async function cotizarCompraDentro(
       dePesoVariable: calculado.valor.dePesoVariable,
     });
   }
-  return ok({ renglones });
+  return ok({ renglones, total: totalDeCompra(renglones.map((r) => r.importe)) });
 }

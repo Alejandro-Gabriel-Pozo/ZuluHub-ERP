@@ -9,6 +9,8 @@ import type { DefinicionDeDato, Proposito } from "./tipos-de-datos";
 const FORMULARIO_DE_PARTE = "apps/web/ui/plantillas/clientes/FormularioDeParte.cliente.tsx";
 const FILTROS_DEL_DIRECTORIO =
   "apps/web/ui/plantillas/clientes/FormularioDeFiltrosDelDirectorio.cliente.tsx";
+const HOJA_DE_NUEVO_PROVEEDOR =
+  "apps/web/ui/plantillas/compras/nueva/HojaDeNuevoProveedor.cliente.tsx";
 const DATOS_DE_LA_PARTE = "src/modulos/clientes/dominio/datos-de-parte.ts";
 const REQUIERE_CLIENTES = { modulo: "clientes", estadoDeEmpresa: ["ACTIVE"] } as const;
 const PONER_PARTES = ["partes.crear", "partes.editar"] as const;
@@ -18,18 +20,32 @@ const FUENTE =
 
 const DE_LA_PARTE = (para: string): Proposito => ({ para, fuente: FUENTE });
 
+const DEL_ALTA_RAPIDA = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs 10-ux-ui, maqueta compra.html, estados `prov-nuevo` y `prov-repetido` (aprobada el 09/11/2026: alta de proveedor en una ventana, sin salir de la compra) y 11-especificaciones/decisiones-del-dueno-2026-11.md (15/11/2026, puntos 8a y 8b)",
+});
+
 export const DATOS_DE_CLIENTES = {
   "naturaleza-de-parte": {
     ficha: "src/modulos/clientes/dominio/estados.ts",
-    propositos: [DE_LA_PARTE("Si la parte es una persona o una empresa.")],
-    consumidores: [FORMULARIO_DE_PARTE],
+    propositos: [
+      DE_LA_PARTE("Si la parte es una persona o una empresa."),
+      DEL_ALTA_RAPIDA(
+        "Si el proveedor que se agrega desde «Nueva compra» es una persona o una empresa.",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_PARTE, HOJA_DE_NUEVO_PROVEEDOR],
     ponerPor: PONER_PARTES,
     requiere: REQUIERE_CLIENTES,
   },
   "nombre-de-parte": {
     ficha: "src/primitivas/texto/nombre-o-razon-social.ts",
-    propositos: [DE_LA_PARTE("Nombre de la persona o razón social de la empresa.")],
-    consumidores: [FORMULARIO_DE_PARTE],
+    propositos: [
+      DE_LA_PARTE("Nombre de la persona o razón social de la empresa."),
+      DEL_ALTA_RAPIDA("Nombre del proveedor que se agrega desde «Nueva compra»."),
+    ],
+    consumidores: [FORMULARIO_DE_PARTE, HOJA_DE_NUEVO_PROVEEDOR],
     ponerPor: PONER_PARTES,
     requiere: REQUIERE_CLIENTES,
   },

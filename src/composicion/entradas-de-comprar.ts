@@ -4,6 +4,7 @@ import { textoDeBusquedaDeProductoDesdeTexto } from "../primitivas/texto/termino
 import { UNIDADES } from "../primitivas/unidades/unidades";
 import {
   decimal,
+  entero,
   identificador,
   leer,
   texto,
@@ -81,5 +82,61 @@ export function entradaDeCotizarCompra(
       unidadDePrecioId: r.unidadDePrecioId ?? null,
       precio: r.precio ?? null,
     })),
+  });
+}
+
+/**
+ * La frontera de «Comprar y recibir» (compras PR 6b): de lo que manda la pantalla a lo que acepta `registrarCompra`. Solo se toman los campos declarados: la clave del envío (un UUID que genera la
+ * pantalla por intento: es la idempotencia), el proveedor, el depósito si la sucursal tiene más de uno, el remito (opcional: punto de venta, número y fecha) y los renglones (los mismos de la
+ * cotización). La empresa, la persona y la sucursal NO se leen del pedido: las pone el servidor. Los importes y las cantidades viajan como TEXTO decimal, nunca `number`. Qué punto de venta, número, fecha,
+ * cantidad o precio valen lo decide el dominio dentro de la transacción (`leerRemito`, `calcularLinea`): acá solo la forma. Un remito a medio llenar NO se descarta: se rechaza (nunca se guarda una compra sin el remito que la
+ * persona empezó a escribir). Todo en blanco es «sin remito».
+ * Previene: dinero o cantidades como `number`, una compra con campos que el navegador inventó y una compra con la empresa o la sucursal que diga el navegador. Chequeo: `entradas-de-comprar.test.ts`.
+ */
+const formaDeRemito = z.object({ puntoDeVenta: entero, numero: entero, fecha: texto });
+const formaDelRemitoEscrito = z.object({ puntoDeVenta: texto, numero: texto, fecha: texto });
+
+const formaDeRegistrar = z.object({
+  clave: identificador,
+  proveedorId: identificador,
+  depositoId: identificador.nullish(),
+  remito: formaDelRemitoEscrito.nullish(),
+  renglones: z.array(formaDeRenglon).min(1),
+});
+
+export type EntradaWebDeRegistrarCompra = Readonly<{
+  clave: string;
+  proveedorId: string;
+  depositoId: string | null;
+  remito: Readonly<{ puntoDeVenta: number; numero: number; fecha: string }> | null;
+  renglones: EntradaWebDeCotizarCompra["renglones"];
+}>;
+
+const enBlanco = (valor: string): boolean => valor.trim() === "";
+
+export function entradaDeRegistrarCompra(
+  crudo: unknown,
+): Resultado<EntradaWebDeRegistrarCompra, ErrorDeEntrada> {
+  const forma = leer(formaDeRegistrar, crudo);
+  if (!forma.ok) return forma;
+  let remito: EntradaWebDeRegistrarCompra["remito"] = null;
+  const escrito = forma.valor.remito;
+  if (
+    escrito !== undefined &&
+    escrito !== null &&
+    !(enBlanco(escrito.puntoDeVenta) && enBlanco(escrito.numero) && enBlanco(escrito.fecha))
+  ) {
+    const leido = leer(formaDeRemito, escrito);
+    if (!leido.ok) return leido;
+    remito = leido.valor;
+  }
+  const renglones = entradaDeCotizarCompra({ renglones: forma.valor.renglones });
+  if (!renglones.ok) return renglones;
+  return ok({
+    clave: forma.valor.clave,
+    proveedorId: forma.valor.proveedorId,
+    depositoId: forma.valor.depositoId ?? null,
+    remito,
+    renglones: renglones.valor.renglones,
   });
 }
