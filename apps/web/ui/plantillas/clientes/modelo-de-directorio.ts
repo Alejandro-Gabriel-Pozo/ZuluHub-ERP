@@ -149,7 +149,7 @@ export function armarLosFiltros(
     valores: filtros,
     textos: {
       buscar: texto(d, "catalogo.lista.buscar"),
-      // SUPUESTO (DEC-0834): el selector de rol (DDD:294) necesita un rótulo y la maqueta usa pestañas sin rótulo; se reusa «Roles» (`clientes.formulario.roles`, aprobado). Costo de revertir: una línea.
+      // SUPUESTO (DEC-0837): el selector de rol (DDD:294) necesita un rótulo y la maqueta usa pestañas sin rótulo; se reusa «Roles» (`clientes.formulario.roles`, aprobado). Costo de revertir: una línea.
       rol: texto(d, "clientes.formulario.roles"),
       todos: texto(d, "catalogo.lista.todos"),
       desactivados: texto(d, "clientes.lista.mostrar_desactivados"),

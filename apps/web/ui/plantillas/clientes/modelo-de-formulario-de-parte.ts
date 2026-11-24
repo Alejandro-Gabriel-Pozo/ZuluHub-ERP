@@ -118,7 +118,7 @@ export function armarElFormularioDeParte(
   return {
     titulo: ficha === null ? texto(d, "clientes.lista.nuevo") : nombreDeLaFicha(ficha),
     naturaleza: {
-      // SUPUESTO (DEC-0834): el selector (decisión del dueño, DDD:294) necesita un rótulo y la maqueta no dibuja ninguno; se arma con sus dos palabras aprobadas, «Persona / Empresa» como lo nombró el dueño. Costo de revertir: una línea.
+      // SUPUESTO (DEC-0837): el selector (decisión del dueño, DDD:294) necesita un rótulo y la maqueta no dibuja ninguno; se arma con sus dos palabras aprobadas, «Persona / Empresa» como lo nombró el dueño. Costo de revertir: una línea.
       etiqueta: `${texto(d, "clientes.lista.persona")} / ${texto(d, "clientes.lista.empresa")}`,
       valorInicial: naturaleza,
       opciones: [

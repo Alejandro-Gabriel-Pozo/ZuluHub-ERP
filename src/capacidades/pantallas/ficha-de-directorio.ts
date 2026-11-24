@@ -163,7 +163,7 @@ export const FICHA_DE_DIRECTORIO = {
     "clientes.formulario.roles": {
       usos: [
         USO_DEL_FORMULARIO,
-        "rótulo del filtro de rol (SUPUESTO (DEC-0834): la maqueta usa pestañas sin rótulo)",
+        "rótulo del filtro de rol (SUPUESTO (DEC-0837): la maqueta usa pestañas sin rótulo)",
       ],
       fuente: MAQUETA_APROBADA,
     },
