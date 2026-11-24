@@ -901,14 +901,31 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
         ok: false,
         error: "ES_EL_GERENTE",
       });
-      expect(await casos.apagarMembresia(e.ctx, { personaId: e.gerente })).toEqual({
-        ok: false,
-        error: "ES_EL_GERENTE",
-      });
       expect(await foto([e.empresa])).toBe(antes);
     });
 
-    it("el último admin no se apaga: ULTIMO_ADMIN (sin gerente activo)", async () => {
+    it("nadie se apaga a sí mismo: ES_UNO_MISMO, ni el gerente ni un administrador, y no se escribe nada (H3)", async () => {
+      const e = await escenario();
+      const admin = await miembro(e, "ADMINISTRADOR");
+      const antes = await foto([e.empresa]);
+      expect(await casos.apagarMembresia(e.ctx, { personaId: e.gerente })).toEqual({
+        ok: false,
+        error: "ES_UNO_MISMO",
+      });
+      expect(await casos.apagarMembresia(admin.ctx, { personaId: admin.id })).toEqual({
+        ok: false,
+        error: "ES_UNO_MISMO",
+      });
+      expect(await foto([e.empresa])).toBe(antes);
+      expect(await auditoria(e.empresa, "MEMBRESIA_APAGADA")).toHaveLength(0);
+      // El administrador sí puede apagar a OTRO administrador (se gestionan por igual), y recién ahí queda apagado.
+      const otro = await miembro(e, "ADMINISTRADOR");
+      expect((await casos.apagarMembresia(admin.ctx, { personaId: otro.id })).ok).toBe(true);
+      expect(await membresia(e.empresa, otro.id)).toMatchObject({ activo: false });
+      expect(await membresia(e.empresa, admin.id)).toMatchObject({ activo: true });
+    });
+
+    it("sin gerente activo, el único administrador no se apaga a sí mismo (ES_UNO_MISMO) y un empleado sí se apaga", async () => {
       const e = await escenario();
       // Desde 0005 la base no deja apagar a un gerente (`membresia_gerente_no_se_apaga`): una empresa
       // sin gerente activo se arma quitando su membresía, como el dueño de la base.
@@ -918,9 +935,10 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
       ]);
       const unico = await miembro(e, "ADMINISTRADOR");
       const operador = await miembro(e, "OPERADOR");
+      // `ULTIMO_ADMIN` ya no se alcanza en secuencia (quien pide cuenta como otro administrador activo): queda como segunda defensa del dominio, probada en `membresia.test.ts`, y en las carreras de `identidad-concurrencia.test.ts`.
       expect(await casos.apagarMembresia(unico.ctx, { personaId: unico.id })).toEqual({
         ok: false,
-        error: "ULTIMO_ADMIN",
+        error: "ES_UNO_MISMO",
       });
       // Un operador sí se apaga, aunque sea el único operador.
       expect((await casos.apagarMembresia(unico.ctx, { personaId: operador.id })).ok).toBe(true);

@@ -71,3 +71,67 @@ export function entradaDeInvitacion(
   const forma = leer(formaDeInvitacion, crudo);
   return forma.ok ? ok({ invitacionId: invitacionId(forma.valor.invitacionId) }) : forma;
 }
+
+/**
+ * Desactivar a una persona: el pedido lleva SOLO su id (el de la ficha). La empresa y quién pide salen de la sesión; el rol, el email y cualquier otro dato no se leen del
+ * navegador (lista blanca). Misma forma que la ficha: una regla, un lugar.
+ */
+export type EntradaDeDesactivarUsuario = EntradaDeFichaDeUsuario;
+
+export function entradaDeDesactivarUsuario(
+  crudo: unknown,
+): Resultado<EntradaDeDesactivarUsuario, ErrorDeEntrada> {
+  return entradaDeFichaDeUsuario(crudo);
+}
+
+const formaDeAsignarSucursales = z.object({
+  personaId: identificador,
+  sucursales: z.array(identificador).max(MAXIMO_DE_SUCURSALES_POR_PEDIDO),
+});
+
+export type EntradaDeAsignarSucursalesDeUsuario = Readonly<{
+  personaId: PersonaId;
+  /** El conjunto FINAL de sucursales de la persona; vacío es válido (quita todas). Sin repetidos ni orden: lo decide el caso de uso. */
+  sucursales: readonly SucursalId[];
+}>;
+
+/**
+ * Lo que se guarda en la ficha de un empleado: la persona (la dirección) y el conjunto final de sucursales tildadas. Una forma que no es un identificador no llega a la base; de qué
+ * empresa es cada id lo decide el servidor (una ajena es indistinguible de una inexistente).
+ */
+export function entradaDeAsignarSucursalesDeUsuario(
+  crudo: unknown,
+): Resultado<EntradaDeAsignarSucursalesDeUsuario, ErrorDeEntrada> {
+  const forma = leer(formaDeAsignarSucursales, crudo);
+  return forma.ok
+    ? ok({
+        personaId: personaId(forma.valor.personaId),
+        sucursales: forma.valor.sucursales.map(sucursalId),
+      })
+    : forma;
+}
+
+/**
+ * Reactivar a una persona desactivada (tramo U3, parte B): el pedido lleva SOLO el id de la persona (la dirección) y las sucursales tildadas. El email y el rol NO se leen del pedido: los toma el servidor de la
+ * membresía de esa persona (la reactivación es una invitación nueva con el MISMO rol; un rol distinto lo rechaza el servidor igual). Las sucursales solo valen para el Empleado; el tope es defensivo, como en invitar.
+ */
+const formaDeReactivar = z.object({
+  personaId: identificador,
+  sucursales: z.array(identificador).max(MAXIMO_DE_SUCURSALES_POR_PEDIDO).default([]),
+});
+
+export type EntradaDeReactivarUsuario = Readonly<{
+  personaId: PersonaId;
+  sucursales: readonly SucursalId[];
+}>;
+
+export function entradaDeReactivarUsuario(
+  crudo: unknown,
+): Resultado<EntradaDeReactivarUsuario, ErrorDeEntrada> {
+  const forma = leer(formaDeReactivar, crudo);
+  if (!forma.ok) return forma;
+  return ok({
+    personaId: personaId(forma.valor.personaId),
+    sucursales: [...new Set(forma.valor.sucursales)].map(sucursalId),
+  });
+}

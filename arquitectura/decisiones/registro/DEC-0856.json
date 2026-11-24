@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0856",
+  "fecha": "2026-11-24",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "La ficha de un empleado activo permite tildar sus sucursales y guardar; puede quedar sin ninguna y, con dos ediciones a la vez, gana la última (aprobado el 23/11/2026).",
+  "que_cambia": "Quien administra asigna sucursales desde la ficha. No cambia permisos ni datos: usa el caso de uso existente. Revertir: quitar el bloque de la ficha y su acción.",
+  "donde": "decisiones-del-dueno-2026-11.md, fila del 23/11/2026 (Usuarios de la empresa; preguntas 8 y 10); catalogo-usuarios.ts, registro-de-administracion.ts, ficha-de-usuarios.ts; confirmada: DDD fila del 23/11/2026"
+}

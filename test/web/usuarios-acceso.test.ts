@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { err, ok } from "../../src/primitivas/resultado/resultado";
 
 /**
- * Los botones de «Usuarios» (tramo U2): salen solo si `permisosDelActor` (el mismo cálculo que el guard) incluye la acción de cada uno. Previene: ofrecer «Invitar», «Reenviar» o «Revocar» a quien el
+ * Los botones de «Usuarios» (tramos U2 y U3): salen solo si `permisosDelActor` (el mismo cálculo que el guard) incluye la acción de cada uno. Previene: ofrecer «Invitar», «Reenviar», «Revocar» o «Desactivar» a quien el
  * servidor va a rechazar (un empleado), con el módulo en solo lectura o si no se pudieron leer los permisos («todo nace cerrado»). Es solo una ayuda: cada acción vuelve a pasar por el guard.
  */
 vi.mock("server-only", () => ({}));
@@ -38,6 +38,7 @@ const TODAS = [
   "usuarios.invitar",
   "usuarios.reenviar_invitacion",
   "usuarios.revocar_invitacion",
+  "usuarios.apagar",
 ];
 beforeEach(() => {
   mundo.fallan = false;
@@ -45,25 +46,59 @@ beforeEach(() => {
 });
 
 describe("ofertasDeUsuarios", () => {
-  it("gerente o administrador (tienen las tres acciones): se ofrecen los tres botones", async () => {
+  it("gerente o administrador (tienen las cuatro acciones): se ofrecen los cuatro botones", async () => {
     conPermisos(TODAS);
-    expect(await ofertas()).toEqual({ invitar: true, reenviar: true, revocar: true });
+    expect(await ofertas()).toEqual({
+      invitar: true,
+      reenviar: true,
+      revocar: true,
+      desactivar: true,
+    });
   });
 
   it("cada botón sale solo con SU acción", async () => {
     conPermisos(["usuarios.ver", "usuarios.reenviar_invitacion"]);
-    expect(await ofertas()).toEqual({ invitar: false, reenviar: true, revocar: false });
+    expect(await ofertas()).toEqual({
+      invitar: false,
+      reenviar: true,
+      revocar: false,
+      desactivar: false,
+    });
   });
 
-  it("un empleado (sin ninguna de las tres): ningún botón", async () => {
+  it("«Desactivar» (U3) sale solo con `usuarios.apagar`, aunque pueda ver e invitar; con el módulo en solo lectura no", async () => {
+    conPermisos(["usuarios.ver", "usuarios.invitar"]);
+    expect(await ofertas()).toMatchObject({ invitar: true, desactivar: false });
+    conPermisos(["usuarios.ver", "usuarios.apagar"]);
+    expect(await ofertas()).toMatchObject({ invitar: false, desactivar: true });
+    conPermisos(["usuarios.ver"], ["administracion"]);
+    expect(await ofertas()).toMatchObject({ desactivar: false });
+  });
+
+  it("un empleado (sin ninguna de las cuatro): ningún botón", async () => {
     conPermisos([]);
-    expect(await ofertas()).toEqual({ invitar: false, reenviar: false, revocar: false });
+    expect(await ofertas()).toEqual({
+      invitar: false,
+      reenviar: false,
+      revocar: false,
+      desactivar: false,
+    });
   });
 
   it("sin permisos leídos (error o falla): todo cerrado", async () => {
     mundo.permisos = err("SIN_PERMISO");
-    expect(await ofertas()).toEqual({ invitar: false, reenviar: false, revocar: false });
+    expect(await ofertas()).toEqual({
+      invitar: false,
+      reenviar: false,
+      revocar: false,
+      desactivar: false,
+    });
     mundo.fallan = true;
-    expect(await ofertas()).toEqual({ invitar: false, reenviar: false, revocar: false });
+    expect(await ofertas()).toEqual({
+      invitar: false,
+      reenviar: false,
+      revocar: false,
+      desactivar: false,
+    });
   });
 });

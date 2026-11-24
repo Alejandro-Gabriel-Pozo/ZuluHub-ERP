@@ -52,8 +52,8 @@ export async function accionesDePuntosDeVenta(
 }
 
 /**
- * Las ofertas de botones de «Usuarios» (tramo U2): ¿la persona puede invitar, reenviar o revocar? Cada una es la oferta de SU acción (`usuarios.invitar`, `usuarios.reenviar_invitacion`,
- * `usuarios.revocar_invitacion`: gerente y administrador) que el servidor calcula con `ofertaDe`: con el módulo en desarrollo, en solo lectura o sin el rol, no. Si no se pudieron leer los
+ * Las ofertas de botones de «Usuarios» (tramo U2): ¿la persona puede invitar, reenviar, revocar o desactivar (U3)? Cada una es la oferta de SU acción (`usuarios.invitar`, `usuarios.reenviar_invitacion`,
+ * `usuarios.revocar_invitacion`, `usuarios.apagar`: gerente y administrador) que el servidor calcula con `ofertaDe`: con el módulo en desarrollo, en solo lectura o sin el rol, no. Si no se pudieron leer los
  * permisos, `false` (cierra, no abre). Ocultar no es autorizar: cada acción vuelve a pasar por el guard dentro de su transacción. Es solo la ayuda que decide si el botón se dibuja.
  * Chequeo: `test/web/usuarios-acceso.test.ts`.
  */
@@ -61,9 +61,16 @@ export type OfertasDeUsuarios = Readonly<{
   invitar: boolean;
   reenviar: boolean;
   revocar: boolean;
+  /** Tramo U3: desactivar a una persona (`usuarios.apagar`). Reactivar es una invitación nueva: lo decide `invitar`. */
+  desactivar: boolean;
 }>;
 
-const TODO_CERRADO: OfertasDeUsuarios = { invitar: false, reenviar: false, revocar: false };
+const TODO_CERRADO: OfertasDeUsuarios = {
+  invitar: false,
+  reenviar: false,
+  revocar: false,
+  desactivar: false,
+};
 
 export async function ofertasDeUsuarios(contexto: ContextoOperativo): Promise<OfertasDeUsuarios> {
   const permisos = await permisosDeLaPersona(contexto);
@@ -72,5 +79,6 @@ export async function ofertasDeUsuarios(contexto: ContextoOperativo): Promise<Of
     invitar: ofertaDe("usuarios.invitar", permisos).permitida,
     reenviar: ofertaDe("usuarios.reenviar_invitacion", permisos).permitida,
     revocar: ofertaDe("usuarios.revocar_invitacion", permisos).permitida,
+    desactivar: ofertaDe("usuarios.apagar", permisos).permitida,
   };
 }

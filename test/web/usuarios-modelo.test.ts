@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ListaDeUsuariosParaLaPantalla } from "../../src/composicion/usuarios-web";
 import {
+  armarElEditorDeSucursales,
   armarLaFichaDeUsuario,
   armarLaListaDeUsuarios,
 } from "../../apps/web/ui/plantillas/usuarios/modelo-de-usuarios";
@@ -117,6 +118,8 @@ describe("armarLaFichaDeUsuario", () => {
         { rotulo: "Rol", valor: "Empleado", insignia: null },
         { rotulo: "Estado", valor: null, insignia: { tono: "exito", texto: "Activo" } },
       ],
+      desactivar: null,
+      reactivar: null,
     });
   });
 
@@ -126,5 +129,120 @@ describe("armarLaFichaDeUsuario", () => {
       valor: null,
       insignia: { tono: "aviso", texto: "Desactivado" },
     });
+  });
+});
+
+/**
+ * Quién ve «Desactivar» en la ficha: solo una persona ACTIVA que NO es el gerente ni quien está mirando, y solo si quien mira tiene el permiso (todo nace cerrado: sin saber quién mira o sin permiso, no se
+ * ofrece). Es una ayuda para no ofrecer lo que nunca va a funcionar: el servidor lo impone igual (`ES_EL_GERENTE`, `ES_UNO_MISMO`, el guard). Previene: ofrecer desactivar al gerente o a uno mismo.
+ */
+describe("armarLaFichaDeUsuario: el botón «Desactivar»", () => {
+  const YO = U(9, "yo@x.test", "ADMINISTRADOR");
+  const MIRA = { personaId: YO.personaId, puedeDesactivar: true, puedeReactivar: false };
+  const ofrece = (u: ReturnType<typeof U>, quien: Parameters<typeof armarLaFichaDeUsuario>[2]) =>
+    armarLaFichaDeUsuario(u, {}, quien).desactivar !== null;
+
+  it.each([
+    ["un empleado activo", U(1, "ana@x.test", "OPERADOR"), true],
+    ["otro administrador activo", U(2, "diego@x.test", "ADMINISTRADOR"), true],
+    ["el gerente", U(3, "laura@x.test", "GERENTE"), false],
+    ["un empleado desactivado", U(4, "sofia@x.test", "OPERADOR", false), false],
+    ["un administrador desactivado", U(5, "pablo@x.test", "ADMINISTRADOR", false), false],
+    ["la propia persona (administrador)", YO, false],
+  ])("quien mira es administrador con permiso: %s → %s", (_, persona, esperado) => {
+    expect(ofrece(persona, MIRA)).toBe(esperado);
+  });
+
+  it("la propia persona no lo ve aunque sea la única fila y esté activa; el gerente mirándose tampoco", () => {
+    const gerente = U(8, "gerente@x.test", "GERENTE");
+    expect(
+      ofrece(gerente, {
+        personaId: gerente.personaId,
+        puedeDesactivar: true,
+        puedeReactivar: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("sin permiso, sin saber quién mira o sin pedir nada, no se ofrece a nadie", () => {
+    const empleado = U(1, "ana@x.test", "OPERADOR");
+    expect(
+      ofrece(empleado, { personaId: YO.personaId, puedeDesactivar: false, puedeReactivar: false }),
+    ).toBe(false);
+    expect(
+      ofrece(empleado, { personaId: null, puedeDesactivar: true, puedeReactivar: false }),
+    ).toBe(false);
+    expect(ofrece(empleado, null)).toBe(false);
+    expect(armarLaFichaDeUsuario(empleado).desactivar).toBeNull();
+  });
+
+  it("los textos del cuadro salen del catálogo, con el email en el título", () => {
+    const { desactivar } = armarLaFichaDeUsuario(U(1, "ana@x.test", "OPERADOR"), {}, MIRA);
+    expect(desactivar).toEqual({
+      boton: "Desactivar",
+      titulo: "¿Desactivar a ana@x.test?",
+      detalle: "Se corta su acceso ahora.",
+      confirmar: "Desactivar",
+      cancelar: "Cancelar",
+      cerrar: "Cerrar",
+      enviando: "Enviando…",
+    });
+  });
+});
+
+describe("armarElEditorDeSucursales", () => {
+  it("dice «Sucursales» y «Guardar» con textos del catálogo y conserva el orden y las tildes del servidor", () => {
+    const opciones = [
+      { id: "s-1", nombre: "Centro", marcada: true },
+      { id: "s-2", nombre: "Norte", marcada: false },
+    ];
+    expect(armarElEditorDeSucursales(opciones)).toEqual({
+      rotulo: "Sucursales",
+      guardar: "Guardar",
+      opciones,
+    });
+  });
+});
+
+/**
+ * Quién ve «Reactivar» en la ficha (tramo U3, parte B): solo una persona DESACTIVADA que no es el gerente, y solo si quien mira puede invitar (la reactivación es una invitación nueva). Sin saber qué puede quien
+ * mira, o sin pedir nada, no se ofrece (todo nace cerrado). El enlace lleva solo el id de la persona. Previene: ofrecer reactivar a quien el servidor va a rechazar o a quien ya está activo.
+ */
+describe("armarLaFichaDeUsuario: el enlace «Reactivar»", () => {
+  const MIRA = { personaId: "quien-mira", puedeDesactivar: true, puedeReactivar: true };
+  const reactivar = (u: ReturnType<typeof U>, quien: Parameters<typeof armarLaFichaDeUsuario>[2]) =>
+    armarLaFichaDeUsuario(u, {}, quien).reactivar;
+
+  it("a una persona desactivada, con el id en la dirección y el texto «Reactivar»", () => {
+    const ana = U(1, "ana@x.test", "OPERADOR", false);
+    expect(reactivar(ana, MIRA)).toEqual({
+      texto: "Reactivar",
+      href: `/cuenta/usuarios/invitar?reactivar=${ana.personaId}`,
+    });
+    expect(reactivar(U(2, "diego@x.test", "ADMINISTRADOR", false), MIRA)).not.toBeNull();
+  });
+
+  it.each([
+    ["una persona activa", U(1, "ana@x.test", "OPERADOR", true)],
+    ["un administrador activo", U(2, "diego@x.test", "ADMINISTRADOR", true)],
+    ["el gerente (aunque figurara desactivado)", U(3, "laura@x.test", "GERENTE", false)],
+  ])("no se ofrece en %s", (_, persona) => {
+    expect(reactivar(persona, MIRA)).toBeNull();
+  });
+
+  it("sin permiso para invitar, sin saber quién mira o sin pedir nada, no se ofrece; con permiso de desactivar pero no de invitar tampoco", () => {
+    const ana = U(1, "ana@x.test", "OPERADOR", false);
+    expect(reactivar(ana, { ...MIRA, puedeReactivar: false })).toBeNull();
+    expect(reactivar(ana, null)).toBeNull();
+    expect(armarLaFichaDeUsuario(ana).reactivar).toBeNull();
+  });
+
+  it("un desactivado nunca ofrece «Desactivar», y uno activo nunca «Reactivar»", () => {
+    const desactivada = armarLaFichaDeUsuario(U(1, "ana@x.test", "OPERADOR", false), {}, MIRA);
+    expect(desactivada.desactivar).toBeNull();
+    expect(desactivada.reactivar).not.toBeNull();
+    const activa = armarLaFichaDeUsuario(U(1, "ana@x.test", "OPERADOR", true), {}, MIRA);
+    expect(activa.desactivar).not.toBeNull();
+    expect(activa.reactivar).toBeNull();
   });
 });
