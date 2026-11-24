@@ -111,6 +111,7 @@ export const TEXTOS_DE_USUARIOS = {
       { como: "FUNCION", archivo: MODELO, nombre: "armarElEditorDeSucursales" },
       { como: "FUNCION", archivo: MODELO_DE_INVITACIONES, nombre: "armarElFormularioDeInvitacion" },
       { como: "FUNCION", archivo: MODELO_DE_INVITACIONES, nombre: "armarLaFichaDeInvitacion" },
+      { como: "FUNCION", archivo: MODELO, nombre: "armarElEditorDeSucursales" },
     ],
     fuente: FUENTE_DE_INVITAR,
   },

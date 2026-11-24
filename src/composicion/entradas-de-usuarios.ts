@@ -86,7 +86,7 @@ export function entradaDeDesactivarUsuario(
 
 const formaDeAsignarSucursales = z.object({
   personaId: identificador,
-  sucursales: z.array(identificador),
+  sucursales: z.array(identificador).max(MAXIMO_DE_SUCURSALES_POR_PEDIDO),
 });
 
 export type EntradaDeAsignarSucursalesDeUsuario = Readonly<{

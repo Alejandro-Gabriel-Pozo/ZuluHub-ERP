@@ -163,8 +163,6 @@ export async function revocarUnaInvitacion(
   return { estado: "HECHO", ruta: RUTAS_DE_CUENTA.usuarios };
 }
 
-export type { InvitacionParaLaFicha, ListaDeUsuariosParaLaPantalla, UsuarioParaLaPantalla };
-
 /** Desactiva a la persona de la ficha; devuelve el error ya traducido o `{ error: null }`. Vuelve a pedir la lista y la ficha en cualquier caso. */
 export async function desactivarElUsuario(personaId: string): Promise<ResultadoDeAccion> {
   const respuesta = await conLaEmpresa((contexto) =>
@@ -215,3 +213,5 @@ export async function guardarLasSucursalesDeUnEmpleado(
   revalidatePath(rutaDeLaFichaDeUsuario(personaId));
   return respuesta.ok ? { error: null } : { error: respuesta.error };
 }
+
+export type { InvitacionParaLaFicha, ListaDeUsuariosParaLaPantalla, UsuarioParaLaPantalla };
