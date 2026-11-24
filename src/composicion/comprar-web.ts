@@ -126,14 +126,24 @@ export function cotizarLaCompra(
 }
 
 export type DependenciasDeRegistrarCompraWeb = Readonly<{
-  casosDeUso: () => Pick<ReturnType<Web["casosDeUsoDeCompras"]>, "registrarCompra">;
+  casosDeUso: () => Pick<
+    ReturnType<Web["casosDeUsoDeCompras"]>,
+    "registrarCompra" | "registrarCompraConFactura"
+  >;
   respuesta: DependenciasDeRespuesta;
 }>;
+
+/** Lo que la factura cargada «tal como vino» avisa sin frenar: la letra que no era la esperada del proveedor y el total del papel que no coincide con la suma. */
+export type AvisoDeFacturaParaLaPantalla =
+  | Readonly<{ tipo: "LETRA_NO_ESPERADA"; esperada: string }>
+  | Readonly<{ tipo: "TOTAL_NO_COINCIDE" }>;
 
 export type CompraRegistradaParaLaPantalla = Readonly<{
   recepcionId: string;
   /** `true`: era la misma compra de un envío anterior (doble toque, reintento): no se escribió ni se auditó nada de nuevo. */
   yaExistia: boolean;
+  /** Los avisos de la factura (vacía sin factura): la factura se guardó igual. */
+  avisos: readonly AvisoDeFacturaParaLaPantalla[];
 }>;
 
 /**
@@ -153,15 +163,28 @@ export function registrarLaCompra(
     d.respuesta,
     crudo,
     entradaDeRegistrarCompra,
-    (entrada) =>
-      d.casosDeUso().registrarCompra(contexto, {
+    (entrada) => {
+      const pedido = {
         clave: entrada.clave,
         sucursalId,
         proveedorId: entrada.proveedorId,
         depositoId: entrada.depositoId,
         remito: entrada.remito,
         renglones: entrada.renglones,
-      }),
-    (salida) => ({ recepcionId: salida.recepcionId, yaExistia: salida.yaExistia }),
+      };
+      // Con factura, el caso de uso de «Con factura» (compra + factura + conciliación de atajo en UNA transacción); sin ella, el de siempre. El nivel de la empresa lo verifica el servidor en los dos.
+      return entrada.factura === null
+        ? d.casosDeUso().registrarCompra(contexto, pedido)
+        : d
+            .casosDeUso()
+            .registrarCompraConFactura(contexto, { ...pedido, factura: entrada.factura });
+    },
+    (salida) => ({
+      recepcionId: salida.recepcionId,
+      yaExistia: salida.yaExistia,
+      avisos: salida.avisos.map((a) =>
+        a.tipo === "LETRA_NO_ESPERADA" ? { tipo: a.tipo, esperada: a.esperada } : { tipo: a.tipo },
+      ),
+    }),
   );
 }

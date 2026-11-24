@@ -16,6 +16,7 @@ export type {
   TxDeConsultasDeCompras,
 } from "./casos-de-uso/contrato";
 export {
+  ALICUOTAS_DE_COMPRA,
   PUNTO_DE_VENTA_MAXIMO,
   PUNTO_DE_VENTA_MINIMO,
   TIPOS_DE_COMPROBANTE_DE_PROVEEDOR,
