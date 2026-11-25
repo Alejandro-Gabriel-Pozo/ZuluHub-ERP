@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0956",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: la dirección que muestra «Carta en línea» (copiar y QR) usa el host de carta propio y activo de la empresa; si no tiene ninguno, sigue usando el host de la marca, como hasta ahora.",
+  "que_cambia": "Solo la dirección que ven y copian las personas de una empresa con dominio propio activo para la carta; el resto no cambia. Se revierte dejando de leer el host propio en la pantalla.",
+  "donde": "src/composicion/carta-en-linea-web.ts (verLaCartaEnLinea) y web-de-catalogo.ts (hostPropioDeLaCarta)",
+  "motivo": "El plan decía que la carta se publica en la dirección propia, pero no qué mostrar mientras esa dirección no esté activa; mostrar la de la marca evita un enlace roto."
+}

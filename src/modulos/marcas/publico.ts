@@ -135,7 +135,12 @@ export {
   type DominioGuardado,
   type RepositorioDeDominios,
 } from "./persistencia/repositorios";
-export type { DominiosDb, MarcasParaMailDb, PublicoDb } from "./persistencia/tablas";
+export type {
+  DominiosDb,
+  HostsPropiosDb,
+  MarcasParaMailDb,
+  PublicoDb,
+} from "./persistencia/tablas";
 export {
   errorDeDominioDeRestriccion,
   errorDeMarcaDeRestriccion,
@@ -157,9 +162,16 @@ export {
   type VersionPublicaDeMarca,
 } from "./dominio/configuracion-publica";
 export {
+  leerHostsProtegidos,
+  MAXIMO_DE_HOSTS_PROTEGIDOS,
+  type ErrorDeListaDeHostsProtegidos,
+} from "./dominio/hosts-protegidos";
+export {
+  crearLecturaDeHostsPropios,
   crearLecturaDeMarcaParaMail,
   crearLecturaPublicaDeMarcas,
   type HostServible,
+  type LecturaDeHostsPropios,
   type LecturaDeMarcaParaMail,
   type LecturaPublicaDeMarcas,
 } from "./persistencia/lecturas";

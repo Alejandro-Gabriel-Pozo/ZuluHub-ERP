@@ -40,6 +40,7 @@ const casosCon = (vigilada: Vigilada): CasosDeUsoDeDominios =>
   crearCasosDeUsoDeDominios({
     transacciones: { ejecutar: (_opciones, trabajo) => trabajo(vigilada.tx) },
     reglas: REGLAS_DE_PLATAFORMA,
+    hostsProtegidos: new Set(),
   });
 
 const CLAVE = "clave-de-guard-0001";

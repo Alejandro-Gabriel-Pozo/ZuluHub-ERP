@@ -18,7 +18,7 @@ import {
 import type { Host } from "../dominio/host";
 import type { DatosDeMarcaParaMail } from "../dominio/marca-de-mail";
 import { versionVigente } from "../dominio/vigencia";
-import type { MarcasParaMailDb, PublicoDb } from "./tablas";
+import type { HostsPropiosDb, MarcasParaMailDb, PublicoDb } from "./tablas";
 
 /**
  * Lecturas de marcas que NO son de plataforma (ADR-005): la resolución pública de un host y los datos de
@@ -242,6 +242,30 @@ export function crearLecturaDeMarcaParaMail(db: Kysely<MarcasParaMailDb>): Lectu
         // El CHECK `dominio_host_ck` garantiza la forma de un host normalizado.
         hostCanonico: dominio === undefined ? null : (dominio.host as Host),
       };
+    },
+  };
+}
+
+/**
+ * El host ACTIVO que la empresa del contexto tiene para una superficie (dominio propio, DEC-0913: a lo sumo uno por empresa y superficie). Lo lee la app con su rol y NO filtra por
+ * empresa ni por estado en la consulta: el rol no tiene privilegio sobre esas columnas (0095 otorga solo `host` y `superficie`) y la política `dominio_app_leer_propio` ya deja ver únicamente lo
+ * ACTIVO de la empresa del contexto firmado. Sin contexto, o con otro, no hay filas (falla cerrado). `null` si no hay.
+ */
+export interface LecturaDeHostsPropios {
+  activoDe(superficie: "APP" | "CARTA"): Promise<Host | null>;
+}
+
+export function crearLecturaDeHostsPropios(db: Kysely<HostsPropiosDb>): LecturaDeHostsPropios {
+  return {
+    async activoDe(superficie) {
+      const fila = await db
+        .selectFrom("dominio")
+        .select("host")
+        .where("superficie", "=", superficie)
+        .limit(1)
+        .executeTakeFirst();
+      // El CHECK `dominio_host_ck` garantiza la forma de un host normalizado.
+      return fila === undefined ? null : (fila.host as Host);
     },
   };
 }
