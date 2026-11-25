@@ -63,6 +63,57 @@ export function leerDestino(texto: string | undefined): Destino | null {
 }
 
 /**
+ * Los proyectos de Vercel de los clientes con base propia (extra de plan; dueño, 25/11/2026): una lista CERRADA, hoy VACÍA. Código del
+ * cliente (`cliente-<codigo>`, el MISMO de su ambiente en `migrar.yml` y `cargar-entorno.yml`) → id de su proyecto de Vercel (no es un
+ * secreto). Sumar un cliente es una línea acá, otra en cada workflow y la prueba que las compara.
+ * Previene: cargar las variables de un cliente en `pedernal-erp` (o al revés) por un texto libre o un error de tipeo: un código que no está
+ * acá no resuelve a ningún proyecto (falla cerrado) y un id repetido o igual al de la web o la consola tampoco.
+ */
+export const PROYECTOS_DE_VERCEL_DE_CLIENTES: Readonly<Record<string, string>> = {};
+
+export const CODIGO_DE_CLIENTE = /^cliente-[a-z0-9-]{3,30}$/;
+const ID_DE_PROYECTO_DE_VERCEL = /^prj_[A-Za-z0-9]{20,40}$/;
+
+/** A qué proyecto y a qué destino de Vercel se escribe un pedido `--vercel <texto>`. */
+export type PedidoDeVercel = Readonly<{
+  /** Lo que se escribió: `preview`, `production` o `cliente-<codigo>`. */
+  texto: string;
+  destino: Destino;
+  /** El id del proyecto de Vercel donde se escribe. */
+  proyecto: string;
+  /** Cómo se nombra el proyecto en los mensajes. */
+  etiqueta: string;
+}>;
+
+/**
+ * `preview` y `production` van al proyecto `pedernal-erp`; `cliente-<codigo>` va al proyecto de ESE cliente (siempre en su destino
+ * `production`: es su instalación) y solo si está en la lista cerrada. Cualquier otra cosa, `null`.
+ */
+export function leerPedidoDeVercel(
+  texto: string | undefined,
+  clientes: Readonly<Record<string, string>> = PROYECTOS_DE_VERCEL_DE_CLIENTES,
+): PedidoDeVercel | null {
+  const destino = leerDestino(texto);
+  if (destino !== null) {
+    return { texto: destino, destino, proyecto: PROYECTO_DE_VERCEL, etiqueta: "pedernal-erp" };
+  }
+  if (texto === undefined || !CODIGO_DE_CLIENTE.test(texto) || !Object.hasOwn(clientes, texto)) {
+    return null;
+  }
+  const proyecto = clientes[texto];
+  if (
+    proyecto === undefined ||
+    !ID_DE_PROYECTO_DE_VERCEL.test(proyecto) ||
+    proyecto === PROYECTO_DE_VERCEL ||
+    proyecto === PROYECTO_DE_VERCEL_DE_LA_CONSOLA ||
+    Object.values(clientes).filter((id) => id === proyecto).length !== 1
+  ) {
+    return null;
+  }
+  return { texto, destino: "production", proyecto, etiqueta: texto };
+}
+
+/**
  * Lo que la aplicación PROHÍBE que exista (`VARIABLES_PROHIBIDAS` y `PREFIJO_PROHIBIDO` de
  * `src/composicion/entorno.ts`). Se repite acá porque el script se carga con Node sin compilar y ese
  * archivo importa sin extensión; `test/arquitectura/vercel-prohibidas.test.ts` falla si las dos listas
