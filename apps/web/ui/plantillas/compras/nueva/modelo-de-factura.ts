@@ -103,7 +103,7 @@ export const alicuotaDeLaLinea = (factura: FacturaEscrita, renglon: RenglonEscri
   factura.lineas[renglon.id]?.alicuota ?? ALICUOTA_INICIAL;
 
 /** «2000.0000» pasa a «2000»; «1.5000», a «1.5»: el mismo valor canónico, sin ceros de relleno. */
-function sinCerosDeRelleno(decimal: string): string {
+export function sinCerosDeRelleno(decimal: string): string {
   if (!decimal.includes(".")) return decimal;
   return decimal.replace(/0+$/, "").replace(/\.$/, "");
 }

@@ -20,6 +20,8 @@ export const DECLARACIONES_DE_CONSULTAS = {
   listarRecepcionesSeparadas: { accion: "recepciones.ver" },
   fichaDeRecepcionSeparada: { accion: "recepciones.ver" },
   listarFacturasSeparadas: { accion: "comprobantes_de_proveedor.ver" },
+  fichaDeFacturaSeparada: { accion: "comprobantes_de_proveedor.ver" },
+  conciliacionesDeFactura: { accion: "conciliaciones.ver" },
   listarOrdenes: { accion: "ordenes_de_compra.ver" },
   obtenerOrden: { accion: "ordenes_de_compra.ver" },
   listarDevoluciones: { accion: "devoluciones_a_proveedor.ver" },

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0934",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "El alcance de sucursales limita la propuesta, lo recibido y las conciliaciones visibles, y conciliar o anular lo exigen. El gerente concilia todas las sucursales (pregunta 6, respuesta del dueño).",
+  "que_cambia": "Gerente y administrador operan en todas las sucursales (H6) y tienen conciliaciones ver, conciliar y anular. Un rol propio futuro (H4b) con esas acciones quedaria limitado a sus sucursales asignadas. Revertir: pasar TODAS.",
+  "donde": "proponer-conciliacion.ts, conciliar-factura.ts, repositorio-de-recepciones-separadas.ts, compras-n3-conciliacion.test.ts; pregunta 6 de Compras 4, respuesta Ok del dueño el 25/11/2026"
+}

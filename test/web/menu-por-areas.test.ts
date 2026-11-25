@@ -303,6 +303,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "compras.recepcion.titulo_lista",
       ],
       [
+        "facturas",
+        "compras",
+        "compras",
+        "compras",
+        "comprobantes_de_proveedor.ver",
+        "/compras/facturas",
+        "compras.factura.titulo_lista",
+      ],
+      [
         "proveedores",
         "compras",
         "proveedores",
@@ -528,6 +537,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "compras",
     "nivel-de-compras",
     "recepciones",
+    "facturas",
     "proveedores",
     "configuracion-fiscal",
     "medios-de-pago",
