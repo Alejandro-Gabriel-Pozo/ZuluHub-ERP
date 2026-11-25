@@ -458,7 +458,7 @@ ARCA ni contra una base real: **NO VERIFICADO** hasta la prueba de homologación
 
 Decisión del dueño, 25/11/2026: tener la base de datos propia es un **extra de plan** («Extra de plan sobre bd»); los clientes lo piden para «tener sus datos en su propia BD». La base compartida sigue siendo el estándar. Diseño y alternativas: `base-por-cliente-opciones.md` (repositorio de documentos). Esta sección es el camino **mínimo y manual**: una instalación aparte, operada por vos. No hay alta automática.
 
-**Estado:** el mecanismo está en `migrar.yml` (ambiente `cliente-<codigo>`, frase `MIGRAR CLIENTE-<CODIGO>`, respaldo obligatorio). La lista de clientes está **vacía**: no hay ninguno dado de alta. La carga de variables al proyecto de Vercel del cliente (`cargar-entorno.yml`) **todavía no existe**; hasta entonces se cargan a mano.
+**Estado:** el mecanismo está en `migrar.yml` (ambiente `cliente-<codigo>`, frase `MIGRAR CLIENTE-<CODIGO>`, respaldo obligatorio) y en `cargar-entorno.yml` (frase `CARGAR CLIENTE-<CODIGO>`, proyecto de Vercel del cliente). La lista de clientes está **vacía** en los dos y en `PROYECTOS_DE_VERCEL_DE_CLIENTES`: no hay ninguno dado de alta.
 
 ### H.1 Neon (la organización `Pedernal`, un proyecto por cliente y una clave por proyecto)
 
@@ -476,19 +476,19 @@ Decisión del dueño, 25/11/2026: tener la base de datos propia es un **extra de
 
 `Settings → Environments → New environment`: `cliente-<codigo>` (minúsculas, números y guiones, 3 a 30 caracteres). Revisor obligatorio: vos. «Deployment branches»: solo `main`. Secretos:
 
-- `PEDERNAL_DB_DUENO_DIRECTA` (la cadena directa del cliente), `NEON_API_KEY` y `NEON_PROJECT_ID` (**obligatorios**: sin respaldo no se migra).
+- `PEDERNAL_DB_DUENO_DIRECTA` (la cadena directa del cliente), `NEON_API_KEY` y `NEON_PROJECT_ID` (**obligatorios**: sin respaldo no se migra) y `PEDERNAL_VERCEL_TOKEN` (para cargar las variables en SU proyecto de Vercel).
 - `PEDERNAL_CLAVE_CONTEXTO`: una **propia del cliente**, distinta de la de producción y de preview (así un contexto firmado para un cliente lo rechaza la base de otro).
 
 Un Environment que no existe en GitHub **no es seguro de nombrar**: GitHub lo crea vacío y sin revisor al primer uso. Por eso el ambiente solo se puede elegir si está en la lista de `migrar.yml`, y se suma **después** de crear el Environment con su revisor.
 
 ### H.3 Sumar al cliente a la lista (un PR chico)
 
-En `.github/workflows/migrar.yml` se suman dos líneas, y nada más: la opción `- cliente-<codigo>` y el caso `cliente-<codigo>) esperado="MIGRAR CLIENTE-<CODIGO>"; con_respaldo=true ;;` en «validar». En `test/arquitectura/workflow-migrar.test.ts` se actualiza, a propósito, la lista esperada. La prueba falla si falta el caso, la frase no nombra al cliente o el respaldo no es obligatorio.
+Se suman cuatro cosas, y nada más: en `.github/workflows/migrar.yml` la opción `- cliente-<codigo>` y el caso `cliente-<codigo>) esperado="MIGRAR CLIENTE-<CODIGO>"; con_respaldo=true ;;`; en `.github/workflows/cargar-entorno.yml` la opción y el caso `cliente-<codigo>) esperado="CARGAR CLIENTE-<CODIGO>"; destino="cliente-<codigo>" ;;`; y en `src/adaptadores/vercel/plan-de-variables.ts` la línea `"cliente-<codigo>": "prj_…"` de `PROYECTOS_DE_VERCEL_DE_CLIENTES` (el id del proyecto de Vercel del cliente; no es un secreto). Las pruebas se actualizan a propósito y fallan si una de las tres listas no coincide con las otras, si falta un caso o su frase, si el respaldo no es obligatorio, o si el id es el de `pedernal-erp`, el de la consola o el de otro cliente.
 
 ### H.4 Migrar, roles y primer administrador
 
 1. `Actions → Migrar` con el ambiente del cliente: `ver`, y después `aplicar` con la frase. Se crea primero la rama de respaldo `antes-de-<NNNN>`; si no se puede, no se migra.
-2. Roles de la base y variables: como en B.4, con la cadena del cliente, **sin tocar** `pedernal-erp`. Las variables van al proyecto de Vercel del cliente (a mano, hasta que exista la carga automática).
+2. Roles de la base y variables: `Actions → Cargar entorno` con el ambiente del cliente (frase `CARGAR CLIENTE-<CODIGO>`). Las variables van al proyecto de Vercel **del cliente**, siempre en su destino `production`, y **nunca** a `pedernal-erp`: el proyecto sale de la lista de H.3 y un código que no está en ella falla antes de tocar nada.
 3. Primer administrador y alta de la primera empresa: sección E, desde tu terminal con la cadena del cliente (no hay consola de plataforma del cliente).
 4. Cliente de Google y DNS: B.8 y B.7, a mano, con los hosts del cliente.
 
@@ -500,6 +500,7 @@ El proyecto de Vercel del cliente **no se conecta a Git** y lo desplegás vos po
 
 - Cada versión nueva se migra y se despliega **dos veces**, a mano: una por instalación.
 - El respaldo diario externo no existe todavía (ni para producción): lo único es la rama de respaldo antes de migrar.
-- El cron de trabajos corre cada 5 minutos en cada proyecto: mantiene despierta la base del cliente (costo aproximado de la base US$ 20–25 por mes; cifras de la documentación pública, a confirmar).
+- El cron de trabajos corre en cada proyecto con su propio calendario y, mientras corre, mantiene despierta la base del cliente: eso se paga por hora de cómputo (el costo de la base sube cuanto más seguido corra; ver `base-por-cliente-opciones.md`, §4, con cifras de la documentación pública a confirmar). La frecuencia vigente de la web está en `apps/web/vercel.json`.
 - Planes, marcas y empresas se cargan a mano en la base del cliente.
+- El token de Vercel de un Environment de cliente lo emitís vos con el alcance que Vercel permita (**NO VERIFICADO**: si es del equipo entero, también podría escribir en `pedernal-erp`). Lo que lo impide es el código: el comando solo escribe en el proyecto de la lista. Si Vercel permite un token limitado a un proyecto, usá ese.
 - Salida del cliente: se le entrega un volcado **verificado**, se le dan 30 días de gracia con sus datos ya entregados, y el borrado del proyecto de Neon lo hacés **solo vos**, en la consola.

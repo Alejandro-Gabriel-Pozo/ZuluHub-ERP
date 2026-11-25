@@ -14,9 +14,9 @@ import {
 import { crearClienteVercel } from "../src/adaptadores/vercel/cliente-vercel.ts";
 import {
   EQUIPO_DE_VERCEL,
-  leerDestino,
+  leerPedidoDeVercel,
   leerTokenDeVercel,
-  type Destino,
+  type PedidoDeVercel,
 } from "../src/adaptadores/vercel/plan-de-variables.ts";
 import {
   VARIABLE_DE_LA_CADENA,
@@ -57,16 +57,16 @@ export type EntradaDeCargaDeEntornoDelComando = Readonly<{
 }>;
 
 const USO =
-  "uso: cargar-entorno --vercel <preview|production> [--confirmo production] " +
-  "(production exige escribir también --confirmo production)";
+  "uso: cargar-entorno --vercel <preview|production|cliente-<codigo>> [--confirmo <lo mismo>] " +
+  "(production y un cliente exigen escribir también --confirmo con el mismo texto)";
 
-function leerPedido(argumentos: readonly string[]): Destino | null {
+function leerPedido(argumentos: readonly string[]): PedidoDeVercel | null {
   const [bandera, valor, confirmacion, confirmo] = argumentos;
-  const destino = leerDestino(valor);
-  if (bandera !== "--vercel" || destino === null) return null;
-  if (destino === "preview") return argumentos.length === 2 ? destino : null;
-  return argumentos.length === 4 && confirmacion === "--confirmo" && confirmo === "production"
-    ? destino
+  const pedido = leerPedidoDeVercel(valor);
+  if (bandera !== "--vercel" || pedido === null) return null;
+  if (pedido.texto === "preview") return argumentos.length === 2 ? pedido : null;
+  return argumentos.length === 4 && confirmacion === "--confirmo" && confirmo === pedido.texto
+    ? pedido
     : null;
 }
 
@@ -107,8 +107,8 @@ export async function ejecutarCargaDeEntorno(
   const info = (linea: string) => entrada.info(tapar(linea));
   const error = (linea: string) => entrada.error(tapar(linea));
 
-  const destino = leerPedido(entrada.argumentos);
-  if (destino === null) {
+  const pedido = leerPedido(entrada.argumentos);
+  if (pedido === null) {
     error(`ERROR: ${USO}`);
     return 2;
   }
@@ -133,6 +133,7 @@ export async function ejecutarCargaDeEntorno(
 
   const cliente = crearClienteVercel({
     token,
+    proyecto: pedido.proyecto,
     fetch: entrada.fetch ?? fetch,
     ...(entrada.plazoDeVercelEnMs === undefined ? {} : { plazoEnMs: entrada.plazoDeVercelEnMs }),
     ...(entrada.esperarEntreLecturas === undefined
@@ -140,12 +141,12 @@ export async function ejecutarCargaDeEntorno(
       : { esperar: entrada.esperarEntreLecturas }),
   });
   info(
-    `Se cargará en Vercel: ${destino.toUpperCase()} (proyecto pedernal-erp, equipo ${EQUIPO_DE_VERCEL}).`,
+    `Se cargará en Vercel: ${pedido.destino.toUpperCase()} (proyecto ${pedido.etiqueta}, equipo ${EQUIPO_DE_VERCEL}).`,
   );
 
   try {
     const informe = await cargarEntorno({
-      destino,
+      destino: pedido.destino,
       cliente,
       base,
       ...(entrada.bytesAlAzar === undefined ? {} : { bytesAlAzar: entrada.bytesAlAzar }),

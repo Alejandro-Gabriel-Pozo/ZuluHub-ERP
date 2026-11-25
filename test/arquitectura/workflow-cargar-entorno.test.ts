@@ -1,6 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  PROYECTO_DE_VERCEL,
+  PROYECTOS_DE_VERCEL_DE_CLIENTES,
+  leerPedidoDeVercel,
+} from "../../src/adaptadores/vercel/plan-de-variables";
 
 /**
  * `.github/workflows/cargar-entorno.yml`: carga en Vercel las variables que se generan solas. Corre con el token de
@@ -423,8 +428,8 @@ describe("workflow cargar-entorno.yml", () => {
         "base-con-la-cadena-directa",
         "el paso de carga sin la cadena de la base",
         reemplazar(
-          "npm run cargar-entorno -- --vercel preview\n          fi\n        env:\n          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}\n",
-          "npm run cargar-entorno -- --vercel preview\n          fi\n        env:\n",
+          'npm run cargar-entorno -- --vercel "$DESTINO" --confirmo "$DESTINO"\n          fi\n        env:\n          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}\n',
+          'npm run cargar-entorno -- --vercel "$DESTINO" --confirmo "$DESTINO"\n          fi\n        env:\n',
         ),
       ],
       ["sin-pooler", "la cadena del pooler", (t) => `${t}\n# nada\n          POOLER: pooler\n`],
@@ -440,8 +445,8 @@ describe("workflow cargar-entorno.yml", () => {
         "roles-solo-lo-pedido",
         "rotar contraseñas desde el workflow",
         reemplazar(
-          "--vercel preview\n          fi\n        env:\n          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}\n          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}\n          DESTINO: ${{ needs.validar.outputs.destino }}\n\n      - name: Generar",
-          "--vercel preview --rotar\n          fi\n        env:\n          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}\n          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}\n          DESTINO: ${{ needs.validar.outputs.destino }}\n\n      - name: Generar",
+          '--vercel "$DESTINO" --confirmo "$DESTINO"\n          fi\n        env:\n          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}\n          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}\n          DESTINO: ${{ needs.validar.outputs.destino }}\n\n      - name: Generar',
+          '--vercel "$DESTINO" --confirmo "$DESTINO" --rotar\n          fi\n        env:\n          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}\n          PEDERNAL_VERCEL_TOKEN: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}\n          DESTINO: ${{ needs.validar.outputs.destino }}\n\n      - name: Generar',
         ),
       ],
       [
@@ -554,6 +559,136 @@ describe("workflow cargar-entorno.yml", () => {
       expect([...CODIGOS_EVALUADOS].sort()).toEqual(
         [...new Set(casos.map(([codigo]) => codigo))].sort(),
       );
+    });
+  });
+});
+
+/**
+ * Los clientes con base propia (extra de plan; dueño, 25/11/2026): tres listas que tienen que decir lo mismo, hoy las tres VACÍAS —
+ * las opciones de `cargar-entorno.yml`, las de `migrar.yml` y `PROYECTOS_DE_VERCEL_DE_CLIENTES` (código → proyecto de Vercel). `[]` si
+ * coinciden y cada cliente tiene su caso con su frase, su proyecto válido y su destino.
+ * Previene: un cliente que se puede migrar pero no cargar (o al revés), o que apunte al proyecto de Vercel de OTRO (la web, la consola u otro
+ * cliente) por un código o un id mal copiado.
+ */
+const opcionesDeAmbiente = (texto: string, hasta: string) =>
+  [
+    ...texto
+      .slice(texto.indexOf("      ambiente:"), texto.indexOf(hasta))
+      .matchAll(/^ {10}- (\S+)$/gm),
+  ].map((m) => m[1] as string);
+
+function problemasDeClientes(
+  cargar: string,
+  migrar: string,
+  lista: Readonly<Record<string, string>>,
+): string[] {
+  const problemas: string[] = [];
+  const claves = Object.keys(lista).sort();
+  const igual = (a: readonly string[]) => JSON.stringify([...a].sort()) === JSON.stringify(claves);
+  if (!igual(opcionesDeAmbiente(cargar, "      confirmacion:").slice(2))) {
+    problemas.push("cargar-distinto-de-la-lista");
+  }
+  if (!igual(opcionesDeAmbiente(migrar, "      accion:").slice(2))) {
+    problemas.push("migrar-distinto-de-la-lista");
+  }
+  for (const c of claves) {
+    if (leerPedidoDeVercel(c, lista)?.destino !== "production") {
+      problemas.push(`cliente-sin-proyecto-valido: ${c}`);
+    }
+    const frase = c.slice("cliente-".length).toUpperCase();
+    if (!cargar.includes(`${c}) esperado="CARGAR CLIENTE-${frase}"; destino="${c}" ;;`)) {
+      problemas.push(`cargar-sin-caso: ${c}`);
+    }
+    if (!migrar.includes(`${c}) esperado="MIGRAR CLIENTE-${frase}"; con_respaldo=true ;;`)) {
+      problemas.push(`migrar-sin-caso: ${c}`);
+    }
+  }
+  return problemas;
+}
+
+describe("clientes con base propia: las tres listas dicen lo mismo", () => {
+  const ID_EJEMPLO = "prj_EjemploEjemploEjemploEjemplo1";
+  const OPCION = "          - produccion\n";
+  const CIERRE = '            *) echo "::error::Ambiente no permitido."; exit 1 ;;';
+  const conClienteEn = (texto: string, codigo: string, caso: string) =>
+    texto
+      .replace(OPCION, `${OPCION}          - ${codigo}\n`)
+      .replace(CIERRE, `            ${codigo}) ${caso} ;;\n${CIERRE}`);
+  const frase = (c: string) => c.slice("cliente-".length).toUpperCase();
+  const casoDeCargar = (c: string) => `esperado="CARGAR CLIENTE-${frase(c)}"; destino="${c}"`;
+  const casoDeMigrar = (c: string) => `esperado="MIGRAR CLIENTE-${frase(c)}"; con_respaldo=true`;
+
+  it("hoy: las tres vacías y de acuerdo", () => {
+    expect(Object.keys(PROYECTOS_DE_VERCEL_DE_CLIENTES)).toEqual([]);
+    expect(problemasDeClientes(TEXTO, MIGRAR, PROYECTOS_DE_VERCEL_DE_CLIENTES)).toEqual([]);
+  });
+
+  it("un cliente de ejemplo bien sumado en las tres listas cumple", () => {
+    const c = "cliente-ejemplo";
+    const cargar = conClienteEn(TEXTO, c, casoDeCargar(c));
+    const migrar = conClienteEn(MIGRAR, c, casoDeMigrar(c));
+    expect(problemasDeClientes(cargar, migrar, { [c]: ID_EJEMPLO })).toEqual([]);
+  });
+
+  describe("violaciones inyectadas: cada una se detecta", () => {
+    const c = "cliente-ejemplo";
+    const cargarBien = conClienteEn(TEXTO, c, casoDeCargar(c));
+    const migrarBien = conClienteEn(MIGRAR, c, casoDeMigrar(c));
+    const lista = { [c]: ID_EJEMPLO };
+    const casos: [string, string, () => string[]][] = [
+      [
+        "cargar-distinto-de-la-lista",
+        "una opción en cargar-entorno que no está en la lista de proyectos",
+        () => problemasDeClientes(cargarBien, MIGRAR, {}),
+      ],
+      [
+        "migrar-distinto-de-la-lista",
+        "una opción en migrar que no está en la lista de proyectos",
+        () => problemasDeClientes(TEXTO, migrarBien, {}),
+      ],
+      [
+        "cargar-distinto-de-la-lista",
+        "un cliente en la lista de proyectos sin su ambiente en cargar-entorno",
+        () => problemasDeClientes(TEXTO, migrarBien, lista),
+      ],
+      [
+        "migrar-distinto-de-la-lista",
+        "un cliente en la lista de proyectos sin su ambiente en migrar",
+        () => problemasDeClientes(cargarBien, MIGRAR, lista),
+      ],
+      [
+        `cliente-sin-proyecto-valido: ${c}`,
+        "un cliente que apunta al proyecto de la web (pedernal-erp)",
+        () => problemasDeClientes(cargarBien, migrarBien, { [c]: PROYECTO_DE_VERCEL }),
+      ],
+      [
+        `cliente-sin-proyecto-valido: ${c}`,
+        "un cliente con un id que no tiene la forma de un proyecto",
+        () => problemasDeClientes(cargarBien, migrarBien, { [c]: "otro" }),
+      ],
+      [
+        `cargar-sin-caso: ${c}`,
+        "un cliente cuyo caso de cargar-entorno apunta a otro destino",
+        () =>
+          problemasDeClientes(
+            conClienteEn(TEXTO, c, `esperado="CARGAR CLIENTE-EJEMPLO"; destino="production"`),
+            migrarBien,
+            lista,
+          ),
+      ],
+      [
+        `migrar-sin-caso: ${c}`,
+        "un cliente cuyo caso de migrar no exige respaldo",
+        () =>
+          problemasDeClientes(
+            cargarBien,
+            conClienteEn(MIGRAR, c, `esperado="MIGRAR CLIENTE-EJEMPLO"; con_respaldo=false`),
+            lista,
+          ),
+      ],
+    ];
+    it.each(casos)("«%s»: %s", (codigo, _descripcion, correr) => {
+      expect(correr()).toContain(codigo);
     });
   });
 });
