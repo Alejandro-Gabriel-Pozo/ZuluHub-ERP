@@ -105,7 +105,7 @@ function decodificar<S extends z.ZodType>(
   if (opaco === undefined || opaco === "") return undefined;
   try {
     const leido = forma.safeParse(JSON.parse(Buffer.from(opaco, "base64url").toString()));
-    return leido.success ? (leido.data as z.output<S>) : "ROTO";
+    return leido.success ? leido.data : "ROTO";
   } catch {
     return "ROTO";
   }
