@@ -87,7 +87,8 @@ async function resultado(): Promise<
   try {
     return { tipo: "pagina", pagina: (await Pagina()) as ReactElement };
   } catch (error) {
-    const digest = String((error as { digest?: unknown }).digest ?? "");
+    const crudo = (error as { digest?: unknown }).digest;
+    const digest = typeof crudo === "string" ? crudo : "";
     if (digest.includes("404")) return { tipo: "noEncontrada" };
     if (digest.startsWith("NEXT_REDIRECT")) return { tipo: "redireccion", digest };
     throw error;
