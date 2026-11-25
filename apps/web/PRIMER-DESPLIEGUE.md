@@ -477,7 +477,7 @@ Decisión del dueño, 25/11/2026: tener la base de datos propia es un **extra de
 `Settings → Environments → New environment`: `cliente-<codigo>` (minúsculas, números y guiones, 3 a 30 caracteres). Revisor obligatorio: vos. «Deployment branches»: solo `main`. Secretos:
 
 - `PEDERNAL_DB_DUENO_DIRECTA` (la cadena directa del cliente), `NEON_API_KEY` y `NEON_PROJECT_ID` (**obligatorios**: sin respaldo no se migra) y `PEDERNAL_VERCEL_TOKEN` (para cargar las variables en SU proyecto de Vercel).
-- `PEDERNAL_CLAVE_CONTEXTO`: una **propia del cliente**, distinta de la de producción y de preview (así un contexto firmado para un cliente lo rechaza la base de otro).
+- `PEDERNAL_CLAVE_CONTEXTO`: una **propia del cliente**, distinta de la de producción y de preview (así un contexto firmado para un cliente lo rechaza la base de otro). La generás vos con el comando de B.4 (`<kid>:<64 hexadecimales>`), la cargás en este Environment (la instala `migrar.yml` al aplicar) y en Vercel, y la dejás en tu terminal para H.4, paso 3: `cargar-entorno` la carga como sensible y después no se puede volver a leer.
 
 Un Environment que no existe en GitHub **no es seguro de nombrar**: GitHub lo crea vacío y sin revisor al primer uso. Por eso el ambiente solo se puede elegir si está en la lista de `migrar.yml`, y se suma **después** de crear el Environment con su revisor.
 
@@ -489,7 +489,13 @@ Se suman cuatro cosas, y nada más: en `.github/workflows/migrar.yml` la opción
 
 1. `Actions → Migrar` con el ambiente del cliente: `ver`, y después `aplicar` con la frase. Se crea primero la rama de respaldo `antes-de-<NNNN>`; si no se puede, no se migra.
 2. Roles de la base y variables: `Actions → Cargar entorno` con el ambiente del cliente (frase `CARGAR CLIENTE-<CODIGO>`). Las variables van al proyecto de Vercel **del cliente**, siempre en su destino `production`, y **nunca** a `pedernal-erp`: el proyecto sale de la lista de H.3 y un código que no está en ella falla antes de tocar nada.
-3. Primer administrador y alta de la primera empresa: sección E, desde tu terminal con la cadena del cliente (no hay consola de plataforma del cliente).
+3. Primer administrador y alta de la primera empresa: sección E, desde tu terminal con la cadena del cliente (no hay consola de plataforma del cliente). `plataforma:primer-admin` usa la cadena directa del dueño; `plataforma:caso` necesita además `PEDERNAL_DB_PLATAFORMA` y la clave de contexto del cliente (H.2). **El rol `pedernal_plataforma` nace sin login y nadie se lo da por vos** (`--preparar-roles` no lo toca nunca); lo abrís a mano, una sola vez y por poco tiempo:
+   1. En la consola de Neon, proyecto «Hoteles del Neuquen», rama `production`, **SQL Editor** (entra como dueño): `ALTER ROLE pedernal_plataforma WITH LOGIN PASSWORD '<clave al azar de 32 caracteres, la generás vos>' VALID UNTIL '<ahora + 60 minutos, en formato AAAA-MM-DD HH:MM:SS+00>';`. No hay que otorgar nada más: la migración 0004 ya le dio solo lo que necesita (leer y escribir tenants, empresas, invitaciones y auditoría de plataforma; no lee tablas operativas ni borra) y el rol nace sin `SUPERUSER` ni `BYPASSRLS`.
+   2. `PEDERNAL_DB_PLATAFORMA` en tu terminal (nunca en un archivo ni en un chat): la cadena **directa** del proyecto con el usuario `pedernal_plataforma` y esa clave.
+   3. Corré los casos de la sección E (`plataforma:caso`).
+   4. **Cerralo apenas termines**: `ALTER ROLE pedernal_plataforma WITH NOLOGIN PASSWORD NULL VALID UNTIL 'infinity';`. El vencimiento hace que, si te olvidás, la clave deje de servir a los 60 minutos, pero el cierre es tuyo.
+   5. Verificación (mismo editor): `SELECT rolcanlogin FROM pg_roles WHERE rolname = 'pedernal_plataforma';` tiene que dar `false`. Que la clave quedó en `NULL` no se puede mirar desde Neon (`pg_authid` es de superusuario): con `NOLOGIN` alcanza.
+      `npm run plataforma:login-temporal` **no sirve** para esto: solo actúa dentro de GitHub Actions (fuera de ahí no hace nada) y además instala una clave de contexto extra y desconocida en la base. Es lo de `preparar-empresa-de-pruebas.yml`, solo preview.
 4. Cliente de Google y DNS: B.8 y B.7, a mano, con los hosts del cliente.
 
 ### H.5 Despliegue de su instalación (SUPUESTO del orquestador, 25/11/2026)
@@ -502,5 +508,27 @@ El proyecto de Vercel del cliente **no se conecta a Git** y lo desplegás vos po
 - El respaldo diario externo no existe todavía (ni para producción): lo único es la rama de respaldo antes de migrar.
 - El cron de trabajos corre en cada proyecto con su propio calendario y, mientras corre, mantiene despierta la base del cliente: eso se paga por hora de cómputo (el costo de la base sube cuanto más seguido corra; ver `base-por-cliente-opciones.md`, §4, con cifras de la documentación pública a confirmar). La frecuencia vigente de la web está en `apps/web/vercel.json`.
 - Planes, marcas y empresas se cargan a mano en la base del cliente.
-- El token de Vercel de un Environment de cliente lo emitís vos con el alcance que Vercel permita (**NO VERIFICADO**: si es del equipo entero, también podría escribir en `pedernal-erp`). Lo que lo impide es el código: el comando solo escribe en el proyecto de la lista. Si Vercel permite un token limitado a un proyecto, usá ese.
+- Límite conocido: el token de Vercel de un Environment de cliente lo emitís vos con el alcance que Vercel permita (**NO VERIFICADO**: si es del equipo entero, también podría escribir en `pedernal-erp`). Lo que lo impide es el código: el comando solo escribe en el proyecto de la lista. Si Vercel permite un token limitado a un proyecto, usá ese.
 - Salida del cliente: se le entrega un volcado **verificado**, se le dan 30 días de gracia con sus datos ya entregados, y el borrado del proyecto de Neon lo hacés **solo vos**, en la consola.
+
+### H.7 Variables que cargás a mano en `pedernal-hdn` (nombres, nunca valores)
+
+`cargar-entorno` genera `PEDERNAL_SECRETO_INVITACIONES`, `PEDERNAL_AUTH_SECRETO_EMPRESA`, `CRON_SECRET` y `PEDERNAL_CLAVE_CERTIFICADOS`, y `--preparar-roles` las cadenas de los roles. El resto lo ponés vos, en el proyecto de Vercel `pedernal-hdn`, como sensibles:
+
+| Nombre                      | Para qué                                                                                                                                               | Quién la pone |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| `PEDERNAL_CLAVE_CONTEXTO`   | Firmar el contexto (la misma que instala `migrar.yml`; H.2)                                                                                            | Vos           |
+| `GOOGLE_CLIENT_ID`          | Ingreso con Google. **Un cliente de Google propio de hdn**, con la dirección de retorno de `app.hotelesdelneuquen.com.ar` (Google no acepta comodines) | Vos           |
+| `GOOGLE_CLIENT_SECRET`      | Ídem                                                                                                                                                   | Vos           |
+| `PEDERNAL_RESEND_API_KEY`   | Mandar mails (Resend)                                                                                                                                  | Vos           |
+| `PEDERNAL_CORREO_REMITENTE` | Remitente de los mails                                                                                                                                 | Vos           |
+| `PEDERNAL_URL_BASE`         | Origen de los enlaces del mail (el host de la app de hdn)                                                                                              | Vos           |
+| `PEDERNAL_NOMBRE_DE_MARCA`  | Nombre que firma el mail                                                                                                                               | Vos           |
+
+### H.8 Los hosts de hdn viven SOLO en su base
+
+`app.hotelesdelneuquen.com.ar` y `carta.hotelesdelneuquen.com.ar` se registran (casos de plataforma `agregarDominio`, con la marca y el plan de hdn) **únicamente en la base de hdn**. En la base compartida no se registran nunca: si figuraran ahí, el resolutor de la web compartida los serviría con la marca equivocada. Verificación, con el SQL Editor de Neon en la base compartida (rama `production` del proyecto `Pedernal`): `SELECT count(*) FROM dominio WHERE host LIKE '%hotelesdelneuquen.com.ar';` tiene que dar `0`. **No hay una prueba automática de esto** (los dominios son datos, no código): una guarda en `agregarDominio` con una lista cerrada de hosts reservados sería un cambio de producto aparte.
+
+### H.9 DNS y el proyecto `hdn` viejo de Motor2
+
+Los dos hosts hoy pueden apuntar al proyecto `hdn` de Motor2. Pasarlos a `pedernal-hdn` es un paso **manual tuyo, después del primer despliegue general** y de verificar la instalación de hdn por su dirección de Vercel: se agregan en `pedernal-hdn` (nunca en `pedernal-erp`), se cambia el DNS, y recién después se quitan del proyecto viejo. No se toca el proyecto `hdn` de Motor2 desde este repositorio.
