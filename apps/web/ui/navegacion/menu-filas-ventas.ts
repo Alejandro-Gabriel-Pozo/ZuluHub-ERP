@@ -3,6 +3,7 @@ import { RUTA_DE_CLIENTES } from "../plantillas/clientes/modelo-de-directorio";
 import { RUTA_DEL_CIERRE } from "../plantillas/cierre/ruta-del-cierre";
 import { RUTA_DE_IMPRESORAS } from "../plantillas/salon/modelo-de-impresoras";
 import { RUTA_DE_MESAS } from "../plantillas/salon/modelo-de-mesas";
+import { RUTA_DEL_SALON } from "../plantillas/salon/rutas-del-salon";
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
 import { RUTA_DE_LA_VENTA, RUTA_DE_TICKETS_DEL_DIA } from "../plantillas/venta/rutas-de-venta";
 
@@ -71,6 +72,19 @@ export const FILAS_DE_VENTAS = [
     perilla: null,
     href: RUTA_DEL_CIERRE,
     etiqueta: "cierre.titulo",
+    departamento: null,
+  },
+  // «Salón» (SAL-A; `menu-por-areas.html`, grupo Salón del área Ventas): el mapa de mesas de la operación. Módulo `salon` (disponible), perilla `salon` (extra de pago) y acción `mesas.ver`: nace cerrada, sin matriz nueva.
+  {
+    tipo: "pantalla",
+    clave: "salon",
+    area: "ventas",
+    grupo: "salon",
+    modulo: "salon",
+    accion: "mesas.ver",
+    perilla: "salon",
+    href: RUTA_DEL_SALON,
+    etiqueta: "salon.texto.grupo_salon",
     departamento: null,
   },
   // «Mesas» (S-1; `menu-por-areas.html`: «Mesas», pantalla dentro del grupo Salón del área Ventas): módulo `salon` (hoy en desarrollo: la entrada no se muestra) y acción `mesas.ver`.
