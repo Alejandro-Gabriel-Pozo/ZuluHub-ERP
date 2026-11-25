@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 /**
  * H4b T3: todo actor de empresa que se arma en código de producción lleva `acciones` (el conjunto que decide el guard). Un objeto que junta
- * `rol` y `modulosActivados` sin `acciones` haría caer al guard a la matriz de roles: justo lo que T3 saca de producción (DEC-0955). El camino
+ * `rol` y `modulosActivados` sin `acciones` haría caer al guard a la matriz de roles: justo lo que T3 saca de producción. El camino
  * por matriz queda solo para fakes y pruebas (que esta prueba no mira) y para plataforma y grupo (otros actores, sin `modulosActivados`).
  * Previene: que un actor armado a mano en `src/` autorice por la matriz y no por la base. Chequeo: este archivo, con violaciones inyectadas.
  * Límites que NO ve: un actor armado por partes (`{ ...a, rol }`) o con las claves en variables, y un objeto con llaves anidadas entre las claves.
