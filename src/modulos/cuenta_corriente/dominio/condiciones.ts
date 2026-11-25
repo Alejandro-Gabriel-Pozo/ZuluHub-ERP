@@ -13,7 +13,7 @@ import { motivoDeSuspensionDeCuentaDesdeTexto } from "../../../primitivas/texto/
  * bloquea nada: marca «vencida» una deuda, no impide vender.
  */
 
-/** SUPUESTO (DEC-1067) (CC-1, brief §2): el plazo se guarda como entero de días entre 1 y 365; la pantalla ofrecerá 30 y 60 (catálogo). Revertir es cambiar el catálogo, no la base. */
+/** SUPUESTO (DEC-1091) (CC-1, brief §2): el plazo se guarda como entero de días entre 1 y 365; la pantalla ofrecerá 30 y 60 (catálogo). Revertir es cambiar el catálogo, no la base. */
 export const PLAZO_MINIMO_EN_DIAS = 1;
 export const PLAZO_MAXIMO_EN_DIAS = 365;
 
