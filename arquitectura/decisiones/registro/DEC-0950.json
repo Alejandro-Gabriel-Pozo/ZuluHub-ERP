@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0950",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: un piso «todos los roles» nuevo SUMA la acción a las plantillas y roles propios que no la tienen (Q3 solo describe quitar al endurecer «solo gerente»).",
+  "que_cambia": "Solo el impacto que la plataforma ve antes de confirmar un piso nuevo (lo aplica T5); sin esto la base rechazaría la próxima versión de cada rol que no la lleve. Se revierte en una función pura.",
+  "donde": "src/capacidades/roles/impacto-de-piso.ts (accionesTrasElPiso); Pedernal-docs h4b-permisos-configurables.md §9 Q3 e I5"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0951",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Un rol propio archivado no otorga ninguna acción (conjunto vacío), aunque una membresía siguiera apuntando a él.",
+  "que_cambia": "Nada que vea el negocio: archivar exige que no haya personas activas con ese rol (S5), así que el caso no debería darse; si se da, la persona queda sin permisos en lugar de conservar los del rol archivado (nace cerrado).",
+  "donde": "src/capacidades/roles/conjunto-efectivo.ts (conjuntoEfectivo); Pedernal-docs h4b-permisos-configurables.md §3.3 y S5",
+  "motivo": "El diseño no dice qué hacer con un rol archivado con personas; denegar por defecto es lo que pide el repositorio ante un dato inconsistente."
+}
