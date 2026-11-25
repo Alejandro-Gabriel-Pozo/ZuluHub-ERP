@@ -1,5 +1,6 @@
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import { PERMISOS_DE_EMPRESA, tablaDePermisos } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import { personaId } from "../../src/primitivas/identificadores/marca";
 import { ok } from "../../src/primitivas/resultado/resultado";
@@ -34,6 +35,8 @@ const S2: Estado = { activados: ["facturacion"], habilitados: [] };
 const MEZCLA_PELIGROSA: Estado = { activados: ["facturacion"], habilitados: ["facturacion"] };
 
 const esperar = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms));
+
+const GERENTE = [...tablaDePermisos(PERMISOS_DE_EMPRESA).GERENTE];
 
 describe.skipIf(base === null)("módulos de la empresa: lectura consistente y concurrente", () => {
   let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
@@ -180,7 +183,7 @@ describe.skipIf(base === null)("módulos de la empresa: lectura consistente y co
 
     const [a, b] = await Promise.all([operacion(), operacion(), plataforma()]);
     for (const resultado of [a, b]) {
-      expect(resultado?.antes).toEqual({ rol: "GERENTE", ...pares(S1) });
+      expect(resultado?.antes).toEqual({ rol: "GERENTE", acciones: GERENTE, ...pares(S1) });
       expect(resultado?.despues).toEqual(resultado?.antes);
     }
     // Una operación que empieza después ve el estado nuevo, entero.
@@ -203,9 +206,9 @@ describe.skipIf(base === null)("módulos de la empresa: lectura consistente y co
     expect(r).toEqual({
       ok: true,
       valor: {
-        antes: { rol: "GERENTE", ...pares(S1) },
-        despues: { rol: "GERENTE", ...pares(S2) },
-        otraVez: { rol: "GERENTE", ...pares(S2) },
+        antes: { rol: "GERENTE", acciones: GERENTE, ...pares(S1) },
+        despues: { rol: "GERENTE", acciones: GERENTE, ...pares(S2) },
+        otraVez: { rol: "GERENTE", acciones: GERENTE, ...pares(S2) },
       },
     });
   });

@@ -3,7 +3,11 @@ import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { crearTokensHmac } from "../../src/adaptadores/tokens/tokens-hmac";
 import type { ClaveAccion } from "../../src/capacidades/modulos/catalogo";
-import { PERMISOS_DE_EMPRESA, REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
+import {
+  PERMISOS_DE_EMPRESA,
+  REGLAS_DE_EMPRESA,
+  tablaDePermisos,
+} from "../../src/capacidades/permisos/empresa";
 import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "../../src/capacidades/permisos/roles";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import {
@@ -81,7 +85,7 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
     await propia.destruir();
   });
 
-  const SIN_ROL = { rol: null, modulosActivados: [], modulosHabilitados: [] };
+  const SIN_ROL = { rol: null, acciones: [], modulosActivados: [], modulosHabilitados: [] };
 
   /** Una empresa activa de la marca A con un miembro de ese rol. */
   const empresaDeA = async (rol: RolDePrueba = "GERENTE") => {
@@ -114,7 +118,12 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
         const e = await empresaDeA(rol);
         const por = (marca: MarcaComercialId | null) =>
           delActor(comoEmpresa(e.empresa, e.persona, marca));
-        expect(await por(A)).toEqual({ rol, modulosActivados: [], modulosHabilitados: [] });
+        expect(await por(A)).toEqual({
+          rol,
+          acciones: [...tablaDePermisos(PERMISOS_DE_EMPRESA)[rol]],
+          modulosActivados: [],
+          modulosHabilitados: [],
+        });
         expect(await por(B)).toEqual(SIN_ROL);
         expect(await por(marcaComercialId(randomUUID()))).toEqual(SIN_ROL);
         // Una marca de entrada nula con una persona no autoriza (falla cerrado): el `null` es del sistema.

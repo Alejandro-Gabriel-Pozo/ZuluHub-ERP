@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0957",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Comparar un rol con un literal (GERENTE, ADMINISTRADOR, OPERADOR) en el código queda congelado en una lista exacta de archivos, con presupuesto que solo baja.",
+  "que_cambia": "Nada que vea el negocio: es una regla de arquitectura; las comparaciones que hay hoy son deuda a pagar al llegar los roles propios.",
+  "donde": "test/arquitectura/rol-con-literal.test.ts",
+  "motivo": "Un rol propio no es ninguno de los tres literales. Presupuesto exacto por archivo que solo baja: (b) identidad se achica en T4; (c) composición y pantallas en T6. Sin registro de deuda por el tope de 10 excepciones."
+}
