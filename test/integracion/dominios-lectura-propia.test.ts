@@ -79,6 +79,18 @@ describe.skipIf(base === null)(
       await propia.destruir();
     });
 
+    /** El lector real, con el rol de la app y el contexto firmado de la empresa. */
+    async function hostActivo(empresa: string, superficie: "APP" | "CARTA") {
+      const r = await entorno.ejecutar(
+        { contexto: comoEmpresa(empresa as never) },
+        async ({ db }) => {
+          const lector = crearLecturaDeHostsPropios(db.withTables<HostsPropiosDb>());
+          return { ok: true as const, valor: await lector.activoDe(superficie) };
+        },
+      );
+      return exito(r);
+    }
+
     const hostsDeEmpresas = () => [
       h.cartaA.host,
       h.appPendienteA.host,
@@ -99,18 +111,6 @@ describe.skipIf(base === null)(
     }
 
     describe("el lector del host propio (carta en línea)", () => {
-      /** El lector real, con el rol de la app y el contexto firmado de la empresa. */
-      async function hostActivo(empresa: string, superficie: "APP" | "CARTA") {
-        const r = await entorno.ejecutar(
-          { contexto: comoEmpresa(empresa as never) },
-          async ({ db }) => {
-            const lector = crearLecturaDeHostsPropios(db.withTables<HostsPropiosDb>());
-            return { ok: true as const, valor: await lector.activoDe(superficie) };
-          },
-        );
-        return exito(r);
-      }
-
       it("devuelve el host ACTIVO de la superficie y ninguno si solo hay pendientes o retirados", async () => {
         expect(await hostActivo(a, "CARTA")).toBe(h.cartaA.host);
         expect(await hostActivo(a, "APP")).toBeNull();
@@ -119,6 +119,36 @@ describe.skipIf(base === null)(
       it("cada empresa lee el suyo y nunca el de la otra (lo decide la base, no la consulta)", async () => {
         expect(await hostActivo(b, "CARTA")).toBe(h.cartaB.host);
         expect(await hostActivo(a, "CARTA")).not.toBe(h.cartaB.host);
+      });
+    });
+
+    describe("el lector no confunde el host canónico de la marca con el propio de la empresa", () => {
+      it("con un canónico de marca ACTIVO de la misma superficie: sin propio, null; con propio, SIEMPRE el propio; y otra empresa no ve el de la primera", async () => {
+        const sin = (await crearEmpresaActiva(entorno)).empresa;
+        const otra = (await crearEmpresaActiva(entorno)).empresa;
+        // Un canónico ACTIVO de APP de una marca: la app lo ve aunque no sea de su empresa (`dominio_app_leer`, 0007).
+        const canonico = await crearDominio(dueno, await crearMarca(dueno), {
+          superficie: "APP",
+          canonico: true,
+          estado: "ACTIVO",
+        });
+        // Premisa: la app SÍ ve ese canónico (si no, esta prueba no prueba nada).
+        const visibles = exito(
+          await entorno.ejecutar({ contexto: comoEmpresa(sin as never) }, async ({ db }) => {
+            const filas = await sql<{
+              host: string;
+            }>`select host from dominio where es_canonico`.execute(db);
+            return { ok: true as const, valor: filas.rows.map((f) => f.host) };
+          }),
+        );
+        expect(visibles).toContain(canonico.host);
+        expect(await hostActivo(sin, "APP")).toBeNull();
+        const propio = await crearDominioDeEmpresa(dueno, sin, {
+          superficie: "APP",
+          estado: "ACTIVO",
+        });
+        expect(await hostActivo(sin, "APP")).toBe(propio.host);
+        expect(await hostActivo(otra, "APP")).not.toBe(propio.host);
       });
     });
 

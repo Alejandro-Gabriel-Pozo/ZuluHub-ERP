@@ -248,8 +248,9 @@ export function crearLecturaDeMarcaParaMail(db: Kysely<MarcasParaMailDb>): Lectu
 
 /**
  * El host ACTIVO que la empresa del contexto tiene para una superficie (dominio propio, DEC-0913: a lo sumo uno por empresa y superficie). Lo lee la app con su rol y NO filtra por
- * empresa ni por estado en la consulta: el rol no tiene privilegio sobre esas columnas (0095 otorga solo `host` y `superficie`) y la política `dominio_app_leer_propio` ya deja ver únicamente lo
- * ACTIVO de la empresa del contexto firmado. Sin contexto, o con otro, no hay filas (falla cerrado). `null` si no hay.
+ * empresa ni por estado en la consulta: el rol no tiene privilegio sobre esas columnas (solo `host`, `superficie`, `marca_id` y `es_canonico`) y la política `dominio_app_leer_propio` (0095)
+ * deja ver lo ACTIVO de la empresa del contexto firmado. Pero la app TAMBIÉN ve los canónicos de su marca (`dominio_app_leer`, 0007): `es_canonico = false` los deja afuera (un host de
+ * empresa nunca es canónico: `dominio_canonico_ck`), así que nunca devuelve el de la marca por el propio. Sin contexto, o con otro, no hay filas (falla cerrado). `null` si no hay.
  */
 export interface LecturaDeHostsPropios {
   activoDe(superficie: "APP" | "CARTA"): Promise<Host | null>;
@@ -262,6 +263,8 @@ export function crearLecturaDeHostsPropios(db: Kysely<HostsPropiosDb>): LecturaD
         .selectFrom("dominio")
         .select("host")
         .where("superficie", "=", superficie)
+        .where("es_canonico", "=", false)
+        .orderBy("host")
         .limit(1)
         .executeTakeFirst();
       // El CHECK `dominio_host_ck` garantiza la forma de un host normalizado.

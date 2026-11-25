@@ -38,10 +38,11 @@ export type DominiosDb = {
 
 /**
  * Lo que la app lee de `dominio` con el rol `pedernal_app` (política `dominio_app_leer_propio`, 0095): solo las filas ACTIVAS de la empresa
- * del contexto firmado y solo estas dos columnas (los privilegios por columna del rol).
+ * del contexto firmado y solo las columnas que el rol tiene otorgadas (`host`, `superficie`, `marca_id`, `es_canonico`).
+ * La app ve además los canónicos de su marca (0007): por eso el lector pide `es_canonico = false`.
  */
 export type HostsPropiosDb = {
-  dominio: { host: string; superficie: string };
+  dominio: { host: string; superficie: string; es_canonico: boolean };
 };
 
 type Iguales<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
