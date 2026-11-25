@@ -104,6 +104,8 @@ export type PedidoDeCompra = Readonly<{
   depositoId: string | null;
   remito: RemitoEscrito;
   renglones: ReturnType<typeof renglonParaElServidor>[];
+  /** La factura, solo en «Con factura». */
+  factura?: unknown;
 }>;
 
 /** El pedido que sale al guardar. Un renglón sin cantidad NO se descarta en silencio: sale igual y el servidor lo rechaza (nunca se guarda una compra distinta de la que se ve). */
@@ -112,12 +114,14 @@ export function armarElPedido(
   depositoId: string | null,
   remito: RemitoEscrito,
   renglones: readonly RenglonEscrito[],
+  factura?: unknown,
 ): PedidoDeCompra {
   return {
     proveedorId,
     depositoId,
     remito,
     renglones: renglones.map(renglonParaElServidor),
+    ...(factura === undefined ? {} : { factura }),
   };
 }
 
@@ -143,8 +147,8 @@ type ProductoParaElegir = Readonly<{
 }>;
 export type ProductosParaElegir = Readonly<{ productos: readonly ProductoParaElegir[] }>;
 
-/** Un proveedor de la lista de «Nueva compra»: solo el id y el nombre. */
-export type ProveedorParaElegir = Readonly<{ id: string; nombre: string }>;
+/** Un proveedor de la lista de «Nueva compra»: el id, el nombre y si ya tiene su CUIT (sin él, la primera factura lo pide). */
+export type ProveedorParaElegir = Readonly<{ id: string; nombre: string; tieneCuit: boolean }>;
 
 export type TextosDelResumen = Readonly<{
   entraATuStock: string;

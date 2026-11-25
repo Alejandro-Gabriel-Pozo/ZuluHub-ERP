@@ -1,10 +1,13 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { CLASES_COMPRABLES } from "../../catalogo/publico";
+import { calcularComprobante, type ComprobanteCalculado } from "../dominio/comprobante";
+import { tributosDeLaPantalla } from "../dominio/factura";
 import { totalDeCompra } from "../dominio/importe-vigente";
 import { leerRenglonesDeCompra } from "../dominio/registrar-compra";
 import type { TxDeConsultasDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
+import { nivelDeComprasDentro } from "./lectura-nivel";
 import { calcularRenglon } from "./registrar-compra-apoyo";
 
 /**
@@ -127,4 +130,76 @@ export async function cotizarCompraDentro(
     });
   }
   return ok({ renglones, total: totalDeCompra(renglones.map((r) => r.importe)) });
+}
+
+/**
+ * `nivelParaComprar`: si la empresa compra «Con factura» (N2), SOLO ese dato, para que «Nueva compra» sepa si dibuja el bloque de la factura. Es de quien carga compras (`recepciones.registrar`, el guard de «Comprar y recibir»):
+ * quien opera sigue sin poder VER la configuración ni CAMBIAR el nivel (`compras.configurar`, solo gerente). No devuelve la versión ni la configuración. NO escribe: usa la lectura que no crea la fila (`nivelDeComprasDentro`);
+ * una empresa sin fila es el nivel inicial. La empresa sale del contexto. Previene: que quien opera no pueda comprar «Con factura» por no poder leer el nivel, y que leerlo escriba. Chequeo: `test/integracion/compras-nivel-para-comprar.test.ts`.
+ */
+export type NivelParaComprar = Readonly<{ conFactura: boolean }>;
+
+export async function nivelParaComprarDentro(
+  tx: TxDeConsultasDeCompras,
+  contexto: ContextoOperativo,
+): Promise<NivelParaComprar> {
+  const { nivel } = await nivelDeComprasDentro(tx, contexto);
+  return { conFactura: nivel === "CON_COMPROBANTE" };
+}
+
+/**
+ * `cotizarFactura`: las cuentas de la factura ANTES de guardarla (neto e IVA de cada línea, importes por alícuota, tributos y el total calculado contra el que dice el papel). Es la MISMA función del dominio que usa el alta
+ * (`calcularComprobante`, con las percepciones leídas por la misma `tributosDeLaPantalla`): una regla, un lugar; lo que ve la pantalla es lo que se guarda. No escribe ni audita. Todo texto decimal, nunca `number`. Un pedido que el
+ * alta rechazaría (tipo, alícuota, cantidad, precio, total) se rechaza igual y con el mismo error. La condición de la empresa frente al IVA solo decide el crédito fiscal computable, que esta cotización no muestra, y ningún total depende de
+ * ella: se pasa la de un inscripto para que una factura A se calcule igual (la prueba compara con el alta de las dos condiciones). No lee nada de la empresa: solo hace cuentas sobre lo que manda la pantalla.
+ */
+export type EntradaDeCotizarFactura = Readonly<{
+  tipo: string;
+  lineas: readonly Readonly<{
+    cantidadFacturada: string;
+    precioNeto: string;
+    alicuota: string | null;
+  }>[];
+  percepciones: string | null;
+  totalSegunFactura: string;
+}>;
+
+export type FacturaCotizada = Pick<
+  ComprobanteCalculado,
+  | "lineas"
+  | "importesPorAlicuota"
+  | "netoGravado"
+  | "noGravado"
+  | "exento"
+  | "iva"
+  | "tributosTotal"
+  | "totalCalculado"
+  | "totalSegunFactura"
+  | "totalCoincide"
+>;
+
+export function cotizarFacturaDentro(
+  entrada: EntradaDeCotizarFactura,
+): Resultado<FacturaCotizada, ErrorDeCompras> {
+  const calculado = calcularComprobante({
+    tipo: entrada.tipo,
+    lineas: entrada.lineas,
+    tributos: tributosDeLaPantalla(entrada.percepciones),
+    totalSegunFactura: entrada.totalSegunFactura,
+    condicionDeLaEmpresa: "RESPONSABLE_INSCRIPTO",
+  });
+  if (!calculado.ok) return calculado;
+  const c = calculado.valor;
+  return ok({
+    lineas: c.lineas,
+    importesPorAlicuota: c.importesPorAlicuota,
+    netoGravado: c.netoGravado,
+    noGravado: c.noGravado,
+    exento: c.exento,
+    iva: c.iva,
+    tributosTotal: c.tributosTotal,
+    totalCalculado: c.totalCalculado,
+    totalSegunFactura: c.totalSegunFactura,
+    totalCoincide: c.totalCoincide,
+  });
 }

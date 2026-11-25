@@ -23,6 +23,14 @@
     "apps/web/ui/plantillas/compras/correccion/*",
     "apps/web/ui/plantillas/compras/ficha/*"
   ],
+  "test/web/ficha-de-pago-de-compras.test.ts": [
+    "apps/web/app/s/app/(operacion)/compras/**",
+    "apps/web/app/s/app/acciones-de-pago-de-factura.ts",
+    "apps/web/servidor/pago-de-factura.ts",
+    "apps/web/servidor/ofertas-de-compras.ts",
+    "apps/web/ui/plantillas/compras/pago/*",
+    "apps/web/ui/plantillas/compras/ficha/*"
+  ],
   "test/web/ficha-de-proveedor-de-compras.test.ts": [
     "apps/web/app/s/app/(operacion)/compras/proveedores/**",
     "apps/web/app/s/app/acciones-de-ficha-de-proveedor.ts",

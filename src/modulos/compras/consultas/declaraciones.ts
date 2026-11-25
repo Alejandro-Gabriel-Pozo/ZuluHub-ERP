@@ -13,6 +13,8 @@ export const DECLARACIONES_DE_CONSULTAS = {
   comprasSinPrecio: { accion: "recepciones.ver" },
   productosParaComprar: { accion: "recepciones.ver" },
   cotizarCompra: { accion: "recepciones.registrar" },
+  nivelParaComprar: { accion: "recepciones.registrar" },
+  cotizarFactura: { accion: "comprobantes_de_proveedor.registrar" },
   proveedoresDelProducto: { accion: "recepciones.ver" },
   proponerConciliacion: { accion: "conciliaciones.ver" },
   listarRecepcionesSeparadas: { accion: "recepciones.ver" },

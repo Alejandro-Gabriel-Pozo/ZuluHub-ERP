@@ -1,9 +1,14 @@
 import type { ErrorDeCompras } from "../casos-de-uso/errores";
 import {
   cotizarCompraDentro,
+  cotizarFacturaDentro,
+  nivelParaComprarDentro,
   productosParaComprarDentro,
   type CompraCotizada,
+  type EntradaDeCotizarFactura,
   type EntradaDeProductosParaComprar,
+  type FacturaCotizada,
+  type NivelParaComprar,
   type ProductoParaComprar,
 } from "../casos-de-uso/lectura-para-comprar";
 import { type Lector, type RDeConsulta } from "./comun";
@@ -11,7 +16,14 @@ import type { Resultado } from "../../../primitivas/resultado/resultado";
 
 type RError = Extract<Awaited<ReturnType<Lector>>, { ok: false }>["error"];
 
-export type { CompraCotizada, EntradaDeProductosParaComprar, ProductoParaComprar };
+export type {
+  CompraCotizada,
+  EntradaDeCotizarFactura,
+  EntradaDeProductosParaComprar,
+  FacturaCotizada,
+  NivelParaComprar,
+  ProductoParaComprar,
+};
 
 export function armarConsultasParaComprar(leer: Lector) {
   return {
@@ -37,6 +49,28 @@ export function armarConsultasParaComprar(leer: Lector) {
     ): Promise<Resultado<CompraCotizada, ErrorDeCompras | RError>> {
       const r = await leer(contexto, ["recepciones.registrar"], (tx) =>
         cotizarCompraDentro(tx, contexto, entrada),
+      );
+      return r.ok ? r.valor : r;
+    },
+    /**
+     * Si la empresa compra «Con factura»: SOLO `{ conFactura }`, para dibujar el bloque de la factura en «Nueva compra». Acción `recepciones.registrar` (la de «Comprar y recibir»); no escribe y no toca
+     * `compras.configurar` (quien opera sigue sin poder cambiar el nivel). Ver `nivelParaComprarDentro`.
+     */
+    nivelParaComprar(contexto: Parameters<Lector>[0]): Promise<RDeConsulta<NivelParaComprar>> {
+      return leer(contexto, ["recepciones.registrar"], (tx) =>
+        nivelParaComprarDentro(tx, contexto),
+      );
+    },
+    /**
+     * Las cuentas de la factura ANTES de guardarla: la misma función del dominio que el alta (`calcularComprobante`), sin escribir. Acción `comprobantes_de_proveedor.registrar`, la de cargar la
+     * factura. Ver `cotizarFacturaDentro`.
+     */
+    async cotizarFactura(
+      contexto: Parameters<Lector>[0],
+      entrada: EntradaDeCotizarFactura,
+    ): Promise<Resultado<FacturaCotizada, ErrorDeCompras | RError>> {
+      const r = await leer(contexto, ["comprobantes_de_proveedor.registrar"], () =>
+        Promise.resolve(cotizarFacturaDentro(entrada)),
       );
       return r.ok ? r.valor : r;
     },

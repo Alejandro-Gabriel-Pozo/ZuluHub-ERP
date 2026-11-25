@@ -83,7 +83,7 @@ describe.skipIf(base === null)("composición web: Comprar y recibir", () => {
     const r = await comprar(x.operador, x.sucursal, pedido(m));
     expect(r).toMatchObject({ ok: true, dato: { yaExistia: false } });
     if (!r.ok) return;
-    expect(Object.keys(r.dato).sort()).toEqual(["recepcionId", "yaExistia"]);
+    expect(Object.keys(r.dato).sort()).toEqual(["avisos", "recepcionId", "yaExistia"]);
     expect(await recepciones(m)).toBe(1);
     expect(await c.existencia(m.deposito, m.articulo)).toBe("2000.0000");
     expect((await c.auditoria(x.empresa, "COMPRA_REGISTRADA")).at(-1)).toMatchObject({

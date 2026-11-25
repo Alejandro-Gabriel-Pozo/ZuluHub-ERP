@@ -7,7 +7,7 @@ import {
   formatearFecha,
   formatearImporte,
 } from "../../../patrones/formato-fiscal";
-import { RUTA_DE_COMPRAS, rutaDeCorregirLaLinea } from "../rutas-de-compras";
+import { RUTA_DE_COMPRAS, rutaDeCorregirLaLinea, rutaDelPago } from "../rutas-de-compras";
 import {
   nombreDeLaFactura,
   numeroImpreso,
@@ -56,6 +56,7 @@ export type FichaDeCompraParaLaPantalla = Readonly<{
   }>[];
   total: Importe | null;
   factura: Readonly<{
+    comprobanteId: string;
     letra: "A" | "B" | "C";
     puntoDeVenta: number;
     numero: number;
@@ -63,6 +64,18 @@ export type FichaDeCompraParaLaPantalla = Readonly<{
     vencimientoDePago: string | null;
     totalSegunLaFactura: Importe;
   }> | null;
+  pagos: readonly Readonly<{
+    id: string;
+    fechaDePago: string;
+    medio: string;
+    importe: Importe;
+    estado: "VIGENTE" | "ANULADO";
+    declaradoPor: string | null;
+    declaradoEn: string;
+    anuladoPor: string | null;
+    anuladoEn: string | null;
+    motivoDeAnulacion: string | null;
+  }>[];
 }>;
 
 const SIN_DATO = "—";
@@ -89,11 +102,34 @@ type LineaDeFichaArmada = Readonly<{
 }>;
 
 /** Lo que la persona puede hacer sobre una compra (solo ayuda para ofrecer botones: cada acción vuelve a pasar por el guard del servidor). Sin permisos leídos, todo cerrado. */
-export type AccionesDeLaCompraParaLaPantalla = Readonly<{ corregir: boolean; anular: boolean }>;
+export type AccionesDeLaCompraParaLaPantalla = Readonly<{
+  corregir: boolean;
+  anular: boolean;
+  /** «Declarar pago» (`comprobantes_de_proveedor.pagar`). */
+  pagar: boolean;
+  /** Anular el pago (`comprobantes_de_proveedor.anular_pago`). */
+  anularPago: boolean;
+}>;
 export const SIN_ACCIONES_DE_LA_COMPRA: AccionesDeLaCompraParaLaPantalla = {
   corregir: false,
   anular: false,
+  pagar: false,
+  anularPago: false,
 };
+
+/** Un pago de la factura ya armado para mostrar: «Transferencia · 24/11/2026», su importe, quién y cuándo, y, si se anuló, «Anulado» con su motivo, quién y cuándo. */
+type PagoArmado = Readonly<{
+  clave: string;
+  titulo: string;
+  importe: string;
+  /** «correo · 24/11/2026 21:14»; `null` sin correo que mostrar. */
+  quien: string | null;
+  anulado: Readonly<{
+    rotulo: string;
+    motivo: string | null;
+    quien: string | null;
+  }> | null;
+}>;
 
 export type FichaArmada = Readonly<{
   /** «Compra 5». */
@@ -118,6 +154,12 @@ export type FichaArmada = Readonly<{
   anular: boolean;
   /** Adónde lleva «Corregir» junto al aviso de una compra ya consumida: la primera línea que se puede corregir; `null` si ninguna. */
   corregirLaPrimera: string | null;
+  /** Los pagos de la factura, del más viejo al más nuevo (los anulados quedan a la vista: nada se borra). Vacía sin factura o sin pagos. */
+  pagos: readonly PagoArmado[];
+  /** Adónde lleva «Declarar pago»: solo con el permiso, una factura vigente de una compra no anulada y sin pago vigente; `null` si no se ofrece. */
+  declararPago: Readonly<{ texto: string; href: string }> | null;
+  /** El pago vigente que «Anular» puede anular (con el permiso); `null` si no se ofrece. */
+  anularPagoId: string | null;
 }>;
 
 /** «2 Kilogramo» sin presentación; «2 Caja de 12» con ella: la cantidad de compra con el nombre de lo que se compró. */
@@ -173,6 +215,7 @@ export function armarLaFicha(
       : null;
   const quien = (por: string | null, en: string): string | null =>
     por === null ? null : `${por} · ${fechaYHoraParaMostrar(en)}`;
+  const vigente = ficha.pagos.find((p) => p.estado === "VIGENTE");
   return {
     titulo: `${textos.compra} ${String(ficha.numero)}`,
     anulada: ficha.estado === "ANULADA" ? textos.anulada : null,
@@ -238,5 +281,27 @@ export function armarLaFicha(
     anular: acciones.anular && ficha.estado !== "ANULADA",
     corregirLaPrimera:
       ficha.lineas.map((l) => hrefDeCorregir(l)).find((href) => href !== null) ?? null,
+    pagos: ficha.pagos.map((p) => ({
+      clave: p.id,
+      titulo: `${textos.medioDePago(p.medio)} · ${formatearFecha(p.fechaDePago)}`,
+      importe: formatearImporte(p.importe.monto),
+      quien: quien(p.declaradoPor, p.declaradoEn),
+      anulado:
+        p.estado === "ANULADO"
+          ? {
+              rotulo: textos.anulado,
+              motivo: p.motivoDeAnulacion,
+              quien: p.anuladoEn === null ? null : quien(p.anuladoPor, p.anuladoEn),
+            }
+          : null,
+    })),
+    declararPago:
+      acciones.pagar &&
+      ficha.factura !== null &&
+      ficha.estado !== "ANULADA" &&
+      vigente === undefined
+        ? { texto: textos.declararPago, href: rutaDelPago(ficha.recepcionId) }
+        : null,
+    anularPagoId: acciones.anularPago && vigente !== undefined ? vigente.id : null,
   };
 }

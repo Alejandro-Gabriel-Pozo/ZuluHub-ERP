@@ -91,6 +91,8 @@ function armarRegistro(dependencias: DependenciasDeCompras, conFactura: boolean)
     if (entrada.pago !== undefined && entrada.pago !== null) {
       const leido = leerPago(entrada.pago, contexto.ahora);
       if (!leido.ok) return leido;
+      // El pago que viaja con la compra no tiene caja de donde sacar la plata, y el efectivo siempre sale de una caja abierta (dueño, 16/11/2026, 3A): en efectivo se declara aparte, con `declararPago`.
+      if (leido.valor.medio === "EFECTIVO") return err("SALIDA_DE_CAJA_INVALIDA");
       pago = leido.valor;
     }
     const huella = huellaDeLaCompra({

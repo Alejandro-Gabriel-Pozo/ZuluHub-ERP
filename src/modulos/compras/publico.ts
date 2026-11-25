@@ -16,6 +16,7 @@ export type {
   TxDeConsultasDeCompras,
 } from "./casos-de-uso/contrato";
 export {
+  ALICUOTAS_DE_COMPRA,
   PUNTO_DE_VENTA_MAXIMO,
   PUNTO_DE_VENTA_MINIMO,
   TIPOS_DE_COMPROBANTE_DE_PROVEEDOR,
@@ -25,6 +26,7 @@ export {
   CONDICIONES_DE_IVA_DE_LA_EMPRESA,
   type CondicionDeIvaDeLaEmpresa,
 } from "./dominio/comprobante";
+export { MEDIOS_DE_PAGO, type MedioDePago } from "./dominio/pago";
 export type { ErrorDeCompras } from "./casos-de-uso/errores";
 export {
   NIVELES_DE_COMPRA,

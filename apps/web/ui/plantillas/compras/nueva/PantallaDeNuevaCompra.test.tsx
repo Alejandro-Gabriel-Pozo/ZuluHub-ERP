@@ -60,7 +60,7 @@ function servidorFalso(
       Promise.resolve({
         ok: true,
         dato: texto.toLowerCase().includes("frigo")
-          ? [{ id: ID_PROVEEDOR, nombre: "Frigorífico Norte" }]
+          ? [{ id: ID_PROVEEDOR, nombre: "Frigorífico Norte", tieneCuit: true }]
           : [],
       }),
     cotizar: (renglones) => {
@@ -368,5 +368,144 @@ describe("Nueva compra: el envío", () => {
       .toHaveAccessibleDescription("No se puede enviar sin conexión.");
     await expect.element(page.getByLabelText("Cantidad")).toHaveValue("2");
     expect(servidor.pedidos).toHaveLength(0);
+  });
+});
+
+describe("Nueva compra «Con factura» (Compras PR 7)", () => {
+  /** La cuenta de la factura que haría el servidor: se anota lo que recibe y se contesta algo fijo (la pantalla nunca suma). */
+  function conFactura(servidor: ReturnType<typeof servidorFalso>, tieneCuit = true) {
+    const cotizadas: Record<string, unknown>[] = [];
+    return {
+      cotizadas,
+      pantalla: pantalla(servidor, {
+        conFactura: true,
+        buscarProveedores: (texto) =>
+          Promise.resolve({
+            ok: true,
+            dato: texto.toLowerCase().includes("frigo")
+              ? [{ id: ID_PROVEEDOR, nombre: "Frigorífico Norte", tieneCuit }]
+              : [],
+          }),
+        cotizarFactura: (factura) => {
+          cotizadas.push(factura as Record<string, unknown>);
+          return Promise.resolve({
+            ok: true,
+            dato: {
+              lineas: [{ netoDeLinea: "22000.00", ivaDeLinea: "4620.00" }],
+              totalCalculado: "26620.00",
+              totalSegunFactura: (factura as { totalSegunFactura: string }).totalSegunFactura,
+              totalCoincide:
+                (factura as { totalSegunFactura: string }).totalSegunFactura === "26620.00",
+            },
+          });
+        },
+      }),
+    };
+  }
+
+  async function llenarElComprobante() {
+    await userEvent.selectOptions(page.getByLabelText("Tipo"), "FACTURA_A");
+    await userEvent.type(page.getByLabelText("Punto de venta").nth(1), "5");
+    await userEvent.type(page.getByLabelText("Número").nth(1), "1187");
+    await userEvent.fill(page.getByLabelText("Fecha de la factura"), "2026-11-20");
+  }
+
+  it("sin «Con factura» no hay bloque de factura", async () => {
+    await render(pantalla(servidorFalso()));
+    expect(page.getByLabelText("Tipo").elements()).toHaveLength(0);
+    expect(page.getByLabelText("Total según la factura").elements()).toHaveLength(0);
+  });
+
+  it("con «Con factura» el bloque aparece y «Comprar y recibir» espera a la factura", async () => {
+    const { pantalla: conBloque } = conFactura(servidorFalso());
+    await render(conBloque);
+    await cargarLaCompra();
+    await expect.element(page.getByLabelText("Tipo")).toBeVisible();
+    await expect.element(boton("Comprar y recibir")).toBeDisabled();
+  });
+
+  it("precarga la cantidad y el precio neto del renglón; el IVA solo en una A; el servidor cuenta y la pantalla lo muestra; sin violaciones de accesibilidad", async () => {
+    const servidor = servidorFalso();
+    const { pantalla: p, cotizadas } = conFactura(servidor);
+    await render(p);
+    await cargarLaCompra("2", "11000");
+    await expect.element(page.getByLabelText("Cantidad facturada")).toHaveValue("2");
+    await vi.waitFor(() =>
+      expect((page.getByLabelText("Precio neto").element() as HTMLInputElement).value).toMatch(
+        /^11\.000/,
+      ),
+    );
+    await userEvent.selectOptions(page.getByLabelText("Tipo"), "FACTURA_B");
+    await expect
+      .element(page.getByText("Sin IVA discriminado: es un comprobante B o C"))
+      .toBeVisible();
+    expect(page.getByLabelText("IVA: Bife de chorizo").elements()).toHaveLength(0);
+    await userEvent.selectOptions(page.getByLabelText("Tipo"), "FACTURA_A");
+    await expect.element(page.getByLabelText("IVA: Bife de chorizo")).toHaveValue("21");
+    await userEvent.type(page.getByLabelText("Total según la factura"), "26620");
+    await vi.waitFor(() => expect(cotizadas.length).toBeGreaterThan(0));
+    const ultima = cotizadas.at(-1) as {
+      tipo: string;
+      lineas: Record<string, unknown>[];
+      totalSegunFactura: string;
+    };
+    expect(ultima.tipo).toBe("FACTURA_A");
+    expect(ultima.totalSegunFactura).toBe("26620.00");
+    expect(ultima.lineas).toEqual([
+      { cantidadFacturada: "2", precioNeto: "11000.00", alicuota: "21" },
+    ]);
+    await expect.element(page.getByText("$ 26.620,00").first()).toBeVisible();
+    await expect.element(page.getByText("El total coincide con la factura")).toBeVisible();
+    expect(await violacionesDeAccesibilidad(document.body)).toEqual([]);
+  });
+
+  it("un total que no coincide avisa y deja guardar igual; la factura sale completa con la MISMA clave y el mismo pedido, y un doble toque es UN envío", async () => {
+    const servidor = servidorFalso();
+    const { pantalla: p } = conFactura(servidor);
+    await render(p);
+    await cargarLaCompra("2", "11000");
+    await llenarElComprobante();
+    await userEvent.type(page.getByLabelText("Total según la factura"), "26000");
+    await expect.element(page.getByText("El total no coincide")).toBeVisible();
+    const comprar = boton("Comprar y recibir");
+    await expect.element(comprar).toBeEnabled();
+    tocar(comprar);
+    tocar(comprar);
+    await vi.waitFor(() => expect(servidor.pedidos.length).toBe(1));
+    const pedido = servidor.pedidos[0] as { factura: Record<string, unknown> };
+    expect(pedido.factura).toMatchObject({
+      tipo: "FACTURA_A",
+      puntoDeVenta: "5",
+      numero: "1187",
+      fecha: "2026-11-20",
+      vencimientoDePago: null,
+      percepciones: null,
+      totalSegunFactura: "26000.00",
+      cuitDelProveedor: null,
+      lineas: [{ renglon: 1, cantidadFacturada: "2", precioNeto: "11000.00", alicuota: "21" }],
+    });
+    expect(Object.keys(pedido.factura).sort()).not.toContain("pago");
+  });
+
+  it("la primera factura de un proveedor sin CUIT lo pide y no deja guardar sin él; con CUIT no lo pide", async () => {
+    const servidor = servidorFalso();
+    const { pantalla: sinCuit } = conFactura(servidor, false);
+    const { unmount } = await render(sinCuit);
+    await cargarLaCompra("2", "11000");
+    await llenarElComprobante();
+    await userEvent.type(page.getByLabelText("Total según la factura"), "26620");
+    await expect.element(boton("Comprar y recibir")).toBeDisabled();
+    await userEvent.type(page.getByLabelText("CUIT"), "20123456786");
+    await expect.element(boton("Comprar y recibir")).toBeEnabled();
+    tocar(boton("Comprar y recibir"));
+    await vi.waitFor(() => expect(servidor.pedidos.length).toBe(1));
+    expect(
+      (servidor.pedidos[0] as { factura: { cuitDelProveedor: string } }).factura.cuitDelProveedor,
+    ).toBe("20123456786");
+    await unmount();
+    const conCuit = servidorFalso();
+    await render(conFactura(conCuit, true).pantalla);
+    await cargarLaCompra("2", "11000");
+    expect(page.getByLabelText("CUIT").elements()).toHaveLength(0);
   });
 });

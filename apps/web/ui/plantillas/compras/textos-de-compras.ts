@@ -1,4 +1,5 @@
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
+import { CLAVE_DE_TEXTO_DEL_MEDIO, esUnMedioDePago } from "./pago/modelo-de-pago";
 
 /**
  * Los textos de «Compras» y «Compra» ya resueltos (Compras PR 3). Acá no se arma ningún texto nuevo: se eligen los aprobados del catálogo (cada uno con su fuente en `catalogo-compras.ts` y,
@@ -38,6 +39,15 @@ export type TextosDeCompras = Readonly<{
   /** «Corregido por ana@ejemplo.com · 24/11/2026 21:14». */
   corregidoPor: (persona: string, cuando: string) => string;
   nuevaCompra: string;
+  declararPago: string;
+  fecha: string;
+  medio: string;
+  caja: string;
+  importe: string;
+  sinElegir: string;
+  anulado: string;
+  /** «Efectivo», «Transferencia», …: el texto de cada medio de pago por su valor. */
+  medioDePago: (medio: string) => string;
 }>;
 
 export function textosDeCompras(): TextosDeCompras {
@@ -74,5 +84,15 @@ export function textosDeCompras(): TextosDeCompras {
     precioPor: texto({}, "compras.compra.precio_por"),
     corregidoPor: (persona, cuando) => texto({}, "cierre.corregido_por", { persona, cuando }),
     nuevaCompra: texto({}, "compras.compra.nueva_compra"),
+    declararPago: texto({}, "compras.pago.declarar"),
+    fecha: texto({}, "fiscal.pantalla.rotulo_fecha"),
+    medio: texto({}, "ventas.cobro.medio"),
+    caja: texto({}, "caja.pantalla.titulo"),
+    importe: texto({}, "ventas.cobro.importe"),
+    sinElegir: texto({}, "catalogo.dato.sin_elegir"),
+    anulado: texto({}, "caja.estado.anulado"),
+    // Un medio que la pantalla no conoce se dice con su propio valor (nunca se esconde).
+    medioDePago: (medio) =>
+      esUnMedioDePago(medio) ? texto({}, CLAVE_DE_TEXTO_DEL_MEDIO[medio]) : medio,
   };
 }

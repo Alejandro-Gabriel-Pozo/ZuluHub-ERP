@@ -38,6 +38,14 @@ const DE_CORREGIR_Y_ANULAR = (para: string): Proposito => ({
     "Pedernal-docs, brief `PR-10-corregir-y-anular-pantalla.md` de Compras (rama de planificación de la Ola 1) y maqueta `compra-corregir-anular.html` (`vForm`, `vHoja`); quién: gerente y administrador (compras.corregir y recepciones.anular, DDD:187)",
 });
 
+const HOJA_DE_ANULAR_PAGO = "apps/web/ui/plantillas/compras/pago/HojaDeAnularPago.cliente.tsx";
+const ANULAR_PAGO = ["comprobantes_de_proveedor.anular_pago"] as const;
+const DE_ANULAR_UN_PAGO = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs, brief `PR-8-pago-de-una-factura.md` de Compras (rama de planificación de la Ola 1) y maqueta `compra-pago.html` (estado «Anular el pago», aceptada por delegación, DDD:187); quién: gerente y administrador (comprobantes_de_proveedor.anular_pago)",
+});
+
 const HOJA_DE_LA_FICHA = "apps/web/ui/plantillas/compras/proveedor/HojaDeCambioDeFicha.cliente.tsx";
 const EDITAR_O_PEDIR_FICHA = ["proveedores.editar_ficha", "proveedores.pedir_ficha"] as const;
 const DE_LA_FICHA_DEL_PROVEEDOR = (para: string): Proposito => ({
@@ -72,9 +80,12 @@ export const DATOS_DE_COMPRAS = {
   },
   "motivo-de-anulacion-de-compra": {
     ficha: "src/modulos/compras/dominio/registrar-compra.ts",
-    propositos: [DE_CORREGIR_Y_ANULAR("Motivo obligatorio de anular una compra entera.")],
-    consumidores: [HOJA_DE_ANULAR],
-    ponerPor: ANULAR_COMPRA,
+    propositos: [
+      DE_CORREGIR_Y_ANULAR("Motivo obligatorio de anular una compra entera."),
+      DE_ANULAR_UN_PAGO("Motivo obligatorio de anular el pago de una factura."),
+    ],
+    consumidores: [HOJA_DE_ANULAR, HOJA_DE_ANULAR_PAGO],
+    ponerPor: [...ANULAR_COMPRA, ...ANULAR_PAGO],
     requiere: REQUIERE_COMPRAS,
   },
   "numero-de-punto-de-venta": {

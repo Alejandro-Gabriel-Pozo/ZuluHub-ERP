@@ -146,7 +146,9 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
   it("una segunda declaración con otra clave es COMPROBANTE_YA_PAGADO con el id del pago vigente", async () => {
     const m = await armar();
     const primero = valorDe(await c.casos.declararPago(m.e.gerente, pagoPedido(m)));
-    expect(await c.casos.declararPago(m.e.gerente, pagoPedido(m, { medio: "EFECTIVO" }))).toEqual({
+    expect(
+      await c.casos.declararPago(m.e.gerente, pagoPedido(m, { medio: "TRANSFERENCIA" })),
+    ).toEqual({
       ok: false,
       error: { error: "COMPROBANTE_YA_PAGADO", pagoId: primero.pagoId },
     });
@@ -199,7 +201,7 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
       motivo_de_anulacion: "Se pagó con otro medio",
     });
     const segundo = valorDe(
-      await c.casos.declararPago(m.e.gerente, pagoPedido(m, { medio: "EFECTIVO" })),
+      await c.casos.declararPago(m.e.gerente, pagoPedido(m, { medio: "TRANSFERENCIA" })),
     );
     expect(segundo.pagoId).not.toBe(primero.pagoId);
     expect(await pagos(m.comprobanteId)).toBe(2);
@@ -299,7 +301,7 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
 
   it("el pago puede viajar con la compra: queda vigente con el total de la factura; repetir devuelve el mismo pago; sin factura es FACTURA_REQUERIDA; el operador no puede pagar", async () => {
     const m = await armar();
-    const pedido = m.compra({ pago: { fechaDePago: "2026-10-11", medio: "EFECTIVO" } });
+    const pedido = m.compra({ pago: { fechaDePago: "2026-10-11", medio: "TRANSFERENCIA" } });
     expect(await c.casos.registrarCompraConFactura(m.e.operador, pedido)).toMatchObject({
       ok: false,
       error: "SIN_PERMISO",
@@ -311,7 +313,7 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
         "select estado, importe::text as importe, medio from pago_de_comprobante where id = $1",
         [r.pagoId],
       ),
-    ).toEqual([{ estado: "VIGENTE", importe: "2420.00", medio: "EFECTIVO" }]);
+    ).toEqual([{ estado: "VIGENTE", importe: "2420.00", medio: "TRANSFERENCIA" }]);
     expect(valorDe(await c.casos.registrarCompraConFactura(m.e.gerente, pedido))).toEqual({
       ...r,
       yaExistia: true,
@@ -323,7 +325,7 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
       ),
     ).toMatchObject({ ok: false, error: { error: "COMPROBANTE_YA_PAGADO" } });
     const { factura: _f, ...sinFactura } = m.compra({
-      pago: { fechaDePago: "2026-10-11", medio: "EFECTIVO" },
+      pago: { fechaDePago: "2026-10-11", medio: "TRANSFERENCIA" },
     });
     void _f;
     expect(await c.casos.registrarCompraConFactura(m.e.gerente, sinFactura)).toEqual({
@@ -334,7 +336,7 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
     expect(
       await c.casos.registrarCompra(
         m.e.gerente,
-        m.compra({ pago: { fechaDePago: "2026-10-11", medio: "EFECTIVO" } }),
+        m.compra({ pago: { fechaDePago: "2026-10-11", medio: "TRANSFERENCIA" } }),
       ),
     ).toEqual({
       ok: false,
@@ -347,9 +349,21 @@ describe.skipIf(base === null)("compras: pago de la factura", () => {
     expect(
       await c.casos.registrarCompraConFactura(
         m.e.gerente,
-        m.compra({ pago: { fechaDePago: "2027-01-01", medio: "EFECTIVO" } }),
+        m.compra({ pago: { fechaDePago: "2027-01-01", medio: "TRANSFERENCIA" } }),
       ),
     ).toEqual({ ok: false, error: "FECHA_INVALIDA" });
+  });
+
+  it("el pago que viaja con la compra no puede ser en efectivo (no tiene caja): se rechaza sin escribir la compra, la factura ni el pago", async () => {
+    const m = await armar();
+    const antes = await c.contar("select count(*) as n from pago_de_comprobante");
+    expect(
+      await c.casos.registrarCompraConFactura(
+        m.e.gerente,
+        m.compra({ pago: { fechaDePago: "2026-10-11", medio: "EFECTIVO" } }),
+      ),
+    ).toEqual({ ok: false, error: "SALIDA_DE_CAJA_INVALIDA" });
+    expect(await c.contar("select count(*) as n from pago_de_comprobante")).toBe(antes);
   });
 
   it("anular una compra con pago vigente falla (COMPROBANTE_YA_PAGADO) y no toca nada; con el pago anulado antes, la compra se anula", async () => {

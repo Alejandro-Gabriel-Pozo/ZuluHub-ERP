@@ -41,16 +41,22 @@ const ficha = (cambios: Record<string, unknown> = {}): FichaDeCompraParaLaPantal
   lineas: [linea(1), linea(2, { importe: null, costoPorUnidadDeStock: null, precioPor: null })],
   total: null,
   factura: null,
+  pagos: [],
   ...cambios,
 });
 
-const TODO = { corregir: true, anular: true };
+const TODO = { corregir: true, anular: true, pagar: true, anularPago: true };
 
 describe("la ficha de una compra con «Corregir» y «Anular»", () => {
   it("sin permisos (o sin decir nada) no hay ningún botón: todo nace cerrado", () => {
     for (const f of [
       armarLaFicha(ficha(), textos),
-      armarLaFicha(ficha(), textos, { corregir: false, anular: false }),
+      armarLaFicha(ficha(), textos, {
+        corregir: false,
+        anular: false,
+        pagar: false,
+        anularPago: false,
+      }),
     ]) {
       expect(f.anular).toBe(false);
       expect(f.corregirLaPrimera).toBeNull();
@@ -66,10 +72,20 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
   });
 
   it("cada permiso es independiente: quien solo anula no corrige y al revés", () => {
-    const soloAnula = armarLaFicha(ficha(), textos, { corregir: false, anular: true });
+    const soloAnula = armarLaFicha(ficha(), textos, {
+      corregir: false,
+      anular: true,
+      pagar: false,
+      anularPago: false,
+    });
     expect(soloAnula.anular).toBe(true);
     expect(soloAnula.lineas[0]?.corregir).toBeNull();
-    const soloCorrige = armarLaFicha(ficha(), textos, { corregir: true, anular: false });
+    const soloCorrige = armarLaFicha(ficha(), textos, {
+      corregir: true,
+      anular: false,
+      pagar: false,
+      anularPago: false,
+    });
     expect(soloCorrige.anular).toBe(false);
     expect(soloCorrige.lineas[0]?.corregir).not.toBeNull();
   });

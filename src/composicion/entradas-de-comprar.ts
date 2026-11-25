@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ALICUOTAS_DE_COMPRA, TIPOS_DE_COMPROBANTE_DE_PROVEEDOR } from "../modulos/compras/publico";
 import { ok, type Resultado } from "../primitivas/resultado/resultado";
 import { textoDeBusquedaDeProductoDesdeTexto } from "../primitivas/texto/termino-de-busqueda-de-producto";
 import { UNIDADES } from "../primitivas/unidades/unidades";
@@ -96,12 +97,99 @@ export function entradaDeCotizarCompra(
 const formaDeRemito = z.object({ puntoDeVenta: entero, numero: entero, fecha: texto });
 const formaDelRemitoEscrito = z.object({ puntoDeVenta: texto, numero: texto, fecha: texto });
 
+/**
+ * La factura que llega con la compra (nivel «Con factura»; Compras PR 7): el tipo de la lista de comprobantes, el punto de venta y el número (enteros), la fecha, el vencimiento de pago (opcional), cada línea
+ * con el renglón de la compra al que corresponde, su cantidad, su precio neto y su alícuota (de la lista de alícuotas), las percepciones (opcional), el total según la factura y, solo en la primera factura de un
+ * proveedor sin CUIT, el CUIT y la condición frente al IVA. Los importes y las cantidades viajan como TEXTO decimal, nunca `number`. Un campo en blanco de los opcionales es «no hay». Qué tipo, número, alícuota o total valen
+ * lo decide el dominio dentro de la transacción (`leerFactura`, `calcularComprobante`): acá solo la forma. NO existe un campo para el pago (se declara aparte, PR 8) ni para el importe de los totales calculados.
+ */
+const enBlancoEsNada = (valor: string | null | undefined): string | null =>
+  valor === undefined || valor === null || valor.trim() === "" ? null : valor;
+
+const formaDeLineaDeFactura = z.strictObject({
+  renglon: entero,
+  cantidadFacturada: decimal,
+  precioNeto: decimal,
+  alicuota: z.enum(ALICUOTAS_DE_COMPRA).nullish(),
+});
+
+const formaDeFactura = z.strictObject({
+  tipo: z.enum(TIPOS_DE_COMPROBANTE_DE_PROVEEDOR),
+  puntoDeVenta: entero,
+  numero: entero,
+  fecha: texto,
+  vencimientoDePago: texto.nullish(),
+  lineas: z.array(formaDeLineaDeFactura).min(1),
+  percepciones: decimal.nullish(),
+  totalSegunFactura: decimal,
+  cuitDelProveedor: texto.nullish(),
+  condicionIva: texto.nullish(),
+});
+
+export type FacturaWebDeRegistrarCompra = Readonly<{
+  tipo: (typeof TIPOS_DE_COMPROBANTE_DE_PROVEEDOR)[number];
+  puntoDeVenta: number;
+  numero: number;
+  fecha: string;
+  vencimientoDePago: string | null;
+  lineas: readonly Readonly<{
+    renglon: number;
+    cantidadFacturada: string;
+    precioNeto: string;
+    alicuota: string | null;
+  }>[];
+  percepciones: string | null;
+  totalSegunFactura: string;
+  cuitDelProveedor: string | null;
+  condicionIva: string | null;
+}>;
+
+/**
+ * La frontera de «cotizar la factura» (las cuentas antes de guardar; Compras PR 7): solo lo que entra en la cuenta (el tipo, cada línea con su cantidad, su precio neto y su alícuota, las percepciones y el total según la factura),
+ * con las mismas formas y listas que la factura de «Comprar y recibir». Todo como TEXTO decimal. Lo que la cuenta rechaza lo dice el servidor con el mismo error del alta.
+ */
+const formaDeCotizarFactura = z.strictObject({
+  tipo: z.enum(TIPOS_DE_COMPROBANTE_DE_PROVEEDOR),
+  lineas: z.array(formaDeLineaDeFactura.omit({ renglon: true })).min(1),
+  percepciones: decimal.nullish(),
+  totalSegunFactura: decimal,
+});
+
+export type EntradaWebDeCotizarFactura = Readonly<{
+  tipo: (typeof TIPOS_DE_COMPROBANTE_DE_PROVEEDOR)[number];
+  lineas: readonly Readonly<{
+    cantidadFacturada: string;
+    precioNeto: string;
+    alicuota: string | null;
+  }>[];
+  percepciones: string | null;
+  totalSegunFactura: string;
+}>;
+
+export function entradaDeCotizarFactura(
+  crudo: unknown,
+): Resultado<EntradaWebDeCotizarFactura, ErrorDeEntrada> {
+  const forma = leer(formaDeCotizarFactura, crudo);
+  if (!forma.ok) return forma;
+  return ok({
+    tipo: forma.valor.tipo,
+    lineas: forma.valor.lineas.map((l) => ({
+      cantidadFacturada: l.cantidadFacturada,
+      precioNeto: l.precioNeto,
+      alicuota: l.alicuota ?? null,
+    })),
+    percepciones: enBlancoEsNada(forma.valor.percepciones),
+    totalSegunFactura: forma.valor.totalSegunFactura,
+  });
+}
+
 const formaDeRegistrar = z.object({
   clave: identificador,
   proveedorId: identificador,
   depositoId: identificador.nullish(),
   remito: formaDelRemitoEscrito.nullish(),
   renglones: z.array(formaDeRenglon).min(1),
+  factura: formaDeFactura.nullish(),
 });
 
 export type EntradaWebDeRegistrarCompra = Readonly<{
@@ -110,6 +198,8 @@ export type EntradaWebDeRegistrarCompra = Readonly<{
   depositoId: string | null;
   remito: Readonly<{ puntoDeVenta: number; numero: number; fecha: string }> | null;
   renglones: EntradaWebDeCotizarCompra["renglones"];
+  /** La factura de la compra («Con factura»); `null` sin factura. El nivel de la empresa lo decide el servidor: una factura en «Sin factura» (o su falta en «Con factura») se rechaza ahí. */
+  factura: FacturaWebDeRegistrarCompra | null;
 }>;
 
 const enBlanco = (valor: string): boolean => valor.trim() === "";
@@ -138,5 +228,25 @@ export function entradaDeRegistrarCompra(
     depositoId: forma.valor.depositoId ?? null,
     remito,
     renglones: renglones.valor.renglones,
+    factura:
+      forma.valor.factura === undefined || forma.valor.factura === null
+        ? null
+        : {
+            tipo: forma.valor.factura.tipo,
+            puntoDeVenta: forma.valor.factura.puntoDeVenta,
+            numero: forma.valor.factura.numero,
+            fecha: forma.valor.factura.fecha,
+            vencimientoDePago: enBlancoEsNada(forma.valor.factura.vencimientoDePago),
+            lineas: forma.valor.factura.lineas.map((l) => ({
+              renglon: l.renglon,
+              cantidadFacturada: l.cantidadFacturada,
+              precioNeto: l.precioNeto,
+              alicuota: l.alicuota ?? null,
+            })),
+            percepciones: enBlancoEsNada(forma.valor.factura.percepciones),
+            totalSegunFactura: forma.valor.factura.totalSegunFactura,
+            cuitDelProveedor: enBlancoEsNada(forma.valor.factura.cuitDelProveedor),
+            condicionIva: enBlancoEsNada(forma.valor.factura.condicionIva),
+          },
   });
 }

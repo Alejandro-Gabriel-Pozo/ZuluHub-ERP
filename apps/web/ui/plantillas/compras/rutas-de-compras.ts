@@ -15,6 +15,9 @@ export const rutaDeLaCompra = (recepcionId: string): string => `${RUTA_DE_COMPRA
 export const rutaDeCorregirLaLinea = (recepcionId: string, linea: number): string =>
   `${rutaDeLaCompra(recepcionId)}/corregir/${String(linea)}`;
 
+/** «Declarar pago» de la factura de una compra (Compras PR 8). */
+export const rutaDelPago = (recepcionId: string): string => `${rutaDeLaCompra(recepcionId)}/pago`;
+
 export type FiltroAplicado = Readonly<{
   estado: "TODAS" | "SIN_FACTURAR";
   desde: string | null;

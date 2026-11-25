@@ -135,6 +135,8 @@ export type FichaDeCompraParaLaPantalla = Readonly<{
   }>[];
   total: Importe | null;
   factura: Readonly<{
+    /** Qué factura es: la página de «Declarar pago» la liga a su acción (no viaja en un campo del formulario). */
+    comprobanteId: string;
     letra: LetraDeFactura;
     puntoDeVenta: number;
     numero: number;
@@ -142,6 +144,20 @@ export type FichaDeCompraParaLaPantalla = Readonly<{
     vencimientoDePago: string | null;
     totalSegunLaFactura: Importe;
   }> | null;
+  /** Los pagos de la factura, del más viejo al más nuevo (a lo sumo uno vigente). Vacía sin factura o sin pagos. */
+  pagos: readonly Readonly<{
+    id: string;
+    fechaDePago: string;
+    medio: string;
+    importe: Importe;
+    estado: "VIGENTE" | "ANULADO";
+    /** El correo de quien lo declaró; `null` si no se puede mostrar. */
+    declaradoPor: string | null;
+    declaradoEn: string;
+    anuladoPor: string | null;
+    anuladoEn: string | null;
+    motivoDeAnulacion: string | null;
+  }>[];
 }>;
 
 const MOTIVOS_DE_RECHAZO: ReadonlySet<string> = new Set([
@@ -172,6 +188,9 @@ export function fichaDeLaCompra(
           ficha.valor.registradoPor,
           ...(ficha.valor.anuladaPor === null ? [] : [ficha.valor.anuladaPor]),
           ...ficha.valor.correcciones.map((c) => c.registradoPor),
+          ...ficha.valor.pagos.flatMap((p) =>
+            p.anuladoPor === null ? [p.registradoPor] : [p.registradoPor, p.anuladoPor],
+          ),
         ]),
       ];
       const personas = await d.consultasDeIdentidad().personasParaMostrar(contexto, { ids });
@@ -242,6 +261,7 @@ export function fichaDeLaCompra(
         f.comprobante.puntoDeVenta !== null &&
         f.comprobante.numero !== null
           ? {
+              comprobanteId: f.comprobante.id,
               letra: f.comprobante.letra,
               puntoDeVenta: f.comprobante.puntoDeVenta,
               numero: f.comprobante.numero,
@@ -250,6 +270,18 @@ export function fichaDeLaCompra(
               totalSegunLaFactura: { moneda: MONEDA, monto: f.comprobante.totalSegunFactura },
             }
           : null,
+      pagos: f.pagos.map((p) => ({
+        id: p.id,
+        fechaDePago: p.fechaDePago,
+        medio: p.medio,
+        importe: { moneda: MONEDA, monto: p.importe },
+        estado: p.estado === "ANULADO" ? "ANULADO" : "VIGENTE",
+        declaradoPor: correoDe(p.registradoPor),
+        declaradoEn: p.registradoEn,
+        anuladoPor: p.anuladoPor === null ? null : correoDe(p.anuladoPor),
+        anuladoEn: p.anuladoEn,
+        motivoDeAnulacion: p.motivoDeAnulacion,
+      })),
     }),
   );
 }

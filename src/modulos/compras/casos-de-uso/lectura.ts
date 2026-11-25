@@ -186,7 +186,11 @@ export type FichaDeCompra = Readonly<{
     importe: string;
     estado: string;
     registradoPor: string;
+    /** Instante ISO UTC en que se declaró. */
+    registradoEn: string;
     anuladoPor: string | null;
+    /** Instante ISO UTC en que se anuló; `null` si está vigente. */
+    anuladoEn: string | null;
     motivoDeAnulacion: string | null;
   }>[];
 }>;
@@ -304,7 +308,9 @@ export async function fichaDeCompraDentro(
       importe: p.importe,
       estado: p.estado,
       registradoPor: p.registradoPor,
+      registradoEn: p.registradoEn.toISOString(),
       anuladoPor: p.anuladoPor,
+      anuladoEn: p.anuladoEn === null ? null : p.anuladoEn.toISOString(),
       motivoDeAnulacion: p.motivoDeAnulacion,
     })),
   });

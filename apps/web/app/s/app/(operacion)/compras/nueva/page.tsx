@@ -8,6 +8,7 @@ import {
   buscarProductosAccion,
   buscarProveedoresAccion,
   cotizarCompraAccion,
+  cotizarFacturaAccion,
   registrarCompraAccion,
 } from "../../../acciones-de-comprar";
 
@@ -23,6 +24,8 @@ export default async function PaginaDeNuevaCompra() {
         buscarProductos={buscarProductosAccion}
         buscarProveedores={buscarProveedoresAccion}
         cotizar={cotizarCompraAccion}
+        cotizarFactura={cotizarFacturaAccion}
+        conFactura={previo.dato.conFactura}
         registrar={registrarCompraAccion}
         agregarProveedor={agregarProveedorAccion}
         puedeAgregarProveedor={previo.dato.puedeAgregarProveedor}

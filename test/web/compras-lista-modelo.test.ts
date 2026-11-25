@@ -163,6 +163,7 @@ const ficha = (cambios: Record<string, unknown> = {}) =>
     ],
     total: { moneda: "ARS", monto: "512600.00" },
     factura: null,
+    pagos: [],
     ...cambios,
   }) as unknown as FichaDeCompraParaLaPantalla;
 
@@ -257,6 +258,7 @@ describe("la ficha de una compra", () => {
       ficha({
         estado: "RECIBIDA_Y_FACTURADA",
         factura: {
+          comprobanteId: "0c0c0c0c-1111-4222-8333-444444444444",
           letra: "A",
           puntoDeVenta: 2,
           numero: 1187,

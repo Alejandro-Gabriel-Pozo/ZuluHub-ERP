@@ -6,11 +6,13 @@ import {
   buscarProductosParaComprar,
   buscarProveedoresParaComprar,
   cotizarLaCompraDelFormulario,
+  cotizarLaFacturaDelFormulario,
   registrarLaCompraDelFormulario,
 } from "../../../servidor/comprar";
 import type {
   CompraCotizadaParaLaPantalla,
   CompraRegistradaParaLaPantalla,
+  FacturaCotizadaParaLaPantalla,
   ProductosParaComprarEnLaPantalla,
   ProveedorParaElegir,
   ResultadoDeGuardar,
@@ -30,6 +32,12 @@ export async function cotizarCompraAccion(
   renglones: unknown,
 ): Promise<Respuesta<CompraCotizadaParaLaPantalla>> {
   return cotizarLaCompraDelFormulario(renglones);
+}
+
+export async function cotizarFacturaAccion(
+  factura: unknown,
+): Promise<Respuesta<FacturaCotizadaParaLaPantalla>> {
+  return cotizarLaFacturaDelFormulario(factura);
 }
 
 export async function registrarCompraAccion(

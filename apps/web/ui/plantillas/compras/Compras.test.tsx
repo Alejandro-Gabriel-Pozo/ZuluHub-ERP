@@ -182,6 +182,7 @@ const FICHA: FichaDeCompraParaLaPantalla = {
   ],
   total: null,
   factura: {
+    comprobanteId: "c0000000-0000-4000-8000-000000000001",
     letra: "A",
     puntoDeVenta: 2,
     numero: 1187,
@@ -189,6 +190,7 @@ const FICHA: FichaDeCompraParaLaPantalla = {
     vencimientoDePago: "2026-11-30",
     totalSegunLaFactura: pesos("29225040.00"),
   },
+  pagos: [],
 };
 
 describe("PantallaDeFichaDeCompra", () => {
