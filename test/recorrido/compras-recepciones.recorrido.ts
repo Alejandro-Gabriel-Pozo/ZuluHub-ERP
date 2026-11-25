@@ -211,12 +211,14 @@ describe.skipIf(base === null)(
     });
 
     it("«Corregir lo recibido»: el gerente corrige 40 → 35 con un DOBLE CLIC real: UNA corrección, el stock baja 5, el detalle dice lo vigente y la historia; el motivo es de una lista cerrada y la nota es opcional", async () => {
-      await ir(pagina, "/compras/recepciones");
-      await pagina
-        .getByRole("link", { name: /Recepción \d+ · Distribuidora Central/ })
-        .first()
-        .click();
-      await pagina.waitForURL(/\/compras\/recepciones\/[0-9a-f-]{36}$/);
+      // La recepción de 40 kg, por su id (la lista ordena por fecha y desempata por id: «la primera» no es siempre la última).
+      const id = (
+        await dueno().query<{ recepcion_id: string }>(
+          "select recepcion_id from linea_de_recepcion where empresa_id = $1 and cantidad_de_compra = 40",
+          [mundo.empresa],
+        )
+      ).rows[0]?.recepcion_id as string;
+      await ir(pagina, `/compras/recepciones/${id}`);
       await pagina.getByText("Recibida sin facturar", { exact: true }).waitFor();
       expect(await pagina.getByRole("button", { name: "Corregir lo recibido" }).count()).toBe(1);
       await pagina.getByRole("button", { name: "Corregir lo recibido" }).click();
