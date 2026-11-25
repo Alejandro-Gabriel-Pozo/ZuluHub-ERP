@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0891",
+  "fecha": "2026-11-24",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "El botón para registrar el pago de una factura del proveedor dice «Declarar pago» (clave compras.pago.declarar).",
+  "que_cambia": "El botón de la ficha de la compra, el título del formulario y el botón de envío del pago dicen «Declarar pago». Revertir: cambiar el texto de la clave en catalogo-compras.ts.",
+  "donde": "decisiones-del-dueno-2026-11.md, fila del 16/11/2026 «Respuestas 1A, 2A y 3A» (2A); compra-pago.html; catalogo-compras.ts, textos-de-compras.ts; confirmada: DDD fila del 16/11/2026"
+}

@@ -29,11 +29,28 @@ export const COLUMNAS_QUE_LEE_COMPRAS = [
 
 export interface ProductosParaCompras {
   obtener(empresa: EmpresaId, id: string): Promise<ProductoParaCompras | null>;
+  /** Los productos de la empresa con esos ids (activos o no), en UNA consulta; un id repetido, que no es UUID o de otra empresa no devuelve fila. */
+  deVarios(empresa: EmpresaId, ids: readonly string[]): Promise<readonly ProductoParaCompras[]>;
   /** Igual que `obtener`, con la fila bloqueada en modo compartido: nadie lo desactiva ni lo cambia mientras dura la transacción. */
   bloquearCompartido(empresa: EmpresaId, id: string): Promise<ProductoParaCompras | null>;
 }
 
 export function crearProductosParaCompras(db: Kysely<ComprasDb>): ProductosParaCompras {
+  const aProducto = (f: {
+    id: string;
+    nombre: string;
+    clase_de_uso: string;
+    activo: boolean;
+    unidad_base_id: string;
+    dimension: string;
+  }): ProductoParaCompras => ({
+    id: f.id,
+    nombre: f.nombre,
+    claseDeUso: f.clase_de_uso,
+    activo: f.activo,
+    unidadBaseId: f.unidad_base_id,
+    dimension: f.dimension,
+  });
   async function leer(empresa: EmpresaId, id: string, bloquear: boolean) {
     if (!esUuid(id)) return null;
     let consulta = db
@@ -43,17 +60,20 @@ export function crearProductosParaCompras(db: Kysely<ComprasDb>): ProductosParaC
       .where("id", "=", id);
     if (bloquear) consulta = consulta.forShare();
     const f = await consulta.executeTakeFirst();
-    if (f === undefined) return null;
-    return {
-      id: f.id,
-      nombre: f.nombre,
-      claseDeUso: f.clase_de_uso,
-      activo: f.activo,
-      unidadBaseId: f.unidad_base_id,
-      dimension: f.dimension,
-    };
+    return f === undefined ? null : aProducto(f);
   }
   return {
+    async deVarios(empresa, ids) {
+      const validos = [...new Set(ids.filter(esUuid))];
+      if (validos.length === 0) return [];
+      const filas = await db
+        .selectFrom("producto")
+        .select(COLUMNAS_QUE_LEE_COMPRAS)
+        .where("empresa_id", "=", empresa)
+        .where("id", "in", validos)
+        .execute();
+      return filas.map(aProducto);
+    },
     obtener: (empresa, id) => leer(empresa, id, false),
     bloquearCompartido: (empresa, id) => leer(empresa, id, true),
   };

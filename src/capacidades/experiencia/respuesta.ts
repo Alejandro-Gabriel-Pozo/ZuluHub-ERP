@@ -23,6 +23,7 @@ import {
   type CodigoDeSalon,
 } from "./respuesta-de-salon";
 import { CLAVES_DE_ERRORES_DE_VENTAS, type CodigoDeVentas } from "./respuesta-de-ventas";
+import { CLAVES_DE_ERRORES_DE_USUARIOS, type CodigoDeUsuarios } from "./respuesta-de-usuarios";
 import { CLAVES_DE_ERRORES_FISCALES, type CodigoFiscal } from "./respuesta-fiscal";
 
 /**
@@ -65,6 +66,7 @@ export type CodigoDeNegocio =
   | CodigoDeCierre
   | CodigoDeCompras
   | CodigoDeClientes
+  | CodigoDeUsuarios
   | CodigoDeSalon
   | CodigoDeVentas
   | CodigoDeStock
@@ -105,6 +107,11 @@ const AVISOS_DE_CAJA = Object.fromEntries(
 const AVISOS_DE_CLIENTES = Object.fromEntries(
   Object.entries(CLAVES_DE_ERRORES_DE_CLIENTES).map(([codigo, clave]) => [codigo, aviso(clave)]),
 ) as Readonly<Record<CodigoDeClientes, DefinicionDeCodigo>>;
+
+/** Los códigos de la pantalla «Usuarios» de Cuenta (`respuesta-de-usuarios.ts`): cada uno es un aviso con su texto `usuarios.error.*`. */
+const AVISOS_DE_USUARIOS = Object.fromEntries(
+  Object.entries(CLAVES_DE_ERRORES_DE_USUARIOS).map(([codigo, clave]) => [codigo, aviso(clave)]),
+) as Readonly<Record<CodigoDeUsuarios, DefinicionDeCodigo>>;
 
 /** Los códigos de compras N1 y N2 (`respuesta-de-compras.ts`): cada uno es un aviso con su texto `compras.error.*`. */
 const AVISOS_DE_COMPRAS = Object.fromEntries(
@@ -166,6 +173,7 @@ export const CODIGOS_PUBLICOS: Readonly<Record<CodigoPublico, DefinicionDeCodigo
   ...AVISOS_DE_CIERRE,
   ...AVISOS_DE_COMPRAS,
   ...AVISOS_DE_CLIENTES,
+  ...AVISOS_DE_USUARIOS,
   ...AVISOS_DE_SALON,
   ...AVISOS_DE_VENTAS,
   ...AVISOS_DE_STOCK,

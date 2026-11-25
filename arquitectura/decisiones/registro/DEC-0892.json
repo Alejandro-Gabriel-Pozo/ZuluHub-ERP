@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0892",
+  "fecha": "2026-11-24",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Compras PR 8: declarar y anular el pago de una factura sobre el pago actual (un pago por factura, por el total, sin parciales; el efectivo sale de una caja abierta).",
+  "que_cambia": "Gerente y administrador declaran y anulan el pago desde la ficha de la compra; quien opera lo ve sin botones. El pago a cuenta, el anticipo y las retenciones no se construyen (cuenta de proveedores). Revertir: sacar la ruta de pago de la compra y los bloques de la ficha.",
+  "donde": "decisiones-del-dueno-2026-11.md, fila del 23/11/2026 «Compras: el dueño aprueba las recomendaciones del plan a las 10 preguntas» (pregunta 3) y orden del 24/11/2026; compra-pago.html; ficha-de-pago-de-compras.ts; confirmada: DDD fila del 23/11/2026"
+}

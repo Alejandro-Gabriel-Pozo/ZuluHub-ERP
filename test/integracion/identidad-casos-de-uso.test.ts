@@ -689,7 +689,11 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
     it("reactivar con OTRO rol no se soporta: ROL_DISTINTO_AL_ANTERIOR y no se escribe nada", async () => {
       const e = await escenario();
       const p = await miembro(e, "OPERADOR", false);
-      const { id, token } = await invitar(e, { email: p.email, rol: "ADMINISTRADOR" });
+      // Por `invitarUsuario` ya no nace (H1: se rechaza al invitar); la aceptación sigue defendiéndose de una invitación que existía antes de que la membresía se apagara.
+      const {
+        inv: { id },
+        token,
+      } = await invitacionMultiempresa([{ e, rol: "ADMINISTRADOR" }], p.email);
       const antes = await foto([e.empresa], [p.email]);
       expect(await aceptar(token, p.email)).toEqual({
         ok: false,
@@ -779,19 +783,64 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
       ).toBe(1);
     });
 
-    it("con una pendiente vigente devuelve esa, sea cual sea el rol pedido, y no escribe (D2)", async () => {
+    it("con una pendiente vigente del mismo rol devuelve esa y no escribe (D2)", async () => {
       const e = await escenario();
       const primera = await invitar(e, { rol: "OPERADOR" });
       const despues = await foto([e.empresa]);
       const repetida = await casos.invitarUsuario(e.ctx, {
         email: primera.email.toUpperCase(),
-        rol: "ADMINISTRADOR",
+        rol: "OPERADOR",
         sucursales: [],
       });
       expect(repetida).toEqual({ ok: true, valor: { invitacionId: primera.id, yaExistia: true } });
       expect(await foto([e.empresa])).toBe(despues);
       expect(await trabajos(e.empresa)).toHaveLength(1);
       expect(await auditoria(e.empresa)).toHaveLength(1);
+    });
+
+    it("con una pendiente vigente de OTRO rol se rechaza (H2) y no escribe: no se hace pasar por hecho lo que no se hizo", async () => {
+      const e = await escenario();
+      const primera = await invitar(e, { rol: "OPERADOR" });
+      const despues = await foto([e.empresa]);
+      const repetida = await casos.invitarUsuario(e.ctx, {
+        email: primera.email,
+        rol: "ADMINISTRADOR",
+        sucursales: [],
+      });
+      expect(repetida).toEqual({ ok: false, error: "INVITACION_VIGENTE_CON_OTRO_ROL" });
+      expect(await foto([e.empresa])).toBe(despues);
+      expect(await invitacion(primera.id)).toMatchObject({ estado: "PENDIENTE" });
+    });
+
+    it("invitar a quien tiene la membresía apagada con OTRO rol se rechaza al invitar (H1) y no deja invitación ni mail", async () => {
+      const e = await escenario();
+      const p = await miembro(e, "OPERADOR", false);
+      const antes = await foto([e.empresa], [p.email]);
+      const r = await casos.invitarUsuario(e.ctx, {
+        email: p.email,
+        rol: "ADMINISTRADOR",
+        sucursales: [],
+      });
+      expect(r).toEqual({
+        ok: false,
+        error: { codigo: "ROL_DISTINTO_AL_ANTERIOR", empresaId: e.empresa },
+      });
+      expect(await foto([e.empresa], [p.email])).toBe(antes);
+      expect(await trabajos(e.empresa)).toHaveLength(0);
+    });
+
+    it("invitar a quien tiene la membresía apagada con el MISMO rol funciona (es la forma de reactivar)", async () => {
+      const e = await escenario();
+      const p = await miembro(e, "OPERADOR", false);
+      const r = await casos.invitarUsuario(e.ctx, {
+        email: p.email,
+        rol: "OPERADOR",
+        sucursales: [],
+      });
+      expect(r).toEqual({
+        ok: true,
+        valor: { invitacionId: cualquierTexto, yaExistia: false },
+      });
     });
 
     it("una pendiente vencida se revoca y se reemplaza por una nueva", async () => {
@@ -852,14 +901,31 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
         ok: false,
         error: "ES_EL_GERENTE",
       });
-      expect(await casos.apagarMembresia(e.ctx, { personaId: e.gerente })).toEqual({
-        ok: false,
-        error: "ES_EL_GERENTE",
-      });
       expect(await foto([e.empresa])).toBe(antes);
     });
 
-    it("el último admin no se apaga: ULTIMO_ADMIN (sin gerente activo)", async () => {
+    it("nadie se apaga a sí mismo: ES_UNO_MISMO, ni el gerente ni un administrador, y no se escribe nada (H3)", async () => {
+      const e = await escenario();
+      const admin = await miembro(e, "ADMINISTRADOR");
+      const antes = await foto([e.empresa]);
+      expect(await casos.apagarMembresia(e.ctx, { personaId: e.gerente })).toEqual({
+        ok: false,
+        error: "ES_UNO_MISMO",
+      });
+      expect(await casos.apagarMembresia(admin.ctx, { personaId: admin.id })).toEqual({
+        ok: false,
+        error: "ES_UNO_MISMO",
+      });
+      expect(await foto([e.empresa])).toBe(antes);
+      expect(await auditoria(e.empresa, "MEMBRESIA_APAGADA")).toHaveLength(0);
+      // El administrador sí puede apagar a OTRO administrador (se gestionan por igual), y recién ahí queda apagado.
+      const otro = await miembro(e, "ADMINISTRADOR");
+      expect((await casos.apagarMembresia(admin.ctx, { personaId: otro.id })).ok).toBe(true);
+      expect(await membresia(e.empresa, otro.id)).toMatchObject({ activo: false });
+      expect(await membresia(e.empresa, admin.id)).toMatchObject({ activo: true });
+    });
+
+    it("sin gerente activo, el único administrador no se apaga a sí mismo (ES_UNO_MISMO) y un empleado sí se apaga", async () => {
       const e = await escenario();
       // Desde 0005 la base no deja apagar a un gerente (`membresia_gerente_no_se_apaga`): una empresa
       // sin gerente activo se arma quitando su membresía, como el dueño de la base.
@@ -869,9 +935,10 @@ describe.skipIf(base === null)("identidad: los casos de uso contra una base real
       ]);
       const unico = await miembro(e, "ADMINISTRADOR");
       const operador = await miembro(e, "OPERADOR");
+      // `ULTIMO_ADMIN` ya no se alcanza en secuencia (quien pide cuenta como otro administrador activo): queda como segunda defensa del dominio, probada en `membresia.test.ts`, y en las carreras de `identidad-concurrencia.test.ts`.
       expect(await casos.apagarMembresia(unico.ctx, { personaId: unico.id })).toEqual({
         ok: false,
-        error: "ULTIMO_ADMIN",
+        error: "ES_UNO_MISMO",
       });
       // Un operador sí se apaga, aunque sea el único operador.
       expect((await casos.apagarMembresia(unico.ctx, { personaId: operador.id })).ok).toBe(true);

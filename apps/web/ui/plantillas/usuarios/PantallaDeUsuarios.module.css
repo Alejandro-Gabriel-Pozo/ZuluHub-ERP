@@ -1,0 +1,130 @@
+.cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fila {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "nombre estado"
+    "detalle estado";
+  gap: var(--espacio-1) var(--espacio-3);
+  align-items: center;
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  color: inherit;
+  text-decoration: none;
+}
+
+a.fila:focus-visible {
+  outline: var(--borde-grosor-fuerte) solid var(--accion-primaria-fondo);
+  outline-offset: var(--espacio-1);
+}
+
+.nombre {
+  grid-area: nombre;
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.detalle {
+  grid-area: detalle;
+  color: var(--color-texto-suave);
+}
+
+.estado {
+  grid-area: estado;
+}
+
+.seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.encabezado {
+  margin: 0;
+  font-size: var(--tipo-tamano-medio);
+}
+
+.datos {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+}
+
+.dato {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--espacio-3);
+  padding: var(--espacio-2) var(--espacio-3);
+  border-bottom: var(--borde-grosor) solid var(--color-borde);
+}
+
+.dato:last-child {
+  border-bottom: 0;
+}
+
+.dato dt {
+  color: var(--color-texto-suave);
+}
+
+.dato dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+}
+
+.grupo legend {
+  padding: 0 var(--espacio-1);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  align-items: center;
+}
+
+.vence {
+  margin: 0;
+  color: var(--color-texto-suave);
+}
+
+.acciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+}
+
+.detalle-de-confirmar {
+  margin: 0;
+  color: var(--color-texto-suave);
+}

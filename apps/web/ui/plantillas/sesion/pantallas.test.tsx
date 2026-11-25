@@ -171,7 +171,7 @@ describe("elegir empresa", () => {
             - button "Entrar a la empresa Café del Puerto"
           - listitem:
             - paragraph: Panadería Los Pinos
-            - text: Operador La empresa está suspendida.
+            - text: Empleado La empresa está suspendida.
             - button "Entrar a la empresa Panadería Los Pinos"
     `);
   });

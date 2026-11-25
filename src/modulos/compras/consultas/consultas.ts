@@ -6,6 +6,8 @@ import { armarConsultasDeDevoluciones } from "./devoluciones";
 import { armarConsultasDeNotasDeCredito } from "./notas-de-credito";
 import { armarConsultasDeDiferencias } from "./diferencias";
 import { armarConsultasDeFicha } from "./ficha";
+import { armarConsultasParaComprar } from "./consultas-para-comprar";
+import { armarConsultasDeNivel } from "./nivel";
 import { armarConsultasDeOrdenes } from "./ordenes";
 
 /**
@@ -17,7 +19,9 @@ export function crearConsultasDeCompras(d: DependenciasDeConsultasDeCompras) {
   return {
     ...armarConsultasDeFicha(leer),
     ...armarConsultasDeCompras(leer),
+    ...armarConsultasParaComprar(leer),
     ...armarConsultasDeConciliacion(leer),
+    ...armarConsultasDeNivel(leer),
     ...armarConsultasDeOrdenes(leer),
     ...armarConsultasDeDevoluciones(leer),
     ...armarConsultasDeNotasDeCredito(leer),

@@ -1,4 +1,5 @@
 import "server-only";
+import { revalidatePath } from "next/cache";
 import type { ErrorPublico, Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   agregarElContacto,
@@ -12,12 +13,14 @@ import {
   type FichaParaLaPantalla,
   type PartesParaLaLista,
   type PosibleDuplicadoParaLaPantalla,
+  type ResultadoDeGuardar,
 } from "../../../src/composicion/directorio-web";
 import type { ResultadoDeAccion } from "./acciones";
 import { web } from "./composicion";
 import { conLaEmpresa } from "./con-la-empresa";
 import { textoDe } from "./formularios-de-caja";
 import { dependenciasDeSesion } from "./sesion";
+import { RUTA_DE_CLIENTES } from "../ui/plantillas/clientes/modelo-de-directorio";
 
 /**
  * «Clientes y proveedores»: la lectura de la lista y de la ficha y las acciones de guardar, desactivar, reactivar y los contactos. Finas a propósito (ADR-015, punto 2): resuelven QUIÉN
@@ -107,21 +110,50 @@ export async function guardarLaParteDelFormulario(
   return { error: null, guardada: true, duplicados: [] };
 }
 
+/**
+ * El alta rápida de un proveedor desde «Nueva compra» (maqueta `compra.html`, «Agregar proveedor»): solo el nombre y si es persona o empresa, con el rol Proveedor y nada más (DDD 15/11/2026, 8a).
+ * Es el MISMO alta del directorio (`guardarLaParte`), con su clave de creación (idempotencia) y su aviso de duplicados, que no bloquea (8b): sin `guardarIgual` y con una parte parecida no se escribe nada
+ * y vuelven las coincidencias. La empresa y la persona salen de la sesión.
+ */
+export function altaRapidaDeProveedor(
+  clave: string,
+  naturaleza: string,
+  nombre: string,
+  guardarIgual: boolean,
+): Promise<Respuesta<ResultadoDeGuardar>> {
+  return conLaEmpresa((contexto) =>
+    guardarLaParte(dependencias, contexto, {
+      idempotencia: clave,
+      parteId: null,
+      versionEsperada: null,
+      guardarIgual,
+      naturaleza,
+      nombre,
+      roles: ["PROVEEDOR"],
+    }),
+  );
+}
+
 /** Termina una acción sobre una parte: el error ya traducido o nada. No redirige: la pantalla decide adónde ir. */
 function terminar(respuesta: Respuesta<unknown>): ResultadoDeAccion {
   return { error: respuesta.ok ? null : respuesta.error };
 }
 
+/** Cambiar el estado vuelve a pedir la lista (`revalidatePath`): lo que sigue lleva el estado vigente. Solo si salió bien. */
 export async function desactivarLaParteDelDirectorio(parteId: string): Promise<ResultadoDeAccion> {
-  return terminar(
+  const resultado = terminar(
     await conLaEmpresa((contexto) => desactivarLaParte(dependencias, contexto, { parteId })),
   );
+  if (resultado.error === null) revalidatePath(RUTA_DE_CLIENTES);
+  return resultado;
 }
 
 export async function reactivarLaParteDelDirectorio(parteId: string): Promise<ResultadoDeAccion> {
-  return terminar(
+  const resultado = terminar(
     await conLaEmpresa((contexto) => reactivarLaParte(dependencias, contexto, { parteId })),
   );
+  if (resultado.error === null) revalidatePath(RUTA_DE_CLIENTES);
+  return resultado;
 }
 
 export async function agregarUnContacto(
@@ -150,3 +182,6 @@ export async function quitarUnContacto(
     ),
   );
 }
+
+/** La clave de creación de UN intento de alta: la fija la página al abrirse. Previene: que un doble toque o un reintento por red cortada creen dos partes. */
+export const nuevaClaveDeParte = (): string => crypto.randomUUID();

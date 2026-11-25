@@ -11,55 +11,97 @@ const membresia = (
   empresa = EMPRESA,
 ): Membresia => ({ empresaId: empresa, personaId: personaId(persona), rol, activo, version: 1 });
 
+/** La persona que pide el apagado: ninguna de las del escenario, salvo en las pruebas de `ES_UNO_MISMO`. */
+const QUIEN_PIDE = personaId("p-quien-pide");
+
 const gerente = membresia("p-gerente", "GERENTE");
 const admin = membresia("p-admin", "ADMINISTRADOR");
 const operador = membresia("p-operador", "OPERADOR");
 
 describe("decidirApagado", () => {
   it("una membresía que no existe es MEMBRESIA_NO_ENCONTRADA", () => {
-    expect(decidirApagado(null, [gerente, admin])).toEqual({
+    expect(decidirApagado(null, [gerente, admin], QUIEN_PIDE)).toEqual({
       ok: false,
       error: "MEMBRESIA_NO_ENCONTRADA",
+    });
+  });
+
+  it("nadie se apaga a sí mismo: ES_UNO_MISMO, sea cual sea su rol y aunque haya otros admins", () => {
+    for (const objetivo of [gerente, admin, operador]) {
+      expect(decidirApagado(objetivo, [gerente, admin, operador], objetivo.personaId)).toEqual({
+        ok: false,
+        error: "ES_UNO_MISMO",
+      });
+    }
+  });
+
+  it("el actor solo importa si es el objetivo: otro admin sí puede apagar a un administrador", () => {
+    const otroAdmin = membresia("p-admin-2", "ADMINISTRADOR");
+    expect(decidirApagado(admin, [admin, otroAdmin], otroAdmin.personaId)).toEqual({
+      ok: true,
+      valor: "APAGAR",
+    });
+    expect(decidirApagado(operador, [operador], admin.personaId)).toEqual({
+      ok: true,
+      valor: "APAGAR",
     });
   });
 
   it("apagar lo ya apagado es ok y no escribe (idempotente), sea cual sea el rol", () => {
     for (const rol of ["GERENTE", "ADMINISTRADOR", "OPERADOR"] as const) {
       const apagada = membresia("p-x", rol, false);
-      expect(decidirApagado(apagada, [])).toEqual({ ok: true, valor: "YA_APAGADA" });
-      expect(decidirApagado(apagada, [gerente])).toEqual({ ok: true, valor: "YA_APAGADA" });
+      expect(decidirApagado(apagada, [], QUIEN_PIDE)).toEqual({ ok: true, valor: "YA_APAGADA" });
+      expect(decidirApagado(apagada, [gerente], QUIEN_PIDE)).toEqual({
+        ok: true,
+        valor: "YA_APAGADA",
+      });
     }
   });
 
   it("el gerente activo no se apaga: se traspasa (aunque haya otros admins)", () => {
-    expect(decidirApagado(gerente, [gerente, admin])).toEqual({
+    expect(decidirApagado(gerente, [gerente, admin], QUIEN_PIDE)).toEqual({
       ok: false,
       error: "ES_EL_GERENTE",
     });
-    expect(decidirApagado(gerente, [])).toEqual({ ok: false, error: "ES_EL_GERENTE" });
+    expect(decidirApagado(gerente, [], QUIEN_PIDE)).toEqual({ ok: false, error: "ES_EL_GERENTE" });
   });
 
   it("el último admin activo no se apaga", () => {
-    expect(decidirApagado(admin, [admin])).toEqual({ ok: false, error: "ULTIMO_ADMIN" });
-    expect(decidirApagado(admin, [admin, operador])).toEqual({ ok: false, error: "ULTIMO_ADMIN" });
-    expect(decidirApagado(admin, [])).toEqual({ ok: false, error: "ULTIMO_ADMIN" });
+    expect(decidirApagado(admin, [admin], QUIEN_PIDE)).toEqual({
+      ok: false,
+      error: "ULTIMO_ADMIN",
+    });
+    expect(decidirApagado(admin, [admin, operador], QUIEN_PIDE)).toEqual({
+      ok: false,
+      error: "ULTIMO_ADMIN",
+    });
+    expect(decidirApagado(admin, [], QUIEN_PIDE)).toEqual({ ok: false, error: "ULTIMO_ADMIN" });
   });
 
   it("con otro admin activo en la empresa, el administrador se apaga", () => {
     const otroAdmin = membresia("p-admin-2", "ADMINISTRADOR");
-    expect(decidirApagado(admin, [admin, otroAdmin])).toEqual({ ok: true, valor: "APAGAR" });
-    expect(decidirApagado(admin, [admin, gerente])).toEqual({ ok: true, valor: "APAGAR" });
-    expect(decidirApagado(admin, [gerente])).toEqual({ ok: true, valor: "APAGAR" });
+    expect(decidirApagado(admin, [admin, otroAdmin], QUIEN_PIDE)).toEqual({
+      ok: true,
+      valor: "APAGAR",
+    });
+    expect(decidirApagado(admin, [admin, gerente], QUIEN_PIDE)).toEqual({
+      ok: true,
+      valor: "APAGAR",
+    });
+    expect(decidirApagado(admin, [gerente], QUIEN_PIDE)).toEqual({ ok: true, valor: "APAGAR" });
   });
 
   it("un operador se apaga siempre, aun siendo el único activo", () => {
-    expect(decidirApagado(operador, [operador])).toEqual({ ok: true, valor: "APAGAR" });
-    expect(decidirApagado(operador, [])).toEqual({ ok: true, valor: "APAGAR" });
+    expect(decidirApagado(operador, [operador], QUIEN_PIDE)).toEqual({ ok: true, valor: "APAGAR" });
+    expect(decidirApagado(operador, [], QUIEN_PIDE)).toEqual({ ok: true, valor: "APAGAR" });
   });
 
   it("el objetivo no se cuenta a sí mismo, venga o no dentro de las activas", () => {
-    expect(decidirApagado(admin, [admin])).toEqual({ ok: false, error: "ULTIMO_ADMIN" });
-    expect(decidirApagado(admin, [])).toEqual({ ok: false, error: "ULTIMO_ADMIN" });
+    expect(decidirApagado(admin, [admin], QUIEN_PIDE)).toEqual({
+      ok: false,
+      error: "ULTIMO_ADMIN",
+    });
+    expect(decidirApagado(admin, [], QUIEN_PIDE)).toEqual({ ok: false, error: "ULTIMO_ADMIN" });
   });
 
   it("los admins inactivos o de otra empresa no cuentan como admin que queda", () => {
@@ -68,12 +110,18 @@ describe("decidirApagado", () => {
     const adminDeOtra = membresia("p-admin-3", "ADMINISTRADOR", true, empresaId("e-2"));
     const gerenteDeOtra = membresia("p-gerente-3", "GERENTE", true, empresaId("e-2"));
     expect(
-      decidirApagado(admin, [admin, adminApagado, gerenteApagado, adminDeOtra, gerenteDeOtra]),
+      decidirApagado(
+        admin,
+        [admin, adminApagado, gerenteApagado, adminDeOtra, gerenteDeOtra],
+        QUIEN_PIDE,
+      ),
     ).toEqual({ ok: false, error: "ULTIMO_ADMIN" });
   });
 
   it("un operador activo no es admin: no cuenta como admin que queda", () => {
-    expect(decidirApagado(admin, [admin, operador, membresia("p-op-2", "OPERADOR")])).toEqual({
+    expect(
+      decidirApagado(admin, [admin, operador, membresia("p-op-2", "OPERADOR")], QUIEN_PIDE),
+    ).toEqual({
       ok: false,
       error: "ULTIMO_ADMIN",
     });
@@ -81,7 +129,7 @@ describe("decidirApagado", () => {
 
   it("la misma persona con el mismo id en otra empresa no cuenta como el objetivo", () => {
     const mismaPersonaEnOtra = membresia("p-admin", "ADMINISTRADOR", true, empresaId("e-2"));
-    expect(decidirApagado(admin, [admin, mismaPersonaEnOtra])).toEqual({
+    expect(decidirApagado(admin, [admin, mismaPersonaEnOtra], QUIEN_PIDE)).toEqual({
       ok: false,
       error: "ULTIMO_ADMIN",
     });

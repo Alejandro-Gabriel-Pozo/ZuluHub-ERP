@@ -11,6 +11,76 @@
 export const TEXTOS_DE_COMPRAS = {
   // compra.html, «Textos aprobados» (09/11/2026), filas «Lista» y «Nueva compra» (D175: «Recibida sin facturar» y «Comprar y recibir» son de la decisión 35)
   "compras.compra.compras": { porDefecto: "Compras" },
+  // «Compra» antes del número («Compra 5 · Carnes del Sur», título de la ficha): `compra-corregir-anular.html` (`vLista`, `vFicha`), aceptada por delegación (DDD:187). Distinta de `stock.motivo.compra` (motivo de un movimiento): otro uso, otra clave.
+  "compras.compra.compra": {
+    porDefecto: "Compra",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/textos-de-compras.ts",
+        nombre: "textosDeCompras",
+      },
+    ],
+    fuente: { decision: "DEC-0838" },
+  },
+  // «Nivel de compras» (Compras PR 11): el nombre de la pantalla y los dos niveles que se eligen (N1 y N2). Los tres los aprobó el dueño tal cual el 24/11/2026 (`compra-nivel.html`; nombres de DDD:120 punto 3). «Recepción separada» y «Tres vías» (aprobados) son de la fase 5, pausada: no tienen clave hasta que se construyan.
+  "compras.nivel.titulo": {
+    porDefecto: "Nivel de compras",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/nivel/textos-de-nivel-de-compras.ts",
+        nombre: "textosDeNivelDeCompras",
+      },
+      { como: "FUNCION", archivo: "apps/web/ui/navegacion/menu.ts", nombre: "FILAS_DEL_MENU" },
+    ],
+    fuente: { decision: "DEC-0870" },
+  },
+  "compras.nivel.compra_simple": {
+    porDefecto: "Sin factura",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/nivel/textos-de-nivel-de-compras.ts",
+        nombre: "textosDeNivelDeCompras",
+      },
+    ],
+    fuente: { decision: "DEC-0870" },
+  },
+  "compras.nivel.con_comprobante": {
+    porDefecto: "Con factura",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/nivel/textos-de-nivel-de-compras.ts",
+        nombre: "textosDeNivelDeCompras",
+      },
+    ],
+    fuente: { decision: "DEC-0870" },
+  },
+  // «Corregir» y «Antes» (Compras PR 10; `compra-corregir-anular.html`): «Corregir» es el verbo de corregir una línea (aceptado por delegación, DDD:173/174; ya no hay otro «Corregir» solo en el catálogo) y «Antes» el del precio de antes de una corrección (aprobado el 09/11/2026, `compra.html:373`).
+  "compras.correccion.corregir": {
+    porDefecto: "Corregir",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/textos-de-compras.ts",
+        nombre: "textosDeCompras",
+      },
+    ],
+    fuente: { decision: "DEC-0871" },
+  },
+  "compras.correccion.antes": {
+    porDefecto: "Antes",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/textos-de-compras.ts",
+        nombre: "textosDeCompras",
+      },
+    ],
+    fuente: { decision: "DEC-0871" },
+  },
   "compras.compra.por_recibir": { porDefecto: "Por recibir" },
   "compras.compra.sin_facturar": { porDefecto: "Sin facturar" },
   "compras.compra.pedida": { porDefecto: "Pedida" },
@@ -48,6 +118,30 @@ export const TEXTOS_DE_COMPRAS = {
   "compras.recepcion.remito_del_proveedor": { porDefecto: "Remito del proveedor" },
   "compras.recepcion.sin_remito": { porDefecto: "Sin remito" },
   "compras.recepcion.fecha_del_remito": { porDefecto: "Fecha del remito" },
+  // «Depósito» (singular de «Depósitos», `stock.pantalla.depositos`): selector del depósito de «Nueva compra» (Compras PR 6b). Aceptado por delegación de textos (DDD:173), el 24/11/2026.
+  "compras.compra.deposito": {
+    porDefecto: "Depósito",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/nueva/textos-de-nueva-compra.ts",
+        nombre: "textosDeNuevaCompra",
+      },
+    ],
+    fuente: { decision: "DEC-0864" },
+  },
+  // «Número» del remito (compra.html, «Textos aprobados», fila «Remito del proveedor · Punto de venta · Número · Fecha del remito · Sin remito», aprobada el 09/11/2026): Compras PR 6b.
+  "compras.recepcion.numero": {
+    porDefecto: "Número",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/nueva/textos-de-nueva-compra.ts",
+        nombre: "textosDeNuevaCompra",
+      },
+    ],
+    fuente: { decision: "DEC-0861" },
+  },
 
   // compra.html, «Textos aprobados», filas «Nueva compra», «Pool», «Ficha del proveedor», «Ficha y carga de factura y nota» y «Pedidos de quien carga compras»
   "compras.ficha.agregar_proveedor": { porDefecto: "Agregar proveedor" },
@@ -192,4 +286,50 @@ export const TEXTOS_DE_COMPRAS = {
   "compras.error.precio_invalido": { porDefecto: "Escribí un precio válido" },
   "compras.error.proveedor_no_encontrado": { porDefecto: "El proveedor ya no está disponible" },
   "compras.error.sin_permiso": { porDefecto: "Esta acción no está permitida" },
+  // Los tres tipos de factura que se cargan con «Nueva compra» (Compras PR 7): rótulos del arreglo `TIPOS` de `compra.html`, que no figuran en «Textos aprobados» pero el dueño los aprobó el 24/11/2026 (término fiscal; DEC-0896).
+  "compras.factura.tipo_factura_a": {
+    porDefecto: "Factura A",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/nueva/textos-de-nueva-compra.ts",
+        nombre: "textosDeNuevaCompra",
+      },
+    ],
+    fuente: { decision: "DEC-0896" },
+  },
+  "compras.factura.tipo_factura_b": {
+    porDefecto: "Factura B",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/nueva/textos-de-nueva-compra.ts",
+        nombre: "textosDeNuevaCompra",
+      },
+    ],
+    fuente: { decision: "DEC-0896" },
+  },
+  "compras.factura.tipo_factura_c": {
+    porDefecto: "Factura C",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/nueva/textos-de-nueva-compra.ts",
+        nombre: "textosDeNuevaCompra",
+      },
+    ],
+    fuente: { decision: "DEC-0896" },
+  },
+  // compra-pago.html, «Textos nuevos»: el botón del pago de una factura, elegido por el dueño el 16/11/2026 (2A, `DEC-0891`): Compras PR 8.
+  "compras.pago.declarar": {
+    porDefecto: "Declarar pago",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/textos-de-compras.ts",
+        nombre: "textosDeCompras",
+      },
+    ],
+    fuente: { decision: "DEC-0891" },
+  },
 } as const;

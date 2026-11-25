@@ -420,8 +420,27 @@ describe.skipIf(base === null)("compras: pago en efectivo desde la caja", () => 
 
   it("un pago sin salida de caja se anula sin tocar la caja", async () => {
     const m = await armar();
-    const pago = valorDe(await c.casos.declararPago(m.e.gerente, pedido(m, null)));
+    const pago = valorDe(
+      await c.casos.declararPago(m.e.gerente, pedido(m, null, { medio: "TRANSFERENCIA" })),
+    );
     valorDe(await c.casos.anularPago(m.e.gerente, { pagoId: pago.pagoId, motivo: "Se pagó mal" }));
     expect(await movimientos(m.caja.sesionId)).toBe(1);
+  });
+
+  it("el efectivo siempre sale de una caja (dueño, 16/11, 3A): sin salida de caja el pago NO se declara y no queda ni pago, ni egreso, ni auditoría; con otro medio sigue sin pedirla", async () => {
+    const m = await armar();
+    const antes = await movimientos(m.caja.sesionId);
+    const sinCaja = pedido(m, null);
+    expect(await c.casos.declararPago(m.e.gerente, sinCaja)).toEqual({
+      ok: false,
+      error: "SALIDA_DE_CAJA_INVALIDA",
+    });
+    expect(await pagos(m.comprobanteId)).toBe(0);
+    expect(await movimientos(m.caja.sesionId)).toBe(antes);
+    expect((await c.auditoria(m.e.empresa, "PAGO_DECLARADO")).length).toBe(0);
+    // Con la caja abierta funciona, y otro medio no cambia.
+    valorDe(await c.casos.declararPago(m.e.gerente, pedido(m, m.caja.cajaId)));
+    expect(await pagos(m.comprobanteId)).toBe(1);
+    expect(await movimientos(m.caja.sesionId)).toBe(antes + 1);
   });
 });

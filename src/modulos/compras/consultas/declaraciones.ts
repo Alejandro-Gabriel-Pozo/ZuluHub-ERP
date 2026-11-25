@@ -11,6 +11,10 @@ export const DECLARACIONES_DE_CONSULTAS = {
   listarCompras: { accion: "recepciones.ver" },
   fichaDeCompra: { accion: "recepciones.ver" },
   comprasSinPrecio: { accion: "recepciones.ver" },
+  productosParaComprar: { accion: "recepciones.ver" },
+  cotizarCompra: { accion: "recepciones.registrar" },
+  nivelParaComprar: { accion: "recepciones.registrar" },
+  cotizarFactura: { accion: "comprobantes_de_proveedor.registrar" },
   proveedoresDelProducto: { accion: "recepciones.ver" },
   proponerConciliacion: { accion: "conciliaciones.ver" },
   listarRecepcionesSeparadas: { accion: "recepciones.ver" },
@@ -23,4 +27,5 @@ export const DECLARACIONES_DE_CONSULTAS = {
   obtenerNotaDeCredito: { accion: "notas_de_credito_de_proveedor.ver" },
   listarDiferencias: { accion: "diferencias_de_compra.ver" },
   obtenerTolerancias: { accion: "diferencias_de_compra.ver" },
+  nivelDeCompras: { accion: "compras.configurar" },
 } as const satisfies Record<string, DeclaracionDeCaso>;
