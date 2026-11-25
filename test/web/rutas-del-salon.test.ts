@@ -26,9 +26,9 @@ describe("rutas del salón", () => {
     expect(RUTA_DE_MESAS.startsWith(`${RUTA_DE_LA_CUENTA_DE_MESA}/`)).toBe(false);
     expect(rutaDeLaCuentaDeMesa("x").startsWith(`${RUTA_DE_MESAS}/`)).toBe(false);
   });
-  it("ninguna fila del menú apunta a una pantalla que todavía no existe", () => {
+  it("la única fila del menú hacia la operación del salón es el mapa; la ficha de la mesa todavía no tiene fila", () => {
     const destinos = FILAS_DEL_MENU.flatMap((f) => ("href" in f ? [f.href] : []));
-    expect(destinos).not.toContain(RUTA_DEL_SALON);
+    expect(destinos).toContain(RUTA_DEL_SALON);
     expect(destinos.some((h) => h.startsWith(RUTA_DE_LA_CUENTA_DE_MESA))).toBe(false);
   });
 });
