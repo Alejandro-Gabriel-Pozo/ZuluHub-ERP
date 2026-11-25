@@ -229,8 +229,10 @@ jobs:
     needs: mutacion-plan
     if: github.event_name != 'push' && (github.event_name != 'pull_request' || needs.mutacion-plan.outputs.estabilidad == 'true')
     runs-on: ubuntu-latest
-    # 25 y no 15: la suite de integración pasó de ~13 a más de 15 min con E4, E1 y E5 (ver #253 y #255); el tope de 15 canceló el job.
-    timeout-minutes: 25
+    # 40 y no 25 ni 15: la suite de integración pasó de ~13 a más de 15 min con E4, E1 y E5 (ver #253 y #255) y el tope de 15 canceló el job; después el tope de 25 canceló
+    # el job con la suite en 25 min (#495 y #357, 25/11/2026: ningún test falló, cortó el tiempo). En las últimas corridas de pull request las copias tardan entre 15 y 25 min según
+    # la máquina que toque, así que el tope tiene que dejar margen sobre el peor caso; lo que se mide no cambia.
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
