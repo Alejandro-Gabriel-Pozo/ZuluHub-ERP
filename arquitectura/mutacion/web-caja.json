@@ -3,5 +3,5 @@
   "archivos": "apps/web/ui/plantillas/caja/modelo-de-la-caja.ts,apps/web/ui/plantillas/caja/modelo-de-conteo-de-caja.ts,apps/web/ui/plantillas/caja/pedidos-de-caja.ts",
   "minutos": 2,
   "pruebas": "test/web/caja-modelo.test.ts",
-  "critico": true
+  "nivel": "CRITICO"
 }

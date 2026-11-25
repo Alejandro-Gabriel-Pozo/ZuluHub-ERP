@@ -3,5 +3,5 @@
   "archivos": "src/modulos/caja/dominio/**/*.ts,src/modulos/caja/estados.ts",
   "minutos": 4,
   "pruebas": "src/modulos/caja",
-  "critico": true
+  "nivel": "CRITICO"
 }

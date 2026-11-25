@@ -147,6 +147,12 @@ describe("el catálogo de perillas real", () => {
         modulo: "compras",
         requiere: "recepcion_separada",
       },
+      facturar_antes_de_cobrar: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "ventas",
+      },
     });
   });
 
@@ -166,6 +172,7 @@ describe("el catálogo de perillas real", () => {
       | "venta_por_fracciones_y_peso"
       | "recepcion_separada"
       | "conciliacion_de_tres_vias"
+      | "facturar_antes_de_cobrar"
     >();
     // @ts-expect-error esa perilla no está declarada (la registra el módulo que la verifica)
     const inventada: ClavePerilla = "terminal_compartida";
@@ -196,7 +203,7 @@ describe("el catálogo de perillas real", () => {
     }
   });
 
-  it("cada perilla la verifica el módulo que la nombra: las de recetas, stock; la de combos, catálogo; la de cajas, caja; la del salón, salón", () => {
+  it("cada perilla la verifica el módulo que la nombra: las de recetas, stock; la de combos, catálogo; la de cajas, caja; la del salón, salón; la de facturar antes de cobrar, ventas", () => {
     const duenos = Object.fromEntries(
       Object.entries(catalogoComoTabla).map(([clave, d]) => [clave, d.modulo]),
     );
@@ -215,6 +222,7 @@ describe("el catálogo de perillas real", () => {
       venta_por_fracciones_y_peso: "catalogo",
       recepcion_separada: "compras",
       conciliacion_de_tres_vias: "compras",
+      facturar_antes_de_cobrar: "ventas",
     });
   });
 

@@ -3,5 +3,5 @@
   "archivos": "src/composicion/directorio-web.ts,src/composicion/entradas-de-directorio.ts,src/composicion/errores-de-clientes.ts,src/composicion/errores-de-compras.ts",
   "minutos": 4,
   "pruebas": "src/composicion/directorio-web.test.ts src/composicion/errores-de-clientes.test.ts src/composicion/errores-de-compras.test.ts",
-  "critico": true
+  "nivel": "CRITICO"
 }

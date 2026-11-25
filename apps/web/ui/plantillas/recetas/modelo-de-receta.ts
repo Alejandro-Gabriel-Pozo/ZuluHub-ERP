@@ -7,7 +7,8 @@ import { formatearCantidad } from "../../patrones/formato-fiscal";
 import { CLAVE_DE_CLASE } from "../catalogo/filtros-de-productos";
 import { costoRedondeado } from "../produccion/modelo-de-orden";
 import { cantidadConUnidad } from "../produccion/modelo-de-ordenes";
-import { rutaDeLaCocina } from "./filtros-de-recetas";
+import { rutaDeEditarLaReceta, rutaDeLaCocina, rutaDeLaRecetaNueva } from "./filtros-de-recetas";
+import type { AccionesDeLasRecetas } from "./modelo-de-recetas";
 
 /**
  * El modelo de vista de la ficha de una receta y de su ficha de cocina (maqueta aprobada `receta.html`, 15/11/2026, funciones `vFicha` y `vCocina`): de lo que entrega la composición, lo
@@ -63,6 +64,8 @@ export type RecetaArmada = Readonly<{
   ingredientes: Readonly<{ titulo: string; filas: readonly LineaArmada[] }> | null;
   pasos: Readonly<{ titulo: string; texto: string }> | null;
   cocina: Readonly<{ href: string; texto: string }> | null;
+  /** «Editar» (o «Nueva receta» si el producto no tiene), solo si el servidor deja guardar hoy; `null` si no. */
+  editar: Readonly<{ href: string; texto: string }> | null;
 }>;
 
 const CLASES_CONOCIDAS = new Map<string, ClaveDeTexto>(Object.entries(CLAVE_DE_CLASE));
@@ -102,7 +105,11 @@ function lineaArmada(l: LineaDeLaFicha, d: DiccionarioResuelto): LineaArmada {
   };
 }
 
-export function armarLaReceta(receta: RecetaDeLaFicha, d: DiccionarioResuelto = {}): RecetaArmada {
+export function armarLaReceta(
+  receta: RecetaDeLaFicha,
+  acciones: AccionesDeLasRecetas = {},
+  d: DiccionarioResuelto = {},
+): RecetaArmada {
   const { ficha } = receta;
   const titulo = receta.producto.nombre;
   if (ficha === null) {
@@ -114,6 +121,13 @@ export function armarLaReceta(receta: RecetaDeLaFicha, d: DiccionarioResuelto = 
       ingredientes: null,
       pasos: null,
       cocina: null,
+      editar:
+        acciones.editar === true
+          ? {
+              href: rutaDeLaRecetaNueva(receta.producto.id),
+              texto: texto(d, "receta.lista.nueva_receta"),
+            }
+          : null,
     };
   }
   const datos: DatoArmado[] = [
@@ -150,6 +164,13 @@ export function armarLaReceta(receta: RecetaDeLaFicha, d: DiccionarioResuelto = 
       href: rutaDeLaCocina(receta.producto.id),
       texto: texto(d, "receta.ficha_de_cocina.titulo"),
     },
+    editar:
+      acciones.editar === true
+        ? {
+            href: rutaDeEditarLaReceta(receta.producto.id),
+            texto: texto(d, "receta.edicion.editar"),
+          }
+        : null,
   };
 }
 

@@ -13,7 +13,7 @@ import {
   CLASES_DE_COMPROBANTE_DE_PROVEEDOR,
   NIVELES_DE_COMPRA,
 } from "../../src/modulos/compras/dominio/niveles";
-import { MEDIOS_DE_PAGO } from "../../src/modulos/compras/dominio/pago";
+import { MEDIOS_DE_LA_CABECERA, MEDIOS_DE_PAGO } from "../../src/modulos/compras/dominio/pago";
 import type { BaseDePruebas } from "./global";
 
 /**
@@ -238,8 +238,11 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
     expect(await valores("linea_de_comprobante", "linea_de_comprobante_alicuota_ck")).toEqual(
       [...ALICUOTAS_DE_COMPRA].sort(),
     );
-    expect(await valores("pago_de_comprobante", "pago_medio_ck")).toEqual(
+    expect(await valores("medio_de_un_pago", "medio_de_un_pago_medio_ck")).toEqual(
       [...MEDIOS_DE_PAGO].sort(),
+    );
+    expect(await valores("pago_de_comprobante", "pago_medio_ck")).toEqual(
+      [...MEDIOS_DE_LA_CABECERA].sort(),
     );
     expect(await valores("tributo_de_comprobante", "tributo_tipo_ck")).toEqual(
       [...TIPOS_DE_TRIBUTO].sort(),
