@@ -43,6 +43,10 @@ import {
   crearRepositorioDeLecturasSeparadas,
   type RepositorioDeLecturasSeparadas,
 } from "./repositorio-de-lecturas-separadas";
+import {
+  crearRepositorioDeExportacionDeCompras,
+  type RepositorioDeExportacionDeCompras,
+} from "./repositorio-de-exportacion-de-compras";
 import { crearRepositorioDeOfertas, type RepositorioDeOfertas } from "./repositorio-de-ofertas";
 import {
   crearRepositorioDeNotasDeCredito,
@@ -86,6 +90,7 @@ export type RepositoriosDeCompras = Readonly<{
   devolucionesAProveedor: RepositorioDeDevoluciones;
   notasDeCredito: RepositorioDeNotasDeCredito;
   productosParaCompras: ProductosParaCompras;
+  exportacionDeCompras: RepositorioDeExportacionDeCompras;
 }>;
 
 export function crearRepositoriosDeCompras(db: {
@@ -112,5 +117,6 @@ export function crearRepositoriosDeCompras(db: {
     devolucionesAProveedor: crearRepositorioDeDevoluciones(conexion),
     notasDeCredito: crearRepositorioDeNotasDeCredito(conexion),
     productosParaCompras: crearProductosParaCompras(conexion),
+    exportacionDeCompras: crearRepositorioDeExportacionDeCompras(conexion),
   };
 }

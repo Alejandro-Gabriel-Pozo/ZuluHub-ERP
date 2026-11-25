@@ -459,7 +459,9 @@ export async function crearBaseAparte(
     clave: base.clave,
   };
   if (opciones.migrar !== false) {
-    await aplicarMigraciones(propia.dueno, join(import.meta.dirname, "../../migraciones"));
+    await aplicarMigraciones(propia.dueno, join(import.meta.dirname, "../../migraciones"), {
+      sincronizarPlantillas: true,
+    });
     if (opciones.sinClave !== true) await instalarClaveDeContexto(propia.dueno, base.clave);
     await sembrarAdminsDePrueba(propia.dueno);
     // Con `sinMarcaDePrueba` la base queda como la deja la migración 0007 (para probarla tal cual).

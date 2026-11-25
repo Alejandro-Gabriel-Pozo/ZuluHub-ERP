@@ -1,10 +1,14 @@
-import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import pg from "pg";
 // Con extensión `.ts` a propósito: lo carga `scripts/migrar-base.ts` directamente con Node (que borra
 // los tipos pero no resuelve imports sin extensión).
-import { ErrorDeMigracion, PATRON_DE_ARCHIVO, hostConPooler } from "./migraciones.ts";
+import {
+  ErrorDeMigracion,
+  PATRON_DE_ARCHIVO,
+  checksumDeMigracion,
+  hostConPooler,
+} from "./migraciones.ts";
 
 /**
  * Qué migraciones tiene la base y cuáles faltan, SIN escribir nada (es lo que corre el modo «ver» de
@@ -56,7 +60,7 @@ export async function leerEstadoDeMigraciones(
   for (const nombre of archivos) {
     // CRLF → LF, igual que el ejecutor: un checkout en Windows no hace pasar por editada una migración.
     const sql = (await readFile(join(carpeta, nombre), "utf8")).replaceAll("\r\n", "\n");
-    checksumsDeArchivos.set(nombre, createHash("sha256").update(sql).digest("hex"));
+    checksumsDeArchivos.set(nombre, checksumDeMigracion(sql));
   }
 
   const cliente = new pg.Client({

@@ -183,14 +183,15 @@ export async function montarCompras(
   const dueno = new pg.Client({ connectionString: propia.base.dueno });
   await dueno.connect();
   const reglas = opciones.reglas ?? REGLAS_DE_PRUEBA;
-  const casos = crearCasosDeUsoDeCompras({
+  const dependencias = {
     transacciones: entorno,
     reglas,
     stock: crearPuertosDeStock({ reglas }),
     egresoDeCaja: crearEgresoDeCaja(),
     // La condición de la empresa frente al IVA: de entrada, responsable inscripto (el IVA de una Factura A es crédito fiscal); cada prueba la cambia con `fijarCondicionDeIva`.
     ivaDeLaEmpresa: { condicion: () => Promise.resolve(condicionDeIva) },
-  });
+  };
+  const casos = crearCasosDeUsoDeCompras(dependencias);
   const consultas = crearConsultasDeCompras({ transacciones: entorno, reglas });
   const clientes = crearCasosDeUsoDeClientes({ transacciones: entorno, reglas });
   const catalogoCasos = crearCasosDeUsoDeCatalogo({
@@ -335,6 +336,8 @@ export async function montarCompras(
     contar,
     auditoria,
     alcances,
+    /** Las dependencias reales de los casos de uso (para armar uno con otro parámetro, por ejemplo el tope de la exportación). */
+    dependencias,
     inyectarFalla: (punto: "oferta" | "lineas" | null) => {
       falla = punto;
     },

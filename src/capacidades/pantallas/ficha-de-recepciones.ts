@@ -249,7 +249,7 @@ export const FICHA_DE_RECEPCIONES = {
       usos: ["opción del motivo y de la historia de correcciones"],
       fuente: DE_LA_MAQUETA,
     },
-    "compras.recepcion.aviso_reparto_interno": {
+    "compras.recepcion.aviso_reparto": {
       usos: ["aviso de la hoja cuando el motivo es «Reparto interno»"],
       fuente: DE_LA_MAQUETA,
     },

@@ -1,3 +1,5 @@
+import { TEXTOS_DE_EXPORTACION_DE_COMPRAS } from "./textos-de-exportacion-de-compras";
+
 /**
  * Los textos del módulo `compras` (prefijo `compras.`, E9-T15; `e9-compras-especificacion.md` §10). Ninguno es nuevo: todos salen de los que el
  * dueño aprobó el 09/11/2026 en los prototipos `compra.html` («Textos aprobados»), `control.html` y `orden.html` («Textos nuevos»), que son la
@@ -8,7 +10,7 @@
  * pantallas de pago y de corrección no tienen texto ni prototipo (D142 y D143; decisión D175). Un texto repetido en dos filas de los prototipos
  * («Pedida», «Cuarentena») tiene una sola clave, la del primer grupo.
  */
-const D37 = { decision: "DEC-0937" } as const;
+const D = { decision: "DEC-0937" } as const;
 export const TEXTOS_DE_COMPRAS = {
   // compra.html, «Textos aprobados» (09/11/2026), filas «Lista» y «Nueva compra» (D175: «Recibida sin facturar» y «Comprar y recibir» son de la decisión 35)
   "compras.compra.compras": { porDefecto: "Compras" },
@@ -163,15 +165,12 @@ export const TEXTOS_DE_COMPRAS = {
     fuente: { decision: "DEC-0935" },
   },
   // «Corregir lo recibido» (Compras 4, PR D): lista corta de motivos, decisión del dueño del 25/11/2026; textos propuestos por el ingeniero (DEC-0937).
-  "compras.recepcion.corregir_recibido": { porDefecto: "Corregir lo recibido", fuente: D37 },
-  "compras.recepcion.motivo_correccion": { porDefecto: "Motivo de la corrección", fuente: D37 },
-  "compras.recepcion.causa_error_de_carga": { porDefecto: "Error de carga", fuente: D37 },
-  "compras.recepcion.causa_reparto_interno": { porDefecto: "Reparto interno", fuente: D37 },
-  "compras.recepcion.causa_faltante": { porDefecto: "Faltante del proveedor", fuente: D37 },
-  "compras.recepcion.aviso_reparto_interno": {
-    porDefecto: "El total recibido se conserva: la otra sucursal también se corrige.",
-    fuente: D37,
-  },
+  "compras.recepcion.corregir_recibido": { porDefecto: "Corregir lo recibido", fuente: D },
+  "compras.recepcion.motivo_correccion": { porDefecto: "Motivo de la corrección", fuente: D },
+  "compras.recepcion.causa_error_de_carga": { porDefecto: "Error de carga", fuente: D },
+  "compras.recepcion.causa_reparto_interno": { porDefecto: "Reparto interno", fuente: D },
+  "compras.recepcion.causa_faltante": { porDefecto: "Faltante del proveedor", fuente: D },
+  "compras.recepcion.aviso_reparto": { porDefecto: "Corregí también la otra sucursal.", fuente: D },
   "compras.recepcion.caja_de_peso_variable": { porDefecto: "Caja de peso variable" },
   "compras.recepcion.el_peso_real_se_carga_al_recibir": {
     porDefecto: "el peso real se carga al recibir",
@@ -396,4 +395,6 @@ export const TEXTOS_DE_COMPRAS = {
     ],
     fuente: { decision: "DEC-0891" },
   },
+  // La exportación a Excel (25/11/2026): su archivo propio para no pasar el tope de líneas.
+  ...TEXTOS_DE_EXPORTACION_DE_COMPRAS,
 } as const;

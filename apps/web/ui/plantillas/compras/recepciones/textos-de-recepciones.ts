@@ -68,7 +68,7 @@ export function textosDeRecepciones(): TextosDeRecepciones {
     causaErrorDeCarga: texto({}, "compras.recepcion.causa_error_de_carga"),
     causaRepartoInterno: texto({}, "compras.recepcion.causa_reparto_interno"),
     causaFaltanteDelProveedor: texto({}, "compras.recepcion.causa_faltante"),
-    avisoRepartoInterno: texto({}, "compras.recepcion.aviso_reparto_interno"),
+    avisoRepartoInterno: texto({}, "compras.recepcion.aviso_reparto"),
     nota: texto({}, "clientes.formulario.nota"),
     correcciones: texto({}, "cierre.control.correcciones"),
     enviando: texto({}, "conexion.enviando"),

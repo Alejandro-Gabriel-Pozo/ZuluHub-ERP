@@ -327,6 +327,20 @@ export const DECLARACIONES = {
       },
     },
   },
+  exportarCompras: {
+    accion: "compras.exportar",
+    // Exportar mira muchas compras y trae importes: además de la acción propia exige las dos de ver compras y los costos (dueño, 25/11/2026, pregunta 4).
+    tambien: ["recepciones.ver", "comprobantes_de_proveedor.ver", "costos.ver"],
+    repeticion: {
+      regla: "NO_APLICA",
+      motivo:
+        "Es una lectura: repetirla devuelve lo mismo y no duplica nada de compras, pagos ni stock; cada exportación deja su propio registro de auditoría (quién, cuándo, período y cantidad de filas).",
+      prueba: {
+        archivo: "test/integracion/compras-exportacion.test.ts",
+        it: "I6: exportar dos veces el mismo período da las mismas filas, deja dos registros de auditoría sin los datos y no cambia ninguna tabla de compras",
+      },
+    },
+  },
   corregirCompra: {
     accion: "compras.corregir",
     repeticion: {

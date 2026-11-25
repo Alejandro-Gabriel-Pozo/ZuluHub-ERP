@@ -48,6 +48,12 @@ const DE_LA_MAQUETA: FuenteDeTexto = {
   donde:
     "Pedernal-docs 10-ux-ui, maquetas compra-corregir-anular.html (vLista, vFicha) y compra.html; 11-especificaciones/briefs/compras/PR-3-lista-y-ficha-de-compra.md §6",
 };
+const DE_LA_EXPORTACION: FuenteDeTexto = {
+  decidio:
+    "el orquestador, por la delegación de la fila 173 (DEC-0921): el texto del enlace «Exportar» lo propuso el plan de la exportación y el dueño aprobó el 25/11/2026 todas las recomendaciones de ese plan («Sí a todas tus recomendaciones»)",
+  donde:
+    "Pedernal-docs 11-especificaciones/plan-exportacion-de-compras-2026-11-25.md §2, §5.1 y §6; decisiones-del-dueno-2026-11.md, filas del 25/11/2026",
+};
 const USO = "apps/web/ui/plantillas/compras/";
 
 export const FICHA_DE_COMPRAS = {
@@ -64,6 +70,8 @@ export const FICHA_DE_COMPRAS = {
     "apps/web/ui/plantillas/compras/ficha/modelo-de-ficha-de-compra.ts",
     "src/composicion/compras-lista-web.ts",
     "src/composicion/entradas-de-compras.ts",
+    "apps/web/app/s/app/(operacion)/compras/exportar/route.ts",
+    "src/composicion/compras-exportacion-web.ts",
   ],
   rutas: ["/compras", "/compras/[id]"],
   botones: [
@@ -71,6 +79,12 @@ export const FICHA_DE_COMPRAS = {
       id: "nueva-compra",
       texto: "compras.compra.nueva_compra",
       hace: { navega: "/compras/nueva" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "exportar",
+      texto: "compras.exportacion.exportar",
+      hace: { navega: "/compras/exportar" },
       sinPermiso: "AUSENTE",
     },
     {
@@ -112,6 +126,12 @@ export const FICHA_DE_COMPRAS = {
         "enlace de la lista hacia «Nueva compra» (Compras PR 6b), solo con permiso de registrar",
       ],
       fuente: DE_LA_MAQUETA,
+    },
+    "compras.exportacion.exportar": {
+      usos: [
+        "enlace de la lista que baja el archivo de Excel del período aplicado (Desde y Hasta); solo con `compras.exportar` y `costos.ver`, y solo con el período completo",
+      ],
+      fuente: DE_LA_EXPORTACION,
     },
     "compras.compra.compras": {
       usos: [`${USO}textos-de-compras.ts`, "título de la lista y entrada del menú Compras"],

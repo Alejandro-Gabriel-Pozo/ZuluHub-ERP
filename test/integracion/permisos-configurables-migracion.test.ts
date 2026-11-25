@@ -32,6 +32,7 @@ const REVERSION = join(
   "../../migraciones/reversiones/0094_revertir_permisos_configurables.sql",
 );
 const MIGRACION = join(import.meta.dirname, "../../migraciones/0094_permisos_configurables.sql");
+const SELLOS = join(import.meta.dirname, "../../migraciones/selladas.json");
 
 const ROLES_DE_BASE = [
   "pedernal_app",
@@ -429,9 +430,13 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
       expect(rows.map((r) => r.accion)).toEqual(TODAS);
     });
 
-    it("el bloque de la semilla del archivo de la migración es el que se genera hoy desde la constante", async () => {
+    it("el bloque de la semilla del archivo de la migración es el que se genera hoy desde la constante (mientras la 0094 no esté sellada)", async () => {
+      // Sellada = ya corrió en alguna base: su semilla queda congelada (la protege `test/arquitectura/migraciones-selladas.test.ts`) y una acción
+      // nueva llega a las plantillas por la sincronización del ejecutor, no editando este archivo.
+      const sellos = JSON.parse(await readFile(SELLOS, "utf8")) as Record<string, unknown>;
+      const sellada = "0094_permisos_configurables.sql" in sellos;
       const sql = await readFile(MIGRACION, "utf8");
-      expect(bloqueDelArchivo(sql)).toBe(bloqueDeLaSemilla());
+      expect(sellada || bloqueDelArchivo(sql) === bloqueDeLaSemilla()).toBe(true);
     });
   });
 

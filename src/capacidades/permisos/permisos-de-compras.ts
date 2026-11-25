@@ -39,6 +39,8 @@ export const PERMISOS_DE_COMPRAS = {
   "diferencias_de_compra.resolver": ["GERENTE", "ADMINISTRADOR"],
   "compras.configurar": ["GERENTE"],
   "compras.corregir": ["GERENTE", "ADMINISTRADOR"],
+  // Exportar compras a Excel (dueño, 25/11/2026, pregunta 4): quien administra o gerencia, y además `costos.ver` (la consulta exige las dos; el archivo lleva importes).
+  "compras.exportar": ["GERENTE", "ADMINISTRADOR"],
 } as const satisfies Record<
   keyof (typeof CATALOGO_DE_MODULOS)["compras"]["acciones"],
   readonly RolDeEmpresa[]
