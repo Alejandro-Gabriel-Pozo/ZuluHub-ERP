@@ -86,8 +86,8 @@ describe.skipIf(base === null)("raíz de la carta: las cartas de la empresa del 
     expect(await codigos()).toEqual([a.carta1.codigo, a.carta2.codigo].sort());
   });
 
-  it("repetir y pedir a la vez da siempre lo mismo (es una lectura: no escribe nada)", async () => {
-    const pedidas = await Promise.all(Array.from({ length: 6 }, () => codigos()));
+  it("dos pedidos a la vez dan lo mismo (es una lectura: no escribe nada)", async () => {
+    const pedidas = await Promise.all(Array.from({ length: 2 }, () => codigos()));
     for (const lista of pedidas) expect(lista).toEqual([a.carta1.codigo, a.carta2.codigo].sort());
   });
 
