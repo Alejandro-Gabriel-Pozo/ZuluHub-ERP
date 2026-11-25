@@ -12,7 +12,7 @@ import {
 } from "../../../src/capacidades/experiencia/vidriera/vista";
 import type { AlcanceDelHost } from "../../../src/capacidades/experiencia/puerta";
 import { logoPublicoDeLaCarta } from "../../../src/capacidades/experiencia/vidriera/logo-publico";
-import type { VidrieraPublica } from "../../../src/puertos/vidriera-publica";
+import type { CartaDeLaLista, VidrieraPublica } from "../../../src/puertos/vidriera-publica";
 import { web } from "./composicion";
 
 /**
@@ -34,7 +34,7 @@ export type VidrieraParaLaPantalla = Readonly<{ vista: VistaDeVidriera; textos: 
  * El camino de la carta en la dirección pública. En el host compartido es `/<código>`; en el host dedicado
  * es vacío. Hasta que W4 resuelva el host, siempre es el compartido (ASUMIDO: se cambia acá, en un lugar).
  */
-function rutaPublicaDe(codigo: string): string {
+export function rutaPublicaDe(codigo: string): string {
   return `/${encodeURIComponent(codigo)}`;
 }
 
@@ -53,6 +53,14 @@ export async function vidrieraParaLaPantalla(
     vista: armarVistaDeVidriera(vidriera, rutaPublicaDe(codigo)),
     textos: textosDeVidriera({}),
   };
+}
+
+/**
+ * Las cartas de la raíz del host (`/` en un host de carta): solo las de la empresa dueña de un host DEDICADO; en el host compartido, siempre vacío (el puerto lo garantiza).
+ * `puerta` es la resuelta para el host del pedido (S2), nunca un dato del cliente.
+ */
+export function cartasDeLaRaiz(puerta: AlcanceDelHost): Promise<readonly CartaDeLaLista[]> {
+  return vidrieras().listarDelHost(puerta);
 }
 
 /** Un producto de la carta por el último tramo de su dirección (`<slug>-<h8>`), o `null` si ya no está. */

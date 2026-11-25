@@ -14,7 +14,14 @@ import { afterEach, describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
 
-type Grupo = { id: string; grupo: string; archivos: string; minutos: number; pruebas?: string };
+type Grupo = {
+  id: string;
+  grupo: string;
+  archivos: string;
+  minutos: number;
+  pruebas?: string;
+  critico?: true;
+};
 type Falla = { archivo: string; motivo: string };
 type Arbol = { rutas: string[]; leer: (ruta: string) => Buffer | null };
 const cargador = require("../../arquitectura/grupos-de-mutacion.cjs") as {
@@ -190,6 +197,17 @@ describe("leer los grupos", () => {
     expect(motivos(grupo("caja-dominio", { ...BUENO, pruebas: 5 }))).toEqual([
       "«pruebas» tiene que ser un texto.",
     ]);
+  });
+
+  it("`critico` es opcional y solo vale `true`: cualquier otro valor falla con su motivo", () => {
+    expect(leer(grupo("caja-dominio", { ...BUENO, critico: true })).errores).toEqual([]);
+    expect(leer(grupo("caja-dominio", { ...BUENO, critico: true })).grupos[0]?.critico).toBe(true);
+    expect(leer(grupo("caja-dominio", BUENO)).grupos[0]).not.toHaveProperty("critico");
+    for (const critico of [false, "true", 1, null]) {
+      expect(motivos(grupo("caja-dominio", { ...BUENO, critico })), String(critico)).toEqual([
+        "«critico» solo puede ser true (un grupo que no es crítico no lleva el campo).",
+      ]);
+    }
   });
 
   it("cada patrón de `archivos` tiene que ser de la forma permitida (lista de permitidos)", () => {

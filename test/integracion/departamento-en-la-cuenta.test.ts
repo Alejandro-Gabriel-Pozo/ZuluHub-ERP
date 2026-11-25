@@ -5,9 +5,9 @@ import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { montarVentas, nuevoId, valorDe, type MundoDeVentas } from "./ventas-apoyo";
 
 /**
- * A2c (a): la cuenta de venta guarda el departamento con el que se abrió (migración 0048; decisión del dueño del 13/11/2026: se pega a la CUENTA, no a la caja). Lo que se
- * prueba: sin departamentos la cuenta queda sin departamento; con uno solo activo lo toma; con dos o más se exige elegir (nunca «todos»); el elegido tiene que existir, ser de la
- * empresa, ser de primer nivel y estar activo; repetir la apertura devuelve la misma cuenta (idempotencia) y con otro departamento es `CUENTA_ID_EN_USO`; dos aperturas a la
+ * El departamento de la cuenta de venta (migración 0048). Decisión del dueño del 25/11/2026 (vía el orquestador): el departamento sale del PRODUCTO y la cuenta ya no lo pide (reemplaza DEC-0363). Lo que se
+ * prueba: sin nombrar uno la cuenta queda sin departamento con 0, 1, 2 o 3 activos (nunca «todos», nunca el primero, sin error); si se nombra uno tiene que existir, ser de la empresa, ser de
+ * primer nivel y estar activo, y se guarda; repetir la apertura devuelve la misma cuenta (idempotencia) y con otro departamento es `CUENTA_ID_EN_USO`; dos aperturas a la
  * vez dejan UNA cuenta; la base impone las mismas reglas y que el departamento no cambie; y la reversión.
  */
 const base = inject("baseDePruebas");
@@ -49,7 +49,7 @@ describe.skipIf(base === null)("departamento en la cuenta (0048)", () => {
     expect(await departamentoGuardado(cuenta)).toBeNull();
   });
 
-  it("con un solo departamento activo: lo toma sin que se lo manden, y la auditoría lo deja escrito", async () => {
+  it("con un solo departamento activo: la cuenta queda sin departamento (sale del producto) y la auditoría lo deja escrito", async () => {
     const e = await m.escenario();
     const dep = await nodo(e.empresa, "Restaurante");
     // una categoría y un departamento desactivado no cuentan
@@ -57,25 +57,26 @@ describe.skipIf(base === null)("departamento en la cuenta (0048)", () => {
     await desactivar(await nodo(e.empresa, "Viejo"));
     const cuenta = nuevoId();
     valorDe(await m.casos.abrirCuenta(e.gerente, { cuentaId: cuenta, sucursalId: e.sucursal }));
-    expect(await departamentoGuardado(cuenta)).toBe(dep);
-    const auditoria = await m.filas<{ despues: { departamentoId: string } }>(
+    expect(await departamentoGuardado(cuenta)).toBeNull();
+    const auditoria = await m.filas<{ despues: { departamentoId: string | null } }>(
       "select despues from auditoria_empresa where empresa_id = $1 and accion = 'CUENTA_ABIERTA' and entidad_id = $2",
       [e.empresa, cuenta],
     );
-    expect(auditoria[0]?.despues.departamentoId).toBe(dep);
+    expect(auditoria[0]?.despues.departamentoId).toBeNull();
   });
 
-  it("con dos o más activos: sin elegir se rechaza y no escribe nada; eligiendo uno válido se guarda", async () => {
+  it("con dos y con tres activos: sin nombrar uno se abre sin departamento (sin error y sin elegir el primero); nombrando uno válido se guarda ese", async () => {
     const e = await m.escenario();
-    const a = await nodo(e.empresa, "Hotel");
-    const b = await nodo(e.empresa, "Spa");
-    const sinElegir = nuevoId();
-    expect(
-      await m.casos.abrirCuenta(e.gerente, { cuentaId: sinElegir, sucursalId: e.sucursal }),
-    ).toEqual({ ok: false, error: "DEPARTAMENTO_REQUERIDO" });
-    expect(await m.filas("select 1 from cuenta_consumo where id = $1", [sinElegir])).toHaveLength(
-      0,
-    );
+    const a = await nodo(e.empresa, "Alojamiento");
+    const b = await nodo(e.empresa, "Restaurante");
+    for (const cuantos of ["dos", "tres"]) {
+      if (cuantos === "tres") await nodo(e.empresa, "Cafetería");
+      const sinNombrar = nuevoId();
+      valorDe(
+        await m.casos.abrirCuenta(e.gerente, { cuentaId: sinNombrar, sucursalId: e.sucursal }),
+      );
+      expect(await departamentoGuardado(sinNombrar)).toBeNull();
+    }
     const elegida = nuevoId();
     valorDe(
       await m.casos.abrirCuenta(e.gerente, {
@@ -85,7 +86,7 @@ describe.skipIf(base === null)("departamento en la cuenta (0048)", () => {
       }),
     );
     expect(await departamentoGuardado(elegida)).toBe(b);
-    // elegir otro no toca la cuenta ya abierta de a
+    // nombrar otro no toca la cuenta ya abierta de b
     const otra = nuevoId();
     valorDe(
       await m.casos.abrirCuenta(e.gerente, {
@@ -94,6 +95,7 @@ describe.skipIf(base === null)("departamento en la cuenta (0048)", () => {
         departamentoId: a,
       }),
     );
+    expect(await departamentoGuardado(elegida)).toBe(b);
     expect(await departamentoGuardado(otra)).toBe(a);
   });
 

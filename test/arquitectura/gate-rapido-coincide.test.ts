@@ -110,6 +110,15 @@ function diferenciasConElRapido(ci: string, rapido: string, jobs: readonly strin
   return problemas;
 }
 
+/** El texto de un job (de su encabezado al siguiente job o al final). */
+function cuerpoDeJob(yaml: string, job: string): string {
+  const inicio = yaml.indexOf(`\n  ${job}:\n`);
+  if (inicio === -1) throw new Error(`no existe el job ${job}`);
+  const resto = yaml.slice(inicio + 1);
+  const fin = resto.slice(1).search(/\n {2}[a-z0-9-]+:\n/);
+  return fin === -1 ? resto : resto.slice(0, fin + 1);
+}
+
 const JOBS_COPIADOS = ["estatico", "pruebas", "web", "componentes"] as const;
 
 describe("el repositorio real", () => {
@@ -128,7 +137,30 @@ describe("el repositorio real", () => {
     const jobs = [...rapido.matchAll(/^ {2}([a-z0-9-]+):\s*$/gm)]
       .map((m) => m[1])
       .filter((nombre) => rapido.indexOf(`  ${nombre}:`) > rapido.indexOf("\njobs:"));
-    expect(jobs).toEqual([...JOBS_COPIADOS]);
+    expect(jobs).toEqual(["hay-pr", ...JOBS_COPIADOS]);
+  });
+
+  /**
+   * Con un pull request abierto para la rama, `ci.yml` ya corre lo mismo en cada push: el aviso temprano se saltea (job `hay-pr`). Previene: pagar dos veces el estático y las
+   * pruebas de cada push a una rama con PR. Ante la duda (la consulta falla) los cuatro jobs CORREN: `!cancelled()` y `!= '0'` (una salida vacía no es `0`).
+   */
+  it("los cuatro jobs copiados se saltean solo si hay-pr dijo que hay un pull request abierto (cero abiertos o consulta caída: corren)", () => {
+    const SI = "${{ !cancelled() && needs.hay-pr.outputs.abiertos != '0' }}";
+    for (const job of JOBS_COPIADOS) {
+      const cuerpo = cuerpoDeJob(rapido, job);
+      expect(cuerpo, job).toContain("    needs: hay-pr\n");
+      expect(cuerpo, job).toContain(`    if: ${SI}\n`);
+    }
+  });
+
+  it("hay-pr consulta por REST solo los pull requests abiertos de la rama, con permisos de solo lectura y sin interpolar nada en el comando", () => {
+    const cuerpo = cuerpoDeJob(rapido, "hay-pr");
+    expect(cuerpo).toContain("pull-requests: read");
+    expect(cuerpo).not.toMatch(/(?:contents|pull-requests|actions|issues): write/);
+    expect(cuerpo).toContain('gh api -X GET "repos/${REPOSITORIO}/pulls"');
+    expect(cuerpo).toContain('-f head="${DUENIO}:${RAMA}" -f state=open --jq length');
+    expect(cuerpo).toContain("RAMA: ${{ github.ref_name }}");
+    expect(cuerpo).not.toMatch(/run:[\s\S]*\$\{\{/);
   });
 });
 

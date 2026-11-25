@@ -8,8 +8,10 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  *
  * DIFERENCIAS CON LA MAQUETA (`compra.html`, estado `nueva`; la maqueta manda: cada desvío lleva su fundamento y lo decide el dueño, DDD:294):
  *  1. Sin «Pedir»: pide una orden de compra, que es de N4 (fase 5, pausada). Sin «Cambiar» en «Cómo se compra»: es un selector (la maqueta abre una hoja; el selector es el patrón de la aplicación).
- *  2. SIN PRESENTACIONES («caja de 12»): se compra en la unidad base del producto o en otra de su misma dimensión, porque hoy no hay pantalla de Catálogo para crearlas (dueño, 23/11/2026, pregunta 6 del
- *     plan de compras: aprobada la recomendación). Por eso tampoco hay «Peso recibido», «Falta pesar» ni «se confirma al pesar» (son de las cajas de peso variable, que son presentaciones).
+ *  2. CON PRESENTACIONES («caja de 12»; T0b, dueño 25/11/2026, fila 434 de decisiones-del-dueno-2026-11.md; resueltas por el orquestador el 25/11/2026): «Cómo se compra» ofrece las presentaciones ACTIVAS del producto y, después,
+ *     las unidades de su misma dimensión; sin presentaciones se compra por unidad como siempre. La presentación fija la unidad de compra en la base. Con una presentación de peso variable aparece «Peso recibido» (texto
+ *     aprobado de la maqueta, `compra.html` 09/11/2026; el peso va en la unidad base) y «Precio por» ofrece también la presentación elegida (rotulada con su nombre: sin texto nuevo). Sin «Falta pesar» ni «se
+ *     confirma al pesar»: la cotización espera al peso, no se muestra nada hasta tenerlo. «Recibir» (recepción separada) sigue por unidad.
  *  3. «Entra a tu stock» y «Costo por unidad de stock» se muestran ANTES de guardar, con la cuenta del servidor (`cotizarCompra`), no con una cuenta de la pantalla (dueño, 23/11/2026, pregunta 7).
  *  4. El remito se carga en esta misma pantalla, antes de «Comprar y recibir» (la maqueta lo pide en una segunda pantalla, «Recibir»): el brief PR-6 lo pone como un paso de la misma pantalla y evita
  *     una pantalla intermedia sin función propia en la primera versión.
@@ -240,12 +242,16 @@ export const FICHA_DE_NUEVA_COMPRA = {
       fuente: DE_LA_MAQUETA,
     },
     "compras.compra.como_se_compra": {
-      usos: ["selector de la unidad de compra"],
+      usos: ["selector de la presentación o la unidad de compra"],
       fuente: DE_LA_MAQUETA,
     },
     "compras.compra.cantidad": { usos: ["cantidad de un renglón"], fuente: DE_LA_MAQUETA },
+    "compras.recepcion.peso_recibido": {
+      usos: ["peso real de un renglón de presentación de peso variable"],
+      fuente: DE_LA_MAQUETA,
+    },
     "compras.compra.precio_por": {
-      usos: ["selector de la unidad del precio"],
+      usos: ["selector de la unidad del precio o de la presentación"],
       fuente: DE_LA_MAQUETA,
     },
     "fiscal.pantalla.emitir_precio": { usos: ["precio de un renglón"], fuente: DE_LA_MAQUETA },

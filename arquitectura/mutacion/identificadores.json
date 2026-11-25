@@ -2,5 +2,6 @@
   "grupo": "identificadores",
   "archivos": "src/primitivas/identificadores/**/*.ts",
   "minutos": 0.9,
-  "pruebas": "src/primitivas/identificadores"
+  "pruebas": "src/primitivas/identificadores",
+  "critico": true
 }

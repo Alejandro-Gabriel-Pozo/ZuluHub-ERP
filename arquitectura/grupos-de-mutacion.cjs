@@ -12,7 +12,9 @@
  *  - `archivos`: patrones separados por coma. Cada uno, la ruta o patrón de archivos a mutar, con `!` delante para excluir (dentro del grupo) y, a lo sumo, un rango de
  *    líneas `:desde-hasta` al final (un archivo grande repartido entre grupos);
  *  - `minutos`: cuánto tarda el grupo (ordena la corrida en paralelo);
- *  - `pruebas`: las pruebas que lo cubren. Sin ella el grupo corre con todas (deuda que cuenta el guardián).
+ *  - `pruebas`: las pruebas que lo cubren. Sin ella el grupo corre con todas (deuda que cuenta el guardián);
+ *  - `critico` (opcional, solo `true`): protege dinero, permisos, aislamiento, base de datos o fiscal. Un grupo que muta rutas sensibles (`arquitectura/rutas-sensibles-de-mutacion.json`) tiene que traerlo
+ *    (`test/arquitectura/relajaciones-de-pruebas.test.ts`): es lo que impide que un grupo nuevo de esas rutas quede fuera de lo que se corre completo en cada pull request.
  *
  * Todo nace cerrado (falla ante la duda): un archivo que no es `<identificador>.json`, una subcarpeta, JSON roto, un campo de más o de menos o un patrón fuera del conjunto
  * permitido es una falla que nombra el archivo; nunca se ignora ni se corrige solo.
@@ -26,7 +28,7 @@ const CARPETA_DE_LOS_GRUPOS = "arquitectura/mutacion";
 const EXCLUSION_DE_PRUEBAS = "!src/**/*.test.ts";
 
 const CAMPOS_OBLIGATORIOS = Object.freeze(["grupo", "archivos", "minutos"]);
-const CAMPOS_PERMITIDOS = Object.freeze([...CAMPOS_OBLIGATORIOS, "pruebas"]);
+const CAMPOS_PERMITIDOS = Object.freeze([...CAMPOS_OBLIGATORIOS, "pruebas", "critico"]);
 /** Un patrón: `!` opcional, rutas con letras, números y `_ . / * { } -`, y a lo sumo un rango de líneas. */
 const PATRON = /^!?[A-Za-z0-9_./*{}-]+(?::[0-9]+-[0-9]+)?$/;
 const NOMBRE_DE_ARCHIVO = /^([^/]+)\.json$/;
@@ -78,6 +80,9 @@ function problemasDelGrupo(valor, idDelNombre) {
   }
   if ("pruebas" in valor && typeof valor.pruebas !== "string") {
     problemas.push("«pruebas» tiene que ser un texto.");
+  }
+  if ("critico" in valor && valor.critico !== true) {
+    problemas.push("«critico» solo puede ser true (un grupo que no es crítico no lleva el campo).");
   }
   return problemas;
 }

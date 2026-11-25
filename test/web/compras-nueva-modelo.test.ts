@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { UNIDADES } from "../../src/primitivas/unidades/unidades";
 import {
   armarElPedido,
+  cambiosAlElegirComoSeCompra,
+  opcionesDeComoSeCompra,
+  opcionesDePrecioPor,
+  PRECIO_POR_LA_PRESENTACION,
+  presentacionElegida,
+  renglonCompleto,
+  valorDeComoSeCompra,
   conRenglon,
   idSiguiente,
   nombreDeUnidad,
@@ -31,6 +39,9 @@ describe("modelo de «Nueva compra»", () => {
       cantidad: "",
       unidadDePrecio: "KILOGRAMO",
       precio: "",
+      presentaciones: [],
+      presentacionId: "",
+      pesoReal: "",
     });
   });
 
@@ -52,8 +63,10 @@ describe("modelo de «Nueva compra»", () => {
     expect(renglonesParaCotizar([r])).toEqual([
       {
         productoId: "p1",
+        presentacionId: null,
         unidadDeCompraId: "KILOGRAMO",
         cantidad: "2.5",
+        pesoReal: null,
         precioPor: "UNIDAD",
         unidadDePrecioId: null,
         precio: null,
@@ -128,5 +141,123 @@ describe("modelo de «Nueva compra»", () => {
     expect(totalDelPie([con, sin], cotizada("22000.00"), "Sin precio")).toBeNull();
     expect(totalDelPie([], cotizada("1.00"), "Sin precio")).toBeNull();
     expect(totalDelPie([con], null, "Sin precio")).toBeNull();
+  });
+});
+
+describe("modelo de «Nueva compra»: presentaciones (T0b)", () => {
+  const caja = { id: "pr-caja", nombre: "Caja ×12", cantidad: "12.0000", dePesoVariable: false };
+  const pieza = { id: "pr-pieza", nombre: "Pieza", cantidad: "4.0000", dePesoVariable: true };
+  const gaseosa = {
+    productoId: "p2",
+    nombre: "Gaseosa",
+    unidadBase: "UNIDAD",
+    presentaciones: [caja],
+  };
+  const carne = { ...bife, presentaciones: [pieza] };
+
+  it("«por la presentación» no se confunde con ninguna unidad", () => {
+    expect(Object.hasOwn(UNIDADES, PRECIO_POR_LA_PRESENTACION)).toBe(false);
+  });
+
+  it("sin presentaciones el selector ofrece lo de siempre", () => {
+    const r = renglonNuevo(1, bife);
+    expect(opcionesDeComoSeCompra(r)).toEqual(opcionesDeUnidad("KILOGRAMO"));
+    expect(opcionesDePrecioPor(r)).toEqual(opcionesDeUnidad("KILOGRAMO"));
+    expect(valorDeComoSeCompra(r)).toBe("KILOGRAMO");
+    expect(presentacionElegida(r)).toBeNull();
+  });
+
+  it("ofrece las presentaciones primero y después las unidades; el rótulo sale del dato", () => {
+    const opciones = opcionesDeComoSeCompra(renglonNuevo(1, gaseosa));
+    expect(opciones[0]).toEqual({
+      valor: "presentacion:pr-caja",
+      etiqueta: "Caja ×12 (12 Unidad)",
+      apagada: false,
+    });
+    expect(opciones).toHaveLength(1 + opcionesDeUnidad("UNIDAD").length);
+  });
+
+  it("elegir una presentación fija la unidad base, limpia el peso y manda su id; el pedido sale «por unidad» hasta elegir «Precio por» la presentación", () => {
+    const r0 = { ...renglonNuevo(1, gaseosa), cantidad: "3" };
+    const r = { ...r0, ...cambiosAlElegirComoSeCompra(r0, "presentacion:pr-caja") };
+    expect(valorDeComoSeCompra(r)).toBe("presentacion:pr-caja");
+    expect(renglonesParaCotizar([r])).toEqual([
+      {
+        productoId: "p2",
+        presentacionId: "pr-caja",
+        unidadDeCompraId: "UNIDAD",
+        cantidad: "3",
+        pesoReal: null,
+        precioPor: "UNIDAD",
+        unidadDePrecioId: null,
+        precio: null,
+      },
+    ]);
+    expect(opcionesDePrecioPor(r)[0]).toEqual({
+      valor: PRECIO_POR_LA_PRESENTACION,
+      etiqueta: "Caja ×12",
+      apagada: false,
+    });
+  });
+
+  it("precio por la presentación: sale precioPor PRESENTACION y sin unidad de precio", () => {
+    const r0 = { ...renglonNuevo(1, gaseosa), cantidad: "2", precio: "12000.00" };
+    const r1 = { ...r0, ...cambiosAlElegirComoSeCompra(r0, "presentacion:pr-caja") };
+    const r = { ...r1, unidadDePrecio: PRECIO_POR_LA_PRESENTACION };
+    expect(renglonesParaCotizar([r])[0]).toMatchObject({
+      presentacionId: "pr-caja",
+      precioPor: "PRESENTACION",
+      unidadDePrecioId: null,
+      precio: "12000.00",
+    });
+  });
+
+  it("volver a una unidad borra la presentación y el peso, y un «Precio por» la presentación vuelve a la base", () => {
+    const r0 = { ...renglonNuevo(1, carne), cantidad: "2" };
+    const r1 = { ...r0, ...cambiosAlElegirComoSeCompra(r0, "presentacion:pr-pieza") };
+    const r2 = { ...r1, pesoReal: "8.5", unidadDePrecio: PRECIO_POR_LA_PRESENTACION };
+    const r3 = { ...r2, ...cambiosAlElegirComoSeCompra(r2, "KILOGRAMO") };
+    expect(r3).toMatchObject({
+      presentacionId: "",
+      pesoReal: "",
+      unidadDeCompra: "KILOGRAMO",
+      unidadDePrecio: "KILOGRAMO",
+    });
+    expect(renglonesParaCotizar([r3])[0]).toMatchObject({ presentacionId: null, pesoReal: null });
+  });
+
+  it("«Recibir» (sin presentaciones) no ofrece ninguna aunque el producto las tenga", () => {
+    const r = renglonNuevo(1, gaseosa, false);
+    expect(r.presentaciones).toEqual([]);
+    expect(opcionesDeComoSeCompra(r)).toEqual(opcionesDeUnidad("UNIDAD"));
+  });
+
+  it("una presentación que no es de las ofrecidas no se supone: no cambia nada", () => {
+    const r = renglonNuevo(1, gaseosa);
+    expect(cambiosAlElegirComoSeCompra(r, "presentacion:otra")).toEqual({});
+  });
+
+  it("peso variable: sin peso el renglón está incompleto (no se cotiza ni cuenta para el total); con peso sale el pesoReal", () => {
+    const r0 = { ...renglonNuevo(1, carne), cantidad: "2" };
+    const r = { ...r0, ...cambiosAlElegirComoSeCompra(r0, "presentacion:pr-pieza") };
+    expect(renglonCompleto(r)).toBe(false);
+    expect(renglonesParaCotizar([r])).toEqual([]);
+    expect(totalDelPie([r], { renglones: [], total: "1.00" }, "Sin precio")).toBeNull();
+    const conPeso = { ...r, pesoReal: "8.5" };
+    expect(renglonCompleto(conPeso)).toBe(true);
+    expect(renglonesParaCotizar([conPeso])[0]).toMatchObject({
+      presentacionId: "pr-pieza",
+      pesoReal: "8.5",
+    });
+  });
+
+  it("peso fijo: aunque quedara un peso escrito, no se manda (el servidor lo rechaza)", () => {
+    const r0 = { ...renglonNuevo(1, gaseosa), cantidad: "2" };
+    const r = {
+      ...r0,
+      ...cambiosAlElegirComoSeCompra(r0, "presentacion:pr-caja"),
+      pesoReal: "5",
+    };
+    expect(renglonesParaCotizar([r])[0]).toMatchObject({ pesoReal: null });
   });
 });
