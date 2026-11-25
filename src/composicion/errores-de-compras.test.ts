@@ -126,6 +126,7 @@ describe("traducirErrorDeCompras: todos los errores propios de compras", () => {
     "DIFERENCIA_YA_RESUELTA",
     "EGRESO_DE_CAJA_NO_ANULABLE",
     "EGRESO_DE_CAJA_RECHAZADO",
+    "EXPORTACION_DEMASIADO_GRANDE",
     "FACTURA_NO_CORRESPONDE_AL_NIVEL",
     "FACTURA_REQUERIDA",
     "FECHA_INVALIDA",
