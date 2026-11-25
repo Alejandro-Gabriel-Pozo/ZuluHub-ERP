@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0635",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La semilla de plantillas sale de la constante real: operador 65 acciones, administrador 152, 19 solo del gerente; el diseño decía 63 y 74.",
+  "que_cambia": "Nada: la base queda igual a la tabla de hoy; solo se corrigen las cifras del diseño H4b, que contó mal.",
+  "donde": "migraciones/0094_permisos_configurables.sql (semilla); Pedernal-docs h4b-permisos-configurables.md §0 y §1",
+  "motivo": "Con PERMISOS_DE_EMPRESA de main hay 171 acciones: 65 de los tres roles, 87 de gerente y administrador y 19 solo del gerente (el Anexo A del diseño tenía 20: `productos.asignar_emisor` se retiró del sistema en #468); una prueba compara la semilla con la constante."
+}
