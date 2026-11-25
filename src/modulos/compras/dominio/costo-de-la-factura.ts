@@ -28,10 +28,13 @@ export function leerTomarElCosto(
       : {};
   const clave = v["clave"];
   const recepcionId = v["recepcionId"];
+  // Stryker disable next-line ConditionalExpression: `esUuid` ya rechaza lo que no es texto; el `typeof` solo le da el tipo a TypeScript
   if (typeof clave !== "string" || !esUuid(clave)) return err("IDENTIFICADOR_INVALIDO");
+  // Stryker disable next-line ConditionalExpression: igual que la clave
   if (typeof recepcionId !== "string" || !esUuid(recepcionId)) return err("IDENTIFICADOR_INVALIDO");
   const linea = v["linea"];
   if (
+    // Stryker disable next-line ConditionalExpression: `Number.isInteger` ya rechaza lo que no es número; el `typeof` solo le da el tipo a TypeScript
     typeof linea !== "number" ||
     !Number.isInteger(linea) ||
     linea < 1 ||
@@ -91,7 +94,9 @@ export function facturaUnicaDeLaLinea(
 ): Resultado<FacturaDeLaLinea, ErrorDeFacturaUnica> {
   const recibida = leerCantidadPositiva(entrada.recibida);
   const asignada = leerCantidad(entrada.asignada);
-  if (recibida === null || asignada === null || asignada !== recibida) {
+  // Una `asignada` ilegible (`null`) con una `recibida` legible ya es distinta de ella.
+  // Stryker disable next-line ConditionalExpression: con `recibida` ilegible la comparación de la suma contra ella (más abajo) también rechaza; el `null` solo le da el tipo a TypeScript
+  if (recibida === null || asignada !== recibida) {
     return err("LINEA_NO_CONCILIADA_ENTERA");
   }
   const claves = new Set<string>();
@@ -105,6 +110,7 @@ export function facturaUnicaDeLaLinea(
   // Lo asignado de la línea y lo que suman sus asignaciones vigentes son lo mismo (los dos los escribe la base): si no coinciden, no hay de dónde tomar nada.
   if (suma !== recibida) return err("LINEA_NO_CONCILIADA_ENTERA");
   const unica = entrada.vigentes[0];
+  // Stryker disable next-line ConditionalExpression: sin asignaciones `claves` tiene cero elementos y `claves.size !== 1` ya la rechaza; `unica === undefined` solo le da el tipo a TypeScript
   if (unica === undefined || claves.size !== 1) return err("COSTO_SIN_FACTURA_UNICA");
   return ok({ comprobanteId: unica.comprobanteId, lineaDeFactura: unica.lineaDeFactura });
 }
