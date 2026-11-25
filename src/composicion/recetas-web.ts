@@ -6,6 +6,7 @@ import {
 } from "../modulos/identidad/publico";
 import type {
   ConsultasDeStock,
+  FichaDeCocina,
   PaginaDeIngredientes,
   PaginaDeRecetas,
   RecetaDeProducto,
@@ -45,6 +46,7 @@ export type DependenciasDeRecetasWeb = Readonly<{
     ConsultasDeStock,
     | "listarRecetas"
     | "recetaDeProducto"
+    | "fichaDeCocina"
     | "ingredientesParaReceta"
     | "vistaPreviaDeReceta"
     | "versionesDeReceta"
@@ -115,6 +117,21 @@ export async function verLaReceta(
   try {
     const receta = await d.consultas().recetaDeProducto(contexto, entrada);
     return receta.ok ? { ok: true, dato: receta.valor } : conError(receta.error, d);
+  } catch (excepcion) {
+    return aRespuestaDeExcepcion(excepcion, d.respuesta);
+  }
+}
+
+/** La ficha de cocina de la versión vigente (cantidades brutas y pasos, sin costos ni precios: la consulta no los trae); `null` si no hay receta (también un id mal formado). */
+export async function verLaFichaDeCocina(
+  d: DependenciasDeRecetasWeb,
+  contexto: ContextoOperativo,
+  productoId: string,
+): Promise<Respuesta<FichaDeCocina | null>> {
+  if (!identificador.safeParse(productoId).success) return { ok: true, dato: null };
+  try {
+    const ficha = await d.consultas().fichaDeCocina(contexto, { productoId });
+    return ficha.ok ? { ok: true, dato: ficha.valor } : conError(ficha.error, d);
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, d.respuesta);
   }

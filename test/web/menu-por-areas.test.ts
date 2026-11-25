@@ -211,6 +211,7 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "/caja/cierre-del-dia",
         "cierre.titulo",
       ],
+      ["salon", "ventas", "salon", "salon", "mesas.ver", "/salon", "salon.texto.grupo_salon"],
       ["mesas", "ventas", "salon", "salon", "mesas.ver", "/salon/mesas", "salon.texto.admin_mesas"],
       [
         "impresoras",
@@ -274,6 +275,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "transformaciones.ver",
         "/catalogo/produccion",
         "produccion.pantalla.produccion",
+      ],
+      [
+        "recetas",
+        "catalogo",
+        "produccion",
+        "stock",
+        "stock.ver",
+        "/catalogo/recetas",
+        "receta.pantalla.recetas",
       ],
       [
         "compras",
@@ -487,6 +497,39 @@ describe("«Venta rápida»: la fila del grupo «Mostrador» del área Ventas (d
   });
 });
 
+describe("«Salón» (SAL-A): la fila del mapa nace cerrada", () => {
+  const salon = fila("salon");
+  const conFunciones = (
+    acciones: readonly string[],
+    modulos: readonly string[],
+    funciones?: readonly string[],
+  ) => ({
+    ...permisos(acciones, modulos),
+    ...(funciones === undefined ? {} : { funcionesEncendidas: funciones }),
+  });
+
+  it("apunta al mapa, con la acción de lectura de mesas y la perilla `salon`", () => {
+    expect(salon).toMatchObject({
+      href: "/salon",
+      modulo: "salon",
+      accion: "mesas.ver",
+      perilla: "salon",
+      etiqueta: "salon.texto.grupo_salon",
+    });
+  });
+  it("con el módulo, `mesas.ver` y la perilla encendida aparece", () => {
+    expect(
+      claves(armarElMenu([salon], conFunciones(["mesas.ver"], ["salon"], ["salon"]), null)),
+    ).toEqual([["ventas", [["salon"]]]]);
+  });
+  it("sin `mesas.ver`, con la perilla apagada, sin leer las funciones o con el módulo apagado no aparece", () => {
+    expect(armarElMenu([salon], conFunciones([], ["salon"], ["salon"]), null)).toEqual([]);
+    expect(armarElMenu([salon], conFunciones(["mesas.ver"], ["salon"], []), null)).toEqual([]);
+    expect(armarElMenu([salon], conFunciones(["mesas.ver"], ["salon"]), null)).toEqual([]);
+    expect(armarElMenu([salon], conFunciones(["mesas.ver"], [], ["salon"]), null)).toEqual([]);
+  });
+});
+
 describe("«Mesas»: la fila declara la función de pago `salon` (X-1b)", () => {
   const mesas = fila("mesas");
   const conFunciones = (funciones?: readonly string[]) => ({
@@ -497,8 +540,10 @@ describe("«Mesas»: la fila declara la función de pago `salon` (X-1b)", () => 
   it("lleva la función `salon` y es del mismo módulo", () => {
     expect(mesas.perilla).toBe("salon");
     expect(
-      FILAS_DEL_MENU.filter((f) => f.tipo === "pantalla" && f.perilla === "salon"),
-    ).toHaveLength(1);
+      FILAS_DEL_MENU.filter((f) => f.tipo === "pantalla" && f.perilla === "salon").map(
+        (f) => f.clave,
+      ),
+    ).toEqual(["salon", "mesas"]);
   });
   it("con el módulo, la acción y la función encendida aparece", () => {
     expect(claves(armarElMenu([mesas], conFunciones(["salon"]), null))).toEqual([
@@ -526,6 +571,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "comprobantes",
     "caja",
     "cierre-del-dia",
+    "salon",
     "mesas",
     "impresoras",
     "clientes",
@@ -534,6 +580,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "secciones",
     "stock",
     "produccion",
+    "recetas",
     "compras",
     "nivel-de-compras",
     "recepciones",
@@ -577,6 +624,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
         [
           "salon",
           [
+            ["pantalla", "salon", "/salon", "salon.texto.grupo_salon"],
             ["pantalla", "mesas", "/salon/mesas", "salon.texto.admin_mesas"],
             ["pantalla", "impresoras", "/salon/impresoras", "comandas.texto.imprimir_impresoras"],
           ],
@@ -604,6 +652,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
         ],
         ["carta", [["pantalla", "secciones", "/catalogo/secciones", "catalogo.seccion.titulo"]]],
         ["stock", [["pantalla", "stock", "/stock/depositos", "stock.pantalla.stock"]]],
+        ["produccion", [["pantalla", "recetas", "/catalogo/recetas", "receta.pantalla.recetas"]]],
       ],
     ],
     [

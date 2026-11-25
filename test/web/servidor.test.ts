@@ -77,6 +77,7 @@ describe("apps/web/servidor/composicion.ts", () => {
       "consultasDeSesion",
       "consultasDeStock",
       "consultasDeVentas",
+      "hostPropioDeLaCarta",
       "imagenesExternas",
       "lecturasCompartidas",
       "memoriaDeLogos",

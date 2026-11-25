@@ -416,6 +416,7 @@ describe.skipIf(base === null)("un pozo por rol", () => {
         const web = await resolverEmpresa(dependencias, {
           sesion,
           marcaId: marcaComercialId("44444444-4444-4444-8444-444444444444"),
+          duenioDelHost: { tipo: "MARCA" },
           cookieDeEmpresa: null,
         });
         expect(web).toMatchObject({ ok: false, error: { codigo: "ERROR_INTERNO" } });

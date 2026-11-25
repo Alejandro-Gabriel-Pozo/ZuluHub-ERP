@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1064",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "La ficha de cocina muestra el rinde, la versión, cada ingrediente con su cantidad bruta y los pasos, sin costos ni precios.",
+  "que_cambia": "Qué ve la cocina. La falta de botón de imprimir es un supuesto del diseño, no una decisión del dueño: revertir es sumar el botón.",
+  "donde": "apps/web/ui/plantillas/recetas/PantallaDeFichaDeCocina.tsx; dueño 25/11/2026, vía el orquestador; la fila la asienta diseño"
+}

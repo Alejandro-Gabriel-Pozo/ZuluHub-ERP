@@ -80,6 +80,7 @@ export const empresaDelPedido = cache(async (): Promise<EmpresaDelPedido> => {
   const entrada = await resolverEmpresa(dependenciasDeSesion, {
     sesion,
     marcaId: marcaComercialId(puerta.marcaId),
+    duenioDelHost: puerta.duenio,
     cookieDeEmpresa,
   });
   return { puerta, sesion, entrada };

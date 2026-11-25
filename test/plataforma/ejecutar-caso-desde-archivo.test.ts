@@ -404,7 +404,13 @@ describe("armarCasosDeLaLista: cada nombre corre su caso", () => {
         "desactivarModuloDeEmpresa",
       ]),
     casosDeUsoDeDominios: () =>
-      espia("dominios", ["agregarDominio", "verificarDominio", "activarDominio"]),
+      espia("dominios", [
+        "agregarDominio",
+        "verificarDominio",
+        "activarDominio",
+        "desactivarDominio",
+        "retirarDominio",
+      ]),
     casosDeUsoDeAltas: () => espia("altas", ["altaDeEmpresa"]),
   } as unknown as Parameters<typeof armarCasosDeLaLista>[0];
 
@@ -415,6 +421,8 @@ describe("armarCasosDeLaLista: cada nombre corre su caso", () => {
     agregarDominio: "dominios.agregarDominio",
     verificarDominio: "dominios.verificarDominio",
     activarDominio: "dominios.activarDominio",
+    desactivarDominio: "dominios.desactivarDominio",
+    retirarDominio: "dominios.retirarDominio",
     crearPlan: "marcasYPlanes.crearPlan",
     guardarBorradorDePlan: "marcasYPlanes.guardarBorradorDePlan",
     publicarVersionDePlan: "marcasYPlanes.publicarVersionDePlan",

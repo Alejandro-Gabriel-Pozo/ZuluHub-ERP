@@ -106,6 +106,7 @@ function repositorioFalso(iniciales: readonly DominioGuardado[] = []): Repositor
 export function armarDominios(
   iniciales: readonly DominioGuardado[] = [],
   rol: RolDePlataforma | null = "ADMIN",
+  hostsProtegidos: ReadonlySet<string> = new Set(),
 ) {
   const dominios = repositorioFalso(iniciales);
   const auditoria = auditoriaFalsa();
@@ -120,6 +121,7 @@ export function armarDominios(
   const casos: CasosDeUsoDeDominios = crearCasosDeUsoDeDominios({
     transacciones,
     reglas: REGLAS_DE_PLATAFORMA,
+    hostsProtegidos,
   });
   return { casos, dominios, auditoria, idempotencia, transacciones, AHORA };
 }
