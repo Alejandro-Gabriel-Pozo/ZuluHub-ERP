@@ -17,6 +17,8 @@ export type TextosDeFacturas = Readonly<{
   conciliado: string;
   aConciliar: string;
   conciliaciones: string;
+  tomarElCosto: string;
+  precioNeto: string;
   anularConciliacion: string;
   anular: string;
   cancelar: string;
@@ -46,6 +48,8 @@ export function textosDeFacturas(): TextosDeFacturas {
     conciliado: texto({}, "compras.conciliacion.conciliado"),
     aConciliar: texto({}, "compras.conciliacion.a_conciliar"),
     conciliaciones: texto({}, "compras.conciliacion.conciliaciones"),
+    tomarElCosto: texto({}, "compras.factura.tomar_costo"),
+    precioNeto: texto({}, "compras.factura.precio_neto"),
     anularConciliacion: texto({}, "compras.conciliacion.anular"),
     anular: texto({}, "ventas.ticket.anular"),
     cancelar: texto({}, "catalogo.accion.cancelar"),

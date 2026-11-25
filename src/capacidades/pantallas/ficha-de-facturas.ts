@@ -11,7 +11,12 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  *  1. La factura es de la EMPRESA: no tiene sucursal (respuesta del dueño a la pregunta 1, 25/11/2026, DEC-0902). Lo recibido sí es por sucursal.
  *  2. El alcance de sucursales limita la propuesta, lo recibido que se muestra y las conciliaciones visibles (pregunta 6, DEC-0934). Gerente y administrador operan en todas las sucursales (H6) y son hoy quienes tienen las acciones de conciliar; un rol propio futuro (H4b) con esas acciones quedaría limitado a sus sucursales asignadas.
  *  3. «Anular conciliación» no pide motivo (la entrada de `anularConciliacion` no lo lleva) y solo se ofrece en una conciliación no anulada que repartió solo sucursales del alcance de quien anula.
- *  4. Sin filtros en la lista (pregunta 8, DEC-0905). Sin «tomar el costo» todavía: es el PR C.
+ *  4. Sin filtros en la lista (pregunta 8, DEC-0905).
+ *  6. «Tomar el costo de la factura» (PR C, pregunta 2 del dueño, «b chica», DEC-0903): el botón va por línea recibida (por sucursal) debajo de lo recibido de cada línea de la factura, solo si esa línea de la factura cubre
+ *     TODA la línea recibida y ella sola, y la persona puede corregir compras y ajustar stock. La hoja muestra el producto, la sucursal con lo recibido y el «Precio neto» ya cargado (no se escribe nada). Con el costo ya
+ *     tomado la línea muestra «Precio neto: $ …» y no «Costo por unidad de stock» con su importe (desvío de la maqueta (DEC-0944, por aprobar): la lectura no tiene la condición de IVA de la empresa para calcularlo y una línea ya
+ *     corregida tampoco lo muestra en la ficha de compras; costo de revertir: medio, hay que darle esa condición a las consultas). «Anular conciliación» se sigue ofreciendo con el costo tomado (DEC-0941: el costo es de la
+ *     línea recibida, no de la conciliación).
  *  5. «Cargar factura» es el bloque de la factura de «Nueva compra» (los mismos datos y textos) con un producto por línea y sin remito, sin depósito y sin sucursal.
  */
 
@@ -71,6 +76,7 @@ export const FICHA_DE_FACTURAS = {
     "apps/web/ui/plantillas/compras/facturas/PantallaDeConciliar.cliente.tsx",
     "apps/web/ui/plantillas/compras/facturas/PantallaDeDetalleDeFactura.tsx",
     "apps/web/ui/plantillas/compras/facturas/PantallaDeListaDeFacturas.tsx",
+    "apps/web/ui/plantillas/compras/facturas/TomarElCosto.cliente.tsx",
     "apps/web/ui/plantillas/compras/facturas/apoyo-de-facturas.ts",
     "apps/web/ui/plantillas/compras/facturas/modelo-de-cargar-factura.ts",
     "apps/web/ui/plantillas/compras/facturas/modelo-de-conciliar.ts",
@@ -127,6 +133,18 @@ export const FICHA_DE_FACTURAS = {
       id: "anular-conciliacion-confirmar",
       texto: "ventas.ticket.anular",
       hace: { envia: "conciliaciones.anular" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "tomar-el-costo",
+      texto: "compras.factura.tomar_costo",
+      hace: { envia: "compras.corregir" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "tomar-el-costo-confirmar",
+      texto: "compras.factura.tomar_costo",
+      hace: { envia: "compras.corregir" },
       sinPermiso: "AUSENTE",
     },
     {
@@ -212,6 +230,16 @@ export const FICHA_DE_FACTURAS = {
     },
     "compras.conciliacion.anular": {
       usos: ["botón de cada conciliación y título de su hoja, solo gerente y administrador"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.factura.tomar_costo": {
+      usos: [
+        "botón de cada línea recibida cubierta entera por esta línea de la factura, y título y botón de su hoja; solo gerente y administrador",
+      ],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.factura.precio_neto": {
+      usos: ["precio de la factura que muestra la hoja de tomar el costo y el que quedó tomado"],
       fuente: DE_LA_MAQUETA,
     },
     "ventas.ticket.anular": { usos: ["botón de la hoja de anular"], fuente: DE_LA_MAQUETA },
