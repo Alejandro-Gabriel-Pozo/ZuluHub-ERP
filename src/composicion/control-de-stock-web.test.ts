@@ -122,6 +122,18 @@ describe("fijarElControlDeStock", () => {
     ]);
   });
 
+  it("la función «Producción» apagada (error con forma de objeto) y la falta de receta salen como el genérico, no como un fallo inesperado", async () => {
+    for (const error of [
+      { error: "FUNCION_NO_INCLUIDA", perilla: "produccion" },
+      "SIN_COMPOSICION",
+    ]) {
+      const { d } = montar({ controlar: () => err(error) });
+      expect(
+        codigoDe(await fijarElControlDeStock(d, contexto, { productoId: ID, controlado: true })),
+      ).toBe(GENERICO);
+    }
+  });
+
   it("no altera: «true» nunca llama a dejarDeControlar ni «false» a controlarArticulo", async () => {
     const a = montar();
     await fijarElControlDeStock(a.d, contexto, { productoId: ID, controlado: true });
