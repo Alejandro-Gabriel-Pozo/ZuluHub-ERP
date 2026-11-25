@@ -7,8 +7,8 @@
 --    la fija la lectura pública dentro de su transacción (`set_config(…, true)`), a partir del DUEÑO del host que la puerta ya resolvió (nunca un dato del navegador); si no se fijó,
 --    `current_setting(…, true)` da NULL, no es igual a nada y NINGUNA fila se ve (falla cerrado). La comparación es por texto (no convierte la variable a uuid): un valor mal formado no da un
 --    error ni una fila, da cero filas. Solo `EN_LINEA`: una carta fuera de línea no se lista ni se ve.
---  * NINGÚN privilegio nuevo: las columnas que el rol público ya tiene sobre `carta_publica` (0043: id, empresa_id, sucursal_id, codigo, nombre, rubro, lugar, mensaje_de_portada, estado) son
---    las mismas; el listado solo usa `codigo`, `nombre`, `rubro` y `lugar` (lo acota la consulta, no la política). Ni quién creó la carta, ni cuándo, ni la versión.
+--  * NINGÚN privilegio nuevo: las columnas que el rol público ya tiene sobre `carta_publica` (0043: id, empresa_id, sucursal_id, codigo, nombre, rubro, lugar, mensaje_de_portada, estado; 0077: modelo,
+--    cara, color_propio y los datos del logo) son las mismas; el listado solo usa `codigo`, `nombre`, `rubro` y `lugar` (lo acota la consulta, no la política). Ni quién creó la carta, ni cuándo, ni la versión.
 --  * NINGUNA otra tabla se abre: sucursal, producto, precios, etc. siguen visibles solo por `app.codigo_de_carta`. Que una carta listada realmente se SIRVA (sucursal abierta, empresa que opera,
 --    plan con el módulo de la carta y la perilla `vidriera_por_qr`) lo decide el código, que confirma cada candidata con la lectura por código de siempre antes de listarla.
 --  * Sin DELETE, UPDATE ni INSERT; sin funciones; sin SECURITY DEFINER. La política existente por código no se toca (es permisiva: las dos se suman; ver abajo qué ve cada camino).
