@@ -64,7 +64,7 @@ describe("entradaDeCotizarCompra", () => {
     precio: "1234.5678",
   };
 
-  it("toma solo los campos declarados, con cantidades y precio como texto, y sin presentación", () => {
+  it("toma solo los campos declarados, con cantidades y precio como texto, y la presentación elegida", () => {
     expect(
       entradaDeCotizarCompra({
         renglones: [{ ...renglon, presentacionId: ID, empresaId: "otra", importe: "1" }],
@@ -76,7 +76,7 @@ describe("entradaDeCotizarCompra", () => {
         renglones: [
           {
             productoId: ID,
-            presentacionId: null,
+            presentacionId: ID,
             unidadDeCompraId: "KILOGRAMO",
             cantidad: "2.5",
             pesoReal: null,
@@ -86,6 +86,28 @@ describe("entradaDeCotizarCompra", () => {
           },
         ],
       },
+    });
+  });
+
+  it("la presentación ausente o nula es «por unidad» (null); el peso real viaja como texto", () => {
+    const sin = entradaDeCotizarCompra({ renglones: [renglon] });
+    expect(sin).toMatchObject({ ok: true, valor: { renglones: [{ presentacionId: null }] } });
+    const nula = entradaDeCotizarCompra({
+      renglones: [{ ...renglon, presentacionId: null, pesoReal: "8.5" }],
+    });
+    expect(nula).toMatchObject({
+      ok: true,
+      valor: { renglones: [{ presentacionId: null, pesoReal: "8.5" }] },
+    });
+  });
+
+  it.each([
+    ["no es un identificador", "no-es-un-id"],
+    ["es un número", 12],
+    ["es vacía", ""],
+  ])("una presentación que %s se rechaza", (_caso, presentacionId) => {
+    expect(entradaDeCotizarCompra({ renglones: [{ ...renglon, presentacionId }] })).toMatchObject({
+      ok: false,
     });
   });
 
