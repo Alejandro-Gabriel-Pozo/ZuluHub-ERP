@@ -11,11 +11,11 @@ type Pantalla = "existencias" | "movimientos";
 export function hrefDeLectura(
   pantalla: Pantalla,
   depositoId: string | null,
-  despues?: string | null,
+  despues: string | null = null,
 ): string {
   const consulta = new URLSearchParams();
   if (depositoId !== null) consulta.set("deposito", depositoId);
-  if (despues !== undefined && despues !== null) consulta.set("despues", despues);
+  if (despues !== null) consulta.set("despues", despues);
   const texto = consulta.toString();
   return texto === "" ? RUTAS_DE_STOCK[pantalla] : `${RUTAS_DE_STOCK[pantalla]}?${texto}`;
 }

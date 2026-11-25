@@ -78,7 +78,7 @@ const montar = (cambios: Partial<Montaje> = {}) => {
 };
 const codigoDe = (r: { ok: boolean; error?: { codigo: string } }) =>
   r.ok ? "OK" : (r.error?.codigo ?? "?");
-const cursor = (x: object) => Buffer.from(JSON.stringify(x)).toString("base64url");
+const cursor = (x: unknown) => Buffer.from(JSON.stringify(x)).toString("base64url");
 
 describe("existenciasDelDeposito", () => {
   it("sin depósito pedido toma el primero de la sucursal; la existencia sale como texto y «negativa» es el signo", async () => {
@@ -177,13 +177,51 @@ describe("existenciasDelDeposito", () => {
       depositoId: D1,
       despuesDe: sig,
     });
-    for (const roto of ["no es base64 de json", cursor({ nombreClave: 1 }), cursor([1])]) {
+    const completo = { nombreClave: "harina", articuloId: A1, depositoId: D1 };
+    for (const roto of [
+      "no es base64 de json",
+      cursor({ nombreClave: 1 }),
+      cursor([1]),
+      cursor(null),
+      cursor("texto"),
+      cursor({ articuloId: A1, depositoId: D1 }),
+      cursor({ nombreClave: "harina", depositoId: D1 }),
+      cursor({ nombreClave: "harina", articuloId: A1 }),
+      cursor({ ...completo, de_mas: 1 }),
+    ]) {
       const c = montar();
       expect(codigoDe(await existenciasDelDeposito(c.d, contexto, SUC, { despues: roto }))).toBe(
         GENERICO,
       );
       expect(c.m.llamadas).toEqual([]);
     }
+  });
+
+  it("un cursor con texto no ASCII vuelve igual a la consulta", async () => {
+    const sig = { nombreClave: "ñandú", articuloId: A1, depositoId: D1 };
+    const { m, d } = montar();
+    await existenciasDelDeposito(d, contexto, SUC, { despues: cursor(sig) });
+    expect(m.llamadas.find((l) => l.que === "existencias")?.entrada).toEqual({
+      depositoId: D1,
+      despuesDe: sig,
+    });
+  });
+
+  it("un cursor vacío es «sin cursor», no un error", async () => {
+    const { m, d } = montar();
+    expect((await existenciasDelDeposito(d, contexto, SUC, { despues: "" })).ok).toBe(true);
+    expect(m.llamadas.find((l) => l.que === "existencias")?.entrada).toEqual({
+      depositoId: D1,
+      despuesDe: undefined,
+    });
+  });
+
+  it("un error al listar los depósitos no se esconde", async () => {
+    const { m, d } = montar({ depositos: () => err({ tipo: "ERROR_DE_BASE" }) });
+    expect(codigoDe(await existenciasDelDeposito(d, contexto, SUC, {}))).not.toBe(GENERICO);
+    expect(m.registrados).toHaveLength(1);
+    expect(m.registrados[0]).toContain("ERROR_DE_BASE");
+    expect(m.llamadas.map((l) => l.que)).toEqual(["depositos"]);
   });
 
   it("un id que no tiene forma de id es el genérico; un error de la consulta no se esconde; una excepción sale con referencia", async () => {
@@ -195,6 +233,7 @@ describe("existenciasDelDeposito", () => {
     const r = await existenciasDelDeposito(b.d, contexto, SUC, {});
     expect(codigoDe(r)).not.toBe(GENERICO);
     expect(b.m.registrados).toHaveLength(1);
+    expect(b.m.registrados[0]).toContain("ERROR_DE_BASE");
     const c = montar({
       existencias: () => {
         throw new Error("la base no responde");
@@ -220,6 +259,60 @@ describe("movimientosDelDeposito", () => {
     expect(m.llamadas.filter((l) => l.que === "personas")).toEqual([
       { que: "personas", entrada: { ids: [P1] } },
     ]);
+  });
+
+  it.each([
+    "MODULO_EN_DESARROLLO",
+    "MODULO_NO_ACTIVO",
+    "MODULO_EN_SOLO_LECTURA",
+    "SIN_CAPACIDAD",
+    "SIN_PERMISO",
+  ])("si identidad rechaza con %s, la lista sale igual con el correo en null", async (motivo) => {
+    const { d } = montar({
+      movimientos: () => ok({ movimientos: [movimiento()], siguiente: null }),
+      personas: () => err(motivo),
+    });
+    const r = await movimientosDelDeposito(d, contexto, SUC, {});
+    expect(r.ok && r.dato.movimientos[0]?.quien).toBeNull();
+  });
+
+  it("un fallo de identidad que no es un rechazo de permiso (un texto desconocido) no se esconde", async () => {
+    const { d, m } = montar({
+      movimientos: () => ok({ movimientos: [movimiento()], siguiente: null }),
+      personas: () => err("OTRO_MOTIVO"),
+    });
+    expect(codigoDe(await movimientosDelDeposito(d, contexto, SUC, {}))).not.toBe(GENERICO);
+    expect(m.registrados).toHaveLength(1);
+  });
+
+  it("sin depósitos activos, el libro sale vacío sin consultar movimientos ni personas; pedir un depósito ajeno o fallar la lectura no se esconde", async () => {
+    const a = montar({ depositos: () => ok([]) });
+    expect(await movimientosDelDeposito(a.d, contexto, SUC, {})).toEqual({
+      ok: true,
+      dato: { depositos: [], depositoId: null, movimientos: [], siguiente: null },
+    });
+    expect(a.m.llamadas.map((l) => l.que)).toEqual(["depositos"]);
+    const b = montar();
+    expect(codigoDe(await movimientosDelDeposito(b.d, contexto, SUC, { depositoId: P1 }))).toBe(
+      GENERICO,
+    );
+    const c = montar({ depositos: () => err({ tipo: "ERROR_DE_BASE" }) });
+    expect(codigoDe(await movimientosDelDeposito(c.d, contexto, SUC, {}))).not.toBe(GENERICO);
+    expect(c.m.registrados[0]).toContain("ERROR_DE_BASE");
+    const e = montar({ movimientos: () => err({ tipo: "ERROR_DE_BASE" }) });
+    expect(codigoDe(await movimientosDelDeposito(e.d, contexto, SUC, {}))).not.toBe(GENERICO);
+    expect(e.m.registrados[0]).toContain("ERROR_DE_BASE");
+    expect(e.m.llamadas.some((l) => l.que === "personas")).toBe(false);
+  });
+
+  it("sin otra página, «siguiente» es null y el cursor vacío es «sin cursor»", async () => {
+    const { m, d } = montar();
+    const r = await movimientosDelDeposito(d, contexto, SUC, { despues: "" });
+    expect(r.ok && r.dato.siguiente).toBeNull();
+    expect(m.llamadas.find((l) => l.que === "movimientos")?.entrada).toEqual({
+      depositoId: D1,
+      despuesDe: undefined,
+    });
   });
 
   it("sin permiso para ver personas, el correo sale en null y la lista sale igual; otro fallo de identidad no se esconde", async () => {

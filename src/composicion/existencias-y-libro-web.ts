@@ -76,7 +76,7 @@ export type MovimientosParaLaPantalla = Readonly<{
   siguiente: string | null;
 }>;
 
-const MOTIVOS_DE_RECHAZO: ReadonlySet<string> = new Set([
+const MOTIVOS_DE_RECHAZO: ReadonlySet<unknown> = new Set<string>([
   "MODULO_EN_DESARROLLO",
   "MODULO_NO_ACTIVO",
   "MODULO_EN_SOLO_LECTURA",
@@ -96,36 +96,28 @@ function entradaDeLectura(crudo: unknown): Resultado<EntradaDeLectura, ErrorDeEn
 
 /** El cursor de las dos listas viaja como texto opaco: JSON en base64 de URL. Uno que no vuelve a la forma pedida no se acepta. */
 const codificar = (cursor: object): string =>
-  Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
+  Buffer.from(JSON.stringify(cursor)).toString("base64url");
 
-function decodificar<T>(
+function decodificar<S extends z.ZodType>(
   opaco: string | undefined,
-  esValido: (x: unknown) => x is T,
-): T | undefined | "ROTO" {
+  forma: S,
+): z.output<S> | undefined | "ROTO" {
   if (opaco === undefined || opaco === "") return undefined;
   try {
-    const x: unknown = JSON.parse(Buffer.from(opaco, "base64url").toString("utf8"));
-    return esValido(x) ? x : "ROTO";
+    const leido = forma.safeParse(JSON.parse(Buffer.from(opaco, "base64url").toString()));
+    return leido.success ? (leido.data as z.output<S>) : "ROTO";
   } catch {
     return "ROTO";
   }
 }
 
-const esTexto = (x: unknown): x is string => typeof x === "string";
-const esCursorDeExistencias = (
-  x: unknown,
-): x is Readonly<{ nombreClave: string; articuloId: string; depositoId: string }> =>
-  typeof x === "object" &&
-  x !== null &&
-  esTexto((x as Record<string, unknown>)["nombreClave"]) &&
-  esTexto((x as Record<string, unknown>)["articuloId"]) &&
-  esTexto((x as Record<string, unknown>)["depositoId"]);
-const esCursorDeMovimientos = (x: unknown): x is CursorDeMovimientosDeDeposito =>
-  typeof x === "object" &&
-  x !== null &&
-  esTexto((x as Record<string, unknown>)["hechoEn"]) &&
-  esTexto((x as Record<string, unknown>)["movimientoId"]) &&
-  typeof (x as Record<string, unknown>)["numero"] === "number";
+/** La forma de cada cursor: solo lo que el servidor entrega y nada más (lista de permitidos; ante la duda se rechaza). La del cursor de movimientos es la de `CursorDeMovimientosDeDeposito`. */
+const formaDelCursorDeExistencias = z
+  .object({ nombreClave: z.string(), articuloId: z.string(), depositoId: z.string() })
+  .strict();
+const formaDelCursorDeMovimientos = z
+  .object({ hechoEn: z.string(), movimientoId: z.string(), numero: z.number().int() })
+  .strict() satisfies z.ZodType<CursorDeMovimientosDeDeposito>;
 
 /** Los depósitos de la sucursal que se ofrecen en el selector (los activos) y el elegido: el pedido si es uno de ellos, si no el primero. Pedir uno que no está es el genérico. */
 async function depositosYElegido(
@@ -144,6 +136,13 @@ async function depositosYElegido(
   return ok({ depositos, depositoId: pedido ?? depositos[0]?.id ?? null });
 }
 
+type Elegido = Readonly<{
+  depositos: readonly DepositoParaElSelector[];
+  depositoId: string | null;
+}>;
+const SIN_EXISTENCIAS: PaginaDeExistencias = { existencias: [], siguiente: null };
+const SIN_MOVIMIENTOS: PaginaDeMovimientosDeDeposito = { movimientos: [], siguiente: null };
+
 /** Las existencias del depósito elegido de la sucursal elegida, de a una página. */
 export function existenciasDelDeposito(
   d: DependenciasDeExistenciasYLibroWeb,
@@ -153,38 +152,33 @@ export function existenciasDelDeposito(
 ): Promise<Respuesta<ExistenciasParaLaPantalla>> {
   return accionDeStock<
     EntradaDeLectura,
-    Readonly<{
-      depositos: readonly DepositoParaElSelector[];
-      depositoId: string | null;
-      pagina: PaginaDeExistencias | null;
-    }>,
+    Elegido & Readonly<{ pagina: PaginaDeExistencias }>,
     ExistenciasParaLaPantalla
   >(
     d.respuesta,
     crudo,
     entradaDeLectura,
     async (entrada) => {
-      const cursor = decodificar(entrada.despues, esCursorDeExistencias);
+      const cursor = decodificar(entrada.despues, formaDelCursorDeExistencias);
       if (cursor === "ROTO") return err("IDENTIFICADOR_INVALIDO");
       const elegido = await depositosYElegido(d, contexto, sucursalId, entrada.depositoId);
       if (!elegido.ok) return elegido;
       const { depositos, depositoId } = elegido.valor;
-      if (depositoId === null) return ok({ depositos, depositoId, pagina: null });
+      if (depositoId === null) return ok({ depositos, depositoId, pagina: SIN_EXISTENCIAS });
       const pagina = await d.consultas().existencias(contexto, { depositoId, despuesDe: cursor });
-      if (!pagina.ok) return pagina;
-      return ok({ depositos, depositoId, pagina: pagina.valor });
+      return pagina.ok ? ok({ depositos, depositoId, pagina: pagina.valor }) : pagina;
     },
-    ({ depositos, depositoId, pagina }) => ({
+    ({ depositos, depositoId, pagina }): ExistenciasParaLaPantalla => ({
       depositos,
       depositoId,
-      existencias: (pagina?.existencias ?? []).map((x) => ({
+      existencias: pagina.existencias.map((x) => ({
         articuloId: x.articuloId,
         nombre: x.nombre,
         unidadId: x.unidadId,
         existencia: x.existencia,
         negativa: x.existencia.startsWith("-"),
       })),
-      siguiente: pagina?.siguiente == null ? null : codificar(pagina.siguiente),
+      siguiente: pagina.siguiente === null ? null : codificar(pagina.siguiente),
     }),
   );
 }
@@ -198,25 +192,26 @@ export function movimientosDelDeposito(
 ): Promise<Respuesta<MovimientosParaLaPantalla>> {
   return accionDeStock<
     EntradaDeLectura,
-    Readonly<{
-      depositos: readonly DepositoParaElSelector[];
-      depositoId: string | null;
-      pagina: PaginaDeMovimientosDeDeposito | null;
-      correos: ReadonlyMap<string, string>;
-    }>,
+    Elegido &
+      Readonly<{ pagina: PaginaDeMovimientosDeDeposito; correos: ReadonlyMap<string, string> }>,
     MovimientosParaLaPantalla
   >(
     d.respuesta,
     crudo,
     entradaDeLectura,
     async (entrada) => {
-      const cursor = decodificar(entrada.despues, esCursorDeMovimientos);
+      const cursor = decodificar(entrada.despues, formaDelCursorDeMovimientos);
       if (cursor === "ROTO") return err("IDENTIFICADOR_INVALIDO");
       const elegido = await depositosYElegido(d, contexto, sucursalId, entrada.depositoId);
       if (!elegido.ok) return elegido;
       const { depositos, depositoId } = elegido.valor;
       if (depositoId === null)
-        return ok({ depositos, depositoId, pagina: null, correos: new Map<string, string>() });
+        return ok({
+          depositos,
+          depositoId,
+          pagina: SIN_MOVIMIENTOS,
+          correos: new Map<string, string>(),
+        });
       const pagina = await d
         .consultas()
         .movimientosDelDeposito(contexto, { depositoId, despuesDe: cursor });
@@ -227,18 +222,14 @@ export function movimientosDelDeposito(
           ? ok(new Map<ReturnType<typeof personaId>, string>())
           : await d.consultasDeIdentidad().personasParaMostrar(contexto, { ids });
       // Sin permiso para ver personas, la lista sale con el correo en `null`; cualquier otro fallo (base, entrada) no se esconde.
-      if (
-        !personas.ok &&
-        !(typeof personas.error === "string" && MOTIVOS_DE_RECHAZO.has(personas.error))
-      )
-        return err(personas.error);
+      if (!personas.ok && !MOTIVOS_DE_RECHAZO.has(personas.error)) return err(personas.error);
       const correos = new Map<string, string>(personas.ok ? personas.valor : []);
       return ok({ depositos, depositoId, pagina: pagina.valor, correos });
     },
-    ({ depositos, depositoId, pagina, correos }) => ({
+    ({ depositos, depositoId, pagina, correos }): MovimientosParaLaPantalla => ({
       depositos,
       depositoId,
-      movimientos: (pagina?.movimientos ?? []).map((m) => ({
+      movimientos: pagina.movimientos.map((m) => ({
         movimientoId: m.movimientoId,
         numero: m.numero,
         clase: m.clase,
@@ -253,7 +244,7 @@ export function movimientosDelDeposito(
         anulado: m.anulado,
         anulable: m.anulable,
       })),
-      siguiente: pagina?.siguiente == null ? null : codificar(pagina.siguiente),
+      siguiente: pagina.siguiente === null ? null : codificar(pagina.siguiente),
     }),
   );
 }

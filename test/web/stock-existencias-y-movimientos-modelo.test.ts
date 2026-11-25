@@ -42,6 +42,8 @@ describe("la dirección de las pantallas de lectura", () => {
   it("lleva el depósito y el cursor opaco, y sin ellos es la dirección sola", () => {
     expect(hrefDeLectura("existencias", null)).toBe("/stock/existencias");
     expect(hrefDeLectura("movimientos", "d1")).toBe("/stock/movimientos?deposito=d1");
+    expect(hrefDeLectura("movimientos", "d1", null)).toBe("/stock/movimientos?deposito=d1");
+    expect(hrefDeLectura("existencias", null, "ab")).toBe("/stock/existencias?despues=ab");
     expect(hrefDeLectura("movimientos", "d1", "ab_-9")).toBe(
       "/stock/movimientos?deposito=d1&despues=ab_-9",
     );
@@ -52,8 +54,10 @@ describe("la dirección de las pantallas de lectura", () => {
       depositoId: "d1",
       despues: "x",
     });
-    expect(leerLaLectura({ deposito: ["a", "b"], despues: "" })).toEqual({});
-    expect(leerLaLectura({})).toEqual({});
+    expect(leerLaLectura({ deposito: ["a", "b"], despues: "" })).toStrictEqual({});
+    expect(leerLaLectura({})).toStrictEqual({});
+    expect(leerLaLectura({ deposito: "d1" })).toStrictEqual({ depositoId: "d1" });
+    expect(leerLaLectura({ despues: "x" })).toStrictEqual({ despues: "x" });
   });
 });
 
@@ -123,6 +127,15 @@ describe("armarLosMovimientos", () => {
       mov({ clase: "ANULACION", motivo: "ANULACION", quien: null, anulado: true }),
     ]).tarjetas;
     expect(t).toMatchObject({ clase: "Anulación", anulado: true, detalle: "Harina" });
+  });
+
+  it("el selector lista los depósitos con su dirección y marca solo el elegido; sin otra página no hay «Siguiente»", () => {
+    const vista = armar([mov()]);
+    expect(vista.opciones).toStrictEqual([
+      { id: "d1", nombre: "Salón", href: "/stock/movimientos?deposito=d1", actual: false },
+      { id: "d2", nombre: "Cocina", href: "/stock/movimientos?deposito=d2", actual: true },
+    ]);
+    expect(vista.hrefDeSiguiente).toBeNull();
   });
 
   it("una clase que no conoce no se rotula (lista de permitidos)", () => {
