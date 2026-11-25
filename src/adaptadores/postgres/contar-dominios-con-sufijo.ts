@@ -42,28 +42,29 @@ export async function contarDominiosConSufijo(
   if (cadena.trim() === "") throw new RangeError("falta la cadena de lectura");
   if (!FORMA_DE_SUFIJO_DE_HOST.test(sufijo)) throw new RangeError("el sufijo de host no es válido");
   const cliente = crearCliente(cadena);
+  return contar(cliente, sufijo)
+    .catch((error: unknown): never => {
+      // Sin el mensaje ni el error original: los de `pg` pueden traer la cadena de conexión.
+      const tipo = error instanceof Error ? error.name : "falla que no es un Error";
+      throw new Error(`no se pudo contar los dominios (${tipo})`);
+    })
+    .finally(() => cliente.end().then(undefined, () => undefined));
+}
+
+async function contar(cliente: ClienteDeConteo, sufijo: string): Promise<number> {
+  await cliente.connect();
+  await cliente.query("BEGIN READ ONLY");
   try {
-    await cliente.connect();
-    await cliente.query("BEGIN READ ONLY");
-    try {
-      const { rows } = await cliente.query(
-        "SELECT count(*)::int AS cuenta FROM dominio WHERE right(lower(host), length($1)) = $1",
-        [sufijo],
-      );
-      const fila = rows[0] as { cuenta?: unknown } | undefined;
-      if (typeof fila?.cuenta !== "number" || !Number.isInteger(fila.cuenta) || fila.cuenta < 0) {
-        throw new TypeError("la base devolvió algo que no es un conteo");
-      }
-      return fila.cuenta;
-    } finally {
-      await cliente.query("ROLLBACK").catch(() => undefined);
+    const { rows } = await cliente.query(
+      "SELECT count(*)::int AS cuenta FROM dominio WHERE right(lower(host), length($1)) = $1",
+      [sufijo],
+    );
+    const fila = rows[0] as { cuenta?: unknown } | undefined;
+    if (typeof fila?.cuenta !== "number" || !Number.isInteger(fila.cuenta) || fila.cuenta < 0) {
+      throw new TypeError("la base devolvió algo que no es un conteo");
     }
-  } catch (error) {
-    // Sin el mensaje ni el error original: los de `pg` pueden traer la cadena de conexión.
-    const tipo = error instanceof Error ? error.name : "falla que no es un Error";
-    // eslint-disable-next-line preserve-caught-error -- a propósito: la causa original de `pg` puede traer la cadena de conexión
-    throw new Error(`no se pudo contar los dominios (${tipo})`);
+    return fila.cuenta;
   } finally {
-    await cliente.end().catch(() => undefined);
+    await cliente.query("ROLLBACK").catch(() => undefined);
   }
 }
