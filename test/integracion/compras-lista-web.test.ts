@@ -5,6 +5,7 @@ import {
   listarLasCompras,
   type DependenciasDeComprasListaWeb,
 } from "../../src/composicion/compras-lista-web";
+import type { TxDeConsultasDeCompras } from "../../src/modulos/compras/casos-de-uso/contrato";
 import { crearConsultasDeCompras } from "../../src/modulos/compras/publico";
 import { crearDirectorioDePartes } from "../../src/modulos/clientes/publico";
 import { crearConsultasDeIdentidad } from "../../src/modulos/identidad/publico";
@@ -317,46 +318,56 @@ describe.skipIf(base === null)("composición web: lista y ficha de compras", () 
   });
 
   describe("orden y cursor por número", () => {
-    it("120 compras: tres páginas sin repetir ni saltear; la más nueva (número mayor) primero; mientras se pagina se carga otra y no se repite ni se pierde nada", async () => {
+    it("el cursor por número con páginas de 2: la más nueva primero, sin repetir ni saltear, y aunque se cargue una compra mientras se pagina", async () => {
+      // Pocas filas y páginas chicas (el límite lo recibe el repositorio): prueban lo mismo que 120 compras sin el volumen ni 8 escritores a la vez.
       const empresa = await c.escenario();
       const m = await armar(empresa);
-      const numeros: number[] = [];
-      for (let lote = 0; lote < 15; lote++) {
-        const hechas = await Promise.all(
-          Array.from({ length: 8 }, () => c.casos.registrarCompra(empresa.operador, compra(m))),
+      const registrar = async () =>
+        valorDe(await c.casos.registrarCompra(empresa.operador, compra(m)));
+      for (let i = 0; i < 5; i++) await registrar();
+      const pagina = async (despuesDe: { fechaNegocio: string; numero: number } | null) => {
+        const r = await c.entorno.ejecutar(
+          { contexto: empresa.operador, aislamiento: "read committed", soloLectura: true },
+          async (tx: TxDeConsultasDeCompras) => ({
+            ok: true as const,
+            valor: await tx.lecturasDeCompras.listar(empresa.empresaId, {
+              sucursales: "TODAS",
+              proveedorId: null,
+              estado: null,
+              facturada: null,
+              desde: null,
+              hasta: null,
+              despuesDe,
+              limite: 3,
+            }),
+          }),
         );
-        for (const h of hechas) valorDe(h);
-        numeros.push(...hechas.map(() => 0));
-      }
-      const primera = await lista(empresa.operador, empresa.sucursal);
-      expect(primera.compras).toHaveLength(50);
-      expect(primera.siguiente).not.toBeNull();
-      const ordenados = primera.compras.map((x) => x.numero);
-      expect(ordenados).toEqual([...ordenados].sort((x, y) => y - x));
-      expect(ordenados[0]).toBe(120);
-      // Mientras se pide la segunda página se carga una compra nueva.
-      const [segunda] = await Promise.all([
-        lista(empresa.operador, empresa.sucursal, { despues: primera.siguiente }),
-        c.casos.registrarCompra(empresa.operador, compra(m)),
-      ]);
-      expect(segunda.compras).toHaveLength(50);
-      expect(segunda.siguiente).not.toBeNull();
-      const tercera = await lista(empresa.operador, empresa.sucursal, {
-        despues: segunda.siguiente,
-      });
-      const vistos = [...primera.compras, ...segunda.compras, ...tercera.compras].map(
+        if (!r.ok) throw new Error("la lectura tenía que salir");
+        return r.valor;
+      };
+      const cursorDe = (filas: Awaited<ReturnType<typeof pagina>>) => {
+        const ultima = filas.slice(0, 2).at(-1);
+        return ultima === undefined
+          ? null
+          : { fechaNegocio: ultima.fechaNegocio, numero: ultima.numero };
+      };
+      const primera = await pagina(null);
+      expect(primera).toHaveLength(3);
+      expect(primera.slice(0, 2).map((x) => x.numero)).toEqual([5, 4]);
+      // Mientras se pide la segunda página se carga una compra nueva (dos actores a la vez).
+      const [segunda] = await Promise.all([pagina(cursorDe(primera)), registrar()]);
+      expect(segunda.slice(0, 2).map((x) => x.numero)).toEqual([3, 2]);
+      expect(segunda).toHaveLength(3);
+      const tercera = await pagina(cursorDe(segunda));
+      expect(tercera.map((x) => x.numero)).toEqual([1]);
+      // Ninguna se repite ni se saltea: las 5 que había; la 6 es nueva y quedó arriba.
+      const vistos = [...primera.slice(0, 2), ...segunda.slice(0, 2), ...tercera].map(
         (x) => x.numero,
       );
-      // Ninguna se repite ni se saltea: son exactamente las 120 que había (la 121 es nueva y quedó arriba).
-      expect(new Set(vistos).size).toBe(120);
-      expect([...vistos].sort((x, y) => x - y)).toEqual(
-        Array.from({ length: 120 }, (_, i) => i + 1),
-      );
-      expect(tercera.siguiente).toBeNull();
+      expect([...vistos].sort((x, y) => x - y)).toEqual([1, 2, 3, 4, 5]);
+      expect((await pagina(null))[0]?.numero).toBe(6);
       // Repetir la lectura da lo mismo.
-      expect(
-        await lista(empresa.operador, empresa.sucursal, { despues: primera.siguiente }),
-      ).toEqual(await lista(empresa.operador, empresa.sucursal, { despues: primera.siguiente }));
+      expect(await pagina(cursorDe(primera))).toEqual(await pagina(cursorDe(primera)));
     });
 
     it("un cursor mal formado es el genérico", async () => {

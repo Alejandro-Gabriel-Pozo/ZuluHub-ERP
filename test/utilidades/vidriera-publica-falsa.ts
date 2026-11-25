@@ -109,6 +109,10 @@ export function crearVidrieraPublicaFalsa(marcaPorCodigo: MarcaPorCodigo): Vidri
           : comoVidrieraPublicada(vidriera),
       );
     },
+    // El falso no tiene empresas dueñas: en un host de marca, vacío; en uno de empresa, tampoco hay cartas de ejemplo asociadas.
+    listarDelHost() {
+      return Promise.resolve([]);
+    },
   };
 }
 
