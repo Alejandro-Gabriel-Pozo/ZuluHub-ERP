@@ -134,6 +134,14 @@ describe("fijarElControlDeStock", () => {
     }
   });
 
+  it("solo `FUNCION_NO_INCLUIDA` con forma de objeto es el genérico: otro objeto, uno sin `error` o la ausencia de error siguen su camino común", async () => {
+    for (const error of [{ error: "OTRO_ERROR" }, { tipo: "X" }, { error: undefined }, null]) {
+      const { d } = montar({ controlar: () => err(error) });
+      const r = await fijarElControlDeStock(d, contexto, { productoId: ID, controlado: true });
+      expect(codigoDe(r)).not.toBe(GENERICO);
+    }
+  });
+
   it("no altera: «true» nunca llama a dejarDeControlar ni «false» a controlarArticulo", async () => {
     const a = montar();
     await fijarElControlDeStock(a.d, contexto, { productoId: ID, controlado: true });
@@ -213,6 +221,21 @@ describe("verLaExistenciaPropia", () => {
       consultas: () => ({ existencias }),
       respuesta: { registrar: () => undefined },
     }) as unknown as DependenciasDeControlDeStockWeb;
+
+  it("una existencia que no es un decimal exacto no se suma: sale como inesperado y deja registrado de qué dato era", async () => {
+    const registrados: string[] = [];
+    const d = {
+      casosDeUso: () => ({}),
+      consultas: () => ({
+        existencias: () => Promise.resolve(ok({ existencias: [fila(ID, "1,5")], siguiente: null })),
+      }),
+      respuesta: { registrar: (detalle: string) => registrados.push(detalle) },
+    } as unknown as DependenciasDeControlDeStockWeb;
+    const r = await verLaExistenciaPropia(d, contexto, entrada);
+    expect(r.ok).toBe(false);
+    expect(registrados).toHaveLength(1);
+    expect(registrados[0]).toContain("existencia");
+  });
 
   it("suma exacta de los saldos del producto en los depósitos que ve la persona y solo de ese producto (otro con nombre parecido no cuenta)", async () => {
     const llamadas: unknown[] = [];

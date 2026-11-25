@@ -39,11 +39,8 @@ const GENERICO = errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA");
 /** Los errores de negocio del módulo (cadenas con nombre) salen como el genérico; lo que no es de negocio (la base, un defecto) sigue su camino común. */
 function conError(error: unknown, d: DependenciasDeControlDeStockWeb): ErrorPublico {
   // `{ error: "FUNCION_NO_INCLUIDA", perilla }`: el elaborado y el vendible sin la función «Producción» en el plan; también el genérico (si no, saldría como un fallo inesperado con referencia).
-  const deObjeto =
-    typeof error === "object" &&
-    error !== null &&
-    "error" in error &&
-    error.error === "FUNCION_NO_INCLUIDA";
+  // `Object(...)` envuelve cualquier valor (también `null`, `undefined` y las cadenas) sin lanzar: lo que no es un objeto con `error` da `undefined`.
+  const deObjeto = (Object(error) as { error?: unknown }).error === "FUNCION_NO_INCLUIDA";
   return deObjeto || (typeof error === "string" && error !== "ERROR_DE_LA_BASE_NO_TRADUCIDO")
     ? GENERICO
     : errorAPublico(error, d.respuesta);
