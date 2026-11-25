@@ -188,4 +188,24 @@ export const ERRORES_DE_IDENTIDAD_POR_RESTRICCION: Readonly<Record<string, strin
   traspaso_gerencia_inmutable: "NO_TRADUCIDA",
   traspaso_gerencia_transicion_invalida: "TRASPASO_RESUELTO",
   traspaso_gerencia_resuelto_inmutable: "TRASPASO_RESUELTO",
+
+  // 0094 y 0097 (H4b): los roles propios de la empresa y sus versiones. El caso de uso comprueba antes casi todo; estas son la segunda línea (y la primera ante dos pedidos a la vez).
+  rol_de_empresa_pkey: "ID_DE_ROL_EN_USO",
+  rol_de_empresa_nombre_uk: "NOMBRE_DE_ROL_EN_USO",
+  rol_de_empresa_nombre_ck: "NOMBRE_DE_ROL_INVALIDO",
+  rol_de_empresa_nombre_clave_ck: "NOMBRE_DE_ROL_INVALIDO",
+  rol_de_empresa_id_empresa_uk: "NO_TRADUCIDA",
+  rol_de_empresa_empresa_id_fkey: "EMPRESA_INEXISTENTE",
+  rol_de_empresa_plantilla_origen_fkey: "NO_TRADUCIDA",
+  rol_de_empresa_inmutable: "NO_TRADUCIDA",
+  rol_de_empresa_con_personas: "ROL_CON_PERSONAS",
+  // Dos ediciones a la vez agregan la misma versión siguiente: la segunda choca con la clave primaria y se pide que mire de nuevo.
+  version_de_rol_pkey: "EDICION_DESACTUALIZADA",
+  version_de_rol_numero_ck: "NO_TRADUCIDA",
+  version_de_rol_acciones_ck: "NO_TRADUCIDA",
+  version_de_rol_empresa_id_fkey: "EMPRESA_INEXISTENTE",
+  version_de_rol_creado_por_fkey: "PERSONA_INEXISTENTE",
+  version_de_rol_rol_fkey: "NO_TRADUCIDA",
+  version_de_rol_numero_invalido: "NO_TRADUCIDA",
+  version_de_rol_pisos: "NO_TRADUCIDA",
 };

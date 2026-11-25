@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0962",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Ver, crear, editar y archivar roles propios son permisos solo del gerente: ni el administrador ni el empleado los reciben, y la base lo impone con pisos «solo gerente».",
+  "que_cambia": "El administrador no gestiona roles de la empresa; solo el gerente. Es lo que el dueño fijó el 14/11 y el 25/11/2026.",
+  "donde": "src/capacidades/permisos/permisos-de-administracion.ts; src/capacidades/modulos/catalogo-administracion.ts; migraciones/0094_permisos_configurables.sql (semilla); migraciones/0097_roles_propios_de_la_empresa.sql"
+}

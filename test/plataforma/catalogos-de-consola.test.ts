@@ -270,6 +270,14 @@ describe("catalogoDePerillas", () => {
         modulo: "compras",
       },
       {
+        perilla: "roles_propios_por_empresa",
+        tipo: "LIMITE",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "LIMITE", limite: "ILIMITADO" },
+        requiere: null,
+        modulo: "administracion",
+      },
+      {
         perilla: "salon",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",

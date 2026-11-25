@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0963",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Los roles propios por empresa los limita una perilla del plan sin tope de base (ilimitado), más un tope técnico de 100 roles propios activos por empresa.",
+  "que_cambia": "Hoy ninguna empresa tiene un límite comercial de roles; el plan puede ponerlo después sin tocar código. Los roles archivados no cuentan.",
+  "donde": "src/capacidades/planes/perillas.ts; src/modulos/identidad/dominio/rol-propio.ts (MAXIMO_DE_ROLES_PROPIOS_ACTIVOS_POR_EMPRESA)"
+}
