@@ -4,7 +4,7 @@ Fase de análisis, 25/11/2026. No cambia código. Pedido del orquestador por dec
 
 ## En una frase
 
-El cron no hace falta cada 5 minutos ni de noche: los clientes trabajan de 07:00 a 14:00 de Argentina (y, siendo generosos, de 06:00 a 18:00), y todo lo que el cron hace tiene su respaldo o tolera esperar. Recomendación: **un solo cron cada 15 minutos con ventana horaria, `*/15 9-20 * * *` (hora UTC = 06:00 a 17:45 de Argentina)**: ≈33 CU-h al mes de cómputo del cron contra ≈180 hoy. Hay **un riesgo concreto** si el mail de alta del gerente queda esperando mucho (vence a las 24 horas) y **un hueco de código** que conviene cerrar aparte: las invitaciones no se despachan de inmediato. Lo que decidió el dueño (25/11/2026): Vercel **Pro**; el cron puede ser más espaciado porque los clientes son chicos y no trabajan a todas horas. **NV** = no verificado en esta sesión.
+El cron no hace falta cada 5 minutos ni de noche: los clientes trabajan de 07:00 a 14:00 de Argentina (y, siendo generosos, de 06:00 a 18:00), y todo lo que el cron hace tiene su respaldo o tolera esperar. Recomendación original (sección (d)): A, `*/15 9-20 * * *`. El dueño eligió **B** como base provisoria (sección (d)) y preguntó si el cron en horas de trabajo hace falta (sección (i)): **B por ahora, el despacho inmediato de invitaciones en un PR aparte y no construir el despacho oportunista todavía**. Hay **un riesgo concreto** si el mail de alta del gerente queda esperando mucho (vence a las 24 horas) y **un hueco de código** que conviene cerrar aparte: las invitaciones no se despachan de inmediato. Lo que decidió el dueño (25/11/2026): Vercel **Pro**; el cron puede ser más espaciado porque los clientes son chicos y no trabajan a todas horas. **NV** = no verificado en esta sesión.
 
 ## (a) Tipos de trabajo y quién los despacha
 
@@ -112,6 +112,54 @@ El plan del dueño es **Pro** (25/11/2026): mínimo una vez por minuto, 100 cron
 | Barrido de sesiones, verificaciones y contadores                | Nada visible: solo crecen las tablas unas horas.                                                                                                                                                                          | Sí: 10 000 filas por pasada, idempotente (`barrido-de-autenticacion.ts`).                                                                                                                                                                       |
 | Avisos del traspaso                                             | Hoy no salen con ningún cron (sin manejador).                                                                                                                                                                             | —                                                                                                                                                                                                                                               |
 | Reintentos de la cola                                           | De noche no se gastan intentos (no corre nada); el reintento «de 1 minuto» pasa a ser «a la próxima pasada».                                                                                                              | Sí.                                                                                                                                                                                                                                             |
+
+## (i) ¿Hace falta el cron en horas de trabajo? La variante «oportunista»
+
+Pregunta del dueño (25/11/2026): «¿es necesario el cron en horas de trabajo? ¿No se actualizaría con el propio trabajo si se toca algo que toca el cron?». El dueño eligió la alternativa B como base provisoria.
+
+### Qué se despacha de inmediato (verificado con `grep` en `apps/` y `src/`)
+
+- **Un solo uso real:** `conIntentoInmediato` (`apps/web/servidor/facturacion.ts:82-91`) llama a `despacharPorClavesDespuesDeConfirmar` (`despacho-inmediato.ts:41`) al emitir una factura (`facturacion.ts:96`), una nota de crédito (`:102`), una nota de débito (`:108`) o una factura desde un ticket (`facturar-tickets.ts:71`): despacha `fiscal.validar_comprobante` de ese comprobante, con `after()` y `esperarHastaTerminar` (`despacho-inmediato.ts:46-50`).
+- `despacharDespuesDeConfirmar(ids)` (`despacho-inmediato.ts:22`) **no tiene ninguna llamada**. Nada más usa `despacharAhora` ni `despacharPorClaves` fuera del procesador y de ese archivo.
+
+Dependen **solo del cron**: `enviar_invitacion` (todas sus vías), `revocar_sesiones`, `fiscal.reconciliar` (el productor es la pasada del cron, `trabajos.ts:96`), el reintento de cualquier trabajo que falló (el cron es quien lo vuelve a tomar al vencer su espera), el reencolado de `PENDIENTE` huérfanos (lo hace la reconciliación), el barrido de autenticación y el retomado de un trabajo `EN_CURSO` cuyo proceso murió (vence a los 5 minutos).
+
+### Respuesta a la pregunta del dueño
+
+**Hoy no, pero casi: el cron en horas de trabajo es la red de seguridad de lo fiscal y el camino normal de todo lo demás.** Es camino normal para las invitaciones, que no tienen despacho inmediato (un hueco de código: con despacho inmediato pasarían a ser también red de seguridad). Es red de seguridad para lo fiscal (el comprobante sale de inmediato y el cron solo levanta lo que falló) y para los vencimientos por tiempo (reintentos, trabajo retomado, barrido). Cerrar el hueco de las invitaciones (un PR chico aparte: que las acciones que encolan `enviar_invitacion` llamen a `despacharPorClavesDespuesDeConfirmar`) es lo que permite espaciar el cron en horas de trabajo sin que nadie espere un mail.
+
+### La variante oportunista
+
+Idea: que una acción confirmada de la empresa E despache además los trabajos vencidos pendientes de E. Hay un punto único donde enganchar: `conLaEmpresa` (`apps/web/servidor/con-la-empresa.ts:19`, usado por 34 archivos de acciones).
+
+- **Qué falta construir:** (1) una lectura nueva de la cola `candidatosDeLaEmpresa(empresaId, ahora, limite)` (hoy `candidatos` es de toda la cola, `procesador.ts` y `cola-de-trabajos.ts:55`; `idsPorClaves` es por empresa pero pide claves); (2) un método del procesador que la use; (3) un productor de la reconciliación por empresa (hoy solo el cron encola `fiscal.reconciliar`); (4) el enganche en `conLaEmpresa` con `after()`; (5) pruebas de concurrencia e idempotencia. No toca migraciones.
+- **Ventajas:** reintentos y reconciliación corren «con el trabajo» (cuando hay actividad, a los segundos y no a los 15 minutos), y con actividad casi continua el cron de horas de trabajo sobra.
+- **Riesgos:** (a) **carga extra en cada solicitud** (una consulta a la cola por acción, aunque no haya nada: se puede limitar a una por empresa cada N minutos, pero sin memoria compartida entre funciones eso exige otro dato en la base); (b) **un trabajo lento atado a la solicitud de una persona**: con `after()` la respuesta ya salió, pero la función sigue viva hasta terminar y consume su tiempo (ARCA autoriza hasta 25 s, más consulta y último autorizado, `contrato-de-facturacion.ts:107-118`; el tope de las funciones que alojan esas acciones es 90 s, `maxDuration`, y una función cortada deja el trabajo `EN_CURSO` hasta vencer su toma de 5 minutos); (c) **sin acciones no corre nada**: lo que falla con la última acción del día (un comprobante «Confirmando») espera a la red de seguridad; (d) **un trabajo ajeno a lo que hizo la persona** se ejecuta a nombre de su solicitud (sin riesgo de datos: el trabajo corre con su propio contexto de sistema `contextoDeSistema`, no con el de la persona, y la cola solo ve su empresa en `idsPorClaves`; hay que cuidarlo en la lectura nueva); (e) más superficie para probar que una pasada y una acción simultáneas no pisen.
+- **Garantía de que nada se ejecuta dos veces:** la toma es un `UPDATE … WHERE id = $1 AND (PENDIENTE y vencido, o EN_CURSO con la toma vencida) RETURNING` (`src/adaptadores/postgres/cola-de-trabajos.ts:70-90`): solo uno de dos procesos simultáneos recibe la fila (el otro obtiene `NO_TOMADO`); el cierre (`marcarHecho`, `reprogramar`, `marcarFallido`) está «cercado» por el número de intento, así que quien perdió el plazo no cierra lo de otro (`cola-de-trabajos.ts` del puerto, comentario inicial). Eso ya vale hoy para el cron y el despacho inmediato a la vez; el despacho oportunista usaría la misma `procesarUno`. Además cada manejador es idempotente (claves por trabajo y por mail, la reconciliación consulta a ARCA y no reenvía), por si una toma vence y otro retoma.
+
+### Alternativas y recomendación
+
+| Alternativa             | Cron en horas de trabajo (07-14 AR) | Fuera de horas       | CU-h/mes del cron (solo cron, **NV**) | Peor demora de un trabajo vencido en horas de trabajo            |
+| ----------------------- | ----------------------------------- | -------------------- | ------------------------------------- | ---------------------------------------------------------------- |
+| B tal cual              | cada 15 min                         | cada 2 h             | ≈26                                   | 15 min                                                           |
+| B con red más espaciada | cada 30 min (`*/30 10-16`)          | cada 2 h             | ≈16                                   | 30 min                                                           |
+| Oportunista + red       | ninguno                             | cada 2 h todo el día | ≈8 (más lo que cueste cada acción)    | segundos si hay actividad de esa empresa; hasta 2 h si no la hay |
+
+Las CU-h usan los mismos supuestos de (d) y se **solapan** con el tráfico real: en horas de trabajo con actividad la base ya está encendida y el cron casi no suma, así que **espaciarlo ahí ahorra poco**; lo que ahorra de verdad es la noche.
+
+**Recomendación: B tal cual por ahora, y el despacho inmediato de invitaciones como PR aparte; no construir el oportunista todavía.** Razones: (1) con actividad, el cron cada 15 minutos casi no cuesta (la base ya está despierta), y es la red de seguridad de lo fiscal con una demora máxima de 15 minutos (el plazo fiscal exacto: **NV**; hasta confirmarlo, no conviene alargarla); (2) el oportunista no elimina la red de seguridad (lo que falla con la última acción del día sigue necesitándola), agrega carga y superficie de concurrencia a 34 acciones y su ahorro en horas de trabajo es chico; (3) si el consumo medido de Neon lo exige, el siguiente paso barato es «B con red más espaciada» (30 minutos) con una sola línea de cambio, y recién después el oportunista. De noche: B hace 9 pasadas de 2 horas que cuestan ≈6 CU-h y gastan intentos de reintento; si se quiere ahorrar y evitar eso, quitar la segunda entrada (queda A recortada a 07-14: ≈20 CU-h) cuesta que lo que falle después de las 14:00 AR espere hasta la mañana.
+
+Cambio concreto (sin aplicar), B tal cual: `apps/web/vercel.json`:
+
+```diff
+-  "crons": [{ "path": "/api/trabajos/cron", "schedule": "*/5 * * * *" }]
++  "crons": [
++    { "path": "/api/trabajos/cron", "schedule": "*/15 10-16 * * *" },
++    { "path": "/api/trabajos/cron", "schedule": "0 0,2,4,6,8,17,19,21,23 * * *" }
++  ]
+```
+
+(**NV** si Vercel acepta dos entradas con el mismo path; si no, una ruta hermana que llame a la misma función.) Y `test/arquitectura/vercel-json.test.ts:105-110`: la lista exacta de las dos entradas, con la hora UTC documentada. Más `PRIMER-DESPLIEGUE.md:26` y `:434`.
 
 ## Hallazgos aparte (no tocados)
 
