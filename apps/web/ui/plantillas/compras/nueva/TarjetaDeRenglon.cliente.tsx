@@ -6,7 +6,12 @@ import { CampoImporte } from "../../../componentes/CampoImporte";
 import { CampoNumero } from "../../../componentes/CampoNumero";
 import { Selector } from "../../../componentes/Selector";
 import {
-  opcionesDeUnidad,
+  cambiosAlElegirComoSeCompra,
+  nombreDeUnidad,
+  opcionesDeComoSeCompra,
+  opcionesDePrecioPor,
+  presentacionElegida,
+  valorDeComoSeCompra,
   type RenglonEscrito,
   type ResumenDeRenglon,
 } from "./modelo-de-nueva-compra";
@@ -26,8 +31,8 @@ export type PropsDeTarjetaDeRenglon = Readonly<{
 }>;
 
 /**
- * Un renglón de «Nueva compra» (maqueta `compra.html`, `tarjetaLinea`): el producto, «Cómo se compra» (su unidad base u otra de su misma dimensión; las de otra dimensión aparecen apagadas),
- * «Cantidad», «Precio por» y «Precio», y debajo lo que calcula el servidor: «Entra a tu stock», «Costo por unidad de stock» y el importe de la línea («Sin precio» si no hay precio: nunca cero).
+ * Un renglón de «Nueva compra» (maqueta `compra.html`, `tarjetaLinea`): el producto, «Cómo se compra» (sus presentaciones activas, su unidad base u otra de su misma dimensión; las de otra dimensión
+ * aparecen apagadas), «Cantidad», «Peso recibido» (solo con una presentación de peso variable), «Precio por» (las unidades y la presentación elegida) y «Precio», y debajo lo que calcula el servidor: «Entra a tu stock», «Costo por unidad de stock» y el importe de la línea («Sin precio» si no hay precio: nunca cero).
  * La pantalla NO calcula nada: el resumen es el que devolvió `cotizarCompra`, la misma cuenta que usa el alta.
  */
 export function TarjetaDeRenglon({
@@ -39,7 +44,7 @@ export function TarjetaDeRenglon({
   deshabilitada,
   sinPrecio = false,
 }: PropsDeTarjetaDeRenglon) {
-  const unidades = opcionesDeUnidad(renglon.unidadBase);
+  const dePesoVariable = presentacionElegida(renglon)?.dePesoVariable === true;
   return (
     <section className={estilos["tarjeta"]} aria-label={renglon.nombre}>
       <h3 className={estilos["producto"]}>{renglon.nombre}</h3>
@@ -47,11 +52,11 @@ export function TarjetaDeRenglon({
         dato="unidad-de-compra"
         etiqueta={textos.comoSeCompra}
         nombreAccesible={`${textos.comoSeCompra}: ${renglon.nombre}`}
-        valor={renglon.unidadDeCompra}
-        alCambiar={(unidadDeCompra) => {
-          alCambiar({ unidadDeCompra });
+        valor={valorDeComoSeCompra(renglon)}
+        alCambiar={(valor) => {
+          alCambiar(cambiosAlElegirComoSeCompra(renglon, valor));
         }}
-        opciones={unidades}
+        opciones={opcionesDeComoSeCompra(renglon)}
         deshabilitado={deshabilitada}
       />
       <CampoNumero
@@ -64,6 +69,18 @@ export function TarjetaDeRenglon({
         regla={REGLA_DE_CANTIDAD}
         deshabilitado={deshabilitada}
       />
+      {dePesoVariable ? (
+        <CampoNumero
+          dato="peso-recibido-de-compra"
+          etiqueta={`${textos.pesoRecibido} (${nombreDeUnidad(renglon.unidadBase)})`}
+          valor={renglon.pesoReal ?? ""}
+          alCambiar={(pesoReal) => {
+            alCambiar({ pesoReal });
+          }}
+          regla={REGLA_DE_CANTIDAD}
+          deshabilitado={deshabilitada}
+        />
+      ) : null}
       {sinPrecio ? null : (
         <>
           <Selector
@@ -74,7 +91,7 @@ export function TarjetaDeRenglon({
             alCambiar={(unidadDePrecio) => {
               alCambiar({ unidadDePrecio });
             }}
-            opciones={unidades}
+            opciones={opcionesDePrecioPor(renglon)}
             deshabilitado={deshabilitada}
           />
           <CampoImporte

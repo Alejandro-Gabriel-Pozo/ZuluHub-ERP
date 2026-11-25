@@ -201,7 +201,7 @@ export function PantallaDeNuevaCompra({
   const agregarElProducto = (productoId: string) => {
     const elegido = productos.dato?.productos.find((p) => p.productoId === productoId);
     if (elegido === undefined) return;
-    setRenglones([...renglones, renglonNuevo(idSiguiente(renglones), elegido)]);
+    setRenglones([...renglones, renglonNuevo(idSiguiente(renglones), elegido, !recepcion)]);
     setConsultaDeProducto("");
     editado();
   };
