@@ -419,9 +419,9 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
       expect(await c.existencia(dep, a.articulo)).toBe("9.0000");
     });
 
-    it("es un ajuste: nunca se bloquea por existencia negativa (un conteo que encuentra menos tiene que poder aplicarse), ni por BLOQUEAR", async () => {
+    it("es un ajuste: nunca se bloquea por existencia negativa (un conteo que encuentra menos tiene que poder aplicarse), ni por AVISAR", async () => {
       const emp = await c.escenario();
-      await c.fijarNivel(emp.empresa, "BLOQUEAR");
+      await c.fijarNivel(emp.empresa, "AVISAR");
       const dep = await c.deposito(emp);
       const a = await c.articulo(emp);
       valorDe(
@@ -444,7 +444,7 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
           unidadId: "UNIDAD",
         }),
       );
-      // Mientras tanto se vendió todo lo que había (con BLOQUEAR no se podría vender más): la diferencia 0 − 2 deja el saldo en −2.
+      // Mientras tanto se vendió todo lo que había (con AVISAR no se podría vender más sin confirmar): la diferencia 0 − 2 deja el saldo en −2.
       valorDe(
         await c.casos.registrarSalida(enMinutos(emp.gerente, 5), {
           clave: nuevoId(),

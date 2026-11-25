@@ -6,6 +6,6 @@
   "estado": "PENDIENTE_DE_OK",
   "decision": "La columna del rol propio en la membresía y la invitación, el valor PROPIO de los roles y el disparador de cambio de rol van en el tramo T4, no en T1.",
   "que_cambia": "Nada que vea el negocio: T1 no cambia el comportamiento de hoy; esos cambios llegan junto con los casos de uso que los usan.",
-  "donde": "migraciones/0061_permisos_configurables.sql (encabezado); Pedernal-docs h4b-permisos-configurables.md §3.2, §4 y §8",
+  "donde": "migraciones/0094_permisos_configurables.sql (encabezado); Pedernal-docs h4b-permisos-configurables.md §3.2, §4 y §8",
   "motivo": "Agregar PROPIO a los CHECK de rol rompe la prueba que los compara con ROLES_DE_EMPRESA y exige cambiar el tipo RolDeEmpresa, que es de T3 y T4."
 }

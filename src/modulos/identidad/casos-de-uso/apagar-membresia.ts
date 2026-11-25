@@ -29,8 +29,8 @@ const MOTIVO_ENTRANTE_DADO_DE_BAJA = "ENTRANTE_DADO_DE_BAJA";
 /**
  * Apagar la membresía de una persona en la empresa del contexto (diseño §6.3, R4). Contexto
  * OPERATIVO con persona. En una transacción serializable: el guard (`usuarios.apagar`), la empresa
- * opera, y el dominio decide (`decidirApagado`: no existe, ya apagada, es el gerente, es el último
- * admin).
+ * opera, y el dominio decide (`decidirApagado`: no existe, es uno mismo, ya apagada, es el gerente, es el último
+ * admin). Nadie se apaga a sí mismo (`ES_UNO_MISMO`): el actor es la persona del contexto, no un dato del pedido.
  *
  * Apagar deja `activo = false`, apaga TODAS sus asignaciones de sucursal y revoca las invitaciones
  * pendientes dirigidas a su email que incluyan la empresa (si la invitación es de varias empresas
@@ -68,7 +68,7 @@ export function crearApagarMembresia({ transacciones, reglas }: DependenciasDeId
 
         const objetivo = await tx.membresias.obtener(empresaId, entrada.personaId);
         const activas = await tx.membresias.listarActivas(empresaId);
-        const decision = decidirApagado(objetivo, activas);
+        const decision = decidirApagado(objetivo, activas, contexto.personaId);
         if (!decision.ok) return decision;
         if (decision.valor === "YA_APAGADA" || objetivo === null) {
           return ok({ yaEstabaApagada: true, invitacionesRevocadas: 0 });

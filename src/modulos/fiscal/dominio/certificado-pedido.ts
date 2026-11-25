@@ -10,6 +10,7 @@ import { certificadoId, esUuid, type CertificadoId, type EmisorId } from "./iden
  */
 
 /** El alias del certificado (`CN`): letras y dígitos, de 1 a 30. Es la regla de la base (`certificado_alias_ck`). */
+// fuente-unica: ajeno — el 30 del alias del certificado coincide por casualidad con el largo del número de IIBB
 const ALIAS = /^[A-Za-z0-9]{1,30}$/;
 /** La organización (`O`): hasta 64 caracteres (el tope de X.520) y sin caracteres de control. */
 const ORGANIZACION = /^[^\p{Cc}]{1,64}$/u;

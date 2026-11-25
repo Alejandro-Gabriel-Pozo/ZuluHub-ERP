@@ -89,9 +89,12 @@ const TABLAS_LEGIBLES = [
   "plan",
   "version_de_plan",
   "plan_de_tenant",
+  "politica_de_cambio_de_plan", // 0089: la política de cambio de plan, sus condiciones por cambio y los arrepentimientos
+  "condiciones_de_cambio_de_plan",
+  "arrepentimiento_de_plan",
   "ajuste_de_perilla",
   "modulo_de_empresa",
-  "plantilla_de_rol", // 0061 (permisos configurables): la plataforma lee las plantillas, los pisos y las acciones introducidas
+  "plantilla_de_rol", // 0094 (permisos configurables): la plataforma lee las plantillas, los pisos y las acciones introducidas
   "version_de_plantilla",
   "piso_de_plataforma",
   "accion_introducida",
@@ -482,7 +485,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           "modulo_de_empresa.modulo_de_empresa_plataforma_admin_alta:INSERT:RESTRICTIVE",
           "modulo_de_empresa.modulo_de_empresa_plataforma_admin_cambiar:UPDATE:RESTRICTIVE",
           "modulo_de_empresa.modulo_de_empresa_plataforma_con_actor:SELECT:RESTRICTIVE",
-          // 0061 (permisos configurables): con sus restrictivas del actor; las plantillas y las acciones introducidas solo se leen
+          // 0094 (permisos configurables): con sus restrictivas del actor; las plantillas y las acciones introducidas solo se leen
           ...["plantilla_de_rol", "accion_introducida"].flatMap((t) => [
             `${t}.${t}_plataforma_leer:SELECT:PERMISSIVE`,
             `${t}.${t}_plataforma_con_actor:SELECT:RESTRICTIVE`,
@@ -501,6 +504,18 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           "plan_de_tenant.plan_de_tenant_plataforma_leer:SELECT:PERMISSIVE",
           "plan_de_tenant.plan_de_tenant_plataforma_admin_alta:INSERT:RESTRICTIVE",
           "plan_de_tenant.plan_de_tenant_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "politica_de_cambio_de_plan.politica_de_cambio_de_plan_plataforma_alta:INSERT:PERMISSIVE",
+          "politica_de_cambio_de_plan.politica_de_cambio_de_plan_plataforma_leer:SELECT:PERMISSIVE",
+          "politica_de_cambio_de_plan.politica_de_cambio_de_plan_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "politica_de_cambio_de_plan.politica_de_cambio_de_plan_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "condiciones_de_cambio_de_plan.condiciones_de_cambio_de_plan_plataforma_alta:INSERT:PERMISSIVE",
+          "condiciones_de_cambio_de_plan.condiciones_de_cambio_de_plan_plataforma_leer:SELECT:PERMISSIVE",
+          "condiciones_de_cambio_de_plan.condiciones_de_cambio_de_plan_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "condiciones_de_cambio_de_plan.condiciones_de_cambio_de_plan_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "arrepentimiento_de_plan.arrepentimiento_de_plan_plataforma_alta:INSERT:PERMISSIVE",
+          "arrepentimiento_de_plan.arrepentimiento_de_plan_plataforma_leer:SELECT:PERMISSIVE",
+          "arrepentimiento_de_plan.arrepentimiento_de_plan_plataforma_admin_alta:INSERT:RESTRICTIVE",
+          "arrepentimiento_de_plan.arrepentimiento_de_plan_plataforma_con_actor:SELECT:RESTRICTIVE",
           "ajuste_de_perilla.ajuste_de_perilla_plataforma_alta:INSERT:PERMISSIVE",
           "ajuste_de_perilla.ajuste_de_perilla_plataforma_leer:SELECT:PERMISSIVE",
           "ajuste_de_perilla.ajuste_de_perilla_plataforma_admin_alta:INSERT:RESTRICTIVE",

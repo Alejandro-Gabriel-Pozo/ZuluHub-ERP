@@ -1,0 +1,87 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-5);
+  min-width: 0;
+}
+
+.subtitulo {
+  margin: 0;
+  color: var(--color-texto);
+  font-size: var(--tipo-tamano-base);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.direccion {
+  margin: 0;
+  color: var(--color-texto);
+  font-family: ui-monospace, monospace;
+  overflow-wrap: anywhere;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+}
+
+.aviso {
+  min-height: 1lh;
+  margin: 0;
+  color: var(--color-texto);
+}
+
+.qr {
+  width: min(100%, 16rem);
+  height: auto;
+}
+
+.secundario {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-width: var(--objetivo-minimo);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-5);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+  text-decoration: none;
+}
+
+.contador {
+  margin: 0;
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.motivos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-texto);
+}
+
+/* Un grupo de controles (cara, logo): su rótulo es la leyenda, sin el borde que trae el navegador. */
+.grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.leyenda {
+  padding: 0;
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+}

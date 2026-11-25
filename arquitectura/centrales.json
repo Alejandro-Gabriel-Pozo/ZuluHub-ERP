@@ -1,0 +1,158 @@
+{
+  "centrales": [
+    {
+      "ruta": "apps/web/servidor/modulos.ts",
+      "exporta": [
+        "destinosDeAreas",
+        "destinosDeModulos",
+        "pantallasDeCuenta",
+        "ACCION_DE_CONFIGURACION_FISCAL",
+        "puedeVerLaConfiguracionFiscal",
+        "pendientesDeLaEmpresa",
+        "accionesDePuntosDeVenta",
+        "puedeEditarElContactoDeLaSucursal",
+        "accionesDeLaListaDeCaja",
+        "puedeEditarProductos",
+        "puedeCrearProductos",
+        "puedeCambiarPrecios",
+        "puedeEditarOpciones",
+        "OfertaDeLaCarta",
+        "ofertaDeLaCartaEnLinea",
+        "puedeOcultarEnElLocal",
+        "puedeOcultarEnLaEmpresa",
+        "puedeEmitirNotasDeCredito",
+        "puedeEmitirFacturas",
+        "puedeAdministrarMesas",
+        "puedeCambiarDeMesa",
+        "puedeUnirMesas",
+        "puedeDividirCuentas",
+        "puedeEnviarAComandas",
+        "puedeImprimir",
+        "puedeReimprimir",
+        "puedeAdministrarImpresoras"
+      ],
+      "importaDe": [
+        "server-only",
+        "src/contexto/contexto",
+        "src/capacidades/vocabulario/vocabulario",
+        "src/capacidades/modulos/catalogo",
+        "apps/web/ui/navegacion/menu",
+        "apps/web/ui/plantillas/configuracion-fiscal/lista-de-lo-que-falta",
+        "apps/web/ui/plantillas/sesion/*",
+        "apps/web/servidor/permisos-de-la-persona",
+        "apps/web/servidor/ofertas-de-*",
+        "apps/web/servidor/configuracion-fiscal"
+      ],
+      "parteDedicada": "apps/web/servidor/ofertas-de-<módulo>.ts",
+      "soloJunta": false,
+      "lineas": 185
+    },
+    {
+      "ruta": "src/composicion/web.ts",
+      "exporta": ["OpcionesDeWeb", "armarWeb", "Web"],
+      "importaDe": [
+        "src/composicion/web-base",
+        "src/composicion/web-de-*",
+        "src/composicion/conexiones",
+        "src/composicion/emision-fiscal",
+        "src/composicion/cadenas-de-confianza-de-arca",
+        "src/capacidades/permisos/empresa",
+        "src/modulos/fiscal/publico",
+        "src/adaptadores/certificados/lector-x509",
+        "src/puertos/transacciones"
+      ],
+      "parteDedicada": "src/composicion/web-de-<módulo>.ts",
+      "soloJunta": false,
+      "lineas": 91,
+      "excepciones": ["empresas", "fiscal", "identidad"]
+    },
+    {
+      "ruta": "src/capacidades/integracion/contextos.ts",
+      "exporta": ["CONTEXTOS", "IdDeContexto"],
+      "importaDe": [
+        "src/capacidades/integracion/tipos",
+        "src/capacidades/integracion/contextos-de-*"
+      ],
+      "parteDedicada": "src/capacidades/integracion/contextos-de-<módulo>.ts",
+      "soloJunta": true,
+      "lineas": 13
+    },
+    {
+      "ruta": "src/capacidades/integracion/operaciones.ts",
+      "exporta": ["OPERACIONES"],
+      "importaDe": [
+        "src/capacidades/integracion/tipos",
+        "src/capacidades/integracion/contextos",
+        "src/capacidades/integracion/operaciones-de-*"
+      ],
+      "parteDedicada": "src/capacidades/integracion/operaciones-de-<módulo>.ts",
+      "soloJunta": true,
+      "lineas": 12
+    },
+    {
+      "ruta": "src/capacidades/vocabulario/catalogo.ts",
+      "exporta": [
+        "LARGO_MAXIMO_DE_TEXTO",
+        "DefinicionDeTexto",
+        "CATALOGO_DE_TEXTOS",
+        "ClaveDeTexto"
+      ],
+      "importaDe": [
+        "src/capacidades/vocabulario/catalogo-*",
+        "src/capacidades/vocabulario/uso-y-fuente-de-texto"
+      ],
+      "parteDedicada": "src/capacidades/vocabulario/catalogo-<módulo>.ts",
+      "soloJunta": true,
+      "lineas": 90,
+      "excepciones": [
+        "nucleo",
+        "carta-publica",
+        "sesion-y-empresa",
+        "fiscal",
+        "fiscal-configuracion",
+        "fiscal-emitir",
+        "fiscal-imprimir",
+        "fiscal-pantallas",
+        "lotes",
+        "usuarios",
+        "cierre.test",
+        "comandas.test",
+        "produccion.test"
+      ]
+    },
+    {
+      "ruta": "src/capacidades/modulos/catalogo.ts",
+      "exporta": [
+        "EstadoDeConstruccion",
+        "EfectoDeAccion",
+        "EFECTOS_DE_ACCION",
+        "DefinicionDeAccion",
+        "DefinicionDeModulo",
+        "CatalogoComercial",
+        "CATALOGO_DE_MODULOS",
+        "ClaveModulo",
+        "ClaveAccion",
+        "ClaveCapacidad"
+      ],
+      "importaDe": ["src/capacidades/modulos/catalogo-*"],
+      "parteDedicada": "src/capacidades/modulos/catalogo-<módulo>.ts",
+      "soloJunta": true,
+      "lineas": 98,
+      "excepciones": ["lotes-y-produccion", "salon-y-comandas"]
+    },
+    {
+      "ruta": "src/capacidades/permisos/empresa.ts",
+      "exporta": ["PERMISOS_DE_EMPRESA", "ReglasDeEmpresa", "REGLAS_DE_EMPRESA", "tablaDePermisos"],
+      "importaDe": [
+        "src/capacidades/permisos/permisos-de-*",
+        "src/capacidades/modulos/catalogo",
+        "src/capacidades/modulos/activos",
+        "src/capacidades/permisos/guard",
+        "src/capacidades/permisos/roles"
+      ],
+      "parteDedicada": "src/capacidades/permisos/permisos-de-<módulo>.ts",
+      "soloJunta": false,
+      "lineas": 80
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0852",
+  "fecha": "2026-11-24",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Usuarios (U2): invitar, reenviar y revocar invitaciones desde Cuenta; el servidor rechaza invitar a un desactivado con otro rol (H1) y con una invitación vigente de otro rol (H2).",
+  "que_cambia": "Gerente y administrador invitan, reenvían y revocan. SUPUESTOS: H2 rechaza (no reemplaza) y compara solo el rol; el aviso «email de Google» no se construye (texto sin aprobar). Revertir: quitar la regla en decidirInvitacionDeUsuario; sumar un texto.",
+  "donde": "decisiones-del-dueno-2026-11.md, fila del 23/11/2026 (Usuarios de la empresa; puntos 1, 3, 7, 9, 11 y H2); catalogo-usuarios.ts, ficha-de-usuarios.ts, invitar-usuario.ts, invitacion.ts; confirmada: DDD fila del 23/11/2026"
+}

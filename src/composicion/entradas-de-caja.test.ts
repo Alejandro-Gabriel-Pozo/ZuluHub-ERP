@@ -3,6 +3,7 @@ import {
   entradaDeAltaDeCaja,
   entradaDeAltaDeCuenta,
   entradaDeAltaDeMedio,
+  entradaDeDatosDelMedio,
   entradaDeEdicionDeCaja,
   entradaDeEdicionDeCuenta,
   entradaDeEdicionDeMedio,
@@ -74,6 +75,48 @@ describe("entradaDeEdicionDeMedio", () => {
     { medioDePagoId: ID, versionEsperada: 1e12 },
   ])("un pedido sin la forma pedida (%j) es inválido", (crudo) => {
     expect(entradaDeEdicionDeMedio(crudo).ok).toBe(false);
+  });
+});
+
+describe("entradaDeDatosDelMedio", () => {
+  const base = { medioDePagoId: ID, versionEsperada: 3 };
+
+  it("arma el conjunto final: los tildados piden y el resto no; repetir un valor no cambia nada", () => {
+    expect(entradaDeDatosDelMedio({ ...base, datos: ["cupon", "marca", "cupon"] })).toEqual({
+      ok: true,
+      valor: {
+        medioDePagoId: ID,
+        versionEsperada: 3,
+        pide: { cupon: true, ultimos4: false, marca: true, cuotas: false, dni: false },
+      },
+    });
+  });
+
+  it.each(["cupon", "ultimos4", "marca", "cuotas", "dni"])(
+    "tildar solo %s apaga los otros cuatro",
+    (dato) => {
+      const r = entradaDeDatosDelMedio({ ...base, datos: [dato] });
+      expect(r.ok && Object.entries(r.valor.pide).filter(([, v]) => v)).toEqual([[dato, true]]);
+    },
+  );
+
+  it("ninguno tildado es válido: el medio deja de pedir datos", () => {
+    const r = entradaDeDatosDelMedio({ ...base, datos: [] });
+    expect(r).toMatchObject({ ok: true });
+    expect(r.ok && Object.values(r.valor.pide).some(Boolean)).toBe(false);
+  });
+
+  it.each([["cliente"], ["__proto__"], ["CUPON"], [""], [1], [null], "cupon", null, undefined])(
+    "un dato fuera de la lista de los cinco (%j) se rechaza",
+    (datos) => {
+      expect(entradaDeDatosDelMedio({ ...base, datos }).ok).toBe(false);
+    },
+  );
+
+  it("sin id o con una versión que no es un entero se rechaza", () => {
+    expect(entradaDeDatosDelMedio({ ...base, medioDePagoId: "x", datos: [] }).ok).toBe(false);
+    expect(entradaDeDatosDelMedio({ ...base, versionEsperada: 1.5, datos: [] }).ok).toBe(false);
+    expect(entradaDeDatosDelMedio({ datos: [] }).ok).toBe(false);
   });
 });
 

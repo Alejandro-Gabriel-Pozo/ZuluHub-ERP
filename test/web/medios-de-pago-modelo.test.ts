@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { TIPOS_DE_MEDIO } from "../../src/modulos/caja/publico";
+import { DATOS_DEL_COBRO, TIPOS_DE_MEDIO } from "../../src/modulos/caja/publico";
 import {
   RUTAS_DE_MEDIOS,
+  DATOS_DEL_COBRO_CON_TEXTO,
   TIPOS_DE_MEDIO_CON_TEXTO,
   armarLaListaDeMedios,
+  casillasDeDatos,
   opcionesDeTipo,
   rutaDeUnMedio,
   type MedioDeLaLista,
@@ -114,5 +116,37 @@ describe("las direcciones", () => {
       nuevo: "/caja/medios-de-pago/nuevo",
     });
     expect(rutaDeUnMedio("x")).toBe("/caja/medios-de-pago/x");
+  });
+});
+
+describe("los datos del cobro de la pantalla coinciden con los del dominio de caja", () => {
+  it("la misma lista, en el mismo orden (un dato nuevo sin texto no pasa)", () => {
+    expect([...DATOS_DEL_COBRO_CON_TEXTO]).toEqual([...DATOS_DEL_COBRO]);
+  });
+});
+
+describe("casillasDeDatos", () => {
+  it("una casilla por dato admitido, con el texto aprobado y si hoy se pide", () => {
+    expect(
+      casillasDeDatos([
+        { dato: "cupon", pide: true },
+        { dato: "ultimos4", pide: false },
+        { dato: "marca", pide: false },
+        { dato: "cuotas", pide: true },
+        { dato: "dni", pide: false },
+      ]),
+    ).toEqual([
+      { dato: "cupon", etiqueta: "Cupón", pide: true },
+      { dato: "ultimos4", etiqueta: "Últimos 4 dígitos", pide: false },
+      { dato: "marca", etiqueta: "Marca de la tarjeta", pide: false },
+      { dato: "cuotas", etiqueta: "Cuotas", pide: true },
+      { dato: "dni", etiqueta: "DNI", pide: false },
+    ]);
+  });
+
+  it("un tipo sin datos no dibuja nada, y un dato que la pantalla no sabe nombrar no se ofrece", () => {
+    expect(casillasDeDatos([])).toEqual([]);
+    expect(casillasDeDatos([{ dato: "cliente", pide: true }])).toEqual([]);
+    expect(casillasDeDatos([{ dato: "toString", pide: true }])).toEqual([]);
   });
 });

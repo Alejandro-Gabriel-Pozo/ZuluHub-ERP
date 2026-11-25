@@ -96,12 +96,7 @@
   },
   "apps/web/ui/patrones/borrador-de-pagina.test.tsx": {
     "pendientes": 0,
-    "crudos": 10,
-    "dinamicos": 0
-  },
-  "apps/web/ui/plantillas/configuracion-fiscal/FormularioDeDatosFiscales.cliente.tsx": {
-    "pendientes": 4,
-    "crudos": 0,
+    "crudos": 9,
     "dinamicos": 0
   },
   "apps/web/ui/plantillas/configuracion-fiscal/FormularioDePuntoDeVenta.cliente.tsx": {

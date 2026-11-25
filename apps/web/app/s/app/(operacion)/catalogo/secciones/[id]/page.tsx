@@ -5,16 +5,21 @@ import { leerLaPagina } from "../../../../../../../ui/plantillas/catalogo/filtro
 import { armarUnaSeccion } from "../../../../../../../ui/plantillas/catalogo/modelo-de-secciones";
 import { PantallaDeUnaSeccion } from "../../../../../../../ui/plantillas/catalogo/PantallaDeUnaSeccion";
 import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
-import { desactivarSeccionAccion, reactivarSeccionAccion } from "../../../../acciones-de-secciones";
+import {
+  desactivarSeccionAccion,
+  quitarProductoDeSeccionAccion,
+  reactivarSeccionAccion,
+} from "../../../../acciones-de-secciones";
 
 type PropsDePagina = Readonly<{
   params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }>;
 
-// `/catalogo/secciones/[id]`: una sección de la carta con sus productos activos, en orden alfabético, solo lectura (maqueta `productos-secciones.html`, 12/11/2026). El id de la dirección es lo
+// `/catalogo/secciones/[id]`: una sección de la carta con sus productos activos, en orden alfabético (maqueta `productos-secciones.html`, 12/11/2026). El id de la dirección es lo
 // único que viene del navegador: se busca entre las secciones de la empresa; una que no está ahí (ajena, inexistente, mal escrita) sale como el genérico y no dice cuál de los casos es. «Nombre»,
-// «Desactivar» y «Reactivar» se ofrecen solo con `productos.editar` (`puedeEditarProductos`, cierra ante la duda). Sin «Agregar producto» ni «Quitar»: son de la parte 2.
+// «Desactivar», «Reactivar», «Agregar producto» y «Quitar» se ofrecen solo con `productos.editar` (`puedeEditarProductos`, cierra ante la duda). «Quitar» lleva ligados con `bind` los productos como se
+// ven, con su versión (no viajan en un campo): con una versión vieja el servidor rechaza y la pantalla recarga.
 export default async function PaginaDeUnaSeccion({ params, searchParams }: PropsDePagina) {
   const { id } = await params;
   const direccion = await searchParams;
@@ -30,6 +35,7 @@ export default async function PaginaDeUnaSeccion({ params, searchParams }: Props
           ? reactivarSeccionAccion
           : desactivarSeccionAccion
         ).bind(null, seccion.id)}
+        accionDeQuitar={quitarProductoDeSeccionAccion.bind(null, seccion.id, seccion.vistas)}
       />,
     );
   });

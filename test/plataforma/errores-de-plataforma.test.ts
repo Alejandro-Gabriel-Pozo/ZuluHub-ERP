@@ -491,3 +491,89 @@ describe("errorParaLaPantalla: contexto PLAN (asignarPlan)", () => {
     });
   });
 });
+
+describe("errorParaLaPantalla: listas del sistema", () => {
+  it("el nombre repetido y el inválido van al campo «Nombre»; el tope sale del dominio", () => {
+    expect(errorParaLaPantalla("VALOR_DUPLICADO", "LISTA")).toEqual({
+      tipo: "CAMPO",
+      campo: "nombre",
+      texto: "Ya existe un valor con ese nombre",
+    });
+    expect(textoDe(errorParaLaPantalla("NOMBRE_INVALIDO", "LISTA"))).toMatch(
+      /^Escribí un nombre de hasta \d+ caracteres$/,
+    );
+  });
+
+  it.each(["VALOR_FIJO", "LISTA_INVALIDA"])("%s es el genérico aprobado", (codigo) => {
+    expect(errorParaLaPantalla(codigo, "LISTA")).toEqual({
+      tipo: "GENERAL",
+      texto: "Esta acción no está permitida",
+    });
+  });
+
+  it.each(["VALOR_NO_ENCONTRADO", "ID_INVALIDO", "VERSION_DESACTUALIZADA"])(
+    "%s es pantalla vieja",
+    (codigo) => {
+      expect(errorParaLaPantalla(codigo, "LISTA")).toMatchObject({ tipo: "PANTALLA_VIEJA" });
+    },
+  );
+
+  it("VERSION_ESPERADA_INVALIDA es inesperado; el resto de la tabla común sigue valiendo", () => {
+    expect(errorParaLaPantalla("VERSION_ESPERADA_INVALIDA", "LISTA")).toEqual({
+      tipo: "INESPERADO",
+    });
+    expect(errorParaLaPantalla("SIN_PERMISO", "LISTA")).toEqual({ tipo: "OCULTAR_ACCION" });
+    expect(errorParaLaPantalla("segundo_factor_reciente_requerido", "LISTA")).toEqual({
+      tipo: "SEGUNDO_FACTOR",
+    });
+  });
+
+  it("fuera del contexto de listas los códigos de lista no se reconocen, y NOMBRE_INVALIDO sigue siendo del alta", () => {
+    expect(errorParaLaPantalla("VALOR_DUPLICADO")).toEqual({ tipo: "INESPERADO" });
+    expect(errorParaLaPantalla("NOMBRE_INVALIDO")).toMatchObject({ campo: "razonSocial" });
+    expect(errorParaLaPantalla("constructor", "LISTA")).toEqual({ tipo: "INESPERADO" });
+  });
+});
+
+describe("errorParaLaPantalla: contexto MODULOS", () => {
+  const de = (e: unknown) => errorParaLaPantalla(e, "MODULOS");
+  const general = (texto: string) => ({ tipo: "GENERAL", texto });
+
+  it("cada código del cambio de módulo da su texto", () => {
+    expect(de("MODULO_FUERA_DEL_PLAN")).toEqual(
+      general("El plan de la empresa no incluye este módulo."),
+    );
+    expect(de("MODULO_EN_DESARROLLO")).toEqual(general("Este módulo todavía está en desarrollo."));
+    expect(de({ codigo: "REQUIERE_INACTIVO", modulo: "comandas" })).toEqual(
+      general("Primero hay que activar Comandas."),
+    );
+    expect(de({ codigo: "ES_REQUERIDO_POR", modulo: "salon" })).toEqual(
+      general("No se puede desactivar: Salón lo necesita."),
+    );
+    expect(de("EMPRESA_NO_ENCONTRADA")).toEqual(general("No encontramos esa empresa."));
+    expect(de({ tipo: "ConcurrenciaAgotada" })).toEqual(
+      general("Se estaba guardando otro cambio a la vez. Probá de nuevo."),
+    );
+  });
+
+  it.each(["MODULO_OBLIGATORIO", "MODULO_DESCONOCIDO", "ID_INVALIDO"])(
+    "%s usa el texto de pantalla vieja del plan",
+    (codigo) => {
+      const r = de(codigo);
+      expect(r.tipo).toBe("PANTALLA_VIEJA");
+      expect(textoDe(r)).toMatch(/^Alguien más cambió el plan de este cliente/);
+    },
+  );
+
+  it("sin el módulo en los datos, o con un código desconocido, es inesperado", () => {
+    expect(de("REQUIERE_INACTIVO")).toEqual({ tipo: "INESPERADO" });
+    expect(de({ codigo: "ES_REQUERIDO_POR", modulo: 3 })).toEqual({ tipo: "INESPERADO" });
+    expect(de("CODIGO_NUEVO")).toEqual({ tipo: "INESPERADO" });
+    expect(de(new Error("base"))).toEqual({ tipo: "INESPERADO" });
+  });
+
+  it("el permiso y el segundo factor siguen siendo los de siempre", () => {
+    expect(de("SIN_PERMISO")).toEqual({ tipo: "OCULTAR_ACCION" });
+    expect(de("segundo_factor_reciente_requerido")).toEqual({ tipo: "SEGUNDO_FACTOR" });
+  });
+});

@@ -6,6 +6,6 @@
   "estado": "PENDIENTE_DE_OK",
   "decision": "La versión vigente de una plantilla o de un rol propio es la de mayor número; la versión de la fila del rol solo es el control optimista.",
   "que_cambia": "Nada que vea el negocio: es la misma regla de versiones de planes y de opciones.",
-  "donde": "migraciones/0061_permisos_configurables.sql (version_de_plantilla, version_de_rol); Pedernal-docs h4b-permisos-configurables.md §3.2",
+  "donde": "migraciones/0094_permisos_configurables.sql (version_de_plantilla, version_de_rol); Pedernal-docs h4b-permisos-configurables.md §3.2",
   "motivo": "El diseño dice que la vigente es la que indica la versión del rol, pero esa versión sube también al archivar o renombrar y dejaría de coincidir con el número de la lista."
 }

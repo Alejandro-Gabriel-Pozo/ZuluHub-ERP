@@ -7,12 +7,22 @@ import { err, ok, type Resultado } from "../../primitivas/resultado/resultado";
 import type { FechaCivil } from "../../primitivas/tiempo/fecha-civil";
 import { clasificarConsulta, type EsperadoDeConsulta } from "./clasificar-consulta";
 import { codigoDeArca, enteroDeArca, FORMA_DEL_CAE, fechaDeArca } from "./conversiones-de-arca";
-import { cuerpoDe, motivoDeSinRespuesta, RESPUESTA_ILEGIBLE } from "./cuerpo-de-respuesta";
 import {
+  causaDeTransporte,
+  cuerpoDe,
+  motivoDeSinRespuesta,
+  RESPUESTA_ILEGIBLE,
+} from "./cuerpo-de-respuesta";
+import {
+  causaDeErroresDeWsfe,
+  causaDeFallaDeWsaa,
   codigoDeFallaDeWsaa,
   codigosComoTexto,
+  conCausa,
   errorDeFallaDeWsaa,
   hayCategoria,
+  soloSinDatos,
+  type Causa,
 } from "./errores-de-arca";
 import {
   leerAutorizacion,
@@ -136,26 +146,42 @@ export type EsperadoDeUltimoAutorizado = Readonly<{
   tipoDeComprobante: number;
 }>;
 
-const noDisponible = (detalle: string): Resultado<never, ErrorDeEmision> =>
-  err({ codigo: "SERVICIO_NO_DISPONIBLE", detalle });
+/** El servicio no está disponible; `causa` solo cuando se sabe por qué (elige el texto, no el comportamiento). */
+const noDisponible = (
+  detalle: string,
+  causa: Causa | null = null,
+): Resultado<never, ErrorDeEmision> =>
+  err(conCausa({ codigo: "SERVICIO_NO_DISPONIBLE", detalle }, causa));
+
+/** Una lectura que no se pudo interpretar: un problema del sistema, no de la cuenta de ARCA. */
+const noSePudoLeer = (detalle: string): Resultado<never, ErrorDeEmision> =>
+  noDisponible(detalle, "PROBLEMA_DEL_SISTEMA");
 
 /**
  * Los errores de una operación de WSFE que no es una escritura, como `ErrorDeEmision`: 600 y 601 (el token
  * no sirve para esa CUIT) son una autorización del servicio que falta; cualquier otro error, el servicio no
- * está disponible. `null` si no hay errores.
+ * está disponible. `null` si no hay errores. La causa (`errores-de-arca.ts`) solo elige el texto: con un único código conocido
+ * (601, 11000, 11001, 11002) la lleva; con cualquier otra mezcla, no.
  */
 function errorDeEmisionDe(errores: readonly Mensaje[]): ErrorDeEmision | null {
   if (errores.length === 0) return null;
+  const causa = causaDeErroresDeWsfe(errores);
   if (hayCategoria(errores, "TOKEN")) {
-    return {
-      codigo: "AUTORIZACION_DEL_SERVICIO_FALTANTE",
-      detalle: `ARCA no aceptó el token (error ${codigosComoTexto(errores)})`,
-    };
+    return conCausa(
+      {
+        codigo: "AUTORIZACION_DEL_SERVICIO_FALTANTE",
+        detalle: `ARCA no aceptó el token (error ${codigosComoTexto(errores)})`,
+      },
+      causa,
+    );
   }
-  return {
-    codigo: "SERVICIO_NO_DISPONIBLE",
-    detalle: `ARCA respondió con errores (${codigosComoTexto(errores)})`,
-  };
+  return conCausa(
+    {
+      codigo: "SERVICIO_NO_DISPONIBLE",
+      detalle: `ARCA respondió con errores (${codigosComoTexto(errores)})`,
+    },
+    causa,
+  );
 }
 
 export function clasificarUltimoAutorizado(
@@ -163,9 +189,9 @@ export function clasificarUltimoAutorizado(
   esperado: EsperadoDeUltimoAutorizado,
 ): Resultado<bigint, ErrorDeEmision> {
   const cuerpo = cuerpoDe(respuesta);
-  if (!cuerpo.ok) return noDisponible(cuerpo.motivo);
+  if (!cuerpo.ok) return noDisponible(cuerpo.motivo, causaDeTransporte(respuesta));
   const leida = leerUltimoAutorizado(cuerpo.cuerpo);
-  if (leida === null) return noDisponible(RESPUESTA_ILEGIBLE);
+  if (leida === null) return noSePudoLeer(RESPUESTA_ILEGIBLE);
   const error = errorDeEmisionDe(leida.errores);
   if (error !== null) return err(error);
   const { puntoDeVenta, tipoDeComprobante, numero } = leida;
@@ -195,18 +221,25 @@ export type TicketDeWsaa = Readonly<{ token: string; sign: string; venceEn: Date
 export function clasificarLoginCms(
   respuesta: RespuestaDeTransporte,
 ): Resultado<TicketDeWsaa, ErrorDeEmision> {
-  if (respuesta.tipo !== "RESPUESTA") return noDisponible(motivoDeSinRespuesta(respuesta));
+  if (respuesta.tipo !== "RESPUESTA") {
+    return noDisponible(motivoDeSinRespuesta(respuesta), causaDeTransporte(respuesta));
+  }
   const falla = leerFallaSoap(respuesta.cuerpo);
   if (falla !== null) {
-    return err({
-      codigo: errorDeFallaDeWsaa(falla.codigo),
-      detalle: `WSAA ${codigoDeFallaDeWsaa(falla.codigo)}: ${falla.texto}`,
-    });
+    return err(
+      conCausa(
+        {
+          codigo: errorDeFallaDeWsaa(falla.codigo),
+          detalle: `WSAA ${codigoDeFallaDeWsaa(falla.codigo)}: ${falla.texto}`,
+        },
+        causaDeFallaDeWsaa(falla.codigo),
+      ),
+    );
   }
   const cuerpo = cuerpoDe(respuesta);
-  if (!cuerpo.ok) return noDisponible(cuerpo.motivo);
+  if (!cuerpo.ok) return noDisponible(cuerpo.motivo, causaDeTransporte(respuesta));
   const ticket = leerTicketDeLoginCms(cuerpo.cuerpo);
-  if (ticket === null) return noDisponible("la respuesta de WSAA no se pudo leer");
+  if (ticket === null) return noSePudoLeer("la respuesta de WSAA no se pudo leer");
   const venceEn = new Date(ticket.vencimiento);
   if (Number.isNaN(venceEn.getTime()))
     return noDisponible("el vencimiento del ticket no es una fecha");
@@ -225,10 +258,31 @@ export function clasificarParametros(
   respuesta: RespuestaDeTransporte,
   operacion: string,
 ): Resultado<readonly FilaDeParametro[], ErrorDeEmision> {
+  return clasificarTabla(respuesta, operacion, false);
+}
+
+/**
+ * Los puntos de venta de `FEParamGetPtosVenta`: como cualquier tabla, salvo una regla. Si TODOS los errores son 602 («no existen datos») y
+ * no hay filas, la CUIT no tiene ningún punto de venta de web services: es una lista vacía (el contrato del puerto, `emision-electronica.ts`),
+ * no un servicio caído. Con 602 junto a otro código, o con filas, no se sabe: sigue el camino de siempre. Las demás tablas no cambian.
+ * Previene: decirle a quien pasa a producción «ARCA no está disponible» cuando lo que falta es dar de alta el punto de venta en ARCA.
+ */
+export function clasificarPuntosDeVenta(
+  respuesta: RespuestaDeTransporte,
+): Resultado<readonly FilaDeParametro[], ErrorDeEmision> {
+  return clasificarTabla(respuesta, "FEParamGetPtosVenta", true);
+}
+
+function clasificarTabla(
+  respuesta: RespuestaDeTransporte,
+  operacion: string,
+  sinDatosEsVacia: boolean,
+): Resultado<readonly FilaDeParametro[], ErrorDeEmision> {
   const cuerpo = cuerpoDe(respuesta);
-  if (!cuerpo.ok) return noDisponible(cuerpo.motivo);
+  if (!cuerpo.ok) return noDisponible(cuerpo.motivo, causaDeTransporte(respuesta));
   const leida = leerTabla(cuerpo.cuerpo, operacion);
-  if (leida === null) return noDisponible(RESPUESTA_ILEGIBLE);
+  if (leida === null) return noSePudoLeer(RESPUESTA_ILEGIBLE);
+  if (sinDatosEsVacia && soloSinDatos(leida.errores) && leida.filas.length === 0) return ok([]);
   const error = errorDeEmisionDe(leida.errores);
   return error === null ? ok(leida.filas) : err(error);
 }
@@ -244,12 +298,12 @@ export function clasificarDummy(
   respuesta: RespuestaDeTransporte,
 ): Resultado<EstadoDelServicio, ErrorDeEmision> {
   const cuerpo = cuerpoDe(respuesta);
-  if (!cuerpo.ok) return noDisponible(cuerpo.motivo);
+  if (!cuerpo.ok) return noDisponible(cuerpo.motivo, causaDeTransporte(respuesta));
   const leida = leerDummy(cuerpo.cuerpo);
-  if (leida === null) return noDisponible(RESPUESTA_ILEGIBLE);
+  if (leida === null) return noSePudoLeer(RESPUESTA_ILEGIBLE);
   const { aplicacion, baseDeDatos, autenticacion } = leida;
   if (aplicacion === "" || baseDeDatos === "" || autenticacion === "") {
-    return noDisponible(RESPUESTA_ILEGIBLE);
+    return noSePudoLeer(RESPUESTA_ILEGIBLE);
   }
   return ok({
     aplicacion: textoSeguro(aplicacion),

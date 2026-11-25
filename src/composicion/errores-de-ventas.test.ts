@@ -41,6 +41,21 @@ describe("traducirErrorDeVentas: lista de permitidos", () => {
     expect(traducirErrorDeVentas(e)).toEqual(GENERICO);
   });
 
+  it.each([
+    ["JORNADA_EN_AUDITORIA", "CIERRE_DIA_EN_CIERRE"],
+    ["JORNADA_CERRADA", "CIERRE_DIA_CERRADO"],
+  ])(
+    "con el día en cierre o cerrado (%s) sale su aviso propio, no el genérico",
+    (error, codigo) => {
+      expect(traducirErrorDeVentas(error)).toEqual({ codigo });
+    },
+  );
+
+  it("solo un texto con ese nombre es el día en cierre: un objeto o el nombre heredado no lo son", () => {
+    expect(traducirErrorDeVentas({ error: "JORNADA_CERRADA" })).toEqual(GENERICO);
+    expect(traducirErrorDeVentas("constructor")).toEqual(GENERICO);
+  });
+
   it("un error de negocio con forma de objeto sale como el genérico, sin sus datos (ids)", () => {
     expect(traducirErrorDeVentas({ error: "OPCIONES_INCOMPLETAS", grupoId: "g-secreto" })).toEqual(
       GENERICO,

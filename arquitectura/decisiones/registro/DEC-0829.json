@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0829",
+  "fecha": "2026-11-21",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "CONFIRMADA",
+  "decision": "El logo de la carta se sirve desde la dirección de la propia carta: el servidor lo trae del proveedor con un traedor seguro (host fijo, sin redirecciones, 100 KB, tiempo acotado).",
+  "que_cambia": "La carta pública muestra el logo sobre la placa. La CSP no cambia (solo imágenes propias). Si el proveedor falla, queda la inicial. Revertir: sacar la ruta del logo y la imagen de la placa; no hay datos nuevos.",
+  "donde": "src/adaptadores/imagenes-externas/traedor.ts; ruta del logo en apps/web/app/s/carta; src/capacidades/experiencia/vidriera/logo-publico.ts; aprobada por el orquestador (diseño V1c, mensaje entre sesiones del 20/11/2026); confirmada: DDD fila del 23/11/2026"
+}

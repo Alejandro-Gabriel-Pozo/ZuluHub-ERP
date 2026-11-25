@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0567",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Editar una parte guarda los datos y los roles en una sola transacción: todo o nada, con las dos acciones de permiso exigidas.",
+  "que_cambia": "Quien edita necesita partes.editar y partes.cambiar_roles; si algo falla no queda nada a medias. Revertir es volver a dos pasos separados.",
+  "donde": "src/modulos/clientes/casos-de-uso/editar-parte-con-roles.ts; orden del orquestador por delegación del dueño, 16/11/2026; aprobada por el dueño el 20/11/2026 (DDD, fila «Llevar main a preview y redesplegar; DEC-0566 y DEC-0567 aprobadas»)"
+}

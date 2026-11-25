@@ -4,6 +4,7 @@ import {
   EQUIPO_DE_VERCEL,
   NOMBRE_DE_LA_CADENA_DE_DUENO,
   PROYECTO_DE_VERCEL,
+  PROYECTO_DE_VERCEL_DE_LA_CONSOLA,
   VARIABLE_CLAVE_CONTEXTO,
   VARIABLES_GENERABLES,
   VARIABLE_CLAVE_CERTIFICADOS,
@@ -36,6 +37,8 @@ function variable(parcial: Partial<VariableRemota> & { key: string }): VariableR
 describe("constantes", () => {
   it("el proyecto, el equipo y los nombres de variable son los de Pedernal", () => {
     expect(PROYECTO_DE_VERCEL).toBe("prj_BZ5e86RcBcfYCAzSW2vVbPpkj7jG");
+    expect(PROYECTO_DE_VERCEL_DE_LA_CONSOLA).toBe("prj_g74KJiMT3BPQZrtABltcHJQAaUIk");
+    expect(PROYECTO_DE_VERCEL_DE_LA_CONSOLA).not.toBe(PROYECTO_DE_VERCEL);
     expect(EQUIPO_DE_VERCEL).toBe("alepozod");
     expect(VARIABLE_DEL_TOKEN).toBe("PEDERNAL_VERCEL_TOKEN");
     expect(NOMBRE_DE_LA_CADENA_DE_DUENO).toBe("PEDERNAL_DB_MIGRACIONES");

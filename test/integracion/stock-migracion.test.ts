@@ -53,7 +53,7 @@ import {
  * anulación por movimiento, un ajuste por conteo), el saldo que solo escribe el libro y que siempre es la suma de los renglones, la solo
  * inserción, la fecha de negocio (con la misma fórmula que `fechaDeNegocio`), la salida por venta con la fecha del ticket, cuarentena y
  * rechazo, el depósito de venta único, la transferencia que suma cero, la anulación espejo, el control de existencia negativa
- * (PERMITIR, AVISAR y BLOQUEAR por `nivel_de_control`), el conteo, las composiciones, el aislamiento entre empresas, la concurrencia sobre
+ * (PERMITIR y AVISAR por `nivel_de_control`), el conteo, las composiciones, el aislamiento entre empresas, la concurrencia sobre
  * el saldo y la reversión.
  *
  * Los datos se arman con SQL del dueño (depósitos, artículos, niveles) y con el rol real de la aplicación (el libro). Cada prueba usa su
@@ -1762,12 +1762,12 @@ describe.skipIf(base === null)("0030 stock: la migración contra una base real",
       expect(await existencia(e)).toBe("-3.0000");
     });
 
-    it("BLOQUEAR rechaza la salida que deja la existencia en negativo (cero sí), también cuando ya estaba en negativo, y no cambia el saldo", async () => {
+    it("AVISAR sin confirmar rechaza la salida que deja la existencia en negativo (cero sí), también cuando ya estaba en negativo, y no cambia el saldo", async () => {
       const e = await escenario();
-      await nivelDeBase(dueno, e.m.empresa, "BLOQUEAR");
+      await nivelDeBase(dueno, e.m.empresa, "AVISAR");
       await cargar(e.m, entrada(e.m, e.d1, e.articulo, "2"));
-      const bloqueada = "stock_existencia_negativa_bloqueada";
-      check(await intentar(e.m, salida(e.m, e.d1, e.articulo, "3")), bloqueada);
+      const sinConfirmar = "stock_existencia_negativa_sin_confirmar";
+      check(await intentar(e.m, salida(e.m, e.d1, e.articulo, "3")), sinConfirmar);
       check(
         await intentar(
           e.m,
@@ -1777,32 +1777,24 @@ describe.skipIf(base === null)("0030 stock: la migración contra una base real",
             fechaDeNegocio: "2026-11-09",
           }),
         ),
-        bloqueada,
-      );
-      // Confirmar no cambia nada: aunque venga marcado como confirmado, BLOQUEAR no se confirma.
-      check(
-        await intentar(e.m, {
-          ...salida(e.m, e.d1, e.articulo, "3"),
-          renglones: [{ articulo: e.articulo, cantidad: "-3", confirmoNegativo: true }],
-        }),
-        bloqueada,
+        sinConfirmar,
       );
       expect(await existencia(e)).toBe("2.0000");
       // Hasta cero se puede.
       await cargar(e.m, salida(e.m, e.d1, e.articulo, "2"));
       expect(await existencia(e)).toBe("0.0000");
-      check(await intentar(e.m, salida(e.m, e.d1, e.articulo, "0.0001")), bloqueada);
+      check(await intentar(e.m, salida(e.m, e.d1, e.articulo, "0.0001")), sinConfirmar);
       // Un artículo que nunca tuvo saldo tampoco puede salir.
       const nuevo = await articuloDeBase(dueno, e.m);
-      check(await intentar(e.m, salida(e.m, e.d1, nuevo.articulo, "1")), bloqueada);
+      check(await intentar(e.m, salida(e.m, e.d1, nuevo.articulo, "1")), sinConfirmar);
     });
 
-    it("BLOQUEAR no frena entradas, ajustes, ajustes por conteo ni anulaciones, ni la pata de destino de una transferencia; sí su origen", async () => {
+    it("AVISAR no frena entradas, ajustes, ajustes por conteo ni anulaciones, ni la pata de destino de una transferencia; sí su origen", async () => {
       const e = await escenario();
-      await nivelDeBase(dueno, e.m.empresa, "BLOQUEAR");
+      await nivelDeBase(dueno, e.m.empresa, "AVISAR");
       const original = entrada(e.m, e.d1, e.articulo, "5");
       const id = await cargar(e.m, original);
-      // La anulación de una entrada que ya se vendió deja la existencia en negativo: es lo que realmente salió, no se bloquea.
+      // La anulación de una entrada que ya se vendió deja la existencia en negativo: es lo que realmente salió, no se frena.
       await cargar(e.m, salida(e.m, e.d1, e.articulo, "4"));
       await cargar(e.m, espejoDe(e.m, { ...original, id }));
       expect(await existencia(e)).toBe("-4.0000");
@@ -1819,13 +1811,13 @@ describe.skipIf(base === null)("0030 stock: la migración contra una base real",
       // La transferencia: el origen (resta) se controla; el destino (suma) no.
       check(
         await intentar(e.m, transferencia(e.m, e.d1, e.d2, e.articulo, "1")),
-        "stock_existencia_negativa_bloqueada",
+        "stock_existencia_negativa_sin_confirmar",
       );
       await cargar(e.m, entrada(e.m, e.d1, e.articulo, "10"));
       await cargar(e.m, transferencia(e.m, e.d1, e.d2, e.articulo, "5"));
       expect(await existencia(e, e.d2)).toBe("5.0000");
       expect(await existencia(e, e.d1)).toBe("0.0000");
-      // Un ajuste por conteo que encuentra menos se aplica aun con BLOQUEAR.
+      // Un ajuste por conteo que encuentra menos se aplica aun con AVISAR.
       const conteo = randomUUID();
       await enApp(e.m, async (s, ex) => {
         acepta(
@@ -1896,31 +1888,31 @@ describe.skipIf(base === null)("0030 stock: la migración contra una base real",
     });
 
     it("la sucursal puede endurecer el nivel de la empresa y no aflojarlo; el de otra empresa no cuenta", async () => {
-      const bloqueada = "stock_existencia_negativa_bloqueada";
+      const sinConfirmar = "stock_existencia_negativa_sin_confirmar";
       // Un nivel de otra empresa no se aplica.
       const e = await escenario();
       const otra = await escenario();
-      await nivelDeBase(dueno, otra.m.empresa, "BLOQUEAR");
+      await nivelDeBase(dueno, otra.m.empresa, "AVISAR");
       await cargar(e.m, salida(e.m, e.d1, e.articulo, "1"));
       expect(await existencia(e)).toBe("-1.0000");
-      // La empresa permite y la sucursal bloquea.
+      // La empresa permite y la sucursal avisa.
       const f = await escenario();
       await nivelDeBase(dueno, f.m.empresa, "PERMITIR");
-      await nivelDeBase(dueno, f.m.empresa, "BLOQUEAR", f.m.sucursal);
-      check(await intentar(f.m, salida(f.m, f.d1, f.articulo, "1")), bloqueada);
-      // La empresa bloquea y la sucursal permite: rige el más exigente.
+      await nivelDeBase(dueno, f.m.empresa, "AVISAR", f.m.sucursal);
+      check(await intentar(f.m, salida(f.m, f.d1, f.articulo, "1")), sinConfirmar);
+      // La empresa avisa y la sucursal permite: rige el más exigente.
       const g = await escenario();
-      await nivelDeBase(dueno, g.m.empresa, "BLOQUEAR");
+      await nivelDeBase(dueno, g.m.empresa, "AVISAR");
       await nivelDeBase(dueno, g.m.empresa, "PERMITIR", g.m.sucursal);
-      check(await intentar(g.m, salida(g.m, g.d1, g.articulo, "1")), bloqueada);
+      check(await intentar(g.m, salida(g.m, g.d1, g.articulo, "1")), sinConfirmar);
       // La sucursal que endurece solo afecta a sus depósitos: otra sucursal sigue con el de la empresa (PERMITIR).
       const h = await escenario();
       const otraSucursal = await sucursalDeBase(dueno, h.m.empresa);
       const lejano = await depositoDeBase(dueno, h.m, { sucursal: otraSucursal });
-      await nivelDeBase(dueno, h.m.empresa, "BLOQUEAR", h.m.sucursal);
+      await nivelDeBase(dueno, h.m.empresa, "AVISAR", h.m.sucursal);
       await cargar(h.m, salida(h.m, lejano, h.articulo, "1"));
       expect(await existencia(h, lejano)).toBe("-1.0000");
-      check(await intentar(h.m, salida(h.m, h.d1, h.articulo, "1")), bloqueada);
+      check(await intentar(h.m, salida(h.m, h.d1, h.articulo, "1")), sinConfirmar);
     });
   });
 
@@ -2377,9 +2369,9 @@ describe.skipIf(base === null)("0030 stock: la migración contra una base real",
     ): Promise<Intento> =>
       (await escribirMovimiento((t, p) => s.directo(t, p), m.empresa, mov)).resultado;
 
-    it("dos salidas del último ítem a la vez con BLOQUEAR: una pasa, la otra espera el saldo y se rechaza; la existencia queda en 0, nunca en −1", async () => {
+    it("dos salidas del último ítem a la vez con AVISAR sin confirmar: una pasa, la otra espera el saldo y se rechaza; la existencia queda en 0, nunca en −1", async () => {
       const e = await escenario();
-      await nivelDeBase(dueno, e.m.empresa, "BLOQUEAR");
+      await nivelDeBase(dueno, e.m.empresa, "AVISAR");
       await cargar(e.m, entrada(e.m, e.d1, e.articulo, "1"));
       const s1 = await sesion(e.m);
       const s2 = await sesion(e.m);
@@ -2390,7 +2382,7 @@ describe.skipIf(base === null)("0030 stock: la migración contra una base real",
           true,
         );
         acepta(await s1.confirmar());
-        check(await segunda, "stock_existencia_negativa_bloqueada");
+        check(await segunda, "stock_existencia_negativa_sin_confirmar");
       } finally {
         await s1.cerrar();
         await s2.cerrar();

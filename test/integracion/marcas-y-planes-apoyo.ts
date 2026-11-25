@@ -273,3 +273,14 @@ export async function cuenta(
 ): Promise<number> {
   return Number(((await dueno.query(texto, parametros)).rows[0] as { n: string }).n);
 }
+
+/**
+ * Para las pruebas que NO tratan de la política de cambio de plan: carga la versión 2 de la política con 0, 0 y 0 días (sin anticipación ni
+ * arrepentimiento), así `asignarPlan` con vigencia inmediata sigue sirviendo para armar el escenario. La política que nace en la migración (1, 1, 0)
+ * la prueban `politica-de-cambio-casos-de-uso.test.ts` y `politica-de-cambio-concurrencia.test.ts`. Se inserta con la conexión del dueño de la base de pruebas.
+ */
+export async function sinAnticipacionDeCambioDePlan(dueno: pg.Client): Promise<void> {
+  await dueno.query(
+    "insert into politica_de_cambio_de_plan (version, dias_de_anticipacion_de_suba, dias_de_anticipacion_de_baja, dias_de_arrepentimiento, motivo, definida_por) values (2, 0, 0, 0, 'pruebas sin anticipación', 'sistema')",
+  );
+}

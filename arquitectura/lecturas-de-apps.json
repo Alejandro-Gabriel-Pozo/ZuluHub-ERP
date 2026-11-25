@@ -1,4 +1,61 @@
 {
+  "test/web/ficha-de-caja.test.ts": [
+    "apps/web/app/s/app/(operacion)/caja/page.tsx",
+    "apps/web/ui/plantillas/caja/*"
+  ],
+  "test/web/ficha-de-usuarios.test.ts": [
+    "apps/web/app/s/app/(operacion)/cuenta/**",
+    "apps/web/servidor/usuarios.ts",
+    "apps/web/ui/plantillas/sesion/PantallaDeCuenta.tsx",
+    "apps/web/ui/plantillas/usuarios/*"
+  ],
+  "test/web/ficha-de-nivel-de-compras.test.ts": [
+    "apps/web/app/s/app/(operacion)/compras/nivel/**",
+    "apps/web/app/s/app/acciones-de-nivel-de-compras.ts",
+    "apps/web/servidor/nivel-de-compras.ts",
+    "apps/web/ui/plantillas/compras/nivel/*"
+  ],
+  "test/web/ficha-de-correccion-de-compras.test.ts": [
+    "apps/web/app/s/app/(operacion)/compras/**",
+    "apps/web/app/s/app/acciones-de-correccion-de-compra.ts",
+    "apps/web/servidor/correccion-de-compra.ts",
+    "apps/web/servidor/ofertas-de-compras.ts",
+    "apps/web/ui/plantillas/compras/correccion/*",
+    "apps/web/ui/plantillas/compras/ficha/*"
+  ],
+  "test/web/ficha-de-pago-de-compras.test.ts": [
+    "apps/web/app/s/app/(operacion)/compras/**",
+    "apps/web/app/s/app/acciones-de-pago-de-factura.ts",
+    "apps/web/servidor/pago-de-factura.ts",
+    "apps/web/servidor/ofertas-de-compras.ts",
+    "apps/web/ui/plantillas/compras/pago/*",
+    "apps/web/ui/plantillas/compras/ficha/*"
+  ],
+  "test/web/ficha-de-proveedor-de-compras.test.ts": [
+    "apps/web/app/s/app/(operacion)/compras/proveedores/**",
+    "apps/web/app/s/app/acciones-de-ficha-de-proveedor.ts",
+    "apps/web/servidor/ficha-de-proveedor.ts",
+    "apps/web/servidor/acciones-de-la-ficha-del-proveedor.ts",
+    "apps/web/ui/plantillas/compras/proveedor/*"
+  ],
+  "test/web/ficha-de-mesas.test.ts": [
+    "apps/web/app/s/app/(operacion)/salon/mesas/**",
+    "apps/web/ui/plantillas/salon/*"
+  ],
+  "test/web/ficha-de-directorio.test.ts": [
+    "apps/web/app/s/app/(operacion)/clientes/**",
+    "apps/web/app/s/app/acciones-de-directorio.ts",
+    "apps/web/ui/plantillas/clientes/*"
+  ],
+  "test/web/ficha-de-impresoras.test.ts": [
+    "apps/web/app/s/app/(operacion)/salon/impresoras/**",
+    "apps/web/ui/plantillas/salon/*",
+    "apps/web/ui/patrones/papel/*"
+  ],
+  "test/web/impresoras-modelo.test.ts": [
+    "apps/web/ui/plantillas/salon/*",
+    "apps/web/ui/patrones/papel/*"
+  ],
   "test/web/contraste-de-superficies.test.ts": ["apps/web/ui/tokens.css"],
   "test/web/legibilidad-de-la-app.test.ts": ["apps/web/**"],
   "src/adaptadores/pdf/medidas-del-papel.test.ts": ["apps/web/ui/**/*.css"],
@@ -12,16 +69,48 @@
   "test/web/sucursal-elegida.test.ts": ["apps/web/app/s/app/acciones-de-sucursal.ts"],
   "test/arquitectura/vercel-json.test.ts": ["apps/web/**"],
   "test/arquitectura/cargar-entorno-nombres.test.ts": ["apps/web/PRIMER-DESPLIEGUE.md"],
+  "test/arquitectura/carta-compartida-no-indexa.test.ts": ["apps/web/app/s/carta/**"],
   "test/arquitectura/reglas.test.ts": ["apps/**"],
   "test/arquitectura/lint.test.ts": ["apps/**"],
   "test/arquitectura/campos-con-dato.test.ts": ["apps/**"],
   "test/arquitectura/declaracion-de-pantallas.test.ts": ["apps/**"],
   "test/arquitectura/lista-de-permitidos.test.ts": ["apps/**"],
   "test/arquitectura/fuente-unica.test.ts": ["apps/**"],
+  "test/arquitectura/grafo.test.ts": ["apps/**"],
+  "test/arquitectura/grafo-lectores.ts": ["apps/**"],
   "test/arquitectura/fuente-unica-limites-de-division.test.ts": ["apps/**"],
   "test/arquitectura/cuenta-de-documento.test.ts": ["apps/**"],
   "test/arquitectura/cobrar-no-expuesto.test.ts": ["apps/**"],
+  "test/arquitectura/sin-nivel-bloquear.test.ts": ["apps/**"],
   "test/arquitectura/menu-por-areas.test.ts": ["apps/**"],
+  "test/arquitectura/ofertas-por-modulo.test.ts": ["apps/web/servidor/*.ts"],
+  "test/arquitectura/archivos-centrales.test.ts": ["apps/web/servidor/*.ts"],
   "test/arquitectura/sin-importar-de-test.test.ts": ["apps/**"],
-  "test/arquitectura/carta-con-duenio.test.ts": ["apps/web/app/s/carta/**"]
+  "test/arquitectura/carta-con-duenio.test.ts": ["apps/web/app/s/carta/**"],
+  "test/arquitectura/operaciones-contextuales.test.ts": ["apps/web/**"],
+  "test/web/ficha-de-planes-de-consola.test.ts": [
+    "apps/plataforma/app/planes/**",
+    "apps/plataforma/pantallas/*",
+    "apps/plataforma/logica/*"
+  ],
+  "test/web/ficha-de-arrepentimiento-de-consola.test.ts": [
+    "apps/plataforma/app/empresas/**",
+    "apps/plataforma/pantallas/*",
+    "apps/plataforma/logica/*"
+  ],
+  "test/web/ficha-de-politica-de-consola.test.ts": [
+    "apps/plataforma/app/politica-de-plan/**",
+    "apps/plataforma/pantallas/*",
+    "apps/plataforma/logica/*"
+  ],
+  "test/web/ficha-de-carta-en-linea.test.ts": [
+    "apps/web/app/s/app/(operacion)/catalogo/carta-en-linea/**",
+    "apps/web/app/s/app/acciones-de-carta-en-linea.ts",
+    "apps/web/servidor/carta-en-linea.ts",
+    "apps/web/ui/plantillas/carta/*"
+  ],
+  "src/capacidades/experiencia/vidriera/color-de-la-carta.test.ts": [
+    "apps/web/ui/plantillas/carta/*",
+    "apps/web/ui/plantillas/vidriera/*"
+  ]
 }

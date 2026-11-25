@@ -115,8 +115,78 @@
 }
 
 .producto {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
   padding: var(--espacio-3) 0;
   border-bottom: var(--borde-grosor) solid var(--color-borde);
   color: var(--color-texto);
   overflow-wrap: anywhere;
+}
+
+.nombre {
+  min-width: 0;
+}
+
+/* «Quitar»: un botón de envío con aspecto de texto, a la derecha de la fila. */
+.quitar {
+  flex: 0 0 auto;
+  min-width: var(--objetivo-minimo);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-3);
+  border: 0;
+  background: transparent;
+  color: var(--color-texto);
+  font: inherit;
+  font-weight: var(--tipo-peso-fuerte);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.quitar:disabled {
+  color: var(--color-sobre-deshabilitado);
+  text-decoration: none;
+  cursor: not-allowed;
+}
+
+.quitar[aria-disabled="true"]:not(:disabled) {
+  cursor: progress;
+  opacity: 0.85;
+}
+
+/* Un candidato de «Agregar producto»: toda la fila es el botón (nombre a la izquierda, dónde está hoy a la derecha). */
+.candidato {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  width: 100%;
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie-elevada);
+  color: var(--color-texto);
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.candidato:disabled {
+  background: var(--color-deshabilitado);
+  color: var(--color-sobre-deshabilitado);
+  cursor: not-allowed;
+}
+
+.candidato[aria-disabled="true"]:not(:disabled) {
+  cursor: progress;
+  opacity: 0.85;
+}
+
+.suave {
+  flex: 0 0 auto;
+  color: var(--color-texto-suave);
+  font-size: var(--tipo-tamano-chico);
 }

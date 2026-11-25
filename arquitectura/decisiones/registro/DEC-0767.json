@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0767",
+  "fecha": "2026-11-19",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: cada caja de la sucursal se abre por separado y tiene su propia sesión; Cobrar usa la única abierta (DEC-0502).",
+  "que_cambia": "Si una sucursal puede tener varias cajas abiertas a la vez. Revertir: exigir en el servidor una sola abierta por sucursal; la pantalla no cambia.",
+  "donde": "src/capacidades/pantallas/ficha-de-caja.ts; orquestadora, 19/11/2026 (supuestos P1, P2 y P3 de Caja C2)"
+}

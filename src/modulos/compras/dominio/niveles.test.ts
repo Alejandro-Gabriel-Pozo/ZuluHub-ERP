@@ -3,6 +3,7 @@ import {
   CLASES_DE_COMPROBANTE_DE_PROVEEDOR,
   NIVEL_INICIAL_DE_COMPRA,
   NIVELES_DE_COMPRA,
+  NIVELES_ESTANDAR_DE_COMPRA,
   PERILLA_DEL_NIVEL,
   claseDeComprobante,
   esNivelDeCompra,
@@ -26,6 +27,16 @@ describe("niveles de compra", () => {
     });
     for (const n of NIVELES_DE_COMPRA) expect(esNivelDeCompra(n)).toBe(true);
     for (const n of ["N1", "", "compra_simple"]) expect(esNivelDeCompra(n)).toBe(false);
+  });
+});
+
+describe("niveles que se eligen desde la pantalla", () => {
+  it("solo N1 y N2 (los estándar, sin perilla), en ese orden: N3 y N4 son de la fase 5 y no se ofrecen", () => {
+    expect([...NIVELES_ESTANDAR_DE_COMPRA]).toEqual(["COMPRA_SIMPLE", "CON_COMPROBANTE"]);
+    for (const n of NIVELES_ESTANDAR_DE_COMPRA) expect(PERILLA_DEL_NIVEL[n]).toBeNull();
+    for (const n of NIVELES_DE_COMPRA.filter((x) => !NIVELES_ESTANDAR_DE_COMPRA.includes(x))) {
+      expect(PERILLA_DEL_NIVEL[n]).not.toBeNull();
+    }
   });
 });
 

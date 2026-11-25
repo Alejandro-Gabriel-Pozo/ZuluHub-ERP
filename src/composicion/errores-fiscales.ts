@@ -23,6 +23,7 @@ import { err, type Resultado } from "../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../puertos/transacciones";
 import { aRespuesta, type DependenciasDeRespuesta } from "./a-respuesta";
 import { CAMPOS_DE_IIBB, ERRORES_DE_IIBB } from "./errores-fiscales-de-ingresos-brutos";
+import { ERRORES_AL_PASAR_A_PRODUCCION, codigoDeErrorConCodigo } from "./errores-fiscales-de-arca";
 import { campoDelReceptor } from "./errores-fiscales-del-receptor";
 import { ERRORES_DE_IMPRESION, type ErrorAlLeerComprobantes } from "./errores-fiscales-de-lectura";
 import {
@@ -170,7 +171,7 @@ export const FISCAL_POR_ERROR_DE_TEXTO: Readonly<
   DATOS_FISCALES_NO_ENCONTRADOS: SIN_TEXTO_APROBADO,
   DOMICILIO_NO_ENCONTRADO: SIN_TEXTO_APROBADO,
   ID_EN_USO: SIN_TEXTO_APROBADO,
-  PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA: "FISCAL_PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA", // D-77: texto del 10005 (catalogo-fiscal.ts)
+  ...ERRORES_AL_PASAR_A_PRODUCCION,
   // La pantalla solo ofrece las sucursales de la empresa: un id ajeno es un pedido armado a mano, y decir que existe en otra
   // empresa sería un oráculo. La base lo rechaza por la referencia, no por una regla que la persona pueda corregir.
   SUCURSAL_DE_OTRA_EMPRESA: null,
@@ -306,9 +307,9 @@ export function traducirErrorFiscal(error: unknown): unknown {
       (codigo === "FISCAL_MOTIVO_INVALIDO" ? "motivo" : undefined);
     return campo === undefined ? { codigo } : { codigo, campo };
   }
-  if (esObjeto(error) && typeof error["codigo"] === "string") {
-    if (!Object.hasOwn(FISCAL_POR_ERROR_CON_CODIGO, error["codigo"])) return error;
-    const codigo = FISCAL_POR_ERROR_CON_CODIGO[error["codigo"] as ErrorConCodigo["codigo"]];
+  if (esObjeto(error)) {
+    const codigo = codigoDeErrorConCodigo(error, FISCAL_POR_ERROR_CON_CODIGO);
+    if (codigo === undefined) return error;
     const campo = campoDeError(error);
     return campo === undefined ? { codigo } : { codigo, campo };
   }

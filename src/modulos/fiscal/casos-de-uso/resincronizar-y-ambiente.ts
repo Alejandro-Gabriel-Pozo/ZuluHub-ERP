@@ -6,7 +6,10 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import type { TipoDeComprobante } from "../dominio/comprobante-emitido";
 import type { Ambiente } from "../dominio/comprobante-nuevo";
-import { habilitadoEnArca } from "../dominio/habilitacion-en-arca";
+import {
+  motivoDeNoHabilitacion,
+  type MotivoDeNoHabilitacion,
+} from "../dominio/habilitacion-en-arca";
 import type { EmisorId, PuntoDeVentaId } from "../dominio/identificadores";
 import {
   exigirSucursalAbierta,
@@ -179,9 +182,27 @@ export type ErrorPropioAlCambiarAmbiente =
   | "SIN_CERTIFICADO_VIGENTE"
   | "AMBIENTE_NO_VUELVE"
   | "PUNTO_DE_VENTA_YA_EMITIO_EN_PRODUCCION"
-  /** D-77: ARCA no tiene ese número, o lo tiene bloqueado o dado de baja. Sin texto aprobado todavía (`errores-fiscales.ts`). */
+  /** D-77: ARCA no tiene ese número, o lo informa repetido. Sus textos: `errores-fiscales.ts`. */
   | "PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA"
+  /** D-77: ARCA no informa ningún punto de venta para la CUIT, lo tiene bloqueado o lo tiene dado de baja. */
+  | "SIN_PUNTOS_DE_VENTA_EN_ARCA"
+  | "PUNTO_DE_VENTA_BLOQUEADO_EN_ARCA"
+  | "PUNTO_DE_VENTA_DADO_DE_BAJA_EN_ARCA"
+  /** Decisión del dueño del 18/11/2026 (DEC-0742): ARCA lo informa solo para CAEA. */
+  | "PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA"
   | ErrorDeSucursalCerrada;
+
+/** El error de cada motivo por el que ARCA no habilita un punto de venta (exhaustivo: un motivo nuevo no compila sin su error). */
+const ERROR_POR_MOTIVO_DE_NO_HABILITACION: Readonly<
+  Record<MotivoDeNoHabilitacion, ErrorPropioAlCambiarAmbiente>
+> = {
+  SIN_PUNTOS_DE_VENTA: "SIN_PUNTOS_DE_VENTA_EN_ARCA",
+  NO_FIGURA: "PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA",
+  REPETIDO: "PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA",
+  DADO_DE_BAJA: "PUNTO_DE_VENTA_DADO_DE_BAJA_EN_ARCA",
+  BLOQUEADO: "PUNTO_DE_VENTA_BLOQUEADO_EN_ARCA",
+  SOLO_CAEA: "PUNTO_DE_VENTA_SOLO_CAEA_EN_ARCA",
+};
 
 export type ErrorAlCambiarAmbiente =
   | ErrorPropioAlCambiarAmbiente
@@ -294,9 +315,8 @@ export function armarCambiarAmbienteDePuntoDeVenta(dependencias: DependenciasDeF
       opciones.tiempos,
     );
     if (!informados.ok) return informados;
-    if (!habilitadoEnArca(informados.valor, puntoDeVenta.numero)) {
-      return err("PUNTO_DE_VENTA_NO_HABILITADO_EN_ARCA");
-    }
+    const motivo = motivoDeNoHabilitacion(informados.valor, puntoDeVenta.numero);
+    if (motivo !== null) return err(ERROR_POR_MOTIVO_DE_NO_HABILITACION[motivo]);
 
     const resultado = await transacciones.ejecutar(
       { contexto },

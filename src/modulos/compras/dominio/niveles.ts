@@ -28,6 +28,11 @@ export const PERILLA_DEL_NIVEL: Readonly<Record<NivelDeCompra, string | null>> =
   TRES_VIAS: "conciliacion_de_tres_vias",
 };
 
+/** Los niveles que se eligen desde la pantalla: los estándar (N1 y N2, sin perilla). N3 y N4 son de la fase 5 (pausada) y no se ofrecen ni se aceptan desde la web. */
+export const NIVELES_ESTANDAR_DE_COMPRA: readonly NivelDeCompra[] = NIVELES_DE_COMPRA.filter(
+  (nivel) => PERILLA_DEL_NIVEL[nivel] === null,
+);
+
 export const CLASES_DE_COMPROBANTE_DE_PROVEEDOR = [
   "SIN_COMPROBANTE",
   "FACTURA",

@@ -4,12 +4,8 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { MAXIMO_DE_DESTINOS_DE_MODULOS } from "../../src/capacidades/experiencia/destinos";
 import { CATALOGO_DE_TEXTOS } from "../../src/capacidades/vocabulario/catalogo";
-import {
-  AREAS_DEL_MENU,
-  FILAS_DEL_MENU,
-  GRUPOS_DEL_MENU,
-  problemasDelMenu,
-} from "../../apps/web/ui/navegacion/menu";
+import { AREAS_DEL_MENU, FILAS_DEL_MENU, GRUPOS_DEL_MENU } from "../../apps/web/ui/navegacion/menu";
+import { problemasDelMenu } from "../../apps/web/ui/navegacion/problemas-del-menu";
 
 /**
  * REGLA (dueño, 12/11/2026, `decisiones-del-dueno-2026-11.md`, fila «Menú por áreas, versión 4», requisito d): el menú sale de UNA tabla
@@ -95,7 +91,9 @@ describe("menú por áreas: la tabla real", () => {
   it("cada pantalla apunta a una ruta que existe", () => {
     for (const f of FILAS_DEL_MENU) {
       if (f.tipo !== "pantalla") continue;
-      const pagina = join(APP_WEB, "app/s/app/(operacion)", f.href, "page.tsx");
+      // La dirección puede llevar un filtro (`/clientes?rol=proveedor`): la página es la de la ruta sin él.
+      const ruta = f.href.split("?")[0] ?? f.href;
+      const pagina = join(APP_WEB, "app/s/app/(operacion)", ruta, "page.tsx");
       expect(existsSync(pagina), `${f.clave}: ${f.href}`).toBe(true);
     }
   });

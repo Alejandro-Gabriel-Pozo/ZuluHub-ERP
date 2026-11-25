@@ -1,0 +1,54 @@
+.grupo {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--espacio-2);
+}
+
+.opcion {
+  position: relative;
+}
+
+/* El botón de opción nativo cubre toda la opción (el área tocable es el bloque entero) y no se ve: lo que se ve es el bloque de texto, como en la maqueta. */
+.boton {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.boton:disabled {
+  cursor: default;
+}
+
+.texto {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-1) var(--espacio-2);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.boton:checked + .texto {
+  border-color: var(--accion-primaria-fondo);
+  background: var(--color-info-suave);
+}
+
+.boton:focus-visible + .texto {
+  outline: 3px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+.boton:disabled + .texto {
+  color: var(--color-texto-suave);
+}

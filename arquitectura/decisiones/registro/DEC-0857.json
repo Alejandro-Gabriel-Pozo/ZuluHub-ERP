@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0857",
+  "fecha": "2026-11-24",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Se puede desactivar a una persona desde su ficha en Usuarios, con confirmación; la acción vive en la web y repite sin duplicar.",
+  "que_cambia": "El gerente y el administrador desactivan a un empleado o a otro administrador desde su ficha, con confirmación: se corta el acceso, se apagan sus sucursales y se revocan sus invitaciones. No cambia permisos ni datos. Revertir: quitar el botón y su cuadro.",
+  "donde": "decisiones-del-dueno-2026-11.md, fila del 23/11/2026 (Usuarios de la empresa; recomendaciones 1, 2, 4, 5 y 7); catalogo-usuarios.ts, ficha-de-usuarios.ts, usuarios-web.ts, ConfirmacionDeDesactivar.cliente.tsx; confirmada: DDD fila del 23/11/2026"
+}

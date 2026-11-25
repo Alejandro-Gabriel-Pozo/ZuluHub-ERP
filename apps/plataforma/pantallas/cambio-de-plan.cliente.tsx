@@ -13,13 +13,14 @@ import { Texto } from "../../web/ui/primitivas/Texto";
 import {
   armarResumen,
   etiquetaDeVersion,
+  fechaMinimaDelCambio,
   textoDelError,
   validarCambio,
   type CampoLocal,
 } from "../logica/cambio-de-plan";
 import { LARGO_MAXIMO_DEL_MOTIVO } from "../logica/entrada-del-plan";
 import type { PlanDeEmpresa } from "../logica/plan-de-empresa";
-import { fechaLegible, fechaMinimaDeVigencia } from "../logica/vigencia";
+import { fechaLegible } from "../logica/vigencia";
 import { CasillaDeProgramada } from "./casilla-de-programada.cliente";
 import propios from "./plan.module.css";
 import submarcas from "./submarcas.module.css";
@@ -43,6 +44,7 @@ export function CambioDePlan({ plan }: PropsDeCambioDePlan) {
   const [locales, setLocales] = useState<Partial<Record<CampoLocal, string>>>({});
   const { envio, fijada, fijar, referenciaIncierta, ventana } = useEnvioDelCambio(plan.tenantId);
   const hayProgramada = plan.programada !== null;
+  const reglaDeFecha = fechaMinimaDelCambio(plan, elegido, new Date());
 
   const estado = envio.estado;
   const incierto = estado.tipo === "incierto";
@@ -109,7 +111,8 @@ export function CambioDePlan({ plan }: PropsDeCambioDePlan) {
         motivo,
         hayProgramada,
         reemplaza,
-        fechaMinima: fechaMinimaDeVigencia(new Date()),
+        fechaMinima: reglaDeFecha.fechaMinima,
+        faltaDeAnticipacion: reglaDeFecha.faltaDeAnticipacion,
       });
       setLocales(faltas);
       if (Object.keys(faltas).length > 0) return;
@@ -241,7 +244,7 @@ export function CambioDePlan({ plan }: PropsDeCambioDePlan) {
                 nombre="vigenteDesde"
                 tipo="date"
                 obligatorio="obligatorio"
-                ayuda={`Desde mañana (${fechaLegible(fechaMinimaDeVigencia(new Date()))}).`}
+                ayuda={reglaDeFecha.ayuda}
                 valor={vigenteDesde}
                 alCambiar={(v) => {
                   editar("vigenteDesde", () => {

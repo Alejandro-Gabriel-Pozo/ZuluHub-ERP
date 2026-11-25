@@ -105,6 +105,8 @@ export async function montarCompras(
   const alcances = new Map<string, readonly SucursalId[]>();
   /** Módulos que la autorización deja de sumar (para probar el módulo apagado). */
   const sinModulos = new Set<string>();
+  /** Perillas que los derechos de uso muestran ENCENDIDAS (el plan de las pruebas no las enciende: ninguna empresa tiene extras). */
+  const perillasEncendidas = new Set<string>();
   /** La barrera de la ronda en curso: cada transacción espera tras leer su autorización hasta que llegaron todas. */
   let barrera: () => Promise<void> = () => Promise.resolve();
   /** Una falla inyectada en un punto de «Comprar y recibir» (para probar que no queda nada a medias). */
@@ -133,6 +135,24 @@ export async function montarCompras(
         insertarLineas: (...argumentos: Parameters<typeof repos.recepciones.insertarLineas>) => {
           if (falla === "lineas") throw new Error("falla inyectada en las líneas");
           return repos.recepciones.insertarLineas(...argumentos);
+        },
+      },
+      derechos: {
+        ...tx.derechos,
+        deLaEmpresa: async (contexto) => {
+          const reales = await tx.derechos.deLaEmpresa(contexto);
+          if (perillasEncendidas.size === 0) return reales;
+          return {
+            ...reales,
+            perillas: new Map(
+              [...reales.perillas].map(([perilla, valor]) => [
+                perilla,
+                perillasEncendidas.has(perilla) && valor.tipo === "INTERRUPTOR"
+                  ? { ...valor, encendida: true }
+                  : valor,
+              ]),
+            ),
+          };
         },
       },
       autorizacion: {
@@ -334,6 +354,13 @@ export async function montarCompras(
     },
     encenderModulo: (modulo: "stock" | "catalogo" | "compras") => {
       sinModulos.delete(modulo);
+    },
+    /** Enciende una perilla de compras en los derechos de uso (el plan de las pruebas no las enciende). */
+    encenderPerilla: (perilla: "recepcion_separada" | "conciliacion_de_tres_vias") => {
+      perillasEncendidas.add(perilla);
+    },
+    apagarPerillas: () => {
+      perillasEncendidas.clear();
     },
     cerrar: async () => {
       await dueno.end();

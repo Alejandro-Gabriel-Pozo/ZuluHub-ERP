@@ -234,7 +234,7 @@ describe("propiedades de decidirApagado", () => {
         }));
         const objetivo = todas[indice % todas.length] as Membresia;
         const activas = todas.filter((m) => m.activo);
-        const resultado = decidirApagado(objetivo, activas);
+        const resultado = decidirApagado(objetivo, activas, personaId("p-quien-pide"));
         const esAdmin = (m: Membresia) => m.activo && m.rol !== "OPERADOR";
         const adminsAntes = todas.filter(esAdmin).length;
         if (resultado.ok && resultado.valor === "APAGAR" && adminsAntes > 0) {

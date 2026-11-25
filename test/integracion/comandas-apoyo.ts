@@ -32,9 +32,15 @@ const REGLAS_CON_COMANDAS: ReglasDeEmpresa = {
   permisos: PERMISOS_DE_EMPRESA,
 };
 
-/** Las reglas reales del catálogo: `comandas` está en desarrollo y nadie puede nada (denegar por defecto). */
+/**
+ * El catálogo con `comandas` «en desarrollo»: desde S-0r (17/11/2026) el real lo tiene disponible, y esto conserva la prueba de que un módulo en desarrollo no deja pasar nada
+ * (denegar por defecto, guard primero).
+ */
 const REGLAS_REALES: ReglasDeEmpresa = {
-  catalogo: CATALOGO_DE_MODULOS,
+  catalogo: {
+    ...CATALOGO_DE_MODULOS,
+    comandas: { ...CATALOGO_DE_MODULOS.comandas, estado: "en_desarrollo" },
+  },
   permisos: PERMISOS_DE_EMPRESA,
 };
 

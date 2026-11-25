@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0578",
+  "fecha": "2026-11-16",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: una receta cuya última versión está vacía (la retiró) cuenta como «sin receta» en la lista, el filtro y la ficha; la ficha de una versión sin ingredientes sale vacía.",
+  "que_cambia": "Un producto con la receta retirada reaparece en «Sin receta» y se le puede crear una nueva. Revertir: cambiar el cálculo de con_componentes en lecturas-de-recetas.ts.",
+  "donde": "src/modulos/stock/persistencia/lecturas-de-recetas.ts; recetas-pantalla.md §8 B1 (S12)"
+}

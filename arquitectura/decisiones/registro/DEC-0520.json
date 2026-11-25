@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0520",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "La parte 2 de Secciones usa dos textos ya aprobados: «Agregar producto» (botón de la sección y título de la pantalla de elegir) y «Quitar» (en cada producto de la sección).",
+  "que_cambia": "Dos claves nuevas en catalogo.*: catalogo.seccion.agregar_producto y catalogo.accion.quitar, sin textos nuevos para el cliente. Revertir: quitar las dos claves y los dos botones.",
+  "donde": "src/capacidades/vocabulario/catalogo-catalogo.ts; maqueta productos-secciones.html:330 (sec.agregar, aprobada el 12/11/2026) y productos.html:593 (Quitar); delegación del dueño, DDD filas 173 y 174"
+}

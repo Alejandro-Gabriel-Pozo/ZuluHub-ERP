@@ -768,6 +768,61 @@ describe.skipIf(base === null)(
         ).toEqual({ ok: false, error: "VERSION_DESACTUALIZADA" });
       });
 
+      it("con la perilla encendida el gerente pasa a N3; cambiar de nivel queda auditado y la repetición no escribe", async () => {
+        const otra = await c.escenario();
+        c.encenderPerilla("recepcion_separada");
+        try {
+          expect(
+            await c.casos.configurarCompras(otra.administrador, {
+              nivel: "RECEPCION_SEPARADA",
+              versionEsperada: 1,
+            }),
+          ).toMatchObject({ ok: false, error: "SIN_PERMISO" });
+          const hecho = valorDe(
+            await c.casos.configurarCompras(otra.gerente, {
+              nivel: "RECEPCION_SEPARADA",
+              versionEsperada: 1,
+            }),
+          );
+          expect(hecho).toEqual({ nivel: "RECEPCION_SEPARADA", version: 2 });
+          const repetido = valorDe(
+            await c.casos.configurarCompras(otra.gerente, {
+              nivel: "RECEPCION_SEPARADA",
+              versionEsperada: 1,
+            }),
+          );
+          expect(repetido).toEqual(hecho);
+          expect((await c.auditoria(otra.empresa, "COMPRAS_NIVEL_CAMBIADO")).length).toBe(1);
+          // Mientras N3 no tenga su camino de carga (tramo N3-2), «Comprar y recibir» sigue cerrado en ese nivel.
+          expect(
+            await c.casos.registrarCompra(otra.operador, {
+              ...compra(await armar(otra), { sucursalId: otra.sucursal }),
+            }),
+          ).toEqual({
+            ok: false,
+            error: { error: "FUNCION_NO_INCLUIDA", perilla: "recepcion_separada" },
+          });
+        } finally {
+          c.apagarPerillas();
+        }
+        // Con la perilla ya apagada otra vez, volver a pedir N3 desde otro nivel lo rechaza el plan (el nivel vigente se puede bajar).
+        expect(
+          await c.casos.configurarCompras(otra.gerente, {
+            nivel: "CON_COMPROBANTE",
+            versionEsperada: 2,
+          }),
+        ).toMatchObject({ ok: true });
+        expect(
+          await c.casos.configurarCompras(otra.gerente, {
+            nivel: "RECEPCION_SEPARADA",
+            versionEsperada: 3,
+          }),
+        ).toEqual({
+          ok: false,
+          error: { error: "FUNCION_NO_INCLUIDA", perilla: "recepcion_separada" },
+        });
+      });
+
       it("configurarCompras con el nivel que ya está devuelve lo vigente aunque la versión esperada sea vieja, sin escribir ni auditar", async () => {
         const otra = await c.escenario();
         const hecho = valorDe(
@@ -812,10 +867,8 @@ describe.skipIf(base === null)(
             [a.recepcionId, "ANULADA"],
           ].sort(porId),
         );
-        // misma jornada: el desempate es el id, de mayor a menor
-        expect(todas.compras.map((x) => x.recepcionId)).toEqual(
-          [a.recepcionId, b.recepcionId].sort().reverse(),
-        );
+        // misma jornada: el desempate es el número de la compra (el orden de carga), de mayor a menor; el id es un UUID al azar y no sirve para ordenar
+        expect(todas.compras.map((x) => x.recepcionId)).toEqual([b.recepcionId, a.recepcionId]);
         expect(
           valorDe(await c.consultas.listarCompras(otra.gerente, { estado: "ANULADA" })).compras.map(
             (x) => x.recepcionId,

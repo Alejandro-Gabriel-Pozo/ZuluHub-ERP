@@ -117,7 +117,7 @@ export async function verLosPreciosDeUnProducto(
 }
 
 /** ¿Es el mismo precio? Compara el valor exacto (no el texto: «13000.00» y «13000.000000» son iguales). Un texto que no es un precio no es igual a nada. */
-function mismoPrecio(a: string | null, b: string): boolean {
+export function mismoPrecio(a: string | null, b: string): boolean {
   if (a === null) return false;
   const x = precioDeVentaDesdeTexto(a);
   const y = precioDeVentaDesdeTexto(b);

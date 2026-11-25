@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0794",
+  "fecha": "2026-11-19",
+  "quien": "padre",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "permisosDelActor devuelve las funciones de pago (interruptores) encendidas, leídas en su transacción y solo si algún módulo de la empresa es dueño de alguna.",
+  "que_cambia": "La pantalla sabe qué extras tiene la empresa sin otra consulta; una empresa que solo factura no paga sentencias de más. Revertir: quitar el campo funcionesEncendidas y la lectura de derechos.",
+  "donde": "src/modulos/empresas/consultas/permisos-del-actor.ts; src/capacidades/planes/funciones-encendidas.ts; brief PR-X1b de escalabilidad, repo de documentos, 11-especificaciones/briefs/escalabilidad"
+}

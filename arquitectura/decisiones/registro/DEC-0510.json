@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0510",
+  "fecha": "2026-11-16",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Textos de «Cierre del día»: los aprobados el 14/11/2026 (filas 123 y 126), los ya aprobados de la maqueta y «Siguiente» (15/11, fila 183); Guardar, Cancelar, Motivo y el genérico reusan sus claves.",
+  "que_cambia": "Qué lee la persona en la pantalla del cierre; sin «Paso 1 de 3» (no aprobado). Revertir: cambiar el texto en catalogo-cierre.ts.",
+  "donde": "delegación del dueño, DDD filas 173 y 174; DDD filas 123, 126 y 183; src/capacidades/vocabulario/catalogo-cierre.ts"
+}

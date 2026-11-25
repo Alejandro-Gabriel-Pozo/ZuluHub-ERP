@@ -1,0 +1,30 @@
+{
+  "olas": {
+    "1": "2027-01-20",
+    "2": "2027-03-20",
+    "3": "2027-05-20"
+  },
+  "reservadas": [
+    {
+      "accion": "vidrieras.publicar",
+      "motivo": "Permiso del modelo viejo de la vidriera (H7), sin caso de uso: la publicación en línea usa vidrieras.publicar_en_linea. Se decide en la ola 1 si se quita o se usa.",
+      "ola": 1,
+      "referencia": "decisiones-del-dueno-2026-11.md, fila del 21/11/2026 «Regla de arquitectura: tercera pata» (las de vidriera quedan reservadas); conceptos/estado-de-la-carta-en-linea-y-fuera-de-linea.md §2 (permisos duplicados)",
+      "vence": "2027-01-20"
+    },
+    {
+      "accion": "vidrieras.retirar",
+      "motivo": "Permiso del modelo viejo de la vidriera (H7), sin caso de uso: retirar de línea usa vidrieras.retirar_de_linea. Se decide en la ola 1 si se quita o se usa.",
+      "ola": 1,
+      "referencia": "decisiones-del-dueno-2026-11.md, fila del 21/11/2026 «Regla de arquitectura: tercera pata» (las de vidriera quedan reservadas); conceptos/estado-de-la-carta-en-linea-y-fuera-de-linea.md §2 (permisos duplicados)",
+      "vence": "2027-01-20"
+    },
+    {
+      "accion": "vidrieras.renovar_enlace",
+      "motivo": "Renovar el código del enlace de la carta por QR (lo impreso queda muerto si se renueva): sin caso de uso todavía (VYP-2). La ola 1 es una asunción de la sesión, a confirmar.",
+      "ola": 1,
+      "referencia": "decisiones-del-dueno-2026-11.md, fila del 21/11/2026 «Regla de arquitectura: tercera pata» (las de vidriera quedan reservadas); cuestionarios/carta-qr.md (P15, roles de renovar_enlace)",
+      "vence": "2027-01-20"
+    }
+  ]
+}

@@ -8,8 +8,10 @@ import {
 import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import { ROLES_DE_EMPRESA } from "../../../capacidades/permisos/roles";
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import { derechosDeUso, type DerechosDeUso } from "../../../capacidades/planes/derechos";
+import { CATALOGO_DE_PERILLAS } from "../../../capacidades/planes/perillas";
 import { MARCA_PRINCIPAL_DE_PRUEBA } from "../../../../test/utilidades/marcas";
-import { empresaId, personaId } from "../../../primitivas/identificadores/marca";
+import { empresaId, personaId, tenantId } from "../../../primitivas/identificadores/marca";
 import type { DatosDelActor } from "../../../puertos/autorizacion";
 import type { OpcionesDeTransaccion, Transacciones } from "../../../puertos/transacciones";
 import { crearConsultasDeEmpresas } from "./consultas";
@@ -38,9 +40,15 @@ const EN_DESARROLLO: ReglasDeEmpresa = {
   permisos: PERMISOS_DE_EMPRESA,
 };
 
-function armar(actor: () => DatosDelActor, reglas: ReglasDeEmpresa = REGLAS_DE_EMPRESA) {
+function armar(
+  actor: () => DatosDelActor,
+  reglas: ReglasDeEmpresa = REGLAS_DE_EMPRESA,
+  derechos: () => Promise<DerechosDeUso> = () =>
+    Promise.reject(new Error("no se tenían que leer los derechos")),
+) {
   const aperturas: OpcionesDeTransaccion[] = [];
   let lecturasDelActor = 0;
+  let lecturasDeDerechos = 0;
   const tx = {
     autorizacion: {
       delActor: () => {
@@ -48,6 +56,12 @@ function armar(actor: () => DatosDelActor, reglas: ReglasDeEmpresa = REGLAS_DE_E
         return Promise.resolve(actor());
       },
       sucursalesDelActor: () => Promise.reject(new Error("no mira las sucursales")),
+    },
+    derechos: {
+      deLaEmpresa: () => {
+        lecturasDeDerechos += 1;
+        return derechos();
+      },
     },
   } as unknown as TxDeConsultasDeEmpresas;
   const transacciones: Transacciones<TxDeConsultasDeEmpresas> = {
@@ -60,6 +74,7 @@ function armar(actor: () => DatosDelActor, reglas: ReglasDeEmpresa = REGLAS_DE_E
     consultas: crearConsultasDeEmpresas({ transacciones, reglas }),
     aperturas,
     lecturasDelActor: () => lecturasDelActor,
+    lecturasDeDerechos: () => lecturasDeDerechos,
   };
 }
 
@@ -194,6 +209,79 @@ describe("permisosDelActor", () => {
     expect(permisos.modulos).toEqual({
       activos: ["administracion", "clientes"],
       enSoloLectura: ["facturacion"],
+    });
+  });
+
+  describe("funcionesEncendidas", () => {
+    const conSalon = (modulo: "activos" | "soloLectura" = "activos"): DatosDelActor => ({
+      rol: "GERENTE",
+      modulosActivados: ["salon"],
+      modulosHabilitados: modulo === "activos" ? ["salon"] : [],
+    });
+    const derechosConSalon = (encendida: boolean) => () =>
+      Promise.resolve(
+        derechosDeUso({
+          catalogoDeModulos: CATALOGO_DE_MODULOS,
+          catalogoDePerillas: CATALOGO_DE_PERILLAS,
+          tenantId: tenantId("t-1"),
+          empresaId: contexto.empresaId,
+          versionDePlan: null,
+          ajustes: [
+            {
+              perilla: "salon",
+              empresaId: null,
+              numero: 1,
+              vigenteDesde: new Date(0),
+              valor: { tipo: "INTERRUPTOR", encendida },
+            },
+          ],
+          ahora: contexto.ahora,
+        }),
+      );
+
+    it("sin ningún módulo con funciones de pago devuelve [] y NO lee los derechos", async () => {
+      const { consultas, lecturasDeDerechos } = armar(() => conFacturacionEnElPlan("GERENTE"));
+      const permisos = exito(await consultas.permisosDelActor(contexto));
+      expect(permisos.funcionesEncendidas).toEqual([]);
+      expect(lecturasDeDerechos()).toBe(0);
+    });
+
+    it("con salón activo y la función apagada devuelve [] y lee los derechos una sola vez", async () => {
+      const { consultas, lecturasDeDerechos } = armar(
+        () => conSalon(),
+        REGLAS_DE_EMPRESA,
+        derechosConSalon(false),
+      );
+      const permisos = exito(await consultas.permisosDelActor(contexto));
+      expect(permisos.funcionesEncendidas).toEqual([]);
+      expect(lecturasDeDerechos()).toBe(1);
+    });
+
+    it("con la función encendida la devuelve", async () => {
+      const { consultas } = armar(() => conSalon(), REGLAS_DE_EMPRESA, derechosConSalon(true));
+      const permisos = exito(await consultas.permisosDelActor(contexto));
+      expect(permisos.funcionesEncendidas).toEqual(["salon"]);
+    });
+
+    it("con el módulo en solo lectura también lee los derechos", async () => {
+      const { consultas, lecturasDeDerechos } = armar(
+        () => conSalon("soloLectura"),
+        REGLAS_DE_EMPRESA,
+        derechosConSalon(true),
+      );
+      const permisos = exito(await consultas.permisosDelActor(contexto));
+      expect(permisos.modulos.enSoloLectura).toContain("salon");
+      expect(permisos.funcionesEncendidas).toEqual(["salon"]);
+      expect(lecturasDeDerechos()).toBe(1);
+    });
+
+    it("si la lectura de derechos falla, la consulta rechaza: no devuelve permisos a medias", async () => {
+      const { consultas } = armar(
+        () => conSalon(),
+        REGLAS_DE_EMPRESA,
+        () => Promise.reject(new RangeError("empresa no visible")),
+      );
+      await expect(consultas.permisosDelActor(contexto)).rejects.toThrow(RangeError);
     });
   });
 });

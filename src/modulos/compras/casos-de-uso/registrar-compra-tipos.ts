@@ -1,3 +1,4 @@
+import type { ComprobanteCalculado } from "../dominio/comprobante";
 import type { RenglonDeCompra } from "../dominio/registrar-compra";
 
 /** Lo que entra y sale de «Comprar y recibir» (con y sin factura) y la línea ya calculada. Vive aparte para que el caso de uso quepa en un archivo. */
@@ -56,4 +57,13 @@ export type LineaCalculada = Readonly<{
   cantidadEnStock: string;
   importe: string | null;
   costoPorUnidadDeStock: string | null;
+}>;
+
+export type FacturaPreparada = Readonly<{
+  calculado: ComprobanteCalculado;
+  avisos: readonly AvisoDeCompra[];
+  letraNoEsperada: boolean;
+  cuit: string | null;
+  razonSocial: string;
+  asignaciones: readonly Readonly<{ lineaDeFactura: number; renglon: number; cantidad: string }>[];
 }>;

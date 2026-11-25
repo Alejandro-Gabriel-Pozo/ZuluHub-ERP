@@ -1,0 +1,6 @@
+{
+  "grupo": "activos (memoria de logos)",
+  "archivos": "src/capacidades/activos/memoria-de-logos.ts",
+  "minutos": 2,
+  "pruebas": "src/capacidades/activos/memoria-de-logos.test.ts"
+}

@@ -25,18 +25,6 @@ export type CatalogoDb = TablasDePresentaciones &
       factor_a_base: string;
       es_base: boolean;
     };
-    seccion_de_carta: {
-      /** El que manda la aplicación (idempotencia); si no lo manda, lo genera la base. */
-      id: Generated<string>;
-      empresa_id: string;
-      nombre: string;
-      nombre_clave: string;
-      orden: number;
-      activa: Generated<boolean>;
-      creado_en: Generated<Date>;
-      actualizado_en: Generated<Date>;
-      version: Generated<number>;
-    };
     producto: {
       id: string;
       empresa_id: string;
@@ -141,17 +129,6 @@ export const COLUMNAS_DE_CATALOGO = {
   ...COLUMNAS_DE_CARTA,
   ...clasificacion.COLUMNAS_DE_CLASIFICACION,
   unidad_de_medida: ["id", "dimension", "simbolo", "factor_a_base", "es_base"],
-  seccion_de_carta: [
-    "id",
-    "empresa_id",
-    "nombre",
-    "nombre_clave",
-    "orden",
-    "activa",
-    "creado_en",
-    "actualizado_en",
-    "version",
-  ],
   producto: [
     "id",
     "empresa_id",

@@ -1,3 +1,4 @@
+import { LARGO_MAXIMO_DEL_EMAIL_DE_CONTACTO } from "../../../primitivas/contacto/email";
 import { cuitDesdeTexto } from "../../../primitivas/identificacion-fiscal/cuit";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { normalizarAtribucion, type Atribucion } from "./atribucion";
@@ -68,7 +69,7 @@ export type ErrorDeFormulario =
 
 export const LARGO_MAXIMO_DEL_NOMBRE_DE_CONTACTO = 80; // fuente-unica: ajeno — el nombre de contacto de captación es otro dato que el nombre de elección del catálogo
 export const LARGO_MAXIMO_DEL_NOMBRE_DEL_NEGOCIO = 100;
-export const LARGO_MAXIMO_DEL_CORREO = 254;
+export const LARGO_MAXIMO_DEL_CORREO = LARGO_MAXIMO_DEL_EMAIL_DE_CONTACTO;
 const LARGO_MAXIMO_DE_LA_PARTE_LOCAL = 64;
 
 /** Control, formato, sustitutos, uso privado, sin asignar, y los separadores de línea y de párrafo. */

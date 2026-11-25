@@ -25,6 +25,7 @@ import {
   cuenta,
   desdeAhora,
   type TxDeMarcasYPlanesDePrueba,
+  sinAnticipacionDeCambioDePlan,
 } from "./marcas-y-planes-apoyo";
 
 /**
@@ -53,6 +54,7 @@ describe.skipIf(base === null)("marcas y planes de plataforma: concurrencia", ()
     propia = await crearBaseAparte(base);
     dueno = new pg.Client({ connectionString: propia.base.dueno });
     await dueno.connect();
+    await sinAnticipacionDeCambioDePlan(dueno);
     principal = await marcaPrincipal(dueno);
   });
   afterAll(async () => {

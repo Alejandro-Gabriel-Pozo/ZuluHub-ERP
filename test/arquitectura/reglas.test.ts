@@ -584,6 +584,14 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "conexiones-salientes-solo-en-adaptadores-de-red",
+      archivos: { "src/composicion/c.ts": importa("node:https") },
+    },
+    {
+      regla: "dns-solo-en-imagenes-externas",
+      archivos: { "src/adaptadores/arca/a.ts": importa("node:dns/promises") },
+    },
+    {
       regla: "plataforma-solo-importa-la-interfaz-de-la-web",
       archivos: {
         "apps/plataforma/servidor/a.ts": importa("../../web/servidor/sesion"),
@@ -1628,72 +1636,82 @@ describe("E0-T5: sentido de las dependencias entre módulos de base, ventas y ci
     expect(permitido).not.toContain("clientes-sin-negocio");
   });
 
-  it("compras no importa fiscal, ventas ni caja; stock y catálogo no importan compras; compras sí usa stock, catálogo y clientes por su publico.ts", async () => {
-    for (const modulo of ["fiscal", "ventas", "caja"]) {
-      const v = await violacionesDe({
-        "src/modulos/compras/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
-        [`src/modulos/${modulo}/publico.ts`]: exporta,
-      });
-      expect(v, modulo).toContain("compras-sin-fiscal-ventas-ni-caja");
-    }
-    for (const [modulo, regla] of [
-      ["stock", "stock-sin-compras"],
-      ["catalogo", "catalogo-sin-compras"],
-    ] as const) {
-      const v = await violacionesDe({
-        [`src/modulos/${modulo}/casos-de-uso/c.ts`]: importa("../../compras/publico"),
-        "src/modulos/compras/publico.ts": exporta,
-      });
-      expect(v, modulo).toContain(regla);
-    }
-    for (const modulo of ["stock", "catalogo", "clientes", "empresas"]) {
-      const permitido = await violacionesDe({
-        [`src/modulos/${modulo}/publico.ts`]: exporta,
-        "src/modulos/compras/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
-      });
-      expect(permitido, modulo).not.toContain("compras-sin-fiscal-ventas-ni-caja");
-    }
-  });
+  // Tope propio (estabilidad bajo carga, 23/11/2026): corre dependency-cruiser varias veces; 0,5 s medido solo y más de 5 s con la máquina cargada.
+  it(
+    "compras no importa fiscal, ventas ni caja; stock y catálogo no importan compras; compras sí usa stock, catálogo y clientes por su publico.ts",
+    { timeout: 30_000 },
+    async () => {
+      for (const modulo of ["fiscal", "ventas", "caja"]) {
+        const v = await violacionesDe({
+          "src/modulos/compras/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+          [`src/modulos/${modulo}/publico.ts`]: exporta,
+        });
+        expect(v, modulo).toContain("compras-sin-fiscal-ventas-ni-caja");
+      }
+      for (const [modulo, regla] of [
+        ["stock", "stock-sin-compras"],
+        ["catalogo", "catalogo-sin-compras"],
+      ] as const) {
+        const v = await violacionesDe({
+          [`src/modulos/${modulo}/casos-de-uso/c.ts`]: importa("../../compras/publico"),
+          "src/modulos/compras/publico.ts": exporta,
+        });
+        expect(v, modulo).toContain(regla);
+      }
+      for (const modulo of ["stock", "catalogo", "clientes", "empresas"]) {
+        const permitido = await violacionesDe({
+          [`src/modulos/${modulo}/publico.ts`]: exporta,
+          "src/modulos/compras/casos-de-uso/c.ts": importa(`../../${modulo}/publico`),
+        });
+        expect(permitido, modulo).not.toContain("compras-sin-fiscal-ventas-ni-caja");
+      }
+    },
+  );
 
-  it("producción solo importa a stock (por su publico.ts) y ningún módulo de negocio importa producción", async () => {
-    for (const modulo of [
-      "catalogo",
-      "caja",
-      "ventas",
-      "fiscal",
-      "clientes",
-      "compras",
-      "cierre",
-    ]) {
-      const v = await violacionesDe({
-        [`src/modulos/produccion/casos-de-uso/c.ts`]: importa(`../../${modulo}/publico`),
-        [`src/modulos/${modulo}/publico.ts`]: exporta,
+  // Tope propio (estabilidad bajo carga, 23/11/2026): corre dependency-cruiser varias veces; 0,8 s medido solo y más de 5 s con la máquina cargada.
+  it(
+    "producción solo importa a stock (por su publico.ts) y ningún módulo de negocio importa producción",
+    { timeout: 30_000 },
+    async () => {
+      for (const modulo of [
+        "catalogo",
+        "caja",
+        "ventas",
+        "fiscal",
+        "clientes",
+        "compras",
+        "cierre",
+      ]) {
+        const v = await violacionesDe({
+          [`src/modulos/produccion/casos-de-uso/c.ts`]: importa(`../../${modulo}/publico`),
+          [`src/modulos/${modulo}/publico.ts`]: exporta,
+        });
+        expect(v, modulo).toContain("produccion-solo-con-stock");
+      }
+      for (const modulo of [
+        "catalogo",
+        "caja",
+        "ventas",
+        "fiscal",
+        "clientes",
+        "compras",
+        "cierre",
+        "stock",
+      ]) {
+        const v = await violacionesDe({
+          [`src/modulos/${modulo}/casos-de-uso/c.ts`]: importa("../../produccion/publico"),
+          "src/modulos/produccion/publico.ts": exporta,
+        });
+        expect(v, modulo).toContain("negocio-sin-produccion");
+      }
+      const permitido = await violacionesDe({
+        "src/modulos/produccion/casos-de-uso/c.ts": importa("../../stock/publico"),
+        "src/modulos/stock/publico.ts": exporta,
       });
-      expect(v, modulo).toContain("produccion-solo-con-stock");
-    }
-    for (const modulo of [
-      "catalogo",
-      "caja",
-      "ventas",
-      "fiscal",
-      "clientes",
-      "compras",
-      "cierre",
-      "stock",
-    ]) {
-      const v = await violacionesDe({
-        [`src/modulos/${modulo}/casos-de-uso/c.ts`]: importa("../../produccion/publico"),
-        "src/modulos/produccion/publico.ts": exporta,
-      });
-      expect(v, modulo).toContain("negocio-sin-produccion");
-    }
-    const permitido = await violacionesDe({
-      "src/modulos/produccion/casos-de-uso/c.ts": importa("../../stock/publico"),
-      "src/modulos/stock/publico.ts": exporta,
-    });
-    expect(permitido).not.toContain("produccion-solo-con-stock");
-    expect(permitido).not.toContain("negocio-sin-produccion");
-  });
+      expect(permitido).not.toContain("produccion-solo-con-stock");
+      expect(permitido).not.toContain("negocio-sin-produccion");
+    },
+  );
 
   it("cierre no importa ningún módulo de negocio, ni por su publico.ts", async () => {
     for (const modulo of [
@@ -1816,40 +1834,45 @@ describe("facturación F6: las consultas del facturador (spec H7 facturación §
     expect(ajena).toContain("consultas-sin-dominio");
   });
 
-  it("una consulta de salón importa el estado de la mesa y una de comandas, el papel y el estado del trabajo; ningún otro archivo del dominio ni los de otro módulo", async () => {
-    const casos: Record<string, readonly string[]> = {
-      salon: ["estado-de-mesa"],
-      comandas: ["documento", "impresion"],
-    };
-    for (const [modulo, permitidos] of Object.entries(casos)) {
-      for (const archivo of permitidos) {
-        const v = await violacionesDe({
-          [`src/modulos/${modulo}/dominio/${archivo}.ts`]: exporta,
-          [`src/modulos/${modulo}/consultas/c.ts`]: importa(`../dominio/${archivo}`),
-        });
-        expect(v, `${modulo}/${archivo}`).not.toContain("consultas-sin-dominio");
-        const ajeno = await violacionesDe({
-          [`src/modulos/empresas/dominio/${archivo}.ts`]: exporta,
-          "src/modulos/empresas/consultas/c.ts": importa(`../dominio/${archivo}`),
-        });
-        expect(ajeno, `empresas/${archivo}`).toContain("consultas-sin-dominio");
+  // Tope propio (estabilidad bajo carga, 23/11/2026): corre dependency-cruiser varias veces; 0,5 s medido solo y más de 5 s con la máquina cargada.
+  it(
+    "una consulta de salón importa el estado de la mesa y una de comandas, el papel y el estado del trabajo; ningún otro archivo del dominio ni los de otro módulo",
+    { timeout: 30_000 },
+    async () => {
+      const casos: Record<string, readonly string[]> = {
+        salon: ["estado-de-mesa"],
+        comandas: ["documento", "impresion"],
+      };
+      for (const [modulo, permitidos] of Object.entries(casos)) {
+        for (const archivo of permitidos) {
+          const v = await violacionesDe({
+            [`src/modulos/${modulo}/dominio/${archivo}.ts`]: exporta,
+            [`src/modulos/${modulo}/consultas/c.ts`]: importa(`../dominio/${archivo}`),
+          });
+          expect(v, `${modulo}/${archivo}`).not.toContain("consultas-sin-dominio");
+          const ajeno = await violacionesDe({
+            [`src/modulos/empresas/dominio/${archivo}.ts`]: exporta,
+            "src/modulos/empresas/consultas/c.ts": importa(`../dominio/${archivo}`),
+          });
+          expect(ajeno, `empresas/${archivo}`).toContain("consultas-sin-dominio");
+        }
       }
-    }
-    for (const [modulo, otro] of [
-      ["salon", "mesa"],
-      ["salon", "division"],
-      ["salon", "estado-de-mesa-de-otra-cosa"],
-      ["comandas", "envio"],
-      ["comandas", "huella"],
-      ["comandas", "documento-de-otra-cosa"],
-    ] as const) {
-      const prohibido = await violacionesDe({
-        [`src/modulos/${modulo}/dominio/${otro}.ts`]: exporta,
-        [`src/modulos/${modulo}/consultas/c.ts`]: importa(`../dominio/${otro}`),
-      });
-      expect(prohibido, `${modulo}/${otro}`).toContain("consultas-sin-dominio");
-    }
-  });
+      for (const [modulo, otro] of [
+        ["salon", "mesa"],
+        ["salon", "division"],
+        ["salon", "estado-de-mesa-de-otra-cosa"],
+        ["comandas", "envio"],
+        ["comandas", "huella"],
+        ["comandas", "documento-de-otra-cosa"],
+      ] as const) {
+        const prohibido = await violacionesDe({
+          [`src/modulos/${modulo}/dominio/${otro}.ts`]: exporta,
+          [`src/modulos/${modulo}/consultas/c.ts`]: importa(`../dominio/${otro}`),
+        });
+        expect(prohibido, `${modulo}/${otro}`).toContain("consultas-sin-dominio");
+      }
+    },
+  );
 
   it("la excepción es solo de fiscal: el modelo de impresión, la acreditación y la vigencia de otro módulo siguen prohibidos", async () => {
     for (const archivo of ["modelo-de-impresion", "acreditacion", "vigencia"]) {
@@ -1877,23 +1900,28 @@ describe("facturación F8: el adaptador real de ARCA (spec H7 facturación §B.5
     }
   });
 
-  it("el dominio, los casos de uso, otro adaptador, las apps y los scripts no los importan", async () => {
-    for (const paquete of PAQUETES) {
-      for (const ruta of [
-        "src/modulos/fiscal/dominio/d.ts",
-        "src/modulos/fiscal/casos-de-uso/c.ts",
-        "src/modulos/fiscal/persistencia/p.ts",
-        "src/adaptadores/correo/a.ts",
-        "src/composicion/c.ts",
-        "src/primitivas/p.ts",
-        "apps/web/servidor/s.ts",
-        "scripts/s.ts",
-      ]) {
-        const v = await violacionesDe({ [ruta]: importa(paquete) });
-        expect(v, `${paquete} desde ${ruta}`).toContain("arca-solo-en-su-adaptador");
+  // Tope propio (estabilidad bajo carga, 23/11/2026): corre dependency-cruiser una vez por paquete y ruta (unas 20 corridas); 1,6 s medido solo y 6,6 s con la máquina cargada, que vencía los 5 s por defecto.
+  it(
+    "el dominio, los casos de uso, otro adaptador, las apps y los scripts no los importan",
+    { timeout: 30_000 },
+    async () => {
+      for (const paquete of PAQUETES) {
+        for (const ruta of [
+          "src/modulos/fiscal/dominio/d.ts",
+          "src/modulos/fiscal/casos-de-uso/c.ts",
+          "src/modulos/fiscal/persistencia/p.ts",
+          "src/adaptadores/correo/a.ts",
+          "src/composicion/c.ts",
+          "src/primitivas/p.ts",
+          "apps/web/servidor/s.ts",
+          "scripts/s.ts",
+        ]) {
+          const v = await violacionesDe({ [ruta]: importa(paquete) });
+          expect(v, `${paquete} desde ${ruta}`).toContain("arca-solo-en-su-adaptador");
+        }
       }
-    }
-  });
+    },
+  );
 
   it("también se ve el import de un archivo interno del paquete", async () => {
     const v = await violacionesDe({
@@ -1938,6 +1966,94 @@ describe("facturación F8: el adaptador real de ARCA (spec H7 facturación §B.5
       "src/adaptadores/correo/a.ts": importa("../../modulos/identidad/publico"),
     });
     expect(v).not.toContain("adaptador-arca-solo-con-fiscal");
+  });
+});
+
+describe("V1c: las conexiones salientes viven en dos adaptadores y el DNS en uno", () => {
+  const MODULOS_DE_RED = [
+    "node:https",
+    "node:http",
+    "node:http2",
+    "node:net",
+    "node:tls",
+    "node:dgram",
+    "node:dns",
+    "node:dns/promises",
+    "https",
+    "dns",
+  ];
+  const DNS = ["node:dns", "node:dns/promises", "dns"];
+
+  // Tope propio (estabilidad bajo carga, 23/11/2026): corre dependency-cruiser varias veces; 0,7 s medido solo y más de 5 s con la máquina cargada.
+  it(
+    "el traedor y el adaptador de ARCA sí pueden abrir conexiones",
+    { timeout: 30_000 },
+    async () => {
+      for (const modulo of MODULOS_DE_RED.filter((m) => !m.includes("dns"))) {
+        for (const ruta of [
+          "src/adaptadores/imagenes-externas/a.ts",
+          "src/adaptadores/arca/a.ts",
+        ]) {
+          const v = await violacionesDe({ [ruta]: importa(modulo) });
+          expect(v, `${modulo} desde ${ruta}`).not.toContain(
+            "conexiones-salientes-solo-en-adaptadores-de-red",
+          );
+        }
+      }
+    },
+  );
+
+  it(
+    "cualquier otro lugar que las importe rompe la regla (otro adaptador, módulos, composición, apps, scripts, primitivas)",
+    { timeout: 60_000 },
+    async () => {
+      for (const modulo of MODULOS_DE_RED) {
+        for (const ruta of [
+          "src/adaptadores/correo/a.ts",
+          "src/adaptadores/postgres/a.ts",
+          "src/adaptadores/vercel/a.ts",
+          "src/modulos/catalogo/persistencia/p.ts",
+          "src/modulos/catalogo/casos-de-uso/c.ts",
+          "src/capacidades/activos/a.ts",
+          "src/composicion/c.ts",
+          "src/primitivas/p.ts",
+          "apps/web/servidor/s.ts",
+          "apps/web/app/s/carta/r.ts",
+          "scripts/s.ts",
+        ]) {
+          const v = await violacionesDe({ [ruta]: importa(modulo) });
+          expect(v, `${modulo} desde ${ruta}`).toContain(
+            "conexiones-salientes-solo-en-adaptadores-de-red",
+          );
+        }
+      }
+    },
+  );
+
+  // Tope propio (estabilidad bajo carga, 23/11/2026): corre dependency-cruiser varias veces; 0,5 s medido solo y más de 5 s con la máquina cargada.
+  it(
+    "node:dns solo en el traedor: ni siquiera el adaptador de ARCA",
+    { timeout: 30_000 },
+    async () => {
+      for (const modulo of DNS) {
+        const permitido = await violacionesDe({
+          "src/adaptadores/imagenes-externas/a.ts": importa(modulo),
+        });
+        expect(permitido, modulo).not.toContain("dns-solo-en-imagenes-externas");
+        for (const ruta of ["src/adaptadores/arca/a.ts", "src/composicion/c.ts", "scripts/s.ts"]) {
+          const v = await violacionesDe({ [ruta]: importa(modulo) });
+          expect(v, `${modulo} desde ${ruta}`).toContain("dns-solo-en-imagenes-externas");
+        }
+      }
+    },
+  );
+
+  it("lo que no es de red sigue libre (node:fs, node:crypto, node:path)", async () => {
+    for (const modulo of ["node:fs", "node:crypto", "node:path"]) {
+      const v = await violacionesDe({ "src/composicion/c.ts": importa(modulo) });
+      expect(v, modulo).not.toContain("conexiones-salientes-solo-en-adaptadores-de-red");
+      expect(v, modulo).not.toContain("dns-solo-en-imagenes-externas");
+    }
   });
 });
 
@@ -2255,36 +2371,41 @@ describe("P7: la puerta de plataforma solo la importan los scripts y las pruebas
     }
   });
 
-  it("la puerta de la consola solo la importa el servidor de la consola (y las pruebas): ni la web ni el resto de src/ ni las páginas de la consola", async () => {
-    const PUERTA_DE_CONSOLA = "src/composicion/puerta-de-consola.ts";
-    const servidor = await violacionesDe({
-      "apps/plataforma/servidor/composicion.ts": importa(
-        "../../../src/composicion/puerta-de-consola",
-      ),
-      "src/composicion/puerta-de-consola.test.ts": importa("./puerta-de-consola"),
-      [PUERTA_DE_CONSOLA]: exporta,
-    });
-    expect(servidor).not.toContain("puerta-de-consola-solo-desde-la-consola");
-    expect(servidor).not.toContain("composicion-solo-desde-servidor-de-apps");
-    for (const origen of [
-      "apps/plataforma/app/page.tsx",
-      "apps/plataforma/ui/boton.ts",
-      "apps/web/servidor/composicion.ts",
-      "apps/web/app/s/app/page.tsx",
-      "src/composicion/web.ts",
-      "src/composicion/conexiones.ts",
-      "src/modulos/empresas/casos-de-uso/c.ts",
-      "src/plataforma/casos-de-uso/c.ts",
-      "src/adaptadores/postgres/a.ts",
-    ]) {
-      const profundidad = "../".repeat(origen.split("/").length - 1);
-      const v = await violacionesDe({
-        [origen]: importa(`${profundidad}src/composicion/puerta-de-consola`),
+  // Tope propio (estabilidad bajo carga, 23/11/2026): corre dependency-cruiser varias veces; 0,5 s medido solo y más de 5 s con la máquina cargada.
+  it(
+    "la puerta de la consola solo la importa el servidor de la consola (y las pruebas): ni la web ni el resto de src/ ni las páginas de la consola",
+    { timeout: 30_000 },
+    async () => {
+      const PUERTA_DE_CONSOLA = "src/composicion/puerta-de-consola.ts";
+      const servidor = await violacionesDe({
+        "apps/plataforma/servidor/composicion.ts": importa(
+          "../../../src/composicion/puerta-de-consola",
+        ),
+        "src/composicion/puerta-de-consola.test.ts": importa("./puerta-de-consola"),
         [PUERTA_DE_CONSOLA]: exporta,
       });
-      expect(v, origen).toContain("puerta-de-consola-solo-desde-la-consola");
-    }
-  });
+      expect(servidor).not.toContain("puerta-de-consola-solo-desde-la-consola");
+      expect(servidor).not.toContain("composicion-solo-desde-servidor-de-apps");
+      for (const origen of [
+        "apps/plataforma/app/page.tsx",
+        "apps/plataforma/ui/boton.ts",
+        "apps/web/servidor/composicion.ts",
+        "apps/web/app/s/app/page.tsx",
+        "src/composicion/web.ts",
+        "src/composicion/conexiones.ts",
+        "src/modulos/empresas/casos-de-uso/c.ts",
+        "src/plataforma/casos-de-uso/c.ts",
+        "src/adaptadores/postgres/a.ts",
+      ]) {
+        const profundidad = "../".repeat(origen.split("/").length - 1);
+        const v = await violacionesDe({
+          [origen]: importa(`${profundidad}src/composicion/puerta-de-consola`),
+          [PUERTA_DE_CONSOLA]: exporta,
+        });
+        expect(v, origen).toContain("puerta-de-consola-solo-desde-la-consola");
+      }
+    },
+  );
 
   it("sí la importan los scripts, las pruebas y los archivos de la propia puerta", async () => {
     const v = await violacionesDe({
@@ -2579,6 +2700,9 @@ describe("el módulo de ARCA simulada del recorrido no puede llegar a producció
   const RAIZ_REAL = join(import.meta.dirname, "../..");
   const PROHIBIDO_EN_PRODUCCION = [
     "conectar-arca-simulada",
+    "conectar-proveedor-de-imagenes-simulado",
+    "proveedor-de-imagenes-simulado",
+    "activar-modulos-en-desarrollo",
     "PEDERNAL_RECORRIDO",
     "arca-simulada",
     "NODE_OPTIONS",
@@ -2611,7 +2735,7 @@ describe("el módulo de ARCA simulada del recorrido no puede llegar a producció
     expect(referenciasProhibidas(vercel)).toEqual([]);
   });
 
-  it("la regla detecta la violación inyectada (las cuatro formas)", () => {
+  it("la regla detecta la violación inyectada (cada nombre prohibido)", () => {
     for (const prohibido of PROHIBIDO_EN_PRODUCCION) {
       expect(referenciasProhibidas(`const a = 1;\nimport "${prohibido}";\n`)).toEqual([
         `import "${prohibido}";`,

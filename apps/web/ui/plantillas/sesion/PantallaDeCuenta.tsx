@@ -25,6 +25,8 @@ export type PropsDePantallaDeCuenta = Readonly<{
   configuracionFiscal?: Readonly<{ texto: string; href: string }>;
   /** El renglón «Contacto de la sucursal» y adónde lleva; solo para quien puede editar sucursales (lo decide el servidor). Sin él, no se muestra. */
   contactoDeLaSucursal?: Readonly<{ texto: string; href: string }>;
+  /** El renglón «Usuarios» y adónde lleva; solo para quien puede ver a los usuarios (lo decide el servidor). Sin él, no se muestra. */
+  usuarios?: Readonly<{ texto: string; href: string }>;
   accionDeCerrarSesion: AccionDeFormulario;
   diccionario?: DiccionarioResuelto;
 }>;
@@ -35,6 +37,7 @@ export function PantallaDeCuenta({
   sucursales,
   configuracionFiscal,
   contactoDeLaSucursal,
+  usuarios,
   accionDeCerrarSesion,
   diccionario = {},
 }: PropsDePantallaDeCuenta) {
@@ -62,6 +65,13 @@ export function PantallaDeCuenta({
         <Texto>
           <a className={estilos["enlace"]} href={contactoDeLaSucursal.href}>
             {contactoDeLaSucursal.texto}
+          </a>
+        </Texto>
+      )}
+      {usuarios === undefined ? null : (
+        <Texto>
+          <a className={estilos["enlace"]} href={usuarios.href}>
+            {usuarios.texto}
           </a>
         </Texto>
       )}

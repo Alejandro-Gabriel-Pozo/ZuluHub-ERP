@@ -1,0 +1,124 @@
+name: Cargar entorno de la consola (solo preview)
+
+# Deja la consola de plataforma de `preview` (proyecto de Vercel `pedernal-plataforma`) con sus variables SIN que el dueño vea ni pegue
+# ningún secreto. Decisiones del dueño, 2026-11-19 (pregunta directa): rol de autenticación propio de la consola (migración 0088),
+# login PERMANENTE de `pedernal_plataforma` SOLO en preview (90 días, renovable corriendo este mismo flujo; reemplaza para este caso la
+# decisión del 2026-11-05 de login temporal), el mismo secreto de invitaciones en la web y la consola, y un token de Vercel propio.
+#  - SOLO `preview`: no hay entrada de ambiente y el script rechaza cualquier destino distinto. Producción no se toca desde acá.
+#  - Qué carga (valores al azar de la corrida, enmascarados, sensibles en Vercel): PEDERNAL_CLAVE_CONTEXTO de la consola (kid nuevo,
+#    instalada en la base), PEDERNAL_SECRETO_INVITACIONES (el MISMO valor en la web y la consola), PEDERNAL_DB_AUTENTICACION y
+#    PEDERNAL_DB_PLATAFORMA (contraseña nueva de cada rol, con login y VALID UNTIL a 90 días). No carga el host, el secreto de Better
+#    Auth de la consola ni el cliente de Google: los carga el dueño; el flujo solo informa por nombre si están o faltan.
+#  - `rotar` en false (lo normal): idempotente, lo que ya está no se toca y se renueva la vigencia del login. La PRIMERA corrida, con
+#    valores que el dueño cargó a mano y que nadie puede leer, se hace con `rotar` en true (reemplaza las cuatro).
+#  - Atomicidad: el cambio de la base va en una transacción que queda abierta mientras se escribe en Vercel; si Vercel falla se deshace.
+#    Si falla a mitad, el informe nombra lo ya escrito y se repite con `rotar` en true.
+#  - Después de correrlo, redesplegar el último despliegue de preview de la consola (y el de la web si cambió el secreto de invitaciones);
+#    las invitaciones pendientes de preview hay que reenviarlas. Guía: apps/plataforma/PRIMER-DESPLIEGUE.md y apps/web/PRIMER-DESPLIEGUE.md.
+#  - Nada de lo secreto se imprime: cada valor se enmascara (`::add-mask::`) antes de usarse. Los secretos solo entran por `env:` de un paso.
+#  - El Environment `preview` exige la APROBACIÓN DEL DUEÑO (revisores obligatorios y solo `main`, PRIMER-DESPLIEGUE.md, B.1).
+#    Secretos del Environment `preview` (nunca en el repositorio):
+#      PEDERNAL_DB_DUENO_DIRECTA        la cadena DIRECTA (nunca la del pooler) del dueño de la base de preview (la de `migrar.yml`).
+#      PEDERNAL_VERCEL_TOKEN_CONSOLA    token de Vercel con alcance a `pedernal-erp` Y `pedernal-plataforma` (equipo `alepozod`) y
+#                                       vencimiento corto. DISTINTO de PEDERNAL_VERCEL_TOKEN. Lo crea el dueño; nadie más lo ve.
+#  - Requiere la base al día (migración 0088 aplicada con `migrar.yml`): no migra.
+#  - Concurrencia: comparte el grupo `migrar-preview` con `migrar.yml`, `cargar-entorno.yml` y `preparar-empresa-de-pruebas.yml`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmacion:
+        description: "Escribir CARGAR CONSOLA PREVIEW"
+        type: string
+        required: true
+      rotar:
+        description: "Reemplazar clave de contexto, secreto de invitaciones y cadenas (true en la primera corrida)"
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  # El MISMO grupo que los demás flujos de `preview`: uno a la vez sobre la misma base. Lo que ya corre nunca se cancela.
+  group: migrar-preview
+  cancel-in-progress: false
+
+jobs:
+  validar:
+    # Todo lo que se puede rechazar sin los secretos se rechaza ACÁ, antes del Environment.
+    name: Validar la corrida
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Validar la rama y la frase
+        run: |
+          set -eu
+          if [ "$REF" != "refs/heads/main" ]; then
+            echo "::error::Solo se carga la consola desde la rama main (esta corrida es de $REF). Volvé a correrlo eligiendo main en «Use workflow from»."
+            exit 1
+          fi
+          if [ "$CONFIRMACION" != "CARGAR CONSOLA PREVIEW" ]; then
+            echo "::error::Para cargar la consola hay que escribir exactamente «CARGAR CONSOLA PREVIEW» en el campo de confirmación."
+            exit 1
+          fi
+        env:
+          REF: ${{ github.ref }}
+          CONFIRMACION: ${{ inputs.confirmacion }}
+
+  cargar:
+    name: Cargar el entorno de la consola
+    needs: validar
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Los revisores obligatorios (el dueño) aprueban ANTES de que arranque cualquier paso de este job.
+    environment: preview
+    permissions:
+      contents: read
+    steps:
+      - name: Comprobar que el Environment tiene todo lo necesario (solo se nombran las que faltan)
+        run: |
+          set -eu
+          faltan=""
+          [ -n "${PEDERNAL_DB_MIGRACIONES:-}" ] || faltan="$faltan PEDERNAL_DB_DUENO_DIRECTA"
+          [ -n "${PEDERNAL_VERCEL_TOKEN_CONSOLA:-}" ] || faltan="$faltan PEDERNAL_VERCEL_TOKEN_CONSOLA"
+          if [ -n "$faltan" ]; then
+            echo "::error::Faltan estos secretos en el Environment preview (Settings → Environments → Secrets):$faltan"
+            exit 1
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_VERCEL_TOKEN_CONSOLA: ${{ secrets.PEDERNAL_VERCEL_TOKEN_CONSOLA }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # Sin caché de npm: este job tiene los secretos y no restaura nada que no sea el lockfile.
+      - name: Dependencias (solo las de producción, sin scripts de instalación)
+        run: npm ci --omit=dev --ignore-scripts
+
+      - name: La base tiene que estar al día
+        # Este flujo no migra: eso es de `migrar.yml`. `shell: bash` activa `pipefail`.
+        shell: bash
+        run: |
+          set -eu
+          npm run migrar -- --ver | tee "$RUNNER_TEMP/estado.txt"
+          if grep -q "faltan aplicar" "$RUNNER_TEMP/estado.txt"; then
+            echo "::error::Hay migraciones pendientes. Corré antes «Migrar (preview y producción)» (aplicar, preview) y volvé a cargar la consola."
+            exit 1
+          fi
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+
+      - name: Cargar la consola (sin mostrar ningún valor)
+        run: npm run consola:cargar-entorno
+        env:
+          PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
+          PEDERNAL_VERCEL_TOKEN_CONSOLA: ${{ secrets.PEDERNAL_VERCEL_TOKEN_CONSOLA }}
+          DESTINO: preview
+          ROTAR: ${{ inputs.rotar }}

@@ -6,7 +6,7 @@ import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import type { DatosDelCobroValidos } from "../dominio/datos-del-cobro";
 import { esUuid } from "../dominio/identificadores";
 import type { ReferenciaOpaca } from "../dominio/identidad-del-cobro";
-import type { TipoDeMedio } from "../estados";
+import type { DatoDelCobro, TipoDeMedio } from "../estados";
 import type { CajaDb } from "./esquema";
 
 /** Lo que se guarda de un cobro además de su movimiento: el origen (identidad del efecto) y los datos opcionales ya validados. */
@@ -38,6 +38,8 @@ export type CobroDeOrigenGuardado = Readonly<{
   cuentaDeCobroId: string | null;
   /** La jornada de la sesión del cobro (el sello de la sesión, no la fecha de hoy). */
   fechaDeNegocio: FechaCivil;
+  /** El sello de la base al cobrar (PR-7-caja): los datos que el medio pedía y quedaron vacíos. */
+  datosPendientes: readonly DatoDelCobro[];
   correcciones: readonly CorreccionDeCobro[];
 }>;
 
@@ -51,9 +53,11 @@ export type MarcaDeTarjeta = Readonly<{ id: string; nombre: string }>;
 export interface RepositorioDeCobros {
   /**
    * Alta con `INSERT ... ON CONFLICT DO NOTHING` sin objetivo (cualquier unicidad, sin dejar abortada la transacción del llamador).
-   * `false` si no insertó porque ese origen y orden ya tenían su cobro.
+   * `null` si no insertó porque ese origen y orden ya tenían su cobro; si insertó, el sello `datos_pendientes` que calculó la base (el código no lo escribe).
    */
-  insertar(nuevo: CobroNuevo): Promise<boolean>;
+  insertar(nuevo: CobroNuevo): Promise<readonly DatoDelCobro[] | null>;
+  /** El sello de un cobro ya registrado (para devolver el original en una repetición). `null` si no existe en la empresa. */
+  datosPendientes(empresa: EmpresaId, cobroId: string): Promise<readonly DatoDelCobro[] | null>;
   /** Los cobros de un origen, ordenados por su posición dentro de él. Solo lectura. */
   deOrigen(empresa: EmpresaId, origen: ReferenciaOpaca): Promise<CobroDeOrigenGuardado[]>;
   /** Las marcas de tarjeta ACTIVAS (la lista `MARCAS_DE_TARJETA`), por nombre. Solo lectura. */
@@ -82,8 +86,20 @@ export function crearRepositorioDeCobros(db: Kysely<CajaDb>): RepositorioDeCobro
           dni: nuevo.datos.dni,
         })
         .onConflict((oc) => oc.doNothing())
+        .returning("datos_pendientes")
         .executeTakeFirst();
-      return resultado.numInsertedOrUpdatedRows === 1n;
+      return resultado === undefined ? null : (resultado.datos_pendientes as DatoDelCobro[]);
+    },
+
+    async datosPendientes(empresa, cobroId) {
+      if (!esUuid(cobroId)) return null;
+      const fila = await db
+        .selectFrom("cobro")
+        .select("datos_pendientes")
+        .where("empresa_id", "=", empresa)
+        .where("movimiento_id", "=", cobroId)
+        .executeTakeFirst();
+      return fila === undefined ? null : (fila.datos_pendientes as DatoDelCobro[]);
     },
 
     async deOrigen(empresa, origen) {
@@ -110,6 +126,7 @@ export function crearRepositorioDeCobros(db: Kysely<CajaDb>): RepositorioDeCobro
           "md.tipo as medio_tipo",
           "m.cuenta_de_cobro_id as cuenta_de_cobro_id",
           sql<string>`s.fecha_negocio::text`.as("fecha_negocio"),
+          "co.datos_pendientes as datos_pendientes",
         ])
         .where("co.empresa_id", "=", empresa)
         .where("co.origen_tipo", "=", origen.tipo)
@@ -148,6 +165,7 @@ export function crearRepositorioDeCobros(db: Kysely<CajaDb>): RepositorioDeCobro
         medioTipo: c.medio_tipo,
         cuentaDeCobroId: c.cuenta_de_cobro_id,
         fechaDeNegocio: c.fecha_negocio as FechaCivil,
+        datosPendientes: c.datos_pendientes as DatoDelCobro[],
         correcciones: correcciones
           .filter((k) => k.cobro_id === c.cobro_id)
           .map((k) => ({

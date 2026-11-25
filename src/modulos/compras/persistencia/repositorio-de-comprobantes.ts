@@ -14,6 +14,8 @@ export type ComprobanteGuardado = Readonly<{
   id: string;
   proveedorId: string;
   clase: string;
+  /** La factura que corrige (solo una nota de crédito). */
+  comprobanteAsociadoId: string | null;
   tipo: TipoDeComprobanteDeProveedor | null;
   puntoDeVenta: number | null;
   numero: number | null;
@@ -46,6 +48,8 @@ export type ComprobanteGuardado = Readonly<{
 export type AltaDeComprobante = Readonly<{
   proveedorId: string;
   clase: string;
+  /** La factura que corrige: obligatoria en una nota de crédito y ausente en lo demás (lo exige la base). */
+  comprobanteAsociadoId?: string | null;
   tipo: TipoDeComprobanteDeProveedor;
   puntoDeVenta: number;
   numero: number;
@@ -89,6 +93,11 @@ export interface RepositorioDeComprobantes {
   bloquear(empresa: EmpresaId, id: string): Promise<ComprobanteGuardado | null>;
   /** El comprobante vigente (registrado si lo hay; si no, el más nuevo) de una recepción, por el puntero de sus líneas. */
   delaRecepcion(empresa: EmpresaId, recepcionId: string): Promise<ComprobanteGuardado | null>;
+  /** Lo mismo que `delaRecepcion` para varias recepciones en UNA consulta (sin N+1): el comprobante vigente de cada una, con su recepción; las que no tienen no aparecen. */
+  deVariasRecepciones(
+    empresa: EmpresaId,
+    recepcionIds: readonly string[],
+  ): Promise<readonly (ComprobanteGuardado & Readonly<{ recepcionId: string }>)[]>;
   /** Los comprobantes de un proveedor, los más nuevos primero (hasta `limite`). */
   delProveedor(
     empresa: EmpresaId,
@@ -110,6 +119,7 @@ const COLUMNAS = [
   "id",
   "proveedor_id",
   "clase",
+  "comprobante_asociado_id",
   "tipo",
   "punto_de_venta",
   "numero",
@@ -143,6 +153,7 @@ type Fila = {
   id: string;
   proveedor_id: string;
   clase: string;
+  comprobante_asociado_id: string | null;
   tipo: string | null;
   punto_de_venta: number | null;
   numero: number | null;
@@ -184,6 +195,7 @@ function aComprobante(f: Fila): ComprobanteGuardado {
     id: f.id,
     proveedorId: f.proveedor_id,
     clase: f.clase,
+    comprobanteAsociadoId: f.comprobante_asociado_id,
     tipo: f.tipo,
     puntoDeVenta: f.punto_de_venta,
     numero: f.numero,
@@ -266,6 +278,31 @@ export function crearRepositorioDeComprobantes(db: Kysely<ComprasDb>): Repositor
         .executeTakeFirst();
       return fila === undefined ? null : aComprobante(fila);
     },
+    async deVariasRecepciones(empresa, recepcionIds) {
+      const validos = [...new Set(recepcionIds.filter(esUuid))];
+      if (validos.length === 0) return [];
+      const apunta = sql<
+        string | null
+      >`(select l.recepcion_id from linea_de_comprobante l where l.empresa_id = comprobante_de_proveedor.empresa_id
+        and l.comprobante_id = comprobante_de_proveedor.id and l.recepcion_id in (${sql.join(validos)}) limit 1)`;
+      const filas = await db
+        .selectFrom("comprobante_de_proveedor")
+        .select([...COLUMNAS, apunta.as("recepcion_id")])
+        .where("empresa_id", "=", empresa)
+        .where(sql<boolean>`${apunta} is not null`)
+        // El mismo criterio que `delaRecepcion`: el registrado primero y, entre iguales, el más nuevo; el primero de cada recepción es el vigente.
+        .orderBy(sql`(estado = 'REGISTRADO')`, "desc")
+        .orderBy("registrado_en", "desc")
+        .execute();
+      const vistas = new Set<string>();
+      const vigentes: (ComprobanteGuardado & Readonly<{ recepcionId: string }>)[] = [];
+      for (const f of filas) {
+        if (f.recepcion_id === null || vistas.has(f.recepcion_id)) continue;
+        vistas.add(f.recepcion_id);
+        vigentes.push({ ...aComprobante(f), recepcionId: f.recepcion_id });
+      }
+      return vigentes;
+    },
     async delProveedor(empresa, proveedorId, limite) {
       if (!esUuid(proveedorId)) return [];
       const filas = await db
@@ -300,6 +337,7 @@ export function crearRepositorioDeComprobantes(db: Kysely<ComprasDb>): Repositor
           empresa_id: empresa,
           proveedor_id: alta.proveedorId,
           clase: alta.clase,
+          comprobante_asociado_id: alta.comprobanteAsociadoId ?? null,
           tipo: alta.tipo,
           punto_de_venta: alta.puntoDeVenta,
           numero: alta.numero,

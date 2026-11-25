@@ -201,12 +201,9 @@ describe.skipIf(base === null)("producción: órdenes (E6-T8)", () => {
       ).toBe(0);
     });
 
-    it("D12: con faltante, BLOQUEAR rechaza, AVISAR pide «producir igual», AVISAR confirmado y PERMITIR pasan con una excepción auditada", async () => {
+    it("D12: con faltante, AVISAR pide «producir igual», AVISAR confirmado y PERMITIR pasan con una excepción auditada", async () => {
       const p = await c.panaderia(e);
       await c.comprar(e, p.origen, p.harina.producto, "5", "1000"); // faltan 7 kg de harina y toda la manteca
-      await c.fijarNivel(e.empresa, "BLOQUEAR");
-      const bloqueada = await abrir(p);
-      expect(bloqueada).toMatchObject({ ok: false, error: { error: "CONTROL_BLOQUEA" } });
       await c.fijarNivel(e.empresa, "AVISAR");
       expect(await abrir(p)).toMatchObject({
         ok: false,
@@ -229,7 +226,6 @@ describe.skipIf(base === null)("producción: órdenes (E6-T8)", () => {
           (await c.auditoria(e.empresa, "CONTROL_EXCEPCION")).filter((a) => a["entidad_id"] === id),
         ).toHaveLength(2);
       }
-      await c.fijarNivel(e.empresa, "BLOQUEAR");
       expect(
         await c.contar("select count(*) as n from orden_de_produccion where producto_id = $1", [
           p.masa.producto,

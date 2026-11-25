@@ -21,7 +21,7 @@ import type { BaseDePruebas } from "./global";
 import { esperarBloqueo, SesionDePrueba } from "./sesiones";
 
 /**
- * 0061 (permisos configurables, T1 de H4b) contra una base real: privilegios y RLS (I11), la semilla igual a la tabla de hoy (I14, parte 1), los pisos que la base
+ * 0094 (permisos configurables, T1 de H4b) contra una base real: privilegios y RLS (I11), la semilla igual a la tabla de hoy (I14, parte 1), los pisos que la base
  * impone aunque el código se olvide (I5), versiones inmutables, aislamiento entre empresas, escrituras simultáneas y repetidas (I9, I10) y la reversión.
  * Lo que toca tablas GLOBALES (plantillas, pisos) se prueba siempre dentro de una transacción que se deshace: otras pruebas de la corrida leen esas tablas.
  */
@@ -29,9 +29,9 @@ const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 120_000 });
 const REVERSION = join(
   import.meta.dirname,
-  "../../migraciones/reversiones/0061_revertir_permisos_configurables.sql",
+  "../../migraciones/reversiones/0094_revertir_permisos_configurables.sql",
 );
-const MIGRACION = join(import.meta.dirname, "../../migraciones/0061_permisos_configurables.sql");
+const MIGRACION = join(import.meta.dirname, "../../migraciones/0094_permisos_configurables.sql");
 
 const ROLES_DE_BASE = [
   "pedernal_app",
@@ -52,7 +52,7 @@ const TABLAS = [
 ];
 const TODAS = Object.keys(PERMISOS_DE_EMPRESA).sort();
 const tabla = tablaDePermisos(PERMISOS_DE_EMPRESA);
-/** Las acciones que hoy tiene solo el gerente y las 4 que tienen todos: el Anexo A del diseño (H4b), escrito aparte para no depender del generador. */
+/** Las acciones que hoy tiene solo el gerente y las 4 que tienen todos: el Anexo A del diseño (H4b), escrito aparte para no depender del generador. Sin `productos.asignar_emisor`: el Anexo A la lista, pero la acción se retiró del sistema (#468, sin caso de uso), así que ya no existe. */
 const SOLO_GERENTE_ANEXO_A = [
   "sucursales.desactivar",
   "sucursales.reactivar",
@@ -66,7 +66,6 @@ const SOLO_GERENTE_ANEXO_A = [
   "puntos_de_venta.desactivar",
   "puntos_de_venta.cambiar_ambiente",
   "emisores.confirmar_regla",
-  "productos.asignar_emisor",
   "stock.verificar_saldos",
   "series.resincronizar",
   "certificados.gestionar",
@@ -84,7 +83,7 @@ const TODOS_ANEXO_A = [
 /** Una lista válida que cumple los pisos: los cuatro de todos y dos acciones libres. */
 const LISTA_VALIDA = [...TODOS_ANEXO_A, "ventas.ver", "mesas.ver"].sort();
 
-describe.skipIf(base === null)("migración 0061: permisos configurables (T1 de H4b)", () => {
+describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H4b)", () => {
   const entorno = crearEntornoDePrueba(base as BaseDePruebas, 6);
   let dueno: pg.Client;
   let empresa: string;
@@ -388,12 +387,12 @@ describe.skipIf(base === null)("migración 0061: permisos configurables (T1 de H
         "select clave, numero, autor from version_de_plantilla order by clave, numero",
       );
       expect(v.rows).toEqual([
-        { clave: "ADMINISTRADOR", numero: 1, autor: "migracion:0061" },
-        { clave: "OPERADOR", numero: 1, autor: "migracion:0061" },
+        { clave: "ADMINISTRADOR", numero: 1, autor: "migracion:0094" },
+        { clave: "OPERADOR", numero: 1, autor: "migracion:0094" },
       ]);
     });
 
-    it("los pisos son los del Anexo A: 20 solo-gerente (los que hoy tiene únicamente el gerente) y 4 de todos los roles", async () => {
+    it("los pisos son los del Anexo A: 19 solo-gerente (los que hoy tiene únicamente el gerente) y 4 de todos los roles", async () => {
       const { rows } = await dueno.query<{ accion: string; tipo: string }>(
         "select accion, tipo from piso_de_plataforma order by accion",
       );
@@ -403,7 +402,7 @@ describe.skipIf(base === null)("migración 0061: permisos configurables (T1 de H
       expect(rows.filter((r) => r.tipo === "TODOS_LOS_ROLES").map((r) => r.accion)).toEqual(
         TODOS_ANEXO_A,
       );
-      expect(rows).toHaveLength(24);
+      expect(rows).toHaveLength(23);
       // El piso solo-gerente es exactamente «lo que hoy solo tiene el gerente»; los de todos están entre los que hoy tienen los tres.
       expect(SOLO_GERENTE_ANEXO_A).toEqual(
         TODAS.filter(
@@ -796,7 +795,7 @@ describe.skipIf(base === null)("migración 0061: permisos configurables (T1 de H
       const s = await comoApp(empresa);
       try {
         const p = await s.directo("select count(*)::int as n from piso_de_plataforma");
-        expect(p.ok && p.rows[0]).toEqual({ n: 24 });
+        expect(p.ok && p.rows[0]).toEqual({ n: 23 });
         const v = await s.directo("select count(*)::int as n from version_de_plantilla");
         expect(v.ok && v.rows[0]).toEqual({ n: 2 });
       } finally {
@@ -986,7 +985,7 @@ describe.skipIf(base === null)("migración 0061: permisos configurables (T1 de H
         );
         await expect(correr()).rejects.toMatchObject({ code: "55000" });
         expect((await c.query("select 1 from version_de_rol")).rowCount).toBe(1);
-        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(24);
+        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(23);
         // Sin roles pero con una versión de plantilla de la plataforma: frena.
         await c.query("alter table rol_de_empresa disable trigger rol_de_empresa_sin_borrado");
         await c.query("alter table version_de_rol disable trigger version_de_rol_solo_insercion");
@@ -1012,7 +1011,7 @@ describe.skipIf(base === null)("migración 0061: permisos configurables (T1 de H
         );
         await expect(correr()).rejects.toMatchObject({ code: "55000" });
         await c.query(
-          "update piso_de_plataforma set tipo = 'SOLO_GERENTE', autor = 'migracion:0061' where accion = 'cajas.crear'",
+          "update piso_de_plataforma set tipo = 'SOLO_GERENTE', autor = 'migracion:0094' where accion = 'cajas.crear'",
         );
         // Todavía frena: la versión del piso ya no es 1 (queda el rastro de que se cambió).
         await expect(correr()).rejects.toMatchObject({ code: "55000" });
@@ -1034,7 +1033,7 @@ describe.skipIf(base === null)("migración 0061: permisos configurables (T1 de H
         expect(
           (
             await c.query(
-              "select 1 from migracion where nombre = '0061_permisos_configurables.sql'",
+              "select 1 from migracion where nombre = '0094_permisos_configurables.sql'",
             )
           ).rowCount,
         ).toBe(0);
@@ -1042,7 +1041,7 @@ describe.skipIf(base === null)("migración 0061: permisos configurables (T1 de H
         await c.query("begin");
         await c.query(await readFile(MIGRACION, "utf8"));
         await c.query("commit");
-        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(24);
+        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(23);
         expect((await c.query("select 1 from accion_introducida")).rowCount).toBe(TODAS.length);
       } finally {
         await c.end();

@@ -144,6 +144,7 @@ export type MedioParaOfrecer = Readonly<{
   tipo: TipoDeMedio;
   nombre: string | null;
   pide: DatosQuePideElMedio;
+  avisaSiFalta: DatosQuePideElMedio;
 }>;
 export type CuentaParaOfrecer = Readonly<{ id: string; tipo: TipoDeCuenta; nombre: string }>;
 
@@ -155,6 +156,8 @@ export type OpcionDeMedioParaCobrar = Readonly<{
   /** Las cuentas que el medio admite (puede estar vacía: la cuenta es opcional, decisión 151; el efectivo no lleva). */
   cuentas: readonly CuentaParaOfrecer[];
   datosQuePide: DatosQuePideElMedio;
+  /** De los que pide, cuáles «se piden»: se pueden dejar vacíos y el cobro queda con el dato pendiente (nunca bloquea). */
+  datosQueSePiden: DatosQuePideElMedio;
 }>;
 
 /**
@@ -179,6 +182,12 @@ export function opcionDeMedioParaCobrar(
       .map((c) => ({ id: c.id, tipo: c.tipo, nombre: c.nombre })),
     datosQuePide: Object.fromEntries(
       DATOS_DEL_COBRO.map((dato) => [dato, medio.pide[dato] && datosAdmitidos.includes(dato)]),
+    ) as DatosQuePideElMedio,
+    datosQueSePiden: Object.fromEntries(
+      DATOS_DEL_COBRO.map((dato) => [
+        dato,
+        medio.avisaSiFalta[dato] && medio.pide[dato] && datosAdmitidos.includes(dato),
+      ]),
     ) as DatosQuePideElMedio,
   };
 }

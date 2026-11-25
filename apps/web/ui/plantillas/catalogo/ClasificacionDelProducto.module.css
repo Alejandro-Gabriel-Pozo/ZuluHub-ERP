@@ -1,0 +1,33 @@
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie-elevada);
+}
+
+.fila {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+  margin: 0;
+}
+
+.fila dt {
+  color: var(--color-texto-suave);
+}
+
+.fila dd {
+  margin: 0;
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+}

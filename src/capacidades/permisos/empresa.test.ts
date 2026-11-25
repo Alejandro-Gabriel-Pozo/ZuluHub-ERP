@@ -55,14 +55,10 @@ const DEL_OPERADOR_DE_CATALOGO_Y_STOCK = [
   "vidrieras.ver",
 ] as const;
 
-/** Lo que el administrador puede de más que el operador en catálogo, carta y stock (30 acciones). */
+/** Lo que el administrador puede de más que el operador en catálogo, carta y stock (27 acciones). */
 const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
   "articulos.controlar",
   "articulos.dejar_de_controlar",
-  "categorias.crear",
-  "categorias.desactivar",
-  "categorias.editar",
-  "categorias.reactivar",
   "composiciones.editar",
   "conteos.abrir",
   "conteos.aplicar",
@@ -80,8 +76,10 @@ const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
   "productos.reactivar",
   "stock.ajustar",
   "stock.anular",
+  "vidrieras.administrar_portal",
   "vidrieras.crear",
   "vidrieras.editar",
+  "vidrieras.ocultar_en_empresa",
   "vidrieras.publicar",
   "vidrieras.publicar_en_linea",
   "vidrieras.renovar_enlace",
@@ -90,14 +88,14 @@ const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
 ] as const;
 
 /**
- * Las 2 acciones que quedan de CE0 (catalogo-carta-niveles-y-elecciones §7.2): gerente y administrador. Las 6 de grupos de
- * precio y `opciones.asignar` se retiraron en E0-T1 (decisiones 138 y 133; «copiar de otro producto» es `opciones.editar`).
+ * La acción que queda de CE0 (catalogo-carta-niveles-y-elecciones §7.2): gerente y administrador. Las 6 de grupos de
+ * precio y `opciones.asignar` se retiraron en E0-T1 (decisiones 138 y 133; «copiar de otro producto» es `opciones.editar`) y
+ * `conjuntos.editar_contenido` se quitó el 23/11/2026 por no tener caso de uso (tercera pata, decisión del dueño del 21/11).
  */
-const DE_LA_ESCALERA_DE_ELECCIONES = ["conjuntos.editar_contenido", "variantes.editar"] as const;
+const DE_LA_ESCALERA_DE_ELECCIONES = ["variantes.editar"] as const;
 
 /**
- * Caja, cierre y ventas (E0-T1, e0-cimientos-especificacion §3.1): los tres módulos están `en_desarrollo`, así que esta tabla
- * no autoriza nada hoy; fija quién podrá cuando E3, E3b y E4 los construyan.
+ * Caja, cierre y ventas (E0-T1, e0-cimientos-especificacion §3.1): los tres módulos pasaron a `disponible` (caja y ventas el 15/11/2026, DEC-0463); esta tabla fija quién puede cada acción.
  */
 const SOLO_DEL_GERENTE_DE_CAJA = ["cajas.crear", "cajas.desactivar", "cajas.reactivar"] as const;
 
@@ -148,6 +146,9 @@ const DEL_OPERADOR_DE_CAJA_CIERRE_Y_VENTAS = [
 const DEL_OPERADOR_DE_CLIENTES_Y_COMPRAS = [
   "comprobantes_de_proveedor.registrar",
   "comprobantes_de_proveedor.ver",
+  "devoluciones_a_proveedor.ver",
+  "notas_de_credito_de_proveedor.ver",
+  "ordenes_de_compra.ver",
   "partes.cambiar_roles",
   "partes.crear",
   "partes.desvincular_contacto",
@@ -168,6 +169,21 @@ const DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS = [
   "partes.reactivar",
   "proveedores.editar_ficha",
   "recepciones.anular",
+  "recepciones.confirmar",
+  "comprobantes_de_proveedor.anular",
+  "conciliaciones.conciliar",
+  "conciliaciones.anular",
+  "conciliaciones.ver",
+  "ordenes_de_compra.crear",
+  "ordenes_de_compra.pedir",
+  "ordenes_de_compra.cerrar",
+  "ordenes_de_compra.anular",
+  "devoluciones_a_proveedor.registrar",
+  "devoluciones_a_proveedor.anular",
+  "notas_de_credito_de_proveedor.registrar",
+  "notas_de_credito_de_proveedor.anular",
+  "diferencias_de_compra.ver",
+  "diferencias_de_compra.resolver",
 ] as const;
 
 /** El nivel de operación de las compras es solo del gerente. */
@@ -225,11 +241,8 @@ const DEL_OPERADOR = [
   ...DEL_OPERADOR_DE_SALON_Y_COMANDAS,
 ] as const;
 
-/** Estructura fiscal y verificación de saldos: solo el gerente. */
-const SOLO_DEL_GERENTE_DE_CATALOGO_Y_STOCK = [
-  "productos.asignar_emisor",
-  "stock.verificar_saldos",
-] as const;
+/** Verificación de saldos: solo el gerente. */
+const SOLO_DEL_GERENTE_DE_CATALOGO_Y_STOCK = ["stock.verificar_saldos"] as const;
 
 /**
  * Configuración fiscal (H7 fiscal §C, T5; C11): confirmar datos fiscales, activar un punto de venta y confirmar
@@ -296,9 +309,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 157 acciones: 34 de empresa, configuración fiscal y facturación, 48 de catálogo, carta y stock (39 de T0, 2 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 19 de clientes y compras y 16 de salón y comandas", () => {
+  it("hay 171 acciones: 34 de empresa, configuración fiscal y facturación, 44 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 37 de clientes y compras y 16 de salón y comandas", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(157);
+    expect(todas).toHaveLength(171);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -328,7 +341,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("composiciones"),
       porPrefijo("conteos"),
       porPrefijo("costos"),
-    ]).toEqual([7, 4, 1, 1, 0, 1, 9, 7, 4, 2, 1, 4, 1]);
+    ]).toEqual([6, 0, 1, 1, 0, 0, 11, 7, 4, 2, 1, 4, 1]);
     expect([
       porPrefijo("cajas"),
       porPrefijo("medios_de_pago"),
@@ -348,7 +361,8 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("recepciones"),
       porPrefijo("comprobantes_de_proveedor"),
       porPrefijo("compras"),
-    ]).toEqual([8, 2, 3, 4, 2]);
+      porPrefijo("conciliaciones"),
+    ]).toEqual([8, 2, 4, 5, 2, 3]);
   });
 
   it("las acciones retiradas por las decisiones 138 y 133 ya no existen: ni en la matriz ni en el catálogo", () => {
@@ -396,7 +410,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     }
   });
 
-  it("asignar un emisor a un producto o a un depósito y verificar los saldos son solo del gerente (estructura fiscal y control)", () => {
+  it("verificar los saldos es solo del gerente (control)", () => {
     for (const accion of SOLO_DEL_GERENTE_DE_CATALOGO_Y_STOCK) {
       expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE"]);
     }
@@ -425,8 +439,8 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     }
   });
 
-  it("CE0: las dos acciones que quedan de la escalera de elecciones no las puede el operador", () => {
-    expect(DE_LA_ESCALERA_DE_ELECCIONES).toHaveLength(2);
+  it("CE0: la acción que queda de la escalera de elecciones no la puede el operador", () => {
+    expect(DE_LA_ESCALERA_DE_ELECCIONES).toHaveLength(1);
     const operador = tablaDePermisos(PERMISOS_DE_EMPRESA).OPERADOR as readonly string[];
     for (const accion of DE_LA_ESCALERA_DE_ELECCIONES) {
       expect(operador, accion).not.toContain(accion);
@@ -696,18 +710,16 @@ describe("el guard con las reglas reales", () => {
     (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
   );
 
-  it("todo módulo en desarrollo del catálogo incluye catalogo, vidriera, caja, ventas, comandas, salon y produccion (cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4 y compras desde E9-T12)", () => {
-    expect([...ENDESARROLLO].sort()).toEqual(
-      ["caja", "catalogo", "comandas", "produccion", "salon", "ventas", "vidriera"].sort(),
-    );
+  it("todo módulo en desarrollo del catálogo es solo produccion (comandas y salon desde S-0r, 17/11/2026; cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12, catalogo, caja y ventas desde el 15/11/2026, DEC-0463, y vidriera desde el 20/11/2026, DEC-0826)", () => {
+    expect([...ENDESARROLLO].sort()).toEqual(["produccion"]);
   });
 
-  it("las 75 acciones sin construir (23 de catálogo y carta, 31 de caja y ventas 16 de salón y comandas y 5 de producción) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  it("las 5 acciones sin construir (todas de producción) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
     const sinConstruir = ENDESARROLLO.flatMap(
       (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
     );
-    expect(sinConstruir).toHaveLength(75);
+    expect(sinConstruir).toHaveLength(5);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(
@@ -747,10 +759,14 @@ describe("el guard con las reglas reales", () => {
     );
   });
 
-  it("activar caja o ventas por empresa y plan no los deja activos: sigue sin habilitarse nada", () => {
+  it("caja, ventas y catalogo (disponibles, DEC-0463) no nacen activos: solo quedan activos si la empresa los activa Y el plan los incluye", () => {
     const todos = ["caja", "ventas", "catalogo"];
-    const estado = estadoDeModulos(CATALOGO_DE_MODULOS, todos, todos);
-    expect([...estado.modulosActivos]).toEqual(["administracion", "clientes"]);
+    const base = ["administracion", "clientes"];
+    expect([...estadoDeModulos(CATALOGO_DE_MODULOS, [], todos).modulosActivos]).toEqual(base);
+    expect([...estadoDeModulos(CATALOGO_DE_MODULOS, todos, []).modulosActivos]).toEqual(base);
+    expect([...estadoDeModulos(CATALOGO_DE_MODULOS, todos, todos).modulosActivos].sort()).toEqual(
+      [...base, ...todos].sort(),
+    );
   });
 
   it("si el módulo no figura entre los activos, MODULO_NO_ACTIVO (el guard no lo da por hecho)", () => {

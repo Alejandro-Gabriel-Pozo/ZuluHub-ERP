@@ -151,7 +151,34 @@ describe("FormularioDeSeccionDeCarta", () => {
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 
-  it("un error sin campo (el genérico: nombre repetido, versión vieja) sale debajo con el patrón común y el campo no queda inválido", async () => {
+  it("«Ya existe una sección con ese nombre» se asocia al campo, no se repite debajo y lo escrito se conserva", async () => {
+    await render(
+      formulario(
+        { nombre: "Cafés" },
+        rechazo({
+          codigo: "CATALOGO_SECCION_REPETIDA",
+          clave: "catalogo.error.seccion_repetida",
+          presentacion: "AVISO",
+          campo: "nombre",
+        }),
+      ),
+    );
+    tocar(guardar());
+    await expect.element(page.getByText("Ya existe una sección con ese nombre")).toBeVisible();
+    expect(document.body.textContent?.match(/Ya existe una sección con ese nombre/g)).toHaveLength(
+      1,
+    );
+    const entrada = nombre().element();
+    expect(entrada.getAttribute("aria-invalid")).toBe("true");
+    const descrito = entrada.getAttribute("aria-describedby") ?? "";
+    expect(document.getElementById(descrito)?.textContent).toContain(
+      "Ya existe una sección con ese nombre",
+    );
+    await expect.element(nombre()).toHaveValue("Cafés");
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("un error sin campo (el genérico: versión vieja) sale debajo con el patrón común y el campo no queda inválido", async () => {
     await render(
       formulario(
         { nombre: "Cafés" },

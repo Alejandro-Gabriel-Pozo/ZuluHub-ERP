@@ -8,6 +8,7 @@ import { formatearImporte } from "../../patrones/formato-fiscal";
 import {
   CLAVE_DE_CLASE,
   RUTA_DEL_ALTA_DE_PRODUCTO,
+  RUTA_DE_LOS_OCULTOS,
   direccionDeLaLista,
   type FiltrosDeProductos,
 } from "./filtros-de-productos";
@@ -58,7 +59,15 @@ type FilaDeProducto = Readonly<{
   sinSeccion: boolean;
   /** El precio ya formateado; `null` si el producto no se vende. */
   precio: string | null;
+  /** «Oculto en toda la empresa» y/o «Oculto» (en el local), si lo está (C2; maqueta `pillsOcu`); vacío si no, o si no se pudo leer. */
+  avisosDeOculto: readonly string[];
 }>;
+
+/** Dónde está oculto cada producto (por id), como lo entrega la composición; un producto que no figura está visible. */
+export type OcultosPorProducto = ReadonlyMap<
+  string,
+  Readonly<{ local: boolean; empresa: boolean }>
+>;
 
 export type ListaArmada = Readonly<{
   filas: readonly FilaDeProducto[];
@@ -107,10 +116,30 @@ export function armarElEnlaceDeAlta(
     : null;
 }
 
+function avisosDeOculto(
+  donde: Readonly<{ local: boolean; empresa: boolean }> | undefined,
+  d: DiccionarioResuelto,
+): readonly string[] {
+  if (donde === undefined) return [];
+  return [
+    ...(donde.empresa ? [texto(d, "catalogo.ocultar.oculto_en_la_empresa")] : []),
+    ...(donde.local ? [texto(d, "catalogo.ocultar.oculto")] : []),
+  ];
+}
+
+/** El enlace del filtro «Oculto» (C2; maqueta `chipOcu`): lleva a la lista de ocultos. Sale solo si se pudo leer dónde está oculto cada producto (cierra ante la duda). */
+export function armarElFiltroDeOcultos(
+  puede: boolean,
+  d: DiccionarioResuelto = {},
+): Readonly<{ href: string; texto: string }> | null {
+  return puede ? { href: RUTA_DE_LOS_OCULTOS, texto: texto(d, "catalogo.ocultar.oculto") } : null;
+}
+
 export function armarLaLista(
   pagina: PaginaDeLaLista,
   filtros: FiltrosDeProductos,
   d: DiccionarioResuelto = {},
+  ocultos: OcultosPorProducto = new Map(),
 ): ListaArmada {
   return {
     filas: pagina.productos.map((p) => {
@@ -123,6 +152,7 @@ export function armarLaLista(
         seccion: p.seccion,
         sinSeccion: p.seccion === null && p.precio !== null,
         precio: precioDe(p.precio, d),
+        avisosDeOculto: avisosDeOculto(ocultos.get(p.id), d),
       };
     }),
     vacio: pagina.productos.length === 0 ? texto(d, "catalogo.lista.sin_resultados") : null,

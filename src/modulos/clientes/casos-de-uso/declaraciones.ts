@@ -1,6 +1,7 @@
 import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/declaracion";
 
 const ARCHIVO_DE_PARTES = "test/integracion/clientes-partes.test.ts";
+const ARCHIVO_DE_EDITAR_CON_ROLES = "test/integracion/clientes-editar-con-roles.test.ts";
 const ARCHIVO_DE_ROLES = "test/integracion/clientes-roles-y-vinculos.test.ts";
 
 /**
@@ -25,6 +26,17 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_PARTES,
         it: "I10: repetir editarParte ya aplicado devuelve lo vigente aunque la versión esperada sea vieja, sin escribir ni auditar",
+      },
+    },
+  },
+  editarParteConRoles: {
+    accion: "partes.editar",
+    tambien: ["partes.cambiar_roles"],
+    repeticion: {
+      regla: "SIN_CAMBIOS",
+      prueba: {
+        archivo: ARCHIVO_DE_EDITAR_CON_ROLES,
+        it: "I1: repetir editarParteConRoles ya aplicado devuelve lo vigente aunque la versión esperada sea vieja, sin escribir ni auditar",
       },
     },
   },

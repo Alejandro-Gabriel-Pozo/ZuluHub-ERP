@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import { PERMISOS_DE_EMPRESA, tablaDePermisos } from "../src/capacidades/permisos/empresa";
 
 /**
- * Genera la SEMILLA de la migración 0061 (permisos configurables, tramo T1 de H4b) desde la constante `PERMISOS_DE_EMPRESA`:
+ * Genera la SEMILLA de la migración 0094 (permisos configurables, tramo T1 de H4b) desde la constante `PERMISOS_DE_EMPRESA`:
  * las plantillas `ADMINISTRADOR` y `OPERADOR` (el gerente no tiene lista: su conjunto es «todo lo que el plan habilita»), los pisos
  * de plataforma y las acciones ya introducidas. Previene: que la semilla se escriba a mano y difiera de la tabla de hoy (el
  * comportamiento tiene que quedar idéntico, diseño H4b §6.1). La comprueba `test/integracion/permisos-configurables-migracion.test.ts`.
@@ -23,7 +23,7 @@ export const PISOS_DE_TODOS_LOS_ROLES = [
 ] as const;
 
 /** Quién figura como autor de lo que carga la migración (las tablas guardan texto: el actor de plataforma o este valor). */
-export const AUTOR_DE_LA_SEMILLA = "migracion:0061";
+export const AUTOR_DE_LA_SEMILLA = "migracion:0094";
 
 export const MARCA_DE_INICIO = "-- >>> SEMILLA GENERADA (npm run semilla:plantillas) >>>";
 export const MARCA_DE_FIN = "-- <<< SEMILLA GENERADA <<<";
@@ -90,7 +90,7 @@ export function bloqueDelArchivo(sql: string): string | null {
 }
 
 const ARCHIVO_DE_LA_MIGRACION = new URL(
-  "../migraciones/0061_permisos_configurables.sql",
+  "../migraciones/0094_permisos_configurables.sql",
   import.meta.url,
 );
 
@@ -103,7 +103,7 @@ function principal(argumentos: readonly string[]): number {
   const actual = bloqueDelArchivo(readFileSync(ARCHIVO_DE_LA_MIGRACION, "utf8"));
   if (actual === generado) return 0;
   console.error(
-    "El bloque de la semilla de 0061 no es el que se genera desde PERMISOS_DE_EMPRESA: corré `npm run semilla:plantillas` y revisá la diferencia (una migración ya aplicada no se edita: la diferencia iría en una migración nueva).",
+    "El bloque de la semilla de 0094 no es el que se genera desde PERMISOS_DE_EMPRESA: corré `npm run semilla:plantillas` y revisá la diferencia (una migración ya aplicada no se edita: la diferencia iría en una migración nueva).",
   );
   return 1;
 }

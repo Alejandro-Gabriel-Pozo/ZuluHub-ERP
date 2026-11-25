@@ -8,7 +8,9 @@ import {
   type VidrieraDeEjemplo,
 } from "../../../../test/fixtures/vidrieras";
 import type { VidrieraPublicada } from "../../../puertos/vidriera-publica";
+import { COLOR_POR_DEFECTO_DE_LA_CARTA } from "./color-de-la-carta";
 import { resolverProductoPorSegmento } from "./direccion";
+import { temaDeLaCarta } from "./tema-de-la-carta";
 import {
   GUARNICION_A_ELECCION,
   LARGO_MAXIMO_DE_LA_GUARNICION,
@@ -26,6 +28,13 @@ function publicada(c: VidrieraDeEjemplo, lugar: string | null = null): VidrieraP
     rubro: c.rubro,
     lugar,
     mensajeDePortada: null,
+    identidad: {
+      modelo: "LISTA",
+      cara: null,
+      colorPropio: null,
+      colorDeLaEmpresa: null,
+      logo: null,
+    },
     letraBase: "NORMAL",
     secciones: c.secciones,
   };
@@ -484,5 +493,98 @@ describe("las otras cartas de ejemplo", () => {
       const hrefs = productos(v).map((p) => p.href);
       expect(new Set(hrefs).size, c.codigo).toBe(hrefs.length);
     }
+  });
+});
+
+describe("armarVistaDeVidriera: identidad (V1b)", () => {
+  const con = (
+    identidad: Partial<VidrieraPublicada["identidad"]>,
+    nombre = "La Esquina Café",
+  ): VistaDeVidriera["identidad"] =>
+    armarVistaDeVidriera(
+      {
+        ...publicada(CAFETERIA),
+        nombre,
+        identidad: { ...publicada(CAFETERIA).identidad, ...identidad },
+      },
+      "/x",
+    ).identidad;
+  const tema = (cara: "DIA" | "BOLICHE" | "NOCHE", color: string) => {
+    const r = temaDeLaCarta(cara, color);
+    if (!r.ok) throw new Error("color válido esperado");
+    return r.valor;
+  };
+
+  it("sin nada elegido: la cara de siempre y NINGÚN tema (la carta se ve como siempre)", () => {
+    expect(con({})).toEqual({ cara: "DIA", tema: null, inicial: "L", logo: null });
+  });
+
+  it("cara y color propio: el tema de esa cara con ese color", () => {
+    expect(con({ cara: "NOCHE", colorPropio: "#1f4e79" })).toEqual({
+      cara: "NOCHE",
+      tema: tema("NOCHE", "#1f4e79"),
+      inicial: "L",
+      logo: null,
+    });
+  });
+
+  it("solo el color: rige DIA con ese color; solo la cara: rige el color por defecto (el azul de la maqueta)", () => {
+    expect(con({ colorPropio: "#17562f" })).toMatchObject({
+      cara: "DIA",
+      tema: tema("DIA", "#17562f"),
+    });
+    expect(con({ cara: "BOLICHE" })).toMatchObject({
+      cara: "BOLICHE",
+      tema: tema("BOLICHE", COLOR_POR_DEFECTO_DE_LA_CARTA),
+    });
+    expect(COLOR_POR_DEFECTO_DE_LA_CARTA).toBe("#1f4e79");
+  });
+
+  it("el color propio gana sobre el de la empresa; sin propio rige el de la empresa", () => {
+    expect(con({ cara: "DIA", colorPropio: "#17562f", colorDeLaEmpresa: "#7a1f2b" }).tema).toEqual(
+      tema("DIA", "#17562f"),
+    );
+    expect(con({ cara: "DIA", colorDeLaEmpresa: "#7a1f2b" }).tema).toEqual(tema("DIA", "#7a1f2b"));
+    expect(con({ colorDeLaEmpresa: "#7a1f2b" })).toMatchObject({
+      cara: "DIA",
+      tema: tema("DIA", "#7a1f2b"),
+    });
+  });
+
+  it("el logo es una dirección PROPIA de la carta, con su versión: nunca la del proveedor", () => {
+    const partes = {
+      proveedor: "CLOUDINARY",
+      cuenta: "demo",
+      idPublico: "logos/cafe",
+      version: "1700000000",
+      extension: "png",
+    } as const;
+    expect(con({ logo: partes }).logo).toBe("/x/logo/1700000000.webp");
+    expect(con({ logo: null }).logo).toBeNull();
+    // Solo el logo no elige cara ni color: la carta no tiene tema, pero sí placa con su logo.
+    expect(con({ logo: partes })).toMatchObject({ cara: "DIA", tema: null });
+    expect(
+      armarVistaDeVidriera(
+        { ...publicada(CAFETERIA), identidad: { ...publicada(CAFETERIA).identidad, logo: partes } },
+        "",
+      ).identidad.logo,
+    ).toBe("/logo/1700000000.webp");
+  });
+
+  it("un color que no es `#rrggbb` (no debería llegar de la base) deja la carta sin tema, sin romper", () => {
+    expect(con({ cara: "NOCHE", colorPropio: "rojo" })).toEqual({
+      cara: "NOCHE",
+      tema: null,
+      inicial: "L",
+      logo: null,
+    });
+  });
+
+  it("la inicial es la primera letra del nombre, sin espacios y en mayúscula; un emoji o una letra con tilde cuentan como una", () => {
+    expect(con({}, "  ana ").inicial).toBe("A");
+    expect(con({}, "ñandú").inicial).toBe("Ñ");
+    expect(con({}, "😀 Fiesta").inicial).toBe("😀");
+    expect(con({}, "").inicial).toBe("");
+    expect(con({}, "   ").inicial).toBe("");
   });
 });

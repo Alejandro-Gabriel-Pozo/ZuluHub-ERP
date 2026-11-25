@@ -11,7 +11,7 @@ import type { DatosDelCobro, ErrorDeDatoDelCobro } from "../dominio/datos-del-co
 import type { ErrorDeParDeCobro } from "../dominio/medios";
 import type { ReferenciaOpaca } from "../dominio/identidad-del-cobro";
 import type { EstadoDeCaja } from "../dominio/sesion";
-import type { TipoDeCuenta, TipoDeMedio } from "../estados";
+import type { DatoDelCobro, TipoDeCuenta, TipoDeMedio } from "../estados";
 import type { RepositorioDeCajas } from "../persistencia/repositorio-de-cajas";
 import type { RepositorioDeCobros } from "../persistencia/repositorio-de-cobros";
 import type { RepositorioDeCuentasDeCobro } from "../persistencia/repositorio-de-cuentas";
@@ -83,6 +83,14 @@ export type OpcionDeCobro = Readonly<{
     cuotas: boolean;
     dni: boolean;
   }>;
+  /** De los que pide, cuáles «se piden»: se pueden dejar vacíos; el cobro se registra y queda con ese dato pendiente. */
+  datosQueSePiden: Readonly<{
+    cupon: boolean;
+    ultimos4: boolean;
+    marca: boolean;
+    cuotas: boolean;
+    dni: boolean;
+  }>;
 }>;
 
 export type OpcionesDeCobro = Readonly<{
@@ -116,6 +124,8 @@ export type SalidaDeRegistrarCobro = Readonly<{
   jornadaVencida: boolean;
   /** `true`: ese `(origen, orden)` ya estaba cobrado con el mismo contenido; no se escribió ni se auditó nada. */
   yaExistia: boolean;
+  /** Los datos que el medio pedía y el cobro dejó vacíos, sellados por la base al registrarlo (en una repetición, los originales). */
+  datosPendientes: readonly DatoDelCobro[];
 }>;
 
 /**
@@ -151,6 +161,8 @@ export type CobroConMedioVigente = Readonly<{
   /** La cuenta con la que se cobró. */
   cuentaDeCobroId: string | null;
   fechaDeNegocio: FechaCivil;
+  /** Lo que selló la base al cobrar: no cambia aunque después cambie la configuración del medio ni con una corrección de medio. */
+  datosPendientes: readonly DatoDelCobro[];
 }>;
 
 export type CobrosDeUnOrigen = Readonly<{

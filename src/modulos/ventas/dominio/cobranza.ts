@@ -7,11 +7,12 @@ import {
   sumar,
   type Importe,
 } from "../../../primitivas/dinero/importe";
+import { MAXIMO_DE_COBROS_POR_TICKET } from "../../../primitivas/dinero/limites-de-cobro";
 import { ARS } from "../../../primitivas/dinero/moneda";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { datosEnFormaCompleta, type DatosDelCobro } from "../../caja/publico";
 import type { EstadoDeTicket } from "./estados";
-import { FORMA_DEL_IMPORTE } from "./forma-del-importe";
+import { FORMA_DEL_IMPORTE } from "../../../primitivas/dinero/forma-del-importe";
 import { esUuid } from "./identificadores";
 
 /**
@@ -20,7 +21,7 @@ import { esUuid } from "./identificadores";
  * Códigos: `COBROS_INVALIDOS` (ninguno o más de 50), `IDENTIFICADOR_INVALIDO`, `MONEDA_NO_SOPORTADA`, `IMPORTE_INVALIDO` (no cumple la forma o es 0),
  * `COBRO_NO_CUADRA { falta | sobra }`, `TICKET_ANULADO`, `TICKET_NO_COBRABLE`, `TICKET_YA_COBRADO`, `EJEMPLAR_DESACTUALIZADO`.
  */
-export const MAXIMO_DE_COBROS_POR_TICKET = 50;
+export { MAXIMO_DE_COBROS_POR_TICKET };
 
 export type CobroPedido = Readonly<{
   medioDePagoId: string;

@@ -60,10 +60,12 @@ const SOLO_DE_ADMIN = [
   "modulos_de_empresa.activar",
   "modulos_de_empresa.desactivar",
   "perillas.ajustar",
+  "planes.arrepentir",
   "planes.asignar",
   "planes.crear",
   "planes.editar_borrador",
   "planes.publicar_version",
+  "politica_de_plan.definir",
 ] as const;
 
 /** Las 2 de listas del sistema (e3 §3.7), declaradas al final del catálogo. */
@@ -106,6 +108,8 @@ const ACCIONES_DE_MARCAS_Y_PLANES = [
   "planes.editar_borrador",
   "planes.publicar_version",
   "planes.asignar",
+  "politica_de_plan.definir",
+  "planes.arrepentir",
   "perillas.ajustar",
   "modulos_de_empresa.activar",
   "modulos_de_empresa.desactivar",
@@ -121,7 +125,7 @@ const ACCIONES_DE_DOMINIOS_DE_M4A = [
   "dominios.desactivar",
 ] as const;
 
-/** El orden real del catálogo desde la acción 19: las 14 de marcas y planes con las 3 de M4a tras `dominios.retirar`. */
+/** El orden real del catálogo desde la acción 19: las 16 de marcas y planes con las 3 de M4a tras `dominios.retirar`. */
 const ORDEN_DESDE_MARCAS_Y_PLANES = [
   ...ACCIONES_DE_MARCAS_Y_PLANES.slice(0, 7),
   ...ACCIONES_DE_DOMINIOS_DE_M4A,
@@ -258,6 +262,16 @@ describe("el catálogo de plataforma", () => {
             segundoFactorReciente: true,
           },
           "planes.asignar": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
+          "politica_de_plan.definir": {
+            capacidad: null,
+            efecto: "CREA_AMPLIA",
+            segundoFactorReciente: true,
+          },
+          "planes.arrepentir": {
+            capacidad: null,
+            efecto: "CREA_AMPLIA",
+            segundoFactorReciente: true,
+          },
           "perillas.ajustar": {
             capacidad: null,
             efecto: "CREA_AMPLIA",
@@ -286,13 +300,13 @@ describe("el catálogo de plataforma", () => {
     ]);
   });
 
-  it("las acciones son las 37: 13 que hacen los dos roles y 24 que solo hace ADMIN", () => {
-    expect(TODAS).toHaveLength(37);
+  it("las acciones son las 39: 13 que hacen los dos roles y 26 que solo hace ADMIN", () => {
+    expect(TODAS).toHaveLength(39);
     expect(DE_SOPORTE).toHaveLength(13);
-    expect(SOLO_DE_ADMIN).toHaveLength(24);
+    expect(SOLO_DE_ADMIN).toHaveLength(26);
   });
 
-  it("las 14 de marcas y planes se agregaron juntas tras las 18 de H5, sin reordenarlas, y las 3 de M4a van justo después de dominios.retirar", () => {
+  it("las 16 de marcas y planes se agregaron juntas tras las 18 de H5, sin reordenarlas, y las 3 de M4a van justo después de dominios.retirar", () => {
     const orden = Object.keys(CATALOGO_DE_PLATAFORMA.plataforma.acciones);
     expect(orden.slice(0, 18)).toEqual(ACCIONES_DE_H5);
     expect(orden.slice(18)).toEqual(ORDEN_DESDE_MARCAS_Y_PLANES);
@@ -358,13 +372,13 @@ describe("la matriz rol → acciones de plataforma (F3)", () => {
     expect(
       tabla.SOPORTE.filter((a) => (ACCIONES_DE_H5 as readonly string[]).includes(a)),
     ).toHaveLength(10);
-    expect(tabla.ADMIN).toHaveLength(37);
+    expect(tabla.ADMIN).toHaveLength(39);
   });
 
   it("piso jerárquico: lo que puede SOPORTE lo puede ADMIN", () => {
     const tabla = tablaDePermisosDePlataforma(PERMISOS_DE_PLATAFORMA);
     for (const accion of tabla.SOPORTE) expect(tabla.ADMIN).toContain(accion);
-    expect(tabla.ADMIN).toHaveLength(37);
+    expect(tabla.ADMIN).toHaveLength(39);
   });
 
   it("cada acción del catálogo tiene su fila en la matriz, y no hay filas de más", () => {
@@ -511,10 +525,12 @@ const EFECTOS_DE_PLATAFORMA = {
     "modulos_de_empresa.activar",
     "perillas.ajustar",
     "personas.reactivar",
+    "planes.arrepentir",
     "planes.asignar",
     "planes.crear",
     "planes.editar_borrador",
     "planes.publicar_version",
+    "politica_de_plan.definir",
     "tenants.reactivar",
   ],
   COMPLETA_CIERRA: [
@@ -546,7 +562,7 @@ describe("el efecto de cada acción de plataforma", () => {
     }).toEqual(EFECTOS_DE_PLATAFORMA);
   });
 
-  it("las 37 acciones tienen exactamente un efecto, y ninguna queda sin clasificar", () => {
+  it("las 39 acciones tienen exactamente un efecto, y ninguna queda sin clasificar", () => {
     const clasificadas = Object.values(EFECTOS_DE_PLATAFORMA).flat().sort();
     expect(clasificadas).toEqual(TODAS.slice().sort());
   });
