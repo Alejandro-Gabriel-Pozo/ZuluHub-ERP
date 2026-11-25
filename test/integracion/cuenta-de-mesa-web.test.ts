@@ -119,6 +119,7 @@ describe.skipIf(base === null)("cuenta de mesa de la web", () => {
         "compartida",
         "deLaMesa",
         "descripcion",
+        "envioId",
         "importe",
         "lineaId",
         "numeroDeEnvio",

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1066",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "El departamento sale del producto, como las categorías: la cuenta ya no lo pide y queda sin departamento aunque haya 2 o más; unir y dividir no lo exigen.",
+  "que_cambia": "Se pueden tomar pedidos y unir o dividir mesas del hotel (2 o 3 departamentos) sin elegir uno. No hay reporte por cuenta: el reporte por departamento sale de las líneas. Revertir: exigir elegir al abrir la cuenta.",
+  "donde": "src/modulos/ventas/dominio/departamento.ts; abrir-cuenta.ts; salon unir.ts y dividir.ts; respuesta del dueño del 25/11/2026 vía el orquestador; reemplaza DEC-0363 y DEC-0364"
+}

@@ -136,6 +136,60 @@ describe.skipIf(base === null)("recorrido del salón: del mapa a la mesa", () =>
     expect(vigilante.tomar()).toEqual([]);
   });
 
+  it("«Enviar a cocina» imprime la comanda UNA vez aunque se toque dos veces y deja un envío; anular lo enviado pide motivo, avisa a cocina y no borra la línea", async () => {
+    // Una impresora de comandas (sin ella el envío se hace igual, pero no hay papel que mirar).
+    await ir("/salon/impresoras/nueva");
+    await pagina.getByLabel("Nombre", { exact: true }).fill("Cocina");
+    await pagina.getByLabel("Para qué sirve").selectOption("COMANDA");
+    await pagina.getByLabel("Papel").selectOption("80");
+    await pagina.getByRole("button", { name: "Guardar" }).click();
+    await pagina.waitForURL(`${mundo.url}/salon/impresoras`);
+    // `window.print` es un espía: anota la hoja del momento y no abre nada.
+    await pagina.addInitScript(
+      `window.__impresiones = []; window.print = () => { window.__impresiones.push(document.querySelector("[data-papel]")?.textContent ?? ""); };`,
+    );
+    const impresiones = () => pagina.evaluate<string[]>("window.__impresiones");
+    const filas = async (tabla: string) =>
+      contar(`select count(*)::text as n from ${tabla} where empresa_id = $1`, [mundo.empresa]);
+
+    await ir("/salon");
+    await pagina.getByRole("link", { name: "Mesa 7" }).click();
+    await pagina.waitForURL(/\/salon\/cuenta\/[0-9a-f-]{36}$/);
+    await pagina.getByRole("button", { name: "Tomar pedido" }).click();
+    await pagina.getByText("La mesa no tiene pedido").waitFor();
+    await pagina.getByRole("button", { name: /^Medialuna/ }).click();
+    await pagina.getByRole("button", { name: /^Agregar( ·|$)/ }).click();
+    await pagina.getByRole("heading", { name: "Para enviar" }).waitFor();
+
+    // Doble toque en «Enviar a cocina»: un solo envío y un solo diálogo de impresión.
+    await pagina.getByRole("button", { name: "Enviar a cocina" }).dblclick();
+    await pagina.getByText("Impresa").waitFor();
+    expect(await filas("envio_de_comanda")).toBe(1);
+    expect(await filas("trabajo_de_impresion")).toBe(1);
+    expect(await impresiones()).toHaveLength(1);
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+
+    // Anular lo enviado: sin motivo no se puede; con motivo queda el aviso y la línea anulada (no se borra).
+    await pagina.reload();
+    await pagina.getByRole("heading", { name: "Enviadas" }).waitFor();
+    await pagina.getByRole("button", { name: "Anular" }).click();
+    const hoja = pagina.getByRole("dialog");
+    expect(await hoja.getByRole("button", { name: "Anular" }).isDisabled()).toBe(true);
+    await hoja.getByLabel("Motivo", { exact: true }).fill("Se cayó al piso");
+    await hoja.getByRole("button", { name: "Anular" }).click();
+    await pagina.getByText("Impresa").waitFor();
+    expect(await filas("aviso_de_anulacion")).toBe(1);
+    expect(
+      await contar(
+        "select count(*)::text as n from linea_cuenta where empresa_id = $1 and estado = 'ANULADA'",
+        [mundo.empresa],
+      ),
+    ).toBeGreaterThanOrEqual(1);
+    // Recargar reinició el espía: lo que cuenta ahora es solo el aviso de anulación, UN diálogo.
+    expect(await impresiones()).toHaveLength(1);
+    expect(vigilante.tomar()).toEqual([]);
+  });
+
   it("una mesa que no existe o un id mal formado dan el genérico, sin romper la página", async () => {
     for (const id of ["11111111-1111-4111-8111-111111111111", "no-es-un-id"]) {
       const respuesta = await ir(`/salon/cuenta/${id}`);

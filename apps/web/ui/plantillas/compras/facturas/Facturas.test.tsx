@@ -45,6 +45,7 @@ const TODO: AccionesDeLaFactura = {
   verConciliaciones: true,
   conciliar: true,
   anularConciliacion: true,
+  tomarElCosto: true,
 };
 const textos = textosDeFacturas();
 
@@ -75,6 +76,7 @@ const FICHA: FichaDeFacturaParaLaPantalla = {
         { sucursalId: SUCURSAL_CENTRO, recibida: "1000.0000", sinConciliar: "200.0000" },
         { sucursalId: SUCURSAL_NORTE, recibida: "1000.0000", sinConciliar: "1000.0000" },
       ],
+      costos: [],
     },
   ],
   conciliaciones: [

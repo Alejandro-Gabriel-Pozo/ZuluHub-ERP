@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0962",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: la lista de la raíz de la carta (varias cartas en línea) no lleva texto propio: su título es el nombre de la marca y cada fila muestra nombre, rubro y lugar de la carta.",
+  "que_cambia": "Lo que ve quien abre la raíz del host dedicado cuando hay varias cartas. No hay texto nuevo (interfaz sobria). Si el dueño prefiere un título como «Nuestras cartas», es un texto aprobado más. Se revierte en un componente.",
+  "donde": "apps/web/app/s/carta/page.tsx y apps/web/ui/plantillas/vidriera/ListaDeCartasDeLaRaiz.tsx"
+}

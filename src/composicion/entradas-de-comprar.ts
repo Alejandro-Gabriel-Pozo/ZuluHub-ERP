@@ -37,13 +37,14 @@ export function entradaDeProductosParaComprar(
 /**
  * La frontera de «cotizar la compra» (cuánto entra al stock y cuánto cuesta, antes de guardar): de lo que escribe la pantalla a los renglones que acepta la consulta. Solo se toman los campos
  * declarados de cada renglón (el producto, la unidad de compra de la lista de unidades, la cantidad, el peso real, cómo se paga el precio y el precio, todo como TEXTO decimal: nunca `number`);
- * la presentación no se toma (la primera versión compra en la unidad base). Que la cantidad, el precio y las unidades tengan sentido lo decide el servidor con la misma cuenta del alta.
+ * la presentación elegida (opcional: sin ella se compra en una unidad) viaja como identificador y el servidor comprueba que sea del producto, de la empresa y activa. Que la cantidad, el precio y las unidades tengan sentido lo decide el servidor con la misma cuenta del alta.
  * Previene: dinero o cantidades como `number`, y un renglón con campos que el navegador inventó. Chequeo: `entradas-de-comprar.test.ts`.
  */
 export const unidad = z.string().refine((u) => Object.hasOwn(UNIDADES, u));
 
 const formaDeRenglon = z.object({
   productoId: identificador,
+  presentacionId: identificador.nullish(),
   unidadDeCompraId: unidad,
   cantidad: decimal,
   pesoReal: decimal.nullish(),
@@ -57,7 +58,7 @@ const formaDeCotizar = z.object({ renglones: z.array(formaDeRenglon).min(1) });
 export type EntradaWebDeCotizarCompra = Readonly<{
   renglones: readonly Readonly<{
     productoId: string;
-    presentacionId: null;
+    presentacionId: string | null;
     unidadDeCompraId: string;
     cantidad: string;
     pesoReal: string | null;
@@ -67,13 +68,13 @@ export type EntradaWebDeCotizarCompra = Readonly<{
   }>[];
 }>;
 
-/** Los renglones ya leídos con su forma, a los que acepta la consulta y el alta: los opcionales ausentes son `null` y la presentación no se toma. Un solo lugar para la cotización y para «Comprar y recibir». */
+/** Los renglones ya leídos con su forma, a los que acepta la consulta y el alta: los opcionales ausentes (presentación, peso, precio) son `null`. Un solo lugar para la cotización y para «Comprar y recibir». */
 const aRenglonesDeCompra = (
   renglones: readonly z.infer<typeof formaDeRenglon>[],
 ): EntradaWebDeCotizarCompra["renglones"] =>
   renglones.map((r) => ({
     productoId: r.productoId,
-    presentacionId: null,
+    presentacionId: r.presentacionId ?? null,
     unidadDeCompraId: r.unidadDeCompraId,
     cantidad: r.cantidad,
     pesoReal: r.pesoReal ?? null,
