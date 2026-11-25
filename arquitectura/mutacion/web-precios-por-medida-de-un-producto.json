@@ -3,5 +3,5 @@
   "archivos": "src/composicion/entradas-de-precios-por-medida.ts,apps/web/ui/plantillas/catalogo/modelo-de-precios-por-medida.ts",
   "minutos": 1,
   "pruebas": "src/composicion/entradas-de-precios-por-medida.test.ts test/web/precios-por-medida-modelo.test.ts",
-  "critico": true
+  "nivel": "CRITICO"
 }

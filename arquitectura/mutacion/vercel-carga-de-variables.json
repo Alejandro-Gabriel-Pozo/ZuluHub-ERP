@@ -3,5 +3,5 @@
   "archivos": "src/adaptadores/vercel/**/*.ts",
   "minutos": 5.8,
   "pruebas": "src/adaptadores/vercel",
-  "critico": true
+  "nivel": "CRITICO"
 }

@@ -4,7 +4,11 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import type { CodigoDeUnidad } from "../../../primitivas/unidades/unidades";
 import { calcularLinea } from "../dominio/calcular-linea";
 import { alicuotaQueEntraAlCosto } from "../dominio/iva-en-el-costo";
-import { discriminaIva, type AlicuotaDeCompra } from "../dominio/comprobante";
+import {
+  discriminaIva,
+  type AlicuotaDeCompra,
+  type TipoDeComprobanteDeProveedor,
+} from "../dominio/comprobante";
 import {
   camposDeHuellaDeCorreccion,
   cantidadConsumida,
@@ -109,14 +113,31 @@ export async function alicuotaDelCosto(
   if (comprobante === null || comprobante.estado !== "REGISTRADO" || comprobante.tipo === null) {
     return ok(null);
   }
-  const condicion = discriminaIva(comprobante.tipo)
-    ? await dependencias.ivaDeLaEmpresa.condicion(tx, contexto)
-    : null;
   const lineas = await tx.detalleDeComprobantes.lineasDe(contexto.empresaId, comprobante.id);
   const cubre = lineas.find(
     (l) => l.recepcionId === recepcionId && l.lineaDeRecepcion === numeroDeLinea,
   );
-  return alicuotaQueEntraAlCosto(condicion, comprobante.tipo, cubre?.alicuota ?? null);
+  return alicuotaDeUnaLineaDeFactura(
+    tx,
+    contexto,
+    dependencias,
+    comprobante.tipo,
+    cubre?.alicuota ?? null,
+  );
+}
+
+/** El IVA que entra al costo de una línea de factura con esa alícuota: la condición de la empresa de hoy (DEC-0324) y la regla única `alicuotaQueEntraAlCosto`, la de N1, N2 y N3. */
+export async function alicuotaDeUnaLineaDeFactura(
+  tx: TxDeCompras,
+  contexto: ContextoOperativo,
+  dependencias: DependenciasDeCompras,
+  tipo: TipoDeComprobanteDeProveedor,
+  alicuotaDeLaLinea: AlicuotaDeCompra | null,
+): Promise<R<AlicuotaDeCompra | null>> {
+  const condicion = discriminaIva(tipo)
+    ? await dependencias.ivaDeLaEmpresa.condicion(tx, contexto)
+    : null;
+  return alicuotaQueEntraAlCosto(condicion, tipo, alicuotaDeLaLinea);
 }
 
 /**

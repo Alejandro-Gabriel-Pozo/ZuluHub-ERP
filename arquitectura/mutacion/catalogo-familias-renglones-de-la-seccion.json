@@ -2,5 +2,6 @@
   "grupo": "catálogo (familias: renglones de la sección)",
   "archivos": "src/modulos/catalogo/dominio/renglones-de-seccion.ts",
   "minutos": 1,
-  "pruebas": "src/modulos/catalogo/dominio/renglones-de-seccion.test.ts"
+  "pruebas": "src/modulos/catalogo/dominio/renglones-de-seccion.test.ts",
+  "nivel": "SERVIDOR"
 }

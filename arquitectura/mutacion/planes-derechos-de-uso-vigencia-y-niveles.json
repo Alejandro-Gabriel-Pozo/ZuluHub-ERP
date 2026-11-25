@@ -3,5 +3,5 @@
   "archivos": "src/capacidades/planes/**/*.ts",
   "minutos": 8,
   "pruebas": "src/capacidades/planes",
-  "critico": true
+  "nivel": "CRITICO"
 }

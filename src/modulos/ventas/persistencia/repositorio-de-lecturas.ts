@@ -355,8 +355,9 @@ export function crearRepositorioDeLecturas(db: Kysely<VentasDb>): LecturasDeVent
                co.creada_en as cobrado_en
           from ticket t
           join ticket_ejemplar ev on ev.empresa_id = t.empresa_id and ev.ticket_id = t.id and ev.numero_de_ejemplar = t.ejemplar_vigente
-          join cobranza_de_ticket co on co.empresa_id = t.empresa_id and co.ticket_id = t.id
-         where t.empresa_id = ${empresa} and t.estado = 'COBRADO'
+          left join cobranza_de_ticket co on co.empresa_id = t.empresa_id and co.ticket_id = t.id
+         where t.empresa_id = ${empresa}
+           and (t.estado = 'COBRADO' or (${filtro.conEmitidos}::boolean and t.estado = 'EMITIDO'))
            and (${sucursales}::uuid[] is null or t.sucursal_id = any(${sucursales}::uuid[]))
            and (${filtro.fechaDesde}::date is null or t.fecha_negocio >= ${filtro.fechaDesde}::date)
            and (${filtro.fechaHasta}::date is null or t.fecha_negocio <= ${filtro.fechaHasta}::date)
@@ -371,7 +372,7 @@ export function crearRepositorioDeLecturas(db: Kysely<VentasDb>): LecturasDeVent
         fechaNegocio: texto(f["fecha_negocio"]),
         ejemplarVigente: numero(f["ejemplar_vigente"]),
         total: texto(f["total"]),
-        cobradoEn: fecha(f["cobrado_en"]),
+        cobradoEn: f["cobrado_en"] === null ? null : fecha(f["cobrado_en"]),
       }));
     },
   };
