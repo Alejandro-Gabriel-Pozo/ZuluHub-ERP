@@ -27,7 +27,7 @@ import { PERMISOS_DE_SALON } from "./permisos-de-salon";
 import { PERMISOS_DE_STOCK } from "./permisos-de-stock";
 import { PERMISOS_DE_VENTAS } from "./permisos-de-ventas";
 import { PERMISOS_DE_VIDRIERA } from "./permisos-de-vidriera";
-import type { RolDeEmpresa } from "./roles";
+import type { RolDeEmpresa, RolDeLaMembresia as Rol } from "./roles";
 
 /**
  * Qué puede hacer cada rol dentro de una empresa. Es una TABLA DE DATOS en el código (roles fijos
@@ -60,7 +60,7 @@ export const PERMISOS_DE_EMPRESA = {
   ...PERMISOS_DE_PRODUCCION,
 } as const satisfies Record<ClaveAccion, readonly RolDeEmpresa[]>;
 
-export type ReglasDeEmpresa = ReglasDelGuard<ClaveModulo, ClaveAccion, ClaveCapacidad>;
+export type ReglasDeEmpresa = ReglasDelGuard<ClaveModulo, ClaveAccion, ClaveCapacidad, Rol>;
 
 /** El catálogo y la matriz reales, tal como la composición se los pasa a los casos de uso. */
 export const REGLAS_DE_EMPRESA: ReglasDeEmpresa = {

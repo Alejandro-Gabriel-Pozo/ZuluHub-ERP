@@ -1,7 +1,7 @@
 import { esClaveDe } from "../../capacidades/modulos/activos";
 import type { MotivoDeRechazo, ReglasDelGuard } from "../../capacidades/permisos/guard";
 import type { ReglasDePlataforma } from "../../capacidades/permisos/plataforma";
-import type { RolDeEmpresa } from "../../capacidades/permisos/roles";
+import type { RolDeLaMembresia } from "../../capacidades/permisos/roles";
 import type { ContextoDePlataforma } from "../../contexto/contexto";
 import { emailDesdeTexto, type Email } from "../../modulos/identidad/publico";
 import {
@@ -250,7 +250,7 @@ async function explicarAccion(
   const membresias =
     persona === null ? [] : await tx.soporte.membresiasDe(persona.id, [objetivo.empresaId]);
   const membresia = membresias.find((m) => m.empresaId === objetivo.empresaId) ?? null;
-  const hechos: HechosDeAccion<RolDeEmpresa> = {
+  const hechos: HechosDeAccion<RolDeLaMembresia> = {
     empresaId: objetivo.empresaId,
     persona: persona === null ? null : { activoGlobal: persona.activoGlobal },
     membresia: membresia === null ? null : { rol: membresia.rol, activo: membresia.activo },

@@ -1,5 +1,5 @@
 import type { Kysely } from "kysely";
-import { ROLES_DE_EMPRESA } from "../../../capacidades/permisos/roles";
+import { ROLES_DE_LA_MEMBRESIA } from "../../../capacidades/permisos/roles";
 import {
   empresaId,
   invitacionId,
@@ -154,7 +154,7 @@ export function crearRepositorioDeMembresias(db: Kysely<IdentidadDb>): Repositor
   }): Membresia => ({
     empresaId: empresaId(fila.empresa_id),
     personaId: personaId(fila.persona_id),
-    rol: deLaLista(ROLES_DE_EMPRESA, fila.rol, "rol"),
+    rol: deLaLista(ROLES_DE_LA_MEMBRESIA, fila.rol, "rol"),
     activo: fila.activo,
     version: fila.version,
   });
