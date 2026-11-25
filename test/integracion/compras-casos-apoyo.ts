@@ -5,6 +5,7 @@ import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import type { TransaccionesDePostgres } from "../../src/adaptadores/postgres/transacciones";
+import { armarAnonimizacionDePartesEnTx } from "../../src/composicion/anonimizacion-de-partes";
 import { crearEgresoDeCaja } from "../../src/composicion/egreso-de-caja";
 import { crearCasosDeUsoDeCaja } from "../../src/modulos/caja/publico";
 import {
@@ -94,6 +95,7 @@ export type EscenarioDeCompras = Readonly<{
 type TxDePruebaConCompras = TxDePrueba &
   RepositoriosDeStock &
   RepositoriosDeClientes &
+  ReturnType<typeof armarAnonimizacionDePartesEnTx> &
   RepositoriosDeCompras;
 
 export async function montarCompras(
@@ -119,6 +121,7 @@ export async function montarCompras(
       ...tx,
       ...crearRepositoriosDeStock(tx.db),
       ...crearRepositoriosDeClientes(tx.db),
+      ...armarAnonimizacionDePartesEnTx(tx.db),
       ...repos,
       // Fiscal (solo lectura para compras): el adaptador real de la condición de IVA de la empresa los usa sobre la misma conexión.
       emisores: crearRepositorioDeEmisores(tx.db.withTables<FiscalDb>()),

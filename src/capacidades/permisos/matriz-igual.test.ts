@@ -160,6 +160,7 @@ const MATRIZ_CONGELADA: readonly (readonly [string, readonly RolDeEmpresa[]])[] 
   ["partes.desvincular_contacto", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
   ["partes.desactivar", ["GERENTE", "ADMINISTRADOR"]],
   ["partes.reactivar", ["GERENTE", "ADMINISTRADOR"]],
+  ["partes.anonimizar", ["GERENTE"]],
   ["proveedores.editar_ficha", ["GERENTE", "ADMINISTRADOR"]],
   ["proveedores.pedir_ficha", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
   ["recepciones.ver", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
@@ -193,8 +194,8 @@ const MATRIZ_CONGELADA: readonly (readonly [string, readonly RolDeEmpresa[]])[] 
 ];
 
 /** Cifras del congelado: filas, y cuántas acciones puede cada rol. */
-const FILAS = 172;
-const PUEDEN = { GERENTE: 172, ADMINISTRADOR: 153, OPERADOR: 65 } as const satisfies Record<
+const FILAS = 173;
+const PUEDEN = { GERENTE: 173, ADMINISTRADOR: 153, OPERADOR: 65 } as const satisfies Record<
   RolDeEmpresa,
   number
 >;
@@ -244,7 +245,7 @@ describe("la matriz de permisos de la empresa es idéntica a la congelada", () =
       }
     }
     expect(comparadas).toBe(FILAS * ROLES_DE_EMPRESA.length);
-    expect(comparadas).toBe(516);
+    expect(comparadas).toBe(519);
   });
 
   it("la tabla leída por rol es la misma", () => {

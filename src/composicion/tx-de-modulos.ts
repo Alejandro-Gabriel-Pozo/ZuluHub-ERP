@@ -1,8 +1,12 @@
 import type { ConfiguracionDeTransacciones } from "../adaptadores/postgres/transacciones";
+import { armarAnonimizacionDePartesEnTx } from "./anonimizacion-de-partes";
 import { crearRepositoriosDeCatalogo } from "../modulos/catalogo/publico";
 import { crearRepositoriosDeComandas } from "../modulos/comandas/publico";
 import { crearRepositoriosDeSalon } from "../modulos/salon/publico";
-import { crearRepositoriosDeClientes } from "../modulos/clientes/publico";
+import {
+  crearRepositoriosDeClientes,
+  type AnonimizacionDePartesEnTx,
+} from "../modulos/clientes/publico";
 import { crearRepositoriosDeCompras } from "../modulos/compras/publico";
 import {
   crearLecturaDeHostsPropios,
@@ -27,6 +31,8 @@ export type PiezasDeModulosEnTx = ReturnType<typeof crearRepositoriosDeCatalogo>
   ReturnType<typeof crearRepositoriosDeClientes> &
   ReturnType<typeof crearRepositoriosDeCompras> &
   ReturnType<typeof crearRepositoriosDeProduccion> &
+  /** Lo que impide anonimizar una parte (saldo distinto de cero) y las copias que se vacían (`clientes`): sobre la misma conexión. */
+  Readonly<{ anonimizacionDePartes: AnonimizacionDePartesEnTx }> &
   /** El host activo propio de la empresa por superficie (dominio propio): solo lectura; la base deja ver únicamente lo activo de la empresa del contexto (0095). */
   Readonly<{ hostsPropios: LecturaDeHostsPropios }>;
 
@@ -42,6 +48,7 @@ export function armarPiezasDeModulosEnTx(
     ...crearRepositoriosDeClientes(db),
     ...crearRepositoriosDeCompras(db),
     ...crearRepositoriosDeProduccion(db),
+    ...armarAnonimizacionDePartesEnTx(db),
     hostsPropios: crearLecturaDeHostsPropios(db.withTables<HostsPropiosDb>()),
   };
 }

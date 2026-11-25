@@ -1,0 +1,6 @@
+{
+  "grupo": "clientes (anonimización en la composición)",
+  "archivos": "src/composicion/anonimizacion-de-partes.ts",
+  "minutos": 2,
+  "pruebas": "src/composicion/anonimizacion-de-partes.test.ts"
+}

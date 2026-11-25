@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1066",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Anonimizar una parte (cliente o proveedor) a pedido del titular es una acción nueva, partes.anonimizar, solo del gerente; reemplaza a DEC-0305 («sin acción de anonimizar»).",
+  "que_cambia": "El gerente puede anonimizar una persona o empresa del directorio desde el servidor; en esta versión no hay pantalla. Revertir: sacar la acción del catálogo y la migración 0105.",
+  "donde": "src/modulos/clientes/casos-de-uso/anonimizar-parte.ts; dueño 25/11/2026, vía el orquestador («Acepto tus recomendaciones»); la fila la asienta diseño"
+}
