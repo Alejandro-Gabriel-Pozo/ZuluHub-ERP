@@ -2,18 +2,9 @@
   "id": "DEC-0958",
   "fecha": "2026-11-25",
   "quien": "sesión",
-<<<<<<< HEAD
-  "tipo": "SIN_DECISION",
-  "estado": "PENDIENTE_DE_OK",
-  "decision": "Las pantallas siguen con los tres roles base: una persona con rol propio hace fallar en voz alta la lista, hasta que T6 defina cómo se muestra.",
-  "que_cambia": "Nada que vea el negocio hoy: nadie puede tener rol propio todavía (no hay casos de uso ni pantallas para asignarlo).",
-  "donde": "src/capacidades/permisos/roles.ts (rolParaMostrar)",
-  "motivo": "Mostrar un rol propio como «Empleado» o «Administrador» sería falso; el texto aprobado llega con el inventario de T6."
-=======
   "tipo": "PERMISOS",
   "estado": "PENDIENTE_DE_OK",
   "decision": "SUPUESTO: los hosts propios de la plataforma (variable PEDERNAL_HOSTS_PROTEGIDOS, la carga el dueño) no se agregan, verifican ni activan como dominio de un cliente.",
   "que_cambia": "Nadie puede dar de alta el host de la consola, la app o la landing como dominio de un cliente; desactivar y retirar un host así sí se puede. Sin la variable, la gestión de dominios no se arma. Texto: el genérico ya aprobado. Se revierte quitando la comprobación y la variable.",
   "donde": "src/plataforma/casos-de-uso/agregar-dominio.ts y cambiar-estado-de-dominio.ts; src/modulos/marcas/dominio/hosts-protegidos.ts; plan de dominio propio (Pedernal-docs, hosts protegidos)"
->>>>>>> origin/integracion/modulos-v2
 }
