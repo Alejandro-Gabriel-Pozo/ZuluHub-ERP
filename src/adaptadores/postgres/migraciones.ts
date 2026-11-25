@@ -2,6 +2,12 @@ import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import pg from "pg";
+// Con extensión `.ts` a propósito: lo carga `scripts/migrar-base.ts` directamente con Node (que borra los tipos pero no resuelve imports sin extensión).
+import { declaracionDesdeTexto } from "../../capacidades/roles/sincronizar-plantillas.ts";
+import {
+  sincronizarPlantillas,
+  type ResultadoDeLaSincronizacion,
+} from "./sincronizar-plantillas.ts";
 
 /**
  * Aplica en orden los archivos `NNNN_nombre.sql` de la carpeta de migraciones, cada uno en su propia
@@ -23,6 +29,15 @@ import pg from "pg";
  *   archivo del historial es reescribirlo.
  */
 
+/**
+ * El checksum de una migración: SHA-256 del contenido con fin de línea LF. UNA sola definición: la usan este ejecutor, el modo «ver»
+ * (`estado-de-migraciones.ts`) y los sellos de `migraciones/selladas.json` (que una prueba de arquitectura compara con el archivo).
+ * Previene: dos cálculos que se desfasan y un sello que ya no coincide con lo que registró el ejecutor.
+ */
+export function checksumDeMigracion(contenido: string): string {
+  return createHash("sha256").update(contenido.replaceAll("\r\n", "\n")).digest("hex");
+}
+
 /** Compartido con `estado-de-migraciones.ts` (solo lectura): una sola definición de qué es una migración. */
 export const PATRON_DE_ARCHIVO = /^(\d{4})_[a-z0-9_]+\.sql$/;
 const CLAVE_DE_BLOQUEO = 7_340_001;
@@ -36,13 +51,27 @@ export class ErrorDeMigracion extends Error {
   }
 }
 
-export type ResultadoDeMigraciones = Readonly<{ aplicadas: string[]; yaAplicadas: string[] }>;
+export type ResultadoDeMigraciones = Readonly<{
+  aplicadas: string[];
+  yaAplicadas: string[];
+  /** Solo si se pidió `sincronizarPlantillas`. */
+  plantillas?: ResultadoDeLaSincronizacion;
+}>;
+
+/** El archivo, dentro de la carpeta de migraciones, con lo que el código declara de cada acción (lo genera `npm run semilla:plantillas`). */
+export const ARCHIVO_DE_LA_DECLARACION = "plantillas-declaradas.json";
 
 export type OpcionesDeMigraciones = Readonly<{
   /** Cuánto espera una sentencia por un bloqueo ajeno antes de fallar. Por defecto 10 s. */
   esperaDeBloqueoEnMs?: number;
   /** Duración máxima de cada sentencia de una migración. Por defecto 5 min. */
   duracionMaximaEnMs?: number;
+  /**
+   * Después de aplicar con éxito, suma a las plantillas las acciones nuevas que declara `plantillas-declaradas.json` (solo aditivo, una
+   * transacción; ver `sincronizar-plantillas.ts`). Si falla, el ejecutor termina con error y las migraciones ya aplicadas quedan: la
+   * próxima corrida solo reintenta la sincronización. Apagado por defecto: lo piden `npm run migrar` y la base de pruebas.
+   */
+  sincronizarPlantillas?: boolean;
 }>;
 
 /** Compartido con `estado-de-migraciones.ts`: una sola definición de qué cadena es del pooler. */
@@ -189,7 +218,7 @@ export async function aplicarMigraciones(
         `la migración ${nombre} trae su propio ${control}: el ejecutor ya la envuelve en una transacción`,
       );
     }
-    contenidos.set(nombre, { sql, checksum: createHash("sha256").update(sql).digest("hex") });
+    contenidos.set(nombre, { sql, checksum: checksumDeMigracion(sql) });
   }
 
   const cliente = new pg.Client({ connectionString: urlDirecta });
@@ -245,6 +274,23 @@ export async function aplicarMigraciones(
         throw error;
       }
       aplicadas.push(nombre);
+    }
+    if (opciones.sincronizarPlantillas === true) {
+      const texto = await readFile(join(carpeta, ARCHIVO_DE_LA_DECLARACION), "utf8").catch(() => {
+        throw new ErrorDeMigracion(
+          `falta ${ARCHIVO_DE_LA_DECLARACION} en la carpeta de migraciones`,
+        );
+      });
+      const lectura = declaracionDesdeTexto(texto);
+      if (!lectura.ok) {
+        throw new ErrorDeMigracion(`${ARCHIVO_DE_LA_DECLARACION} no sirve: ${lectura.motivo}`);
+      }
+      const plantillas = await sincronizarPlantillas(
+        cliente,
+        lectura.declaracion,
+        (mensaje) => new ErrorDeMigracion(mensaje),
+      );
+      return { aplicadas, yaAplicadas, plantillas };
     }
     return { aplicadas, yaAplicadas };
   } finally {

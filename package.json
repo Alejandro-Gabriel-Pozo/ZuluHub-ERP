@@ -27,6 +27,7 @@
     "integracion:documento": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/escribir-operaciones-contextuales.ts",
     "analizar:muerto": "knip",
     "mutacion": "stryker run",
+    "sellar:migraciones": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/sellar-migraciones.ts",
     "migrar": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/migrar-base.ts",
     "semilla:plantillas": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/semilla-de-plantillas.ts",
     "cargar-entorno": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/cargar-entorno.ts",

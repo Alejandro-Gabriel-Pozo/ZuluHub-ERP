@@ -353,10 +353,15 @@ export async function ejecutarMigracion(entrada: EntradaDeMigracion): Promise<nu
       return 0;
     }
 
-    const resultado = await aplicarMigraciones(cadena, carpeta);
+    const resultado = await aplicarMigraciones(cadena, carpeta, { sincronizarPlantillas: true });
     info(`Aplicadas ahora (${resultado.aplicadas.length}):`);
     for (const linea of lista(resultado.aplicadas)) info(linea);
     info(`Ya estaban aplicadas: ${resultado.yaAplicadas.length}.`);
+    if (resultado.plantillas !== undefined) {
+      info(
+        `Plantillas de permisos: ${resultado.plantillas.introducidas} acciones nuevas introducidas, ${resultado.plantillas.versiones.length} versiones nuevas de plantilla.`,
+      );
+    }
     if (pedido.modo === "--aplicar") {
       info(
         resultado.aplicadas.length === 0

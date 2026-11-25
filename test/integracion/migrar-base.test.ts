@@ -204,6 +204,11 @@ describe.skipIf(base === null)("migrar-base: el comando que migra la base real",
       for (const archivo of archivosReales) {
         await cp(join(CARPETA_REAL, archivo), join(carpeta, archivo));
       }
+      // `--aplicar` también sincroniza las plantillas de permisos: necesita la declaración de acciones junto a las migraciones.
+      await cp(
+        join(CARPETA_REAL, "plantillas-declaradas.json"),
+        join(carpeta, "plantillas-declaradas.json"),
+      );
       const aplicada = await correrAca("--aplicar", url, carpeta);
       expect(aplicada.codigo).toBe(0);
     });
