@@ -44,7 +44,7 @@ export type PropuestaDeConciliacion = Readonly<{
 
 /**
  * Lo que necesita la pantalla de conciliar una factura de N3 o N4 (E9 §3.8) y la propuesta de un toque: cada línea de la factura toma, por producto y en el orden en que se recibió, lo que haya sin asignar en las
- * recepciones CONFIRMADAS del mismo proveedor (las líneas rechazadas no se proponen). **Limitada al alcance de quien pide** (decisión del dueño, 25/11/2026, pregunta 6: cada gerente concilia lo de su sucursal): con alcance de
+ * recepciones CONFIRMADAS del mismo proveedor (las líneas rechazadas no se proponen). **Limitada al alcance de quien pide** (decisión del dueño, 25/11/2026, pregunta 6; hoy gerente y administrador tienen «TODAS», H6, así que el límite solo actúa con un alcance acotado): con alcance de
  * una sola sucursal, ni la propuesta ni la lista de lo recibido traen líneas de otras. Solo propone: no escribe; la persona la confirma con `conciliarFactura`, que vuelve a decidir todo (permiso, alcance, topes).
  * `null` si la factura no existe, no es de N3 o N4, está anulada o es de otra empresa (indistinguible).
  */

@@ -199,7 +199,7 @@ export type FichaDeFacturaArmada = Readonly<{
       anulable: boolean;
     }>[];
   }> | null;
-  /** «Conciliar» se ofrece (permiso y la factura todavía tiene algo que conciliar y algo recibido que repartir). */
+  /** «Conciliar» se ofrece (permiso y el estado de la factura que dice el servidor: «Falta conciliar» o «Conciliada en parte»; la pantalla no recalcula saldos). */
   conciliar: boolean;
 }>;
 

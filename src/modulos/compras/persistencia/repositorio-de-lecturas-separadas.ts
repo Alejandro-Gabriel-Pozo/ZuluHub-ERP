@@ -147,7 +147,7 @@ export function crearRepositorioDeLecturasSeparadas(
     async facturas(empresa, filtro) {
       // La factura no tiene sucursal: ve todas las del proveedor quien tiene alcance sobre alguna sucursal (el alcance vacío no ve nada).
       if (filtro.sucursales !== "TODAS" && filtro.sucursales.length === 0) return [];
-      // «Falta conciliar» mira solo la mercadería de las sucursales del alcance de quien pide (cada gerente concilia lo de su sucursal).
+      // «Falta conciliar» mira solo la mercadería de las sucursales del alcance de quien pide (hoy gerente y administrador ven todas, H6; el efecto real es sobre quien tiene alcance acotado, p. ej. un operador).
       const alcance =
         filtro.sucursales === "TODAS"
           ? sql`true`

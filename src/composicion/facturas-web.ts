@@ -221,7 +221,7 @@ export type DatosParaConciliarParaLaPantalla = Readonly<{
   productosDeLasLineas: readonly Readonly<{ numero: number; productoId: string }>[];
 }>;
 
-/** Lo que necesita «Conciliar» y la propuesta, limitadas al alcance de quien pide (cada gerente concilia lo de su sucursal). */
+/** Lo que necesita «Conciliar» y la propuesta, limitadas al alcance de quien pide (hoy gerente y administrador tienen «TODAS», H6). */
 export function datosParaConciliar(
   d: DependenciasDeFacturasWeb,
   contexto: ContextoOperativo,

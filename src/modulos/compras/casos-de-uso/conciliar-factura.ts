@@ -101,6 +101,8 @@ export function armarConciliarFactura(dependencias: DependenciasDeCompras) {
           const recibidas = await tx.recepcionesSeparadas.lineasConciliables(
             empresaId,
             comprobante.proveedorId,
+            // Todas, a propósito: el alcance se verifica más abajo recepción por recepción para devolver SUCURSAL_FUERA_DE_ALCANCE y no «no conciliable».
+            "TODAS",
           );
           const sucursales = new Map<string, string>();
           for (const a of asignaciones.valor) {
@@ -239,7 +241,7 @@ export function armarAnularConciliacion(dependencias: DependenciasDeCompras) {
             return err("CONCILIACION_YA_ANULADA");
           }
           const hechas = await tx.conciliacionesDeCompra.asignacionesDe(empresaId, conciliacion.id);
-          // Anular también es de quien tiene alcance sobre cada sucursal involucrada (como conciliar): cada gerente corrige lo de su sucursal.
+          // Anular también es de quien tiene alcance sobre cada sucursal involucrada (como conciliar). Hoy gerente y administrador tienen alcance «TODAS» (H6): solo actúa con un alcance acotado.
           for (const recepcionId of new Set(hechas.map((a) => a.recepcionId))) {
             const recepcion = await tx.recepcionesSeparadas.obtenerSeparada(empresaId, recepcionId);
             if (recepcion === null) return err("CONCILIACION_NO_ENCONTRADA");

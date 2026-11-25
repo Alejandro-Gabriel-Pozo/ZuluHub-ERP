@@ -9,7 +9,7 @@ import { textosDeFacturas } from "../../../../../../../../ui/plantillas/compras/
 import { conciliarFacturaAccion } from "../../../../../acciones-de-facturas";
 
 // `/compras/facturas/[id]/conciliar`: repartir la factura entre lo recibido por sucursal (maqueta `compra-conciliar.html`, estado `conciliar`). El id es lo único que viene de la URL. La propuesta y lo recibido se
-// limitan a las sucursales del alcance de quien concilia (cada gerente concilia lo de su sucursal). Sin permiso para conciliar la pantalla no se abre (el genérico): nace cerrada; el guard de la acción vuelve a
+// limitan a las sucursales del alcance de quien concilia (hoy gerente y administrador tienen alcance «TODAS», H6). Sin permiso para conciliar la pantalla no se abre (el genérico): nace cerrada; el guard de la acción vuelve a
 // decidir. Una factura que no existe o es de otra empresa sale igual (el genérico).
 export default async function PaginaDeConciliar({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

@@ -61,8 +61,7 @@ export type FichaDeFacturaSeparada = Readonly<{
 }>;
 
 /**
- * El detalle de una factura de N3 o N4 (Compras 4, F6): por línea lo **facturado**, lo **conciliado** y lo **recibido por sucursal** (solo lo CONFIRMADO, y solo de las sucursales del alcance de quien mira: cada gerente ve
- * lo suyo), que responde «qué falta recibir» y «qué falta conciliar». Es una LECTURA (pide `comprobantes_de_proveedor.ver` en la consulta que la envuelve; las conciliaciones hechas son otra consulta, `conciliacionesDeFactura`,
+ * El detalle de una factura de N3 o N4 (Compras 4, F6): por línea lo **facturado**, lo **conciliado** y lo **recibido por sucursal** (solo lo CONFIRMADO, y solo de las sucursales del alcance de quien mira), que responde «qué falta recibir» y «qué falta conciliar». Es una LECTURA (pide `comprobantes_de_proveedor.ver` en la consulta que la envuelve; las conciliaciones hechas son otra consulta, `conciliacionesDeFactura`,
  * `null` si no existe, es de otra empresa o no es de N3 o N4 (indistinguible); alcance vacío no ve nada.
  */
 export async function fichaDeFacturaSeparadaDentro(
@@ -155,7 +154,7 @@ export async function fichaDeFacturaSeparadaDentro(
 
 /**
  * Las conciliaciones hechas de una factura de N3 o N4 (Compras 4, F6), con lo que repartió cada una, la más vieja primero. Es una LECTURA aparte con su propia acción (`conciliaciones.ver` en la consulta que la envuelve: el operador
- * no la tiene y no ve conciliaciones). **Solo las que repartieron alguna sucursal del alcance de quien mira**, y de cada una solo lo de esas sucursales (cada gerente ve y corrige lo de su sucursal); `anulableEnAlcance` dice si
+ * no la tiene y no ve conciliaciones). **Solo las que repartieron alguna sucursal del alcance de quien mira**, y de cada una solo lo de esas sucursales (hoy gerente y administrador tienen «TODAS», H6); `anulableEnAlcance` dice si
  * quien mira tiene alcance sobre TODAS las que repartió (solo entonces `anularConciliacion` la deja anular). `null` si la factura no existe, es de otra empresa o no es de N3 o N4 (indistinguible).
  */
 export async function conciliacionesDeFacturaDentro(
