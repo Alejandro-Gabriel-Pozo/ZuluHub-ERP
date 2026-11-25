@@ -451,3 +451,55 @@ ARCA ni contra una base real: **NO VERIFICADO** hasta la prueba de homologación
 12. Que el Root Directory `apps/web` y «Include source files outside of the Root Directory» alcancen para `src/` y `migraciones/`
     (ya en G.1): la compilación sin secretos en un clon limpio sí se verificó (`npm ci` y `npm run build:web`, 2026-11-04);
     lo de Vercel no.
+
+---
+
+## H. Instalación dedicada de un cliente (base propia)
+
+Decisión del dueño, 25/11/2026: tener la base de datos propia es un **extra de plan** («Extra de plan sobre bd»); los clientes lo piden para «tener sus datos en su propia BD». La base compartida sigue siendo el estándar. Diseño y alternativas: `base-por-cliente-opciones.md` (repositorio de documentos). Esta sección es el camino **mínimo y manual**: una instalación aparte, operada por vos. No hay alta automática.
+
+**Estado:** el mecanismo está en `migrar.yml` (ambiente `cliente-<codigo>`, frase `MIGRAR CLIENTE-<CODIGO>`, respaldo obligatorio). La lista de clientes está **vacía**: no hay ninguno dado de alta. La carga de variables al proyecto de Vercel del cliente (`cargar-entorno.yml`) **todavía no existe**; hasta entonces se cargan a mano.
+
+### H.1 Neon (la organización `Pedernal`, un proyecto por cliente y una clave por proyecto)
+
+1. Los proyectos de clientes se crean **en la organización `Pedernal`** (la de la producción nueva), **por vos en la consola, nunca por una sesión**. No hace falta una organización aparte: lo que separa a un cliente de otro, y de la producción, es la **clave limitada a un proyecto**.
+2. Un proyecto por cliente, en la misma región de hoy (`aws-sa-east-1`, São Paulo) y Postgres 18.
+3. Dejá la rama predeterminada con el nombre `production` y protegela: `migrar.yml` busca la rama de respaldo por ese nombre (`select(.name == "production")`) y no cambia.
+4. Creá, como administrador de la organización, **una clave de API limitada a ESE proyecto** («project-scoped»; solo un administrador de la organización las crea). Una por proyecto: la de producción no alcanza a los clientes y la de un cliente no alcanza a producción ni a otro cliente. Anotá el identificador del proyecto.
+   - **Qué puede la clave de un proyecto** (documentación pública de Neon, leída el 25/11/2026 por buscador; confirmalo en la consola): acceso de editor sobre ese proyecto, es decir leer y modificar lo que hay adentro (ramas, bases, roles).
+   - **Qué no puede:** borrar el proyecto, crear otros proyectos, crear otras claves ni ver otros proyectos.
+   - **Lo que sí puede y conviene tener presente:** como editor, una clave de proyecto **sí puede borrar o resetear una rama de ese proyecto**. Lo que impide que `migrar.yml` lo haga no es la clave sino el workflow (solo lista y crea ramas) y la prueba `workflows-y-neon.test.ts`.
+5. Copiá la cadena **DIRECTA** del dueño de la base (apagá «Connection pooling»).
+6. **Costo:** la organización `Pedernal` está hoy en el plan gratuito; un cliente con base propia probablemente exija un plan pago (precio del extra: pregunta ya registrada, ver `base-por-cliente-opciones.md`, pregunta 2).
+
+### H.2 GitHub: un Environment por cliente
+
+`Settings → Environments → New environment`: `cliente-<codigo>` (minúsculas, números y guiones, 3 a 30 caracteres). Revisor obligatorio: vos. «Deployment branches»: solo `main`. Secretos:
+
+- `PEDERNAL_DB_DUENO_DIRECTA` (la cadena directa del cliente), `NEON_API_KEY` y `NEON_PROJECT_ID` (**obligatorios**: sin respaldo no se migra).
+- `PEDERNAL_CLAVE_CONTEXTO`: una **propia del cliente**, distinta de la de producción y de preview (así un contexto firmado para un cliente lo rechaza la base de otro).
+
+Un Environment que no existe en GitHub **no es seguro de nombrar**: GitHub lo crea vacío y sin revisor al primer uso. Por eso el ambiente solo se puede elegir si está en la lista de `migrar.yml`, y se suma **después** de crear el Environment con su revisor.
+
+### H.3 Sumar al cliente a la lista (un PR chico)
+
+En `.github/workflows/migrar.yml` se suman dos líneas, y nada más: la opción `- cliente-<codigo>` y el caso `cliente-<codigo>) esperado="MIGRAR CLIENTE-<CODIGO>"; con_respaldo=true ;;` en «validar». En `test/arquitectura/workflow-migrar.test.ts` se actualiza, a propósito, la lista esperada. La prueba falla si falta el caso, la frase no nombra al cliente o el respaldo no es obligatorio.
+
+### H.4 Migrar, roles y primer administrador
+
+1. `Actions → Migrar` con el ambiente del cliente: `ver`, y después `aplicar` con la frase. Se crea primero la rama de respaldo `antes-de-<NNNN>`; si no se puede, no se migra.
+2. Roles de la base y variables: como en B.4, con la cadena del cliente, **sin tocar** `pedernal-erp`. Las variables van al proyecto de Vercel del cliente (a mano, hasta que exista la carga automática).
+3. Primer administrador y alta de la primera empresa: sección E, desde tu terminal con la cadena del cliente (no hay consola de plataforma del cliente).
+4. Cliente de Google y DNS: B.8 y B.7, a mano, con los hosts del cliente.
+
+### H.5 Despliegue de su instalación (SUPUESTO del orquestador, 25/11/2026)
+
+El proyecto de Vercel del cliente **no se conecta a Git** y lo desplegás vos por línea de comandos, **después del primer despliegue general aprobado** (B.10): ninguna instalación dedicada sale antes. Motivo: `apps/web/vercel.json` lo leen todos los proyectos con esa carpeta raíz y enciende el despliegue automático de la rama `preview`; un proyecto de cliente conectado desplegaría esa rama. **Cuesta revertir poco:** conectarlo a Git es un cambio en Vercel más una rama agregada a `RAMAS_CON_DESPLIEGUE_APROBADO_POR_EL_DUENO` de `test/arquitectura/vercel-json.test.ts`.
+
+### H.6 Lo que este camino NO resuelve
+
+- Cada versión nueva se migra y se despliega **dos veces**, a mano: una por instalación.
+- El respaldo diario externo no existe todavía (ni para producción): lo único es la rama de respaldo antes de migrar.
+- El cron de trabajos corre cada 5 minutos en cada proyecto: mantiene despierta la base del cliente (costo aproximado de la base US$ 20–25 por mes; cifras de la documentación pública, a confirmar).
+- Planes, marcas y empresas se cargan a mano en la base del cliente.
+- Salida del cliente: se le entrega un volcado **verificado**, se le dan 30 días de gracia con sus datos ya entregados, y el borrado del proyecto de Neon lo hacés **solo vos**, en la consola.
