@@ -188,7 +188,14 @@ describe("«Tomar el costo de la factura»", () => {
     );
     await expect.element(boton("Tomar el costo de la factura")).not.toBeInTheDocument();
     await sinPermiso.unmount();
-    await render(detalle(servidor, { tomarElCosto: undefined }));
+    await render(
+      <PantallaDeDetalleDeFactura
+        ficha={FICHA}
+        textos={textos}
+        sucursales={SUCURSALES}
+        acciones={TODO}
+      />,
+    );
     await expect.element(boton("Tomar el costo de la factura")).not.toBeInTheDocument();
   });
 
