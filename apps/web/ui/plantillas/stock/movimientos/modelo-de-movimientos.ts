@@ -51,7 +51,7 @@ export type MovimientosDeLaComposicion = Readonly<{
   siguiente: string | null;
 }>;
 
-export type TarjetaDeMovimiento = Readonly<{
+type TarjetaDeMovimiento = Readonly<{
   id: string;
   /** La clase, o `null` si no tiene texto aprobado. */
   clase: string | null;

@@ -19,7 +19,7 @@ export type ExistenciasDeLaComposicion = Readonly<{
   siguiente: string | null;
 }>;
 
-export type FilaDeExistencia = Readonly<{
+type FilaDeExistencia = Readonly<{
   id: string;
   titulo: string;
   cantidad: string;
