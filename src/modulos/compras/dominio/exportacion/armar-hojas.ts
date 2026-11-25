@@ -116,14 +116,21 @@ const MONEDA = "ARS";
 
 type EstadoDelPago = "PENDIENTE" | "PAGADO" | "ANULADO";
 
-/** El estado y el importe del pago de una factura: hay un pago vigente = pagado; solo pagos anulados = anulado; ninguno = pendiente. El pago es uno por factura y por el total. */
+/**
+ * El estado, el pago vigente, lo abonado y el saldo de una factura: hay un pago vigente = pagado; solo pagos anulados = anulado; ninguno = pendiente. El pago es uno por factura y por el
+ * total. Lo abonado es el pago vigente o `0.00` (un cero verdadero: no se pagó nada) y el saldo es el total según la factura menos lo abonado, en centavos enteros.
+ */
 function pagoDe(c: ComprobanteParaExportar): Readonly<{
   estado: EstadoDelPago;
   vigente: ComprobanteParaExportar["pagos"][number] | null;
+  abonado: string;
+  saldo: string;
 }> {
   const vigente = c.pagos.find((p) => p.estado === "VIGENTE") ?? null;
-  if (vigente !== null) return { estado: "PAGADO", vigente };
-  return { estado: c.pagos.length > 0 ? "ANULADO" : "PENDIENTE", vigente: null };
+  const abonado = vigente === null ? "0.00" : vigente.importe;
+  const saldo = textoDeImporte(centavos(c.totalSegunFactura) - centavos(abonado));
+  if (vigente !== null) return { estado: "PAGADO", vigente, abonado, saldo };
+  return { estado: c.pagos.length > 0 ? "ANULADO" : "PENDIENTE", vigente: null, abonado, saldo };
 }
 
 const centavos = (texto: string): bigint => {
@@ -169,11 +176,6 @@ export function armarCabecera(
     .map((c): Celda[] => {
       const f = c.comprobante;
       const pago = f === null ? null : pagoDe(f);
-      const abonado = f === null ? null : (pago?.vigente?.importe ?? "0.00");
-      const saldo =
-        f === null || abonado === null
-          ? null
-          : textoDeImporte(centavos(f.totalSegunFactura) - centavos(abonado));
       const d = datosDelComprobante(f, r);
       const clase = f === null ? null : claseDe(f);
       return [
@@ -200,8 +202,8 @@ export function armarCabecera(
         celdaDecimal(totalDeCompra(c.lineas.map((l) => l.importeVigente)), 2),
         celdaEntera(c.lineas.length),
         d.estadoDelPago,
-        celdaDecimal(abonado, 2),
-        celdaDecimal(saldo, 2),
+        celdaDecimal(pago?.abonado ?? null, 2),
+        celdaDecimal(pago?.saldo ?? null, 2),
         celdaDeFecha(pago?.vigente?.fechaDePago ?? null),
         celdaDeTexto(pago?.vigente == null ? null : r.medioDePago(pago.vigente.medio)),
         celdaDeTexto(f === null ? null : r.estadoDeLaFactura(f.estado)),
@@ -219,10 +221,9 @@ function costoPorKiloDeLinea(l: LineaParaExportar): string | null {
   const peso = l.pesoReal === null ? null : leerCantidad(l.pesoReal);
   if (peso !== null)
     return costoPorKiloDerivado(importe, peso, l.unidadDeCompraId as CodigoDeUnidad);
-  const enStock = leerCantidad(l.cantidadEnStock);
-  return enStock === null
-    ? null
-    : costoPorKiloDerivado(importe, enStock, l.unidadDeStockId as CodigoDeUnidad);
+  // Una cantidad que no se lee queda en cero: sin cantidad no hay costo por kilo.
+  const enStock = leerCantidad(l.cantidadEnStock) ?? 0n;
+  return costoPorKiloDerivado(importe, enStock, l.unidadDeStockId as CodigoDeUnidad);
 }
 
 export function armarDetalle(
@@ -289,10 +290,10 @@ type Grupo = {
   cantidadDeCompra: bigint;
   cantidadEnStock: bigint;
   importe: bigint;
-  conImporte: number;
+  conImporte: boolean;
   sinPrecio: number;
   abonado: bigint;
-  conAbonado: number;
+  conAbonado: boolean;
 };
 
 const porTexto = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
@@ -323,10 +324,10 @@ export function armarResumen(
           cantidadDeCompra: 0n,
           cantidadEnStock: 0n,
           importe: 0n,
-          conImporte: 0,
+          conImporte: false,
           sinPrecio: 0,
           abonado: 0n,
-          conAbonado: 0,
+          conAbonado: false,
         };
         grupos.set(clave, g);
       }
@@ -337,11 +338,11 @@ export function armarResumen(
       if (l.importeVigente === null) g.sinPrecio += 1;
       else {
         g.importe += centavos(l.importeVigente);
-        g.conImporte += 1;
+        g.conImporte = true;
       }
       if (l.importeAbonadoDerivado !== null) {
         g.abonado += centavos(l.importeAbonadoDerivado);
-        g.conAbonado += 1;
+        g.conAbonado = true;
       }
     }
   }
@@ -361,10 +362,10 @@ export function armarResumen(
       celdaDecimal(textoDeCantidad(g.cantidadDeCompra), 4),
       celdaDecimal(textoDeCantidad(g.cantidadEnStock), 4),
       celdaDeTexto(g.unidadDeStockSimbolo),
-      celdaDecimal(g.conImporte === 0 ? null : textoDeImporte(g.importe), 2),
+      celdaDecimal(g.conImporte ? textoDeImporte(g.importe) : null, 2),
       celdaDeTexto(MONEDA),
       celdaEntera(g.sinPrecio),
-      celdaDecimal(g.conAbonado === 0 ? null : textoDeImporte(g.abonado), 2),
+      celdaDecimal(g.conAbonado ? textoDeImporte(g.abonado) : null, 2),
     ]);
   return { columnas: COLUMNAS_DE_RESUMEN, filas };
 }

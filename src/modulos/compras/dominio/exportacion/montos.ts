@@ -16,13 +16,17 @@ export function repartirConMayorResto(total: bigint, pesos: readonly bigint[]): 
   const suma = pesos.reduce((a, p) => a + p, 0n);
   if (suma === 0n) return total === 0n ? pesos.map(() => 0n) : null;
   const partes = pesos.map((p) => (total * p) / suma);
-  const restos = pesos.map((p, i) => ({ i, resto: (total * p) % suma }));
-  let faltan = total - partes.reduce((a, p) => a + p, 0n);
-  restos.sort((a, b) => (a.resto === b.resto ? a.i - b.i : a.resto > b.resto ? -1 : 1));
-  for (const { i } of restos) {
-    if (faltan === 0n) break;
-    partes[i] = (partes[i] as bigint) + 1n;
-    faltan -= 1n;
+  const restos = pesos.map((p) => (total * p) % suma);
+  // Los centavos que sobran (menos que la cantidad de partes) van de a uno a quien tiene el mayor resto; con restos iguales, al primero en el orden dado.
+  const elegidos = new Set<number>();
+  for (let faltan = total - partes.reduce((a, p) => a + p, 0n); faltan > 0n; faltan -= 1n) {
+    let mejor = -1;
+    for (const [i, resto] of restos.entries()) {
+      if (elegidos.has(i)) continue;
+      if (mejor === -1 || resto > (restos[mejor] as bigint)) mejor = i;
+    }
+    elegidos.add(mejor);
+    partes[mejor] = (partes[mejor] as bigint) + 1n;
   }
   return partes;
 }

@@ -17,7 +17,35 @@ describe("repartirConMayorResto", () => {
   });
   it("lo negativo se rechaza", () => {
     expect(repartirConMayorResto(-1n, [1n])).toBeNull();
-    expect(repartirConMayorResto(10n, [1n, -1n])).toBeNull();
+    // Con un peso negativo la suma no es cero: lo único que lo frena es el rechazo del peso negativo.
+    expect(repartirConMayorResto(10n, [3n, -1n])).toBeNull();
+    expect(repartirConMayorResto(10n, [-1n, 3n])).toBeNull();
+  });
+
+  it("el centavo que sobra va al MAYOR resto, no al primero", () => {
+    // 10 entre 3, 2 y 1: pisos 5, 3, 1 (suman 9) y restos 0, 2, 4: el centavo es del tercero.
+    expect(repartirConMayorResto(10n, [3n, 2n, 1n])).toEqual([5n, 3n, 2n]);
+    // Y con dos centavos que sobran, a los dos mayores restos en su orden.
+    expect(repartirConMayorResto(11n, [3n, 2n, 1n])).toEqual([5n, 4n, 2n]);
+  });
+
+  it("con restos iguales el centavo va al primero en el orden dado (el mismo pedido da siempre el mismo archivo)", () => {
+    expect(repartirConMayorResto(2n, [1n, 1n, 1n])).toEqual([1n, 1n, 0n]);
+    expect(repartirConMayorResto(1n, [1n, 1n, 1n])).toEqual([1n, 0n, 0n]);
+    // Empate entre el segundo y el tercero, con el primero de menor resto: el centavo sobrante es del segundo.
+    expect(repartirConMayorResto(5n, [1n, 3n, 3n])).toEqual([1n, 2n, 2n]);
+    // Con muchos empatados, los centavos van a los primeros en orden.
+    expect(repartirConMayorResto(3n, [1n, 1n, 1n, 1n, 1n, 1n])).toEqual([1n, 1n, 1n, 0n, 0n, 0n]);
+    expect(repartirConMayorResto(4n, [2n, 2n, 2n, 2n, 2n, 2n, 2n, 2n])).toEqual([
+      1n,
+      1n,
+      1n,
+      1n,
+      0n,
+      0n,
+      0n,
+      0n,
+    ]);
   });
   it("propiedad: la suma de las partes es siempre exactamente el total, ninguna parte es negativa y es determinista", () => {
     fc.assert(

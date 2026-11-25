@@ -16,6 +16,16 @@ describe("el período de la exportación", () => {
     expect(periodoDeLaExportacionValido("2028-02-29", "2029-02-28")).toBe(true);
     expect(periodoDeLaExportacionValido("2028-02-29", "2029-03-01")).toBe(false);
   });
+  it("el formato se exige entero y en las dos fechas: ni sobrante antes o después, ni meses o días de una cifra", () => {
+    expect(periodoDeLaExportacionValido("2026-07-01x", "2026-08-01")).toBe(false);
+    expect(periodoDeLaExportacionValido("x2026-07-01", "2026-08-01")).toBe(false);
+    expect(periodoDeLaExportacionValido("-2026-07-01", "2026-08-01")).toBe(false);
+    expect(periodoDeLaExportacionValido("2026-07-01", "2026-08-01x")).toBe(false);
+    expect(periodoDeLaExportacionValido("2026-07-01", "x2026-08-01")).toBe(false);
+    expect(periodoDeLaExportacionValido("2026-7-1", "2026-09-01")).toBe(false);
+    expect(periodoDeLaExportacionValido("2026-07-01", "2026-9-5")).toBe(false);
+  });
+
   it("lo que no es una fecha civil se rechaza", () => {
     expect(periodoDeLaExportacionValido("ayer", "2026-07-01")).toBe(false);
     expect(periodoDeLaExportacionValido("2026-07-01", "")).toBe(false);
