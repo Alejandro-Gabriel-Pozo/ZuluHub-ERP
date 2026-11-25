@@ -139,5 +139,5 @@ obedece igual, se acumula y compite con otras.
   (`test/arquitectura/vercel-json.test.ts`) falla si se enciende sin cambiar a propósito su constante. La compilación
   nunca migra: las migraciones las aplica el workflow manual `migrar.yml`, con la aprobación del dueño. La guía de
   puesta en marcha es `apps/web/PRIMER-DESPLIEGUE.md`.
-- Neon: **producción** = proyecto `frosty-pond-14815728` (organización `Pedernal`), rama `production` (protegida), región `aws-sa-east-1`, Postgres 18.
+- Neon: **producción** = proyecto `frosty-pond-14815728` (organización `Pedernal`), rama `production` (hoy NO protegida: la protección exige un plan pago de Neon; el dueño la activará al pasar a Launch, antes del primer cliente real; mientras tanto la cerradura es el workflow `migrar.yml`, que solo lista y crea ramas, y la prueba `test/arquitectura/workflows-y-neon.test.ts`; al pasar a un plan pago: proteger la rama `production`), región `aws-sa-east-1`, Postgres 18.
   **Preview y desarrollo** = proyecto `flat-flower-36030007`, rama `preview` (su rama `production` vieja tiene datos de prueba y no es la de los clientes).

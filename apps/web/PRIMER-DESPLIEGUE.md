@@ -78,7 +78,8 @@ Settings → Environments → New environment. Dos, con estos nombres exactos:
 
 ### B.2 Neon: las ramas
 
-**Producción:** proyecto `frosty-pond-14815728` (organización `Pedernal`), rama `production` (la de los clientes, protegida), región `aws-sa-east-1`, Postgres 18.
+**Producción:** proyecto `frosty-pond-14815728` (organización `Pedernal`), rama `production` (la de los clientes; hoy NO protegida: la protección exige un plan pago de Neon y se activa al pasar a Launch, antes del primer cliente real; mientras tanto la cerradura es `migrar.yml`, que solo lista y crea ramas, y la prueba `test/arquitectura/workflows-y-neon.test.ts`), región `aws-sa-east-1`, Postgres 18.
+**Al pasar a un plan pago: proteger la rama `production`.**
 
 **Preview y desarrollo:** proyecto `flat-flower-36030007`, rama `preview` (sin datos de clientes, para las pruebas). La rama `production` vieja de ese proyecto tiene datos de
 prueba, no es la de los clientes y no se usa como producción. El `NEON_PROJECT_ID` del Environment `produccion` tiene que ser el del proyecto de producción.
