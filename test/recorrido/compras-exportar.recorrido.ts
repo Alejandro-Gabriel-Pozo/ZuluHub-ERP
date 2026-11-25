@@ -135,7 +135,7 @@ describe.skipIf(base === null)("recorrido de compras: exportar a Excel", () => {
     expect(respuesta?.status()).toBeGreaterThanOrEqual(400);
     expect(respuesta?.headers()["content-disposition"]).toBeUndefined();
     expect(respuesta?.headers()["cache-control"]).toBe("private, no-store");
-    expect(Object.keys(await respuesta?.json())).toEqual(["codigo"]);
+    expect(Object.keys((await respuesta?.json()) as object)).toEqual(["codigo"]);
   });
 
   it("el operador no ve el enlace y, si pide la dirección a mano, no recibe ningún archivo", async () => {
