@@ -1,6 +1,11 @@
 import type { Kysely } from "kysely";
 import { ROLES_DE_EMPRESA } from "../../capacidades/permisos/roles";
 import type { EstadoDeEmpresa, EstadoDeTenant } from "../../contexto/estados";
+import {
+  ESTADOS_DE_DOMINIO,
+  SUPERFICIES_DE_DOMINIO,
+  TITULARES_DE_DOMINIO,
+} from "../../modulos/marcas/publico";
 import type { Persona } from "../../modulos/identidad/publico";
 import {
   empresaId,
@@ -127,6 +132,42 @@ export function crearLecturaDeSoporteDePostgres(db: Kysely<SoporteDb>): LecturaD
       if (pagina.despuesDeId !== null) consulta = consulta.where("id", ">", pagina.despuesDeId);
       const ids = await consulta.execute();
       return cargarInvitaciones(ids.map((i) => i.id));
+    },
+
+    async listarDominios(filtro, pagina) {
+      let consulta = db
+        .selectFrom("dominio as d")
+        .innerJoin("empresa as e", "e.id", "d.duenio_empresa_id")
+        .select([
+          "d.id",
+          "d.host",
+          "d.superficie",
+          "d.titular",
+          "d.estado",
+          "d.verificado_en",
+          "d.motivo",
+          "d.version",
+          "e.id as empresa_id",
+          "e.razon_social",
+        ])
+        .orderBy("d.id")
+        .limit(pagina.limite);
+      if (filtro.empresaId !== null) consulta = consulta.where("e.id", "=", filtro.empresaId);
+      if (filtro.estado !== null) consulta = consulta.where("d.estado", "=", filtro.estado);
+      if (pagina.despuesDeId !== null) consulta = consulta.where("d.id", ">", pagina.despuesDeId);
+      const filas = await consulta.execute();
+      return filas.map((f) => ({
+        id: f.id,
+        host: f.host,
+        superficie: deLaLista(SUPERFICIES_DE_DOMINIO, f.superficie, "superficie"),
+        titular: deLaLista(TITULARES_DE_DOMINIO, f.titular, "titular"),
+        estado: deLaLista(ESTADOS_DE_DOMINIO, f.estado, "estado de dominio"),
+        verificadoEn: f.verificado_en,
+        motivo: f.motivo,
+        version: f.version,
+        empresaId: empresaId(f.empresa_id),
+        razonSocial: f.razon_social,
+      }));
     },
 
     async listarTrabajosFallidos(pagina) {

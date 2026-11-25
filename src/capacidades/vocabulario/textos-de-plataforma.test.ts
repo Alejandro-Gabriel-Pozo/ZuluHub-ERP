@@ -7,6 +7,30 @@ import { TEXTOS_DE_PLATAFORMA } from "./textos-de-plataforma";
  */
 const APROBADOS: Readonly<Record<string, string>> = {
   "plataforma.menu.planes": "Planes",
+  "plataforma.dominios.titulo": "Dominios",
+  "plataforma.dominios.col_host": "Nombre del sitio",
+  "plataforma.dominios.col_empresa": "Empresa",
+  "plataforma.dominios.col_superficie": "Qué muestra",
+  "plataforma.dominios.col_titular": "Titular",
+  "plataforma.dominios.superficie_app": "Aplicación",
+  "plataforma.dominios.superficie_carta": "Carta",
+  "plataforma.dominios.titular_cliente": "Cliente",
+  "plataforma.dominios.titular_operador": "Operador",
+  "plataforma.dominios.estado_pendiente": "Pendiente de verificación",
+  "plataforma.dominios.estado_verificado": "Verificado",
+  "plataforma.dominios.verificado_el": "Verificado el {fecha}",
+  "plataforma.dominios.agregar": "Agregar dominio",
+  "plataforma.dominios.confirmar_agregar": "Agregar",
+  "plataforma.dominios.verificar": "Verificar",
+  "plataforma.dominios.activar": "Activar",
+  "plataforma.dominios.desactivar": "Desactivar",
+  "plataforma.dominios.retirar": "Retirar",
+  "plataforma.dominios.vacio": "Todavía no hay dominios.",
+  "plataforma.dominios.exito_agregado": "Dominio agregado.",
+  "plataforma.dominios.exito_verificado": "Dominio verificado.",
+  "plataforma.dominios.exito_activado": "Dominio activado.",
+  "plataforma.dominios.exito_desactivado": "Dominio desactivado.",
+  "plataforma.dominios.exito_retirado": "Dominio retirado.",
   "plataforma.arrepentir.puede_hasta": "Se puede deshacer hasta el {fecha}.",
   "plataforma.arrepentir.etiqueta_suba": "Suba",
   "plataforma.arrepentir.etiqueta_baja": "Baja",
@@ -153,13 +177,15 @@ describe("textos de la consola de plataforma", () => {
       const declarados = "marcadores" in definicion ? [...definicion.marcadores].sort() : [];
       expect(declarados).toEqual(usados);
       expect(definicion.usos).toEqual(["DE_FICHA"]);
-      // «Planes»: DEC-0805; «Política de cambio de plan» (T-1 a T-18): DEC-0814; «Deshacer por arrepentimiento» (T-19 a T-37): DEC-0817.
+      // «Planes»: DEC-0805; «Política de cambio de plan» (T-1 a T-18): DEC-0814; «Deshacer por arrepentimiento» (T-19 a T-37): DEC-0817; «Dominios»: DEC-0900.
       expect(definicion.fuente).toEqual({
         decision: /^plataforma\.(menu\.politica|politica\.)/.test(_clave)
           ? "DEC-0814"
           : /^plataforma\.arrepentir\./.test(_clave)
             ? "DEC-0817"
-            : "DEC-0805",
+            : /^plataforma\.dominios\./.test(_clave)
+              ? "DEC-0900"
+              : "DEC-0805",
       });
     },
   );

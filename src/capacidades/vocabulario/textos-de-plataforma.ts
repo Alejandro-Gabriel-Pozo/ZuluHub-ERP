@@ -37,7 +37,43 @@ const A = (porDefecto: string, marcadores?: readonly string[]): DefinicionDeText
   fuente: { decision: "DEC-0817" },
 });
 
+/**
+ * «Dominios» (consola, plan de dominio propio, P1). Fuente de todos: DEC-0900 (inventario de textos de `dominio-propio-textos-y-fichas.md` §1.1 que el orquestador aceptó el
+ * 25/11/2026 por la delegación de la fila 173). «Estado», «Activo», «Retirado», «Motivo» y «Cancelar» reusan las claves de «Planes» (mismo texto); los errores de los casos
+ * son los de `mensajes-de-dominios.ts`.
+ */
+const O = (porDefecto: string, marcadores?: readonly string[]): DefinicionDeTexto => ({
+  porDefecto,
+  ...(marcadores === undefined ? {} : { marcadores }),
+  usos: ["DE_FICHA"],
+  fuente: { decision: "DEC-0900" },
+});
+
 export const TEXTOS_DE_PLATAFORMA = {
+  "plataforma.dominios.titulo": O("Dominios"),
+  "plataforma.dominios.col_host": O("Nombre del sitio"),
+  "plataforma.dominios.col_empresa": O("Empresa"),
+  "plataforma.dominios.col_superficie": O("Qué muestra"),
+  "plataforma.dominios.col_titular": O("Titular"),
+  "plataforma.dominios.superficie_app": O("Aplicación"),
+  "plataforma.dominios.superficie_carta": O("Carta"),
+  "plataforma.dominios.titular_cliente": O("Cliente"),
+  "plataforma.dominios.titular_operador": O("Operador"),
+  "plataforma.dominios.estado_pendiente": O("Pendiente de verificación"),
+  "plataforma.dominios.estado_verificado": O("Verificado"),
+  "plataforma.dominios.verificado_el": O("Verificado el {fecha}", ["fecha"]),
+  "plataforma.dominios.agregar": O("Agregar dominio"),
+  "plataforma.dominios.confirmar_agregar": O("Agregar"),
+  "plataforma.dominios.verificar": O("Verificar"),
+  "plataforma.dominios.activar": O("Activar"),
+  "plataforma.dominios.desactivar": O("Desactivar"),
+  "plataforma.dominios.retirar": O("Retirar"),
+  "plataforma.dominios.vacio": O("Todavía no hay dominios."),
+  "plataforma.dominios.exito_agregado": O("Dominio agregado."),
+  "plataforma.dominios.exito_verificado": O("Dominio verificado."),
+  "plataforma.dominios.exito_activado": O("Dominio activado."),
+  "plataforma.dominios.exito_desactivado": O("Dominio desactivado."),
+  "plataforma.dominios.exito_retirado": O("Dominio retirado."),
   "plataforma.menu.planes": T("Planes"),
   "plataforma.menu.politica": P("Política de cambio de plan"), // T-1
   "plataforma.politica.titulo": P("Política de cambio de plan"), // T-2

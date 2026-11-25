@@ -10,6 +10,11 @@ import type {
   EstadosDeEmpresa,
 } from "../../contexto/estados";
 import type { EstadoGuardado, Invitacion, Persona } from "../../modulos/identidad/publico";
+import type {
+  EstadoDeDominio,
+  SuperficieDeDominio,
+  TitularDeDominio,
+} from "../../modulos/marcas/publico";
 import type { AjusteGuardado } from "../../modulos/planes/publico";
 import type {
   EmpresaId,
@@ -259,7 +264,32 @@ export type PerillaDelCatalogo = Readonly<{
 export type VistaDeCatalogoDePerillas = Readonly<{ perillas: readonly PerillaDelCatalogo[] }>;
 
 /** Las listas de nivel 1 y la búsqueda de referencias. */
+/** Qué dominios de empresa se piden: los de una empresa y/o en un estado; sin filtro, todos los de empresas. */
+export type FiltroDeDominios = Readonly<{
+  empresaId: EmpresaId | null;
+  estado: EstadoDeDominio | null;
+}>;
+
+/**
+ * Un dominio de una empresa tal como lo ve la consola: el host, qué muestra, de quién es, en qué estado está y la `version` (la que lee el caso de uso al
+ * cambiarlo). Sin el actor que lo registró ni ningún dato de la base que la pantalla no use.
+ */
+export type FilaDeDominio = Readonly<{
+  id: string;
+  host: string;
+  superficie: SuperficieDeDominio;
+  titular: TitularDeDominio;
+  estado: EstadoDeDominio;
+  verificadoEn: Date | null;
+  motivo: string | null;
+  version: number;
+  empresaId: EmpresaId;
+  razonSocial: string;
+}>;
+
 export interface LecturaDeNivel1 {
+  /** Los dominios de empresas (los de una marca no entran), con la razón social de su empresa: UNA sentencia con join, ordenada por id. */
+  listarDominios(filtro: FiltroDeDominios, pagina: Pagina): Promise<FilaDeDominio[]>;
   /**
    * Los tenants con su marca, su plan vigente a `ahora` y cuántas empresas no canceladas tienen: UNA
    * sentencia con joins, no una por fila.

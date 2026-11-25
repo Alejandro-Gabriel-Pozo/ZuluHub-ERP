@@ -174,6 +174,8 @@ export const CATALOGO_DE_PLATAFORMA = {
       // pregunta Q16 de e3 sigue abierta; costo de revertir: el indicador de esta fila y su renglón en la prueba del segundo factor.
       "listas.ver": { capacidad: null, efecto: "LECTURA", segundoFactorReciente: false },
       "listas.editar": { capacidad: null, efecto: "CREA_AMPLIA", segundoFactorReciente: true },
+      // Ver la lista de dominios (consola «Dominios»): lectura sin segundo factor; SOPORTE ve y no cambia nada (dueño, 25/11/2026: plan de dominio propio, P1).
+      "dominios.ver": { capacidad: null, efecto: "LECTURA", segundoFactorReciente: false },
     },
   },
 } as const satisfies CatalogoDePlataforma;
@@ -241,6 +243,8 @@ export const PERMISOS_DE_PLATAFORMA = {
   // Listas del sistema (e3 §3.7). SUPUESTO (DEC-0055) de la especificación (pregunta Q16 pendiente): SOPORTE ve, solo ADMIN edita. Una fila.
   "listas.ver": ["ADMIN", "SOPORTE"],
   "listas.editar": ["ADMIN"],
+  // Dominios: SOPORTE ve la lista y no cambia nada (dueño, 25/11/2026, plan de dominio propio, P1).
+  "dominios.ver": ["ADMIN", "SOPORTE"],
 } as const satisfies Record<ClaveAccionDePlataforma, readonly RolDePlataforma[]>;
 
 export type ReglasDePlataforma = ReglasDelGuard<

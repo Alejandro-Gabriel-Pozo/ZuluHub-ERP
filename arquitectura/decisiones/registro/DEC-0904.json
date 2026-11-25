@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0904",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "La raíz de la carta de un host dedicado lista automáticamente las cartas en línea si hay varias; con una sola va directo a ella.",
+  "que_cambia": "No hay casilla aparte para aparecer en la lista (se construye en P3). Revertir: agregar esa casilla.",
+  "donde": "Respuesta del dueño del 25/11/2026 (Sí a A, B, C y D), plan v2 de dominio propio §0.7 C."
+}

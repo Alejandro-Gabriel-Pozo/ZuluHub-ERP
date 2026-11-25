@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0907",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "CONFIRMADA",
+  "decision": "Verificar un dominio desde la consola deja constancia con la fecha del inicio del día en la Argentina.",
+  "que_cambia": "Repetir el pedido el mismo día es idempotente. Se retira cuando la verificación consulte el DNS (T2).",
+  "donde": "apps/plataforma/logica/fecha-de-verificacion.ts; plan de dominio propio §4.",
+  "motivo": "Cambio puramente técnico: la fecha por día evita que un reintento cambie la huella de la clave de idempotencia."
+}

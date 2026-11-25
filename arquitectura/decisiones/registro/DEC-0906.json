@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0906",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Nueva acción de lectura dominios.ver: ADMIN y SOPORTE ven los dominios de las empresas en la consola; solo ADMIN los cambia.",
+  "que_cambia": "SOPORTE puede ver la lista de dominios y no cambia nada. Revertir: quitar la acción del catálogo y de la matriz de plataforma, y la entrada del menú.",
+  "donde": "Ficha 2.1 de dominio-propio-textos-y-fichas.md aceptada el 25/11/2026 (acceso dominios.ver); permisos/plataforma.ts."
+}
