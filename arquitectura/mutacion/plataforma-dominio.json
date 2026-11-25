@@ -2,5 +2,6 @@
   "grupo": "plataforma (dominio)",
   "archivos": "src/plataforma/dominio/**/*.ts",
   "minutos": 16.4,
-  "pruebas": "src/plataforma/dominio src/plataforma/casos-de-uso src/plataforma/consultas src/plataforma/sin-reloj-ni-azar.test.ts test/plataforma"
+  "pruebas": "src/plataforma/dominio src/plataforma/casos-de-uso src/plataforma/consultas src/plataforma/sin-reloj-ni-azar.test.ts test/plataforma",
+  "critico": true
 }

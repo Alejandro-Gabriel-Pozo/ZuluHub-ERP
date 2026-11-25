@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 import {
@@ -7,6 +7,9 @@ import {
 } from "../../../../../src/capacidades/experiencia/respuesta";
 import { legibleYTocable } from "../../pruebas/ayudas-de-emision";
 import { tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
+import type { TrabajoDeImpresion } from "../../patrones/papel/BotonDeImprimir.cliente";
+import type { PapelParaImprimir } from "../../patrones/papel/hoja-del-papel";
+import { armarLosTextosDeImprimir } from "../../patrones/papel/textos-de-imprimir";
 import type { ProductoDeLaVenta } from "../venta/modelo-de-venta-rapida";
 import { textosDeLaVenta } from "../venta/modelo-de-venta-rapida";
 import { PantallaDeLaMesa, type PropsDePantallaDeLaMesa } from "./PantallaDeLaMesa.cliente";
@@ -35,6 +38,7 @@ const linea = (extra: Partial<LineaDeLaFichaDeLaPantalla> & { lineaId: string })
   compartida: false,
   comanda: "PARA_ENVIAR",
   numeroDeEnvio: null,
+  envioId: null,
   deLaMesa: null,
   ...extra,
 });
@@ -51,7 +55,13 @@ const fichaConPlatos: FichaDeLaMesaDeLaPantalla = {
       lineas: [
         linea({ lineaId: "a" }),
         linea({ lineaId: "b", comanda: "ESPERA", descripcion: "Flan" }),
-        linea({ lineaId: "c", comanda: "ENVIADA", numeroDeEnvio: 1, descripcion: "Café" }),
+        linea({
+          lineaId: "c",
+          comanda: "ENVIADA",
+          numeroDeEnvio: 1,
+          envioId: "e1",
+          descripcion: "Café",
+        }),
       ],
     },
   ],
@@ -88,6 +98,36 @@ const rechazada: Respuesta<unknown> = {
 
 const accionFalsa = () =>
   vi.fn<(pedido: unknown) => Promise<Respuesta<unknown>>>(() => Promise.resolve(resuelta));
+type Envio = Readonly<{
+  envioId: string;
+  numero: number;
+  trabajoId: string;
+  sinImpresora: boolean;
+  yaExistia: boolean;
+}>;
+const envioHecho = (extra: Partial<Envio> = {}): Respuesta<Envio> => ({
+  ok: true,
+  dato: {
+    envioId: "env-1",
+    numero: 1,
+    trabajoId: "trab-1",
+    sinImpresora: false,
+    yaExistia: false,
+    ...extra,
+  },
+});
+const trabajo = (extra: Partial<TrabajoDeImpresion> = {}): Respuesta<TrabajoDeImpresion> => ({
+  ok: true,
+  dato: {
+    trabajoId: "trab-1",
+    estado: "PENDIENTE",
+    intentos: 1,
+    sinImpresora: false,
+    yaExistia: true,
+    reintento: false,
+    ...extra,
+  },
+});
 const accionesFalsas = () => ({
   tomarPedido: accionFalsa(),
   agregar: accionFalsa(),
@@ -95,6 +135,39 @@ const accionesFalsas = () => ({
   quitar: accionFalsa(),
   liberar: accionFalsa(),
   cambiarDeMesa: accionFalsa(),
+  enviar: vi.fn<(pedido: unknown) => Promise<Respuesta<Envio>>>(() =>
+    Promise.resolve(envioHecho()),
+  ),
+  pedirQueSalga: vi.fn<(pedido: unknown) => Promise<Respuesta<Envio>>>(() =>
+    Promise.resolve(envioHecho({ envioId: "env-2", numero: 2, trabajoId: "trab-2" })),
+  ),
+  anular: vi.fn<
+    (
+      pedido: unknown,
+    ) => Promise<
+      Respuesta<
+        Readonly<{ avisoId: string; trabajoId: string; sinImpresora: boolean; yaExistia: boolean }>
+      >
+    >
+  >(() =>
+    Promise.resolve({
+      ok: true,
+      dato: { avisoId: "aviso-1", trabajoId: "trab-a1", sinImpresora: false, yaExistia: false },
+    }),
+  ),
+  imprimir: vi.fn<(pedido: unknown) => Promise<Respuesta<TrabajoDeImpresion>>>(() =>
+    Promise.resolve(trabajo()),
+  ),
+  reimprimir: vi.fn<(pedido: unknown) => Promise<Respuesta<TrabajoDeImpresion>>>(() =>
+    Promise.resolve(trabajo({ trabajoId: "copia-1", yaExistia: false })),
+  ),
+  declarar: accionFalsa(),
+  papel: vi.fn<(pedido: unknown) => Promise<Respuesta<PapelParaImprimir>>>(() =>
+    Promise.resolve({
+      ok: true,
+      dato: { ancho: 80, lineas: [{ texto: "COMANDA", estilo: "NEGRITA" }] },
+    }),
+  ),
 });
 type Acciones = ReturnType<typeof accionesFalsas>;
 
@@ -110,6 +183,9 @@ const pantalla = (
     acciones={acciones}
     cuentaNuevaId="cuenta-nueva"
     mesasLibres={null}
+    textosDeImprimir={armarLosTextosDeImprimir()}
+    puede={{ enviar: true, imprimir: true, reimprimir: true }}
+    rutaDeImpresoras={null}
     catalogo={null}
     {...extra}
   />
@@ -190,7 +266,7 @@ describe("PantallaDeLaMesa", () => {
         .toBeVisible();
       await expect.element(page.getByRole("heading", { name: "Enviadas" })).toBeVisible();
       await expect.element(page.getByText("$ 21.500,50")).toBeVisible();
-      await expect.element(page.getByText("Envío 1")).toBeVisible();
+      await expect.element(page.getByText("Envío 1").first()).toBeVisible();
       expect(page.getByRole("button", { name: "Quitar" }).elements()).toHaveLength(2);
       expect(page.getByRole("button", { name: /Cuándo sale/ }).elements()).toHaveLength(2);
       expect(page.getByRole("button", { name: "Liberar mesa" }).elements()).toHaveLength(0);
@@ -401,5 +477,264 @@ describe("PantallaDeLaMesa", () => {
     await expect.element(page.getByText("Unida a la mesa 3")).toBeVisible();
     expect(page.getByRole("button").elements()).toHaveLength(0);
     expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  describe("cocina (SAL-C)", () => {
+    let imprimir: MockInstance<() => void>;
+    beforeEach(() => {
+      imprimir = vi.spyOn(window, "print").mockImplementation(() => undefined);
+    });
+    afterEach(() => {
+      imprimir.mockRestore();
+    });
+    const fichaParaEnviar: FichaDeLaMesaDeLaPantalla = {
+      ...fichaConPlatos,
+      cuentas: [
+        {
+          cuentaId: "c1",
+          parte: null,
+          total: ARS("38000.00"),
+          lineas: [
+            linea({ lineaId: "a" }),
+            linea({ lineaId: "b", comanda: "ESPERA", descripcion: "Flan" }),
+          ],
+        },
+      ],
+    };
+
+    it("IDEMPOTENCIA: dos toques en «Enviar a cocina» son un solo envío con SU id y SU clave; abre el diálogo UNA vez, declara «Impresa» y recarga", async () => {
+      const acciones = accionesFalsas();
+      await render(pantalla(fichaParaEnviar, acciones));
+      const enviar = page.getByRole("button", { name: "Enviar a cocina" });
+      tocar(enviar);
+      tocar(enviar);
+      await vi.waitFor(() => {
+        expect(acciones.enviar).toHaveBeenCalledTimes(1);
+      });
+      const [pedido] = acciones.enviar.mock.calls[0] as unknown as [Record<string, unknown>];
+      expect(pedido).toMatchObject({ cuentaId: "c1" });
+      expect(String(pedido["envioId"])).toMatch(/^[0-9a-f-]{36}$/);
+      expect(String(pedido["claveIdempotencia"])).toMatch(/^[0-9a-f-]{36}$/);
+      await expect.element(page.getByText("Impresa")).toBeVisible();
+      expect(imprimir).toHaveBeenCalledTimes(1);
+      expect(acciones.papel).toHaveBeenCalledWith({
+        documentoTipo: "COMANDA",
+        documentoId: "env-1",
+      });
+      expect(acciones.declarar).toHaveBeenCalledWith({
+        trabajoId: "trab-1",
+        numero: 1,
+        resultado: "IMPRESA",
+      });
+      // El trabajo ya lo creó el envío: no se vuelve a pedir (no se abriría otro papel).
+      expect(acciones.imprimir).not.toHaveBeenCalled();
+      expect(router.refresh).toHaveBeenCalledTimes(1);
+      expect(await violacionesDeAccesibilidad()).toEqual([]);
+    });
+
+    it("tras un corte, repetir el envío reutiliza el mismo id y la misma clave; con el éxito el siguiente es otro", async () => {
+      const acciones = accionesFalsas();
+      acciones.enviar.mockImplementationOnce(() => Promise.reject(new Error("sin red")));
+      await render(pantalla(fichaParaEnviar, acciones));
+      await userEvent.click(page.getByRole("button", { name: "Enviar a cocina" }));
+      await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
+      await userEvent.click(page.getByRole("button", { name: "Enviar a cocina" }));
+      await vi.waitFor(() => {
+        expect(acciones.enviar).toHaveBeenCalledTimes(2);
+      });
+      const [a, b] = acciones.enviar.mock.calls.map((c) => c[0] as Record<string, unknown>);
+      expect(b?.["envioId"]).toBe(a?.["envioId"]);
+      expect(b?.["claveIdempotencia"]).toBe(a?.["claveIdempotencia"]);
+    });
+
+    it("si el envío «ya existía» (otro mozo, otra pestaña) no se abre otro diálogo de impresión", async () => {
+      const acciones = accionesFalsas();
+      acciones.enviar.mockImplementation(() => Promise.resolve(envioHecho({ yaExistia: true })));
+      await render(pantalla(fichaParaEnviar, acciones));
+      await userEvent.click(page.getByRole("button", { name: "Enviar a cocina" }));
+      await vi.waitFor(() => {
+        expect(router.refresh).toHaveBeenCalledTimes(1);
+      });
+      expect(imprimir).not.toHaveBeenCalled();
+      expect(acciones.papel).not.toHaveBeenCalled();
+    });
+
+    it("si el diálogo no se pudo abrir: «No se pudo imprimir» con «Reintentar» (el mismo trabajo) y «Ver en pantalla»; el envío quedó registrado igual", async () => {
+      const acciones = accionesFalsas();
+      imprimir.mockImplementationOnce(() => {
+        throw new Error("sin diálogo");
+      });
+      acciones.imprimir.mockImplementation(() =>
+        Promise.resolve(trabajo({ yaExistia: false, reintento: true, intentos: 2 })),
+      );
+      await render(pantalla(fichaParaEnviar, acciones));
+      await userEvent.click(page.getByRole("button", { name: "Enviar a cocina" }));
+      await expect.element(page.getByText("No se pudo imprimir")).toBeVisible();
+      expect(acciones.declarar).toHaveBeenLastCalledWith({
+        trabajoId: "trab-1",
+        numero: 1,
+        resultado: "FALLIDA",
+      });
+      await expect.element(page.getByRole("button", { name: "Ver en pantalla" })).toBeVisible();
+      await userEvent.click(page.getByRole("button", { name: "Reintentar" }));
+      await expect.element(page.getByText("Impresa")).toBeVisible();
+      expect(acciones.imprimir).toHaveBeenCalledTimes(1);
+      expect(acciones.imprimir.mock.calls[0]?.[0]).toMatchObject({
+        trabajoId: "trab-1",
+        documentoTipo: "COMANDA",
+        documentoId: "env-1",
+      });
+      expect(acciones.declarar).toHaveBeenLastCalledWith({
+        trabajoId: "trab-1",
+        numero: 2,
+        resultado: "IMPRESA",
+      });
+      expect(acciones.enviar).toHaveBeenCalledTimes(1);
+    });
+
+    it("sin impresora: «No hay impresora para la comanda de cocina», «Ver en pantalla» y «Configurar impresoras» a quien puede ir; no abre ningún diálogo", async () => {
+      const acciones = accionesFalsas();
+      acciones.enviar.mockImplementation(() => Promise.resolve(envioHecho({ sinImpresora: true })));
+      await render(pantalla(fichaParaEnviar, acciones, { rutaDeImpresoras: "/salon/impresoras" }));
+      await userEvent.click(page.getByRole("button", { name: "Enviar a cocina" }));
+      await expect
+        .element(page.getByText("No hay impresora para la comanda de cocina"))
+        .toBeVisible();
+      await expect
+        .element(page.getByRole("link", { name: "Configurar impresoras" }))
+        .toHaveAttribute("href", "/salon/impresoras");
+      await expect.element(page.getByRole("button", { name: "Ver en pantalla" })).toBeVisible();
+      expect(imprimir).not.toHaveBeenCalled();
+      expect(await violacionesDeAccesibilidad()).toEqual([]);
+    });
+
+    it("«Pedir que salga» en un plato que espera, y «Pedir que salga todo» en el grupo: cada uno es un envío con su id; abre su papel", async () => {
+      const acciones = accionesFalsas();
+      await render(pantalla(fichaParaEnviar, acciones));
+      await userEvent.click(page.getByRole("button", { name: "Pedir que salga", exact: true }));
+      await vi.waitFor(() => {
+        expect(acciones.pedirQueSalga).toHaveBeenCalledTimes(1);
+      });
+      expect(acciones.pedirQueSalga.mock.calls[0]?.[0]).toMatchObject({
+        cuentaId: "c1",
+        lineaIds: ["b"],
+      });
+      await expect.element(page.getByText("Impresa")).toBeVisible();
+      expect(acciones.papel).toHaveBeenLastCalledWith({
+        documentoTipo: "COMANDA",
+        documentoId: "env-2",
+      });
+      await userEvent.click(page.getByRole("button", { name: "Pedir que salga todo" }));
+      await vi.waitFor(() => {
+        expect(acciones.pedirQueSalga).toHaveBeenCalledTimes(2);
+      });
+      expect(acciones.pedirQueSalga.mock.calls[1]?.[0]).toMatchObject({
+        cuentaId: "c1",
+        lineaIds: "TODAS",
+      });
+      const ids = acciones.pedirQueSalga.mock.calls.map(
+        (c) => (c[0] as { envioId: string }).envioId,
+      );
+      expect(new Set(ids).size).toBe(2);
+    });
+
+    it("«Anular» un plato enviado: pide cantidad y motivo; apagado sin motivo; manda la cantidad como texto y el motivo; un doble toque es un solo aviso; imprime el aviso", async () => {
+      const acciones = accionesFalsas();
+      await render(pantalla(fichaConPlatos, acciones));
+      await userEvent.click(page.getByRole("button", { name: "Anular" }));
+      const dialogo = page.getByRole("dialog");
+      await expect.element(dialogo).toBeVisible();
+      const confirmar = dialogo.getByRole("button", { name: "Anular", exact: true });
+      await expect.element(confirmar).toBeDisabled();
+      await userEvent.fill(dialogo.getByLabelText("Motivo"), "Se equivocaron de plato");
+      await expect.element(confirmar).toBeEnabled();
+      tocar(confirmar);
+      tocar(confirmar);
+      await vi.waitFor(() => {
+        expect(acciones.anular).toHaveBeenCalledTimes(1);
+      });
+      const [pedido] = acciones.anular.mock.calls[0] as unknown as [Record<string, unknown>];
+      expect(pedido).toMatchObject({
+        cuentaId: "c1",
+        lineaId: "c",
+        cantidad: "2",
+        motivo: "Se equivocaron de plato",
+      });
+      expect(String(pedido["avisoId"])).toMatch(/^[0-9a-f-]{36}$/);
+      await expect.element(page.getByText("Ítem anulado")).toBeVisible();
+      await expect.element(page.getByText("Impresa")).toBeVisible();
+      expect(acciones.papel).toHaveBeenLastCalledWith({
+        documentoTipo: "ANULACION",
+        documentoId: "aviso-1",
+      });
+      expect(imprimir).toHaveBeenCalledTimes(1);
+    });
+
+    it("anular parte: la cantidad editada viaja como texto; el rechazo del servidor se ve dentro de la hoja y no recarga", async () => {
+      const acciones = accionesFalsas();
+      acciones.anular.mockImplementation(() => Promise.resolve(rechazada as never));
+      await render(pantalla(fichaConPlatos, acciones));
+      await userEvent.click(page.getByRole("button", { name: "Anular" }));
+      const dialogo = page.getByRole("dialog");
+      await userEvent.fill(dialogo.getByLabelText("Cantidad"), "1");
+      await userEvent.fill(dialogo.getByLabelText("Motivo"), "Uno menos");
+      await userEvent.click(dialogo.getByRole("button", { name: "Anular", exact: true }));
+      await expect.element(dialogo.getByText("Esta acción no está permitida")).toBeVisible();
+      expect(acciones.anular.mock.calls[0]?.[0]).toMatchObject({
+        cantidad: "1",
+        motivo: "Uno menos",
+      });
+      expect(router.refresh).not.toHaveBeenCalled();
+      expect(await violacionesDeAccesibilidad()).toEqual([]);
+    });
+
+    it("«Reimprimir» pide confirmar («Se imprime una copia con la hora del envío original») y recién ahí pide la copia; se imprime marcada como copia y se declara contra el trabajo nuevo", async () => {
+      const acciones = accionesFalsas();
+      await render(pantalla(fichaConPlatos, acciones));
+      await userEvent.click(page.getByRole("button", { name: "Reimprimir" }));
+      await expect
+        .element(page.getByText("Se imprime una copia con la hora del envío original"))
+        .toBeVisible();
+      expect(acciones.reimprimir).not.toHaveBeenCalled();
+      const dialogo = page.getByRole("dialog");
+      await userEvent.click(dialogo.getByRole("button", { name: "Reimprimir" }));
+      await expect.element(page.getByText("Impresa")).toBeVisible();
+      expect(acciones.reimprimir).toHaveBeenCalledTimes(1);
+      const [pedido] = acciones.reimprimir.mock.calls[0] as unknown as [Record<string, unknown>];
+      expect(pedido).toMatchObject({ documentoTipo: "COMANDA", documentoId: "e1" });
+      expect(String(pedido["trabajoId"])).toMatch(/^[0-9a-f-]{36}$/);
+      expect(acciones.papel).toHaveBeenLastCalledWith({
+        documentoTipo: "COMANDA",
+        documentoId: "e1",
+        copia: true,
+      });
+      expect(acciones.declarar).toHaveBeenLastCalledWith({
+        trabajoId: "copia-1",
+        numero: 1,
+        resultado: "IMPRESA",
+      });
+      expect(imprimir).toHaveBeenCalledTimes(1);
+    });
+
+    it("«Cancelar» en la confirmación de la copia no pide nada", async () => {
+      const acciones = accionesFalsas();
+      await render(pantalla(fichaConPlatos, acciones));
+      await userEvent.click(page.getByRole("button", { name: "Reimprimir" }));
+      await userEvent.click(page.getByRole("dialog").getByRole("button", { name: "Cancelar" }));
+      expect(acciones.reimprimir).not.toHaveBeenCalled();
+      expect(imprimir).not.toHaveBeenCalled();
+    });
+
+    it("sin permiso (la ayuda): sin «Enviar a cocina», «Pedir que salga», «Anular» ni «Reimprimir»; la ficha sigue igual", async () => {
+      await render(
+        pantalla(fichaParaEnviar, accionesFalsas(), {
+          puede: { enviar: false, imprimir: false, reimprimir: false },
+        }),
+      );
+      for (const nombre of ["Enviar a cocina", "Pedir que salga", "Anular", "Reimprimir"]) {
+        expect(page.getByRole("button", { name: nombre }).elements()).toHaveLength(0);
+      }
+      await expect.element(page.getByRole("heading", { name: "Para enviar" })).toBeVisible();
+    });
   });
 });

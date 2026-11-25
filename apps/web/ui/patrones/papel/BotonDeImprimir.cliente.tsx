@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { ErrorPublico, Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
 import { Aviso } from "../../componentes/Aviso";
 import { Boton } from "../../componentes/Boton.cliente";
@@ -40,6 +40,15 @@ export type PropsDeBotonDeImprimir = Readonly<{
   deshabilitado?: boolean;
   /** Genera la clave de un intento nuevo; por defecto, un UUID del navegador. */
   nuevaClave?: () => string;
+  /**
+   * El trabajo ya existe porque lo creó el mismo paso que creó el documento (enviar a cocina, anular un ítem enviado): el primer «Imprimir» NO lo pide de nuevo (el servidor diría «ya existía» y no se abriría el diálogo), imprime el intento
+   * `intentos` de ese trabajo y lo declara. Si no había impresora, va directo a «Ver en pantalla». Los «Reintentar» siguientes sí pasan por `pedirImpresion` (el mismo trabajo, `intentos + 1`).
+   */
+  trabajoInicial?: Readonly<{ intentos: number; sinImpresora: boolean }>;
+  /** Arranca solo al aparecer (una sola vez): el diálogo de impresión se abre al enviar (DEC-1034). Sin esto espera el toque en «Imprimir». */
+  arrancarSolo?: boolean;
+  /** Lo que acompaña al aviso «No hay impresora para la comanda de cocina» (p. ej. el enlace «Configurar impresoras»). */
+  acompanamientoSinImpresora?: ReactNode;
 }>;
 
 type Fase = "reposo" | "imprimiendo" | "impresa" | "fallida" | "sinImpresora";
@@ -61,6 +70,9 @@ export function BotonDeImprimir({
   declarar,
   deshabilitado = false,
   nuevaClave = () => crypto.randomUUID(),
+  trabajoInicial,
+  arrancarSolo = false,
+  acompanamientoSinImpresora,
 }: PropsDeBotonDeImprimir) {
   const [fase, setFase] = useState<Fase>("reposo");
   const [error, setError] = useState<ErrorPublico | null>(null);
@@ -68,6 +80,9 @@ export function BotonDeImprimir({
   const enVuelo = useRef(false);
   const porDeclarar = useRef<PorDeclarar | null>(null);
   const clave = useRef<string | null>(null);
+  // El trabajo que creó el envío se imprime una sola vez sin pedirlo; después todo pasa por «Imprimir» y «Reintentar» comunes.
+  const inicialPendiente = useRef(trabajoInicial !== undefined);
+  const arrancado = useRef(false);
 
   /** Declara lo que quedó pendiente de un intento anterior. `true` si ya no queda nada por declarar. */
   const declararLoPendiente = async (): Promise<boolean> => {
@@ -127,6 +142,15 @@ export function BotonDeImprimir({
           return;
         }
       }
+      if (inicialPendiente.current && trabajoInicial !== undefined) {
+        inicialPendiente.current = false;
+        if (trabajoInicial.sinImpresora) {
+          setFase("sinImpresora");
+          return;
+        }
+        await imprimirElIntento(trabajoInicial.intentos);
+        return;
+      }
       // La clave es de UN intento: si no volvió respuesta (red cortada) se reusa en el reintento (el servidor devuelve el mismo trabajo) y recién con una respuesta se descarta.
       const esRecuperacion = clave.current !== null;
       clave.current ??= nuevaClave();
@@ -162,6 +186,17 @@ export function BotonDeImprimir({
     }
   };
 
+  // `correr` se vuelve a crear en cada pintura: el arranque solo lee la última por referencia y dispara UNA vez.
+  const ultimoCorrer = useRef(correr);
+  useEffect(() => {
+    ultimoCorrer.current = correr;
+  });
+  useEffect(() => {
+    if (!arrancarSolo || arrancado.current) return;
+    arrancado.current = true;
+    void ultimoCorrer.current();
+  }, [arrancarSolo]);
+
   const verEnPantalla = async () => {
     setError(null);
     try {
@@ -194,6 +229,7 @@ export function BotonDeImprimir({
       {fase === "sinImpresora" ? (
         <Aviso tono="aviso">
           <Texto>{textos.sinImpresora}</Texto>
+          {acompanamientoSinImpresora}
         </Aviso>
       ) : null}
       {error === null ? null : <ErrorDeRespuesta error={error} />}
