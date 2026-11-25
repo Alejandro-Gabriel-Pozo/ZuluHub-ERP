@@ -325,7 +325,7 @@ const VIOLACIONES: readonly (readonly [id: string, que: string, cambio: Cambio])
     "H12-01",
     "un código inexistente devuelve la carta activa",
     (u) =>
-      u.endsWith("/humo-codigo-que-no-existe") && u.startsWith(CARTA)
+      u.endsWith("/humo-codigo-que-no-existe") && new URL(u).origin === CARTA
         ? html(200, "<html>la carta activa</html>")
         : null,
   ],
@@ -333,7 +333,7 @@ const VIOLACIONES: readonly (readonly [id: string, que: string, cambio: Cambio])
     "H12-01",
     "un código inexistente da 200 con otra cosa",
     (u) =>
-      u.endsWith("/humo-codigo-que-no-existe") && u.startsWith(CARTA)
+      u.endsWith("/humo-codigo-que-no-existe") && new URL(u).origin === CARTA
         ? html(200, "<html>otra</html>")
         : null,
   ],
@@ -487,7 +487,7 @@ describe("variables y omisiones", () => {
     for (const id of ["H0-04", "H1-02", "H1-03", "H12-01", "H12-02", "H12-03", "HDN-01"]) {
       expect(estadoDe(t.de(id)), id).toBe("OMITIDO");
     }
-    expect(t.pedidos.every((p) => p.url.startsWith(TECNICA))).toBe(true);
+    expect(t.pedidos.every((p) => new URL(p.url).origin === TECNICA)).toBe(true);
   });
 
   it("sin la dirección técnica: código 2, nombra la variable y no pide nada", async () => {
