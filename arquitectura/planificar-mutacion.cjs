@@ -15,6 +15,8 @@
  *    (el grafo lo ve) o lo lee como texto (`LECTURAS_DE_APPS`);
  *  - `.github/workflows/ci.yml`: ver `cambioDeCiAfecta`; solo un cambio en jobs que no son de mutación deja de correr todo, y aun así alcanza al guardián.
  *
+ * CI liviano (dueño, 25/11/2026): ver `perfil-del-ci.cjs` (un pull request hacia la rama de integración no corre mutación ni Estabilidad, y la web solo si el cambio la toca).
+ *
  * El mismo grafo (más una lista de rutas del dueño) decide si la integración (`Estabilidad`, 12 copias) tiene que repetirse: ver `planificarEstabilidad`.
  * Orden de los grupos: duración descendente (`ordenarPorDuracion`); los del guardián solo entran si el PR lo toca (`guardian-en-pr.cjs`). Chequeo: `test/arquitectura/planificar-mutacion.test.ts`.
  */
@@ -24,17 +26,7 @@ const path = require("node:path");
 const { cargarLosGrupos } = require("./grupos-de-mutacion.cjs");
 const { gruposDelPlan } = require("./guardian-en-pr.cjs");
 const { decidirPorFiltro } = require("./grupos-por-filtro.cjs");
-
-/**
- * Cambios que ninguna prueba lee de un modo que cambie un resultado: ni la mutación ni la integración los notan. Los dos workflows de acá no los lee ninguna prueba salvo el escaneo de nombres, que no ejerce código mutado.
- */
-const DOCUMENTACION_Y_AJENOS = [
-  /\.md$/,
-  /^\.github\/dependabot\.yml$/,
-  /^\.github\/workflows\/(codeql|gate-rapido)\.yml$/,
-  /^\.gitleaks\.toml$/,
-  /^skills-lock\.json$/,
-];
+const { decidirElPlan, DOCUMENTACION_Y_AJENOS, ARCHIVO_DE_CI } = require("./perfil-del-ci.cjs");
 
 /** Cambios que ninguna prueba unitaria lee: no alteran ningún resultado de mutación. */
 const IGNORABLES = [
@@ -47,8 +39,6 @@ const IGNORABLES_DE_INTEGRACION = [
   ...DOCUMENTACION_Y_AJENOS,
   ...require("./ajenos-a-la-integracion.cjs"),
 ];
-
-const ARCHIVO_DE_CI = ".github/workflows/ci.yml";
 
 /** Configuración de una aplicación: cambia cómo se instalan o transforman sus archivos (workspace de npm, `tsconfig` de esbuild). Se trata como lo desconocido: corre todo. */
 const CONFIGURACION_DE_APPS = /^apps\/[^/]+\/(package\.json|tsconfig[^/]*\.json)$/;
@@ -510,32 +500,36 @@ function principal() {
   const raiz = process.cwd();
   const grupos = leerGrupos(raiz);
   const evento = process.env["GITHUB_EVENT_NAME"] ?? "";
-  let plan;
-  let estabilidad;
-  if (evento === "pull_request") {
-    const cambios = leerCambios(raiz);
-    const dependencias = leerDependencias(raiz);
-    const ci = cambios.includes(ARCHIVO_DE_CI) ? leerCi(raiz) : undefined;
-    plan = planificar({ cambios, grupos, dependencias, ci });
-    estabilidad = planificarEstabilidad({ cambios, dependencias });
-  } else {
-    const cual = `evento ${evento === "" ? "local" : evento}`;
-    plan = todosLosGrupos(grupos, `${cual}: se corre todo`);
-    estabilidad = { corre: true, motivo: `${cual}: se repite siempre` };
-  }
+  const { plan, estabilidad, web, perfil } = decidirElPlan({
+    evento,
+    base: process.env["BASE_DEL_PR"] ?? "",
+    origen: process.env["ORIGEN_DEL_PR"] ?? "",
+    raiz,
+    grupos,
+    h: {
+      todosLosGrupos,
+      leerCambios,
+      leerDependencias,
+      leerCi,
+      planificar,
+      planificarEstabilidad,
+      cierre,
+    },
+  });
 
   const resumen = [
     `Mutación: ${plan.motivo}.`,
     ...plan.grupos.map((g) => `- ${g.grupo}: ${g.archivos}`),
     ...(plan.saltados ?? []).map((s) => `- se saltea ${s}`),
-    `Estabilidad (integración x12): ${estabilidad.corre ? "corre" : "se saltea"}: ${estabilidad.motivo}.`,
+    `Estabilidad (integración repetida): ${estabilidad.corre ? "corre" : "se saltea"}: ${estabilidad.motivo}.`,
+    `Web (compilación, componentes y recorrido): ${web.toca ? "corre" : "se saltea"}: ${web.motivo}.`,
   ].join("\n");
   process.stdout.write(`${resumen}\n`);
   const salida = process.env["GITHUB_OUTPUT"];
   if (salida !== undefined && salida !== "") {
     fs.appendFileSync(
       salida,
-      `hay=${plan.grupos.length > 0}\ngrupos=${JSON.stringify(plan.grupos)}\nestabilidad=${estabilidad.corre}\n`,
+      `hay=${plan.grupos.length > 0}\ngrupos=${JSON.stringify(plan.grupos)}\nestabilidad=${estabilidad.corre}\nliviano=${perfil === "liviano"}\ntoca_web=${web.toca}\n`,
     );
   }
 }
@@ -552,6 +546,7 @@ module.exports = {
   archivoDe,
   conEnlacesDelGuardian,
   leerArchivosDelGuardian,
+  cierre,
 };
 
 if (require.main === module) principal();
