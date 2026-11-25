@@ -347,6 +347,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
           "invitacion_sucursal.invitacion_sucursal_app_leer:SELECT:pedernal_app",
           "invitacion_sucursal.invitacion_sucursal_invitado_leer:SELECT:pedernal_app",
           "membresia.membresia_app_apagar:UPDATE:pedernal_app",
+          "membresia.membresia_app_asignar_rol:UPDATE:pedernal_app", // 0097
           "membresia.membresia_app_leer:SELECT:pedernal_app",
           "membresia.membresia_app_traspasar:UPDATE:pedernal_app", // 0005
           "membresia.membresia_invitado_alta:INSERT:pedernal_app",
@@ -387,6 +388,7 @@ describe.skipIf(base === null)("identidad: la migración 0002 contra una base re
         "invitacion_empresa_app_alta",
         "invitacion_sucursal_app_alta",
         "membresia_app_apagar",
+        "membresia_app_asignar_rol", // 0097
         "membresia_app_traspasar", // 0005
       ]);
       for (const p of politicas) {

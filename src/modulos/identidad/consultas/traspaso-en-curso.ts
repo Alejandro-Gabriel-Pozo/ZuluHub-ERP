@@ -1,6 +1,6 @@
 import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
-import type { RolDeEmpresa } from "../../../capacidades/permisos/roles";
+import type { RolDeLaMembresia } from "../../../capacidades/permisos/roles";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { PersonaId, TraspasoId } from "../../../primitivas/identificadores/marca";
 import { ok, type Resultado } from "../../../primitivas/resultado/resultado";
@@ -51,7 +51,7 @@ export function armarTraspasoEnCurso({
       { contexto, aislamiento: "read committed", soloLectura: true },
       async (tx): Promise<Resultado<TraspasoEnCursoDeLaPantalla | null, MotivoDeRechazo>> => {
         // El rol sale de la misma lectura que usa el guard: no se vuelve a pedir.
-        let rol: RolDeEmpresa | null = null;
+        let rol: RolDeLaMembresia | null = null;
         const permiso = await exigirAccion(
           reglas,
           DECLARACIONES_DE_CONSULTAS.traspasoEnCurso.accion,

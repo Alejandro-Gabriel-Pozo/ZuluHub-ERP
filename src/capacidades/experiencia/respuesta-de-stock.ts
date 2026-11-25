@@ -2,7 +2,7 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
 
 /**
  * Los códigos públicos de negocio de las pantallas de stock (ADR-016): lo ÚNICO que sale hacia la pantalla cuando un caso de uso de stock no puede completarse por una regla
- * del negocio. Solo los errores que la maqueta aprobada `stock.html` (fila «Errores y avisos» de «Textos nuevos», 09/11/2026) redacta tienen texto propio (`stock.error.*`); todo lo
+ * del negocio. Solo los errores que la maqueta aprobada `stock.html` (fila «Errores y avisos» de «Textos nuevos», 09/11/2026) redacta, más los tres de la gestión de depósitos que el dueño aprobó el 25/11/2026 (DEC-1018), tienen texto propio (`stock.error.*`); todo lo
  * demás sale con el genérico «Esta acción no está permitida» (`stock.error.sin_permiso`), como ya decidió el dueño. Cómo se llega de un error del módulo a uno de estos lo decide
  * `src/composicion/errores-de-stock.ts` (tabla exhaustiva por tipo). `STOCK_CONTROL_AVISA` no es un fallo: la composición de la pantalla que lo recibe pide confirmar y reintenta.
  *
@@ -16,6 +16,9 @@ export const CLAVES_DE_ERRORES_DE_STOCK = {
   STOCK_CANTIDAD_INVALIDA: "stock.error.cantidad_invalida",
   STOCK_CONTEO_EN_CURSO: "stock.error.conteo_en_curso",
   STOCK_NOMBRE_DUPLICADO: "stock.error.nombre_duplicado",
+  STOCK_DEPOSITO_CON_EXISTENCIA: "stock.error.deposito_con_existencia",
+  STOCK_ES_EL_DE_VENTA: "stock.error.es_el_de_venta",
+  STOCK_DEPOSITO_DESACTUALIZADO: "stock.error.deposito_desactualizado",
   STOCK_ACCION_NO_PERMITIDA: "stock.error.sin_permiso",
 } as const satisfies Record<string, ClaveDeTexto>;
 

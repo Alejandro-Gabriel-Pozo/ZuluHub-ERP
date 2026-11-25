@@ -2,7 +2,7 @@ import type { CatalogoComercial } from "../../capacidades/modulos/catalogo";
 import type { ReglasDePlataforma } from "../../capacidades/permisos/plataforma";
 import type { AmbitoDePerilla } from "../../capacidades/planes/perillas";
 import type { ValorDePerilla } from "../../capacidades/planes/valores";
-import type { RolDeEmpresa } from "../../capacidades/permisos/roles";
+import type { RolDeLaMembresia } from "../../capacidades/permisos/roles";
 import type {
   EstadoDeEmpresa,
   EstadoDeTenant,
@@ -196,7 +196,7 @@ export type FilaDeReferencia = Readonly<{
 export type MembresiaVisible = Readonly<{
   empresaId: EmpresaId;
   personaId: PersonaId;
-  rol: RolDeEmpresa;
+  rol: RolDeLaMembresia;
   activo: boolean;
 }>;
 
