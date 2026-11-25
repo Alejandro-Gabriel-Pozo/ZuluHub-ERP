@@ -33,7 +33,8 @@ INSERT INTO motivo_de_movimiento (clase, codigo, entra_con_costo, entrega_mercad
   ON CONFLICT (clase, codigo) DO NOTHING;   -- la reversión no borra los motivos (tabla de solo inserción): al reaplicar ya están
 
 CREATE TABLE correccion_de_lo_recibido (
-  id                 uuid NOT NULL,
+  -- La aplicación lo manda (sale de la clave, para que un reintento repita el origen del movimiento de stock); el valor por defecto es la red de seguridad.
+  id                 uuid NOT NULL DEFAULT gen_random_uuid(),
   empresa_id         uuid NOT NULL REFERENCES empresa (id),
   recepcion_id       uuid NOT NULL,
   linea              integer NOT NULL,
