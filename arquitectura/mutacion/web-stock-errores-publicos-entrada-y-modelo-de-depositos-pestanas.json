@@ -1,7 +1,6 @@
 {
   "grupo": "web (stock: errores públicos, entrada y modelo de depósitos, pestañas)",
   "archivos": "src/composicion/errores-de-stock.ts,src/composicion/entradas-de-depositos.ts,apps/web/ui/plantillas/stock/depositos/modelo-de-depositos.ts,apps/web/ui/plantillas/stock/pestanas-de-stock.ts,apps/web/ui/plantillas/stock/rutas-de-stock.ts,src/composicion/existencias-y-libro-web.ts,apps/web/ui/plantillas/stock/lectura/modelo-de-lectura.ts,apps/web/ui/plantillas/stock/existencias/modelo-de-existencias.ts,apps/web/ui/plantillas/stock/movimientos/modelo-de-movimientos.ts",
-  "minutos": 4,
-  "pruebas": "src/capacidades/experiencia/respuesta-de-stock.test.ts src/composicion/errores-de-stock.test.ts src/composicion/entradas-de-depositos.test.ts test/web/stock-depositos-modelo.test.ts src/composicion/existencias-y-libro-web.test.ts test/web/stock-existencias-y-movimientos-modelo.test.ts",
-  "nivel": "CRITICO"
+  "minutos": 6,
+  "pruebas": "src/capacidades/experiencia/respuesta-de-stock.test.ts src/composicion/errores-de-stock.test.ts src/composicion/entradas-de-depositos.test.ts test/web/stock-depositos-modelo.test.ts src/composicion/existencias-y-libro-web.test.ts test/web/stock-existencias-y-movimientos-modelo.test.ts"
 }

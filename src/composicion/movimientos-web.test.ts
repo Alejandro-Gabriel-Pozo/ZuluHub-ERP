@@ -22,8 +22,16 @@ const MOV = "88888888-8888-4888-8888-888888888888";
 const contexto = { empresaId: "e1" } as unknown as ContextoOperativo;
 const GENERICO = "STOCK_ACCION_NO_PERMITIDA";
 
-const montar = (cambios: { caso?: () => unknown; depositos?: unknown[] } = {}) => {
+const montar = (
+  cambios: {
+    caso?: () => unknown;
+    depositos?: unknown[];
+    fallaDepositos?: boolean;
+    fallaArticulos?: boolean;
+  } = {},
+) => {
   const llamadas: { que: string; entrada: unknown }[] = [];
+  const lecturas: unknown[] = [];
   const registrados: string[] = [];
   const caso = (que: string) => (_c: unknown, entrada: unknown) => {
     llamadas.push({ que, entrada });
@@ -40,8 +48,10 @@ const montar = (cambios: { caso?: () => unknown; depositos?: unknown[] } = {}) =
       anularMovimiento: caso("anular"),
     }),
     consultas: () => ({
-      listarDepositos: () =>
-        Promise.resolve(
+      listarDepositos: (_c: unknown, entrada: unknown) => {
+        lecturas.push(entrada);
+        if (cambios.fallaDepositos === true) return Promise.resolve(err({ tipo: "ERROR_DE_BASE" }));
+        return Promise.resolve(
           ok(
             cambios.depositos ?? [
               { id: D1, nombre: "Salón", uso: "NORMAL", activo: true },
@@ -49,15 +59,18 @@ const montar = (cambios: { caso?: () => unknown; depositos?: unknown[] } = {}) =
               { id: AJENO, nombre: "Viejo", uso: "NORMAL", activo: false },
             ],
           ),
-        ),
+        );
+      },
       articulosControlados: () =>
-        Promise.resolve(
-          ok([{ articuloId: ART, productoId: PROD, nombre: "Harina", unidadId: "KILOGRAMO" }]),
-        ),
+        cambios.fallaArticulos === true
+          ? Promise.resolve(err({ tipo: "ERROR_DE_BASE" }))
+          : Promise.resolve(
+              ok([{ articuloId: ART, productoId: PROD, nombre: "Harina", unidadId: "KILOGRAMO" }]),
+            ),
     }),
     respuesta: { registrar: (x: string) => registrados.push(x) },
   } as unknown as DependenciasDeMovimientosWeb;
-  return { d, llamadas, registrados };
+  return { d, llamadas, lecturas, registrados };
 };
 const codigoDe = (r: { ok: boolean; error?: { codigo: string } }) =>
   r.ok ? "OK" : (r.error?.codigo ?? "?");
@@ -281,5 +294,81 @@ describe("anularElMovimiento", () => {
       codigoDe(await anularElMovimiento(d, contexto, { clave: CLAVE, movimientoId: "x" })),
     ).toBe(GENERICO);
     expect(llamadas).toHaveLength(1);
+  });
+});
+
+describe("lo que se lee del servidor", () => {
+  it("los depósitos se piden de la sucursal elegida, en las opciones y al resolver cada movimiento", async () => {
+    const a = montar();
+    await opcionesParaMover(a.d, contexto, SUC);
+    expect(a.lecturas).toEqual([{ sucursalId: SUC }]);
+    const b = montar();
+    await registrarElMovimiento(b.d, contexto, SUC, true, pedido);
+    expect(b.lecturas).toEqual([{ sucursalId: SUC }]);
+  });
+
+  it.each([
+    ["los depósitos", { fallaDepositos: true }],
+    ["los artículos", { fallaArticulos: true }],
+  ])(
+    "si falla la lectura de %s, no se esconde y no se llama al caso de uso",
+    async (_cual, falla) => {
+      const llamar = [
+        (m: ReturnType<typeof montar>) => opcionesParaMover(m.d, contexto, SUC),
+        (m: ReturnType<typeof montar>) => registrarElMovimiento(m.d, contexto, SUC, true, pedido),
+        (m: ReturnType<typeof montar>) =>
+          transferirElStock(m.d, contexto, SUC, {
+            clave: CLAVE,
+            origenId: D1,
+            destinoId: D2,
+            articuloId: ART,
+            cantidad: "1",
+          }),
+        (m: ReturnType<typeof montar>) =>
+          ajustarElStock(m.d, contexto, SUC, {
+            clave: CLAVE,
+            depositoId: D1,
+            articuloId: ART,
+            sentido: "SUMA",
+            cantidad: "1",
+            detalle: "x",
+          }),
+      ];
+      for (const f of llamar) {
+        const m = montar(falla);
+        expect(codigoDe(await f(m))).not.toBe(GENERICO);
+        expect(m.registrados[0]).toContain("ERROR_DE_BASE");
+        expect(m.llamadas).toEqual([]);
+      }
+    },
+  );
+
+  it("ajustar con un depósito que no es de la sucursal o un artículo que no se puede mover es el genérico y no llama al caso de uso", async () => {
+    const { d, llamadas } = montar();
+    const ajuste = { clave: CLAVE, sentido: "SUMA", cantidad: "1", detalle: "x" };
+    expect(
+      codigoDe(
+        await ajustarElStock(d, contexto, SUC, { ...ajuste, depositoId: AJENO, articuloId: ART }),
+      ),
+    ).toBe(GENERICO);
+    expect(
+      codigoDe(
+        await ajustarElStock(d, contexto, SUC, {
+          ...ajuste,
+          depositoId: D1,
+          articuloId: "99999999-9999-4999-8999-999999999999",
+        }),
+      ),
+    ).toBe(GENERICO);
+    expect(llamadas.some((l) => l.que === "ajustar")).toBe(false);
+  });
+
+  it("anular sin detalle manda vacío para que el servidor diga que falta", async () => {
+    const { d, llamadas } = montar();
+    await anularElMovimiento(d, contexto, { clave: CLAVE, movimientoId: MOV });
+    expect(llamadas[0]).toEqual({
+      que: "anular",
+      entrada: { clave: CLAVE, movimientoId: MOV, detalle: "" },
+    });
   });
 });

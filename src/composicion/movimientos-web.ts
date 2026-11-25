@@ -111,24 +111,18 @@ export function registrarElMovimiento(
         motivo: e.motivo,
         detalle: e.detalle,
       };
-      const renglon = {
-        productoId: r.valor.productoId,
-        cantidad: e.cantidad,
-        unidadId: r.valor.unidadId,
-      };
+      // Un costo mandado en una salida lo rechaza el servidor (`COSTO_INVALIDO`): la pantalla no lo filtra.
+      const renglones = [
+        {
+          productoId: r.valor.productoId,
+          cantidad: e.cantidad,
+          unidadId: r.valor.unidadId,
+          costoUnitario: e.costoUnitario,
+        },
+      ];
       return entrada
-        ? d.casosDeUso().registrarEntrada(contexto, {
-            ...base,
-            renglones: [{ ...renglon, costoUnitario: e.costoUnitario }],
-          })
-        : d.casosDeUso().registrarSalida(contexto, {
-            ...base,
-            renglones: [
-              e.costoUnitario === undefined
-                ? renglon
-                : { ...renglon, costoUnitario: e.costoUnitario },
-            ],
-          });
+        ? d.casosDeUso().registrarEntrada(contexto, { ...base, renglones })
+        : d.casosDeUso().registrarSalida(contexto, { ...base, renglones });
     },
     comoHecho,
   );

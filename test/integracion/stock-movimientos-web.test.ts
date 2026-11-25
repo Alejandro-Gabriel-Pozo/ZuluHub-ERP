@@ -66,7 +66,7 @@ describe.skipIf(base === null)("movimientos de stock de la web", () => {
       {
         consultas: () => c.consultas,
         consultasDeIdentidad: () => ({
-          personasParaMostrar: () => Promise.resolve({ ok: true as const, valor: new Map() }),
+          personasParaMostrar: () => Promise.resolve({ ok: true, valor: new Map() }),
         }),
         respuesta: { registrar: () => undefined },
       } as unknown as DependenciasDeExistenciasYLibroWeb,
