@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1074",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Elaborado y vendible ofrecen «Se produce en tanda»: al encenderlo, deja de descontar ingredientes al vender, y una franja dice si tiene stock propio.",
+  "que_cambia": "Un texto que ve el cliente y lo que descuenta la venta de ese producto. Aprobado por el dueño el 25/11/2026 con esta redacción (TP-4, TP-5 y TP-9). Revertir: cambiar los textos por defecto en el catálogo; para que no se pueda encender, quitar la perilla produccion del plan.",
+  "donde": "src/capacidades/vocabulario/catalogo-produccion.ts; textos-de-produccion-dia-uno-2026-11-25.md, TP-4, TP-5 y TP-9"
+}
