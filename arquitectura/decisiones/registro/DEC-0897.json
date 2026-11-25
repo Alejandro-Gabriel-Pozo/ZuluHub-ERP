@@ -1,10 +1,10 @@
 {
   "id": "DEC-0897",
   "fecha": "2026-11-25",
-  "quien": "dueño",
-  "tipo": "COMERCIAL",
+  "quien": "padre",
+  "tipo": "CLIENTE",
   "estado": "CONFIRMADA",
-  "decision": "La recepción separada convive con «Nueva compra»: la habilita la perilla del plan de la empresa, cada compra elige su camino al cargarla y no hay regla ni dato por proveedor.",
-  "que_cambia": "Una empresa en «Sin factura» o «Con factura» puede además recibir por separado y cargar la factura de la empresa; «Nueva compra» sigue andando. Revertir: volver a exigir el nivel de la empresa en nivel-separado.ts.",
-  "donde": "nivel-separado.ts (exigirNivelSeparado), compras-n3-recepcion.test.ts; pregunta 1 de Compras 4, respuesta del dueño en el chat del orquestador el 25/11/2026: «Ok, ojo que no se puede determinar el proveedor que manda una única o una para cada sucursal»"
+  "decision": "T0 de Catálogo: la pantalla de presentaciones de compra es la solapa «Cómo se compra» dentro del producto, con lista, agregar y editar, sin entrada de menú.",
+  "que_cambia": "Gerente y administrador agregan, renombran, desactivan y reactivan presentaciones de lo que se compra; quien opera las ve con los botones apagados. Nueva compra con presentaciones es un tramo aparte (T0b). Revertir: sacar las tres rutas bajo catalogo/productos/id/compra y el enlace de la ficha.",
+  "donde": "Chat del dueño del 25/11/2026 («Si» a las cinco preguntas del plan de T0, relayadas por el orquestador); fila 174 de decisiones-del-dueno-2026-11.md; presentaciones.html; plan-t0-pantalla-de-presentaciones-2026-11-25.md; ficha-de-presentaciones.ts"
 }

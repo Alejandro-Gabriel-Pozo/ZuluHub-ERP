@@ -67,23 +67,27 @@ export type EntradaWebDeCotizarCompra = Readonly<{
   }>[];
 }>;
 
+/** Los renglones ya leídos con su forma, a los que acepta la consulta y el alta: los opcionales ausentes son `null` y la presentación no se toma. Un solo lugar para la cotización y para «Comprar y recibir». */
+const aRenglonesDeCompra = (
+  renglones: readonly z.infer<typeof formaDeRenglon>[],
+): EntradaWebDeCotizarCompra["renglones"] =>
+  renglones.map((r) => ({
+    productoId: r.productoId,
+    presentacionId: null,
+    unidadDeCompraId: r.unidadDeCompraId,
+    cantidad: r.cantidad,
+    pesoReal: r.pesoReal ?? null,
+    precioPor: r.precioPor,
+    unidadDePrecioId: r.unidadDePrecioId ?? null,
+    precio: r.precio ?? null,
+  }));
+
 export function entradaDeCotizarCompra(
   crudo: unknown,
 ): Resultado<EntradaWebDeCotizarCompra, ErrorDeEntrada> {
   const forma = leer(formaDeCotizar, crudo);
   if (!forma.ok) return forma;
-  return ok({
-    renglones: forma.valor.renglones.map((r) => ({
-      productoId: r.productoId,
-      presentacionId: null,
-      unidadDeCompraId: r.unidadDeCompraId,
-      cantidad: r.cantidad,
-      pesoReal: r.pesoReal ?? null,
-      precioPor: r.precioPor,
-      unidadDePrecioId: r.unidadDePrecioId ?? null,
-      precio: r.precio ?? null,
-    })),
-  });
+  return ok({ renglones: aRenglonesDeCompra(forma.valor.renglones) });
 }
 
 /**
@@ -228,14 +232,12 @@ export function entradaDeRegistrarCompra(
   if (!forma.ok) return forma;
   const remito = leerElRemitoEscrito(forma.valor.remito);
   if (!remito.ok) return remito;
-  const renglones = entradaDeCotizarCompra({ renglones: forma.valor.renglones });
-  if (!renglones.ok) return renglones;
   return ok({
     clave: forma.valor.clave,
     proveedorId: forma.valor.proveedorId,
     depositoId: forma.valor.depositoId ?? null,
     remito: remito.valor,
-    renglones: renglones.valor.renglones,
+    renglones: aRenglonesDeCompra(forma.valor.renglones),
     factura:
       forma.valor.factura === undefined || forma.valor.factura === null
         ? null

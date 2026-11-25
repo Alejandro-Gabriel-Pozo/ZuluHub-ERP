@@ -43,7 +43,7 @@ const ACCIONES_DE_LA_RECEPCION =
 const DE_RECEPCIONES = (para: string): Proposito => ({
   para,
   fuente:
-    "Pedernal-docs, maqueta `compra-recibir.html` (estados «Por confirmar» y «Varios depósitos») y `plan-de-pantallas-compras-4-2026-11-25.md` (ficha F3); quién: gerente y administrador (`recepciones.confirmar` y `recepciones.anular`, DEC-0899); aceptada por delegación de pantallas (DEC-0902)",
+    "Pedernal-docs, maqueta `compra-recibir.html` (estados «Por confirmar» y «Varios depósitos») y `plan-de-pantallas-compras-4-2026-11-25.md` (ficha F3); quién: gerente y administrador (`recepciones.confirmar` y `recepciones.anular`, DEC-0904); aceptada por delegación de pantallas (DEC-0907)",
 });
 
 const HOJA_DE_ANULAR_PAGO = "apps/web/ui/plantillas/compras/pago/HojaDeAnularPago.cliente.tsx";

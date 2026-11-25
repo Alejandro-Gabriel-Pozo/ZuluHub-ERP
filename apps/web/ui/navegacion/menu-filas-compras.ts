@@ -38,7 +38,7 @@ export const FILAS_DE_COMPRAS = [
     departamento: null,
   },
   // «Recepciones» (Compras 4, recepción separada): la lista de recepciones de la sucursal. Módulo `compras` y la acción de su lectura (`recepciones.ver`, los tres roles); la perilla `recepcion_separada` es del plan de la
-  // empresa (DEC-0897): sin ella la entrada no se ofrece. Nace cerrada: sin la acción o sin la perilla no se ofrece.
+  // empresa (DEC-0902): sin ella la entrada no se ofrece. Nace cerrada: sin la acción o sin la perilla no se ofrece.
   {
     tipo: "pantalla",
     clave: "recepciones",

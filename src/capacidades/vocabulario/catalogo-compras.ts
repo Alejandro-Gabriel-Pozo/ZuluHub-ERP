@@ -108,24 +108,24 @@ export const TEXTOS_DE_COMPRAS = {
   "compras.recepcion.cantidad_recibida": { porDefecto: "Cantidad recibida" },
   "compras.recepcion.peso_recibido": { porDefecto: "Peso recibido" },
   "compras.recepcion.validar_recepcion": { porDefecto: "Confirmar recepción" },
-  // «Recepciones» (Compras 4, recepción separada; maqueta compra-recibir.html): textos propuestos por el ingeniero y aceptados por el orquestador por delegación de textos (DDD:173), con el chat del dueño del 25/11/2026 (DEC-0901).
-  "compras.recepcion.titulo_lista": { porDefecto: "Recepciones", fuente: { decision: "DEC-0901" } },
-  "compras.recepcion.recepcion": { porDefecto: "Recepción", fuente: { decision: "DEC-0901" } },
+  // «Recepciones» (Compras 4, recepción separada; maqueta compra-recibir.html): textos propuestos por el ingeniero y aceptados por el orquestador por delegación de textos (DDD:173), con el chat del dueño del 25/11/2026 (DEC-0906).
+  "compras.recepcion.titulo_lista": { porDefecto: "Recepciones", fuente: { decision: "DEC-0906" } },
+  "compras.recepcion.recepcion": { porDefecto: "Recepción", fuente: { decision: "DEC-0906" } },
   "compras.recepcion.anular_recepcion": {
     porDefecto: "Anular recepción",
-    fuente: { decision: "DEC-0901" },
+    fuente: { decision: "DEC-0906" },
   },
   "compras.recepcion.estado_por_validar": {
     porDefecto: "Por confirmar",
-    fuente: { decision: "DEC-0901" },
+    fuente: { decision: "DEC-0906" },
   },
   "compras.recepcion.estado_facturada_en_parte": {
     porDefecto: "Facturada en parte",
-    fuente: { decision: "DEC-0901" },
+    fuente: { decision: "DEC-0906" },
   },
   "compras.recepcion.estado_facturada": {
     porDefecto: "Facturada",
-    fuente: { decision: "DEC-0901" },
+    fuente: { decision: "DEC-0906" },
   },
   "compras.recepcion.caja_de_peso_variable": { porDefecto: "Caja de peso variable" },
   "compras.recepcion.el_peso_real_se_carga_al_recibir": {

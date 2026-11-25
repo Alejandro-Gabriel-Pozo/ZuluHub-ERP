@@ -16,6 +16,7 @@ import { FormularioDeFichaDeProducto } from "../../../../../../../ui/plantillas/
 import { armarLaClasificacionDelProducto } from "../../../../../../../ui/plantillas/catalogo/modelo-de-clasificacion";
 import { armarLaFicha } from "../../../../../../../ui/plantillas/catalogo/modelo-de-ficha-de-producto";
 import { rutaDeLasOpciones } from "../../../../../../../ui/plantillas/catalogo/modelo-de-opciones";
+import { rutaDeLaCompraDelProducto } from "../../../../../../../ui/plantillas/catalogo/modelo-de-presentaciones";
 import { armarLaVisibilidad } from "../../../../../../../ui/plantillas/catalogo/modelo-de-visibilidad-de-producto";
 import { VisibilidadDeLaFichaDeProducto } from "../../../../../../../ui/plantillas/catalogo/VisibilidadDeLaFichaDeProducto.cliente";
 import { Pila } from "../../../../../../../ui/primitivas/Pila";
@@ -89,6 +90,12 @@ export default async function PaginaDeLaFichaDeUnProducto({ params }: PropsDePag
         {respuesta.dato.seVende ? (
           <EnlaceDeAccion href={rutaDeLasOpciones(ficha.id)}>
             {texto({}, "catalogo.ficha.opciones")}
+          </EnlaceDeAccion>
+        ) : null}
+        {/* La solapa «Cómo se compra» (T0): solo para lo que se compra, que es lo único que tiene presentaciones. */}
+        {respuesta.dato.seCompra ? (
+          <EnlaceDeAccion href={rutaDeLaCompraDelProducto(ficha.id)}>
+            {texto({}, "compras.compra.como_se_compra")}
           </EnlaceDeAccion>
         ) : null}
       </Pila>,

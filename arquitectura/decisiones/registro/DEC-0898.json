@@ -1,10 +1,10 @@
 {
   "id": "DEC-0898",
   "fecha": "2026-11-25",
-  "quien": "dueño",
-  "tipo": "DINERO",
+  "quien": "padre",
+  "tipo": "COMERCIAL",
   "estado": "CONFIRMADA",
-  "decision": "«Recibir» no pide precio: lo recibido queda sin costo hasta tomar el costo de la factura (opción b chica de la pregunta 2 de Compras 4).",
-  "que_cambia": "La pantalla y la frontera web de «Recibir» rechazan cualquier precio; el costo se completa después desde la factura (PR C). Revertir: volver a admitir el precio opcional en entradas-de-recepciones.ts.",
-  "donde": "entradas-de-recepciones.ts, PantallaDeNuevaCompra.cliente.tsx (modo RECEPCION); pregunta 2 de Compras 4, respuesta del dueño en el chat del orquestador el 25/11/2026: «Sí a tu recomendación: b chica»"
+  "decision": "Una presentación no se borra: se desactiva y se reactiva (en lugar del «Quitar» de la maqueta de productos); lo ya comprado no cambia.",
+  "que_cambia": "Una presentación desactivada deja de ofrecerse en compras nuevas y se puede reactivar. Revertir: borrar de verdad exige una migración y no está autorizada en esta tanda.",
+  "donde": "Chat del dueño del 25/11/2026 («Si» a las cinco preguntas del plan de T0, relayadas por el orquestador) (pregunta 2); fila 174 de decisiones-del-dueno-2026-11.md; productos.html (vCompra); repositorio-de-presentaciones.ts (el servidor solo apaga)"
 }

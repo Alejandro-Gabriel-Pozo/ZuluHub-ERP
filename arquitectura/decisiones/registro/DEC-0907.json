@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0907",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "La ficha de las pantallas «Recepciones»: la lista, «Recibir» (sin precio) y el detalle de una recepción. Aceptada por el orquestador por delegación.",
+  "que_cambia": "Una ficha nueva en src/capacidades/pantallas con las tres rutas. Revertir: quitar la ficha y las rutas.",
+  "donde": "ficha-de-recepciones.ts; delegación de pantallas DDD fila 174, mensaje del orquestador del 25/11/2026 y chat del dueño del 25/11/2026"
+}

@@ -1,6 +1,7 @@
 import { sql, type Kysely } from "kysely";
 import type { AlcanceDeSucursales } from "../../../capacidades/permisos/alcance";
 import type { EmpresaId, PersonaId, SucursalId } from "../../../primitivas/identificadores/marca";
+import { comoPrefijo } from "../../catalogo/publico";
 import type { ClaseDeMovimiento } from "../dominio/movimiento";
 import type { StockDb } from "./esquema";
 import { esUuid } from "./filas";
@@ -88,9 +89,6 @@ export interface LecturasDelLibro {
   /** Los pares cuyo saldo difiere de la suma de sus renglones: **debe ser vacío** (el saldo se deriva del libro). */
   verificarSaldos(empresa: EmpresaId): Promise<DiferenciaDeSaldo[]>;
 }
-
-/** Escapa `%`, `_` y `\` de lo que se busca con `LIKE`: el texto es del usuario. */
-export const comoPrefijo = (texto: string): string => `${texto.replace(/[\\%_]/g, "\\$&")}%`;
 
 export function crearLecturasDelLibro(db: Kysely<StockDb>): LecturasDelLibro {
   return {

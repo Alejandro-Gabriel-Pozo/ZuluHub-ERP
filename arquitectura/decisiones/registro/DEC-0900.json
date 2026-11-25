@@ -1,10 +1,10 @@
 {
   "id": "DEC-0900",
   "fecha": "2026-11-25",
-  "quien": "dueño",
-  "tipo": "COMERCIAL",
+  "quien": "padre",
+  "tipo": "DATOS",
   "estado": "CONFIRMADA",
-  "decision": "La primera versión de «Recepciones» no ofrece control de la mercadería ni filtros en la lista (preguntas 7 y 8 de Compras 4, respuesta Ok).",
-  "que_cambia": "«Recibir» no pide el control por línea ni el destino por línea, y la lista muestra el estado de cada fila sin filtros. Revertir: sumar el control y los filtros en un PR aparte.",
-  "donde": "PantallaDeNuevaCompra.cliente.tsx (modo RECEPCION), PantallaDeListaDeRecepciones.tsx; respuesta del dueño en el chat del orquestador el 25/11/2026: Ok"
+  "decision": "T0 de Catálogo: el largo del nombre de una presentación (80) pasa a su primitiva nombre-de-presentacion, y el registro de campos suma tres datos y dos caminos de la pantalla.",
+  "que_cambia": "Una sola fuente para el límite: dominio, formulario y base lo comparan con la misma primitiva. Sin cambio de comportamiento. Revertir: devolver la constante al dominio y quitar los tres datos y los dos caminos.",
+  "donde": "Orden del orquestador del 25/11/2026 (hallazgo H2 del plan aceptado); fila 174 de decisiones-del-dueno-2026-11.md; nombre-de-presentacion.ts; registro-de-productos.ts; caminos-de-productos.ts"
 }

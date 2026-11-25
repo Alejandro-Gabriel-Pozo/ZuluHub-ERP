@@ -7,9 +7,9 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  * de textos, el de permisos y la tabla del menú. No crea acciones ni permisos. Previene: un botón o un texto que nadie aprobó, y una ruta o una fila de menú que se mueve sin que la ficha lo note.
  *
  * DIFERENCIAS CON LA MAQUETA (`compra-recibir.html`; la maqueta manda: cada desvío lleva su fundamento y lo decide el dueño, DDD:294):
- *  1. «Recibir» NO pide precio (decisión del dueño, 25/11/2026, pregunta 2, opción «b chica», DEC-0898): lo recibido queda sin costo hasta tomar el costo de la factura. Es el formulario de «Nueva compra» en su modo
+ *  1. «Recibir» NO pide precio (decisión del dueño, 25/11/2026, pregunta 2, opción «b chica», DEC-0903): lo recibido queda sin costo hasta tomar el costo de la factura. Es el formulario de «Nueva compra» en su modo
  *     «recepción»: sin factura, sin cotización de lo que entra al stock, sin depósito (se elige al confirmar) y con el botón «Recibir».
- *  2. Sin control de la mercadería ni destino por línea, y sin filtros en la lista (DEC-0900).
+ *  2. Sin control de la mercadería ni destino por línea, y sin filtros en la lista (DEC-0905).
  *  3. Sin el aviso «El stock entra cuando se confirma la recepción» de la maqueta (Interfaz sobria: lo rechazó el orquestador el 25/11/2026).
  *  4. El detalle muestra cada línea con lo recibido en la unidad en que se compró («2 kg»); no muestra «Entra a tu stock» ni importes.
  *  5. La sucursal no es un campo: la pone el servidor (la elegida en este dispositivo). Una recepción de otra sucursal sale como una que no existe.
@@ -50,7 +50,7 @@ export type FichaDeRecepciones = Readonly<{
 
 const DE_LA_MAQUETA: FuenteDeTexto = {
   decidio:
-    "el dueño: textos del prototipo aprobado de compras (09/11/2026, compra.html) y, para los nuevos, aceptación del orquestador por delegación de textos (DDD:173) con el chat del dueño del 25/11/2026 (DEC-0901)",
+    "el dueño: textos del prototipo aprobado de compras (09/11/2026, compra.html) y, para los nuevos, aceptación del orquestador por delegación de textos (DDD:173) con el chat del dueño del 25/11/2026 (DEC-0906)",
   donde:
     "Pedernal-docs 10-ux-ui, maquetas compra.html y compra-recibir.html; 11-especificaciones/plan-de-pantallas-compras-4-2026-11-25.md §4 y §5; decisiones-del-dueno-2026-11.md filas 173 y 174",
 };

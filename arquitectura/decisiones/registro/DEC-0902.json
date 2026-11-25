@@ -1,10 +1,10 @@
 {
   "id": "DEC-0902",
   "fecha": "2026-11-25",
-  "quien": "padre",
-  "tipo": "CLIENTE",
+  "quien": "dueño",
+  "tipo": "COMERCIAL",
   "estado": "CONFIRMADA",
-  "decision": "La ficha de las pantallas «Recepciones»: la lista, «Recibir» (sin precio) y el detalle de una recepción. Aceptada por el orquestador por delegación.",
-  "que_cambia": "Una ficha nueva en src/capacidades/pantallas con las tres rutas. Revertir: quitar la ficha y las rutas.",
-  "donde": "ficha-de-recepciones.ts; delegación de pantallas DDD fila 174, mensaje del orquestador del 25/11/2026 y chat del dueño del 25/11/2026"
+  "decision": "La recepción separada convive con «Nueva compra»: la habilita la perilla del plan de la empresa, cada compra elige su camino al cargarla y no hay regla ni dato por proveedor.",
+  "que_cambia": "Una empresa en «Sin factura» o «Con factura» puede además recibir por separado y cargar la factura de la empresa; «Nueva compra» sigue andando. Revertir: volver a exigir el nivel de la empresa en nivel-separado.ts.",
+  "donde": "nivel-separado.ts (exigirNivelSeparado), compras-n3-recepcion.test.ts; pregunta 1 de Compras 4, respuesta del dueño en el chat del orquestador el 25/11/2026: «Ok, ojo que no se puede determinar el proveedor que manda una única o una para cada sucursal»"
 }

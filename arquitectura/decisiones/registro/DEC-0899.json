@@ -1,10 +1,10 @@
 {
   "id": "DEC-0899",
   "fecha": "2026-11-25",
-  "quien": "dueño",
-  "tipo": "PERMISOS",
+  "quien": "padre",
+  "tipo": "CLIENTE",
   "estado": "CONFIRMADA",
-  "decision": "Confirmar y anular una recepción pendiente siguen siendo de gerente y administrador; el operador solo registra (pregunta 3 de Compras 4, respuesta Ok).",
-  "que_cambia": "Ninguna acción ni permiso nuevo: el operador recibe y no ve los botones de confirmar ni anular. Revertir: cambiar la matriz de permisos-de-compras.ts.",
-  "donde": "permisos-de-compras.ts (recepciones.confirmar, recepciones.anular), AccionesDeLaRecepcion.cliente.tsx; respuesta del dueño en el chat del orquestador el 25/11/2026: Ok; ver también DEC-0700"
+  "decision": "Textos de «Cómo se compra»: cinco aprobados el 09/11/2026 (Presentación, Cantidad en la unidad base, De peso variable, Peso aproximado, Agregar presentación) y «Sin presentaciones».",
+  "que_cambia": "Seis claves catalogo.presentacion.* nuevas y nueve textos reusados. Con peso variable el único campo de cantidad se rotula «Peso aproximado». No cambia dinero, permisos ni fiscal. Revertir: sacar las seis claves.",
+  "donde": "Chat del dueño del 25/11/2026 («Si» a las cinco preguntas del plan de T0, relayadas por el orquestador) (preguntas 3, 4 y 5); fila 173 de decisiones-del-dueno-2026-11.md; productos.html tabla Textos nuevos del 09/11/2026 y línea 595; plan-t0-pantalla-de-presentaciones-2026-11-25.md sección C"
 }
