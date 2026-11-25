@@ -1,5 +1,6 @@
 import { armarAnularCompra } from "./anular-compra";
 import { armarCorregirCompra } from "./correcciones";
+import { armarExportarCompras } from "./exportar-compras";
 import { armarAnularPago, armarDeclararPago } from "./pagos";
 import { armarConfigurarCompras } from "./configuracion";
 import { armarAnularConciliacion, armarConciliarFactura } from "./conciliar-factura";
@@ -63,6 +64,7 @@ export function crearCasosDeUsoDeCompras(dependencias: DependenciasDeCompras) {
     declararPago: armarDeclararPago(dependencias),
     anularPago: armarAnularPago(dependencias),
     corregirCompra: armarCorregirCompra(dependencias),
+    exportarCompras: armarExportarCompras(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

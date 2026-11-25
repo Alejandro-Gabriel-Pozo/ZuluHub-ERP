@@ -79,3 +79,24 @@ export {
   type RepositoriosDeCompras,
 } from "./persistencia/repositorios-de-compras";
 export { ERRORES_DE_COMPRAS_POR_RESTRICCION } from "./persistencia/errores-por-restriccion";
+export {
+  armarCabecera,
+  armarDetalle,
+  armarResumen,
+  COLUMNAS_DE_CABECERA,
+  COLUMNAS_DE_DETALLE,
+  COLUMNAS_DE_RESUMEN,
+  type ColumnaDeCabecera,
+  type ColumnaDeDetalle,
+  type ColumnaDeResumen,
+} from "./dominio/exportacion/armar-hojas";
+export type { Celda, HojaDeExportacion } from "./dominio/exportacion/celdas";
+export type { CompraParaExportar, RotulosDeExportacion } from "./dominio/exportacion/datos";
+export {
+  FILAS_MAXIMAS_DE_LA_EXPORTACION,
+  periodoDeLaExportacionValido,
+} from "./dominio/exportacion/limites";
+export type {
+  EntradaDeExportarCompras,
+  SalidaDeExportarCompras,
+} from "./casos-de-uso/exportar-compras";

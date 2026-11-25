@@ -101,7 +101,9 @@ export default async function setup(project: TestProject): Promise<() => Promise
   await fijarLaZonaDeLaBase(admin, nombre);
 
   const urlDueno = conBase(urlAdmin, nombre);
-  await aplicarMigraciones(urlDueno, join(import.meta.dirname, "../../migraciones"));
+  await aplicarMigraciones(urlDueno, join(import.meta.dirname, "../../migraciones"), {
+    sincronizarPlantillas: true,
+  });
 
   // Clave de contexto al azar por corrida: nunca se repite ni se escribe en el repositorio.
   const claveDeContexto: ClaveDeContexto = { kid: 1, secreto: randomBytes(32) };

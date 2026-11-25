@@ -46,5 +46,7 @@ export const MODULO_DE_COMPRAS = {
     "diferencias_de_compra.resolver": { capacidad: null, efecto: "COMPLETA_CIERRA" },
     "compras.configurar": { capacidad: null, efecto: "CREA_AMPLIA" },
     "compras.corregir": { capacidad: null, efecto: "CREA_AMPLIA" },
+    // Exportar a Excel (dueño, 25/11/2026): mirar y bajar un archivo; no crea ni cierra nada de compras (la auditoría es un registro, no un efecto de negocio).
+    "compras.exportar": { capacidad: null, efecto: "LECTURA" },
   },
 } as const;
