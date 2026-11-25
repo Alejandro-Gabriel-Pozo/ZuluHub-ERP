@@ -4,7 +4,7 @@ Fase de análisis, 25/11/2026. No cambia código. Pedido del orquestador por dec
 
 ## En una frase
 
-El cron no es necesario cada 5 minutos para que el sistema funcione: casi todo lo que hace tiene su respaldo o su tolerancia. Hay **un riesgo concreto** si se espacia mucho (el mail de alta del gerente vence a las 24 horas) y **un hueco de código** que conviene cerrar aparte (las invitaciones no se despachan de inmediato). Recomendación: **un solo cron cada 30 minutos** (`*/30 * * * *`), sin separar tareas, y un PR chico aparte que despache de inmediato las invitaciones.
+El cron no hace falta cada 5 minutos ni de noche: los clientes trabajan de 07:00 a 14:00 de Argentina (y, siendo generosos, de 06:00 a 18:00), y todo lo que el cron hace tiene su respaldo o tolera esperar. Recomendación: **un solo cron cada 15 minutos con ventana horaria, `*/15 9-20 * * *` (hora UTC = 06:00 a 17:45 de Argentina)**: ≈33 CU-h al mes de cómputo del cron contra ≈180 hoy. Hay **un riesgo concreto** si el mail de alta del gerente queda esperando mucho (vence a las 24 horas) y **un hueco de código** que conviene cerrar aparte: las invitaciones no se despachan de inmediato. Lo que decidió el dueño (25/11/2026): Vercel **Pro**; el cron puede ser más espaciado porque los clientes son chicos y no trabajan a todas horas. **NV** = no verificado en esta sesión.
 
 ## (a) Tipos de trabajo y quién los despacha
 
@@ -40,29 +40,54 @@ No encontré un plazo legal, fiscal o de negocio que exija 5 minutos. Lo que sí
 
 ## (c) Suposiciones de tiempo que presuponen los 5 minutos
 
-- Reintentos de la cola: esperas de 1, 2, 4 y 8 minutos (`reintentos.ts`, `POLITICA_POR_DEFECTO`); toma por 5 minutos. Con un cron más lento que la espera, el reintento ocurre en la siguiente pasada, no a los 1-2 minutos: los 5 intentos se vuelven 5 pasadas (a `*/30`: unas 2 horas y media; a un día: 5 días hasta quedar `FALLIDO`).
+- Reintentos de la cola: esperas de 1, 2, 4 y 8 minutos (`reintentos.ts`, `POLITICA_POR_DEFECTO`); toma por 5 minutos. Con un cron más lento que la espera, el reintento ocurre en la siguiente pasada, no a los 1-2 minutos: los 5 intentos se vuelven 5 pasadas (a cada 15 minutos: 75 minutos; a un día: 5 días hasta quedar `FALLIDO`).
 - Reserva de la serie fiscal: 5 minutos (`numeracion.ts:64`); pendiente huérfano: 10 minutos (`contrato-de-facturacion.ts:107`).
-- El comentario de `trabajos.ts:43-48` (clave de reconciliación «una por hora») ya prevé un cron diario: «con el cron diario de hoy, es una por día». Con `*/30` se encola una por hora: el segundo cron de la misma hora no repite (`YA_ENCOLADO`).
+- El comentario de `trabajos.ts:43-48` (clave de reconciliación «una por hora») ya prevé un cron diario: «con el cron diario de hoy, es una por día». Con una pasada cada 15 minutos se encola una por hora: el segundo cron de la misma hora no repite (`YA_ENCOLADO`).
 - Comentarios desactualizados que dicen «una vez por día mientras sea Hobby»: `apps/web/app/api/trabajos/cron/route.ts:3`, `src/composicion/rutas-de-sistema.ts:63`. Contradicen a `vercel.json` y a la decisión del 10/11/2026 (hallazgo, no tocado).
 
-## (d) Frecuencia recomendada
+## (d) Frecuencia y ventana horaria
 
-**Una sola: `*/30 * * * *`.** Razones:
+Datos del dueño (25/11/2026): Vercel Pro; actividad real de 07:00 a 14:00 de Argentina y, generosos, de 06:00 a 18:00. Argentina es UTC-3 todo el año (sin horario de verano), así que 06:00-18:00 de Argentina son **09:00-21:00 UTC**, y 07:00-14:00 son **10:00-17:00 UTC**. La hora de los crons de Vercel es UTC.
 
-1. Neon gratis: el cómputo se apaga a los 5 minutos de inactividad (dato del dueño; **NV** en la documentación de Neon, que cambia). Cada pasada despierta la base y la deja encendida unos 5 minutos más. Con el cómputo mínimo de 0,25 CU, siempre encendida son ≈180 CU-h al mes (el tope gratuito es 100). Aproximación (sin el tráfico de personas y sin contar el arranque): `*/5` ≈ 180 CU-h; `*/15` ≈ 67; `*/30` ≈ 33; `*/60` ≈ 17; diario ≈ 0,4.
-2. Lo único sensible al tiempo (el mostrador y el mail de invitación) se resuelve mejor **sin cron**: el comprobante ya sale de inmediato; la invitación debería hacerlo también (propuesta abajo). Con eso el cron queda como respaldo y 30 minutos alcanzan.
-3. No conviene separar tareas hoy: el barrido y el despacho son baratos y comparten el despertar de la base (separarlos agrega un segundo despertar sin ahorrar). Separar exigiría dos rutas o un parámetro (`?tarea=`): más superficie sin necesidad.
-4. Si el dueño prefiere más velocidad fiscal: `*/15` (≈67 CU-h) sigue dentro del gratuito sin tráfico; `*/5` no.
+### Qué dicen las documentaciones (consultadas hoy por búsqueda)
 
-Propuesta aparte (código, no se aplica acá): que las acciones que encolan `enviar_invitacion` llamen a `despacharPorClavesDespuesDeConfirmar` (hoy solo lo llama emitir). Con eso el mail sale en segundos y el cron lenta deja de ser riesgo del alta del gerente. Mientras eso no esté, **no pasar de `*/60`**.
+- Vercel, [Usage & Pricing for Cron Jobs](https://vercel.com/docs/cron-jobs/usage-and-pricing): **Pro: una vez por minuto como mínimo, precisión de minuto; 100 crons por proyecto** en cada plan; Hobby: una vez por día con precisión de ±59 minutos, y una expresión más frecuente hace fallar el despliegue. Los crons corren como Vercel Functions: aplican los límites y el costo de las funciones. Vercel anuncia migrar los crons a «Schedules» (una página de límites distinta habla de 15 minutos en Hobby: no coincide con la de crons; **NV** cuál rige para este proyecto). Una expresión con rango de horas (`9-20`) es cron estándar de cinco campos: **NV** que el panel la acepte igual; se ve en el primer despliegue.
+- Neon, [planes](https://neon.com/docs/introduction/plans) y [preguntas frecuentes del plan gratuito](https://neon.com/faqs/free-plan-limits-and-quotas): **100 CU-horas por proyecto y por mes**; el cómputo se apaga a los **5 minutos** de inactividad y eso no se puede cambiar en el plan gratuito; con 0,25 CU el tope equivale a ≈400 horas de reloj; un cómputo apagado no consume; al agotar las 100 CU-h el cómputo se suspende hasta el período siguiente. Un blog viejo de Neon habla de 50 CU-h (2025): **NV**; las páginas vigentes dicen 100.
 
-## (e) Vercel Hobby
+### Cuenta de cómputo (aproximada)
 
-Según mi conocimiento de la documentación de Vercel (**NV**: no pude abrirla en esta sesión): en Hobby un cron solo puede correr **una vez por día**, y Vercel rechaza el despliegue si la expresión corre más seguido («Hobby accounts are limited to daily cron jobs»); además, en Hobby la hora exacta tiene hasta una hora de imprecisión. Con `*/5` el despliegue de producción **fallaría** en Hobby. El repositorio ya lo asume: `PRIMER-DESPLIEGUE.md:26` y `:434` dicen que `*/5` exige plan Pro «para el primer cliente, no para el primer despliegue ni las pruebas», y `vercel-json.test.ts:103` registra que el dueño tendrá Pro (PP-E1-2, 10/11/2026). Con `*/30` o `*/15` también hace falta Pro; solo una vez al día entra en Hobby (con los riesgos de la tabla de (b)). El plan actual del dueño: desconocido para mí.
+Supuestos: 30 días por mes; cada pasada deja la base encendida ≈5,5 minutos (5 de inactividad + ≈30 segundos de trabajo, **NV**: no medí la duración real de una pasada); cómputo mínimo 0,25 CU (si la carga sube el cómputo, cuesta más); sin contar el arranque en frío. «Solo cron» es lo que gasta el cron si **no** hubiera tráfico; el tráfico real despierta la base por su cuenta (ver más abajo) y, donde se superponen, no se suma.
+
+| Alternativa                                                 | Pasadas por día | Base encendida por el cron | CU-h al mes (solo cron) |
+| ----------------------------------------------------------- | --------------- | -------------------------- | ----------------------- |
+| Hoy: `*/5` todo el día                                      | 288             | siempre                    | ≈182 (730 h × 0,25)     |
+| `*/30` todo el día                                          | 48              | 4,4 h por día              | ≈33                     |
+| **A**: cada 15 min de 09:00 a 21:00 UTC (`*/15 9-20 * * *`) | 48              | 4,4 h por día (132 h)      | **≈33**                 |
+| **B**: cada 15 min de 10:00 a 17:00 UTC y cada 2 h el resto | 28 + 9 = 37     | 3,4 h por día (≈102 h)     | **≈26**                 |
+| Una vez por día                                             | 1               | 0,09 h por día             | ≈1                      |
+
+El **tráfico web real** (reservas, carta en línea, ingreso) manda: una sola base para todos los clientes. Si hay actividad casi continua entre 06:00 y 18:00, la base ya está encendida esas 12 horas por día ≈ 90 CU-h al mes **sin ningún cron** (12 h × 30 × 0,25), y entonces el cron dentro de esa ventana casi no suma: lo que cuenta es no despertarla de noche. Con solo 07:00-14:00 de actividad serían ≈52 CU-h. **NV**: el tráfico real de los clientes no está medido; conviene medir el consumo (Neon lo muestra por proyecto) antes de decidir el plan.
+
+### Alternativas pedidas
+
+**A.** Un cron: `{"path": "/api/trabajos/cron", "schedule": "*/15 9-20 * * *"}`. Corre de 09:00 a 20:45 UTC (06:00 a 17:45 de Argentina). De noche no corre nada.
+
+**B.** Dos entradas con la misma ruta (**NV**: que Vercel acepte dos schedules para el mismo path; si no, habría que separar rutas):
+`{"path": "/api/trabajos/cron", "schedule": "*/15 10-16 * * *"}` (07:00 a 13:45 de Argentina) y `{"path": "/api/trabajos/cron", "schedule": "0 0,2,4,6,8,17,19,21,23 * * *"}` (cada 2 horas el resto del día).
+
+### Recomendación
+
+**A.** Razones: ahorra lo grande (la noche) con una sola entrada; B ahorra ≈7 CU-h más pero agrega una segunda entrada y un riesgo: de noche cada pasada consume **un intento** de los trabajos que fallan (5 intentos, `reintentos.ts`), y con pasadas cada 2 horas un trabajo que falla de madrugada llega a `FALLIDO` en ≈10 horas (con A, de noche no corre nada y no se gastan intentos). Si el dueño confirma que algunos clientes no abren domingos, `*/15 9-20 * * 1-6` ahorra un séptimo más (la ventana cae dentro del mismo día en UTC y en Argentina, así que el día de la semana coincide). Mientras las invitaciones no se despachen de inmediato, no ensanchar los huecos (el alta del gerente vence a las 24 horas).
+
+Propuesta aparte (código, no se aplica acá): que las acciones que encolan `enviar_invitacion` llamen a `despacharPorClavesDespuesDeConfirmar`. Con eso el mail sale en segundos, aun fuera de ventana.
+
+## (e) Vercel Pro y Hobby
+
+El plan del dueño es **Pro** (25/11/2026): mínimo una vez por minuto, 100 crons por proyecto, precisión de minuto (fuente en (d)). Con Pro, `*/5`, `*/15` o una ventana horaria son válidos. Si algún día fuera Hobby: solo una vez por día (con ±59 min de imprecisión) y el despliegue con `*/5` o `*/15` **falla**. El repositorio ya lo asume: `PRIMER-DESPLIEGUE.md:26` y `:434`, y `vercel-json.test.ts:103` (PP-E1-2, 10/11/2026).
 
 ## (f) Qué prueba fija la frecuencia
 
-`test/arquitectura/vercel-json.test.ts:105-110`: exige exactamente `[{ path: "/api/trabajos/cron", schedule: "*/5 * * * *" }]` y los cinco campos `["*/5","*","*","*","*"]`. Además `:88` fija que `vercel.json` declara solo esquema, instalación, región, git y crons. `PRIMER-DESPLIEGUE.md:26` y `:434` repiten «cada 5 minutos»; no hay otra prueba con `*/5`. La prueba es en sí la violación inyectada: cualquier cambio de frecuencia a escondidas la pone roja; se cambia a propósito en el mismo PR, con el motivo en el comentario de arriba (`:103-104`).
+`test/arquitectura/vercel-json.test.ts:105-110`: exige exactamente `[{ path: "/api/trabajos/cron", schedule: "*/5 * * * *" }]` y los cinco campos `["*/5","*","*","*","*"]`. Además `:88` fija que `vercel.json` declara solo esquema, instalación, región, git y crons. `PRIMER-DESPLIEGUE.md:26` y `:434` repiten «cada 5 minutos»; no hay otra prueba con `*/5`. La prueba es en sí la violación inyectada: cualquier cambio de frecuencia a escondidas la pone roja; se cambia a propósito en el mismo PR, con el motivo en el comentario.
 
 ## (g) Cambio propuesto (sin aplicar)
 
@@ -70,10 +95,23 @@ Según mi conocimiento de la documentación de Vercel (**NV**: no pude abrirla e
 
 ```diff
 -  "crons": [{ "path": "/api/trabajos/cron", "schedule": "*/5 * * * *" }]
-+  "crons": [{ "path": "/api/trabajos/cron", "schedule": "*/30 * * * *" }]
++  "crons": [{ "path": "/api/trabajos/cron", "schedule": "*/15 9-20 * * *" }]
 ```
 
-`test/arquitectura/vercel-json.test.ts:105-110`: cambiar el nombre del caso a «cada 30 minutos» y los dos valores a `"*/30 * * * *"` y `["*/30","*","*","*","*"]`, con el comentario actualizado (el consumo de Neon gratis y la decisión del dueño con su fecha). Más las menciones de `PRIMER-DESPLIEGUE.md:26` y `:434`, y los dos comentarios desactualizados de (c). Si se decide `*/15` o `*/60`, es el mismo cambio con otro número.
+`test/arquitectura/vercel-json.test.ts:105-110`: nombre del caso «cada 15 minutos de 06:00 a 18:00 de Argentina (09 a 20 UTC)»; los dos valores pasan a `"*/15 9-20 * * *"` y `["*/15","9-20","*","*","*"]`; el comentario cita la decisión del dueño (25/11/2026: Vercel Pro, clientes de 07:00 a 14:00 y, generosos, de 06:00 a 18:00; Neon gratis) y que la hora es UTC. Más `PRIMER-DESPLIEGUE.md:26` y `:434`, y los dos comentarios desactualizados de (c). Con B, el cambio es el de arriba con las dos entradas y la prueba compara la lista de dos.
+
+## (h) Qué pierde un cliente de madrugada, por trabajo (con A; sin pasadas de 18:00 a 06:00 de Argentina)
+
+| Trabajo                                                         | Qué pierde                                                                                                                                                                                                                | ¿Se recupera solo a la primera pasada de la mañana, sin duplicar?                                                                                                                                                                               |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Validar comprobante (solo lo que falló en el intento inmediato) | Un comprobante que quedó «Confirmando» a las 18:30 espera hasta las 06:00. El cliente ya se fue; el plazo fiscal para el CAE: **NV**.                                                                                     | Sí: lo toma la pasada (los trabajos viejos primero, `candidatos`); la clave `fiscal.validar:<id>:<n>` y la toma condicionada (`procesador.ts`) impiden ejecutarlo dos veces.                                                                    |
+| Reconciliar comprobantes en vuelo                               | La serie fiscal del punto de venta puede quedar ocupada toda la noche si un comprobante quedó `INCIERTO` (la reserva vence a los 5 min, pero hasta reconciliar no se libera): nadie factura de noche, así que no se nota. | Sí: la pasada encola una por empresa y hora (`fiscal.reconciliar:<empresa>:<hora UTC>`, `YA_ENCOLADO` evita repetir) y consulta a ARCA, nunca reenvía. Un atraso grande se absorbe en pasadas sucesivas (50 trabajos y 50 empresas por pasada). |
+| Enviar invitación (usuario, 7 días)                             | El mail de una invitación hecha a las 18:30 sale a las 06:00.                                                                                                                                                             | Sí: `invitacion:<id>:envio` es la clave de idempotencia: no duplica mails.                                                                                                                                                                      |
+| Enviar invitación del alta del gerente (24 h)                   | Sale a las 06:00 (≈11 horas de espera, dentro de las 24). Quien espera el mail a las 20:00 no lo ve hasta la mañana.                                                                                                      | Sí; si pasaran 24 horas el manejador no lo envía (vencida) y deja constancia.                                                                                                                                                                   |
+| Revocar sesiones                                                | Nada: la persona suspendida queda bloqueada al instante (`sesion.ts:27` y `:46`).                                                                                                                                         | Sí: borrar lo ya borrado no hace nada.                                                                                                                                                                                                          |
+| Barrido de sesiones, verificaciones y contadores                | Nada visible: solo crecen las tablas unas horas.                                                                                                                                                                          | Sí: 10 000 filas por pasada, idempotente (`barrido-de-autenticacion.ts`).                                                                                                                                                                       |
+| Avisos del traspaso                                             | Hoy no salen con ningún cron (sin manejador).                                                                                                                                                                             | —                                                                                                                                                                                                                                               |
+| Reintentos de la cola                                           | De noche no se gastan intentos (no corre nada); el reintento «de 1 minuto» pasa a ser «a la próxima pasada».                                                                                                              | Sí.                                                                                                                                                                                                                                             |
 
 ## Hallazgos aparte (no tocados)
 
