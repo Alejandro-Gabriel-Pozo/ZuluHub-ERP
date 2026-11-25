@@ -14,6 +14,10 @@ name: Migrar (preview y producción)
 #  - Antes de «aplicar» en producción, si hay migraciones pendientes, se crea una rama de respaldo de la rama
 #    `production` de Neon. SIN RESPALDO NO SE MIGRA PRODUCCIÓN: si faltan NEON_API_KEY o NEON_PROJECT_ID, si no se
 #    puede crear la rama o si no se puede saber si hay algo pendiente, el paso falla y «Aplicar» no corre.
+#  - CLIENTES CON BASE PROPIA (extra de plan; dueño, 25/11/2026): cada uno es un ambiente `cliente-<codigo>` con SU Environment
+#    (mismos secretos, mismo revisor obligatorio, solo `main`) y SU proyecto de Neon, y tiene EL MISMO respaldo obligatorio que
+#    producción (la rama predeterminada de su proyecto se llama `production`: PRIMER-DESPLIEGUE.md, H). La lista es CERRADA y hoy está
+#    VACÍA: sumar un cliente son dos líneas (una opción abajo y un caso en «validar»), nunca un texto libre.
 #  - Después de aplicar, si el Environment tiene PEDERNAL_CLAVE_CONTEXTO, se instala esa clave en la base (idempotente).
 #
 # El script que migra (`npm run migrar`) lee la cadena de la variable PEDERNAL_DB_MIGRACIONES; acá se la alimenta con el
@@ -29,6 +33,7 @@ on:
         options:
           - preview
           - produccion
+          # Clientes con base propia (lista cerrada, vacía hoy): `- cliente-<codigo>` (minúsculas, números y guiones, 3 a 30).
       accion:
         description: "ver = solo mirar (no cambia nada) · aplicar = aplicar las migraciones pendientes"
         type: choice
@@ -62,6 +67,7 @@ jobs:
     outputs:
       ambiente: ${{ steps.validar.outputs.ambiente }}
       accion: ${{ steps.validar.outputs.accion }}
+      con_respaldo: ${{ steps.validar.outputs.con_respaldo }}
     steps:
       - id: validar
         run: |
@@ -74,9 +80,11 @@ jobs:
             exit 1
           fi
           case "$AMBIENTE" in
-            preview) esperado="MIGRAR PREVIEW" ;;
-            produccion) esperado="MIGRAR PRODUCCION" ;;
-            *) echo "::error::Ambiente no permitido (preview o produccion)."; exit 1 ;;
+            preview) esperado="MIGRAR PREVIEW"; con_respaldo=false ;;
+            produccion) esperado="MIGRAR PRODUCCION"; con_respaldo=true ;;
+            # Un cliente con base propia (lista cerrada, vacía hoy), con su frase y el respaldo obligatorio:
+            #   cliente-<codigo>) esperado="MIGRAR CLIENTE-<CODIGO>"; con_respaldo=true ;;
+            *) echo "::error::Ambiente no permitido."; exit 1 ;;
           esac
           case "$ACCION" in
             ver) ;;
@@ -90,6 +98,7 @@ jobs:
           esac
           echo "ambiente=$AMBIENTE" >> "$GITHUB_OUTPUT"
           echo "accion=$ACCION" >> "$GITHUB_OUTPUT"
+          echo "con_respaldo=$con_respaldo" >> "$GITHUB_OUTPUT"
         env:
           REF: ${{ github.ref }}
           AMBIENTE: ${{ inputs.ambiente }}
@@ -124,8 +133,8 @@ jobs:
         env:
           PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
 
-      - name: Rama de respaldo en Neon (solo producción, obligatoria si hay algo para aplicar)
-        if: needs.validar.outputs.accion == 'aplicar' && needs.validar.outputs.ambiente == 'produccion'
+      - name: Rama de respaldo en Neon (producción y clientes con base propia, obligatoria si hay algo para aplicar)
+        if: needs.validar.outputs.accion == 'aplicar' && needs.validar.outputs.con_respaldo == 'true'
         shell: bash
         run: |
           set -eu
@@ -141,7 +150,7 @@ jobs:
             exit 1
           fi
           if [ -z "${NEON_API_KEY:-}" ] || [ -z "${NEON_PROJECT_ID:-}" ]; then
-            echo "::error::Faltan NEON_API_KEY o NEON_PROJECT_ID en el Environment produccion: sin respaldo no se migra producción. No se migra."
+            echo "::error::Faltan NEON_API_KEY o NEON_PROJECT_ID en el Environment: sin respaldo no se migra producción ni la base de un cliente. No se migra."
             exit 1
           fi
           case "$NEON_PROJECT_ID" in

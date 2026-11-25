@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0929",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: el respaldo previo obligatorio de producción rige también para la base de cada cliente con base propia, por la salida con_respaldo.",
+  "que_cambia": "Un cliente sin las claves de Neon o sin poder crear la rama de respaldo no se migra. Revertir: quitar con_respaldo=true del caso del cliente (la prueba lo impide).",
+  "donde": ".github/workflows/migrar.yml (validar, con_respaldo; paso Rama de respaldo); test/arquitectura/workflow-migrar.test.ts (problemasDeAmbientes)",
+  "motivo": "Técnica: aplica la regla del dueño del 25/11/2026 (sin respaldo no se migra producción) a una base de cliente, que es producción de ese cliente."
+}
