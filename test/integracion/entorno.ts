@@ -280,7 +280,7 @@ export function crearEntornoDePrueba(
 /**
  * Quita `acciones` del actor que arma el adaptador, para las pruebas que PRUEBAN UNA MATRIZ DISTINTA de la real (un rol al que la prueba le
  * da o le saca una acción por las reglas): sin el conjunto, el guard decide por la matriz que la prueba le pasa (H4b T3, DEC-0955). Es el
- * camino de la deuda «guard-fallback-a-la-matriz»; lo que se prueba con el conjunto real va por `crearEntornoDePrueba` a secas.
+ * camino de respaldo por matriz (DEC-0955), solo para fakes y pruebas; lo que se prueba con el conjunto real va por `crearEntornoDePrueba` a secas.
  */
 export function sinAcciones<D extends Readonly<{ acciones?: readonly string[] }>>(
   datos: D,

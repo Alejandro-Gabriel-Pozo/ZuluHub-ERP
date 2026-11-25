@@ -6,6 +6,6 @@
   "estado": "PENDIENTE_DE_OK",
   "decision": "El guard decide por el conjunto de acciones del actor cuando viene; si el campo falta, decide por la matriz y un rol que la matriz no conoce no pasa.",
   "que_cambia": "Nada que vea el negocio: con las plantillas sembradas cada rol tiene exactamente lo de siempre. El camino por matriz queda solo para pruebas y roles de plataforma, como deuda a retirar.",
-  "donde": "src/capacidades/permisos/guard.ts (accionesDelActor); arquitectura/deuda/registro.json (guard-fallback-a-la-matriz)",
+  "donde": "src/capacidades/permisos/guard.ts (accionesDelActor); pagar al armar las pruebas su conjunto",
   "motivo": "Pasar de golpe todas las pruebas y los fakes que arman un actor a armar su conjunto agranda el cambio de autoridad; el campo ausente cae a la matriz y, para un rol que ella no conoce, a SIN_PERMISO."
 }

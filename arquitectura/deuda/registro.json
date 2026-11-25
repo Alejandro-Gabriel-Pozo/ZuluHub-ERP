@@ -540,49 +540,5 @@
     "motivo": "Entregar el logo por la ruta propia sin sumar una migración ni una pantalla nueva en el mismo PR. Se paga con una tabla de cuentas por empresa y la validación al guardar y al traer (armarDestinoDeLogo ya recibe la lista de cuentas declaradas). DEC-0831.",
     "aprobadoPor": "orquestador (V1c: diferir las cuentas declaradas como deuda con vencimiento, mensajes entre sesiones del 2026-11-20 y 2026-11-21; cupo liberado pagando campos-sin-dato--web-select (select crudo quitado de borrador-de-pagina.test.tsx))",
     "vence": "2027-01-20"
-  },
-  {
-    "id": "guard-fallback-a-la-matriz",
-    "archivos": ["src/capacidades/permisos/guard.ts"],
-    "descripcion": "El guard cae a la matriz de roles cuando el actor no trae `accionesDelActor` (fakes y pruebas que arman `rol` a mano, roles de plataforma y de grupo). El adaptador de producción de la empresa lo manda siempre. Se paga así: Pasar todas las pruebas y fakes a armar su conjunto agranda el cambio de autoridad de T3 (DEC-0955). Se paga cuando las pruebas arman el conjunto: se retira el camino por matriz y el campo pasa a ser obligatorio. Objetivo: antes de habilitar roles propios en producción (T5).",
-    "tipo": "backlog",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-11-25"
-  },
-  {
-    "id": "explicar-por-que--matriz",
-    "archivos": ["src/plataforma/dominio/soporte/explicar.ts"],
-    "descripcion": "«Explicar por qué» de soporte evalúa el guard por la matriz de roles, no por el conjunto de acciones de la membresía: para un rol con plantilla editada puede explicar distinto de lo que el guard real decide. Se paga así: Leer el conjunto de otra empresa desde plataforma es un caso aparte (lectura entre empresas) fuera de T3 (DEC-0955). Se paga antes de habilitar plantillas editables en producción (T5).",
-    "tipo": "backlog",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-11-25"
-  },
-  {
-    "id": "rol-con-literal--estructura-de-identidad",
-    "archivos": [
-      "src/modulos/identidad/casos-de-uso/aceptar-traspaso.ts",
-      "src/modulos/identidad/consultas/traspaso-en-curso.ts",
-      "src/modulos/identidad/dominio/invitacion.ts",
-      "src/modulos/identidad/dominio/membresia.ts",
-      "src/modulos/identidad/dominio/traspaso.ts"
-    ],
-    "descripcion": "Reglas de identidad que comparan un rol con «GERENTE» o «ADMINISTRADOR» (un solo gerente, no se apaga al gerente, traspaso). Presupuesto exacto por archivo en test/arquitectura/rol-con-literal.test.ts; solo baja. Se paga así: Son reglas de estructura de la empresa, no permisos; pasarlas a «es el gerente de esta empresa» ligado a la membresía es el tramo de roles propios (T4) y no entra en T3 (DEC-0957).",
-    "tipo": "backlog",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-11-25"
-  },
-  {
-    "id": "rol-con-literal--composicion-y-pantallas",
-    "archivos": [
-      "apps/web/app/s/app/(operacion)/cuenta/usuarios/invitar/page.tsx",
-      "apps/web/ui/plantillas/usuarios/modelo-de-usuarios.ts",
-      "src/composicion/entradas-de-usuarios.ts",
-      "src/composicion/usuarios-desactivar-y-reactivar-web.ts",
-      "src/composicion/usuarios-web.ts"
-    ],
-    "descripcion": "Composición y pantallas de usuarios que muestran u ocultan por el nombre del rol. Presupuesto exacto por archivo en test/arquitectura/rol-con-literal.test.ts; solo baja. Se paga así: Pasarlas a leer las acciones del actor es el tramo de pantallas (T5) y no entra en T3 (DEC-0957).",
-    "tipo": "backlog",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-11-25"
   }
 ]

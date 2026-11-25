@@ -58,7 +58,7 @@ export type DatosDelGuard<
    *  - `null`: no se pudo resolver el conjunto: nada (`SIN_PERMISO`), nunca la matriz;
    *  - AUSENTE: el camino de siempre, por la matriz `permisos` y el `rol`. Es lo que hacen las pruebas y los fakes que arman `rol` a mano, y los
    *    roles de plataforma y de grupo (que siguen fijos en código). El adaptador de producción de la empresa lo manda SIEMPRE. Es deuda
-   *    registrada (DEC-0955; `arquitectura/deuda/registro.json`: «guard-fallback-a-la-matriz»); un rol que no está en la matriz (uno propio) cae a
+   *    anotada en DEC-0955 (el camino existe solo para fakes y pruebas; la producción de la empresa siempre trae el conjunto); un rol que no está en la matriz (uno propio) cae a
    *    `SIN_PERMISO` por este mismo camino (falla cerrado).
    * Sin rol (`rol: null`) no hay permiso aunque el conjunto traiga acciones.
    */
