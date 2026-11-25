@@ -43,6 +43,20 @@ export const TEXTOS_DE_PRODUCCION = {
   // produccion.html, fila «Elaborado» (decisión 94).
   "produccion.elaborado.se_produce_en_tanda": { porDefecto: "Se produce en tanda" },
   "produccion.elaborado.se_arma_al_usarlo": { porDefecto: "Se arma al usarlo" },
+  // La franja y el aviso del elaborado (PRO-A): aprobados por el dueño el 25/11/2026 con esta redacción exacta (respuesta relevada por el orquestador; `textos-de-produccion-dia-uno-2026-11-25.md`, TP-4, TP-5 y
+  // TP-9; DEC-1059 es el aviso). Cambian lo que se entiende del stock: con stock propio la venta deja de descontar los ingredientes (decisión previa 94).
+  "produccion.elaborado.tiene_stock_propio": {
+    porDefecto: "Tiene stock propio: {existencia}",
+    marcadores: ["existencia"],
+  },
+  "produccion.elaborado.no_tiene_stock_propio": {
+    porDefecto: "No tiene stock propio: descuenta sus ingredientes.",
+  },
+  "produccion.elaborado.aviso_al_encender": {
+    largoMaximo: 160,
+    porDefecto:
+      "Al encenderlo, este producto deja de descontar sus ingredientes al venderse: se descuentan al producir.",
+  },
 
   // Textos de la maqueta aprobada `produccion.html` (09/11/2026) que no tenían fila propia en «Textos aprobados»; aceptados por el orquestador por delegación del dueño (DDD filas 173 y 174, DEC-0555).
   // Fuente de cada uno: la línea de `10-ux-ui/prototipos-gastronomia/produccion.html` de Pedernal-docs.

@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
+import { seOfrece } from "../../src/capacidades/integracion/ofrecer";
 import {
   AREAS_DEL_MENU,
   FILAS_DEL_MENU,
@@ -140,20 +141,18 @@ describe("«Secciones»: la fila del grupo «Carta» de Catálogo (A8)", () => {
     );
   });
 
-  it("un módulo «en desarrollo» no aparece aunque llegue la acción y figure activo (fila de prueba sobre `produccion`, que sigue en desarrollo)", () => {
-    // Con catalogo, caja y ventas disponibles (DEC-0463) ninguna fila real del menú depende de un módulo en desarrollo: se prueba la regla con una fila armada.
-    const enDesarrollo = { ...productos, modulo: "produccion" as const };
-    expect(CATALOGO_DE_MODULOS.produccion.estado).toBe("en_desarrollo");
-    expect(armarElMenu([enDesarrollo], permisos(["productos.ver"], ["produccion"]), null)).toEqual(
-      [],
-    );
-    expect(
-      armarElMenu([enDesarrollo], permisos(["productos.ver"], [], ["produccion"]), null),
-    ).toEqual([]);
-    // La misma fila con un módulo disponible sí se ve: lo que la oculta es el estado, no la forma de la fila.
-    const disponible = { ...productos, modulo: "catalogo" as const };
-    expect(armarElMenu([disponible], permisos(["productos.ver"], ["catalogo"]), null)).not.toEqual(
-      [],
+  it("un módulo «en desarrollo» no aparece aunque llegue la acción y figure activo (se prueba con una copia del catálogo donde `produccion` lo está, como lo fue hasta PRO-A)", () => {
+    // Ningún módulo real está en desarrollo: se prueba la regla con el mismo cálculo del menú (`seOfrece`) sobre una copia del catálogo.
+    const catalogo = {
+      ...CATALOGO_DE_MODULOS,
+      produccion: { ...CATALOGO_DE_MODULOS.produccion, estado: "en_desarrollo" },
+    };
+    const pedido = { modulo: "produccion", accion: "productos.ver", perilla: null };
+    expect(seOfrece(catalogo, permisos(["productos.ver"], ["produccion"]), pedido)).toBe(false);
+    expect(seOfrece(catalogo, permisos(["productos.ver"], [], ["produccion"]), pedido)).toBe(false);
+    // El mismo pedido con el módulo disponible sí se ve: lo que lo oculta es el estado, no la forma del pedido.
+    expect(seOfrece(CATALOGO_DE_MODULOS, permisos(["productos.ver"], ["produccion"]), pedido)).toBe(
+      true,
     );
   });
 
@@ -652,7 +651,13 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
         ],
         ["carta", [["pantalla", "secciones", "/catalogo/secciones", "catalogo.seccion.titulo"]]],
         ["stock", [["pantalla", "stock", "/stock/depositos", "stock.pantalla.stock"]]],
-        ["produccion", [["pantalla", "recetas", "/catalogo/recetas", "receta.pantalla.recetas"]]],
+        [
+          "produccion",
+          [
+            ["pantalla", "produccion", "/catalogo/produccion", "produccion.pantalla.produccion"],
+            ["pantalla", "recetas", "/catalogo/recetas", "receta.pantalla.recetas"],
+          ],
+        ],
       ],
     ],
     [

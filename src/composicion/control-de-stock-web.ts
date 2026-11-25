@@ -4,7 +4,13 @@ import {
   type Respuesta,
 } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
-import type { CasosDeUsoDeStock, ConsultasDeStock } from "../modulos/stock/publico";
+import { formatearDecimalFijo, parsearDecimalFijo } from "../primitivas/cantidad/decimal-fijo";
+import { textoDeBusquedaDeProductoDesdeTexto } from "../primitivas/texto/termino-de-busqueda-de-producto";
+import type {
+  CasosDeUsoDeStock,
+  ConsultasDeStock,
+  CursorDeExistencias,
+} from "../modulos/stock/publico";
 import { aRespuestaDeExcepcion, errorAPublico, type DependenciasDeRespuesta } from "./a-respuesta";
 import { identificador } from "./entradas-de-facturacion";
 import { leerElPedidoDeControlDeStock } from "./entradas-de-control-de-stock";
@@ -24,7 +30,7 @@ import { leerElPedidoDeControlDeStock } from "./entradas-de-control-de-stock";
 
 export type DependenciasDeControlDeStockWeb = Readonly<{
   casosDeUso: () => Pick<CasosDeUsoDeStock, "controlarArticulo" | "dejarDeControlar">;
-  consultas: () => Pick<ConsultasDeStock, "controlDeStockDelProducto">;
+  consultas: () => Pick<ConsultasDeStock, "controlDeStockDelProducto" | "existencias">;
   respuesta: DependenciasDeRespuesta;
 }>;
 
@@ -80,6 +86,52 @@ export async function fijarElControlDeStock(
     return hecho.ok
       ? { ok: true, dato: { productoId, controlado, yaEstaba: hecho.valor.yaEstaba } }
       : { ok: false, error: conError(hecho.error, d) };
+  } catch (excepcion) {
+    return aRespuestaDeExcepcion(excepcion, d.respuesta);
+  }
+}
+
+/**
+ * La existencia PROPIA de un producto con stock propio (la franja «Tiene stock propio: …» de un elaborado o un vendible): la suma, en texto decimal exacto, de sus saldos en los depósitos que la persona
+ * puede ver (lo decide la consulta: `stock.ver` y su alcance de sucursales). Sale de la lista de existencias filtrada por el nombre del producto (no hay una consulta por producto). Falla CERRADO:
+ * si el nombre no sirve de búsqueda, o hay tantas filas con ese nombre que no se recorren todas, devuelve `null` (no se sabe) y la franja no muestra el número; nunca un cero inventado. Un producto
+ * que nunca se movió no tiene filas: su existencia es cero de verdad. Es una LECTURA: no escribe ni audita.
+ */
+export type ExistenciaPropia = Readonly<{ existencia: string; unidadId: string }>;
+
+/** Cuántas páginas de existencias se recorren como máximo (50 filas cada una): un tope de seguridad, no una regla de negocio. */
+const MAXIMO_DE_PAGINAS_DE_EXISTENCIAS = 5;
+const ESCALA_DE_LA_EXISTENCIA = 4;
+
+export async function verLaExistenciaPropia(
+  d: DependenciasDeControlDeStockWeb,
+  contexto: ContextoOperativo,
+  entrada: Readonly<{ productoId: string; nombre: string; unidadId: string }>,
+): Promise<Respuesta<ExistenciaPropia | null>> {
+  if (!identificador.safeParse(entrada.productoId).success) return { ok: false, error: GENERICO };
+  const busqueda = textoDeBusquedaDeProductoDesdeTexto(entrada.nombre);
+  if (!busqueda.ok || busqueda.valor === null) return { ok: true, dato: null };
+  try {
+    let suma = 0n;
+    let unidadId = entrada.unidadId;
+    let despuesDe: CursorDeExistencias | undefined;
+    for (let pagina = 0; pagina < MAXIMO_DE_PAGINAS_DE_EXISTENCIAS; pagina++) {
+      const r = await d.consultas().existencias(contexto, { texto: busqueda.valor, despuesDe });
+      if (!r.ok) return { ok: false, error: conError(r.error, d) };
+      for (const fila of r.valor.existencias) {
+        if (fila.productoId !== entrada.productoId) continue;
+        suma += parsearDecimalFijo(fila.existencia, ESCALA_DE_LA_EXISTENCIA, "existencia");
+        unidadId = fila.unidadId;
+      }
+      if (r.valor.siguiente === null) {
+        return {
+          ok: true,
+          dato: { existencia: formatearDecimalFijo(suma, ESCALA_DE_LA_EXISTENCIA), unidadId },
+        };
+      }
+      despuesDe = r.valor.siguiente;
+    }
+    return { ok: true, dato: null };
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, d.respuesta);
   }

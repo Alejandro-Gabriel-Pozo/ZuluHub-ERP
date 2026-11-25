@@ -1,6 +1,7 @@
+import { exigirPerilla } from "../../../capacidades/planes/derechos";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { seControlaStockLaClase } from "../../catalogo/publico";
+import { seControlaStockLaClase, seProduceLaClase } from "../../catalogo/publico";
 import { esUuid } from "../persistencia/filas";
 import { autorizar, exigirAlcanceTotal, traducir } from "./comun";
 import type { DependenciasDeStock } from "./contrato";
@@ -20,6 +21,12 @@ export type SalidaDeDejarDeControlar = Readonly<{ yaEstaba: boolean }>;
  * el insumo y la reventa se controlan (`CLASE_NO_CONTROLABLE`): lo impone la base, una sola vez, y el caso de uso traduce el error. Si el
  * producto ya tuvo artículo y se dejó de controlar, se reactiva el MISMO (su libro sigue). Repetición (`YA_ESTABA`): ya controlado devuelve
  * `yaExistia` sin escribir ni auditar.
+ *
+ * STOCK PROPIO de un elaborado o un vendible (E6, D94; PRO-A): se admite SOLO si la empresa tiene encendida la perilla `produccion` (`FUNCION_NO_INCLUIDA`)
+ * y el producto tiene una receta vigente no vacía (`SIN_COMPOSICION`). Cambia lo que descuenta la venta: con artículo propio activo, la venta descuenta ese
+ * artículo y NO sus ingredientes (`situacionDeConsumo`), que bajan al cerrar una orden de producción. Una cuenta abierta con una línea agregada antes de
+ * encenderlo conserva lo que sella `controla_stock` y no cambia de camino. La receta se lee en la misma transacción SERIALIZABLE: retirarla a la vez no deja
+ * un artículo sobre una receta vacía (una de las dos aborta y se reintenta). Encender no crea movimientos: la existencia nace en cero.
  */
 export function armarControlarArticulo(dependencias: DependenciasDeStock) {
   return async function controlarArticulo(
@@ -45,9 +52,19 @@ export function armarControlarArticulo(dependencias: DependenciasDeStock) {
           return ok({ articuloId: existente.id, yaExistia: true });
         }
         if (!producto.activo) return err("PRODUCTO_INACTIVO");
-        // La base admite también el elaborado y el vendible (0032, E6: stock propio, D94); este caso de uso solo los controla cuando la empresa
-        // enciende la producción (T9). Hasta entonces nace cerrado: lo que no se declara no se habilita.
-        if (!seControlaStockLaClase(producto.claseDeUso)) return err("CLASE_NO_CONTROLABLE");
+        // La base admite también el elaborado y el vendible (0032, E6: stock propio, D94); este caso de uso solo los controla con la perilla `produccion`
+        // y una receta vigente. Sin ellas nace cerrado: lo que no se declara no se habilita.
+        if (!seControlaStockLaClase(producto.claseDeUso)) {
+          if (!seProduceLaClase(producto.claseDeUso)) {
+            return err("CLASE_NO_CONTROLABLE");
+          }
+          const derechos = await tx.derechos.deLaEmpresa(contexto);
+          if (!exigirPerilla(derechos, "produccion", { empresaId }).ok) {
+            return err({ error: "FUNCION_NO_INCLUIDA", perilla: "produccion" });
+          }
+          const receta = await tx.composicionesDeStock.ultimaVersion(empresaId, producto.id);
+          if (receta === null || receta.componentes.length === 0) return err("SIN_COMPOSICION");
+        }
         const articulo =
           existente === null
             ? await tx.articulosDeStock.insertar(empresaId, {

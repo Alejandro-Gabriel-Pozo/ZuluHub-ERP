@@ -1,7 +1,11 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { estadoDeModulos } from "../modulos/activos";
-import { CATALOGO_DE_MODULOS, type ClaveModulo } from "../modulos/catalogo";
+import {
+  CATALOGO_DE_MODULOS,
+  type ClaveModulo,
+  type EstadoDeConstruccion,
+} from "../modulos/catalogo";
 import {
   PERMISOS_DE_EMPRESA,
   REGLAS_DE_EMPRESA,
@@ -708,23 +712,33 @@ describe("el guard con las reglas reales", () => {
   // para que un módulo `en_desarrollo` agregado después y olvidado no quede sin cubrir. El módulo se marca activo a
   // propósito (el guard rechaza por «en desarrollo» antes de mirar si está activo o qué rol tiene).
   const ENDESARROLLO = (Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]).filter(
-    (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
+    (m) => (CATALOGO_DE_MODULOS[m].estado as EstadoDeConstruccion) === "en_desarrollo",
   );
 
-  it("todo módulo en desarrollo del catálogo es solo produccion (comandas y salon desde S-0r, 17/11/2026; cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12, catalogo, caja y ventas desde el 15/11/2026, DEC-0463, y vidriera desde el 20/11/2026, DEC-0826)", () => {
-    expect([...ENDESARROLLO].sort()).toEqual(["produccion"]);
+  it("ningún módulo del catálogo real está en desarrollo (producción salió el 25/11/2026, DEC-1050; comandas y salon desde S-0r, 17/11/2026; cierre desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12, catalogo, caja y ventas desde el 15/11/2026, DEC-0463, y vidriera desde el 20/11/2026, DEC-0826)", () => {
+    expect([...ENDESARROLLO]).toEqual([]);
   });
 
-  it("las 5 acciones sin construir (todas de producción) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  // Como hoy no queda ningún módulo en desarrollo, la regla del guard se prueba con una copia del catálogo donde producción lo está (lo que fue hasta PRO-A).
+  const CON_PRODUCCION_EN_DESARROLLO: ReglasDeEmpresa = {
+    ...REGLAS_DE_EMPRESA,
+    catalogo: {
+      ...CATALOGO_DE_MODULOS,
+      produccion: { ...CATALOGO_DE_MODULOS.produccion, estado: "en_desarrollo" },
+    } as unknown as ReglasDeEmpresa["catalogo"],
+  };
+  const SIN_CONSTRUIR = Object.keys(
+    CATALOGO_DE_MODULOS.produccion.acciones,
+  ) as (keyof typeof PERMISOS_DE_EMPRESA)[];
+
+  it("las 5 acciones de un módulo en desarrollo (aquí, producción) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
-    const sinConstruir = ENDESARROLLO.flatMap(
-      (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
-    );
+    const sinConstruir = SIN_CONSTRUIR;
     expect(sinConstruir).toHaveLength(5);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(
-          evaluarGuard(REGLAS_DE_EMPRESA, accion, {
+          evaluarGuard(CON_PRODUCCION_EN_DESARROLLO, accion, {
             rol,
             modulosActivos: todosActivos,
             capacidadesDeSucursal: null,
@@ -737,9 +751,7 @@ describe("el guard con las reglas reales", () => {
 
   it("propiedad: para cualquier subconjunto de módulos activos y cualquier rol, un módulo en desarrollo siempre rechaza igual (no depende del rol)", () => {
     const claves = Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[];
-    const sinConstruir = ENDESARROLLO.flatMap(
-      (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
-    );
+    const sinConstruir = SIN_CONSTRUIR;
     fc.assert(
       fc.property(
         fc.subarray(claves),
@@ -748,7 +760,7 @@ describe("el guard con las reglas reales", () => {
         fc.constantFrom(...sinConstruir),
         (activos, enSoloLectura, rol, accion) => {
           expect(
-            evaluarGuard(REGLAS_DE_EMPRESA, accion, {
+            evaluarGuard(CON_PRODUCCION_EN_DESARROLLO, accion, {
               rol,
               modulosActivos: new Set(activos),
               modulosEnSoloLectura: new Set(enSoloLectura),

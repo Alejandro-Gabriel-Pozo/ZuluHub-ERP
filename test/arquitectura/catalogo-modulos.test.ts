@@ -7,6 +7,7 @@ import {
   type DefinicionDeAccion,
   type DefinicionDeModulo,
   EFECTOS_DE_ACCION,
+  type EstadoDeConstruccion,
 } from "../../src/capacidades/modulos/catalogo";
 import { CATALOGO_DE_PLATAFORMA } from "../../src/capacidades/permisos/plataforma";
 import {
@@ -97,7 +98,7 @@ const carpetaExiste = (carpeta: string): boolean => {
 type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
 /** Los módulos declarados en el catálogo cuyas carpetas y casos de uso todavía no existen (T0). */
-const SIN_CONSTRUIR: readonly string[] = ["produccion"];
+const SIN_CONSTRUIR: readonly string[] = [];
 
 /**
  * Acciones de un módulo YA disponible que ninguna declaración de caso de uso nombra (X1 inverso), con lista exacta. Nació con DEC-0463
@@ -418,9 +419,17 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ).toEqual([]);
   });
 
-  it("producción es el único módulo sin construir y sigue en desarrollo; vidriera salió el 20/11/2026 (DEC-0826), stock salió con E5, clientes con E9-T4, compras con E9-T12, catálogo, caja y ventas el 15/11/2026 (DEC-0463) y comandas y salón con S-0r (17/11/2026, Q-S0-3), y son disponibles", () => {
-    expect([...SIN_CONSTRUIR]).toEqual(["produccion"]);
-    for (const clave of ["catalogo", "caja", "ventas", "comandas", "salon", "vidriera"] as const) {
+  it("ningún módulo queda sin construir: producción salió el 25/11/2026 (DEC-1050, PRO-A), vidriera el 20/11/2026 (DEC-0826), stock con E5, clientes con E9-T4, compras con E9-T12, catálogo, caja y ventas el 15/11/2026 (DEC-0463) y comandas y salón con S-0r (17/11/2026, Q-S0-3), y son disponibles", () => {
+    expect([...SIN_CONSTRUIR]).toEqual([]);
+    for (const clave of [
+      "catalogo",
+      "caja",
+      "ventas",
+      "comandas",
+      "salon",
+      "vidriera",
+      "produccion",
+    ] as const) {
       expect(SIN_CONSTRUIR).not.toContain(clave);
       expect(CATALOGO_DE_MODULOS[clave].estado, clave).toBe("disponible");
     }
@@ -472,18 +481,25 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
 
   it("todo módulo en desarrollo del catálogo real figura en SIN_CONSTRUIR: uno nuevo olvidado hace fallar esta prueba (E0-T1)", () => {
     const enDesarrollo = Object.entries(CATALOGO_DE_MODULOS)
-      .filter(([, definicion]) => definicion.estado === "en_desarrollo")
+      .filter(([, definicion]) => (definicion.estado as EstadoDeConstruccion) === "en_desarrollo")
       .map(([clave]) => clave);
     expect(enDesarrollo.filter((clave) => !SIN_CONSTRUIR.includes(clave))).toEqual([]);
   });
 
   it("violación inyectada: un módulo en desarrollo fuera de SIN_CONSTRUIR rompe X1 (ningún caso de uso exige sus acciones)", () => {
+    // Producción ya es disponible: se la vuelve a poner en desarrollo en una copia para probar la regla.
+    const conProduccionEnDesarrollo = {
+      ...CATALOGO_DE_MODULOS,
+      produccion: { ...CATALOGO_DE_MODULOS.produccion, estado: "en_desarrollo" },
+    } as unknown as CatalogoComercial;
     const sinCasosDeProduccion: AccionesPorCarpeta = { ...declaradas, "modulos/produccion": [] };
     expect(
-      crucesDelCatalogo(CATALOGO_DE_MODULOS, sinCasosDeProduccion, carpetaExiste, SIN_CONSTRUIR),
+      crucesDelCatalogo(conProduccionEnDesarrollo, sinCasosDeProduccion, carpetaExiste, [
+        "produccion",
+      ]),
     ).not.toContain("X1: la acción transformaciones.ver no la exige ningún caso de uso");
     expect(
-      crucesDelCatalogo(CATALOGO_DE_MODULOS, sinCasosDeProduccion, carpetaExiste, []),
+      crucesDelCatalogo(conProduccionEnDesarrollo, sinCasosDeProduccion, carpetaExiste, []),
     ).toContain("X1: la acción transformaciones.ver no la exige ningún caso de uso");
   });
 
@@ -523,20 +539,26 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     expect(CATALOGO_DE_MODULOS.cierre.usaSiExiste).toEqual([]);
   });
 
-  it("sin la lista de módulos sin construir, X1 SÍ reclama sus acciones (el perdón es solo de ellos)", () => {
-    const sinCasosDeLosPendientes: AccionesPorCarpeta = Object.fromEntries(
-      Object.entries(declaradas).map(([carpeta, acciones]) => [
-        carpeta,
-        carpeta === "modulos/produccion" ? [] : acciones,
-      ]),
-    );
-    const problemas = crucesDelCatalogo(CATALOGO_DE_MODULOS, sinCasosDeLosPendientes);
-    const pendientes = SIN_CONSTRUIR.flatMap((clave) =>
-      Object.keys(CATALOGO_DE_MODULOS[clave as keyof typeof CATALOGO_DE_MODULOS].acciones),
-    );
+  it("sin construir perdona solo a los módulos de la lista: con producción en la lista, X1 no reclama sus acciones, y sin ella sí", () => {
+    const sinCasosDeProduccion: AccionesPorCarpeta = { ...declaradas, "modulos/produccion": [] };
+    const conProduccionEnDesarrollo = {
+      ...CATALOGO_DE_MODULOS,
+      produccion: { ...CATALOGO_DE_MODULOS.produccion, estado: "en_desarrollo" },
+    } as unknown as CatalogoComercial;
+    const pendientes = Object.keys(CATALOGO_DE_MODULOS.produccion.acciones);
     expect(pendientes.length).toBeGreaterThan(0);
+    const perdonado = crucesDelCatalogo(
+      conProduccionEnDesarrollo,
+      sinCasosDeProduccion,
+      carpetaExiste,
+      ["produccion"],
+    );
+    const reclamado = crucesDelCatalogo(conProduccionEnDesarrollo, sinCasosDeProduccion);
     for (const accion of pendientes) {
-      expect(problemas, accion).toContain(`X1: la acción ${accion} no la exige ningún caso de uso`);
+      expect(perdonado, accion).not.toContain(
+        `X1: la acción ${accion} no la exige ningún caso de uso`,
+      );
+      expect(reclamado, accion).toContain(`X1: la acción ${accion} no la exige ningún caso de uso`);
     }
   });
 

@@ -46,3 +46,13 @@ export async function puedeControlarElStock(contexto: ContextoOperativo): Promis
   const permisos = await permisosDeLaPersona(contexto);
   return permisos !== null && ofertaDe("articulos.controlar", permisos).permitida;
 }
+
+/**
+ * ¿La empresa tiene encendida la función «Producción»? Es la perilla `produccion` del plan, leída del mismo cálculo que el guard (`permisosDelActor`); si no se pudieron leer los permisos,
+ * `false` (cierra, no abre). Solo decide si la ficha ofrece «Se produce en tanda»: encender el control vuelve a exigir la perilla y la receta en el servidor (`controlarArticulo`). Chequeo:
+ * `test/web/ficha-de-producto-acceso.test.ts`.
+ */
+export async function produccionEncendida(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && permisos.funcionesEncendidas.includes("produccion");
+}

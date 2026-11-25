@@ -27,10 +27,17 @@ const CLASES_QUE_SE_CONSUMEN: readonly ClaseDeUso[] = [
   "ELABORADO",
 ];
 /**
- * Lo que `controlarArticulo` (stock) acepta hoy: materia prima, insumo y reventa. El elaborado NO se controla aún (nace cerrado hasta que la empresa encienda la
- * producción, T9): por eso no comparte lista con `CLASES_QUE_SE_CONSUMEN`. Previene: que habilitar el consumo de un elaborado en una opción lo deje controlable por arrastre.
+ * Lo que `controlarArticulo` (stock) acepta siempre: materia prima, insumo y reventa. El elaborado y el vendible solo con la perilla `produccion` y una receta (`seProduceLaClase`):
+ * por eso no comparte lista con `CLASES_QUE_SE_CONSUMEN`. Previene: que habilitar el consumo de un elaborado en una opción lo deje controlable por arrastre.
  */
 const CLASES_QUE_CONTROLAN_STOCK: readonly ClaseDeUso[] = ["MATERIA_PRIMA", "INSUMO", "REVENTA"];
+
+/**
+ * Las clases que pueden tener STOCK PROPIO si la empresa enciende la producción (E6, D94): el elaborado y el vendible. Se controlan con la perilla `produccion` y una receta vigente
+ * (`controlarArticulo`), no por la lista de `seControlaStockLaClase`. Una sola regla para el caso de uso y para la ficha.
+ */
+export const seProduceLaClase = (clase: ClaseDeUso): boolean =>
+  clase === "ELABORADO" || clase === "VENDIBLE";
 
 /** Reventa y producto vendible: llevan alícuota, sección, nombre de cocina, descripción, precio y opciones. */
 export const vendeLaClase = (clase: ClaseDeUso): boolean => CLASES_QUE_VENDEN.includes(clase);

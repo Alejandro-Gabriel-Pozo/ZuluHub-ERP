@@ -14,11 +14,11 @@ export const ACCIONES_DE_LOTES = {
 
 /**
  * Producción (E6, `e6-recetas-produccion-especificacion.md` §3.2 y §3.6): módulo propio, `requiere: [stock]` (decisión del dueño del 26/10: «es bastante
- * complejo como para ser un módulo propio; eso lo aísla mejor»). Nace `en_desarrollo` hasta que T9 lo abra a las empresas: el guard rechaza todo con
- * `MODULO_EN_DESARROLLO`. Efectos: mirar es `LECTURA`; abrir crea; cerrar, cancelar y anular cierran lo iniciado (se permiten en solo lectura).
+ * complejo como para ser un módulo propio; eso lo aísla mejor»). Estaba `en_desarrollo` hasta que el dueño lo abrió para el hotel (25/11/2026, DEC-1050; PRO-A): ahora el guard lo deja pasar. Que una empresa lo use sigue dependiendo de que lo tenga
+ * activo y de la perilla `produccion` (nace apagada). Efectos: mirar es `LECTURA`; abrir crea; cerrar, cancelar y anular cierran lo iniciado (se permiten en solo lectura).
  */
 export const MODULO_DE_PRODUCCION = {
-  estado: "en_desarrollo",
+  estado: "disponible",
   obligatorio: false,
   requiere: ["stock"],
   usaSiExiste: ["catalogo"],

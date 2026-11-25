@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ContextoOperativo } from "../contexto/contexto";
 import { err, ok } from "../primitivas/resultado/resultado";
 import {
   fijarElControlDeStock,
   verElControlDeStock,
+  verLaExistenciaPropia,
   type DependenciasDeControlDeStockWeb,
 } from "./control-de-stock-web";
 
@@ -184,5 +185,115 @@ describe("fijarElControlDeStock", () => {
       expect(JSON.stringify(r)).not.toContain("se cayó");
       expect(m.registrados).toHaveLength(1);
     }
+  });
+});
+
+describe("verLaExistenciaPropia", () => {
+  const entrada = { productoId: ID, nombre: "Medialuna", unidadId: "UNIDAD" };
+  const fila = (productoId: string, existencia: string, unidadId = "UNIDAD") => ({
+    productoId,
+    existencia,
+    unidadId,
+  });
+  const con = (existencias: unknown) =>
+    ({
+      casosDeUso: () => ({}),
+      consultas: () => ({ existencias }),
+      respuesta: { registrar: () => undefined },
+    }) as unknown as DependenciasDeControlDeStockWeb;
+
+  it("suma exacta de los saldos del producto en los depósitos que ve la persona y solo de ese producto (otro con nombre parecido no cuenta)", async () => {
+    const llamadas: unknown[] = [];
+    const d = con((c: unknown, e: unknown) => {
+      llamadas.push([c, e]);
+      return Promise.resolve(
+        ok({
+          existencias: [
+            fila(ID, "12.5000"),
+            fila("otro", "100.0000"),
+            fila(ID, "0.1250"),
+            fila(ID, "-2.0000"),
+          ],
+          siguiente: null,
+        }),
+      );
+    });
+    expect(await verLaExistenciaPropia(d, contexto, entrada)).toEqual({
+      ok: true,
+      dato: { existencia: "10.6250", unidadId: "UNIDAD" },
+    });
+    expect(llamadas).toEqual([[contexto, { texto: "Medialuna", despuesDe: undefined }]]);
+  });
+
+  it("sin filas (nunca se movió) es cero de verdad, en la unidad del producto", async () => {
+    const d = con(() => Promise.resolve(ok({ existencias: [], siguiente: null })));
+    expect(await verLaExistenciaPropia(d, contexto, entrada)).toEqual({
+      ok: true,
+      dato: { existencia: "0.0000", unidadId: "UNIDAD" },
+    });
+  });
+
+  it("recorre las páginas con el cursor de la anterior y suma todas", async () => {
+    const cursor = { nombreClave: "medialuna", articuloId: "a", depositoId: "d" };
+    const pedidos: unknown[] = [];
+    const paginas = [
+      ok({ existencias: [fila(ID, "1.0000", "KILOGRAMO")], siguiente: cursor }),
+      ok({ existencias: [fila(ID, "2.0000", "KILOGRAMO")], siguiente: null }),
+    ];
+    const d = con((_: unknown, e: unknown) => {
+      pedidos.push(e);
+      return Promise.resolve(paginas.shift());
+    });
+    expect(await verLaExistenciaPropia(d, contexto, entrada)).toEqual({
+      ok: true,
+      dato: { existencia: "3.0000", unidadId: "KILOGRAMO" },
+    });
+    expect(pedidos).toEqual([
+      { texto: "Medialuna", despuesDe: undefined },
+      { texto: "Medialuna", despuesDe: cursor },
+    ]);
+  });
+
+  it("falla cerrado: demasiadas páginas, o un nombre que no sirve de búsqueda, es «no se sabe» (null), nunca un cero", async () => {
+    const siempre = vi
+      .fn()
+      .mockResolvedValue(
+        ok({ existencias: [], siguiente: { nombreClave: "m", articuloId: "a", depositoId: "d" } }),
+      );
+    expect(await verLaExistenciaPropia(con(siempre), contexto, entrada)).toEqual({
+      ok: true,
+      dato: null,
+    });
+    expect(siempre).toHaveBeenCalledTimes(5);
+    const noPide = vi.fn();
+    for (const nombre of ["", "   ", "a\u0000b"]) {
+      expect(await verLaExistenciaPropia(con(noPide), contexto, { ...entrada, nombre })).toEqual({
+        ok: true,
+        dato: null,
+      });
+    }
+    expect(noPide).not.toHaveBeenCalled();
+  });
+
+  it("un id que no es uuid es el genérico y no consulta; un error de negocio sale como el genérico y una excepción con referencia", async () => {
+    const consulta = vi.fn();
+    expect(
+      await verLaExistenciaPropia(con(consulta), contexto, { ...entrada, productoId: "x" }),
+    ).toMatchObject({
+      ok: false,
+      error: { codigo: GENERICO },
+    });
+    expect(consulta).not.toHaveBeenCalled();
+    const sinPermiso = con(() => Promise.resolve(err("SIN_PERMISO")));
+    // Un error de negocio del módulo (aquí, sin permiso) sale como el genérico: no dice cuál.
+    expect(await verLaExistenciaPropia(sinPermiso, contexto, entrada)).toMatchObject({
+      ok: false,
+      error: { codigo: GENERICO },
+    });
+    const roto = con(() => Promise.reject(new Error("boom")));
+    expect(await verLaExistenciaPropia(roto, contexto, entrada)).toMatchObject({
+      ok: false,
+      error: { codigo: "ERROR_INTERNO" },
+    });
   });
 });

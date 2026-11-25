@@ -37,6 +37,8 @@ describe.skipIf(base === null)("ventas con stock: cerrar descuenta, anular devue
   let stock: CasosDeUsoDeStock;
   /** Mientras no es `null`, la auditoría de esa acción falla (una falla en el MEDIO del cierre, después de que stock escribió). */
   let fallaAlAuditar: string | null = null;
+  /** Mientras es `true`, los derechos de uso de las empresas muestran ENCENDIDA la perilla `produccion` (el plan de las pruebas no la enciende). */
+  let produccionEncendida = false;
 
   beforeAll(async () => {
     if (base === null) return;
@@ -45,6 +47,24 @@ describe.skipIf(base === null)("ventas con stock: cerrar descuenta, anular devue
       conexiones: 16,
       ajustarTx: (tx: TxDePrueba): TxDePrueba => ({
         ...tx,
+        derechos: {
+          ...tx.derechos,
+          deLaEmpresa: async (contexto) => {
+            const reales = await tx.derechos.deLaEmpresa(contexto);
+            if (!produccionEncendida) return reales;
+            return {
+              ...reales,
+              perillas: new Map(
+                [...reales.perillas].map(([perilla, valor]) => [
+                  perilla,
+                  perilla === "produccion" && valor.tipo === "INTERRUPTOR"
+                    ? { ...valor, encendida: true }
+                    : valor,
+                ]),
+              ),
+            };
+          },
+        },
         auditoria: {
           ...tx.auditoria,
           registrar: async (evento) => {
@@ -235,6 +255,55 @@ describe.skipIf(base === null)("ventas con stock: cerrar descuenta, anular devue
     expect(await controla(t.lineas[0] as string)).toBe(true);
     // La auditoría de la salida y la del ticket quedan en la misma historia, una vez cada una.
     expect(await m.auditoria(e.empresa, "TICKET_EMITIDO")).toHaveLength(1);
+  });
+
+  it("PRO-A: darle stock propio a un plato cambia lo que descuenta TODA venta que se cierre desde entonces, también una cuenta abierta con la línea agregada antes (`controla_stock` solo dice si la línea va a stock; el camino se decide al cerrar)", async () => {
+    const mundo = await mundoNuevo();
+    const { e, dep } = mundo;
+    const harina = await articuloDeBase(m.dueno, e, { clase: "MATERIA_PRIMA" });
+    valorDe(
+      await stock.registrarEntrada(e.gerente, {
+        clave: nuevoId(),
+        depositoId: dep,
+        motivo: "COMPRA",
+        renglones: [{ productoId: harina.producto, cantidad: "100", unidadId: "UNIDAD" }],
+      }),
+    );
+    const plato = await m.productoVendible(e.empresa, "500");
+    valorDe(
+      await stock.guardarComposicion(e.gerente, {
+        productoId: plato,
+        versionEsperada: 0,
+        rinde: "1",
+        componentes: [{ productoId: harina.producto, cantidad: "3", unidadId: "UNIDAD" }],
+      }),
+    );
+    // La cuenta se abre y la línea se agrega ANTES de encenderlo: se sella `controla_stock`.
+    const abierta = await cuentaCon(e, [{ producto: plato, cantidad: "1" }]);
+    expect(await controla(abierta.lineas[0] as string)).toBe(true);
+    produccionEncendida = true;
+    try {
+      const propio = valorDe(await stock.controlarArticulo(e.gerente, { productoId: plato }));
+      // Cierra la cuenta que ya estaba abierta.
+      const t1 = valorDe(await cerrar(e.gerente, abierta.cuenta));
+      const salida1 = (await delEjemplar(t1.ejemplarId, "SALIDA"))[0] as { id: string };
+      const renglones1 = await renglonesDe(salida1.id);
+      // Una venta nueva (línea agregada DESPUÉS de encenderlo): descuenta el stock propio y deja los ingredientes.
+      const t2 = await vender(mundo, [{ producto: plato, cantidad: "1" }]);
+      const salida2 = (await delEjemplar(t2.ejemplarId, "SALIDA"))[0] as { id: string };
+      const renglones2 = await renglonesDe(salida2.id);
+      // Las dos descuentan el stock propio (artículo del plato) y ninguna toca la harina: una cuenta que quedó abierta al encenderlo NO conserva el camino de los ingredientes.
+      const dePropio = (rs: typeof renglones1) =>
+        rs.map((r) => r.articulo_id === propio.articuloId);
+      const deHarina = (rs: typeof renglones1) => rs.map((r) => r.articulo_id === harina.articulo);
+      expect({
+        cuentaAbierta: [dePropio(renglones1), deHarina(renglones1)],
+        ventaNueva: [dePropio(renglones2), deHarina(renglones2)],
+      }).toEqual({ cuentaAbierta: [[true], [false]], ventaNueva: [[true], [false]] });
+      expect(await existencia(dep, harina.articulo)).toBe("100.0000");
+    } finally {
+      produccionEncendida = false;
+    }
   });
 
   it("solo descuenta lo que controla: una línea anulada no, un producto sin artículo ni receta no (la venta pasa, D140); una receta descuenta sus componentes", async () => {

@@ -2,7 +2,10 @@
  * La lógica del editor de un borrador de plan (pantalla «Planes» de la consola). Puro: sin Next ni React. Las reglas de integridad las decide el servidor (`validarVersionDePlan`); acá solo se
  * ayuda a armar el contenido: los módulos que otro pide se marcan solos, al quitar uno se quitan los que dependen de él, y se advierte (sin bloquear) lo que el plan deja inconsistente.
  */
-import { CATALOGO_DE_MODULOS } from "../../../src/capacidades/modulos/catalogo";
+import {
+  CATALOGO_DE_MODULOS,
+  type EstadoDeConstruccion,
+} from "../../../src/capacidades/modulos/catalogo";
 import {
   diferenciaEntreVersiones,
   type ContenidoParaComparar,
@@ -44,7 +47,7 @@ export const modulosParaElegir = (): readonly ModuloParaElegir[] =>
       clave,
       rotulo: rotuloDeModulo(clave),
       obligatorio: d.obligatorio,
-      enDesarrollo: d.estado === "en_desarrollo",
+      enDesarrollo: (d.estado as EstadoDeConstruccion) === "en_desarrollo",
       requiere: d.requiere,
     };
   });

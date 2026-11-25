@@ -775,7 +775,7 @@ describe.skipIf(base === null)("stock: depósitos y artículos", () => {
 
   // =============================================================================================
   describe("controlarArticulo y dejarDeControlar", () => {
-    it("controla la materia prima, el insumo y la reventa con la unidad base del producto, y lo audita; el elaborado y el vendible no (CLASE_NO_CONTROLABLE)", async () => {
+    it("controla la materia prima, el insumo y la reventa con la unidad base del producto, y lo audita; el elaborado y el vendible sin la perilla de producción no (FUNCION_NO_INCLUIDA)", async () => {
       for (const clase of ["MATERIA_PRIMA", "INSUMO", "REVENTA"] as const) {
         const producto = await productoDeBase(c.dueno, e.empresa, {
           clase,
@@ -808,9 +808,10 @@ describe.skipIf(base === null)("stock: depósitos y artículos", () => {
       }
       for (const clase of ["ELABORADO", "VENDIBLE"] as const) {
         const producto = await productoDeBase(c.dueno, e.empresa, { clase });
+        // Sin la perilla `produccion` (y sin receta) el elaborado y el vendible siguen rechazados; con ellas se controlan (`stock-propio-de-elaborados.test.ts`).
         expect(await c.casos.controlarArticulo(e.gerente, { productoId: producto })).toEqual({
           ok: false,
-          error: "CLASE_NO_CONTROLABLE",
+          error: { error: "FUNCION_NO_INCLUIDA", perilla: "produccion" },
         });
         expect(
           await c.contar("select count(*) as n from articulo_de_stock where producto_id = $1", [

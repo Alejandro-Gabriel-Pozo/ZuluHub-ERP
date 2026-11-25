@@ -69,3 +69,38 @@ describe("puedeEditarProductos", () => {
     expect(await puedeEditarProductos(contexto())).toBe(false);
   });
 });
+
+/** «Se produce en tanda» solo se ofrece con la función «Producción» encendida en el plan; sin ella o sin poder leer el plan, la ficha queda como estaba (todo nace cerrado). */
+const RUTA_DE_OFERTAS = "../../apps/web/servidor/ofertas-de-catalogo";
+const produccionEncendida = async (contexto: never): Promise<boolean> => {
+  const modulo = (await import(/* @vite-ignore */ RUTA_DE_OFERTAS)) as {
+    produccionEncendida: (c: never) => Promise<boolean>;
+  };
+  return modulo.produccionEncendida(contexto);
+};
+
+describe("produccionEncendida", () => {
+  const conPlan = (funcionesEncendidas: string[]) => {
+    mundo.permisos = ok({
+      acciones: [],
+      modulos: { activos: ["catalogo"], enSoloLectura: [] },
+      funcionesEncendidas,
+    });
+  };
+
+  it("con la perilla `produccion` encendida: sí; sin ella o con otras: no", async () => {
+    conPlan(["produccion", "subcomposiciones"]);
+    expect(await produccionEncendida(contexto())).toBe(true);
+    conPlan(["subcomposiciones"]);
+    expect(await produccionEncendida(contexto())).toBe(false);
+    conPlan([]);
+    expect(await produccionEncendida(contexto())).toBe(false);
+  });
+
+  it("si no se pudieron leer los permisos (rechazo o excepción): no", async () => {
+    mundo.permisos = err({ codigo: "SIN_PERMISO" });
+    expect(await produccionEncendida(contexto())).toBe(false);
+    mundo.fallan = true;
+    expect(await produccionEncendida(contexto())).toBe(false);
+  });
+});
