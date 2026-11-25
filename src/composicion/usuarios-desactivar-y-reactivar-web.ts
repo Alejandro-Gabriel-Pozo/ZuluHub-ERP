@@ -53,7 +53,8 @@ export function reactivarUsuario(
       const miembro = miembros.valor.find((m) => m.personaId === entrada.personaId);
       if (miembro === undefined) return err("MEMBRESIA_NO_ENCONTRADA");
       if (miembro.activo) return err("NO_ESTA_DESACTIVADA");
-      if (miembro.rol === "GERENTE") return err("ROL_NO_INVITABLE");
+      // Un rol propio no se invita: el gerente la pasa antes a un rol base (la base no deja reactivarla con otro rol).
+      if (miembro.rol === "GERENTE" || miembro.rol === "PROPIO") return err("ROL_NO_INVITABLE");
       return d.casosDeUso().invitarUsuario(contexto, {
         email: miembro.email,
         rol: miembro.rol,

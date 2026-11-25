@@ -1,5 +1,5 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
-import type { RolDeEmpresa } from "../capacidades/permisos/roles";
+import { rolParaMostrar, type RolDeEmpresa } from "../capacidades/permisos/roles";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type { SucursalDeLista } from "../modulos/empresas/publico";
 import type { InvitacionPendienteDeLaLista, MiembroDeLista } from "../modulos/identidad/publico";
@@ -71,7 +71,7 @@ export type ListaDeUsuariosParaLaPantalla = Readonly<{
 const delUsuario = (m: MiembroDeLista): UsuarioParaLaPantalla => ({
   personaId: m.personaId,
   email: m.email,
-  rol: m.rol,
+  rol: rolParaMostrar(m.rol),
   activo: m.activo,
 });
 

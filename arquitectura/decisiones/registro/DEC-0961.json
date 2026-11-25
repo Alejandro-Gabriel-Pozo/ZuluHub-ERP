@@ -2,10 +2,9 @@
   "id": "DEC-0961",
   "fecha": "2026-11-25",
   "quien": "sesión",
-  "tipo": "SIN_DECISION",
+  "tipo": "PERMISOS",
   "estado": "PENDIENTE_DE_OK",
-  "decision": "SUPUESTO: la raíz lista hasta 20 cartas en línea de la empresa, ordenadas por nombre, y cada una solo si su dirección realmente la serviría (sucursal abierta, empresa que opera, plan con la carta).",
-  "que_cambia": "Nada que vea el negocio con pocas sucursales; con más de 20 cartas en línea la raíz muestra las 20 primeras por nombre. Se revierte cambiando una constante (TOPE_DE_CARTAS_DE_LA_RAIZ).",
-  "donde": "src/puertos/vidriera-publica.ts (TOPE_DE_CARTAS_DE_LA_RAIZ) y src/adaptadores/postgres/vidriera-publica.ts (listarDelHost)",
-  "motivo": "El plan no fijaba un tope ni decía qué hacer con una carta en línea que su plan ya no deja servir; confirmar cada candidata con la lectura por código evita listar enlaces que dan 404 y no abre más tablas al rol público."
+  "decision": "A quien tiene un rol propio no se lo reinvita con ese rol: el gerente lo pasa antes a un rol base y reactivar sigue siendo solo por invitación; la base lo impone.",
+  "que_cambia": "Una persona con rol propio que se apaga se reasigna a Administrador o Empleado antes de invitarla de nuevo; reactivar no cambia.",
+  "donde": "migraciones/0097_roles_propios_de_la_empresa.sql (membresia_validar_cambio); src/modulos/identidad/dominio/invitacion.ts"
 }

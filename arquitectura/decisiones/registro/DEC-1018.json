@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1018",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Textos propios para tres errores al gestionar depósitos: «El depósito tiene existencia», «No se puede desactivar el depósito de venta» y «Otra persona modificó este depósito. Actualizá la pantalla».",
+  "que_cambia": "Tres claves stock.error.* nuevas con su código público. «Tiene un conteo abierto» reutiliza el texto aprobado de conteo en curso; el resto sigue con el genérico. Revertir: sacar las tres claves y sus códigos.",
+  "donde": "Dueño 25/11/2026, fila 449 de decisiones-del-dueno-2026-11.md (los dos primeros) y fila 173, aceptado por el orquestador por delegación (el tercero); dia-uno-stock-inventario-de-textos-2026-11-25.md N-20, N-21 y N-23"
+}
