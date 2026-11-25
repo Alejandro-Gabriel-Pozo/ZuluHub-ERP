@@ -457,13 +457,17 @@ Decisión del dueño, 25/11/2026: tener la base de datos propia es un **extra de
 
 **Estado:** el mecanismo está en `migrar.yml` (ambiente `cliente-<codigo>`, frase `MIGRAR CLIENTE-<CODIGO>`, respaldo obligatorio). La lista de clientes está **vacía**: no hay ninguno dado de alta. La carga de variables al proyecto de Vercel del cliente (`cargar-entorno.yml`) **todavía no existe**; hasta entonces se cargan a mano.
 
-### H.1 Neon (una organización aparte para los clientes)
+### H.1 Neon (la organización `Pedernal`, un proyecto por cliente y una clave por proyecto)
 
-1. Creá una **organización de Neon aparte** para los proyectos de clientes. Motivo: no se sabe qué alcance admite una clave de API de Neon (**NO VERIFICADO**: verificalo en la consola antes de crearla). Si una clave puede tocar todos los proyectos de su organización, que esa organización no tenga el proyecto de producción.
+1. Los proyectos de clientes se crean **en la organización `Pedernal`** (la de la producción nueva), **por vos en la consola, nunca por una sesión**. No hace falta una organización aparte: lo que separa a un cliente de otro, y de la producción, es la **clave limitada a un proyecto**.
 2. Un proyecto por cliente, en la misma región de hoy (`aws-sa-east-1`, São Paulo) y Postgres 18.
-3. Renombrá la rama predeterminada a `production` y protegela: `migrar.yml` busca la rama de respaldo por ese nombre.
-4. Creá una clave de API **propia de clientes**, con el alcance mínimo que Neon permita, y anotá el identificador del proyecto.
+3. Dejá la rama predeterminada con el nombre `production` y protegela: `migrar.yml` busca la rama de respaldo por ese nombre (`select(.name == "production")`) y no cambia.
+4. Creá, como administrador de la organización, **una clave de API limitada a ESE proyecto** («project-scoped»; solo un administrador de la organización las crea). Una por proyecto: la de producción no alcanza a los clientes y la de un cliente no alcanza a producción ni a otro cliente. Anotá el identificador del proyecto.
+   - **Qué puede la clave de un proyecto** (documentación pública de Neon, leída el 25/11/2026 por buscador; confirmalo en la consola): acceso de editor sobre ese proyecto, es decir leer y modificar lo que hay adentro (ramas, bases, roles).
+   - **Qué no puede:** borrar el proyecto, crear otros proyectos, crear otras claves ni ver otros proyectos.
+   - **Lo que sí puede y conviene tener presente:** como editor, una clave de proyecto **sí puede borrar o resetear una rama de ese proyecto**. Lo que impide que `migrar.yml` lo haga no es la clave sino el workflow (solo lista y crea ramas) y la prueba `workflows-y-neon.test.ts`.
 5. Copiá la cadena **DIRECTA** del dueño de la base (apagá «Connection pooling»).
+6. **Costo:** la organización `Pedernal` está hoy en el plan gratuito; un cliente con base propia probablemente exija un plan pago (precio del extra: pregunta ya registrada, ver `base-por-cliente-opciones.md`, pregunta 2).
 
 ### H.2 GitHub: un Environment por cliente
 
