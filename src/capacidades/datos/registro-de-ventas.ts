@@ -11,6 +11,10 @@ const HOJA = "apps/web/ui/plantillas/venta/HojaDeProducto.cliente.tsx";
 // La prueba del componente de elección arma el campo suelto: es el único lugar fuera de la hoja que lo pide.
 const PRUEBA_DEL_GRUPO = "apps/web/ui/componentes/GrupoDeOpciones.test.tsx";
 const CONTROL_DE_CANTIDAD = "apps/web/ui/plantillas/venta/ControlDeCantidad.cliente.tsx";
+// SAL-C: anular un ítem ya enviado desde la ficha de la mesa del salón (cantidad y motivo).
+const ANULAR_UN_ITEM_ENVIADO = "apps/web/ui/plantillas/salon/HojaDeAnularItem.cliente.tsx";
+const FUENTE_DE_ANULAR_UN_ITEM =
+  "Pedernal-docs/11-especificaciones/briefs/salon/SAL-C-cocina-e-impresion.md §1 y §3 (S6, anular un ítem ya enviado con motivo obligatorio y cantidad), decisión 155 de 11-especificaciones/decisiones-del-dueno-2026-11.md (con todo auditado: quién, cuándo y por qué) y la maqueta `salon.html` (carpeta de prototipos de Pedernal-docs 10-ux-ui, aprobada el 09/11/2026)";
 const FUENTE_DE_LA_VENTA =
   "Pedernal-docs/11-especificaciones/servidor-del-mostrador-minimo.md §7 y la maqueta de venta rápida `venta-rapida-v4.html` (carpeta de prototipos de Pedernal-docs 10-ux-ui), tabla «Campos y sus datos»; decisiones 162 y 166 (cantidad: decimal exacto con paso mínimo) y fila 171 de 11-especificaciones/decisiones-del-dueno-2026-11.md";
 const PROPOSITO = (para: string): Proposito => ({ para, fuente: FUENTE_DE_LA_VENTA });
@@ -33,9 +37,13 @@ export const DATOS_DE_VENTAS = {
       PROPOSITO(
         "Cantidad de una línea ya agregada a la cuenta de la venta rápida: se corrige escribiéndola (sin botones − ni +).",
       ),
+      {
+        para: "Cantidad que se anula de un ítem ya enviado a cocina desde la ficha de la mesa del salón: la enviada por defecto; menos es una anulación parcial. El servidor valida que no supere lo que hay y que sea múltiplo del paso.",
+        fuente: FUENTE_DE_ANULAR_UN_ITEM,
+      },
     ],
-    consumidores: [CONTROL_DE_CANTIDAD],
-    ponerPor: ["cuentas.agregar_linea"],
+    consumidores: [CONTROL_DE_CANTIDAD, ANULAR_UN_ITEM_ENVIADO],
+    ponerPor: ["cuentas.agregar_linea", "cuentas.anular_linea"],
     requiere: REQUIERE_VENTAS,
   },
   "eleccion-de-opcion-de-venta": {
@@ -125,9 +133,13 @@ export const DATOS_DE_VENTAS = {
       PROPOSITO_DEL_COBRO(
         "Motivo con el que se anula un ticket entero (decisión 172), desde el resultado de cobrar o desde la ficha del ticket en «Tickets del día».",
       ),
+      {
+        para: "Motivo, obligatorio, con el que se anula un ítem ya enviado a cocina desde la ficha de la mesa del salón; queda en el aviso a la cocina y en la auditoría.",
+        fuente: FUENTE_DE_ANULAR_UN_ITEM,
+      },
     ],
-    consumidores: [ANULAR_EL_TICKET],
-    ponerPor: ["tickets.corregir"],
+    consumidores: [ANULAR_EL_TICKET, ANULAR_UN_ITEM_ENVIADO],
+    ponerPor: ["tickets.corregir", "cuentas.anular_linea"],
     requiere: REQUIERE_VENTAS,
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;

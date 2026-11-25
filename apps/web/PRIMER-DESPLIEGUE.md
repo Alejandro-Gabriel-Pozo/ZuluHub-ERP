@@ -350,6 +350,29 @@ mostrarlo** (por ejemplo `read -rs CRON_SECRET; export CRON_SECRET`) y no lo cop
 | 14  | **La IP de confianza llega y no se deja falsificar** (`x-vercel-forwarded-for`, NO VERIFICADO) | Pedí el inicio de sesión de dos maneras y mirá el registro de la función (Vercel → Logs): (a) normal, `curl -si -X POST -H 'content-type: application/json' -d '{"provider":"google","callbackURL":"/"}' <URL>/api/auth/sign-in/social`; (b) igual pero con `-H 'x-vercel-forwarded-for: 1.1.1.1, 2.2.2.2'` | En (a) y en (b) **no** aparece el aviso «falling back to a single shared per-path bucket». Si aparece en (a), el encabezado no llega; si aparece en (b), Vercel **no** lo pisa y un cliente lo falsifica. En cualquiera de los dos casos NO se enciende: se pasa a `x-real-ip` o `x-forwarded-for` (Vercel documenta que los pisa) cambiando `ENCABEZADO_DE_IP`. Nunca se registra ni se copia el valor de la IP; solo se anota si el encabezado llegó y con un único valor |
 | 15  | **Ingreso con Google sin JavaScript** (`form-action 'self'`, NO VERIFICADO)                    | En Chrome con JavaScript desactivado (Configuración → Privacidad y seguridad → Configuración de sitios → JavaScript → No permitir), tocá «Ingresar con Google» en el despliegue de prueba                                                                                                                   | Te lleva a `accounts.google.com`. Si Chrome lo bloquea por la política `form-action 'self'` (consola: «Refused to send form data»), se anota y se ajusta la política en un cambio aparte; con JavaScript el ingreso anda igual                                                                                                                                                                                                                                              |
 
+### Las pruebas de humo, en un solo comando (`npm run humo`)
+
+Repite solo de lectura (solo pedidos GET; nada se escribe, nada se despliega) las comprobaciones 3, 4, 6, 7, 8, 9 y 13 de arriba, más lo que se pueda
+ver sin sesión de «no se mezclan las empresas» (los encabezados `x-pd-*` forjados no cambian nada, una ruta interna `/s/…` pedida desde afuera es la
+neutra, sin sesión no se entra a lo privado), «solo se sirve lo activo» (una carta activa sí, un host retirado cae a la neutra) y «nunca En
+mantenimiento». Cada chequeo sale `PASA`, `FALLA` u `OMITIDO` (con el motivo); **un chequeo que no se pudo hacer nunca sale como pasa**.
+Código de salida: 0 sin fallas, 1 si algo falla, 2 si falta la variable obligatoria.
+
+Las direcciones y la cadena se cargan en la terminal, **sin escribirlas en ningún archivo del repositorio** (los valores no se imprimen):
+
+| Variable                                                    | Para qué                                                                                                                |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `PEDERNAL_HUMO_URL_TECNICA`                                 | **Obligatoria.** La dirección `*.vercel.app` del despliegue (https; `http://localhost` solo para pruebas locales)       |
+| `PEDERNAL_HUMO_URL_APP`                                     | La dirección de la aplicación (host de la superficie APP). Sin ella se omiten H0-04, H1-02 y H1-03                      |
+| `PEDERNAL_HUMO_URL_CARTA` y `PEDERNAL_HUMO_CODIGO_DE_CARTA` | Una carta ACTIVA conocida y su código. Sin ellas se omiten H12-01 y H12-02                                              |
+| `PEDERNAL_HUMO_URL_RETIRADA`                                | Un host retirado o sin registrar. Sin ella se omite H12-03                                                              |
+| `PEDERNAL_HUMO_DB_LECTURA`                                  | Cadena de **solo lectura** de la base compartida, con el rol público. Sin ella, el aislamiento del hotel es paso manual |
+
+**Aislamiento del hotel (HDN-01).** Los dominios que terminan en `hotelesdelneuquen.com.ar` no tienen que figurar en la base compartida. Con la
+cadena de lectura el comando los cuenta (una transacción `READ ONLY`, siempre con `ROLLBACK`) y tiene que dar 0. **Límite:** con el rol público solo se
+ven los dominios **ACTIVOS** (los que la web serviría); los pendientes, verificados o retirados no. Para verlos todos, el paso manual, como dueño, en
+el SQL Editor de Neon sobre la base compartida: `SELECT count(*) FROM dominio WHERE host LIKE '%hotelesdelneuquen.com.ar';` (tiene que dar 0).
+
 ---
 
 ## D. Plan B si Vercel no entiende el workspace

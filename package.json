@@ -41,6 +41,7 @@
     "consola:cargar-entorno": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/cargar-entorno-consola.ts",
     "plataforma:login-temporal": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/login-temporal-de-plataforma.ts",
     "plataforma:baja-admin": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/baja-de-admin.ts",
+    "humo": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/humo.ts",
     "plataforma:resetear-segundo-factor": "node --import ./scripts/cargador-de-ts.mjs --experimental-transform-types --disable-warning=ExperimentalWarning scripts/resetear-segundo-factor.ts"
   },
   "devDependencies": {

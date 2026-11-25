@@ -75,6 +75,8 @@ export type LineaDeLaFicha = Readonly<{
   /** Estado de comanda: lo que falta enviar, lo que espera y lo enviado con su número de envío. */
   comanda: "PARA_ENVIAR" | "ESPERA" | "ENVIADA";
   numeroDeEnvio: number | null;
+  /** El envío en que salió el ítem (para reimprimir su papel); `null` si todavía no se envió. */
+  envioId: string | null;
   /** «De la mesa N»: el número de la mesa de la que vino el ítem por una unión. */
   deLaMesa: number | null;
 }>;
@@ -366,6 +368,7 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
                   ? "ESPERA"
                   : "PARA_ENVIAR",
               numeroDeEnvio: f?.numeroDeEnvio ?? null,
+              envioId: f?.envioId ?? null,
               deLaMesa: unidas.has(l.id)
                 ? (numeroDeOrigen.get(unidas.get(l.id)?.mesaOrigenId ?? "") ?? null)
                 : null,
