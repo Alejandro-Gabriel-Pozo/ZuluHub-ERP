@@ -289,6 +289,23 @@ export type ComprasDb = {
     registrado_en: DeLaBase<Date>;
     registrado_por: string;
   };
+  /** N3 (0098): la corrección de lo recibido de una línea de recepción separada confirmada. Solo inserción; la base ajusta el saldo de la línea al insertarla. */
+  correccion_de_lo_recibido: {
+    id: string;
+    empresa_id: string;
+    recepcion_id: string;
+    linea: number;
+    numero: number;
+    cantidad_anterior: string;
+    cantidad_nueva: string;
+    causa: string;
+    nota: string | null;
+    movimiento_id: string;
+    clave_idempotencia: string;
+    huella: string;
+    registrado_en: DeLaBase<Date>;
+    registrado_por: string;
+  };
   /** N4 (0066): la orden de compra al proveedor. El número, los momentos y el motivo de cierre los fija la base al cambiar de estado. */
   orden_de_compra: {
     id: Generated<string>;

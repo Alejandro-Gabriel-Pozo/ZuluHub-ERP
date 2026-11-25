@@ -42,6 +42,10 @@ export const MENSAJES_DE_ERROR_DE_DOMINIOS = {
   MARCA_NO_ENCONTRADA: "No se encontró la marca indicada.",
   MARCA_RETIRADA: "La marca está retirada y no admite dominios nuevos.",
   EMPRESA_NO_ENCONTRADA: "No se encontró la empresa indicada.",
+  // Sin texto propio (interfaz sobria, DEC-0913): usa el genérico ya aprobado; el motivo exacto se ve en la lista (la empresa ya tiene ese host).
+  EMPRESA_YA_TIENE_HOST_DE_ESA_SUPERFICIE: "Esta acción no está permitida.",
+  // Sin texto propio (interfaz sobria): el genérico ya aprobado; no dice cuáles son los hosts protegidos.
+  HOST_PROTEGIDO: "Esta acción no está permitida.",
   FECHA_DE_VERIFICACION_INVALIDA:
     "La fecha de la verificación no es válida: no puede ser futura ni estar vacía.",
   FECHA_DE_VERIFICACION_INMUTABLE:

@@ -3,8 +3,10 @@ import { crearVidrieraPublica } from "../adaptadores/postgres/vidriera-publica";
 import { crearMemoriaDeLogos } from "../capacidades/activos/memoria-de-logos";
 import { CATALOGO_DE_MODULOS } from "../capacidades/modulos/catalogo";
 import { CATALOGO_DE_PERILLAS } from "../capacidades/planes/perillas";
+import type { ContextoOperativo } from "../contexto/contexto";
 import { crearCasosDeUsoDeCatalogo, crearConsultasDeCatalogo } from "../modulos/catalogo/publico";
 import { crearExistenciasDeCatalogo, generarCodigoDeCarta } from "./existencias-de-catalogo";
+import { ok } from "../primitivas/resultado/resultado";
 import { perezoso } from "./perezoso";
 import type { BaseDeWeb } from "./web-base";
 
@@ -19,6 +21,22 @@ export function armarWebDeCatalogo({ conexiones, reglas, reloj }: BaseDeWeb) {
         catalogoDeModulos: CATALOGO_DE_MODULOS,
         catalogoDePerillas: CATALOGO_DE_PERILLAS,
       }),
+    ),
+    /**
+     * La dirección propia ACTIVA de la carta de la empresa del contexto (dominio propio): una lectura de solo lectura con el rol de la app, que ve únicamente lo de su empresa
+     * (0095). El permiso ya lo exigió la consulta de la carta que la precede; acá no se decide ninguno.
+     */
+    hostPropioDeLaCarta: perezoso(
+      () =>
+        async (contexto: ContextoOperativo): Promise<string | null> => {
+          const leido = await conexiones
+            .transaccionesDeApp()
+            .ejecutar({ contexto, aislamiento: "read committed", soloLectura: true }, async (tx) =>
+              ok(await tx.hostsPropios.activoDe("CARTA")),
+            );
+          // `ok` es el único camino: lo demás (un error de la base) sale como excepción y llega a `aRespuestaDeExcepcion`.
+          return leido.ok ? leido.valor : null;
+        },
     ),
     /**
      * El logo de la carta por dirección externa (§5.7.5): el traedor seguro de imágenes y la memoria de lo traído (acotada, con corte de fallos). Una sola de cada una por

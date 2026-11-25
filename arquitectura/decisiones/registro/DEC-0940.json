@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0940",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Se corrige la línea que entró entera a un solo depósito de uso normal; no se corrige a cero ni lo que entró repartido o a cuarentena. Respeta el control de existencia negativa.",
+  "que_cambia": "Esas líneas se rechazan con el mensaje genérico. Una recepción que no llegó se anula. Revertir: sumar los casos, es código y quizás una migración.",
+  "donde": "corregir-lo-recibido.ts, compras-correccion-recibido.test.ts"
+}

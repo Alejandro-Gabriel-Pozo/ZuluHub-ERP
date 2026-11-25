@@ -13,6 +13,9 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  *  3. Sin el aviso «El stock entra cuando se confirma la recepción» de la maqueta (Interfaz sobria: lo rechazó el orquestador el 25/11/2026).
  *  4. El detalle muestra cada línea con lo recibido en la unidad en que se compró («2 kg»); no muestra «Entra a tu stock» ni importes.
  *  5. La sucursal no es un campo: la pone el servidor (la elegida en este dispositivo). Una recepción de otra sucursal sale como una que no existe.
+ *  6. «Corregir lo recibido» (PR D, decisión del dueño del 25/11/2026, DEC-0937): en el detalle de una recepción CONFIRMADA, un botón por línea para gerente y administrador abre una hoja con la cantidad
+ *     que de verdad llegó, el motivo (lista cerrada: error de carga, reparto interno, faltante del proveedor) y una nota opcional; abajo, «Correcciones» con la historia. SUPUESTO (DEC-0939): el botón vive en el detalle
+ *     de la RECEPCIÓN (la maqueta lo muestra en el detalle de la factura, donde lo recibido se ve por sucursal sumado): acá hay una línea por recepción y el servidor necesita saber cuál. Mover el botón es solo de pantalla.
  */
 
 type FuenteDeTexto = Readonly<{ decidio: string; donde: string }>;
@@ -66,6 +69,7 @@ export const FICHA_DE_RECEPCIONES = {
     "apps/web/ui/plantillas/compras/rutas-de-compras.ts",
     "apps/web/ui/plantillas/compras/nueva/PantallaDeNuevaCompra.cliente.tsx",
     "apps/web/ui/plantillas/compras/recepciones/AccionesDeLaRecepcion.cliente.tsx",
+    "apps/web/ui/plantillas/compras/recepciones/CorregirLoRecibido.cliente.tsx",
     "apps/web/ui/plantillas/compras/recepciones/PantallaDeDetalleDeRecepcion.tsx",
     "apps/web/ui/plantillas/compras/recepciones/PantallaDeListaDeRecepciones.tsx",
     "apps/web/ui/plantillas/compras/recepciones/modelo-de-recepciones.ts",
@@ -109,6 +113,18 @@ export const FICHA_DE_RECEPCIONES = {
       id: "anular-recepcion-confirmar",
       texto: "ventas.ticket.anular",
       hace: { envia: "recepciones.anular" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "corregir-lo-recibido",
+      texto: "compras.recepcion.corregir_recibido",
+      hace: { envia: "compras.corregir" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "corregir-lo-recibido-enviar",
+      texto: "compras.correccion.corregir",
+      hace: { envia: "compras.corregir" },
       sinPermiso: "AUSENTE",
     },
     {
@@ -201,6 +217,53 @@ export const FICHA_DE_RECEPCIONES = {
     "catalogo.lista.sin_resultados": { usos: ["lista vacía"], fuente: DE_LA_MAQUETA },
     "fiscal.pantalla.listado_pagina_siguiente": {
       usos: ["enlace al pie de la lista, solo si hay otra página"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.recepcion.corregir_recibido": {
+      usos: [
+        "botón de cada línea de una recepción confirmada y título de la hoja, solo gerente y administrador",
+      ],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.correccion.corregir": {
+      usos: ["botón que envía la corrección de lo recibido"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.recepcion.cantidad_recibida": {
+      usos: ["campo de la cantidad que de verdad llegó, en la hoja de corregir"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.recepcion.motivo_correccion": {
+      usos: ["selector del motivo de la corrección (lista cerrada)"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.recepcion.causa_error_de_carga": {
+      usos: ["opción del motivo y de la historia de correcciones"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.recepcion.causa_reparto_interno": {
+      usos: ["opción del motivo y de la historia de correcciones"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.recepcion.causa_faltante": {
+      usos: ["opción del motivo y de la historia de correcciones"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "compras.recepcion.aviso_reparto": {
+      usos: ["aviso de la hoja cuando el motivo es «Reparto interno»"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "clientes.formulario.nota": {
+      usos: ["nota opcional de la corrección de lo recibido"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "cierre.control.correcciones": {
+      usos: ["título de la historia de correcciones del detalle de la recepción"],
+      fuente: DE_LA_MAQUETA,
+    },
+    "conexion.enviando": { usos: ["botón de la hoja mientras envía"], fuente: DE_LA_MAQUETA },
+    "estado.reintentar": {
+      usos: ["reintento de la corrección tras un corte (misma clave, mismo pedido)"],
       fuente: DE_LA_MAQUETA,
     },
     "compras.error.sin_permiso": {

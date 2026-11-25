@@ -4,12 +4,14 @@ import type { ClaveAccion } from "../../../src/capacidades/modulos/catalogo";
 import {
   anularLaRecepcion,
   confirmarLaRecepcion,
+  corregirLoRecibidoDeLaRecepcion,
   fichaDeLaRecepcion,
   listarLasRecepciones,
   registrarLaRecepcion,
   type DependenciasDeRecepcionesWeb,
   type FichaDeRecepcionParaLaPantalla,
   type ListaDeRecepcionesParaLaPantalla,
+  type LoRecibidoCorregidoParaLaPantalla,
   type RecepcionRegistradaParaLaPantalla,
 } from "../../../src/composicion/recepciones-web";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
@@ -33,9 +35,11 @@ import { sucursalDelPedido } from "./sucursal-elegida";
  * transacción. Ninguna acción redirige (un `redirect` dentro de una acción pierde el host): devuelven el resultado y la pantalla navega.
  */
 
+export { CAUSAS_DE_CORRECCION } from "../../../src/composicion/recepciones-web";
 export type {
   FichaDeRecepcionParaLaPantalla,
   ListaDeRecepcionesParaLaPantalla,
+  LoRecibidoCorregidoParaLaPantalla,
   RecepcionRegistradaParaLaPantalla,
 };
 
@@ -80,6 +84,7 @@ export async function accionesDeLaRecepcion(
     registrar: puede("recepciones.registrar"),
     confirmar: puede("recepciones.confirmar"),
     anular: puede("recepciones.anular"),
+    corregir: puede("compras.corregir"),
   };
 }
 
@@ -149,4 +154,16 @@ export async function anularLaRecepcionDeLaPantalla(
   return r.ok
     ? { estado: "HECHO", ruta: rutaDeLaRecepcion(recepcionId) }
     : { estado: "ERROR", error: r.error };
+}
+
+/**
+ * «Corregir lo recibido»: el pedido (con la clave del intento, la recepción, la línea, lo que se vio, la cantidad, la causa y la nota) lo valida la composición con su lista de permitidos. La empresa y la persona salen
+ * de la sesión. El permiso, el alcance de la sucursal de la recepción, la idempotencia y toda cuenta los decide el caso de uso dentro de su transacción.
+ */
+export function corregirLoRecibidoDelFormulario(
+  pedido: unknown,
+): Promise<Respuesta<LoRecibidoCorregidoParaLaPantalla>> {
+  return conLaEmpresa((contexto) =>
+    corregirLoRecibidoDeLaRecepcion(dependencias, contexto, pedido),
+  );
 }

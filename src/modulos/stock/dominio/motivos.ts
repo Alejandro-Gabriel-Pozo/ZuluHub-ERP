@@ -1,4 +1,5 @@
 import {
+  ORIGEN_CORRECCION_DE_RECEPCION,
   ORIGEN_DEVOLUCION_A_PROVEEDOR,
   ORIGEN_EJEMPLAR_DE_TICKET,
   ORIGEN_TRANSFORMACION,
@@ -54,12 +55,16 @@ export const MOTIVOS_DE_MOVIMIENTO: readonly MotivoSembrado[] = [
   motivo("SALIDA", "CONSUMO_DE_TRANSFORMACION", { entregaMercaderia: true }),
   // E9 N4 (0084): la devolución de mercadería al proveedor. Solo la escribe el puerto de compras (origen `DEVOLUCION_A_PROVEEDOR`), nunca una persona; no entrega mercadería a un uso.
   motivo("SALIDA", "DEVOLUCION_A_PROVEEDOR"),
+  // E9 N3 (0098): la corrección de lo recibido de una recepción separada ya confirmada. Solo la escribe el puerto de compras (origen `CORRECCION_DE_RECEPCION`), nunca una persona; la entrada puede declarar el costo de la línea.
+  motivo("ENTRADA", "CORRECCION_DE_RECEPCION", { entraConCosto: true }),
+  motivo("SALIDA", "CORRECCION_DE_RECEPCION"),
 ];
 
 export const MOTIVO_DE_VENTA = "VENTA";
 export const MOTIVO_PRODUCTO_DE_TRANSFORMACION = "PRODUCTO_DE_TRANSFORMACION";
 export const MOTIVO_CONSUMO_DE_TRANSFORMACION = "CONSUMO_DE_TRANSFORMACION";
 export const MOTIVO_DE_DEVOLUCION_A_PROVEEDOR = "DEVOLUCION_A_PROVEEDOR";
+export const MOTIVO_DE_CORRECCION_DE_RECEPCION = "CORRECCION_DE_RECEPCION";
 
 const esMotivoDeTransformacion = (codigo: string): boolean =>
   codigo === MOTIVO_PRODUCTO_DE_TRANSFORMACION || codigo === MOTIVO_CONSUMO_DE_TRANSFORMACION;
@@ -78,6 +83,7 @@ export function motivoManualPermitido(clase: ClaseDeMovimiento, codigo: string):
     buscarMotivo(clase, codigo) !== null &&
     codigo !== MOTIVO_DE_VENTA &&
     codigo !== MOTIVO_DE_DEVOLUCION_A_PROVEEDOR &&
+    codigo !== MOTIVO_DE_CORRECCION_DE_RECEPCION &&
     !esMotivoDeTransformacion(codigo)
   );
 }
@@ -102,4 +108,7 @@ export const origenCoherenteConElMotivo = (
     ((clase === "ENTRADA" || clase === "SALIDA") && origenTipo === ORIGEN_TRANSFORMACION) &&
   // E9 N4: la salida por devolución va con el origen de la devolución y ese origen solo con ella (una anulación puede llevarlo).
   (codigo === MOTIVO_DE_DEVOLUCION_A_PROVEEDOR) ===
-    ((clase === "ENTRADA" || clase === "SALIDA") && origenTipo === ORIGEN_DEVOLUCION_A_PROVEEDOR);
+    ((clase === "ENTRADA" || clase === "SALIDA") && origenTipo === ORIGEN_DEVOLUCION_A_PROVEEDOR) &&
+  // E9 N3: la corrección de lo recibido va con el origen de la corrección y ese origen solo con ella (una anulación puede llevarlo).
+  (codigo === MOTIVO_DE_CORRECCION_DE_RECEPCION) ===
+    ((clase === "ENTRADA" || clase === "SALIDA") && origenTipo === ORIGEN_CORRECCION_DE_RECEPCION);

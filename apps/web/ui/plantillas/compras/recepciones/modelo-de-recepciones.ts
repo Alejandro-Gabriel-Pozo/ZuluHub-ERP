@@ -17,6 +17,9 @@ type EstadoDeRecepcion =
   | "FACTURADA_EN_PARTE"
   | "RECIBIDA_Y_FACTURADA";
 
+/** Las causas de una corrección de lo recibido, como las entrega el servidor (la lista cerrada vive una vez, en el módulo de compras: la página se la pasa a la pantalla y el compilador comprueba que coincidan). */
+export type CausaDeCorreccion = "ERROR_DE_CARGA" | "REPARTO_INTERNO" | "FALTANTE_DEL_PROVEEDOR";
+
 type Remito = Readonly<{ puntoDeVenta: number; numero: number; fecha: string }>;
 
 export type ListaDeRecepcionesParaLaPantalla = Readonly<{
@@ -46,6 +49,17 @@ export type FichaDeRecepcionParaLaPantalla = Readonly<{
     unidadDeCompraId: string;
     cantidadEnStock: string;
     unidadDeStockId: string | null;
+    /** Lo recibido que rige hoy (ya con las correcciones), en la unidad de stock. */
+    cantidadRecibida: string;
+    /** La versión que se devuelve al corregir: cuántas correcciones tiene la línea. */
+    correccionesVistas: number;
+    correcciones: readonly Readonly<{
+      numero: number;
+      cantidadAnterior: string;
+      cantidadNueva: string;
+      causa: CausaDeCorreccion;
+      nota: string | null;
+    }>[];
   }>[];
 }>;
 
@@ -54,11 +68,13 @@ export type AccionesDeLaRecepcion = Readonly<{
   registrar: boolean;
   confirmar: boolean;
   anular: boolean;
+  corregir: boolean;
 }>;
 export const SIN_ACCIONES_DE_LA_RECEPCION: AccionesDeLaRecepcion = {
   registrar: false,
   confirmar: false,
   anular: false,
+  corregir: false,
 };
 
 const SIN_DATO = "—";
@@ -138,11 +154,42 @@ export type FichaDeRecepcionArmada = Readonly<{
   proveedorYFecha: string;
   remito: Readonly<{ rotulo: string; valor: string }>;
   motivoDeAnulacion: Readonly<{ rotulo: string; texto: string }> | null;
-  lineas: readonly Readonly<{ clave: string; nombre: string; cantidad: string }>[];
+  lineas: readonly Readonly<{
+    clave: string;
+    nombre: string;
+    cantidad: string;
+    /** Los datos de «Corregir lo recibido» de la línea; `null` si no se ofrece (la recepción no está confirmada o falta el permiso). */
+    corregir: Readonly<{
+      linea: number;
+      /** Lo recibido que rige hoy, en la unidad de stock («1.500 g»). */
+      hoy: string;
+      correccionesVistas: number;
+    }> | null;
+  }>[];
+  /** «Correcciones»: lo que se corrigió, de la primera a la última; `null` si no se corrigió nada. */
+  correcciones: Readonly<{
+    titulo: string;
+    filas: readonly Readonly<{ clave: string; texto: string }>[];
+  }> | null;
   /** «Confirmar recepción» y «Anular recepción» solo se ofrecen con la recepción «Por confirmar» y el permiso. */
   confirmar: boolean;
   anular: boolean;
 }>;
+
+const textoDeLaCausa = (causa: CausaDeCorreccion, textos: TextosDeRecepciones): string => {
+  switch (causa) {
+    case "ERROR_DE_CARGA":
+      return textos.causaErrorDeCarga;
+    case "REPARTO_INTERNO":
+      return textos.causaRepartoInterno;
+    case "FALTANTE_DEL_PROVEEDOR":
+      return textos.causaFaltanteDelProveedor;
+  }
+};
+
+/** Una cantidad de stock con su unidad: «1.500 g». */
+const enStock = (cantidad: string, unidadDeStockId: string | null): string =>
+  `${formatearCantidad(cantidad)} ${unidadDeStockId === null ? "" : nombreDeUnidad(unidadDeStockId)}`.trimEnd();
 
 /** La ficha armada. Una línea muestra lo recibido en la unidad en que se compró («2 kg»); nunca un precio ni un costo. */
 export function armarLaFichaDeRecepcion(
@@ -151,6 +198,20 @@ export function armarLaFichaDeRecepcion(
   acciones: AccionesDeLaRecepcion = SIN_ACCIONES_DE_LA_RECEPCION,
 ): FichaDeRecepcionArmada {
   const pendiente = ficha.estado === "PENDIENTE_DE_CONFIRMAR";
+  // Se corrige lo recibido de una recepción ya confirmada (la pendiente no movió stock y la anulada no recibió nada).
+  const confirmada = !pendiente && ficha.estado !== "ANULADA";
+  const filasDeCorreccion = ficha.lineas.flatMap((l) =>
+    l.correcciones.map((c) => ({
+      clave: `${String(l.numero)}-${String(c.numero)}`,
+      texto: [
+        `${l.producto ?? SIN_DATO} · ${enStock(c.cantidadAnterior, l.unidadDeStockId)} → ${enStock(c.cantidadNueva, l.unidadDeStockId)}`,
+        textoDeLaCausa(c.causa, textos),
+        c.nota,
+      ]
+        .filter((parte): parte is string => parte !== null)
+        .join(" · "),
+    })),
+  );
   return {
     titulo: `${textos.recepcion} ${String(ficha.numero)}`,
     estado: textoDelEstado(ficha.estado, textos),
@@ -167,9 +228,24 @@ export function armarLaFichaDeRecepcion(
     lineas: ficha.lineas.map((l) => ({
       clave: String(l.numero),
       nombre: l.producto ?? SIN_DATO,
+      // Una línea corregida muestra lo que rige hoy (en la unidad de stock); la que no, lo que se cargó (en la unidad en que se compró).
       cantidad:
-        `${formatearCantidad(l.cantidadDeCompra)} ${nombreDeUnidad(l.unidadDeCompraId)}`.trimEnd(),
+        l.correccionesVistas > 0
+          ? enStock(l.cantidadRecibida, l.unidadDeStockId)
+          : `${formatearCantidad(l.cantidadDeCompra)} ${nombreDeUnidad(l.unidadDeCompraId)}`.trimEnd(),
+      corregir:
+        confirmada && acciones.corregir
+          ? {
+              linea: l.numero,
+              hoy: enStock(l.cantidadRecibida, l.unidadDeStockId),
+              correccionesVistas: l.correccionesVistas,
+            }
+          : null,
     })),
+    correcciones:
+      filasDeCorreccion.length === 0
+        ? null
+        : { titulo: textos.correcciones, filas: filasDeCorreccion },
     confirmar: pendiente && acciones.confirmar,
     anular: pendiente && acciones.anular,
   };

@@ -42,6 +42,10 @@
     "apps/web/app/s/app/(operacion)/salon/mesas/**",
     "apps/web/ui/plantillas/salon/*"
   ],
+  "test/web/ficha-de-salon.test.ts": [
+    "apps/web/app/s/app/(operacion)/salon/page.tsx",
+    "apps/web/ui/plantillas/salon/*"
+  ],
   "test/web/ficha-de-directorio.test.ts": [
     "apps/web/app/s/app/(operacion)/clientes/**",
     "apps/web/app/s/app/acciones-de-directorio.ts",
@@ -73,6 +77,7 @@
   "test/arquitectura/reglas.test.ts": ["apps/**"],
   "test/arquitectura/lint.test.ts": ["apps/**"],
   "test/arquitectura/campos-con-dato.test.ts": ["apps/**"],
+  "test/arquitectura/rol-con-literal.test.ts": ["apps/**"],
   "test/arquitectura/declaracion-de-pantallas.test.ts": ["apps/**"],
   "test/arquitectura/lista-de-permitidos.test.ts": ["apps/**"],
   "test/arquitectura/fuente-unica.test.ts": ["apps/**"],

@@ -47,6 +47,11 @@ export type {
   EstadoDeFacturaSeparada,
   EstadoDeRecepcionSeparada,
 } from "./dominio/recepcion-separada";
+export {
+  CAUSAS_DE_CORRECCION,
+  MAXIMO_DE_LA_NOTA_DE_CORRECCION,
+  type CausaDeCorreccion,
+} from "./dominio/correccion-de-lo-recibido";
 export { FORMA_DEL_CURSOR_SEPARADO as FORMA_DEL_CURSOR_DE_RECEPCIONES } from "./casos-de-uso/lectura-separada";
 export type {
   FacturaSeparadaDeLista,

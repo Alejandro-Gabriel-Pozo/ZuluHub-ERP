@@ -351,4 +351,14 @@ export const DECLARACIONES = {
       },
     },
   },
+  corregirLoRecibido: {
+    accion: "compras.corregir",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/compras-correccion-recibido.test.ts",
+        it: "I1: la misma corrección dos veces (misma clave) deja una sola fila y un solo movimiento y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
+      },
+    },
+  },
 } as const satisfies Record<string, DeclaracionDeCasoDeUso>;

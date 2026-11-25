@@ -2,6 +2,7 @@ import { EnlaceDeAccion } from "../../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../../componentes/Insignia";
 import { RUTA_DE_RECEPCIONES } from "../rutas-de-compras";
 import { AccionesDeLaRecepcion } from "./AccionesDeLaRecepcion.cliente";
+import { CorregirLoRecibido, type PropsDeCorregirLoRecibido } from "./CorregirLoRecibido.cliente";
 import {
   armarLaFichaDeRecepcion,
   type AccionesDeLaRecepcion as PermisosDeLaRecepcion,
@@ -26,6 +27,10 @@ export type PropsDePantallaDeDetalleDeRecepcion = Readonly<{
   accionDeAnular?: AccionDeLaRecepcion;
   /** Los depósitos entre los que hay que elegir (solo si hay más de uno). */
   depositos?: readonly Readonly<{ id: string; nombre: string }>[];
+  /** `corregirLoRecibidoAccion`: sin ella no se dibuja «Corregir lo recibido». */
+  accionDeCorregir?: PropsDeCorregirLoRecibido["corregir"];
+  /** Las causas que se ofrecen al corregir (la lista cerrada del módulo; las pone la página, que corre en el servidor). */
+  causas?: PropsDeCorregirLoRecibido["causas"];
 }>;
 
 /**
@@ -40,6 +45,8 @@ export function PantallaDeDetalleDeRecepcion({
   accionDeConfirmar,
   accionDeAnular,
   depositos = [],
+  accionDeCorregir,
+  causas = [],
 }: PropsDePantallaDeDetalleDeRecepcion) {
   const f = armarLaFichaDeRecepcion(ficha, textos, acciones);
   return (
@@ -66,9 +73,49 @@ export function PantallaDeDetalleDeRecepcion({
           <li key={l.clave} className={estilos["linea"]}>
             <span className={estilos["titulo"]}>{l.nombre}</span>
             <span className={estilos["detalle"]}>{l.cantidad}</span>
+            {l.corregir !== null && accionDeCorregir !== undefined ? (
+              <CorregirLoRecibido
+                recepcionId={ficha.recepcionId}
+                linea={l.corregir.linea}
+                nombre={l.nombre}
+                hoy={l.corregir.hoy}
+                causas={causas}
+                correccionesVistas={l.corregir.correccionesVistas}
+                corregir={accionDeCorregir}
+                // Solo los textos que usa: a un componente de cliente no puede pasarse una función.
+                textos={{
+                  corregirLoRecibido: textos.corregirLoRecibido,
+                  corregir: textos.corregir,
+                  cantidadRecibida: textos.cantidadRecibida,
+                  motivoDeLaCorreccion: textos.motivoDeLaCorreccion,
+                  causaErrorDeCarga: textos.causaErrorDeCarga,
+                  causaRepartoInterno: textos.causaRepartoInterno,
+                  causaFaltanteDelProveedor: textos.causaFaltanteDelProveedor,
+                  avisoRepartoInterno: textos.avisoRepartoInterno,
+                  nota: textos.nota,
+                  sinElegir: textos.sinElegir,
+                  cancelar: textos.cancelar,
+                  cerrar: textos.cerrar,
+                  enviando: textos.enviando,
+                  reintentar: textos.reintentar,
+                }}
+              />
+            ) : null}
           </li>
         ))}
       </ul>
+      {f.correcciones === null ? null : (
+        <section className={estilos["seccion"]} aria-label={f.correcciones.titulo}>
+          <h2 className={estilos["titulo"]}>{f.correcciones.titulo}</h2>
+          <ul className={estilos["lista"]}>
+            {f.correcciones.filas.map((c) => (
+              <li key={c.clave} className={estilos["linea"]}>
+                <span className={estilos["detalle"]}>{c.texto}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {(f.confirmar || f.anular) &&
       accionDeConfirmar !== undefined &&
       accionDeAnular !== undefined ? (

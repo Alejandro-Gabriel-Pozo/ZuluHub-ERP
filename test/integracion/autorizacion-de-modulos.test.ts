@@ -1,6 +1,7 @@
 import { sql } from "kysely";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { PERMISOS_DE_EMPRESA, tablaDePermisos } from "../../src/capacidades/permisos/empresa";
 import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import { exigirAccion } from "../../src/capacidades/permisos/exigir";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
@@ -258,11 +259,13 @@ describe.skipIf(base === null)("autorización: los módulos reales de la empresa
         valor: {
           antes: {
             rol: "GERENTE",
+            acciones: [...tablaDePermisos(PERMISOS_DE_EMPRESA).GERENTE],
             modulosActivados: ["facturacion"],
             modulosHabilitados: ["facturacion"],
           },
           despues: {
             rol: "GERENTE",
+            acciones: [...tablaDePermisos(PERMISOS_DE_EMPRESA).GERENTE],
             modulosActivados: ["facturacion"],
             modulosHabilitados: ["facturacion"],
           },
@@ -323,7 +326,7 @@ describe.skipIf(base === null)("autorización: los módulos reales de la empresa
         valor: {
           modulosDeA: 0,
           planDeA: 0,
-          deA: { rol: null, modulosActivados: [], modulosHabilitados: [] },
+          deA: { rol: null, acciones: [], modulosActivados: [], modulosHabilitados: [] },
         },
       });
     });
@@ -344,7 +347,7 @@ describe.skipIf(base === null)("autorización: los módulos reales de la empresa
 
   // ===============================================================================================
   describe("sin rol no hay módulos (falla cerrado, como hasta ahora)", () => {
-    const SIN_ROL = { rol: null, modulosActivados: [], modulosHabilitados: [] };
+    const SIN_ROL = { rol: null, acciones: [], modulosActivados: [], modulosHabilitados: [] };
 
     const conModulos = async (rol: RolDePrueba = "GERENTE") => {
       const m = await mundo({ plan: ["facturacion"], rol });

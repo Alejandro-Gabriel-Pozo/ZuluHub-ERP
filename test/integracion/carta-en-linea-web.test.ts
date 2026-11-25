@@ -41,6 +41,7 @@ describe.skipIf(base === null)("carta en línea de la web", () => {
     d = {
       casosDeUso: () => c.casos,
       consultas: () => c.consultas,
+      hostPropioDeLaCarta: () => () => Promise.resolve(null),
       respuesta: { registrar: () => undefined },
     };
   });

@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
-import { FORMA_DEL_CURSOR_DE_RECEPCIONES } from "../modulos/compras/publico";
+import {
+  CAUSAS_DE_CORRECCION,
+  FORMA_DEL_CURSOR_DE_RECEPCIONES,
+  type CausaDeCorreccion,
+} from "../modulos/compras/publico";
 import { formaDelRemitoEscrito, leerElRemitoEscrito, unidad } from "./entradas-de-comprar";
 import {
   decimal,
@@ -130,4 +134,44 @@ export function entradaDeListarRecepciones(
     return err({ codigo: "FISCAL_DATOS_INVALIDOS", campo: "despues" });
   }
   return ok({ despuesDe: cursor === "" ? null : cursor });
+}
+
+const formaDeCorregirLoRecibido = z.strictObject({
+  clave: identificador,
+  recepcionId: identificador,
+  linea: z.number().int(),
+  correccionesVistas: z.number().int(),
+  cantidad: decimal,
+  causa: z.enum(CAUSAS_DE_CORRECCION),
+  nota: texto.nullish(),
+});
+
+export type EntradaWebDeCorregirLoRecibido = Readonly<{
+  clave: string;
+  recepcionId: string;
+  linea: number;
+  correccionesVistas: number;
+  cantidad: string;
+  causa: CausaDeCorreccion;
+  nota: string | null;
+}>;
+
+/**
+ * «Corregir lo recibido» de una línea de una recepción confirmada: la clave del envío (un UUID por intento), la recepción, la línea, la última corrección que vio quien pide, la cantidad realmente
+ * recibida (texto decimal, en la unidad de stock), la causa (de la lista cerrada) y una nota opcional. Lista de permitidos: ningún otro campo pasa; la empresa y la persona no se leen del pedido.
+ */
+export function entradaDeCorregirLoRecibido(
+  crudo: unknown,
+): Resultado<EntradaWebDeCorregirLoRecibido, ErrorDeEntrada> {
+  const forma = leer(formaDeCorregirLoRecibido, crudo);
+  if (!forma.ok) return forma;
+  return ok({
+    clave: forma.valor.clave,
+    recepcionId: forma.valor.recepcionId,
+    linea: forma.valor.linea,
+    correccionesVistas: forma.valor.correccionesVistas,
+    cantidad: forma.valor.cantidad,
+    causa: forma.valor.causa,
+    nota: forma.valor.nota ?? null,
+  });
 }
