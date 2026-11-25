@@ -78,8 +78,10 @@ Settings → Environments → New environment. Dos, con estos nombres exactos:
 
 ### B.2 Neon: las ramas
 
-Proyecto `flat-flower-36030007`, región `aws-sa-east-1`. Dos ramas persistentes: `production` (la de los clientes) y
-`preview` (sin datos de clientes, para las pruebas). **Nunca** ramifiques `preview` desde `production` con datos reales.
+**Producción:** proyecto `frosty-pond-14815728` (organización `Pedernal`), rama `production` (la de los clientes, protegida), región `aws-sa-east-1`, Postgres 18.
+
+**Preview y desarrollo:** proyecto `flat-flower-36030007`, rama `preview` (sin datos de clientes, para las pruebas). La rama `production` vieja de ese proyecto tiene datos de
+prueba, no es la de los clientes y no se usa como producción. El `NEON_PROJECT_ID` del Environment `produccion` tiene que ser el del proyecto de producción.
 
 ### B.3 Aplicar las migraciones (con el workflow, nunca desde Vercel)
 
