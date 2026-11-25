@@ -20,7 +20,11 @@ import type { Kysely } from "kysely";
 import type { TxPublica } from "./resolucion-de-host";
 import type { SinTablas } from "./transacciones";
 import type { TransaccionesPublicas } from "../../puertos/transacciones-publicas";
-import type { VidrieraPublica } from "../../puertos/vidriera-publica";
+import {
+  TOPE_DE_CARTAS_DE_LA_RAIZ,
+  type CartaDeLaLista,
+  type VidrieraPublica,
+} from "../../puertos/vidriera-publica";
 
 /**
  * Lo que recibe el trabajo de una transacción pública de la carta: la lectura del catálogo para el comensal (0044) y, de marcas y planes, solo lo que hace falta para
@@ -68,32 +72,57 @@ export function crearVidrieraPublica(
   reloj: Readonly<{ ahora(): Date }>,
   catalogos: CatalogosDeLaCarta,
 ): VidrieraPublica {
-  return {
-    async porCodigo(host, codigo) {
-      if (!codigoDeCartaDesdeTexto(codigo).ok) return null;
-      const ahora = reloj.ahora();
-      const leida = await transacciones.leer(async (tx) => {
-        const carta = await tx.cartas.porCodigo(codigo, ahora);
-        if (carta === null) return null;
-        const vidriera = armarVidrieraPublicada(carta, host);
-        // El plan se lee solo de una carta que, por lo demás, se serviría: lo que ya es `null` no cuesta ni muestra nada más.
-        if (vidriera === null) return null;
-        const derechos = await derechosDeLaEmpresaDeUnTenant(tx.planes, catalogos, {
-          tenant: carta.tenantId,
-          empresa: carta.empresaId,
-          ahora,
-        });
-        const permite = elPlanDejaServirLaCarta({
-          catalogoDeModulos: catalogos.catalogoDeModulos,
-          modulo: "vidriera",
-          perilla: "vidriera_por_qr",
-          derechos,
-          modulosActivados: await tx.modulos.deLaEmpresa(carta.empresaId),
-        });
-        return permite ? vidriera : null;
+  const porCodigo: VidrieraPublica["porCodigo"] = async (host, codigo) => {
+    if (!codigoDeCartaDesdeTexto(codigo).ok) return null;
+    const ahora = reloj.ahora();
+    const leida = await transacciones.leer(async (tx) => {
+      const carta = await tx.cartas.porCodigo(codigo, ahora);
+      if (carta === null) return null;
+      const vidriera = armarVidrieraPublicada(carta, host);
+      // El plan se lee solo de una carta que, por lo demás, se serviría: lo que ya es `null` no cuesta ni muestra nada más.
+      if (vidriera === null) return null;
+      const derechos = await derechosDeLaEmpresaDeUnTenant(tx.planes, catalogos, {
+        tenant: carta.tenantId,
+        empresa: carta.empresaId,
+        ahora,
       });
-      if (!leida.ok) throw new Error(`no se pudo leer la carta pública: ${leida.error.tipo}`);
-      return leida.valor;
+      const permite = elPlanDejaServirLaCarta({
+        catalogoDeModulos: catalogos.catalogoDeModulos,
+        modulo: "vidriera",
+        perilla: "vidriera_por_qr",
+        derechos,
+        modulosActivados: await tx.modulos.deLaEmpresa(carta.empresaId),
+      });
+      return permite ? vidriera : null;
+    });
+    if (!leida.ok) throw new Error(`no se pudo leer la carta pública: ${leida.error.tipo}`);
+    return leida.valor;
+  };
+  return {
+    porCodigo,
+    async listarDelHost(host) {
+      // El host compartido (dueño: la marca) no lista nada: sin tocar la base. Solo un host dedicado a UNA empresa lista las suyas.
+      if (host.duenio.tipo !== "EMPRESA") return [];
+      const empresa = host.duenio.empresaId;
+      const candidatas = await transacciones.leer((tx) =>
+        tx.cartas.codigosDeLaEmpresa(empresa, TOPE_DE_CARTAS_DE_LA_RAIZ),
+      );
+      if (!candidatas.ok) {
+        throw new Error(`no se pudo leer la lista de cartas: ${candidatas.error.tipo}`);
+      }
+      // Cada candidata se confirma con la lectura por código de siempre (sucursal abierta, empresa que opera, plan que deja servirla): lo que `/<código>` no serviría, no se lista.
+      const lista: CartaDeLaLista[] = [];
+      for (const codigo of candidatas.valor) {
+        const vidriera = await porCodigo(host, codigo);
+        if (vidriera === null) continue;
+        lista.push({
+          codigo: vidriera.codigo,
+          nombre: vidriera.nombre,
+          rubro: vidriera.rubro,
+          lugar: vidriera.lugar,
+        });
+      }
+      return lista;
     },
   };
 }
