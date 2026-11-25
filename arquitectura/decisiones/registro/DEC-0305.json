@@ -4,7 +4,7 @@
   "quien": "sesión",
   "tipo": "PERMISOS",
   "estado": "CORREGIDA",
-  "decision": "Ninguna acción de anonimizar partes del directorio hasta que el dueño la pida. Corregida el 25/11/2026: la pidió y la reemplaza DEC-1075.",
+  "decision": "Ninguna acción de anonimizar partes del directorio hasta que el dueño la pida. Corregida el 25/11/2026: la pidió y la reemplaza DEC-1260.",
   "que_cambia": "Quien necesite anonimizar por pedido de un titular no puede hacerlo desde el sistema; se corrige declarando la acción y su caso de uso.",
   "donde": "src/capacidades/modulos/catalogo.ts:332"
 }
