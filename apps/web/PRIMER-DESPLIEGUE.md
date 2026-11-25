@@ -78,8 +78,11 @@ Settings → Environments → New environment. Dos, con estos nombres exactos:
 
 ### B.2 Neon: las ramas
 
-Proyecto `flat-flower-36030007`, región `aws-sa-east-1`. Dos ramas persistentes: `production` (la de los clientes) y
-`preview` (sin datos de clientes, para las pruebas). **Nunca** ramifiques `preview` desde `production` con datos reales.
+**Producción:** proyecto `frosty-pond-14815728` (organización `Pedernal`), rama `production` (la de los clientes; hoy NO protegida: la protección exige un plan pago de Neon y se activa al pasar a Launch, antes del primer cliente real; mientras tanto la cerradura es `migrar.yml`, que solo lista y crea ramas, y la prueba `test/arquitectura/workflows-y-neon.test.ts`), región `aws-sa-east-1`, Postgres 18.
+**Al pasar a un plan pago: proteger la rama `production`.**
+
+**Preview y desarrollo:** proyecto `flat-flower-36030007`, rama `preview` (sin datos de clientes, para las pruebas). La rama `production` vieja de ese proyecto tiene datos de
+prueba, no es la de los clientes y no se usa como producción. El `NEON_PROJECT_ID` del Environment `produccion` tiene que ser el del proyecto de producción.
 
 ### B.3 Aplicar las migraciones (con el workflow, nunca desde Vercel)
 
@@ -497,7 +500,7 @@ El proyecto de Vercel del cliente **no se conecta a Git** y lo desplegás vos po
 
 - Cada versión nueva se migra y se despliega **dos veces**, a mano: una por instalación.
 - El respaldo diario externo no existe todavía (ni para producción): lo único es la rama de respaldo antes de migrar.
-- El cron de trabajos corre cada 5 minutos en cada proyecto: mantiene despierta la base del cliente (costo aproximado de la base US$ 20–25 por mes; cifras de la documentación pública, a confirmar).
+- El cron de trabajos corre en cada proyecto con su propio calendario y, mientras corre, mantiene despierta la base del cliente: eso se paga por hora de cómputo (el costo de la base sube cuanto más seguido corra; ver `base-por-cliente-opciones.md`, §4, con cifras de la documentación pública a confirmar). La frecuencia vigente de la web está en `apps/web/vercel.json`.
 - Planes, marcas y empresas se cargan a mano en la base del cliente.
 - El token de Vercel de un Environment de cliente lo emitís vos con el alcance que Vercel permita (**NO VERIFICADO**: si es del equipo entero, también podría escribir en `pedernal-erp`). Lo que lo impide es el código: el comando solo escribe en el proyecto de la lista. Si Vercel permite un token limitado a un proyecto, usá ese.
 - Salida del cliente: se le entrega un volcado **verificado**, se le dan 30 días de gracia con sus datos ya entregados, y el borrado del proyecto de Neon lo hacés **solo vos**, en la consola.
