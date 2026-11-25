@@ -73,9 +73,8 @@ export type ErrorDeVentas =
   | "ANCLA_INVALIDA"
   | "ANCLA_OCUPADA"
   | "ETIQUETA_INVALIDA"
-  /** A2c: el departamento con el que se abre la cuenta no existe, está desactivado o hay que elegir uno (`departamentoDeLaCuenta`); unir cuentas de departamentos distintos. */
+  /** El departamento que se nombró al abrir la cuenta no existe o está desactivado (`departamentoDeLaCuenta`). */
   | ErrorDeDepartamento
-  | "DEPARTAMENTO_DISTINTO"
   | "CUENTA_ID_EN_USO"
   | "CUENTA_NO_ENCONTRADA"
   | "CUENTA_NO_ABIERTA"

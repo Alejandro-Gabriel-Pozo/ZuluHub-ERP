@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0941",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "El costo tomado de la factura es de la línea recibida, no de la conciliación: «Anular conciliación» se sigue ofreciendo con el costo tomado y el costo queda en la línea.",
+  "que_cambia": "Una baja de lo recibido bajo lo conciliado se arregla anulando la conciliación, corrigiendo y volviendo a conciliar, sin perder el costo. Revertir: rechazar la anulación si la línea tiene costo (una condición), con la línea sin salida.",
+  "donde": "tomar-el-costo.ts, compras-tomar-el-costo.test.ts, ficha-de-facturas.ts; respuesta del orquestador del 25/11/2026 a la pregunta 1 de PR C (opción A), que reemplaza el SUPUESTO 3 del plan de pantallas"
+}

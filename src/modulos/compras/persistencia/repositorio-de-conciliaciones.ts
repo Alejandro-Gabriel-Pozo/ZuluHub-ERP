@@ -43,6 +43,15 @@ export type ConciliacionParaMostrar = Readonly<{
   }>[];
 }>;
 
+/** Lo conciliado todavía vigente de una línea recibida contra una línea de factura: la suma neta de sus asignaciones y de sus espejos, solo si es mayor que cero. */
+export type AsignacionVigenteDeLaLinea = Readonly<{
+  recepcionId: string;
+  lineaDeRecepcion: number;
+  comprobanteId: string;
+  lineaDeComprobante: number;
+  cantidad: string;
+}>;
+
 /**
  * Las conciliaciones de un comprobante con lo recibido (E9 §3.3): el acto de conciliar y, una sola vez, su anulación espejo con las cantidades opuestas;
  * cada asignación solo entra si no supera lo recibido ni lo facturado (lo impone la base con los saldos). Solo inserción.
@@ -66,6 +75,11 @@ export interface RepositorioDeConciliaciones {
     empresa: EmpresaId,
     comprobanteId: string,
   ): Promise<readonly ConciliacionParaMostrar[]>;
+  /** Lo conciliado todavía vigente de las líneas de esas recepciones (neto de espejos): una fila por línea recibida y línea de factura con saldo asignado. Solo lectura. */
+  vigentesDeLasRecepciones(
+    empresa: EmpresaId,
+    recepcionIds: readonly string[],
+  ): Promise<readonly AsignacionVigenteDeLaLinea[]>;
   insertarConciliacion(
     empresa: EmpresaId,
     alta: Readonly<{
@@ -217,6 +231,35 @@ export function crearRepositorioDeConciliaciones(
             lineaDeRecepcion: a.linea_de_recepcion,
             cantidad: a.cantidad,
           })),
+      }));
+    },
+    async vigentesDeLasRecepciones(empresa, recepcionIds) {
+      const ids = recepcionIds.filter(esUuid);
+      if (ids.length === 0) return [];
+      const filas = await db
+        .selectFrom("asignacion_de_conciliacion")
+        .select([
+          "recepcion_id",
+          "linea_de_recepcion",
+          "comprobante_id",
+          "linea_de_comprobante",
+          sql<string>`sum(cantidad)::text`.as("cantidad"),
+        ])
+        .where("empresa_id", "=", empresa)
+        .where("recepcion_id", "in", ids)
+        .groupBy(["recepcion_id", "linea_de_recepcion", "comprobante_id", "linea_de_comprobante"])
+        .having(sql`sum(cantidad)`, ">", sql`0`)
+        .orderBy("recepcion_id")
+        .orderBy("linea_de_recepcion")
+        .orderBy("comprobante_id")
+        .orderBy("linea_de_comprobante")
+        .execute();
+      return filas.map((f) => ({
+        recepcionId: f.recepcion_id,
+        lineaDeRecepcion: f.linea_de_recepcion,
+        comprobanteId: f.comprobante_id,
+        lineaDeComprobante: f.linea_de_comprobante,
+        cantidad: f.cantidad,
       }));
     },
     async insertarConciliacion(empresa, alta) {

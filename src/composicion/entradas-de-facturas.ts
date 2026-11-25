@@ -127,6 +127,28 @@ export function entradaDeAnularConciliacion(
   return leer(formaDeAnular, crudo);
 }
 
+const formaDeTomarElCosto = z.strictObject({
+  clave: identificador,
+  recepcionId: identificador,
+  linea: z.number().int(),
+});
+
+export type EntradaWebDeTomarElCosto = Readonly<{
+  clave: string;
+  recepcionId: string;
+  linea: number;
+}>;
+
+/**
+ * «Tomar el costo de la factura»: la clave del envío (un UUID por intento: es la idempotencia), la recepción y la línea recibida. NADA MÁS: el precio no viaja (lo lee el servidor de la factura
+ * conciliada) ni el motivo (es un código del servidor); la empresa, la persona y la sucursal tampoco se leen del pedido.
+ */
+export function entradaDeTomarElCosto(
+  crudo: unknown,
+): Resultado<EntradaWebDeTomarElCosto, ErrorDeEntrada> {
+  return leer(formaDeTomarElCosto, crudo);
+}
+
 const formaDeLaFicha = z.strictObject({ comprobanteId: identificador });
 
 /** El detalle de una factura y los datos para conciliarla: solo el id (un UUID). */

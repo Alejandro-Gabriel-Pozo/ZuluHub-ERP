@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0943",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Lo que entra de más al corregir lo recibido entra al costo vigente de la línea (el guardado o el tomado de la factura), no sin costo.",
+  "que_cambia": "El promedio del depósito no se desvirtúa si llega más de lo cargado después de tomar el costo. Revertir: volver a declarar solo el costo guardado en la línea (la entrada quedaría sin costo en N3).",
+  "donde": "corregir-lo-recibido.ts, tomar-el-costo.ts (costoVigenteDeLaLineaSeparada), compras-tomar-el-costo.test.ts; hallazgo 4 de PR C aprobado por el orquestador el 25/11/2026"
+}

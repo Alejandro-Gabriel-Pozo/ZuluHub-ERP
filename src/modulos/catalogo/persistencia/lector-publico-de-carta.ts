@@ -11,6 +11,7 @@ import type {
 } from "../dominio/carta-publicada";
 import { productoId } from "../dominio/identificadores";
 import { caraDeCarta, logoDeCarta, modeloDeCarta } from "./filas-de-carta";
+import { FORMA_DE_UUID } from "./filas";
 import type { CatalogoDb } from "./esquema";
 import { crearRepositorioDePrecios } from "./repositorio-de-precios";
 
@@ -32,6 +33,12 @@ export type PublicoDeCartaDb = {
 export interface LecturaPublicaDeCartas {
   /** `null` si el código no es de una carta en línea (también si su sucursal está cerrada): la misma respuesta para todo, sin oráculo. */
   porCodigo(codigo: string, ahora: Date): Promise<CartaLeida | null>;
+  /**
+   * Los códigos de las cartas EN LÍNEA de UNA empresa (la dueña del host dedicado que la puerta ya resolvió), ordenados por nombre y de a lo sumo `tope` (0096). Son CANDIDATAS: el
+   * llamador confirma cada una con `porCodigo` (sucursal abierta, empresa que opera, plan que deja servirla) antes de mostrarla. Una empresa que no tiene la forma de un id no lee
+   * nada y no toca la base. Con la política de 0096 ausente devuelve lista vacía (falla cerrado).
+   */
+  codigosDeLaEmpresa(empresa: string, tope: number): Promise<readonly string[]>;
 }
 
 const COMO_ESTADO_DE_EMPRESA: readonly EstadoDeEmpresa[] = [
@@ -60,6 +67,22 @@ export function crearLecturaPublicaDeCartas(db: {
   const k = db.withTables<object>();
   const precios = crearRepositorioDePrecios(k);
   return {
+    async codigosDeLaEmpresa(empresa, tope) {
+      if (!FORMA_DE_UUID.test(empresa)) return [];
+      const id = empresa.toLowerCase();
+      // La empresa del host: desde acá y hasta el final de la transacción, la política de 0096 deja ver solo las cartas EN LÍNEA de ESA empresa. El `where` repite la empresa y el estado.
+      await sql`select set_config('app.empresa_del_host', ${id}, true)`.execute(k);
+      const filas = await k
+        .selectFrom("carta_publica")
+        .select(["codigo"])
+        .where("empresa_id", "=", id)
+        .where("estado", "=", "EN_LINEA")
+        .orderBy("nombre")
+        .orderBy("id")
+        .limit(tope)
+        .execute();
+      return filas.map((f) => f.codigo);
+    },
     async porCodigo(codigo, ahora) {
       // El código de la visita: desde acá y hasta el final de la transacción, las políticas dejan ver solo esa carta (y solo si está en línea).
       await sql`select set_config('app.codigo_de_carta', ${codigo}, true)`.execute(k);
