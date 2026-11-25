@@ -22,6 +22,18 @@ vi.mock("../app/planes/acciones", () => ({
 const empujar = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: empujar, refresh: vi.fn() }) }));
 
+// Ningún módulo real está en desarrollo desde que producción salió (DEC-1050): para ver la etiqueta se marca uno en el catálogo de esta prueba.
+vi.mock("../../../src/capacidades/modulos/catalogo", async (importar) => {
+  const real = await importar<typeof import("../../../src/capacidades/modulos/catalogo")>();
+  return {
+    ...real,
+    CATALOGO_DE_MODULOS: {
+      ...real.CATALOGO_DE_MODULOS,
+      produccion: { ...real.CATALOGO_DE_MODULOS.produccion, estado: "en_desarrollo" },
+    },
+  };
+});
+
 const crear = vi.mocked(crearPlanAccion);
 const guardar = vi.mocked(guardarBorradorAccion);
 const publicar = vi.mocked(publicarVersionAccion);
