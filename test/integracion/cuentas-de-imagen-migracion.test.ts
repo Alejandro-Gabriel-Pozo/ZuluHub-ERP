@@ -429,7 +429,7 @@ describe.skipIf(base === null)("migración 0102: cuentas de imagen declaradas", 
     const { rows } = await dueno.query<{ rol: string; tabla: string; privilegio: string }>(
       `select grantee as rol, table_name as tabla, privilege_type as privilegio
          from information_schema.table_privileges
-        where table_schema = 'public' and table_name = 'cuenta_de_imagen_declarada' and grantee like 'pedernal\_%'
+        where table_schema = 'public' and table_name = 'cuenta_de_imagen_declarada' and grantee like 'pedernal%'
           and privilege_type in ('INSERT', 'UPDATE', 'DELETE', 'TRUNCATE')`,
     );
     // La aplicación escribe por COLUMNA (no figura a nivel de tabla); nadie más recibe nada.
@@ -443,8 +443,8 @@ describe.skipIf(base === null)("migración 0102: cuentas de imagen declaradas", 
          from information_schema.column_privileges
         where table_schema = 'public'
           and ((table_name = 'cuenta_de_imagen_declarada' and privilege_type in ('INSERT', 'UPDATE'))
-            or (table_name = 'carta_publica' and column_name like 'logo\_%' and privilege_type in ('INSERT', 'UPDATE')))
-          and grantee like 'pedernal\_%'`,
+            or (table_name = 'carta_publica' and column_name like 'logo%' and privilege_type in ('INSERT', 'UPDATE')))
+          and grantee like 'pedernal%'`,
     );
     expect([...new Set(columnas.map((c) => c.rol))]).toEqual(["pedernal_app"]);
     // La aplicación SIN empresa en el contexto (el contexto de un grupo o de la plataforma no es de una empresa): RLS no deja escribir ni ver cuentas.
