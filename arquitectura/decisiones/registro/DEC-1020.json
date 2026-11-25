@@ -1,0 +1,11 @@
+{
+  "id": "DEC-1020",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Los botones Editar, Desactivar y Reactivar de un depósito no se dibujan para quien no tiene el permiso; el servidor igual decide.",
+  "que_cambia": "Solo la forma de la pantalla: lo pide la maqueta aprobada («el operador no ve Editar, Desactivar ni Reactivar»). Revertir: dibujarlos apagados, cambio de una línea por botón.",
+  "donde": "apps/web/ui/plantillas/stock/depositos/PantallaDeDepositos.tsx; maqueta stock-depositos-gestion.html",
+  "motivo": "SUPUESTO de la sesión: la ficha FP-STK-01 dice «no se ofrece cuando operador» y el resto de las pantallas apagan el botón; se siguió la maqueta aprobada."
+}
