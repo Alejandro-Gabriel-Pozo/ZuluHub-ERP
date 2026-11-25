@@ -98,8 +98,8 @@ export const TEXTOS_DE_PRODUCCION = {
   "receta.edicion.costo_ahora": { porDefecto: "Costo ahora" },
   "receta.edicion.diferencia": { porDefecto: "Diferencia" },
   "receta.edicion.volver_a_editar": { porDefecto: "Volver a editar" },
-  // «Nueva receta» (TP-16): el patrón aprobado «Nuevo producto», «Nueva compra», «Nueva orden» (`textos-por-aprobar.html:39`, N.° 68 y 278) y la decisión del dueño del 15/11/2026 (DDD:165). SUPUESTO (DEC-1068):
-  // pendiente de aceptación por delegación del orquestador; se cambia su porDefecto acá.
+  // «Nueva receta» (TP-16): el patrón aprobado «Nuevo producto», «Nueva compra», «Nueva orden» (`textos-por-aprobar.html:39`, N.° 68 y 278) y la decisión del dueño del 15/11/2026 (DDD:165). Aceptado por
+  // delegación del orquestador (fila 173, DEC-1068); se cambia su porDefecto acá.
   "receta.lista.nueva_receta": { porDefecto: "Nueva receta" },
   // receta.html, fila «Ficha de cocina» (idea 6, decisión 99).
   "receta.ficha_de_cocina.titulo": { porDefecto: "Ficha de cocina" },
