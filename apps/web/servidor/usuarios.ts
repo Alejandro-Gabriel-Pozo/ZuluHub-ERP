@@ -36,6 +36,7 @@ import type {
 import type { ResultadoDeAccion } from "./acciones";
 import { web } from "./composicion";
 import { conLaEmpresa } from "./con-la-empresa";
+import { despacharElEnvioDeUnaInvitacion } from "./despacho-inmediato";
 import { puedeLaAccion } from "./permisos-de-la-persona";
 import { dependenciasDeSesion } from "./sesion";
 
@@ -99,14 +100,30 @@ const textosDe = (datos: FormData, nombre: string): string[] =>
  * Repetir (doble toque, dos pestañas) devuelve la misma invitación y la pantalla lo dice («Ya había una invitación pendiente…»): ni una segunda fila ni otro mail.
  */
 export async function invitarAUnUsuario(datos: FormData): Promise<ResultadoDeInvitar> {
-  const respuesta = await conLaEmpresa((contexto) =>
-    invitar(dependencias, contexto, {
-      email: textoDe(datos, "email"),
-      rol: textoDe(datos, "rol"),
-      sucursales: textosDe(datos, "sucursales"),
-    }),
+  const respuesta = await conLaEmpresa(async (contexto) =>
+    conEnvioInmediato(
+      contexto,
+      await invitar(dependencias, contexto, {
+        email: textoDe(datos, "email"),
+        rol: textoDe(datos, "rol"),
+        sucursales: textosDe(datos, "sucursales"),
+      }),
+    ),
   );
   return aResultadoDeInvitar(respuesta);
+}
+
+/**
+ * Pide el envío inmediato del mail de la invitación que quedó (la nueva o, en un doble toque, la que ya había: despachar de nuevo es seguro y levanta un envío que no salió). Recién cuando la
+ * acción terminó bien, es decir con la transacción ya confirmada. No cambia lo que ve la persona.
+ */
+function conEnvioInmediato<D extends Readonly<{ invitacionId: string }>>(
+  contexto: ContextoOperativo,
+  respuesta: Respuesta<D>,
+): Respuesta<D> {
+  if (respuesta.ok)
+    despacharElEnvioDeUnaInvitacion(contexto.empresaId, respuesta.dato.invitacionId);
+  return respuesta;
 }
 
 /** De la respuesta de invitar o de reactivar a lo que dibuja el formulario. */
@@ -129,12 +146,15 @@ export async function reactivarAUnUsuario(
   personaId: string,
   datos: unknown,
 ): Promise<ResultadoDeInvitar> {
-  const respuesta = await conLaEmpresa((contexto) =>
-    reactivarUsuario(dependencias, contexto, {
-      personaId,
-      // Un pedido que no es un formulario no es «ninguna tildada»: se manda sin forma y el servidor lo rechaza.
-      sucursales: datos instanceof FormData ? textosDe(datos, "sucursales") : undefined,
-    }),
+  const respuesta = await conLaEmpresa(async (contexto) =>
+    conEnvioInmediato(
+      contexto,
+      await reactivarUsuario(dependencias, contexto, {
+        personaId,
+        // Un pedido que no es un formulario no es «ninguna tildada»: se manda sin forma y el servidor lo rechaza.
+        sucursales: datos instanceof FormData ? textosDe(datos, "sucursales") : undefined,
+      }),
+    ),
   );
   return aResultadoDeInvitar(respuesta);
 }
@@ -147,8 +167,8 @@ export async function reactivarAUnUsuario(
 export async function reenviarUnaInvitacion(
   invitacionId: string,
 ): Promise<ResultadoDeAccionDeInvitacion> {
-  const respuesta = await conLaEmpresa((contexto) =>
-    reenviar(dependencias, contexto, { invitacionId }),
+  const respuesta = await conLaEmpresa(async (contexto) =>
+    conEnvioInmediato(contexto, await reenviar(dependencias, contexto, { invitacionId })),
   );
   if (!respuesta.ok) return { estado: "ERROR", error: respuesta.error };
   return { estado: "HECHO", ruta: rutaDeLaFichaDeInvitacion(respuesta.dato.invitacionId) };

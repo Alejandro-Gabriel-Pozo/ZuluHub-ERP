@@ -336,6 +336,88 @@ describe.skipIf(base === null)("enviar_invitacion: el trabajo contra una base re
     });
   });
 
+  describe("despacho inmediato por clave (lo que hace la acción de invitar, después de confirmar)", () => {
+    const clave = (id: string) => [claveDeEnvioDeInvitacion(id)];
+
+    it("dos despachos simultáneos del mismo trabajo: un solo envío y un solo intento", async () => {
+      const e = await escenario();
+      const { id } = await invitar(e);
+      const correo = crearCorreoFalso();
+      const a = armar(correo);
+      const b = armar(correo);
+      await Promise.all([
+        a.despacharPorClaves(e.empresa, clave(id), T0, { esperarHastaTerminar: true }),
+        b.despacharPorClaves(e.empresa, clave(id), T0, { esperarHastaTerminar: true }),
+        a.despacharPorClaves(e.empresa, clave(id), T0, { esperarHastaTerminar: true }),
+      ]);
+      expect(correo.enviados()).toHaveLength(1);
+      expect(await trabajo(id)).toMatchObject({ estado: "HECHO", intentos: 1 });
+      expect(await auditoria(e.empresa, "INVITACION_ENVIADA")).toHaveLength(1);
+    });
+
+    it("repetir el despacho (doble toque, la acción otra vez): un solo envío", async () => {
+      const e = await escenario();
+      const { id } = await invitar(e);
+      const correo = crearCorreoFalso();
+      const p = armar(correo);
+      await p.despacharPorClaves(e.empresa, clave(id), T0, { esperarHastaTerminar: true });
+      await p.despacharPorClaves(e.empresa, clave(id), mas(1), { esperarHastaTerminar: true });
+      await p.procesarPendientes({ ahora: mas(2), limite: 20 });
+      expect(correo.enviados()).toHaveLength(1);
+      expect(await trabajo(id)).toMatchObject({ estado: "HECHO", intentos: 1 });
+    });
+
+    it("si el despacho inmediato falla, no lanza, el trabajo sigue PENDIENTE y el cron lo envía después (un solo mail)", async () => {
+      const e = await escenario();
+      const { id, email } = await invitar(e);
+      const correo = crearCorreoFalso();
+      correo.fallarLasProximas(1, { definitivo: false, motivo: "el proveedor respondió 503" });
+      const p = armar(correo);
+
+      await expect(
+        p.despacharPorClaves(e.empresa, clave(id), T0, { esperarHastaTerminar: true }),
+      ).resolves.toBeUndefined();
+      expect(correo.enviados()).toEqual([]);
+      expect(await trabajo(id)).toMatchObject({
+        estado: "PENDIENTE",
+        intentos: 1,
+        ultimo_error: "correo: el proveedor respondió 503",
+      });
+
+      // Pasada la espera, el cron lo levanta y sale el mail, una sola vez.
+      const resumen = await p.procesarPendientes({ ahora: mas(1_000), limite: 20 });
+      expect(resumen).toMatchObject({ hechos: 1 });
+      expect(correo.enviados()).toHaveLength(1);
+      expect(correo.enviados()[0]).toMatchObject({ mensaje: { para: email } });
+      expect(await trabajo(id)).toMatchObject({ estado: "HECHO", intentos: 2, ultimo_error: null });
+    });
+
+    it("solo despacha los trabajos DE LA EMPRESA con esa clave: la misma clave en otra empresa no se toca", async () => {
+      const e = await escenario();
+      const otra = await escenario();
+      const { id } = await invitar(e);
+      const correo = crearCorreoFalso();
+      await armar(correo).despacharPorClaves(otra.empresa, clave(id), T0, {
+        esperarHastaTerminar: true,
+      });
+      expect(correo.enviados()).toEqual([]);
+      expect(await trabajo(id)).toMatchObject({ estado: "PENDIENTE", intentos: 0 });
+    });
+
+    it("una invitación revocada antes del despacho: no sale el mail y el trabajo termina sin enviar", async () => {
+      const e = await escenario();
+      const { id } = await invitar(e);
+      const revocada = await casos.revocarInvitacion(e.ctx, { invitacionId: id });
+      expect(revocada.ok).toBe(true);
+      const correo = crearCorreoFalso();
+      await armar(correo).despacharPorClaves(e.empresa, clave(id), T0, {
+        esperarHastaTerminar: true,
+      });
+      expect(correo.enviados()).toEqual([]);
+      expect(await trabajo(id)).toMatchObject({ estado: "HECHO" });
+    });
+  });
+
   describe("el correo falla", () => {
     it("reprograma con espera creciente y, al agotar los intentos, queda FALLIDO sin perder la fila", async () => {
       const e = await escenario();

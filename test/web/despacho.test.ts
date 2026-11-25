@@ -44,6 +44,7 @@ vi.mock("../../apps/web/servidor/composicion", () => {
 
 import {
   despacharDespuesDeConfirmar,
+  despacharElEnvioDeUnaInvitacion,
   despacharPorClavesDespuesDeConfirmar,
 } from "../../apps/web/servidor/despacho-inmediato";
 import { empresaId } from "../../src/primitivas/identificadores/marca";
@@ -144,6 +145,45 @@ describe("despacharPorClavesDespuesDeConfirmar", () => {
       });
     });
     despacharPorClavesDespuesDeConfirmar(empresa, ["k"]);
+    await expect(mundo.programadas[0]?.()).resolves.toBeUndefined();
+    expect(registro.mock.calls.map((c) => c.join(" "))).toEqual([
+      "[despacho] no se pudo despachar de inmediato (ErrorDeEntorno); queda para el cron",
+    ]);
+  });
+});
+
+describe("despacharElEnvioDeUnaInvitacion", () => {
+  const empresa = empresaId("11111111-1111-4111-8111-111111111111");
+  const invitacion = "22222222-2222-4222-8222-222222222222";
+
+  it("programa UN intento con after() y no ejecuta nada todavía (después de confirmar, nunca antes)", () => {
+    despacharElEnvioDeUnaInvitacion(empresa, invitacion);
+    expect(mundo.programadas).toHaveLength(1);
+    expect(mundo.procesador).not.toHaveBeenCalled();
+    expect(mundo.porClaves).not.toHaveBeenCalled();
+  });
+
+  it("al correr, despacha la clave del envío de ESA invitación en ESA empresa, esperando a que termine", async () => {
+    despacharElEnvioDeUnaInvitacion(empresa, invitacion);
+    vi.setSystemTime(new Date("2026-10-14T12:00:11.000Z"));
+    await mundo.programadas[0]?.();
+    expect(mundo.porClaves).toHaveBeenCalledTimes(1);
+    expect(mundo.porClaves).toHaveBeenCalledWith(
+      empresa,
+      [`invitacion:${invitacion}:envio`],
+      new Date("2026-10-14T12:00:11.000Z"),
+      { esperarHastaTerminar: true },
+    );
+  });
+
+  it("si el despacho falla no lanza ni cambia lo que vio la persona: queda registrado y el trabajo sigue para el cron", async () => {
+    const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mundo.procesador.mockImplementationOnce(() => {
+      throw Object.assign(new Error("falta PEDERNAL_RESEND_API_KEY clave=zzz"), {
+        name: "ErrorDeEntorno",
+      });
+    });
+    despacharElEnvioDeUnaInvitacion(empresa, invitacion);
     await expect(mundo.programadas[0]?.()).resolves.toBeUndefined();
     expect(registro.mock.calls.map((c) => c.join(" "))).toEqual([
       "[despacho] no se pudo despachar de inmediato (ErrorDeEntorno); queda para el cron",
