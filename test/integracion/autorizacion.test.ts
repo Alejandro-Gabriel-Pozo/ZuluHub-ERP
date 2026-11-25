@@ -230,11 +230,16 @@ describe.skipIf(base === null)("autorización: el adaptador contra una base real
       return [...(rows[0]?.def ?? "").matchAll(/'([A-Z_]+)'/g)].map((m) => m[1] ?? "").sort();
     };
 
-    it.each(["membresia_rol_ck", "invitacion_empresa_rol_ck"])(
-      "%s admite exactamente ROLES_DE_EMPRESA",
-      async (restriccion) => {
-        expect(await rolesDelCheck(restriccion)).toEqual([...ROLES_DE_EMPRESA].sort());
-      },
-    );
+    it("invitacion_empresa_rol_ck admite exactamente ROLES_DE_EMPRESA (nadie se invita directo a un rol propio)", async () => {
+      expect(await rolesDelCheck("invitacion_empresa_rol_ck")).toEqual(
+        [...ROLES_DE_EMPRESA].sort(),
+      );
+    });
+
+    it("membresia_rol_ck admite ROLES_DE_EMPRESA y PROPIO (el rol propio se asigna después, 0097)", async () => {
+      expect(await rolesDelCheck("membresia_rol_ck")).toEqual(
+        [...ROLES_DE_EMPRESA, "PROPIO"].sort(),
+      );
+    });
   });
 });

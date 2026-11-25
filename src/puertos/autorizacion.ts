@@ -1,5 +1,5 @@
 import type { AlcanceDeSucursales } from "../capacidades/permisos/alcance";
-import type { RolDeEmpresa } from "../capacidades/permisos/roles";
+import type { RolDeLaMembresia } from "../capacidades/permisos/roles";
 import type { ContextoOperativo } from "../contexto/contexto";
 
 /**
@@ -9,7 +9,7 @@ import type { ContextoOperativo } from "../contexto/contexto";
  */
 export type DatosDelActor = Readonly<{
   /** `null`: sin persona, sin membresía activa en la empresa del contexto o persona suspendida. */
-  rol: RolDeEmpresa | null;
+  rol: RolDeLaMembresia | null;
   /** Módulos activables que la empresa activó (los obligatorios no se guardan). */
   modulosActivados: readonly string[];
   /**

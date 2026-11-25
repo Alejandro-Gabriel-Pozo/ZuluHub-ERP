@@ -1,6 +1,6 @@
 import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
-import type { RolDeEmpresa } from "../../../capacidades/permisos/roles";
+import type { RolDeLaMembresia } from "../../../capacidades/permisos/roles";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { PersonaId, SucursalId } from "../../../primitivas/identificadores/marca";
 import { ok, type Resultado } from "../../../primitivas/resultado/resultado";
@@ -14,7 +14,7 @@ export type MiembroDeLista = Readonly<{
   personaId: PersonaId;
   /** Hasta que la autenticación aporte el nombre, la lista muestra el email (D9). */
   email: string;
-  rol: RolDeEmpresa;
+  rol: RolDeLaMembresia;
   /** `false`: la membresía está apagada (la persona sigue figurando). */
   activo: boolean;
   /** Las sucursales de la asignación efectiva: asignación activa Y sucursal activa. */

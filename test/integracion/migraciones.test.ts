@@ -101,6 +101,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0093_correccion_de_compra_ampliada.sql",
         "0094_permisos_configurables.sql",
         "0095_dominios_de_empresa_lectura_propia_y_unico_por_superficie.sql",
+        "0097_roles_propios_de_la_empresa.sql",
         "0098_correccion_de_lo_recibido.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
@@ -184,6 +185,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0093_correccion_de_compra_ampliada.sql",
           "0094_permisos_configurables.sql",
           "0095_dominios_de_empresa_lectura_propia_y_unico_por_superficie.sql",
+          "0097_roles_propios_de_la_empresa.sql",
           "0098_correccion_de_lo_recibido.sql",
         ],
       });
@@ -373,6 +375,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0093_correccion_de_compra_ampliada.sql",
         "0094_permisos_configurables.sql",
         "0095_dominios_de_empresa_lectura_propia_y_unico_por_superficie.sql",
+        "0097_roles_propios_de_la_empresa.sql",
         "0098_correccion_de_lo_recibido.sql",
       ]);
     } finally {
