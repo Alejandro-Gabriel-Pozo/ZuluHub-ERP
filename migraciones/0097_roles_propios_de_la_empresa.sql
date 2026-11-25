@@ -1,5 +1,5 @@
 -- 0097_roles_propios_de_la_empresa: asignar un rol propio a una persona de la empresa, tramo T4 de H4b.
--- Diseño aceptado: Pedernal-docs/11-especificaciones/h4b-permisos-configurables.md §3.2 y §4 (2) (membresía y disparador de cambio de rol), §5 (invariantes I1, I9, I10, I12) y
+-- Diseño aceptado: ZuluHub-docs/11-especificaciones/h4b-permisos-configurables.md §3.2 y §4 (2) (membresía y disparador de cambio de rol), §5 (invariantes I1, I9, I10, I12) y
 -- §8 (tramos). Decisiones del dueño (14/11/2026 y 25/11/2026): el gerente crea roles propios y es el único que los asigna (`usuarios.asignar_rol` nace SOLO_GERENTE); los
 -- roles propios y la asignación quedan fijados por la plataforma con pisos; la cantidad de roles propios no tiene límite comercial (perilla sin límite, sin migración).
 --
@@ -7,7 +7,8 @@
 --   1. `membresia.rol_propio_id` (nulo) + el valor `PROPIO` en `membresia_rol_ck` + `membresia_rol_propio_ck` (rol = 'PROPIO' <=> hay rol propio) + clave foránea compuesta
 --      (rol_propio_id, empresa_id) -> rol_de_empresa: el rol propio es de la MISMA empresa.
 --   2. El disparador `membresia_validar_cambio` (de 0005) sigue impidiendo todo cambio de rol salvo el traspaso de gerencia y suma la ÚNICA otra salida: el gerente activo de la
---      empresa reasigna entre ADMINISTRADOR, OPERADOR y un rol propio ACTIVO, con la persona activa y sin tocar nunca al gerente. Nadie asciende a gerente por acá.
+--      empresa reasigna entre ADMINISTRADOR, OPERADOR y un rol propio ACTIVO, sin cambiar `activo` y sin tocar nunca al gerente. Nadie asciende a gerente por acá. Una persona
+--      APAGADA también se reasigna (a un rol base o a un rol propio activo): así no queda con un puntero a un rol propio archivado sin salida, y después se la reinvita.
 --   3. La política `membresia_app_asignar_rol` y el privilegio de columna `rol_propio_id` (la política y el privilegio de `rol` ya existían por el traspaso).
 --   4. Un rol propio no se archiva mientras tenga personas activas (S5), con el bloqueo que evita la carrera con una asignación simultánea.
 --   5. Los pisos SOLO_GERENTE de las cinco acciones nuevas (`roles.ver`, `roles.crear`, `roles.editar`, `roles.archivar`, `usuarios.asignar_rol`): hasta que la plataforma
@@ -87,9 +88,10 @@ BEGIN
       RETURN NEW;
     END IF;
 
-    -- (b) Asignación del gerente: entre ADMINISTRADOR, OPERADOR y un rol propio ACTIVO de la empresa; la persona activa y sin tocar nunca a un gerente (ni como origen ni
-    -- como destino); quien la hace es el gerente ACTIVO de la empresa (contexto firmado). Ahí nadie asciende a gerente y nadie baja al gerente.
-    IF OLD.activo AND NEW.activo
+    -- (b) Asignación del gerente: entre ADMINISTRADOR, OPERADOR y un rol propio ACTIVO de la empresa; sin cambiar `activo` (la persona puede estar apagada: se la reasigna y
+    -- después se la reinvita) y sin tocar nunca a un gerente (ni como origen ni como destino); quien la hace es el gerente ACTIVO de la empresa (contexto firmado).
+    -- Ahí nadie asciende a gerente y nadie baja al gerente.
+    IF NEW.activo = OLD.activo
        AND OLD.rol <> 'GERENTE' AND NEW.rol <> 'GERENTE'
        AND NEW.persona_id = OLD.persona_id AND NEW.empresa_id = OLD.empresa_id
        AND EXISTS (
@@ -119,11 +121,11 @@ $$;
 -- ---------------------------------------------------------------------------------------------
 -- 3. Política y privilegio de la asignación
 -- ---------------------------------------------------------------------------------------------
--- Las políticas permisivas se suman (OR): esta deja tocar la fila de un miembro ACTIVO que no es el gerente; qué columnas, lo limita el privilegio por columna, y qué cambio es
--- válido, el disparador (que además exige que quien actúa sea el gerente). El gerente nunca entra (ni antes ni después).
+-- Las políticas permisivas se suman (OR): esta deja tocar la fila de un miembro que no es el gerente (activo o no); qué columnas, lo limita el privilegio por columna, y qué cambio
+-- es válido, el disparador (que además exige que quien actúa sea el gerente y que `activo` no cambie). El gerente nunca entra (ni antes ni después).
 CREATE POLICY membresia_app_asignar_rol ON membresia FOR UPDATE TO pedernal_app
-  USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND activo AND rol <> 'GERENTE')
-  WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND activo AND rol <> 'GERENTE');
+  USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND rol <> 'GERENTE')
+  WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND rol <> 'GERENTE');
 GRANT UPDATE (rol_propio_id) ON membresia TO pedernal_app;
 
 -- ---------------------------------------------------------------------------------------------
