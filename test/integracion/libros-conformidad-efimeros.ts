@@ -6,12 +6,6 @@ import { ROL_DE_LA_APLICACION, type CodigoDeInvariante } from "./libros-conformi
  * Los libros EFÍMEROS de la prueba de conformidad: en un esquema aparte se arma un libro que cumple todo (la plantilla del §2.4 del diseño)
  * y, por cada invariante, una copia a la que se le quita justo esa. La conformidad tiene que detectar esa y solo esa: sin la violación
  * inyectada, la prueba no demuestra que detecta nada.
- *
- * Ningún libro efímero tiene claves foráneas a tablas del esquema `public` (ni `empresa` ni `persona`): crear o borrar una tabla con una clave
- * foránea toma un bloqueo exclusivo sobre la tabla REFERENCIADA, y esas tablas las usan a la vez los demás archivos de integración sobre la misma
- * base (una inserción les toma `RowShareLock`). El `DROP SCHEMA … CASCADE` del cierre se cruzaba con ellas y Postgres abortaba uno por deadlock
- * (`40P01`; CI de #492 y #494). La conformidad no mira esas claves: solo las que apuntan a una tabla con `empresa_id` (la madre, que sí queda). Previene:
- * el deadlock intermitente del borrado del esquema efímero. Chequeo: el propio archivo `libros-conformidad.test.ts` (el esquema se arma y se borra en cada corrida).
  */
 
 type Ddl = Readonly<{ tabla: string; sentencias: readonly string[] }>;
@@ -34,7 +28,7 @@ export function ddlDeLibroEfimero(
   // Una columna menos y una restricción menos por cada invariante rota; el resto del libro queda intacto.
   const columnas = [
     `id uuid PRIMARY KEY`,
-    `empresa_id uuid NOT NULL`,
+    `empresa_id uuid NOT NULL REFERENCES public.empresa (id)`,
     `madre_id uuid NOT NULL`,
     `clase text NOT NULL CHECK (clase IN ('ENTRADA', 'ANULACION'))`,
     importe ? `importe numeric(18,2) NOT NULL` : `cantidad numeric(18,4) NOT NULL`,
@@ -46,7 +40,9 @@ export function ddlDeLibroEfimero(
     `clave_idempotencia text ${sin("C3_CLAVE_NO_NULA") ? "" : "NOT NULL"}`,
     `huella text NOT NULL`,
     ...(sin("C4_MOMENTO") ? [] : [`registrado_en timestamptz NOT NULL`]),
-    sin("C4_AUTOR") ? `registrado_por uuid` : `registrado_por uuid NOT NULL`,
+    sin("C4_AUTOR")
+      ? `registrado_por uuid`
+      : `registrado_por uuid NOT NULL REFERENCES public.persona (id)`,
     sin("C4_FECHA_DE_NEGOCIO") ? `fecha_negocio date` : `fecha_negocio date NOT NULL`,
     `origen_tipo text NOT NULL`,
     `origen_id uuid`,
