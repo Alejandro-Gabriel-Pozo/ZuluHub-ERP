@@ -280,6 +280,16 @@ describe.skipIf(base === null)("dominios: persistencia y traducción de restricc
         provocar: () => conPlataforma((db) => insertarDeEmpresa(db, randomUUID())),
       },
       {
+        restriccion: "dominio_empresa_superficie_uk",
+        tipo: "Unicidad",
+        motivo: "EMPRESA_YA_TIENE_HOST_DE_ESA_SUPERFICIE",
+        provocar: async () => {
+          const mundo = await crearMundoDeMarca(dueno);
+          await crearDominioDeEmpresa(dueno, mundo.empresa, { superficie: "APP" });
+          return conPlataforma((db) => insertarDeEmpresa(db, mundo.empresa, { superficie: "APP" }));
+        },
+      },
+      {
         restriccion: "dominio_host_ck",
         tipo: "Check",
         motivo: "HOST_INVALIDO",
@@ -329,7 +339,7 @@ describe.skipIf(base === null)("dominios: persistencia y traducción de restricc
         .map(([restriccion]) => restriccion)
         .sort();
       expect(casos.map((c) => c.restriccion).sort()).toEqual(traducidas);
-      expect(casos).toHaveLength(14);
+      expect(casos).toHaveLength(15);
       // las siete que pidió el dueño están entre ellas
       for (const nombre of [
         "dominio_host_uk",
