@@ -3,5 +3,5 @@
   "archivos": "src/composicion/rutas-de-sistema.ts",
   "minutos": 0.8,
   "pruebas": "src/composicion/rutas-de-sistema.test.ts",
-  "critico": true
+  "nivel": "CRITICO"
 }

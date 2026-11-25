@@ -3,5 +3,5 @@
   "archivos": "src/composicion/control-de-stock-web.ts,src/composicion/entradas-de-control-de-stock.ts",
   "minutos": 3,
   "pruebas": "src/composicion/control-de-stock-web.test.ts src/composicion/entradas-de-control-de-stock.test.ts",
-  "critico": true
+  "nivel": "CRITICO"
 }
