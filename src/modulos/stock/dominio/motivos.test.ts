@@ -214,6 +214,11 @@ describe("origenCoherenteConElMotivo: la corrección de lo recibido ⇔ el orige
     expect(origenCoherenteConElMotivo("SALIDA", "MERMA", "CORRECCION_DE_RECEPCION")).toBe(false);
     expect(origenCoherenteConElMotivo("ENTRADA", "COMPRA", "CORRECCION_DE_RECEPCION")).toBe(false);
   });
+  it("una anulación puede llevar el origen de la corrección que revierte", () => {
+    expect(origenCoherenteConElMotivo("ANULACION", "ANULACION", "CORRECCION_DE_RECEPCION")).toBe(
+      true,
+    );
+  });
   it("una persona no elige el motivo de la corrección", () => {
     expect(motivoManualPermitido("ENTRADA", "CORRECCION_DE_RECEPCION")).toBe(false);
     expect(motivoManualPermitido("SALIDA", "CORRECCION_DE_RECEPCION")).toBe(false);
