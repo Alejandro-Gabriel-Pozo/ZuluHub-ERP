@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0958",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las pantallas siguen con los tres roles base: una persona con rol propio hace fallar en voz alta la lista, hasta que T6 defina cómo se muestra.",
+  "que_cambia": "Nada que vea el negocio hoy: nadie puede tener rol propio todavía (no hay casos de uso ni pantallas para asignarlo).",
+  "donde": "src/capacidades/permisos/roles.ts (rolParaMostrar)",
+  "motivo": "Mostrar un rol propio como «Empleado» o «Administrador» sería falso; el texto aprobado llega con el inventario de T6."
+}
