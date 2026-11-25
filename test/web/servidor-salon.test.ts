@@ -23,11 +23,15 @@ const mundo = vi.hoisted(
     creaciones: Record<string, unknown>[];
     listas: Record<string, unknown>[];
     mapas: Record<string, unknown>[];
+    agregados: Record<string, unknown>[];
+    cuentaDelMapa: string | null;
   } => ({
     efectiva: "",
     creaciones: [],
     listas: [],
     mapas: [],
+    agregados: [],
+    cuentaDelMapa: null,
   }),
 );
 vi.mock("../../apps/web/servidor/composicion", () => ({
@@ -44,6 +48,19 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
         Promise.resolve({ ok: true, valor: { mesaId: MESA, version: 2, yaExistia: false } }),
       desactivarMesa: () =>
         Promise.resolve({ ok: true, valor: { mesaId: MESA, version: 2, yaExistia: false } }),
+      agregarAlPedido: (_c: unknown, entrada: Record<string, unknown>) => {
+        mundo.agregados.push(entrada);
+        return Promise.resolve({
+          ok: true,
+          valor: {
+            posicion: 1,
+            precioUnitario: { moneda: "ARS", monto: "1000.000000" },
+            totalProvisorio: { moneda: "ARS", monto: "1000.00" },
+            yaExistia: false,
+            extra: "no sale",
+          },
+        });
+      },
       reactivarMesa: () =>
         Promise.resolve({ ok: true, valor: { mesaId: MESA, version: 3, yaExistia: false } }),
     }),
@@ -54,7 +71,11 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
       },
       mapaDeMesas: (_c: unknown, entrada: Record<string, unknown>) => {
         mundo.mapas.push(entrada);
-        return Promise.resolve({ ok: true, valor: [] });
+        return Promise.resolve({
+          ok: true,
+          valor:
+            mundo.cuentaDelMapa === null ? [] : [{ mesaId: MESA, cuentaId: mundo.cuentaDelMapa }],
+        });
       },
     }),
   },
@@ -78,6 +99,7 @@ type Salon = {
   cargarLasMesas: (contexto: never) => Promise<unknown>;
   cambiarElEstadoDeLaMesaDelSalon: (id: string, activa: boolean) => Promise<unknown>;
   cargarElMapaDeMesas: (crudo?: unknown) => Promise<unknown>;
+  agregarAlPedidoDeLaMesaDelSalon: (crudo: unknown) => Promise<unknown>;
   nuevaClaveDeMesa: () => string;
 };
 const cargar = () => import(/* @vite-ignore */ RUTA) as Promise<Salon>;
@@ -100,6 +122,8 @@ beforeEach(() => {
   mundo.creaciones = [];
   mundo.listas = [];
   mundo.mapas = [];
+  mundo.agregados = [];
+  mundo.cuentaDelMapa = null;
 });
 
 describe("servidor del salón: mesas", () => {
@@ -193,5 +217,79 @@ describe("servidor del salón: mapa de mesas (SAL-A)", () => {
     mundo.efectiva = OTRA;
     await cargarElMapaDeMesas();
     expect(mundo.mapas.map((m) => m["sucursalId"])).toEqual([SUCURSAL, OTRA]);
+  });
+});
+
+describe("servidor del salón: agregar al pedido (SAL-B)", () => {
+  const CUENTA = "55555555-5555-4555-8555-555555555555";
+  const LINEA = "66666666-6666-4666-8666-666666666666";
+  const PRODUCTO = "77777777-7777-4777-8777-777777777777";
+  const pedido = (extra: Record<string, unknown> = {}) => ({
+    cuentaId: CUENTA,
+    lineaId: LINEA,
+    productoId: PRODUCTO,
+    opcionIds: [],
+    cantidad: "2",
+    ...extra,
+  });
+
+  it("la línea lleva el id de la página y solo lo declarado; el precio, el total, la sucursal y la persona del navegador se descartan, y solo sale lo declarado", async () => {
+    mundo.cuentaDelMapa = CUENTA;
+    const { agregarAlPedidoDeLaMesaDelSalon } = await cargar();
+    const r = await agregarAlPedidoDeLaMesaDelSalon(
+      pedido({
+        salida: "DESPUES",
+        precioUnitario: { moneda: "ARS", monto: "1.00" },
+        sucursalId: "otra",
+        personaId: "otra",
+      }),
+    );
+    expect(mundo.agregados).toEqual([
+      {
+        cuentaId: CUENTA,
+        lineaId: LINEA,
+        productoId: PRODUCTO,
+        opcionIds: [],
+        cantidad: "2",
+        salida: "DESPUES",
+      },
+    ]);
+    expect(mundo.mapas).toEqual([{ sucursalId: SUCURSAL, filtro: "TODAS" }]);
+    expect(r).toEqual({
+      ok: true,
+      dato: {
+        posicion: 1,
+        precioUnitario: { moneda: "ARS", monto: "1000.000000" },
+        totalProvisorio: { moneda: "ARS", monto: "1000.00" },
+        yaExistia: false,
+      },
+    });
+  });
+
+  it("la cantidad es texto: un número, un id inválido o una salida inexistente son el genérico y no llaman al caso de uso", async () => {
+    mundo.cuentaDelMapa = CUENTA;
+    const { agregarAlPedidoDeLaMesaDelSalon } = await cargar();
+    const generico = { ok: false, error: errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA") };
+    for (const malo of [
+      pedido({ cantidad: 2 }),
+      pedido({ lineaId: "x" }),
+      pedido({ salida: "NUNCA" }),
+      pedido({ opcionIds: "no-es-lista" }),
+      undefined,
+    ]) {
+      expect(await agregarAlPedidoDeLaMesaDelSalon(malo)).toEqual(generico);
+    }
+    expect(mundo.agregados).toEqual([]);
+  });
+
+  it("una cuenta que no figura en el mapa de la sucursal, o sin sucursal efectiva, es el genérico y no escribe", async () => {
+    const { agregarAlPedidoDeLaMesaDelSalon } = await cargar();
+    const generico = { ok: false, error: errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA") };
+    mundo.cuentaDelMapa = "88888888-8888-4888-8888-888888888888";
+    expect(await agregarAlPedidoDeLaMesaDelSalon(pedido())).toEqual(generico);
+    mundo.cuentaDelMapa = CUENTA;
+    mundo.efectiva = "";
+    expect(await agregarAlPedidoDeLaMesaDelSalon(pedido())).toEqual(generico);
+    expect(mundo.agregados).toEqual([]);
   });
 });

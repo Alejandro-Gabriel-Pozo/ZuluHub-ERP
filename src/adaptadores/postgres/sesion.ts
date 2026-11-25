@@ -1,5 +1,5 @@
 import type { Kysely } from "kysely";
-import { ROLES_DE_EMPRESA } from "../../capacidades/permisos/roles";
+import { ROLES_DE_EMPRESA, type RolDeLaMembresia } from "../../capacidades/permisos/roles";
 import type { EstadoDeEmpresa, EstadoDeTenant } from "../../contexto/estados";
 import { empresaId, personaId } from "../../primitivas/identificadores/marca";
 import type { LecturasDeSesion } from "../../puertos/sesion";
@@ -49,7 +49,8 @@ export function crearLecturasDeSesionDePostgres(db: Kysely<SesionDb>): LecturasD
         .execute();
       return filas.map((f) => {
         // Un valor que el CHECK de la base no deja pasar: si llega otro, algo se rompió.
-        const rol = ROLES_DE_EMPRESA.find((r) => r === f.rol);
+        const rol: RolDeLaMembresia | undefined =
+          f.rol === "PROPIO" ? "PROPIO" : ROLES_DE_EMPRESA.find((r) => r === f.rol);
         if (rol === undefined) throw new RangeError(`rol desconocido en la base: ${f.rol}`);
         return {
           empresaId: empresaId(f.empresa_id),

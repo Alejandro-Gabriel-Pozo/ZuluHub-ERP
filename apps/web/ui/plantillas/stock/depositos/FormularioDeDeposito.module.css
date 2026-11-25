@@ -20,3 +20,11 @@
   font-weight: var(--tipo-peso-fuerte);
   text-decoration: none;
 }
+
+/* El uso del depósito al editarlo: se ve y no se cambia (rótulo y valor en una fila). */
+.actual {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  color: var(--color-texto);
+}

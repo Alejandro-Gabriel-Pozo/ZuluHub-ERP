@@ -82,6 +82,7 @@ plataforma tuvo en el menú «Dominios» y «Soporte» sin pantalla aprobada.
 - **Se pregunta lo que cambia** qué se construye, cómo se comporta, los datos, el dinero, los permisos, los textos que ve el cliente o la
   prioridad. Lo puramente interno (nombre de una función privada, en qué archivo va) sigue la convención que ya existe; si no hay
   convención y la elección tiene consecuencias, se pregunta.
+- **Negocio vs aplicación (dueño, 2026-11-25).** Antes de preguntar al dueño, clasificá: ¿es del NEGOCIO (política de operación que se ve en el momento: cómo se salda un saldo a favor, qué impresora usa, cuándo cambia el emisor fiscal, cuántos mozos) o de la APLICACIÓN (qué se construye, modelo de datos, dinero que la app impone, permisos, textos al cliente)? Solo se pregunta lo segundo; lo primero se DISEÑA FLEXIBLE (soporta las variantes razonables, manual con registro o configurable) y se documenta. Previene: frenar al dueño con preguntas de negocio y construir políticas rígidas que el negocio no pidió. Sin chequeo mecánico: es regla de proceso (caso real: 25/11/2026, nota de crédito después del pago y emisor fiscal).
 - **Alcance cerrado.** Se hace solo lo pedido. Lo que no está en la lista no se hace: si ves algo más (mejora, riesgo, deuda), anotalo
   en «Hallazgos aparte» sin tocarlo. Entre quedarse corto y agrandar, quedarse corto.
 - **Una regla, un lugar.** Antes de crear una función, una regla o una constante, buscá si ya tiene dueño (registro de contratos,

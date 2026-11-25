@@ -1,4 +1,4 @@
-import type { RolDeEmpresa } from "../capacidades/permisos/roles";
+import type { RolDeLaMembresia } from "../capacidades/permisos/roles";
 import type { EstadoDeEmpresa, EstadoDeTenant } from "../contexto/estados";
 import type {
   EmpresaId,
@@ -15,7 +15,7 @@ import type {
 export type EmpresaDeLaSesion = Readonly<{
   empresaId: EmpresaId;
   nombre: string;
-  rol: RolDeEmpresa;
+  rol: RolDeLaMembresia;
   estado: EstadoDeEmpresa;
   estadoDelTenant: EstadoDeTenant;
 }>;

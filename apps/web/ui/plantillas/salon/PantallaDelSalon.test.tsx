@@ -8,7 +8,7 @@ import { armarElMapa, type MesaDelMapaDeLaPantalla } from "./modelo-del-mapa";
 
 /**
  * El mapa del salón en Chromium (SAL-A; maqueta `salon.html`): cada mesa con su estado dicho con ícono y texto (nunca solo color), su total en «$» con coma decimal, «Unida a la mesa N» y las cuentas de una mesa
- * dividida; los filtros son enlaces (el activo marcado, tocarlo de nuevo vuelve a todas); ninguna mesa es un enlace todavía; error sin lista; axe y tamaños en 390 y 1280 px.
+ * dividida; los filtros son enlaces (el activo marcado, tocarlo de nuevo vuelve a todas); cada mesa es un enlace a su ficha; error sin lista; axe y tamaños en 390 y 1280 px.
  */
 const ARS = (monto: string) => ({ moneda: "ARS", monto });
 const MESAS: readonly MesaDelMapaDeLaPantalla[] = [
@@ -73,9 +73,12 @@ describe("PantallaDelSalon", () => {
     await conFiltro.unmount();
   });
 
-  it("ninguna mesa es un enlace todavía (su ficha es SAL-B): solo los tres filtros lo son", async () => {
+  it("cada mesa es un enlace a su ficha, con el nombre de la mesa; además de los tres filtros", async () => {
     const { unmount } = await render(<PantallaDelSalon mapa={armarElMapa({}, MESAS, null)} />);
-    expect(page.getByRole("link").elements()).toHaveLength(3);
+    expect(page.getByRole("link").elements()).toHaveLength(3 + MESAS.length);
+    await expect
+      .element(page.getByRole("link", { name: "Mesa 2" }))
+      .toHaveAttribute("href", "/salon/cuenta/m2");
     await unmount();
   });
 

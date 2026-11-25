@@ -14,6 +14,7 @@ const FUENTE_DE_LA_LISTA_DE_PRODUCTOS =
   "Pedernal-docs/11-especificaciones/fichas-de-modulo/a1-productos-y-precios.md §3 (consultas: `listarProductos` filtra por texto, clase, «falta completar» y activo) y la maqueta aprobada el 12/11/2026 (`productos.html`, carpeta de prototipos de Pedernal-docs 10-ux-ui)";
 
 const BUSCADOR_DE_LA_VENTA = "apps/web/ui/plantillas/venta/PantallaDeVentaRapida.cliente.tsx";
+const BUSCADOR_DE_LA_MESA = "apps/web/ui/plantillas/salon/CatalogoDeLaMesa.cliente.tsx";
 const FICHA_DE_PRODUCTO = "apps/web/ui/plantillas/catalogo/FormularioDeFichaDeProducto.cliente.tsx";
 const ALTA_DE_PRODUCTO = "apps/web/ui/plantillas/catalogo/FormularioDeAltaDeProducto.cliente.tsx";
 const ALTA_PROPOSITO = (para: string): Proposito => ({
@@ -61,12 +62,17 @@ export const DATOS_DE_PRODUCTOS = {
           "la maqueta `productos-secciones.html` líneas 399 y 490, carpeta de prototipos de Pedernal-docs 10-ux-ui (cuadro «Agregar producto», campo «Buscar», aprobada el 12/11/2026) y 11-especificaciones/conceptos/secciones-de-la-carta-pantalla.md §4",
       },
       {
-        para: "Texto con el que se busca un producto por su nombre, su código o su código de barras en la venta rápida del mostrador (se filtra la lista ya cargada; el buscador vacío muestra todo).",
+        para: "Texto con el que se busca un producto por su nombre, su código o su código de barras en la venta rápida del mostrador y, con la misma hoja, para agregarlo al pedido de una mesa del salón (se filtra la lista ya cargada; el buscador vacío muestra todo).",
         fuente:
-          "Pedernal-docs/11-especificaciones/servidor-del-mostrador-minimo.md §7 (fila «Buscar por nombre o código») y la maqueta `venta-rapida-v4.html` (carpeta de prototipos de Pedernal-docs 10-ux-ui)",
+          "Pedernal-docs/11-especificaciones/servidor-del-mostrador-minimo.md §7 (fila «Buscar por nombre o código») y la maqueta `venta-rapida-v4.html` (carpeta de prototipos de Pedernal-docs 10-ux-ui); para la mesa del salón, `briefs/salon/SAL-B-mesa-y-pedido.md` §1 («Agregar productos con la hoja de producto de la venta rápida») y la maqueta `salon.html` (aprobada el 09/11/2026), con el recorrido del 25/11/2026 dado por aprobado por el orquestador a falta de objeción del dueño (pregunta P-9)",
       },
     ],
-    consumidores: [LISTA_DE_PRODUCTOS, BUSCADOR_DE_CANDIDATOS, BUSCADOR_DE_LA_VENTA],
+    consumidores: [
+      LISTA_DE_PRODUCTOS,
+      BUSCADOR_DE_CANDIDATOS,
+      BUSCADOR_DE_LA_VENTA,
+      BUSCADOR_DE_LA_MESA,
+    ],
     ponerPor: ["productos.ver"],
     requiere: REQUIERE_CATALOGO,
   },

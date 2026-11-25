@@ -8,7 +8,7 @@ import {
 
 /**
  * El modelo de vista del mapa del salón (SAL-A): el filtro sale de una lista cerrada, cada estado lleva ícono (el tono) y texto, el dinero sale como texto decimal con «$» y solo en ARS, una mesa unida dice a qué
- * mesa y una dividida lista sus cuentas, y ninguna mesa lleva enlace todavía (su ficha es SAL-B). Previene: un filtro armado a mano desde la dirección, un estado dicho solo con color, un importe que pasa por
+ * mesa y una dividida lista sus cuentas, y cada mesa lleva a su ficha. Previene: un filtro armado a mano desde la dirección, un estado dicho solo con color, un importe que pasa por
  * `number` o una moneda mostrada como pesos.
  */
 const ARS = (monto: string) => ({ moneda: "ARS", monto });
@@ -132,9 +132,16 @@ describe("armarElMapa", () => {
     const [fila] = armarElMapa({}, [mesa({ numero: 8, estado: "UNIDA" })], null).filas;
     expect(fila?.estado?.texto).toBe("Unida a la mesa");
   });
-  it("conserva el orden del servidor y la fila no trae enlace (la ficha de la mesa es SAL-B)", () => {
-    const filas = armarElMapa({}, [mesa({ numero: 9 }), mesa({ numero: 2 })], null).filas;
+  it("conserva el orden del servidor y cada fila lleva a la ficha de su mesa, con el id codificado", () => {
+    const filas = armarElMapa(
+      {},
+      [mesa({ numero: 9 }), mesa({ numero: 2, mesaId: "../mesas/1" })],
+      null,
+    ).filas;
     expect(filas.map((f) => f.titulo)).toEqual(["Mesa 9", "Mesa 2"]);
-    expect(Object.keys(filas[0] ?? {})).not.toContain("href");
+    expect(filas.map((f) => f.href)).toEqual([
+      "/salon/cuenta/00000000-0000-4000-8000-000000000009",
+      "/salon/cuenta/..%2Fmesas%2F1",
+    ]);
   });
 });

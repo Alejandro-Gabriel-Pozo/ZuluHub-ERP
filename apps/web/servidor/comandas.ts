@@ -5,6 +5,7 @@ import {
   cambiarLaSalida,
   enviarALaCocina,
   pedirQueSalga,
+  quitarUnPlatoSinEnviar,
   type DependenciasDeComandasWeb,
 } from "../../../src/composicion/comandas-web";
 import {
@@ -74,6 +75,10 @@ export const anularElItemEnviado = (crudo: unknown) =>
 /** «Sale ahora» / «Sale después» de un plato no enviado (`{ cuentaId, lineaId, salida }`). */
 export const cambiarElOrdenDeSalida = (crudo: unknown) =>
   enLaSucursal((c, s) => cambiarLaSalida(dependencias, c, s, crudo));
+
+/** Quitar un plato que todavía no se envió (`{ cuentaId, lineaId }`): sin motivo y sin papel. */
+export const quitarElPlatoSinEnviar = (crudo: unknown) =>
+  enLaSucursal((c, s) => quitarUnPlatoSinEnviar(dependencias, c, s, crudo));
 
 /** Las impresoras de la sucursal de trabajo. */
 export const cargarLasImpresoras = (contexto: ContextoOperativo) =>

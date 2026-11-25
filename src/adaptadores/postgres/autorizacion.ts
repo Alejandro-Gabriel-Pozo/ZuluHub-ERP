@@ -3,7 +3,7 @@ import { esClaveDe } from "../../capacidades/modulos/activos";
 import { CATALOGO_DE_MODULOS } from "../../capacidades/modulos/catalogo";
 import { vigenteEn } from "../../capacidades/planes/vigencia";
 import type { AlcanceDeSucursales } from "../../capacidades/permisos/alcance";
-import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "../../capacidades/permisos/roles";
+import { ROLES_DE_EMPRESA, type RolDeLaMembresia } from "../../capacidades/permisos/roles";
 import { conjuntoEfectivo } from "../../capacidades/roles/conjunto-efectivo";
 import { sucursalId } from "../../primitivas/identificadores/marca";
 import type { ContextoOperativo } from "../../contexto/contexto";
@@ -35,7 +35,15 @@ import type {
  * marca B (la marca no viaja en el token firmado: no es frontera de aislamiento por sí sola, §B.10).
  */
 export type AutorizacionDb = {
-  membresia: { empresa_id: string; persona_id: string; rol: string; activo: boolean };
+  membresia: {
+    empresa_id: string;
+    persona_id: string;
+    rol: string;
+    rol_propio_id: string | null;
+    activo: boolean;
+  };
+  rol_de_empresa: { id: string; empresa_id: string; activo: boolean };
+  version_de_rol: { empresa_id: string; rol_id: string; numero: number; acciones: string[] };
   persona: { id: string; activo_global: boolean };
   asignacion_sucursal: {
     empresa_id: string;
@@ -49,8 +57,17 @@ export type AutorizacionDb = {
   version_de_plantilla: { clave: string; numero: number; acciones: string[] };
 };
 
-const esRolDeEmpresa = (valor: string): valor is RolDeEmpresa =>
-  ROLES_DE_EMPRESA.some((rol) => rol === valor);
+const esRolDeLaMembresia = (valor: string): valor is RolDeLaMembresia =>
+  valor === "PROPIO" || ROLES_DE_EMPRESA.some((rol) => rol === valor);
+
+/** Una lista de acciones leída de la base: un valor que no es una lista de textos es un dato roto y falla (no se trata como «sin permisos» en silencio). */
+function listaDeAcciones(valor: unknown, de: string): readonly string[] | null {
+  if (valor === null) return null;
+  if (!Array.isArray(valor) || !valor.every((accion) => typeof accion === "string")) {
+    throw new RangeError(`las acciones de ${de} no son una lista de textos`);
+  }
+  return valor;
+}
 
 /** Lo que carga el adaptador cuando no hay rol (ni, por lo tanto, nada que activar ni ninguna acción): falla cerrado. */
 const SIN_ROL: DatosDelActor = {
@@ -80,7 +97,7 @@ type FilaDeModulos =
 
 /** Quién es el actor en la empresa del contexto: su rol, sus acciones y el tenant de esa empresa (que da el plan). */
 type MembresiaDelActor = Readonly<{
-  rol: RolDeEmpresa;
+  rol: RolDeLaMembresia;
   tenantId: string;
   acciones: readonly string[];
 }>;
@@ -153,6 +170,17 @@ function armarAutorizacion(db: Kysely<AutorizacionDb>, memorizar: boolean): Carg
       .select([
         "m.rol",
         "e.tenant_id",
+        // El rol propio (T4): si está activo y su versión vigente (la de mayor número). Archivado = conjunto vacío aunque la membresía siga apuntando a él.
+        sql<
+          boolean | null
+        >`(select r.activo from rol_de_empresa r where r.id = m.rol_propio_id and r.empresa_id = m.empresa_id)`.as(
+          "rol_propio_activo",
+        ),
+        sql<
+          string[] | null
+        >`(select v.acciones from version_de_rol v where v.rol_id = m.rol_propio_id and v.empresa_id = m.empresa_id order by v.numero desc limit 1)`.as(
+          "acciones_del_rol_propio",
+        ),
         // La versión VIGENTE (la de mayor número) de la plantilla de su rol, en la MISMA consulta y la misma transacción: sin caché entre
         // pedidos, un cambio de plantilla vale desde la transacción siguiente (DEC-0956). El gerente no tiene plantilla (su conjunto es todo el catálogo).
         sql<
@@ -169,20 +197,18 @@ function armarAutorizacion(db: Kysely<AutorizacionDb>, memorizar: boolean): Carg
       .executeTakeFirst();
     if (fila === undefined) return null;
     // Un valor que el CHECK de la base no deja pasar: si llega otro, algo se rompió.
-    if (!esRolDeEmpresa(fila.rol)) throw new RangeError(`rol desconocido en la base: ${fila.rol}`);
-    const plantilla = fila.acciones_de_la_plantilla;
-    // Sin versión legible de la plantilla: ESE rol queda sin acciones (nace cerrado). El gerente no la usa: tiene todo el catálogo. Un valor que no
-    // es una lista de textos es un dato roto: falla, no se trata como «sin permisos» en silencio.
-    if (
-      plantilla !== null &&
-      !(Array.isArray(plantilla) && plantilla.every((a) => typeof a === "string"))
-    ) {
-      throw new RangeError(`la plantilla de ${fila.rol} no es una lista de acciones`);
-    }
+    if (!esRolDeLaMembresia(fila.rol))
+      throw new RangeError(`rol desconocido en la base: ${fila.rol}`);
+    // Sin versión legible de la plantilla (o del rol propio): ESE rol queda sin acciones (nace cerrado). El gerente no la usa: tiene todo el catálogo.
+    const plantilla = listaDeAcciones(fila.acciones_de_la_plantilla, `la plantilla de ${fila.rol}`);
+    const delRolPropio = listaDeAcciones(fila.acciones_del_rol_propio, "el rol propio");
     const acciones = conjuntoEfectivo(fila.rol, {
       catalogo: ACCIONES_DEL_CATALOGO,
       plantilla: () => plantilla,
-      rolPropio: null,
+      rolPropio:
+        fila.rol === "PROPIO" && delRolPropio !== null
+          ? { activo: fila.rol_propio_activo === true, acciones: delRolPropio }
+          : null,
     });
     return {
       rol: fila.rol,
@@ -257,7 +283,7 @@ function armarAutorizacion(db: Kysely<AutorizacionDb>, memorizar: boolean): Carg
   }
 
   /** Solo el rol (para el alcance de sucursales, que no necesita módulos ni plan). */
-  async function rolDelActor(contexto: ContextoOperativo): Promise<RolDeEmpresa | null> {
+  async function rolDelActor(contexto: ContextoOperativo): Promise<RolDeLaMembresia | null> {
     return (await membresiaDelActor(contexto))?.rol ?? null;
   }
 
