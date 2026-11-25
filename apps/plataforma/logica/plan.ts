@@ -30,6 +30,9 @@ export const ROTULO_DE_PERILLA: Readonly<Record<string, string>> = {
   // de plataforma, pendiente del OK del dueño (DEC-0702).
   recepcion_separada: "Recepción separada",
   conciliacion_de_tres_vias: "Tres vías",
+  // `facturar_antes_de_cobrar` (R-05): SUPUESTO (DEC-1068). El rótulo «Facturar antes de cobrar» está pendiente de aprobación del dueño (FAC-1); mientras tanto se usa «Facturación», el
+  // nombre aprobado del módulo (mismo criterio que `salon`: el rótulo de la perilla es el del módulo). Se cambia con esta línea al aprobarse FAC-1.
+  facturar_antes_de_cobrar: "Facturación",
 };
 
 export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {

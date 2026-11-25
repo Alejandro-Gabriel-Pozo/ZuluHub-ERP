@@ -29,6 +29,10 @@ import {
   type EntradaDeDocumentoDelTicket,
   type ErrorDeDocumentoDelTicket,
 } from "./documento-del-ticket";
+import {
+  facturarAntesDeCobrarEncendida,
+  ticketSeFactura,
+} from "../casos-de-uso/facturar-antes-de-cobrar";
 import { reunirPendientes } from "./pendientes-de-facturar";
 import {
   fichaDelTicketDelDia,
@@ -231,7 +235,10 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
           renglones: ficha.renglonesDelVigente,
           cobranza: ficha.cobranza,
           // Hasta que exista la emisión (E1) todo ticket cobrado está pendiente de facturar (§3.12).
-          pendienteDeFacturar: t.estado === "COBRADO",
+          pendienteDeFacturar: ticketSeFactura(
+            t.estado,
+            await facturarAntesDeCobrarEncendida(tx, contexto),
+          ),
         });
       }),
 
@@ -344,6 +351,7 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
           sucursales,
           fechaDesde: desde === null || !desde.ok ? null : desde.valor,
           fechaHasta: hasta === null || !hasta.ok ? null : hasta.valor,
+          conEmitidos: await facturarAntesDeCobrarEncendida(tx, contexto),
         };
         const pagina = await reunirPendientes(tx, contexto, dependencias, base, entrada, limite);
         if (!pagina.ok) return pagina;
@@ -371,8 +379,9 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
         if (t === null) return err("TICKET_NO_ENCONTRADO");
         const alcance = exigirSucursal(p.alcance, t.ticket.sucursalId);
         if (!alcance.ok) return alcance;
-        // Falla cerrado: solo un ticket cobrado se factura; uno emitido sin cobrar, de cortesía o anulado no.
-        if (t.ticket.estado !== "COBRADO") return err("TICKET_NO_FACTURABLE");
+        // Falla cerrado: un ticket cobrado se factura; uno emitido sin cobrar solo con la perilla encendida; de cortesía o anulado, nunca.
+        if (!ticketSeFactura(t.ticket.estado, await facturarAntesDeCobrarEncendida(tx, contexto)))
+          return err("TICKET_NO_FACTURABLE");
         return ok({
           ticketId: t.ticket.id,
           numero: t.ticket.numero,

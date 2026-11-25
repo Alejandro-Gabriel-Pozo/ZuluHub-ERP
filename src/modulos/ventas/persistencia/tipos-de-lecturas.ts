@@ -90,7 +90,8 @@ export type TicketPendienteDeFacturar = Readonly<{
   fechaNegocio: string;
   ejemplarVigente: number;
   total: string;
-  cobradoEn: Date;
+  /** Cuándo se cobró; `null` si el ticket está EMITIDO sin cobrar (solo con la perilla `facturar_antes_de_cobrar`). */
+  cobradoEn: Date | null;
 }>;
 
 export type CursorDePendientes = Readonly<{
@@ -104,6 +105,8 @@ export type FiltroDePendientes = Readonly<{
   sucursales: readonly SucursalId[] | null;
   fechaDesde: string | null;
   fechaHasta: string | null;
+  /** `true`: además de los COBRADO entran los EMITIDO sin cobrar (la empresa enciende `facturar_antes_de_cobrar`). Nunca CORTESIA ni ANULADO. */
+  conEmitidos: boolean;
   /** Solo `SIN_COMPROBANTE` existe hasta que E1 cree los documentos fiscales; con `COMPROBANTE_ANULADO` no hay nada. */
   despuesDe: CursorDePendientes | null;
   limite: number;

@@ -31,7 +31,7 @@ import {
 } from "./emitir-comprobante";
 
 /**
- * Facturar un documento que armó otro módulo (E1; decisiones 148, 149, 150 y 175): la factura de un documento ya cobrado, con sus renglones
+ * Facturar un documento que armó otro módulo (E1; decisiones 148, 149, 150 y 175): la factura de un documento (en ventas, un ticket cobrado o, con la perilla `facturar_antes_de_cobrar`, uno emitido sin cobrar; fiscal no mira cobros), con sus renglones
  * congelados; solo se elige el receptor. Fiscal NO conoce de dónde viene: recibe un origen opaco (`origen.tipo` de una lista de permitidos y su
  * `id`) y renglones como datos. Quien llama (ventas, por la composición, que es el único lugar donde se tocan los dos módulos) la corre DENTRO
  * de su propia transacción: el comprobante, su trabajo de validación, su auditoría y lo que quien llama guarde del vínculo son todo o nada.
