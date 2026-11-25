@@ -5,7 +5,7 @@
   "tipo": "SIN_DECISION",
   "estado": "PENDIENTE_DE_OK",
   "decision": "Una lista de acciones de plantilla o de rol propio admite como máximo 1000 claves distintas con la forma recurso.accion.",
-  "que_cambia": "Un tope de forma, no de negocio: hoy el catálogo tiene 171 acciones; si algún día supera 1000 hay que subirlo con una migración.",
+  "que_cambia": "Un tope de forma, no de negocio: hoy el catálogo tiene 172 acciones; si algún día supera 1000 hay que subirlo con una migración.",
   "donde": "migraciones/0094_permisos_configurables.sql (claves_de_accion_validas)",
   "motivo": "Es un tope técnico de forma, copiado del que ya usa la lista de módulos de un plan (100); no cambia ningún permiso ni texto."
 }
