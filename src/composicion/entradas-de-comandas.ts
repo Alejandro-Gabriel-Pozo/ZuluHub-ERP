@@ -56,6 +56,7 @@ const FORMA_DE_CAMBIAR_SALIDA = z.object({
   lineaId: identificador,
   salida: z.enum(SALIDAS_DE_LINEA),
 });
+const FORMA_DE_QUITAR_SIN_ENVIAR = z.object({ cuentaId: identificador, lineaId: identificador });
 const FORMA_DE_REGISTRAR_IMPRESORA = z.object({
   impresoraId: identificador,
   nombre: texto,
@@ -94,6 +95,7 @@ export type PedidoDeEnviar = z.output<typeof FORMA_DE_ENVIAR>;
 export type PedidoDePedirQueSalga = z.output<typeof FORMA_DE_PEDIR_QUE_SALGA>;
 export type PedidoDeAnular = z.output<typeof FORMA_DE_ANULAR>;
 export type PedidoDeCambiarSalida = z.output<typeof FORMA_DE_CAMBIAR_SALIDA>;
+export type PedidoDeQuitarSinEnviar = z.output<typeof FORMA_DE_QUITAR_SIN_ENVIAR>;
 export type PedidoDeRegistrarImpresora = z.output<typeof FORMA_DE_REGISTRAR_IMPRESORA>;
 export type PedidoDeEditarImpresora = z.output<typeof FORMA_DE_EDITAR_IMPRESORA>;
 export type PedidoDeUnaImpresora = z.output<typeof FORMA_DE_UNA_IMPRESORA>;
@@ -110,6 +112,8 @@ export const leerElPedidoDeAnular = (crudo: unknown): Pedido<PedidoDeAnular> =>
   leer(FORMA_DE_ANULAR, crudo);
 export const leerElPedidoDeCambiarSalida = (crudo: unknown): Pedido<PedidoDeCambiarSalida> =>
   leer(FORMA_DE_CAMBIAR_SALIDA, crudo);
+export const leerElPedidoDeQuitarSinEnviar = (crudo: unknown): Pedido<PedidoDeQuitarSinEnviar> =>
+  leer(FORMA_DE_QUITAR_SIN_ENVIAR, crudo);
 export const leerElPedidoDeRegistrarImpresora = (
   crudo: unknown,
 ): Pedido<PedidoDeRegistrarImpresora> => leer(FORMA_DE_REGISTRAR_IMPRESORA, crudo);

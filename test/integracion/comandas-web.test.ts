@@ -4,6 +4,7 @@ import {
   cambiarLaSalida,
   enviarALaCocina,
   pedirQueSalga,
+  quitarUnPlatoSinEnviar,
   type DependenciasDeComandasWeb,
 } from "../../src/composicion/comandas-web";
 import {
@@ -80,12 +81,15 @@ describe.skipIf(base === null)("comandas e impresión de la web", () => {
     trabajo: () => Promise<R>,
   ) => repetirSiAgotada(trabajo, { esAgotada: agotadaSegunElRegistro(registrados) });
 
+  const mesasPorEmpresa = new Map<string, number>();
   /** Una cuenta de mesa con `n` platos (cada uno con su salida) en la sucursal del escenario. */
   const cuentaConPlatos = async (
     salidas: readonly ("AHORA" | "DESPUES")[],
     escenario = e,
   ): Promise<{ cuenta: string; lineas: string[] }> => {
-    const n = ++proxima;
+    // El número de mesa sigue por empresa: el salón es de 14 × 9 (35 mesas en esta grilla) y cada empresa tiene el suyo.
+    const n = (mesasPorEmpresa.get(escenario.empresa) ?? 0) + 1;
+    mesasPorEmpresa.set(escenario.empresa, n);
     const mesaId = nuevoId();
     valorDe(
       await m.salon.crearMesa(escenario.gerente, {
@@ -231,6 +235,133 @@ describe.skipIf(base === null)("comandas e impresión de la web", () => {
     expect(codigo(await cambiar("CUANDO_QUIERA"))).toBe(GENERICO);
     await enviar(cuenta);
     expect(codigo(await cambiar("DESPUES"))).toBe(GENERICO);
+  });
+
+  it("«Quitar» un plato sin enviar: sin motivo, sin papel; repetir es yaEstabaQuitada y audita una vez; el plato queda ANULADO, no se borra", async () => {
+    const { cuenta, lineas } = await cuentaConPlatos(["AHORA", "DESPUES"]);
+    const lineaId = lineas[1] as string;
+    const quitar = (id = lineaId, pedido: Record<string, unknown> = {}) =>
+      quitarUnPlatoSinEnviar(d, e.gerente, e.sucursal, {
+        cuentaId: cuenta,
+        lineaId: id,
+        ...pedido,
+      });
+    expect(await quitar()).toMatchObject({ ok: true, dato: { yaEstabaQuitada: false } });
+    expect(await quitar()).toMatchObject({ ok: true, dato: { yaEstabaQuitada: true } });
+    const estados = await m.filas<{
+      id: string;
+      estado: string;
+      motivo_de_anulacion: string | null;
+    }>(
+      "select id, estado, motivo_de_anulacion from linea_cuenta where cuenta_id = $1 order by posicion",
+      [cuenta],
+    );
+    expect(estados.map((l) => l.estado)).toEqual(["VIGENTE", "ANULADA"]);
+    expect(estados[1]?.motivo_de_anulacion).toBe("SIN_ENVIAR");
+    const auditadas = (await m.auditoria(e.empresa, "LINEA_ANULADA")).filter(
+      (a) => a["entidad_id"] === lineaId,
+    );
+    expect(auditadas).toHaveLength(1);
+    expect(await cuantos("envio_de_comanda", "cuenta_id", cuenta)).toBe(0);
+    // Un motivo que mande el navegador se descarta: el motivo es interno.
+    const ajena = await cuentaConPlatos(["AHORA"]);
+    expect(
+      await quitarUnPlatoSinEnviar(d, e.gerente, e.sucursal, {
+        cuentaId: ajena.cuenta,
+        lineaId: ajena.lineas[0],
+        motivo: "me dio la gana",
+      }),
+    ).toMatchObject({ ok: true });
+    const motivo = await m.filas<{ motivo_de_anulacion: string }>(
+      "select motivo_de_anulacion from linea_cuenta where id = $1",
+      [ajena.lineas[0]],
+    );
+    expect(motivo[0]?.motivo_de_anulacion).toBe("SIN_ENVIAR");
+  });
+
+  it("«Quitar» un plato ya enviado, de otra cuenta o inexistente es el genérico y no escribe", async () => {
+    const { cuenta, lineas } = await cuentaConPlatos(["AHORA", "DESPUES"]);
+    expect((await enviar(cuenta)).ok).toBe(true);
+    const quitar = (cuentaId: string, lineaId: string) =>
+      quitarUnPlatoSinEnviar(d, e.gerente, e.sucursal, { cuentaId, lineaId });
+    expect(codigo(await quitar(cuenta, lineas[0] as string))).toBe(GENERICO);
+    const otraCuenta = await cuentaConPlatos(["AHORA"]);
+    expect(codigo(await quitar(cuenta, otraCuenta.lineas[0] as string))).toBe(GENERICO);
+    expect(codigo(await quitar(cuenta, nuevoId()))).toBe(GENERICO);
+    expect(codigo(await quitar(cuenta, "no-es-un-id"))).toBe(GENERICO);
+    const vigentes = await m.contar(
+      "select count(*) as n from linea_cuenta where cuenta_id = $1 and estado = 'VIGENTE'",
+      [cuenta],
+    );
+    expect(vigentes).toBe(2);
+    // El que esperaba (sale después) sigue sin enviar y sí se puede quitar.
+    expect(await quitar(cuenta, lineas[1] as string)).toMatchObject({ ok: true });
+  });
+
+  it("CONCURRENCIA: quitar a la vez que otro envía: o se quita o se envía, nunca las dos cosas", async () => {
+    for (let i = 0; i < 3; i++) {
+      const { cuenta, lineas } = await cuentaConPlatos(["AHORA", "AHORA"]);
+      const lineaId = lineas[0] as string;
+      const [quitado, enviado] = await Promise.all([
+        repetir(() =>
+          quitarUnPlatoSinEnviar(d, e.gerente, e.sucursal, { cuentaId: cuenta, lineaId }),
+        ),
+        repetir(() => enviar(cuenta, {}, e.administrador)),
+      ]);
+      const fila = await m.filas<{ estado: string; envio_id: string | null }>(
+        "select l.estado, c.envio_id from linea_cuenta l join linea_de_comanda c on c.linea_id = l.id where l.id = $1",
+        [lineaId],
+      );
+      const [una] = fila;
+      expect(una).toBeDefined();
+      // Nunca un plato anulado y enviado a la vez.
+      expect(una?.estado === "ANULADA" && una.envio_id !== null).toBe(false);
+      if (quitado.ok) expect(una?.estado).toBe("ANULADA");
+      else expect(codigo(quitado)).toBe(GENERICO);
+      expect(enviado.ok || codigo(enviado) === GENERICO).toBe(true);
+    }
+  });
+
+  it("«Quitar»: la sucursal la fija el servidor; sin sucursal, de otra sucursal o de otra empresa es el genérico; sin persona no escribe", async () => {
+    const { cuenta, lineas } = await cuentaConPlatos(["AHORA"]);
+    const lineaId = lineas[0] as string;
+    expect(
+      codigo(await quitarUnPlatoSinEnviar(d, e.gerente, "", { cuentaId: cuenta, lineaId })),
+    ).toBe(GENERICO);
+    expect(
+      codigo(
+        await quitarUnPlatoSinEnviar(d, e.gerente, e.otraSucursal, { cuentaId: cuenta, lineaId }),
+      ),
+    ).toBe(GENERICO);
+    const otra = await m.escenario();
+    const ajena = await cuentaConPlatos(["AHORA"], otra);
+    expect(
+      codigo(
+        await quitarUnPlatoSinEnviar(d, e.gerente, e.sucursal, {
+          cuentaId: ajena.cuenta,
+          lineaId: ajena.lineas[0],
+        }),
+      ),
+    ).toBe(GENERICO);
+    expect(
+      (
+        await quitarUnPlatoSinEnviar(d, { ...e.gerente, personaId: null }, e.sucursal, {
+          cuentaId: cuenta,
+          lineaId,
+        })
+      ).ok,
+    ).toBe(false);
+    const vigentes = await m.contar(
+      "select count(*) as n from linea_cuenta where id = $1 and estado = 'VIGENTE'",
+      [lineaId],
+    );
+    expect(vigentes).toBe(1);
+    expect(
+      await m.contar(
+        "select count(*) as n from linea_cuenta where id = $1 and estado = 'VIGENTE'",
+        [ajena.lineas[0] as string],
+      ),
+    ).toBe(1);
   });
 
   it("«Anular» un ítem enviado: con motivo, parcial; repetir con el mismo avisoId es un solo aviso; sin motivo o de más es el genérico", async () => {

@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
+  agregarAlPedidoDeLaMesa,
   cambiarDeMesaLaCuenta,
   liberarLaMesa,
   tomarElPedido,
@@ -164,6 +165,12 @@ export const cargarLaFichaDeLaMesa = (crudo: unknown): Promise<Respuesta<FichaPa
 export const tomarElPedidoDeLaMesa = (crudo: unknown) =>
   enLaSucursal((contexto, sucursal) =>
     tomarElPedido(dependenciasDeLaCuenta, contexto, sucursal, crudo),
+  );
+
+/** «Agregar» un producto al pedido (`{ cuentaId, lineaId, productoId, varianteId?, opcionIds, cantidad, precioAbierto?, confirmaciones?, salida? }`; el `lineaId` lo fija la página una vez por intento). */
+export const agregarAlPedidoDeLaMesaDelSalon = (crudo: unknown) =>
+  enLaSucursal((contexto, sucursal) =>
+    agregarAlPedidoDeLaMesa(dependenciasDeLaCuenta, contexto, sucursal, crudo),
   );
 
 /** «Liberar mesa» (`{ cuentaId }`). */

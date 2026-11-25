@@ -1,7 +1,15 @@
 import { z } from "zod";
+import { SALIDAS_DE_LINEA } from "../modulos/comandas/publico";
 import type { FiltroDelMapa } from "../modulos/salon/publico";
 import type { Resultado } from "../primitivas/resultado/resultado";
-import { identificador, leer, type ErrorDeEntrada } from "./entradas-de-facturacion";
+import { MAXIMO_DE_OPCIONES_POR_LINEA } from "./entradas-de-venta-rapida";
+import {
+  decimal,
+  identificador,
+  leer,
+  texto,
+  type ErrorDeEntrada,
+} from "./entradas-de-facturacion";
 
 /**
  * La frontera de la cuenta de mesa del salón (S-0r; E7 §3.4): de lo que manda la pantalla a lo que aceptan el mapa, la ficha, `tomarPedido`, `liberarMesa` y `cambiarDeMesa`. Pura: sin base ni servidor.
@@ -10,6 +18,9 @@ import { identificador, leer, type ErrorDeEntrada } from "./entradas-de-facturac
  * mesa; la sucursal la fija el servidor). Esta capa dice si el dato tiene la FORMA pedida (ids con forma de id, el filtro dentro del conjunto del mapa); si la mesa existe, está libre o es de
  * la sucursal lo decide el servidor dentro de su transacción. Nada de dinero entra por acá.
  *
+ *  - **El precio NO viaja**: «Agregar al pedido» manda el producto, las opciones y la cantidad (texto decimal, nunca número); el precio sale del catálogo en el servidor. `precioAbierto` solo existe para un
+ *    producto sin precio cargado y el servidor rechaza uno con precio.
+ *  - **El id de la línea lo manda la pantalla** (una vez por intento): repetir con el mismo id es la misma línea.
  *  - **El id de la cuenta lo manda la pantalla** y es la clave de idempotencia de «Tomar pedido»: la misma otra vez devuelve la misma cuenta, no abre otra.
  * Chequeo: `entradas-de-cuenta-de-mesa.test.ts`.
  */
@@ -29,12 +40,25 @@ const FORMA_DE_CAMBIAR_DE_MESA = z.object({
   mesaDestinoId: identificador,
 });
 
+const FORMA_DE_AGREGAR_AL_PEDIDO = z.object({
+  cuentaId: identificador,
+  lineaId: identificador,
+  productoId: identificador,
+  varianteId: identificador.optional(),
+  opcionIds: z.array(identificador).max(MAXIMO_DE_OPCIONES_POR_LINEA),
+  cantidad: decimal,
+  precioAbierto: decimal.optional(),
+  confirmaciones: z.array(texto).max(10).optional(),
+  salida: z.enum(SALIDAS_DE_LINEA).optional(),
+});
+
 type Pedido<T> = Resultado<T, ErrorDeEntrada>;
 
 export type PedidoDelMapa = Readonly<{ filtro: FiltroDelMapa }>;
 export type PedidoDeTomarPedido = z.output<typeof FORMA_DE_TOMAR_PEDIDO>;
 export type PedidoDeUnaCuenta = z.output<typeof FORMA_DE_UNA_CUENTA>;
 export type PedidoDeCambiarDeMesa = z.output<typeof FORMA_DE_CAMBIAR_DE_MESA>;
+export type PedidoDeAgregarAlPedido = z.output<typeof FORMA_DE_AGREGAR_AL_PEDIDO>;
 
 /** El mapa sin filtro (o sin pedido) es «Todas». */
 export function leerElPedidoDelMapa(crudo: unknown): Pedido<PedidoDelMapa> {
@@ -50,3 +74,6 @@ export const leerElPedidoDeUnaCuenta = (crudo: unknown): Pedido<PedidoDeUnaCuent
 
 export const leerElPedidoDeCambiarDeMesa = (crudo: unknown): Pedido<PedidoDeCambiarDeMesa> =>
   leer(FORMA_DE_CAMBIAR_DE_MESA, crudo);
+
+export const leerElPedidoDeAgregarAlPedido = (crudo: unknown): Pedido<PedidoDeAgregarAlPedido> =>
+  leer(FORMA_DE_AGREGAR_AL_PEDIDO, crudo);
