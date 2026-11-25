@@ -30,6 +30,7 @@ export type LineaDeLaFichaDeLaPantalla = Readonly<{
   compartida: boolean;
   comanda: string;
   numeroDeEnvio: number | null;
+  envioId: string | null;
   deLaMesa: number | null;
 }>;
 
@@ -68,6 +69,17 @@ export type TextosDeLaMesa = Readonly<{
   quitar: string;
   cancelar: string;
   cerrar: string;
+  enviarACocina: string;
+  enviadoACocina: string;
+  pedirQueSalga: string;
+  pedirQueSalgaTodo: string;
+  anular: string;
+  motivo: string;
+  cantidad: string;
+  reimprimir: string;
+  seImprimeUnaCopia: string;
+  configurarImpresoras: string;
+  itemAnulado: string;
 }>;
 
 export function textosDeLaMesa(d: DiccionarioResuelto = {}): TextosDeLaMesa {
@@ -87,6 +99,20 @@ export function textosDeLaMesa(d: DiccionarioResuelto = {}): TextosDeLaMesa {
     quitar: texto(d, "comandas.texto.salida_quitar"),
     cancelar: texto(d, "ventas.venta.cancelar"),
     cerrar: texto(d, "vidriera.producto.cerrar"),
+    enviarACocina: texto(d, "comandas.texto.envio_enviar_a_cocina"),
+    enviadoACocina: texto(d, "comandas.texto.envio_enviado_a_cocina"),
+    pedirQueSalga: texto(d, "comandas.texto.salida_pedir_que_salga"),
+    pedirQueSalgaTodo: texto(d, "comandas.texto.salida_pedir_que_salga_todo"),
+    anular: texto(d, "comandas.texto.anulacion_anular"),
+    motivo: texto(d, "comandas.texto.anulacion_motivo"),
+    cantidad: texto(d, "ventas.venta.cantidad"),
+    reimprimir: texto(d, "comandas.texto.envio_reimprimir"),
+    seImprimeUnaCopia: texto(
+      d,
+      "comandas.texto.imprimir_se_imprime_una_copia_con_la_hora_del_envio_origina",
+    ),
+    configurarImpresoras: texto(d, "comandas.texto.imprimir_configurar_impresoras"),
+    itemAnulado: texto(d, "comandas.texto.envio_item_anulado"),
   };
 }
 
@@ -108,6 +134,10 @@ export type PlatoArmado = Readonly<{
   /** Solo un plato todavía no enviado: «Sale ahora» (`AHORA`) o «Sale después» (`DESPUES`). */
   salida: "AHORA" | "DESPUES" | null;
   quitable: boolean;
+  /** La cantidad tal como la guarda la cuenta, como texto decimal sin ceros de más («2», «1.5»): es lo que se propone al anular. */
+  cantidad: string;
+  /** El envío en que salió; `null` si todavía no se envió. */
+  envioId: string | null;
 }>;
 
 type GrupoArmado = Readonly<{
@@ -128,6 +158,12 @@ export type MesaArmada = Readonly<{
   /** «$ 1.234,56»; `null` si no hay cuenta (o su moneda no es ARS). */
   total: string | null;
   grupos: readonly GrupoArmado[];
+  /** Los envíos de la cuenta, por número y sin repetir («Envío 1»): de cada uno se puede pedir una copia. */
+  envios: readonly Readonly<{ envioId: string; titulo: string }>[];
+  /** Hay platos «Para enviar» (se ofrece «Enviar a cocina»). */
+  hayParaEnviar: boolean;
+  /** Los platos que esperan (para «Pedir que salga todo»). */
+  hayEnEspera: boolean;
   /** Una cuenta sin ningún plato: se muestra «La mesa no tiene pedido» y se ofrece «Liberar mesa». */
   sinPlatos: boolean;
 }>;
@@ -142,13 +178,26 @@ const cuentaN = (d: DiccionarioResuelto, numero: number): string => {
     : `${rotulo} ${String(numero)}`;
 };
 
+/** «Envío 1»: `comandas.texto.envio_envio_n` dice «Envío N» (la N final es el lugar del número). */
+const numeroDeEnvio = (d: DiccionarioResuelto, numero: number): string => {
+  const rotulo = texto(d, "comandas.texto.envio_envio_n");
+  return rotulo.endsWith("N")
+    ? `${rotulo.slice(0, -1)}${String(numero)}`
+    : `${rotulo} ${String(numero)}`;
+};
+
+/** «Envío 1», con los textos aprobados por defecto (para lo que arma la pantalla en el navegador, que no recibe un diccionario). */
+export const tituloDelEnvio = (numero: number): string => numeroDeEnvio({}, numero);
+
+/** «2.0000» pasa a «2» y «1.5000» a «1.5», sin pasar por `number`. */
+const sinCerosDeMas = (cantidad: string): string =>
+  cantidad.includes(".") ? cantidad.replace(/0+$/, "").replace(/\.$/, "") : cantidad;
+
 function armarElPlato(d: DiccionarioResuelto, l: LineaDeLaFichaDeLaPantalla): PlatoArmado {
   const enviado = l.comanda === "ENVIADA";
   const variante = l.varianteNombre === null ? "" : ` · ${l.varianteNombre}`;
   const notas = [
-    l.numeroDeEnvio === null
-      ? ""
-      : `${texto(d, "comandas.texto.envio_envio_n").replace(/N$/, String(l.numeroDeEnvio))}`,
+    l.numeroDeEnvio === null ? "" : numeroDeEnvio(d, l.numeroDeEnvio),
     l.deLaMesa === null ? "" : `${texto(d, "salon.texto.unir_de_la_mesa")} ${String(l.deLaMesa)}`,
     l.compartida ? texto(d, "salon.texto.unir_compartido") : "",
   ].filter((n) => n !== "");
@@ -159,6 +208,8 @@ function armarElPlato(d: DiccionarioResuelto, l: LineaDeLaFichaDeLaPantalla): Pl
     importe: l.compartida ? null : formatearImporte(l.importe),
     salida: enviado ? null : l.comanda === "ESPERA" ? "DESPUES" : "AHORA",
     quitable: !enviado,
+    cantidad: sinCerosDeMas(l.cantidad),
+    envioId: l.envioId,
   };
 }
 
@@ -172,6 +223,9 @@ export function armarLaMesa(d: DiccionarioResuelto, ficha: FichaDeLaMesaDeLaPant
     cuentaId: null,
     total: null,
     grupos: [],
+    envios: [],
+    hayParaEnviar: false,
+    hayEnEspera: false,
     sinPlatos: false,
   } as const;
   if (ficha.estado === "UNIDA") {
@@ -202,12 +256,21 @@ export function armarLaMesa(d: DiccionarioResuelto, ficha: FichaDeLaMesaDeLaPant
     };
   }
   const platos = unica.lineas.map((l) => ({ l, plato: armarElPlato(d, l) }));
+  const envios = new Map<number, string>();
+  for (const { l } of platos) {
+    if (l.numeroDeEnvio !== null && l.envioId !== null) envios.set(l.numeroDeEnvio, l.envioId);
+  }
   return {
     ...base,
     modo: "CON_CUENTA",
     cuentaId: unica.cuentaId,
     total: importeDe(unica.total),
     sinPlatos: platos.length === 0,
+    hayParaEnviar: platos.some((p) => p.l.comanda === "PARA_ENVIAR"),
+    hayEnEspera: platos.some((p) => p.l.comanda === "ESPERA"),
+    envios: [...envios.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([numero, envioId]) => ({ envioId, titulo: numeroDeEnvio(d, numero) })),
     grupos: GRUPOS.flatMap((g) => {
       const de = platos.filter((p) => p.l.comanda === g.comanda).map((p) => p.plato);
       return de.length === 0 ? [] : [{ comanda: g.comanda, titulo: texto(d, g.clave), platos: de }];

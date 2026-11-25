@@ -83,7 +83,15 @@ export type EntradaDeDocumentoParaImprimir = Readonly<{
   copia?: boolean | undefined;
   /** La impresora elegida (da el ancho del papel); sin ella, la de ese uso de la sucursal, o 80 mm. */
   impresoraId?: string | undefined;
+  /** La sucursal con la que trabaja quien pide (la fija el servidor): un documento de otra sucursal es como si no existiera. */
+  sucursalDeTrabajo?: string | undefined;
 }>;
+
+/** ¿El documento es de otra sucursal que la de trabajo? Sin sucursal de trabajo (quien llama no la fija) no se compara: rige el alcance de quien pide. */
+const esDeOtraSucursal = (
+  sucursalDeTrabajo: string | undefined,
+  sucursalDelDocumento: string,
+): boolean => sucursalDeTrabajo !== undefined && sucursalDeTrabajo !== sucursalDelDocumento;
 
 export function crearConsultasDeComandas(dependencias: DependenciasDeConsultasDeComandas) {
   const leer = <T>(
@@ -168,6 +176,9 @@ export function crearConsultasDeComandas(dependencias: DependenciasDeConsultasDe
           if (envio === null) return err("DOCUMENTO_NO_ENCONTRADO");
           const alcance = exigirSucursal(p.alcance, sucursalId(envio.sucursalId));
           if (!alcance.ok) return alcance;
+          if (esDeOtraSucursal(entrada.sucursalDeTrabajo, envio.sucursalId)) {
+            return err("DOCUMENTO_NO_ENCONTRADO");
+          }
           const z = await zona(envio.sucursalId);
           if (!z.ok) return z;
           const ancho = await anchoDe(
@@ -209,6 +220,9 @@ export function crearConsultasDeComandas(dependencias: DependenciasDeConsultasDe
           if (cuenta === null) return err("DOCUMENTO_NO_ENCONTRADO");
           const alcance = exigirSucursal(p.alcance, cuenta.sucursalId);
           if (!alcance.ok) return alcance;
+          if (esDeOtraSucursal(entrada.sucursalDeTrabajo, cuenta.sucursalId)) {
+            return err("DOCUMENTO_NO_ENCONTRADO");
+          }
           const z = await zona(cuenta.sucursalId);
           if (!z.ok) return z;
           const ancho = await anchoDe(
@@ -243,6 +257,9 @@ export function crearConsultasDeComandas(dependencias: DependenciasDeConsultasDe
         if (ficha === null) return err("DOCUMENTO_NO_ENCONTRADO");
         const alcance = exigirSucursal(p.alcance, ficha.ticket.sucursalId);
         if (!alcance.ok) return alcance;
+        if (esDeOtraSucursal(entrada.sucursalDeTrabajo, ficha.ticket.sucursalId)) {
+          return err("DOCUMENTO_NO_ENCONTRADO");
+        }
         const ancho = await anchoDe(
           tx,
           contexto,

@@ -11,6 +11,7 @@ import { Boton } from "../../componentes/Boton.cliente";
 import { Insignia } from "../../componentes/Insignia";
 import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
 import { Superposicion } from "../../patrones/Superposicion";
+import type { armarLosTextosDeImprimir } from "../../patrones/papel/textos-de-imprimir";
 import type { LineaElegida } from "../venta/HojaDeProducto.cliente";
 import {
   agregarALaCuenta,
@@ -23,20 +24,33 @@ import type {
   TextosDeLaVenta,
 } from "../venta/modelo-de-venta-rapida";
 import { CatalogoDeLaMesa } from "./CatalogoDeLaMesa.cliente";
+import { EnviosDeLaMesa } from "./EnviosDeLaMesa.cliente";
+import { HojaDeAnularItem } from "./HojaDeAnularItem.cliente";
+import { ImpresionDelDocumento, type AccionesDeImpresion } from "./ImpresionDelDocumento.cliente";
 import estilos from "./PantallaDeLaMesa.module.css";
-import type { MesaArmada, MesaLibre, PlatoArmado, TextosDeLaMesa } from "./modelo-de-la-mesa";
+import { PlatoDeLaMesa } from "./PlatoDeLaMesa.cliente";
+import {
+  tituloDelEnvio,
+  type MesaArmada,
+  type MesaLibre,
+  type PlatoArmado,
+  type TextosDeLaMesa,
+} from "./modelo-de-la-mesa";
 import { rutaDeLaCuentaDeMesa } from "./rutas-del-salon";
+import { useCocinaDeLaMesa, type AccionesDeLaCocina } from "./useCocinaDeLaMesa.cliente";
 
 type Accion = (pedido: unknown) => Promise<Respuesta<unknown>>;
 
-type AccionesDeLaMesa = Readonly<{
-  tomarPedido: Accion;
-  agregar: Accion;
-  cambiarSalida: Accion;
-  quitar: Accion;
-  liberar: Accion;
-  cambiarDeMesa: Accion;
-}>;
+type AccionesDeLaMesa = AccionesDeLaCocina &
+  AccionesDeImpresion &
+  Readonly<{
+    tomarPedido: Accion;
+    agregar: Accion;
+    cambiarSalida: Accion;
+    quitar: Accion;
+    liberar: Accion;
+    cambiarDeMesa: Accion;
+  }>;
 
 export type PropsDePantallaDeLaMesa = Readonly<{
   mesaId: string;
@@ -47,6 +61,12 @@ export type PropsDePantallaDeLaMesa = Readonly<{
   cuentaNuevaId: string;
   /** Las mesas libres a las que se puede pasar la cuenta; `null` si la persona no puede cambiar de mesa (el botón no se ofrece). */
   mesasLibres: readonly MesaLibre[] | null;
+  /** Los textos de imprimir ya resueltos (los aprobados de `comandas.texto.imprimir_*`). */
+  textosDeImprimir: ReturnType<typeof armarLosTextosDeImprimir>;
+  /** Lo que la persona puede hacer con la cocina (solo ayudas: el servidor decide). `enviar` abre enviar, pedir que salga y anular; `reimprimir`, las copias; `imprimir`, el botón de imprimir. */
+  puede: Readonly<{ enviar: boolean; imprimir: boolean; reimprimir: boolean }>;
+  /** Adónde lleva «Configurar impresoras»; `null` si la persona no puede ir (el enlace no se ofrece). */
+  rutaDeImpresoras: string | null;
   /** Lo que se ofrece para agregar; `null` si no se pudo leer (entonces no se ofrece agregar). */
   catalogo: Readonly<{
     secciones: readonly SeccionDeLaVenta[];
@@ -61,48 +81,6 @@ const ERROR_SIN_RESPUESTA: ErrorPublico = errorDeCodigo("CATALOGO_ACCION_NO_PERM
 
 const nuevoId = (): string => crypto.randomUUID();
 
-function Plato({
-  plato,
-  textos,
-  ocupado,
-  alCambiarSalida,
-  alQuitar,
-}: Readonly<{
-  plato: PlatoArmado;
-  textos: TextosDeLaMesa;
-  ocupado: boolean;
-  alCambiarSalida: (salida: "AHORA" | "DESPUES") => void;
-  alQuitar: () => void;
-}>) {
-  return (
-    <li className={estilos["plato"]}>
-      <div className={estilos["datos"]}>
-        <span>{plato.nombre}</span>
-        {plato.nota === "" ? null : <span className={estilos["nota"]}>{plato.nota}</span>}
-      </div>
-      {plato.importe === null ? null : <span className={estilos["importe"]}>{plato.importe}</span>}
-      {plato.salida === null ? null : (
-        <button
-          type="button"
-          className={estilos["salida"]}
-          aria-label={`${plato.salida === "AHORA" ? textos.saleAhora : textos.saleDespues}. ${textos.cuandoSale}: ${plato.nombre}`}
-          aria-disabled={ocupado ? "true" : undefined}
-          onClick={() => {
-            if (!ocupado) alCambiarSalida(plato.salida === "AHORA" ? "DESPUES" : "AHORA");
-          }}
-        >
-          {plato.salida === "AHORA" ? textos.saleAhora : textos.saleDespues}
-        </button>
-      )}
-      {plato.quitable ? (
-        <Boton variante="secundaria" alTocar={alQuitar} deshabilitado={ocupado}>
-          {textos.quitar}
-        </Boton>
-      ) : null}
-    </li>
-  );
-}
-
 /**
  * La ficha de la mesa (SAL-B, S2; maqueta `salon.html` y `salida.html`): mesa libre → «Tomar pedido»; mesa con una cuenta → los platos agrupados por su estado de comanda, el total, agregar productos (la hoja de la
  * venta rápida), «Sale ahora» / «Sale después» y «Quitar» en lo que no se envió, «Liberar mesa» sin platos y «Cambiar de mesa». Cada acción escribe en el servidor (que decide el permiso, la sucursal y el precio) y la
@@ -116,18 +94,26 @@ export function PantallaDeLaMesa({
   acciones,
   cuentaNuevaId,
   mesasLibres,
+  textosDeImprimir,
+  puede,
+  rutaDeImpresoras,
   catalogo,
 }: PropsDePantallaDeLaMesa) {
   const router = useRouter();
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<ErrorPublico | null>(null);
   const [cambiando, setCambiando] = useState(false);
+  const [anulando, setAnulando] = useState<PlatoArmado | null>(null);
   // El pedido en vuelo: una sola cosa a la vez, también contra dos toques en el mismo instante (el estado se repinta tarde; la referencia no).
   const enVuelo = useRef(false);
   // El intento de agregar: repetir exactamente lo mismo (tras un corte de red, por ejemplo) reutiliza el id de la línea, así el servidor no la duplica; otra elección es otro intento.
   const intento = useRef<Readonly<{ para: string; lineaId: string }> | null>(null);
 
-  const ejecutar = async (accion: Accion, pedido: unknown, alTerminar: () => void) => {
+  const ejecutar = async <R,>(
+    accion: (pedido: unknown) => Promise<Respuesta<R>>,
+    pedido: unknown,
+    alTerminar: (dato: R) => void,
+  ) => {
     if (enVuelo.current) return;
     enVuelo.current = true;
     setOcupado(true);
@@ -135,7 +121,7 @@ export function PantallaDeLaMesa({
     try {
       const respuesta = await accion(pedido);
       if (respuesta.ok) {
-        alTerminar();
+        alTerminar(respuesta.dato);
       } else {
         setError(respuesta.error);
       }
@@ -149,6 +135,8 @@ export function PantallaDeLaMesa({
   const recargar = () => {
     router.refresh();
   };
+
+  const cocina = useCocinaDeLaMesa(mesa.cuentaId, acciones, ejecutar, recargar);
 
   const agregar = (linea: LineaElegida) => {
     if (mesa.cuentaId === null) return;
@@ -199,16 +187,32 @@ export function PantallaDeLaMesa({
       {mesa.modo === "CON_CUENTA" ? (
         <>
           {mesa.sinPlatos ? <p>{textos.sinPedido}</p> : null}
+          {cocina.documento === null ? null : (
+            <ImpresionDelDocumento
+              key={cocina.documento.clave}
+              documento={cocina.documento}
+              textos={textosDeImprimir}
+              textoDeLaCopia={textos.reimprimir}
+              acciones={acciones}
+              deshabilitado={!puede.imprimir}
+              configurarImpresoras={
+                rutaDeImpresoras === null ? null : (
+                  <a href={rutaDeImpresoras}>{textos.configurarImpresoras}</a>
+                )
+              }
+            />
+          )}
           {mesa.grupos.map((g) => (
             <section key={g.comanda} className={estilos["grupo"]}>
               <h3 className={estilos["subtitulo"]}>{g.titulo}</h3>
               <ul className={estilos["platos"]}>
                 {g.platos.map((p) => (
-                  <Plato
+                  <PlatoDeLaMesa
                     key={p.id}
                     plato={p}
                     textos={textos}
                     ocupado={ocupado}
+                    conCocina={puede.enviar}
                     alCambiarSalida={(salida) => {
                       if (mesa.cuentaId === null) return;
                       void ejecutar(
@@ -225,9 +229,37 @@ export function PantallaDeLaMesa({
                         recargar,
                       );
                     }}
+                    alPedirQueSalga={() => {
+                      cocina.pedirQueSalga([p.id], tituloDelEnvio);
+                    }}
+                    alAnular={() => {
+                      setAnulando(p);
+                    }}
                   />
                 ))}
               </ul>
+              {puede.enviar && g.comanda === "PARA_ENVIAR" ? (
+                <Boton
+                  deshabilitado={ocupado}
+                  enviando={ocupado}
+                  alTocar={() => {
+                    cocina.enviar(tituloDelEnvio);
+                  }}
+                >
+                  {textos.enviarACocina}
+                </Boton>
+              ) : null}
+              {puede.enviar && g.comanda === "ESPERA" ? (
+                <Boton
+                  variante="secundaria"
+                  deshabilitado={ocupado}
+                  alTocar={() => {
+                    cocina.pedirQueSalga("TODAS", tituloDelEnvio);
+                  }}
+                >
+                  {textos.pedirQueSalgaTodo}
+                </Boton>
+              ) : null}
             </section>
           ))}
           {mesa.total === null ? null : (
@@ -236,6 +268,16 @@ export function PantallaDeLaMesa({
               <strong>{mesa.total}</strong>
             </p>
           )}
+          {puede.reimprimir && mesa.envios.length > 0 ? (
+            <EnviosDeLaMesa
+              envios={mesa.envios}
+              textos={textos}
+              ocupado={ocupado}
+              alCopiar={(e) => {
+                cocina.copiar(e.envioId, e.titulo);
+              }}
+            />
+          ) : null}
           <div className={estilos["acciones"]}>
             {mesa.sinPlatos ? (
               <Boton
@@ -276,6 +318,29 @@ export function PantallaDeLaMesa({
           )}
         </>
       ) : null}
+
+      {anulando === null ? null : (
+        <HojaDeAnularItem
+          plato={{ id: anulando.id, nombre: anulando.nombre, cantidad: anulando.cantidad }}
+          textos={{
+            anular: textos.anular,
+            motivo: textos.motivo,
+            cantidad: textos.cantidad,
+            cancelar: textos.cancelar,
+            cerrar: textos.cerrar,
+          }}
+          ocupado={ocupado}
+          error={error}
+          alAnular={(pedido) => {
+            cocina.anular(pedido, textos.itemAnulado, () => {
+              setAnulando(null);
+            });
+          }}
+          alCancelar={() => {
+            setAnulando(null);
+          }}
+        />
+      )}
 
       <Superposicion
         abierta={cambiando && mesasLibres !== null}
