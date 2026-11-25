@@ -93,8 +93,13 @@ export function crearEntornoDeDominios(
 
 export const crearCasosDeDominios = (
   entorno: TransaccionesDePostgres<TxDeDominiosDePrueba>,
+  hostsProtegidos: ReadonlySet<string> = new Set(),
 ): CasosDeUsoDeDominios =>
-  crearCasosDeUsoDeDominios({ transacciones: entorno, reglas: REGLAS_DE_PLATAFORMA });
+  crearCasosDeUsoDeDominios({
+    transacciones: entorno,
+    reglas: REGLAS_DE_PLATAFORMA,
+    hostsProtegidos,
+  });
 
 /** Registra la referencia de un rechazo, como lo hace la puerta DESPUÉS de que el caso de uso se revirtió. */
 export const crearRegistroDeReferencias = (

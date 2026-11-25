@@ -2,6 +2,7 @@ import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
 import { RUTA_DE_CLASIFICACION } from "../plantillas/catalogo/modelo-de-clasificacion";
 import { RUTA_DE_SECCIONES } from "../plantillas/catalogo/modelo-de-secciones";
 import { RUTA_DE_PRODUCCION } from "../plantillas/produccion/filtros-de-ordenes";
+import { RUTA_DE_RECETAS } from "../plantillas/recetas/filtros-de-recetas";
 import { RUTAS_DE_STOCK } from "../plantillas/stock/rutas-de-stock";
 
 /**
@@ -70,6 +71,20 @@ export const FILAS_DE_CATALOGO = [
     perilla: null,
     href: RUTA_DE_PRODUCCION,
     etiqueta: "produccion.pantalla.produccion",
+    departamento: null,
+  },
+  // «Recetas» (REC-A; plan de producción del día uno, 25/11/2026, DEC-1053): módulo `stock` y acción `stock.ver`, las de su consulta (la receta es de la empresa; supuesto S2 de `recetas-pantalla.md`: la
+  // celda de la maqueta del menú dice `produccion`, que sigue «en desarrollo»). Va en el grupo «Producción».
+  {
+    tipo: "pantalla",
+    clave: "recetas",
+    area: "catalogo",
+    grupo: "produccion",
+    modulo: "stock",
+    accion: "stock.ver",
+    perilla: null,
+    href: RUTA_DE_RECETAS,
+    etiqueta: "receta.pantalla.recetas",
     departamento: null,
   },
 ] as const;

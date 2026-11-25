@@ -4,8 +4,7 @@
  * (línea 245, una fila por grupo: decisiones D85, D94 y D95), y `receta.html`, sección «Textos aprobados» (línea 240: decisiones D74, D77, D82 y
  * D99). Lo que esas listas no traen no se agrega acá: los errores sin texto aprobado (`CICLO_EN_LA_RECETA`, `RECETA_DEMASIADO_ANIDADA`,
  * `PRODUCTO_SIN_RECETA`, `ORDEN_CANCELADA`, `PRODUCTO_YA_USADO`, `CLAVE_REUTILIZADA`, `FUNCION_NO_INCLUIDA`…) se muestran con el mensaje genérico
- * que ya existe (D175), el encabezado «Pasos» no tiene texto aprobado (la pantalla no los
- * rotula) y «La central cambió» / «Receta propia» quedan fuera hasta que se haga la receta por sucursal (P-3, decidida «después»).
+ * que ya existe (D175), y «La central cambió» / «Receta propia» quedan fuera hasta que se haga la receta por sucursal (P-3, decidida «después»).
  */
 export const TEXTOS_DE_PRODUCCION = {
   // produccion.html «Textos aprobados», fila «Lista y orden».
@@ -86,6 +85,13 @@ export const TEXTOS_DE_PRODUCCION = {
   },
   "receta.edicion.versiones": { porDefecto: "Versiones" },
   "receta.edicion.comparar": { porDefecto: "Comparar" },
+  // Pantalla de Recetas, «ver» (REC-A): textos aprobados por el dueño y listados en `recetas-pantalla.md` §5 (repositorio de documentos): «Neto» el 13/11/2026 (DDD:102), «Rinde», «Pasos» y «Costo de la comida»
+  // el 14/11/2026 (DDD:119 y 123) y «Todas» el 15/11/2026 (T24 a T27, DDD:165). «Sin costo» reusa `stock.accion.sin_costo`; «Sin resultados», `catalogo.lista.sin_resultados`.
+  "receta.ficha.neto": { porDefecto: "Neto" },
+  "receta.ficha.rinde": { porDefecto: "Rinde" },
+  "receta.ficha.pasos": { porDefecto: "Pasos" },
+  "receta.ficha.costo_de_la_comida": { porDefecto: "Costo de la comida" },
+  "receta.lista.todas": { porDefecto: "Todas" },
   // receta.html, fila «Ficha de cocina» (idea 6, decisión 99).
   "receta.ficha_de_cocina.titulo": { porDefecto: "Ficha de cocina" },
   // El genérico de la pantalla de Recetas (rechazo de guardar). Texto ya aprobado y repetido por módulo (`caja.error.accion_no_permitida`, `catalogo.error.accion_no_permitida`):

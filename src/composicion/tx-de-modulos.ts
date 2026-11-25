@@ -4,6 +4,11 @@ import { crearRepositoriosDeComandas } from "../modulos/comandas/publico";
 import { crearRepositoriosDeSalon } from "../modulos/salon/publico";
 import { crearRepositoriosDeClientes } from "../modulos/clientes/publico";
 import { crearRepositoriosDeCompras } from "../modulos/compras/publico";
+import {
+  crearLecturaDeHostsPropios,
+  type HostsPropiosDb,
+  type LecturaDeHostsPropios,
+} from "../modulos/marcas/publico";
 import { crearRepositoriosDeProduccion } from "../modulos/produccion/publico";
 import { crearRepositoriosDeStock } from "../modulos/stock/publico";
 import { crearRepositoriosDeVentas } from "../modulos/ventas/publico";
@@ -21,7 +26,9 @@ export type PiezasDeModulosEnTx = ReturnType<typeof crearRepositoriosDeCatalogo>
   ReturnType<typeof crearRepositoriosDeSalon> &
   ReturnType<typeof crearRepositoriosDeClientes> &
   ReturnType<typeof crearRepositoriosDeCompras> &
-  ReturnType<typeof crearRepositoriosDeProduccion>;
+  ReturnType<typeof crearRepositoriosDeProduccion> &
+  /** El host activo propio de la empresa por superficie (dominio propio): solo lectura; la base deja ver únicamente lo activo de la empresa del contexto (0095). */
+  Readonly<{ hostsPropios: LecturaDeHostsPropios }>;
 
 export function armarPiezasDeModulosEnTx(
   db: Parameters<ConfiguracionDeTransacciones<unknown>["armar"]>[0],
@@ -35,5 +42,6 @@ export function armarPiezasDeModulosEnTx(
     ...crearRepositoriosDeClientes(db),
     ...crearRepositoriosDeCompras(db),
     ...crearRepositoriosDeProduccion(db),
+    hostsPropios: crearLecturaDeHostsPropios(db.withTables<HostsPropiosDb>()),
   };
 }

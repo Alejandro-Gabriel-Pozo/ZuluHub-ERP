@@ -12,6 +12,7 @@ const VALIDA: FuenteDeEntorno = {
   PEDERNAL_DB_PLATAFORMA: "postgres://usuario:contrasena@127.0.0.1:1/base",
   PEDERNAL_CLAVE_CONTEXTO: `1:${"ab".repeat(32)}`,
   PEDERNAL_SECRETO_INVITACIONES: "cd".repeat(32),
+  PEDERNAL_HOSTS_PROTEGIDOS: "consola.pedernal.test,app.pedernal.test",
 };
 
 const AHORA = new Date("2026-10-20T12:00:00Z");
@@ -105,7 +106,36 @@ describe("armarPlataforma", () => {
     );
     const plataforma = armarPlataforma({ fuente: sinSecreto });
     expect(() => plataforma.casosDeUsoDeMarcasYPlanes()).not.toThrow();
-    expect(() => plataforma.casosDeUsoDeDominios()).not.toThrow();
+  });
+
+  it("los dominios exigen la lista de hosts protegidos: sin ella, o con una inválida, no se arman (falla cerrado) y el registro no repite el valor", () => {
+    const sinLista = { ...VALIDA };
+    delete sinLista["PEDERNAL_HOSTS_PROTEGIDOS"];
+    const registrar = vi.fn();
+    expect(() =>
+      armarPlataforma({ fuente: () => sinLista, registrar }).casosDeUsoDeDominios(),
+    ).toThrow(ErrorDeEntorno);
+    expect(registrar).toHaveBeenCalledWith(
+      "pieza hosts-protegidos: PEDERNAL_HOSTS_PROTEGIDOS falta",
+    );
+    for (const invalida of [
+      "consola.pedernal.test,",
+      "https://secreto-no-repetir.test",
+      "a.test,a.test",
+    ]) {
+      const registro = vi.fn();
+      expect(() =>
+        armarPlataforma({
+          fuente: () => ({ ...VALIDA, PEDERNAL_HOSTS_PROTEGIDOS: invalida }),
+          registrar: registro,
+        }).casosDeUsoDeDominios(),
+      ).toThrow();
+      expect(JSON.stringify(registro.mock.calls)).not.toContain("secreto-no-repetir");
+    }
+    // La lista no se pide para los demás grupos.
+    expect(() =>
+      armarPlataforma({ fuente: () => sinLista }).casosDeUsoDeMarcasYPlanes(),
+    ).not.toThrow();
   });
 
   it("una variable prohibida en el entorno impide armar cualquier pieza", async () => {

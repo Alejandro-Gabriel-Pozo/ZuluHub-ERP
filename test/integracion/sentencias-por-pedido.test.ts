@@ -100,6 +100,7 @@ describe.skipIf(base === null)("sentencias por pedido: listado, cuenta y emitir"
     const entrada = await resolverEmpresa(d, {
       sesion,
       marcaId: mundo.marcaA,
+      duenioDelHost: { tipo: "MARCA" },
       cookieDeEmpresa: null,
     });
     if (!entrada.ok || entrada.dato.tipo !== "ENTRA") throw new Error("el pedido no entró");

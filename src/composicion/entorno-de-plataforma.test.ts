@@ -40,7 +40,7 @@ const detalleDe = (accion: () => unknown): string => {
 };
 
 describe("NOMBRES_DE_ENTORNO_DE_PLATAFORMA", () => {
-  it("son exactamente la cadena de plataforma, la clave de contexto, el secreto de invitaciones y lo del ingreso de la consola (secreto, Google, cadena de autenticación y host)", () => {
+  it("son exactamente la cadena de plataforma, la clave de contexto, el secreto de invitaciones y lo del ingreso de la consola (secreto, Google, cadena de autenticación y host) y los hosts protegidos", () => {
     expect(NOMBRES_DE_ENTORNO_DE_PLATAFORMA.map((e) => [e.nombre, e.piezas])).toEqual([
       ["PEDERNAL_DB_PLATAFORMA", ["transacciones-de-plataforma"]],
       ["PEDERNAL_CLAVE_CONTEXTO", ["transacciones-de-plataforma"]],
@@ -50,6 +50,7 @@ describe("NOMBRES_DE_ENTORNO_DE_PLATAFORMA", () => {
       ["GOOGLE_CLIENT_SECRET_PLATAFORMA", ["autenticacion-de-plataforma"]],
       ["PEDERNAL_DB_AUTENTICACION", ["conexion-de-autenticacion-de-plataforma"]],
       ["PEDERNAL_HOST_DE_LA_CONSOLA", ["host-de-la-consola"]],
+      ["PEDERNAL_HOSTS_PROTEGIDOS", ["hosts-protegidos"]],
     ]);
     expect(PEDERNAL_DB_PLATAFORMA).toBe("PEDERNAL_DB_PLATAFORMA");
     expect(PEDERNAL_DB_AUTENTICACION).toBe("PEDERNAL_DB_AUTENTICACION");
