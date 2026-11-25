@@ -85,6 +85,6 @@ export type RotulosDeExportacion = Readonly<{
   estadoDelPago: (estado: "PENDIENTE" | "PAGADO" | "ANULADO") => string;
   estadoDeLaFactura: (estado: "REGISTRADO" | "ANULADO") => string;
   medioDePago: (medio: string) => string;
-  /** Los dos valores de «Precio por». */
-  precioPor: (tipo: "PRESENTACION" | "UNIDAD") => string;
+  /** El valor de «Precio por» cuando el precio es por unidad (cuando es por presentación sale el nombre de la presentación). */
+  precioPorUnidad: string;
 }>;

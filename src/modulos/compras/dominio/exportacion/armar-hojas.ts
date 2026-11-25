@@ -257,7 +257,9 @@ export function armarDetalle(
         celdaDecimal(l.cantidadEnStock, 4),
         celdaDeTexto(l.unidadDeStockSimbolo),
         celdaDecimal(l.precio, 6),
-        celdaDeTexto(l.precioPorTipo === null ? null : r.precioPor(l.precioPorTipo)),
+        celdaDeTexto(
+          l.precioPorTipo === "PRESENTACION" ? l.presentacionNombre : l.precioPorTipo === "UNIDAD" ? r.precioPorUnidad : null,
+        ),
         celdaDeTexto(l.unidadDePrecioSimbolo),
         celdaDecimal(l.importeVigente, 2),
         celdaDecimal(l.costoPorUnidadDeStock, 6),

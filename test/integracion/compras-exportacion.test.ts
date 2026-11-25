@@ -30,7 +30,7 @@ const ROTULOS: RotulosDeExportacion = {
   estadoDelPago: (e) => e,
   estadoDeLaFactura: (e) => e,
   medioDePago: (m) => m,
-  precioPor: (t) => t,
+  precioPorUnidad: "UNIDAD",
 };
 const PERIODO = { desde: "2026-01-01", hasta: "2026-12-31" };
 
@@ -74,7 +74,7 @@ describe.skipIf(base === null)("compras: exportación a Excel", () => {
     proveedorId: m.proveedor,
     depositoId: m.deposito,
     renglones: LINEAS.map((l, i) => ({
-      productoId: m.productos[i],
+      productoId: m.productos[i] as string,
       unidadDeCompraId: "KILOGRAMO",
       cantidad: l.kg,
       precioPor: "UNIDAD",
@@ -132,8 +132,8 @@ describe.skipIf(base === null)("compras: exportación a Excel", () => {
     const m = await armar();
     const r = valorDe(await c.casos.registrarCompraConFactura(m.e.operador, compraReal(m)));
     const negocio = (
-      await c.filas<{ f: string }>("select fecha_negocio::text as f from recepcion where id = $1", [r.recepcionId])
-    )[0]?.f;
+      (await c.filas<{ f: string }>("select fecha_negocio::text as f from recepcion where id = $1", [r.recepcionId]))[0] as { f: string }
+    ).f;
     expect(negocio).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     let salida = valorDe(await exportar(m));
     let cab = armarCabecera(salida.compras, new Map(), ROTULOS);
@@ -144,7 +144,7 @@ describe.skipIf(base === null)("compras: exportación a Excel", () => {
     valorDe(
       await c.casos.declararPago(m.e.gerente, {
         clave: nuevoId(),
-        comprobanteId: r.comprobanteId,
+        comprobanteId: r.comprobanteId as string,
         fechaDePago: negocio,
         medio: "TRANSFERENCIA",
       }),
@@ -175,7 +175,7 @@ describe.skipIf(base === null)("compras: exportación a Excel", () => {
         proveedorId: m.proveedor,
         depositoId: m.deposito,
         renglones: [
-          { productoId: m.productos[0], unidadDeCompraId: "KILOGRAMO", cantidad: "2", precioPor: "UNIDAD", unidadDePrecioId: "KILOGRAMO", precio: null },
+          { productoId: m.productos[0] as string, unidadDeCompraId: "KILOGRAMO", cantidad: "2", precioPor: "UNIDAD", unidadDePrecioId: "KILOGRAMO", precio: null },
         ],
       }),
     ).recepcionId;
