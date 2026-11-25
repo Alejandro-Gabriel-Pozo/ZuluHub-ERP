@@ -1,5 +1,5 @@
 import type { Kysely } from "kysely";
-import { ROLES_DE_EMPRESA } from "../../capacidades/permisos/roles";
+import { ROLES_DE_LA_MEMBRESIA } from "../../capacidades/permisos/roles";
 import type { EstadoDeEmpresa, EstadoDeTenant } from "../../contexto/estados";
 import {
   ESTADOS_DE_DOMINIO,
@@ -294,7 +294,7 @@ export function crearLecturaDeSoporteDePostgres(db: Kysely<SoporteDb>): LecturaD
       return filas.map((f) => ({
         empresaId: empresaId(f.empresa_id),
         personaId: personaId(f.persona_id),
-        rol: deLaLista(ROLES_DE_EMPRESA, f.rol, "rol"),
+        rol: deLaLista(ROLES_DE_LA_MEMBRESIA, f.rol, "rol"),
         activo: f.activo,
       }));
     },
