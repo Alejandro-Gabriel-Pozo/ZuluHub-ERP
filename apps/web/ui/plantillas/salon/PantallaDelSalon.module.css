@@ -77,3 +77,12 @@
   list-style: none;
   color: var(--color-texto-suave);
 }
+
+/* El nombre de la mesa es el enlace a su ficha: toda la línea es tocable. */
+.enlace {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--objetivo-minimo);
+  color: var(--color-texto);
+  text-decoration: underline;
+}

@@ -340,7 +340,7 @@ describe.skipIf(base === null)("cuenta de mesa de la web", () => {
       cuentaId: string,
       extra: Record<string, unknown> = {},
       contexto = x.gerente,
-      sucursal = x.sucursal,
+      sucursal: string = x.sucursal,
       escenario = x,
     ) =>
       agregarAlPedidoDeLaMesa(d, contexto, sucursal, {
@@ -526,7 +526,7 @@ describe.skipIf(base === null)("cuenta de mesa de la web", () => {
 
     it("una cuenta que ya no está abierta o una mesa unida no admite pedidos (el genérico)", async () => {
       const { cuentaId } = await conCuenta();
-      valorDe(await liberarLaMesa(d, x.gerente, x.sucursal, { cuentaId }));
+      expect((await liberarLaMesa(d, x.gerente, x.sucursal, { cuentaId })).ok).toBe(true);
       expect(codigo(await agregar(cuentaId))).toBe(GENERICO);
       expect(await lineas(cuentaId)).toBe(0);
     });

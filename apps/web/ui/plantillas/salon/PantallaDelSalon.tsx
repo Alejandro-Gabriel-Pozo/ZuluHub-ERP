@@ -12,7 +12,7 @@ export type PropsDePantallaDelSalon = Readonly<{
 
 /**
  * El mapa de mesas del salón (SAL-A; maqueta `salon.html`, aprobada el 09/11/2026): los filtros y, debajo, una tarjeta por mesa de la sucursal con su estado (ícono y texto), su total y, si es el caso,
- * a qué mesa está unida o las cuentas en que está dividida. Sin estado ni hooks: es una página de servidor; los filtros son enlaces (recargan con `?filtro=`). Una mesa todavía no se toca (su ficha es SAL-B).
+ * a qué mesa está unida o las cuentas en que está dividida. Sin estado ni hooks: es una página de servidor; los filtros son enlaces (recargan con `?filtro=`). Cada mesa lleva a su ficha (SAL-B).
  * Sin textos propios: todos llegan resueltos. El `h1` lo pone el armazón.
  */
 export function PantallaDelSalon({ mapa, error }: PropsDePantallaDelSalon) {
@@ -39,7 +39,9 @@ export function PantallaDelSalon({ mapa, error }: PropsDePantallaDelSalon) {
             {mapa.filas.map((fila) => (
               <li key={fila.id} className={estilos["mesa"]}>
                 <div className={estilos["cabecera"]}>
-                  <span>{fila.titulo}</span>
+                  <a className={estilos["enlace"]} href={fila.href}>
+                    {fila.titulo}
+                  </a>
                   {fila.estado === null ? null : (
                     <Insignia tono={fila.estado.tono}>{fila.estado.texto}</Insignia>
                   )}

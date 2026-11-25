@@ -274,14 +274,14 @@ describe.skipIf(base === null)("comandas e impresión de la web", () => {
     ).toMatchObject({ ok: true });
     const motivo = await m.filas<{ motivo_de_anulacion: string }>(
       "select motivo_de_anulacion from linea_cuenta where id = $1",
-      [ajena.lineas[0] as string],
+      [ajena.lineas[0]],
     );
     expect(motivo[0]?.motivo_de_anulacion).toBe("SIN_ENVIAR");
   });
 
   it("«Quitar» un plato ya enviado, de otra cuenta o inexistente es el genérico y no escribe", async () => {
     const { cuenta, lineas } = await cuentaConPlatos(["AHORA", "DESPUES"]);
-    valorDe(await enviar(cuenta));
+    expect((await enviar(cuenta)).ok).toBe(true);
     const quitar = (cuentaId: string, lineaId: string) =>
       quitarUnPlatoSinEnviar(d, e.gerente, e.sucursal, { cuentaId, lineaId });
     expect(codigo(await quitar(cuenta, lineas[0] as string))).toBe(GENERICO);
