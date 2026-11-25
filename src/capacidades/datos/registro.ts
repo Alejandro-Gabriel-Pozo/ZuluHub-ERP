@@ -9,6 +9,7 @@ import { DATOS_DE_COMPRAS_FACTURA_Y_PAGO } from "./registro-de-compras-factura-y
 import { DATOS_DE_CONSUMO_DE_OPCION } from "./registro-de-consumo";
 import { DATOS_DE_FACTURACION } from "./registro-de-facturacion";
 import { DATOS_DE_FISCAL } from "./registro-de-fiscal";
+import { DATOS_DE_PRESENTACIONES } from "./registro-de-presentaciones";
 import { DATOS_DE_PRODUCCION } from "./registro-de-produccion";
 import { DATOS_DE_PLATAFORMA } from "./registro-de-plataforma";
 import { DATOS_DE_PRODUCTOS } from "./registro-de-productos";
@@ -58,6 +59,7 @@ export const FRAGMENTOS_DEL_REGISTRO = {
   fiscal: DATOS_DE_FISCAL,
   produccion: DATOS_DE_PRODUCCION,
   plataforma: DATOS_DE_PLATAFORMA,
+  presentaciones: DATOS_DE_PRESENTACIONES,
   productos: DATOS_DE_PRODUCTOS,
   salon: DATOS_DE_SALON,
   "stock-depositos": DATOS_DE_STOCK_DEPOSITOS,
@@ -78,6 +80,7 @@ export const REGISTRO_DE_DATOS = {
   ...DATOS_DE_FISCAL,
   ...DATOS_DE_PRODUCCION,
   ...DATOS_DE_PLATAFORMA,
+  ...DATOS_DE_PRESENTACIONES,
   ...DATOS_DE_PRODUCTOS,
   ...DATOS_DE_SALON,
   ...DATOS_DE_STOCK_DEPOSITOS,
