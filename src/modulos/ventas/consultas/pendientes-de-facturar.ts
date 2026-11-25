@@ -26,6 +26,8 @@ export async function reunirPendientes(
     sucursales: readonly SucursalId[] | null;
     fechaDesde: string | null;
     fechaHasta: string | null;
+    /** La perilla `facturar_antes_de_cobrar` de la empresa, ya leída: con ella entran también los EMITIDO. */
+    conEmitidos: boolean;
   }>,
   entrada: Readonly<{
     despuesDe?: CursorDePendientes | undefined;
