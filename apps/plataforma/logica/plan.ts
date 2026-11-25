@@ -30,7 +30,7 @@ export const ROTULO_DE_PERILLA: Readonly<Record<string, string>> = {
   // de plataforma, pendiente del OK del dueño (DEC-0702).
   recepcion_separada: "Recepción separada",
   conciliacion_de_tres_vias: "Tres vías",
-  // SUPUESTO (DEC-1076): rótulo provisorio, el del módulo; «Facturar antes de cobrar» (FAC-1) espera el OK del dueño.
+  // SUPUESTO (DEC-1242): rótulo provisorio, el del módulo; «Facturar antes de cobrar» (FAC-1) espera el OK del dueño.
   facturar_antes_de_cobrar: "Facturación",
 };
 
