@@ -16,6 +16,7 @@ export const COLUMNAS_DE_IDENTIDAD = {
     "creado_en",
     "actualizado_en",
     "version",
+    "rol_propio_id", // 0097 (T4 de H4b)
   ],
   asignacion_sucursal: [
     "empresa_id",
@@ -98,6 +99,9 @@ export const ERRORES_DE_IDENTIDAD_POR_RESTRICCION: Readonly<Record<string, strin
   membresia_persona_id_fkey: "PERSONA_INEXISTENTE",
   membresia_invitacion_id_fkey: "INVITACION_NO_ENCONTRADA",
   membresia_gerente_uk: "YA_HAY_GERENTE",
+  // 0097 (T4 de H4b): el caso de uso comprueba antes que el rol exista, sea de la empresa y esté activo; si saltan, es un defecto.
+  membresia_rol_propio_ck: "NO_TRADUCIDA",
+  membresia_rol_propio_fkey: "NO_TRADUCIDA",
 
   // asignacion_sucursal
   asignacion_sucursal_pkey: "SUCURSAL_YA_ASIGNADA",

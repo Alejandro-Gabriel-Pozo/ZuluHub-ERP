@@ -239,6 +239,45 @@ describe.skipIf(base === null)("migración 0097: roles propios de la empresa (T4
       );
     });
 
+    it("reactivar una persona apagada por UPDATE directo sigue rechazado (solo lo hace el flujo de invitación), sea gerente, administrador u operador", async () => {
+      const e = await equipo();
+      await dueno.query(
+        "update membresia set activo = false where empresa_id = $1 and persona_id = $2",
+        [e.empresa, e.otro],
+      );
+      for (const quien of [e.gerente, e.administrador, e.operador]) {
+        const r = await intentar(
+          e.empresa,
+          quien,
+          "update membresia set activo = true where empresa_id = $1 and persona_id = $2",
+          [e.empresa, e.otro],
+        );
+        expect(r, "no se reactiva").toBe("42501:");
+      }
+      expect(
+        (
+          await dueno.query(
+            "select activo from membresia where empresa_id = $1 and persona_id = $2",
+            [e.empresa, e.otro],
+          )
+        ).rows[0],
+      ).toEqual({ activo: false });
+    });
+
+    it("un administrador (u operador) no reasigna a una persona apagada", async () => {
+      const e = await equipo();
+      const rol = await crearRol(e.empresa);
+      await dueno.query(
+        "update membresia set activo = false where empresa_id = $1 and persona_id = $2",
+        [e.empresa, e.otro],
+      );
+      for (const quien of [e.administrador, e.operador]) {
+        expect(await intentar(e.empresa, quien, ASIGNAR, [e.empresa, e.otro, rol])).toBe(
+          "23514:membresia_rol_sin_traspaso",
+        );
+      }
+    });
+
     it("el gerente NO puede cambiar `activo` junto con el rol (ni encender ni apagar por esta vía)", async () => {
       const e = await equipo();
       const rol = await crearRol(e.empresa);
@@ -261,7 +300,7 @@ describe.skipIf(base === null)("migración 0097: roles propios de la empresa (T4
           "update membresia set rol = 'PROPIO', rol_propio_id = $3, activo = true where empresa_id = $1 and persona_id = $2",
           [e.empresa, e.otro, rol],
         ),
-      ).toBe("23514:membresia_rol_sin_traspaso");
+      ).toBe("42501:");
     });
   });
 

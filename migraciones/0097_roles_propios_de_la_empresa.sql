@@ -6,7 +6,8 @@
 -- QUÉ CAMBIA (todo aditivo y compatible hacia atrás: ninguna fila existente cambia de valor y el código de antes de T4 sigue funcionando):
 --   1. `membresia.rol_propio_id` (nulo) + el valor `PROPIO` en `membresia_rol_ck` + `membresia_rol_propio_ck` (rol = 'PROPIO' <=> hay rol propio) + clave foránea compuesta
 --      (rol_propio_id, empresa_id) -> rol_de_empresa: el rol propio es de la MISMA empresa.
---   2. El disparador `membresia_validar_cambio` (de 0005) sigue impidiendo todo cambio de rol salvo el traspaso de gerencia y suma la ÚNICA otra salida: el gerente activo de la
+--   2. El disparador `membresia_validar_cambio` (de 0005) sigue impidiendo todo cambio de rol salvo el traspaso de gerencia, suma la guarda «reactivar solo con invitación» (la nueva
+--      política, combinada con la de apagar, abriría la reactivación directa) y suma la ÚNICA otra salida: el gerente activo de la
 --      empresa reasigna entre ADMINISTRADOR, OPERADOR y un rol propio ACTIVO, sin cambiar `activo` y sin tocar nunca al gerente. Nadie asciende a gerente por acá. Una persona
 --      APAGADA también se reasigna (a un rol base o a un rol propio activo): así no queda con un puntero a un rol propio archivado sin salida, y después se la reinvita.
 --   3. La política `membresia_app_asignar_rol` y el privilegio de columna `rol_propio_id` (la política y el privilegio de `rol` ya existían por el traspaso).
@@ -70,6 +71,17 @@ BEGIN
       USING ERRCODE = '23514', CONSTRAINT = 'membresia_gerente_no_se_apaga';
   END IF;
 
+  -- Reactivar a una persona apagada es solo del flujo de invitación (0002). Las políticas permisivas se combinan por separado en USING y en WITH CHECK: la fila apagada la deja ver
+  -- `membresia_app_apagar` y la fila ya activa la deja pasar `membresia_app_asignar_rol`, así que SIN esta guarda cualquier sesión de la aplicación reactivaría por UPDATE directo
+  -- (lo que antes de 0097 ninguna combinación permitía). La guarda repite lo que ya pide `membresia_invitado_reactivar` (la invitación del token aceptada por esa persona) y
+  -- vale solo para quien está sujeto a la RLS (la aplicación); el dueño de la base que la evade (migraciones, arreglos a mano) no queda afectado.
+  IF NOT OLD.activo AND NEW.activo AND pg_catalog.row_security_active('public.membresia')
+     AND NOT public.invitacion_aceptada_en((SELECT public.app_token_invitacion()), OLD.empresa_id, OLD.persona_id, NULL) THEN
+    -- El mismo error que daba la RLS antes de 0097 (insufficient_privilege): el código que traduce errores no ve diferencia.
+    RAISE EXCEPTION 'una persona apagada solo se reactiva con una invitación aceptada'
+      USING ERRCODE = '42501';
+  END IF;
+
   IF NEW.rol IS DISTINCT FROM OLD.rol OR NEW.rol_propio_id IS DISTINCT FROM OLD.rol_propio_id THEN
     -- (a) Traspaso de gerencia: con las dos membresías activas y un traspaso ACEPTADO en ESTA transacción (xmin = el xid en curso: uno viejo no se reutiliza).
     v_traspaso := OLD.activo AND NEW.activo AND EXISTS (
@@ -121,11 +133,13 @@ $$;
 -- ---------------------------------------------------------------------------------------------
 -- 3. Política y privilegio de la asignación
 -- ---------------------------------------------------------------------------------------------
--- Las políticas permisivas se suman (OR): esta deja tocar la fila de un miembro que no es el gerente (activo o no); qué columnas, lo limita el privilegio por columna, y qué cambio
--- es válido, el disparador (que además exige que quien actúa sea el gerente y que `activo` no cambie). El gerente nunca entra (ni antes ni después).
+-- Las políticas permisivas se suman (OR): esta deja tocar la fila de un miembro ACTIVO que no es el gerente; qué columnas, lo limita el privilegio por columna, y qué cambio es
+-- válido, el disparador (que además exige que quien actúa sea el gerente). El gerente nunca entra (ni antes ni después). Una persona APAGADA no necesita política nueva: la de apagar
+-- (`membresia_app_apagar`, 0002) ya deja pasar su fila (USING rol <> 'GERENTE', WITH CHECK NOT activo), de modo que el gerente la reasigna sin poder reactivarla: reactivar sigue
+-- siendo solo del flujo de invitación, como antes de 0097.
 CREATE POLICY membresia_app_asignar_rol ON membresia FOR UPDATE TO pedernal_app
-  USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND rol <> 'GERENTE')
-  WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND rol <> 'GERENTE');
+  USING (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND activo AND rol <> 'GERENTE')
+  WITH CHECK (empresa_id = (SELECT app_empresa_id()) AND empresa_operable(empresa_id) AND activo AND rol <> 'GERENTE');
 GRANT UPDATE (rol_propio_id) ON membresia TO pedernal_app;
 
 -- ---------------------------------------------------------------------------------------------
