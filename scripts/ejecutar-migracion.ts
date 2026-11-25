@@ -137,7 +137,7 @@ const EXTRAS = [
 const CON_VALOR = ["--vercel", "--confirmo"] as const;
 
 const SIN_CONFIRMACION =
-  "cargar en PRODUCTION o en un cliente se confirma escribiendo también --confirmo con el mismo texto que --vercel (así un comando de " +
+  "cargar en PRODUCTION se confirma escribiendo también --confirmo production, y en un cliente, --confirmo con el mismo texto que --vercel (así un comando de " +
   "preview copiado con una sola palabra cambiada no llega a producción sin querer)";
 
 /**
