@@ -62,6 +62,11 @@
     "apps/web/ui/plantillas/salon/*",
     "apps/web/ui/patrones/papel/*"
   ],
+  "test/web/ficha-de-la-cocina.test.ts": [
+    "apps/web/app/s/app/(operacion)/salon/comandas/**",
+    "apps/web/ui/plantillas/salon/*",
+    "apps/web/ui/patrones/papel/*"
+  ],
   "test/web/impresoras-modelo.test.ts": [
     "apps/web/ui/plantillas/salon/*",
     "apps/web/ui/patrones/papel/*"

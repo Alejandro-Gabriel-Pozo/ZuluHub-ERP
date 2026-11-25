@@ -223,6 +223,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "comandas.texto.imprimir_impresoras",
       ],
       [
+        "comandas",
+        "ventas",
+        "salon",
+        "comandas",
+        "comandas.ver",
+        "/salon/comandas",
+        "comandas.texto.cocina_comandas",
+      ],
+      [
         "clientes",
         "ventas",
         "clientes",
@@ -574,6 +583,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "salon",
     "mesas",
     "impresoras",
+    "comandas",
     "clientes",
     "productos",
     "clasificacion",
@@ -627,6 +637,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
             ["pantalla", "salon", "/salon", "salon.texto.grupo_salon"],
             ["pantalla", "mesas", "/salon/mesas", "salon.texto.admin_mesas"],
             ["pantalla", "impresoras", "/salon/impresoras", "comandas.texto.imprimir_impresoras"],
+            ["pantalla", "comandas", "/salon/comandas", "comandas.texto.cocina_comandas"],
           ],
         ],
         [

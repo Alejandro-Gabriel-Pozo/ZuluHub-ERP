@@ -15,6 +15,7 @@ import {
   pedirUnaCopia,
   registrarLaImpresora,
   verElPapelDelDocumento,
+  verLaCocinaDeLaSucursal,
   verLasImpresoras,
   verLosTrabajosDeImpresion,
   type DependenciasDeImpresionWeb,
@@ -947,6 +948,128 @@ describe.skipIf(base === null)("comandas e impresión de la web", () => {
           }),
         ),
       ).toBe(GENERICO);
+    });
+  });
+
+  describe("la cocina de la sucursal (SAL-H)", () => {
+    const cocina = async (contexto = e.gerente, sucursal = e.sucursal) => {
+      const r = await verLaCocinaDeLaSucursal(di, contexto, sucursal);
+      return r.ok ? r.dato.envios : null;
+    };
+    const declarar = (trabajoId: string, numero: number, resultado: string, k: EscenarioDeVentas) =>
+      declararElResultadoDeImpresion(di, k.gerente, k.sucursal, { trabajoId, numero, resultado });
+
+    it("lista lo pendiente y lo fallido (mesa, «Envío N», hora en UTC-3, sin huella ni clave); lo impreso y las copias no están; «Reintentar» es el mismo trabajo", async () => {
+      const k = await m.escenario();
+      const { cuenta } = await cuentaConPlatos(["AHORA"], k);
+      const envio = await enviar(cuenta, {}, k.gerente, k.sucursal);
+      expect(envio.ok).toBe(true);
+      if (!envio.ok) return;
+      const trabajoId = envio.dato.trabajoId;
+      let lista = await cocina(k.gerente, k.sucursal);
+      expect(lista).toHaveLength(1);
+      // El reloj fijo del escenario es el 09/11/2026 15:00Z: las 12:00 en Argentina.
+      expect(lista?.[0]).toMatchObject({
+        trabajoId,
+        envioId: envio.dato.envioId,
+        numero: 1,
+        hora: "12:00",
+        estado: "PENDIENTE",
+        intentos: 1,
+        sinImpresora: true,
+      });
+      expect(lista?.[0]?.rotulo).toMatch(/^Mesa \d+$/);
+      expect(Object.keys(lista?.[0] ?? {}).sort()).toEqual(
+        [
+          "envioId",
+          "estado",
+          "hora",
+          "intentos",
+          "numero",
+          "rotulo",
+          "sinImpresora",
+          "trabajoId",
+        ].sort(),
+      );
+      // Falló: sigue en la lista; «Reintentar» es el mismo trabajo con un intento más.
+      expect(await declarar(trabajoId, 1, "FALLIDA", k)).toMatchObject({ ok: true });
+      lista = await cocina(k.gerente, k.sucursal);
+      expect(lista?.[0]).toMatchObject({ estado: "FALLIDA", intentos: 1 });
+      const reintento = await pedirLaImpresion(di, k.gerente, k.sucursal, {
+        trabajoId,
+        documentoTipo: "COMANDA",
+        documentoId: envio.dato.envioId,
+        claveIdempotencia: nuevaClave(),
+      });
+      expect(reintento).toMatchObject({
+        ok: true,
+        dato: { trabajoId, intentos: 2, reintento: true },
+      });
+      expect(await cocina(k.gerente, k.sucursal)).toHaveLength(1);
+      // Una copia pendiente no es un trabajo de la cocina; lo impreso sale de la lista.
+      expect(
+        await pedirUnaCopia(di, k.gerente, k.sucursal, {
+          trabajoId: nuevoId(),
+          documentoTipo: "COMANDA",
+          documentoId: envio.dato.envioId,
+          claveIdempotencia: nuevaClave(),
+        }),
+      ).toMatchObject({ ok: true });
+      expect(await declarar(trabajoId, 2, "IMPRESA", k)).toMatchObject({ ok: true });
+      expect(await cocina(k.gerente, k.sucursal)).toEqual([]);
+    });
+
+    it("AISLAMIENTO: la lista es solo de la sucursal de trabajo; otra sucursal, otra empresa y la sucursal vacía o fuera de alcance no ven nada", async () => {
+      const k = await m.escenario();
+      const otra = await m.escenario();
+      const { cuenta } = await cuentaConPlatos(["AHORA"], k);
+      expect((await enviar(cuenta, {}, k.gerente, k.sucursal)).ok).toBe(true);
+      const { cuenta: enOtra } = await cuentaConPlatos(["AHORA"], otra);
+      expect((await enviar(enOtra, {}, otra.gerente, otra.sucursal)).ok).toBe(true);
+      expect(await cocina(k.gerente, k.sucursal)).toHaveLength(1);
+      expect(await cocina(otra.gerente, otra.sucursal)).toHaveLength(1);
+      // La otra sucursal de la misma empresa no tiene envíos propios.
+      expect(await cocina(k.gerente, k.otraSucursal)).toEqual([]);
+      // Una sucursal de OTRA empresa nombrada por esta no existe (genérico, sin filtrar nada).
+      expect(codigo(await verLaCocinaDeLaSucursal(di, k.gerente, otra.sucursal))).toBe(GENERICO);
+      expect(codigo(await verLaCocinaDeLaSucursal(di, k.gerente, ""))).toBe(GENERICO);
+      // El operador está asignado solo a la sucursal principal.
+      expect(codigo(await verLaCocinaDeLaSucursal(di, k.operador, k.otraSucursal))).toBe(GENERICO);
+      expect(await cocina(k.operador, k.sucursal)).toHaveLength(1);
+    });
+
+    it("PERMISOS: sin persona o sin sesión no hay lista (decide el servidor)", async () => {
+      expect(
+        (await verLaCocinaDeLaSucursal(di, { ...e.gerente, personaId: null }, e.sucursal)).ok,
+      ).toBe(false);
+    });
+
+    it("DOS ACTORES: dos dispositivos de la cocina declaran «Impresa» a la vez y piden imprimir a la vez: un solo trabajo, un solo intento, el mismo resultado", async () => {
+      const k = await m.escenario();
+      const { cuenta } = await cuentaConPlatos(["AHORA"], k);
+      const envio = await enviar(cuenta, {}, k.gerente, k.sucursal);
+      if (!envio.ok) throw new Error("no se envió");
+      const trabajoId = envio.dato.trabajoId;
+      const pedido = (clave: string) =>
+        pedirLaImpresion(di, k.gerente, k.sucursal, {
+          trabajoId,
+          documentoTipo: "COMANDA",
+          documentoId: envio.dato.envioId,
+          claveIdempotencia: clave,
+        });
+      const [a, b] = await Promise.all([
+        repetir(() => pedido(nuevaClave())),
+        repetir(() => pedido(nuevaClave())),
+      ]);
+      expect(a.ok && b.ok).toBe(true);
+      expect(await cuantos("trabajo_de_impresion", "documento_id", envio.dato.envioId)).toBe(1);
+      const [x, y2] = await Promise.all([
+        repetir(() => declarar(trabajoId, 1, "IMPRESA", k)),
+        repetir(() => declarar(trabajoId, 1, "IMPRESA", k)),
+      ]);
+      expect(x.ok && y2.ok).toBe(true);
+      expect(await cuantos("intento_de_impresion", "trabajo_id", trabajoId)).toBe(1);
+      expect(await cocina(k.gerente, k.sucursal)).toEqual([]);
     });
   });
 });
