@@ -292,7 +292,8 @@ describe.skipIf(base === null)("ventas con stock: cerrar descuenta, anular devue
       const t2 = await vender(mundo, [{ producto: plato, cantidad: "1" }]);
       const salida2 = (await delEjemplar(t2.ejemplarId, "SALIDA"))[0] as { id: string };
       const renglones2 = await renglonesDe(salida2.id);
-      // Las dos descuentan el stock propio (artículo del plato) y ninguna toca la harina: una cuenta que quedó abierta al encenderlo NO conserva el camino de los ingredientes.
+      // SUPUESTO declarado al dueño (25/11): el camino se decide al cerrar. La cuenta abierta al encender descuenta el stock propio (que nace en 0: queda negativo) y NO los ingredientes; se compensa al
+      // cerrar una orden de producción. Sellar el camino en la línea necesita migración (mejora de la segunda tanda). Por eso: encender producción fuera de servicio o sin cuentas abiertas.
       const dePropio = (rs: typeof renglones1) =>
         rs.map((r) => r.articulo_id === propio.articuloId);
       const deHarina = (rs: typeof renglones1) => rs.map((r) => r.articulo_id === harina.articulo);
@@ -301,6 +302,7 @@ describe.skipIf(base === null)("ventas con stock: cerrar descuenta, anular devue
         ventaNueva: [dePropio(renglones2), deHarina(renglones2)],
       }).toEqual({ cuentaAbierta: [[true], [false]], ventaNueva: [[true], [false]] });
       expect(await existencia(dep, harina.articulo)).toBe("100.0000");
+      expect(await existencia(dep, propio.articuloId)).toBe("-2.0000");
     } finally {
       produccionEncendida = false;
     }
