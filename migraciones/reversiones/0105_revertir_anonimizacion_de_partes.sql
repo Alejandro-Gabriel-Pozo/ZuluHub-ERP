@@ -2,7 +2,7 @@
 -- exigencia del cargo) y saca el piso SOLO_GERENTE de `partes.anonimizar` que sembró.
 --
 -- NO borra ni cambia ninguna parte, rol, vínculo ni auditoría: una parte que ya se anonimizó con la migración puesta sigue anonimizada (es terminal, ni el dueño de la base la edita).
--- FRENA (55000) si la plataforma cambió el piso que sembró 0105 (se perdería lo que decidió): avisar al dueño antes. Si el código que usa `partes.anonimizar` sigue desplegado, el
+-- FRENA (55000) si la plataforma cambió el piso que sembró 0105 (se perdería lo que decidió). Si el piso lo sembró la semilla de 0094 (una base nueva, que corre 0094 ya con la acción), no es de esta migración y no se toca: avisar al dueño antes. Si el código que usa `partes.anonimizar` sigue desplegado, el
 -- piso no debería quitarse: revertir primero el código (sin el piso, esa acción quedaría delegable a un rol propio).
 --
 -- Este script NO lo aplica el ejecutor de migraciones (solo toma los `NNNN_nombre.sql` de `migraciones/`): se corre a mano, revisado, en una sola transacción y con el rol dueño de
@@ -28,7 +28,7 @@ BEGIN
     RAISE EXCEPTION '0094 no está aplicada (piso_de_plataforma no existe)' USING ERRCODE = '55000';
   END IF;
   SELECT count(*) INTO v_cambios FROM public.piso_de_plataforma
-   WHERE accion = 'partes.anonimizar' AND (version > 1 OR autor <> 'migracion:0105' OR tipo <> 'SOLO_GERENTE');
+   WHERE accion = 'partes.anonimizar' AND autor = 'migracion:0105' AND (version > 1 OR tipo <> 'SOLO_GERENTE');
   IF v_cambios > 0 THEN
     RAISE EXCEPTION 'la plataforma cambió el piso que sembró 0105: avisar al dueño antes de perder lo que decidió'
       USING ERRCODE = '55000';

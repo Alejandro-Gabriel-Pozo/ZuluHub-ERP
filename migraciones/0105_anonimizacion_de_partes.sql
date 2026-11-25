@@ -6,7 +6,7 @@
 --      parte, activo o no, puede conservar el `cargo` (el cargo de una persona en una empresa es un dato personal que `parte_anonimizada_ck` no mira). Previene: un caso de uso que
 --      apaga los vínculos pero olvida vaciar el cargo. Mismo mecanismo y mismo momento que la exigencia de roles y vínculos que ya tenía.
 --   2. El piso SOLO_GERENTE de la acción nueva `partes.anonimizar`: sin el piso, la sincronización de plantillas daría la acción por «introducida sin piso» y el gerente podría
---      delegarla en un rol propio. Mismo mecanismo que 0097. Idempotente.
+--      delegarla en un rol propio. Mismo mecanismo que 0097. Idempotente. (En una base NUEVA el piso ya lo trae la semilla de 0094, que se regenera mientras no esté sellada: acá no hace nada. Esta línea cubre las bases donde 0094 ya corrió sin la acción.)
 --
 -- QUÉ NO CAMBIA, a propósito: tablas, columnas, políticas y privilegios. El rol de la aplicación ya puede vaciar los datos de `parte` (UPDATE de las columnas personales y de
 -- `estado`; la base fija `anonimizada_en` y la versión), apagar `parte_rol` y `parte_vinculo` (activo y cargo) y encolar en `trabajo`. Las partes ya anonimizadas (ninguna

@@ -801,10 +801,8 @@ describe.skipIf(base === null)("clientes: anonimizar una parte", () => {
 
     it("la acción `partes.anonimizar` nace con el piso SOLO_GERENTE: ninguna plantilla ni rol propio la puede llevar", async () => {
       expect(
-        await c.filas(
-          "select tipo, autor from piso_de_plataforma where accion = 'partes.anonimizar'",
-        ),
-      ).toEqual([{ tipo: "SOLO_GERENTE", autor: "migracion:0105" }]);
+        await c.filas("select tipo from piso_de_plataforma where accion = 'partes.anonimizar'"),
+      ).toEqual([{ tipo: "SOLO_GERENTE" }]);
     });
   });
 });
