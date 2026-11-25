@@ -27,7 +27,7 @@ export default async function PaginaDeMovimientos({ searchParams }: PropsDePagin
           textos={{
             depositos: texto({}, "stock.pantalla.depositos"),
             anulado: texto({}, "stock.estado.anulado"),
-            siguiente: texto({}, "stock.lista.siguiente"),
+            siguiente: texto({}, "fiscal.pantalla.config_cert_siguiente"),
           }}
         />
       </>

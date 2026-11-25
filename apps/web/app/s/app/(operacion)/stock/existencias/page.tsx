@@ -27,7 +27,7 @@ export default async function PaginaDeExistencias({ searchParams }: PropsDePagin
           textos={{
             depositos: texto({}, "stock.pantalla.depositos"),
             negativa: texto({}, "stock.pantalla.negativa"),
-            siguiente: texto({}, "stock.lista.siguiente"),
+            siguiente: texto({}, "fiscal.pantalla.config_cert_siguiente"),
           }}
         />
       </>

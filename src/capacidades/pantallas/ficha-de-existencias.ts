@@ -13,11 +13,11 @@ const MAQUETA_DE_STOCK = {
   donde:
     "Pedernal-docs 10-ux-ui, maqueta stock.html (tabla «Textos nuevos», filas «Pantallas» y «Existencias»)",
 } as const;
-const SUPUESTO_DE_LA_SESION = {
+const SIGUIENTE_YA_APROBADO = {
   decidio:
-    "supuesto de la sesión de Stock, pendiente de OK del dueño (DEC-1023): el único texto nuevo es «Siguiente»",
+    "el dueño, 03/11/2026 (cuestionario «Certificado», «Siguiente»); su reutilización la aceptó el orquestador por delegación del dueño (fila 173; DEC-1023)",
   donde:
-    "arquitectura/decisiones/registro/DEC-1023.json; Pedernal-docs 11-especificaciones/dia-uno-stock-fichas-de-pantalla-2026-11-25.md (FP-STK-02)",
+    "Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md (03/11/2026, «Siguiente»); arquitectura/decisiones/registro/DEC-1023.json",
 } as const;
 const USO_DE_LA_PANTALLA = "PantallaDeExistencias.tsx";
 
@@ -47,9 +47,11 @@ export const FICHA_DE_EXISTENCIAS = {
       usos: [USO_DE_LA_PANTALLA + " (marca de un saldo bajo cero)"],
       fuente: MAQUETA_DE_STOCK,
     },
-    "stock.lista.siguiente": {
-      usos: [USO_DE_LA_PANTALLA + " (enlace a la página que sigue)"],
-      fuente: SUPUESTO_DE_LA_SESION,
+    "fiscal.pantalla.config_cert_siguiente": {
+      usos: [
+        "PantallaDeExistencias.tsx (enlace a la página que sigue; se reutiliza el aprobado en fiscal)",
+      ],
+      fuente: SIGUIENTE_YA_APROBADO,
     },
   },
   estadoDeLaFicha: "EN_CONSTRUCCION",

@@ -19,11 +19,11 @@ const CLASES_DE_DEC_1022 = {
   donde:
     "Pedernal-docs 11-especificaciones/dia-uno-stock-inventario-de-textos-2026-11-25.md (N-10, N-11, N-12 y «Anulado»); arquitectura/decisiones/registro/DEC-1022.json",
 } as const;
-const SUPUESTO_DE_LA_SESION = {
+const SIGUIENTE_YA_APROBADO = {
   decidio:
-    "supuesto de la sesión de Stock, pendiente de OK del dueño (DEC-1023): el único texto nuevo es «Siguiente»",
+    "el dueño, 03/11/2026 (cuestionario «Certificado», «Siguiente»); su reutilización la aceptó el orquestador por delegación del dueño (fila 173; DEC-1023)",
   donde:
-    "arquitectura/decisiones/registro/DEC-1023.json; Pedernal-docs 11-especificaciones/dia-uno-stock-fichas-de-pantalla-2026-11-25.md (FP-STK-03)",
+    "Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md (03/11/2026, «Siguiente»); arquitectura/decisiones/registro/DEC-1023.json",
 } as const;
 const USO_DE_LA_TARJETA = "modelo-de-movimientos.ts (rótulo de la tarjeta)";
 
@@ -77,9 +77,11 @@ export const FICHA_DE_MOVIMIENTOS = {
     "stock.motivo.vencimiento": { usos: [USO_DE_LA_TARJETA], fuente: MAQUETA_DE_STOCK },
     "stock.motivo.otra_salida": { usos: [USO_DE_LA_TARJETA], fuente: MAQUETA_DE_STOCK },
     "stock.motivo.correccion": { usos: [USO_DE_LA_TARJETA], fuente: MAQUETA_DE_STOCK },
-    "stock.lista.siguiente": {
-      usos: ["PantallaDeMovimientos.tsx (enlace a la página que sigue)"],
-      fuente: SUPUESTO_DE_LA_SESION,
+    "fiscal.pantalla.config_cert_siguiente": {
+      usos: [
+        "PantallaDeMovimientos.tsx (enlace a la página que sigue; se reutiliza el aprobado en fiscal)",
+      ],
+      fuente: SIGUIENTE_YA_APROBADO,
     },
   },
   estadoDeLaFicha: "EN_CONSTRUCCION",
