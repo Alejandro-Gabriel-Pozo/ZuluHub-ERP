@@ -69,7 +69,7 @@ const FORMAS = {
     duenio: req("duenio"),
   },
   // Verificar y activar un dominio (PENDIENTE_VERIFICACION → VERIFICADO → ACTIVO): sin ellos un host agregado sirve la
-  // página neutra para siempre. Decisión del dueño, 2026-11-05 (mensaje del orquestador). Desactivar y retirar NO están.
+  // página neutra para siempre. Decisión del dueño, 2026-11-05 (mensaje del orquestador).
   verificarDominio: {
     claveDeIdempotencia: req("clave"),
     dominioId: req("id"),
@@ -78,6 +78,16 @@ const FORMAS = {
   activarDominio: {
     claveDeIdempotencia: req("clave"),
     dominioId: req("id"),
+  },
+  // Desactivar y retirar un dominio (instalaciones dedicadas, sin consola; decisión del orquestador, 2026-11-25): los mismos casos de uso y permisos que la consola.
+  desactivarDominio: {
+    claveDeIdempotencia: req("clave"),
+    dominioId: req("id"),
+  },
+  retirarDominio: {
+    claveDeIdempotencia: req("clave"),
+    dominioId: req("id"),
+    motivo: req("motivo"),
   },
   crearPlan: {
     claveDeIdempotencia: req("clave"),
