@@ -2,5 +2,6 @@
   "grupo": "web (opciones de un producto)",
   "archivos": "src/composicion/entradas-de-opciones.ts,src/composicion/conjunto-de-opciones.ts,apps/web/ui/plantillas/catalogo/modelo-de-opciones.ts,src/modulos/catalogo/dominio/copia-de-opciones.ts",
   "minutos": 2,
-  "pruebas": "src/composicion/entradas-de-opciones.test.ts src/composicion/conjunto-de-opciones.test.ts test/web/opciones-modelo.test.ts src/modulos/catalogo/dominio/copia-de-opciones.test.ts"
+  "pruebas": "src/composicion/entradas-de-opciones.test.ts src/composicion/conjunto-de-opciones.test.ts test/web/opciones-modelo.test.ts src/modulos/catalogo/dominio/copia-de-opciones.test.ts",
+  "nivel": "SERVIDOR"
 }

@@ -3,5 +3,5 @@
   "archivos": "src/primitivas/dinero/**/*.ts,!src/primitivas/dinero/monto-exacto.ts,!src/primitivas/dinero/interno.ts,!src/primitivas/dinero/redondeo.ts",
   "minutos": 5,
   "pruebas": "src/primitivas/dinero test/propiedades/dinero.test.ts",
-  "critico": true
+  "nivel": "DINERO_EXACTO"
 }

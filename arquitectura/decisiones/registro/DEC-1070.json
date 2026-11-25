@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1070",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Los ingredientes se eligen de un selector con la lista completa, uno por vez con «Agregar»; la hoja con buscador queda para otro tramo. La receta se arma y confirma en una pantalla de dos pasos.",
+  "que_cambia": "Cómo se agrega un ingrediente. Revertir: sumar la hoja con buscador (otro tramo, con su dato de búsqueda).",
+  "donde": "apps/web/ui/plantillas/recetas/FormularioDeReceta.cliente.tsx; recetas-pantalla.md §6, supuesto S11"
+}

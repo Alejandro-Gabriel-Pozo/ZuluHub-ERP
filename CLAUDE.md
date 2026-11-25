@@ -9,6 +9,7 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
   pruebas de lo que tocaste. El gate completo (`npm run gate`) lo corre el CI; local, solo para reproducir una falla del CI. Motivo: el gate
   completo local tarda unos 20 minutos y repite lo que ya corre el CI (dueño, 17/11/2026, «4.-si»).
 - Cambios mínimos y enfocados; no inventar librerías ni APIs; avisar antes de sumar una dependencia.
+- La mutación exige 100 % en el cálculo puro de dinero, 95 % en lo crítico, 80 % en servidor y dominio y 60 % en las pantallas (ver «Mutación por nivel»); un grupo nuevo declara su `nivel`.
 - Si tocás `apps/web/ui`, corré también `npm run test:componentes` (Chromium real: axe, foco y envío; el CI lo corre en el job
   `componentes`). Un entorno que ya trae su propio Chromium lo indica con `PEDERNAL_NAVEGADOR=<ruta del ejecutable>`.
 - Si tocás `apps/web`, corré también `npm run test:recorrido` (app real, Chromium y Postgres; necesita `npm run build:web` hecho). Previene: un `Boton`
@@ -25,12 +26,17 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
   completo por PR (condición del registro de relajaciones). Previene: un fallo del guardián o de la mutación que los PR ya no corren (solo la nocturna lo ve) quede escondido bajo
   merges nuevos. Chequeo: `test/arquitectura/guardian-en-pr.test.ts` (que la nocturna corra todo); que el orquestador la mire es proceso, no un test.
 - **Relajaciones de pruebas (dueño, 25/11/2026).** El cliente tendrá 1 o 2 personas operando por sucursal como máximo, así que se corre menos de lo que el CI
-  podría correr, con un contador: todo recorte de pruebas (el CI liviano de los PR hacia la rama de integración, copias de Estabilidad en un PR, sin pruebas de carga ni volumen, concurrencia
-  con dos actores) figura en `arquitectura/deuda/relajaciones-de-pruebas.json` con quién lo decidió, el motivo, la condición para restaurarlo y su vencimiento
-  de revisión (≤ 90 días). La nocturna corre TODO (todas las copias y todos los grupos de mutación) y es lo que respalda cada recorte de un PR. Un grupo de mutación
-  que muta dinero, permisos, aislamiento, base de datos, fiscal o secretos lleva `"critico": true` (reglas de rutas en
-  `arquitectura/rutas-sensibles-de-mutacion.json`; un grupo nuevo de esas rutas sin la marca falla). Previene: recortes del CI que nadie recuerda ni revisa cuando cambia
-  la escala. Chequeo: `test/arquitectura/relajaciones-de-pruebas.test.ts` (una violación inyectada por caso).
+  podría correr, con un contador: todo recorte de pruebas (el CI liviano de los PR hacia la rama de integración, copias de Estabilidad en un PR, umbrales de mutación
+  menores que 100 %, sin pruebas de carga ni volumen, concurrencia con dos actores) figura en `arquitectura/deuda/relajaciones-de-pruebas.json` con quién lo decidió, el motivo, la condición
+  para restaurarlo y su vencimiento de revisión (≤ 90 días). La nocturna corre TODO (todas las copias y todos los grupos de mutación) y es lo que respalda cada recorte de un PR.
+  Previene: recortes del CI que nadie recuerda ni revisa cuando cambia la escala. Chequeo: `test/arquitectura/relajaciones-de-pruebas.test.ts` (una violación inyectada por caso).
+- **Mutación por nivel (dueño, 25/11/2026).** Todo grupo de `arquitectura/mutacion/*.json` declara su `nivel` y el umbral de mutación sale de `arquitectura/niveles-de-mutacion.json`:
+  DINERO_EXACTO 100 % (solo el cálculo puro de dinero: importes, redondeo, prorrateo y moneda; rutas `dinero_exacto` de `arquitectura/rutas-sensibles-de-mutacion.json`), CRITICO 95 % (permisos y
+  autorización, aislamiento entre empresas, rol público, base de datos y migraciones, fiscal, secretos, costos, el resto del dinero y el guardián; lo que muta `rutas` del mismo archivo TIENE que
+  serlo, y el código de `apps/web` que arma pedidos con dinero o cantidades hacia el servidor también), SERVIDOR 80 % (el resto de servidor y dominio) y PANTALLA 60 % (solo grupos con todos sus
+  archivos en `apps/web/ui`: el servidor ya decide permisos, validación y dinero). Falta de nivel, DINERO_EXACTO con umbral menor que 100, un grupo de dinero puro que no es DINERO_EXACTO o una
+  pantalla con archivos fuera de `apps/web/ui` fallan; en el registro de relajaciones figura cada nivel con umbral menor que 100 (y el 100 % no lleva entrada). Un grupo nuevo sin nivel falla.
+  Previene: matar el último mutante de una pantalla con la misma exigencia que el cálculo de un importe. Chequeo: `test/arquitectura/grupos-de-mutacion.test.ts` y `relajaciones-de-pruebas.test.ts`.
 
 ## Reglas que no se negocian
 

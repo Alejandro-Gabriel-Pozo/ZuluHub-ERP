@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1242",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Rótulo provisorio de la perilla `facturar_antes_de_cobrar` en la consola: «Facturación» (nombre aprobado del módulo); «Facturar antes de cobrar» (FAC-1) espera el OK del dueño.",
+  "que_cambia": "El texto que ve quien arma un plan en la consola. Al aprobarse FAC-1 se cambia una línea de `apps/plataforma/logica/plan.ts` (revertir cuesta un renglón).",
+  "donde": "apps/plataforma/logica/plan.ts; PR-R05-facturar-antes-de-cobrar.md §9 (FAC-1), repositorio de documentos"
+}
