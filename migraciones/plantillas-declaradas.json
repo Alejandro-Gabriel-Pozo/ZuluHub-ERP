@@ -159,6 +159,7 @@
     "transformaciones.cerrar": ["ADMINISTRADOR", "GERENTE"],
     "transformaciones.ver": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "usuarios.apagar": ["ADMINISTRADOR", "GERENTE"],
+    "usuarios.asignar_rol": ["GERENTE"],
     "usuarios.asignar_sucursales": ["ADMINISTRADOR", "GERENTE"],
     "usuarios.invitar": ["ADMINISTRADOR", "GERENTE"],
     "usuarios.reenviar_invitacion": ["ADMINISTRADOR", "GERENTE"],

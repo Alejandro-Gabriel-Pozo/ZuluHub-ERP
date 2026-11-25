@@ -79,7 +79,7 @@ const SOLO_GERENTE_ANEXO_A = [
   "cajas.desactivar",
   "compras.configurar",
 ].sort();
-/** Los 5 pisos de T4: las acciones de roles y la asignación de rol son solo del gerente (los cuatro `roles.*` vienen en la semilla de 0094; `usuarios.asignar_rol`, de 0097). */
+/** Los 5 pisos de T4: las acciones de roles y la asignación de rol son solo del gerente (vienen en la semilla de 0094; 0097 los siembra solo si faltan). */
 const SOLO_GERENTE_DE_0097 = [
   "roles.archivar",
   "roles.crear",
@@ -1011,7 +1011,7 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
         );
         await expect(correr()).rejects.toMatchObject({ code: "55000" });
         expect((await c.query("select 1 from version_de_rol")).rowCount).toBe(1);
-        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(27);
+        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(28);
         // Sin roles pero con una versión de plantilla de la plataforma: frena.
         await c.query("alter table rol_de_empresa disable trigger rol_de_empresa_sin_borrado");
         await c.query("alter table version_de_rol disable trigger version_de_rol_solo_insercion");
@@ -1067,7 +1067,7 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
         await c.query("begin");
         await c.query(await readFile(MIGRACION, "utf8"));
         await c.query("commit");
-        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(27);
+        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(28);
         expect((await c.query("select 1 from accion_introducida")).rowCount).toBe(TODAS.length);
       } finally {
         await c.end();
