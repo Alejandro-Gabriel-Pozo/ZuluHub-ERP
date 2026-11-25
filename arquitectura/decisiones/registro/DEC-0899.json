@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0899",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Confirmar y anular una recepción pendiente siguen siendo de gerente y administrador; el operador solo registra (pregunta 3 de Compras 4, respuesta Ok).",
+  "que_cambia": "Ninguna acción ni permiso nuevo: el operador recibe y no ve los botones de confirmar ni anular. Revertir: cambiar la matriz de permisos-de-compras.ts.",
+  "donde": "permisos-de-compras.ts (recepciones.confirmar, recepciones.anular), AccionesDeLaRecepcion.cliente.tsx; respuesta del dueño en el chat del orquestador el 25/11/2026: Ok; ver también DEC-0700"
+}

@@ -191,7 +191,7 @@ describe.skipIf(base === null)("compras N3: factura sola y conciliación", () =>
     ).toBe(1);
   });
 
-  it("la factura exige N3 o N4 y la perilla, un producto por línea, y un producto de otra empresa no existe", async () => {
+  it("la factura exige la perilla del plan (no el nivel de la empresa), un producto por línea, y un producto de otra empresa no existe", async () => {
     const n1 = await c.escenario();
     const proveedor = await c.proveedor(n1.operador, { condicionIva: "RESPONSABLE_INSCRIPTO" });
     const x = await c.articulo(n1, { unidadBase: "GRAMO", dimension: "MASA" });
@@ -201,7 +201,8 @@ describe.skipIf(base === null)("compras N3: factura sola y conciliación", () =>
       factura: pedidoDeFactura({ proveedor, cuit: cuitUnico() } as M, [linea(x.producto, "10")])
         .factura,
     });
-    expect(codigo(enN1)).toBe("RECEPCION_SEPARADA_NO_CORRESPONDE_AL_NIVEL");
+    // P1 = B: la empresa en N1 o N2 con la perilla encendida ya no es rechazada por su nivel: llega a las reglas de la factura (este proveedor no declaró puntos de venta).
+    expect(codigo(enN1)).toBe("PUNTO_DE_VENTA_NO_DECLARADO");
     const m = await armar();
     const ajeno = await armar();
     const sinProducto = await c.casos.registrarFactura(

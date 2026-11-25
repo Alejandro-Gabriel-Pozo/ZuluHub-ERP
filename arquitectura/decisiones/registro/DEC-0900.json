@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0900",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "La primera versión de «Recepciones» no ofrece control de la mercadería ni filtros en la lista (preguntas 7 y 8 de Compras 4, respuesta Ok).",
+  "que_cambia": "«Recibir» no pide el control por línea ni el destino por línea, y la lista muestra el estado de cada fila sin filtros. Revertir: sumar el control y los filtros en un PR aparte.",
+  "donde": "PantallaDeNuevaCompra.cliente.tsx (modo RECEPCION), PantallaDeListaDeRecepciones.tsx; respuesta del dueño en el chat del orquestador el 25/11/2026: Ok"
+}

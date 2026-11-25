@@ -125,6 +125,26 @@ export function armarElPedido(
   };
 }
 
+/** El renglón de una recepción separada: el producto, la unidad de compra y la cantidad, y NADA más (no se pide precio: el costo se toma de la factura al conciliar). */
+function renglonDeRecepcionParaElServidor(r: RenglonEscrito) {
+  return { productoId: r.productoId, unidadDeCompraId: r.unidadDeCompra, cantidad: r.cantidad };
+}
+
+export type PedidoDeRecepcion = Readonly<{
+  proveedorId: string;
+  remito: RemitoEscrito;
+  renglones: ReturnType<typeof renglonDeRecepcionParaElServidor>[];
+}>;
+
+/** El pedido de «Recibir»: sin depósito (se elige al confirmar), sin factura y sin precio. Un renglón sin cantidad NO se descarta en silencio: sale igual y el servidor lo rechaza. */
+export function armarElPedidoDeRecepcion(
+  proveedorId: string,
+  remito: RemitoEscrito,
+  renglones: readonly RenglonEscrito[],
+): PedidoDeRecepcion {
+  return { proveedorId, remito, renglones: renglones.map(renglonDeRecepcionParaElServidor) };
+}
+
 export type RenglonCotizado = Readonly<{
   productoId: string;
   cantidadEnStock: string;

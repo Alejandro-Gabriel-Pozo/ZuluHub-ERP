@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0898",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "«Recibir» no pide precio: lo recibido queda sin costo hasta tomar el costo de la factura (opción b chica de la pregunta 2 de Compras 4).",
+  "que_cambia": "La pantalla y la frontera web de «Recibir» rechazan cualquier precio; el costo se completa después desde la factura (PR C). Revertir: volver a admitir el precio opcional en entradas-de-recepciones.ts.",
+  "donde": "entradas-de-recepciones.ts, PantallaDeNuevaCompra.cliente.tsx (modo RECEPCION); pregunta 2 de Compras 4, respuesta del dueño en el chat del orquestador el 25/11/2026: «Sí a tu recomendación: b chica»"
+}

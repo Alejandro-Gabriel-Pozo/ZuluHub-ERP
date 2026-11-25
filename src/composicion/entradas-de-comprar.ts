@@ -40,7 +40,7 @@ export function entradaDeProductosParaComprar(
  * la presentación no se toma (la primera versión compra en la unidad base). Que la cantidad, el precio y las unidades tengan sentido lo decide el servidor con la misma cuenta del alta.
  * Previene: dinero o cantidades como `number`, y un renglón con campos que el navegador inventó. Chequeo: `entradas-de-comprar.test.ts`.
  */
-const unidad = z.string().refine((u) => Object.hasOwn(UNIDADES, u));
+export const unidad = z.string().refine((u) => Object.hasOwn(UNIDADES, u));
 
 const formaDeRenglon = z.object({
   productoId: identificador,
@@ -95,7 +95,7 @@ export function entradaDeCotizarCompra(
  * Previene: dinero o cantidades como `number`, una compra con campos que el navegador inventó y una compra con la empresa o la sucursal que diga el navegador. Chequeo: `entradas-de-comprar.test.ts`.
  */
 const formaDeRemito = z.object({ puntoDeVenta: entero, numero: entero, fecha: texto });
-const formaDelRemitoEscrito = z.object({ puntoDeVenta: texto, numero: texto, fecha: texto });
+export const formaDelRemitoEscrito = z.object({ puntoDeVenta: texto, numero: texto, fecha: texto });
 
 /**
  * La factura que llega con la compra (nivel «Con factura»; Compras PR 7): el tipo de la lista de comprobantes, el punto de venta y el número (enteros), la fecha, el vencimiento de pago (opcional), cada línea
@@ -204,29 +204,37 @@ export type EntradaWebDeRegistrarCompra = Readonly<{
 
 const enBlanco = (valor: string): boolean => valor.trim() === "";
 
+/** El remito tal como se escribió: todo en blanco (o ausente) es «sin remito»; a medio llenar se rechaza (nunca se guarda una compra distinta de la que la persona empezó a escribir). Lo comparten «Nueva compra» y «Recibir». */
+export function leerElRemitoEscrito(
+  escrito: Readonly<{ puntoDeVenta: string; numero: string; fecha: string }> | null | undefined,
+): Resultado<
+  Readonly<{ puntoDeVenta: number; numero: number; fecha: string }> | null,
+  ErrorDeEntrada
+> {
+  if (
+    escrito === undefined ||
+    escrito === null ||
+    (enBlanco(escrito.puntoDeVenta) && enBlanco(escrito.numero) && enBlanco(escrito.fecha))
+  ) {
+    return ok(null);
+  }
+  return leer(formaDeRemito, escrito);
+}
+
 export function entradaDeRegistrarCompra(
   crudo: unknown,
 ): Resultado<EntradaWebDeRegistrarCompra, ErrorDeEntrada> {
   const forma = leer(formaDeRegistrar, crudo);
   if (!forma.ok) return forma;
-  let remito: EntradaWebDeRegistrarCompra["remito"] = null;
-  const escrito = forma.valor.remito;
-  if (
-    escrito !== undefined &&
-    escrito !== null &&
-    !(enBlanco(escrito.puntoDeVenta) && enBlanco(escrito.numero) && enBlanco(escrito.fecha))
-  ) {
-    const leido = leer(formaDeRemito, escrito);
-    if (!leido.ok) return leido;
-    remito = leido.valor;
-  }
+  const remito = leerElRemitoEscrito(forma.valor.remito);
+  if (!remito.ok) return remito;
   const renglones = entradaDeCotizarCompra({ renglones: forma.valor.renglones });
   if (!renglones.ok) return renglones;
   return ok({
     clave: forma.valor.clave,
     proveedorId: forma.valor.proveedorId,
     depositoId: forma.valor.depositoId ?? null,
-    remito,
+    remito: remito.valor,
     renglones: renglones.valor.renglones,
     factura:
       forma.valor.factura === undefined || forma.valor.factura === null

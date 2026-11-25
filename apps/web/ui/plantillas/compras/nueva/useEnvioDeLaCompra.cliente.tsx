@@ -10,7 +10,7 @@ import {
   type DiccionarioResuelto,
 } from "../../../../../../src/capacidades/vocabulario/vocabulario";
 import { useEnvioConClave, type EnvioConClave } from "../../../patrones/useEnvioConClave";
-import type { PedidoDeCompra } from "./modelo-de-nueva-compra";
+import type { PedidoDeCompra, PedidoDeRecepcion } from "./modelo-de-nueva-compra";
 
 /** La acción del servidor que registra la compra. Recibe el pedido con la clave; devuelve la respuesta ya traducida. */
 export type RegistrarLaCompra = (
@@ -22,7 +22,7 @@ type CompraHecha = Readonly<{ recepcionId: string }>;
 export type EnvioDeLaCompra = Readonly<{
   envio: EnvioConClave<CompraHecha, ErrorPublico>;
   /** Manda la compra con este pedido. El pedido se FIJA con la clave en el primer envío del intento y se reusa igual en cada reintento. */
-  comprar: (pedido: PedidoDeCompra) => void;
+  comprar: (pedido: PedidoDeCompra | PedidoDeRecepcion) => void;
   /** El último error inesperado devuelto como valor, mientras el intento sigue incierto (para mostrar su referencia `PD-…`). */
   inesperado: ErrorPublico | null;
 }>;
@@ -43,8 +43,8 @@ export function useEnvioDeLaCompra({
   diccionario: DiccionarioResuelto;
   esperaEntreVerificacionesMs?: number | undefined;
 }>): EnvioDeLaCompra {
-  const delToque = useRef<PedidoDeCompra | null>(null);
-  const fijado = useRef<PedidoDeCompra | null>(null);
+  const delToque = useRef<PedidoDeCompra | PedidoDeRecepcion | null>(null);
+  const fijado = useRef<PedidoDeCompra | PedidoDeRecepcion | null>(null);
   const [inesperado, setInesperado] = useState<ErrorPublico | null>(null);
 
   const envio = useEnvioConClave<CompraHecha, ErrorPublico>({

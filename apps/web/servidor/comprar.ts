@@ -153,3 +153,17 @@ export async function cargarLoDeNuevaCompra(
     },
   };
 }
+
+/**
+ * Lo que «Recibir» (recepción separada) necesita saber antes de dibujar: si la persona puede registrar (sin permiso, el genérico: la pantalla nace cerrada) y si puede dar de alta un proveedor (solo ayuda para
+ * ofrecer o esconder el botón: el alta vuelve a pedir el permiso). No hay depósito que elegir (se elige al confirmar), ni nivel ni factura. Ocultar no es autorizar: «Recibir» vuelve a pasar por el guard.
+ */
+export async function cargarLoDeRecibir(
+  contexto: ContextoOperativo,
+): Promise<Respuesta<Readonly<{ puedeAgregarProveedor: boolean }>>> {
+  if (!(await puedeLaAccion(contexto, "recepciones.registrar"))) return SIN_SUCURSAL;
+  return {
+    ok: true,
+    dato: { puedeAgregarProveedor: await puedeLaAccion(contexto, "partes.crear") },
+  };
+}

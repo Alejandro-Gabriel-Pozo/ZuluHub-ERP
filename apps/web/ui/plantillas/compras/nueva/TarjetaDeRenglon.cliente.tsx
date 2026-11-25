@@ -21,6 +21,8 @@ export type PropsDeTarjetaDeRenglon = Readonly<{
   alQuitar: () => void;
   textos: TextosDeNuevaCompra;
   deshabilitada: boolean;
+  /** «Recibir» (recepción separada): no se pide precio, así que no hay «Precio por» ni «Precio». Por defecto, la tarjeta de «Nueva compra» con precio. */
+  sinPrecio?: boolean;
 }>;
 
 /**
@@ -35,6 +37,7 @@ export function TarjetaDeRenglon({
   alQuitar,
   textos,
   deshabilitada,
+  sinPrecio = false,
 }: PropsDeTarjetaDeRenglon) {
   const unidades = opcionesDeUnidad(renglon.unidadBase);
   return (
@@ -61,26 +64,30 @@ export function TarjetaDeRenglon({
         regla={REGLA_DE_CANTIDAD}
         deshabilitado={deshabilitada}
       />
-      <Selector
-        dato="unidad-de-precio-de-compra"
-        etiqueta={textos.precioPor}
-        nombreAccesible={`${textos.precioPor}: ${renglon.nombre}`}
-        valor={renglon.unidadDePrecio}
-        alCambiar={(unidadDePrecio) => {
-          alCambiar({ unidadDePrecio });
-        }}
-        opciones={unidades}
-        deshabilitado={deshabilitada}
-      />
-      <CampoImporte
-        dato="precio-de-compra"
-        etiqueta={textos.precio}
-        valor={renglon.precio}
-        alCambiar={(precio) => {
-          alCambiar({ precio });
-        }}
-        deshabilitado={deshabilitada}
-      />
+      {sinPrecio ? null : (
+        <>
+          <Selector
+            dato="unidad-de-precio-de-compra"
+            etiqueta={textos.precioPor}
+            nombreAccesible={`${textos.precioPor}: ${renglon.nombre}`}
+            valor={renglon.unidadDePrecio}
+            alCambiar={(unidadDePrecio) => {
+              alCambiar({ unidadDePrecio });
+            }}
+            opciones={unidades}
+            deshabilitado={deshabilitada}
+          />
+          <CampoImporte
+            dato="precio-de-compra"
+            etiqueta={textos.precio}
+            valor={renglon.precio}
+            alCambiar={(precio) => {
+              alCambiar({ precio });
+            }}
+            deshabilitado={deshabilitada}
+          />
+        </>
+      )}
       {resumen === null ? null : (
         <div className={estilos["resumen"]}>
           <p className={estilos["destacado"]}>{resumen.entra}</p>

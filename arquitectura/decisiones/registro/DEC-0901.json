@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0901",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Los textos de «Recepciones»: Recepciones, Recepción, Por confirmar, Anular recepción, Facturada y Facturada en parte; los demás son los ya aprobados. Aceptados por el orquestador por delegación.",
+  "que_cambia": "Seis claves nuevas de compras.recepcion en el catálogo; «Motivo», «Anulada», «Cancelar» y el estado vacío reutilizan los existentes. Revertir: quitar las claves y volver a textos aprobados.",
+  "donde": "catalogo-compras.ts, textos-de-recepciones.ts; delegación de textos DDD fila 173, mensaje del orquestador del 25/11/2026 y chat del dueño del 25/11/2026"
+}
