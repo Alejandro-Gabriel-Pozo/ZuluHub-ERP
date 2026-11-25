@@ -105,6 +105,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0097_roles_propios_de_la_empresa.sql",
         "0098_correccion_de_lo_recibido.sql",
         "0102_cuentas_de_imagen_declaradas.sql",
+        "0103_pago_compuesto.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -191,6 +192,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0097_roles_propios_de_la_empresa.sql",
           "0098_correccion_de_lo_recibido.sql",
           "0102_cuentas_de_imagen_declaradas.sql",
+          "0103_pago_compuesto.sql",
         ],
       });
     } finally {
@@ -383,6 +385,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0097_roles_propios_de_la_empresa.sql",
         "0098_correccion_de_lo_recibido.sql",
         "0102_cuentas_de_imagen_declaradas.sql",
+        "0103_pago_compuesto.sql",
       ]);
     } finally {
       await aparte.destruir();
