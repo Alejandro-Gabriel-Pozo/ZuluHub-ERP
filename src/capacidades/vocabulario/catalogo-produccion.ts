@@ -92,6 +92,15 @@ export const TEXTOS_DE_PRODUCCION = {
   "receta.ficha.pasos": { porDefecto: "Pasos" },
   "receta.ficha.costo_de_la_comida": { porDefecto: "Costo de la comida" },
   "receta.lista.todas": { porDefecto: "Todas" },
+  // Pantalla de Recetas, guardar (REC-B): «Costo antes», «Costo ahora» y «Diferencia» (aprobados el 14/11/2026, DDD:119 y 123) y «Volver a editar» (15/11/2026, T24 a T27, DDD:165), de `recetas-pantalla.md` §5.
+  // «Guardar», «Quitar», «Producto», «Sin elegir», «Agregar» y «Cancelar» reusan los textos ya aprobados de catálogo y de compras (una regla, un lugar).
+  "receta.edicion.costo_antes": { porDefecto: "Costo antes" },
+  "receta.edicion.costo_ahora": { porDefecto: "Costo ahora" },
+  "receta.edicion.diferencia": { porDefecto: "Diferencia" },
+  "receta.edicion.volver_a_editar": { porDefecto: "Volver a editar" },
+  // «Nueva receta» (TP-16): el patrón aprobado «Nuevo producto», «Nueva compra», «Nueva orden» (`textos-por-aprobar.html:39`, N.° 68 y 278) y la decisión del dueño del 15/11/2026 (DDD:165). SUPUESTO (DEC-1068):
+  // pendiente de aceptación por delegación del orquestador; se cambia su porDefecto acá.
+  "receta.lista.nueva_receta": { porDefecto: "Nueva receta" },
   // receta.html, fila «Ficha de cocina» (idea 6, decisión 99).
   "receta.ficha_de_cocina.titulo": { porDefecto: "Ficha de cocina" },
   // El genérico de la pantalla de Recetas (rechazo de guardar). Texto ya aprobado y repetido por módulo (`caja.error.accion_no_permitida`, `catalogo.error.accion_no_permitida`):

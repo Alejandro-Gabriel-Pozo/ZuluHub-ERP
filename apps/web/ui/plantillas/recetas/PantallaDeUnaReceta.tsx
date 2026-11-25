@@ -8,14 +8,18 @@ export type PropsDePantallaDeUnaReceta = Readonly<{ receta: RecetaArmada }>;
 
 /**
  * La ficha de una receta (maqueta `receta.html`, 15/11/2026), solo lectura: «Versión N · vigente», «Rinde» y «Costo de la comida» (si la consulta lo trajo), los ingredientes con su clase,
- * bruto, merma y neto (y el costo de la línea si lo trajo), los pasos y el enlace a la ficha de cocina. Un producto sin receta dice «Este producto no tiene receta». Sin «Editar» ni
- * «Nueva receta» (otro tramo). Sin textos propios: todos llegan resueltos. El `h1` (el nombre del producto) lo pone el armazón.
+ * bruto, merma y neto (y el costo de la línea si lo trajo), los pasos y el enlace a la ficha de cocina. Un producto sin receta dice «Este producto no tiene receta». «Editar» (o «Nueva receta» si no tiene) solo si el modelo lo ofrece. Sin textos propios: todos llegan resueltos. El `h1` (el nombre del producto) lo pone el armazón.
  */
 export function PantallaDeUnaReceta({ receta }: PropsDePantallaDeUnaReceta) {
   if (receta.sinReceta !== null) {
     return (
       <div className={estilos["raiz"]}>
         <Aviso tono="info">{receta.sinReceta}</Aviso>
+        {receta.editar === null ? null : (
+          <div className={estilos["acciones"]}>
+            <EnlaceDeAccion href={receta.editar.href}>{receta.editar.texto}</EnlaceDeAccion>
+          </div>
+        )}
       </div>
     );
   }
@@ -66,11 +70,16 @@ export function PantallaDeUnaReceta({ receta }: PropsDePantallaDeUnaReceta) {
           <p className={estilos["pasos"]}>{receta.pasos.texto}</p>
         </>
       )}
-      {receta.cocina === null ? null : (
+      {receta.cocina === null && receta.editar === null ? null : (
         <div className={estilos["acciones"]}>
-          <EnlaceDeAccion href={receta.cocina.href} variante="secundaria">
-            {receta.cocina.texto}
-          </EnlaceDeAccion>
+          {receta.editar === null ? null : (
+            <EnlaceDeAccion href={receta.editar.href}>{receta.editar.texto}</EnlaceDeAccion>
+          )}
+          {receta.cocina === null ? null : (
+            <EnlaceDeAccion href={receta.cocina.href} variante="secundaria">
+              {receta.cocina.texto}
+            </EnlaceDeAccion>
+          )}
         </div>
       )}
     </div>

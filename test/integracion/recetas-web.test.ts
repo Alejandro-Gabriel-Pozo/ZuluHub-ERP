@@ -1,9 +1,13 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { crearConsultasDeIdentidad } from "../../src/modulos/identidad/publico";
 import {
+  guardarLaReceta,
   listarLasRecetas,
   listarLasVersionesDeLaReceta,
   ofrecerLosIngredientes,
+  ofrecerTodosLosIngredientes,
+  ofrecerTodosLosProductosSinReceta,
+  verLaConfirmacionDeLaReceta,
   verLaFichaDeCocina,
   verLaReceta,
   verLaVistaPreviaDeLaReceta,
@@ -12,9 +16,13 @@ import {
 import { errorAPublico } from "../../src/composicion/a-respuesta";
 import { traducirErrorDeReceta } from "../../src/composicion/errores-de-recetas";
 import { productoDeBase } from "./catalogo-apoyo";
+import { fechaCivilDesdeTexto } from "../../src/primitivas/tiempo/fecha-civil";
 import {
+  aLaVez,
   montarStock,
   nuevoId,
+  RONDAS,
+  soloOk,
   valorDe,
   type EscenarioDeStock,
   type MontajeDeStock,
@@ -46,6 +54,7 @@ describe.skipIf(base === null)("recetas de la web: lecturas y errores", () => {
     registrados = [];
     const identidad = crearConsultasDeIdentidad({ transacciones: c.entorno, reglas: c.reglas });
     d = {
+      casosDeUso: () => c.casos,
       consultas: () => c.consultas,
       personas: () => identidad,
       respuesta: { registrar: (detalle) => registrados.push(detalle) },
@@ -414,6 +423,393 @@ describe.skipIf(base === null)("recetas de la web: lecturas y errores", () => {
       ]) {
         expect(r).toMatchObject({ ok: false, error: { codigo: "MODULO_NO_ACTIVO" } });
       }
+    } finally {
+      c.encenderModulos();
+    }
+  });
+
+  // ---- REC-B: guardar por la puerta web ---------------------------------------------------------------------------------------
+
+  const pedidoDe = (
+    productoId: string,
+    ingredienteId: string,
+    versionEsperada: number,
+    extra: Record<string, unknown> = {},
+  ) => ({
+    productoId,
+    versionEsperada,
+    rinde: "1",
+    pasos: "",
+    lineas: [{ ingredienteId, bruto: "1", merma: "" }],
+    unidades: { [ingredienteId]: "KILOGRAMO" },
+    ...extra,
+  });
+  const versionesDe = (productoId: string) =>
+    c.contar("select count(*) as n from composicion where producto_id = $1", [productoId]);
+  const auditadasDe = (x: EscenarioDeStock) =>
+    c.contar(
+      "select count(*) as n from auditoria_empresa where empresa_id = $1 and accion = 'COMPOSICION_GUARDADA'",
+      [x.empresa],
+    );
+  const codigoDe = (r: { ok: boolean; error?: { codigo: string } }) =>
+    r.ok ? "OK" : (r.error?.codigo ?? "?");
+
+  it("REC-B, guardar: la primera receta es la versión 1; el mismo contenido otra vez es «ya existía» y no crea versión ni auditoría", async () => {
+    const x = await c.escenario();
+    const harina = await materia(x);
+    const p = await vendible(x);
+    const r1 = dato(await guardarLaReceta(d, x.gerente, pedidoDe(p, harina.producto, 0)));
+    expect(r1).toEqual({ productoId: p, version: 1, yaExistia: false });
+    expect(await versionesDe(p)).toBe(1);
+    const auditadas = await auditadasDe(x);
+    // Doble clic, o reintento tras un corte: el mismo contenido, y aunque la versión vista sea vieja.
+    for (const version of [0, 1]) {
+      expect(
+        dato(await guardarLaReceta(d, x.gerente, pedidoDe(p, harina.producto, version))),
+      ).toEqual({
+        productoId: p,
+        version: 1,
+        yaExistia: true,
+      });
+    }
+    expect(await versionesDe(p)).toBe(1);
+    expect(await auditadasDe(x)).toBe(auditadas);
+    // Otro contenido sobre la versión que se vio: versión 2, y nada se pisa.
+    expect(
+      dato(await guardarLaReceta(d, x.gerente, pedidoDe(p, harina.producto, 1, { rinde: "2" })))
+        .version,
+    ).toBe(2);
+    expect(await versionesDe(p)).toBe(2);
+    expect(await auditadasDe(x)).toBe(auditadas + 1);
+  });
+
+  it("REC-B, guardar: lo escrito en el formulario llega entero (rinde, pasos, bruto y merma exactos) y el pasos en blanco es sin pasos", async () => {
+    const x = await c.escenario();
+    c.encenderPerilla("composiciones_con_perdida");
+    const harina = await materia(x);
+    const p = await vendible(x);
+    dato(
+      await guardarLaReceta(
+        d,
+        x.gerente,
+        pedidoDe(p, harina.producto, 0, {
+          rinde: "2.5",
+          pasos: "  Amasar.  ",
+          lineas: [{ ingredienteId: harina.producto, bruto: "1.2345", merma: "12.5" }],
+        }),
+      ),
+    );
+    const ficha = dato(await verLaReceta(d, x.gerente, { productoId: p }))?.ficha;
+    expect(ficha).toMatchObject({ rinde: "2.5000", pasos: "Amasar." });
+    expect(ficha?.componentes[0]).toMatchObject({ bruto: "1.2345", merma: "12.5000" });
+    // Merma en blanco = sin merma; pasos en blanco = sin pasos.
+    dato(await guardarLaReceta(d, x.gerente, pedidoDe(p, harina.producto, 1, { pasos: "   " })));
+    const sinPasos = dato(await verLaReceta(d, x.gerente, { productoId: p }))?.ficha;
+    expect(sinPasos?.pasos).toBeNull();
+    expect(sinPasos?.componentes[0]?.merma).toBe("0.0000");
+  });
+
+  it("REC-B, concurrencia: dos guardados con la misma versión vista y contenido distinto dejan UNA versión nueva y la otra se rechaza sin escribir (20 rondas)", async () => {
+    const x = await c.escenario();
+    const harina = await materia(x);
+    const p = await vendible(x);
+    dato(await guardarLaReceta(d, x.gerente, pedidoDe(p, harina.producto, 0)));
+    let version = 1;
+    for (let ronda = 0; ronda < Math.max(RONDAS, 20); ronda++) {
+      const resultados = await aLaVez(
+        c,
+        [
+          () =>
+            guardarLaReceta(
+              d,
+              x.gerente,
+              pedidoDe(p, harina.producto, version, { rinde: `${String(ronda + 2)}` }),
+            ),
+          () =>
+            guardarLaReceta(
+              d,
+              x.administrador,
+              pedidoDe(p, harina.producto, version, { rinde: `${String(ronda + 1000)}` }),
+            ),
+        ],
+        ronda,
+      );
+      expect(soloOk(resultados), JSON.stringify(resultados)).toBe(1);
+      const perdio = resultados.find((r) => !r.ok);
+      expect(codigoDe(perdio as never)).toBe("RECETA_ACCION_NO_PERMITIDA");
+      version += 1;
+      expect(await versionesDe(p)).toBe(version);
+    }
+  });
+
+  it("REC-B, doble clic: el mismo guardado dos veces a la vez crea una versión y el segundo dice «ya existía» (20 rondas)", async () => {
+    const x = await c.escenario();
+    const harina = await materia(x);
+    const p = await vendible(x);
+    dato(await guardarLaReceta(d, x.gerente, pedidoDe(p, harina.producto, 0)));
+    let version = 1;
+    for (let ronda = 0; ronda < Math.max(RONDAS, 20); ronda++) {
+      const mismo = () =>
+        guardarLaReceta(
+          d,
+          x.gerente,
+          pedidoDe(p, harina.producto, version, { rinde: `${String(ronda + 2)}` }),
+        );
+      const resultados = await aLaVez(c, [mismo, mismo], ronda);
+      const hechos = resultados.map((r) => (r.ok ? r.dato : null));
+      // Uno crea la versión nueva; el otro, o la ve ya creada (ya existía) o pierde por la versión vista: nunca dos versiones.
+      expect(hechos.filter((h) => h !== null && !h.yaExistia)).toHaveLength(1);
+      version += 1;
+      expect(await versionesDe(p)).toBe(version);
+    }
+  });
+
+  it("REC-B, guardar y vender a la vez: la venta usa la versión vigente al cerrar su ticket (la anterior o la nueva entera, nunca una mezcla) y ninguna se pierde", async () => {
+    const x = await c.escenario();
+    const dep = await c.deposito(x, { deVenta: true });
+    const harina = await materia(x);
+    const p = await vendible(x);
+    valorDe(
+      await c.casos.registrarEntrada(x.gerente, {
+        clave: nuevoId(),
+        depositoId: dep,
+        motivo: "COMPRA",
+        renglones: [
+          {
+            productoId: harina.producto,
+            cantidad: "1000",
+            unidadId: "KILOGRAMO",
+            costoUnitario: "1",
+          },
+        ],
+      }),
+    );
+    dato(await guardarLaReceta(d, x.gerente, pedidoDe(p, harina.producto, 0)));
+    const fecha = valorDe(fechaCivilDesdeTexto("2026-10-09"));
+    const existencia = async () => Number(await c.existencia(dep, harina.articulo));
+    let version = 1;
+    for (let ronda = 0; ronda < 5; ronda++) {
+      const vigenteAntes = version === 1 ? 1 : version;
+      const bruto = String(version + 1);
+      const antes = await existencia();
+      const guardar = () =>
+        guardarLaReceta(
+          d,
+          x.gerente,
+          pedidoDe(p, harina.producto, version, {
+            lineas: [{ ingredienteId: harina.producto, bruto, merma: "" }],
+          }),
+        ).then((r): { ok: boolean; r: unknown } => ({ ok: r.ok, r }));
+      const vender = () =>
+        c.entorno
+          .ejecutar({ contexto: x.gerente }, (tx) =>
+            c.puertos.consumoDeStock.registrarSalidaPorVentaEnTx(tx, x.gerente, {
+              origen: { tipo: "EJEMPLAR_DE_TICKET", id: nuevoId() },
+              accion: "cuentas.cerrar",
+              depositoId: dep,
+              hechoEn: x.gerente.ahora,
+              fechaDeNegocio: fecha,
+              renglones: [
+                {
+                  posicion: 1,
+                  productoId: p,
+                  cantidad: "1",
+                  unidadDeVentaId: "KILOGRAMO",
+                  opciones: [],
+                },
+              ],
+            }),
+          )
+          .then((r): { ok: boolean; r: unknown } => ({ ok: r.ok, r }));
+      const [guardada, venta] = await aLaVez(c, [guardar, vender], ronda);
+      expect(guardada?.ok, JSON.stringify(guardada)).toBe(true);
+      expect(venta?.ok, JSON.stringify(venta)).toBe(true);
+      version += 1;
+      // Una sola versión entera: la que estaba vigente (su bruto) o la que se guardó (`bruto`), nunca otra cosa; y se descontó una vez.
+      expect([vigenteAntes, Number(bruto)]).toContain(antes - (await existencia()));
+      expect(await versionesDe(p)).toBe(version);
+    }
+  });
+
+  it("REC-B, permisos en el servidor: el operador no guarda aunque mande el pedido a mano; un administrador de una sola sucursal tampoco; el módulo apagado, el motivo del guard", async () => {
+    const x = await c.escenario();
+    const harina = await materia(x);
+    const p = await vendible(x);
+    const antes = await escrituras(x);
+    expect(codigoDe(await guardarLaReceta(d, x.operador, pedidoDe(p, harina.producto, 0)))).toBe(
+      "SIN_PERMISO",
+    );
+    expect(
+      codigoDe(
+        await guardarLaReceta(d, x.administradorDeUnaSucursal, pedidoDe(p, harina.producto, 0)),
+      ),
+    ).toBe("RECETA_ACCION_NO_PERMITIDA");
+    c.apagarModulo("stock");
+    try {
+      expect(codigoDe(await guardarLaReceta(d, x.gerente, pedidoDe(p, harina.producto, 0)))).toBe(
+        "MODULO_NO_ACTIVO",
+      );
+    } finally {
+      c.encenderModulos();
+    }
+    expect(await escrituras(x)).toBe(antes);
+    expect(await versionesDe(p)).toBe(0);
+  });
+
+  it("REC-B, aislamiento: no se guarda la receta de un producto de otra empresa ni con ingredientes de otra empresa, y no se escribe nada", async () => {
+    const a = await c.escenario();
+    const b = await c.escenario();
+    const harinaA = await materia(a);
+    const harinaB = await materia(b);
+    const pA = await vendible(a);
+    const antesA = await escrituras(a);
+    const antesB = await escrituras(b);
+    expect(codigoDe(await guardarLaReceta(d, b.gerente, pedidoDe(pA, harinaB.producto, 0)))).toBe(
+      "RECETA_ACCION_NO_PERMITIDA",
+    );
+    expect(codigoDe(await guardarLaReceta(d, a.gerente, pedidoDe(pA, harinaB.producto, 0)))).toBe(
+      "RECETA_ACCION_NO_PERMITIDA",
+    );
+    expect(await escrituras(a)).toBe(antesA);
+    expect(await escrituras(b)).toBe(antesB);
+    expect(await versionesDe(pA)).toBe(0);
+    expect(harinaA.producto).not.toBe(harinaB.producto);
+  });
+
+  it("REC-B, todo o nada: una receta con un ingrediente válido y otro que no lo es no deja ni versión, ni renglones, ni auditoría", async () => {
+    const x = await c.escenario();
+    const harina = await materia(x);
+    const insumo = await c.articulo(x, { clase: "INSUMO", ...kilos });
+    const p = await vendible(x);
+    const antes = await escrituras(x);
+    const r = await guardarLaReceta(
+      d,
+      x.gerente,
+      pedidoDe(p, harina.producto, 0, {
+        lineas: [
+          { ingredienteId: harina.producto, bruto: "1", merma: "" },
+          { ingredienteId: insumo.producto, bruto: "1", merma: "" },
+        ],
+        unidades: { [harina.producto]: "KILOGRAMO", [insumo.producto]: "KILOGRAMO" },
+      }),
+    );
+    expect(codigoDe(r)).toBe("RECETA_ACCION_NO_PERMITIDA");
+    expect(await escrituras(x)).toBe(antes);
+    expect(await versionesDe(p)).toBe(0);
+    expect(
+      await c.contar("select count(*) as n from componente_de_composicion where empresa_id = $1", [
+        x.empresa,
+      ]),
+    ).toBe(
+      await c.contar("select count(*) as n from componente_de_composicion where empresa_id = $1", [
+        x.empresa,
+      ]),
+    );
+  });
+
+  it("REC-B, la unidad la fija el servidor: un ingrediente sin unidad ligada, o una unidad de otra dimensión, no guarda", async () => {
+    const x = await c.escenario();
+    const harina = await materia(x);
+    const p = await vendible(x);
+    const antes = await escrituras(x);
+    expect(
+      codigoDe(
+        await guardarLaReceta(d, x.gerente, pedidoDe(p, harina.producto, 0, { unidades: {} })),
+      ),
+    ).toBe("RECETA_ACCION_NO_PERMITIDA");
+    expect(
+      codigoDe(
+        await guardarLaReceta(
+          d,
+          x.gerente,
+          pedidoDe(p, harina.producto, 0, { unidades: { [harina.producto]: "LITRO" } }),
+        ),
+      ),
+    ).toBe("RECETA_ACCION_NO_PERMITIDA");
+    expect(await escrituras(x)).toBe(antes);
+  });
+
+  it("REC-B, la confirmación: costo antes, ahora y diferencia exactos; el operador, sin costos; no escribe nada", async () => {
+    const x = await c.escenario();
+    const dep = await c.deposito(x, { deVenta: true });
+    const harina = await materia(x);
+    const p = await vendible(x);
+    valorDe(
+      await c.casos.registrarEntrada(x.gerente, {
+        clave: nuevoId(),
+        depositoId: dep,
+        motivo: "COMPRA",
+        renglones: [
+          {
+            productoId: harina.producto,
+            cantidad: "10",
+            unidadId: "KILOGRAMO",
+            costoUnitario: "1000",
+          },
+        ],
+      }),
+    );
+    // Una receta que no existe todavía: solo «ahora».
+    const nueva = dato(
+      await verLaConfirmacionDeLaReceta(
+        d,
+        x.gerente,
+        pedidoDe(p, harina.producto, 0, { rinde: "3" }),
+      ),
+    );
+    expect(nueva?.costos).toEqual({ moneda: "ARS", ahora: "333.333333" });
+    expect(nueva?.netos).toEqual({ [harina.producto]: "1.0000" });
+    dato(await guardarLaReceta(d, x.gerente, pedidoDe(p, harina.producto, 0, { rinde: "3" })));
+    const antes = await escrituras(x);
+    const edicion = dato(
+      await verLaConfirmacionDeLaReceta(
+        d,
+        x.gerente,
+        pedidoDe(p, harina.producto, 1, {
+          rinde: "3",
+          lineas: [{ ingredienteId: harina.producto, bruto: "2", merma: "" }],
+        }),
+      ),
+    );
+    expect(edicion?.costos).toEqual({
+      moneda: "ARS",
+      ahora: "666.666667",
+      antes: "333.333333",
+      diferencia: "333.333334",
+    });
+    const operador = dato(
+      await verLaConfirmacionDeLaReceta(
+        d,
+        x.operador,
+        pedidoDe(p, harina.producto, 1, { rinde: "3" }),
+      ),
+    );
+    expect(Object.hasOwn(operador ?? {}, "costos")).toBe(false);
+    expect(operador?.netos).toEqual({ [harina.producto]: "1.0000" });
+    expect(await escrituras(x)).toBe(antes);
+  });
+
+  it("REC-B, las listas completas: los productos sin receta (activos) y los ingredientes (sin el propio producto ni insumos), de la empresa y nada de otra", async () => {
+    const a = await c.escenario();
+    const b = await c.escenario();
+    const harina = await materia(a);
+    await c.articulo(a, { clase: "INSUMO", ...kilos });
+    await materia(b);
+    const con = await vendible(a, "Con receta lista");
+    const sin = await vendible(a, "Sin receta lista");
+    await vendible(b, "De la otra");
+    dato(await guardarLaReceta(d, a.gerente, pedidoDe(con, harina.producto, 0)));
+    const sinReceta = dato(await ofrecerTodosLosProductosSinReceta(d, a.gerente));
+    expect(sinReceta.map((r) => r.productoId)).toEqual([sin]);
+    const ingredientes = dato(await ofrecerTodosLosIngredientes(d, a.gerente, con));
+    expect(ingredientes.map((i) => i.productoId)).toEqual([harina.producto]);
+    // Lo ven los tres roles que miran stock; con el módulo apagado, el motivo del guard.
+    expect(dato(await ofrecerTodosLosIngredientes(d, a.operador, ""))).toHaveLength(1);
+    c.apagarModulo("stock");
+    try {
+      expect(codigoDe((await ofrecerTodosLosIngredientes(d, a.gerente, "")) as never)).toBe(
+        "MODULO_NO_ACTIVO",
+      );
     } finally {
       c.encenderModulos();
     }
