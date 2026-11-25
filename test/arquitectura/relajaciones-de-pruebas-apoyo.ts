@@ -2,7 +2,7 @@
  * Apoyo de `relajaciones-de-pruebas.test.ts`: las reglas del registro de relajaciones de pruebas, como funciones puras (reciben el contenido y la fecha de hoy; no leen el disco).
  */
 
-export const ESTADOS = ["VIGENTE", "RESTAURADA"] as const;
+const ESTADOS = ["VIGENTE", "RESTAURADA"] as const;
 export const CAMPOS_OBLIGATORIOS = [
   "id",
   "estado",
@@ -14,10 +14,10 @@ export const CAMPOS_OBLIGATORIOS = [
   "restaurar_si",
   "revisar_antes_de",
 ] as const;
-export const CAMPOS_PERMITIDOS = [...CAMPOS_OBLIGATORIOS, "valor"] as const;
+const CAMPOS_PERMITIDOS = [...CAMPOS_OBLIGATORIOS, "valor"] as const;
 /** Una relajación se revisa con el dueño como máximo cada 90 días. */
-export const DIAS_MAXIMOS_DE_REVISION = 90;
-export const ID_DE_LA_ESTABILIDAD = "estabilidad-reducida-en-pr";
+const DIAS_MAXIMOS_DE_REVISION = 90;
+const ID_DE_LA_ESTABILIDAD = "estabilidad-reducida-en-pr";
 
 const FORMA_DE_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const FORMA_DE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
