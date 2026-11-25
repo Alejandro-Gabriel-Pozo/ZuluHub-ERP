@@ -104,12 +104,12 @@ export function leerPedidoDeVercel(
   if (destino !== null) {
     return { texto: destino, destino, proyecto: PROYECTO_DE_VERCEL, etiqueta: "pedernal-erp" };
   }
-  if (texto === undefined || !CODIGO_DE_CLIENTE.test(texto) || !Object.hasOwn(clientes, texto)) {
-    return null;
-  }
-  const proyecto = clientes[texto];
+  // La lista se recorre (no se indexa): solo cuenta una clave PROPIA de la lista, nunca un nombre heredado de Object.
+  const hallado = Object.entries(clientes).find(([codigo]) => codigo === texto);
+  if (hallado === undefined) return null;
+  const [codigo, proyecto] = hallado;
   if (
-    proyecto === undefined ||
+    !CODIGO_DE_CLIENTE.test(codigo) ||
     !ID_DE_PROYECTO_DE_VERCEL.test(proyecto) ||
     proyecto === PROYECTO_DE_VERCEL ||
     proyecto === PROYECTO_DE_VERCEL_DE_LA_CONSOLA ||
@@ -117,7 +117,7 @@ export function leerPedidoDeVercel(
   ) {
     return null;
   }
-  return { texto, destino: "production", proyecto, etiqueta: texto };
+  return { texto: codigo, destino: "production", proyecto, etiqueta: codigo };
 }
 
 /**
