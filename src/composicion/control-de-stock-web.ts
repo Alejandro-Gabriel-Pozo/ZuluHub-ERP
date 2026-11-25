@@ -38,8 +38,7 @@ const GENERICO = errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA");
 
 /** Los errores de negocio del módulo (cadenas con nombre) salen como el genérico; lo que no es de negocio (la base, un defecto) sigue su camino común. */
 function conError(error: unknown, d: DependenciasDeControlDeStockWeb): ErrorPublico {
-  // `{ error: "FUNCION_NO_INCLUIDA", perilla }`: el elaborado y el vendible sin la función «Producción» en el plan; también el genérico (si no, saldría como un fallo inesperado con referencia).
-  // `Object(...)` envuelve cualquier valor (también `null`, `undefined` y las cadenas) sin lanzar: lo que no es un objeto con `error` da `undefined`.
+  // `{ error: "FUNCION_NO_INCLUIDA", perilla }` (plan sin «Producción») es el genérico, no un fallo inesperado; `Object(...)` evita lanzar con `null` o cadenas.
   const deObjeto = (Object(error) as { error?: unknown }).error === "FUNCION_NO_INCLUIDA";
   return deObjeto || (typeof error === "string" && error !== "ERROR_DE_LA_BASE_NO_TRADUCIDO")
     ? GENERICO
@@ -95,14 +94,11 @@ export async function fijarElControlDeStock(
 }
 
 /**
- * La existencia PROPIA de un producto con stock propio (la franja «Tiene stock propio: …» de un elaborado o un vendible): la suma, en texto decimal exacto, de sus saldos en los depósitos que la persona
- * puede ver (lo decide la consulta: `stock.ver` y su alcance de sucursales). Sale de la lista de existencias filtrada por el nombre del producto (no hay una consulta por producto). Falla CERRADO:
- * si el nombre no sirve de búsqueda, o hay tantas filas con ese nombre que no se recorren todas, devuelve `null` (no se sabe) y la franja no muestra el número; nunca un cero inventado. Un producto
- * que nunca se movió no tiene filas: su existencia es cero de verdad. Es una LECTURA: no escribe ni audita.
+ * Existencia propia de un producto con stock propio: suma exacta de sus saldos en los depósitos que la persona ve (`stock.ver`). Falla cerrado: si no se puede saber, `null` (sin número inventado).
  */
 export type ExistenciaPropia = Readonly<{ existencia: string; unidadId: string }>;
 
-/** Cuántas páginas de existencias se recorren como máximo (50 filas cada una): un tope de seguridad, no una regla de negocio. */
+/** Tope de seguridad de páginas de existencias (50 filas cada una), no una regla de negocio. */
 const MAXIMO_DE_PAGINAS_DE_EXISTENCIAS = 5;
 const ESCALA_DE_LA_EXISTENCIA = 4;
 

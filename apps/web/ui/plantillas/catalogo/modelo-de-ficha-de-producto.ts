@@ -194,10 +194,7 @@ export function armarLaFicha(f: FichaDeLaPantalla, d: DiccionarioResuelto = {}):
   };
 }
 
-/**
- * La franja de la ficha de un producto de stock propio (TP-4 y TP-5, aprobados el 25/11/2026): con el control encendido, «Tiene stock propio: {existencia}»; apagado, «No tiene stock propio:
- * descuenta sus ingredientes.». Si está encendido y no se pudo leer la existencia, no hay franja (`null`): nunca un número inventado.
- */
+/** La franja de stock propio (TP-4 y TP-5): con el control encendido, la existencia; apagado, que descuenta sus ingredientes. Sin existencia legible, `null` (nunca un número inventado). */
 export function armarLaFranjaDeStockPropio(
   controlado: boolean,
   existencia: Readonly<{ existencia: string; unidadId: string }> | null,

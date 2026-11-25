@@ -22,11 +22,7 @@ export type SalidaDeDejarDeControlar = Readonly<{ yaEstaba: boolean }>;
  * producto ya tuvo artículo y se dejó de controlar, se reactiva el MISMO (su libro sigue). Repetición (`YA_ESTABA`): ya controlado devuelve
  * `yaExistia` sin escribir ni auditar.
  *
- * STOCK PROPIO de un elaborado o un vendible (E6, D94; PRO-A): se admite SOLO si la empresa tiene encendida la perilla `produccion` (`FUNCION_NO_INCLUIDA`)
- * y el producto tiene una receta vigente no vacía (`SIN_COMPOSICION`). Cambia lo que descuenta la venta: con artículo propio activo, la venta descuenta ese
- * artículo y NO sus ingredientes (`situacionDeConsumo`), que bajan al cerrar una orden de producción. Una cuenta abierta con una línea agregada antes de
- * encenderlo conserva lo que sella `controla_stock` y no cambia de camino. La receta se lee en la misma transacción SERIALIZABLE: retirarla a la vez no deja
- * un artículo sobre una receta vacía (una de las dos aborta y se reintenta). Encender no crea movimientos: la existencia nace en cero.
+ * Stock propio de un elaborado o vendible (E6, D94): solo con la perilla `produccion` y una receta vigente; la venta pasa a descontar ese artículo y no sus ingredientes.
  */
 export function armarControlarArticulo(dependencias: DependenciasDeStock) {
   return async function controlarArticulo(
