@@ -99,14 +99,12 @@ export type EntradaDeDocumentoParaImprimir = Readonly<{
   /** La impresora elegida (da el ancho del papel); sin ella, la de ese uso de la sucursal, o 80 mm. */
   impresoraId?: string | undefined;
   /** La sucursal con la que trabaja quien pide (la fija el servidor): un documento de otra sucursal es como si no existiera. */
-  sucursalDeTrabajo?: string | undefined;
+  sucursalDeTrabajo: string;
 }>;
 
-/** ¿El documento es de otra sucursal que la de trabajo? Sin sucursal de trabajo (quien llama no la fija) no se compara: rige el alcance de quien pide. */
-const esDeOtraSucursal = (
-  sucursalDeTrabajo: string | undefined,
-  sucursalDelDocumento: string,
-): boolean => sucursalDeTrabajo !== undefined && sucursalDeTrabajo !== sucursalDelDocumento;
+/** ¿El documento es de otra sucursal que la de trabajo? Sin sucursal de trabajo (quien llama no la fija) también: cierra, nunca se compara a medias. */
+const esDeOtraSucursal = (sucursalDeTrabajo: string, sucursalDelDocumento: string): boolean =>
+  sucursalDeTrabajo !== sucursalDelDocumento;
 
 export function crearConsultasDeComandas(dependencias: DependenciasDeConsultasDeComandas) {
   const leer = <T>(
