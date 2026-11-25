@@ -16,7 +16,7 @@ describe("el catálogo comercial de módulos", () => {
     expect(conCapacidad).toEqual([]);
   });
 
-  it("tiene trece módulos: administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, caja y ventas (disponibles desde el 15/11/2026, DEC-0463), compras (disponible desde E9-T12), vidriera (disponible desde el 20/11/2026, DEC-0826), comandas y salon (disponibles desde S-0r, 17/11/2026, Q-S0-3), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
+  it("tiene catorce módulos (el de cuenta_corriente nace en_desarrollo, CC-1): administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, caja y ventas (disponibles desde el 15/11/2026, DEC-0463), compras (disponible desde E9-T12), vidriera (disponible desde el 20/11/2026, DEC-0826), comandas y salon (disponibles desde S-0r, 17/11/2026, Q-S0-3), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
     expect(CATALOGO_DE_MODULOS).toEqual({
       administracion: {
         estado: "disponible",
@@ -305,6 +305,18 @@ describe("el catálogo comercial de módulos", () => {
           "compras.exportar": { capacidad: null, efecto: "LECTURA" },
         },
       },
+      cuenta_corriente: {
+        estado: "en_desarrollo",
+        obligatorio: false,
+        requiere: ["clientes"],
+        usaSiExiste: [],
+        datosRequeridos: [],
+        implementadoPor: ["modulos/cuenta_corriente"],
+        acciones: {
+          "cuenta_corriente.ver": { capacidad: null, efecto: "LECTURA" },
+          "cuenta_corriente.administrar": { capacidad: null, efecto: "CREA_AMPLIA" },
+        },
+      },
       produccion: {
         estado: "en_desarrollo",
         obligatorio: false,
@@ -342,7 +354,8 @@ describe("el catálogo comercial de módulos", () => {
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 49 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
     // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A y `vidrieras.administrar_portal` del portal), 35 de caja, cierre y ventas (E0-T1), 38 de clientes y compras (E9-T1, T11, N3-2b, N3-4, N4-1, N4-3, N4-4, N4-5 y la exportación del 25/11/2026), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 178 en total.
-    expect(todas).toHaveLength(25 + 9 + 44 + 35 + 38 + 16 + 5);
+    // + 2 de cuenta corriente de clientes (CC-1: `cuenta_corriente.ver` y `cuenta_corriente.administrar`).
+    expect(todas).toHaveLength(25 + 9 + 44 + 35 + 38 + 16 + 5 + 2);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -484,6 +497,7 @@ const EFECTOS_DE_EMPRESA = {
     "comprobantes_de_proveedor.ver",
     "conciliaciones.ver",
     "costos.ver",
+    "cuenta_corriente.ver",
     "devoluciones_a_proveedor.ver",
     "diferencias_de_compra.ver",
     "gerencia.ver_traspaso",
@@ -520,6 +534,7 @@ const EFECTOS_DE_EMPRESA = {
     "comprobantes_de_proveedor.pagar",
     "comprobantes_de_proveedor.registrar",
     "conteos.abrir",
+    "cuenta_corriente.administrar",
     "cuentas.abrir",
     "cuentas.agregar_linea",
     "cuentas_de_cobro.crear",

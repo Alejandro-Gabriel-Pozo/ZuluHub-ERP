@@ -17,6 +17,34 @@ describe("las clases de asiento", () => {
       expect(c.exigeDetalle).toBe(true);
   });
 
+  it("las clases de A_COBRAR de v1 son tres, con su signo (+ cargo, − cobranza, ± ajuste con detalle); las demás nacen cerradas", () => {
+    expect(CLASES_DE_ASIENTO.filter((c) => c.sentido === "A_COBRAR")).toEqual([
+      {
+        sentido: "A_COBRAR",
+        clase: "CARGO_DE_VENTA_A_CUENTA",
+        signo: "+",
+        exigeDetalle: false,
+        admiteVencimiento: true,
+      },
+      {
+        sentido: "A_COBRAR",
+        clase: "COBRANZA",
+        signo: "-",
+        exigeDetalle: false,
+        admiteVencimiento: false,
+      },
+      {
+        sentido: "A_COBRAR",
+        clase: "AJUSTE_DE_SALDO",
+        signo: "±",
+        exigeDetalle: true,
+        admiteVencimiento: false,
+      },
+    ]);
+    expect(claseDe("A_COBRAR", "CREDITO_A_FAVOR")).toBeNull();
+    expect(claseDe("A_COBRAR", "NOTA_DE_CREDITO_DE_VENTA")).toBeNull();
+  });
+
   it("claseDe distingue por sentido: una clase de otro sentido o inventada no existe", () => {
     expect(claseDe("A_PAGAR", "PAGO_A_PROVEEDOR")?.signo).toBe("-");
     expect(claseDe("A_COBRAR", "PAGO_A_PROVEEDOR")).toBeNull();

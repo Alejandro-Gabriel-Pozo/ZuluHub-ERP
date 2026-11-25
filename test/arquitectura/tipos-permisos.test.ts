@@ -54,6 +54,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "salon"
       | "clientes"
       | "compras"
+      | "cuenta_corriente"
       | "produccion"
     >();
     expectTypeOf<ClaveAccion>().toEqualTypeOf<
@@ -191,6 +192,8 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "salon.dividir"
       | "tickets.cobrar"
       | "tickets.corregir"
+      | "cuenta_corriente.ver"
+      | "cuenta_corriente.administrar"
       | "partes.ver"
       | "partes.crear"
       | "partes.editar"
@@ -295,6 +298,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       "salon",
       "clientes",
       "compras",
+      "cuenta_corriente",
       "produccion",
     ]);
   });
