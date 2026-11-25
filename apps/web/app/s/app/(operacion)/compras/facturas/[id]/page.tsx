@@ -8,7 +8,7 @@ import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetall
 import { PantallaDeDetalleDeFactura } from "../../../../../../../ui/plantillas/compras/facturas/PantallaDeDetalleDeFactura";
 import { nombreDeLaFacturaDeLaEmpresa } from "../../../../../../../ui/plantillas/compras/facturas/modelo-de-facturas";
 import { textosDeFacturas } from "../../../../../../../ui/plantillas/compras/facturas/textos-de-facturas";
-import { anularConciliacionAccion } from "../../../../acciones-de-facturas";
+import { anularConciliacionAccion, tomarElCostoAccion } from "../../../../acciones-de-facturas";
 
 // `/compras/facturas/[id]`: el detalle de una factura de la empresa (maqueta `compra-conciliar.html`, estados «Falta conciliar» y «Conciliada en parte»). El id es lo único que viene de la URL: la empresa, la persona
 // y el alcance de sucursal los decide el servidor. Un id mal escrito o de otra empresa sale igual que uno que no existe (el genérico). Lo recibido se muestra solo de las sucursales del alcance. «Conciliar» y
@@ -30,6 +30,7 @@ export default async function PaginaDelDetalleDeFactura({
         textos={textosDeFacturas()}
         sucursales={await cargarLasSucursalesConNombre(contexto)}
         acciones={acciones}
+        tomarElCosto={tomarElCostoAccion}
         accionesDeAnular={Object.fromEntries(
           ficha.dato.conciliaciones.map((c) => [
             c.conciliacionId,

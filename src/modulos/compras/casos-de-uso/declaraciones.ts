@@ -361,4 +361,14 @@ export const DECLARACIONES = {
       },
     },
   },
+  tomarElCosto: {
+    accion: "compras.corregir",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/compras-tomar-el-costo.test.ts",
+        it: "I1: tomar el costo dos veces (misma clave) deja una sola corrección y un solo ajuste y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
+      },
+    },
+  },
 } as const satisfies Record<string, DeclaracionDeCasoDeUso>;
