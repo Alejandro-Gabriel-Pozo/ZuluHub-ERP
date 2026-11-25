@@ -20,7 +20,8 @@ type Grupo = {
   archivos: string;
   minutos: number;
   pruebas?: string;
-  critico?: true;
+  nivel: string;
+  umbral?: number;
 };
 type Falla = { archivo: string; motivo: string };
 type Arbol = { rutas: string[]; leer: (ruta: string) => Buffer | null };
@@ -29,6 +30,9 @@ const cargador = require("../../arquitectura/grupos-de-mutacion.cjs") as {
   EXCLUSION_DE_PRUEBAS: string;
   arbolDelDisco: (raiz: string) => Arbol;
   cargarLosGrupos: (raiz: string) => { grupos: Grupo[]; mutate: string[] };
+  leerLosNiveles: (texto: string) => { niveles: Record<string, number> | null; errores: string[] };
+  ARCHIVO_DE_LOS_NIVELES: string;
+  NIVELES: readonly string[];
   derivarMutate: (grupos: { archivos: string }[]) => string[];
   identificadorDe: (grupo: string) => string;
   leerLosGrupos: (arbol: Arbol) => { grupos: Grupo[]; errores: Falla[] };
@@ -46,7 +50,12 @@ const BUENO = {
   archivos: "src/a.ts,!src/a.test.ts",
   minutos: 2,
   pruebas: "src/a",
+  nivel: "SERVIDOR",
 };
+const NIVELES_DE_PRUEBA = "arquitectura/niveles-de-mutacion.json";
+const NIVELES_BUENOS = JSON.stringify({
+  niveles: { DINERO_EXACTO: 100, CRITICO: 95, SERVIDOR: 80, PANTALLA: 60 },
+});
 const arbol = (archivos: Record<string, string | null>): Arbol => ({
   rutas: Object.keys(archivos),
   leer: (ruta) => {
@@ -78,7 +87,12 @@ describe("el identificador de un grupo", () => {
 
 describe("leer los grupos: precisiones", () => {
   it("si falta «archivos» se dice una sola vez, sin sumar que «tiene que ser un texto»", () => {
-    const sinArchivos = { grupo: BUENO.grupo, minutos: BUENO.minutos, pruebas: BUENO.pruebas };
+    const sinArchivos = {
+      grupo: BUENO.grupo,
+      minutos: BUENO.minutos,
+      pruebas: BUENO.pruebas,
+      nivel: BUENO.nivel,
+    };
     expect(motivos(grupo("caja-dominio", sinArchivos))).toEqual(["falta «archivos»."]);
   });
 
@@ -106,12 +120,17 @@ describe("leer los grupos", () => {
   });
 
   it("`pruebas` es opcional (sin ella el grupo corre con todas las pruebas: deuda que cuenta el guardián)", () => {
-    const sin = { grupo: "Sin filtro", archivos: "src/a.ts", minutos: 1 };
+    const sin = { grupo: "Sin filtro", archivos: "src/a.ts", minutos: 1, nivel: "SERVIDOR" };
     expect(leer(grupo("sin-filtro", sin)).errores).toEqual([]);
   });
 
   it("devuelve los grupos ordenados por identificador, byte a byte, sin depender del orden de los archivos", () => {
-    const hacer = (nombre: string) => ({ grupo: nombre, archivos: "src/a.ts", minutos: 1 });
+    const hacer = (nombre: string) => ({
+      grupo: nombre,
+      archivos: "src/a.ts",
+      minutos: 1,
+      nivel: "SERVIDOR",
+    });
     const r = leer({
       ...grupo("b", hacer("B")),
       ...grupo("a-b", hacer("A B")),
@@ -160,12 +179,12 @@ describe("leer los grupos", () => {
   });
 
   it("falta un campo, sobra un campo o el nombre del archivo no es el identificador del grupo", () => {
-    const sinMinutos = { grupo: BUENO.grupo, archivos: BUENO.archivos };
+    const sinMinutos = { grupo: BUENO.grupo, archivos: BUENO.archivos, nivel: BUENO.nivel };
     expect(motivos(grupo("caja-dominio", sinMinutos))).toEqual(["falta «minutos»."]);
-    expect(motivos(grupo("caja-dominio", { archivos: "a", minutos: 1 }))).toEqual([
-      "falta «grupo».",
-    ]);
-    expect(motivos(grupo("caja-dominio", { grupo: "x", minutos: 1 }))).toContain(
+    expect(
+      motivos(grupo("caja-dominio", { archivos: "a", minutos: 1, nivel: "SERVIDOR" })),
+    ).toEqual(["falta «grupo»."]);
+    expect(motivos(grupo("caja-dominio", { grupo: "x", minutos: 1, nivel: "SERVIDOR" }))).toContain(
       "falta «archivos».",
     );
     expect(motivos(grupo("caja-dominio", { ...BUENO, extra: 1 }))).toEqual([
@@ -199,13 +218,15 @@ describe("leer los grupos", () => {
     ]);
   });
 
-  it("`critico` es opcional y solo vale `true`: cualquier otro valor falla con su motivo", () => {
-    expect(leer(grupo("caja-dominio", { ...BUENO, critico: true })).errores).toEqual([]);
-    expect(leer(grupo("caja-dominio", { ...BUENO, critico: true })).grupos[0]?.critico).toBe(true);
-    expect(leer(grupo("caja-dominio", BUENO)).grupos[0]).not.toHaveProperty("critico");
-    for (const critico of [false, "true", 1, null]) {
-      expect(motivos(grupo("caja-dominio", { ...BUENO, critico })), String(critico)).toEqual([
-        "«critico» solo puede ser true (un grupo que no es crítico no lleva el campo).",
+  it("`nivel` es obligatorio y solo vale DINERO_EXACTO, CRITICO, SERVIDOR o PANTALLA: cualquier otro valor falla con su motivo", () => {
+    for (const nivel of cargador.NIVELES) {
+      expect(leer(grupo("caja-dominio", { ...BUENO, nivel })).errores, nivel).toEqual([]);
+    }
+    const sinNivel = { grupo: BUENO.grupo, archivos: BUENO.archivos, minutos: BUENO.minutos };
+    expect(motivos(grupo("caja-dominio", sinNivel))).toEqual(["falta «nivel»."]);
+    for (const nivel of ["critico", "NORMAL", "", 1, null, true]) {
+      expect(motivos(grupo("caja-dominio", { ...BUENO, nivel })), String(nivel)).toEqual([
+        "«nivel» tiene que ser DINERO_EXACTO, CRITICO, SERVIDOR o PANTALLA.",
       ]);
     }
   });
@@ -297,25 +318,104 @@ describe("derivar `mutate`", () => {
   });
 });
 
-describe("cargar los grupos del disco", () => {
-  const carpetas: string[] = [];
-  afterEach(() => {
-    for (const c of carpetas.splice(0)) rmSync(c, { recursive: true, force: true });
-  });
-  const disco = (archivos: Record<string, string>): string => {
-    const raiz = mkdtempSync(join(tmpdir(), "grupos-"));
-    carpetas.push(raiz);
-    for (const [ruta, contenido] of Object.entries(archivos)) {
-      mkdirSync(dirname(join(raiz, ruta)), { recursive: true });
-      writeFileSync(join(raiz, ruta), contenido);
-    }
-    return raiz;
-  };
+const carpetas: string[] = [];
+afterEach(() => {
+  for (const c of carpetas.splice(0)) rmSync(c, { recursive: true, force: true });
+});
+const disco = (archivos: Record<string, string>): string => {
+  const raiz = mkdtempSync(join(tmpdir(), "grupos-"));
+  carpetas.push(raiz);
+  for (const [ruta, contenido] of Object.entries({
+    [NIVELES_DE_PRUEBA]: NIVELES_BUENOS,
+    ...archivos,
+  })) {
+    mkdirSync(dirname(join(raiz, ruta)), { recursive: true });
+    writeFileSync(join(raiz, ruta), contenido);
+  }
+  return raiz;
+};
 
+describe("los umbrales por nivel", () => {
+  const leerNiveles = (valor: unknown) =>
+    cargador.leerLosNiveles(typeof valor === "string" ? valor : JSON.stringify(valor));
+
+  const N = { DINERO_EXACTO: 100, CRITICO: 95, SERVIDOR: 80, PANTALLA: 60 };
+
+  it("lee los cuatro niveles con su umbral", () => {
+    expect(leerNiveles({ niveles: N })).toEqual({ niveles: N, errores: [] });
+  });
+
+  it("VIOLACIÓN: el nivel DINERO_EXACTO con un umbral distinto de 100 falla (el cálculo puro de dinero es la norma)", () => {
+    for (const exacto of [99, 95, 1, 101, "100", null]) {
+      const r = leerNiveles({ niveles: { ...N, DINERO_EXACTO: exacto } });
+      expect(r.niveles, String(exacto)).toBeNull();
+      expect(r.errores.join(" "), String(exacto)).toContain("«DINERO_EXACTO» tiene que ser 100.");
+    }
+  });
+
+  it("VIOLACIÓN: falta un nivel, sobra uno, o un umbral que no es entero de 1 a 100 falla", () => {
+    expect(
+      leerNiveles({ niveles: { DINERO_EXACTO: 100, CRITICO: 95, SERVIDOR: 80 } }).errores,
+    ).toEqual(["«PANTALLA» tiene que ser un entero de 1 a 100."]);
+    expect(leerNiveles({ niveles: { ...N, OTRO: 50 } }).errores).toEqual([
+      "«OTRO» no es un nivel (DINERO_EXACTO, CRITICO, SERVIDOR, PANTALLA).",
+    ]);
+    for (const umbral of [0, -5, 101, 70.5, "70", null]) {
+      const r = leerNiveles({ niveles: { ...N, PANTALLA: umbral } });
+      expect(r.errores[0], String(umbral)).toBe("«PANTALLA» tiene que ser un entero de 1 a 100.");
+    }
+  });
+
+  it("VIOLACIÓN: un nivel menos importante que exige más que otro más importante falla (DINERO_EXACTO ≥ CRITICO ≥ SERVIDOR ≥ PANTALLA)", () => {
+    expect(leerNiveles({ niveles: { ...N, SERVIDOR: 96 } }).errores).toEqual([
+      "«SERVIDOR» no puede exigir más que «CRITICO».",
+    ]);
+    expect(leerNiveles({ niveles: { ...N, PANTALLA: 81 } }).errores).toEqual([
+      "«PANTALLA» no puede exigir más que «SERVIDOR».",
+    ]);
+    expect(leerNiveles({ niveles: { ...N, SERVIDOR: 95, PANTALLA: 95 } }).errores).toEqual([]);
+  });
+
+  it("un archivo roto o con otra forma falla (todo nace cerrado)", () => {
+    expect(leerNiveles("{roto").errores[0]).toContain("no se puede leer");
+    for (const malo of [null, [], {}, { niveles: [] }, { niveles: {}, extra: 1 }, "5"]) {
+      expect(leerNiveles(JSON.stringify(malo)).niveles, JSON.stringify(malo)).toBeNull();
+    }
+  });
+
+  it("el cargador del disco le pone a cada grupo el umbral de su nivel", () => {
+    const raiz = disco({
+      ...grupo("a", { ...BUENO, grupo: "A", nivel: "DINERO_EXACTO" }),
+      ...grupo("b", { ...BUENO, grupo: "B", nivel: "CRITICO" }),
+      ...grupo("c", { ...BUENO, grupo: "C", nivel: "SERVIDOR" }),
+      ...grupo("d", { ...BUENO, grupo: "D", nivel: "PANTALLA" }),
+    });
+    expect(cargador.cargarLosGrupos(raiz).grupos.map((g) => [g.id, g.umbral])).toEqual([
+      ["a", 100],
+      ["b", 95],
+      ["c", 80],
+      ["d", 60],
+    ]);
+  });
+
+  it("VIOLACIÓN: sin el archivo de niveles, o con uno roto, el cargador lanza (la mutación no corre con umbrales inventados)", () => {
+    const raiz = disco({ ...grupo("a", { ...BUENO, grupo: "A" }), [NIVELES_DE_PRUEBA]: "{roto" });
+    expect(() => cargador.cargarLosGrupos(raiz)).toThrow(
+      /niveles-de-mutacion\.json: no se puede leer/,
+    );
+    const sin = mkdtempSync(join(tmpdir(), "grupos-"));
+    carpetas.push(sin);
+    mkdirSync(join(sin, CARPETA), { recursive: true });
+    writeFileSync(join(sin, CARPETA, "a.json"), JSON.stringify({ ...BUENO, grupo: "A" }));
+    expect(() => cargador.cargarLosGrupos(sin)).toThrow(/niveles-de-mutacion\.json/);
+  });
+});
+
+describe("cargar los grupos del disco", () => {
   it("lee los grupos y arma `mutate` con ellos", () => {
     const raiz = disco({
       ...grupo("caja-dominio", BUENO),
-      ...grupo("otro", { grupo: "Otro", archivos: "src/o.ts", minutos: 1 }),
+      ...grupo("otro", { grupo: "Otro", archivos: "src/o.ts", minutos: 1, nivel: "PANTALLA" }),
     });
     const r = cargador.cargarLosGrupos(raiz);
     expect(r.grupos.map((x) => x.id)).toEqual(["caja-dominio", "otro"]);

@@ -1,5 +1,6 @@
 import { errorDeCodigo } from "../../../../../../../../../src/capacidades/experiencia/respuesta";
 import { conTitulo, pantallaDeOperacion } from "../../../../../../../pantallas/operacion";
+import { puedeEditarRecetas } from "../../../../../../../servidor/ofertas-de-stock";
 import { cargarLaReceta } from "../../../../../../../servidor/recetas";
 import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import { armarLaReceta } from "../../../../../../../ui/plantillas/recetas/modelo-de-receta";
@@ -18,7 +19,7 @@ export default async function PaginaDeUnaReceta({ params }: PropsDePagina) {
     if (respuesta.dato === null) {
       return <ErrorDelDetalle error={errorDeCodigo("RECETA_ACCION_NO_PERMITIDA")} />;
     }
-    const receta = armarLaReceta(respuesta.dato);
+    const receta = armarLaReceta(respuesta.dato, { editar: await puedeEditarRecetas(contexto) });
     return conTitulo(receta.titulo, <PantallaDeUnaReceta receta={receta} />);
   });
 }

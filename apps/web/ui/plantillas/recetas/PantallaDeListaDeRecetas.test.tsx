@@ -38,14 +38,20 @@ const recetas: RecetasDeLaLista = {
   siguiente: "k",
 };
 
-const pantalla = (lista: RecetasDeLaLista = recetas, filtro: FiltroDeRecetas = "") => (
+const pantalla = (
+  lista: RecetasDeLaLista = recetas,
+  filtro: FiltroDeRecetas = "",
+  puedeEditar = false,
+) => (
   <ArmazonDeOperacion
     titulo={texto({}, "receta.pantalla.recetas")}
     marca="Hotel del Lago"
     empresa="Café del Puerto"
     modulos={[]}
   >
-    <PantallaDeListaDeRecetas lista={armarLaListaDeRecetas(lista, filtro)} />
+    <PantallaDeListaDeRecetas
+      lista={armarLaListaDeRecetas(lista, filtro, { editar: puedeEditar })}
+    />
   </ArmazonDeOperacion>
 );
 
@@ -140,6 +146,19 @@ describe("lista de recetas", () => {
     expect(filtros.map((f) => f.getAttribute("aria-current"))).toEqual([null, "page"]);
     const siguiente = page.getByRole("link", { name: "Página siguiente" }).element();
     expect(siguiente.getAttribute("href")).toBe("/catalogo/recetas?receta=sin&despues=k");
+  });
+
+  it("«Nueva receta» es un enlace de 48 px o más a la receta nueva, solo si se puede guardar; accesible", async () => {
+    await render(pantalla(recetas, "", true));
+    const enlace = page.getByRole("link", { name: "Nueva receta" }).element();
+    expect(enlace.getAttribute("href")).toBe("/catalogo/recetas/nueva");
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    legibleYTocable();
+  });
+
+  it("sin permiso para guardar no hay «Nueva receta»", async () => {
+    await render(pantalla());
+    expect(page.getByRole("link", { name: "Nueva receta" }).elements()).toHaveLength(0);
   });
 
   it("sin recetas dice «Sin resultados» y no hay lista de tarjetas", async () => {

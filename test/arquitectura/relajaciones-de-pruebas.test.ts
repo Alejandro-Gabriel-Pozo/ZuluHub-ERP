@@ -7,7 +7,8 @@ import {
   codeqlSoloHaciaMain,
   copiasDeEstabilidad,
   fechaEnMs,
-  gruposSensiblesSinMarca,
+  problemasDeLosNiveles,
+  problemasDeLosUmbrales,
   problemasDeLasRutas,
   problemasDelCiLiviano,
   problemasDelRegistro,
@@ -19,7 +20,9 @@ const RAIZ = join(import.meta.dirname, "../..");
 const leerJson = (ruta: string): unknown => JSON.parse(readFileSync(join(RAIZ, ruta), "utf8"));
 
 const { cargarLosGrupos } = require("../../arquitectura/grupos-de-mutacion.cjs") as {
-  cargarLosGrupos: (raiz: string) => { grupos: { id: string; critico?: true; archivos: string }[] };
+  cargarLosGrupos: (raiz: string) => {
+    grupos: { id: string; nivel: string; umbral: number; archivos: string }[];
+  };
 };
 const { expandir } = require("../../arquitectura/planificar-mutacion.cjs") as {
   expandir: (patrones: string, raiz: string) => string[];
@@ -249,51 +252,169 @@ describe("lo que el workflow recorta tiene que figurar en el registro", () => {
   });
 });
 
-describe("un grupo de mutación que muta rutas sensibles tiene que ser crítico", () => {
-  const RUTAS = ["^src/primitivas/dinero/", "^src/modulos/caja/"];
-  const grupo = (id: string, expandidos: string[], critico?: true) => ({
-    id,
-    expandidos,
-    ...(critico === undefined ? {} : { critico }),
-  });
+describe("el nivel de cada grupo de mutación", () => {
+  const RUTAS = ["^src/modulos/caja/", "^src/modulos/fiscal/"];
+  const DINERO = ["^src/primitivas/dinero/"];
+  const grupo = (id: string, nivel: string, expandidos: string[]) => ({ id, nivel, expandidos });
+  const problemasDe = (grupos: ReturnType<typeof grupo>[]) =>
+    problemasDeLosNiveles(grupos, RUTAS, DINERO);
 
-  it("un grupo crítico, o uno que no toca rutas sensibles, no se marca", () => {
+  it("un grupo en su nivel (dinero exacto, crítico, servidor y pantalla de verdad) no tiene problemas", () => {
     expect(
-      gruposSensiblesSinMarca(
-        [grupo("a", ["src/primitivas/dinero/x.ts"], true), grupo("b", ["src/otra/x.ts"])],
-        RUTAS,
-      ),
+      problemasDe([
+        grupo("a", "DINERO_EXACTO", ["src/primitivas/dinero/x.ts"]),
+        grupo("b", "SERVIDOR", ["src/otra/x.ts"]),
+        grupo("c", "PANTALLA", ["apps/web/ui/plantillas/caja/lista-de-caja.ts"]),
+        grupo("guardian-x", "CRITICO", ["arquitectura/a.cjs"]),
+        grupo("d", "CRITICO", ["src/modulos/caja/dominio/x.ts"]),
+        grupo("e", "DINERO_EXACTO", ["src/modulos/caja/dominio/y.ts"]), // subir de nivel no hace falta justificarlo
+      ]),
     ).toEqual([]);
   });
 
-  it("VIOLACIÓN: un grupo nuevo de dinero sin `critico: true`", () => {
-    expect(
-      gruposSensiblesSinMarca([grupo("dinero-nuevo", ["src/primitivas/dinero/x.ts"])], RUTAS),
-    ).toEqual([{ id: "dinero-nuevo", archivo: "src/primitivas/dinero/x.ts" }]);
+  it("VIOLACIÓN: un grupo de cálculo puro de dinero que no es DINERO_EXACTO (ni siquiera CRITICO)", () => {
+    for (const nivel of ["CRITICO", "SERVIDOR", "PANTALLA"]) {
+      const r = problemasDe([grupo("dinero-nuevo", nivel, ["src/primitivas/dinero/x.ts"])]);
+      expect(
+        r.map((p) => p.id),
+        nivel,
+      ).toContain("dinero-nuevo");
+      expect(r[0]?.motivo, nivel).toContain("tiene que ser DINERO_EXACTO");
+    }
+  });
+
+  it("VIOLACIÓN: un grupo nuevo de una ruta sensible SERVIDOR o PANTALLA (sin el nivel crítico)", () => {
+    for (const nivel of ["SERVIDOR", "PANTALLA"]) {
+      const r = problemasDe([grupo("caja-nuevo", nivel, ["src/modulos/caja/dominio/x.ts"])]);
+      expect(
+        r.map((p) => p.id),
+        nivel,
+      ).toContain("caja-nuevo");
+      expect(r[0]?.motivo, nivel).toContain("tiene que ser CRITICO");
+    }
   });
 
   it("VIOLACIÓN: basta UN archivo sensible entre varios, y el rango de líneas no lo esconde", () => {
     expect(
-      gruposSensiblesSinMarca(
-        [grupo("mixto", ["src/otra/a.ts", "src/modulos/caja/dominio/y.ts:1-50"])],
-        RUTAS,
-      ),
-    ).toEqual([{ id: "mixto", archivo: "src/modulos/caja/dominio/y.ts" }]);
+      problemasDe([
+        grupo("mixto", "SERVIDOR", ["src/otra/a.ts", "src/modulos/fiscal/dominio/y.ts:1-50"]),
+      ]).map((p) => p.id),
+    ).toEqual(["mixto"]);
+    expect(
+      problemasDe([
+        grupo("mixto-dinero", "CRITICO", ["src/otra/a.ts", "src/primitivas/dinero/y.ts:1-50"]),
+      ]).map((p) => p.id),
+    ).toEqual(["mixto-dinero"]);
   });
 
-  it("las reglas de rutas mal formadas fallan", () => {
-    expect(problemasDeLasRutas({ rutas: ["^src/a/"] })).toEqual([]);
+  it("VIOLACIÓN: un grupo del guardián que no es CRITICO", () => {
+    expect(
+      problemasDe([grupo("guardian-y", "SERVIDOR", ["arquitectura/a.cjs"])])[0]?.motivo,
+    ).toContain("es del guardián");
+  });
+
+  it("VIOLACIÓN: un grupo PANTALLA con un archivo fuera de apps/web/ui (no se relaja un grupo de src/ marcándolo PANTALLA)", () => {
+    expect(
+      problemasDe([grupo("p", "PANTALLA", ["apps/web/ui/a.ts", "src/composicion/b.ts"])])[0]
+        ?.motivo,
+    ).toContain("fuera de apps/web/ui");
+    expect(problemasDe([grupo("vacio", "PANTALLA", [])])).toHaveLength(1);
+    expect(problemasDe([grupo("p2", "PANTALLA", ["apps/web/uix/a.ts"])])).toHaveLength(1);
+  });
+
+  it("las reglas de rutas mal formadas fallan (solo `rutas` y `dinero_exacto`, listas no vacías de patrones que empiezan en ^)", () => {
+    expect(problemasDeLasRutas({ rutas: ["^src/a/"], dinero_exacto: ["^src/b/"] })).toEqual([]);
     for (const malo of [
       null,
       [],
-      { rutas: [] },
-      { rutas: ["src/a/"] },
-      { rutas: [5] },
-      { rutas: ["^("] },
-      { rutas: ["^a"], extra: 1 },
+      { rutas: [], dinero_exacto: ["^a"] },
+      { rutas: ["^a"] },
+      { rutas: ["^a"], dinero_exacto: [] },
+      { rutas: ["src/a/"], dinero_exacto: ["^a"] },
+      { rutas: [5], dinero_exacto: ["^a"] },
+      { rutas: ["^("], dinero_exacto: ["^a"] },
+      { rutas: ["^a"], dinero_exacto: ["b"] },
+      { rutas: ["^a"], dinero_exacto: ["^b"], extra: 1 },
     ]) {
       expect(problemasDeLasRutas(malo), JSON.stringify(malo)).not.toEqual([]);
     }
+  });
+});
+
+describe("los umbrales de mutación menores que 100 figuran en el registro (y solo ellos)", () => {
+  const NIVELES = { DINERO_EXACTO: 100, CRITICO: 95, SERVIDOR: 80, PANTALLA: 60 };
+  const de = (nivel: string, valor: number, estado = "VIGENTE") => ({
+    ...BUENA,
+    id: `mutacion-${nivel.toLowerCase()}`,
+    nivel,
+    valor,
+    estado,
+  });
+  const TODAS = [de("CRITICO", 95), de("SERVIDOR", 80), de("PANTALLA", 60)];
+
+  it("con una entrada VIGENTE por cada nivel menor que 100 y su mismo valor: sin problemas (DINERO_EXACTO no lleva entrada)", () => {
+    expect(problemasDeLosUmbrales(NIVELES, registro(BUENA, ...TODAS))).toEqual([]);
+  });
+
+  it("VIOLACIÓN: un nivel con umbral menor que 100 sin su entrada (también CRITICO)", () => {
+    expect(
+      problemasDeLosUmbrales(NIVELES, registro(de("SERVIDOR", 80), de("PANTALLA", 60))),
+    ).toEqual([
+      "el nivel CRITICO exige 95 % y no figura una relajación de ese nivel en el registro.",
+    ]);
+    expect(
+      problemasDeLosUmbrales(NIVELES, registro(de("CRITICO", 95), de("SERVIDOR", 80))),
+    ).toEqual([
+      "el nivel PANTALLA exige 60 % y no figura una relajación de ese nivel en el registro.",
+    ]);
+  });
+
+  it("VIOLACIÓN: la entrada existe pero está RESTAURADA o con otro valor que la configuración", () => {
+    expect(
+      problemasDeLosUmbrales(
+        NIVELES,
+        registro(de("CRITICO", 95, "RESTAURADA"), de("SERVIDOR", 80), de("PANTALLA", 60)),
+      )[0],
+    ).toContain("no está VIGENTE");
+    expect(
+      problemasDeLosUmbrales(
+        NIVELES,
+        registro(de("CRITICO", 90), de("SERVIDOR", 80), de("PANTALLA", 60)),
+      )[0],
+    ).toContain("el registro dice 90");
+    expect(problemasDeLosUmbrales({ ...NIVELES, PANTALLA: 50 }, registro(...TODAS))[0]).toContain(
+      "exige 50 % y el registro dice 60",
+    );
+  });
+
+  it("VIOLACIÓN: un nivel que llegó a 100 y su entrada sigue VIGENTE; o una entrada de un nivel que no existe", () => {
+    expect(problemasDeLosUmbrales({ ...NIVELES, CRITICO: 100 }, registro(...TODAS))[0]).toContain(
+      "no está marcada RESTAURADA",
+    );
+    expect(
+      problemasDeLosUmbrales(
+        { ...NIVELES, CRITICO: 100 },
+        registro(de("CRITICO", 95, "RESTAURADA"), de("SERVIDOR", 80), de("PANTALLA", 60)),
+      ),
+    ).toEqual([]);
+    expect(problemasDeLosUmbrales(NIVELES, registro(...TODAS, de("OTRO", 50)))[0]).toContain(
+      "nombra un nivel que no existe",
+    );
+  });
+
+  it("VIOLACIÓN: DINERO_EXACTO con umbral menor que 100, o con una entrada (es la norma, no se relaja)", () => {
+    expect(
+      problemasDeLosUmbrales({ ...NIVELES, DINERO_EXACTO: 99 }, registro(...TODAS))[0],
+    ).toContain("DINERO_EXACTO tiene que ser 100");
+    expect(
+      problemasDeLosUmbrales(NIVELES, registro(...TODAS, de("DINERO_EXACTO", 100))).join(" "),
+    ).toContain("no lleva relajación");
+  });
+
+  it("una entrada de umbral con un nivel que no se puede relajar falla la forma del registro", () => {
+    expect(problemas({ ...BUENA, nivel: "DINERO_EXACTO" }).join(" ")).toContain(
+      "«nivel» tiene que ser CRITICO o SERVIDOR o PANTALLA",
+    );
   });
 });
 
@@ -412,23 +533,39 @@ describe("el repositorio real", () => {
     );
   });
 
-  it("ningún grupo de mutación real que mute rutas sensibles queda sin `critico: true`", () => {
-    const { rutas } = leerJson("arquitectura/rutas-sensibles-de-mutacion.json") as {
-      rutas: string[];
-    };
+  it("ningún grupo de mutación real baja de nivel por debajo de lo que sus rutas exigen", () => {
+    const { rutas, dinero_exacto: dineroExacto } = leerJson(
+      "arquitectura/rutas-sensibles-de-mutacion.json",
+    ) as { rutas: string[]; dinero_exacto: string[] };
     const grupos = cargarLosGrupos(RAIZ).grupos.map((g) => ({
       ...g,
       expandidos: expandir(g.archivos, RAIZ),
     }));
     expect(grupos.length).toBeGreaterThan(90);
-    expect(gruposSensiblesSinMarca(grupos, rutas)).toEqual([]);
+    expect(problemasDeLosNiveles(grupos, rutas, dineroExacto)).toEqual([]);
   });
 
-  it("los grupos críticos son una parte propia: ni todos ni ninguno", () => {
+  it("los niveles reales son una parte propia (ni todos críticos ni todos relajados) y los del guardián son críticos", () => {
     const { grupos } = cargarLosGrupos(RAIZ);
-    const criticos = grupos.filter((g) => g.critico === true).length;
-    expect(criticos).toBeGreaterThan(50);
-    expect(criticos).toBeLessThan(grupos.length - 20);
-    expect(grupos.filter((g) => g.id.startsWith("guardian-") && g.critico === true)).toEqual([]);
+    const por = (nivel: string) => grupos.filter((g) => g.nivel === nivel);
+    expect(por("CRITICO").length).toBeGreaterThan(50);
+    expect(por("SERVIDOR").length).toBeGreaterThan(10);
+    expect(por("PANTALLA").length).toBeGreaterThan(0);
+    expect(grupos.filter((g) => g.id.startsWith("guardian-") && g.nivel !== "CRITICO")).toEqual([]);
+    expect(
+      por("DINERO_EXACTO")
+        .map((g) => g.id)
+        .sort(),
+    ).toEqual(["dinero-calculo-exacto-y-redondeo", "dinero-importe-prorrateo-y-moneda"]);
+    expect(new Set(grupos.map((g) => g.umbral))).toEqual(new Set([100, 95, 80, 60]));
+  });
+
+  it("los umbrales de la configuración y el registro de relajaciones coinciden", () => {
+    const { niveles } = leerJson("arquitectura/niveles-de-mutacion.json") as {
+      niveles: Record<string, number>;
+    };
+    expect(
+      problemasDeLosUmbrales(niveles, leerJson("arquitectura/deuda/relajaciones-de-pruebas.json")),
+    ).toEqual([]);
   });
 });

@@ -3,5 +3,5 @@
   "archivos": "src/modulos/marcas/dominio/marca-de-mail.ts",
   "minutos": 0.5,
   "pruebas": "src/modulos/marcas/dominio/marca-de-mail.test.ts",
-  "critico": true
+  "nivel": "CRITICO"
 }
