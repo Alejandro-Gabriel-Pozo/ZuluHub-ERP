@@ -11,11 +11,19 @@ import {
 import {
   AHORA_DE_PRUEBA,
   comoEmpresa,
+  comoInvitacion,
   crearBaseAparte,
   crearEmpresaActiva,
   crearEntornoDePrueba,
 } from "./entorno";
-import { crearMembresiaDeBase, crearPersonaDeBase, type RolDePrueba } from "./fixtures-identidad";
+import {
+  aceptarDeBase,
+  crearInvitacionDeBase,
+  crearMembresiaDeBase,
+  crearPersonaDeBase,
+  incluirEmpresa,
+  type RolDePrueba,
+} from "./fixtures-identidad";
 import type { BaseDePruebas } from "./global";
 import { esperarBloqueo, SesionDePrueba } from "./sesiones";
 
@@ -262,6 +270,59 @@ describe.skipIf(base === null)("migración 0097: roles propios de la empresa (T4
           )
         ).rows[0],
       ).toEqual({ activo: false });
+    });
+
+    it("el flujo real de invitación SÍ reactiva a un apagado (token aceptado por esa persona, mismo rol); con token de OTRA persona, o pendiente, no", async () => {
+      const e = await equipo();
+      const apagado = await crearPersonaDeBase(dueno);
+      await crearMembresiaDeBase(dueno, e.empresa, apagado.id, "OPERADOR", false);
+      const ajena = await crearPersonaDeBase(dueno);
+      const tenant = (
+        await dueno.query<{ tenant_id: string }>("select tenant_id from empresa where id = $1", [
+          e.empresa,
+        ])
+      ).rows[0]?.tenant_id as string;
+      const invitar = async (persona: { id: string; email: string }, aceptar: boolean) => {
+        const inv = await crearInvitacionDeBase(dueno, { tenant, email: persona.email });
+        await incluirEmpresa(dueno, inv, e.empresa, "OPERADOR");
+        if (aceptar) await aceptarDeBase(dueno, inv, persona.id);
+        return inv;
+      };
+      const reactivar = async (tokenHash: string) => {
+        const s = await SesionDePrueba.abrir(
+          base as BaseDePruebas,
+          "pedernal_app",
+          comoInvitacion(tokenHash),
+        );
+        try {
+          const r = await s.intentar(
+            "update membresia set activo = true where empresa_id = $1 and persona_id = $2",
+            [e.empresa, apagado.id],
+          );
+          if (r.ok && r.filas === 1) await s.confirmar();
+          return r.ok ? r.filas : `${r.codigo}:${r.restriccion ?? ""}`;
+        } finally {
+          await s.cerrar();
+        }
+      };
+      const activo = async () =>
+        (
+          await dueno.query<{ activo: boolean }>(
+            "select activo from membresia where empresa_id = $1 and persona_id = $2",
+            [e.empresa, apagado.id],
+          )
+        ).rows[0]?.activo;
+
+      // (f) la invitación de OTRA persona (aceptada) y la propia todavía pendiente: no reactivan.
+      const deLaAjena = await invitar(ajena, true);
+      expect(await reactivar(deLaAjena.tokenHash)).toBe(0);
+      const pendiente = await invitar(apagado, false);
+      expect(await reactivar(pendiente.tokenHash)).toBe(0);
+      expect(await activo()).toBe(false);
+      // (e) la propia, aceptada: reactiva (y la guarda del disparador la deja pasar).
+      await aceptarDeBase(dueno, pendiente, apagado.id);
+      expect(await reactivar(pendiente.tokenHash)).toBe(1);
+      expect(await activo()).toBe(true);
     });
 
     it("un administrador (u operador) no reasigna a una persona apagada", async () => {
