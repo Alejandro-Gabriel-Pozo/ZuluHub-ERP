@@ -17,6 +17,7 @@ export type {
   PrecioDeLista,
   ProductoDeLista,
 } from "./consultas/consultas";
+export { comoPrefijo } from "./persistencia/como-prefijo";
 export {
   cotizarParaVender,
   tienePrecioParaLaCartaEnSucursal,

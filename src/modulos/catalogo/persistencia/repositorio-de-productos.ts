@@ -4,6 +4,7 @@ import { CLASES_DE_USO, seConsumeLaClase, type ClaseDeUso } from "../dominio/cla
 import type { ProductoId, SeccionDeCartaId } from "../dominio/identificadores";
 import type { Producto } from "../dominio/modelo";
 import type { FichaValida } from "../dominio/producto";
+import { comoPrefijo } from "./como-prefijo";
 import type { CatalogoDb } from "./esquema";
 import { aProducto, FORMA_DE_UUID } from "./filas";
 import { insertarIdempotente } from "./insertar-idempotente";
@@ -115,9 +116,6 @@ export function aSeccion(f: {
     version: f.version,
   };
 }
-
-/** Escapa `%`, `_` y `\` de lo que se busca con `LIKE`: el texto es del usuario. */
-const comoPrefijo = (texto: string): string => `${texto.replace(/[\\%_]/g, "\\$&")}%`;
 
 export function crearRepositorioDeProductos(db: Kysely<CatalogoDb>): RepositorioDeProductos {
   const comunes = (f: FichaValida) => ({
