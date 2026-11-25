@@ -91,6 +91,12 @@ const DE_LA_FICHA_DEL_PROVEEDOR = (para: string): Proposito => ({
 const FUENTE_DE_NUEVA_COMPRA =
   "Pedernal-docs, brief `PR-6-nueva-compra-pantalla.md` de Compras (rama de planificación de la Ola 1) §6b, maqueta `compra.html` (estados `nueva`, `como`, `remito`; aprobada el 09/11/2026) y plan `compras-siguientes-tramos-2026-11-23.md` §4 (respuestas del dueño del 23/11/2026, filas 6 y 7: compra en la unidad base y cotización antes de guardar); quién: los tres roles (recepciones.registrar)";
 const DE_NUEVA_COMPRA = (para: string): Proposito => ({ para, fuente: FUENTE_DE_NUEVA_COMPRA });
+const FUENTE_CON_PRESENTACIONES =
+  "Pedernal-docs, `decisiones-del-dueno-2026-11.md` fila del 25/11/2026 («Presentaciones en Catálogo (T0): … «Nueva compra» con presentaciones va aparte (T0b)»), maqueta `compra.html` (estados `nueva` y `como`, aprobada el 09/11/2026) y respuestas del orquestador del 25/11/2026 (peso variable con «Peso recibido» y «Precio por» la presentación); quién: los tres roles (recepciones.registrar)";
+const CON_PRESENTACIONES = (para: string): Proposito => ({
+  para,
+  fuente: FUENTE_CON_PRESENTACIONES,
+});
 
 export const DATOS_DE_COMPRAS = {
   "precio-corregido-de-compra": {
@@ -290,6 +296,9 @@ export const DATOS_DE_COMPRAS = {
       DE_NUEVA_COMPRA(
         "Unidad en que se cuenta lo que se compra («Cómo se compra»): la unidad base del producto o otra de su misma dimensión; las de otra dimensión no se pueden elegir.",
       ),
+      CON_PRESENTACIONES(
+        "Con presentaciones activas en el producto, el mismo selector ofrece también cada presentación («caja de 12»): es una forma de comprar con su cantidad fija en la unidad base; el servidor comprueba que sea del producto y activa.",
+      ),
     ],
     consumidores: [TARJETA_DE_RENGLON],
     ponerPor: REGISTRAR_COMPRA,
@@ -304,11 +313,25 @@ export const DATOS_DE_COMPRAS = {
     ponerPor: REGISTRAR_COMPRA,
     requiere: REQUIERE_COMPRAS,
   },
+  "peso-recibido-de-compra": {
+    ficha: "src/primitivas/cantidad/cantidad.ts",
+    propositos: [
+      CON_PRESENTACIONES(
+        "Peso real de lo que se recibe, en la unidad base, cuando se compra una presentación de peso variable (una caja de carne no pesa siempre lo mismo): es lo que entra al stock y se costea, no el aproximado; con una presentación de peso fijo no corresponde.",
+      ),
+    ],
+    consumidores: [TARJETA_DE_RENGLON],
+    ponerPor: REGISTRAR_COMPRA,
+    requiere: REQUIERE_COMPRAS,
+  },
   "unidad-de-precio-de-compra": {
     ficha: "src/primitivas/unidades/unidades.ts",
     propositos: [
       DE_NUEVA_COMPRA(
         "Unidad por la que cobra el proveedor («Precio por»): la unidad base del producto u otra de su misma dimensión.",
+      ),
+      CON_PRESENTACIONES(
+        "Con una presentación elegida, el proveedor también puede cobrar por la presentación («$ 12.000 la caja»): el precio se multiplica por la cantidad de presentaciones.",
       ),
     ],
     consumidores: [TARJETA_DE_RENGLON],

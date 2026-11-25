@@ -21,6 +21,7 @@ const linea = (extra: Partial<LineaDeLaFichaDeLaPantalla> & { lineaId: string })
   compartida: false,
   comanda: "PARA_ENVIAR",
   numeroDeEnvio: null,
+  envioId: null,
   deLaMesa: null,
   ...extra,
 });

@@ -201,7 +201,8 @@ export function pedirLaImpresion(
     sucursalId,
     crudo,
     leerElPedidoDeImprimir,
-    (pedido) => d.casosDeUso().solicitarImpresion(contexto, pedido),
+    (pedido) =>
+      d.casosDeUso().solicitarImpresion(contexto, { ...pedido, sucursalDeTrabajo: sucursalId }),
     imprimirParaLaPantalla,
   );
 }
@@ -218,7 +219,8 @@ export function pedirUnaCopia(
     sucursalId,
     crudo,
     leerElPedidoDeImprimir,
-    (pedido) => d.casosDeUso().solicitarCopia(contexto, pedido),
+    (pedido) =>
+      d.casosDeUso().solicitarCopia(contexto, { ...pedido, sucursalDeTrabajo: sucursalId }),
     imprimirParaLaPantalla,
   );
 }
@@ -237,7 +239,10 @@ export function declararElResultadoDeImpresion(
     sucursalId,
     crudo,
     leerElPedidoDeDeclarar,
-    (pedido) => d.casosDeUso().declararResultadoDeImpresion(contexto, pedido),
+    (pedido) =>
+      d
+        .casosDeUso()
+        .declararResultadoDeImpresion(contexto, { ...pedido, sucursalDeTrabajo: sucursalId }),
     (s) => ({
       trabajoId: s.trabajoId,
       estado: s.estado,
@@ -293,6 +298,7 @@ export function verElPapelDelDocumento(
     leerElPedidoDelDocumento,
     (pedido) =>
       d.consultas().documentoParaImprimir(contexto, {
+        sucursalDeTrabajo: sucursalId,
         documentoTipo: pedido.documentoTipo,
         documentoId: pedido.documentoId,
         ...(pedido.copia === undefined ? {} : { copia: pedido.copia }),
