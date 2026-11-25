@@ -5,6 +5,7 @@ import {
   entradaDeFichaDeFactura,
   entradaDeListarFacturas,
   entradaDeRegistrarFactura,
+  entradaDeTomarElCosto,
 } from "./entradas-de-facturas";
 
 const ID = "11111111-1111-4111-8111-111111111111";
@@ -140,5 +141,36 @@ describe("entradaDeAnularConciliacion, entradaDeFichaDeFactura y entradaDeListar
       valor: { despuesDe: `2026-11-20|${ID}` },
     });
     expect(entradaDeListarFacturas({ despues: "20" }).ok).toBe(false);
+  });
+});
+
+describe("entradaDeTomarElCosto", () => {
+  it("lleva solo la clave, la recepción y la línea", () => {
+    expect(entradaDeTomarElCosto({ clave: ID, recepcionId: OTRO, linea: 2 })).toEqual({
+      ok: true,
+      valor: { clave: ID, recepcionId: OTRO, linea: 2 },
+    });
+  });
+
+  it("no deja pasar el precio, el motivo, la empresa ni la sucursal que invente el navegador", () => {
+    const base = { clave: ID, recepcionId: OTRO, linea: 1 };
+    for (const extra of [
+      { precio: "999" },
+      { motivo: "x" },
+      { empresaId: ID },
+      { sucursalId: ID },
+      { personaId: ID },
+    ]) {
+      expect(entradaDeTomarElCosto({ ...base, ...extra }).ok).toBe(false);
+    }
+  });
+
+  it("rechaza ids mal formados, una línea que no es un entero y los campos que faltan", () => {
+    expect(entradaDeTomarElCosto({ clave: "no", recepcionId: OTRO, linea: 1 }).ok).toBe(false);
+    expect(entradaDeTomarElCosto({ clave: ID, recepcionId: "../x", linea: 1 }).ok).toBe(false);
+    expect(entradaDeTomarElCosto({ clave: ID, recepcionId: OTRO, linea: "1" }).ok).toBe(false);
+    expect(entradaDeTomarElCosto({ clave: ID, recepcionId: OTRO, linea: 1.5 }).ok).toBe(false);
+    expect(entradaDeTomarElCosto({ clave: ID, recepcionId: OTRO }).ok).toBe(false);
+    expect(entradaDeTomarElCosto(null).ok).toBe(false);
   });
 });

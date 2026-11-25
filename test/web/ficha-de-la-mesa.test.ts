@@ -39,14 +39,19 @@ describe("ficha de la pantalla «Mesa»", () => {
     }
   });
 
-  it("todo texto del catálogo que cita el modelo de la mesa está en la ficha", () => {
-    const codigo = readFileSync("apps/web/ui/plantillas/salon/modelo-de-la-mesa.ts", "utf8");
+  it("todo texto del catálogo que citan el modelo de la mesa y los textos de imprimir está en la ficha", () => {
+    const codigo = [
+      "apps/web/ui/plantillas/salon/modelo-de-la-mesa.ts",
+      "apps/web/ui/patrones/papel/textos-de-imprimir.ts",
+    ]
+      .map((archivo) => readFileSync(archivo, "utf8"))
+      .join("\n");
     const citados = [
       ...new Set(
         [...codigo.matchAll(/"((?:salon|comandas|ventas|vidriera)\.[a-z_.]+)"/g)].map((m) => m[1]),
       ),
     ];
-    expect(citados.length).toBeGreaterThan(10);
+    expect(citados.length).toBeGreaterThan(25);
     for (const clave of citados)
       expect(Object.keys(FICHA_DE_LA_MESA.textos), String(clave)).toContain(clave);
   });

@@ -229,4 +229,50 @@ describe.skipIf(base === null)("recorrido de «Nueva compra»: de la lista a la 
       ),
     ).toBe(2);
   });
+
+  it("con una PRESENTACIÓN: «Caja de 12» a $ 12.000 la caja; el servidor dice que entran 24 unidades; un doble clic es UNA compra y entra el stock una sola vez", async () => {
+    const c = dueno();
+    const gaseosa = await productoDeBase(c, mundo.empresa, {
+      nombre: "Gaseosa cola",
+      clase: "REVENTA",
+      unidadBase: "UNIDAD",
+      dimension: "CONTEO",
+    });
+    const articuloDeGaseosa = randomUUID();
+    await c.query(
+      `insert into articulo_de_stock (id, empresa_id, producto_id, unidad_de_stock_id, dimension) values ($1, $2, $3, 'UNIDAD', 'CONTEO')`,
+      [articuloDeGaseosa, mundo.empresa, gaseosa],
+    );
+    const caja = (
+      await c.query<{ id: string }>(
+        `insert into presentacion_de_producto (empresa_id, producto_id, nombre, nombre_clave, cantidad)
+         values ($1, $2, 'Caja de 12', 'caja de 12', 12) returning id`,
+        [mundo.empresa, gaseosa],
+      )
+    ).rows[0]?.id as string;
+    const antes = await recepciones();
+    await ir(pagina, "/compras/nueva");
+    await pagina.getByRole("combobox", { name: "Proveedor" }).pressSequentially("Carnes");
+    await pagina.getByRole("option", { name: /Carnes del Sur/ }).click();
+    await pagina.getByRole("combobox", { name: "Agregar producto" }).pressSequentially("Gaseosa");
+    await pagina.getByRole("option", { name: /Gaseosa cola/ }).click();
+    await pagina.getByLabel(/Cómo se compra/).selectOption(`presentacion:${caja}`);
+    await pagina.getByLabel("Cantidad").pressSequentially("2");
+    await pagina.getByLabel(/Precio por/).selectOption("PRESENTACION");
+    await pagina.getByLabel("Precio", { exact: true }).pressSequentially("12000");
+    await pagina.getByText("Entra a tu stock: 24 Unidad").waitFor();
+    await pagina.getByText("Costo por unidad de stock: $ 1.000,00").waitFor();
+    await sinViolacionesDeAxe();
+    await pagina.getByRole("button", { name: "Comprar y recibir" }).dblclick();
+    await pagina.waitForURL(/\/compras\/[0-9a-f-]{36}$/);
+    expect(await recepciones()).toBe(antes + 1);
+    expect(await existenciaDe(c, deposito, articuloDeGaseosa)).toBe("24.0000");
+    expect(
+      await contar(
+        "select count(*) as n from renglon_de_movimiento where deposito_id = $1 and articulo_id = $2",
+        [deposito, articuloDeGaseosa],
+      ),
+    ).toBe(1);
+    expect(vigilante.tomar()).toEqual([]);
+  });
 });

@@ -2,5 +2,6 @@
   "grupo": "libro",
   "archivos": "src/primitivas/libro/asiento.ts,src/primitivas/libro/clave.ts,src/primitivas/libro/espejo.ts,src/primitivas/libro/huella.ts",
   "minutos": 1,
-  "pruebas": "src/primitivas/libro"
+  "pruebas": "src/primitivas/libro",
+  "critico": true
 }

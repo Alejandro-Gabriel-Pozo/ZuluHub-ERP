@@ -3210,9 +3210,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       const politicasPublicas = await filas<{ policyname: string; qual: string }>(
         `select policyname, qual from pg_policies where tablename = 'carta_publica' and 'pedernal_publico' = any(roles)`,
       );
-      // Dos políticas públicas: la de siempre por `app.codigo_de_carta` (UNA carta) y la del portal (0078), por `app.empresa_del_portal`, que solo deja ver las cartas EN LÍNEA
-      // de sucursales con una tarjeta o una zona del portal (ver `portal-lectura.test.ts`, «variante B»).
-      expect(politicasPublicas).toHaveLength(2);
+      // Tres políticas públicas: la de siempre por `app.codigo_de_carta` (UNA carta), la del portal (0078), por `app.empresa_del_portal`, que solo deja ver las cartas EN LÍNEA
+      // de sucursales con una tarjeta o una zona del portal (ver `portal-lectura.test.ts`, «variante B»), y la de la raíz del host dedicado (0096), por `app.empresa_del_host`, que
+      // deja ver las cartas EN LÍNEA de UNA empresa (ver `carta-publica-raiz*.test.ts`). Cada una mira solo SU variable.
+      expect(politicasPublicas).toHaveLength(3);
       const porCarta = politicasPublicas.find((p) => p.qual.includes("app.codigo_de_carta"));
       const porPortal = politicasPublicas.find((p) => p.qual.includes("app.empresa_del_portal"));
       expect(porCarta?.qual).not.toContain("app.empresa_del_portal");
@@ -3220,6 +3221,12 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
       expect(porPortal?.qual).toContain("portal_tarjeta");
       expect(porPortal?.qual).toContain("portal_zona");
       expect(porPortal?.qual).toContain("EN_LINEA");
+      const porHost = politicasPublicas.find((p) => p.qual.includes("app.empresa_del_host"));
+      expect(porHost?.qual).not.toContain("app.codigo_de_carta");
+      expect(porHost?.qual).not.toContain("app.empresa_del_portal");
+      expect(porHost?.qual).toContain("EN_LINEA");
+      expect(porCarta?.qual).not.toContain("app.empresa_del_host");
+      expect(porPortal?.qual).not.toContain("app.empresa_del_host");
     });
 
     it("la premisa de emisor_cuit_uk: solo la plataforma escribe emisor.cuit (si el cliente lo escribiera, el error de duplicado le mostraría los CUIT ajenos)", async () => {

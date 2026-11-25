@@ -45,6 +45,7 @@
   "test/web/ficha-de-la-mesa.test.ts": [
     "apps/web/app/s/app/(operacion)/salon/cuenta/**",
     "apps/web/app/s/app/acciones-de-salon.ts",
+    "apps/web/ui/patrones/papel/*",
     "apps/web/ui/plantillas/salon/*"
   ],
   "test/web/ficha-de-salon.test.ts": [

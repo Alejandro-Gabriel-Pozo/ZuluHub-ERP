@@ -106,6 +106,7 @@ const fichaParaLaPantalla = (f: FichaDeMesa): FichaParaLaPantalla => ({
       compartida: l.compartida,
       comanda: l.comanda,
       numeroDeEnvio: l.numeroDeEnvio,
+      envioId: l.envioId,
       deLaMesa: l.deLaMesa,
     })),
   })),

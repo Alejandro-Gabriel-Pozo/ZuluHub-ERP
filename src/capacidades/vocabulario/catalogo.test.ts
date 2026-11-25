@@ -385,7 +385,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
           .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
       );
     expect(Object.keys(de("clientes"))).toHaveLength(32);
-    expect(Object.keys(de("compras"))).toHaveLength(230);
+    expect(Object.keys(de("compras"))).toHaveLength(231);
     expect(de("clientes")).toMatchObject({
       "clientes.lista.clientes_y_proveedores": "Clientes y proveedores",
       "clientes.error.cuit_invalido": "El CUIT no es válido",
@@ -395,6 +395,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     expect(de("compras")).toMatchObject({
       "compras.compra.comprar_y_recibir": "Comprar y recibir",
       "compras.compra.costo_por_unidad_de_stock": "Costo por unidad de stock",
+      "compras.factura.tomar_costo": "Tomar el costo de la factura",
       "compras.recepcion.validar_recepcion": "Confirmar recepción",
       "compras.error.remito_ya_registrado": "Ese remito ya está cargado",
       "compras.error.comprobante_ya_registrado": "Esa factura ya está cargada",
