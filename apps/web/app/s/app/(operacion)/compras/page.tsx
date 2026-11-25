@@ -22,6 +22,10 @@ export default async function PaginaDeCompras({
         lista={lista.dato}
         textos={textosDeCompras()}
         puedeCargarUnaCompra={await puedeLaAccion(contexto, "recepciones.registrar")}
+        puedeExportar={
+          (await puedeLaAccion(contexto, "compras.exportar")) &&
+          (await puedeLaAccion(contexto, "costos.ver"))
+        }
       />
     );
   });

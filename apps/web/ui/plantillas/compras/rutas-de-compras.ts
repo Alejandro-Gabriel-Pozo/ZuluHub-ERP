@@ -9,6 +9,9 @@ export const RUTA_DEL_NIVEL_DE_COMPRAS = `${RUTA_DE_COMPRAS}/nivel`;
 /** «Nueva compra» (Compras PR 6b). */
 export const RUTA_DE_NUEVA_COMPRA = `${RUTA_DE_COMPRAS}/nueva`;
 
+/** La descarga del archivo de compras (Excel) del período aplicado en la lista. */
+export const RUTA_DE_EXPORTAR_COMPRAS = `${RUTA_DE_COMPRAS}/exportar`;
+
 export const rutaDeLaCompra = (recepcionId: string): string => `${RUTA_DE_COMPRAS}/${recepcionId}`;
 
 /** El formulario de «Corregir» una línea de la compra (Compras PR 10): el número de línea es un entero que sale de la ficha. */
@@ -34,4 +37,16 @@ export function direccionDeLaLista(filtro: FiltroAplicado, despues: string | nul
   return pares.length === 0
     ? RUTA_DE_COMPRAS
     : `${RUTA_DE_COMPRAS}?${new URLSearchParams(pares).toString()}`;
+}
+
+/**
+ * La dirección de la descarga con el período YA APLICADO en la lista (lo que el servidor tomó de la dirección, no lo que se tipeó sin aplicar). Sin las dos fechas no hay archivo: `null`
+ * (no se supone un período). El servidor valida de nuevo y rechaza más de 12 meses.
+ */
+export function direccionDeExportar(filtro: FiltroAplicado): string | null {
+  if (filtro.desde === null || filtro.hasta === null) return null;
+  return `${RUTA_DE_EXPORTAR_COMPRAS}?${new URLSearchParams([
+    ["desde", filtro.desde],
+    ["hasta", filtro.hasta],
+  ]).toString()}`;
 }

@@ -536,6 +536,12 @@ describe("reglas de arquitectura (ADR-001)", () => {
       },
     },
     {
+      regla: "xlsx-solo-en-su-adaptador",
+      archivos: {
+        "src/composicion/compras-exportacion-web.ts": importa("write-excel-file/node"),
+      },
+    },
+    {
       regla: "adaptador-arca-solo-con-fiscal",
       archivos: {
         "src/adaptadores/arca/a.ts": importa("../../modulos/identidad/publico"),
@@ -2542,6 +2548,25 @@ describe("PDF de la factura: la librería de PDF solo entra por su adaptador y l
   ])("%s no puede importar pdfkit (%s)", async (_nombre, origen) => {
     const v = await violacionesDe({ [origen]: importa("pdfkit") });
     expect(v).toContain("pdf-solo-en-su-adaptador");
+  });
+
+  it("la biblioteca de planillas la importa solo su adaptador: ni la composición, ni un módulo, ni la web, ni un script", async () => {
+    expect(
+      await violacionesDe({ "src/adaptadores/xlsx/escritor-de-xlsx.ts": importa("write-excel-file/node") }),
+    ).not.toContain("xlsx-solo-en-su-adaptador");
+    for (const origen of [
+      "src/composicion/compras-exportacion-web.ts",
+      "src/modulos/compras/dominio/exportacion/armar-hojas.ts",
+      "src/adaptadores/pdf/pdf-de-la-factura.ts",
+      "apps/web/servidor/compras.ts",
+      "apps/web/app/api/salud/route.ts",
+      "scripts/crear-planilla.ts",
+      "src/adaptadores/xlsxs/a.ts",
+    ]) {
+      expect(await violacionesDe({ [origen]: importa("write-excel-file/node") }), origen).toContain(
+        "xlsx-solo-en-su-adaptador",
+      );
+    }
   });
 
   it("también se ve el import de un archivo interno del paquete, y desde una carpeta que solo se parece", async () => {
