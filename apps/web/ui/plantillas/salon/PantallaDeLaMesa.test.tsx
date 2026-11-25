@@ -135,6 +135,7 @@ const accionesFalsas = () => ({
   quitar: accionFalsa(),
   liberar: accionFalsa(),
   cambiarDeMesa: accionFalsa(),
+  unir: accionFalsa(),
   enviar: vi.fn<(pedido: unknown) => Promise<Respuesta<Envio>>>(() =>
     Promise.resolve(envioHecho()),
   ),
@@ -184,8 +185,9 @@ const pantalla = (
     cuentaNuevaId="cuenta-nueva"
     mesasLibres={null}
     textosDeImprimir={armarLosTextosDeImprimir()}
-    puede={{ enviar: true, imprimir: true, reimprimir: true, cobrar: true }}
+    puede={{ enviar: true, imprimir: true, reimprimir: true, cobrar: true, unir: true }}
     rutaDeImpresoras={null}
+    mesasParaUnir={null}
     catalogo={null}
     {...extra}
   />
@@ -728,7 +730,7 @@ describe("PantallaDeLaMesa", () => {
     it("sin permiso (la ayuda): sin «Enviar a cocina», «Pedir que salga», «Anular» ni «Reimprimir»; la ficha sigue igual", async () => {
       await render(
         pantalla(fichaParaEnviar, accionesFalsas(), {
-          puede: { enviar: false, imprimir: false, reimprimir: false, cobrar: false },
+          puede: { enviar: false, imprimir: false, reimprimir: false, cobrar: false, unir: false },
         }),
       );
       for (const nombre of ["Enviar a cocina", "Pedir que salga", "Anular", "Reimprimir"]) {
@@ -769,7 +771,7 @@ describe("PantallaDeLaMesa", () => {
     it("sin permiso para cobrar la mesa (la ayuda) no hay «Cobrar»; una mesa sin platos tampoco se puede cobrar", async () => {
       await render(
         pantalla(todoEnviado, accionesFalsas(), {
-          puede: { enviar: true, imprimir: true, reimprimir: true, cobrar: false },
+          puede: { enviar: true, imprimir: true, reimprimir: true, cobrar: false, unir: false },
         }),
       );
       expect(page.getByRole("button", { name: "Cobrar" }).elements()).toHaveLength(0);

@@ -202,5 +202,35 @@ describe.skipIf(base === null)(
       await otra.close();
       vigilante.tomar();
     });
+
+    it("UNIR: la mesa 10 se une con la 9 (con «Cuánto queda»), un doble toque pasa los platos UNA vez, el mapa dice «Unida a la mesa 9» y cobrar la 9 libera las dos", async () => {
+      await mesaConPedido(9, 7);
+      await mesaConPedido(10, 9);
+      await pagina.getByRole("button", { name: "Unir con otra mesa" }).click();
+      await pagina.getByRole("button", { name: "Mesa 9", exact: true }).click();
+      await pagina.getByText("Cuánto queda").waitFor();
+      await pagina.getByText("$ 1.600,00").last().waitFor();
+      await pagina.getByText(/Esto no se deshace/).waitFor();
+      expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+      await pagina.getByRole("button", { name: "Confirmar unión" }).dblclick();
+      await pagina.waitForURL(/\/salon\/cuenta\/[0-9a-f-]{36}$/);
+      await pagina.getByRole("heading", { name: "Mesa 9" }).first().waitFor();
+      expect(await pagina.getByText("1 × Medialuna").count()).toBe(2);
+      expect(await contar("union_de_mesas")).toBe(1);
+
+      await ir(pagina, "/salon");
+      await pagina.getByText("Unida a la mesa 9").waitFor();
+      await ir(pagina, "/salon");
+      await pagina.getByRole("link", { name: "Mesa 9" }).click();
+      await pagina.waitForURL(/\/salon\/cuenta\/[0-9a-f-]{36}$/);
+      await enviarYRecargar();
+      await pagina.getByRole("button", { name: "Cobrar", exact: true }).click();
+      await pagina.getByRole("button", { name: "Cobrar", exact: true }).waitFor();
+      await pagina.locator("[data-total-del-cobro]").getByText("$ 1.600,00").waitFor();
+      await pagina.getByRole("button", { name: "Cobrar", exact: true }).click();
+      await pagina.getByText("Cobrado", { exact: true }).waitFor();
+      expect(await cuentasAbiertas()).toBe(0);
+      vigilante.tomar();
+    });
   },
 );
