@@ -58,6 +58,7 @@ const TABLAS = [
   "diferencia_de_compra",
   "devolucion_a_proveedor",
   "linea_de_devolucion",
+  "correccion_de_lo_recibido",
 ];
 
 describe.skipIf(base === null)("compras: la persistencia contra el esquema real", () => {
@@ -99,7 +100,12 @@ describe.skipIf(base === null)("compras: la persistencia contra el esquema real"
       join(import.meta.dirname, "../../migraciones", "0084_compras_devoluciones.sql"),
       "utf8",
     );
+    const correccionDeLoRecibido = await readFile(
+      join(import.meta.dirname, "../../migraciones", "0098_correccion_de_lo_recibido.sql"),
+      "utf8",
+    );
     const fijas = [
+      ...correccionDeLoRecibido.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...migracion.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...ordenes.matchAll(/CONSTRAINT = '(\w+)'/g),
       ...diferencias.matchAll(/CONSTRAINT = '(\w+)'/g),

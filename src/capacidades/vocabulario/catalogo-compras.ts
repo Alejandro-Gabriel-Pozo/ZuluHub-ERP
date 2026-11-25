@@ -10,6 +10,7 @@ import { TEXTOS_DE_EXPORTACION_DE_COMPRAS } from "./textos-de-exportacion-de-com
  * pantallas de pago y de corrección no tienen texto ni prototipo (D142 y D143; decisión D175). Un texto repetido en dos filas de los prototipos
  * («Pedida», «Cuarentena») tiene una sola clave, la del primer grupo.
  */
+const D = { decision: "DEC-0937" } as const;
 export const TEXTOS_DE_COMPRAS = {
   // compra.html, «Textos aprobados» (09/11/2026), filas «Lista» y «Nueva compra» (D175: «Recibida sin facturar» y «Comprar y recibir» son de la decisión 35)
   "compras.compra.compras": { porDefecto: "Compras" },
@@ -163,6 +164,13 @@ export const TEXTOS_DE_COMPRAS = {
     porDefecto: "Conciliada en parte",
     fuente: { decision: "DEC-0935" },
   },
+  // «Corregir lo recibido» (Compras 4, PR D): lista corta de motivos, decisión del dueño del 25/11/2026; textos propuestos por el ingeniero (DEC-0937).
+  "compras.recepcion.corregir_recibido": { porDefecto: "Corregir lo recibido", fuente: D },
+  "compras.recepcion.motivo_correccion": { porDefecto: "Motivo de la corrección", fuente: D },
+  "compras.recepcion.causa_error_de_carga": { porDefecto: "Error de carga", fuente: D },
+  "compras.recepcion.causa_reparto_interno": { porDefecto: "Reparto interno", fuente: D },
+  "compras.recepcion.causa_faltante": { porDefecto: "Faltante del proveedor", fuente: D },
+  "compras.recepcion.aviso_reparto": { porDefecto: "Corregí también la otra sucursal.", fuente: D },
   "compras.recepcion.caja_de_peso_variable": { porDefecto: "Caja de peso variable" },
   "compras.recepcion.el_peso_real_se_carga_al_recibir": {
     porDefecto: "el peso real se carga al recibir",

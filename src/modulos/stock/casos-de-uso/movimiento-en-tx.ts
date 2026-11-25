@@ -13,6 +13,7 @@ import { decidirExistenciaNegativa, type DecisionDeNegativo } from "../dominio/c
 import { decidirPorHuella } from "../dominio/huella";
 import {
   comprobarCoherencia,
+  ORIGEN_CORRECCION_DE_RECEPCION,
   ORIGEN_DEVOLUCION_A_PROVEEDOR,
   ORIGEN_EJEMPLAR_DE_TICKET,
   ORIGEN_MANUAL,
@@ -39,6 +40,7 @@ const ORIGENES_DE_OTRO_MODULO: readonly string[] = [
   ORIGEN_EJEMPLAR_DE_TICKET,
   ORIGEN_RECEPCION,
   ORIGEN_DEVOLUCION_A_PROVEEDOR,
+  ORIGEN_CORRECCION_DE_RECEPCION,
   ORIGEN_TRANSFORMACION,
 ];
 

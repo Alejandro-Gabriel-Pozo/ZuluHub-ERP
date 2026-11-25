@@ -1,11 +1,15 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
-import type { EstadoDeRecepcionSeparada } from "../modulos/compras/publico";
+import type { CausaDeCorreccion, EstadoDeRecepcionSeparada } from "../modulos/compras/publico";
+
+/** Las causas de una corrección de lo recibido, para que la página (servidor) se las pase a la pantalla: un componente de cliente no importa el módulo de compras. */
+export { CAUSAS_DE_CORRECCION } from "../modulos/compras/publico";
 import { err, ok } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
 import {
   entradaDeAnularRecepcion,
   entradaDeConfirmarRecepcion,
+  entradaDeCorregirLoRecibido,
   entradaDeFichaDeRecepcion,
   entradaDeListarRecepciones,
   entradaDeRegistrarRecepcion,
@@ -30,7 +34,7 @@ export type DependenciasDeRecepcionesWeb = Readonly<{
   >;
   casosDeUso: () => Pick<
     ReturnType<Web["casosDeUsoDeCompras"]>,
-    "registrarRecepcion" | "confirmarRecepcion" | "anularRecepcionPendiente"
+    "registrarRecepcion" | "confirmarRecepcion" | "anularRecepcionPendiente" | "corregirLoRecibido"
   >;
   respuesta: DependenciasDeRespuesta;
 }>;
@@ -105,6 +109,17 @@ export type FichaDeRecepcionParaLaPantalla = Readonly<{
     /** Lo que entra al stock, en la unidad base del producto. */
     cantidadEnStock: string;
     unidadDeStockId: string | null;
+    /** Lo recibido que rige hoy (ya con las correcciones), en la unidad base del producto. */
+    cantidadRecibida: string;
+    /** Cuántas correcciones de lo recibido tiene la línea: la versión que se devuelve al corregir. */
+    correccionesVistas: number;
+    correcciones: readonly Readonly<{
+      numero: number;
+      cantidadAnterior: string;
+      cantidadNueva: string;
+      causa: CausaDeCorreccion;
+      nota: string | null;
+    }>[];
   }>[];
 }>;
 
@@ -145,6 +160,15 @@ export function fichaDeLaRecepcion(
         unidadDeCompraId: l.unidadDeCompraId,
         cantidadEnStock: l.cantidadEnStock,
         unidadDeStockId: l.unidadDeStockId,
+        cantidadRecibida: l.cantidadRecibida,
+        correccionesVistas: l.correccionesVistas,
+        correcciones: l.correcciones.map((c) => ({
+          numero: c.numero,
+          cantidadAnterior: c.cantidadAnterior,
+          cantidadNueva: c.cantidadNueva,
+          causa: c.causa,
+          nota: c.nota,
+        })),
       })),
     }),
   );
@@ -220,5 +244,37 @@ export function anularLaRecepcion(
     entradaDeAnularRecepcion,
     (entrada) => d.casosDeUso().anularRecepcionPendiente(contexto, entrada),
     () => ({ anulada: true as const }),
+  );
+}
+
+export type LoRecibidoCorregidoParaLaPantalla = Readonly<{
+  recepcionId: string;
+  linea: number;
+  numero: number;
+  /** `true`: era la misma corrección de un envío anterior (doble toque, reintento): no se escribió ni se auditó nada de nuevo. */
+  yaExistia: boolean;
+}>;
+
+/**
+ * «Corregir lo recibido» de una línea de una recepción confirmada: la cantidad que de verdad llegó, su causa (lista cerrada) y una nota opcional. Un solo caso de uso, una transacción: suma la corrección,
+ * mueve el stock por la diferencia y deja la auditoría. Solo gerente o administrador (`compras.corregir`); la sucursal de la recepción tiene que estar en el alcance de quien corrige; no se baja de lo ya
+ * conciliado. La clave del envío es la idempotencia: el mismo pedido dos veces deja una sola corrección. Todo rechazo sale como el genérico.
+ */
+export function corregirLoRecibidoDeLaRecepcion(
+  d: DependenciasDeRecepcionesWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<LoRecibidoCorregidoParaLaPantalla>> {
+  return accionDeCompras(
+    d.respuesta,
+    crudo,
+    entradaDeCorregirLoRecibido,
+    (entrada) => d.casosDeUso().corregirLoRecibido(contexto, entrada),
+    (salida) => ({
+      recepcionId: salida.recepcionId,
+      linea: salida.linea,
+      numero: salida.numero,
+      yaExistia: salida.yaExistia,
+    }),
   );
 }

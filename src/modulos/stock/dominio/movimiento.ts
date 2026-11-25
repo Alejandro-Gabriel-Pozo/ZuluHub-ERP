@@ -37,6 +37,8 @@ export const ORIGEN_EJEMPLAR_DE_TICKET = "EJEMPLAR_DE_TICKET";
 export const ORIGEN_RECEPCION = "RECEPCION";
 /** E9 N4: la devolución de mercadería al proveedor (una salida por devolución). */
 export const ORIGEN_DEVOLUCION_A_PROVEEDOR = "DEVOLUCION_A_PROVEEDOR";
+/** E9 N3: la corrección de lo recibido de una línea de recepción separada (una entrada o una salida por corrección). */
+export const ORIGEN_CORRECCION_DE_RECEPCION = "CORRECCION_DE_RECEPCION";
 /** E6: la orden de producción (consumo de ingredientes y producto obtenido). */
 export const ORIGEN_TRANSFORMACION = "TRANSFORMACION";
 

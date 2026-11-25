@@ -10,16 +10,19 @@ import { ajustarCostoPorOrigen } from "./casos-de-uso/ajuste-de-costo";
 import type { EntradaDeAjusteDeCosto, SalidaDeAjusteDeCosto } from "./casos-de-uso/ajuste-de-costo";
 import { registrarEntradaPorOrigen, revertirPorOrigen } from "./casos-de-uso/reversion-y-entrada";
 import { registrarSalidaPorVenta } from "./casos-de-uso/salida-por-venta";
+import { registrarCorreccionDeRecepcion } from "./casos-de-uso/correccion-por-origen";
 import { anularSalidaPorOrigen, registrarSalidaPorOrigen } from "./casos-de-uso/salida-por-origen";
 import type {
   ControlDeUnProducto,
   EntradaDeAnulacionPorOrigen,
+  EntradaDeCorreccionDeRecepcion,
   EntradaDeEntradaPorOrigen,
   EntradaDeReversionPorOrigen,
   EntradaDeSalidaPorOrigen,
   EntradaDeSalidaPorVenta,
   ExistenciaDeProducto,
   SalidaDeAnulacionPorOrigen,
+  SalidaDeCorreccionDeRecepcion,
   SalidaDeEntradaPorOrigen,
   SalidaDeReversionPorOrigen,
   SalidaDeSalidaPorOrigen,
@@ -114,6 +117,15 @@ export interface SalidaPorOrigen {
   ): Promise<R<SalidaDeAnulacionPorOrigen>>;
 }
 
+/** La corrección de lo recibido de una recepción separada (compras, N3): una entrada o una salida por corrección, una sola por corrección aunque cambie la clave. */
+export interface CorreccionDeRecepcion {
+  registrar(
+    tx: TxDeStock,
+    contexto: ContextoOperativo,
+    entrada: EntradaDeCorreccionDeRecepcion,
+  ): Promise<R<SalidaDeCorreccionDeRecepcion>>;
+}
+
 /** El ajuste del costo de una compra corregida (E9 T11, D-E9-3): corrige el promedio por la diferencia sobre lo que queda; lo ya consumido conserva su costo. */
 export interface AjusteDeCostoPorOrigen {
   ajustar(
@@ -131,6 +143,7 @@ export type PuertosDeStock = Readonly<{
   existenciaParaMostrar: ExistenciaParaMostrar;
   entradaPorOrigen: EntradaPorOrigen;
   salidaPorOrigen: SalidaPorOrigen;
+  correccionDeRecepcion: CorreccionDeRecepcion;
   ajusteDeCostoPorOrigen: AjusteDeCostoPorOrigen;
 }>;
 
@@ -168,6 +181,13 @@ export const crearSalidaPorOrigen = ({
   anular: (tx, contexto, entrada) => anularSalidaPorOrigen(tx, contexto, entrada),
 });
 
+export const crearCorreccionDeRecepcion = ({
+  reglas,
+}: DependenciasDePuertosDeStock): CorreccionDeRecepcion => ({
+  registrar: (tx, contexto, entrada) =>
+    registrarCorreccionDeRecepcion(tx, contexto, reglas, entrada),
+});
+
 export const crearAjusteDeCostoPorOrigen = ({
   reglas,
 }: DependenciasDePuertosDeStock): AjusteDeCostoPorOrigen => ({
@@ -185,5 +205,6 @@ export const crearPuertosDeStock = (
   existenciaParaMostrar: crearExistenciaParaMostrar(),
   entradaPorOrigen: crearEntradaPorOrigen(dependencias),
   salidaPorOrigen: crearSalidaPorOrigen(dependencias),
+  correccionDeRecepcion: crearCorreccionDeRecepcion(dependencias),
   ajusteDeCostoPorOrigen: crearAjusteDeCostoPorOrigen(dependencias),
 });

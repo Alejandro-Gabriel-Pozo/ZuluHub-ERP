@@ -81,6 +81,7 @@ export type DependenciasDeCompras = Readonly<{
     | "articulosDeVenta"
     | "entradaPorOrigen"
     | "salidaPorOrigen"
+    | "correccionDeRecepcion"
     | "existenciaParaMostrar"
     | "ajusteDeCostoPorOrigen"
   >;

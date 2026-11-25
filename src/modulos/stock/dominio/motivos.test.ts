@@ -22,6 +22,7 @@ describe("los motivos sembrados (E5 §3.1)", () => {
       "DEVOLUCION_DE_CLIENTE",
       "OTRA_ENTRADA",
       "PRODUCTO_DE_TRANSFORMACION",
+      "CORRECCION_DE_RECEPCION",
     ]);
     expect(codigos("SALIDA")).toEqual([
       "VENTA",
@@ -32,12 +33,13 @@ describe("los motivos sembrados (E5 §3.1)", () => {
       "OTRA_SALIDA",
       "CONSUMO_DE_TRANSFORMACION",
       "DEVOLUCION_A_PROVEEDOR",
+      "CORRECCION_DE_RECEPCION",
     ]);
     expect(codigos("TRANSFERENCIA")).toEqual(["TRANSFERENCIA"]);
     expect(codigos("AJUSTE")).toEqual(["CORRECCION"]);
     expect(codigos("AJUSTE_POR_CONTEO")).toEqual(["CONTEO"]);
     expect(codigos("ANULACION")).toEqual(["ANULACION"]);
-    expect(MOTIVOS_DE_MOVIMIENTO).toHaveLength(17);
+    expect(MOTIVOS_DE_MOVIMIENTO).toHaveLength(19);
   });
 
   it("(clase, código) no se repite y toda clase es conocida", () => {
@@ -50,11 +52,12 @@ describe("los motivos sembrados (E5 §3.1)", () => {
     for (const m of MOTIVOS_DE_MOVIMIENTO) expect(m.codigo).toMatch(/^[A-Z][A-Z_]{1,39}$/);
   });
 
-  it("solo compra y carga inicial entran con costo; solo venta y consumo interno entregan mercadería", () => {
+  it("solo compra, carga inicial, la producción y la corrección de lo recibido entran con costo; solo venta y consumo interno entregan mercadería", () => {
     expect(MOTIVOS_DE_MOVIMIENTO.filter((m) => m.entraConCosto).map((m) => m.codigo)).toEqual([
       "COMPRA",
       "CARGA_INICIAL",
       "PRODUCTO_DE_TRANSFORMACION",
+      "CORRECCION_DE_RECEPCION",
     ]);
     expect(MOTIVOS_DE_MOVIMIENTO.filter((m) => m.entregaMercaderia).map((m) => m.codigo)).toEqual([
       "VENTA",
@@ -93,6 +96,7 @@ describe("motivoManualPermitido: lo que una persona puede elegir", () => {
         (m.clase === "ENTRADA" || m.clase === "SALIDA") &&
         m.codigo !== "VENTA" &&
         m.codigo !== "DEVOLUCION_A_PROVEEDOR" &&
+        m.codigo !== "CORRECCION_DE_RECEPCION" &&
         !m.codigo.endsWith("_DE_TRANSFORMACION");
       expect(motivoManualPermitido(m.clase, m.codigo)).toBe(esperado);
     }
@@ -195,5 +199,30 @@ describe("origenCoherenteConElMotivo: la devolución al proveedor ⇔ el origen 
       entraConCosto: false,
       entregaMercaderia: false,
     });
+  });
+});
+
+describe("origenCoherenteConElMotivo: la corrección de lo recibido ⇔ el origen de la corrección (E9 N3)", () => {
+  it("la entrada y la salida por corrección llevan el origen CORRECCION_DE_RECEPCION y ese origen solo va con ellas", () => {
+    for (const clase of ["ENTRADA", "SALIDA"] as const) {
+      expect(
+        origenCoherenteConElMotivo(clase, "CORRECCION_DE_RECEPCION", "CORRECCION_DE_RECEPCION"),
+      ).toBe(true);
+      expect(origenCoherenteConElMotivo(clase, "CORRECCION_DE_RECEPCION", "MANUAL")).toBe(false);
+      expect(origenCoherenteConElMotivo(clase, "CORRECCION_DE_RECEPCION", "RECEPCION")).toBe(false);
+    }
+    expect(origenCoherenteConElMotivo("SALIDA", "MERMA", "CORRECCION_DE_RECEPCION")).toBe(false);
+    expect(origenCoherenteConElMotivo("ENTRADA", "COMPRA", "CORRECCION_DE_RECEPCION")).toBe(false);
+  });
+  it("una anulación puede llevar el origen de la corrección que revierte", () => {
+    expect(origenCoherenteConElMotivo("ANULACION", "ANULACION", "CORRECCION_DE_RECEPCION")).toBe(
+      true,
+    );
+  });
+  it("una persona no elige el motivo de la corrección", () => {
+    expect(motivoManualPermitido("ENTRADA", "CORRECCION_DE_RECEPCION")).toBe(false);
+    expect(motivoManualPermitido("SALIDA", "CORRECCION_DE_RECEPCION")).toBe(false);
+    expect(buscarMotivo("ENTRADA", "CORRECCION_DE_RECEPCION")?.entraConCosto).toBe(true);
+    expect(buscarMotivo("SALIDA", "CORRECCION_DE_RECEPCION")?.entraConCosto).toBe(false);
   });
 });

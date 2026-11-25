@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0939",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Corregir lo recibido se ofrece en el detalle de la recepción, una vez por línea; la maqueta lo mostraba en el detalle de la factura.",
+  "que_cambia": "La persona corrige desde la recepción que cargó y no desde la factura. Revertir: mover el botón de pantalla; no cambia datos ni permisos.",
+  "donde": "PantallaDeDetalleDeRecepcion.tsx, CorregirLoRecibido.cliente.tsx, ficha-de-recepciones.ts"
+}

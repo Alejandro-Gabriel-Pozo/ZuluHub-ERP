@@ -33,6 +33,9 @@ const FICHA: FichaDeRecepcionParaLaPantalla = {
       unidadDeCompraId: "KILOGRAMO",
       cantidadEnStock: "60000.0000",
       unidadDeStockId: "GRAMO",
+      cantidadRecibida: "60000.0000",
+      correccionesVistas: 0,
+      correcciones: [],
     },
   ],
 };
@@ -41,7 +44,7 @@ const GENERICO = {
   clave: "compras.error.sin_permiso",
   presentacion: "AVISO",
 } as const;
-const TODO = { registrar: true, confirmar: true, anular: true };
+const TODO = { registrar: true, confirmar: true, anular: true, corregir: true };
 const textos = textosDeRecepciones();
 
 afterEach(async () => {
@@ -83,7 +86,9 @@ describe("el detalle de una recepción", () => {
     await expect.element(boton("Confirmar recepción")).toBeVisible();
     await expect.element(boton("Anular recepción")).toBeVisible();
     await unmount();
-    await render(detalle({ acciones: { registrar: true, confirmar: false, anular: false } }));
+    await render(
+      detalle({ acciones: { registrar: true, confirmar: false, anular: false, corregir: false } }),
+    );
     await expect.element(boton("Confirmar recepción")).not.toBeInTheDocument();
     await expect.element(boton("Anular recepción")).not.toBeInTheDocument();
   });

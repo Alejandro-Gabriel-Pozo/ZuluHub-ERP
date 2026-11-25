@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   entradaDeAnularRecepcion,
   entradaDeConfirmarRecepcion,
+  entradaDeCorregirLoRecibido,
   entradaDeFichaDeRecepcion,
   entradaDeListarRecepciones,
   entradaDeRegistrarRecepcion,
@@ -141,5 +142,73 @@ describe("las demás entradas de «Recepciones»", () => {
       ok: true,
       valor: { despuesDe: null },
     });
+  });
+});
+
+describe("entradaDeCorregirLoRecibido: lista de permitidos", () => {
+  const pedido = (extra: Record<string, unknown> = {}) => ({
+    clave: OTRO,
+    recepcionId: ID,
+    linea: 1,
+    correccionesVistas: 0,
+    cantidad: "1500",
+    causa: "ERROR_DE_CARGA",
+    ...extra,
+  });
+  it("toma lo declarado; la nota es opcional y sin ella queda en null", () => {
+    expect(entradaDeCorregirLoRecibido(pedido())).toEqual({
+      ok: true,
+      valor: {
+        clave: OTRO,
+        recepcionId: ID,
+        linea: 1,
+        correccionesVistas: 0,
+        cantidad: "1500",
+        causa: "ERROR_DE_CARGA",
+        nota: null,
+      },
+    });
+    expect(entradaDeCorregirLoRecibido(pedido({ nota: "Faltaron 2 bolsas" }))).toMatchObject({
+      ok: true,
+      valor: { nota: "Faltaron 2 bolsas" },
+    });
+  });
+
+  it("la causa solo es una de la lista cerrada", () => {
+    for (const causa of ["ERROR_DE_CARGA", "REPARTO_INTERNO", "FALTANTE_DEL_PROVEEDOR"]) {
+      expect(entradaDeCorregirLoRecibido(pedido({ causa })).ok).toBe(true);
+    }
+    for (const causa of ["OTRA", "", null, 1, "error_de_carga"]) {
+      expect(entradaDeCorregirLoRecibido(pedido({ causa })).ok).toBe(false);
+    }
+  });
+
+  it("un campo inventado (la empresa, la persona, la sucursal, el depósito, un precio) no se ignora: el pedido es inválido", () => {
+    for (const campo of [
+      { empresaId: ID },
+      { personaId: ID },
+      { sucursalId: ID },
+      { depositoId: ID },
+      { precio: "1" },
+      { confirmoExistenciaNegativa: true },
+    ]) {
+      expect(entradaDeCorregirLoRecibido(pedido(campo)).ok).toBe(false);
+    }
+  });
+
+  it("una clave o una recepción que no son UUID, una línea o una versión que no son enteros y una cantidad que no es texto no pasan", () => {
+    for (const malo of [
+      { clave: "x" },
+      { recepcionId: "x" },
+      { linea: "1" },
+      { linea: 1.5 },
+      { correccionesVistas: "0" },
+      { correccionesVistas: 0.5 },
+      { cantidad: 1500 },
+      { cantidad: "1".repeat(41) },
+      { nota: 5 },
+    ]) {
+      expect(entradaDeCorregirLoRecibido(pedido(malo)).ok).toBe(false);
+    }
   });
 });
