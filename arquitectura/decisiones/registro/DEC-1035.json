@@ -1,0 +1,11 @@
+{
+  "id": "DEC-1035",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: el mapa del salón es el de la sucursal de trabajo, que fija el servidor; no hay concepto de turno.",
+  "que_cambia": "Nada que vea el negocio: cada persona ve las mesas de su sucursal y nunca las de otra. Sumar un turno después no cambia datos. Se revierte agregando el filtro de turno a la consulta del mapa.",
+  "donde": "apps/web/servidor/salon.ts (cargarElMapaDeMesas) y apps/web/app/s/app/(operacion)/salon/page.tsx; Pedernal-docs plan-de-salon-dia-uno-2026-11-25.md H-7",
+  "motivo": "El código no tiene concepto de turno (hallazgo H-7 del plan) y la sucursal la decide el servidor: un mapa por turno exigiría datos que hoy no existen."
+}
