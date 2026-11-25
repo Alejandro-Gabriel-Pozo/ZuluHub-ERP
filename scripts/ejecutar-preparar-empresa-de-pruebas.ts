@@ -5,9 +5,13 @@ import {
   leerSecretoDeInvitaciones,
 } from "../src/adaptadores/tokens/tokens-hmac";
 import { valoresDeLaPieza } from "../src/composicion/entorno";
-import { PEDERNAL_DB_PLATAFORMA } from "../src/composicion/entorno-de-plataforma";
+import {
+  PEDERNAL_DB_PLATAFORMA,
+  PEDERNAL_HOSTS_PROTEGIDOS,
+} from "../src/composicion/entorno-de-plataforma";
 import { armarEntradaDelCaso, type NombreDeCaso } from "../src/plataforma/dominio/pedido-de-caso";
 import { emailDesdeTexto } from "../src/modulos/identidad/publico";
+import { leerHostsProtegidos } from "../src/modulos/marcas/publico";
 import { VARIABLE_DE_LA_CADENA } from "./ejecutar-crear-primer-admin";
 import { ejecutarCasoDePlataforma, type EntradaDeEjecucion } from "./ejecutar-caso-desde-archivo";
 import { textoDeProblema } from "./mensajes-de-plataforma";
@@ -77,10 +81,15 @@ export const VARIABLES_ANTES_DEL_LOGIN = [
   PEDERNAL_SECRETO_INVITACIONES,
   VARIABLE_DEL_CRON,
 ] as const;
+/**
+ * Las que exige la corrida completa. `PEDERNAL_HOSTS_PROTEGIDOS` (una VARIABLE del Environment, no un secreto) va acá y no antes del login: el paso `--validar` del workflow no la recibe a
+ * propósito (solo la ven el chequeo previo y «Preparar»). Sin ella, `agregarDominio` falla cerrado (#516) a mitad del flujo, con el administrador, el plan y la marca ya sembrados: se corta antes de sembrar.
+ */
 export const VARIABLES_OBLIGATORIAS = [
   ...VARIABLES_ANTES_DEL_LOGIN,
   PEDERNAL_DB_PLATAFORMA,
   PEDERNAL_CLAVE_CONTEXTO,
+  PEDERNAL_HOSTS_PROTEGIDOS,
 ] as const;
 
 /** Un administrador de plataforma no puede ser miembro de ninguna empresa (decisión F5): el dueño necesita DOS cuentas de Google. */
@@ -587,6 +596,15 @@ export async function prepararEmpresaDePruebas(entrada: EntradaDePreparacion): P
   } catch {
     malos.push(
       `${VARIABLE_DEL_CRON}: tiene que tener al menos ${LARGO_MINIMO_DEL_CRON} caracteres y variedad (letras y números distintos)`,
+    );
+  }
+  // La lista de hosts protegidos, con la MISMA regla de forma que usa la composición (una sola fuente: `leerHostsProtegidos`). Solo se pide en la corrida completa.
+  if (
+    entrada.soloValidar !== true &&
+    !leerHostsProtegidos(entorno[PEDERNAL_HOSTS_PROTEGIDOS] ?? "").ok
+  ) {
+    malos.push(
+      `${PEDERNAL_HOSTS_PROTEGIDOS}: tiene que ser una lista de hosts distintos separados por comas, sin https:// ni barras`,
     );
   }
   if (malos.length > 0) {
