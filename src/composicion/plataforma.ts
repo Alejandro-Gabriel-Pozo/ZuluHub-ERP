@@ -59,6 +59,7 @@ import {
   crearRepositorioDeMarcas,
   type DominiosDb,
   type LecturaParaElAltaDb,
+  leerHostsProtegidos,
   type MarcasDb,
 } from "../modulos/marcas/publico";
 import {
@@ -100,7 +101,12 @@ import { ok } from "../primitivas/resultado/resultado";
 import type { AdminEncontrado } from "../puertos/admins-de-plataforma";
 import type { Tokens } from "../puertos/tokens";
 import { registrandoFallosDeEntorno, entornoDelProceso, type FuenteDeEntorno } from "./entorno";
-import { PEDERNAL_DB_PLATAFORMA, valoresDeLaPiezaDePlataforma } from "./entorno-de-plataforma";
+import { ErrorDeConfiguracion } from "../adaptadores/postgres/errores";
+import {
+  PEDERNAL_DB_PLATAFORMA,
+  PEDERNAL_HOSTS_PROTEGIDOS,
+  valoresDeLaPiezaDePlataforma,
+} from "./entorno-de-plataforma";
 import { contextoDePlataforma } from "./contextos";
 import { perezoso } from "./perezoso";
 
@@ -174,6 +180,19 @@ export function armarPlataforma(opciones: OpcionesDePlataforma = {}) {
         clave: leerClaveDeContexto(valores[PEDERNAL_CLAVE_CONTEXTO]),
         maximoDeConexiones: CONEXIONES_POR_POOL,
       } as const;
+    }),
+  );
+
+  /** Los hosts de la propia plataforma: obligatorios (sin la variable, o con una lista inválida, la gestión de dominios no se arma y se registra el fallo). */
+  const hostsProtegidos = perezoso((): ReadonlySet<string> =>
+    registrandoFallosDeEntorno(registrar, () => {
+      const lista = leerHostsProtegidos(
+        valoresDeLaPiezaDePlataforma(fuente(), "hosts-protegidos")[PEDERNAL_HOSTS_PROTEGIDOS],
+      );
+      if (!lista.ok) {
+        throw new ErrorDeConfiguracion(`${PEDERNAL_HOSTS_PROTEGIDOS} inválido: ${lista.error}`);
+      }
+      return lista.valor;
     }),
   );
 
@@ -335,7 +354,11 @@ export function armarPlataforma(opciones: OpcionesDePlataforma = {}) {
       crearCasosDeUsoDeListas({ transacciones: transaccionesDeListas(), reglas }),
     ),
     casosDeUsoDeDominios: perezoso(() =>
-      crearCasosDeUsoDeDominios({ transacciones: transaccionesDeDominiosYSoporte(), reglas }),
+      crearCasosDeUsoDeDominios({
+        transacciones: transaccionesDeDominiosYSoporte(),
+        reglas,
+        hostsProtegidos: hostsProtegidos(),
+      }),
     ),
     casosDeUsoDeSoporte: perezoso(() =>
       crearCasosDeUsoDeSoporte({

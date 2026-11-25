@@ -17,6 +17,7 @@ export async function empresasDelPedido() {
     dependenciasDeSesion,
     sesion,
     marcaComercialId(puerta.marcaId),
+    puerta.duenio,
   );
   return { puerta, empresas };
 }

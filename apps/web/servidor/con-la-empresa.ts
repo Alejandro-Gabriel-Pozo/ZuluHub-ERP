@@ -29,6 +29,7 @@ export async function conLaEmpresa<D>(
     const entrada = await resolverEmpresa(dependenciasDeSesion, {
       sesion,
       marcaId: marcaComercialId(puerta.marcaId),
+      duenioDelHost: puerta.duenio,
       cookieDeEmpresa,
     });
     if (!entrada.ok) return entrada;

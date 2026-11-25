@@ -36,6 +36,9 @@ export const PEDERNAL_DB_PLATAFORMA = "PEDERNAL_DB_PLATAFORMA";
  */
 export const PEDERNAL_DB_AUTENTICACION = "PEDERNAL_DB_AUTENTICACION";
 
+/** Los hosts que ningún cliente puede registrar ni activar (los de los proyectos de la plataforma), separados por comas. */
+export const PEDERNAL_HOSTS_PROTEGIDOS = "PEDERNAL_HOSTS_PROTEGIDOS";
+
 export const NOMBRES_DE_ENTORNO_DE_PLATAFORMA = [
   {
     nombre: PEDERNAL_DB_PLATAFORMA,
@@ -88,6 +91,13 @@ export const NOMBRES_DE_ENTORNO_DE_PLATAFORMA = [
     nombre: PEDERNAL_HOST_DE_LA_CONSOLA,
     forma: FORMA_DE_TEXTO,
     piezas: ["host-de-la-consola"],
+  },
+  // Los hosts de los proyectos de la propia plataforma, separados por comas (los valores los carga el dueño; el código solo valida la forma con `leerHostsProtegidos`). Sin la lista no se
+  // arma la gestión de dominios: falla cerrado.
+  {
+    nombre: PEDERNAL_HOSTS_PROTEGIDOS,
+    forma: FORMA_DE_TEXTO,
+    piezas: ["hosts-protegidos"],
   },
 ] as const;
 

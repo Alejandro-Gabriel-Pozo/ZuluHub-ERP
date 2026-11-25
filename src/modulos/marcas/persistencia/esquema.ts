@@ -52,6 +52,7 @@ export const ERRORES_DE_DOMINIO_POR_RESTRICCION = {
   dominio_marca_id_fkey: "NO_TRADUCIDA", // la marca la fija el disparador desde el dueño
   dominio_host_uk: "HOST_DUPLICADO",
   dominio_canonico_uk: "YA_TIENE_CANONICO",
+  dominio_empresa_superficie_uk: "EMPRESA_YA_TIENE_HOST_DE_ESA_SUPERFICIE", // 0095: un host vigente por empresa y superficie
   dominio_nace_pendiente: "NO_TRADUCIDA", // lo lanza un disparador
   dominio_marca_retirada: "MARCA_RETIRADA", // lo lanza un disparador
   dominio_inmutable: "NO_TRADUCIDA", // lo lanza un disparador

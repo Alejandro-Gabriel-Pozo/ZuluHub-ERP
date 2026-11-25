@@ -39,6 +39,7 @@ describe.skipIf(base === null)(
     let casos: ReturnType<typeof crearCasosDeDominios>;
     let empresaA = "";
     let empresaB = "";
+    let tenantId = "";
     let carta = { id: "", host: "" };
     let app = { id: "", host: "" };
     let deB = { id: "", host: "" };
@@ -54,6 +55,7 @@ describe.skipIf(base === null)(
       entornoDeDominios = crearEntornoDeDominios(propia.base, 6);
       casos = crearCasosDeDominios(entornoDeDominios);
       const tenant = await sembrarTenant(dueno);
+      tenantId = tenant;
       empresaA = await sembrarEmpresa(dueno, tenant, { razonSocial: "Hotel Ejemplo A" });
       empresaB = await sembrarEmpresa(dueno, tenant, { razonSocial: "Hotel Ejemplo B" });
       carta = await crearDominioDeEmpresa(dueno, empresaA, {
@@ -189,20 +191,24 @@ describe.skipIf(base === null)(
     });
 
     it("idempotencia: el alta repetida con la misma clave no registra otro y sale en la lista una sola vez", async () => {
+      // Una empresa propia: A ya tiene host de CARTA y de APP (un host vigente por empresa y superficie, 0095).
+      const empresaNueva = await sembrarEmpresa(dueno, tenantId, {
+        razonSocial: "Hotel Ejemplo X",
+      });
       const pedido = {
         claveDeIdempotencia: claveAlAzar(),
         host: hostAlAzar(),
         superficie: "CARTA" as const,
         titular: "CLIENTE" as const,
         esCanonico: false,
-        duenio: { tipo: "EMPRESA" as const, empresaId: empresaA },
+        duenio: { tipo: "EMPRESA" as const, empresaId: empresaNueva },
       };
       const primero = exito(await casos.agregarDominio(comoAdmin(), pedido));
       const segundo = exito(await casos.agregarDominio(comoAdmin(), pedido));
       expect(segundo.dominioId).toBe(primero.dominioId);
       expect(segundo.yaExistia).toBe(true);
       const lista = exito(
-        await consultas.listarDominios(comoAdmin(), { empresaId: empresaA }),
+        await consultas.listarDominios(comoAdmin(), { empresaId: empresaNueva }),
       ).filas;
       expect(lista.filter((f) => f.host === pedido.host)).toHaveLength(1);
     });
@@ -229,6 +235,9 @@ describe.skipIf(base === null)(
     });
 
     it("la verificación con fecha por día es idempotente: dos instantes del mismo día dan la misma fecha y la misma clave devuelve lo mismo", async () => {
+      const empresaNueva = await sembrarEmpresa(dueno, tenantId, {
+        razonSocial: "Hotel Ejemplo X",
+      });
       const { dominioId } = exito(
         await casos.agregarDominio(comoAdmin(), {
           claveDeIdempotencia: claveAlAzar(),
@@ -236,7 +245,7 @@ describe.skipIf(base === null)(
           superficie: "APP",
           titular: "OPERADOR",
           esCanonico: false,
-          duenio: { tipo: "EMPRESA", empresaId: empresaA },
+          duenio: { tipo: "EMPRESA", empresaId: empresaNueva },
         }),
       );
       const clave = claveAlAzar();

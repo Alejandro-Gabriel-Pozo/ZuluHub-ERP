@@ -77,6 +77,8 @@ export function armarCasosDeLaLista(
     agregarDominio: (c, e) => plataforma.casosDeUsoDeDominios().agregarDominio(c, e),
     verificarDominio: (c, e) => plataforma.casosDeUsoDeDominios().verificarDominio(c, e),
     activarDominio: (c, e) => plataforma.casosDeUsoDeDominios().activarDominio(c, e),
+    desactivarDominio: (c, e) => plataforma.casosDeUsoDeDominios().desactivarDominio(c, e),
+    retirarDominio: (c, e) => plataforma.casosDeUsoDeDominios().retirarDominio(c, e),
     crearPlan: (c, e) => plataforma.casosDeUsoDeMarcasYPlanes().crearPlan(c, e),
     guardarBorradorDePlan: (c, e) =>
       plataforma.casosDeUsoDeMarcasYPlanes().guardarBorradorDePlan(c, e),

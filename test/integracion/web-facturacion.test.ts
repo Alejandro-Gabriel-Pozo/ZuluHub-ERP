@@ -101,8 +101,16 @@ vi.mock("../../apps/web/servidor/fuente-de-puertas", () => ({
     consultarHost: (host: string, superficie: string) => {
       const m = estado.mundo;
       if (m === null || superficie !== "APP") return Promise.resolve({ ok: true, valor: null });
-      if (host === HOST_A) return Promise.resolve({ ok: true, valor: { marcaId: m.marcaA } });
-      if (host === HOST_B) return Promise.resolve({ ok: true, valor: { marcaId: m.marcaB } });
+      if (host === HOST_A)
+        return Promise.resolve({
+          ok: true,
+          valor: { marcaId: m.marcaA, duenio: { tipo: "MARCA" } },
+        });
+      if (host === HOST_B)
+        return Promise.resolve({
+          ok: true,
+          valor: { marcaId: m.marcaB, duenio: { tipo: "MARCA" } },
+        });
       return Promise.resolve({ ok: true, valor: null });
     },
     leerMarca: () => Promise.resolve({ nombre: "Marca", tema: {}, hostDeApp: null }),
