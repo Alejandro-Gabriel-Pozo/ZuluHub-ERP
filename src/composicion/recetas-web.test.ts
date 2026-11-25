@@ -6,6 +6,7 @@ import {
   listarLasRecetas,
   listarLasVersionesDeLaReceta,
   ofrecerLosIngredientes,
+  verLaFichaDeCocina,
   verLaReceta,
   verLaVistaPreviaDeLaReceta,
   type DependenciasDeRecetasWeb,
@@ -120,6 +121,42 @@ describe("verLaReceta", () => {
     });
     const roto = dependencias({ recetaDeProducto: vi.fn().mockRejectedValue(new Error("boom")) });
     expect(await verLaReceta(roto.d, contexto, { productoId: ID })).toMatchObject({
+      ok: false,
+      error: { codigo: "ERROR_INTERNO" },
+    });
+  });
+});
+
+describe("verLaFichaDeCocina", () => {
+  it("un id que no es un uuid es null y no consulta", async () => {
+    const fichaDeCocina = vi.fn();
+    const { d } = dependencias({ fichaDeCocina });
+    expect(await verLaFichaDeCocina(d, contexto, "no-es-un-uuid")).toEqual({
+      ok: true,
+      dato: null,
+    });
+    expect(fichaDeCocina).not.toHaveBeenCalled();
+  });
+
+  it("devuelve lo que dice la consulta, también null", async () => {
+    const fichaDeCocina = vi
+      .fn()
+      .mockResolvedValueOnce(ok({ version: 3 }))
+      .mockResolvedValueOnce(ok(null));
+    const { d } = dependencias({ fichaDeCocina });
+    expect(await verLaFichaDeCocina(d, contexto, ID)).toEqual({ ok: true, dato: { version: 3 } });
+    expect(fichaDeCocina).toHaveBeenCalledWith(contexto, { productoId: ID });
+    expect(await verLaFichaDeCocina(d, contexto, ID)).toEqual({ ok: true, dato: null });
+  });
+
+  it("errores: el guard pasa y una excepción sale con referencia", async () => {
+    const { d } = dependencias({ fichaDeCocina: vi.fn().mockResolvedValue(err("SIN_PERMISO")) });
+    expect(await verLaFichaDeCocina(d, contexto, ID)).toMatchObject({
+      ok: false,
+      error: { codigo: "SIN_PERMISO" },
+    });
+    const roto = dependencias({ fichaDeCocina: vi.fn().mockRejectedValue(new Error("boom")) });
+    expect(await verLaFichaDeCocina(roto.d, contexto, ID)).toMatchObject({
       ok: false,
       error: { codigo: "ERROR_INTERNO" },
     });

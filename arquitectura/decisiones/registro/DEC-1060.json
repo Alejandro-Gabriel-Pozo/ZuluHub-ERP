@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1060",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Ver la lista de recetas, la ficha y la ficha de cocina lo puede quien tiene la acción stock.ver (gerente, administrador y operador); la entrada «Recetas» del menú sigue esa acción.",
+  "que_cambia": "Quién ve la pantalla. Revertir: cambiar la acción de la fila del menú y de la consulta, que hoy es stock.ver.",
+  "donde": "apps/web/ui/navegacion/menu-filas-catalogo.ts; recetas-pantalla.md §3, supuesto S2"
+}

@@ -60,8 +60,12 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       // La misma persona ingresa también por B (otra sesión, otro host).
       const enB = await ingresarEn(mundo, HOST_B, enA.perfil);
 
-      const respuestaA = await empresasDeLaPersona(mundo.dependencias, enA.sesion, mundo.marcaA);
-      const respuestaB = await empresasDeLaPersona(mundo.dependencias, enB.sesion, mundo.marcaB);
+      const respuestaA = await empresasDeLaPersona(mundo.dependencias, enA.sesion, mundo.marcaA, {
+        tipo: "MARCA",
+      });
+      const respuestaB = await empresasDeLaPersona(mundo.dependencias, enB.sesion, mundo.marcaB, {
+        tipo: "MARCA",
+      });
       expect(respuestaA.ok && respuestaA.dato.empresas.map((e) => e.empresaId)).toEqual([
         deA.empresa,
       ]);
@@ -84,7 +88,9 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const enB = await ingresarEn(mundo, HOST_B);
       const persona = await personaVinculada(mundo, enB.sesion);
       await empresaDeLaMarca(mundo, mundo.marcaA, persona, "GERENTE");
-      const respuesta = await empresasDeLaPersona(mundo.dependencias, enB.sesion, mundo.marcaB);
+      const respuesta = await empresasDeLaPersona(mundo.dependencias, enB.sesion, mundo.marcaB, {
+        tipo: "MARCA",
+      });
       expect(respuesta).toEqual({
         ok: true,
         dato: { personaId: persona, empresas: [] },
@@ -92,6 +98,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const entrada = await resolverEmpresa(mundo.dependencias, {
         sesion: enB.sesion,
         marcaId: mundo.marcaB,
+        duenioDelHost: { tipo: "MARCA" },
         cookieDeEmpresa: null,
       });
       expect(entrada).toEqual({ ok: true, dato: { tipo: "SIN_EMPRESAS" } });
@@ -104,6 +111,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const entrada = await resolverEmpresa(mundo.dependencias, {
         sesion: enB.sesion,
         marcaId: mundo.marcaB,
+        duenioDelHost: { tipo: "MARCA" },
         cookieDeEmpresa: deA.empresa,
       });
       expect(entrada).toEqual({
@@ -117,10 +125,94 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const elegida = await elegirEmpresa(mundo.dependencias, {
         sesion: enB.sesion,
         marcaId: mundo.marcaB,
+        duenioDelHost: { tipo: "MARCA" },
         empresaId: deA.empresa,
       });
       expect(elegida.ok).toBe(false);
       expect(elegida.ok === false && elegida.error.codigo).toBe("SIN_PERMISO");
+    });
+
+    describe("host dedicado a una empresa (dominio propio): solo entra a esa empresa (DEC-0911)", () => {
+      async function dosEmpresas() {
+        const en = await ingresarEn(mundo, HOST_A);
+        const persona = await personaVinculada(mundo, en.sesion);
+        const a = await empresaDeLaMarca(mundo, mundo.marcaA, persona, "GERENTE");
+        const b = await empresaDeLaMarca(mundo, mundo.marcaA, persona, "GERENTE");
+        return { en, a: a.empresa, b: b.empresa };
+      }
+
+      it("una persona con DOS empresas en la marca ve solo la dueña del host; en el host de la marca ve las dos", async () => {
+        const { en, a, b } = await dosEmpresas();
+        const enElHostDeA = await empresasDeLaPersona(mundo.dependencias, en.sesion, mundo.marcaA, {
+          tipo: "EMPRESA",
+          empresaId: a,
+        });
+        expect(enElHostDeA.ok && enElHostDeA.dato.empresas.map((e) => e.empresaId)).toEqual([a]);
+        const enElHostDeB = await empresasDeLaPersona(mundo.dependencias, en.sesion, mundo.marcaA, {
+          tipo: "EMPRESA",
+          empresaId: b,
+        });
+        expect(enElHostDeB.ok && enElHostDeB.dato.empresas.map((e) => e.empresaId)).toEqual([b]);
+        const enLaMarca = await empresasDeLaPersona(mundo.dependencias, en.sesion, mundo.marcaA, {
+          tipo: "MARCA",
+        });
+        expect(enLaMarca.ok && enLaMarca.dato.empresas.map((e) => e.empresaId).sort()).toEqual(
+          [a, b].sort(),
+        );
+      });
+
+      it("con un solo candidato entra directo a la dueña; la cookie de la OTRA empresa es SIN_PERMISO y elegirla también", async () => {
+        const { en, a, b } = await dosEmpresas();
+        const duenio = { tipo: "EMPRESA", empresaId: a } as const;
+        const entra = await resolverEmpresa(mundo.dependencias, {
+          sesion: en.sesion,
+          marcaId: mundo.marcaA,
+          duenioDelHost: duenio,
+          cookieDeEmpresa: null,
+        });
+        expect(entra.ok && entra.dato.tipo === "ENTRA" && entra.dato.empresa.empresaId).toBe(a);
+        const conLaCookieDeB = await resolverEmpresa(mundo.dependencias, {
+          sesion: en.sesion,
+          marcaId: mundo.marcaA,
+          duenioDelHost: duenio,
+          cookieDeEmpresa: b,
+        });
+        expect(conLaCookieDeB.ok === false && conLaCookieDeB.error.codigo).toBe("SIN_PERMISO");
+        const eligeB = await elegirEmpresa(mundo.dependencias, {
+          sesion: en.sesion,
+          marcaId: mundo.marcaA,
+          duenioDelHost: duenio,
+          empresaId: b,
+        });
+        expect(eligeB.ok === false && eligeB.error.codigo).toBe("SIN_PERMISO");
+      });
+
+      it("una persona que NO es de la empresa dueña no tiene empresas en ese host aunque sea de otra de la marca", async () => {
+        const en = await ingresarEn(mundo, HOST_A);
+        const persona = await personaVinculada(mundo, en.sesion);
+        const propia = await empresaDeLaMarca(mundo, mundo.marcaA, persona, "GERENTE");
+        const ajena = await empresaDeLaMarca(
+          mundo,
+          mundo.marcaA,
+          await personaVinculada(mundo, (await ingresarEn(mundo, HOST_A)).sesion),
+          "GERENTE",
+        );
+        const r = await resolverEmpresa(mundo.dependencias, {
+          sesion: en.sesion,
+          marcaId: mundo.marcaA,
+          duenioDelHost: { tipo: "EMPRESA", empresaId: ajena.empresa },
+          cookieDeEmpresa: propia.empresa,
+        });
+        // Con la cookie de SU empresa (que ese host no admite) es SIN_PERMISO; sin cookie, no tiene empresas: en los dos casos no entra.
+        expect(r.ok === false && r.error.codigo).toBe("SIN_PERMISO");
+        const sinCookie = await resolverEmpresa(mundo.dependencias, {
+          sesion: en.sesion,
+          marcaId: mundo.marcaA,
+          duenioDelHost: { tipo: "EMPRESA", empresaId: ajena.empresa },
+          cookieDeEmpresa: null,
+        });
+        expect(sinCookie.ok && sinCookie.dato).toEqual({ tipo: "SIN_EMPRESAS" });
+      });
     });
 
     it("una cookie con la empresa de OTRA persona (misma marca) o inventada es SIN_PERMISO", async () => {
@@ -138,6 +230,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
         const entrada = await resolverEmpresa(mundo.dependencias, {
           sesion: yo.sesion,
           marcaId: mundo.marcaA,
+          duenioDelHost: { tipo: "MARCA" },
           cookieDeEmpresa: cookie,
         });
         expect(entrada.ok, cookie).toBe(false);
@@ -155,7 +248,9 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
         )
       ).rows[0]?.id as string;
       await empresaDeLaMarca(mundo, mundo.marcaA, persona, "GERENTE");
-      const respuesta = await empresasDeLaPersona(mundo.dependencias, yo.sesion, mundo.marcaA);
+      const respuesta = await empresasDeLaPersona(mundo.dependencias, yo.sesion, mundo.marcaA, {
+        tipo: "MARCA",
+      });
       expect(respuesta).toEqual({ ok: true, dato: { personaId: null, empresas: [] } });
     });
 
@@ -164,7 +259,9 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const persona = await personaVinculada(mundo, yo.sesion);
       await empresaDeLaMarca(mundo, mundo.marcaA, persona, "GERENTE");
       await mundo.dueno.query("update persona set activo_global = false where id = $1", [persona]);
-      const respuesta = await empresasDeLaPersona(mundo.dependencias, yo.sesion, mundo.marcaA);
+      const respuesta = await empresasDeLaPersona(mundo.dependencias, yo.sesion, mundo.marcaA, {
+        tipo: "MARCA",
+      });
       expect(respuesta).toEqual({ ok: true, dato: { personaId: null, empresas: [] } });
     });
   });
@@ -177,6 +274,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const entrada = await resolverEmpresa(mundo.dependencias, {
         sesion: yo.sesion,
         marcaId: mundo.marcaA,
+        duenioDelHost: { tipo: "MARCA" },
         cookieDeEmpresa: null,
       });
       expect(entrada.ok && entrada.dato.tipo).toBe("ENTRA");
@@ -207,11 +305,13 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const entradaA = await resolverEmpresa(mundo.dependencias, {
         sesion: enA.sesion,
         marcaId: mundo.marcaA,
+        duenioDelHost: { tipo: "MARCA" },
         cookieDeEmpresa: null,
       });
       const entradaB = await resolverEmpresa(mundo.dependencias, {
         sesion: enB.sesion,
         marcaId: mundo.marcaB,
+        duenioDelHost: { tipo: "MARCA" },
         cookieDeEmpresa: deB.empresa,
       });
       expect(
@@ -232,6 +332,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const entrada = await resolverEmpresa(mundo.dependencias, {
         sesion: yo.sesion,
         marcaId: mundo.marcaA,
+        duenioDelHost: { tipo: "MARCA" },
         cookieDeEmpresa: null,
       });
       if (!entrada.ok || entrada.dato.tipo !== "ENTRA") throw new Error("tenía que entrar");
@@ -254,6 +355,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const sinCookie = await resolverEmpresa(mundo.dependencias, {
         sesion: yo.sesion,
         marcaId: mundo.marcaA,
+        duenioDelHost: { tipo: "MARCA" },
         cookieDeEmpresa: null,
       });
       expect(sinCookie.ok && sinCookie.dato.tipo).toBe("ELEGIR");
@@ -265,12 +367,14 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const elegida = await elegirEmpresa(mundo.dependencias, {
         sesion: yo.sesion,
         marcaId: mundo.marcaA,
+        duenioDelHost: { tipo: "MARCA" },
         empresaId: e2.empresa,
       });
       expect(elegida).toEqual({ ok: true, dato: { empresaId: e2.empresa } });
       const conCookie = await resolverEmpresa(mundo.dependencias, {
         sesion: yo.sesion,
         marcaId: mundo.marcaA,
+        duenioDelHost: { tipo: "MARCA" },
         cookieDeEmpresa: e2.empresa,
       });
       expect(conCookie.ok && conCookie.dato.tipo === "ENTRA" && conCookie.dato.empresa.rol).toBe(
@@ -280,7 +384,9 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const suspendida = await empresaDeLaMarca(mundo, mundo.marcaA, persona, "GERENTE", {
         estado: "SUSPENDED",
       });
-      const lista = await empresasDeLaPersona(mundo.dependencias, yo.sesion, mundo.marcaA);
+      const lista = await empresasDeLaPersona(mundo.dependencias, yo.sesion, mundo.marcaA, {
+        tipo: "MARCA",
+      });
       const estado = lista.ok
         ? lista.dato.empresas.find((e) => e.empresaId === suspendida.empresa)?.estadoEfectivo
         : null;
@@ -292,7 +398,12 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const persona = await personaVinculada(mundo, yo.sesion);
       const e = await empresaDeLaMarca(mundo, mundo.marcaA, persona, "GERENTE");
       const pedir = (empresaId: string) =>
-        elegirEmpresa(mundo.dependencias, { sesion: yo.sesion, marcaId: mundo.marcaA, empresaId });
+        elegirEmpresa(mundo.dependencias, {
+          sesion: yo.sesion,
+          marcaId: mundo.marcaA,
+          duenioDelHost: { tipo: "MARCA" },
+          empresaId,
+        });
       expect(await pedir(e.empresa)).toEqual(await pedir(e.empresa));
       const vacia = await pedir("");
       expect(vacia.ok).toBe(false);
@@ -313,7 +424,9 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const yo = await ingresarEn(mundo, HOST_A, perfilAlAzar({ email }));
 
       // Antes de aceptar, el usuario no tiene persona ni empresas.
-      const antes = await empresasDeLaPersona(mundo.dependencias, yo.sesion, mundo.marcaA);
+      const antes = await empresasDeLaPersona(mundo.dependencias, yo.sesion, mundo.marcaA, {
+        tipo: "MARCA",
+      });
       expect(antes).toEqual({ ok: true, dato: { personaId: null, empresas: [] } });
 
       const aceptada = await aceptarInvitacionDeLaSesion(mundo.dependencias, {
@@ -330,6 +443,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const entrada = await resolverEmpresa(mundo.dependencias, {
         sesion: otraVez.sesion,
         marcaId: mundo.marcaA,
+        duenioDelHost: { tipo: "MARCA" },
         cookieDeEmpresa: null,
       });
       expect(entrada.ok && entrada.dato.tipo === "ENTRA" && entrada.dato.empresa).toMatchObject({
@@ -376,6 +490,7 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
       const entrada = await resolverEmpresa(mundo.dependencias, {
         sesion: yo.sesion,
         marcaId: mundo.marcaA,
+        duenioDelHost: { tipo: "MARCA" },
         cookieDeEmpresa: null,
       });
       expect(entrada.ok && entrada.dato.tipo).toBe("ELEGIR");
@@ -395,7 +510,12 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
         ok: false,
         error: { codigo: "INVITACION_NO_ENCONTRADA" },
       });
-      const sinMembresia = await empresasDeLaPersona(mundo.dependencias, porB.sesion, mundo.marcaB);
+      const sinMembresia = await empresasDeLaPersona(
+        mundo.dependencias,
+        porB.sesion,
+        mundo.marcaB,
+        { tipo: "MARCA" },
+      );
       expect(sinMembresia).toEqual({ ok: true, dato: { personaId: null, empresas: [] } });
       // Por la puerta de su propia marca, la misma invitación sí se acepta.
       const porA = await ingresarEn(mundo, HOST_A, porB.perfil);

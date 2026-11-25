@@ -73,7 +73,7 @@ vi.mock("../../apps/web/servidor/fuente-de-puertas", () => ({
     consultarHost: (host: string, superficie: string) => {
       const m = estado.mundo;
       if (m === null || superficie !== "APP" || host !== HOST_A) return Promise.resolve(ok(null));
-      return Promise.resolve(ok({ marcaId: m.marcaA }));
+      return Promise.resolve(ok({ marcaId: m.marcaA, duenio: { tipo: "MARCA" } }));
     },
     leerMarca: () => Promise.resolve({ nombre: "Hotel del Lago", tema: {}, hostDeApp: null }),
   },

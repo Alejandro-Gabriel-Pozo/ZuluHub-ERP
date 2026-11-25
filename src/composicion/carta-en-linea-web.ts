@@ -36,6 +36,8 @@ import {
 export type DependenciasDeCartaEnLineaWeb = Readonly<{
   casosDeUso: () => Pick<CasosDeUsoDeCatalogo, "guardarCartaPublica">;
   consultas: () => Pick<ConsultasDeCatalogo, "verCartaPublica">;
+  /** La dirección propia activa de la carta de la empresa, o `null` si no tiene (entonces vale la de la marca). */
+  hostPropioDeLaCarta: () => (contexto: ContextoOperativo) => Promise<string | null>;
   respuesta: DependenciasDeRespuesta;
 }>;
 
@@ -113,8 +115,12 @@ export async function verLaCartaEnLinea(
     const vista = await d.consultas().verCartaPublica(contexto, { sucursalId: entrada.sucursalId });
     if (!vista.ok) return conError(vista.error, d);
     const { carta, visibilidad } = vista.valor;
+    // DEC-0913: con dirección propia activa, la carta se publica ahí; sin ella, en el host de la marca (como hasta ahora).
+    const hostPropio = carta === null ? null : await d.hostPropioDeLaCarta()(contexto);
     const direccion =
-      carta === null ? null : direccionPublicaDeLaCarta(entrada.hostDeApp, carta.codigo);
+      carta === null
+        ? null
+        : direccionPublicaDeLaCarta(hostPropio ?? entrada.hostDeApp, carta.codigo);
     return {
       ok: true,
       dato: {
