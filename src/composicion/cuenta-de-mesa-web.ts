@@ -9,6 +9,7 @@ import type {
 } from "../modulos/salon/publico";
 import { aRespuestaDeExcepcion, errorAPublico, type DependenciasDeRespuesta } from "./a-respuesta";
 import {
+  leerElPedidoDeAgregarAlPedido,
   leerElPedidoDeCambiarDeMesa,
   leerElPedidoDeTomarPedido,
   leerElPedidoDeUnaCuenta,
@@ -36,7 +37,10 @@ import { accionDelSalon, traducirErrorDeSalon } from "./errores-de-salon";
  */
 
 export type DependenciasDeCuentaDeMesaWeb = Readonly<{
-  casosDeUso: () => Pick<CasosDeUsoDeSalon, "tomarPedido" | "liberarMesa" | "cambiarDeMesa">;
+  casosDeUso: () => Pick<
+    CasosDeUsoDeSalon,
+    "tomarPedido" | "agregarAlPedido" | "liberarMesa" | "cambiarDeMesa"
+  >;
   consultas: () => Pick<ConsultasDeSalon, "mapaDeMesas" | "fichaDeMesa">;
   respuesta: DependenciasDeRespuesta;
 }>;
@@ -212,6 +216,44 @@ export function tomarElPedido(
         : null;
     },
     (salida) => ({ cuentaId: salida.cuentaId, yaExistia: salida.yaExistia }),
+  );
+}
+
+/**
+ * «Agregar» un producto al pedido: la línea entra en la cuenta con el precio del catálogo (nunca el del navegador) y queda «Sale ahora» o «Sale después». La cuenta tiene que ser de una mesa de la sucursal de trabajo.
+ * Repetir con el mismo `lineaId` devuelve la misma línea (`yaExistia`); sin jornada de caja abierta no se agrega (el genérico).
+ */
+export function agregarAlPedidoDeLaMesa(
+  d: DependenciasDeCuentaDeMesaWeb,
+  contexto: ContextoOperativo,
+  sucursalId: string,
+  crudo: unknown,
+): Promise<
+  Respuesta<
+    Readonly<{
+      posicion: number;
+      precioUnitario: { moneda: string; monto: string };
+      totalProvisorio: { moneda: string; monto: string };
+      yaExistia: boolean;
+    }>
+  >
+> {
+  return accionDelSalon(
+    d.respuesta,
+    sucursalId,
+    crudo,
+    leerElPedidoDeAgregarAlPedido,
+    async (pedido) => {
+      const es = await laCuentaEsDeLaSucursal(d, contexto, sucursalId, pedido.cuentaId);
+      if (!es.ok) return es;
+      return es.valor ? d.casosDeUso().agregarAlPedido(contexto, pedido) : null;
+    },
+    (salida) => ({
+      posicion: salida.posicion,
+      precioUnitario: importe(salida.precioUnitario),
+      totalProvisorio: importe(salida.totalProvisorio),
+      yaExistia: salida.yaExistia,
+    }),
   );
 }
 

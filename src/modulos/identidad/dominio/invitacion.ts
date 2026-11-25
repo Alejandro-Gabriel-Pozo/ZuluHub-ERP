@@ -19,7 +19,7 @@ import type {
   ErrorDeSucursalesDeInvitacion,
   RolDistintoAlAnterior,
 } from "./errores";
-import type { Persona, RolDeEmpresa } from "./membresia";
+import type { Persona, RolDeEmpresa, RolDeLaMembresia } from "./membresia";
 import {
   type Invitacion,
   type NuevaInvitacion,
@@ -74,7 +74,7 @@ export type DatosDeAceptacion = Readonly<{
    * El rol que la persona tenía en cada empresa donde ya tuvo una membresía APAGADA. Reactivarla
    * con otro rol no se soporta (el rol de una membresía no se cambia). Sin entrada: nunca fue miembro.
    */
-  rolesAnteriores: ReadonlyMap<EmpresaId, RolDeEmpresa>;
+  rolesAnteriores: ReadonlyMap<EmpresaId, RolDeLaMembresia>;
 }>;
 
 export type DecisionDeAceptacion =
@@ -155,7 +155,7 @@ export type DatosDeInvitacionDeUsuario = Readonly<{
   /** El email ya pertenece a un miembro ACTIVO de la empresa. */
   esMiembroActivo: boolean;
   /** El rol de la membresía APAGADA que esa persona tuvo en la empresa; `null` si nunca la tuvo (o está activa). */
-  rolAnterior: RolDeEmpresa | null;
+  rolAnterior: RolDeLaMembresia | null;
   /**
    * La invitación guardada como `PENDIENTE` que ya incluye a esa empresa para ese email. La base
    * admite a lo sumo una (índice único parcial); puede estar vencida (el vencimiento no se guarda).

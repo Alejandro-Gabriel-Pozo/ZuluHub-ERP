@@ -31,6 +31,10 @@ const REVERSION = join(
   import.meta.dirname,
   "../../migraciones/reversiones/0094_revertir_permisos_configurables.sql",
 );
+const REVERSION_0097 = join(
+  import.meta.dirname,
+  "../../migraciones/reversiones/0097_revertir_roles_propios_de_la_empresa.sql",
+);
 const MIGRACION = join(import.meta.dirname, "../../migraciones/0094_permisos_configurables.sql");
 const SELLOS = join(import.meta.dirname, "../../migraciones/selladas.json");
 
@@ -75,6 +79,14 @@ const SOLO_GERENTE_ANEXO_A = [
   "cajas.desactivar",
   "compras.configurar",
 ].sort();
+/** Los 5 pisos que suma 0097 (T4): las acciones de roles y la asignación de rol son solo del gerente. */
+const SOLO_GERENTE_DE_0097 = [
+  "roles.archivar",
+  "roles.crear",
+  "roles.editar",
+  "roles.ver",
+  "usuarios.asignar_rol",
+];
 const TODOS_ANEXO_A = [
   "gerencia.ver_traspaso",
   "gerencia.aceptar_traspaso",
@@ -398,12 +410,12 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
         "select accion, tipo from piso_de_plataforma order by accion",
       );
       expect(rows.filter((r) => r.tipo === "SOLO_GERENTE").map((r) => r.accion)).toEqual(
-        SOLO_GERENTE_ANEXO_A,
+        [...SOLO_GERENTE_ANEXO_A, ...SOLO_GERENTE_DE_0097].sort(),
       );
       expect(rows.filter((r) => r.tipo === "TODOS_LOS_ROLES").map((r) => r.accion)).toEqual(
         TODOS_ANEXO_A,
       );
-      expect(rows).toHaveLength(23);
+      expect(rows).toHaveLength(28);
       // El piso solo-gerente es exactamente «lo que hoy solo tiene el gerente»; los de todos están entre los que hoy tienen los tres.
       expect(SOLO_GERENTE_ANEXO_A).toEqual(
         TODAS.filter(
@@ -800,7 +812,7 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
       const s = await comoApp(empresa);
       try {
         const p = await s.directo("select count(*)::int as n from piso_de_plataforma");
-        expect(p.ok && p.rows[0]).toEqual({ n: 23 });
+        expect(p.ok && p.rows[0]).toEqual({ n: 28 });
         const v = await s.directo("select count(*)::int as n from version_de_plantilla");
         expect(v.ok && v.rows[0]).toEqual({ n: 2 });
       } finally {
@@ -947,13 +959,16 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
 
   describe("la migración y su reversión", () => {
     it("la migración no cambia lo que existía: la membresía y las invitaciones siguen con sus tres roles", async () => {
-      const { rows } = await dueno.query<{ def: string }>(
-        "select pg_get_constraintdef(oid) as def from pg_constraint where conname in ('membresia_rol_ck', 'invitacion_empresa_rol_ck') order by conname",
+      const { rows } = await dueno.query<{ conname: string; def: string }>(
+        "select conname, pg_get_constraintdef(oid) as def from pg_constraint where conname in ('membresia_rol_ck', 'invitacion_empresa_rol_ck') order by conname",
       );
       expect(rows).toHaveLength(2);
-      for (const r of rows) expect(r.def).not.toContain("PROPIO");
+      // `PROPIO` lo suma 0097 (T4) solo a la membresía; la invitación sigue con los tres roles base.
+      const defs = Object.fromEntries(rows.map((r) => [r.conname, r.def]));
+      expect(defs["invitacion_empresa_rol_ck"]).not.toContain("PROPIO");
+      expect(defs["membresia_rol_ck"]).toContain("PROPIO");
       const c = await dueno.query(
-        "select 1 from information_schema.columns where table_name in ('membresia', 'invitacion_empresa') and column_name = 'rol_propio_id'",
+        "select 1 from information_schema.columns where table_name = 'invitacion_empresa' and column_name = 'rol_propio_id'",
       );
       expect(c.rowCount).toBe(0);
     });
@@ -963,6 +978,10 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
       const c = new pg.Client({ connectionString: aparte.base.dueno });
       await c.connect();
       try {
+        // 0097 (T4) se apoya en 0094: su reversión va ANTES (lo dice la de 0094). Esta prueba es de 0094 sola.
+        await c.query("begin");
+        await c.query(await readFile(REVERSION_0097, "utf8"));
+        await c.query("commit");
         const sql = await readFile(REVERSION, "utf8");
         const correr = async () => {
           await c.query("begin");

@@ -3,7 +3,7 @@ import {
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { formatearImporte } from "../../patrones/formato-fiscal";
-import { RUTA_DEL_SALON } from "./rutas-del-salon";
+import { RUTA_DEL_SALON, rutaDeLaCuentaDeMesa } from "./rutas-del-salon";
 
 /**
  * El modelo de vista del mapa de mesas del salón (SAL-A; maqueta `salon.html`, aprobada el 09/11/2026): de lo que entrega el servidor (`cargarElMapaDeMesas`), lo que se ve y NADA más. Puro: sin
@@ -14,7 +14,7 @@ import { RUTA_DEL_SALON } from "./rutas-del-salon";
  *  - **Cada estado se lee con ícono y texto**, nunca solo con color (`Insignia`). Un estado que esta pantalla no conoce no se inventa: sale sin rótulo y el servidor sigue siendo la fuente.
  *  - **El dinero llega como texto decimal con su moneda** y se muestra con `formatearImporte`; nunca pasa por `number`. Una moneda distinta de ARS no se muestra como pesos: la mesa sale sin total.
  *  - **Una mesa unida dice a qué mesa** («Unida a la mesa 5») y **una dividida lista sus cuentas** («Cuenta 1 · $ 100,00»); ninguna se oculta ni se suma.
- *  - **Todavía no se toca una mesa**: la ficha de la mesa es SAL-B; sin pantalla de destino no hay enlace (una entrada hacia una página que no existe sería una entrada rota).
+ *  - **Cada mesa lleva a su ficha** (SAL-B, `/salon/cuenta/<id>`; el id viaja codificado): también la unida y la dividida (la ficha las muestra de solo lectura).
  *  - Sin el nombre del mozo ni los minutos abiertos: el mapa solo trae el id del mozo y esos rótulos no tienen texto aprobado (inventario `TX-S2-01`, pendiente). Se agregan cuando se acepten.
  */
 
@@ -65,6 +65,8 @@ const importeDeLaMesa = (i: Importe | undefined): string | null =>
 
 type FilaDelMapa = Readonly<{
   id: string;
+  /** La ficha de la mesa. */
+  href: string;
   /** «Mesa 7». */
   titulo: string;
   /** El estado: su texto y su tono (el tono pone el ícono). `null` si el estado no se conoce. */
@@ -115,6 +117,7 @@ function armarLaFila(d: DiccionarioResuelto, mesa: MesaDelMapaDeLaPantalla): Fil
         };
   return {
     id: mesa.mesaId,
+    href: rutaDeLaCuentaDeMesa(mesa.mesaId),
     titulo: texto(d, "salon.texto.admin_mesa_numero", { numero: String(mesa.numero) }),
     estado: rotulo,
     total: importeDeLaMesa(mesa.total),

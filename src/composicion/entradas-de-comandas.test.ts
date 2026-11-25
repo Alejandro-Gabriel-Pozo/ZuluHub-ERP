@@ -8,6 +8,7 @@ import {
   leerElPedidoDeImprimir,
   leerElPedidoDeLosTrabajos,
   leerElPedidoDePedirQueSalga,
+  leerElPedidoDeQuitarSinEnviar,
   leerElPedidoDeRegistrarImpresora,
   leerElPedidoDeUnaImpresora,
   leerElPedidoDelDocumento,
@@ -107,6 +108,20 @@ describe("entradas de las comandas y de la impresión", () => {
     }
     for (const salida of ["ESPERA", "ahora", "", undefined, 1]) {
       expect(leerElPedidoDeCambiarSalida({ ...base, salida }).ok).toBe(false);
+    }
+  });
+
+  it("quitar sin enviar: solo la cuenta y la línea; el motivo y lo demás se descartan", () => {
+    expect(
+      leerElPedidoDeQuitarSinEnviar({
+        cuentaId: ID,
+        lineaId: OTRO,
+        motivo: "otro",
+        sucursalId: "x",
+      }),
+    ).toEqual({ ok: true, valor: { cuentaId: ID, lineaId: OTRO } });
+    for (const malo of [{ cuentaId: ID }, { cuentaId: ID, lineaId: "x" }, undefined, null]) {
+      expect(leerElPedidoDeQuitarSinEnviar(malo).ok).toBe(false);
     }
   });
 

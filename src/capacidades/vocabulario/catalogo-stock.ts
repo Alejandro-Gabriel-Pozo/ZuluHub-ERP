@@ -2,8 +2,8 @@
  * Los textos del módulo `stock` (prefijo `stock.`, E5 §10). Ninguno es nuevo: todos salen de la lista que el dueño aprobó el 09/11/2026 en el
  * prototipo `stock.html`, sección «Textos nuevos» (decisión D125), que es la fuente de cada grupo de abajo (`10-ux-ui/prototipos-gastronomia/
  * stock.html:266`, repositorio de documentos, una fila por grupo). Lo que esa lista no trae no se agrega acá: los errores sin texto aprobado
- * (`STOCK_SIN_DEPOSITO_DE_VENTA`, `CONTEO_SIN_REGISTROS`, `CLAVE_REUTILIZADA`, `*_DESACTUALIZADA`, `ARTICULO_NO_CONTROLADO`, `CLASE_NO_CONTROLABLE`,
- * `MOVIMIENTO_NO_ANULABLE`, `MOVIMIENTO_YA_ANULADO`, `DEPOSITO_CON_EXISTENCIA`, `FUNCION_NO_INCLUIDA`…) se muestran con el mensaje genérico que ya
+ * (`STOCK_SIN_DEPOSITO_DE_VENTA`, `CONTEO_SIN_REGISTROS`, `CLAVE_REUTILIZADA`, `*_DESACTUALIZADA` salvo el del depósito, `ARTICULO_NO_CONTROLADO`, `CLASE_NO_CONTROLABLE`,
+ * `MOVIMIENTO_NO_ANULABLE`, `MOVIMIENTO_YA_ANULADO`, `FUNCION_NO_INCLUIDA`…) se muestran con el mensaje genérico que ya
  * existe, y el aviso «falta receta» no tiene pantalla (contrato `excepciones`; D175). Cada clave de motivo es el código del motivo sembrado en
  * minúsculas (`COMPRA` → `stock.motivo.compra`) y cada clave de uso de depósito, el código del uso (`CUARENTENA` → `stock.deposito.cuarentena`).
  */
@@ -72,6 +72,23 @@ export const TEXTOS_DE_STOCK = {
   "stock.error.cantidad_invalida": { porDefecto: "La cantidad tiene que ser mayor que cero" },
   "stock.error.conteo_en_curso": { porDefecto: "Ya hay un conteo abierto en este depósito" },
   "stock.error.nombre_duplicado": { porDefecto: "Ya existe un depósito con ese nombre" },
+  // Gestión de depósitos (STK-A): los tres errores que el dueño aprobó el 25/11/2026 (N-20 y N-21, fila 449 de `decisiones-del-dueno-2026-11.md`) y el que aceptó el orquestador por delegación (N-23, fila
+  // 173); el cuarto error de esa pantalla («tiene un conteo abierto») reutiliza `stock.error.conteo_en_curso`. Cada uno lo consume su código público (`respuesta-de-stock.ts`).
+  "stock.error.deposito_con_existencia": {
+    porDefecto: "El depósito tiene existencia",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-1018" },
+  },
+  "stock.error.es_el_de_venta": {
+    porDefecto: "No se puede desactivar el depósito de venta",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-1018" },
+  },
+  "stock.error.deposito_desactualizado": {
+    porDefecto: "Otra persona modificó este depósito. Actualizá la pantalla",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-1018" },
+  },
   // stock.html, nota final de «Textos nuevos» («Esta acción no está permitida» ya estaba aprobado), sin el punto final de esa nota.
   "stock.error.sin_permiso": { porDefecto: "Esta acción no está permitida" },
 

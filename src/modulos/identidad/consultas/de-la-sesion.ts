@@ -1,4 +1,4 @@
-import type { RolDeEmpresa } from "../../../capacidades/permisos/roles";
+import type { RolDeLaMembresia } from "../../../capacidades/permisos/roles";
 import type { ContextoDeSesion } from "../../../contexto/contexto";
 import {
   estadoEfectivo,
@@ -31,7 +31,7 @@ export type DependenciasDeConsultasDeSesion = Readonly<{
 export type EmpresaDeLaLista = Readonly<{
   empresaId: EmpresaId;
   nombre: string;
-  rol: RolDeEmpresa;
+  rol: RolDeLaMembresia;
   /** El estado de la propia empresa. */
   estado: EstadoDeEmpresa;
   /** El estado efectivo (empresa y tenant juntos): `OPERA` o por qué no (un tenant suspendido, por ejemplo). */
