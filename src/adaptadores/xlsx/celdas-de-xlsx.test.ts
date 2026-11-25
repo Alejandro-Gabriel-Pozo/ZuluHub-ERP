@@ -62,10 +62,17 @@ describe("el texto: sin fórmulas", () => {
     "%j lleva una comilla simple antepuesta",
     (t) => expect(textoInofensivo(t)).toBe(`'${t}`),
   );
-  it.each(["Carnes del Sur", "Bife angosto", "1+1", "a=b", "'ya con comilla"])(
-    "%j queda igual",
-    (t) => expect(textoInofensivo(t)).toBe(t),
-  );
+  it.each([
+    "Carnes del Sur",
+    "Bife angosto",
+    "1+1",
+    "a=b",
+    "'ya con comilla",
+    "(Oferta) Bife",
+    "2x1",
+    " con espacio",
+    "Ñandú",
+  ])("%j queda igual", (t) => expect(textoInofensivo(t)).toBe(t));
 });
 
 describe("la fecha civil: el día, sin corrimiento", () => {

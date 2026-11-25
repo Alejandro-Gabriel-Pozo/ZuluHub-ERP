@@ -5,7 +5,7 @@ import type { Celda } from "../../primitivas/planilla/celda";
  *
  *  1. El dinero y las cantidades salen como NÚMERO solo si el texto exacto de la base vuelve idéntico al leerlo como número y no pasa de 15 dígitos significativos; si no, como TEXTO
  *     exacto. Nunca se escribe un importe distinto del que guarda la base. Previene: un importe de 17 dígitos redondeado en silencio por el número binario de Excel.
- *  2. Un texto que empieza con `=`, `+`, `-`, `@`, tabulador o retorno de carro lleva una comilla simple antepuesta: queda como texto inofensivo si el archivo se pega en otra
+ *  2. Un texto cuyo primer carácter no es de los permitidos (letra, dígito, espacio o un signo de apertura) lleva una comilla simple antepuesta; en particular `=`, `+`, `-`, `@`, tabulador y retorno de carro: queda como texto inofensivo si el archivo se pega en otra
  *     planilla o se guarda como CSV. Previene la inyección de fórmulas (un proveedor llamado `=HYPERLINK(...)`). Los números no pasan por esta regla (un importe negativo es un número).
  *  3. Una fecha es una fecha civil sin hora ni zona: se escribe a medianoche UTC del día y su formato es `aaaa-mm-dd`, así el número de serie es el del día y no corre por la zona del servidor.
  *
@@ -21,13 +21,14 @@ export type CeldaDeLaBiblioteca =
 export const FORMATO_DE_FECHA = "yyyy-mm-dd";
 const FORMATO_POR_DECIMALES = { 2: "0.00", 4: "0.0000", 6: "0.000000" } as const;
 const DIGITOS_EXACTOS_DE_UN_NUMERO = 15;
-const EMPIEZA_COMO_FORMULA = /^[=+\-@\t\r]/;
+/** Lo que se PERMITE como primer carácter de un texto sin tocarlo: letra, dígito, espacio y los signos de apertura comunes. Cualquier otro primer carácter (`=`, `+`, `-`, `@`, tabulador, retorno de carro…) lleva la comilla. */
+const PRIMER_CARACTER_SEGURO = /^[\p{L}\p{N} ("'.#«¿¡[]/u;
 const FORMA_DE_UN_DECIMAL = /^-?\d+(?:\.\d+)?$/;
 const FORMA_DE_UNA_FECHA = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /** El texto que se escribe en una celda de texto: con la comilla simple antepuesta si podría leerse como fórmula. */
 export const textoInofensivo = (texto: string): string =>
-  EMPIEZA_COMO_FORMULA.test(texto) ? `'${texto}` : texto;
+  texto === "" || PRIMER_CARACTER_SEGURO.test(texto) ? texto : `'${texto}`;
 
 /** El decimal sin ceros de más (`266252.40` → `266252.4`, `0.00` → `0`), que es como lo escribe `String(Number(...))`. */
 function canonico(texto: string): string {
