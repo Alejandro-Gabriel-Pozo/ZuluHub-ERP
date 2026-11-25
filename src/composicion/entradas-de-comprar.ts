@@ -117,7 +117,7 @@ const formaDeLineaDeFactura = z.strictObject({
   alicuota: z.enum(ALICUOTAS_DE_COMPRA).nullish(),
 });
 
-const formaDeFactura = z.strictObject({
+export const formaDeFactura = z.strictObject({
   tipo: z.enum(TIPOS_DE_COMPROBANTE_DE_PROVEEDOR),
   puntoDeVenta: entero,
   numero: entero,

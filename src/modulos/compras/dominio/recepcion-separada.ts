@@ -90,20 +90,27 @@ export function estadoDeRecepcionSeparada(
 }
 
 /**
- * El estado derivado de una factura de N3 o N4: `ANULADA`, y, registrada, cuánto de lo facturado ya se concilió con lo recibido: nada → `FACTURADA_FALTA_RECIBIR` (el texto
- * aprobado de la maqueta «Facturada, falta recibir»), todo → `CONCILIADA`, algo → `CONCILIADA_EN_PARTE` (códigos: su texto lo decide la pantalla).
+ * El estado derivado de una factura de N3 o N4: `ANULADA`, y, registrada, cuánto de lo facturado ya se concilió con lo recibido: nada conciliado y NADA recibido todavía de sus productos →
+ * `FACTURADA_FALTA_RECIBIR` («Facturada, falta recibir», aprobado en la maqueta); nada conciliado pero ya hay mercadería recibida sin repartir → `FALTA_CONCILIAR` («Falta conciliar»,
+ * aprobado por el dueño el 25/11/2026); algo → `CONCILIADA_EN_PARTE` («Conciliada en parte», aprobado por el dueño); todo → `CONCILIADA` («Todo coincide»).
+ * `haySinConciliar` es lo que lee la lista (hay recibido CONFIRMADO del mismo proveedor y de los productos de la factura sin asignar, dentro del alcance de quien mira); sin dato, falla hacia «falta recibir».
  */
 export type EstadoDeFacturaSeparada =
-  "ANULADA" | "FACTURADA_FALTA_RECIBIR" | "CONCILIADA_EN_PARTE" | "CONCILIADA";
+  "ANULADA" | "FACTURADA_FALTA_RECIBIR" | "FALTA_CONCILIAR" | "CONCILIADA_EN_PARTE" | "CONCILIADA";
 
 export function estadoDeFacturaSeparada(
   estado: "REGISTRADO" | "ANULADO",
   facturada: string,
   asignada: string,
+  haySinConciliar = false,
 ): EstadoDeFacturaSeparada {
   if (estado === "ANULADO") return "ANULADA";
   const total = leerCantidad(facturada);
   const hecha = leerCantidad(asignada);
-  if (total === null || hecha === null || hecha === 0n) return "FACTURADA_FALTA_RECIBIR";
+  if (total === null || hecha === null || hecha === 0n) {
+    return haySinConciliar && total !== null && hecha !== null
+      ? "FALTA_CONCILIAR"
+      : "FACTURADA_FALTA_RECIBIR";
+  }
   return hecha >= total ? "CONCILIADA" : "CONCILIADA_EN_PARTE";
 }

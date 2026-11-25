@@ -12,7 +12,16 @@ import {
 import { useEnvioConClave, type EnvioConClave } from "../../../patrones/useEnvioConClave";
 import type { PedidoDeCompra, PedidoDeRecepcion } from "./modelo-de-nueva-compra";
 
-/** La acción del servidor que registra la compra. Recibe el pedido con la clave; devuelve la respuesta ya traducida. */
+/**
+ * Lo que sale con la clave del intento: el pedido de «Nueva compra», el de «Recibir» o el de otra pantalla con el mismo mecanismo (la factura de la empresa y su conciliación, Compras 4). El que lo manda arma el
+ * pedido completo y lo valida el servidor con su lista de permitidos.
+ */
+type PedidoQueSale = PedidoDeCompra | PedidoDeRecepcion | Readonly<Record<string, unknown>>;
+
+/**
+ * La acción del servidor que registra la compra. Recibe el pedido con la clave; devuelve la respuesta ya traducida. El `recepcionId` es el id de lo que se creó: lo de «Facturas» (Compras 4) lo trae con el id de la
+ * factura o de la conciliación (cada pantalla adapta su respuesta con `comoRegistro`).
+ */
 export type RegistrarLaCompra = (
   entrada: unknown,
 ) => Promise<Respuesta<Readonly<{ recepcionId: string; yaExistia: boolean }>>>;
@@ -22,7 +31,7 @@ type CompraHecha = Readonly<{ recepcionId: string }>;
 export type EnvioDeLaCompra = Readonly<{
   envio: EnvioConClave<CompraHecha, ErrorPublico>;
   /** Manda la compra con este pedido. El pedido se FIJA con la clave en el primer envío del intento y se reusa igual en cada reintento. */
-  comprar: (pedido: PedidoDeCompra | PedidoDeRecepcion) => void;
+  comprar: (pedido: PedidoQueSale) => void;
   /** El último error inesperado devuelto como valor, mientras el intento sigue incierto (para mostrar su referencia `PD-…`). */
   inesperado: ErrorPublico | null;
 }>;
@@ -43,8 +52,8 @@ export function useEnvioDeLaCompra({
   diccionario: DiccionarioResuelto;
   esperaEntreVerificacionesMs?: number | undefined;
 }>): EnvioDeLaCompra {
-  const delToque = useRef<PedidoDeCompra | PedidoDeRecepcion | null>(null);
-  const fijado = useRef<PedidoDeCompra | PedidoDeRecepcion | null>(null);
+  const delToque = useRef<PedidoQueSale | null>(null);
+  const fijado = useRef<PedidoQueSale | null>(null);
   const [inesperado, setInesperado] = useState<ErrorPublico | null>(null);
 
   const envio = useEnvioConClave<CompraHecha, ErrorPublico>({

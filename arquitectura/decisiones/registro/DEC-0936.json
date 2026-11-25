@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0936",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "La ficha de las pantallas Facturas: lista, Cargar factura sin sucursal, detalle con conciliaciones y Conciliar. Aceptada por el orquestador por delegación.",
+  "que_cambia": "Una ficha nueva en src/capacidades/pantallas con las cuatro rutas. Revertir: quitar la ficha y las rutas.",
+  "donde": "ficha-de-facturas.ts; delegación de pantallas DDD fila 174, orquestador y chat del dueño del 25/11/2026"
+}

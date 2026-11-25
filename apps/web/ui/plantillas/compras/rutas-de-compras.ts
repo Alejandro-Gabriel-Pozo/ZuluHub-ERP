@@ -24,6 +24,20 @@ export const direccionDeLaListaDeRecepciones = (despues: string | null): string 
     ? RUTA_DE_RECEPCIONES
     : `${RUTA_DE_RECEPCIONES}?${new URLSearchParams([["despues", despues]]).toString()}`;
 
+/** «Facturas» (Compras 4, la factura de la empresa y su conciliación): la lista, «Cargar factura», el detalle y «Conciliar». El id es un UUID que sale de la consulta del servidor, nunca de un texto libre. */
+export const RUTA_DE_FACTURAS = `${RUTA_DE_COMPRAS}/facturas`;
+export const RUTA_DE_CARGAR_FACTURA = `${RUTA_DE_FACTURAS}/nueva`;
+export const rutaDeLaFactura = (comprobanteId: string): string =>
+  `${RUTA_DE_FACTURAS}/${comprobanteId}`;
+export const rutaDeConciliar = (comprobanteId: string): string =>
+  `${rutaDeLaFactura(comprobanteId)}/conciliar`;
+
+/** La lista de facturas; con cursor, la página que sigue (lo único que la dirección aporta). */
+export const direccionDeLaListaDeFacturas = (despues: string | null): string =>
+  despues === null
+    ? RUTA_DE_FACTURAS
+    : `${RUTA_DE_FACTURAS}?${new URLSearchParams([["despues", despues]]).toString()}`;
+
 export const rutaDeLaCompra = (recepcionId: string): string => `${RUTA_DE_COMPRAS}/${recepcionId}`;
 
 /** El formulario de «Corregir» una línea de la compra (Compras PR 10): el número de línea es un entero que sale de la ficha. */

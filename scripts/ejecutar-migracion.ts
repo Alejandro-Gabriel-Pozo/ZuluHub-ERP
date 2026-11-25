@@ -34,9 +34,10 @@ import {
   NOMBRE_DE_LA_CADENA_DE_DUENO,
   generarSecretos,
   leerTokenDeVercel,
-  leerDestino,
+  leerPedidoDeVercel,
   planificar,
   type Destino,
+  type PedidoDeVercel,
   type ValorACargar,
 } from "../src/adaptadores/vercel/plan-de-variables.ts";
 
@@ -106,7 +107,7 @@ export type EntradaDeMigracion = Readonly<{
 
 const USO =
   "uso: migrar-base --ver | --aplicar | --preparar-roles [--con-autenticacion] [--con-respaldo] [--rotar] [--directa] [--diagnostico] " +
-  "[--vercel <preview|production> [--confirmo production] [--secretos]]";
+  "[--vercel <preview|production|cliente-<codigo>> [--confirmo <lo mismo>] [--secretos]]";
 
 type Pedido = Readonly<{
   modo: "--ver" | "--aplicar" | "--preparar-roles";
@@ -117,7 +118,7 @@ type Pedido = Readonly<{
   directa: boolean;
   diagnostico: boolean;
   /** El destino de Vercel pedido, o `null` si no se pidió cargar en Vercel. */
-  vercel: Destino | null;
+  vercel: PedidoDeVercel | null;
   secretos: boolean;
 }>;
 
@@ -136,7 +137,7 @@ const EXTRAS = [
 const CON_VALOR = ["--vercel", "--confirmo"] as const;
 
 const SIN_CONFIRMACION =
-  "cargar en PRODUCTION se confirma escribiendo también --confirmo production (así un comando de " +
+  "cargar en PRODUCTION se confirma escribiendo también --confirmo production, y en un cliente, --confirmo con el mismo texto que --vercel (así un comando de " +
   "preview copiado con una sola palabra cambiada no llega a producción sin querer)";
 
 /**
@@ -163,10 +164,10 @@ function leerPedido(argumentos: readonly string[]): Pedido | string {
   const modo = modos[0] as Pedido["modo"];
   if (modo !== "--preparar-roles" && extras.length > 0) return USO;
 
-  const vercel = leerDestino(valores.get("--vercel"));
+  const vercel = leerPedidoDeVercel(valores.get("--vercel"));
   const confirmo = valores.get("--confirmo");
   if (extras.includes("--vercel") && vercel === null) {
-    return "--vercel acepta solo preview o production (en minúscula).";
+    return "--vercel acepta solo preview, production o un cliente de la lista (en minúscula).";
   }
   if (vercel === null && (extras.includes("--secretos") || confirmo !== undefined)) {
     return "--secretos y --confirmo se usan solo junto con --vercel.";
@@ -177,9 +178,11 @@ function leerPedido(argumentos: readonly string[]): Pedido | string {
       "a Vercel (va al secreto del Environment «respaldo» de GitHub). Corré el comando sin --vercel."
     );
   }
-  if (vercel === "production" && confirmo !== "production") return SIN_CONFIRMACION;
-  if (vercel === "preview" && confirmo !== undefined) {
-    return "--confirmo se usa solo con --vercel production.";
+  if (vercel !== null && vercel.texto !== "preview" && confirmo !== vercel.texto) {
+    return SIN_CONFIRMACION;
+  }
+  if (vercel?.texto === "preview" && confirmo !== undefined) {
+    return "--confirmo se usa solo con --vercel production o de un cliente.";
   }
   return {
     modo,
@@ -307,6 +310,7 @@ export async function ejecutarMigracion(entrada: EntradaDeMigracion): Promise<nu
     tapados.push(token);
     const cliente = crearClienteVercel({
       token,
+      proyecto: pedido.vercel.proyecto,
       fetch: entrada.fetch ?? fetch,
       ...(entrada.plazoDeVercelEnMs === undefined ? {} : { plazoEnMs: entrada.plazoDeVercelEnMs }),
       ...(entrada.esperarEntreLecturas === undefined
@@ -314,7 +318,7 @@ export async function ejecutarMigracion(entrada: EntradaDeMigracion): Promise<nu
         : { esperar: entrada.esperarEntreLecturas }),
     });
     info(
-      `Se cargará en Vercel: ${pedido.vercel.toUpperCase()} (proyecto pedernal-erp, equipo ${EQUIPO_DE_VERCEL}).`,
+      `Se cargará en Vercel: ${pedido.vercel.destino.toUpperCase()} (proyecto ${pedido.vercel.etiqueta}, equipo ${EQUIPO_DE_VERCEL}).`,
     );
     const lectura = await cliente.listar();
     if (!lectura.ok) {
@@ -322,7 +326,7 @@ export async function ejecutarMigracion(entrada: EntradaDeMigracion): Promise<nu
       error("RESULTADO: FALLA (no se cambió nada).");
       return 1;
     }
-    vercel = { cliente, destino: pedido.vercel };
+    vercel = { cliente, destino: pedido.vercel.destino };
   }
 
   const verSolo = pedido.modo === "--ver";

@@ -129,6 +129,40 @@ export const TEXTOS_DE_COMPRAS = {
     porDefecto: "Facturada",
     fuente: { decision: "DEC-0906" },
   },
+  // «Facturas» y «Conciliar» (Compras 4; maqueta compra-conciliar.html): «Conciliar», «Confirmar conciliación», «Facturado», «Recibido» y «Todo coincide» ya estaban aprobados en compra.html (09/11/2026); «Falta conciliar» y «Conciliada en parte» los aprobó el dueño el 25/11/2026; el resto lo propuso el ingeniero y lo aceptó el orquestador por delegación (DDD:173). DEC-0935.
+  "compras.factura.titulo_lista": { porDefecto: "Facturas", fuente: { decision: "DEC-0935" } },
+  "compras.conciliacion.conciliar": { porDefecto: "Conciliar", fuente: { decision: "DEC-0935" } },
+  "compras.conciliacion.validar_conciliacion": {
+    porDefecto: "Confirmar conciliación",
+    fuente: { decision: "DEC-0935" },
+  },
+  "compras.conciliacion.facturado": { porDefecto: "Facturado", fuente: { decision: "DEC-0935" } },
+  "compras.conciliacion.recibido": { porDefecto: "Recibido", fuente: { decision: "DEC-0935" } },
+  "compras.conciliacion.todo_coincide": {
+    porDefecto: "Todo coincide",
+    fuente: { decision: "DEC-0935" },
+  },
+  "compras.conciliacion.a_conciliar": {
+    porDefecto: "A conciliar",
+    fuente: { decision: "DEC-0935" },
+  },
+  "compras.conciliacion.conciliado": { porDefecto: "Conciliado", fuente: { decision: "DEC-0935" } },
+  "compras.conciliacion.conciliaciones": {
+    porDefecto: "Conciliaciones",
+    fuente: { decision: "DEC-0935" },
+  },
+  "compras.conciliacion.anular": {
+    porDefecto: "Anular conciliación",
+    fuente: { decision: "DEC-0935" },
+  },
+  "compras.conciliacion.estado_falta_conciliar": {
+    porDefecto: "Falta conciliar",
+    fuente: { decision: "DEC-0935" },
+  },
+  "compras.conciliacion.estado_conciliada_en_parte": {
+    porDefecto: "Conciliada en parte",
+    fuente: { decision: "DEC-0935" },
+  },
   "compras.recepcion.caja_de_peso_variable": { porDefecto: "Caja de peso variable" },
   "compras.recepcion.el_peso_real_se_carga_al_recibir": {
     porDefecto: "el peso real se carga al recibir",

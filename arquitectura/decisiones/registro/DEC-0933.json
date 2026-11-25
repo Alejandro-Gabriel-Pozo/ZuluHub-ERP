@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0933",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "Estados de la factura de la empresa: Facturada, falta recibir; Falta conciliar; Conciliada en parte; Todo coincide; Anulada. Falta conciliar y Conciliada en parte los aprobó el dueño (pregunta 4).",
+  "que_cambia": "Derivado, no se guarda; cuenta solo el alcance de quien mira. Hoy solo afecta a quien tiene alcance acotado (un operador de una sola sucursal ve Facturada, falta recibir si lo recibido esta en otra). Revertir: pasar TODAS en la lectura.",
+  "donde": "recepcion-separada.ts, repositorio-de-lecturas-separadas.ts, compras-n3-listas.test.ts; pregunta 4 de Compras 4, respuesta Ok del dueño en el chat del orquestador el 25/11/2026"
+}

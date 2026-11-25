@@ -38,6 +38,8 @@ export async function registrarDiferenciasDeLaConciliacion(
   const recibidas = await tx.recepcionesSeparadas.lineasConciliables(
     empresaId,
     conciliacion.proveedorId,
+    // Todas: las diferencias se miden sobre lo recibido de la empresa, no sobre el alcance de quien concilia.
+    "TODAS",
   );
   const lineas: LineaConciliada[] = detalle.map((l) => ({
     numero: l.numero,

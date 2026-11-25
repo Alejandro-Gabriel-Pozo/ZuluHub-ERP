@@ -28,6 +28,21 @@ export type AsignacionGuardada = Readonly<{
   cantidad: string;
 }>;
 
+/** Una conciliación hecha de la factura, para mostrarla: cuándo (fecha de negocio, hora de Argentina), si ya se anuló y qué repartió. */
+export type ConciliacionParaMostrar = Readonly<{
+  id: string;
+  fechaNegocio: string;
+  anulada: boolean;
+  asignaciones: readonly Readonly<{
+    lineaDeComprobante: number;
+    recepcionId: string;
+    recepcionNumero: number;
+    sucursalId: string;
+    lineaDeRecepcion: number;
+    cantidad: string;
+  }>[];
+}>;
+
 /**
  * Las conciliaciones de un comprobante con lo recibido (E9 §3.3): el acto de conciliar y, una sola vez, su anulación espejo con las cantidades opuestas;
  * cada asignación solo entra si no supera lo recibido ni lo facturado (lo impone la base con los saldos). Solo inserción.
@@ -46,6 +61,11 @@ export interface RepositorioDeConciliaciones {
     empresa: EmpresaId,
     comprobanteId: string,
   ): Promise<readonly SaldoDeLineaFacturada[]>;
+  /** Las conciliaciones (acto `CONCILIACION`, sin el atajo) de la factura, la más vieja primero, con lo que repartió cada una y si ya se anuló. Solo lectura. */
+  historialDe(
+    empresa: EmpresaId,
+    comprobanteId: string,
+  ): Promise<readonly ConciliacionParaMostrar[]>;
   insertarConciliacion(
     empresa: EmpresaId,
     alta: Readonly<{
@@ -140,6 +160,64 @@ export function crearRepositorioDeConciliaciones(
         .orderBy("numero")
         .execute();
       return filas.map((f) => ({ linea: f.numero, facturada: f.facturada, asignada: f.asignada }));
+    },
+    async historialDe(empresa, comprobanteId) {
+      if (!esUuid(comprobanteId)) return [];
+      const conciliaciones = await db
+        .selectFrom("conciliacion as c")
+        .select([
+          "c.id",
+          sql<string>`to_char(c.registrado_en at time zone 'America/Argentina/Buenos_Aires', 'YYYY-MM-DD')`.as(
+            "fecha_negocio",
+          ),
+          sql<boolean>`exists (select 1 from conciliacion e
+            where e.empresa_id = c.empresa_id and e.anula_a = c.id and e.acto = 'ANULACION')`.as(
+            "anulada",
+          ),
+        ])
+        .where("c.empresa_id", "=", empresa)
+        .where("c.comprobante_id", "=", comprobanteId)
+        .where("c.acto", "=", "CONCILIACION")
+        .where("c.es_atajo", "=", false)
+        .orderBy("c.registrado_en")
+        .orderBy("c.id")
+        .execute();
+      if (conciliaciones.length === 0) return [];
+      const asignaciones = await db
+        .selectFrom("asignacion_de_conciliacion as a")
+        .innerJoin("recepcion as r", (j) =>
+          j.onRef("r.empresa_id", "=", "a.empresa_id").onRef("r.id", "=", "a.recepcion_id"),
+        )
+        .select([
+          "a.conciliacion_id",
+          "a.linea_de_comprobante",
+          "a.recepcion_id",
+          "r.numero as recepcion_numero",
+          "r.sucursal_id",
+          "a.linea_de_recepcion",
+          sql<string>`a.cantidad::text`.as("cantidad"),
+        ])
+        .where("a.empresa_id", "=", empresa)
+        .where("a.comprobante_id", "=", comprobanteId)
+        .where("a.acto", "=", "CONCILIACION")
+        .orderBy("a.conciliacion_id")
+        .orderBy("a.numero")
+        .execute();
+      return conciliaciones.map((c) => ({
+        id: c.id,
+        fechaNegocio: c.fecha_negocio,
+        anulada: c.anulada,
+        asignaciones: asignaciones
+          .filter((a) => a.conciliacion_id === c.id)
+          .map((a) => ({
+            lineaDeComprobante: a.linea_de_comprobante,
+            recepcionId: a.recepcion_id,
+            recepcionNumero: a.recepcion_numero,
+            sucursalId: a.sucursal_id,
+            lineaDeRecepcion: a.linea_de_recepcion,
+            cantidad: a.cantidad,
+          })),
+      }));
     },
     async insertarConciliacion(empresa, alta) {
       const fila = await db

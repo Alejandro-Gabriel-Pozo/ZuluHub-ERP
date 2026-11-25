@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0935",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Textos de Facturas y Conciliar: Facturas, Conciliar, Confirmar conciliación, Facturado, Recibido, Todo coincide, Falta conciliar, Conciliada en parte, A conciliar, Conciliado y Anular conciliación.",
+  "que_cambia": "Doce claves nuevas (con Conciliaciones) de compras.factura y compras.conciliacion; Anulada, Cancelar y el estado vacío reutilizan los existentes. Revertir: quitar las claves y volver a textos aprobados.",
+  "donde": "catalogo-compras.ts, textos-de-facturas.ts; delegación de textos DDD fila 173, orquestador y chat del dueño del 25/11/2026"
+}

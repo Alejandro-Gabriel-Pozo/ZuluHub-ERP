@@ -49,10 +49,22 @@ export type {
 } from "./dominio/recepcion-separada";
 export { FORMA_DEL_CURSOR_SEPARADO as FORMA_DEL_CURSOR_DE_RECEPCIONES } from "./casos-de-uso/lectura-separada";
 export type {
+  FacturaSeparadaDeLista,
   FichaDeRecepcionSeparada,
   PaginaDe as PaginaDeSeparadas,
   RecepcionSeparadaDeLista,
 } from "./casos-de-uso/lectura-separada";
+export type {
+  ConciliacionDeFactura,
+  FichaDeFacturaSeparada,
+  LineaDeFacturaSeparada,
+  RecibidoPorSucursal,
+} from "./casos-de-uso/lectura-de-factura";
+export type {
+  LineaFacturadaParaConciliar,
+  LineaRecibidaParaConciliar,
+  PropuestaDeConciliacion,
+} from "./casos-de-uso/proponer-conciliacion";
 export type {
   EntradaDeComprobanteDeFicha,
   EntradaDePuntoDeVenta,
