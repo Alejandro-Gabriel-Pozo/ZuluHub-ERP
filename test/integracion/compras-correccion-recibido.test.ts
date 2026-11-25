@@ -87,7 +87,7 @@ describe.skipIf(base === null)("compras N3: corregir lo recibido", () => {
       cantidad,
       causa: "ERROR_DE_CARGA",
       ...extra,
-    } as Parameters<typeof c.casos.corregirLoRecibido>[1]);
+    });
   const saldo = async (recepcionId: string) =>
     (
       await c.filas<{ recibida: string; asignada: string }>(

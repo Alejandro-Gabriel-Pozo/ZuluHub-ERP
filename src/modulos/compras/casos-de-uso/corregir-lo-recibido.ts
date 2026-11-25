@@ -11,7 +11,7 @@ import {
 import { leerCantidad, leerCantidadPositiva, textoDeCantidad } from "../dominio/decimal";
 import { decidirPorHuella, huellaDeComando } from "../dominio/huella";
 import { autorizar, exigirAlcanceDeSucursal, traducir } from "./comun";
-import type { DependenciasDeCompras, TxDeCompras } from "./contrato";
+import type { DependenciasDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
 
 type R<S> = Resultado<S, ErrorDeCompras>;
