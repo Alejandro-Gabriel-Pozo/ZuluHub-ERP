@@ -156,9 +156,13 @@ export type {
 export type {
   CabeceraDeMovimiento,
   CursorDeLibro,
+  CursorDeMovimientosDeDeposito,
   EntradaDeLibroDeArticulo,
+  EntradaDeMovimientosDeDeposito,
   FichaDeMovimiento,
+  MovimientoDeDeposito,
   PaginaDeLibro,
+  PaginaDeMovimientosDeDeposito,
   RenglonDeFicha,
 } from "./consultas/libro";
 export type {
