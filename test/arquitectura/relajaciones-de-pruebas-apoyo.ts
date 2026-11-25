@@ -15,8 +15,8 @@ export const CAMPOS_OBLIGATORIOS = [
   "revisar_antes_de",
 ] as const;
 const CAMPOS_PERMITIDOS = [...CAMPOS_OBLIGATORIOS, "valor", "nivel"] as const;
-/** Los niveles de mutación que pueden tener una relajación (el crítico, 100 %, es la norma y no la tiene). */
-const NIVELES_RELAJABLES = ["SERVIDOR", "PANTALLA"] as const;
+/** Los niveles de mutación que pueden tener una relajación (DINERO_EXACTO, 100 %, es la norma y no la tiene). */
+const NIVELES_RELAJABLES = ["CRITICO", "SERVIDOR", "PANTALLA"] as const;
 /** Una relajación se revisa con el dueño como máximo cada 90 días. */
 const DIAS_MAXIMOS_DE_REVISION = 90;
 const ID_DE_LA_ESTABILIDAD = "estabilidad-reducida-en-pr";
@@ -201,27 +201,38 @@ export function problemasDelWorkflow(ci: string, registro: unknown): string[] {
 
 /**
  * Lo que el nivel de cada grupo de mutación tiene que cumplir (todo nace cerrado: lo que sube de nivel no hace falta justificarlo, lo que BAJA sí):
- *  - un grupo que muta una ruta sensible, o del guardián, tiene que ser CRITICO (100 %): un grupo nuevo de dinero, permisos, aislamiento, base o fiscal no queda sin cerrojo;
+ *  - un grupo que muta una ruta de dinero exacto (el cálculo puro de dinero) tiene que ser DINERO_EXACTO (100 %);
+ *  - un grupo que muta una ruta sensible, o del guardián, tiene que ser CRITICO o DINERO_EXACTO: un grupo nuevo de permisos, aislamiento, base o fiscal no queda sin cerrojo;
  *  - un grupo PANTALLA tiene todos sus archivos en `apps/web/ui` (el servidor ya decide): no se relaja un grupo de `src/` marcándolo PANTALLA.
  * Devuelve los que no cumplen, con el motivo.
  */
 export function problemasDeLosNiveles(
   grupos: readonly { id: string; nivel: string; expandidos: readonly string[] }[],
   rutas: readonly string[],
+  rutasDeDinero: readonly string[],
 ): { id: string; motivo: string }[] {
   const patrones = rutas.map((r) => new RegExp(r));
+  const deDinero = rutasDeDinero.map((r) => new RegExp(r));
   const problemas: { id: string; motivo: string }[] = [];
   for (const grupo of grupos) {
     const archivos = grupo.expandidos.map((e) => e.replace(/:\d+-\d+$/, ""));
+    const dinero = archivos.find((e) => deDinero.some((p) => p.test(e)));
     const sensible = archivos.find((e) => patrones.some((p) => p.test(e)));
     const delGuardian = archivos.length > 0 && archivos.every((e) => e.startsWith("arquitectura/"));
-    if (grupo.nivel !== "CRITICO" && sensible !== undefined) {
+    const alMenosCritico = grupo.nivel === "CRITICO" || grupo.nivel === "DINERO_EXACTO";
+    if (grupo.nivel !== "DINERO_EXACTO" && dinero !== undefined) {
+      problemas.push({
+        id: grupo.id,
+        motivo: `muta ${dinero} (cálculo puro de dinero) y es ${grupo.nivel}: tiene que ser DINERO_EXACTO`,
+      });
+    }
+    if (!alMenosCritico && sensible !== undefined) {
       problemas.push({
         id: grupo.id,
         motivo: `muta ${sensible} (ruta sensible) y es ${grupo.nivel}: tiene que ser CRITICO`,
       });
     }
-    if (grupo.nivel !== "CRITICO" && delGuardian) {
+    if (!alMenosCritico && delGuardian) {
       problemas.push({
         id: grupo.id,
         motivo: `es del guardián y es ${grupo.nivel}: tiene que ser CRITICO`,
@@ -241,7 +252,7 @@ export function problemasDeLosNiveles(
 /**
  * Los umbrales de mutación menores que 100 figuran en el registro, y a la inversa (dueño, 25/11/2026: se declaran SOLO los que no son 100 %). Por cada nivel de la configuración con umbral
  * menor que 100 tiene que haber una relajación VIGENTE de ese `nivel` con el mismo `valor`; una relajación de umbral (con `nivel`) cuyo valor ya no es el de la configuración, o cuyo nivel
- * llegó a 100 y no está RESTAURADA, o que nombra un nivel que no existe, falla. El nivel crítico no lleva entrada.
+ * llegó a 100 y no está RESTAURADA, o que nombra un nivel que no existe, falla. DINERO_EXACTO (el cálculo puro de dinero, 100 %) no lleva entrada.
  */
 export function problemasDeLosUmbrales(
   niveles: Readonly<Record<string, number>>,
@@ -252,26 +263,28 @@ export function problemasDeLosUmbrales(
   const deUmbral = lista.filter((e): e is Record<string, unknown> => esObjeto(e) && "nivel" in e);
   const problemas: string[] = [];
   for (const [nivel, umbral] of Object.entries(niveles)) {
-    if (nivel === "CRITICO") {
-      if (umbral !== 100) problemas.push("el nivel CRITICO tiene que ser 100.");
-      if (deUmbral.some((e) => e["nivel"] === "CRITICO"))
-        problemas.push("el nivel CRITICO (100 %) no lleva relajación: es la norma.");
+    if (nivel === "DINERO_EXACTO") {
+      if (umbral !== 100) problemas.push("el nivel DINERO_EXACTO tiene que ser 100.");
+      if (deUmbral.some((e) => e["nivel"] === "DINERO_EXACTO")) {
+        problemas.push("el nivel DINERO_EXACTO (100 %) no lleva relajación: es la norma.");
+      }
       continue;
     }
     const entrada = deUmbral.find((e) => e["nivel"] === nivel);
     if (umbral < 100) {
-      if (entrada === undefined)
+      if (entrada === undefined) {
         problemas.push(
           `el nivel ${nivel} exige ${umbral} % y no figura una relajación de ese nivel en el registro.`,
         );
-      else if (entrada["estado"] !== "VIGENTE")
+      } else if (entrada["estado"] !== "VIGENTE") {
         problemas.push(
           `el nivel ${nivel} exige ${umbral} % y su relajación «${String(entrada["id"])}» no está VIGENTE.`,
         );
-      else if (entrada["valor"] !== umbral)
+      } else if (entrada["valor"] !== umbral) {
         problemas.push(
           `el nivel ${nivel} exige ${umbral} % y el registro dice ${String(entrada["valor"])}: actualizá «valor».`,
         );
+      }
     } else if (entrada !== undefined && entrada["estado"] !== "RESTAURADA") {
       problemas.push(
         `el nivel ${nivel} ya exige 100 % y su relajación «${String(entrada["id"])}» no está marcada RESTAURADA.`,
@@ -279,32 +292,39 @@ export function problemasDeLosUmbrales(
     }
   }
   for (const entrada of deUmbral) {
-    if (!(String(entrada["nivel"]) in niveles))
+    if (!(String(entrada["nivel"]) in niveles)) {
       problemas.push(
         `la relajación «${String(entrada["id"])}» nombra un nivel que no existe en la configuración.`,
       );
+    }
   }
   return problemas;
 }
 
-/** Las reglas de rutas sensibles bien formadas (lista no vacía de patrones que compilan y empiezan en `^`). */
+/** Las reglas de rutas sensibles bien formadas: solo `rutas` y `dinero_exacto`, listas no vacías de patrones que compilan y empiezan en `^`. */
 export function problemasDeLasRutas(valor: unknown): string[] {
-  if (!esObjeto(valor) || Object.keys(valor).some((c) => c !== "rutas")) {
-    return ["las rutas sensibles tienen que ser un objeto con solo «rutas»."];
+  if (!esObjeto(valor) || Object.keys(valor).some((c) => c !== "rutas" && c !== "dinero_exacto")) {
+    return ["las rutas sensibles tienen que ser un objeto con solo «rutas» y «dinero_exacto»."];
   }
-  const rutas = valor["rutas"];
-  if (!Array.isArray(rutas) || rutas.length === 0)
-    return ["«rutas» tiene que ser una lista con al menos una regla."];
   const problemas: string[] = [];
-  for (const ruta of rutas) {
-    if (typeof ruta !== "string" || !ruta.startsWith("^")) {
-      problemas.push(`la regla ${JSON.stringify(ruta)} tiene que ser un texto que empiece en «^».`);
+  for (const clave of ["rutas", "dinero_exacto"] as const) {
+    const reglas = valor[clave];
+    if (!Array.isArray(reglas) || reglas.length === 0) {
+      problemas.push(`«${clave}» tiene que ser una lista con al menos una regla.`);
       continue;
     }
-    try {
-      new RegExp(ruta);
-    } catch {
-      problemas.push(`la regla «${ruta}» no es una expresión válida.`);
+    for (const ruta of reglas) {
+      if (typeof ruta !== "string" || !ruta.startsWith("^")) {
+        problemas.push(
+          `la regla ${JSON.stringify(ruta)} tiene que ser un texto que empiece en «^».`,
+        );
+        continue;
+      }
+      try {
+        new RegExp(ruta);
+      } catch {
+        problemas.push(`la regla «${ruta}» no es una expresión válida.`);
+      }
     }
   }
   return problemas;

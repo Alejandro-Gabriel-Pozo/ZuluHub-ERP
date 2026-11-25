@@ -3,8 +3,8 @@
  *
  *     GRUPOS_DEL_PAQUETE='[{"grupo","archivos","pruebas"}, ...]' node arquitectura/correr-paquete-de-mutacion.cjs
  *
- * Previene: que agrupar grupos oculte cuál falló. Cada grupo corre con su propio `--mutate`, su propio filtro de pruebas y el umbral de su NIVEL (CRITICO 100 %,
- * SERVIDOR 90 %, PANTALLA 70 %; `arquitectura/niveles-de-mutacion.json`, dueño 25/11/2026) como `thresholds.break` de Stryker (`stryker.config.mjs` lo lee de
+ * Previene: que agrupar grupos oculte cuál falló. Cada grupo corre con su propio `--mutate`, su propio filtro de pruebas y el umbral de su NIVEL (DINERO_EXACTO 100 %,
+ * CRITICO 95 %, SERVIDOR 80 %, PANTALLA 60 %; `arquitectura/niveles-de-mutacion.json`, dueño 25/11/2026) como `thresholds.break` de Stryker (`stryker.config.mjs` lo lee de
  * `PEDERNAL_UMBRAL_DE_MUTACION`; un grupo sin umbral conocido FALLA, no corre con otro), igual que cuando era un job por grupo; si uno falla, los demás igual corren (se ven todas las fallas de una vez) y el job
  * sale con error al final. El log tiene una sección plegable por grupo, el resumen del job una fila por grupo y cada falla es un `::error` con el nombre del
  * grupo. Cualquier dato que no sea de la forma esperada hace fallar el job (denegar por defecto): nunca se saltea un grupo ni se corrige solo.

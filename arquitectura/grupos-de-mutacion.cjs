@@ -13,10 +13,11 @@
  *    líneas `:desde-hasta` al final (un archivo grande repartido entre grupos);
  *  - `minutos`: cuánto tarda el grupo (ordena la corrida en paralelo);
  *  - `pruebas`: las pruebas que lo cubren. Sin ella el grupo corre con todas (deuda que cuenta el guardián);
- *  - `nivel`: CRITICO, SERVIDOR o PANTALLA; decide el umbral de mutación del grupo (`arquitectura/niveles-de-mutacion.json`: CRITICO 100 %, SERVIDOR 90 %, PANTALLA 70 %; dueño,
- *    25/11/2026). CRITICO protege dinero, permisos, aislamiento, base de datos, fiscal o secretos (un grupo que muta rutas sensibles, `arquitectura/rutas-sensibles-de-mutacion.json`, tiene
- *    que serlo) y los del guardián; PANTALLA es solo para grupos cuyos archivos viven TODOS en `apps/web/ui` (el servidor ya decide permisos, validación y dinero). Lo que baja de 100 %
- *    figura en `arquitectura/deuda/relajaciones-de-pruebas.json`. Chequeo: `test/arquitectura/relajaciones-de-pruebas.test.ts`.
+ *  - `nivel`: DINERO_EXACTO, CRITICO, SERVIDOR o PANTALLA; decide el umbral de mutación del grupo (`arquitectura/niveles-de-mutacion.json`: DINERO_EXACTO 100 %, CRITICO 95 %, SERVIDOR 80 %,
+ *    PANTALLA 60 %; dueño, 25/11/2026). DINERO_EXACTO es solo el cálculo puro de dinero (importes, redondeo, prorrateo y moneda: `dinero_exacto` en `arquitectura/rutas-sensibles-de-mutacion.json`);
+ *    CRITICO protege permisos, aislamiento, base de datos, fiscal, secretos y el resto del dinero (un grupo que muta rutas sensibles, `rutas` del mismo archivo, tiene que serlo) y los del guardián;
+ *    PANTALLA es solo para grupos cuyos archivos viven TODOS en `apps/web/ui` (el servidor ya decide permisos, validación y dinero). Lo que baja de 100 % figura en
+ *    `arquitectura/deuda/relajaciones-de-pruebas.json`. Chequeo: `test/arquitectura/relajaciones-de-pruebas.test.ts`.
  *
  * Todo nace cerrado (falla ante la duda): un archivo que no es `<identificador>.json`, una subcarpeta, JSON roto, un campo de más o de menos o un patrón fuera del conjunto
  * permitido es una falla que nombra el archivo; nunca se ignora ni se corrige solo.
@@ -32,7 +33,7 @@ const EXCLUSION_DE_PRUEBAS = "!src/**/*.test.ts";
 const CAMPOS_OBLIGATORIOS = Object.freeze(["grupo", "archivos", "minutos", "nivel"]);
 const CAMPOS_PERMITIDOS = Object.freeze([...CAMPOS_OBLIGATORIOS, "pruebas"]);
 /** Los niveles de un grupo (el umbral de cada uno vive en `ARCHIVO_DE_LOS_NIVELES`). */
-const NIVELES = Object.freeze(["CRITICO", "SERVIDOR", "PANTALLA"]);
+const NIVELES = Object.freeze(["DINERO_EXACTO", "CRITICO", "SERVIDOR", "PANTALLA"]);
 const ARCHIVO_DE_LOS_NIVELES = "arquitectura/niveles-de-mutacion.json";
 /** Un patrón: `!` opcional, rutas con letras, números y `_ . / * { } -`, y a lo sumo un rango de líneas. */
 const PATRON = /^!?[A-Za-z0-9_./*{}-]+(?::[0-9]+-[0-9]+)?$/;
@@ -87,7 +88,7 @@ function problemasDelGrupo(valor, idDelNombre) {
     problemas.push("«pruebas» tiene que ser un texto.");
   }
   if ("nivel" in valor && !NIVELES.includes(valor.nivel)) {
-    problemas.push("«nivel» tiene que ser CRITICO, SERVIDOR o PANTALLA.");
+    problemas.push("«nivel» tiene que ser DINERO_EXACTO, CRITICO, SERVIDOR o PANTALLA.");
   }
   return problemas;
 }
@@ -176,7 +177,8 @@ function arbolDelDisco(raiz) {
 
 /**
  * Los umbrales de mutación por nivel, desde el texto de `ARCHIVO_DE_LOS_NIVELES`: `{ niveles, errores }`. Todo nace cerrado: tiene que traer EXACTAMENTE los niveles de `NIVELES`,
- * cada uno un entero de 1 a 100, y CRITICO en 100 (el nivel crítico es la norma: bajarlo es una relajación que no se hace acá). Un texto roto o con algo de más o de menos falla.
+ * cada uno un entero de 1 a 100, DINERO_EXACTO en 100 (el cálculo puro de dinero es la norma: bajarlo no se hace acá) y en orden (DINERO_EXACTO ≥ CRITICO ≥ SERVIDOR ≥ PANTALLA: un nivel
+ * más importante nunca exige menos). Un texto roto o con algo de más o de menos falla.
  */
 function leerLosNiveles(texto) {
   let valor;
@@ -200,7 +202,12 @@ function leerLosNiveles(texto) {
       errores.push(`«${nivel}» tiene que ser un entero de 1 a 100.`);
     }
   }
-  if (tabla["CRITICO"] !== 100) errores.push("«CRITICO» tiene que ser 100.");
+  if (tabla["DINERO_EXACTO"] !== 100) errores.push("«DINERO_EXACTO» tiene que ser 100.");
+  for (let i = 1; i < NIVELES.length; i += 1) {
+    if (tabla[NIVELES[i]] > tabla[NIVELES[i - 1]]) {
+      errores.push(`«${NIVELES[i]}» no puede exigir más que «${NIVELES[i - 1]}».`);
+    }
+  }
   return errores.length > 0 ? { niveles: null, errores } : { niveles: { ...tabla }, errores };
 }
 

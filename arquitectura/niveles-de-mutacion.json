@@ -1,7 +1,8 @@
 {
   "niveles": {
-    "CRITICO": 100,
-    "SERVIDOR": 90,
-    "PANTALLA": 70
+    "DINERO_EXACTO": 100,
+    "CRITICO": 95,
+    "SERVIDOR": 80,
+    "PANTALLA": 60
   }
 }

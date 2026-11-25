@@ -253,78 +253,88 @@ describe("lo que el workflow recorta tiene que figurar en el registro", () => {
 });
 
 describe("el nivel de cada grupo de mutación", () => {
-  const RUTAS = ["^src/primitivas/dinero/", "^src/modulos/caja/"];
+  const RUTAS = ["^src/modulos/caja/", "^src/modulos/fiscal/"];
+  const DINERO = ["^src/primitivas/dinero/"];
   const grupo = (id: string, nivel: string, expandidos: string[]) => ({ id, nivel, expandidos });
+  const problemasDe = (grupos: ReturnType<typeof grupo>[]) =>
+    problemasDeLosNiveles(grupos, RUTAS, DINERO);
 
-  it("un grupo CRITICO, uno que no toca rutas sensibles o uno de pantalla de verdad, no tienen problemas", () => {
+  it("un grupo en su nivel (dinero exacto, crítico, servidor y pantalla de verdad) no tiene problemas", () => {
     expect(
-      problemasDeLosNiveles(
-        [
-          grupo("a", "CRITICO", ["src/primitivas/dinero/x.ts"]),
-          grupo("b", "SERVIDOR", ["src/otra/x.ts"]),
-          grupo("c", "PANTALLA", ["apps/web/ui/plantillas/caja/lista-de-caja.ts"]),
-          grupo("guardian-x", "CRITICO", ["arquitectura/a.cjs"]),
-        ],
-        RUTAS,
-      ),
+      problemasDe([
+        grupo("a", "DINERO_EXACTO", ["src/primitivas/dinero/x.ts"]),
+        grupo("b", "SERVIDOR", ["src/otra/x.ts"]),
+        grupo("c", "PANTALLA", ["apps/web/ui/plantillas/caja/lista-de-caja.ts"]),
+        grupo("guardian-x", "CRITICO", ["arquitectura/a.cjs"]),
+        grupo("d", "CRITICO", ["src/modulos/caja/dominio/x.ts"]),
+        grupo("e", "DINERO_EXACTO", ["src/modulos/caja/dominio/y.ts"]), // subir de nivel no hace falta justificarlo
+      ]),
     ).toEqual([]);
   });
 
-  it("VIOLACIÓN: un grupo nuevo de dinero SERVIDOR o PANTALLA (sin el nivel crítico)", () => {
-    for (const nivel of ["SERVIDOR", "PANTALLA"]) {
+  it("VIOLACIÓN: un grupo de cálculo puro de dinero que no es DINERO_EXACTO (ni siquiera CRITICO)", () => {
+    for (const nivel of ["CRITICO", "SERVIDOR", "PANTALLA"]) {
+      const r = problemasDe([grupo("dinero-nuevo", nivel, ["src/primitivas/dinero/x.ts"])]);
       expect(
-        problemasDeLosNiveles(
-          [grupo("dinero-nuevo", nivel, ["src/primitivas/dinero/x.ts"])],
-          RUTAS,
-        ).map((p) => p.id),
+        r.map((p) => p.id),
         nivel,
       ).toContain("dinero-nuevo");
+      expect(r[0]?.motivo, nivel).toContain("tiene que ser DINERO_EXACTO");
     }
-    expect(
-      problemasDeLosNiveles([grupo("n", "SERVIDOR", ["src/primitivas/dinero/x.ts"])], RUTAS)[0]
-        ?.motivo,
-    ).toContain("tiene que ser CRITICO");
+  });
+
+  it("VIOLACIÓN: un grupo nuevo de una ruta sensible SERVIDOR o PANTALLA (sin el nivel crítico)", () => {
+    for (const nivel of ["SERVIDOR", "PANTALLA"]) {
+      const r = problemasDe([grupo("caja-nuevo", nivel, ["src/modulos/caja/dominio/x.ts"])]);
+      expect(
+        r.map((p) => p.id),
+        nivel,
+      ).toContain("caja-nuevo");
+      expect(r[0]?.motivo, nivel).toContain("tiene que ser CRITICO");
+    }
   });
 
   it("VIOLACIÓN: basta UN archivo sensible entre varios, y el rango de líneas no lo esconde", () => {
     expect(
-      problemasDeLosNiveles(
-        [grupo("mixto", "SERVIDOR", ["src/otra/a.ts", "src/modulos/caja/dominio/y.ts:1-50"])],
-        RUTAS,
-      ).map((p) => p.id),
+      problemasDe([
+        grupo("mixto", "SERVIDOR", ["src/otra/a.ts", "src/modulos/fiscal/dominio/y.ts:1-50"]),
+      ]).map((p) => p.id),
     ).toEqual(["mixto"]);
+    expect(
+      problemasDe([
+        grupo("mixto-dinero", "CRITICO", ["src/otra/a.ts", "src/primitivas/dinero/y.ts:1-50"]),
+      ]).map((p) => p.id),
+    ).toEqual(["mixto-dinero"]);
   });
 
   it("VIOLACIÓN: un grupo del guardián que no es CRITICO", () => {
     expect(
-      problemasDeLosNiveles([grupo("guardian-y", "SERVIDOR", ["arquitectura/a.cjs"])], RUTAS)[0]
-        ?.motivo,
+      problemasDe([grupo("guardian-y", "SERVIDOR", ["arquitectura/a.cjs"])])[0]?.motivo,
     ).toContain("es del guardián");
   });
 
   it("VIOLACIÓN: un grupo PANTALLA con un archivo fuera de apps/web/ui (no se relaja un grupo de src/ marcándolo PANTALLA)", () => {
     expect(
-      problemasDeLosNiveles(
-        [grupo("p", "PANTALLA", ["apps/web/ui/a.ts", "src/composicion/b.ts"])],
-        RUTAS,
-      )[0]?.motivo,
+      problemasDe([grupo("p", "PANTALLA", ["apps/web/ui/a.ts", "src/composicion/b.ts"])])[0]
+        ?.motivo,
     ).toContain("fuera de apps/web/ui");
-    expect(problemasDeLosNiveles([grupo("vacio", "PANTALLA", [])], RUTAS)).toHaveLength(1);
-    expect(
-      problemasDeLosNiveles([grupo("p2", "PANTALLA", ["apps/web/uix/a.ts"])], RUTAS),
-    ).toHaveLength(1);
+    expect(problemasDe([grupo("vacio", "PANTALLA", [])])).toHaveLength(1);
+    expect(problemasDe([grupo("p2", "PANTALLA", ["apps/web/uix/a.ts"])])).toHaveLength(1);
   });
 
-  it("las reglas de rutas mal formadas fallan", () => {
-    expect(problemasDeLasRutas({ rutas: ["^src/a/"] })).toEqual([]);
+  it("las reglas de rutas mal formadas fallan (solo `rutas` y `dinero_exacto`, listas no vacías de patrones que empiezan en ^)", () => {
+    expect(problemasDeLasRutas({ rutas: ["^src/a/"], dinero_exacto: ["^src/b/"] })).toEqual([]);
     for (const malo of [
       null,
       [],
-      { rutas: [] },
-      { rutas: ["src/a/"] },
-      { rutas: [5] },
-      { rutas: ["^("] },
-      { rutas: ["^a"], extra: 1 },
+      { rutas: [], dinero_exacto: ["^a"] },
+      { rutas: ["^a"] },
+      { rutas: ["^a"], dinero_exacto: [] },
+      { rutas: ["src/a/"], dinero_exacto: ["^a"] },
+      { rutas: [5], dinero_exacto: ["^a"] },
+      { rutas: ["^("], dinero_exacto: ["^a"] },
+      { rutas: ["^a"], dinero_exacto: ["b"] },
+      { rutas: ["^a"], dinero_exacto: ["^b"], extra: 1 },
     ]) {
       expect(problemasDeLasRutas(malo), JSON.stringify(malo)).not.toEqual([]);
     }
@@ -332,7 +342,7 @@ describe("el nivel de cada grupo de mutación", () => {
 });
 
 describe("los umbrales de mutación menores que 100 figuran en el registro (y solo ellos)", () => {
-  const NIVELES = { CRITICO: 100, SERVIDOR: 90, PANTALLA: 70 };
+  const NIVELES = { DINERO_EXACTO: 100, CRITICO: 95, SERVIDOR: 80, PANTALLA: 60 };
   const de = (nivel: string, valor: number, estado = "VIGENTE") => ({
     ...BUENA,
     id: `mutacion-${nivel.toLowerCase()}`,
@@ -340,17 +350,22 @@ describe("los umbrales de mutación menores que 100 figuran en el registro (y so
     valor,
     estado,
   });
+  const TODAS = [de("CRITICO", 95), de("SERVIDOR", 80), de("PANTALLA", 60)];
 
-  it("con una entrada VIGENTE por cada nivel menor que 100 y su mismo valor: sin problemas (el crítico no lleva entrada)", () => {
-    expect(
-      problemasDeLosUmbrales(NIVELES, registro(BUENA, de("SERVIDOR", 90), de("PANTALLA", 70))),
-    ).toEqual([]);
+  it("con una entrada VIGENTE por cada nivel menor que 100 y su mismo valor: sin problemas (DINERO_EXACTO no lleva entrada)", () => {
+    expect(problemasDeLosUmbrales(NIVELES, registro(BUENA, ...TODAS))).toEqual([]);
   });
 
-  it("VIOLACIÓN: un nivel con umbral menor que 100 sin su entrada", () => {
-    const problemas = problemasDeLosUmbrales(NIVELES, registro(BUENA, de("SERVIDOR", 90)));
-    expect(problemas).toEqual([
-      "el nivel PANTALLA exige 70 % y no figura una relajación de ese nivel en el registro.",
+  it("VIOLACIÓN: un nivel con umbral menor que 100 sin su entrada (también CRITICO)", () => {
+    expect(
+      problemasDeLosUmbrales(NIVELES, registro(de("SERVIDOR", 80), de("PANTALLA", 60))),
+    ).toEqual([
+      "el nivel CRITICO exige 95 % y no figura una relajación de ese nivel en el registro.",
+    ]);
+    expect(
+      problemasDeLosUmbrales(NIVELES, registro(de("CRITICO", 95), de("SERVIDOR", 80))),
+    ).toEqual([
+      "el nivel PANTALLA exige 60 % y no figura una relajación de ese nivel en el registro.",
     ]);
   });
 
@@ -358,59 +373,47 @@ describe("los umbrales de mutación menores que 100 figuran en el registro (y so
     expect(
       problemasDeLosUmbrales(
         NIVELES,
-        registro(de("SERVIDOR", 90, "RESTAURADA"), de("PANTALLA", 70)),
+        registro(de("CRITICO", 95, "RESTAURADA"), de("SERVIDOR", 80), de("PANTALLA", 60)),
       )[0],
     ).toContain("no está VIGENTE");
     expect(
-      problemasDeLosUmbrales(NIVELES, registro(de("SERVIDOR", 80), de("PANTALLA", 70)))[0],
-    ).toContain("el registro dice 80");
-    expect(
       problemasDeLosUmbrales(
-        { ...NIVELES, PANTALLA: 60 },
-        registro(de("SERVIDOR", 90), de("PANTALLA", 70)),
+        NIVELES,
+        registro(de("CRITICO", 90), de("SERVIDOR", 80), de("PANTALLA", 60)),
       )[0],
-    ).toContain("exige 60 % y el registro dice 70");
+    ).toContain("el registro dice 90");
+    expect(problemasDeLosUmbrales({ ...NIVELES, PANTALLA: 50 }, registro(...TODAS))[0]).toContain(
+      "exige 50 % y el registro dice 60",
+    );
   });
 
   it("VIOLACIÓN: un nivel que llegó a 100 y su entrada sigue VIGENTE; o una entrada de un nivel que no existe", () => {
+    expect(problemasDeLosUmbrales({ ...NIVELES, CRITICO: 100 }, registro(...TODAS))[0]).toContain(
+      "no está marcada RESTAURADA",
+    );
     expect(
       problemasDeLosUmbrales(
-        { ...NIVELES, SERVIDOR: 100 },
-        registro(de("SERVIDOR", 90), de("PANTALLA", 70)),
-      )[0],
-    ).toContain("no está marcada RESTAURADA");
-    expect(
-      problemasDeLosUmbrales(
-        { ...NIVELES, SERVIDOR: 100 },
-        registro(de("SERVIDOR", 90, "RESTAURADA"), de("PANTALLA", 70)),
+        { ...NIVELES, CRITICO: 100 },
+        registro(de("CRITICO", 95, "RESTAURADA"), de("SERVIDOR", 80), de("PANTALLA", 60)),
       ),
     ).toEqual([]);
-    expect(
-      problemasDeLosUmbrales(
-        NIVELES,
-        registro(de("SERVIDOR", 90), de("PANTALLA", 70), { ...de("OTRO", 50) }),
-      )[0],
-    ).toContain("nombra un nivel que no existe");
+    expect(problemasDeLosUmbrales(NIVELES, registro(...TODAS, de("OTRO", 50)))[0]).toContain(
+      "nombra un nivel que no existe",
+    );
   });
 
-  it("VIOLACIÓN: el nivel crítico con umbral menor que 100, o con una entrada (es la norma, no se relaja)", () => {
+  it("VIOLACIÓN: DINERO_EXACTO con umbral menor que 100, o con una entrada (es la norma, no se relaja)", () => {
     expect(
-      problemasDeLosUmbrales(
-        { ...NIVELES, CRITICO: 99 },
-        registro(de("SERVIDOR", 90), de("PANTALLA", 70)),
-      )[0],
-    ).toContain("CRITICO tiene que ser 100");
+      problemasDeLosUmbrales({ ...NIVELES, DINERO_EXACTO: 99 }, registro(...TODAS))[0],
+    ).toContain("DINERO_EXACTO tiene que ser 100");
     expect(
-      problemasDeLosUmbrales(
-        NIVELES,
-        registro(de("SERVIDOR", 90), de("PANTALLA", 70), { ...de("CRITICO", 100) }),
-      ).join(" "),
+      problemasDeLosUmbrales(NIVELES, registro(...TODAS, de("DINERO_EXACTO", 100))).join(" "),
     ).toContain("no lleva relajación");
   });
 
   it("una entrada de umbral con un nivel que no se puede relajar falla la forma del registro", () => {
-    expect(problemas({ ...BUENA, nivel: "CRITICO" }).join(" ")).toContain(
-      "«nivel» tiene que ser SERVIDOR o PANTALLA",
+    expect(problemas({ ...BUENA, nivel: "DINERO_EXACTO" }).join(" ")).toContain(
+      "«nivel» tiene que ser CRITICO o SERVIDOR o PANTALLA",
     );
   });
 });
@@ -531,15 +534,15 @@ describe("el repositorio real", () => {
   });
 
   it("ningún grupo de mutación real baja de nivel por debajo de lo que sus rutas exigen", () => {
-    const { rutas } = leerJson("arquitectura/rutas-sensibles-de-mutacion.json") as {
-      rutas: string[];
-    };
+    const { rutas, dinero_exacto: dineroExacto } = leerJson(
+      "arquitectura/rutas-sensibles-de-mutacion.json",
+    ) as { rutas: string[]; dinero_exacto: string[] };
     const grupos = cargarLosGrupos(RAIZ).grupos.map((g) => ({
       ...g,
       expandidos: expandir(g.archivos, RAIZ),
     }));
     expect(grupos.length).toBeGreaterThan(90);
-    expect(problemasDeLosNiveles(grupos, rutas)).toEqual([]);
+    expect(problemasDeLosNiveles(grupos, rutas, dineroExacto)).toEqual([]);
   });
 
   it("los niveles reales son una parte propia (ni todos críticos ni todos relajados) y los del guardián son críticos", () => {
@@ -549,7 +552,12 @@ describe("el repositorio real", () => {
     expect(por("SERVIDOR").length).toBeGreaterThan(10);
     expect(por("PANTALLA").length).toBeGreaterThan(0);
     expect(grupos.filter((g) => g.id.startsWith("guardian-") && g.nivel !== "CRITICO")).toEqual([]);
-    expect(new Set(grupos.map((g) => g.umbral))).toEqual(new Set([100, 90, 70]));
+    expect(
+      por("DINERO_EXACTO")
+        .map((g) => g.id)
+        .sort(),
+    ).toEqual(["dinero-calculo-exacto-y-redondeo", "dinero-importe-prorrateo-y-moneda"]);
+    expect(new Set(grupos.map((g) => g.umbral))).toEqual(new Set([100, 95, 80, 60]));
   });
 
   it("los umbrales de la configuración y el registro de relajaciones coinciden", () => {

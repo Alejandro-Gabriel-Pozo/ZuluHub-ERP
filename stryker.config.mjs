@@ -17,7 +17,7 @@ function umbralDeLaCorrida(texto) {
 /**
  * La configuración de Stryker. `mutate` NO se escribe acá: lo deriva `arquitectura/grupos-de-mutacion.cjs` de los grupos de `arquitectura/mutacion/` (un archivo por grupo),
  * así hay una sola lista y un grupo nuevo no toca este archivo (previene los choques entre sesiones en paralelo; ver el encabezado del cargador). El CI corre cada grupo con
- * `--mutate "<sus archivos>"` y el umbral de su nivel en `PEDERNAL_UMBRAL_DE_MUTACION` (`arquitectura/niveles-de-mutacion.json`: CRITICO 100 %, SERVIDOR 90 %, PANTALLA 70 %);
+ * `--mutate "<sus archivos>"` y el umbral de su nivel en `PEDERNAL_UMBRAL_DE_MUTACION` (`arquitectura/niveles-de-mutacion.json`: DINERO_EXACTO 100 %, CRITICO 95 %, SERVIDOR 80 %, PANTALLA 60 %);
  * sin esa variable (la corrida completa local, `npm run mutacion`) exige 100 %, el más estricto: nunca se relaja por omisión.
  * Es `.mjs` y no `.json` porque Stryker encuentra primero el `.json` si están los dos.
  */

@@ -53,7 +53,9 @@ const BUENO = {
   nivel: "SERVIDOR",
 };
 const NIVELES_DE_PRUEBA = "arquitectura/niveles-de-mutacion.json";
-const NIVELES_BUENOS = JSON.stringify({ niveles: { CRITICO: 100, SERVIDOR: 90, PANTALLA: 70 } });
+const NIVELES_BUENOS = JSON.stringify({
+  niveles: { DINERO_EXACTO: 100, CRITICO: 95, SERVIDOR: 80, PANTALLA: 60 },
+});
 const arbol = (archivos: Record<string, string | null>): Arbol => ({
   rutas: Object.keys(archivos),
   leer: (ruta) => {
@@ -216,7 +218,7 @@ describe("leer los grupos", () => {
     ]);
   });
 
-  it("`nivel` es obligatorio y solo vale CRITICO, SERVIDOR o PANTALLA: cualquier otro valor falla con su motivo", () => {
+  it("`nivel` es obligatorio y solo vale DINERO_EXACTO, CRITICO, SERVIDOR o PANTALLA: cualquier otro valor falla con su motivo", () => {
     for (const nivel of cargador.NIVELES) {
       expect(leer(grupo("caja-dominio", { ...BUENO, nivel })).errores, nivel).toEqual([]);
     }
@@ -224,7 +226,7 @@ describe("leer los grupos", () => {
     expect(motivos(grupo("caja-dominio", sinNivel))).toEqual(["falta «nivel»."]);
     for (const nivel of ["critico", "NORMAL", "", 1, null, true]) {
       expect(motivos(grupo("caja-dominio", { ...BUENO, nivel })), String(nivel)).toEqual([
-        "«nivel» tiene que ser CRITICO, SERVIDOR o PANTALLA.",
+        "«nivel» tiene que ser DINERO_EXACTO, CRITICO, SERVIDOR o PANTALLA.",
       ]);
     }
   });
@@ -337,32 +339,41 @@ describe("los umbrales por nivel", () => {
   const leerNiveles = (valor: unknown) =>
     cargador.leerLosNiveles(typeof valor === "string" ? valor : JSON.stringify(valor));
 
-  it("lee los tres niveles con su umbral", () => {
-    expect(leerNiveles({ niveles: { CRITICO: 100, SERVIDOR: 90, PANTALLA: 70 } })).toEqual({
-      niveles: { CRITICO: 100, SERVIDOR: 90, PANTALLA: 70 },
-      errores: [],
-    });
+  const N = { DINERO_EXACTO: 100, CRITICO: 95, SERVIDOR: 80, PANTALLA: 60 };
+
+  it("lee los cuatro niveles con su umbral", () => {
+    expect(leerNiveles({ niveles: N })).toEqual({ niveles: N, errores: [] });
   });
 
-  it("VIOLACIÓN: el nivel CRITICO con un umbral menor que 100 falla (bajarlo es una relajación que no se hace acá)", () => {
-    for (const critico of [99, 90, 1, 101, "100", null]) {
-      const r = leerNiveles({ niveles: { CRITICO: critico, SERVIDOR: 90, PANTALLA: 70 } });
-      expect(r.niveles, String(critico)).toBeNull();
-      expect(r.errores.join(" "), String(critico)).toContain("«CRITICO» tiene que ser 100.");
+  it("VIOLACIÓN: el nivel DINERO_EXACTO con un umbral distinto de 100 falla (el cálculo puro de dinero es la norma)", () => {
+    for (const exacto of [99, 95, 1, 101, "100", null]) {
+      const r = leerNiveles({ niveles: { ...N, DINERO_EXACTO: exacto } });
+      expect(r.niveles, String(exacto)).toBeNull();
+      expect(r.errores.join(" "), String(exacto)).toContain("«DINERO_EXACTO» tiene que ser 100.");
     }
   });
 
   it("VIOLACIÓN: falta un nivel, sobra uno, o un umbral que no es entero de 1 a 100 falla", () => {
-    expect(leerNiveles({ niveles: { CRITICO: 100, SERVIDOR: 90 } }).errores).toEqual([
-      "«PANTALLA» tiene que ser un entero de 1 a 100.",
-    ]);
     expect(
-      leerNiveles({ niveles: { CRITICO: 100, SERVIDOR: 90, PANTALLA: 70, OTRO: 50 } }).errores,
-    ).toEqual(["«OTRO» no es un nivel (CRITICO, SERVIDOR, PANTALLA)."]);
+      leerNiveles({ niveles: { DINERO_EXACTO: 100, CRITICO: 95, SERVIDOR: 80 } }).errores,
+    ).toEqual(["«PANTALLA» tiene que ser un entero de 1 a 100."]);
+    expect(leerNiveles({ niveles: { ...N, OTRO: 50 } }).errores).toEqual([
+      "«OTRO» no es un nivel (DINERO_EXACTO, CRITICO, SERVIDOR, PANTALLA).",
+    ]);
     for (const umbral of [0, -5, 101, 70.5, "70", null]) {
-      const r = leerNiveles({ niveles: { CRITICO: 100, SERVIDOR: 90, PANTALLA: umbral } });
-      expect(r.errores, String(umbral)).toEqual(["«PANTALLA» tiene que ser un entero de 1 a 100."]);
+      const r = leerNiveles({ niveles: { ...N, PANTALLA: umbral } });
+      expect(r.errores[0], String(umbral)).toBe("«PANTALLA» tiene que ser un entero de 1 a 100.");
     }
+  });
+
+  it("VIOLACIÓN: un nivel menos importante que exige más que otro más importante falla (DINERO_EXACTO ≥ CRITICO ≥ SERVIDOR ≥ PANTALLA)", () => {
+    expect(leerNiveles({ niveles: { ...N, SERVIDOR: 96 } }).errores).toEqual([
+      "«SERVIDOR» no puede exigir más que «CRITICO».",
+    ]);
+    expect(leerNiveles({ niveles: { ...N, PANTALLA: 81 } }).errores).toEqual([
+      "«PANTALLA» no puede exigir más que «SERVIDOR».",
+    ]);
+    expect(leerNiveles({ niveles: { ...N, SERVIDOR: 95, PANTALLA: 95 } }).errores).toEqual([]);
   });
 
   it("un archivo roto o con otra forma falla (todo nace cerrado)", () => {
@@ -374,14 +385,16 @@ describe("los umbrales por nivel", () => {
 
   it("el cargador del disco le pone a cada grupo el umbral de su nivel", () => {
     const raiz = disco({
-      ...grupo("a", { ...BUENO, grupo: "A", nivel: "CRITICO" }),
-      ...grupo("b", { ...BUENO, grupo: "B", nivel: "SERVIDOR" }),
-      ...grupo("c", { ...BUENO, grupo: "C", nivel: "PANTALLA" }),
+      ...grupo("a", { ...BUENO, grupo: "A", nivel: "DINERO_EXACTO" }),
+      ...grupo("b", { ...BUENO, grupo: "B", nivel: "CRITICO" }),
+      ...grupo("c", { ...BUENO, grupo: "C", nivel: "SERVIDOR" }),
+      ...grupo("d", { ...BUENO, grupo: "D", nivel: "PANTALLA" }),
     });
     expect(cargador.cargarLosGrupos(raiz).grupos.map((g) => [g.id, g.umbral])).toEqual([
       ["a", 100],
-      ["b", 90],
-      ["c", 70],
+      ["b", 95],
+      ["c", 80],
+      ["d", 60],
     ]);
   });
 

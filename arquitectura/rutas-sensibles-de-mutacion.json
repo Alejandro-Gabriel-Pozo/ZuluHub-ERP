@@ -13,5 +13,6 @@
     "^apps/web/ui/plantillas/(cobrar|stock|produccion)/",
     "^apps/web/ui/plantillas/venta/(modelo-de-la-cuenta|modelo-de-venta-rapida)\\.ts$",
     "^apps/web/ui/plantillas/catalogo/modelo-de-precios"
-  ]
+  ],
+  "dinero_exacto": ["^src/primitivas/dinero/"]
 }
