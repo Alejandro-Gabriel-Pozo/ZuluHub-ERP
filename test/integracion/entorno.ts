@@ -277,6 +277,32 @@ export function crearEntornoDePrueba(
   });
 }
 
+/**
+ * Quita `acciones` del actor que arma el adaptador, para las pruebas que PRUEBAN UNA MATRIZ DISTINTA de la real (un rol al que la prueba le
+ * da o le saca una acción por las reglas): sin el conjunto, el guard decide por la matriz que la prueba le pasa (H4b T3, DEC-0955). Es el
+ * camino de la deuda «guard-fallback-a-la-matriz»; lo que se prueba con el conjunto real va por `crearEntornoDePrueba` a secas.
+ */
+export function sinAcciones<D extends Readonly<{ acciones?: readonly string[] }>>(
+  datos: D,
+): Omit<D, "acciones"> {
+  return Object.fromEntries(
+    Object.entries(datos).filter(([clave]) => clave !== "acciones"),
+  ) as Omit<D, "acciones">;
+}
+
+export function sinConjuntoDeAcciones<T extends Readonly<{ autorizacion: CargaDeAutorizacion }>>(
+  tx: T,
+): T {
+  return {
+    ...tx,
+    autorizacion: {
+      ...tx.autorizacion,
+      delActor: async (contexto: Parameters<CargaDeAutorizacion["delActor"]>[0]) =>
+        sinAcciones(await tx.autorizacion.delActor(contexto)),
+    },
+  };
+}
+
 const AHORA = new Date("2026-10-11T12:00:00Z");
 
 /**

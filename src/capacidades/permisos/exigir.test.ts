@@ -465,3 +465,62 @@ describe("accionesPermitidas", () => {
     expect(lista).not.toContain("certificados.gestionar");
   });
 });
+
+describe("el conjunto de acciones del actor (H4b T3)", () => {
+  const TODAS = Object.keys(PERMISOS_DE_EMPRESA);
+  const activados = Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[];
+
+  it("con `acciones`, exigirAccion decide por el conjunto: la acción que falta es SIN_PERMISO aunque la matriz se la diera al rol", async () => {
+    const sinEmitir = TODAS.filter((a) => a !== "comprobantes.emitir");
+    const actor: ActorCargado = {
+      rol: "GERENTE",
+      acciones: sinEmitir,
+      modulosActivados: activados,
+      modulosHabilitados: activados,
+    };
+    const rechazada = await exigirAccion(
+      REGLAS_DE_EMPRESA,
+      "comprobantes.emitir",
+      cargaDe(actor).cargar,
+    );
+    expect(rechazada).toEqual({ ok: false, error: "SIN_PERMISO" });
+    const permitida = await exigirAccion(
+      REGLAS_DE_EMPRESA,
+      "comprobantes.ver",
+      cargaDe(actor).cargar,
+    );
+    expect(permitida.ok).toBe(true);
+  });
+
+  it("`acciones` vacío: nada pasa, ni siquiera para el gerente (no se vuelve a la matriz)", async () => {
+    const actor: ActorCargado = {
+      rol: "GERENTE",
+      acciones: [],
+      modulosActivados: activados,
+      modulosHabilitados: activados,
+    };
+    const r = await exigirAccion(REGLAS_DE_EMPRESA, "comprobantes.ver", cargaDe(actor).cargar);
+    expect(r).toEqual({ ok: false, error: "SIN_PERMISO" });
+    expect(accionesPermitidas(REGLAS_DE_EMPRESA, actor)).toEqual([]);
+  });
+
+  it("accionesPermitidas con conjunto devuelve la intersección (conjunto, módulo activo), ordenada", () => {
+    const actor: ActorCargado = {
+      rol: "OPERADOR",
+      acciones: ["stock.ver", "comprobantes.ver", "accion.inexistente"],
+      modulosActivados: activados,
+      modulosHabilitados: activados,
+    };
+    expect(accionesPermitidas(REGLAS_DE_EMPRESA, actor)).toEqual(["comprobantes.ver", "stock.ver"]);
+  });
+
+  it("sin `acciones` (fakes y roles de plataforma) sigue la matriz: mismo resultado que antes", async () => {
+    const actor: ActorCargado = {
+      rol: "OPERADOR",
+      modulosActivados: activados,
+      modulosHabilitados: activados,
+    };
+    const r = await exigirAccion(REGLAS_DE_EMPRESA, "comprobantes.ver", cargaDe(actor).cargar);
+    expect(r.ok).toBe(true);
+  });
+});

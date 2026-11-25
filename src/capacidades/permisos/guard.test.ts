@@ -540,3 +540,64 @@ describe("evaluarGuard: el tipo de rol es un parámetro (H5 P1)", () => {
     expect(noSeEjecuta).toBeTypeOf("function");
   });
 });
+
+describe("evaluarGuard: el conjunto de acciones del actor (H4b T3)", () => {
+  const conConjunto = (acciones: readonly string[] | null) => ({
+    accionesDelActor: acciones === null ? null : new Set(acciones),
+  });
+
+  it("con conjunto, MANDA el conjunto y no la matriz: lo que no está, SIN_PERMISO aunque el rol sí lo tenga", () => {
+    // `base.abrir` es del gerente en la matriz, pero el conjunto del actor no la trae.
+    expect(evaluar("base.abrir", { rol: "GERENTE", ...conConjunto(["base.ver"]) })).toEqual(
+      rechazo("SIN_PERMISO"),
+    );
+    expect(evaluar("base.ver", { rol: "GERENTE", ...conConjunto(["base.ver"]) })).toEqual(OK);
+  });
+
+  it("con conjunto, una acción que la matriz le negaba al rol pasa si el conjunto la trae (la autoridad es el conjunto)", () => {
+    expect(evaluar("base.abrir", { rol: "OPERADOR", ...conConjunto(["base.abrir"]) })).toEqual(OK);
+  });
+
+  it("conjunto null (no se pudo resolver) o vacío: SIN_PERMISO, nunca la matriz", () => {
+    for (const accion of Object.keys(PERMISOS) as Accion[]) {
+      if (accion.startsWith("futuro.")) continue;
+      expect(evaluar(accion, { rol: "GERENTE", ...conConjunto(null) })).toEqual(
+        rechazo("SIN_PERMISO"),
+      );
+      expect(evaluar(accion, { rol: "GERENTE", ...conConjunto([]) })).toEqual(
+        rechazo("SIN_PERMISO"),
+      );
+    }
+  });
+
+  it("sin rol no hay permiso aunque el conjunto traiga la acción", () => {
+    expect(evaluar("base.ver", { rol: null, ...conConjunto(["base.ver"]) })).toEqual(
+      rechazo("SIN_PERMISO"),
+    );
+  });
+
+  it("el conjunto va DESPUÉS de módulo y capacidad: el módulo inactivo y la capacidad faltante ganan", () => {
+    const todo = Object.keys(PERMISOS);
+    expect(
+      evaluar("ventas.vender", {
+        ...conConjunto(todo),
+        modulosActivos: new Set<Modulo>(["base"]),
+      }),
+    ).toEqual(rechazo("MODULO_NO_ACTIVO"));
+    expect(
+      evaluar("base.cobrar", {
+        ...conConjunto(todo),
+        capacidadesDeSucursal: new Set<Capacidad>(["balanza"]),
+      }),
+    ).toEqual(rechazo("SIN_CAPACIDAD"));
+    expect(evaluar("futuro.pronosticar", conConjunto(todo))).toEqual(
+      rechazo("MODULO_EN_DESARROLLO"),
+    );
+  });
+
+  it("sin conjunto (ausente) sigue la matriz de siempre, y un rol que la matriz no conoce cae a SIN_PERMISO", () => {
+    expect(evaluar("base.abrir", { rol: "GERENTE" })).toEqual(OK);
+    const propio = "PROPIO" as unknown as RolDeEmpresa;
+    expect(evaluar("base.ver", { rol: propio })).toEqual(rechazo("SIN_PERMISO"));
+  });
+});

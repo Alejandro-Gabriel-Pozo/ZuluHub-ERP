@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0957",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Comparar un rol con un literal (GERENTE, ADMINISTRADOR, OPERADOR) en el código queda congelado en una lista exacta de archivos, con presupuesto que solo baja.",
+  "que_cambia": "Nada que vea el negocio: es una regla de arquitectura; las comparaciones que hay hoy son deuda a pagar al llegar los roles propios.",
+  "donde": "test/arquitectura/rol-con-literal.test.ts",
+  "motivo": "Un rol propio no es ninguno de los tres literales: toda decisión escrita por nombre de rol lo deja afuera o le da lo que no debe."
+}

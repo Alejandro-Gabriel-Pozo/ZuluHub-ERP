@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0956",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La lectura del conjunto de acciones del actor va en la misma consulta de su membresía y no se guarda entre pedidos; si la lectura falla, la operación falla.",
+  "que_cambia": "Nada que vea el negocio: un cambio de plantilla rige desde la operación siguiente; un error de base no deja a nadie sin permisos en silencio ni con permisos de más.",
+  "donde": "src/adaptadores/postgres/autorizacion.ts (leerMembresiaDelActor)",
+  "motivo": "Una caché entre pedidos demoraría una baja de permisos; tragar el error convertiría una falla de base en «sin permisos» o en la matriz."
+}
