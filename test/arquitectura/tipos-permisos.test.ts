@@ -228,6 +228,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "comprobantes_de_proveedor.anular_pago"
       | "compras.configurar"
       | "compras.corregir"
+      | "compras.exportar"
     >();
     // Hoy ninguna acción exige una capacidad de sucursal.
     expectTypeOf<ClaveCapacidad>().toEqualTypeOf<never>();
@@ -407,6 +408,7 @@ describe("H5 P1: los tipos de plataforma salen de su catálogo y no se mezclan c
       | "modulos_de_empresa.desactivar"
       | "listas.ver"
       | "listas.editar"
+      | "dominios.ver"
     >();
     expectTypeOf<ClaveCapacidadDePlataforma>().toEqualTypeOf<never>();
     expectTypeOf<RolDePlataforma>().toEqualTypeOf<"ADMIN" | "SOPORTE">();

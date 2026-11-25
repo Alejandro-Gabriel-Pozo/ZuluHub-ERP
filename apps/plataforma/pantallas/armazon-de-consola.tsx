@@ -18,6 +18,7 @@ const SECCIONES = [
     etiqueta: textoDePlanes("plataforma.menu.politica"),
     href: "/politica-de-plan",
   },
+  { clave: "dominios", etiqueta: textoDePlanes("plataforma.dominios.titulo"), href: "/dominios" },
 ] as const;
 
 export type PropsDeArmazonDeConsola = Readonly<{

@@ -3,6 +3,7 @@ import { armarBuscarReferencia } from "./buscar-referencia";
 import { armarCatalogoDePerillas, armarVerConfiguracion } from "./configuracion";
 import type { DependenciasDeConsultasDePlataforma } from "./contrato";
 import type { DECLARACIONES_DE_CONSULTAS_DE_PLATAFORMA } from "./declaraciones";
+import { armarListarDominios } from "./dominios";
 import { armarListarInvitaciones } from "./invitaciones";
 import { armarListarTrabajosFallidos } from "./trabajos-fallidos";
 import {
@@ -28,6 +29,7 @@ export function crearConsultasDePlataforma(dependencias: DependenciasDeConsultas
     verConfiguracion: armarVerConfiguracion(dependencias),
     catalogoDePerillas: armarCatalogoDePerillas(dependencias),
     buscarReferencia: armarBuscarReferencia(dependencias),
+    listarDominios: armarListarDominios(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES_DE_CONSULTAS_DE_PLATAFORMA, unknown>;
 }
 

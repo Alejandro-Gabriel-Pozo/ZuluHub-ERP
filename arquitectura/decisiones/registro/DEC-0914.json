@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0914",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Nueva acción de lectura dominios.ver: ADMIN y SOPORTE ven los dominios de las empresas en la consola; solo ADMIN los cambia.",
+  "que_cambia": "SOPORTE puede ver la lista de dominios y no cambia nada. Revertir: quitar la acción del catálogo y de la matriz de plataforma, y la entrada del menú.",
+  "donde": "Aprobación del dueño del 25/11/2026 (SOPORTE ve la lista de dominios), asentada por la sesión de diseño en la fila de decisiones del dueño; permisos/plataforma.ts."
+}

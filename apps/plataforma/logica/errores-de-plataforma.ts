@@ -1,4 +1,5 @@
 import { LARGO_MAXIMO_DEL_NOMBRE_DE_VALOR } from "../../../src/modulos/listas/publico";
+import { MENSAJES_DE_ERROR_DE_DOMINIOS } from "../../../src/plataforma/casos-de-uso/mensajes-de-dominios";
 
 /**
  * Traductor de errores de la consola de plataforma. `aRespuesta` de la web no conoce los códigos de plataforma,
@@ -25,7 +26,7 @@ export type CampoDeSubmarca =
   | "vigenteDesde"
   | "motivo";
 
-type CampoDeLista = "nombre";
+type CampoDeLista = "nombre" | "host";
 
 export type ErrorParaLaPantalla =
   | { tipo: "CAMPO"; campo: CampoDelAlta | CampoDeSubmarca | CampoDeLista; texto: string }
@@ -52,6 +53,31 @@ const campo = (
   texto,
 });
 const general = (texto: string): ErrorParaLaPantalla => ({ tipo: "GENERAL", texto });
+
+/**
+ * Los errores de dominios (consola «Dominios»): el texto es el que ya tiene el caso de uso (`mensajes-de-dominios.ts`, una sola vez). Los de permiso, clave y
+ * segundo factor NO están acá: valen los generales (`SIN_PERMISO` oculta la acción, una clave vieja pide recargar). El nombre del sitio y el motivo del retiro
+ * van debajo de su campo.
+ */
+const GENERALES_DE_LA_CONSOLA = new Set([
+  "SIN_PERMISO",
+  "CLAVE_REUTILIZADA",
+  "CLAVE_DE_IDEMPOTENCIA_INVALIDA",
+]);
+const POR_CODIGO_DE_DOMINIO: Readonly<Record<string, ErrorParaLaPantalla>> = Object.freeze(
+  Object.fromEntries(
+    Object.entries(MENSAJES_DE_ERROR_DE_DOMINIOS)
+      .filter(([codigo]) => !GENERALES_DE_LA_CONSOLA.has(codigo))
+      .map(([codigo, texto]): [string, ErrorParaLaPantalla] => [
+        codigo,
+        codigo === "HOST_INVALIDO" || codigo === "HOST_DUPLICADO"
+          ? campo("host", texto)
+          : codigo === "MOTIVO_OBLIGATORIO" || codigo === "MOTIVO_DEMASIADO_LARGO"
+            ? campo("motivo", texto)
+            : general(texto),
+      ]),
+  ),
+);
 
 /** Códigos que se traducen sin datos adicionales. */
 const POR_CODIGO: Readonly<Record<string, ErrorParaLaPantalla>> = {
@@ -317,7 +343,7 @@ function textoDeLimiteDelPlan(datos: Record<string, unknown>): string {
  */
 export function errorParaLaPantalla(
   error: unknown,
-  contexto: "GENERAL" | "SUBMARCA" | "PLAN" | "MODULOS" | "LISTA" = "GENERAL",
+  contexto: "GENERAL" | "SUBMARCA" | "PLAN" | "MODULOS" | "LISTA" | "DOMINIO" = "GENERAL",
 ): ErrorParaLaPantalla {
   let codigo: string;
   let datos: Record<string, unknown> = {};
@@ -341,6 +367,9 @@ export function errorParaLaPantalla(
   }
   if (contexto === "LISTA" && Object.hasOwn(POR_CODIGO_DE_LISTA, codigo)) {
     return POR_CODIGO_DE_LISTA[codigo] ?? INESPERADO;
+  }
+  if (contexto === "DOMINIO" && Object.hasOwn(POR_CODIGO_DE_DOMINIO, codigo)) {
+    return POR_CODIGO_DE_DOMINIO[codigo] ?? INESPERADO;
   }
   if (contexto === "MODULOS") {
     // El módulo implicado se rotula con la tabla cerrada de la consola; una clave que no se conoce vuelve tal cual.

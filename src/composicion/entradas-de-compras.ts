@@ -61,3 +61,18 @@ export function entradaDeFichaDeCompra(
 ): Resultado<Readonly<{ recepcionId: string }>, ErrorDeEntrada> {
   return leer(FORMA_DE_LA_FICHA, crudo);
 }
+
+/**
+ * La exportación de compras: del pedido solo se leen `desde` y `hasta`, las dos fechas civiles `AAAA-MM-DD` y las dos obligatorias (sin período no hay archivo: no se supone «los
+ * últimos 12 meses»). Cualquier otra clave no llega: la empresa y las sucursales las pone el servidor. Que el período no pase de 12 meses lo decide el caso de uso.
+ */
+export function entradaDeExportarCompras(
+  crudo: unknown,
+): Resultado<Readonly<{ desde: string; hasta: string }>, ErrorDeEntrada> {
+  const desde = fechaOSinLimite(textoDe(crudo, "desde"));
+  const hasta = fechaOSinLimite(textoDe(crudo, "hasta"));
+  if (desde === null || hasta === null) {
+    return err({ codigo: "FISCAL_DATOS_INVALIDOS", campo: desde === null ? "desde" : "hasta" });
+  }
+  return ok({ desde, hasta });
+}

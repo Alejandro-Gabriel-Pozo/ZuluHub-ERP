@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0911",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "El host de la aplicación de una empresa solo deja entrar a usuarios de esa empresa, aunque la persona tenga otra.",
+  "que_cambia": "El ingreso por un host dedicado se frena si la empresa activa no es la dueña del host (se construye en P2). Revertir: quitar ese control.",
+  "donde": "Respuesta del dueño del 25/11/2026 (Sí a A, B, C y D), plan v2 de dominio propio §0.7 B."
+}

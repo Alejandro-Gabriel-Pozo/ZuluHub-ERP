@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0910",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Dominio propio mínimo: en el host de la aplicación de una empresa se ingresa con Google; el ingreso con correo y clave queda como proyecto aparte.",
+  "que_cambia": "El alta manual del retorno de Google por cada host de aplicación sigue siendo parte del procedimiento del operador. Corrige la aprobación anterior de correo y clave como estándar, que hoy no existe (ADR-013).",
+  "donde": "Respuesta del dueño del 25/11/2026 (Sí a A, B, C y D) a las preguntas del plan v2 de dominio propio, dominio-propio-plan-de-construccion.md §0.7 A."
+}

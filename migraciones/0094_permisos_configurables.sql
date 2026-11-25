@@ -4,7 +4,7 @@
 -- plan y pisos, los pisos los fija solo la plataforma, los tres roles base quedan como plantillas; Q1 a Q4 = la opción recomendada, Q5 = B (la cantidad de roles propios es una
 -- perilla del plan comercial, base 0).
 --
--- NO SE LEE TODAVÍA: el guard, el adaptador y las 171 acciones siguen usando la constante `PERMISOS_DE_EMPRESA` (tramo T3). Esta migración solo agrega tablas, su semilla (la
+-- NO SE LEE TODAVÍA: el guard, el adaptador y las 172 acciones siguen usando la constante `PERMISOS_DE_EMPRESA` (tramo T3). Esta migración solo agrega tablas, su semilla (la
 -- tabla de hoy, generada desde la constante por `npm run semilla:plantillas`) y la defensa en profundidad de la base. El comportamiento de hoy queda idéntico.
 --
 -- Qué guarda (la fuente de verdad del CATÁLOGO de acciones sigue en el código; acá solo quién tiene cada acción):
@@ -62,7 +62,7 @@ CREATE FUNCTION clave_de_accion_valida(p_accion text) RETURNS boolean LANGUAGE s
   SET search_path = pg_catalog, public, pg_temp AS
 $$ SELECT coalesce(p_accion ~ '^[a-z][a-z0-9_]{0,39}\.[a-z][a-z0-9_]{0,39}$', false) $$;
 
--- Un conjunto de acciones: vacío o de claves válidas, sin repetidas ni nulas, una sola dimensión y a lo sumo 1000 (DEC-0630: tope de forma, no de negocio; hoy hay 171).
+-- Un conjunto de acciones: vacío o de claves válidas, sin repetidas ni nulas, una sola dimensión y a lo sumo 1000 (DEC-0630: tope de forma, no de negocio; hoy hay 172).
 CREATE FUNCTION claves_de_accion_validas(p_acciones text[]) RETURNS boolean LANGUAGE sql IMMUTABLE
   SET search_path = pg_catalog, public, pg_temp AS
 $$
@@ -323,6 +323,7 @@ INSERT INTO version_de_plantilla (clave, numero, acciones, autor) VALUES
     'comandas.ver',
     'composiciones.editar',
     'compras.corregir',
+    'compras.exportar',
     'comprobantes.descartar',
     'comprobantes.emitir',
     'comprobantes.emitir_manual',
@@ -550,6 +551,7 @@ INSERT INTO accion_introducida (accion) SELECT unnest(ARRAY[
     'composiciones.editar',
     'compras.configurar',
     'compras.corregir',
+    'compras.exportar',
     'comprobantes.descartar',
     'comprobantes.emitir',
     'comprobantes.emitir_manual',

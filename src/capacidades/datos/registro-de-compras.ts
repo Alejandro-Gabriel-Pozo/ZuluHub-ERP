@@ -17,6 +17,13 @@ const DEL_FILTRO = (para: string): Proposito => ({
     "Pedernal-docs/11-especificaciones/briefs/compras/PR-3-lista-y-ficha-de-compra.md §4.1 punto 5 y §4.3 (chips «Todas» y «Sin facturar» y «Aplicar filtros» como el listado de facturación y el directorio, DDD:294); quién: los tres roles (recepciones.ver, DDD:247)",
 });
 
+/** El mismo período aplicado en la lista es el que baja el enlace «Exportar» (dueño, 25/11/2026; no hay campos propios de la exportación). */
+const DE_LA_EXPORTACION = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs/11-especificaciones/plan-exportacion-de-compras-2026-11-25.md §2 y §6 (el enlace «Exportar» usa el período aplicado de la lista); dueño, 25/11/2026: «Sí a todas tus recomendaciones» (pregunta 5 del diseño: el período de la Cabecera es la fecha del comprobante si hay, si no la de negocio; el del Detalle, la de negocio)",
+});
+
 const PRUEBA_DEL_BUSCADOR = "apps/web/ui/componentes/BuscadorEnLista.test.tsx";
 const PRUEBA_DE_LA_LECTURA = "apps/web/ui/plantillas/compras/nueva/useLecturaDemorada.test.tsx";
 const PANTALLA_DE_NUEVA_COMPRA =
@@ -292,6 +299,9 @@ export const DATOS_DE_COMPRAS = {
       DEL_FILTRO(
         "Fecha de negocio desde la que se listan las compras (inclusive; vacía, sin límite).",
       ),
+      DE_LA_EXPORTACION(
+        "Primer día del período del archivo de Excel (inclusive): fecha del comprobante en la Cabecera, fecha de negocio en el Detalle.",
+      ),
     ],
     consumidores: [FORMULARIO_DE_FILTROS],
     ponerPor: VER_COMPRAS,
@@ -302,6 +312,9 @@ export const DATOS_DE_COMPRAS = {
     propositos: [
       DEL_FILTRO(
         "Fecha de negocio hasta la que se listan las compras (inclusive; vacía, sin límite).",
+      ),
+      DE_LA_EXPORTACION(
+        "Último día del período del archivo de Excel (inclusive): fecha del comprobante en la Cabecera, fecha de negocio en el Detalle.",
       ),
     ],
     consumidores: [FORMULARIO_DE_FILTROS],
