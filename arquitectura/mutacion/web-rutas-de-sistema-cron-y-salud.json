@@ -2,5 +2,6 @@
   "grupo": "web (rutas de sistema: cron y salud)",
   "archivos": "src/composicion/rutas-de-sistema.ts",
   "minutos": 0.8,
-  "pruebas": "src/composicion/rutas-de-sistema.test.ts"
+  "pruebas": "src/composicion/rutas-de-sistema.test.ts",
+  "critico": true
 }

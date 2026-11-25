@@ -45,6 +45,8 @@ export type EntradaDeSolicitarImpresion = Readonly<{
   /** Una impresora de la sucursal que sirva a ese documento; sin ella, la de cocina o del cliente de la sucursal (o «Ver en pantalla»). */
   impresoraId?: string | undefined;
   claveIdempotencia: string;
+  /** La sucursal con la que trabaja quien pide (la fija el servidor): un documento o trabajo de OTRA es como si no existiera. Previene: copiar o declarar un papel de una sucursal desde otra con alcance a ambas. */
+  sucursalDeTrabajo?: string | undefined;
 }>;
 
 export type SalidaDeImpresion = Readonly<{
@@ -96,13 +98,7 @@ async function prepararImpresion(
   dependencias: DependenciasDeComandas,
   contexto: ContextoOperativo,
   accion: "impresiones.imprimir" | "impresiones.reimprimir",
-  entrada: Readonly<{
-    trabajoId: string;
-    documentoTipo: string;
-    documentoId: string;
-    impresoraId?: string | undefined;
-    claveIdempotencia: string;
-  }>,
+  entrada: EntradaDeSolicitarImpresion,
 ) {
   const persona = await prepararComando(tx, contexto, dependencias.reglas, [accion]);
   if (!persona.ok) return persona;
@@ -125,6 +121,8 @@ async function prepararImpresion(
   if (sucursal === null) return err("DOCUMENTO_NO_ENCONTRADO" as const);
   const alcance = await exigirAlcance(tx, contexto, sucursalId(sucursal));
   if (!alcance.ok) return alcance;
+  if ((entrada.sucursalDeTrabajo ?? sucursal) !== sucursal)
+    return err("DOCUMENTO_NO_ENCONTRADO" as const);
   return ok({ persona: persona.valor, tipo: tipo.valor, sucursal });
 }
 
@@ -324,6 +322,8 @@ export type EntradaDeDeclararResultado = Readonly<{
   /** El intento que declara (1 es el primero; «Reintentar» suma uno). */
   numero: number;
   resultado: string;
+  /** Ver `EntradaDeSolicitarImpresion.sucursalDeTrabajo`: un trabajo de otra sucursal es como si no existiera. */
+  sucursalDeTrabajo?: string | undefined;
 }>;
 export type SalidaDeDeclararResultado = Readonly<{
   trabajoId: string;
@@ -359,6 +359,8 @@ async function declarar(
   if (trabajo === null) return err("TRABAJO_NO_ENCONTRADO");
   const alcance = await exigirAlcance(tx, contexto, sucursalId(trabajo.sucursalId));
   if (!alcance.ok) return alcance;
+  if ((entrada.sucursalDeTrabajo ?? trabajo.sucursalId) !== trabajo.sucursalId)
+    return err("TRABAJO_NO_ENCONTRADO");
   if (entrada.numero > trabajo.intentos) return err("INTENTO_NO_PEDIDO");
   const nuevo = await tx.impresion.insertarIntento(empresaId, {
     trabajoId: trabajo.id,

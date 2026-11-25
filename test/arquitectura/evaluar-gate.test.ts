@@ -14,7 +14,7 @@ const require = createRequire(import.meta.url);
 const { evaluarGate, corridaReemplazada, SALTABLES_EN_PUSH } =
   require("../../arquitectura/evaluar-gate.cjs") as {
     SALTABLES_EN_PUSH: readonly string[];
-    evaluarGate: (needs: Needs, evento?: string) => string[];
+    evaluarGate: (needs: Needs, evento?: string, base?: string) => string[];
     corridaReemplazada: (e: {
       needs: Needs;
       evento?: string;
@@ -399,5 +399,139 @@ describe("Gate: un push a main corre solo lo rápido (la mutación y Estabilidad
     expect(job("mutacion", "gate")).toContain("needs.mutacion-plan.outputs.hay == 'true'");
     expect(ci).toMatch(/^ {2}workflow_dispatch:\s*$/m);
     expect(ci).toMatch(/^ {2}schedule:\s*$/m);
+  });
+});
+
+/**
+ * CI liviano (dueño, 25/11/2026): en un pull request hacia la rama de integración se aceptan saltados la mutación, Estabilidad y, si el cambio no toca la web, la compilación de la
+ * web, los componentes y el recorrido. Cualquier otra combinación los deja en rojo (fail-closed). Cada caso de abajo es una violación inyectada.
+ */
+describe("Gate: CI liviano en un pull request hacia la rama de integración", () => {
+  const BASE = "integracion/modulos-v2";
+  const LIVIANO_SIN_WEB: Needs = {
+    "mutacion-plan": {
+      result: "success",
+      outputs: { hay: "false", estabilidad: "false", liviano: "true", toca_web: "false" },
+    },
+    mutacion: { result: "skipped" },
+    estabilidad: { result: "skipped" },
+    web: { result: "skipped" },
+    componentes: { result: "skipped" },
+    recorrido: { result: "skipped" },
+  };
+  const LIVIANO_CON_WEB: Needs = {
+    ...LIVIANO_SIN_WEB,
+    "mutacion-plan": {
+      result: "success",
+      outputs: { hay: "false", estabilidad: "false", liviano: "true", toca_web: "true" },
+    },
+    web: { result: "success" },
+    componentes: { result: "success" },
+    recorrido: { result: "success" },
+  };
+  const evaluar = (cambios: Needs, evento = "pull_request", base = BASE) =>
+    evaluarGate(con(cambios), evento, base);
+
+  it("liviano sin tocar la web: mutación, Estabilidad y los tres de la web saltados pasan", () => {
+    expect(evaluar(LIVIANO_SIN_WEB)).toEqual([]);
+  });
+
+  it("liviano tocando la web: los tres de la web corren y pasan", () => {
+    expect(evaluar(LIVIANO_CON_WEB)).toEqual([]);
+  });
+
+  it.each(["web", "componentes", "recorrido"])(
+    "VIOLACIÓN: liviano con toca_web == true y «%s» saltado queda en rojo",
+    (job) => {
+      const needs = { ...LIVIANO_CON_WEB, [job]: { result: "skipped" } };
+      expect(evaluar(needs)).toEqual([`${job}: skipped`]);
+    },
+  );
+
+  it.each(["", "true", "algo"])(
+    "VIOLACIÓN: toca_web «%s» (vacío o distinto de false) con la web saltada queda en rojo (fail-closed)",
+    (valor) => {
+      const needs = {
+        ...LIVIANO_SIN_WEB,
+        "mutacion-plan": {
+          result: "success",
+          outputs: { hay: "false", estabilidad: "false", liviano: "true", toca_web: valor },
+        },
+      };
+      expect(evaluar(needs)).toEqual([
+        "web: skipped",
+        "componentes: skipped",
+        "recorrido: skipped",
+      ]);
+    },
+  );
+
+  it("VIOLACIÓN: un pull request hacia main con la web saltada queda en rojo aunque el plan diga liviano", () => {
+    expect(evaluar(LIVIANO_SIN_WEB, "pull_request", "main")).toEqual([
+      "web: skipped",
+      "componentes: skipped",
+      "recorrido: skipped",
+    ]);
+    expect(evaluar(LIVIANO_SIN_WEB, "pull_request", "")).toHaveLength(3);
+    expect(evaluarGate(con(LIVIANO_SIN_WEB), "pull_request")).toHaveLength(3); // sin base
+  });
+
+  it("VIOLACIÓN: la nocturna, la corrida a pedido y un push con la web saltada y el plan liviano quedan en rojo", () => {
+    for (const evento of ["schedule", "workflow_dispatch", "push"]) {
+      const problemas = evaluar(LIVIANO_SIN_WEB, evento);
+      expect(problemas, evento).toEqual(
+        expect.arrayContaining(["web: skipped", "componentes: skipped", "recorrido: skipped"]),
+      );
+    }
+  });
+
+  it("VIOLACIÓN: el plan caído (failure) con la web saltada queda en rojo", () => {
+    const needs = { ...LIVIANO_SIN_WEB, "mutacion-plan": { result: "failure" } };
+    expect(evaluar(needs)).toEqual(
+      expect.arrayContaining(["mutacion-plan: failure", "web: skipped"]),
+    );
+  });
+
+  it("VIOLACIÓN: liviano == false (otro perfil) con la web saltada queda en rojo", () => {
+    const needs = {
+      ...LIVIANO_SIN_WEB,
+      "mutacion-plan": {
+        result: "success",
+        outputs: { hay: "false", estabilidad: "false", liviano: "false", toca_web: "false" },
+      },
+    };
+    expect(evaluar(needs)).toEqual(["web: skipped", "componentes: skipped", "recorrido: skipped"]);
+  });
+
+  it("VIOLACIÓN: liviano con las pruebas, el estático, el guardián o la seguridad saltados queda en rojo", () => {
+    for (const job of ["pruebas", "estatico", "guardian", "seguridad", "flujos"]) {
+      expect(evaluar({ ...LIVIANO_SIN_WEB, [job]: { result: "skipped" } }), job).toEqual([
+        `${job}: skipped`,
+      ]);
+    }
+  });
+
+  it("la web fallida sigue en rojo en liviano (saltar no es fallar)", () => {
+    expect(evaluar({ ...LIVIANO_CON_WEB, recorrido: { result: "failure" } })).toEqual([
+      "recorrido: failure",
+    ]);
+  });
+
+  it("el paso de verdad: la rama base llega por BASE_DEL_PR (liviano sale 0; hacia main sale 1)", () => {
+    const correr = (base: string) =>
+      spawnSync("node", [join(RAIZ, "arquitectura/evaluar-gate.cjs")], {
+        encoding: "utf8",
+        env: {
+          NODE_ENV: "test",
+          PATH: process.env["PATH"] ?? "",
+          NEEDS: JSON.stringify(con(LIVIANO_SIN_WEB)),
+          EVENTO: "pull_request",
+          BASE_DEL_PR: base,
+        },
+      });
+    expect(correr(BASE).status).toBe(0);
+    const rojo = correr("main");
+    expect(rojo.status).toBe(1);
+    expect(rojo.stderr).toContain("web: skipped");
   });
 });

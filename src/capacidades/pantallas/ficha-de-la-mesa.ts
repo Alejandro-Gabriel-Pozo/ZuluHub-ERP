@@ -21,6 +21,19 @@ const ORDEN_DE_SALIDA = {
   donde:
     "Pedernal-docs 10-ux-ui, maqueta salida.html (tabla «Sale ahora · Sale después · Cuándo sale», aprobada el 09/11/2026) y 11-especificaciones/salon-dia-uno-inventario-de-textos.md, sección A.1",
 } as const;
+const COMANDA_APROBADA = {
+  decidio:
+    "el dueño, 09/11/2026 (aprobó la maqueta `salon.html`; Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md, D115: 302 textos)",
+  donde:
+    "Pedernal-docs 10-ux-ui, maqueta salon.html (grupos «Cocina e impresión» y «Anular») y 11-especificaciones/salon-dia-uno-inventario-de-textos.md, sección A.2",
+} as const;
+const COPIA_APROBADA = {
+  decidio:
+    "el dueño, 09/11/2026 (aprobó la maqueta `imprimir.html`; Pedernal-docs 11-especificaciones/decisiones-del-dueno-2026-11.md, D115: 302 textos)",
+  donde:
+    "Pedernal-docs 10-ux-ui, maqueta imprimir.html (CYN 120) y 11-especificaciones/salon-dia-uno-inventario-de-textos.md, sección A.2",
+} as const;
+const USO_DE_IMPRIMIR = "BotonDeImprimir.cliente.tsx";
 const USO_DEL_MODELO = "modelo-de-la-mesa.ts (ficha de la mesa)";
 const USO_DE_LA_PANTALLA = "PantallaDeLaMesa.cliente.tsx";
 
@@ -31,6 +44,12 @@ export const FICHA_DE_LA_MESA = {
     "apps/web/ui/plantillas/salon/PantallaDeLaMesa.cliente.tsx",
     "apps/web/ui/plantillas/salon/CatalogoDeLaMesa.cliente.tsx",
     "apps/web/ui/plantillas/salon/modelo-de-la-mesa.ts",
+    "apps/web/ui/plantillas/salon/PlatoDeLaMesa.cliente.tsx",
+    "apps/web/ui/plantillas/salon/useCocinaDeLaMesa.cliente.tsx",
+    "apps/web/ui/plantillas/salon/ImpresionDelDocumento.cliente.tsx",
+    "apps/web/ui/plantillas/salon/HojaDeAnularItem.cliente.tsx",
+    "apps/web/ui/plantillas/salon/EnviosDeLaMesa.cliente.tsx",
+    "apps/web/ui/patrones/papel/BotonDeImprimir.cliente.tsx",
   ],
   rutas: ["/salon/cuenta/[mesaId]"],
   titulo: "salon.texto.admin_mesa_numero",
@@ -59,6 +78,42 @@ export const FICHA_DE_LA_MESA = {
       texto: "comandas.texto.salida_quitar",
       hace: { envia: "cuentas.anular_linea" },
       sinPermiso: "APAGADO",
+    },
+    {
+      id: "enviar-a-cocina",
+      texto: "comandas.texto.envio_enviar_a_cocina",
+      hace: { envia: "comandas.enviar" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "pedir-que-salga",
+      texto: "comandas.texto.salida_pedir_que_salga",
+      hace: { envia: "comandas.enviar" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "pedir-que-salga-todo",
+      texto: "comandas.texto.salida_pedir_que_salga_todo",
+      hace: { envia: "comandas.enviar" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "anular-item-enviado",
+      texto: "comandas.texto.anulacion_anular",
+      hace: { envia: "cuentas.anular_linea" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "imprimir",
+      texto: "comandas.texto.imprimir_imprimir",
+      hace: { envia: "impresiones.imprimir" },
+      sinPermiso: "APAGADO",
+    },
+    {
+      id: "reimprimir",
+      texto: "comandas.texto.envio_reimprimir",
+      hace: { envia: "impresiones.reimprimir" },
+      sinPermiso: "AUSENTE",
     },
     {
       id: "liberar",
@@ -144,6 +199,58 @@ export const FICHA_DE_LA_MESA = {
     "comandas.texto.envio_envio_n": {
       usos: ["número de envío de un plato enviado («Envío 1»)"],
       fuente: MAQUETA_APROBADA,
+    },
+    "comandas.texto.envio_enviar_a_cocina": {
+      usos: [USO_DE_LA_PANTALLA],
+      fuente: COMANDA_APROBADA,
+    },
+    "comandas.texto.envio_enviado_a_cocina": {
+      usos: ["texto de la ficha (confirmación del envío)"],
+      fuente: COMANDA_APROBADA,
+    },
+    "comandas.texto.envio_reimprimir": { usos: [USO_DE_LA_PANTALLA], fuente: COMANDA_APROBADA },
+    "comandas.texto.envio_item_anulado": {
+      usos: ["título del aviso de un ítem anulado"],
+      fuente: COMANDA_APROBADA,
+    },
+    "comandas.texto.salida_pedir_que_salga": {
+      usos: [USO_DE_LA_PANTALLA],
+      fuente: ORDEN_DE_SALIDA,
+    },
+    "comandas.texto.salida_pedir_que_salga_todo": {
+      usos: [USO_DE_LA_PANTALLA],
+      fuente: ORDEN_DE_SALIDA,
+    },
+    "comandas.texto.anulacion_anular": { usos: [USO_DE_LA_PANTALLA], fuente: COMANDA_APROBADA },
+    "comandas.texto.anulacion_motivo": { usos: [USO_DE_LA_PANTALLA], fuente: COMANDA_APROBADA },
+    "ventas.venta.cantidad": {
+      usos: ["cantidad que se anula (hoja de anular un ítem enviado)"],
+      fuente: {
+        decidio: "el dueño, 09/11/2026 (aprobó la maqueta de la venta rápida; D115)",
+        donde:
+          "Pedernal-docs 10-ux-ui, maqueta venta-rapida-v4.html (hoja de producto, campo de cantidad)",
+      },
+    },
+    "comandas.texto.imprimir_se_imprime_una_copia_con_la_hora_del_envio_origina": {
+      usos: ["hoja que confirma una copia del papel"],
+      fuente: COPIA_APROBADA,
+    },
+    "comandas.texto.imprimir_configurar_impresoras": {
+      usos: ["enlace cuando no hay impresora para la comanda de cocina"],
+      fuente: COPIA_APROBADA,
+    },
+    "comandas.texto.imprimir_imprimir": { usos: [USO_DE_IMPRIMIR], fuente: COPIA_APROBADA },
+    "comandas.texto.imprimir_imprimiendo": { usos: [USO_DE_IMPRIMIR], fuente: COPIA_APROBADA },
+    "comandas.texto.imprimir_impresa": { usos: [USO_DE_IMPRIMIR], fuente: COPIA_APROBADA },
+    "comandas.texto.imprimir_no_se_pudo_imprimir": {
+      usos: [USO_DE_IMPRIMIR],
+      fuente: COPIA_APROBADA,
+    },
+    "comandas.texto.imprimir_reintentar": { usos: [USO_DE_IMPRIMIR], fuente: COPIA_APROBADA },
+    "comandas.texto.imprimir_ver_en_pantalla": { usos: [USO_DE_IMPRIMIR], fuente: COPIA_APROBADA },
+    "comandas.texto.imprimir_no_hay_impresora_para_la_comanda_de_cocina": {
+      usos: [USO_DE_IMPRIMIR],
+      fuente: COPIA_APROBADA,
     },
     "salon.texto.unir_unida_a_la_mesa": {
       usos: ["estado de una mesa unida («Unida a la mesa 5»)"],
