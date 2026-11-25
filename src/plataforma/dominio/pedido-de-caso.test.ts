@@ -96,6 +96,14 @@ const VALIDOS: Record<NombreDeCaso, { json: unknown; entrada: unknown }> = {
     json: { claveDeIdempotencia: CLAVE, dominioId: ID_A },
     entrada: { claveDeIdempotencia: CLAVE, dominioId: ID_A },
   },
+  desactivarDominio: {
+    json: { claveDeIdempotencia: CLAVE, dominioId: ID_A },
+    entrada: { claveDeIdempotencia: CLAVE, dominioId: ID_A },
+  },
+  retirarDominio: {
+    json: { claveDeIdempotencia: CLAVE, dominioId: ID_A, motivo: "el cliente se fue" },
+    entrada: { claveDeIdempotencia: CLAVE, dominioId: ID_A, motivo: "el cliente se fue" },
+  },
   crearPlan: {
     json: { claveDeIdempotencia: CLAVE, codigo: "base" },
     entrada: { claveDeIdempotencia: CLAVE, codigo: "base" },
@@ -199,6 +207,8 @@ describe("la lista cerrada de casos", () => {
       "agregarDominio",
       "verificarDominio",
       "activarDominio",
+      "desactivarDominio",
+      "retirarDominio",
       "crearPlan",
       "guardarBorradorDePlan",
       "publicarVersionDePlan",

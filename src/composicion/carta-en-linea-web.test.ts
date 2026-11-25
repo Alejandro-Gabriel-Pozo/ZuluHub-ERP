@@ -52,7 +52,10 @@ type Montaje = {
   llamadas: { que: string; entrada: unknown }[];
   registrados: string[];
 };
-const montar = (cambios: Partial<Pick<Montaje, "vista" | "guardar">> = {}) => {
+const montar = (
+  cambios: Partial<Pick<Montaje, "vista" | "guardar">> = {},
+  hostPropio: string | null = null,
+) => {
   const m: Montaje = {
     vista: () => ok({ carta: VIGENTE, sucursalActiva: true, visibilidad: VISIBILIDAD }),
     guardar: () =>
@@ -74,6 +77,7 @@ const montar = (cambios: Partial<Pick<Montaje, "vista" | "guardar">> = {}) => {
         return Promise.resolve(m.vista());
       },
     }),
+    hostPropioDeLaCarta: () => () => Promise.resolve(hostPropio),
     respuesta: { registrar: (detalle: string) => m.registrados.push(detalle) },
   } as unknown as DependenciasDeCartaEnLineaWeb;
   return { m, d };
@@ -94,6 +98,23 @@ describe("direccionPublicaDeLaCarta", () => {
       `https://app.ejemplo.test/${CODIGO}`,
     );
     expect(direccionPublicaDeLaCarta(null, CODIGO)).toBe(`/${CODIGO}`);
+  });
+});
+
+describe("verLaCartaEnLinea: dirección propia (DEC-0913)", () => {
+  it("con dirección propia activa, la dirección sale ahí; sin ella, en el host de la marca", async () => {
+    const propio = montar({}, "carta.cliente.test");
+    const r1 = await verLaCartaEnLinea(propio.d, contexto, {
+      sucursalId: SUCURSAL,
+      hostDeApp: "app.ejemplo.test",
+    });
+    expect(r1.ok && r1.dato.direccion).toBe(`https://carta.cliente.test/${CODIGO}`);
+    const sin = montar();
+    const r2 = await verLaCartaEnLinea(sin.d, contexto, {
+      sucursalId: SUCURSAL,
+      hostDeApp: "app.ejemplo.test",
+    });
+    expect(r2.ok && r2.dato.direccion).toBe(`https://app.ejemplo.test/${CODIGO}`);
   });
 });
 

@@ -183,6 +183,7 @@ describe("agregar un dominio", () => {
           ejecutar: () => Promise.resolve(err({ tipo, restriccion })),
         },
         reglas: REGLAS_DE_PLATAFORMA,
+        hostsProtegidos: new Set(),
       });
     const esperado = [
       ["dominio_host_uk", "Unicidad", "HOST_DUPLICADO"],
@@ -418,6 +419,7 @@ describe("verificar, activar, desactivar y retirar", () => {
           ejecutar: () => Promise.resolve(err({ tipo: "Check", restriccion } as const)),
         },
         reglas: REGLAS_DE_PLATAFORMA,
+        hostsProtegidos: new Set(),
       });
     const esperado = [
       ["dominio_transicion_invalida", "TRANSICION_DE_DOMINIO_INVALIDA"],

@@ -674,6 +674,10 @@ const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
   resolucionDeHost: { sinGuard: "puerta pública: sin sesión, solo lectura" },
   configuracionPublicaDeHost: { sinGuard: "puerta pública: sin sesión, solo lectura" },
   vidrieraPublica: { sinGuard: "puerta pública: sin sesión, solo lectura (la carta en línea)" },
+  hostPropioDeLaCarta: {
+    sinGuard:
+      "lectura del host propio de la empresa del contexto (política 0095); solo la llama la pantalla de la carta después de `verCartaPublica`, que exige `vidrieras.ver`",
+  },
   imagenesExternas: {
     sinGuard:
       "no toca datos de nadie: pide una imagen a un destino armado desde la plantilla del proveedor",

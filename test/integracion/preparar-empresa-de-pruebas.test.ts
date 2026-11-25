@@ -67,6 +67,7 @@ describe.skipIf(base === null)("preparar la empresa de pruebas (base y casos rea
       PEDERNAL_DB_PLATAFORMA: aparte.base.plataforma,
       PEDERNAL_CLAVE_CONTEXTO: `${aparte.base.clave.kid}:${aparte.base.clave.secreto.toString("hex")}`,
       PEDERNAL_SECRETO_INVITACIONES: randomBytes(32).toString("hex"),
+      PEDERNAL_HOSTS_PROTEGIDOS: "consola.pedernal.test",
       CRON_SECRET: `cron-${randomBytes(16).toString("hex")}`,
     };
     plataforma = armarPlataforma({ fuente: () => entorno });
