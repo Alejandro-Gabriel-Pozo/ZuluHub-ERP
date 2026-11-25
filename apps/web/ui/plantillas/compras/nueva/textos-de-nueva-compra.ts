@@ -24,6 +24,8 @@ export type TextosDeNuevaCompra = Readonly<{
   agregarProducto: string;
   comoSeCompra: string;
   cantidad: string;
+  /** «Peso recibido»: el peso real de una presentación de peso variable (texto de la maqueta `compra.html`, aprobado el 09/11/2026). */
+  pesoRecibido: string;
   precioPor: string;
   precio: string;
   entraATuStock: string;
@@ -80,6 +82,7 @@ export function textosDeNuevaCompra(): TextosDeNuevaCompra {
     agregarProducto: texto({}, "catalogo.seccion.agregar_producto"),
     comoSeCompra: texto({}, "compras.compra.como_se_compra"),
     cantidad: texto({}, "compras.compra.cantidad"),
+    pesoRecibido: texto({}, "compras.recepcion.peso_recibido"),
     precioPor: texto({}, "compras.compra.precio_por"),
     precio: texto({}, "fiscal.pantalla.emitir_precio"),
     entraATuStock: texto({}, "compras.compra.entra_a_tu_stock"),

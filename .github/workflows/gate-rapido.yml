@@ -5,6 +5,10 @@ name: Gate rápido
 # verificación estática y todas las pruebas (con la integración). No incluye la mutación, las 12 copias de
 # estabilidad ni la seguridad: eso corre en el pull request de integración de cada tanda (ci.yml). Las ramas
 # `integracion/**` y `main` ya tienen su CI completo y no se repiten acá.
+#
+# Con un pull request abierto para la rama, `ci.yml` ya corre lo mismo en cada push: este aviso se saltea (job `hay-pr`). Previene: pagar dos veces el estático y las
+# pruebas de cada push a una rama con PR (los dos workflows corrían la misma suite: ~la mitad de las pruebas de cada PR, medido el 25/11/2026). Una rama sin PR conserva su
+# aviso temprano. Ante la duda (la consulta falla) los jobs CORREN.
 
 on:
   push:
@@ -21,8 +25,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  hay-pr:
+    name: ¿La rama ya tiene un pull request abierto?
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      abiertos: ${{ steps.consulta.outputs.abiertos }}
+    steps:
+      - id: consulta
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORIO: ${{ github.repository }}
+          DUENIO: ${{ github.repository_owner }}
+          RAMA: ${{ github.ref_name }}
+        run: |
+          abiertos="$(gh api -X GET "repos/${REPOSITORIO}/pulls" -f head="${DUENIO}:${RAMA}" -f state=open --jq length)"
+          echo "abiertos=${abiertos}" >> "$GITHUB_OUTPUT"
+
   estatico:
     name: Estático (tipos, lint, formato, arquitectura, código muerto)
+    needs: hay-pr
+    if: ${{ !cancelled() && needs.hay-pr.outputs.abiertos != '0' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -42,6 +68,8 @@ jobs:
 
   pruebas:
     name: Pruebas (con Postgres real)
+    needs: hay-pr
+    if: ${{ !cancelled() && needs.hay-pr.outputs.abiertos != '0' }}
     runs-on: ubuntu-latest
     # Tres fragmentos de la suite en paralelo (`vitest` con `shard`, por archivo; cada uno con su propio Postgres): con un solo job la suite (17-20 min, p90 de 19-22) se cancelaba por timeout al borde del límite
     # (run 43989591478 del 17/11/2026: tres intentos de 20 min 16 s, 20 min 5 s y 19 min 27 s) y dejaba el PR «unstable». Por fragmento se esperan ~7 min con el arranque (la suite se reparte casi pareja: ver `pruebas-en-shards.test.ts`); el tope de 20 es casi 3 veces eso.
@@ -88,6 +116,8 @@ jobs:
 
   web:
     name: Web y consola (next build sin variables PEDERNAL_*)
+    needs: hay-pr
+    if: ${{ !cancelled() && needs.hay-pr.outputs.abiertos != '0' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -114,6 +144,8 @@ jobs:
 
   componentes:
     name: Componentes (axe, foco y envío en Chromium)
+    needs: hay-pr
+    if: ${{ !cancelled() && needs.hay-pr.outputs.abiertos != '0' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

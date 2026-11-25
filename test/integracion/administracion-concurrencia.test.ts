@@ -614,8 +614,37 @@ describe.skipIf(base === null)("administración: concurrencia de las reglas de 0
          where a.empresa_id = $1 and a.activa and not m.activo`,
         [e.empresa.empresa],
       );
-      expect(huerfanas, `ronda ${n}: ${JSON.stringify([asignado, apagado])}`).toEqual([]);
-      expect((await membresia(e, e.operador))?.activo).toBe(false);
+      const resultado = `ronda ${n}: ${JSON.stringify([asignado, apagado])}`;
+      // La invariante (nunca una asignación activa de un miembro apagado) vale siempre, gane quien gane.
+      expect(huerfanas, resultado).toEqual([]);
+      if (apagado.ok) {
+        expect((await membresia(e, e.operador))?.activo, resultado).toBe(false);
+      } else {
+        // El apagado perdió la carrera contra la asignación en TODOS sus reintentos (la asignación confirma más lento que la espera acumulada de los reintentos, por ejemplo con
+        // la máquina cargada): es un error tipado de «reintentar», no un estado roto. Nada cambió (el miembro sigue activo y sin asignaciones huérfanas) y, sin la carrera,
+        // volver a pedir el apagado lo aplica entero.
+        expect(apagado.error, resultado).toEqual({ tipo: "ConcurrenciaAgotada" });
+        expect((await membresia(e, e.operador))?.activo, resultado).toBe(true);
+        const otraVez = await entorno.ejecutar({ contexto: ctx(e, e.admin) }, async ({ db }) => {
+          await sql`update membresia set activo = false
+                    where empresa_id = ${e.empresa.empresa} and persona_id = ${e.operador}`.execute(
+            db,
+          );
+          await sql`update asignacion_sucursal set activa = false where persona_id = ${e.operador}`.execute(
+            db,
+          );
+          return ok("APAGADO");
+        });
+        expect(otraVez, resultado).toEqual({ ok: true, valor: "APAGADO" });
+        expect((await membresia(e, e.operador))?.activo, resultado).toBe(false);
+        expect(
+          await consultar(
+            "select 1 from asignacion_sucursal where empresa_id = $1 and persona_id = $2 and activa",
+            [e.empresa.empresa, e.operador],
+          ),
+          resultado,
+        ).toEqual([]);
+      }
     }
   });
 });

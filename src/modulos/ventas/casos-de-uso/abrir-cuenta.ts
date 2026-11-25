@@ -24,8 +24,8 @@ export type EntradaDeAbrirCuenta = Readonly<{
   cuentaId: string;
   sucursalId: string;
   /**
-   * A2c: el departamento en el que se abre (el del selector de la pantalla; se fija y no cambia). Ausente: con dos o más departamentos activos es
-   * `DEPARTAMENTO_REQUERIDO` (nunca se asume «todos»); con uno solo lo toma; sin departamentos queda sin departamento (`departamentoDeLaCuenta`).
+   * El departamento en el que se abre, solo si quien abre lo nombra (se valida y no cambia). Ausente: la cuenta queda sin departamento, con los departamentos que haya
+   * (el departamento sale del producto: `departamentoDeLaCuenta`).
    */
   departamentoId?: string | undefined;
   ancla?: Ancla | undefined;
@@ -105,18 +105,13 @@ export async function abrirCuentaEnTx(
     const ocupada = await tx.cuentas.abiertaPorAncla(empresaId, pedido.ancla);
     if (ocupada !== null) return ok({ cuentaId: ocupada.id, yaExistia: true });
   }
-  // El departamento se decide recién acá, sobre lo que hay AHORA en la empresa, y solo para una cuenta nueva (la repetición ya devolvió la guardada).
-  let departamento: string | null;
-  if (opciones.departamentoDeLaMadre !== undefined) {
-    departamento = opciones.departamentoDeLaMadre.id;
-  } else {
-    const elegido = departamentoDeLaCuenta(
-      await tx.clasificacion.todos(empresaId),
-      entrada.departamentoId,
-    );
-    if (!elegido.ok) return elegido;
-    departamento = elegido.valor;
-  }
+  // El departamento (si se nombró uno) se valida recién acá, sobre lo que hay AHORA en la empresa, y solo para una cuenta nueva (la repetición ya devolvió la guardada).
+  const elegido = departamentoDeLaCuenta(
+    await tx.clasificacion.todos(empresaId),
+    entrada.departamentoId,
+  );
+  if (!elegido.ok) return elegido;
+  const departamento = elegido.valor;
   const insertada = await tx.cuentas.insertar(empresaId, {
     id,
     sucursalId: sucursal,

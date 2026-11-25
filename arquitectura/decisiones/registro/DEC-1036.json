@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "PERMISOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Se confirma la matriz del salón: unir, dividir, cambiar de mesa, enviar e imprimir, los tres roles; mesas e impresoras, gerente y administrador. No se crea ninguna acción.",
   "que_cambia": "Solo se confirma lo que ya hay: el operador toma pedidos, agrega, quita, envía e imprime, pero no administra mesas ni impresoras. El mapa y la ficha de la mesa se piden con mesas.ver. Se revierte cambiando la plantilla del rol.",
-  "donde": "src/capacidades/modulos/catalogo-salon-y-comandas.ts; apps/web/ui/navegacion/menu-filas-ventas.ts (fila Salón); Pedernal-docs plan-de-salon-dia-uno-2026-11-25.md DEC-1036 (Q2 del 16/11/2026)"
+  "donde": "src/capacidades/modulos/catalogo-salon-y-comandas.ts; apps/web/ui/navegacion/menu-filas-ventas.ts (fila Salón); Pedernal-docs plan-de-salon-dia-uno-2026-11-25.md DEC-1036 (Q2 del 16/11/2026); dueño 25/11, vía el orquestador; la fila la asienta diseño"
 }
