@@ -32,6 +32,33 @@ vi.setConfig({ testTimeout: 180_000 });
 const kilos = { unidadBase: "KILOGRAMO", dimension: "MASA" } as const;
 const VACIA = { texto: "", conReceta: "", activo: "", despues: "" };
 
+/** Los valores de texto que tienen forma de importe o costo exacto (decimal de 6 decimales: «333.333333», «1000.000000»), en cualquier parte de un resultado. */
+const importesEn = (valor: unknown): string[] => {
+  if (typeof valor === "string") return /^-?\d+\.\d{6}$/.test(valor) ? [valor] : [];
+  if (Array.isArray(valor)) return valor.flatMap(importesEn);
+  if (typeof valor === "object" && valor !== null) return Object.values(valor).flatMap(importesEn);
+  return [];
+};
+
+describe("importesEn (la prueba de que el operador no ve costos mira valores, no texto suelto)", () => {
+  it("no confunde un UUID con «333» con un costo, y sí detecta un costo filtrado en cualquier parte", () => {
+    const sinCostos = {
+      id: "33333333-3333-4333-8333-333333333333",
+      bruto: "1.0000",
+      merma: "20.0000",
+      lineas: [{ neto: "0.8000" }],
+    };
+    expect(importesEn(sinCostos)).toEqual([]);
+    expect(importesEn({ ...sinCostos, costos: { porUnidad: "333.333333" } })).toEqual([
+      "333.333333",
+    ]);
+    expect(
+      importesEn({ ...sinCostos, lineas: [{ neto: "0.8000", costo: "1000.000000" }] }),
+    ).toEqual(["1000.000000"]);
+    expect(importesEn(null)).toEqual([]);
+  });
+});
+
 describe.skipIf(base === null)("recetas de la web: lecturas y errores", () => {
   let c: MontajeDeStock;
   let e: EscenarioDeStock;
@@ -341,7 +368,8 @@ describe.skipIf(base === null)("recetas de la web: lecturas y errores", () => {
     expect(operador?.ficha?.componentes[0]).toMatchObject({ bruto: "1.0000", merma: "20.0000" });
     expect(Object.hasOwn(operador?.ficha ?? {}, "costos")).toBe(false);
     expect(Object.hasOwn(operador?.ficha?.componentes[0] ?? {}, "costo")).toBe(false);
-    expect(JSON.stringify(operador)).not.toMatch(/333|1000\.0/);
+    // Ningún VALOR con forma de costo (texto decimal de 6 decimales) en lo que ve el operador; se mira cada valor, no el JSON entero (un UUID al azar puede llevar «333»).
+    expect(importesEn(operador)).toEqual([]);
 
     // Una versión con un ingrediente sin costo: la línea es null y el total, incompleto; nunca cero.
     valorDe(
