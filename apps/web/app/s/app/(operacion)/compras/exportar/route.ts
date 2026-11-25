@@ -5,7 +5,8 @@ import { descargarElArchivoDeCompras } from "../../../../../../pantallas/descarg
 // genera al compilar. Cada descarga deja su registro de auditoría (quién, cuándo, período y cantidad de filas).
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// Tope de la función: 30 s. Lee hasta 20.000 filas y escribe el archivo en memoria; la medición (`test/integracion/compras-exportacion-volumen.test.ts`) fija que 20.000 líneas tardan bien menos.
+// Tope de la función: 30 s. Lee hasta 20.000 filas en una transacción y escribe el archivo en memoria; no llama a nadie de afuera. El número es un supuesto con margen hasta medirlo en la
+// base real de preview (la medición del PR dice cuánto tardó en la base local).
 // Next: `maxDuration` en un route.ts. Chequeo: `test/web/max-duration.test.ts`.
 export const maxDuration = 30;
 
