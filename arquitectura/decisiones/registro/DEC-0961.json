@@ -4,7 +4,7 @@
   "quien": "sesión",
   "tipo": "SIN_DECISION",
   "estado": "PENDIENTE_DE_OK",
-  "decision": "SUPUESTO: la raíz lista hasta 20 cartas en línea de la empresa, ordenadas por nombre, y cada una solo si `/<código>` realmente la serviría (sucursal abierta, empresa que opera, plan con la carta).",
+  "decision": "SUPUESTO: la raíz lista hasta 20 cartas en línea de la empresa, ordenadas por nombre, y cada una solo si su dirección realmente la serviría (sucursal abierta, empresa que opera, plan con la carta).",
   "que_cambia": "Nada que vea el negocio con pocas sucursales; con más de 20 cartas en línea la raíz muestra las 20 primeras por nombre. Se revierte cambiando una constante (TOPE_DE_CARTAS_DE_LA_RAIZ).",
   "donde": "src/puertos/vidriera-publica.ts (TOPE_DE_CARTAS_DE_LA_RAIZ) y src/adaptadores/postgres/vidriera-publica.ts (listarDelHost)",
   "motivo": "El plan no fijaba un tope ni decía qué hacer con una carta en línea que su plan ya no deja servir; confirmar cada candidata con la lectura por código evita listar enlaces que dan 404 y no abre más tablas al rol público."
