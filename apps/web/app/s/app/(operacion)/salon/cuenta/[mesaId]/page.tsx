@@ -12,6 +12,7 @@ import {
   cargarLaFichaDeLaMesa,
   nuevoIdDeCuentaDeMesa,
 } from "../../../../../../../servidor/salon";
+import { puedeCobrarLaMesa } from "../../../../../../../servidor/ofertas-de-salon";
 import { cargarLaVentaRapida } from "../../../../../../../servidor/venta-rapida";
 import { armarLosTextosDeImprimir } from "../../../../../../../ui/patrones/papel/textos-de-imprimir";
 import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
@@ -73,8 +74,9 @@ export default async function PaginaDeLaMesa({ params }: PropsDePagina) {
           enviar: await puedeEnviarAComandas(contexto),
           imprimir: await puedeImprimir(contexto),
           reimprimir: await puedeReimprimir(contexto),
+          cobrar: await puedeCobrarLaMesa(contexto),
         }
-      : { enviar: false, imprimir: false, reimprimir: false };
+      : { enviar: false, imprimir: false, reimprimir: false, cobrar: false };
     const configurarImpresoras = conCuenta && (await puedeAdministrarImpresoras(contexto));
     return conTitulo(
       mesa.titulo,

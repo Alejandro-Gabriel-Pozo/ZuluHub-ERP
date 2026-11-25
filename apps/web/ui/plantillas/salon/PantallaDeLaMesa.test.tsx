@@ -184,7 +184,7 @@ const pantalla = (
     cuentaNuevaId="cuenta-nueva"
     mesasLibres={null}
     textosDeImprimir={armarLosTextosDeImprimir()}
-    puede={{ enviar: true, imprimir: true, reimprimir: true }}
+    puede={{ enviar: true, imprimir: true, reimprimir: true, cobrar: true }}
     rutaDeImpresoras={null}
     catalogo={null}
     {...extra}
@@ -728,13 +728,53 @@ describe("PantallaDeLaMesa", () => {
     it("sin permiso (la ayuda): sin «Enviar a cocina», «Pedir que salga», «Anular» ni «Reimprimir»; la ficha sigue igual", async () => {
       await render(
         pantalla(fichaParaEnviar, accionesFalsas(), {
-          puede: { enviar: false, imprimir: false, reimprimir: false },
+          puede: { enviar: false, imprimir: false, reimprimir: false, cobrar: false },
         }),
       );
       for (const nombre of ["Enviar a cocina", "Pedir que salga", "Anular", "Reimprimir"]) {
         expect(page.getByRole("button", { name: nombre }).elements()).toHaveLength(0);
       }
       await expect.element(page.getByRole("heading", { name: "Para enviar" })).toBeVisible();
+    });
+  });
+
+  describe("cobrar (SAL-D)", () => {
+    const todoEnviado: FichaDeLaMesaDeLaPantalla = {
+      ...fichaConPlatos,
+      cuentas: [
+        {
+          cuentaId: "c1",
+          parte: null,
+          total: ARS("12345.67"),
+          lineas: [linea({ lineaId: "c", comanda: "ENVIADA", numeroDeEnvio: 1, envioId: "e1" })],
+        },
+      ],
+    };
+
+    it("«Cobrar» está APAGADO mientras haya platos para enviar o que esperan (el estado, sin texto nuevo) y se enciende con todo enviado", async () => {
+      await render(pantalla(fichaConPlatos, accionesFalsas()));
+      await expect.element(page.getByRole("button", { name: "Cobrar" })).toBeDisabled();
+      await render(pantalla(todoEnviado, accionesFalsas()));
+      await expect.element(page.getByRole("button", { name: "Cobrar" }).last()).toBeEnabled();
+    });
+
+    it("tocar «Cobrar» lleva a la hoja de cobro de ESA mesa; no cobra nada en esta pantalla", async () => {
+      const acciones = accionesFalsas();
+      await render(pantalla(todoEnviado, acciones));
+      await userEvent.click(page.getByRole("button", { name: "Cobrar" }));
+      expect(router.push).toHaveBeenCalledWith("/salon/cuenta/m1/cobrar");
+      expect(acciones.enviar).not.toHaveBeenCalled();
+    });
+
+    it("sin permiso para cobrar la mesa (la ayuda) no hay «Cobrar»; una mesa sin platos tampoco se puede cobrar", async () => {
+      await render(
+        pantalla(todoEnviado, accionesFalsas(), {
+          puede: { enviar: true, imprimir: true, reimprimir: true, cobrar: false },
+        }),
+      );
+      expect(page.getByRole("button", { name: "Cobrar" }).elements()).toHaveLength(0);
+      await render(pantalla(fichaSinPlatos, accionesFalsas()));
+      await expect.element(page.getByRole("button", { name: "Cobrar" }).last()).toBeDisabled();
     });
   });
 });

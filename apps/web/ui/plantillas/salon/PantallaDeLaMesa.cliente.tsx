@@ -23,6 +23,7 @@ import type {
   SeccionDeLaVenta,
   TextosDeLaVenta,
 } from "../venta/modelo-de-venta-rapida";
+import { AccionesDeLaMesa } from "./AccionesDeLaMesa.cliente";
 import { CatalogoDeLaMesa } from "./CatalogoDeLaMesa.cliente";
 import { EnviosDeLaMesa } from "./EnviosDeLaMesa.cliente";
 import { HojaDeAnularItem } from "./HojaDeAnularItem.cliente";
@@ -36,7 +37,7 @@ import {
   type PlatoArmado,
   type TextosDeLaMesa,
 } from "./modelo-de-la-mesa";
-import { rutaDeLaCuentaDeMesa } from "./rutas-del-salon";
+import { rutaDeCobrarLaMesa, rutaDeLaCuentaDeMesa } from "./rutas-del-salon";
 import { useCocinaDeLaMesa, type AccionesDeLaCocina } from "./useCocinaDeLaMesa.cliente";
 
 type Accion = (pedido: unknown) => Promise<Respuesta<unknown>>;
@@ -64,7 +65,7 @@ export type PropsDePantallaDeLaMesa = Readonly<{
   /** Los textos de imprimir ya resueltos (los aprobados de `comandas.texto.imprimir_*`). */
   textosDeImprimir: ReturnType<typeof armarLosTextosDeImprimir>;
   /** Lo que la persona puede hacer con la cocina (solo ayudas: el servidor decide). `enviar` abre enviar, pedir que salga y anular; `reimprimir`, las copias; `imprimir`, el botón de imprimir. */
-  puede: Readonly<{ enviar: boolean; imprimir: boolean; reimprimir: boolean }>;
+  puede: Readonly<{ enviar: boolean; imprimir: boolean; reimprimir: boolean; cobrar: boolean }>;
   /** Adónde lleva «Configurar impresoras»; `null` si la persona no puede ir (el enlace no se ofrece). */
   rutaDeImpresoras: string | null;
   /** Lo que se ofrece para agregar; `null` si no se pudo leer (entonces no se ofrece agregar). */
@@ -278,31 +279,26 @@ export function PantallaDeLaMesa({
               }}
             />
           ) : null}
-          <div className={estilos["acciones"]}>
-            {mesa.sinPlatos ? (
-              <Boton
-                variante="secundaria"
-                deshabilitado={ocupado}
-                alTocar={() => {
-                  if (mesa.cuentaId === null) return;
-                  void ejecutar(acciones.liberar, { cuentaId: mesa.cuentaId }, recargar);
-                }}
-              >
-                {textos.liberar}
-              </Boton>
-            ) : null}
-            {mesasLibres === null ? null : (
-              <Boton
-                variante="secundaria"
-                deshabilitado={ocupado}
-                alTocar={() => {
-                  setCambiando(true);
-                }}
-              >
-                {textos.cambiarDeMesa}
-              </Boton>
-            )}
-          </div>
+          <AccionesDeLaMesa
+            textos={textos}
+            ocupado={ocupado}
+            puedeCobrar={puede.cobrar}
+            cobrarApagado={
+              mesa.hayParaEnviar || mesa.hayEnEspera || mesa.sinPlatos || mesa.totalACobrar === null
+            }
+            alCobrar={() => {
+              router.push(rutaDeCobrarLaMesa(mesaId));
+            }}
+            sinPlatos={mesa.sinPlatos}
+            alLiberar={() => {
+              if (mesa.cuentaId === null) return;
+              void ejecutar(acciones.liberar, { cuentaId: mesa.cuentaId }, recargar);
+            }}
+            puedeCambiarDeMesa={mesasLibres !== null}
+            alCambiarDeMesa={() => {
+              setCambiando(true);
+            }}
+          />
           {catalogo === null ? null : (
             <>
               <h3 className={estilos["subtitulo"]}>{textos.agregar}</h3>

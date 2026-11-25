@@ -70,6 +70,7 @@ export type TextosDeLaMesa = Readonly<{
   cancelar: string;
   cerrar: string;
   enviarACocina: string;
+  cobrar: string;
   enviadoACocina: string;
   pedirQueSalga: string;
   pedirQueSalgaTodo: string;
@@ -100,6 +101,7 @@ export function textosDeLaMesa(d: DiccionarioResuelto = {}): TextosDeLaMesa {
     cancelar: texto(d, "ventas.venta.cancelar"),
     cerrar: texto(d, "vidriera.producto.cerrar"),
     enviarACocina: texto(d, "comandas.texto.envio_enviar_a_cocina"),
+    cobrar: texto(d, "ventas.cobro.cobrar"),
     enviadoACocina: texto(d, "comandas.texto.envio_enviado_a_cocina"),
     pedirQueSalga: texto(d, "comandas.texto.salida_pedir_que_salga"),
     pedirQueSalgaTodo: texto(d, "comandas.texto.salida_pedir_que_salga_todo"),
@@ -157,6 +159,8 @@ export type MesaArmada = Readonly<{
   cuentaId: string | null;
   /** «$ 1.234,56»; `null` si no hay cuenta (o su moneda no es ARS). */
   total: string | null;
+  /** El total tal como lo guarda la cuenta (texto decimal con su moneda): es el `totalEsperado` de «Cobrar»; `null` si no hay cuenta o su moneda no es ARS. */
+  totalACobrar: Importe | null;
   grupos: readonly GrupoArmado[];
   /** Los envíos de la cuenta, por número y sin repetir («Envío 1»): de cada uno se puede pedir una copia. */
   envios: readonly Readonly<{ envioId: string; titulo: string }>[];
@@ -222,6 +226,7 @@ export function armarLaMesa(d: DiccionarioResuelto, ficha: FichaDeLaMesaDeLaPant
     cuentasHijas: [],
     cuentaId: null,
     total: null,
+    totalACobrar: null,
     grupos: [],
     envios: [],
     hayParaEnviar: false,
@@ -265,6 +270,10 @@ export function armarLaMesa(d: DiccionarioResuelto, ficha: FichaDeLaMesaDeLaPant
     modo: "CON_CUENTA",
     cuentaId: unica.cuentaId,
     total: importeDe(unica.total),
+    totalACobrar:
+      unica.total.moneda === MONEDA
+        ? { moneda: unica.total.moneda, monto: unica.total.monto }
+        : null,
     sinPlatos: platos.length === 0,
     hayParaEnviar: platos.some((p) => p.l.comanda === "PARA_ENVIAR"),
     hayEnEspera: platos.some((p) => p.l.comanda === "ESPERA"),
