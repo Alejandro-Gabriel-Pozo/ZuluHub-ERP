@@ -136,7 +136,5 @@ module.exports = {
   BASE_DE_INTEGRACION,
   DOCUMENTACION_Y_AJENOS,
   ARCHIVO_DE_CI,
-  perfilDelPullRequest,
-  tocaLaWeb,
   decidirElPlan,
 };

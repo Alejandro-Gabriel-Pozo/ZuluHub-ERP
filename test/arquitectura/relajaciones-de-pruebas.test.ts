@@ -367,19 +367,38 @@ describe("el repositorio real", () => {
   });
 
   it("el planificador y codeql.yml están de acuerdo con el registro sobre el CI liviano", () => {
-    const { BASE_DE_INTEGRACION, perfilDelPullRequest } =
+    const { BASE_DE_INTEGRACION, decidirElPlan } =
       require("../../arquitectura/perfil-del-ci.cjs") as {
         BASE_DE_INTEGRACION: string;
-        perfilDelPullRequest: (e: { evento: string; base: string; origen: string }) => string;
+        decidirElPlan: (e: {
+          evento: string;
+          base: string;
+          origen: string;
+          raiz: string;
+          grupos: unknown[];
+          h: Record<string, unknown>;
+        }) => { perfil: string };
       };
+    const h = {
+      todosLosGrupos: () => ({ grupos: [], motivo: "" }),
+      leerCambios: () => [],
+      leerDependencias: () => ({}),
+      leerCi: () => ({ antes: null, despues: null }),
+      planificar: () => ({ grupos: [], motivo: "" }),
+      planificarEstabilidad: () => ({ corre: false, motivo: "" }),
+      cierre: () => new Set<string>(),
+    };
     const codeql = readFileSync(join(RAIZ, ".github/workflows/codeql.yml"), "utf8");
     const entrada = {
       aplicaElPlanificador:
-        perfilDelPullRequest({
+        decidirElPlan({
           evento: "pull_request",
           base: BASE_DE_INTEGRACION,
           origen: "feat/x",
-        }) === "liviano",
+          raiz: "/no-se-lee",
+          grupos: [],
+          h,
+        }).perfil === "liviano",
       codeqlSoloHaciaMain: codeqlSoloHaciaMain(codeql),
     };
     expect(
