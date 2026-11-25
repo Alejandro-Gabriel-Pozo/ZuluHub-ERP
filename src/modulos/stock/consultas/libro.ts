@@ -4,7 +4,7 @@ import type { PersonaId } from "../../../primitivas/identificadores/marca";
 import { fechaCivilDesdeTexto } from "../../../primitivas/tiempo/fecha-civil";
 import { esUuid } from "../persistencia/filas";
 import { esAnulable } from "../casos-de-uso/anulaciones";
-import type { FilaDeLibro } from "../persistencia/lecturas-del-libro";
+import type { ArticuloControlado, FilaDeLibro } from "../persistencia/lecturas-del-libro";
 import type { Movimiento, RenglonGuardado } from "../persistencia/modelo";
 import type { TxDeConsultasDeStock } from "../casos-de-uso/contrato";
 import { type Lector, type RDeConsulta } from "./comun";
@@ -42,6 +42,8 @@ export type CursorDeMovimientosDeDeposito = Readonly<{
   movimientoId: string;
   numero: number;
 }>;
+
+export type { ArticuloControlado };
 
 export type EntradaDeMovimientosDeDeposito = Readonly<{
   depositoId: string;
@@ -278,6 +280,14 @@ export function armarConsultasDeLibro(leer: Lector) {
               : null,
         };
       }),
+
+    /** Los artículos activos que se pueden mover, por nombre (los selectores de los formularios de movimiento). Guard `stock.ver`; no trae costos. */
+    articulosControlados: (
+      contexto: ContextoOperativo,
+    ): Promise<RDeConsulta<readonly ArticuloControlado[]>> =>
+      leer(contexto, DECLARACIONES_DE_CONSULTAS.articulosControlados.accion, (tx) =>
+        tx.movimientosDeStock.articulosControlados(contexto.empresaId),
+      ),
 
     /**
      * El libro de un depósito para la pestaña «Movimientos»: un renglón por tarjeta, del más nuevo al más viejo, de a `TAMANO_DE_PAGINA` por cursor. Guard
