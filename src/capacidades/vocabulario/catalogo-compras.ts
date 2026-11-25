@@ -286,7 +286,7 @@ export const TEXTOS_DE_COMPRAS = {
   "compras.error.precio_invalido": { porDefecto: "Escribí un precio válido" },
   "compras.error.proveedor_no_encontrado": { porDefecto: "El proveedor ya no está disponible" },
   "compras.error.sin_permiso": { porDefecto: "Esta acción no está permitida" },
-  // Los tres tipos de factura que se cargan con «Nueva compra» (Compras PR 7): rótulos del arreglo `TIPOS` de `compra.html`, que NO figuran en «Textos aprobados»: SIN APROBAR, los decide el dueño (término fiscal; DEC-0896).
+  // Los tres tipos de factura que se cargan con «Nueva compra» (Compras PR 7): rótulos del arreglo `TIPOS` de `compra.html`, que no figuran en «Textos aprobados» pero el dueño los aprobó el 24/11/2026 (término fiscal; DEC-0896).
   "compras.factura.tipo_factura_a": {
     porDefecto: "Factura A",
     usos: [

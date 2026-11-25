@@ -3,8 +3,8 @@
   "fecha": "2026-11-24",
   "quien": "sesión",
   "tipo": "DINERO",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Un pago en efectivo a un proveedor siempre sale de una caja abierta: declarar un pago en efectivo sin caja se rechaza, y el pago que viaja con la compra no puede ser en efectivo.",
   "que_cambia": "El servidor ya no admite un pago en efectivo que no descuente ninguna caja; se rechaza con el genérico y sin escribir nada. Los otros medios no cambian. Revertir: quitar los dos controles de pagos.ts y registrar-compra.ts.",
-  "donde": "decisiones-del-dueno-2026-11.md, fila del 16/11/2026 «Respuestas 1A, 2A y 3A» (3A: un pago en efectivo siempre sale de una caja abierta) y orden del orquestador del 24/11/2026; pagos.ts, registrar-compra.ts, compras-pagos-caja.test.ts"
+  "donde": "decisiones-del-dueno-2026-11.md, fila del 16/11/2026 «Respuestas 1A, 2A y 3A» (3A: un pago en efectivo siempre sale de una caja abierta) y orden del orquestador del 24/11/2026; pagos.ts, registrar-compra.ts, compras-pagos-caja.test.ts; confirmada: DDD fila del 24/11/2026"
 }

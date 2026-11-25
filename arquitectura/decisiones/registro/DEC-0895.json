@@ -3,8 +3,8 @@
   "fecha": "2026-11-24",
   "quien": "sesión",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Compras PR 7: la factura se carga en un bloque dentro de «Nueva compra» cuando la empresa compra «Con factura»; sin pantalla de recepción separada.",
   "que_cambia": "Factura y compra entran juntas con un solo envío, sin la pantalla aparte de la maqueta (flujo pausado). Sin condición del proveedor nuevo ni importes por alícuota; precio neto con 4 decimales. Revertir: sacar el bloque.",
-  "donde": "Orden del orquestador del 24/11/2026 (respuesta C2); compra.html estados factura y factura-total; ficha-de-nueva-compra.ts diferencias 9 a 13"
+  "donde": "Orden del orquestador del 24/11/2026 (respuesta C2); compra.html estados factura y factura-total; ficha-de-nueva-compra.ts diferencias 9 a 13; confirmada: DDD fila del 24/11/2026"
 }

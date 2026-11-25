@@ -3,8 +3,8 @@
   "fecha": "2026-11-24",
   "quien": "sesión",
   "tipo": "DATOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Compras PR 7: una lectura, cotizarFactura, hace las cuentas de la factura antes de guardar con la misma función del alta (calcularComprobante).",
   "que_cambia": "La pantalla muestra neto de cada línea, total calculado y si coincide con el total del papel sin sumar nada ella. No escribe. Revertir: sacar la lectura y mostrar los avisos solo al guardar.",
-  "donde": "Orden del orquestador del 24/11/2026 (respuesta C1); lectura-para-comprar.ts, consultas-para-comprar.ts, compras-factura-para-comprar-web.test.ts"
+  "donde": "Orden del orquestador del 24/11/2026 (respuesta C1); lectura-para-comprar.ts, consultas-para-comprar.ts, compras-factura-para-comprar-web.test.ts; confirmada: DDD fila del 24/11/2026"
 }

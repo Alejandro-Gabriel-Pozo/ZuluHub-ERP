@@ -25,7 +25,7 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  * 11. Sin «Condición frente al IVA» del proveedor nuevo (la maqueta la pide junto al CUIT): solo el CUIT, que el brief PR-7 declara; sin importes por alícuota («Neto 21 %», «IVA 21 %»: sin texto aprobado) y sin el aviso
  *     de la letra esperada en vivo («Este proveedor emite»): ese aviso lo sabe el servidor al guardar. Interfaz sobria.
  * 12. «Exento» y «No gravado» son dos opciones (textos ya aprobados) y no una sola «Exento o no gravado» de la maqueta: el dominio las distingue (alícuotas EXENTO y NO_GRAVADO) y una sola opción no sabría cuál guardar.
- * 13. «Factura A», «Factura B» y «Factura C» (el selector «Tipo») salen del arreglo `TIPOS` de la maqueta y NO figuran en sus «Textos aprobados»: quedan SIN APROBAR hasta que el dueño los acepte (DEC-0896).
+ * 13. «Factura A», «Factura B» y «Factura C» (el selector «Tipo») salen del arreglo `TIPOS` de la maqueta y no figuran en sus «Textos aprobados»: el dueño los aprobó el 24/11/2026 (DEC-0896).
  */
 
 type FuenteDeTexto = Readonly<{ decidio: string; donde: string }>;
@@ -55,11 +55,11 @@ const DE_LA_MAQUETA: FuenteDeTexto = {
   donde:
     "Pedernal-docs 10-ux-ui, maqueta compra.html (estados nueva, como, remito, prov-nuevo, prov-repetido, sinconexion); 11-especificaciones/compras-siguientes-tramos-2026-11-23.md §4; brief PR-6 de Compras",
 };
-const SIN_APROBAR: FuenteDeTexto = {
+const APROBADOS_EL_24_11: FuenteDeTexto = {
   decidio:
-    "SIN APROBAR por el dueño: rótulos del arreglo TIPOS de la maqueta compra.html, que no figuran en sus «Textos aprobados» (término fiscal; DEC-0896); el orquestador los acepta para construir y los lleva al dueño",
+    "el dueño, el 24/11/2026 (fila «DEC-0896 aprobada» de decisiones-del-dueno-2026-11.md): rótulos del arreglo TIPOS de la maqueta compra.html, que no figuran en sus «Textos aprobados» (término fiscal; DEC-0896)",
   donde:
-    "Pedernal-docs 10-ux-ui, maqueta compra.html (arreglo TIPOS del estado factura); brief PR-7-factura-en-la-compra.md de Compras",
+    "Pedernal-docs 10-ux-ui, maqueta compra.html (arreglo TIPOS del estado factura); decisiones-del-dueno-2026-11.md, fila del 24/11/2026; brief PR-7-factura-en-la-compra.md de Compras",
 };
 const USO = "apps/web/ui/plantillas/compras/nueva/";
 
@@ -187,15 +187,15 @@ export const FICHA_DE_NUEVA_COMPRA = {
     },
     "compras.factura.tipo_factura_a": {
       usos: ["opción «Factura A» del tipo de factura"],
-      fuente: SIN_APROBAR,
+      fuente: APROBADOS_EL_24_11,
     },
     "compras.factura.tipo_factura_b": {
       usos: ["opción «Factura B» del tipo de factura"],
-      fuente: SIN_APROBAR,
+      fuente: APROBADOS_EL_24_11,
     },
     "compras.factura.tipo_factura_c": {
       usos: ["opción «Factura C» del tipo de factura"],
-      fuente: SIN_APROBAR,
+      fuente: APROBADOS_EL_24_11,
     },
     "compras.compra.nueva_compra": {
       usos: ["título de la pantalla y estado sin productos"],

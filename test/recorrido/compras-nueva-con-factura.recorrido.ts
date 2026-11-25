@@ -5,13 +5,14 @@ import { PREFIJO_DE_NAVEGADOR } from "../../src/capacidades/autenticacion/host-d
 import { productoDeBase } from "../integracion/catalogo-apoyo";
 import { proveedorDeBase } from "../integracion/compras-apoyo";
 import { cuitUnico } from "../integracion/unicos";
+import { crearDomicilio } from "../integracion/fiscal-apoyo";
 import { crearAsignacionDeBase } from "../integracion/fixtures-identidad";
 import { depositoDeBase } from "../integracion/stock-apoyo";
 import { HOST_DEL_RECORRIDO, armarMundoDelRecorrido, type MundoDelRecorrido } from "./apoyo/mundo";
 import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilante";
 
 /**
- * Se carga una factura C (sin IVA discriminado): una A pide la condición de la empresa frente al IVA, que el mundo del recorrido no tiene (lo cubre la integración).
+ * La factura A pide la condición de la empresa frente al IVA: SIN ella se rechaza con el genérico y la compra no se guarda; con ella (responsable inscripto, cargada como datos fiscales confirmados) se guarda con su IVA. La C (sin IVA discriminado) no la pide.
  * «NUEVA COMPRA CON FACTURA» de punta a punta en la app REAL con un navegador real (Compras PR 7), con la persona como OPERADORA (quien carga las compras y no puede cambiar el nivel): en «Sin factura» no hay bloque de
  * factura; en «Con factura» aparece (lo dice el servidor), cada línea se precarga del renglón, el servidor cuenta y avisa si el total no coincide («se carga igual»), la primera factura de un proveedor sin CUIT lo pide y lo guarda, y
  * un DOBLE CLIC en «Comprar y recibir» es UNA compra, UN comprobante y UNA entrada de stock. La misma factura otra vez dice «Esa factura ya está cargada» y no escribe. Lo que no ven los componentes: las acciones de Next reales,
@@ -26,6 +27,7 @@ describe.skipIf(base === null)("recorrido de «Nueva compra» con factura", () =
   let pagina: Page;
   let vigilante: Vigilante;
   let proveedor = "";
+  let persona = "";
   const cuit = cuitUnico();
 
   const dueno = () => mundo.mundo.dueno;
@@ -51,8 +53,8 @@ describe.skipIf(base === null)("recorrido de «Nueva compra» con factura", () =
     await pagina.getByLabel("Cantidad", { exact: true }).pressSequentially("2");
     await pagina.getByLabel("Precio", { exact: true }).pressSequentially("1000");
   }
-  async function cargarLaFactura(numero: string, total: string) {
-    await pagina.getByLabel("Tipo").selectOption("FACTURA_C");
+  async function cargarLaFactura(numero: string, total: string, tipo = "FACTURA_C") {
+    await pagina.getByLabel("Tipo").selectOption(tipo);
     await pagina.getByLabel("Punto de venta").nth(1).fill("5");
     await pagina.getByLabel("Número").nth(1).fill(numero);
     await pagina.getByLabel("Fecha de la factura").fill("2026-11-20");
@@ -71,7 +73,7 @@ describe.skipIf(base === null)("recorrido de «Nueva compra» con factura", () =
         mundo.empresa,
       ])
     ).rows[0]?.id as string;
-    const persona = (
+    persona = (
       await c.query<{ persona_id: string }>(
         "select persona_id from membresia where empresa_id = $1 limit 1",
         [mundo.empresa],
@@ -185,5 +187,57 @@ describe.skipIf(base === null)("recorrido de «Nueva compra» con factura", () =
     await pagina.getByText("Esa factura ya está cargada").waitFor();
     expect(await recepciones()).toBe(1);
     expect(await comprobantes()).toBe(1);
+  });
+
+  it("una factura A SIN la condición de la empresa frente al IVA se rechaza con el genérico y la compra no se guarda", async () => {
+    const compras = await recepciones();
+    const facturas = await comprobantes();
+    await cargar();
+    await pagina.getByLabel("Tipo").waitFor();
+    await cargarLaFactura("1190", "2420", "FACTURA_A");
+    await pagina.getByText("Total calculado").waitFor();
+    await pagina.getByRole("button", { name: "Comprar y recibir" }).click();
+    await pagina.getByText("Esta acción no está permitida").waitFor();
+    expect(await recepciones()).toBe(compras);
+    expect(await comprobantes()).toBe(facturas);
+  });
+
+  it("con la empresa responsable inscripto (datos fiscales confirmados) la factura A se guarda con su IVA: total calculado y total del papel coinciden", async () => {
+    const c = dueno();
+    const emisor = (
+      await c.query<{ id: string }>(
+        "select id from emisor where empresa_id = $1 and es_principal",
+        [mundo.empresa],
+      )
+    ).rows[0]?.id as string;
+    const domicilio = await crearDomicilio(c, mundo.empresa);
+    const id = randomUUID();
+    await c.query(
+      `insert into datos_fiscales (id, empresa_id, emisor_id, razon_social, condicion_iva, domicilio_fiscal_id, inicio_actividades, iibb_numero, iibb_condicion, creado_por)
+       values ($1, $2, $3, 'Panadería Zulú SA', 'RESPONSABLE_INSCRIPTO', $4, '2020-01-01', '901-123456-7', 'LOCAL', $5)`,
+      [id, mundo.empresa, emisor, domicilio, persona],
+    );
+    await c.query(
+      `update datos_fiscales set estado = 'CONFIRMADA', numero = 1, vigente_desde = now(), confirmada_en = now(), confirmada_por = $2, motivo = 'alta' where id = $1`,
+      [id, persona],
+    );
+    const compras = await recepciones();
+    await cargar();
+    await pagina.getByLabel("Tipo").waitFor();
+    await cargarLaFactura("1190", "2420", "FACTURA_A");
+    await pagina.getByText("$ 2.420,00").first().waitFor();
+    await pagina.getByText("El total coincide con la factura").waitFor();
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    await pagina.getByRole("button", { name: "Comprar y recibir" }).dblclick();
+    await pagina.waitForURL(/\/compras\/[0-9a-f-]{36}$/);
+    await pagina.getByText(/Factura A 00005-00001190/).waitFor();
+    expect(await recepciones()).toBe(compras + 1);
+    expect(
+      await contar(
+        "select count(*) as n from comprobante_de_proveedor where empresa_id = $1 and tipo = 'FACTURA_A' and iva = 420 and total_calculado = 2420",
+        [mundo.empresa],
+      ),
+    ).toBe(1);
+    expect(vigilante.tomar()).toEqual([]);
   });
 });
