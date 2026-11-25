@@ -6,6 +6,7 @@ import {
   CLAVE_DE_TEXTO_DEL_MOTIVO,
 } from "../../apps/web/ui/plantillas/stock/movimientos/modelo-de-movimientos";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
+import type { FichaDePantalla } from "../../src/capacidades/pantallas/ficha-de-mesas";
 import { FICHA_DE_EXISTENCIAS } from "../../src/capacidades/pantallas/ficha-de-existencias";
 import { FICHA_DE_MOVIMIENTOS } from "../../src/capacidades/pantallas/ficha-de-movimientos";
 import { CATALOGO_DE_TEXTOS } from "../../src/capacidades/vocabulario/catalogo";
@@ -15,10 +16,10 @@ import { CLASES_DE_MOVIMIENTO } from "../../src/modulos/stock/publico";
  * Las fichas de «Existencias» y «Movimientos» de stock no se desfasan de la realidad: sus archivos existen, sus textos están en el catálogo con sus usos y su fuente, el acceso es el de la fila del menú
  * y todo texto de stock que citan las páginas y los modelos está declarado en la ficha. Previene: un botón o un texto que nadie aprobó, y una ruta que se mueve sin que la ficha lo note.
  */
-const FICHAS = [
+const FICHAS: readonly { nombre: string; ficha: FichaDePantalla; pagina: string }[] = [
   { nombre: "Existencias", ficha: FICHA_DE_EXISTENCIAS, pagina: "existencias" },
   { nombre: "Movimientos", ficha: FICHA_DE_MOVIMIENTOS, pagina: "movimientos" },
-] as const;
+];
 
 describe.each(FICHAS)("ficha de la pantalla «$nombre» de stock", ({ ficha, pagina }) => {
   it("sus archivos existen", () => {

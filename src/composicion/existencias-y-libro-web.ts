@@ -6,7 +6,7 @@ import type {
   PaginaDeExistencias,
   PaginaDeMovimientosDeDeposito,
 } from "../modulos/stock/publico";
-import { personaId } from "../primitivas/identificadores/marca";
+import type { personaId } from "../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
 import { identificador, leer, texto, type ErrorDeEntrada } from "./entradas-de-facturacion";
