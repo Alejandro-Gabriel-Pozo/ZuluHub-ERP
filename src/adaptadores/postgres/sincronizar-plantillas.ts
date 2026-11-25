@@ -19,6 +19,8 @@ import {
  * Auditoría: la dejan las propias filas, inmutables (solo inserción, con autor y fecha). NO escribe `auditoria_plataforma`: esa tabla exige
  * un actor de plataforma firmado (0004) y el ejecutor no lo es.
  *
+ * Una acción que el código declara solo para el gerente y no tiene piso `SOLO_GERENTE` NO se marca como introducida (quedaría delegable por un
+ * rol propio): se devuelve en `sinSincronizar` y el ejecutor la avisa en el log. El piso lo inserta T4.
  * Previene: una acción nueva sin dueño en las plantillas, y que cada despliegue pise lo que la plataforma cambió (no quita ni repone nada).
  * Chequeo: `test/integracion/sincronizar-plantillas.test.ts` (dos corridas a la vez, repetida, acción nueva, plantilla editada).
  */
@@ -27,6 +29,10 @@ export const AUTOR_DE_LA_SINCRONIZACION = "sincronizacion:plantillas";
 export type ResultadoDeLaSincronizacion = Readonly<{
   /** Cuántas acciones nuevas se marcaron como introducidas. */
   introducidas: number;
+  /** Las acciones solo-gerente que todavía no tienen piso: no se marcaron, el ejecutor lo avisa. */
+  sinSincronizar: readonly string[];
+  /** Las acciones marcadas como introducidas ahora. */
+  accionesIntroducidas: readonly string[];
   /** Las versiones nuevas: la plantilla, su número y las acciones que sumó. */
   versiones: readonly Readonly<{
     clave: ClaveDePlantilla;
@@ -107,7 +113,12 @@ export async function sincronizarPlantillas(
       );
     }
     await cliente.query("COMMIT");
-    return { introducidas: plan.nuevasIntroducidas.length, versiones };
+    return {
+      introducidas: plan.nuevasIntroducidas.length,
+      accionesIntroducidas: plan.nuevasIntroducidas,
+      sinSincronizar: plan.sinSincronizar,
+      versiones,
+    };
   } catch (error) {
     await cliente.query("ROLLBACK");
     throw error;

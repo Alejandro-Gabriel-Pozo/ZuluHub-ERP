@@ -88,7 +88,12 @@ describe.skipIf(base === null)("sincronizar plantillas (base real)", () => {
     const { dueno, cliente } = await baseVacia();
     const carpeta = await carpetaCon();
     const primera = await aplicarMigraciones(dueno, carpeta, CON_SINCRONIZACION);
-    expect(primera.plantillas).toEqual({ introducidas: 0, versiones: [] });
+    expect(primera.plantillas).toEqual({
+      introducidas: 0,
+      accionesIntroducidas: [],
+      sinSincronizar: [],
+      versiones: [],
+    });
     const antes = await versiones(cliente);
     expect(antes.map((v) => [v.clave, v.numero, v.autor])).toEqual([
       ["ADMINISTRADOR", 1, "migracion:0094"],
@@ -98,7 +103,12 @@ describe.skipIf(base === null)("sincronizar plantillas (base real)", () => {
 
     const segunda = await aplicarMigraciones(dueno, carpeta, CON_SINCRONIZACION);
     expect(segunda.aplicadas).toEqual([]);
-    expect(segunda.plantillas).toEqual({ introducidas: 0, versiones: [] });
+    expect(segunda.plantillas).toEqual({
+      introducidas: 0,
+      accionesIntroducidas: [],
+      sinSincronizar: [],
+      versiones: [],
+    });
     expect(await versiones(cliente)).toEqual(antes);
   });
 
@@ -110,7 +120,10 @@ describe.skipIf(base === null)("sincronizar plantillas (base real)", () => {
 
     const r = await aplicarMigraciones(dueno, carpeta, CON_SINCRONIZACION);
     expect(r.plantillas).toEqual({
-      introducidas: 3,
+      introducidas: 2,
+      accionesIntroducidas: ["prueba.para_todos", "prueba.solo_admin"],
+      // Solo-gerente y sin piso: no se marca (sería delegable por un rol propio); se avisa.
+      sinSincronizar: ["prueba.solo_gerente"],
       versiones: [
         {
           clave: "ADMINISTRADOR",
@@ -131,12 +144,31 @@ describe.skipIf(base === null)("sincronizar plantillas (base real)", () => {
     expect(operador.acciones).toEqual(
       [...ultima(antes, "OPERADOR").acciones, "prueba.para_todos"].sort(),
     );
-    expect(await introducidas(cliente)).toEqual(
-      expect.arrayContaining(["prueba.para_todos", "prueba.solo_admin", "prueba.solo_gerente"]),
-    );
+    const marcadas = await introducidas(cliente);
+    expect(marcadas).toEqual(expect.arrayContaining(["prueba.para_todos", "prueba.solo_admin"]));
+    expect(marcadas).not.toContain("prueba.solo_gerente");
 
+    // Repetida: no cambia nada y la solo-gerente sin piso se sigue avisando (hasta que exista su piso).
     const otra = await aplicarMigraciones(dueno, carpeta, CON_SINCRONIZACION);
-    expect(otra.plantillas).toEqual({ introducidas: 0, versiones: [] });
+    expect(otra.plantillas).toEqual({
+      introducidas: 0,
+      accionesIntroducidas: [],
+      sinSincronizar: ["prueba.solo_gerente"],
+      versiones: [],
+    });
+    expect(await versiones(cliente)).toEqual(despues);
+
+    // Con su piso SOLO_GERENTE ya en la base, la acción se marca y deja de avisarse.
+    await cliente.query(
+      "insert into piso_de_plataforma (accion, tipo, autor) values ('prueba.solo_gerente', 'SOLO_GERENTE', 'plataforma:prueba')",
+    );
+    const conPiso = await aplicarMigraciones(dueno, carpeta, CON_SINCRONIZACION);
+    expect(conPiso.plantillas).toEqual({
+      introducidas: 1,
+      accionesIntroducidas: ["prueba.solo_gerente"],
+      sinSincronizar: [],
+      versiones: [],
+    });
     expect(await versiones(cliente)).toEqual(despues);
   });
 

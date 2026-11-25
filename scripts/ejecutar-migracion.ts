@@ -358,9 +358,20 @@ export async function ejecutarMigracion(entrada: EntradaDeMigracion): Promise<nu
     for (const linea of lista(resultado.aplicadas)) info(linea);
     info(`Ya estaban aplicadas: ${resultado.yaAplicadas.length}.`);
     if (resultado.plantillas !== undefined) {
+      const { accionesIntroducidas, versiones, sinSincronizar } = resultado.plantillas;
       info(
-        `Plantillas de permisos: ${resultado.plantillas.introducidas} acciones nuevas introducidas, ${resultado.plantillas.versiones.length} versiones nuevas de plantilla.`,
+        `Plantillas de permisos: ${accionesIntroducidas.length} acciones nuevas introducidas, ${versiones.length} versiones nuevas de plantilla.`,
       );
+      for (const v of versiones) {
+        info(`  - ${v.clave} versión ${v.numero} suma: ${v.agregadas.join(", ")}`);
+      }
+      if (accionesIntroducidas.length > 0)
+        info(`  Introducidas: ${accionesIntroducidas.join(", ")}`);
+      if (sinSincronizar.length > 0) {
+        info(
+          `  AVISO, sin sincronizar (declaradas solo para el gerente y sin piso SOLO_GERENTE en la base): ${sinSincronizar.join(", ")}`,
+        );
+      }
     }
     if (pedido.modo === "--aplicar") {
       info(

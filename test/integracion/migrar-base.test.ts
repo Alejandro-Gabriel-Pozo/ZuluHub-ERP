@@ -253,6 +253,31 @@ describe.skipIf(base === null)("migrar-base: el comando que migra la base real",
       }
     });
 
+    it("«aplicar» imprime en el registro las acciones que la sincronización sumó a las plantillas y avisa las que quedaron sin sincronizar", async () => {
+      const ruta = join(carpeta, "plantillas-declaradas.json");
+      const original = await readFile(ruta, "utf8");
+      const declarada = JSON.parse(original) as { acciones: Record<string, string[]> };
+      declarada.acciones["prueba.para_admin"] = ["GERENTE", "ADMINISTRADOR"];
+      declarada.acciones["prueba.solo_gerente"] = ["GERENTE"];
+      try {
+        await writeFile(ruta, JSON.stringify(declarada));
+        const aplicar = await correrAca("--aplicar", url, carpeta);
+        expect(aplicar.codigo).toBe(0);
+        expect(aplicar.texto).toContain(
+          "Plantillas de permisos: 1 acciones nuevas introducidas, 1 versiones nuevas",
+        );
+        expect(aplicar.texto).toContain("ADMINISTRADOR versión 2 suma: prueba.para_admin");
+        expect(aplicar.texto).toContain("Introducidas: prueba.para_admin");
+        expect(aplicar.texto).toContain(
+          "AVISO, sin sincronizar (declaradas solo para el gerente y sin piso SOLO_GERENTE en la base): prueba.solo_gerente",
+        );
+        const otra = await correrAca("--aplicar", url, carpeta);
+        expect(otra.texto).toContain("0 acciones nuevas introducidas, 0 versiones nuevas");
+      } finally {
+        await writeFile(ruta, original);
+      }
+    });
+
     it("un checkout con fin de línea CRLF no hace pasar por editada una migración aplicada", async () => {
       const originales = new Map<string, string>();
       try {

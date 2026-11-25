@@ -27,6 +27,7 @@ describe("sincronizar plantillas: el plan", () => {
     const todo = estado({ introducidas: new Set(Object.keys(DECLARACION)) });
     expect(planDeSincronizacion(DECLARACION, todo)).toEqual({
       nuevasIntroducidas: [],
+      sinSincronizar: [],
       versiones: [],
     });
   });
@@ -34,6 +35,7 @@ describe("sincronizar plantillas: el plan", () => {
   it("una acción nueva se suma a las plantillas que el código dice y queda marcada", () => {
     expect(planDeSincronizacion(DECLARACION, estado())).toEqual({
       nuevasIntroducidas: ["c.nueva"],
+      sinSincronizar: [],
       versiones: [
         {
           clave: "ADMINISTRADOR",
@@ -51,12 +53,40 @@ describe("sincronizar plantillas: el plan", () => {
     expect(plan.versiones.map((v) => v.clave)).toEqual(["ADMINISTRADOR"]);
   });
 
-  it("una acción solo del gerente no entra a ninguna plantilla pero queda marcada", () => {
+  it("una acción solo del gerente CON piso no entra a ninguna plantilla pero queda marcada", () => {
     const d: DeclaracionDeAcciones = { ...DECLARACION, "c.nueva": ["GERENTE"] };
+    expect(
+      planDeSincronizacion(d, estado({ reservadasAlGerente: new Set(["b.config", "c.nueva"]) })),
+    ).toEqual({ nuevasIntroducidas: ["c.nueva"], sinSincronizar: [], versiones: [] });
+  });
+
+  it("una acción solo del gerente SIN piso no se marca (sería delegable): queda sin sincronizar", () => {
+    const d: DeclaracionDeAcciones = {
+      ...DECLARACION,
+      "c.nueva": ["GERENTE"],
+      "b.otra": ["GERENTE"],
+    };
     expect(planDeSincronizacion(d, estado())).toEqual({
-      nuevasIntroducidas: ["c.nueva"],
+      nuevasIntroducidas: [],
+      sinSincronizar: ["b.otra", "c.nueva"],
       versiones: [],
     });
+  });
+
+  it("solo es «solo gerente» la que tiene exactamente ese rol: con otro rol más se sincroniza aunque no tenga piso", () => {
+    const d: DeclaracionDeAcciones = { ...DECLARACION, "c.nueva": ["ADMINISTRADOR"] };
+    const plan = planDeSincronizacion(d, estado());
+    expect(plan.nuevasIntroducidas).toEqual(["c.nueva"]);
+    expect(plan.sinSincronizar).toEqual([]);
+  });
+
+  it("una solo-gerente sin piso que ya estaba introducida no se vuelve a avisar", () => {
+    const d: DeclaracionDeAcciones = { ...DECLARACION, "c.nueva": ["GERENTE"] };
+    const plan = planDeSincronizacion(
+      d,
+      estado({ introducidas: new Set(["a.ver", "a.crear", "b.config", "c.nueva"]) }),
+    );
+    expect(plan).toEqual({ nuevasIntroducidas: [], sinSincronizar: [], versiones: [] });
   });
 
   it("el piso gana: una acción reservada al gerente no se suma aunque el código la declare para el administrador", () => {
