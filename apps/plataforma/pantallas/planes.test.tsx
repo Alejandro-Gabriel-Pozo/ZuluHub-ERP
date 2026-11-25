@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type * as CatalogoReal from "../../../src/capacidades/modulos/catalogo";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 import {
@@ -24,7 +25,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: empujar, refresh: 
 
 // Ningún módulo real está en desarrollo desde que producción salió (DEC-1050): para ver la etiqueta se marca uno en el catálogo de esta prueba.
 vi.mock("../../../src/capacidades/modulos/catalogo", async (importar) => {
-  const real = await importar<typeof import("../../../src/capacidades/modulos/catalogo")>();
+  const real = await importar<typeof CatalogoReal>();
   return {
     ...real,
     CATALOGO_DE_MODULOS: {
