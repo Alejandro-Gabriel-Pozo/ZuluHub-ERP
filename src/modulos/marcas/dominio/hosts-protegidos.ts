@@ -17,7 +17,8 @@ export function leerHostsProtegidos(
   texto: string,
 ): Resultado<ReadonlySet<Host>, ErrorDeListaDeHostsProtegidos> {
   const partes = texto.split(",").map((parte) => parte.trim());
-  if (partes.length === 0 || partes.length > MAXIMO_DE_HOSTS_PROTEGIDOS) {
+  // `split` siempre devuelve al menos un elemento: la lista vacía (`""`) cae abajo, porque `""` no es un host.
+  if (partes.length > MAXIMO_DE_HOSTS_PROTEGIDOS) {
     return err("LISTA_DE_HOSTS_PROTEGIDOS_INVALIDA");
   }
   const hosts = new Set<Host>();
