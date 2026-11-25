@@ -148,6 +148,15 @@ export const CATALOGO_DE_PERILLAS = {
     modulo: "compras",
     requiere: "recepcion_separada",
   },
+  // R-05 (decisión del dueño, 14/11/2026: «se permite facturar antes de cobrar»; ratificada el 25/11/2026; brief PR-R05): permite facturar un ticket EMITIDO (sin cobrar),
+  // por ejemplo la venta a cuenta corriente. Base APAGADA: sin ella se factura solo lo cobrado, como hasta ahora (Q-A, recomendación A; todo nace cerrado). La verifica
+  // `emitirComprobanteDeTicket` y las lecturas de ventas que ofrecen tickets para facturar, leída en la transacción. Apagarla no invalida lo ya facturado.
+  facturar_antes_de_cobrar: {
+    ambito: "EMPRESA",
+    tipo: "INTERRUPTOR",
+    base: { encendida: false },
+    modulo: "ventas",
+  },
   // Caja (decisión 124; caja-y-cobros.md:43, 69; registro de contratos :778; supuesto S-5 de E0: nombre y base 1 del
   // registro de octubre): cuántas cajas activas puede tener una sucursal. Base 1 («Caja 1» nace con la sucursal, decisión
   // 165); la sube la plataforma. Declara el tipo; `crearCaja` y `reactivarCaja` la verifican con `exigirPerilla` en E3.

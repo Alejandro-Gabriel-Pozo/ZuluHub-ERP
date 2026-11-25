@@ -9,15 +9,34 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
   pruebas de lo que tocaste. El gate completo (`npm run gate`) lo corre el CI; local, solo para reproducir una falla del CI. Motivo: el gate
   completo local tarda unos 20 minutos y repite lo que ya corre el CI (dueño, 17/11/2026, «4.-si»).
 - Cambios mínimos y enfocados; no inventar librerías ni APIs; avisar antes de sumar una dependencia.
+- La mutación exige 100 % en el cálculo puro de dinero, 95 % en lo crítico, 80 % en servidor y dominio y 60 % en las pantallas (ver «Mutación por nivel»); un grupo nuevo declara su `nivel`.
 - Si tocás `apps/web/ui`, corré también `npm run test:componentes` (Chromium real: axe, foco y envío; el CI lo corre en el job
   `componentes`). Un entorno que ya trae su propio Chromium lo indica con `PEDERNAL_NAVEGADOR=<ruta del ejecutable>`.
 - Si tocás `apps/web`, corré también `npm run test:recorrido` (app real, Chromium y Postgres; necesita `npm run build:web` hecho). Previene: un `Boton`
   sin `"use client"` rompe «Emitir» en el navegador (React #441) y ninguna prueba unitaria lo ve; lo cubre el job `recorrido` del Gate.
 - Una regla nueva de arquitectura trae su violación inyectada en `test/arquitectura/reglas.test.ts`.
-- **Parar la línea (dueño, 17/11/2026).** Si la nocturna (mutación completa, incluido el guardián) está roja, no se mergea producto hasta que
-  esté verde o explicada; el orquestador la mira cada mañana. Previene: un fallo del guardián que los PR ya no corren (solo la nocturna lo ve)
-  quede escondido bajo merges nuevos. Chequeo: `test/arquitectura/guardian-en-pr.test.ts` (que la nocturna corra todo); que el orquestador la
-  mire es proceso, no un test.
+- **CI liviano en los pull requests hacia `integracion/modulos-v2` (dueño, 25/11/2026).** Un PR hacia la rama de integración corre solo tipos, lint, formato, arquitectura,
+  guardián de contratos, código muerto, seguridad (gitleaks, zizmor, dependencias) y las pruebas completas con Postgres; la compilación de la web, los componentes y el
+  recorrido, solo si el cambio toca la web (el plan lo decide por el grafo y, ante lo que no sabe clasificar, corren). NO corren mutación, Estabilidad ni CodeQL. La corrida
+  NOCTURNA sobre la rama de integración (`nocturna-de-integracion.yml`) corre TODO (toda la mutación, 12 copias de Estabilidad, componentes, recorrido y CodeQL) y el PR final de
+  integración hacia `main` corre el gate completo. Previene: unos 60 chequeos y 30 a 60 minutos por PR con muchas sesiones en paralelo. Chequeo:
+  `test/arquitectura/evaluar-gate.test.ts` y `planificar-ci-liviano.test.ts` (el salto solo vale hacia la rama de integración; cualquier otro caso queda en rojo).
+- **Parar la línea (dueño, 17/11/2026, ampliada el 25/11/2026).** Si la nocturna (mutación completa, incluido el guardián; la de `main` y la de la rama de integración) está
+  roja, no se mergea producto hasta que esté verde o explicada; el orquestador la mira cada mañana. Si aparecen dos fallas de la nocturna en una semana se restaura el gate
+  completo por PR (condición del registro de relajaciones). Previene: un fallo del guardián o de la mutación que los PR ya no corren (solo la nocturna lo ve) quede escondido bajo
+  merges nuevos. Chequeo: `test/arquitectura/guardian-en-pr.test.ts` (que la nocturna corra todo); que el orquestador la mire es proceso, no un test.
+- **Relajaciones de pruebas (dueño, 25/11/2026).** El cliente tendrá 1 o 2 personas operando por sucursal como máximo, así que se corre menos de lo que el CI
+  podría correr, con un contador: todo recorte de pruebas (el CI liviano de los PR hacia la rama de integración, copias de Estabilidad en un PR, umbrales de mutación
+  menores que 100 %, sin pruebas de carga ni volumen, concurrencia con dos actores) figura en `arquitectura/deuda/relajaciones-de-pruebas.json` con quién lo decidió, el motivo, la condición
+  para restaurarlo y su vencimiento de revisión (≤ 90 días). La nocturna corre TODO (todas las copias y todos los grupos de mutación) y es lo que respalda cada recorte de un PR.
+  Previene: recortes del CI que nadie recuerda ni revisa cuando cambia la escala. Chequeo: `test/arquitectura/relajaciones-de-pruebas.test.ts` (una violación inyectada por caso).
+- **Mutación por nivel (dueño, 25/11/2026).** Todo grupo de `arquitectura/mutacion/*.json` declara su `nivel` y el umbral de mutación sale de `arquitectura/niveles-de-mutacion.json`:
+  DINERO_EXACTO 100 % (solo el cálculo puro de dinero: importes, redondeo, prorrateo y moneda; rutas `dinero_exacto` de `arquitectura/rutas-sensibles-de-mutacion.json`), CRITICO 95 % (permisos y
+  autorización, aislamiento entre empresas, rol público, base de datos y migraciones, fiscal, secretos, costos, el resto del dinero y el guardián; lo que muta `rutas` del mismo archivo TIENE que
+  serlo, y el código de `apps/web` que arma pedidos con dinero o cantidades hacia el servidor también), SERVIDOR 80 % (el resto de servidor y dominio) y PANTALLA 60 % (solo grupos con todos sus
+  archivos en `apps/web/ui`: el servidor ya decide permisos, validación y dinero). Falta de nivel, DINERO_EXACTO con umbral menor que 100, un grupo de dinero puro que no es DINERO_EXACTO o una
+  pantalla con archivos fuera de `apps/web/ui` fallan; en el registro de relajaciones figura cada nivel con umbral menor que 100 (y el 100 % no lleva entrada). Un grupo nuevo sin nivel falla.
+  Previene: matar el último mutante de una pantalla con la misma exigencia que el cálculo de un importe. Chequeo: `test/arquitectura/grupos-de-mutacion.test.ts` y `relajaciones-de-pruebas.test.ts`.
 
 ## Reglas que no se negocian
 

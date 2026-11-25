@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -110,6 +111,81 @@ function diferenciasConElRapido(ci: string, rapido: string, jobs: readonly strin
   return problemas;
 }
 
+/** El texto de un job (de su encabezado al siguiente job o al final). */
+function cuerpoDeJob(yaml: string, job: string): string {
+  const inicio = yaml.indexOf(`\n  ${job}:\n`);
+  if (inicio === -1) throw new Error(`no existe el job ${job}`);
+  const resto = yaml.slice(inicio + 1);
+  const fin = resto.slice(1).search(/\n {2}[a-z0-9-]+:\n/);
+  return fin === -1 ? resto : resto.slice(0, fin + 1);
+}
+
+/**
+ * Evalúa una condición `${{ … }}` de un job con el único vocabulario que usan estos workflows: `!cancelled()`, `needs.hay-pr.result`, `needs.hay-pr.outputs.omitir`,
+ * textos entre comillas simples, `==`, `!=`, `&&`, `||`, `!` y paréntesis. Cualquier otra cosa lanza (no se adivina).
+ */
+function evaluarCondicion(
+  expresion: string,
+  entorno: { resultado: string; omitir: string; cancelada: boolean },
+): boolean {
+  const texto = /^\$\{\{\s*([\s\S]*?)\s*\}\}$/.exec(expresion.trim())?.[1];
+  if (texto === undefined) throw new Error(`no es una condición \${{ }}: ${expresion}`);
+  const fichas = texto.match(/'[^']*'|!=|==|&&|\|\||[()!]|[A-Za-z_][\w.()-]*/g) ?? [];
+  if (fichas.join("").length < texto.replace(/\s+/g, "").length) {
+    throw new Error(`la condición usa algo que este evaluador no entiende: ${texto}`);
+  }
+  let i = 0;
+  type Valor = string | boolean;
+  const valorDe = (ficha: string): Valor => {
+    if (ficha.startsWith("'")) return ficha.slice(1, -1);
+    if (ficha === "needs.hay-pr.result") return entorno.resultado;
+    if (ficha === "needs.hay-pr.outputs.omitir") return entorno.omitir;
+    if (ficha === "cancelled()") return entorno.cancelada;
+    throw new Error(`referencia desconocida: ${ficha}`);
+  };
+  const primario = (): Valor => {
+    const ficha = fichas[i++] as string;
+    if (ficha === "(") {
+      const v = o();
+      i++; // ")"
+      return v;
+    }
+    if (ficha === "!") return !primario();
+    return valorDe(ficha);
+  };
+  const comparacion = (): Valor => {
+    const izquierda = primario();
+    const operador = fichas[i];
+    if (operador === "==" || operador === "!=") {
+      i++;
+      const derecha = primario();
+      return operador === "==" ? izquierda === derecha : izquierda !== derecha;
+    }
+    return izquierda;
+  };
+  const y = (): Valor => {
+    let v = comparacion();
+    while (fichas[i] === "&&") {
+      i++;
+      const siguiente = comparacion();
+      v = Boolean(v) && Boolean(siguiente);
+    }
+    return v;
+  };
+  const o = (): Valor => {
+    let v = y();
+    while (fichas[i] === "||") {
+      i++;
+      const siguiente = y();
+      v = Boolean(v) || Boolean(siguiente);
+    }
+    return v;
+  };
+  const resultado = o();
+  if (i !== fichas.length) throw new Error(`sobran fichas en la condición: ${texto}`);
+  return Boolean(resultado);
+}
+
 const JOBS_COPIADOS = ["estatico", "pruebas", "web", "componentes"] as const;
 
 describe("el repositorio real", () => {
@@ -128,7 +204,77 @@ describe("el repositorio real", () => {
     const jobs = [...rapido.matchAll(/^ {2}([a-z0-9-]+):\s*$/gm)]
       .map((m) => m[1])
       .filter((nombre) => rapido.indexOf(`  ${nombre}:`) > rapido.indexOf("\njobs:"));
-    expect(jobs).toEqual([...JOBS_COPIADOS]);
+    expect(jobs).toEqual(["hay-pr", ...JOBS_COPIADOS]);
+  });
+
+  /**
+   * Con un pull request abierto para la rama, `ci.yml` ya corre lo mismo en cada push: el aviso temprano se saltea (job `hay-pr`). Previene: pagar dos veces el estático y las
+   * pruebas de cada push a una rama con PR. Ante la duda (la consulta falla, la salida viene vacía o no es un número) los cuatro jobs CORREN. La regla se EVALÚA (no se compara
+   * su texto): una condición invertida pasaría una comparación de texto y haría justo lo contrario (caso real: `!= '0'` corría con PR y saltaba sin PR).
+   */
+  it("la condición de los cuatro jobs copiados se evalúa: con PR abierto se saltea; sin PR, con la consulta caída o con la salida vacía corre", () => {
+    for (const job of JOBS_COPIADOS) {
+      const cuerpo = cuerpoDeJob(rapido, job);
+      expect(cuerpo, job).toContain("    needs: hay-pr\n");
+      const si = /^ {4}if: (.+)$/m.exec(cuerpo)?.[1];
+      expect(si, job).toBeDefined();
+      const corre = (resultado: string, omitir: string, cancelada = false) =>
+        evaluarCondicion(si ?? "", { resultado, omitir, cancelada });
+      expect(corre("success", "true"), `${job}: con PR abierto`).toBe(false);
+      expect(corre("success", "false"), `${job}: sin PR`).toBe(true);
+      expect(corre("success", ""), `${job}: salida vacía`).toBe(true);
+      expect(corre("failure", ""), `${job}: consulta caída`).toBe(true);
+      expect(corre("failure", "true"), `${job}: consulta caída con salida vieja`).toBe(false);
+      expect(corre("success", "false", true), `${job}: corrida cancelada`).toBe(false);
+    }
+  });
+
+  it("VIOLACIÓN: la condición invertida (corre con PR, se saltea sin PR) y la que se saltea ante la consulta caída se detectan al evaluar", () => {
+    const invertida = "${{ !cancelled() && needs.hay-pr.outputs.omitir == 'true' }}";
+    expect(
+      evaluarCondicion(invertida, { resultado: "success", omitir: "true", cancelada: false }),
+    ).toBe(true); // debería ser false
+    expect(
+      evaluarCondicion(invertida, { resultado: "success", omitir: "false", cancelada: false }),
+    ).toBe(false); // debería ser true
+    const frágil = "${{ !cancelled() && needs.hay-pr.outputs.omitir == 'false' }}";
+    expect(evaluarCondicion(frágil, { resultado: "failure", omitir: "", cancelada: false })).toBe(
+      false,
+    ); // debería ser true
+  });
+
+  it("el script de hay-pr: `omitir` es true solo si hay uno o más pull requests abiertos (cero, vacío o algo que no es un número: false)", () => {
+    const cuerpo = cuerpoDeJob(rapido, "hay-pr");
+    const caso = /^ {10}case "\$\{abiertos\}" in\n[\s\S]*?^ {10}esac$/m.exec(cuerpo)?.[0];
+    expect(caso).toBeDefined();
+    const omitir = (abiertos: string) =>
+      spawnSync("bash", ["-c", `abiertos=$1\n${caso ?? ""}\necho "$omitir"`, "_", abiertos], {
+        encoding: "utf8",
+      }).stdout.trim();
+    for (const [abiertos, esperado] of [
+      ["0", "false"],
+      ["1", "true"],
+      ["2", "true"],
+      ["12", "true"],
+      ["", "false"],
+      ["x", "false"],
+      ["-1", "false"],
+      ["1x", "false"],
+      ["null", "false"],
+    ] as const) {
+      expect(omitir(abiertos), `abiertos="${abiertos}"`).toBe(esperado);
+    }
+  });
+
+  it("hay-pr consulta por REST solo los pull requests abiertos de la rama, con permisos de solo lectura y sin interpolar nada en el comando", () => {
+    const cuerpo = cuerpoDeJob(rapido, "hay-pr");
+    expect(cuerpo).toContain("pull-requests: read");
+    expect(cuerpo).not.toMatch(/(?:contents|pull-requests|actions|issues): write/);
+    expect(cuerpo).toContain('gh api -X GET "repos/${REPOSITORIO}/pulls"');
+    expect(cuerpo).toContain('-f head="${DUENIO}:${RAMA}" -f state=open --jq length');
+    expect(cuerpo).toContain("RAMA: ${{ github.ref_name }}");
+    expect(cuerpo).toContain("omitir: ${{ steps.consulta.outputs.omitir }}");
+    expect(cuerpo).not.toMatch(/run:[\s\S]*\$\{\{/);
   });
 });
 

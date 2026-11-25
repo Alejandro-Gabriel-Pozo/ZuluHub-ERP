@@ -2,5 +2,6 @@
   "grupo": "marcas (marca de los mails)",
   "archivos": "src/modulos/marcas/dominio/marca-de-mail.ts",
   "minutos": 0.5,
-  "pruebas": "src/modulos/marcas/dominio/marca-de-mail.test.ts"
+  "pruebas": "src/modulos/marcas/dominio/marca-de-mail.test.ts",
+  "nivel": "CRITICO"
 }

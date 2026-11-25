@@ -2,5 +2,6 @@
   "grupo": "web (cobrar)",
   "archivos": "apps/web/ui/plantillas/cobrar/modelo-de-cobro.ts,apps/web/ui/plantillas/cobrar/textos-de-cobrar.ts,src/composicion/decidir-la-caja.ts",
   "minutos": 4,
-  "pruebas": "test/web/modelo-de-cobro.test.ts src/composicion/decidir-la-caja.test.ts test/web/modelo-de-venta-a-cero.test.ts"
+  "pruebas": "test/web/modelo-de-cobro.test.ts src/composicion/decidir-la-caja.test.ts test/web/modelo-de-venta-a-cero.test.ts",
+  "nivel": "CRITICO"
 }

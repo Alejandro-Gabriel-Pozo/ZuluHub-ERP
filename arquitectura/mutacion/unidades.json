@@ -2,5 +2,6 @@
   "grupo": "unidades",
   "archivos": "src/primitivas/unidades/**/*.ts",
   "minutos": 1.1,
-  "pruebas": "src/primitivas/unidades"
+  "pruebas": "src/primitivas/unidades",
+  "nivel": "CRITICO"
 }

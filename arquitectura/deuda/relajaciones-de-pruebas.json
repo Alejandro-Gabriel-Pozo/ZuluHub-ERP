@@ -1,0 +1,88 @@
+{
+  "relajaciones": [
+    {
+      "id": "ci-liviano-en-pr-a-integracion",
+      "estado": "VIGENTE",
+      "que": "Un pull request hacia la rama de integración corre solo tipos, lint, formato, arquitectura, guardián, código muerto, seguridad y las pruebas completas; sin mutación, sin Estabilidad, sin CodeQL y sin gate completo, y la web (compilación, componentes y recorrido) solo si el cambio la toca",
+      "donde": ".github/workflows/ci.yml (plan y Gate), .github/workflows/codeql.yml, arquitectura/planificar-mutacion.cjs, arquitectura/evaluar-gate.cjs",
+      "motivo": "Muchas sesiones en paralelo: cada pull request corría unos 60 chequeos y tardaba de 30 a 60 minutos; la nocturna de integración corre TODO y el pull request final hacia main corre el gate completo",
+      "decidio": "dueño, 2026-11-25",
+      "fecha": "2026-11-25",
+      "restaurar_si": "Antes del primer despliegue a un cliente real corre el gate completo en el pull request final; si aparecen dos fallas de la nocturna en una semana se restaura el gate completo por pull request; o hay más de 2 personas operando a la vez por sucursal, un segundo cliente de otra escala o una cadena",
+      "revisar_antes_de": "2027-02-23"
+    },
+    {
+      "id": "estabilidad-reducida-en-pr",
+      "estado": "VIGENTE",
+      "que": "En un pull request, Estabilidad repite la integración 3 veces en vez de las 12 de la corrida nocturna y a pedido",
+      "donde": ".github/workflows/ci.yml, job estabilidad (matriz `corrida`)",
+      "valor": 3,
+      "motivo": "Ahorra ~140 min de máquina por pull request que la dispara; las 12 copias siguen corriendo cada noche y a pedido",
+      "decidio": "dueño, 2026-11-16",
+      "fecha": "2026-11-16",
+      "restaurar_si": "Hay más de 2 personas operando a la vez por sucursal, o llega un segundo cliente de otra escala, o antes de venderle a una cadena",
+      "revisar_antes_de": "2027-02-14"
+    },
+    {
+      "id": "sin-pruebas-de-carga-ni-volumen",
+      "estado": "VIGENTE",
+      "que": "No hay pruebas de carga ni de volumen (muchos usuarios a la vez, tablas con millones de filas)",
+      "donde": "test/ (no existen)",
+      "motivo": "El cliente tendrá 1 o 2 personas operando por sucursal como máximo; el costo de mantener esas pruebas no se justifica a esa escala",
+      "decidio": "dueño, 2026-11-25",
+      "fecha": "2026-11-25",
+      "restaurar_si": "Hay más de 2 personas operando a la vez por sucursal, o llega un segundo cliente de otra escala, o antes de venderle a una cadena",
+      "revisar_antes_de": "2027-02-23"
+    },
+    {
+      "id": "concurrencia-con-dos-actores",
+      "estado": "VIGENTE",
+      "que": "Las pruebas de concurrencia enfrentan a dos actores simultáneos, no a muchos",
+      "donde": "test/integracion/ (pruebas de concurrencia)",
+      "motivo": "Con 1 o 2 personas operando por sucursal, dos actores sobre lo mismo es el caso real; más actores no agregan un caso que pueda ocurrir",
+      "decidio": "dueño, 2026-11-25",
+      "fecha": "2026-11-25",
+      "restaurar_si": "Hay más de 2 personas operando a la vez por sucursal, o llega un segundo cliente de otra escala, o antes de venderle a una cadena",
+      "revisar_antes_de": "2027-02-23"
+    },
+    {
+      "id": "mutacion-critico-95",
+      "estado": "VIGENTE",
+      "decidio": "dueño, 2026-11-25",
+      "fecha": "2026-11-25",
+      "restaurar_si": "Antes del primer cliente real se evalúa subir los umbrales; o si una falla en producción nace de un grupo no crítico; o hay más de 2 personas operando a la vez por sucursal, un segundo cliente de otra escala o una cadena",
+      "revisar_antes_de": "2027-02-23",
+      "nivel": "CRITICO",
+      "valor": 95,
+      "que": "Los grupos de mutación CRÍTICOS (dinero fuera del cálculo puro, permisos, aislamiento, base de datos, fiscal, secretos y el guardián) exigen 95 % de mutantes muertos en vez de 100 %",
+      "donde": "arquitectura/niveles-de-mutacion.json (nivel CRITICO) y el campo `nivel` de arquitectura/mutacion/*.json",
+      "motivo": "Solo el cálculo puro de dinero (DINERO_EXACTO) queda en 100 %; lo crítico admite hasta 1 mutante de cada 20 vivo, que sigue cubierto por el servidor y por las pruebas de integración"
+    },
+    {
+      "id": "mutacion-no-critica-80",
+      "estado": "VIGENTE",
+      "decidio": "dueño, 2026-11-25",
+      "fecha": "2026-11-25",
+      "restaurar_si": "Antes del primer cliente real se evalúa subir los umbrales; o si una falla en producción nace de un grupo no crítico; o hay más de 2 personas operando a la vez por sucursal, un segundo cliente de otra escala o una cadena",
+      "revisar_antes_de": "2027-02-23",
+      "nivel": "SERVIDOR",
+      "valor": 80,
+      "que": "Los grupos de mutación NO críticos de servidor y dominio exigen 80 % de mutantes muertos en vez de 100 %",
+      "donde": "arquitectura/niveles-de-mutacion.json (nivel SERVIDOR) y el campo `nivel` de arquitectura/mutacion/*.json",
+      "motivo": "Lo no crítico no justifica matar el último mutante con 1 o 2 personas operando por sucursal"
+    },
+    {
+      "id": "mutacion-pantallas-60",
+      "estado": "VIGENTE",
+      "decidio": "dueño, 2026-11-25",
+      "fecha": "2026-11-25",
+      "restaurar_si": "Antes del primer cliente real se evalúa subir los umbrales; o si una falla en producción nace de un grupo no crítico; o hay más de 2 personas operando a la vez por sucursal, un segundo cliente de otra escala o una cadena",
+      "revisar_antes_de": "2027-02-23",
+      "nivel": "PANTALLA",
+      "valor": 60,
+      "que": "Los grupos de mutación de pantallas (solo archivos de apps/web/ui y sus modelos de vista) exigen 60 % en vez de 100 %",
+      "donde": "arquitectura/niveles-de-mutacion.json (nivel PANTALLA) y el campo `nivel` de arquitectura/mutacion/*.json",
+      "motivo": "El servidor ya decide permisos, validación y dinero; la pantalla solo muestra. Lo que arma pedidos con dinero o cantidades hacia el servidor sigue CRITICO"
+    }
+  ]
+}

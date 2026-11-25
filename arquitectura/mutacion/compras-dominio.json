@@ -2,5 +2,6 @@
   "grupo": "compras (dominio)",
   "archivos": "src/modulos/compras/dominio/**/*.ts",
   "minutos": 6,
-  "pruebas": "src/modulos/compras"
+  "pruebas": "src/modulos/compras",
+  "nivel": "CRITICO"
 }
