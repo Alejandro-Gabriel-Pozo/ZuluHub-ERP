@@ -101,6 +101,14 @@ del código vale `"0019"` (`src/composicion/guarda-de-migracion.ts`, línea 19) 
 de `migraciones/` (`0019_contacto_de_la_sucursal.sql`): si esta guía dice otra cosa, manda el código. «Ver» del workflow
 te dice qué falta.
 
+**Sellos y plantillas de permisos (H4b).** Cada migración que ya corrió en una base se «sella» en `migraciones/selladas.json` (su checksum);
+una prueba falla si el archivo de una migración sellada cambia. **El mismo día del primer `aplicar` de la `0094` en cualquier base
+(`preview` incluida), el PR que la sella se mergea ANTES de aplicar**: `npm run sellar:migraciones -- 0094_permisos_configurables.sql`. Sin
+ese PR la semilla de la `0094` sigue editable y una acción nueva podría entrar por el camino equivocado. Una acción nueva de cualquier
+módulo llega a las plantillas por la sincronización que corre el propio `aplicar` (después de las migraciones; solo suma, nunca quita ni
+repone): para eso, quien agrega la acción corre `npm run semilla:plantillas -- --declaracion` y sube `migraciones/plantillas-declaradas.json`
+(una prueba falla si no coincide con el código).
+
 ### B.4 Roles de la base y variables de Vercel
 
 `LOGIN` y contraseña de los roles `pedernal_app`, `pedernal_trabajos`, `pedernal_publico` y `pedernal_autenticacion`, **en cada

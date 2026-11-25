@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0953",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La sincronización de plantillas deja su rastro en las propias filas inmutables (autor y fecha), no en auditoria_plataforma.",
+  "que_cambia": "Nada que vea el negocio: la auditoría de las versiones nuevas son las filas de solo inserción con autor «sincronizacion:plantillas».",
+  "donde": "src/adaptadores/postgres/sincronizar-plantillas.ts",
+  "motivo": "auditoria_plataforma exige un actor de plataforma firmado (0004) y el ejecutor de migraciones no lo es; escribirla exigiría suplantar un actor."
+}

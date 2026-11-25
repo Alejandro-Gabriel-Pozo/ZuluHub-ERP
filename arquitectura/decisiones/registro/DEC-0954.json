@@ -1,0 +1,11 @@
+{
+  "id": "DEC-0954",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las migraciones ya aplicadas se sellan en migraciones/selladas.json (0001 a 0093 ya; la 0094 el día de su primer apply en cualquier base).",
+  "que_cambia": "Nada que vea el negocio: una prueba falla si se edita una migración sellada; el sello de la 0094 es un paso de proceso.",
+  "donde": "migraciones/selladas.json; test/arquitectura/migraciones-selladas.test.ts; apps/web/PRIMER-DESPLIEGUE.md",
+  "motivo": "El ejecutor detecta una migración aplicada y editada recién en el siguiente migrar de esa base; el sello lo detecta en el CI."
+}
