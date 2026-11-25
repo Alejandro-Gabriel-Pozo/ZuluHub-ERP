@@ -21,8 +21,8 @@ type Resultado = Readonly<{ dominioId: string; yaEstaba: boolean }>;
 
 export type CambioDeDominio = Readonly<{
   envio: EnvioConClave<Resultado, RechazoDeDominio>;
-  /** Fija el pedido del intento y lo manda. Con un intento incierto pendiente, `envio.enviar` lo reintenta con el MISMO pedido y la misma clave. */
-  pedir: (pedido: PedidoDeDominio) => void;
+  /** Fija el pedido del intento y lo manda; devuelve `false` (y no hace nada) si ya hay uno fijado. Con un intento incierto pendiente, `envio.enviar` lo reintenta con el MISMO pedido y la misma clave. */
+  pedir: (pedido: PedidoDeDominio) => boolean;
   /** La referencia del último «inesperado» devuelto como valor, mientras el intento sigue incierto. */
   referenciaIncierta: string | undefined;
   /** La ventana del código del segundo factor: hay que pintarla en la pantalla. */
@@ -90,9 +90,12 @@ export function useCambioDeDominio(): CambioDeDominio {
   return {
     envio,
     pedir: (nuevo) => {
-      if (!envio.puedeEnviar) return;
+      // Con un pedido ya fijado (en vuelo o incierto) otro no lo pisa: el reintento usa el MISMO pedido y la misma clave.
+      if (pedido.current !== null) return false;
+      if (!envio.puedeEnviar) return false;
       pedido.current = nuevo;
       envio.enviar();
+      return true;
     },
     referenciaIncierta,
     ventana,

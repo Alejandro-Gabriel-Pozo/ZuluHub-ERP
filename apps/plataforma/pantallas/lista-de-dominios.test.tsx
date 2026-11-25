@@ -233,3 +233,53 @@ describe("ListaDeDominios: agregar y retirar", () => {
     });
   });
 });
+
+describe("ListaDeDominios: un pedido por vez y sin formularios viejos", () => {
+  it("dos botones de filas distintas en el mismo instante: solo el primero sale y el aviso es el suyo", async () => {
+    const p = puerta();
+    verificar.mockReturnValue(p.espera);
+    activar.mockResolvedValue(BIEN(D2));
+    await mostrar();
+    tocar(fila("app.hotel-uno").getByRole("button", { name: "Verificar" }));
+    tocar(fila("carta.hotel-uno").getByRole("button", { name: "Activar" }));
+    await vi.waitFor(() => expect(verificar).toHaveBeenCalledTimes(1));
+    expect(activar).not.toHaveBeenCalled();
+    p.soltar(BIEN(D1));
+    await expect.element(page.getByText("Dominio verificado.")).toBeVisible();
+    expect(page.getByText("Dominio activado.").elements()).toHaveLength(0);
+  });
+
+  it("tras un alta hecha, tocar un botón de una fila no hace reaparecer el formulario viejo", async () => {
+    agregar.mockResolvedValue(BIEN(D1));
+    verificar.mockResolvedValue({ ok: false, error: { tipo: "GENERAL", texto: "Algo falló." } });
+    await mostrar();
+    tocar(page.getByRole("button", { name: "Agregar dominio" }));
+    await page.getByLabelText("Empresa").selectOptions(E1);
+    await page.getByLabelText("Nombre del sitio").fill("app.hotel-nuevo.com.ar");
+    await page.getByLabelText("Qué muestra").selectOptions("APP");
+    await page.getByLabelText("Titular").selectOptions("CLIENTE");
+    tocar(page.getByRole("button", { name: "Agregar", exact: true }));
+    await vi.waitFor(() => expect(agregar).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(refrescar).toHaveBeenCalled());
+    tocar(fila("app.hotel-uno").getByRole("button", { name: "Verificar" }));
+    await vi.waitFor(() => expect(verificar).toHaveBeenCalledTimes(1));
+    await expect.element(page.getByText("Algo falló.")).toBeVisible();
+    expect(page.getByLabelText("Nombre del sitio").elements()).toHaveLength(0);
+    expect(agregar).toHaveBeenCalledTimes(1);
+  });
+
+  it("tras un retiro hecho, tocar otra fila tampoco reabre el formulario del retiro", async () => {
+    retirar.mockResolvedValue(BIEN(D3));
+    desactivar.mockResolvedValue({ ok: false, error: { tipo: "GENERAL", texto: "Algo falló." } });
+    await mostrar();
+    tocar(fila("carta.hotel-dos").getByRole("button", { name: "Retirar" }));
+    await page.getByLabelText("Motivo").fill("El cliente se fue");
+    tocar(page.getByRole("button", { name: "Retirar" }).first());
+    await vi.waitFor(() => expect(retirar).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(refrescar).toHaveBeenCalled());
+    tocar(fila("carta.hotel-dos").getByRole("button", { name: "Desactivar" }));
+    await vi.waitFor(() => expect(desactivar).toHaveBeenCalledTimes(1));
+    expect(page.getByLabelText("Motivo").elements()).toHaveLength(0);
+    expect(retirar).toHaveBeenCalledTimes(1);
+  });
+});

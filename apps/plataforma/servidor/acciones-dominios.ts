@@ -32,12 +32,26 @@ function falla(error: unknown): Falla {
 type Resultado =
   { ok: true; valor: { dominioId: string; yaEstaba: boolean } } | { ok: false; error: unknown };
 
+type Acceso = Awaited<ReturnType<typeof exigirAcceso>>;
+
+/**
+ * Lista blanca (todo nace cerrado): estas acciones solo valen sobre el dominio de una EMPRESA. Llegan con un id que manda el navegador, y los casos de uso de dominios sirven
+ * también a los dominios de una marca (landing, consola, host canónico); sin esta lectura previa, un ADMIN con segundo factor podría mandar a la página neutra uno de ellos por su
+ * id. La lectura solo devuelve dominios de empresas y el dueño de un dominio no cambia nunca (`dominio_inmutable`), así que no hay carrera entre leer y actuar. Si no vuelve
+ * una fila (no existe o es de una marca) la respuesta es la misma: `DOMINIO_NO_ENCONTRADO`.
+ */
+async function noEsDeUnaEmpresa(acceso: Acceso, dominioId: string): Promise<Resultado | null> {
+  const lectura = await acceso.consultas.listarDominios({ dominioId, limite: 1 });
+  if (!lectura.ok) return lectura;
+  return lectura.valor.filas.length === 1 ? null : { ok: false, error: "DOMINIO_NO_ENCONTRADO" };
+}
+
 /**
  * Corre un caso de uso de dominios con el acceso de este pedido. Cada caso pide su acción y el segundo factor reciente a la puerta de la consola; un `redirect`
  * de Next se relanza; lo que lance cualquier otra cosa sale como inesperado, con referencia y sin el pedido.
  */
 async function ejecutar(
-  correr: (acceso: Awaited<ReturnType<typeof exigirAcceso>>) => Promise<Resultado>,
+  correr: (acceso: Acceso) => Promise<Resultado>,
 ): Promise<RespuestaDeCambioDeDominio> {
   try {
     const acceso = await exigirAcceso();
@@ -87,6 +101,8 @@ export async function verificarDominioDeConsola(
   const forma = entradaDeCambiarDominio(entrada);
   if (!forma.ok) return datosNoValidos();
   return ejecutar(async (acceso) => {
+    const previo = await noEsDeUnaEmpresa(acceso, forma.valor.dominioId);
+    if (previo !== null) return previo;
     const r = await acceso.casos.verificarDominio({
       ...forma.valor,
       verificadoEn: inicioDelDiaArgentino(new Date()),
@@ -101,6 +117,8 @@ export async function activarDominioDeConsola(
   const forma = entradaDeCambiarDominio(entrada);
   if (!forma.ok) return datosNoValidos();
   return ejecutar(async (acceso) => {
+    const previo = await noEsDeUnaEmpresa(acceso, forma.valor.dominioId);
+    if (previo !== null) return previo;
     const r = await acceso.casos.activarDominio(forma.valor);
     return r.ok ? { ok: true, valor: r.valor } : r;
   });
@@ -112,6 +130,8 @@ export async function desactivarDominioDeConsola(
   const forma = entradaDeCambiarDominio(entrada);
   if (!forma.ok) return datosNoValidos();
   return ejecutar(async (acceso) => {
+    const previo = await noEsDeUnaEmpresa(acceso, forma.valor.dominioId);
+    if (previo !== null) return previo;
     const r = await acceso.casos.desactivarDominio(forma.valor);
     return r.ok ? { ok: true, valor: r.valor } : r;
   });
@@ -124,6 +144,8 @@ export async function retirarDominioDeConsola(
   const forma = entradaDeRetirarDominio(entrada);
   if (!forma.ok) return datosNoValidos();
   return ejecutar(async (acceso) => {
+    const previo = await noEsDeUnaEmpresa(acceso, forma.valor.dominioId);
+    if (previo !== null) return previo;
     const r = await acceso.casos.retirarDominio(forma.valor);
     return r.ok ? { ok: true, valor: r.valor } : r;
   });

@@ -25,7 +25,7 @@ import { DECLARACIONES_DE_CONSULTAS_DE_PLATAFORMA as D } from "./declaraciones";
  * sirve es un error, nunca «sin filtro» (todo nace cerrado: un filtro mal escrito no devuelve todo).
  */
 export type EntradaDeListarDominios = EntradaDePagina &
-  Readonly<{ empresaId?: string | null; estado?: string | null }>;
+  Readonly<{ dominioId?: string | null; empresaId?: string | null; estado?: string | null }>;
 
 export type ErrorAlListarDominios =
   MotivoDeRechazo | ErrorDePagina | "ID_INVALIDO" | "FILTRO_INVALIDO" | ErrorDePersistencia;
@@ -33,6 +33,12 @@ export type ErrorAlListarDominios =
 function filtroValido(
   entrada: EntradaDeListarDominios,
 ): Resultado<FiltroDeDominios, "ID_INVALIDO" | "FILTRO_INVALIDO"> {
+  let dominio: FiltroDeDominios["dominioId"] = null;
+  if (entrada.dominioId !== undefined && entrada.dominioId !== null) {
+    const id = uuidDesdeTexto(entrada.dominioId);
+    if (!id.ok) return err("ID_INVALIDO");
+    dominio = id.valor;
+  }
   let empresa: FiltroDeDominios["empresaId"] = null;
   if (entrada.empresaId !== undefined && entrada.empresaId !== null) {
     const id = uuidDesdeTexto(entrada.empresaId);
@@ -45,7 +51,7 @@ function filtroValido(
     if (pedido === undefined) return err("FILTRO_INVALIDO");
     estado = pedido;
   }
-  return ok({ empresaId: empresa, estado });
+  return ok({ dominioId: dominio, empresaId: empresa, estado });
 }
 
 /**

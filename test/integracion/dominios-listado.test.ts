@@ -117,6 +117,25 @@ describe.skipIf(base === null)(
       });
     });
 
+    it("el filtro por id devuelve solo ese dominio y NUNCA uno de una marca (lista blanca de las acciones)", async () => {
+      const propio = exito(await consultas.listarDominios(comoAdmin(), { dominioId: carta.id }));
+      expect(propio.filas.map((f) => f.id)).toEqual([carta.id]);
+      const deUnaMarca = exito(
+        await consultas.listarDominios(comoAdmin(), { dominioId: deMarca.id }),
+      );
+      expect(deUnaMarca.filas).toEqual([]);
+      const inexistente = exito(
+        await consultas.listarDominios(comoAdmin(), {
+          dominioId: "00000000-0000-4000-8000-000000000000",
+        }),
+      );
+      expect(inexistente.filas).toEqual([]);
+      expect(await consultas.listarDominios(comoAdmin(), { dominioId: "no-es-un-uuid" })).toEqual({
+        ok: false,
+        error: "ID_INVALIDO",
+      });
+    });
+
     it("pagina por id sin repetir ni saltear filas", async () => {
       const todas = exito(await consultas.listarDominios(comoAdmin(), { limite: 100 })).filas;
       const vistas: string[] = [];

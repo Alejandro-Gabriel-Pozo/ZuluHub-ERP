@@ -266,6 +266,8 @@ export type VistaDeCatalogoDePerillas = Readonly<{ perillas: readonly PerillaDel
 /** Las listas de nivel 1 y la búsqueda de referencias. */
 /** Qué dominios de empresa se piden: los de una empresa y/o en un estado; sin filtro, todos los de empresas. */
 export type FiltroDeDominios = Readonly<{
+  /** Solo ese dominio (y solo si es de una empresa): lo usan las acciones de la consola para no actuar sobre un dominio de marca. */
+  dominioId: string | null;
   empresaId: EmpresaId | null;
   estado: EstadoDeDominio | null;
 }>;

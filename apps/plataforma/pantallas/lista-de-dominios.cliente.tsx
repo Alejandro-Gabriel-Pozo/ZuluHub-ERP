@@ -119,9 +119,15 @@ export function ListaDeDominios({ dominios, empresas, puedeEditar }: PropsDeList
     setFormulario(nuevo);
   };
 
-  const mandar = (pedido: PedidoDeDominio) => {
+  /**
+   * Manda un pedido. Con uno en vuelo (o incierto) no hace nada: ni pisa el pedido fijado ni cambia el aviso. Un pedido de una FILA cierra el formulario que haya quedado abierto o
+   * resuelto: si no, al fallar este el formulario viejo reaparecería y reenviarlo repetiría un alta o un retiro ya hechos (`HOST_DUPLICADO`). El del propio formulario lo deja
+   * abierto: su error se muestra ahí.
+   */
+  const mandar = (pedido: PedidoDeDominio, desdeElFormulario = false) => {
+    if (!pedir(pedido)) return;
+    if (!desdeElFormulario) setFormulario(null);
     setUltimo(pedido.tipo);
-    pedir(pedido);
   };
 
   const guardar = () => {
@@ -130,10 +136,10 @@ export function ListaDeDominios({ dominios, empresas, puedeEditar }: PropsDeList
       const s = SUPERFICIES_DE_ALTA.find((x) => x === superficie);
       const t = TITULARES_DE_ALTA.find((x) => x === titular);
       if (s === undefined || t === undefined || empresaId === "") return;
-      mandar({ tipo: "AGREGAR", empresaId, host, superficie: s, titular: t });
+      mandar({ tipo: "AGREGAR", empresaId, host, superficie: s, titular: t }, true);
       return;
     }
-    mandar({ tipo: "RETIRAR", dominioId: formulario.dominio.id, motivo });
+    mandar({ tipo: "RETIRAR", dominioId: formulario.dominio.id, motivo }, true);
   };
 
   const rotuloDeSuperficie = (s: DominioParaLaPantalla["superficie"]) =>

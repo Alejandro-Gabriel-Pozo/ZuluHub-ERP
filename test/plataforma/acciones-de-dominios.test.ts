@@ -2,14 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } fr
 
 vi.mock("server-only", () => ({}));
 
-const { exigirAcceso, agregar, verificar, activar, desactivar, retirar } = vi.hoisted(() => ({
-  exigirAcceso: vi.fn(),
-  agregar: vi.fn(),
-  verificar: vi.fn(),
-  activar: vi.fn(),
-  desactivar: vi.fn(),
-  retirar: vi.fn(),
-}));
+const { exigirAcceso, listar, agregar, verificar, activar, desactivar, retirar } = vi.hoisted(
+  () => ({
+    listar: vi.fn(),
+    exigirAcceso: vi.fn(),
+    agregar: vi.fn(),
+    verificar: vi.fn(),
+    activar: vi.fn(),
+    desactivar: vi.fn(),
+    retirar: vi.fn(),
+  }),
+);
 
 vi.mock("../../apps/plataforma/servidor/acceso", () => ({ exigirAcceso }));
 
@@ -47,8 +50,15 @@ const redireccion = () =>
 let registro: MockInstance<(...datos: unknown[]) => void>;
 
 beforeEach(() => {
-  for (const f of [exigirAcceso, agregar, verificar, activar, desactivar, retirar]) f.mockReset();
+  for (const f of [exigirAcceso, listar, agregar, verificar, activar, desactivar, retirar])
+    f.mockReset();
+  // Por defecto el dominio es de una empresa: la lectura previa devuelve su fila.
+  listar.mockResolvedValue({
+    ok: true,
+    valor: { filas: [{ id: DOMINIO }], siguienteDespuesDeId: null },
+  });
   exigirAcceso.mockResolvedValue({
+    consultas: { listarDominios: listar },
     casos: {
       agregarDominio: agregar,
       verificarDominio: verificar,
@@ -247,4 +257,39 @@ describe("activar, desactivar y retirar", () => {
     expect(await retirarDominioDeConsola(CAMBIO)).toMatchObject({ ok: false });
     expect(retirar).not.toHaveBeenCalled();
   });
+});
+
+describe("solo sobre dominios de EMPRESA (lista blanca: un id de marca nunca llega al caso)", () => {
+  const ACCIONES = [
+    ["verificar", () => verificarDominioDeConsola(CAMBIO), verificar],
+    ["activar", () => activarDominioDeConsola(CAMBIO), activar],
+    ["desactivar", () => desactivarDominioDeConsola(CAMBIO), desactivar],
+    ["retirar", () => retirarDominioDeConsola({ ...CAMBIO, motivo: "se fue" }), retirar],
+  ] as const;
+
+  it.each(ACCIONES)(
+    "%s: un id que no es de una empresa (marca, landing, consola o inexistente) da «no encontrado» y no llega al caso",
+    async (_nombre, llamar, caso) => {
+      listar.mockResolvedValue({ ok: true, valor: { filas: [], siguienteDespuesDeId: null } });
+      expect(await llamar()).toEqual({
+        ok: false,
+        error: { tipo: "GENERAL", texto: MENSAJES_DE_ERROR_DE_DOMINIOS.DOMINIO_NO_ENCONTRADO },
+      });
+      expect(caso).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(ACCIONES)("%s: pregunta por ESE dominio y solo por ese", async (_nombre, llamar) => {
+    await llamar();
+    expect(listar).toHaveBeenCalledWith({ dominioId: DOMINIO, limite: 1 });
+  });
+
+  it.each(ACCIONES)(
+    "%s: si la lectura falla (sin permiso) la acción se oculta y el caso no corre",
+    async (_nombre, llamar, caso) => {
+      listar.mockResolvedValue({ ok: false, error: "SIN_PERMISO" });
+      expect(await llamar()).toEqual({ ok: false, error: { tipo: "OCULTAR_ACCION" } });
+      expect(caso).not.toHaveBeenCalled();
+    },
+  );
 });

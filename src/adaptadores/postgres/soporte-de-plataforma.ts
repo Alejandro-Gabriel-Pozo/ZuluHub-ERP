@@ -152,6 +152,7 @@ export function crearLecturaDeSoporteDePostgres(db: Kysely<SoporteDb>): LecturaD
         ])
         .orderBy("d.id")
         .limit(pagina.limite);
+      if (filtro.dominioId !== null) consulta = consulta.where("d.id", "=", filtro.dominioId);
       if (filtro.empresaId !== null) consulta = consulta.where("e.id", "=", filtro.empresaId);
       if (filtro.estado !== null) consulta = consulta.where("d.estado", "=", filtro.estado);
       if (pagina.despuesDeId !== null) consulta = consulta.where("d.id", ">", pagina.despuesDeId);

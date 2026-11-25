@@ -72,7 +72,7 @@ const SOLO_DE_ADMIN = [
 /** Las 2 de listas del sistema (e3 §3.7), declaradas al final del catálogo. */
 const ACCIONES_DE_LISTAS = ["listas.ver", "listas.editar"] as const;
 
-/** La de «Dominios» de la consola (dueño, 25/11/2026: plan de dominio propio, P1), declarada al final del catálogo. */
+/** La de «Dominios» de la consola (SUPUESTO, DEC-0914 pendiente de OK del dueño: plan de dominio propio, P1), declarada al final del catálogo. */
 const ACCIONES_DE_LA_PANTALLA_DE_DOMINIOS = ["dominios.ver"] as const;
 
 const TODAS = Object.keys(PERMISOS_DE_PLATAFORMA) as ClaveAccionDePlataforma[];
