@@ -44,6 +44,32 @@
       "fecha": "2026-11-25",
       "restaurar_si": "Hay más de 2 personas operando a la vez por sucursal, o llega un segundo cliente de otra escala, o antes de venderle a una cadena",
       "revisar_antes_de": "2027-02-23"
+    },
+    {
+      "id": "mutacion-no-critica-90",
+      "estado": "VIGENTE",
+      "nivel": "SERVIDOR",
+      "valor": 90,
+      "que": "Los grupos de mutación NO críticos de servidor y dominio exigen 90 % de mutantes muertos en vez de 100 %",
+      "donde": "arquitectura/niveles-de-mutacion.json (nivel SERVIDOR) y el campo `nivel` de arquitectura/mutacion/*.json",
+      "motivo": "Lo crítico (dinero, permisos, aislamiento, base de datos, fiscal, secretos, guardián) sigue en 100 %; el resto no justifica matar el último mutante con 1 o 2 personas operando por sucursal",
+      "decidio": "dueño, 2026-11-25",
+      "fecha": "2026-11-25",
+      "restaurar_si": "Antes del primer cliente real se evalúa subir los umbrales; o si una falla en producción nace de un grupo no crítico; o hay más de 2 personas operando a la vez por sucursal, un segundo cliente de otra escala o una cadena",
+      "revisar_antes_de": "2027-02-23"
+    },
+    {
+      "id": "mutacion-pantallas-70",
+      "estado": "VIGENTE",
+      "nivel": "PANTALLA",
+      "valor": 70,
+      "que": "Los grupos de mutación de pantallas (solo archivos de apps/web/ui y sus modelos de vista) exigen 70 % en vez de 100 %",
+      "donde": "arquitectura/niveles-de-mutacion.json (nivel PANTALLA) y el campo `nivel` de arquitectura/mutacion/*.json",
+      "motivo": "El servidor ya decide permisos, validación y dinero; la pantalla solo muestra. Lo que arma pedidos con dinero o cantidades hacia el servidor sigue CRITICO",
+      "decidio": "dueño, 2026-11-25",
+      "fecha": "2026-11-25",
+      "restaurar_si": "Antes del primer cliente real se evalúa subir los umbrales; o si una falla en producción nace de un grupo no crítico; o hay más de 2 personas operando a la vez por sucursal, un segundo cliente de otra escala o una cadena",
+      "revisar_antes_de": "2027-02-23"
     }
   ]
 }

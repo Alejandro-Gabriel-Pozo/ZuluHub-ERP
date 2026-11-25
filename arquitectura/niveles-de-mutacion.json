@@ -1,0 +1,7 @@
+{
+  "niveles": {
+    "CRITICO": 100,
+    "SERVIDOR": 90,
+    "PANTALLA": 70
+  }
+}

@@ -3,14 +3,16 @@
  *
  *     GRUPOS_DEL_PAQUETE='[{"grupo","archivos","pruebas"}, ...]' node arquitectura/correr-paquete-de-mutacion.cjs
  *
- * Previene: que agrupar grupos oculte cuál falló. Cada grupo corre con su propio `--mutate`, su propio filtro de pruebas y el umbral de 100 % de
- * Stryker (`thresholds.break`), igual que cuando era un job por grupo; si uno falla, los demás igual corren (se ven todas las fallas de una vez) y el job
+ * Previene: que agrupar grupos oculte cuál falló. Cada grupo corre con su propio `--mutate`, su propio filtro de pruebas y el umbral de su NIVEL (CRITICO 100 %,
+ * SERVIDOR 90 %, PANTALLA 70 %; `arquitectura/niveles-de-mutacion.json`, dueño 25/11/2026) como `thresholds.break` de Stryker (`stryker.config.mjs` lo lee de
+ * `PEDERNAL_UMBRAL_DE_MUTACION`; un grupo sin umbral conocido FALLA, no corre con otro), igual que cuando era un job por grupo; si uno falla, los demás igual corren (se ven todas las fallas de una vez) y el job
  * sale con error al final. El log tiene una sección plegable por grupo, el resumen del job una fila por grupo y cada falla es un `::error` con el nombre del
  * grupo. Cualquier dato que no sea de la forma esperada hace fallar el job (denegar por defecto): nunca se saltea un grupo ni se corrige solo.
  * Chequeo que falla si se quita: `test/arquitectura/empaquetar-mutacion.test.ts`.
  */
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
+const { cargarLosGrupos } = require("./grupos-de-mutacion.cjs");
 
 /** Lo que Stryker nunca muta (el mismo de `grupos-de-mutacion.cjs`): las pruebas. */
 const EXCLUSION_DE_PRUEBAS = "!src/**/*.test.ts";
@@ -103,17 +105,28 @@ function correrPaquete({ grupos, ejecutar, escribir, ahora = Date.now }) {
   return { resultados, fallaron, resumen };
 }
 
-/** El comando de Stryker de un grupo: argumentos (no texto de un shell) y el filtro de pruebas que corre cada mutante (vacío = toda la suite unitaria). */
-function comandoDeStryker(grupo, entorno) {
+/**
+ * El comando de Stryker de un grupo: argumentos (no texto de un shell), el filtro de pruebas que corre cada mutante (vacío = toda la suite unitaria) y el umbral de su nivel.
+ * Un umbral que no es un entero de 1 a 100 lanza (denegar por defecto): nunca se corre un grupo con otro umbral.
+ */
+function comandoDeStryker(grupo, entorno, umbral) {
+  if (!(Number.isInteger(umbral) && umbral >= 1 && umbral <= 100)) {
+    throw new Error(`El grupo «${grupo.grupo}» no tiene un umbral de mutación válido (1 a 100).`);
+  }
   return {
     argumentos: ["stryker", "run", "--mutate", `${grupo.archivos},${EXCLUSION_DE_PRUEBAS}`],
-    entorno: { ...entorno, PEDERNAL_FILTRO_PRUEBAS: grupo.pruebas },
+    entorno: {
+      ...entorno,
+      PEDERNAL_FILTRO_PRUEBAS: grupo.pruebas,
+      PEDERNAL_UMBRAL_DE_MUTACION: String(umbral),
+    },
   };
 }
 
-/** Corre Stryker de verdad para un grupo: sin shell (los datos van como argumentos, no como texto de un comando). */
+/** Corre Stryker de verdad para un grupo: sin shell (los datos van como argumentos, no como texto de un comando). El umbral sale del nivel declarado del grupo. */
 function ejecutarStryker(grupo) {
-  const { argumentos, entorno } = comandoDeStryker(grupo, process.env);
+  const declarado = cargarLosGrupos(process.cwd()).grupos.find((g) => g.grupo === grupo.grupo);
+  const { argumentos, entorno } = comandoDeStryker(grupo, process.env, declarado?.umbral);
   const resultado = spawnSync("npx", argumentos, { stdio: "inherit", env: entorno });
   return resultado.status ?? 1;
 }

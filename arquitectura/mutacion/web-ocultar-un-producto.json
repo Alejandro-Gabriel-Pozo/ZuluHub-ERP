@@ -2,5 +2,6 @@
   "grupo": "web (ocultar un producto)",
   "archivos": "src/composicion/ocultar-web.ts,src/composicion/entradas-de-ocultar.ts,apps/web/ui/plantillas/catalogo/modelo-de-visibilidad-de-producto.ts",
   "minutos": 2,
-  "pruebas": "src/composicion/ocultar-web.test.ts src/composicion/entradas-de-ocultar.test.ts test/web/ocultar-modelo.test.ts"
+  "pruebas": "src/composicion/ocultar-web.test.ts src/composicion/entradas-de-ocultar.test.ts test/web/ocultar-modelo.test.ts",
+  "nivel": "SERVIDOR"
 }

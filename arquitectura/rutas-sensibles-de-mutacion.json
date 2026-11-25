@@ -9,7 +9,9 @@
     "^src/plataforma/(dominio|captacion)/",
     "^src/consultas-de-grupo/",
     "^src/composicion/(decidir-la-caja|autorizacion-de-cron|ruta-de-ingreso|sesion-de-plataforma|puerta-de-consola|autenticacion-de-host-fijo|guarda-de-migracion|contextos|entorno|entorno-de-plataforma|rutas-de-sistema|comprar-web|entradas-de-comprar|control-de-stock-web|entradas-de-control-de-stock|cierre-del-dia-web|entradas-de-cierre|errores-de-cierre|lectura-del-cierre|entradas-de-caja|errores-de-caja|errores-de-stock|entradas-de-depositos|a-respuesta|respuesta-de-logo|verificacion-memorizada|entradas-de-precios-de-producto|entradas-de-precios-por-medida|errores-de-compras|entradas-de-produccion|errores-de-produccion|produccion-web)\\.ts$",
-    "^apps/web/ui/plantillas/(caja|cobrar|venta|stock|produccion)/",
+    "^apps/web/ui/plantillas/caja/(pedidos-de-caja|modelo-de-conteo-de-caja|modelo-de-la-caja)\\.ts$",
+    "^apps/web/ui/plantillas/(cobrar|stock|produccion)/",
+    "^apps/web/ui/plantillas/venta/(modelo-de-la-cuenta|modelo-de-venta-rapida)\\.ts$",
     "^apps/web/ui/plantillas/catalogo/modelo-de-precios"
   ]
 }
