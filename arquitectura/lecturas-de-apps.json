@@ -42,6 +42,10 @@
     "apps/web/app/s/app/(operacion)/salon/mesas/**",
     "apps/web/ui/plantillas/salon/*"
   ],
+  "test/web/ficha-de-salon.test.ts": [
+    "apps/web/app/s/app/(operacion)/salon/page.tsx",
+    "apps/web/ui/plantillas/salon/*"
+  ],
   "test/web/ficha-de-directorio.test.ts": [
     "apps/web/app/s/app/(operacion)/clientes/**",
     "apps/web/app/s/app/acciones-de-directorio.ts",
