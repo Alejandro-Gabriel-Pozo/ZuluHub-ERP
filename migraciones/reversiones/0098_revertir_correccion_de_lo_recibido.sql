@@ -23,7 +23,14 @@ $$;
 -- Los disparadores de la tabla se van con ella (DROP TABLE no usa CASCADE: nada más depende de ella).
 DROP TABLE IF EXISTS correccion_de_lo_recibido;
 DROP FUNCTION IF EXISTS correccion_de_lo_recibido_aplicar();
-REVOKE UPDATE (cantidad_recibida) ON saldo_de_linea_de_recepcion FROM pedernal_app;
+DO $$
+BEGIN
+  -- Si la reversión de 0037 ya borró la tabla del saldo, el permiso se fue con ella.
+  IF to_regclass('public.saldo_de_linea_de_recepcion') IS NOT NULL THEN
+    REVOKE UPDATE (cantidad_recibida) ON public.saldo_de_linea_de_recepcion FROM pedernal_app;
+  END IF;
+END
+$$;
 DO $$
 BEGIN
   IF to_regclass('public.migracion') IS NOT NULL THEN
