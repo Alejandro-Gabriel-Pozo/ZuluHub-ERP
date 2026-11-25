@@ -4,7 +4,7 @@ import { join } from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { nombreUnico } from "./unicos";
-import { comoEmpresa, crearEmpresaActiva, crearEntornoDePrueba } from "./entorno";
+import { comoEmpresa, crearBaseAparte, crearEmpresaActiva, crearEntornoDePrueba } from "./entorno";
 import { productoDeBase } from "./catalogo-apoyo";
 import type { BaseDePruebas } from "./global";
 import { SesionDePrueba } from "./sesiones";
@@ -18,13 +18,16 @@ vi.setConfig({ testTimeout: 120_000 });
 const CARPETA = join(import.meta.dirname, "../../migraciones/reversiones");
 
 describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => {
-  const entorno = crearEntornoDePrueba(base as BaseDePruebas, 6);
+  // Base PROPIA (no la compartida de global.ts): la reversión de 0079–0081 hace DDL con AccessExclusive, y en la base compartida se cruza con otros archivos que corren a la vez
+  // (deadlock 40P01 del 23/11/2026, run 45279687253). Los locks son por base: en una propia no hay con quién cruzarse.
+  let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
+  let entorno: ReturnType<typeof crearEntornoDePrueba>;
   let dueno: pg.Client;
   let empresa: string;
   let otra: string;
 
   const comoApp = (e: string) =>
-    SesionDePrueba.abrir(base as BaseDePruebas, "pedernal_app", comoEmpresa(e as never));
+    SesionDePrueba.abrir(propia.base, "pedernal_app", comoEmpresa(e as never));
   const intentar = async (e: string, sql: string, p: unknown[] = []): Promise<string | null> => {
     const s = await comoApp(e);
     try {
@@ -55,7 +58,9 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
     );
 
   beforeAll(async () => {
-    dueno = new pg.Client({ connectionString: (base as BaseDePruebas).dueno });
+    propia = await crearBaseAparte(base as BaseDePruebas);
+    entorno = crearEntornoDePrueba(propia.base, 6);
+    dueno = new pg.Client({ connectionString: propia.base.dueno });
     await dueno.connect();
     empresa = (await crearEmpresaActiva(entorno)).empresa;
     otra = (await crearEmpresaActiva(entorno)).empresa;
@@ -63,6 +68,7 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
   afterAll(async () => {
     await dueno.end();
     await entorno.cerrar();
+    await propia.destruir();
   });
 
   describe("forma y privilegios", () => {
@@ -127,7 +133,7 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
 
     it("sin código de carta el rol público no ve ninguna familia", async () => {
       await familia(empresa, nombreUnico("Publica"));
-      const s = await SesionDePrueba.abrir(base as BaseDePruebas, "pedernal_publico", null);
+      const s = await SesionDePrueba.abrir(propia.base, "pedernal_publico", null);
       try {
         const r = await s.intentar("select id from familia_de_producto");
         expect(r.ok && r.rows.length).toBe(0);
@@ -482,7 +488,7 @@ describe.skipIf(base === null)("migraciones 0079, 0080 y 0081: familias", () => 
     it("revertir 0081, 0080 y 0079, repetir cada reversión y volver a aplicarlas deja todo en pie (todo dentro de una transacción que se deshace)", async () => {
       const leer = (carpeta: string, n: string) => readFile(join(carpeta, `${n}.sql`), "utf8");
       const migraciones = join(import.meta.dirname, "../../migraciones");
-      const c = new pg.Client({ connectionString: (base as BaseDePruebas).dueno });
+      const c = new pg.Client({ connectionString: propia.base.dueno });
       await c.connect();
       try {
         const registro = (prefijo: string) =>

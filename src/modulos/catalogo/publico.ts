@@ -218,7 +218,7 @@ export {
 export type { ConsumoDeVersion, ProductoParaStock, ProductosParaStock } from "./lector-para-stock";
 
 // Presentaciones de compra de un producto (E9 §3.2, X5): el dato es del catálogo; compras lo lee por estos tipos y por el repositorio de la `Tx`.
-export { esClaseComprable } from "./dominio/clase-comprable";
+export { CLASES_COMPRABLES, esClaseComprable } from "./dominio/clase-comprable";
 export type {
   EntradaDeCrearPresentacion,
   EntradaDeEditarPresentacion,

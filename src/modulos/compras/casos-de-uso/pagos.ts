@@ -19,8 +19,8 @@ export type EntradaDeDeclararPago = Readonly<{
   fechaDePago: string;
   medio: string;
   /**
-   * Solo con el medio `EFECTIVO`: la plata sale de esta caja abierta en la misma transacción (T10b). Ausente, el pago no mueve la caja. Sin sesión abierta
-   * en esa caja, el pago NO se declara (falla con su código) y se puede volver a pedir por otro medio.
+   * Solo con el medio `EFECTIVO`, y con él es OBLIGATORIA: la plata sale de esta caja abierta en la misma transacción (T10b; dueño, 16/11/2026, 3A). Sin ella, un pago en efectivo no se declara
+   * (`SALIDA_DE_CAJA_INVALIDA`); con otro medio no se admite. Sin sesión abierta en esa caja, el pago NO se declara (falla con su código) y se puede volver a pedir por otro medio.
    */
   salidaDeCaja?: Readonly<{ cajaId: string; motivo: string }>;
 }>;
@@ -71,6 +71,11 @@ export function armarDeclararPago(dependencias: DependenciasDeCompras) {
     if (!pago.ok) return pago;
     const salida = leerSalidaDeCaja(entrada.salidaDeCaja, pago.valor.medio);
     if (!salida.ok) return salida;
+    // El efectivo siempre sale de una caja abierta (dueño, 16/11/2026, 3A): un pago en efectivo sin caja no se declara. Previene: plata que sale sin que ninguna caja lo sepa (el pago quedaría declarado y la caja, sin
+    // descontar). Chequeo: `test/integracion/compras-pagos-caja.test.ts`.
+    if (pago.valor.medio === "EFECTIVO" && salida.valor === null) {
+      return err("SALIDA_DE_CAJA_INVALIDA");
+    }
     return traducir(
       await dependencias.transacciones.ejecutar(
         { contexto },

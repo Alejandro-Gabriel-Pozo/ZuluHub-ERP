@@ -6,7 +6,8 @@ export const TEXTOS_DEL_NUCLEO = {
   "modulo.administracion.nombre": { porDefecto: "Administración" },
   "rol.gerente.nombre": { porDefecto: "Gerente" },
   "rol.administrador.nombre": { porDefecto: "Administrador" },
-  "rol.operador.nombre": { porDefecto: "Operador" },
+  // «Empleado» lo aprobó el dueño el 16/11/2026 (DDD:205 y DDD:206); la clave y el rol interno (`OPERADOR`) no cambian: solo el texto.
+  "rol.operador.nombre": { porDefecto: "Empleado" },
 
   // Los motivos con que el guard rechaza una acción (reemplazan al `TEXTOS_DE_MOTIVO` previsto en H4).
   "motivo.modulo_en_desarrollo": {

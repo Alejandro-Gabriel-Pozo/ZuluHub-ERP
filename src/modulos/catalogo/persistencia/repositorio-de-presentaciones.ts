@@ -29,6 +29,11 @@ export type AltaDePresentacion = Readonly<{
 export interface RepositorioDePresentaciones {
   obtener(empresa: EmpresaId, id: string): Promise<PresentacionGuardada | null>;
   bloquear(empresa: EmpresaId, id: string): Promise<PresentacionGuardada | null>;
+  /** Las presentaciones de la empresa con esos ids (activas o no), en UNA consulta; un id repetido, que no es UUID o de otra empresa no devuelve fila. */
+  obtenerVarias(
+    empresa: EmpresaId,
+    ids: readonly string[],
+  ): Promise<readonly PresentacionGuardada[]>;
   porNombre(
     empresa: EmpresaId,
     productoId: string,
@@ -39,6 +44,11 @@ export interface RepositorioDePresentaciones {
     empresa: EmpresaId,
     productoId: string,
     incluirApagadas: boolean,
+  ): Promise<readonly PresentacionGuardada[]>;
+  /** Las presentaciones ACTIVAS de varios productos en una sola lectura (por producto y nombre): para mostrar una página de productos sin una consulta por cada uno. */
+  deLosProductos(
+    empresa: EmpresaId,
+    productoIds: readonly string[],
   ): Promise<readonly PresentacionGuardada[]>;
   insertar(empresa: EmpresaId, alta: AltaDePresentacion): Promise<PresentacionGuardada>;
   /** `null` si la versión ya no es la esperada. */
@@ -100,6 +110,17 @@ export function crearRepositorioDePresentaciones(
   return {
     obtener: (empresa, id) => leer(empresa, id, false),
     bloquear: (empresa, id) => leer(empresa, id, true),
+    async obtenerVarias(empresa, ids) {
+      const validos = [...new Set(ids.filter(esUuid))];
+      if (validos.length === 0) return [];
+      const filas = await db
+        .selectFrom("presentacion_de_producto")
+        .select(COLUMNAS)
+        .where("empresa_id", "=", empresa)
+        .where("id", "in", validos)
+        .execute();
+      return filas.map(aPresentacion);
+    },
     async porNombre(empresa, productoId, nombreClave) {
       if (!esUuid(productoId)) return null;
       const fila = await db
@@ -120,6 +141,21 @@ export function crearRepositorioDePresentaciones(
         .where("producto_id", "=", productoId);
       if (!incluirApagadas) consulta = consulta.where("activa", "=", true);
       const filas = await consulta.orderBy("nombre_clave").orderBy("id").execute();
+      return filas.map(aPresentacion);
+    },
+    async deLosProductos(empresa, productoIds) {
+      const ids = productoIds.filter(esUuid);
+      if (ids.length === 0) return [];
+      const filas = await db
+        .selectFrom("presentacion_de_producto")
+        .select(COLUMNAS)
+        .where("empresa_id", "=", empresa)
+        .where("producto_id", "in", ids)
+        .where("activa", "=", true)
+        .orderBy("producto_id")
+        .orderBy("nombre_clave")
+        .orderBy("id")
+        .execute();
       return filas.map(aPresentacion);
     },
     async insertar(empresa, alta) {

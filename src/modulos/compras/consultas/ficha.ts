@@ -20,6 +20,8 @@ export type FichaDelProveedorParaCompras = Readonly<{
   /** «Qué le compramos»: la última compra de cada producto (lo último que cobró; nunca «cero»: sin oferta no hay fila). */
   queLeCompramos: readonly Readonly<{
     productoId: string;
+    /** El nombre del producto para mostrar (también si está desactivado); `null` si no se puede leer. */
+    productoNombre: string | null;
     presentacionId: string | null;
     precioPor: string;
     unidadDePrecioId: string | null;
@@ -105,6 +107,14 @@ export function armarConsultasDeFicha(leer: Lector) {
         const ficha = await tx.fichasDeCompra.obtener(empresaId, entrada.parteId);
         const pedidos = await tx.fichasDeCompra.pedidosPendientes(empresaId, entrada.parteId);
         const ofertas = await tx.ofertasDeProveedor.delProveedor(empresaId, entrada.parteId);
+        const productos = new Map(
+          (
+            await tx.productosParaCompras.deVarios(
+              empresaId,
+              ofertas.map((o) => o.productoId),
+            )
+          ).map((p) => [p.id, p.nombre]),
+        );
         return {
           parteId: entrada.parteId,
           letraEsperada: ficha?.letraEsperada ?? null,
@@ -120,6 +130,7 @@ export function armarConsultasDeFicha(leer: Lector) {
           })),
           queLeCompramos: ofertas.map((o) => ({
             productoId: o.productoId,
+            productoNombre: productos.get(o.productoId) ?? null,
             presentacionId: o.presentacionId,
             precioPor: o.precioPorTipo,
             unidadDePrecioId: o.unidadDePrecioId,

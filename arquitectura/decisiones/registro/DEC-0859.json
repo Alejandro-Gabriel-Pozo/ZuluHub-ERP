@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0859",
+  "fecha": "2026-11-24",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "El formulario de invitar avisa «El email tiene que ser de una cuenta de Google» bajo el campo Email (punto 11 aprobado por el dueño el 23/11).",
+  "que_cambia": "Quien invita ve una ayuda de una línea bajo el email. Texto redactado por delegación (DDD:173). Revertir: quitar la ayuda y la clave del catálogo.",
+  "donde": "decisiones-del-dueno-2026-11.md, fila del 23/11/2026 (punto 11); catalogo-usuarios.ts, FormularioDeInvitacion.cliente.tsx; confirmada: DDD fila del 23/11/2026"
+}

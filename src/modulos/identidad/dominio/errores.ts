@@ -34,7 +34,9 @@ export type ErrorDeInvitacion =
   | "REENVIO_NO_PERMITIDO"
   | "ALTA_YA_TIENE_INVITACION"
   // Invitar a quien ya es miembro activo de la empresa.
-  | "YA_ES_MIEMBRO";
+  | "YA_ES_MIEMBRO"
+  // Invitar con un rol distinto al de la invitación vigente que ya hay para ese email: no se pisa ni se hace pasar por hecho.
+  | "INVITACION_VIGENTE_CON_OTRO_ROL";
 
 /**
  * Revocación de una invitación de usuario desde la empresa (H6): no existe (o no la ve esta
@@ -72,8 +74,9 @@ export type ErrorDeAceptacion =
   | EmpresaNoOpera
   | RolDistintoAlAnterior;
 
-/** Apagado de una membresía. */
-export type ErrorDeMembresia = "MEMBRESIA_NO_ENCONTRADA" | "ES_EL_GERENTE" | "ULTIMO_ADMIN";
+/** Apagado de una membresía. `ES_UNO_MISMO`: quien pide el apagado es la persona a apagar (H3, dueño 23/11/2026). */
+export type ErrorDeMembresia =
+  "MEMBRESIA_NO_ENCONTRADA" | "ES_UNO_MISMO" | "ES_EL_GERENTE" | "ULTIMO_ADMIN";
 
 /**
  * Traspaso de gerencia (H6, especificación §B.3). Los errores de cada decisión: `TRASPASO_RESUELTO`

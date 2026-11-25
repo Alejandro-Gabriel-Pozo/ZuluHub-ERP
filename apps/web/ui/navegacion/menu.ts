@@ -7,26 +7,15 @@ import {
 import { seOfrece } from "../../../../src/capacidades/integracion/ofrecer";
 import type { ClaveDeTexto } from "../../../../src/capacidades/vocabulario/catalogo";
 import type { ClaveDeIcono } from "../iconos/catalogo";
-import { RUTAS_DE_CAJA, RUTA_DE_LA_CAJA } from "../plantillas/caja/lista-de-caja";
-import { RUTA_DE_PRODUCTOS } from "../plantillas/catalogo/filtros-de-productos";
-import { RUTA_DE_CLASIFICACION } from "../plantillas/catalogo/modelo-de-clasificacion";
-import { RUTA_DEL_CIERRE } from "../plantillas/cierre/ruta-del-cierre";
-import { RUTA_DE_SECCIONES } from "../plantillas/catalogo/modelo-de-secciones";
-import { RUTA_DE_IMPRESORAS } from "../plantillas/salon/modelo-de-impresoras";
-import { RUTA_DE_MESAS } from "../plantillas/salon/modelo-de-mesas";
-import { RUTAS_DE_CONFIGURACION } from "../plantillas/configuracion-fiscal/lista-de-lo-que-falta";
-import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
-import { RUTA_DE_PRODUCCION } from "../plantillas/produccion/filtros-de-ordenes";
-import { RUTAS_DE_CUENTA } from "../plantillas/sesion/rutas-de-cuenta";
-import { RUTA_DE_LA_VENTA, RUTA_DE_TICKETS_DEL_DIA } from "../plantillas/venta/rutas-de-venta";
-import { RUTAS_DE_STOCK } from "../plantillas/stock/rutas-de-stock";
+import { FILAS_DE_CATALOGO } from "./menu-filas-catalogo";
+import { FILAS_DE_COMPRAS } from "./menu-filas-compras";
+import { FILAS_DE_CUENTA } from "./menu-filas-cuenta";
+import { FILAS_DE_VENTAS } from "./menu-filas-ventas";
 
 /**
  * EL MENÚ POR ÁREAS: una sola tabla declarativa (área → grupo → pantalla), una fila por pantalla. Es la ÚNICA fuente de qué hay en el menú, en qué área y grupo, qué módulo y
  * qué acción exige: mover una pantalla de grupo o de área es cambiar UNA fila, y sumar un rubro es sumar un área y sus filas (dueño, 12/11/2026: «siempre tiene que estar
  * presente la escalabilidad o el posible cambio de rumbo al tema de la organización de la pantalla», `decisiones-del-dueno-2026-11.md`, fila «Menú por áreas, versión 4»).
- * Estructura «B: por módulo» (12/11/2026): Ventas, Catálogo, Compras y Cuenta; maqueta `10-ux-ui/prototipos-gastronomia/menu-por-areas.html` (versión 5).
- *
  * Solo entra una fila con RUTA real y texto aprobado: una pantalla sin construir no se declara (una fila sin ruta daría un 404 a quien tenga el permiso) y un rótulo sin
  * aprobar no se inventa. Las pantallas de la maqueta que todavía no existen se suman con su fila cuando existan. Previene: componentes que fijan áreas o grupos a mano
  * (`test/arquitectura/menu-por-areas.test.ts`).
@@ -55,10 +44,9 @@ export const GRUPOS_DEL_MENU = [
   { clave: "caja", etiqueta: null },
   { clave: "productos", etiqueta: null },
   { clave: "salon", etiqueta: "salon.texto.grupo_salon" },
-  // Una reserva por pantalla de Clientes y proveedores y de Compras: sin filas no aparecen (todo nace cerrado); cada pantalla suma su fila.
   { clave: "clientes", etiqueta: null },
-  { clave: "proveedores", etiqueta: null },
   { clave: "compras", etiqueta: null },
+  { clave: "proveedores", etiqueta: null },
   { clave: "carta", etiqueta: "navegacion.grupo.carta" },
   { clave: "stock", etiqueta: null },
   { clave: "produccion", etiqueta: null },
@@ -98,205 +86,12 @@ export type FilaDeAccion = BaseDeFila &
 
 export type FilaDelMenu = FilaDePantalla | FilaDeAccion;
 
-/**
- * LA TABLA. El orden de las filas es el orden de aparición. «Medios de pago» nace declarado y cerrado: su módulo (`caja`) está «en desarrollo» y no da permisos a nadie. Su
- * rótulo es el título aprobado de la pantalla, «Medios de pago» (`caja.medios.titulo`); la maqueta dice «Medios de pago y cajas», que no tiene clave: va a preguntas
- * pendientes.
- */
+/** LA TABLA. El orden de las filas es el de aparición. «Medios de pago» nace declarado y cerrado: su módulo (`caja`) está «en desarrollo». Su rótulo es el título aprobado, `caja.medios.titulo`; la maqueta dice «Medios de pago y cajas», que no tiene clave (va a preguntas pendientes). */
 export const FILAS_DEL_MENU = [
-  {
-    tipo: "pantalla",
-    clave: "venta-rapida",
-    area: "ventas",
-    grupo: "mostrador",
-    modulo: "ventas",
-    accion: "ventas.ver",
-    perilla: null,
-    href: RUTA_DE_LA_VENTA,
-    etiqueta: "ventas.venta.menu",
-    departamento: null,
-  },
-  {
-    tipo: "pantalla",
-    clave: "tickets-del-dia",
-    area: "ventas",
-    grupo: "mostrador",
-    modulo: "ventas",
-    accion: "ventas.ver",
-    perilla: null,
-    href: RUTA_DE_TICKETS_DEL_DIA,
-    etiqueta: "ventas.tickets.menu",
-    departamento: null,
-  },
-  {
-    tipo: "pantalla",
-    clave: "comprobantes",
-    area: "ventas",
-    grupo: "comprobantes",
-    modulo: "facturacion",
-    accion: "comprobantes.ver",
-    perilla: null,
-    href: RUTA_DEL_LISTADO,
-    etiqueta: "fiscal.pantalla.listado_titulo",
-    departamento: null,
-  },
-  // «Caja» (maqueta `menu-por-areas.html`: grupo «Caja» con «Caja» y «Cierre del día»). El grupo se muestra sin encabezado (`etiqueta: null`). Nace cerrada: cada fila se ofrece solo a quien tiene la acción de su módulo.
-  {
-    tipo: "pantalla",
-    clave: "caja",
-    area: "ventas",
-    grupo: "caja",
-    modulo: "caja",
-    accion: "cajas.ver",
-    perilla: null,
-    href: RUTA_DE_LA_CAJA,
-    etiqueta: "caja.pantalla.titulo",
-    departamento: null,
-  },
-  {
-    tipo: "pantalla",
-    clave: "cierre-del-dia",
-    area: "ventas",
-    grupo: "caja",
-    modulo: "cierre",
-    accion: "jornadas.ver",
-    perilla: null,
-    href: RUTA_DEL_CIERRE,
-    etiqueta: "cierre.titulo",
-    departamento: null,
-  },
-  {
-    tipo: "pantalla",
-    clave: "productos",
-    area: "catalogo",
-    grupo: "productos",
-    modulo: "catalogo",
-    accion: "productos.ver",
-    perilla: null,
-    href: RUTA_DE_PRODUCTOS,
-    etiqueta: "catalogo.lista.titulo",
-    departamento: null,
-  }, // Clasificación comercial (A14): solo gerente y administrador (`productos.editar`; maqueta `clasificacion.html`: el operador no ve la entrada). Su rótulo es el título aprobado «Clasificación comercial».
-  {
-    tipo: "pantalla",
-    clave: "clasificacion",
-    area: "catalogo",
-    grupo: "productos",
-    modulo: "catalogo",
-    accion: "productos.editar",
-    perilla: null,
-    href: RUTA_DE_CLASIFICACION,
-    etiqueta: "catalogo.clasificacion.titulo",
-    departamento: null,
-  },
-
-  // «Secciones» (A8; dueño, 13/11/2026, `decisiones-del-dueno-2026-11.md` línea 110): en Catálogo, grupo «Carta». Módulo `catalogo` y acción `productos.ver`, las de su consulta (S7 de la ficha: la celda de la maqueta del menú dice `vidriera` y `vidrieras.ver`, pero el servidor resuelve estas).
-  {
-    tipo: "pantalla",
-    clave: "secciones",
-    area: "catalogo",
-    grupo: "carta",
-    modulo: "catalogo",
-    accion: "productos.ver",
-    perilla: null,
-    href: RUTA_DE_SECCIONES,
-    etiqueta: "catalogo.seccion.titulo",
-    departamento: null,
-  },
-  // «Mesas» (S-1; `menu-por-areas.html`: «Mesas», pantalla dentro del grupo Salón del área Ventas): módulo `salon` (hoy en desarrollo: la entrada no se muestra) y acción `mesas.ver`.
-  {
-    tipo: "pantalla",
-    clave: "mesas",
-    area: "ventas",
-    grupo: "salon",
-    modulo: "salon",
-    accion: "mesas.ver",
-    perilla: "salon",
-    href: RUTA_DE_MESAS,
-    etiqueta: "salon.texto.admin_mesas",
-    departamento: null,
-  },
-  // «Impresoras» (S-2; `menu-por-areas.html`, grupo Salón del área Ventas): módulo `comandas` (disponible desde S-0r) y acción `impresoras.ver`.
-  {
-    tipo: "pantalla",
-    clave: "impresoras",
-    area: "ventas",
-    grupo: "salon",
-    modulo: "comandas",
-    accion: "impresoras.ver",
-    perilla: null,
-    href: RUTA_DE_IMPRESORAS,
-    etiqueta: "comandas.texto.imprimir_impresoras",
-    departamento: null,
-  },
-  {
-    tipo: "pantalla",
-    clave: "stock",
-    area: "catalogo",
-    grupo: "stock",
-    modulo: "stock",
-    accion: "stock.ver",
-    perilla: null,
-    href: RUTAS_DE_STOCK.entrada,
-    etiqueta: "stock.pantalla.stock",
-    departamento: null,
-  },
-  {
-    tipo: "pantalla",
-    clave: "produccion",
-    area: "catalogo",
-    grupo: "produccion",
-    modulo: "produccion",
-    accion: "transformaciones.ver",
-    perilla: null,
-    href: RUTA_DE_PRODUCCION,
-    etiqueta: "produccion.pantalla.produccion",
-    departamento: null,
-  },
-  {
-    tipo: "pantalla",
-    clave: "configuracion-fiscal",
-    area: "cuenta",
-    grupo: "empresa",
-    modulo: "administracion",
-    accion: "datos_fiscales.editar",
-    perilla: null,
-    href: RUTAS_DE_CONFIGURACION.lista,
-    etiqueta: "fiscal.pantalla.config_titulo",
-    departamento: null,
-  },
-  {
-    tipo: "pantalla",
-    clave: "medios-de-pago",
-    area: "cuenta",
-    grupo: "empresa",
-    modulo: "caja",
-    accion: "medios_de_pago.editar",
-    perilla: null,
-    href: RUTAS_DE_CAJA.medios,
-    etiqueta: "caja.medios.titulo",
-    departamento: null,
-  },
-  {
-    tipo: "pantalla",
-    clave: "contacto",
-    area: "cuenta",
-    grupo: "sucursal",
-    modulo: "administracion",
-    accion: "sucursales.editar",
-    perilla: null,
-    href: RUTAS_DE_CUENTA.contactoDeLaSucursal,
-    etiqueta: "sucursal.contacto_titulo",
-    departamento: null,
-  },
-  {
-    tipo: "accion",
-    clave: "cerrar-sesion",
-    area: "cuenta",
-    grupo: "salir",
-    etiqueta: "cuenta.cerrar_sesion",
-    departamento: null,
-  },
+  ...FILAS_DE_VENTAS,
+  ...FILAS_DE_CATALOGO,
+  ...FILAS_DE_COMPRAS,
+  ...FILAS_DE_CUENTA,
 ] as const satisfies readonly FilaDelMenu[];
 
 /** Las claves de las filas de la tabla: salen de ella (sumar una pantalla es una sola edición, la fila). */

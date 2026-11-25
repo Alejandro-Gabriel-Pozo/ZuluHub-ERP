@@ -12,7 +12,7 @@ import { PantallaDeCuenta } from "./PantallaDeCuenta";
  */
 const accionVacia = () => Promise.resolve({ error: null });
 
-const cuenta = (conRenglon: boolean, conContacto = false) => (
+const cuenta = (conRenglon: boolean, conContacto = false, conUsuarios = false) => (
   <ArmazonDeOperacion
     titulo="Cuenta"
     actual="cuenta"
@@ -38,6 +38,7 @@ const cuenta = (conRenglon: boolean, conContacto = false) => (
             },
           }
         : {})}
+      {...(conUsuarios ? { usuarios: { texto: "Usuarios", href: "/cuenta/usuarios" } } : {})}
       accionDeCerrarSesion={accionVacia}
     />
   </ArmazonDeOperacion>
@@ -88,5 +89,26 @@ describe("Cuenta y Contacto de la sucursal", () => {
     await expect
       .element(page.getByRole("link", { name: "Contacto de la sucursal" }))
       .toHaveAttribute("href", "/cuenta/contacto-de-la-sucursal");
+  });
+});
+
+/**
+ * El renglón «Usuarios» (tramo U1): igual que los otros, solo existe si el servidor se lo pasa (la persona puede ver a los usuarios: gerente y administrador).
+ * Previene: ofrecer la entrada a quien el servidor va a rechazar y un renglón que no se pueda tocar en el celular.
+ */
+describe("Cuenta y Usuarios", () => {
+  it("con el permiso: un enlace a la lista, sin violaciones de accesibilidad y de 48 px o más", async () => {
+    await render(cuenta(false, false, true));
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    const enlace = page.getByRole("link", { name: "Usuarios" });
+    await expect.element(enlace).toBeVisible();
+    await expect.element(enlace).toHaveAttribute("href", "/cuenta/usuarios");
+    expect(enlace.element().getBoundingClientRect().height).toBeGreaterThanOrEqual(48);
+  });
+
+  it("sin el permiso (un empleado): no hay renglón", async () => {
+    await render(cuenta(true, true, false));
+    expect(page.getByRole("link", { name: "Usuarios" }).elements()).toHaveLength(0);
+    await expect.element(page.getByRole("button", { name: "Cerrar sesión" })).toBeVisible();
   });
 });

@@ -46,8 +46,9 @@ function esAdmin(rol: RolDeEmpresa): boolean {
 }
 
 /**
- * Decide el apagado de una membresía. `activas` son las membresías activas de la empresa. Orden:
- * no existe (`MEMBRESIA_NO_ENCONTRADA`); ya apagada (ok `YA_APAGADA`, idempotente); es el gerente
+ * Decide el apagado de una membresía. `activas` son las membresías activas de la empresa; `actor` es la persona que pide el apagado (sale del contexto, nunca del pedido; `null` es el sistema, que no es ninguna persona y el guard ya rechazó antes). Orden:
+ * no existe (`MEMBRESIA_NO_ENCONTRADA`); el actor es el propio objetivo (`ES_UNO_MISMO`: nadie se da de baja a sí mismo; lo hace otra persona, y quien quede sin acceso lo
+ * recupera quien lo invite de nuevo; previene que un administrador se quite el acceso por un toque de más); ya apagada (ok `YA_APAGADA`, idempotente); es el gerente
  * activo (`ES_EL_GERENTE`: se traspasa, no se apaga); es admin y no queda otro admin activo en la
  * misma empresa (`ULTIMO_ADMIN`); si no, `APAGAR`. Solo cuentan las membresías activas de la misma
  * empresa y el objetivo no se cuenta a sí mismo, venga o no dentro de `activas`.
@@ -55,8 +56,10 @@ function esAdmin(rol: RolDeEmpresa): boolean {
 export function decidirApagado(
   objetivo: Membresia | null,
   activas: readonly Membresia[],
+  actor: PersonaId | null,
 ): Resultado<"APAGAR" | "YA_APAGADA", ErrorDeMembresia> {
   if (objetivo === null) return err("MEMBRESIA_NO_ENCONTRADA");
+  if (objetivo.personaId === actor) return err("ES_UNO_MISMO");
   if (!objetivo.activo) return ok("YA_APAGADA");
   if (objetivo.rol === "GERENTE") return err("ES_EL_GERENTE");
   if (!esAdmin(objetivo.rol)) return ok("APAGAR");

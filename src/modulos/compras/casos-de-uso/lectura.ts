@@ -1,14 +1,23 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { fechaCivilDesdeTexto } from "../../../primitivas/tiempo/fecha-civil";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { crearDirectorioDePartes } from "../../clientes/publico";
+import { FICHA_DE_TIPO_DE_COMPROBANTE } from "../dominio/comprobante";
+import { totalDeCompra } from "../dominio/importe-vigente";
 import { estadoDerivadoDeCompra, type EstadoDeCompra } from "../dominio/niveles";
 import { esUuid } from "../dominio/identificadores";
 import type { LineaDeRecepcion, Recepcion } from "../persistencia/repositorio-de-recepciones";
-import type {
-  FilaDeListaDeCompras,
-  FiltroDeCompras,
-} from "../persistencia/repositorio-de-lecturas-de-compras";
+import type { FiltroDeCompras } from "../persistencia/repositorio-de-lecturas-de-compras";
+import {
+  armarCompras,
+  claveDeLinea,
+  importesVigentes,
+  type CompraDeLista,
+  type FacturaDeLista,
+} from "./compras-por-lote";
 import type { TxDeConsultasDeCompras } from "./contrato";
+
+export type { CompraDeLista, FacturaDeLista };
 
 /**
  * Lo que leen las consultas de compras (E9 §3.10). Vive acá y no en `consultas/` porque decide con el dominio (el estado derivado de la compra) y las
@@ -27,16 +36,6 @@ export type EntradaDeListarCompras = Readonly<{
   despuesDe?: string | undefined;
 }>;
 
-export type CompraDeLista = Readonly<{
-  recepcionId: string;
-  numero: number;
-  sucursalId: string;
-  proveedorId: string;
-  fechaNegocio: string;
-  remito: Recepcion["remito"];
-  estado: EstadoDeCompra;
-}>;
-
 export type PaginaDeCompras = Readonly<{
   compras: readonly CompraDeLista[];
   siguiente: string | null;
@@ -50,7 +49,10 @@ type RLectura<S> = Resultado<
 /** Cuántas compras trae una página. */
 export const TAMANO_DE_PAGINA = 50;
 
-export const FORMA_DEL_CURSOR = /^(\d{4}-\d{2}-\d{2})\|([0-9a-f-]{36})$/;
+/** El cursor de la lista: `fecha_negocio|numero` (el número de la compra es único por empresa y sigue el orden de carga; el `id` es un UUID al azar). */
+export const FORMA_DEL_CURSOR = /^(\d{4}-\d{2}-\d{2})\|([1-9]\d{0,8})$/;
+
+const directorio = crearDirectorioDePartes();
 
 export function fechaOpcional(texto: string | undefined): string | null | undefined {
   if (texto === undefined) return null;
@@ -71,14 +73,11 @@ export async function listarComprasDentro(
   let despuesDe: FiltroDeCompras["despuesDe"] = null;
   if (entrada.despuesDe !== undefined) {
     const partes = FORMA_DEL_CURSOR.exec(entrada.despuesDe);
-    if (
-      partes === null ||
-      !esUuid(partes[2] as string) ||
-      !fechaCivilDesdeTexto(partes[1] as string).ok
-    ) {
+    const numero = Number(partes?.[2]);
+    if (partes === null || !fechaCivilDesdeTexto(partes[1] as string).ok) {
       return err("CURSOR_INVALIDO");
     }
-    despuesDe = { fechaNegocio: partes[1] as string, id: partes[2] as string };
+    despuesDe = { fechaNegocio: partes[1] as string, numero };
   }
   const alcance = await tx.autorizacion.sucursalesDelActor(contexto);
   let sucursales: FiltroDeCompras["sucursales"] = alcance;
@@ -103,29 +102,21 @@ export async function listarComprasDentro(
   const pagina = filas.slice(0, TAMANO_DE_PAGINA);
   const ultima = pagina.at(-1);
   return ok({
-    compras: pagina.map(aCompraDeLista),
+    compras: await armarCompras(tx, contexto, pagina),
     siguiente:
       filas.length > TAMANO_DE_PAGINA && ultima !== undefined
-        ? `${ultima.fechaNegocio}|${ultima.id}`
+        ? `${ultima.fechaNegocio}|${ultima.numero}`
         : null,
   });
 }
-
-const aCompraDeLista = (f: FilaDeListaDeCompras): CompraDeLista => ({
-  recepcionId: f.id,
-  numero: f.numero,
-  sucursalId: f.sucursalId,
-  proveedorId: f.proveedorId,
-  fechaNegocio: f.fechaNegocio,
-  remito: f.remito,
-  estado: estadoDerivadoDeCompra(f.estado, f.comprobanteEstado),
-});
 
 export type FichaDeCompra = Readonly<{
   recepcionId: string;
   numero: number;
   sucursalId: string;
   proveedorId: string;
+  /** El nombre del proveedor para mostrar (también si está desactivado); `null` si la parte está anonimizada. */
+  proveedorNombre: string | null;
   nivel: string;
   remito: Recepcion["remito"];
   hechoEn: string;
@@ -135,12 +126,29 @@ export type FichaDeCompra = Readonly<{
   anuladaPor: string | null;
   anuladaEn: string | null;
   motivoDeAnulacion: string | null;
-  /** Cada línea con lo que entra a tu stock y el costo por unidad de stock; `null` = «Sin precio». */
-  lineas: readonly LineaDeRecepcion[];
+  /** Cada línea con su producto, lo que entra a tu stock, el costo por unidad de stock y su importe VIGENTE (con la última corrección de precio); `null` = «Sin precio». */
+  lineas: readonly (LineaDeRecepcion &
+    Readonly<{
+      productoNombre: string | null;
+      /** La unidad en que entra al stock (la base del producto); `null` si el producto no se pudo leer. */
+      unidadDeStockId: string | null;
+      /** El nombre de la presentación (la «caja», el «pack»), o `null` si se compró en la unidad. */
+      presentacionNombre: string | null;
+      importeVigente: string | null;
+      /**
+       * El costo por unidad de stock que guardó el alta, o `null` si la línea no tiene precio o fue CORREGIDA: el costo de una línea corregida lo recalcula la
+       * corrección con el IVA que entra al costo (`alicuotaDelCosto`, que lee fiscal) y no se guarda; acá no se muestra uno viejo.
+       */
+      costoVigente: string | null;
+    }>)[];
+  /** La suma de los importes vigentes de las líneas (la misma cuenta de la lista); `null` si alguna línea no tiene precio, nunca cero. */
+  total: string | null;
   /** La factura de la compra (la vigente, o la última si se anuló), con los dos totales: el calculado y el que dice el papel. */
   comprobante: Readonly<{
     id: string;
     tipo: string | null;
+    /** La letra del tipo (A, B o C); `null` sin tipo. */
+    letra: "A" | "B" | "C" | null;
     puntoDeVenta: number | null;
     numero: number | null;
     fecha: string | null;
@@ -159,6 +167,13 @@ export type FichaDeCompra = Readonly<{
     numero: number;
     precioAnterior: string | null;
     precioNuevo: string | null;
+    /** Solo al completar el precio de una línea «Sin precio»: su «precio por». */
+    precioPorTipo: "PRESENTACION" | "UNIDAD" | null;
+    unidadDePrecioId: string | null;
+    cantidadAnterior: string | null;
+    cantidadNueva: string | null;
+    pesoRealAnterior: string | null;
+    pesoRealNuevo: string | null;
     motivo: string;
     registradoPor: string;
     registradoEn: string;
@@ -171,7 +186,11 @@ export type FichaDeCompra = Readonly<{
     importe: string;
     estado: string;
     registradoPor: string;
+    /** Instante ISO UTC en que se declaró. */
+    registradoEn: string;
     anuladoPor: string | null;
+    /** Instante ISO UTC en que se anuló; `null` si está vigente. */
+    anuladoEn: string | null;
     motivoDeAnulacion: string | null;
   }>[];
 }>;
@@ -194,11 +213,35 @@ export async function fichaDeCompraDentro(
   const factura = await tx.comprobantesDeProveedor.delaRecepcion(contexto.empresaId, recepcion.id);
   const pagos =
     factura === null ? [] : await tx.pagosDeProveedor.deComprobante(contexto.empresaId, factura.id);
+  const { lineas, importes, corregidas } = await importesVigentes(tx, contexto, [recepcion.id]);
+  const productos = new Map(
+    (
+      await tx.productosParaCompras.deVarios(
+        contexto.empresaId,
+        lineas.map((l) => l.productoId),
+      )
+    ).map((p) => [p.id, p]),
+  );
+  const presentaciones = new Map(
+    (
+      await tx.presentacionesDeProducto.obtenerVarias(
+        contexto.empresaId,
+        lineas.flatMap((l) => (l.presentacionId === null ? [] : [l.presentacionId])),
+      )
+    ).map((p) => [p.id, p.nombre]),
+  );
+  const nombres = await directorio.nombresParaMostrar(tx, contexto.empresaId, [
+    recepcion.proveedorId,
+  ]);
+  const importesDeLaFicha = lineas.map(
+    (l) => importes.get(claveDeLinea(l.recepcionId, l.numero)) ?? null,
+  );
   return ok({
     recepcionId: recepcion.id,
     numero: recepcion.numero,
     sucursalId: recepcion.sucursalId,
     proveedorId: recepcion.proveedorId,
+    proveedorNombre: nombres.get(recepcion.proveedorId) ?? null,
     nivel: recepcion.nivel,
     remito: recepcion.remito,
     hechoEn: recepcion.hechoEn.toISOString(),
@@ -208,13 +251,27 @@ export async function fichaDeCompraDentro(
     anuladaPor: recepcion.anuladaPor,
     anuladaEn: recepcion.anuladaEn?.toISOString() ?? null,
     motivoDeAnulacion: recepcion.motivoDeAnulacion,
-    lineas: await tx.recepciones.lineasDe(contexto.empresaId, recepcion.id),
+    lineas: lineas.map((l, i) => {
+      return {
+        ...l,
+        productoNombre: productos.get(l.productoId)?.nombre ?? null,
+        unidadDeStockId: productos.get(l.productoId)?.unidadBaseId ?? null,
+        presentacionNombre:
+          l.presentacionId === null ? null : (presentaciones.get(l.presentacionId) ?? null),
+        importeVigente: importesDeLaFicha[i] ?? null,
+        costoVigente: corregidas.has(claveDeLinea(l.recepcionId, l.numero))
+          ? null
+          : l.costoPorUnidadDeStock,
+      };
+    }),
+    total: totalDeCompra(importesDeLaFicha),
     comprobante:
       factura === null
         ? null
         : {
             id: factura.id,
             tipo: factura.tipo,
+            letra: factura.tipo === null ? null : FICHA_DE_TIPO_DE_COMPROBANTE[factura.tipo].letra,
             puntoDeVenta: factura.puntoDeVenta,
             numero: factura.numero,
             fecha: factura.fechaDelComprobante,
@@ -234,6 +291,12 @@ export async function fichaDeCompraDentro(
       numero: k.numero,
       precioAnterior: k.precioAnterior,
       precioNuevo: k.precioNuevo,
+      precioPorTipo: k.precioPorTipo,
+      unidadDePrecioId: k.unidadDePrecioId,
+      cantidadAnterior: k.cantidadAnterior,
+      cantidadNueva: k.cantidadNueva,
+      pesoRealAnterior: k.pesoRealAnterior,
+      pesoRealNuevo: k.pesoRealNuevo,
       motivo: k.motivo,
       registradoPor: k.registradoPor,
       registradoEn: k.registradoEn.toISOString(),
@@ -245,7 +308,9 @@ export async function fichaDeCompraDentro(
       importe: p.importe,
       estado: p.estado,
       registradoPor: p.registradoPor,
+      registradoEn: p.registradoEn.toISOString(),
       anuladoPor: p.anuladoPor,
+      anuladoEn: p.anuladoEn === null ? null : p.anuladoEn.toISOString(),
       motivoDeAnulacion: p.motivoDeAnulacion,
     })),
   });
@@ -258,5 +323,5 @@ export async function comprasSinPrecioDentro(
 ): Promise<readonly CompraDeLista[]> {
   const alcance = await tx.autorizacion.sucursalesDelActor(contexto);
   const filas = await tx.lecturasDeCompras.sinPrecio(contexto.empresaId, alcance, 200);
-  return filas.map(aCompraDeLista);
+  return armarCompras(tx, contexto, filas);
 }

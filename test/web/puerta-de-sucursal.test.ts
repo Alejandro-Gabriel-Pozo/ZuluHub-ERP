@@ -110,7 +110,8 @@ describe("el Inicio", () => {
 });
 
 describe("la pantalla «Elegir sucursal»", () => {
-  it("sin elegida: selector en blanco y botón «Continuar»", async () => {
+  // Tope propio (estabilidad bajo carga, 23/11/2026): es la primera prueba del archivo y compila el árbol de módulos de la web; 2,1 s medido solo y más de 5 s con la máquina cargada, que vencía los 5 s por defecto.
+  it("sin elegida: selector en blanco y botón «Continuar»", { timeout: 30_000 }, async () => {
     mundo.del = { ok: true, dato: { elegibles: [A, B], elegida: null, efectiva: "" } };
     const html = await entrar(ELEGIR);
     expect(html).toContain("Elegí una sucursal");

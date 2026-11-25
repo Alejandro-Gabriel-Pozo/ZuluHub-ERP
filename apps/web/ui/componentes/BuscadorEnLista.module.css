@@ -1,0 +1,69 @@
+.raiz {
+  position: relative;
+}
+
+.entrada {
+  width: 100%;
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-3);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font: inherit;
+}
+
+.entrada[aria-invalid="true"] {
+  border-color: var(--color-peligro);
+}
+
+.entrada:disabled {
+  background: var(--color-deshabilitado);
+  color: var(--color-sobre-deshabilitado);
+}
+
+/* La lista va en el flujo (no flotante): en el celular empuja lo de abajo en vez de taparlo. */
+.lista {
+  margin: var(--espacio-1) 0 0;
+  padding: 0;
+  list-style: none;
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie);
+  overflow: hidden;
+}
+
+.opcion {
+  display: flex;
+  flex-direction: column;
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-3);
+  justify-content: center;
+  color: var(--color-texto);
+  cursor: pointer;
+}
+
+.opcion + .opcion {
+  border-top: var(--borde-grosor) solid var(--color-borde);
+}
+
+.opcion[data-activa] {
+  background: var(--color-superficie-elevada);
+  outline: var(--borde-grosor-fuerte) solid var(--color-foco);
+  outline-offset: calc(-1 * var(--borde-grosor-fuerte));
+}
+
+.opcion[aria-disabled="true"] {
+  color: var(--color-sobre-deshabilitado);
+  background: var(--color-deshabilitado);
+  cursor: default;
+}
+
+.detalle {
+  color: var(--color-texto-suave);
+  font-size: var(--tipo-tamano-chico);
+}
+
+.opcion[aria-disabled="true"] .detalle {
+  color: inherit;
+}

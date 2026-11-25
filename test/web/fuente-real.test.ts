@@ -24,21 +24,28 @@ const sinVariablesDelProducto = (): NodeJS.ProcessEnv =>
   ) as NodeJS.ProcessEnv;
 
 describe("fuenteDePuertas real, sin PEDERNAL_DB_PUBLICO", () => {
-  it("cada consulta falla (no devuelve ok(null) ni una marca) y el nombre solo va al registro", async () => {
-    process.env = sinVariablesDelProducto();
-    const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    vi.resetModules();
-    const { fuenteDePuertas } = await import("../../apps/web/servidor/fuente-de-puertas");
-    const error = await fuenteDePuertas
-      .consultarHost("app.hoteldellago.test", "APP")
-      .catch((e: unknown) => e);
-    expect((error as Error).name).toBe("ErrorDeEntorno");
-    expect((error as Error).message).not.toContain("PEDERNAL");
-    await expect(fuenteDePuertas.leerMarca("m", "app.hoteldellago.test", "APP")).rejects.toThrow();
-    expect(registro.mock.calls.map((c) => String(c[0])).join("\n")).toContain(
-      "PEDERNAL_DB_PUBLICO",
-    );
-  });
+  // Tope propio (estabilidad bajo carga, 23/11/2026): es la primera prueba del archivo y compila el árbol de módulos de la web; 1,9 s medido solo y más de 5 s con la máquina cargada, que vencía los 5 s por defecto.
+  it(
+    "cada consulta falla (no devuelve ok(null) ni una marca) y el nombre solo va al registro",
+    { timeout: 30_000 },
+    async () => {
+      process.env = sinVariablesDelProducto();
+      const registro = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      vi.resetModules();
+      const { fuenteDePuertas } = await import("../../apps/web/servidor/fuente-de-puertas");
+      const error = await fuenteDePuertas
+        .consultarHost("app.hoteldellago.test", "APP")
+        .catch((e: unknown) => e);
+      expect((error as Error).name).toBe("ErrorDeEntorno");
+      expect((error as Error).message).not.toContain("PEDERNAL");
+      await expect(
+        fuenteDePuertas.leerMarca("m", "app.hoteldellago.test", "APP"),
+      ).rejects.toThrow();
+      expect(registro.mock.calls.map((c) => String(c[0])).join("\n")).toContain(
+        "PEDERNAL_DB_PUBLICO",
+      );
+    },
+  );
 
   it("la puerta lo resuelve como NO_DISPONIBLE para cualquier host válido, y como desconocido el que no normaliza (sin tocar nada)", async () => {
     process.env = sinVariablesDelProducto();

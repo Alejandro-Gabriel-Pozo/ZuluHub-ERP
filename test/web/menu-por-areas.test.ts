@@ -211,6 +211,25 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "/caja/cierre-del-dia",
         "cierre.titulo",
       ],
+      ["mesas", "ventas", "salon", "salon", "mesas.ver", "/salon/mesas", "salon.texto.admin_mesas"],
+      [
+        "impresoras",
+        "ventas",
+        "salon",
+        "comandas",
+        "impresoras.ver",
+        "/salon/impresoras",
+        "comandas.texto.imprimir_impresoras",
+      ],
+      [
+        "clientes",
+        "ventas",
+        "clientes",
+        "clientes",
+        "partes.ver",
+        "/clientes?rol=cliente",
+        "clientes.lista.clientes",
+      ],
       [
         "productos",
         "catalogo",
@@ -220,7 +239,6 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "/catalogo/productos",
         "catalogo.lista.titulo",
       ],
-      // Clasificación comercial (A14): solo quien edita productos (gerente y administrador); el operador no ve la entrada.
       [
         "clasificacion",
         "catalogo",
@@ -238,16 +256,6 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "productos.ver",
         "/catalogo/secciones",
         "catalogo.seccion.titulo",
-      ],
-      ["mesas", "ventas", "salon", "salon", "mesas.ver", "/salon/mesas", "salon.texto.admin_mesas"],
-      [
-        "impresoras",
-        "ventas",
-        "salon",
-        "comandas",
-        "impresoras.ver",
-        "/salon/impresoras",
-        "comandas.texto.imprimir_impresoras",
       ],
       [
         "stock",
@@ -268,6 +276,33 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "produccion.pantalla.produccion",
       ],
       [
+        "compras",
+        "compras",
+        "compras",
+        "compras",
+        "recepciones.ver",
+        "/compras",
+        "compras.compra.compras",
+      ],
+      [
+        "nivel-de-compras",
+        "compras",
+        "compras",
+        "compras",
+        "compras.configurar",
+        "/compras/nivel",
+        "compras.nivel.titulo",
+      ],
+      [
+        "proveedores",
+        "compras",
+        "proveedores",
+        "clientes",
+        "partes.ver",
+        "/clientes?rol=proveedor",
+        "clientes.lista.proveedores",
+      ],
+      [
         "configuracion-fiscal",
         "cuenta",
         "empresa",
@@ -284,6 +319,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "medios_de_pago.editar",
         "/caja/medios-de-pago",
         "caja.medios.titulo",
+      ],
+      [
+        "usuarios",
+        "cuenta",
+        "empresa",
+        "administracion",
+        "usuarios.ver",
+        "/cuenta/usuarios",
+        "usuarios.lista.titulo",
       ],
       [
         "contacto",
@@ -464,15 +508,20 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "comprobantes",
     "caja",
     "cierre-del-dia",
+    "mesas",
+    "impresoras",
+    "clientes",
     "productos",
     "clasificacion",
     "secciones",
-    "mesas",
-    "impresoras",
     "stock",
     "produccion",
+    "compras",
+    "nivel-de-compras",
+    "proveedores",
     "configuracion-fiscal",
     "medios-de-pago",
+    "usuarios",
     "contacto",
     "cerrar-sesion",
   ];
@@ -512,6 +561,10 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
             ["pantalla", "impresoras", "/salon/impresoras", "comandas.texto.imprimir_impresoras"],
           ],
         ],
+        [
+          "clientes",
+          [["pantalla", "clientes", "/clientes?rol=cliente", "clientes.lista.clientes"]],
+        ],
       ],
     ],
     [
@@ -534,6 +587,22 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
       ],
     ],
     [
+      "compras",
+      [
+        [
+          "compras",
+          [
+            ["pantalla", "compras", "/compras", "compras.compra.compras"],
+            ["pantalla", "nivel-de-compras", "/compras/nivel", "compras.nivel.titulo"],
+          ],
+        ],
+        [
+          "proveedores",
+          [["pantalla", "proveedores", "/clientes?rol=proveedor", "clientes.lista.proveedores"]],
+        ],
+      ],
+    ],
+    [
       "cuenta",
       [
         [
@@ -546,6 +615,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
               "fiscal.pantalla.config_titulo",
             ],
             ["pantalla", "medios-de-pago", "/caja/medios-de-pago", "caja.medios.titulo"],
+            ["pantalla", "usuarios", "/cuenta/usuarios", "usuarios.lista.titulo"],
           ],
         ],
         [

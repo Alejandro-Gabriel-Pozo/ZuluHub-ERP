@@ -105,9 +105,10 @@ const SIN_CONSTRUIR: readonly string[] = ["produccion"];
  * nuevo un módulo entero; acá solo pasa lo nombrado, y una entrada que ya no hace falta hace fallar su prueba.
  * - Pedidas DENTRO del caso de uso con `autorizar`/`exigirAccion` además de la principal (el chequeo lee la fuente): el escáner solo lee
  *   la acción principal de cada declaración.
- * - Sin caso de uso todavía (deuda declarada, no se construye en este cambio): `productos.asignar_emisor`, `categorias.*` y
- *   `conjuntos.editar_contenido` (catálogo); `vidrieras.publicar` y `vidrieras.retirar` (modelo viejo, H7) y `vidrieras.renovar_enlace`
- *   (VYP-2, no se hace ahora). Nacieron con DEC-0826 (vidriera pasa a disponible).
+ * - Sin caso de uso todavía: las del registro `arquitectura/pantallas/acciones-reservadas.json` (con motivo, ola y vencimiento; lo vigila
+ *   `accion-con-caso-de-uso.test.ts`). Hoy, `vidrieras.publicar` y `vidrieras.retirar` (modelo viejo, H7) y `vidrieras.renovar_enlace`
+ *   (VYP-2); nacieron con DEC-0826 (vidriera pasa a disponible). Los permisos de categorías, `productos.asignar_emisor` y
+ *   `conjuntos.editar_contenido` se quitaron del catálogo el 23/11/2026.
  */
 const ACCIONES_PEDIDAS_DENTRO_DEL_CASO: Readonly<Record<string, string>> = {
   "variantes.editar": "src/modulos/catalogo/casos-de-uso/editar-opciones.ts",
@@ -119,17 +120,12 @@ const ACCIONES_PEDIDAS_DENTRO_DEL_CASO: Readonly<Record<string, string>> = {
   // La declara `modulos/portal`, carpeta que `vidriera` todavía no lista en `implementadoPor` (lo mira el PR del portal).
   "vidrieras.administrar_portal": "src/modulos/portal/casos-de-uso/declaraciones.ts",
 };
-const ACCIONES_SIN_CASO_DE_USO: readonly string[] = [
-  "productos.asignar_emisor",
-  "categorias.crear",
-  "categorias.editar",
-  "categorias.reactivar",
-  "categorias.desactivar",
-  "conjuntos.editar_contenido",
-  "vidrieras.publicar",
-  "vidrieras.retirar",
-  "vidrieras.renovar_enlace",
-];
+/** Las reservadas del registro de la regla «acción → caso de uso» (una sola lista, la del registro). */
+const ACCIONES_SIN_CASO_DE_USO: readonly string[] = (
+  JSON.parse(
+    readFileSync(join(RAIZ, "arquitectura/pantallas/acciones-reservadas.json"), "utf8"),
+  ) as { reservadas: { accion: string }[] }
+).reservadas.map((r) => r.accion);
 const ACCIONES_PERDONADAS_DE_X1: readonly string[] = [
   ...Object.keys(ACCIONES_PEDIDAS_DENTRO_DEL_CASO),
   ...ACCIONES_SIN_CASO_DE_USO,

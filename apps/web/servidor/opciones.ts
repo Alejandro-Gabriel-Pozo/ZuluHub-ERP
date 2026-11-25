@@ -7,6 +7,7 @@ import {
   copiarLasOpcionesDeOtroProducto,
   guardarUnGrupoDeOpciones,
   verLasOpcionesDeUnProducto,
+  verLaVariante,
   verLasOpcionesParaCopiar,
   verUnGrupoDeOpciones,
   type DependenciasDeOpcionesWeb,
@@ -55,6 +56,14 @@ export function cargarUnGrupo(
   return verUnGrupoDeOpciones(dependencias, contexto, productoId, grupoId);
 }
 
+/** La variante (la medida) para editarla, o la hoja de una nueva si el producto no tiene. */
+export function cargarLaVariante(
+  contexto: ContextoOperativo,
+  productoId: string,
+): Promise<Respuesta<GrupoParaEditar>> {
+  return verLaVariante(dependencias, contexto, productoId);
+}
+
 /** De dónde se pueden copiar las opciones al producto, con la vista previa de lo que traería el origen pedido en la dirección (si no es un candidato, el primero). */
 export function cargarLaCopia(
   contexto: ContextoOperativo,
@@ -69,6 +78,8 @@ export type LigadoDeUnGrupo = Readonly<{
   productoId: string;
   versionDeOpciones: number;
   grupoId: string | null;
+  /** `true`: lo que se guarda es la variante (la medida) del producto, no un grupo de opciones. Lo fija la acción, no el formulario. */
+  esVariante?: boolean;
   claveDelCambio: string;
   /** Los ids de las opciones que se vieron, en el orden de las filas `e0`, `e1`… */
   idsDeOpciones: readonly string[];
@@ -88,8 +99,11 @@ export async function guardarElGrupo(
       versionDeOpciones: ligado.versionDeOpciones,
       claveDelCambio: ligado.claveDelCambio,
       grupoId: ligado.grupoId,
+      esVariante: ligado.esVariante === true,
+      esTamano: marcada(datos, "esTamano"),
       nombre: textoDe(datos, "nombre"),
-      clase: textoDe(datos, "clase"),
+      // La variante no elige clase (el pedido la fija como variante): el valor no cuenta, se manda uno válido de la lista.
+      clase: ligado.esVariante === true ? "INCLUIDA" : textoDe(datos, "clase"),
       esObligatorio: marcada(datos, "esObligatorio"),
       admiteVarias: marcada(datos, "admiteVarias"),
       seMuestraEnCarta: !marcada(datos, "fueraDeLaCarta"),

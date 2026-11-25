@@ -58,6 +58,45 @@ function exigirPesoNoNegativo(peso: MontoExacto, contexto: string): void {
   if (peso.numerador < 0n) throw new ErrorDeValor("PESOS_INVALIDOS", `${contexto}: peso negativo`);
 }
 
+/** Los pesos llevados a enteros con un denominador común, y su suma. */
+function pesosEnteros(pesos: readonly MontoExacto[]): { enteros: bigint[]; suma: bigint } {
+  const denominadorComun = pesos.reduce((acumulado, p) => mcm(acumulado, p.denominador), 1n);
+  const enteros = pesos.map((p) => p.numerador * (denominadorComun / p.denominador));
+  return { enteros, suma: enteros.reduce((acumulado, p) => acumulado + p, 0n) };
+}
+
+/**
+ * Reparte `total` entre los pesos con la regla del SOBRANTE AL PRIMERO: cada parte es el piso (en centavos enteros) de su parte exacta y TODO el
+ * sobrante del redondeo (puede ser más de un centavo) va al primero de la lista con peso positivo. Las partes suman exactamente `total`. Con pesos
+ * iguales da lo mismo que `prorratear` (10,00 en tres = 3,34 / 3,33 / 3,33). Es la regla que el dueño confirmó el 21/11/2026 para repartir entre
+ * sucursales (los centros de costo del libro de saldos); `prorratear`, con restos mayores, sigue siendo la de fiscal, ventas y combos.
+ *
+ * Mismos supuestos que `prorratear`: el total no es negativo; con todos los pesos en cero y un total distinto de cero es `PESOS_INVALIDOS`.
+ */
+export function prorratearConSobranteAlPrimero(
+  total: Importe,
+  pesos: readonly MontoExacto[],
+): Importe[] {
+  if (total.unidades < 0n) {
+    throw new ErrorDeValor("FUERA_DE_RANGO", "prorrateo: el total no puede ser negativo");
+  }
+  for (const peso of pesos) {
+    exigirMismaMoneda(total.moneda, peso.moneda);
+    exigirPesoNoNegativo(peso, "prorrateo");
+  }
+  const { enteros, suma } = pesosEnteros(pesos);
+  if (suma === 0n) {
+    if (total.unidades !== 0n) {
+      throw new ErrorDeValor("PESOS_INVALIDOS", "prorrateo: los pesos no suman nada");
+    }
+    return pesos.map(() => crearImporte(total.moneda, 0n));
+  }
+  const pisos = enteros.map((peso) => (total.unidades * peso) / suma);
+  const sobrante = total.unidades - pisos.reduce((acumulado, p) => acumulado + p, 0n);
+  const primero = enteros.findIndex((peso) => peso > 0n);
+  return pisos.map((piso, i) => crearImporte(total.moneda, i === primero ? piso + sobrante : piso));
+}
+
 /**
  * Núcleo común de `prorratear` y `repartirPrecioUnitario`: reparte `total` (unidades enteras, no
  * negativo) en partes enteras proporcionales a los pesos, por restos mayores. Los pesos ya vienen
@@ -68,9 +107,7 @@ function repartirPorRestosMayores(
   pesos: readonly MontoExacto[],
   contexto: string,
 ): bigint[] {
-  const denominadorComun = pesos.reduce((acumulado, p) => mcm(acumulado, p.denominador), 1n);
-  const enteros = pesos.map((p) => p.numerador * (denominadorComun / p.denominador));
-  const suma = enteros.reduce((acumulado, p) => acumulado + p, 0n);
+  const { enteros, suma } = pesosEnteros(pesos);
 
   if (suma === 0n) {
     if (total !== 0n) {
