@@ -38,6 +38,18 @@ const DE_CORREGIR_Y_ANULAR = (para: string): Proposito => ({
     "Pedernal-docs, brief `PR-10-corregir-y-anular-pantalla.md` de Compras (rama de planificación de la Ola 1) y maqueta `compra-corregir-anular.html` (`vForm`, `vHoja`); quién: gerente y administrador (compras.corregir y recepciones.anular, DDD:187)",
 });
 
+const PANTALLA_DE_CARGAR_FACTURA =
+  "apps/web/ui/plantillas/compras/facturas/PantallaDeCargarFactura.cliente.tsx";
+const PANTALLA_DE_CONCILIAR =
+  "apps/web/ui/plantillas/compras/facturas/PantallaDeConciliar.cliente.tsx";
+const CARGAR_FACTURA = ["comprobantes_de_proveedor.registrar"] as const;
+const CONCILIAR_FACTURA = ["conciliaciones.conciliar"] as const;
+const DE_FACTURAS = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs, maqueta `compra-conciliar.html` (estados `cargar` y `conciliar`) y `plan-de-pantallas-compras-4-2026-11-25.md` (fichas F5 y F7); quién: los tres roles cargan la factura (`comprobantes_de_proveedor.registrar`) y gerente y administrador concilian (`conciliaciones.conciliar`, DEC-0700); aceptada por delegación de pantallas (DEC-0936)",
+});
+
 const ACCIONES_DE_LA_RECEPCION =
   "apps/web/ui/plantillas/compras/recepciones/AccionesDeLaRecepcion.cliente.tsx";
 const DE_RECEPCIONES = (para: string): Proposito => ({
@@ -144,9 +156,17 @@ export const DATOS_DE_COMPRAS = {
       DE_NUEVA_COMPRA(
         "Producto de un renglón de «Nueva compra», elegido buscando por nombre entre los productos que el servidor ofrece para comprar (la unidad base sale de ese producto).",
       ),
+      DE_FACTURAS(
+        "Producto de cada línea de la factura de la empresa («Cargar factura»), elegido buscando por nombre entre los productos que el servidor ofrece para comprar: con él se propone la conciliación.",
+      ),
     ],
-    consumidores: [PANTALLA_DE_NUEVA_COMPRA, PRUEBA_DEL_BUSCADOR, PRUEBA_DE_LA_LECTURA],
-    ponerPor: REGISTRAR_COMPRA,
+    consumidores: [
+      PANTALLA_DE_NUEVA_COMPRA,
+      PANTALLA_DE_CARGAR_FACTURA,
+      PRUEBA_DEL_BUSCADOR,
+      PRUEBA_DE_LA_LECTURA,
+    ],
+    ponerPor: [...REGISTRAR_COMPRA, ...CARGAR_FACTURA],
     requiere: REQUIERE_COMPRAS,
   },
   "proveedor-de-compra": {
@@ -156,9 +176,12 @@ export const DATOS_DE_COMPRAS = {
       DE_NUEVA_COMPRA(
         "Proveedor de la compra, elegido buscando por nombre entre los proveedores del directorio (o agregado en el momento).",
       ),
+      DE_FACTURAS(
+        "Proveedor de la factura de la empresa, elegido buscando por nombre entre los proveedores del directorio.",
+      ),
     ],
-    consumidores: [PANTALLA_DE_NUEVA_COMPRA],
-    ponerPor: REGISTRAR_COMPRA,
+    consumidores: [PANTALLA_DE_NUEVA_COMPRA, PANTALLA_DE_CARGAR_FACTURA],
+    ponerPor: [...REGISTRAR_COMPRA, ...CARGAR_FACTURA],
     requiere: REQUIERE_COMPRAS,
   },
   "deposito-de-compra": {
@@ -173,6 +196,18 @@ export const DATOS_DE_COMPRAS = {
     ],
     consumidores: [PANTALLA_DE_NUEVA_COMPRA, ACCIONES_DE_LA_RECEPCION],
     ponerPor: [...REGISTRAR_COMPRA, "recepciones.confirmar"],
+    requiere: REQUIERE_COMPRAS,
+  },
+  "cantidad-a-conciliar-de-linea": {
+    // La cantidad es la misma de todo el módulo (hasta 4 decimales, mayor que cero, en la unidad de stock): la regla vive UNA vez en `decimal.ts` y el servidor la vuelve a aplicar con los topes (no más de lo recibido ni de lo facturado).
+    ficha: "src/modulos/compras/dominio/decimal.ts",
+    propositos: [
+      DE_FACTURAS(
+        "Cuánto de una línea recibida de una sucursal cubre una línea de la factura (precargada con la propuesta; la persona la deja o la corrige).",
+      ),
+    ],
+    consumidores: [PANTALLA_DE_CONCILIAR],
+    ponerPor: CONCILIAR_FACTURA,
     requiere: REQUIERE_COMPRAS,
   },
   "punto-de-venta-del-remito": {

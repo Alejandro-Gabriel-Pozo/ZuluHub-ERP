@@ -1,6 +1,7 @@
 import { RUTA_DE_CLIENTES } from "../plantillas/clientes/modelo-de-directorio";
 import {
   RUTA_DE_COMPRAS,
+  RUTA_DE_FACTURAS,
   RUTA_DE_RECEPCIONES,
   RUTA_DEL_NIVEL_DE_COMPRAS,
 } from "../plantillas/compras/rutas-de-compras";
@@ -49,6 +50,20 @@ export const FILAS_DE_COMPRAS = [
     perilla: "recepcion_separada",
     href: RUTA_DE_RECEPCIONES,
     etiqueta: "compras.recepcion.titulo_lista",
+    departamento: null,
+  },
+  // «Facturas» (Compras 4, la factura de la empresa y su conciliación): la lista de facturas de la empresa. Módulo `compras` y la acción de su lectura (`comprobantes_de_proveedor.ver`, los tres roles); la perilla
+  // `recepcion_separada` es del plan de la empresa (DEC-0902): sin ella la entrada no se ofrece. Nace cerrada: sin la acción o sin la perilla no se ofrece.
+  {
+    tipo: "pantalla",
+    clave: "facturas",
+    area: "compras",
+    grupo: "compras",
+    modulo: "compras",
+    accion: "comprobantes_de_proveedor.ver",
+    perilla: "recepcion_separada",
+    href: RUTA_DE_FACTURAS,
+    etiqueta: "compras.factura.titulo_lista",
     departamento: null,
   },
   {
