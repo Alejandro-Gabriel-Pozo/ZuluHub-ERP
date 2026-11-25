@@ -2,6 +2,7 @@ import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { fechaCivilDesdeTexto } from "../../../primitivas/tiempo/fecha-civil";
 import { crearDirectorioDePartes } from "../../clientes/publico";
+import type { CausaDeCorreccion } from "../dominio/correccion-de-lo-recibido";
 import { esUuid } from "../dominio/identificadores";
 import {
   estadoDeFacturaSeparada,
@@ -194,6 +195,18 @@ export type FichaDeRecepcionSeparada = Readonly<{
     unidadDeCompraId: string;
     cantidadEnStock: string;
     unidadDeStockId: string | null;
+    /** Lo recibido que rige HOY, en la unidad de stock (el saldo de la línea: ya con las correcciones); `cantidadEnStock` es lo que se cargó. */
+    cantidadRecibida: string;
+    /** Cuántas correcciones de lo recibido tiene la línea: la versión que la pantalla devuelve al corregir. */
+    correccionesVistas: number;
+    /** Las correcciones de lo recibido de la línea, de la primera a la última. */
+    correcciones: readonly Readonly<{
+      numero: number;
+      cantidadAnterior: string;
+      cantidadNueva: string;
+      causa: CausaDeCorreccion;
+      nota: string | null;
+    }>[];
   }>[];
 }>;
 
@@ -237,6 +250,15 @@ export async function fichaDeRecepcionSeparadaDentro(
   const nombres = await directorio.nombresParaMostrar(tx, contexto.empresaId, [
     recepcion.proveedorId,
   ]);
+  const saldos = new Map(
+    (await tx.correccionesDeLoRecibido.saldosDeLaRecepcion(contexto.empresaId, recepcion.id)).map(
+      (s) => [s.linea, s.recibida],
+    ),
+  );
+  const correcciones = await tx.correccionesDeLoRecibido.deLaRecepcion(
+    contexto.empresaId,
+    recepcion.id,
+  );
   return ok({
     recepcionId: recepcion.id,
     numero: recepcion.numero,
@@ -254,6 +276,17 @@ export async function fichaDeRecepcionSeparadaDentro(
       unidadDeCompraId: l.unidadDeCompraId,
       cantidadEnStock: l.cantidadEnStock,
       unidadDeStockId: productos.get(l.productoId)?.unidadBaseId ?? null,
+      cantidadRecibida: saldos.get(l.numero) ?? l.cantidadEnStock,
+      correccionesVistas: correcciones.filter((c) => c.linea === l.numero).length,
+      correcciones: correcciones
+        .filter((c) => c.linea === l.numero)
+        .map((c) => ({
+          numero: c.numero,
+          cantidadAnterior: c.cantidadAnterior,
+          cantidadNueva: c.cantidadNueva,
+          causa: c.causa,
+          nota: c.nota,
+        })),
     })),
   });
 }

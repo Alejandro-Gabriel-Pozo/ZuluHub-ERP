@@ -63,13 +63,16 @@ export function leerDestino(texto: string | undefined): Destino | null {
 }
 
 /**
- * Los proyectos de Vercel de los clientes con base propia (extra de plan; dueño, 25/11/2026): una lista CERRADA, hoy VACÍA. Código del
+ * Los proyectos de Vercel de los clientes con base propia (extra de plan; dueño, 25/11/2026): una lista CERRADA, hoy de UN cliente. Código del
  * cliente (`cliente-<codigo>`, el MISMO de su ambiente en `migrar.yml` y `cargar-entorno.yml`) → id de su proyecto de Vercel (no es un
  * secreto). Sumar un cliente es una línea acá, otra en cada workflow y la prueba que las compara.
  * Previene: cargar las variables de un cliente en `pedernal-erp` (o al revés) por un texto libre o un error de tipeo: un código que no está
  * acá no resuelve a ningún proyecto (falla cerrado) y un id repetido o igual al de la web o la consola tampoco.
  */
-export const PROYECTOS_DE_VERCEL_DE_CLIENTES: Readonly<Record<string, string>> = {};
+export const PROYECTOS_DE_VERCEL_DE_CLIENTES: Readonly<Record<string, string>> = {
+  // Hoteles del Neuquén (`pedernal-hdn`, sin conectar a Git). NUNCA el `hdn` viejo de Motor2.
+  "cliente-hdn": "prj_7FCPV72lnTupGoEB6gDka1ZQIfOg",
+};
 
 // Los largos del código y del id se arman con nombres propios (no son los de ninguna primitiva de datos: son de este comando).
 const LARGO_DEL_CODIGO = { desde: 3, hasta: 30 } as const;

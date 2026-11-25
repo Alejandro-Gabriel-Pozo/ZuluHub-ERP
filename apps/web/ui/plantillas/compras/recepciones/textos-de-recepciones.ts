@@ -25,6 +25,18 @@ export type TextosDeRecepciones = Readonly<{
   facturada: string;
   sinResultados: string;
   paginaSiguiente: string;
+  corregirLoRecibido: string;
+  corregir: string;
+  cantidadRecibida: string;
+  motivoDeLaCorreccion: string;
+  causaErrorDeCarga: string;
+  causaRepartoInterno: string;
+  causaFaltanteDelProveedor: string;
+  avisoRepartoInterno: string;
+  nota: string;
+  correcciones: string;
+  enviando: string;
+  reintentar: string;
 }>;
 
 export function textosDeRecepciones(): TextosDeRecepciones {
@@ -49,5 +61,17 @@ export function textosDeRecepciones(): TextosDeRecepciones {
     facturada: texto({}, "compras.recepcion.estado_facturada"),
     sinResultados: texto({}, "catalogo.lista.sin_resultados"),
     paginaSiguiente: texto({}, "fiscal.pantalla.listado_pagina_siguiente"),
+    corregirLoRecibido: texto({}, "compras.recepcion.corregir_recibido"),
+    corregir: texto({}, "compras.correccion.corregir"),
+    cantidadRecibida: texto({}, "compras.recepcion.cantidad_recibida"),
+    motivoDeLaCorreccion: texto({}, "compras.recepcion.motivo_correccion"),
+    causaErrorDeCarga: texto({}, "compras.recepcion.causa_error_de_carga"),
+    causaRepartoInterno: texto({}, "compras.recepcion.causa_reparto_interno"),
+    causaFaltanteDelProveedor: texto({}, "compras.recepcion.causa_faltante"),
+    avisoRepartoInterno: texto({}, "compras.recepcion.aviso_reparto"),
+    nota: texto({}, "clientes.formulario.nota"),
+    correcciones: texto({}, "cierre.control.correcciones"),
+    enviando: texto({}, "conexion.enviando"),
+    reintentar: texto({}, "estado.reintentar"),
   };
 }

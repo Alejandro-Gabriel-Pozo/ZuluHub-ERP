@@ -52,6 +52,17 @@ export type DatosDelGuard<
   modulosEnSoloLectura?: ReadonlySet<M>;
   /** `null`: la operación no es de una sucursal. */
   capacidadesDeSucursal: ReadonlySet<C> | null;
+  /**
+   * El conjunto de acciones que el actor tiene, leído de la base (H4b §4: plantillas y roles propios). Es la AUTORIDAD cuando viene:
+   *  - un conjunto: el guard pregunta si la acción está; si no está, `SIN_PERMISO`;
+   *  - `null`: no se pudo resolver el conjunto: nada (`SIN_PERMISO`), nunca la matriz;
+   *  - AUSENTE: el camino de siempre, por la matriz `permisos` y el `rol`. Es lo que hacen las pruebas y los fakes que arman `rol` a mano, y los
+   *    roles de plataforma y de grupo (que siguen fijos en código). El adaptador de producción de la empresa lo manda SIEMPRE. Es deuda
+   *    anotada en DEC-0955 (el camino existe solo para fakes y pruebas; la producción de la empresa siempre trae el conjunto); un rol que no está en la matriz (uno propio) cae a
+   *    `SIN_PERMISO` por este mismo camino (falla cerrado).
+   * Sin rol (`rol: null`) no hay permiso aunque el conjunto traiga acciones.
+   */
+  accionesDelActor?: ReadonlySet<string> | null;
 }>;
 
 /** Del módulo, el guard mira su estado y sus acciones; `obligatorio` sirve para armar los activos. */
@@ -85,7 +96,7 @@ function dondeEstaLaAccion<M extends string, A extends string, C extends string>
 
 /**
  * Puro y síncrono. Orden fijo: módulo en desarrollo → módulo no activo → módulo en solo lectura →
- * capacidad → rol. Una acción que ningún módulo declara, o sin permisos definidos, es un defecto
+ * capacidad → rol (o el conjunto de acciones del actor, si viene). Una acción que ningún módulo declara, o sin permisos definidos, es un defecto
  * (por tipos no puede pasar) y lanza `RangeError`: nunca se autoriza por omisión.
  */
 export function evaluarGuard<
@@ -119,9 +130,14 @@ export function evaluarGuard<
   ) {
     return err("SIN_CAPACIDAD");
   }
-  // Sin rol (`null`) ningún rol de la matriz coincide: no hay un caso aparte.
-  if (!reglas.permisos[accion].some((permitido) => permitido === datos.rol)) {
-    return err("SIN_PERMISO");
+  const conjunto = datos.accionesDelActor;
+  if (conjunto === undefined) {
+    // Sin rol (`null`) ningún rol de la matriz coincide: no hay un caso aparte. Un rol que la matriz no conoce tampoco coincide.
+    if (!reglas.permisos[accion].some((permitido) => permitido === datos.rol)) {
+      return err("SIN_PERMISO");
+    }
+    return ok(null);
   }
+  if (datos.rol === null || conjunto === null || !conjunto.has(nombre)) return err("SIN_PERMISO");
   return ok(null);
 }

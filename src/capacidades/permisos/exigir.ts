@@ -27,6 +27,11 @@ export type ActorCargado<R extends string = RolDeEmpresa> = Readonly<{
    * una carga que se olvida del plan no compila.
    */
   modulosHabilitados: readonly string[];
+  /**
+   * Las acciones que el actor tiene según la base (plantilla de su rol, H4b): la AUTORIDAD cuando viene (vacía: nada). AUSENTE: el guard decide por la matriz y el rol de siempre (deuda registrada, DEC-0955; ver `DatosDelGuard.accionesDelActor`). Lo manda
+   * SIEMPRE el adaptador de producción de la empresa; sin rol, vacío.
+   */
+  acciones?: readonly string[];
 }>;
 
 /** Carga del actor, leída dentro de la transacción en curso y sin caché. */
@@ -43,11 +48,13 @@ function datosDelActor<
   C extends string,
   R extends string = RolDeEmpresa,
 >(reglas: ReglasDelGuard<M, A, C, R>, actor: ActorCargado<NoInfer<R>>): DatosDelGuard<M, C, R> {
-  return {
+  const datos: DatosDelGuard<M, C, R> = {
     rol: actor.rol,
     ...estadoDeModulos(reglas.catalogo, actor.modulosActivados, actor.modulosHabilitados),
     capacidadesDeSucursal: null,
   };
+  if (actor.acciones === undefined) return datos;
+  return { ...datos, accionesDelActor: new Set(actor.acciones) };
 }
 
 /**

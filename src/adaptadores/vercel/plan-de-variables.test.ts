@@ -532,11 +532,31 @@ describe("leerPedidoDeVercel (proyectos de clientes con base propia)", () => {
     expect(leerPedidoDeVercel("production")?.proyecto).toBe(PROYECTO_DE_VERCEL);
   });
 
-  it("la lista real de clientes está vacía: ningún cliente resuelve a ningún proyecto (falla cerrado)", () => {
-    expect(Object.keys(PROYECTOS_DE_VERCEL_DE_CLIENTES)).toEqual([]);
-    for (const texto of ["cliente-ejemplo", "cliente-uno", "cliente-", "", undefined]) {
+  it("la lista real tiene un solo cliente, Hoteles del Neuquén; cualquier otro no resuelve a ningún proyecto (falla cerrado)", () => {
+    expect(Object.keys(PROYECTOS_DE_VERCEL_DE_CLIENTES)).toEqual(["cliente-hdn"]);
+    for (const texto of [
+      "cliente-ejemplo",
+      "cliente-uno",
+      "cliente-",
+      "cliente-hd",
+      "hdn",
+      "",
+      undefined,
+    ]) {
       expect(leerPedidoDeVercel(texto)).toBeNull();
     }
+  });
+
+  it("cliente-hdn va a SU proyecto de Vercel, en production, y no al de la web ni al de la consola", () => {
+    const pedido = leerPedidoDeVercel("cliente-hdn");
+    expect(pedido).toMatchObject({
+      texto: "cliente-hdn",
+      destino: "production",
+      etiqueta: "cliente-hdn",
+    });
+    expect(pedido?.proyecto).toBe(PROYECTOS_DE_VERCEL_DE_CLIENTES["cliente-hdn"]);
+    expect(pedido?.proyecto).not.toBe(PROYECTO_DE_VERCEL);
+    expect(pedido?.proyecto).not.toBe(PROYECTO_DE_VERCEL_DE_LA_CONSOLA);
   });
 
   it("un cliente de la lista va a SU proyecto, siempre en production, y nunca al de pedernal-erp", () => {

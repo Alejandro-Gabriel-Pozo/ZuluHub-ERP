@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
   anularLaRecepcion,
   confirmarLaRecepcion,
+  corregirLoRecibidoDeLaRecepcion,
   fichaDeLaRecepcion,
   listarLasRecepciones,
   registrarLaRecepcion,
@@ -235,6 +236,78 @@ describe.skipIf(base === null)("composición web: Recepciones", () => {
     }
   });
 
+  it("corregir lo recibido por la pantalla: solo gerente o administrador, el pedido es el que declara la frontera, la respuesta no trae nada interno y la ficha dice lo vigente", async () => {
+    const { x, m } = await mundo();
+    const id = idDe(await recibir(x, pedido(m)));
+    const corregido = (extra: Record<string, unknown> = {}) => ({
+      clave: nuevoId(),
+      recepcionId: id,
+      linea: 1,
+      correccionesVistas: 0,
+      cantidad: "1500",
+      causa: "FALTANTE_DEL_PROVEEDOR",
+      nota: "Faltaron 2 bolsas",
+      ...extra,
+    });
+    // Una pendiente no se corrige (no entró nada al stock): el genérico.
+    esGenerico(await corregirLoRecibidoDeLaRecepcion(d, x.gerente, corregido()));
+    await confirmarLaRecepcion(d, x.gerente, { recepcionId: id });
+    sinPermiso(await corregirLoRecibidoDeLaRecepcion(d, x.operador, corregido()));
+    // La frontera es una lista de permitidos: ni la empresa, ni la sucursal, ni el depósito, ni una causa inventada.
+    for (const extra of [
+      { empresaId: x.empresa },
+      { sucursalId: x.sucursal },
+      { depositoId: m.deposito },
+      { causa: "OTRA" },
+    ]) {
+      esGenerico(await corregirLoRecibidoDeLaRecepcion(d, x.gerente, corregido(extra)));
+    }
+    // La cantidad que no es una cantidad tiene su texto propio (como en toda la compra).
+    expect(
+      await corregirLoRecibidoDeLaRecepcion(d, x.gerente, corregido({ cantidad: "0" })),
+    ).toMatchObject({ ok: false, error: { codigo: "COMPRAS_CANTIDAD_INVALIDA" } });
+    expect(await c.existencia(m.deposito, m.articulo)).toBe("2000.0000");
+    const pedidoOk = corregido();
+    const r = await corregirLoRecibidoDeLaRecepcion(d, x.gerente, pedidoOk);
+    expect(r).toMatchObject({
+      ok: true,
+      dato: { recepcionId: id, linea: 1, numero: 1, yaExistia: false },
+    });
+    if (!r.ok) return;
+    expect(Object.keys(r.dato).sort()).toEqual(["linea", "numero", "recepcionId", "yaExistia"]);
+    expect(await c.existencia(m.deposito, m.articulo)).toBe("1500.0000");
+    // Repetir el mismo envío (doble toque, reintento) no escribe nada de nuevo.
+    expect(await corregirLoRecibidoDeLaRecepcion(d, x.administrador, pedidoOk)).toMatchObject({
+      ok: true,
+      dato: { numero: 1, yaExistia: true },
+    });
+    expect(await c.existencia(m.deposito, m.articulo)).toBe("1500.0000");
+    const ficha = await fichaDeLaRecepcion(d, x.operador, x.sucursal, id);
+    expect(ficha).toMatchObject({
+      ok: true,
+      dato: {
+        lineas: [
+          {
+            cantidadEnStock: "2000.0000",
+            cantidadRecibida: "1500.0000",
+            correccionesVistas: 1,
+            correcciones: [
+              {
+                numero: 1,
+                cantidadAnterior: "2000.0000",
+                cantidadNueva: "1500.0000",
+                causa: "FALTANTE_DEL_PROVEEDOR",
+                nota: "Faltaron 2 bolsas",
+              },
+            ],
+          },
+        ],
+      },
+    });
+    // La respuesta de la ficha no trae personas ni el movimiento de stock.
+    expect(JSON.stringify(ficha)).not.toContain(x.personaDelGerente);
+  });
+
   it("anular: solo una «Por confirmar», con motivo; sin motivo es el genérico y por el operador, «sin permiso»; repetir no escribe", async () => {
     const { x, m } = await mundo();
     const id = idDe(await recibir(x, pedido(m)));
@@ -286,6 +359,9 @@ describe.skipIf(base === null)("composición web: Recepciones", () => {
     expect(Object.keys(pendiente.dato.lineas[0] ?? {}).sort()).toEqual([
       "cantidadDeCompra",
       "cantidadEnStock",
+      "cantidadRecibida",
+      "correcciones",
+      "correccionesVistas",
       "numero",
       "producto",
       "unidadDeCompraId",

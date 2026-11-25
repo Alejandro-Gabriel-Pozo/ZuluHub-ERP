@@ -36,6 +36,10 @@ import {
   type RepositorioDeCorrecciones,
 } from "./repositorio-de-correcciones";
 import {
+  crearRepositorioDeCorreccionesDeLoRecibido,
+  type RepositorioDeCorreccionesDeLoRecibido,
+} from "./repositorio-de-correcciones-de-lo-recibido";
+import {
   crearRepositorioDeLecturasSeparadas,
   type RepositorioDeLecturasSeparadas,
 } from "./repositorio-de-lecturas-separadas";
@@ -79,6 +83,7 @@ export type RepositoriosDeCompras = Readonly<{
   conciliacionesDeCompra: RepositorioDeConciliaciones;
   pagosDeProveedor: RepositorioDePagos;
   correccionesDeCompra: RepositorioDeCorrecciones;
+  correccionesDeLoRecibido: RepositorioDeCorreccionesDeLoRecibido;
   ordenesDeCompra: RepositorioDeOrdenes;
   diferenciasDeCompra: RepositorioDeDiferencias;
   toleranciasDeCompra: RepositorioDeTolerancias;
@@ -105,6 +110,7 @@ export function crearRepositoriosDeCompras(db: {
     conciliacionesDeCompra: crearRepositorioDeConciliaciones(conexion),
     pagosDeProveedor: crearRepositorioDePagos(conexion),
     correccionesDeCompra: crearRepositorioDeCorrecciones(conexion),
+    correccionesDeLoRecibido: crearRepositorioDeCorreccionesDeLoRecibido(conexion),
     ordenesDeCompra: crearRepositorioDeOrdenes(conexion),
     diferenciasDeCompra: crearRepositorioDeDiferencias(conexion),
     toleranciasDeCompra: crearRepositorioDeTolerancias(conexion),

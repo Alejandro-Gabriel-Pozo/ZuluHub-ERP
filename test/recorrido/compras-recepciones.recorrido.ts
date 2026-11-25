@@ -210,6 +210,50 @@ describe.skipIf(base === null)(
       }
     });
 
+    it("«Corregir lo recibido»: el gerente corrige 40 → 35 con un DOBLE CLIC real: UNA corrección, el stock baja 5, el detalle dice lo vigente y la historia; el motivo es de una lista cerrada y la nota es opcional", async () => {
+      // La recepción de 40 kg, por su id (la lista ordena por fecha y desempata por id: «la primera» no es siempre la última).
+      const id = (
+        await dueno().query<{ recepcion_id: string }>(
+          "select recepcion_id from linea_de_recepcion where empresa_id = $1 and cantidad_de_compra = 40",
+          [mundo.empresa],
+        )
+      ).rows[0]?.recepcion_id as string;
+      await ir(pagina, `/compras/recepciones/${id}`);
+      await pagina.getByText("Recibida sin facturar", { exact: true }).waitFor();
+      expect(await pagina.getByRole("button", { name: "Corregir lo recibido" }).count()).toBe(1);
+      await pagina.getByRole("button", { name: "Corregir lo recibido" }).click();
+      const hoja = pagina.getByRole("dialog");
+      expect(await hoja.getByRole("button", { name: "Corregir", exact: true }).isDisabled()).toBe(
+        true,
+      );
+      await hoja.getByLabel("Cantidad recibida").pressSequentially("35");
+      await hoja.getByLabel("Motivo de la corrección").selectOption("REPARTO_INTERNO");
+      await hoja.getByText(/la otra sucursal/).waitFor();
+      await hoja.getByLabel("Motivo de la corrección").selectOption("FALTANTE_DEL_PROVEEDOR");
+      await hoja.getByLabel("Nota").pressSequentially("Faltaron 5 bolsas");
+      await sinViolacionesDeAxe();
+      await hoja.getByRole("button", { name: "Corregir", exact: true }).dblclick();
+      await pagina.getByText("Correcciones", { exact: true }).waitFor();
+      await pagina
+        .getByText(/40 Kilogramo → 35 Kilogramo · Faltante del proveedor · Faltaron 5 bolsas/)
+        .waitFor();
+      expect(
+        await contar("select count(*) as n from correccion_de_lo_recibido where empresa_id = $1", [
+          mundo.empresa,
+        ]),
+      ).toBe(1);
+      expect(await movimientos()).toBe(3);
+      expect(await existenciaDe(dueno(), deposito, articulo)).toBe("95.0000");
+      expect(
+        await contar(
+          "select count(*) as n from auditoria_empresa where empresa_id = $1 and accion = 'COMPRA_CORREGIDA'",
+          [mundo.empresa],
+        ),
+      ).toBe(1);
+      await sinViolacionesDeAxe();
+      expect(vigilante.tomar()).toEqual([]);
+    });
+
     it("«Anular recepción» pide el motivo y deja la recepción «Anulada» sin stock; una recepción de otra empresa o un id inválido es el genérico", async () => {
       await recibir(pagina, "5");
       await pagina.getByRole("button", { name: "Recibir", exact: true }).click();
@@ -224,7 +268,7 @@ describe.skipIf(base === null)(
       await hoja.getByRole("button", { name: "Anular", exact: true }).click();
       await pagina.getByText("Anulada", { exact: true }).waitFor();
       await pagina.getByText("Se cargó de más").waitFor();
-      expect(await movimientos()).toBe(2);
+      expect(await movimientos()).toBe(3);
       await ir(pagina, "/compras/recepciones/no-es-un-id");
       await pagina.getByText("Esta acción no está permitida").waitFor();
       await ir(pagina, `/compras/recepciones/${randomUUID()}`);
