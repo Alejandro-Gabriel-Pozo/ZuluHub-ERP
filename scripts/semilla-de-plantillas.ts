@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { PERMISOS_DE_EMPRESA, tablaDePermisos } from "../src/capacidades/permisos/empresa";
 
@@ -9,7 +9,10 @@ import { PERMISOS_DE_EMPRESA, tablaDePermisos } from "../src/capacidades/permiso
  * comportamiento tiene que quedar idéntico, diseño H4b §6.1). La comprueba `test/integracion/permisos-configurables-migracion.test.ts`.
  *
  *     npm run semilla:plantillas              imprime el bloque
- *     npm run semilla:plantillas -- --verificar   falla si el bloque de la migración no es el que se genera hoy
+ *     npm run semilla:plantillas -- --declaracion   escribe `migraciones/plantillas-declaradas.json` (lo que el código declara de cada
+ *                                                   acción; lo lee el ejecutor para sincronizar las plantillas, H4b §6.3)
+ *     npm run semilla:plantillas -- --verificar   falla si el bloque de la migración (mientras no esté sellada) o la declaración no son
+ *                                                 los que se generan hoy
  *
  * Pisos iniciales (decisión del dueño del 14/11/2026, Q1 = A, `h4b-permisos-configurables.md` Anexo A en Pedernal-docs): solo-gerente =
  * las acciones que hoy tiene únicamente el GERENTE (se derivan de la constante); «todos los roles» = estas cuatro, que NO se derivan (de las
@@ -94,18 +97,65 @@ const ARCHIVO_DE_LA_MIGRACION = new URL(
   import.meta.url,
 );
 
+const ARCHIVO_DE_LA_DECLARACION = new URL(
+  "../migraciones/plantillas-declaradas.json",
+  import.meta.url,
+);
+const ARCHIVO_DE_LOS_SELLOS = new URL("../migraciones/selladas.json", import.meta.url);
+const NOMBRE_DE_LA_MIGRACION = "0094_permisos_configurables.sql";
+
+/**
+ * Lo que el código declara de cada acción (los roles que la tienen), tal como lo lee el ejecutor de migraciones. Un archivo aparte de la
+ * migración porque una migración sellada no se edita y una acción nueva tiene que poder llegar a las plantillas igual (H4b §6.3).
+ * Una acción por línea y los roles en una línea: es el formato que deja prettier, así `format:check` no lo discute.
+ */
+export function textoDeLaDeclaracion(): string {
+  const lineas = Object.keys(PERMISOS_DE_EMPRESA)
+    .sort()
+    .map((accion) => {
+      const roles: readonly string[] =
+        PERMISOS_DE_EMPRESA[accion as keyof typeof PERMISOS_DE_EMPRESA];
+      return `    ${JSON.stringify(accion)}: [${[...roles]
+        .sort()
+        .map((rol) => JSON.stringify(rol))
+        .join(", ")}]`;
+    });
+  return `{\n  "formato": 1,\n  "acciones": {\n${lineas.join(",\n")}\n  }\n}\n`;
+}
+
+/** Si la migración ya está sellada (aplicada en alguna base), su semilla no se vuelve a comparar: ya no se edita. */
+function estaSellada(): boolean {
+  const sellos = JSON.parse(readFileSync(ARCHIVO_DE_LOS_SELLOS, "utf8")) as Record<string, unknown>;
+  return NOMBRE_DE_LA_MIGRACION in sellos;
+}
+
 function principal(argumentos: readonly string[]): number {
+  if (argumentos.includes("--declaracion")) {
+    writeFileSync(ARCHIVO_DE_LA_DECLARACION, textoDeLaDeclaracion());
+    return 0;
+  }
   const generado = bloqueDeLaSemilla();
   if (!argumentos.includes("--verificar")) {
     console.log(generado);
     return 0;
   }
-  const actual = bloqueDelArchivo(readFileSync(ARCHIVO_DE_LA_MIGRACION, "utf8"));
-  if (actual === generado) return 0;
-  console.error(
-    "El bloque de la semilla de 0094 no es el que se genera desde PERMISOS_DE_EMPRESA: corré `npm run semilla:plantillas` y revisá la diferencia (una migración ya aplicada no se edita: la diferencia iría en una migración nueva).",
-  );
-  return 1;
+  let falla = 0;
+  if (
+    !estaSellada() &&
+    bloqueDelArchivo(readFileSync(ARCHIVO_DE_LA_MIGRACION, "utf8")) !== generado
+  ) {
+    console.error(
+      "El bloque de la semilla de 0094 no es el que se genera desde PERMISOS_DE_EMPRESA: corré `npm run semilla:plantillas` y pegá el bloque (una migración ya aplicada no se edita: la acción nueva llega por la declaración, ver `--declaracion`).",
+    );
+    falla = 1;
+  }
+  if (readFileSync(ARCHIVO_DE_LA_DECLARACION, "utf8") !== textoDeLaDeclaracion()) {
+    console.error(
+      "migraciones/plantillas-declaradas.json no es el que se genera desde PERMISOS_DE_EMPRESA: corré `npm run semilla:plantillas -- --declaracion`.",
+    );
+    falla = 1;
+  }
+  return falla;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

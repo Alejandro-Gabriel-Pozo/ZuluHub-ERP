@@ -99,3 +99,24 @@ paths = [
 regexes = [
   '''^tok_de-prueba123$''',
 ]
+
+# Sellos de migraciones (H4b T8): `migraciones/selladas.json` guarda el SHA-256 de cada migración ya aplicada. Un hash
+# de 64 caracteres hexadecimales se parece a un token y la regla `sumologic-access-token` marcó uno (el de
+# `0056_receta_sin_insumos.sql`): no es un secreto, es el checksum de un archivo del repositorio. Falla que previene: un
+# escaneo del historial rojo permanente (y uno nuevo cada vez que se sella otra migración) por valores que no son secretos.
+# Angosta: solo esa regla, un solo archivo Y solo líneas con exactamente la forma `"NNNN_nombre.sql": "<64 hexadecimales>"`.
+# Va como excepción DE LA REGLA y no global a propósito: medido con gitleaks 8.30.1, una excepción global con `paths` ignora
+# TODO el archivo sin mirar la regex (un token real puesto en selladas.json pasaba sin marcarse); como excepción de la regla,
+# la ruta y la forma de la línea se exigen juntas.
+[[rules]]
+id = "sumologic-access-token"
+[[rules.allowlists]]
+description = "Checksums SHA-256 de las migraciones selladas (migraciones/selladas.json)"
+condition = "AND"
+paths = [
+  '''^migraciones/selladas\.json$''',
+]
+regexTarget = "line"
+regexes = [
+  '''^\s*"\d{4}_[a-z0-9_]+\.sql": "[0-9a-f]{64}",?\s*$''',
+]
