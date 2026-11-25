@@ -157,16 +157,18 @@ export type {
 export type {
   CabeceraDeMovimiento,
   CursorDeLibro,
-  ArticuloControlado,
-  CursorDeMovimientosDeDeposito,
   EntradaDeLibroDeArticulo,
-  EntradaDeMovimientosDeDeposito,
   FichaDeMovimiento,
-  MovimientoDeDeposito,
   PaginaDeLibro,
-  PaginaDeMovimientosDeDeposito,
   RenglonDeFicha,
 } from "./consultas/libro";
+export type {
+  ArticuloControlado,
+  CursorDeMovimientosDeDeposito,
+  EntradaDeMovimientosDeDeposito,
+  MovimientoDeDeposito,
+  PaginaDeMovimientosDeDeposito,
+} from "./consultas/libro-del-deposito";
 export type {
   CandidatoDeConteo,
   ConteoDeLista,

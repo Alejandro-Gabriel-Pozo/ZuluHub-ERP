@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1024",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Textos de los formularios de movimientos de stock: «Artículo», «Sobra» y «Falta».",
+  "que_cambia": "Tres claves nuevas (stock.accion.articulo, stock.ajuste.sobra, stock.ajuste.falta). «Sobra» ya estaba aprobado el 15/11 para caja; su clave es de stock. Revertir: sacar las claves y el selector de sentido.",
+  "donde": "dia-uno-stock-inventario-de-textos-2026-11-25.md N-01 (delegación, fila 173), N-15 (dueño 25/11, fila 449) y «Sobra» (aprobado 15/11, M11)"
+}
