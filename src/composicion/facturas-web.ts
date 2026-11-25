@@ -9,6 +9,7 @@ import {
   entradaDeFichaDeFactura,
   entradaDeListarFacturas,
   entradaDeRegistrarFactura,
+  entradaDeTomarElCosto,
 } from "./entradas-de-facturas";
 import { accionDeCompras } from "./errores-de-compras";
 import type { Web } from "./web";
@@ -33,7 +34,7 @@ export type DependenciasDeFacturasWeb = Readonly<{
   >;
   casosDeUso: () => Pick<
     ReturnType<Web["casosDeUsoDeCompras"]>,
-    "registrarFactura" | "conciliarFactura" | "anularConciliacion"
+    "registrarFactura" | "conciliarFactura" | "anularConciliacion" | "tomarElCosto"
   >;
   respuesta: DependenciasDeRespuesta;
 }>;
@@ -104,6 +105,16 @@ export type FichaDeFacturaParaLaPantalla = Readonly<{
       recibida: string;
       sinConciliar: string;
     }>[];
+    /** Las líneas recibidas que esta línea cubre entera y sola, con su costo: se puede tomar o ya se tomó. */
+    costos: readonly Readonly<{
+      recepcionId: string;
+      recepcionNumero: number;
+      linea: number;
+      sucursalId: string;
+      recibida: string;
+      estado: "SE_PUEDE_TOMAR" | "TOMADO";
+      precioNeto: string;
+    }>[];
   }>[];
 }>;
 
@@ -154,6 +165,7 @@ export function fichaDeLaFactura(
         facturada: l.facturada,
         conciliada: l.conciliada,
         recibidoPorSucursal: l.recibidoPorSucursal.map((r) => ({ ...r })),
+        costos: l.costos.map((k) => ({ ...k })),
       })),
     }),
   );
@@ -332,5 +344,35 @@ export function anularLaConciliacion(
     entradaDeAnularConciliacion,
     (entrada) => d.casosDeUso().anularConciliacion(contexto, entrada),
     () => ({ anulada: true as const }),
+  );
+}
+
+export type CostoTomadoParaLaPantalla = Readonly<{
+  recepcionId: string;
+  linea: number;
+  /** `true`: era el mismo envío de un toque anterior (doble toque, reintento): no se escribió, ni se ajustó el stock, ni se auditó nada de nuevo. */
+  yaExistia: boolean;
+}>;
+
+/**
+ * «Tomar el costo de la factura»: toma el precio neto de la línea de la factura que cubre toda la línea recibida y completa su costo (`tomarElCosto`, una transacción: la corrección del precio, el
+ * ajuste del promedio del stock y la auditoría). Solo gerente o administrador (`compras.corregir` y `stock.ajustar`) con alcance sobre la sucursal de la recepción. El pedido lleva solo la clave del
+ * envío, la recepción y la línea: el precio y el motivo los decide el servidor. Tocar dos veces deja una; todo rechazo sale como el genérico.
+ */
+export function tomarElCostoDeLaFactura(
+  d: DependenciasDeFacturasWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<CostoTomadoParaLaPantalla>> {
+  return accionDeCompras(
+    d.respuesta,
+    crudo,
+    entradaDeTomarElCosto,
+    (entrada) => d.casosDeUso().tomarElCosto(contexto, entrada),
+    (salida) => ({
+      recepcionId: salida.recepcionId,
+      linea: salida.linea,
+      yaExistia: salida.yaExistia,
+    }),
   );
 }

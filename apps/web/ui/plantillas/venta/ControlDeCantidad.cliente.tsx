@@ -32,7 +32,7 @@ export type PropsDeControlDeCantidad = Readonly<{
 const ATAJOS_DE_UNIDAD = [1, 2, 3, 4, 5, 6] as const;
 const ENTEROS_QUE_SUMAN = [1, 2, 3] as const;
 const REGLA_ENTERA = { decimales: 0, enterosMaximos: 4 } as const;
-const REGLA_DE_MEDIDA = { decimales: 4, enterosMaximos: 4 } as const;
+export const REGLA_DE_MEDIDA = { decimales: 4, enterosMaximos: 4 } as const;
 
 /**
  * Cómo se carga la cantidad de un producto (decisiones 162 y 166; maqueta `venta-rapida-v4.html`), sin botones − ni +:

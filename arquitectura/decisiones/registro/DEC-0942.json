@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0942",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "El precio de «Tomar el costo» lo lee el servidor de la factura, no el pedido; solo se ofrece si UNA línea de UNA factura cubre toda la línea recibida. El motivo es un código con la factura y la línea.",
+  "que_cambia": "Con dos facturas o dos líneas no hay costo único y se rechaza con el genérico. El pedido solo trae clave, recepción y línea. Revertir: aceptar el precio en el pedido (se pierde la garantía de que sea el de la factura).",
+  "donde": "costo-de-la-factura.ts, tomar-el-costo.ts, entradas-de-facturas.ts; brief de PR C aprobado por el orquestador el 25/11/2026"
+}

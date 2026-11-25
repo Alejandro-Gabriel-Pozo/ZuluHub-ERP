@@ -9,6 +9,8 @@ import {
   fichaDeLaFactura,
   listarLasFacturas,
   registrarLaFactura,
+  tomarElCostoDeLaFactura,
+  type CostoTomadoParaLaPantalla,
   type DatosParaConciliarParaLaPantalla,
   type DependenciasDeFacturasWeb,
   type FacturaConciliadaParaLaPantalla,
@@ -38,6 +40,7 @@ import { sucursalesParaElegir } from "./sucursal-elegida";
  */
 
 export type {
+  CostoTomadoParaLaPantalla,
   DatosParaConciliarParaLaPantalla,
   FichaDeFacturaParaLaPantalla,
   FacturaConciliadaParaLaPantalla,
@@ -111,6 +114,7 @@ export async function accionesDeLaFactura(
     verConciliaciones: puede("conciliaciones.ver"),
     conciliar: puede("conciliaciones.conciliar"),
     anularConciliacion: puede("conciliaciones.anular"),
+    tomarElCosto: puede("compras.corregir") && puede("stock.ajustar"),
   };
 }
 
@@ -148,4 +152,11 @@ export async function anularLaConciliacionDeLaPantalla(
   return r.ok
     ? { estado: "HECHO", ruta: rutaDeLaFactura(comprobanteId) }
     : { estado: "ERROR", error: r.error };
+}
+
+/** «Tomar el costo de la factura»: la clave de idempotencia, la recepción y la línea viajan en el pedido; el precio lo lee el servidor de la factura conciliada y la sucursal y el permiso los decide él. */
+export function tomarElCostoDelFormulario(
+  pedido: unknown,
+): Promise<Respuesta<CostoTomadoParaLaPantalla>> {
+  return conLaEmpresa((contexto) => tomarElCostoDeLaFactura(dependencias, contexto, pedido));
 }

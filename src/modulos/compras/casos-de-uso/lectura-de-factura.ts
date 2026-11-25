@@ -2,6 +2,7 @@ import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { crearDirectorioDePartes } from "../../clientes/publico";
 import { pendienteDeLinea } from "../dominio/conciliacion-separada";
+import { facturaUnicaDeLaLinea } from "../dominio/costo-de-la-factura";
 import { leerCantidad, textoDeCantidad } from "../dominio/decimal";
 import { esUuid } from "../dominio/identificadores";
 import {
@@ -21,6 +22,18 @@ export type RecibidoPorSucursal = Readonly<{
   sinConciliar: string;
 }>;
 
+/** Una línea recibida (de una sucursal del alcance) que esta línea de la factura cubre entera y sola, y qué pasa con su costo: ya se tomó de la factura (`TOMADO`) o se puede tomar (`SE_PUEDE_TOMAR`). */
+export type CostoDeLineaRecibida = Readonly<{
+  recepcionId: string;
+  recepcionNumero: number;
+  linea: number;
+  sucursalId: string;
+  recibida: string;
+  estado: "SE_PUEDE_TOMAR" | "TOMADO";
+  /** El precio neto de la línea de la factura (la que cubre esta línea recibida); si ya se tomó, el que se tomó. */
+  precioNeto: string;
+}>;
+
 export type LineaDeFacturaSeparada = Readonly<{
   numero: number;
   productoId: string | null;
@@ -30,6 +43,8 @@ export type LineaDeFacturaSeparada = Readonly<{
   /** Lo ya conciliado de esta línea (decimal de 4). */
   conciliada: string;
   recibidoPorSucursal: readonly RecibidoPorSucursal[];
+  /** El costo de cada línea recibida que esta línea cubre entera y sola; vacío en una factura anulada. */
+  costos: readonly CostoDeLineaRecibida[];
 }>;
 
 export type ConciliacionDeFactura = Readonly<{
@@ -104,6 +119,31 @@ export async function fichaDeFacturaSeparadaDentro(
   );
   const nombres = await directorio.nombresParaMostrar(tx, contexto.empresaId, [fila.proveedorId]);
 
+  // El costo de lo recibido (decisión del dueño del 25/11/2026, «b chica»): una línea recibida se ofrece solo si ESTA línea de la factura la cubre entera y sola; con dos precios posibles, no.
+  const historial =
+    fila.estado === "ANULADO"
+      ? []
+      : await tx.conciliacionesDeCompra.historialDe(contexto.empresaId, fila.id);
+  const recepcionIds = [
+    ...new Set(historial.flatMap((c) => c.asignaciones.map((a) => a.recepcionId))),
+  ];
+  const vigentes = await tx.conciliacionesDeCompra.vigentesDeLasRecepciones(
+    contexto.empresaId,
+    recepcionIds,
+  );
+  const tomas = new Map(
+    (await tx.correccionesDeCompra.ultimasDeVarias(contexto.empresaId, recepcionIds))
+      .filter((k) => k.precioNuevo !== null)
+      .map((k) => [`${k.recepcionId}:${k.linea}`, k.precioNuevo as string]),
+  );
+
+  const base = (r: (typeof recibidas)[number]) => ({
+    recepcionId: r.recepcionId,
+    recepcionNumero: r.recepcionNumero,
+    linea: r.linea,
+    sucursalId: r.sucursalId,
+    recibida: r.recibida,
+  });
   const deLaFactura: LineaDeFacturaSeparada[] = lineas.map((l) => {
     const producto =
       l.productoId === null || l.productoId === undefined ? undefined : productos.get(l.productoId);
@@ -124,6 +164,34 @@ export async function fichaDeFacturaSeparadaDentro(
       unidadDeStockId: producto?.unidadBaseId ?? null,
       facturada: saldo?.facturada ?? l.cantidadFacturada,
       conciliada: saldo?.asignada ?? "0.0000",
+      costos: recibidas.flatMap((r): CostoDeLineaRecibida[] => {
+        const deEsta = vigentes.filter(
+          (v) => v.recepcionId === r.recepcionId && v.lineaDeRecepcion === r.linea,
+        );
+        if (!deEsta.some((v) => v.comprobanteId === fila.id && v.lineaDeComprobante === l.numero)) {
+          return [];
+        }
+        const tomado = tomas.get(`${r.recepcionId}:${r.linea}`);
+        const unica = facturaUnicaDeLaLinea({
+          recibida: r.recibida,
+          asignada: r.asignada,
+          vigentes: deEsta.map((v) => ({
+            comprobanteId: v.comprobanteId,
+            lineaDeFactura: v.lineaDeComprobante,
+            cantidad: v.cantidad,
+          })),
+        });
+        const cubreEsta =
+          unica.ok &&
+          unica.valor.comprobanteId === fila.id &&
+          unica.valor.lineaDeFactura === l.numero;
+        if (tomado !== undefined) {
+          return [{ ...base(r), estado: "TOMADO", precioNeto: tomado }];
+        }
+        return cubreEsta
+          ? [{ ...base(r), estado: "SE_PUEDE_TOMAR", precioNeto: l.precioNeto }]
+          : [];
+      }),
       recibidoPorSucursal: [...porSucursal.entries()].map(([sucursalId, v]) => ({
         sucursalId,
         recibida: textoDeCantidad(v.recibida),

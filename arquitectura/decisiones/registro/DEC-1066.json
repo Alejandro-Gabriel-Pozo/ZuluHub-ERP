@@ -2,9 +2,9 @@
   "id": "DEC-1066",
   "fecha": "2026-11-25",
   "quien": "sesión",
-  "tipo": "PERMISOS",
+  "tipo": "DATOS",
   "estado": "CONFIRMADA",
-  "decision": "Gerente y administrador declaran y retiran las cuentas de imagen del logo de la carta, con una sola acción nueva (vidrieras.administrar_cuentas_de_imagen), delegable; también sirve para listarlas.",
-  "que_cambia": "Quién puede declarar o retirar una cuenta de fotos y así de qué cuentas se muestran los logos. Revertir: separar en dos acciones (administrar y ver), una más en el catálogo, como proponía el brief.",
-  "donde": "src/capacidades/permisos/permisos-de-vidriera.ts; src/modulos/catalogo/casos-de-uso/declarar-cuenta-de-imagen.ts; brief-logo-de-la-carta-cuentas-declaradas-2026-11-25.md §5; dueño 25/11, vía el orquestador; la fila la asienta diseño"
+  "decision": "El departamento sale del producto, como las categorías: la cuenta ya no lo pide y queda sin departamento aunque haya 2 o más; unir y dividir no lo exigen.",
+  "que_cambia": "Se pueden tomar pedidos y unir o dividir mesas del hotel (2 o 3 departamentos) sin elegir uno. No hay reporte por cuenta: el reporte por departamento sale de las líneas. Revertir: exigir elegir al abrir la cuenta.",
+  "donde": "src/modulos/ventas/dominio/departamento.ts; abrir-cuenta.ts; salon unir.ts y dividir.ts; respuesta del dueño del 25/11/2026 vía el orquestador; reemplaza DEC-0363 y DEC-0364"
 }
