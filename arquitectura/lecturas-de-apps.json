@@ -143,5 +143,9 @@
     "apps/web/servidor/facturas.ts",
     "apps/web/ui/plantillas/compras/facturas/*",
     "apps/web/ui/plantillas/compras/rutas-de-compras.ts"
+  ],
+  "test/web/ficha-de-depositos.test.ts": [
+    "apps/web/app/s/app/(operacion)/stock/depositos/**",
+    "apps/web/ui/plantillas/stock/depositos/*"
   ]
 }
