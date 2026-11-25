@@ -104,6 +104,7 @@ const FICHA = {
   claseDeUso: "VENDIBLE",
   unidadBaseId: "UNIDAD",
   seVende: true,
+  seCompra: false,
   admiteControlDeStock: false,
   nombreDeCocina: "MILA",
   codigo: "MIL-1",
@@ -427,6 +428,25 @@ describe("la página de la ficha de datos de un producto", () => {
       },
     });
     expect(await html()).not.toContain("/opciones");
+  });
+
+  it("un producto que se compra ofrece la solapa «Cómo se compra» (un enlace a sus presentaciones); uno que no se compra, no", async () => {
+    expect(await html()).not.toContain("/compra");
+    responde({
+      ok: true,
+      dato: {
+        ...FICHA,
+        claseDeUso: "MATERIA_PRIMA",
+        seVende: false,
+        seCompra: true,
+        nombreDeCocina: null,
+        alicuota: null,
+        seccion: null,
+      },
+    });
+    expect(await html()).toMatch(
+      new RegExp(`<a [^>]*href="/catalogo/productos/${ID}/compra"[^>]*>Cómo se compra</a>`),
+    );
   });
 
   it("una alícuota guardada que el producto no ofrece se ve y su desplegable sale apagado", async () => {
