@@ -70,8 +70,9 @@ export type VistaDeMovimientos = Readonly<{
   hrefDeSiguiente: string | null;
 }>;
 
-const conSigno = (cantidad: string): string =>
-  cantidad.startsWith("-") ? cantidad : `+${cantidad}`;
+/** La cantidad ya formateada, con «+» si no es negativa (el «-» ya viene del texto). */
+const conSigno = (formateada: string): string =>
+  formateada.startsWith("-") ? formateada : `+${formateada}`;
 
 export function armarLosMovimientos(
   dato: MovimientosDeLaComposicion,
@@ -90,7 +91,7 @@ export function armarLosMovimientos(
       id: `${m.movimientoId}:${String(m.numero)}`,
       clase: rotulo(CLAVE_DE_TEXTO_DE_LA_CLASE, m.clase),
       anulado: m.anulado,
-      cantidad: cantidadConUnidad(conSigno(m.cantidad), m.unidadId),
+      cantidad: conSigno(cantidadConUnidad(m.cantidad, m.unidadId)),
       detalle: [m.nombre, rotulo(CLAVE_DE_TEXTO_DEL_MOTIVO, m.motivo), m.quien]
         .filter((x): x is string => x !== null)
         .join(" · "),
