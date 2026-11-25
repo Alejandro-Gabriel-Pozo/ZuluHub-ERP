@@ -18,6 +18,13 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
   esté verde o explicada; el orquestador la mira cada mañana. Previene: un fallo del guardián que los PR ya no corren (solo la nocturna lo ve)
   quede escondido bajo merges nuevos. Chequeo: `test/arquitectura/guardian-en-pr.test.ts` (que la nocturna corra todo); que el orquestador la
   mire es proceso, no un test.
+- **Relajaciones de pruebas (dueño, 25/11/2026).** El cliente tendrá 1 o 2 personas operando por sucursal como máximo, así que se corre menos de lo que el CI
+  podría correr, con un contador: todo recorte de pruebas (copias de Estabilidad en un PR, mutación recortada, sin pruebas de carga ni volumen, concurrencia
+  con dos actores) figura en `arquitectura/deuda/relajaciones-de-pruebas.json` con quién lo decidió, el motivo, la condición para restaurarlo y su vencimiento
+  de revisión (≤ 90 días). La nocturna corre TODO (todas las copias y todos los grupos de mutación) y es lo que respalda cada recorte de un PR. Un grupo de mutación
+  que muta dinero, permisos, aislamiento, base de datos, fiscal o secretos lleva `"critico": true` (reglas de rutas en
+  `arquitectura/rutas-sensibles-de-mutacion.json`; un grupo nuevo de esas rutas sin la marca falla). Previene: recortes del CI que nadie recuerda ni revisa cuando cambia
+  la escala. Chequeo: `test/arquitectura/relajaciones-de-pruebas.test.ts` (una violación inyectada por caso).
 
 ## Reglas que no se negocian
 

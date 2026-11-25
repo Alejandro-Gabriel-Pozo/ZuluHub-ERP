@@ -1,0 +1,38 @@
+{
+  "relajaciones": [
+    {
+      "id": "estabilidad-reducida-en-pr",
+      "estado": "VIGENTE",
+      "que": "En un pull request, Estabilidad repite la integración 3 veces en vez de las 12 de la corrida nocturna y a pedido",
+      "donde": ".github/workflows/ci.yml, job estabilidad (matriz `corrida`)",
+      "valor": 3,
+      "motivo": "Ahorra ~140 min de máquina por pull request que la dispara; las 12 copias siguen corriendo cada noche y a pedido",
+      "decidio": "dueño, 2026-11-16",
+      "fecha": "2026-11-16",
+      "restaurar_si": "Hay más de 2 personas operando a la vez por sucursal, o llega un segundo cliente de otra escala, o antes de venderle a una cadena",
+      "revisar_antes_de": "2027-02-14"
+    },
+    {
+      "id": "sin-pruebas-de-carga-ni-volumen",
+      "estado": "VIGENTE",
+      "que": "No hay pruebas de carga ni de volumen (muchos usuarios a la vez, tablas con millones de filas)",
+      "donde": "test/ (no existen)",
+      "motivo": "El cliente tendrá 1 o 2 personas operando por sucursal como máximo; el costo de mantener esas pruebas no se justifica a esa escala",
+      "decidio": "dueño, 2026-11-25",
+      "fecha": "2026-11-25",
+      "restaurar_si": "Hay más de 2 personas operando a la vez por sucursal, o llega un segundo cliente de otra escala, o antes de venderle a una cadena",
+      "revisar_antes_de": "2027-02-23"
+    },
+    {
+      "id": "concurrencia-con-dos-actores",
+      "estado": "VIGENTE",
+      "que": "Las pruebas de concurrencia enfrentan a dos actores simultáneos, no a muchos",
+      "donde": "test/integracion/ (pruebas de concurrencia)",
+      "motivo": "Con 1 o 2 personas operando por sucursal, dos actores sobre lo mismo es el caso real; más actores no agregan un caso que pueda ocurrir",
+      "decidio": "dueño, 2026-11-25",
+      "fecha": "2026-11-25",
+      "restaurar_si": "Hay más de 2 personas operando a la vez por sucursal, o llega un segundo cliente de otra escala, o antes de venderle a una cadena",
+      "revisar_antes_de": "2027-02-23"
+    }
+  ]
+}
