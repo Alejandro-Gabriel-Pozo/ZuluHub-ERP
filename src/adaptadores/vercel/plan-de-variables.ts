@@ -71,8 +71,15 @@ export function leerDestino(texto: string | undefined): Destino | null {
  */
 export const PROYECTOS_DE_VERCEL_DE_CLIENTES: Readonly<Record<string, string>> = {};
 
-export const CODIGO_DE_CLIENTE = /^cliente-[a-z0-9-]{3,30}$/;
-const ID_DE_PROYECTO_DE_VERCEL = /^prj_[A-Za-z0-9]{20,40}$/;
+// Los largos del código y del id se arman con nombres propios (no son los de ninguna primitiva de datos: son de este comando).
+const LARGO_DEL_CODIGO = { desde: 3, hasta: 30 } as const;
+const LARGO_DEL_ID = { desde: 20, hasta: 40 } as const;
+export const CODIGO_DE_CLIENTE = new RegExp(
+  `^cliente-[a-z0-9-]{${LARGO_DEL_CODIGO.desde},${LARGO_DEL_CODIGO.hasta}}$`,
+);
+const ID_DE_PROYECTO_DE_VERCEL = new RegExp(
+  `^prj_[A-Za-z0-9]{${LARGO_DEL_ID.desde},${LARGO_DEL_ID.hasta}}$`,
+);
 
 /** A qué proyecto y a qué destino de Vercel se escribe un pedido `--vercel <texto>`. */
 export type PedidoDeVercel = Readonly<{
