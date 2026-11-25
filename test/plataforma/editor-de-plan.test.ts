@@ -57,8 +57,8 @@ describe("módulos", () => {
     const todos = modulosParaElegir();
     expect(todos.map((m) => m.clave)).toEqual([...CLAVES_DE_MODULOS]);
     expect(todos.filter((m) => m.obligatorio).map((m) => m.clave)).toEqual(OBLIGATORIOS);
-    expect(todos.some((m) => m.enDesarrollo)).toBe(true);
-    expect(todos.some((m) => !m.enDesarrollo)).toBe(true);
+    // Ningún módulo real está en desarrollo desde que producción salió (DEC-1050).
+    expect(todos.every((m) => !m.enDesarrollo)).toBe(true);
     expect(todos.find((m) => m.clave === "ventas")?.requiere).toEqual(
       CATALOGO_DE_MODULOS.ventas.requiere,
     );
