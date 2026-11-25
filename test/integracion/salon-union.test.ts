@@ -72,6 +72,7 @@ describe.skipIf(base === null)("salón: unir mesas", () => {
   };
   const unir = (destino: string, origen: string, unionId = nuevoId(), clave = nuevaClave()) =>
     m.salon.unirMesas(e.gerente, {
+      sucursalDeTrabajo: e.sucursal,
       unionId,
       cuentaDestinoId: destino,
       cuentaOrigenId: origen,
@@ -268,10 +269,15 @@ describe.skipIf(base === null)("salón: unir mesas", () => {
         cantidad: "1",
       }),
     );
-    expect(await unir(a.cuenta, otraSucursal)).toEqual({ ok: false, error: "SUCURSAL_DISTINTA" });
+    // La cuenta de OTRA sucursal que la de trabajo es como si no existiera (SAL-E1); la regla `SUCURSAL_DISTINTA` queda en el dominio (`union.test.ts`).
+    expect(await unir(a.cuenta, otraSucursal)).toEqual({
+      ok: false,
+      error: "CUENTA_NO_ENCONTRADA",
+    });
     const x = await m.escenario();
     expect(
       await m.salon.unirMesas(x.gerente, {
+        sucursalDeTrabajo: x.sucursal,
         unionId: nuevoId(),
         cuentaDestinoId: a.cuenta,
         cuentaOrigenId: nuevoId(),
@@ -387,6 +393,7 @@ describe.skipIf(base === null)("salón: unir mesas", () => {
     }
     valorDe(
       await m.salon.unirMesas(x.gerente, {
+        sucursalDeTrabajo: x.sucursal,
         unionId: nuevoId(),
         cuentaDestinoId: cuentas[0] as string,
         cuentaOrigenId: cuentas[1] as string,

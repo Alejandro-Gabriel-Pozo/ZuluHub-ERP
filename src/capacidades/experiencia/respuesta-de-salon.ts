@@ -13,6 +13,10 @@ export const CLAVES_DE_ERRORES_DE_SALON = {
   SALON_NUMERO_DE_MESA_EN_USO: "salon.texto.admin_ya_existe_una_mesa_con_ese_numero",
   SALON_MESA_FUERA_DEL_SALON: "salon.texto.admin_queda_fuera_del_salon",
   SALON_MESA_SUPERPUESTA: "salon.error.se_superpone_con_la_mesa",
+  // Unir mesas (SAL-E1; `unir.html`): «No se pueden unir» y los dos motivos con texto aprobado; los demás motivos salen sin motivo (no se inventan textos).
+  SALON_UNIR_NO_SE_PUEDEN_UNIR: "salon.texto.unir_no_se_pueden_unir",
+  SALON_UNIR_MESA_LIBRE: "salon.texto.unir_mesa_libre",
+  SALON_UNIR_LA_MESA_YA_TIENE_UN_COBRO: "salon.texto.unir_la_mesa_ya_tiene_un_cobro",
 } as const satisfies Record<string, ClaveDeTexto>;
 
 export type CodigoDeSalon = keyof typeof CLAVES_DE_ERRORES_DE_SALON;

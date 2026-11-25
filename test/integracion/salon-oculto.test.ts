@@ -80,6 +80,7 @@ describe.skipIf(base === null)("salón: un producto oculto (carta real T8)", () 
     await ocultar(e, e.producto);
     const r = valorDe(
       await m.salon.unirMesas(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         unionId: nuevoId(),
         cuentaDestinoId: destino,
         cuentaOrigenId: origen,

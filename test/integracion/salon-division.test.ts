@@ -339,6 +339,7 @@ describe.skipIf(base === null)("salón: dividir la cuenta", () => {
     const otra = await mesaConLineas([{ cantidad: "1" }]);
     expect(
       await m.salon.unirMesas(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         unionId: nuevoId(),
         cuentaDestinoId: otra.cuenta,
         cuentaOrigenId: hija,
