@@ -1,3 +1,5 @@
+import { TEXTOS_DE_EXPORTACION_DE_COMPRAS } from "./textos-de-exportacion-de-compras";
+
 /**
  * Los textos del módulo `compras` (prefijo `compras.`, E9-T15; `e9-compras-especificacion.md` §10). Ninguno es nuevo: todos salen de los que el
  * dueño aprobó el 09/11/2026 en los prototipos `compra.html` («Textos aprobados»), `control.html` y `orden.html` («Textos nuevos»), que son la
@@ -332,4 +334,6 @@ export const TEXTOS_DE_COMPRAS = {
     ],
     fuente: { decision: "DEC-0891" },
   },
+  // La exportación a Excel (25/11/2026): su archivo propio para no pasar el tope de líneas.
+  ...TEXTOS_DE_EXPORTACION_DE_COMPRAS,
 } as const;

@@ -4,6 +4,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { leerZipComoTextos } from "../../src/adaptadores/xlsx/leer-zip-de-prueba";
 import { productoDeBase } from "../integracion/catalogo-apoyo";
+import { crearAsignacionDeBase } from "../integracion/fixtures-identidad";
 import { claveDeCompra, huellaAlAzar, proveedorDeBase } from "../integracion/compras-apoyo";
 import { HOST_DEL_RECORRIDO, armarMundoDelRecorrido, type MundoDelRecorrido } from "./apoyo/mundo";
 import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilante";
@@ -23,6 +24,7 @@ describe.skipIf(base === null)("recorrido de compras: exportar a Excel", () => {
   let pagina: Page;
   let vigilante: Vigilante;
   let persona = "";
+  let sucursalDeLaPersona = "";
 
   const ir = async (ruta: string) => {
     const respuesta = await pagina.goto(`${mundo.url}${ruta}`);
@@ -48,6 +50,7 @@ describe.skipIf(base === null)("recorrido de compras: exportar a Excel", () => {
         [mundo.empresa],
       )
     ).rows[0]?.persona_id as string;
+    sucursalDeLaPersona = sucursal;
     const m = { empresa: mundo.empresa, persona, sucursal };
     const proveedor = await proveedorDeBase(c, m, "Carnes del Sur");
     const producto = await productoDeBase(c, mundo.empresa, {
@@ -117,7 +120,7 @@ describe.skipIf(base === null)("recorrido de compras: exportar a Excel", () => {
     expect(pagina.url()).toContain("/compras?");
     const registros = (
       await mundo.mundo.dueno.query<{ despues: unknown }>(
-        "select despues from auditoria where empresa_id = $1 and accion = 'COMPRAS_EXPORTADAS'",
+        "select despues from auditoria_empresa where empresa_id = $1 and accion = 'COMPRAS_EXPORTADAS'",
         [mundo.empresa],
       )
     ).rows;
@@ -127,13 +130,12 @@ describe.skipIf(base === null)("recorrido de compras: exportar a Excel", () => {
   });
 
   it("un período de más de 12 meses no baja ningún archivo: responde el error con su código", async () => {
-    const respuesta = await pagina.request.get(
-      `${mundo.url}/compras/exportar?desde=2025-01-01&hasta=2026-12-31`,
-    );
-    expect(respuesta.status()).toBeGreaterThanOrEqual(400);
-    expect(respuesta.headers()["content-disposition"]).toBeUndefined();
-    expect(respuesta.headers()["cache-control"]).toBe("private, no-store");
-    expect(Object.keys(await respuesta.json())).toEqual(["codigo"]);
+    const respuesta = await ir("/compras/exportar?desde=2025-01-01&hasta=2026-12-31");
+    expect(respuesta).not.toBeNull();
+    expect(respuesta?.status()).toBeGreaterThanOrEqual(400);
+    expect(respuesta?.headers()["content-disposition"]).toBeUndefined();
+    expect(respuesta?.headers()["cache-control"]).toBe("private, no-store");
+    expect(Object.keys(await respuesta?.json())).toEqual(["codigo"]);
   });
 
   it("el operador no ve el enlace y, si pide la dirección a mano, no recibe ningún archivo", async () => {
@@ -151,16 +153,17 @@ describe.skipIf(base === null)("recorrido de compras: exportar a Excel", () => {
       await c.query("rollback");
       throw error;
     }
+    // Un operador trabaja en las sucursales a las que está asignado.
+    await crearAsignacionDeBase(c, mundo.empresa, persona, sucursalDeLaPersona);
     await ir("/compras?desde=2026-11-01&hasta=2026-11-30");
     await pagina
       .getByRole("link", { name: /^Compra \d+ · / })
       .first()
       .waitFor();
     expect(await pagina.getByRole("link", { name: "Exportar" }).count()).toBe(0);
-    const respuesta = await pagina.request.get(
-      `${mundo.url}/compras/exportar?desde=2026-11-01&hasta=2026-11-30`,
-    );
-    expect(respuesta.status()).toBeGreaterThanOrEqual(400);
-    expect(respuesta.headers()["content-disposition"]).toBeUndefined();
+    const respuesta = await ir("/compras/exportar?desde=2026-11-01&hasta=2026-11-30");
+    expect(respuesta).not.toBeNull();
+    expect(respuesta?.status()).toBeGreaterThanOrEqual(400);
+    expect(respuesta?.headers()["content-disposition"]).toBeUndefined();
   });
 });
