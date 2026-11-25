@@ -4,6 +4,7 @@ import { importeDesdeTexto } from "../primitivas/dinero/importe";
 import { ARS } from "../primitivas/dinero/moneda";
 import { err, ok } from "../primitivas/resultado/resultado";
 import {
+  armarAnonimizacionDePartesEnTx,
   crearCopiasDePartes,
   crearImpedimentosDeAnonimizacion,
   fuenteDeSaldoDelLibro,
@@ -182,5 +183,26 @@ describe("las copias que se vacían junto con la parte", () => {
     ]);
     expect(await copias.anonimizarCopiasEnTx(EMPRESA, PARTE, AHORA)).toEqual(err(falla));
     expect(vistos).toEqual(["a", "b"]);
+  });
+});
+
+describe("lo que se arma sobre la conexión de la transacción", () => {
+  it("trae la fuente del libro de saldos (lee la base: si no puede, falla cerrado) y las copias (hoy ninguna: ok)", async () => {
+    const ilegible = new Error("tabla de saldos ilegible");
+    const tablas = {
+      selectFrom: () => {
+        throw ilegible;
+      },
+    };
+    const conexion = { withTables: () => tablas } as unknown as Parameters<
+      typeof armarAnonimizacionDePartesEnTx
+    >[0];
+    const { anonimizacionDePartes } = armarAnonimizacionDePartesEnTx(conexion);
+    await expect(anonimizacionDePartes.impedimentos.impedimentos(EMPRESA, PARTE)).rejects.toBe(
+      ilegible,
+    );
+    expect(await anonimizacionDePartes.copias.anonimizarCopiasEnTx(EMPRESA, PARTE, AHORA)).toEqual(
+      ok(null),
+    );
   });
 });
