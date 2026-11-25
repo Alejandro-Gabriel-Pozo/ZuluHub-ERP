@@ -65,6 +65,18 @@ export type SoporteDb = {
     version: number;
   };
   invitacion_empresa: { invitacion_id: string; empresa_id: string; rol: string; tipo: string };
+  // Solo las columnas que lee la consola «Dominios» (nunca `registrado_por`): el rol de plataforma tiene `SELECT` sobre la tabla (0007).
+  dominio: {
+    id: Generated<string>;
+    host: string;
+    superficie: string;
+    titular: string;
+    estado: string;
+    verificado_en: Date | null;
+    motivo: string | null;
+    version: number;
+    duenio_empresa_id: string | null;
+  };
   trabajo: {
     id: Generated<string>;
     empresa_id: string | null;

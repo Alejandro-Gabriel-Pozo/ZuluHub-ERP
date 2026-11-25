@@ -34,6 +34,8 @@ const PERMITIDAS = [
   "version_de_plan",
   "plan_de_tenant",
   "ajuste_de_perilla",
+  // La consola «Dominios» (0007: `SELECT` de plataforma; solo las columnas que se piden).
+  "dominio",
 ];
 const OPERATIVAS = [
   "sucursal",

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0908",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Consola Dominios (P1): el orquestador acepta los textos de la consola del inventario del plan de dominio propio que usa el mínimo.",
+  "que_cambia": "Quedan aprobados los rótulos, estados, botones, el vacío y los cinco avisos de éxito de la pantalla Dominios. Revertir: cambiar las claves plataforma.dominios en textos-de-plataforma.ts.",
+  "donde": "Delegación de la fila 173 de decisiones-del-dueno-2026-11.md; orden del orquestador del 25/11/2026; dominio-propio-textos-y-fichas.md §1.1 (sin lo de la etapa 2)."
+}

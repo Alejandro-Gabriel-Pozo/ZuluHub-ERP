@@ -10,6 +10,9 @@ const GRUPOS = "apps/plataforma/pantallas/grupos-del-plan.cliente.tsx";
 const PUBLICAR = "apps/plataforma/pantallas/publicar-version.cliente.tsx";
 const NUEVO_PLAN = "apps/plataforma/pantallas/nuevo-plan.cliente.tsx";
 const POLITICA = "apps/plataforma/pantallas/politica-de-plan.cliente.tsx";
+const DOMINIOS = "apps/plataforma/pantallas/lista-de-dominios.cliente.tsx";
+const FICHA_DE_DOMINIOS =
+  "Pedernal-docs 11-especificaciones/dominio-propio-textos-y-fichas.md §2.1 (ficha «dominios», aceptada el 25/11/2026 por la delegación de la fila 174, DEC-0909)";
 const BRIEF_H14B =
   "Pedernal-docs 11-especificaciones/briefs/escalabilidad/PR-H14b-consola-politica-de-cambio-de-plan.md";
 const BRIEF = "Pedernal-docs 11-especificaciones/briefs/plataforma/PR-planes-consola.md";
@@ -129,5 +132,66 @@ export const DATOS_DE_PLATAFORMA = {
     ],
     consumidores: ["apps/plataforma/pantallas/arrepentimiento.cliente.tsx"],
     ponerPor: ["planes.arrepentir"],
+  },
+  // «Dominios» (plan de dominio propio, P1): cada campo del alta y del retiro. El largo y el conjunto permitido de cada uno viven una vez, en el dominio de marcas.
+  "host-de-dominio": {
+    ambito: "PLATAFORMA",
+    ficha: "src/modulos/marcas/dominio/host.ts",
+    propositos: [
+      {
+        para: "Nombre del sitio (el host) de un dominio de empresa, al agregarlo en la pantalla «Dominios»; se normaliza y es único mientras no esté retirado.",
+        fuente: FICHA_DE_DOMINIOS,
+      },
+    ],
+    consumidores: [DOMINIOS],
+    ponerPor: ["dominios.agregar"],
+  },
+  "empresa-del-dominio": {
+    ambito: "PLATAFORMA",
+    ficha: "src/plataforma/dominio/formas-de-entrada.ts",
+    propositos: [
+      {
+        para: "Empresa dueña del dominio que se agrega (selector de la pantalla «Dominios»).",
+        fuente: FICHA_DE_DOMINIOS,
+      },
+    ],
+    consumidores: [DOMINIOS],
+    ponerPor: ["dominios.agregar"],
+  },
+  "superficie-de-dominio": {
+    ambito: "PLATAFORMA",
+    ficha: "src/modulos/marcas/dominio/ciclo-de-dominio.ts",
+    propositos: [
+      {
+        para: "Qué muestra el dominio de una empresa: la aplicación o la carta (el sitio de la empresa es de la etapa 2).",
+        fuente: FICHA_DE_DOMINIOS,
+      },
+    ],
+    consumidores: [DOMINIOS],
+    ponerPor: ["dominios.agregar"],
+  },
+  "titular-de-dominio": {
+    ambito: "PLATAFORMA",
+    ficha: "src/modulos/marcas/dominio/ciclo-de-dominio.ts",
+    propositos: [
+      {
+        para: "Quién es el titular del dominio en el registrador: el cliente o el operador.",
+        fuente: FICHA_DE_DOMINIOS,
+      },
+    ],
+    consumidores: [DOMINIOS],
+    ponerPor: ["dominios.agregar"],
+  },
+  "motivo-de-retiro-de-dominio": {
+    ambito: "PLATAFORMA",
+    ficha: "src/modulos/marcas/dominio/ciclo-de-dominio.ts",
+    propositos: [
+      {
+        para: "Motivo obligatorio (hasta 500 caracteres) al retirar un dominio; queda en el historial.",
+        fuente: FICHA_DE_DOMINIOS,
+      },
+    ],
+    consumidores: [DOMINIOS],
+    ponerPor: ["dominios.retirar"],
   },
 } as const satisfies Readonly<Record<string, DatoDeConsola>>;

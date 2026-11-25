@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0913",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Una empresa tiene un solo host vigente por superficie (uno para la aplicación y otro para la carta).",
+  "que_cambia": "Un índice único parcial lo impone en la base (se construye en P2). Revertir: quitar el índice.",
+  "donde": "Respuesta del dueño del 25/11/2026 (Sí a A, B, C y D), plan v2 de dominio propio §0.7 D."
+}

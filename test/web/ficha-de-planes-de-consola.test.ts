@@ -16,7 +16,7 @@ import { TEXTOS_DE_PLATAFORMA } from "../../src/capacidades/vocabulario/textos-d
  */
 
 /** El catálogo de la consola es uno solo; cada ficha declara los textos de SU pantalla («Política de cambio de plan» y «Deshacer por arrepentimiento» tienen las suyas). */
-const DE_LA_POLITICA = /^plataforma\.(menu\.politica|politica\.|arrepentir\.)/;
+const DE_LA_POLITICA = /^plataforma\.(menu\.politica|politica\.|arrepentir\.|dominios\.)/;
 const textosDePlanes = Object.fromEntries(
   Object.entries(TEXTOS_DE_PLATAFORMA).filter(([clave]) => !DE_LA_POLITICA.test(clave)),
 );

@@ -181,6 +181,7 @@ export function lecturaFalsa(datos: DatosDeLecturaFalsa = {}): LecturaDeSoporte 
     listarAltasPendientes: (...a) => pedir("listarAltasPendientes", a, datos.altas ?? []),
     listarInvitaciones: (...a) => pedir("listarInvitaciones", a, datos.invitaciones ?? []),
     listarTrabajosFallidos: (...a) => pedir("listarTrabajosFallidos", a, datos.trabajos ?? []),
+    listarDominios: (...a) => pedir("listarDominios", a, []),
     consultarAuditoria: (...a) => pedir("consultarAuditoria", a, datos.auditoria ?? []),
     buscarReferencias: (...a) => pedir("buscarReferencias", a, datos.referencias ?? []),
     estadosDeEmpresas: (...a) => pedir("estadosDeEmpresas", a, datos.estados ?? new Map()),

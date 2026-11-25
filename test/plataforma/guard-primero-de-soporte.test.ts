@@ -92,6 +92,7 @@ const LLAMADAS_DE_CONSULTAS: Record<
   verConfiguracion: (c) => c.verConfiguracion(comoAdministrador),
   catalogoDePerillas: (c) => c.catalogoDePerillas(comoAdministrador),
   buscarReferencia: (c) => c.buscarReferencia(comoAdministrador, { referencia: "PD-0000-0000" }),
+  listarDominios: (c) => c.listarDominios(comoAdministrador, {}),
 };
 
 /** Lo mismo para los casos de uso que pasan por el guard (los `sinGuard` se declaran y se explican aparte). */
