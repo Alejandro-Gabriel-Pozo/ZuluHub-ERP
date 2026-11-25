@@ -384,7 +384,7 @@ _Excepción para la empresa de PRUEBAS en Preview (2026-11-05, pedido del dueño
 
 **Secretos del Environment `preview`** para ese workflow: `PEDERNAL_DB_DUENO_DIRECTA`, `PEDERNAL_SECRETO_INVITACIONES` (hexadecimal, 64 o más dígitos) y
 `CRON_SECRET` (24 o más caracteres) —los dos últimos con el MISMO valor que en Vercel Preview, fijados por el dueño, y después un Redeploy de
-preview— y `PEDERNAL_PREPARAR_PREVIEW`, un JSON en UNA línea. Plantilla con valores FICTICIOS (`adminEmail` y `emailGerente` tienen que ser
+preview— y `PEDERNAL_PREPARAR_PREVIEW`, un JSON en UNA línea. Además, **una variable** (no un secreto) del mismo Environment: `PEDERNAL_HOSTS_PROTEGIDOS`, los hosts de la consola, la aplicación y la landing de Preview separados por comas y sin `https://` (los mismos que tienen esos proyectos); sin ella el chequeo previo del workflow se corta y nada se prepara, porque agregar el dominio de la empresa falla cerrado. Plantilla con valores FICTICIOS (`adminEmail` y `emailGerente` tienen que ser
 DISTINTOS: el administrador de plataforma no puede ser miembro de ninguna empresa; `vigenteDesde` es un instante FUTURO de 5 a 8 minutos desde la
 corrida —la confirmación de la marca no admite una fecha pasada y el alta exige la marca ya vigente, así que el flujo espera a que llegue— y
 `verificadoEn`, uno pasado; si el Environment tarda en aprobarse y `vigenteDesde` queda en el pasado, el flujo cierra bien el login y rechaza: se edita el JSON y se repite):
