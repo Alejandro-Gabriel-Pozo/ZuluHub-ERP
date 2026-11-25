@@ -3,9 +3,11 @@ import {
   type PropuestaDeConciliacion,
 } from "../casos-de-uso/proponer-conciliacion";
 import {
+  fichaDeRecepcionSeparadaDentro,
   listarFacturasSeparadasDentro,
   listarRecepcionesSeparadasDentro,
   type EntradaDeListarSeparadas,
+  type FichaDeRecepcionSeparada,
   type FacturaSeparadaDeLista,
   type PaginaDe,
   type RecepcionSeparadaDeLista,
@@ -13,6 +15,7 @@ import {
 import { type Lector, type RDeConsulta } from "./comun";
 
 export type {
+  FichaDeRecepcionSeparada,
   PropuestaDeConciliacion,
   EntradaDeListarSeparadas,
   FacturaSeparadaDeLista,
@@ -29,6 +32,15 @@ export function armarConsultasDeConciliacion(leer: Lector) {
     ): Promise<RDeConsulta<PaginaDe<RecepcionSeparadaDeLista>>> {
       return leer(contexto, ["recepciones.ver"], (tx) =>
         listarRecepcionesSeparadasDentro(tx, contexto, entrada),
+      ).then((r) => (r.ok ? r.valor : r));
+    },
+    /** La ficha de una recepción de N3 o N4 (guard `recepciones.ver`); `null` si no existe, no es de recepción separada o es de una sucursal fuera del alcance. */
+    fichaDeRecepcionSeparada(
+      contexto: Parameters<Lector>[0],
+      entrada: Readonly<{ recepcionId: string }>,
+    ): Promise<RDeConsulta<FichaDeRecepcionSeparada | null>> {
+      return leer(contexto, ["recepciones.ver"], (tx) =>
+        fichaDeRecepcionSeparadaDentro(tx, contexto, entrada),
       ).then((r) => (r.ok ? r.valor : r));
     },
     /** Las facturas de N3 y N4 con su estado derivado («Facturada, falta recibir», conciliada, anulada), paginadas por cursor (guard `comprobantes_de_proveedor.ver`). */

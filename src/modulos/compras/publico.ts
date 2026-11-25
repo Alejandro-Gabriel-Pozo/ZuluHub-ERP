@@ -44,6 +44,16 @@ export {
   type PaginaDeCompras,
 } from "./casos-de-uso/lectura";
 export type {
+  EstadoDeFacturaSeparada,
+  EstadoDeRecepcionSeparada,
+} from "./dominio/recepcion-separada";
+export { FORMA_DEL_CURSOR_SEPARADO as FORMA_DEL_CURSOR_DE_RECEPCIONES } from "./casos-de-uso/lectura-separada";
+export type {
+  FichaDeRecepcionSeparada,
+  PaginaDe as PaginaDeSeparadas,
+  RecepcionSeparadaDeLista,
+} from "./casos-de-uso/lectura-separada";
+export type {
   EntradaDeComprobanteDeFicha,
   EntradaDePuntoDeVenta,
   EntradaDeResolverPedido,

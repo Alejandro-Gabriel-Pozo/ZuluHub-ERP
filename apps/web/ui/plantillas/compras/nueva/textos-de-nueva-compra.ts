@@ -38,6 +38,8 @@ export type TextosDeNuevaCompra = Readonly<{
   quitar: string;
   sinElegir: string;
   comprarYRecibir: string;
+  /** «Recibir»: el botón de la recepción separada (mismo componente, sin precio). */
+  recibir: string;
   enviando: string;
   reintentar: string;
   sinResultados: string;
@@ -92,6 +94,7 @@ export function textosDeNuevaCompra(): TextosDeNuevaCompra {
     quitar: texto({}, "catalogo.accion.quitar"),
     sinElegir: texto({}, "catalogo.dato.sin_elegir"),
     comprarYRecibir: texto({}, "compras.compra.comprar_y_recibir"),
+    recibir: texto({}, "compras.recepcion.recibir"),
     enviando: texto({}, "conexion.enviando"),
     reintentar: texto({}, "estado.reintentar"),
     sinResultados: texto({}, "catalogo.lista.sin_resultados"),
