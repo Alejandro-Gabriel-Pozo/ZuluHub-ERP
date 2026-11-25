@@ -57,6 +57,19 @@ export const COLUMNAS_DE_IDENTIDAD = {
     "tipo",
   ],
   invitacion_sucursal: ["invitacion_id", "empresa_id", "sucursal_id"],
+  // 0094 (H4b T1): los roles propios de la empresa y sus versiones (las plantillas y los pisos de la plataforma se leen con SQL propio: son de otro dueño)
+  rol_de_empresa: [
+    "id",
+    "empresa_id",
+    "nombre",
+    "nombre_clave",
+    "plantilla_origen",
+    "activo",
+    "creado_en",
+    "actualizado_en",
+    "version",
+  ],
+  version_de_rol: ["empresa_id", "rol_id", "numero", "acciones", "creado_por", "creado_en"],
   // 0005 (H6)
   traspaso_gerencia: [
     "id",

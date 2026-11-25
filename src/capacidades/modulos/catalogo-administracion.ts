@@ -25,6 +25,13 @@ export const MODULO_DE_ADMINISTRACION = {
     "usuarios.ver": { capacidad: null, efecto: "LECTURA" },
     "usuarios.asignar_sucursales": { capacidad: null, efecto: "CREA_AMPLIA" },
     "usuarios.revocar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+    // H4b T4 (roles propios): solo el gerente (piso SOLO_GERENTE de 0097). Crear y editar un rol crean o amplían; archivar cierra; reactivar vuelve a crear. Asignar un rol propio a una
+    // persona amplía lo que esa persona puede hacer.
+    "roles.ver": { capacidad: null, efecto: "LECTURA" },
+    "roles.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+    "roles.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+    "roles.archivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+    "usuarios.asignar_rol": { capacidad: null, efecto: "CREA_AMPLIA" },
     "sucursales.ver": { capacidad: null, efecto: "LECTURA" },
     "sucursales.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
     "sucursales.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
