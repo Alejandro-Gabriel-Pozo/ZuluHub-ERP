@@ -1,0 +1,78 @@
+.raiz {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  min-width: 0;
+}
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* El filtro es un enlace con el aspecto de un botón; el activo se distingue por el trazo grueso y el fondo, no solo por el color. */
+.filtro {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--objetivo-minimo);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-5);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+  text-decoration: none;
+}
+
+.filtro[data-activo="si"] {
+  border-color: var(--color-texto);
+  background: var(--color-superficie-elevada);
+  text-decoration: underline;
+}
+
+.lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mesa {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  min-width: 0;
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie-elevada);
+  color: var(--color-texto);
+}
+
+.cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-3);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.total {
+  margin: 0;
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.cuentas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-texto-suave);
+}

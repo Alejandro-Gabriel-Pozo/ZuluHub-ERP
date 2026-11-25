@@ -22,10 +22,12 @@ const mundo = vi.hoisted(
     efectiva: string;
     creaciones: Record<string, unknown>[];
     listas: Record<string, unknown>[];
+    mapas: Record<string, unknown>[];
   } => ({
     efectiva: "",
     creaciones: [],
     listas: [],
+    mapas: [],
   }),
 );
 vi.mock("../../apps/web/servidor/composicion", () => ({
@@ -50,6 +52,10 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
         mundo.listas.push(entrada);
         return Promise.resolve({ ok: true, valor: [] });
       },
+      mapaDeMesas: (_c: unknown, entrada: Record<string, unknown>) => {
+        mundo.mapas.push(entrada);
+        return Promise.resolve({ ok: true, valor: [] });
+      },
     }),
   },
 }));
@@ -71,6 +77,7 @@ type Salon = {
   darDeAltaLaMesa: (clave: string, datos: FormData) => Promise<unknown>;
   cargarLasMesas: (contexto: never) => Promise<unknown>;
   cambiarElEstadoDeLaMesaDelSalon: (id: string, activa: boolean) => Promise<unknown>;
+  cargarElMapaDeMesas: (crudo?: unknown) => Promise<unknown>;
   nuevaClaveDeMesa: () => string;
 };
 const cargar = () => import(/* @vite-ignore */ RUTA) as Promise<Salon>;
@@ -92,6 +99,7 @@ beforeEach(() => {
   mundo.efectiva = SUCURSAL;
   mundo.creaciones = [];
   mundo.listas = [];
+  mundo.mapas = [];
 });
 
 describe("servidor del salón: mesas", () => {
@@ -143,5 +151,47 @@ describe("servidor del salón: mesas", () => {
   it("la clave de creación es nueva en cada apertura de la página", async () => {
     const { nuevaClaveDeMesa } = await cargar();
     expect(nuevaClaveDeMesa()).not.toBe(nuevaClaveDeMesa());
+  });
+});
+
+describe("servidor del salón: mapa de mesas (SAL-A)", () => {
+  it("el mapa pide la sucursal del servidor; sin filtro es «Todas»", async () => {
+    const { cargarElMapaDeMesas } = await cargar();
+    expect(await cargarElMapaDeMesas()).toEqual({ ok: true, dato: { mesas: [] } });
+    expect(mundo.mapas).toEqual([{ sucursalId: SUCURSAL, filtro: "TODAS" }]);
+  });
+
+  it("la sucursal y la empresa que traiga el pedido del navegador se descartan; el filtro pasa solo si es de la lista", async () => {
+    const { cargarElMapaDeMesas } = await cargar();
+    await cargarElMapaDeMesas({ filtro: "LIBRES", sucursalId: "otra", empresaId: "otra" });
+    expect(mundo.mapas).toEqual([{ sucursalId: SUCURSAL, filtro: "LIBRES" }]);
+  });
+
+  it("un filtro que no existe cierra con el genérico y no llama a la consulta", async () => {
+    const { cargarElMapaDeMesas } = await cargar();
+    expect(await cargarElMapaDeMesas({ filtro: "TODAS_LAS_SUCURSALES" })).toEqual({
+      ok: false,
+      error: errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA"),
+    });
+    expect(mundo.mapas).toEqual([]);
+  });
+
+  it("sin sucursal efectiva no se asume «todas»: el genérico y ninguna llamada", async () => {
+    mundo.efectiva = "";
+    const { cargarElMapaDeMesas } = await cargar();
+    expect(await cargarElMapaDeMesas({ filtro: "LIBRES" })).toEqual({
+      ok: false,
+      error: errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA"),
+    });
+    expect(mundo.mapas).toEqual([]);
+  });
+
+  it("dos sucursales: cada pedido trae la suya, nunca la del otro", async () => {
+    const { cargarElMapaDeMesas } = await cargar();
+    const OTRA = "44444444-4444-4444-8444-444444444444";
+    await cargarElMapaDeMesas();
+    mundo.efectiva = OTRA;
+    await cargarElMapaDeMesas();
+    expect(mundo.mapas.map((m) => m["sucursalId"])).toEqual([SUCURSAL, OTRA]);
   });
 });

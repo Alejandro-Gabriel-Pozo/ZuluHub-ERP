@@ -590,6 +590,41 @@ describe.skipIf(base === null)("salón: pedido, envío, cambio de mesa y cobro",
     });
   });
 
+  it("FECHAS: los minutos abiertos del mapa se cuentan contra el reloj del servidor (contexto.ahora), no contra el del navegador, y nunca salen negativos", async () => {
+    const x = await m.escenario();
+    const mesaId = nuevoId();
+    valorDe(
+      await m.salon.crearMesa(x.gerente, {
+        mesaId,
+        sucursalId: x.sucursal,
+        numero: 1,
+        forma: "CUADRADA",
+        tamano: "CHICA",
+        columna: 1,
+        fila: 1,
+      }),
+    );
+    const abierta = valorDe(
+      await m.salon.tomarPedido(x.gerente, { cuentaId: nuevoId(), mesaId }),
+    ).cuentaId;
+    const minutosA = async (milisegundos: number) => {
+      const mapa = valorDe(
+        await m.consultasDeSalon.mapaDeMesas(
+          { ...x.operador, ahora: new Date(x.gerente.ahora.getTime() + milisegundos) },
+          { sucursalId: x.sucursal },
+        ),
+      );
+      expect(mapa[0]).toMatchObject({ cuentaId: abierta });
+      return mapa[0]?.minutosAbierta;
+    };
+    expect(await minutosA(0)).toBe(0);
+    expect(await minutosA(59_999)).toBe(0);
+    expect(await minutosA(60_000)).toBe(1);
+    expect(await minutosA(90 * 60_000 + 30_000)).toBe(90);
+    // Un reloj que va para atrás (la cuenta «abierta en el futuro») no da minutos negativos.
+    expect(await minutosA(-5 * 60_000)).toBe(0);
+  });
+
   it("P13: otra empresa y sucursal fuera de alcance son inexistentes o rechazadas; el mapa solo muestra lo propio", async () => {
     const x = await m.escenario();
     const { id } = await mesa();
