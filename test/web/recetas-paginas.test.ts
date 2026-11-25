@@ -17,16 +17,23 @@ const mundo = vi.hoisted(
     lista: unknown;
     receta: unknown;
     cocina: unknown;
-  } => ({ pedidos: [], lista: null, receta: null, cocina: null }),
+    permisos: unknown;
+    productos: unknown;
+    ingredientes: unknown;
+  } => ({
+    pedidos: [],
+    lista: null,
+    receta: null,
+    cocina: null,
+    permisos: null,
+    productos: null,
+    ingredientes: null,
+  }),
 );
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
     consultasDeEmpresas: () => ({
-      permisosDelActor: () =>
-        Promise.resolve({
-          ok: true,
-          valor: { acciones: [], modulos: { activos: [], enSoloLectura: [] } },
-        }),
+      permisosDelActor: () => Promise.resolve(mundo.permisos),
     }),
   },
 }));
@@ -39,6 +46,16 @@ vi.mock("../../apps/web/servidor/recetas", () => ({
     mundo.pedidos.push({ quien: "receta", contexto, dato: id });
     return Promise.resolve(mundo.receta);
   },
+  cargarLosProductosSinReceta: (contexto: unknown) => {
+    mundo.pedidos.push({ quien: "productos", contexto, dato: null });
+    return Promise.resolve(mundo.productos);
+  },
+  cargarLosIngredientes: (contexto: unknown, id: string) => {
+    mundo.pedidos.push({ quien: "ingredientes", contexto, dato: id });
+    return Promise.resolve(mundo.ingredientes);
+  },
+  guardarLaRecetaDelFormulario: () => Promise.resolve({ error: null }),
+  confirmarLaReceta: () => Promise.resolve({ error: null, vista: null }),
   cargarLaFichaDeCocina: (contexto: unknown, id: string) => {
     mundo.pedidos.push({ quien: "cocina", contexto, dato: id });
     return Promise.resolve(mundo.cocina);
@@ -65,6 +82,8 @@ const BASE = "../../apps/web/app/s/app/(operacion)/catalogo/recetas";
 const RUTA_DE_LA_LISTA = `${BASE}/page`;
 const RUTA_DE_LA_FICHA = `${BASE}/[productoId]/page`;
 const RUTA_DE_LA_COCINA = `${BASE}/[productoId]/cocina/page`;
+const RUTA_DE_LA_NUEVA = `${BASE}/nueva/page`;
+const RUTA_DE_EDITAR = `${BASE}/[productoId]/editar/page`;
 
 type Params = Record<string, string | string[] | undefined>;
 const cargarLista = (): Promise<{
@@ -76,6 +95,31 @@ const cargarFicha = (): Promise<{
 const cargarCocina = (): Promise<{
   default: (p: { params: Promise<{ productoId: string }> }) => Promise<unknown>;
 }> => import(/* @vite-ignore */ RUTA_DE_LA_COCINA);
+
+const cargarNueva = (): Promise<{
+  default: (p: { searchParams: Promise<Params> }) => Promise<unknown>;
+}> => import(/* @vite-ignore */ RUTA_DE_LA_NUEVA);
+const cargarEditar = (): Promise<{
+  default: (p: { params: Promise<{ productoId: string }> }) => Promise<unknown>;
+}> => import(/* @vite-ignore */ RUTA_DE_EDITAR);
+const htmlDeLaNueva = async (params: Params = {}) => {
+  const { default: Pagina } = await cargarNueva();
+  return renderToStaticMarkup(
+    (await Pagina({ searchParams: Promise.resolve(params) })) as ReactNode,
+  );
+};
+const htmlDeEditar = async (productoId = ID) => {
+  const { default: Pagina } = await cargarEditar();
+  return renderToStaticMarkup(
+    (await Pagina({ params: Promise.resolve({ productoId }) })) as ReactNode,
+  );
+};
+const puede = (acciones: string[]) => {
+  mundo.permisos = {
+    ok: true,
+    valor: { acciones, modulos: { activos: ["stock"], enSoloLectura: [] } },
+  };
+};
 
 const htmlDeLaLista = async (params: Params = {}) => {
   const { default: Pagina } = await cargarLista();
@@ -171,8 +215,29 @@ const responde = (que: "lista" | "receta" | "cocina", r: Respuesta<unknown>) => 
   mundo[que] = r;
 };
 
+const SIN_RECETA = [
+  {
+    productoId: "22222222-2222-4222-8222-222222222222",
+    nombre: "Flan",
+    claseDeUso: "VENDIBLE",
+    activo: true,
+    version: null,
+  },
+];
+const INGREDIENTES = [
+  {
+    productoId: "33333333-3333-4333-8333-333333333333",
+    nombre: "Harina",
+    claseDeUso: "MATERIA_PRIMA",
+    unidadId: "KILOGRAMO",
+  },
+];
+
 beforeEach(() => {
   mundo.pedidos = [];
+  puede(["stock.ver"]);
+  mundo.productos = { ok: true, dato: SIN_RECETA };
+  mundo.ingredientes = { ok: true, dato: INGREDIENTES };
   responde("lista", { ok: true, dato: LISTA });
   responde("receta", { ok: true, dato: RECETA });
   responde("cocina", { ok: true, dato: COCINA });
@@ -386,6 +451,128 @@ describe("la página de la ficha de cocina", () => {
     responde("cocina", { ok: true, dato: COCINA });
     responde("receta", { ok: false, error: errorDeCodigo("MODULO_NO_ACTIVO") });
     expect(aTexto(await htmlDeLaCocina())).toContain(
+      "Esta función no está activada para la empresa.",
+    );
+  });
+});
+
+describe("«Nueva receta» y «Editar» en la lista y la ficha", () => {
+  it("solo con composiciones.editar (gerente o administrador) aparecen; un operador no los ve", async () => {
+    expect(aTexto(await htmlDeLaLista())).not.toContain("Nueva receta");
+    expect(aTexto(await htmlDeLaFicha())).not.toContain("Editar");
+    puede(["stock.ver", "composiciones.editar"]);
+    const lista = await htmlDeLaLista();
+    expect(aTexto(lista)).toContain("Nueva receta");
+    expect(lista).toContain('href="/catalogo/recetas/nueva"');
+    const ficha = await htmlDeLaFicha();
+    expect(aTexto(ficha)).toContain("Editar");
+    expect(ficha).toContain(`href="/catalogo/recetas/${ID}/editar"`);
+  });
+
+  it("un producto sin receta ofrece «Nueva receta» con el producto elegido, solo a quien puede guardar", async () => {
+    responde("receta", { ok: true, dato: { ...RECETA, ficha: null } });
+    expect(await htmlDeLaFicha()).not.toContain("/nueva");
+    puede(["stock.ver", "composiciones.editar"]);
+    expect(await htmlDeLaFicha()).toContain(`href="/catalogo/recetas/nueva?producto=${ID}"`);
+  });
+});
+
+describe("la página de la receta nueva", () => {
+  it("un solo h1 «Nueva receta», con el selector de producto, el rinde, los ingredientes que se ofrecen y «Guardar» apagado", async () => {
+    puede(["stock.ver", "composiciones.editar"]);
+    const html = await htmlDeLaNueva();
+    expect(titulos(html)).toEqual(["Nueva receta"]);
+    const t = aTexto(html);
+    expect(t).toContain("Producto");
+    expect(t).toContain("Flan");
+    expect(t).toContain("Rinde");
+    expect(t).toContain("Harina (Kilogramo)");
+    expect(t).toContain("Guardar");
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>Guardar</);
+  });
+
+  it("pide los productos y los ingredientes con el contexto del servidor, sin excluir ninguno; con `?producto=` lo deja elegido solo si se ofrece", async () => {
+    puede(["stock.ver", "composiciones.editar"]);
+    const elegido = await htmlDeLaNueva({ producto: "22222222-2222-4222-8222-222222222222" });
+    expect(mundo.pedidos).toEqual([
+      { quien: "productos", contexto: { id: "contexto" }, dato: null },
+      { quien: "ingredientes", contexto: { id: "contexto" }, dato: "" },
+    ]);
+    expect(elegido).toMatch(/<option value="22222222-2222-4222-8222-222222222222" selected/);
+    expect(await htmlDeLaNueva({ producto: "otro" })).not.toMatch(
+      /<option value="22222222-2222-4222-8222-222222222222" selected/,
+    );
+  });
+
+  it("sin composiciones.editar (un operador) sale el genérico y no se pide nada", async () => {
+    const t = aTexto(await htmlDeLaNueva());
+    expect(t).toContain("Esta acción no está permitida");
+    expect(mundo.pedidos).toEqual([]);
+  });
+
+  it("si no se pudieron leer los permisos, sale el genérico (cierra, no abre)", async () => {
+    mundo.permisos = { ok: false, error: "SIN_PERMISO" };
+    expect(aTexto(await htmlDeLaNueva())).toContain("Esta acción no está permitida");
+  });
+
+  it("el motivo del guard o un fallo al pedir lo que se ofrece sale con su texto y sin formulario", async () => {
+    puede(["stock.ver", "composiciones.editar"]);
+    mundo.productos = { ok: false, error: errorDeCodigo("MODULO_NO_ACTIVO") };
+    const a = await htmlDeLaNueva();
+    expect(aTexto(a)).toContain("Esta función no está activada para la empresa.");
+    expect(a).not.toContain("Rinde");
+    mundo.productos = { ok: true, dato: SIN_RECETA };
+    mundo.ingredientes = {
+      ok: false,
+      error: { ...errorDeCodigo("ERROR_INTERNO"), referencia: "PD-ABC123" },
+    };
+    const b = aTexto(await htmlDeLaNueva());
+    expect(b).toContain("PD-ABC123");
+    expect(b).not.toContain("ERROR_INTERNO");
+  });
+});
+
+describe("la página de editar una receta", () => {
+  it("un solo h1 con el nombre del producto, con el rinde, los pasos y cada ingrediente cargado (en la unidad en que se guardó)", async () => {
+    puede(["stock.ver", "composiciones.editar"]);
+    const html = await htmlDeEditar();
+    expect(titulos(html)).toEqual(["Pizza"]);
+    const t = aTexto(html);
+    expect(t).toContain("Rinde");
+    expect(t).toContain("Harina");
+    expect(t).toContain("Bruto (Kilogramo)");
+    expect(t).toContain("Merma (%)");
+    expect(t).not.toContain("Producto");
+    expect(html).toContain("Amasar y hornear.");
+  });
+
+  it("pide la receta y los ingredientes (sin el propio producto) con el contexto del servidor", async () => {
+    puede(["stock.ver", "composiciones.editar"]);
+    await htmlDeEditar();
+    expect(mundo.pedidos).toEqual([
+      { quien: "receta", contexto: { id: "contexto" }, dato: ID },
+      { quien: "ingredientes", contexto: { id: "contexto" }, dato: ID },
+    ]);
+  });
+
+  it("sin composiciones.editar sale el genérico; un producto que no está o sin receta, también", async () => {
+    expect(aTexto(await htmlDeEditar())).toContain("Esta acción no está permitida");
+    puede(["stock.ver", "composiciones.editar"]);
+    responde("receta", { ok: true, dato: null });
+    expect(aTexto(await htmlDeEditar("no-existe"))).toContain("Esta acción no está permitida");
+    responde("receta", { ok: true, dato: { ...RECETA, ficha: null } });
+    expect(aTexto(await htmlDeEditar())).toContain("Esta acción no está permitida");
+  });
+
+  it("el motivo del guard sale con su texto y sin formulario", async () => {
+    puede(["stock.ver", "composiciones.editar"]);
+    responde("receta", { ok: false, error: errorDeCodigo("MODULO_NO_ACTIVO") });
+    const html = await htmlDeEditar();
+    expect(aTexto(html)).toContain("Esta función no está activada para la empresa.");
+    expect(html).not.toContain("Rinde");
+    responde("receta", { ok: true, dato: RECETA });
+    mundo.ingredientes = { ok: false, error: errorDeCodigo("MODULO_NO_ACTIVO") };
+    expect(aTexto(await htmlDeEditar())).toContain(
       "Esta función no está activada para la empresa.",
     );
   });

@@ -1,4 +1,5 @@
 import { pantallaDeOperacion } from "../../../../../../pantallas/operacion";
+import { puedeEditarRecetas } from "../../../../../../servidor/ofertas-de-stock";
 import { cargarLasRecetas } from "../../../../../../servidor/recetas";
 import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 import {
@@ -31,6 +32,7 @@ export default async function PaginaDeRecetas({ searchParams }: PropsDePagina) {
             ? armarLaListaDeRecetas(
                 { recetas: respuesta.dato.recetas, siguiente: respuesta.dato.siguiente },
                 filtro,
+                { editar: await puedeEditarRecetas(contexto) },
               )
             : null
         }

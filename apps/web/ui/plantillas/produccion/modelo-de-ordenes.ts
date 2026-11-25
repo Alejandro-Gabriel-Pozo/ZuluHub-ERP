@@ -49,14 +49,19 @@ export function marcaDeEstado(
     : { texto: texto(d, clave), tono: TONO_DE_ESTADO[estado as keyof typeof TONO_DE_ESTADO] };
 }
 
+/** «KILOGRAMO» pasa a «Kilogramo»; una unidad que la pantalla no conoce se dice con el propio valor. */
+export function textoDeLaUnidad(unidadId: string, d: DiccionarioResuelto = {}): string {
+  const clave = conocido(CLAVE_DE_TEXTO_DE_UNIDAD, unidadId);
+  return clave === null ? unidadId : texto(d, clave);
+}
+
 /** «10» y «KILOGRAMO» pasan a «10 Kilogramo»; sin unidad, solo la cantidad. La cantidad es texto decimal: nunca pasa por `Number` (ADR-006). */
 export function cantidadConUnidad(
   cantidad: string,
   unidadId: string,
   d: DiccionarioResuelto = {},
 ): string {
-  const clave = conocido(CLAVE_DE_TEXTO_DE_UNIDAD, unidadId);
-  const unidad = clave === null ? unidadId : texto(d, clave);
+  const unidad = textoDeLaUnidad(unidadId, d);
   return unidad === "" ? formatearCantidad(cantidad) : `${formatearCantidad(cantidad)} ${unidad}`;
 }
 
