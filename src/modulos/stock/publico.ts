@@ -178,7 +178,13 @@ export type {
   ExistenciaValorizada,
   UltimoCostoDeCompra,
 } from "./consultas/costos";
-export type { FichaDeReceta, LineaDeFicha, VersionDeReceta } from "./consultas/recetas";
+export type {
+  FichaDeCocina,
+  FichaDeReceta,
+  LineaDeCocina,
+  LineaDeFicha,
+  VersionDeReceta,
+} from "./consultas/recetas";
 export type {
   EntradaDeIngredientes,
   EntradaDeListarRecetas,
