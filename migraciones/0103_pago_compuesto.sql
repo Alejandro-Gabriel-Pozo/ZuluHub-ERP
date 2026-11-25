@@ -1,5 +1,5 @@
 -- 0103_pago_compuesto: un pago de proveedor se compone de uno o más medios (P1, sin saldo a favor; decisión del dueño 25/11/2026, filas 438 y 445). Solo el efectivo sale de la caja; la suma de los medios es el total.
---  * Tabla `medio_de_un_pago` (solo inserción): una fila por medio, con su importe. Un solo medio de cada tipo por pago (SUPUESTO, costo de revertir bajo: quitar la UNIQUE).
+--  * Tabla `medio_de_un_pago` (solo inserción): una fila por medio, con su importe. Un solo medio de cada tipo por pago (SUPUESTO, DEC-1280; costo de revertir bajo: quitar la UNIQUE).
 --  * `pago_de_comprobante.medio` admite `COMPUESTO` (se ensancha: lo viejo sigue válido).
 --  * Disparador diferido sobre las líneas: la suma de los medios es EXACTAMENTE el total y la cabecera dice `COMPUESTO` si hay más de uno o el medio único si hay uno.
 --  * Relleno: una línea por cada pago existente, ANTES de activar la RLS y los disparadores. Si hay un pago viejo de importe 0 la migración FRENA (55000) en vez de dejarlo sin línea.
