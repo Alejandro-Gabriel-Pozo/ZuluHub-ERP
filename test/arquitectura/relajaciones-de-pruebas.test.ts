@@ -368,7 +368,7 @@ describe("el repositorio real", () => {
 
   it("el planificador y codeql.yml están de acuerdo con el registro sobre el CI liviano", () => {
     const { BASE_DE_INTEGRACION, perfilDelPullRequest } =
-      require("../../arquitectura/planificar-mutacion.cjs") as {
+      require("../../arquitectura/perfil-del-ci.cjs") as {
         BASE_DE_INTEGRACION: string;
         perfilDelPullRequest: (e: { evento: string; base: string; origen: string }) => string;
       };

@@ -21,7 +21,7 @@
  */
 
 /** La rama de integración (misma constante que `planificar-mutacion.cjs`: una sola fuente). */
-const { BASE_DE_INTEGRACION } = require("./planificar-mutacion.cjs");
+const { BASE_DE_INTEGRACION } = require("./perfil-del-ci.cjs");
 
 /** Jobs de la web: en el CI liviano se aceptan saltados si el cambio no toca la web. */
 const DE_LA_WEB = ["web", "componentes", "recorrido"];

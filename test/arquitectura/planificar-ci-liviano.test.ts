@@ -2,15 +2,20 @@ import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
+type Dependencias = Record<string, string[]>;
 const { BASE_DE_INTEGRACION, perfilDelPullRequest, tocaLaWeb } =
-  require("../../arquitectura/planificar-mutacion.cjs") as {
+  require("../../arquitectura/perfil-del-ci.cjs") as {
     BASE_DE_INTEGRACION: string;
     perfilDelPullRequest: (e: { evento: string; base: string; origen: string }) => string;
-    tocaLaWeb: (e: { cambios: string[]; dependencias: Record<string, string[]> }) => {
-      toca: boolean;
-      motivo: string;
-    };
+    tocaLaWeb: (e: {
+      cambios: string[];
+      dependencias: Dependencias;
+      cierre: (archivo: string, dependencias: Dependencias) => Set<string>;
+    }) => { toca: boolean; motivo: string };
   };
+const { cierre } = require("../../arquitectura/planificar-mutacion.cjs") as {
+  cierre: (archivo: string, dependencias: Dependencias) => Set<string>;
+};
 
 /**
  * CI liviano (dueño, 25/11/2026): un pull request hacia la rama de integración corre sin mutación ni Estabilidad, y la web solo si el cambio la toca; el pull request final
@@ -72,7 +77,8 @@ describe("¿el cambio toca la web?", () => {
     "arquitectura/algo.cjs": [],
     ".github/workflows/ci.yml": [],
   };
-  const toca = (...cambios: string[]) => tocaLaWeb({ cambios, dependencias: DEPENDENCIAS }).toca;
+  const toca = (...cambios: string[]) =>
+    tocaLaWeb({ cambios, dependencias: DEPENDENCIAS, cierre }).toca;
 
   it("un archivo de una aplicación toca la web", () => {
     expect(toca("apps/web/app/pagina.tsx")).toBe(true);
@@ -108,7 +114,7 @@ describe("¿el cambio toca la web?", () => {
       "src/modulos/nuevo/dominio/recien-creado.ts",
       "archivo-raro.xyz",
     ]) {
-      const r = tocaLaWeb({ cambios: [archivo], dependencias: DEPENDENCIAS });
+      const r = tocaLaWeb({ cambios: [archivo], dependencias: DEPENDENCIAS, cierre });
       expect(r.toca, archivo).toBe(true);
       expect(r.motivo, archivo).toContain(archivo);
     }

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
-const { BASE_DE_INTEGRACION } = require("../../arquitectura/planificar-mutacion.cjs") as {
+const { BASE_DE_INTEGRACION } = require("../../arquitectura/perfil-del-ci.cjs") as {
   BASE_DE_INTEGRACION: string;
 };
 const RAIZ = join(import.meta.dirname, "../..");

@@ -15,8 +15,7 @@
  *    (el grafo lo ve) o lo lee como texto (`LECTURAS_DE_APPS`);
  *  - `.github/workflows/ci.yml`: ver `cambioDeCiAfecta`; solo un cambio en jobs que no son de mutación deja de correr todo, y aun así alcanza al guardián.
  *
- * CI liviano (dueño, 25/11/2026): un pull request hacia la rama de integración (`BASE_DE_INTEGRACION`) no corre ninguna mutación ni Estabilidad (corren de noche) y la web solo si el
- * cambio la toca (`tocaLaWeb`); el pull request final (de esa rama hacia otra) corre TODOS los grupos. Ver `perfilDelPullRequest` y `evaluar-gate.cjs`.
+ * CI liviano (dueño, 25/11/2026): ver `perfil-del-ci.cjs` (un pull request hacia la rama de integración no corre mutación ni Estabilidad, y la web solo si el cambio la toca).
  *
  * El mismo grafo (más una lista de rutas del dueño) decide si la integración (`Estabilidad`, 12 copias) tiene que repetirse: ver `planificarEstabilidad`.
  * Orden de los grupos: duración descendente (`ordenarPorDuracion`); los del guardián solo entran si el PR lo toca (`guardian-en-pr.cjs`). Chequeo: `test/arquitectura/planificar-mutacion.test.ts`.
@@ -27,17 +26,7 @@ const path = require("node:path");
 const { cargarLosGrupos } = require("./grupos-de-mutacion.cjs");
 const { gruposDelPlan } = require("./guardian-en-pr.cjs");
 const { decidirPorFiltro } = require("./grupos-por-filtro.cjs");
-
-/**
- * Cambios que ninguna prueba lee de un modo que cambie un resultado: ni la mutación ni la integración los notan. Los dos workflows de acá no los lee ninguna prueba salvo el escaneo de nombres, que no ejerce código mutado.
- */
-const DOCUMENTACION_Y_AJENOS = [
-  /\.md$/,
-  /^\.github\/dependabot\.yml$/,
-  /^\.github\/workflows\/(codeql|gate-rapido)\.yml$/,
-  /^\.gitleaks\.toml$/,
-  /^skills-lock\.json$/,
-];
+const { decidirElPlan, DOCUMENTACION_Y_AJENOS, ARCHIVO_DE_CI } = require("./perfil-del-ci.cjs");
 
 /** Cambios que ninguna prueba unitaria lee: no alteran ningún resultado de mutación. */
 const IGNORABLES = [
@@ -50,8 +39,6 @@ const IGNORABLES_DE_INTEGRACION = [
   ...DOCUMENTACION_Y_AJENOS,
   ...require("./ajenos-a-la-integracion.cjs"),
 ];
-
-const ARCHIVO_DE_CI = ".github/workflows/ci.yml";
 
 /** Configuración de una aplicación: cambia cómo se instalan o transforman sus archivos (workspace de npm, `tsconfig` de esbuild). Se trata como lo desconocido: corre todo. */
 const CONFIGURACION_DE_APPS = /^apps\/[^/]+\/(package\.json|tsconfig[^/]*\.json)$/;
@@ -509,100 +496,26 @@ function leerCi(raiz) {
   };
 }
 
-/** La rama de integración: los pull requests hacia ella corren el CI liviano (decisión del dueño, 25/11/2026); la nocturna y el pull request final hacia `main` corren todo. */
-const BASE_DE_INTEGRACION = "integracion/modulos-v2";
-
-/**
- * Qué CI corre un pull request, por su rama base y su rama de origen (los dos valores llegan por variables de entorno, nunca interpolados en un comando):
- *  - `liviano`: hacia la rama de integración. Sin mutación ni Estabilidad (corren de noche); la web solo si el cambio la toca (`tocaLaWeb`);
- *  - `completo`: el pull request final, de la rama de integración hacia otra (`main`): TODOS los grupos, Estabilidad siempre y la web siempre;
- *  - `por-grafo`: cualquier otro (por ejemplo, una actualización de dependencias hacia `main`): lo de antes, solo lo que el cambio alcanza.
- * Ante la duda (base vacía, rama desconocida) NO es `liviano`: el liviano exige la base exacta.
- *
- * @param {{ evento: string, base: string, origen: string }} entrada
- * @returns {"liviano" | "completo" | "por-grafo"}
- */
-function perfilDelPullRequest({ evento, base, origen }) {
-  if (evento !== "pull_request") return "completo";
-  if (base === BASE_DE_INTEGRACION) return "liviano";
-  return origen === BASE_DE_INTEGRACION ? "completo" : "por-grafo";
-}
-
-/**
- * ¿El cambio puede afectar a la web (compilación de `apps/web` y `apps/plataforma`, componentes en Chromium y recorrido)? Sí si toca un archivo de `apps/`, el
- * propio `ci.yml`, un archivo que alguna aplicación o un recorrido importa (cierre de importaciones del grafo) o algo que el grafo no conoce (la configuración,
- * las migraciones que aplica el recorrido, `package.json`): ante lo que no sabe clasificar, SÍ (falla cerrado). Solo la documentación y lo que ninguna
- * aplicación ni recorrido alcanza dan `false`.
- *
- * @param {{ cambios: readonly string[], dependencias: Readonly<Record<string, readonly string[]>> }} entrada
- * @returns {{ toca: boolean, motivo: string }}
- */
-function tocaLaWeb({ cambios, dependencias }) {
-  const entradas = Object.keys(dependencias).filter(
-    (archivo) =>
-      archivo.startsWith("apps/") || /^test\/recorrido\/.*\.recorrido\.ts$/.test(archivo),
-  );
-  let alcanzados;
-  const alcanzaA = (cambio) => {
-    alcanzados ??= entradas.map((entrada) => cierre(entrada, dependencias));
-    return alcanzados.some((alcance) => alcance.has(cambio));
-  };
-  for (const cambio of cambios) {
-    if (DOCUMENTACION_Y_AJENOS.some((patron) => patron.test(cambio))) continue;
-    if (cambio === ARCHIVO_DE_CI || cambio.startsWith("apps/")) {
-      return { toca: true, motivo: `cambia ${cambio}` };
-    }
-    if (!(cambio in dependencias)) {
-      return { toca: true, motivo: `cambia ${cambio}, que el grafo de importaciones no explica` };
-    }
-    if (alcanzaA(cambio))
-      return { toca: true, motivo: `cambia ${cambio}, que usa una aplicación o un recorrido` };
-  }
-  return {
-    toca: false,
-    motivo: "el PR no cambia nada que alcance a las aplicaciones ni a los recorridos",
-  };
-}
-
 function principal() {
   const raiz = process.cwd();
   const grupos = leerGrupos(raiz);
   const evento = process.env["GITHUB_EVENT_NAME"] ?? "";
-  let plan;
-  let estabilidad;
-  let web = {
-    toca: true,
-    motivo: `evento ${evento === "" ? "local" : evento}: la web corre siempre`,
-  };
-  const perfil = perfilDelPullRequest({
+  const { plan, estabilidad, web, perfil } = decidirElPlan({
     evento,
     base: process.env["BASE_DEL_PR"] ?? "",
     origen: process.env["ORIGEN_DEL_PR"] ?? "",
+    raiz,
+    grupos,
+    h: {
+      todosLosGrupos,
+      leerCambios,
+      leerDependencias,
+      leerCi,
+      planificar,
+      planificarEstabilidad,
+      cierre,
+    },
   });
-  if (evento === "pull_request") {
-    const cambios = leerCambios(raiz);
-    const dependencias = leerDependencias(raiz);
-    if (perfil === "liviano") {
-      plan = {
-        completo: false,
-        motivo: `CI liviano (pull request hacia ${BASE_DE_INTEGRACION}): la mutación corre de noche`,
-        grupos: [],
-      };
-      estabilidad = { corre: false, motivo: "CI liviano: Estabilidad corre de noche" };
-      web = tocaLaWeb({ cambios, dependencias });
-    } else if (perfil === "completo") {
-      plan = todosLosGrupos(grupos, "pull request final: se corre todo");
-      estabilidad = { corre: true, motivo: "pull request final: se repite siempre" };
-    } else {
-      const ci = cambios.includes(ARCHIVO_DE_CI) ? leerCi(raiz) : undefined;
-      plan = planificar({ cambios, grupos, dependencias, ci });
-      estabilidad = planificarEstabilidad({ cambios, dependencias });
-    }
-  } else {
-    const cual = `evento ${evento === "" ? "local" : evento}`;
-    plan = todosLosGrupos(grupos, `${cual}: se corre todo`);
-    estabilidad = { corre: true, motivo: `${cual}: se repite siempre` };
-  }
 
   const resumen = [
     `Mutación: ${plan.motivo}.`,
@@ -622,9 +535,6 @@ function principal() {
 }
 
 module.exports = {
-  BASE_DE_INTEGRACION,
-  perfilDelPullRequest,
-  tocaLaWeb,
   planificar,
   planificarEstabilidad,
   ordenarPorDuracion,
@@ -636,6 +546,7 @@ module.exports = {
   archivoDe,
   conEnlacesDelGuardian,
   leerArchivosDelGuardian,
+  cierre,
 };
 
 if (require.main === module) principal();
