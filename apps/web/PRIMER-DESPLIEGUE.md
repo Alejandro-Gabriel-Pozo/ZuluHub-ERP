@@ -458,7 +458,7 @@ ARCA ni contra una base real: **NO VERIFICADO** hasta la prueba de homologación
 
 Decisión del dueño, 25/11/2026: tener la base de datos propia es un **extra de plan** («Extra de plan sobre bd»); los clientes lo piden para «tener sus datos en su propia BD». La base compartida sigue siendo el estándar. Diseño y alternativas: `base-por-cliente-opciones.md` (repositorio de documentos). Esta sección es el camino **mínimo y manual**: una instalación aparte, operada por vos. No hay alta automática.
 
-**Estado:** el mecanismo está en `migrar.yml` (ambiente `cliente-<codigo>`, frase `MIGRAR CLIENTE-<CODIGO>`, respaldo obligatorio) y en `cargar-entorno.yml` (frase `CARGAR CLIENTE-<CODIGO>`, proyecto de Vercel del cliente). La lista de clientes está **vacía** en los dos y en `PROYECTOS_DE_VERCEL_DE_CLIENTES`: no hay ninguno dado de alta.
+**Estado:** el mecanismo está en `migrar.yml` (ambiente `cliente-<codigo>`, frase `MIGRAR CLIENTE-<CODIGO>`, respaldo obligatorio) y en `cargar-entorno.yml` (frase `CARGAR CLIENTE-<CODIGO>`, proyecto de Vercel del cliente). La lista de clientes (`cliente-hdn`, Hoteles del Neuquén: proyecto de Neon «Hoteles del Neuquen», proyecto de Vercel `pedernal-hdn` sin conectar a Git) es la misma en los dos y en `PROYECTOS_DE_VERCEL_DE_CLIENTES`; una prueba falla si difieren. No es el proyecto `hdn` viejo de Motor2.
 
 ### H.1 Neon (la organización `Pedernal`, un proyecto por cliente y una clave por proyecto)
 

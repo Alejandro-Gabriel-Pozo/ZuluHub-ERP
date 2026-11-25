@@ -102,10 +102,10 @@ describe("workflow migrar.yml", () => {
     expect(dentroDeOn.match(/^ {2}[a-z_]+:/gm)).toEqual(["  workflow_dispatch:"]);
   });
 
-  it("los ambientes son preview, produccion y, a lo sumo, clientes de la lista cerrada (hoy vacía), cada uno con su caso", () => {
+  it("los ambientes son preview, produccion y, a lo sumo, clientes de la lista cerrada (hoy uno), cada uno con su caso", () => {
     expect(problemasDeAmbientes(TEXTO)).toEqual([]);
     // La lista de clientes con base propia está VACÍA hoy (dueño, 25/11/2026): sumar uno es una decisión y un cambio a propósito.
-    expect(opcionesDeAmbiente(TEXTO)).toEqual(["preview", "produccion"]);
+    expect(opcionesDeAmbiente(TEXTO)).toEqual(["preview", "produccion", "cliente-hdn"]);
   });
 
   it("solo corre desde main, y lo verifica ANTES de entregar los secretos", () => {

@@ -31,7 +31,7 @@ name: Cargar entorno (preview y producción)
 #      PEDERNAL_VERCEL_TOKEN      token de Vercel con alcance al equipo `alepozod` y vencimiento corto.
 #    El proyecto y el equipo de Vercel no son secretos: están en el código (`plan-de-variables.ts`), no hay variables que cargar.
 #  - CLIENTES CON BASE PROPIA (extra de plan; dueño, 25/11/2026): cada uno es un ambiente `cliente-<codigo>` con SU Environment y SU
-#    proyecto de Vercel, que sale de la lista CERRADA `PROYECTOS_DE_VERCEL_DE_CLIENTES` (hoy VACÍA): sumar un cliente son dos líneas
+#    proyecto de Vercel, que sale de la lista CERRADA `PROYECTOS_DE_VERCEL_DE_CLIENTES` (hoy: `cliente-hdn`): sumar un cliente son dos líneas
 #    acá (una opción y un caso en «validar»), una en esa lista y una prueba que las compara; un código que no está en la lista no
 #    resuelve a ningún proyecto y el comando falla antes de tocar nada. Sus variables NUNCA caen en `pedernal-erp`.
 #
@@ -48,7 +48,8 @@ on:
         options:
           - preview
           - produccion
-          # Clientes con base propia (lista cerrada, vacía hoy): `- cliente-<codigo>` (minúsculas, números y guiones, 3 a 30).
+          # Clientes con base propia (lista cerrada): `- cliente-<codigo>` (minúsculas, números y guiones, 3 a 30).
+          - cliente-hdn
       confirmacion:
         description: "Escribir CARGAR PREVIEW (preview) o CARGAR PRODUCCION (produccion)"
         type: string
@@ -93,8 +94,9 @@ jobs:
           case "$AMBIENTE" in
             preview) esperado="CARGAR PREVIEW"; destino="preview" ;;
             produccion) esperado="CARGAR PRODUCCION"; destino="production" ;;
-            # Un cliente con base propia (lista cerrada, vacía hoy), con su frase y su destino:
+            # Un cliente con base propia (lista cerrada), con su frase y su destino:
             #   cliente-<codigo>) esperado="CARGAR CLIENTE-<CODIGO>"; destino="cliente-<codigo>" ;;
+            cliente-hdn) esperado="CARGAR CLIENTE-HDN"; destino="cliente-hdn" ;;
             *) echo "::error::Ambiente no permitido."; exit 1 ;;
           esac
           if [ "$CONFIRMACION" != "$esperado" ]; then
