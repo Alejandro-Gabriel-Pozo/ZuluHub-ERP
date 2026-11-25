@@ -12,6 +12,18 @@ export const RUTA_DE_NUEVA_COMPRA = `${RUTA_DE_COMPRAS}/nueva`;
 /** La descarga del archivo de compras (Excel) del período aplicado en la lista. */
 const RUTA_DE_EXPORTAR_COMPRAS = `${RUTA_DE_COMPRAS}/exportar`;
 
+/** «Recepciones» (Compras 4, recepción separada): la lista, «Recibir» y el detalle de una recepción. El id del detalle es un UUID que sale de la consulta del servidor, nunca de un texto libre. */
+export const RUTA_DE_RECEPCIONES = `${RUTA_DE_COMPRAS}/recepciones`;
+export const RUTA_DE_RECIBIR = `${RUTA_DE_RECEPCIONES}/recibir`;
+export const rutaDeLaRecepcion = (recepcionId: string): string =>
+  `${RUTA_DE_RECEPCIONES}/${recepcionId}`;
+
+/** La lista de recepciones; con cursor, la página que sigue (lo único que la dirección aporta: la sucursal la pone el servidor). */
+export const direccionDeLaListaDeRecepciones = (despues: string | null): string =>
+  despues === null
+    ? RUTA_DE_RECEPCIONES
+    : `${RUTA_DE_RECEPCIONES}?${new URLSearchParams([["despues", despues]]).toString()}`;
+
 export const rutaDeLaCompra = (recepcionId: string): string => `${RUTA_DE_COMPRAS}/${recepcionId}`;
 
 /** El formulario de «Corregir» una línea de la compra (Compras PR 10): el número de línea es un entero que sale de la ficha. */

@@ -45,6 +45,14 @@ const DE_CORREGIR_Y_ANULAR = (para: string): Proposito => ({
     "Pedernal-docs, brief `PR-10-corregir-y-anular-pantalla.md` de Compras (rama de planificación de la Ola 1) y maqueta `compra-corregir-anular.html` (`vForm`, `vHoja`); quién: gerente y administrador (compras.corregir y recepciones.anular, DDD:187)",
 });
 
+const ACCIONES_DE_LA_RECEPCION =
+  "apps/web/ui/plantillas/compras/recepciones/AccionesDeLaRecepcion.cliente.tsx";
+const DE_RECEPCIONES = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs, maqueta `compra-recibir.html` (estados «Por confirmar» y «Varios depósitos») y `plan-de-pantallas-compras-4-2026-11-25.md` (ficha F3); quién: gerente y administrador (`recepciones.confirmar` y `recepciones.anular`, DEC-0904); aceptada por delegación de pantallas (DEC-0907)",
+});
+
 const HOJA_DE_ANULAR_PAGO = "apps/web/ui/plantillas/compras/pago/HojaDeAnularPago.cliente.tsx";
 const ANULAR_PAGO = ["comprobantes_de_proveedor.anular_pago"] as const;
 const DE_ANULAR_UN_PAGO = (para: string): Proposito => ({
@@ -90,8 +98,11 @@ export const DATOS_DE_COMPRAS = {
     propositos: [
       DE_CORREGIR_Y_ANULAR("Motivo obligatorio de anular una compra entera."),
       DE_ANULAR_UN_PAGO("Motivo obligatorio de anular el pago de una factura."),
+      DE_RECEPCIONES(
+        "Motivo obligatorio de anular una recepción que todavía está «Por confirmar».",
+      ),
     ],
-    consumidores: [HOJA_DE_ANULAR, HOJA_DE_ANULAR_PAGO],
+    consumidores: [HOJA_DE_ANULAR, HOJA_DE_ANULAR_PAGO, ACCIONES_DE_LA_RECEPCION],
     ponerPor: [...ANULAR_COMPRA, ...ANULAR_PAGO],
     requiere: REQUIERE_COMPRAS,
   },
@@ -163,9 +174,12 @@ export const DATOS_DE_COMPRAS = {
       DE_NUEVA_COMPRA(
         "Depósito donde entra la mercadería, solo cuando la sucursal tiene más de un depósito de uso normal (con uno solo, el servidor lo toma sin preguntar).",
       ),
+      DE_RECEPCIONES(
+        "Depósito donde entra la mercadería de una recepción al confirmarla, solo cuando la sucursal tiene más de un depósito de uso normal.",
+      ),
     ],
-    consumidores: [PANTALLA_DE_NUEVA_COMPRA],
-    ponerPor: REGISTRAR_COMPRA,
+    consumidores: [PANTALLA_DE_NUEVA_COMPRA, ACCIONES_DE_LA_RECEPCION],
+    ponerPor: [...REGISTRAR_COMPRA, "recepciones.confirmar"],
     requiere: REQUIERE_COMPRAS,
   },
   "punto-de-venta-del-remito": {

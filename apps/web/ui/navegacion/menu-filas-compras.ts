@@ -1,5 +1,9 @@
 import { RUTA_DE_CLIENTES } from "../plantillas/clientes/modelo-de-directorio";
-import { RUTA_DE_COMPRAS, RUTA_DEL_NIVEL_DE_COMPRAS } from "../plantillas/compras/rutas-de-compras";
+import {
+  RUTA_DE_COMPRAS,
+  RUTA_DE_RECEPCIONES,
+  RUTA_DEL_NIVEL_DE_COMPRAS,
+} from "../plantillas/compras/rutas-de-compras";
 
 /**
  * Las filas del área Compras del menú (compras y proveedores, en el orden de la maqueta `menu-por-areas.html`: «Compras» y después «Proveedores»). Es SOLO una parte de la tabla del menú (`menu.ts`, que las compone en el orden de las áreas y es la única fuente que lee el resto): sumar una pantalla de este
@@ -31,6 +35,20 @@ export const FILAS_DE_COMPRAS = [
     perilla: null,
     href: RUTA_DEL_NIVEL_DE_COMPRAS,
     etiqueta: "compras.nivel.titulo",
+    departamento: null,
+  },
+  // «Recepciones» (Compras 4, recepción separada): la lista de recepciones de la sucursal. Módulo `compras` y la acción de su lectura (`recepciones.ver`, los tres roles); la perilla `recepcion_separada` es del plan de la
+  // empresa (DEC-0902): sin ella la entrada no se ofrece. Nace cerrada: sin la acción o sin la perilla no se ofrece.
+  {
+    tipo: "pantalla",
+    clave: "recepciones",
+    area: "compras",
+    grupo: "compras",
+    modulo: "compras",
+    accion: "recepciones.ver",
+    perilla: "recepcion_separada",
+    href: RUTA_DE_RECEPCIONES,
+    etiqueta: "compras.recepcion.titulo_lista",
     departamento: null,
   },
   {

@@ -294,6 +294,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "compras.nivel.titulo",
       ],
       [
+        "recepciones",
+        "compras",
+        "compras",
+        "compras",
+        "recepciones.ver",
+        "/compras/recepciones",
+        "compras.recepcion.titulo_lista",
+      ],
+      [
         "proveedores",
         "compras",
         "proveedores",
@@ -478,9 +487,9 @@ describe("«Mesas»: la fila declara la función de pago `salon` (X-1b)", () => 
 
   it("lleva la función `salon` y es del mismo módulo", () => {
     expect(mesas.perilla).toBe("salon");
-    expect(FILAS_DEL_MENU.filter((f) => f.tipo === "pantalla" && f.perilla !== null)).toHaveLength(
-      1,
-    );
+    expect(
+      FILAS_DEL_MENU.filter((f) => f.tipo === "pantalla" && f.perilla === "salon"),
+    ).toHaveLength(1);
   });
   it("con el módulo, la acción y la función encendida aparece", () => {
     expect(claves(armarElMenu([mesas], conFunciones(["salon"]), null))).toEqual([
@@ -518,6 +527,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "produccion",
     "compras",
     "nivel-de-compras",
+    "recepciones",
     "proveedores",
     "configuracion-fiscal",
     "medios-de-pago",
