@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0927",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las columnas nuevas del archivo de compras se agregan siempre al final de cada hoja.",
+  "que_cambia": "No corre columnas ni rompe las tablas dinámicas ya armadas. Revertir: reordenar las columnas en armar-hojas.ts.",
+  "donde": "plan-exportacion-de-compras-2026-11-25.md §4.1; armar-hojas.ts"
+}

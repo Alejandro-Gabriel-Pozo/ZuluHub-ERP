@@ -53,7 +53,10 @@ export const claveDeLinea = (recepcionId: string, numero: number): string =>
  * Un dato que no se puede leer para recalcular una línea corregida es un error de integridad: se lanza, no se esconde detrás de «Sin precio».
  */
 export async function importesVigentes(
-  tx: TxDeConsultasDeCompras,
+  tx: Pick<
+    TxDeConsultasDeCompras,
+    "recepciones" | "correccionesDeCompra" | "productosParaCompras" | "presentacionesDeProducto"
+  >,
   contexto: ContextoOperativo,
   recepcionIds: readonly string[],
 ): Promise<
@@ -62,6 +65,8 @@ export async function importesVigentes(
     importes: ReadonlyMap<string, string | null>;
     /** Las líneas (clave `recepcionId|número`) que tienen alguna corrección de precio. */
     corregidas: ReadonlySet<string>;
+    /** La última corrección de cada línea corregida (clave `recepcionId|número`). */
+    ultimas: ReadonlyMap<string, CorreccionGuardada>;
   }>
 > {
   const empresa = contexto.empresaId;
@@ -119,7 +124,7 @@ export async function importesVigentes(
     }
     importes.set(clave, r.valor);
   }
-  return { lineas, importes, corregidas: new Set(ultimas.keys()) };
+  return { lineas, importes, corregidas: new Set(ultimas.keys()), ultimas };
 }
 
 /** Las filas de una página como compras de la lista, con proveedor, total y factura leídos por lote en la MISMA transacción. */
