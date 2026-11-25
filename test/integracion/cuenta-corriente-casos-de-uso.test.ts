@@ -857,8 +857,9 @@ describe.skipIf(base === null)("cuenta corriente de clientes: casos de uso y con
 
   describe("el mapa de restricciones", () => {
     it("tiene exactamente las restricciones de la tabla y las que lanza su disparador: no falta ni sobra ninguna", async () => {
+      // Sin los NOT NULL (`contype = 'n'`): Postgres 18 los guarda como restricciones con nombre propio y la aplicación no las traduce.
       const deLaTabla = await filas<{ nombre: string }>(
-        "select conname as nombre from pg_constraint where conrelid = 'public.cuenta_del_cliente'::regclass",
+        "select conname as nombre from pg_constraint where conrelid = 'public.cuenta_del_cliente'::regclass and contype <> 'n'",
       );
       const delDisparador = [
         "cuenta_cliente_parte_no_activa",

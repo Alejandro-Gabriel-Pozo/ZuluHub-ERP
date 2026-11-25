@@ -53,6 +53,8 @@ export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {
   // proveedores», el directorio) y `compras.md` («Compras»); decisión 175 (textos delegados: lo más corto).
   clientes: "Clientes y proveedores",
   compras: "Compras",
+  // SUPUESTO (DEC-1224): el nombre del módulo de cuenta corriente de clientes, en las palabras del dueño («cuentas corrientes de clientes», 25/11/2026) y lo más corto.
+  cuenta_corriente: "Cuenta corriente",
 };
 
 const buscar = (tabla: Readonly<Record<string, string>>, clave: string): string =>
