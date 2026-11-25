@@ -1,7 +1,7 @@
 {
   "rutas": [
     "^src/primitivas/(dinero|cantidad|unidades|libro|secreto|identificadores|identificacion|identificacion-fiscal|tiempo)/",
-    "^src/modulos/(caja|cierre|ventas|salon|compras|stock|produccion|fiscal|identidad|tenants|empresas|marcas)/",
+    "^src/modulos/(caja|cierre|ventas|salon|compras|stock|produccion|fiscal|identidad|tenants|empresas|marcas|clientes)/",
     "^src/modulos/catalogo/dominio/(carta-publica|carta-publicada|fila-con-precio)\\.ts$",
     "^src/capacidades/(permisos|modulos|roles|autenticacion|experiencia|planes)/",
     "^src/capacidades/activos/(red|direccion-externa)\\.ts$",
