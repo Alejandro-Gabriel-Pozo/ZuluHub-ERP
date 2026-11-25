@@ -47,7 +47,11 @@ describe("el decimal: número solo si es exacto, si no texto exacto", () => {
           if (celda !== null && celda.type === Number) {
             const valor = celda.value as number;
             expect(Number(texto)).toBe(valor);
-            expect(BigInt(Math.round(valor * 10 ** d))).toBe(n);
+            // El número vuelve EXACTAMENTE al texto de la base (sin ceros de más): se compara el texto, no una cuenta con decimales binarios.
+            const sinCeros = texto.includes(".")
+              ? texto.replace(/0+$/, "").replace(/\.$/, "")
+              : texto;
+            expect(String(valor)).toBe(sinCeros);
           } else {
             expect(celda).toEqual({ value: texto, type: String });
           }
