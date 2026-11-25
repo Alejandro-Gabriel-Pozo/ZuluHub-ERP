@@ -1,4 +1,6 @@
-import type { RolDeEmpresa } from "../permisos/roles";
+import type { RolDeLaMembresia } from "../permisos/roles";
+
+export type { RolDeLaMembresia };
 
 /**
  * CONJUNTO EFECTIVO (H4b §3.3): qué acciones tiene una persona según su membresía. Puro: lo que se leyó de la base llega por
@@ -13,8 +15,6 @@ import type { RolDeEmpresa } from "../permisos/roles";
  * (escalada de privilegios) o que una clave retirada del catálogo rompa a todo el rol. Chequeo: `conjunto-efectivo.test.ts` y
  * `conjunto-efectivo.propiedades.test.ts`.
  */
-export type RolDeLaMembresia = RolDeEmpresa | "PROPIO";
-
 export type FuentesDelConjunto = Readonly<{
   /** Todas las acciones del catálogo del código (la fuente de verdad de qué existe). */
   catalogo: ReadonlySet<string>;

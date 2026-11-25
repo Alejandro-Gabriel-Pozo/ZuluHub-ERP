@@ -3,7 +3,7 @@ import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respue
 import type { ContextoOperativo } from "../contexto/contexto";
 import type { EmpresaDeLaLista } from "../modulos/identidad/publico";
 import type { EmpresaId, MarcaComercialId, PersonaId } from "../primitivas/identificadores/marca";
-import type { RolDeEmpresa } from "../capacidades/permisos/roles";
+import { rolParaMostrar, type RolDeEmpresa } from "../capacidades/permisos/roles";
 import type { SesionAutenticada } from "../puertos/autenticacion";
 import { aRespuesta, aRespuestaDeExcepcion, errorAPublico, respuestaDeFalla } from "./a-respuesta";
 import { contextoOperativo, contextoDeSesion } from "./contextos";
@@ -28,13 +28,14 @@ import type { DependenciasDeSesion } from "./dependencias-de-sesion";
 /** Una empresa de la lista de la persona, con lo que la pantalla necesita para elegir y para avisar si no opera. */
 export type EmpresaParaLaPantalla = Pick<
   EmpresaDeLaLista,
-  "empresaId" | "nombre" | "rol" | "estadoEfectivo"
->;
+  "empresaId" | "nombre" | "estadoEfectivo"
+> &
+  Readonly<{ rol: RolDeEmpresa }>;
 
 const paraLaPantalla = (e: EmpresaDeLaLista): EmpresaParaLaPantalla => ({
   empresaId: e.empresaId,
   nombre: e.nombre,
-  rol: e.rol,
+  rol: rolParaMostrar(e.rol),
   estadoEfectivo: e.estadoEfectivo,
 });
 
