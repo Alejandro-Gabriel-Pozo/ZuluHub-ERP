@@ -729,6 +729,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "pedernal_app:membresia.activo",
           // `rol` desde 0005: solo cambia al aceptar un traspaso (política + disparador `membresia_cambio`)
           "pedernal_app:membresia.rol",
+          "pedernal_app:membresia.rol_propio_id",
           ...["numero", "sucursal_id", "domicilio_id", "estado"].map(
             (c) => `pedernal_app:punto_de_venta.${c}`,
           ),
