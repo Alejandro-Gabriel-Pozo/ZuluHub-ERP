@@ -162,6 +162,23 @@ function problemasDelWorkflow(texto: string): string[] {
     ) &&
       [alDia, abrir, cerrar].every((p) => p?.texto.includes("PEDERNAL_PREPARAR_PREVIEW") === false),
   );
+  // Los hosts protegidos de la plataforma (#516): una VARIABLE del Environment (no un secreto: son hosts públicos), solo donde se usa. `agregarDominio` falla cerrado sin ella.
+  exigir(
+    "hosts-protegidos-solo-donde-se-usan",
+    [comprobar, preparar].every(
+      (p) =>
+        p?.texto.includes("PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}") ===
+        true,
+    ) &&
+      [validar, alDia, abrir, cerrar].every(
+        (p) => p?.texto.includes("PEDERNAL_HOSTS_PROTEGIDOS") === false,
+      ) &&
+      limpio
+        .match(/PEDERNAL_HOSTS_PROTEGIDOS: .*/g)
+        ?.every((l) => l.includes("${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}")) === true &&
+      !/secrets\.PEDERNAL_HOSTS_PROTEGIDOS/.test(limpio) &&
+      comprobar?.texto.includes('[ -n "${PEDERNAL_HOSTS_PROTEGIDOS:-}" ] || faltan=') === true,
+  );
   exigir(
     "comando-de-preparacion",
     preparar?.texto.includes("run: npm run plataforma:preparar-prueba\n") === true &&
@@ -300,8 +317,8 @@ describe("workflow preparar-empresa-de-pruebas.yml", () => {
         "inputs-solo-en-validar",
         "una entrada leída en el job de los secretos",
         reemplazar(
-          "          PEDERNAL_PREPARAR_PREVIEW: ${{ secrets.PEDERNAL_PREPARAR_PREVIEW }}\n\n      - uses: actions/checkout",
-          "          PEDERNAL_PREPARAR_PREVIEW: ${{ secrets.PEDERNAL_PREPARAR_PREVIEW }}\n          OTRA: ${{ inputs.confirmacion }}\n\n      - uses: actions/checkout",
+          "          PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}\n\n      - uses: actions/checkout",
+          "          PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}\n          OTRA: ${{ inputs.confirmacion }}\n\n      - uses: actions/checkout",
         ),
       ],
       [
@@ -329,8 +346,8 @@ describe("workflow preparar-empresa-de-pruebas.yml", () => {
         "secretos-declarados",
         "un secreto de más",
         reemplazar(
-          "          PEDERNAL_PREPARAR_PREVIEW: ${{ secrets.PEDERNAL_PREPARAR_PREVIEW }}\n\n      - uses: actions/checkout",
-          "          PEDERNAL_PREPARAR_PREVIEW: ${{ secrets.PEDERNAL_PREPARAR_PREVIEW }}\n          OTRO: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}\n\n      - uses: actions/checkout",
+          "          PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}\n\n      - uses: actions/checkout",
+          "          PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}\n          OTRO: ${{ secrets.PEDERNAL_VERCEL_TOKEN }}\n\n      - uses: actions/checkout",
         ),
       ],
       [
@@ -445,6 +462,46 @@ describe("workflow preparar-empresa-de-pruebas.yml", () => {
         "instala-lo-minimo",
         "instalar con scripts",
         reemplazar("npm ci --omit=dev --ignore-scripts", "npm ci"),
+      ],
+      [
+        "hosts-protegidos-solo-donde-se-usan",
+        "sin la variable en el paso de preparar",
+        reemplazar(
+          "          PEDERNAL_PREPARAR_PREVIEW: ${{ secrets.PEDERNAL_PREPARAR_PREVIEW }}\n          PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}\n\n      - name: Cerrar",
+          "          PEDERNAL_PREPARAR_PREVIEW: ${{ secrets.PEDERNAL_PREPARAR_PREVIEW }}\n\n      - name: Cerrar",
+        ),
+      ],
+      [
+        "hosts-protegidos-solo-donde-se-usan",
+        "la variable también en el login temporal",
+        reemplazar(
+          "        run: npm run plataforma:login-temporal -- abrir\n        env:\n",
+          "        run: npm run plataforma:login-temporal -- abrir\n        env:\n          PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}\n",
+        ),
+      ],
+      [
+        "hosts-protegidos-solo-donde-se-usan",
+        "la lista como secreto",
+        reemplazar(
+          "PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}\n\n      - uses: actions/checkout",
+          "PEDERNAL_HOSTS_PROTEGIDOS: ${{ secrets.PEDERNAL_HOSTS_PROTEGIDOS }}\n\n      - uses: actions/checkout",
+        ),
+      ],
+      [
+        "hosts-protegidos-solo-donde-se-usan",
+        "un valor escrito en el repositorio",
+        reemplazar(
+          "PEDERNAL_HOSTS_PROTEGIDOS: ${{ vars.PEDERNAL_HOSTS_PROTEGIDOS }}\n\n      - uses: actions/checkout",
+          "PEDERNAL_HOSTS_PROTEGIDOS: consola.ejemplo.test\n\n      - uses: actions/checkout",
+        ),
+      ],
+      [
+        "hosts-protegidos-solo-donde-se-usan",
+        "el chequeo previo no pide la variable",
+        reemplazar(
+          '          [ -n "${PEDERNAL_HOSTS_PROTEGIDOS:-}" ] || faltan="$faltan PEDERNAL_HOSTS_PROTEGIDOS"\n',
+          "",
+        ),
       ],
       [
         "grupo-compartido-con-migrar",

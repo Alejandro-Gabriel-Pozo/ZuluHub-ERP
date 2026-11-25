@@ -70,6 +70,7 @@ Settings → Environments → New environment. Dos, con estos nombres exactos:
   Si el Environment no la tiene, el workflow no instala ninguna clave.
 - `NEON_API_KEY` y `NEON_PROJECT_ID` (solo `produccion`, **obligatorios**): para la rama de respaldo `antes-de-<NNNN>` antes de migrar.
   Sin ellos, o si el respaldo no se puede crear, **no se migra producción** (decisión del dueño, 25/11/2026: sin respaldo no se migra).
+  **Ojo con la rama:** esa exigencia está en el `migrar.yml` de la rama de integración (`integracion/modulos-v2`). El `migrar.yml` que hoy está en `main` es el anterior: con `NEON_API_KEY` y `NEON_PROJECT_ID` crea el respaldo, pero sin ellos **migra igual, sin respaldo** (solo avisa). El respaldo obligatorio llega a `main` con el PR final de la rama de integración; hasta entonces, no corras `produccion` desde `main` sin esos dos secretos cargados.
 - Revisá que «Required reviewers» de `produccion` **y de `preview`** sea solo vos (decisión del dueño, 2026-11-04) y que
   «Deployment branches» sea solo `main` en los dos: eso es lo que protege el secreto de verdad.
 - El workflow `migrar-base.yml` se retiró (decisión del orquestador por delegación del dueño, 2026-11-06): `migrar.yml`
@@ -96,9 +97,9 @@ Actions → **Migrar (preview y producción)** → Run workflow (siempre desde `
 **Permiso de la guarda:** la guarda de migración lee de la tabla `migracion` solo la columna `nombre`, con el rol
 `pedernal_app`. Ese permiso lo da la migración **0013** (permisos mínimos, `GRANT SELECT (nombre) ON migracion`): hasta que se
 aplique en una base, esa base muestra «En mantenimiento» aunque todo esté bien. Por eso aplicá **todas las migraciones
-pendientes, hasta la `0019`**, en `preview` y en `produccion` **antes** de encender el despliegue. `MIGRACION_REQUERIDA`
-del código vale `"0019"` (`src/composicion/guarda-de-migracion.ts`, línea 19) y una prueba la mantiene igual a la última
-de `migraciones/` (`0019_contacto_de_la_sucursal.sql`): si esta guía dice otra cosa, manda el código. «Ver» del workflow
+pendientes** en `preview` y en `produccion` **antes** de encender el despliegue. `MIGRACION_REQUERIDA` vale lo que diga el código
+(`src/composicion/guarda-de-migracion.ts`) y una prueba la mantiene igual a la última de `migraciones/`: esta guía no copia el
+número, porque se desactualiza con cada migración nueva; si esta guía dice otra cosa, manda el código. «Ver» del workflow
 te dice qué falta.
 
 **Sellos y plantillas de permisos (H4b).** Cada migración que ya corrió en una base se «sella» en `migraciones/selladas.json` (su checksum);
@@ -383,7 +384,7 @@ _Excepción para la empresa de PRUEBAS en Preview (2026-11-05, pedido del dueño
 
 **Secretos del Environment `preview`** para ese workflow: `PEDERNAL_DB_DUENO_DIRECTA`, `PEDERNAL_SECRETO_INVITACIONES` (hexadecimal, 64 o más dígitos) y
 `CRON_SECRET` (24 o más caracteres) —los dos últimos con el MISMO valor que en Vercel Preview, fijados por el dueño, y después un Redeploy de
-preview— y `PEDERNAL_PREPARAR_PREVIEW`, un JSON en UNA línea. Plantilla con valores FICTICIOS (`adminEmail` y `emailGerente` tienen que ser
+preview— y `PEDERNAL_PREPARAR_PREVIEW`, un JSON en UNA línea. Además, **una variable** (no un secreto) del mismo Environment: `PEDERNAL_HOSTS_PROTEGIDOS`, los hosts de la consola, la aplicación y la landing de Preview separados por comas y sin `https://` (los mismos que tienen esos proyectos); sin ella el chequeo previo del workflow se corta y nada se prepara, porque agregar el dominio de la empresa falla cerrado. Plantilla con valores FICTICIOS (`adminEmail` y `emailGerente` tienen que ser
 DISTINTOS: el administrador de plataforma no puede ser miembro de ninguna empresa; `vigenteDesde` es un instante FUTURO de 5 a 8 minutos desde la
 corrida —la confirmación de la marca no admite una fecha pasada y el alta exige la marca ya vigente, así que el flujo espera a que llegue— y
 `verificadoEn`, uno pasado; si el Environment tarda en aprobarse y `vigenteDesde` queda en el pasado, el flujo cierra bien el login y rechaza: se edita el JSON y se repite):
@@ -466,7 +467,7 @@ ARCA ni contra una base real: **NO VERIFICADO** hasta la prueba de homologación
 
 Decisión del dueño, 25/11/2026: tener la base de datos propia es un **extra de plan** («Extra de plan sobre bd»); los clientes lo piden para «tener sus datos en su propia BD». La base compartida sigue siendo el estándar. Diseño y alternativas: `base-por-cliente-opciones.md` (repositorio de documentos). Esta sección es el camino **mínimo y manual**: una instalación aparte, operada por vos. No hay alta automática.
 
-**Estado:** el mecanismo está en `migrar.yml` (ambiente `cliente-<codigo>`, frase `MIGRAR CLIENTE-<CODIGO>`, respaldo obligatorio) y en `cargar-entorno.yml` (frase `CARGAR CLIENTE-<CODIGO>`, proyecto de Vercel del cliente). La lista de clientes (`cliente-hdn`, Hoteles del Neuquén: proyecto de Neon «Hoteles del Neuquen», proyecto de Vercel `pedernal-hdn` sin conectar a Git) es la misma en los dos y en `PROYECTOS_DE_VERCEL_DE_CLIENTES`; una prueba falla si difieren. No es el proyecto `hdn` viejo de Motor2.
+**Estado:** el mecanismo está en `migrar.yml` (ambiente `cliente-<codigo>`, frase `MIGRAR CLIENTE-<CODIGO>`, respaldo obligatorio) y en `cargar-entorno.yml` (frase `CARGAR CLIENTE-<CODIGO>`, proyecto de Vercel del cliente). La lista de clientes (`cliente-hdn`, Hoteles del Neuquén: proyecto de Neon «Hoteles del Neuquen», proyecto de Vercel `pedernal-hdn` sin conectar a Git) es la misma en los dos y en `PROYECTOS_DE_VERCEL_DE_CLIENTES`; una prueba falla si difieren. No es el proyecto viejo `stockhneuquen`, que hoy sirve `app.hotelesdelneuquen.com.ar` y `carta.hotelesdelneuquen.com.ar` (verificado en Vercel, lectura, 25/11/2026).
 
 ### H.1 Neon (la organización `Pedernal`, un proyecto por cliente y una clave por proyecto)
 
@@ -537,6 +538,6 @@ El proyecto de Vercel del cliente **no se conecta a Git** y lo desplegás vos po
 
 `app.hotelesdelneuquen.com.ar` y `carta.hotelesdelneuquen.com.ar` se registran (casos de plataforma `agregarDominio`, con la marca y el plan de hdn) **únicamente en la base de hdn**. En la base compartida no se registran nunca: si figuraran ahí, el resolutor de la web compartida los serviría con la marca equivocada. Verificación, con el SQL Editor de Neon en la base compartida (rama `production` del proyecto `Pedernal`): `SELECT count(*) FROM dominio WHERE host LIKE '%hotelesdelneuquen.com.ar';` tiene que dar `0`. **No hay una prueba automática de esto** (los dominios son datos, no código): una guarda en `agregarDominio` con una lista cerrada de hosts reservados sería un cambio de producto aparte.
 
-### H.9 DNS y el proyecto `hdn` viejo de Motor2
+### H.9 DNS y el proyecto viejo `stockhneuquen`
 
-Los dos hosts hoy pueden apuntar al proyecto `hdn` de Motor2. Pasarlos a `pedernal-hdn` es un paso **manual tuyo, después del primer despliegue general** y de verificar la instalación de hdn por su dirección de Vercel: se agregan en `pedernal-hdn` (nunca en `pedernal-erp`), se cambia el DNS, y recién después se quitan del proyecto viejo. No se toca el proyecto `hdn` de Motor2 desde este repositorio.
+Los dos hosts hoy los sirve el proyecto viejo `stockhneuquen` (verificado en Vercel, lectura, 25/11/2026); `pedernal-hdn` (`prj_7FCPV72lnTupGoEB6gDka1ZQIfOg`, sin Git) es el proyecto nuevo de Pedernal para el hotel. Pasarlos a `pedernal-hdn` es un paso **manual tuyo, después del primer despliegue general** y de verificar la instalación de hdn por su dirección de Vercel: se agregan en `pedernal-hdn` (nunca en `pedernal-erp`), se cambia el DNS, y recién después se quitan del proyecto viejo. No se toca el proyecto `stockhneuquen` desde este repositorio.
