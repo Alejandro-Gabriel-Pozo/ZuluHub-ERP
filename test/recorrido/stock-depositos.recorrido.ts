@@ -8,7 +8,8 @@ import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilan
  * «Depósitos» de Stock con la app REAL construida, un navegador real y una base real. Previene lo que ninguna prueba de unidad ve: un componente de cliente que rompe en el navegador
  * (un `Boton` sin `"use client"`, React #441), la acción de servidor que no llega o el alta que no vuelve a la lista. Con `stock` disponible en el catálogo real, la empresa del mundo lo
  * tiene por su plan y activo (`catalogo` y `stock`, igual que el recorrido de la venta); el servidor y sus permisos, el aislamiento y la idempotencia del alta los prueban
- * `test/integracion/stock-depositos-web.test.ts` y el formulario en Chromium (`FormularioDeDeposito.test.tsx`).
+ * `test/integracion/stock-depositos-web.test.ts` y el formulario en Chromium (`FormularioDeDeposito.test.tsx`). STK-A suma editar, desactivar y reactivar: la acción de «Desactivar» llega y la lista
+ * se refresca, el rechazo del «de venta» sale con su texto y dos pestañas que editan lo mismo no se pisan.
  */
 const base = inject("baseDePruebas");
 const CELULAR = { width: 390, height: 844 } as const;
@@ -116,5 +117,72 @@ describe.skipIf(base === null || !stockAbierto)("recorrido de depósitos de stoc
     await pagina.goto(`${mundo.url}/stock/depositos`);
     await pagina.waitForLoadState("networkidle");
     expect(await pagina.getByText("Cocina", { exact: true }).count()).toBe(1);
+  });
+
+  const tarjeta = (nombre: string) =>
+    pagina.getByRole("listitem").filter({ has: pagina.getByText(nombre, { exact: true }) });
+
+  it("desactivar el «de venta» dice por qué no; desactivar otro lo deja «Desactivado» con «Reactivar», y reactivarlo lo devuelve", async () => {
+    await pagina.goto(`${mundo.url}/stock/depositos`);
+    await pagina.waitForLoadState("networkidle");
+    await tarjeta("Cocina").getByRole("button", { name: "Desactivar" }).click();
+    await pagina.getByText("No se puede desactivar el depósito de venta").waitFor();
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    vigilante.tomar();
+
+    await tarjeta("Barra").getByRole("button", { name: "Desactivar" }).click();
+    await tarjeta("Barra").getByText("Desactivado", { exact: true }).waitFor();
+    expect(await tarjeta("Barra").getByRole("link", { name: "Editar" }).count()).toBe(0);
+    expect(await tarjeta("Barra").getByRole("button", { name: "Desactivar" }).count()).toBe(0);
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+
+    await tarjeta("Barra").getByRole("button", { name: "Reactivar" }).click();
+    await tarjeta("Barra").getByRole("button", { name: "Desactivar" }).waitFor();
+    expect(await tarjeta("Barra").getByText("Desactivado", { exact: true }).count()).toBe(0);
+    expect(vigilante.tomar()).toEqual([]);
+  });
+
+  it("un doble clic en «Desactivar» deja el depósito desactivado una sola vez", async () => {
+    await pagina.goto(`${mundo.url}/stock/depositos`);
+    await pagina.waitForLoadState("networkidle");
+    await tarjeta("Barra").getByRole("button", { name: "Desactivar" }).dblclick();
+    await tarjeta("Barra").getByRole("button", { name: "Reactivar" }).waitFor();
+    await pagina.waitForLoadState("networkidle");
+    expect(await tarjeta("Barra").getByText("Desactivado", { exact: true }).count()).toBe(1);
+    await tarjeta("Barra").getByRole("button", { name: "Reactivar" }).click();
+    await tarjeta("Barra").getByRole("button", { name: "Desactivar" }).waitFor();
+    expect(vigilante.tomar()).toEqual([]);
+  });
+
+  it("editar cambia el nombre y vuelve a la lista; dos pestañas con la misma versión: la segunda recibe «otra persona lo modificó»", async () => {
+    await pagina.goto(`${mundo.url}/stock/depositos`);
+    await pagina.waitForLoadState("networkidle");
+    await tarjeta("Barra").getByRole("link", { name: "Editar" }).click();
+    await pagina.waitForURL("**/editar");
+    const urlDeEdicion = pagina.url();
+    await pagina.getByLabel("Nombre", { exact: true }).waitFor();
+    expect(await pagina.getByLabel("Uso").count()).toBe(0);
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+
+    const otra = await contexto.newPage();
+    await otra.goto(urlDeEdicion);
+    await otra.waitForLoadState("networkidle");
+
+    await pagina.getByLabel("Nombre", { exact: true }).fill("Barra grande");
+    await pagina.getByRole("button", { name: "Guardar" }).click();
+    await pagina.waitForURL((url) => url.pathname === "/stock/depositos");
+    await pagina.getByText("Barra grande", { exact: true }).waitFor();
+    expect(await pagina.getByText("Barra", { exact: true }).count()).toBe(0);
+
+    await otra.getByLabel("Nombre", { exact: true }).fill("Barra chica");
+    await otra.getByRole("button", { name: "Guardar" }).click();
+    await otra.getByText("Otra persona modificó este depósito. Actualizá la pantalla").waitFor();
+    await otra.close();
+
+    await pagina.goto(`${mundo.url}/stock/depositos`);
+    await pagina.waitForLoadState("networkidle");
+    expect(await pagina.getByText("Barra grande", { exact: true }).count()).toBe(1);
+    expect(await pagina.getByText("Barra chica", { exact: true }).count()).toBe(0);
+    vigilante.tomar();
   });
 });

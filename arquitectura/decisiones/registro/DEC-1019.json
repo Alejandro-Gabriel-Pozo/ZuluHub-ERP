@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1019",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Gestión de depósitos en la pantalla Depósitos: editar nombre y «de venta», desactivar y reactivar, sin confirmación porque no se borra nada.",
+  "que_cambia": "La lista muestra también los desactivados con su estado; el uso no se cambia. Quien opera ve la lista sin esos botones. Revertir: sacar los botones y la pantalla de edición, el servidor no cambia.",
+  "donde": "Dueño 25/11/2026, fila 444 de decisiones-del-dueno-2026-11.md (maqueta stock-depositos-gestion.html aprobada); dia-uno-stock-diseno-2026-11-25.md §3.2"
+}
