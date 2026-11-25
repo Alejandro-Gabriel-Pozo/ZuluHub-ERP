@@ -2,7 +2,7 @@ import type { CatalogoComercial } from "../../capacidades/modulos/catalogo";
 import type { ReglasDePlataforma } from "../../capacidades/permisos/plataforma";
 import type { AmbitoDePerilla } from "../../capacidades/planes/perillas";
 import type { ValorDePerilla } from "../../capacidades/planes/valores";
-import type { RolDeEmpresa, RolDeLaMembresia } from "../../capacidades/permisos/roles";
+import type { RolDeLaMembresia } from "../../capacidades/permisos/roles";
 import type {
   EstadoDeEmpresa,
   EstadoDeTenant,

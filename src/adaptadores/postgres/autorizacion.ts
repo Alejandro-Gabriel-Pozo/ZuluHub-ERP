@@ -66,7 +66,7 @@ function listaDeAcciones(valor: unknown, de: string): readonly string[] | null {
   if (!Array.isArray(valor) || !valor.every((accion) => typeof accion === "string")) {
     throw new RangeError(`las acciones de ${de} no son una lista de textos`);
   }
-  return valor as string[];
+  return valor;
 }
 
 /** Lo que carga el adaptador cuando no hay rol (ni, por lo tanto, nada que activar ni ninguna acción): falla cerrado. */
