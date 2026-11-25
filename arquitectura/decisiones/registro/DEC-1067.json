@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1067",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El motivo de retirar una cuenta de imagen es un texto de una línea de 1 a 300 caracteres de la lista de permitidos del catálogo; el 300 no tiene otra fuente que el brief.",
+  "que_cambia": "Cuánto puede escribir quien retira una cuenta. Revertir: cambiar la constante de la primitiva y el CHECK de la base.",
+  "donde": "src/primitivas/texto/motivo-de-retiro-de-cuenta-de-imagen.ts; migraciones/0102_cuentas_de_imagen_declaradas.sql (cuenta_de_imagen_motivo_ck)"
+}

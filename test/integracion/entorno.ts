@@ -109,6 +109,7 @@ import {
   crearRepositorioDePrecios,
   crearRepositorioDePresentaciones,
   crearRepositorioDeCartas,
+  crearRepositorioDeCuentasDeImagen,
   crearRepositorioDeDisponibilidad,
   crearRepositorioDeFamilias,
   type RepositorioDeFamilias,
@@ -117,6 +118,7 @@ import {
   crearRepositorioDeUnidades,
   crearLectorDeCarta,
   type RepositorioDeCartas,
+  type RepositorioDeCuentasDeImagen,
   type RepositorioDeDisponibilidad,
   type RepositorioDeSecciones,
   type RepositorioDeClasificacion,
@@ -187,6 +189,7 @@ export type TxDePrueba = Readonly<{
   presentacionesDeProducto: RepositorioDePresentaciones;
   /** La carta pública, el botón «Ocultar» y las secciones (0043 y T2 de la carta real). */
   cartasPublicas: RepositorioDeCartas;
+  cuentasDeImagen: RepositorioDeCuentasDeImagen;
   disponibilidadDeProductos: RepositorioDeDisponibilidad;
   familias: RepositorioDeFamilias;
   seccionesDeCarta: RepositorioDeSecciones;
@@ -252,6 +255,7 @@ export function crearEntornoDePrueba(
       precios: crearRepositorioDePrecios(db.withTables<CatalogoDb>()),
       presentacionesDeProducto: crearRepositorioDePresentaciones(db.withTables<CatalogoDb>()),
       cartasPublicas: crearRepositorioDeCartas(db.withTables<CatalogoDb>()),
+      cuentasDeImagen: crearRepositorioDeCuentasDeImagen(db.withTables<CatalogoDb>()),
       disponibilidadDeProductos: crearRepositorioDeDisponibilidad(db.withTables<CatalogoDb>()),
       familias: crearRepositorioDeFamilias(db.withTables<CatalogoDb>()),
       seccionesDeCarta: crearRepositorioDeSecciones(db.withTables<CatalogoDb>()),

@@ -76,6 +76,8 @@ export type VidrieraPublicada = Readonly<{
    */
   mensajeDePortada: string | null;
   identidad: IdentidadPublicada;
+  /** Las cuentas del proveedor de imágenes que la empresa de la carta declaró y tiene activas (0102): con ellas se valida el logo al traerlo. */
+  cuentasDeImagen: readonly string[];
   /**
    * Perilla `letra_base` (D10): `NORMAL` (18 px) o `GRANDE` (≈ 22 px). El comensal parte de este valor y
    * el control «Letra» se suma encima; no hay otra forma de fijar un tamaño.

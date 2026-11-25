@@ -107,6 +107,15 @@ export function crearLecturaPublicaDeCartas(db: {
         .executeTakeFirst();
       if (tenantFila === undefined) return null;
 
+      // Las cuentas ACTIVAS de la empresa de esta carta (la política del rol público deja ver solo esas): de otras, un logo no se muestra.
+      const cuentasDeImagen = await k
+        .selectFrom("cuenta_de_imagen_declarada")
+        .select(["cuenta"])
+        .where("empresa_id", "=", empresa)
+        .where("proveedor", "=", "CLOUDINARY")
+        .where("estado", "=", "ACTIVA")
+        .orderBy("cuenta")
+        .execute();
       const identidadDeLaEmpresa = await k
         .selectFrom("identidad_de_carta_empresa")
         .select(["color_principal"])
@@ -245,6 +254,7 @@ export function crearLecturaPublicaDeCartas(db: {
           logo: logoDeCarta(cartaFila),
         },
         colorDeLaEmpresa: identidadDeLaEmpresa?.color_principal ?? null,
+        cuentasDeImagen: cuentasDeImagen.map((c) => c.cuenta),
         sucursalActiva: sucursal.activa,
         empresaId: empresaId(empresa),
         tenantId: tenantId(tenantFila.id),

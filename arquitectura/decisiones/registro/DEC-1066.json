@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1066",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Gerente y administrador declaran y retiran las cuentas de imagen del logo de la carta, con una sola acción nueva (vidrieras.administrar_cuentas_de_imagen), delegable; también sirve para listarlas.",
+  "que_cambia": "Quién puede declarar o retirar una cuenta de fotos y así de qué cuentas se muestran los logos. Revertir: separar en dos acciones (administrar y ver), una más en el catálogo, como proponía el brief.",
+  "donde": "src/capacidades/permisos/permisos-de-vidriera.ts; src/modulos/catalogo/casos-de-uso/declarar-cuenta-de-imagen.ts; brief-logo-de-la-carta-cuentas-declaradas-2026-11-25.md §5; dueño 25/11, vía el orquestador; la fila la asienta diseño"
+}

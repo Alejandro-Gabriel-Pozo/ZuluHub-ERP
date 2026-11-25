@@ -104,6 +104,8 @@ const TABLAS_DE_NEGOCIO = [
   "disponibilidad_de_producto",
   // La identidad de la carta: el color de la empresa para sus cartas (0077_identidad_de_la_carta)
   "identidad_de_carta_empresa",
+  // Las cuentas del proveedor de imágenes que cada empresa declara (0102_cuentas_de_imagen_declaradas)
+  "cuenta_de_imagen_declarada",
   // El portal de la vidriera (0078_portal_de_la_empresa)
   "portal_de_empresa",
   "portal_tarjeta",
@@ -602,6 +604,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "carta_publica:SELECT", // 0043
           "disponibilidad_de_producto:SELECT", // 0043
           "identidad_de_carta_empresa:SELECT", // 0077
+          "cuenta_de_imagen_declarada:SELECT", // 0102
           ...["portal_de_empresa", "portal_tarjeta", "portal_zona"].map(
             (tabla) => `${tabla}:SELECT`,
           ), // 0078
@@ -957,6 +960,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "rubro",
           ].map((c) => `pedernal_app:carta_publica.${c}`), // 0043 y 0077
           "pedernal_app:identidad_de_carta_empresa.color_principal", // 0077
+          ...["estado", "motivo_de_retiro", "retirada_por"].map(
+            (c) => `pedernal_app:cuenta_de_imagen_declarada.${c}`,
+          ), // 0102
           ...[
             "portal_de_empresa.color_detras",
             "portal_de_empresa.color_encabezado",
@@ -1430,6 +1436,16 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "rubro",
           "sucursal_id",
         ].map((c) => `carta_publica.${c}`), // 0043 y 0077
+        // 0102: las cuentas de imagen declaradas (lo que escribe la aplicación al declarar; el retiro va por UPDATE)
+        ...[
+          "id",
+          "empresa_id",
+          "proveedor",
+          "cuenta",
+          "clave_idempotencia",
+          "huella",
+          "declarada_por",
+        ].map((c) => `cuenta_de_imagen_declarada.${c}`),
         // 0077: el color de la empresa para sus cartas (una fila por empresa)
         ...["color_principal", "creado_por", "empresa_id"].map(
           (c) => `identidad_de_carta_empresa.${c}`,

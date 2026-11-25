@@ -24,7 +24,9 @@ import {
   armarEditarFamilia,
   armarQuitarProductoDeFamilia,
 } from "./familias";
+import { armarDeclararCuentaDeImagen } from "./declarar-cuenta-de-imagen";
 import { armarGuardarCartaPublica } from "./guardar-carta-publica";
+import { armarRetirarCuentaDeImagen } from "./retirar-cuenta-de-imagen";
 import { armarGuardarConsumoDeGrupo } from "./guardar-consumo";
 import { armarDestacarRenglon, armarOrdenarRenglonesDeSeccion } from "./orden-de-carta";
 import { armarOcultarProducto } from "./ocultar-producto";
@@ -67,6 +69,8 @@ export function crearCasosDeUsoDeCatalogo(dependencias: DependenciasDeCatalogo) 
     desactivarNodoDeClasificacion: armarDesactivarNodoDeClasificacion(dependencias),
     reactivarNodoDeClasificacion: armarReactivarNodoDeClasificacion(dependencias),
     guardarCartaPublica: armarGuardarCartaPublica(dependencias),
+    declararCuentaDeImagen: armarDeclararCuentaDeImagen(dependencias),
+    retirarCuentaDeImagen: armarRetirarCuentaDeImagen(dependencias),
     ocultarProducto: armarOcultarProducto(dependencias),
     crearFamilia: armarCrearFamilia(dependencias),
     editarFamilia: armarEditarFamilia(dependencias),
