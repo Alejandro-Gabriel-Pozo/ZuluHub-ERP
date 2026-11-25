@@ -1,8 +1,8 @@
 -- 0108_revertir_facturar_antes_de_cobrar: deshace 0108: `documento_validar_alta()` vuelve a ser la de 0029 (el ticket tiene que estar COBRADO), con el cuerpo literal de 0029.
 --
--- FRENA (55000) si existe algún documento VIGENTE sobre un ticket que no está COBRADO (una factura de un ticket emitido sin cobrar): con la función vieja esa situación sería imposible y el sistema
+-- FRENA (55000) si existe algún documento VIGENTE sobre un ticket que no está COBRADO: una factura de un ticket emitido sin cobrar y también, por conservador (falla cerrado), una de un ticket ya ANULADO antes de acreditarla: con la función vieja esa situación sería imposible y el sistema
 -- no sabría tratarla (por ejemplo, no se podría emitir un reemplazo). Hay que acreditar esas facturas (nota de crédito) o cobrar esos tickets antes, y AVISAR AL DUEÑO. Si no hay ninguna, la reversión no
--- cambia ningún dato: el disparador es de alta y no revalida filas; los documentos históricos (también los de tickets ya anulados) quedan como están. Lo único que cambia es que dejan de poder emitirse
+-- cambia ningún dato: el disparador es de alta y no revalida filas; los documentos NO vigentes (históricos) quedan como están. Lo único que cambia es que dejan de poder emitirse
 -- facturas de tickets sin cobrar, aunque la perilla `facturar_antes_de_cobrar` de alguna empresa siga encendida (la base las rechaza con TICKET_NO_FACTURABLE: falla cerrado; apagar esa perilla es del plan).
 --
 -- Este script NO lo aplica el ejecutor de migraciones (solo toma los `NNNN_nombre.sql` de `migraciones/`): se corre a mano, revisado, en una sola transacción y con el rol dueño de la base (que evade

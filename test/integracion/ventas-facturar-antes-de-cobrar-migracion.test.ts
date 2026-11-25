@@ -319,6 +319,36 @@ describe.skipIf(base === null)("0108: facturar antes de cobrar (documento_valida
     ).toBe(0);
   });
 
+  it("un EMITIDO con factura vigente no se anula (la guarda de ventas rige igual que para COBRADO): el documento sigue sobre el ejemplar vigente y no se escribe otro ejemplar", async () => {
+    const ejemplares = () =>
+      m.contar("select count(*) as n from ticket_ejemplar where ticket_id = $1", [
+        t.emitidoFacturado.ticketId,
+      ]);
+    const antes = await ejemplares();
+    const r = await m.casos.anularTicket(e.gerente, {
+      claveIdempotencia: nuevaClave(),
+      ticketId: t.emitidoFacturado.ticketId,
+      ejemplarBaseId: t.emitidoFacturado.ejemplarId,
+      ejemplarNuevoId: nuevoId(),
+      motivo: "Cargado por error",
+    });
+    expect(r.ok ? "ok" : (r.error as { error?: string }).error).toBe(
+      "TICKET_CON_COMPROBANTE_VIGENTE",
+    );
+    expect(await estado(t.emitidoFacturado.ticketId)).toBe("EMITIDO");
+    expect(await ejemplares()).toBe(antes);
+    const fila = (
+      await m.filas<Fila>(
+        `select e.numero_de_ejemplar = k.ejemplar_vigente as es_el_vigente
+           from documento_de_ticket d join ticket k on k.id = d.ticket_id and k.empresa_id = d.empresa_id
+           join ticket_ejemplar e on e.id = d.ejemplar_id and e.empresa_id = d.empresa_id
+          where d.ticket_id = $1 and d.vigente`,
+        [t.emitidoFacturado.ticketId],
+      )
+    )[0];
+    expect(fila?.["es_el_vigente"]).toBe(true);
+  });
+
   // ---- la reversión -----------------------------------------------------------------------------------------------------------------
 
   describe("reversión (destructiva para la base de esta prueba: va al final)", () => {
