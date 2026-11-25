@@ -56,7 +56,7 @@ async function correosDe(
   for (let i = 0; i < ids.length; i += PERSONAS_POR_PEDIDO) {
     const r = await d
       .consultasDeIdentidad()
-      .personasParaMostrar(contexto, { ids: ids.slice(i, i + PERSONAS_POR_PEDIDO) as never });
+      .personasParaMostrar(contexto, { ids: ids.slice(i, i + PERSONAS_POR_PEDIDO) });
     if (!r.ok) {
       // Sin permiso para ver personas, las celdas salen vacías; cualquier otro fallo (base, entrada) no se esconde.
       if (typeof r.error === "string" && MOTIVOS_DE_RECHAZO.has(r.error)) return ok(new Map());
@@ -82,8 +82,16 @@ function hojasDe(
       encabezados: encabezadosDeCabecera(cabecera.columnas),
       filas: cabecera.filas,
     },
-    { nombre: nombres.detalle, encabezados: encabezadosDeDetalle(detalle.columnas), filas: detalle.filas },
-    { nombre: nombres.resumen, encabezados: encabezadosDeResumen(resumen.columnas), filas: resumen.filas },
+    {
+      nombre: nombres.detalle,
+      encabezados: encabezadosDeDetalle(detalle.columnas),
+      filas: detalle.filas,
+    },
+    {
+      nombre: nombres.resumen,
+      encabezados: encabezadosDeResumen(resumen.columnas),
+      filas: resumen.filas,
+    },
   ];
 }
 

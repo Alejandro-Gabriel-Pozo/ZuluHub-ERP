@@ -3,10 +3,17 @@ import { describe, expect, it } from "vitest";
 import { celdaDeLaBiblioteca, seEscribeComoNumero, textoInofensivo } from "./celdas-de-xlsx";
 
 describe("el decimal: número solo si es exacto, si no texto exacto", () => {
-  it.each(["1369499.91", "266252.40", "0.00", "13312.620000", "-2", "8.940000", "27740.75", "0.000001", "100"])(
-    "%s se escribe como número",
-    (t) => expect(seEscribeComoNumero(t)).toBe(true),
-  );
+  it.each([
+    "1369499.91",
+    "266252.40",
+    "0.00",
+    "13312.620000",
+    "-2",
+    "8.940000",
+    "27740.75",
+    "0.000001",
+    "100",
+  ])("%s se escribe como número", (t) => expect(seEscribeComoNumero(t)).toBe(true));
   it.each([
     "12345678901234567.89", // 19 dígitos: el número binario lo redondea
     "1234567890123456", // 16 dígitos
@@ -20,7 +27,9 @@ describe("el decimal: número solo si es exacto, si no texto exacto", () => {
   ])("%s NO se escribe como número", (t) => expect(seEscribeComoNumero(t)).toBe(false));
 
   it("un importe de 17 dígitos sale como texto exacto, nunca redondeado", () => {
-    expect(celdaDeLaBiblioteca({ tipo: "decimal", valor: "12345678901234567.89", decimales: 2 })).toEqual({
+    expect(
+      celdaDeLaBiblioteca({ tipo: "decimal", valor: "12345678901234567.89", decimales: 2 }),
+    ).toEqual({
       value: "12345678901234567.89",
       type: String,
     });
@@ -28,29 +37,34 @@ describe("el decimal: número solo si es exacto, si no texto exacto", () => {
 
   it("propiedad: lo que se escribe como número vuelve idéntico (nunca se cambia un importe)", () => {
     fc.assert(
-      fc.property(fc.bigInt({ min: 0n, max: 10n ** 17n }), fc.integer({ min: 0, max: 6 }), (n, d) => {
-        const base = n.toString().padStart(d + 1, "0");
-        const texto = d === 0 ? base : `${base.slice(0, -d)}.${base.slice(-d)}`;
-        const celda = celdaDeLaBiblioteca({ tipo: "decimal", valor: texto, decimales: 2 });
-        if (celda !== null && celda.type === Number) {
-          const valor = celda.value as number;
-          expect(Number(texto)).toBe(valor);
-          expect(BigInt(Math.round(valor * 10 ** d))).toBe(n);
-        } else {
-          expect(celda).toEqual({ value: texto, type: String });
-        }
-      }),
+      fc.property(
+        fc.bigInt({ min: 0n, max: 10n ** 17n }),
+        fc.integer({ min: 0, max: 6 }),
+        (n, d) => {
+          const base = n.toString().padStart(d + 1, "0");
+          const texto = d === 0 ? base : `${base.slice(0, -d)}.${base.slice(-d)}`;
+          const celda = celdaDeLaBiblioteca({ tipo: "decimal", valor: texto, decimales: 2 });
+          if (celda !== null && celda.type === Number) {
+            const valor = celda.value as number;
+            expect(Number(texto)).toBe(valor);
+            expect(BigInt(Math.round(valor * 10 ** d))).toBe(n);
+          } else {
+            expect(celda).toEqual({ value: texto, type: String });
+          }
+        },
+      ),
     );
   });
 });
 
 describe("el texto: sin fórmulas", () => {
-  it.each(["=HYPERLINK(\"http://x\")", "+cmd|' /C calc'!A0", "-2+3", "@SUM(A1)", "\tdato", "\rdato"])(
+  it.each(['=HYPERLINK("http://x")', "+cmd|' /C calc'!A0", "-2+3", "@SUM(A1)", "\tdato", "\rdato"])(
     "%j lleva una comilla simple antepuesta",
     (t) => expect(textoInofensivo(t)).toBe(`'${t}`),
   );
-  it.each(["Carnes del Sur", "Bife angosto", "1+1", "a=b", "'ya con comilla"])("%j queda igual", (t) =>
-    expect(textoInofensivo(t)).toBe(t),
+  it.each(["Carnes del Sur", "Bife angosto", "1+1", "a=b", "'ya con comilla"])(
+    "%j queda igual",
+    (t) => expect(textoInofensivo(t)).toBe(t),
   );
 });
 

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0910",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las celdas de texto del archivo que podrían leerse como fórmula llevan una comilla simple antepuesta.",
+  "que_cambia": "Aplica a los textos que empiezan con igual, más, menos, arroba, tabulador o retorno de carro. Previene la inyección de fórmulas. Revertir: quitar textoInofensivo de celdas-de-xlsx.ts.",
+  "donde": "Condiciones del orquestador del 25/11/2026; celdas-de-xlsx.ts"
+}

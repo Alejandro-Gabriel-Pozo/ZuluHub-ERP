@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0902",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "Columnas calculadas del archivo: importe abonado «derivado» (por el peso de las líneas, centavos enteros, mayor resto), costo por kilo «derivado» y «Renglones sin precio» en el Resumen.",
+  "que_cambia": "Son columnas del archivo, no se guardan ni cambian lo cargado. Revertir: quitar las columnas de armar-hojas.ts.",
+  "donde": "Chat del dueño 25/11/2026 («Sí a todas tus recomendaciones»), relayado por el orquestador; preguntas 16 y 20 del diseño y P7 del plan; armar-hojas.ts, montos.ts, exportar-compras.ts"
+}

@@ -92,16 +92,13 @@ export function armarExportarCompras(
         const alcance = await tx.autorizacion.sucursalesDelActor(contexto);
         const filtro = { sucursales: alcance, desde: entrada.desde, hasta: entrada.hasta };
         const cuantas = await tx.exportacionDeCompras.contar(empresa, filtro);
-        if (
-          cuantas.lineas > filasMaximas ||
-          cuantas.cabeceras > filasMaximas
-        ) {
+        if (cuantas.lineas > filasMaximas || cuantas.cabeceras > filasMaximas) {
           return err("EXPORTACION_DEMASIADO_GRANDE");
         }
 
         // 1. Las compras del período, de a tandas (las consultas por lote no crecen con el período).
         const filas: FilaDeRecepcionParaExportar[] = [];
-        for (let despuesDe: { fechaNegocio: string; numero: number } | null = null; ; ) {
+        for (let despuesDe: { fechaNegocio: string; numero: number } | null = null; ;) {
           const tanda = await tx.exportacionDeCompras.recepcionesDelPeriodo(
             empresa,
             filtro,
@@ -119,12 +116,18 @@ export function armarExportarCompras(
 
         // 2. Las facturas, sus pagos y TODAS las líneas que cada factura cubre (el reparto del abonado no depende del filtro).
         const facturas = new Map<string, ComprobanteParaExportar>();
-        const cubiertas = await tx.exportacionDeCompras.lineasDeComprobantes(empresa, comprobanteIds);
+        const cubiertas = await tx.exportacionDeCompras.lineasDeComprobantes(
+          empresa,
+          comprobanteIds,
+        );
         const idsDeRecepciones = [
           ...new Set([...filas.map((f) => f.id), ...cubiertas.map((c) => c.recepcionId)]),
         ];
         const pagos = await tx.exportacionDeCompras.pagosDeComprobantes(empresa, comprobanteIds);
-        const comprobantes = new Map<string, ComprobanteGuardado & Readonly<{ recepcionId: string }>>();
+        const comprobantes = new Map<
+          string,
+          ComprobanteGuardado & Readonly<{ recepcionId: string }>
+        >();
         for (let i = 0; i < filas.length; i += TAMANO_DE_TANDA_DE_LA_EXPORTACION) {
           const parte = filas.slice(i, i + TAMANO_DE_TANDA_DE_LA_EXPORTACION).map((f) => f.id);
           for (const c of await tx.comprobantesDeProveedor.deVariasRecepciones(empresa, parte)) {
@@ -158,10 +161,15 @@ export function armarExportarCompras(
               })),
           });
         }
-        const razonSocial = new Map([...comprobantes.values()].map((c) => [c.recepcionId, c.proveedorRazonSocial]));
+        const razonSocial = new Map(
+          [...comprobantes.values()].map((c) => [c.recepcionId, c.proveedorRazonSocial]),
+        );
 
         // 3. Las líneas con su importe vigente, por tandas, y los datos de sus productos, presentaciones y unidades.
-        const lineasPorRecepcion = new Map<string, (LineaDeRecepcion & Readonly<{ recepcionId: string }>)[]>();
+        const lineasPorRecepcion = new Map<
+          string,
+          (LineaDeRecepcion & Readonly<{ recepcionId: string }>)[]
+        >();
         const importes = new Map<string, string | null>();
         const ultimas = new Map<string, CorreccionGuardada>();
         for (let i = 0; i < idsDeRecepciones.length; i += TAMANO_DE_TANDA_DE_LA_EXPORTACION) {
@@ -207,13 +215,24 @@ export function armarExportarCompras(
           const vigente = f.pagos.find((p) => p.estado === "VIGENTE");
           const suyas = cubiertas
             .filter((c) => c.comprobanteId === f.id)
-            .sort((a, b) => (a.recepcionId < b.recepcionId ? -1 : a.recepcionId > b.recepcionId ? 1 : a.linea - b.linea));
-          const pesos = suyas.map((c) => importes.get(claveDeLinea(c.recepcionId, c.linea)) ?? null);
+            .sort((a, b) =>
+              a.recepcionId < b.recepcionId
+                ? -1
+                : a.recepcionId > b.recepcionId
+                  ? 1
+                  : a.linea - b.linea,
+            );
+          const pesos = suyas.map(
+            (c) => importes.get(claveDeLinea(c.recepcionId, c.linea)) ?? null,
+          );
           const total = vigente === undefined ? 0n : centavos(vigente.importe);
           const partes =
             pesos.some((p) => p === null) || suyas.length === 0
               ? null
-              : repartirConMayorResto(total, pesos.map((p) => centavos(p as string)));
+              : repartirConMayorResto(
+                  total,
+                  pesos.map((p) => centavos(p as string)),
+                );
           suyas.forEach((c, i) => {
             abonadoDerivado.set(
               claveDeLinea(c.recepcionId, c.linea),
@@ -223,21 +242,26 @@ export function armarExportarCompras(
         }
 
         const compras = filas.map((f): CompraParaExportar => {
-          const comprobante = f.comprobanteId === null ? null : (facturas.get(f.comprobanteId) ?? null);
+          const comprobante =
+            f.comprobanteId === null ? null : (facturas.get(f.comprobanteId) ?? null);
           const lineas = (lineasPorRecepcion.get(f.id) ?? [])
             .slice()
             .sort((a, b) => a.numero - b.numero)
             .map((l): LineaParaExportar => {
               const clave = claveDeLinea(f.id, l.numero);
               const producto = productos.get(l.productoId);
-              const presentacion = l.presentacionId === null ? undefined : presentaciones.get(l.presentacionId);
+              const presentacion =
+                l.presentacionId === null ? undefined : presentaciones.get(l.presentacionId);
               const correccion = ultimas.get(clave);
               const precioPorTipo = correccion?.precioPorTipo ?? l.precioPorTipo;
               const vigenteA = finDelDia(f.fechaNegocio);
               const nodo = clasificaciones
                 .filter((c) => c.productoId === l.productoId && c.vigenteDesde.getTime() < vigenteA)
                 .sort((a, b) => b.vigenteDesde.getTime() - a.vigenteDesde.getTime())[0]?.nodo;
-              const unidadDePrecio = correccion?.precioPorTipo != null ? correccion.unidadDePrecioId : l.unidadDePrecioId;
+              const unidadDePrecio =
+                correccion?.precioPorTipo != null
+                  ? correccion.unidadDePrecioId
+                  : l.unidadDePrecioId;
               const precio = correccion === undefined ? l.precio : correccion.precioNuevo;
               const conPrecio = importes.get(clave) !== null && importes.get(clave) !== undefined;
               return {
@@ -257,7 +281,10 @@ export function armarExportarCompras(
                 unidadDeStockSimbolo: simbolos.get(producto?.unidadBaseId ?? "") ?? "",
                 precio: conPrecio ? precio : null,
                 precioPorTipo: conPrecio ? precioPorTipo : null,
-                unidadDePrecioSimbolo: conPrecio && unidadDePrecio !== null ? (simbolos.get(unidadDePrecio) ?? null) : null,
+                unidadDePrecioSimbolo:
+                  conPrecio && unidadDePrecio !== null
+                    ? (simbolos.get(unidadDePrecio) ?? null)
+                    : null,
                 importeVigente: importes.get(clave) ?? null,
                 costoPorUnidadDeStock: correccion === undefined ? l.costoPorUnidadDeStock : null,
                 importeAbonadoDerivado: abonadoDerivado.get(clave) ?? null,
@@ -291,7 +318,9 @@ export function armarExportarCompras(
             desde: entrada.desde,
             hasta: entrada.hasta,
             filasDeCabecera: compras.filter((c) => c.enCabecera).length,
-            filasDeDetalle: compras.filter((c) => c.enDetalle).reduce((n, c) => n + c.lineas.length, 0),
+            filasDeDetalle: compras
+              .filter((c) => c.enDetalle)
+              .reduce((n, c) => n + c.lineas.length, 0),
             filasDeResumen: armarResumen(compras).filas.length,
           },
         });

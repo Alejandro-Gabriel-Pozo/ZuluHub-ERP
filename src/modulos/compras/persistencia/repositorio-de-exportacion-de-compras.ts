@@ -219,7 +219,9 @@ export function crearRepositorioDeExportacionDeCompras(
       if (ids.length === 0) return { codigos: new Map(), clasificaciones: [] };
       const lista = sql.join(ids.map((i) => sql`${i}::uuid`));
       const codigos = await sql<{ id: string; codigo: string | null }>`
-        select id, codigo from producto where empresa_id = ${empresa}::uuid and id in (${lista})`.execute(db);
+        select id, codigo from producto where empresa_id = ${empresa}::uuid and id in (${lista})`.execute(
+        db,
+      );
       const clasificaciones = await sql<{
         producto_id: string;
         vigente_desde: Date;
@@ -230,7 +232,9 @@ export function crearRepositorioDeExportacionDeCompras(
           left join nodo_de_clasificacion n on n.id = c.nodo_id and n.empresa_id = c.empresa_id
          where c.empresa_id = ${empresa}::uuid and c.producto_id in (${lista})`.execute(db);
       return {
-        codigos: new Map(codigos.rows.flatMap((f) => (f.codigo === null ? [] : [[f.id, f.codigo]]))),
+        codigos: new Map(
+          codigos.rows.flatMap((f) => (f.codigo === null ? [] : [[f.id, f.codigo]])),
+        ),
         clasificaciones: clasificaciones.rows.map((f) => ({
           productoId: f.producto_id,
           vigenteDesde: f.vigente_desde,
@@ -239,7 +243,10 @@ export function crearRepositorioDeExportacionDeCompras(
       };
     },
     async simbolosDeUnidades() {
-      const { rows } = await sql<{ id: string; simbolo: string }>`select id, simbolo from unidad_de_medida`.execute(db);
+      const { rows } = await sql<{
+        id: string;
+        simbolo: string;
+      }>`select id, simbolo from unidad_de_medida`.execute(db);
       return new Map(rows.map((f) => [f.id, f.simbolo]));
     },
   };

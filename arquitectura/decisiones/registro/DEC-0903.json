@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0903",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "Qué exporta compras: Cabecera, Detalle y Resumen por el alcance de sucursales de la persona, con período obligatorio de hasta 12 meses y 20.000 filas, sin anuladas ni devoluciones.",
+  "que_cambia": "Define el alcance del archivo. Revertir: cambiar los límites en limites.ts o el filtro de la consulta.",
+  "donde": "Chat del dueño 25/11/2026 («Sí a todas tus recomendaciones»), relayado por el orquestador; preguntas 5, 10 y 12 del diseño y P1, P2, P3 y P8 del plan; limites.ts, repositorio-de-exportacion-de-compras.ts"
+}

@@ -2552,7 +2552,9 @@ describe("PDF de la factura: la librería de PDF solo entra por su adaptador y l
 
   it("la biblioteca de planillas la importa solo su adaptador: ni la composición, ni un módulo, ni la web, ni un script", async () => {
     expect(
-      await violacionesDe({ "src/adaptadores/xlsx/escritor-de-xlsx.ts": importa("write-excel-file/node") }),
+      await violacionesDe({
+        "src/adaptadores/xlsx/escritor-de-xlsx.ts": importa("write-excel-file/node"),
+      }),
     ).not.toContain("xlsx-solo-en-su-adaptador");
     for (const origen of [
       "src/composicion/compras-exportacion-web.ts",

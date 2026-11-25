@@ -42,7 +42,8 @@ export function costoPorKiloDerivado(
   if (importeEnCentavos === null || cantidad <= 0n || UNIDADES[unidad].dimension !== "MASA")
     return null;
   // kilos = cantidad / 10^4 * factor / 1000;  costo = (centavos / 100) / kilos, en millonésimos de peso.
-  const numerador = importeEnCentavos * UNO_DE_CANTIDAD * FACTOR_DEL_KILO * 10n ** BigInt(ESCALA_DEL_PRECIO);
+  const numerador =
+    importeEnCentavos * UNO_DE_CANTIDAD * FACTOR_DEL_KILO * 10n ** BigInt(ESCALA_DEL_PRECIO);
   const denominador = 100n * cantidad * UNIDADES[unidad].factor;
   return textoDePrecio((numerador * 2n + denominador) / (2n * denominador));
 }

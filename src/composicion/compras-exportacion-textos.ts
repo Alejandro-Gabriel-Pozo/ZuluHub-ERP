@@ -123,7 +123,9 @@ const MEDIOS: Readonly<Record<string, Parameters<typeof texto>[1]>> = {
 export function rotulosDeExportacion(): RotulosDeExportacion {
   return {
     estadoDeLaCompra: (estado) =>
-      estado === "ANULADA" ? t("compras.orden.anulada") : t("compras.exportacion.valor.compra_vigente"),
+      estado === "ANULADA"
+        ? t("compras.orden.anulada")
+        : t("compras.exportacion.valor.compra_vigente"),
     tipoDeComprobante: (clase) =>
       clase === "FACTURA"
         ? t("fiscal.pantalla.tipo_factura")
@@ -137,7 +139,9 @@ export function rotulosDeExportacion(): RotulosDeExportacion {
           ? t("caja.estado.anulado")
           : t("fiscal.pantalla.config_cartel_pendiente"),
     estadoDeLaFactura: (estado) =>
-      estado === "REGISTRADO" ? t("compras.exportacion.valor.registrado") : t("caja.estado.anulado"),
+      estado === "REGISTRADO"
+        ? t("compras.exportacion.valor.registrado")
+        : t("caja.estado.anulado"),
     medioDePago: (medio) => {
       const clave = MEDIOS[medio];
       return clave === undefined ? "" : t(clave);

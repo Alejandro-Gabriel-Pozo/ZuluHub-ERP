@@ -9,7 +9,7 @@ const HOJAS: readonly HojaDePlanilla[] = [
     encabezados: ["Proveedor", "Total según factura", "Fecha del comprobante", "Cantidad", "Signo"],
     filas: [
       [
-        { tipo: "texto", valor: "=HYPERLINK(\"http://x\")" },
+        { tipo: "texto", valor: '=HYPERLINK("http://x")' },
         { tipo: "decimal", valor: "1369499.91", decimales: 2 },
         { tipo: "fecha", valor: "2026-10-23" },
         { tipo: "decimal", valor: "8.9400", decimales: 4 },
@@ -36,7 +36,8 @@ describe("el escritor de .xlsx", () => {
     expect(hoja1).toContain("<v>8.94</v>");
     expect(hoja1).toContain("<v>-1</v>");
     // Ninguna fórmula en ninguna hoja.
-    for (const [nombre, xml] of zip) if (nombre.startsWith("xl/worksheets/")) expect(xml).not.toContain("<f");
+    for (const [nombre, xml] of zip)
+      if (nombre.startsWith("xl/worksheets/")) expect(xml).not.toContain("<f");
     // El texto peligroso es una cadena (t="s") con su comilla antepuesta; el importe de 17 dígitos también es texto exacto.
     const cadenas = zip.get("xl/sharedStrings.xml") ?? "";
     expect(cadenas).toContain("'=HYPERLINK");

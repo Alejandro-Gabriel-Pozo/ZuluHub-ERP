@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0905",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "El orquestador aceptó, por la delegación de la fila 173, el enlace «Exportar», los nombres de hoja y de archivo y los encabezados operativos del archivo de compras.",
+  "que_cambia": "Los textos dejan de estar sin aprobar. Revertir: cambiar el texto de la clave en catalogo-compras-exportacion.ts.",
+  "donde": "Orden del orquestador del 25/11/2026 (fila 173 de decisiones-del-dueno-2026-11.md); catalogo-compras-exportacion.ts, ficha-de-compras.ts"
+}

@@ -30,7 +30,10 @@ describe.skipIf(base === null)("composición web: archivo de compras", () => {
   beforeAll(async () => {
     if (base === null) return;
     c = await montarCompras(base);
-    const identidad = crearConsultasDeIdentidad({ transacciones: c.entorno, reglas: REGLAS_DE_EMPRESA });
+    const identidad = crearConsultasDeIdentidad({
+      transacciones: c.entorno,
+      reglas: REGLAS_DE_EMPRESA,
+    });
     d = {
       casos: () => c.casos,
       consultasDeIdentidad: () => identidad,
@@ -44,7 +47,12 @@ describe.skipIf(base === null)("composición web: archivo de compras", () => {
 
   const armar = async (e?: EscenarioDeCompras) => {
     const esc = e ?? (await c.escenario());
-    valorDe(await c.casos.configurarCompras(esc.gerente, { nivel: "CON_COMPROBANTE", versionEsperada: 1 }));
+    valorDe(
+      await c.casos.configurarCompras(esc.gerente, {
+        nivel: "CON_COMPROBANTE",
+        versionEsperada: 1,
+      }),
+    );
     const deposito = await c.deposito(esc);
     const { producto } = await c.articulo(esc, { unidadBase: "GRAMO", dimension: "MASA" });
     const proveedor = await c.proveedor(esc.operador, { condicionIva: "RESPONSABLE_INSCRIPTO" });
@@ -57,7 +65,14 @@ describe.skipIf(base === null)("composición web: archivo de compras", () => {
     proveedorId: m.proveedor,
     depositoId: m.deposito,
     renglones: [
-      { productoId: m.producto, unidadDeCompraId: "KILOGRAMO", cantidad: "2", precioPor: "UNIDAD", unidadDePrecioId: "KILOGRAMO", precio: "1000" },
+      {
+        productoId: m.producto,
+        unidadDeCompraId: "KILOGRAMO",
+        cantidad: "2",
+        precioPor: "UNIDAD",
+        unidadDePrecioId: "KILOGRAMO",
+        precio: "1000",
+      },
     ],
     factura: {
       tipo: "FACTURA_A",
@@ -81,9 +96,16 @@ describe.skipIf(base === null)("composición web: archivo de compras", () => {
     expect(r.dato.nombre).toBe("compras_2026-01-01_2026-12-31.xlsx");
     const zip = leerZipComoTextos(r.dato.contenido);
     const libro = zip.get("xl/workbook.xml") ?? "";
-    for (const hoja of ["Cabecera", "Detalle", "Resumen"]) expect(libro).toContain(`name="${hoja}"`);
+    for (const hoja of ["Cabecera", "Detalle", "Resumen"])
+      expect(libro).toContain(`name="${hoja}"`);
     const cadenas = zip.get("xl/sharedStrings.xml") ?? "";
-    for (const encabezado of ["Total según factura", "Importe abonado", "Costo por kilo (derivado)", "Renglones sin precio", "Registrado por"]) {
+    for (const encabezado of [
+      "Total según factura",
+      "Importe abonado",
+      "Costo por kilo (derivado)",
+      "Renglones sin precio",
+      "Registrado por",
+    ]) {
       expect(cadenas).toContain(encabezado);
     }
     // «Tipo» y «Letra» son datos separados, nunca «Factura A» en una celda.
@@ -93,19 +115,23 @@ describe.skipIf(base === null)("composición web: archivo de compras", () => {
     const cabecera = zip.get("xl/worksheets/sheet1.xml") ?? "";
     expect(cabecera).toContain("<v>2420</v>");
     expect(cabecera).toContain("<v>2000</v>");
-    for (const [nombre, xml] of zip) if (nombre.startsWith("xl/worksheets/")) expect(xml).not.toContain("<f");
+    for (const [nombre, xml] of zip)
+      if (nombre.startsWith("xl/worksheets/")) expect(xml).not.toContain("<f");
     // El correo de quien cargó (el operador) sale del directorio de identidad.
     expect(cadenas).toMatch(/@/);
   });
 
   it("un proveedor llamado como una fórmula sale como texto inofensivo", async () => {
     const m = await armar();
-    valorDe(await c.casos.registrarCompraConFactura(m.e.operador, compra(m, '=HYPERLINK("http://x")')));
+    valorDe(
+      await c.casos.registrarCompraConFactura(m.e.operador, compra(m, '=HYPERLINK("http://x")')),
+    );
     const r = await exportarLasCompras(d, m.e.gerente, pedido);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const zip = leerZipComoTextos(r.dato.contenido);
-    for (const [nombre, xml] of zip) if (nombre.startsWith("xl/worksheets/")) expect(xml).not.toContain("<f");
+    for (const [nombre, xml] of zip)
+      if (nombre.startsWith("xl/worksheets/")) expect(xml).not.toContain("<f");
     expect(zip.get("xl/sharedStrings.xml")).not.toMatch(/>=HYPERLINK/);
   });
 
@@ -113,13 +139,24 @@ describe.skipIf(base === null)("composición web: archivo de compras", () => {
     const m = await armar();
     valorDe(await c.casos.registrarCompraConFactura(m.e.operador, compra(m)));
     // El guard dice su propio código (la pantalla lo traduce): el operador no exporta.
-    expect(await exportarLasCompras(d, m.e.operador, pedido)).toMatchObject({ ok: false, error: { codigo: "SIN_PERMISO" } });
-    expect(await exportarLasCompras(d, m.e.gerente, { desde: "2026-01-01" })).toMatchObject(GENERICO);
+    expect(await exportarLasCompras(d, m.e.operador, pedido)).toMatchObject({
+      ok: false,
+      error: { codigo: "SIN_PERMISO" },
+    });
+    expect(await exportarLasCompras(d, m.e.gerente, { desde: "2026-01-01" })).toMatchObject(
+      GENERICO,
+    );
     expect(await exportarLasCompras(d, m.e.gerente, {})).toMatchObject(GENERICO);
     expect(await exportarLasCompras(d, m.e.gerente, null)).toMatchObject(GENERICO);
-    expect(await exportarLasCompras(d, m.e.gerente, { desde: "2026-12-31", hasta: "2026-01-01" })).toMatchObject(GENERICO);
-    expect(await exportarLasCompras(d, m.e.gerente, { desde: "2025-01-01", hasta: "2026-01-01" })).toMatchObject(GENERICO);
-    expect(await exportarLasCompras(d, m.e.gerente, { desde: "ayer", hasta: "hoy" })).toMatchObject(GENERICO);
+    expect(
+      await exportarLasCompras(d, m.e.gerente, { desde: "2026-12-31", hasta: "2026-01-01" }),
+    ).toMatchObject(GENERICO);
+    expect(
+      await exportarLasCompras(d, m.e.gerente, { desde: "2025-01-01", hasta: "2026-01-01" }),
+    ).toMatchObject(GENERICO);
+    expect(await exportarLasCompras(d, m.e.gerente, { desde: "ayer", hasta: "hoy" })).toMatchObject(
+      GENERICO,
+    );
     // Una empresa que no es la suya no existe en el pedido: aunque la mande, el archivo es de SU empresa.
     const otra = await armar();
     valorDe(await c.casos.registrarCompraConFactura(otra.e.operador, { ...compra(otra) }));

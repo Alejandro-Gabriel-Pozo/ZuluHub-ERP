@@ -13,7 +13,8 @@ export function leerZipComoTextos(bytes: Uint8Array): ReadonlyMap<string, string
   let p = b.readUInt32LE(fin + 16);
   const salida = new Map<string, string>();
   for (let i = 0; i < entradas; i++) {
-    if (b.readUInt32LE(p) !== 0x02014b50) throw new Error("zip: entrada del directorio central dañada");
+    if (b.readUInt32LE(p) !== 0x02014b50)
+      throw new Error("zip: entrada del directorio central dañada");
     const metodo = b.readUInt16LE(p + 10);
     const comprimido = b.readUInt32LE(p + 20);
     const largoDelNombre = b.readUInt16LE(p + 28);

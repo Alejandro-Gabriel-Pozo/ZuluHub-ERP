@@ -52,7 +52,9 @@ function fechaAMedianocheUtc(texto: string): Date | null {
   if (m === null) return null;
   const [anio, mes, dia] = [Number(m[1]), Number(m[2]), Number(m[3])];
   const fecha = new Date(Date.UTC(anio, mes - 1, dia));
-  return fecha.getUTCFullYear() === anio && fecha.getUTCMonth() === mes - 1 && fecha.getUTCDate() === dia
+  return fecha.getUTCFullYear() === anio &&
+    fecha.getUTCMonth() === mes - 1 &&
+    fecha.getUTCDate() === dia
     ? fecha
     : null;
 }
@@ -67,7 +69,11 @@ export function celdaDeLaBiblioteca(celda: Celda): CeldaDeLaBiblioteca {
       return { value: celda.valor, type: Number, format: "0" };
     case "decimal":
       return seEscribeComoNumero(celda.valor)
-        ? { value: Number(celda.valor), type: Number, format: FORMATO_POR_DECIMALES[celda.decimales] }
+        ? {
+            value: Number(celda.valor),
+            type: Number,
+            format: FORMATO_POR_DECIMALES[celda.decimales],
+          }
         : { value: celda.valor, type: String };
     case "fecha": {
       const fecha = fechaAMedianocheUtc(celda.valor);

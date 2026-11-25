@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0907",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "INFRAESTRUCTURA",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La exportación de compras corre en una transacción serializable de lectura y escritura con la auditoría adentro y genera el archivo después.",
+  "que_cambia": "No existe una transacción de solo lectura que pueda auditar. Si falla la generación queda una auditoría sin archivo y repetir deja otra. Revertir: cambiar el aislamiento en exportar-compras.ts.",
+  "donde": "plan-exportacion-de-compras-2026-11-25.md §3.1; exportar-compras.ts"
+}

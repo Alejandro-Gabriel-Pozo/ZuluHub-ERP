@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0904",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "El dueño aprobó los encabezados de dinero y fiscal del archivo de compras y los valores «Pagado» y «Registrado».",
+  "que_cambia": "Los textos dejan de estar sin aprobar. Revertir: cambiar el texto de la clave en catalogo-compras-exportacion.ts.",
+  "donde": "Chat del dueño 25/11/2026 («Sí a todas tus recomendaciones»), relayado por el orquestador; lista marcada Dueño de plan-exportacion-de-compras-2026-11-25.md §5.2 a §5.5; catalogo-compras-exportacion.ts"
+}

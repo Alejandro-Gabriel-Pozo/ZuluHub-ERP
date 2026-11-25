@@ -27,7 +27,8 @@ vi.mock("../../apps/web/servidor/sesion", () => ({
   dependenciasDeSesion: { respuesta: { registrar: () => undefined } },
 }));
 vi.mock("../../apps/web/servidor/con-la-empresa", () => ({
-  conLaEmpresa: (hacer: (contexto: unknown) => Promise<unknown>) => hacer({ contexto: "de prueba" }),
+  conLaEmpresa: (hacer: (contexto: unknown) => Promise<unknown>) =>
+    hacer({ contexto: "de prueba" }),
 }));
 vi.mock("../../src/composicion/compras-exportacion-web", () => ({
   exportarLasCompras: (_d: unknown, _contexto: unknown, crudo: unknown) => {

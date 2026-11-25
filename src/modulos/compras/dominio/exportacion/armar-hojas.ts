@@ -1,11 +1,6 @@
 import { instanteIsoEnArgentina } from "../../../../primitivas/tiempo/instante-en-argentina";
 import { FICHA_DE_TIPO_DE_COMPROBANTE } from "../comprobante";
-import {
-  leerCantidad,
-  leerImporte,
-  textoDeCantidad,
-  textoDeImporte,
-} from "../decimal";
+import { leerCantidad, leerImporte, textoDeCantidad, textoDeImporte } from "../decimal";
 import { totalDeCompra } from "../importe-vigente";
 import {
   celdaDeFecha,
@@ -222,7 +217,8 @@ export function armarCabecera(
 function costoPorKiloDeLinea(l: LineaParaExportar): string | null {
   const importe = l.importeVigente === null ? null : leerImporte(l.importeVigente);
   const peso = l.pesoReal === null ? null : leerCantidad(l.pesoReal);
-  if (peso !== null) return costoPorKiloDerivado(importe, peso, l.unidadDeCompraId as CodigoDeUnidad);
+  if (peso !== null)
+    return costoPorKiloDerivado(importe, peso, l.unidadDeCompraId as CodigoDeUnidad);
   const enStock = leerCantidad(l.cantidadEnStock);
   return enStock === null
     ? null
@@ -258,7 +254,11 @@ export function armarDetalle(
         celdaDeTexto(l.unidadDeStockSimbolo),
         celdaDecimal(l.precio, 6),
         celdaDeTexto(
-          l.precioPorTipo === "PRESENTACION" ? l.presentacionNombre : l.precioPorTipo === "UNIDAD" ? r.precioPorUnidad : null,
+          l.precioPorTipo === "PRESENTACION"
+            ? l.presentacionNombre
+            : l.precioPorTipo === "UNIDAD"
+              ? r.precioPorUnidad
+              : null,
         ),
         celdaDeTexto(l.unidadDePrecioSimbolo),
         celdaDecimal(l.importeVigente, 2),

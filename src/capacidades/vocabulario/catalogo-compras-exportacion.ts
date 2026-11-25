@@ -50,9 +50,21 @@ export const TEXTOS_DE_EXPORTACION_DE_COMPRAS = {
     usos: uso("nombreDelArchivoDeCompras"),
     fuente: DEL_ORQUESTADOR,
   },
-  "compras.exportacion.hoja_cabecera": { porDefecto: "Cabecera", usos: uso("hojasDeLaExportacion"), fuente: DEL_ORQUESTADOR },
-  "compras.exportacion.hoja_detalle": { porDefecto: "Detalle", usos: uso("hojasDeLaExportacion"), fuente: DEL_ORQUESTADOR },
-  "compras.exportacion.hoja_resumen": { porDefecto: "Resumen", usos: uso("hojasDeLaExportacion"), fuente: DEL_ORQUESTADOR },
+  "compras.exportacion.hoja_cabecera": {
+    porDefecto: "Cabecera",
+    usos: uso("hojasDeLaExportacion"),
+    fuente: DEL_ORQUESTADOR,
+  },
+  "compras.exportacion.hoja_detalle": {
+    porDefecto: "Detalle",
+    usos: uso("hojasDeLaExportacion"),
+    fuente: DEL_ORQUESTADOR,
+  },
+  "compras.exportacion.hoja_resumen": {
+    porDefecto: "Resumen",
+    usos: uso("hojasDeLaExportacion"),
+    fuente: DEL_ORQUESTADOR,
+  },
   // Cabecera (una fila por compra)
   "compras.exportacion.cabecera.id": deCabecera("ID de la compra", false),
   "compras.exportacion.cabecera.numero": deCabecera("Número de compra", false),
@@ -85,7 +97,10 @@ export const TEXTOS_DE_EXPORTACION_DE_COMPRAS = {
   "compras.exportacion.detalle.codigo_del_producto": deDetalle("Código del producto", false),
   "compras.exportacion.detalle.clasificacion": deDetalle("Clasificación", false),
   "compras.exportacion.detalle.presentacion": deDetalle("Presentación", false),
-  "compras.exportacion.detalle.cantidad_de_la_presentacion": deDetalle("Cantidad de la presentación", false),
+  "compras.exportacion.detalle.cantidad_de_la_presentacion": deDetalle(
+    "Cantidad de la presentación",
+    false,
+  ),
   "compras.exportacion.detalle.cantidad_de_compra": deDetalle("Cantidad de compra", false),
   "compras.exportacion.detalle.unidad_de_compra": deDetalle("Unidad de compra", false),
   "compras.exportacion.detalle.peso_real": deDetalle("Peso real", false),
@@ -95,10 +110,22 @@ export const TEXTOS_DE_EXPORTACION_DE_COMPRAS = {
   "compras.exportacion.detalle.precio_por": deDetalle("Precio por", true),
   "compras.exportacion.detalle.unidad_de_precio": deDetalle("Unidad de precio", true),
   "compras.exportacion.detalle.importe_vigente": deDetalle("Importe vigente", true),
-  "compras.exportacion.detalle.costo_por_unidad_de_stock": deDetalle("Costo por unidad de stock", true),
-  "compras.exportacion.detalle.estado_del_pago_de_la_factura": deDetalle("Estado del pago de la factura", true),
-  "compras.exportacion.detalle.importe_abonado_derivado": deDetalle("Importe abonado (derivado)", true),
-  "compras.exportacion.detalle.costo_por_kilo_derivado": deDetalle("Costo por kilo (derivado)", true),
+  "compras.exportacion.detalle.costo_por_unidad_de_stock": deDetalle(
+    "Costo por unidad de stock",
+    true,
+  ),
+  "compras.exportacion.detalle.estado_del_pago_de_la_factura": deDetalle(
+    "Estado del pago de la factura",
+    true,
+  ),
+  "compras.exportacion.detalle.importe_abonado_derivado": deDetalle(
+    "Importe abonado (derivado)",
+    true,
+  ),
+  "compras.exportacion.detalle.costo_por_kilo_derivado": deDetalle(
+    "Costo por kilo (derivado)",
+    true,
+  ),
   // Resumen (una fila por sucursal × producto × unidad de compra)
   "compras.exportacion.resumen.compras": deResumen("Compras", false),
   "compras.exportacion.resumen.renglones": deResumen("Renglones", false),
