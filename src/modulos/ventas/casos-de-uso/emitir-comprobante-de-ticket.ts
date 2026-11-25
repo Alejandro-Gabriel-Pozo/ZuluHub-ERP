@@ -12,6 +12,7 @@ import { consultarComprobanteDelTicket } from "./comprobante-vigente-del-ticket"
 import { exigirAlcance, exigirUuid, prepararComando, traducir } from "./comun";
 import type { DependenciasDeVentas, TxDeVentas } from "./contrato";
 import type { ErrorDeVentas } from "./errores";
+import { facturarAntesDeCobrarEncendida, ticketSeFactura } from "./facturar-antes-de-cobrar";
 import type { ReceptorDeFactura } from "./puertos-de-facturacion";
 
 type R<S> = Resultado<S, ErrorDeVentas>;
@@ -35,16 +36,17 @@ export type SalidaDeEmitirComprobanteDeTicket = Readonly<{
 }>;
 
 /**
- * `emitirComprobanteDeTicket` (E1 §3.3): la factura de un ticket cobrado, con los renglones congelados del ejemplar vigente; la persona solo
+ * `emitirComprobanteDeTicket` (E1 §3.3): la factura de un ticket cobrado (o emitido sin cobrar, con la perilla `facturar_antes_de_cobrar`, R-05), con los renglones congelados del ejemplar vigente; la persona solo
  * elige el receptor. Una transacción serializable, con el guard primero (`ventas.ver` y `comprobantes.emitir`; fiscal vuelve a pedir la suya):
  *  1. La clave ya usada devuelve ese comprobante sin escribir (con otro ticket, `CLAVE_REUTILIZADA`).
- *  2. El ticket es de la empresa y está en el alcance de quien pide; tiene que estar COBRADO (`TICKET_NO_FACTURABLE`).
+ *  2. El ticket es de la empresa y está en el alcance de quien pide; tiene que estar COBRADO, o EMITIDO con la perilla encendida (`TICKET_NO_FACTURABLE`).
+ *     Facturar no cambia el estado del ticket ni lo cobrado: un EMITIDO facturado sigue EMITIDO y se cobra después como siempre.
  *  3. La fila del ticket se toma `FOR UPDATE`: dos personas que facturan el mismo ticket se turnan.
  *  4. Si ya tiene un documento vigente se le pregunta a FISCAL (`consultarComprobanteDelTicket`, la misma pregunta que hace `anularTicket`) si el
  *     comprobante sigue valiendo: si vale (también «Confirmando»), el ticket ya está facturado (`TICKET_YA_FACTURADO`) y no se emite otro; si dejó de valer (rechazado, descartado o acreditado por completo) se marca
  *     ese documento no vigente y sigue, en la misma transacción.
  *  5. El origen del intento sale de (ticket, intento) de manera determinística (`origenDeLaFactura`); fiscal repite por origen.
- *  6. Los renglones son los del ejemplar vigente; fiscal valida que su total sea el cobrado y emite (nada va a ARCA dentro de la transacción).
+ *  6. Los renglones son los del ejemplar vigente; fiscal valida que su total sea el del ejemplar vigente y emite (nada va a ARCA dentro de la transacción).
  *  7. Se guarda el puntero `documento_de_ticket` y se audita. Todo o nada: si algo falla después de fiscal, no queda ni la factura.
  * «Facturado» lo decide siempre fiscal: el puntero no es una marca propia. Sin `facturador` (la composición no lo armó), se rechaza.
  */
@@ -84,7 +86,13 @@ async function emitir(
     return err("TICKET_NO_ENCONTRADO");
   // Con la fila tomada se vuelve a leer: lo que sigue es lo que vale mientras dure la transacción.
   const actual = await tx.tickets.obtener(empresaId, ticket.id);
-  if (actual === null || actual.estado !== "COBRADO") return err("TICKET_NO_FACTURABLE");
+  // COBRADO siempre; EMITIDO solo con la perilla encendida (leída con la fila tomada: apagarla en medio de la emisión se ve acá). ANULADO y CORTESIA, nunca.
+  if (
+    actual === null ||
+    !ticketSeFactura(actual.estado, await facturarAntesDeCobrarEncendida(tx, contexto))
+  ) {
+    return err("TICKET_NO_FACTURABLE");
+  }
 
   const comprobante = await consultarComprobanteDelTicket(tx, dependencias, contexto, ticket.id);
   if (!comprobante.ok) return comprobante;

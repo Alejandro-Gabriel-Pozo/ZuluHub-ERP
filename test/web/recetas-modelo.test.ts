@@ -6,8 +6,11 @@ import {
   direccionDeLaListaDeRecetas,
   leerElFiltroDeRecetas,
   leerLaPaginaDeRecetas,
+  leerElProductoDeLaDireccion,
+  rutaDeEditarLaReceta,
   rutaDeLaCocina,
   rutaDeLaReceta,
+  rutaDeLaRecetaNueva,
 } from "../../apps/web/ui/plantillas/recetas/filtros-de-recetas";
 import {
   armarLaCocina,
@@ -28,6 +31,16 @@ describe("las direcciones y el filtro", () => {
     expect(RUTA_DE_RECETAS).toBe("/catalogo/recetas");
     expect(rutaDeLaReceta(ID)).toBe(`/catalogo/recetas/${ID}`);
     expect(rutaDeLaCocina(ID)).toBe(`/catalogo/recetas/${ID}/cocina`);
+    expect(rutaDeEditarLaReceta(ID)).toBe(`/catalogo/recetas/${ID}/editar`);
+  });
+
+  it("la receta nueva, con o sin un producto ya elegido; el producto de la dirección es lo que dice", () => {
+    expect(rutaDeLaRecetaNueva()).toBe("/catalogo/recetas/nueva");
+    expect(rutaDeLaRecetaNueva(null)).toBe("/catalogo/recetas/nueva");
+    expect(rutaDeLaRecetaNueva(ID)).toBe(`/catalogo/recetas/nueva?producto=${ID}`);
+    expect(leerElProductoDeLaDireccion({ producto: ID })).toBe(ID);
+    expect(leerElProductoDeLaDireccion({ producto: [ID, "x"] })).toBe(ID);
+    expect(leerElProductoDeLaDireccion({})).toBe("");
   });
 
   it("sin filtro es la lista pelada; el filtro y la página viajan en la dirección", () => {
@@ -147,6 +160,17 @@ describe("la lista de recetas", () => {
     expect(armada.filas[0]?.costo).toBe("$ 123.456.789.012,35");
   });
 
+  it("«Nueva receta» solo si el servidor ya resolvió que la persona puede guardar (todo lo que no sea true, no)", () => {
+    expect(armarLaListaDeRecetas(lista, "", { editar: true }).nueva).toEqual({
+      href: "/catalogo/recetas/nueva",
+      texto: "Nueva receta",
+    });
+    for (const acciones of [{}, { editar: false }, { editar: undefined }]) {
+      expect(armarLaListaDeRecetas(lista, "", acciones).nueva).toBeNull();
+    }
+    expect(armarLaListaDeRecetas(lista, "").nueva).toBeNull();
+  });
+
   it("sin recetas dice «Sin resultados»; con página siguiente ofrece «Página siguiente» con el filtro", () => {
     expect(armarLaListaDeRecetas({ recetas: [], siguiente: null }, "").vacio).toBe(
       "Sin resultados",
@@ -249,6 +273,23 @@ describe("la ficha de una receta", () => {
     expect(JSON.stringify(armada)).not.toMatch(/\$|Sin costo/);
   });
 
+  it("«Editar» lleva a editar la receta, solo si el servidor deja; sin receta ofrece «Nueva receta» con el producto elegido", () => {
+    expect(armarLaReceta(receta(), { editar: true }).editar).toEqual({
+      href: `/catalogo/recetas/${ID}/editar`,
+      texto: "Editar",
+    });
+    for (const acciones of [{}, { editar: false }, { editar: undefined }]) {
+      expect(armarLaReceta(receta(), acciones).editar).toBeNull();
+    }
+    expect(armarLaReceta(receta()).editar).toBeNull();
+    const sin = { producto: { id: ID, nombre: "Flan" }, ficha: null };
+    expect(armarLaReceta(sin, { editar: true }).editar).toEqual({
+      href: `/catalogo/recetas/nueva?producto=${ID}`,
+      texto: "Nueva receta",
+    });
+    expect(armarLaReceta(sin, { editar: false }).editar).toBeNull();
+  });
+
   it("una versión vieja no dice «vigente»; sin pasos no hay sección", () => {
     const armada = armarLaReceta(receta({ esLaVigente: false, pasos: null }));
     expect(armada.version).toBe("Versión 3");
@@ -265,6 +306,7 @@ describe("la ficha de una receta", () => {
       ingredientes: null,
       pasos: null,
       cocina: null,
+      editar: null,
     });
   });
 

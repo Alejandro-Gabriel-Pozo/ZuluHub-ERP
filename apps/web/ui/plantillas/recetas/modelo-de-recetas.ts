@@ -7,6 +7,7 @@ import { costoRedondeado } from "../produccion/modelo-de-orden";
 import {
   direccionDeLaListaDeRecetas,
   rutaDeLaReceta,
+  rutaDeLaRecetaNueva,
   type FiltroDeRecetas,
 } from "./filtros-de-recetas";
 
@@ -14,7 +15,8 @@ import {
  * El modelo de vista de la lista de recetas (maqueta aprobada `receta.html`, 15/11/2026): de lo que entrega la composición, lo que se ve en cada fila y NADA más. Puro: sin React ni
  * servidor. Una fila lleva el nombre del producto y, a la derecha, «Costo de la comida» (solo si la consulta lo trajo, o sea con `costos.ver`; «Sin costo» si no se sabe, nunca cero) o,
  * si no tiene receta, «Sin receta». Sin precio, margen ni food cost (el dueño, 15/11/2026: «Costo de la comida» es el único cálculo). El costo se MUESTRA a 2 decimales con la primitiva
- * de dinero (la misma de Producción: `costoRedondeado`). Los textos salen del catálogo (ya aprobados); sin recetas, «Sin resultados».
+ * de dinero (la misma de Producción: `costoRedondeado`). Los textos salen del catálogo (ya aprobados); sin recetas, «Sin resultados». «Nueva receta» nace cerrado: solo si el servidor ya resolvió que la persona
+ * puede guardar (ocultar no es autorizar: guardar vuelve a pasar por el guard).
  */
 
 /** Las recetas como las entrega la composición (la misma forma, sin importar de dónde venga; la UI no importa la composición). */
@@ -46,7 +48,12 @@ export type ListaDeRecetasArmada = Readonly<{
   /** «Sin resultados» si no hay filas; `null` si las hay. */
   vacio: string | null;
   siguiente: Readonly<{ href: string; texto: string }> | null;
+  /** «Nueva receta», solo si el servidor deja guardar hoy; `null` si no. */
+  nueva: Readonly<{ href: string; texto: string }> | null;
 }>;
+
+/** Qué deja hacer hoy el servidor, ya resuelto (`puedeEditarRecetas`): todo lo que no sea exactamente `true` no se ofrece. */
+export type AccionesDeLasRecetas = Readonly<{ editar?: boolean | undefined }>;
 
 const FILTROS = [
   { filtro: "", clave: "receta.lista.todas" },
@@ -56,6 +63,7 @@ const FILTROS = [
 export function armarLaListaDeRecetas(
   lista: RecetasDeLaLista,
   filtro: FiltroDeRecetas,
+  acciones: AccionesDeLasRecetas = {},
   d: DiccionarioResuelto = {},
 ): ListaDeRecetasArmada {
   return {
@@ -84,5 +92,9 @@ export function armarLaListaDeRecetas(
             href: direccionDeLaListaDeRecetas(filtro, lista.siguiente),
             texto: texto(d, "fiscal.pantalla.listado_pagina_siguiente"),
           },
+    nueva:
+      acciones.editar === true
+        ? { href: rutaDeLaRecetaNueva(), texto: texto(d, "receta.lista.nueva_receta") }
+        : null,
   };
 }

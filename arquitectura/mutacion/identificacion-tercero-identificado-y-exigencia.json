@@ -3,5 +3,5 @@
   "archivos": "src/primitivas/identificacion/**/*.ts",
   "minutos": 0.5,
   "pruebas": "src/primitivas/identificacion",
-  "critico": true
+  "nivel": "CRITICO"
 }

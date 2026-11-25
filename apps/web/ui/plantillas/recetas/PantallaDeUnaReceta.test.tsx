@@ -52,8 +52,8 @@ const armazon = (titulo: string, hijo: React.ReactNode) => (
     {hijo}
   </ArmazonDeOperacion>
 );
-const pantallaDeLaReceta = (r: RecetaDeLaFicha) =>
-  armazon(r.producto.nombre, <PantallaDeUnaReceta receta={armarLaReceta(r)} />);
+const pantallaDeLaReceta = (r: RecetaDeLaFicha, editar = false) =>
+  armazon(r.producto.nombre, <PantallaDeUnaReceta receta={armarLaReceta(r, { editar })} />);
 const pantallaDeLaCocina = () =>
   armazon(
     texto({}, "receta.ficha_de_cocina.titulo"),
@@ -154,6 +154,30 @@ describe("ficha de una receta", () => {
     const anterior = controles[controles.indexOf(enlace) - 1];
     anterior?.focus();
     await verificarFoco(enlace);
+  });
+
+  it("«Editar» lleva a editar la receta y se alcanza con el teclado; sin permiso no está", async () => {
+    await render(pantallaDeLaReceta(receta(), true));
+    const enlace = page.getByRole("link", { name: "Editar" }).element() as HTMLAnchorElement;
+    expect(enlace.getAttribute("href")).toBe(
+      "/catalogo/recetas/0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b/editar",
+    );
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    legibleYTocable();
+  });
+
+  it("sin permiso para guardar no hay «Editar» ni «Nueva receta»", async () => {
+    await render(pantallaDeLaReceta(receta()));
+    expect(page.getByRole("link", { name: "Editar" }).elements()).toHaveLength(0);
+  });
+
+  it("un producto sin receta ofrece «Nueva receta» con el producto elegido, solo a quien puede guardar", async () => {
+    await render(pantallaDeLaReceta({ producto: receta().producto, ficha: null }, true));
+    const enlace = page.getByRole("link", { name: "Nueva receta" }).element() as HTMLAnchorElement;
+    expect(enlace.getAttribute("href")).toBe(
+      "/catalogo/recetas/nueva?producto=0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b",
+    );
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
   });
 
   it("un producto sin receta dice «Este producto no tiene receta», sin ingredientes ni enlaces de la receta", async () => {

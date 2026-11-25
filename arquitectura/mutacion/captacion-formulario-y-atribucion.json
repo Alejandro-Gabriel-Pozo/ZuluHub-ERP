@@ -3,5 +3,5 @@
   "archivos": "src/plataforma/captacion/dominio/formulario.ts,src/plataforma/captacion/dominio/atribucion.ts",
   "minutos": 2.8,
   "pruebas": "src/plataforma/captacion",
-  "critico": true
+  "nivel": "CRITICO"
 }
