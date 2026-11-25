@@ -146,5 +146,12 @@
   "test/web/ficha-de-depositos.test.ts": [
     "apps/web/app/s/app/(operacion)/stock/depositos/**",
     "apps/web/ui/plantillas/stock/depositos/*"
+  ],
+  "test/web/ficha-de-existencias-y-movimientos.test.ts": [
+    "apps/web/app/s/app/(operacion)/stock/existencias/**",
+    "apps/web/app/s/app/(operacion)/stock/movimientos/**",
+    "apps/web/ui/plantillas/stock/existencias/*",
+    "apps/web/ui/plantillas/stock/lectura/*",
+    "apps/web/ui/plantillas/stock/movimientos/*"
   ]
 }

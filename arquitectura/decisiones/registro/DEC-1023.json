@@ -1,0 +1,11 @@
+{
+  "id": "DEC-1023",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En Existencias y Movimientos el depósito se elige con enlaces (uno por depósito) y no con un selector; las listas pasan de página con un enlace «Siguiente»; el ajuste por conteo se rotula «Ajuste».",
+  "que_cambia": "Evita un campo de entrada nuevo y un envío con script; el único texto nuevo es «Siguiente» (stock.lista.siguiente). Revertir: dibujar el selector con su dato registrado (cambio de una pantalla) o sacar el enlace y quedarse con la primera página de 50.",
+  "donde": "apps/web/ui/plantillas/stock/lectura/SelectorDeDeposito.tsx; existencias/ y movimientos/; maqueta stock.html (dibuja un selector «Depósitos»)",
+  "motivo": "SUPUESTO de la sucursal-de-stock: la maqueta dibuja un selector y no dice cómo se pasa de página; se eligió lo que no agrega campo ni script. Pregunta enviada al orquestador sin respuesta al armar el PR."
+}

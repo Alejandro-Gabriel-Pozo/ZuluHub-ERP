@@ -87,7 +87,7 @@ export { CONTROL_DE_NEGATIVO } from "./casos-de-uso/movimiento-en-tx";
 export { leerCantidad, leerDetalle } from "./casos-de-uso/movimientos-comun";
 export { fechaValida as fechaCivilValida } from "./casos-de-uso/corregir-lote";
 export { explotarConsumo, type ProductoParaExplotar } from "./dominio/explosion";
-export { ORIGEN_TRANSFORMACION } from "./dominio/movimiento";
+export { CLASES_DE_MOVIMIENTO, ORIGEN_TRANSFORMACION } from "./dominio/movimiento";
 export {
   MOTIVO_CONSUMO_DE_TRANSFORMACION,
   MOTIVO_PRODUCTO_DE_TRANSFORMACION,

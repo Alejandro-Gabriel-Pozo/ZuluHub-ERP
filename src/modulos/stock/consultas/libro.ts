@@ -3,7 +3,7 @@ import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { PersonaId } from "../../../primitivas/identificadores/marca";
 import { fechaCivilDesdeTexto } from "../../../primitivas/tiempo/fecha-civil";
 import { esUuid } from "../persistencia/filas";
-import { esAnulable } from "../dominio/movimiento";
+import { esAnulable } from "../casos-de-uso/anulaciones";
 import type { FilaDeLibro } from "../persistencia/lecturas-del-libro";
 import type { Movimiento, RenglonGuardado } from "../persistencia/modelo";
 import type { TxDeConsultasDeStock } from "../casos-de-uso/contrato";
