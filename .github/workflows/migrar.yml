@@ -17,7 +17,7 @@ name: Migrar (preview y producción)
 #  - CLIENTES CON BASE PROPIA (extra de plan; dueño, 25/11/2026): cada uno es un ambiente `cliente-<codigo>` con SU Environment
 #    (mismos secretos, mismo revisor obligatorio, solo `main`) y SU proyecto de Neon, y tiene EL MISMO respaldo obligatorio que
 #    producción (la rama predeterminada de su proyecto se llama `production`: PRIMER-DESPLIEGUE.md, H). La lista es CERRADA y hoy está
-#    VACÍA: sumar un cliente son dos líneas (una opción abajo y un caso en «validar»), nunca un texto libre.
+#    de UN cliente hoy (`cliente-hdn`, Hoteles del Neuquén): sumar otro son dos líneas (una opción abajo y un caso en «validar»), nunca un texto libre.
 #  - Después de aplicar, si el Environment tiene PEDERNAL_CLAVE_CONTEXTO, se instala esa clave en la base (idempotente).
 #
 # El script que migra (`npm run migrar`) lee la cadena de la variable PEDERNAL_DB_MIGRACIONES; acá se la alimenta con el
@@ -33,7 +33,8 @@ on:
         options:
           - preview
           - produccion
-          # Clientes con base propia (lista cerrada, vacía hoy): `- cliente-<codigo>` (minúsculas, números y guiones, 3 a 30).
+          # Clientes con base propia (lista cerrada): `- cliente-<codigo>` (minúsculas, números y guiones, 3 a 30).
+          - cliente-hdn
       accion:
         description: "ver = solo mirar (no cambia nada) · aplicar = aplicar las migraciones pendientes"
         type: choice
@@ -82,8 +83,9 @@ jobs:
           case "$AMBIENTE" in
             preview) esperado="MIGRAR PREVIEW"; con_respaldo=false ;;
             produccion) esperado="MIGRAR PRODUCCION"; con_respaldo=true ;;
-            # Un cliente con base propia (lista cerrada, vacía hoy), con su frase y el respaldo obligatorio:
+            # Un cliente con base propia (lista cerrada), con su frase y el respaldo obligatorio:
             #   cliente-<codigo>) esperado="MIGRAR CLIENTE-<CODIGO>"; con_respaldo=true ;;
+            cliente-hdn) esperado="MIGRAR CLIENTE-HDN"; con_respaldo=true ;;
             *) echo "::error::Ambiente no permitido."; exit 1 ;;
           esac
           case "$ACCION" in

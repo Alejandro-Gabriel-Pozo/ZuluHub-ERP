@@ -608,6 +608,7 @@ function problemasDeClientes(
 
 describe("clientes con base propia: las tres listas dicen lo mismo", () => {
   const ID_EJEMPLO = "prj_EjemploEjemploEjemploEjemplo1";
+  const REAL = PROYECTOS_DE_VERCEL_DE_CLIENTES;
   const OPCION = "          - produccion\n";
   const CIERRE = '            *) echo "::error::Ambiente no permitido."; exit 1 ;;';
   const conClienteEn = (texto: string, codigo: string, caso: string) =>
@@ -618,8 +619,8 @@ describe("clientes con base propia: las tres listas dicen lo mismo", () => {
   const casoDeCargar = (c: string) => `esperado="CARGAR CLIENTE-${frase(c)}"; destino="${c}"`;
   const casoDeMigrar = (c: string) => `esperado="MIGRAR CLIENTE-${frase(c)}"; con_respaldo=true`;
 
-  it("hoy: las tres vacías y de acuerdo", () => {
-    expect(Object.keys(PROYECTOS_DE_VERCEL_DE_CLIENTES)).toEqual([]);
+  it("hoy: las tres listas con un solo cliente (Hoteles del Neuquén) y de acuerdo", () => {
+    expect(Object.keys(PROYECTOS_DE_VERCEL_DE_CLIENTES)).toEqual(["cliente-hdn"]);
     expect(problemasDeClientes(TEXTO, MIGRAR, PROYECTOS_DE_VERCEL_DE_CLIENTES)).toEqual([]);
   });
 
@@ -627,24 +628,24 @@ describe("clientes con base propia: las tres listas dicen lo mismo", () => {
     const c = "cliente-ejemplo";
     const cargar = conClienteEn(TEXTO, c, casoDeCargar(c));
     const migrar = conClienteEn(MIGRAR, c, casoDeMigrar(c));
-    expect(problemasDeClientes(cargar, migrar, { [c]: ID_EJEMPLO })).toEqual([]);
+    expect(problemasDeClientes(cargar, migrar, { ...REAL, [c]: ID_EJEMPLO })).toEqual([]);
   });
 
   describe("violaciones inyectadas: cada una se detecta", () => {
     const c = "cliente-ejemplo";
     const cargarBien = conClienteEn(TEXTO, c, casoDeCargar(c));
     const migrarBien = conClienteEn(MIGRAR, c, casoDeMigrar(c));
-    const lista = { [c]: ID_EJEMPLO };
+    const lista = { ...REAL, [c]: ID_EJEMPLO };
     const casos: [string, string, () => string[]][] = [
       [
         "cargar-distinto-de-la-lista",
         "una opción en cargar-entorno que no está en la lista de proyectos",
-        () => problemasDeClientes(cargarBien, MIGRAR, {}),
+        () => problemasDeClientes(cargarBien, MIGRAR, REAL),
       ],
       [
         "migrar-distinto-de-la-lista",
         "una opción en migrar que no está en la lista de proyectos",
-        () => problemasDeClientes(TEXTO, migrarBien, {}),
+        () => problemasDeClientes(TEXTO, migrarBien, REAL),
       ],
       [
         "cargar-distinto-de-la-lista",
@@ -659,12 +660,12 @@ describe("clientes con base propia: las tres listas dicen lo mismo", () => {
       [
         `cliente-sin-proyecto-valido: ${c}`,
         "un cliente que apunta al proyecto de la web (pedernal-erp)",
-        () => problemasDeClientes(cargarBien, migrarBien, { [c]: PROYECTO_DE_VERCEL }),
+        () => problemasDeClientes(cargarBien, migrarBien, { ...REAL, [c]: PROYECTO_DE_VERCEL }),
       ],
       [
         `cliente-sin-proyecto-valido: ${c}`,
         "un cliente con un id que no tiene la forma de un proyecto",
-        () => problemasDeClientes(cargarBien, migrarBien, { [c]: "otro" }),
+        () => problemasDeClientes(cargarBien, migrarBien, { ...REAL, [c]: "otro" }),
       ],
       [
         `cargar-sin-caso: ${c}`,
