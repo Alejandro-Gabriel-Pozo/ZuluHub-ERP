@@ -15,6 +15,7 @@
     "composiciones.editar": ["ADMINISTRADOR", "GERENTE"],
     "compras.configurar": ["GERENTE"],
     "compras.corregir": ["ADMINISTRADOR", "GERENTE"],
+    "compras.exportar": ["ADMINISTRADOR", "GERENTE"],
     "comprobantes.descartar": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "comprobantes.emitir": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "comprobantes.emitir_manual": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
