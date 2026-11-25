@@ -9,7 +9,7 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  *
  * DIFERENCIAS CON LA MAQUETA (`compra-conciliar.html`; la maqueta manda: cada desvío lleva su fundamento y lo decide el dueño, DDD:294):
  *  1. La factura es de la EMPRESA: no tiene sucursal (respuesta del dueño a la pregunta 1, 25/11/2026, DEC-0902). Lo recibido sí es por sucursal.
- *  2. El alcance de sucursales limita la propuesta, lo recibido que se muestra y las conciliaciones visibles (pregunta 6, DEC-0934). Hoy gerente y administrador tienen alcance «TODAS» (H6): el límite solo actúa con un alcance acotado.
+ *  2. El alcance de sucursales limita la propuesta, lo recibido que se muestra y las conciliaciones visibles (pregunta 6, DEC-0934). Gerente y administrador operan en todas las sucursales (H6) y son hoy quienes tienen las acciones de conciliar; un rol propio futuro (H4b) con esas acciones quedaría limitado a sus sucursales asignadas.
  *  3. «Anular conciliación» no pide motivo (la entrada de `anularConciliacion` no lo lleva) y solo se ofrece en una conciliación no anulada que repartió solo sucursales del alcance de quien anula.
  *  4. Sin filtros en la lista (pregunta 8, DEC-0905). Sin «tomar el costo» todavía: es el PR C.
  *  5. «Cargar factura» es el bloque de la factura de «Nueva compra» (los mismos datos y textos) con un producto por línea y sin remito, sin depósito y sin sucursal.

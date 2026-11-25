@@ -241,7 +241,7 @@ export function armarAnularConciliacion(dependencias: DependenciasDeCompras) {
             return err("CONCILIACION_YA_ANULADA");
           }
           const hechas = await tx.conciliacionesDeCompra.asignacionesDe(empresaId, conciliacion.id);
-          // Anular también es de quien tiene alcance sobre cada sucursal involucrada (como conciliar). Hoy gerente y administrador tienen alcance «TODAS» (H6): solo actúa con un alcance acotado.
+          // Anular también es de quien tiene alcance sobre cada sucursal involucrada (como conciliar). Gerente y administrador operan en todas (H6); un rol propio futuro (H4b) con esas acciones quedaría limitado a sus sucursales.
           for (const recepcionId of new Set(hechas.map((a) => a.recepcionId))) {
             const recepcion = await tx.recepcionesSeparadas.obtenerSeparada(empresaId, recepcionId);
             if (recepcion === null) return err("CONCILIACION_NO_ENCONTRADA");

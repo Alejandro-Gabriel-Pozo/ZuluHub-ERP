@@ -4,7 +4,7 @@
   "quien": "dueño",
   "tipo": "PERMISOS",
   "estado": "CONFIRMADA",
-  "decision": "El alcance de sucursales limita la propuesta, lo recibido y las conciliaciones visibles; conciliar y anular exigen alcance sobre cada sucursal que se reparte (pregunta 6, respuesta Ok).",
-  "que_cambia": "Hoy gerente y administrador tienen alcance TODAS (H6), por lo que el limite no se nota en produccion y solo actua con un alcance acotado. Sin permiso ni accion nueva. Revertir: pasar TODAS al pedir lineas y quitar la verificacion al anular.",
+  "decision": "El alcance de sucursales limita la propuesta, lo recibido y las conciliaciones visibles; conciliar y anular exigen alcance sobre cada sucursal repartida. El gerente concilia todas (pregunta 6, respuesta del dueño).",
+  "que_cambia": "Gerente y administrador operan en todas las sucursales (H6) y tienen conciliaciones ver, conciliar y anular. Un rol propio futuro (H4b) con esas acciones quedaria limitado a sus sucursales asignadas. Revertir: pasar TODAS.",
   "donde": "proponer-conciliacion.ts, conciliar-factura.ts, repositorio-de-recepciones-separadas.ts, compras-n3-conciliacion.test.ts; pregunta 6 de Compras 4, respuesta Ok del dueño el 25/11/2026"
 }
