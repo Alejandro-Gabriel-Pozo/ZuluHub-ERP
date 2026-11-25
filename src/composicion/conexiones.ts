@@ -129,11 +129,6 @@ import {
   type ValoresDeLaPieza,
 } from "./entorno";
 import { leerClaveDeCertificados } from "./clave-de-certificados";
-import {
-  crearLecturaDeHostsPropios,
-  type HostsPropiosDb,
-  type LecturaDeHostsPropios,
-} from "../modulos/marcas/publico";
 import { perezoso } from "./perezoso";
 import { armarPiezasDeCajaEnTx, type PiezasDeCajaEnTx } from "./tx-de-caja";
 import { armarPiezasDeModulosEnTx, type PiezasDeModulosEnTx } from "./tx-de-modulos";
@@ -194,8 +189,6 @@ export type TxDeApp = PiezasDeModulosEnTx &
     marca: Readonly<{ deLaEmpresa(empresa: EmpresaId): Promise<MarcaParaImprimir> }>;
     /** El nivel vigente de cada control (permitir, avisar, bloquear), leído en la misma transacción. */
     niveles: NivelesDeControl;
-    /** El host activo propio de la empresa por superficie (dominio propio): solo lectura; la base deja ver únicamente lo activo de la empresa del contexto (0095). */
-    hostsPropios: LecturaDeHostsPropios;
     /** Lo que lee la puerta `SESION` (la persona del usuario y sus empresas). */
     sesion: LecturasDeSesion;
   }> &
@@ -305,7 +298,6 @@ function armarTx(db: ConexionDeTx, autorizacion: CargaDeAutorizacion): TxDeApp {
     ...armarPiezasDeModulosEnTx(db),
     niveles: crearNivelesDeControlDePostgres(db.withTables<NivelesDeControlDb>()),
     sesion: crearLecturasDeSesionDePostgres(db.withTables<SesionDb>()),
-    hostsPropios: crearLecturaDeHostsPropios(db.withTables<HostsPropiosDb>()),
   };
 }
 
