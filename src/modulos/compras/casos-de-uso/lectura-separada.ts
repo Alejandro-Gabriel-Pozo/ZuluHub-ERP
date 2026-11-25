@@ -22,7 +22,7 @@ export const FORMA_DEL_CURSOR_SEPARADO = /^(\d{4}-\d{2}-\d{2})\|([0-9a-fA-F-]{36
 
 /**
  * Lo que leen las pantallas de N3 y N4 (E9 §3.10): las recepciones con su estado derivado (pendiente de confirmar, sin facturar, facturada en parte, facturada, anulada) y las
- * facturas con el suyo (falta recibir, conciliada en parte, conciliada, anulada). Vive acá porque decide con el dominio. Todo filtra por la empresa del contexto; las recepciones,
+ * facturas con el suyo (falta recibir, falta conciliar, conciliada en parte, conciliada, anulada). Vive acá porque decide con el dominio. Todo filtra por la empresa del contexto; las recepciones,
  * además, por el alcance de sucursales de quien pide. Las compras de N1 y N2 salen en `listarCompras`, no acá.
  */
 
@@ -53,6 +53,8 @@ export type RecepcionSeparadaDeLista = Readonly<{
 export type FacturaSeparadaDeLista = Readonly<{
   comprobanteId: string;
   proveedorId: string;
+  /** El nombre del proveedor; `null` si no se puede mostrar (parte anonimizada). */
+  proveedorNombre: string | null;
   tipo: string | null;
   puntoDeVenta: number | null;
   numero: number | null;
@@ -153,16 +155,21 @@ export async function listarFacturasSeparadasDentro(
   const filtro = await leerFiltro(tx, contexto, entrada);
   if (!filtro.ok) return filtro;
   const filas = await tx.lecturasSeparadas.facturas(contexto.empresaId, filtro.valor);
+  const pagina = filas.slice(0, TAMANO_DE_PAGINA);
+  const nombres = await directorio.nombresParaMostrar(tx, contexto.empresaId, [
+    ...new Set(pagina.map((f) => f.proveedorId)),
+  ]);
   return ok({
-    filas: filas.slice(0, TAMANO_DE_PAGINA).map((f) => ({
+    filas: pagina.map((f) => ({
       comprobanteId: f.id,
       proveedorId: f.proveedorId,
+      proveedorNombre: nombres.get(f.proveedorId) ?? null,
       tipo: f.tipo,
       puntoDeVenta: f.puntoDeVenta,
       numero: f.numero,
       fechaNegocio: f.fechaNegocio,
       totalSegunFactura: f.totalSegunFactura,
-      estado: estadoDeFacturaSeparada(f.estado, f.facturada, f.asignada),
+      estado: estadoDeFacturaSeparada(f.estado, f.facturada, f.asignada, f.haySinConciliar),
     })),
     siguiente: siguienteDe(filas),
   });

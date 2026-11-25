@@ -9,6 +9,8 @@ export type FiltroDeListaSeparada = Readonly<{
   proveedorId: string | null;
   /** Solo la recepción con este id (la ficha la lee con el mismo cálculo de saldos que la lista); ausente o `null`, sin este filtro. Solo lo usa `recepciones`. */
   recepcionId?: string | null;
+  /** Solo la factura con este id (el detalle la lee con el mismo cálculo de saldos que la lista); ausente o `null`, sin este filtro. Solo lo usa `facturas`. */
+  comprobanteId?: string | null;
   /** Fechas de negocio, `YYYY-MM-DD`, ambas inclusive. */
   desde: string | null;
   hasta: string | null;
@@ -40,6 +42,8 @@ export type FilaDeFacturaSeparada = Readonly<{
   totalSegunFactura: string;
   facturada: string;
   asignada: string;
+  /** Hay mercadería CONFIRMADA del mismo proveedor y de algún producto de la factura, sin asignar y sin rechazar, en las sucursales del alcance que pidió (para «Falta conciliar»). */
+  haySinConciliar: boolean;
 }>;
 
 /**
@@ -143,6 +147,11 @@ export function crearRepositorioDeLecturasSeparadas(
     async facturas(empresa, filtro) {
       // La factura no tiene sucursal: ve todas las del proveedor quien tiene alcance sobre alguna sucursal (el alcance vacío no ve nada).
       if (filtro.sucursales !== "TODAS" && filtro.sucursales.length === 0) return [];
+      // «Falta conciliar» mira solo la mercadería de las sucursales del alcance de quien pide (cada gerente concilia lo de su sucursal).
+      const alcance =
+        filtro.sucursales === "TODAS"
+          ? sql`true`
+          : sql`r.sucursal_id in (${sql.join(filtro.sucursales.map((id) => sql`${id}::uuid`))})`;
       let consulta = db
         .selectFrom("comprobante_de_proveedor as c")
         .select([
@@ -162,6 +171,17 @@ export function crearRepositorioDeLecturasSeparadas(
             where s.empresa_id = c.empresa_id and s.comprobante_id = c.id), 0)::numeric(18,4)::text`.as(
             "asignada",
           ),
+          sql<boolean>`exists (select 1 from linea_de_comprobante lc
+            join linea_de_recepcion l on l.empresa_id = lc.empresa_id and l.producto_id = lc.producto_id
+            join recepcion r on r.empresa_id = l.empresa_id and r.id = l.recepcion_id
+            join saldo_de_linea_de_recepcion s on s.empresa_id = l.empresa_id and s.recepcion_id = l.recepcion_id and s.numero = l.numero
+            where lc.empresa_id = c.empresa_id and lc.comprobante_id = c.id
+              and r.proveedor_id = c.proveedor_id and r.estado = 'CONFIRMADA'
+              and r.nivel in ('RECEPCION_SEPARADA', 'TRES_VIAS')
+              and s.cantidad_recibida > s.cantidad_asignada
+              and not exists (select 1 from inspeccion_de_linea_de_recepcion i
+                where i.empresa_id = l.empresa_id and i.recepcion_id = l.recepcion_id and i.linea = l.numero and i.condicion = 'RECHAZADA')
+              and ${alcance})`.as("hay_sin_conciliar"),
         ])
         .where("c.empresa_id", "=", empresa)
         .where("c.clase", "=", "FACTURA")
@@ -169,6 +189,8 @@ export function crearRepositorioDeLecturasSeparadas(
         .where("c.es_atajo", "=", false);
       if (filtro.proveedorId !== null)
         consulta = consulta.where("c.proveedor_id", "=", filtro.proveedorId);
+      if (filtro.comprobanteId !== undefined && filtro.comprobanteId !== null)
+        consulta = consulta.where("c.id", "=", filtro.comprobanteId);
       if (filtro.desde !== null)
         consulta = consulta.where(sql`c.fecha_negocio`, ">=", sql`${filtro.desde}::date`);
       if (filtro.hasta !== null)
@@ -195,6 +217,7 @@ export function crearRepositorioDeLecturasSeparadas(
         totalSegunFactura: f.total_segun_factura,
         facturada: f.facturada,
         asignada: f.asignada,
+        haySinConciliar: f.hay_sin_conciliar,
       }));
     },
   };

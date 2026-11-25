@@ -188,4 +188,26 @@ describe("estadoDeFacturaSeparada", () => {
     expect(estadoDeFacturaSeparada("REGISTRADO", "abc", "5")).toBe("FACTURADA_FALTA_RECIBIR");
     expect(estadoDeFacturaSeparada("REGISTRADO", "10", "abc")).toBe("FACTURADA_FALTA_RECIBIR");
   });
+
+  it("T11: «Falta conciliar» solo si no hay nada conciliado y ya hay recibido sin repartir (matriz completa)", () => {
+    // Nada conciliado: depende de si hay mercadería recibida sin repartir.
+    expect(estadoDeFacturaSeparada("REGISTRADO", "10.0000", "0.0000", false)).toBe(
+      "FACTURADA_FALTA_RECIBIR",
+    );
+    expect(estadoDeFacturaSeparada("REGISTRADO", "10.0000", "0.0000", true)).toBe(
+      "FALTA_CONCILIAR",
+    );
+    // Con algo conciliado, lo recibido sin repartir no cambia el estado.
+    expect(estadoDeFacturaSeparada("REGISTRADO", "10.0000", "4.0000", true)).toBe(
+      "CONCILIADA_EN_PARTE",
+    );
+    expect(estadoDeFacturaSeparada("REGISTRADO", "10.0000", "10.0000", true)).toBe("CONCILIADA");
+    // Anulada manda siempre.
+    expect(estadoDeFacturaSeparada("ANULADO", "10.0000", "0.0000", true)).toBe("ANULADA");
+    // Datos que no son decimales: falla cerrada hacia «falta recibir», aun con recibido.
+    expect(estadoDeFacturaSeparada("REGISTRADO", "abc", "0", true)).toBe("FACTURADA_FALTA_RECIBIR");
+    expect(estadoDeFacturaSeparada("REGISTRADO", "10", "abc", true)).toBe(
+      "FACTURADA_FALTA_RECIBIR",
+    );
+  });
 });

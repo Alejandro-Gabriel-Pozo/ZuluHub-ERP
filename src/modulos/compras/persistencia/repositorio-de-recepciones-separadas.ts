@@ -27,6 +27,9 @@ export type RecepcionSeparada = Omit<Recepcion, "estado"> &
  */
 export type LineaConciliable = Readonly<{
   recepcionId: string;
+  /** El número de la recepción y su sucursal: la pantalla de conciliar los muestra y la propuesta se limita al alcance de quien pide. */
+  recepcionNumero: number;
+  sucursalId: string;
   linea: number;
   productoId: string;
   recibida: string;
@@ -62,9 +65,14 @@ export interface RepositorioDeRecepcionesSeparadas {
   controlesDe(empresa: EmpresaId, recepcionId: string): Promise<readonly ControlDeLinea[]>;
   /**
    * Las líneas recibidas de ese proveedor que se pueden conciliar: de recepciones CONFIRMADAS de N3 o N4, sin las que el control dejó RECHAZADAS, la más vieja primero
-   * (por número de recepción y línea), con lo recibido y lo ya asignado.
+   * (por número de recepción y línea), con lo recibido y lo ya asignado. Con `sucursales` (el alcance de quien pide) solo las de esas sucursales; sin él, todas (el caso de uso que concilia
+   * las lee todas y verifica el alcance de cada recepción por su cuenta, para dar el motivo exacto).
    */
-  lineasConciliables(empresa: EmpresaId, proveedorId: string): Promise<readonly LineaConciliable[]>;
+  lineasConciliables(
+    empresa: EmpresaId,
+    proveedorId: string,
+    sucursales?: "TODAS" | readonly string[],
+  ): Promise<readonly LineaConciliable[]>;
   /** PENDIENTE → CONFIRMADA con quién la confirmó (la hora la fija la base). `false` si ya no estaba PENDIENTE. */
   confirmar(empresa: EmpresaId, id: string, por: PersonaId): Promise<boolean>;
   /** PENDIENTE → ANULADA con su motivo. `false` si ya no estaba PENDIENTE. */
@@ -134,9 +142,10 @@ export function crearRepositorioDeRecepcionesSeparadas(
     return fila === undefined ? null : aRecepcionSeparada(fila);
   }
   return {
-    async lineasConciliables(empresa, proveedorId) {
+    async lineasConciliables(empresa, proveedorId, sucursales = "TODAS") {
       if (!esUuid(proveedorId)) return [];
-      const filas = await db
+      if (sucursales !== "TODAS" && sucursales.length === 0) return [];
+      let consulta = db
         .selectFrom("recepcion as r")
         .innerJoin("linea_de_recepcion as l", (j) =>
           j.onRef("l.empresa_id", "=", "r.empresa_id").onRef("l.recepcion_id", "=", "r.id"),
@@ -149,6 +158,8 @@ export function crearRepositorioDeRecepcionesSeparadas(
         )
         .select([
           "r.id as recepcion_id",
+          "r.numero as recepcion_numero",
+          "r.sucursal_id",
           "l.numero as linea",
           "l.producto_id",
           sql<string>`s.cantidad_recibida::text`.as("recibida"),
@@ -161,12 +172,13 @@ export function crearRepositorioDeRecepcionesSeparadas(
         .where(
           sql<boolean>`not exists (select 1 from inspeccion_de_linea_de_recepcion i
             where i.empresa_id = l.empresa_id and i.recepcion_id = l.recepcion_id and i.linea = l.numero and i.condicion = 'RECHAZADA')`,
-        )
-        .orderBy("r.numero")
-        .orderBy("l.numero")
-        .execute();
+        );
+      if (sucursales !== "TODAS") consulta = consulta.where("r.sucursal_id", "in", [...sucursales]);
+      const filas = await consulta.orderBy("r.numero").orderBy("l.numero").execute();
       return filas.map((f) => ({
         recepcionId: f.recepcion_id,
+        recepcionNumero: f.recepcion_numero,
+        sucursalId: f.sucursal_id,
         linea: f.linea,
         productoId: f.producto_id,
         recibida: f.recibida,

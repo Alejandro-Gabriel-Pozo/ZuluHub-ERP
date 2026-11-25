@@ -193,7 +193,7 @@ export type EntradaDeAnularConciliacion = Readonly<{ conciliacionId: string }>;
 
 /**
  * Anular una conciliación de N3 o N4 (el espejo, una sola vez): se registra otro acto con las cantidades opuestas y las líneas recibidas y facturadas recuperan su saldo
- * (nada se borra). Guard `conciliaciones.anular` (gerente y administrador). La del atajo de N1 y N2 no se anula por acá. Una ya anulada es `CONCILIACION_YA_ANULADA` y no escribe;
+ * (nada se borra). Guard `conciliaciones.anular` (gerente y administrador) y la sucursal de cada recepción involucrada en el alcance de quien anula. La del atajo de N1 y N2 no se anula por acá. Una ya anulada es `CONCILIACION_YA_ANULADA` y no escribe;
  * dos anulaciones a la vez dejan un solo espejo (se serializan por el comprobante y lo impone la única `(empresa, anula_a)`).
  */
 export function armarAnularConciliacion(dependencias: DependenciasDeCompras) {
@@ -239,6 +239,17 @@ export function armarAnularConciliacion(dependencias: DependenciasDeCompras) {
             return err("CONCILIACION_YA_ANULADA");
           }
           const hechas = await tx.conciliacionesDeCompra.asignacionesDe(empresaId, conciliacion.id);
+          // Anular también es de quien tiene alcance sobre cada sucursal involucrada (como conciliar): cada gerente corrige lo de su sucursal.
+          for (const recepcionId of new Set(hechas.map((a) => a.recepcionId))) {
+            const recepcion = await tx.recepcionesSeparadas.obtenerSeparada(empresaId, recepcionId);
+            if (recepcion === null) return err("CONCILIACION_NO_ENCONTRADA");
+            const alcance = await exigirAlcanceDeSucursal(
+              tx,
+              contexto,
+              sucursalId(recepcion.sucursalId),
+            );
+            if (!alcance.ok) return alcance;
+          }
           const espejoId = await tx.conciliacionesDeCompra.insertarConciliacion(empresaId, {
             acto: "ANULACION",
             anulaA: conciliacion.id,
