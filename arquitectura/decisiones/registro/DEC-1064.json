@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1064",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La ficha de cocina muestra el rinde, la versión, cada ingrediente con su cantidad bruta y los pasos, sin costos ni precios y sin botón de imprimir.",
+  "que_cambia": "Qué ve la cocina. Revertir: sumar una columna o un botón.",
+  "donde": "apps/web/ui/plantillas/recetas/PantallaDeFichaDeCocina.tsx; recetas-pantalla.md §6, supuesto S7"
+}

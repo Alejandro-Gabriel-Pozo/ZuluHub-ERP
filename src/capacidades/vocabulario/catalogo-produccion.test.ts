@@ -71,6 +71,12 @@ describe("los textos de producción, receta y lotes", () => {
       "Guardar como versión {numero}",
       "Versiones",
       "Comparar",
+      // Pantalla de Recetas, «ver» (REC-A): aprobados por el dueño (13, 14 y 15/11/2026; `recetas-pantalla.md` §5).
+      "Neto",
+      "Rinde",
+      "Pasos",
+      "Costo de la comida",
+      "Todas",
       "Ficha de cocina",
       "Esta acción no está permitida",
     ]);

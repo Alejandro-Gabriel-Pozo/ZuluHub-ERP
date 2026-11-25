@@ -276,6 +276,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "produccion.pantalla.produccion",
       ],
       [
+        "recetas",
+        "catalogo",
+        "produccion",
+        "stock",
+        "stock.ver",
+        "/catalogo/recetas",
+        "receta.pantalla.recetas",
+      ],
+      [
         "compras",
         "compras",
         "compras",
@@ -534,6 +543,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "secciones",
     "stock",
     "produccion",
+    "recetas",
     "compras",
     "nivel-de-compras",
     "recepciones",
@@ -604,6 +614,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
         ],
         ["carta", [["pantalla", "secciones", "/catalogo/secciones", "catalogo.seccion.titulo"]]],
         ["stock", [["pantalla", "stock", "/stock/depositos", "stock.pantalla.stock"]]],
+        ["produccion", [["pantalla", "recetas", "/catalogo/recetas", "receta.pantalla.recetas"]]],
       ],
     ],
     [

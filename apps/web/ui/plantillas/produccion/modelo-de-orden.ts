@@ -118,7 +118,7 @@ function accionDe(
  * El costo por unidad se MUESTRA redondeado a 2 decimales (decisión del dueño, 16/11/2026, opción B): con la primitiva de dinero del sistema (`redondear` con `POLITICA_VIGENTE`: la
  * mitad se aleja del cero), sin números flotantes. El valor guardado y los cálculos no se tocan. Un texto que no es un precio válido no se redondea ni se inventa: se dice como llegó.
  */
-function costoRedondeado(costoUnitario: string): string {
+export function costoRedondeado(costoUnitario: string): string {
   try {
     const exacto = multiplicarPrecioPorCantidad(
       ARS,

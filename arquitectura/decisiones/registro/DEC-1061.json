@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1061",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El costo de la comida (en la lista y en la ficha, también por ingrediente) lo ve solo quien tiene costos.ver (gerente y administrador); el operador ve la receta sin costos y sin huecos.",
+  "que_cambia": "Quién ve los costos de una receta. Lo decide la consulta del servidor, no la pantalla.",
+  "donde": "src/modulos/stock/consultas/recetas.ts; apps/web/ui/plantillas/recetas/modelo-de-receta.ts"
+}
