@@ -63,7 +63,7 @@ type TonoDelMapa = (typeof ESTADOS)[keyof typeof ESTADOS]["tono"];
 const importeDeLaMesa = (i: Importe | undefined): string | null =>
   i === undefined || i.moneda !== MONEDA ? null : formatearImporte(i.monto);
 
-export type FilaDelMapa = Readonly<{
+type FilaDelMapa = Readonly<{
   id: string;
   /** «Mesa 7». */
   titulo: string;
