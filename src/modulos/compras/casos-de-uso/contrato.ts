@@ -32,6 +32,41 @@ export type CodigoDeEgresoDeCaja =
   | "CLAVE_REUTILIZADA"
   | "SIN_PERMISO";
 
+export type CodigoDelLibroDeProveedores =
+  | "LIBRO_DE_SALDOS_RECHAZADO"
+  | "ASIENTO_DE_LA_FACTURA_NO_ENCONTRADO"
+  | "CLAVE_REUTILIZADA"
+  | "SIN_PERMISO";
+
+/**
+ * El puerto del libro de saldos que declara compras y IMPLEMENTA la composición con `saldos_de_partes` (L1: compras no importa el libro). Corre en la transacción de la factura y NO autoriza
+ * (el permiso es el de la acción de compras). `registrarCargo` deja el asiento de la factura (el proveedor es la parte; `total` y los importes del reparto son texto decimal en pesos y el reparto suma el
+ * total); repetido con el mismo comprobante devuelve el asiento hecho. `anularCargo` lo espeja: sin asiento falla cerrado (`ASIENTO_DE_LA_FACTURA_NO_ENCONTRADO`).
+ */
+export type LibroDeProveedores = Readonly<{
+  registrarCargo(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{
+      comprobanteId: string;
+      proveedorId: string;
+      total: string;
+      venceEl: string | null;
+      reparto: readonly Readonly<{ sucursalId: string | null; importe: string }>[];
+      hechoEn: Date;
+    }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+  anularCargo(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ comprobanteId: string }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+}>;
+
 /**
  * El puerto de egreso de efectivo que declara compras y IMPLEMENTA la composición con caja (E9 T10b, D-E9-7: compras no importa caja). Corre en la transacción del
  * pago y NO autoriza (el permiso es el de la acción de compras que paga o anula el pago). `registrar` saca el importe de la caja abierta indicada; `anular` devuelve
@@ -87,6 +122,7 @@ export type DependenciasDeCompras = Readonly<{
   >;
   /** El egreso de efectivo de caja para el pago en efectivo (la composición lo implementa con caja). */
   egresoDeCaja: EgresoDeCaja;
+  libroDeProveedores: LibroDeProveedores;
   /** La condición de la empresa frente al IVA (la composición la lee de los datos fiscales). */
   ivaDeLaEmpresa: IvaDeLaEmpresa;
 }>;

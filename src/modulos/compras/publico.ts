@@ -5,9 +5,18 @@
 export { DECLARACIONES as DECLARACIONES_DE_COMPRAS } from "./casos-de-uso/declaraciones";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_COMPRAS } from "./consultas/declaraciones";
 export { crearCasosDeUsoDeCompras, type CasosDeUsoDeCompras } from "./casos-de-uso/casos-de-uso";
+export {
+  CLASE_DEL_CARGO_DE_FACTURA,
+  DETALLE_DE_LA_ANULACION_DEL_CARGO,
+  ORIGEN_DEL_CARGO_DE_FACTURA,
+  claveDeLaAnulacionDelCargo,
+  claveDelCargo,
+} from "./dominio/cargo-de-factura";
 export { crearConsultasDeCompras, type ConsultasDeCompras } from "./consultas/consultas";
 export type {
   CodigoDeEgresoDeCaja,
+  CodigoDelLibroDeProveedores,
+  LibroDeProveedores,
   DependenciasDeCompras,
   DependenciasDeConsultasDeCompras,
   EgresoDeCaja,
