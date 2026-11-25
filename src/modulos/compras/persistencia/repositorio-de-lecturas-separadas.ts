@@ -7,6 +7,8 @@ export type FiltroDeListaSeparada = Readonly<{
   /** `TODAS` o las sucursales del alcance del actor; una lista vacía no ve nada. */
   sucursales: "TODAS" | readonly string[];
   proveedorId: string | null;
+  /** Solo la recepción con este id (la ficha la lee con el mismo cálculo de saldos que la lista); ausente o `null`, sin este filtro. Solo lo usa `recepciones`. */
+  recepcionId?: string | null;
   /** Fechas de negocio, `YYYY-MM-DD`, ambas inclusive. */
   desde: string | null;
   hasta: string | null;
@@ -102,6 +104,8 @@ export function crearRepositorioDeLecturasSeparadas(
         consulta = consulta.where("r.sucursal_id", "in", [...filtro.sucursales]);
       if (filtro.proveedorId !== null)
         consulta = consulta.where("r.proveedor_id", "=", filtro.proveedorId);
+      if (filtro.recepcionId !== undefined && filtro.recepcionId !== null)
+        consulta = consulta.where("r.id", "=", filtro.recepcionId);
       if (filtro.desde !== null)
         consulta = consulta.where(sql`r.fecha_negocio`, ">=", sql`${filtro.desde}::date`);
       if (filtro.hasta !== null)

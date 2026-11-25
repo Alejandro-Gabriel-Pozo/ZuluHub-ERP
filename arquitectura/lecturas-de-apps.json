@@ -117,5 +117,13 @@
   "src/capacidades/experiencia/vidriera/color-de-la-carta.test.ts": [
     "apps/web/ui/plantillas/carta/*",
     "apps/web/ui/plantillas/vidriera/*"
+  ],
+  "test/web/ficha-de-recepciones.test.ts": [
+    "apps/web/app/s/app/(operacion)/compras/recepciones/**",
+    "apps/web/app/s/app/acciones-de-recepciones.ts",
+    "apps/web/servidor/recepciones.ts",
+    "apps/web/ui/plantillas/compras/nueva/PantallaDeNuevaCompra.cliente.tsx",
+    "apps/web/ui/plantillas/compras/recepciones/*",
+    "apps/web/ui/plantillas/compras/rutas-de-compras.ts"
   ]
 }

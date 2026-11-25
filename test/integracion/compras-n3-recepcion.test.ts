@@ -74,11 +74,33 @@ describe.skipIf(base === null)("compras N3: registrar una recepción pendiente",
   const recepciones = (proveedor: string) =>
     c.contar("select count(*) as n from recepcion where proveedor_id = $1", [proveedor]);
 
-  it("la empresa en N1 o N2 no recibe así: RECEPCION_SEPARADA_NO_CORRESPONDE_AL_NIVEL y no queda nada", async () => {
+  it("P1 = B: la empresa en N1 o N2 con la perilla del plan SÍ recibe por separado (el documento sella N3) y «Nueva compra» sigue andando; sin la perilla, FUNCION_NO_INCLUIDA y no queda nada", async () => {
     const m = await armar(n1);
-    const r = await c.casos.registrarRecepcion(n1.operador, pedido(m, n1));
-    expect(r).toEqual({ ok: false, error: "RECEPCION_SEPARADA_NO_CORRESPONDE_AL_NIVEL" });
-    expect(await recepciones(m.proveedor)).toBe(0);
+    const r = valorDe(await c.casos.registrarRecepcion(n1.operador, pedido(m, n1)));
+    expect(r.yaExistia).toBe(false);
+    expect(
+      await c.contar(
+        "select count(*) as n from recepcion where id = $1 and nivel = 'RECEPCION_SEPARADA' and estado = 'PENDIENTE'",
+        [r.recepcionId],
+      ),
+    ).toBe(1);
+    // el nivel de la empresa no cambió: «Nueva compra» (N1 o N2) sigue funcionando
+    const compra = await c.casos.registrarCompra(n1.operador, {
+      ...pedido(m, n1),
+      depositoId: m.deposito,
+    });
+    expect(compra.ok).toBe(true);
+    c.apagarPerillas();
+    try {
+      const sin = await c.casos.registrarRecepcion(n1.operador, pedido(m, n1));
+      expect(sin).toEqual({
+        ok: false,
+        error: { error: "FUNCION_NO_INCLUIDA", perilla: "recepcion_separada" },
+      });
+      expect(await recepciones(m.proveedor)).toBe(2);
+    } finally {
+      c.encenderPerilla("recepcion_separada");
+    }
   });
 
   it("el operador recibe: queda PENDIENTE, sin atajo, con su control y sin tocar stock ni la oferta del proveedor; audita", async () => {
