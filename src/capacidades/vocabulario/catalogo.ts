@@ -29,6 +29,7 @@ import { TEXTOS_DE_CIERRE } from "./catalogo-cierre";
 import { TEXTOS_DE_COMANDAS } from "./catalogo-comandas";
 import { TEXTOS_DE_CLIENTES } from "./catalogo-clientes";
 import { TEXTOS_DE_COMPRAS } from "./catalogo-compras";
+import { TEXTOS_DE_COMPRAS_COSTO } from "./catalogo-compras-costo";
 import { TEXTOS_DE_FISCAL } from "./catalogo-fiscal";
 import { TEXTOS_DE_FISCAL_CONFIGURACION } from "./catalogo-fiscal-configuracion";
 import { TEXTOS_DE_FISCAL_EMITIR } from "./catalogo-fiscal-emitir";
@@ -65,13 +66,11 @@ export const CATALOGO_DE_TEXTOS = {
   ...TEXTOS_DEL_NUCLEO,
   ...TEXTOS_DE_CARTA_PUBLICA,
   ...TEXTOS_DE_SESION_Y_EMPRESA,
-  // Facturador (H7 facturación): sus errores de negocio y lo que informa ARCA, traducido (`catalogo-fiscal.ts`).
   ...TEXTOS_DE_FISCAL,
   ...TEXTOS_DE_FISCAL_PANTALLAS,
   ...TEXTOS_DE_FISCAL_CONFIGURACION,
   ...TEXTOS_DE_FISCAL_EMITIR,
   ...TEXTOS_DE_FISCAL_IMPRIMIR,
-  // Módulos de E2, E3 y E4: nacen vacíos y cada etapa suma los suyos en su archivo (E0-T4).
   ...TEXTOS_DE_CATALOGO,
   ...TEXTOS_DE_CAJA,
   ...TEXTOS_DE_CIERRE,
@@ -83,6 +82,7 @@ export const CATALOGO_DE_TEXTOS = {
   ...TEXTOS_DE_COMANDAS,
   ...TEXTOS_DE_CLIENTES,
   ...TEXTOS_DE_COMPRAS,
+  ...TEXTOS_DE_COMPRAS_COSTO,
   ...TEXTOS_DE_USUARIOS,
 } as const satisfies Record<string, DefinicionDeTexto>;
 

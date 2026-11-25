@@ -12,6 +12,7 @@ import { leerCantidad, leerCantidadPositiva, textoDeCantidad } from "../dominio/
 import { decidirPorHuella, huellaDeComando } from "../dominio/huella";
 import { autorizar, exigirAlcanceDeSucursal, traducir } from "./comun";
 import type { DependenciasDeCompras } from "./contrato";
+import { costoVigenteDeLaLineaSeparada } from "./tomar-el-costo";
 import type { ErrorDeCompras } from "./errores";
 
 type R<S> = Resultado<S, ErrorDeCompras>;
@@ -44,7 +45,7 @@ export type SalidaDeCorregirLoRecibido = Readonly<{
  * verdad llegó, su causa (lista cerrada) y una nota opcional, y el stock se acomoda con UN movimiento por la diferencia (una entrada si llegó más, una salida si llegó menos), todo en UNA
  * transacción serializable por la fila del saldo de la línea. Guard `compras.corregir` (gerente y administrador) más `stock.registrar_entrada` o `stock.registrar_salida` según el sentido; la
  * sucursal de la recepción en el alcance de quien corrige. La cantidad es la de la unidad de stock (la misma con la que se concilia). Una corrección que dejaría lo recibido por debajo de lo
- * ya conciliado se rechaza (primero se anula la conciliación): la base lo impide aunque este caso de uso lo olvidara. La entrada declara el costo de la línea si lo tiene; la salida sale al
+ * ya conciliado se rechaza (primero se anula la conciliación): la base lo impide aunque este caso de uso lo olvidara. La entrada declara el costo vigente de la línea si lo tiene (el guardado o el tomado de la factura); la salida sale al
  * promedio vigente y lo ya vendido conserva su costo. Solo líneas que entraron enteras a UN depósito de uso normal. Repetición: misma clave y mismo contenido devuelve lo hecho sin escribir ni
  * auditar; misma clave con otro contenido, `CLAVE_REUTILIZADA`; dos pedidos a la vez sobre la línea: gana uno y el otro ve `CORRECCION_DESACTUALIZADA`.
  */
@@ -150,6 +151,13 @@ export function armarCorregirLoRecibido(dependencias: DependenciasDeCompras) {
           const producto = await tx.productosParaCompras.obtener(empresaId, linea.productoId);
           if (producto === null) return err("PRODUCTO_NO_ENCONTRADO");
 
+          // Lo que entra de más entra al costo vigente de la línea: el que guardó o el que tomó de la factura (sin él, el promedio del depósito quedaría desvirtuado).
+          const costoVigente =
+            sentido === "ENTRADA"
+              ? await costoVigenteDeLaLineaSeparada(tx, contexto, dependencias, recepcion.id, linea)
+              : ok(null);
+          if (!costoVigente.ok) return costoVigente;
+
           const diferencia = textoDeCantidad(
             sentido === "ENTRADA" ? nueva - anterior : anterior - nueva,
           );
@@ -168,9 +176,7 @@ export function armarCorregirLoRecibido(dependencias: DependenciasDeCompras) {
                   productoId: linea.productoId,
                   cantidad: diferencia,
                   unidadId: producto.unidadBaseId,
-                  ...(sentido === "ENTRADA" && linea.costoPorUnidadDeStock !== null
-                    ? { costoUnitario: linea.costoPorUnidadDeStock }
-                    : {}),
+                  ...(costoVigente.valor !== null ? { costoUnitario: costoVigente.valor } : {}),
                 },
               ],
               ...(p.confirmoExistenciaNegativa
