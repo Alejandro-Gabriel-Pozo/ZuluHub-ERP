@@ -2,6 +2,7 @@ import { EnlaceDeAccion } from "../../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../../componentes/Insignia";
 import { RUTA_DE_FACTURAS, rutaDeConciliar } from "../rutas-de-compras";
 import { AnularConciliacion } from "./AccionesDeLaConciliacion.cliente";
+import { TomarElCosto, type PropsDeTomarElCosto } from "./TomarElCosto.cliente";
 import {
   armarLaFichaDeFactura,
   type AccionesDeLaFactura,
@@ -26,6 +27,8 @@ export type PropsDePantallaDeDetalleDeFactura = Readonly<{
   acciones?: AccionesDeLaFactura;
   /** Por id de conciliación, la acción de anularla ya ligada; sin ella no se dibuja el botón de esa fila. */
   accionesDeAnular?: Readonly<Record<string, AccionDeAnular>>;
+  /** `tomarElCostoAccion`: sin ella no se dibuja ningún botón de «Tomar el costo de la factura». */
+  tomarElCosto?: PropsDeTomarElCosto["tomar"];
 }>;
 
 /**
@@ -39,6 +42,7 @@ export function PantallaDeDetalleDeFactura({
   sucursales,
   acciones,
   accionesDeAnular = {},
+  tomarElCosto,
 }: PropsDePantallaDeDetalleDeFactura) {
   const f = armarLaFichaDeFactura(ficha, textos, sucursales, acciones);
   return (
@@ -72,6 +76,32 @@ export function PantallaDeDetalleDeFactura({
                 </li>
               ))}
             </ul>
+            {l.costos.length === 0 ? null : (
+              <ul className={estilos["lista"]}>
+                {l.costos.map((k) => (
+                  <li key={k.clave} className={estilos["linea"]}>
+                    <span className={estilos["detalle"]}>{k.tomado ?? k.titulo}</span>
+                    {k.sePuedeTomar && tomarElCosto !== undefined ? (
+                      <TomarElCosto
+                        comprobanteId={ficha.comprobanteId}
+                        recepcionId={k.recepcionId}
+                        linea={k.linea}
+                        hoja={k.hoja}
+                        tomar={tomarElCosto}
+                        // Solo los textos que usa: a un componente de cliente no puede pasarse una función.
+                        textos={{
+                          tomarElCosto: textos.tomarElCosto,
+                          cancelar: textos.cancelar,
+                          cerrar: textos.cerrar,
+                          enviando: textos.enviando,
+                          reintentar: textos.reintentar,
+                        }}
+                      />
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
           </li>
         ))}
       </ul>
