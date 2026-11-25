@@ -1,10 +1,10 @@
 {
   "id": "DEC-0944",
   "fecha": "2026-11-25",
-  "quien": "sesión",
+  "quien": "dueño",
   "tipo": "COMERCIAL",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Con el costo ya tomado, la línea de la factura muestra «Precio neto» de lo tomado y no «Costo por unidad de stock» con su importe, que la maqueta mostraba.",
   "que_cambia": "El costo por unidad (con el IVA que entra al costo) no se calcula en las pantallas de lectura. Revertir: darle a las consultas la condición de IVA de la empresa y mostrar el costo calculado.",
-  "donde": "modelo-de-facturas.ts, ficha-de-facturas.ts; la maqueta compra-conciliar.html, estado «Costo tomado»"
+  "donde": "modelo-de-facturas.ts, ficha-de-facturas.ts; dueño 25/11/2026, vía el orquestador (la fila la asienta diseño); maqueta compra-conciliar.html, estado «Costo tomado»"
 }
