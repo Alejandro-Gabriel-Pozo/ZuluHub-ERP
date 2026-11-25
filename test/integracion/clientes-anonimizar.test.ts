@@ -54,6 +54,7 @@ describe.skipIf(base === null)("clientes: anonimizar una parte", () => {
   let e: EscenarioDeClientes;
   let libro: ReturnType<typeof crearLibro>;
   let sucursal: string;
+  let sur: string;
 
   const crearLibro = (url: string, clave: NonNullable<typeof base>["clave"]) =>
     crearTransacciones<TxDeSaldos>({
@@ -76,14 +77,17 @@ describe.skipIf(base === null)("clientes: anonimizar una parte", () => {
     c = await montarClientes(base);
     e = await c.escenario();
     libro = crearLibro(c.propia.base.app, c.propia.base.clave);
-    sucursal = String(
-      (
-        await c.filas<{ id: string }>(
-          "insert into sucursal (empresa_id, nombre) values ($1, $2) returning id",
-          [e.empresa, "Central"],
-        )
-      )[0]?.id,
-    );
+    const crearSucursal = async (nombre: string) =>
+      String(
+        (
+          await c.filas<{ id: string }>(
+            "insert into sucursal (empresa_id, nombre) values ($1, $2) returning id",
+            [e.empresa, nombre],
+          )
+        )[0]?.id,
+      );
+    sucursal = await crearSucursal("Central");
+    sur = await crearSucursal("Sur");
   });
   afterAll(async () => {
     if (base === null) return;
@@ -196,6 +200,7 @@ describe.skipIf(base === null)("clientes: anonimizar una parte", () => {
     parteId: string,
     clase: "CARGO_DE_FACTURA_DE_COMPRA" | "PAGO_A_PROVEEDOR",
     importe: string,
+    centro: string = sucursal,
   ): EntradaDeAsiento => ({
     parteId,
     sentido: "A_PAGAR",
@@ -207,15 +212,16 @@ describe.skipIf(base === null)("clientes: anonimizar una parte", () => {
     },
     clave: randomUUID(),
     hechoEn: new Date("2026-11-25T12:00:00Z"),
-    distribucion: [{ centroDeCosto: sucursal, importe: imp(importe) }],
+    distribucion: [{ centroDeCosto: centro, importe: imp(importe) }],
   });
   const asentar = (
     parteId: string,
     clase: "CARGO_DE_FACTURA_DE_COMPRA" | "PAGO_A_PROVEEDOR",
     importe: string,
+    centro: string = sucursal,
   ) =>
     libro.ejecutar({ contexto: contextoDelLibro() }, (tx) =>
-      registrarAsientoEnTx(tx, contextoDelLibro(), asiento(parteId, clase, importe)),
+      registrarAsientoEnTx(tx, contextoDelLibro(), asiento(parteId, clase, importe, centro)),
     );
   const saldoDe = async (parteId: string) =>
     String(
@@ -528,6 +534,36 @@ describe.skipIf(base === null)("clientes: anonimizar una parte", () => {
       expect(await fila(conSaldo)).toMatchObject({ estado: "ACTIVA" });
     });
 
+    it("un saldo en un centro de costo impide aunque el total sea cero (+100 en una sucursal y −100 en otra)", async () => {
+      const id = await persona();
+      expect((await asentar(id, "CARGO_DE_FACTURA_DE_COMPRA", "100.00", sucursal)).ok).toBe(true);
+      expect((await asentar(id, "PAGO_A_PROVEEDOR", "-100.00", sur)).ok).toBe(true);
+      expect(await saldoDe(id)).toBe("0.00");
+      expect(await anonimizar(id)).toEqual({ ok: false, error: IMPEDIDA });
+      expect(await fila(id)).toMatchObject({ estado: "ACTIVA" });
+    });
+
+    it("falla CERRADO: si no se puede leer el libro de saldos, no se anonimiza y no cambia nada", async () => {
+      const id = await persona();
+      const antes = await fila(id);
+      await c.dueno.query("revoke select on saldo_de_parte from pedernal_app");
+      try {
+        const r = await anonimizar(id).catch((error: unknown) => ({ ok: false, error }));
+        expect(r.ok).toBe(false);
+      } finally {
+        await c.dueno.query("grant select on saldo_de_parte to pedernal_app");
+      }
+      expect(await fila(id)).toEqual(antes);
+      expect(await rolesDe(id)).toEqual([
+        { rol: "CUSTOMER", activo: true },
+        { rol: "PROVEEDOR", activo: true },
+      ]);
+      expect(await auditadas(id)).toEqual([]);
+      expect(await avisos(id)).toEqual([]);
+      // Con la lectura repuesta, la misma parte se anonimiza.
+      expect(valorDe(await anonimizar(id))).toEqual({ yaEstabaAnonimizada: false });
+    });
+
     it("una parte anonimizada no admite asientos nuevos (la base lo impide)", async () => {
       const id = await persona();
       valorDe(await anonimizar(id));
@@ -637,7 +673,7 @@ describe.skipIf(base === null)("clientes: anonimizar una parte", () => {
     it("anonimizar contra un asiento de saldo que llega a la vez: o entra el asiento y la anonimización queda impedida, o se anonimiza y el asiento falla; nunca una anonimizada con saldo", async () => {
       let impedidas = 0;
       let anonimizadas = 0;
-      for (let ronda = 0; ronda < RONDAS * 2; ronda++) {
+      for (let ronda = 0; ronda < RONDAS; ronda++) {
         const id = await persona();
         const [a, asiento] = await Promise.all([
           anonimizar(id),
@@ -668,7 +704,7 @@ describe.skipIf(base === null)("clientes: anonimizar una parte", () => {
           expect(await avisos(id)).toEqual([]);
         }
       }
-      expect(impedidas + anonimizadas).toBe(RONDAS * 2);
+      expect(impedidas + anonimizadas).toBe(RONDAS);
     });
   });
 

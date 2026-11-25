@@ -23,23 +23,47 @@ import type { ErrorDePersistencia } from "../puertos/transacciones";
  */
 
 /**
- * Lo que impide anonimizar a una parte: el libro de saldos con saldo distinto de cero en cualquiera de los dos sentidos (lo que debe y lo que se le debe), sea a
- * favor o en contra (decisión del dueño, 25/11/2026). Un saldo en cero (también el de una parte sin asientos) no lo impide. Lee el saldo derivado que ya mantiene la
- * base, con la parte bloqueada por quien llama.
+ * Una fuente de impedimentos: un módulo que sabe algo de la parte y puede impedir que se anonimice. Devuelve los suyos (vacío: no impide) y NO captura errores: si no
+ * puede leer, la excepción corta la transacción y no se anonimiza (falla cerrado). Los módulos que se conecten después (la ficha de cuenta corriente del cliente, CC-1;
+ * las cuentas a cobrar de clientes) suman la suya a la lista de `armarAnonimizacionDePartesEnTx`.
  */
-export function crearImpedimentosPorSaldo(
-  saldos: Pick<RepositorioDeSaldos, "saldoDeParte">,
+export type FuenteDeImpedimentos = (
+  empresa: Parameters<ImpedimentosDeAnonimizacion["impedimentos"]>[0],
+  parteId: string,
+) => Promise<readonly ImpedimentoDeAnonimizacion[]>;
+
+/** Lo que impide anonimizar a una parte: los impedimentos de TODAS las fuentes, en orden, sin cortar en la primera (el caso de uso los devuelve todos). */
+export function crearImpedimentosDeAnonimizacion(
+  fuentes: readonly FuenteDeImpedimentos[],
 ): ImpedimentosDeAnonimizacion {
   return {
-    async impedimentos(empresa, parteId): Promise<readonly ImpedimentoDeAnonimizacion[]> {
-      for (const sentido of SENTIDOS) {
-        const saldo = await saldos.saldoDeParte(empresa, parteId, sentido);
-        if (!importesIguales(saldo, importeCero(ARS))) {
-          return [{ modulo: "saldos_de_partes", motivo: "SALDO_DISTINTO_DE_CERO" }];
-        }
-      }
-      return [];
+    async impedimentos(empresa, parteId) {
+      const todos: ImpedimentoDeAnonimizacion[] = [];
+      for (const fuente of fuentes) todos.push(...(await fuente(empresa, parteId)));
+      return todos;
     },
+  };
+}
+
+/**
+ * La fuente del libro de saldos: la parte tiene saldo distinto de cero, a favor o en contra (decisión del dueño, 25/11/2026), en cualquiera de los dos sentidos (lo que debe
+ * y lo que se le debe), en el total o en CUALQUIER centro de costo (un +10 en una sucursal y un −10 en otra suman cero pero siguen siendo saldo). Lee `saldo_de_parte` y
+ * su desglose, que mantiene la base. LIMITACIÓN: solo ve lo que ya está asentado en el libro (proveedores, desde que Compras lo conecte); lo que no está en el libro (por
+ * ejemplo las cuentas a cobrar de clientes) no lo ve.
+ */
+export function fuenteDeSaldoDelLibro(
+  saldos: Pick<RepositorioDeSaldos, "saldoDeParte" | "saldoPorCentroDeCosto">,
+): FuenteDeImpedimentos {
+  const cero = importeCero(ARS);
+  return async (empresa, parteId) => {
+    for (const sentido of SENTIDOS) {
+      const total = await saldos.saldoDeParte(empresa, parteId, sentido);
+      const centros = await saldos.saldoPorCentroDeCosto(empresa, parteId, sentido);
+      if (!importesIguales(total, cero) || centros.some((c) => !importesIguales(c.importe, cero))) {
+        return [{ modulo: "saldos_de_partes", motivo: "SALDO_DISTINTO_DE_CERO" }];
+      }
+    }
+    return [];
   };
 }
 
@@ -72,7 +96,9 @@ export function armarAnonimizacionDePartesEnTx(
 ): Readonly<{ anonimizacionDePartes: AnonimizacionDePartesEnTx }> {
   return {
     anonimizacionDePartes: {
-      impedimentos: crearImpedimentosPorSaldo(crearRepositorioDeSaldos(db.withTables<SaldosDb>())),
+      impedimentos: crearImpedimentosDeAnonimizacion([
+        fuenteDeSaldoDelLibro(crearRepositorioDeSaldos(db.withTables<SaldosDb>())),
+      ]),
       copias: crearCopiasDePartes(),
     },
   };
