@@ -1,5 +1,5 @@
 -- 0097_roles_propios_de_la_empresa: asignar un rol propio a una persona de la empresa, tramo T4 de H4b.
--- Diseño aceptado: ZuluHub-docs/11-especificaciones/h4b-permisos-configurables.md §3.2 y §4 (2) (membresía y disparador de cambio de rol), §5 (invariantes I1, I9, I10, I12) y
+-- Diseño aceptado: Pedernal-docs/11-especificaciones/h4b-permisos-configurables.md §3.2 y §4 (2) (membresía y disparador de cambio de rol), §5 (invariantes I1, I9, I10, I12) y
 -- §8 (tramos). Decisiones del dueño (14/11/2026 y 25/11/2026): el gerente crea roles propios y es el único que los asigna (`usuarios.asignar_rol` nace SOLO_GERENTE); los
 -- roles propios y la asignación quedan fijados por la plataforma con pisos; la cantidad de roles propios no tiene límite comercial (perilla sin límite, sin migración).
 --
