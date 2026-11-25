@@ -4,6 +4,7 @@ import {
   listarLasRecetas,
   listarLasVersionesDeLaReceta,
   ofrecerLosIngredientes,
+  verLaFichaDeCocina,
   verLaReceta,
   verLaVistaPreviaDeLaReceta,
   type DependenciasDeRecetasWeb,
@@ -283,6 +284,139 @@ describe.skipIf(base === null)("recetas de la web: lecturas y errores", () => {
     expect(r.ok).toBe(false);
     expect(JSON.stringify(r)).not.toContain("hunter2");
     expect(registrados.some((linea) => linea.includes("hunter2"))).toBe(true);
+  });
+
+  it("REC-A, la ficha: el gerente ve bruto, merma, neto y costos exactos; el operador, lo mismo sin costos y sin huecos; sin costo es null, nunca cero", async () => {
+    const x = await c.escenario();
+    c.encenderPerilla("composiciones_con_perdida");
+    const harina = await materia(x);
+    const sal = await materia(x);
+    const p = await vendible(x);
+    const dep = await c.deposito(x, { deVenta: true });
+    // Solo la harina tiene costo (1 kg a $ 1.000): la sal queda sin costo.
+    valorDe(
+      await c.casos.registrarEntrada(x.gerente, {
+        clave: nuevoId(),
+        depositoId: dep,
+        motivo: "COMPRA",
+        renglones: [
+          {
+            productoId: harina.producto,
+            cantidad: "10",
+            unidadId: "KILOGRAMO",
+            costoUnitario: "1000",
+          },
+        ],
+      }),
+    );
+    valorDe(
+      await c.casos.guardarComposicion(x.gerente, {
+        productoId: p,
+        versionEsperada: 0,
+        rinde: "3",
+        componentes: [
+          { productoId: harina.producto, cantidad: "1", unidadId: "KILOGRAMO", perdida: "20" },
+        ],
+      }),
+    );
+    const antes = await escrituras(x);
+
+    const gerente = dato(await verLaReceta(d, x.gerente, { productoId: p }));
+    const ficha = gerente?.ficha;
+    expect(ficha).toMatchObject({ version: 1, esLaVigente: true, rinde: "3.0000" });
+    expect(ficha?.componentes[0]).toMatchObject({
+      bruto: "1.0000",
+      merma: "20.0000",
+      neto: "0.8000",
+      costo: "1000.000000",
+    });
+    // Un solo redondeo: $ 1.000 entre 3 unidades, 6 decimales exactos.
+    expect(ficha?.costos).toMatchObject({
+      moneda: "ARS",
+      porUnidad: "333.333333",
+      incompleto: false,
+    });
+
+    const operador = dato(await verLaReceta(d, x.operador, { productoId: p }));
+    expect(operador?.ficha?.componentes[0]).toMatchObject({ bruto: "1.0000", merma: "20.0000" });
+    expect(Object.hasOwn(operador?.ficha ?? {}, "costos")).toBe(false);
+    expect(Object.hasOwn(operador?.ficha?.componentes[0] ?? {}, "costo")).toBe(false);
+    expect(JSON.stringify(operador)).not.toMatch(/333|1000\.0/);
+
+    // Una versión con un ingrediente sin costo: la línea es null y el total, incompleto; nunca cero.
+    valorDe(
+      await c.casos.guardarComposicion(x.gerente, {
+        productoId: p,
+        versionEsperada: 1,
+        rinde: "3",
+        componentes: [{ productoId: sal.producto, cantidad: "1", unidadId: "KILOGRAMO" }],
+      }),
+    );
+    const sinCosto = dato(await verLaReceta(d, x.gerente, { productoId: p }));
+    expect(sinCosto?.ficha?.componentes[0]?.costo).toBeNull();
+    expect(sinCosto?.ficha?.costos?.incompleto).toBe(true);
+    // El servidor manda 0 junto con `incompleto`: por eso la pantalla decide por `incompleto` y dice «Sin costo» (`modelo-de-receta.ts`), nunca el cero.
+    expect(sinCosto?.ficha?.costos?.sinCosto).toEqual([sal.producto]);
+    expect(await escrituras(x)).not.toBe(antes); // guardar la versión 2 sí escribió; leer no:
+    const despues = await escrituras(x);
+    dato(await verLaReceta(d, x.gerente, { productoId: p }));
+    expect(await escrituras(x)).toBe(despues);
+  });
+
+  it("REC-A, la ficha de cocina: bruto y pasos sin costos ni precios, para los tres roles; de otra empresa, sin receta o mal formado es null; leer no escribe", async () => {
+    const a = await c.escenario();
+    const b = await c.escenario();
+    const harina = await materia(a);
+    const conReceta = await vendible(a);
+    const sinReceta = await vendible(a);
+    valorDe(
+      await c.casos.guardarComposicion(a.gerente, {
+        productoId: conReceta,
+        versionEsperada: 0,
+        rinde: "10",
+        pasos: "Amasar y hornear.",
+        componentes: [{ productoId: harina.producto, cantidad: "2.5", unidadId: "KILOGRAMO" }],
+      }),
+    );
+    const antes = await escrituras(a);
+    for (const quien of [a.gerente, a.administrador, a.operador]) {
+      const cocina = dato(await verLaFichaDeCocina(d, quien, conReceta));
+      expect(cocina).toMatchObject({
+        version: 1,
+        rinde: "10.0000",
+        pasos: "Amasar y hornear.",
+        componentes: [{ productoId: harina.producto, cantidad: "2.5000", unidadId: "KILOGRAMO" }],
+      });
+      // Nada de costos ni precios, ni siquiera para quien los ve en la ficha de la receta.
+      expect(JSON.stringify(cocina)).not.toMatch(/costo|precio|moneda/i);
+    }
+    for (const [quien, productoId] of [
+      [b.gerente, conReceta],
+      [a.gerente, sinReceta],
+      [a.gerente, nuevoId()],
+      [a.gerente, "no-es-un-uuid"],
+    ] as const) {
+      expect(dato(await verLaFichaDeCocina(d, quien, productoId))).toBeNull();
+    }
+    expect(await escrituras(a)).toBe(antes);
+  });
+
+  it("REC-A: con el módulo apagado la ficha y la cocina salen como el motivo del guard, sin dato alguno", async () => {
+    const x = await c.escenario();
+    const harina = await materia(x);
+    const p = await vendible(x);
+    await guardar(x.gerente, p, harina.producto, 0);
+    c.apagarModulo("stock");
+    try {
+      for (const r of [
+        await verLaReceta(d, x.gerente, { productoId: p }),
+        await verLaFichaDeCocina(d, x.operador, p),
+      ]) {
+        expect(r).toMatchObject({ ok: false, error: { codigo: "MODULO_NO_ACTIVO" } });
+      }
+    } finally {
+      c.encenderModulos();
+    }
   });
 
   it("B9: lo que guardar rechaza sale como el genérico; el guard pasa sin cambios", async () => {

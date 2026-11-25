@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1061",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "El costo de la comida (en la lista y en la ficha, también por ingrediente) lo ve solo quien tiene costos.ver (gerente y administrador); el operador ve la receta sin costos y sin huecos.",
+  "que_cambia": "Quién ve los costos de una receta. Lo decide la consulta del servidor, no la pantalla.",
+  "donde": "src/modulos/stock/consultas/recetas.ts; dueño 25/11/2026, vía el orquestador; la fila la asienta diseño"
+}

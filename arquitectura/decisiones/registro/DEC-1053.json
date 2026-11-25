@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1053",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "La pantalla de Recetas entra al día uno y se construye antes que abrir órdenes de producción: primero verla (REC-A) y después guardarla (REC-B).",
+  "que_cambia": "Sin recetas cargadas no hay descuento por receta al vender ni orden que abrir. Asentada por el orquestador por delegación, 25/11/2026.",
+  "donde": "plan-de-produccion-del-dia-uno-2026-11-25.md y conceptos/recetas-pantalla.md del repositorio de documentos"
+}
