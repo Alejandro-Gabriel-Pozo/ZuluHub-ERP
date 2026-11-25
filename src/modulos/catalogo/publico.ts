@@ -6,6 +6,7 @@ export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_CATALOGO } 
 export { crearCasosDeUsoDeCatalogo, type CasosDeUsoDeCatalogo } from "./casos-de-uso/casos-de-uso";
 export { crearConsultasDeCatalogo, type ConsultasDeCatalogo } from "./consultas/consultas";
 export type { GrupoDeVistaPrevia } from "./consultas/consultas-de-copia-de-opciones";
+export type { PresentacionesDelProducto } from "./consultas/consultas-de-presentaciones";
 export type {
   EstadoDeProducto,
   FichaDeProducto,
@@ -17,6 +18,7 @@ export type {
   PrecioDeLista,
   ProductoDeLista,
 } from "./consultas/consultas";
+export { comoPrefijo } from "./persistencia/como-prefijo";
 export {
   cotizarParaVender,
   tienePrecioParaLaCartaEnSucursal,

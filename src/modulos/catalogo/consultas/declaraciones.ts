@@ -8,6 +8,7 @@ export const DECLARACIONES_DE_CONSULTAS = {
   listarProductos: { accion: "productos.ver" },
   productosParaVender: { accion: "productos.ver" },
   verProducto: { accion: "productos.ver" },
+  verPresentacionesDelProducto: { accion: "productos.ver" },
   preciosDelProducto: { accion: "productos.ver" },
   productosParaConsumo: { accion: "productos.ver" },
   productosParaCopiar: { accion: "productos.ver" },

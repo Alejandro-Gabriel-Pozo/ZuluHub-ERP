@@ -10,9 +10,10 @@ name: Migrar (preview y producción)
 #    Los secretos viven en cada Environment, nunca en el repositorio:
 #      PEDERNAL_DB_DUENO_DIRECTA  (obligatorio) cadena DIRECTA (nunca la del pooler) del dueño de la base de ese entorno
 #      PEDERNAL_CLAVE_CONTEXTO    (opcional)    la clave de firma del contexto de esa rama, la MISMA que está en Vercel
-#      NEON_API_KEY, NEON_PROJECT_ID (opcionales, solo `produccion`) para la rama de respaldo `antes-de-<NNNN>`
-#  - Antes de «aplicar» en producción, si hay migraciones pendientes y existen NEON_API_KEY y NEON_PROJECT_ID, se
-#    crea una rama de respaldo de la rama `production` de Neon. Si el respaldo se pide y falla, NO se migra.
+#      NEON_API_KEY, NEON_PROJECT_ID (OBLIGATORIOS en `produccion`) para la rama de respaldo `antes-de-<NNNN>`
+#  - Antes de «aplicar» en producción, si hay migraciones pendientes, se crea una rama de respaldo de la rama
+#    `production` de Neon. SIN RESPALDO NO SE MIGRA PRODUCCIÓN: si faltan NEON_API_KEY o NEON_PROJECT_ID, si no se
+#    puede crear la rama o si no se puede saber si hay algo pendiente, el paso falla y «Aplicar» no corre.
 #  - Después de aplicar, si el Environment tiene PEDERNAL_CLAVE_CONTEXTO, se instala esa clave en la base (idempotente).
 #
 # El script que migra (`npm run migrar`) lee la cadena de la variable PEDERNAL_DB_MIGRACIONES; acá se la alimenta con el
@@ -123,18 +124,25 @@ jobs:
         env:
           PEDERNAL_DB_MIGRACIONES: ${{ secrets.PEDERNAL_DB_DUENO_DIRECTA }}
 
-      - name: Rama de respaldo en Neon (solo producción, solo si hay algo para aplicar y hay NEON_API_KEY)
+      - name: Rama de respaldo en Neon (solo producción, obligatoria si hay algo para aplicar)
         if: needs.validar.outputs.accion == 'aplicar' && needs.validar.outputs.ambiente == 'produccion'
         shell: bash
         run: |
           set -eu
-          if ! grep -q "faltan aplicar" "$RUNNER_TEMP/estado.txt"; then
+          # Fail closed: se necesita saber con certeza si hay algo pendiente. Un texto de `--ver` que no sea ninguno de
+          # los dos resultados conocidos (cambio de redacción, salida cortada) NO se toma por «al día»: no se migra.
+          if grep -q "faltan aplicar" "$RUNNER_TEMP/estado.txt"; then
+            :
+          elif grep -q "la base está al día" "$RUNNER_TEMP/estado.txt"; then
             echo "No hay migraciones pendientes: no hace falta respaldo."
             exit 0
+          else
+            echo "::error::No se pudo saber si hay migraciones pendientes (la salida de «ver» no tiene un resultado conocido). No se migra."
+            exit 1
           fi
           if [ -z "${NEON_API_KEY:-}" ] || [ -z "${NEON_PROJECT_ID:-}" ]; then
-            echo "::warning::Sin NEON_API_KEY y NEON_PROJECT_ID en el Environment: se migra SIN rama de respaldo."
-            exit 0
+            echo "::error::Faltan NEON_API_KEY o NEON_PROJECT_ID en el Environment produccion: sin respaldo no se migra producción. No se migra."
+            exit 1
           fi
           case "$NEON_PROJECT_ID" in
             *[!a-z0-9-]*|"") echo "::error::NEON_PROJECT_ID no tiene la forma de un identificador de proyecto."; exit 1 ;;

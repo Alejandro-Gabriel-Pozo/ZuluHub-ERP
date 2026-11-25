@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0897",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "T0 de Catálogo: la pantalla de presentaciones de compra es la solapa «Cómo se compra» dentro del producto, con lista, agregar y editar, sin entrada de menú.",
+  "que_cambia": "Gerente y administrador agregan, renombran, desactivan y reactivan presentaciones de lo que se compra; quien opera las ve con los botones apagados. Nueva compra con presentaciones es un tramo aparte (T0b). Revertir: sacar las tres rutas bajo catalogo/productos/id/compra y el enlace de la ficha.",
+  "donde": "Chat del dueño del 25/11/2026 («Si» a las cinco preguntas del plan de T0, relayadas por el orquestador); fila 174 de decisiones-del-dueno-2026-11.md; presentaciones.html; plan-t0-pantalla-de-presentaciones-2026-11-25.md; ficha-de-presentaciones.ts"
+}

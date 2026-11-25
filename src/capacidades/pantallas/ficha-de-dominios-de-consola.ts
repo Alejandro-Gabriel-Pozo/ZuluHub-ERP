@@ -5,7 +5,7 @@ import type { FichaDePantallaDeConsola } from "./ficha-de-planes-de-consola";
  * (`ficha-de-planes-de-consola.ts`); la comprueba `test/web/ficha-de-dominios-de-consola.test.ts` contra el catálogo de textos, el de permisos, el registro de datos y el código. No crea acciones de cambio: declara las de M4a;
  * suma solo `dominios.ver` (lectura).
  * Previene: un botón, un campo o un texto que nadie aprobó, y una ruta o un archivo que se mueve sin que la ficha lo note. Fuente: ficha §2.1 de `Pedernal-docs 11-especificaciones/dominio-propio-textos-y-fichas.md` aceptada por el
- * orquestador el 25/11/2026 por la delegación de la fila 174 (DEC-0901) y los textos de §1.1 por la fila 173 (DEC-0900). Sin lo de la etapa 2 (registro DNS, última comprobación, retiros pendientes, sitio de la empresa).
+ * orquestador el 25/11/2026 por la delegación de la fila 174 (DEC-0909) y los textos de §1.1 por la fila 173 (DEC-0908). Sin lo de la etapa 2 (registro DNS, última comprobación, retiros pendientes, sitio de la empresa).
  */
 
 const PAGINA = "apps/plataforma/app/dominios/page.tsx";
@@ -14,7 +14,7 @@ const ARMAZON = "apps/plataforma/pantallas/armazon-de-consola.tsx";
 
 const aprobado = (...usos: readonly string[]) => ({
   usos,
-  fuente: { decision: "DEC-0900" } as const,
+  fuente: { decision: "DEC-0908" } as const,
 });
 /** Textos que «Planes» ya tenía aprobados y esta pantalla reusa sin cambio. */
 const deLaConsola = (...usos: readonly string[]) => ({

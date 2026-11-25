@@ -177,14 +177,14 @@ describe("textos de la consola de plataforma", () => {
       const declarados = "marcadores" in definicion ? [...definicion.marcadores].sort() : [];
       expect(declarados).toEqual(usados);
       expect(definicion.usos).toEqual(["DE_FICHA"]);
-      // «Planes»: DEC-0805; «Política de cambio de plan» (T-1 a T-18): DEC-0814; «Deshacer por arrepentimiento» (T-19 a T-37): DEC-0817; «Dominios»: DEC-0900.
+      // «Planes»: DEC-0805; «Política de cambio de plan» (T-1 a T-18): DEC-0814; «Deshacer por arrepentimiento» (T-19 a T-37): DEC-0817; «Dominios»: DEC-0908.
       expect(definicion.fuente).toEqual({
         decision: /^plataforma\.(menu\.politica|politica\.)/.test(_clave)
           ? "DEC-0814"
           : /^plataforma\.arrepentir\./.test(_clave)
             ? "DEC-0817"
             : /^plataforma\.dominios\./.test(_clave)
-              ? "DEC-0900"
+              ? "DEC-0908"
               : "DEC-0805",
       });
     },

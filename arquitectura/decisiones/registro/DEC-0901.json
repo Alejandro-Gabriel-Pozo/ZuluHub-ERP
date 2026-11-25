@@ -1,10 +1,11 @@
 {
   "id": "DEC-0901",
   "fecha": "2026-11-25",
-  "quien": "padre",
-  "tipo": "CLIENTE",
-  "estado": "CONFIRMADA",
-  "decision": "Consola Dominios (P1): el orquestador acepta la ficha de pantalla 2.1 del plan de dominio propio, sin lo de la etapa 2.",
-  "que_cambia": "La pantalla Dominios tiene su ficha declarada: ruta, acceso, campos con su dato, botones, ventanas y estados. Revertir: quitar la ficha-de-dominios-de-consola.ts y su prueba.",
-  "donde": "Delegación de la fila 174 de decisiones-del-dueno-2026-11.md; orden del orquestador del 25/11/2026; dominio-propio-textos-y-fichas.md §2.1."
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "SUPUESTO: la lista sale de una consulta nueva, verPresentacionesDelProducto (permiso productos.ver), y la ficha trae seCompra para ofrecer el enlace solo a lo que se compra.",
+  "que_cambia": "Una lectura de solo lectura con las presentaciones activas y apagadas; el repositorio de lectura del catálogo suma delProducto. Revertir: sacar la consulta, la declaración y el campo seCompra.",
+  "donde": "consultas-de-presentaciones.ts; consultas/declaraciones.ts; ficha-de-producto-web.ts; plan-t0-pantalla-de-presentaciones-2026-11-25.md sección A.3",
+  "motivo": "Técnica: el repositorio ya tenía la lectura y ninguna consulta la exponía; usa el permiso de ver que ya existe."
 }

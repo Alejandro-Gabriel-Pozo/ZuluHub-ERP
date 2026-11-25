@@ -85,6 +85,13 @@ const TABLAS_DE_NEGOCIO = [
   "seccion_de_carta",
   "nodo_de_clasificacion", // 0045
   "clasificacion_de_producto", // 0046
+  // Permisos configurables (0094, T1 de H4b)
+  "plantilla_de_rol",
+  "version_de_plantilla",
+  "piso_de_plataforma",
+  "accion_introducida",
+  "rol_de_empresa",
+  "version_de_rol",
   "producto",
   "grupo_de_elecciones",
   "opcion",
@@ -583,6 +590,13 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ].map((t) => `${t}:SELECT`), // 0025
           "nodo_de_clasificacion:SELECT", // 0045
           "clasificacion_de_producto:SELECT", // 0046
+          ...[
+            "plantilla_de_rol",
+            "version_de_plantilla",
+            "piso_de_plataforma",
+            "rol_de_empresa",
+            "version_de_rol",
+          ].map((t) => `${t}:SELECT`), // 0094 (la accion_introducida no la lee la aplicación)
           "carta_publica:SELECT", // 0043
           "disponibilidad_de_producto:SELECT", // 0043
           "identidad_de_carta_empresa:SELECT", // 0077
@@ -629,6 +643,12 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "referencia_de_error:SELECT",
           "serie_comprobante:SELECT", // 0006
           "solicitud_de_alta:SELECT", // captación
+          ...[
+            "plantilla_de_rol",
+            "version_de_plantilla",
+            "piso_de_plataforma",
+            "accion_introducida",
+          ].map((t) => `${t}:SELECT`), // 0094
           "tenant:SELECT",
           "trabajo:SELECT",
           "traspaso_gerencia:SELECT",
@@ -763,6 +783,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...["activo", "nombre", "nombre_clave", "padre_id"].map(
             (c) => `pedernal_app:nodo_de_clasificacion.${c}`,
           ),
+          // 0094: el rol propio cambia de nombre y se archiva; la plataforma cambia el tipo de un piso (y quién lo fijó)
+          ...["activo", "nombre", "nombre_clave"].map((c) => `pedernal_app:rol_de_empresa.${c}`),
+          ...["autor", "tipo"].map((c) => `pedernal_plataforma:piso_de_plataforma.${c}`),
           "pedernal_app:persona.usuario_auth_id", // 0010: solo el vínculo con el usuario, y solo en INVITACION
           // 0026: la jornada del cierre del día cambia de estado y de marcas (la máquina de estados la impone el disparador)
           ...[
@@ -1314,6 +1337,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "es_canonico",
           "registrado_por",
         ].map((c) => `dominio.${c}`),
+        // 0094: la plataforma publica versiones de plantilla y fija pisos
+        ...["clave", "numero", "acciones", "autor"].map((c) => `version_de_plantilla.${c}`),
+        ...["accion", "tipo", "autor"].map((c) => `piso_de_plataforma.${c}`),
         "plan.codigo",
         ...["plan_id", "nombre_comercial", "modulos", "perillas"].map(
           (c) => `version_de_plan.${c}`,
@@ -1549,6 +1575,13 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
         // 0045: la clasificación comercial
         ...["empresa_id", "id", "nombre", "nombre_clave", "padre_id"].map(
           (c) => `nodo_de_clasificacion.${c}`,
+        ),
+        // 0094: los roles propios y sus versiones (solo inserción)
+        ...["empresa_id", "id", "nombre", "nombre_clave", "plantilla_origen"].map(
+          (c) => `rol_de_empresa.${c}`,
+        ),
+        ...["acciones", "creado_en", "creado_por", "empresa_id", "numero", "rol_id"].map(
+          (c) => `version_de_rol.${c}`,
         ),
         // 0046: el vínculo del producto con vigencia (solo inserción: sin UPDATE por columna)
         ...["cargado_por", "empresa_id", "id", "nodo_id", "producto_id", "vigente_desde"].map(

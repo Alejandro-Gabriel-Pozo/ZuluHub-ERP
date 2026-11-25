@@ -38,7 +38,7 @@ const A = (porDefecto: string, marcadores?: readonly string[]): DefinicionDeText
 });
 
 /**
- * «Dominios» (consola, plan de dominio propio, P1). Fuente de todos: DEC-0900 (inventario de textos de `dominio-propio-textos-y-fichas.md` §1.1 que el orquestador aceptó el
+ * «Dominios» (consola, plan de dominio propio, P1). Fuente de todos: DEC-0908 (inventario de textos de `dominio-propio-textos-y-fichas.md` §1.1 que el orquestador aceptó el
  * 25/11/2026 por la delegación de la fila 173). «Estado», «Activo», «Retirado», «Motivo» y «Cancelar» reusan las claves de «Planes» (mismo texto); los errores de los casos
  * son los de `mensajes-de-dominios.ts`.
  */
@@ -46,7 +46,7 @@ const O = (porDefecto: string, marcadores?: readonly string[]): DefinicionDeText
   porDefecto,
   ...(marcadores === undefined ? {} : { marcadores }),
   usos: ["DE_FICHA"],
-  fuente: { decision: "DEC-0900" },
+  fuente: { decision: "DEC-0908" },
 });
 
 export const TEXTOS_DE_PLATAFORMA = {

@@ -29,7 +29,31 @@ export type PropsDeSelector = Readonly<{
   requerido?: boolean;
 }>;
 
-/** Selector nativo (`<select>`): en el celular es el mejor selector que existe. */
+/**
+ * Selector nativo (`<select>`): en el celular es el mejor selector que existe.
+ *
+ * React 19 reinicia el `<form>` cuando termina su acción, también si la acción falló, y el navegador devuelve cada `<select>` a su opción inicial sin que el estado de la
+ * pantalla cambie: la persona veía vaciarse lo que había elegido. El selector se vuelve a poner en `valor` apenas termina el reinicio (el navegador reinicia los campos
+ * DESPUÉS de avisar el evento, por eso va en una microtarea). Previene: perder la elección en un envío fallido, en cualquier pantalla. Chequeo: `Selector.test.tsx`
+ * («conserva lo elegido después de enviar un formulario con acción»).
+ */
+function reponerTrasElReinicio(
+  selector: HTMLSelectElement | null,
+  valor: string,
+): (() => void) | undefined {
+  const formulario = selector?.form;
+  if (selector === null || formulario === null || formulario === undefined) return undefined;
+  const alReiniciar = () => {
+    queueMicrotask(() => {
+      if (selector.value !== valor) selector.value = valor;
+    });
+  };
+  formulario.addEventListener("reset", alReiniciar);
+  return () => {
+    formulario.removeEventListener("reset", alReiniciar);
+  };
+}
+
 export function Selector({
   etiqueta,
   valor,
@@ -54,6 +78,7 @@ export function Selector({
         <select
           {...datos}
           className={estilos["selector"]}
+          ref={(selector) => reponerTrasElReinicio(selector, valor)}
           name={nombre}
           value={valor}
           disabled={deshabilitado}

@@ -38,10 +38,10 @@ describe("ficha de la pantalla «Dominios» de la consola", () => {
         expect(claves(leer(uso)), `${clave} en ${uso}`).toContain(clave);
       }
       expect(texto.fuente, clave).toEqual({
-        decision: PROPIAS.test(clave) ? "DEC-0900" : "DEC-0805",
+        decision: PROPIAS.test(clave) ? "DEC-0908" : "DEC-0805",
       });
     }
-    expect(existsSync("arquitectura/decisiones/registro/DEC-0900.json")).toBe(true);
+    expect(existsSync("arquitectura/decisiones/registro/DEC-0908.json")).toBe(true);
   });
 
   it("los textos reusados de «Planes» existen en el catálogo de la consola", () => {

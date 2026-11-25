@@ -12,7 +12,7 @@ const NUEVO_PLAN = "apps/plataforma/pantallas/nuevo-plan.cliente.tsx";
 const POLITICA = "apps/plataforma/pantallas/politica-de-plan.cliente.tsx";
 const DOMINIOS = "apps/plataforma/pantallas/lista-de-dominios.cliente.tsx";
 const FICHA_DE_DOMINIOS =
-  "Pedernal-docs 11-especificaciones/dominio-propio-textos-y-fichas.md §2.1 (ficha «dominios», aceptada el 25/11/2026 por la delegación de la fila 174, DEC-0901)";
+  "Pedernal-docs 11-especificaciones/dominio-propio-textos-y-fichas.md §2.1 (ficha «dominios», aceptada el 25/11/2026 por la delegación de la fila 174, DEC-0909)";
 const BRIEF_H14B =
   "Pedernal-docs 11-especificaciones/briefs/escalabilidad/PR-H14b-consola-politica-de-cambio-de-plan.md";
 const BRIEF = "Pedernal-docs 11-especificaciones/briefs/plataforma/PR-planes-consola.md";
