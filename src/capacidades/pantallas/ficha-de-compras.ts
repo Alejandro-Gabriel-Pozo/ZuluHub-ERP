@@ -50,7 +50,7 @@ const DE_LA_MAQUETA: FuenteDeTexto = {
 };
 const DE_LA_EXPORTACION: FuenteDeTexto = {
   decidio:
-    "el orquestador, por la delegación de la fila 173 (DEC-0905): el texto del enlace «Exportar» lo propuso el plan de la exportación y el dueño aprobó el 25/11/2026 todas las recomendaciones de ese plan («Sí a todas tus recomendaciones»)",
+    "el orquestador, por la delegación de la fila 173 (DEC-0921): el texto del enlace «Exportar» lo propuso el plan de la exportación y el dueño aprobó el 25/11/2026 todas las recomendaciones de ese plan («Sí a todas tus recomendaciones»)",
   donde:
     "Pedernal-docs 11-especificaciones/plan-exportacion-de-compras-2026-11-25.md §2, §5.1 y §6; decisiones-del-dueno-2026-11.md, filas del 25/11/2026",
 };

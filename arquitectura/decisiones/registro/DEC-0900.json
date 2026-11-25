@@ -1,10 +1,10 @@
 {
   "id": "DEC-0900",
   "fecha": "2026-11-25",
-  "quien": "dueño",
-  "tipo": "PERMISOS",
+  "quien": "padre",
+  "tipo": "DATOS",
   "estado": "CONFIRMADA",
-  "decision": "Exportar compras a Excel: acción nueva «compras.exportar» solo para gerente y administrador, que además exige «costos.ver»; el operador no exporta.",
-  "que_cambia": "Se suma la acción compras.exportar (efecto LECTURA) al catálogo y a la matriz. Revertir: sacarla de catalogo-compras.ts y permisos-de-compras.ts (y los conteos de las pruebas de matriz).",
-  "donde": "Chat del dueño 25/11/2026 («Sí a todas tus recomendaciones»), relayado por el orquestador; pregunta 4 del diseño y P4 del plan; catalogo-compras.ts, permisos-de-compras.ts, exportar-compras.ts"
+  "decision": "T0 de Catálogo: el largo del nombre de una presentación (80) pasa a su primitiva nombre-de-presentacion, y el registro de campos suma tres datos y dos caminos de la pantalla.",
+  "que_cambia": "Una sola fuente para el límite: dominio, formulario y base lo comparan con la misma primitiva. Sin cambio de comportamiento. Revertir: devolver la constante al dominio y quitar los tres datos y los dos caminos.",
+  "donde": "Orden del orquestador del 25/11/2026 (hallazgo H2 del plan aceptado); fila 174 de decisiones-del-dueno-2026-11.md; nombre-de-presentacion.ts; registro-de-productos.ts; caminos-de-productos.ts"
 }

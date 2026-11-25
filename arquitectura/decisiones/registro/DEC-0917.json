@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0917",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "El dinero del archivo de Excel sale como número solo si es exacto (hasta 15 dígitos) y si no como texto exacto; las fechas civiles, como celdas de fecha sin corrimiento.",
+  "que_cambia": "Ningún importe del archivo se redondea ni se recalcula: se copia lo guardado. Revertir: cambiar las reglas de celdas-de-xlsx.ts.",
+  "donde": "Chat del dueño 25/11/2026 («Sí a todas tus recomendaciones»), relayado por el orquestador; preguntas 6 y 10 del diseño, P9 del plan y condiciones del orquestador; celdas-de-xlsx.ts"
+}

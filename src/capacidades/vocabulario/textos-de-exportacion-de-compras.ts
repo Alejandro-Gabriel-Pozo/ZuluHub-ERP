@@ -3,13 +3,13 @@
  * de columna y los valores de celda que no tenían un texto aprobado. Los que ya existían se reutilizan desde sus claves (`compras.compra.proveedor`, `sucursal.etiqueta`,
  * `compras.factura.tipo`, `fiscal.pantalla.listado_rotulo_letra`, `fiscal.pantalla.listado_rotulo_estado`, `catalogo.opciones.producto`, `caja.medios.tipo.*`, `caja.estado.anulado`,
  * `fiscal.pantalla.tipo_*`, `fiscal.pantalla.config_cartel_pendiente`, `catalogo.unidad.unidad`): no se repite ninguno. Fuentes: los de dinero y fiscal los aprobó el dueño el 25/11/2026
- * («Sí a todas tus recomendaciones», lista de `plan-exportacion-de-compras-2026-11-25.md` §5) en DEC-0904; los demás los aceptó el orquestador por la delegación de la fila 173 en DEC-0905.
+ * («Sí a todas tus recomendaciones», lista de `plan-exportacion-de-compras-2026-11-25.md` §5) en DEC-0920; los demás los aceptó el orquestador por la delegación de la fila 173 en DEC-0921.
  * Las columnas `Nivel` y `Clase` quedaron fuera del primer corte (decisión del dueño, P5 d): sus valores son códigos técnicos.
  */
 
 const ARCHIVO = "src/composicion/compras-exportacion-textos.ts";
-const DEL_DUENO = { decision: "DEC-0904" } as const;
-const DEL_ORQUESTADOR = { decision: "DEC-0905" } as const;
+const DEL_DUENO = { decision: "DEC-0920" } as const;
+const DEL_ORQUESTADOR = { decision: "DEC-0921" } as const;
 const uso = (nombre: string) => [{ como: "FUNCION", archivo: ARCHIVO, nombre }] as const;
 
 const deCabecera = <T extends string>(porDefecto: T, dueno: boolean) => ({

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-0898",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "Una presentación no se borra: se desactiva y se reactiva (en lugar del «Quitar» de la maqueta de productos); lo ya comprado no cambia.",
+  "que_cambia": "Una presentación desactivada deja de ofrecerse en compras nuevas y se puede reactivar. Revertir: borrar de verdad exige una migración y no está autorizada en esta tanda.",
+  "donde": "Chat del dueño del 25/11/2026 («Si» a las cinco preguntas del plan de T0, relayadas por el orquestador) (pregunta 2); fila 174 de decisiones-del-dueno-2026-11.md; productos.html (vCompra); repositorio-de-presentaciones.ts (el servidor solo apaga)"
+}

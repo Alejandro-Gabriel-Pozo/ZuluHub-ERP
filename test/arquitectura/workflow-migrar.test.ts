@@ -170,15 +170,18 @@ describe("workflow migrar.yml", () => {
     expect(paso("Ver qué falta").texto).not.toContain("--aplicar");
   });
 
-  it("el respaldo: solo producción, solo con algo para aplicar, por el nombre de la rama, y si se pide y falla NO se migra", () => {
+  it("el respaldo: solo producción, solo con algo para aplicar, por el nombre de la rama, y si falta o falla NO se migra", () => {
     const { texto } = paso("Rama de respaldo");
     expect(texto).toContain("needs.validar.outputs.ambiente == 'produccion'");
     expect(texto).toContain('grep -q "faltan aplicar"');
+    expect(texto).toContain('grep -q "la base está al día"');
     expect(texto).toContain('nombre="antes-de-$ultima"');
     expect(texto).toContain('select(.name == "production")');
     expect(texto).toContain("https://console.neon.tech/api/v2/projects/$NEON_PROJECT_ID/branches");
-    // Sin las dos variables se migra sin respaldo, pero avisando.
-    expect(texto).toContain("::warning::Sin NEON_API_KEY y NEON_PROJECT_ID");
+    // Sin las dos variables NO se migra producción (antes era un aviso y se migraba sin respaldo): lo detalla
+    // `problemasDelRespaldo`, con una violación inyectada por cada propiedad.
+    expect(texto).toContain("sin respaldo no se migra producción");
+    expect(texto).not.toContain("::warning::");
     // Cada falla del respaldo corta el paso con error (el job no sigue a «Aplicar»).
     expect(texto.match(/exit 1/g)?.length).toBeGreaterThanOrEqual(4);
     expect(texto).toContain("No se migra.");
@@ -216,5 +219,123 @@ describe("workflow migrar.yml", () => {
   it("instala solo lo de producción y sin scripts de instalación (el job tiene los secretos)", () => {
     expect(TEXTO).toContain("run: npm ci --omit=dev --ignore-scripts");
     expect(TEXTO).not.toMatch(/cache:\s*npm/);
+  });
+});
+
+/**
+ * «Sin respaldo no se migra producción» (dueño, 25/11/2026, respuesta a la pregunta H-1 de `base-por-cliente-opciones.md`).
+ * Devuelve los códigos de lo que NO se cumple en el paso de respaldo de un texto de `migrar.yml`; `[]` si todo se cumple.
+ * Previene: migrar producción sin punto de retorno porque faltan las claves de Neon (antes: un aviso y se migraba), porque el
+ * texto de `--ver` cambió y el paso lo tomó por «al día», o porque la falla del respaldo no cortó el job.
+ */
+function problemasDelRespaldo(texto: string): string[] {
+  const problemas: string[] = [];
+  const exigir = (codigo: string, cumple: boolean) => {
+    if (!cumple) problemas.push(codigo);
+  };
+  const desde = texto.indexOf("      - name: Rama de respaldo");
+  const hasta = texto.indexOf("      - name: Aplicar las migraciones");
+  exigir("paso-de-respaldo-antes-de-aplicar", desde >= 0 && hasta > desde);
+  if (desde < 0 || hasta <= desde) return problemas;
+  const paso = texto.slice(desde, hasta);
+  const sinClaves = /if \[ -z "\$\{NEON_API_KEY:-\}" \][^\n]*; then\n([\s\S]*?)\n\s+fi\n/.exec(
+    paso,
+  )?.[1];
+  exigir("claves-obligatorias", sinClaves !== undefined);
+  exigir(
+    "sin-claves-corta",
+    sinClaves !== undefined &&
+      /exit 1/.test(sinClaves) &&
+      !/exit 0/.test(sinClaves) &&
+      !/::warning::/.test(sinClaves),
+  );
+  exigir("sin-avisos-en-lugar-de-error", !/::warning::/.test(paso));
+  // Lo desconocido no es «al día»: el texto de «ver» tiene que ser uno de los dos resultados conocidos o se corta.
+  const iPendientes = paso.indexOf('grep -q "faltan aplicar"');
+  const iAlDia = paso.indexOf('grep -q "la base está al día"');
+  exigir("resultado-conocido", iPendientes >= 0 && iAlDia > iPendientes);
+  exigir(
+    "salida-desconocida-corta",
+    /\n {10}else\n[^\n]*::error::No se pudo saber si hay migraciones pendientes[^\n]*\n {12}exit 1\n {10}fi\n/.test(
+      paso,
+    ),
+  );
+  const iSinPendientes = paso.indexOf("No hay migraciones pendientes");
+  exigir("sin-pendientes-solo-si-al-dia", iAlDia >= 0 && iSinPendientes > iAlDia);
+  // Cada falla corta el paso: salida desconocida, claves, forma del proyecto, listar, rama de producción y crear.
+  exigir("cada-falla-corta", (paso.match(/exit 1/g)?.length ?? 0) >= 6);
+  exigir(
+    "solo-produccion-y-aplicar",
+    /needs\.validar\.outputs\.ambiente == 'produccion'/.test(paso),
+  );
+  exigir("el-paso-no-se-ignora", !/continue-on-error/.test(texto));
+  return problemas;
+}
+
+describe("workflow migrar.yml: sin respaldo no se migra producción", () => {
+  it("cumple todas las propiedades", () => {
+    expect(problemasDelRespaldo(TEXTO)).toEqual([]);
+  });
+
+  const reemplazar = (de: string, a: string) => (texto: string) => {
+    if (!texto.includes(de)) throw new Error(`la violación inyectada no encuentra «${de}»`);
+    return texto.replace(de, a);
+  };
+  const SIN_CLAVES = [
+    '            echo "::error::Faltan NEON_API_KEY o NEON_PROJECT_ID en el Environment produccion: sin respaldo no se migra producción. No se migra."',
+    "            exit 1",
+  ].join("\n");
+  const casos: [string, string, (texto: string) => string][] = [
+    [
+      "sin-claves-corta",
+      "sin las claves se migra con un aviso (el comportamiento anterior)",
+      reemplazar(
+        SIN_CLAVES,
+        '            echo "::warning::Sin NEON_API_KEY y NEON_PROJECT_ID: se migra SIN rama de respaldo."\n            exit 0',
+      ),
+    ],
+    [
+      "claves-obligatorias",
+      "se quita la comprobación de las claves",
+      reemplazar('if [ -z "${NEON_API_KEY:-}" ]', 'if [ -z "${NEON_OTRA:-}" ]'),
+    ],
+    [
+      "salida-desconocida-corta",
+      "una salida de «ver» desconocida se toma por «al día»",
+      reemplazar(
+        '            echo "::error::No se pudo saber si hay migraciones pendientes (la salida de «ver» no tiene un resultado conocido). No se migra."\n            exit 1',
+        '            echo "No hay migraciones pendientes: no hace falta respaldo."\n            exit 0',
+      ),
+    ],
+    [
+      "resultado-conocido",
+      "se vuelve a mirar solo «faltan aplicar»",
+      reemplazar('grep -q "la base está al día"', 'grep -q "algo distinto"'),
+    ],
+    [
+      "el-paso-no-se-ignora",
+      "el paso del respaldo con continue-on-error",
+      reemplazar(
+        "        shell: bash\n        run: |\n          set -eu\n          # Fail closed",
+        "        shell: bash\n        continue-on-error: true\n        run: |\n          set -eu\n          # Fail closed",
+      ),
+    ],
+    [
+      "cada-falla-corta",
+      "la creación de la rama no corta el paso",
+      reemplazar(
+        '*) echo "::error::No se pudo crear la rama de respaldo «$nombre» (HTTP $codigo; si ya existe, borrala en Neon o elegí otra). No se migra."; exit 1 ;;',
+        '*) echo "::error::No se pudo crear la rama de respaldo «$nombre» (HTTP $codigo). No se migra." ;;',
+      ),
+    ],
+    [
+      "solo-produccion-y-aplicar",
+      "el respaldo sin mirar el ambiente",
+      reemplazar(" && needs.validar.outputs.ambiente == 'produccion'", ""),
+    ],
+  ];
+
+  it.each(casos)("violación inyectada «%s»: %s", (codigo, _descripcion, inyectar) => {
+    expect(problemasDelRespaldo(inyectar(TEXTO))).toContain(codigo);
   });
 });
