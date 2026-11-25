@@ -7,6 +7,7 @@ import {
   fichaDeLaFactura,
   listarLasFacturas,
   registrarLaFactura,
+  tomarElCostoDeLaFactura,
   type DependenciasDeFacturasWeb,
 } from "../../src/composicion/facturas-web";
 import {
@@ -600,5 +601,130 @@ describe.skipIf(base === null)("composición web: Facturas y conciliación", () 
     expect(typeof lista.facturas[0]?.proveedor).toBe("string");
     expect(lista.siguiente).toBeNull();
     esGenerico(await listarLasFacturas(f, x.operador, { despues: "no-es-un-cursor" }));
+  });
+
+  describe("tomar el costo de la factura", () => {
+    const costosDe = async (x: EscenarioDeCompras, comprobanteId: string, quien = x.gerente) =>
+      dato(await fichaDeLaFactura(f, quien, comprobanteId)).lineas[0]?.costos;
+    const tomar = (
+      x: EscenarioDeCompras,
+      recepcionId: string,
+      extra: Record<string, unknown> = {},
+      quien = x.gerente,
+    ) => tomarElCostoDeLaFactura(f, quien, { clave: nuevoId(), recepcionId, linea: 1, ...extra });
+
+    it("la ficha ofrece el costo solo de la línea recibida que la factura cubre entera y sola; al tomarlo pasa a «tomado» con su precio neto", async () => {
+      const { x, m } = await mundo();
+      const recepcion = await recibir(x, m, "1");
+      const factura = await cargar(x, m, 1000);
+      expect(await costosDe(x, factura)).toEqual([]);
+      dato(await conciliar(x, factura, [asignacion(recepcion, "400")]));
+      expect(await costosDe(x, factura)).toEqual([]);
+      dato(await conciliar(x, factura, [asignacion(recepcion, "600")]));
+      expect(await costosDe(x, factura)).toEqual([
+        {
+          recepcionId: recepcion,
+          recepcionNumero: expect.any(Number) as number,
+          linea: 1,
+          sucursalId: x.sucursal,
+          recibida: "1000.0000",
+          estado: "SE_PUEDE_TOMAR",
+          precioNeto: "1.000000",
+        },
+      ]);
+      const hecho = dato(await tomar(x, recepcion));
+      expect(hecho).toEqual({ recepcionId: recepcion, linea: 1, yaExistia: false });
+      expect(await costosDe(x, factura)).toMatchObject([
+        { estado: "TOMADO", precioNeto: "1.000000" },
+      ]);
+    });
+
+    it("con dos facturas sobre la misma línea recibida no se ofrece en ninguna", async () => {
+      const { x, m } = await mundo();
+      const recepcion = await recibir(x, m, "1");
+      const primera = await cargar(x, m, 500);
+      const segunda = await cargar(x, m, 500);
+      dato(await conciliar(x, primera, [asignacion(recepcion, "500")]));
+      dato(await conciliar(x, segunda, [asignacion(recepcion, "500")]));
+      expect(await costosDe(x, primera)).toEqual([]);
+      expect(await costosDe(x, segunda)).toEqual([]);
+    });
+
+    it("el pedido no acepta lo que el navegador invente (precio, motivo, empresa, sucursal): el genérico y no queda nada", async () => {
+      const { x, m } = await mundo();
+      const recepcion = await recibir(x, m, "1");
+      const factura = await cargar(x, m, 1000);
+      dato(await conciliar(x, factura, [asignacion(recepcion, "1000")]));
+      for (const extra of [
+        { precio: "999" },
+        { motivo: "porque sí" },
+        { empresaId: x.empresa },
+        { sucursalId: x.sucursal },
+        { linea: "1" },
+      ]) {
+        esGenerico(await tomar(x, recepcion, extra));
+      }
+      expect(
+        await c.contar("select count(*) as n from correccion_de_compra where recepcion_id = $1", [
+          recepcion,
+        ]),
+      ).toBe(0);
+    });
+
+    it("I1: tomarlo dos veces (misma clave, también a la vez) deja una sola toma y un solo ajuste; con otra línea, el genérico", async () => {
+      const { x, m } = await mundo();
+      const recepcion = await recibir(x, m, "1");
+      const factura = await cargar(x, m, 1000);
+      dato(await conciliar(x, factura, [asignacion(recepcion, "1000")]));
+      const clave = nuevoId();
+      const pedido = { clave, recepcionId: recepcion, linea: 1 };
+      const primera = dato(await tomarElCostoDeLaFactura(f, x.gerente, pedido));
+      const segunda = dato(await tomarElCostoDeLaFactura(f, x.gerente, pedido));
+      expect(primera.yaExistia).toBe(false);
+      expect(segunda).toEqual({ recepcionId: recepcion, linea: 1, yaExistia: true });
+      esGenerico(await tomarElCostoDeLaFactura(f, x.gerente, { ...pedido, linea: 2 }));
+      expect(
+        await c.contar("select count(*) as n from correccion_de_compra where recepcion_id = $1", [
+          recepcion,
+        ]),
+      ).toBe(1);
+      // A la vez, con la misma clave, sobre otra línea recibida.
+      const otra = await recibir(x, m, "1");
+      const otraFactura = await cargar(x, m, 1000);
+      dato(await conciliar(x, otraFactura, [asignacion(otra, "1000")]));
+      const claveDoble = nuevoId();
+      const doble = await Promise.all(
+        Array.from({ length: 2 }, () =>
+          tomarElCostoDeLaFactura(f, x.gerente, { clave: claveDoble, recepcionId: otra, linea: 1 }),
+        ),
+      );
+      expect(doble.every((r) => r.ok)).toBe(true);
+      expect(
+        await c.contar("select count(*) as n from correccion_de_compra where recepcion_id = $1", [
+          otra,
+        ]),
+      ).toBe(1);
+    });
+
+    it("alcance y autorización: el operador no lo toma; con alcance solo de otra sucursal es el genérico; otra empresa no lo ve ni lo toma", async () => {
+      const { x, m } = await mundo();
+      const recepcion = await recibir(x, m, "1");
+      const factura = await cargar(x, m, 1000);
+      dato(await conciliar(x, factura, [asignacion(recepcion, "1000")]));
+      expect(await tomar(x, recepcion, {}, x.operador)).toMatchObject({
+        ok: false,
+        error: { codigo: "SIN_PERMISO" },
+      });
+      c.alcances.set(x.personaDelGerente, [x.otraSucursal]);
+      try {
+        esGenerico(await tomar(x, recepcion));
+        expect(await costosDe(x, factura)).toEqual([]);
+      } finally {
+        c.alcances.set(x.personaDelGerente, [x.sucursal]);
+      }
+      const otra = await mundo();
+      esGenerico(await tomar(otra.x, recepcion));
+      dato(await tomar(x, recepcion));
+    });
   });
 });

@@ -51,6 +51,15 @@ export type FichaDeFacturaParaLaPantalla = Readonly<{
       recibida: string;
       sinConciliar: string;
     }>[];
+    costos: readonly Readonly<{
+      recepcionId: string;
+      recepcionNumero: number;
+      linea: number;
+      sucursalId: string;
+      recibida: string;
+      estado: "SE_PUEDE_TOMAR" | "TOMADO";
+      precioNeto: string;
+    }>[];
   }>[];
   conciliaciones: readonly Readonly<{
     conciliacionId: string;
@@ -76,12 +85,14 @@ export type AccionesDeLaFactura = Readonly<{
   verConciliaciones: boolean;
   conciliar: boolean;
   anularConciliacion: boolean;
+  tomarElCosto: boolean;
 }>;
 export const SIN_ACCIONES_DE_LA_FACTURA: AccionesDeLaFactura = {
   cargar: false,
   verConciliaciones: false,
   conciliar: false,
   anularConciliacion: false,
+  tomarElCosto: false,
 };
 
 const SIN_DATO = "—";
@@ -188,6 +199,20 @@ export type FichaDeFacturaArmada = Readonly<{
       rotulo: string;
       porSucursal: readonly Readonly<{ clave: string; texto: string }>[];
     }>;
+    /** El costo de cada línea recibida que esta línea cubre entera y sola: «Tomar el costo de la factura» (con permiso) o, si ya se tomó, el «Precio neto» tomado. */
+    costos: readonly Readonly<{
+      clave: string;
+      recepcionId: string;
+      linea: number;
+      /** El nombre de la sucursal de la línea recibida (lo recibido ya está arriba). */
+      titulo: string;
+      /** «Norte · Precio neto: $ 1.000,00» si ya se tomó; `null` si todavía no. */
+      tomado: string | null;
+      /** El botón se ofrece: se puede tomar y quien mira tiene el permiso. */
+      sePuedeTomar: boolean;
+      /** Lo que muestra la hoja del botón, ya con el precio de la factura que se va a tomar (no se escribe nada). */
+      hoja: Readonly<{ producto: string; sucursalYCantidad: string; precioNeto: string }>;
+    }>[];
   }>[];
   conciliaciones: Readonly<{
     titulo: string;
@@ -234,6 +259,23 @@ export function armarLaFichaDeFactura(
           texto: `${nombreDeLaSucursal(sucursales, r.sucursalId)}: ${cantidadConUnidad(r.recibida, l.unidadDeStockId)}`,
         })),
       },
+      costos: l.costos.map((k) => {
+        const sucursal = nombreDeLaSucursal(sucursales, k.sucursalId);
+        const precioNeto = `${textos.precioNeto}: ${formatearImporte(k.precioNeto)}`;
+        return {
+          clave: `${k.recepcionId}:${String(k.linea)}`,
+          recepcionId: k.recepcionId,
+          linea: k.linea,
+          titulo: sucursal,
+          tomado: k.estado === "TOMADO" ? `${sucursal} · ${precioNeto}` : null,
+          sePuedeTomar: k.estado === "SE_PUEDE_TOMAR" && acciones.tomarElCosto,
+          hoja: {
+            producto: l.producto ?? SIN_DATO,
+            sucursalYCantidad: `${sucursal}: ${cantidadConUnidad(k.recibida, l.unidadDeStockId)}`,
+            precioNeto,
+          },
+        };
+      }),
     })),
     conciliaciones: acciones.verConciliaciones
       ? {

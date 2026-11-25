@@ -5,8 +5,10 @@ import {
   anularLaConciliacionDeLaPantalla,
   conciliarLaFacturaDelFormulario,
   registrarLaFacturaDelFormulario,
+  tomarElCostoDelFormulario,
 } from "../../../servidor/facturas";
 import type {
+  CostoTomadoParaLaPantalla,
   FacturaConciliadaParaLaPantalla,
   FacturaRegistradaParaLaPantalla,
 } from "../../../servidor/facturas";
@@ -38,4 +40,11 @@ export async function anularConciliacionAccion(
   void previo;
   void datos;
   return anularLaConciliacionDeLaPantalla(comprobanteId, conciliacionId);
+}
+
+/** «Tomar el costo de la factura»: el pedido lleva su clave de idempotencia (la genera la pantalla por intento), la recepción y la línea; el precio no viaja. */
+export async function tomarElCostoAccion(
+  pedido: unknown,
+): Promise<Respuesta<CostoTomadoParaLaPantalla>> {
+  return tomarElCostoDelFormulario(pedido);
 }

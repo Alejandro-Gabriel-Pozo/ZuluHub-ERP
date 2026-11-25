@@ -266,6 +266,45 @@ describe.skipIf(base === null)(
       await pagina.getByText("Todo coincide", { exact: true }).waitFor();
     });
 
+    it("«Tomar el costo de la factura»: con lo recibido conciliado entero, la hoja muestra el «Precio neto» sin campos, un DOBLE CLIC real toma el costo UNA vez y la línea pasa a «Precio neto» sin botón", async () => {
+      await ir(pagina, `/compras/facturas/${facturaId}`);
+      await pagina.getByText("Todo coincide", { exact: true }).first().waitFor();
+      const botones = pagina.getByRole("button", {
+        name: "Tomar el costo de la factura",
+        exact: true,
+      });
+      await botones.first().waitFor();
+      expect(await botones.count()).toBe(2);
+      await botones.first().click();
+      const hoja = pagina.getByRole("dialog");
+      await hoja.getByText(/^Precio neto: /).waitFor();
+      expect(await hoja.getByRole("textbox").count()).toBe(0);
+      expect(await hoja.getByRole("spinbutton").count()).toBe(0);
+      await sinViolacionesDeAxe();
+      const tomas = () =>
+        contar(
+          "select count(*) as n from correccion_de_compra where empresa_id = $1 and motivo like 'COSTO-TOMADO-DE-LA-FACTURA:%'",
+          [mundo.empresa],
+        );
+      expect(await tomas()).toBe(0);
+      await hoja
+        .getByRole("button", { name: "Tomar el costo de la factura", exact: true })
+        .dblclick();
+      await pagina.getByText(/· Precio neto: /).waitFor();
+      expect(await tomas()).toBe(1);
+      expect(
+        await contar(
+          "select count(*) as n from auditoria_empresa where empresa_id = $1 and accion = 'COMPRA_CORREGIDA' and despues->>'tipo' = 'COSTO_TOMADO'",
+          [mundo.empresa],
+        ),
+      ).toBe(1);
+      expect(await botones.count()).toBe(1);
+      // Con el costo tomado, «Anular conciliación» se sigue ofreciendo (DEC-0941).
+      await pagina.getByRole("button", { name: "Anular conciliación" }).first().waitFor();
+      await sinViolacionesDeAxe();
+      expect(vigilante.tomar()).toEqual([]);
+    });
+
     it("«Anular conciliación» no pide motivo, devuelve el saldo y la factura vuelve a «Conciliada en parte»; una factura de otra empresa o un id inválido es el genérico", async () => {
       await ir(pagina, `/compras/facturas/${facturaId}`);
       await pagina.getByRole("button", { name: "Anular conciliación" }).first().click();
