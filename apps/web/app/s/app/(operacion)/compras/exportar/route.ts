@@ -13,3 +13,8 @@ export const maxDuration = 30;
 export async function GET(pedido: Request): Promise<Response> {
   return descargarElArchivoDeCompras(new URL(pedido.url).searchParams);
 }
+
+// HEAD no exporta ni deja registro de auditoría: Next lo derivaría de GET y correría toda la exportación sin mandar el cuerpo. Se rechaza con 405.
+export function HEAD(): Response {
+  return new Response(null, { status: 405, headers: { Allow: "GET" } });
+}

@@ -83,6 +83,15 @@ describe("la descarga del archivo de compras", () => {
     expect(ruta["maxDuration"]).toBe(30);
   });
 
+  it("HEAD no exporta ni deja registro: se rechaza con 405 antes de leer nada", async () => {
+    const ruta = await cargar();
+    const r = (ruta["HEAD"] as () => Response)();
+    expect(r.status).toBe(405);
+    expect(r.headers.get("Allow")).toBe("GET");
+    expect(await r.text()).toBe("");
+    expect(estado.llamadas).toEqual([]);
+  });
+
   it("un error sale solo como código (y referencia), con su estado, sin texto del cliente ni detalle", async () => {
     estado.respuesta = { ok: false, error: errorDeCodigo("COMPRAS_ACCION_NO_PERMITIDA") };
     const r = await pedir("desde=<script>&hasta=2026-09-30");

@@ -375,4 +375,88 @@ describe.skipIf(base === null)("compras: exportación a Excel", () => {
     expect(codigoDe(await conTopeChico(m.e.gerente, PERIODO))).toBe("EXPORTACION_DEMASIADO_GRANDE");
     expect(await c.auditoria(m.e.empresa, "COMPRAS_EXPORTADAS")).toHaveLength(0);
   });
+
+  it("varias compras a la vez: cada una sale con SU factura, SU pago y SU abonado (el agrupado da lo mismo que buscar una por una)", async () => {
+    const m = await armar();
+    // Mismo proveedor: el mismo CUIT en las tres facturas.
+    const cuit = cuitUnico();
+    const unaFactura = (numero: number) => {
+      const c0 = compraReal(m, numero);
+      return { ...c0, factura: { ...c0.factura, cuitDelProveedor: cuit } };
+    };
+    // Tres compras de la misma empresa; solo la primera y la tercera se pagan. Cada compra usa los mismos productos: no importa, son compras distintas.
+    const r1 = valorDe(await c.casos.registrarCompraConFactura(m.e.operador, unaFactura(2001)));
+    valorDe(await c.casos.registrarCompraConFactura(m.e.operador, unaFactura(2002)));
+    const r3 = valorDe(await c.casos.registrarCompraConFactura(m.e.operador, unaFactura(2003)));
+    for (const r of [r1, r3]) {
+      valorDe(
+        await c.casos.declararPago(m.e.gerente, {
+          clave: nuevoId(),
+          comprobanteId: r.comprobanteId as string,
+          fechaDePago: "2026-10-11",
+          medio: "TRANSFERENCIA",
+        }),
+      );
+    }
+    const salida = valorDe(await exportar(m));
+    expect(salida.compras).toHaveLength(3);
+    const cab = armarCabecera(salida.compras, new Map(), ROTULOS);
+    const col = (n: string) => cab.columnas.indexOf(n as never);
+    expect(
+      cab.filas.map((f) => (f[col("numero_del_comprobante")] as { valor: number }).valor),
+    ).toEqual([2001, 2002, 2003]);
+    expect(cab.filas.map((f) => (f[col("estado_del_pago")] as { valor: string }).valor)).toEqual([
+      "PAGADO",
+      "PENDIENTE",
+      "PAGADO",
+    ]);
+    const det = armarDetalle(salida.compras, ROTULOS);
+    const derivado = det.columnas.indexOf("importe_abonado_derivado");
+    const porCompra = [0, 1, 2].map((k) =>
+      det.filas
+        .slice(k * 6, k * 6 + 6)
+        .reduce(
+          (a, f) => a + Math.round(Number((f[derivado] as { valor: string }).valor) * 100),
+          0,
+        ),
+    );
+    expect(porCompra).toEqual([136949991, 0, 136949991]);
+  });
+
+  it("el tope vale para TODO lo que se lee: una compra que entra solo por la Cabecera también cuenta sus líneas", async () => {
+    const m = await armar();
+    valorDe(await c.casos.registrarCompraConFactura(m.e.operador, compraReal(m, 3001)));
+    // La compra es del 11/10 y su factura del 23/10: del 20 al 31 de octubre entra solo por la Cabecera (el Detalle queda en cero).
+    const soloCabecera = { desde: "2026-10-20", hasta: "2026-10-31" };
+    const conTopeChico = armarExportarCompras(c.dependencias, 5);
+    expect(codigoDe(await conTopeChico(m.e.gerente, soloCabecera))).toBe(
+      "EXPORTACION_DEMASIADO_GRANDE",
+    );
+    expect(await c.auditoria(m.e.empresa, "COMPRAS_EXPORTADAS")).toHaveLength(0);
+    // Con el tope de siempre sale completa.
+    expect(
+      armarCabecera(
+        valorDe(await exportar(m, m.e.gerente, soloCabecera)).compras,
+        new Map(),
+        ROTULOS,
+      ).filas,
+    ).toHaveLength(1);
+  });
+
+  it("la auditoría dice con qué alcance de sucursales se exportó (todas, o la lista)", async () => {
+    const m = await armar();
+    valorDe(await c.casos.registrarCompraConFactura(m.e.operador, compraReal(m, 4001)));
+    valorDe(await exportar(m));
+    c.alcances.set(m.e.gerente.personaId as string, [m.e.sucursal]);
+    try {
+      valorDe(await exportar(m));
+    } finally {
+      c.alcances.delete(m.e.gerente.personaId as string);
+    }
+    const registros = await c.auditoria(m.e.empresa, "COMPRAS_EXPORTADAS");
+    expect(registros.map((r) => (r["despues"] as { sucursales: unknown }).sucursales)).toEqual([
+      "TODAS",
+      [m.e.sucursal],
+    ]);
+  });
 });

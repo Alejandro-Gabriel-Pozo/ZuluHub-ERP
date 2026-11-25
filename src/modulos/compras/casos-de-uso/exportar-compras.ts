@@ -21,6 +21,7 @@ import type { CorreccionGuardada } from "../persistencia/repositorio-de-correcci
 import type { FilaDeRecepcionParaExportar } from "../persistencia/repositorio-de-exportacion-de-compras";
 import type { LineaDeRecepcion } from "../persistencia/repositorio-de-recepciones";
 import { claveDeLinea, importesVigentes } from "./compras-por-lote";
+import { agrupar, enTandas } from "./exportar-compras-apoyo";
 import { autorizar } from "./comun";
 import type { DependenciasDeCompras } from "./contrato";
 import { DECLARACIONES } from "./declaraciones";
@@ -124,6 +125,9 @@ export function armarExportarCompras(
           ...new Set([...filas.map((f) => f.id), ...cubiertas.map((c) => c.recepcionId)]),
         ];
         const pagos = await tx.exportacionDeCompras.pagosDeComprobantes(empresa, comprobanteIds);
+        // Todo se agrupa UNA vez antes de los bucles: filtrar la lista entera por cada factura o línea es una cuenta cuadrática (20.000 compras tardaban ~12 s de CPU).
+        const pagosPorComprobante = agrupar(pagos, (p) => p.comprobanteId);
+        const cubiertasPorComprobante = agrupar(cubiertas, (c) => c.comprobanteId);
         const comprobantes = new Map<
           string,
           ComprobanteGuardado & Readonly<{ recepcionId: string }>
@@ -151,14 +155,12 @@ export function armarExportarCompras(
             totalSegunFactura: c.totalSegunFactura,
             proveedorCuit: c.proveedorCuit,
             estado: c.estado,
-            pagos: pagos
-              .filter((p) => p.comprobanteId === c.id)
-              .map((p) => ({
-                fechaDePago: p.fechaDePago,
-                medio: p.medio,
-                importe: p.importe,
-                estado: p.estado,
-              })),
+            pagos: (pagosPorComprobante.get(c.id) ?? []).map((p) => ({
+              fechaDePago: p.fechaDePago,
+              medio: p.medio,
+              importe: p.importe,
+              estado: p.estado,
+            })),
           });
         }
         const razonSocial = new Map(
@@ -172,9 +174,13 @@ export function armarExportarCompras(
         >();
         const importes = new Map<string, string | null>();
         const ultimas = new Map<string, CorreccionGuardada>();
+        // El tope vale para TODO lo que se lee, también las líneas de las compras que entran solo por la Cabecera: se corta antes de seguir leyendo.
+        let lineasLeidas = 0;
         for (let i = 0; i < idsDeRecepciones.length; i += TAMANO_DE_TANDA_DE_LA_EXPORTACION) {
           const parte = idsDeRecepciones.slice(i, i + TAMANO_DE_TANDA_DE_LA_EXPORTACION);
           const r = await importesVigentes(tx, contexto, parte);
+          lineasLeidas += r.lineas.length;
+          if (lineasLeidas > filasMaximas) return err("EXPORTACION_DEMASIADO_GRANDE");
           for (const l of r.lineas) {
             const lista = lineasPorRecepcion.get(l.recepcionId) ?? [];
             lista.push(l);
@@ -184,19 +190,22 @@ export function armarExportarCompras(
           for (const [k, v] of r.ultimas) ultimas.set(k, v);
         }
         const todasLasLineas = [...lineasPorRecepcion.values()].flat();
+        // Sin repetidos y de a tandas: una consulta con más de 65.535 parámetros no se puede armar.
+        const idsDeProductos = [...new Set(todasLasLineas.map((l) => l.productoId))];
+        const idsDePresentaciones = [
+          ...new Set(
+            todasLasLineas.flatMap((l) => (l.presentacionId === null ? [] : [l.presentacionId])),
+          ),
+        ];
         const productos = new Map(
           (
-            await tx.productosParaCompras.deVarios(
-              empresa,
-              todasLasLineas.map((l) => l.productoId),
-            )
+            await enTandas(idsDeProductos, (ids) => tx.productosParaCompras.deVarios(empresa, ids))
           ).map((p) => [p.id, p]),
         );
         const presentaciones = new Map(
           (
-            await tx.presentacionesDeProducto.obtenerVarias(
-              empresa,
-              todasLasLineas.flatMap((l) => (l.presentacionId === null ? [] : [l.presentacionId])),
+            await enTandas(idsDePresentaciones, (ids) =>
+              tx.presentacionesDeProducto.obtenerVarias(empresa, ids),
             )
           ).map((p) => [p.id, p]),
         );
@@ -204,6 +213,7 @@ export function armarExportarCompras(
           empresa,
           [...productos.keys()],
         );
+        const clasificacionesPorProducto = agrupar(clasificaciones, (c) => c.productoId);
         const simbolos = await tx.exportacionDeCompras.simbolosDeUnidades();
         const nombres = await directorio.nombresParaMostrar(tx, empresa, [
           ...new Set(filas.map((f) => f.proveedorId)),
@@ -213,15 +223,13 @@ export function armarExportarCompras(
         const abonadoDerivado = new Map<string, string | null>();
         for (const f of facturas.values()) {
           const vigente = f.pagos.find((p) => p.estado === "VIGENTE");
-          const suyas = cubiertas
-            .filter((c) => c.comprobanteId === f.id)
-            .sort((a, b) =>
-              a.recepcionId < b.recepcionId
-                ? -1
-                : a.recepcionId > b.recepcionId
-                  ? 1
-                  : a.linea - b.linea,
-            );
+          const suyas = [...(cubiertasPorComprobante.get(f.id) ?? [])].sort((a, b) =>
+            a.recepcionId < b.recepcionId
+              ? -1
+              : a.recepcionId > b.recepcionId
+                ? 1
+                : a.linea - b.linea,
+          );
           const pesos = suyas.map(
             (c) => importes.get(claveDeLinea(c.recepcionId, c.linea)) ?? null,
           );
@@ -255,8 +263,8 @@ export function armarExportarCompras(
               const correccion = ultimas.get(clave);
               const precioPorTipo = correccion?.precioPorTipo ?? l.precioPorTipo;
               const vigenteA = finDelDia(f.fechaNegocio);
-              const nodo = clasificaciones
-                .filter((c) => c.productoId === l.productoId && c.vigenteDesde.getTime() < vigenteA)
+              const nodo = (clasificacionesPorProducto.get(l.productoId) ?? [])
+                .filter((c) => c.vigenteDesde.getTime() < vigenteA)
                 .sort((a, b) => b.vigenteDesde.getTime() - a.vigenteDesde.getTime())[0]?.nodo;
               const unidadDePrecio =
                 correccion?.precioPorTipo != null
@@ -317,6 +325,7 @@ export function armarExportarCompras(
           despues: {
             desde: entrada.desde,
             hasta: entrada.hasta,
+            sucursales: alcance === "TODAS" ? "TODAS" : [...alcance],
             filasDeCabecera: compras.filter((c) => c.enCabecera).length,
             filasDeDetalle: compras
               .filter((c) => c.enDetalle)
