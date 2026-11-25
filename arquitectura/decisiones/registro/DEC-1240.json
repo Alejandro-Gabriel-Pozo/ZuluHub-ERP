@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1240",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La perilla de empresa `facturar_antes_de_cobrar` nace APAGADA: cada empresa la enciende; hasta entonces se factura solo lo cobrado, como hoy (Q-A, recomendación A del diseño).",
+  "que_cambia": "Una empresa que no pidió facturar antes de cobrar no cambia su comportamiento. Si el dueño prefiere que nazca encendida, se cambia `base` en `src/capacidades/planes/perillas.ts` (una línea) y se ajusta la prueba de catálogo.",
+  "donde": "src/capacidades/planes/perillas.ts; PR-R05-facturar-antes-de-cobrar.md §3 (R-05a) y facturar-antes-de-cobrar.md §6 (Q-A), repositorio de documentos"
+}
