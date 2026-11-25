@@ -18,6 +18,12 @@ export type DatosDelActor = Readonly<{
    * figura acá queda en solo lectura (corrección 16).
    */
   modulosHabilitados: readonly string[];
+  /**
+   * Las acciones que el actor tiene, resueltas por el adaptador: el rol GERENTE tiene todas las del catálogo; ADMINISTRADOR y OPERADOR, las
+   * de la versión vigente de su plantilla (H4b §3.3). Es la autoridad del guard cuando viene. El adaptador de producción la manda SIEMPRE
+   * (vacía si no hay rol o no se puede leer la plantilla: todo nace cerrado); es opcional solo para los fakes de las pruebas.
+   */
+  acciones?: readonly string[];
 }>;
 
 /**

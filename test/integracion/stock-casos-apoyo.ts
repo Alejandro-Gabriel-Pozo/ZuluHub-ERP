@@ -28,6 +28,7 @@ import {
   crearBaseAparte,
   crearEmpresaActiva,
   crearEntornoDePrueba,
+  sinAcciones,
   type TxDePrueba,
 } from "./entorno";
 import {
@@ -127,7 +128,9 @@ export async function montarStock(
           return fijado ?? tx.autorizacion.sucursalesDelActor(contexto, opcionesDeAlcance);
         },
         delActor: async (contexto) => {
-          const datos = await tx.autorizacion.delActor(contexto);
+          const real = await tx.autorizacion.delActor(contexto);
+          // Con `reglas` propias la prueba decide por SU matriz (H4b T3, DEC-0955): se quita el conjunto de acciones real.
+          const datos = opciones.reglas === undefined ? real : sinAcciones(real);
           if (primera) {
             primera = false;
             await barrera();
