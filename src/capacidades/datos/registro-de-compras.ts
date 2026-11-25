@@ -58,6 +58,14 @@ const DE_RECEPCIONES = (para: string): Proposito => ({
     "Pedernal-docs, maqueta `compra-recibir.html` (estados «Por confirmar» y «Varios depósitos») y `plan-de-pantallas-compras-4-2026-11-25.md` (ficha F3); quién: gerente y administrador (`recepciones.confirmar` y `recepciones.anular`, DEC-0904); aceptada por delegación de pantallas (DEC-0907)",
 });
 
+const CORREGIR_LO_RECIBIDO =
+  "apps/web/ui/plantillas/compras/recepciones/CorregirLoRecibido.cliente.tsx";
+const DE_CORREGIR_LO_RECIBIDO = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Decisión del dueño del 25/11/2026 (chat del orquestador, a asentar en `decisiones-del-dueno-2026-11.md`): se corrige lo recibido con un registro nuevo, el motivo es una lista corta (error de carga, reparto interno, faltante del proveedor) más una nota opcional y corrigen gerente y administrador (`compras.corregir`); maqueta «Tomar el costo» (Artifact privado, estado «Corregir», DEC-0937 y DEC-0938).",
+});
+
 const HOJA_DE_ANULAR_PAGO = "apps/web/ui/plantillas/compras/pago/HojaDeAnularPago.cliente.tsx";
 const ANULAR_PAGO = ["comprobantes_de_proveedor.anular_pago"] as const;
 const DE_ANULAR_UN_PAGO = (para: string): Proposito => ({
@@ -208,6 +216,40 @@ export const DATOS_DE_COMPRAS = {
     ],
     consumidores: [PANTALLA_DE_CONCILIAR],
     ponerPor: CONCILIAR_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "cantidad-recibida-corregida": {
+    // La cantidad es la misma de todo el módulo (hasta 4 decimales, mayor que cero, en la unidad de stock): la regla vive UNA vez en `decimal.ts` y el servidor la vuelve a aplicar con el tope de lo conciliado y la existencia.
+    ficha: "src/modulos/compras/dominio/decimal.ts",
+    propositos: [
+      DE_CORREGIR_LO_RECIBIDO(
+        "La cantidad que de verdad llegó de una línea de una recepción confirmada, en la unidad de stock; reemplaza a la vigente con un registro de corrección.",
+      ),
+    ],
+    consumidores: [CORREGIR_LO_RECIBIDO],
+    ponerPor: CORREGIR_COMPRA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "causa-de-correccion-de-lo-recibido": {
+    // Las tres causas viven UNA vez, en el dominio (`CAUSAS_DE_CORRECCION`): la pantalla las ofrece y el servidor solo acepta una de ellas (la base repite la lista con una prueba que falla si difieren).
+    ficha: "src/modulos/compras/dominio/correccion-de-lo-recibido.ts",
+    propositos: [
+      DE_CORREGIR_LO_RECIBIDO(
+        "Por qué se corrige lo recibido: error de carga, reparto interno o faltante del proveedor (separa en los reportes lo que se le reclama al proveedor de lo que no).",
+      ),
+    ],
+    consumidores: [CORREGIR_LO_RECIBIDO],
+    ponerPor: CORREGIR_COMPRA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "nota-de-correccion-de-lo-recibido": {
+    // El largo máximo y el conjunto permitido viven UNA vez, en el dominio (`MAXIMO_DE_LA_NOTA_DE_CORRECCION`, `leerCorreccionDeLoRecibido`); el servidor vuelve a validar.
+    ficha: "src/modulos/compras/dominio/correccion-de-lo-recibido.ts",
+    propositos: [
+      DE_CORREGIR_LO_RECIBIDO("Nota opcional de una línea corregida, de una sola línea."),
+    ],
+    consumidores: [CORREGIR_LO_RECIBIDO],
+    ponerPor: CORREGIR_COMPRA,
     requiere: REQUIERE_COMPRAS,
   },
   "punto-de-venta-del-remito": {

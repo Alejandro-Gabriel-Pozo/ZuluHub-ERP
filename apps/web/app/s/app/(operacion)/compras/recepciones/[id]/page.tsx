@@ -1,5 +1,6 @@
 import { pantallaDeOperacion, conTitulo } from "../../../../../../../pantallas/operacion";
 import {
+  CAUSAS_DE_CORRECCION,
   accionesDeLaRecepcion,
   cargarLaFichaDeRecepcion,
   cargarLosDepositosParaConfirmar,
@@ -10,6 +11,7 @@ import { textosDeRecepciones } from "../../../../../../../ui/plantillas/compras/
 import {
   anularRecepcionAccion,
   confirmarRecepcionAccion,
+  corregirLoRecibidoAccion,
 } from "../../../../acciones-de-recepciones";
 
 // `/compras/recepciones/[id]`: el detalle de una recepción (maqueta `compra-recibir.html`, estados «Por confirmar» y «Confirmada»). El id es lo único que viene de la URL: la empresa, la persona y el alcance de
@@ -34,6 +36,8 @@ export default async function PaginaDelDetalleDeRecepcion({
         acciones={acciones}
         accionDeConfirmar={confirmarRecepcionAccion.bind(null, ficha.dato.recepcionId)}
         accionDeAnular={anularRecepcionAccion.bind(null, ficha.dato.recepcionId)}
+        accionDeCorregir={corregirLoRecibidoAccion}
+        causas={CAUSAS_DE_CORRECCION}
         depositos={
           acciones.confirmar && ficha.dato.estado === "PENDIENTE_DE_CONFIRMAR"
             ? await cargarLosDepositosParaConfirmar(contexto)

@@ -4,9 +4,13 @@ import type { Respuesta } from "../../../../../src/capacidades/experiencia/respu
 import {
   anularLaRecepcionDeLaPantalla,
   confirmarLaRecepcionDeLaPantalla,
+  corregirLoRecibidoDelFormulario,
   registrarLaRecepcionDelFormulario,
 } from "../../../servidor/recepciones";
-import type { RecepcionRegistradaParaLaPantalla } from "../../../servidor/recepciones";
+import type {
+  LoRecibidoCorregidoParaLaPantalla,
+  RecepcionRegistradaParaLaPantalla,
+} from "../../../servidor/recepciones";
 import type { ResultadoDeLaRecepcion } from "../../../ui/plantillas/compras/recepciones/resultado-de-recepcion";
 
 // Las acciones de servidor de «Recepciones» (Compras 4), expuestas a Next. Finas a propósito (ADR-015, punto 2): la directiva `"use server"` tiene que ser lo primero de este archivo, así que lo que hacen vive en
@@ -35,4 +39,11 @@ export async function anularRecepcionAccion(
 ): Promise<ResultadoDeLaRecepcion> {
   void previo;
   return anularLaRecepcionDeLaPantalla(recepcionId, datos);
+}
+
+/** «Corregir lo recibido»: el pedido lleva su clave de idempotencia (la genera la pantalla por intento); la empresa, la persona y la sucursal no viajan. */
+export async function corregirLoRecibidoAccion(
+  pedido: unknown,
+): Promise<Respuesta<LoRecibidoCorregidoParaLaPantalla>> {
+  return corregirLoRecibidoDelFormulario(pedido);
 }
