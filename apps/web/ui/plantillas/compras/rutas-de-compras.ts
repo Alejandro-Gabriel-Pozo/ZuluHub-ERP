@@ -10,7 +10,7 @@ export const RUTA_DEL_NIVEL_DE_COMPRAS = `${RUTA_DE_COMPRAS}/nivel`;
 export const RUTA_DE_NUEVA_COMPRA = `${RUTA_DE_COMPRAS}/nueva`;
 
 /** La descarga del archivo de compras (Excel) del período aplicado en la lista. */
-export const RUTA_DE_EXPORTAR_COMPRAS = `${RUTA_DE_COMPRAS}/exportar`;
+const RUTA_DE_EXPORTAR_COMPRAS = `${RUTA_DE_COMPRAS}/exportar`;
 
 export const rutaDeLaCompra = (recepcionId: string): string => `${RUTA_DE_COMPRAS}/${recepcionId}`;
 
