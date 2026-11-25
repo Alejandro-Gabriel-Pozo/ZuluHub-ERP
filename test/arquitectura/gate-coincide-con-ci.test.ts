@@ -62,6 +62,16 @@ const todosLosClasificados = (c: Clasificacion): string[] => [
 ];
 
 /**
+ * La compilación de la web, los componentes y el recorrido (CI liviano, dueño 25/11/2026): en un pull request hacia la rama de integración se saltean si el plan dice que el cambio no toca la web
+ * (`toca_web == 'false'`); en push, la nocturna y a pedido corren siempre, y si el plan cae o no dice nada (salida vacía) CORREN. El Gate acepta el salto solo así (`evaluar-gate.cjs`).
+ */
+const SI_DE_LA_WEB = {
+  si: "${{ !cancelled() && (github.event_name == 'push' || needs.mutacion-plan.outputs.toca_web != 'false') }}",
+  motivo:
+    "se saltea solo si el plan terminó bien y dijo toca_web == 'false' en un pull request hacia la rama de integración (CI liviano); ante un plan caído o una salida vacía corre",
+};
+
+/**
  * Los únicos `if:` de job que hoy existen, cada uno con su motivo. Un job que no figura acá no puede
  * tener `if`: un `if` en un job obligatorio es una forma de saltearlo sin que nadie lo note.
  */
@@ -86,6 +96,9 @@ const SI_DE_JOB_ESPERADO: Readonly<Record<string, { si: string; motivo: string }
     motivo:
       "sin grupos que correr no hay matriz; el Gate lo acepta skipped solo si el plan terminó bien",
   },
+  web: SI_DE_LA_WEB,
+  componentes: SI_DE_LA_WEB,
+  recorrido: SI_DE_LA_WEB,
   gate: {
     si: "always()",
     motivo:
@@ -318,6 +331,14 @@ function verificarCI(texto: string, clasificacion: Clasificacion = CLASIFICACION
     if (permitido !== undefined && job.si !== permitido.si) {
       problemas.push(
         `«${id}»: su \`if\` es ${job.si === undefined ? "(ninguno)" : `«${job.si}»`} y debe ser «${permitido.si}» (${permitido.motivo})`,
+      );
+    }
+    if (
+      permitido === SI_DE_LA_WEB &&
+      JSON.stringify(job.needs) !== JSON.stringify(["mutacion-plan"])
+    ) {
+      problemas.push(
+        `«${id}»: tiene que esperar al plan (needs: mutacion-plan) para leer \`toca_web\`; hoy espera a [${job.needs.join(", ")}]`,
       );
     }
     const pasosPermitidos = [...(SI_DE_PASOS_ESPERADOS[id] ?? [])].sort();
@@ -569,9 +590,28 @@ const CASOS: Caso[] = [
   ...CLASIFICACION.obligatorios.map((id): Caso => ({
     nombre: `agregar if: false al job obligatorio «${id}»`,
     alterar: (t) => conPropiedad(t, id, "if: false"),
-    // `mutacion-plan` ya tiene un `if` permitido (no corre en push): un segundo `if` lo cambia y se dice «debe ser».
-    esperado: [`«${id}»`, id === "mutacion-plan" ? "debe ser" : "if: false"],
+    // `mutacion-plan` y los de la web ya tienen un `if` permitido: un segundo `if` lo cambia y se dice «debe ser».
+    esperado: [
+      `«${id}»`,
+      id === "mutacion-plan" || ["web", "componentes", "recorrido"].includes(id)
+        ? "debe ser"
+        : "if: false",
+    ],
   })),
+  ...["web", "componentes", "recorrido"].map((id): Caso => ({
+    nombre: `CI liviano: «${id}» que se saltea ante un plan caído o una salida vacía (== 'true' en vez de != 'false')`,
+    alterar: (t) =>
+      enJob(t, id, (b) =>
+        reemplazarUnico(b, "outputs.toca_web != 'false'", "outputs.toca_web == 'true'"),
+      ),
+    esperado: [`«${id}»`, "debe ser"],
+  })),
+  {
+    nombre: "CI liviano: «recorrido» sin esperar al plan",
+    alterar: (t) =>
+      enJob(t, "recorrido", (b) => reemplazarUnico(b, "    needs: mutacion-plan\n", "")),
+    esperado: ["«recorrido»"],
+  },
   {
     nombre: "agregar un if que saltea al job «mutacion-plan» con la forma del de dependencias",
     alterar: (t) => conPropiedad(t, "mutacion-plan", "if: github.event_name == 'pull_request'"),
@@ -963,6 +1003,27 @@ describe("ci.yml y el Gate", () => {
 
   it("el Gate recibe el evento (sin él no puede saber si saltar Estabilidad es legítimo)", () => {
     expect(leerJobs(CI).get("gate")?.texto).toContain("EVENTO: ${{ github.event_name }}");
+  });
+
+  it("CI liviano: el Gate recibe la rama base del contexto de GitHub y el plan recibe base y origen por el entorno (nunca dentro de un comando)", () => {
+    const jobs = leerJobs(CI);
+    expect(jobs.get("gate")?.texto).toContain("BASE_DEL_PR: ${{ github.base_ref }}");
+    const plan = jobs.get("mutacion-plan")?.texto ?? "";
+    expect(plan).toContain("BASE_DEL_PR: ${{ github.base_ref }}");
+    expect(plan).toContain("ORIGEN_DEL_PR: ${{ github.head_ref }}");
+    expect(plan).toContain("liviano: ${{ steps.plan.outputs.liviano }}");
+    expect(plan).toContain("toca_web: ${{ steps.plan.outputs.toca_web }}");
+    // Ninguna rama ni título entra a un `run:` (inyección por el nombre de una rama).
+    expect(CI).not.toMatch(/run:[^\n]*\$\{\{\s*github\.(base_ref|head_ref)/);
+  });
+
+  it("CI liviano: web, componentes y recorrido esperan al plan, que dice si el cambio toca la web; siguen exigidos por el Gate", () => {
+    const jobs = leerJobs(CI);
+    for (const id of ["web", "componentes", "recorrido"]) {
+      expect(jobs.get(id)?.needs, id).toEqual(["mutacion-plan"]);
+      expect(jobs.get(id)?.si, id).toBe(SI_DE_LA_WEB.si);
+      expect(gate.OBLIGATORIOS, id).toContain(id);
+    }
   });
 
   it("estabilidad repite 3 copias en un pull request y 12 en la nocturna y a pedido (y sigue exigida por el Gate)", () => {

@@ -12,8 +12,19 @@
  * si corrieron tienen que dar `success`, y todo lo demás (estático, guardián, pruebas, seguridad, flujos, web, componentes,
  * recorrido) sigue siendo obligatorio. Previene: ~795 min de máquina por merge repitiendo lo que ya corrió en el PR (28 % del
  * consumo medido el 13-16/11/2026) sin dejar pasar un push a main con las pruebas en rojo ni con un job saltado por otra causa.
- * El chequeo que falla si se quita: `test/arquitectura/evaluar-gate.test.ts`.
+ * CI liviano (dueño, 25/11/2026): en un pull request hacia la rama de integración (`BASE_DE_INTEGRACION`) la mutación, Estabilidad y, si el cambio no toca la web
+ * (`toca_web == "false"`), la compilación de la web, los componentes y el recorrido corren solo de noche. Se aceptan SALTADOS únicamente si se cumplen las cuatro:
+ * evento `pull_request`, base exacta de integración (`BASE_DEL_PR`, del contexto de GitHub, no de una salida), el plan terminó bien y dijo `liviano == "true"` y,
+ * para los tres de la web, dijo `toca_web == "false"`. Cualquier otra combinación (un pull request hacia `main`, un `toca_web` vacío o `true`, un plan caído, la
+ * nocturna) los deja en rojo (fail-closed). Previene: 60 chequeos y 30 a 60 minutos por pull request con muchas sesiones en paralelo, sin que un salto por otra causa
+ * pase por verde. El chequeo que falla si se quita: `test/arquitectura/evaluar-gate.test.ts`.
  */
+
+/** La rama de integración (misma constante que `planificar-mutacion.cjs`: una sola fuente). */
+const { BASE_DE_INTEGRACION } = require("./planificar-mutacion.cjs");
+
+/** Jobs de la web: en el CI liviano se aceptan saltados si el cambio no toca la web. */
+const DE_LA_WEB = ["web", "componentes", "recorrido"];
 
 /** Jobs que siempre tienen que terminar en `success`. */
 const OBLIGATORIOS = [
@@ -35,17 +46,31 @@ const SALTABLES_EN_PUSH = ["mutacion-plan", "mutacion", "estabilidad"];
 /**
  * @param {Readonly<Record<string, { result?: string, outputs?: Record<string, string> }>>} needs
  * @param {string} [evento] el evento que disparó la corrida (`github.event_name`); sin él, nada se acepta saltado por filtro
+ * @param {string} [base] la rama base del pull request (`github.base_ref`); sin ella, el CI liviano no se reconoce
  * @returns {string[]} motivos por los que el Gate debe fallar (vacío = verde)
  */
-function evaluarGate(needs, evento) {
+function evaluarGate(needs, evento, base) {
   const problemas = [];
   const resultado = (job) => needs[job]?.result;
   // Solo con el evento `push` y solo para los tres jobs declarados, y solo `skipped` (un `failure` o un `cancelled` siguen en rojo).
   const saltadoEnPush = (job) =>
     evento === "push" && SALTABLES_EN_PUSH.includes(job) && resultado(job) === "skipped";
 
+  const planTerminoBien = resultado("mutacion-plan") === "success";
+  const salidaDelPlan = (nombre) => needs["mutacion-plan"]?.outputs?.[nombre];
+  const liviano =
+    evento === "pull_request" &&
+    base === BASE_DE_INTEGRACION &&
+    planTerminoBien &&
+    salidaDelPlan("liviano") === "true";
+  const webSaltada = (job) =>
+    liviano &&
+    salidaDelPlan("toca_web") === "false" &&
+    DE_LA_WEB.includes(job) &&
+    resultado(job) === "skipped";
+
   for (const job of OBLIGATORIOS) {
-    if (resultado(job) !== "success" && !saltadoEnPush(job)) {
+    if (resultado(job) !== "success" && !saltadoEnPush(job) && !webSaltada(job)) {
       problemas.push(`${job}: ${resultado(job) ?? "ausente"}`);
     }
   }
@@ -54,9 +79,7 @@ function evaluarGate(needs, evento) {
       problemas.push(`${job}: ${resultado(job) ?? "ausente"}`);
     }
   }
-  const filtradoPorElPlan =
-    resultado("mutacion-plan") === "success" &&
-    needs["mutacion-plan"]?.outputs?.["hay"] === "false";
+  const filtradoPorElPlan = planTerminoBien && salidaDelPlan("hay") === "false";
   const mutacionAceptable =
     resultado("mutacion") === "success" ||
     saltadoEnPush("mutacion") ||
@@ -64,9 +87,7 @@ function evaluarGate(needs, evento) {
   if (!mutacionAceptable) problemas.push(`mutacion: ${resultado("mutacion") ?? "ausente"}`);
 
   const estabilidadFiltrada =
-    evento === "pull_request" &&
-    resultado("mutacion-plan") === "success" &&
-    needs["mutacion-plan"]?.outputs?.["estabilidad"] === "false";
+    evento === "pull_request" && planTerminoBien && salidaDelPlan("estabilidad") === "false";
   const estabilidadAceptable =
     resultado("estabilidad") === "success" ||
     saltadoEnPush("estabilidad") ||
@@ -109,7 +130,7 @@ function corridaReemplazada({ needs, evento, actual = "", deEstaCorrida = "" }) 
 
 function principal() {
   const needs = JSON.parse(process.env["NEEDS"] ?? "{}");
-  const problemas = evaluarGate(needs, process.env["EVENTO"]);
+  const problemas = evaluarGate(needs, process.env["EVENTO"], process.env["BASE_DEL_PR"]);
   const reemplazada = corridaReemplazada({
     needs,
     evento: process.env["EVENTO"],
@@ -131,6 +152,7 @@ function principal() {
 
 module.exports = {
   evaluarGate,
+  DE_LA_WEB,
   corridaReemplazada,
   OBLIGATORIOS,
   SOLO_EN_PULL_REQUEST,

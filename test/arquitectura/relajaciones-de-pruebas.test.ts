@@ -4,10 +4,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   CAMPOS_OBLIGATORIOS,
+  codeqlSoloHaciaMain,
   copiasDeEstabilidad,
   fechaEnMs,
   gruposSensiblesSinMarca,
   problemasDeLasRutas,
+  problemasDelCiLiviano,
   problemasDelRegistro,
   problemasDelWorkflow,
 } from "./relajaciones-de-pruebas-apoyo.ts";
@@ -295,6 +297,60 @@ describe("un grupo de mutación que muta rutas sensibles tiene que ser crítico"
   });
 });
 
+describe("el CI liviano figura en el registro mientras se aplica", () => {
+  const LIVIANO = { ...BUENA, id: "ci-liviano-en-pr-a-integracion" };
+  const aplica = { aplicaElPlanificador: true, codeqlSoloHaciaMain: true };
+  const noAplica = { aplicaElPlanificador: false, codeqlSoloHaciaMain: false };
+
+  it("aplicado con su entrada VIGENTE y CodeQL solo hacia main: sin problemas; restaurado con la entrada RESTAURADA: sin problemas", () => {
+    expect(problemasDelCiLiviano(aplica, registro(LIVIANO))).toEqual([]);
+    expect(problemasDelCiLiviano(noAplica, registro({ ...LIVIANO, estado: "RESTAURADA" }))).toEqual(
+      [],
+    );
+    expect(problemasDelCiLiviano(noAplica, registro(BUENA))).toEqual([]);
+  });
+
+  it("VIOLACIÓN: el planificador recorta y no hay entrada", () => {
+    expect(problemasDelCiLiviano(aplica, registro(BUENA))[0]).toContain(
+      "no figura «ci-liviano-en-pr-a-integracion»",
+    );
+  });
+
+  it("VIOLACIÓN: el planificador recorta y la entrada está RESTAURADA", () => {
+    expect(
+      problemasDelCiLiviano(aplica, registro({ ...LIVIANO, estado: "RESTAURADA" }))[0],
+    ).toContain("no está VIGENTE");
+  });
+
+  it("VIOLACIÓN: se restauró el planificador y la entrada sigue VIGENTE", () => {
+    expect(problemasDelCiLiviano(noAplica, registro(LIVIANO))[0]).toContain(
+      "no está marcada RESTAURADA",
+    );
+  });
+
+  it("VIOLACIÓN: el CI liviano dice que CodeQL no corre en esos pull requests y codeql.yml sigue corriendo en todos (y a la inversa)", () => {
+    expect(
+      problemasDelCiLiviano({ ...aplica, codeqlSoloHaciaMain: false }, registro(LIVIANO))[0],
+    ).toContain("codeql.yml sigue corriendo en todos");
+    expect(
+      problemasDelCiLiviano(
+        { ...noAplica, codeqlSoloHaciaMain: true },
+        registro({ ...LIVIANO, estado: "RESTAURADA" }),
+      )[0],
+    ).toContain("sigue corriendo solo hacia main");
+  });
+
+  it("codeql.yml: solo se reconoce `pull_request:` con `branches: [main]` pegado debajo", () => {
+    expect(codeqlSoloHaciaMain("on:\n  pull_request:\n    branches: [main]\n  schedule:\n")).toBe(
+      true,
+    );
+    expect(codeqlSoloHaciaMain("on:\n  pull_request:\n  schedule:\n")).toBe(false);
+    expect(codeqlSoloHaciaMain("on:\n  push:\n    branches: [main]\n  pull_request:\n")).toBe(
+      false,
+    );
+  });
+});
+
 describe("el repositorio real", () => {
   it("el registro de relajaciones está bien formado y ninguna revisión venció", () => {
     const hoy = new Date().toISOString().slice(0, 10);
@@ -307,6 +363,27 @@ describe("el repositorio real", () => {
     const ci = readFileSync(join(RAIZ, ".github/workflows/ci.yml"), "utf8");
     expect(
       problemasDelWorkflow(ci, leerJson("arquitectura/deuda/relajaciones-de-pruebas.json")),
+    ).toEqual([]);
+  });
+
+  it("el planificador y codeql.yml están de acuerdo con el registro sobre el CI liviano", () => {
+    const { BASE_DE_INTEGRACION, perfilDelPullRequest } =
+      require("../../arquitectura/planificar-mutacion.cjs") as {
+        BASE_DE_INTEGRACION: string;
+        perfilDelPullRequest: (e: { evento: string; base: string; origen: string }) => string;
+      };
+    const codeql = readFileSync(join(RAIZ, ".github/workflows/codeql.yml"), "utf8");
+    const entrada = {
+      aplicaElPlanificador:
+        perfilDelPullRequest({
+          evento: "pull_request",
+          base: BASE_DE_INTEGRACION,
+          origen: "feat/x",
+        }) === "liviano",
+      codeqlSoloHaciaMain: codeqlSoloHaciaMain(codeql),
+    };
+    expect(
+      problemasDelCiLiviano(entrada, leerJson("arquitectura/deuda/relajaciones-de-pruebas.json")),
     ).toEqual([]);
   });
 

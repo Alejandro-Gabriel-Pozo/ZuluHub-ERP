@@ -230,3 +230,55 @@ export function problemasDeLasRutas(valor: unknown): string[] {
   }
   return problemas;
 }
+
+const ID_DEL_CI_LIVIANO = "ci-liviano-en-pr-a-integracion";
+
+/**
+ * El CI liviano tiene que figurar en el registro mientras el planificador lo aplique, y a la inversa. `vigente` es lo que HACE el código (el planificador da `liviano`
+ * para un pull request hacia la rama de integración); `codeqlSoloHaciaMain` lo que dice `codeql.yml`. Si el código recorta y la entrada no está VIGENTE, o si ya no
+ * recorta y la entrada sigue VIGENTE, falla; y CodeQL tiene que coincidir con lo mismo.
+ */
+export function problemasDelCiLiviano(
+  entrada: { aplicaElPlanificador: boolean; codeqlSoloHaciaMain: boolean },
+  registro: unknown,
+): string[] {
+  const lista =
+    esObjeto(registro) && Array.isArray(registro["relajaciones"]) ? registro["relajaciones"] : [];
+  const relajacion = lista.find(
+    (e): e is Record<string, unknown> => esObjeto(e) && e["id"] === ID_DEL_CI_LIVIANO,
+  );
+  const problemas: string[] = [];
+  if (entrada.aplicaElPlanificador) {
+    if (relajacion === undefined) {
+      problemas.push(
+        `el planificador aplica el CI liviano en los pull requests hacia la rama de integración y no figura «${ID_DEL_CI_LIVIANO}» en el registro.`,
+      );
+    } else if (relajacion["estado"] !== "VIGENTE") {
+      problemas.push(
+        `el planificador aplica el CI liviano y «${ID_DEL_CI_LIVIANO}» no está VIGENTE.`,
+      );
+    }
+    if (!entrada.codeqlSoloHaciaMain) {
+      problemas.push(
+        "el CI liviano dice que CodeQL no corre en los pull requests hacia la rama de integración, pero codeql.yml sigue corriendo en todos.",
+      );
+    }
+  } else {
+    if (relajacion !== undefined && relajacion["estado"] !== "RESTAURADA") {
+      problemas.push(
+        `el planificador ya no aplica el CI liviano y «${ID_DEL_CI_LIVIANO}» no está marcada RESTAURADA.`,
+      );
+    }
+    if (entrada.codeqlSoloHaciaMain) {
+      problemas.push(
+        "el planificador ya no aplica el CI liviano pero codeql.yml sigue corriendo solo hacia main.",
+      );
+    }
+  }
+  return problemas;
+}
+
+/** ¿`codeql.yml` corre sus pull requests solo hacia `main`? (`pull_request:` seguido de `branches: [main]`). */
+export function codeqlSoloHaciaMain(codeql: string): boolean {
+  return /^ {2}pull_request:\n {4}branches: \[main\]\n/m.test(codeql);
+}

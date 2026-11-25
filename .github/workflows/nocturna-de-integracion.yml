@@ -1,0 +1,34 @@
+name: Nocturna de integración
+
+# La corrida nocturna COMPLETA sobre la rama de integración (decisión del dueño, 25/11/2026: los pull requests hacia ella corren el CI liviano y esto es la red que lo respalda).
+# El `schedule` de GitHub solo corre desde la rama por defecto (`main`): este archivo tiene que estar en `main` para dispararse solo; hasta entonces la corrida se pide a mano
+# (Actions → Nocturna de integración → Run workflow) o con una tarea programada que haga lo mismo. Dispara `ci.yml` (toda la mutación, 12 copias de Estabilidad, componentes
+# y recorrido) y `codeql.yml` con `workflow_dispatch` sobre la rama fija; si la nocturna está roja no se mergea producto (CLAUDE.md, «Parar la línea»).
+# Previene: que el CI liviano de los pull requests deje sin mirar la mutación y las intermitencias para siempre. Chequeo: `test/arquitectura/workflow-nocturna-de-integracion.test.ts`.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: nocturna-de-integracion
+  cancel-in-progress: false
+
+jobs:
+  disparar:
+    name: Disparar la nocturna de integración
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: CI completo sobre la rama de integración
+        run: gh workflow run ci.yml --ref integracion/modulos-v2
+      - name: CodeQL sobre la rama de integración
+        run: gh workflow run codeql.yml --ref integracion/modulos-v2

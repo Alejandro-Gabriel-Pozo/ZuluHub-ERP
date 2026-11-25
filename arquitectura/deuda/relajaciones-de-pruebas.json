@@ -1,6 +1,17 @@
 {
   "relajaciones": [
     {
+      "id": "ci-liviano-en-pr-a-integracion",
+      "estado": "VIGENTE",
+      "que": "Un pull request hacia la rama de integración corre solo tipos, lint, formato, arquitectura, guardián, código muerto, seguridad y las pruebas completas; sin mutación, sin Estabilidad, sin CodeQL y sin gate completo, y la web (compilación, componentes y recorrido) solo si el cambio la toca",
+      "donde": ".github/workflows/ci.yml (plan y Gate), .github/workflows/codeql.yml, arquitectura/planificar-mutacion.cjs, arquitectura/evaluar-gate.cjs",
+      "motivo": "Muchas sesiones en paralelo: cada pull request corría unos 60 chequeos y tardaba de 30 a 60 minutos; la nocturna de integración corre TODO y el pull request final hacia main corre el gate completo",
+      "decidio": "dueño, 2026-11-25",
+      "fecha": "2026-11-25",
+      "restaurar_si": "Antes del primer despliegue a un cliente real corre el gate completo en el pull request final; si aparecen dos fallas de la nocturna en una semana se restaura el gate completo por pull request; o hay más de 2 personas operando a la vez por sucursal, un segundo cliente de otra escala o una cadena",
+      "revisar_antes_de": "2027-02-23"
+    },
+    {
       "id": "estabilidad-reducida-en-pr",
       "estado": "VIGENTE",
       "que": "En un pull request, Estabilidad repite la integración 3 veces en vez de las 12 de la corrida nocturna y a pedido",
