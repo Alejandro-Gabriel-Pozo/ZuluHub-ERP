@@ -642,6 +642,8 @@ describe("planificador de mutación: apps/** (las aplicaciones importan de src, 
       /^test\/arquitectura\/guardian-[^/]+\.ts$/,
       // Esta misma prueba: grafos de juguete con nombres `apps/...`; del árbol real solo lista nombres de archivo.
       /^test\/arquitectura\/planificar-mutacion\.test\.ts$/,
+      // El registro de relajaciones: usa nombres `apps/web/ui/...` de juguete y del árbol real solo lista los archivos que expanden los grupos de mutación (no lee su contenido).
+      /^test\/arquitectura\/relajaciones-de-pruebas\.test\.ts$/,
     ];
     const LECTURA_DE_ARCHIVOS =
       /\b(readFileSync|readdirSync|readdir|globSync|existsSync|statSync|lstatSync|readFile|opendirSync|cpSync|copyFileSync)\b/;
