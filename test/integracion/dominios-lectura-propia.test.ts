@@ -222,7 +222,7 @@ describe.skipIf(base === null)(
         await insertar(e, "APP", hostAlAzar());
       });
 
-      it("dos empresas distintas pueden tener cada una el suyo de la misma superficie", async () => {
+      it("dos empresas distintas pueden tener cada una el suyo de la misma superficie", () => {
         expect(h.cartaA.id).not.toBe(h.cartaB.id);
       });
 
