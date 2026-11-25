@@ -10,7 +10,15 @@ const opciones = [
   { valor: "tarjeta", etiqueta: "Tarjeta" },
 ] as const;
 
-function Probado({ error, deshabilitado }: { error?: string; deshabilitado?: boolean }) {
+function Probado({
+  error,
+  deshabilitado,
+  nombre,
+}: {
+  error?: string;
+  deshabilitado?: boolean;
+  nombre?: string;
+}) {
   const [valor, setValor] = useState("");
   return (
     <Selector
@@ -22,11 +30,44 @@ function Probado({ error, deshabilitado }: { error?: string; deshabilitado?: boo
       textoDeElegir="Elegí un medio"
       error={error}
       deshabilitado={deshabilitado ?? false}
+      nombre={nombre}
     />
   );
 }
 
+/** Un formulario con acción (como los de las pantallas): React 19 reinicia el `<form>` al terminar la acción, aunque la acción haya fallado. */
+function ProbadoEnUnFormulario({ alEnviar }: { alEnviar: () => Promise<void> }) {
+  return (
+    <form action={alEnviar}>
+      <Probado nombre="medio" />
+      <button type="submit">Enviar</button>
+    </form>
+  );
+}
+
 describe("Selector", () => {
+  it("conserva lo elegido después de enviar un formulario con acción (React 19 reinicia el formulario)", async () => {
+    let enviados = 0;
+    await render(
+      <ProbadoEnUnFormulario
+        alEnviar={async () => {
+          enviados += 1;
+          await Promise.resolve();
+        }}
+      />,
+    );
+    const selector = page.getByRole("combobox", { name: "Medio de pago" });
+    await userEvent.selectOptions(selector, "tarjeta");
+    await userEvent.click(page.getByRole("button", { name: "Enviar" }));
+    await expect.poll(() => enviados).toBe(1);
+    // Se espera un ciclo más: el reinicio del formulario llega después de que termina la acción.
+    await new Promise((resolver) => setTimeout(resolver, 100));
+    await expect.element(selector).toHaveValue("tarjeta");
+    // Y sigue siendo un selector vivo: se puede elegir otra opción.
+    await userEvent.selectOptions(selector, "efectivo");
+    await expect.element(selector).toHaveValue("efectivo");
+  });
+
   it("es un <select> nativo con etiqueta, opciones y la opción de elegir", async () => {
     await render(<Probado />);
     const selector = page.getByRole("combobox", { name: "Medio de pago" });

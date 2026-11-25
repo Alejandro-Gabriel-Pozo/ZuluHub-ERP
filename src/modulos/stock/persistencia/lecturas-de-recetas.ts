@@ -1,7 +1,7 @@
 import { sql, type Kysely, type RawBuilder } from "kysely";
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import type { StockDb } from "./esquema";
-import { comoPrefijo } from "./lecturas-del-libro";
+import { comoPrefijo } from "../../catalogo/publico";
 
 /**
  * Las listas de la pantalla de Recetas (B1 y B3 de `recetas-pantalla.md` §8): los productos que llevan receta (con o sin ella) y los que se ofrecen como ingrediente. Son LECTURAS
