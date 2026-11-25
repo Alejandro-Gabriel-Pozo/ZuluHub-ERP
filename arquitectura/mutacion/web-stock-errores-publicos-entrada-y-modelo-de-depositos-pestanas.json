@@ -3,5 +3,5 @@
   "archivos": "src/composicion/errores-de-stock.ts,src/composicion/entradas-de-depositos.ts,apps/web/ui/plantillas/stock/depositos/modelo-de-depositos.ts,apps/web/ui/plantillas/stock/pestanas-de-stock.ts,apps/web/ui/plantillas/stock/rutas-de-stock.ts",
   "minutos": 2,
   "pruebas": "src/capacidades/experiencia/respuesta-de-stock.test.ts src/composicion/errores-de-stock.test.ts src/composicion/entradas-de-depositos.test.ts test/web/stock-depositos-modelo.test.ts",
-  "critico": true
+  "nivel": "CRITICO"
 }

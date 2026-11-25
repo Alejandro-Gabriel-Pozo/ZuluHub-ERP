@@ -2,5 +2,6 @@
   "grupo": "guardián (grupos de mutación)",
   "archivos": "arquitectura/grupos-de-mutacion.cjs",
   "minutos": 3,
-  "pruebas": "test/arquitectura/grupos-de-mutacion.test.ts"
+  "pruebas": "test/arquitectura/grupos-de-mutacion.test.ts",
+  "nivel": "CRITICO"
 }

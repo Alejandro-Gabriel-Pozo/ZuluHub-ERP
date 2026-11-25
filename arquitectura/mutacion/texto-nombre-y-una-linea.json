@@ -2,5 +2,6 @@
   "grupo": "texto (nombre y una línea)",
   "archivos": "src/primitivas/texto/**/*.ts",
   "minutos": 0.6,
-  "pruebas": "src/primitivas/texto"
+  "pruebas": "src/primitivas/texto",
+  "nivel": "SERVIDOR"
 }

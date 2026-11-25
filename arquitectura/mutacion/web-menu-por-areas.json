@@ -2,5 +2,6 @@
   "grupo": "web (menú por áreas)",
   "archivos": "apps/web/ui/navegacion/menu.ts,apps/web/ui/navegacion/menu-filas-ventas.ts,apps/web/ui/navegacion/menu-filas-catalogo.ts,apps/web/ui/navegacion/menu-filas-compras.ts,apps/web/ui/navegacion/menu-filas-cuenta.ts",
   "minutos": 1,
-  "pruebas": "test/web/menu-por-areas.test.ts"
+  "pruebas": "test/web/menu-por-areas.test.ts",
+  "nivel": "PANTALLA"
 }

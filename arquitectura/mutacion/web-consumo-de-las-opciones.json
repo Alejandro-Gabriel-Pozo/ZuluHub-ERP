@@ -2,5 +2,6 @@
   "grupo": "web (consumo de las opciones)",
   "archivos": "src/composicion/entradas-de-consumo.ts,apps/web/ui/plantillas/catalogo/modelo-de-consumo.ts",
   "minutos": 2,
-  "pruebas": "src/composicion/entradas-de-consumo.test.ts test/web/consumo-modelo.test.ts"
+  "pruebas": "src/composicion/entradas-de-consumo.test.ts test/web/consumo-modelo.test.ts",
+  "nivel": "SERVIDOR"
 }
