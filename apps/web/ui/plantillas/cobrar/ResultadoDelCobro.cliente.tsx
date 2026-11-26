@@ -32,7 +32,7 @@ export type PropsDeResultadoDelCobro = Readonly<{
   /** Avisa a la pantalla si se está viendo el ticket del cliente (que trae su propia barra) o el resultado. */
   alCambiarLaVista: (viendoElTicket: boolean) => void;
   alNuevaVenta: () => void;
-  /** El resultado de cobrar una mesa (SAL-D): sin «Anular» (es de SAL-C2) y el último botón es «Volver» (al salón), no «Nueva venta». */
+  /** El resultado de cobrar una mesa (SAL-D y SAL-C2): lleva «Anular» como el del mostrador (la mesa NO se reabre: queda libre) y el último botón es «Volver» (al salón), no «Nueva venta». */
   deLaMesa?: boolean | undefined;
   /** Solo al cobrar una cuenta de una mesa dividida (SAL-E2): el botón dice «Volver a las cuentas» y, si era la última, el resultado avisa «Mesa cobrada» (la mesa quedó libre). */
   deLaDivision?: Readonly<{ rotuloDeVolver: string; mesaCobrada: string | null }> | undefined;
@@ -88,6 +88,9 @@ export function ResultadoDelCobro({
       setPidiendoElPapel(false);
     }
   };
+  // El último botón: «Nueva venta» en el mostrador; «Volver» (o «Volver a las cuentas») en una mesa, que anulada NO se reabre.
+  const rotuloFinal =
+    deLaDivision?.rotuloDeVolver ?? (deLaMesa ? textos.volver : textos.nuevaVenta);
   if (anulado !== null) {
     return (
       <div className={estilos["cuerpo"]}>
@@ -96,7 +99,7 @@ export function ResultadoDelCobro({
           <span data-motivo-anulado>{anulado.motivo}</span>
         </Aviso>
         <Boton ancho="completo" alTocar={alNuevaVenta}>
-          {textos.nuevaVenta}
+          {rotuloFinal}
         </Boton>
       </div>
     );
@@ -171,19 +174,17 @@ export function ResultadoDelCobro({
             {textos.imprimirTicket}
           </Boton>
         )}
-        {deLaMesa ? null : (
-          <Boton
-            variante="secundaria"
-            ancho="completo"
-            alTocar={() => {
-              setAnulando(true);
-            }}
-          >
-            {textos.anular}
-          </Boton>
-        )}
+        <Boton
+          variante="secundaria"
+          ancho="completo"
+          alTocar={() => {
+            setAnulando(true);
+          }}
+        >
+          {textos.anular}
+        </Boton>
         <Boton ancho="completo" alTocar={alNuevaVenta}>
-          {deLaDivision?.rotuloDeVolver ?? (deLaMesa ? textos.volver : textos.nuevaVenta)}
+          {rotuloFinal}
         </Boton>
       </div>
       {errorDelPapel === null ? null : <ErrorDeRespuesta error={errorDelPapel} />}
