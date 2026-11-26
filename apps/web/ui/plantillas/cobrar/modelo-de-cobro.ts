@@ -349,7 +349,8 @@ export function pedidoDeVenderACuenta(
     sinLineas?: boolean | undefined;
   }>,
 ): Readonly<Record<string, unknown>> | null {
-  const lineas = entrada.sinLineas === true ? [] : lineasDelPedido(entrada.ids.lineas, entrada.cuenta);
+  const lineas =
+    entrada.sinLineas === true ? [] : lineasDelPedido(entrada.ids.lineas, entrada.cuenta);
   if (lineas === null) return null;
   return {
     cuentaId: entrada.ids.cuentaId,

@@ -37,7 +37,11 @@ import {
   type TicketAnulado,
   type VentaCobrada,
 } from "./modelo-de-cobro";
-import { comoVentaCobrada, type VentaACuenta, type VentaACuentaDelCobro } from "./modelo-de-vender-a-cuenta";
+import {
+  comoVentaCobrada,
+  type VentaACuenta,
+  type VentaACuentaDelCobro,
+} from "./modelo-de-vender-a-cuenta";
 import { type TextosDeCobrar } from "./textos-de-cobrar";
 import type { TextosDeDividirEnElCobro } from "./textos-de-dividir-en-el-cobro";
 import { useEnvioDelPedido } from "./useEnvioDelPedido.cliente";

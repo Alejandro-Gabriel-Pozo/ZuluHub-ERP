@@ -88,7 +88,10 @@ export function HojaDeVenderACuenta({
 
   const { envio, enviar, inesperado } = useEnvioDelPedido<VentaACuenta>({
     mandar: aCuenta.confirmar,
-    textos: { sinConexion: textosDelCobro.noSePuedeEnviar, verificando: textosDelCobro.verificando },
+    textos: {
+      sinConexion: textosDelCobro.noSePuedeEnviar,
+      verificando: textosDelCobro.verificando,
+    },
     esperaEntreVerificacionesMs,
   });
   const congelado =
@@ -205,7 +208,9 @@ export function HojaDeVenderACuenta({
             ) : null}
           </>
         )}
-        {envio.estado.tipo === "rechazado" ? <ErrorDeRespuesta error={envio.estado.rechazo} /> : null}
+        {envio.estado.tipo === "rechazado" ? (
+          <ErrorDeRespuesta error={envio.estado.rechazo} />
+        ) : null}
         {inesperado === null ? null : <ErrorDeRespuesta error={inesperado} />}
         {excede && !congelado ? (
           <Boton

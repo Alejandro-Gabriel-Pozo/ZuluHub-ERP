@@ -23,7 +23,11 @@ import { sucursalDelPedido } from "./sucursal-elegida";
  * QUIÉN y DÓNDE actúa y llaman a `src/composicion/vender-a-cuenta-web.ts`, donde se prueba todo lo demás. Ninguna decide permisos ni toca la base: cada consulta y caso de uso exige los suyos adentro. La empresa y la
  * persona salen de la sesión y LA SUCURSAL la fija el SERVIDOR (la elegida en este dispositivo, validada contra el alcance): nunca la que diga el navegador; sin ninguna, el genérico (nunca se asume «todas»).
  */
-export type { ClienteElegidoParaLaPantalla, ClientesParaVenderParaLaPantalla, VentaACuentaParaLaPantalla };
+export type {
+  ClienteElegidoParaLaPantalla,
+  ClientesParaVenderParaLaPantalla,
+  VentaACuentaParaLaPantalla,
+};
 
 const dependenciasDeLaHoja: DependenciasDeVenderACuentaWeb = {
   consultas: web.consultasDeCuentaCorriente,
