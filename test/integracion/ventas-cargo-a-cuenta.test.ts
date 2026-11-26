@@ -86,6 +86,7 @@ describe.skipIf(base === null)("ventas: cargo a cuenta corriente (CC-2)", () => 
       cuentaId: cuenta,
       ejemplarId: nuevoId(),
       clienteId,
+      totalEsperado: { moneda: "ARS", monto: "1000.00" },
       ...(aprobacionDelExceso === undefined ? {} : { aprobacionDelExceso }),
     });
   const venta = async (
@@ -228,12 +229,118 @@ describe.skipIf(base === null)("ventas: cargo a cuenta corriente (CC-2)", () => 
     const c = await cliente();
     const { cuenta } = await cuentaConLinea(m, e);
     const ejemplar = nuevoId();
-    const pedido = { cuentaId: cuenta, ejemplarId: ejemplar, clienteId: c };
+    const pedido = {
+      cuentaId: cuenta,
+      ejemplarId: ejemplar,
+      clienteId: c,
+      totalEsperado: { moneda: "ARS", monto: "1000.00" },
+    };
     const a = valorDe(await m.casos.cerrarCuenta(e.gerente, pedido));
     const b = valorDe(await m.casos.cerrarCuenta(e.gerente, pedido));
     expect(b).toMatchObject({ ticketId: a.ticketId, yaEstabaCerrada: true });
     expect(await asientos(c)).toHaveLength(1);
     expect(await saldo(c)).toBe("1000.00");
+  });
+
+  describe("el total que vio quien cierra (B1a-2)", () => {
+    const visto = { moneda: "ARS", monto: "1000.00" };
+    const intentar = (cuenta: string, clienteId: string, totalEsperado?: unknown) =>
+      m.casos.cerrarCuenta(e.gerente, {
+        cuentaId: cuenta,
+        ejemplarId: nuevoId(),
+        clienteId,
+        ...(totalEsperado === undefined ? {} : { totalEsperado }),
+      } as Parameters<typeof m.casos.cerrarCuenta>[1]);
+    const sinEscribir = async (cuenta: string, c: string) => {
+      expect(await asientos(c)).toHaveLength(0);
+      expect(await saldo(c)).toBe("0");
+      const abierta = await m.dueno.query<{ estado: string }>(
+        "select estado from cuenta_consumo where id = $1",
+        [cuenta],
+      );
+      expect(abierta.rows[0]?.estado).toBe("ABIERTA");
+    };
+
+    it("con cliente es OBLIGATORIO: sin él (o con moneda o forma inválidas) se rechaza y no se escribe nada", async () => {
+      const c = await cliente();
+      const { cuenta } = await cuentaConLinea(m, e);
+      expect(await intentar(cuenta, c)).toEqual({ ok: false, error: "ENTRADA_INVALIDA" });
+      expect(await intentar(cuenta, c, { moneda: "USD", monto: "1000.00" })).toEqual({
+        ok: false,
+        error: "MONEDA_NO_SOPORTADA",
+      });
+      for (const monto of ["1e3", "-1000.00", "1000.005", ""]) {
+        expect(await intentar(cuenta, c, { moneda: "ARS", monto }), monto).toEqual({
+          ok: false,
+          error: "IMPORTE_INVALIDO",
+        });
+      }
+      await sinEscribir(cuenta, c);
+    });
+
+    it("si el total de la cuenta cambió (alguien agregó una línea), TOTAL_CAMBIO con el total actual, sin cerrar ni cargar", async () => {
+      const c = await cliente({ limite: "9000.00" });
+      const { cuenta } = await cuentaConLinea(m, e);
+      valorDe(
+        await m.casos.agregarLinea(e.gerente, {
+          cuentaId: cuenta,
+          lineaId: nuevoId(),
+          productoId: e.producto,
+          opcionIds: [],
+          cantidad: "1",
+        }),
+      );
+      expect(await intentar(cuenta, c, visto)).toEqual({
+        ok: false,
+        error: { error: "TOTAL_CAMBIO", totalActual: { moneda: "ARS", monto: "2000.00" } },
+      });
+      await sinEscribir(cuenta, c);
+      // Con el total nuevo, cierra y carga ESO.
+      valorDe(await intentar(cuenta, c, { moneda: "ARS", monto: "2000.00" }));
+      expect(await saldo(c)).toBe("2000.00");
+    });
+
+    it("un cierre ya hecho se devuelve aunque el total esperado sea viejo (la idempotencia va primero) y sin cliente el total esperado no se mira", async () => {
+      const c = await cliente();
+      const { cuenta } = await cuentaConLinea(m, e);
+      const primero = valorDe(await intentar(cuenta, c, visto));
+      const otraVez = valorDe(await intentar(cuenta, c, { moneda: "ARS", monto: "1.00" }));
+      expect(otraVez).toMatchObject({ ticketId: primero.ticketId, yaEstabaCerrada: true });
+      expect(await asientos(c)).toHaveLength(1);
+      const { cuenta: otra } = await cuentaConLinea(m, e);
+      valorDe(
+        await m.casos.cerrarCuenta(e.gerente, {
+          cuentaId: otra,
+          ejemplarId: nuevoId(),
+          totalEsperado: { moneda: "ARS", monto: "1.00" },
+        } as Parameters<typeof m.casos.cerrarCuenta>[1]),
+      );
+    });
+
+    it("concurrencia: cerrar con el total visto mientras otra persona agrega una línea: o cierra con lo visto o falla TOTAL_CAMBIO; nunca se carga otro total", async () => {
+      for (let ronda = 0; ronda < 4; ronda++) {
+        const c = await cliente({ limite: "9000.00" });
+        const { cuenta } = await cuentaConLinea(m, e);
+        m.armarBarrera(2);
+        const [cierre] = await Promise.all([
+          intentar(cuenta, c, visto),
+          m.casos.agregarLinea(e.gerente, {
+            cuentaId: cuenta,
+            lineaId: nuevoId(),
+            productoId: e.producto,
+            opcionIds: [],
+            cantidad: "1",
+          }),
+        ]).finally(m.soltarBarrera);
+        if (cierre.ok) {
+          expect(await saldo(c), `ronda ${ronda}`).toBe("1000.00");
+          expect(await asientos(c)).toHaveLength(1);
+        } else {
+          expect(cierre.error).toMatchObject({ error: "TOTAL_CAMBIO" });
+          expect(await asientos(c)).toHaveLength(0);
+        }
+      }
+    });
   });
 
   it("concurrencia: dos cierres a la vez del mismo cliente con límite para UNO: uno pasa y el otro pide aprobación, en las dos órdenes; el saldo nunca supera el límite", async () => {
@@ -286,6 +393,7 @@ describe.skipIf(base === null)("ventas: cargo a cuenta corriente (CC-2)", () => 
         cuentaId: (await cuentaConLinea(m, s)).cuenta,
         ejemplarId: nuevoId(),
         clienteId: c,
+        totalEsperado: { moneda: "ARS", monto: "1000.00" },
       }),
     );
     const suelto = valorDe(

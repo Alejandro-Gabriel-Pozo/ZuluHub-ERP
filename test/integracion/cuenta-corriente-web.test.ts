@@ -100,6 +100,7 @@ describe.skipIf(base === null)("cuenta corriente: la lista y la ficha en la web 
         cuentaId: cuenta,
         ejemplarId: nuevoId(),
         clienteId,
+        totalEsperado: { moneda: "ARS", monto: "1000.00" },
       }),
     );
   };

@@ -84,7 +84,9 @@ describe.skipIf(base === null)("ventas: cliente en el ticket (0107)", () => {
     m.casos.cerrarCuenta(e.gerente, {
       cuentaId: cuenta,
       ejemplarId: ejemplar,
-      ...(clienteId === undefined ? {} : { clienteId }),
+      ...(clienteId === undefined
+        ? {}
+        : { clienteId, totalEsperado: { moneda: "ARS", monto: "1000.00" } }),
     });
   const ticketsDe = async (cuenta: string) =>
     (
