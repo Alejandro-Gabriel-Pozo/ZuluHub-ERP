@@ -14,6 +14,10 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
   (dueño, 17/11/2026, «4.-si»). `previo` (dueño, 26/11/2026, «Sí a las dos, a tu recomendación») previene las 26 ejecuciones rojas del CI en dos días por olvido local
   (knip, arquitectura o composición no corridas: #612 en 4 rondas, #621, #603) y los choques entre PR en paralelo (#619 contra una prueba nueva de #617). Chequeo:
   `test/arquitectura/previo.test.ts` (falla si falta el script o alguno de esos pasos, con una violación inyectada por cada uno).
+  **Excepción de tiempo (dueño, 26/11/2026, «Si»):** si el último paso de `previo` (`vitest related`, las pruebas del diff) pasa de 20 minutos, se puede empujar con todos los pasos
+  anteriores en verde y dejar que el CI corra esas pruebas, avisándolo en la descripción del PR con lo que sí se corrió. Se reintegra la integración solo si hay conflicto o si lo que entró
+  toca los archivos propios (el CI corre sobre el resultado del merge). Previene: las vueltas largas de `previo` y las reintegraciones reiniciaban 20 minutos o más por PR. Chequeo: `previo.test.ts`
+  afirma que los pasos fijos van siempre antes de las pruebas del diff, así que la excepción solo puede alcanzar a ese último tramo; que se avise en el PR es proceso, no un test.
 - Cambios mínimos y enfocados; no inventar librerías ni APIs; avisar antes de sumar una dependencia.
 - La mutación exige 100 % en el cálculo puro de dinero, 95 % en lo crítico, 80 % en servidor y dominio y 60 % en las pantallas (ver «Mutación por nivel»); un grupo nuevo declara su `nivel`.
 - Si tocás `apps/web/ui`, corré también `npm run test:componentes` (Chromium real: axe, foco y envío; el CI lo corre en el job

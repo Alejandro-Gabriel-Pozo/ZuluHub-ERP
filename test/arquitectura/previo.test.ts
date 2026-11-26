@@ -22,6 +22,7 @@ const previo = require("../../arquitectura/previo.cjs") as {
     modulo?: string;
     modulosExistentes: string[];
   }) => { tipo: string; [clave: string]: unknown };
+  pasosDeLaCorrida: (plan: { tipo: string; [clave: string]: unknown }) => Paso[];
   comandosDelPlan: (plan: { tipo: string; [clave: string]: unknown }) => string[][];
   esCacheVieja: (comando: string[], salida: string) => boolean;
   correrConReintentoPorCacheVieja: (
@@ -264,5 +265,26 @@ describe("caché vieja de vite en grafo.test.ts", () => {
     );
     expect(r.cacheLimpiada).toBe(false);
     expect(limpiezas).toBe(0);
+  });
+});
+
+describe("la excepción de tiempo solo alcanza al último tramo", () => {
+  const PLANES = [
+    { tipo: "modulo", modulo: "caja", filtro: "src/modulos/caja/" },
+    { tipo: "relacionadas", archivos: ["src/a.ts"], aviso: [] },
+    { tipo: "nada", aviso: [] },
+  ];
+
+  it.each(PLANES)("con el plan «$tipo» los pasos fijos van todos antes, en su orden", (plan) => {
+    const ids = previo.pasosDeLaCorrida(plan).map((p) => p.id);
+    expect(ids.slice(0, PASOS_ESPERADOS.length)).toEqual([...PASOS_ESPERADOS]);
+    expect(ids.slice(PASOS_ESPERADOS.length).every((i) => i.startsWith("pruebas-"))).toBe(true);
+  });
+
+  it("CLAUDE.md deja por escrito la excepción de 20 minutos junto a la regla de previo", () => {
+    const texto = readFileSync(join(RAIZ, "CLAUDE.md"), "utf8");
+    expect(texto).toContain("Excepción de tiempo");
+    expect(texto).toContain("20 minutos");
+    expect(texto).toContain("`vitest related`");
   });
 });
