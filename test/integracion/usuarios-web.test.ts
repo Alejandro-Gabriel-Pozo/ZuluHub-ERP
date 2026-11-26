@@ -130,10 +130,28 @@ describe.skipIf(base === null)("usuarios: lista y ficha de la empresa (web)", ()
 
     expect(lista.usuarios).toEqual(
       [
-        { personaId: e.persona, email: gerente, rol: "GERENTE", activo: true },
-        { personaId: admin, email: "b-admin@prueba.test", rol: "ADMINISTRADOR", activo: true },
-        { personaId: sofia, email: "c-sofia@prueba.test", rol: "OPERADOR", activo: true },
-        { personaId: ana, email: "d-ana@prueba.test", rol: "OPERADOR", activo: false },
+        { personaId: e.persona, email: gerente, rol: "GERENTE", rolPropioId: null, activo: true },
+        {
+          personaId: admin,
+          email: "b-admin@prueba.test",
+          rol: "ADMINISTRADOR",
+          rolPropioId: null,
+          activo: true,
+        },
+        {
+          personaId: sofia,
+          email: "c-sofia@prueba.test",
+          rol: "OPERADOR",
+          rolPropioId: null,
+          activo: true,
+        },
+        {
+          personaId: ana,
+          email: "d-ana@prueba.test",
+          rol: "OPERADOR",
+          rolPropioId: null,
+          activo: false,
+        },
       ].sort((a, b) => (a.email < b.email ? -1 : 1)),
     );
     expect(lista.invitaciones).toEqual([
@@ -218,12 +236,14 @@ describe.skipIf(base === null)("usuarios: lista y ficha de la empresa (web)", ()
       personaId: sofia,
       email: "sofia@prueba.test",
       rol: "OPERADOR",
+      rolPropioId: null,
       activo: true,
     });
     expect(datosDe(await fichaDeUsuario(d(), e.como(), { personaId: ana }))).toEqual({
       personaId: ana,
       email: "ana@prueba.test",
       rol: "OPERADOR",
+      rolPropioId: null,
       activo: false,
     });
   });
