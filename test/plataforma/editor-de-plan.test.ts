@@ -57,7 +57,12 @@ describe("módulos", () => {
     const todos = modulosParaElegir();
     expect(todos.map((m) => m.clave)).toEqual([...CLAVES_DE_MODULOS]);
     expect(todos.filter((m) => m.obligatorio).map((m) => m.clave)).toEqual(OBLIGATORIOS);
-    expect(todos.some((m) => m.enDesarrollo)).toBe(true);
+    // «En desarrollo» sale del estado del catálogo (hoy ningún módulo lo está: cuenta_corriente se abrió el 26/11/2026, CC-5); la marca sigue al catálogo y no se pierde.
+    expect(
+      todos.every(
+        (m) => m.enDesarrollo === (CATALOGO_DE_MODULOS[m.clave].estado === "en_desarrollo"),
+      ),
+    ).toBe(true);
     expect(todos.some((m) => !m.enDesarrollo)).toBe(true);
     expect(todos.find((m) => m.clave === "ventas")?.requiere).toEqual(
       CATALOGO_DE_MODULOS.ventas.requiere,
