@@ -28,12 +28,31 @@ export type ErrorDelCargoACuenta =
 
 export type CargoACuenta = Readonly<{ asientoId: string; yaExistia: boolean }>;
 
+/**
+ * EL ORDEN DE BLOQUEO (un solo lugar; lo respetan cerrar, cobrar y anular): el ticket primero (al cerrar nace con su fila; al cobrar `marcarCobrado`; al anular `bloquearTicket`), después la cobranza y los cobros de caja, después la
+ * FICHA del cliente (solo el cargo la toma `FOR UPDATE`; cobrar no: suspender al cliente no impide cobrarle) y al final el SALDO de la parte en el libro, que se toma al insertar el asiento. Anular un ticket cobrado a cuenta anula
+ * primero la cobranza y después el cargo. Como ninguna operación pide algo anterior a lo que ya tiene, no hay ciclo.
+ */
 export interface CuentaCorrienteDeVentas<Tx> {
   /** Carga el total a la cuenta del cliente dentro de la transacción del cierre (ficha bloqueada, límite, aprobación, asiento y auditoría). Repetir no duplica. */
   cargarEnTx(
     tx: Tx,
     contexto: ContextoOperativo,
     entrada: EntradaDeCargoACuenta,
+  ): Promise<Resultado<CargoACuenta, ErrorDelCargoACuenta>>;
+  /**
+   * La cobranza del ticket a cuenta (CC-3), en la misma transacción que el cobro de caja y al final de ella: el asiento COBRANZA por el total, imputado al cargo de ese ticket. Cobra el cargo entero. Repetir no duplica.
+   */
+  cobrarEnTx(
+    tx: Tx,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ ticketId: string; cobranzaId: string; total: string }>,
+  ): Promise<Resultado<CargoACuenta, ErrorDelCargoACuenta>>;
+  /** El espejo de la cobranza al anular un ticket cobrado a cuenta (antes de anular el cargo), en la misma transacción. */
+  anularCobranzaEnTx(
+    tx: Tx,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ cobranzaId: string }>,
   ): Promise<Resultado<CargoACuenta, ErrorDelCargoACuenta>>;
   /** El espejo del cargo al anular el ticket, en la misma transacción. */
   anularEnTx(
