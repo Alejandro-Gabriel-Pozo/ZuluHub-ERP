@@ -78,6 +78,20 @@ function leerPrecio(texto: string): PrecioUnitario | null {
   }
 }
 
+/**
+ * SUPUESTO (DEC-SAL-010): «Por unidades» solo vale cuando precio × paso es un número exacto de centavos. Si no, cada copia se redondea por separado y las cuentas pueden sumar un centavo de más o de menos que la línea (2 kg a $ 1.000,01 el
+ * kilo, paso 0,5: la línea vale $ 2.000,02 y las copias 500,01 + 1.500,02 = $ 2.000,03) y rompe «el total al centavo». Con paso exacto toda copia cierra exacta y la suma es la línea. Una sola regla: la usan el servidor (`planDeDivision`)
+ * y la pantalla (no ofrece el botón). Cuesta poco revertirla: es esta función y su llamada en `planDeDivision` y en `lineasParaDividir`. `false` si el precio o el paso no se leen.
+ * Previene: la suma de las cuentas distinta del total de la mesa. Chequeo: `division.test.ts` y `salon-dividir-modelo.test.ts`.
+ */
+export function cierraExactoPorPaso(precioUnitario: string, pasoDeCantidad: string): boolean {
+  const precio = leerPrecio(precioUnitario);
+  const paso = leerCantidad(pasoDeCantidad);
+  if (precio === null || paso === null) return false;
+  const exacto = multiplicarPrecioPorCantidad(ARS, precio, paso);
+  return exacto.numerador % exacto.denominador === 0n;
+}
+
 const parteValida = (n: number, partes: number): boolean =>
   Number.isSafeInteger(n) && n >= 1 && n <= partes;
 
@@ -146,6 +160,9 @@ export function planDeDivision(
       if (copias.length - desde === 1) {
         const unica = copias[desde] as CopiaAHacer;
         copias[desde] = { ...unica, modo: "COMPLETA" };
+      } else if (!cierraExactoPorPaso(linea.precioUnitario, linea.pasoDeCantidad)) {
+        // Repartida entre varias cuentas con un precio que no cierra en centavos por paso: las copias redondeadas no sumarían la línea.
+        return err("UNIDADES_NO_SUMAN");
       }
     } else {
       if (!asignacion.partes.every((p) => parteValida(p, partes))) return err("PARTES_INVALIDAS");

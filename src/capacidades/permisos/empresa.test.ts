@@ -222,7 +222,10 @@ const DEL_ADMINISTRADOR_DE_CUENTA_CORRIENTE = [
 ] as const;
 
 /** CC-2 (brief PR-CC-2 §1.6, DEC-CCL-001): cerrar una cuenta a nombre de un cliente lo hacen los tres roles (los que hoy cierran cuentas). */
-const DEL_OPERADOR_DE_CUENTA_CORRIENTE = ["cuenta_corriente.cargar_a_cuenta"] as const;
+const DEL_OPERADOR_DE_CUENTA_CORRIENTE = [
+  "cuenta_corriente.cargar_a_cuenta",
+  "cuenta_corriente.consultar_al_vender",
+] as const;
 
 /** E7 (spec §3.13, PP-2): los tres roles unen, dividen, cambian de mesa, envían a cocina e imprimen; el operador también mira mesas e impresoras. */
 const DEL_OPERADOR_DE_SALON_Y_COMANDAS = [
@@ -339,9 +342,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 186 acciones: 39 de empresa (5 de roles propios y su asignación), configuración fiscal y facturación, 45 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 41 de clientes y compras y 16 de salón y comandas y 4 de cuenta corriente (2 de CC-1 y 2 de CC-2)", () => {
+  it("hay 187 acciones: 39 de empresa (5 de roles propios y su asignación), configuración fiscal y facturación, 45 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 41 de clientes y compras y 16 de salón y comandas y 5 de cuenta corriente (2 de CC-1, 2 de CC-2 y 1 de CC-5)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(186);
+    expect(todas).toHaveLength(187);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -751,12 +754,12 @@ describe("el guard con las reglas reales", () => {
     expect([...ENDESARROLLO]).toEqual(["cuenta_corriente"]);
   });
 
-  it("las 4 acciones sin construir (de cuenta corriente) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  it("las 5 acciones sin construir (de cuenta corriente) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
     const sinConstruir = ENDESARROLLO.flatMap(
       (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
     );
-    expect(sinConstruir).toHaveLength(4);
+    expect(sinConstruir).toHaveLength(5);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(

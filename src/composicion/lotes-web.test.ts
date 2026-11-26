@@ -92,6 +92,7 @@ describe("lotesDelArticulo", () => {
         ],
         articuloId: A1,
         unidadId: "KG",
+        control: null,
         lotes: [
           {
             loteId: "l1",
@@ -100,6 +101,8 @@ describe("lotesDelArticulo", () => {
             existencia: "3.0000",
             disponible: "2.0000",
             sinAsignar: false,
+            version: 3,
+            depositos: [],
           },
         ],
       },
@@ -134,7 +137,7 @@ describe("lotesDelArticulo", () => {
     const vacio = await lotesDelArticulo(montar({ controlados: () => ok([]) }).d, contexto, {});
     expect(vacio).toEqual({
       ok: true,
-      dato: { articulos: [], articuloId: null, unidadId: null, lotes: [] },
+      dato: { articulos: [], articuloId: null, unidadId: null, control: null, lotes: [] },
     });
     const sin = montar({
       lotes: () =>
