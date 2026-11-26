@@ -18,6 +18,7 @@ import {
 } from "./modelo-de-invitaciones";
 import { INVITAR_INICIAL, type ResultadoDeInvitar } from "./resultado-de-usuarios";
 import estilos from "./PantallaDeUsuarios.module.css";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeInvitacion = Readonly<{
   formulario: FormularioDeInvitacionArmado;
@@ -59,7 +60,7 @@ export function FormularioDeInvitacion({
   }, [hecho, rutaDeLaLista]);
 
   return (
-    <form action={enviar} noValidate>
+    <form action={enviar} onReset={sinReiniciar} noValidate>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={4}>
           {resultado.estado === "YA_HABIA" ? (

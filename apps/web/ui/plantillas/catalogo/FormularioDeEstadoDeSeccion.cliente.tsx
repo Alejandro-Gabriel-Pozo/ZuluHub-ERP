@@ -8,6 +8,7 @@ import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
 import { ProveedorDeEnvioDeFormulario } from "../../patrones/EnvioDeFormulario.cliente";
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
 import { Pila } from "../../primitivas/Pila";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeEstadoDeSeccion = Readonly<{
   /** «Desactivar» o «Reactivar», ya resuelto. */
@@ -32,7 +33,7 @@ export function FormularioDeEstadoDeSeccion({
 }: PropsDeFormularioDeEstadoDeSeccion) {
   const [resultado, enviar, enviando] = useActionState(accion, SIN_ERROR);
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={2}>
           {apagado ? (

@@ -7,6 +7,7 @@ import { ErrorDeRespuesta } from "../../../patrones/ErrorDeRespuesta";
 import { Superposicion } from "../../../patrones/Superposicion";
 import { Pila } from "../../../primitivas/Pila";
 import { FACTURA_INICIAL, type ResultadoDeLaFactura } from "./resultado-de-factura";
+import { sinReiniciar } from "../../../patrones/sin-reinicio";
 
 type AccionDeAnular = (
   previo: ResultadoDeLaFactura,
@@ -56,7 +57,7 @@ export function AnularConciliacion({ accion, textos }: PropsDeAnularConciliacion
         cerrable={!anulando}
         etiquetaDeCerrar={textos.cerrar}
       >
-        <form action={anular}>
+        <form action={anular} onReset={sinReiniciar}>
           <ProveedorDeEnvioDeFormulario value={anulando}>
             <Pila separacion={3}>
               {resultado.estado === "ERROR" ? <ErrorDeRespuesta error={resultado.error} /> : null}

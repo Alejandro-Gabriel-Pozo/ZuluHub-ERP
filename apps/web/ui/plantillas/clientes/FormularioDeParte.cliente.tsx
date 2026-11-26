@@ -20,6 +20,7 @@ import { FormularioDeEstadoDeParte } from "./FormularioDeEstadoDeParte.cliente";
 import estilos from "./PantallasDelDirectorio.module.css";
 import { RUTA_DE_CLIENTES } from "./modelo-de-directorio";
 import type { FormularioDeParteArmado } from "./modelo-de-formulario-de-parte";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 /** Lo que vuelve de guardar (la misma forma que `ResultadoDeGuardarLaParte` de `servidor/directorio.ts`): el error ya traducido, si quedó guardada y las partes parecidas. */
 export type ResultadoDelFormularioDeParte = Readonly<{
@@ -116,7 +117,7 @@ export function FormularioDeParte({
       >
         <span aria-hidden="true">‹</span>
       </a>
-      <form action={alEnviar}>
+      <form action={alEnviar} onReset={sinReiniciar}>
         <ProveedorDeEnvioDeFormulario value={enviando}>
           <Pila separacion={3}>
             <Selector

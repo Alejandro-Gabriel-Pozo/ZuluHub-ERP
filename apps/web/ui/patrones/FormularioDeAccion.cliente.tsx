@@ -6,6 +6,7 @@ import type { DiccionarioResuelto } from "../../../../src/capacidades/vocabulari
 import { Pila } from "../primitivas/Pila";
 import { ErrorDeRespuesta } from "./ErrorDeRespuesta";
 import { ProveedorDeEnvioDeFormulario } from "./EnvioDeFormulario.cliente";
+import { sinReiniciar } from "./sin-reinicio";
 
 /** Lo que devuelve una acción de formulario: nada si salió bien (redirige) o el error ya traducido. */
 type ResultadoDeFormulario = Readonly<{ error: ErrorPublico | null }>;
@@ -20,12 +21,6 @@ export type PropsDeFormularioDeAccion = Readonly<{
   /** Los campos y el botón (`BotonDeEnvio`). */
   children: ReactNode;
   diccionario?: DiccionarioResuelto;
-  /**
-   * Se llama cuando React REINICIA el formulario al terminar la acción (lo hace siempre, con éxito o con error, y un poco DESPUÉS de que el botón vuelve a estar libre). El reinicio devuelve las
-   * casillas y los campos al valor con el que se dibujaron por primera vez: un campo CONTROLADO (su valor vive en un estado) queda mostrando otra cosa que ese estado hasta el próximo dibujo.
-   * Quien tenga campos controlados vuelve a dibujarlos acá (por ejemplo, cambiando su `key`). Sin esto, nada cambia.
-   */
-  alReiniciar?: () => void;
 }>;
 
 const SIN_ERROR: ResultadoDeFormulario = { error: null };
@@ -35,15 +30,10 @@ const SIN_ERROR: ResultadoDeFormulario = { error: null };
  * muestra el error de la acción debajo, con el patrón que le toca. No guarda nada: el error es la última
  * respuesta del servidor.
  */
-export function FormularioDeAccion({
-  accion,
-  children,
-  diccionario,
-  alReiniciar,
-}: PropsDeFormularioDeAccion) {
+export function FormularioDeAccion({ accion, children, diccionario }: PropsDeFormularioDeAccion) {
   const [resultado, enviar, enviando] = useActionState(accion, SIN_ERROR);
   return (
-    <form action={enviar} {...(alReiniciar === undefined ? {} : { onReset: alReiniciar })}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={3}>
           {children}

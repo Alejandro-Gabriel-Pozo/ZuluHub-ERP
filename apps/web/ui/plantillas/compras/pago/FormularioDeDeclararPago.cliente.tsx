@@ -11,6 +11,7 @@ import { Pila } from "../../../primitivas/Pila";
 import { Texto } from "../../../primitivas/Texto";
 import { DECLARAR_PAGO_INICIAL, type ResultadoDeDeclararPago } from "./resultado-de-pago";
 import { MEDIOS_PARA_ELEGIR, pagoListo, type MedioDePago } from "./modelo-de-pago";
+import { sinReiniciar } from "../../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeDeclararPago = Readonly<{
   /** `declararElPagoAccion` con la factura, la compra y la clave de este intento ya ligadas (`.bind`): no viajan en el formulario. */
@@ -58,7 +59,7 @@ export function FormularioDeDeclararPago({
   }, [ruta]);
   const conEfectivo = medio === "EFECTIVO";
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={3}>
           <Texto>

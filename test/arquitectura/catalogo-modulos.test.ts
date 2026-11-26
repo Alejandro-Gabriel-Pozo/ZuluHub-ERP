@@ -35,6 +35,10 @@ import {
   DECLARACIONES_DE_CONSULTAS_DE_CLIENTES,
 } from "../../src/modulos/clientes/publico";
 import {
+  DECLARACIONES_DE_CONSULTAS_DE_CUENTA_CORRIENTE,
+  DECLARACIONES_DE_CUENTA_CORRIENTE,
+} from "../../src/modulos/cuenta_corriente/publico";
+import {
   DECLARACIONES_DE_COMPRAS,
   DECLARACIONES_DE_CONSULTAS_DE_COMPRAS,
 } from "../../src/modulos/compras/publico";
@@ -99,6 +103,14 @@ type AccionesPorCarpeta = Readonly<Record<string, readonly string[]>>;
 
 /** Los módulos declarados en el catálogo cuyas carpetas y casos de uso todavía no existen (T0). */
 const SIN_CONSTRUIR: readonly string[] = [];
+
+/**
+ * Módulos YA construidos (con su carpeta y sus casos de uso) que siguen `en_desarrollo`, es decir CERRADOS para todos, hasta que su pantalla los declare
+ * disponibles (todo nace cerrado; un módulo `disponible` entra al editor de planes de la plataforma y la cuenta corriente de clientes todavía no tiene pantalla ni
+ * textos aprobados). A diferencia de `SIN_CONSTRUIR`, a estos NO se les perdona nada: X1 y X4 rigen completos. Hoy, `cuenta_corriente` (CC-1, 25/11/2026; lo abre CC-5).
+ * Previene: dejar un módulo abierto por error, o perdonarle a un módulo construido lo que solo se le perdona a uno sin construir.
+ */
+const CERRADOS_HASTA_LA_PANTALLA: readonly string[] = ["cuenta_corriente"];
 
 /**
  * Acciones de un módulo YA disponible que ninguna declaración de caso de uso nombra (X1 inverso), con lista exacta. Nació con DEC-0463
@@ -317,6 +329,10 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       DECLARACIONES_DE_CONSULTAS_DE_CLIENTES,
     ),
     "modulos/compras": accionesDe(DECLARACIONES_DE_COMPRAS, DECLARACIONES_DE_CONSULTAS_DE_COMPRAS),
+    "modulos/cuenta_corriente": accionesDe(
+      DECLARACIONES_DE_CUENTA_CORRIENTE,
+      DECLARACIONES_DE_CONSULTAS_DE_CUENTA_CORRIENTE,
+    ),
     "modulos/fiscal": accionesDe(
       DECLARACIONES_DE_FISCAL,
       DECLARACIONES_DE_CONSULTAS_DE_FISCAL,
@@ -487,7 +503,27 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     const enDesarrollo = Object.entries(CATALOGO_DE_MODULOS)
       .filter(([, definicion]) => (definicion.estado as EstadoDeConstruccion) === "en_desarrollo")
       .map(([clave]) => clave);
-    expect(enDesarrollo.filter((clave) => !SIN_CONSTRUIR.includes(clave))).toEqual([]);
+    expect(
+      enDesarrollo.filter(
+        (clave) => !SIN_CONSTRUIR.includes(clave) && !CERRADOS_HASTA_LA_PANTALLA.includes(clave),
+      ),
+    ).toEqual([]);
+  });
+
+  it("los módulos construidos y cerrados hasta su pantalla siguen en desarrollo, no se perdonan como «sin construir» y cumplen X1 y X4 completos", () => {
+    for (const clave of CERRADOS_HASTA_LA_PANTALLA) {
+      expect(SIN_CONSTRUIR, clave).not.toContain(clave);
+      expect(CATALOGO_DE_MODULOS[clave as keyof typeof CATALOGO_DE_MODULOS].estado, clave).toBe(
+        "en_desarrollo",
+      );
+      const delModulo = crucesDelCatalogo(
+        CATALOGO_DE_MODULOS,
+        declaradas,
+        carpetaExiste,
+        SIN_CONSTRUIR,
+      ).filter((problema) => problema.includes(clave) || problema.includes("cuenta_corriente"));
+      expect(delModulo, clave).toEqual([]);
+    }
   });
 
   it("violación inyectada: un módulo en desarrollo fuera de SIN_CONSTRUIR rompe X1 (ningún caso de uso exige sus acciones)", () => {

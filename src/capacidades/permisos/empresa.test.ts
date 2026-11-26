@@ -1,11 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { estadoDeModulos } from "../modulos/activos";
-import {
-  CATALOGO_DE_MODULOS,
-  type ClaveModulo,
-  type EstadoDeConstruccion,
-} from "../modulos/catalogo";
+import { CATALOGO_DE_MODULOS, type ClaveModulo } from "../modulos/catalogo";
 import {
   PERMISOS_DE_EMPRESA,
   REGLAS_DE_EMPRESA,
@@ -212,6 +208,12 @@ const SOLO_DEL_ADMINISTRADOR_DE_PRODUCCION = [
   "transformaciones.anular",
 ] as const;
 
+/** CC-1 (brief PR-CC-1 §4): cuenta corriente de clientes. Ver la ficha y administrarla: gerente y administrador (el operador no). */
+const DEL_ADMINISTRADOR_DE_CUENTA_CORRIENTE = [
+  "cuenta_corriente.ver",
+  "cuenta_corriente.administrar",
+] as const;
+
 /** E7 (spec §3.13, PP-2): los tres roles unen, dividen, cambian de mesa, envían a cocina e imprimen; el operador también mira mesas e impresoras. */
 const DEL_OPERADOR_DE_SALON_Y_COMANDAS = [
   "comandas.enviar",
@@ -302,6 +304,7 @@ const DEL_ADMINISTRADOR = [
   ...DE_LA_ESCALERA_DE_ELECCIONES,
   ...DEL_ADMINISTRADOR_DE_CAJA,
   ...DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS,
+  ...DEL_ADMINISTRADOR_DE_CUENTA_CORRIENTE,
   ...DEL_ADMINISTRADOR_DE_SALON_Y_COMANDAS,
 ].sort();
 
@@ -323,9 +326,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 176 acciones: 38 de empresa (4 de roles propios), configuración fiscal y facturación, 44 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas", () => {
+  it("hay 178 acciones: 38 de empresa (4 de roles propios), configuración fiscal y facturación, 44 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas y 2 de cuenta corriente (CC-1)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(176);
+    expect(todas).toHaveLength(178);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -728,33 +731,23 @@ describe("el guard con las reglas reales", () => {
   // para que un módulo `en_desarrollo` agregado después y olvidado no quede sin cubrir. El módulo se marca activo a
   // propósito (el guard rechaza por «en desarrollo» antes de mirar si está activo o qué rol tiene).
   const ENDESARROLLO = (Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]).filter(
-    (m) => (CATALOGO_DE_MODULOS[m].estado as EstadoDeConstruccion) === "en_desarrollo",
+    (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
   );
 
-  it("ningún módulo del catálogo real está en desarrollo (producción salió el 25/11/2026, DEC-1050; comandas y salon desde S-0r, 17/11/2026; cierre desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12, catalogo, caja y ventas desde el 15/11/2026, DEC-0463, y vidriera desde el 20/11/2026, DEC-0826)", () => {
-    expect([...ENDESARROLLO]).toEqual([]);
+  it("todo módulo en desarrollo del catálogo es solo cuenta_corriente (CC-1, 25/11/2026; producción salió el 25/11/2026, DEC-1050; comandas y salon desde S-0r, 17/11/2026; cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12, catalogo, caja y ventas desde el 15/11/2026, DEC-0463, y vidriera desde el 20/11/2026, DEC-0826)", () => {
+    expect([...ENDESARROLLO]).toEqual(["cuenta_corriente"]);
   });
 
-  // Como hoy no queda ningún módulo en desarrollo, la regla del guard se prueba con una copia del catálogo donde producción lo está (lo que fue hasta PRO-A).
-  const CON_PRODUCCION_EN_DESARROLLO: ReglasDeEmpresa = {
-    ...REGLAS_DE_EMPRESA,
-    catalogo: {
-      ...CATALOGO_DE_MODULOS,
-      produccion: { ...CATALOGO_DE_MODULOS.produccion, estado: "en_desarrollo" },
-    } as unknown as ReglasDeEmpresa["catalogo"],
-  };
-  const SIN_CONSTRUIR = Object.keys(
-    CATALOGO_DE_MODULOS.produccion.acciones,
-  ) as (keyof typeof PERMISOS_DE_EMPRESA)[];
-
-  it("las 5 acciones de un módulo en desarrollo (aquí, producción) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  it("las 2 acciones sin construir (de cuenta corriente) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
-    const sinConstruir = SIN_CONSTRUIR;
-    expect(sinConstruir).toHaveLength(5);
+    const sinConstruir = ENDESARROLLO.flatMap(
+      (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
+    );
+    expect(sinConstruir).toHaveLength(2);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(
-          evaluarGuard(CON_PRODUCCION_EN_DESARROLLO, accion, {
+          evaluarGuard(REGLAS_DE_EMPRESA, accion, {
             rol,
             modulosActivos: todosActivos,
             capacidadesDeSucursal: null,
@@ -767,7 +760,9 @@ describe("el guard con las reglas reales", () => {
 
   it("propiedad: para cualquier subconjunto de módulos activos y cualquier rol, un módulo en desarrollo siempre rechaza igual (no depende del rol)", () => {
     const claves = Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[];
-    const sinConstruir = SIN_CONSTRUIR;
+    const sinConstruir = ENDESARROLLO.flatMap(
+      (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
+    );
     fc.assert(
       fc.property(
         fc.subarray(claves),
@@ -776,7 +771,7 @@ describe("el guard con las reglas reales", () => {
         fc.constantFrom(...sinConstruir),
         (activos, enSoloLectura, rol, accion) => {
           expect(
-            evaluarGuard(CON_PRODUCCION_EN_DESARROLLO, accion, {
+            evaluarGuard(REGLAS_DE_EMPRESA, accion, {
               rol,
               modulosActivos: new Set(activos),
               modulosEnSoloLectura: new Set(enSoloLectura),

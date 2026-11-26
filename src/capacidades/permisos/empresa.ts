@@ -21,6 +21,7 @@ import { PERMISOS_DE_CIERRE } from "./permisos-de-cierre";
 import { PERMISOS_DE_CLIENTES } from "./permisos-de-clientes";
 import { PERMISOS_DE_COMANDAS } from "./permisos-de-comandas";
 import { PERMISOS_DE_COMPRAS } from "./permisos-de-compras";
+import { PERMISOS_DE_CUENTA_CORRIENTE } from "./permisos-de-cuenta_corriente";
 import { PERMISOS_DE_FACTURACION } from "./permisos-de-facturacion";
 import { PERMISOS_DE_PRODUCCION } from "./permisos-de-produccion";
 import { PERMISOS_DE_SALON } from "./permisos-de-salon";
@@ -57,6 +58,7 @@ export const PERMISOS_DE_EMPRESA = {
   ...PERMISOS_DE_SALON,
   ...PERMISOS_DE_CLIENTES,
   ...PERMISOS_DE_COMPRAS,
+  ...PERMISOS_DE_CUENTA_CORRIENTE,
   ...PERMISOS_DE_PRODUCCION,
 } as const satisfies Record<ClaveAccion, readonly RolDeEmpresa[]>;
 

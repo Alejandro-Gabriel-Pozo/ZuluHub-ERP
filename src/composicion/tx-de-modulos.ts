@@ -9,6 +9,7 @@ import { crearRepositoriosDeComandas } from "../modulos/comandas/publico";
 import { crearRepositoriosDeSalon } from "../modulos/salon/publico";
 import { crearRepositoriosDeClientes } from "../modulos/clientes/publico";
 import { crearRepositoriosDeCompras } from "../modulos/compras/publico";
+import { crearRepositoriosDeCuentaCorriente } from "../modulos/cuenta_corriente/publico";
 import {
   crearLecturaDeHostsPropios,
   type HostsPropiosDb,
@@ -21,7 +22,7 @@ import { crearRepositoriosDeVentas } from "../modulos/ventas/publico";
 
 /**
  * Lo de los módulos de negocio que lleva la `Tx` compuesta de la puerta de la aplicación (`TxDeApp`): los repositorios de catálogo (E2), ventas (E4)
- * stock (E5), producción (E6), comandas y salón (E7), clientes y compras (E9), todos sobre la MISMA conexión de la transacción (así el cierre de una cuenta, que cruza ventas, caja y stock, es una sola
+ * stock (E5), producción (E6), comandas y salón (E7), clientes y compras (E9), cuenta corriente de clientes (CC-1), todos sobre la MISMA conexión de la transacción (así el cierre de una cuenta, que cruza ventas, caja y stock, es una sola
  * transacción). Los nombres de los de stock llevan `DeStock` para no pisar a los de caja; `tipos-tx.test.ts` comprueba que la compuesta contiene la
  * `Tx` angosta de cada módulo. Vive en su archivo para que `conexiones.ts` no pase el tope de líneas; cada módulo nuevo suma el suyo acá.
  */
@@ -32,6 +33,7 @@ export type PiezasDeModulosEnTx = ReturnType<typeof crearRepositoriosDeCatalogo>
   ReturnType<typeof crearRepositoriosDeSalon> &
   ReturnType<typeof crearRepositoriosDeClientes> &
   ReturnType<typeof crearRepositoriosDeCompras> &
+  ReturnType<typeof crearRepositoriosDeCuentaCorriente> &
   ReturnType<typeof crearRepositoriosDeProduccion> &
   /** Los roles propios de la empresa (H4b T4): identidad los usa en sus casos de uso y consultas. */
   Readonly<{ roles: RepositorioDeRoles }> &
@@ -52,6 +54,7 @@ export function armarPiezasDeModulosEnTx(
     ...crearRepositoriosDeSalon(db),
     ...crearRepositoriosDeClientes(db),
     ...crearRepositoriosDeCompras(db),
+    ...crearRepositoriosDeCuentaCorriente(db),
     ...crearRepositoriosDeProduccion(db),
     ...piezasDelLibro(db),
     hostsPropios: crearLecturaDeHostsPropios(db.withTables<HostsPropiosDb>()),

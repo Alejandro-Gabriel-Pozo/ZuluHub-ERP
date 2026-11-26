@@ -11,6 +11,7 @@ import {
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
 import estilos from "./PantallasDeSecciones.module.css";
 import type { ListaDeSeccionesArmada } from "./modelo-de-secciones";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeListaDeSecciones = Readonly<{
   lista: ListaDeSeccionesArmada;
@@ -58,7 +59,7 @@ function Flecha({
 export function ListaDeSecciones({ lista, accion }: PropsDeListaDeSecciones) {
   const [resultado, enviar, enviando] = useActionState(accion, SIN_ERROR);
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <ul className={estilos["lista"]}>
           {lista.filas.map((fila) => (
