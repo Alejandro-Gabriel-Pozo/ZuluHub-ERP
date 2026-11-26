@@ -1685,7 +1685,7 @@ describe.skipIf(base === null)("ventas: consultas y aporte al cierre del día", 
       return s;
     };
 
-    it("los seis controles de ventas, con su severidad: cuentas abiertas BLOQUEA; por cobrar y cortesías RECONOCIBLE; el resto INFORMA", async () => {
+    it("los siete controles de ventas, con su severidad: cuentas abiertas BLOQUEA; por cobrar y cortesías RECONOCIBLE; el resto INFORMA", async () => {
       const s = await conJornada();
       const r = await controles(s);
       expect(r.estado).toBe("ABIERTA");
@@ -1697,6 +1697,7 @@ describe.skipIf(base === null)("ventas: consultas y aporte al cierre del día", 
           "ventas.cortesias",
           "ventas.cuentas_abiertas",
           "ventas.pendientes_de_facturar",
+          "ventas.tickets_a_cuenta_corriente",
           "ventas.tickets_por_cobrar",
         ].sort(),
       );
@@ -1707,6 +1708,7 @@ describe.skipIf(base === null)("ventas: consultas y aporte al cierre del día", 
         "ventas.anulaciones",
         "ventas.correcciones",
         "ventas.pendientes_de_facturar",
+        "ventas.tickets_a_cuenta_corriente",
       ]) {
         expect(porClave.get(k)?.severidad, k).toBe("INFORMA");
       }
