@@ -52,16 +52,35 @@ export const TIPOS = [
 ];
 export const ESTADOS = ["PENDIENTE_DE_OK", "CONFIRMADA", "CORREGIDA"];
 export const QUIENES = ["dueño", "padre", "sesión"];
-export const forma = require("../../arquitectura/decisiones/forma.cjs") as {
-  problemasDelRegistro: (registro: unknown) => { id: string; problema: string }[];
+/** Las familias de ejemplo y el corte (el día desde el cual toda entrada nueva lleva el código de su familia). */
+export const FAMILIAS = {
+  corte: "2026-11-26",
+  familias: { COM: "Compras", SAL: "Salón", STK: "Stock" },
+};
+const formaReal = require("../../arquitectura/decisiones/forma.cjs") as {
+  problemasDelRegistro: (
+    registro: unknown,
+    familias: unknown,
+  ) => { id: string; problema: string }[];
   problemasDeLosSensibles: (valor: unknown) => string[];
-  problemasDeLaCuota: (valor: unknown) => string[];
+  problemasDeLaCuota: (valor: unknown, familias: unknown) => string[];
+  problemasDeLasFamilias: (valor: unknown) => string[];
+};
+/** Las funciones de forma con las familias de ejemplo por defecto (cada prueba de familias pasa las suyas). */
+export const forma = {
+  problemasDelRegistro: (registro: unknown, familias: unknown = FAMILIAS) =>
+    formaReal.problemasDelRegistro(registro, familias),
+  problemasDeLosSensibles: formaReal.problemasDeLosSensibles,
+  problemasDeLaCuota: (valor: unknown, familias: unknown = FAMILIAS) =>
+    formaReal.problemasDeLaCuota(valor, familias),
+  problemasDeLasFamilias: formaReal.problemasDeLasFamilias,
 };
 export const control = require("../../arquitectura/decisiones/decisiones.cjs") as {
   CARPETA_DEL_REGISTRO: string;
   MONOLITO_DEL_REGISTRO: string;
   ARCHIVO_DE_LOS_SENSIBLES: string;
   ARCHIVO_DE_LA_CUOTA: string;
+  ARCHIVO_DE_LAS_FAMILIAS: string;
   EXENTOS: string[];
   COMO_AGREGAR: string;
   ejecutar: (argumentos: string[], raiz: string) => { codigo: number; lineas: string[] };
@@ -123,11 +142,13 @@ export function arbolConRegistro(
   otros: Record<string, string> = {},
   sensibles: unknown = SENSIBLES,
   laCuota: unknown = CUOTA,
+  lasFamilias: unknown = FAMILIAS,
 ): Arbol {
   return arbol({
     ...archivosDelRegistro(registro),
     [control.ARCHIVO_DE_LOS_SENSIBLES]: JSON.stringify(sensibles),
     [control.ARCHIVO_DE_LA_CUOTA]: JSON.stringify(laCuota),
+    [control.ARCHIVO_DE_LAS_FAMILIAS]: JSON.stringify(lasFamilias),
     ...otros,
   });
 }

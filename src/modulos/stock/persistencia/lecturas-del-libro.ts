@@ -72,6 +72,34 @@ export type FilaDeLibro = Readonly<{
   anuladoPor: string | null;
 }>;
 
+export type FiltroDeMovimientosDeDeposito = Readonly<{
+  depositoId: string;
+  /** Paginación por `(hecho en, movimiento, renglón)` descendente: lo que viene DESPUÉS (más viejo) de esta terna. */
+  despuesDe?: Readonly<{ hechoEn: Date; movimientoId: string; numero: number }> | undefined;
+  limite: number;
+}>;
+
+/** Un renglón del libro de UN depósito (el más nuevo primero), con lo que muestra la tarjeta de «Movimientos»: lo que cambió, de qué artículo y quién lo hizo. */
+export type FilaDeMovimientoDeDeposito = Readonly<{
+  movimientoId: string;
+  numero: number;
+  clase: ClaseDeMovimiento;
+  motivo: string;
+  origenTipo: string;
+  hechoEn: Date;
+  registradoPor: PersonaId;
+  articuloId: string;
+  productoId: string;
+  nombre: string;
+  unidadId: string;
+  /** Con signo, texto decimal exacto, en la unidad de stock. */
+  cantidad: string;
+  /** Este movimiento es la anulación de otro. */
+  anulaA: string | null;
+  /** El movimiento que anuló a este, si lo hay. */
+  anuladoPor: string | null;
+}>;
+
 export type DiferenciaDeSaldo = Readonly<{
   depositoId: string;
   articuloId: string;
@@ -84,6 +112,11 @@ export interface LecturasDelLibro {
   existencias(empresa: EmpresaId, filtro: FiltroDeExistencias): Promise<FilaDeExistencia[]>;
   /** Los renglones de un (depósito, artículo) por fecha de negocio, con el saldo corrido desde el primer movimiento; paginado por cursor. */
   libroDeArticulo(empresa: EmpresaId, filtro: FiltroDeLibro): Promise<FilaDeLibro[]>;
+  /** Los renglones del libro de un depósito, del más nuevo al más viejo, paginado por cursor. El alcance de sucursales lo decide quien llama. */
+  movimientosDeDeposito(
+    empresa: EmpresaId,
+    filtro: FiltroDeMovimientosDeDeposito,
+  ): Promise<FilaDeMovimientoDeDeposito[]>;
   /** Cuántos saldos están en negativo en esa sucursal (para el aporte al cierre del día). */
   contarNegativasDe(empresa: EmpresaId, sucursal: SucursalId): Promise<number>;
   /** Los pares cuyo saldo difiere de la suma de sus renglones: **debe ser vacío** (el saldo se deriva del libro). */
@@ -155,6 +188,57 @@ export function crearLecturasDelLibro(db: Kysely<StockDb>): LecturasDelLibro {
         sucursalId: f.sucursal_id as SucursalId,
         existencia: f.existencia,
         uso: usoDeDepositoGuardado(f.uso),
+      }));
+    },
+    async movimientosDeDeposito(empresa, filtro) {
+      if (!esUuid(filtro.depositoId)) return [];
+      const despues =
+        filtro.despuesDe === undefined
+          ? sql``
+          : sql`and (r.hecho_en, r.movimiento_id, r.numero) <
+                    (${filtro.despuesDe.hechoEn}::timestamptz, ${filtro.despuesDe.movimientoId}::uuid, ${filtro.despuesDe.numero}::integer)`;
+      const { rows } = await sql<{
+        movimiento_id: string;
+        numero: number;
+        clase: string;
+        motivo: string;
+        origen_tipo: string;
+        hecho_en: Date;
+        registrado_por: string;
+        articulo_id: string;
+        producto_id: string;
+        nombre: string;
+        unidad_de_stock_id: string;
+        cantidad: string;
+        anula_a: string | null;
+        anulado_por: string | null;
+      }>`
+        select r.movimiento_id, r.numero, m.clase, m.motivo, m.origen_tipo, r.hecho_en, m.registrado_por, r.articulo_id,
+               a.producto_id, p.nombre, a.unidad_de_stock_id, r.cantidad::text as cantidad, m.anula_a,
+               (select x.id from movimiento_de_stock x where x.empresa_id = m.empresa_id and x.anula_a = m.id) as anulado_por
+          from renglon_de_movimiento r
+          join movimiento_de_stock m on m.id = r.movimiento_id and m.empresa_id = r.empresa_id
+          join articulo_de_stock a on a.id = r.articulo_id and a.empresa_id = r.empresa_id
+          join producto p on p.id = a.producto_id and p.empresa_id = a.empresa_id
+         where r.empresa_id = ${empresa} and r.deposito_id = ${filtro.depositoId}::uuid ${despues}
+         order by r.hecho_en desc, r.movimiento_id desc, r.numero desc
+         limit ${filtro.limite}
+      `.execute(db);
+      return rows.map((f) => ({
+        movimientoId: f.movimiento_id,
+        numero: f.numero,
+        clase: claseDeMovimientoGuardada(f.clase),
+        motivo: f.motivo,
+        origenTipo: f.origen_tipo,
+        hechoEn: f.hecho_en,
+        registradoPor: f.registrado_por as PersonaId,
+        articuloId: f.articulo_id,
+        productoId: f.producto_id,
+        nombre: f.nombre,
+        unidadId: f.unidad_de_stock_id,
+        cantidad: f.cantidad,
+        anulaA: f.anula_a,
+        anuladoPor: f.anulado_por,
       }));
     },
     async libroDeArticulo(empresa, filtro) {

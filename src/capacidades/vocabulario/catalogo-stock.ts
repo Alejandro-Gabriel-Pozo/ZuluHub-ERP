@@ -89,6 +89,27 @@ export const TEXTOS_DE_STOCK = {
     usos: ["DE_FICHA"],
     fuente: { decision: "DEC-1018" },
   },
+  // Movimientos (STK-B1): rótulos de clase del libro (N-10, N-11, N-12, fila 173; DEC-1022) y «Anulado» con clave propia de stock (T4, 15/11/2026; DEC-1022: el valor repite `caja.estado.anulado`, anotado en el PR).
+  "stock.clase.transferencia": {
+    porDefecto: "Transferencia",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-1022" },
+  },
+  "stock.clase.ajuste": {
+    porDefecto: "Ajuste",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-1022" },
+  },
+  "stock.clase.anulacion": {
+    porDefecto: "Anulación",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-1022" },
+  },
+  "stock.estado.anulado": {
+    porDefecto: "Anulado",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-1022" },
+  },
   // stock.html, nota final de «Textos nuevos» («Esta acción no está permitida» ya estaba aprobado), sin el punto final de esa nota.
   "stock.error.sin_permiso": { porDefecto: "Esta acción no está permitida" },
 

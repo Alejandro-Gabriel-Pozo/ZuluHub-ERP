@@ -114,7 +114,7 @@ describe("qué cuenta", () => {
     expect(evaluar([...BASE, ...antes], BASE, rige).fallas).toEqual([]);
     const ese = nuevas(6, "DINERO", 0, { fecha: "2026-11-14" });
     expect(mensajes(evaluar([...BASE, ...ese], BASE, rige))).toHaveLength(1);
-    const despues = nuevas(6, "DINERO", 0, { fecha: "2026-12-01" });
+    const despues = nuevas(6, "DINERO", 0, { fecha: "2026-11-25" });
     expect(mensajes(evaluar([...BASE, ...despues], BASE, rige))).toHaveLength(1);
   });
 
