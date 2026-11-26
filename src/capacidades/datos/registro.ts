@@ -15,6 +15,7 @@ import { DATOS_DE_PLATAFORMA } from "./registro-de-plataforma";
 import { DATOS_DE_PRODUCTOS } from "./registro-de-productos";
 import { DATOS_DE_RECETAS } from "./registro-de-recetas";
 import { DATOS_DE_SALON } from "./registro-de-salon";
+import { DATOS_DE_STOCK_CONTEO } from "./registro-de-stock-conteo";
 import { DATOS_DE_STOCK_DEPOSITOS } from "./registro-de-stock-depositos";
 import { DATOS_DE_STOCK_MOVIMIENTOS } from "./registro-de-stock-movimientos";
 import { DATOS_DE_VENTAS } from "./registro-de-ventas";
@@ -65,6 +66,7 @@ export const FRAGMENTOS_DEL_REGISTRO = {
   productos: DATOS_DE_PRODUCTOS,
   recetas: DATOS_DE_RECETAS,
   salon: DATOS_DE_SALON,
+  "stock-conteo": DATOS_DE_STOCK_CONTEO,
   "stock-depositos": DATOS_DE_STOCK_DEPOSITOS,
   "stock-movimientos": DATOS_DE_STOCK_MOVIMIENTOS,
   ventas: DATOS_DE_VENTAS,
@@ -88,6 +90,7 @@ export const REGISTRO_DE_DATOS = {
   ...DATOS_DE_PRODUCTOS,
   ...DATOS_DE_RECETAS,
   ...DATOS_DE_SALON,
+  ...DATOS_DE_STOCK_CONTEO,
   ...DATOS_DE_STOCK_DEPOSITOS,
   ...DATOS_DE_STOCK_MOVIMIENTOS,
   ...DATOS_DE_VENTAS,
