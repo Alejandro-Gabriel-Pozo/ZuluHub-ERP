@@ -5,7 +5,6 @@ import {
   type LineaDeLaVenta,
 } from "../venta/modelo-de-la-cuenta";
 import type { IdsDeLaVenta, VentaCobrada } from "./modelo-de-cobro";
-import type { TextosDeVenderACuenta } from "./textos-de-vender-a-cuenta";
 
 /**
  * Lo que la hoja «Vender a cuenta corriente» recibe del servidor (CC-5 B1b): la misma forma que entregan `listarLosClientesParaVender`, `verElClienteParaVender` y las dos acciones que cargan la venta. Los importes son
@@ -44,6 +43,23 @@ export type VentaACuenta = Readonly<{
 }>;
 
 type AccionDeVenderACuenta<R> = (pedido: unknown) => Promise<Respuesta<R>>;
+
+/** Los textos de la hoja ya resueltos (`textos-de-vender-a-cuenta.ts`); el tipo vive acá para que el modelo no importe un archivo fuera de su grupo de mutación. */
+export type TextosDeVenderACuenta = Readonly<{
+  titulo: string;
+  cliente: string;
+  estado: string;
+  habilitada: string;
+  suspendida: string;
+  saldoActual: string;
+  creditoDisponible: string;
+  estaVenta: string;
+  saldoDespues: string;
+  confirmar: string;
+  elegirOtroCliente: string;
+  superaElLimite: string;
+  sinPermisoParaAprobar: string;
+}>;
 
 /** Lo que el cobro necesita para ofrecer la hoja: los clientes que se pueden elegir (ya cargados por la página) y las dos acciones de servidor. Sin él, el cobro no ofrece «Vender a cuenta corriente». */
 export type VentaACuentaDelCobro = Readonly<{

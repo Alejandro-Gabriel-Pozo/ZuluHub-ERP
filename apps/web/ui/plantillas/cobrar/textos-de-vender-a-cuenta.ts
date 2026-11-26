@@ -1,25 +1,10 @@
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
+import type { TextosDeVenderACuenta } from "./modelo-de-vender-a-cuenta";
 
 /**
  * Los textos de la hoja «Vender a cuenta corriente» ya resueltos (CC-5 B1b): los ocho nuevos de `cuenta_corriente.vender.*` (DEC-CCL-008) y los que ya existían de la cuenta corriente (Cliente, Estado,
  * Habilitada, Suspendida, Crédito disponible, CUIT y días), que NO se duplican. Acá no se arma ningún texto nuevo.
  */
-export type TextosDeVenderACuenta = Readonly<{
-  titulo: string;
-  cliente: string;
-  estado: string;
-  habilitada: string;
-  suspendida: string;
-  saldoActual: string;
-  creditoDisponible: string;
-  estaVenta: string;
-  saldoDespues: string;
-  confirmar: string;
-  elegirOtroCliente: string;
-  superaElLimite: string;
-  sinPermisoParaAprobar: string;
-}>;
-
 export function textosDeVenderACuenta(): TextosDeVenderACuenta {
   return {
     titulo: texto({}, "cuenta_corriente.vender.titulo"),

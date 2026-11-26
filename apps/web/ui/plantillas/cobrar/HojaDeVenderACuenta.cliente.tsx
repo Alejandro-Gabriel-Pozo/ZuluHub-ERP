@@ -16,15 +16,12 @@ import {
   superaElLimite,
   type ClienteElegidoAlVender,
   type ClienteParaElegirAlVender,
+  type TextosDeVenderACuenta,
   type VentaACuentaDelCobro,
   type VentaACuenta,
 } from "./modelo-de-vender-a-cuenta";
 import type { TextosDeCobrar } from "./textos-de-cobrar";
-import {
-  rotuloDelCuit,
-  rotuloDelPlazo,
-  type TextosDeVenderACuenta,
-} from "./textos-de-vender-a-cuenta";
+import { rotuloDelCuit, rotuloDelPlazo } from "./textos-de-vender-a-cuenta";
 import { useEnvioDelPedido } from "./useEnvioDelPedido.cliente";
 
 export type PropsDeHojaDeVenderACuenta = Readonly<{
