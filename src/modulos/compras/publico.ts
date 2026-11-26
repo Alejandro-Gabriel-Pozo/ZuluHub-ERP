@@ -110,6 +110,11 @@ export {
   type ColumnaDeDetalle,
   type ColumnaDeResumen,
 } from "./dominio/exportacion/armar-hojas";
+export {
+  armarPagos,
+  COLUMNAS_DE_PAGOS,
+  type ColumnaDePagos,
+} from "./dominio/exportacion/armar-hoja-de-pagos";
 export type { Celda, HojaDeExportacion } from "./dominio/exportacion/celdas";
 export type { CompraParaExportar, RotulosDeExportacion } from "./dominio/exportacion/datos";
 export {

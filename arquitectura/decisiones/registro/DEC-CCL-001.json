@@ -1,0 +1,10 @@
+{
+  "id": "DEC-CCL-001",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Cerrar una cuenta a nombre de un cliente: lo hacen los roles que cierran cuentas (cajero incluido). Aprobar pasar el límite de crédito: solo gerente y administrador.",
+  "que_cambia": "Hasta que el dueño lo apruebe y se abra el módulo (CC-5), nadie tiene estas dos acciones: no abre nada. Si el dueño quiere que el cajero no venda a cuenta, se saca el rol OPERADOR de una fila y se regenera la semilla.",
+  "donde": "src/capacidades/permisos/permisos-de-cuenta_corriente.ts; brief PR-CC-2 §1.6 (Pedernal-docs 11-especificaciones/briefs/cuenta-corriente/)"
+}

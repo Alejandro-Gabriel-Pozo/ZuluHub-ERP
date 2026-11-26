@@ -110,6 +110,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0105_anonimizacion_de_partes.sql",
         "0106_cuenta_del_cliente.sql",
         "0107_cliente_en_el_ticket.sql",
+        "0108_facturar_antes_de_cobrar.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -201,6 +202,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0105_anonimizacion_de_partes.sql",
           "0106_cuenta_del_cliente.sql",
           "0107_cliente_en_el_ticket.sql",
+          "0108_facturar_antes_de_cobrar.sql",
         ],
       });
     } finally {
@@ -398,6 +400,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0105_anonimizacion_de_partes.sql",
         "0106_cuenta_del_cliente.sql",
         "0107_cliente_en_el_ticket.sql",
+        "0108_facturar_antes_de_cobrar.sql",
       ]);
     } finally {
       await aparte.destruir();

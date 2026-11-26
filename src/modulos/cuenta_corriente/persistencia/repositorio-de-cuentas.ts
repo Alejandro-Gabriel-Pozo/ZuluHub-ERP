@@ -33,6 +33,14 @@ export interface RepositorioDeCuentasDeClientes {
   obtener(empresa: EmpresaId, id: string): Promise<CuentaGuardada | null>;
   /** La ficha del cliente (una sola por cliente y empresa); `null` si no tiene. */
   obtenerPorParte(empresa: EmpresaId, parteId: string): Promise<CuentaGuardada | null>;
+  /**
+   * La ficha del cliente tomada `FOR UPDATE` hasta el fin de la transacción (CC-2): quien carga una venta a la cuenta la toma ANTES de leer el saldo, así dos cargos al mismo
+   * cliente se turnan y el segundo ve el saldo del primero; también espera a quien la esté suspendiendo. `null` si no tiene ficha.
+   */
+  obtenerPorParteParaActualizar(
+    empresa: EmpresaId,
+    parteId: string,
+  ): Promise<CuentaGuardada | null>;
   /** La ficha habilitada con esa clave de idempotencia; `null` si nadie la usó. */
   obtenerPorClave(empresa: EmpresaId, clave: string): Promise<CuentaGuardada | null>;
   /**
@@ -93,6 +101,18 @@ export function crearRepositorioDeCuentasDeClientes(
         .selectAll()
         .where("empresa_id", "=", empresa)
         .where("parte_id", "=", parteId)
+        .executeTakeFirst();
+      return fila === undefined ? null : aCuenta(fila);
+    },
+
+    async obtenerPorParteParaActualizar(empresa, parteId) {
+      if (!esUuidCanonico(parteId)) return null;
+      const fila = await db
+        .selectFrom("cuenta_del_cliente")
+        .selectAll()
+        .where("empresa_id", "=", empresa)
+        .where("parte_id", "=", parteId)
+        .forUpdate()
         .executeTakeFirst();
       return fila === undefined ? null : aCuenta(fila);
     },
