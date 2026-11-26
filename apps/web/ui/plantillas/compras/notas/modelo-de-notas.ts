@@ -51,7 +51,7 @@ export const NETO_CERO = "0.00";
 /** Una letra del comprobante tal cual la imprime el papel: `NOTA_CREDITO_A` → `A`. */
 const letraDelTipo = (tipo: string): string => tipo.slice(-1);
 
-export type FilaDeNota = Readonly<{
+type FilaDeNota = Readonly<{
   id: string;
   clase: "NOTA_DE_CREDITO" | "NOTA_DE_DEBITO";
   /** «Nota de crédito · A 0003-00000077 · 27/11/2026». */
