@@ -5,6 +5,7 @@ import type { MotivoDeRechazo } from "../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../contexto/contexto";
 import { crearDirectorioDePartes } from "../modulos/clientes/publico";
 import { ORIGEN_DEL_CARGO_DE_VENTA } from "../modulos/cuenta_corriente/publico";
+import { crearTicketACobrar, type ErrorDeTicketACobrar } from "../modulos/ventas/publico";
 import {
   estaVencida,
   movimientosDeLasPartes,
@@ -50,12 +51,14 @@ export type DependenciasDeCobroACuenta = Readonly<{
 export const DECLARACIONES_DE_COBRO_A_CUENTA = {
   cargoACobrarDelCliente: { accion: "cuenta_corriente.ver" },
   saldoDelClienteACuenta: { accion: "cuenta_corriente.ver" },
+  ticketACobrar: { accion: "ventas.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const directorio = crearDirectorioDePartes();
 
 export function crearCobroACuenta(d: DependenciasDeCobroACuenta) {
+  const delTicket = crearTicketACobrar({ transacciones: d.transacciones, reglas: d.reglas });
   const leer = <T>(
     contexto: ContextoOperativo,
     trabajo: (tx: TxDeApp) => Promise<Resultado<T, ErrorDeCobroACuenta>>,
@@ -71,6 +74,9 @@ export function crearCobroACuenta(d: DependenciasDeCobroACuenta) {
     );
 
   return {
+    /** El ticket a cobrar (`ventas.ver`): lo lee ventas; se expone acá para que la hoja de cobro tenga una sola puerta. */
+    ticketACobrar: delTicket.ticketACobrar,
+
     /** El cargo pendiente más antiguo del cliente que nació de un ticket, o el de `ticketId` si se pide uno; `null` si no hay (o el cliente no es de la empresa). */
     cargoACobrarDelCliente(
       contexto: ContextoOperativo,

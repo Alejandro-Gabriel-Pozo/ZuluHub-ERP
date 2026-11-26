@@ -81,6 +81,7 @@ const dependencias = (c: Cambios = {}): DependenciasDeCobrarACuentaWeb => ({
   cobro: () =>
     ({
       cargoACobrarDelCliente: () => Promise.resolve(c.cargo ?? ok(CARGO)),
+      ticketACobrar: () => Promise.resolve(c.ticket ?? ok(TICKET_LEIDO)),
       saldoDelClienteACuenta: () => {
         llamadas.saldo += 1;
         return Promise.resolve(c.saldo ?? ok({ moneda: "ARS", monto: "250.00" }));
@@ -95,7 +96,6 @@ const dependencias = (c: Cambios = {}): DependenciasDeCobrarACuentaWeb => ({
     }) as never,
   consultas: () =>
     ({
-      ticketACobrar: () => Promise.resolve(c.ticket ?? ok(TICKET_LEIDO)),
       estadoDeCajasParaCobrar: () => Promise.resolve(c.cajas ?? ok(CAJAS)),
     }) as never,
   respuesta: { registrar: () => undefined, azar: () => new Uint8Array(4) },

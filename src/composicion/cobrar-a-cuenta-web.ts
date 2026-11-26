@@ -25,10 +25,7 @@ type Importe = Readonly<{ moneda: string; monto: string }>;
 export type DependenciasDeCobrarACuentaWeb = Readonly<{
   cobro: () => ReturnType<typeof crearCobroACuenta>;
   casosDeUso: () => Pick<ReturnType<Web["casosDeUsoDeVentas"]>, "cobrar">;
-  consultas: () => Pick<
-    ReturnType<Web["consultasDeVentas"]>,
-    "ticketACobrar" | "estadoDeCajasParaCobrar"
-  >;
+  consultas: () => Pick<ReturnType<Web["consultasDeVentas"]>, "estadoDeCajasParaCobrar">;
   respuesta: DependenciasDeRespuesta;
 }>;
 
@@ -80,7 +77,7 @@ export async function ticketACobrarDelCliente(
     const cargo = await d.cobro().cargoACobrarDelCliente(contexto, entrada.valor);
     if (!cargo.ok) return cargo;
     if (cargo.valor === null) return ok(null);
-    const ticket = await d.consultas().ticketACobrar(contexto, { ticketId: cargo.valor.ticketId });
+    const ticket = await d.cobro().ticketACobrar(contexto, { ticketId: cargo.valor.ticketId });
     if (!ticket.ok) return ticket;
     const t = ticket.valor;
     // El cargo del libro y el ticket tienen que contar lo mismo: del mismo cliente, por el mismo total y todavía sin cobrar.
@@ -143,7 +140,7 @@ export async function cobrarUnTicketACuenta(
   if (!entrada.ok) return { ok: false, error: GENERICO };
   const e = entrada.valor;
   return conTraduccion(d, async () => {
-    const ticket = await d.consultas().ticketACobrar(contexto, { ticketId: e.ticketId });
+    const ticket = await d.cobro().ticketACobrar(contexto, { ticketId: e.ticketId });
     if (!ticket.ok) return ticket;
     const t = ticket.valor;
     const cobrado = await d.casosDeUso().cobrar(contexto, {

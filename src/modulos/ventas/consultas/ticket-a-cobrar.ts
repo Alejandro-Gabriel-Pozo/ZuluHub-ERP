@@ -1,11 +1,15 @@
 import { exigirSucursal, type ErrorDeAlcance } from "../../../capacidades/permisos/alcance";
+import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import type { EmpresaNoOpera } from "../../../contexto/estados";
 import type { ImporteJson } from "../../../primitivas/dinero/importe";
 import type { SucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import type { ErrorDePersistencia } from "../../../puertos/transacciones";
 import { crearDirectorioDePartes } from "../../clientes/publico";
 import { esUuid } from "../casos-de-uso/calculo";
-import type { TxDeConsultasDeVentas } from "./contrato";
+import { previo } from "./consultas";
+import type { DependenciasDeConsultasDeVentas, TxDeConsultasDeVentas } from "./contrato";
 
 /**
  * «Ticket a cobrar» (CC-5 B2a): lo que hace falta para cobrar un ticket que se cargó a la cuenta corriente de un cliente y todavía no se cobró: el ticket con su número, su canal, su sucursal
@@ -30,11 +34,17 @@ export type TicketACobrar = Readonly<{
 }>;
 
 export type ErrorDeTicketACobrar =
-  ErrorDeAlcance | "IDENTIFICADOR_INVALIDO" | "TICKET_NO_ENCONTRADO" | "TICKET_NO_COBRABLE";
+  | MotivoDeRechazo
+  | EmpresaNoOpera
+  | ErrorDePersistencia
+  | ErrorDeAlcance
+  | "IDENTIFICADOR_INVALIDO"
+  | "TICKET_NO_ENCONTRADO"
+  | "TICKET_NO_COBRABLE";
 
 const directorio = crearDirectorioDePartes();
 
-export async function ticketACobrar(
+async function ticketACobrar(
   tx: TxDeConsultasDeVentas,
   contexto: ContextoOperativo,
   alcance: "TODAS" | readonly SucursalId[],
@@ -66,4 +76,24 @@ export async function ticketACobrar(
     total: { moneda: "ARS", monto: vigente.total },
     cliente: { id: t.cargadoAParteId, nombre: nombres.get(t.cargadoAParteId) ?? null },
   });
+}
+
+/**
+ * La consulta «ticket a cobrar» como pieza propia (`ventas.ver`, el mismo guard, la misma exigencia de que la empresa opere y el mismo alcance de sucursales que el resto de las consultas de ventas: reusa su `previo`).
+ * Vive aparte de `crearConsultasDeVentas` porque ese archivo está en su tope de líneas; la composición la arma junto con las lecturas del libro (`cobro-a-cuenta.ts`).
+ */
+export function crearTicketACobrar(dependencias: DependenciasDeConsultasDeVentas) {
+  return {
+    ticketACobrar: (
+      contexto: ContextoOperativo,
+      entrada: Readonly<{ ticketId: string }>,
+    ): Promise<Resultado<TicketACobrar, ErrorDeTicketACobrar>> =>
+      dependencias.transacciones.ejecutar(
+        { contexto, aislamiento: "read committed", soloLectura: true },
+        async (tx): Promise<Resultado<TicketACobrar, ErrorDeTicketACobrar>> => {
+          const p = await previo(tx, contexto, dependencias);
+          return p.ok ? ticketACobrar(tx, contexto, p.valor.alcance, entrada) : p;
+        },
+      ),
+  };
 }
