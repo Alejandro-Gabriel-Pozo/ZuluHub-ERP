@@ -48,8 +48,12 @@ export const TEXTO_DE_CONTROL = {
   "ventas.pendientes_de_facturar": "cierre.control.pendientes_de_facturar",
 } as const satisfies Readonly<Record<string, ClaveDeTexto>>;
 
-/** Los controles que el servidor da y esta versión NO muestra (DDD:183, DEC-0514): los tres de stock, que solo informan y no tienen texto aprobado. */
+/**
+ * Los controles que el servidor da y esta versión NO muestra (DDD:183, DEC-0514): los tres de stock y los tickets a cuenta corriente (CC-2), que solo informan y no tienen texto aprobado.
+ * Sin este lugar, un control con cantidad y sin texto haría fallar toda la pantalla del cierre.
+ */
 export const CONTROLES_QUE_NO_SE_MUESTRAN: ReadonlySet<string> = new Set([
+  "ventas.tickets_a_cuenta_corriente",
   "stock.conteos_abiertos",
   "stock.existencias_negativas",
   "stock.lotes_vencidos_con_existencia",

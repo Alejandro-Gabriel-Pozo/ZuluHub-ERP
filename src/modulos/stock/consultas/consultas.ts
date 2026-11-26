@@ -7,6 +7,7 @@ import { armarConsultasDeCostos } from "./costos";
 import { armarConsultasDeDepositos } from "./depositos";
 import { armarConsultasDeExistencias } from "./existencias";
 import { armarConsultasDeLibro } from "./libro";
+import { armarConsultasDelLibroDelDeposito } from "./libro-del-deposito";
 import { armarConsultasDeLotes } from "./lotes";
 import { armarConsultasDeRecetas } from "./recetas";
 import { armarConsultasDeRecetasParaPantalla } from "./recetas-para-pantalla";
@@ -23,6 +24,7 @@ export function crearConsultasDeStock(d: DependenciasDeConsultasDeStock) {
     // existencias, libro y verificación de saldos (E5-T5)
     ...armarConsultasDeExistencias(leer),
     ...armarConsultasDeLibro(leer),
+    ...armarConsultasDelLibroDelDeposito(leer),
     // conteo físico (E5-T6)
     ...armarConsultasDeConteos(leer, d.reglas),
     // el tilde «Se controla el stock» de la ficha del producto

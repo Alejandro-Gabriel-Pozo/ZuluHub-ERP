@@ -5,6 +5,7 @@ import { CAMINOS_DE_PRESENTACIONES } from "./caminos-de-presentaciones";
 import { CAMINOS_DE_PRODUCTOS } from "./caminos-de-productos";
 import { CAMINOS_DE_RECETAS } from "./caminos-de-recetas";
 import { CAMINOS_DE_STOCK_DEPOSITOS } from "./caminos-de-stock-depositos";
+import { CAMINOS_DE_STOCK_MOVIMIENTOS } from "./caminos-de-stock-movimientos";
 import type { DefinicionDeCamino } from "./tipos-de-caminos";
 
 export type { DefinicionDeCamino, PasoDeCamino } from "./tipos-de-caminos";
@@ -36,6 +37,7 @@ export const FRAGMENTOS_DE_CAMINOS = {
   presentaciones: CAMINOS_DE_PRESENTACIONES,
   productos: CAMINOS_DE_PRODUCTOS,
   "stock-depositos": CAMINOS_DE_STOCK_DEPOSITOS,
+  "stock-movimientos": CAMINOS_DE_STOCK_MOVIMIENTOS,
 } as const;
 
 export const CAMINOS = {
@@ -46,6 +48,7 @@ export const CAMINOS = {
   ...CAMINOS_DE_PRESENTACIONES,
   ...CAMINOS_DE_PRODUCTOS,
   ...CAMINOS_DE_STOCK_DEPOSITOS,
+  ...CAMINOS_DE_STOCK_MOVIMIENTOS,
 } as const satisfies Readonly<Record<string, DefinicionDeCamino>>;
 
 export type IdDeCamino = keyof typeof CAMINOS;

@@ -1,6 +1,7 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
+import { articuloDeBase } from "../integracion/stock-apoyo";
 import { HOST_DEL_RECORRIDO, armarMundoDelRecorrido, type MundoDelRecorrido } from "./apoyo/mundo";
 import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilante";
 
@@ -10,7 +11,7 @@ import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilan
  * tiene por su plan y activo (`catalogo` y `stock`, igual que el recorrido de la venta); el servidor y sus permisos, el aislamiento y la idempotencia del alta los prueban
  * `test/integracion/stock-depositos-web.test.ts` y el formulario en Chromium (`FormularioDeDeposito.test.tsx`). STK-A suma editar, desactivar y reactivar: la acción de «Desactivar» llega y la lista
  * se refresca, el rechazo del «de venta» sale con su texto y dos pestañas que editan lo mismo no se pisan. STK-B1 suma Existencias y Movimientos (solo lectura): cargan limpias, las pestañas llevan de una
- * a otra, el selector de depósitos son enlaces que cambian el depósito y un cursor o un depósito ajenos dan el genérico en vez de romper.
+ * a otra, el selector de depósitos son enlaces que cambian el depósito y un cursor o un depósito ajenos dan el genérico en vez de romper. STK-B2 suma la entrada a mano (con doble clic) y su anulación.
  */
 const base = inject("baseDePruebas");
 const CELULAR = { width: 390, height: 844 } as const;
@@ -229,5 +230,65 @@ describe.skipIf(base === null || !stockAbierto)("recorrido de depósitos de stoc
       await pagina.getByText("Esta acción no está permitida").waitFor();
     }
     vigilante.tomar();
+  });
+
+  it("registrar una entrada desde Existencias la deja en Movimientos una sola vez (doble clic) y anularla la marca «Anulado» con su espejo", async () => {
+    const { articulo } = await articuloDeBase(mundo.mundo.dueno, { empresa: mundo.empresa });
+    expect(articulo).toMatch(/^[0-9a-f-]{36}$/);
+    await pagina.goto(`${mundo.url}/stock/existencias`);
+    await pagina.waitForLoadState("networkidle");
+    await pagina.getByRole("link", { name: "Entrada", exact: true }).click();
+    await pagina.waitForURL("**/stock/movimientos/entrada");
+    await pagina.getByLabel("Artículo").selectOption(articulo);
+    await pagina.getByLabel("Cantidad").fill("5");
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    await pagina.getByRole("button", { name: "Registrar" }).dblclick();
+    await pagina.waitForURL((url) => url.pathname === "/stock/movimientos");
+    await pagina.waitForLoadState("networkidle");
+    const tarjetas = pagina.getByRole("listitem").filter({ hasText: "+5" });
+    expect(await tarjetas.count()).toBe(1);
+    expect(await tarjetas.first().getByText("Entrada", { exact: true }).count()).toBe(1);
+    expect(vigilante.tomar()).toEqual([]);
+
+    await tarjetas.first().getByRole("link", { name: "Anular" }).click();
+    await pagina.waitForURL("**/anular");
+    await pagina.getByLabel("Detalle").fill("Error de carga");
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    await pagina.getByRole("button", { name: "Anular" }).click();
+    await pagina.waitForURL((url) => url.pathname === "/stock/movimientos");
+    await pagina.getByText("Anulación", { exact: true }).waitFor();
+    expect(await pagina.getByText("Anulado", { exact: true }).count()).toBe(1);
+    expect(await pagina.getByRole("link", { name: "Anular" }).count()).toBe(0);
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    expect(vigilante.tomar()).toEqual([]);
+  });
+
+  it("con el nivel AVISAR, una salida que deja negativo avisa y «Registrar» la confirma una sola vez", async () => {
+    const { articulo } = await articuloDeBase(mundo.mundo.dueno, { empresa: mundo.empresa });
+    await mundo.mundo.dueno.query(
+      `insert into nivel_de_control (empresa_id, sucursal_id, control, nivel) values ($1, null, 'stock.existencia_negativa', 'AVISAR')
+       on conflict on constraint nivel_de_control_uk do update set nivel = excluded.nivel`,
+      [mundo.empresa],
+    );
+    try {
+      await pagina.goto(`${mundo.url}/stock/movimientos/salida`);
+      await pagina.waitForLoadState("networkidle");
+      await pagina.getByLabel("Artículo").selectOption(articulo);
+      await pagina.getByLabel("Cantidad").fill("2");
+      await pagina.getByRole("button", { name: "Registrar" }).click();
+      await pagina.getByText("Va a quedar en negativo. ¿Confirmás?").waitFor();
+      expect(pagina.url()).toContain("/stock/movimientos/salida");
+      await pagina.getByRole("button", { name: "Registrar" }).dblclick();
+      await pagina.waitForURL((url) => url.pathname === "/stock/movimientos");
+      await pagina.waitForLoadState("networkidle");
+      const tarjetas = pagina.getByRole("listitem").filter({ hasText: "-2 Unidad" });
+      expect(await tarjetas.count()).toBe(1);
+      expect(vigilante.tomar()).toEqual([]);
+    } finally {
+      await mundo.mundo.dueno.query(
+        "update nivel_de_control set nivel = 'PERMITIR' where empresa_id = $1 and control = 'stock.existencia_negativa'",
+        [mundo.empresa],
+      );
+    }
   });
 });

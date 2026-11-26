@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1206",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Asignar un rol a una persona es solo del gerente (`usuarios.asignar_rol`): al gerente no se lo reasigna, una persona apagada se reasigna y sigue apagada, y rige desde su operación siguiente.",
+  "que_cambia": "El administrador no cambia roles; reactivar a una persona sigue siendo solo por invitación.",
+  "donde": "src/modulos/identidad/casos-de-uso/asignar-rol.ts; src/modulos/identidad/dominio/asignacion-de-rol.ts; src/capacidades/permisos/permisos-de-administracion.ts"
+}

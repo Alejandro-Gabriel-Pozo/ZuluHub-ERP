@@ -9,7 +9,14 @@ const membresia = (
   rol: RolDeLaMembresia,
   activo = true,
   empresa = EMPRESA,
-): Membresia => ({ empresaId: empresa, personaId: personaId(persona), rol, activo, version: 1 });
+): Membresia => ({
+  empresaId: empresa,
+  personaId: personaId(persona),
+  rol,
+  rolPropioId: null,
+  activo,
+  version: 1,
+});
 
 /** La persona que pide el apagado: ninguna de las del escenario, salvo en las pruebas de `ES_UNO_MISMO`. */
 const QUIEN_PIDE = personaId("p-quien-pide");

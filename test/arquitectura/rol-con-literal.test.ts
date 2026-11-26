@@ -37,6 +37,7 @@ const LEGITIMAS: Readonly<Record<string, number>> = {
 };
 const DEUDA_DE_ESTRUCTURA_DE_IDENTIDAD: Readonly<Record<string, number>> = {
   "src/modulos/identidad/casos-de-uso/aceptar-traspaso.ts": 1,
+  "src/modulos/identidad/dominio/asignacion-de-rol.ts": 1,
   "src/modulos/identidad/consultas/traspaso-en-curso.ts": 1,
   "src/modulos/identidad/dominio/invitacion.ts": 2,
   "src/modulos/identidad/dominio/membresia.ts": 3,

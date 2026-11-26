@@ -33,7 +33,14 @@ const membresia = (
   rol: RolDeEmpresa,
   activo = true,
   empresa = EMPRESA,
-): Membresia => ({ empresaId: empresa, personaId: persona, rol, activo, version: 1 });
+): Membresia => ({
+  empresaId: empresa,
+  personaId: persona,
+  rol,
+  rolPropioId: null,
+  activo,
+  version: 1,
+});
 
 const persona = (id: PersonaId, activoGlobal = true): Persona => ({
   id,
