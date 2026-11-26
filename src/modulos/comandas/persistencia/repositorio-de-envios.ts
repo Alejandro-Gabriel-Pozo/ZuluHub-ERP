@@ -2,12 +2,7 @@ import { sql, type Kysely } from "kysely";
 import type { PersonaId } from "../../../primitivas/identificadores/marca";
 import type { VentasDb } from "../../ventas/publico";
 import type { ComandasDb } from "./esquema";
-import type {
-  Aviso,
-  FilaDeComanda,
-  RepositorioDeEnvios,
-  ResumenDeComandas,
-} from "./contrato-de-envios";
+import type { Aviso, FilaDeComanda, RepositorioDeEnvios } from "./contrato-de-envios";
 import { aEnvio, aRenglon } from "./mapeos-de-envios";
 import { crearResumenYNotas } from "./repositorio-de-resumen-y-notas";
 

@@ -47,7 +47,7 @@ async function cambiar(
   const ids = exigirUuid(entrada.cuentaId, entrada.lineaId);
   if (!ids.ok) return ids;
   const quita = entrada.nota === null || entrada.nota.trim() === "";
-  const validada = quita ? null : notaDeCocinaDesdeTexto(entrada.nota as string);
+  const validada = quita ? null : notaDeCocinaDesdeTexto(entrada.nota);
   if (validada !== null && !validada.ok) return err("NOTA_INVALIDA");
   const nota = validada === null ? null : validada.valor;
   const cuenta = await cuentaPorId(tx, empresaId, entrada.cuentaId);
