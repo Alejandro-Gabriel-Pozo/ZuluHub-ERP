@@ -317,6 +317,39 @@ describe.skipIf(base === null)("ventas: cargo a cuenta corriente (CC-2)", () => 
       );
     });
 
+    it("un cierre ya hecho a nombre de OTRO cliente es CLAVE_REUTILIZADA (no se devuelve como propio y no se carga al segundo); a nombre del mismo, devuelve el ticket", async () => {
+      const a = await cliente();
+      const b = await cliente();
+      const { cuenta } = await cuentaConLinea(m, e);
+      const primero = valorDe(await intentar(cuenta, a, visto));
+      expect(await intentar(cuenta, b, visto)).toEqual({ ok: false, error: "CLAVE_REUTILIZADA" });
+      expect(valorDe(await intentar(cuenta, a, visto))).toMatchObject({
+        ticketId: primero.ticketId,
+        yaEstabaCerrada: true,
+      });
+      expect(await asientos(b)).toHaveLength(0);
+      expect(await asientos(a)).toHaveLength(1);
+    });
+
+    it("concurrencia: dos cierres de la MISMA cuenta con clientes distintos: uno gana y el otro CLAVE_REUTILIZADA; un solo cargo", async () => {
+      for (let ronda = 0; ronda < 4; ronda++) {
+        const a = await cliente();
+        const b = await cliente();
+        const { cuenta } = await cuentaConLinea(m, e);
+        m.armarBarrera(2);
+        const rs = await Promise.all([
+          intentar(cuenta, a, visto),
+          intentar(cuenta, b, visto),
+        ]).finally(m.soltarBarrera);
+        expect(
+          rs.filter((r) => r.ok),
+          `ronda ${ronda}`,
+        ).toHaveLength(1);
+        expect(rs.filter((r) => !r.ok)).toEqual([{ ok: false, error: "CLAVE_REUTILIZADA" }]);
+        expect((await asientos(a)).length + (await asientos(b)).length).toBe(1);
+      }
+    });
+
     it("concurrencia: cerrar con el total visto mientras otra persona agrega una línea: o cierra con lo visto o falla TOTAL_CAMBIO; nunca se carga otro total", async () => {
       for (let ronda = 0; ronda < 4; ronda++) {
         const c = await cliente({ limite: "9000.00" });

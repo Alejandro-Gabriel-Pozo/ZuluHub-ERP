@@ -192,6 +192,10 @@ export async function cerrarCuentaEnTx(
       if (actual !== null && actual.estado === "ANULADA") return err("CUENTA_ANULADA");
       throw new Error("la cuenta está cerrada pero no tiene ticket");
     }
+    // Un cierre ya hecho a nombre de OTRO cliente no se devuelve como si fuera este: la misma cuenta con otro cliente es un pedido distinto (`CLAVE_REUTILIZADA`). El mismo cliente, o ninguno, devuelve el ticket tal como quedó.
+    if (entrada.clienteId !== undefined && ticket.cargadoAParteId !== entrada.clienteId) {
+      return err("CLAVE_REUTILIZADA");
+    }
     return ok(await salidaDelTicketExistente(tx, empresaId, ticket));
   };
   if (decision.valor.tipo === "YA_CERRADA") return yaEmitido();
