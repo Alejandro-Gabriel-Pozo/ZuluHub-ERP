@@ -294,30 +294,7 @@ describe.skipIf(base === null)("ventas: cargo a cuenta corriente (CC-2)", () => 
     expect(await saldo(c)).toBe("0.00");
   });
 
-  it("un ticket con cargo a cuenta no se cobra en caja, y un cliente de otra empresa no se puede cargar", async () => {
-    const c = await cliente();
-    const caja = await m.cajaAbierta(e);
-    const t = valorDe((await venta(c)).r);
-    const cobro = await m.casos.cobrar(e.gerente, {
-      claveIdempotencia: nuevaClave(),
-      ticketId: t.ticketId,
-      ejemplarId: t.ejemplarId,
-      cajaId: caja.cajaId,
-      cobros: [
-        {
-          medioDePagoId: caja.medios["EFECTIVO"] as string,
-          cuentaDeCobroId: null,
-          importe: { moneda: "ARS", monto: "1000.00" },
-        },
-      ],
-    });
-    expect(cobro).toEqual({ ok: false, error: "TICKET_A_CUENTA_CORRIENTE" });
-    expect(
-      await m.contar("select count(*) as n from cobranza_de_ticket where ticket_id = $1", [
-        t.ticketId,
-      ]),
-    ).toBe(0);
-
+  it("un cliente de otra empresa no se puede cargar y el saldo de un cliente no se mezcla con el de otro de la misma empresa", async () => {
     const deOtra = await cliente({}, otra);
     const { cuenta, r } = await venta(deOtra);
     expect(r).toEqual({ ok: false, error: "CLIENTE_NO_VALIDO" });

@@ -84,8 +84,6 @@ export type ErrorDeVentas =
   | ErrorDelCargoACuenta
   /** CC-2: sin el puerto de la cuenta corriente, cerrar a nombre de un cliente se rechaza (nace cerrado). */
   | "CUENTA_CORRIENTE_NO_DISPONIBLE"
-  /** CC-2: un ticket con cargo a cuenta corriente no se cobra en caja (se cobra por la cuenta, CC-3): si no, el cliente pagaría dos veces. */
-  | "TICKET_A_CUENTA_CORRIENTE"
   | "CUENTA_NO_ABIERTA"
   | "CUENTA_CERRADA"
   | "LINEA_ID_EN_USO"

@@ -170,6 +170,17 @@ async function anular(
   // El espejo del cargo a cuenta corriente (CC-2), en la misma transacción: si no, el cliente quedaría debiendo una venta anulada. Sin puerto no se anula (nace cerrado).
   if (ticket.cargadoAParteId !== null) {
     if (dependencias.cuentaCorriente === undefined) return err("CUENTA_CORRIENTE_NO_DISPONIBLE");
+    // Cobrado a cuenta (CC-3): primero la cobranza y después el cargo (el orden de bloqueo está escrito en el puerto). El dinero de caja no se toca: el gerente registra la salida aparte.
+    if (ticket.estado === "COBRADO") {
+      const cobranza = await tx.tickets.cobranzaDeTicket(empresaId, ticket.id);
+      if (cobranza === null) throw new Error("el ticket está cobrado pero no tiene su cobranza");
+      const espejoDeLaCobranza = await dependencias.cuentaCorriente.anularCobranzaEnTx(
+        tx,
+        contexto,
+        { cobranzaId: cobranza.id },
+      );
+      if (!espejoDeLaCobranza.ok) return espejoDeLaCobranza;
+    }
     const espejo = await dependencias.cuentaCorriente.anularEnTx(tx, contexto, {
       ticketId: ticket.id,
     });
