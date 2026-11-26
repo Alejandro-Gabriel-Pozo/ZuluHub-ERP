@@ -9,7 +9,8 @@ import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilan
  * (un `Boton` sin `"use client"`, React #441), la acción de servidor que no llega o el alta que no vuelve a la lista. Con `stock` disponible en el catálogo real, la empresa del mundo lo
  * tiene por su plan y activo (`catalogo` y `stock`, igual que el recorrido de la venta); el servidor y sus permisos, el aislamiento y la idempotencia del alta los prueban
  * `test/integracion/stock-depositos-web.test.ts` y el formulario en Chromium (`FormularioDeDeposito.test.tsx`). STK-A suma editar, desactivar y reactivar: la acción de «Desactivar» llega y la lista
- * se refresca, el rechazo del «de venta» sale con su texto y dos pestañas que editan lo mismo no se pisan.
+ * se refresca, el rechazo del «de venta» sale con su texto y dos pestañas que editan lo mismo no se pisan. STK-B1 suma Existencias y Movimientos (solo lectura): cargan limpias, las pestañas llevan de una
+ * a otra, el selector de depósitos son enlaces que cambian el depósito y un cursor o un depósito ajenos dan el genérico en vez de romper.
  */
 const base = inject("baseDePruebas");
 const CELULAR = { width: 390, height: 844 } as const;
@@ -42,7 +43,7 @@ describe.skipIf(base === null || !stockAbierto)("recorrido de depósitos de stoc
     await mundo?.cerrar();
   });
 
-  it("la lista carga limpia, el menú ofrece «Stock» y agregar un depósito lo deja en la lista", async () => {
+  it("la lista carga limpia, el menú ofrece «Stock» (que entra por Existencias) y agregar un depósito lo deja en la lista", async () => {
     const respuesta = await pagina.goto(`${mundo.url}/stock/depositos`);
     await pagina.waitForLoadState("networkidle");
     expect(respuesta?.status()).toBe(200);
@@ -54,7 +55,7 @@ describe.skipIf(base === null || !stockAbierto)("recorrido de depósitos de stoc
       .click();
     const filaStock = pagina.getByRole("link", { name: "Stock", exact: true });
     await filaStock.waitFor();
-    expect(await filaStock.getAttribute("href")).toBe("/stock/depositos");
+    expect(await filaStock.getAttribute("href")).toBe("/stock/existencias");
     expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
     expect(vigilante.tomar()).toEqual([]);
 
@@ -183,6 +184,50 @@ describe.skipIf(base === null || !stockAbierto)("recorrido de depósitos de stoc
     await pagina.waitForLoadState("networkidle");
     expect(await pagina.getByText("Barra grande", { exact: true }).count()).toBe(1);
     expect(await pagina.getByText("Barra chica", { exact: true }).count()).toBe(0);
+    vigilante.tomar();
+  });
+
+  it("Existencias y Movimientos cargan limpias, el selector cambia de depósito y las pestañas navegan entre las pantallas", async () => {
+    await pagina.goto(`${mundo.url}/stock/existencias`);
+    await pagina.waitForLoadState("networkidle");
+    await pagina.getByRole("navigation", { name: "Depósitos" }).waitFor();
+    const enlaces = pagina.getByRole("navigation", { name: "Depósitos" }).getByRole("link");
+    expect(await enlaces.count()).toBeGreaterThanOrEqual(2);
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    expect(vigilante.tomar()).toEqual([]);
+
+    const otro = enlaces.nth(1);
+    const href = await otro.getAttribute("href");
+    expect(href).toMatch(/^\/stock\/existencias\?deposito=[0-9a-f-]{36}$/);
+    await otro.click();
+    await pagina.waitForURL((url) => url.search === `?${(href ?? "").split("?")[1] ?? ""}`);
+    expect(
+      await pagina
+        .getByRole("navigation", { name: "Depósitos" })
+        .getByRole("link")
+        .nth(1)
+        .getAttribute("aria-current"),
+    ).toBe("page");
+
+    await pagina.getByRole("main").getByRole("link", { name: "Movimientos" }).click();
+    await pagina.waitForURL((url) => url.pathname === "/stock/movimientos");
+    await pagina.getByRole("navigation", { name: "Depósitos" }).waitFor();
+    expect(await pagina.getByRole("button").filter({ hasText: "Anular" }).count()).toBe(0);
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    expect(vigilante.tomar()).toEqual([]);
+  });
+
+  it("un depósito que no es de la sucursal o un cursor roto dan el mensaje genérico y no rompen la pantalla", async () => {
+    for (const ruta of [
+      "/stock/existencias?deposito=00000000-0000-4000-8000-000000000000",
+      "/stock/movimientos?deposito=no-es-un-id",
+      "/stock/movimientos?despues=cursor-roto",
+    ]) {
+      const respuesta = await pagina.goto(`${mundo.url}${ruta}`);
+      await pagina.waitForLoadState("networkidle");
+      expect(respuesta?.status(), ruta).toBe(200);
+      await pagina.getByText("Esta acción no está permitida").waitFor();
+    }
     vigilante.tomar();
   });
 });

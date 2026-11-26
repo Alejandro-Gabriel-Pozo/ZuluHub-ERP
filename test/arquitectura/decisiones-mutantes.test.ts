@@ -12,6 +12,7 @@ import {
   MARCA,
   resumen,
   CUOTA,
+  FAMILIAS,
 } from "./decisiones-apoyo";
 
 /**
@@ -30,10 +31,14 @@ const problemas = (c: Record<string, unknown>) =>
 
 describe("anclas y bordes de la forma", () => {
   it.each([["xDEC-0001"], ["DEC-0001x"], ["DEC-1"]])("el id %s no tiene la forma", (id) => {
-    expect(problemas({ id })).toContain("id tiene la forma DEC-0001.");
+    expect(problemas({ id })).toContain(
+      "id tiene la forma DEC-0001 (heredada) o DEC-SAL-001 (por familia).",
+    );
   });
   it("un id que no es texto falla aunque su texto se vea bien", () => {
-    expect(problemas({ id: ["DEC-0001"] })).toContain("id tiene la forma DEC-0001.");
+    expect(problemas({ id: ["DEC-0001"] })).toContain(
+      "id tiene la forma DEC-0001 (heredada) o DEC-SAL-001 (por familia).",
+    );
     expect(forma.problemasDelRegistro([{ ...entrada(), id: 7 }]).map((p) => p.id)).toEqual(
       ["#1", "#1"].slice(0, 1),
     );
@@ -209,8 +214,9 @@ describe("anclas de los archivos que mira el control", () => {
 
 describe("mensajes exactos de las declaraciones", () => {
   const vacio = { rutas: [], leer: () => null };
-  it("sin registro, lista ni cuota, tres fallas con su archivo y sin prefijo", () => {
+  it("sin familias, registro, lista ni cuota, cuatro fallas con su archivo y sin prefijo", () => {
     expect(evaluar(vacio).fallas).toEqual([
+      { archivo: control.ARCHIVO_DE_LAS_FAMILIAS, linea: 1, motivo: "no existe." },
       { archivo: control.CARPETA_DEL_REGISTRO, linea: 1, motivo: "no existe." },
       { archivo: control.ARCHIVO_DE_LOS_SENSIBLES, linea: 1, motivo: "no existe." },
       { archivo: control.ARCHIVO_DE_LA_CUOTA, linea: 1, motivo: "no existe." },
@@ -219,7 +225,11 @@ describe("mensajes exactos de las declaraciones", () => {
   it("JSON roto en el cambio: el mensaje trae el archivo y no el prefijo de la base", () => {
     const entradaRota = `${control.CARPETA_DEL_REGISTRO}/DEC-0001.json`;
     const roto = { rutas: [entradaRota], leer: () => Buffer.from("{roto") };
-    const [uno, dos] = evaluar(roto).fallas;
+    const [familias, uno, dos] = evaluar(roto).fallas;
+    expect(familias?.archivo).toBe(control.ARCHIVO_DE_LAS_FAMILIAS);
+    expect(familias?.motivo).toMatch(
+      /^arquitectura\/decisiones\/familias\.json: no se puede leer \(/,
+    );
     expect(uno?.archivo).toBe(entradaRota);
     expect(uno?.motivo).toMatch(/^no se puede leer \(/);
     expect(dos?.motivo).toMatch(
@@ -285,6 +295,7 @@ describe("corrida como programa", () => {
       sensibles: [{ ruta: "src/primitivas/dinero/", que: "el dinero" }],
     }),
     [control.ARCHIVO_DE_LA_CUOTA]: JSON.stringify(CUOTA),
+    [control.ARCHIVO_DE_LAS_FAMILIAS]: JSON.stringify(FAMILIAS),
   });
   const correr = (script: string, cwd: string, ...args: string[]) =>
     spawnSync(process.execPath, [join(RAIZ, "arquitectura/decisiones", script), ...args], {
@@ -349,5 +360,31 @@ describe("corrida como programa", () => {
       "arquitectura/decisiones/registro/DEC-0001.json: tipo es uno de: DINERO, PERMISOS, CLIENTE, DATOS, COMERCIAL, INFRAESTRUCTURA, SIN_DECISION.\n",
     );
     expect(resumen.ejecutar(repo({})).errores).toHaveLength(1);
+  });
+  it("resumen.cjs sin familias.json, o con uno inválido, falla con el motivo y no imprime nada (no juzga los ids a ciegas)", () => {
+    const sinFamilias = Object.fromEntries(
+      Object.entries(declaraciones([entrada({ id: "DEC-0001", fecha: "2026-11-25" })])).filter(
+        ([ruta]) => ruta !== control.ARCHIVO_DE_LAS_FAMILIAS,
+      ),
+    );
+    const falta = correr("resumen.cjs", repo(sinFamilias));
+    expect(falta.status).toBe(1);
+    expect(falta.stdout).toBe("");
+    expect(falta.stderr).toBe("arquitectura/decisiones/familias.json: no existe.\n");
+    const rotas = correr(
+      "resumen.cjs",
+      repo({
+        ...sinFamilias,
+        [control.ARCHIVO_DE_LAS_FAMILIAS]: JSON.stringify({
+          corte: "mal",
+          familias: { SAL: "Salón" },
+        }),
+      }),
+    );
+    expect(rotas.status).toBe(1);
+    expect(rotas.stdout).toBe("");
+    expect(rotas.stderr).toBe(
+      "arquitectura/decisiones/familias.json: corte es un día real con la forma AAAA-MM-DD.\n",
+    );
   });
 });

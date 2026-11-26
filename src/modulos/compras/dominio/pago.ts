@@ -9,7 +9,7 @@ import { motivoDeAnulacionDesdeTexto } from "./registrar-compra";
  * parciales). Un pago en efectivo puede además SACAR la plata de una caja abierta (`salidaDeCaja`, T10b; DEC-0316): sin ella no mueve la caja. Pura: sin reloj ni azar (el «hoy» entra como dato).
  *
  * Los medios son los tipos de medio de caja (`caja/estados.ts`): compras no importa caja (la regla de módulos lo prohíbe), así que los copia y la prueba
- * `test/arquitectura/compras-fuente-unica.test.ts` falla si difieren. Los repite también el CHECK `pago_medio_ck` de la base (lo compara `compras-persistencia.test.ts`).
+ * `test/arquitectura/compras-fuente-unica.test.ts` falla si difieren. Los repite también el CHECK `medio_de_un_pago_medio_ck` de la base (lo compara `compras-persistencia.test.ts`).
  */
 export const MEDIOS_DE_PAGO = [
   "EFECTIVO",
@@ -20,6 +20,9 @@ export const MEDIOS_DE_PAGO = [
   "OTRO",
 ] as const;
 export type MedioDePago = (typeof MEDIOS_DE_PAGO)[number];
+
+/** Lo que dice la cabecera de un pago (CHECK `pago_medio_ck`): los medios más `COMPUESTO`, que solo pone el sistema cuando el pago tiene más de un medio; nunca viene del navegador (`MEDIOS_DE_PAGO` es lo que se elige). */
+export const MEDIOS_DE_LA_CABECERA = [...MEDIOS_DE_PAGO, "COMPUESTO"] as const;
 
 export const esMedioDePago = (texto: string): texto is MedioDePago =>
   (MEDIOS_DE_PAGO as readonly string[]).includes(texto);

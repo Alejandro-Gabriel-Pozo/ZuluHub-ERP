@@ -27,7 +27,13 @@ export type UsosDeTexto = readonly [UsoDeTexto, ...UsoDeTexto[]] | typeof USOS_P
 /** Marca de la línea base: los textos que ya existían cuando se creó el inventario. Solo baja. */
 export const FUENTE_HEREDADA = "HEREDADO" as const;
 
+/**
+ * El id de una decisión del registro: el heredado (`DEC-0001`) o el POR FAMILIA (código de familia + número, desde el corte de `arquitectura/decisiones/familias.json`). Que la familia exista y la
+ * decisión esté en el registro lo comprueba `arquitectura/decisiones/decisiones.cjs`; acá solo la forma. Una regla, un lugar: las fichas de pantallas importan este tipo.
+ */
+export type IdDeDecision = `DEC-${number}` | `DEC-${Uppercase<string>}-${number}`;
+
 /** De dónde salió el texto aprobado. */
 export type FuenteDeTexto =
-  /** Una decisión del registro del ERP (`arquitectura/decisiones/registro/DEC-NNNN.json`), aceptada (`CONFIRMADA` o `CORREGIDA`). */
-  Readonly<{ decision: `DEC-${number}` }> | typeof FUENTE_HEREDADA;
+  /** Una decisión del registro del ERP (`arquitectura/decisiones/registro/<id>.json`), aceptada (`CONFIRMADA` o `CORREGIDA`). */
+  Readonly<{ decision: IdDeDecision }> | typeof FUENTE_HEREDADA;

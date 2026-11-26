@@ -1,6 +1,7 @@
 import type { IdDeCamino } from "../datos/caminos";
 import type { ClaveAccion } from "../modulos/catalogo";
 import type { ClaveDeTexto } from "../vocabulario/catalogo";
+import type { IdDeDecision } from "../vocabulario/uso-y-fuente-de-texto";
 
 /**
  * Ficha de pantalla: pasos, campos, botones, modales, estados y textos declarados (decisión del dueño, fila 174 de
@@ -50,8 +51,7 @@ export type EntradaDeMenuDeFicha = Readonly<{
 
 /** La ficha está en construcción o terminada (con la decisión que la aprobó y la huella de su contenido). */
 export type EstadoDeLaFicha =
-  | "EN_CONSTRUCCION"
-  | Readonly<{ terminada: Readonly<{ decision: `DEC-${number}`; huella: string }> }>;
+  "EN_CONSTRUCCION" | Readonly<{ terminada: Readonly<{ decision: IdDeDecision; huella: string }> }>;
 
 export type FichaDePantalla = Readonly<{
   /** Identificador de la pantalla (`medios-de-pago`). */

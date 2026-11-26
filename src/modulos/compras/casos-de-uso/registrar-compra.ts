@@ -9,6 +9,7 @@ import {
   leerHechoEn,
   leerCondicionDeIva,
   guardarFactura,
+  registrarLaOferta,
   prepararFactura,
   salidaDeLoYaHecho,
 } from "./registrar-compra-apoyo";
@@ -29,6 +30,7 @@ import {
   type Remito,
 } from "../dominio/registrar-compra";
 import type { LineaDeRecepcion } from "../persistencia/repositorio-de-recepciones";
+import { asentarElCargoDeLaFactura } from "./cargo-de-la-factura";
 import { autorizar, exigirAlcanceDeSucursal, traducir } from "./comun";
 import type { DependenciasDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
@@ -332,21 +334,8 @@ function armarRegistro(dependencias: DependenciasDeCompras, conFactura: boolean)
             pagoId = nuevo;
           }
 
-          // 6. Lo que cobró el proveedor: la compra más nueva gana.
-          for (const l of lineas) {
-            if (l.renglon.precio === null || l.costoPorUnidadDeStock === null) continue;
-            await tx.ofertasDeProveedor.registrar(empresaId, {
-              proveedorId: proveedor.valor.id,
-              productoId: l.producto.id,
-              presentacionId: l.renglon.presentacionId,
-              precioPorTipo: l.renglon.precioPor,
-              unidadDePrecioId: l.renglon.unidadDePrecioId,
-              ultimoPrecio: l.renglon.precio,
-              ultimoCostoPorUnidadDeStock: l.costoPorUnidadDeStock,
-              ultimaCompraId: recepcionId,
-              ultimaCompraEn: hechoEn,
-            });
-          }
+          // 6. Lo que cobró el proveedor y, al final, el cargo de la factura en el libro (ver `asentarElCargoDeLaFactura`).
+          await registrarLaOferta(tx, empresaId, proveedor.valor.id, recepcionId, hechoEn, lineas);
 
           await tx.auditoria.registrar({
             empresaId,
@@ -364,6 +353,17 @@ function armarRegistro(dependencias: DependenciasDeCompras, conFactura: boolean)
               movimientos,
             },
           });
+          if (comprobanteId !== null && factura !== null && preparada?.ok === true) {
+            const datos = {
+              comprobanteId,
+              proveedorId: proveedor.valor.id,
+              total: preparada.valor.calculado.totalSegunFactura,
+              venceEl: factura.vencimientoDePago,
+              sucursalId: entrada.sucursalId,
+            };
+            const cargo = await asentarElCargoDeLaFactura(tx, contexto, dependencias, datos);
+            if (!cargo.ok) return cargo;
+          }
           return ok({
             recepcionId,
             comprobanteId,
