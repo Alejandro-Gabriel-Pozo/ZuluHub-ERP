@@ -303,8 +303,11 @@ describe("el catálogo comercial de módulos", () => {
           "devoluciones_a_proveedor.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "devoluciones_a_proveedor.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "notas_de_credito_de_proveedor.ver": { capacidad: null, efecto: "LECTURA" },
+          "notas_de_debito_de_proveedor.ver": { capacidad: null, efecto: "LECTURA" },
           "notas_de_credito_de_proveedor.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "notas_de_debito_de_proveedor.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "notas_de_credito_de_proveedor.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "notas_de_debito_de_proveedor.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "diferencias_de_compra.ver": { capacidad: null, efecto: "LECTURA" },
           "diferencias_de_compra.resolver": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "compras.configurar": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -351,19 +354,19 @@ describe("el catálogo comercial de módulos", () => {
     expect(carpetas).toEqual([["modulos/catalogo"], ["modulos/catalogo"], ["modulos/stock"]]);
   });
 
-  it("el catálogo tiene 45 acciones de catálogo, carta y stock (8 + 12 + 25), 35 de caja, cierre y ventas (23 + 4 + 8) y 19 de clientes y compras (9 + 10), sin repetir ninguna", () => {
+  it("el catálogo tiene 45 acciones de catálogo, carta y stock (8 + 12 + 25), 35 de caja, cierre y ventas (23 + 4 + 8) y 42 de clientes y compras (9 + 33), sin repetir ninguna", () => {
     const cuantas = (
       m: "catalogo" | "vidriera" | "stock" | "caja" | "cierre" | "ventas" | "clientes" | "compras",
     ) => Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
     expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([8, 12, 25]);
     expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
-    expect([cuantas("clientes"), cuantas("compras")]).toEqual([9, 30]);
+    expect([cuantas("clientes"), cuantas("compras")]).toEqual([9, 33]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
     // 30 de administración (18 de usuarios, sucursales, gerencia y permisos, 5 de roles propios y su asignación de H4b T4, y 7 de la configuración fiscal de H7 T5),
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 49 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
-    // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A y `vidrieras.administrar_portal` del portal), 35 de caja, cierre y ventas (E0-T1), 39 de clientes y compras (E9-T1, T11, N3-2b, N3-4, N4-1, N4-3, N4-4, N4-5 y la exportación del 25/11/2026), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 183 en total.
-    expect(todas).toHaveLength(30 + 9 + 45 + 35 + 39 + 16 + 5 + 4);
+    // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A y `vidrieras.administrar_portal` del portal), 35 de caja, cierre y ventas (E0-T1), 42 de clientes y compras (E9-T1, T11, N3-2b, N3-4, N4-1, N4-3, N4-4, N4-5, la exportación del 25/11/2026 y las 3 de notas de débito de NOTAS-1), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 186 en total.
+    expect(todas).toHaveLength(30 + 9 + 45 + 35 + 42 + 16 + 5 + 4);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -515,6 +518,7 @@ const EFECTOS_DE_EMPRESA = {
     "mesas.ver",
     "modulos.ver",
     "notas_de_credito_de_proveedor.ver",
+    "notas_de_debito_de_proveedor.ver",
     "ordenes_de_compra.ver",
     "partes.ver",
     "permisos.ver_propios",
@@ -574,6 +578,7 @@ const EFECTOS_DE_EMPRESA = {
     "movimientos_caja.ajustar",
     "movimientos_caja.registrar_manual",
     "notas_de_credito_de_proveedor.registrar",
+    "notas_de_debito_de_proveedor.registrar",
     "opciones.editar",
     "ordenes_de_compra.crear",
     "ordenes_de_compra.pedir",
@@ -657,6 +662,7 @@ const EFECTOS_DE_EMPRESA = {
     "movimientos_caja.anular_de_otros",
     "notas_de_credito.emitir",
     "notas_de_credito_de_proveedor.anular",
+    "notas_de_debito_de_proveedor.anular",
     "ordenes_de_compra.anular",
     "ordenes_de_compra.cerrar",
     "partes.anonimizar",

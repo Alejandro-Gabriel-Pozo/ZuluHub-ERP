@@ -83,8 +83,12 @@ export const DATOS_DE_STOCK_MOVIMIENTOS = {
         "Detalle del movimiento: opcional en entradas y salidas; obligatorio al ajustar y al anular.",
       ),
     ],
-    consumidores: [CARPETA],
-    ponerPor: [...TODAS, "stock.anular"],
+    consumidores: [
+      CARPETA,
+      "apps/web/ui/plantillas/stock/conteo/FormularioDeAplicarConteo.cliente.tsx",
+      "apps/web/ui/plantillas/stock/conteo/FormularioDeCancelarConteo.cliente.tsx",
+    ],
+    ponerPor: [...TODAS, "stock.anular", "conteos.aplicar", "conteos.cancelar"],
     requiere: REQUIERE_STOCK,
   },
   "sentido-de-ajuste": {

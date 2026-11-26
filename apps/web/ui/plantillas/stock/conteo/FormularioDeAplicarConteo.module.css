@@ -1,0 +1,62 @@
+.filas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fila {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie-elevada);
+}
+
+.nombre {
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.datos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3) var(--espacio-5);
+  margin: 0;
+}
+
+.datos dt {
+  color: var(--color-texto-suave);
+}
+
+.datos dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+}
+
+/* El enlace con el aspecto del botón secundario («Cancelar»): navega, no envía. Mismo aspecto que el de los formularios de movimientos. */
+.secundario {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--objetivo-minimo);
+  min-height: var(--objetivo-minimo);
+  padding: var(--espacio-2) var(--espacio-5);
+  border: var(--borde-grosor-fuerte) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-weight: var(--tipo-peso-fuerte);
+  text-decoration: none;
+}

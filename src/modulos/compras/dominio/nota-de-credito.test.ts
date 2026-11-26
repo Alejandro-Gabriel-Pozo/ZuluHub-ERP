@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  huellaDeLaNota,
   huellaDeLaNotaDeCredito,
+  leerNota,
   leerNotaDeCredito,
+  leerNotaDeDebito,
   MAXIMO_DE_IMPORTES_DE_UNA_NOTA,
 } from "./nota-de-credito";
 
@@ -161,5 +164,35 @@ describe("huellaDeLaNotaDeCredito", () => {
       ),
     ];
     expect(new Set([base, ...otras]).size).toBe(otras.length + 1);
+  });
+});
+
+describe("la nota de débito", () => {
+  it("lee los tipos de débito y no los de crédito (cada clase lee solo los suyos)", () => {
+    expect(leerNotaDeDebito(nota({ tipo: "NOTA_DEBITO_A" }))).toMatchObject({
+      ok: true,
+      valor: { tipo: "NOTA_DEBITO_A" },
+    });
+    for (const tipo of ["NOTA_CREDITO_A", "FACTURA_A", "NOTA_DEBITO_Z", null, 7]) {
+      expect(leerNotaDeDebito(nota({ tipo })), String(tipo)).toEqual({
+        ok: false,
+        error: "TIPO_DE_COMPROBANTE_INVALIDO",
+      });
+    }
+    expect(leerNotaDeCredito(nota({ tipo: "NOTA_DEBITO_A" }))).toEqual({
+      ok: false,
+      error: "TIPO_DE_COMPROBANTE_INVALIDO",
+    });
+    expect(leerNota(nota({ tipo: "NOTA_DEBITO_B" }), "NOTA_DE_DEBITO")).toMatchObject({ ok: true });
+  });
+
+  it("la huella distingue la clase y el vínculo: una nota de débito suelta (sin factura) no es la vinculada ni la de crédito", () => {
+    const d = leerNotaDeDebito(nota({ tipo: "NOTA_DEBITO_A" }));
+    if (!d.ok) throw new Error("nota de prueba inválida");
+    const vinculada = huellaDeLaNota("NOTA_DE_DEBITO", PROVEEDOR, FACTURA, d.valor);
+    const suelta = huellaDeLaNota("NOTA_DE_DEBITO", PROVEEDOR, null, d.valor);
+    const comoCredito = huellaDeLaNota("NOTA_DE_CREDITO", PROVEEDOR, FACTURA, d.valor);
+    expect(new Set([vinculada, suelta, comoCredito]).size).toBe(3);
+    expect(huellaDeLaNota("NOTA_DE_DEBITO", PROVEEDOR, null, d.valor)).toBe(suelta);
   });
 });

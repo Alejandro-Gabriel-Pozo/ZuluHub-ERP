@@ -8,7 +8,7 @@ import { validarHoraDeConteo } from "../dominio/conteo";
 import { esUnidadConocida } from "../dominio/composicion";
 import type { RegistroGuardado } from "../persistencia/modelo";
 import { autorizar, traducir } from "./comun";
-import { cargarConteo } from "./conteos-comun";
+import { cargarConteo, instanteDeLaHoraDelConteo } from "./conteos-comun";
 import type { DependenciasDeStock, TxDeStock } from "./contrato";
 import type { ErrorDeStock } from "./errores";
 import {
@@ -42,6 +42,11 @@ export type EntradaDeRegistrarConteo = Readonly<{
    * del depósito. Es un dato que la persona declaró: un reintento que la manda tiene que mandar la misma.
    */
   contadoEn?: Date | undefined;
+  /**
+   * La misma hora como la escribe quien cuenta, «HH:MM» (la pantalla no conoce la zona de la sucursal): el servidor la lleva al instante más reciente que ya pasó en la zona de la sucursal del depósito. Es EXCLUYENTE con
+   * `contadoEn` y sin ninguna de las dos vale la hora de la carga. Un reintento tardío puede resolver otro instante (si pasó esa hora de pared otra vez): es `ID_REUTILIZADO`, nunca un registro doble.
+   */
+  horaDelConteo?: string | undefined;
 }>;
 export type SalidaDeRegistrarConteo = Readonly<{ yaExistia: boolean }>;
 
@@ -186,7 +191,18 @@ export function armarRegistrarConteo(dependencias: DependenciasDeStock) {
         if (id === null) return err("IDENTIFICADOR_INVALIDO");
         const conteo = await cargarConteo(tx, contexto, entrada.conteoId, false);
         if (!conteo.ok) return conteo;
-        const contadoEn = entrada.contadoEn;
+        let contadoEn = entrada.contadoEn;
+        if (entrada.horaDelConteo !== undefined) {
+          if (contadoEn !== undefined) return err("IDENTIFICADOR_INVALIDO");
+          const instante = await instanteDeLaHoraDelConteo(
+            tx,
+            contexto,
+            conteo.valor.depositoId,
+            entrada.horaDelConteo,
+          );
+          if (!instante.ok) return instante;
+          contadoEn = instante.valor;
+        }
         if (
           contadoEn !== undefined &&
           !(contadoEn instanceof Date && contadoEn.getTime() <= contexto.ahora.getTime())

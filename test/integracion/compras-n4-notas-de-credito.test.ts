@@ -402,7 +402,7 @@ describe.skipIf(base === null)("compras N4: notas de crédito del proveedor", ()
     expect(fila.rows[0]).toEqual({ calculado: "605.00", papel: "605.01" });
   });
 
-  it("la empresa en otro nivel no carga notas (ORDEN_NO_CORRESPONDE_AL_NIVEL); anular lo cargado sigue", async () => {
+  it("la empresa en otro nivel también carga notas de sus facturas (NOTAS-1, Q-4): la nota graba el nivel de su factura; anular lo cargado sigue", async () => {
     const m = await armar();
     const n = valorDe(await cargar(m));
     valorDe(
@@ -411,7 +411,12 @@ describe.skipIf(base === null)("compras N4: notas de crédito del proveedor", ()
         versionEsperada: 2,
       }),
     );
-    expect(codigo(await cargar(m))).toBe("ORDEN_NO_CORRESPONDE_AL_NIVEL");
+    const otra = valorDe(await cargar(m));
+    const niveles = await c.filas<{ nivel: string }>(
+      "select nivel from comprobante_de_proveedor where id = any($1::uuid[]) order by id",
+      [[n.comprobanteId, otra.comprobanteId, m.factura]],
+    );
+    expect(new Set(niveles.map((f) => f.nivel))).toEqual(new Set(["TRES_VIAS"]));
     valorDe(
       await c.casos.anularNotaDeCredito(m.e.gerente, {
         comprobanteId: n.comprobanteId,
