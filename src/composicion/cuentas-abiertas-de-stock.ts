@@ -1,6 +1,5 @@
 import type { CuentasAbiertasConElProducto } from "../modulos/stock/publico";
 import { cuentasAbiertasConElProducto } from "../modulos/ventas/publico";
-import type { TxDeApp } from "./conexiones";
 
 /**
  * El adaptador que une stock y ventas en el sentido contrario al de `stock-de-ventas.ts` (PRO-D1): antes de darle stock propio a un plato, stock pregunta cuántas cuentas abiertas tienen una línea de ese
@@ -10,6 +9,9 @@ import type { TxDeApp } from "./conexiones";
  * Previene: encender el stock propio de un plato sin que nadie vea que las cuentas abiertas con ese plato pasarán a descontarlo y no a sus ingredientes. Chequeo: `cuentas-abiertas-de-stock.test.ts` y
  * `test/integracion/stock-propio-cuentas-abiertas.test.ts`.
  */
+/** La transacción que espera la lectura de ventas (la `TxDeApp` compuesta); se toma de su firma para no importar `conexiones.ts` desde un archivo mutado. */
+type TxDeVentas = Parameters<typeof cuentasAbiertasConElProducto>[0];
+
 export const cuentasAbiertasDeVentasParaStock: CuentasAbiertasConElProducto = (
   tx,
   contexto,
@@ -18,5 +20,5 @@ export const cuentasAbiertasDeVentasParaStock: CuentasAbiertasConElProducto = (
   if (!("cuentas" in tx)) {
     throw new Error("contar las cuentas abiertas necesita la transacción compuesta con ventas");
   }
-  return cuentasAbiertasConElProducto(tx as unknown as TxDeApp, contexto.empresaId, productoId);
+  return cuentasAbiertasConElProducto(tx as unknown as TxDeVentas, contexto.empresaId, productoId);
 };
