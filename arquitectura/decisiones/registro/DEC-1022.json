@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1022",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Textos del libro de Movimientos: Transferencia, Ajuste y Anulación como rótulo de la clase de cada tarjeta, y «Anulado» con clave propia de stock.",
+  "que_cambia": "Cuatro claves nuevas (stock.clase.transferencia, stock.clase.ajuste, stock.clase.anulacion, stock.estado.anulado). «Entrada» y «Salida» reutilizan los verbos aprobados el 09/11. Revertir: sacar las claves y mostrar la tarjeta sin clase.",
+  "donde": "Delegación de textos DDD fila 173, aceptado por el orquestador; dia-uno-stock-inventario-de-textos-2026-11-25.md N-10, N-11 y N-12; «Anulado» aprobado como T4 el 15/11/2026 (textos-nuevos-pendientes.md)"
+}
