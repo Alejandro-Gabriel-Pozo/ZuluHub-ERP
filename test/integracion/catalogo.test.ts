@@ -2065,6 +2065,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "sesion_de_caja_id",
             "emitido_por",
             "emitido_en",
+            "cargado_a_parte_id", // 0107
           ].map((c) => `ticket.${c}`),
           ...[
             "id",
