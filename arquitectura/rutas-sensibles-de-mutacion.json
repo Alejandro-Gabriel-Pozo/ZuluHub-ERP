@@ -12,7 +12,8 @@
     "^apps/web/ui/plantillas/caja/(pedidos-de-caja|modelo-de-conteo-de-caja|modelo-de-la-caja)\\.ts$",
     "^apps/web/ui/plantillas/(cobrar|stock|produccion)/",
     "^apps/web/ui/plantillas/venta/(modelo-de-la-cuenta|modelo-de-venta-rapida)\\.ts$",
-    "^apps/web/ui/plantillas/catalogo/modelo-de-precios"
+    "^apps/web/ui/plantillas/catalogo/modelo-de-precios",
+    "^apps/web/ui/plantillas/recetas/modelo-de-formulario-de-receta\\.ts$"
   ],
   "dinero_exacto": ["^src/primitivas/dinero/"]
 }

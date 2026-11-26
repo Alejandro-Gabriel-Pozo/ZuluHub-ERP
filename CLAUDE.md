@@ -79,6 +79,12 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
   solo baja (`arquitectura/deuda/campos-sin-dato.json`), no una excepción silenciosa. Previene: la primitiva del CUIT existía y el campo de documento de
   «Emitir» no la usaba (el CUIT quedó escrito como nombre). Chequeo: `test/arquitectura/campos-con-dato.test.ts`, con una violación
   inyectada por cada caso.
+- **Decisiones por familia (dueño, 25/11/2026).** Toda decisión NUEVA del registro (`arquitectura/decisiones/registro/`) lleva el código de su familia: `DEC-<FAM>-<NNN>` (p. ej. `DEC-SAL-001`),
+  con el contador POR FAMILIA: la sesión dueña de la familia toma el siguiente número de SU familia, así dos PR de familias distintas nunca eligen el mismo id. Las familias son una lista
+  cerrada en `arquitectura/decisiones/familias.json` (ANO, CAT, CCL, CI, COM, DOM, FIS, IDE, PRO, SAL, STK, VEN; una familia nueva se agrega ahí, en un PR); las `DEC-NNNN` anteriores al `corte`
+  (26/11/2026) siguen válidas sin renumerar y desde el corte una decisión nueva con el formato viejo falla. Toda cita (`SUPUESTO … (DEC-SAL-001)`, `fuente: { decision }`, ids de la cuota)
+  admite los dos formatos. Previene: los choques de numeración entre sesiones en paralelo (medidos el 25/11/2026: 0962/0963 y 1066/1074–1077). Chequeo: `test/arquitectura/decisiones-familias.test.ts`
+  (familia inexistente, id repetido, formato roto, formato viejo después del corte) y `npm run decisiones:verificar`.
 - **Cuota de decisiones por PR (dueño, 2026-11-11).** Un PR agrega como máximo 5 decisiones de negocio (`DINERO`, `PERMISOS`, `COMERCIAL`) y 10
   técnicas pendientes de OK, desde la fecha de `arquitectura/decisiones/cuota.json` (`vigente_desde`); `npm run decisiones:verificar --base` falla si se pasa.
   Si se pasa: preguntar al dueño antes de construir, reusar una decisión existente o pedir su excepción (id, fecha y fuente en `excepciones`). Previene:

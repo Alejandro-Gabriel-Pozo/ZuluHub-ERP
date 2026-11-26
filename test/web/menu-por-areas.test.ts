@@ -264,7 +264,7 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "stock",
         "stock",
         "stock.ver",
-        "/stock/depositos",
+        "/stock/existencias",
         "stock.pantalla.stock",
       ],
       [
@@ -651,7 +651,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
           ],
         ],
         ["carta", [["pantalla", "secciones", "/catalogo/secciones", "catalogo.seccion.titulo"]]],
-        ["stock", [["pantalla", "stock", "/stock/depositos", "stock.pantalla.stock"]]],
+        ["stock", [["pantalla", "stock", "/stock/existencias", "stock.pantalla.stock"]]],
         ["produccion", [["pantalla", "recetas", "/catalogo/recetas", "receta.pantalla.recetas"]]],
       ],
     ],
