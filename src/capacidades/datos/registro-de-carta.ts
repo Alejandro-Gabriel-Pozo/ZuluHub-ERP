@@ -13,6 +13,12 @@ import type { DefinicionDeDato, Proposito } from "./tipos-de-datos";
  */
 
 const FORMULARIO_DE_CARTA = "apps/web/ui/plantillas/carta/FormularioDeCartaEnLinea.cliente.tsx";
+const FORMULARIO_DE_CUENTAS = "apps/web/ui/plantillas/carta/FormularioDeCuentaDeFotos.cliente.tsx";
+const FORMULARIO_DE_RETIRO =
+  "apps/web/ui/plantillas/carta/FormularioDeRetiroDeCuentaDeFotos.cliente.tsx";
+const PONER_POR_CUENTAS = ["vidrieras.administrar_cuentas_de_imagen"] as const;
+const FUENTE_DE_CUENTAS =
+  "brief-logo-de-la-carta-cuentas-declaradas-2026-11-25.md §3 y §5; decisión del dueño 25/11/2026 (filas 452 y 453 de decisiones-del-dueno-2026-11.md); DEC-1410 y DEC-1411";
 const REQUIERE_VIDRIERA = { modulo: "vidriera", estadoDeEmpresa: ["ACTIVE"] } as const;
 const PONER_POR = ["vidrieras.editar", "vidrieras.crear"] as const;
 const FUENTE_DE_IDENTIDAD =
@@ -92,6 +98,30 @@ export const DATOS_DE_CARTA = {
     ],
     consumidores: [FORMULARIO_DE_CARTA],
     ponerPor: PONER_POR,
+    requiere: REQUIERE_VIDRIERA,
+  },
+  "cuenta-de-foto": {
+    ficha: "src/capacidades/activos/direccion-externa.ts",
+    propositos: [
+      {
+        para: "Cuenta del proveedor de imágenes (Cloudinary) que la empresa declara como suya: de ella, y solo de ella, se trae el logo de la carta (hasta 2 activas por empresa).",
+        fuente: FUENTE_DE_CUENTAS,
+      },
+    ],
+    consumidores: [FORMULARIO_DE_CUENTAS],
+    ponerPor: PONER_POR_CUENTAS,
+    requiere: REQUIERE_VIDRIERA,
+  },
+  "motivo-de-retiro-de-la-cuenta-de-foto": {
+    ficha: "src/primitivas/texto/motivo-de-retiro-de-cuenta-de-imagen.ts",
+    propositos: [
+      {
+        para: "Por qué se retira una cuenta de fotos declarada: queda en la cuenta, que no se borra, con quién y cuándo la retiró.",
+        fuente: FUENTE_DE_CUENTAS,
+      },
+    ],
+    consumidores: [FORMULARIO_DE_RETIRO],
+    ponerPor: PONER_POR_CUENTAS,
     requiere: REQUIERE_VIDRIERA,
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
