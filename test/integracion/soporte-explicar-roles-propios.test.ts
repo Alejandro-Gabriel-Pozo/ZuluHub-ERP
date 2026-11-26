@@ -6,7 +6,6 @@ import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import { exigirAccion } from "../../src/capacidades/permisos/exigir";
 import type { SalidaDeExplicar } from "../../src/plataforma/casos-de-uso/explicar-por-que";
 import {
-  empresaId,
   personaId,
   type EmpresaId,
   type PersonaId,
@@ -319,7 +318,7 @@ describe.skipIf(base === null)(
       const cuenta = async () =>
         Number(
           (
-            await dueno.query(
+            await dueno.query<{ n: number }>(
               "select count(*)::int as n from auditoria_plataforma where entidad_id = $1 and accion = 'SOPORTE_EXPLICAR'",
               [e.empresa],
             )

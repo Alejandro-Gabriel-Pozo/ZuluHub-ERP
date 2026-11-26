@@ -51,7 +51,7 @@ describe.skipIf(base === null)(
       await dueno.connect();
       empresa = (await crearEmpresaActiva(entorno)).empresa;
       persona = (await crearPersonaDeBase(dueno)).id;
-      await crearMembresiaDeBase(dueno, empresa as never, persona, "OPERADOR", true);
+      await crearMembresiaDeBase(dueno, empresa, persona, "OPERADOR", true);
       const autor = (await crearPersonaDeBase(dueno)).id;
       rol = randomUUID();
       await dueno.query(
