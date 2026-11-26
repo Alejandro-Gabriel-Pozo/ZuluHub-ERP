@@ -41,7 +41,9 @@ export function PantallaDeEleccionDeEmpresa({
                 <Pila separacion={2}>
                   <p className={estilos["nombre"]}>{empresa.nombre}</p>
                   <Pila direccion="fila" separacion={2} envolver alinear="centro">
-                    <Insignia tono="neutro">{textoDelRol(empresa.rol, diccionario)}</Insignia>
+                    {empresa.rol === null ? null : (
+                      <Insignia tono="neutro">{textoDelRol(empresa.rol, diccionario)}</Insignia>
+                    )}
                     {noOpera === null ? null : <Insignia tono="aviso">{noOpera}</Insignia>}
                   </Pila>
                   <BotonDeEnvio

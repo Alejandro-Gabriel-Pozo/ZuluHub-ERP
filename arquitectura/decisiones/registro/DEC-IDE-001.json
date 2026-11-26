@@ -1,0 +1,10 @@
+{
+  "id": "DEC-IDE-001",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Quien tiene un rol propio se ve con el nombre de su rol en Usuarios; en la elección de empresa y en la cuenta no se muestra rol. Las sucursales se le asignan como a un empleado.",
+  "que_cambia": "La lista de usuarios deja de fallar con un rol propio (reemplaza DEC-0960); quien lo tiene trabaja solo en las sucursales que se le asignen. Elegir empresa y cuenta no muestran su nombre: leerlo exige una lectura entre empresas.",
+  "donde": "src/capacidades/permisos/roles.ts (rolBaseParaMostrar); src/composicion/usuarios-web.ts; apps/web/ui/plantillas/usuarios/modelo-de-usuarios.ts; apps/web/ui/plantillas/sesion"
+}
