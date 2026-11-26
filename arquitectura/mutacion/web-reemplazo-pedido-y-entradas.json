@@ -1,0 +1,7 @@
+{
+  "grupo": "web (reemplazo del comprobante: pedido y entradas)",
+  "archivos": "src/composicion/entradas-de-reemplazo.ts,src/composicion/reemplazo-web.ts,apps/web/ui/plantillas/compras/reemplazo/modelo-de-reemplazo.ts",
+  "minutos": 4,
+  "pruebas": "src/composicion/entradas-de-reemplazo.test.ts src/composicion/reemplazo-web.test.ts test/web/modelo-de-reemplazo.test.ts",
+  "nivel": "CRITICO"
+}
