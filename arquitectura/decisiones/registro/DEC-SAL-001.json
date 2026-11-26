@@ -1,0 +1,10 @@
+{
+  "id": "DEC-SAL-001",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Dividir por porcentaje es un cobro con varios importes, no una operación aparte. Dividir por ítems reparte sin recotizar, el centavo que sobra va a la Cuenta 1 y todo usa una sola regla.",
+  "que_cambia": "El total de las cuentas hijas es siempre el de la mesa, al centavo (la prueba del dueño: $ 6.001,00). Por porcentaje no se guarda el porcentaje, solo los importes cobrados.",
+  "donde": "src/primitivas/cuentas/reparto.ts, division.ts y src/composicion/dividir-cuenta-web.ts; Pedernal-docs briefs/salon/SAL-E2-dividir-la-cuenta.md secciones 1 y 6"
+}
