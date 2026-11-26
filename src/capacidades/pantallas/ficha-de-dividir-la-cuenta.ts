@@ -4,7 +4,7 @@ import type { FichaDePantalla } from "./ficha-de-mesas";
  * LA FICHA DE «DIVIDIR LA CUENTA» (SAL-E2, S11) Y DE LA LISTA DE CUENTAS DE UNA MESA DIVIDIDA (S9; DDD:174: toda pantalla nueva nace con ficha). Es parte de la pantalla «Mesa» (`ficha-de-la-mesa.ts`: misma ruta, mismo acceso)
  * y la de «Cobrar» una cuenta hija (`?cuenta=` en la ruta de cobrar la mesa). Declara lo que se ve y se hace en la hoja de reparto por ítems y en la lista de cuentas: los botones con la acción de permiso que cada uno envía y cada texto
  * con SU uso y SU fuente. Todos los textos ya existían en el catálogo (aprobados con las maquetas `salon.html` y `unir.html`, 09/11/2026); ninguno es nuevo. «Por porcentaje» NO tiene pantalla propia: es un cobro con varios
- * importes (DEC-1032). La comprueba `test/web/ficha-de-dividir-la-cuenta.test.ts`. Previene: un botón o un texto que nadie aprobó y una hoja que se desfasa de lo declarado.
+ * importes (DEC-SAL-001). La comprueba `test/web/ficha-de-dividir-la-cuenta.test.ts`. Previene: un botón o un texto que nadie aprobó y una hoja que se desfasa de lo declarado.
  */
 const USO_DEL_MODELO = "textos-de-dividir.ts y modelo-de-dividir.ts (SAL-E2)";
 const SALON_APROBADO = {

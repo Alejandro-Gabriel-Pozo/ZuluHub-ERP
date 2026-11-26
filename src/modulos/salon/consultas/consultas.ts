@@ -17,6 +17,7 @@ import {
 import { importeAJson, type ImporteJson } from "../../../primitivas/dinero/importe";
 import { ANCLA_DE_MESA } from "../casos-de-uso/cuenta-de-mesa";
 import { estadoDeMesa, type EstadoDeMesa } from "../dominio/estado-de-mesa";
+import type { CuentaDeLaFicha, FichaDeMesa, LineaDeLaFicha } from "./ficha-de-mesa";
 import type { Mesa } from "../persistencia/repositorio-de-mesas";
 import type { DependenciasDeConsultasDeSalon, TxDeConsultasDeSalon } from "./contrato";
 
@@ -62,44 +63,7 @@ export type MesaDelMapa = Readonly<{
 
 export type EntradaDeFichaDeMesa = Readonly<{ mesaId: string }>;
 
-export type LineaDeLaFicha = Readonly<{
-  lineaId: string;
-  posicion: number;
-  descripcion: string;
-  varianteNombre: string | null;
-  cantidad: string;
-  precioUnitario: string;
-  /** El paso de la cantidad congelado en la línea (para repartir por unidades al dividir). */
-  pasoDeCantidad: string;
-  importe: string;
-  /** El importe de una línea compartida entre cuentas («Compartido»). */
-  compartida: boolean;
-  /** Estado de comanda: lo que falta enviar, lo que espera y lo enviado con su número de envío. */
-  comanda: "PARA_ENVIAR" | "ESPERA" | "ENVIADA";
-  numeroDeEnvio: number | null;
-  /** El envío en que salió el ítem (para reimprimir su papel); `null` si todavía no se envió. */
-  envioId: string | null;
-  /** «De la mesa N»: el número de la mesa de la que vino el ítem por una unión. */
-  deLaMesa: number | null;
-}>;
-
-export type CuentaDeLaFicha = Readonly<{
-  cuentaId: string;
-  /** Número de la parte («Cuenta 2») si es una cuenta hija de una división. */
-  parte: number | null;
-  /** Una cuenta hija ya cobrada (cerrada): se muestra «Cobrada» y no se vuelve a cobrar; una cuenta de mesa o una hija abierta es `false`. */
-  cobrada: boolean;
-  total: ImporteJson;
-  lineas: readonly LineaDeLaFicha[];
-}>;
-
-export type FichaDeMesa = Readonly<{
-  mesaId: string;
-  numero: number;
-  estado: EstadoDeMesa;
-  unidaAMesa: number | null;
-  cuentas: readonly CuentaDeLaFicha[];
-}>;
+export type { CuentaDeLaFicha, FichaDeMesa, LineaDeLaFicha } from "./ficha-de-mesa";
 
 export type EntradaDeListarMesas = Readonly<{
   sucursalId: string;
@@ -338,7 +302,8 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
           }
         }
         const cuentas: CuentaDeLaFicha[] = [];
-        const resumenes: number[] = [];
+        // El estado de la mesa sale solo de las cuentas que siguen abiertas (una hija cobrada ya no cuenta).
+        const paraElEstado: { pendientes: number; envios: number }[] = [];
         for (const c of cuentasParaMostrar) {
           const lineas = await tx.cuentas.lineasDeCuenta(empresaId, c.id as never);
           const calculado = calcularLasLineas(lineas);
@@ -383,7 +348,10 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
                 : null,
             };
           });
-          resumenes.push(lineasFicha.filter((x) => x.comanda !== "ENVIADA").length);
+          const enviadas = lineasFicha.filter((x) => x.comanda === "ENVIADA").length;
+          if (!c.cobrada) {
+            paraElEstado.push({ pendientes: lineasFicha.length - enviadas, envios: enviadas });
+          }
           cuentas.push({
             cuentaId: c.id,
             parte: c.parte,
@@ -393,17 +361,7 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
           });
         }
         const estado = estadoDeMesa({
-          // El estado de la mesa sale solo de las cuentas que siguen abiertas (una hija cobrada ya no cuenta).
-          cuentas: cuentas.flatMap((c, i) =>
-            c.cobrada
-              ? []
-              : [
-                  {
-                    pendientes: resumenes[i] ?? 0,
-                    envios: c.lineas.filter((l) => l.comanda === "ENVIADA").length,
-                  },
-                ],
-          ),
+          cuentas: paraElEstado,
           unidaAMesa,
         });
         return ok({ mesaId: mesa.id, numero: mesa.numero, estado, unidaAMesa, cuentas });

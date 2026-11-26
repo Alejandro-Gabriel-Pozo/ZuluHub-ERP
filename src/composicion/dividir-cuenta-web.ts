@@ -9,7 +9,7 @@ import { accionDelSalon, errorDeDividir } from "./errores-de-salon";
 /**
  * «Dividir la cuenta» por ítems (SAL-E2; `dividirCuenta` del salón, E7 §3.9): cada línea va entera a una cuenta, por unidades o compartida; las hijas se cobran por separado y la madre queda de reserva hasta
  * cobrar la última. La sucursal la fija el servidor y la valida el caso de uso (una cuenta de otra es «no existe», también en una repetición); repetir con el mismo `divisionId` devuelve las mismas cuentas
- * (`yaExistia`), con otra asignación no se pisa. Los motivos de «unir» salen como el genérico. Por porcentaje NO hay caso de uso: es un cobro con varios importes (DEC-1032). Chequeo: `test/integracion/dividir-cuenta-web.test.ts`.
+ * (`yaExistia`), con otra asignación no se pisa. Los motivos de «unir» salen como el genérico. Por porcentaje NO hay caso de uso: es un cobro con varios importes (DEC-SAL-001). Chequeo: `test/integracion/dividir-cuenta-web.test.ts`.
  */
 export type DependenciasDeDividirCuentaWeb = Readonly<{
   casosDeUso: () => Pick<CasosDeUsoDeSalon, "dividirCuenta">;
