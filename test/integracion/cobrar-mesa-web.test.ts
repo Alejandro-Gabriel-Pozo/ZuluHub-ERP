@@ -292,6 +292,17 @@ describe.skipIf(base === null)("composición web: cobrar la mesa", () => {
       GENERICO,
     );
     expect(await cobrarLaMesa(d, e.gerente, "", pedido(cuentaId, caja))).toMatchObject(GENERICO);
+    // El caso de uso sin sucursal de trabajo (un llamado que la omite) cierra: nunca compara a medias.
+    const sin = pedido(cuentaId, caja);
+    expect(
+      await m.salon.cobrarMesa(e.gerente, {
+        claveIdempotencia: sin.claveIdempotencia,
+        cuentaId,
+        ejemplarId: sin.ejemplarId,
+        totalEsperado: sin.totalEsperado,
+        cobro: { cajaId: caja.cajaId, cobros: [] },
+      } as never),
+    ).toEqual({ ok: false, error: "CUENTA_NO_ENCONTRADA" });
     // Una cuenta de otra empresa (y la caja de otra empresa con una cuenta propia).
     expect(
       await cobrarLaMesa(d, e.gerente, e.sucursal, pedido(ajena.cuentaId, cajaOtra)),

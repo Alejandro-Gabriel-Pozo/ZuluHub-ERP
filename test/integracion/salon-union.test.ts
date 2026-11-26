@@ -297,6 +297,7 @@ describe.skipIf(base === null)("salón: unir mesas", () => {
     // Lo que vino de b estaba sin enviar: hay que enviarlo antes de cobrar.
     expect(
       await m.salon.cobrarMesa(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         claveIdempotencia: nuevaClave(),
         cuentaId: a.cuenta,
         ejemplarId: nuevoId(),
@@ -322,6 +323,7 @@ describe.skipIf(base === null)("salón: unir mesas", () => {
     );
     const v = valorDe(
       await m.salon.cobrarMesa(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         claveIdempotencia: nuevaClave(),
         cuentaId: a.cuenta,
         ejemplarId: nuevoId(),

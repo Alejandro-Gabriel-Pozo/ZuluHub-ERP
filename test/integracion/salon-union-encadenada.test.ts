@@ -97,6 +97,7 @@ describe.skipIf(base === null)(
       )[0]?.estado;
     const cobrar = (cuenta: string, total: string) =>
       m.salon.cobrarMesa(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         claveIdempotencia: nuevaClave(),
         cuentaId: cuenta,
         ejemplarId: nuevoId(),
