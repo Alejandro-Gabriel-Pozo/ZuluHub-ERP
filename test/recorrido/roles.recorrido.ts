@@ -1,5 +1,6 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { crearMembresiaDeBase, crearPersonaDeBase } from "../integracion/fixtures-identidad";
 import { crearMundoDeMarca } from "../integracion/marcas-apoyo";
 import { HOST_DEL_RECORRIDO, armarMundoDelRecorrido, type MundoDelRecorrido } from "./apoyo/mundo";
 import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilante";
@@ -10,6 +11,8 @@ import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilan
  *  R2 en la ficha tilda una acción y guarda: queda guardada (una versión nueva) y al volver a abrir sigue tildada; lo cerrado (solo gerente) no se puede tildar;
  *  R3 archiva el rol: la lista lo muestra «Archivado»; lo reactiva y vuelve a figurar activo;
  *  R4 la ficha de un rol de otra empresa dice lo mismo que una inexistente.
+ *  R5 abre la ficha de un empleado y le cambia el rol a uno propio con «Guardar» (dos toques seguidos: un solo cambio): queda guardado y la ficha lo muestra; el gerente no tiene ese bloque.
+ *  R5 abre la ficha de un empleado y le cambia el rol a uno propio con «Guardar» (dos toques seguidos: un solo cambio): queda guardado y la ficha lo muestra; en la ficha del gerente no hay ese bloque.
  * Además: la entrada «Roles» figura en el menú de Cuenta para el gerente y sin violaciones graves de accesibilidad.
  * Lo que esta prueba ve y las de componentes y las de integración no: las acciones de servidor en el navegador (cifrado del id y de la versión ligados con `.bind`, la navegación tras crear) y la lista que se vuelve a leer.
  */
@@ -136,6 +139,45 @@ describe.skipIf(base === null)("recorrido de roles propios", () => {
     expect(await pagina.content()).not.toContain("Ajeno");
     await ir("/cuenta/roles/0c0c0c0c-1111-4222-8333-444444444499");
     await pagina.getByText(GENERICO).waitFor();
+  });
+
+  it("R5: en la ficha de un empleado el gerente cambia su rol a uno propio con «Guardar» (dos toques, un solo cambio) y queda guardado; la ficha del gerente no ofrece cambiar el rol", async () => {
+    const c = mundo.mundo.dueno;
+    const persona = await crearPersonaDeBase(c, "empleado@lacteos.test");
+    await crearMembresiaDeBase(c, mundo.empresa, persona.id, "OPERADOR");
+    const [cajero] = await rolesLlamados("Cajero");
+    await ir(`/cuenta/usuarios/${persona.id}`);
+    const selector = pagina.getByLabel("Rol", { exact: true });
+    await selector.waitFor();
+    await sinViolacionesDeAxe();
+    await selector.selectOption(`PROPIO:${cajero?.id}`);
+    await pagina.getByRole("button", { name: "Guardar" }).first().dblclick();
+    await expect
+      .poll(
+        async () =>
+          (
+            await consulta<{ rol: string; rol_propio_id: string | null }>(
+              "select rol, rol_propio_id from membresia where empresa_id = $1 and persona_id = $2",
+              [mundo.empresa, persona.id],
+            )
+          )[0],
+      )
+      .toEqual({ rol: "PROPIO", rol_propio_id: cajero?.id });
+    const asignaciones = await consulta<{ n: string }>(
+      "select count(*) as n from auditoria_empresa where empresa_id = $1 and accion = 'ROL_ASIGNADO' and entidad_id = $2",
+      [mundo.empresa, persona.id],
+    );
+    expect(Number(asignaciones[0]?.n)).toBe(1);
+
+    await ir(`/cuenta/usuarios/${persona.id}`);
+    await pagina.getByText("Cajero").first().waitFor();
+    const gerente = await consulta<{ persona_id: string }>(
+      "select persona_id from membresia where empresa_id = $1 and rol = 'GERENTE'",
+      [mundo.empresa],
+    );
+    await ir(`/cuenta/usuarios/${gerente[0]?.persona_id}`);
+    await pagina.getByRole("heading").first().waitFor();
+    expect(await pagina.getByLabel("Rol", { exact: true }).count()).toBe(0);
   });
 
   it("la entrada «Roles» figura en el menú de Cuenta del gerente", async () => {

@@ -10,6 +10,9 @@ import {
   armarLaFichaDeUsuario,
 } from "../../../../../../../ui/plantillas/usuarios/modelo-de-usuarios";
 import { PantallaDeFichaDeUsuario } from "../../../../../../../ui/plantillas/usuarios/PantallaDeFichaDeUsuario";
+import { cargarLosRolesAsignables, ofertasDeRoles } from "../../../../../../../servidor/roles";
+import { armarElEditorDeRolDeUsuario } from "../../../../../../../ui/plantillas/roles/modelo-de-roles";
+import { asignarRolAccion } from "../../../../acciones-de-roles";
 import { asignarSucursalesAccion, desactivarUsuarioAccion } from "../../../../acciones-de-usuarios";
 
 // `/cuenta/usuarios/[personaId]`: la ficha de una persona de la empresa. El id es lo único que viene de la dirección: la empresa y quien mira salen de la sesión, y el servidor lo busca entre las personas
@@ -37,10 +40,34 @@ export default async function PaginaDeFichaDeUsuario({
     );
     const editor = await cargarElEditorDeSucursales(contexto, personaId);
     if (!editor.ok) return <ErrorDelDetalle error={editor.error} />;
+    // «Rol» (solo el gerente, y no sobre el gerente): el selector con los roles asignables. Sin permiso o con una falla, la ficha no ofrece cambiar el rol (el servidor lo vuelve a exigir al enviar).
+    const ofertasDeRol = await ofertasDeRoles(contexto);
+    const asignables =
+      ofertasDeRol.asignar && ficha.dato.rol !== "GERENTE"
+        ? await cargarLosRolesAsignables(contexto)
+        : null;
+    const actual =
+      typeof ficha.dato.rol === "string"
+        ? ({ tipo: "BASE", rol: ficha.dato.rol } as const)
+        : ficha.dato.rolPropioId === null
+          ? null
+          : ({
+              tipo: "PROPIO",
+              rolId: ficha.dato.rolPropioId,
+              nombre: ficha.dato.rol.propio,
+            } as const);
+    const rol =
+      asignables?.ok === true && actual !== null
+        ? {
+            editor: armarElEditorDeRolDeUsuario(asignables.dato, actual, {}),
+            accion: asignarRolAccion.bind(null, personaId),
+          }
+        : null;
     return conTitulo(
       armada.email,
       <PantallaDeFichaDeUsuario
         ficha={armada}
+        rol={rol}
         desactivar={desactivarUsuarioAccion.bind(null, ficha.dato.personaId)}
         sucursales={
           editor.dato === null

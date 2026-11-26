@@ -7,7 +7,9 @@ import { ArmazonDeOperacion } from "../sesion/ArmazonDeOperacion";
 import { AccionDeEstadoDeRol } from "./AccionDeEstadoDeRol.cliente";
 import { FormularioDeAltaDeRol } from "./FormularioDeAltaDeRol.cliente";
 import { FormularioDeFichaDeRol } from "./FormularioDeFichaDeRol.cliente";
+import { FormularioDeRolDeUsuario } from "./FormularioDeRolDeUsuario.cliente";
 import {
+  armarElEditorDeRolDeUsuario,
   armarElFormularioDeAlta,
   armarLaFichaDeRol,
   armarLaListaDeRoles,
@@ -238,5 +240,58 @@ describe("AccionDeEstadoDeRol", () => {
     await page.getByRole("button", { name: "Archivar" }).dblClick();
     await new Promise((r) => setTimeout(r, 500));
     expect(pedidos).toHaveLength(1);
+  });
+});
+
+describe("FormularioDeRolDeUsuario", () => {
+  const asignables = {
+    base: ["ADMINISTRADOR", "OPERADOR"],
+    propios: [{ rolId: R(1), nombre: "Cajero" }],
+  } as const;
+
+  it("ofrece los dos roles base y los propios activos con el rol actual marcado, sin violaciones graves de accesibilidad, y manda el rol elegido; un doble toque es un solo envío", async () => {
+    const { accion, pedidos } = accionQueAnota();
+    await render(
+      conArmazon(
+        <FormularioDeRolDeUsuario
+          editor={armarElEditorDeRolDeUsuario(asignables, { tipo: "BASE", rol: "OPERADOR" }, {})}
+          accion={accion}
+        />,
+      ),
+    );
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    const selector = page.getByLabelText("Rol");
+    await expect.element(selector).toHaveValue("BASE:OPERADOR");
+    await selector.selectOptions(`PROPIO:${R(1)}`);
+    await page.getByRole("button", { name: "Guardar" }).dblClick();
+    await new Promise((r) => setTimeout(r, 500));
+    expect(pedidos).toEqual([{ rol: [`PROPIO:${R(1)}`] }]);
+  });
+
+  it("un rol actual archivado se ve como opción apagada con su nombre: el selector arranca en un valor real y no ofrece reasignar a él", async () => {
+    const editor = armarElEditorDeRolDeUsuario(
+      asignables,
+      { tipo: "PROPIO", rolId: R(2), nombre: "Viejo" },
+      {},
+    );
+    expect(editor.valorInicial).toBe(`PROPIO:${R(2)}`);
+    expect(editor.opciones.find((o) => o.valor === `PROPIO:${R(2)}`)).toEqual({
+      valor: `PROPIO:${R(2)}`,
+      etiqueta: "Viejo",
+      apagada: true,
+    });
+    const { accion } = accionQueAnota();
+    await render(conArmazon(<FormularioDeRolDeUsuario editor={editor} accion={accion} />));
+    await expect.element(page.getByLabelText("Rol")).toHaveValue(`PROPIO:${R(2)}`);
+  });
+
+  it("el rol actual que sigue activo no se duplica en las opciones", () => {
+    const editor = armarElEditorDeRolDeUsuario(
+      asignables,
+      { tipo: "PROPIO", rolId: R(1), nombre: "Cajero" },
+      {},
+    );
+    expect(editor.opciones.filter((o) => o.etiqueta === "Cajero")).toHaveLength(1);
+    expect(editor.opciones.map((o) => o.etiqueta)).toEqual(["Administrador", "Empleado", "Cajero"]);
   });
 });

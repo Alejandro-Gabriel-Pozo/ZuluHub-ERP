@@ -42,7 +42,7 @@ describe("ficha de la pantalla «Usuarios»", () => {
     }
   });
 
-  it("sus botones son los de invitar, enviar, reenviar, revocar, desactivar (que abre un cuadro y lo confirma), reactivar (un enlace al formulario de invitar) y guardar sucursales, cada uno con su permiso, y sin permiso ninguno se dibuja; los dos estados son el mensaje genérico", () => {
+  it("sus botones son los de invitar, enviar, reenviar, revocar, desactivar (que abre un cuadro y lo confirma), reactivar (un enlace al formulario de invitar), guardar sucursales y guardar el rol, cada uno con su permiso, y sin permiso ninguno se dibuja; los dos estados son el mensaje genérico", () => {
     const botones: readonly Readonly<{ id: string; hace: unknown; sinPermiso: string }>[] =
       FICHA_DE_USUARIOS.botones;
     expect(botones.map((b) => [b.id, b.hace, b.sinPermiso])).toEqual([
@@ -54,6 +54,7 @@ describe("ficha de la pantalla «Usuarios»", () => {
       ["confirmar-desactivar", { envia: "usuarios.apagar" }, "AUSENTE"],
       ["reactivar", { navega: "/cuenta/usuarios/invitar" }, "AUSENTE"],
       ["guardar-sucursales", { envia: "usuarios.asignar_sucursales" }, "AUSENTE"],
+      ["guardar-rol", { envia: "usuarios.asignar_rol" }, "AUSENTE"],
     ]);
     for (const b of botones) {
       const hace = b.hace;

@@ -35,6 +35,8 @@ type FichaConCuadro = Omit<FichaDePantalla, "botones"> &
  * SUPUESTO (DEC-0851): la ficha NO se da de alta en `fichas.ts` (`FICHAS`, vacío a propósito, con otra forma de ficha): todas las fichas hoy son locales como esta, con su prueba en `test/web/`; migrarlas a `FICHAS` es de otro tramo.
  * Revertir el supuesto cuesta un archivo.
  *
+ * BOTÓN (H4b, T6): «Guardar» el rol de una persona desde su ficha (`usuarios.asignar_rol`, solo el gerente y nunca sobre el gerente): un selector «Rol» con los dos roles base y los roles propios activos, con textos ya aprobados («Rol», «Guardar»).
+ *
  * Previene: un botón o un texto que nadie aprobó, y una ruta o una fila de menú que se mueve sin que la ficha lo note.
  */
 
@@ -94,6 +96,7 @@ export const FICHA_DE_USUARIOS = {
     "src/composicion/usuarios-web.ts",
     "src/composicion/entradas-de-usuarios.ts",
     "src/composicion/errores-de-usuarios.ts",
+    "apps/web/ui/plantillas/roles/FormularioDeRolDeUsuario.cliente.tsx",
   ],
   rutas: [
     "/cuenta/usuarios",
@@ -150,6 +153,12 @@ export const FICHA_DE_USUARIOS = {
       id: "guardar-sucursales",
       texto: "catalogo.accion.guardar",
       hace: { envia: "usuarios.asignar_sucursales" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "guardar-rol",
+      texto: "catalogo.accion.guardar",
+      hace: { envia: "usuarios.asignar_rol" },
       sinPermiso: "AUSENTE",
     },
   ],
