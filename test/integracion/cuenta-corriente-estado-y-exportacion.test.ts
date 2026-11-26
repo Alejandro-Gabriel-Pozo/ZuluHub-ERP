@@ -123,6 +123,7 @@ describe.skipIf(base === null)(
           cuentaId: cuenta,
           ejemplarId: nuevoId(),
           clienteId,
+          totalEsperado: { moneda: "ARS", monto: "1000.00" },
         }),
       );
     };

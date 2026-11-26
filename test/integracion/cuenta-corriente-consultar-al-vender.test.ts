@@ -98,7 +98,12 @@ describe.skipIf(base === null)("cuenta corriente: consultar al vender (CC-5)", (
   const cargar = async (clienteId: string) => {
     const cuenta = await cuentaAbierta();
     valorDe(
-      await m.casos.cerrarCuenta(e.gerente, { cuentaId: cuenta, ejemplarId: nuevoId(), clienteId }),
+      await m.casos.cerrarCuenta(e.gerente, {
+        cuentaId: cuenta,
+        ejemplarId: nuevoId(),
+        clienteId,
+        totalEsperado: { moneda: "ARS", monto: "1000.00" },
+      }),
     );
   };
   const constancias = async () =>
@@ -190,6 +195,7 @@ describe.skipIf(base === null)("cuenta corriente: consultar al vender (CC-5)", (
         cuentaId: cerrada,
         ejemplarId: nuevoId(),
         clienteId: c,
+        totalEsperado: { moneda: "ARS", monto: "1000.00" },
       }),
     );
     const anulada = await cuentaAbierta();
@@ -305,7 +311,12 @@ describe.skipIf(base === null)("cuenta corriente: consultar al vender (CC-5)", (
     const [a, b, cierre] = await Promise.all([
       casos.verClienteParaVender(e.operador, pedido),
       casos.verClienteParaVender(e.operador, pedido),
-      m.casos.cerrarCuenta(e.gerente, { cuentaId: aCerrar, ejemplarId: nuevoId(), clienteId: c }),
+      m.casos.cerrarCuenta(e.gerente, {
+        cuentaId: aCerrar,
+        ejemplarId: nuevoId(),
+        clienteId: c,
+        totalEsperado: { moneda: "ARS", monto: "1000.00" },
+      }),
     ]);
     valorDe(cierre);
     for (const r of [a, b]) {
