@@ -45,7 +45,11 @@ const CLAVES_BASE = Object.freeze([
 ]);
 const CLAVES_DE_SIN_DECISION = Object.freeze([...CLAVES_BASE, "motivo"]);
 
-const FORMA_DEL_ID = /^DEC-\d{4}$/;
+/** El id heredado (`DEC-0001`, valido solo para entradas anteriores al corte) y el id POR FAMILIA (`DEC-SAL-001`, el de toda entrada desde el corte). */
+const FORMA_DEL_ID_HEREDADO = /^DEC-\d{4}$/;
+const FORMA_DEL_ID_POR_FAMILIA = /^DEC-([A-Z]{2,4})-(\d{3})$/;
+const FORMA_DE_UNA_FAMILIA = /^[A-Z]{2,4}$/;
+const LARGO_MAXIMO_DEL_NOMBRE_DE_UNA_FAMILIA = 100;
 /**
  * Lo PERMITIDO en un texto: palabras de letras, dígitos y los signos de una frase, separadas por UN espacio, sin blancos en los
  * extremos ni saltos de línea ni caracteres de control.
@@ -79,8 +83,54 @@ function esFechaReal(fecha) {
 
 const dentroDe = (lista, valor) => lista.includes(valor);
 
-/** Los problemas de UNA entrada del registro (vacío si está bien). */
-function problemasDeUnaEntrada(entrada) {
+/**
+ * Los problemas de la lista de FAMILIAS de decisiones (`familias.json`): `{ corte, familias: { FAM: "nombre" } }`. Cada decisión nueva lleva el código de su familia
+ * (`DEC-SAL-001`) y el contador es POR FAMILIA: la sesión dueña de la familia toma el siguiente de la suya, así dos PR de familias distintas nunca eligen el mismo id.
+ * `corte` es el día desde el cual toda entrada nueva usa el formato por familia (las anteriores conservan su `DEC-NNNN`). Una familia nueva se agrega acá, en un PR.
+ */
+function problemasDeLasFamilias(valor) {
+  if (!esObjeto(valor) || Object.keys(valor).sort().join() !== "corte,familias") {
+    return ["familias.json lleva exactamente: corte, familias."];
+  }
+  const problemas = [];
+  if (!esFechaReal(valor.corte)) {
+    problemas.push("corte es un día real con la forma AAAA-MM-DD.");
+  }
+  if (!esObjeto(valor.familias) || Object.keys(valor.familias).length === 0) {
+    problemas.push("familias es un objeto con al menos una familia.");
+    return problemas;
+  }
+  for (const [codigo, nombre] of Object.entries(valor.familias)) {
+    if (!FORMA_DE_UNA_FAMILIA.test(codigo)) {
+      problemas.push(`la familia «${codigo}» son de 2 a 4 letras mayúsculas.`);
+    }
+    problemas.push(
+      ...problemasDeUnTexto(nombre, `familias.${codigo}`, LARGO_MAXIMO_DEL_NOMBRE_DE_UNA_FAMILIA),
+    );
+  }
+  return problemas;
+}
+
+/** Los problemas de un id (vacío si está bien): heredado `DEC-0001` o por familia `DEC-SAL-001` con la familia en la lista. */
+function problemasDeUnId(id, familias) {
+  if (typeof id !== "string")
+    return ["id tiene la forma DEC-0001 (heredada) o DEC-SAL-001 (por familia)."];
+  if (FORMA_DEL_ID_HEREDADO.test(id)) return [];
+  const porFamilia = FORMA_DEL_ID_POR_FAMILIA.exec(id);
+  if (porFamilia === null) {
+    return ["id tiene la forma DEC-0001 (heredada) o DEC-SAL-001 (por familia)."];
+  }
+  if (!Object.hasOwn(familias.familias, porFamilia[1])) {
+    return [
+      `la familia ${porFamilia[1]} no está en familias.json (las conocidas: ${Object.keys(familias.familias).join(", ")}).`,
+    ];
+  }
+  if (porFamilia[2] === "000") return ["el número de una decisión por familia empieza en 001."];
+  return [];
+}
+
+/** Los problemas de UNA entrada del registro (vacío si está bien). `familias` es la lista ya validada de `familias.json`. */
+function problemasDeUnaEntrada(entrada, familias) {
   if (!esObjeto(entrada)) return ["la entrada tiene que ser un objeto."];
   const problemas = [];
   const esSinDecision = entrada.tipo === TIPO_SIN_DECISION;
@@ -94,9 +144,17 @@ function problemasDeUnaEntrada(entrada) {
       `faltan ${faltan.join(", ")}${esSinDecision && faltan.includes("motivo") ? " (un SIN_DECISION explica en `motivo` por qué no es una decisión de negocio)" : ""}.`,
     );
   }
-  if (typeof entrada.id !== "string" || !FORMA_DEL_ID.test(entrada.id))
-    problemas.push("id tiene la forma DEC-0001.");
+  problemas.push(...problemasDeUnId(entrada.id, familias));
   if (!esFechaReal(entrada.fecha)) problemas.push("fecha es un día real con la forma AAAA-MM-DD.");
+  else if (
+    typeof entrada.id === "string" &&
+    FORMA_DEL_ID_HEREDADO.test(entrada.id) &&
+    entrada.fecha >= familias.corte
+  ) {
+    problemas.push(
+      `desde el ${familias.corte} toda decisión nueva lleva el código de su familia (DEC-SAL-001), no DEC-0001.`,
+    );
+  }
   if (!dentroDe(QUIENES, entrada.quien)) problemas.push(`quien es uno de: ${QUIENES.join(", ")}.`);
   if (!dentroDe(TIPOS, entrada.tipo)) problemas.push(`tipo es uno de: ${TIPOS.join(", ")}.`);
   if (!dentroDe(ESTADOS, entrada.estado))
@@ -116,14 +174,14 @@ function problemasDeUnaEntrada(entrada) {
  * Los problemas del registro completo: una lista de entradas válidas con `id` único. Devuelve `[{ id, problema }]`; `id` es el de la
  * entrada (o su posición si no se puede leer) para que el mensaje diga cuál es.
  */
-function problemasDelRegistro(registro) {
+function problemasDelRegistro(registro, familias) {
   if (!Array.isArray(registro)) return [{ id: "registro", problema: "tiene que ser una lista." }];
   const vistos = new Set();
   const salida = [];
   registro.forEach((entrada, posicion) => {
     const id =
       esObjeto(entrada) && typeof entrada.id === "string" ? entrada.id : `#${posicion + 1}`;
-    for (const problema of problemasDeUnaEntrada(entrada)) salida.push({ id, problema });
+    for (const problema of problemasDeUnaEntrada(entrada, familias)) salida.push({ id, problema });
     if (vistos.has(id)) salida.push({ id, problema: "el id está repetido." });
     vistos.add(id);
   });
@@ -172,7 +230,7 @@ function problemasDeLosSensibles(valor) {
 const TOPE_MAXIMO_DE_UNA_CUOTA = 100;
 const esTopeValido = (valor) =>
   Number.isInteger(valor) && valor >= 0 && valor <= TOPE_MAXIMO_DE_UNA_CUOTA;
-function problemasDeLaCuota(valor) {
+function problemasDeLaCuota(valor, familias) {
   const claves = ["vigente_desde", "negocio", "tecnicas", "excepciones"];
   if (!esObjeto(valor) || Object.keys(valor).sort().join() !== [...claves].sort().join()) {
     return [`cuota.json lleva exactamente: ${claves.join(", ")}.`];
@@ -195,8 +253,8 @@ function problemasDeLaCuota(valor) {
       problemas.push(`${nombre}: lleva exactamente id, fecha y fuente.`);
       continue;
     }
-    if (typeof fila.id !== "string" || !FORMA_DEL_ID.test(fila.id))
-      problemas.push(`${nombre}: id tiene la forma DEC-0001.`);
+    const delId = problemasDeUnId(fila.id, familias);
+    if (delId.length > 0) problemas.push(...delId.map((problema) => `${nombre}: ${problema}`));
     else if (vistas.has(fila.id)) problemas.push(`${nombre}: el id ${fila.id} está repetido.`);
     else vistas.add(fila.id);
     if (!esFechaReal(fila.fecha))
@@ -208,6 +266,7 @@ function problemasDeLaCuota(valor) {
 
 module.exports = {
   TIPO_SIN_DECISION,
+  problemasDeLasFamilias,
   problemasDeLaCuota,
   problemasDeLosSensibles,
   problemasDelRegistro,

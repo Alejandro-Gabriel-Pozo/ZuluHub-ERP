@@ -18,6 +18,7 @@ import {
   motivoDeAnulacionDesdeTexto,
   origenDeLaEntradaDeStock,
 } from "../dominio/registrar-compra";
+import { anularElCargoDeLaFactura } from "./cargo-de-la-factura";
 import { autorizar, exigirAlcanceDeSucursal, traducir } from "./comun";
 import { rehacerOfertasDeLaCompraAnulada } from "./oferta-del-proveedor";
 import type { DependenciasDeCompras } from "./contrato";
@@ -159,6 +160,7 @@ export function armarAnularCompra(dependencias: DependenciasDeCompras) {
             empresaId,
             recepcion.id,
           );
+          let comprobanteAnuladoId: string | null = null;
           if (comprobante !== null) {
             const bloqueado = await tx.comprobantesDeProveedor.bloquear(empresaId, comprobante.id);
             if (bloqueado !== null && bloqueado.estado === "REGISTRADO") {
@@ -211,6 +213,7 @@ export function armarAnularCompra(dependencias: DependenciasDeCompras) {
               );
               if (!comprobanteAnulado)
                 throw new Error("el comprobante ya no estaba registrado bajo bloqueo");
+              comprobanteAnuladoId = bloqueado.id;
             }
           }
 
@@ -243,6 +246,16 @@ export function armarAnularCompra(dependencias: DependenciasDeCompras) {
               ofertasNoVigentes: ofertas.valor.noVigentes,
             },
           });
+          // Al final: el espejo del cargo (el libro toma el saldo del proveedor después del comprobante).
+          if (comprobanteAnuladoId !== null) {
+            const cargo = await anularElCargoDeLaFactura(
+              tx,
+              contexto,
+              dependencias,
+              comprobanteAnuladoId,
+            );
+            if (!cargo.ok) return cargo;
+          }
           return ok({ anulada: true });
         },
       ),
