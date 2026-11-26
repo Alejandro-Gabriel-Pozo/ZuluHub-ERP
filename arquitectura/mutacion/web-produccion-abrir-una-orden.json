@@ -1,7 +1,7 @@
 {
   "grupo": "web (producción: abrir una orden)",
-  "archivos": "src/composicion/entradas-de-nueva-orden.ts,src/composicion/nueva-orden-web.ts",
+  "archivos": "src/composicion/entradas-de-nueva-orden.ts,src/composicion/nueva-orden-web.ts,apps/web/ui/plantillas/produccion/modelo-de-nueva-orden.ts",
   "minutos": 2,
-  "pruebas": "src/composicion/entradas-de-nueva-orden.test.ts src/composicion/nueva-orden-web.test.ts",
+  "pruebas": "src/composicion/entradas-de-nueva-orden.test.ts src/composicion/nueva-orden-web.test.ts test/web/nueva-orden-modelo.test.ts",
   "nivel": "CRITICO"
 }

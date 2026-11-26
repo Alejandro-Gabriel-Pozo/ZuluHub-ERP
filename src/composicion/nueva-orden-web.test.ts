@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { MARCA_PRINCIPAL_DE_PRUEBA } from "../../test/utilidades/marcas";
 import type { ContextoOperativo } from "../contexto/contexto";
+import { errorDeCodigo } from "../capacidades/experiencia/respuesta";
 import { CONTROL_DE_NEGATIVO } from "../modulos/stock/publico";
 import { empresaId, personaId } from "../primitivas/identificadores/marca";
 import { err, ok } from "../primitivas/resultado/resultado";
@@ -181,16 +182,27 @@ describe("lo que se ofrece al abrir una orden", () => {
     expect(r.ok && r.dato.depositoId).toBe(VENTA);
   });
 
-  it("un rechazo de la consulta (guard) sale traducido, y una excepción sin detalle y con referencia", async () => {
+  it.each(["listarDepositos", "articulosControlados", "listarRecetas"] as const)(
+    "un rechazo de %s (el guard) sale con su motivo, sin leer de más y sin contarlo como inesperado",
+    async (consulta) => {
+      const { d, registrados } = armar();
+      const rechazado = {
+        ...d,
+        consultas: () => ({
+          ...d.consultas(),
+          [consulta]: () => Promise.resolve(err("MODULO_EN_DESARROLLO")),
+        }),
+      } as unknown as DependenciasDeNuevaOrdenWeb;
+      expect(await cargarLaNuevaOrden(rechazado, contexto, SUCURSAL)).toEqual({
+        ok: false,
+        error: errorDeCodigo("MODULO_EN_DESARROLLO"),
+      });
+      expect(registrados).toEqual([]);
+    },
+  );
+
+  it("una excepción sale sin detalle y con referencia", async () => {
     const { d } = armar();
-    const rechazado = {
-      ...d,
-      consultas: () => ({
-        ...d.consultas(),
-        listarDepositos: () => Promise.resolve(err("MODULO_EN_DESARROLLO")),
-      }),
-    } as unknown as DependenciasDeNuevaOrdenWeb;
-    expect((await cargarLaNuevaOrden(rechazado, contexto, SUCURSAL)).ok).toBe(false);
     const roto = {
       ...d,
       consultas: () => {

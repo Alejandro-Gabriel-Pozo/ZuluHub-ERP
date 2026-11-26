@@ -1,4 +1,4 @@
-import type { Respuesta } from "../capacidades/experiencia/respuesta";
+import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type { CasosDeUsoDeProduccion } from "../modulos/produccion/publico";
 import {
@@ -46,6 +46,9 @@ export type OfertaDeProduccion = Readonly<{
   depositoId: string;
 }>;
 
+/** Sin depósito de venta activo y normal en la sucursal: el genérico (el texto aprobado no distingue el motivo). */
+const SIN_DEPOSITO_DE_VENTA = errorDeCodigo("PRODUCCION_ACCION_NO_PERMITIDA");
+
 /** Páginas que se leen de la lista de recetas (50 por página): más allá, no se ofrece (lo que no se ve no se puede abrir; nunca se ofrece de más). */
 const MAXIMO_DE_PAGINAS = 20;
 
@@ -58,7 +61,7 @@ async function loQueSePuedeProducir(
   const depositos = await d.consultas().listarDepositos(contexto, { sucursalId });
   if (!depositos.ok) return depositos;
   const deposito = depositos.valor.find((x) => x.deVenta && x.activo && x.uso === "NORMAL");
-  if (deposito === undefined) return err("DEPOSITO_NO_ENCONTRADO");
+  if (deposito === undefined) return err(SIN_DEPOSITO_DE_VENTA);
   const articulos = await d.consultas().articulosControlados(contexto);
   if (!articulos.ok) return articulos;
   const unidadDe = new Map(articulos.valor.map((a) => [a.productoId, a.unidadId]));
