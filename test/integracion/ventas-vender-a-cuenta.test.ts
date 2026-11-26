@@ -490,17 +490,24 @@ describe.skipIf(base === null)("ventas: venta a cuenta corriente (CC-5)", () => 
     });
   });
 
-  it("una venta a $0 (cortesía) a cuenta se rechaza (CARGO_A_CUENTA_RECHAZADO): un cargo de cero no existe en el libro, y no queda cuenta, ticket ni asiento", async () => {
+  it("una venta a $0 a cuenta se rechaza con VENTA_A_CERO, con o sin la confirmación de cortesía: no queda cuenta, línea, ticket ni asiento", async () => {
     const x = await m.escenario();
     const gratis = await m.productoVendible(x.empresa, "0");
     const c = await a.cliente(x);
-    const p = pedido(x, c, {
-      lineas: [{ lineaId: nuevoId(), productoId: gratis, opcionIds: [], cantidad: "1" }],
-      totalEsperado: monto("0.00"),
-      confirmaciones: ["VENTA_A_CERO"],
-    });
-    expect(await vender(x.gerente, p)).toEqual({ ok: false, error: "CARGO_A_CUENTA_RECHAZADO" });
-    expect(await huellaDeBase(p.cuentaId)).toEqual(nada);
+    const linea = () => [{ lineaId: nuevoId(), productoId: gratis, opcionIds: [], cantidad: "1" }];
+    for (const confirmaciones of [undefined, [], ["VENTA_A_CERO"]]) {
+      const p = pedido(x, c, {
+        lineas: linea(),
+        totalEsperado: monto("0.00"),
+        ...(confirmaciones === undefined ? {} : { confirmaciones }),
+      });
+      expect(await vender(x.gerente, p), JSON.stringify(confirmaciones)).toEqual({
+        ok: false,
+        error: { error: "CONFIRMACION_REQUERIDA", clave: "VENTA_A_CERO" },
+      });
+      expect(await huellaDeBase(p.cuentaId)).toEqual(nada);
+    }
     expect(await a.asientos(x, c)).toEqual([]);
+    expect(await a.saldo(x, c)).toBe("0");
   });
 });
