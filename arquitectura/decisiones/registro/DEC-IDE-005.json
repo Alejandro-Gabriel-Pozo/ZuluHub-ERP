@@ -4,7 +4,7 @@
   "quien": "padre",
   "tipo": "PERMISOS",
   "estado": "CONFIRMADA",
-  "decision": "Los textos del historial de un rol propio (Historial, Rol creado, Rol editado, Rol archivado, Rol reactivado, Acciones agregadas, Acciones quitadas, Nombre anterior) quedan aceptados; el historial va como bloque al pie de la ficha del rol, solo para el gerente (roles.ver), sin las asignaciones de personas.",
+  "decision": "Los ocho textos del historial de un rol propio quedan aceptados; el historial va como bloque al pie de la ficha, solo para el gerente (roles.ver), sin las asignaciones de personas.",
   "que_cambia": "Ocho etiquetas simples del bloque «Historial» de la ficha de un rol propio; sin dinero, permisos ni fiscal (no hay acción ni permiso nuevo: usa roles.ver). Lo que el bloque ya podía decir con un texto existente reusa su clave.",
   "donde": "Delegación fila 173, aceptación del orquestador 26/11/2026 (ficha de B3b: S1 a S5 y los ocho textos)"
 }
