@@ -93,11 +93,15 @@ export function cobrarLaMesaDelSalon(
   });
 }
 
-/** Anula el ticket recién cobrado con el ejemplar del resultado, un motivo y la clave de la pantalla. */
+/** Anula el ticket recién cobrado con el ejemplar del resultado, un motivo y la clave de la pantalla. La sucursal la fija el servidor (la de trabajo): un ticket de otra es el genérico. */
 export function anularElTicketDelMostrador(
   pedido: unknown,
 ): Promise<Respuesta<TicketAnuladoParaLaPantalla>> {
-  return conLaEmpresa((contexto) => anularElTicket(dependencias, contexto, pedido));
+  return conLaEmpresa(async (contexto) => {
+    const sucursal = await laSucursal(contexto);
+    if (!sucursal.ok) return sucursal;
+    return anularElTicket(dependencias, contexto, sucursal.dato, pedido);
+  });
 }
 
 /** El papel del ticket recién cobrado para imprimirlo (lectura). No pide sucursal: la consulta valida la del ticket contra el alcance de la persona. */

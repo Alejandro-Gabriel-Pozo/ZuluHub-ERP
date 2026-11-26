@@ -207,6 +207,7 @@ describe.skipIf(base === null)("migración 0028: ventas", () => {
         ejemplarBaseId: t.ejemplarId,
         ejemplarNuevoId: nuevoId(),
         motivo: "Error del cajero",
+        sucursalDeTrabajo: a.sucursal,
       }),
     );
     Object.assign(f.anulado, {
