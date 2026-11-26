@@ -371,4 +371,72 @@ describe.skipIf(base === null || !stockAbierto)("recorrido de depósitos de stoc
       );
     }
   });
+
+  it("el Conteo se abre una sola vez (doble clic), guarda al salir del campo y sobrevive a recargar; «Aplicar» pide el motivo, se confirma una sola vez (doble clic) y el ajuste queda", async () => {
+    const { articulo, producto } = await articuloDeBase(mundo.mundo.dueno, {
+      empresa: mundo.empresa,
+    });
+    const nombre = (
+      await mundo.mundo.dueno.query<{ nombre: string }>(
+        "select nombre from producto where id = $1",
+        [producto],
+      )
+    ).rows[0]?.nombre;
+    expect(nombre).toBeTruthy();
+    const abiertos = async () =>
+      Number(
+        (
+          await mundo.mundo.dueno.query<{ n: string }>(
+            "select count(*)::text as n from conteo_fisico where empresa_id = $1 and estado = 'ABIERTO'",
+            [mundo.empresa],
+          )
+        ).rows[0]?.n,
+      );
+    const existencia = async () =>
+      (
+        await mundo.mundo.dueno.query<{ e: string }>(
+          "select coalesce(sum(existencia), 0)::text as e from saldo_de_stock where articulo_id = $1",
+          [articulo],
+        )
+      ).rows[0]?.e;
+    const fila = () =>
+      pagina.getByRole("listitem").filter({ has: pagina.getByText(nombre ?? "", { exact: true }) });
+
+    await pagina.goto(`${mundo.url}/stock/existencias`);
+    await pagina.getByRole("main").getByRole("link", { name: "Conteo" }).click();
+    await pagina.waitForURL((url) => url.pathname === "/stock/conteo");
+    await pagina.getByRole("button", { name: "Abrir conteo" }).waitFor();
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    await pagina.getByRole("button", { name: "Abrir conteo" }).dblclick();
+    await fila().getByLabel("Contado").waitFor();
+    await pagina.waitForLoadState("networkidle");
+    expect(await abiertos()).toBe(1);
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+
+    // Guarda al salir del campo (sin botón) y sigue ahí al recargar.
+    await fila().getByLabel("Contado").fill("3");
+    const guardado = pagina.waitForResponse((r) => r.request().method() === "POST");
+    await fila().getByLabel("Contado").blur();
+    await guardado;
+    await pagina.reload();
+    await fila().getByLabel("Contado").waitFor();
+    expect(await fila().getByLabel("Contado").inputValue()).toBe("3");
+    expect(vigilante.tomar()).toEqual([]);
+
+    // Aplicar: lleva a la revisión, que muestra lo que el sistema creía y la diferencia, y exige el motivo.
+    await pagina.getByRole("link", { name: "Aplicar" }).click();
+    await pagina.waitForURL((url) => url.pathname === "/stock/conteo/revisar");
+    await fila().getByText("Sistema a esa hora").waitFor();
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    expect(await pagina.getByRole("button", { name: "Aplicar" }).isDisabled()).toBe(true);
+    await fila().getByLabel("Motivo").selectOption("DEVOLUCION_DE_CLIENTE");
+    expect(await pagina.getByRole("button", { name: "Aplicar" }).isEnabled()).toBe(true);
+    await pagina.getByRole("button", { name: "Aplicar" }).dblclick();
+    await pagina.getByRole("heading", { name: "Aplicado" }).waitFor();
+    await pagina.waitForLoadState("networkidle");
+    expect(await existencia()).toBe("3.0000");
+    expect(await abiertos()).toBe(0);
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    expect(vigilante.tomar()).toEqual([]);
+  });
 });

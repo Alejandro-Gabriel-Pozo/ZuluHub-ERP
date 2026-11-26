@@ -1,0 +1,10 @@
+{
+  "id": "DEC-COM-010",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "DINERO",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La nota de débito de una factura no tiene tope, no entra al neto y se paga aparte; con un pago vigente no se anula; la suelta graba el nivel de la empresa y pide alcance sobre todas (SUPUESTOS).",
+  "que_cambia": "Lo que se debe y cómo se paga. Revertir el bloqueo de anular con pago: quitar la guarda en notas-de-debito.ts (el pago quedaría sobre una nota anulada). Revertir el nivel o el alcance de la nota suelta: una línea en notas-de-credito.ts.",
+  "donde": "notas-de-debito.ts, notas-de-credito.ts (armarRegistrarNota), libro-de-proveedores.ts (pago de una nota de débito); Q-3 confirmada por el dueño el 25/11/2026, matriz aprobada por el orquestador el 26/11/2026"
+}

@@ -31,7 +31,7 @@ export const INSTANTE_MAXIMO = Date.parse("9999-12-30T00:00:00Z");
  */
 const FORMATO_DE_ZONA = /^(?:UTC|[A-Z][A-Za-z0-9_+-]*(?:\/[A-Z][A-Za-z0-9_+-]*)+)$/;
 
-function formateadorDeZona(zonaHoraria: string): Intl.DateTimeFormat | null {
+export function formateadorDeZona(zonaHoraria: string): Intl.DateTimeFormat | null {
   if (!FORMATO_DE_ZONA.test(zonaHoraria)) return null;
   try {
     return new Intl.DateTimeFormat("en-US", {
@@ -52,7 +52,7 @@ function formateadorDeZona(zonaHoraria: string): Intl.DateTimeFormat | null {
 }
 
 /** Las partes de la fecha formateada (año, mes, día, hora, minuto) como números, por tipo. */
-function numerosPorTipo(formateador: Intl.DateTimeFormat, instante: Date) {
+export function numerosPorTipo(formateador: Intl.DateTimeFormat, instante: Date) {
   const valores: Record<string, number> = {};
   for (const { type, value } of formateador.formatToParts(instante)) valores[type] = Number(value);
   return valores as Record<"year" | "month" | "day" | "hour" | "minute", number>;

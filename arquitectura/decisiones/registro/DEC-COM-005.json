@@ -3,8 +3,8 @@
   "fecha": "2026-11-26",
   "quien": "sesión",
   "tipo": "DINERO",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Una factura de total cero no se paga: todo pago tiene un importe mayor que cero y al menos un medio.",
   "que_cambia": "La base rechaza un pago de importe 0. Revertir: quitar el CHECK pago_importe_positivo_ck (la reversión de 0109 lo hace).",
-  "donde": "0109_pago_compuesto_exigir_medios.sql; paso 2 de P1 aprobado por el orquestador el 26/11/2026; el importe mayor que cero espera la confirmación del dueño"
+  "donde": "0109_pago_compuesto_exigir_medios.sql; paso 2 de P1 aprobado por el orquestador el 26/11/2026; confirmada por el dueño el 26/11/2026 (respuesta a la lista de decisiones), vía el orquestador"
 }

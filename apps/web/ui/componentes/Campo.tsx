@@ -11,7 +11,9 @@ export type PropsDeCampo = Readonly<{
   valor: string;
   alCambiar: (valor: string) => void;
   nombre?: string | undefined;
-  tipo?: "text" | "email" | "search" | "tel" | "url" | "date";
+  tipo?: "text" | "email" | "search" | "tel" | "url" | "date" | "time";
+  /** Se llama al salir del campo (para guardar lo escrito sin un botón). El valor ya está en `valor`. */
+  alSalir?: (() => void) | undefined;
   /** Con `tipo="date"`: la última fecha `aaaa-mm-dd` que ofrece el selector. Es ayuda, no validación (la regla es del servidor). */
   maximo?: string | undefined;
   autoComplete?: string | undefined;
@@ -32,6 +34,7 @@ export function Campo({
   alCambiar,
   nombre,
   tipo = "text",
+  alSalir,
   maximo,
   autoComplete,
   autoCapitalize,
@@ -62,6 +65,7 @@ export function Campo({
           spellCheck={autoCapitalize === "off" ? false : undefined}
           inputMode={inputMode}
           disabled={deshabilitado}
+          onBlur={alSalir}
           onChange={(evento) => {
             alCambiar(evento.target.value);
           }}

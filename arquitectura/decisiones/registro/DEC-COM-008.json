@@ -3,8 +3,8 @@
   "fecha": "2026-11-26",
   "quien": "padre",
   "tipo": "DINERO",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "El pago de una factura es su total menos las notas de crédito vigentes (el neto); con neto cero no hay pago. Una nota de crédito que el pago ya descontó no se anula hasta anular el pago (SUPUESTO).",
   "que_cambia": "Lo que sale de la caja y lo que asienta el libro es el neto. Revertir el pago por el neto: volver a copiar el total en declararPago. Revertir el bloqueo de anular la nota: quitar la guarda en notas-de-credito.ts; la factura quedaría pagada con deuda.",
-  "donde": "pagos.ts (declararPago), notas-de-credito.ts (anular), pago.ts (netoAPagar); Q-2 y Q-3 confirmadas por el dueño 25/11/2026 (briefs de Diseño 2); matriz aprobada por el orquestador 26/11/2026"
+  "donde": "pagos.ts (declararPago), notas-de-credito.ts (anular), pago.ts (netoAPagar); Q-2 y Q-3 confirmadas por el dueño 25/11/2026 (briefs de Diseño 2); matriz aprobada por el orquestador 26/11/2026; confirmada por el dueño el 26/11/2026 (respuesta a la lista de decisiones), vía el orquestador"
 }
