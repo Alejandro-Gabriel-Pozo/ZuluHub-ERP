@@ -372,3 +372,49 @@ describe("lo que se lee del servidor", () => {
     });
   });
 });
+
+describe("la confirmación del aviso de negativo", () => {
+  const CONFIRMA = { confirmaciones: ["stock.existencia_negativa"] };
+  const tiene = (llamada: { entrada: unknown } | undefined) =>
+    "confirmaciones" in (llamada?.entrada as object);
+
+  it("una salida confirmada manda la confirmación del control y una sin confirmar no", async () => {
+    const a = montar();
+    await registrarElMovimiento(a.d, contexto, SUC, false, {
+      ...pedido,
+      motivo: "MERMA",
+      confirmar: "1",
+    });
+    expect(a.llamadas[0]?.entrada).toMatchObject(CONFIRMA);
+    const b = montar();
+    await registrarElMovimiento(b.d, contexto, SUC, false, { ...pedido, motivo: "MERMA" });
+    expect(tiene(b.llamadas[0])).toBe(false);
+  });
+
+  it("una transferencia igual", async () => {
+    const t = { clave: CLAVE, origenId: D1, destinoId: D2, articuloId: ART, cantidad: "1" };
+    const a = montar();
+    await transferirElStock(a.d, contexto, SUC, { ...t, confirmar: "1" });
+    expect(a.llamadas[0]?.entrada).toMatchObject(CONFIRMA);
+    const b = montar();
+    await transferirElStock(b.d, contexto, SUC, t);
+    expect(tiene(b.llamadas[0])).toBe(false);
+  });
+
+  it("una entrada no manda confirmaciones aunque le pasen la marca (no resta nada)", async () => {
+    const { d, llamadas } = montar();
+    await registrarElMovimiento(d, contexto, SUC, true, { ...pedido, confirmar: "1" });
+    expect(tiene(llamadas[0])).toBe(false);
+  });
+
+  it("el aviso del servidor sale con su código propio para que la pantalla lo muestre", async () => {
+    const { d } = montar({
+      caso: () => err({ error: "CONTROL_REQUIERE_CONFIRMACION", detalle: [] }),
+    });
+    expect(
+      codigoDe(
+        await registrarElMovimiento(d, contexto, SUC, false, { ...pedido, motivo: "MERMA" }),
+      ),
+    ).toBe("STOCK_CONTROL_AVISA");
+  });
+});

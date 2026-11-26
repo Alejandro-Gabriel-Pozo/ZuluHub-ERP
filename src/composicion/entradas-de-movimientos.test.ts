@@ -24,7 +24,7 @@ describe("entradaDeMovimiento", () => {
       }),
     ).toStrictEqual({
       ok: true,
-      valor: { ...base, costoUnitario: undefined, detalle: undefined },
+      valor: { ...base, costoUnitario: undefined, detalle: undefined, confirmar: false },
     });
     expect(
       entradaDeMovimiento({ ...base, costoUnitario: "10.5", detalle: "Factura 1" }),
@@ -48,10 +48,45 @@ describe("entradaDeMovimiento", () => {
   });
 });
 
+describe("la confirmación del aviso de negativo", () => {
+  it("«1» confirma; ausente no; cualquier otro valor es inválido (lista de permitidos)", () => {
+    expect(entradaDeMovimiento({ ...base, confirmar: "1" })).toMatchObject({
+      ok: true,
+      valor: { confirmar: true },
+    });
+    expect(entradaDeMovimiento(base)).toMatchObject({ ok: true, valor: { confirmar: false } });
+    // El servidor web manda «» cuando el campo no viene en el formulario.
+    expect(entradaDeMovimiento({ ...base, confirmar: "" })).toMatchObject({
+      ok: true,
+      valor: { confirmar: false },
+    });
+    for (const malo of ["0", "true", "on", 1, true]) {
+      expect(entradaDeMovimiento({ ...base, confirmar: malo }).ok).toBe(false);
+    }
+  });
+
+  it("la transferencia igual", () => {
+    const t = { clave: U1, origenId: U2, destinoId: U3, articuloId: U1, cantidad: "1" };
+    expect(entradaDeTransferencia({ ...t, confirmar: "1" })).toMatchObject({
+      ok: true,
+      valor: { confirmar: true },
+    });
+    expect(entradaDeTransferencia(t)).toMatchObject({ ok: true, valor: { confirmar: false } });
+    expect(entradaDeTransferencia({ ...t, confirmar: "" })).toMatchObject({
+      ok: true,
+      valor: { confirmar: false },
+    });
+    expect(entradaDeTransferencia({ ...t, confirmar: "si" }).ok).toBe(false);
+  });
+});
+
 describe("entradaDeTransferencia", () => {
   const t = { clave: U1, origenId: U2, destinoId: U3, articuloId: U1, cantidad: "1" };
   it("lee origen, destino, artículo y cantidad", () => {
-    expect(entradaDeTransferencia(t)).toStrictEqual({ ok: true, valor: t });
+    expect(entradaDeTransferencia(t)).toStrictEqual({
+      ok: true,
+      valor: { ...t, confirmar: false },
+    });
   });
   it.each(["clave", "origenId", "destinoId", "articuloId", "cantidad"])(
     "sin %s es inválida",

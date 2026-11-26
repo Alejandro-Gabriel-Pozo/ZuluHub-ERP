@@ -1,6 +1,6 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
-import { motivosManualesDe } from "../modulos/stock/publico";
+import { CONTROL_DE_NEGATIVO, motivosManualesDe } from "../modulos/stock/publico";
 import { err, ok } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
 import {
@@ -90,6 +90,10 @@ async function resolver(
 type Hecho = Readonly<{ movimientoId: string; yaExistia: boolean }>;
 const comoHecho = (s: Hecho): Hecho => ({ movimientoId: s.movimientoId, yaExistia: s.yaExistia });
 
+/** Lo que confirma la persona que vio el aviso: solo el control de existencia negativa, y solo si lo confirmó (con el nivel PERMITIR el servidor no lo necesita y no cambia nada). */
+const confirmaciones = (confirmar: boolean) =>
+  confirmar ? { confirmaciones: [CONTROL_DE_NEGATIVO] } : {};
+
 /** Registra una entrada (`entrada: true`) o una salida a mano de un artículo en un depósito de la sucursal. El costo por unidad solo corresponde a la entrada por compra (lo decide el servidor). */
 export function registrarElMovimiento(
   d: DependenciasDeMovimientosWeb,
@@ -122,7 +126,9 @@ export function registrarElMovimiento(
       ];
       return entrada
         ? d.casosDeUso().registrarEntrada(contexto, { ...base, renglones })
-        : d.casosDeUso().registrarSalida(contexto, { ...base, renglones });
+        : d
+            .casosDeUso()
+            .registrarSalida(contexto, { ...base, renglones, ...confirmaciones(e.confirmar) });
     },
     comoHecho,
   );
@@ -146,6 +152,7 @@ export function transferirElStock(
         clave: e.clave,
         origenId: e.origenId,
         destinoId: e.destinoId,
+        ...confirmaciones(e.confirmar),
         renglones: [
           { productoId: r.valor.productoId, cantidad: e.cantidad, unidadId: r.valor.unidadId },
         ],

@@ -60,6 +60,7 @@ export async function registrarEntradaOSalidaDeStock(
           "motivo",
           "costoUnitario",
           "detalle",
+          "confirmar",
         ]),
       });
     }),
@@ -77,7 +78,7 @@ export async function transferirElStockDeLaSucursal(
       if (!sucursal.ok) return sucursal;
       return transferirElStock(dependencias, contexto, sucursal.dato, {
         clave,
-        ...campos(datos, ["origenId", "destinoId", "articuloId", "cantidad"]),
+        ...campos(datos, ["origenId", "destinoId", "articuloId", "cantidad", "confirmar"]),
       });
     }),
     RUTAS_DE_MOVIMIENTOS.lista,
