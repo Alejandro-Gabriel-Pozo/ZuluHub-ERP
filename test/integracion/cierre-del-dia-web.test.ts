@@ -78,6 +78,10 @@ describe.skipIf(base === null)("cierre del día de la web", () => {
               ),
             ),
         }) as unknown as ReturnType<DependenciasDeCierreWeb["consultasDeVentas"]>,
+      // Salón: el número de la mesa de las cuentas anuladas (acá no hay mesas: cae a «Ticket N»).
+      consultasDeSalon: () => ({
+        numerosDeMesaDeCuentas: () => Promise.resolve(ok([])),
+      }),
       // Identidad: el correo de las personas pedidas que conoce.
       consultasDeIdentidad: () =>
         ({
@@ -184,7 +188,7 @@ describe.skipIf(base === null)("cierre del día de la web", () => {
     const numero =
       7 + [...tickets.tickets.values()].findIndex((t) => t.ticketId === ticket?.ticketId);
     expect(c.conciliacion?.cobradoContraTicket).toEqual([
-      { ticketNumero: numero, diferencia: "20.00" },
+      { ticketNumero: numero, mesaAnulada: null, diferencia: "20.00" },
     ]);
     // Las opciones del diálogo: medios activos y, de cada uno, las cuentas activas de la sucursal que admite (el efectivo, ninguna).
     const efectivo = c.medios.find((x) => x.tipo === "EFECTIVO");
@@ -430,5 +434,70 @@ describe.skipIf(base === null)("cierre del día de la web", () => {
     ).toBe("OK");
     expect((await cargar(m, j)).estado).toBe("EN_AUDITORIA");
     expect(registrados).toEqual([]);
+  });
+
+  it("ANULAR un ticket contra CERRAR el día, en las dos órdenes (SAL-F): anular antes de cerrar cambia lo que se vio y el cierre es «cambiaron» (con lo nuevo cierra); anular después de cerrar no toca el día ya cerrado", async () => {
+    const reconocer = (visto: Awaited<ReturnType<typeof cargar>>) =>
+      visto.controles
+        .filter((c) => c.severidad === "RECONOCIBLE" && c.cantidad > 0)
+        .map((c) => ({ modulo: c.modulo, clave: c.clave, texto: "Ya se habló con el cliente" }));
+    const anular = (m: MundoDeCobro, j: JornadaLista) => {
+      const ticket = tickets.tickets.get(j.origenes[1]?.id ?? "");
+      if (ticket === undefined) throw new Error("no hay ticket para anular");
+      ticket.total = "0.00";
+    };
+
+    // Orden 1: anular → cerrar. La pantalla vio $ 20,00 de diferencia; el ticket se anula; cerrar con lo que se vio es «cambiaron».
+    const m1 = await mundo();
+    const j1 = await listo(
+      m1,
+      [
+        { medio: "TARJETA_CREDITO", cuenta: "terminal", importe: "18400.00" },
+        { medio: "EFECTIVO", importe: "50.00", totalDelTicket: "30.00" },
+      ],
+      { conforme: true },
+    );
+    await dato(empezar(m1, j1));
+    const visto1 = await cargar(m1, j1);
+    anular(m1, j1);
+    const cerrarConLoVisto = (m: MundoDeCobro, j: JornadaLista, huella: string, minutos: number) =>
+      cerrarElDia(d, j.ctx(minutos), m.sucursal, {
+        fechaDeNegocio: j.fecha,
+        huellaVista: huella,
+        reconocimientos: reconocer(visto1),
+      });
+    expect(codigoDe(await cerrarConLoVisto(m1, j1, visto1.huella, 61))).toBe(
+      "CIERRE_CONTROLES_CAMBIARON",
+    );
+    const nuevo1 = await cargar(m1, j1, 62);
+    expect(nuevo1.huella).not.toBe(visto1.huella);
+    expect(nuevo1.conciliacion?.cobradoContraTicket.map((t) => t.diferencia)).toEqual(["50.00"]);
+    expect(codigoDe(await cerrarConLoVisto(m1, j1, nuevo1.huella, 63))).toBe("OK");
+
+    // Orden 2: cerrar → anular. El día ya cerrado conserva lo que se cerró; anular después no lo cambia.
+    const m2 = await mundo();
+    const j2 = await listo(
+      m2,
+      [
+        { medio: "TARJETA_CREDITO", cuenta: "terminal", importe: "18400.00" },
+        { medio: "EFECTIVO", importe: "50.00", totalDelTicket: "30.00" },
+      ],
+      { conforme: true },
+    );
+    await dato(empezar(m2, j2));
+    const visto2 = await cargar(m2, j2);
+    expect(
+      codigoDe(
+        await cerrarElDia(d, j2.ctx(64), m2.sucursal, {
+          fechaDeNegocio: j2.fecha,
+          huellaVista: visto2.huella,
+          reconocimientos: reconocer(visto2),
+        }),
+      ),
+    ).toBe("OK");
+    anular(m2, j2);
+    const cerrada = await cargar(m2, j2, 65);
+    expect(cerrada.estado).toBe("CERRADA");
+    expect(cerrada.huella).toBe(visto2.huella);
   });
 });

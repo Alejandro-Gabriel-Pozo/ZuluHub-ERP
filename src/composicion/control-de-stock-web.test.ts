@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ContextoOperativo } from "../contexto/contexto";
+import { CONFIRMACION_DE_CUENTAS_ABIERTAS } from "../modulos/stock/publico";
 import { err, ok } from "../primitivas/resultado/resultado";
 import {
   fijarElControlDeStock,
@@ -140,6 +141,43 @@ describe("fijarElControlDeStock", () => {
       const r = await fijarElControlDeStock(d, contexto, { productoId: ID, controlado: true });
       expect(codigoDe(r)).not.toBe(GENERICO);
     }
+  });
+
+  it("confirmar las cuentas abiertas pasa la confirmación declarada al caso de uso; sin confirmar o con otro valor no la pasa", async () => {
+    const a = montar();
+    await fijarElControlDeStock(a.d, contexto, {
+      productoId: ID,
+      controlado: true,
+      confirmarCuentasAbiertas: true,
+    });
+    expect(a.m.llamadas).toEqual([
+      {
+        que: "controlar",
+        entrada: {
+          c: contexto,
+          entrada: { productoId: ID, confirmaciones: [CONFIRMACION_DE_CUENTAS_ABIERTAS] },
+        },
+      },
+    ]);
+    const b = montar();
+    await fijarElControlDeStock(b.d, contexto, {
+      productoId: ID,
+      controlado: true,
+      confirmarCuentasAbiertas: false,
+    });
+    expect(b.m.llamadas).toEqual([
+      { que: "controlar", entrada: { c: contexto, entrada: { productoId: ID } } },
+    ]);
+  });
+
+  it("«hay cuentas abiertas con el plato» sale como el aviso de confirmar, sin la cantidad ni detalle, y no se registra como un fallo", async () => {
+    const { m, d } = montar({
+      controlar: () => err({ error: "CUENTAS_ABIERTAS_REQUIEREN_CONFIRMACION", cuentas: 7 }),
+    });
+    const r = await fijarElControlDeStock(d, contexto, { productoId: ID, controlado: true });
+    expect(codigoDe(r)).toBe("PRODUCCION_CUENTAS_ABIERTAS");
+    expect(JSON.stringify(r)).not.toContain("7");
+    expect(m.registrados).toEqual([]);
   });
 
   it("no altera: «true» nunca llama a dejarDeControlar ni «false» a controlarArticulo", async () => {

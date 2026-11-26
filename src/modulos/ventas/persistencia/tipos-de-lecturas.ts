@@ -5,6 +5,8 @@ import type { Ejemplar, Ticket } from "./repositorio-de-tickets";
 /** Las filas planas que devuelven las lecturas de ventas (E4 §3.12, §3.13 y §3.15): importes y cantidades como TEXTO decimal exacto. */
 export type TicketDeJornada = Readonly<{
   ticketId: string;
+  /** La cuenta de la que salió el ticket (para saber si era de una mesa). */
+  cuentaId: string;
   numero: number;
   estado: EstadoDeTicket;
   ejemplarVigente: number;

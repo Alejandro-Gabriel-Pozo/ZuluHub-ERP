@@ -1,4 +1,5 @@
 import { crearCasosDeUsoDeStock, crearConsultasDeStock } from "../modulos/stock/publico";
+import { cuentasAbiertasDeVentasParaStock } from "./cuentas-abiertas-de-stock";
 import { perezoso } from "./perezoso";
 import type { BaseDeWeb } from "./web-base";
 
@@ -10,7 +11,11 @@ export function armarWebDeStock({ conexiones, reglas }: BaseDeWeb) {
      * ofrece a ventas y a compras (`crearPuertosDeStock`) no salen por acá: corren en la transacción de quien los llama y no tienen acción propia.
      */
     casosDeUsoDeStock: perezoso(() =>
-      crearCasosDeUsoDeStock({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+      crearCasosDeUsoDeStock({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        cuentasAbiertas: cuentasAbiertasDeVentasParaStock,
+      }),
     ),
     consultasDeStock: perezoso(() =>
       crearConsultasDeStock({ transacciones: conexiones.transaccionesDeApp(), reglas }),

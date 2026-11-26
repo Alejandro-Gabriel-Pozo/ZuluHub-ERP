@@ -71,7 +71,6 @@ export const MAXIMO_DE_PENDIENTES_POR_PEDIDO = 100;
 const PENDIENTES_POR_DEFECTO = 50;
 const ACCION: ClaveAccion = "ventas.ver";
 const ARS = "ARS";
-
 export type EntradaDeJornadaDeVentas = Readonly<{ sucursalId: string; fechaNegocio: string }>;
 export type EntradaDePendientes = Readonly<{
   sucursalId?: string | undefined;
@@ -254,6 +253,7 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
       (await tx.lecturasDeVentas.ticketsDeLaJornada(contexto.empresaId, sucursal, fecha)).map(
         (t) => ({
           ticketId: t.ticketId,
+          cuentaId: t.cuentaId,
           numero: t.numero,
           numeroDeCorreccion: numeroDeCorreccion(t.ejemplarVigente),
           estado: t.estado,

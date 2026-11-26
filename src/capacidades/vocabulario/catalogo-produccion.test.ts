@@ -45,6 +45,7 @@ describe("los textos de producción, receta y lotes", () => {
       "Tiene stock propio: {existencia}",
       "No tiene stock propio: descuenta sus ingredientes.",
       "Al encenderlo, este producto deja de descontar sus ingredientes al venderse: se descuentan al producir.",
+      "Hay cuentas abiertas con este plato. Al cerrarlas se descontará el plato y no sus ingredientes. ¿Confirmás?",
       // produccion.html, textos sin fila en «Textos aprobados» aceptados por delegación (DEC-0555).
       "Todas",
       "Abiertas",

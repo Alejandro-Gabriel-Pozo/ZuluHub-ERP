@@ -38,6 +38,11 @@ export interface RepositorioDeCuentasSolas {
     anclaIds: readonly string[],
   ): Promise<Cuenta[]>;
   /**
+   * Cuántas cuentas ABIERTAS tienen al menos una línea VIGENTE de este producto (de toda la empresa, todas las sucursales). Es una LECTURA para saber a quién
+   * le cambia el camino de descuento cuando el producto pasa a tener stock propio (PRO-D1); un id que no es un uuid no es el de ningún producto: cero.
+   */
+  contarAbiertasConElProducto(empresa: EmpresaId, productoId: string): Promise<number>;
+  /**
    * Mueve el ancla de una cuenta ABIERTA (cambiar de mesa, 0038): `UPDATE … WHERE estado = 'ABIERTA'`; `false` si ya no lo estaba. Si el ancla
    * nueva ya tiene otra cuenta abierta, la única de la base lo rechaza (error de unicidad que el caso de uso traduce a `ANCLA_OCUPADA`).
    */
@@ -191,6 +196,22 @@ export function crearRepositorioDeCuentas(db: Kysely<VentasDb>): RepositorioDeCu
         .orderBy("ancla_id")
         .execute();
       return filas.map(aCuenta);
+    },
+
+    async contarAbiertasConElProducto(empresa, productoId) {
+      if (!esUuid(productoId)) return 0;
+      const fila = await db
+        .selectFrom("cuenta_consumo as c")
+        .innerJoin("linea_cuenta as l", (union) =>
+          union.onRef("l.cuenta_id", "=", "c.id").onRef("l.empresa_id", "=", "c.empresa_id"),
+        )
+        .select(sql<string>`count(distinct c.id)`.as("n"))
+        .where("c.empresa_id", "=", empresa)
+        .where("c.estado", "=", "ABIERTA")
+        .where("l.producto_id", "=", productoId)
+        .where("l.estado", "=", "VIGENTE")
+        .executeTakeFirst();
+      return Number(fila?.n ?? 0);
     },
 
     async reanclar(empresa, id, ancla) {

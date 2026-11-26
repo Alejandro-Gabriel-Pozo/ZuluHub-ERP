@@ -42,6 +42,8 @@ export type LineaDeConciliacionDelCierre = Readonly<{
 export type CobradoContraTicketDelCierre = Readonly<{
   /** El número del ticket; `null` si ventas no lo devuelve para esta jornada (el cobro es de un ticket de otro día). */
   ticketNumero: number | null;
+  /** El número de la mesa si el ticket es de una mesa y está ANULADO (la anulación no toca la caja: la salida se registra a mano); `null` si no. */
+  mesaAnulada: number | null;
   diferencia: string;
 }>;
 

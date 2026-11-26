@@ -24,6 +24,8 @@ export type {
   SalidaDeEditarDeposito,
   SalidaDeCambiarActivoDeDeposito,
 } from "./casos-de-uso/depositos";
+export { CONFIRMACION_DE_CUENTAS_ABIERTAS } from "./casos-de-uso/articulos";
+export type { CuentasAbiertasConElProducto } from "./casos-de-uso/contrato";
 export type {
   EntradaDeControlarArticulo,
   EntradaDeDejarDeControlar,

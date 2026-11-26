@@ -40,6 +40,7 @@ describe("catalogo-cierre: los textos aprobados, exactamente", () => {
       "cierre.medio_correcto": "Medio correcto",
       "cierre.corregido_por": "Corregido por {persona} · {cuando}",
       "cierre.ticket_numero": "Ticket {numero}",
+      "cierre.diferencia_por_anulacion_de_la_mesa": "Diferencia por anulación de la mesa {mesa}",
       "cierre.error.accion_no_permitida": "Esta acción no está permitida",
       "cierre.error.en_cierre": "El día está en cierre. Cancelá el cierre para seguir",
       "cierre.error.cerrada": "El día ya está cerrado",
@@ -56,6 +57,7 @@ describe("catalogo-cierre: los textos aprobados, exactamente", () => {
       "cierre.cerrada_por": ["persona", "cuando"],
       "cierre.corregido_por": ["persona", "cuando"],
       "cierre.ticket_numero": ["numero"],
+      "cierre.diferencia_por_anulacion_de_la_mesa": ["mesa"],
     });
     for (const clave of [
       "cierre.reconocido_por",
