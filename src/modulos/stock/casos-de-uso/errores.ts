@@ -71,6 +71,8 @@ export type ErrorDeStock =
       control: ControlDeStock;
       detalle: readonly DetalleDeNegativo[];
     }>
+  /** La carga inicial sobre un depósito que ya tiene existencia: es un AVISO (nada se escribió); confirmar con `confirmaExistenciaPrevia` la registra igual (P-8). */
+  | Readonly<{ error: "YA_HAY_EXISTENCIA" }>
   // conteos
   | "CONTEO_NO_ENCONTRADO"
   | "CONTEO_EN_CURSO"

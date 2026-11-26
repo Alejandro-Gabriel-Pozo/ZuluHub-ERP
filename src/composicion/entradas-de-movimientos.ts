@@ -14,7 +14,7 @@ import {
  * Un costo o un detalle en blanco es «ausente».
  */
 
-const enBlanco = (v: string | undefined): string | undefined =>
+export const enBlanco = (v: string | undefined): string | undefined =>
   v === undefined || v.trim() === "" ? undefined : v;
 
 const formaDeMovimiento = z.object({

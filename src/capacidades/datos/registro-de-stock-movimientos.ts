@@ -3,6 +3,9 @@ import type { DefinicionDeDato, Proposito } from "./tipos-de-datos";
 /** Los datos de los formularios de movimientos de stock (Entrada, Salida, Transferir, Ajustar, Anular), en su propio archivo (uno por pantalla de stock). `registro.ts` los junta con el resto. */
 
 const CARPETA = "apps/web/ui/plantillas/stock/movimientos/FormularioDeMovimiento.cliente.tsx";
+/** La grilla de la carga inicial (STK-C, FP-STK-08) pide los mismos cuatro datos que los formularios: el depósito, el artículo, la cantidad y el costo por unidad. */
+const GRILLA_DE_LA_CARGA =
+  "apps/web/ui/plantillas/stock/carga-inicial/FormularioDeCargaInicial.cliente.tsx";
 const REQUIERE_STOCK = { modulo: "stock", estadoDeEmpresa: ["ACTIVE"] } as const;
 const PROPOSITO = (para: string): Proposito => ({
   para,
@@ -25,7 +28,7 @@ export const DATOS_DE_STOCK_MOVIMIENTOS = {
         "Depósito de la sucursal donde entra, sale, se transfiere o se ajusta existencia (solo los activos; en Entrada no los de Cuarentena ni Rechazo).",
       ),
     ],
-    consumidores: [CARPETA],
+    consumidores: [CARPETA, GRILLA_DE_LA_CARGA],
     ponerPor: TODAS,
     requiere: REQUIERE_STOCK,
   },
@@ -36,7 +39,7 @@ export const DATOS_DE_STOCK_MOVIMIENTOS = {
         "Artículo que se mueve: solo los controlados y activos; su unidad es la de stock y no se elige.",
       ),
     ],
-    consumidores: [CARPETA],
+    consumidores: [CARPETA, GRILLA_DE_LA_CARGA],
     ponerPor: TODAS,
     requiere: REQUIERE_STOCK,
   },
@@ -47,7 +50,7 @@ export const DATOS_DE_STOCK_MOVIMIENTOS = {
         "Cantidad del movimiento: mayor que cero, hasta cuatro decimales, en la unidad de stock del artículo.",
       ),
     ],
-    consumidores: [CARPETA],
+    consumidores: [CARPETA, GRILLA_DE_LA_CARGA],
     ponerPor: TODAS,
     requiere: REQUIERE_STOCK,
   },
@@ -69,7 +72,7 @@ export const DATOS_DE_STOCK_MOVIMIENTOS = {
         "Costo por unidad de una entrada por compra, opcional (vacío es «sin costo»); alimenta el promedio de costo.",
       ),
     ],
-    consumidores: [CARPETA],
+    consumidores: [CARPETA, GRILLA_DE_LA_CARGA],
     ponerPor: ["stock.registrar_entrada"],
     requiere: REQUIERE_STOCK,
   },
