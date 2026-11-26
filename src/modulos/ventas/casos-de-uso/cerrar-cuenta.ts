@@ -74,7 +74,7 @@ export type SalidaDeCerrarCuenta = Readonly<{
 const directorio = crearDirectorioDePartes();
 
 /** La salida de un ticket que ya existía (repetición): el original, con el rótulo y el estado de hoy. */
-async function salidaDelTicketExistente(
+export async function salidaDelTicketExistente(
   tx: TxDeVentas,
   empresa: Parameters<TxDeVentas["tickets"]["ejemplarDeNumero"]>[0],
   ticket: Ticket,

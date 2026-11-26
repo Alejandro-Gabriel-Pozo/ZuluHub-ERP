@@ -8,6 +8,7 @@ import { armarCobrar } from "./cobrar";
 import { armarEmitirComprobanteDeTicket } from "./emitir-comprobante-de-ticket";
 import type { DependenciasDeVentas } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";
+import { armarVenderACuenta } from "./vender-a-cuenta";
 import { armarVenderYCobrar } from "./vender-y-cobrar";
 
 /**
@@ -25,6 +26,7 @@ export function crearCasosDeUsoDeVentas(dependencias: DependenciasDeVentas) {
     cobrar: armarCobrar(dependencias),
     emitirComprobanteDeTicket: armarEmitirComprobanteDeTicket(dependencias),
     venderYCobrar: armarVenderYCobrar(dependencias),
+    venderACuenta: armarVenderACuenta(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 
