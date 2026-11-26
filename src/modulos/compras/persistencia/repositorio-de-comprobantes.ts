@@ -3,47 +3,10 @@ import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/m
 import type { TipoDeComprobanteDeProveedor } from "../dominio/comprobante";
 import type { NivelDeCompra } from "../dominio/niveles";
 import type { ComprasDb } from "./esquema";
-import { COLUMNAS, aComprobante } from "./comprobante-fila";
+import { COLUMNAS, aComprobante, type ComprobanteGuardado } from "./comprobante-fila";
 import { esUuid } from "./filas";
 
-export type EstadoDeComprobante = "REGISTRADO" | "ANULADO";
-
-export type ComprobanteGuardado = Readonly<{
-  id: string;
-  proveedorId: string;
-  clase: string;
-  /** La factura que corrige (solo una nota de crédito). */
-  comprobanteAsociadoId: string | null;
-  /** La factura anulada que esta factura reemplaza (NOTAS-2); `null` en las demás. */
-  reemplazaAId: string | null;
-  tipo: TipoDeComprobanteDeProveedor | null;
-  puntoDeVenta: number | null;
-  numero: number | null;
-  fechaDelComprobante: string | null;
-  fechaDeVencimientoDePago: string | null;
-  netoGravado: string;
-  noGravado: string;
-  exento: string;
-  iva: string;
-  tributosTotal: string;
-  creditoFiscalComputable: string;
-  totalCalculado: string;
-  totalSegunFactura: string;
-  proveedorCuit: string | null;
-  proveedorRazonSocial: string;
-  letraNoEsperada: boolean;
-  nivel: NivelDeCompra;
-  esAtajo: boolean;
-  estado: EstadoDeComprobante;
-  fechaNegocio: string;
-  claveIdempotencia: string;
-  huella: string;
-  registradoPor: string;
-  anuladoPor: string | null;
-  anuladoEn: Date | null;
-  motivoDeAnulacion: string | null;
-  version: number;
-}>;
+export type { ComprobanteGuardado, EstadoDeComprobante } from "./comprobante-fila";
 
 export type AltaDeComprobante = Readonly<{
   proveedorId: string;

@@ -1,9 +1,49 @@
 import { sql } from "kysely";
 import { esTipoDeComprobanteDeProveedor } from "../dominio/comprobante";
 import { esNivelDeCompra } from "../dominio/niveles";
-import type { ComprobanteGuardado } from "./repositorio-de-comprobantes";
+import type { NivelDeCompra } from "../dominio/niveles";
+import type { TipoDeComprobanteDeProveedor } from "../dominio/comprobante";
 
 /** Las columnas de un comprobante, la fila que vuelve de la base y su paso al `ComprobanteGuardado` (separado del repositorio para no pasar del tope de líneas por archivo). */
+export type EstadoDeComprobante = "REGISTRADO" | "ANULADO";
+
+export type ComprobanteGuardado = Readonly<{
+  id: string;
+  proveedorId: string;
+  clase: string;
+  /** La factura que corrige (solo una nota de crédito). */
+  comprobanteAsociadoId: string | null;
+  /** La factura anulada que esta factura reemplaza (NOTAS-2); `null` en las demás. */
+  reemplazaAId: string | null;
+  tipo: TipoDeComprobanteDeProveedor | null;
+  puntoDeVenta: number | null;
+  numero: number | null;
+  fechaDelComprobante: string | null;
+  fechaDeVencimientoDePago: string | null;
+  netoGravado: string;
+  noGravado: string;
+  exento: string;
+  iva: string;
+  tributosTotal: string;
+  creditoFiscalComputable: string;
+  totalCalculado: string;
+  totalSegunFactura: string;
+  proveedorCuit: string | null;
+  proveedorRazonSocial: string;
+  letraNoEsperada: boolean;
+  nivel: NivelDeCompra;
+  esAtajo: boolean;
+  estado: EstadoDeComprobante;
+  fechaNegocio: string;
+  claveIdempotencia: string;
+  huella: string;
+  registradoPor: string;
+  anuladoPor: string | null;
+  anuladoEn: Date | null;
+  motivoDeAnulacion: string | null;
+  version: number;
+}>;
+
 export const COLUMNAS = [
   "id",
   "proveedor_id",
