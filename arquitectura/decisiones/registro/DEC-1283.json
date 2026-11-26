@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1283",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "El cargo se reparte por defecto a la sucursal de la recepción (N1 y N2) o a «sin centro de costo» (N3 y N4); quien reparte la factura entre sucursales pasa su propio reparto.",
+  "que_cambia": "El saldo por sucursal de un proveedor de facturas de la empresa queda sin centro de costo hasta que servicios reparta. Revertir: cambiar el reparto por defecto.",
+  "donde": "cargo-de-factura.ts (repartoPorDefecto), cargo-de-la-factura.ts; brief de L1 aprobado por el orquestador el 25/11/2026 (cambio 2)"
+}

@@ -1,11 +1,10 @@
 {
   "id": "DEC-1021",
   "fecha": "2026-11-25",
-  "quien": "sesión",
-  "tipo": "SIN_DECISION",
-  "estado": "PENDIENTE_DE_OK",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
   "decision": "En Editar, el uso se muestra como texto con su rótulo y no como un campo apagado; «Desactivar» del depósito de venta se ofrece y el servidor responde con su motivo.",
   "que_cambia": "Evita un campo de entrada sin función y una regla del servidor repetida en la pantalla (interfaz sobria). Revertir: dibujar el selector apagado o apagar el botón, un cambio chico.",
-  "donde": "apps/web/ui/plantillas/stock/depositos/FormularioDeEditarDeposito.cliente.tsx; PantallaDeDepositos.tsx",
-  "motivo": "SUPUESTO de la sesión: la maqueta dibuja un selector de uso apagado y la ficha dice que el botón del depósito de venta se ofrece apagado; se eligió lo que no agrega campo ni replica la regla."
+  "donde": "apps/web/ui/plantillas/stock/depositos/FormularioDeEditarDeposito.cliente.tsx; PantallaDeDepositos.tsx; dueño 25/11/2026, vía el orquestador (la fila la asienta diseño)"
 }

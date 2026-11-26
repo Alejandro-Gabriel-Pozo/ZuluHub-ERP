@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1282",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Anular una factura sin asiento en el libro falla cerrado con su propio código; el libro arranca con el despliegue, sin relleno de facturas anteriores.",
+  "que_cambia": "Una factura anterior al libro no se puede anular hasta rellenarla. Producción está vacía y la empresa de pruebas se recrea. Revertir: saltear la anulación si falta el asiento.",
+  "donde": "libro-de-proveedores.ts (anularCargo), compras-cargo-de-factura.test.ts; brief de L1 aprobado por el orquestador el 25/11/2026 (cambio 1)"
+}

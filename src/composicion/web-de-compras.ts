@@ -2,6 +2,7 @@ import { crearCasosDeUsoDeCompras, crearConsultasDeCompras } from "../modulos/co
 import { crearPuertosDeStock } from "../modulos/stock/publico";
 import { crearEgresoDeCaja } from "./egreso-de-caja";
 import { crearIvaDeLaEmpresa } from "./iva-de-la-empresa";
+import { crearLibroDeProveedores } from "./libro-de-proveedores";
 import { perezoso } from "./perezoso";
 import type { BaseDeWeb } from "./web-base";
 
@@ -18,6 +19,7 @@ export function armarWebDeCompras({ conexiones, reglas }: BaseDeWeb) {
         reglas,
         stock: crearPuertosDeStock({ reglas }),
         egresoDeCaja: crearEgresoDeCaja(),
+        libroDeProveedores: crearLibroDeProveedores(),
         ivaDeLaEmpresa: crearIvaDeLaEmpresa(),
       }),
     ),

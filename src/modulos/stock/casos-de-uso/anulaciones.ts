@@ -9,6 +9,12 @@ import type { ErrorDeStock } from "./errores";
 import { buscarRepeticion, registrarMovimientoEnTx } from "./movimiento-en-tx";
 import { leerClave, leerDetalle, leerId, traducirMovimiento } from "./movimientos-comun";
 
+/**
+ * Si un movimiento del libro se puede anular desde stock: UNA regla (`esAnulable` del dominio), la que usa «Anular» y la que la lista de Movimientos le cuenta a la pantalla. Las consultas no importan el
+ * dominio: entran por acá (mismo camino que `lectura-de-lotes`).
+ */
+export { esAnulable };
+
 type R<S> = Resultado<S, ErrorDeStock>;
 
 export type EntradaDeAnularMovimiento = Readonly<{
