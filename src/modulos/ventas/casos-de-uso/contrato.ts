@@ -5,6 +5,7 @@ import type { Transacciones } from "../../../puertos/transacciones";
 import type { TxDeCaja } from "../../caja/publico";
 import type { LecturasDeCatalogo } from "../../catalogo/publico";
 import type { TxDeJornadas } from "../../cierre/publico";
+import type { RepositoriosDeClientes } from "../../clientes/publico";
 import type { LecturaDeEstados, RepositorioDeSucursales } from "../../empresas/publico";
 import type { FacturadorDeTickets } from "./puertos-de-facturacion";
 import type { StockDeVentas } from "./puertos-de-stock";
@@ -26,6 +27,8 @@ export type TxDeVentas = LecturaDeEstados &
   Readonly<{
     cuentas: RepositorioDeCuentas;
     tickets: RepositorioDeTickets;
+    /** El directorio de partes (clientes): al cerrar, el cliente que se carga al ticket se valida con su puerto (`parteParaOperacion`), en esta transacción. */
+    partes: RepositoriosDeClientes["partes"];
     /** El puntero ticket → comprobante (E1, 0029). */
     documentos: RepositorioDeDocumentos;
     /** El ticket con los renglones de su ejemplar vigente: lo que se factura (E1). */

@@ -19,6 +19,8 @@ export type TicketDeJornada = Readonly<{
   cobros: readonly Readonly<{ cobroId: string; origenOrden: number; importe: string }>[];
   emitidoPor: string;
   emitidoEn: Date;
+  /** El cliente al que se le cargó la venta (0107); `null` si no hay. */
+  cargadoAParteId: string | null;
 }>;
 
 export type TicketPorCobranza = Readonly<{

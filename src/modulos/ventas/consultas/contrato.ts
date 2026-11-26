@@ -4,6 +4,7 @@ import type { LecturaDeDerechosDeUso } from "../../../puertos/derechos-de-uso";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { TxDeLecturaDeCaja } from "../../caja/publico";
 import type { LecturasDeCatalogo } from "../../catalogo/publico";
+import type { RepositoriosDeClientes } from "../../clientes/publico";
 import type { LecturaDeEstados } from "../../empresas/publico";
 import type { LecturasDeVentas } from "../persistencia/repositorio-de-lecturas";
 import type { FacturadorDeTickets } from "../casos-de-uso/puertos-de-facturacion";
@@ -19,6 +20,8 @@ export type TxDeConsultasDeVentas = LecturasDeCatalogo &
     cuentas: Pick<RepositorioDeCuentas, "obtener" | "lineasDeCuenta">;
     /** El puntero ticket → comprobante (E1, 0029): qué tickets ya tienen documento. */
     documentos: Pick<RepositorioDeDocumentos, "vigentesDe">;
+    /** Solo para mostrar el nombre del cliente cargado al ticket (`nombresParaMostrar`). */
+    partes: RepositoriosDeClientes["partes"];
     autorizacion: CargaDeAutorizacion;
     /** Los derechos del plan de la empresa (la perilla `facturar_antes_de_cobrar`), leídos en esta transacción y sin caché. */
     derechos: Pick<LecturaDeDerechosDeUso, "deLaEmpresa">;

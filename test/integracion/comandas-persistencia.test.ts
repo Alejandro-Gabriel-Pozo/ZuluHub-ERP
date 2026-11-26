@@ -61,7 +61,14 @@ describe.skipIf(base === null)("comandas: la persistencia contra el esquema real
       (m) => m[1] as string,
     );
     expect(deDisparadores.length).toBeGreaterThan(15);
-    const existentes = new Set([...rows.map((r) => r.nombre), ...deDisparadores]);
+    // 0104 (nota libre) reemplaza tres disparadores de 0038 y suma reglas nuevas: sus nombres también se declaran.
+    const sql0104 = await readFile(
+      join(import.meta.dirname, "../../migraciones/0104_nota_libre_en_la_linea_de_comanda.sql"),
+      "utf8",
+    );
+    const deNota = [...sql0104.matchAll(/CONSTRAINT = '(\w+)'/g)].map((m) => m[1] as string);
+    expect(deNota).toEqual(expect.arrayContaining(["renglon_nota_distinta"]));
+    const existentes = new Set([...rows.map((r) => r.nombre), ...deDisparadores, ...deNota]);
     const traducidas = new Set(Object.keys(ERRORES_DE_COMANDAS_POR_RESTRICCION));
     expect(
       [...existentes].filter((n) => !traducidas.has(n)).sort(),

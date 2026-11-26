@@ -140,7 +140,7 @@ async function ticketsDeJornada(
   const filas = await sql<Fila>`
     select t.id, t.numero, t.estado, t.ejemplar_vigente, ev.id as ejemplar_vigente_id, t.total::text as total_original,
            (${VIGENTE})::text as total_vigente, (${COBRADO})::text as total_cobrado,
-           (case when c.id is null then 0::numeric(18,2) else (${COBRADO}) - (${VIGENTE}) end)::text as diferencia, c.id as cobranza_id, t.emitido_por, t.emitido_en
+           (case when c.id is null then 0::numeric(18,2) else (${COBRADO}) - (${VIGENTE}) end)::text as diferencia, c.id as cobranza_id, t.emitido_por, t.emitido_en, t.cargado_a_parte_id
       from ticket t
       join ticket_ejemplar ev on ev.empresa_id = t.empresa_id and ev.ticket_id = t.id and ev.numero_de_ejemplar = t.ejemplar_vigente
       left join cobranza_de_ticket c on c.empresa_id = t.empresa_id and c.ticket_id = t.id
@@ -183,6 +183,7 @@ async function ticketsDeJornada(
     cobros: f["cobranza_id"] === null ? [] : (cobros.get(texto(f["cobranza_id"])) ?? []),
     emitidoPor: texto(f["emitido_por"]),
     emitidoEn: fecha(f["emitido_en"]),
+    cargadoAParteId: f["cargado_a_parte_id"] === null ? null : texto(f["cargado_a_parte_id"]),
   }));
 }
 
