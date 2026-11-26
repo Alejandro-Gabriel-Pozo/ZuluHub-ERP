@@ -54,6 +54,7 @@ export function armarHojaDeLaExportacion(
     origen: celdaDeTexto(rotulos.origenes[f.origen]),
     sucursal: celdaDeTexto(f.sucursal),
     medio_de_pago: celdaDeTexto(
+      // Stryker disable next-line ConditionalExpression: sin medio, `rotulos.tiposDeMedio[null]` es `undefined` y el `??` devuelve el propio `null`: da lo mismo que cortar antes.
       f.tipoDeMedio === null ? null : (rotulos.tiposDeMedio[f.tipoDeMedio] ?? f.tipoDeMedio),
     ),
     estado: celdaDeTexto(rotulos.estados[f.estado]),
