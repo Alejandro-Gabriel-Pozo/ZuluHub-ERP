@@ -1,6 +1,8 @@
 import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/declaracion";
 
 const ARCHIVO_DE_PRUEBAS = "test/integracion/cuenta-corriente-casos-de-uso.test.ts";
+const ARCHIVO_DE_PRUEBAS_DE_LA_EXPORTACION =
+  "test/integracion/cuenta-corriente-estado-y-exportacion.test.ts";
 const ARCHIVO_DE_PRUEBAS_DEL_CARGO = "test/integracion/ventas-cargo-a-cuenta.test.ts";
 const ARCHIVO_DE_PRUEBAS_DE_LA_COBRANZA = "test/integracion/ventas-cobranza-a-cuenta.test.ts";
 
@@ -103,6 +105,19 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_PRUEBAS_DEL_CARGO,
         it: "anular el ticket anula el cargo en la misma transacción (el saldo vuelve a cero) y repetir la anulación no duplica el espejo",
+      },
+    },
+  },
+  // CC-4: lee y deja su registro de auditoría; no cambia nada del libro. Sin acción nueva: `cuenta_corriente.ver` (hoy gerente y administrador).
+  exportarCuentaCorriente: {
+    accion: "cuenta_corriente.ver",
+    repeticion: {
+      regla: "NO_APLICA",
+      motivo:
+        "Es una lectura: repetirla devuelve lo mismo y no cambia el libro ni las fichas; cada exportación deja su propio registro de auditoría (quién, cuándo, a qué día y cuántas filas, sin los datos).",
+      prueba: {
+        archivo: ARCHIVO_DE_PRUEBAS_DE_LA_EXPORTACION,
+        it: "exportar dos veces da las mismas filas, deja dos registros de auditoría sin los datos y no cambia el libro",
       },
     },
   },
