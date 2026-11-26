@@ -27,9 +27,13 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
 const RUTA = "../../apps/web/servidor/ofertas-de-produccion";
 const accionesDeProduccion = async (
   contexto: never,
-): Promise<{ cancelar: boolean; anular: boolean }> => {
+): Promise<{ cancelar: boolean; anular: boolean; cerrar: boolean }> => {
   const modulo = (await import(/* @vite-ignore */ RUTA)) as {
-    accionesDeProduccion: (c: never) => Promise<{ cancelar: boolean; anular: boolean }>;
+    accionesDeProduccion: (c: never) => Promise<{
+      cancelar: boolean;
+      anular: boolean;
+      cerrar: boolean;
+    }>;
   };
   return modulo.accionesDeProduccion(contexto);
 };
@@ -52,21 +56,48 @@ beforeEach(() => {
 });
 
 describe("accionesDeProduccion", () => {
-  it("con cancelar y anular (gerente o administrador): las dos", async () => {
-    conPermisos(["transformaciones.ver", "transformaciones.cancelar", "transformaciones.anular"]);
-    expect(await accionesDeProduccion(contexto())).toEqual({ cancelar: true, anular: true });
+  it("con cerrar, cancelar y anular (gerente o administrador): las tres", async () => {
+    conPermisos([
+      "transformaciones.ver",
+      "transformaciones.cerrar",
+      "transformaciones.cancelar",
+      "transformaciones.anular",
+    ]);
+    expect(await accionesDeProduccion(contexto())).toEqual({
+      cancelar: true,
+      anular: true,
+      cerrar: true,
+    });
   });
 
   it("cada una por separado", async () => {
     conPermisos(["transformaciones.cancelar"]);
-    expect(await accionesDeProduccion(contexto())).toEqual({ cancelar: true, anular: false });
+    expect(await accionesDeProduccion(contexto())).toEqual({
+      cancelar: true,
+      anular: false,
+      cerrar: false,
+    });
     conPermisos(["transformaciones.anular"]);
-    expect(await accionesDeProduccion(contexto())).toEqual({ cancelar: false, anular: true });
+    expect(await accionesDeProduccion(contexto())).toEqual({
+      cancelar: false,
+      anular: true,
+      cerrar: false,
+    });
+    conPermisos(["transformaciones.cerrar"]);
+    expect(await accionesDeProduccion(contexto())).toEqual({
+      cancelar: false,
+      anular: false,
+      cerrar: true,
+    });
   });
 
   it("solo con ver y abrir (un operador): ninguna", async () => {
     conPermisos(["transformaciones.ver", "transformaciones.abrir"]);
-    expect(await accionesDeProduccion(contexto())).toEqual({ cancelar: false, anular: false });
+    expect(await accionesDeProduccion(contexto())).toEqual({
+      cancelar: false,
+      anular: false,
+      cerrar: false,
+    });
   });
 
   it("con el módulo en desarrollo o sin activar (la acción no figura): ninguna", async () => {
@@ -74,22 +105,38 @@ describe("accionesDeProduccion", () => {
       acciones: [],
       modulos: { activos: [], enSoloLectura: [] },
     });
-    expect(await accionesDeProduccion(contexto())).toEqual({ cancelar: false, anular: false });
+    expect(await accionesDeProduccion(contexto())).toEqual({
+      cancelar: false,
+      anular: false,
+      cerrar: false,
+    });
   });
 
-  it("con el módulo en solo lectura, cancelar y anular siguen (cierran lo iniciado)", async () => {
+  it("con el módulo en solo lectura, cerrar, cancelar y anular siguen (cierran lo iniciado)", async () => {
     mundo.permisos = ok({
-      acciones: ["transformaciones.cancelar", "transformaciones.anular"],
+      acciones: ["transformaciones.cerrar", "transformaciones.cancelar", "transformaciones.anular"],
       modulos: { activos: [], enSoloLectura: ["produccion"] },
     });
-    expect(await accionesDeProduccion(contexto())).toEqual({ cancelar: true, anular: true });
+    expect(await accionesDeProduccion(contexto())).toEqual({
+      cancelar: true,
+      anular: true,
+      cerrar: true,
+    });
   });
 
   it("si no se pudieron leer los permisos (sin ellos o con una falla), ninguna", async () => {
     mundo.permisos = null;
-    expect(await accionesDeProduccion(contexto())).toEqual({ cancelar: false, anular: false });
+    expect(await accionesDeProduccion(contexto())).toEqual({
+      cancelar: false,
+      anular: false,
+      cerrar: false,
+    });
     mundo.fallan = true;
-    expect(await accionesDeProduccion(contexto())).toEqual({ cancelar: false, anular: false });
+    expect(await accionesDeProduccion(contexto())).toEqual({
+      cancelar: false,
+      anular: false,
+      cerrar: false,
+    });
   });
 });
 

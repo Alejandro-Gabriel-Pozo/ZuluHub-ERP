@@ -34,3 +34,7 @@ export function direccionDeLaLista(estado: EstadoDelFiltroDeLaLista): string {
 
 /** La dirección de la ficha de una orden. El id lo dio el servidor (un UUID): no se arma desde el navegador. */
 export const rutaDeLaOrden = (ordenId: string): string => `${RUTA_DE_PRODUCCION}/${ordenId}`;
+
+/** La dirección de «Cerrar con lo real» de una orden. El id lo dio el servidor (un UUID): no se arma desde el navegador. */
+export const rutaDeCierreDeLaOrden = (ordenId: string): string =>
+  `${rutaDeLaOrden(ordenId)}/cerrar`;
