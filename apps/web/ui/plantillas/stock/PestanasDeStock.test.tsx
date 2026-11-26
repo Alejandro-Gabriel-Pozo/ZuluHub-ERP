@@ -8,7 +8,7 @@ import { PESTANAS_CONSTRUIDAS, RUTAS_DE_STOCK } from "./rutas-de-stock";
 
 /** Las pestañas de Stock en Chromium (maqueta `stock.html`, 09/11/2026): solo las de pantallas construidas, la actual marcada, accesibles. */
 describe("PestanasDeStock", () => {
-  it("hoy son tres enlaces (Existencias, Movimientos y Depósitos), con el actual marcado", async () => {
+  it("hoy son cuatro enlaces (Existencias, Movimientos, Depósitos y Lotes), con el actual marcado", async () => {
     await render(<PestanasDeStock pestanas={pestanasDeStock("movimientos")} />);
     await expect
       .element(page.getByRole("link", { name: "Existencias" }))
@@ -19,7 +19,10 @@ describe("PestanasDeStock", () => {
     await expect
       .element(page.getByRole("link", { name: "Depósitos" }))
       .toHaveAttribute("href", "/stock/depositos");
-    expect(page.getByRole("link").elements()).toHaveLength(3);
+    await expect
+      .element(page.getByRole("link", { name: "Lotes" }))
+      .toHaveAttribute("href", "/stock/lotes");
+    expect(page.getByRole("link").elements()).toHaveLength(4);
     expect(await violacionesDeAccesibilidad()).toEqual([]);
   });
 

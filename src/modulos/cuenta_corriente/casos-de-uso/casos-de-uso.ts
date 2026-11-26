@@ -1,5 +1,11 @@
 import { armarCambiarCondicionesDeLaCuenta } from "./cambiar-condiciones";
-import { anularCargoDeVentaEnTx, aprobarExcesoEnTx, cargarVentaEnTx } from "./cargar-venta";
+import {
+  anularCargoDeVentaEnTx,
+  anularCobranzaDeVentaEnTx,
+  aprobarExcesoEnTx,
+  cargarVentaEnTx,
+  cobrarVentaEnTx,
+} from "./cargar-venta";
 import { armarReactivarCuentaDelCliente, armarSuspenderCuentaDelCliente } from "./cambiar-estado";
 import type { DependenciasDeCuentaCorriente } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";
@@ -31,6 +37,8 @@ export function crearCasosDeUsoDeCuentaCorriente(dependencias: DependenciasDeCue
     aprobarExcesoEnTx: (...argumentos: DesdeLaTx<typeof aprobarExcesoEnTx>) =>
       aprobarExcesoEnTx(argumentos[0], argumentos[1], dependencias.reglas, argumentos[2]),
     anularCargoDeVentaEnTx,
+    cobrarVentaEnTx,
+    anularCobranzaDeVentaEnTx,
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

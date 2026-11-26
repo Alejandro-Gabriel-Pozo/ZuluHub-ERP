@@ -36,6 +36,7 @@ export type {
   SalidaDeDesactivarImpresora,
   SalidaDeImpresora,
 } from "./casos-de-uso/impresoras";
+export type { EntradaDeCambiarNota, SalidaDeCambiarNota } from "./casos-de-uso/notas";
 export type {
   EntradaDeDeclararResultado,
   EntradaDeSolicitarCopia,

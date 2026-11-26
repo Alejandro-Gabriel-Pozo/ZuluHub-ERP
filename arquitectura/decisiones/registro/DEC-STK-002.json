@@ -1,0 +1,10 @@
+{
+  "id": "DEC-STK-002",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Pestaña Lotes de stock en solo lectura: Lotes, Vence, Sin asignar, Vencimientos, Vencido, Vence hoy y Vence en los próximos días. Sin importes.",
+  "que_cambia": "Siete claves nuevas stock.lotes.*. Lotes y la quinta pestaña: dueño 25/11/2026, fila 449; el resto, orquestador, fila 173. SUPUESTO: el filtro de días son enlaces a 7, 30 y 90 (la maqueta pone un campo). Revertir: sacar claves, pestaña y ruta.",
+  "donde": "dia-uno-stock-inventario-de-textos-2026-11-25.md L-01, L-03, L-04, L-10, L-11, L-12 y L-16; dia-uno-stock-fichas-de-pantalla-2026-11-25.md FP-STK-13 y FP-STK-14; maqueta stock-lotes.html"
+}

@@ -39,6 +39,12 @@ const UNIR_APROBADO = {
   donde:
     "Pedernal-docs 10-ux-ui, maqueta unir.html y 11-especificaciones/briefs/salon/SAL-E1-unir-mesas.md §3 (S10)",
 } as const;
+const NOTA_APROBADA = {
+  decidio:
+    "el dueño, 25/11/2026 (aprobó la maqueta de notas libres y el rótulo «Nota para la cocina», sin ayuda del largo; decisiones-del-dueno-2026-11.md)",
+  donde:
+    "Pedernal-docs 11-especificaciones/briefs/salon/SAL-G-notas-libres.md §6 (textos) y la maqueta de notas libres (artifact VSXpunZMWoh9obTmpPxKmE)",
+} as const;
 const USO_DE_IMPRIMIR = "BotonDeImprimir.cliente.tsx";
 const USO_DEL_MODELO = "modelo-de-la-mesa.ts (ficha de la mesa)";
 const USO_DE_LA_PANTALLA = "PantallaDeLaMesa.cliente.tsx";
@@ -198,6 +204,13 @@ export const FICHA_DE_LA_MESA = {
         { usos: ["hoja de «Unir con otra mesa» (SAL-E1)", USO_DEL_MODELO], fuente: UNIR_APROBADO },
       ]),
     ),
+    "comandas.texto.nota_nota_para_la_cocina": {
+      usos: [
+        "rótulo del campo de la nota de un plato, en la hoja de producto y en la ficha de la mesa (SAL-G)",
+        USO_DEL_MODELO,
+      ],
+      fuente: NOTA_APROBADA,
+    },
     "ventas.cobro.cobrar": {
       usos: [
         "botón «Cobrar» de la ficha de la mesa (lleva a la hoja de cobro de la mesa: la de la venta rápida en modo «cuenta existente», descrita en `ficha-de-cobrar.ts`)",

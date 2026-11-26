@@ -81,6 +81,8 @@ const FORMA_DE_AGREGAR_AL_PEDIDO = z.object({
   precioAbierto: decimal.optional(),
   confirmaciones: z.array(texto).max(10).optional(),
   salida: z.enum(SALIDAS_DE_LINEA).optional(),
+  /** La nota libre para la cocina (SAL-G): la forma; el servidor valida el largo y los caracteres. */
+  nota: texto.optional(),
 });
 
 type Pedido<T> = Resultado<T, ErrorDeEntrada>;

@@ -8,6 +8,7 @@ import {
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import type { FichaDePantalla } from "../../src/capacidades/pantallas/ficha-de-mesas";
 import { FICHA_DE_EXISTENCIAS } from "../../src/capacidades/pantallas/ficha-de-existencias";
+import { FICHA_DE_LOTES_DE_STOCK } from "../../src/capacidades/pantallas/ficha-de-lotes-de-stock";
 import { FICHA_DE_MOVIMIENTOS } from "../../src/capacidades/pantallas/ficha-de-movimientos";
 import {
   FICHA_DE_AJUSTAR,
@@ -29,9 +30,18 @@ const FICHAS: readonly {
   ficha: FichaDePantalla;
   pagina: string;
   citas: boolean;
+  /** `false`: el acceso es el de la consulta de la pantalla y no el de la fila «Stock» del menú (`stock.ver`). */
+  accesoDelMenu?: boolean;
 }[] = [
   { nombre: "Existencias", ficha: FICHA_DE_EXISTENCIAS, pagina: "existencias", citas: true },
   { nombre: "Movimientos", ficha: FICHA_DE_MOVIMIENTOS, pagina: "movimientos", citas: true },
+  {
+    nombre: "Lotes",
+    ficha: FICHA_DE_LOTES_DE_STOCK,
+    pagina: "lotes",
+    citas: true,
+    accesoDelMenu: false,
+  },
   { nombre: "Entrada", ficha: FICHA_DE_ENTRADA, pagina: "movimientos/entrada", citas: false },
   { nombre: "Salida", ficha: FICHA_DE_SALIDA, pagina: "movimientos/salida", citas: false },
   {
@@ -44,36 +54,40 @@ const FICHAS: readonly {
   { nombre: "Anular", ficha: FICHA_DE_ANULAR, pagina: "movimientos/[id]/anular", citas: false },
 ];
 
-describe.each(FICHAS)("ficha de la pantalla «$nombre» de stock", ({ ficha, pagina }) => {
-  it("sus archivos existen", () => {
-    for (const archivo of ficha.archivos) expect(() => readFileSync(archivo)).not.toThrow();
-  });
+describe.each(FICHAS)(
+  "ficha de la pantalla «$nombre» de stock",
+  ({ ficha, pagina, accesoDelMenu }) => {
+    it("sus archivos existen", () => {
+      for (const archivo of ficha.archivos) expect(() => readFileSync(archivo)).not.toThrow();
+    });
 
-  it("su ruta es la de su página y cada botón declara su texto, y la acción de permiso que envía existe en el módulo", () => {
-    expect(ficha.rutas).toEqual([`/stock/${pagina}`]);
-    const acciones = Object.keys(CATALOGO_DE_MODULOS.stock.acciones);
-    for (const b of ficha.botones) {
-      expect(Object.keys(ficha.textos), b.id).toContain(b.texto);
-      if ("envia" in b.hace) expect(acciones).toContain(b.hace.envia);
-    }
-  });
+    it("su ruta es la de su página y cada botón declara su texto, y la acción de permiso que envía existe en el módulo", () => {
+      expect(ficha.rutas).toEqual([`/stock/${pagina}`]);
+      const acciones = Object.keys(CATALOGO_DE_MODULOS.stock.acciones);
+      for (const b of ficha.botones) {
+        expect(Object.keys(ficha.textos), b.id).toContain(b.texto);
+        if ("envia" in b.hace) expect(acciones).toContain(b.hace.envia);
+      }
+    });
 
-  it("todo texto está declarado con usos y fuente, y cada clave existe con su fuente en el catálogo cuando es nueva", () => {
-    expect(Object.keys(ficha.textos)).toContain(ficha.titulo);
-    for (const [clave, t] of Object.entries(ficha.textos)) {
-      expect(Object.keys(CATALOGO_DE_TEXTOS)).toContain(clave);
-      expect(t.usos.length).toBeGreaterThan(0);
-      expect(t.fuente.decidio).toMatch(/dueño/);
-      expect(t.fuente.donde).toMatch(/Pedernal-docs|arquitectura\/decisiones/);
-    }
-  });
+    it("todo texto está declarado con usos y fuente, y cada clave existe con su fuente en el catálogo cuando es nueva", () => {
+      expect(Object.keys(ficha.textos)).toContain(ficha.titulo);
+      for (const [clave, t] of Object.entries(ficha.textos)) {
+        expect(Object.keys(CATALOGO_DE_TEXTOS)).toContain(clave);
+        expect(t.usos.length).toBeGreaterThan(0);
+        expect(t.fuente.decidio).toMatch(/dueño/);
+        expect(t.fuente.donde).toMatch(/Pedernal-docs|arquitectura\/decisiones/);
+      }
+    });
 
-  it("el acceso existe en el módulo stock y es el de la fila del menú", () => {
-    expect(Object.keys(CATALOGO_DE_MODULOS.stock.acciones)).toContain(ficha.acceso);
-    const fila = FILAS_DEL_MENU.find((f) => f.tipo === "pantalla" && f.clave === "stock");
-    expect(fila).toMatchObject({ accion: ficha.acceso });
-  });
-});
+    it("el acceso existe en el módulo stock y, salvo Lotes, es el de la fila del menú", () => {
+      expect(Object.keys(CATALOGO_DE_MODULOS.stock.acciones)).toContain(ficha.acceso);
+      if (accesoDelMenu === false) return;
+      const fila = FILAS_DEL_MENU.find((f) => f.tipo === "pantalla" && f.clave === "stock");
+      expect(fila).toMatchObject({ accion: ficha.acceso });
+    });
+  },
+);
 
 describe.each(FICHAS.filter((f) => f.citas))(
   "la ficha de «$nombre» cita solo textos declarados",

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   leerElPedidoDeAnular,
+  leerElPedidoDeCambiarNota,
   leerElPedidoDeCambiarSalida,
   leerElPedidoDeDeclarar,
   leerElPedidoDeEditarImpresora,
@@ -109,6 +110,19 @@ describe("entradas de las comandas y de la impresión", () => {
     for (const salida of ["ESPERA", "ahora", "", undefined, 1]) {
       expect(leerElPedidoDeCambiarSalida({ ...base, salida }).ok).toBe(false);
     }
+  });
+
+  it("nota para la cocina: la cuenta, la línea y la nota como texto (vacío la quita); la sucursal y lo demás se descartan", () => {
+    const base = { cuentaId: ID, lineaId: OTRO };
+    expect(leerElPedidoDeCambiarNota({ ...base, nota: "sin cebolla", sucursalId: "x" })).toEqual({
+      ok: true,
+      valor: { ...base, nota: "sin cebolla" },
+    });
+    expect(leerElPedidoDeCambiarNota({ ...base, nota: "" }).ok).toBe(true);
+    for (const nota of [undefined, null, 1, {}, "x".repeat(1001)]) {
+      expect(leerElPedidoDeCambiarNota({ ...base, nota }).ok).toBe(false);
+    }
+    expect(leerElPedidoDeCambiarNota({ cuentaId: "x", lineaId: OTRO, nota: "a" }).ok).toBe(false);
   });
 
   it("quitar sin enviar: solo la cuenta y la línea; el motivo y lo demás se descartan", () => {

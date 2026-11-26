@@ -1,0 +1,11 @@
+{
+  "id": "DEC-SAL-007",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "motivo": "El campo «Nota para la cocina» y su texto salen del brief SAL-G ya aprobado con la migración 0104 (DEC-SAL-006): se usa la palabra del catálogo y no hay dinero ni permisos nuevos; la nota se edita con el permiso de editar el pedido y el servidor la valida.",
+  "decision": "El mozo escribe una nota libre por plato antes de enviarlo; se guarda al salir del campo y viaja a la cocina en el envío.",
+  "que_cambia": "Se ve el campo «Nota para la cocina» en la hoja de producto y en cada plato sin enviar; el enviado la muestra sin editarla.",
+  "donde": "src/capacidades/vocabulario/catalogo-comandas.ts; Pedernal-docs briefs/salon/SAL-G-notas-libres.md"
+}
