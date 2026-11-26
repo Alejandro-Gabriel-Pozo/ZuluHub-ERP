@@ -9,6 +9,7 @@ import {
 import { armarReactivarCuentaDelCliente, armarSuspenderCuentaDelCliente } from "./cambiar-estado";
 import type { DependenciasDeCuentaCorriente } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";
+import { armarExportarCuentaCorriente } from "./exportar-cuenta-corriente";
 import { armarHabilitarCuentaDelCliente } from "./habilitar";
 
 /** Los argumentos de un caso de uso en la transacción del llamador, sin las reglas (las pone el módulo). */
@@ -39,6 +40,8 @@ export function crearCasosDeUsoDeCuentaCorriente(dependencias: DependenciasDeCue
     anularCargoDeVentaEnTx,
     cobrarVentaEnTx,
     anularCobranzaDeVentaEnTx,
+    // CC-4: lectura de toda la cuenta corriente para tablas dinámicas.
+    exportarCuentaCorriente: armarExportarCuentaCorriente(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

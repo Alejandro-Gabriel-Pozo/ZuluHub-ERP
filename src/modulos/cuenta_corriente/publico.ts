@@ -42,3 +42,46 @@ export {
   type ErrorDelCargoDeVenta,
   type TxDeCargoDeVenta,
 } from "./casos-de-uso/cargar-venta";
+export {
+  COLUMNAS_DE_LA_EXPORTACION,
+  FILAS_MAXIMAS_DE_LA_EXPORTACION,
+  ORIGENES_DE_LA_EXPORTACION,
+  TRAMOS_DE_ANTIGUEDAD,
+  antiguedadEnDias,
+  armarFilasDeLaExportacion,
+  tramoDeAntiguedad,
+  type ClienteParaExportar,
+  type ColumnaDeLaExportacion,
+  type FilaDeExportacion,
+  type MedioDeCobranza,
+  type MovimientoParaExportar,
+  type OrigenDeLaExportacion,
+  type TramoDeAntiguedad,
+} from "./dominio/exportacion";
+export type { ApoyoDeLaExportacion } from "./casos-de-uso/puertos-de-exportacion";
+export type {
+  ErrorAlExportarCuentaCorriente,
+  SalidaDeExportarCuentaCorriente,
+} from "./casos-de-uso/exportar-cuenta-corriente";
+export {
+  ORDENES_DE_LA_LISTA,
+  type ClienteConCuenta,
+  type EntradaDeListarClientesConCuenta,
+  type ErrorAlListarClientesConCuenta,
+  type ListaDeClientesConCuenta,
+  type OrdenDeLaLista,
+} from "./consultas/listar-clientes-con-cuenta";
+export type {
+  CargoPendienteDelEstadoDeCuenta,
+  DependenciasDeEstadoDeCuenta,
+  EntradaDeVerEstadoDeCuenta,
+  ErrorAlVerEstadoDeCuenta,
+  EstadoDeCuentaDelCliente,
+  LineaDelEstadoDeCuenta,
+  TxDeEstadoDeCuenta,
+} from "./consultas/ver-estado-de-cuenta";
+export { ORIGEN_DE_LA_COBRANZA_DE_VENTA } from "./dominio/cargo-de-venta";
+export {
+  armarHojaDeLaExportacion,
+  type RotulosDeLaExportacion,
+} from "./dominio/hoja-de-la-exportacion";

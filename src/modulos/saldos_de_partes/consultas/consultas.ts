@@ -3,9 +3,12 @@ import type { Importe } from "../../../primitivas/dinero/importe";
 import type { FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import type { TxDeSaldos } from "../casos-de-uso/contrato";
 import type {
+  CargoPendienteDeParte,
   CargoPendiente,
   LineaDeCuenta,
+  MovimientoDelLibro,
   PartidaAbierta,
+  SaldoDeParte,
   Reparto,
   Sentido,
 } from "../persistencia/repositorio-de-saldos";
@@ -77,4 +80,39 @@ export function creditosAbiertos(
   sentido: Sentido,
 ): Promise<PartidaAbierta[]> {
   return lectura.saldos.creditosAbiertos(contexto.empresaId, parteId, sentido);
+}
+
+/**
+ * CC-4: todos los movimientos de varias partes (espejos de anulación incluidos), por parte y orden de registro. Lee a lo sumo `limite + 1` filas: si vuelven más de `limite`, quien llama
+ * rechaza el pedido entero. Una parte de otra empresa no aparece (filtra por la empresa del contexto).
+ */
+export function movimientosDeLasPartes(
+  lectura: LecturaDeSaldos,
+  contexto: ContextoOperativo,
+  parteIds: readonly string[],
+  sentido: Sentido,
+  limite: number,
+): Promise<MovimientoDelLibro[]> {
+  return lectura.saldos.movimientosDeLasPartes(contexto.empresaId, sentido, parteIds, limite);
+}
+
+/** CC-4: el saldo de cada una de esas partes en ese sentido (cero si nunca tuvieron asientos). */
+export function saldosDeLasPartes(
+  lectura: LecturaDeSaldos,
+  contexto: ContextoOperativo,
+  parteIds: readonly string[],
+  sentido: Sentido,
+): Promise<SaldoDeParte[]> {
+  return lectura.saldos.saldosDeLasPartes(contexto.empresaId, sentido, parteIds);
+}
+
+/** CC-4: los cargos con algo por saldar de esas partes, cada uno con su «vencida» a la fecha `hoy`. */
+export function cargosAbiertosDeLasPartes(
+  lectura: LecturaDeSaldos,
+  contexto: ContextoOperativo,
+  parteIds: readonly string[],
+  sentido: Sentido,
+  hoy: FechaCivil,
+): Promise<CargoPendienteDeParte[]> {
+  return lectura.saldos.cargosAbiertosDeLasPartes(contexto.empresaId, sentido, parteIds, hoy);
 }
