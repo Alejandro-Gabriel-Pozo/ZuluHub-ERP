@@ -5,7 +5,7 @@ import {
 } from "../../../patrones/formato-fiscal";
 import { nombreDeLaFactura } from "../lista/modelo-de-lista-de-compras";
 import { nombreDeUnidad } from "../nueva/modelo-de-nueva-compra";
-import { direccionDeLaListaDeFacturas, rutaDeLaFactura } from "../rutas-de-compras";
+import { direccionDeLaListaDeFacturas, rutaDeLaFactura, rutaDeLasNotas } from "../rutas-de-compras";
 import type { TextosDeFacturas } from "./textos-de-facturas";
 
 /**
@@ -86,6 +86,8 @@ export type AccionesDeLaFactura = Readonly<{
   conciliar: boolean;
   anularConciliacion: boolean;
   tomarElCosto: boolean;
+  /** Ver las notas de la factura (las dos acciones de ver notas: la lectura las pide). */
+  verNotas: boolean;
 }>;
 export const SIN_ACCIONES_DE_LA_FACTURA: AccionesDeLaFactura = {
   cargar: false,
@@ -93,6 +95,7 @@ export const SIN_ACCIONES_DE_LA_FACTURA: AccionesDeLaFactura = {
   conciliar: false,
   anularConciliacion: false,
   tomarElCosto: false,
+  verNotas: false,
 };
 
 const SIN_DATO = "—";
@@ -224,6 +227,8 @@ export type FichaDeFacturaArmada = Readonly<{
       anulable: boolean;
     }>[];
   }> | null;
+  /** Adónde lleva «Notas de crédito»: solo con el permiso de ver las notas; `null` si no se ofrece. */
+  notas: Readonly<{ texto: string; href: string }> | null;
   /** «Conciliar» se ofrece (permiso y el estado de la factura que dice el servidor: «Falta conciliar» o «Conciliada en parte»; la pantalla no recalcula saldos). */
   conciliar: boolean;
 }>;
@@ -294,6 +299,9 @@ export function armarLaFichaDeFactura(
             anulable: acciones.anularConciliacion && !c.anulada && c.anulableEnAlcance,
           })),
         }
+      : null,
+    notas: acciones.verNotas
+      ? { texto: textos.notasDeCredito, href: rutaDeLasNotas(ficha.comprobanteId) }
       : null,
     conciliar:
       acciones.conciliar &&

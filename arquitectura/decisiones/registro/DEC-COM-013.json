@@ -1,0 +1,10 @@
+{
+  "id": "DEC-COM-013",
+  "fecha": "2026-11-26",
+  "quien": "dueño",
+  "tipo": "DINERO",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Los rótulos «Importe a pagar» (el neto de la factura: total menos notas de crédito) y «Todavía se puede acreditar» (el tope de una nueva nota de crédito) de las pantallas de notas del proveedor.",
+  "que_cambia": "Cómo se nombran en pantalla lo que se paga y lo que todavía se puede acreditar; el importe sale del servidor, no cambia. Revertir: cambiar el valor por defecto en catalogo-compras-costo.ts (una línea por texto).",
+  "donde": "catalogo-compras-costo.ts (compras.notas.importe_a_pagar y compras.notas.todavia_se_puede_acreditar); rótulos de la maqueta de Diseño 2 (servicios-y-bienes-de-uso.html, pantallas 9 y 10); Dueño 26/11/2026, «Rótulo aprobados» (vía el orquestador)"
+}

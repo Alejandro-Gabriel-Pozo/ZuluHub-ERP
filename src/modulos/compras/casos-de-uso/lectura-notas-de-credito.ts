@@ -216,6 +216,11 @@ export const obtenerNotaDeDebitoDentro = (
 /** Las notas de una factura, de crédito y de débito, vigentes y anuladas, con lo que suman las vigentes y lo que hay que pagar. */
 export type NotasDeUnaFactura = Readonly<{
   facturaId: string;
+  /** El proveedor de la factura y cómo se la nombra (tipo, punto de venta y número): lo que necesita la pantalla de notas sin una segunda lectura. */
+  proveedorId: string;
+  tipo: string | null;
+  puntoDeVenta: number | null;
+  numero: number | null;
   totalDeLaFactura: string;
   /** Lo que acreditan las notas de crédito vigentes (resta del pago). */
   acreditado: string;
@@ -260,6 +265,10 @@ export async function notasDeUnaFacturaDentro(
   const exceso = pago === null ? null : excesoDelPago(pago.importe, neto);
   return {
     facturaId: factura.id,
+    proveedorId: factura.proveedorId,
+    tipo: factura.tipo,
+    puntoDeVenta: factura.puntoDeVenta,
+    numero: factura.numero,
     totalDeLaFactura: factura.totalSegunFactura,
     acreditado,
     debitado: await tx.notasDeCredito.debitadoDe(empresaId, factura.id),

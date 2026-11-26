@@ -32,6 +32,13 @@ export const rutaDeLaFactura = (comprobanteId: string): string =>
 export const rutaDeConciliar = (comprobanteId: string): string =>
   `${rutaDeLaFactura(comprobanteId)}/conciliar`;
 
+/** «Notas de la factura» (NOTAS-2c-1) y «Cargar una nota del proveedor» de crédito o de débito: la factura sale de la consulta del servidor y la clase es una de dos palabras fijas, nunca un texto libre. */
+export const rutaDeLasNotas = (comprobanteId: string): string =>
+  `${rutaDeLaFactura(comprobanteId)}/notas`;
+export type ClaseDeNotaParaLaRuta = "credito" | "debito";
+export const rutaDeCargarNota = (comprobanteId: string, clase: ClaseDeNotaParaLaRuta): string =>
+  `${rutaDeLasNotas(comprobanteId)}/nueva?clase=${clase}`;
+
 /** La lista de facturas; con cursor, la página que sigue (lo único que la dirección aporta). */
 export const direccionDeLaListaDeFacturas = (despues: string | null): string =>
   despues === null
