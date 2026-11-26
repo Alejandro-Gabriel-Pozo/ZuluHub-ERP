@@ -246,6 +246,14 @@ describe("catalogoDePerillas", () => {
         modulo: "administracion",
       },
       {
+        perilla: "facturar_antes_de_cobrar",
+        tipo: "INTERRUPTOR",
+        ambito: "EMPRESA",
+        valorBase: { tipo: "INTERRUPTOR", encendida: false },
+        requiere: null,
+        modulo: "ventas",
+      },
+      {
         perilla: "lotes",
         tipo: "INTERRUPTOR",
         ambito: "EMPRESA",

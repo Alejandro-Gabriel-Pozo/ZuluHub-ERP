@@ -1,0 +1,85 @@
+.titulo {
+  margin: 0;
+  font-size: inherit;
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.linea {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  min-width: 0;
+}
+
+.linea legend {
+  padding: 0 var(--espacio-2);
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+.resumen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  background: var(--color-superficie-elevada);
+  color: var(--color-texto);
+}
+
+.renglon {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.nombre {
+  font-weight: var(--tipo-peso-fuerte);
+  overflow-wrap: anywhere;
+}
+
+/* Sin `min-width: 0`: el valor no se achica por debajo de su ancho; el que cede y se corta en renglones es el texto de la izquierda. */
+.valor {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fuerte {
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.rotulo {
+  color: var(--color-texto-suave);
+}
+
+.detalle {
+  color: var(--color-texto-suave);
+  overflow-wrap: anywhere;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fila {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  padding: var(--espacio-3) 0;
+  border-bottom: var(--borde-grosor) solid var(--color-borde);
+}
+
+.pasos {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

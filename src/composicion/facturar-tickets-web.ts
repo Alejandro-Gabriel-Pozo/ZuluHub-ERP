@@ -69,7 +69,8 @@ export type PendienteDeFacturarParaLaPantalla = Readonly<{
   fechaNegocio: string;
   /** Texto decimal (ADR-006). */
   total: Readonly<{ moneda: string; monto: string }>;
-  cobradoEn: string;
+  /** `null`: ticket emitido sin cobrar (solo con la perilla `facturar_antes_de_cobrar`). */
+  cobradoEn: string | null;
   motivo: "SIN_COMPROBANTE" | "COMPROBANTE_ANULADO";
 }>;
 
@@ -97,7 +98,7 @@ export function listarPendientesDeFacturar(
         sucursalId: t.sucursalId,
         fechaNegocio: t.fechaNegocio,
         total: { moneda: t.total.moneda, monto: t.total.monto },
-        cobradoEn: t.cobradoEn.toISOString(),
+        cobradoEn: t.cobradoEn === null ? null : t.cobradoEn.toISOString(),
         motivo: t.motivo,
       })),
       siguiente:

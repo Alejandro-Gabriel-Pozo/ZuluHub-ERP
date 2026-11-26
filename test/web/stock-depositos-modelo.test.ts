@@ -100,13 +100,17 @@ describe("las opciones del uso", () => {
 describe("las rutas y las pestañas de Stock", () => {
   it("solo se ofrecen las pestañas de pantallas construidas, y la actual lleva la marca", () => {
     expect(pestanasDeStock("depositos").map((p) => [p.texto, p.href, p.actual])).toEqual([
+      ["Existencias", "/stock/existencias", false],
+      ["Movimientos", "/stock/movimientos", false],
       ["Depósitos", "/stock/depositos", true],
     ]);
-    expect(PESTANAS_CONSTRUIDAS).toEqual(["depositos"]);
+    expect(PESTANAS_CONSTRUIDAS).toEqual(["existencias", "movimientos", "depositos"]);
   });
 
   it("la marca de «actual» sigue a la pantalla en la que se está, no a la pestaña que hay", () => {
     expect(pestanasDeStock("conteo").map((p) => [p.texto, p.actual])).toEqual([
+      ["Existencias", false],
+      ["Movimientos", false],
       ["Depósitos", false],
     ]);
   });
@@ -133,6 +137,6 @@ describe("las rutas y las pestañas de Stock", () => {
     expect(RUTAS_DE_DEPOSITOS.editar("0b0b0b0b-1111-4222-8333-444444444444")).toBe(
       "/stock/depositos/0b0b0b0b-1111-4222-8333-444444444444/editar",
     );
-    expect(RUTAS_DE_STOCK.entrada).toBe(RUTAS_DE_STOCK.depositos);
+    expect(RUTAS_DE_STOCK.entrada).toBe(RUTAS_DE_STOCK.existencias);
   });
 });

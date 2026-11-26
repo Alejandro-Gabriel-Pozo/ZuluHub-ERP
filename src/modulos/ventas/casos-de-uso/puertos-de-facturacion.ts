@@ -31,7 +31,7 @@ export type EntradaDeFacturaDeTicket = Readonly<{
   sucursalId: string;
   receptor: ReceptorDeFactura;
   renglones: readonly RenglonDeFactura[];
-  /** El total que se cobró (texto decimal); el cálculo de fiscal tiene que igualarlo al centavo. */
+  /** El total del ejemplar vigente del ticket, es decir lo vendido (texto decimal; no lo cobrado: R-05 permite facturar antes de cobrar); el cálculo de fiscal tiene que igualarlo al centavo. */
   totalEsperado: string;
 }>;
 

@@ -48,3 +48,17 @@ export const rutaDeLaReceta = (productoId: string): string => `${RUTA_DE_RECETAS
 /** La dirección de la ficha de cocina de una receta. */
 export const rutaDeLaCocina = (productoId: string): string =>
   `${rutaDeLaReceta(productoId)}/cocina`;
+
+/** La dirección de la receta nueva; con un producto (el de «Este producto no tiene receta») lo deja elegido. El id lo dio el servidor (un UUID): no se arma desde el navegador. */
+export const rutaDeLaRecetaNueva = (productoId: string | null = null): string =>
+  productoId === null
+    ? `${RUTA_DE_RECETAS}/nueva`
+    : `${RUTA_DE_RECETAS}/nueva?${new URLSearchParams([["producto", productoId]]).toString()}`;
+
+/** La dirección de editar una receta (guarda una versión nueva). */
+export const rutaDeEditarLaReceta = (productoId: string): string =>
+  `${rutaDeLaReceta(productoId)}/editar`;
+
+/** El producto que pide la dirección de la receta nueva (`?producto=`); la página lo usa solo si es uno de los que se ofrecen. `""` si no hay. */
+export const leerElProductoDeLaDireccion = (params: ParametrosDeLaDireccion): string =>
+  primero(params, "producto");

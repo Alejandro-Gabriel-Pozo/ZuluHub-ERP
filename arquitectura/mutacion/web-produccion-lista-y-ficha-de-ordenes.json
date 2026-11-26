@@ -3,5 +3,5 @@
   "archivos": "src/composicion/entradas-de-produccion.ts,src/composicion/errores-de-produccion.ts,src/composicion/produccion-web.ts,apps/web/ui/plantillas/produccion/filtros-de-ordenes.ts,apps/web/ui/plantillas/produccion/modelo-de-ordenes.ts,apps/web/ui/plantillas/produccion/modelo-de-orden.ts",
   "minutos": 2,
   "pruebas": "src/composicion/entradas-de-produccion.test.ts src/composicion/errores-de-produccion.test.ts src/composicion/produccion-web.test.ts test/web/produccion-modelo.test.ts",
-  "critico": true
+  "nivel": "CRITICO"
 }
