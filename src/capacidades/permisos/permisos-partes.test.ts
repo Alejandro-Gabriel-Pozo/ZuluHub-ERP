@@ -80,7 +80,7 @@ describe("ninguna acción está en dos partes", () => {
     expect(enMasDeUnaParte(PARTES).size).toBe(0);
     const suma = Object.values(PARTES).reduce((n, filas) => n + Object.keys(filas).length, 0);
     expect(suma).toBe(Object.keys(PERMISOS_DE_EMPRESA).length);
-    expect(suma).toBe(183);
+    expect(suma).toBe(186);
   });
 
   it("violación inyectada: una acción en dos partes se detecta (la segunda pisaría a la primera)", () => {

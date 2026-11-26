@@ -149,6 +149,7 @@ const DEL_OPERADOR_DE_CLIENTES_Y_COMPRAS = [
   "comprobantes_de_proveedor.ver",
   "devoluciones_a_proveedor.ver",
   "notas_de_credito_de_proveedor.ver",
+  "notas_de_debito_de_proveedor.ver",
   "ordenes_de_compra.ver",
   "partes.cambiar_roles",
   "partes.crear",
@@ -183,7 +184,9 @@ const DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS = [
   "devoluciones_a_proveedor.registrar",
   "devoluciones_a_proveedor.anular",
   "notas_de_credito_de_proveedor.registrar",
+  "notas_de_debito_de_proveedor.registrar",
   "notas_de_credito_de_proveedor.anular",
+  "notas_de_debito_de_proveedor.anular",
   "diferencias_de_compra.ver",
   "diferencias_de_compra.resolver",
 ] as const;
@@ -336,9 +339,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 183 acciones: 39 de empresa (5 de roles propios y su asignación), configuración fiscal y facturación, 45 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas y 4 de cuenta corriente (2 de CC-1 y 2 de CC-2)", () => {
+  it("hay 186 acciones: 39 de empresa (5 de roles propios y su asignación), configuración fiscal y facturación, 45 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 41 de clientes y compras y 16 de salón y comandas y 4 de cuenta corriente (2 de CC-1 y 2 de CC-2)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(183);
+    expect(todas).toHaveLength(186);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
