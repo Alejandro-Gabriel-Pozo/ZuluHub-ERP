@@ -84,6 +84,7 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
           pagar: false,
           anularPago: false,
           verNotas: false,
+          cambiarElComprobante: false,
         }}
         accionDeAnular={() => Promise.resolve({ estado: "INICIAL" })}
       />,
@@ -113,6 +114,7 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
           pagar: false,
           anularPago: false,
           verNotas: false,
+          cambiarElComprobante: false,
         }}
         accionDeAnular={() => Promise.resolve({ estado: "INICIAL" })}
       />,
@@ -139,6 +141,7 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
           pagar: false,
           anularPago: false,
           verNotas: false,
+          cambiarElComprobante: false,
         }}
         accionDeAnular={accion}
       />,
@@ -175,6 +178,7 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
           pagar: false,
           anularPago: false,
           verNotas: false,
+          cambiarElComprobante: false,
         }}
         accionDeAnular={accion}
       />,
@@ -204,6 +208,7 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
           pagar: false,
           anularPago: false,
           verNotas: false,
+          cambiarElComprobante: false,
         }}
         accionDeAnular={accion}
       />,

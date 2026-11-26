@@ -355,6 +355,7 @@ describe("la ficha de la compra con el pago de la factura", () => {
     pagar: true,
     anularPago: true,
     verNotas: false,
+    cambiarElComprobante: false,
   };
   const anularPago = () => () => Promise.resolve({ estado: "INICIAL" } as ResultadoDeAnularPago);
 

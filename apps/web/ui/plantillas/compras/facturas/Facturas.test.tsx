@@ -47,6 +47,7 @@ const TODO: AccionesDeLaFactura = {
   anularConciliacion: true,
   tomarElCosto: true,
   verNotas: false,
+  reemplazar: false,
 };
 const textos = textosDeFacturas();
 
@@ -615,5 +616,33 @@ describe("Cargar factura", () => {
     await render(pantalla(servidorFalso()));
     await cargarLaFactura();
     expect(await violacionesDeAccesibilidad(document.body)).toEqual([]);
+  });
+});
+
+describe("«Reemplazar» en el detalle de la factura", () => {
+  const detalle = (extra: Partial<AccionesDeLaFactura>, ficha = FICHA) => (
+    <PantallaDeDetalleDeFactura
+      ficha={ficha}
+      textos={textos}
+      sucursales={SUCURSALES}
+      acciones={{ ...TODO, ...extra }}
+    />
+  );
+
+  it("se ofrece solo con el permiso de reemplazar y una factura no anulada, y lleva a «Reemplazar el comprobante»", async () => {
+    const sin = await render(detalle({ reemplazar: false }));
+    await expect
+      .element(page.getByRole("link", { name: "Reemplazar", exact: true }))
+      .not.toBeInTheDocument();
+    await sin.unmount();
+    const anulada = await render(detalle({ reemplazar: true }, { ...FICHA, estado: "ANULADA" }));
+    await expect
+      .element(page.getByRole("link", { name: "Reemplazar", exact: true }))
+      .not.toBeInTheDocument();
+    await anulada.unmount();
+    await render(detalle({ reemplazar: true }));
+    await expect
+      .element(page.getByRole("link", { name: "Reemplazar", exact: true }))
+      .toHaveAttribute("href", `/compras/facturas/${ID}/reemplazar`);
   });
 });

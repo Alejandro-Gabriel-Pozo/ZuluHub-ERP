@@ -11,6 +11,7 @@ import { NETO_CERO } from "../notas/modelo-de-notas";
 import {
   RUTA_DE_COMPRAS,
   rutaDeCorregirLaLinea,
+  rutaDeCambiarElComprobante,
   rutaDeLasNotas,
   rutaDelPago,
 } from "../rutas-de-compras";
@@ -121,6 +122,8 @@ export type AccionesDeLaCompraParaLaPantalla = Readonly<{
   anularPago: boolean;
   /** Ver las notas de la factura (las dos acciones de ver notas: la lectura las pide). */
   verNotas: boolean;
+  /** Cambiar el comprobante de la compra: las tres acciones que pide el servidor (reemplazar, anular y registrar un comprobante). */
+  cambiarElComprobante: boolean;
 }>;
 export const SIN_ACCIONES_DE_LA_COMPRA: AccionesDeLaCompraParaLaPantalla = {
   corregir: false,
@@ -128,6 +131,7 @@ export const SIN_ACCIONES_DE_LA_COMPRA: AccionesDeLaCompraParaLaPantalla = {
   pagar: false,
   anularPago: false,
   verNotas: false,
+  cambiarElComprobante: false,
 };
 
 /** Un pago de la factura ya armado para mostrar: «Transferencia · 24/11/2026», su importe, quién y cuándo, y, si se anuló, «Anulado» con su motivo, quién y cuándo. */
@@ -175,6 +179,8 @@ export type FichaArmada = Readonly<{
   anularPagoId: string | null;
   /** «Notas de crédito»: lleva a «Notas de la factura»; solo con el permiso y una factura; `null` si no se ofrece. */
   notas: Readonly<{ texto: string; href: string }> | null;
+  /** «Cambiar el comprobante de la compra» se ofrece (permisos, compra con factura y no anulada); lleva a «Reemplazar el comprobante». */
+  cambiarElComprobante: Readonly<{ texto: string; href: string }> | null;
   /** «Saldada por notas»: la factura de una compra no anulada, sin pago vigente, que las notas dejaron sin nada para pagar; `null` en cualquier otro caso. */
   saldadaPorNotas: string | null;
 }>;
@@ -331,6 +337,13 @@ export function armarLaFicha(
     notas:
       acciones.verNotas && ficha.factura !== null
         ? { texto: textos.notasDeCredito, href: rutaDeLasNotas(ficha.factura.comprobanteId) }
+        : null,
+    cambiarElComprobante:
+      acciones.cambiarElComprobante && ficha.factura !== null && ficha.estado !== "ANULADA"
+        ? {
+            texto: textos.cambiarElComprobante,
+            href: rutaDeCambiarElComprobante(ficha.recepcionId),
+          }
         : null,
     saldadaPorNotas:
       ficha.factura !== null &&

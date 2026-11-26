@@ -1,3 +1,11 @@
+const USO_DEL_REEMPLAZO = [
+  {
+    como: "FUNCION",
+    archivo: "apps/web/ui/plantillas/compras/reemplazo/textos-de-reemplazo.ts",
+    nombre: "textosDeReemplazo",
+  },
+] as const;
+
 const USO_DE_LAS_NOTAS = [
   {
     como: "FUNCION",
@@ -101,5 +109,49 @@ export const TEXTOS_DE_COMPRAS_COSTO = {
       },
     ],
     fuente: { decision: "DEC-COM-014" },
+  },
+  // «Reemplazar el comprobante» (NOTAS-2c-2, pantalla 11): títulos y rótulos aceptados por el orquestador (DEC-COM-015, fila 173); el motivo precargado y el aviso del costo del stock son del dueño (DEC-COM-016, P-1 del 26/11/2026).
+  "compras.reemplazo.titulo": {
+    porDefecto: "Reemplazar el comprobante",
+    usos: USO_DEL_REEMPLAZO,
+    fuente: { decision: "DEC-COM-015" },
+  },
+  "compras.reemplazo.que_deshacer_antes": {
+    porDefecto: "Qué hay que deshacer antes",
+    usos: USO_DEL_REEMPLAZO,
+    fuente: { decision: "DEC-COM-015" },
+  },
+  "compras.reemplazo.comprobante_nuevo": {
+    porDefecto: "Comprobante nuevo",
+    usos: USO_DEL_REEMPLAZO,
+    fuente: { decision: "DEC-COM-015" },
+  },
+  "compras.reemplazo.cambiar_comprobante": {
+    porDefecto: "Cambiar el comprobante de la compra",
+    usos: [
+      ...USO_DEL_REEMPLAZO,
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/compras/textos-de-compras.ts",
+        nombre: "textosDeCompras",
+      },
+    ],
+    fuente: { decision: "DEC-COM-015" },
+  },
+  "compras.reemplazo.pago": {
+    porDefecto: "Pago",
+    usos: USO_DEL_REEMPLAZO,
+    fuente: { decision: "DEC-COM-015" },
+  },
+  "compras.reemplazo.motivo_por_defecto": {
+    porDefecto: "Reemplazada por la factura {numero}",
+    marcadores: ["numero"],
+    usos: USO_DEL_REEMPLAZO,
+    fuente: { decision: "DEC-COM-016" },
+  },
+  "compras.reemplazo.costo_no_cambia": {
+    porDefecto: "El costo del stock no cambia; si hace falta, usá Corregir lo recibido",
+    usos: USO_DEL_REEMPLAZO,
+    fuente: { decision: "DEC-COM-016" },
   },
 } as const;
