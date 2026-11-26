@@ -1,0 +1,11 @@
+{
+  "id": "DEC-CI-001",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las decisiones nuevas llevan el código de su familia (DEC-SAL-001) y el tipo de TypeScript de una decisión acepta ese formato además del heredado.",
+  "que_cambia": "Nada que vea el cliente: solo cambia cómo se numeran las decisiones del registro y qué forma de id aceptan las fuentes de textos y las fichas de pantallas.",
+  "donde": "arquitectura/decisiones/familias.json y src/capacidades/vocabulario/uso-y-fuente-de-texto.ts",
+  "motivo": "Decisión del dueño del 25/11/2026 para que dos sesiones en paralelo no choquen por numeración; el cambio en el texto de los catálogos es solo del tipo, no de ningún texto."
+}

@@ -10,6 +10,7 @@ import {
   entrada,
   MARCA,
   CUOTA,
+  FAMILIAS,
 } from "./decisiones-apoyo";
 
 /**
@@ -307,6 +308,7 @@ describe("la línea de comandos", () => {
       sensibles: [{ ruta: "src/primitivas/dinero/", que: "el dinero" }],
     }),
     [control.ARCHIVO_DE_LA_CUOTA]: JSON.stringify(CUOTA),
+    [control.ARCHIVO_DE_LAS_FAMILIAS]: JSON.stringify(FAMILIAS),
   });
 
   it("un argumento desconocido o dos --base dan el uso (código 2)", () => {

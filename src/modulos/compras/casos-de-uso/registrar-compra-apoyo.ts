@@ -292,3 +292,28 @@ export async function exigirFacturaNueva(
     ? ok(null)
     : err({ error: "COMPROBANTE_YA_REGISTRADO", comprobanteId: repetida.id });
 }
+
+/** Lo que cobró el proveedor en la compra: la compra más nueva gana. */
+export async function registrarLaOferta(
+  tx: TxDeCompras,
+  empresaId: EmpresaId,
+  proveedorId: string,
+  recepcionId: string,
+  hechoEn: Date,
+  lineas: readonly LineaCalculada[],
+): Promise<void> {
+  for (const l of lineas) {
+    if (l.renglon.precio === null || l.costoPorUnidadDeStock === null) continue;
+    await tx.ofertasDeProveedor.registrar(empresaId, {
+      proveedorId,
+      productoId: l.producto.id,
+      presentacionId: l.renglon.presentacionId,
+      precioPorTipo: l.renglon.precioPor,
+      unidadDePrecioId: l.renglon.unidadDePrecioId,
+      ultimoPrecio: l.renglon.precio,
+      ultimoCostoPorUnidadDeStock: l.costoPorUnidadDeStock,
+      ultimaCompraId: recepcionId,
+      ultimaCompraEn: hechoEn,
+    });
+  }
+}

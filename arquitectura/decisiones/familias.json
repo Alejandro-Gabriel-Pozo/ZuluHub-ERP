@@ -1,0 +1,17 @@
+{
+  "corte": "2026-11-26",
+  "familias": {
+    "ANO": "Anonimización",
+    "CAT": "Catálogo, cartas y logo",
+    "CCL": "Cuenta corriente de clientes",
+    "CI": "Arquitectura y CI",
+    "COM": "Compras",
+    "DOM": "Dominios y marcas",
+    "FIS": "Fiscal",
+    "IDE": "Identidad, roles y permisos",
+    "PRO": "Producción y recetas",
+    "SAL": "Salón",
+    "STK": "Stock",
+    "VEN": "Ventas, tickets, caja y facturar antes de cobrar"
+  }
+}
