@@ -1,6 +1,7 @@
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { Auditoria } from "../../../puertos/auditoria";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
+import type { LecturaDeDerechosDeUso } from "../../../puertos/derechos-de-uso";
 import type { Tokens } from "../../../puertos/tokens";
 import type { Trabajos } from "../../../puertos/trabajos";
 import type { Transacciones } from "../../../puertos/transacciones";
@@ -11,6 +12,7 @@ import type {
   RepositorioDeInvitaciones,
   RepositorioDeMembresias,
   RepositorioDePersonas,
+  RepositorioDeRoles,
   RepositorioDeTraspasos,
 } from "../persistencia/repositorios";
 
@@ -26,6 +28,10 @@ export type TxDeIdentidad = Readonly<{
   asignaciones: RepositorioDeAsignaciones;
   invitaciones: RepositorioDeInvitaciones;
   traspasos: RepositorioDeTraspasos;
+  /** Los roles propios de la empresa y lo que hace falta para validarlos (pisos y plantillas de la plataforma). */
+  roles: RepositorioDeRoles;
+  /** El plan de la empresa: el techo de módulos de un rol propio y la perilla `roles_propios_por_empresa`. */
+  derechos: Pick<LecturaDeDerechosDeUso, "deLaEmpresa">;
   empresas: Pick<RepositorioDeEmpresas, "obtener" | "cambiarEstado">;
   /**
    * Para saber si una sucursal está activa (H6: no se invita ni se asigna a una desactivada) y cuáles

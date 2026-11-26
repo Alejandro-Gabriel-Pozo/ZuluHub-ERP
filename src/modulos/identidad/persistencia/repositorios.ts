@@ -31,6 +31,15 @@ export {
   type RepositorioDeInvitaciones,
 } from "./repositorio-de-invitaciones";
 export {
+  crearRepositorioDeRoles,
+  PLANTILLAS_DE_ORIGEN,
+  type AltaDeRol,
+  type PlantillaDeOrigen,
+  type RepositorioDeRoles,
+  type RolPropio,
+  type RolPropioDeLista,
+} from "./repositorio-de-roles";
+export {
   crearRepositorioDeTraspasos,
   type RepositorioDeTraspasos,
   type TraspasoGuardado,
