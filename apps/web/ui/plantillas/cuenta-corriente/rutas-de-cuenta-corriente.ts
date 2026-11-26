@@ -11,3 +11,9 @@ export type OrdenDelListado = "SALDO" | "VENCIDO" | "ANTIGUEDAD";
 
 export const direccionDelListadoDeCuentas = (orden: OrdenDelListado): string =>
   `${RUTA_DE_LA_CUENTA_CORRIENTE}?${new URLSearchParams([["orden", orden]]).toString()}`;
+
+/** Habilitar a un cliente (formulario) y cambiar el plazo o el límite de uno ya habilitado. */
+export const RUTA_DE_HABILITAR_CUENTA = `${RUTA_DE_LA_CUENTA_CORRIENTE}/habilitar`;
+
+export const rutaDeLasCondicionesDeCuenta = (parteId: string): string =>
+  `${rutaDeLaFichaDeCuenta(parteId)}/condiciones`;

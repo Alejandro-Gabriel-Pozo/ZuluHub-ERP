@@ -55,6 +55,7 @@ describe("apps/web/servidor/composicion.ts", () => {
       "casosDeUsoDeComandas",
       "casosDeUsoDeCompras",
       "casosDeUsoDeConfiguracionFiscal",
+      "casosDeUsoDeCuentaCorriente",
       "casosDeUsoDeEmpresas",
       "casosDeUsoDeFacturacion",
       "casosDeUsoDeIdentidad",
