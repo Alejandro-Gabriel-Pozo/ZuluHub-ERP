@@ -53,6 +53,8 @@ export type FichaDeCuentaParaLaPantalla = Readonly<{
     vence: string | null;
     vencida: boolean;
     importe: Importe;
+    /** El ticket detrás del movimiento, para vincular la fila con él (B2); la pantalla de hoy no lo muestra. */
+    ticketId: string | null;
     ticket: Readonly<{
       numero: number;
       canal: "SALON" | "MOSTRADOR";

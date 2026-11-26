@@ -5,7 +5,10 @@ import { cargarLaListaDeCuentas } from "../../../../../../servidor/cuenta-corrie
 import { puedeAdministrarCuentas } from "../../../../../../servidor/cuenta-corriente-escritura";
 import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 import { PantallaDeLaListaDeCuentas } from "../../../../../../ui/plantillas/cuenta-corriente/PantallaDeLaListaDeCuentas";
-import { RUTA_DE_HABILITAR_CUENTA } from "../../../../../../ui/plantillas/cuenta-corriente/rutas-de-cuenta-corriente";
+import {
+  direccionDeExportarCuentaCorriente,
+  RUTA_DE_HABILITAR_CUENTA,
+} from "../../../../../../ui/plantillas/cuenta-corriente/rutas-de-cuenta-corriente";
 import { textosDeCuentaCorriente } from "../../../../../../ui/plantillas/cuenta-corriente/textos-de-cuenta-corriente";
 
 // `/caja/cuenta-corriente`: los clientes con cuenta corriente, con su saldo, lo vencido y su crédito (maqueta `cuenta-corriente-ficha-listado-y-cobro.html`, pestaña «Clientes con saldo»). La lectura exige
@@ -25,13 +28,18 @@ export default async function PaginaDeLaCuentaCorriente({
         lista={lista.dato}
         textos={textos}
         acciones={
-          (await puedeAdministrarCuentas(contexto)) ? (
-            <EnlaceDeAccion href={RUTA_DE_HABILITAR_CUENTA} variante="primaria">
-              {textos.habilitarCliente}
+          <>
+            <EnlaceDeAccion href={direccionDeExportarCuentaCorriente()} variante="secundaria">
+              {textos.exportar}
             </EnlaceDeAccion>
-          ) : (
-            <Boton deshabilitado>{textos.habilitarCliente}</Boton>
-          )
+            {(await puedeAdministrarCuentas(contexto)) ? (
+              <EnlaceDeAccion href={RUTA_DE_HABILITAR_CUENTA} variante="primaria">
+                {textos.habilitarCliente}
+              </EnlaceDeAccion>
+            ) : (
+              <Boton deshabilitado>{textos.habilitarCliente}</Boton>
+            )}
+          </>
         }
       />
     );

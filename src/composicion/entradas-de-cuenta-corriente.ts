@@ -97,3 +97,24 @@ export const entradaDeSuspender = (
 export const entradaDeReactivar = (
   crudo: unknown,
 ): Resultado<EntradaWebDeReactivar, ErrorDeEntrada> => leer(formaDeReactivar, crudo);
+
+/**
+ * El saldo de UN cliente al venderle a cuenta (CC-5, B1): el cliente elegido, dónde se vende (la cuenta de consumo de la mesa; sin ella, la sucursal con la que trabaja quien vende, que pone el servidor y no
+ * viaja) y, si se quiere ver qué pasaría, el total de la venta (texto decimal). Un campo de más es el genérico. Qué es un total válido lo decide el dominio.
+ */
+const formaDelClienteParaVender = z.strictObject({
+  clienteId: identificador,
+  cuentaDeConsumoId: identificador.optional(),
+  totalDeLaVenta: decimal.optional(),
+});
+
+export type EntradaWebDelClienteParaVender = Readonly<{
+  clienteId: string;
+  cuentaDeConsumoId?: string | undefined;
+  totalDeLaVenta?: string | undefined;
+}>;
+
+export const entradaDelClienteParaVender = (
+  crudo: unknown,
+): Resultado<EntradaWebDelClienteParaVender, ErrorDeEntrada> =>
+  leer(formaDelClienteParaVender, crudo);
