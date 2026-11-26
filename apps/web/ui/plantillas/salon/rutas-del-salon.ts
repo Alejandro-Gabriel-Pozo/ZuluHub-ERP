@@ -14,3 +14,7 @@ export const rutaDeLaCuentaDeMesa = (mesaId: string): string =>
 /** «Cobrar» la mesa (SAL-D): la hoja de cobro de la cuenta de esa mesa; el id viaja codificado. */
 export const rutaDeCobrarLaMesa = (mesaId: string): string =>
   `${rutaDeLaCuentaDeMesa(mesaId)}/cobrar`;
+
+/** «Cobrar» una cuenta hija de una mesa dividida (SAL-E2): la misma hoja de cobro, con la cuenta en la dirección; los ids viajan codificados. */
+export const rutaDeCobrarLaCuenta = (mesaId: string, cuentaId: string): string =>
+  `${rutaDeCobrarLaMesa(mesaId)}?cuenta=${encodeURIComponent(cuentaId)}`;

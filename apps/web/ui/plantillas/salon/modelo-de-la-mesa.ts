@@ -8,6 +8,12 @@ import {
   sumar,
 } from "../../../../../src/primitivas/dinero/importe";
 import { formatearCantidad, formatearImporte } from "../../patrones/formato-fiscal";
+import {
+  lineasParaDividir,
+  type CuentaHijaArmada,
+  type LineaParaDividir,
+} from "./modelo-de-dividir";
+import { conNumero } from "./textos-de-dividir";
 
 /**
  * El modelo de vista de la ficha de la mesa (SAL-B; maqueta `salon.html`, orden de salida `salida.html`, aprobadas el 09/11/2026): de lo que entrega el servidor (`cargarLaFichaDeLaMesa`), lo que se ve y NADA más.
@@ -31,6 +37,8 @@ export type LineaDeLaFichaDeLaPantalla = Readonly<{
   descripcion: string;
   varianteNombre: string | null;
   cantidad: string;
+  precioUnitario: string;
+  pasoDeCantidad: string;
   importe: string;
   compartida: boolean;
   comanda: string;
@@ -42,6 +50,7 @@ export type LineaDeLaFichaDeLaPantalla = Readonly<{
 type CuentaDeLaFichaDeLaPantalla = Readonly<{
   cuentaId: string;
   parte: number | null;
+  cobrada: boolean;
   total: Importe;
   lineas: readonly LineaDeLaFichaDeLaPantalla[];
 }>;
@@ -169,8 +178,10 @@ export type MesaArmada = Readonly<{
   modo: "LIBRE" | "CON_CUENTA" | "SOLO_LECTURA";
   /** «Unida a la mesa 5»; `null` si no está unida. */
   unida: string | null;
-  /** Las cuentas de una mesa dividida («Cuenta 1 · $ 100,00»); vacío si no. */
-  cuentasHijas: readonly string[];
+  /** Las cuentas de una mesa dividida, por número; vacío si no. */
+  cuentasHijas: readonly CuentaHijaArmada[];
+  /** Las líneas a repartir en «Dividir la cuenta»; vacío si la mesa no se puede dividir (con platos sin enviar, sin platos o sin total en pesos). */
+  paraDividir: readonly LineaParaDividir[];
   cuentaId: string | null;
   /** «$ 1.234,56»; `null` si no hay cuenta (o su moneda no es ARS). */
   total: string | null;
@@ -189,13 +200,6 @@ export type MesaArmada = Readonly<{
 
 const importeDe = (i: Importe | undefined): string | null =>
   i === undefined || i.moneda !== MONEDA ? null : formatearImporte(i.monto);
-
-const cuentaN = (d: DiccionarioResuelto, numero: number): string => {
-  const rotulo = texto(d, "salon.texto.dividir_cuenta_n");
-  return rotulo.endsWith("N")
-    ? `${rotulo.slice(0, -1)}${String(numero)}`
-    : `${rotulo} ${String(numero)}`;
-};
 
 /** «Envío 1»: `comandas.texto.envio_envio_n` dice «Envío N» (la N final es el lugar del número). */
 const numeroDeEnvio = (d: DiccionarioResuelto, numero: number): string => {
@@ -239,6 +243,7 @@ export function armarLaMesa(d: DiccionarioResuelto, ficha: FichaDeLaMesaDeLaPant
     titulo,
     unida: null,
     cuentasHijas: [],
+    paraDividir: [],
     cuentaId: null,
     total: null,
     totalACobrar: null,
@@ -269,10 +274,21 @@ export function armarLaMesa(d: DiccionarioResuelto, ficha: FichaDeLaMesaDeLaPant
     return {
       ...base,
       modo: "SOLO_LECTURA",
-      cuentasHijas: ficha.cuentas.flatMap((c) => {
-        const importe = importeDe(c.total);
-        return c.parte === null || importe === null ? [] : [`${cuentaN(d, c.parte)} · ${importe}`];
-      }),
+      cuentasHijas: ficha.cuentas
+        .flatMap((c) => (c.parte === null ? [] : [{ c, parte: c.parte }]))
+        .sort((a, b) => a.parte - b.parte)
+        .map(({ c, parte }) => ({
+          cuentaId: c.cuentaId,
+          titulo: conNumero(texto(d, "salon.texto.dividir_cuenta_n"), parte),
+          importe: importeDe(c.total),
+          totalACobrar: c.total.moneda === MONEDA ? c.total : null,
+          cobrada: c.cobrada,
+          cobrable:
+            !c.cobrada &&
+            c.total.moneda === MONEDA &&
+            c.lineas.length > 0 &&
+            c.lineas.every((l) => l.comanda === "ENVIADA"),
+        })),
     };
   }
   const platos = unica.lineas.map((l) => ({ l, plato: armarElPlato(d, l) }));
@@ -290,6 +306,12 @@ export function armarLaMesa(d: DiccionarioResuelto, ficha: FichaDeLaMesaDeLaPant
         ? { moneda: unica.total.moneda, monto: unica.total.monto }
         : null,
     sinPlatos: platos.length === 0,
+    paraDividir:
+      platos.length > 0 &&
+      unica.total.moneda === MONEDA &&
+      platos.every((p) => p.l.comanda === "ENVIADA")
+        ? lineasParaDividir(unica.lineas)
+        : [],
     hayParaEnviar: platos.some((p) => p.l.comanda === "PARA_ENVIAR"),
     hayEnEspera: platos.some((p) => p.l.comanda === "ESPERA"),
     envios: [...envios.entries()]

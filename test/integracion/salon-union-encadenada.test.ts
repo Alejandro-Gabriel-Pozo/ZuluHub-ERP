@@ -79,6 +79,7 @@ describe.skipIf(base === null)(
         [cuenta],
       );
       return m.salon.dividirCuenta(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         divisionId: nuevoId(),
         cuentaId: cuenta,
         partes: 2,

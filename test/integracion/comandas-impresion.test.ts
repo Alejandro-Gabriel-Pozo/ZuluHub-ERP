@@ -71,6 +71,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     contexto: ContextoOperativo = e.gerente,
   ) =>
     m.casosDeComandas.solicitarImpresion(contexto, {
+      sucursalDeTrabajo: e.sucursal,
       trabajoId: nuevoId(),
       documentoTipo: "COMANDA",
       documentoId,
@@ -241,6 +242,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     // El dispositivo declara que falló: «Reintentar» es el mismo trabajo con un intento más (también con doble toque).
     valorDe(
       await m.casosDeComandas.declararResultadoDeImpresion(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         trabajoId: t.trabajoId,
         numero: 1,
         resultado: "FALLIDA",
@@ -260,6 +262,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     expect(fila[0]).toEqual({ estado: "PENDIENTE", intentos: 2 });
     const impresa = valorDe(
       await m.casosDeComandas.declararResultadoDeImpresion(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         trabajoId: t.trabajoId,
         numero: 2,
         resultado: "IMPRESA",
@@ -301,6 +304,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
       [cuenta],
     );
     const entrada = {
+      sucursalDeTrabajo: e.sucursal,
       trabajoId: nuevoId(),
       documentoTipo: "COMANDA",
       documentoId: envio.envioId,
@@ -352,6 +356,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     // El papel de la copia: «Copia», con el envío original, sin precios.
     const papel = valorDe(
       await m.consultasDeComandas.documentoParaImprimir(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         documentoTipo: "COMANDA",
         documentoId: envio.envioId,
         copia: true,
@@ -369,6 +374,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     expect(sinAutor).not.toMatch(/\$|1000/);
     const original = valorDe(
       await m.consultasDeComandas.documentoParaImprimir(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         documentoTipo: "COMANDA",
         documentoId: envio.envioId,
       }),
@@ -381,6 +387,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     const t = envio.trabajoId;
     const a = valorDe(
       await m.casosDeComandas.declararResultadoDeImpresion(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         trabajoId: t,
         numero: 1,
         resultado: "IMPRESA",
@@ -389,6 +396,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     expect(a).toMatchObject({ estado: "IMPRESA", yaExistia: false });
     const b = valorDe(
       await m.casosDeComandas.declararResultadoDeImpresion(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         trabajoId: t,
         numero: 1,
         resultado: "IMPRESA",
@@ -398,6 +406,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     expect(
       codigo(
         await m.casosDeComandas.declararResultadoDeImpresion(e.gerente, {
+          sucursalDeTrabajo: e.sucursal,
           trabajoId: t,
           numero: 1,
           resultado: "FALLIDA",
@@ -407,6 +416,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     expect(
       codigo(
         await m.casosDeComandas.declararResultadoDeImpresion(e.gerente, {
+          sucursalDeTrabajo: e.sucursal,
           trabajoId: t,
           numero: 2,
           resultado: "IMPRESA",
@@ -416,6 +426,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     expect(
       codigo(
         await m.casosDeComandas.declararResultadoDeImpresion(e.gerente, {
+          sucursalDeTrabajo: e.sucursal,
           trabajoId: t,
           numero: 1,
           resultado: "QUIZAS",
@@ -425,6 +436,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     expect(
       codigo(
         await m.casosDeComandas.declararResultadoDeImpresion(e.gerente, {
+          sucursalDeTrabajo: e.sucursal,
           trabajoId: nuevoId(),
           numero: 1,
           resultado: "IMPRESA",
@@ -465,6 +477,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     );
     const pedir = () =>
       m.consultasDeComandas.documentoParaImprimir(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         documentoTipo: "ANULACION",
         documentoId: avisoId,
       });
@@ -481,6 +494,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     expect(
       codigo(
         await m.consultasDeComandas.documentoParaImprimir(e.gerente, {
+          sucursalDeTrabajo: e.sucursal,
           documentoTipo: "ANULACION",
           documentoId: nuevoId(),
         }),
@@ -491,6 +505,7 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
     expect(
       codigo(
         await m.consultasDeComandas.documentoParaImprimir(ajena.gerente, {
+          sucursalDeTrabajo: e.sucursal,
           documentoTipo: "ANULACION",
           documentoId: avisoId,
         }),
@@ -500,5 +515,45 @@ describe.skipIf(base === null)("comandas: impresoras e impresión", () => {
       await m.consultasDeComandas.trabajosDeImpresion(e.gerente, { documentoId: avisoId }),
     );
     expect(fichas).toHaveLength(1);
+  });
+
+  it("la sucursal de trabajo es OBLIGATORIA: sin ella (o con la de otra sucursal) el documento y el trabajo son como si no existieran y no se escribe nada", async () => {
+    const { envio } = await unEnvio();
+    const intentos = () => m.contar("select count(*) as n from intento_de_impresion", []);
+    const antes = await intentos();
+    for (const sucursalDeTrabajo of [undefined, "", e.otraSucursal]) {
+      const sin = { sucursalDeTrabajo } as unknown as { sucursalDeTrabajo: string };
+      expect(
+        codigo(
+          await m.casosDeComandas.solicitarImpresion(e.gerente, {
+            ...sin,
+            trabajoId: envio.trabajoId,
+            documentoTipo: "COMANDA",
+            documentoId: envio.envioId,
+            claveIdempotencia: nuevaClave(),
+          }),
+        ),
+      ).toBe("DOCUMENTO_NO_ENCONTRADO");
+      expect(
+        codigo(
+          await m.casosDeComandas.declararResultadoDeImpresion(e.gerente, {
+            ...sin,
+            trabajoId: envio.trabajoId,
+            numero: 1,
+            resultado: "IMPRESA",
+          }),
+        ),
+      ).toBe("TRABAJO_NO_ENCONTRADO");
+      expect(
+        codigo(
+          await m.consultasDeComandas.documentoParaImprimir(e.gerente, {
+            ...sin,
+            documentoTipo: "COMANDA",
+            documentoId: envio.envioId,
+          }),
+        ),
+      ).toBe("DOCUMENTO_NO_ENCONTRADO");
+    }
+    expect(await intentos()).toBe(antes);
   });
 });

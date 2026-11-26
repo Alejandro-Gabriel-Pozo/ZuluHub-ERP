@@ -38,6 +38,10 @@ import {
   type VentasDb,
 } from "../../src/modulos/ventas/publico";
 import {
+  crearRepositoriosDeClientes,
+  type RepositoriosDeClientes,
+} from "../../src/modulos/clientes/publico";
+import {
   crearRepositorioDeJornadas,
   type CierreDb,
   type RepositorioDeJornadas,
@@ -111,6 +115,7 @@ import {
   crearRepositorioDePrecios,
   crearRepositorioDePresentaciones,
   crearRepositorioDeCartas,
+  crearRepositorioDeCuentasDeImagen,
   crearRepositorioDeDisponibilidad,
   crearRepositorioDeFamilias,
   type RepositorioDeFamilias,
@@ -119,6 +124,7 @@ import {
   crearRepositorioDeUnidades,
   crearLectorDeCarta,
   type RepositorioDeCartas,
+  type RepositorioDeCuentasDeImagen,
   type RepositorioDeDisponibilidad,
   type RepositorioDeSecciones,
   type RepositorioDeClasificacion,
@@ -189,6 +195,7 @@ export type TxDePrueba = Readonly<{
   presentacionesDeProducto: RepositorioDePresentaciones;
   /** La carta pública, el botón «Ocultar» y las secciones (0043 y T2 de la carta real). */
   cartasPublicas: RepositorioDeCartas;
+  cuentasDeImagen: RepositorioDeCuentasDeImagen;
   disponibilidadDeProductos: RepositorioDeDisponibilidad;
   familias: RepositorioDeFamilias;
   seccionesDeCarta: RepositorioDeSecciones;
@@ -198,6 +205,8 @@ export type TxDePrueba = Readonly<{
   unidades: RepositorioDeUnidades;
   lectorDeCarta: LectorDeCarta;
 }> &
+  /** Las partes (clientes): ventas valida y muestra el cliente cargado al ticket (R2 mínimo, 0107). */
+  RepositoriosDeClientes &
   PiezasDeCajaEnTx &
   TxDeIdentidad;
 
@@ -224,6 +233,7 @@ export function crearEntornoDePrueba(
       jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
       sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
       ...armarPiezasDeCajaEnTx(db),
+      ...crearRepositoriosDeClientes(db),
       cuentas: crearRepositorioDeCuentas(db.withTables<VentasDb>()),
       tickets: crearRepositorioDeTickets(db.withTables<VentasDb>()),
       documentos: crearRepositorioDeDocumentos(db.withTables<VentasDb>()),
@@ -255,6 +265,7 @@ export function crearEntornoDePrueba(
       precios: crearRepositorioDePrecios(db.withTables<CatalogoDb>()),
       presentacionesDeProducto: crearRepositorioDePresentaciones(db.withTables<CatalogoDb>()),
       cartasPublicas: crearRepositorioDeCartas(db.withTables<CatalogoDb>()),
+      cuentasDeImagen: crearRepositorioDeCuentasDeImagen(db.withTables<CatalogoDb>()),
       disponibilidadDeProductos: crearRepositorioDeDisponibilidad(db.withTables<CatalogoDb>()),
       familias: crearRepositorioDeFamilias(db.withTables<CatalogoDb>()),
       seccionesDeCarta: crearRepositorioDeSecciones(db.withTables<CatalogoDb>()),

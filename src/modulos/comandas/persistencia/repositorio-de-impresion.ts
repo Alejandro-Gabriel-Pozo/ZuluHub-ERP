@@ -90,6 +90,15 @@ export interface RepositorioDeImpresion {
   trabajoPorId(empresa: EmpresaId, id: string): Promise<Trabajo | null>;
   trabajoPorClave(empresa: EmpresaId, clave: string): Promise<Trabajo | null>;
   trabajosDeDocumento(empresa: EmpresaId, documentoId: string): Promise<Trabajo[]>;
+  /**
+   * Los trabajos ORIGINALES de comanda de UNA sucursal que todavía no salieron (`PENDIENTE`) o que fallaron (`FALLIDA`), los más nuevos primero y hasta `limite` (SAL-H, la pantalla de la cocina). Una copia
+   * no es un trabajo pendiente de la cocina. Siempre por empresa Y sucursal: nunca los de otra.
+   */
+  trabajosPendientesDeLaSucursal(
+    empresa: EmpresaId,
+    sucursal: string,
+    limite: number,
+  ): Promise<Trabajo[]>;
   /** `INSERT … ON CONFLICT DO NOTHING`: `false` si el original ya existía (única parcial) o el id/clave ya estaban. */
   insertarTrabajo(empresa: EmpresaId, alta: AltaDeTrabajo): Promise<boolean>;
   /** «Reintentar»: `FALLIDA → PENDIENTE` con un intento más (el mismo trabajo); `false` si ya no estaba fallida. */
@@ -261,6 +270,20 @@ export function crearRepositorioDeImpresion(db: Db): RepositorioDeImpresion {
         .where("documento_id", "=", documentoId)
         .orderBy("solicitado_en")
         .orderBy("id")
+        .execute();
+      return filas.map(aTrabajo);
+    },
+
+    async trabajosPendientesDeLaSucursal(empresa, sucursal, limite) {
+      const filas = await seleccionarTrabajo()
+        .where("empresa_id", "=", empresa)
+        .where("sucursal_id", "=", sucursal)
+        .where("documento_tipo", "=", "COMANDA")
+        .where("es_copia", "=", false)
+        .where("estado", "in", ["PENDIENTE", "FALLIDA"])
+        .orderBy("solicitado_en", "desc")
+        .orderBy("id")
+        .limit(limite)
         .execute();
       return filas.map(aTrabajo);
     },
