@@ -12,6 +12,7 @@ import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.clien
 import { Pila } from "../../primitivas/Pila";
 import estilos from "./PantallasDeMesas.module.css";
 import type { FormularioDeImpresoraArmado } from "./modelo-de-impresoras";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeImpresora = Readonly<{
   formulario: FormularioDeImpresoraArmado;
@@ -41,7 +42,7 @@ export function FormularioDeImpresora({ formulario, accion }: PropsDeFormularioD
       >
         <span aria-hidden="true">‹</span>
       </a>
-      <form action={enviar}>
+      <form action={enviar} onReset={sinReiniciar}>
         <ProveedorDeEnvioDeFormulario value={enviando}>
           <Pila separacion={3}>
             <Campo

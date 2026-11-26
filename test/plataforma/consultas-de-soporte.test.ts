@@ -710,6 +710,7 @@ describe("verConfiguracion", () => {
       "clientes",
       "comandas",
       "compras",
+      "cuenta_corriente",
       "facturacion",
       "produccion",
       "salon",

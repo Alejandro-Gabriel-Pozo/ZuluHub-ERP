@@ -168,23 +168,66 @@ describe("el bloque «Sucursales» de la ficha de un empleado", () => {
 
   it("«Guardar» manda lo tildado; destildar todo manda el conjunto vacío (envío explícito, no un campo que falta)", async () => {
     const { envios, accion } = accionDePrueba();
+    // React REINICIA el formulario al terminar la acción, un rato DESPUÉS de que el botón queda libre (unos 150 ms medidos; con la máquina cargada, más). Se espera ese reinicio en vez de suponer
+    // cuándo llega: antes la prueba seguía con la segunda ronda de toques y el reinicio caía en el medio (causa del intermitente «expected ['s-2'] to deeply equal []»).
+    let reinicios = 0;
+    const contarReinicio = () => {
+      reinicios += 1;
+    };
+    document.addEventListener("reset", contarReinicio, true);
+    try {
+      await render(
+        <PantallaDeFichaDeUsuario
+          ficha={armarLaFichaDeUsuario(empleado)}
+          sucursales={{ editor, accion }}
+        />,
+      );
+
+      await page.getByRole("checkbox", { name: "Norte" }).click();
+      await page.getByRole("button", { name: "Guardar" }).click();
+      await expect.poll(() => envios.length).toBe(1);
+      expect(envios[0]).toEqual(["s-1", "s-2"]);
+      await expect
+        .poll(() =>
+          page.getByRole("button", { name: "Guardar" }).element().hasAttribute("disabled"),
+        )
+        .toBe(false);
+      await expect.poll(() => reinicios).toBe(1);
+      // Lo guardado sigue a la vista: el reinicio no devuelve las casillas a como se dibujaron la primera vez.
+      await expect.element(page.getByRole("checkbox", { name: "Centro" })).toBeChecked();
+      await expect.element(page.getByRole("checkbox", { name: "Norte" })).toBeChecked();
+
+      await page.getByRole("checkbox", { name: "Centro" }).click();
+      await page.getByRole("checkbox", { name: "Norte" }).click();
+      await page.getByRole("button", { name: "Guardar" }).click();
+      await expect.poll(() => envios.length).toBe(2);
+      expect(envios[1]).toEqual([]);
+    } finally {
+      document.removeEventListener("reset", contarReinicio, true);
+    }
+  });
+
+  it("lo que se ve tildado es lo que se manda, también si un reinicio del formulario llega en medio de los toques (React lo cancela: `sinReiniciar`)", async () => {
+    const { envios, accion } = accionDePrueba();
     await render(
       <PantallaDeFichaDeUsuario
         ficha={armarLaFichaDeUsuario(empleado)}
         sucursales={{ editor, accion }}
       />,
     );
-
     await page.getByRole("checkbox", { name: "Norte" }).click();
     await page.getByRole("button", { name: "Guardar" }).click();
     await expect.poll(() => envios.length).toBe(1);
-    expect(envios[0]).toEqual(["s-1", "s-2"]);
+    // El reinicio de React cae cuando cae: se lo provoca acá, en el momento que molesta (entre dos toques), para que no dependa de la velocidad de la máquina.
+    await page.getByRole("checkbox", { name: "Centro" }).click();
+    (document.querySelector("form") as HTMLFormElement).reset();
+    await expect.element(page.getByRole("checkbox", { name: "Centro" })).not.toBeChecked();
+    await expect.element(page.getByRole("checkbox", { name: "Norte" })).toBeChecked();
+    await page.getByRole("checkbox", { name: "Norte" }).click();
+    await expect.element(page.getByRole("checkbox", { name: "Norte" })).not.toBeChecked();
     await expect
       .poll(() => page.getByRole("button", { name: "Guardar" }).element().hasAttribute("disabled"))
       .toBe(false);
-
-    await page.getByRole("checkbox", { name: "Centro" }).click();
-    await page.getByRole("checkbox", { name: "Norte" }).click();
     await page.getByRole("button", { name: "Guardar" }).click();
     await expect.poll(() => envios.length).toBe(2);
     expect(envios[1]).toEqual([]);

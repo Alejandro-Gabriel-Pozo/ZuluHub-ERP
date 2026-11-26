@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   armarLaMesa,
+  cuantoQuedaAlUnir,
   mesasLibresParaElCambio,
+  mesasParaUnir,
   textosDeLaMesa,
   type FichaDeLaMesaDeLaPantalla,
   type LineaDeLaFichaDeLaPantalla,
@@ -185,5 +187,39 @@ describe("textosDeLaMesa", () => {
       saleDespues: "Sale después",
       quitar: "Quitar",
     });
+  });
+});
+
+describe("unir con otra mesa (SAL-E1)", () => {
+  const ars = (monto: string) => ({ moneda: "ARS", monto });
+  const mesa = (numero: number, estado: string, cuentaId?: string, total = ars("100.00")) => ({
+    mesaId: `m${String(numero)}`,
+    numero,
+    estado,
+    cuentaId,
+    total,
+  });
+
+  it("se ofrecen solo las mesas con cuenta abierta en pesos, sin la actual, por número; libres, unidas y divididas no", () => {
+    const mesas = [
+      mesa(9, "OCUPADA", "c9"),
+      mesa(2, "EN_PEDIDO", "c2"),
+      mesa(3, "LIBRE"),
+      mesa(4, "UNIDA", "c4"),
+      mesa(5, "DIVIDIDA", "c5"),
+      mesa(6, "OCUPADA", "c6", { moneda: "USD", monto: "1.00" }),
+      mesa(7, "OCUPADA", "c7"),
+    ];
+    expect(mesasParaUnir({}, mesas, "m7").map((m) => [m.titulo, m.cuentaId])).toEqual([
+      ["Mesa 2", "c2"],
+      ["Mesa 9", "c9"],
+    ]);
+  });
+
+  it("«Cuánto queda» es la suma exacta con centavos y sin `number`; otra moneda o un monto mal formado no se suma", () => {
+    expect(cuantoQuedaAlUnir(ars("2345.66"), ars("1000.01"))).toBe("$ 3.345,67");
+    expect(cuantoQuedaAlUnir(ars("0.10"), ars("0.20"))).toBe("$ 0,30");
+    expect(cuantoQuedaAlUnir(ars("1.00"), { moneda: "USD", monto: "1.00" })).toBeNull();
+    expect(cuantoQuedaAlUnir(ars("1.00"), ars("uno"))).toBeNull();
   });
 });

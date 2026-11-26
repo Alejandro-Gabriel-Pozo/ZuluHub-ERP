@@ -8,6 +8,7 @@ import { ProveedorDeEnvioDeFormulario } from "../../patrones/EnvioDeFormulario.c
 import { Superposicion } from "../../patrones/Superposicion";
 import type { DesactivarArmado } from "./modelo-de-usuarios";
 import estilos from "./PantallaDeUsuarios.module.css";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 type ResultadoDeDesactivar = Readonly<{ error: ErrorPublico | null }>;
 
@@ -41,7 +42,7 @@ export function ConfirmacionDeDesactivar({ accion, textos }: PropsDeConfirmacion
         cerrable={!enviando}
         etiquetaDeCerrar={textos.cerrar}
       >
-        <form action={enviar}>
+        <form action={enviar} onReset={sinReiniciar}>
           <ProveedorDeEnvioDeFormulario value={enviando}>
             <div className={estilos["cuerpo"]}>
               <p className={estilos["detalle-de-confirmar"]}>{textos.detalle}</p>

@@ -6,6 +6,7 @@ import type { DiccionarioResuelto } from "../../../../src/capacidades/vocabulari
 import { Pila } from "../primitivas/Pila";
 import { ErrorDeRespuesta } from "./ErrorDeRespuesta";
 import { ProveedorDeEnvioDeFormulario } from "./EnvioDeFormulario.cliente";
+import { sinReiniciar } from "./sin-reinicio";
 
 /** Lo que devuelve una acción de formulario: nada si salió bien (redirige) o el error ya traducido. */
 type ResultadoDeFormulario = Readonly<{ error: ErrorPublico | null }>;
@@ -32,7 +33,7 @@ const SIN_ERROR: ResultadoDeFormulario = { error: null };
 export function FormularioDeAccion({ accion, children, diccionario }: PropsDeFormularioDeAccion) {
   const [resultado, enviar, enviando] = useActionState(accion, SIN_ERROR);
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={3}>
           {children}

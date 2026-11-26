@@ -3,7 +3,14 @@ import { sucursalId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { decidirPorHuella, huellaDeComando } from "../dominio/huella";
 import { esUuid } from "../dominio/identificadores";
-import { camposDeHuellaDePago, esClasePagable, leerPago, leerSalidaDeCaja } from "../dominio/pago";
+import {
+  camposDeHuellaDePago,
+  esClasePagable,
+  leerPagoConMedios,
+  leerSalidaDeCaja,
+  resolverLosMedios,
+  type LineaDePago,
+} from "../dominio/pago";
 import { motivoDeAnulacionDesdeTexto } from "../dominio/registrar-compra";
 import { autorizar, exigirAlcanceDeSucursal, traducir } from "./comun";
 import type { DependenciasDeCompras, TxDeCompras } from "./contrato";
@@ -17,10 +24,13 @@ export type EntradaDeDeclararPago = Readonly<{
   comprobanteId: string;
   /** Fecha civil `YYYY-MM-DD`, no futura (el «hoy» de Argentina). */
   fechaDePago: string;
-  medio: string;
+  /** Un solo medio por el total de la factura. O este, o `medios`: las dos cosas juntas no se admiten. */
+  medio?: string;
+  /** Varios medios, cada uno con su importe (texto decimal): la suma tiene que ser el total de la factura, que el servidor lee bajo el bloqueo (`LA_SUMA_DE_LOS_MEDIOS_NO_ES_EL_TOTAL`). Un medio de cada tipo (DEC-1280). */
+  medios?: readonly Readonly<{ medio: string; importe: string }>[];
   /**
-   * Solo con el medio `EFECTIVO`, y con él es OBLIGATORIA: la plata sale de esta caja abierta en la misma transacción (T10b; dueño, 16/11/2026, 3A). Sin ella, un pago en efectivo no se declara
-   * (`SALIDA_DE_CAJA_INVALIDA`); con otro medio no se admite. Sin sesión abierta en esa caja, el pago NO se declara (falla con su código) y se puede volver a pedir por otro medio.
+   * Solo con un medio `EFECTIVO`, y con él es OBLIGATORIA: la plata de la línea en efectivo (no la del total) sale de esta caja abierta en la misma transacción (T10b; dueño, 16/11/2026, 3A). Sin ella, un pago con efectivo no se declara
+   * (`SALIDA_DE_CAJA_INVALIDA`); sin efectivo no se admite. Sin sesión abierta en esa caja, el pago NO se declara (falla con su código) y se puede volver a pedir por otro medio.
    */
   salidaDeCaja?: Readonly<{ cajaId: string; motivo: string }>;
 }>;
@@ -50,9 +60,13 @@ async function exigirAlcanceDelComprobante(
   return alcance.ok ? ok(recepcion.sucursalId) : alcance;
 }
 
+/** Lo que paga la línea en efectivo (la única que mueve la caja); con `salidaDeCaja` hay una. */
+const efectivo = (lineas: readonly LineaDePago[]): string =>
+  lineas.find((l) => l.medio === "EFECTIVO")?.importe ?? "0.00";
+
 /**
- * Declarar el pago de una factura (E9 §3.6, D142): cuándo y con qué medio. El importe es el total de la factura (el que dice el papel) y se copia en el pago:
- * un pago por factura, sin parciales. Con `salidaDeCaja` (solo efectivo) la plata sale de la caja abierta indicada, en la misma transacción (DEC-0316). Guard `comprobantes_de_proveedor.pagar` (gerente y administrador). El comprobante se bloquea: dos pagos a
+ * Declarar el pago de una factura (E9 §3.6, D142): cuándo y con qué medio o medios. El importe es el total de la factura (el que dice el papel) y se copia en el pago:
+ * un pago por factura, sin parciales; con varios medios, cada uno con su importe y la suma exacta es el total (DEC-1280). Con `salidaDeCaja` (solo si hay una línea en efectivo) la plata de esa línea sale de la caja abierta indicada, en la misma transacción (DEC-0316). Guard `comprobantes_de_proveedor.pagar` (gerente y administrador). El comprobante se bloquea: dos pagos a
  * la vez de la misma factura dejan uno (el otro, `COMPROBANTE_YA_PAGADO` con el id del vigente). Repetición (`CLAVE_DE_IDEMPOTENCIA`): misma clave y mismo
  * contenido devuelve el pago con `yaExistia` sin escribir ni auditar; misma clave y otro contenido, `CLAVE_REUTILIZADA`.
  */
@@ -67,15 +81,14 @@ export function armarDeclararPago(dependencias: DependenciasDeCompras) {
     if (!esUuid(entrada.clave) || !esUuid(entrada.comprobanteId)) {
       return err("IDENTIFICADOR_INVALIDO");
     }
-    const pago = leerPago(entrada, contexto.ahora);
+    const pago = leerPagoConMedios(entrada, contexto.ahora);
     if (!pago.ok) return pago;
-    const salida = leerSalidaDeCaja(entrada.salidaDeCaja, pago.valor.medio);
+    const hayEfectivo = pago.valor.medios.some((m) => m.medio === "EFECTIVO");
+    const salida = leerSalidaDeCaja(entrada.salidaDeCaja, hayEfectivo ? "EFECTIVO" : "OTRO");
     if (!salida.ok) return salida;
-    // El efectivo siempre sale de una caja abierta (dueño, 16/11/2026, 3A): un pago en efectivo sin caja no se declara. Previene: plata que sale sin que ninguna caja lo sepa (el pago quedaría declarado y la caja, sin
+    // El efectivo siempre sale de una caja abierta (dueño, 16/11/2026, 3A): un pago con una línea en efectivo sin caja no se declara. Previene: plata que sale sin que ninguna caja lo sepa (el pago quedaría declarado y la caja, sin
     // descontar). Chequeo: `test/integracion/compras-pagos-caja.test.ts`.
-    if (pago.valor.medio === "EFECTIVO" && salida.valor === null) {
-      return err("SALIDA_DE_CAJA_INVALIDA");
-    }
+    if (hayEfectivo && salida.valor === null) return err("SALIDA_DE_CAJA_INVALIDA");
     return traducir(
       await dependencias.transacciones.ejecutar(
         { contexto },
@@ -93,10 +106,7 @@ export function armarDeclararPago(dependencias: DependenciasDeCompras) {
           if (!alcance.ok) return alcance;
           const huella = huellaDeComando(
             "declarar_pago",
-            [
-              comprobante.id,
-              ...camposDeHuellaDePago(pago.valor, comprobante.totalSegunFactura, salida.valor),
-            ],
+            [comprobante.id, ...camposDeHuellaDePago(pago.valor, salida.valor)],
             [],
           );
           const previa = await tx.pagosDeProveedor.porClave(empresaId, entrada.clave);
@@ -109,10 +119,13 @@ export function armarDeclararPago(dependencias: DependenciasDeCompras) {
           if (!esClasePagable(comprobante.clase)) return err("COMPROBANTE_NO_PAGABLE");
           const vigente = await tx.pagosDeProveedor.vigenteDe(empresaId, comprobante.id);
           if (vigente !== null) return err({ error: "COMPROBANTE_YA_PAGADO", pagoId: vigente.id });
+          // El total se lee acá, bajo el bloqueo de la factura: la suma de los medios se compara con él y no con nada que mande el navegador.
+          const lineas = resolverLosMedios(pago.valor.medios, comprobante.totalSegunFactura);
+          if (!lineas.ok) return lineas;
           const pagoId = await tx.pagosDeProveedor.insertar(empresaId, {
             comprobanteId: comprobante.id,
             fechaDePago: pago.valor.fechaDePago,
-            medio: pago.valor.medio,
+            medios: lineas.valor,
             importe: comprobante.totalSegunFactura,
             clave: entrada.clave,
             huella,
@@ -130,7 +143,7 @@ export function armarDeclararPago(dependencias: DependenciasDeCompras) {
               cajaId: salida.valor.cajaId,
               sucursalId: alcance.valor,
               pagoId,
-              importe: comprobante.totalSegunFactura,
+              importe: efectivo(lineas.valor),
               motivo: salida.valor.motivo,
             });
             if (!egreso.ok) return err(egreso.error);
@@ -144,7 +157,7 @@ export function armarDeclararPago(dependencias: DependenciasDeCompras) {
             despues: {
               comprobanteId: comprobante.id,
               fechaDePago: pago.valor.fechaDePago,
-              medio: pago.valor.medio,
+              medios: lineas.valor,
               importe: comprobante.totalSegunFactura,
               salidaDeCajaId: salida.valor?.cajaId ?? null,
             },

@@ -9,6 +9,7 @@ import { ProveedorDeEnvioDeFormulario } from "../../patrones/EnvioDeFormulario.c
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
 import { Pila } from "../../primitivas/Pila";
 import { RUTA_DE_CLIENTES } from "./modelo-de-directorio";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeEstadoDeParte = Readonly<{
   /** «Desactivar» o «Reactivar», ya resuelto. */
@@ -44,7 +45,7 @@ export function FormularioDeEstadoDeParte({
     if (resultado.hecho) window.location.assign(RUTA_DE_CLIENTES);
   }, [resultado.hecho]);
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={2}>
           {apagado ? (

@@ -76,6 +76,7 @@ describe.skipIf(base === null)("salón: pedido, envío, cambio de mesa y cobro",
     contexto = e.gerente,
   ) => m.salon.enviarACocina(contexto, { envioId, cuentaId: cuenta, claveIdempotencia: clave });
   const cobro = (cuenta: string, total: string, cambios = {}) => ({
+    sucursalDeTrabajo: e.sucursal,
     claveIdempotencia: nuevaClave(),
     cuentaId: cuenta,
     ejemplarId: nuevoId(),
@@ -509,6 +510,7 @@ describe.skipIf(base === null)("salón: pedido, envío, cambio de mesa y cobro",
     valorDe(await enviar(cuenta, nuevoId(), nuevaClave(), x.gerente));
     const otraCaja = await m.cajaAbierta(x);
     const r = await m.salon.cobrarMesa(x.gerente, {
+      sucursalDeTrabajo: x.sucursal,
       claveIdempotencia: nuevaClave(),
       cuentaId: cuenta,
       ejemplarId: nuevoId(),
