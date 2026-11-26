@@ -1,6 +1,6 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { esFechaCivil } from "../dominio/disponibilidad";
+import { fechaValida } from "../dominio/disponibilidad";
 import { esUuid } from "../persistencia/filas";
 import { autorizar, exigirAlcanceTotal, traducir } from "./comun";
 import type { DependenciasDeStock } from "./contrato";
@@ -8,18 +8,6 @@ import type { ErrorDeStock } from "./errores";
 import { leerDetalle } from "./movimientos-comun";
 
 type R<S> = Resultado<S, ErrorDeStock>;
-
-/** Una fecha civil que existe en el calendario y que la base admite (2000 a 2200). */
-export function fechaValida(texto: unknown): texto is string {
-  if (typeof texto !== "string" || !esFechaCivil(texto)) return false;
-  const fecha = new Date(`${texto}T00:00:00Z`);
-  return (
-    !Number.isNaN(fecha.getTime()) &&
-    fecha.toISOString().slice(0, 10) === texto &&
-    texto >= "2000-01-01" &&
-    texto <= "2200-12-31"
-  );
-}
 
 export type EntradaDeCorregirLote = Readonly<{
   loteId: string;

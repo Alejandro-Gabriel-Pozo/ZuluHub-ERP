@@ -44,9 +44,7 @@ describe("traducirErrorDeProduccion", () => {
   });
 
   it("el vencimiento que falta o ya pasó al cerrar sale con su código propio (texto aprobado de Lotes), no como el genérico", () => {
-    expect(traducirErrorDeProduccion("VENCIMIENTO_REQUERIDO")).toBe(
-      "PRODUCCION_VENCIMIENTO_REQUERIDO",
-    );
+    expect(traducirErrorDeProduccion("VENCIMIENTO_REQUERIDO")).toBe("LOTE_VENCIMIENTO_REQUERIDO");
     expect(traducirErrorDeProduccion("VENCIMIENTO_PASADO")).toBe("PRODUCCION_VENCIMIENTO_PASADO");
     expect(traducirErrorDeProduccion("VENCIMIENTO_OTRO")).toEqual(GENERICO);
     expect(traducirErrorDeProduccion("hasOwnProperty")).toEqual(GENERICO);

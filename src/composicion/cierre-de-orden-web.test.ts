@@ -277,7 +277,7 @@ describe("cerrar la orden", () => {
     expect(r).toMatchObject({ ok: false, error: { codigo: "STOCK_CONTROL_AVISA" } });
     expect(JSON.stringify(r)).not.toContain("secreto");
     for (const [error, codigo] of [
-      ["VENCIMIENTO_REQUERIDO", "PRODUCCION_VENCIMIENTO_REQUERIDO"],
+      ["VENCIMIENTO_REQUERIDO", "LOTE_VENCIMIENTO_REQUERIDO"],
       ["VENCIMIENTO_PASADO", "PRODUCCION_VENCIMIENTO_PASADO"],
     ] as const) {
       const v = armar({ cerrar: vi.fn(() => Promise.resolve(err(error))) });

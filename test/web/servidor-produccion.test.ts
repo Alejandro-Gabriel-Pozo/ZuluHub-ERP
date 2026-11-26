@@ -456,7 +456,7 @@ describe("cerrar una orden desde el formulario", () => {
     expect(mundo.casos[0]?.[2]).not.toHaveProperty("confirmaciones");
     mundo.resultadoDeCerrar = err("VENCIMIENTO_REQUERIDO");
     expect(await cerrarLaOrdenDelFormulario(ORDEN, CLAVE, datos())).toMatchObject({
-      error: { codigo: "PRODUCCION_VENCIMIENTO_REQUERIDO" },
+      error: { codigo: "LOTE_VENCIMIENTO_REQUERIDO" },
     });
     mundo.resultadoDeCerrar = err("ORDEN_YA_CERRADA");
     expect(await cerrarLaOrdenDelFormulario(ORDEN, CLAVE, datos())).toMatchObject({
