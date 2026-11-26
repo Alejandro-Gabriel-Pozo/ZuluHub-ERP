@@ -3,6 +3,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { PREFIJO_DE_NAVEGADOR } from "../../src/capacidades/autenticacion/host-de-autenticacion";
 import { productoDeBase } from "../integracion/catalogo-apoyo";
+import { crearAsignacionDeBase } from "../integracion/fixtures-identidad";
 import {
   claveDeCompra,
   huellaAlAzar,
@@ -264,6 +265,8 @@ describe.skipIf(base === null)("recorrido de compras: notas del proveedor de una
     const { comprobanteId } = await compraConFactura();
     await cargarNotaDeCredito(comprobanteId, "100.00");
     await pagina.waitForURL(`**/compras/facturas/${comprobanteId}/notas`);
+    // El operador ve lo de su sucursal: sin una asignación no tiene alcance y la lectura no devuelve nada.
+    await crearAsignacionDeBase(mundo.mundo.dueno, mundo.empresa, persona, sucursal);
     await conRol("OPERADOR");
     try {
       await ir(`/compras/facturas/${comprobanteId}/notas`);
