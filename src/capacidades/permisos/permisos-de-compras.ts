@@ -19,6 +19,7 @@ export const PERMISOS_DE_COMPRAS = {
   "comprobantes_de_proveedor.registrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "comprobantes_de_proveedor.pagar": ["GERENTE", "ADMINISTRADOR"],
   "comprobantes_de_proveedor.anular_pago": ["GERENTE", "ADMINISTRADOR"],
+  "comprobantes_de_proveedor.reemplazar": ["GERENTE", "ADMINISTRADOR"],
   // Órdenes de compra (N4, decisión del dueño del 16/11/2026): crear, pedir, cerrar y anular una orden es de quien administra o gerencia, no del operador; mirarla es de los tres
   // (el operador la ve sin precios: los precios piden además `costos.ver`).
   "ordenes_de_compra.ver": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],

@@ -69,6 +69,7 @@ describe("apps/web/servidor/composicion.ts", () => {
       "consultasDeClientes",
       "consultasDeComandas",
       "consultasDeCompras",
+      "consultasDeCuentaCorriente",
       "consultasDeEmpresas",
       "consultasDeFacturacion",
       "consultasDeIdentidad",

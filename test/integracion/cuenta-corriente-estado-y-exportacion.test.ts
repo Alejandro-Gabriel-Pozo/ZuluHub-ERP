@@ -80,7 +80,10 @@ describe.skipIf(base === null)(
         reglas: REGLAS_DE_PRUEBA_CON_CUENTA_CORRIENTE,
       };
       cc = {
-        consultas: crearConsultasDeCuentaCorriente(dependencias),
+        consultas: crearConsultasDeCuentaCorriente({
+          ...dependencias,
+          apoyo: crearApoyoDeLaExportacionDeCuentaCorriente(),
+        }),
         casos: crearCasosDeUsoDeCuentaCorriente({
           ...dependencias,
           apoyoDeLaExportacion: crearApoyoDeLaExportacionDeCuentaCorriente(),
@@ -217,6 +220,56 @@ describe.skipIf(base === null)(
       );
       expect(fuera.lineas).toEqual([]);
       expect(fuera.saldo.monto).toBe("1000.00");
+    });
+
+    it("la ficha dice, de cada movimiento, qué es, de qué ticket sale (número, canal y sucursal), con qué medio se cobró y si está vencido; y la lista trae la fecha del cargo abierto más antiguo", async () => {
+      const c = await cliente();
+      const cobrado = await aCuenta(c);
+      await cobrar(cobrado, [["TARJETA_DEBITO", "1000.00"]]);
+      const anulado = await aCuenta(c);
+      await anular(anulado);
+      await aCuenta(c);
+      const numero = async (t: { ticketId: string }) =>
+        (
+          await m.filas<{ numero: number }>("select numero from ticket where id = $1", [t.ticketId])
+        )[0]?.numero;
+      const sucursal = (
+        await m.filas<{ nombre: string }>("select nombre from sucursal where id = $1", [e.sucursal])
+      )[0]?.nombre;
+      const r = valorDe(
+        await cc.consultas.verEstadoDeCuenta(el("2026-12-10T00:10:00-03:00"), { parteId: c }),
+      );
+      expect(
+        r.lineas.map((l) => [l.tipo, l.ticket?.numero, l.ticket?.canal, l.ticket?.sucursal]),
+      ).toEqual([
+        ["VENTA_A_CUENTA", await numero(cobrado), "MOSTRADOR", sucursal],
+        ["COBRANZA", await numero(cobrado), "MOSTRADOR", sucursal],
+        ["VENTA_A_CUENTA", await numero(anulado), "MOSTRADOR", sucursal],
+        ["VENTA_ANULADA", await numero(anulado), "MOSTRADOR", sucursal],
+        ["VENTA_A_CUENTA", r.lineas[4]?.ticket?.numero, "MOSTRADOR", sucursal],
+      ]);
+      expect(r.lineas.map((l) => l.medioDePago)).toEqual([
+        null,
+        "TARJETA_DEBITO",
+        null,
+        null,
+        null,
+      ]);
+      // «Vencida» solo el cargo que sigue con algo por saldar: el cobrado y el anulado ya no deben nada.
+      expect(r.lineas.map((l) => l.vencida)).toEqual([false, false, false, false, true]);
+      const lista = valorDe(
+        await cc.consultas.listarClientesConCuenta(el("2026-12-10T00:10:00-03:00")),
+      );
+      expect(lista.clientes.find((x) => x.cuenta.parteId === c)).toMatchObject({
+        fechaDelCargoMasAntiguo: "2026-11-09",
+        antiguedadEnDias: 31,
+      });
+      const sinDeuda = await cliente();
+      expect(
+        valorDe(await cc.consultas.listarClientesConCuenta(e.gerente)).clientes.find(
+          (x) => x.cuenta.parteId === sinDeuda,
+        ),
+      ).toMatchObject({ fechaDelCargoMasAntiguo: null, antiguedadEnDias: null });
     });
 
     it("vencida: el día del vencimiento todavía no; al día siguiente sí, también en el corte de medianoche (23:50 y 00:10 de Argentina)", async () => {

@@ -1,3 +1,4 @@
+import { RUTA_DE_LA_CUENTA_CORRIENTE } from "../plantillas/cuenta-corriente/rutas-de-cuenta-corriente";
 import { RUTA_DE_LA_CAJA } from "../plantillas/caja/lista-de-caja";
 import { RUTA_DE_CLIENTES } from "../plantillas/clientes/modelo-de-directorio";
 import { RUTA_DEL_CIERRE } from "../plantillas/cierre/ruta-del-cierre";
@@ -73,6 +74,20 @@ export const FILAS_DE_VENTAS = [
     perilla: null,
     href: RUTA_DEL_CIERRE,
     etiqueta: "cierre.titulo",
+    departamento: null,
+  },
+  // «Cuenta corriente» (CC-5, A1; maqueta `cuenta-corriente-ficha-listado-y-cobro.html`, «Caja → Cuenta corriente»): el listado de clientes con cuenta. Módulo `cuenta_corriente` y la acción de su lectura (`cuenta_corriente.ver`,
+  // gerente y administrador); el módulo sigue «en desarrollo», así que nace cerrada: sin él o sin la acción no se ofrece.
+  {
+    tipo: "pantalla",
+    clave: "cuenta-corriente",
+    area: "ventas",
+    grupo: "caja",
+    modulo: "cuenta_corriente",
+    accion: "cuenta_corriente.ver",
+    perilla: null,
+    href: RUTA_DE_LA_CUENTA_CORRIENTE,
+    etiqueta: "cuenta_corriente.menu.entrada",
     departamento: null,
   },
   // «Salón» (SAL-A; `menu-por-areas.html`, grupo Salón del área Ventas): el mapa de mesas de la operación. Módulo `salon` (disponible), perilla `salon` (extra de pago) y acción `mesas.ver`: nace cerrada, sin matriz nueva.

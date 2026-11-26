@@ -2328,6 +2328,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "comprobante_de_proveedor.proveedor_id",
           "comprobante_de_proveedor.proveedor_razon_social",
           "comprobante_de_proveedor.punto_de_venta",
+          "comprobante_de_proveedor.reemplaza_a_id",
           "comprobante_de_proveedor.registrado_por",
           "comprobante_de_proveedor.tipo",
           "comprobante_de_proveedor.total_calculado",
