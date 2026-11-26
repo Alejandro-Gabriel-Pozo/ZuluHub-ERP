@@ -39,7 +39,7 @@ export type ErrorAlVerClienteParaVender =
  * Ver el estado, el saldo y el crédito disponible de UN cliente al venderle a cuenta (CC-5, C3 del dueño; opción A del orquestador). Guard primero (`cuenta_corriente.consultar_al_vender`:
  * los roles que cargan a cuenta); la cuenta de consumo tiene que estar ABIERTA y ser de una sucursal del alcance del actor; el cliente, de la empresa y con ficha. Deja constancia de
  * CADA consulta en la misma transacción (quién, qué cuenta, qué cliente, cuándo; sin importes): si el registro falla no se devuelve el dato. Es lectura: repetirla da lo mismo y deja otro
- * registro. SUPUESTO (DEC-CCL-003) (opción A): el servidor no sabe «cuál es el cliente elegido» antes de cerrar (la cuenta de consumo no lo guarda); quien tiene una cuenta abierta puede consultar un cliente a
+ * registro. Decisión del dueño (DEC-CCL-003), opción A: el servidor no sabe «cuál es el cliente elegido» antes de cerrar (la cuenta de consumo no lo guarda); quien tiene una cuenta abierta puede consultar un cliente a
  * la vez, con rastro. Pasar a guardar la elección es una migración y una acción más.
  */
 export function armarVerClienteParaVender(dependencias: DependenciasDeCuentaCorriente) {
