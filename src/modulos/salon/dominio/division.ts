@@ -15,7 +15,7 @@ import {
 } from "../../../primitivas/dinero/precio-unitario";
 import { POLITICA_VIGENTE, redondear } from "../../../primitivas/dinero/redondeo";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
-import { repartirItemCompartido } from "./reparto";
+import { repartirItemCompartido } from "../../../primitivas/cuentas/reparto";
 
 /**
  * DIVIDIR LA CUENTA POR ÍTEMS (E7 §3.9, D90 y D117). Por cada línea vigente, UNA de tres formas: `ENTERO` (la línea completa a una cuenta),

@@ -3,7 +3,11 @@ import { celdasDeMesa } from "./celdas";
 import { huellaDeDivision, planDeDivision, type Asignacion, type LineaADividir } from "./division";
 import { posicionDeMesa } from "./mesa";
 import { MAXIMO_DE_CUENTAS_POR_ITEMS } from "../../../primitivas/cuentas/limites-de-division";
-import { repartirEnPartesIguales, repartirItemCompartido, repartirPorPorcentaje } from "./reparto";
+import {
+  repartirEnPartesIguales,
+  repartirItemCompartido,
+  repartirPorPorcentaje,
+} from "../../../primitivas/cuentas/reparto";
 
 /**
  * Cada rechazo y cada desempate del dominio del salón, uno por uno: una rama de validación que ninguna prueba aísla es una regla que alguien puede
