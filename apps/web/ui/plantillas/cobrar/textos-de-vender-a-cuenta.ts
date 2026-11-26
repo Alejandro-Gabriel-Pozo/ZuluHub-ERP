@@ -16,7 +16,7 @@ export function textosDeVenderACuenta(): TextosDeVenderACuenta {
     creditoDisponible: texto({}, "cuenta_corriente.credito_disponible"),
     estaVenta: texto({}, "cuenta_corriente.vender.esta_venta"),
     saldoDespues: texto({}, "cuenta_corriente.vender.saldo_despues"),
-    confirmar: texto({}, "cuenta_corriente.vender.confirmar"),
+    confirmar: texto({}, "cuenta_corriente.vender.cargar"),
     elegirOtroCliente: texto({}, "cuenta_corriente.vender.elegir_otro_cliente"),
     superaElLimite: texto({}, "cuenta_corriente.vender.supera_el_limite"),
     sinPermisoParaAprobar: texto({}, "cuenta_corriente.vender.sin_permiso_para_aprobar"),

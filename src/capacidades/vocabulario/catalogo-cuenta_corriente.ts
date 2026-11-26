@@ -266,7 +266,7 @@ export const TEXTOS_DE_CUENTA_CORRIENTE = {
     usos: [DE_LOS_TEXTOS_DE_VENDER],
     fuente: FUENTE_DE_VENDER,
   },
-  "cuenta_corriente.vender.confirmar": {
+  "cuenta_corriente.vender.cargar": {
     porDefecto: "Confirmar venta a cuenta",
     usos: [DE_LOS_TEXTOS_DE_VENDER],
     fuente: FUENTE_DE_VENDER,
@@ -284,6 +284,7 @@ export const TEXTOS_DE_CUENTA_CORRIENTE = {
   "cuenta_corriente.vender.sin_permiso_para_aprobar": {
     porDefecto:
       "No tenés permiso para aprobar este exceso. Pedile a un gerente o administrador que lo apruebe.",
+    largoMaximo: 120,
     usos: [DE_LOS_TEXTOS_DE_VENDER],
     fuente: FUENTE_DE_VENDER,
   },
