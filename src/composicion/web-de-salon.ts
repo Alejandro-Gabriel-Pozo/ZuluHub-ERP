@@ -1,4 +1,5 @@
 import { crearCasosDeUsoDeSalon, crearConsultasDeSalon } from "../modulos/salon/publico";
+import { crearCuentaCorrienteDeVentas } from "./cuenta-corriente-de-ventas";
 import { perezoso } from "./perezoso";
 import { crearStockDeVentas } from "./stock-de-ventas";
 import type { BaseDeWeb } from "./web-base";
@@ -15,6 +16,7 @@ export function armarWebDeSalon({ conexiones, reglas }: BaseDeWeb) {
         transacciones: conexiones.transaccionesDeApp(),
         reglas,
         stock: crearStockDeVentas(reglas),
+        cuentaCorriente: crearCuentaCorrienteDeVentas(reglas),
       }),
     ),
     consultasDeSalon: perezoso(() =>
