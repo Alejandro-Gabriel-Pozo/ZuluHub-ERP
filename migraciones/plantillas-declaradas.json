@@ -24,6 +24,7 @@
     "comprobantes_de_proveedor.anular": ["ADMINISTRADOR", "GERENTE"],
     "comprobantes_de_proveedor.anular_pago": ["ADMINISTRADOR", "GERENTE"],
     "comprobantes_de_proveedor.pagar": ["ADMINISTRADOR", "GERENTE"],
+    "comprobantes_de_proveedor.reemplazar": ["ADMINISTRADOR", "GERENTE"],
     "comprobantes_de_proveedor.registrar": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "comprobantes_de_proveedor.ver": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "conciliaciones.anular": ["ADMINISTRADOR", "GERENTE"],

@@ -89,5 +89,6 @@ export function traducir<T>(resultado: Resultado<T, ErrorDeCompras>): Resultado<
   if (codigo === "REMITO_YA_REGISTRADO") return err({ error: codigo, recepcionId: null });
   if (codigo === "COMPROBANTE_YA_REGISTRADO") return err({ error: codigo, comprobanteId: null });
   if (codigo === "COMPROBANTE_YA_PAGADO") return err({ error: codigo, pagoId: null });
+  if (codigo === "FACTURA_YA_REEMPLAZADA") return err({ error: codigo, reemplazoId: null });
   return err(codigo as ErrorDeCompras);
 }

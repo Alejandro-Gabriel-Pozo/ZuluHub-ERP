@@ -31,6 +31,7 @@ export const MODULO_DE_COMPRAS = {
     "comprobantes_de_proveedor.pagar": { capacidad: null, efecto: "CREA_AMPLIA" },
     "comprobantes_de_proveedor.anular": { capacidad: null, efecto: "COMPLETA_CIERRA" },
     "comprobantes_de_proveedor.anular_pago": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+    "comprobantes_de_proveedor.reemplazar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
     "ordenes_de_compra.ver": { capacidad: null, efecto: "LECTURA" },
     "ordenes_de_compra.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
     "ordenes_de_compra.pedir": { capacidad: null, efecto: "CREA_AMPLIA" },

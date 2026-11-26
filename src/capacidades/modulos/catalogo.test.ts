@@ -294,6 +294,7 @@ describe("el catálogo comercial de módulos", () => {
           "comprobantes_de_proveedor.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "comprobantes_de_proveedor.pagar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "comprobantes_de_proveedor.anular_pago": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "comprobantes_de_proveedor.reemplazar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "ordenes_de_compra.ver": { capacidad: null, efecto: "LECTURA" },
           "ordenes_de_compra.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
           "ordenes_de_compra.pedir": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -355,19 +356,19 @@ describe("el catálogo comercial de módulos", () => {
     expect(carpetas).toEqual([["modulos/catalogo"], ["modulos/catalogo"], ["modulos/stock"]]);
   });
 
-  it("el catálogo tiene 45 acciones de catálogo, carta y stock (8 + 12 + 25), 35 de caja, cierre y ventas (23 + 4 + 8) y 42 de clientes y compras (9 + 33), sin repetir ninguna", () => {
+  it("el catálogo tiene 45 acciones de catálogo, carta y stock (8 + 12 + 25), 35 de caja, cierre y ventas (23 + 4 + 8) y 43 de clientes y compras (9 + 34), sin repetir ninguna", () => {
     const cuantas = (
       m: "catalogo" | "vidriera" | "stock" | "caja" | "cierre" | "ventas" | "clientes" | "compras",
     ) => Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
     expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([8, 12, 25]);
     expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
-    expect([cuantas("clientes"), cuantas("compras")]).toEqual([9, 33]);
+    expect([cuantas("clientes"), cuantas("compras")]).toEqual([9, 34]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
     // 30 de administración (18 de usuarios, sucursales, gerencia y permisos, 5 de roles propios y su asignación de H4b T4, y 7 de la configuración fiscal de H7 T5),
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 49 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
     // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A y `vidrieras.administrar_portal` del portal), 35 de caja, cierre y ventas (E0-T1), 42 de clientes y compras (E9-T1, T11, N3-2b, N3-4, N4-1, N4-3, N4-4, N4-5, la exportación del 25/11/2026 y las 3 de notas de débito de NOTAS-1), 16 de salón y comandas (E7), 6 de lotes de E6-T7, 5 de producción de E6-T8 y 5 de cuenta corriente (CC-1, CC-2 y CC-5): 187 en total.
-    expect(todas).toHaveLength(30 + 9 + 45 + 35 + 42 + 16 + 5 + 5);
+    expect(todas).toHaveLength(30 + 9 + 45 + 35 + 43 + 16 + 5 + 5);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -635,6 +636,7 @@ const EFECTOS_DE_EMPRESA = {
     "comprobantes.reintentar",
     "comprobantes_de_proveedor.anular",
     "comprobantes_de_proveedor.anular_pago",
+    "comprobantes_de_proveedor.reemplazar",
     "conciliaciones.anular",
     "conciliaciones.conciliar",
     "conteos.aplicar",

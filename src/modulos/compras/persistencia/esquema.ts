@@ -154,6 +154,8 @@ export type ComprasDb = {
     clase: string;
     /** N4 (0085): la factura que corrige una nota de crédito (solo la clase NOTA_DE_CREDITO la lleva). */
     comprobante_asociado_id: string | null;
+    /** NOTAS-2 (0112): la factura anulada que esta factura reemplaza (solo una factura la lleva). */
+    reemplaza_a_id: string | null;
     tipo: string | null;
     punto_de_venta: number | null;
     numero: number | null;
@@ -284,23 +286,6 @@ export type ComprasDb = {
     peso_real_anterior: string | null;
     peso_real_nuevo: string | null;
     motivo: string;
-    clave_idempotencia: string;
-    huella: string;
-    registrado_en: DeLaBase<Date>;
-    registrado_por: string;
-  };
-  /** N3 (0098): la corrección de lo recibido de una línea de recepción separada confirmada. Solo inserción; la base ajusta el saldo de la línea al insertarla. */
-  correccion_de_lo_recibido: {
-    id: string;
-    empresa_id: string;
-    recepcion_id: string;
-    linea: number;
-    numero: number;
-    cantidad_anterior: string;
-    cantidad_nueva: string;
-    causa: string;
-    nota: string | null;
-    movimiento_id: string;
     clave_idempotencia: string;
     huella: string;
     registrado_en: DeLaBase<Date>;

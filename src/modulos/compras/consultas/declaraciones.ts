@@ -28,6 +28,7 @@ export const DECLARACIONES_DE_CONSULTAS = {
   obtenerDevolucion: { accion: "devoluciones_a_proveedor.ver" },
   listarNotasDeCredito: { accion: "notas_de_credito_de_proveedor.ver" },
   obtenerNotaDeCredito: { accion: "notas_de_credito_de_proveedor.ver" },
+  queHayQueDeshacerAntes: { accion: "comprobantes_de_proveedor.reemplazar" },
   listarNotasDeDebito: { accion: "notas_de_debito_de_proveedor.ver" },
   obtenerNotaDeDebito: { accion: "notas_de_debito_de_proveedor.ver" },
   notasDeLaFactura: { accion: "notas_de_credito_de_proveedor.ver" },
