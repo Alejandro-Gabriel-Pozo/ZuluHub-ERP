@@ -8,4 +8,6 @@ export const DECLARACIONES_DE_CONSULTAS = {
   listarClientesConCuenta: { accion: "cuenta_corriente.ver" },
   // CC-5 B1: la lista para elegir cliente al vender a cuenta; la ve quien puede cargar a cuenta (sin saldos).
   listarClientesParaVender: { accion: "cuenta_corriente.cargar_a_cuenta" },
+  // CC-5 A2: los clientes que se pueden habilitar; la ve quien puede habilitar (`administrar`), no solo quien mira.
+  listarClientesSinCuenta: { accion: "cuenta_corriente.administrar" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

@@ -35,6 +35,21 @@ export type TextosDeCuentaCorriente = Readonly<{
   sinResultados: string;
   salon: string;
   mostrador: string;
+  habilitarCliente: string;
+  habilitarTitulo: string;
+  elegirCliente: string;
+  razonSocial: string;
+  limiteDeCreditoEnPesos: string;
+  faltaElCuit: string;
+  faltaElCuitDetalle: string;
+  habilitar: string;
+  cambiarCondiciones: string;
+  suspender: string;
+  motivoDeSuspension: string;
+  motivoDeReactivacion: string;
+  reactivar: string;
+  guardar: string;
+  cancelar: string;
 }>;
 
 export function textosDeCuentaCorriente(): TextosDeCuentaCorriente {
@@ -69,5 +84,20 @@ export function textosDeCuentaCorriente(): TextosDeCuentaCorriente {
     sinResultados: texto({}, "catalogo.lista.sin_resultados"),
     salon: texto({}, "salon.texto.grupo_salon"),
     mostrador: texto({}, "navegacion.grupo.mostrador"),
+    habilitarCliente: texto({}, "cuenta_corriente.lista.habilitar_cliente"),
+    habilitarTitulo: texto({}, "cuenta_corriente.habilitar.titulo"),
+    elegirCliente: texto({}, "cuenta_corriente.habilitar.elegir_cliente"),
+    razonSocial: texto({}, "cuenta_corriente.habilitar.razon_social"),
+    limiteDeCreditoEnPesos: texto({}, "cuenta_corriente.habilitar.limite"),
+    faltaElCuit: texto({}, "cuenta_corriente.habilitar.falta_cuit"),
+    faltaElCuitDetalle: texto({}, "cuenta_corriente.habilitar.falta_cuit_detalle"),
+    habilitar: texto({}, "cuenta_corriente.habilitar.habilitar"),
+    cambiarCondiciones: texto({}, "cuenta_corriente.ficha.cambiar_condiciones"),
+    suspender: texto({}, "cuenta_corriente.ficha.suspender"),
+    motivoDeSuspension: texto({}, "cuenta_corriente.ficha.motivo_de_suspension"),
+    motivoDeReactivacion: texto({}, "cuenta_corriente.ficha.motivo_de_reactivacion"),
+    reactivar: texto({}, "cuenta_corriente.ficha.reactivar"),
+    guardar: texto({}, "catalogo.accion.guardar"),
+    cancelar: texto({}, "catalogo.accion.cancelar"),
   };
 }

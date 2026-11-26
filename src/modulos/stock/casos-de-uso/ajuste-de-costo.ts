@@ -103,8 +103,8 @@ export async function ajustarCostoPorOrigen(
     existenciaActual: existencia,
   });
   if (!despues.ok) return err("COSTO_INVALIDO");
-  // Lo valorizado nunca pasa de lo que hay: `corregirPromedio` suma «lo que queda» de la compra sin mirar cuántas unidades ya tenían costo (hallazgo de Stock, 25/11/2026) y con una carga
-  // consumida y otra con costo podría dejar más valorizado que la existencia. Se acota acá, en el camino de la corrección de compras, sin tocar el dominio común.
+  // Cinturón (invariante: valorizada ≤ existencia): `corregirPromedio` ya suma solo las unidades sin costo, así que esto no debería actuar. Se deja por si un estado guardado
+  // viejo ya traía más valorizado que lo que hay (hallazgo de Stock, 25/11/2026): ahí lo acota en vez de propagar el estado inválido.
   const tope = existencia.unidades > 0n ? existencia.unidades : 0n;
   const acotado: EstadoDeCosto =
     despues.valor.cantidadValorizada.unidades > tope

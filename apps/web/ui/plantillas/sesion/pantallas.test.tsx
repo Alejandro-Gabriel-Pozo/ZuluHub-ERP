@@ -176,6 +176,21 @@ describe("elegir empresa", () => {
     `);
   });
 
+  it("una empresa donde la persona tiene un rol propio no muestra ningún rol (no es uno de los tres base)", async () => {
+    await render(
+      <PantallaDeEleccionDeEmpresa
+        empresas={[empresa("Café del Puerto", null)]}
+        accion={accionVacia}
+      />,
+    );
+    await expect
+      .element(page.getByRole("button", { name: /^Entrar a la empresa Café del Puerto/ }))
+      .toBeVisible();
+    for (const rol of ["Gerente", "Administrador", "Empleado"]) {
+      expect(page.getByText(rol, { exact: true }).elements()).toHaveLength(0);
+    }
+  });
+
   it("un nombre largo no desborda el celular", async () => {
     await verificar(
       <PantallaDeEleccionDeEmpresa

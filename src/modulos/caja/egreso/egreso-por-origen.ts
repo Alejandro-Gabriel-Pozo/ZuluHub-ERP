@@ -1,4 +1,5 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import { importeATexto } from "../../../primitivas/dinero/importe";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { jornadaDeSucursal } from "../../cierre/publico";
@@ -7,7 +8,10 @@ import type { TxDeCaja } from "../casos-de-uso/contrato";
 import { decidirAnulacion, movimientoAnulableDe } from "../dominio/anulacion";
 import { decidirCajaParaCobrar, decidirSesionParaCobrar } from "../dominio/cobrar";
 import { decidirPorHuella } from "../dominio/huella";
+import { huellaDeCampos } from "../dominio/huella";
 import { huellaDeAnulacion, huellaDeMovimientoManual } from "../dominio/idempotencia-de-operacion";
+import { validarParDeCobro, type ErrorDeParDeCobro } from "../dominio/medios";
+import type { TipoDeMedio } from "../estados";
 import { sumarImportes } from "../dominio/importes";
 import { decidirMovimientoManual, egresoSuperaElEfectivo } from "../dominio/movimiento";
 import type {
@@ -15,6 +19,7 @@ import type {
   EntradaDeEgresoPorOrigen,
   ErrorAlAnularEgreso,
   ErrorAlEgresar,
+  MedioDelEgreso,
   OrigenDeEgreso,
   SalidaDeAnularEgresoPorOrigen,
   SalidaDeEgresoPorOrigen,
@@ -31,7 +36,51 @@ export function claveDeAnulacionDeEgreso(origen: OrigenDeEgreso): string {
 }
 
 /**
- * Saca UN egreso de efectivo de la caja abierta (E9 T10b) en la transacción del llamador y sin autorizar (el permiso es el de la acción de compras).
+ * El medio por el que sale el egreso. Sin `medio` pedido: el efectivo de la empresa (compras, como siempre). Con `medio`: el par medio y cuenta se valida con la regla
+ * del cobro (`validarParDeCobro`: existe en la empresa, activo, cuenta de la sucursal de la caja y compatible) y, si quien llama limita los tipos, también eso.
+ */
+async function resolverElMedio(
+  tx: TxDeCaja,
+  empresaId: EmpresaId,
+  pedido: MedioDelEgreso | undefined,
+  sucursalDeLaCaja: string,
+): Promise<
+  Resultado<
+    Readonly<{
+      medio: Readonly<{ id: string; tipo: TipoDeMedio }>;
+      cuentaDeCobroId: string | null;
+    }>,
+    ErrorDeParDeCobro | "MEDIO_NO_ADMITIDO"
+  >
+> {
+  if (pedido === undefined) {
+    const efectivo = await tx.mediosDePago.obtenerEfectivo(empresaId);
+    if (efectivo === null) throw new Error("invariante rota: una sesión sin medio efectivo");
+    return ok({ medio: { id: efectivo.id, tipo: efectivo.tipo }, cuentaDeCobroId: null });
+  }
+  const medio = await tx.mediosDePago.obtener(empresaId, pedido.medioDePagoId);
+  const cuenta =
+    pedido.cuentaDeCobroId === null
+      ? null
+      : await tx.cuentasDeCobro.obtener(empresaId, pedido.cuentaDeCobroId);
+  const par = validarParDeCobro({
+    medio,
+    cuentaDeCobroId: pedido.cuentaDeCobroId,
+    cuenta,
+    sucursalDeLaCaja,
+  });
+  if (!par.ok) return par;
+  if (pedido.tiposAdmitidos !== undefined && !pedido.tiposAdmitidos.includes(par.valor)) {
+    return err("MEDIO_NO_ADMITIDO");
+  }
+  return ok({
+    medio: { id: pedido.medioDePagoId, tipo: par.valor },
+    cuentaDeCobroId: pedido.cuentaDeCobroId,
+  });
+}
+
+/**
+ * Saca UN egreso de la caja abierta (E9 T10b) en la transacción del llamador y sin autorizar (el permiso es el de la acción de compras).
  * Orden: persona del contexto, serializable (como el cobro: el cierre de la caja detecta al egreso en vuelo), validación del importe y del motivo,
  * BÚSQUEDA POR CLAVE ANTES DE MIRAR LA SESIÓN (misma clave y misma huella: lo ya hecho con `yaExistia`; otra huella: `CLAVE_REUTILIZADA`), caja
  * activa de la sucursal, sesión `ABIERTA` (sin sesión o en cierre falla cerrado con su error tipado: se puede pagar por otro medio) y jornada abierta.
@@ -57,19 +106,37 @@ export async function registrarEgresoEnTx(
   });
   if (!movimiento.ok) return movimiento;
   const clave = claveDeEgreso(entrada.origen);
-  const huella = huellaDeMovimientoManual({
-    // La sesión todavía no se conoce (se busca por clave ANTES de mirarla): la huella lleva la caja, que es lo que pidió quien paga.
-    sesionId: entrada.cajaId,
-    clase: movimiento.valor.clase,
-    importe: movimiento.valor.importe,
-    motivo: movimiento.valor.motivo,
-  });
+  // La sesión todavía no se conoce (se busca por clave ANTES de mirarla): la huella lleva la caja, que es lo que pidió quien paga. Sin `medio` es la de siempre (las
+  // huellas de compras ya guardadas siguen valiendo); con `medio` lleva también el medio y la cuenta: la misma clave con otro medio es `CLAVE_REUTILIZADA`.
+  const huella =
+    entrada.medio === undefined
+      ? huellaDeMovimientoManual({
+          sesionId: entrada.cajaId,
+          clase: movimiento.valor.clase,
+          importe: movimiento.valor.importe,
+          motivo: movimiento.valor.motivo,
+        })
+      : huellaDeCampos([
+          "caja.egreso_con_medio",
+          entrada.cajaId,
+          entrada.medio.medioDePagoId,
+          entrada.medio.cuentaDeCobroId,
+          movimiento.valor.clase,
+          movimiento.valor.importe.moneda,
+          importeATexto(movimiento.valor.importe),
+          movimiento.valor.motivo,
+        ]);
   const previa = await tx.movimientos.obtenerHuellaPorClave(empresaId, clave);
   if (previa !== null) {
     if (decidirPorHuella(previa.huella, huella) === "CLAVE_REUTILIZADA") {
       return err("CLAVE_REUTILIZADA");
     }
-    return ok({ movimientoId: previa.id, sesionId: previa.sesionId, yaExistia: true });
+    return ok({
+      movimientoId: previa.id,
+      sesionId: previa.sesionId,
+      yaExistia: true,
+      medioTipo: null,
+    });
   }
 
   const caja = await tx.cajas.obtener(empresaId, entrada.cajaId);
@@ -88,19 +155,24 @@ export async function registrarEgresoEnTx(
   );
   if (!jornada.ok) return jornada;
 
-  const efectivo = await tx.mediosDePago.obtenerEfectivo(empresaId);
-  if (efectivo === null) throw new Error("invariante rota: una sesión sin medio efectivo");
-  const delEfectivo = (await tx.movimientos.paraSumar(empresaId, sesion.id)).filter(
-    (m) => m.medioDePagoId === efectivo.id && m.cuentaDeCobroId === null,
-  );
+  const elegido = await resolverElMedio(tx, empresaId, entrada.medio, entrada.sucursalId);
+  if (!elegido.ok) return elegido;
+  const { medio, cuentaDeCobroId } = elegido.valor;
+  // El aviso de «supera el efectivo» es del efectivo: se mide solo cuando el egreso sale de ahí.
+  const esEfectivo = medio.tipo === "EFECTIVO";
+  const delEfectivo = esEfectivo
+    ? (await tx.movimientos.paraSumar(empresaId, sesion.id)).filter(
+        (m) => m.medioDePagoId === medio.id && m.cuentaDeCobroId === null,
+      )
+    : [];
   const esperadoAntes = sumarImportes(delEfectivo.map((m) => m.importe));
 
   const movimientoId = await tx.movimientos.insertarSiNoExiste({
     empresa: empresaId,
     sesionId: sesion.id,
     clase: movimiento.valor.clase,
-    medioDePagoId: efectivo.id,
-    cuentaDeCobroId: null,
+    medioDePagoId: medio.id,
+    cuentaDeCobroId,
     importe: movimiento.valor.importe,
     motivo: movimiento.valor.motivo,
     anulaA: null,
@@ -118,7 +190,12 @@ export async function registrarEgresoEnTx(
     }
     return decidirPorHuella(ganadora.huella, huella) === "CLAVE_REUTILIZADA"
       ? err("CLAVE_REUTILIZADA")
-      : ok({ movimientoId: ganadora.id, sesionId: ganadora.sesionId, yaExistia: true });
+      : ok({
+          movimientoId: ganadora.id,
+          sesionId: ganadora.sesionId,
+          yaExistia: true,
+          medioTipo: null,
+        });
   }
   await dejarConstancia(tx, contexto, persona, {
     accion: "MOVIMIENTO_MANUAL_REGISTRADO",
@@ -133,7 +210,7 @@ export async function registrarEgresoEnTx(
       origenId: entrada.origen.id,
     },
   });
-  if (egresoSuperaElEfectivo(esperadoAntes, movimiento.valor.importe)) {
+  if (esEfectivo && egresoSuperaElEfectivo(esperadoAntes, movimiento.valor.importe)) {
     await dejarConstancia(tx, contexto, persona, {
       accion: "EGRESO_SUPERA_EFECTIVO",
       entidad: "movimiento_caja",
@@ -141,7 +218,7 @@ export async function registrarEgresoEnTx(
       despues: { sesionId: sesion.id, importe: importeATexto(movimiento.valor.importe) },
     });
   }
-  return ok({ movimientoId, sesionId: sesion.id, yaExistia: false });
+  return ok({ movimientoId, sesionId: sesion.id, yaExistia: false, medioTipo: medio.tipo });
 }
 
 /**

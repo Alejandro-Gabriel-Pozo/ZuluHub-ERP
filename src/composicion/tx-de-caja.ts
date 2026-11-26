@@ -14,6 +14,7 @@ import {
   crearRepositorioDeLaJornada,
   crearRepositorioDeMediosDePago,
   crearRepositorioDeMovimientos,
+  crearRepositorioDeMovimientosDeDinero,
   crearRepositorioDeSesiones,
   type CajaDb,
   type RepositorioDeArqueos,
@@ -27,9 +28,12 @@ import {
   type RepositorioDeLaJornada,
   type RepositorioDeMediosDePago,
   type RepositorioDeMovimientos,
+  type RepositorioDeMovimientosDeDinero,
   type RepositorioDeSesiones,
 } from "../modulos/caja/publico";
+import { crearRepositorioDeMembresias, type IdentidadDb } from "../modulos/identidad/publico";
 import { crearLecturaDePlanes, type PlanesDb } from "../modulos/planes/publico";
+import type { EmpresaId, PersonaId } from "../primitivas/identificadores/marca";
 import type { LecturaDeDerechosDeUso } from "../puertos/derechos-de-uso";
 
 /**
@@ -45,6 +49,11 @@ export type PiezasDeCajaEnTx = Readonly<{
   /** Las sesiones de caja, sus movimientos (solo inserción) y el arqueo que nace al cerrar. */
   sesiones: RepositorioDeSesiones;
   movimientos: RepositorioDeMovimientos;
+  /** El acto «movimiento de dinero» de la salida de dinero (solo inserción) y la lectura de si una persona es miembro activo de la empresa. */
+  movimientosDeDinero: RepositorioDeMovimientosDeDinero;
+  empleados: Readonly<{
+    esMiembroActivo(empresa: EmpresaId, persona: PersonaId): Promise<boolean>;
+  }>;
   /** El cobro (puerto de cobrar para ventas) y las marcas de tarjeta. */
   cobros: RepositorioDeCobros;
   arqueos: RepositorioDeArqueos;
@@ -61,6 +70,16 @@ export type PiezasDeCajaEnTx = Readonly<{
   derechos: LecturaDeDerechosDeUso;
 }>;
 
+function empleadosDeLaEmpresa(
+  membresias: ReturnType<typeof crearRepositorioDeMembresias>,
+): PiezasDeCajaEnTx["empleados"] {
+  return {
+    async esMiembroActivo(empresa, persona) {
+      return (await membresias.obtener(empresa, persona))?.activo === true;
+    },
+  };
+}
+
 export function armarPiezasDeCajaEnTx(
   db: Parameters<ConfiguracionDeTransacciones<unknown>["armar"]>[0],
 ): PiezasDeCajaEnTx {
@@ -70,6 +89,8 @@ export function armarPiezasDeCajaEnTx(
     cuentasDeCobro: crearRepositorioDeCuentasDeCobro(db.withTables<CajaDb>()),
     sesiones: crearRepositorioDeSesiones(db.withTables<CajaDb>()),
     movimientos: crearRepositorioDeMovimientos(db.withTables<CajaDb>()),
+    movimientosDeDinero: crearRepositorioDeMovimientosDeDinero(db.withTables<CajaDb>()),
+    empleados: empleadosDeLaEmpresa(crearRepositorioDeMembresias(db.withTables<IdentidadDb>())),
     cobros: crearRepositorioDeCobros(db.withTables<CajaDb>()),
     arqueos: crearRepositorioDeArqueos(db.withTables<CajaDb>()),
     correcciones: crearRepositorioDeCorrecciones(db.withTables<CajaDb>()),

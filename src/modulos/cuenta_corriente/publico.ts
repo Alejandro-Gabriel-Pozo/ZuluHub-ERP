@@ -76,6 +76,10 @@ export type {
   ErrorAlListarClientesParaVender,
 } from "./consultas/listar-clientes-para-vender";
 export type {
+  ClienteSinCuenta,
+  ErrorAlListarClientesSinCuenta,
+} from "./consultas/listar-clientes-sin-cuenta";
+export type {
   CargoPendienteDelEstadoDeCuenta,
   DependenciasDeEstadoDeCuenta,
   EntradaDeVerEstadoDeCuenta,

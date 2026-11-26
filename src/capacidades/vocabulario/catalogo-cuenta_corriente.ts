@@ -1,3 +1,4 @@
+import { TEXTOS_DE_EXPORTACION_DE_CUENTA_CORRIENTE } from "./textos-de-exportacion-de-cuenta-corriente";
 import type { FuenteDeTexto, UsoDeTexto } from "./uso-y-fuente-de-texto";
 
 /**
@@ -5,10 +6,12 @@ import type { FuenteDeTexto, UsoDeTexto } from "./uso-y-fuente-de-texto";
  * Pedernal-docs `11-especificaciones/briefs/maquetas/`), que el dueño aprobó el 26/11/2026 con su chat («Apruebo», con lo ya decidido aplicado: sin pies explicativos, «Excedida», «Crédito disponible», «Origen del
  * movimiento»); el orquestador los asentó en `DEC-CCL-004` (delegación del 15/11/2026, fila 173). Lo que la maqueta tiene y todavía no se usa (habilitar, suspender, reactivar, cambiar condiciones, exportar, cobrar) entra con su
  * pantalla. Se reutilizan los que ya existían (Cliente, Estado, Fecha, Importe, Vence, Anulación, Sucursal, Salón, Mostrador, los tipos de medio y «Sin resultados»): no se duplican.
+ * CC-5 A2 (habilitar, cambiar plazo o límite, suspender y reactivar): los textos de la misma maqueta, asentados en `DEC-CCL-006`; la maqueta trae un pie explicativo en el formulario de habilitar que NO se usa (interfaz sobria).
  * El banner de una cuenta suspendida lleva el motivo SIN «(quién, cuándo)»: la ficha guarda el motivo y no quién ni cuándo suspendió (decisión del dueño, DEC-CCL-005).
  */
 const FUENTE: FuenteDeTexto = { decision: "DEC-CCL-004" };
 const FUENTE_DEL_BANNER: FuenteDeTexto = { decision: "DEC-CCL-005" };
+const FUENTE_DE_A2: FuenteDeTexto = { decision: "DEC-CCL-006" };
 const MODELO = "apps/web/ui/plantillas/cuenta-corriente/modelo-de-cuenta-corriente.ts";
 const TEXTOS = "apps/web/ui/plantillas/cuenta-corriente/textos-de-cuenta-corriente.ts";
 const DE_LOS_TEXTOS: UsoDeTexto = {
@@ -166,4 +169,74 @@ export const TEXTOS_DE_CUENTA_CORRIENTE = {
     usos: [DEL_MODELO],
     fuente: FUENTE_DEL_BANNER,
   },
+  // A2: habilitar a un cliente (botón del listado y formulario), cambiar plazo o límite, suspender y reactivar (maqueta v2 «Habilitar cuenta» y «Ficha suspendida»).
+  "cuenta_corriente.lista.habilitar_cliente": {
+    porDefecto: "Habilitar cliente",
+    usos: [DE_LOS_TEXTOS],
+    fuente: FUENTE_DE_A2,
+  },
+  "cuenta_corriente.habilitar.titulo": {
+    porDefecto: "Habilitar cuenta corriente",
+    usos: [DE_LOS_TEXTOS],
+    fuente: FUENTE_DE_A2,
+  },
+  "cuenta_corriente.habilitar.elegir_cliente": {
+    porDefecto: "Elegí un cliente…",
+    usos: [DE_LOS_TEXTOS],
+    fuente: FUENTE_DE_A2,
+  },
+  "cuenta_corriente.habilitar.razon_social": {
+    porDefecto: "Razón social",
+    usos: [DE_LOS_TEXTOS],
+    fuente: FUENTE_DE_A2,
+  },
+  "cuenta_corriente.habilitar.limite": {
+    porDefecto: "Límite de crédito (ARS)",
+    usos: [DE_LOS_TEXTOS],
+    fuente: FUENTE_DE_A2,
+  },
+  "cuenta_corriente.habilitar.falta_cuit": {
+    porDefecto: "Falta el CUIT:",
+    usos: [DE_LOS_TEXTOS],
+    fuente: FUENTE_DE_A2,
+  },
+  "cuenta_corriente.habilitar.falta_cuit_detalle": {
+    porDefecto:
+      "este cliente no tiene CUIT cargado. Para habilitar la cuenta corriente, el cliente necesita CUIT y razón social. Cargalo en la ficha del cliente.",
+    largoMaximo: 200,
+    usos: [DE_LOS_TEXTOS],
+    fuente: FUENTE_DE_A2,
+  },
+  "cuenta_corriente.habilitar.habilitar": {
+    porDefecto: "Habilitar",
+    usos: [DE_LOS_TEXTOS],
+    fuente: FUENTE_DE_A2,
+  },
+  "cuenta_corriente.ficha.cambiar_condiciones": {
+    porDefecto: "Cambiar plazo o límite",
+    usos: [DE_LOS_TEXTOS],
+    fuente: FUENTE_DE_A2,
+  },
+  "cuenta_corriente.ficha.suspender": {
+    porDefecto: "Suspender cuenta",
+    usos: [DE_LOS_TEXTOS],
+    fuente: FUENTE_DE_A2,
+  },
+  "cuenta_corriente.ficha.motivo_de_suspension": {
+    porDefecto: "Motivo de la suspensión (obligatorio)",
+    usos: [DE_LOS_TEXTOS],
+    fuente: FUENTE_DE_A2,
+  },
+  "cuenta_corriente.ficha.motivo_de_reactivacion": {
+    porDefecto: "Motivo de la reactivación (obligatorio)",
+    usos: [DE_LOS_TEXTOS],
+    fuente: FUENTE_DE_A2,
+  },
+  "cuenta_corriente.ficha.reactivar": {
+    porDefecto: "Reactivar cuenta",
+    usos: [DE_LOS_TEXTOS],
+    fuente: FUENTE_DE_A2,
+  },
+  // La exportación a Excel (CC-5 D): sus diez textos nuevos viven aparte.
+  ...TEXTOS_DE_EXPORTACION_DE_CUENTA_CORRIENTE,
 } as const;

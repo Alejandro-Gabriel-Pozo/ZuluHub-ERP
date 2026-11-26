@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
   aceptarInvitacionDeLaSesion,
@@ -82,6 +83,27 @@ describe.skipIf(base === null)("web: sesión y empresa", () => {
         )
       ).rows[0]?.razon_social as string;
       expect(JSON.stringify(respuestaA)).not.toContain(nombreB);
+    });
+
+    it("una persona con un rol propio ve su empresa (con el rol en null): la lista no falla ni la muestra como otro rol", async () => {
+      const enA = await ingresarEn(mundo, HOST_A);
+      const persona = await personaVinculada(mundo, enA.sesion);
+      const { empresa } = await crearMundoDeMarca(mundo.dueno, { marca: mundo.marcaA });
+      const rol = randomUUID();
+      await mundo.dueno.query(
+        "insert into rol_de_empresa (id, empresa_id, nombre, nombre_clave) values ($1, $2, 'Cajero', 'cajero')",
+        [rol, empresa],
+      );
+      await mundo.dueno.query(
+        "insert into membresia (empresa_id, persona_id, rol, rol_propio_id) values ($1, $2, 'PROPIO', $3)",
+        [empresa, persona, rol],
+      );
+
+      const r = await empresasDeLaPersona(mundo.dependencias, enA.sesion, mundo.marcaA, {
+        tipo: "MARCA",
+      });
+
+      expect(r.ok && r.dato.empresas.map((e) => [e.empresaId, e.rol])).toEqual([[empresa, null]]);
     });
 
     it("una persona con membresía solo en A que entra por B no ve empresas", async () => {
