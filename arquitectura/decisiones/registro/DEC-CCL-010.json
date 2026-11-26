@@ -1,0 +1,10 @@
+{
+  "id": "DEC-CCL-010",
+  "fecha": "2026-11-26",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Abrir el módulo cuenta_corriente como disponible al cierre de la primera etapa; ninguna empresa lo tiene activo hasta que el dueño lo active desde la consola.",
+  "que_cambia": "Volver a cerrarlo es cambiar su estado a en_desarrollo en el catálogo de módulos, sin migración. Abrirlo no lo enciende a ninguna empresa: sin activarlo, el servidor rechaza todo con MODULO_NO_ACTIVO.",
+  "donde": "Dueño 26/11/2026, \"Si\", mensaje sobre abrir el módulo cuenta_corriente; src/capacidades/modulos/catalogo-cuenta_corriente.ts"
+}

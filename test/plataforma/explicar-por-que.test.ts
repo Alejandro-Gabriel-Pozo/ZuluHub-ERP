@@ -70,7 +70,7 @@ const accion = (extra: Partial<Extract<EntradaDeExplicar["objetivo"], { tipo: "A
     },
   }) satisfies EntradaDeExplicar;
 
-const membresia = (rol: "GERENTE" | "ADMINISTRADOR" | "OPERADOR", activo = true) => ({
+const membresia = (rol: "GERENTE" | "ADMINISTRADOR" | "OPERADOR" | "PROPIO", activo = true) => ({
   empresaId: EMPRESA,
   personaId: PERSONA.id,
   rol,
@@ -208,8 +208,95 @@ describe("explicar una acción", () => {
       { metodo: "estadosDeEmpresas", argumentos: [[EMPRESA]] },
       { metodo: "personaPorEmail", argumentos: ["ana@x.test"] },
       { metodo: "membresiasDe", argumentos: [PERSONA.id, [EMPRESA]] },
-      { metodo: "modulosActivadosDe", argumentos: [EMPRESA] },
+      { metodo: "fuentesDelConjunto", argumentos: [PERSONA.id, EMPRESA] },
+      { metodo: "modulosDeLaEmpresa", argumentos: [EMPRESA, comoAdministrador.ahora] },
     ]);
+  });
+
+  describe("el conjunto de acciones sale de lo que hay en la base (plantilla vigente o rol propio), no de la matriz del código", () => {
+    const decision = async (datos: DatosDeLecturaFalsa) => {
+      const { explicarPorQue } = armar(datos);
+      const r = await explicarPorQue(comoAdministrador, accion());
+      if (!r.ok || r.valor.tipo !== "ACCION") throw new Error("esperaba una acción explicada");
+      return r.valor.explicacion;
+    };
+    const plantillas = (acciones: string[] | null) => ({ ADMINISTRADOR: acciones, OPERADOR: null });
+
+    it("un administrador cuya plantilla vigente lleva la acción puede; si ya no la lleva, no (aunque la matriz del código la tenga)", async () => {
+      const con = await decision({
+        membresias: [membresia("ADMINISTRADOR")],
+        fuentes: { plantillas: plantillas(["sucursales.crear"]), rolPropio: null },
+      });
+      expect(con).toMatchObject({ razonDelRol: "CON_ROL", guard: { ok: true } });
+      const sin = await decision({
+        membresias: [membresia("ADMINISTRADOR")],
+        fuentes: { plantillas: plantillas(["productos.ver"]), rolPropio: null },
+      });
+      expect(sin).toMatchObject({
+        razonDelRol: "CON_ROL",
+        guard: { ok: false, error: "SIN_PERMISO" },
+      });
+    });
+
+    it("un rol propio activo con la acción en su versión vigente puede", async () => {
+      const e = await decision({
+        membresias: [membresia("PROPIO")],
+        fuentes: {
+          plantillas: plantillas(null),
+          rolPropio: { activo: true, acciones: ["sucursales.crear"] },
+        },
+      });
+      expect(e).toMatchObject({
+        rol: "PROPIO",
+        razonDelRol: "CON_ROL_PROPIO",
+        guard: { ok: true },
+      });
+    });
+
+    it("un rol propio activo sin la acción, o con una clave que el catálogo ya no tiene: SIN_PERMISO", async () => {
+      const e = await decision({
+        membresias: [membresia("PROPIO")],
+        fuentes: {
+          plantillas: plantillas(null),
+          rolPropio: { activo: true, acciones: ["productos.ver", "clave.retirada"] },
+        },
+      });
+      expect(e).toMatchObject({
+        razonDelRol: "CON_ROL_PROPIO",
+        guard: { ok: false, error: "SIN_PERMISO" },
+      });
+    });
+
+    it("un rol propio archivado no otorga nada, y la razón lo dice", async () => {
+      const e = await decision({
+        membresias: [membresia("PROPIO")],
+        fuentes: {
+          plantillas: plantillas(null),
+          rolPropio: { activo: false, acciones: ["sucursales.crear"] },
+        },
+      });
+      expect(e).toMatchObject({
+        rol: "PROPIO",
+        razonDelRol: "ROL_PROPIO_ARCHIVADO",
+        guard: { ok: false, error: "SIN_PERMISO" },
+      });
+    });
+
+    it("un rol propio cuya versión no se pudo leer nace cerrado, y la razón lo dice", async () => {
+      const e = await decision({
+        membresias: [membresia("PROPIO")],
+        fuentes: { plantillas: plantillas(null), rolPropio: null },
+      });
+      expect(e).toMatchObject({
+        razonDelRol: "ROL_PROPIO_ILEGIBLE",
+        guard: { ok: false, error: "SIN_PERMISO" },
+      });
+    });
+
+    it("el gerente tiene todo el catálogo aunque no haya nada guardado", async () => {
+      const e = await decision({ membresias: [membresia("GERENTE")] });
+      expect(e).toMatchObject({ razonDelRol: "CON_ROL", guard: { ok: true } });
+    });
   });
 
   it("los módulos activados salen de la lectura", async () => {

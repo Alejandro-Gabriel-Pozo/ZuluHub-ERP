@@ -286,5 +286,6 @@ describe("la excepción de tiempo solo alcanza al último tramo", () => {
     expect(texto).toContain("Excepción de tiempo");
     expect(texto).toContain("20 minutos");
     expect(texto).toContain("`vitest related`");
+    expect(texto).toContain("Sin repetir `previo` después de reintegrar");
   });
 });

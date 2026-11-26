@@ -26,6 +26,15 @@ import {
  * Previene: un cajero que ve saldos, límites o movimientos en la lista; clientes de otra empresa o desactivados en la lista; una consulta por sucursal que se cuela fuera del alcance de quien vende
  * o de la empresa; una constancia con importes; un «saldo después» que no cierra con el libro; una consulta sin permiso; y un total inválido que se acepta.
  */
+/** El módulo se abrió el 26/11/2026 (CC-5): para probar que el guard va primero con el módulo cerrado se usa una COPIA del catálogo donde vuelve a estar en desarrollo (violación inyectada). */
+const REGLAS_CON_EL_MODULO_CERRADO = {
+  ...REGLAS_DE_PRUEBA,
+  catalogo: {
+    ...REGLAS_DE_PRUEBA.catalogo,
+    cuenta_corriente: { ...REGLAS_DE_PRUEBA.catalogo.cuenta_corriente, estado: "en_desarrollo" },
+  },
+} as unknown as typeof REGLAS_DE_PRUEBA;
+
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 180_000 });
 
@@ -150,7 +159,7 @@ describe.skipIf(base === null)("cuenta corriente: vender a cuenta, lista y previ
     it("exige `cargar_a_cuenta`: con el módulo en desarrollo o sin persona se rechaza", async () => {
       const enDesarrollo = crearConsultasDeCuentaCorriente({
         transacciones: m.entorno as unknown as Transacciones<Tx>,
-        reglas: REGLAS_DE_PRUEBA,
+        reglas: REGLAS_CON_EL_MODULO_CERRADO,
       });
       expect(await enDesarrollo.listarClientesParaVender(e.operador)).toMatchObject({
         ok: false,
@@ -213,7 +222,7 @@ describe.skipIf(base === null)("cuenta corriente: vender a cuenta, lista y previ
       const c = await cliente(e);
       const enDesarrollo = crearCasosDeUsoDeCuentaCorriente({
         transacciones: m.entorno as unknown as Transacciones<Tx>,
-        reglas: REGLAS_DE_PRUEBA,
+        reglas: REGLAS_CON_EL_MODULO_CERRADO,
       });
       expect(
         await enDesarrollo.verClienteParaVender(e.operador, {

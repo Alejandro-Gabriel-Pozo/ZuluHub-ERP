@@ -749,23 +749,32 @@ describe("el guard con las reglas reales", () => {
   // para que un módulo `en_desarrollo` agregado después y olvidado no quede sin cubrir. El módulo se marca activo a
   // propósito (el guard rechaza por «en desarrollo» antes de mirar si está activo o qué rol tiene).
   const ENDESARROLLO = (Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]).filter(
-    (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
+    (m) => (CATALOGO_DE_MODULOS[m].estado as string) === "en_desarrollo",
   );
 
-  it("todo módulo en desarrollo del catálogo es solo cuenta_corriente (CC-1, 25/11/2026; producción salió el 25/11/2026, DEC-1050; comandas y salon desde S-0r, 17/11/2026; cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12, catalogo, caja y ventas desde el 15/11/2026, DEC-0463, y vidriera desde el 20/11/2026, DEC-0826)", () => {
-    expect([...ENDESARROLLO]).toEqual(["cuenta_corriente"]);
+  it("ningún módulo del catálogo real está en desarrollo: cuenta_corriente se abrió el 26/11/2026 (CC-5; producción el 25/11/2026, DEC-1050; comandas y salon desde S-0r; cierre desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12, catalogo, caja y ventas desde el 15/11/2026, DEC-0463, y vidriera desde el 20/11/2026, DEC-0826)", () => {
+    expect([...ENDESARROLLO]).toEqual([]);
   });
 
-  it("las 5 acciones sin construir (de cuenta corriente) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  // La regla de «nadie usa lo que no está construido» se sigue probando, ahora con una COPIA del catálogo donde cuenta_corriente vuelve a estar en desarrollo (violación inyectada: el catálogo real ya no tiene ninguno).
+  const REGLAS_CON_CUENTA_CORRIENTE_CERRADA = {
+    ...REGLAS_DE_EMPRESA,
+    catalogo: {
+      ...CATALOGO_DE_MODULOS,
+      cuenta_corriente: { ...CATALOGO_DE_MODULOS.cuenta_corriente, estado: "en_desarrollo" },
+    },
+  } as unknown as typeof REGLAS_DE_EMPRESA;
+  const ACCIONES_DE_CUENTA_CORRIENTE = Object.keys(
+    CATALOGO_DE_MODULOS.cuenta_corriente.acciones,
+  ) as (keyof typeof PERMISOS_DE_EMPRESA)[];
+
+  it("un módulo en desarrollo (cuenta_corriente en una copia del catálogo) da MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
-    const sinConstruir = ENDESARROLLO.flatMap(
-      (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
-    );
-    expect(sinConstruir).toHaveLength(5);
+    expect(ACCIONES_DE_CUENTA_CORRIENTE).toHaveLength(5);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
-      for (const accion of sinConstruir) {
+      for (const accion of ACCIONES_DE_CUENTA_CORRIENTE) {
         expect(
-          evaluarGuard(REGLAS_DE_EMPRESA, accion, {
+          evaluarGuard(REGLAS_CON_CUENTA_CORRIENTE_CERRADA, accion, {
             rol,
             modulosActivos: todosActivos,
             capacidadesDeSucursal: null,
@@ -778,18 +787,15 @@ describe("el guard con las reglas reales", () => {
 
   it("propiedad: para cualquier subconjunto de módulos activos y cualquier rol, un módulo en desarrollo siempre rechaza igual (no depende del rol)", () => {
     const claves = Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[];
-    const sinConstruir = ENDESARROLLO.flatMap(
-      (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
-    );
     fc.assert(
       fc.property(
         fc.subarray(claves),
         fc.subarray(claves),
         fc.constantFrom<RolDeEmpresa | null>(...ROLES_DE_EMPRESA, null),
-        fc.constantFrom(...sinConstruir),
+        fc.constantFrom(...ACCIONES_DE_CUENTA_CORRIENTE),
         (activos, enSoloLectura, rol, accion) => {
           expect(
-            evaluarGuard(REGLAS_DE_EMPRESA, accion, {
+            evaluarGuard(REGLAS_CON_CUENTA_CORRIENTE_CERRADA, accion, {
               rol,
               modulosActivos: new Set(activos),
               modulosEnSoloLectura: new Set(enSoloLectura),
@@ -799,6 +805,39 @@ describe("el guard con las reglas reales", () => {
         },
       ),
     );
+  });
+
+  // CC-5: con el módulo ABIERTO, cada acción × cada rol sigue la matriz (aprobar_exceso, administrar y ver: gerente y administrador; cargar_a_cuenta y consultar_al_vender: también el operador) y sin el
+  // módulo activo la empresa recibe MODULO_NO_ACTIVO (abrirlo NO lo enciende a nadie: cada empresa lo activa y su plan lo incluye).
+  it("cuenta_corriente abierta: la matriz por rol con el módulo activo, y MODULO_NO_ACTIVO si la empresa no lo activó", () => {
+    const esperado: Readonly<Record<string, readonly (RolDeEmpresa | null)[]>> = {
+      "cuenta_corriente.ver": ["GERENTE", "ADMINISTRADOR"],
+      "cuenta_corriente.administrar": ["GERENTE", "ADMINISTRADOR"],
+      "cuenta_corriente.aprobar_exceso": ["GERENTE", "ADMINISTRADOR"],
+      "cuenta_corriente.cargar_a_cuenta": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+      "cuenta_corriente.consultar_al_vender": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
+    };
+    const activos = new Set<ClaveModulo>(["administracion", "clientes", "cuenta_corriente"]);
+    const sinElModulo = new Set<ClaveModulo>(["administracion", "clientes"]);
+    expect(Object.keys(esperado).sort()).toEqual([...ACCIONES_DE_CUENTA_CORRIENTE].sort());
+    for (const accion of ACCIONES_DE_CUENTA_CORRIENTE) {
+      for (const rol of [...ROLES_DE_EMPRESA, null]) {
+        const conModulo = evaluarGuard(REGLAS_DE_EMPRESA, accion, {
+          rol,
+          modulosActivos: activos,
+          capacidadesDeSucursal: null,
+        });
+        expect(conModulo.ok, `${rol} ${accion}`).toBe(esperado[accion]?.includes(rol) === true);
+        expect(
+          evaluarGuard(REGLAS_DE_EMPRESA, accion, {
+            rol,
+            modulosActivos: sinElModulo,
+            capacidadesDeSucursal: null,
+          }),
+          `${rol} ${accion} sin el módulo`,
+        ).toEqual({ ok: false, error: "MODULO_NO_ACTIVO" });
+      }
+    }
   });
 
   it("caja, ventas y catalogo (disponibles, DEC-0463) no nacen activos: solo quedan activos si la empresa los activa Y el plan los incluye", () => {

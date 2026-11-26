@@ -98,6 +98,8 @@ const TABLAS_LEGIBLES = [
   "version_de_plantilla",
   "piso_de_plataforma",
   "accion_introducida",
+  "rol_de_empresa", // 0113 (T5 de H4b): solo 3 columnas (las prueba `soporte-lee-roles-propios-migracion.test.ts`)
+  "version_de_rol", // 0113: solo 4 columnas (id, empresa y estado del rol propio y las acciones de cada versión)
   "solicitud_de_alta", // captación: la plataforma revisa y decide las solicitudes
   "valor_de_lista", // 0027 (caja y cobros): las listas del sistema (marcas de tarjeta y motivos de rechazo) las administra la plataforma
 ] as const;
@@ -318,6 +320,27 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
        select empresa_id, id, emisor_id, 'FACTURA_B', 0, 'HOMOLOGACION' from punto_de_venta where empresa_id = $1`,
       [activa.empresa],
     );
+    // Un rol propio con su primera versión (0094 y 0113): la plataforma lo lee por columna, así que tampoco puede estar vacío.
+    const rolPropio = randomUUID();
+    await dueno.query(
+      `insert into rol_de_empresa (id, empresa_id, nombre, nombre_clave) values ($1, $2, 'Cajero', 'cajero')`,
+      [rolPropio, activa.empresa],
+    );
+    await dueno.query(
+      `insert into version_de_rol (empresa_id, rol_id, numero, acciones, creado_por, creado_en)
+       values ($1, $2, 1, $3::text[], $4, now())`,
+      [
+        activa.empresa,
+        rolPropio,
+        [
+          "gerencia.aceptar_traspaso",
+          "gerencia.rechazar_traspaso",
+          "gerencia.ver_traspaso",
+          "permisos.ver_propios",
+        ],
+        personaMiembro,
+      ],
+    );
   });
   afterAll(async () => {
     await entorno.cerrar();
@@ -412,6 +435,11 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
           "referencia_de_error.referencia_de_error_plataforma_alta:INSERT:PERMISSIVE",
           "referencia_de_error.referencia_de_error_plataforma_leer:SELECT:PERMISSIVE",
           "membresia.membresia_plataforma_leer:SELECT:PERMISSIVE",
+          // 0113: la plataforma lee los roles propios (solo lectura, solo con actor vigente)
+          "rol_de_empresa.rol_de_empresa_plataforma_leer:SELECT:PERMISSIVE",
+          "rol_de_empresa.rol_de_empresa_plataforma_con_actor:SELECT:RESTRICTIVE",
+          "version_de_rol.version_de_rol_plataforma_leer:SELECT:PERMISSIVE",
+          "version_de_rol.version_de_rol_plataforma_con_actor:SELECT:RESTRICTIVE",
           // 0001 y 0002 (permisivas, sin cambios)
           "auditoria_empresa.auditoria_empresa_plataforma_alta:INSERT:PERMISSIVE",
           "auditoria_plataforma.auditoria_plataforma_alta:INSERT:PERMISSIVE",
@@ -752,7 +780,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       expect(definer.map((f) => f.proname)).toEqual(["contexto_firmado"]);
     });
 
-    it("la plataforma lee exactamente 4 columnas de membresia, y ningún rol más las lee por columna", async () => {
+    it("la plataforma lee exactamente 5 columnas de membresia, y ningún rol más las lee por columna", async () => {
       const columnas = await filas<{ grantee: string; column_name: string }>(
         `select grantee, column_name from information_schema.column_privileges
          where table_schema = 'public' and table_name = 'membresia' and privilege_type = 'SELECT'
@@ -764,6 +792,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
         "empresa_id",
         "persona_id",
         "rol",
+        "rol_propio_id", // 0113
       ]);
       // La aplicación sigue leyendo toda la tabla; nadie más.
       expect([
@@ -771,7 +800,7 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       ]).toEqual(["pedernal_app"]);
     });
 
-    it("lo que la plataforma puede leer, columna por columna, es exactamente esto (las tablas enteras más 4 de membresia)", async () => {
+    it("lo que la plataforma puede leer, columna por columna, es exactamente esto (las tablas enteras, más 5 de membresia, 3 de rol_de_empresa y 4 de version_de_rol)", async () => {
       const reales = await filas<{ t: string; c: string }>(
         `select table_name as t, column_name as c from information_schema.column_privileges
          where table_schema = 'public' and grantee = 'pedernal_plataforma' and privilege_type = 'SELECT'
@@ -781,7 +810,8 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
       for (const { t, c } of reales) porTabla.set(t, [...(porTabla.get(t) ?? []), c]);
       expect([...porTabla.keys()].sort()).toEqual([...TABLAS_LEGIBLES].sort());
       for (const tabla of TABLAS_LEGIBLES) {
-        if (tabla === "membresia" || tabla === "punto_de_venta") continue;
+        if (["membresia", "punto_de_venta", "rol_de_empresa", "version_de_rol"].includes(tabla))
+          continue;
         const todas = await filas<{ column_name: string }>(
           `select column_name from information_schema.columns
            where table_schema = 'public' and table_name = $1 order by 1`,

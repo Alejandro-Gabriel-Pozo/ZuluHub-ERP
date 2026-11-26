@@ -4,7 +4,12 @@ import { exigirAccion } from "../../src/capacidades/permisos/exigir";
 import { PERMISOS_DE_EMPRESA, REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import type { ClaveAccion } from "../../src/capacidades/modulos/catalogo";
 import type { ReglasDelGuard } from "../../src/capacidades/permisos/guard";
-import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "../../src/capacidades/permisos/roles";
+import {
+  ROLES_DE_EMPRESA,
+  ROLES_DE_LA_MEMBRESIA,
+  type RolDeLaMembresia,
+} from "../../src/capacidades/permisos/roles";
+import { conjuntoEfectivo } from "../../src/capacidades/roles/conjunto-efectivo";
 import {
   comprobarQueOpera,
   estadoEfectivo,
@@ -52,13 +57,27 @@ const estadosDeEmpresa = fc.constantFrom<EstadoDeEmpresa>(
 const estadosDeTenant = fc.constantFrom<EstadoDeTenant>("ACTIVE", "SUSPENDED");
 const E1 = empresaId("e-1");
 
-const hechosDeAccion: fc.Arbitrary<HechosDeAccion<RolDeEmpresa>> = fc.record({
+const hechosDeAccion: fc.Arbitrary<HechosDeAccion<RolDeLaMembresia>> = fc.record({
   empresaId: fc.constant(E1),
   persona: fc.option(fc.record({ activoGlobal: fc.boolean() }), { nil: null }),
   membresia: fc.option(
-    fc.record({ rol: fc.constantFrom(...ROLES_DE_EMPRESA), activo: fc.boolean() }),
+    fc.record({ rol: fc.constantFrom(...ROLES_DE_LA_MEMBRESIA), activo: fc.boolean() }),
     { nil: null },
   ),
+  // Lo guardado en la base: las acciones de cada plantilla y del rol propio (con una clave retirada del catálogo a propósito), o sin versión legible.
+  fuentes: fc.record({
+    plantillas: fc.record({
+      ADMINISTRADOR: fc.option(fc.subarray([...acciones, "retirada.del_catalogo"]), { nil: null }),
+      OPERADOR: fc.option(fc.subarray([...acciones, "retirada.del_catalogo"]), { nil: null }),
+    }),
+    rolPropio: fc.option(
+      fc.record({
+        activo: fc.boolean(),
+        acciones: fc.subarray([...acciones, "retirada.del_catalogo"]),
+      }),
+      { nil: null },
+    ),
+  }),
   modulosActivados: fc.subarray(["administracion", "otro", "constructor", "__proto__"]),
   modulosHabilitados: fc.subarray(["administracion", "otro", "constructor", "__proto__"]),
   estadoDeEmpresa: estadosDeEmpresa,
@@ -66,7 +85,7 @@ const hechosDeAccion: fc.Arbitrary<HechosDeAccion<RolDeEmpresa>> = fc.record({
 });
 
 /** El rol que carga `autorizacion.delActor`: membresía activa con la persona activa globalmente. */
-function rolReal(h: HechosDeAccion<RolDeEmpresa>): RolDeEmpresa | null {
+function rolReal(h: HechosDeAccion<RolDeLaMembresia>): RolDeLaMembresia | null {
   if (h.persona === null || !h.persona.activoGlobal) return null;
   return h.membresia !== null && h.membresia.activo ? h.membresia.rol : null;
 }
@@ -78,8 +97,16 @@ describe("explicarAccionDeEmpresa = exigirAccion + comprobarQueOpera (reglas rea
         const real = await exigirAccion(REGLAS_DE_EMPRESA, accion, () =>
           Promise.resolve({
             rol: rolReal(h),
-            modulosActivados: h.modulosActivados,
-            modulosHabilitados: h.modulosHabilitados,
+            acciones: [
+              ...conjuntoEfectivo(rolReal(h), {
+                catalogo: new Set(acciones),
+                plantilla: (clave) => h.fuentes.plantillas[clave],
+                rolPropio: rolReal(h) === "PROPIO" ? h.fuentes.rolPropio : null,
+              }),
+            ],
+            // Sin rol, `autorizacion.delActor` no lee módulos (SIN_ROL): el guard ve «no activo» antes de mirar el rol.
+            modulosActivados: rolReal(h) === null ? [] : h.modulosActivados,
+            modulosHabilitados: rolReal(h) === null ? [] : h.modulosHabilitados,
           }),
         );
         const estados = new Map([
@@ -98,11 +125,16 @@ describe("explicarAccionDeEmpresa = exigirAccion + comprobarQueOpera (reglas rea
     );
   });
 
-  it("la razón del rol es coherente con el rol: hay rol si y solo si la razón es CON_ROL", () => {
+  it("la razón del rol es coherente con el rol: hay rol si y solo si la razón es una de las que dan rol", () => {
     fc.assert(
       fc.property(fc.constantFrom(...acciones), hechosDeAccion, (accion, h) => {
         const e = explicarAccionDeEmpresa(REGLAS_DE_EMPRESA, accion, h);
-        expect(e.rol !== null).toBe(e.razonDelRol === "CON_ROL");
+        const conRol = ["CON_ROL", "CON_ROL_PROPIO", "ROL_PROPIO_ARCHIVADO", "ROL_PROPIO_ILEGIBLE"];
+        expect(e.rol !== null).toBe(conRol.includes(e.razonDelRol));
+        // Un rol propio archivado o ilegible, o sin la acción en su versión, nunca la permite (el conjunto nace cerrado).
+        if (e.razonDelRol === "ROL_PROPIO_ARCHIVADO" || e.razonDelRol === "ROL_PROPIO_ILEGIBLE") {
+          expect(e.guard.ok).toBe(false);
+        }
       }),
     );
   });
@@ -116,7 +148,7 @@ describe("explicarAccionDeEmpresa = exigirAccion + comprobarQueOpera (reglas rea
 describe("explicarAccionDeEmpresa = exigirAccion con un módulo activable (solo lectura por plan)", () => {
   type Modulo = "base" | "ventas";
   type Accion = "base.ver" | "ventas.mirar" | "ventas.vender" | "ventas.cerrar";
-  const REGLAS_CON_PLAN: ReglasDelGuard<Modulo, Accion, never, "JEFE"> = {
+  const REGLAS_CON_PLAN: ReglasDelGuard<Modulo, Accion, never, "GERENTE"> = {
     catalogo: {
       base: {
         estado: "disponible",
@@ -134,10 +166,10 @@ describe("explicarAccionDeEmpresa = exigirAccion con un módulo activable (solo 
       },
     },
     permisos: {
-      "base.ver": ["JEFE"],
-      "ventas.mirar": ["JEFE"],
-      "ventas.vender": ["JEFE"],
-      "ventas.cerrar": ["JEFE"],
+      "base.ver": ["GERENTE"],
+      "ventas.mirar": ["GERENTE"],
+      "ventas.vender": ["GERENTE"],
+      "ventas.cerrar": ["GERENTE"],
     },
   };
   const claves = ["base", "ventas", "otro", "constructor"];
@@ -150,9 +182,14 @@ describe("explicarAccionDeEmpresa = exigirAccion con un módulo activable (solo 
         fc.subarray(claves),
         fc.boolean(),
         async (accion, modulosActivados, modulosHabilitados, conRol) => {
-          const rol = conRol ? ("JEFE" as const) : null;
+          const rol = conRol ? ("GERENTE" as const) : null;
           const real = await exigirAccion(REGLAS_CON_PLAN, accion, () =>
-            Promise.resolve({ rol, modulosActivados, modulosHabilitados }),
+            Promise.resolve({
+              rol,
+              acciones: rol === null ? [] : Object.keys(REGLAS_CON_PLAN.permisos),
+              modulosActivados: rol === null ? [] : modulosActivados,
+              modulosHabilitados: rol === null ? [] : modulosHabilitados,
+            }),
           );
           const explicada = explicarAccionDeEmpresa(REGLAS_CON_PLAN, accion, {
             empresaId: E1,
@@ -160,6 +197,7 @@ describe("explicarAccionDeEmpresa = exigirAccion con un módulo activable (solo 
             membresia: rol === null ? null : { rol, activo: true },
             modulosActivados,
             modulosHabilitados,
+            fuentes: { plantillas: { ADMINISTRADOR: null, OPERADOR: null }, rolPropio: null },
             estadoDeEmpresa: "ACTIVE",
             estadoDeTenant: "ACTIVE",
           });
