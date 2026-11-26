@@ -13,6 +13,7 @@ import type {
   ErrorDeConfirmacion,
 } from "../dominio/decisiones";
 import type { ErrorDelFacturador } from "./puertos-de-facturacion";
+import type { ErrorDelCargoACuenta } from "./puertos-de-cuenta-corriente";
 import type { ErrorDelStock } from "./puertos-de-stock";
 import type { ErrorDeDepartamento } from "../dominio/departamento";
 import type { ErrorDeMotivo } from "../dominio/motivo";
@@ -79,6 +80,12 @@ export type ErrorDeVentas =
   | "CUENTA_NO_ENCONTRADA"
   /** R2 mínimo: el cliente que se carga al cerrar no existe en la empresa, no está activo o no es cliente (un solo motivo: no distingue lo que hay en otra empresa). */
   | "CLIENTE_NO_VALIDO"
+  /** CC-2: la cuenta corriente no deja cargar (cliente sin ficha habilitada, suspendido, por encima del límite sin aprobación…): ver `ErrorDelCargoACuenta`. */
+  | ErrorDelCargoACuenta
+  /** CC-2: sin el puerto de la cuenta corriente, cerrar a nombre de un cliente se rechaza (nace cerrado). */
+  | "CUENTA_CORRIENTE_NO_DISPONIBLE"
+  /** CC-2: un ticket con cargo a cuenta corriente no se cobra en caja (se cobra por la cuenta, CC-3): si no, el cliente pagaría dos veces. */
+  | "TICKET_A_CUENTA_CORRIENTE"
   | "CUENTA_NO_ABIERTA"
   | "CUENTA_CERRADA"
   | "LINEA_ID_EN_USO"

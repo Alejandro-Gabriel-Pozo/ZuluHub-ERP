@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { empresaId, personaId } from "../../src/primitivas/identificadores/marca";
 import { ok } from "../../src/primitivas/resultado/resultado";
 import { cuentaId } from "../../src/modulos/ventas/dominio/identificadores";
+import { HUELLA, claveNueva } from "./caja-apoyo";
 import { crearBaseAparte } from "./entorno";
 import { CARPETA_DE_MIGRACIONES } from "./marcas-apoyo";
 import { cuitUnico, sufijoUnico } from "./unicos";
@@ -34,7 +35,7 @@ describe.skipIf(base === null)("ventas: cliente en el ticket (0107)", () => {
 
   beforeAll(async () => {
     if (base === null) return;
-    m = await montarVentas(base, { conexiones: 16 });
+    m = await montarVentas(base, { conexiones: 16, cuentaCorriente: true });
     e = await m.escenario();
     otra = await m.escenario();
   });
@@ -58,6 +59,14 @@ describe.skipIf(base === null)("ventas: cliente en el ticket (0107)", () => {
       await m.dueno.query(
         "insert into parte_rol (empresa_id, parte_id, rol, activo) values ($1, $2, $3, true)",
         [de.empresa, id, rol],
+      );
+    }
+    // Un cliente que puede deber tiene su ficha habilitada (CC-1): sin ella el cierre a su nombre se rechaza (CC-2).
+    if (o.estado === undefined && rol === "CUSTOMER") {
+      await m.dueno.query(
+        `insert into cuenta_del_cliente (empresa_id, parte_id, plazo_dias, limite, clave_idempotencia, huella, habilitada_por)
+         values ($1, $2, 30, '1000000.00', $3, $4, $5)`,
+        [de.empresa, id, claveNueva(), HUELLA, de.gerente.personaId],
       );
     }
     if (o.estado === "INACTIVA") {

@@ -4,6 +4,9 @@ import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import { crearFacturadorDeTickets } from "../../src/composicion/facturacion-de-tickets";
 import { crearStockDeVentas } from "../../src/composicion/stock-de-ventas";
+import { crearCuentaCorrienteDeVentas } from "../../src/composicion/cuenta-corriente-de-ventas";
+import { armarTxDeSaldos } from "../../src/composicion/libro-de-saldos";
+import { crearRepositoriosDeCuentaCorriente } from "../../src/modulos/cuenta_corriente/publico";
 import { crearRepositoriosDeStock } from "../../src/modulos/stock/publico";
 import { crearCasosDeUsoDeCaja } from "../../src/modulos/caja/publico";
 import {
@@ -75,6 +78,16 @@ export const REGLAS_DE_PRUEBA_CON_STOCK: ReglasDeEmpresa = {
   },
 };
 
+/** Las mismas reglas con `clientes` y `cuenta_corriente` disponibles (el módulo real está en desarrollo): lo que usa un mundo con la cuenta corriente de clientes cableada (CC-2). */
+export const REGLAS_DE_PRUEBA_CON_CUENTA_CORRIENTE: ReglasDeEmpresa = {
+  ...REGLAS_DE_PRUEBA,
+  catalogo: {
+    ...REGLAS_DE_PRUEBA.catalogo,
+    clientes: { ...CATALOGO_DE_MODULOS.clientes, estado: "disponible" },
+    cuenta_corriente: { ...CATALOGO_DE_MODULOS.cuenta_corriente, estado: "disponible" },
+  },
+};
+
 export type EscenarioDeVentas = Readonly<{
   empresa: string;
   sucursal: SucursalId;
@@ -105,6 +118,8 @@ export async function montarVentas(
      * queda sin puerto de stock y no llama a nada.
      */
     stock?: boolean;
+    /** CC-2: arma también la ficha y el libro de saldos sobre la MISMA conexión, le da a ventas el puerto de la cuenta corriente y deja `clientes` y `cuenta_corriente` ACTIVOS para la empresa. */
+    cuentaCorriente?: boolean;
   }> = {},
 ) {
   let stockActivo = opciones.stock === true;
@@ -128,8 +143,21 @@ export async function montarVentas(
   };
   const conStock = (tx: TxDePrueba): TxDePrueba =>
     opciones.stock === true ? { ...tx, ...crearRepositoriosDeStock(tx.db) } : tx;
+  const conCuentaCorriente = (tx: TxDePrueba): TxDePrueba => {
+    if (opciones.cuentaCorriente !== true) return tx;
+    const { asientos, imputaciones, saldos } = armarTxDeSaldos(tx.db);
+    return {
+      ...tx,
+      ...crearRepositoriosDeCuentaCorriente(tx.db),
+      asientos,
+      imputaciones,
+      saldos,
+    } as TxDePrueba;
+  };
   const entorno = crearEntornoDePrueba(propia.base, opciones.conexiones ?? 12, (base0) => {
-    const tx = (opciones.ajustarTx ?? ((t: TxDePrueba) => t))(conStock(conFiscal(base0)));
+    const tx = (opciones.ajustarTx ?? ((t: TxDePrueba) => t))(
+      conCuentaCorriente(conStock(conFiscal(base0))),
+    );
     let primera = true;
     return {
       ...tx,
@@ -153,6 +181,7 @@ export async function montarVentas(
                   "caja",
                   "facturacion",
                   ...(stockActivo ? ["stock"] : []),
+                  ...(opciones.cuentaCorriente === true ? ["clientes", "cuenta_corriente"] : []),
                 ],
                 modulosHabilitados: [
                   ...datos.modulosHabilitados,
@@ -162,6 +191,7 @@ export async function montarVentas(
                   "caja",
                   "facturacion",
                   ...(stockActivo ? ["stock"] : []),
+                  ...(opciones.cuentaCorriente === true ? ["clientes", "cuenta_corriente"] : []),
                 ],
               };
         },
@@ -170,13 +200,21 @@ export async function montarVentas(
   });
   const dueno = new pg.Client({ connectionString: propia.base.dueno });
   await dueno.connect();
-  const reglas = opciones.stock === true ? REGLAS_DE_PRUEBA_CON_STOCK : REGLAS_DE_PRUEBA;
+  const reglas =
+    opciones.cuentaCorriente === true
+      ? REGLAS_DE_PRUEBA_CON_CUENTA_CORRIENTE
+      : opciones.stock === true
+        ? REGLAS_DE_PRUEBA_CON_STOCK
+        : REGLAS_DE_PRUEBA;
   const facturador = opciones.facturacion === true ? crearFacturadorDeTickets(reglas) : undefined;
   const casos = crearCasosDeUsoDeVentas({
     transacciones: entorno,
     reglas,
     ...(facturador === undefined ? {} : { facturador }),
     ...(opciones.stock === true ? { stock: crearStockDeVentas(reglas) } : {}),
+    ...(opciones.cuentaCorriente === true
+      ? { cuentaCorriente: crearCuentaCorrienteDeVentas(reglas) }
+      : {}),
   });
   const consultas = crearConsultasDeVentas({
     transacciones: entorno,

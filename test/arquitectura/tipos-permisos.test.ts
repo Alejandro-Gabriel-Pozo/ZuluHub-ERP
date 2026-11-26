@@ -198,6 +198,8 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "tickets.corregir"
       | "cuenta_corriente.ver"
       | "cuenta_corriente.administrar"
+      | "cuenta_corriente.cargar_a_cuenta"
+      | "cuenta_corriente.aprobar_exceso"
       | "partes.ver"
       | "partes.crear"
       | "partes.editar"
