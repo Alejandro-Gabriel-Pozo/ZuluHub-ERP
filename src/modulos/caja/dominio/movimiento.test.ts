@@ -57,11 +57,9 @@ describe("clases con motivo, anulables y solo de efectivo", () => {
   it("se anulan ingreso, egreso y ajuste", () => {
     expect([...CLASES_ANULABLES]).toEqual(["INGRESO_MANUAL", "EGRESO_MANUAL", "AJUSTE"]);
   });
-  it("son solo de efectivo el fondo, el ingreso y el egreso", () => {
+  it("son solo de efectivo el fondo y el ingreso; el egreso sale por cualquier medio (como la base)", () => {
     for (const clase of CLASES_DE_MOVIMIENTO) {
-      expect(esSoloDeEfectivo(clase)).toBe(
-        ["FONDO_INICIAL", "INGRESO_MANUAL", "EGRESO_MANUAL"].includes(clase),
-      );
+      expect(esSoloDeEfectivo(clase)).toBe(["FONDO_INICIAL", "INGRESO_MANUAL"].includes(clase));
     }
   });
 });

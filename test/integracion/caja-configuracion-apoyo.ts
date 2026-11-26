@@ -11,6 +11,10 @@ import {
 } from "../../src/adaptadores/postgres/autorizacion";
 import { crearLecturaDeDerechosDeUso } from "../../src/adaptadores/postgres/derechos-de-uso";
 import {
+  crearNivelesDeControlDePostgres,
+  type NivelesDeControlDb,
+} from "../../src/adaptadores/postgres/niveles-de-control";
+import {
   crearTransacciones,
   type SinTablas,
   type TransaccionesDePostgres,
@@ -36,6 +40,7 @@ import {
   crearRepositorioDeLaJornada,
   crearRepositorioDeMediosDePago,
   crearRepositorioDeMovimientos,
+  crearRepositorioDeMovimientosDeDinero,
   crearRepositorioDeSesiones,
   crearConsultasDeCaja,
   crearCasosDeUsoDeCaja,
@@ -55,6 +60,10 @@ import {
   type GanchosDeSucursal,
   type TxDeEmpresas,
 } from "../../src/modulos/empresas/publico";
+import {
+  crearRepositorioDeMembresias,
+  type IdentidadDb,
+} from "../../src/modulos/identidad/publico";
 import { crearLecturaDePlanes, type PlanesDb } from "../../src/modulos/planes/publico";
 import { crearRepositorioDeTenants, type TenantsDb } from "../../src/modulos/tenants/publico";
 import {
@@ -120,6 +129,17 @@ export function crearEntornoDeCaja(
       cuentasDeCobro: crearRepositorioDeCuentasDeCobro(db.withTables<CajaDb>()),
       sesiones: crearRepositorioDeSesiones(db.withTables<CajaDb>()),
       movimientos: crearRepositorioDeMovimientos(db.withTables<CajaDb>()),
+      movimientosDeDinero: crearRepositorioDeMovimientosDeDinero(db.withTables<CajaDb>()),
+      niveles: crearNivelesDeControlDePostgres(db.withTables<NivelesDeControlDb>()),
+      empleados: {
+        esMiembroActivo: async (empresa, persona) =>
+          (
+            await crearRepositorioDeMembresias(db.withTables<IdentidadDb>()).obtener(
+              empresa,
+              persona,
+            )
+          )?.activo === true,
+      },
       cobros: crearRepositorioDeCobros(db.withTables<CajaDb>()),
       arqueos: crearRepositorioDeArqueos(db.withTables<CajaDb>()),
       correcciones: crearRepositorioDeCorrecciones(db.withTables<CajaDb>()),

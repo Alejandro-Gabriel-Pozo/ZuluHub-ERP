@@ -1,0 +1,10 @@
+{
+  "id": "DEC-VEN-001",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Una salida de dinero por un medio que no es efectivo exige la acción salidas_de_dinero.registrar (gerente y administrador); por efectivo sigue la acción vieja y la puede el operador.",
+  "que_cambia": "Hoy el operador puede sacar efectivo de la caja y sigue pudiendo; por transferencia, tarjeta, QR u otro medio solo gerente y administrador. Si el dueño quiere que el operador tampoco saque efectivo, es una línea de la tabla accionParaLaSalida.",
+  "donde": "src/modulos/caja/casos-de-uso/registrar-salida-de-dinero.ts; src/capacidades/permisos/permisos-de-caja.ts; pendiente de la respuesta del dueño (Q1 de la matriz PR-S2, 26/11/2026)"
+}
