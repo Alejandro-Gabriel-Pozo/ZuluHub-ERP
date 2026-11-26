@@ -37,6 +37,10 @@ import {
   type VentasDb,
 } from "../../src/modulos/ventas/publico";
 import {
+  crearRepositoriosDeClientes,
+  type RepositoriosDeClientes,
+} from "../../src/modulos/clientes/publico";
+import {
   crearRepositorioDeJornadas,
   type CierreDb,
   type RepositorioDeJornadas,
@@ -196,6 +200,8 @@ export type TxDePrueba = Readonly<{
   unidades: RepositorioDeUnidades;
   lectorDeCarta: LectorDeCarta;
 }> &
+  /** Las partes (clientes): ventas valida y muestra el cliente cargado al ticket (R2 mínimo, 0107). */
+  RepositoriosDeClientes &
   PiezasDeCajaEnTx &
   TxDeIdentidad;
 
@@ -222,6 +228,7 @@ export function crearEntornoDePrueba(
       jornadas: crearRepositorioDeJornadas(db.withTables<CierreDb>()),
       sucursalBloqueada: crearLecturaDeSucursalBloqueada(db.withTables<EmpresasDb>()),
       ...armarPiezasDeCajaEnTx(db),
+      ...crearRepositoriosDeClientes(db),
       cuentas: crearRepositorioDeCuentas(db.withTables<VentasDb>()),
       tickets: crearRepositorioDeTickets(db.withTables<VentasDb>()),
       documentos: crearRepositorioDeDocumentos(db.withTables<VentasDb>()),
