@@ -474,7 +474,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     });
   });
 
-  it("los textos de stock son exactamente los que el dueño aprobó (el 09/11/2026 en stock.html «Textos nuevos», D125, los seis del conteo con hora el 14/11/2026 y los tres errores de gestión de depósitos el 25/11/2026, los cuatro textos del libro de Movimientos de DEC-1022 y los tres de los formularios de movimientos de DEC-1024), y ninguno más", () => {
+  it("los textos de stock son exactamente los que el dueño aprobó (el 09/11/2026 en stock.html «Textos nuevos», D125, los seis del conteo con hora el 14/11/2026 y los tres errores de gestión de depósitos el 25/11/2026, los cuatro textos del libro de Movimientos de DEC-1022 y los tres de los formularios de movimientos de DEC-STK-001), y ninguno más", () => {
     expect(
       Object.fromEntries(
         claves

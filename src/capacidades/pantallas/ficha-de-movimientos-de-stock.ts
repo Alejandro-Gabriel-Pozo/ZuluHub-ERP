@@ -14,9 +14,9 @@ const MAQUETA = {
 } as const;
 const NUEVOS = {
   decidio:
-    "por delegación del dueño (fila 173) el orquestador aceptó «Artículo» (N-01); «Falta» (N-15) lo aprobó el dueño el 25/11/2026 (fila 449); «Sobra» lo aprobó el dueño el 15/11/2026 (DEC-1024)",
+    "por delegación del dueño (fila 173) el orquestador aceptó «Artículo» (N-01); «Falta» (N-15) lo aprobó el dueño el 25/11/2026 (fila 449); «Sobra» lo aprobó el dueño el 15/11/2026 (DEC-STK-001)",
   donde:
-    "Pedernal-docs 11-especificaciones/dia-uno-stock-inventario-de-textos-2026-11-25.md (N-01, N-15 y «Sobra»); arquitectura/decisiones/registro/DEC-1024.json",
+    "Pedernal-docs 11-especificaciones/dia-uno-stock-inventario-de-textos-2026-11-25.md (N-01, N-15 y «Sobra»); arquitectura/decisiones/registro/DEC-STK-001.json",
 } as const;
 const YA_APROBADO = {
   decidio:

@@ -110,21 +110,21 @@ export const TEXTOS_DE_STOCK = {
     usos: ["DE_FICHA"],
     fuente: { decision: "DEC-1022" },
   },
-  // Formularios de movimientos (STK-B2; DEC-1024): «Artículo» (N-01, aceptado por el orquestador por delegación, fila 173), «Sobra» (aprobado el 15/11 para caja; clave de stock) y «Falta» (N-15, dueño 25/11, fila 449).
+  // Formularios de movimientos (STK-B2; DEC-STK-001): «Artículo» (N-01, aceptado por el orquestador por delegación, fila 173), «Sobra» (aprobado el 15/11 para caja; clave de stock) y «Falta» (N-15, dueño 25/11, fila 449).
   "stock.accion.articulo": {
     porDefecto: "Artículo",
     usos: ["DE_FICHA"],
-    fuente: { decision: "DEC-1024" },
+    fuente: { decision: "DEC-STK-001" },
   },
   "stock.ajuste.sobra": {
     porDefecto: "Sobra",
     usos: ["DE_FICHA"],
-    fuente: { decision: "DEC-1024" },
+    fuente: { decision: "DEC-STK-001" },
   },
   "stock.ajuste.falta": {
     porDefecto: "Falta",
     usos: ["DE_FICHA"],
-    fuente: { decision: "DEC-1024" },
+    fuente: { decision: "DEC-STK-001" },
   },
   // stock.html, nota final de «Textos nuevos» («Esta acción no está permitida» ya estaba aprobado), sin el punto final de esa nota.
   "stock.error.sin_permiso": { porDefecto: "Esta acción no está permitida" },
