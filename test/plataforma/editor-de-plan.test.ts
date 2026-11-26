@@ -60,7 +60,10 @@ describe("módulos", () => {
     // «En desarrollo» sale del estado del catálogo (hoy ningún módulo lo está: cuenta_corriente se abrió el 26/11/2026, CC-5); la marca sigue al catálogo y no se pierde.
     expect(
       todos.every(
-        (m) => m.enDesarrollo === (CATALOGO_DE_MODULOS[m.clave].estado === "en_desarrollo"),
+        (m) =>
+          m.enDesarrollo ===
+          ((CATALOGO_DE_MODULOS[m.clave as keyof typeof CATALOGO_DE_MODULOS].estado as string) ===
+            "en_desarrollo"),
       ),
     ).toBe(true);
     expect(todos.some((m) => !m.enDesarrollo)).toBe(true);

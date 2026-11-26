@@ -749,7 +749,7 @@ describe("el guard con las reglas reales", () => {
   // para que un módulo `en_desarrollo` agregado después y olvidado no quede sin cubrir. El módulo se marca activo a
   // propósito (el guard rechaza por «en desarrollo» antes de mirar si está activo o qué rol tiene).
   const ENDESARROLLO = (Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]).filter(
-    (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
+    (m) => (CATALOGO_DE_MODULOS[m].estado as string) === "en_desarrollo",
   );
 
   it("ningún módulo del catálogo real está en desarrollo: cuenta_corriente se abrió el 26/11/2026 (CC-5; producción el 25/11/2026, DEC-1050; comandas y salon desde S-0r; cierre desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12, catalogo, caja y ventas desde el 15/11/2026, DEC-0463, y vidriera desde el 20/11/2026, DEC-0826)", () => {

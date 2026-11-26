@@ -51,9 +51,11 @@ function dondeVive(accion: ClaveAccion): {
     const acciones: Readonly<Record<string, { efecto: string }>> = definicion.acciones;
     const propia = Object.hasOwn(acciones, accion) ? acciones[accion] : undefined;
     if (propia !== undefined) {
+      // Se compara como texto: hoy ningún módulo del catálogo está en desarrollo y el tipo literal ya no deja escribir la comparación (volver a cerrar uno es cambiar su `estado`).
+      const estado: string = definicion.estado;
       return {
         modulo,
-        enDesarrollo: definicion.estado === "en_desarrollo",
+        enDesarrollo: estado === "en_desarrollo",
         creaAmplia: propia.efecto === "CREA_AMPLIA",
       };
     }
