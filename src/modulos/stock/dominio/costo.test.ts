@@ -276,10 +276,41 @@ describe("corregirPromedio (fórmula A: la diferencia sobre lo que queda; lo con
         corregir(ESTADO_DE_COSTO_INICIAL, { anterior: null, nuevo: "50", entro: "10", hay: "6" }),
       ),
     ).toEqual(["50.000000", "6.0000"]);
-    // Con promedio previo de otras compras y más existencia que lo que entró: quedan 10 de esta compra → (10 × 100 + 10 × 40) ÷ 20 = 70.
+    // Con promedio previo de otras compras: hay 20, 10 ya tienen costo, así que las 10 sin costo son esta compra → (10 × 100 + 10 × 40) ÷ 20 = 70.
     expect(
-      verOk(corregir(estado("100", "10"), { anterior: null, nuevo: "40", entro: "10", hay: "16" })),
+      verOk(corregir(estado("100", "10"), { anterior: null, nuevo: "40", entro: "10", hay: "20" })),
     ).toEqual(["70.000000", "20.0000"]);
+  });
+
+  it("sin costo anterior, solo ganan costo las unidades que no lo tienen: lo valorizado nunca pasa de la existencia (ejemplo 10 / 6 / 8)", () => {
+    // Hay 10, 6 con costo 100; la compra sin precio entró 8: solo 4 están sin costo → (6 × 100 + 4 × 40) ÷ 10 = 76 y valorizadas 10.
+    expect(
+      verOk(corregir(estado("100", "6"), { anterior: null, nuevo: "40", entro: "8", hay: "10" })),
+    ).toEqual(["76.000000", "10.0000"]);
+    // Entró menos de lo que está sin costo: manda lo que entró (hay 10, 2 con costo, entró 3 → 3 unidades): (2 × 100 + 3 × 40) ÷ 5 = 64.
+    expect(
+      verOk(corregir(estado("100", "2"), { anterior: null, nuevo: "40", entro: "3", hay: "10" })),
+    ).toEqual(["64.000000", "5.0000"]);
+    // Entró justo lo que está sin costo (hay 10, 6 con costo, entró 4): los dos topes coinciden.
+    expect(
+      verOk(corregir(estado("100", "6"), { anterior: null, nuevo: "40", entro: "4", hay: "10" })),
+    ).toEqual(["76.000000", "10.0000"]);
+  });
+
+  it("sin costo anterior y con todo valorizado (existencia igual o menor que lo valorizado), el estado no cambia", () => {
+    const igual = estado("100", "10");
+    expect(corregir(igual, { anterior: null, nuevo: "40", entro: "10", hay: "10" })).toEqual({
+      ok: true,
+      valor: igual,
+    });
+    expect(corregir(igual, { anterior: null, nuevo: "40", entro: "10", hay: "7" })).toEqual({
+      ok: true,
+      valor: igual,
+    });
+    // Una unidad sin costo (0,0001) sí entra: la frontera es estricta.
+    expect(
+      verOk(corregir(igual, { anterior: null, nuevo: "40", entro: "10", hay: "10.0001" })),
+    ).toEqual(["99.999400", "10.0001"]);
   });
 
   it("sin costo anterior y sin nada que quede, no cambia nada", () => {

@@ -4,6 +4,7 @@ import "../../../../test/propiedades/configuracion";
 import { cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
 import { precioUnitarioDesdeTexto } from "../../../primitivas/dinero/precio-unitario";
 import {
+  corregirPromedio,
   costoDefinitivo,
   entrar,
   ESTADO_DE_COSTO_INICIAL,
@@ -142,6 +143,71 @@ describe("costo promedio: propiedades (P23, lo puro)", () => {
         expect(vuelta.cantidadValorizada.unidades).toBe(estado.cantidadValorizada.unidades);
         // el promedio entra igual a sí mismo: no se mueve
         expect(vuelta.promedio?.unidades).toBe(estado.promedio?.unidades);
+      }),
+    );
+  });
+});
+
+describe("corregirPromedio: propiedades (lo valorizado nunca pasa de lo que hay)", () => {
+  const p6 = (u: bigint) => precioUnitarioDesdeTexto(aTexto(u, 6));
+  const cantidadDe = fc.bigInt({ min: 0n, max: 5_000_000n });
+  const costoPositivo = fc.bigInt({ min: 1n, max: 500_000_000n });
+  /** Un estado válido: sin valorizadas no hay promedio; con valorizadas, un promedio positivo; la existencia cubre lo valorizado. */
+  const escenario = fc
+    .record({
+      valorizada: cantidadDe,
+      sinCosto: cantidadDe,
+      promedio: costoPositivo,
+      entro: cantidadDe,
+      nuevo: costoPositivo,
+      anterior: costoPositivo,
+    })
+    .map((e) => ({
+      ...e,
+      estado: {
+        promedio: e.valorizada === 0n ? null : p6(e.promedio),
+        cantidadValorizada: q(e.valorizada),
+      } satisfies EstadoDeCosto,
+      existencia: e.valorizada + e.sinCosto,
+    }));
+
+  it("sin costo anterior: lo valorizado no pasa de la existencia y solo crece con unidades que no tenían costo ni más de lo que entró", () => {
+    fc.assert(
+      fc.property(escenario, (e) => {
+        const r = corregirPromedio(e.estado, {
+          costoAnterior: null,
+          costoNuevo: p6(e.nuevo),
+          cantidadQueEntro: q(e.entro),
+          existenciaActual: q(e.existencia),
+        });
+        if (!r.ok) return;
+        const despues = r.valor.cantidadValorizada.unidades;
+        expect(despues).toBeLessThanOrEqual(e.existencia);
+        const sumo = despues - e.valorizada;
+        expect(sumo).toBeGreaterThanOrEqual(0n);
+        expect(sumo).toBeLessThanOrEqual(e.sinCosto);
+        expect(sumo).toBeLessThanOrEqual(e.entro);
+        if (sumo === 0n) expect(r.valor).toEqual(e.estado);
+        else expect(r.valor.promedio).not.toBeNull();
+      }),
+    );
+  });
+
+  it("con costo anterior: las unidades valorizadas no cambian, y sin unidades valorizadas el estado no cambia", () => {
+    fc.assert(
+      fc.property(escenario, (e) => {
+        const r = corregirPromedio(e.estado, {
+          costoAnterior: p6(e.anterior),
+          costoNuevo: p6(e.nuevo),
+          cantidadQueEntro: q(e.entro),
+          existenciaActual: q(e.existencia),
+        });
+        if (!r.ok) {
+          expect(r.error).toBe("COSTO_RESULTANTE_INVALIDO");
+          return;
+        }
+        expect(r.valor.cantidadValorizada.unidades).toBe(e.valorizada);
+        if (e.valorizada === 0n) expect(r.valor).toEqual(e.estado);
       }),
     );
   });
