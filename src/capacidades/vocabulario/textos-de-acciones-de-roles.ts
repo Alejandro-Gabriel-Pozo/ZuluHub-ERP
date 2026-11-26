@@ -142,7 +142,7 @@ export const TEXTOS_DE_ACCIONES_DE_ROLES = {
   ),
   "roles.accion.cobros.corregir_medio": nombre("Corregir el medio de pago de un cobro"),
   "roles.accion.declaraciones_de_total.registrar": nombre("Declarar el total contado en la caja"),
-  // SUPUESTO (propuesto por el orquestador el 26/11/2026; el dueño lo aprueba en una ronda corta junto con `devoluciones.registrar`): hasta entonces es la redacción propuesta, no una aprobada.
+  // SUPUESTO (propuesto por el orquestador el 26/11/2026; el dueño lo aprueba en una ronda corta junto con `devoluciones.registrar`): hasta entonces es la redacción propuesta, no una aprobada (DEC-IDE-004).
   "roles.accion.salidas_de_dinero.registrar": nombre(
     "Registrar salidas de dinero por otros medios (transferencia, tarjeta, QR u otro)",
     120,
