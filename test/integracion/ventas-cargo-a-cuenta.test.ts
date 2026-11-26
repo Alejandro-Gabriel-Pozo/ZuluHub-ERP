@@ -313,7 +313,7 @@ describe.skipIf(base === null)("ventas: cargo a cuenta corriente (CC-2)", () => 
           cuentaId: otra,
           ejemplarId: nuevoId(),
           totalEsperado: { moneda: "ARS", monto: "1.00" },
-        } as Parameters<typeof m.casos.cerrarCuenta>[1]),
+        }),
       );
     });
 
