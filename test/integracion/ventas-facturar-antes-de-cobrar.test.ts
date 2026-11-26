@@ -3,7 +3,6 @@ import type { Resultado } from "../../src/primitivas/resultado/resultado";
 import { agotadaEnElResultado, repetirSiAgotada } from "./concurrencia-apoyo";
 import { ajustarPerilla } from "./marcas-apoyo";
 import { cuentaConLinea, montarVentas, nuevoId, valorDe, type MundoDeVentas } from "./ventas-apoyo";
-import { aflojarElDisparadorDeAlta } from "./ventas-facturar-antes-de-cobrar-apoyo";
 import {
   crearFiscalDePrueba,
   escenarioFacturable,
@@ -18,8 +17,7 @@ import {
  * (EMITIDO es TICKET_NO_FACTURABLE); encendida, un EMITIDO se factura y SIGUE EMITIDO; cobrarlo después no cambia la factura y hay una sola
  * cobranza; ANULADO y CORTESIA nunca; anular un EMITIDO facturado exige acreditar; las dos órdenes de emitir+cobrar y emitir+anular, y la carrera
  * de cada par; idempotencia por clave; la perilla de una empresa no mueve a otra; y la lista de pendientes (encendida suma los EMITIDO).
- * La migración 0108 (R-05b) todavía no existe: estas pruebas instalan en SU base el mismo disparador aflojado que ella traerá
- * (`aflojarElDisparadorDeAlta`; se borra al llegar 0108).
+ * La base ya trae la migración 0108 (R-05b), que afloja el disparador de alta; sus propias pruebas están en `ventas-facturar-antes-de-cobrar-migracion.test.ts`.
  */
 
 const base = inject("baseDePruebas");
@@ -53,7 +51,6 @@ describe.skipIf(base === null)("ventas: facturar antes de cobrar (R-05a)", () =>
     if (base === null) return;
     m = await montarVentas(base, { facturacion: true, conexiones: 16 });
     fiscal = crearFiscalDePrueba(m);
-    await aflojarElDisparadorDeAlta(m.dueno);
   });
   afterAll(async () => {
     await fiscal.cerrar();
@@ -123,6 +120,7 @@ describe.skipIf(base === null)("ventas: facturar antes de cobrar (R-05a)", () =>
     });
   const anular = (e: EscenarioDeFacturacionDeTickets, t: Emitido) =>
     m.casos.anularTicket(e.gerente, {
+      sucursalDeTrabajo: e.sucursal,
       claveIdempotencia: nuevaClave(),
       ticketId: t.ticketId,
       ejemplarBaseId: t.ejemplarId,

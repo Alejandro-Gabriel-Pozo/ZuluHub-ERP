@@ -13,6 +13,7 @@ import { armarLosTextosDeImprimir } from "../../patrones/papel/textos-de-imprimi
 import type { ProductoDeLaVenta } from "../venta/modelo-de-venta-rapida";
 import { textosDeLaVenta } from "../venta/modelo-de-venta-rapida";
 import { PantallaDeLaMesa, type PropsDePantallaDeLaMesa } from "./PantallaDeLaMesa.cliente";
+import { textosDeDividir } from "./textos-de-dividir";
 import {
   armarLaMesa,
   textosDeLaMesa,
@@ -34,6 +35,8 @@ const linea = (extra: Partial<LineaDeLaFichaDeLaPantalla> & { lineaId: string })
   descripcion: "Milanesa",
   varianteNombre: null,
   cantidad: "2.0000",
+  precioUnitario: "9500.00",
+  pasoDeCantidad: "1.0000",
   importe: "19000.00",
   nota: null,
   compartida: false,
@@ -52,6 +55,7 @@ const fichaConPlatos: FichaDeLaMesaDeLaPantalla = {
     {
       cuentaId: "c1",
       parte: null,
+      cobrada: false,
       total: ARS("21500.50"),
       lineas: [
         linea({ lineaId: "a" }),
@@ -69,7 +73,7 @@ const fichaConPlatos: FichaDeLaMesaDeLaPantalla = {
 };
 const fichaSinPlatos: FichaDeLaMesaDeLaPantalla = {
   ...fichaConPlatos,
-  cuentas: [{ cuentaId: "c1", parte: null, total: ARS("0.00"), lineas: [] }],
+  cuentas: [{ cuentaId: "c1", parte: null, cobrada: false, total: ARS("0.00"), lineas: [] }],
 };
 const fichaLibre: FichaDeLaMesaDeLaPantalla = {
   ...fichaConPlatos,
@@ -138,6 +142,7 @@ const accionesFalsas = () => ({
   liberar: accionFalsa(),
   cambiarDeMesa: accionFalsa(),
   unir: accionFalsa(),
+  dividir: accionFalsa(),
   enviar: vi.fn<(pedido: unknown) => Promise<Respuesta<Envio>>>(() =>
     Promise.resolve(envioHecho()),
   ),
@@ -183,11 +188,19 @@ const pantalla = (
     mesaId="m1"
     mesa={armarLaMesa({}, ficha)}
     textos={textosDeLaMesa()}
+    textosDeDividir={textosDeDividir()}
     acciones={acciones}
     cuentaNuevaId="cuenta-nueva"
     mesasLibres={null}
     textosDeImprimir={armarLosTextosDeImprimir()}
-    puede={{ enviar: true, imprimir: true, reimprimir: true, cobrar: true, unir: true }}
+    puede={{
+      enviar: true,
+      imprimir: true,
+      reimprimir: true,
+      cobrar: true,
+      unir: true,
+      dividir: true,
+    }}
     rutaDeImpresoras={null}
     mesasParaUnir={null}
     catalogo={null}
@@ -499,6 +512,7 @@ describe("PantallaDeLaMesa", () => {
           {
             cuentaId: "c1",
             parte: null,
+            cobrada: false,
             total: ARS("38000.00"),
             lineas: [
               linea({ lineaId: "a", nota: "sin cebolla" }),
@@ -563,6 +577,7 @@ describe("PantallaDeLaMesa", () => {
         {
           cuentaId: "c1",
           parte: null,
+          cobrada: false,
           total: ARS("38000.00"),
           lineas: [
             linea({ lineaId: "a" }),
@@ -798,7 +813,14 @@ describe("PantallaDeLaMesa", () => {
     it("sin permiso (la ayuda): sin «Enviar a cocina», «Pedir que salga», «Anular» ni «Reimprimir»; la ficha sigue igual", async () => {
       await render(
         pantalla(fichaParaEnviar, accionesFalsas(), {
-          puede: { enviar: false, imprimir: false, reimprimir: false, cobrar: false, unir: false },
+          puede: {
+            enviar: false,
+            imprimir: false,
+            reimprimir: false,
+            cobrar: false,
+            unir: false,
+            dividir: false,
+          },
         }),
       );
       for (const nombre of ["Enviar a cocina", "Pedir que salga", "Anular", "Reimprimir"]) {
@@ -815,6 +837,7 @@ describe("PantallaDeLaMesa", () => {
         {
           cuentaId: "c1",
           parte: null,
+          cobrada: false,
           total: ARS("12345.67"),
           lineas: [linea({ lineaId: "c", comanda: "ENVIADA", numeroDeEnvio: 1, envioId: "e1" })],
         },
@@ -839,7 +862,14 @@ describe("PantallaDeLaMesa", () => {
     it("sin permiso para cobrar la mesa (la ayuda) no hay «Cobrar»; una mesa sin platos tampoco se puede cobrar", async () => {
       await render(
         pantalla(todoEnviado, accionesFalsas(), {
-          puede: { enviar: true, imprimir: true, reimprimir: true, cobrar: false, unir: false },
+          puede: {
+            enviar: true,
+            imprimir: true,
+            reimprimir: true,
+            cobrar: false,
+            unir: false,
+            dividir: false,
+          },
         }),
       );
       expect(page.getByRole("button", { name: "Cobrar" }).elements()).toHaveLength(0);

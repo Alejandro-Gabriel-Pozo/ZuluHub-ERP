@@ -17,6 +17,7 @@ import {
 import { importeAJson, type ImporteJson } from "../../../primitivas/dinero/importe";
 import { ANCLA_DE_MESA } from "../casos-de-uso/cuenta-de-mesa";
 import { estadoDeMesa, type EstadoDeMesa } from "../dominio/estado-de-mesa";
+import type { CuentaDeLaFicha, FichaDeMesa, LineaDeLaFicha } from "./ficha-de-mesa";
 import type { Mesa } from "../persistencia/repositorio-de-mesas";
 import type { DependenciasDeConsultasDeSalon, TxDeConsultasDeSalon } from "./contrato";
 
@@ -62,42 +63,7 @@ export type MesaDelMapa = Readonly<{
 
 export type EntradaDeFichaDeMesa = Readonly<{ mesaId: string }>;
 
-export type LineaDeLaFicha = Readonly<{
-  lineaId: string;
-  posicion: number;
-  descripcion: string;
-  varianteNombre: string | null;
-  cantidad: string;
-  precioUnitario: string;
-  importe: string;
-  /** La nota libre para la cocina del plato («sin cebolla»); `null` si no tiene. */
-  nota: string | null;
-  /** El importe de una línea compartida entre cuentas («Compartido»). */
-  compartida: boolean;
-  /** Estado de comanda: lo que falta enviar, lo que espera y lo enviado con su número de envío. */
-  comanda: "PARA_ENVIAR" | "ESPERA" | "ENVIADA";
-  numeroDeEnvio: number | null;
-  /** El envío en que salió el ítem (para reimprimir su papel); `null` si todavía no se envió. */
-  envioId: string | null;
-  /** «De la mesa N»: el número de la mesa de la que vino el ítem por una unión. */
-  deLaMesa: number | null;
-}>;
-
-export type CuentaDeLaFicha = Readonly<{
-  cuentaId: string;
-  /** Número de la parte («Cuenta 2») si es una cuenta hija de una división. */
-  parte: number | null;
-  total: ImporteJson;
-  lineas: readonly LineaDeLaFicha[];
-}>;
-
-export type FichaDeMesa = Readonly<{
-  mesaId: string;
-  numero: number;
-  estado: EstadoDeMesa;
-  unidaAMesa: number | null;
-  cuentas: readonly CuentaDeLaFicha[];
-}>;
+export type { CuentaDeLaFicha, FichaDeMesa, LineaDeLaFicha } from "./ficha-de-mesa";
 
 export type EntradaDeListarMesas = Readonly<{
   sucursalId: string;
@@ -311,7 +277,7 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
           id: mesa.id,
         });
         let unidaAMesa: number | null = null;
-        let cuentasParaMostrar: { id: string; parte: number | null }[] = [];
+        let cuentasParaMostrar: { id: string; parte: number | null; cobrada: boolean }[] = [];
         if (abierta !== null) {
           const union = await tx.unionesYDivisiones.unionPorOrigen(empresaId, abierta.id);
           const division = await tx.unionesYDivisiones.divisionPorMadre(empresaId, abierta.id);
@@ -323,16 +289,21 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
               division.id,
             )) {
               const hija = await tx.cuentas.obtener(empresaId, parte.cuentaId as never);
-              if (hija !== null && hija.estado === "ABIERTA") {
-                cuentasParaMostrar.push({ id: hija.id, parte: parte.numero });
+              if (hija !== null && (hija.estado === "ABIERTA" || hija.estado === "CERRADA")) {
+                cuentasParaMostrar.push({
+                  id: hija.id,
+                  parte: parte.numero,
+                  cobrada: hija.estado === "CERRADA",
+                });
               }
             }
           } else {
-            cuentasParaMostrar = [{ id: abierta.id, parte: null }];
+            cuentasParaMostrar = [{ id: abierta.id, parte: null, cobrada: false }];
           }
         }
         const cuentas: CuentaDeLaFicha[] = [];
-        const resumenes: number[] = [];
+        // El estado de la mesa sale solo de las cuentas que siguen abiertas (una hija cobrada ya no cuenta).
+        const paraElEstado: { pendientes: number; envios: number }[] = [];
         for (const c of cuentasParaMostrar) {
           const lineas = await tx.cuentas.lineasDeCuenta(empresaId, c.id as never);
           const calculado = calcularLasLineas(lineas);
@@ -362,6 +333,7 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
               varianteNombre: l.varianteNombre,
               cantidad: l.cantidad,
               precioUnitario: l.precioUnitario,
+              pasoDeCantidad: l.pasoDeCantidad,
               importe: importes.get(l.id) ?? "0.00",
               nota: f?.nota ?? null,
               compartida: l.importeFijo !== null,
@@ -377,19 +349,20 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
                 : null,
             };
           });
-          resumenes.push(lineasFicha.filter((x) => x.comanda !== "ENVIADA").length);
+          const enviadas = lineasFicha.filter((x) => x.comanda === "ENVIADA").length;
+          if (!c.cobrada) {
+            paraElEstado.push({ pendientes: lineasFicha.length - enviadas, envios: enviadas });
+          }
           cuentas.push({
             cuentaId: c.id,
             parte: c.parte,
+            cobrada: c.cobrada,
             total: importeAJson(calculado.total),
             lineas: lineasFicha,
           });
         }
         const estado = estadoDeMesa({
-          cuentas: cuentas.map((c, i) => ({
-            pendientes: resumenes[i] ?? 0,
-            envios: c.lineas.filter((l) => l.comanda === "ENVIADA").length,
-          })),
+          cuentas: paraElEstado,
           unidaAMesa,
         });
         return ok({ mesaId: mesa.id, numero: mesa.numero, estado, unidaAMesa, cuentas });

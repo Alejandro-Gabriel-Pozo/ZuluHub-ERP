@@ -24,5 +24,6 @@ export const MODULO_DE_VIDRIERA = {
     "vidrieras.renovar_enlace": { capacidad: null, efecto: "CREA_AMPLIA" },
     "vidrieras.retirar_de_linea": { capacidad: null, efecto: "COMPLETA_CIERRA" },
     "vidrieras.administrar_portal": { capacidad: null, efecto: "CREA_AMPLIA" },
+    "vidrieras.administrar_cuentas_de_imagen": { capacidad: null, efecto: "CREA_AMPLIA" },
   },
 } as const;

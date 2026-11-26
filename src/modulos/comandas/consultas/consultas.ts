@@ -61,6 +61,21 @@ async function previo(
   return ok({ alcance: await tx.autorizacion.sucursalesDelActor(contexto) });
 }
 
+/** «01:25»: la hora del envío en la zona de la empresa, para la lista de la cocina. */
+function horaDelEnvio(instante: Date, zona: string): string {
+  const partes = new Intl.DateTimeFormat("es-AR", {
+    timeZone: zona,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(instante);
+  const de = (tipo: string) => partes.find((p) => p.type === tipo)?.value ?? "";
+  return `${de("hour")}:${de("minute")}`;
+}
+
+/** Cuántos envíos pendientes o fallidos muestra la pantalla de la cocina a la vez (los más nuevos primero). */
+const MAXIMO_EN_LA_PANTALLA_DE_LA_COCINA = 100;
+
 /** «09/11/2026 01:25»: la hora del envío en la zona de la empresa (la que ve el cocinero, no UTC). */
 function fechaYHora(instante: Date, zona: string): string {
   const partes = new Intl.DateTimeFormat("es-AR", {
@@ -84,14 +99,12 @@ export type EntradaDeDocumentoParaImprimir = Readonly<{
   /** La impresora elegida (da el ancho del papel); sin ella, la de ese uso de la sucursal, o 80 mm. */
   impresoraId?: string | undefined;
   /** La sucursal con la que trabaja quien pide (la fija el servidor): un documento de otra sucursal es como si no existiera. */
-  sucursalDeTrabajo?: string | undefined;
+  sucursalDeTrabajo: string;
 }>;
 
-/** ¿El documento es de otra sucursal que la de trabajo? Sin sucursal de trabajo (quien llama no la fija) no se compara: rige el alcance de quien pide. */
-const esDeOtraSucursal = (
-  sucursalDeTrabajo: string | undefined,
-  sucursalDelDocumento: string,
-): boolean => sucursalDeTrabajo !== undefined && sucursalDeTrabajo !== sucursalDelDocumento;
+/** ¿El documento es de otra sucursal que la de trabajo? Sin sucursal de trabajo (quien llama no la fija) también: cierra, nunca se compara a medias. */
+const esDeOtraSucursal = (sucursalDeTrabajo: string, sucursalDelDocumento: string): boolean =>
+  sucursalDeTrabajo !== sucursalDelDocumento;
 
 export function crearConsultasDeComandas(dependencias: DependenciasDeConsultasDeComandas) {
   const leer = <T>(
@@ -289,6 +302,45 @@ export function crearConsultasDeComandas(dependencias: DependenciasDeConsultasDe
           (t) => exigirSucursal(p.alcance, sucursalId(t.sucursalId)).ok,
         );
         return ok(visibles);
+      }),
+
+    /**
+     * SAL-H, la pantalla de la cocina: los envíos de UNA sucursal cuyo trabajo de impresión original todavía no salió (`PENDIENTE`) o falló (`FALLIDA`), con lo mínimo para mostrarlos (mesa, «Envío N», hora en la zona de la
+     * sucursal, estado, intentos y si hay impresora). Es una lectura: no escribe. La sucursal es la de trabajo (la pone el servidor); fuera del alcance de quien pide es el error de alcance.
+     */
+    trabajosPendientesDeLaSucursal: (
+      contexto: ContextoOperativo,
+      entrada: Readonly<{ sucursalId: string }>,
+    ) =>
+      leer(contexto, "comandas.ver", async (tx, p) => {
+        if (!esUuid(entrada.sucursalId)) return err("IDENTIFICADOR_INVALIDO");
+        const alcance = exigirSucursal(p.alcance, sucursalId(entrada.sucursalId));
+        if (!alcance.ok) return alcance;
+        const zona = await datosDeJornada(tx, sucursalId(entrada.sucursalId));
+        if (!zona.ok) return zona;
+        const trabajos = await tx.impresion.trabajosPendientesDeLaSucursal(
+          contexto.empresaId,
+          entrada.sucursalId,
+          MAXIMO_EN_LA_PANTALLA_DE_LA_COCINA,
+        );
+        const filas = await Promise.all(
+          trabajos.map(async (t) => {
+            const envio = await tx.envios.envioPorId(contexto.empresaId, t.documentoId);
+            return envio === null || envio.sucursalId !== entrada.sucursalId
+              ? null
+              : {
+                  trabajoId: t.id,
+                  envioId: envio.id,
+                  rotulo: envio.rotulo,
+                  numero: envio.numero,
+                  hora: horaDelEnvio(envio.enviadoEn, zona.valor.zonaHoraria),
+                  estado: t.estado,
+                  intentos: t.intentos,
+                  sinImpresora: t.impresoraId === null,
+                };
+          }),
+        );
+        return ok(filas.flatMap((f) => (f === null ? [] : [f])));
       }),
 
     impresorasDeLaSucursal: (

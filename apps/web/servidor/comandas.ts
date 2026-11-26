@@ -17,6 +17,7 @@ import {
   pedirUnaCopia,
   registrarLaImpresora,
   verElPapelDelDocumento,
+  verLaCocinaDeLaSucursal,
   verLasImpresoras,
   verLosTrabajosDeImpresion,
   type DependenciasDeImpresionWeb,
@@ -89,6 +90,14 @@ export const quitarElPlatoSinEnviar = (crudo: unknown) =>
 export const cargarLasImpresoras = (contexto: ContextoOperativo) =>
   sucursalDeTrabajo(contexto).then((sucursal) =>
     sucursal.ok ? verLasImpresoras(dependenciasDeImpresion, contexto, sucursal.dato) : sucursal,
+  );
+
+/** Los envíos de la sucursal de trabajo que esperan papel o cuyo papel falló (la pantalla de la cocina). */
+export const cargarLaCocina = (contexto: ContextoOperativo) =>
+  sucursalDeTrabajo(contexto).then((sucursal) =>
+    sucursal.ok
+      ? verLaCocinaDeLaSucursal(dependenciasDeImpresion, contexto, sucursal.dato)
+      : sucursal,
   );
 
 /** Alta de impresora (`{ impresoraId, nombre, uso, papelMm }`). */

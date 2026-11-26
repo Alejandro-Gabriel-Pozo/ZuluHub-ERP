@@ -2,6 +2,7 @@ import { z } from "zod";
 import { SALIDAS_DE_LINEA } from "../modulos/comandas/publico";
 import type { FiltroDelMapa } from "../modulos/salon/publico";
 import type { Resultado } from "../primitivas/resultado/resultado";
+import { MAXIMO_DE_CUENTAS_POR_ITEMS } from "../primitivas/cuentas/limites-de-division";
 import { MAXIMO_DE_OPCIONES_POR_LINEA } from "./entradas-de-venta-rapida";
 import {
   decimal,
@@ -47,6 +48,29 @@ const FORMA_DE_UNIR = z.object({
   clave: texto,
 });
 
+/** Una cuenta hija es un número de 1 hasta el máximo por ítems; la pantalla manda una asignación por línea vigente. */
+const PARTE = z.number().int().min(1).max(MAXIMO_DE_CUENTAS_POR_ITEMS);
+const FORMA_DE_ASIGNACION = z.discriminatedUnion("forma", [
+  z.object({ lineaId: identificador, forma: z.literal("ENTERO"), parte: PARTE }),
+  z.object({
+    lineaId: identificador,
+    forma: z.literal("POR_UNIDADES"),
+    cantidades: z.array(decimal).min(2).max(MAXIMO_DE_CUENTAS_POR_ITEMS),
+  }),
+  z.object({
+    lineaId: identificador,
+    forma: z.literal("COMPARTIDO"),
+    partes: z.array(PARTE).min(2).max(MAXIMO_DE_CUENTAS_POR_ITEMS),
+  }),
+]);
+const MAXIMO_DE_LINEAS_A_DIVIDIR = 200;
+const FORMA_DE_DIVIDIR = z.object({
+  divisionId: identificador,
+  cuentaId: identificador,
+  partes: z.number().int().min(2).max(MAXIMO_DE_CUENTAS_POR_ITEMS),
+  asignaciones: z.array(FORMA_DE_ASIGNACION).min(1).max(MAXIMO_DE_LINEAS_A_DIVIDIR),
+});
+
 const FORMA_DE_AGREGAR_AL_PEDIDO = z.object({
   cuentaId: identificador,
   lineaId: identificador,
@@ -68,6 +92,7 @@ export type PedidoDeTomarPedido = z.output<typeof FORMA_DE_TOMAR_PEDIDO>;
 export type PedidoDeUnaCuenta = z.output<typeof FORMA_DE_UNA_CUENTA>;
 export type PedidoDeCambiarDeMesa = z.output<typeof FORMA_DE_CAMBIAR_DE_MESA>;
 export type PedidoDeUnir = z.output<typeof FORMA_DE_UNIR>;
+export type PedidoDeDividir = z.output<typeof FORMA_DE_DIVIDIR>;
 export type PedidoDeAgregarAlPedido = z.output<typeof FORMA_DE_AGREGAR_AL_PEDIDO>;
 
 /** El mapa sin filtro (o sin pedido) es «Todas». */
@@ -91,3 +116,7 @@ export const leerElPedidoDeAgregarAlPedido = (crudo: unknown): Pedido<PedidoDeAg
 /** «Unir con otra mesa»: el id de la unión y la clave los fija la pantalla una vez por intento; las dos cuentas, el destino y el origen. */
 export const leerElPedidoDeUnir = (crudo: unknown): Pedido<PedidoDeUnir> =>
   leer(FORMA_DE_UNIR, crudo);
+
+/** «Dividir la cuenta» por ítems: el id de la división lo fija la pantalla una vez por intento; la sucursal la fija el servidor. */
+export const leerElPedidoDeDividir = (crudo: unknown): Pedido<PedidoDeDividir> =>
+  leer(FORMA_DE_DIVIDIR, crudo);

@@ -30,7 +30,9 @@ import { HojaDeCambiarDeMesa } from "./HojaDeCambiarDeMesa.cliente";
 import { ImpresionDelDocumento } from "./ImpresionDelDocumento.cliente";
 import estilos from "./PantallaDeLaMesa.module.css";
 import { PlatoDeLaMesa } from "./PlatoDeLaMesa.cliente";
-import { UnirLaMesa } from "./UnirLaMesa.cliente";
+import { UnirODividirLaMesa } from "./UnirODividirLaMesa.cliente";
+import { CuentasDeLaMesaDividida } from "./CuentasDeLaMesaDividida.cliente";
+import type { TextosDeDividir } from "./textos-de-dividir";
 import {
   tituloDelEnvio,
   type MesaArmada,
@@ -39,7 +41,7 @@ import {
   type PlatoArmado,
   type TextosDeLaMesa,
 } from "./modelo-de-la-mesa";
-import { rutaDeCobrarLaMesa, rutaDeLaCuentaDeMesa } from "./rutas-del-salon";
+import { rutaDeCobrarLaCuenta, rutaDeCobrarLaMesa, rutaDeLaCuentaDeMesa } from "./rutas-del-salon";
 import type { AccionesDelServidorDeLaMesa } from "./acciones-de-la-mesa";
 import { useCocinaDeLaMesa } from "./useCocinaDeLaMesa.cliente";
 
@@ -47,6 +49,7 @@ export type PropsDePantallaDeLaMesa = Readonly<{
   mesaId: string;
   mesa: MesaArmada;
   textos: TextosDeLaMesa;
+  textosDeDividir: TextosDeDividir;
   acciones: AccionesDelServidorDeLaMesa;
   /** El id de la cuenta de UN intento de «Tomar pedido»: lo fija la página al abrirse (recargar es otro intento). */
   cuentaNuevaId: string;
@@ -61,6 +64,7 @@ export type PropsDePantallaDeLaMesa = Readonly<{
     reimprimir: boolean;
     cobrar: boolean;
     unir: boolean;
+    dividir: boolean;
   }>;
   /** Las mesas a las que se puede unir esta (`mesasParaUnir`); `null` si no se pudieron leer: no se ofrece unir. */
   mesasParaUnir: readonly MesaParaUnir[] | null;
@@ -90,6 +94,7 @@ export function PantallaDeLaMesa({
   mesaId,
   mesa,
   textos,
+  textosDeDividir,
   acciones,
   cuentaNuevaId,
   mesasLibres,
@@ -135,7 +140,6 @@ export function PantallaDeLaMesa({
   const recargar = () => {
     router.refresh();
   };
-
   const cocina = useCocinaDeLaMesa(mesa.cuentaId, acciones, ejecutar, recargar);
 
   const agregar = (linea: LineaElegida) => {
@@ -183,11 +187,15 @@ export function PantallaDeLaMesa({
       ) : null}
 
       {mesa.modo === "SOLO_LECTURA" && mesa.cuentasHijas.length > 0 ? (
-        <ul className={estilos["cuentas"]}>
-          {mesa.cuentasHijas.map((c) => (
-            <li key={c}>{c}</li>
-          ))}
-        </ul>
+        <CuentasDeLaMesaDividida
+          cuentas={mesa.cuentasHijas}
+          textos={textosDeDividir}
+          puedeCobrar={puede.cobrar}
+          ocupado={ocupado}
+          alCobrar={(c) => {
+            router.push(rutaDeCobrarLaCuenta(mesaId, c.cuentaId));
+          }}
+        />
       ) : null}
 
       {mesa.modo === "CON_CUENTA" ? (
@@ -312,27 +320,21 @@ export function PantallaDeLaMesa({
               setCambiando(true);
             }}
           />
-          {puede.unir &&
-          mesa.cuentaId !== null &&
-          mesa.totalACobrar !== null &&
-          mesasParaUnir !== null &&
-          mesasParaUnir.length > 0 &&
-          !mesa.sinPlatos ? (
-            <UnirLaMesa
-              cuentaId={mesa.cuentaId}
-              total={mesa.totalACobrar}
-              candidatas={mesasParaUnir}
-              textos={textos}
-              ocupado={ocupado}
-              error={error}
-              unir={(pedido, alTerminar) => {
-                void ejecutar(acciones.unir, pedido, alTerminar);
-              }}
-              alUnida={(destino) => {
-                router.push(rutaDeLaCuentaDeMesa(destino.mesaId));
-              }}
-            />
-          ) : null}
+          <UnirODividirLaMesa
+            mesa={mesa}
+            textos={textos}
+            textosDeDividir={textosDeDividir}
+            puede={puede}
+            mesasParaUnir={mesasParaUnir}
+            ocupado={ocupado}
+            error={error}
+            acciones={acciones}
+            ejecutar={ejecutar}
+            alUnida={(destino) => {
+              router.push(rutaDeLaCuentaDeMesa(destino.mesaId));
+            }}
+            alDividida={recargar}
+          />
           {catalogo === null ? null : (
             <>
               <h3 className={estilos["subtitulo"]}>{textos.agregar}</h3>

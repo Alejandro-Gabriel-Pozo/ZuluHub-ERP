@@ -119,31 +119,25 @@ describe.skipIf(base === null)("comandas: la nota libre en la base (0104)", () =
     expect(await notaDe(lineaId)).toBeNull();
   });
 
-  it("(2) la foto del envío lleva EXACTAMENTE la nota guardada: con una nota en la línea, el envío actual (que todavía no la copia) lo frena la base y no queda envío ni línea enviada", async () => {
+  it("(2) la foto del envío lleva EXACTAMENTE la nota guardada en la línea (con SAL-G el envío la copia; sin nota, la foto queda sin nota)", async () => {
     const e = await m.escenario();
     const { cuentaId, lineaId } = await conUnPlato(e);
     await ponerNota(lineaId, "sin cebolla");
-    const antes = await m.contar(
-      "select count(*) as n from envio_de_comanda where cuenta_id = $1",
-      [cuentaId],
-    );
-    await expect(enviar(e, cuentaId)).resolves.not.toMatchObject({ ok: true });
-    expect(
-      await m.contar("select count(*) as n from envio_de_comanda where cuenta_id = $1", [cuentaId]),
-    ).toBe(antes);
-    expect(
-      (
-        await m.filas<{ envio_id: string | null }>(
-          "select envio_id from linea_de_comanda where linea_id = $1",
-          [lineaId],
-        )
-      )[0]?.envio_id,
-    ).toBeNull();
-    await ponerNota(lineaId, null);
     valorDe(await enviar(e, cuentaId));
+    const foto = async (id: string) =>
+      (
+        await m.filas<{ nota: string | null }>(
+          "select nota from renglon_de_envio where linea_id = $1 and rol = 'SALE'",
+          [id],
+        )
+      )[0]?.nota;
+    expect(await foto(lineaId)).toBe("sin cebolla");
+    const sinNota = await conUnPlato(e);
+    valorDe(await enviar(e, sinNota.cuentaId));
+    expect(await foto(sinNota.lineaId)).toBeNull();
   });
 
-  it("(3) una copia conserva la nota de su origen: con nota, unir (que todavía no la copia) lo frena la base y no queda unión; sin nota une", async () => {
+  it("(3) una copia conserva la nota de su origen: al unir, la línea que pasa a la cuenta destino lleva la misma nota", async () => {
     const e = await m.escenario();
     const unir = (destino: string, origen: string) =>
       m.salon.unirMesas(e.gerente, {
@@ -156,15 +150,14 @@ describe.skipIf(base === null)("comandas: la nota libre en la base (0104)", () =
     const destino = await conUnPlato(e);
     const conNota = await conUnPlato(e);
     await ponerNota(conNota.lineaId, "sin cebolla");
-    expect((await unir(destino.cuentaId, conNota.cuentaId)).ok).toBe(false);
-    expect(
-      await m.contar("select count(*) as n from union_de_mesas where cuenta_origen_id = $1", [
-        conNota.cuentaId,
-      ]),
-    ).toBe(0);
-    await ponerNota(conNota.lineaId, null);
     expect((await unir(destino.cuentaId, conNota.cuentaId)).ok).toBe(true);
+    const notas = await m.filas<{ nota: string | null }>(
+      "select nota from linea_de_comanda where cuenta_id = $1 and nota is not null",
+      [destino.cuentaId],
+    );
+    expect(notas.map((n) => n.nota)).toEqual(["sin cebolla"]);
   });
+
   it("la REVERSIÓN deja el esquema como antes y borra la fila del registro `migracion` (si no, el ejecutor no la volvería a correr); repetirla no cambia nada y la migración se puede volver a aplicar", async () => {
     if (base === null) return;
     const aparte = await crearBaseAparte(base);

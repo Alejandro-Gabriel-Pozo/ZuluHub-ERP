@@ -30,6 +30,8 @@ export type DocumentoAImprimir = Readonly<{
   titulo: string;
   sinImpresora: boolean;
   copia: boolean;
+  /** El intento del trabajo que ya existe (1 si no se dice): el primer toque imprime ESE intento. */
+  intentos?: number;
 }>;
 
 export type PropsDeImpresionDelDocumento = Readonly<{
@@ -42,6 +44,12 @@ export type PropsDeImpresionDelDocumento = Readonly<{
   deshabilitado: boolean;
   /** El enlace «Configurar impresoras» (solo a quien puede ir); `null` si no se ofrece. */
   configurarImpresoras: ReactNode;
+  /** Por defecto el diálogo se abre solo al aparecer (al enviar, DEC-1034). En la pantalla de la cocina espera el toque en «Imprimir». */
+  arrancarSolo?: boolean;
+  /** Para un trabajo que ya falló: empieza en «No se pudo imprimir» con «Reintentar» (el mismo trabajo, un intento más). */
+  empezarFallida?: boolean;
+  /** `false` si quien lo usa ya muestra el título del documento. */
+  mostrarTitulo?: boolean;
 }>;
 
 /**
@@ -58,6 +66,9 @@ export function ImpresionDelDocumento({
   acciones,
   deshabilitado,
   configurarImpresoras,
+  arrancarSolo = true,
+  empezarFallida = false,
+  mostrarTitulo = true,
 }: PropsDeImpresionDelDocumento) {
   // La copia pide su trabajo con el id y la clave de cada intento; el resultado se declara contra el trabajo que volvió.
   const idDeLaCopia = useRef<Readonly<{ clave: string; trabajoId: string }> | null>(null);
@@ -90,7 +101,7 @@ export function ImpresionDelDocumento({
 
   return (
     <section className={estilos["impresion"]} aria-label={documento.titulo}>
-      <h3 className={estilos["subtitulo"]}>{documento.titulo}</h3>
+      {mostrarTitulo ? <h3 className={estilos["subtitulo"]}>{documento.titulo}</h3> : null}
       <BotonDeImprimir
         textos={{ ...textos, imprimir: documento.copia ? textoDeLaCopia : textos.imprimir }}
         pedirImpresion={pedirImpresion}
@@ -109,10 +120,16 @@ export function ImpresionDelDocumento({
           })
         }
         deshabilitado={deshabilitado}
-        arrancarSolo
-        {...(documento.copia || documento.trabajoId === null
+        arrancarSolo={arrancarSolo}
+        empezarFallida={empezarFallida}
+        {...(documento.copia || documento.trabajoId === null || empezarFallida
           ? {}
-          : { trabajoInicial: { intentos: 1, sinImpresora: documento.sinImpresora } })}
+          : {
+              trabajoInicial: {
+                intentos: documento.intentos ?? 1,
+                sinImpresora: documento.sinImpresora,
+              },
+            })}
         acompanamientoSinImpresora={configurarImpresoras}
       />
     </section>

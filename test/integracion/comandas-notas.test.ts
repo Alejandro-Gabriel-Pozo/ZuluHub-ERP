@@ -70,6 +70,7 @@ describe.skipIf(base === null)("comandas: la nota libre del plato", () => {
         documentoTipo: "COMANDA",
         documentoId: envio.envioId,
         copia: false,
+        sucursalDeTrabajo: e.sucursal,
       }),
     );
     const textos = papel.lineas.map((l) => l.texto);

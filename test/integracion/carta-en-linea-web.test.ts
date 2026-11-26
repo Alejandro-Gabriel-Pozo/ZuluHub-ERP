@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { PERMISOS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
+import { cuentaDeImagenDeBase } from "./carta-publica-apoyo";
 import {
   cambiarElEstadoDeLaCartaEnLinea,
   guardarLaCartaEnLinea,
@@ -483,19 +484,26 @@ describe.skipIf(base === null)("carta en línea de la web", () => {
   describe("identidad: cara, color y logo", () => {
     const LOGO = "https://res.cloudinary.com/demo/image/upload/v1700000000/logos/parador.png";
     const IDENTIDAD = { cara: "BOLICHE", paleta: "otro", colorPropio: "#0e7490", logo: LOGO };
-    const guardarIdentidad = (
+    // La cuenta del logo ("demo") la declara la empresa ANTES de guardar el logo (0102): una vez por empresa.
+    const conCuentaDeclarada = new Set<string>();
+    const guardarIdentidad = async (
       e: EscenarioDeCatalogo,
       cartaId: string,
       versionEsperada: number | null,
       extra: Record<string, unknown>,
       contexto = e.gerente,
-    ) =>
-      guardarLaCartaEnLinea(
+    ) => {
+      if (!conCuentaDeclarada.has(e.empresa)) {
+        conCuentaDeclarada.add(e.empresa);
+        await cuentaDeImagenDeBase(c.dueno, e.empresa, e.personaDelGerente, "demo");
+      }
+      return guardarLaCartaEnLinea(
         d,
         contexto,
         pedidoDeGuardar(e, { cartaId, versionEsperada, ...extra }),
         e.sucursal,
       );
+    };
 
     it("guardar la identidad la escribe (el color como se eligió, el logo en partes), la muestra al volver a ver y audita UNA vez", async () => {
       const e = await conProductos();

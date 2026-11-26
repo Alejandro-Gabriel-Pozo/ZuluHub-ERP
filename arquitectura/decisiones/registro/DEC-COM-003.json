@@ -1,0 +1,10 @@
+{
+  "id": "DEC-COM-003",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Todo pago de una factura se asienta en el libro, imputado contra su cargo; anular el pago lo espeja y falla cerrado si el pago no tiene asiento.",
+  "que_cambia": "Un pago anterior al libro no se puede anular hasta rellenarlo (base vacía). Anular un pago bloquea comprobante, pago y parte en ese orden. Revertir: quitar las llamadas al libro en pagos.ts y registrar-compra.ts.",
+  "donde": "cargo-de-la-factura.ts, libro-de-proveedores.ts, pagos.ts, compras-pago-en-el-libro.test.ts; matriz de L2 enviada y aceptada por el orquestador el 26/11/2026 (modo nocturno)"
+}

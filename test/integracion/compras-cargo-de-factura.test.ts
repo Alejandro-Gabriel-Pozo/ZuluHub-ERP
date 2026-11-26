@@ -213,6 +213,8 @@ describe.skipIf(base === null)("compras: el cargo de la factura en el libro", ()
         registrarCargo: () =>
           Promise.resolve({ ok: true, valor: { asientoId: nuevoId(), yaExistia: false } }),
         anularCargo: c.dependencias.libroDeProveedores.anularCargo,
+        registrarPago: c.dependencias.libroDeProveedores.registrarPago,
+        anularPago: c.dependencias.libroDeProveedores.anularPago,
       },
     });
     const r = valorDe(
@@ -265,7 +267,8 @@ describe.skipIf(base === null)("compras: el cargo de la factura en el libro", ()
       }),
     ]);
     expect([anulacion.ok, pago.ok].filter(Boolean).length).toBeGreaterThanOrEqual(1);
-    expect(await saldo(m)).toBe(anulacion.ok ? "0.00" : "2420.00");
+    // Anulada y sin pago, o pagada (el pago salda el cargo): en los dos casos el saldo del proveedor es cero.
+    expect(await saldo(m)).toBe("0.00");
   });
 
   it("aislamiento: el cargo es de la empresa de la factura; el saldo de otra empresa y otro proveedor no se toca", async () => {

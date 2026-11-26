@@ -19,6 +19,9 @@ export type PropsDeCobroDeLaMesa = Readonly<{
   /** Lo que la página resolvió en el servidor: la caja y las opciones, o por qué no se puede cobrar. */
   preparado: CobroPreparado;
   textos: TextosDeCobrar;
+  /** Solo al cobrar una cuenta de una mesa dividida: sus textos y si es la última (la mesa queda libre y «Volver» lleva al salón). */
+  deLaDivision?:
+    Readonly<{ ultima: boolean; volverALasCuentas: string; mesaCobrada: string }> | undefined;
   acciones: Readonly<{
     cobrar: Accion<VentaCobrada>;
     anular: Accion<TicketAnulado>;
@@ -37,6 +40,7 @@ export function CobroDeLaMesa({
   total,
   preparado,
   textos,
+  deLaDivision,
   acciones,
 }: PropsDeCobroDeLaMesa) {
   const router = useRouter();
@@ -50,11 +54,24 @@ export function CobroDeLaMesa({
       anular={acciones.anular}
       imprimir={acciones.imprimir}
       cuentaExistente={{ cuentaId }}
+      deLaDivision={
+        deLaDivision === undefined
+          ? undefined
+          : {
+              rotuloDeVolver: deLaDivision.ultima ? textos.volver : deLaDivision.volverALasCuentas,
+              mesaCobrada: deLaDivision.ultima ? deLaDivision.mesaCobrada : null,
+            }
+      }
       alVolver={() => {
         router.push(rutaDeLaCuentaDeMesa(mesaId));
       }}
       alNuevaVenta={() => {
-        router.push(RUTA_DEL_SALON);
+        // La última cuenta deja la mesa libre: se vuelve al salón; si quedan cuentas, a la lista de cuentas de la mesa.
+        router.push(
+          deLaDivision !== undefined && !deLaDivision.ultima
+            ? rutaDeLaCuentaDeMesa(mesaId)
+            : RUTA_DEL_SALON,
+        );
       }}
     />
   );

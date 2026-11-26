@@ -195,4 +195,21 @@ export const TEXTOS_DE_COMANDAS = {
     fuente: FUENTE_DE_IMPRIMIR,
   },
   "comandas.texto.imprimir_configurar_impresoras": { porDefecto: "Configurar impresoras" },
+  // La pantalla de la cocina (SAL-H): el nombre «Comandas» lo aprobó el dueño (DDD:125) y la maqueta, el 25/11/2026.
+  "comandas.texto.cocina_comandas": {
+    porDefecto: "Comandas",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/plantillas/salon/modelo-de-la-cocina.ts",
+        nombre: "armarLaCocina",
+      },
+      {
+        como: "FUNCION",
+        archivo: "apps/web/ui/navegacion/menu.ts",
+        nombre: "FILAS_DEL_MENU",
+      },
+    ],
+    fuente: { decision: "DEC-1042" },
+  },
 } as const;

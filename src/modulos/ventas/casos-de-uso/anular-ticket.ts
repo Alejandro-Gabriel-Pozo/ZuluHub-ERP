@@ -29,6 +29,8 @@ export type EntradaDeAnularTicket = Readonly<{
   /** El id del ejemplar de anulación; lo manda la pantalla, como todo id de ventas (idempotencia). */
   ejemplarNuevoId: string;
   motivo: string;
+  /** La sucursal con la que trabaja quien anula (la fija el servidor): un ticket de OTRA, o sin ella, es como si no existiera (`TICKET_NO_ENCONTRADO`) y no se escribe nada, también en una repetición. */
+  sucursalDeTrabajo: string;
 }>;
 
 export type SalidaDeAnularTicket = Readonly<{
@@ -73,6 +75,7 @@ async function anular(
   if (inicial === null) return err("TICKET_NO_ENCONTRADO");
   const alcance = await exigirAlcance(tx, contexto, inicial.sucursalId);
   if (!alcance.ok) return alcance;
+  if (entrada.sucursalDeTrabajo !== inicial.sucursalId) return err("TICKET_NO_ENCONTRADO");
 
   // Idempotencia por clave: la misma huella devuelve lo hecho (aunque la jornada se haya cerrado después); otra huella es otra cosa.
   const huella = huellaDeAnulacion({
@@ -164,6 +167,14 @@ async function anular(
     hechaPor: persona.valor,
     hechaEn: contexto.ahora,
   });
+  // El espejo del cargo a cuenta corriente (CC-2), en la misma transacción: si no, el cliente quedaría debiendo una venta anulada. Sin puerto no se anula (nace cerrado).
+  if (ticket.cargadoAParteId !== null) {
+    if (dependencias.cuentaCorriente === undefined) return err("CUENTA_CORRIENTE_NO_DISPONIBLE");
+    const espejo = await dependencias.cuentaCorriente.anularEnTx(tx, contexto, {
+      ticketId: ticket.id,
+    });
+    if (!espejo.ok) return espejo;
+  }
   if (dependencias.stock !== undefined) {
     const original = await tx.tickets.ejemplarDeNumero(empresaId, ticket.id, 1);
     if (original === null) throw new Error("el ticket no tiene su ejemplar original");

@@ -16,6 +16,7 @@ import { esUuid } from "../dominio/identificadores";
 import { ERRORES_DE_VENTAS_POR_RESTRICCION } from "../persistencia/restricciones";
 import type { TxDeVentas } from "./contrato";
 import type { ErrorDeVentas } from "./errores";
+import type { CuentaCorrienteDeVentas } from "./puertos-de-cuenta-corriente";
 import type { StockDeVentas } from "./puertos-de-stock";
 
 type R<S> = Resultado<S, ErrorDeVentas>;
@@ -121,6 +122,8 @@ export type OpcionesDeLaVenta = Readonly<{
   sesionDeCajaId?: string | undefined;
   /** El puerto de stock (E5-T12): quien llama lo pasa de sus dependencias; sin él, ninguna línea controla stock y el cierre no descuenta nada. */
   stock?: StockDeVentas<TxDeVentas> | undefined;
+  /** El puerto de la cuenta corriente (CC-2): quien llama lo pasa de sus dependencias; sin él, cerrar a nombre de un cliente se rechaza. */
+  cuentaCorriente?: CuentaCorrienteDeVentas<TxDeVentas> | undefined;
 }>;
 
 /** Un uuid que manda la aplicación: lo demás nunca puede ser el id de nada. */

@@ -268,6 +268,7 @@ describe.skipIf(base === null)("ventas: concurrencia e idempotencia del cobro", 
         () =>
           firme(() =>
             m.casos.anularTicket(s.gerente, {
+              sucursalDeTrabajo: s.sucursal,
               claveIdempotencia: nuevaClave(),
               ticketId: t.ticketId,
               ejemplarBaseId: t.ejemplarId,

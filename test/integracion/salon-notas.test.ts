@@ -127,6 +127,7 @@ describe.skipIf(base === null)("salón: la nota libre del plato", () => {
       await m.salon.dividirCuenta(e.gerente, {
         divisionId: nuevoId(),
         cuentaId,
+        sucursalDeTrabajo: e.sucursal,
         partes: 2,
         asignaciones: [
           { lineaId: lineaA, forma: "POR_UNIDADES", cantidades: ["1", "1"] },

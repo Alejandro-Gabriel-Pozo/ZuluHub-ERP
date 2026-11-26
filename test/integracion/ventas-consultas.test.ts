@@ -229,6 +229,13 @@ describe.skipIf(base === null)("ventas: consultas y aporte al cierre del día", 
         ejemplarBaseId: ticket.ejemplarId,
         ejemplarNuevoId: nuevoId(),
         motivo,
+        sucursalDeTrabajo:
+          (
+            await m.filas<{ sucursal_id: string }>(
+              "select sucursal_id from ticket where id::text = $1",
+              [ticket.ticketId],
+            )
+          )[0]?.sucursal_id ?? "",
       }),
     );
 

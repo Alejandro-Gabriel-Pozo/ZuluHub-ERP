@@ -5,8 +5,10 @@ import type { Transacciones } from "../../../puertos/transacciones";
 import type { TxDeCaja } from "../../caja/publico";
 import type { LecturasDeCatalogo } from "../../catalogo/publico";
 import type { TxDeJornadas } from "../../cierre/publico";
+import type { RepositoriosDeClientes } from "../../clientes/publico";
 import type { LecturaDeEstados, RepositorioDeSucursales } from "../../empresas/publico";
 import type { FacturadorDeTickets } from "./puertos-de-facturacion";
+import type { CuentaCorrienteDeVentas } from "./puertos-de-cuenta-corriente";
 import type { StockDeVentas } from "./puertos-de-stock";
 import type { LecturasDeVentas } from "../persistencia/repositorio-de-lecturas";
 import type { RepositorioDeCuentas } from "../persistencia/repositorio-de-cuentas";
@@ -26,6 +28,8 @@ export type TxDeVentas = LecturaDeEstados &
   Readonly<{
     cuentas: RepositorioDeCuentas;
     tickets: RepositorioDeTickets;
+    /** El directorio de partes (clientes): al cerrar, el cliente que se carga al ticket se valida con su puerto (`parteParaOperacion`), en esta transacción. */
+    partes: RepositoriosDeClientes["partes"];
     /** El puntero ticket → comprobante (E1, 0029). */
     documentos: RepositorioDeDocumentos;
     /** El ticket con los renglones de su ejemplar vigente: lo que se factura (E1). */
@@ -46,6 +50,8 @@ export type DependenciasDeVentas = Readonly<{
    * llama a nada: la empresa con stock apagado vende como antes (D146).
    */
   stock?: StockDeVentas<TxDeVentas> | undefined;
+  /** La cuenta corriente de clientes (CC-2; la arma la composición con `cuenta_corriente`). Sin ella, cerrar a nombre de un cliente se rechaza: nace cerrado. */
+  cuentaCorriente?: CuentaCorrienteDeVentas<TxDeVentas> | undefined;
   /** El catálogo y la matriz rol → acciones con los que el guard autoriza (los pasa la composición). */
   reglas: ReglasDeEmpresa;
 }>;

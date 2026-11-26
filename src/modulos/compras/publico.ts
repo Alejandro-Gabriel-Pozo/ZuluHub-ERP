@@ -7,10 +7,16 @@ export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_COMPRAS } f
 export { crearCasosDeUsoDeCompras, type CasosDeUsoDeCompras } from "./casos-de-uso/casos-de-uso";
 export {
   CLASE_DEL_CARGO_DE_FACTURA,
+  CLASE_DEL_PAGO,
   DETALLE_DE_LA_ANULACION_DEL_CARGO,
+  DETALLE_DE_LA_ANULACION_DEL_PAGO,
   ORIGEN_DEL_CARGO_DE_FACTURA,
+  ORIGEN_DEL_PAGO,
   claveDeLaAnulacionDelCargo,
+  claveDeLaAnulacionDelPago,
+  claveDeLaImputacionDelPago,
   claveDelCargo,
+  claveDelPago,
 } from "./dominio/cargo-de-factura";
 export { crearConsultasDeCompras, type ConsultasDeCompras } from "./consultas/consultas";
 export type {
@@ -104,6 +110,11 @@ export {
   type ColumnaDeDetalle,
   type ColumnaDeResumen,
 } from "./dominio/exportacion/armar-hojas";
+export {
+  armarPagos,
+  COLUMNAS_DE_PAGOS,
+  type ColumnaDePagos,
+} from "./dominio/exportacion/armar-hoja-de-pagos";
 export type { Celda, HojaDeExportacion } from "./dominio/exportacion/celdas";
 export type { CompraParaExportar, RotulosDeExportacion } from "./dominio/exportacion/datos";
 export {

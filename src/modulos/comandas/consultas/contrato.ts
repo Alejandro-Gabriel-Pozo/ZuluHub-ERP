@@ -15,7 +15,10 @@ export type TxDeConsultasDeComandas = LecturaDeEstados &
     >;
     impresion: Pick<
       RepositorioDeImpresion,
-      "impresorasDeSucursal" | "impresoraPorId" | "trabajosDeDocumento"
+      | "impresorasDeSucursal"
+      | "impresoraPorId"
+      | "trabajosDeDocumento"
+      | "trabajosPendientesDeLaSucursal"
     >;
     cuentas: Pick<RepositorioDeCuentas, "obtener" | "obtenerLinea">;
     /** La zona de la empresa para mostrar la hora del envío. */

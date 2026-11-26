@@ -522,6 +522,7 @@ describe.skipIf(base === null)("ventas: cobrar y venderYCobrar", () => {
     const anulado = await ticketPorCobrar(e);
     valorDe(
       await m.casos.anularTicket(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         claveIdempotencia: nuevaClave(),
         ticketId: anulado.ticketId,
         ejemplarBaseId: anulado.ejemplarId,
@@ -853,6 +854,7 @@ describe.skipIf(base === null)("ventas: cobrar y venderYCobrar", () => {
     expect(
       valorDe(
         await m.casos.anularTicket(e.gerente, {
+          sucursalDeTrabajo: e.sucursal,
           claveIdempotencia: nuevaClave(),
           ticketId: va.ticketId,
           ejemplarBaseId: va.ejemplarId,

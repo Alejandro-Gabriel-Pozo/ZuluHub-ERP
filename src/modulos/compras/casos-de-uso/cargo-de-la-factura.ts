@@ -11,6 +11,9 @@ type R<S> = Resultado<S, ErrorDeCompras>;
  * entre sucursales) y lo hace AL FINAL de su transacción. ORDEN DE BLOQUEO: primero el comprobante (el caso de uso ya lo insertó o lo bloqueó) y DESPUÉS la parte (el libro toma el saldo del proveedor
  * al asentar): quien paga, anula un pago o anula la factura bloquea en el mismo orden, así que dos operaciones a la vez sobre la misma factura y proveedor se turnan sin abrazo mortal.
  * Un error del libro deshace TODA la transacción (la factura no queda sin su cargo).
+ *
+ * ORDEN DE BLOQUEO (el único lugar donde está escrito): COMPROBANTE, después el PAGO y por último la PARTE del libro. Lo cumplen registrar y anular la factura, declarar el pago y anular el pago (que antes bloqueaba el pago primero:
+ * cruzado con anular la factura era un abrazo mortal posible). Chequeo: `compras-pago-en-el-libro.test.ts` (dos actores, las tres combinaciones).
  */
 export async function asentarElCargoDeLaFactura(
   tx: TxDeCompras,
@@ -47,5 +50,33 @@ export async function anularElCargoDeLaFactura(
   comprobanteId: string,
 ): Promise<R<null>> {
   const espejo = await dependencias.libroDeProveedores.anularCargo(tx, contexto, { comprobanteId });
+  return espejo.ok ? ok(null) : err(espejo.error);
+}
+
+/**
+ * El pago de la factura en el libro (L2): el asiento de pago imputado contra el cargo, por el `importe` que se guardó en el pago. Lo llaman TODOS los casos de uso que guardan un pago (`declararPago` y la compra N2 con pago)
+ * AL FINAL de su transacción, con el comprobante ya bloqueado y ANTES de que el libro tome la parte (mismo orden de bloqueo que el cargo). Un error del libro deshace TODO: el pago, sus líneas, el egreso de caja y la auditoría.
+ */
+export async function asentarElPagoDeLaFactura(
+  tx: TxDeCompras,
+  contexto: ContextoOperativo,
+  dependencias: DependenciasDeCompras,
+  datos: Readonly<{ pagoId: string; comprobanteId: string; importe: string }>,
+): Promise<R<null>> {
+  const asiento = await dependencias.libroDeProveedores.registrarPago(tx, contexto, {
+    ...datos,
+    hechoEn: contexto.ahora,
+  });
+  return asiento.ok ? ok(null) : err(asiento.error);
+}
+
+/** El espejo del pago al anularlo: sin asiento (un pago anterior al libro) falla cerrado, igual que el cargo. */
+export async function anularElPagoDeLaFactura(
+  tx: TxDeCompras,
+  contexto: ContextoOperativo,
+  dependencias: DependenciasDeCompras,
+  pagoId: string,
+): Promise<R<null>> {
+  const espejo = await dependencias.libroDeProveedores.anularPago(tx, contexto, { pagoId });
   return espejo.ok ? ok(null) : err(espejo.error);
 }
