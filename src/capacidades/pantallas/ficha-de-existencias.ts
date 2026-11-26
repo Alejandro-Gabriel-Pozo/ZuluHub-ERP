@@ -3,7 +3,7 @@ import type { FichaDePantalla } from "./ficha-de-mesas";
 /**
  * LA FICHA DE LA PANTALLA «EXISTENCIAS» DE STOCK (STK-B1, FP-STK-02; DDD:174: toda pantalla tiene su ficha). Declara lo que la pantalla ofrece: ruta y archivos, el acceso, los botones, los estados y cada texto
  * con SU uso y SU fuente. Misma forma que `ficha-de-mesas.ts` y la comprueba `ficha-de-existencias-y-movimientos.test.ts` contra el catálogo de textos y la tabla del menú, para que no se desfase.
- * Es solo lectura: no hay botones que escriban (Entrada, Salida, Transferir, Ajustar y Carga inicial llegan con la escritura de Stock) y por eso no hay nada que apagar sin permiso. El depósito se elige con
+ * Los botones Entrada, Salida, Transferir y Ajustar llevan a su formulario y salen apagados sin el permiso (el servidor igual decide); «Carga inicial» llega con su pantalla. El depósito se elige con
  * enlaces (DEC-1023) y la sucursal la fija el servidor. No muestra costos ni «Disponible». Los nombres de las unidades salen del catálogo de unidades de medida. Previene: un botón o un texto que nadie aprobó.
  */
 
@@ -32,7 +32,32 @@ export const FICHA_DE_EXISTENCIAS = {
   rutas: ["/stock/existencias"],
   titulo: "stock.pantalla.existencias",
   acceso: "stock.ver",
-  botones: [],
+  botones: [
+    {
+      id: "entrada",
+      texto: "stock.accion.entrada",
+      hace: { navega: "/stock/movimientos/entrada" },
+      sinPermiso: "APAGADO",
+    },
+    {
+      id: "salida",
+      texto: "stock.accion.salida",
+      hace: { navega: "/stock/movimientos/salida" },
+      sinPermiso: "APAGADO",
+    },
+    {
+      id: "transferir",
+      texto: "stock.accion.transferir",
+      hace: { navega: "/stock/movimientos/transferir" },
+      sinPermiso: "APAGADO",
+    },
+    {
+      id: "ajustar",
+      texto: "stock.accion.ajustar",
+      hace: { navega: "/stock/movimientos/ajustar" },
+      sinPermiso: "APAGADO",
+    },
+  ],
   estados: { ERROR: "GENERICO", SIN_PERMISO: "GENERICO" },
   textos: {
     "stock.pantalla.existencias": {
@@ -43,6 +68,13 @@ export const FICHA_DE_EXISTENCIAS = {
       usos: ["rótulo del selector de depósitos (enlaces)", "título de la pestaña Depósitos"],
       fuente: MAQUETA_DE_STOCK,
     },
+    "stock.accion.entrada": { usos: [USO_DE_LA_PANTALLA + " (botón)"], fuente: MAQUETA_DE_STOCK },
+    "stock.accion.salida": { usos: [USO_DE_LA_PANTALLA + " (botón)"], fuente: MAQUETA_DE_STOCK },
+    "stock.accion.transferir": {
+      usos: [USO_DE_LA_PANTALLA + " (botón)"],
+      fuente: MAQUETA_DE_STOCK,
+    },
+    "stock.accion.ajustar": { usos: [USO_DE_LA_PANTALLA + " (botón)"], fuente: MAQUETA_DE_STOCK },
     "stock.pantalla.negativa": {
       usos: [USO_DE_LA_PANTALLA + " (marca de un saldo bajo cero)"],
       fuente: MAQUETA_DE_STOCK,

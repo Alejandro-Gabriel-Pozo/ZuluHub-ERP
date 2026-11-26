@@ -31,6 +31,7 @@ const mov = (c: Record<string, unknown> = {}) => ({
   unidadId: "KILOGRAMO",
   cantidad: "5.5000",
   anulado: false,
+  anulable: false,
   ...c,
 });
 const armar = (movimientos: readonly ReturnType<typeof mov>[], siguiente: string | null = null) =>
@@ -140,6 +141,11 @@ describe("armarLosMovimientos", () => {
 
   it("una clase que no conoce no se rotula (lista de permitidos)", () => {
     expect(armar([mov({ clase: "INVENTADA" })]).tarjetas[0]?.clase).toBeNull();
+  });
+
+  it("lleva el movimiento y si es anulable, tal como lo dice el servidor", () => {
+    const [t] = armar([mov({ movimientoId: "mx", anulable: true })]).tarjetas;
+    expect(t).toMatchObject({ movimientoId: "mx", anulable: true });
   });
 
   it("el ajuste por conteo se rotula «Ajuste»", () => {
