@@ -12,6 +12,7 @@ import { ProveedorDeEnvioDeFormulario } from "../../patrones/EnvioDeFormulario.c
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
 import { Pila } from "../../primitivas/Pila";
 import type { AltaArmada } from "./modelo-de-alta-de-producto";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeAltaDeProducto = Readonly<{
   alta: AltaArmada;
@@ -56,7 +57,7 @@ export function FormularioDeAltaDeProducto({
   const sinCampo = error !== null && !CAMPOS.includes(campoDelError ?? "");
 
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={3}>
           <Selector

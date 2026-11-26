@@ -49,6 +49,29 @@ describe("la frontera de «Declarar pago»", () => {
     }
   });
 
+  it("varios medios llevan cada uno su importe; `COMPUESTO`, un importe que no es texto, una lista vacía o de más de seis y los campos de más no pasan", () => {
+    const sinMedio = { clave: ID, comprobanteId: OTRO, fechaDePago: base.fechaDePago };
+    const medios = [
+      { medio: "EFECTIVO", importe: "1000.00" },
+      { medio: "QR", importe: "1420.00" },
+    ];
+    expect(entradaDeDeclararPago({ ...sinMedio, medios })).toEqual({
+      ok: true,
+      valor: { ...sinMedio, medios },
+    });
+    for (const malos of [
+      [{ medio: "COMPUESTO", importe: "1.00" }],
+      [{ medio: "QR", importe: 5 }],
+      [{ medio: "QR", importe: "1.00", moneda: "USD" }],
+      [{ medio: "QR" }],
+      [],
+      [...MEDIOS_DE_PAGO, "QR"].map((medio) => ({ medio, importe: "1.00" })),
+    ]) {
+      expect(entradaDeDeclararPago({ ...sinMedio, medios: malos }).ok).toBe(false);
+    }
+    expect(entradaDeDeclararPago({ ...sinMedio, medio: "COMPUESTO" }).ok).toBe(false);
+  });
+
   it("un campo de más (importe, empresa, sucursal, persona) hace inválido el pedido: lo que no se declaró no pasa", () => {
     for (const extra of [
       { importe: "1.00" },

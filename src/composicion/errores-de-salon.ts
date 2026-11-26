@@ -20,10 +20,29 @@ const CON_TEXTO_PROPIO: Readonly<Record<string, CodigoDeSalon>> = {
   NUMERO_DE_MESA_INVALIDO: "SALON_NUMERO_DE_MESA_INVALIDO",
   NUMERO_DE_MESA_EN_USO: "SALON_NUMERO_DE_MESA_EN_USO",
   MESA_FUERA_DEL_SALON: "SALON_MESA_FUERA_DEL_SALON",
+  // Unir mesas (SAL-E1): dos motivos con texto aprobado; el resto de los rechazos de la unión sale como «No se pueden unir», sin motivo.
+  MESA_LIBRE: "SALON_UNIR_MESA_LIBRE",
+  MESA_CON_COBRO: "SALON_UNIR_LA_MESA_YA_TIENE_UN_COBRO",
+  MISMA_CUENTA: "SALON_UNIR_NO_SE_PUEDEN_UNIR",
+  SUCURSAL_DISTINTA: "SALON_UNIR_NO_SE_PUEDEN_UNIR",
+  MESA_UNIDA: "SALON_UNIR_NO_SE_PUEDEN_UNIR",
+  MESA_DIVIDIDA: "SALON_UNIR_NO_SE_PUEDEN_UNIR",
 };
 
 const DEFECTO_DE_LA_BASE = "ERROR_DE_LA_BASE_NO_TRADUCIDO";
 const GENERICO = { codigo: "CATALOGO_ACCION_NO_PERMITIDA" } as const;
+
+/** Motivos de «unir» que en «dividir» no significan lo mismo: «dividir» los sale como el genérico (interfaz sobria; la pantalla ya no ofrece lo que no se puede). */
+const MOTIVOS_DE_UNIR_QUE_NO_SON_DE_DIVIDIR: ReadonlySet<string> = new Set([
+  "MESA_LIBRE",
+  "MESA_CON_COBRO",
+  "MISMA_CUENTA",
+  "SUCURSAL_DISTINTA",
+  "MESA_UNIDA",
+  "MESA_DIVIDIDA",
+]);
+export const errorDeDividir = (error: unknown): unknown =>
+  typeof error === "string" && MOTIVOS_DE_UNIR_QUE_NO_SON_DE_DIVIDIR.has(error) ? GENERICO : error;
 
 export function traducirErrorDeSalon(error: unknown): unknown {
   if (typeof error === "string") {

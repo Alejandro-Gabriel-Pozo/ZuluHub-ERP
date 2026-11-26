@@ -1,5 +1,5 @@
 import type { ColumnType, Generated } from "kysely";
-import type { EsquemaDeDevoluciones } from "./esquema-de-devoluciones";
+import type { EsquemaDePagosYDevoluciones } from "./esquema-de-pagos";
 
 /** Una columna que fija la base: se lee, no se escribe. */
 type DeLaBase<T> = ColumnType<T, never, never>;
@@ -397,4 +397,4 @@ export type ComprasDb = {
     registrado_en: DeLaBase<Date>;
     version: Generated<number>;
   };
-} & EsquemaDeDevoluciones;
+} & EsquemaDePagosYDevoluciones;

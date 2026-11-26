@@ -17,9 +17,10 @@ import {
   cuitUnico,
   nombreUnico,
   type EmpresaDePrueba,
+  baseDeEsteArchivo,
 } from "./entorno";
 
-const base = inject("baseDePruebas");
+const base = await baseDeEsteArchivo(inject("baseDePruebas"));
 
 type Entorno = ReturnType<typeof crearEntornoDePrueba>;
 

@@ -10,6 +10,7 @@ import { ErrorDeRespuesta } from "../../../patrones/ErrorDeRespuesta";
 import { Superposicion } from "../../../patrones/Superposicion";
 import { Pila } from "../../../primitivas/Pila";
 import { ANULAR_INICIAL, type ResultadoDeAnular } from "./resultado-de-correccion";
+import { sinReiniciar } from "../../../patrones/sin-reinicio";
 
 export type PropsDeHojaDeAnularCompra = Readonly<{
   /** `anularCompraAccion` con la compra ya ligada (`.bind`): el id no viaja en el formulario. */
@@ -62,7 +63,7 @@ export function HojaDeAnularCompra({
         cerrable={!enviando}
         etiquetaDeCerrar={textos.cerrar}
       >
-        <form action={enviar}>
+        <form action={enviar} onReset={sinReiniciar}>
           <ProveedorDeEnvioDeFormulario value={enviando}>
             <Pila separacion={3}>
               <AreaDeTexto

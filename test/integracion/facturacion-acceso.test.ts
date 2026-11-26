@@ -13,13 +13,14 @@ import {
   viaDueno,
   type Escenario,
 } from "./facturacion-apoyo";
+import { baseDeEsteArchivo } from "./entorno";
 
 /**
  * Facturación F2: los certificados de ARCA, el ticket de acceso cacheado y los intentos contra ARCA (§B.8.5),
  * y que nada de lo facturado se borra. Los privilegios de columna exactos están en `catalogo.test.ts`.
  */
 
-const base = inject("baseDePruebas");
+const base = await baseDeEsteArchivo(inject("baseDePruebas"));
 vi.setConfig({ testTimeout: 120_000 });
 
 const PEM = "-----BEGIN CERTIFICATE-----\nMIIB\n-----END CERTIFICATE-----";

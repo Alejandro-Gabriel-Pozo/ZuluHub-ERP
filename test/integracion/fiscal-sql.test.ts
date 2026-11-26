@@ -20,7 +20,7 @@ import {
   type Serie,
 } from "../../src/modulos/fiscal/publico";
 import "../propiedades/configuracion";
-import { crearEmpresaActiva, crearEntornoDePrueba, cuitUnico } from "./entorno";
+import { crearEmpresaActiva, crearEntornoDePrueba, cuitUnico, baseDeEsteArchivo } from "./entorno";
 import {
   acepta,
   check,
@@ -59,7 +59,7 @@ import { empresaId, personaId } from "../../src/primitivas/identificadores/marca
  * por `pg` con el rol real y su contexto firmado: no pasan por los repositorios (eso es T4).
  */
 
-const base = inject("baseDePruebas");
+const base = await baseDeEsteArchivo(inject("baseDePruebas"));
 vi.setConfig({ testTimeout: 60_000 });
 
 const ROLES = [

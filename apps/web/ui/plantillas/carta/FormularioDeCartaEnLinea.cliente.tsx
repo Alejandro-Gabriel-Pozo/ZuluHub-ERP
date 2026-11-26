@@ -17,6 +17,7 @@ import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.clien
 import { Pila } from "../../primitivas/Pila";
 import estilos from "./PantallaDeCartaEnLinea.module.css";
 import { OTRO_COLOR, type CartaEnLineaArmada } from "./modelo-de-carta-en-linea";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeCartaEnLinea = Readonly<{
   formulario: CartaEnLineaArmada["formulario"];
@@ -53,7 +54,7 @@ export function FormularioDeCartaEnLinea({ formulario, accion }: PropsDeFormular
   const logoMalEscrito = logo.trim() !== "" && !leerDireccionPegada(logo).ok;
   const delNombre = error?.campo === "nombre";
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={3}>
           <Campo

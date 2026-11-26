@@ -29,6 +29,11 @@ const REVERSION_DE_LA_IDENTIDAD = join(
   import.meta.dirname,
   "../../migraciones/reversiones/0077_revertir_identidad_de_la_carta.sql",
 );
+/** 0102 (las cuentas de imagen declaradas) cuelga de las columnas del logo de 0077: se revierte antes que ella (sin cuentas declaradas, no frena). */
+const REVERSION_DE_LAS_CUENTAS_DE_IMAGEN = join(
+  import.meta.dirname,
+  "../../migraciones/reversiones/0102_revertir_cuentas_de_imagen_declaradas.sql",
+);
 /** 0078 (el portal) y 0083 (su plan) dependen de 0077: se revierten antes que ella. */
 const REVERSION_DEL_PORTAL = join(
   import.meta.dirname,
@@ -483,7 +488,8 @@ describe.skipIf(base === null)("migración 0043: carta pública y botón «Ocult
           );
         }
         await c.query("set local pedernal.confirmar_reversion = ''");
-        // 0077 (identidad) también mira `carta_publica`: se revierte primero (sin datos, no frena).
+        // 0102 (cuentas de imagen) cuelga del logo de 0077: se revierte primero; después 0077 (identidad), que también mira `carta_publica` (sin datos, no frenan).
+        await c.query(await readFile(REVERSION_DE_LAS_CUENTAS_DE_IMAGEN, "utf8"));
         await c.query(await readFile(REVERSION_DE_LA_IDENTIDAD, "utf8"));
         await c.query(await readFile(REVERSION_DEL_PLAN, "utf8"));
         await c.query(await readFile(REVERSION_DE_LA_LECTURA, "utf8"));

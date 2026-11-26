@@ -8,6 +8,7 @@ import { ProveedorDeEnvioDeFormulario } from "../../../patrones/EnvioDeFormulari
 import { ErrorDeRespuesta } from "../../../patrones/ErrorDeRespuesta";
 import { Pila } from "../../../primitivas/Pila";
 import { CORREGIR_INICIAL, type ResultadoDeCorregir } from "./resultado-de-correccion";
+import { sinReiniciar } from "../../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeCorregirLinea = Readonly<{
   /** `corregirLaLineaAccion` con la compra, la línea, las correcciones que se vieron y la clave de este intento ya ligadas (`.bind`): no viajan en el formulario. */
@@ -35,7 +36,7 @@ export function FormularioDeCorregirLinea({ accion, textos }: PropsDeFormularioD
     if (ruta !== null) window.location.assign(ruta);
   }, [ruta]);
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={3}>
           <CampoImporte

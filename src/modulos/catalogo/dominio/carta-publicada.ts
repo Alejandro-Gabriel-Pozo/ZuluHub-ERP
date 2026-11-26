@@ -11,7 +11,10 @@ import type {
   VidrieraPublicada,
 } from "../../../puertos/vidriera-publica";
 import type { AlcanceDelHost } from "../../../capacidades/experiencia/puerta";
-import type { PartesDeDireccion } from "../../../capacidades/activos/direccion-externa";
+import {
+  armarDestinoDeLogo,
+  type PartesDeDireccion,
+} from "../../../capacidades/activos/direccion-externa";
 import type { CaraDeVidriera } from "../../../capacidades/experiencia/vidriera/caras";
 import type { ModeloDeVidriera } from "../../../capacidades/experiencia/vidriera/modelos";
 import { ocultoPor, type Disponibilidad, type EstadoDeCarta } from "./carta-publica";
@@ -76,6 +79,8 @@ export type CartaLeida = Readonly<{
   }>;
   /** El color de la empresa para sus cartas (`identidad_de_carta_empresa.color_principal`); `null` si no cargó ninguno (rige el color de la marca). */
   colorDeLaEmpresa: string | null;
+  /** Las cuentas del proveedor que la empresa de la carta tiene declaradas y ACTIVAS (0102): de otra, un logo no se muestra ni se trae. */
+  cuentasDeImagen: readonly string[];
   sucursalActiva: boolean;
   /** La empresa dueña de la carta y su tenant: con ellos la puerta pública lee el plan (T6), siempre acotado por el código de la carta. */
   empresaId: EmpresaId;
@@ -206,8 +211,13 @@ export function armarVidrieraPublicada(
       cara: leida.carta.cara,
       colorPropio: leida.carta.colorPropio,
       colorDeLaEmpresa: leida.colorDeLaEmpresa,
-      logo: leida.carta.logo,
+      // Un logo de una cuenta que la empresa no declaró (o retiró) NO se muestra: es «sin logo» (la inicial del nombre), con la misma regla que decide si se trae (`armarDestinoDeLogo`).
+      logo:
+        leida.carta.logo !== null && armarDestinoDeLogo(leida.carta.logo, leida.cuentasDeImagen).ok
+          ? leida.carta.logo
+          : null,
     },
+    cuentasDeImagen: leida.cuentasDeImagen,
     letraBase: "NORMAL",
     secciones,
   };

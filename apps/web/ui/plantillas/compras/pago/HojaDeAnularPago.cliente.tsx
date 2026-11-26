@@ -9,6 +9,7 @@ import { ErrorDeRespuesta } from "../../../patrones/ErrorDeRespuesta";
 import { Superposicion } from "../../../patrones/Superposicion";
 import { Pila } from "../../../primitivas/Pila";
 import { ANULAR_PAGO_INICIAL, type ResultadoDeAnularPago } from "./resultado-de-pago";
+import { sinReiniciar } from "../../../patrones/sin-reinicio";
 
 export type PropsDeHojaDeAnularPago = Readonly<{
   /** `anularElPagoAccion` con el pago y la compra ya ligados (`.bind`): el id no viaja en el formulario. */
@@ -47,7 +48,7 @@ export function HojaDeAnularPago({ accion, textos }: PropsDeHojaDeAnularPago) {
         cerrable={!enviando}
         etiquetaDeCerrar={textos.cerrar}
       >
-        <form action={enviar}>
+        <form action={enviar} onReset={sinReiniciar}>
           <ProveedorDeEnvioDeFormulario value={enviando}>
             <Pila separacion={3}>
               <AreaDeTexto

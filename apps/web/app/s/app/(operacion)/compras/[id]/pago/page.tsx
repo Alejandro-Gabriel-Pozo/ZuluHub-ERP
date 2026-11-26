@@ -59,6 +59,8 @@ export default async function PaginaDeDeclararElPago({ params }: PropsDePagina) 
           motivo: textos.motivo,
           sinElegir: textos.sinElegir,
           declararPago: textos.declararPago,
+          agregarMedio: textos.agregarMedio,
+          quitar: textos.quitar,
           medios: {
             EFECTIVO: textos.medioDePago("EFECTIVO"),
             TARJETA_DEBITO: textos.medioDePago("TARJETA_DEBITO"),

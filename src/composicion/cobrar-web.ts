@@ -41,8 +41,9 @@ export type DependenciasDeCobrarWeb = Readonly<{
 type Importe = Readonly<{ moneda: string; monto: string }>;
 
 /** Los datos del cobro sin las claves ausentes: para el dominio `undefined` es «no vino» y no puede viajar como valor (`exactOptionalPropertyTypes`). */
-const sinAusentes = (datos: Readonly<Record<string, string | number | undefined>>): DatosDelCobro =>
-  Object.fromEntries(Object.entries(datos).filter(([, v]) => v !== undefined));
+export const sinAusentes = (
+  datos: Readonly<Record<string, string | number | undefined>>,
+): DatosDelCobro => Object.fromEntries(Object.entries(datos).filter(([, v]) => v !== undefined));
 const importe = (i: Importe): Importe => ({ moneda: i.moneda, monto: i.monto });
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -250,24 +251,45 @@ export function cobrarLaVenta(
           })),
         },
       }),
-    (venta) => ({
-      ticketId: venta.ticketId,
-      ejemplarId: venta.ejemplarId,
-      numero: venta.numero,
-      estado: venta.estado,
-      fechaNegocio: venta.fechaNegocio,
-      total: importe(venta.total),
-      cobranzaId: venta.cobranzaId,
-      cobros: venta.cobros.map((c) => ({
-        orden: c.orden,
-        medioDePagoId: c.medioDePagoId,
-        cuentaDeCobroId: c.cuentaDeCobroId,
-        importe: importe(c.importe),
-      })),
-      pendienteDeFacturar: venta.pendienteDeFacturar,
-      yaExistia: venta.yaExistia,
-    }),
+    presentarLaVentaCobrada,
   );
+}
+
+/** Lo que sale a la pantalla de una venta cobrada (lista blanca campo por campo: sin ids internos de más); lo comparten el mostrador y la mesa. */
+export function presentarLaVentaCobrada(venta: {
+  ticketId: string;
+  ejemplarId: string;
+  numero: number;
+  estado: string;
+  fechaNegocio: string;
+  total: Importe;
+  cobranzaId: string | null;
+  cobros: readonly {
+    orden: number;
+    medioDePagoId: string;
+    cuentaDeCobroId: string | null;
+    importe: Importe;
+  }[];
+  pendienteDeFacturar: boolean;
+  yaExistia: boolean;
+}): VentaCobradaParaLaPantalla {
+  return {
+    ticketId: venta.ticketId,
+    ejemplarId: venta.ejemplarId,
+    numero: venta.numero,
+    estado: venta.estado,
+    fechaNegocio: venta.fechaNegocio,
+    total: importe(venta.total),
+    cobranzaId: venta.cobranzaId,
+    cobros: venta.cobros.map((c) => ({
+      orden: c.orden,
+      medioDePagoId: c.medioDePagoId,
+      cuentaDeCobroId: c.cuentaDeCobroId,
+      importe: importe(c.importe),
+    })),
+    pendienteDeFacturar: venta.pendienteDeFacturar,
+    yaExistia: venta.yaExistia,
+  };
 }
 
 // ---------------------------------------------------------------------------------------------------------------

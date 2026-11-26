@@ -4,6 +4,11 @@ import { REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import type { TransaccionesDePostgres } from "../../src/adaptadores/postgres/transacciones";
 import {
+  armarAnonimizacionDePartesEnTx,
+  crearCopiasDePartes,
+  type PasoDeCopiaDeParte,
+} from "../../src/composicion/anonimizacion-de-partes";
+import {
   crearCasosDeUsoDeClientes,
   crearConsultasDeClientes,
   crearDirectorioDePartes,
@@ -44,16 +49,25 @@ export type EscenarioDeClientes = Readonly<{
   personaDelOperador: PersonaId;
 }>;
 
-type TxDePruebaConClientes = TxDePrueba & RepositoriosDeClientes;
+type TxDePruebaConClientes = TxDePrueba &
+  RepositoriosDeClientes &
+  ReturnType<typeof armarAnonimizacionDePartesEnTx>;
 
 export async function montarClientes(base: BaseDePruebas) {
   const propia = await crearBaseAparte(base);
   let barrera: () => Promise<void> = () => Promise.resolve();
+  /** Los pasos de copia de otros módulos que una prueba suma para ver que `anonimizarParte` los llama y que, si uno falla, no queda nada. */
+  const pasosDeCopias: PasoDeCopiaDeParte[] = [];
   const entorno = crearEntornoDePrueba(propia.base, 12, (tx) => {
     let primera = true;
+    const anonimizacion = armarAnonimizacionDePartesEnTx(tx.db);
     return {
       ...tx,
       ...crearRepositoriosDeClientes(tx.db),
+      anonimizacionDePartes: {
+        ...anonimizacion.anonimizacionDePartes,
+        copias: crearCopiasDePartes(pasosDeCopias),
+      },
       autorizacion: {
         ...tx.autorizacion,
         delActor: async (contexto) => {
@@ -112,6 +126,7 @@ export async function montarClientes(base: BaseDePruebas) {
     propia,
     entorno,
     dueno,
+    pasosDeCopias,
     casos,
     consultas,
     directorio,

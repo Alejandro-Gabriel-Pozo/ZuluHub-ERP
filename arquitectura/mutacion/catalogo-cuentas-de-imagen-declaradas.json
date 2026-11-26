@@ -1,0 +1,7 @@
+{
+  "grupo": "catálogo (cuentas de imagen declaradas)",
+  "archivos": "src/modulos/catalogo/dominio/cuenta-de-imagen.ts",
+  "minutos": 1,
+  "pruebas": "src/modulos/catalogo/dominio/cuenta-de-imagen.test.ts",
+  "nivel": "CRITICO"
+}

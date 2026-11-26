@@ -4,7 +4,7 @@
 -- plan y pisos, los pisos los fija solo la plataforma, los tres roles base quedan como plantillas; Q1 a Q4 = la opción recomendada, Q5 = B (la cantidad de roles propios es una
 -- perilla del plan comercial, base 0).
 --
--- NO SE LEE TODAVÍA: el guard, el adaptador y las 172 acciones siguen usando la constante `PERMISOS_DE_EMPRESA` (tramo T3). Esta migración solo agrega tablas, su semilla (la
+-- NO SE LEE TODAVÍA: el guard, el adaptador y las 173 acciones siguen usando la constante `PERMISOS_DE_EMPRESA` (tramo T3). Esta migración solo agrega tablas, su semilla (la
 -- tabla de hoy, generada desde la constante por `npm run semilla:plantillas`) y la defensa en profundidad de la base. El comportamiento de hoy queda idéntico.
 --
 -- Qué guarda (la fuente de verdad del CATÁLOGO de acciones sigue en el código; acá solo quién tiene cada acción):
@@ -62,7 +62,7 @@ CREATE FUNCTION clave_de_accion_valida(p_accion text) RETURNS boolean LANGUAGE s
   SET search_path = pg_catalog, public, pg_temp AS
 $$ SELECT coalesce(p_accion ~ '^[a-z][a-z0-9_]{0,39}\.[a-z][a-z0-9_]{0,39}$', false) $$;
 
--- Un conjunto de acciones: vacío o de claves válidas, sin repetidas ni nulas, una sola dimensión y a lo sumo 1000 (DEC-0630: tope de forma, no de negocio; hoy hay 172).
+-- Un conjunto de acciones: vacío o de claves válidas, sin repetidas ni nulas, una sola dimensión y a lo sumo 1000 (DEC-0630: tope de forma, no de negocio; hoy hay 173).
 CREATE FUNCTION claves_de_accion_validas(p_acciones text[]) RETURNS boolean LANGUAGE sql IMMUTABLE
   SET search_path = pg_catalog, public, pg_temp AS
 $$
@@ -298,11 +298,16 @@ INSERT INTO piso_de_plataforma (accion, tipo, autor) VALUES
   ('emisores.confirmar_regla', 'SOLO_GERENTE', 'migracion:0094'),
   ('gerencia.cancelar_traspaso', 'SOLO_GERENTE', 'migracion:0094'),
   ('gerencia.proponer_traspaso', 'SOLO_GERENTE', 'migracion:0094'),
+  ('partes.anonimizar', 'SOLO_GERENTE', 'migracion:0094'),
   ('puntos_de_venta.activar', 'SOLO_GERENTE', 'migracion:0094'),
   ('puntos_de_venta.cambiar_ambiente', 'SOLO_GERENTE', 'migracion:0094'),
   ('puntos_de_venta.crear', 'SOLO_GERENTE', 'migracion:0094'),
   ('puntos_de_venta.desactivar', 'SOLO_GERENTE', 'migracion:0094'),
   ('puntos_de_venta.editar', 'SOLO_GERENTE', 'migracion:0094'),
+  ('roles.archivar', 'SOLO_GERENTE', 'migracion:0094'),
+  ('roles.crear', 'SOLO_GERENTE', 'migracion:0094'),
+  ('roles.editar', 'SOLO_GERENTE', 'migracion:0094'),
+  ('roles.ver', 'SOLO_GERENTE', 'migracion:0094'),
   ('series.resincronizar', 'SOLO_GERENTE', 'migracion:0094'),
   ('stock.verificar_saldos', 'SOLO_GERENTE', 'migracion:0094'),
   ('sucursales.desactivar', 'SOLO_GERENTE', 'migracion:0094'),
@@ -342,6 +347,10 @@ INSERT INTO version_de_plantilla (clave, numero, acciones, autor) VALUES
     'conteos.cancelar',
     'conteos.registrar',
     'costos.ver',
+    'cuenta_corriente.administrar',
+    'cuenta_corriente.aprobar_exceso',
+    'cuenta_corriente.cargar_a_cuenta',
+    'cuenta_corriente.ver',
     'cuentas.abrir',
     'cuentas.agregar_linea',
     'cuentas.anular',
@@ -456,6 +465,7 @@ INSERT INTO version_de_plantilla (clave, numero, acciones, autor) VALUES
     'usuarios.ver',
     'variantes.editar',
     'ventas.ver',
+    'vidrieras.administrar_cuentas_de_imagen',
     'vidrieras.administrar_portal',
     'vidrieras.crear',
     'vidrieras.editar',
@@ -481,6 +491,7 @@ INSERT INTO version_de_plantilla (clave, numero, acciones, autor) VALUES
     'comprobantes_de_proveedor.registrar',
     'comprobantes_de_proveedor.ver',
     'conteos.registrar',
+    'cuenta_corriente.cargar_a_cuenta',
     'cuentas.abrir',
     'cuentas.agregar_linea',
     'cuentas.anular',
@@ -570,6 +581,10 @@ INSERT INTO accion_introducida (accion) SELECT unnest(ARRAY[
     'conteos.cancelar',
     'conteos.registrar',
     'costos.ver',
+    'cuenta_corriente.administrar',
+    'cuenta_corriente.aprobar_exceso',
+    'cuenta_corriente.cargar_a_cuenta',
+    'cuenta_corriente.ver',
     'cuentas.abrir',
     'cuentas.agregar_linea',
     'cuentas.anular',
@@ -637,6 +652,7 @@ INSERT INTO accion_introducida (accion) SELECT unnest(ARRAY[
     'ordenes_de_compra.crear',
     'ordenes_de_compra.pedir',
     'ordenes_de_compra.ver',
+    'partes.anonimizar',
     'partes.cambiar_roles',
     'partes.crear',
     'partes.desactivar',
@@ -663,6 +679,10 @@ INSERT INTO accion_introducida (accion) SELECT unnest(ARRAY[
     'recepciones.confirmar',
     'recepciones.registrar',
     'recepciones.ver',
+    'roles.archivar',
+    'roles.crear',
+    'roles.editar',
+    'roles.ver',
     'salon.cambiar_mesa',
     'salon.dividir',
     'salon.unir',
@@ -698,6 +718,7 @@ INSERT INTO accion_introducida (accion) SELECT unnest(ARRAY[
     'usuarios.ver',
     'variantes.editar',
     'ventas.ver',
+    'vidrieras.administrar_cuentas_de_imagen',
     'vidrieras.administrar_portal',
     'vidrieras.crear',
     'vidrieras.editar',

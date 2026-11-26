@@ -31,6 +31,7 @@ import type { MotivoDeTextoInvalido } from "../../../primitivas/texto/texto-de-u
 import type { CartaPublica, EstadoDeCarta } from "../dominio/carta-publica";
 import { cartaPublicaId, esUuid } from "../dominio/identificadores";
 import { autorizar, exigirAlcanceTotal, exigirSucursalAbierta, traducir } from "./comun";
+import { exigirCuentaDelLogo, mismoLogo } from "./cuenta-del-logo";
 import type { DependenciasDeCatalogo, TxDeCatalogo } from "./contrato";
 import type { ErrorDeCatalogo } from "./errores";
 import { visibilidadDeLaCarta } from "./visibilidad-de-la-carta";
@@ -105,15 +106,6 @@ function logoValido(v: unknown): R<PartesDeDireccion | null> {
     return err("LOGO_DE_CARTA_INVALIDO");
   return ok({ ...partes, proveedor: "CLOUDINARY" });
 }
-
-const mismoLogo = (a: PartesDeDireccion | null, b: PartesDeDireccion | null): boolean =>
-  a === null || b === null
-    ? a === b
-    : a.proveedor === b.proveedor &&
-      a.cuenta === b.cuenta &&
-      a.idPublico === b.idPublico &&
-      a.version === b.version &&
-      a.extension === b.extension;
 
 /** Un texto opcional: ausente o en blanco es «sin esa línea» (`null`); si trae algo tiene que ser válido. */
 function opcional(
@@ -278,6 +270,13 @@ export function armarGuardarCartaPublica(dependencias: DependenciasDeCatalogo) {
             const perilla = await exigirPerillaDelModelo(tx, contexto, datos.valor.modelo);
             if (!perilla.ok) return perilla;
           }
+          const cuentaDelLogo = await exigirCuentaDelLogo(
+            tx,
+            contexto,
+            datos.valor.logo,
+            existente.logo,
+          );
+          if (!cuentaDelLogo.ok) return cuentaDelLogo;
           const cambiaElEstado = existente.estado !== datos.valor.estado;
           if (cambiaElEstado) {
             const exige = await pedir([
@@ -333,6 +332,8 @@ export function armarGuardarCartaPublica(dependencias: DependenciasDeCatalogo) {
           const puede = await exigirPoderPonerEnLinea(tx, contexto, sucursal);
           if (!puede.ok) return puede;
         }
+        const cuentaDelLogo = await exigirCuentaDelLogo(tx, contexto, datos.valor.logo, null);
+        if (!cuentaDelLogo.ok) return cuentaDelLogo;
         const codigo = codigoDeCartaDesdeTexto(dependencias.generarCodigoDeCarta());
         if (!codigo.ok) return err("CODIGO_DE_CARTA_INVALIDO");
         const insertada = await tx.cartasPublicas.insertar(empresaId, {
