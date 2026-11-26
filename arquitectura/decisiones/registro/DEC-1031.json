@@ -3,9 +3,9 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "SIN_DECISION",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "El salón no expone las cinco puertas crudas de la cuenta de ventas: usa tomarPedido, agregarAlPedido, quitarSinEnviar y liberarMesa, que guardan la mesa y el estado de comanda.",
   "que_cambia": "Nada que vea el negocio: una cuenta de mesa no se puede abrir sin la mesa como ancla ni dejar una línea sin su estado de comanda. Sumar la puerta cruda después es barato.",
-  "donde": "src/composicion/cuenta-de-mesa-web.ts (agregarAlPedidoDeLaMesa) y src/composicion/comandas-web.ts (quitarUnPlatoSinEnviar); Pedernal-docs plan-de-salon-dia-uno-2026-11-25.md H-1",
+  "donde": "src/composicion/cuenta-de-mesa-web.ts (agregarAlPedidoDeLaMesa) y src/composicion/comandas-web.ts (quitarUnPlatoSinEnviar); Pedernal-docs plan-de-salon-dia-uno-2026-11-25.md H-1; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja D, fila del ID)",
   "motivo": "Resuelta por el orquestador el 25/11/2026 (pregunta P-S2: sin cuentas sin mesa; se cargan mesas tipo Barra 1). Previene una cuenta de mesa abierta o cerrada salteando el ancla y el estado de comanda."
 }

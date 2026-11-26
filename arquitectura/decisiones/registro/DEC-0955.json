@@ -3,9 +3,9 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "SIN_DECISION",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "El guard decide por el conjunto de acciones del actor cuando viene; si el campo falta, decide por la matriz y un rol que la matriz no conoce no pasa.",
   "que_cambia": "Nada que vea el negocio: con las plantillas sembradas cada rol tiene exactamente lo de siempre. El camino por matriz queda solo para pruebas y roles de plataforma, como deuda a retirar.",
-  "donde": "src/capacidades/permisos/guard.ts (accionesDelActor); pagar al armar las pruebas su conjunto",
+  "donde": "src/capacidades/permisos/guard.ts (accionesDelActor); pagar al armar las pruebas su conjunto; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja D, fila del ID)",
   "motivo": "El camino por matriz sirve a fakes y pruebas. Se retira antes de abrir T5; `explicar.ts` (soporte), que sigue por matriz, también se paga antes de T5 leyendo el conjunto de la base."
 }

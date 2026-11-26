@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "PERMISOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Crear una receta, editarla y guardar una versión nueva lo puede hacer solo quien tiene composiciones.editar (gerente y administrador, con todas las sucursales); el operador mira y no guarda.",
   "que_cambia": "Quién guarda recetas. Las pantallas nueva y editar no se ofrecen a otro y el servidor vuelve a decidirlo al guardar. Revertir: cambiar la acción en la oferta y en el caso de uso.",
-  "donde": "apps/web/servidor/ofertas-de-stock.ts; recetas-pantalla.md §3 (composiciones.editar)"
+  "donde": "apps/web/servidor/ofertas-de-stock.ts; recetas-pantalla.md §3 (composiciones.editar); dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja A, fila del ID)"
 }
