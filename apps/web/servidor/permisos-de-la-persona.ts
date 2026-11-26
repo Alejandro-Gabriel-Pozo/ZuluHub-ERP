@@ -9,7 +9,6 @@ import {
   CATALOGO_DE_MODULOS,
   type ClaveAccion,
   type ClaveModulo,
-  type EstadoDeConstruccion,
 } from "../../../src/capacidades/modulos/catalogo";
 import type { ClaveDeTexto } from "../../../src/capacidades/vocabulario/catalogo";
 import { web } from "./composicion";
@@ -54,7 +53,7 @@ function dondeVive(accion: ClaveAccion): {
     if (propia !== undefined) {
       return {
         modulo,
-        enDesarrollo: (definicion.estado as EstadoDeConstruccion) === "en_desarrollo",
+        enDesarrollo: definicion.estado === "en_desarrollo",
         creaAmplia: propia.efecto === "CREA_AMPLIA",
       };
     }

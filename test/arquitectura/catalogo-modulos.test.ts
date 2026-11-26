@@ -7,7 +7,6 @@ import {
   type DefinicionDeAccion,
   type DefinicionDeModulo,
   EFECTOS_DE_ACCION,
-  type EstadoDeConstruccion,
 } from "../../src/capacidades/modulos/catalogo";
 import { CATALOGO_DE_PLATAFORMA } from "../../src/capacidades/permisos/plataforma";
 import {
@@ -501,7 +500,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
 
   it("todo módulo en desarrollo del catálogo real figura en SIN_CONSTRUIR: uno nuevo olvidado hace fallar esta prueba (E0-T1)", () => {
     const enDesarrollo = Object.entries(CATALOGO_DE_MODULOS)
-      .filter(([, definicion]) => (definicion.estado as EstadoDeConstruccion) === "en_desarrollo")
+      .filter(([, definicion]) => definicion.estado === "en_desarrollo")
       .map(([clave]) => clave);
     expect(
       enDesarrollo.filter(
