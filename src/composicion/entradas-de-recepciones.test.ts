@@ -136,7 +136,14 @@ describe("las demás entradas de «Recepciones»", () => {
       ok: true,
       valor: { despuesDe: `2026-11-24|${ID}` },
     });
-    expect(entradaDeListarRecepciones({ despues: "basura" }).ok).toBe(false);
+    // Sin objeto no hay cursor (y no revienta): primera página.
+    for (const crudo of [null, undefined, "x", 5]) {
+      expect(entradaDeListarRecepciones(crudo)).toEqual({ ok: true, valor: { despuesDe: null } });
+    }
+    expect(entradaDeListarRecepciones({ despues: "basura" })).toEqual({
+      ok: false,
+      error: { codigo: "FISCAL_DATOS_INVALIDOS", campo: "despues" },
+    });
     expect(entradaDeListarRecepciones({ despues: "2026-11-24|12" }).ok).toBe(false);
     expect(entradaDeListarRecepciones({ despues: ["x"] })).toEqual({
       ok: true,

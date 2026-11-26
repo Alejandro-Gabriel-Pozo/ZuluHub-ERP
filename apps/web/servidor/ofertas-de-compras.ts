@@ -27,5 +27,9 @@ export async function accionesDeLaCompra(
     anularPago: puede("comprobantes_de_proveedor.anular_pago"),
     verNotas:
       puede("notas_de_credito_de_proveedor.ver") && puede("notas_de_debito_de_proveedor.ver"),
+    cambiarElComprobante:
+      puede("comprobantes_de_proveedor.reemplazar") &&
+      puede("comprobantes_de_proveedor.anular") &&
+      puede("comprobantes_de_proveedor.registrar"),
   };
 }

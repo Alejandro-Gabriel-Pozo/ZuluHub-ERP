@@ -2,6 +2,7 @@ import { z } from "zod";
 import { PLANTILLAS_DE_ORIGEN, type OrigenDeUnRol } from "../modulos/identidad/publico";
 import { ok, type Resultado } from "../primitivas/resultado/resultado";
 import { entero, identificador, leer, texto, type ErrorDeEntrada } from "./entradas-de-facturacion";
+import { personaId, type PersonaId } from "../primitivas/identificadores/marca";
 
 /**
  * La frontera de la pantalla «Roles» de Cuenta: de lo que manda el navegador a lo que recibe la composición. Lista blanca campo por campo: la empresa y la persona que actúa NO se leen del pedido, salen
@@ -69,4 +70,30 @@ export type EntradaDeRolWeb = Readonly<{ rolId: string }>;
 export function entradaDeRol(crudo: unknown): Resultado<EntradaDeRolWeb, ErrorDeEntrada> {
   const forma = leer(formaDeRol, crudo);
   return forma.ok ? ok(forma.valor) : forma;
+}
+
+/**
+ * Asignar un rol a una persona (desde su ficha): la persona (el id de la dirección) y el destino, que es uno de los dos roles base asignables (`ADMINISTRADOR` u `OPERADOR`: el gerente no se asigna, se traspasa) o un rol propio por su
+ * id. Lista cerrada: cualquier otra forma no llega a la base. La empresa y quien actúa salen de la sesión; que el rol propio sea de la empresa y esté activo lo decide el caso de uso.
+ */
+const formaDeAsignarRol = z.object({
+  personaId: identificador,
+  destino: z.discriminatedUnion("tipo", [
+    z.object({ tipo: z.literal("BASE"), rol: z.enum(["ADMINISTRADOR", "OPERADOR"]) }),
+    z.object({ tipo: z.literal("PROPIO"), rolId: identificador }),
+  ]),
+});
+
+export type EntradaDeAsignarRolWeb = Readonly<{
+  personaId: PersonaId;
+  destino:
+    | Readonly<{ tipo: "BASE"; rol: "ADMINISTRADOR" | "OPERADOR" }>
+    | Readonly<{ tipo: "PROPIO"; rolId: string }>;
+}>;
+
+export function entradaDeAsignarRol(
+  crudo: unknown,
+): Resultado<EntradaDeAsignarRolWeb, ErrorDeEntrada> {
+  const forma = leer(formaDeAsignarRol, crudo);
+  return forma.ok ? ok({ ...forma.valor, personaId: personaId(forma.valor.personaId) }) : forma;
 }

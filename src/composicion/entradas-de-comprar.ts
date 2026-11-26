@@ -149,6 +149,25 @@ export type FacturaWebDeRegistrarCompra = Readonly<{
   condicionIva: string | null;
 }>;
 
+/** La factura leída con su forma, a la que acepta el caso de uso: los opcionales en blanco son `null`. Un solo lugar para «Comprar y recibir» y para «Cambiar el comprobante de la compra». */
+export const aFacturaWeb = (f: z.infer<typeof formaDeFactura>): FacturaWebDeRegistrarCompra => ({
+  tipo: f.tipo,
+  puntoDeVenta: f.puntoDeVenta,
+  numero: f.numero,
+  fecha: f.fecha,
+  vencimientoDePago: enBlancoEsNada(f.vencimientoDePago),
+  lineas: f.lineas.map((l) => ({
+    renglon: l.renglon,
+    cantidadFacturada: l.cantidadFacturada,
+    precioNeto: l.precioNeto,
+    alicuota: l.alicuota ?? null,
+  })),
+  percepciones: enBlancoEsNada(f.percepciones),
+  totalSegunFactura: f.totalSegunFactura,
+  cuitDelProveedor: enBlancoEsNada(f.cuitDelProveedor),
+  condicionIva: enBlancoEsNada(f.condicionIva),
+});
+
 /**
  * La frontera de «cotizar la factura» (las cuentas antes de guardar; Compras PR 7): solo lo que entra en la cuenta (el tipo, cada línea con su cantidad, su precio neto y su alícuota, las percepciones y el total según la factura),
  * con las mismas formas y listas que la factura de «Comprar y recibir». Todo como TEXTO decimal. Lo que la cuenta rechaza lo dice el servidor con el mismo error del alta.
@@ -242,22 +261,6 @@ export function entradaDeRegistrarCompra(
     factura:
       forma.valor.factura === undefined || forma.valor.factura === null
         ? null
-        : {
-            tipo: forma.valor.factura.tipo,
-            puntoDeVenta: forma.valor.factura.puntoDeVenta,
-            numero: forma.valor.factura.numero,
-            fecha: forma.valor.factura.fecha,
-            vencimientoDePago: enBlancoEsNada(forma.valor.factura.vencimientoDePago),
-            lineas: forma.valor.factura.lineas.map((l) => ({
-              renglon: l.renglon,
-              cantidadFacturada: l.cantidadFacturada,
-              precioNeto: l.precioNeto,
-              alicuota: l.alicuota ?? null,
-            })),
-            percepciones: enBlancoEsNada(forma.valor.factura.percepciones),
-            totalSegunFactura: forma.valor.factura.totalSegunFactura,
-            cuitDelProveedor: enBlancoEsNada(forma.valor.factura.cuitDelProveedor),
-            condicionIva: enBlancoEsNada(forma.valor.factura.condicionIva),
-          },
+        : aFacturaWeb(forma.valor.factura),
   });
 }

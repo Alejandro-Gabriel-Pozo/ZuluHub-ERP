@@ -2,7 +2,13 @@
 
 import { redirect } from "next/navigation";
 import type { ResultadoDeAccion } from "../../../servidor/acciones";
-import { archivarUnRol, crearUnRol, guardarUnRol, reactivarUnRol } from "../../../servidor/roles";
+import {
+  archivarUnRol,
+  asignarUnRol,
+  crearUnRol,
+  guardarUnRol,
+  reactivarUnRol,
+} from "../../../servidor/roles";
 import { rutaDeLaFichaDeRol } from "../../../ui/plantillas/sesion/rutas-de-cuenta";
 
 // Las acciones de servidor de «Roles», expuestas a Next. Finas a propósito (ADR-015, punto 2): la directiva `"use server"` tiene que ser lo primero de este archivo, así que lo que hacen vive en `servidor/roles.ts`.
@@ -47,4 +53,14 @@ export async function reactivarRolAccion(
 ): Promise<ResultadoDeAccion> {
   void previo;
   return reactivarUnRol(rolId);
+}
+
+/** Asignar el rol elegido a la persona de la ficha (id ligado con `.bind`; del formulario solo viaja el rol). Repetirlo no duplica. */
+export async function asignarRolAccion(
+  personaId: string,
+  previo: ResultadoDeAccion,
+  datos: FormData,
+): Promise<ResultadoDeAccion> {
+  void previo;
+  return asignarUnRol(personaId, datos);
 }

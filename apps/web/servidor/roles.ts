@@ -4,16 +4,22 @@ import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   accionesParaElegir,
   archivar,
+  asignar,
   crear,
   editar,
   fichaDeRol,
   listarLosRoles,
+  rolesAsignables,
   type DependenciasDeRolesWeb,
   type RolParaLaPantalla,
 } from "../../../src/composicion/roles-web";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
-import type { ModuloParaElegir } from "../../../src/modulos/identidad/publico";
-import { RUTAS_DE_CUENTA, rutaDeLaFichaDeRol } from "../ui/plantillas/sesion/rutas-de-cuenta";
+import type { ModuloParaElegir, RolesAsignables } from "../../../src/modulos/identidad/publico";
+import {
+  RUTAS_DE_CUENTA,
+  rutaDeLaFichaDeRol,
+  rutaDeLaFichaDeUsuario,
+} from "../ui/plantillas/sesion/rutas-de-cuenta";
 import type { ResultadoDeAccion } from "./acciones";
 import { web } from "./composicion";
 import { conLaEmpresa } from "./con-la-empresa";
@@ -57,18 +63,26 @@ export function cargarLasAccionesParaElegir(
   return accionesParaElegir(dependencias, contexto);
 }
 
+/** Los roles que se pueden asignar (los dos base y los propios activos): para el selector de la ficha de una persona. Solo el gerente (`usuarios.asignar_rol`). */
+export function cargarLosRolesAsignables(
+  contexto: ContextoOperativo,
+): Promise<Respuesta<RolesAsignables>> {
+  return rolesAsignables(dependencias, contexto);
+}
+
 /**
  * ¿La persona puede crear o editar roles? Es la oferta de `roles.crear` y `roles.editar` (solo el gerente) que el servidor calcula con `ofertaDe`. Si no se pudieron leer los permisos, `false` (cierra, no abre).
  * Ocultar no es autorizar: cada acción vuelve a pasar por el guard dentro de su transacción.
  */
 export async function ofertasDeRoles(
   contexto: ContextoOperativo,
-): Promise<Readonly<{ crear: boolean; editar: boolean }>> {
+): Promise<Readonly<{ crear: boolean; editar: boolean; asignar: boolean }>> {
   const permisos = await permisosDeLaPersona(contexto);
-  if (permisos === null) return { crear: false, editar: false };
+  if (permisos === null) return { crear: false, editar: false, asignar: false };
   return {
     crear: ofertaDe("roles.crear", permisos).permitida,
     editar: ofertaDe("roles.editar", permisos).permitida,
+    asignar: ofertaDe("usuarios.asignar_rol", permisos).permitida,
   };
 }
 
@@ -154,6 +168,33 @@ export async function reactivarUnRol(rolId: string): Promise<ResultadoDeAccion> 
   );
   revalidatePath(RUTAS_DE_CUENTA.roles);
   revalidatePath(rutaDeLaFichaDeRol(rolId));
+  return respuesta.ok ? { error: null } : { error: respuesta.error };
+}
+
+/** De lo elegido en el selector del rol (`BASE:<rol>` o `PROPIO:<id>`) al destino que pide el caso de uso; lo que no es una de las dos formas se manda sin forma y el servidor lo rechaza. */
+function destinoDe(datos: FormData): unknown {
+  const elegido = textoDe(datos, "rol");
+  if (elegido?.startsWith("BASE:") === true)
+    return { tipo: "BASE", rol: elegido.slice("BASE:".length) };
+  if (elegido?.startsWith("PROPIO:") === true) {
+    return { tipo: "PROPIO", rolId: elegido.slice("PROPIO:".length) };
+  }
+  return undefined;
+}
+
+/**
+ * Asignar un rol a la persona de la ficha (`usuarios.asignar_rol`, solo el gerente). La persona viene ligada con `.bind` (Next la cifra): del formulario solo se toma el rol elegido. Repetirlo no duplica ni audita (el mismo
+ * rol no escribe). Sin importar el resultado se vuelve a pedir la ficha y la lista: muestra lo que quedó, o lo que otra persona dejó.
+ */
+export async function asignarUnRol(personaId: string, datos: unknown): Promise<ResultadoDeAccion> {
+  const respuesta = await conLaEmpresa((contexto) =>
+    asignar(dependencias, contexto, {
+      personaId,
+      destino: datos instanceof FormData ? destinoDe(datos) : undefined,
+    }),
+  );
+  revalidatePath(RUTAS_DE_CUENTA.usuarios);
+  revalidatePath(rutaDeLaFichaDeUsuario(personaId));
   return respuesta.ok ? { error: null } : { error: respuesta.error };
 }
 
