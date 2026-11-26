@@ -172,6 +172,14 @@ function comandosDelPlan(plan) {
   ];
 }
 
+/** Todos los pasos de una corrida, en orden: los fijos y, AL FINAL, las pruebas del diff (la excepción de CLAUDE.md solo alcanza a ese último tramo). Función pura. */
+function pasosDeLaCorrida(plan) {
+  return [
+    ...PASOS_FIJOS,
+    ...comandosDelPlan(plan).map((comando, i) => ({ id: `pruebas-${i + 1}`, comando })),
+  ];
+}
+
 function git(args) {
   const r = spawnSync("git", args, { cwd: RAIZ, encoding: "utf8" });
   return r.status === 0 ? r.stdout : null;
@@ -277,10 +285,7 @@ async function main(argv) {
     return 1;
   }
 
-  const pasos = [
-    ...PASOS_FIJOS,
-    ...comandosDelPlan(plan).map((comando, i) => ({ id: `pruebas-${i + 1}`, comando })),
-  ];
+  const pasos = pasosDeLaCorrida(plan);
   const resumen = [];
   for (const paso of pasos) {
     salida(`\n== previo: ${paso.id} (${paso.comando.join(" ")})`);
@@ -321,6 +326,7 @@ module.exports = {
   PASOS_FIJOS,
   planDeLasPruebas,
   comandosDelPlan,
+  pasosDeLaCorrida,
   esCacheVieja,
   correrConReintentoPorCacheVieja,
 };
