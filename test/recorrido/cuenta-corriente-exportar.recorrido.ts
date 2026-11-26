@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { leerZipComoTextos } from "../../src/adaptadores/xlsx/leer-zip-de-prueba";
@@ -93,7 +92,10 @@ describe.skipIf(base === null)("recorrido de cuenta corriente: exportar a Excel"
       pagina.goto(`${mundo.url}${RUTA}`).catch(() => null),
     ]);
     expect(descarga.suggestedFilename()).toMatch(/^cuenta_corriente_\d{4}-\d{2}-\d{2}\.xlsx$/);
-    const zip = leerZipComoTextos(new Uint8Array(readFileSync(await descarga.path())));
+    const flujo = await descarga.createReadStream();
+    const trozos: Buffer[] = [];
+    for await (const trozo of flujo) trozos.push(Buffer.from(trozo as Uint8Array));
+    const zip = leerZipComoTextos(new Uint8Array(Buffer.concat(trozos)));
     expect(zip.get("xl/workbook.xml")).toContain('name="Cuenta corriente"');
     expect(zip.get("xl/worksheets/sheet1.xml")).toContain("<v>1234.5</v>");
     expect(zip.get("xl/sharedStrings.xml")).toContain("Cliente del recorrido");
