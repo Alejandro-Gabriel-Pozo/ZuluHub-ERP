@@ -2,6 +2,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
 import {
+  compararFilasDeLotes,
   leerLotesDelRenglon,
   lotesParaLaHuella,
   MAXIMO_DE_LOTES_POR_RENGLON,
@@ -345,5 +346,28 @@ describe("lotesParaLaHuella: el orden", () => {
           .sort((a, b) => (clave(a) < clave(b) ? -1 : clave(a) > clave(b) ? 1 : 0)),
       ),
     );
+  });
+});
+
+describe("compararFilasDeLotes", () => {
+  it("menor → −1, mayor → 1, igual → 0, sobre pares sueltos (sin pasar por el sort)", () => {
+    expect(compararFilasDeLotes(["A", null], ["B", null])).toBe(-1);
+    expect(compararFilasDeLotes(["B", null], ["A", null])).toBe(1);
+    expect(compararFilasDeLotes(["A", "x"], ["A", "x"])).toBe(0);
+  });
+
+  it("el campo ausente vale vacío: null y texto vacío empatan, y un valor es mayor que la ausencia", () => {
+    expect(compararFilasDeLotes(["A", null], ["A", ""])).toBe(0);
+    expect(compararFilasDeLotes(["A", null], ["A", "2099-01-01"])).toBe(-1);
+    expect(compararFilasDeLotes(["A", "2099-01-01"], ["A", null])).toBe(1);
+  });
+
+  it("compara por la clave completa, campo a campo, en orden", () => {
+    expect(
+      compararFilasDeLotes(["A", "2099-01-01", null, "9"], ["A", "2099-01-02", null, "1"]),
+    ).toBe(-1);
+    expect(
+      compararFilasDeLotes(["A", "2099-01-01", null, "2"], ["A", "2099-01-01", null, "1"]),
+    ).toBe(1);
   });
 });
