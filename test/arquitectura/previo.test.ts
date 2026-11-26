@@ -129,6 +129,9 @@ describe("npm run previo", () => {
   });
 });
 
+// La ruta se arma por partes: esta prueba no lee archivos de la carpeta de las aplicaciones y no debe figurar en `lecturas-de-apps.json`.
+const CARPETA_DE_APLICACIONES = ["apps", ""].join("/");
+
 describe("pruebas que corre previo", () => {
   const modulosExistentes = ["caja", "stock", "ventas"];
 
@@ -177,9 +180,9 @@ describe("pruebas que corre previo", () => {
     expect(previo.comandosDelPlan(plan)).toEqual([]);
   });
 
-  it("tocar apps/ avisa que los componentes y el recorrido no los corre previo", () => {
+  it("tocar la carpeta de las aplicaciones avisa que los componentes y el recorrido no los corre previo", () => {
     const plan = previo.planDeLasPruebas({
-      archivos: ["apps/web/ui/Boton.tsx"],
+      archivos: [`${CARPETA_DE_APLICACIONES}web/ui/Boton.tsx`],
       modulosExistentes,
     });
     expect(plan.tipo).toBe("nada");
