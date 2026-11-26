@@ -3,7 +3,7 @@
   "fecha": "2026-11-26",
   "quien": "padre",
   "tipo": "PERMISOS",
-  "estado": "CONFIRMADA",
+  "estado": "PENDIENTE_DE_OK",
   "decision": "Registrar una carga inicial exige además el permiso de ajustar el stock, o sea solo gerente y administrador, sin una acción nueva.",
   "que_cambia": "Una entrada con motivo Carga inicial pide registrar entrada y además ajustar, igual que dar de baja por vencimiento. El operador recibe sin permiso y no ve el botón. Revertir: sacar el motivo de la lista que exige ajustar.",
   "donde": "dia-uno-stock-diseno-2026-11-25.md DEC 1011 y P-4 (aprobado el 25/11/2026); dia-uno-stock-fichas-de-pantalla-2026-11-25.md FP-STK-08"
