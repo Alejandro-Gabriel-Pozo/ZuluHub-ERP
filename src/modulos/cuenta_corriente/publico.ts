@@ -85,3 +85,9 @@ export {
   armarHojaDeLaExportacion,
   type RotulosDeLaExportacion,
 } from "./dominio/hoja-de-la-exportacion";
+export type { CuentasDeConsumoParaVender } from "./casos-de-uso/puertos-de-venta";
+export type {
+  ClienteParaVender,
+  EntradaDeVerClienteParaVender,
+  ErrorAlVerClienteParaVender,
+} from "./casos-de-uso/ver-cliente-para-vender";

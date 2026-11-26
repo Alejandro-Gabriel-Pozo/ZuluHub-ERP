@@ -202,6 +202,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "cuenta_corriente.administrar"
       | "cuenta_corriente.cargar_a_cuenta"
       | "cuenta_corriente.aprobar_exceso"
+      | "cuenta_corriente.consultar_al_vender"
       | "partes.ver"
       | "partes.crear"
       | "partes.editar"

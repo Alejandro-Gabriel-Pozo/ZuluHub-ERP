@@ -324,6 +324,7 @@ describe("el catálogo comercial de módulos", () => {
           "cuenta_corriente.administrar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "cuenta_corriente.cargar_a_cuenta": { capacidad: null, efecto: "CREA_AMPLIA" },
           "cuenta_corriente.aprobar_exceso": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "cuenta_corriente.consultar_al_vender": { capacidad: null, efecto: "LECTURA" },
         },
       },
       produccion: {
@@ -362,8 +363,8 @@ describe("el catálogo comercial de módulos", () => {
     // 30 de administración (18 de usuarios, sucursales, gerencia y permisos, 5 de roles propios y su asignación de H4b T4, y 7 de la configuración fiscal de H7 T5),
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 49 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
-    // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A y `vidrieras.administrar_portal` del portal), 35 de caja, cierre y ventas (E0-T1), 39 de clientes y compras (E9-T1, T11, N3-2b, N3-4, N4-1, N4-3, N4-4, N4-5 y la exportación del 25/11/2026), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 183 en total.
-    expect(todas).toHaveLength(30 + 9 + 45 + 35 + 39 + 16 + 5 + 4);
+    // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A y `vidrieras.administrar_portal` del portal), 35 de caja, cierre y ventas (E0-T1), 39 de clientes y compras (E9-T1, T11, N3-2b, N3-4, N4-1, N4-3, N4-4, N4-5 y la exportación del 25/11/2026), 16 de salón y comandas (E7), 6 de lotes de E6-T7, 5 de producción de E6-T8 y 5 de cuenta corriente (CC-1, CC-2 y CC-5): 184 en total.
+    expect(todas).toHaveLength(30 + 9 + 45 + 35 + 39 + 16 + 5 + 5);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -505,6 +506,7 @@ const EFECTOS_DE_EMPRESA = {
     "comprobantes_de_proveedor.ver",
     "conciliaciones.ver",
     "costos.ver",
+    "cuenta_corriente.consultar_al_vender",
     "cuenta_corriente.ver",
     "devoluciones_a_proveedor.ver",
     "diferencias_de_compra.ver",

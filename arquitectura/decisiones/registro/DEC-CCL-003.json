@@ -1,0 +1,10 @@
+{
+  "id": "DEC-CCL-003",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Quien vende a cuenta (cajero incluido) ve estado, saldo y crédito de UN cliente con la acción propia consultar_al_vender; sin guardar cuál es el elegido, cada consulta deja constancia.",
+  "que_cambia": "Nadie tiene la acción hasta que el dueño abra el módulo (CC-5). Si el dueño exige que solo se pueda ver el cliente elegido para ese ticket, se guarda la elección en la cuenta de consumo (una migración y una acción más) y la consulta solo responde por ese cliente.",
+  "donde": "src/capacidades/permisos/permisos-de-cuenta_corriente.ts; src/modulos/cuenta_corriente/casos-de-uso/ver-cliente-para-vender.ts; decisión C3 del dueño del 26/11/2026 («Coincido con todas las recomendaciones»); opción A aprobada por el orquestador"
+}
