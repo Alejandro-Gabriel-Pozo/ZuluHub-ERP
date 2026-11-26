@@ -256,6 +256,16 @@ describe.skipIf(base === null)(
         null,
         null,
       ]);
+      // `ticketId` (solo lectura): cada movimiento dice a qué ticket pertenece (el del cargo, o el de la cobranza), y el único cargo con algo por saldar trae el SUYO.
+      expect(r.lineas.map((l) => l.ticketId)).toEqual([
+        cobrado.ticketId,
+        cobrado.ticketId,
+        anulado.ticketId,
+        anulado.ticketId,
+        r.lineas[4]?.ticketId,
+      ]);
+      expect(r.lineas[4]?.ticketId).not.toBeNull();
+      expect(r.cargosPendientes.map((p) => p.ticketId)).toEqual([r.lineas[4]?.ticketId]);
       // «Vencida» solo el cargo que sigue con algo por saldar: el cobrado y el anulado ya no deben nada.
       expect(r.lineas.map((l) => l.vencida)).toEqual([false, false, false, false, true]);
       const lista = valorDe(

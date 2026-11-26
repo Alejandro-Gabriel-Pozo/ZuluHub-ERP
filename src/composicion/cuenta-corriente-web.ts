@@ -104,6 +104,8 @@ export type FichaDeCuentaParaLaPantalla = Readonly<{
     vence: string | null;
     vencida: boolean;
     importe: Importe;
+    /** El ticket detrás del movimiento (el del cargo o el de la cobranza), para vincular la fila con él; `null` si no se pudo determinar. */
+    ticketId: string | null;
     /** El ticket detrás del movimiento; `null` si no se pudo determinar. */
     ticket: Readonly<{
       numero: number;
@@ -143,6 +145,7 @@ export function fichaDeLaCuenta(
         vence: l.venceEl,
         vencida: l.vencida,
         importe: l.importe,
+        ticketId: l.ticketId,
         ticket: l.ticket,
         medioDePago: l.medioDePago,
       })),
