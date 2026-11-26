@@ -50,24 +50,42 @@ export async function vigilar(pagina: Page, hostPropio: string): Promise<Vigilan
   };
 }
 
-/** axe sobre la pantalla actual: devuelve las violaciones graves o críticas (las leves no frenan el recorrido). */
-export async function violacionesGravesDeAxe(pagina: Page): Promise<string[]> {
-  // El botón que se acaba de tocar sigue con el mouse encima y su color está en transición (`transition: background-color`): axe medía el contraste
-  // a mitad de camino (falla intermitente en «Anular»). Se saca el mouse y se espera a un estado observable: que no quede ninguna TRANSICIÓN corriendo.
-  // `finished` rechaza con AbortError si la transición se cancela (el elemento se desmonta o otra la reemplaza): se espera con `allSettled`, y cada
-  // vuelta tiene tope para no colgarse; las animaciones que no son transiciones (un indicador de carga infinito) no se esperan.
-  await pagina.mouse.move(0, 0);
+/**
+ * Espera el ESTADO FINAL de la pantalla antes de auditarla: la red quieta (la recarga que sigue a una acción ya volvió), el DOM sin cambios durante una ventana más larga que cualquier transición, y ninguna
+ * TRANSICIÓN corriendo. Un botón que cambia de «apagado» a «activo» después de una acción (p. ej. «Cobrar» al terminar de enviar a cocina) arranca su `transition: background-color` DESPUÉS de que un chequeo
+ * puntual de transiciones ya dio vacío: axe medía el contraste a mitad de camino (fondo gris claro sobre texto blanco: 1,59) y fallaba en forma intermitente; el estado final cumple. No se excluye ninguna regla.
+ * Cada espera tiene tope para no colgarse; las animaciones que no son transiciones (un indicador de carga infinito) no se esperan.
+ */
+async function esperarElEstadoFinal(pagina: Page): Promise<void> {
+  await pagina.waitForLoadState("networkidle");
   await pagina.evaluate(`(async () => {
-    const limite = Date.now() + 3000;
-    for (;;) {
-      const corriendo = document.getAnimations().filter((a) => a instanceof CSSTransition && a.playState === "running");
-      if (corriendo.length === 0 || Date.now() > limite) return;
-      await Promise.race([
-        Promise.allSettled(corriendo.map((a) => a.finished)),
-        new Promise((r) => setTimeout(r, 300)),
-      ]);
+    const VENTANA_QUIETA = 300;
+    const limite = Date.now() + 5000;
+    let ultimoCambio = Date.now();
+    const observador = new MutationObserver(() => { ultimoCambio = Date.now(); });
+    observador.observe(document.documentElement, { attributes: true, childList: true, subtree: true, characterData: true });
+    try {
+      for (;;) {
+        const corriendo = document.getAnimations().filter((a) => a instanceof CSSTransition && a.playState === "running");
+        if (corriendo.length > 0) ultimoCambio = Date.now();
+        if (Date.now() > limite) return;
+        if (corriendo.length === 0 && Date.now() - ultimoCambio >= VENTANA_QUIETA) return;
+        await Promise.race([
+          Promise.allSettled(corriendo.map((a) => a.finished)),
+          new Promise((r) => setTimeout(r, 50)),
+        ]);
+      }
+    } finally {
+      observador.disconnect();
     }
   })()`);
+}
+
+/** axe sobre la pantalla actual: devuelve las violaciones graves o críticas (las leves no frenan el recorrido). */
+export async function violacionesGravesDeAxe(pagina: Page): Promise<string[]> {
+  // El botón que se acaba de tocar sigue con el mouse encima y su color está en transición: se saca el mouse (el hover también transiciona) y se espera el estado final.
+  await pagina.mouse.move(0, 0);
+  await esperarElEstadoFinal(pagina);
   const resultado = await new AxeBuilder({ page: pagina }).analyze();
   return resultado.violations
     .filter((v) => v.impact === "serious" || v.impact === "critical")
