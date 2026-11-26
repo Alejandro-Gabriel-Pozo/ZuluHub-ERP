@@ -26,10 +26,19 @@ const cargar = async () =>
   (await import(/* @vite-ignore */ RUTA)) as unknown as {
     puedeEnStock: Puede;
     puedeEditarRecetas: (contexto: never) => Promise<boolean>;
+    lotesEncendidos: (contexto: never) => Promise<boolean>;
   };
 const contexto = () => ({ empresaId: "e-1" }) as never;
-const conPermisos = (acciones: string[], activos: string[] = ["stock"]) => {
-  mundo.permisos = ok({ acciones, modulos: { activos, enSoloLectura: [] } });
+const conPermisos = (
+  acciones: string[],
+  activos: string[] = ["stock"],
+  funcionesEncendidas: string[] = [],
+) => {
+  mundo.permisos = ok({
+    acciones,
+    modulos: { activos, enSoloLectura: [] },
+    funcionesEncendidas,
+  });
 };
 beforeEach(() => {
   mundo.fallan = false;
@@ -73,5 +82,22 @@ describe("puedeEditarRecetas", () => {
     expect(await (await cargar()).puedeEditarRecetas(contexto())).toBe(false);
     mundo.fallan = true;
     expect(await (await cargar()).puedeEditarRecetas(contexto())).toBe(false);
+  });
+});
+
+describe("lotesEncendidos", () => {
+  it("solo con la perilla `lotes` del plan encendida se ofrece «Controlar por lote»", async () => {
+    conPermisos(["lotes.controlar"], ["stock"], ["lotes"]);
+    expect(await (await cargar()).lotesEncendidos(contexto())).toBe(true);
+    conPermisos(["lotes.controlar"], ["stock"], ["produccion"]);
+    expect(await (await cargar()).lotesEncendidos(contexto())).toBe(false);
+    conPermisos(["lotes.controlar"]);
+    expect(await (await cargar()).lotesEncendidos(contexto())).toBe(false);
+  });
+  it("sin permisos leídos (error o falla): no (todo nace cerrado)", async () => {
+    mundo.permisos = err("SIN_PERMISO");
+    expect(await (await cargar()).lotesEncendidos(contexto())).toBe(false);
+    mundo.fallan = true;
+    expect(await (await cargar()).lotesEncendidos(contexto())).toBe(false);
   });
 });

@@ -28,6 +28,8 @@ describe.skipIf(base === null || !stockAbierto)("recorrido de depósitos de stoc
     if (base === null) return;
     mundo = await armarMundoDelRecorrido(base, {
       modulos: ["facturacion", "catalogo", "stock"],
+      // La perilla `lotes` del plan: sin ella «Controlar por lote» no se ofrece (FP-STK-13).
+      perillas: { lotes: { tipo: "INTERRUPTOR", encendida: true } },
     });
     const ejecutable = process.env["PEDERNAL_NAVEGADOR"];
     navegador = await chromium.launch({
@@ -437,6 +439,73 @@ describe.skipIf(base === null || !stockAbierto)("recorrido de depósitos de stoc
     expect(await existencia()).toBe("3.0000");
     expect(await abiertos()).toBe(0);
     expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    expect(vigilante.tomar()).toEqual([]);
+  });
+
+  it("«Controlar por lote» se hace una sola vez (doble clic), deja el «Sin asignar» con lo que había, ofrece «Reasignar» y «Dejar de controlar»; sin lotes que reciban, «Registrar» no se habilita", async () => {
+    const { articulo, producto } = await articuloDeBase(mundo.mundo.dueno, {
+      empresa: mundo.empresa,
+    });
+    const nombre = (
+      await mundo.mundo.dueno.query<{ nombre: string }>(
+        "select nombre from producto where id = $1",
+        [producto],
+      )
+    ).rows[0]?.nombre;
+    expect(nombre).toBeTruthy();
+    await pagina.goto(`${mundo.url}/stock/movimientos/entrada`);
+    await pagina.waitForLoadState("networkidle");
+    await pagina.getByLabel("Artículo").selectOption(articulo);
+    await pagina.getByLabel("Cantidad").fill("4");
+    await pagina.getByRole("button", { name: "Registrar" }).click();
+    await pagina.waitForURL((url) => url.pathname === "/stock/movimientos");
+
+    await pagina.goto(`${mundo.url}/stock/lotes?articulo=${articulo}`);
+    await pagina.waitForLoadState("networkidle");
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    expect(await pagina.getByRole("button", { name: "Dejar de controlar" }).count()).toBe(0);
+    await pagina.getByRole("button", { name: "Controlar por lote" }).dblclick();
+    await pagina.getByRole("button", { name: "Dejar de controlar" }).waitFor();
+    await pagina.waitForLoadState("networkidle");
+    const lotesDelArticulo = async () =>
+      Number(
+        (
+          await mundo.mundo.dueno.query<{ n: string }>(
+            "select count(*)::text as n from lote where empresa_id = $1 and articulo_id = $2",
+            [mundo.empresa, articulo],
+          )
+        ).rows[0]?.n,
+      );
+    expect(await lotesDelArticulo()).toBe(1);
+    await pagina.getByText("Sin asignar", { exact: true }).waitFor();
+    expect(await pagina.getByRole("button", { name: "Controlar por lote" }).count()).toBe(0);
+    expect(vigilante.tomar()).toEqual([]);
+
+    // Reasignar: el «Sin asignar» tiene existencia, pero no hay un lote que ya exista donde ponerla.
+    await pagina.getByRole("link", { name: "Reasignar" }).click();
+    await pagina.waitForURL((url) => url.pathname === "/stock/lotes/reasignar");
+    await pagina.getByLabel("Cantidad").waitFor();
+    await pagina.getByLabel("Cantidad").fill("1");
+    await pagina.getByLabel("Detalle").fill("prueba");
+    expect(await pagina.getByRole("button", { name: "Registrar" }).isDisabled()).toBe(true);
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    await pagina.getByRole("link", { name: "Cancelar" }).click();
+    await pagina.waitForURL((url) => url.pathname === "/stock/lotes");
+
+    // Corregir el «Sin asignar» (no tiene fechas) o un lote que no es del artículo es el genérico.
+    const respuesta = await pagina.goto(
+      `${mundo.url}/stock/lotes/corregir?articulo=${articulo}&lote=00000000-0000-4000-8000-000000000000`,
+    );
+    expect(respuesta?.status()).toBe(200);
+    await pagina.getByText("Esta acción no está permitida").waitFor();
+    vigilante.tomar();
+
+    // Dejar de controlar, con doble clic: queda sin control y el botón vuelve a ser «Controlar por lote».
+    await pagina.goto(`${mundo.url}/stock/lotes?articulo=${articulo}`);
+    await pagina.waitForLoadState("networkidle");
+    await pagina.getByRole("button", { name: "Dejar de controlar" }).dblclick();
+    await pagina.getByRole("button", { name: "Controlar por lote" }).waitFor();
+    await pagina.waitForLoadState("networkidle");
     expect(vigilante.tomar()).toEqual([]);
   });
 });

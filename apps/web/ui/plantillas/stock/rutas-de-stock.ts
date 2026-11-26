@@ -12,6 +12,9 @@ export const RUTAS_DE_STOCK = {
   lotes: "/stock/lotes",
   /** La revisión y el resultado de un conteo (FP-STK-11 y FP-STK-12): no es pestaña, se llega desde Conteo. */
   revisarConteo: "/stock/conteo/revisar",
+  /** Corregir y Reasignar un lote (FP-STK-16): no son pestañas, se llega desde los lotes de un artículo. */
+  corregirLote: "/stock/lotes/corregir",
+  reasignarLote: "/stock/lotes/reasignar",
   /** No es pestaña: se llega por el botón «Carga inicial» de Existencias (FP-STK-08). */
   cargaInicial: "/stock/carga-inicial",
   entrada: "/stock/existencias",
