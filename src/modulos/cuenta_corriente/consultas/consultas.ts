@@ -1,5 +1,8 @@
 import type { DependenciasDeConsultasDeCuentaCorriente } from "./ver-cuenta";
+import type { DependenciasDeEstadoDeCuenta } from "./ver-estado-de-cuenta";
 import { armarVerCuentaDelCliente } from "./ver-cuenta";
+import { armarListarClientesConCuenta } from "./listar-clientes-con-cuenta";
+import { armarVerEstadoDeCuenta } from "./ver-estado-de-cuenta";
 import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 
 /**
@@ -7,10 +10,12 @@ import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
  * `DECLARACIONES_DE_CONSULTAS`: una nueva sin declarar su acción no compila.
  */
 export function crearConsultasDeCuentaCorriente(
-  dependencias: DependenciasDeConsultasDeCuentaCorriente,
+  dependencias: DependenciasDeConsultasDeCuentaCorriente & DependenciasDeEstadoDeCuenta,
 ) {
   return {
     verCuentaDelCliente: armarVerCuentaDelCliente(dependencias),
+    verEstadoDeCuenta: armarVerEstadoDeCuenta(dependencias),
+    listarClientesConCuenta: armarListarClientesConCuenta(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES_DE_CONSULTAS, unknown>;
 }
 

@@ -8,6 +8,7 @@ import {
   esClasePagable,
   leerPagoConMedios,
   leerSalidaDeCaja,
+  netoAPagar,
   resolverLosMedios,
   type LineaDePago,
 } from "../dominio/pago";
@@ -27,7 +28,7 @@ export type EntradaDeDeclararPago = Readonly<{
   fechaDePago: string;
   /** Un solo medio por el total de la factura. O este, o `medios`: las dos cosas juntas no se admiten. */
   medio?: string;
-  /** Varios medios, cada uno con su importe (texto decimal): la suma tiene que ser el total de la factura, que el servidor lee bajo el bloqueo (`LA_SUMA_DE_LOS_MEDIOS_NO_ES_EL_TOTAL`). Un medio de cada tipo (DEC-1280). */
+  /** Varios medios, cada uno con su importe (texto decimal): la suma tiene que ser lo que hay que pagar de la factura (su neto, total menos notas de crédito), que el servidor lee bajo el bloqueo (`LA_SUMA_DE_LOS_MEDIOS_NO_ES_EL_TOTAL`). Un medio de cada tipo (DEC-1280). */
   medios?: readonly Readonly<{ medio: string; importe: string }>[];
   /**
    * Solo con un medio `EFECTIVO`, y con él es OBLIGATORIA: la plata de la línea en efectivo (no la del total) sale de esta caja abierta en la misma transacción (T10b; dueño, 16/11/2026, 3A). Sin ella, un pago con efectivo no se declara
@@ -66,8 +67,8 @@ const efectivo = (lineas: readonly LineaDePago[]): string =>
   lineas.find((l) => l.medio === "EFECTIVO")?.importe ?? "0.00";
 
 /**
- * Declarar el pago de una factura (E9 §3.6, D142): cuándo y con qué medio o medios. El importe es el total de la factura (el que dice el papel) y se copia en el pago:
- * un pago por factura, sin parciales; con varios medios, cada uno con su importe y la suma exacta es el total (DEC-1280). Con `salidaDeCaja` (solo si hay una línea en efectivo) la plata de esa línea sale de la caja abierta indicada, en la misma transacción (DEC-0316). Guard `comprobantes_de_proveedor.pagar` (gerente y administrador). El comprobante se bloquea: dos pagos a
+ * Declarar el pago de una factura (E9 §3.6, D142): cuándo y con qué medio o medios. El importe es el NETO de la factura (su total menos lo que acreditan sus notas de crédito vigentes; sin notas, el total que dice el papel) y se copia en el pago:
+ * un pago por factura, sin parciales; con varios medios, cada uno con su importe y la suma exacta es el neto (DEC-1280); si el neto es cero, `NADA_PARA_PAGAR`. Con `salidaDeCaja` (solo si hay una línea en efectivo) la plata de esa línea sale de la caja abierta indicada, en la misma transacción (DEC-0316). Guard `comprobantes_de_proveedor.pagar` (gerente y administrador). El comprobante se bloquea: dos pagos a
  * la vez de la misma factura dejan uno (el otro, `COMPROBANTE_YA_PAGADO` con el id del vigente). Repetición (`CLAVE_DE_IDEMPOTENCIA`): misma clave y mismo
  * contenido devuelve el pago con `yaExistia` sin escribir ni auditar; misma clave y otro contenido, `CLAVE_REUTILIZADA`.
  */
@@ -120,14 +121,18 @@ export function armarDeclararPago(dependencias: DependenciasDeCompras) {
           if (!esClasePagable(comprobante.clase)) return err("COMPROBANTE_NO_PAGABLE");
           const vigente = await tx.pagosDeProveedor.vigenteDe(empresaId, comprobante.id);
           if (vigente !== null) return err({ error: "COMPROBANTE_YA_PAGADO", pagoId: vigente.id });
-          // El total se lee acá, bajo el bloqueo de la factura: la suma de los medios se compara con él y no con nada que mande el navegador.
-          const lineas = resolverLosMedios(pago.valor.medios, comprobante.totalSegunFactura);
+          // Lo que se paga es el NETO de la factura (total − notas de crédito vigentes), leído acá, bajo el bloqueo de la factura (que las notas también toman al cargarse): la suma de los medios se compara con él y no con nada
+          // que mande el navegador. Sin nada para pagar (las notas lo acreditan todo) no hay pago, ni salida de caja, ni asiento. Previene: pagar de más lo que el proveedor ya acreditó. Chequeo: `test/integracion/compras-pago-por-el-neto.test.ts`.
+          const acreditado = await tx.notasDeCredito.acreditadoDe(empresaId, comprobante.id);
+          const aPagar = netoAPagar(comprobante.totalSegunFactura, acreditado);
+          if (aPagar === null) return err("NADA_PARA_PAGAR");
+          const lineas = resolverLosMedios(pago.valor.medios, aPagar);
           if (!lineas.ok) return lineas;
           const pagoId = await tx.pagosDeProveedor.insertar(empresaId, {
             comprobanteId: comprobante.id,
             fechaDePago: pago.valor.fechaDePago,
             medios: lineas.valor,
-            importe: comprobante.totalSegunFactura,
+            importe: aPagar,
             clave: entrada.clave,
             huella,
             registradoPor: persona,
@@ -153,7 +158,7 @@ export function armarDeclararPago(dependencias: DependenciasDeCompras) {
           const enElLibro = await asentarElPagoDeLaFactura(tx, contexto, dependencias, {
             pagoId,
             comprobanteId: comprobante.id,
-            importe: comprobante.totalSegunFactura,
+            importe: aPagar,
           });
           if (!enElLibro.ok) return enElLibro;
           await tx.auditoria.registrar({
@@ -166,7 +171,9 @@ export function armarDeclararPago(dependencias: DependenciasDeCompras) {
               comprobanteId: comprobante.id,
               fechaDePago: pago.valor.fechaDePago,
               medios: lineas.valor,
-              importe: comprobante.totalSegunFactura,
+              importe: aPagar,
+              totalDeLaFactura: comprobante.totalSegunFactura,
+              acreditado,
               salidaDeCajaId: salida.valor?.cajaId ?? null,
             },
           });

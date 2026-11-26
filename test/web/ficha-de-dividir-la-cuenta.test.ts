@@ -49,6 +49,7 @@ describe("ficha de «Dividir la cuenta»", () => {
     const codigo = [
       "apps/web/ui/plantillas/salon/textos-de-dividir.ts",
       "apps/web/ui/plantillas/salon/modelo-de-dividir.ts",
+      "apps/web/ui/plantillas/cobrar/textos-de-dividir-en-el-cobro.ts",
     ]
       .map((archivo) => readFileSync(archivo, "utf8"))
       .join("\n");

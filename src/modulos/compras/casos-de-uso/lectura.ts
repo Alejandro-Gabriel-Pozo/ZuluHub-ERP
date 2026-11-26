@@ -6,6 +6,7 @@ import { FICHA_DE_TIPO_DE_COMPROBANTE } from "../dominio/comprobante";
 import { totalDeCompra } from "../dominio/importe-vigente";
 import { estadoDerivadoDeCompra, type EstadoDeCompra } from "../dominio/niveles";
 import { esUuid } from "../dominio/identificadores";
+import { netoAPagar } from "../dominio/pago";
 import type { LineaDeRecepcion, Recepcion } from "../persistencia/repositorio-de-recepciones";
 import type { FiltroDeCompras } from "../persistencia/repositorio-de-lecturas-de-compras";
 import {
@@ -158,6 +159,8 @@ export type FichaDeCompra = Readonly<{
     tributosTotal: string;
     totalCalculado: string;
     totalSegunFactura: string;
+    /** Lo que hay que pagar: el total menos lo que acreditan sus notas de crédito vigentes (`0.00` si lo acreditan todo). Lo calcula el servidor: la pantalla no hace cuentas. */
+    netoAPagar: string;
     letraNoEsperada: boolean;
     estado: string;
   }> | null;
@@ -291,6 +294,11 @@ export async function fichaDeCompraDentro(
             tributosTotal: factura.tributosTotal,
             totalCalculado: factura.totalCalculado,
             totalSegunFactura: factura.totalSegunFactura,
+            netoAPagar:
+              netoAPagar(
+                factura.totalSegunFactura,
+                await tx.notasDeCredito.acreditadoDe(contexto.empresaId, factura.id),
+              ) ?? "0.00",
             letraNoEsperada: factura.letraNoEsperada,
             estado: factura.estado,
           },

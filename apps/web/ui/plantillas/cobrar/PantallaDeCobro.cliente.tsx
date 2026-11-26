@@ -16,6 +16,8 @@ import { formatearImporte } from "../../patrones/formato-fiscal";
 import { CONFIRMACION_VENTA_A_CERO, type LineaDeLaVenta } from "../venta/modelo-de-la-cuenta";
 import estilos from "./Cobrar.module.css";
 import { FilaDeCobro } from "./FilaDeCobro.cliente";
+import { HojaDeDividirEnElCobro } from "./HojaDeDividirEnElCobro.cliente";
+import { filasDelReparto } from "./modelo-de-reparto-en-el-cobro";
 import type { PapelDeTicket } from "./PapelDelTicket.cliente";
 import { ResultadoDelCobro } from "./ResultadoDelCobro.cliente";
 import {
@@ -34,6 +36,7 @@ import {
   type VentaCobrada,
 } from "./modelo-de-cobro";
 import { type TextosDeCobrar } from "./textos-de-cobrar";
+import type { TextosDeDividirEnElCobro } from "./textos-de-dividir-en-el-cobro";
 import { useEnvioDelPedido } from "./useEnvioDelPedido.cliente";
 
 export type PropsDePantallaDeCobro = Readonly<{
@@ -67,6 +70,8 @@ export type PropsDePantallaDeCobro = Readonly<{
   cuentaExistente?: Readonly<{ cuentaId: string }> | undefined;
   /** Solo al cobrar una cuenta de una mesa dividida (SAL-E2): el rótulo del botón del resultado y, si es la última cuenta, el aviso «Mesa cobrada». */
   deLaDivision?: Readonly<{ rotuloDeVolver: string; mesaCobrada: string | null }> | undefined;
+  /** Solo al cobrar una cuenta de una mesa (SAL-E3): los textos de «Dividir la cuenta» por porcentaje; sin ellos, no se ofrece. Dividir es UN ticket con varios cobros: la hoja solo carga las filas de cobro. */
+  dividirPorPorcentaje?: TextosDeDividirEnElCobro | undefined;
   /** Vale `true` durante los primeros instantes tras abrir la vista (lo maneja la pantalla de venta): un toque en «Cobrar» entonces se ignora. */
   esperaAlAbrir?: Readonly<{ current: boolean }>;
 }>;
@@ -99,6 +104,7 @@ export function PantallaDeCobro({
   confirmoCero = false,
   cuentaExistente,
   deLaDivision,
+  dividirPorPorcentaje,
 }: PropsDePantallaDeCobro) {
   const medios = preparado.estado === "LISTO" ? preparado.opciones.medios : [];
   const [pagos, setPagos] = useState<readonly PagoEnEdicion[]>(() => {
@@ -117,6 +123,7 @@ export function PantallaDeCobro({
     esperaEntreVerificacionesMs,
   });
 
+  const [dividiendo, setDividiendo] = useState(false);
   const idDelTitulo = useId();
   // Con el ticket del cliente a la vista, la barra es la suya (`TicketDelCliente`): esta no se dibuja.
   const [viendoElTicket, setViendoElTicket] = useState(false);
@@ -155,6 +162,13 @@ export function PantallaDeCobro({
       sinLineas: cuentaExistente !== undefined,
     });
     if (pedido !== null) enviar(pedido);
+  };
+
+  // «Usar en el cobro»: una fila por parte con su importe y un medio distinto si hay (se cambia en cada fila); no cobra nada.
+  const usarElReparto = (importes: readonly string[]) => {
+    const filas = filasDelReparto(importes, medios, nuevoId);
+    if (filas.length > 0) setPagos(filas);
+    setDividiendo(false);
   };
 
   const cambiarPago = (clave: string, pago: PagoEnEdicion) => {
@@ -271,6 +285,19 @@ export function PantallaDeCobro({
               {textos.agregarOtroMedio}
             </Boton>
           ) : null}
+          {preparado.estado === "LISTO" &&
+          dividirPorPorcentaje !== undefined &&
+          cuentaExistente !== undefined ? (
+            <Boton
+              variante="secundaria"
+              deshabilitado={congelado}
+              alTocar={() => {
+                setDividiendo(true);
+              }}
+            >
+              {dividirPorPorcentaje.dividirLaCuenta}
+            </Boton>
+          ) : null}
           <LineaDelEstado linea={lineaDeEstado(estado.vuelto)} textos={textos} />
           {envio.estado.tipo === "rechazado" && !esElRechazoGenerico(envio.estado.rechazo) ? (
             <ErrorDeRespuesta error={envio.estado.rechazo} />
@@ -291,6 +318,20 @@ export function PantallaDeCobro({
         </div>
       </>
     );
+
+  if (dividiendo && dividirPorPorcentaje !== undefined) {
+    return (
+      <HojaDeDividirEnElCobro
+        total={total}
+        textos={textos}
+        textosDeDividir={dividirPorPorcentaje}
+        alUsar={usarElReparto}
+        alVolver={() => {
+          setDividiendo(false);
+        }}
+      />
+    );
+  }
 
   return (
     <section
