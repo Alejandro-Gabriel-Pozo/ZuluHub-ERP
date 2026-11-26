@@ -99,6 +99,7 @@ describe("verLaFichaDeProducto", () => {
         seVende: true,
         seCompra: false,
         admiteControlDeStock: false,
+        admiteStockPropio: true,
         nombreDeCocina: "MILA",
         codigo: "MIL-1",
         codigoDeBarras: null,
@@ -176,6 +177,30 @@ describe("verLaFichaDeProducto", () => {
       expect(await caso({ claseDeUso, activo: false })).toBe(false);
     }
     for (const claseDeUso of ["ELABORADO", "VENDIBLE"]) {
+      expect(await caso({ claseDeUso })).toBe(false);
+    }
+  });
+
+  it("admiteStockPropio: solo el elaborado y el vendible activos (la pantalla además exige la perilla `produccion`); las demás clases y el desactivado, no", async () => {
+    const caso = async (cambios: Record<string, unknown>) => {
+      const { d } = montar({
+        ver: () =>
+          ok({
+            producto: { ...PRODUCTO, alicuota: null, ...cambios },
+            seccion: null,
+            grupos: [],
+            preciosVigentes: [],
+            historial: [],
+          }),
+      });
+      const r = await verLaFichaDeProducto(d, contexto, ID);
+      return r.ok && r.dato.admiteStockPropio;
+    };
+    for (const claseDeUso of ["ELABORADO", "VENDIBLE"]) {
+      expect(await caso({ claseDeUso })).toBe(true);
+      expect(await caso({ claseDeUso, activo: false })).toBe(false);
+    }
+    for (const claseDeUso of ["MATERIA_PRIMA", "INSUMO", "REVENTA"]) {
       expect(await caso({ claseDeUso })).toBe(false);
     }
   });
