@@ -84,6 +84,8 @@ export type ErrorDeVentas =
   | ErrorDelCargoACuenta
   /** CC-2: sin el puerto de la cuenta corriente, cerrar a nombre de un cliente se rechaza (nace cerrado). */
   | "CUENTA_CORRIENTE_NO_DISPONIBLE"
+  /** CC-5: una venta a cuenta de total 0 no existe (un cargo de cero no entra al libro): `venderACuenta` la rechaza antes de abrir nada, con o sin la confirmación de cortesía. */
+  | "VENTA_A_CERO_A_CUENTA"
   | "CUENTA_NO_ABIERTA"
   | "CUENTA_CERRADA"
   | "LINEA_ID_EN_USO"

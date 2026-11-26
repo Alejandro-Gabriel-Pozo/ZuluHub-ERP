@@ -1,5 +1,6 @@
 import type { DependenciasDeConsultasDeIdentidad } from "./contrato";
 import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
+import { armarAccionesParaElegir } from "./acciones-para-elegir";
 import { armarListarInvitacionesPendientes } from "./listar-invitaciones-pendientes";
 import { armarListarMiembros } from "./listar-miembros";
 import { armarListarRoles } from "./listar-roles";
@@ -23,6 +24,7 @@ export function crearConsultasDeIdentidad(dependencias: DependenciasDeConsultasD
     listarRoles: armarListarRoles(dependencias),
     verRol: armarVerRol(dependencias),
     rolesAsignables: armarRolesAsignables(dependencias),
+    accionesParaElegir: armarAccionesParaElegir(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES_DE_CONSULTAS, unknown>;
 }
 

@@ -105,6 +105,17 @@ export const DECLARACIONES = {
       },
     },
   },
+  cerrarMesaACuenta: {
+    accion: "mesas.ver",
+    tambien: ["cuentas.cerrar", "cuenta_corriente.cargar_a_cuenta", "cuentas.anular"],
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/salon-cerrar-mesa-a-cuenta.test.ts",
+        it: "doble clic en cerrar la mesa a cuenta deja un ticket, un cargo y la mesa libre, y devuelve yaEstabaCerrada",
+      },
+    },
+  },
   enviarACocina: {
     accion: "mesas.ver",
     tambien: ["comandas.enviar"],

@@ -164,4 +164,16 @@ export const TEXTOS_DE_VENTAS = {
   "ventas.error.ticket_con_factura_vigente": {
     porDefecto: "Primero acreditá la factura con una nota de crédito",
   },
+  // Venta a cuenta corriente de total 0 (`venderACuenta`, CC-5): texto propio aprobado por el dueño el 26/11/2026 («Apruebo el texto», sobre el aviso de ventas en $0; DEC-VEN-003).
+  "ventas.error.venta_a_cero_a_cuenta": {
+    porDefecto: "No se puede cargar a cuenta una venta de $0.",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/composicion/errores-de-ventas.ts",
+        nombre: "traducirErrorDeVentas",
+      },
+    ],
+    fuente: { decision: "DEC-VEN-003" },
+  },
 } as const;

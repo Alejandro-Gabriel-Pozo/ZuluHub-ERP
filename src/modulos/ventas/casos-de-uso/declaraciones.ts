@@ -102,4 +102,16 @@ export const DECLARACIONES = {
       },
     },
   },
+  venderACuenta: {
+    // La declaración admite UNA acción y X1 no deja que una carpeta declare la de otro módulo: se declara `cuentas.cerrar`; el caso exige además `cuentas.abrir`, `cuentas.agregar_linea` y
+    // `cuenta_corriente.cargar_a_cuenta` (ver `vender-a-cuenta.ts`). Sin permiso nuevo.
+    accion: "cuentas.cerrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/ventas-vender-a-cuenta.test.ts",
+        it: "I9: repetir venderACuenta con la misma cuenta deja una venta, un ticket y un cargo, y devuelve yaEstabaCerrada",
+      },
+    },
+  },
 } as const satisfies Record<string, DeclaracionDeCasoDeUso>;

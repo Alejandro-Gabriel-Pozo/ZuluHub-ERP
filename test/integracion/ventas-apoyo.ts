@@ -91,6 +91,16 @@ export const REGLAS_DE_PRUEBA_CON_PRODUCCION: ReglasDeEmpresa = {
   },
 };
 
+/** Las reglas con `stock`, `clientes` y `cuenta_corriente` disponibles: un mundo con ventas, stock y cuenta corriente sobre la misma base (CC-5, venta a cuenta con descuento de stock). */
+export const REGLAS_DE_PRUEBA_CON_STOCK_Y_CUENTA_CORRIENTE: ReglasDeEmpresa = {
+  ...REGLAS_DE_PRUEBA_CON_STOCK,
+  catalogo: {
+    ...REGLAS_DE_PRUEBA_CON_STOCK.catalogo,
+    clientes: { ...CATALOGO_DE_MODULOS.clientes, estado: "disponible" },
+    cuenta_corriente: { ...CATALOGO_DE_MODULOS.cuenta_corriente, estado: "disponible" },
+  },
+};
+
 /** Las mismas reglas con `clientes` y `cuenta_corriente` disponibles (el módulo real está en desarrollo): lo que usa un mundo con la cuenta corriente de clientes cableada (CC-2). */
 export const REGLAS_DE_PRUEBA_CON_CUENTA_CORRIENTE: ReglasDeEmpresa = {
   ...REGLAS_DE_PRUEBA,
@@ -225,7 +235,9 @@ export async function montarVentas(
   await dueno.connect();
   const reglas =
     opciones.cuentaCorriente === true
-      ? REGLAS_DE_PRUEBA_CON_CUENTA_CORRIENTE
+      ? opciones.stock === true
+        ? REGLAS_DE_PRUEBA_CON_STOCK_Y_CUENTA_CORRIENTE
+        : REGLAS_DE_PRUEBA_CON_CUENTA_CORRIENTE
       : opciones.produccion === true
         ? REGLAS_DE_PRUEBA_CON_PRODUCCION
         : opciones.stock === true

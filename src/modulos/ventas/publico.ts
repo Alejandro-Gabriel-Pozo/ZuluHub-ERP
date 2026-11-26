@@ -105,6 +105,7 @@ export { calcularLasLineas } from "./casos-de-uso/calculo";
 export { anclaValida, type Ancla } from "./dominio/ancla";
 export { esUuid } from "./dominio/identificadores";
 export type { Cuenta, Linea, OpcionDeLinea, ModoDeCopia } from "./persistencia/modelo-de-cuentas";
+export type { EntradaDeVenderACuenta } from "./casos-de-uso/vender-a-cuenta";
 export type {
   EntradaDeVenderYCobrar,
   SalidaDeVenderYCobrar,
