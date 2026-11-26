@@ -2,7 +2,7 @@
  * El PERFIL del CI de un pull request (dueño, 25/11/2026: «ser más flexible para llegar al objetivo, con un contador de deuda; el cliente tendrá 1 o 2 personas operando por
  * sucursal como máximo»). Lo usa `planificar-mutacion.cjs` (decide qué corre) y `evaluar-gate.cjs` (decide qué salto acepta el Gate); la rama de integración vive UNA vez, acá.
  *
- *  - `liviano`: un pull request hacia la rama de integración. Sin mutación ni Estabilidad (corren de noche, `nocturna-de-integracion.yml`) y la web (compilación, componentes y
+ *  - `liviano`: un pull request hacia la rama de integración. Sin mutación ni Estabilidad (corren en la corrida nocturna de `main`, el `schedule` de `ci.yml`; la rama de integración se retira tras el pull request final, 26/11/2026) y la web (compilación, componentes y
  *    recorrido) solo si el cambio la toca (`tocaLaWeb`);
  *  - `completo`: el pull request final, de la rama de integración hacia otra (`main`): TODOS los grupos, Estabilidad siempre y la web siempre;
  *  - `por-grafo`: cualquier otro (por ejemplo, una actualización de dependencias hacia `main`): lo de antes, solo lo que el cambio alcanza.
