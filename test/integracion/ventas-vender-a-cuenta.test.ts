@@ -430,6 +430,30 @@ describe.skipIf(base === null)("ventas: venta a cuenta corriente (CC-5)", () => 
       ).toBe(1);
     });
 
+    it("dos venderACuenta de la MISMA cuenta a la vez con CLIENTES distintos: uno gana y el otro es CLAVE_REUTILIZADA; un solo cargo, al cliente que ganó", async () => {
+      const x = await m.escenario();
+      const c1 = await a.cliente(x);
+      const c2 = await a.cliente(x);
+      const p1 = pedido(x, c1);
+      const p2 = { ...p1, clienteId: c2 };
+      const [r1, r2] = await dosALaVez(
+        () => firme(() => vender(x.gerente, p1)),
+        () => firme(() => vender(x.gerente, p2)),
+      );
+      expect([r1.ok, r2.ok].filter(Boolean)).toHaveLength(1);
+      expect([r1, r2].filter((r) => !r.ok)).toEqual([{ ok: false, error: "CLAVE_REUTILIZADA" }]);
+      const gano = r1.ok ? c1 : c2;
+      const perdio = r1.ok ? c2 : c1;
+      expect(await a.asientos(x, gano)).toHaveLength(1);
+      expect(await a.asientos(x, perdio)).toEqual([]);
+      expect(await huellaDeBase(p1.cuentaId)).toEqual({
+        ...nada,
+        cuentas: 1,
+        lineas: 1,
+        tickets: 1,
+      });
+    });
+
     it("dos ventas a cuenta del MISMO cliente (cuentas distintas) a la vez, con límite para una sola: una pasa y la otra da EXCEDE_EL_LIMITE sin dejar cuenta, línea, ticket ni cargo", async () => {
       const x = await m.escenario();
       const c = await a.cliente(x, { limite: "1500.00" });
