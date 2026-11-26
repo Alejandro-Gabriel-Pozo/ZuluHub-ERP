@@ -1,0 +1,7 @@
+{
+  "grupo": "web (notas del proveedor: modelo de la pantalla)",
+  "archivos": "apps/web/ui/plantillas/compras/notas/modelo-de-notas.ts",
+  "minutos": 2,
+  "pruebas": "test/web/modelo-de-notas.test.ts",
+  "nivel": "PANTALLA"
+}

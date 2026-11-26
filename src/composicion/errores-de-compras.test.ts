@@ -23,6 +23,13 @@ describe("traducirErrorDeCompras", () => {
     expect(traducirErrorDeCompras(error)).toEqual({ codigo: "COMPRAS_REMITO_REPETIDO" });
   });
 
+  it("anular una nota ya descontada por un pago sale con su texto propio (el del dueño, 26/11/2026), no como el genérico", () => {
+    expect(traducirErrorDeCompras("NOTA_DE_CREDITO_CON_PAGO")).toEqual({
+      codigo: "COMPRAS_NOTA_CON_PAGO",
+    });
+    expect(traducirErrorDeCompras("NOTA_DE_CREDITO_NO_ENCONTRADA")).toEqual(GENERICO);
+  });
+
   it("una factura ya cargada sale como COMPRAS_FACTURA_REPETIDA y no lleva el id", () => {
     expect(
       traducirErrorDeCompras({ error: "COMPROBANTE_YA_REGISTRADO", comprobanteId: ID }),
