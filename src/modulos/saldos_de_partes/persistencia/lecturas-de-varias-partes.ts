@@ -59,7 +59,13 @@ export type SaldoDeParte = Readonly<{ parteId: string; saldo: Importe }>;
 
 /** Un cargo con algo por saldar y de quién es: lo agrega la lista de clientes con cuenta. */
 export type CargoPendienteDeParte = CargoPendiente &
-  Readonly<{ parteId: string; fechaNegocio: FechaCivil }>;
+  Readonly<{
+    parteId: string;
+    fechaNegocio: FechaCivil;
+    /** De dónde viene el cargo (el ticket que lo originó): solo lectura, para que quien muestra la deuda pueda vincular la fila con su origen. */
+    origenTipo: string;
+    origenId: string;
+  }>;
 
 /** Lo que lee el libro de VARIAS partes a la vez (CC-4). */
 export interface LecturasDeVariasPartes {
@@ -196,7 +202,15 @@ export async function partidasAbiertas(
   parteIds: readonly string[],
   sentido: Sentido,
   lado: LadoDePartida,
-): Promise<(PartidaAbierta & Readonly<{ parteId: string; fechaNegocio: FechaCivil }>)[]> {
+): Promise<
+  (PartidaAbierta &
+    Readonly<{
+      parteId: string;
+      fechaNegocio: FechaCivil;
+      origenTipo: string;
+      origenId: string;
+    }>)[]
+> {
   const ids = parteIds.filter(esUuidCanonico);
   if (ids.length === 0) return [];
   const filas = await db
@@ -213,6 +227,8 @@ export async function partidasAbiertas(
       "a.registrado_en as registrado_en",
       "a.referencia_tipo as referencia_tipo",
       "a.referencia_id as referencia_id",
+      "a.origen_tipo as origen_tipo",
+      sql<string>`a.origen_id::text`.as("origen_id"),
       sql<string>`s.tope::text`.as("tope"),
       sql<string>`s.importe_imputado::text`.as("imputado"),
       sql<string>`(s.tope - s.importe_imputado)::text`.as("pendiente"),
@@ -239,6 +255,8 @@ export async function partidasAbiertas(
     registradoEn: f.registrado_en,
     referenciaTipo: f.referencia_tipo,
     referenciaId: f.referencia_id,
+    origenTipo: f.origen_tipo,
+    origenId: f.origen_id,
     tope: importeDesdeTexto(ARS, f.tope),
     imputado: importeDesdeTexto(ARS, f.imputado),
     pendiente: importeDesdeTexto(ARS, f.pendiente),
