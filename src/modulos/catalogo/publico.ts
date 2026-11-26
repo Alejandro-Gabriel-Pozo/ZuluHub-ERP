@@ -221,6 +221,7 @@ export type {
   PrecioParaVender,
   ProductoParaVender,
 } from "./casos-de-uso/productos-para-vender";
+export type { CuentaDeImagenParaAdministrar } from "./consultas/consultas-de-cuentas-de-imagen";
 export type {
   CartaParaAdministrar,
   ProductoOcultoParaAdministrar,
