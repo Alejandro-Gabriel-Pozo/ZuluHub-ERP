@@ -45,6 +45,23 @@ describe.skipIf(base === null)("recorrido de cuenta corriente: abrir y vender a 
     );
   const cargosDe = (cliente: string) =>
     contar("asiento_de_saldo", "and parte_id = $2 and sentido = 'A_COBRAR'", [cliente]);
+  /** Cambia el rol de la persona del recorrido: un disparador solo lo deja con un traspaso o una asignación del gerente, así que la siembra el dueño de la base sin disparadores (solo esta transacción, como la sesión de caja). */
+  const ponerRol = async (rol: "GERENTE" | "OPERADOR") => {
+    const c = mundo.mundo.dueno;
+    try {
+      await c.query("begin");
+      await c.query("set local session_replication_role = replica");
+      await c.query("update membresia set rol = $3 where empresa_id = $1 and persona_id = $2", [
+        mundo.empresa,
+        persona,
+        rol,
+      ]);
+      await c.query("commit");
+    } catch (error) {
+      await c.query("rollback");
+      throw error;
+    }
+  };
   const clienteDeBase = async (nombre: string) => {
     const id = (
       await consulta<{ id: string }>(
@@ -150,7 +167,7 @@ describe.skipIf(base === null)("recorrido de cuenta corriente: abrir y vender a 
     await ir("/caja/cuenta-corriente/habilitar");
     await pagina.getByRole("combobox", { name: "Cliente" }).selectOption(agencia);
     await pagina.getByLabel("Plazo", { exact: true }).fill("30");
-    await pagina.getByLabel("Límite de crédito (ARS)").fill("100000");
+    await pagina.getByLabel("Límite", { exact: true }).fill("100000");
     expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
     await pagina.getByRole("button", { name: "Habilitar", exact: true }).click();
     await expect.poll(() => contar("cuenta_del_cliente", "and parte_id = $2", [agencia])).toBe(1);
@@ -231,10 +248,7 @@ describe.skipIf(base === null)("recorrido de cuenta corriente: abrir y vender a 
 
   it("el operador (sin `cuenta_corriente.ver`) no ve la entrada ni la lista y, con el límite pasado, ve que no puede aprobar", async () => {
     // La misma persona pasa a ser operador de la sucursal: el servidor lee el rol en cada pedido.
-    await consulta(
-      "update membresia set rol = 'OPERADOR' where empresa_id = $1 and persona_id = $2",
-      [mundo.empresa, persona],
-    );
+    await ponerRol("OPERADOR");
     await crearAsignacionDeBase(mundo.mundo.dueno, mundo.empresa, persona, sucursal);
     try {
       await ir("/caja/cuenta-corriente");
@@ -258,10 +272,7 @@ describe.skipIf(base === null)("recorrido de cuenta corriente: abrir y vender a 
       ).toBe(true);
       expect(await cargosDe(constructora)).toBe(0);
     } finally {
-      await consulta(
-        "update membresia set rol = 'GERENTE' where empresa_id = $1 and persona_id = $2",
-        [mundo.empresa, persona],
-      );
+      await ponerRol("GERENTE");
     }
   });
 });
