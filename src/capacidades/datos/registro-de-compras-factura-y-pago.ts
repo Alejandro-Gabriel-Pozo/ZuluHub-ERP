@@ -39,17 +39,6 @@ const DE_LA_NOTA = (para: string): Proposito => ({
     "Pedernal-docs, brief `PR-NOTAS-1-notas-de-credito-y-debito-con-pagos.md` (pantalla 10) y maqueta `briefs/maquetas/servicios-y-bienes-de-uso.html` («Cargar una nota del proveedor»); ficha aprobada por el orquestador el 26/11/2026 (NOTAS-2c-1); quién: gerente y administrador (notas_de_credito_de_proveedor.registrar y notas_de_debito_de_proveedor.registrar)",
 });
 
-/** «Reemplazar el comprobante» (NOTAS-2c-2): el formulario, el permiso y el propósito que declaran los datos que ese formulario usa y que viven en `registro-de-compras.ts` (producto y motivo). */
-export const DEL_REEMPLAZO = {
-  formulario: "apps/web/ui/plantillas/compras/reemplazo/FormularioDeReemplazar.cliente.tsx",
-  accion: ["comprobantes_de_proveedor.reemplazar"] as const,
-  proposito: (para: string): Proposito => ({
-    para,
-    fuente:
-      "Pantalla 11 de la maqueta de Diseño 2 (según el pedido del orquestador) y `decisiones-del-dueno-2026-11.md` (P-1 del 26/11/2026: el costo del stock no cambia al reemplazar); ficha aprobada por el orquestador el 26/11/2026 (NOTAS-2c-2); quién: gerente y administrador (comprobantes_de_proveedor.reemplazar)",
-  }),
-};
-
 export const DATOS_DE_COMPRAS_FACTURA_Y_PAGO = {
   "fecha-de-pago-de-compra": {
     // Que la fecha sea real y no futura (el «hoy» de Argentina) lo decide el servidor (`leerPago`); la pantalla solo ofrece la de hoy y tope en hoy como ayuda.

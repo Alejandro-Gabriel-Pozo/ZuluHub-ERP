@@ -6,7 +6,7 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  * cambiar el comprobante de una compra (`/compras/[id]/cambiar-comprobante`, N1/N2; pantalla 11 de la maqueta de Diseño 2), más los dos enlaces que la abren (en el detalle de la factura y en la ficha de la compra). La comprueba
  * `test/web/ficha-de-reemplazo-de-compras.test.ts` contra el catálogo de textos y el de permisos. No crea acciones ni permisos. Previene: un botón o un texto que nadie aprobó, y una ruta que se mueve sin que la ficha lo note.
  *
- * SUPUESTOS (aceptados por el orquestador el 26/11/2026, costo de revertir bajo):
+ * SUPUESTOS (DEC-COM-015; aceptados por el orquestador el 26/11/2026, costo de revertir bajo):
  *  1. Una sola pantalla con dos entradas (no dos pantallas).
  *  2. «Pago» es la única etiqueta del primer paso sin parecido aprobado (DEC-COM-015); «Conciliaciones» y «Notas de la factura» reutilizan textos aprobados. Los frenos no llevan texto propio: el servidor los vuelve a revalidar
  *     al enviar y el error sale con el mensaje genérico.

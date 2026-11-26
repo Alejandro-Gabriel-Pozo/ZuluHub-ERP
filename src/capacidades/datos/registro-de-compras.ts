@@ -1,5 +1,5 @@
+import { DEL_REEMPLAZO as R } from "./del-reemplazo-de-compras";
 import type { DefinicionDeDato, Proposito } from "./tipos-de-datos";
-import { DEL_REEMPLAZO as R } from "./registro-de-compras-factura-y-pago";
 
 /**
  * Los datos de la lista de compras del registro de datos (ver `registro.ts`), en su propio archivo (una línea en el registro por módulo, sin pisar a los demás): los tres campos del filtro de la
