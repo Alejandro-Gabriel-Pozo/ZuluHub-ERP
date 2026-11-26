@@ -253,7 +253,7 @@ describe.skipIf(base === null)("compras: pago con varios medios", () => {
     ).toBe(1);
   });
 
-  it("un pago viejo (cabecera con su línea única del relleno de la 0103, sin salida de caja) se lee y se anula igual", async () => {
+  it("un pago viejo (cabecera con su línea única del relleno de la 0103, sin asiento en el libro) no se anula en silencio: falla cerrado y queda vigente", async () => {
     const m = await armar();
     // Cabecera y línea en UNA transacción: desde el paso 2 (0109) la base exige las dos juntas.
     await c.filas("begin");
@@ -267,10 +267,16 @@ describe.skipIf(base === null)("compras: pago con varios medios", () => {
       [m.e.empresa, pago?.id],
     );
     await c.filas("commit");
-    valorDe(
+    expect(
       await c.casos.anularPago(m.e.gerente, { pagoId: pago?.id as string, motivo: "Era de antes" }),
-    );
+    ).toEqual({ ok: false, error: "ASIENTO_DEL_PAGO_NO_ENCONTRADO" });
     expect(await lineas(m.comprobanteId)).toEqual([{ medio: "EFECTIVO", importe: "2420.00" }]);
+    expect(
+      await c.contar(
+        "select count(*) as n from pago_de_comprobante where id = $1 and estado = 'VIGENTE'",
+        [pago?.id],
+      ),
+    ).toBe(1);
     expect(await movimientos(m.caja.sesionId)).toBe(1);
   });
 });
