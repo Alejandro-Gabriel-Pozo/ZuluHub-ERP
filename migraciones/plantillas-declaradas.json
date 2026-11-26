@@ -141,6 +141,7 @@
     "roles.crear": ["GERENTE"],
     "roles.editar": ["GERENTE"],
     "roles.ver": ["GERENTE"],
+    "salidas_de_dinero.registrar": ["ADMINISTRADOR", "GERENTE"],
     "salon.cambiar_mesa": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "salon.dividir": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "salon.unir": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],

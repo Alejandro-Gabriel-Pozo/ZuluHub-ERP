@@ -190,6 +190,17 @@ export const DECLARACIONES = {
       },
     },
   },
+  registrarSalidaDeDinero: {
+    // El piso: quien puede registrar un movimiento manual. Por un medio que no es efectivo pide además `salidas_de_dinero.registrar` (`accionParaLaSalida`).
+    accion: "movimientos_caja.registrar_manual",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/caja-salida-de-dinero.test.ts",
+        it: "la misma salida dos veces con la misma clave: la segunda devuelve yaExistia y no escribe ni audita",
+      },
+    },
+  },
   registrarAjuste: {
     accion: "movimientos_caja.ajustar",
     repeticion: {

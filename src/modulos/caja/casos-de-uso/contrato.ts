@@ -1,4 +1,6 @@
+import type { NivelesDeControl } from "../../../capacidades/controles/niveles";
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
+import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
 import type { Auditoria } from "../../../puertos/auditoria";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
 import type { LecturaDeDerechosDeUso } from "../../../puertos/derechos-de-uso";
@@ -17,6 +19,7 @@ import type { RepositorioDeDeclaraciones } from "../persistencia/repositorio-de-
 import type { RepositorioDeCuentasDeCobro } from "../persistencia/repositorio-de-cuentas";
 import type { RepositorioDeMediosDePago } from "../persistencia/repositorio-de-medios";
 import type { RepositorioDeMovimientos } from "../persistencia/repositorio-de-movimientos";
+import type { RepositorioDeMovimientosDeDinero } from "../persistencia/repositorio-de-movimientos-de-dinero";
 import type { RepositorioDeSesiones } from "../persistencia/repositorio-de-sesiones";
 
 /**
@@ -33,6 +36,14 @@ export type TxDeCaja = LecturaDeEstados &
     sucursales: Pick<RepositorioDeSucursales, "jornadaDe">;
     sesiones: RepositorioDeSesiones;
     movimientos: RepositorioDeMovimientos;
+    /** El acto «movimiento de dinero» (solo inserción): la salida de dinero lo escribe junto con su egreso. */
+    movimientosDeDinero: RepositorioDeMovimientosDeDinero;
+    /** El nivel vigente de cada control (permitir, avisar), leído en esta transacción: `caja.salida_sin_identificar`. */
+    niveles: NivelesDeControl;
+    /** ¿Esa persona es miembro ACTIVO de la empresa? Para que una salida de dinero a un empleado no apunte a una persona ajena. Solo lectura. */
+    empleados: Readonly<{
+      esMiembroActivo(empresa: EmpresaId, persona: PersonaId): Promise<boolean>;
+    }>;
     /** El cobro (puerto de cobrar): su fila con el origen y los datos, y las marcas de tarjeta. */
     cobros: RepositorioDeCobros;
     arqueos: RepositorioDeArqueos;
