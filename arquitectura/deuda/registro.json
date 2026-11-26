@@ -529,19 +529,5 @@
     "motivo": "Introducir los chequeos de lista de permitidos y de fuente única (PR 2 de C1) sin reescribir de una vez todas las validaciones existentes: lo nuevo falla desde este PR y lo existente se salda con vencimiento (las migraciones ya aplicadas no se editan: se corrigen con una migración nueva). La cuenta por archivo (que solo baja) está en arquitectura/deuda/validacion-de-datos.json. puerta.ts y ruta-de-retorno.ts ya se reescribieron con lista de permitidos (Deuda 4, #209 y #214) y salieron del presupuesto; configuracion.ts del correo y entorno.ts se reescribieron con lista de permitidos (Deuda 9) y salieron del presupuesto. entrada-del-plan.ts y filtros-de-empresas.ts salieron por P2 (fuente única: importan su tope del dueño, 500 y 200), no por lista de permitidos.",
     "aprobadoPor": "orquestador (PR 2 de C1 autorizado el 2026-11-06 por mensaje entre sesiones; decisión del dueño 2026-11-05). Reescribir YA lo existente que viola P1 (en vez de dejarlo pasar): el dueño, 2026-11-05 y 2026-11-06, conversación con el orquestador; constancia en `11-especificaciones/decisiones-del-dueno-2026-11.md` del repo de docs, fila «Principios P1 y P2 de validación».",
     "vence": "2027-01-05"
-  },
-  {
-    "id": "perilla-facturar-antes-de-cobrar--condiciones-del-dueno",
-    "archivos": [
-      "src/modulos/ventas/casos-de-uso/emitir-comprobante-de-ticket.ts",
-      "src/modulos/ventas/aporte-al-cierre.ts"
-    ],
-    "descripcion": "Dos condiciones del dueño (26/11/2026, decisiones DEC-1241 y DEC-1243) para encender la perilla facturar_antes_de_cobrar a cualquier empresa. Sin construir. 1. Restringir «facturar sin cobrar» a gerente y administrador (acción nueva, no ventas.ver y comprobantes.emitir): facturar sin cobrar emite un comprobante fiscal y deja una deuda (DEC-1241). 2. Resolver la brecha del cierre: con la perilla encendida, un ticket emitido sin cobrar ni facturar no figura como «pendiente de facturar» porque el aporte no recibe el contexto de la empresa; toca cierre y cuenta corriente (DEC-1243). VENCE antes de encender la perilla a cualquier empresa: regla de proceso, nada impide hoy encenderla.",
-    "tipo": "backlog",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-11-26",
-    "motivo": "Condición del dueño (26/11/2026, Excel de decisiones, comentarios de DEC-1241 y DEC-1243): confirmó las dos decisiones sin construir esto, con la condición de no encender la perilla facturar_antes_de_cobrar a ninguna empresa hasta resolverlo.",
-    "aprobadoPor": "dueño (26/11/2026, Excel decisiones-pendientes-del-pr-final, vía el orquestador)",
-    "vence": "2027-01-25"
   }
 ]
