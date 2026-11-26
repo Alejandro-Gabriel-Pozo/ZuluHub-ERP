@@ -12,6 +12,8 @@ import {
   type EstadoDeTenant,
   type EstadoEfectivo,
 } from "../../../contexto/estados";
+import { conjuntoEfectivo } from "../../../capacidades/roles/conjunto-efectivo";
+import type { RolDeLaMembresia } from "../../../capacidades/permisos/roles";
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import type { Resultado } from "../../../primitivas/resultado/resultado";
 import {
@@ -37,7 +39,26 @@ import {
 
 /** Por qué el actor no tiene rol vigente en la empresa (o `CON_ROL` si lo tiene). */
 export type RazonDelRol =
-  "CON_ROL" | "PERSONA_INEXISTENTE" | "PERSONA_SUSPENDIDA" | "SIN_MEMBRESIA" | "MEMBRESIA_APAGADA";
+  | "CON_ROL"
+  /** Tiene un rol propio activo: sus acciones son las de la versión vigente de ese rol. */
+  | "CON_ROL_PROPIO"
+  /** Su rol propio está archivado: no otorga nada (el conjunto queda vacío aunque la membresía siga apuntando a él). */
+  | "ROL_PROPIO_ARCHIVADO"
+  /** Apunta a un rol propio cuya versión no se pudo leer: nace cerrado, sin acciones. */
+  | "ROL_PROPIO_ILEGIBLE"
+  | "PERSONA_INEXISTENTE"
+  | "PERSONA_SUSPENDIDA"
+  | "SIN_MEMBRESIA"
+  | "MEMBRESIA_APAGADA";
+
+/**
+ * De dónde sale el conjunto de acciones, tal como lo guarda la base (`null`: sin versión legible): la versión vigente de la plantilla de cada rol base y el rol propio al que apunta
+ * la membresía. Es lo mismo que lee `autorizacion.delActor`; con ellas, `conjuntoEfectivo` da lo que el guard real le deja hacer.
+ */
+export type FuentesDelConjuntoParaExplicar = Readonly<{
+  plantillas: Readonly<Record<"ADMINISTRADOR" | "OPERADOR", readonly string[] | null>>;
+  rolPropio: Readonly<{ activo: boolean; acciones: readonly string[] }> | null;
+}>;
 
 /** Lo que el caso de uso de soporte lee de la base, sin datos operativos, para explicar una acción. */
 export type HechosDeAccion<R extends string> = Readonly<{
@@ -50,6 +71,8 @@ export type HechosDeAccion<R extends string> = Readonly<{
   modulosActivados: readonly string[];
   /** Módulos que el plan de su tenant incluye (el techo); los activados fuera de él quedan en solo lectura. */
   modulosHabilitados: readonly string[];
+  /** De dónde sale el conjunto de acciones de su rol (ver arriba). */
+  fuentes: FuentesDelConjuntoParaExplicar;
   estadoDeEmpresa: EstadoDeEmpresa;
   estadoDeTenant: EstadoDeTenant;
 }>;
@@ -80,6 +103,16 @@ function rolYRazon<R extends string>(
   const { membresia } = hechos;
   if (membresia === null) return { rol: null, razonDelRol: "SIN_MEMBRESIA" };
   if (!membresia.activo) return { rol: null, razonDelRol: "MEMBRESIA_APAGADA" };
+  if (membresia.rol === "PROPIO") {
+    const { rolPropio } = hechos.fuentes;
+    const razonDelRol =
+      rolPropio === null
+        ? "ROL_PROPIO_ILEGIBLE"
+        : rolPropio.activo
+          ? "CON_ROL_PROPIO"
+          : "ROL_PROPIO_ARCHIVADO";
+    return { rol: membresia.rol, razonDelRol };
+  }
   return { rol: membresia.rol, razonDelRol: "CON_ROL" };
 }
 
@@ -100,9 +133,22 @@ export function explicarAccionDeEmpresa<
   hechos: HechosDeAccion<NoInfer<R>>,
 ): ExplicacionDeAccion<R> {
   const { rol, razonDelRol } = rolYRazon(hechos);
+  // El conjunto que el guard real le deja a ese rol (`autorizacion.delActor` lo calcula con la misma función): gerente, todo el catálogo; base, la plantilla vigente; propio, su rol.
+  // Un rol que la base no conoce no otorga nada (nace cerrado): el cast solo nombra lo que `conjuntoEfectivo` ya descarta con su `default`.
+  const accionesDelActor = conjuntoEfectivo(rol as RolDeLaMembresia | null, {
+    catalogo: new Set(Object.keys(reglas.permisos)),
+    plantilla: (clave) => hechos.fuentes.plantillas[clave],
+    rolPropio: rol === "PROPIO" ? hechos.fuentes.rolPropio : null,
+  });
   const guard = evaluarGuard(reglas, accion, {
     rol,
-    ...estadoDeModulos(reglas.catalogo, hechos.modulosActivados, hechos.modulosHabilitados),
+    accionesDelActor,
+    // Sin rol vigente `autorizacion.delActor` no lee ningún módulo (falla cerrado: «no hay nada que activar»), y el guard mira el módulo ANTES que el rol: el motivo que ve el actor es el del módulo.
+    ...estadoDeModulos(
+      reglas.catalogo,
+      rol === null ? [] : hechos.modulosActivados,
+      rol === null ? [] : hechos.modulosHabilitados,
+    ),
     capacidadesDeSucursal: null,
   });
   const opera = comprobarQueOpera(

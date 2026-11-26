@@ -713,12 +713,27 @@ describe.skipIf(base === null)("cuenta corriente de clientes: casos de uso y con
       );
     });
 
-    it("con el catálogo real el módulo está en desarrollo: todos los roles reciben MODULO_EN_DESARROLLO (cerrado hasta la pantalla)", async () => {
+    it("con el catálogo real el módulo está disponible (CC-5, 26/11/2026): con el módulo activado en la empresa, el gerente habilita y consulta", async () => {
       const reales: ReglasDeEmpresa = {
         catalogo: CATALOGO_DE_MODULOS,
         permisos: PERMISOS_DE_EMPRESA,
       };
       const real = armarCuentaCorriente(entorno, reales);
+      expect((await habilitar(await cliente(), { casos: real.casos })).ok).toBe(true);
+      expect(
+        error(await real.consultas.verCuentaDelCliente(m.ctx(), { parteId: randomUUID() })),
+      ).toBe("CUENTA_NO_ENCONTRADA");
+    });
+
+    it("violación inyectada: con el módulo vuelto a «en desarrollo» (copia del catálogo), todos reciben MODULO_EN_DESARROLLO", async () => {
+      const cerrado = {
+        catalogo: {
+          ...CATALOGO_DE_MODULOS,
+          cuenta_corriente: { ...CATALOGO_DE_MODULOS.cuenta_corriente, estado: "en_desarrollo" },
+        },
+        permisos: PERMISOS_DE_EMPRESA,
+      } as unknown as ReglasDeEmpresa;
+      const real = armarCuentaCorriente(entorno, cerrado);
       expect(error(await habilitar(await cliente(), { casos: real.casos }))).toBe(
         "MODULO_EN_DESARROLLO",
       );

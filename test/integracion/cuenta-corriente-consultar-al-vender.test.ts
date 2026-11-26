@@ -22,6 +22,15 @@ import {
  * que sale aunque el registro de auditoría haya fallado.
  */
 
+/** El módulo se abrió el 26/11/2026 (CC-5): para probar que el guard va primero con el módulo cerrado se usa una COPIA del catálogo donde vuelve a estar en desarrollo (violación inyectada). */
+const REGLAS_CON_EL_MODULO_CERRADO = {
+  ...REGLAS_DE_PRUEBA,
+  catalogo: {
+    ...REGLAS_DE_PRUEBA.catalogo,
+    cuenta_corriente: { ...REGLAS_DE_PRUEBA.catalogo.cuenta_corriente, estado: "en_desarrollo" },
+  },
+} as unknown as typeof REGLAS_DE_PRUEBA;
+
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 180_000 });
 
@@ -190,7 +199,7 @@ describe.skipIf(base === null)("cuenta corriente: consultar al vender (CC-5)", (
     const antes = await constancias();
     const enDesarrollo = crearCasosDeUsoDeCuentaCorriente({
       transacciones,
-      reglas: REGLAS_DE_PRUEBA,
+      reglas: REGLAS_CON_EL_MODULO_CERRADO,
       cuentasDeConsumoParaVender: crearCuentasDeConsumoParaVender(),
     });
     const a = await enDesarrollo.verClienteParaVender(e.operador, {
