@@ -138,7 +138,7 @@ async function ticketsDeJornada(
   limite: number | null,
 ): Promise<TicketDeJornada[]> {
   const filas = await sql<Fila>`
-    select t.id, t.numero, t.estado, t.ejemplar_vigente, ev.id as ejemplar_vigente_id, t.total::text as total_original,
+    select t.id, t.cuenta_id, t.numero, t.estado, t.ejemplar_vigente, ev.id as ejemplar_vigente_id, t.total::text as total_original,
            (${VIGENTE})::text as total_vigente, (${COBRADO})::text as total_cobrado,
            (case when c.id is null then 0::numeric(18,2) else (${COBRADO}) - (${VIGENTE}) end)::text as diferencia, c.id as cobranza_id, t.emitido_por, t.emitido_en, t.cargado_a_parte_id
       from ticket t
@@ -171,6 +171,7 @@ async function ticketsDeJornada(
   }
   return filas.rows.map((f) => ({
     ticketId: texto(f["id"]),
+    cuentaId: texto(f["cuenta_id"]),
     numero: numero(f["numero"]),
     estado: f["estado"] as EstadoDeTicket,
     ejemplarVigente: numero(f["ejemplar_vigente"]),

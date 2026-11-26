@@ -265,21 +265,29 @@ describe("los controles", () => {
       cierre({
         estado: "EN_AUDITORIA",
         controles: [
-          control({ clave: "caja.cobrado_contra_ticket", cantidad: 2 }),
+          control({ clave: "caja.cobrado_contra_ticket", cantidad: 3 }),
           control({ clave: "caja.diferencia_de_arqueo", cantidad: 1 }),
         ],
         conciliacion: {
           enVivo: true,
           lineas: [],
           cobradoContraTicket: [
-            { ticketNumero: 7, diferencia: "2000.00" },
-            { ticketNumero: null, diferencia: "-1.50" },
+            { ticketNumero: 7, mesaAnulada: null, diferencia: "2000.00" },
+            { ticketNumero: null, mesaAnulada: null, diferencia: "-1.50" },
+            { ticketNumero: 9, mesaAnulada: 12, diferencia: "2000.00" },
           ],
         },
       }),
     );
     expect(m.porReconocer.map((c) => [c.rotulo, c.detalle])).toEqual([
-      ["Cobrado contra el ticket", ["Ticket 7 · Diferencia $ 2.000,00", "Diferencia -$ 1,50"]],
+      [
+        "Cobrado contra el ticket",
+        [
+          "Ticket 7 · Diferencia $ 2.000,00",
+          "Diferencia -$ 1,50",
+          "Diferencia por anulación de la mesa 12 · $ 2.000,00",
+        ],
+      ],
       ["Diferencias de arqueo", []],
     ]);
   });

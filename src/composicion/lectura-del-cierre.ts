@@ -44,6 +44,7 @@ export type DependenciasDeLaLecturaDelCierre = Readonly<{
     "cobrosDeLaJornada" | "conciliacionDeLaJornada" | "listarMediosDePago" | "listarCuentasDeCobro"
   >;
   consultasDeVentas: () => Pick<ReturnType<Web["consultasDeVentas"]>, "listarTickets">;
+  consultasDeSalon: () => Pick<ReturnType<Web["consultasDeSalon"]>, "numerosDeMesaDeCuentas">;
   consultasDeIdentidad: () => Pick<ReturnType<Web["consultasDeIdentidad"]>, "personasParaMostrar">;
   respuesta: DependenciasDeRespuesta;
 }>;
@@ -171,6 +172,9 @@ async function cargar(
 
   // El número de cada ticket de «Cobrado contra el ticket»: se une con la lista de tickets de la jornada de ventas; sin esa fila, no hay nada que unir ni que pedir.
   const numerosDeTicket = new Map<string, number>();
+  // De una anulación de una MESA (SAL-F): el número de la mesa del ticket anulado, para decir «Diferencia por anulación de la mesa N». Es un dato de más: si salón no lo da (sin permiso de ver mesas, sin la perilla, una cuenta que no es de una mesa) el
+  // ticket queda como «Ticket N» y NADA falla; una consulta distinta no hace caer el cierre del día por un rótulo.
+  const mesasDeTicket = new Map<string, number>();
   if (conciliacion !== null && conciliacion.cobradoContraTicket.length > 0) {
     const tickets = exigir(
       await d
@@ -178,6 +182,21 @@ async function cargar(
         .listarTickets(contexto, { sucursalId, fechaNegocio: fechaDeNegocio }),
     );
     for (const ticket of tickets) numerosDeTicket.set(ticket.ticketId, ticket.numero);
+    const conDiferencia = new Set(conciliacion.cobradoContraTicket.map((t) => t.ticketId));
+    const anulados = tickets.filter((t) => t.estado === "ANULADO" && conDiferencia.has(t.ticketId));
+    if (anulados.length > 0) {
+      const mesas = await d.consultasDeSalon().numerosDeMesaDeCuentas(contexto, {
+        sucursalId,
+        cuentaIds: anulados.map((t) => t.cuentaId),
+      });
+      if (mesas.ok) {
+        const porCuenta = new Map(mesas.valor.map((m) => [m.cuentaId, m.numero]));
+        for (const t of anulados) {
+          const numero = porCuenta.get(t.cuentaId);
+          if (numero !== undefined) mesasDeTicket.set(t.ticketId, numero);
+        }
+      }
+    }
   }
 
   const paraCorregir =
@@ -241,6 +260,7 @@ async function cargar(
             })),
             cobradoContraTicket: conciliacion.cobradoContraTicket.map((t) => ({
               ticketNumero: numerosDeTicket.get(t.ticketId) ?? null,
+              mesaAnulada: mesasDeTicket.get(t.ticketId) ?? null,
               diferencia: monto(t.diferencia),
             })),
           },

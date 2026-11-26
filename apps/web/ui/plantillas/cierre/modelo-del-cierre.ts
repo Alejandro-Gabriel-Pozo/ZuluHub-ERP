@@ -177,9 +177,11 @@ function armarLosControles(
   cierre: CierreParaLaPantalla,
 ): readonly (ControlVisto & Readonly<{ severidad: string }>)[] | null {
   const filasDeTicket = (cierre.conciliacion?.cobradoContraTicket ?? []).map((t) =>
-    t.ticketNumero === null
-      ? `${texto({}, "caja.arqueo.diferencia")} ${formatearImporte(t.diferencia)}`
-      : `${texto({}, "cierre.ticket_numero", { numero: String(t.ticketNumero) })} · ${texto({}, "caja.arqueo.diferencia")} ${formatearImporte(t.diferencia)}`,
+    t.mesaAnulada !== null
+      ? `${texto({}, "cierre.diferencia_por_anulacion_de_la_mesa", { mesa: String(t.mesaAnulada) })} · ${formatearImporte(t.diferencia)}`
+      : t.ticketNumero === null
+        ? `${texto({}, "caja.arqueo.diferencia")} ${formatearImporte(t.diferencia)}`
+        : `${texto({}, "cierre.ticket_numero", { numero: String(t.ticketNumero) })} · ${texto({}, "caja.arqueo.diferencia")} ${formatearImporte(t.diferencia)}`,
   );
   // Stryker disable next-line ArrayDeclaration: un elemento ajeno sin severidad no entra en ningún grupo (`de` filtra por severidad), así que el arreglo inicial vacío no se distingue de uno con ese elemento.
   const controles: (ControlVisto & Readonly<{ severidad: string }>)[] = [];

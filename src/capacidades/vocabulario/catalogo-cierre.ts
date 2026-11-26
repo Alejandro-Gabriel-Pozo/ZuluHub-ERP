@@ -13,6 +13,8 @@
  *    caja y `imprimir.html:327`), reutilizados por la maqueta (su tabla «(reutilizados)»). «Guardar», «Cancelar», «Motivo», «Efectivo» y los demás medios
  *    NO se repiten acá: se usan sus claves de `caja.*`, `catalogo.*` y `stock.*` (una regla, un lugar). El genérico «Esta acción no está permitida» sí tiene su clave
  *    propia (`cierre.error.accion_no_permitida`), como la tienen caja y catálogo: la tabla de códigos públicos no admite dos códigos con la misma clave.
+ *  - «Diferencia por anulación de la mesa {mesa}» (`cierre.diferencia_por_anulacion_de_la_mesa`; DEC-SAL-009): son las palabras del dueño del 26/11/2026 (pidió que el cierre diga la anulación de la mesa y no solo un faltante, para que el gerente registre la
+ *    salida); rotula una diferencia ya calculada de «Cobrado contra el ticket» sin cambiar dinero ni permisos; la acepta el orquestador por delegación (DDD:173).
  *  - «Ticket {numero}» (`cierre.ticket_numero`): está en la maqueta aceptada (`:426`, «Ticket 0007 · Diferencia $ …») pero no en su tabla de textos aprobados; por
  *    eso es una pregunta pendiente (DEC-0511).
  * «{persona} · {cuando}» (`cierre.cerrada_por`) es la línea de la franja «Cerrada» de la maqueta: no trae palabras nuevas, solo une quién y cuándo con el mismo «·» de
@@ -62,6 +64,10 @@ export const TEXTOS_DE_CIERRE = {
     marcadores: ["persona", "cuando"],
   },
   "cierre.ticket_numero": { porDefecto: "Ticket {numero}", marcadores: ["numero"] },
+  "cierre.diferencia_por_anulacion_de_la_mesa": {
+    porDefecto: "Diferencia por anulación de la mesa {mesa}",
+    marcadores: ["mesa"],
+  },
   "cierre.error.accion_no_permitida": { porDefecto: "Esta acción no está permitida" },
   "cierre.error.en_cierre": {
     porDefecto: "El día está en cierre. Cancelá el cierre para seguir",
