@@ -11,8 +11,8 @@ import { crearCasosDeUsoDeCompras } from "../../src/modulos/compras/publico";
 import { numeroUnico } from "./unicos";
 
 /**
- * L3a: cada nota de crédito deja su asiento de nota (resta) imputado contra el cargo de su factura, y anularla deja el espejo. Lo que sobra de lo pendiente (pagar el total después de una nota, o una nota después del pago) queda
- * como saldo A FAVOR de la empresa. El reparto por sucursal va contra lo pendiente del cargo y el último pago salda cada centro a un centavo. Idempotencia, atomicidad, falla cerrada sin cargo o sin asiento, la nota de débito
+ * L3a: cada nota de crédito deja su asiento de nota (resta) imputado contra el cargo de su factura, y anularla deja el espejo. Lo que sobra de lo pendiente (una nota que llega después del pago) queda
+ * como saldo A FAVOR de la empresa; un pago posterior a la nota paga el NETO y deja el saldo en cero (P3). El reparto por sucursal va contra lo pendiente del cargo y el último pago salda cada centro a un centavo. Idempotencia, atomicidad, falla cerrada sin cargo o sin asiento, la nota de débito
  * como cargo suelto y dos actores a la vez (nota y pago; dos notas; anular la nota y pagar) sin abrazo mortal y con el saldo coherente.
  */
 const base = inject("baseDePruebas");
@@ -146,7 +146,7 @@ describe.skipIf(base === null)("compras: las notas del proveedor en el libro", (
     expect(await delaNota(r.comprobanteId)).toHaveLength(2);
   });
 
-  it("pagar el total DESPUÉS de una nota: se imputa solo lo pendiente y el exceso queda como saldo a favor de la empresa (signo menos)", async () => {
+  it("pagar DESPUÉS de una nota: el pago es el neto (total − nota), se imputa entero contra lo pendiente y el saldo queda en cero", async () => {
     const m = await armar();
     valorDe(await cargarNota(m));
     const p = valorDe(await pagar(m));
@@ -154,7 +154,7 @@ describe.skipIf(base === null)("compras: las notas del proveedor en el libro", (
       "select importe::text as importe from asiento_de_saldo where origen_tipo = 'compras.pago' and origen_id = $1",
       [p.pagoId],
     );
-    expect(pago?.importe).toBe("-1210.00");
+    expect(pago?.importe).toBe("-605.00");
     const [imputado] = await c.filas<{ t: string }>(
       `select coalesce(sum(i.importe), 0)::text as t from imputacion_de_saldo i
          join asiento_de_saldo a on a.id = i.saldante_id and a.empresa_id = i.empresa_id
@@ -162,7 +162,7 @@ describe.skipIf(base === null)("compras: las notas del proveedor en el libro", (
       [p.pagoId],
     );
     expect(imputado?.t).toBe("605.00");
-    expect(await saldo(m)).toBe("-605.00");
+    expect(await saldo(m)).toBe("0.00");
   });
 
   it("una nota DESPUÉS del pago: no hay nada pendiente que imputar y la nota queda como saldo a favor", async () => {
@@ -270,8 +270,13 @@ describe.skipIf(base === null)("compras: las notas del proveedor en el libro", (
       for (const r of resultados) {
         expect(r.ok, r.ok ? "" : JSON.stringify(r.error)).toBe(true);
       }
-      // 1210 de cargo − 605 de nota − 1210 de pago: 605 a favor de la empresa, en cualquier orden.
-      expect(await saldo(m)).toBe("-605.00");
+      // O la nota entró primero y el pago fue el neto (605: saldo cero), o el pago entró primero (1210) y la nota quedó a favor (−605): nunca un importe a medias.
+      const [pago] = await c.filas<{ importe: string }>(
+        "select importe::text as importe from pago_de_comprobante where comprobante_id = $1",
+        [m.factura],
+      );
+      expect(["605.00", "1210.00"]).toContain(pago?.importe);
+      expect(await saldo(m)).toBe(pago?.importe === "605.00" ? "0.00" : "-605.00");
     }
   });
 
@@ -286,11 +291,14 @@ describe.skipIf(base === null)("compras: las notas del proveedor en el libro", (
       } finally {
         c.soltarBarrera();
       }
-      for (const r of resultados) {
-        expect(r.ok, r.ok ? "" : JSON.stringify(r.error)).toBe(true);
+      // Anular primero: el pago es el total (1210) y el saldo cero. Pagar primero: el pago ya descontó la nota (605) y anularla se rechaza (`NOTA_DE_CREDITO_CON_PAGO`): la nota sigue y el saldo es cero igual.
+      expect(resultados[1].ok, JSON.stringify(resultados[1])).toBe(true);
+      if (resultados[0].ok) {
+        expect(await estadoDeLaNota(nota.comprobanteId)).toBe("ANULADO");
+      } else {
+        expect(codigo(resultados[0])).toBe("NOTA_DE_CREDITO_CON_PAGO");
+        expect(await estadoDeLaNota(nota.comprobanteId)).toBe("REGISTRADO");
       }
-      // Nota anulada y pago de 1210 contra el cargo de 1210: saldo cero. (Con el pago primero la anulación deja el crédito de la nota sin imputar y vuelve a cero.)
-      expect(await estadoDeLaNota(nota.comprobanteId)).toBe("ANULADO");
       expect(await saldo(m)).toBe("0.00");
     }
   });
