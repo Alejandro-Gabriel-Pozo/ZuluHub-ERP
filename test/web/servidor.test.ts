@@ -63,6 +63,7 @@ describe("apps/web/servidor/composicion.ts", () => {
       "casosDeUsoDeSalon",
       "casosDeUsoDeStock",
       "casosDeUsoDeVentas",
+      "cobroACuenta",
       "configuracionPublicaDeHost",
       "consultasDeCaja",
       "consultasDeCatalogo",

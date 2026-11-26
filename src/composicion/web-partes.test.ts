@@ -45,9 +45,9 @@ const CLAVES_DE_WEB = [
   "casosDeUsoDeCierre",
   "casosDeUsoDeClientes",
   "casosDeUsoDeComandas",
-  "casosDeUsoDeCuentaCorriente",
   "casosDeUsoDeCompras",
   "casosDeUsoDeConfiguracionFiscal",
+  "casosDeUsoDeCuentaCorriente",
   "casosDeUsoDeEmpresas",
   "casosDeUsoDeFacturacion",
   "casosDeUsoDeIdentidad",
@@ -55,6 +55,7 @@ const CLAVES_DE_WEB = [
   "casosDeUsoDeSalon",
   "casosDeUsoDeStock",
   "casosDeUsoDeVentas",
+  "cobroACuenta",
   "configuracionPublicaDeHost",
   "consultasDeCaja",
   "consultasDeCatalogo",
@@ -161,7 +162,7 @@ describe("armarWeb por partes: las mismas claves que antes", () => {
   it("la lista de claves de Web es exactamente la de antes de partir el archivo", () => {
     const web = armarWeb(conexionesQueLanzan());
     expect(Object.keys(web).sort()).toEqual([...CLAVES_DE_WEB].sort());
-    expect(CLAVES_DE_WEB).toHaveLength(41);
+    expect(CLAVES_DE_WEB).toHaveLength(42);
   });
 
   it("cada entrada de Web se pide como función (no hay valores sueltos)", () => {

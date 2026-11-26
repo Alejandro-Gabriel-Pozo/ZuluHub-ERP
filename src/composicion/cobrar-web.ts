@@ -76,21 +76,29 @@ export function cajasParaCobrar(
     {},
     () => ok({}),
     () => d.consultas().estadoDeCajasParaCobrar(contexto, { sucursalId }),
-    (estado) => ({
-      cajas: estado.cajas.map((c) => ({
-        cajaId: c.cajaId,
-        nombre: c.nombre,
-        estado: c.estado,
-        sesionId: c.sesionId,
-        fechaDeNegocio: c.fechaDeNegocio,
-        jornadaVencida: c.jornadaVencida,
-      })),
-      jornadaActual: {
-        fechaDeNegocio: estado.jornadaActual.fechaDeNegocio,
-        estado: estado.jornadaActual.estado,
-      },
-    }),
+    presentarLasCajas,
   );
+}
+
+/** Las cajas con su sesión como salen a la pantalla (lista blanca campo por campo); las comparten el cobro del mostrador y el cobro a cuenta. */
+export function presentarLasCajas(estado: {
+  cajas: readonly CajasParaCobrarParaLaPantalla["cajas"][number][];
+  jornadaActual: CajasParaCobrarParaLaPantalla["jornadaActual"];
+}): CajasParaCobrarParaLaPantalla {
+  return {
+    cajas: estado.cajas.map((c) => ({
+      cajaId: c.cajaId,
+      nombre: c.nombre,
+      estado: c.estado,
+      sesionId: c.sesionId,
+      fechaDeNegocio: c.fechaDeNegocio,
+      jornadaVencida: c.jornadaVencida,
+    })),
+    jornadaActual: {
+      fechaDeNegocio: estado.jornadaActual.fechaDeNegocio,
+      estado: estado.jornadaActual.estado,
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------------------------------------------
