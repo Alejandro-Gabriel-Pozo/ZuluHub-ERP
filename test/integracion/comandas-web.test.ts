@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
   anularUnItemEnviado,
+  cambiarLaNota,
   cambiarLaSalida,
   enviarALaCocina,
   pedirQueSalga,
@@ -243,6 +244,40 @@ describe.skipIf(base === null)("comandas e impresión de la web", () => {
     expect(codigo(await cambiar("CUANDO_QUIERA"))).toBe(GENERICO);
     await enviar(cuenta);
     expect(codigo(await cambiar("DESPUES"))).toBe(GENERICO);
+  });
+
+  it("«Nota para la cocina»: cambia mientras no se envió, repetir devuelve yaEstaba, la sucursal la fija el servidor y con el plato enviado, una nota inválida o sin persona es el genérico y no escribe", async () => {
+    const { cuenta, lineas } = await cuentaConPlatos(["AHORA"], y);
+    const linea = lineas[0] as string;
+    const nota = (texto: string, ctx = y.gerente, sucursal: string = y.sucursal) =>
+      cambiarLaNota(d, ctx, sucursal, { cuentaId: cuenta, lineaId: linea, nota: texto });
+    const viva = async () =>
+      (
+        await m.filas<{ nota: string | null }>(
+          "select nota from linea_de_comanda where linea_id = $1",
+          [linea],
+        )
+      )[0]?.nota;
+    expect(await nota("sin cebolla")).toEqual({
+      ok: true,
+      dato: { nota: "sin cebolla", yaEstaba: false },
+    });
+    expect(await nota("sin cebolla")).toEqual({
+      ok: true,
+      dato: { nota: "sin cebolla", yaEstaba: true },
+    });
+    // Sin sucursal de trabajo, de otra sucursal, de otra empresa, sin persona o con una nota inválida: el genérico y nada cambia.
+    expect(codigo(await nota("x", y.gerente, ""))).toBe(GENERICO);
+    expect(codigo(await nota("x", y.gerente, y.otraSucursal))).toBe(GENERICO);
+    expect(codigo(await nota("x", e.gerente))).not.toBeNull();
+    expect((await nota("x", { ...y.gerente, personaId: null })).ok).toBe(false);
+    expect(codigo(await nota("<b>x</b>"))).toBe(GENERICO);
+    expect(codigo(await nota("x".repeat(121)))).toBe(GENERICO);
+    expect(await viva()).toBe("sin cebolla");
+    // Enviado: la nota ya no se toca.
+    valorDe(await enviar(cuenta, {}, y.gerente, y.sucursal));
+    expect(codigo(await nota("otra"))).toBe(GENERICO);
+    expect(await viva()).toBe("sin cebolla");
   });
 
   it("«Quitar» un plato sin enviar: sin motivo, sin papel; repetir es yaEstabaQuitada y audita una vez; el plato queda ANULADO, no se borra", async () => {

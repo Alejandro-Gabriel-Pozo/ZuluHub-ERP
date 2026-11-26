@@ -106,4 +106,22 @@ describe("entradas de la cuenta de mesa", () => {
       expect(leerElPedidoDeAgregarAlPedido(malo).ok).toBe(false);
     }
   });
+
+  it("agregar al pedido lee la nota para la cocina como TEXTO (nunca otra cosa); el largo y los caracteres los valida el servidor", () => {
+    const base = {
+      cuentaId: CUENTA,
+      lineaId: MESA,
+      productoId: CUENTA,
+      opcionIds: [],
+      cantidad: "1",
+    };
+    expect(leerElPedidoDeAgregarAlPedido({ ...base, nota: "sin cebolla" })).toMatchObject({
+      ok: true,
+      valor: { nota: "sin cebolla" },
+    });
+    expect(leerElPedidoDeAgregarAlPedido(base)).toMatchObject({ ok: true });
+    for (const nota of [1, null, {}, ["a"], true]) {
+      expect(leerElPedidoDeAgregarAlPedido({ ...base, nota }).ok).toBe(false);
+    }
+  });
 });
