@@ -4,6 +4,10 @@ import {
   DECIMALES_DEL_PORCENTAJE_DE_LA_PARTE,
   ENTEROS_DEL_PORCENTAJE_DE_LA_PARTE,
 } from "../../primitivas/cuentas/reparto-por-porcentaje";
+import {
+  DECIMALES_DE_PRECIO_UNITARIO,
+  ENTEROS_DE_PRECIO_UNITARIO,
+} from "../../primitivas/dinero/precio-unitario";
 import type { ReglaDeNumero } from "./numero-argentino";
 
 /**
@@ -20,6 +24,12 @@ export const REGLA_DE_CANTIDAD: ReglaDeNumero = {
 export const REGLA_DE_MERMA: ReglaDeNumero = {
   decimales: DECIMALES_DE_MERMA,
   enterosMaximos: ENTEROS_DE_MERMA,
+};
+
+/** El costo por unidad de una entrada de stock: un precio unitario (hasta 6 decimales, `numeric(18,6)`), sin ceros de relleno. */
+export const REGLA_DE_COSTO_UNITARIO: ReglaDeNumero = {
+  decimales: DECIMALES_DE_PRECIO_UNITARIO,
+  enterosMaximos: ENTEROS_DE_PRECIO_UNITARIO,
 };
 
 /** El porcentaje de una parte al dividir la cuenta por porcentaje (SAL-E3): hasta 100 con 2 decimales (decisión del dueño, 14/11/2026), sin ceros de relleno. */

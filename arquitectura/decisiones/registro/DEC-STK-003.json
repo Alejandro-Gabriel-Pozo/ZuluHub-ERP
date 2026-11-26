@@ -1,0 +1,10 @@
+{
+  "id": "DEC-STK-003",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Textos de la carga inicial en tanda: Valor, Agregar artículo, el resumen de artículos por total, la fecha de hoy, Revisá el costo, el aviso de depósito con existencia y los artículos sin costo.",
+  "que_cambia": "Siete claves nuevas stock.carga.*. Seis las aprobó el dueño el 25/11/2026 (N-02, N-04 a N-08, fila 449) y Agregar artículo (N-03) el orquestador por delegación (fila 173). Revertir: sacar las claves y la pantalla.",
+  "donde": "dia-uno-stock-inventario-de-textos-2026-11-25.md N-02 a N-08; dia-uno-stock-fichas-de-pantalla-2026-11-25.md FP-STK-08; DEC-1010 y DEC-STK-004"
+}

@@ -11,6 +11,7 @@ describe("códigos públicos de stock", () => {
   it("son exactamente estos, con su texto exacto", () => {
     expect(CLAVES_DE_ERRORES_DE_STOCK).toEqual({
       STOCK_CONTROL_AVISA: "stock.error.control_avisa",
+      STOCK_YA_HAY_EXISTENCIA: "stock.carga.ya_hay_existencia",
       STOCK_TRANSFERENCIA_AL_MISMO_DEPOSITO: "stock.error.transferencia_al_mismo_deposito",
       STOCK_DETALLE_REQUERIDO: "stock.error.detalle_requerido",
       STOCK_CANTIDAD_INVALIDA: "stock.error.cantidad_invalida",

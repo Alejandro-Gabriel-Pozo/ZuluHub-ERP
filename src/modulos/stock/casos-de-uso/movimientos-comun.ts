@@ -15,6 +15,7 @@ import { convertirCantidad } from "../../../primitivas/unidades/convertir-cantid
 import type { CodigoDeUnidad } from "../../../primitivas/unidades/unidades";
 import { datosDeJornada } from "../../empresas/publico";
 import { esUnidadConocida } from "../dominio/composicion";
+import { MOTIVO_DE_CARGA_INICIAL } from "../dominio/motivos";
 import { cantidadDeUnidades, type RenglonDeLibro } from "../dominio/movimiento";
 import { esUuid } from "../persistencia/filas";
 import type { Articulo, Deposito } from "../persistencia/modelo";
@@ -292,4 +293,21 @@ export function traducirMovimiento<T>(resultado: R<T>): R<T> {
     }
   }
   return traducir(resultado);
+}
+
+/**
+ * P-8 (aviso, no bloqueo): ¿hay que avisar «este depósito ya tiene existencia» antes de registrar esta entrada? Solo la `CARGA_INICIAL`, y solo si la persona no confirmó (`confirmaExistenciaPrevia`). Es una lectura
+ * sin bloqueo dentro de la transacción del comando, después de detectar la repetición: repetir la misma clave nunca avisa.
+ */
+export async function hayQueAvisarLaCarga(
+  tx: Pick<TxDeStock, "movimientosDeStock">,
+  contexto: Pick<ContextoOperativo, "empresaId">,
+  pedido: Readonly<{ motivo: string; confirmaExistenciaPrevia?: boolean | undefined }>,
+  depositoId: string,
+): Promise<boolean> {
+  return (
+    pedido.motivo === MOTIVO_DE_CARGA_INICIAL &&
+    pedido.confirmaExistenciaPrevia !== true &&
+    (await tx.movimientosDeStock.conExistenciaEnElDeposito(contexto.empresaId, depositoId))
+  );
 }

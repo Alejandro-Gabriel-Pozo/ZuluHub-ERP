@@ -126,6 +126,8 @@ describe.skipIf(base === null)("stock: recetas (E6-T6)", () => {
         clave: nuevoId(),
         depositoId: dep,
         motivo,
+        // Varias entradas al mismo depósito: la confirmación del aviso de existencia previa de la carga inicial (P-8) no es lo que se prueba acá.
+        confirmaExistenciaPrevia: true,
         renglones: [{ productoId: producto, cantidad, unidadId: "KILOGRAMO", costoUnitario }],
       }),
     );

@@ -3,7 +3,7 @@ import type { FichaDePantalla } from "./ficha-de-mesas";
 /**
  * LA FICHA DE LA PANTALLA «EXISTENCIAS» DE STOCK (STK-B1, FP-STK-02; DDD:174: toda pantalla tiene su ficha). Declara lo que la pantalla ofrece: ruta y archivos, el acceso, los botones, los estados y cada texto
  * con SU uso y SU fuente. Misma forma que `ficha-de-mesas.ts` y la comprueba `ficha-de-existencias-y-movimientos.test.ts` contra el catálogo de textos y la tabla del menú, para que no se desfase.
- * Los botones Entrada, Salida, Transferir y Ajustar llevan a su formulario y salen apagados sin el permiso (el servidor igual decide); «Carga inicial» llega con su pantalla. El depósito se elige con
+ * Los botones Entrada, Salida, Transferir, Ajustar y Carga inicial llevan a su pantalla y salen apagados sin el permiso (el servidor igual decide; la carga inicial pide `stock.registrar_entrada` y además `stock.ajustar`, DEC-STK-004). El depósito se elige con
  * enlaces (DEC-1023) y la sucursal la fija el servidor. No muestra costos ni «Disponible». Los nombres de las unidades salen del catálogo de unidades de medida. Previene: un botón o un texto que nadie aprobó.
  */
 
@@ -57,6 +57,12 @@ export const FICHA_DE_EXISTENCIAS = {
       hace: { navega: "/stock/movimientos/ajustar" },
       sinPermiso: "APAGADO",
     },
+    {
+      id: "carga-inicial",
+      texto: "stock.motivo.carga_inicial",
+      hace: { navega: "/stock/carga-inicial" },
+      sinPermiso: "APAGADO",
+    },
   ],
   estados: { ERROR: "GENERICO", SIN_PERMISO: "GENERICO" },
   textos: {
@@ -75,6 +81,10 @@ export const FICHA_DE_EXISTENCIAS = {
       fuente: MAQUETA_DE_STOCK,
     },
     "stock.accion.ajustar": { usos: [USO_DE_LA_PANTALLA + " (botón)"], fuente: MAQUETA_DE_STOCK },
+    "stock.motivo.carga_inicial": {
+      usos: [USO_DE_LA_PANTALLA + " (botón que lleva a la grilla de la carga inicial)"],
+      fuente: MAQUETA_DE_STOCK,
+    },
     "stock.pantalla.negativa": {
       usos: [USO_DE_LA_PANTALLA + " (marca de un saldo bajo cero)"],
       fuente: MAQUETA_DE_STOCK,

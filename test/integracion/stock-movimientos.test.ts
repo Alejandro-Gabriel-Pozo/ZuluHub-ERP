@@ -395,6 +395,46 @@ describe.skipIf(base === null)("stock: movimientos", () => {
       expect(await c.existencia(a.dep, a.articulo)).toBe("5.0000");
     });
 
+    it("la CARGA_INICIAL exige además `stock.ajustar` (DEC-STK-004): el operador no (y no mueve nada), el administrador y el gerente sí; el resto de las entradas, todos", async () => {
+      const n = await nuevo();
+      expect(await entrar(n.producto, n.dep, "5", e.operador, { motivo: "CARGA_INICIAL" })).toEqual(
+        { ok: false, error: "SIN_PERMISO" },
+      );
+      expect(await c.existencia(n.dep, n.articulo)).toBe("0");
+      for (const motivo of ["COMPRA", "DEVOLUCION_DE_CLIENTE", "OTRA_ENTRADA"]) {
+        valorDe(await entrar(n.producto, n.dep, "1", e.operador, { motivo }));
+      }
+      // El depósito ya tiene las compras de arriba: el aviso de existencia previa se confirma (otra prueba lo cubre).
+      const confirmada = { motivo: "CARGA_INICIAL", confirmaExistenciaPrevia: true };
+      valorDe(await entrar(n.producto, n.dep, "2", e.administrador, confirmada));
+      valorDe(await entrar(n.producto, n.dep, "4", e.gerente, confirmada));
+      expect(await c.existencia(n.dep, n.articulo)).toBe("9.0000");
+    });
+
+    it("la CARGA_INICIAL sobre un depósito con existencia AVISA y no escribe (P-8); confirmar la registra; repetir la misma clave devuelve lo hecho sin avisar; los otros motivos no avisan", async () => {
+      const n = await nuevo();
+      valorDe(await entrar(n.producto, n.dep, "3", e.gerente, { motivo: "CARGA_INICIAL" }));
+      const clave = nuevoId();
+      const cargar = (extra: Record<string, unknown> = {}) =>
+        entrar(n.producto, n.dep, "4", e.gerente, { motivo: "CARGA_INICIAL", clave, ...extra });
+      expect(await cargar()).toEqual({ ok: false, error: { error: "YA_HAY_EXISTENCIA" } });
+      expect(await c.existencia(n.dep, n.articulo)).toBe("3.0000");
+      const hecho = valorDe(await cargar({ confirmaExistenciaPrevia: true }));
+      expect(hecho.yaExistia).toBe(false);
+      expect(await c.existencia(n.dep, n.articulo)).toBe("7.0000");
+      // La repetición con la misma clave devuelve lo hecho: con o sin confirmación, aunque el depósito ya tenga existencia.
+      expect(valorDe(await cargar())).toEqual({
+        movimientoId: hecho.movimientoId,
+        yaExistia: true,
+      });
+      expect(valorDe(await cargar({ confirmaExistenciaPrevia: true })).yaExistia).toBe(true);
+      expect(await c.existencia(n.dep, n.articulo)).toBe("7.0000");
+      // Una compra sobre el mismo depósito no avisa, y solo un depósito sin saldos distintos de cero deja cargar sin avisar.
+      valorDe(await entrar(n.producto, n.dep, "1"));
+      const vacio = await nuevo();
+      valorDe(await entrar(vacio.producto, vacio.dep, "2", e.gerente, { motivo: "CARGA_INICIAL" }));
+    });
+
     it("con el módulo apagado no se mueve nada (MODULO_NO_ACTIVO), aunque el rol lo permita", async () => {
       const n = await nuevo();
       c.apagarModulo("stock");
