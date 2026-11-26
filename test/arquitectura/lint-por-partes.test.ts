@@ -68,8 +68,8 @@ describe("npm run lint partido en invocaciones", () => {
   });
 
   it("violación inyectada: una carpeta ignorada que nadie lintea", () => {
-    expect(problemas(`${UNA} src && ${UNA} . --ignore-pattern "apps/**"`)).toEqual([
-      "se ignora «apps/**» y ninguna otra invocación lo lintea",
+    expect(problemas(`${UNA} src && ${UNA} . --ignore-pattern "scripts/**"`)).toEqual([
+      "se ignora «scripts/**» y ninguna otra invocación lo lintea",
     ]);
   });
 
