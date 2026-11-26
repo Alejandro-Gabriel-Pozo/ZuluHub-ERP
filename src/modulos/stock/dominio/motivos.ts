@@ -94,8 +94,12 @@ export const motivosManualesDe = (clase: "ENTRADA" | "SALIDA"): readonly string[
     (m) => m.clase === clase && motivoManualPermitido(clase, m.codigo),
   ).map((m) => m.codigo);
 
-/** S-7: dar de baja por vencimiento exige además `stock.ajustar` (D118 lo reserva a administración). */
-export const motivoExigeAjustar = (codigo: string): boolean => codigo === MOTIVO_DE_VENCIMIENTO;
+/** La carga inicial del stock de arranque (DEC-STK-004): una entrada que fija la valuación de partida. */
+export const MOTIVO_DE_CARGA_INICIAL = "CARGA_INICIAL";
+
+/** S-7: dar de baja por vencimiento exige además `stock.ajustar` (D118 lo reserva a administración); DEC-STK-004: la carga inicial también (solo gerente y administrador), sin una acción nueva. */
+export const motivoExigeAjustar = (codigo: string): boolean =>
+  codigo === MOTIVO_DE_VENCIMIENTO || codigo === MOTIVO_DE_CARGA_INICIAL;
 
 /**
  * La regla `motivo = 'VENTA'` ⇔ salida con origen `EJEMPLAR_DE_TICKET` (CHECK del libro, E5 §3.1): ni una venta sin ejemplar ni una

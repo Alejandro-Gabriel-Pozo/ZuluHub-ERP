@@ -10,6 +10,8 @@ export const RUTAS_DE_STOCK = {
   conteo: "/stock/conteo",
   depositos: "/stock/depositos",
   lotes: "/stock/lotes",
+  /** No es pestaña: se llega por el botón «Carga inicial» de Existencias (FP-STK-08). */
+  cargaInicial: "/stock/carga-inicial",
   entrada: "/stock/existencias",
 } as const;
 

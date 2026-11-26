@@ -293,6 +293,56 @@ describe.skipIf(base === null || !stockAbierto)("recorrido de depósitos de stoc
     expect(vigilante.tomar()).toEqual([]);
   });
 
+  it("la Carga inicial se registra una sola vez (doble clic) con su valor y resumen a la vista; sobre un depósito con existencia avisa y «Registrar» la confirma", async () => {
+    const { articulo } = await articuloDeBase(mundo.mundo.dueno, { empresa: mundo.empresa });
+    const existencia = async () =>
+      (
+        await mundo.mundo.dueno.query<{ e: string }>(
+          "select coalesce(sum(existencia), 0)::text as e from saldo_de_stock where articulo_id = $1",
+          [articulo],
+        )
+      ).rows[0]?.e;
+    const abrirLaGrilla = async () => {
+      await pagina.goto(`${mundo.url}/stock/existencias`);
+      await pagina.waitForLoadState("networkidle");
+      await pagina.getByRole("link", { name: "Carga inicial", exact: true }).click();
+      await pagina.waitForURL("**/stock/carga-inicial");
+      await pagina.getByLabel("Artículo").waitFor();
+      await pagina.getByLabel("Artículo").selectOption(articulo);
+    };
+    const aviso = pagina.getByText("Este depósito ya tiene existencia. ¿Registrar igual?");
+    await abrirLaGrilla();
+    await pagina.getByLabel("Cantidad").fill("4");
+    await pagina.getByLabel("Costo por unidad").fill("12,5");
+    await pagina.getByText("$ 50,00").first().waitFor();
+    await pagina.getByText("1 artículos por $ 50,00").waitFor();
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    await pagina.getByRole("button", { name: "Registrar" }).dblclick();
+    // Si el depósito ya tenía algo de las pruebas anteriores, avisa: se confirma (el aviso se prueba abajo, donde sí es seguro).
+    await Promise.race([
+      pagina.waitForURL((url) => url.pathname === "/stock/existencias"),
+      aviso.waitFor(),
+    ]);
+    if (pagina.url().includes("carga-inicial")) {
+      await pagina.getByRole("button", { name: "Registrar" }).click();
+      await pagina.waitForURL((url) => url.pathname === "/stock/existencias");
+    }
+    expect(await existencia()).toBe("4.0000");
+    expect(vigilante.tomar()).toEqual([]);
+
+    // Segunda carga sobre el mismo depósito: ahora SÍ tiene existencia, avisa y no escribe hasta confirmar.
+    await abrirLaGrilla();
+    await pagina.getByLabel("Cantidad").fill("3");
+    await pagina.getByRole("button", { name: "Registrar" }).click();
+    await aviso.waitFor();
+    expect(pagina.url()).toContain("/stock/carga-inicial");
+    expect(await existencia()).toBe("4.0000");
+    await pagina.getByRole("button", { name: "Registrar" }).dblclick();
+    await pagina.waitForURL((url) => url.pathname === "/stock/existencias");
+    expect(await existencia()).toBe("7.0000");
+    expect(vigilante.tomar()).toEqual([]);
+  });
+
   it("con el nivel AVISAR, una salida que deja negativo avisa y «Registrar» la confirma una sola vez", async () => {
     const { articulo } = await articuloDeBase(mundo.mundo.dueno, { empresa: mundo.empresa });
     await mundo.mundo.dueno.query(

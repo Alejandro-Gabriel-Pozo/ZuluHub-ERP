@@ -105,6 +105,44 @@ export const TEXTOS_DE_STOCK = {
     usos: ["DE_FICHA"],
     fuente: { decision: "DEC-1022" },
   },
+  // Carga inicial (STK-C): N-02, N-04, N-05, N-06, N-07 y N-08 los aprobó el dueño el 25/11/2026 (fila 449) y N-03 lo aceptó el orquestador por delegación (fila 173); DEC-STK-003.
+  "stock.carga.valor": {
+    porDefecto: "Valor",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-003" },
+  },
+  "stock.carga.agregar_articulo": {
+    porDefecto: "Agregar artículo",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-003" },
+  },
+  "stock.carga.resumen": {
+    porDefecto: "{cantidad} artículos por {total}",
+    marcadores: ["cantidad", "total"],
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-003" },
+  },
+  "stock.carga.es_de_hoy": {
+    porDefecto: "La carga queda con la fecha de hoy",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-003" },
+  },
+  "stock.carga.revisar_costo": {
+    porDefecto: "Revisá el costo",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-003" },
+  },
+  "stock.carga.ya_hay_existencia": {
+    porDefecto: "Este depósito ya tiene existencia. ¿Registrar igual?",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-003" },
+  },
+  "stock.carga.sin_costo": {
+    porDefecto: "{n} sin costo: no entran al promedio",
+    marcadores: ["n"],
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-003" },
+  },
   // Lotes (STK-E, lectura): «Lotes» (L-01) lo aprobó el dueño el 25/11/2026 (fila 449) y el resto de los rótulos (L-03, L-04, L-10, L-11, L-12, L-16) los aceptó el orquestador por delegación (fila 173); DEC-STK-002.
   "stock.lotes.pantalla": {
     porDefecto: "Lotes",

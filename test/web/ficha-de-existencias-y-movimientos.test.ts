@@ -8,6 +8,7 @@ import {
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import type { FichaDePantalla } from "../../src/capacidades/pantallas/ficha-de-mesas";
 import { FICHA_DE_EXISTENCIAS } from "../../src/capacidades/pantallas/ficha-de-existencias";
+import { FICHA_DE_CARGA_INICIAL_DE_STOCK } from "../../src/capacidades/pantallas/ficha-de-carga-inicial-de-stock";
 import { FICHA_DE_LOTES_DE_STOCK } from "../../src/capacidades/pantallas/ficha-de-lotes-de-stock";
 import { FICHA_DE_MOVIMIENTOS } from "../../src/capacidades/pantallas/ficha-de-movimientos";
 import {
@@ -35,6 +36,12 @@ const FICHAS: readonly {
 }[] = [
   { nombre: "Existencias", ficha: FICHA_DE_EXISTENCIAS, pagina: "existencias", citas: true },
   { nombre: "Movimientos", ficha: FICHA_DE_MOVIMIENTOS, pagina: "movimientos", citas: true },
+  {
+    nombre: "Carga inicial",
+    ficha: FICHA_DE_CARGA_INICIAL_DE_STOCK,
+    pagina: "carga-inicial",
+    citas: true,
+  },
   {
     nombre: "Lotes",
     ficha: FICHA_DE_LOTES_DE_STOCK,
