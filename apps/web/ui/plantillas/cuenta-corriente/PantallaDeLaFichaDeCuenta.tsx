@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Aviso } from "../../componentes/Aviso";
 import { Insignia } from "../../componentes/Insignia";
 import {
@@ -10,14 +11,19 @@ import estilos from "./CuentaCorriente.module.css";
 export type PropsDePantallaDeLaFichaDeCuenta = Readonly<{
   ficha: FichaDeCuentaParaLaPantalla;
   textos: TextosDeCuentaCorriente;
+  /** Lo que escribe («Cambiar plazo o límite», suspender o reactivar): lo arma la página con el permiso ya leído. Sin él, la pantalla es solo lectura. */
+  acciones?: ReactNode;
 }>;
 
 /**
  * La ficha de un cliente con su estado de cuenta (CC-5, A1; maqueta `cuenta-corriente-ficha-listado-y-cobro.html`, pestañas «Ficha y estado de cuenta» y «Ficha suspendida»): su CUIT y su estado, las condiciones
- * (límite, plazo), el saldo y el crédito disponible, el banner si la cuenta está suspendida y los movimientos con su origen. SOLO LECTURA: sin «Cambiar plazo o límite», «Suspender» ni «Reactivar» (llegan con su caso
- * de uso). Sin pies explicativos. Sin estado ni hooks: es una página de servidor. El `h1` (el nombre del cliente) lo pone la página.
+ * (límite, plazo), el saldo y el crédito disponible, el banner si la cuenta está suspendida y los movimientos con su origen. Las acciones que escriben llegan por `acciones`. Sin pies explicativos. Sin estado ni hooks: es una página de servidor. El `h1` (el nombre del cliente) lo pone la página.
  */
-export function PantallaDeLaFichaDeCuenta({ ficha, textos }: PropsDePantallaDeLaFichaDeCuenta) {
+export function PantallaDeLaFichaDeCuenta({
+  ficha,
+  textos,
+  acciones,
+}: PropsDePantallaDeLaFichaDeCuenta) {
   const armada = armarLaFichaDeLaCuenta(ficha, textos);
   const c = armada.condiciones;
   const k = armada.columnas;
@@ -40,6 +46,9 @@ export function PantallaDeLaFichaDeCuenta({ ficha, textos }: PropsDePantallaDeLa
           </div>
         ))}
       </dl>
+      {acciones === undefined ? null : (
+        <div className={estilos["accionesDeLaFicha"]}>{acciones}</div>
+      )}
       <div className={estilos["contenedorDeTabla"]}>
         <table className={estilos["tabla"]}>
           <thead>

@@ -46,8 +46,12 @@ export function PantallaDeCuenta({
       <dl className={estilos["datos"]}>
         <dt>{texto(diccionario, "empresa.etiqueta")}</dt>
         <dd className={estilos["valor"]}>{empresa.nombre}</dd>
-        <dt>{texto(diccionario, "empresa.rol_etiqueta")}</dt>
-        <dd className={estilos["valor"]}>{textoDelRol(empresa.rol, diccionario)}</dd>
+        {empresa.rol === null ? null : (
+          <>
+            <dt>{texto(diccionario, "empresa.rol_etiqueta")}</dt>
+            <dd className={estilos["valor"]}>{textoDelRol(empresa.rol, diccionario)}</dd>
+          </>
+        )}
       </dl>
       <SelectorDeSucursal
         empresaId={empresa.empresaId}
