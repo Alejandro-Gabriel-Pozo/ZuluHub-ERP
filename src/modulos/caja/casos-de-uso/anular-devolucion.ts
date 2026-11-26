@@ -153,7 +153,7 @@ export function armarAnularDevolucion({ transacciones, reglas }: DependenciasDeC
             empresaId,
             clavesDeAnulacion[0] as string,
           );
-          const cobranza = origen as NonNullable<typeof origen>;
+          const cobranza = origen;
           const quedaPorDevolver = async (): Promise<ImporteJson> =>
             importeAJson(
               await tx.movimientosDeDinero.devolvibleDeOrigen(

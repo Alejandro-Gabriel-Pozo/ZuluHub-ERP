@@ -70,7 +70,7 @@ export function armarAnularMovimientoDeCaja({ transacciones, reglas }: Dependenc
     contexto: ContextoOperativo,
     entrada: EntradaDeAnularMovimientoDeCaja,
   ): Promise<Resultado<SalidaDeAnularMovimientoDeCaja, ErrorAlAnularMovimientoDeCaja>> {
-    const { empresaId, ahora } = contexto;
+    const { empresaId } = contexto;
     const ejecutar = () =>
       transacciones.ejecutar(
         { contexto, reintentos: REINTENTOS_EN_LA_SESION_DE_CAJA },
