@@ -30,7 +30,6 @@ import { TEXTOS_DE_COMANDAS } from "./catalogo-comandas";
 import { TEXTOS_DE_CLIENTES } from "./catalogo-clientes";
 import { TEXTOS_DE_COMPRAS } from "./catalogo-compras";
 import { TEXTOS_DE_COMPRAS_COSTO } from "./catalogo-compras-costo";
-import { TEXTOS_DE_COMPRAS_NOTAS } from "./catalogo-compras-notas";
 import { TEXTOS_DE_FISCAL } from "./catalogo-fiscal";
 import { TEXTOS_DE_FISCAL_CONFIGURACION } from "./catalogo-fiscal-configuracion";
 import { TEXTOS_DE_FISCAL_EMITIR } from "./catalogo-fiscal-emitir";
@@ -87,7 +86,6 @@ export const CATALOGO_DE_TEXTOS = {
   ...TEXTOS_DE_CLIENTES,
   ...TEXTOS_DE_COMPRAS,
   ...TEXTOS_DE_COMPRAS_COSTO,
-  ...TEXTOS_DE_COMPRAS_NOTAS,
   ...TEXTOS_DE_USUARIOS,
   ...TEXTOS_DE_ADMINISTRACION,
 } as const satisfies Record<string, DefinicionDeTexto>;

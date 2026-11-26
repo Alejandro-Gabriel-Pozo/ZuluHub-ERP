@@ -5,6 +5,6 @@
   "tipo": "CLIENTE",
   "estado": "PENDIENTE_DE_OK",
   "decision": "Ocho etiquetas simples de las pantallas de notas del proveedor (títulos y rótulos de la maqueta de Diseño 2), aceptadas por el orquestador; Anulada y Nota de crédito/débito reutilizan las existentes.",
-  "que_cambia": "Lo que dice cada rótulo de esas dos pantallas. Revertir: cambiar el valor por defecto en catalogo-compras-notas.ts (una línea por texto).",
-  "donde": "catalogo-compras-notas.ts (compras.notas.titulo, cargar_titulo, total_de_la_factura, creditos_vigentes, debitos_vinculados, cargar_nota_de_debito, vigente, total_de_la_nota); delegación del 15/11/2026 (decisiones-del-dueno-2026-11.md, fila 173), aceptado por el orquestador el 26/11/2026"
+  "que_cambia": "Lo que dice cada rótulo de esas dos pantallas. Revertir: cambiar el valor por defecto en catalogo-compras-costo.ts (una línea por texto).",
+  "donde": "catalogo-compras-costo.ts (compras.notas.titulo, cargar_titulo, total_de_la_factura, creditos_vigentes, debitos_vinculados, cargar_nota_de_debito, vigente, total_de_la_nota); delegación del 15/11/2026 (decisiones-del-dueno-2026-11.md, fila 173), aceptado por el orquestador el 26/11/2026"
 }

@@ -1,7 +1,7 @@
 {
   "grupo": "web (notas del proveedor: modelo de la pantalla)",
-  "archivos": "apps/web/ui/plantillas/compras/notas/modelo-de-notas.ts",
+  "archivos": "apps/web/ui/plantillas/compras/notas/modelo-de-notas.ts,apps/web/ui/plantillas/compras/notas/textos-de-notas.ts",
   "minutos": 2,
-  "pruebas": "test/web/modelo-de-notas.test.ts",
+  "pruebas": "test/web/modelo-de-notas.test.ts test/web/ficha-de-notas-de-compras.test.ts",
   "nivel": "PANTALLA"
 }

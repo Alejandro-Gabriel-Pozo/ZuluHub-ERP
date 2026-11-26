@@ -5,6 +5,6 @@
   "tipo": "DINERO",
   "estado": "PENDIENTE_DE_OK",
   "decision": "Tres textos de dinero confirmados por el dueño (anular una nota ya descontada por un pago, «Saldada por notas», «Saldo a favor») y «Pagar» oculto en la ficha de la compra con neto cero.",
-  "que_cambia": "Qué ve la persona al anular una nota ya descontada por un pago, con la factura saldada por notas y con saldo a favor; y que no se ofrece pagar lo que no hay que pagar. Revertir: cambiar los textos en catalogo-compras-notas.ts o quitar la condición del neto en modelo-de-ficha-de-compra.ts.",
-  "donde": "catalogo-compras-notas.ts, errores-de-compras.ts (COMPRAS_NOTA_CON_PAGO), modelo-de-ficha-de-compra.ts; respuesta del dueño del 26/11/2026 (Excel de decisiones, filas 12, 13, 14 y 15), vía el orquestador"
+  "que_cambia": "Qué ve la persona al anular una nota ya descontada por un pago, con la factura saldada por notas y con saldo a favor; y que no se ofrece pagar lo que no hay que pagar. Revertir: cambiar los textos en catalogo-compras-costo.ts o quitar la condición del neto en modelo-de-ficha-de-compra.ts.",
+  "donde": "catalogo-compras-costo.ts, errores-de-compras.ts (COMPRAS_NOTA_CON_PAGO), modelo-de-ficha-de-compra.ts; respuesta del dueño del 26/11/2026 (Excel de decisiones, filas 12, 13, 14 y 15), vía el orquestador"
 }

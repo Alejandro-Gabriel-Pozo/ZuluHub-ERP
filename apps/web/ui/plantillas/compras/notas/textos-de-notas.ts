@@ -2,7 +2,7 @@ import { texto } from "../../../../../../src/capacidades/vocabulario/vocabulario
 import { CLAVE_DE_TEXTO_DE_LA_ALICUOTA } from "../nueva/modelo-de-factura";
 
 /**
- * Los textos de las pantallas de notas del proveedor ya resueltos (NOTAS-2c-1): «Notas de la factura» y «Cargar una nota del proveedor». Cada texto sale del catálogo con su fuente (`catalogo-compras-notas.ts`; lo demás ya existía
+ * Los textos de las pantallas de notas del proveedor ya resueltos (NOTAS-2c-1): «Notas de la factura» y «Cargar una nota del proveedor». Cada texto sale del catálogo con su fuente (`catalogo-compras-costo.ts`; lo demás ya existía
  * y se reutiliza). Lo que no tiene texto aprobado NO se escribe acá: va a la lista de textos por aprobar del PR.
  */
 export type TextosDeNotas = Readonly<{
