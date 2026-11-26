@@ -4,7 +4,11 @@ import type { ComprasDb } from "./esquema";
 import type { EstadoDeComprobante } from "./repositorio-de-comprobantes";
 import { esUuid } from "./filas";
 
+export type ClaseDeNotaListable = "NOTA_DE_CREDITO" | "NOTA_DE_DEBITO";
+
 export type FiltroDeListaDeNotas = Readonly<{
+  /** Qué notas: las de crédito o las de débito (nunca mezcladas: cada una tiene su permiso). */
+  clase: ClaseDeNotaListable;
   /** `TODAS` o las sucursales del alcance del actor: la nota no tiene sucursal, pero quien no tiene alcance sobre ninguna no ve nada. */
   sucursales: "TODAS" | readonly string[];
   facturaId: string | null;
@@ -18,8 +22,8 @@ export type FiltroDeListaDeNotas = Readonly<{
 export type FilaDeListaDeNotas = Readonly<{
   id: string;
   proveedorId: string;
-  /** La factura que corrige. */
-  facturaId: string;
+  /** La factura que corrige (la nota de crédito siempre) o que vincula (la nota de débito, si la tiene). */
+  facturaId: string | null;
   tipo: string;
   puntoDeVenta: number;
   numero: number;
@@ -38,6 +42,27 @@ export interface RepositorioDeNotasDeCredito {
   listar(empresa: EmpresaId, filtro: FiltroDeListaDeNotas): Promise<readonly FilaDeListaDeNotas[]>;
   /** La suma de lo que dicen las notas de CRÉDITO vigentes de una factura (las de débito no restan: se pagan aparte) (texto decimal con dos decimales). */
   acreditadoDe(empresa: EmpresaId, facturaId: string): Promise<string>;
+  /** La suma de lo que dicen las notas de DÉBITO vigentes vinculadas a una factura (texto decimal con dos decimales). */
+  debitadoDe(empresa: EmpresaId, facturaId: string): Promise<string>;
+}
+
+/** La suma de lo que dicen las notas VIGENTES de una clase vinculadas a una factura. */
+async function sumaDeNotas(
+  db: Kysely<ComprasDb>,
+  empresa: EmpresaId,
+  facturaId: string,
+  clase: ClaseDeNotaListable,
+): Promise<string> {
+  if (!esUuid(facturaId)) return "0.00";
+  const fila = await db
+    .selectFrom("comprobante_de_proveedor as c")
+    .select(sql<string>`coalesce(sum(c.total_segun_factura), 0)::numeric(18,2)::text`.as("total"))
+    .where("c.empresa_id", "=", empresa)
+    .where("c.comprobante_asociado_id", "=", facturaId)
+    .where("c.clase", "=", clase)
+    .where("c.estado", "<>", "ANULADO")
+    .executeTakeFirst();
+  return fila?.total ?? "0.00";
 }
 
 export function crearRepositorioDeNotasDeCredito(
@@ -60,7 +85,7 @@ export function crearRepositorioDeNotasDeCredito(
           sql<string>`c.total_segun_factura::text`.as("total"),
         ])
         .where("c.empresa_id", "=", empresa)
-        .where("c.clase", "=", "NOTA_DE_CREDITO");
+        .where("c.clase", "=", filtro.clase);
       if (filtro.facturaId !== null) {
         consulta = consulta.where("c.comprobante_asociado_id", "=", filtro.facturaId);
       }
@@ -81,13 +106,13 @@ export function crearRepositorioDeNotasDeCredito(
         .execute();
       return filas.map((f) => {
         if (
-          f.comprobante_asociado_id === null ||
+          (filtro.clase === "NOTA_DE_CREDITO" && f.comprobante_asociado_id === null) ||
           f.tipo === null ||
           f.punto_de_venta === null ||
           f.numero === null ||
           (f.estado !== "REGISTRADO" && f.estado !== "ANULADO")
         ) {
-          throw new RangeError("una nota de crédito guardada no tiene todos sus datos");
+          throw new RangeError("una nota guardada no tiene todos sus datos");
         }
         return {
           id: f.id,
@@ -102,19 +127,7 @@ export function crearRepositorioDeNotasDeCredito(
         };
       });
     },
-    async acreditadoDe(empresa, facturaId) {
-      if (!esUuid(facturaId)) return "0.00";
-      const fila = await db
-        .selectFrom("comprobante_de_proveedor as c")
-        .select(
-          sql<string>`coalesce(sum(c.total_segun_factura), 0)::numeric(18,2)::text`.as("total"),
-        )
-        .where("c.empresa_id", "=", empresa)
-        .where("c.comprobante_asociado_id", "=", facturaId)
-        .where("c.clase", "=", "NOTA_DE_CREDITO")
-        .where("c.estado", "<>", "ANULADO")
-        .executeTakeFirst();
-      return fila?.total ?? "0.00";
-    },
+    acreditadoDe: (empresa, facturaId) => sumaDeNotas(db, empresa, facturaId, "NOTA_DE_CREDITO"),
+    debitadoDe: (empresa, facturaId) => sumaDeNotas(db, empresa, facturaId, "NOTA_DE_DEBITO"),
   };
 }

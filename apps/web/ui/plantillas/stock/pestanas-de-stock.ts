@@ -1,7 +1,10 @@
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { PESTANAS_CONSTRUIDAS, RUTAS_DE_STOCK, type PestanaDeStock } from "./rutas-de-stock";
 
-type ClaveDePestana = Exclude<keyof typeof RUTAS_DE_STOCK, "entrada" | "cargaInicial">;
+type ClaveDePestana = Exclude<
+  keyof typeof RUTAS_DE_STOCK,
+  "entrada" | "cargaInicial" | "revisarConteo"
+>;
 
 /** Las pestañas de Stock con sus textos (los títulos de cada pantalla, aprobados el 09/11/2026) y la actual marcada, solo las de pantallas construidas (`PESTANAS_CONSTRUIDAS`). El orden es el de la maqueta `stock.html`; «Lotes» va al final (`stock-lotes.html`). */
 export function pestanasDeStock(actual: ClaveDePestana): readonly PestanaDeStock[] {

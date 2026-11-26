@@ -30,6 +30,8 @@ export type PropsDeCampoNumero = Readonly<{
   ayuda?: string | undefined;
   error?: string | undefined;
   deshabilitado?: boolean;
+  /** Se llama al salir del campo, ya formateado (para guardar lo escrito sin un botón). El valor ya está en `valor`. */
+  alSalirDelCampo?: (() => void) | undefined;
 }>;
 
 /**
@@ -49,6 +51,7 @@ export function CampoNumero({
   ayuda,
   error,
   deshabilitado = false,
+  alSalirDelCampo,
 }: PropsDeCampoNumero) {
   const { entrada, visible, alEscribir, alPegar, alSalir } = useCampoFormateado(valor, alCambiar, {
     escribir: (crudo, cursor) => escribirNumero(crudo, cursor, regla),
@@ -84,7 +87,10 @@ export function CampoNumero({
             spellCheck={false}
             value={visible}
             disabled={deshabilitado}
-            onBlur={alSalir}
+            onBlur={() => {
+              alSalir();
+              alSalirDelCampo?.();
+            }}
             onPaste={alPegar}
             onChange={alEscribir}
           />

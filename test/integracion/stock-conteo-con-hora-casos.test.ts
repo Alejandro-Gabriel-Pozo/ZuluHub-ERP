@@ -311,4 +311,59 @@ describe.skipIf(base === null)("stock: conteo con hora (casos)", () => {
     expect(await c.existencia(s.dep, s.articulo)).toBe("2.5000");
     expect(await estadoDe(id)).toBe("APLICADO");
   });
+
+  it("horaDelConteo «HH:MM» (la que escribe quien cuenta): el servidor la lleva a la hora de pared MÁS RECIENTE en la zona de la sucursal; el operador también puede; repetir el mismo registro no duplica", async () => {
+    const s = await conStock(c, e, "20");
+    const id = await abrirConteoDe(c, e, s.dep);
+    // AHORA = 09:00 en Argentina (12:00Z) del 11/10: las 08:50 ya pasaron hoy y las 09:30 son de ayer.
+    const operador = conReloj(e.operador, hace(0));
+    const hoy = nuevoId();
+    valorDe(await contarEn(c, operador, id, s.producto, "14", { id: hoy, horaDelConteo: "08:50" }));
+    const ayer = valorDe(
+      await contarEn(c, operador, id, s.producto, "15", { horaDelConteo: "09:30" }),
+    );
+    expect(ayer.yaExistia).toBe(false);
+    const registros = valorDe(
+      await c.consultas.fichaDeConteo(e.gerente, { conteoId: id }),
+    )?.registros;
+    expect(registros?.map((r) => r.contadoEn.toISOString())).toEqual([
+      "2026-10-11T11:50:00.000Z",
+      "2026-10-10T12:30:00.000Z",
+    ]);
+    // El mismo registro otra vez: es el mismo; con otra cantidad, el id está ocupado.
+    expect(
+      valorDe(
+        await contarEn(c, operador, id, s.producto, "14", { id: hoy, horaDelConteo: "08:50" }),
+      ).yaExistia,
+    ).toBe(true);
+    expect(
+      await contarEn(c, operador, id, s.producto, "99", { id: hoy, horaDelConteo: "08:50" }),
+    ).toEqual({ ok: false, error: "ID_REUTILIZADO" });
+    expect(await c.filas("select 1 from conteo_registro where conteo_id = $1", [id])).toHaveLength(
+      2,
+    );
+  });
+
+  it("horaDelConteo inválida (no es HH:MM, o viene junto con contadoEn) no registra nada; sin ninguna de las dos vale la hora de la carga", async () => {
+    const s = await conStock(c, e, "20");
+    const id = await abrirConteoDe(c, e, s.dep);
+    for (const horaDelConteo of ["", "9:30", "24:00", "12:60", "12:00:00", "ab:cd"]) {
+      expect(
+        await contarEn(c, e.operador, id, s.producto, "5", { horaDelConteo }),
+        horaDelConteo,
+      ).toEqual({ ok: false, error: "IDENTIFICADOR_INVALIDO" });
+    }
+    expect(
+      await contarEn(c, e.operador, id, s.producto, "5", {
+        horaDelConteo: "08:00",
+        contadoEn: hace(-5),
+      }),
+    ).toEqual({ ok: false, error: "IDENTIFICADOR_INVALIDO" });
+    expect(await c.filas("select 1 from conteo_registro where conteo_id = $1", [id])).toHaveLength(
+      0,
+    );
+    valorDe(await contarEn(c, conReloj(e.operador, hace(0)), id, s.producto, "5"));
+    const ficha = valorDe(await c.consultas.fichaDeConteo(e.gerente, { conteoId: id }));
+    expect(ficha?.registros[0]?.contadoEn.toISOString()).toBe(hace(0).toISOString());
+  });
 });

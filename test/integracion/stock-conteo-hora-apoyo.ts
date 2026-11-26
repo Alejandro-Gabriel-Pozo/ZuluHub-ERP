@@ -115,7 +115,12 @@ export const contarEn = (
   conteoId: string,
   producto: string,
   cantidad: string,
-  extra: Readonly<{ contadoEn?: Date; id?: string; unidadId?: string }> = {},
+  extra: Readonly<{
+    contadoEn?: Date;
+    horaDelConteo?: string;
+    id?: string;
+    unidadId?: string;
+  }> = {},
 ) =>
   c.casos.registrarConteo(quien, {
     id: extra.id ?? randomUUID(),
@@ -124,6 +129,7 @@ export const contarEn = (
     cantidadContada: cantidad,
     unidadId: extra.unidadId ?? "UNIDAD",
     ...(extra.contadoEn === undefined ? {} : { contadoEn: extra.contadoEn }),
+    ...(extra.horaDelConteo === undefined ? {} : { horaDelConteo: extra.horaDelConteo }),
   });
 
 export const conteoDiferencia = (c: MontajeDeStock, conteoId: string) =>

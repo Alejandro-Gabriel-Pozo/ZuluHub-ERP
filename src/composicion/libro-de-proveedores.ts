@@ -220,12 +220,20 @@ export function crearLibroDeProveedores(): LibroDeProveedores {
     },
     async registrarPago(tx, contexto, entrada) {
       const tx2 = comoTxDeSaldos(tx);
-      const cargo = await tx2.asientos.porOrigen(
-        contexto.empresaId,
-        ORIGEN_DEL_CARGO_DE_FACTURA,
-        entrada.comprobanteId,
-        1,
-      );
+      // Lo que se paga es el cargo de una factura o, si es una nota de débito (que se paga como comprobante propio), su asiento de nota.
+      const cargo =
+        (await tx2.asientos.porOrigen(
+          contexto.empresaId,
+          ORIGEN_DEL_CARGO_DE_FACTURA,
+          entrada.comprobanteId,
+          1,
+        )) ??
+        (await tx2.asientos.porOrigen(
+          contexto.empresaId,
+          ORIGEN_DE_LA_NOTA,
+          entrada.comprobanteId,
+          1,
+        ));
       if (cargo === null) return { ok: false, error: "ASIENTO_DE_LA_FACTURA_NO_ENCONTRADO" };
       return aplicarContraElCargo(tx2, contexto, cargo, {
         clase: CLASE_DEL_PAGO,

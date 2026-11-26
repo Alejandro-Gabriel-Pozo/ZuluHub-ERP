@@ -185,8 +185,11 @@ const MATRIZ_CONGELADA: readonly (readonly [string, readonly RolDeEmpresa[]])[] 
   ["devoluciones_a_proveedor.registrar", ["GERENTE", "ADMINISTRADOR"]],
   ["devoluciones_a_proveedor.anular", ["GERENTE", "ADMINISTRADOR"]],
   ["notas_de_credito_de_proveedor.ver", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
+  ["notas_de_debito_de_proveedor.ver", ["GERENTE", "ADMINISTRADOR", "OPERADOR"]],
   ["notas_de_credito_de_proveedor.registrar", ["GERENTE", "ADMINISTRADOR"]],
+  ["notas_de_debito_de_proveedor.registrar", ["GERENTE", "ADMINISTRADOR"]],
   ["notas_de_credito_de_proveedor.anular", ["GERENTE", "ADMINISTRADOR"]],
+  ["notas_de_debito_de_proveedor.anular", ["GERENTE", "ADMINISTRADOR"]],
   ["diferencias_de_compra.ver", ["GERENTE", "ADMINISTRADOR"]],
   ["diferencias_de_compra.resolver", ["GERENTE", "ADMINISTRADOR"]],
   ["compras.configurar", ["GERENTE"]],
@@ -205,8 +208,8 @@ const MATRIZ_CONGELADA: readonly (readonly [string, readonly RolDeEmpresa[]])[] 
 ];
 
 /** Cifras del congelado: filas, y cuántas acciones puede cada rol. */
-const FILAS = 184;
-const PUEDEN = { GERENTE: 184, ADMINISTRADOR: 159, OPERADOR: 67 } as const satisfies Record<
+const FILAS = 187;
+const PUEDEN = { GERENTE: 187, ADMINISTRADOR: 162, OPERADOR: 68 } as const satisfies Record<
   RolDeEmpresa,
   number
 >;
@@ -256,7 +259,7 @@ describe("la matriz de permisos de la empresa es idéntica a la congelada", () =
       }
     }
     expect(comparadas).toBe(FILAS * ROLES_DE_EMPRESA.length);
-    expect(comparadas).toBe(552);
+    expect(comparadas).toBe(561);
   });
 
   it("la tabla leída por rol es la misma", () => {

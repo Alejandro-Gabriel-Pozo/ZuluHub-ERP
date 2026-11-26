@@ -102,16 +102,24 @@ describe("las rutas y las pestañas de Stock", () => {
     expect(pestanasDeStock("depositos").map((p) => [p.texto, p.href, p.actual])).toEqual([
       ["Existencias", "/stock/existencias", false],
       ["Movimientos", "/stock/movimientos", false],
+      ["Conteo", "/stock/conteo", false],
       ["Depósitos", "/stock/depositos", true],
       ["Lotes", "/stock/lotes", false],
     ]);
-    expect(PESTANAS_CONSTRUIDAS).toEqual(["existencias", "movimientos", "depositos", "lotes"]);
+    expect(PESTANAS_CONSTRUIDAS).toEqual([
+      "existencias",
+      "movimientos",
+      "conteo",
+      "depositos",
+      "lotes",
+    ]);
   });
 
-  it("la marca de «actual» sigue a la pantalla en la que se está, no a la pestaña que hay", () => {
+  it("la marca de «actual» sigue a la pantalla en la que se está", () => {
     expect(pestanasDeStock("conteo").map((p) => [p.texto, p.actual])).toEqual([
       ["Existencias", false],
       ["Movimientos", false],
+      ["Conteo", true],
       ["Depósitos", false],
       ["Lotes", false],
     ]);
