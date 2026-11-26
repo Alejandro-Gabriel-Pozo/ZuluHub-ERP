@@ -32,6 +32,10 @@ describe("el catálogo comercial de módulos", () => {
           "usuarios.ver": { capacidad: null, efecto: "LECTURA" },
           "usuarios.asignar_sucursales": { capacidad: null, efecto: "CREA_AMPLIA" },
           "usuarios.revocar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "roles.ver": { capacidad: null, efecto: "LECTURA" },
+          "roles.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "roles.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+          "roles.archivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "sucursales.ver": { capacidad: null, efecto: "LECTURA" },
           "sucursales.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
           "sucursales.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -350,12 +354,11 @@ describe("el catálogo comercial de módulos", () => {
     expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
     expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 30]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
-    // 25 de administración (18 de usuarios, sucursales, gerencia y permisos, y 7 de la configuración fiscal de H7 T5),
+    // 29 de administración (18 de usuarios, sucursales, gerencia y permisos, 4 de roles propios de H4b T4, y 7 de la configuración fiscal de H7 T5),
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 49 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
-    // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A y `vidrieras.administrar_portal` del portal), 35 de caja, cierre y ventas (E0-T1), 38 de clientes y compras (E9-T1, T11, N3-2b, N3-4, N4-1, N4-3, N4-4, N4-5 y la exportación del 25/11/2026), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 178 en total.
-    // + 2 de cuenta corriente de clientes (CC-1: `cuenta_corriente.ver` y `cuenta_corriente.administrar`).
-    expect(todas).toHaveLength(25 + 9 + 44 + 35 + 38 + 16 + 5 + 2);
+    // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A y `vidrieras.administrar_portal` del portal), 35 de caja, cierre y ventas (E0-T1), 38 de clientes y compras (E9-T1, T11, N3-2b, N3-4, N4-1, N4-3, N4-4, N4-5 y la exportación del 25/11/2026), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 182 en total.
+    expect(todas).toHaveLength(29 + 9 + 44 + 35 + 38 + 16 + 5 + 2);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -512,6 +515,7 @@ const EFECTOS_DE_EMPRESA = {
     "permisos.ver_propios",
     "productos.ver",
     "recepciones.ver",
+    "roles.ver",
     "stock.ver",
     "stock.verificar_saldos",
     "sucursales.ver",
@@ -583,6 +587,8 @@ const EFECTOS_DE_EMPRESA = {
     "puntos_de_venta.crear",
     "puntos_de_venta.editar",
     "recepciones.registrar",
+    "roles.crear",
+    "roles.editar",
     "sesiones_caja.abrir",
     "stock.ajustar",
     "stock.registrar_entrada",
@@ -649,6 +655,7 @@ const EFECTOS_DE_EMPRESA = {
     "puntos_de_venta.desactivar",
     "recepciones.anular",
     "recepciones.confirmar",
+    "roles.archivar",
     "salon.cambiar_mesa",
     "salon.dividir",
     "salon.unir",

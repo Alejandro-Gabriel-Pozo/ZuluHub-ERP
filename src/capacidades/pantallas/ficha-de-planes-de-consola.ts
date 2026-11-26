@@ -2,6 +2,7 @@ import type { IdDeDato } from "../datos/registro";
 import type { ClaveAccionDePlataforma } from "../permisos/plataforma";
 import type { ClaveDeTexto } from "../vocabulario/catalogo";
 import type { ClaveDeTextoDePlataforma } from "../vocabulario/textos-de-plataforma";
+import type { IdDeDecision } from "../vocabulario/uso-y-fuente-de-texto";
 
 /**
  * LA FICHA DE LA PANTALLA «PLANES» DE LA CONSOLA DE PLATAFORMA (toda pantalla nueva nace con ficha). Declara lo que la pantalla ofrece: rutas y archivos, el acceso, los campos con su dato, los botones con la acción de permiso
@@ -44,7 +45,7 @@ export type FichaDePantallaDeConsola = Readonly<{
     Partial<
       Record<
         ClaveDeTextoDePlataforma,
-        Readonly<{ usos: readonly string[]; fuente: Readonly<{ decision: `DEC-${number}` }> }>
+        Readonly<{ usos: readonly string[]; fuente: Readonly<{ decision: IdDeDecision }> }>
       >
     >
   >;

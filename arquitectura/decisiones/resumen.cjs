@@ -7,7 +7,11 @@
  * tenga un lugar donde verlas todas juntas. Si el registro no es válido NO imprime una lista a medias: falla con el motivo (fail closed).
  */
 const { arbolDelDisco, leerRegistroEnCarpeta } = require("../registros/en-carpeta.cjs");
-const { CARPETA_DEL_REGISTRO, MONOLITO_DEL_REGISTRO } = require("./decisiones.cjs");
+const {
+  CARPETA_DEL_REGISTRO,
+  MONOLITO_DEL_REGISTRO,
+  leerLasFamilias,
+} = require("./decisiones.cjs");
 const { TIPO_SIN_DECISION, problemasDelRegistro } = require("./forma.cjs");
 
 /** Cómo se llama cada tipo para el dueño, en el orden en que se muestran. */
@@ -62,8 +66,19 @@ function ejecutar(raiz) {
       errores: leido.errores.map(({ archivo, motivo }) => `${archivo}: ${motivo}`),
     };
   }
+  const familias = leerLasFamilias(
+    arbolDelDisco(raiz, CARPETA_DEL_REGISTRO, MONOLITO_DEL_REGISTRO),
+    "",
+  );
+  if (familias.valor === null) {
+    return {
+      codigo: 1,
+      salida: "",
+      errores: familias.fallas.map((f) => `${f.archivo}: ${f.motivo}`),
+    };
+  }
   const registro = leido.valor;
-  const problemas = problemasDelRegistro(registro);
+  const problemas = problemasDelRegistro(registro, familias.valor);
   if (problemas.length > 0) {
     const errores = problemas.map(
       ({ id, problema }) => `${CARPETA_DEL_REGISTRO}/${id}.json: ${problema}`,

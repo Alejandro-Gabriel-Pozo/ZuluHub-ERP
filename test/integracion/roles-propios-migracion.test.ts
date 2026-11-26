@@ -675,6 +675,19 @@ describe.skipIf(base === null)("migración 0097: roles propios de la empresa (T4
             )
           ).rows[0],
         ).toEqual({ n: 0 });
+        // Los cuatro `roles.*` los trae la semilla de 0094 (la regeneración de su bloque): la reversión de 0097 no los toca; `usuarios.asignar_rol` era solo de 0097 y se va.
+        expect(
+          (
+            await cliente.query(
+              "select accion, autor from piso_de_plataforma where accion like 'roles.%' or accion = 'usuarios.asignar_rol' order by accion",
+            )
+          ).rows,
+        ).toEqual(
+          ["roles.archivar", "roles.crear", "roles.editar", "roles.ver"].map((accion) => ({
+            accion,
+            autor: "migracion:0094",
+          })),
+        );
         // El CHECK de rol volvió a los tres roles base y el disparador a la regla de 0005.
         await expect(
           cliente.query(

@@ -1,0 +1,11 @@
+{
+  "id": "DEC-1023",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Existencias y Movimientos: el depósito se elige con enlaces, no con selector; «Siguiente» (de fiscal) pasa de página; el ajuste por conteo se rotula «Ajuste».",
+  "que_cambia": "No suma ningún campo de entrada ni texto nuevo. La paginación y la tarjeta por renglón las aceptó el orquestador por delegación (fila 173). Revertir: dibujar el selector con su dato registrado (una pantalla) o rotular el ajuste por conteo con otro texto aprobado.",
+  "donde": "apps/web/ui/plantillas/stock/lectura/SelectorDeDeposito.tsx; existencias/ y movimientos/; maqueta stock.html (dibuja un selector «Depósitos»)",
+  "motivo": "SUPUESTO de la sesión: la maqueta dibuja un selector; se eligió lo que no agrega campo ni script. Los enlaces y el «Ajuste» del conteo siguen sin OK del dueño."
+}

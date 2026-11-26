@@ -341,7 +341,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
     ),
   };
 
-  it("identidad exige las acciones de usuarios y de gerencia (casos de uso y consultas)", () => {
+  it("identidad exige las acciones de usuarios, de gerencia y de roles propios (casos de uso y consultas)", () => {
     expect([...new Set(declaradas["modulos/identidad"])].sort()).toEqual([
       "gerencia.aceptar_traspaso",
       "gerencia.cancelar_traspaso",
@@ -350,6 +350,10 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       "gerencia.ver_traspaso",
       // `personasParaMostrar` (C6/X6) pide la acción de los tres roles que ya usan las sucursales elegibles (DEC-0464).
       "permisos.ver_propios",
+      "roles.archivar",
+      "roles.crear",
+      "roles.editar",
+      "roles.ver",
       "usuarios.apagar",
       "usuarios.asignar_sucursales",
       "usuarios.invitar",

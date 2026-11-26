@@ -265,12 +265,21 @@ const SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL = [
   "puntos_de_venta.editar",
 ] as const;
 
+/** H4b T4: los roles propios son solo del gerente (y su piso SOLO_GERENTE lo fija la base). */
+const SOLO_DEL_GERENTE_DE_ROLES = [
+  "roles.archivar",
+  "roles.crear",
+  "roles.editar",
+  "roles.ver",
+] as const;
+
 const SOLO_DEL_GERENTE = [
   "gerencia.cancelar_traspaso",
   "gerencia.proponer_traspaso",
   "sucursales.desactivar",
   "sucursales.reactivar",
   ...SOLO_DEL_GERENTE_DE_CATALOGO_Y_STOCK,
+  ...SOLO_DEL_GERENTE_DE_ROLES,
   ...SOLO_DEL_GERENTE_DE_FACTURACION,
   ...SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL,
   ...SOLO_DEL_GERENTE_DE_CAJA,
@@ -317,9 +326,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 174 acciones: 34 de empresa, configuración fiscal y facturación, 44 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas, 5 de producción y 2 de cuenta corriente (CC-1)", () => {
+  it("hay 178 acciones: 38 de empresa (4 de roles propios), configuración fiscal y facturación, 44 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas y 2 de cuenta corriente (CC-1)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(174);
+    expect(todas).toHaveLength(178);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -402,6 +411,13 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
   it("las siete acciones de la configuración fiscal son solo del gerente: administrador y operador no pueden ninguna", () => {
     expect(SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL).toHaveLength(7);
     for (const accion of SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL) {
+      expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE"]);
+    }
+  });
+
+  it("los cuatro permisos de roles propios son solo del gerente: administrador y operador no pueden ninguno", () => {
+    expect(SOLO_DEL_GERENTE_DE_ROLES).toHaveLength(4);
+    for (const accion of SOLO_DEL_GERENTE_DE_ROLES) {
       expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE"]);
     }
   });

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1281",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Toda factura de proveedor deja su cargo en el libro de saldos, asentado por un helper común al final de la transacción, para que servicios y activos fijos lo hereden sin cambios.",
+  "que_cambia": "Registrar o anular una factura mueve el saldo del proveedor en la misma transacción. Revertir: quitar las llamadas al helper; los asientos hechos quedan (el libro es de solo inserción).",
+  "donde": "cargo-de-la-factura.ts, libro-de-proveedores.ts, compras-cargo-de-factura.test.ts; brief de L1 aprobado por el orquestador el 25/11/2026"
+}

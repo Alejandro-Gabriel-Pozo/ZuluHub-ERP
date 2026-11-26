@@ -474,7 +474,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
     });
   });
 
-  it("los textos de stock son exactamente los que el dueño aprobó (el 09/11/2026 en stock.html «Textos nuevos», D125, los seis del conteo con hora el 14/11/2026 y los tres errores de gestión de depósitos el 25/11/2026), y ninguno más", () => {
+  it("los textos de stock son exactamente los que el dueño aprobó (el 09/11/2026 en stock.html «Textos nuevos», D125, los seis del conteo con hora el 14/11/2026 y los tres errores de gestión de depósitos el 25/11/2026, y los cuatro textos del libro de Movimientos de DEC-1022), y ninguno más", () => {
     expect(
       Object.fromEntries(
         claves
@@ -543,6 +543,10 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "stock.error.deposito_desactualizado":
         "Otra persona modificó este depósito. Actualizá la pantalla",
       "stock.error.sin_permiso": "Esta acción no está permitida",
+      "stock.clase.transferencia": "Transferencia",
+      "stock.clase.ajuste": "Ajuste",
+      "stock.clase.anulacion": "Anulación",
+      "stock.estado.anulado": "Anulado",
     });
   });
 
