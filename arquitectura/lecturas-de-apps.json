@@ -48,6 +48,10 @@
     "apps/web/ui/patrones/papel/*",
     "apps/web/ui/plantillas/salon/*"
   ],
+  "test/web/ficha-de-dividir-la-cuenta.test.ts": [
+    "apps/web/app/s/app/(operacion)/salon/cuenta/**",
+    "apps/web/ui/plantillas/salon/*"
+  ],
   "test/web/ficha-de-salon.test.ts": [
     "apps/web/app/s/app/(operacion)/salon/page.tsx",
     "apps/web/ui/plantillas/salon/*"

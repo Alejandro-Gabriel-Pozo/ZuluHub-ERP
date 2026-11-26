@@ -12,7 +12,11 @@ import {
   cargarLaFichaDeLaMesa,
   nuevoIdDeCuentaDeMesa,
 } from "../../../../../../../servidor/salon";
-import { puedeCobrarLaMesa, puedeUnirMesas } from "../../../../../../../servidor/ofertas-de-salon";
+import {
+  puedeCobrarLaMesa,
+  puedeDividirCuentas,
+  puedeUnirMesas,
+} from "../../../../../../../servidor/ofertas-de-salon";
 import { cargarLaVentaRapida } from "../../../../../../../servidor/venta-rapida";
 import { armarLosTextosDeImprimir } from "../../../../../../../ui/patrones/papel/textos-de-imprimir";
 import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
@@ -23,11 +27,13 @@ import {
   textosDeLaMesa,
 } from "../../../../../../../ui/plantillas/salon/modelo-de-la-mesa";
 import { RUTA_DE_IMPRESORAS } from "../../../../../../../ui/plantillas/salon/modelo-de-impresoras";
+import { textosDeDividir } from "../../../../../../../ui/plantillas/salon/textos-de-dividir";
 import { PantallaDeLaMesa } from "../../../../../../../ui/plantillas/salon/PantallaDeLaMesa.cliente";
 import { textosDeLaVenta } from "../../../../../../../ui/plantillas/venta/modelo-de-venta-rapida";
 import {
   agregarAlPedidoAccion,
   anularItemEnviadoAccion,
+  dividirCuentaAccion,
   cambiarDeMesaAccion,
   cambiarSalidaAccion,
   unirMesasAccion,
@@ -78,8 +84,16 @@ export default async function PaginaDeLaMesa({ params }: PropsDePagina) {
           reimprimir: await puedeReimprimir(contexto),
           cobrar: await puedeCobrarLaMesa(contexto),
           unir: await puedeUnirMesas(contexto),
+          dividir: await puedeDividirCuentas(contexto),
         }
-      : { enviar: false, imprimir: false, reimprimir: false, cobrar: false, unir: false };
+      : {
+          enviar: false,
+          imprimir: false,
+          reimprimir: false,
+          cobrar: false,
+          unir: false,
+          dividir: false,
+        };
     // Las mesas a las que se puede unir esta: solo si se ofrece unir; si no se pudo leer el mapa, no se ofrece.
     const mapa = cocina.unir ? await cargarElMapaDeMesas({ filtro: "TODAS" }) : null;
     const paraUnir = mapa?.ok === true ? mesasParaUnir({}, mapa.dato.mesas, mesaId) : null;
@@ -96,6 +110,7 @@ export default async function PaginaDeLaMesa({ params }: PropsDePagina) {
           mesaId={mesaId}
           mesa={mesa}
           textos={textosDeLaMesa()}
+          textosDeDividir={textosDeDividir()}
           acciones={{
             tomarPedido: tomarPedidoAccion,
             agregar: agregarAlPedidoAccion,
@@ -104,6 +119,7 @@ export default async function PaginaDeLaMesa({ params }: PropsDePagina) {
             liberar: liberarMesaAccion,
             cambiarDeMesa: cambiarDeMesaAccion,
             unir: unirMesasAccion,
+            dividir: dividirCuentaAccion,
             enviar: enviarACocinaAccion,
             pedirQueSalga: pedirQueSalgaAccion,
             anular: anularItemEnviadoAccion,

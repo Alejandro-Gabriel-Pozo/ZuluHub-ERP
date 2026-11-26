@@ -44,6 +44,19 @@ export type Borrador = Readonly<{
   repartos: Readonly<Record<string, Reparto | undefined>>;
 }>;
 
+/** Una cuenta hija de una mesa dividida («Cuenta 1 · $ 100,00 · Pendiente»): se cobra sola, con todos sus platos enviados y su total en pesos. */
+export type CuentaHijaArmada = Readonly<{
+  cuentaId: string;
+  /** «Cuenta 1». */
+  titulo: string;
+  /** «$ 1.234,56»; `null` si su moneda no es ARS. */
+  importe: string | null;
+  totalACobrar: Readonly<{ moneda: string; monto: string }> | null;
+  cobrada: boolean;
+  /** Se le ofrece «Cobrar»: sin cobrar, con platos y todos enviados. */
+  cobrable: boolean;
+}>;
+
 /** Dos cuentas de entrada: el mínimo para dividir (el máximo es el de la primitiva de límites). */
 export const BORRADOR_INICIAL: Borrador = { cuentas: 2, repartos: {} };
 
@@ -160,7 +173,7 @@ function asignacionDe(
     cantidadPorPasos(l.pasoDeCantidad, r.pasos.filter((p) => p === i + 1).length),
   );
   return cantidades.every((c) => c !== null)
-    ? { lineaId: l.lineaId, forma: "POR_UNIDADES", cantidades: cantidades as string[] }
+    ? { lineaId: l.lineaId, forma: "POR_UNIDADES", cantidades }
     : null;
 }
 
