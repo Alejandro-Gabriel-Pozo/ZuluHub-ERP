@@ -6,7 +6,7 @@ import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilan
 
 /**
  * SAL-D: «Cobrar la mesa» de punta a punta en la app REAL construida, con un navegador real y una base real: con platos sin enviar «Cobrar» está apagado y se enciende al enviar a cocina; abre la hoja de cobro de ESA mesa con el
- * total del servidor; con DOBLE TOQUE en «Cobrar» queda un solo ticket y un solo cobro, el resultado dice «Cobrado» y el número (sin «Anular»), y la mesa queda libre; desde DOS pestañas cobrando la misma mesa a la vez, uno cobra y
+ * total del servidor; con DOBLE TOQUE en «Cobrar» queda un solo ticket y un solo cobro, el resultado dice «Cobrado» y el número y «Anular», y la mesa queda libre; desde DOS pestañas cobrando la misma mesa a la vez, uno cobra y
  * el otro no (un solo ticket). Lo que esta prueba ve y las de componentes no: la página en el servidor (caja, opciones y total), la acción de servidor, la CSP y que ningún componente rompa en el navegador (React #441).
  * La sesión de caja se siembra en la base (abrirla es otra pantalla).
  */
@@ -138,7 +138,7 @@ describe.skipIf(base === null)(
       await mundo?.cerrar();
     });
 
-    it("«Cobrar» está apagado con platos sin enviar; enviado, abre la hoja de cobro de la mesa; doble toque en «Cobrar»: un solo ticket, «Cobrado», sin «Anular», y la mesa queda libre", async () => {
+    it("«Cobrar» está apagado con platos sin enviar; enviado, abre la hoja de cobro de la mesa; doble toque en «Cobrar»: un solo ticket, «Cobrado», con «Anular», y la mesa queda libre", async () => {
       await mesaConPedido(7, 3);
       expect(await pagina.getByRole("button", { name: "Cobrar", exact: true }).isDisabled()).toBe(
         true,
@@ -159,7 +159,7 @@ describe.skipIf(base === null)(
       await pagina.getByRole("button", { name: "Cobrar", exact: true }).dblclick();
       await pagina.getByText("Cobrado", { exact: true }).waitFor();
       await pagina.getByText("Ticket N.º 1").waitFor();
-      expect(await pagina.getByRole("button", { name: "Anular", exact: true }).count()).toBe(0);
+      expect(await pagina.getByRole("button", { name: "Anular", exact: true }).count()).toBe(1);
       expect(await contar("ticket")).toBe(1);
       expect(await contar("cobranza_de_ticket")).toBe(1);
       expect(await cuentasAbiertas()).toBe(0);
@@ -231,6 +231,31 @@ describe.skipIf(base === null)(
       await pagina.getByText("Cobrado", { exact: true }).waitFor();
       expect(await cuentasAbiertas()).toBe(0);
       vigilante.tomar();
+    });
+    it("ANULAR el cobro de la mesa: sin motivo no deja; con motivo queda «Anulado», no se reabre la mesa y la caja no se toca", async () => {
+      await mesaConPedido(12, 13);
+      await enviarYRecargar();
+      await pagina.getByRole("button", { name: "Cobrar", exact: true }).click();
+      await pagina.waitForURL(/\/cobrar$/);
+      await pagina.getByRole("heading", { name: "Cobro", level: 2 }).waitFor();
+      await pagina.getByRole("button", { name: "Cobrar", exact: true }).click();
+      await pagina.getByText("Cobrado", { exact: true }).waitFor();
+      const movimientos = await contar("movimiento_caja");
+      await pagina.getByRole("button", { name: "Anular", exact: true }).click();
+      const cuadro = pagina.getByRole("dialog");
+      await cuadro.getByRole("button", { name: "Anular", exact: true }).click();
+      await pagina.getByText("Escribí el motivo").waitFor();
+      expect(await contar("ticket_correccion")).toBe(0);
+      expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+      await cuadro.getByRole("textbox", { name: /Motivo/ }).fill("Se cobró de más");
+      await cuadro.getByRole("button", { name: "Anular", exact: true }).dblclick();
+      await pagina.getByText("Anulado", { exact: true }).first().waitFor();
+      expect(await contar("ticket_correccion")).toBe(1);
+      expect(await contar("movimiento_caja")).toBe(movimientos);
+      expect(await cuentasAbiertas()).toBe(0);
+      await pagina.getByRole("button", { name: "Volver", exact: true }).click();
+      await pagina.waitForURL(`${mundo.url}/salon`);
+      expect(vigilante.tomar()).toEqual([]);
     });
   },
 );
