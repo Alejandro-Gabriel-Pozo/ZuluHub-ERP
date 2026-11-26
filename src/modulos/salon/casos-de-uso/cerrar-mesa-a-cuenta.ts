@@ -63,15 +63,14 @@ async function cerrar(
     const pendientes = await platosPendientesEnTx(tx, empresaId, cuenta.id);
     if (pendientes.paraEnviar > 0 || pendientes.enEspera > 0) return err("HAY_PLATOS_SIN_ENVIAR");
   }
-  // `totalEsperado` lo valida `cerrarCuentaEnTx` (CC-1): una sola regla, en ventas. Mientras su tipo no lo declare, el pedido va como valor y no como literal.
-  const pedido = {
+  const pedido: EntradaDeCerrarCuenta = {
     cuentaId: entrada.cuentaId,
     ejemplarId: entrada.ejemplarId,
     clienteId: entrada.clienteId,
     totalEsperado: entrada.totalEsperado,
     aprobacionDelExceso: entrada.aprobacionDelExceso,
     confirmaciones: entrada.confirmaciones,
-  } satisfies EntradaDeCerrarCuenta & Pick<EntradaDeCerrarMesaACuenta, "totalEsperado">;
+  };
   const cerrada = await cerrarCuentaEnTx(tx, contexto, persona, pedido, {
     stock: dependencias.stock,
     cuentaCorriente: dependencias.cuentaCorriente,

@@ -9,8 +9,8 @@ import { nuevoId, valorDe, type EscenarioDeVentas } from "./ventas-apoyo";
  * Cerrar una mesa a nombre de un cliente con cuenta corriente (`salon.cerrarMesaACuenta`), con los casos de uso reales, la cuenta corriente real y el rol de la aplicación: sin
  * cobro de caja, el ticket queda EMITIDO cargado a la cuenta con UN cargo en el libro y la mesa queda libre. Cubre: lo feliz, los platos sin enviar, la idempotencia (doble clic
  * y repetición), dos actores a la vez (la misma mesa; cerrar contra cobrar; dos mesas del mismo cliente con límite para una), cada error del cierre a cuenta sin escribir, uniones
- * y divisiones, aislamiento por empresa y sucursal, permisos, atomicidad con falla inyectada y la auditoría sin el nombre del cliente. El total esperado y el cierre con otro
- * cliente los valida ventas (CC-1): se prueban en `ventas-*` y se suman acá al integrar ese cambio.
+ * y divisiones, aislamiento por empresa y sucursal, permisos, atomicidad con falla inyectada y la auditoría sin el nombre del cliente. El total esperado (`TOTAL_CAMBIO`) y el
+ * cierre ya hecho con OTRO cliente (`CLAVE_REUTILIZADA`) los valida ventas (CC-1) y acá se prueban por la composición de salón.
  */
 
 const base = inject("baseDePruebas");
@@ -307,6 +307,46 @@ describe.skipIf(base === null)("salón: cerrar la mesa a cuenta", () => {
       (await cerrar(p.cuenta, c, { aprobacionDelExceso: { motivo: "Cliente de confianza" } })).ok,
     ).toBe(true);
     expect(await asientos(c)).toHaveLength(1);
+  });
+
+  it("TOTAL ESPERADO: si el total de ahora no es el que vio quien cierra, TOTAL_CAMBIO con el total actual y no escribe nada; con el total justo cierra", async () => {
+    const p = await mesaConPlato();
+    const c = await cliente();
+    expect(
+      await cerrar(p.cuenta, c, { totalEsperado: { moneda: "ARS", monto: "999.99" } }),
+    ).toEqual({
+      ok: false,
+      error: { error: "TOTAL_CAMBIO", totalActual: { moneda: "ARS", monto: "1000.00" } },
+    });
+    expect(
+      await cerrar(p.cuenta, c, { totalEsperado: { moneda: "USD", monto: "1000.00" } }),
+    ).toEqual({
+      ok: false,
+      error: "MONEDA_NO_SOPORTADA",
+    });
+    expect(await tickets(p.cuenta)).toEqual([]);
+    expect(await asientos(c)).toEqual([]);
+    expect(await estado(p.cuenta)).toBe("ABIERTA");
+    expect((await cerrar(p.cuenta, c)).ok).toBe(true);
+  });
+
+  it("IDEMPOTENCIA CON TOTAL VIEJO Y OTRO CLIENTE: repetir el cierre con el total esperado viejo devuelve el ticket; con OTRO cliente es CLAVE_REUTILIZADA; nada se escribe de más", async () => {
+    const p = await mesaConPlato();
+    const [c, otro] = [await cliente(), await cliente()];
+    const primera = valorDe(await cerrar(p.cuenta, c));
+    const antes = await auditorias("MESA_CERRADA_A_CUENTA");
+    const conTotalViejo = valorDe(
+      await cerrar(p.cuenta, c, { totalEsperado: { moneda: "ARS", monto: "1.00" } }),
+    );
+    expect(conTotalViejo.ticketId).toBe(primera.ticketId);
+    expect(conTotalViejo.yaEstabaCerrada).toBe(true);
+    expect(await cerrar(p.cuenta, otro)).toEqual({ ok: false, error: "CLAVE_REUTILIZADA" });
+    expect(await tickets(p.cuenta)).toEqual([
+      { id: primera.ticketId, estado: "EMITIDO", cargado_a_parte_id: c },
+    ]);
+    expect(await asientos(c)).toHaveLength(1);
+    expect(await asientos(otro)).toEqual([]);
+    expect(await auditorias("MESA_CERRADA_A_CUENTA")).toBe(antes);
   });
 
   it("UNIÓN: cerrar a cuenta la mesa destino libera la mesa de reserva unida", async () => {
