@@ -2,10 +2,12 @@ import type { DefinicionDeCamino } from "./tipos-de-caminos";
 
 /**
  * Los caminos del módulo producción (ver `caminos.ts`), en su propio archivo para que dos ramas que suman caminos de módulos distintos no toquen las mismas líneas. Un camino no puede estar
- * en dos fragmentos (lo comprueba `test/arquitectura/datos-por-modulo.test.ts`). Cerrar una orden se suma con su pantalla (tramo siguiente).
+ * en dos fragmentos (lo comprueba `test/arquitectura/datos-por-modulo.test.ts`).
  */
 
 const HOJA_DE_MOTIVO = "apps/web/ui/plantillas/produccion/HojaDeMotivo.cliente.tsx";
+const FORMULARIO_DE_CIERRE =
+  "apps/web/ui/plantillas/produccion/FormularioDeCierreDeOrden.cliente.tsx";
 const FORMULARIO_DE_NUEVA_ORDEN =
   "apps/web/ui/plantillas/produccion/FormularioDeNuevaOrden.cliente.tsx";
 
@@ -53,6 +55,30 @@ export const CAMINOS_DE_PRODUCCION = {
       clave: "transformaciones.abrir",
       requiere: ["producto-a-producir", "cantidad-a-producir"],
       admite: [],
+    },
+    camposDeError: [],
+  },
+  // Órdenes de producción, cerrar una con lo real: lo obtenido, lo real de cada ingrediente (por posición) y, si el artículo lo pide, el vencimiento son lo único que escribe la persona; la orden y la clave de idempotencia
+  // las fija la página (`bind`) y el producto y la unidad de cada consumo los pone el servidor desde la orden. Sin `campo` de error: todo rechazo sale como el genérico, como el aviso «va a quedar en negativo» o con el
+  // texto de Lotes del vencimiento (`errores-de-produccion.ts`).
+  "cerrar-orden-de-produccion": {
+    funcion: "Cerrar una orden de producción con lo real",
+    pantallas: [FORMULARIO_DE_CIERRE],
+    pasos: [
+      {
+        id: "lo-real",
+        campos: {
+          consumos: "consumo-real-de-ingrediente",
+          obtenido: "cantidad-obtenida-de-orden",
+          vence: "vencimiento-del-lote-de-orden",
+        },
+      },
+    ],
+    deriva: [],
+    accion: {
+      clave: "transformaciones.cerrar",
+      requiere: ["consumo-real-de-ingrediente", "cantidad-obtenida-de-orden"],
+      admite: ["vencimiento-del-lote-de-orden"],
     },
     camposDeError: [],
   },
