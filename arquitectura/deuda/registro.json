@@ -531,19 +531,17 @@
     "vence": "2027-01-05"
   },
   {
-    "id": "facturar-sin-cobrar-restringir-a-gerente-y-administrador",
-    "archivos": ["src/modulos/ventas/casos-de-uso/emitir-comprobante-de-ticket.ts"],
-    "descripcion": "Condición del dueño sobre DEC-1241 (26/11/2026): facturar un ticket sin cobrar emite un comprobante fiscal y deja una deuda, así que hay que restringirlo a gerente y administrador (acción nueva, no ventas.ver y comprobantes.emitir). VENCE antes de encender la perilla facturar_antes_de_cobrar a cualquier empresa. Sin construir.",
+    "id": "perilla-facturar-antes-de-cobrar--condiciones-del-dueno",
+    "archivos": [
+      "src/modulos/ventas/casos-de-uso/emitir-comprobante-de-ticket.ts",
+      "src/modulos/ventas/aporte-al-cierre.ts"
+    ],
+    "descripcion": "Dos condiciones del dueño (26/11/2026, decisiones DEC-1241 y DEC-1243) para encender la perilla facturar_antes_de_cobrar a cualquier empresa. Sin construir. 1. Restringir «facturar sin cobrar» a gerente y administrador (acción nueva, no ventas.ver y comprobantes.emitir): facturar sin cobrar emite un comprobante fiscal y deja una deuda (DEC-1241). 2. Resolver la brecha del cierre: con la perilla encendida, un ticket emitido sin cobrar ni facturar no figura como «pendiente de facturar» porque el aporte no recibe el contexto de la empresa; toca cierre y cuenta corriente (DEC-1243). VENCE antes de encender la perilla a cualquier empresa: regla de proceso, nada impide hoy encenderla.",
     "tipo": "backlog",
     "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-11-26"
-  },
-  {
-    "id": "cierre-pendientes-de-facturar-con-la-perilla-encendida",
-    "archivos": ["src/modulos/ventas/aporte-al-cierre.ts"],
-    "descripcion": "Condición del dueño sobre DEC-1243 (26/11/2026): con la perilla facturar_antes_de_cobrar encendida, un ticket emitido sin cobrar ni facturar no figura como «pendiente de facturar» en el cierre (el aporte no recibe el contexto de la empresa; toca cierre y cuenta corriente). VENCE antes de encender la perilla a cualquier empresa. Sin construir.",
-    "tipo": "backlog",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-11-26"
+    "creada": "2026-11-26",
+    "motivo": "Condición del dueño (26/11/2026, Excel de decisiones, comentarios de DEC-1241 y DEC-1243): confirmó las dos decisiones sin construir esto, con la condición de no encender la perilla facturar_antes_de_cobrar a ninguna empresa hasta resolverlo.",
+    "aprobadoPor": "dueño (26/11/2026, Excel decisiones-pendientes-del-pr-final, vía el orquestador)",
+    "vence": "2027-01-25"
   }
 ]
