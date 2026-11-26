@@ -3,5 +3,5 @@
   "archivos": "src/modulos/fiscal/dominio/acreditacion.ts",
   "minutos": 1,
   "pruebas": "src/modulos/fiscal/dominio/acreditacion.test.ts",
-  "critico": true
+  "nivel": "CRITICO"
 }

@@ -77,6 +77,12 @@ describe("los textos de producción, receta y lotes", () => {
       "Pasos",
       "Costo de la comida",
       "Todas",
+      // Pantalla de Recetas, guardar (REC-B).
+      "Costo antes",
+      "Costo ahora",
+      "Diferencia",
+      "Volver a editar",
+      "Nueva receta",
       "Ficha de cocina",
       "Esta acción no está permitida",
     ]);

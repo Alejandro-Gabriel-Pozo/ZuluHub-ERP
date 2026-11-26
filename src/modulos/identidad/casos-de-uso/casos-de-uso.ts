@@ -2,7 +2,6 @@ import { crearAceptarInvitacion } from "./aceptar-invitacion";
 import { crearAceptarTraspaso } from "./aceptar-traspaso";
 import { crearApagarMembresia } from "./apagar-membresia";
 import { crearArchivarRol } from "./archivar-rol";
-import { crearAsignarRol } from "./asignar-rol";
 import { crearAsignarSucursales } from "./asignar-sucursales";
 import { crearCancelarTraspaso } from "./cancelar-traspaso";
 import type { DependenciasDeIdentidad } from "./contrato";
@@ -37,7 +36,6 @@ export function crearCasosDeUsoDeIdentidad(dependencias: DependenciasDeIdentidad
     crearRol: crearCrearRol(dependencias),
     editarRol: crearEditarRol(dependencias),
     archivarRol: crearArchivarRol(dependencias),
-    asignarRol: crearAsignarRol(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 

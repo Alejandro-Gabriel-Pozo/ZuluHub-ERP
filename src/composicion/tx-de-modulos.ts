@@ -14,6 +14,7 @@ import {
   type HostsPropiosDb,
   type LecturaDeHostsPropios,
 } from "../modulos/marcas/publico";
+import { armarTxDeSaldos } from "./libro-de-saldos";
 import { crearRepositoriosDeProduccion } from "../modulos/produccion/publico";
 import { crearRepositoriosDeStock } from "../modulos/stock/publico";
 import { crearRepositoriosDeVentas } from "../modulos/ventas/publico";
@@ -34,6 +35,8 @@ export type PiezasDeModulosEnTx = ReturnType<typeof crearRepositoriosDeCatalogo>
   ReturnType<typeof crearRepositoriosDeProduccion> &
   /** Los roles propios de la empresa (H4b T4): identidad los usa en sus casos de uso y consultas. */
   Readonly<{ roles: RepositorioDeRoles }> &
+  /** El libro de saldos (L1: compras asienta el cargo de la factura en su transacción): sus repositorios; la auditoría ya la trae la `Tx` base. */
+  Pick<ReturnType<typeof armarTxDeSaldos>, "asientos" | "imputaciones" | "saldos"> &
   /** El host activo propio de la empresa por superficie (dominio propio): solo lectura; la base deja ver únicamente lo activo de la empresa del contexto (0095). */
   Readonly<{ hostsPropios: LecturaDeHostsPropios }>;
 
@@ -50,6 +53,14 @@ export function armarPiezasDeModulosEnTx(
     ...crearRepositoriosDeClientes(db),
     ...crearRepositoriosDeCompras(db),
     ...crearRepositoriosDeProduccion(db),
+    ...piezasDelLibro(db),
     hostsPropios: crearLecturaDeHostsPropios(db.withTables<HostsPropiosDb>()),
   };
+}
+
+function piezasDelLibro(
+  db: Parameters<ConfiguracionDeTransacciones<unknown>["armar"]>[0],
+): Pick<ReturnType<typeof armarTxDeSaldos>, "asientos" | "imputaciones" | "saldos"> {
+  const { asientos, imputaciones, saldos } = armarTxDeSaldos(db);
+  return { asientos, imputaciones, saldos };
 }

@@ -361,11 +361,6 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
         }),
       editarRol: (_e, ctx) => ops.identidad.editarRol(ctx, { rolId: randomUUID(), nombre: "Otro" }),
       archivarRol: (_e, ctx) => ops.identidad.archivarRol(ctx, { rolId: randomUUID() }),
-      asignarRol: (e, ctx) =>
-        ops.identidad.asignarRol(ctx, {
-          personaId: e.otra,
-          destino: { tipo: "BASE", rol: "OPERADOR" },
-        }),
     };
     const DE_CONSULTAS_DE_IDENTIDAD: Record<
       keyof typeof DECLARACIONES_DE_CONSULTAS_DE_IDENTIDAD,
@@ -379,7 +374,6 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
         ops.consultasDeIdentidad.personasParaMostrar(ctx, { ids: [e.otra] }),
       listarRoles: (_e, ctx) => ops.consultasDeIdentidad.listarRoles(ctx),
       verRol: (_e, ctx) => ops.consultasDeIdentidad.verRol(ctx, { rolId: randomUUID() }),
-      rolesAsignables: (_e, ctx) => ops.consultasDeIdentidad.rolesAsignables(ctx),
     };
     const DE_EMPRESAS: Record<
       keyof typeof DECLARACIONES_DE_EMPRESAS,

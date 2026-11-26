@@ -10,6 +10,8 @@ export const DECLARACIONES_DE_CONSULTAS = {
   existencias: { accion: "stock.ver" },
   existenciasNegativas: { accion: "stock.ver" },
   libroDeArticulo: { accion: "stock.ver" },
+  // La pestaña «Movimientos» (STK-B1): el libro de un depósito, una tarjeta por renglón.
+  movimientosDelDeposito: { accion: "stock.ver" },
   fichaDeMovimiento: { accion: "stock.ver" },
   movimientosPorOrigen: { accion: "stock.ver" },
   verificarSaldos: { accion: "stock.verificar_saldos" },

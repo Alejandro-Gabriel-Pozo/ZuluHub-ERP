@@ -98,11 +98,6 @@ const LLAMADAS: Record<ConAccion, (casos: CasosDeUsoDeIdentidad) => Promise<unkn
     c.crearRol(contexto, { rolId: "r-1", nombre: "Cajero", origen: { tipo: "VACIO" } }),
   editarRol: (c) => c.editarRol(contexto, { rolId: "r-1", nombre: "Cajera" }),
   archivarRol: (c) => c.archivarRol(contexto, { rolId: "r-1" }),
-  asignarRol: (c) =>
-    c.asignarRol(contexto, {
-      personaId: personaId("p-1"),
-      destino: { tipo: "BASE", rol: "OPERADOR" },
-    }),
 };
 
 /**
@@ -136,7 +131,6 @@ describe("P7: el guard va primero en cada caso de uso", () => {
       "aceptarTraspaso",
       "apagarMembresia",
       "archivarRol",
-      "asignarRol",
       "asignarSucursales",
       "cancelarTraspaso",
       "crearRol",
@@ -387,7 +381,6 @@ describe("P7: el guard va primero en cada consulta de identidad", () => {
       c.personasParaMostrar(contexto, { ids: ["00000000-0000-4000-8000-000000000001"] }),
     listarRoles: (c) => c.listarRoles(contexto),
     verRol: (c) => c.verRol(contexto, { rolId: "r-1" }),
-    rolesAsignables: (c) => c.rolesAsignables(contexto),
   };
 
   const consultas = Object.entries(DECLARACIONES_DE_CONSULTAS).flatMap(([nombre, declaracion]) =>

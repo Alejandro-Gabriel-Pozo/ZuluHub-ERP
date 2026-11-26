@@ -1,5 +1,6 @@
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
+import type { LecturaDeDerechosDeUso } from "../../../puertos/derechos-de-uso";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { TxDeLecturaDeCaja } from "../../caja/publico";
 import type { LecturasDeCatalogo } from "../../catalogo/publico";
@@ -19,6 +20,8 @@ export type TxDeConsultasDeVentas = LecturasDeCatalogo &
     /** El puntero ticket → comprobante (E1, 0029): qué tickets ya tienen documento. */
     documentos: Pick<RepositorioDeDocumentos, "vigentesDe">;
     autorizacion: CargaDeAutorizacion;
+    /** Los derechos del plan de la empresa (la perilla `facturar_antes_de_cobrar`), leídos en esta transacción y sin caché. */
+    derechos: Pick<LecturaDeDerechosDeUso, "deLaEmpresa">;
   }>;
 
 export type DependenciasDeConsultasDeVentas = Readonly<{

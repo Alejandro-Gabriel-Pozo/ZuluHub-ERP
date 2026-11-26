@@ -31,8 +31,6 @@ export const MODULO_DE_ADMINISTRACION = {
     "roles.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
     "roles.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
     "roles.archivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-    // Asignar un rol a una persona amplía (o recorta) lo que esa persona puede hacer; solo el gerente.
-    "usuarios.asignar_rol": { capacidad: null, efecto: "CREA_AMPLIA" },
     "sucursales.ver": { capacidad: null, efecto: "LECTURA" },
     "sucursales.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
     "sucursales.editar": { capacidad: null, efecto: "CREA_AMPLIA" },

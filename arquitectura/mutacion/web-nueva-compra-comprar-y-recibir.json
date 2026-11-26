@@ -3,5 +3,5 @@
   "archivos": "src/composicion/comprar-web.ts,src/composicion/entradas-de-comprar.ts",
   "minutos": 10,
   "pruebas": "src/composicion/comprar-web.test.ts src/composicion/entradas-de-comprar.test.ts",
-  "critico": true
+  "nivel": "CRITICO"
 }

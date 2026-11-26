@@ -259,13 +259,12 @@ const SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL = [
   "puntos_de_venta.editar",
 ] as const;
 
-/** H4b T4: los roles propios y su asignación son solo del gerente (y su piso SOLO_GERENTE lo fija la base). */
+/** H4b T4: los roles propios son solo del gerente (y su piso SOLO_GERENTE lo fija la base). */
 const SOLO_DEL_GERENTE_DE_ROLES = [
   "roles.archivar",
   "roles.crear",
   "roles.editar",
   "roles.ver",
-  "usuarios.asignar_rol",
 ] as const;
 
 const SOLO_DEL_GERENTE = [
@@ -320,9 +319,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 177 acciones: 39 de empresa (5 de roles propios y su asignación), configuración fiscal y facturación, 44 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas", () => {
+  it("hay 176 acciones: 38 de empresa (4 de roles propios), configuración fiscal y facturación, 44 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(177);
+    expect(todas).toHaveLength(176);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -409,8 +408,8 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     }
   });
 
-  it("los cinco permisos de roles propios y su asignación son solo del gerente: administrador y operador no pueden ninguno", () => {
-    expect(SOLO_DEL_GERENTE_DE_ROLES).toHaveLength(5);
+  it("los cuatro permisos de roles propios son solo del gerente: administrador y operador no pueden ninguno", () => {
+    expect(SOLO_DEL_GERENTE_DE_ROLES).toHaveLength(4);
     for (const accion of SOLO_DEL_GERENTE_DE_ROLES) {
       expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE"]);
     }

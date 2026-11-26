@@ -60,7 +60,7 @@ const entradas = Object.entries(CATALOGO_DE_PERILLAS) as [string, DefinicionDePe
 const catalogoComoTabla: Readonly<Record<string, DefinicionDePerilla>> = CATALOGO_DE_PERILLAS;
 
 describe("el catálogo de perillas real", () => {
-  it("trae quince perillas: empresas_por_tenant (de administración), cuatro de catálogo y stock y tres de E6 (lotes, calidad de lote y producción), interruptores de empresa apagados, cajas_por_sucursal (de caja, límite por sucursal con base 1) y roles_propios_por_empresa (de administración, límite sin tope de base)", () => {
+  it("trae dieciséis perillas: empresas_por_tenant (de administración), cuatro de catálogo y stock y tres de E6 (lotes, calidad de lote y producción), interruptores de empresa apagados, cajas_por_sucursal (de caja, límite por sucursal con base 1) y roles_propios_por_empresa (de administración, límite sin tope de base)", () => {
     expect(CATALOGO_DE_PERILLAS).toEqual({
       empresas_por_tenant: {
         ambito: "TENANT",
@@ -153,6 +153,12 @@ describe("el catálogo de perillas real", () => {
         base: { limite: "ILIMITADO" },
         modulo: "administracion",
       },
+      facturar_antes_de_cobrar: {
+        ambito: "EMPRESA",
+        tipo: "INTERRUPTOR",
+        base: { encendida: false },
+        modulo: "ventas",
+      },
     });
   });
 
@@ -173,6 +179,7 @@ describe("el catálogo de perillas real", () => {
       | "venta_por_fracciones_y_peso"
       | "recepcion_separada"
       | "conciliacion_de_tres_vias"
+      | "facturar_antes_de_cobrar"
     >();
     // @ts-expect-error esa perilla no está declarada (la registra el módulo que la verifica)
     const inventada: ClavePerilla = "terminal_compartida";
@@ -203,7 +210,7 @@ describe("el catálogo de perillas real", () => {
     }
   });
 
-  it("cada perilla la verifica el módulo que la nombra: las de recetas, stock; la de combos, catálogo; la de cajas, caja; la del salón, salón", () => {
+  it("cada perilla la verifica el módulo que la nombra: las de recetas, stock; la de combos, catálogo; la de cajas, caja; la del salón, salón; la de facturar antes de cobrar, ventas", () => {
     const duenos = Object.fromEntries(
       Object.entries(catalogoComoTabla).map(([clave, d]) => [clave, d.modulo]),
     );
@@ -223,6 +230,7 @@ describe("el catálogo de perillas real", () => {
       recepcion_separada: "compras",
       conciliacion_de_tres_vias: "compras",
       roles_propios_por_empresa: "administracion",
+      facturar_antes_de_cobrar: "ventas",
     });
   });
 

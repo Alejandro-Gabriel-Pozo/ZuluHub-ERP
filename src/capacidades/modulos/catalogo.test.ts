@@ -36,7 +36,6 @@ describe("el catálogo comercial de módulos", () => {
           "roles.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
           "roles.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
           "roles.archivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
-          "usuarios.asignar_rol": { capacidad: null, efecto: "CREA_AMPLIA" },
           "sucursales.ver": { capacidad: null, efecto: "LECTURA" },
           "sucursales.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
           "sucursales.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
@@ -343,11 +342,11 @@ describe("el catálogo comercial de módulos", () => {
     expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
     expect([cuantas("clientes"), cuantas("compras")]).toEqual([8, 30]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
-    // 30 de administración (18 de usuarios, sucursales, gerencia y permisos, 5 de roles propios y su asignación de H4b T4, y 7 de la configuración fiscal de H7 T5),
+    // 29 de administración (18 de usuarios, sucursales, gerencia y permisos, 4 de roles propios de H4b T4, y 7 de la configuración fiscal de H7 T5),
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 49 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
-    // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A y `vidrieras.administrar_portal` del portal), 35 de caja, cierre y ventas (E0-T1), 38 de clientes y compras (E9-T1, T11, N3-2b, N3-4, N4-1, N4-3, N4-4, N4-5 y la exportación del 25/11/2026), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 183 en total.
-    expect(todas).toHaveLength(30 + 9 + 44 + 35 + 38 + 16 + 5);
+    // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A y `vidrieras.administrar_portal` del portal), 35 de caja, cierre y ventas (E0-T1), 38 de clientes y compras (E9-T1, T11, N3-2b, N3-4, N4-1, N4-3, N4-4, N4-5 y la exportación del 25/11/2026), 16 de salón y comandas (E7), 6 de lotes de E6-T7 y 5 de producción de E6-T8: 182 en total.
+    expect(todas).toHaveLength(29 + 9 + 44 + 35 + 38 + 16 + 5);
     expect(new Set(todas).size).toBe(todas.length);
   });
 

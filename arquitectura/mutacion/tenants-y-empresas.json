@@ -3,5 +3,5 @@
   "archivos": "src/modulos/tenants/dominio/**/*.ts,src/modulos/empresas/dominio/**/*.ts,src/consultas-de-grupo/vista-de-grupo.ts",
   "minutos": 2.8,
   "pruebas": "src/modulos/tenants/dominio src/modulos/empresas/dominio src/consultas-de-grupo",
-  "critico": true
+  "nivel": "CRITICO"
 }

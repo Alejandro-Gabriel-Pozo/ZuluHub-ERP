@@ -13,7 +13,6 @@ export const PERMISOS_DE_ADMINISTRACION = {
   "roles.crear": ["GERENTE"],
   "roles.editar": ["GERENTE"],
   "roles.archivar": ["GERENTE"],
-  "usuarios.asignar_rol": ["GERENTE"],
   "sucursales.ver": ["GERENTE", "ADMINISTRADOR"],
   "sucursales.crear": ["GERENTE", "ADMINISTRADOR"],
   "sucursales.editar": ["GERENTE", "ADMINISTRADOR"],

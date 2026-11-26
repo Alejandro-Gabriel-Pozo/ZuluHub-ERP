@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1280",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "DINERO",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Un pago compuesto lleva como mucho un medio de cada tipo (un solo efectivo, una sola transferencia): la suma de los medios es el total del pago.",
+  "que_cambia": "No se puede pagar con dos transferencias de importes distintos en un mismo pago. Revertir: quitar la restricción única de medio_de_un_pago (una línea de SQL).",
+  "donde": "0103_pago_compuesto.sql (medio_de_un_pago_uno_por_medio_uk); pago compuesto, decisión del dueño del 25/11/2026 filas 438 y 445"
+}

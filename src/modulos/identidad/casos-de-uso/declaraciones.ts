@@ -92,16 +92,6 @@ export const DECLARACIONES = {
       },
     },
   },
-  asignarRol: {
-    accion: "usuarios.asignar_rol",
-    repeticion: {
-      regla: "SIN_CAMBIOS",
-      prueba: {
-        archivo: "test/integracion/roles-asignar-casos-de-uso.test.ts",
-        it: "asignarRol: asignar el mismo rol dos veces no escribe ni audita de nuevo",
-      },
-    },
-  },
   proponerTraspaso: {
     accion: "gerencia.proponer_traspaso",
     repeticion: {

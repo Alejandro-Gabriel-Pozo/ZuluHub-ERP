@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Aviso } from "../../componentes/Aviso";
+import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import type { ListaDeRecetasArmada } from "./modelo-de-recetas";
 import estilos from "./PantallaDeListaDeRecetas.module.css";
 
@@ -12,7 +13,7 @@ export type PropsDePantallaDeListaDeRecetas = Readonly<{
 
 /**
  * La lista de recetas (maqueta `receta.html`, 15/11/2026), solo lectura: los filtros «Todas» y «Sin receta» (enlaces, no campos) y una tarjeta por producto, que lleva a su ficha: el
- * nombre y, a la derecha, el costo de la comida (solo con `costos.ver`) o «Sin receta». Sin «Nueva receta» (otro tramo). Una lista vacía dice «Sin resultados» (aviso informativo). Sin
+ * nombre y, a la derecha, el costo de la comida (solo con `costos.ver`) o «Sin receta». «Nueva receta» abajo, solo si el modelo la ofrece. Una lista vacía dice «Sin resultados» (aviso informativo). Sin
  * textos propios: todos llegan resueltos. El `h1` lo pone el armazón.
  */
 export function PantallaDeListaDeRecetas({ lista, error }: PropsDePantallaDeListaDeRecetas) {
@@ -56,6 +57,11 @@ export function PantallaDeListaDeRecetas({ lista, error }: PropsDePantallaDeList
             <a className={estilos["siguiente"]} href={lista.siguiente.href}>
               {lista.siguiente.texto}
             </a>
+          )}
+          {lista.nueva === null ? null : (
+            <div>
+              <EnlaceDeAccion href={lista.nueva.href}>{lista.nueva.texto}</EnlaceDeAccion>
+            </div>
           )}
         </>
       )}

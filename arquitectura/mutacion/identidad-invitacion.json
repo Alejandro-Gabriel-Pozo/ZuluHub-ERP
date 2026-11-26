@@ -3,5 +3,5 @@
   "archivos": "src/modulos/identidad/dominio/invitacion.ts,src/modulos/identidad/dominio/invitacion-tipos.ts",
   "minutos": 4.2,
   "pruebas": "src/modulos/identidad",
-  "critico": true
+  "nivel": "CRITICO"
 }

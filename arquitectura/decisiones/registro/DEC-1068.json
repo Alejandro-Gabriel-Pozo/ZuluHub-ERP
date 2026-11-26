@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1068",
+  "fecha": "2026-11-25",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "«Nueva receta» es el texto del botón de la lista y del aviso de un producto sin receta, y el título de la pantalla de alta, por el patrón aprobado «Nuevo producto», «Nueva compra» y «Nueva orden».",
+  "que_cambia": "Un texto que ve el cliente. Aceptado por delegación del orquestador (fila 173, TP-16). Revertir: cambiar su texto por defecto en el catálogo.",
+  "donde": "src/capacidades/vocabulario/catalogo-produccion.ts; TP-16; orquestador, fila 173"
+}

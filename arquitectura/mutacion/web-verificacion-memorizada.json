@@ -3,5 +3,5 @@
   "archivos": "src/composicion/verificacion-memorizada.ts",
   "minutos": 0.4,
   "pruebas": "src/composicion/verificacion-memorizada.test.ts",
-  "critico": true
+  "nivel": "CRITICO"
 }
