@@ -13,6 +13,7 @@ import { armarLosTextosDeImprimir } from "../../patrones/papel/textos-de-imprimi
 import type { ProductoDeLaVenta } from "../venta/modelo-de-venta-rapida";
 import { textosDeLaVenta } from "../venta/modelo-de-venta-rapida";
 import { PantallaDeLaMesa, type PropsDePantallaDeLaMesa } from "./PantallaDeLaMesa.cliente";
+import { textosDeDividir } from "./textos-de-dividir";
 import {
   armarLaMesa,
   textosDeLaMesa,
@@ -34,6 +35,8 @@ const linea = (extra: Partial<LineaDeLaFichaDeLaPantalla> & { lineaId: string })
   descripcion: "Milanesa",
   varianteNombre: null,
   cantidad: "2.0000",
+  precioUnitario: "9500.00",
+  pasoDeCantidad: "1.0000",
   importe: "19000.00",
   compartida: false,
   comanda: "PARA_ENVIAR",
@@ -51,6 +54,7 @@ const fichaConPlatos: FichaDeLaMesaDeLaPantalla = {
     {
       cuentaId: "c1",
       parte: null,
+      cobrada: false,
       total: ARS("21500.50"),
       lineas: [
         linea({ lineaId: "a" }),
@@ -68,7 +72,7 @@ const fichaConPlatos: FichaDeLaMesaDeLaPantalla = {
 };
 const fichaSinPlatos: FichaDeLaMesaDeLaPantalla = {
   ...fichaConPlatos,
-  cuentas: [{ cuentaId: "c1", parte: null, total: ARS("0.00"), lineas: [] }],
+  cuentas: [{ cuentaId: "c1", parte: null, cobrada: false, total: ARS("0.00"), lineas: [] }],
 };
 const fichaLibre: FichaDeLaMesaDeLaPantalla = {
   ...fichaConPlatos,
@@ -135,6 +139,8 @@ const accionesFalsas = () => ({
   quitar: accionFalsa(),
   liberar: accionFalsa(),
   cambiarDeMesa: accionFalsa(),
+  unir: accionFalsa(),
+  dividir: accionFalsa(),
   enviar: vi.fn<(pedido: unknown) => Promise<Respuesta<Envio>>>(() =>
     Promise.resolve(envioHecho()),
   ),
@@ -180,12 +186,21 @@ const pantalla = (
     mesaId="m1"
     mesa={armarLaMesa({}, ficha)}
     textos={textosDeLaMesa()}
+    textosDeDividir={textosDeDividir()}
     acciones={acciones}
     cuentaNuevaId="cuenta-nueva"
     mesasLibres={null}
     textosDeImprimir={armarLosTextosDeImprimir()}
-    puede={{ enviar: true, imprimir: true, reimprimir: true }}
+    puede={{
+      enviar: true,
+      imprimir: true,
+      reimprimir: true,
+      cobrar: true,
+      unir: true,
+      dividir: true,
+    }}
     rutaDeImpresoras={null}
+    mesasParaUnir={null}
     catalogo={null}
     {...extra}
   />
@@ -493,6 +508,7 @@ describe("PantallaDeLaMesa", () => {
         {
           cuentaId: "c1",
           parte: null,
+          cobrada: false,
           total: ARS("38000.00"),
           lineas: [
             linea({ lineaId: "a" }),
@@ -728,13 +744,68 @@ describe("PantallaDeLaMesa", () => {
     it("sin permiso (la ayuda): sin «Enviar a cocina», «Pedir que salga», «Anular» ni «Reimprimir»; la ficha sigue igual", async () => {
       await render(
         pantalla(fichaParaEnviar, accionesFalsas(), {
-          puede: { enviar: false, imprimir: false, reimprimir: false },
+          puede: {
+            enviar: false,
+            imprimir: false,
+            reimprimir: false,
+            cobrar: false,
+            unir: false,
+            dividir: false,
+          },
         }),
       );
       for (const nombre of ["Enviar a cocina", "Pedir que salga", "Anular", "Reimprimir"]) {
         expect(page.getByRole("button", { name: nombre }).elements()).toHaveLength(0);
       }
       await expect.element(page.getByRole("heading", { name: "Para enviar" })).toBeVisible();
+    });
+  });
+
+  describe("cobrar (SAL-D)", () => {
+    const todoEnviado: FichaDeLaMesaDeLaPantalla = {
+      ...fichaConPlatos,
+      cuentas: [
+        {
+          cuentaId: "c1",
+          parte: null,
+          cobrada: false,
+          total: ARS("12345.67"),
+          lineas: [linea({ lineaId: "c", comanda: "ENVIADA", numeroDeEnvio: 1, envioId: "e1" })],
+        },
+      ],
+    };
+
+    it("«Cobrar» está APAGADO mientras haya platos para enviar o que esperan (el estado, sin texto nuevo) y se enciende con todo enviado", async () => {
+      await render(pantalla(fichaConPlatos, accionesFalsas()));
+      await expect.element(page.getByRole("button", { name: "Cobrar" })).toBeDisabled();
+      await render(pantalla(todoEnviado, accionesFalsas()));
+      await expect.element(page.getByRole("button", { name: "Cobrar" }).last()).toBeEnabled();
+    });
+
+    it("tocar «Cobrar» lleva a la hoja de cobro de ESA mesa; no cobra nada en esta pantalla", async () => {
+      const acciones = accionesFalsas();
+      await render(pantalla(todoEnviado, acciones));
+      await userEvent.click(page.getByRole("button", { name: "Cobrar" }));
+      expect(router.push).toHaveBeenCalledWith("/salon/cuenta/m1/cobrar");
+      expect(acciones.enviar).not.toHaveBeenCalled();
+    });
+
+    it("sin permiso para cobrar la mesa (la ayuda) no hay «Cobrar»; una mesa sin platos tampoco se puede cobrar", async () => {
+      await render(
+        pantalla(todoEnviado, accionesFalsas(), {
+          puede: {
+            enviar: true,
+            imprimir: true,
+            reimprimir: true,
+            cobrar: false,
+            unir: false,
+            dividir: false,
+          },
+        }),
+      );
+      expect(page.getByRole("button", { name: "Cobrar" }).elements()).toHaveLength(0);
+      await render(pantalla(fichaSinPlatos, accionesFalsas()));
+      await expect.element(page.getByRole("button", { name: "Cobrar" }).last()).toBeDisabled();
     });
   });
 });

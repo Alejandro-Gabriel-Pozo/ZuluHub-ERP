@@ -7,6 +7,7 @@ const ARCHIVO_DE_CLASIFICACION = "test/integracion/clasificacion-casos-de-uso.te
 const ARCHIVO_DE_FORMA = "test/integracion/catalogo-forma-de-venta.test.ts";
 const ARCHIVO_DE_FAMILIAS = "test/integracion/familias-casos-de-uso.test.ts";
 const ARCHIVO_DE_ORDEN = "test/integracion/familias-orden.test.ts";
+const ARCHIVO_DE_CUENTAS_DE_IMAGEN = "test/integracion/cuentas-de-imagen-casos-de-uso.test.ts";
 
 /**
  * Los casos de uso del catálogo (E2 mínimo §3.5) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin
@@ -231,6 +232,26 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_CARTA,
         it: "C-1: guardarCartaPublica con el mismo id dos veces deja UNA carta, un solo código y una entrada de auditoría; la segunda es yaExistia",
+      },
+    },
+  },
+  declararCuentaDeImagen: {
+    accion: "vidrieras.administrar_cuentas_de_imagen",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_CUENTAS_DE_IMAGEN,
+        it: "I-1: declarar con la misma clave dos veces deja UNA cuenta y una auditoría; la segunda es yaExistia; con la misma clave y otra cuenta, CLAVE_REUTILIZADA",
+      },
+    },
+  },
+  retirarCuentaDeImagen: {
+    accion: "vidrieras.administrar_cuentas_de_imagen",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_CUENTAS_DE_IMAGEN,
+        it: "R-1: retirar dos veces es ok; la segunda es yaEstaba y no escribe ni audita",
       },
     },
   },

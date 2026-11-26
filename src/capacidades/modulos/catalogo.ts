@@ -13,6 +13,7 @@ import { MODULO_DE_CATALOGO } from "./catalogo-catalogo";
 import { MODULO_DE_CIERRE } from "./catalogo-cierre";
 import { MODULO_DE_CLIENTES } from "./catalogo-clientes";
 import { MODULO_DE_COMPRAS } from "./catalogo-compras";
+import { MODULO_DE_CUENTA_CORRIENTE } from "./catalogo-cuenta_corriente";
 import { MODULO_DE_FACTURACION } from "./catalogo-facturacion";
 import { MODULO_DE_PRODUCCION } from "./catalogo-lotes-y-produccion";
 import { MODULOS_DE_SALON_Y_COMANDAS } from "./catalogo-salon-y-comandas";
@@ -79,6 +80,7 @@ export const CATALOGO_DE_MODULOS = {
   ...MODULOS_DE_SALON_Y_COMANDAS,
   clientes: MODULO_DE_CLIENTES,
   compras: MODULO_DE_COMPRAS,
+  cuenta_corriente: MODULO_DE_CUENTA_CORRIENTE,
   produccion: MODULO_DE_PRODUCCION,
 } as const satisfies CatalogoComercial;
 

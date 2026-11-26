@@ -174,6 +174,45 @@ describe.skipIf(base === null)("composición web: declarar y anular el pago de u
     expect(await movimientos(m.caja.sesionId)).toBe(antes);
   });
 
+  it("varios medios por la frontera web: efectivo y QR con su importe; la ficha los muestra uno por uno, la caja baja solo el efectivo; `COMPUESTO` desde el navegador no pasa", async () => {
+    const m = await armar();
+    const sinMedio = {
+      clave: nuevoId(),
+      comprobanteId: m.comprobanteId,
+      fechaDePago: "2026-10-11",
+      cajaId: m.caja.cajaId,
+      motivo: "Pago de la factura en efectivo",
+      medios: [
+        { medio: "EFECTIVO", importe: "1000.00" },
+        { medio: "QR", importe: "1420.00" },
+      ],
+    };
+    expect(
+      await declararElPago(d, m.e.gerente, {
+        ...sinMedio,
+        clave: nuevoId(),
+        medios: [{ medio: "COMPUESTO", importe: "2420.00" }],
+      }),
+    ).toMatchObject({ ok: false });
+    expect(await pagos(m.comprobanteId)).toBe(0);
+    expect(await declararElPago(d, m.e.gerente, sinMedio)).toMatchObject({
+      ok: true,
+      dato: { yaExistia: false },
+    });
+    const f = await ficha(m.e, m.recepcionId);
+    expect(f.pagos).toMatchObject([
+      {
+        medio: "COMPUESTO",
+        importe: { moneda: "ARS", monto: "2420.00" },
+        medios: [
+          { medio: "EFECTIVO", importe: { moneda: "ARS", monto: "1000.00" } },
+          { medio: "QR", importe: { moneda: "ARS", monto: "1420.00" } },
+        ],
+      },
+    ]);
+    expect(await saldo(m.caja.sesionId)).toBe("0.00");
+  });
+
   it("EFECTIVO con caja abierta: el pago y el egreso de caja son una sola transacción (la caja baja 2420,00)", async () => {
     const m = await armar();
     const r = await declararElPago(d, m.e.gerente, enEfectivo(m.comprobanteId, m.caja.cajaId));

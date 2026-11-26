@@ -77,6 +77,8 @@ export type ErrorDeVentas =
   | ErrorDeDepartamento
   | "CUENTA_ID_EN_USO"
   | "CUENTA_NO_ENCONTRADA"
+  /** R2 mínimo: el cliente que se carga al cerrar no existe en la empresa, no está activo o no es cliente (un solo motivo: no distingue lo que hay en otra empresa). */
+  | "CLIENTE_NO_VALIDO"
   | "CUENTA_NO_ABIERTA"
   | "CUENTA_CERRADA"
   | "LINEA_ID_EN_USO"

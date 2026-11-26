@@ -9,6 +9,7 @@ import { ErrorDeRespuesta } from "../../../patrones/ErrorDeRespuesta";
 import { Superposicion } from "../../../patrones/Superposicion";
 import { Pila } from "../../../primitivas/Pila";
 import { RECEPCION_INICIAL, type ResultadoDeLaRecepcion } from "./resultado-de-recepcion";
+import { sinReiniciar } from "../../../patrones/sin-reinicio";
 
 type AccionDeLaRecepcion = (
   previo: ResultadoDeLaRecepcion,
@@ -70,7 +71,7 @@ export function AccionesDeLaRecepcion({
   return (
     <>
       {puedeConfirmar ? (
-        <form action={confirmar}>
+        <form action={confirmar} onReset={sinReiniciar}>
           <ProveedorDeEnvioDeFormulario value={confirmando}>
             <Pila separacion={3}>
               {hayDepositoAElegir ? (
@@ -109,7 +110,7 @@ export function AccionesDeLaRecepcion({
             cerrable={!anulando}
             etiquetaDeCerrar={textos.cerrar}
           >
-            <form action={anular}>
+            <form action={anular} onReset={sinReiniciar}>
               <ProveedorDeEnvioDeFormulario value={anulando}>
                 <Pila separacion={3}>
                   <AreaDeTexto

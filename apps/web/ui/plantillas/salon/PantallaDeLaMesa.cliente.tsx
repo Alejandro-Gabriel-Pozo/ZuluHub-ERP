@@ -10,7 +10,6 @@ import {
 import { Boton } from "../../componentes/Boton.cliente";
 import { Insignia } from "../../componentes/Insignia";
 import { ErrorDeRespuesta } from "../../patrones/ErrorDeRespuesta";
-import { Superposicion } from "../../patrones/Superposicion";
 import type { armarLosTextosDeImprimir } from "../../patrones/papel/textos-de-imprimir";
 import type { LineaElegida } from "../venta/HojaDeProducto.cliente";
 import {
@@ -23,40 +22,35 @@ import type {
   SeccionDeLaVenta,
   TextosDeLaVenta,
 } from "../venta/modelo-de-venta-rapida";
+import { AccionesDeLaMesa } from "./AccionesDeLaMesa.cliente";
 import { CatalogoDeLaMesa } from "./CatalogoDeLaMesa.cliente";
 import { EnviosDeLaMesa } from "./EnviosDeLaMesa.cliente";
 import { HojaDeAnularItem } from "./HojaDeAnularItem.cliente";
-import { ImpresionDelDocumento, type AccionesDeImpresion } from "./ImpresionDelDocumento.cliente";
+import { HojaDeCambiarDeMesa } from "./HojaDeCambiarDeMesa.cliente";
+import { ImpresionDelDocumento } from "./ImpresionDelDocumento.cliente";
 import estilos from "./PantallaDeLaMesa.module.css";
 import { PlatoDeLaMesa } from "./PlatoDeLaMesa.cliente";
+import { UnirODividirLaMesa } from "./UnirODividirLaMesa.cliente";
+import { CuentasDeLaMesaDividida } from "./CuentasDeLaMesaDividida.cliente";
+import type { TextosDeDividir } from "./textos-de-dividir";
 import {
   tituloDelEnvio,
   type MesaArmada,
+  type MesaParaUnir,
   type MesaLibre,
   type PlatoArmado,
   type TextosDeLaMesa,
 } from "./modelo-de-la-mesa";
-import { rutaDeLaCuentaDeMesa } from "./rutas-del-salon";
-import { useCocinaDeLaMesa, type AccionesDeLaCocina } from "./useCocinaDeLaMesa.cliente";
-
-type Accion = (pedido: unknown) => Promise<Respuesta<unknown>>;
-
-type AccionesDeLaMesa = AccionesDeLaCocina &
-  AccionesDeImpresion &
-  Readonly<{
-    tomarPedido: Accion;
-    agregar: Accion;
-    cambiarSalida: Accion;
-    quitar: Accion;
-    liberar: Accion;
-    cambiarDeMesa: Accion;
-  }>;
+import { rutaDeCobrarLaCuenta, rutaDeCobrarLaMesa, rutaDeLaCuentaDeMesa } from "./rutas-del-salon";
+import type { AccionesDelServidorDeLaMesa } from "./acciones-de-la-mesa";
+import { useCocinaDeLaMesa } from "./useCocinaDeLaMesa.cliente";
 
 export type PropsDePantallaDeLaMesa = Readonly<{
   mesaId: string;
   mesa: MesaArmada;
   textos: TextosDeLaMesa;
-  acciones: AccionesDeLaMesa;
+  textosDeDividir: TextosDeDividir;
+  acciones: AccionesDelServidorDeLaMesa;
   /** El id de la cuenta de UN intento de «Tomar pedido»: lo fija la página al abrirse (recargar es otro intento). */
   cuentaNuevaId: string;
   /** Las mesas libres a las que se puede pasar la cuenta; `null` si la persona no puede cambiar de mesa (el botón no se ofrece). */
@@ -64,7 +58,16 @@ export type PropsDePantallaDeLaMesa = Readonly<{
   /** Los textos de imprimir ya resueltos (los aprobados de `comandas.texto.imprimir_*`). */
   textosDeImprimir: ReturnType<typeof armarLosTextosDeImprimir>;
   /** Lo que la persona puede hacer con la cocina (solo ayudas: el servidor decide). `enviar` abre enviar, pedir que salga y anular; `reimprimir`, las copias; `imprimir`, el botón de imprimir. */
-  puede: Readonly<{ enviar: boolean; imprimir: boolean; reimprimir: boolean }>;
+  puede: Readonly<{
+    enviar: boolean;
+    imprimir: boolean;
+    reimprimir: boolean;
+    cobrar: boolean;
+    unir: boolean;
+    dividir: boolean;
+  }>;
+  /** Las mesas a las que se puede unir esta (`mesasParaUnir`); `null` si no se pudieron leer: no se ofrece unir. */
+  mesasParaUnir: readonly MesaParaUnir[] | null;
   /** Adónde lleva «Configurar impresoras»; `null` si la persona no puede ir (el enlace no se ofrece). */
   rutaDeImpresoras: string | null;
   /** Lo que se ofrece para agregar; `null` si no se pudo leer (entonces no se ofrece agregar). */
@@ -91,12 +94,14 @@ export function PantallaDeLaMesa({
   mesaId,
   mesa,
   textos,
+  textosDeDividir,
   acciones,
   cuentaNuevaId,
   mesasLibres,
   textosDeImprimir,
   puede,
   rutaDeImpresoras,
+  mesasParaUnir,
   catalogo,
 }: PropsDePantallaDeLaMesa) {
   const router = useRouter();
@@ -135,7 +140,6 @@ export function PantallaDeLaMesa({
   const recargar = () => {
     router.refresh();
   };
-
   const cocina = useCocinaDeLaMesa(mesa.cuentaId, acciones, ejecutar, recargar);
 
   const agregar = (linea: LineaElegida) => {
@@ -177,11 +181,15 @@ export function PantallaDeLaMesa({
       ) : null}
 
       {mesa.modo === "SOLO_LECTURA" && mesa.cuentasHijas.length > 0 ? (
-        <ul className={estilos["cuentas"]}>
-          {mesa.cuentasHijas.map((c) => (
-            <li key={c}>{c}</li>
-          ))}
-        </ul>
+        <CuentasDeLaMesaDividida
+          cuentas={mesa.cuentasHijas}
+          textos={textosDeDividir}
+          puedeCobrar={puede.cobrar}
+          ocupado={ocupado}
+          alCobrar={(c) => {
+            router.push(rutaDeCobrarLaCuenta(mesaId, c.cuentaId));
+          }}
+        />
       ) : null}
 
       {mesa.modo === "CON_CUENTA" ? (
@@ -278,31 +286,41 @@ export function PantallaDeLaMesa({
               }}
             />
           ) : null}
-          <div className={estilos["acciones"]}>
-            {mesa.sinPlatos ? (
-              <Boton
-                variante="secundaria"
-                deshabilitado={ocupado}
-                alTocar={() => {
-                  if (mesa.cuentaId === null) return;
-                  void ejecutar(acciones.liberar, { cuentaId: mesa.cuentaId }, recargar);
-                }}
-              >
-                {textos.liberar}
-              </Boton>
-            ) : null}
-            {mesasLibres === null ? null : (
-              <Boton
-                variante="secundaria"
-                deshabilitado={ocupado}
-                alTocar={() => {
-                  setCambiando(true);
-                }}
-              >
-                {textos.cambiarDeMesa}
-              </Boton>
-            )}
-          </div>
+          <AccionesDeLaMesa
+            textos={textos}
+            ocupado={ocupado}
+            puedeCobrar={puede.cobrar}
+            cobrarApagado={
+              mesa.hayParaEnviar || mesa.hayEnEspera || mesa.sinPlatos || mesa.totalACobrar === null
+            }
+            alCobrar={() => {
+              router.push(rutaDeCobrarLaMesa(mesaId));
+            }}
+            sinPlatos={mesa.sinPlatos}
+            alLiberar={() => {
+              if (mesa.cuentaId === null) return;
+              void ejecutar(acciones.liberar, { cuentaId: mesa.cuentaId }, recargar);
+            }}
+            puedeCambiarDeMesa={mesasLibres !== null}
+            alCambiarDeMesa={() => {
+              setCambiando(true);
+            }}
+          />
+          <UnirODividirLaMesa
+            mesa={mesa}
+            textos={textos}
+            textosDeDividir={textosDeDividir}
+            puede={puede}
+            mesasParaUnir={mesasParaUnir}
+            ocupado={ocupado}
+            error={error}
+            acciones={acciones}
+            ejecutar={ejecutar}
+            alUnida={(destino) => {
+              router.push(rutaDeLaCuentaDeMesa(destino.mesaId));
+            }}
+            alDividida={recargar}
+          />
           {catalogo === null ? null : (
             <>
               <h3 className={estilos["subtitulo"]}>{textos.agregar}</h3>
@@ -342,44 +360,26 @@ export function PantallaDeLaMesa({
         />
       )}
 
-      <Superposicion
+      <HojaDeCambiarDeMesa
         abierta={cambiando && mesasLibres !== null}
-        titulo={textos.pasarALaMesa}
-        proposito="elegir"
+        mesasLibres={mesasLibres}
+        textos={textos}
+        ocupado={ocupado}
         alCerrar={() => {
           setCambiando(false);
         }}
-        cerrable={!ocupado}
-        etiquetaDeCerrar={textos.cerrar}
-      >
-        {mesasLibres === null || mesasLibres.length === 0 ? (
-          <p>{textos.noHayMesasLibres}</p>
-        ) : (
-          <ul className={estilos["destinos"]}>
-            {mesasLibres.map((destino) => (
-              <li key={destino.id}>
-                <Boton
-                  variante="secundaria"
-                  deshabilitado={ocupado}
-                  alTocar={() => {
-                    if (mesa.cuentaId === null) return;
-                    void ejecutar(
-                      acciones.cambiarDeMesa,
-                      { cuentaId: mesa.cuentaId, mesaDestinoId: destino.id },
-                      () => {
-                        setCambiando(false);
-                        router.push(rutaDeLaCuentaDeMesa(destino.id));
-                      },
-                    );
-                  }}
-                >
-                  {destino.titulo}
-                </Boton>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Superposicion>
+        alElegir={(destino) => {
+          if (mesa.cuentaId === null) return;
+          void ejecutar(
+            acciones.cambiarDeMesa,
+            { cuentaId: mesa.cuentaId, mesaDestinoId: destino.id },
+            () => {
+              setCambiando(false);
+              router.push(rutaDeLaCuentaDeMesa(destino.id));
+            },
+          );
+        }}
+      />
     </div>
   );
 }

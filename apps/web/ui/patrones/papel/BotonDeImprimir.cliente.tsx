@@ -47,6 +47,8 @@ export type PropsDeBotonDeImprimir = Readonly<{
   trabajoInicial?: Readonly<{ intentos: number; sinImpresora: boolean }>;
   /** Arranca solo al aparecer (una sola vez): el diálogo de impresión se abre al enviar (DEC-1034). Sin esto espera el toque en «Imprimir». */
   arrancarSolo?: boolean;
+  /** Empieza en «No se pudo imprimir» con «Reintentar» y «Ver en pantalla» (la pantalla de la cocina, SAL-H, para un trabajo que ya falló antes de abrirla). «Reintentar» pide el mismo trabajo con un intento más. */
+  empezarFallida?: boolean;
   /** Lo que acompaña al aviso «No hay impresora para la comanda de cocina» (p. ej. el enlace «Configurar impresoras»). */
   acompanamientoSinImpresora?: ReactNode;
 }>;
@@ -72,9 +74,10 @@ export function BotonDeImprimir({
   nuevaClave = () => crypto.randomUUID(),
   trabajoInicial,
   arrancarSolo = false,
+  empezarFallida = false,
   acompanamientoSinImpresora,
 }: PropsDeBotonDeImprimir) {
-  const [fase, setFase] = useState<Fase>("reposo");
+  const [fase, setFase] = useState<Fase>(empezarFallida ? "fallida" : "reposo");
   const [error, setError] = useState<ErrorPublico | null>(null);
   const impresion = useImpresionDelPapel();
   const enVuelo = useRef(false);
