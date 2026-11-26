@@ -35,6 +35,7 @@ const linea = (extra: Partial<LineaDeLaFichaDeLaPantalla> & { lineaId: string })
   varianteNombre: null,
   cantidad: "2.0000",
   importe: "19000.00",
+  nota: null,
   compartida: false,
   comanda: "PARA_ENVIAR",
   numeroDeEnvio: null,
@@ -132,6 +133,7 @@ const accionesFalsas = () => ({
   tomarPedido: accionFalsa(),
   agregar: accionFalsa(),
   cambiarSalida: accionFalsa(),
+  cambiarNota: accionFalsa(),
   quitar: accionFalsa(),
   liberar: accionFalsa(),
   cambiarDeMesa: accionFalsa(),
@@ -436,6 +438,26 @@ describe("PantallaDeLaMesa", () => {
       });
     });
 
+    it("«Nota para la cocina»: lo escrito viaja como texto con la línea (y otra nota es otro intento); sin nota no viaja la clave", async () => {
+      const acciones = accionesFalsas();
+      await render(pantalla(fichaSinPlatos, acciones, { catalogo: conCatalogo }));
+      await new Promise((r) => setTimeout(r, 650));
+      await userEvent.click(page.getByRole("button", { name: /Medialuna/ }));
+      await userEvent.fill(
+        page.getByRole("textbox", { name: "Nota para la cocina" }),
+        "sin cebolla",
+      );
+      await userEvent.click(page.getByRole("button", { name: /^Agregar( ·|$)/ }));
+      await vi.waitFor(() => {
+        expect(acciones.agregar).toHaveBeenCalledTimes(1);
+      });
+      expect(acciones.agregar.mock.calls[0]?.[0]).toMatchObject({
+        productoId: "medialuna",
+        nota: "sin cebolla",
+        cuentaId: "c1",
+      });
+    });
+
     it("IDEMPOTENCIA: tras un corte, repetir lo mismo reutiliza el id de la línea; otra cantidad o éxito previo es otro id", async () => {
       const acciones = accionesFalsas();
       acciones.agregar.mockImplementationOnce(() => Promise.reject(new Error("sin red")));
@@ -465,6 +487,53 @@ describe("PantallaDeLaMesa", () => {
     it("sin lo que se ofrece (catálogo ilegible) no hay «Agregar»; una mesa libre tampoco", async () => {
       await render(pantalla(fichaSinPlatos, accionesFalsas()));
       expect(page.getByRole("button", { name: /Medialuna/ }).elements()).toHaveLength(0);
+    });
+  });
+
+  describe("nota para la cocina de un plato (SAL-G)", () => {
+    it("un plato sin enviar tiene su campo: al salir de él con otro texto guarda la nota (vacía la quita); sin cambios no manda nada; el enviado la muestra y no se edita", async () => {
+      const acciones = accionesFalsas();
+      const ficha: FichaDeLaMesaDeLaPantalla = {
+        ...fichaConPlatos,
+        cuentas: [
+          {
+            cuentaId: "c1",
+            parte: null,
+            cobrada: false,
+            total: ARS("38000.00"),
+            lineas: [
+              linea({ lineaId: "a", nota: "sin cebolla" }),
+              linea({
+                lineaId: "c",
+                comanda: "ENVIADA",
+                numeroDeEnvio: 1,
+                envioId: "e1",
+                descripcion: "Café",
+                nota: "con hielo",
+              }),
+            ],
+          },
+        ],
+      };
+      await render(pantalla(ficha, acciones));
+      const campo = page.getByRole("textbox", { name: "Nota para la cocina" });
+      expect(campo.elements()).toHaveLength(1);
+      await expect.element(campo).toHaveValue("sin cebolla");
+      await expect.element(page.getByText("con hielo")).toBeVisible();
+      await userEvent.click(campo);
+      await userEvent.tab();
+      expect(acciones.cambiarNota).not.toHaveBeenCalled();
+      await userEvent.fill(campo, "bien cocida");
+      await userEvent.tab();
+      await vi.waitFor(() => {
+        expect(acciones.cambiarNota).toHaveBeenCalledTimes(1);
+      });
+      expect(acciones.cambiarNota.mock.calls[0]?.[0]).toEqual({
+        cuentaId: "c1",
+        lineaId: "a",
+        nota: "bien cocida",
+      });
+      expect(await violacionesDeAccesibilidad()).toEqual([]);
     });
   });
 

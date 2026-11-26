@@ -70,6 +70,8 @@ export type LineaDeLaFicha = Readonly<{
   cantidad: string;
   precioUnitario: string;
   importe: string;
+  /** La nota libre para la cocina del plato («sin cebolla»); `null` si no tiene. */
+  nota: string | null;
   /** El importe de una línea compartida entre cuentas («Compartido»). */
   compartida: boolean;
   /** Estado de comanda: lo que falta enviar, lo que espera y lo enviado con su número de envío. */
@@ -361,6 +363,7 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
               cantidad: l.cantidad,
               precioUnitario: l.precioUnitario,
               importe: importes.get(l.id) ?? "0.00",
+              nota: f?.nota ?? null,
               compartida: l.importeFijo !== null,
               comanda: enviada
                 ? "ENVIADA"

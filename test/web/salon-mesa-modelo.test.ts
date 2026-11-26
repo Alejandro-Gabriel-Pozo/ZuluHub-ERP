@@ -20,6 +20,7 @@ const linea = (extra: Partial<LineaDeLaFichaDeLaPantalla> & { lineaId: string })
   varianteNombre: null,
   cantidad: "2.0000",
   importe: "19000.00",
+  nota: null,
   compartida: false,
   comanda: "PARA_ENVIAR",
   numeroDeEnvio: null,

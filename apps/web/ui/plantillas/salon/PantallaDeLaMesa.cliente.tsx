@@ -27,7 +27,7 @@ import { CatalogoDeLaMesa } from "./CatalogoDeLaMesa.cliente";
 import { EnviosDeLaMesa } from "./EnviosDeLaMesa.cliente";
 import { HojaDeAnularItem } from "./HojaDeAnularItem.cliente";
 import { HojaDeCambiarDeMesa } from "./HojaDeCambiarDeMesa.cliente";
-import { ImpresionDelDocumento, type AccionesDeImpresion } from "./ImpresionDelDocumento.cliente";
+import { ImpresionDelDocumento } from "./ImpresionDelDocumento.cliente";
 import estilos from "./PantallaDeLaMesa.module.css";
 import { PlatoDeLaMesa } from "./PlatoDeLaMesa.cliente";
 import { UnirLaMesa } from "./UnirLaMesa.cliente";
@@ -40,27 +40,14 @@ import {
   type TextosDeLaMesa,
 } from "./modelo-de-la-mesa";
 import { rutaDeCobrarLaMesa, rutaDeLaCuentaDeMesa } from "./rutas-del-salon";
-import { useCocinaDeLaMesa, type AccionesDeLaCocina } from "./useCocinaDeLaMesa.cliente";
-
-type Accion = (pedido: unknown) => Promise<Respuesta<unknown>>;
-
-type AccionesDeLaMesa = AccionesDeLaCocina &
-  AccionesDeImpresion &
-  Readonly<{
-    tomarPedido: Accion;
-    agregar: Accion;
-    cambiarSalida: Accion;
-    quitar: Accion;
-    liberar: Accion;
-    cambiarDeMesa: Accion;
-    unir: Accion;
-  }>;
+import type { AccionesDelServidorDeLaMesa } from "./acciones-de-la-mesa";
+import { useCocinaDeLaMesa } from "./useCocinaDeLaMesa.cliente";
 
 export type PropsDePantallaDeLaMesa = Readonly<{
   mesaId: string;
   mesa: MesaArmada;
   textos: TextosDeLaMesa;
-  acciones: AccionesDeLaMesa;
+  acciones: AccionesDelServidorDeLaMesa;
   /** El id de la cuenta de UN intento de «Tomar pedido»: lo fija la página al abrirse (recargar es otro intento). */
   cuentaNuevaId: string;
   /** Las mesas libres a las que se puede pasar la cuenta; `null` si la persona no puede cambiar de mesa (el botón no se ofrece). */
@@ -155,15 +142,21 @@ export function PantallaDeLaMesa({
     if (mesa.cuentaId === null) return;
     const [pedido] = pedidoDeCotizacion(agregarALaCuenta([], linea)).lineas;
     if (pedido === undefined) return;
-    const para = JSON.stringify([mesa.cuentaId, pedido]);
+    // La nota (si la hay) viaja con la línea; otra nota es otro intento (otro id de línea).
+    const nota = linea.nota === undefined ? {} : { nota: linea.nota };
+    const para = JSON.stringify([mesa.cuentaId, pedido, nota]);
     if (intento.current === null || intento.current.para !== para) {
       intento.current = { para, lineaId: nuevoId() };
     }
     const lineaId = intento.current.lineaId;
-    void ejecutar(acciones.agregar, { ...pedido, cuentaId: mesa.cuentaId, lineaId }, () => {
-      intento.current = null;
-      recargar();
-    });
+    void ejecutar(
+      acciones.agregar,
+      { ...pedido, ...nota, cuentaId: mesa.cuentaId, lineaId },
+      () => {
+        intento.current = null;
+        recargar();
+      },
+    );
   };
 
   return (
@@ -231,6 +224,14 @@ export function PantallaDeLaMesa({
                       void ejecutar(
                         acciones.cambiarSalida,
                         { cuentaId: mesa.cuentaId, lineaId: p.id, salida },
+                        recargar,
+                      );
+                    }}
+                    alCambiarNota={(nota) => {
+                      if (mesa.cuentaId === null) return;
+                      void ejecutar(
+                        acciones.cambiarNota,
+                        { cuentaId: mesa.cuentaId, lineaId: p.id, nota },
                         recargar,
                       );
                     }}
@@ -342,6 +343,7 @@ export function PantallaDeLaMesa({
                 cotizar={catalogo.cotizar}
                 ocupado={ocupado}
                 alAgregar={agregar}
+                rotuloDeNota={textos.notaParaLaCocina}
               />
             </>
           )}
