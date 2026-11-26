@@ -1,5 +1,6 @@
 import { crearCasosDeUsoDeCompras, crearConsultasDeCompras } from "../modulos/compras/publico";
 import { crearPuertosDeStock } from "../modulos/stock/publico";
+import { crearCuentaDelProveedor } from "./cuenta-del-proveedor";
 import { crearEgresoDeCaja } from "./egreso-de-caja";
 import { crearIvaDeLaEmpresa } from "./iva-de-la-empresa";
 import { crearLibroDeProveedores } from "./libro-de-proveedores";
@@ -25,6 +26,10 @@ export function armarWebDeCompras({ conexiones, reglas }: BaseDeWeb) {
     ),
     consultasDeCompras: perezoso(() =>
       crearConsultasDeCompras({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
+    /** La cuenta del proveedor desde el libro (lo que se debe y lo que queda a favor): una lectura que cruza compras y el libro, por eso vive en la composición. */
+    cuentaDelProveedor: perezoso(() =>
+      crearCuentaDelProveedor({ transacciones: conexiones.transaccionesDeApp(), reglas }),
     ),
   };
 }

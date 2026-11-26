@@ -1,5 +1,6 @@
 import type { NivelesDeControl } from "../../../capacidades/controles/niveles";
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
+import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { Auditoria } from "../../../puertos/auditoria";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
 import type { LecturaDeDerechosDeUso } from "../../../puertos/derechos-de-uso";
@@ -26,8 +27,20 @@ export type TxDeStock = LecturaDeEstados &
     derechos: Pick<LecturaDeDerechosDeUso, "deLaEmpresa">;
   }>;
 
+/**
+ * Cuántas cuentas abiertas tienen una línea vigente de este producto, dentro de la transacción de stock (PRO-D1). Stock no conoce las tablas de ventas: la composición, el único lugar donde se tocan los dos módulos, lo
+ * cablea con la lectura que ofrece ventas. Sin este puerto (stock sin ventas) no hay cuentas que mirar.
+ */
+export type CuentasAbiertasConElProducto = (
+  tx: TxDeStock,
+  contexto: ContextoOperativo,
+  productoId: string,
+) => Promise<number>;
+
 export type DependenciasDeStock = Readonly<{
   transacciones: Transacciones<TxDeStock>;
+  /** Para pedir confirmación al darle stock propio a un plato con cuentas abiertas (PRO-D1). */
+  cuentasAbiertas?: CuentasAbiertasConElProducto | undefined;
   /** El catálogo de módulos y la matriz rol → acciones con los que el guard autoriza (los pasa la composición). */
   reglas: ReglasDeEmpresa;
 }>;

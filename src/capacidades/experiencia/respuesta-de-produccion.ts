@@ -13,6 +13,8 @@ export const CLAVES_DE_ERRORES_DE_PRODUCCION = {
   PRODUCCION_ACCION_NO_PERMITIDA: "lotes.error.sin_permiso",
   // Cerrar una orden con un artículo que lleva control de vencimiento: la fecha ya pasó (texto aprobado de Lotes, control.html fila «Recibir»). La que falta sale con el código compartido `LOTE_VENCIMIENTO_REQUERIDO` (`respuesta-de-stock.ts`): el mismo texto.
   PRODUCCION_VENCIMIENTO_PASADO: "lotes.error.vencimiento_pasado",
+  // Encender el stock propio de un plato con cuentas abiertas que lo tienen: la ficha pide confirmar que esas cuentas descontarán el plato y no sus ingredientes (DEC-PRO-004).
+  PRODUCCION_CUENTAS_ABIERTAS: "produccion.elaborado.aviso_cuentas_abiertas",
 } as const satisfies Record<string, ClaveDeTexto>;
 
 export type CodigoDeProduccion = keyof typeof CLAVES_DE_ERRORES_DE_PRODUCCION;

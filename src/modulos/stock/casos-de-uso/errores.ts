@@ -115,6 +115,8 @@ export type ErrorDeStock =
   | "LOTE_CON_OTRA_FECHA"
   | "SALDO_DE_LOTE_INSUFICIENTE"
   | "SIN_CAMBIOS"
+  /** Darle stock propio a un plato con cuentas abiertas que lo tienen cambia lo que descuentan al cerrarse: hace falta que la persona lo vea y lo confirme (PRO-D1). `cuentas` es cuántas son. */
+  | Readonly<{ error: "CUENTAS_ABIERTAS_REQUIEREN_CONFIRMACION"; cuentas: number }>
   | Readonly<{
       error: "FUNCION_NO_INCLUIDA";
       perilla:

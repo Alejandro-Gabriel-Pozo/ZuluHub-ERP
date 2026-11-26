@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import type { ErrorPublico } from "../../../../../src/capacidades/experiencia/respuesta";
+import type { CodigoDeProduccion } from "../../../../../src/capacidades/experiencia/respuesta-de-produccion";
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 import { Boton } from "../../componentes/Boton.cliente";
 import { Casilla } from "../../componentes/Casilla";
@@ -34,6 +35,9 @@ export type PropsDeFormularioDeFichaDeProducto = Readonly<{
 /** Los campos del formulario a los que un error puede apuntarse (los que muestran su propio error). */
 const CAMPOS = ["nombre", "codigo", "codigoDeBarras", "alicuota"];
 
+/** El código del aviso «hay cuentas abiertas con este plato» (DEC-PRO-004): no es un fallo, la persona confirma y se reenvía. */
+const CODIGO_DE_AVISO = "PRODUCCION_CUENTAS_ABIERTAS" satisfies CodigoDeProduccion;
+
 const SIN_ERROR: Readonly<{ error: ErrorPublico | null }> = { error: null };
 
 /** Un dato que solo se ve (la clase y la unidad no se cambian después de crear el producto). */
@@ -58,7 +62,19 @@ export function FormularioDeFichaDeProducto({
   puedeGuardar,
   controlDeStock,
 }: PropsDeFormularioDeFichaDeProducto) {
-  const [resultado, enviar, enviando] = useActionState(accion, SIN_ERROR);
+  // Con cuentas abiertas que tienen el plato, encender el stock propio vuelve con un aviso: el botón pasa a «Confirmar» y reenvía con `confirmarCuentasAbiertas=1`. Cambiar cualquier dato descarta la confirmación.
+  const [avisado, setAvisado] = useState(false);
+  const conAviso: AccionDeFormulario = async (previo, datos) => {
+    if (avisado) datos.set("confirmarCuentasAbiertas", "1");
+    // Cuando la acción sale bien, Next redirige y el pedido no devuelve valor: por eso `| undefined`.
+    const respuesta: Awaited<ReturnType<AccionDeFormulario>> | undefined = await accion(
+      previo,
+      datos,
+    );
+    setAvisado(respuesta?.error?.codigo === CODIGO_DE_AVISO);
+    return respuesta;
+  };
+  const [resultado, enviar, enviando] = useActionState(conAviso, SIN_ERROR);
   const [nombre, setNombre] = useState(ficha.nombre.valor);
   const [cocina, setCocina] = useState(ficha.nombreDeCocina?.valor ?? "");
   const [codigo, setCodigo] = useState(ficha.codigo.valor);
@@ -88,7 +104,10 @@ export function FormularioDeFichaDeProducto({
               etiqueta={ficha.nombre.etiqueta}
               nombre="nombre"
               valor={nombre}
-              alCambiar={setNombre}
+              alCambiar={(valor) => {
+                setAvisado(false);
+                setNombre(valor);
+              }}
               autoComplete="off"
               error={errorDe("nombre")}
             />
@@ -98,7 +117,10 @@ export function FormularioDeFichaDeProducto({
                 etiqueta={ficha.nombreDeCocina.etiqueta}
                 nombre="nombreDeCocina"
                 valor={cocina}
-                alCambiar={setCocina}
+                alCambiar={(valor) => {
+                  setAvisado(false);
+                  setCocina(valor);
+                }}
                 autoComplete="off"
               />
             )}
@@ -107,7 +129,10 @@ export function FormularioDeFichaDeProducto({
               etiqueta={ficha.codigo.etiqueta}
               nombre="codigo"
               valor={codigo}
-              alCambiar={setCodigo}
+              alCambiar={(valor) => {
+                setAvisado(false);
+                setCodigo(valor);
+              }}
               autoComplete="off"
               autoCapitalize="off"
               error={errorDe("codigo")}
@@ -117,7 +142,10 @@ export function FormularioDeFichaDeProducto({
               etiqueta={ficha.codigoDeBarras.etiqueta}
               nombre="codigoDeBarras"
               valor={barras}
-              alCambiar={setBarras}
+              alCambiar={(valor) => {
+                setAvisado(false);
+                setBarras(valor);
+              }}
               autoComplete="off"
               inputMode="numeric"
               error={errorDe("codigoDeBarras")}
@@ -129,7 +157,10 @@ export function FormularioDeFichaDeProducto({
                 etiqueta={ficha.alicuota.etiqueta}
                 nombre="alicuota"
                 valor={alicuota}
-                alCambiar={setAlicuota}
+                alCambiar={(valor) => {
+                  setAvisado(false);
+                  setAlicuota(valor);
+                }}
                 opciones={ficha.alicuota.opciones}
                 textoDeElegir={ficha.textoDeElegir}
                 deshabilitado={ficha.alicuota.apagado}
@@ -142,7 +173,10 @@ export function FormularioDeFichaDeProducto({
                 etiqueta={ficha.seccion.etiqueta}
                 nombre="seccionDeCartaId"
                 valor={seccion}
-                alCambiar={setSeccion}
+                alCambiar={(valor) => {
+                  setAvisado(false);
+                  setSeccion(valor);
+                }}
                 opciones={ficha.seccion.opciones}
                 textoDeElegir={ficha.textoDeElegir}
                 deshabilitado={ficha.seccion.apagado}
@@ -160,14 +194,19 @@ export function FormularioDeFichaDeProducto({
                 nombre="seControlaElStock"
                 marcada={controlado}
                 alCambiar={(valor) => {
-                  if (valor !== controlado) setPorConfirmar(valor);
+                  if (valor !== controlado) {
+                    setAvisado(false);
+                    setPorConfirmar(valor);
+                  }
                 }}
                 apagada={!controlDeStock.puedeCambiar}
               />
             )}
             {sinCampo ? <ErrorDeRespuesta error={error} /> : null}
             {puedeGuardar ? (
-              <BotonDeEnvio>{ficha.guardar}</BotonDeEnvio>
+              <BotonDeEnvio>
+                {avisado && confirmacion !== null ? confirmacion.confirmar : ficha.guardar}
+              </BotonDeEnvio>
             ) : (
               <Boton deshabilitado>{ficha.guardar}</Boton>
             )}

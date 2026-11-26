@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import type { ErrorPublico } from "../../../../../src/capacidades/experiencia/respuesta";
+import {
+  errorDeCodigo,
+  type ErrorPublico,
+} from "../../../../../src/capacidades/experiencia/respuesta";
 import { legibleYTocable } from "../../pruebas/ayudas-de-emision";
 import { tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
@@ -413,6 +416,59 @@ describe("FormularioDeFichaDeProducto", () => {
     tocar(guardar());
     await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(2));
     expect((accion.mock.calls[1]?.[1] as FormData).has("seControlaElStock")).toBe(false);
+  });
+
+  it("tras el aviso de cuentas abiertas el botón pasa a «Confirmar» y reenvía con la confirmación; sin el aviso nunca viaja", async () => {
+    const aviso = { error: errorDeCodigo("PRODUCCION_CUENTAS_ABIERTAS") };
+    const accion = vi.fn((_previo: unknown, datos: FormData) => {
+      void datos;
+      return Promise.resolve(accion.mock.calls.length === 1 ? aviso : { error: null });
+    });
+    await render(
+      formulario(armarLaFicha(INSUMO), accion, true, { marcada: false, puedeCambiar: true }),
+    );
+    await userEvent.click(casilla());
+    await userEvent.click(confirmar());
+    tocar(guardar());
+    await expect
+      .element(
+        page.getByText(
+          "Hay cuentas abiertas con este plato. Al cerrarlas se descontará el plato y no sus ingredientes. ¿Confirmás?",
+        ),
+      )
+      .toBeVisible();
+    expect((accion.mock.calls[0]?.[1] as FormData).get("confirmarCuentasAbiertas")).toBeNull();
+    await expect.element(guardar()).not.toBeInTheDocument();
+    tocar(confirmar());
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(2));
+    expect((accion.mock.calls[1]?.[1] as FormData).get("confirmarCuentasAbiertas")).toBe("1");
+    expect((accion.mock.calls[1]?.[1] as FormData).get("seControlaElStock")).toBe("on");
+  });
+
+  it("si después del aviso cambia un dato o la casilla, vuelve «Guardar» y el reenvío ya no confirma", async () => {
+    const aviso = { error: errorDeCodigo("PRODUCCION_CUENTAS_ABIERTAS") };
+    const accion = vi.fn((_previo: unknown, datos: FormData) => {
+      void datos;
+      return Promise.resolve(aviso);
+    });
+    await render(
+      formulario(armarLaFicha(INSUMO), accion, true, { marcada: false, puedeCambiar: true }),
+    );
+    await userEvent.click(casilla());
+    await userEvent.click(confirmar());
+    tocar(guardar());
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    await expect.element(page.getByRole("button", { name: "Confirmar" })).toBeVisible();
+    await userEvent.fill(campo("Nombre"), "Otro nombre");
+    await expect.element(guardar()).toBeVisible();
+    tocar(guardar());
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(2));
+    expect((accion.mock.calls[1]?.[1] as FormData).get("confirmarCuentasAbiertas")).toBeNull();
+    await expect.element(page.getByRole("button", { name: "Confirmar" })).toBeVisible();
+    await userEvent.click(casilla());
+    await expect.element(dialogo()).toBeVisible();
+    await userEvent.click(cancelar());
+    await expect.element(guardar()).toBeVisible();
   });
 
   it("«Se controla el stock»: sin permiso se ve apagada con su estado real y no viaja, y axe no marca faltas", async () => {
