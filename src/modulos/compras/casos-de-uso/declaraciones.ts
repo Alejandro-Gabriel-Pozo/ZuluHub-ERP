@@ -1,4 +1,5 @@
 import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/declaracion";
+import { DECLARACIONES_DE_NOTAS } from "./declaraciones-de-notas";
 
 const ARCHIVO_DE_FICHA = "test/integracion/compras-ficha.test.ts";
 const ARCHIVO_DE_FACTURA = "test/integracion/compras-factura.test.ts";
@@ -8,9 +9,6 @@ const ARCHIVO_DE_RECEPCION_SEPARADA = "test/integracion/compras-n3-recepcion.tes
 const ARCHIVO_DE_CONCILIACION_SEPARADA = "test/integracion/compras-n3-conciliacion.test.ts";
 const ARCHIVO_DE_ORDENES = "test/integracion/compras-n4-ordenes.test.ts";
 const ARCHIVO_DE_DIFERENCIAS = "test/integracion/compras-n4-diferencias.test.ts";
-const ARCHIVO_DE_NOTAS = "test/integracion/compras-n4-notas-de-credito.test.ts";
-const ARCHIVO_DE_REEMPLAZO = "test/integracion/compras-reemplazo-de-factura.test.ts";
-const ARCHIVO_DE_NOTAS_DE_DEBITO = "test/integracion/compras-notas-de-debito.test.ts";
 const ARCHIVO_DE_DEVOLUCIONES = "test/integracion/compras-n4-devoluciones.test.ts";
 
 /**
@@ -19,6 +17,7 @@ const ARCHIVO_DE_DEVOLUCIONES = "test/integracion/compras-n4-devoluciones.test.t
  * módulo que usan (`stock.*`, `partes.*`): la declaración lista la propia.
  */
 export const DECLARACIONES = {
+  ...DECLARACIONES_DE_NOTAS,
   agregarPuntoDeVenta: {
     accion: "proveedores.editar_ficha",
     repeticion: {
@@ -196,56 +195,6 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_DEVOLUCIONES,
         it: "I2: anular dos veces la misma devolución devuelve yaEstaba y la segunda no escribe ni audita",
-      },
-    },
-  },
-  registrarNotaDeCredito: {
-    accion: "notas_de_credito_de_proveedor.registrar",
-    repeticion: {
-      regla: "CLAVE_DE_IDEMPOTENCIA",
-      prueba: {
-        archivo: ARCHIVO_DE_NOTAS,
-        it: "I1: la misma nota dos veces (misma clave) deja una sola nota y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
-      },
-    },
-  },
-  anularNotaDeCredito: {
-    accion: "notas_de_credito_de_proveedor.anular",
-    repeticion: {
-      regla: "YA_ESTABA",
-      prueba: {
-        archivo: ARCHIVO_DE_NOTAS,
-        it: "I2: anular dos veces la misma nota devuelve yaEstaba y la segunda no escribe ni audita",
-      },
-    },
-  },
-  reemplazarFactura: {
-    accion: "comprobantes_de_proveedor.reemplazar",
-    repeticion: {
-      regla: "CLAVE_DE_IDEMPOTENCIA",
-      prueba: {
-        archivo: ARCHIVO_DE_REEMPLAZO,
-        it: "I1: reemplazar dos veces con la misma clave (también a la vez) deja una sola factura nueva y una sola auditoría; con otro contenido, CLAVE_REUTILIZADA",
-      },
-    },
-  },
-  registrarNotaDeDebito: {
-    accion: "notas_de_debito_de_proveedor.registrar",
-    repeticion: {
-      regla: "CLAVE_DE_IDEMPOTENCIA",
-      prueba: {
-        archivo: ARCHIVO_DE_NOTAS_DE_DEBITO,
-        it: "I1: la misma nota de débito dos veces (misma clave, también a la vez) deja una sola nota y devuelve yaExistia; con otro contenido, CLAVE_REUTILIZADA",
-      },
-    },
-  },
-  anularNotaDeDebito: {
-    accion: "notas_de_debito_de_proveedor.anular",
-    repeticion: {
-      regla: "YA_ESTABA",
-      prueba: {
-        archivo: ARCHIVO_DE_NOTAS_DE_DEBITO,
-        it: "I2: anular dos veces la misma nota de débito devuelve yaEstaba y la segunda no escribe ni audita",
       },
     },
   },
