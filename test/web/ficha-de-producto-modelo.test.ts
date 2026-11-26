@@ -5,6 +5,7 @@ import { ALICUOTAS_DEL_PRODUCTO } from "../../src/modulos/fiscal/publico";
 import {
   CLAVE_DE_ALICUOTA,
   armarLaFicha,
+  armarLaFranjaDeStockPropio,
   rutaDeLaFicha,
   type FichaDeLaPantalla,
 } from "../../apps/web/ui/plantillas/catalogo/modelo-de-ficha-de-producto";
@@ -26,6 +27,7 @@ const ficha = (cambios: Partial<FichaDeLaPantalla> = {}): FichaDeLaPantalla => (
   unidadBaseId: "UNIDAD",
   seVende: true,
   admiteControlDeStock: false,
+  admiteStockPropio: false,
   nombreDeCocina: "MILA",
   codigo: "MIL-1",
   codigoDeBarras: "12345678",
@@ -240,6 +242,35 @@ describe("un valor guardado que la pantalla no ofrece", () => {
 describe("las direcciones", () => {
   it("la ficha vive bajo la lista de productos", () => {
     expect(rutaDeLaFicha(ID)).toBe(`/catalogo/productos/${ID}`);
+  });
+});
+
+describe("«Se produce en tanda» (stock propio de un elaborado o un vendible)", () => {
+  it("la casilla y el diálogo usan los textos aprobados de la producción (TP-9); sin stock propio, los de siempre", () => {
+    const propio = armarLaFicha(ficha({ admiteControlDeStock: true, admiteStockPropio: true }));
+    expect(propio.etiquetaDelControlDeStock).toBe("Se produce en tanda");
+    expect(propio.confirmacionDelControlDeStock?.titulo).toBe("Se produce en tanda");
+    expect(propio.confirmacionDelControlDeStock?.activar).toBe(
+      "Al encenderlo, este producto deja de descontar sus ingredientes al venderse: se descuentan al producir.",
+    );
+    expect(propio.confirmacionDelControlDeStock?.apagar).toBe(
+      "Las ventas no descuentan nada y no hay conteo ni alertas de faltante.",
+    );
+    const comun = armarLaFicha(ficha({ admiteControlDeStock: true, admiteStockPropio: false }));
+    expect(comun.etiquetaDelControlDeStock).toBe("Se controla el stock");
+  });
+
+  it("la franja: encendido con existencia, «Tiene stock propio: …»; apagado, «No tiene stock propio…»; encendido sin poder leerla, nada (nunca un número inventado)", () => {
+    expect(armarLaFranjaDeStockPropio(true, { existencia: "12.5000", unidadId: "KG" })).toBe(
+      "Tiene stock propio: 12,5 KG",
+    );
+    expect(armarLaFranjaDeStockPropio(true, { existencia: "0.0000", unidadId: "KG" })).toBe(
+      "Tiene stock propio: 0 KG",
+    );
+    expect(armarLaFranjaDeStockPropio(false, null)).toBe(
+      "No tiene stock propio: descuenta sus ingredientes.",
+    );
+    expect(armarLaFranjaDeStockPropio(true, null)).toBeNull();
   });
 });
 

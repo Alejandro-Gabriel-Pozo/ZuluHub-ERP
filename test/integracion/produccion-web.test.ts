@@ -50,8 +50,12 @@ describe.skipIf(base === null)("producción en la web: lista, ficha, cancelar y 
       casosDeUso: () => c.produccion,
       respuesta: { registrar: (detalle) => registrados.push(detalle) },
     };
-    // El catálogo real: `produccion` sigue `en_desarrollo` y el guard rechaza todo.
-    const reglas = { catalogo: CATALOGO_DE_MODULOS, permisos: PERMISOS_DE_EMPRESA };
+    // Un catálogo con `produccion` en desarrollo (el real ya la tiene disponible, DEC-1050): el guard rechaza todo.
+    const catalogo = {
+      ...CATALOGO_DE_MODULOS,
+      produccion: { ...CATALOGO_DE_MODULOS.produccion, estado: "en_desarrollo" },
+    } as unknown as typeof CATALOGO_DE_MODULOS;
+    const reglas = { catalogo, permisos: PERMISOS_DE_EMPRESA };
     const transacciones = c.entorno as never;
     cerrado = {
       consultas: () => crearConsultasDeProduccion({ transacciones, reglas }),
@@ -239,7 +243,7 @@ describe.skipIf(base === null)("producción en la web: lista, ficha, cancelar y 
       });
     });
 
-    it("con `produccion` en desarrollo (el catálogo real) el guard rechaza la lectura, sin datos", async () => {
+    it("con `produccion` en desarrollo el guard rechaza la lectura, sin datos", async () => {
       const r = await listarLasOrdenes(cerrado, e.gerente, e.sucursal, { estado: "" });
       expect(r).toMatchObject({ ok: false, error: { codigo: "MODULO_EN_DESARROLLO" } });
       expect(JSON.stringify(r)).not.toContain("ordenes");
@@ -317,7 +321,7 @@ describe.skipIf(base === null)("producción en la web: lista, ficha, cancelar y 
       }
     });
 
-    it("con `produccion` en desarrollo (el catálogo real) el guard rechaza la ficha", async () => {
+    it("con `produccion` en desarrollo el guard rechaza la ficha", async () => {
       const p = await lista();
       const a = await abrir(p);
       expect(await verLaOrden(cerrado, e.gerente, { ordenId: a.ordenId })).toMatchObject({
@@ -435,7 +439,7 @@ describe.skipIf(base === null)("producción en la web: lista, ficha, cancelar y 
       expect(await estadoDe(a.ordenId)).toBe("ABIERTA");
     });
 
-    it("con `produccion` en desarrollo (el catálogo real) el guard rechaza y no cambia nada", async () => {
+    it("con `produccion` en desarrollo el guard rechaza y no cambia nada", async () => {
       const p = await lista();
       const a = await abrir(p);
       expect(
@@ -549,7 +553,7 @@ describe.skipIf(base === null)("producción en la web: lista, ficha, cancelar y 
       expect(await estadoDe(a.ordenId)).toBe("CERRADA");
     });
 
-    it("con `produccion` en desarrollo (el catálogo real) el guard rechaza y no cambia nada", async () => {
+    it("con `produccion` en desarrollo el guard rechaza y no cambia nada", async () => {
       const p = await lista();
       const a = await abrir(p);
       await cerrar(a.ordenId, p);

@@ -41,6 +41,10 @@ describe("los textos de producción, receta y lotes", () => {
       "Producir igual",
       "Se produce en tanda",
       "Se arma al usarlo",
+      // PRO-A: franja y aviso del elaborado, aprobados por el dueño el 25/11/2026 (TP-4, TP-5 y TP-9).
+      "Tiene stock propio: {existencia}",
+      "No tiene stock propio: descuenta sus ingredientes.",
+      "Al encenderlo, este producto deja de descontar sus ingredientes al venderse: se descuentan al producir.",
       // produccion.html, textos sin fila en «Textos aprobados» aceptados por delegación (DEC-0555).
       "Todas",
       "Abiertas",
