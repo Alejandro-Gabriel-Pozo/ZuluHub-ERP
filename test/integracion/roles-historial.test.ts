@@ -252,7 +252,7 @@ describe.skipIf(base === null)("roles: historial de un rol (web)", () => {
     const e = await nuevo("GERENTE");
     const rolId = randomUUID();
     datosDe(await crear(d(), e.como(AHORA), vacio(rolId, "Carrera")));
-    const { accion, conjunto } = await unaAccionDelegable(e);
+    const { conjunto } = await unaAccionDelegable(e);
 
     const [, lectura] = await Promise.all([
       editar(d(), e.como(AHORA), { rolId, nombre: "Carrera 2", acciones: conjunto }),
