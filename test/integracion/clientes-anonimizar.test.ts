@@ -31,6 +31,12 @@ import {
   type EscenarioDeClientes,
   type MontajeDeClientes,
 } from "./clientes-apoyo";
+import {
+  armarCuentaCorriente,
+  crearEntornoDeCuentaCorriente,
+  crearMundoDeCuentaCorriente,
+  type MundoDeCuentaCorriente,
+} from "./cuenta-corriente-apoyo";
 import { cuitUnico } from "./entorno";
 import { numeroUnico } from "./unicos";
 
@@ -456,6 +462,86 @@ describe.skipIf(base === null)("clientes: anonimizar una parte", () => {
       c.pasosDeCopias.length = 0;
     }
     expect(vistas).toEqual([[e.empresa, id, e.gerente.ahora.toISOString()]]);
+  });
+
+  // ---- cuenta corriente de clientes (CC-1): cualquier ficha impide ------------------------------
+  describe("cuenta corriente del cliente", () => {
+    let mundo: MundoDeCuentaCorriente;
+    let entornoCC: ReturnType<typeof crearEntornoDeCuentaCorriente>;
+    let cc: ReturnType<typeof armarCuentaCorriente>;
+    beforeAll(async () => {
+      mundo = await crearMundoDeCuentaCorriente(c.entorno, c.dueno);
+      entornoCC = crearEntornoDeCuentaCorriente(c.propia.base);
+      cc = armarCuentaCorriente(entornoCC);
+    });
+    afterAll(async () => {
+      await entornoCC.cerrar();
+    });
+    const cliente = async () =>
+      valorDe(
+        await c.casos.crearParte(mundo.ctx(), {
+          idempotencia: nuevoId(),
+          naturaleza: "JURIDICA",
+          nombre: nombreUnico("Cliente"),
+          documento: { tipo: "CUIT", numero: cuitUnico() },
+          roles: ["CUSTOMER"],
+        }),
+      ).parteId;
+    const habilitar = (parteId: string) =>
+      cc.casos.habilitarCuentaDelCliente(mundo.ctx(), {
+        claveDeIdempotencia: randomUUID(),
+        parteId,
+        plazoDias: 30,
+        limite: "1000.00",
+      });
+    const IMPEDIDA_POR_CUENTA = {
+      error: "ANONIMIZACION_IMPEDIDA",
+      impedimentos: [{ modulo: "cuenta_corriente", motivo: "CUENTA_CORRIENTE_DEL_CLIENTE" }],
+    };
+    const fichas = (id: string) =>
+      c.contar("select count(*) as n from cuenta_del_cliente where parte_id = $1", [id]);
+
+    it("una ficha HABILITADA impide anonimizar, y también una SUSPENDIDA; la ficha y la parte no cambian", async () => {
+      const id = await cliente();
+      const { cuenta } = valorDe(await habilitar(id));
+      expect(await c.casos.anonimizarParte(mundo.ctx(), { parteId: id, motivo: MOTIVO })).toEqual({
+        ok: false,
+        error: IMPEDIDA_POR_CUENTA,
+      });
+      valorDe(
+        await cc.casos.suspenderCuentaDelCliente(mundo.ctx(), {
+          cuentaId: cuenta.id,
+          versionEsperada: cuenta.version,
+          motivo: "Pidió pausar la cuenta",
+        }),
+      );
+      expect(await c.casos.anonimizarParte(mundo.ctx(), { parteId: id, motivo: MOTIVO })).toEqual({
+        ok: false,
+        error: IMPEDIDA_POR_CUENTA,
+      });
+      expect(await fila(id)).toMatchObject({ estado: "ACTIVA" });
+      expect(
+        await c.filas("select estado from cuenta_del_cliente where parte_id = $1", [id]),
+      ).toEqual([{ estado: "SUSPENDIDA" }]);
+      expect(await auditadas(id)).toEqual([]);
+    });
+
+    it("anonimizar contra habilitar la ficha a la vez: gana uno; nunca una anonimizada con ficha", async () => {
+      for (let ronda = 0; ronda < RONDAS; ronda++) {
+        const id = await cliente();
+        const [a, h] = await Promise.all([
+          c.casos.anonimizarParte(mundo.ctx(), { parteId: id, motivo: MOTIVO }),
+          habilitar(id),
+        ]);
+        if ((await fila(id))?.["estado"] === "ANONIMIZADA") {
+          expect([a.ok, h.ok, await fichas(id)]).toEqual([true, false, 0]);
+        } else {
+          expect(h.ok).toBe(true);
+          expect(a).toEqual({ ok: false, error: IMPEDIDA_POR_CUENTA });
+          expect(await fichas(id)).toBe(1);
+        }
+      }
+    });
   });
 
   // ---- la base (0105) -------------------------------------------------------------------------

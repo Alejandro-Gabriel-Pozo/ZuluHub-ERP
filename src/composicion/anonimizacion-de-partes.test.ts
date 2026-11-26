@@ -7,6 +7,7 @@ import {
   armarAnonimizacionDePartesEnTx,
   crearCopiasDePartes,
   crearImpedimentosDeAnonimizacion,
+  fuenteDeCuentaDelCliente,
   fuenteDeSaldoDelLibro,
   type PasoDeCopiaDeParte,
 } from "./anonimizacion-de-partes";
@@ -77,6 +78,33 @@ describe("la fuente del libro de saldos (decisión del dueño, 25/11/2026)", () 
   });
 });
 
+describe("la fuente de la cuenta corriente del cliente (CC-1)", () => {
+  const CUENTA = { modulo: "cuenta_corriente", motivo: "CUENTA_CORRIENTE_DEL_CLIENTE" } as const;
+  const conFicha = (ficha: object | null, vistas: string[] = []) => ({
+    obtenerPorParte: (empresa: string, parte: string) => {
+      vistas.push(`${empresa}|${parte}`);
+      return Promise.resolve(ficha as never);
+    },
+  });
+
+  it("sin ficha no impide; con una ficha, habilitada o suspendida, impide; pregunta por esta empresa y esta parte", async () => {
+    const vistas: string[] = [];
+    expect(await fuenteDeCuentaDelCliente(conFicha(null, vistas))(EMPRESA, PARTE)).toEqual([]);
+    for (const estado of ["HABILITADA", "SUSPENDIDA"]) {
+      expect(await fuenteDeCuentaDelCliente(conFicha({ estado }, vistas))(EMPRESA, PARTE)).toEqual([
+        CUENTA,
+      ]);
+    }
+    expect(vistas).toEqual(Array(3).fill(`${EMPRESA}|${PARTE}`));
+  });
+
+  it("falla cerrado: si no puede leer la ficha, la excepción sale", async () => {
+    const roto = new Error("tabla ilegible");
+    const lectura = { obtenerPorParte: () => Promise.reject(roto) };
+    await expect(fuenteDeCuentaDelCliente(lectura)(EMPRESA, PARTE)).rejects.toBe(roto);
+  });
+});
+
 describe("la lista de fuentes de impedimentos y los pasos de copia", () => {
   it("junta los impedimentos de todas las fuentes en orden, con la empresa y la parte; sin fuentes, nada; falla cerrado y corta", async () => {
     const vistos: string[] = [];
@@ -128,19 +156,32 @@ describe("la lista de fuentes de impedimentos y los pasos de copia", () => {
     );
   });
 
-  it("lo armado sobre la conexión trae la fuente del libro (si no puede leer, falla cerrado) y las copias (hoy ninguna: ok)", async () => {
+  it("lo armado sobre la conexión lee el libro de saldos Y la ficha de cuenta corriente (las dos fuentes), y trae las copias (hoy ninguna: ok)", async () => {
+    const tablasLeidas: string[] = [];
+    const consulta: object = new Proxy(
+      {},
+      {
+        get: (_, propiedad) =>
+          propiedad === "executeTakeFirst"
+            ? () => Promise.resolve(undefined)
+            : propiedad === "execute"
+              ? () => Promise.resolve([])
+              : () => consulta,
+      },
+    );
     const tablas = {
-      selectFrom: () => {
-        throw roto;
+      selectFrom: (tabla: string) => {
+        tablasLeidas.push(tabla);
+        return consulta;
       },
     };
     const conexion = { withTables: () => tablas } as unknown as Parameters<
       typeof armarAnonimizacionDePartesEnTx
     >[0];
     const { anonimizacionDePartes } = armarAnonimizacionDePartesEnTx(conexion);
-    await expect(anonimizacionDePartes.impedimentos.impedimentos(EMPRESA, PARTE)).rejects.toBe(
-      roto,
-    );
+    expect(await anonimizacionDePartes.impedimentos.impedimentos(EMPRESA, PARTE)).toEqual([]);
+    expect(tablasLeidas).toContain("cuenta_del_cliente");
+    expect(tablasLeidas.some((t) => t.startsWith("saldo_de_parte"))).toBe(true);
     expect(await anonimizacionDePartes.copias.anonimizarCopiasEnTx(EMPRESA, PARTE, AHORA)).toEqual(
       ok(null),
     );

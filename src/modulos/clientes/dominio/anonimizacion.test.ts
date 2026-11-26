@@ -16,8 +16,11 @@ const SALDO: ImpedimentoDeAnonimizacion = {
 describe("anonimización: listas cerradas y decisión", () => {
   it("los motivos, los módulos y los impedimentos admitidos son exactamente estos", () => {
     expect([...MOTIVOS_DE_ANONIMIZACION]).toEqual(["PEDIDO_DEL_TITULAR", "BAJA_DE_EMPRESA"]);
-    expect([...MODULOS_QUE_IMPIDEN_ANONIMIZAR]).toEqual(["saldos_de_partes"]);
-    expect([...MOTIVOS_DE_IMPEDIMENTO]).toEqual(["SALDO_DISTINTO_DE_CERO"]);
+    expect([...MODULOS_QUE_IMPIDEN_ANONIMIZAR]).toEqual(["saldos_de_partes", "cuenta_corriente"]);
+    expect([...MOTIVOS_DE_IMPEDIMENTO]).toEqual([
+      "SALDO_DISTINTO_DE_CERO",
+      "CUENTA_CORRIENTE_DEL_CLIENTE",
+    ]);
   });
 
   it("un motivo se admite solo si es uno de la lista, tal cual", () => {

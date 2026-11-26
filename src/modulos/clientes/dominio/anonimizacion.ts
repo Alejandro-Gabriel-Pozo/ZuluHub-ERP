@@ -13,12 +13,15 @@ export function esMotivoDeAnonimizacion(valor: unknown): valor is MotivoDeAnonim
   return MOTIVOS_DE_ANONIMIZACION.some((motivo) => motivo === valor);
 }
 
-/** Qué módulos pueden impedir una anonimización. Hoy solo el libro de saldos; los demás se suman cuando se decida. */
-export const MODULOS_QUE_IMPIDEN_ANONIMIZAR = ["saldos_de_partes"] as const;
+/** Qué módulos pueden impedir una anonimización: el libro de saldos y la cuenta corriente de clientes (CC-1). Los demás se suman cuando se decida. */
+export const MODULOS_QUE_IMPIDEN_ANONIMIZAR = ["saldos_de_partes", "cuenta_corriente"] as const;
 export type ModuloQueImpide = (typeof MODULOS_QUE_IMPIDEN_ANONIMIZAR)[number];
 
-/** Por qué un módulo impide anonimizar. Es un código, nunca un texto con datos de la parte. */
-export const MOTIVOS_DE_IMPEDIMENTO = ["SALDO_DISTINTO_DE_CERO"] as const;
+/** Por qué un módulo impide anonimizar. Es un código, nunca un texto con datos de la parte. `SALDO_DISTINTO_DE_CERO`: el libro tiene saldo. `CUENTA_CORRIENTE_DEL_CLIENTE`: tiene ficha de cuenta corriente, habilitada o suspendida (no se suspende sola: se resuelve antes). */
+export const MOTIVOS_DE_IMPEDIMENTO = [
+  "SALDO_DISTINTO_DE_CERO",
+  "CUENTA_CORRIENTE_DEL_CLIENTE",
+] as const;
 export type MotivoDeImpedimento = (typeof MOTIVOS_DE_IMPEDIMENTO)[number];
 
 export type ImpedimentoDeAnonimizacion = Readonly<{

@@ -6,6 +6,11 @@ import type {
   ImpedimentosDeAnonimizacion,
 } from "../modulos/clientes/publico";
 import {
+  crearRepositorioDeCuentasDeClientes,
+  type CuentaDelClienteDb,
+  type RepositorioDeCuentasDeClientes,
+} from "../modulos/cuenta_corriente/publico";
+import {
   SENTIDOS,
   crearRepositorioDeSaldos,
   type RepositorioDeSaldos,
@@ -67,6 +72,19 @@ export function fuenteDeSaldoDelLibro(
   };
 }
 
+/**
+ * La fuente de la cuenta corriente de clientes (CC-1): el cliente tiene ficha, HABILITADA o SUSPENDIDA (decisión del orquestador, 26/11/2026: cualquier ficha impide, por simple y
+ * reversible; la ficha no se suspende ni se toca desde acá). La ficha no se borra, así que una vez que existe, impide hasta que se decida otra cosa.
+ */
+export function fuenteDeCuentaDelCliente(
+  cuentas: Pick<RepositorioDeCuentasDeClientes, "obtenerPorParte">,
+): FuenteDeImpedimentos {
+  return async (empresa, parteId) =>
+    (await cuentas.obtenerPorParte(empresa, parteId)) === null
+      ? []
+      : [{ modulo: "cuenta_corriente", motivo: "CUENTA_CORRIENTE_DEL_CLIENTE" }];
+}
+
 /** Un módulo que guarda una copia de datos personales de la parte y sabe vaciarla en la transacción de quien anonimiza. */
 export type PasoDeCopiaDeParte = (
   empresa: Parameters<CopiasDePartes["anonimizarCopiasEnTx"]>[0],
@@ -98,6 +116,9 @@ export function armarAnonimizacionDePartesEnTx(
     anonimizacionDePartes: {
       impedimentos: crearImpedimentosDeAnonimizacion([
         fuenteDeSaldoDelLibro(crearRepositorioDeSaldos(db.withTables<SaldosDb>())),
+        fuenteDeCuentaDelCliente(
+          crearRepositorioDeCuentasDeClientes(db.withTables<CuentaDelClienteDb>()),
+        ),
       ]),
       copias: crearCopiasDePartes(),
     },
