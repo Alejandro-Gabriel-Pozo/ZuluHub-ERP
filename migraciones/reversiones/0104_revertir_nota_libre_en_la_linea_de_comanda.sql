@@ -101,3 +101,11 @@ $$;
 
 ALTER TABLE linea_de_comanda DROP COLUMN IF EXISTS nota;
 ALTER TABLE renglon_de_envio DROP COLUMN IF EXISTS nota;
+-- Sin esta fila, la migración figuraría aplicada y el ejecutor no volvería a correrla (el nombre lleva el «.sql», como lo guarda el registro).
+DO $$
+BEGIN
+  IF to_regclass('public.migracion') IS NOT NULL THEN
+    DELETE FROM public.migracion WHERE nombre = '0104_nota_libre_en_la_linea_de_comanda.sql';
+  END IF;
+END
+$$;

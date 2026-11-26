@@ -1,4 +1,9 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
+import { crearBaseAparte } from "./entorno";
+import { CARPETA_DE_MIGRACIONES } from "./marcas-apoyo";
 import { montarSalon, type MundoDeSalon } from "./salon-apoyo";
 import { nuevaClave, nuevoId, valorDe, type EscenarioDeVentas } from "./ventas-apoyo";
 
@@ -159,5 +164,53 @@ describe.skipIf(base === null)("comandas: la nota libre en la base (0104)", () =
     ).toBe(0);
     await ponerNota(conNota.lineaId, null);
     expect((await unir(destino.cuentaId, conNota.cuentaId)).ok).toBe(true);
+  });
+  it("la REVERSIÓN deja el esquema como antes y borra la fila del registro `migracion` (si no, el ejecutor no la volvería a correr); repetirla no cambia nada y la migración se puede volver a aplicar", async () => {
+    if (base === null) return;
+    const aparte = await crearBaseAparte(base);
+    const c = new pg.Client({ connectionString: aparte.base.dueno });
+    await c.connect();
+    try {
+      const MIGRACION = "0104_nota_libre_en_la_linea_de_comanda.sql";
+      const migracion = await readFile(join(CARPETA_DE_MIGRACIONES, MIGRACION), "utf8");
+      const reversion = await readFile(
+        join(
+          CARPETA_DE_MIGRACIONES,
+          "reversiones/0104_revertir_nota_libre_en_la_linea_de_comanda.sql",
+        ),
+        "utf8",
+      );
+      const columnas = async () =>
+        (
+          await c.query<{ n: string }>(
+            "select count(*)::text as n from information_schema.columns where table_schema = 'public' and column_name = 'nota' and table_name in ('linea_de_comanda', 'renglon_de_envio')",
+          )
+        ).rows[0]?.n;
+      const registrada = async () =>
+        (await c.query("select 1 from migracion where nombre = $1", [MIGRACION])).rowCount;
+      const correr = async (texto: string) => {
+        await c.query("begin");
+        try {
+          await c.query(texto);
+          await c.query("commit");
+        } catch (error) {
+          await c.query("rollback");
+          throw error;
+        }
+      };
+      expect(await columnas()).toBe("2");
+      expect(await registrada()).toBe(1);
+      await correr(reversion);
+      expect(await columnas()).toBe("0");
+      expect(await registrada()).toBe(0);
+      await correr(reversion); // repetida: no cambia nada
+      expect(await columnas()).toBe("0");
+      expect(await registrada()).toBe(0);
+      await correr(migracion); // se vuelve a aplicar
+      expect(await columnas()).toBe("2");
+    } finally {
+      await c.end();
+      await aparte.destruir();
+    }
   });
 });
