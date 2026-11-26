@@ -5,9 +5,15 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
 
 ## Antes de entregar
 
-- Antes de entregar, solo comprobaciones rápidas locales: `npm run typecheck`, `npm run format:check`, `npm run lint`, `npm run arquitectura` y las
-  pruebas de lo que tocaste. El gate completo (`npm run gate`) lo corre el CI; local, solo para reproducir una falla del CI. Motivo: el gate
-  completo local tarda unos 20 minutos y repite lo que ya corre el CI (dueño, 17/11/2026, «4.-si»).
+- Antes de entregar, solo comprobaciones rápidas locales: `npm run typecheck`, `npm run format:check`, `npm run lint`, `npm run analizar:muerto` (knip),
+  `npm run arquitectura` (y sus controles contra la rama base y las pruebas de `test/arquitectura`, que ese comando no corre), las pruebas de composición
+  (`src/composicion`) y las pruebas de lo que tocaste, incluidas las de integración de los módulos que
+  consumen un contrato que cambiaste (campo obligatorio, error nuevo, firma). Todo eso lo corre en orden, cortando en la primera falla, **`npm run previo`**
+  (con `npm run previo -- <módulo>` si no puede inferir el módulo del diff); antes de empujar, traé la integración con merge y corrélo de nuevo. El gate completo
+  (`npm run gate`) lo corre el CI; local, solo para reproducir una falla del CI. Motivo: el gate completo local tarda unos 20 minutos y repite lo que ya corre el CI
+  (dueño, 17/11/2026, «4.-si»). `previo` (dueño, 26/11/2026, «Sí a las dos, a tu recomendación») previene las 26 ejecuciones rojas del CI en dos días por olvido local
+  (knip, arquitectura o composición no corridas: #612 en 4 rondas, #621, #603) y los choques entre PR en paralelo (#619 contra una prueba nueva de #617). Chequeo:
+  `test/arquitectura/previo.test.ts` (falla si falta el script o alguno de esos pasos, con una violación inyectada por cada uno).
 - Cambios mínimos y enfocados; no inventar librerías ni APIs; avisar antes de sumar una dependencia.
 - La mutación exige 100 % en el cálculo puro de dinero, 95 % en lo crítico, 80 % en servidor y dominio y 60 % en las pantallas (ver «Mutación por nivel»); un grupo nuevo declara su `nivel`.
 - Si tocás `apps/web/ui`, corré también `npm run test:componentes` (Chromium real: axe, foco y envío; el CI lo corre en el job
