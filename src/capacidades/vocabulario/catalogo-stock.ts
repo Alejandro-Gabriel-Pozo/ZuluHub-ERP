@@ -105,6 +105,43 @@ export const TEXTOS_DE_STOCK = {
     usos: ["DE_FICHA"],
     fuente: { decision: "DEC-1022" },
   },
+  // Lotes (STK-E, lectura): «Lotes» (L-01) lo aprobó el dueño el 25/11/2026 (fila 449) y el resto de los rótulos (L-03, L-04, L-10, L-11, L-12, L-16) los aceptó el orquestador por delegación (fila 173); DEC-STK-002.
+  "stock.lotes.pantalla": {
+    porDefecto: "Lotes",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-002" },
+  },
+  "stock.lotes.vence": {
+    porDefecto: "Vence",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-002" },
+  },
+  "stock.lotes.sin_asignar": {
+    porDefecto: "Sin asignar",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-002" },
+  },
+  "stock.lotes.vencimientos": {
+    porDefecto: "Vencimientos",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-002" },
+  },
+  "stock.lotes.vencido": {
+    porDefecto: "Vencido",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-002" },
+  },
+  "stock.lotes.vence_hoy": {
+    porDefecto: "Vence hoy",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-002" },
+  },
+  "stock.lotes.dias": {
+    porDefecto: "Vence en los próximos {dias} días",
+    marcadores: ["dias"],
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-002" },
+  },
   "stock.estado.anulado": {
     porDefecto: "Anulado",
     usos: ["DE_FICHA"],

@@ -103,8 +103,9 @@ describe("las rutas y las pestañas de Stock", () => {
       ["Existencias", "/stock/existencias", false],
       ["Movimientos", "/stock/movimientos", false],
       ["Depósitos", "/stock/depositos", true],
+      ["Lotes", "/stock/lotes", false],
     ]);
-    expect(PESTANAS_CONSTRUIDAS).toEqual(["existencias", "movimientos", "depositos"]);
+    expect(PESTANAS_CONSTRUIDAS).toEqual(["existencias", "movimientos", "depositos", "lotes"]);
   });
 
   it("la marca de «actual» sigue a la pantalla en la que se está, no a la pestaña que hay", () => {
@@ -112,12 +113,13 @@ describe("las rutas y las pestañas de Stock", () => {
       ["Existencias", false],
       ["Movimientos", false],
       ["Depósitos", false],
+      ["Lotes", false],
     ]);
   });
 
   it("ninguna pestaña apunta a una ruta fuera de las construidas", () => {
     const permitidas = PESTANAS_CONSTRUIDAS.map((clave) => RUTAS_DE_STOCK[clave]);
-    for (const actual of ["existencias", "movimientos", "conteo", "depositos"] as const) {
+    for (const actual of ["existencias", "movimientos", "conteo", "depositos", "lotes"] as const) {
       for (const pestana of pestanasDeStock(actual)) expect(permitidas).toContain(pestana.href);
     }
   });

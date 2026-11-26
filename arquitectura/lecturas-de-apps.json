@@ -76,7 +76,9 @@
   "test/web/ficha-de-existencias-y-movimientos.test.ts": [
     "apps/web/app/s/app/(operacion)/stock/existencias/**",
     "apps/web/app/s/app/(operacion)/stock/movimientos/**",
+    "apps/web/app/s/app/(operacion)/stock/lotes/**",
     "apps/web/ui/plantillas/stock/existencias/*",
+    "apps/web/ui/plantillas/stock/lotes/*",
     "apps/web/ui/plantillas/stock/lectura/*",
     "apps/web/ui/plantillas/stock/movimientos/*",
     "apps/web/pantallas/pantalla-de-movimiento.tsx"
