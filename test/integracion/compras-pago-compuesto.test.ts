@@ -252,4 +252,22 @@ describe.skipIf(base === null)("compras: pago con varios medios", () => {
       ),
     ).toBe(1);
   });
+
+  it("un pago viejo (cabecera con su línea única del relleno de la 0103, sin salida de caja) se lee y se anula igual", async () => {
+    const m = await armar();
+    const [pago] = await c.filas<{ id: string }>(
+      `insert into pago_de_comprobante (empresa_id, comprobante_id, fecha_de_pago, medio, importe, clave_idempotencia, huella, registrado_por)
+       values ($1, $2, '2026-10-01', 'EFECTIVO', 2420.00, $3, repeat('a', 64), $4) returning id`,
+      [m.e.empresa, m.comprobanteId, nuevoId(), m.e.gerente.personaId],
+    );
+    await c.filas(
+      `insert into medio_de_un_pago (empresa_id, pago_id, numero, medio, importe) values ($1, $2, 1, 'EFECTIVO', 2420.00)`,
+      [m.e.empresa, pago?.id],
+    );
+    valorDe(
+      await c.casos.anularPago(m.e.gerente, { pagoId: pago?.id as string, motivo: "Era de antes" }),
+    );
+    expect(await lineas(m.comprobanteId)).toEqual([{ medio: "EFECTIVO", importe: "2420.00" }]);
+    expect(await movimientos(m.caja.sesionId)).toBe(1);
+  });
 });
