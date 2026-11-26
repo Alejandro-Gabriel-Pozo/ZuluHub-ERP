@@ -83,7 +83,7 @@ const SIN_FORMA = errorDeCodigo("PRODUCCION_ACCION_NO_PERMITIDA");
  * Lo que tienen en común las acciones de la web de producción: leer el pedido, correr el caso de uso o la consulta con el contexto del servidor y traducir el resultado. Un pedido sin la
  * forma pedida es el genérico (no hay un texto por campo); una excepción sale sin detalle y con referencia. Un solo lugar: que cada pantalla de producción no lo escriba a su manera.
  */
-async function accionDeProduccion<E, S, D>(
+export async function accionDeProduccion<E, S, D>(
   respuesta: DependenciasDeRespuesta,
   crudo: unknown,
   leer: (crudo: unknown) => Resultado<E, ErrorDeEntrada>,

@@ -1,0 +1,7 @@
+{
+  "grupo": "web (producción: abrir una orden)",
+  "archivos": "src/composicion/entradas-de-nueva-orden.ts,src/composicion/nueva-orden-web.ts",
+  "minutos": 2,
+  "pruebas": "src/composicion/entradas-de-nueva-orden.test.ts src/composicion/nueva-orden-web.test.ts",
+  "nivel": "CRITICO"
+}

@@ -29,6 +29,20 @@ describe("traducirErrorDeProduccion", () => {
     ).toEqual(GENERICO);
   });
 
+  it("abrir con faltante en el nivel AVISAR sale como el aviso de stock (no como fallo), sin el detalle", () => {
+    expect(
+      traducirErrorDeProduccion({
+        error: "CONTROL_REQUIERE_CONFIRMACION",
+        control: "stock.existencia_negativa",
+        detalle: [{ productoId: "p", depositoId: "d", existenciaResultante: "-1.0000" }],
+      }),
+    ).toBe("STOCK_CONTROL_AVISA");
+    // Cualquier otra cosa con forma de objeto sigue siendo el genérico.
+    expect(traducirErrorDeProduccion({ error: "CONTROL_REQUIERE_CONFIRMACIONES" })).toEqual(
+      GENERICO,
+    );
+  });
+
   it("un nombre heredado de Object.prototype no se confunde con un código conocido", () => {
     for (const error of ["toString", "constructor", "__proto__", "hasOwnProperty"]) {
       expect(traducirErrorDeProduccion(error)).toEqual(GENERICO);
