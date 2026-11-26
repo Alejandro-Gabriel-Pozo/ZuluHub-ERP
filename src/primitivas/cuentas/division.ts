@@ -1,4 +1,9 @@
-import { cantidadATexto, cantidadDesdeTexto, type Cantidad } from "../cantidad/cantidad";
+import {
+  cantidadATexto,
+  cantidadDesdeTexto,
+  DECIMALES_DE_CANTIDAD,
+  type Cantidad,
+} from "../cantidad/cantidad";
 import { ErrorDeValor } from "../cantidad/errores";
 import { MAXIMO_DE_CUENTAS_POR_ITEMS } from "./limites-de-division";
 import { importeATexto } from "../dinero/importe";
@@ -193,4 +198,24 @@ export function totalesDeLaDivision(
     const digitos = t.toString().padStart(3, "0");
     return `${digitos.slice(0, -2)}.${digitos.slice(-2)}`;
   });
+}
+
+/** Cuántos pasos de cantidad tiene una línea (3 gaseosas con paso 1 → 3); `null` si no es un múltiplo entero del paso o no se lee. Es lo que se reparte al dividir «por unidades». */
+export function pasosDeLaLinea(cantidad: string, paso: string): number | null {
+  const c = leerCantidad(cantidad);
+  const p = leerCantidad(paso);
+  if (c === null || p === null || p.unidades === 0n || c.unidades % p.unidades !== 0n) return null;
+  const pasos = c.unidades / p.unidades;
+  return pasos <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(pasos) : null;
+}
+
+/** La cantidad de `pasos` pasos (2 pasos de «0.5» → «1»), como texto decimal exacto; `null` si no se lee. Sin `number` de por medio: la cuenta es de enteros escalados. */
+export function cantidadPorPasos(paso: string, pasos: number): string | null {
+  const p = leerCantidad(paso);
+  if (p === null || !Number.isSafeInteger(pasos) || pasos < 0) return null;
+  const digitos = (p.unidades * BigInt(pasos)).toString().padStart(DECIMALES_DE_CANTIDAD + 1, "0");
+  const total = leerCantidad(
+    `${digitos.slice(0, -DECIMALES_DE_CANTIDAD)}.${digitos.slice(-DECIMALES_DE_CANTIDAD)}`,
+  );
+  return total === null ? null : cantidadATexto(total);
 }

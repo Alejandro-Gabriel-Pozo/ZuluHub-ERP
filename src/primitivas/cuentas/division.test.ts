@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { MAXIMO_DE_CUENTAS_POR_ITEMS } from "./limites-de-division";
 import {
+  cantidadPorPasos,
+  pasosDeLaLinea,
   planDeDivision,
   totalesDeLaDivision,
   type Asignacion,
@@ -211,5 +213,19 @@ describe("totalesDeLaDivision (lo que muestra la pantalla)", () => {
         { lineaOrigenId: "x", parte: 1, modo: "COMPLETA", cantidad: "1" },
       ]),
     ).toBeNull();
+  });
+});
+
+describe("pasosDeLaLinea y cantidadPorPasos (dividir por unidades)", () => {
+  it("cuenta los pasos de la línea y arma la cantidad de N pasos sin pasar por number", () => {
+    expect(pasosDeLaLinea("3", "1")).toBe(3);
+    expect(pasosDeLaLinea("1.5", "0.5")).toBe(3);
+    expect(pasosDeLaLinea("2.5", "1")).toBeNull();
+    expect(pasosDeLaLinea("3", "0")).toBeNull();
+    expect(pasosDeLaLinea("tres", "1")).toBeNull();
+    expect(cantidadPorPasos("0.5", 3)).toBe(cantidadPorPasos("1.5", 1));
+    expect(cantidadPorPasos("1", 0)).toBe(cantidadPorPasos("0", 1));
+    expect(cantidadPorPasos("1", -1)).toBeNull();
+    expect(cantidadPorPasos("x", 1)).toBeNull();
   });
 });
