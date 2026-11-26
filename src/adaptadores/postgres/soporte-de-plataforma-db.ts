@@ -53,7 +53,17 @@ export type SoporteDb = {
     creado_en: Date;
   };
   persona: { id: Generated<string>; email: string; activo_global: boolean };
-  membresia: { empresa_id: string; persona_id: string; rol: string; activo: boolean };
+  membresia: {
+    empresa_id: string;
+    persona_id: string;
+    rol: string;
+    activo: boolean;
+    rol_propio_id: string | null;
+  };
+  // 0113: la plataforma lee solo estas columnas del rol propio y de sus versiones (nunca el nombre del rol).
+  rol_de_empresa: { id: string; empresa_id: string; activo: boolean };
+  version_de_rol: { empresa_id: string; rol_id: string; numero: number; acciones: string[] };
+  version_de_plantilla: { clave: string; numero: number; acciones: string[] };
   invitacion: {
     id: string;
     tenant_id: string;

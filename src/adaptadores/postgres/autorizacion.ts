@@ -1,9 +1,9 @@
 import { sql, type Kysely } from "kysely";
-import { esClaveDe } from "../../capacidades/modulos/activos";
 import { CATALOGO_DE_MODULOS } from "../../capacidades/modulos/catalogo";
 import { vigenteEn } from "../../capacidades/planes/vigencia";
 import type { AlcanceDeSucursales } from "../../capacidades/permisos/alcance";
 import { ROLES_DE_EMPRESA, type RolDeLaMembresia } from "../../capacidades/permisos/roles";
+import { listaDeAcciones, validarNombresDeModulo } from "./lecturas-de-permisos";
 import { conjuntoEfectivo } from "../../capacidades/roles/conjunto-efectivo";
 import { sucursalId } from "../../primitivas/identificadores/marca";
 import type { ContextoOperativo } from "../../contexto/contexto";
@@ -60,15 +60,6 @@ export type AutorizacionDb = {
 const esRolDeLaMembresia = (valor: string): valor is RolDeLaMembresia =>
   valor === "PROPIO" || ROLES_DE_EMPRESA.some((rol) => rol === valor);
 
-/** Una lista de acciones leída de la base: un valor que no es una lista de textos es un dato roto y falla (no se trata como «sin permisos» en silencio). */
-export function listaDeAcciones(valor: unknown, de: string): readonly string[] | null {
-  if (valor === null) return null;
-  if (!Array.isArray(valor) || !valor.every((accion) => typeof accion === "string")) {
-    throw new RangeError(`las acciones de ${de} no son una lista de textos`);
-  }
-  return valor;
-}
-
 /** Lo que carga el adaptador cuando no hay rol (ni, por lo tanto, nada que activar ni ninguna acción): falla cerrado. */
 const SIN_ROL: DatosDelActor = {
   rol: null,
@@ -101,24 +92,6 @@ type MembresiaDelActor = Readonly<{
   tenantId: string;
   acciones: readonly string[];
 }>;
-
-/**
- * Un nombre de módulo que llega de la base tiene que ser una clave del catálogo (`esClaveDe`): la base solo
- * valida la FORMA (`^[a-z][a-z0-9_]{1,39}$`), y un nombre que el catálogo no conoce (o que ni siquiera tiene
- * esa forma) es un dato roto, no un módulo que haya que ignorar en silencio. Como el rol desconocido, es una
- * falla: ningún actor opera con un plan o una activación que el código no sabe leer.
- */
-export function validarNombresDeModulo(
-  origen: string,
-  nombres: readonly string[],
-): readonly string[] {
-  for (const nombre of nombres) {
-    if (!esClaveDe(CATALOGO_DE_MODULOS, nombre)) {
-      throw new RangeError(`módulo desconocido en la base (${origen}): ${nombre}`);
-    }
-  }
-  return [...nombres].sort();
-}
 
 /**
  * Dos fábricas, a propósito, y no una con una opción: la de ESCRITURA (`crearAutorizacionDePostgres`) no tiene cómo memorizar, así que
