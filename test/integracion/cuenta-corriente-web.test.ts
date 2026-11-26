@@ -195,6 +195,7 @@ describe.skipIf(base === null)("cuenta corriente: la lista y la ficha en la web 
       ["VENTA_A_CUENTA", "1000.00", null, "MOSTRADOR"],
     ]);
     expect(Object.keys(r.dato).sort()).toEqual([
+      "cuentaId",
       "cuit",
       "disponible",
       "estado",
@@ -205,6 +206,7 @@ describe.skipIf(base === null)("cuenta corriente: la lista y la ficha en la web 
       "parteId",
       "plazoDias",
       "saldo",
+      "version",
     ]);
     const s = await cliente(e, { suspendida: true });
     expect(await fichaDeLaCuenta(d, e.gerente, { parteId: s })).toMatchObject({
