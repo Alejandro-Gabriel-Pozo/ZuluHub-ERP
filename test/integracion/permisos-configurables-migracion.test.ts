@@ -96,6 +96,27 @@ const TODOS_ANEXO_A = [
 /** Una lista válida que cumple los pisos: los cuatro de todos y dos acciones libres. */
 const LISTA_VALIDA = [...TODOS_ANEXO_A, "ventas.ver", "mesas.ver"].sort();
 
+/** Una sentencia con el dueño de una base, dentro de una transacción que se deshace: la falla como `codigo:restriccion` o `null` si anduvo. */
+const comoDuenoDe = async (
+  cliente: pg.Client,
+  sql: string,
+  p: unknown[] = [],
+): Promise<string | null> => {
+  await cliente.query("begin");
+  try {
+    await cliente.query("savepoint s");
+    try {
+      await cliente.query(sql, p);
+      return null;
+    } catch (e) {
+      const err = e as { code?: string; constraint?: string };
+      return `${err.code}:${err.constraint ?? ""}`;
+    }
+  } finally {
+    await cliente.query("rollback");
+  }
+};
+
 describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H4b)", () => {
   const entorno = crearEntornoDePrueba(base as BaseDePruebas, 6);
   let dueno: pg.Client;
@@ -145,21 +166,8 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
   };
 
   /** Lo mismo con el dueño de la base, siempre dentro de una transacción que se deshace (las tablas globales no se ensucian). */
-  const comoDuenoSinConfirmar = async (sql: string, p: unknown[] = []): Promise<string | null> => {
-    await dueno.query("begin");
-    try {
-      await dueno.query("savepoint s");
-      try {
-        await dueno.query(sql, p);
-        return null;
-      } catch (e) {
-        const err = e as { code?: string; constraint?: string };
-        return `${err.code}:${err.constraint ?? ""}`;
-      }
-    } finally {
-      await dueno.query("rollback");
-    }
-  };
+  const comoDuenoSinConfirmar = (sql: string, p: unknown[] = []): Promise<string | null> =>
+    comoDuenoDe(dueno, sql, p);
 
   beforeAll(async () => {
     dueno = new pg.Client({ connectionString: (base as BaseDePruebas).dueno });
@@ -308,31 +316,48 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
       }
     });
 
+    /**
+     * Las sentencias de abajo incluyen `truncate`: toma el bloqueo EXCLUSIVO de la tabla (y, con `cascade`, de todas las que la referencian) ANTES de que el disparador diga que no,
+     * así que en la base compartida espera a lo que otras pruebas, en paralelo, tengan abierto sobre esas tablas (o cae en un deadlock) y, bajo carga, no llega al 42501 a
+     * tiempo; además frena a esas otras pruebas. Por eso corre en una base propia: nadie más la toca y el resultado depende solo de los disparadores.
+     */
     it("ni el dueño de la base borra ni edita lo inmutable: disparadores de solo inserción y sin borrado", async () => {
-      const rol = await crearRol(empresa, "Intocable");
-      expect(
-        await intentar(empresa, SQL_VERSION, [empresa, rol, 1, LISTA_VALIDA, persona]),
-      ).toBeNull();
-      for (const sql of [
-        "update version_de_plantilla set autor = 'otro'",
-        "delete from version_de_plantilla",
-        "truncate version_de_plantilla",
-        "update plantilla_de_rol set clave = clave",
-        "delete from plantilla_de_rol",
-        "update accion_introducida set accion = accion",
-        "delete from accion_introducida",
-        "truncate accion_introducida",
-        "delete from piso_de_plataforma",
-        "truncate piso_de_plataforma",
-        "update version_de_rol set acciones = '{}'",
-        "delete from version_de_rol",
-        "truncate version_de_rol",
-        "delete from rol_de_empresa",
-        "truncate rol_de_empresa cascade",
-        "truncate plantilla_de_rol cascade",
-      ]) {
-        const r = await comoDuenoSinConfirmar(sql);
-        expect([sql, r?.split(":")[0]]).toEqual([sql, "42501"]);
+      const aparte = await crearBaseAparte(base as BaseDePruebas);
+      const cliente = new pg.Client({ connectionString: aparte.base.dueno });
+      try {
+        await cliente.connect();
+        const e = (await crearEmpresaActiva(crearEntornoDePrueba(aparte.base, 2))).empresa;
+        const autor = (await crearPersonaDeBase(cliente)).id;
+        const rol = randomUUID();
+        await cliente.query(
+          "insert into rol_de_empresa (id, empresa_id, nombre, nombre_clave) values ($1, $2, 'Intocable', 'intocable')",
+          [rol, e],
+        );
+        await cliente.query(SQL_VERSION, [e, rol, 1, LISTA_VALIDA, autor]);
+        for (const sql of [
+          "update version_de_plantilla set autor = 'otro'",
+          "delete from version_de_plantilla",
+          "truncate version_de_plantilla",
+          "update plantilla_de_rol set clave = clave",
+          "delete from plantilla_de_rol",
+          "update accion_introducida set accion = accion",
+          "delete from accion_introducida",
+          "truncate accion_introducida",
+          "delete from piso_de_plataforma",
+          "truncate piso_de_plataforma",
+          "update version_de_rol set acciones = '{}'",
+          "delete from version_de_rol",
+          "truncate version_de_rol",
+          "delete from rol_de_empresa",
+          "truncate rol_de_empresa cascade",
+          "truncate plantilla_de_rol cascade",
+        ]) {
+          const r = await comoDuenoDe(cliente, sql);
+          expect([sql, r?.split(":")[0]]).toEqual([sql, "42501"]);
+        }
+      } finally {
+        await cliente.end();
+        await aparte.destruir();
       }
     });
 
