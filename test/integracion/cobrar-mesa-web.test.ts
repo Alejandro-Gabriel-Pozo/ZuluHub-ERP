@@ -252,7 +252,8 @@ describe.skipIf(base === null)("composición web: cobrar la mesa", () => {
     );
     expect(ok).toMatchObject({ ok: true, dato: { total: monto("2000.00") } });
     if (ok.ok) {
-      expect(ok.dato.cobros.map((c) => c.importe.monto)).toEqual(["1500.00", "500.00"]);
+      // El orden de los cobros no es el que se mandó (lo fija caja): se compara el conjunto.
+      expect(ok.dato.cobros.map((c) => c.importe.monto).sort()).toEqual(["1500.00", "500.00"]);
     }
   });
 
