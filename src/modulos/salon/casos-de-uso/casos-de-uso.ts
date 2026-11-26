@@ -1,6 +1,7 @@
 import type { DependenciasDeSalon } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";
 import { armarCambioDeMesa } from "./cambio-de-mesa";
+import { armarCerrarMesaACuenta } from "./cerrar-mesa-a-cuenta";
 import { armarCobro } from "./cobro";
 import { armarDivision } from "./dividir";
 import { armarEnvios } from "./envios";
@@ -18,6 +19,7 @@ export function crearCasosDeUsoDeSalon(dependencias: DependenciasDeSalon) {
     ...armarPedido(dependencias),
     ...armarCambioDeMesa(dependencias),
     ...armarCobro(dependencias),
+    ...armarCerrarMesaACuenta(dependencias),
     ...armarEnvios(dependencias),
     ...armarUnion(dependencias),
     ...armarDivision(dependencias),

@@ -12,7 +12,11 @@ describe("códigos públicos de ventas", () => {
     expect(CLAVES_DE_ERRORES_DE_VENTAS).toEqual({
       VENTAS_ACCION_NO_PERMITIDA: "ventas.error.accion_no_permitida",
       VENTAS_TICKET_CON_FACTURA_VIGENTE: "ventas.error.ticket_con_factura_vigente",
+      VENTAS_VENTA_A_CERO_A_CUENTA: "ventas.error.venta_a_cero_a_cuenta",
     });
+    expect(CATALOGO_DE_TEXTOS["ventas.error.venta_a_cero_a_cuenta"].porDefecto).toBe(
+      "No se puede cargar a cuenta una venta de $0.",
+    );
     expect(CATALOGO_DE_TEXTOS["ventas.error.ticket_con_factura_vigente"].porDefecto).toBe(
       "Primero acreditá la factura con una nota de crédito",
     );

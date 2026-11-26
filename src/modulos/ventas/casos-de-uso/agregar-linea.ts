@@ -80,6 +80,25 @@ function mismoPrecioAbierto(linea: Linea, precioAbierto: string | undefined): bo
   );
 }
 
+/** Una línea ya guardada es la que se pide (mismo producto, cantidad, elecciones y precio abierto): la regla de la repetición de `agregarLinea` y de `venderACuenta`. */
+export function lineaTieneElContenido(
+  existente: Linea,
+  pedido: Readonly<{
+    productoId: string;
+    cantidad: Cantidad;
+    /** Variante y opciones elegidas, en cualquier orden. */
+    elegidas: readonly string[];
+    precioAbierto: string | undefined;
+  }>,
+): boolean {
+  return (
+    existente.productoId === pedido.productoId &&
+    cantidadIgual(existente.cantidad, pedido.cantidad) &&
+    JSON.stringify(eleccionDeLaLinea(existente)) === JSON.stringify([...pedido.elegidas].sort()) &&
+    mismoPrecioAbierto(existente, pedido.precioAbierto)
+  );
+}
+
 function cantidadIgual(a: string, b: Cantidad): boolean {
   try {
     return cantidadDesdeTexto(a).unidades === b.unidades;
@@ -153,10 +172,12 @@ export async function agregarLineaEnTx(
   if (existente !== null) {
     const mismoContenido =
       existente.cuentaId === cuenta.id &&
-      existente.productoId === entrada.productoId &&
-      cantidadIgual(existente.cantidad, cantidad.valor) &&
-      JSON.stringify(eleccionDeLaLinea(existente)) === JSON.stringify([...elegidas].sort()) &&
-      mismoPrecioAbierto(existente, entrada.precioAbierto);
+      lineaTieneElContenido(existente, {
+        productoId: entrada.productoId,
+        cantidad: cantidad.valor,
+        elegidas,
+        precioAbierto: entrada.precioAbierto,
+      });
     if (!mismoContenido) return err("LINEA_ID_EN_USO");
     const lineas = await tx.cuentas.lineasDeCuenta(empresaId, cuenta.id);
     return ok({

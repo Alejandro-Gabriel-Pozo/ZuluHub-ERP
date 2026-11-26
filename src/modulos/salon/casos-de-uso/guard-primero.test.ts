@@ -29,6 +29,7 @@ const LLAMADAS: Record<keyof typeof DECLARACIONES, (c: Casos) => Promise<unknown
   liberarMesa: (c) => c.liberarMesa(contextoDeParidad, ENTRADA),
   cambiarDeMesa: (c) => c.cambiarDeMesa(contextoDeParidad, ENTRADA),
   cobrarMesa: (c) => c.cobrarMesa(contextoDeParidad, ENTRADA),
+  cerrarMesaACuenta: (c) => c.cerrarMesaACuenta(contextoDeParidad, ENTRADA),
   enviarACocina: (c) => c.enviarACocina(contextoDeParidad, ENTRADA),
   pedirQueSalga: (c) => c.pedirQueSalga(contextoDeParidad, ENTRADA),
   anularItemEnviado: (c) => c.anularItemEnviado(contextoDeParidad, ENTRADA),

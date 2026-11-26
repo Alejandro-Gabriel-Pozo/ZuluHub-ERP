@@ -2,7 +2,7 @@ import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { LecturaDeDerechosDeUso } from "../../../puertos/derechos-de-uso";
 import type { TxDeComandas } from "../../comandas/publico";
-import type { StockDeVentas } from "../../ventas/publico";
+import type { CuentaCorrienteDeVentas, StockDeVentas } from "../../ventas/publico";
 import type { RepositoriosDeSalon } from "../persistencia/repositorios-de-salon";
 
 /**
@@ -26,4 +26,6 @@ export type DependenciasDeSalon = Readonly<{
    * stock y el salón no llama a nada: la empresa con stock apagado vende como antes.
    */
   stock?: StockDeVentas<TxDeSalon> | undefined;
+  /** La cuenta corriente de clientes (la arma la composición con `cuenta_corriente`, la MISMA que usa ventas). Sin ella, cerrar una mesa a cuenta se rechaza: nace cerrado. */
+  cuentaCorriente?: CuentaCorrienteDeVentas<TxDeSalon> | undefined;
 }>;
