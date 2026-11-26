@@ -120,6 +120,7 @@ describe.skipIf(base === null)("ventas: facturar antes de cobrar (R-05a)", () =>
     });
   const anular = (e: EscenarioDeFacturacionDeTickets, t: Emitido) =>
     m.casos.anularTicket(e.gerente, {
+      sucursalDeTrabajo: e.sucursal,
       claveIdempotencia: nuevaClave(),
       ticketId: t.ticketId,
       ejemplarBaseId: t.ejemplarId,

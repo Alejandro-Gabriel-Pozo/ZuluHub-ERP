@@ -355,6 +355,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
       "roles.editar",
       "roles.ver",
       "usuarios.apagar",
+      "usuarios.asignar_rol",
       "usuarios.asignar_sucursales",
       "usuarios.invitar",
       "usuarios.reenviar_invitacion",

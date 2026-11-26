@@ -120,13 +120,19 @@ export async function montarCompras(
   /** La barrera de la ronda en curso: cada transacción espera tras leer su autorización hasta que llegaron todas. */
   let barrera: () => Promise<void> = () => Promise.resolve();
   /** Una falla inyectada en un punto de «Comprar y recibir» (para probar que no queda nada a medias). */
-  let falla: "oferta" | "lineas" | "libro" | null = null;
+  let falla: "oferta" | "lineas" | "libro" | "libro-pago" | null = null;
   let condicionDeIva: CondicionDeIvaDeLaEmpresa | null = "RESPONSABLE_INSCRIPTO";
   /** El libro real; con `inyectarFalla("libro")` falla en lugar de asentar (para probar que no queda nada a medias). */
   const libroConFalla = () => {
     const real = crearLibroDeProveedores();
     const cae = () => {
       if (falla === "libro") throw new Error("falla inyectada en el libro");
+    };
+    // `libro-pago` solo falla en el pago (el cargo de la factura se asienta): para probar que el pago no queda a medias.
+    const caePago = () => {
+      if (falla === "libro" || falla === "libro-pago") {
+        throw new Error("falla inyectada en el libro");
+      }
     };
     return {
       registrarCargo: (...a: Parameters<typeof real.registrarCargo>) => {
@@ -136,6 +142,14 @@ export async function montarCompras(
       anularCargo: (...a: Parameters<typeof real.anularCargo>) => {
         cae();
         return real.anularCargo(...a);
+      },
+      registrarPago: (...a: Parameters<typeof real.registrarPago>) => {
+        caePago();
+        return real.registrarPago(...a);
+      },
+      anularPago: (...a: Parameters<typeof real.anularPago>) => {
+        caePago();
+        return real.anularPago(...a);
       },
     };
   };
@@ -368,7 +382,7 @@ export async function montarCompras(
     alcances,
     /** Las dependencias reales de los casos de uso (para armar uno con otro parámetro, por ejemplo el tope de la exportación). */
     dependencias,
-    inyectarFalla: (punto: "oferta" | "lineas" | "libro" | null) => {
+    inyectarFalla: (punto: "oferta" | "lineas" | "libro" | "libro-pago" | null) => {
       falla = punto;
     },
     armarBarrera: (participantes: number) => {

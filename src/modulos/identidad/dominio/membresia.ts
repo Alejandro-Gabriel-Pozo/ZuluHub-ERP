@@ -19,6 +19,8 @@ export type Membresia = Readonly<{
   empresaId: EmpresaId;
   personaId: PersonaId;
   rol: RolDeLaMembresia;
+  /** El rol propio de la empresa cuando `rol` es `PROPIO` (la base lo exige); `null` en los otros tres. */
+  rolPropioId: string | null;
   activo: boolean;
   version: number;
 }>;

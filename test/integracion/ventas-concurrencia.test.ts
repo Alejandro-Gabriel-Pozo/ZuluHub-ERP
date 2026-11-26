@@ -847,6 +847,7 @@ describe.skipIf(base === null)("ventas: concurrencia e idempotencia", () => {
         ejemplarBaseId: t.ejemplarId,
         ejemplarNuevoId: nuevo,
         motivo: ANULACION,
+        sucursalDeTrabajo: s.sucursal,
       };
       const [a, b] = await carrera(
         i,
@@ -872,6 +873,7 @@ describe.skipIf(base === null)("ventas: concurrencia e idempotencia", () => {
         ejemplarBaseId: t.ejemplarId,
         ejemplarNuevoId,
         motivo: ANULACION,
+        sucursalDeTrabajo: s.sucursal,
       });
       const nuevoA = nuevoId();
       const nuevoB = nuevoId();
@@ -936,6 +938,7 @@ describe.skipIf(base === null)("ventas: concurrencia e idempotencia", () => {
           ejemplarBaseId: t.ejemplarId,
           ejemplarNuevoId: nuevoId(),
           motivo: ANULACION,
+          sucursalDeTrabajo: s.sucursal,
         };
         await expect(casosRotos.anularTicket(s.gerente, pedido)).rejects.toThrow("falla inyectada");
         const ctx = `ronda ${i}`;

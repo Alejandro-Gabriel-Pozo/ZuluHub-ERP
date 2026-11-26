@@ -62,7 +62,7 @@ export type PropsDePantallaDeCobro = Readonly<{
   confirmoCero?: boolean | undefined;
   /**
    * Cobrar una cuenta que YA existe (SAL-D, la mesa del salón; DEC-1039: la hoja de Cobrar se reutiliza, no se duplica): el id de la cuenta lo fija la página y el pedido no lleva líneas (las lee el servidor de la
-   * cuenta). Tras cobrar no se ofrece «Anular» (es de SAL-C2) y el botón del resultado vuelve al salón en vez de empezar una venta nueva.
+   * cuenta). Tras cobrar se ofrece «Anular» como en el mostrador (SAL-C2; la mesa no se reabre) y el botón del resultado vuelve al salón en vez de empezar una venta nueva.
    */
   cuentaExistente?: Readonly<{ cuentaId: string }> | undefined;
   /** Solo al cobrar una cuenta de una mesa dividida (SAL-E2): el rótulo del botón del resultado y, si es la última cuenta, el aviso «Mesa cobrada». */

@@ -17,7 +17,7 @@ import { textosDeCobrar } from "./textos-de-cobrar";
 
 /**
  * La hoja de cobro en modo «cuenta existente» (SAL-D, cobrar la mesa; DEC-1039: se reutiliza la de la venta rápida): el pedido lleva el id de la cuenta de la mesa y NO lleva líneas ni propina; la clave y el id del ejemplar
- * se fijan una vez por intento (un doble toque es un solo cobro y un reintento repite lo mismo); falta o sobra un centavo apaga «Cobrar»; tras cobrar no se ofrece «Anular» (es de SAL-C2) y el último botón es «Volver».
+ * se fijan una vez por intento (un doble toque es un solo cobro y un reintento repite lo mismo); falta o sobra un centavo apaga «Cobrar»; tras cobrar se ofrece «Anular» con motivo obligatorio (SAL-C2) y el último botón es «Volver».
  */
 const nada = { cupon: false, ultimos4: false, marca: false, cuotas: false, dni: false };
 const MEDIOS: readonly MedioParaCobrar[] = [
@@ -177,13 +177,13 @@ describe("PantallaDeCobro: modo cuenta existente (cobrar la mesa)", () => {
     expect(alCobrar.mock.calls.length).toBeLessThanOrEqual(2);
   });
 
-  it("tras cobrar: «Cobrado», el número del ticket, «Imprimir ticket» y «Volver» al salón; NO hay «Anular» ni «Nueva venta»", async () => {
+  it("tras cobrar: «Cobrado», el número del ticket, «Imprimir ticket» y «Anular» y «Volver» al salón; NO hay «Nueva venta»", async () => {
     const { alNuevaVenta, anular } = await hojaDeLaMesa();
     await userEvent.click(boton("Cobrar"));
     await expect.element(page.getByText("Cobrado")).toBeVisible();
     await expect.element(page.getByText("Ticket N.º 7")).toBeVisible();
     await expect.element(boton("Imprimir ticket")).toBeVisible();
-    expect(page.getByRole("button", { name: "Anular", exact: true }).elements()).toHaveLength(0);
+    await expect.element(boton("Anular")).toBeVisible();
     expect(page.getByRole("button", { name: "Nueva venta", exact: true }).elements()).toHaveLength(
       0,
     );
@@ -191,6 +191,37 @@ describe("PantallaDeCobro: modo cuenta existente (cobrar la mesa)", () => {
     expect(alNuevaVenta).toHaveBeenCalledTimes(1);
     expect(anular).not.toHaveBeenCalled();
     expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("ANULAR el cobro: pide motivo, manda el ejemplar del cobro, queda «Anulado» y sigue «Volver»", async () => {
+    const { anular, alNuevaVenta } = await hojaDeLaMesa();
+    anular.mockResolvedValue({
+      ok: true,
+      dato: {
+        ticketId: "ticket-1",
+        numero: 7,
+        estado: "ANULADO",
+      },
+    });
+    await userEvent.click(boton("Cobrar"));
+    await expect.element(page.getByText("Cobrado")).toBeVisible();
+    await userEvent.click(boton("Anular"));
+    const delCuadro = (nombre: string) =>
+      page.getByRole("dialog").getByRole("button", { name: nombre, exact: true });
+    await userEvent.click(delCuadro("Anular"));
+    await expect.element(page.getByText("Escribí el motivo")).toBeVisible();
+    expect(anular).not.toHaveBeenCalled();
+    await userEvent.fill(page.getByRole("textbox", { name: /Motivo/ }), "Se cobró de más");
+    await userEvent.click(delCuadro("Anular"));
+    await expect.element(page.getByText("Anulado", { exact: true }).first()).toBeVisible();
+    expect(anular).toHaveBeenCalledTimes(1);
+    expect(pedidoDe(anular, 0)).toMatchObject({
+      ticketId: "ticket-1",
+      ejemplarBaseId: "ejemplar-1",
+      motivo: "Se cobró de más",
+    });
+    await userEvent.click(boton("Volver"));
+    expect(alNuevaVenta).toHaveBeenCalledTimes(1);
   });
 
   it("un rechazo del servidor sale como el genérico y se puede volver al cobro sin cobrar nada más", async () => {

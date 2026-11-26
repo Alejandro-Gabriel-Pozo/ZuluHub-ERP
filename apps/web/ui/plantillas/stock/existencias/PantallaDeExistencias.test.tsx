@@ -31,8 +31,12 @@ const DATO: ExistenciasDeLaComposicion = {
   ],
   siguiente: null,
 };
+const ACCIONES = [
+  { texto: "Entrada", href: "/stock/movimientos/entrada", habilitado: true },
+  { texto: "Ajustar", href: "/stock/movimientos/ajustar", habilitado: false },
+];
 const pantalla = (dato = DATO) => (
-  <PantallaDeExistencias vista={armarLasExistencias(dato)} textos={TEXTOS} />
+  <PantallaDeExistencias vista={armarLasExistencias(dato)} textos={TEXTOS} acciones={ACCIONES} />
 );
 
 describe("PantallaDeExistencias", () => {
@@ -41,8 +45,16 @@ describe("PantallaDeExistencias", () => {
     await expect.element(page.getByText("Harina")).toBeVisible();
     await expect.element(page.getByText("12,5", { exact: false })).toBeVisible();
     expect(page.getByText("Negativa").elements()).toHaveLength(1);
-    expect(page.getByRole("button").elements()).toHaveLength(0);
     expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("los botones llevan al formulario si el servidor deja hacerlo, y salen apagados si no", async () => {
+    await render(pantalla());
+    await expect
+      .element(page.getByRole("link", { name: "Entrada" }))
+      .toHaveAttribute("href", "/stock/movimientos/entrada");
+    await expect.element(page.getByRole("button", { name: "Ajustar" })).toBeDisabled();
+    expect(page.getByRole("link", { name: "Ajustar" }).elements()).toHaveLength(0);
   });
 
   it("el selector lista los depósitos como enlaces a su dirección y marca el elegido", async () => {
