@@ -45,12 +45,11 @@ export const CLASES_ANULABLES: readonly ClaseDeMovimiento[] = [
   "AJUSTE",
 ];
 
-/** El fondo y los ingresos y egresos manuales son solo de efectivo. */
-const CLASES_SOLO_EFECTIVO: readonly ClaseDeMovimiento[] = [
-  "FONDO_INICIAL",
-  "INGRESO_MANUAL",
-  "EGRESO_MANUAL",
-];
+/**
+ * El fondo y los ingresos manuales son solo de efectivo. El egreso manual NO lo es (dueño, 19/11 y 26/11, Q-D8 A): sale por cualquier medio activo y, si no
+ * es efectivo, lleva su acto de salida (la base lo exige). Es la misma lista que `movimiento_caja_solo_efectivo` (0091); una prueba compara las dos.
+ */
+const CLASES_SOLO_EFECTIVO: readonly ClaseDeMovimiento[] = ["FONDO_INICIAL", "INGRESO_MANUAL"];
 
 export function motivoRequerido(clase: ClaseDeMovimiento): boolean {
   return CLASES_CON_MOTIVO.includes(clase);
@@ -72,7 +71,7 @@ export type MovimientoManualArmado = Readonly<{
   motivo: string;
 }>;
 
-/** Ingreso o egreso manual (solo efectivo): el monto que llega es positivo, el egreso se guarda negativo. Con motivo. */
+/** Ingreso o egreso manual: el monto que llega es positivo, el egreso se guarda negativo. Con motivo. */
 export function decidirMovimientoManual(
   entrada: Readonly<{
     sentido: "INGRESO" | "EGRESO";
