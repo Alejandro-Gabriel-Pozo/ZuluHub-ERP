@@ -39,7 +39,7 @@ export type VentaACuenta = Readonly<{
   yaExistia: boolean;
 }>;
 
-export type AccionDeVenderACuenta<R> = (pedido: unknown) => Promise<Respuesta<R>>;
+type AccionDeVenderACuenta<R> = (pedido: unknown) => Promise<Respuesta<R>>;
 
 /** Lo que el cobro necesita para ofrecer la hoja: los clientes que se pueden elegir (ya cargados por la página) y las dos acciones de servidor. Sin él, el cobro no ofrece «Vender a cuenta corriente». */
 export type VentaACuentaDelCobro = Readonly<{
