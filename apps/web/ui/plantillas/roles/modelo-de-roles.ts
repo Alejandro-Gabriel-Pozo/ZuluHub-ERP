@@ -11,7 +11,7 @@ import {
 
 /**
  * El nombre que ve el gerente para una acción del catálogo (clave `roles.accion.<id>`). Una acción sin nombre es un error de programación y no se disfraza con el id: falla (la prueba
- * `catalogo-de-acciones.test.ts` lo atrapa antes, para las 188 del catálogo).
+ * `textos-de-acciones-de-roles.test.ts` lo atrapa antes, para las 188 del catálogo).
  */
 export function textoDeLaAccion(diccionario: DiccionarioResuelto, accion: string): string {
   const clave = claveDelNombreDeLaAccion(accion);

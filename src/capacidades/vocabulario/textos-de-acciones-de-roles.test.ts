@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CATALOGO_DE_MODULOS } from "../modulos/catalogo";
 import { CATALOGO_DE_TEXTOS } from "./catalogo";
-import { TEXTOS_DE_ACCIONES_DE_ROLES } from "./catalogo-acciones-de-roles";
+import { TEXTOS_DE_ACCIONES_DE_ROLES } from "./textos-de-acciones-de-roles";
 import { claveDelNombreDeLaAccion } from "./nombre-de-la-accion";
 
 /** Todas las acciones del catálogo de módulos, con su id completo. */
