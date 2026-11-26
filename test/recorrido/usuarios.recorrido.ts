@@ -130,13 +130,12 @@ describe.skipIf(base === null)("recorrido de la lista de usuarios", () => {
     expect(await pagina.getByRole("button", { name: "Desactivar" }).count()).toBe(1);
     await sinViolacionesDeAxe();
 
-    // El administrador y el gerente trabajan en todas las sucursales: su ficha no dice nada de sucursales. Al administrador el gerente sí lo puede desactivar: sus dos botones son «Desactivar» y el «Guardar» del rol (H4b, T6).
+    // El administrador y el gerente trabajan en todas las sucursales: su ficha no dice nada de sucursales. Al administrador el gerente sí lo puede desactivar (único botón).
     await ir(`/cuenta/usuarios/${diego}`);
     await pagina.getByRole("heading", { name: "diego@lacteos.test" }).waitFor();
     await pagina.getByText("Administrador").first().waitFor();
-    expect(await pagina.getByRole("button").count()).toBe(2);
+    expect(await pagina.getByRole("button").count()).toBe(1);
     expect(await pagina.getByRole("button", { name: "Desactivar" }).count()).toBe(1);
-    expect(await pagina.getByRole("button", { name: "Guardar" }).count()).toBe(1);
     expect(await pagina.getByText("Sucursales").count()).toBe(0);
 
     await ir(`/cuenta/usuarios/${deOtraEmpresa}`);
@@ -184,12 +183,7 @@ describe.skipIf(base === null)("recorrido de la lista de usuarios", () => {
         ).rows[0]?.n,
       );
     const guardar = async (p: Page) => {
-      // La ficha tiene dos formularios con «Guardar» (el del rol y el de sucursales): este es el de «Sucursales».
-      await p
-        .locator("form")
-        .filter({ has: p.getByRole("group", { name: "Sucursales" }) })
-        .getByRole("button", { name: "Guardar" })
-        .click();
+      await p.getByRole("button", { name: "Guardar" }).click();
       await p.waitForLoadState("networkidle");
     };
 
@@ -323,9 +317,7 @@ describe.skipIf(base === null)("recorrido de la lista de usuarios", () => {
     await pag.getByRole("dialog").getByRole("button", { name: "Desactivar" }).click();
     await pag.getByText("Desactivado").first().waitFor();
     await pag.getByRole("button", { name: "Desactivar" }).waitFor({ state: "detached" });
-    // El gerente puede reasignar el rol de una persona desactivada (sigue desactivada): queda solo el «Guardar» del rol.
-    expect(await pag.getByRole("button").count()).toBe(1);
-    expect(await pag.getByRole("button", { name: "Guardar" }).count()).toBe(1);
+    expect(await pag.getByRole("button").count()).toBe(0);
     expect(
       (await aDeLaBase("select activo from membresia where persona_id = $1", [marta.id]))[0],
     ).toEqual({ activo: false });
