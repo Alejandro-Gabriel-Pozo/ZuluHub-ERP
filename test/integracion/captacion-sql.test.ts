@@ -26,7 +26,7 @@ import {
 import { validarFormulario } from "../../src/plataforma/captacion/dominio/formulario";
 import { ADMIN_DE_PRUEBA } from "./admins-de-prueba";
 import { contar, crearSolicitud, filaDe } from "./captacion-apoyo";
-import { AHORA_DE_PRUEBA } from "./entorno";
+import { AHORA_DE_PRUEBA, baseDeEsteArchivo } from "./entorno";
 import { check, clave, denegado, intentoDelDueno, sinConfirmar } from "./fiscal-apoyo";
 import type { BaseDePruebas } from "./global";
 import { crearMarca, crearMundoDeMarca, marcaPrincipal } from "./marcas-apoyo";
@@ -40,7 +40,7 @@ import { correoUnico } from "./unicos";
  * reversión, en `captacion-migracion.test.ts`; los debilitamientos, en `captacion-debilitamientos.test.ts`.
  */
 
-const base = inject("baseDePruebas");
+const base = await baseDeEsteArchivo(inject("baseDePruebas"));
 vi.setConfig({ testTimeout: 60_000 });
 
 const ROL = "pedernal_captacion";

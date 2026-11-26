@@ -1,3 +1,4 @@
+import { afterAll } from "vitest";
 import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import pg from "pg";
@@ -509,6 +510,22 @@ export async function crearBaseAparte(
       await admin.end();
     },
   };
+}
+
+/**
+ * La base de UN archivo de pruebas (se destruye al terminar el archivo). Previene: un `truncate` toma el bloqueo exclusivo de la tabla (y de las que la referencian) ANTES de que
+ * el disparador o el privilegio lo rechacen, así que en la base compartida espera a lo que otros archivos, en paralelo, tengan abierto (o cae en un deadlock) y, bajo carga, la
+ * prueba no ve el rechazo esperado; además frena a esos archivos. Se usa en el archivo que intenta vaciar tablas: `const base = await baseDeEsteArchivo(inject("baseDePruebas"))`.
+ */
+export async function baseDeEsteArchivo(
+  compartida: BaseDePruebas | null,
+): Promise<BaseDePruebas | null> {
+  if (compartida === null) return null;
+  const aparte = await crearBaseAparte(compartida);
+  afterAll(async () => {
+    await aparte.destruir();
+  });
+  return aparte.base;
 }
 
 /** Punto de encuentro: todos esperan hasta que llegaron `participantes`. */

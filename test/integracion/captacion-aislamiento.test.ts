@@ -32,7 +32,14 @@ import {
   type ClaimDeCaptacion,
   type SolicitudDePrueba,
 } from "./captacion-apoyo";
-import { AHORA_DE_PRUEBA, comoEmpresa, comoGrupo, comoPlataforma, comoTrabajos } from "./entorno";
+import {
+  AHORA_DE_PRUEBA,
+  comoEmpresa,
+  comoGrupo,
+  comoPlataforma,
+  comoTrabajos,
+  baseDeEsteArchivo,
+} from "./entorno";
 import type { BaseDePruebas } from "./global";
 import { crearMarca, crearMundoDeMarca, marcaPrincipal, type MundoDeMarca } from "./marcas-apoyo";
 import { SesionDePrueba, type Intento } from "./sesiones";
@@ -45,7 +52,7 @@ import { SesionDePrueba, type Intento } from "./sesiones";
  * conexión no filtra ni toca nada que no sea la solicitud que su contexto firmado nombra.
  */
 
-const base = inject("baseDePruebas");
+const base = await baseDeEsteArchivo(inject("baseDePruebas"));
 vi.setConfig({ testTimeout: 120_000 });
 
 // ---- ayudas ----------------------------------------------------------------------------------------------
