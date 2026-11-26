@@ -29,6 +29,8 @@ export type PropsDeCatalogoDeLaMesa = Readonly<{
   /** Hay un pedido en vuelo: no se abre otra hoja ni se agrega nada hasta que vuelva. */
   ocupado: boolean;
   alAgregar: (linea: LineaElegida) => void;
+  /** El rótulo del campo «Nota para la cocina» de la hoja de producto (la mesa manda a cocina). */
+  rotuloDeNota?: string | undefined;
 }>;
 
 /** Tras cerrar la hoja se ignora un segundo toque sobre un producto: evita abrirla dos veces con un doble toque (igual que la venta rápida). */
@@ -45,6 +47,7 @@ export function CatalogoDeLaMesa({
   cotizar,
   ocupado,
   alAgregar,
+  rotuloDeNota,
 }: PropsDeCatalogoDeLaMesa) {
   const [busqueda, setBusqueda] = useState("");
   const [seccionId, setSeccionId] = useState<string | null>(null);
@@ -161,6 +164,7 @@ export function CatalogoDeLaMesa({
             producto={abierto}
             forma={formaAbierta}
             textos={textos}
+            rotuloDeNota={rotuloDeNota}
             cotizar={cotizar}
             alAgregar={(linea) => {
               alAgregar(linea);

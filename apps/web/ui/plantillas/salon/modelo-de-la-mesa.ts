@@ -40,6 +40,7 @@ export type LineaDeLaFichaDeLaPantalla = Readonly<{
   precioUnitario: string;
   pasoDeCantidad: string;
   importe: string;
+  nota: string | null;
   compartida: boolean;
   comanda: string;
   numeroDeEnvio: number | null;
@@ -100,6 +101,7 @@ export type TextosDeLaMesa = Readonly<{
   seImprimeUnaCopia: string;
   configurarImpresoras: string;
   itemAnulado: string;
+  notaParaLaCocina: string;
 }>;
 
 export function textosDeLaMesa(d: DiccionarioResuelto = {}): TextosDeLaMesa {
@@ -139,6 +141,7 @@ export function textosDeLaMesa(d: DiccionarioResuelto = {}): TextosDeLaMesa {
     ),
     configurarImpresoras: texto(d, "comandas.texto.imprimir_configurar_impresoras"),
     itemAnulado: texto(d, "comandas.texto.envio_item_anulado"),
+    notaParaLaCocina: texto(d, "comandas.texto.nota_nota_para_la_cocina"),
   };
 }
 
@@ -164,6 +167,8 @@ export type PlatoArmado = Readonly<{
   cantidad: string;
   /** El envío en que salió; `null` si todavía no se envió. */
   envioId: string | null;
+  /** La nota libre para la cocina del plato (SAL-G): se ve bajo el plato y, sin enviar, se edita; `null` si no tiene. */
+  notaDeCocina: string | null;
 }>;
 
 type GrupoArmado = Readonly<{
@@ -233,6 +238,7 @@ function armarElPlato(d: DiccionarioResuelto, l: LineaDeLaFichaDeLaPantalla): Pl
     quitable: !enviado,
     cantidad: sinCerosDeMas(l.cantidad),
     envioId: l.envioId,
+    notaDeCocina: l.nota,
   };
 }
 

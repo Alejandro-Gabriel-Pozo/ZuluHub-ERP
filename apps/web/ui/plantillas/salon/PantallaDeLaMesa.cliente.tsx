@@ -146,15 +146,21 @@ export function PantallaDeLaMesa({
     if (mesa.cuentaId === null) return;
     const [pedido] = pedidoDeCotizacion(agregarALaCuenta([], linea)).lineas;
     if (pedido === undefined) return;
-    const para = JSON.stringify([mesa.cuentaId, pedido]);
+    // La nota (si la hay) viaja con la línea; otra nota es otro intento (otro id de línea).
+    const nota = linea.nota === undefined ? {} : { nota: linea.nota };
+    const para = JSON.stringify([mesa.cuentaId, pedido, nota]);
     if (intento.current === null || intento.current.para !== para) {
       intento.current = { para, lineaId: nuevoId() };
     }
     const lineaId = intento.current.lineaId;
-    void ejecutar(acciones.agregar, { ...pedido, cuentaId: mesa.cuentaId, lineaId }, () => {
-      intento.current = null;
-      recargar();
-    });
+    void ejecutar(
+      acciones.agregar,
+      { ...pedido, ...nota, cuentaId: mesa.cuentaId, lineaId },
+      () => {
+        intento.current = null;
+        recargar();
+      },
+    );
   };
 
   return (
@@ -226,6 +232,14 @@ export function PantallaDeLaMesa({
                       void ejecutar(
                         acciones.cambiarSalida,
                         { cuentaId: mesa.cuentaId, lineaId: p.id, salida },
+                        recargar,
+                      );
+                    }}
+                    alCambiarNota={(nota) => {
+                      if (mesa.cuentaId === null) return;
+                      void ejecutar(
+                        acciones.cambiarNota,
+                        { cuentaId: mesa.cuentaId, lineaId: p.id, nota },
                         recargar,
                       );
                     }}
@@ -331,6 +345,7 @@ export function PantallaDeLaMesa({
                 cotizar={catalogo.cotizar}
                 ocupado={ocupado}
                 alAgregar={agregar}
+                rotuloDeNota={textos.notaParaLaCocina}
               />
             </>
           )}
