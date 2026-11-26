@@ -181,6 +181,7 @@ describe.skipIf(base === null)("salón: el departamento sale del producto", () =
     );
     const r = valorDe(
       await m.salon.dividirCuenta(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         divisionId: nuevoId(),
         cuentaId: cuenta,
         partes: 2,

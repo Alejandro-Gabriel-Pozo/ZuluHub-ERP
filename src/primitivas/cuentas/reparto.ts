@@ -1,12 +1,12 @@
-import { ErrorDeValor } from "../../../primitivas/cantidad/errores";
-import { porcentajeDesdeTexto } from "../../../primitivas/cantidad/porcentaje";
+import { ErrorDeValor } from "../cantidad/errores";
+import { porcentajeDesdeTexto } from "../cantidad/porcentaje";
 import {
   MAXIMO_DE_CUENTAS_POR_ITEMS,
   MAXIMO_DE_PARTES_POR_PORCENTAJE,
-} from "../../../primitivas/cuentas/limites-de-division";
-import { importeDesdeTexto } from "../../../primitivas/dinero/importe";
-import { ARS } from "../../../primitivas/dinero/moneda";
-import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+} from "./limites-de-division";
+import { importeDesdeTexto } from "../dinero/importe";
+import { ARS } from "../dinero/moneda";
+import { err, ok, type Resultado } from "../resultado/resultado";
 
 /**
  * LA ÚNICA REGLA DE REPARTO DE LA CUENTA (E7 §3.9, PP-4 decidido; ADR-006): la usan la pantalla (para proponer los importes) y el servidor (para

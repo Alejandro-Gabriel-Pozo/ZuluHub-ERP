@@ -87,6 +87,13 @@ describe.skipIf(base === null)(
         precio: "800.00",
         desde: DESDE,
       });
+      const cafe = await productoDeBase(c, mundo.empresa, { nombre: "Café" });
+      await precioDeBase(c, {
+        empresa: mundo.empresa,
+        producto: cafe,
+        precio: "500.00",
+        desde: DESDE,
+      });
       // La caja con su sesión abierta de hoy (abrirla es otra pantalla) y el efectivo.
       const sucursal = (
         await consulta<{ id: string }>("select id from sucursal where empresa_id = $1 limit 1", [
@@ -252,6 +259,58 @@ describe.skipIf(base === null)(
       await pagina.getByText("Anulado", { exact: true }).first().waitFor();
       expect(await contar("ticket_correccion")).toBe(1);
       expect(await contar("movimiento_caja")).toBe(movimientos);
+      expect(await cuentasAbiertas()).toBe(0);
+      await pagina.getByRole("button", { name: "Volver", exact: true }).click();
+      await pagina.waitForURL(`${mundo.url}/salon`);
+      expect(vigilante.tomar()).toEqual([]);
+    });
+    it("DIVIDIR: la mesa 11 con dos platos se divide por ítems (doble toque en «Confirmar división»: UNA división y dos cuentas), cada cuenta se cobra sola y al cobrar la última dice «Mesa cobrada» y la mesa queda libre", async () => {
+      await mesaConPedido(11, 11);
+      await pagina.waitForLoadState("networkidle");
+      await pagina.getByRole("button", { name: /^Café/ }).click();
+      await pagina.getByRole("button", { name: /^Agregar( ·|$)/ }).click();
+      await pagina.getByText("1 × Café").waitFor();
+      await enviarYRecargar();
+      await pagina.getByRole("button", { name: "Dividir la cuenta" }).click();
+      const hoja = pagina.getByRole("dialog");
+      await hoja.getByText("Falta asignar").first().waitFor();
+      expect(await hoja.getByRole("button", { name: "Confirmar división" }).isDisabled()).toBe(
+        true,
+      );
+      expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+      const linea = (nombre: string) => hoja.getByRole("listitem").filter({ hasText: nombre });
+      await linea("Medialuna").getByRole("button", { name: "Entero" }).click();
+      await linea("Medialuna").getByRole("button", { name: "Cuenta 1" }).click();
+      await linea("Café").getByRole("button", { name: "Entero" }).click();
+      await linea("Café").getByRole("button", { name: "Cuenta 2" }).click();
+      await hoja.getByText("Cuenta 1 · $ 800,00").waitFor();
+      await hoja.getByText("Cuenta 2 · $ 500,00").waitFor();
+      await hoja.getByRole("button", { name: "Confirmar división" }).dblclick();
+      await pagina.getByText("Cuenta 1 · $ 800,00 · Pendiente").waitFor();
+      await pagina.getByText("Cuenta 2 · $ 500,00 · Pendiente").waitFor();
+      expect(await contar("division_de_cuenta")).toBe(1);
+      expect(await contar("parte_de_division")).toBe(2);
+      expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+
+      // Cobrar la Cuenta 1: «Volver a las cuentas» y la mesa sigue ocupada.
+      await pagina.getByRole("button", { name: "Cobrar", exact: true }).first().click();
+      await pagina.waitForURL(/\/cobrar\?cuenta=[0-9a-f-]{36}$/);
+      await pagina.locator("[data-total-del-cobro]").getByText("$ 800,00").waitFor();
+      await pagina.getByRole("button", { name: "Cobrar", exact: true }).click();
+      await pagina.getByText("Cobrado", { exact: true }).waitFor();
+      expect(await pagina.getByText("Mesa cobrada").count()).toBe(0);
+      await pagina.getByRole("button", { name: "Volver a las cuentas", exact: true }).click();
+      await pagina.getByText("Cuenta 1 · $ 800,00 · Cobrada").waitFor();
+      await pagina.getByText("Cuenta 2 · $ 500,00 · Pendiente").waitFor();
+      expect(await pagina.getByRole("button", { name: "Cobrar", exact: true }).count()).toBe(1);
+
+      // Cobrar la última: «Mesa cobrada» y la mesa queda libre.
+      await pagina.getByRole("button", { name: "Cobrar", exact: true }).click();
+      await pagina.waitForURL(/\/cobrar\?cuenta=[0-9a-f-]{36}$/);
+      await pagina.getByRole("heading", { name: "Cobro", level: 2 }).waitFor();
+      await pagina.locator("[data-total-del-cobro]").getByText("$ 500,00").waitFor();
+      await pagina.getByRole("button", { name: "Cobrar", exact: true }).click();
+      await pagina.getByText("Mesa cobrada").waitFor();
       expect(await cuentasAbiertas()).toBe(0);
       await pagina.getByRole("button", { name: "Volver", exact: true }).click();
       await pagina.waitForURL(`${mundo.url}/salon`);

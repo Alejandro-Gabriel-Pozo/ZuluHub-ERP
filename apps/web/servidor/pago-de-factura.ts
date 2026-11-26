@@ -9,6 +9,7 @@ import {
 } from "../../../src/composicion/pago-de-factura-web";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { hoyEnArgentina } from "../../../src/primitivas/tiempo/fecha-civil-hasta-hoy";
+import { pedidoDeMedios } from "../ui/plantillas/compras/pago/modelo-de-pago";
 import { rutaDeLaCompra } from "../ui/plantillas/compras/rutas-de-compras";
 import type {
   ResultadoDeAnularPago,
@@ -39,13 +40,17 @@ const textoDe = (datos: FormData, nombre: string): string => {
   return typeof valor === "string" ? valor : "";
 };
 
+/** Todos los valores de un campo repetido (una fila por medio), en el orden del formulario; lo que no es texto cuenta como vacío. */
+const textosDe = (datos: FormData, nombre: string): string[] =>
+  datos.getAll(nombre).map((valor) => (typeof valor === "string" ? valor : ""));
+
 /** Un campo que el formulario solo manda con efectivo: ausente es `undefined` (no «vacío»), para que el servidor distinga «sin caja» de «caja mal escrita». */
 const textoOpcionalDe = (datos: FormData, nombre: string): string | undefined => {
   const valor = datos.get(nombre);
   return typeof valor === "string" ? valor : undefined;
 };
 
-/** La fecha, el medio, la caja y el motivo salen del formulario; la factura, la compra y la clave las liga la página con `.bind` (no viajan en un campo). */
+/** La fecha, el medio o los medios con su importe, la caja y el motivo salen del formulario; la factura, la compra y la clave las liga la página con `.bind` (no viajan en un campo). */
 export async function declararElPagoDeLaFactura(
   recepcionId: string,
   comprobanteId: string,
@@ -59,7 +64,7 @@ export async function declararElPagoDeLaFactura(
       clave,
       comprobanteId,
       fechaDePago: textoDe(datos, "fecha"),
-      medio: textoDe(datos, "medio"),
+      ...pedidoDeMedios(textosDe(datos, "medio"), textosDe(datos, "importe")),
       ...(cajaId === undefined ? {} : { cajaId }),
       ...(motivo === undefined ? {} : { motivo }),
     }),

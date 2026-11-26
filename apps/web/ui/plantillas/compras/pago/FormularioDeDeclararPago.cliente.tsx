@@ -4,13 +4,21 @@ import { useActionState, useEffect, useState } from "react";
 import { AreaDeTexto } from "../../../componentes/AreaDeTexto";
 import { Boton } from "../../../componentes/Boton.cliente";
 import { Campo } from "../../../componentes/Campo";
+import { CampoImporte } from "../../../componentes/CampoImporte";
 import { Selector } from "../../../componentes/Selector";
 import { ProveedorDeEnvioDeFormulario } from "../../../patrones/EnvioDeFormulario.cliente";
 import { ErrorDeRespuesta } from "../../../patrones/ErrorDeRespuesta";
 import { Pila } from "../../../primitivas/Pila";
 import { Texto } from "../../../primitivas/Texto";
 import { DECLARAR_PAGO_INICIAL, type ResultadoDeDeclararPago } from "./resultado-de-pago";
-import { MEDIOS_PARA_ELEGIR, pagoListo, type MedioDePago } from "./modelo-de-pago";
+import {
+  hayEfectivo,
+  mediosParaLaFila,
+  pagoListo,
+  sePuedeAgregarUnMedio,
+  type FilaDeMedio,
+  type MedioDePago,
+} from "./modelo-de-pago";
 import { sinReiniciar } from "../../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeDeclararPago = Readonly<{
@@ -30,6 +38,9 @@ export type PropsDeFormularioDeDeclararPago = Readonly<{
     motivo: string;
     sinElegir: string;
     declararPago: string;
+    /** «Agregar medio» y «Quitar»: suman y sacan filas de medio. */
+    agregarMedio: string;
+    quitar: string;
     /** El texto de cada medio de pago. */
     medios: Readonly<Record<MedioDePago, string>>;
   }>;
@@ -37,7 +48,8 @@ export type PropsDeFormularioDeDeclararPago = Readonly<{
 
 /**
  * «Declarar pago» (maqueta `compra-pago.html`, estado «Declarar pago»): el importe fijo (el total de la factura, que NO se escribe), la fecha (hoy), el medio («Sin elegir») y, solo con efectivo, la caja de la que
- * sale la plata y el motivo del egreso. El botón queda apagado hasta tener lo necesario y no se vuelve a tocar mientras envía (`Boton` con `enviando`); repetir el envío es seguro en el servidor: la clave de este
+ * sale la plata y el motivo del egreso. «Agregar medio» suma una fila (hasta uno de cada tipo): con varias filas cada una dice cuánto paga y el servidor comprueba que la suma sea el total (DEC-1280); con una sola,
+ * el medio lleva el total y no hay importe que escribir. El botón queda apagado hasta tener lo necesario y no se vuelve a tocar mientras envía (`Boton` con `enviando`); repetir el envío es seguro en el servidor: la clave de este
  * intento repite el mismo pago sin escribir ni sacar la plata dos veces. Si salió bien navega a la ficha, que ya muestra el pago; si no, el error ya traducido (el genérico) queda debajo. Mostrar no es autorizar:
  * el servidor decide si se puede (fecha no futura, caja abierta, factura sin pago).
  */
@@ -49,7 +61,8 @@ export function FormularioDeDeclararPago({
   textos,
 }: PropsDeFormularioDeDeclararPago) {
   const [fecha, setFecha] = useState(hoy);
-  const [medio, setMedio] = useState("");
+  const [filas, setFilas] = useState<readonly FilaDeMedio[]>([{ id: 0, medio: "", importe: "" }]);
+  const [siguiente, setSiguiente] = useState(1);
   const [cajaId, setCajaId] = useState("");
   const [motivo, setMotivo] = useState("");
   const [resultado, enviar, enviando] = useActionState(accion, DECLARAR_PAGO_INICIAL);
@@ -57,7 +70,10 @@ export function FormularioDeDeclararPago({
   useEffect(() => {
     if (ruta !== null) window.location.assign(ruta);
   }, [ruta]);
-  const conEfectivo = medio === "EFECTIVO";
+  const conEfectivo = hayEfectivo(filas);
+  const cambiarFila = (id: number, cambio: Partial<Omit<FilaDeMedio, "id">>) => {
+    setFilas((actuales) => actuales.map((f) => (f.id === id ? { ...f, ...cambio } : f)));
+  };
   return (
     <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
@@ -74,15 +90,57 @@ export function FormularioDeDeclararPago({
             valor={fecha}
             alCambiar={setFecha}
           />
-          <Selector
-            dato="medio-de-pago-de-compra"
-            etiqueta={textos.medio}
-            nombre="medio"
-            valor={medio}
-            alCambiar={setMedio}
-            textoDeElegir={textos.sinElegir}
-            opciones={MEDIOS_PARA_ELEGIR.map((m) => ({ valor: m, etiqueta: textos.medios[m] }))}
-          />
+          {filas.map((fila, i) => (
+            <Pila key={fila.id} separacion={2}>
+              <Selector
+                dato="medio-de-pago-de-compra"
+                etiqueta={textos.medio}
+                nombreAccesible={filas.length > 1 ? `${textos.medio} ${String(i + 1)}` : undefined}
+                nombre="medio"
+                valor={fila.medio}
+                alCambiar={(medio) => {
+                  cambiarFila(fila.id, { medio });
+                }}
+                textoDeElegir={textos.sinElegir}
+                opciones={mediosParaLaFila(filas, fila).map((m) => ({
+                  valor: m,
+                  etiqueta: textos.medios[m],
+                }))}
+              />
+              {filas.length > 1 ? (
+                <>
+                  <CampoImporte
+                    dato="importe-de-medio-de-pago-de-compra"
+                    etiqueta={`${textos.importe} ${String(i + 1)}`}
+                    nombre="importe"
+                    valor={fila.importe}
+                    alCambiar={(importe) => {
+                      cambiarFila(fila.id, { importe });
+                    }}
+                  />
+                  <Boton
+                    variante="secundaria"
+                    alTocar={() => {
+                      setFilas((actuales) => actuales.filter((f) => f.id !== fila.id));
+                    }}
+                  >
+                    {textos.quitar}
+                  </Boton>
+                </>
+              ) : null}
+            </Pila>
+          ))}
+          {sePuedeAgregarUnMedio(filas) ? (
+            <Boton
+              variante="secundaria"
+              alTocar={() => {
+                setFilas((actuales) => [...actuales, { id: siguiente, medio: "", importe: "" }]);
+                setSiguiente(siguiente + 1);
+              }}
+            >
+              {textos.agregarMedio}
+            </Boton>
+          ) : null}
           {conEfectivo ? (
             <>
               <Selector
@@ -107,7 +165,7 @@ export function FormularioDeDeclararPago({
           <Boton
             tipo="submit"
             enviando={enviando || ruta !== null}
-            deshabilitado={!pagoListo({ fecha, medio, cajaId, motivo })}
+            deshabilitado={!pagoListo({ fecha, filas, cajaId, motivo })}
           >
             {textos.declararPago}
           </Boton>

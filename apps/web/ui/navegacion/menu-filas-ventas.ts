@@ -2,6 +2,7 @@ import { RUTA_DE_LA_CAJA } from "../plantillas/caja/lista-de-caja";
 import { RUTA_DE_CLIENTES } from "../plantillas/clientes/modelo-de-directorio";
 import { RUTA_DEL_CIERRE } from "../plantillas/cierre/ruta-del-cierre";
 import { RUTA_DE_IMPRESORAS } from "../plantillas/salon/modelo-de-impresoras";
+import { RUTA_DE_LA_COCINA } from "../plantillas/salon/modelo-de-la-cocina";
 import { RUTA_DE_MESAS } from "../plantillas/salon/modelo-de-mesas";
 import { RUTA_DEL_SALON } from "../plantillas/salon/rutas-del-salon";
 import { RUTA_DEL_LISTADO } from "../plantillas/facturacion/filtros-del-listado";
@@ -111,6 +112,19 @@ export const FILAS_DE_VENTAS = [
     perilla: null,
     href: RUTA_DE_IMPRESORAS,
     etiqueta: "comandas.texto.imprimir_impresoras",
+    departamento: null,
+  },
+  // «Comandas» (SAL-H; maqueta aprobada por el dueño el 25/11/2026): la pantalla de la cocina, grupo Salón del área Ventas; módulo `comandas` y acción `comandas.ver`.
+  {
+    tipo: "pantalla",
+    clave: "comandas",
+    area: "ventas",
+    grupo: "salon",
+    modulo: "comandas",
+    accion: "comandas.ver",
+    perilla: null,
+    href: RUTA_DE_LA_COCINA,
+    etiqueta: "comandas.texto.cocina_comandas",
     departamento: null,
   },
   {

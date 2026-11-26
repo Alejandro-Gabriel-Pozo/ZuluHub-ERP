@@ -1,20 +1,17 @@
-import { createHash } from "node:crypto";
 import {
   cantidadATexto,
   cantidadDesdeTexto,
+  DECIMALES_DE_CANTIDAD,
   type Cantidad,
-} from "../../../primitivas/cantidad/cantidad";
-import { ErrorDeValor } from "../../../primitivas/cantidad/errores";
-import { MAXIMO_DE_CUENTAS_POR_ITEMS } from "../../../primitivas/cuentas/limites-de-division";
-import { importeATexto } from "../../../primitivas/dinero/importe";
-import { ARS } from "../../../primitivas/dinero/moneda";
-import { multiplicarPrecioPorCantidad } from "../../../primitivas/dinero/monto-exacto";
-import {
-  precioUnitarioDesdeTexto,
-  type PrecioUnitario,
-} from "../../../primitivas/dinero/precio-unitario";
-import { POLITICA_VIGENTE, redondear } from "../../../primitivas/dinero/redondeo";
-import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+} from "../cantidad/cantidad";
+import { ErrorDeValor } from "../cantidad/errores";
+import { MAXIMO_DE_CUENTAS_POR_ITEMS } from "./limites-de-division";
+import { importeATexto } from "../dinero/importe";
+import { ARS } from "../dinero/moneda";
+import { multiplicarPrecioPorCantidad } from "../dinero/monto-exacto";
+import { precioUnitarioDesdeTexto, type PrecioUnitario } from "../dinero/precio-unitario";
+import { POLITICA_VIGENTE, redondear } from "../dinero/redondeo";
+import { err, ok, type Resultado } from "../resultado/resultado";
 import { repartirItemCompartido } from "./reparto";
 
 /**
@@ -174,25 +171,51 @@ export function planDeDivision(
 }
 
 /**
- * La huella de lo que pidió quien divide: sha256 (hex) de la cuenta, la cantidad de partes y las asignaciones en orden canónico (texto de cada una, ordenado). La
- * misma división con el mismo `divisionId` devuelve lo hecho; con otra huella es un conflicto. Puro: sin reloj ni azar.
+ * Lo que suma cada cuenta hija de un plan (`planDeDivision`), con la MISMA cuenta que el servidor (precio por cantidad redondeado; lo compartido, su importe fijo): la usa la pantalla para mostrar los totales antes de
+ * confirmar. El de la posición `i` es el de la Cuenta `i + 1`, como texto decimal de 2 decimales. Una línea o un precio que no se leen dan `null` (nunca un total a medias).
  */
-export function huellaDeDivision(
-  entrada: Readonly<{ cuentaId: string; partes: number; asignaciones: readonly Asignacion[] }>,
-): string {
-  // Cada asignación como texto canónico y la lista ordenada por ese texto (orden por defecto, sin comparador): no depende del orden de entrada.
-  const canonicas = entrada.asignaciones
-    .map((a) =>
-      JSON.stringify(
-        a.forma === "ENTERO"
-          ? [a.lineaId, a.forma, a.parte]
-          : a.forma === "POR_UNIDADES"
-            ? [a.lineaId, a.forma, ...a.cantidades]
-            : [a.lineaId, a.forma, ...[...a.partes].sort((x, y) => x - y)],
-      ),
-    )
-    .sort();
-  return createHash("sha256")
-    .update(JSON.stringify([entrada.cuentaId, entrada.partes, canonicas]))
-    .digest("hex");
+export function totalesDeLaDivision(
+  partes: number,
+  lineas: readonly LineaADividir[],
+  copias: readonly CopiaAHacer[],
+): readonly string[] | null {
+  const totales: bigint[] = Array.from({ length: partes }, () => 0n);
+  for (const c of copias) {
+    const linea = lineas.find((l) => l.lineaId === c.lineaOrigenId);
+    const cantidad = leerCantidad(c.cantidad);
+    const precio = linea === undefined ? null : leerPrecio(linea.precioUnitario);
+    if (linea === undefined || cantidad === null || precio === null) return null;
+    const texto =
+      c.importeFijo ??
+      importeATexto(
+        redondear(multiplicarPrecioPorCantidad(ARS, precio, cantidad), POLITICA_VIGENTE),
+      );
+    const indice = c.parte - 1;
+    if (indice < 0 || indice >= partes) return null;
+    totales[indice] = (totales[indice] ?? 0n) + BigInt(texto.replace(".", ""));
+  }
+  return totales.map((t) => {
+    const digitos = t.toString().padStart(3, "0");
+    return `${digitos.slice(0, -2)}.${digitos.slice(-2)}`;
+  });
+}
+
+/** Cuántos pasos de cantidad tiene una línea (3 gaseosas con paso 1 → 3); `null` si no es un múltiplo entero del paso o no se lee. Es lo que se reparte al dividir «por unidades». */
+export function pasosDeLaLinea(cantidad: string, paso: string): number | null {
+  const c = leerCantidad(cantidad);
+  const p = leerCantidad(paso);
+  if (c === null || p === null || p.unidades === 0n || c.unidades % p.unidades !== 0n) return null;
+  const pasos = c.unidades / p.unidades;
+  return pasos <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(pasos) : null;
+}
+
+/** La cantidad de `pasos` pasos (2 pasos de «0.5» → «1»), como texto decimal exacto; `null` si no se lee. Sin `number` de por medio: la cuenta es de enteros escalados. */
+export function cantidadPorPasos(paso: string, pasos: number): string | null {
+  const p = leerCantidad(paso);
+  if (p === null || !Number.isSafeInteger(pasos) || pasos < 0) return null;
+  const digitos = (p.unidades * BigInt(pasos)).toString().padStart(DECIMALES_DE_CANTIDAD + 1, "0");
+  const total = leerCantidad(
+    `${digitos.slice(0, -DECIMALES_DE_CANTIDAD)}.${digitos.slice(-DECIMALES_DE_CANTIDAD)}`,
+  );
+  return total === null ? null : cantidadATexto(total);
 }

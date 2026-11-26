@@ -79,7 +79,14 @@ describe.skipIf(base === null)("salón: dividir la cuenta", () => {
     partes: number,
     asignaciones: Parameters<MundoDeSalon["salon"]["dividirCuenta"]>[1]["asignaciones"],
     divisionId = nuevoId(),
-  ) => m.salon.dividirCuenta(e.gerente, { divisionId, cuentaId: cuenta, partes, asignaciones });
+  ) =>
+    m.salon.dividirCuenta(e.gerente, {
+      divisionId,
+      cuentaId: cuenta,
+      partes,
+      asignaciones,
+      sucursalDeTrabajo: e.sucursal,
+    });
   const estado = async (cuenta: string) =>
     (
       await m.filas<{ estado: string }>("select estado from cuenta_consumo where id = $1", [cuenta])

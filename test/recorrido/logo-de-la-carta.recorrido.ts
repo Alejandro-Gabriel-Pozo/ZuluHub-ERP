@@ -1,7 +1,7 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { crearDominio } from "../integracion/marcas-apoyo";
-import { cartaDeBase } from "../integracion/carta-publica-apoyo";
+import { cartaDeBase, cuentaDeImagenDeBase } from "../integracion/carta-publica-apoyo";
 import { levantarFachadaHttps, type FachadaHttps } from "./apoyo/fachada-https";
 import { armarMundoDelRecorrido, type MundoDelRecorrido } from "./apoyo/mundo";
 import {
@@ -69,6 +69,12 @@ describe.skipIf(base === null)("recorrido del logo de la carta pública", () => 
     carta = await cartaDeBase(dueno, mundo.empresa, rows[0]?.id as string, {
       nombre: "Parador El Ensayo",
     });
+    // La cuenta del logo tiene que estar declarada por la empresa ANTES de guardar el logo (0102).
+    const miembro = await dueno.query<{ persona_id: string }>(
+      "select persona_id from membresia where empresa_id = $1 limit 1",
+      [mundo.empresa],
+    );
+    await cuentaDeImagenDeBase(dueno, mundo.empresa, miembro.rows[0]?.persona_id as string, "demo");
     await dueno.query(
       `update carta_publica set cara = 'DIA', logo_proveedor = 'CLOUDINARY', logo_cuenta = 'demo', logo_id_publico = 'logos/parador',
          logo_version = '1700000000', logo_extension = 'png' where id = $1`,

@@ -39,6 +39,8 @@ export type ComandasDb = {
     nombre_de_cocina: string;
     detalle_de_cocina: string[];
     creado_en: Generated<Date>;
+    /** La foto de la nota libre de la línea al enviar (0104); nula si no tenía. */
+    nota: string | null;
   };
   linea_de_comanda: {
     empresa_id: string;
@@ -49,6 +51,8 @@ export type ComandasDb = {
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
+    /** La nota libre del plato («sin cebolla», 0104): se edita solo mientras no se envió; nula si no tiene. */
+    nota: string | null;
   };
   aviso_de_anulacion: {
     id: string;
@@ -144,6 +148,7 @@ export const COLUMNAS_DE_COMANDAS = {
     "nombre_de_cocina",
     "detalle_de_cocina",
     "creado_en",
+    "nota",
   ],
   linea_de_comanda: [
     "empresa_id",
@@ -154,6 +159,7 @@ export const COLUMNAS_DE_COMANDAS = {
     "creado_en",
     "actualizado_en",
     "version",
+    "nota",
   ],
   aviso_de_anulacion: [
     "id",

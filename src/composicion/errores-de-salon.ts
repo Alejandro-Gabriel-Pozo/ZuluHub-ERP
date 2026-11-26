@@ -32,6 +32,18 @@ const CON_TEXTO_PROPIO: Readonly<Record<string, CodigoDeSalon>> = {
 const DEFECTO_DE_LA_BASE = "ERROR_DE_LA_BASE_NO_TRADUCIDO";
 const GENERICO = { codigo: "CATALOGO_ACCION_NO_PERMITIDA" } as const;
 
+/** Motivos de «unir» que en «dividir» no significan lo mismo: «dividir» los sale como el genérico (interfaz sobria; la pantalla ya no ofrece lo que no se puede). */
+const MOTIVOS_DE_UNIR_QUE_NO_SON_DE_DIVIDIR: ReadonlySet<string> = new Set([
+  "MESA_LIBRE",
+  "MESA_CON_COBRO",
+  "MISMA_CUENTA",
+  "SUCURSAL_DISTINTA",
+  "MESA_UNIDA",
+  "MESA_DIVIDIDA",
+]);
+export const errorDeDividir = (error: unknown): unknown =>
+  typeof error === "string" && MOTIVOS_DE_UNIR_QUE_NO_SON_DE_DIVIDIR.has(error) ? GENERICO : error;
+
 export function traducirErrorDeSalon(error: unknown): unknown {
   if (typeof error === "string") {
     if (Object.hasOwn(CON_TEXTO_PROPIO, error)) return { codigo: CON_TEXTO_PROPIO[error] };

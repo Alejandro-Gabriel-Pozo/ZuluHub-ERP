@@ -67,7 +67,9 @@ export type FichaDeCompraParaLaPantalla = Readonly<{
   pagos: readonly Readonly<{
     id: string;
     fechaDePago: string;
+    /** El medio único, o `COMPUESTO` si el pago tiene varios: la ficha dice cada uno con su importe. */
     medio: string;
+    medios: readonly Readonly<{ medio: string; importe: Importe }>[];
     importe: Importe;
     estado: "VIGENTE" | "ANULADO";
     declaradoPor: string | null;
@@ -283,7 +285,13 @@ export function armarLaFicha(
       ficha.lineas.map((l) => hrefDeCorregir(l)).find((href) => href !== null) ?? null,
     pagos: ficha.pagos.map((p) => ({
       clave: p.id,
-      titulo: `${textos.medioDePago(p.medio)} · ${formatearFecha(p.fechaDePago)}`,
+      titulo: `${
+        p.medio === "COMPUESTO" && p.medios.length > 0
+          ? p.medios
+              .map((m) => `${textos.medioDePago(m.medio)} · ${formatearImporte(m.importe.monto)}`)
+              .join(" + ")
+          : textos.medioDePago(p.medio)
+      } · ${formatearFecha(p.fechaDePago)}`,
       importe: formatearImporte(p.importe.monto),
       quien: quien(p.declaradoPor, p.declaradoEn),
       anulado:

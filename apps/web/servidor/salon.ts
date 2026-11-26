@@ -14,6 +14,10 @@ import {
   type MapaParaLaPantalla,
 } from "../../../src/composicion/cuenta-de-mesa-web";
 import {
+  dividirLaCuenta,
+  type DependenciasDeDividirCuentaWeb,
+} from "../../../src/composicion/dividir-cuenta-web";
+import {
   unirLasMesas,
   type DependenciasDeUnirMesasWeb,
 } from "../../../src/composicion/unir-mesas-web";
@@ -60,6 +64,11 @@ const dependenciasDeLaCuenta: DependenciasDeCuentaDeMesaWeb = {
 };
 
 const dependenciasDeUnir: DependenciasDeUnirMesasWeb = {
+  casosDeUso: web.casosDeUsoDeSalon,
+  respuesta: dependenciasDeSesion.respuesta,
+};
+
+const dependenciasDeDividir: DependenciasDeDividirCuentaWeb = {
   casosDeUso: web.casosDeUsoDeSalon,
   respuesta: dependenciasDeSesion.respuesta,
 };
@@ -197,3 +206,9 @@ export const cambiarDeMesaLaCuentaDelSalon = (crudo: unknown) =>
 /** «Unir con otra mesa» (`{ unionId, cuentaDestinoId, cuentaOrigenId, clave }`; el `unionId` y la clave los fija la página una vez por intento). */
 export const unirLasMesasDelSalon = (crudo: unknown) =>
   enLaSucursal((contexto, sucursal) => unirLasMesas(dependenciasDeUnir, contexto, sucursal, crudo));
+
+/** «Dividir la cuenta» por ítems (`{ divisionId, cuentaId, partes, asignaciones }`; el `divisionId` lo fija la página una vez por intento). */
+export const dividirLaCuentaDelSalon = (crudo: unknown) =>
+  enLaSucursal((contexto, sucursal) =>
+    dividirLaCuenta(dependenciasDeDividir, contexto, sucursal, crudo),
+  );

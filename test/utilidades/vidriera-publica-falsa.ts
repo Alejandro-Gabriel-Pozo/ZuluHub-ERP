@@ -79,6 +79,7 @@ function comoVidrieraPublicada(vidriera: VidrieraDeEjemplo): VidrieraPublicada {
       colorDeLaEmpresa: null,
       logo: null,
     },
+    cuentasDeImagen: [],
     ...complemento,
     secciones: vidriera.secciones.map((s) => ({
       ...s,
