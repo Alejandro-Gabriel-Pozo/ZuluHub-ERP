@@ -141,6 +141,10 @@
     "apps/web/ui/plantillas/compras/recepciones/*",
     "apps/web/ui/plantillas/compras/rutas-de-compras.ts"
   ],
+  "test/web/ficha-de-dividir-la-cuenta.test.ts": [
+    "apps/web/app/s/app/(operacion)/salon/cuenta/**",
+    "apps/web/ui/plantillas/salon/*"
+  ],
   "test/web/ficha-de-salon.test.ts": [
     "apps/web/app/s/app/(operacion)/salon/page.tsx",
     "apps/web/ui/plantillas/salon/*"
@@ -158,5 +162,10 @@
   "test/web/legibilidad-de-la-app.test.ts": ["apps/web/**"],
   "test/web/logo-neutro.test.ts": ["apps/web/public/**"],
   "test/web/max-duration.test.ts": ["apps/web/app/s/app/(operacion)/facturacion/comprobantes/**"],
-  "test/web/sucursal-elegida.test.ts": ["apps/web/app/s/app/acciones-de-sucursal.ts"]
+  "test/web/sucursal-elegida.test.ts": ["apps/web/app/s/app/acciones-de-sucursal.ts"],
+  "test/web/ficha-de-la-cocina.test.ts": [
+    "apps/web/app/s/app/(operacion)/salon/comandas/**",
+    "apps/web/ui/plantillas/salon/*",
+    "apps/web/ui/patrones/papel/*"
+  ]
 }

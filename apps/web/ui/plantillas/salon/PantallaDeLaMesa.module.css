@@ -113,3 +113,9 @@
   justify-content: space-between;
   gap: var(--espacio-3);
 }
+
+.opciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+}

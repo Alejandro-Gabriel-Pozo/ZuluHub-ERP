@@ -19,6 +19,8 @@ const linea = (extra: Partial<LineaDeLaFichaDeLaPantalla> & { lineaId: string })
   descripcion: "Milanesa",
   varianteNombre: null,
   cantidad: "2.0000",
+  precioUnitario: "9500.00",
+  pasoDeCantidad: "1.0000",
   importe: "19000.00",
   compartida: false,
   comanda: "PARA_ENVIAR",
@@ -36,6 +38,7 @@ const ficha = (extra: Partial<FichaDeLaMesaDeLaPantalla> = {}): FichaDeLaMesaDeL
     {
       cuentaId: "c1",
       parte: null,
+      cobrada: false,
       total: ARS("21500.50"),
       lineas: [
         linea({ lineaId: "a" }),
@@ -114,22 +117,69 @@ describe("armarLaMesa", () => {
     expect(m).toMatchObject({ modo: "SOLO_LECTURA", unida: "Unida a la mesa 3", cuentaId: null });
   });
 
-  it("mesa dividida (cuentas hijas): solo lectura con sus cuentas; sin acciones", () => {
+  it("mesa dividida (cuentas hijas): solo lectura con sus cuentas por número, cada una pendiente o cobrada; solo se cobra la que no está cobrada y tiene todo enviado", () => {
+    const enviada = linea({ lineaId: "e", comanda: "ENVIADA", numeroDeEnvio: 1 });
     const m = armarLaMesa(
       {},
       ficha({
         estado: "OCUPADA",
         cuentas: [
-          { cuentaId: "h1", parte: 1, total: ARS("100.00"), lineas: [] },
-          { cuentaId: "h2", parte: 2, total: ARS("2500.5"), lineas: [] },
+          { cuentaId: "h2", parte: 2, cobrada: false, total: ARS("2500.5"), lineas: [enviada] },
+          { cuentaId: "h1", parte: 1, cobrada: true, total: ARS("100.00"), lineas: [enviada] },
+          {
+            cuentaId: "h3",
+            parte: 3,
+            cobrada: false,
+            total: ARS("7.00"),
+            lineas: [linea({ lineaId: "p" })],
+          },
+          {
+            cuentaId: "h4",
+            parte: 4,
+            cobrada: false,
+            total: { moneda: "USD", monto: "1.00" },
+            lineas: [enviada],
+          },
         ],
       }),
     );
-    expect(m).toMatchObject({
-      modo: "SOLO_LECTURA",
-      cuentaId: null,
-      cuentasHijas: ["Cuenta 1 · $ 100,00", "Cuenta 2 · $ 2.500,50"],
-    });
+    expect(m).toMatchObject({ modo: "SOLO_LECTURA", cuentaId: null, paraDividir: [] });
+    expect(m.cuentasHijas.map((h) => [h.titulo, h.importe, h.cobrada, h.cobrable])).toEqual([
+      ["Cuenta 1", "$ 100,00", true, false],
+      ["Cuenta 2", "$ 2.500,50", false, true],
+      ["Cuenta 3", "$ 7,00", false, false],
+      ["Cuenta 4", null, false, false],
+    ]);
+    expect(m.cuentasHijas[1]?.totalACobrar).toEqual(ARS("2500.5"));
+    expect(m.cuentasHijas[3]?.totalACobrar).toBeNull();
+  });
+
+  it("«Dividir la cuenta» solo se ofrece con platos y TODOS enviados y el total en pesos", () => {
+    const f = ficha();
+    const unica = f.cuentas[0];
+    if (unica === undefined) throw new Error("falta la cuenta");
+    const enviadas = [
+      linea({ lineaId: "a", comanda: "ENVIADA", numeroDeEnvio: 1 }),
+      linea({
+        lineaId: "b",
+        comanda: "ENVIADA",
+        numeroDeEnvio: 1,
+        descripcion: "Flan",
+        varianteNombre: "Grande",
+      }),
+    ];
+    const con = (cuenta: Partial<typeof unica>) =>
+      armarLaMesa({}, { ...f, cuentas: [{ ...unica, ...cuenta }] });
+    expect(con({ lineas: enviadas }).paraDividir.map((l) => l.nombre)).toEqual([
+      "2 × Milanesa",
+      "2 × Flan · Grande",
+    ]);
+    expect(f.cuentas[0]?.lineas.some((l) => l.comanda !== "ENVIADA")).toBe(true);
+    expect(armarLaMesa({}, f).paraDividir).toEqual([]);
+    expect(con({ lineas: [] }).paraDividir).toEqual([]);
+    expect(con({ lineas: enviadas, total: { moneda: "USD", monto: "1.00" } }).paraDividir).toEqual(
+      [],
+    );
   });
 
   it("ante lo que no conoce (estado raro, dos cuentas sin ser hijas, una hija sola) no se ofrece nada", () => {

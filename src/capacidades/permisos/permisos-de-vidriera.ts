@@ -20,6 +20,8 @@ export const PERMISOS_DE_VIDRIERA = {
   "vidrieras.renovar_enlace": ["GERENTE", "ADMINISTRADOR"],
   "vidrieras.retirar_de_linea": ["GERENTE", "ADMINISTRADOR"],
   "vidrieras.administrar_portal": ["GERENTE", "ADMINISTRADOR"],
+  // Declarar y retirar las cuentas del proveedor de imágenes de las que se trae el logo de la carta (0102): afecta a todas las cartas de la empresa, así que como la carta: gerente y administrador.
+  "vidrieras.administrar_cuentas_de_imagen": ["GERENTE", "ADMINISTRADOR"],
 } as const satisfies Record<
   keyof (typeof CATALOGO_DE_MODULOS)["vidriera"]["acciones"],
   readonly RolDeEmpresa[]

@@ -6,6 +6,11 @@ import {
   type TablasDeCarta,
 } from "./esquema-de-carta";
 import {
+  COLUMNAS_DE_CUENTAS_DE_IMAGEN,
+  ERRORES_DE_CUENTAS_DE_IMAGEN_POR_RESTRICCION,
+  type TablasDeCuentasDeImagen,
+} from "./esquema-de-cuentas-de-imagen";
+import {
   COLUMNAS_DE_PRESENTACIONES,
   ERRORES_DE_PRESENTACIONES_POR_RESTRICCION,
   type TablasDePresentaciones,
@@ -17,6 +22,7 @@ import {
  */
 export type CatalogoDb = TablasDePresentaciones &
   TablasDeCarta &
+  TablasDeCuentasDeImagen &
   clasificacion.TablasDeClasificacion & {
     unidad_de_medida: {
       id: string;
@@ -127,6 +133,7 @@ export type CatalogoDb = TablasDePresentaciones &
 export const COLUMNAS_DE_CATALOGO = {
   ...COLUMNAS_DE_PRESENTACIONES,
   ...COLUMNAS_DE_CARTA,
+  ...COLUMNAS_DE_CUENTAS_DE_IMAGEN,
   ...clasificacion.COLUMNAS_DE_CLASIFICACION,
   unidad_de_medida: ["id", "dimension", "simbolo", "factor_a_base", "es_base"],
   producto: [
@@ -239,6 +246,7 @@ export const COLUMNAS_DE_CATALOGO = {
 export const ERRORES_DE_CATALOGO_POR_RESTRICCION: Readonly<Record<string, string>> = {
   ...ERRORES_DE_PRESENTACIONES_POR_RESTRICCION,
   ...ERRORES_DE_CARTA_POR_RESTRICCION,
+  ...ERRORES_DE_CUENTAS_DE_IMAGEN_POR_RESTRICCION,
   ...clasificacion.ERRORES_DE_CLASIFICACION_POR_RESTRICCION,
   // unidad_de_medida (sembrada: nadie la escribe)
   unidad_de_medida_pkey: "NO_TRADUCIDA",

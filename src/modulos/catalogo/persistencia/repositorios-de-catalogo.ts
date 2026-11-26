@@ -8,6 +8,10 @@ import {
 import { crearLectorDeCarta, type LectorDeCarta } from "./lector-de-carta";
 import { crearRepositorioDeCartas, type RepositorioDeCartas } from "./repositorio-de-cartas";
 import {
+  crearRepositorioDeCuentasDeImagen,
+  type RepositorioDeCuentasDeImagen,
+} from "./repositorio-de-cuentas-de-imagen";
+import {
   crearRepositorioDeDisponibilidad,
   type RepositorioDeDisponibilidad,
 } from "./repositorio-de-disponibilidad";
@@ -34,6 +38,7 @@ export type RepositoriosDeCatalogo = Readonly<{
   precios: RepositorioDePrecios;
   presentacionesDeProducto: RepositorioDePresentaciones;
   cartasPublicas: RepositorioDeCartas;
+  cuentasDeImagen: RepositorioDeCuentasDeImagen;
   disponibilidadDeProductos: RepositorioDeDisponibilidad;
   familias: RepositorioDeFamilias;
   seccionesDeCarta: RepositorioDeSecciones;
@@ -52,6 +57,7 @@ export function crearRepositoriosDeCatalogo(db: {
     precios: crearRepositorioDePrecios(conexion),
     presentacionesDeProducto: crearRepositorioDePresentaciones(conexion),
     cartasPublicas: crearRepositorioDeCartas(conexion),
+    cuentasDeImagen: crearRepositorioDeCuentasDeImagen(conexion),
     disponibilidadDeProductos: crearRepositorioDeDisponibilidad(conexion),
     familias: crearRepositorioDeFamilias(conexion),
     seccionesDeCarta: crearRepositorioDeSecciones(conexion),
