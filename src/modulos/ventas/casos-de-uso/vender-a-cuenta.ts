@@ -178,10 +178,9 @@ async function vender(
     });
   }
 
-  // Una venta a cuenta de total 0 no existe (un cargo de cero no entra al libro; decisión del orquestador, coherente con la mesa): se rechaza con el error de siempre de la venta a $0, con o
-  // sin la confirmación de cortesía, ANTES de abrir nada. Va después de la cotización: el total sale del catálogo, no del pedido.
-  if (totalActual.unidades === 0n)
-    return err({ error: "CONFIRMACION_REQUERIDA", clave: "VENTA_A_CERO" });
+  // Una venta a cuenta de total 0 no existe (un cargo de cero no entra al libro): se rechaza, con o sin la confirmación de cortesía, ANTES de abrir nada. Va después de la cotización: el total
+  // sale del catálogo, no del pedido.
+  if (totalActual.unidades === 0n) return err("VENTA_A_CERO_A_CUENTA");
 
   const opciones: OpcionesDeLaVenta = {
     stock: dependencias.stock,

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-VEN-003",
+  "fecha": "2026-11-26",
+  "quien": "dueño",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Una venta a cuenta corriente de total $0 se rechaza con el texto propio «No se puede cargar a cuenta una venta de $0.», con o sin la confirmación de cortesía.",
+  "que_cambia": "El aviso que ve quien intenta vender a cuenta algo que da $0. Cambiar el texto es una línea del catálogo de ventas; pasar a aceptar el $0 a cuenta sería cambiar `venderACuenta` y el libro, no el texto.",
+  "donde": "Dueño 26/11/2026, «Apruebo el texto», mensaje del dueño sobre el aviso de ventas en $0, vía el orquestador; src/capacidades/vocabulario/catalogo-ventas.ts (ventas.error.venta_a_cero_a_cuenta); src/composicion/errores-de-ventas.ts"
+}

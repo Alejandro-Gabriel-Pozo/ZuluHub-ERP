@@ -514,7 +514,7 @@ describe.skipIf(base === null)("ventas: venta a cuenta corriente (CC-5)", () => 
     });
   });
 
-  it("una venta a $0 a cuenta se rechaza con VENTA_A_CERO, con o sin la confirmación de cortesía: no queda cuenta, línea, ticket ni asiento", async () => {
+  it("una venta a $0 a cuenta se rechaza con VENTA_A_CERO_A_CUENTA, con o sin la confirmación de cortesía: no queda cuenta, línea, ticket ni asiento", async () => {
     const x = await m.escenario();
     const gratis = await m.productoVendible(x.empresa, "0");
     const c = await a.cliente(x);
@@ -527,7 +527,7 @@ describe.skipIf(base === null)("ventas: venta a cuenta corriente (CC-5)", () => 
       });
       expect(await vender(x.gerente, p), JSON.stringify(confirmaciones)).toEqual({
         ok: false,
-        error: { error: "CONFIRMACION_REQUERIDA", clave: "VENTA_A_CERO" },
+        error: "VENTA_A_CERO_A_CUENTA",
       });
       expect(await huellaDeBase(p.cuentaId)).toEqual(nada);
     }
