@@ -173,7 +173,7 @@ export function pedidoDeCobrarACuenta(entrada: {
     cajaId,
     medioDePagoId: pago.medioId,
     cuentaDeCobroId: pago.cuentaId === "" ? null : pago.cuentaId,
-    ...datosParaEnviar(pago, medio as MedioParaCobrar),
+    ...datosParaEnviar(pago, medio),
   };
 }
 

@@ -78,22 +78,17 @@ type Cambios = Partial<{
   sucursal: unknown;
   opciones: unknown;
 }>;
-const OPCIONES = {
-  medios: [
-    {
-      id: MEDIO,
-      tipo: "EFECTIVO",
-      nombre: null,
-      cuentaObligatoria: false,
-      cuentas: [],
-      datosQuePide: { cupon: false, ultimos4: false, marca: false, cuotas: false, dni: false },
-      datosQueSePiden: { cupon: false, ultimos4: false, marca: false, cuotas: false, dni: false },
-      otraCosa: "no sale",
-    },
-  ],
-  marcasDeTarjeta: [],
+const MEDIO_SALIDA = {
+  id: MEDIO,
+  tipo: "EFECTIVO",
+  nombre: null,
+  cuentaObligatoria: false,
+  cuentas: [],
+  datosQuePide: { cupon: false, ultimos4: false, marca: false, cuotas: false, dni: false },
+  datosQueSePiden: { cupon: false, ultimos4: false, marca: false, cuotas: false, dni: false },
 };
-const { otraCosa: _sinUso, ...MEDIO_SALIDA } = OPCIONES.medios[0] as (typeof OPCIONES.medios)[0];
+/** Lo que entrega la consulta: un campo de más (`otraCosa`) que la hoja no debe dejar pasar. */
+const OPCIONES = { medios: [{ ...MEDIO_SALIDA, otraCosa: "no sale" }], marcasDeTarjeta: [] };
 const SALIDA_DE_OPCIONES = [MEDIO_SALIDA];
 const llamadas: { cobrar: unknown[]; saldo: number; opciones: unknown[] } = {
   cobrar: [],
