@@ -38,7 +38,7 @@ export const PERMISOS_DE_CAJA = {
   "cobros.corregir_medio": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "declaraciones_de_total.registrar": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   // Salida de dinero por un medio que no es efectivo (dueño, 26/11/2026, Q-D8 A): gerente y administrador. La salida en efectivo sigue con `movimientos_caja.registrar_manual`
-  // (el operador la mantiene hasta que el dueño decida otra cosa); la tabla `accionParaLaSalida` es el único lugar que lo decide.
+  // (el operador la mantiene hasta que el dueño decida otra cosa); la tabla `pideLaAccionDeSalida` es el único lugar que lo decide.
   "salidas_de_dinero.registrar": ["GERENTE", "ADMINISTRADOR"],
 } as const satisfies Record<
   keyof (typeof CATALOGO_DE_MODULOS)["caja"]["acciones"],

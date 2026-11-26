@@ -163,6 +163,17 @@ const LLAMADAS: Record<ConAccion, (casos: CasosDeUsoDeCaja) => Promise<unknown>>
       motivo: "Flete",
       tercero: { nombre: "Pérez" },
     }),
+  registrarSalidaDeDineroPorOtroMedio: (c) =>
+    c.registrarSalidaDeDineroPorOtroMedio(contexto, {
+      claveDeIdempotencia: "clave-de-prueba-0022",
+      cajaId: UUID,
+      medioDePagoId: UUID,
+      cuentaDeCobroId: null,
+      categoria: "GASTO_MENOR",
+      importe: { moneda: "ARS", monto: "10.00" },
+      motivo: "Flete",
+      tercero: { nombre: "Pérez" },
+    }),
   registrarAjuste: (c) =>
     c.registrarAjuste(contexto, {
       claveDeIdempotencia: "clave-de-prueba-0003",
@@ -281,7 +292,7 @@ const todos: Entrada[] = [...casos, ...consultas];
 describe("P7: el guard va primero en cada caso de uso y consulta de caja", () => {
   it("hay casos de uso y consultas con acción que probar, uno por cada declarado", () => {
     expect(casos).toHaveLength(Object.keys(DECLARACIONES).length);
-    expect(casos).toHaveLength(24);
+    expect(casos).toHaveLength(25);
     expect(consultas.map((c) => c.nombre).sort()).toEqual([
       "cobradoPorOrigenDeLaJornada",
       "cobrosDeLaJornada",
@@ -418,6 +429,7 @@ describe("cada caso de uso y cada consulta exigen SU acción (no la de otro)", (
       cerrarSesion: "sesiones_caja.cerrar",
       registrarMovimientoManual: "movimientos_caja.registrar_manual",
       registrarSalidaDeDinero: "movimientos_caja.registrar_manual",
+      registrarSalidaDeDineroPorOtroMedio: "salidas_de_dinero.registrar",
       registrarAjuste: "movimientos_caja.ajustar",
       anularMovimientoDeCaja: "movimientos_caja.anular",
       corregirMedioDeCobro: "cobros.corregir_medio",
@@ -465,6 +477,7 @@ describe("los demás motivos del guard salen tal cual", () => {
     const creaOAmplia = new Set<ClaveAccion>([
       "sesiones_caja.abrir",
       "movimientos_caja.registrar_manual",
+      "salidas_de_dinero.registrar",
       "movimientos_caja.ajustar",
       "cajas.crear",
       "cajas.editar",

@@ -1,6 +1,5 @@
 import type { ClaveAccion } from "../../../capacidades/modulos/catalogo";
 import type { ErrorDeAlcance } from "../../../capacidades/permisos/alcance";
-import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import { decidirControl, registroDeExcepcion } from "../../../capacidades/controles/decision";
 import type { ErrorDeControl } from "../../../capacidades/controles/decision";
@@ -38,22 +37,21 @@ import { traducirErrores } from "./traducir";
 const CONTROL_SALIDA_SIN_IDENTIFICAR = "caja.salida_sin_identificar" as const;
 
 /**
- * La acción EXTRA que exige un medio, además de la de piso del caso de uso (`movimientos_caja.registrar_manual`). `null`: ninguna (el efectivo, como hasta hoy: lo
- * puede el operador). Es EL lugar donde se decide qué permiso pide cada medio: pasar el efectivo a gerente y administrador, o abrir otro medio al operador, es cambiar una
- * línea (decisión de permisos pendiente del dueño, 26/11/2026: hoy se conserva el comportamiento de antes). Previene: que el operador saque plata por un medio que el
- * dueño todavía no le habilitó.
+ * Si un medio pide, además de la acción de piso del caso de uso (`movimientos_caja.registrar_manual`), la acción `salidas_de_dinero.registrar`. `false`: ninguna extra (el efectivo,
+ * como hasta hoy: lo puede el operador). Es EL lugar donde se decide qué permiso pide cada medio: pasar el efectivo a gerente y administrador, o abrir otro medio al operador, es
+ * cambiar una línea (decisión del dueño, 26/11/2026, «Opción B; con permisos»). Previene: que el operador saque plata por un medio que el dueño no le habilitó.
  */
-const ACCION_EXTRA_POR_MEDIO: Readonly<Record<TipoDeMedio, ClaveAccion | null>> = {
-  EFECTIVO: null,
-  TARJETA_DEBITO: "salidas_de_dinero.registrar",
-  TARJETA_CREDITO: "salidas_de_dinero.registrar",
-  TRANSFERENCIA: "salidas_de_dinero.registrar",
-  QR: "salidas_de_dinero.registrar",
-  OTRO: "salidas_de_dinero.registrar",
+const PIDE_LA_ACCION_DE_SALIDA: Readonly<Record<TipoDeMedio, boolean>> = {
+  EFECTIVO: false,
+  TARJETA_DEBITO: true,
+  TARJETA_CREDITO: true,
+  TRANSFERENCIA: true,
+  QR: true,
+  OTRO: true,
 };
 
-export function accionParaLaSalida(tipo: TipoDeMedio): ClaveAccion | null {
-  return ACCION_EXTRA_POR_MEDIO[tipo];
+export function pideLaAccionDeSalida(tipo: TipoDeMedio): boolean {
+  return PIDE_LA_ACCION_DE_SALIDA[tipo];
 }
 
 export type EntradaDeRegistrarSalidaDeDinero = Readonly<{
@@ -118,13 +116,36 @@ const origenDeLaSalida = (clave: string) => ({
 
 /**
  * Registrar que salió plata de la caja sin una compra (PR-S2; dueño 19/11 y 26/11/2026, Q-D8 A: por CUALQUIER medio activo). En UNA transacción serializable, con el
- * orden fijo: guard de piso (`movimientos_caja.registrar_manual`), la empresa opera, la caja y el alcance de su sucursal (la sucursal sale de la caja, nunca de la pantalla),
- * clave y validación del pedido, el medio (existe) y la acción EXTRA que pide ese medio (`accionParaLaSalida`), idempotencia por clave y huella (con el medio y la caja:
+ * orden fijo: guard de la puerta (`movimientos_caja.registrar_manual` la de piso, `salidas_de_dinero.registrar` la completa), la empresa opera, la caja y el alcance de su sucursal (la sucursal sale de la caja, nunca de la pantalla),
+ * clave y validación del pedido, el medio (existe) y la acción EXTRA que pide ese medio (`pideLaAccionDeSalida`), idempotencia por clave y huella (con el medio y la caja:
  * un reintento tras el cierre devuelve lo hecho; otra huella con la misma clave → `CLAVE_REUTILIZADA`), el empleado de la empresa y el control de «sin identificar»; recién
  * ahí el egreso (`registrarEgresoEnTx`: caja y jornada abiertas, medio y cuenta válidos, tipo admitido por la categoría) y el acto SALIDA. Una salida por un medio que no es
  * efectivo exige la caja abierta, como todo egreso. Egreso, acto y auditoría van juntos o no va nada; la auditoría no lleva el nombre del tercero.
  */
-export function armarRegistrarSalidaDeDinero({ transacciones, reglas }: DependenciasDeCaja) {
+/**
+ * Las dos puertas de la salida de dinero, con UNA implementación: la de piso (`movimientos_caja.registrar_manual`, la que tiene el operador) solo admite medios que no piden la
+ * acción de salida (hoy, el efectivo: `pideLaAccionDeSalida`); la completa (`salidas_de_dinero.registrar`, gerente y administrador por defecto) admite cualquier medio.
+ * Cada una declara SU acción en `DECLARACIONES`, así el guard exige exactamente lo declarado y antes de leer nada.
+ */
+type PuertaDeSalida = "DE_PISO" | "COMPLETA";
+
+export function armarRegistrarSalidaDeDinero(dependencias: DependenciasDeCaja) {
+  return armarPuerta(dependencias, "DE_PISO", DECLARACIONES.registrarSalidaDeDinero.accion);
+}
+
+export function armarRegistrarSalidaDeDineroPorOtroMedio(dependencias: DependenciasDeCaja) {
+  return armarPuerta(
+    dependencias,
+    "COMPLETA",
+    DECLARACIONES.registrarSalidaDeDineroPorOtroMedio.accion,
+  );
+}
+
+function armarPuerta(
+  { transacciones, reglas }: DependenciasDeCaja,
+  puerta: PuertaDeSalida,
+  accionDeLaPuerta: ClaveAccion,
+) {
   return async function registrarSalidaDeDinero(
     contexto: ContextoOperativo,
     entrada: EntradaDeRegistrarSalidaDeDinero,
@@ -141,12 +162,7 @@ export function armarRegistrarSalidaDeDinero({ transacciones, reglas }: Dependen
             ErrorPropio | MotivoDeRechazo | EmpresaNoOpera | ErrorDeAlcance
           >
         > => {
-          const previo = await prepararCaso(
-            tx,
-            contexto,
-            reglas,
-            DECLARACIONES.registrarSalidaDeDinero.accion,
-          );
+          const previo = await prepararCaso(tx, contexto, reglas, accionDeLaPuerta);
           if (!previo.ok) return previo;
           if (!esUuidCanonico(entrada.cajaId)) return err("CAJA_NO_ENCONTRADA");
           const caja = await tx.cajas.obtener(empresaId, entrada.cajaId);
@@ -163,13 +179,8 @@ export function armarRegistrarSalidaDeDinero({ transacciones, reglas }: Dependen
           if (!esUuidCanonico(entrada.medioDePagoId)) return err("MEDIO_NO_ENCONTRADO");
           const medio = await tx.mediosDePago.obtener(empresaId, entrada.medioDePagoId);
           if (medio === null) return err("MEDIO_NO_ENCONTRADO");
-          const extra = accionParaLaSalida(medio.tipo);
-          if (extra !== null) {
-            const permiso = await exigirAccion(reglas, extra, () =>
-              tx.autorizacion.delActor(contexto),
-            );
-            if (!permiso.ok) return permiso;
-          }
+          // La puerta de piso no admite un medio que pide la acción de salida: sin ella, el rechazo es el mismo que el del guard.
+          if (puerta === "DE_PISO" && pideLaAccionDeSalida(medio.tipo)) return err("SIN_PERMISO");
 
           const terceroNombre = armada.tercero?.tipo === "NOMBRE" ? armada.tercero.nombre : null;
           const terceroPersona =

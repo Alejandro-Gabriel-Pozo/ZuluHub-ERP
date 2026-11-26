@@ -191,13 +191,24 @@ export const DECLARACIONES = {
     },
   },
   registrarSalidaDeDinero: {
-    // El piso: quien puede registrar un movimiento manual. Por un medio que no es efectivo pide además `salidas_de_dinero.registrar` (`accionParaLaSalida`).
+    // La puerta de piso: quien puede registrar un movimiento manual (el operador). Solo admite los medios que no piden la acción de salida (hoy, el efectivo: `pideLaAccionDeSalida`).
     accion: "movimientos_caja.registrar_manual",
     repeticion: {
       regla: "CLAVE_DE_IDEMPOTENCIA",
       prueba: {
         archivo: "test/integracion/caja-salida-de-dinero.test.ts",
         it: "la misma salida dos veces con la misma clave: la segunda devuelve yaExistia y no escribe ni audita",
+      },
+    },
+  },
+  registrarSalidaDeDineroPorOtroMedio: {
+    // La puerta completa: cualquier medio activo, con la acción de salida (gerente y administrador por defecto; configurable por empresa).
+    accion: "salidas_de_dinero.registrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/caja-salida-de-dinero.test.ts",
+        it: "la misma salida por otro medio dos veces con la misma clave: la segunda devuelve yaExistia y no escribe ni audita",
       },
     },
   },

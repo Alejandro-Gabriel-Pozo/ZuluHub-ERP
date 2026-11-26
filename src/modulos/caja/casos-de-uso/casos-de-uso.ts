@@ -26,7 +26,10 @@ import { armarEditarMedioDePago } from "./editar-medio-de-pago";
 import { armarIniciarCierre } from "./iniciar-cierre";
 import { armarRegistrarAjuste } from "./registrar-ajuste";
 import { armarRegistrarMovimientoManual } from "./registrar-movimiento-manual";
-import { armarRegistrarSalidaDeDinero } from "./registrar-salida-de-dinero";
+import {
+  armarRegistrarSalidaDeDinero,
+  armarRegistrarSalidaDeDineroPorOtroMedio,
+} from "./registrar-salida-de-dinero";
 
 /**
  * Los casos de uso de la caja, listos para que la composición los ofrezca. El `satisfies` exige que sean EXACTAMENTE los que declara
@@ -55,6 +58,7 @@ export function crearCasosDeUsoDeCaja(dependencias: DependenciasDeCaja) {
     cerrarSesion: armarCerrarSesion(dependencias),
     registrarMovimientoManual: armarRegistrarMovimientoManual(dependencias),
     registrarSalidaDeDinero: armarRegistrarSalidaDeDinero(dependencias),
+    registrarSalidaDeDineroPorOtroMedio: armarRegistrarSalidaDeDineroPorOtroMedio(dependencias),
     registrarAjuste: armarRegistrarAjuste(dependencias),
     anularMovimientoDeCaja: armarAnularMovimientoDeCaja(dependencias),
     corregirMedioDeCobro: armarCorregirMedioDeCobro(dependencias),

@@ -1,7 +1,7 @@
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { ok } from "../../src/primitivas/resultado/resultado";
-import { accionParaLaSalida } from "../../src/modulos/caja/casos-de-uso/registrar-salida-de-dinero";
+import { pideLaAccionDeSalida } from "../../src/modulos/caja/casos-de-uso/registrar-salida-de-dinero";
 import { crearBaseAparte, crearEntornoDePrueba } from "./entorno";
 import {
   armarCaja,
@@ -148,13 +148,14 @@ describe.skipIf(base === null)("caja: salida de dinero por cualquier medio", () 
     if (!r.ok) throw new Error(`no se pudo abrir la sesión: ${JSON.stringify(r.error)}`);
     return r.valor.sesionId;
   };
-  /** Una salida con valores razonables; `resto` pisa lo que haga falta. */
+  /** Una salida con valores razonables; `resto` pisa lo que haga falta. Por el efectivo usa la puerta de piso; con un medio dado, la completa. */
   const salida = async (
     m: MundoDeOperacion,
     resto: Partial<Parameters<ReturnType<typeof casos>["registrarSalidaDeDinero"]>[1]> = {},
     ctx = ctxEn(m),
-  ) =>
-    casos().registrarSalidaDeDinero(ctx, {
+    puerta: "AUTO" | "DE_PISO" | "COMPLETA" = "AUTO",
+  ) => {
+    const entrada = {
       claveDeIdempotencia: claveNueva(),
       cajaId: m.cajaId,
       medioDePagoId: await efectivoDe(m),
@@ -164,7 +165,13 @@ describe.skipIf(base === null)("caja: salida de dinero por cualquier medio", () 
       motivo: "Flete",
       tercero: { nombre: "Pérez" },
       ...resto,
-    });
+    };
+    const completa =
+      puerta === "COMPLETA" || (puerta === "AUTO" && resto.medioDePagoId !== undefined);
+    return completa
+      ? casos().registrarSalidaDeDineroPorOtroMedio(ctx, entrada)
+      : casos().registrarSalidaDeDinero(ctx, entrada);
+  };
   const esperadoEn = async (m: MundoDeOperacion, medio: string) =>
     (
       await filas<{ total: string }>(
@@ -255,6 +262,19 @@ describe.skipIf(base === null)("caja: salida de dinero por cualquier medio", () 
     expect(await foto(m)).toBe(antes);
   });
 
+  it("la misma salida por otro medio dos veces con la misma clave: la segunda devuelve yaExistia y no escribe ni audita", async () => {
+    const m = await mundo();
+    await abrir(m);
+    const transferencia = await medioDe(m, "TRANSFERENCIA");
+    const entrada = { claveDeIdempotencia: claveNueva(), medioDePagoId: transferencia };
+    const primera = await salida(m, entrada);
+    expect(primera.ok && primera.valor.yaExistia).toBe(false);
+    const antes = await foto(m);
+    const segunda = await salida(m, entrada, ctxEn(m, 9));
+    expect(segunda.ok && segunda.valor.yaExistia).toBe(true);
+    expect(await foto(m)).toBe(antes);
+  });
+
   it("IDEMPOTENCIA: otro contenido con la misma clave (importe, categoría, medio, tercero) es CLAVE_REUTILIZADA y no escribe nada; tras el cierre devuelve lo hecho", async () => {
     const m = await mundo();
     const sesion = await abrir(m);
@@ -316,7 +336,7 @@ describe.skipIf(base === null)("caja: salida de dinero por cualquier medio", () 
     expect(await auditorias(m, "EGRESO_SUPERA_EFECTIVO")).toBe(1);
   });
 
-  it("PERMISOS: el operador con alcance saca efectivo (como hoy) pero NO por un medio que no es efectivo; el administrador sí; sin persona o sin alcance no escribe nada", async () => {
+  it("PERMISOS: el operador con alcance saca efectivo (como hoy) pero NO por un medio que no es efectivo, ni por una puerta ni por la otra; el administrador sí; sin persona o sin alcance no escribe nada", async () => {
     const m = await mundo();
     await abrir(m);
     const transferencia = await medioDe(m, "TRANSFERENCIA");
@@ -324,25 +344,31 @@ describe.skipIf(base === null)("caja: salida de dinero por cualquier medio", () 
     const administrador = await sumarPersona(dueno, m, "ADMINISTRADOR");
     const sinAlcance = await sumarPersona(dueno, m, "OPERADOR", false);
     const comoOperador = conAhora(operador(), en(5));
-    const antes = await foto(m);
     expect((await salida(m, {}, comoOperador)).ok).toBe(true);
-    expect(await salida(m, { medioDePagoId: transferencia }, comoOperador)).toEqual(
+    const antes = await foto(m);
+    for (const puerta of ["DE_PISO", "COMPLETA"] as const) {
+      expect(await salida(m, { medioDePagoId: transferencia }, comoOperador, puerta)).toEqual(
+        GENERICO_DE_PERMISO,
+      );
+    }
+    // El operador tampoco saca efectivo por la puerta completa (pide la acción de salida).
+    expect(await salida(m, {}, comoOperador, "COMPLETA")).toEqual(GENERICO_DE_PERMISO);
+    expect((await salida(m, {}, { ...ctxEn(m), personaId: null })).ok).toBe(false);
+    expect((await salida(m, {}, conAhora(sinAlcance(), en(5)))).ok).toBe(false);
+    expect(await foto(m)).toBe(antes);
+    const comoAdmin = conAhora(administrador(), en(5));
+    expect((await salida(m, { medioDePagoId: transferencia }, comoAdmin)).ok).toBe(true);
+    expect((await salida(m, {}, comoAdmin, "COMPLETA")).ok).toBe(true);
+    // La puerta de piso rechaza un medio que no es efectivo aunque quien llama sea administrador: hay que usar la completa.
+    expect(await salida(m, { medioDePagoId: transferencia }, comoAdmin, "DE_PISO")).toEqual(
       GENERICO_DE_PERMISO,
     );
-    expect((await salida(m, {}, { ...ctxEn(m), personaId: null })).ok).toBe(false);
-    const sin = await salida(m, {}, conAhora(sinAlcance(), en(5)));
-    expect(sin.ok).toBe(false);
-    expect(
-      (await salida(m, { medioDePagoId: transferencia }, conAhora(administrador(), en(5)))).ok,
-    ).toBe(true);
-    // Lo único que se escribió es la salida en efectivo del operador y la transferencia del administrador.
-    expect(await egresos(m)).toHaveLength(2);
-    expect(await actos(m)).toHaveLength(2);
-    expect(antes).not.toBe(await foto(m));
+    expect(await egresos(m)).toHaveLength(3);
+    expect(await actos(m)).toHaveLength(3);
   });
 
-  it("PERMISOS: la acción extra sale de UNA tabla: efectivo no pide ninguna y todo otro medio pide salidas_de_dinero.registrar", () => {
-    expect(accionParaLaSalida("EFECTIVO")).toBeNull();
+  it("PERMISOS: la acción extra sale de UNA tabla: el efectivo no pide ninguna y todo otro medio pide salidas_de_dinero.registrar", () => {
+    expect(pideLaAccionDeSalida("EFECTIVO")).toBe(false);
     for (const tipo of [
       "TARJETA_DEBITO",
       "TARJETA_CREDITO",
@@ -350,7 +376,7 @@ describe.skipIf(base === null)("caja: salida de dinero por cualquier medio", () 
       "QR",
       "OTRO",
     ] as const) {
-      expect(accionParaLaSalida(tipo)).toBe("salidas_de_dinero.registrar");
+      expect(pideLaAccionDeSalida(tipo)).toBe(true);
     }
   });
 
