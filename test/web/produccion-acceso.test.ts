@@ -34,6 +34,13 @@ const accionesDeProduccion = async (
   return modulo.accionesDeProduccion(contexto);
 };
 
+const puedeAbrirOrdenes = async (contexto: never): Promise<boolean> => {
+  const modulo = (await import(/* @vite-ignore */ RUTA)) as {
+    puedeAbrirOrdenes: (c: never) => Promise<boolean>;
+  };
+  return modulo.puedeAbrirOrdenes(contexto);
+};
+
 const contexto = () => ({ empresaId: "e-1" }) as never;
 const conPermisos = (acciones: string[], activos: string[] = ["produccion"]) => {
   mundo.permisos = ok({ acciones, modulos: { activos, enSoloLectura: [] } });
@@ -83,5 +90,31 @@ describe("accionesDeProduccion", () => {
     expect(await accionesDeProduccion(contexto())).toEqual({ cancelar: false, anular: false });
     mundo.fallan = true;
     expect(await accionesDeProduccion(contexto())).toEqual({ cancelar: false, anular: false });
+  });
+});
+
+describe("puedeAbrirOrdenes («Nueva orden»)", () => {
+  it("con transformaciones.abrir (gerente, administrador y operador): sí", async () => {
+    conPermisos(["transformaciones.ver", "transformaciones.abrir"]);
+    expect(await puedeAbrirOrdenes(contexto())).toBe(true);
+  });
+
+  it("sin abrir (aunque pueda cancelar o anular): no", async () => {
+    conPermisos(["transformaciones.ver", "transformaciones.cancelar", "transformaciones.anular"]);
+    expect(await puedeAbrirOrdenes(contexto())).toBe(false);
+  });
+
+  it("con el módulo en desarrollo, sin activar o en solo lectura (abrir crea y no figura): no", async () => {
+    mundo.permisos = ok({ acciones: [], modulos: { activos: [], enSoloLectura: [] } });
+    expect(await puedeAbrirOrdenes(contexto())).toBe(false);
+    mundo.permisos = ok({ acciones: [], modulos: { activos: [], enSoloLectura: ["produccion"] } });
+    expect(await puedeAbrirOrdenes(contexto())).toBe(false);
+  });
+
+  it("si no se pudieron leer los permisos (sin ellos o con una falla): no", async () => {
+    mundo.permisos = null;
+    expect(await puedeAbrirOrdenes(contexto())).toBe(false);
+    mundo.fallan = true;
+    expect(await puedeAbrirOrdenes(contexto())).toBe(false);
   });
 });
