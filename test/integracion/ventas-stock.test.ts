@@ -292,7 +292,7 @@ describe.skipIf(base === null)("ventas con stock: cerrar descuenta, anular devue
       const t2 = await vender(mundo, [{ producto: plato, cantidad: "1" }]);
       const salida2 = (await delEjemplar(t2.ejemplarId, "SALIDA"))[0] as { id: string };
       const renglones2 = await renglonesDe(salida2.id);
-      // SUPUESTO declarado al dueño (25/11): el camino se decide al cerrar. La cuenta abierta al encender descuenta el stock propio (que nace en 0: queda negativo) y NO los ingredientes; se compensa al
+      // SUPUESTO (DEC-PRO-001): el camino se decide al cerrar. La cuenta abierta al encender descuenta el stock propio (que nace en 0: queda negativo) y NO los ingredientes; se compensa al
       // cerrar una orden de producción. Sellar el camino en la línea necesita migración (mejora de la segunda tanda). Por eso: encender producción fuera de servicio o sin cuentas abiertas.
       const dePropio = (rs: typeof renglones1) =>
         rs.map((r) => r.articulo_id === propio.articuloId);
