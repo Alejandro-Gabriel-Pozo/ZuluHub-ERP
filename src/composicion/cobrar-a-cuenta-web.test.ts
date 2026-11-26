@@ -75,13 +75,37 @@ type Cambios = Partial<{
   cajas: unknown;
   cobrar: unknown;
   saldo: unknown;
+  sucursal: unknown;
+  opciones: unknown;
 }>;
-const llamadas: { cobrar: unknown[]; saldo: number } = { cobrar: [], saldo: 0 };
+const OPCIONES = {
+  medios: [
+    {
+      id: MEDIO,
+      tipo: "EFECTIVO",
+      nombre: null,
+      cuentaObligatoria: false,
+      cuentas: [],
+      datosQuePide: { cupon: false, ultimos4: false, marca: false, cuotas: false, dni: false },
+      datosQueSePiden: { cupon: false, ultimos4: false, marca: false, cuotas: false, dni: false },
+      otraCosa: "no sale",
+    },
+  ],
+  marcasDeTarjeta: [],
+};
+const { otraCosa: _sinUso, ...MEDIO_SALIDA } = OPCIONES.medios[0] as (typeof OPCIONES.medios)[0];
+const SALIDA_DE_OPCIONES = [MEDIO_SALIDA];
+const llamadas: { cobrar: unknown[]; saldo: number; opciones: unknown[] } = {
+  cobrar: [],
+  saldo: 0,
+  opciones: [],
+};
 const dependencias = (c: Cambios = {}): DependenciasDeCobrarACuentaWeb => ({
   cobro: () =>
     ({
       cargoACobrarDelCliente: () => Promise.resolve(c.cargo ?? ok(CARGO)),
       ticketACobrar: () => Promise.resolve(c.ticket ?? ok(TICKET_LEIDO)),
+      nombreDeLaSucursal: () => Promise.resolve(c.sucursal ?? ok("Centro")),
       saldoDelClienteACuenta: () => {
         llamadas.saldo += 1;
         return Promise.resolve(c.saldo ?? ok({ moneda: "ARS", monto: "250.00" }));
@@ -97,6 +121,10 @@ const dependencias = (c: Cambios = {}): DependenciasDeCobrarACuentaWeb => ({
   consultas: () =>
     ({
       estadoDeCajasParaCobrar: () => Promise.resolve(c.cajas ?? ok(CAJAS)),
+      opcionesParaCobrar: (_contexto: unknown, entrada: unknown) => {
+        llamadas.opciones.push(entrada);
+        return Promise.resolve(c.opciones ?? ok(OPCIONES));
+      },
     }) as never,
   respuesta: { registrar: () => undefined, azar: () => new Uint8Array(4) },
 });
@@ -127,6 +155,7 @@ describe("la hoja de «Cobrar un ticket a cuenta»", () => {
           total: { moneda: "ARS", monto: "1000.00" },
           venceEl: "2026-12-09",
           vencida: false,
+          sucursal: "Centro",
         },
         cajas: [
           {
@@ -139,8 +168,34 @@ describe("la hoja de «Cobrar un ticket a cuenta»", () => {
           },
         ],
         jornadaActual: { fechaDeNegocio: "2026-11-09", estado: "ABIERTA" },
+        opciones: {
+          medios: SALIDA_DE_OPCIONES,
+          marcasDeTarjeta: [],
+        },
       },
     });
+  });
+
+  it("las opciones se piden con la caja abierta (o la primera si ninguna lo está) y sin cajas no hay opciones", async () => {
+    llamadas.opciones = [];
+    await ticketACobrarDelCliente(dependencias(), CONTEXTO, { clienteId: CLIENTE });
+    expect(llamadas.opciones).toEqual([{ cajaId: CAJA }]);
+    const sinCajas = dependencias({
+      cajas: ok({ cajas: [], jornadaActual: CAJAS.jornadaActual }),
+    });
+    const r = await ticketACobrarDelCliente(sinCajas, CONTEXTO, { clienteId: CLIENTE });
+    expect(r.ok && r.dato?.opciones).toBeNull();
+  });
+
+  it("si no se leen las opciones o la sucursal, la hoja no sale (nunca a medias)", async () => {
+    for (const cambios of [
+      { opciones: err("CAJA_NO_ENCONTRADA") },
+      { sucursal: err("IDENTIFICADOR_INVALIDO") },
+    ]) {
+      expect(
+        await ticketACobrarDelCliente(dependencias(cambios), CONTEXTO, { clienteId: CLIENTE }),
+      ).toMatchObject(GENERICO);
+    }
   });
 
   it("sin cargo pendiente la hoja es vacía; un cliente sin nombre usa el del ticket", async () => {

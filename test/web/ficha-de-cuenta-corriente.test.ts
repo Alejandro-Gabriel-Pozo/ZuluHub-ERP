@@ -29,7 +29,7 @@ describe("ficha de las pantallas de la cuenta corriente", () => {
       expect(Object.keys(CATALOGO_DE_TEXTOS), clave).toContain(clave);
       expect(t.usos.length).toBeGreaterThan(0);
       expect(t.fuente.decidio).toMatch(/dueño/);
-      expect(t.fuente.donde).toMatch(/DEC-CCL-00[456]/);
+      expect(t.fuente.donde).toMatch(/DEC-CCL-00[4568]/);
     }
     for (const clave of ficha.reutilizados)
       expect(Object.keys(CATALOGO_DE_TEXTOS)).toContain(clave);

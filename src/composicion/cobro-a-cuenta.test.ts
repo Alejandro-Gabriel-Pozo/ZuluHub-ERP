@@ -35,12 +35,17 @@ describe("las lecturas del libro de «Cobrar un ticket a cuenta»", () => {
       ok: false,
       error: "IDENTIFICADOR_INVALIDO",
     });
+    expect(await cobro.nombreDeLaSucursal(CONTEXTO, { sucursalId: "x" })).toEqual({
+      ok: false,
+      error: "IDENTIFICADOR_INVALIDO",
+    });
   });
 
   it("cada lectura exige su acción: la cuenta corriente para el libro y ventas para el ticket", () => {
     expect(DECLARACIONES_DE_COBRO_A_CUENTA).toEqual({
       cargoACobrarDelCliente: { accion: "cuenta_corriente.ver" },
       saldoDelClienteACuenta: { accion: "cuenta_corriente.ver" },
+      nombreDeLaSucursal: { accion: "cuenta_corriente.ver" },
       ticketACobrar: { accion: "ventas.ver" },
     });
   });

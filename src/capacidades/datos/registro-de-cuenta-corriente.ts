@@ -10,6 +10,8 @@ const CONDICIONES =
   "apps/web/ui/plantillas/cuenta-corriente/FormularioDeCondicionesDeCuenta.cliente.tsx";
 const SUSPENDER = "apps/web/ui/plantillas/cuenta-corriente/FormularioDeSuspenderCuenta.cliente.tsx";
 const REACTIVAR = "apps/web/ui/plantillas/cuenta-corriente/FormularioDeReactivarCuenta.cliente.tsx";
+const COBRAR_A_CUENTA =
+  "apps/web/ui/plantillas/cuenta-corriente/PantallaDeCobrarACuenta.cliente.tsx";
 const REQUIERE_CUENTA_CORRIENTE = {
   modulo: "cuenta_corriente",
   estadoDeEmpresa: ["ACTIVE"],
@@ -18,6 +20,12 @@ const PROPOSITO = (para: string): Proposito => ({
   para,
   fuente:
     "Pedernal-docs/11-especificaciones/briefs/cuenta-corriente/PR-CC-1-ficha-del-cliente-y-clases-a-cobrar.md §2 y §3 (habilitar, condiciones, suspender y reactivar) y la maqueta cuenta-corriente-ficha-listado-y-cobro.html (v2, aprobada por el dueño el 26/11/2026); arquitectura/decisiones/registro/DEC-CCL-006.json",
+});
+
+const PROPOSITO_DE_COBRAR = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Maqueta cuenta-corriente-ficha-listado-y-cobro.html (hoja «Cobrar un ticket a cuenta», aprobada por el dueño el 26/11/2026) y DEC-CCL-008",
 });
 
 export const DATOS_DE_CUENTA_CORRIENTE = {
@@ -75,5 +83,17 @@ export const DATOS_DE_CUENTA_CORRIENTE = {
     consumidores: [REACTIVAR],
     ponerPor: ["cuenta_corriente.administrar"],
     requiere: REQUIERE_CUENTA_CORRIENTE,
+  },
+  "caja-de-cobro-a-cuenta": {
+    // Sin primitiva: es la elección de una de las cajas con sesión abierta hoy de la sucursal del ticket (lista cerrada que arma el servidor); el servidor revalida caja, sesión y jornada.
+    ficha: "src/modulos/caja/cobrar/opciones-de-cobro.ts",
+    propositos: [
+      PROPOSITO_DE_COBRAR(
+        "Caja abierta de la sucursal del ticket donde entra el cobro de un ticket a cuenta (pantalla «Cobrar un ticket a cuenta»), de entre las que tienen la sesión abierta hoy.",
+      ),
+    ],
+    consumidores: [COBRAR_A_CUENTA],
+    ponerPor: ["tickets.cobrar"],
+    requiere: { modulo: "caja", estadoDeEmpresa: ["ACTIVE"] },
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;
