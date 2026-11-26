@@ -72,6 +72,14 @@ export type FilaDeLibro = Readonly<{
   anuladoPor: string | null;
 }>;
 
+/** Un artículo que se controla y está activo, para ofrecerlo en un formulario de movimiento: su unidad es la de stock (no se elige). */
+export type ArticuloControlado = Readonly<{
+  articuloId: string;
+  productoId: string;
+  nombre: string;
+  unidadId: string;
+}>;
+
 export type FiltroDeMovimientosDeDeposito = Readonly<{
   depositoId: string;
   /** Paginación por `(hecho en, movimiento, renglón)` descendente: lo que viene DESPUÉS (más viejo) de esta terna. */
@@ -117,6 +125,8 @@ export interface LecturasDelLibro {
     empresa: EmpresaId,
     filtro: FiltroDeMovimientosDeDeposito,
   ): Promise<FilaDeMovimientoDeDeposito[]>;
+  /** Los artículos activos de la empresa (el producto también activo), por nombre: los que se pueden mover. */
+  articulosControlados(empresa: EmpresaId): Promise<ArticuloControlado[]>;
   /** Cuántos saldos están en negativo en esa sucursal (para el aporte al cierre del día). */
   contarNegativasDe(empresa: EmpresaId, sucursal: SucursalId): Promise<number>;
   /** Los pares cuyo saldo difiere de la suma de sus renglones: **debe ser vacío** (el saldo se deriva del libro). */
@@ -188,6 +198,26 @@ export function crearLecturasDelLibro(db: Kysely<StockDb>): LecturasDelLibro {
         sucursalId: f.sucursal_id as SucursalId,
         existencia: f.existencia,
         uso: usoDeDepositoGuardado(f.uso),
+      }));
+    },
+    async articulosControlados(empresa) {
+      const { rows } = await sql<{
+        articulo_id: string;
+        producto_id: string;
+        nombre: string;
+        unidad_de_stock_id: string;
+      }>`
+        select a.id as articulo_id, a.producto_id, p.nombre, a.unidad_de_stock_id
+          from articulo_de_stock a
+          join producto p on p.id = a.producto_id and p.empresa_id = a.empresa_id
+         where a.empresa_id = ${empresa} and a.activo and p.activo
+         order by p.nombre_clave, a.id
+      `.execute(db);
+      return rows.map((f) => ({
+        articuloId: f.articulo_id,
+        productoId: f.producto_id,
+        nombre: f.nombre,
+        unidadId: f.unidad_de_stock_id,
       }));
     },
     async movimientosDeDeposito(empresa, filtro) {

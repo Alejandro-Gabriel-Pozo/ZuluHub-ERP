@@ -78,7 +78,8 @@
     "apps/web/app/s/app/(operacion)/stock/movimientos/**",
     "apps/web/ui/plantillas/stock/existencias/*",
     "apps/web/ui/plantillas/stock/lectura/*",
-    "apps/web/ui/plantillas/stock/movimientos/*"
+    "apps/web/ui/plantillas/stock/movimientos/*",
+    "apps/web/pantallas/pantalla-de-movimiento.tsx"
   ],
   "test/web/ficha-de-facturas.test.ts": [
     "apps/web/app/s/app/(operacion)/compras/facturas/**",
