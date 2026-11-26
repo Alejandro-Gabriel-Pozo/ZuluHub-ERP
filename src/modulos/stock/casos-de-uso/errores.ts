@@ -110,6 +110,9 @@ export type ErrorDeStock =
   | "LOTE_SIN_CALIDAD"
   | "LOTE_DESACTUALIZADO"
   | "LOTE_SIN_ASIGNAR"
+  // STK-E2a: lotes en una entrada de un artículo que no se controla por lote, y un lote que ya existe con otra fecha de vencimiento o de elaboración.
+  | "LOTES_SIN_CONTROL"
+  | "LOTE_CON_OTRA_FECHA"
   | "SALDO_DE_LOTE_INSUFICIENTE"
   | "SIN_CAMBIOS"
   | Readonly<{

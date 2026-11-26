@@ -18,6 +18,7 @@ import {
   leerConfirmaciones,
   leerDetalle,
   leerRenglones,
+  lotesDeLaEntrada,
   renglonDeLibro,
   renglonesDeHuella,
   resolverRenglones,
@@ -132,7 +133,7 @@ function armarEntradaOSalida<S extends SalidaDeRegistrarEntrada | SalidaDeRegist
         if (!confirmaciones.ok) return confirmaciones;
         // Solo una entrada con motivo que declara costo (compra, carga inicial) puede traer `costoUnitario`.
         const admiteCosto = entrada && buscarMotivo(clase, pedido.motivo)?.entraConCosto === true;
-        const leidos = leerRenglones(pedido.renglones, admiteCosto);
+        const leidos = leerRenglones(pedido.renglones, admiteCosto, entrada);
         if (!leidos.ok) return leidos;
         const deposito = await cargarDeposito(tx, contexto, pedido.depositoId);
         if (!deposito.ok) return deposito;
@@ -161,6 +162,9 @@ function armarEntradaOSalida<S extends SalidaDeRegistrarEntrada | SalidaDeRegist
           return err({ error: "YA_HAY_EXISTENCIA" });
         }
 
+        const lotes = await lotesDeLaEntrada(tx, contexto, deposito.valor.id, resueltos.valor);
+        if (!lotes.ok) return lotes;
+
         const registrado = await registrarMovimientoEnTx(tx, contexto, {
           clase,
           motivo: pedido.motivo,
@@ -177,6 +181,7 @@ function armarEntradaOSalida<S extends SalidaDeRegistrarEntrada | SalidaDeRegist
           renglones: renglonesDe(deposito.valor.id, resueltos.valor, entrada ? 1 : -1),
           confirmaciones: confirmaciones.valor,
           costos: costosDeclaradosDe(deposito.valor.id, resueltos.valor),
+          lotes: lotes.valor,
         });
         if (!registrado.ok) return registrado;
         return ok(

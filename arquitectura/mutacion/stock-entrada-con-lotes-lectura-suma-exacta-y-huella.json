@@ -1,0 +1,7 @@
+{
+  "grupo": "stock (entrada con lotes: lectura, suma exacta y huella)",
+  "archivos": "src/modulos/stock/casos-de-uso/lotes-del-pedido.ts",
+  "minutos": 2,
+  "pruebas": "src/modulos/stock/casos-de-uso/lotes-del-pedido.test.ts src/modulos/stock/casos-de-uso/movimientos-comun-lotes.test.ts",
+  "nivel": "CRITICO"
+}

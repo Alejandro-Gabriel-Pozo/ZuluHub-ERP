@@ -131,7 +131,7 @@ describe("FormularioDeCierreDeOrden", () => {
   it("el vencimiento que falta sale con su texto aprobado y el botón sigue «Cerrar la orden»", async () => {
     const accion = vi.fn((_previo: unknown, datos: FormData) => {
       void datos;
-      return Promise.resolve({ error: errorDeCodigo("PRODUCCION_VENCIMIENTO_REQUERIDO") });
+      return Promise.resolve({ error: errorDeCodigo("LOTE_VENCIMIENTO_REQUERIDO") });
     });
     await render(formulario(accion));
     tocar(page.getByRole("button", { name: "Cerrar la orden" }));

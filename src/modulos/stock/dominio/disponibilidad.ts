@@ -16,6 +16,18 @@ export type LoteParaDisponibilidad = Readonly<{
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 export const esFechaCivil = (texto: string): boolean => FECHA.test(texto);
 
+/** Una fecha civil que existe en el calendario y que la base admite (2000 a 2200). */
+export function fechaValida(texto: unknown): texto is string {
+  if (typeof texto !== "string" || !esFechaCivil(texto)) return false;
+  const fecha = new Date(`${texto}T00:00:00Z`);
+  return (
+    !Number.isNaN(fecha.getTime()) &&
+    fecha.toISOString().slice(0, 10) === texto &&
+    texto >= "2000-01-01" &&
+    texto <= "2200-12-31"
+  );
+}
+
 export const estaVencido = (vence: string | null, fechaDeNegocio: string): boolean =>
   (vence ?? fechaDeNegocio) < fechaDeNegocio;
 

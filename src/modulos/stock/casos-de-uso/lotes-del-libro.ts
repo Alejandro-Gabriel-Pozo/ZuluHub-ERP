@@ -46,6 +46,12 @@ export type LotesDelPedido = Readonly<{
   nombrados?: ReadonlyMap<string, string>;
   /** `EN_CUARENTENA` si la recepción queda «con observaciones» (D118); sin dato, un lote nuevo de un artículo con calidad nace `LIBERADO`. */
   estadoInicialDeCalidad?: CalidadDeLote;
+  /**
+   * La entrada MANUAL (STK-E2a): si el lote ya existe (mismo artículo y código) y la persona mandó una fecha de vencimiento o de elaboración distinta de la que tiene, es `LOTE_CON_OTRA_FECHA` y no se escribe nada
+   * (la fecha de un lote existente se cambia con «Corregir», no tipeándola de nuevo). Se mira DESPUÉS de buscar o crear, dentro de la misma transacción: dos entradas a la vez que crean el mismo lote con fechas distintas no
+   * se pisan en silencio, una gana y la otra se rechaza. Las entradas de compras y producción no lo piden y siguen como siempre.
+   */
+  exigirMismasFechas?: boolean;
 }>;
 
 const MOTIVO_DE_INGRESO = "Ingreso del lote";
@@ -236,6 +242,14 @@ async function lotesDeUnaEntrada(
         por: persona,
         en: contexto.ahora,
       });
+    }
+    if (
+      lotes?.exigirMismasFechas === true &&
+      !creado &&
+      ((vence !== null && lote.fechaDeVencimiento !== vence) ||
+        (elabora !== null && lote.fechaDeElaboracion !== elabora))
+    ) {
+      return err("LOTE_CON_OTRA_FECHA");
     }
     const unidades = cantidad.valor.unidades;
     suma += unidades;

@@ -21,6 +21,9 @@ export const CLAVES_DE_ERRORES_DE_STOCK = {
   STOCK_ES_EL_DE_VENTA: "stock.error.es_el_de_venta",
   STOCK_DEPOSITO_DESACTUALIZADO: "stock.error.deposito_desactualizado",
   STOCK_SALDO_DE_LOTE_INSUFICIENTE: "stock.error.saldo_de_lote_insuficiente",
+  // Entrada con lotes (STK-E2a): la fecha de vencimiento falta (texto ya aprobado de Lotes, que también usa producción al cerrar una orden) o ya pasó (L-14).
+  LOTE_VENCIMIENTO_REQUERIDO: "lotes.error.vencimiento_requerido",
+  STOCK_VENCIMIENTO_PASADO: "stock.error.vencimiento_pasado",
   STOCK_ACCION_NO_PERMITIDA: "stock.error.sin_permiso",
 } as const satisfies Record<string, ClaveDeTexto>;
 

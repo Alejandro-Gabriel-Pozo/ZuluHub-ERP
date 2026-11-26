@@ -86,7 +86,7 @@ export { evaluarFaltantes } from "./casos-de-uso/faltantes";
 export { productosParaExplotar } from "./casos-de-uso/lectura-de-venta";
 export { CONTROL_DE_NEGATIVO } from "./casos-de-uso/movimiento-en-tx";
 export { leerCantidad, leerDetalle, MAXIMO_DE_RENGLONES } from "./casos-de-uso/movimientos-comun";
-export { fechaValida as fechaCivilValida } from "./casos-de-uso/corregir-lote";
+export { fechaValida as fechaCivilValida } from "./dominio/disponibilidad";
 export { explotarConsumo, type ProductoParaExplotar } from "./dominio/explosion";
 export { CLASES_DE_MOVIMIENTO, ORIGEN_TRANSFORMACION } from "./dominio/movimiento";
 export {

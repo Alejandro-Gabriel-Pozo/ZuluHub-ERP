@@ -19,9 +19,9 @@ const GENERICO = { codigo: "PRODUCCION_ACCION_NO_PERMITIDA" satisfies CodigoDePr
 
 /** Los dos errores de la fecha de vencimiento al cerrar una orden tienen texto aprobado (Lotes): salen con él y no como el genérico. */
 const ERROR_DE_VENCIMIENTO = {
-  VENCIMIENTO_REQUERIDO: "PRODUCCION_VENCIMIENTO_REQUERIDO",
+  VENCIMIENTO_REQUERIDO: "LOTE_VENCIMIENTO_REQUERIDO",
   VENCIMIENTO_PASADO: "PRODUCCION_VENCIMIENTO_PASADO",
-} as const satisfies Readonly<Record<string, CodigoDeProduccion>>;
+} as const satisfies Readonly<Record<string, CodigoDeProduccion | CodigoDeStock>>;
 
 /** El aviso «va a quedar en negativo» (nivel AVISAR) que devuelve abrir una orden con faltante: no es un fallo, la pantalla pide confirmar («Producir igual») y reintenta con la misma clave. */
 const AVISO_DE_NEGATIVO = "STOCK_CONTROL_AVISA" satisfies CodigoDeStock;

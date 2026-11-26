@@ -206,6 +206,11 @@ export const TEXTOS_DE_STOCK = {
     usos: ["DE_FICHA"],
     fuente: { decision: "DEC-STK-005" },
   },
+  "stock.error.vencimiento_pasado": {
+    porDefecto: "La fecha de vencimiento ya pasó",
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-006" },
+  },
   "stock.error.saldo_de_lote_insuficiente": {
     porDefecto: "El lote no tiene tanta existencia",
     usos: ["DE_FICHA"],
