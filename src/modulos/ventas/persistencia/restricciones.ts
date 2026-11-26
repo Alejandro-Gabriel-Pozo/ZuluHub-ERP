@@ -201,6 +201,8 @@ export const ERRORES_DE_VENTAS_POR_RESTRICCION: Readonly<Record<string, string>>
   numerador_ticket_pkey: "NO_TRADUCIDA",
   numerador_ultimo_ck: "NO_TRADUCIDA",
   ticket_alta_invalida: "NO_TRADUCIDA",
+  ticket_cargado_a_parte_fkey: "CLIENTE_NO_VALIDO",
+  ticket_cargado_a_parte_inmutable: "INVARIANTE_DE_VENTAS",
   ticket_cobrado_sin_cobranza: "INVARIANTE_DE_VENTAS",
   ticket_correccion_empresa_id_fkey: "NO_TRADUCIDA",
   ticket_correccion_hecha_por_fkey: "NO_TRADUCIDA",

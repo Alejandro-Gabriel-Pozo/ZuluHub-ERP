@@ -25,9 +25,19 @@ describe("traducirErrorDeClientes", () => {
     "CARGO_INVALIDO",
     "PARTE_CON_VINCULOS",
     "CURSOR_INVALIDO",
+    "MOTIVO_DE_ANONIMIZACION_INVALIDO",
     "UN_ERROR_QUE_NADIE_CONOCE",
   ])("%s sale como el genérico", (error) => {
     expect(traducirErrorDeClientes(error)).toEqual(GENERICO);
+  });
+
+  it("la anonimización impedida (con sus impedimentos) sale como el genérico: ni el módulo ni el motivo llegan a la pantalla", () => {
+    expect(
+      traducirErrorDeClientes({
+        error: "ANONIMIZACION_IMPEDIDA",
+        impedimentos: [{ modulo: "saldos_de_partes", motivo: "SALDO_DISTINTO_DE_CERO" }],
+      }),
+    ).toEqual(GENERICO);
   });
 
   it("un documento ya registrado sale con su texto y su campo, sin el id de la otra parte", () => {

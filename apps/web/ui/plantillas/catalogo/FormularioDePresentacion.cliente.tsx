@@ -19,6 +19,7 @@ import {
   sePuedeGuardarLaPresentacion,
   type FormularioDePresentacionArmado,
 } from "./modelo-de-presentaciones";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDePresentacion = Readonly<{
   formulario: FormularioDePresentacionArmado;
@@ -44,7 +45,7 @@ export function FormularioDePresentacion({ formulario, accion }: PropsDeFormular
   const delNombre = error?.campo === "nombre";
   return (
     <div className={estilos["raiz"]}>
-      <form action={enviar}>
+      <form action={enviar} onReset={sinReiniciar}>
         <ProveedorDeEnvioDeFormulario value={enviando}>
           <Pila separacion={3}>
             <Campo

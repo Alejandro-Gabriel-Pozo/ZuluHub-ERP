@@ -148,7 +148,9 @@ export type FichaDeCompraParaLaPantalla = Readonly<{
   pagos: readonly Readonly<{
     id: string;
     fechaDePago: string;
+    /** El medio único, o `COMPUESTO` si el pago tiene varios (sus líneas, en `medios`). */
     medio: string;
+    medios: readonly Readonly<{ medio: string; importe: Importe }>[];
     importe: Importe;
     estado: "VIGENTE" | "ANULADO";
     /** El correo de quien lo declaró; `null` si no se puede mostrar. */
@@ -274,6 +276,10 @@ export function fichaDeLaCompra(
         id: p.id,
         fechaDePago: p.fechaDePago,
         medio: p.medio,
+        medios: p.medios.map((m) => ({
+          medio: m.medio,
+          importe: { moneda: MONEDA, monto: m.importe },
+        })),
         importe: { moneda: MONEDA, monto: p.importe },
         estado: p.estado === "ANULADO" ? "ANULADO" : "VIGENTE",
         declaradoPor: correoDe(p.registradoPor),

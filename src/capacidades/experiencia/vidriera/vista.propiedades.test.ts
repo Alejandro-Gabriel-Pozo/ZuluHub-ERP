@@ -57,6 +57,7 @@ const vidriera: fc.Arbitrary<VidrieraPublicada> = fc.record({
     colorDeLaEmpresa: null,
     logo: null,
   }),
+  cuentasDeImagen: fc.constant([]),
   letraBase: fc.constantFrom("NORMAL" as const, "GRANDE" as const),
   secciones: fc.array(
     fc.record({ id: uuid, nombre, productos: fc.array(producto, { minLength: 1, maxLength: 5 }) }),

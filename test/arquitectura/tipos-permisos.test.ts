@@ -54,6 +54,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "salon"
       | "clientes"
       | "compras"
+      | "cuenta_corriente"
       | "produccion"
     >();
     expectTypeOf<ClaveAccion>().toEqualTypeOf<
@@ -115,6 +116,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "vidrieras.renovar_enlace"
       | "vidrieras.retirar_de_linea"
       | "vidrieras.administrar_portal"
+      | "vidrieras.administrar_cuentas_de_imagen"
       | "stock.ver"
       | "stock.verificar_saldos"
       | "costos.ver"
@@ -196,6 +198,10 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "salon.dividir"
       | "tickets.cobrar"
       | "tickets.corregir"
+      | "cuenta_corriente.ver"
+      | "cuenta_corriente.administrar"
+      | "cuenta_corriente.cargar_a_cuenta"
+      | "cuenta_corriente.aprobar_exceso"
       | "partes.ver"
       | "partes.crear"
       | "partes.editar"
@@ -204,6 +210,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "partes.desvincular_contacto"
       | "partes.desactivar"
       | "partes.reactivar"
+      | "partes.anonimizar"
       | "proveedores.editar_ficha"
       | "proveedores.pedir_ficha"
       | "recepciones.ver"
@@ -300,6 +307,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       "salon",
       "clientes",
       "compras",
+      "cuenta_corriente",
       "produccion",
     ]);
   });

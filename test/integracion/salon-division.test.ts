@@ -79,13 +79,21 @@ describe.skipIf(base === null)("salón: dividir la cuenta", () => {
     partes: number,
     asignaciones: Parameters<MundoDeSalon["salon"]["dividirCuenta"]>[1]["asignaciones"],
     divisionId = nuevoId(),
-  ) => m.salon.dividirCuenta(e.gerente, { divisionId, cuentaId: cuenta, partes, asignaciones });
+  ) =>
+    m.salon.dividirCuenta(e.gerente, {
+      divisionId,
+      cuentaId: cuenta,
+      partes,
+      asignaciones,
+      sucursalDeTrabajo: e.sucursal,
+    });
   const estado = async (cuenta: string) =>
     (
       await m.filas<{ estado: string }>("select estado from cuenta_consumo where id = $1", [cuenta])
     )[0]?.estado;
   const cobrarHija = (cuenta: string, total: string) =>
     m.salon.cobrarMesa(e.gerente, {
+      sucursalDeTrabajo: e.sucursal,
       claveIdempotencia: nuevaClave(),
       cuentaId: cuenta,
       ejemplarId: nuevoId(),
@@ -339,6 +347,7 @@ describe.skipIf(base === null)("salón: dividir la cuenta", () => {
     const otra = await mesaConLineas([{ cantidad: "1" }]);
     expect(
       await m.salon.unirMesas(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         unionId: nuevoId(),
         cuentaDestinoId: otra.cuenta,
         cuentaOrigenId: hija,

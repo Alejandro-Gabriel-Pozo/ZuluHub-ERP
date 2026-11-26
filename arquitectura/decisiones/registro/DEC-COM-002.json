@@ -1,0 +1,10 @@
+{
+  "id": "DEC-COM-002",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "P1b: la pantalla Declarar pago suma filas de medio con «Agregar medio» y «Quitar» (textos ya existentes), sin «Falta asignar».",
+  "que_cambia": "Se paga una factura con varios medios, cada uno con su importe; sin textos nuevos. Revertir: dejar una sola fila.",
+  "donde": "fila 173 de decisiones-del-dueno-2026-11.md (delegación): mensaje del orquestador a Compras 4 del 26/11/2026 aceptando el inventario de P1b"
+}

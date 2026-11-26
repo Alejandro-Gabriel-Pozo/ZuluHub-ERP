@@ -1,10 +1,10 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
-import "../../../../test/propiedades/configuracion";
+import "../../../test/propiedades/configuracion";
 import {
   MAXIMO_DE_CUENTAS_POR_ITEMS,
   MAXIMO_DE_PARTES_POR_PORCENTAJE,
-} from "../../../primitivas/cuentas/limites-de-division";
+} from "./limites-de-division";
 import { repartirEnPartesIguales, repartirItemCompartido, repartirPorPorcentaje } from "./reparto";
 
 const centavos = (texto: string): bigint => BigInt(texto.replace(".", ""));

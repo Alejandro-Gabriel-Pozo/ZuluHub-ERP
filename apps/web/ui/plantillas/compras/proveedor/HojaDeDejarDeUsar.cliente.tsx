@@ -11,6 +11,7 @@ import {
   FICHA_DE_PROVEEDOR_INICIAL,
   type ResultadoDeFichaDeProveedor,
 } from "./resultado-de-proveedor";
+import { sinReiniciar } from "../../../patrones/sin-reinicio";
 
 export type PropsDeHojaDeDejarDeUsar = Readonly<{
   /** «Dejar de usar»: el verbo del botón y el título de la hoja. */
@@ -69,7 +70,7 @@ export function HojaDeDejarDeUsar({
         cerrable={!enviando}
         etiquetaDeCerrar={textoDeCerrar}
       >
-        <form action={enviar}>
+        <form action={enviar} onReset={sinReiniciar}>
           <ProveedorDeEnvioDeFormulario value={enviando}>
             <Pila separacion={3}>
               <p>{descripcion}</p>

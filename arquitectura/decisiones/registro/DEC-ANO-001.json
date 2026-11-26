@@ -1,0 +1,10 @@
+{
+  "id": "DEC-ANO-001",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "Un cliente con ficha de cuenta corriente, habilitada o suspendida, no se puede anonimizar; la ficha no se suspende ni se toca desde la anonimización.",
+  "que_cambia": "Cuándo se puede anonimizar a un cliente con cuenta corriente. Revertir: sacar la fuente de la cuenta del cliente de la lista de impedimentos.",
+  "donde": "src/composicion/anonimizacion-de-partes.ts; orquestador 26/11/2026, aprobó la propuesta de la sesión para CC-1"
+}

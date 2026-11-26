@@ -163,6 +163,8 @@ export type VentasDb = {
     ejemplar_vigente: Generated<number>;
     emitido_por: string;
     emitido_en: Date;
+    /** 0107 (R2 mínimo): el cliente al que se le cargó la venta al cerrar; nace con el ticket y no cambia. */
+    cargado_a_parte_id: string | null;
     creado_en: Generated<Date>;
     actualizado_en: Generated<Date>;
     version: Generated<number>;
@@ -339,6 +341,8 @@ export const COLUMNAS_DE_VENTAS = {
     "creado_en",
     "actualizado_en",
     "version",
+    // Al final: la columna se agregó con 0107 y el orden es el físico de la tabla.
+    "cargado_a_parte_id",
   ],
   ticket_correccion: [
     "id",

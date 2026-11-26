@@ -76,6 +76,7 @@ const SOLO_DEL_ADMINISTRADOR_DE_CATALOGO_Y_STOCK = [
   "productos.reactivar",
   "stock.ajustar",
   "stock.anular",
+  "vidrieras.administrar_cuentas_de_imagen",
   "vidrieras.administrar_portal",
   "vidrieras.crear",
   "vidrieras.editar",
@@ -189,6 +190,8 @@ const DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS = [
 
 /** El nivel de operación de las compras es solo del gerente. */
 const SOLO_DEL_GERENTE_DE_COMPRAS = ["compras.configurar"] as const;
+/** Anonimizar una parte (derecho de supresión del titular): solo el gerente (clientes.md §C, decidido; dueño, 25/11/2026). */
+const SOLO_DEL_GERENTE_DE_CLIENTES = ["partes.anonimizar"] as const;
 
 /** E6-T7 (P-2): lotes y calidad. Mirar lo ven los tres roles; el resto, gerente y administrador. */
 const DEL_OPERADOR_DE_LOTES = ["lotes.ver"] as const;
@@ -207,6 +210,16 @@ const SOLO_DEL_ADMINISTRADOR_DE_PRODUCCION = [
   "transformaciones.cancelar",
   "transformaciones.anular",
 ] as const;
+
+/** CC-1 (brief PR-CC-1 §4): cuenta corriente de clientes. Ver la ficha y administrarla: gerente y administrador (el operador no). CC-2: aprobar un exceso del límite, también de ellos. */
+const DEL_ADMINISTRADOR_DE_CUENTA_CORRIENTE = [
+  "cuenta_corriente.ver",
+  "cuenta_corriente.administrar",
+  "cuenta_corriente.aprobar_exceso",
+] as const;
+
+/** CC-2 (brief PR-CC-2 §1.6, DEC-CCL-001): cerrar una cuenta a nombre de un cliente lo hacen los tres roles (los que hoy cierran cuentas). */
+const DEL_OPERADOR_DE_CUENTA_CORRIENTE = ["cuenta_corriente.cargar_a_cuenta"] as const;
 
 /** E7 (spec §3.13, PP-2): los tres roles unen, dividen, cambian de mesa, envían a cocina e imprimen; el operador también mira mesas e impresoras. */
 const DEL_OPERADOR_DE_SALON_Y_COMANDAS = [
@@ -239,6 +252,7 @@ const DEL_OPERADOR = [
   ...DEL_OPERADOR_DE_LOTES,
   ...DEL_OPERADOR_DE_PRODUCCION,
   ...DEL_OPERADOR_DE_CAJA_CIERRE_Y_VENTAS,
+  ...DEL_OPERADOR_DE_CUENTA_CORRIENTE,
   ...DEL_OPERADOR_DE_SALON_Y_COMANDAS,
 ] as const;
 
@@ -279,6 +293,7 @@ const SOLO_DEL_GERENTE = [
   ...SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL,
   ...SOLO_DEL_GERENTE_DE_CAJA,
   ...SOLO_DEL_GERENTE_DE_COMPRAS,
+  ...SOLO_DEL_GERENTE_DE_CLIENTES,
 ] as const;
 
 const DEL_ADMINISTRADOR = [
@@ -299,6 +314,7 @@ const DEL_ADMINISTRADOR = [
   ...DE_LA_ESCALERA_DE_ELECCIONES,
   ...DEL_ADMINISTRADOR_DE_CAJA,
   ...DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS,
+  ...DEL_ADMINISTRADOR_DE_CUENTA_CORRIENTE,
   ...DEL_ADMINISTRADOR_DE_SALON_Y_COMANDAS,
 ].sort();
 
@@ -320,9 +336,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 177 acciones: 39 de empresa (5 de roles propios y su asignación), configuración fiscal y facturación, 44 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas", () => {
+  it("hay 183 acciones: 39 de empresa (5 de roles propios y su asignación), configuración fiscal y facturación, 45 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas y 4 de cuenta corriente (2 de CC-1 y 2 de CC-2)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(177);
+    expect(todas).toHaveLength(183);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -352,7 +368,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("composiciones"),
       porPrefijo("conteos"),
       porPrefijo("costos"),
-    ]).toEqual([6, 0, 1, 1, 0, 0, 11, 7, 4, 2, 1, 4, 1]);
+    ]).toEqual([6, 0, 1, 1, 0, 0, 12, 7, 4, 2, 1, 4, 1]);
     expect([
       porPrefijo("cajas"),
       porPrefijo("medios_de_pago"),
@@ -373,7 +389,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("comprobantes_de_proveedor"),
       porPrefijo("compras"),
       porPrefijo("conciliaciones"),
-    ]).toEqual([8, 2, 4, 5, 3, 3]);
+    ]).toEqual([9, 2, 4, 5, 3, 3]);
   });
 
   it("las acciones retiradas por las decisiones 138 y 133 ya no existen: ni en la matriz ni en el catálogo", () => {
@@ -728,16 +744,16 @@ describe("el guard con las reglas reales", () => {
     (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
   );
 
-  it("todo módulo en desarrollo del catálogo es solo produccion (comandas y salon desde S-0r, 17/11/2026; cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12, catalogo, caja y ventas desde el 15/11/2026, DEC-0463, y vidriera desde el 20/11/2026, DEC-0826)", () => {
-    expect([...ENDESARROLLO].sort()).toEqual(["produccion"]);
+  it("todo módulo en desarrollo del catálogo es solo produccion y cuenta_corriente (CC-1, 25/11/2026; comandas y salon desde S-0r, 17/11/2026; cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12, catalogo, caja y ventas desde el 15/11/2026, DEC-0463, y vidriera desde el 20/11/2026, DEC-0826)", () => {
+    expect([...ENDESARROLLO].sort()).toEqual(["cuenta_corriente", "produccion"]);
   });
 
-  it("las 5 acciones sin construir (todas de producción) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  it("las 9 acciones sin construir (5 de producción y 4 de cuenta corriente) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
     const sinConstruir = ENDESARROLLO.flatMap(
       (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
     );
-    expect(sinConstruir).toHaveLength(5);
+    expect(sinConstruir).toHaveLength(9);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(
