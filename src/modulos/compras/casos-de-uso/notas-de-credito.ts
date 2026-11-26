@@ -6,6 +6,7 @@ import { razonSocialDeLaParte } from "../dominio/factura";
 import { decidirPorHuella } from "../dominio/huella";
 import { esUuid } from "../dominio/identificadores";
 import { huellaDeLaNotaDeCredito, leerNotaDeCredito } from "../dominio/nota-de-credito";
+import { elPagoCubreSinLaNota } from "../dominio/pago";
 import { motivoDeAnulacionDesdeTexto } from "../dominio/registrar-compra";
 import { anularLaNotaDeCredito, asentarLaNotaDeCredito } from "./cargo-de-la-factura";
 import { autorizar, traducir } from "./comun";
@@ -259,12 +260,31 @@ export function armarAnularNotaDeCredito(dependencias: DependenciasDeCompras) {
           ) {
             return err("NOTA_DE_CREDITO_NO_ENCONTRADA");
           }
-          await tx.comprobantesDeProveedor.bloquear(empresaId, sinBloquear.comprobanteAsociadoId);
+          const factura = await tx.comprobantesDeProveedor.bloquear(
+            empresaId,
+            sinBloquear.comprobanteAsociadoId,
+          );
           const nota = await tx.comprobantesDeProveedor.bloquear(empresaId, entrada.comprobanteId);
           if (nota === null || nota.clase !== "NOTA_DE_CREDITO") {
             return err("NOTA_DE_CREDITO_NO_ENCONTRADA");
           }
           if (nota.estado === "ANULADO") return ok({ yaEstaba: true });
+          // Una factura ya pagada por el neto con esta nota no se queda con la deuda de la nota: primero se anula el pago. Una nota que llegó DESPUÉS del pago (el pago es el total) sí se anula. Bajo el bloqueo de la
+          // factura, que `declararPago` también toma: no hay pago ni nota a medias. Chequeo: `test/integracion/compras-pago-por-el-neto.test.ts`.
+          const vigente =
+            factura === null ? null : await tx.pagosDeProveedor.vigenteDe(empresaId, factura.id);
+          if (
+            factura !== null &&
+            vigente !== null &&
+            !elPagoCubreSinLaNota(
+              vigente.importe,
+              factura.totalSegunFactura,
+              await tx.notasDeCredito.acreditadoDe(empresaId, factura.id),
+              nota.totalSegunFactura,
+            )
+          ) {
+            return err("NOTA_DE_CREDITO_CON_PAGO");
+          }
           const hecho = await tx.comprobantesDeProveedor.anular(empresaId, nota.id, {
             por: persona,
             en: contexto.ahora,

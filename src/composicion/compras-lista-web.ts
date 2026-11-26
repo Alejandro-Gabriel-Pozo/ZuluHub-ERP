@@ -143,6 +143,8 @@ export type FichaDeCompraParaLaPantalla = Readonly<{
     fecha: string | null;
     vencimientoDePago: string | null;
     totalSegunLaFactura: Importe;
+    /** Lo que se paga: el total menos lo que acreditan sus notas de crédito (lo calcula el servidor). */
+    netoAPagar: Importe;
   }> | null;
   /** Los pagos de la factura, del más viejo al más nuevo (a lo sumo uno vigente). Vacía sin factura o sin pagos. */
   pagos: readonly Readonly<{
@@ -270,6 +272,7 @@ export function fichaDeLaCompra(
               fecha: f.comprobante.fecha,
               vencimientoDePago: f.comprobante.vencimientoDePago,
               totalSegunLaFactura: { moneda: MONEDA, monto: f.comprobante.totalSegunFactura },
+              netoAPagar: { moneda: MONEDA, monto: f.comprobante.netoAPagar },
             }
           : null,
       pagos: f.pagos.map((p) => ({

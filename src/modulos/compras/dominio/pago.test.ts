@@ -10,6 +10,8 @@ import {
   MEDIOS_DE_LA_CABECERA,
   MEDIOS_DE_PAGO,
   resolverLosMedios,
+  netoAPagar,
+  elPagoCubreSinLaNota,
 } from "./pago";
 
 const AHORA = new Date("2026-10-11T12:00:00Z");
@@ -287,5 +289,37 @@ describe("leerSalidaDeCaja", () => {
       ok: false,
       error: "SALIDA_DE_CAJA_INVALIDA",
     });
+  });
+});
+
+describe("netoAPagar", () => {
+  it("el total menos lo acreditado, en centavos exactos; sin notas, el total", () => {
+    expect(netoAPagar("2420.00", "0.00")).toBe("2420.00");
+    expect(netoAPagar("2420.00", "420.00")).toBe("2000.00");
+    expect(netoAPagar("0.30", "0.10")).toBe("0.20");
+    expect(netoAPagar("100.01", "0.01")).toBe("100.00");
+  });
+  it("sin nada para pagar (lo acreditan todo, o de más) o con un texto que no es importe: null", () => {
+    expect(netoAPagar("2420.00", "2420.00")).toBeNull();
+    expect(netoAPagar("2420.00", "2420.01")).toBeNull();
+    expect(netoAPagar("abc", "0.00")).toBeNull();
+    expect(netoAPagar("2420.00", "1e3")).toBeNull();
+  });
+});
+
+describe("elPagoCubreSinLaNota", () => {
+  it("un pago que ya descontó la nota no la deja anular; uno por el total (la nota llegó después) sí", () => {
+    // factura 2420, nota 420 (la única acreditada): pagó el neto (2000) o el total (2420).
+    expect(elPagoCubreSinLaNota("2000.00", "2420.00", "420.00", "420.00")).toBe(false);
+    expect(elPagoCubreSinLaNota("2420.00", "2420.00", "420.00", "420.00")).toBe(true);
+  });
+  it("con varias notas mira lo que quedaría sin esa nota", () => {
+    // acreditado 600 (420 + 180); pagó el neto 1820. Anular la de 180 deja un neto de 2000 > 1820: no cubre.
+    expect(elPagoCubreSinLaNota("1820.00", "2420.00", "600.00", "180.00")).toBe(false);
+    // pagó 2000 cuando solo estaba la de 420; la de 180 llegó después: anularla deja el neto en 2000: cubre.
+    expect(elPagoCubreSinLaNota("2000.00", "2420.00", "600.00", "180.00")).toBe(true);
+  });
+  it("un texto que no es importe no cubre (falla cerrada)", () => {
+    expect(elPagoCubreSinLaNota("x", "2420.00", "420.00", "420.00")).toBe(false);
   });
 });

@@ -36,7 +36,7 @@ export type FilaDeListaDeNotas = Readonly<{
 export interface RepositorioDeNotasDeCredito {
   /** De la más nueva a la más vieja (`fecha_negocio`, `id`), con el filtro y el alcance. */
   listar(empresa: EmpresaId, filtro: FiltroDeListaDeNotas): Promise<readonly FilaDeListaDeNotas[]>;
-  /** La suma de lo que dicen las notas VIGENTES de una factura (texto decimal con dos decimales). */
+  /** La suma de lo que dicen las notas de CRÉDITO vigentes de una factura (las de débito no restan: se pagan aparte) (texto decimal con dos decimales). */
   acreditadoDe(empresa: EmpresaId, facturaId: string): Promise<string>;
 }
 
@@ -111,6 +111,7 @@ export function crearRepositorioDeNotasDeCredito(
         )
         .where("c.empresa_id", "=", empresa)
         .where("c.comprobante_asociado_id", "=", facturaId)
+        .where("c.clase", "=", "NOTA_DE_CREDITO")
         .where("c.estado", "<>", "ANULADO")
         .executeTakeFirst();
       return fila?.total ?? "0.00";

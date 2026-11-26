@@ -134,6 +134,35 @@ export function resolverLosMedios(
   return suma === totalEnCentavos ? ok(lineas) : err("LA_SUMA_DE_LOS_MEDIOS_NO_ES_EL_TOTAL");
 }
 
+/**
+ * Lo que hay que pagar de una factura: su total menos lo que acreditan sus notas de crédito vigentes (`acreditado`), en centavos exactos (Q-3 del dueño, 25/11/2026: neto = total − notas de crédito; la nota de débito se paga aparte).
+ * `null` si no queda nada para pagar (neto cero) o algún texto no es un importe: se paga solo un importe mayor que cero. Previene: pagar el total de una factura que el proveedor ya acreditó en parte o por entero.
+ */
+export function netoAPagar(total: string, acreditado: string): string | null {
+  const t = leerImporte(total);
+  const a = leerImporte(acreditado);
+  if (t === null || a === null || t - a <= 0n) return null;
+  return textoDeImporte(t - a);
+}
+
+/**
+ * Si el pago vigente de una factura sigue cubriendo todo lo que se debe de ella DESPUÉS de anular una nota de crédito: el neto que quedaría (total − lo acreditado sin esa nota) no puede pasar de lo que se pagó.
+ * Una nota que llegó después del pago (el pago es el total) se anula sin problema; una que el pago ya descontó, no: primero se anula el pago. Previene: una factura «pagada» con una deuda que nadie declaró.
+ */
+export function elPagoCubreSinLaNota(
+  pagoImporte: string,
+  total: string,
+  acreditado: string,
+  totalDeLaNota: string,
+): boolean {
+  const pagado = leerImporte(pagoImporte);
+  const t = leerImporte(total);
+  const a = leerImporte(acreditado);
+  const n = leerImporte(totalDeLaNota);
+  if (pagado === null || t === null || a === null || n === null) return false;
+  return pagado >= t - (a - n);
+}
+
 /** El medio que dice la cabecera del pago: el único medio, o `COMPUESTO` si hay más de uno (el disparador de la base lo exige igual). */
 export const medioDeLaCabecera = (medios: readonly { medio: MedioDePago }[]): MedioDeLaCabecera =>
   medios.length === 1 ? (medios[0] as { medio: MedioDePago }).medio : "COMPUESTO";
