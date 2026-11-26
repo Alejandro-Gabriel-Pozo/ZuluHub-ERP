@@ -1,7 +1,6 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { sucursalId } from "../../../primitivas/identificadores/marca";
 import {
-  cantidadConSignoATexto,
   cantidadConSignoDesdeTexto,
   compararConSigno,
   negarConSigno,
@@ -13,12 +12,12 @@ import { registrarMovimientoEnTx } from "../../stock/publico";
 import { huellaDeComando } from "../dominio/huella";
 import { esUuid } from "../dominio/identificadores";
 import {
-  claveDeLaAnulacionDeLaConciliacion,
   claveDeLaAnulacionDeLaEntrada,
   motivoDeAnulacionDesdeTexto,
   origenDeLaEntradaDeStock,
 } from "../dominio/registrar-compra";
 import { anularElCargoDeLaFactura } from "./cargo-de-la-factura";
+import { espejarLasConciliacionesDelAtajo } from "./espejo-del-atajo";
 import { autorizar, exigirAlcanceDeSucursal, traducir } from "./comun";
 import { rehacerOfertasDeLaCompraAnulada } from "./oferta-del-proveedor";
 import type { DependenciasDeCompras } from "./contrato";
@@ -164,44 +163,7 @@ export function armarAnularCompra(dependencias: DependenciasDeCompras) {
           if (comprobante !== null) {
             const bloqueado = await tx.comprobantesDeProveedor.bloquear(empresaId, comprobante.id);
             if (bloqueado !== null && bloqueado.estado === "REGISTRADO") {
-              const conciliaciones = await tx.conciliacionesDeCompra.conciliacionesDe(
-                empresaId,
-                bloqueado.id,
-              );
-              const yaEspejadas = new Set(conciliaciones.map((c) => c.anulaA));
-              for (const conciliacion of conciliaciones) {
-                if (conciliacion.acto !== "CONCILIACION" || yaEspejadas.has(conciliacion.id))
-                  continue;
-                const espejo = await tx.conciliacionesDeCompra.insertarConciliacion(empresaId, {
-                  acto: "ANULACION",
-                  anulaA: conciliacion.id,
-                  comprobanteId: bloqueado.id,
-                  esAtajo: true,
-                  nivel: bloqueado.nivel,
-                  clave: claveDeLaAnulacionDeLaConciliacion(conciliacion.id),
-                  registradoPor: persona,
-                });
-                if (espejo === undefined) {
-                  throw new Error("el espejo de la conciliación chocó con una restricción única");
-                }
-                const asignaciones = await tx.conciliacionesDeCompra.asignacionesDe(
-                  empresaId,
-                  conciliacion.id,
-                );
-                await tx.conciliacionesDeCompra.insertarAsignaciones(
-                  empresaId,
-                  { id: espejo, acto: "ANULACION", comprobanteId: bloqueado.id },
-                  asignaciones.map((a) => {
-                    const cantidad = cantidadConSignoDesdeTexto(a.cantidad);
-                    if (!cantidad.ok)
-                      throw new RangeError("compras: la asignación guardada no es una cantidad");
-                    return {
-                      ...a,
-                      cantidad: cantidadConSignoATexto(negarConSigno(cantidad.valor)),
-                    };
-                  }),
-                );
-              }
+              await espejarLasConciliacionesDelAtajo(tx, empresaId, persona, bloqueado);
               const comprobanteAnulado = await tx.comprobantesDeProveedor.anular(
                 empresaId,
                 bloqueado.id,

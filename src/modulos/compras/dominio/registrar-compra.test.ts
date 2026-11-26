@@ -4,6 +4,7 @@ import {
   claveDeLaAnulacionDeLaConciliacion,
   claveDeLaAnulacionDeLaEntrada,
   claveDeLaConciliacionDeAtajo,
+  claveDeLaConciliacionDelCambioDeComprobante,
   claveDeLaEntradaDeStock,
   claveDelPagoDeLaCompra,
   elegirDepositoDeLaCompra,
@@ -358,6 +359,15 @@ describe("los identificadores de la entrada de stock", () => {
     expect(claveDeLaAnulacionDeLaConciliacion(R)).toBe("8fdda9b0-817d-5f55-af1f-9d6eb0044ac2");
     expect(claveDeLaConciliacionDeAtajo(R)).not.toBe(claveDeLaConciliacionDeAtajo(D));
     expect(claveDeLaAnulacionDeLaConciliacion(R)).not.toBe(claveDeLaAnulacionDeLaConciliacion(D));
+  });
+  it("la conciliación atajo del cambio de comprobante es distinta de la de la recepción, cambia con la clave del cambio y es fija", () => {
+    const K = "3b0d7e52-9c41-4a6e-8f13-5d2a6c9e1b70";
+    const cambio = claveDeLaConciliacionDelCambioDeComprobante(R, K);
+    expect(cambio).not.toBe(claveDeLaConciliacionDeAtajo(R));
+    expect(cambio).not.toBe(claveDeLaConciliacionDelCambioDeComprobante(D, K));
+    expect(cambio).not.toBe(claveDeLaConciliacionDelCambioDeComprobante(R, R));
+    expect(cambio).toBe(claveDeLaConciliacionDelCambioDeComprobante(R, K));
+    expect(cambio).toBe("8cbc77e8-1479-5f12-9e2d-9671b787ce01");
   });
   it("la del pago de la compra también es fija y cambia con la recepción", () => {
     expect(claveDelPagoDeLaCompra(R)).toBe("659a618b-b9d9-5ef8-a241-48c01ddd115c");

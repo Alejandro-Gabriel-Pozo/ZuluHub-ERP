@@ -9,7 +9,8 @@ import type { EstadoEfectivo } from "../../../../../src/contexto/estados";
 export type EmpresaParaMostrar = Readonly<{
   empresaId: string;
   nombre: string;
-  rol: RolDeEmpresa;
+  /** `null`: la persona tiene un rol propio de esa empresa; su nombre se ve en «Usuarios» (acá no se muestra nada: el rol no es uno de los tres base). */
+  rol: RolDeEmpresa | null;
   estadoEfectivo: EstadoEfectivo;
 }>;
 
