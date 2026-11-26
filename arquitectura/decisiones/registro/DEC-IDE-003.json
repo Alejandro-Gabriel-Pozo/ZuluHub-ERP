@@ -1,0 +1,10 @@
+{
+  "id": "DEC-IDE-003",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Los textos de etiqueta de la pantalla «Roles» (Nuevo rol, lista vacía, personas, Archivado, Archivar, Empezar desde, Sin acciones, Copiar de otro rol) quedan aceptados.",
+  "que_cambia": "Ocho etiquetas simples de la pantalla Roles; sin dinero, permisos ni fiscal. Cualquier otro texto de la pantalla reusa uno existente.",
+  "donde": "Delegación fila 173, aceptación del orquestador 26/11/2026; inventario de textos de la pantalla Roles"
+}

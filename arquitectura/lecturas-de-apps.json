@@ -169,6 +169,12 @@
     "apps/web/app/s/app/(operacion)/salon/page.tsx",
     "apps/web/ui/plantillas/salon/*"
   ],
+  "test/web/ficha-de-roles.test.ts": [
+    "apps/web/app/s/app/(operacion)/cuenta/**",
+    "apps/web/app/s/app/acciones-de-roles.ts",
+    "apps/web/servidor/roles.ts",
+    "apps/web/ui/plantillas/roles/*"
+  ],
   "test/web/ficha-de-usuarios.test.ts": [
     "apps/web/app/s/app/(operacion)/cuenta/**",
     "apps/web/servidor/usuarios.ts",
