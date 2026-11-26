@@ -104,7 +104,12 @@ describe.skipIf(base === null)("cuenta corriente: vender a cuenta, lista y previ
       }),
     );
     valorDe(
-      await m.casos.cerrarCuenta(e.gerente, { cuentaId: cuenta, ejemplarId: nuevoId(), clienteId }),
+      await m.casos.cerrarCuenta(e.gerente, {
+        cuentaId: cuenta,
+        ejemplarId: nuevoId(),
+        clienteId,
+        totalEsperado: { moneda: "ARS", monto: "1000.00" },
+      }),
     );
   };
   const constancias = async () =>
