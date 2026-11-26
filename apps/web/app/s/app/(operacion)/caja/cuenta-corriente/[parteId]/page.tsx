@@ -8,7 +8,10 @@ import { FormularioDeReactivarCuenta } from "../../../../../../../ui/plantillas/
 import { FormularioDeSuspenderCuenta } from "../../../../../../../ui/plantillas/cuenta-corriente/FormularioDeSuspenderCuenta.cliente";
 import { PantallaDeLaFichaDeCuenta } from "../../../../../../../ui/plantillas/cuenta-corriente/PantallaDeLaFichaDeCuenta";
 import { armarLaFichaDeLaCuenta } from "../../../../../../../ui/plantillas/cuenta-corriente/modelo-de-cuenta-corriente";
-import { rutaDeLasCondicionesDeCuenta } from "../../../../../../../ui/plantillas/cuenta-corriente/rutas-de-cuenta-corriente";
+import {
+  direccionDeExportarCuentaCorriente,
+  rutaDeLasCondicionesDeCuenta,
+} from "../../../../../../../ui/plantillas/cuenta-corriente/rutas-de-cuenta-corriente";
 import { textosDeCuentaCorriente } from "../../../../../../../ui/plantillas/cuenta-corriente/textos-de-cuenta-corriente";
 import {
   reactivarCuentaAccion,
@@ -35,6 +38,9 @@ export default async function PaginaDeLaFichaDeCuenta({ params }: PropsDePagina)
         textos={textos}
         acciones={
           <>
+            <EnlaceDeAccion href={direccionDeExportarCuentaCorriente()} variante="secundaria">
+              {textos.exportar}
+            </EnlaceDeAccion>
             {puede ? (
               <EnlaceDeAccion
                 href={rutaDeLasCondicionesDeCuenta(ficha.parteId)}

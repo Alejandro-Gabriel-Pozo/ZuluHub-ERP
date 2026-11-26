@@ -38,7 +38,13 @@ export function crearApoyoDeLaExportacionDeCuentaCorriente(): ApoyoDeLaExportaci
     },
     async ticketsDeLosMovimientos(tx, empresa, ticketIds, cobranzaIds) {
       const { ticketsParaCuentas } = comoPiezas(tx);
-      const aTicket = (t: { numero: number; sucursalId: string; esDelSalon: boolean }) => ({
+      const aTicket = (t: {
+        ticketId: string;
+        numero: number;
+        sucursalId: string;
+        esDelSalon: boolean;
+      }) => ({
+        ticketId: t.ticketId,
         numero: t.numero,
         sucursalId: t.sucursalId,
         esDelSalon: t.esDelSalon,
