@@ -1,0 +1,10 @@
+{
+  "id": "DEC-COM-015",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Las etiquetas simples de la pantalla «Reemplazar el comprobante»: el título, los rótulos «Qué hay que deshacer antes» y «Comprobante nuevo», el botón «Cambiar el comprobante de la compra» y el rótulo «Pago» del primer paso (los demás frenos reutilizan «Conciliaciones» y «Notas de la factura»). Aceptadas por el orquestador.",
+  "que_cambia": "Lo que dice cada rótulo de esa pantalla. Revertir: cambiar el valor por defecto en catalogo-compras-costo.ts (una línea por texto).",
+  "donde": "catalogo-compras-costo.ts (compras.reemplazo.titulo, que_deshacer_antes, comprobante_nuevo, cambiar_comprobante, pago); delegación del 15/11/2026 (decisiones-del-dueno-2026-11.md, fila 173), aceptado por el orquestador el 26/11/2026 (aprobación de NOTAS-2c-2); «Pago» es la única etiqueta sin parecido aprobado y queda marcada SUPUESTO"
+}

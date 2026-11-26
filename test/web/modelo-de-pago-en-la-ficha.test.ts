@@ -59,6 +59,7 @@ const PUEDE = {
   pagar: true,
   anularPago: true,
   verNotas: false,
+  cambiarElComprobante: false,
 };
 
 describe("el pago de la factura en la ficha de la compra", () => {

@@ -29,10 +29,15 @@ const formaDeLinea = z.strictObject({
   alicuota: z.enum(ALICUOTAS_DE_COMPRA).nullish(),
 });
 
+/** La factura de la empresa (N3 y N4): la de «Nueva compra» con cada línea apuntando a su PRODUCTO. La usan «Cargar factura» y «Reemplazar» (una regla, un lugar). */
+export const formaDeLaFacturaSeparada = formaDeFactura
+  .omit({ lineas: true })
+  .extend({ lineas: z.array(formaDeLinea).min(1) });
+
 const formaDeRegistrar = z.strictObject({
   clave: identificador,
   proveedorId: identificador,
-  factura: formaDeFactura.omit({ lineas: true }).extend({ lineas: z.array(formaDeLinea).min(1) }),
+  factura: formaDeLaFacturaSeparada,
 });
 
 const enBlancoEsNada = (valor: string | null | undefined): string | null =>
@@ -60,32 +65,38 @@ export type EntradaWebDeRegistrarFactura = Readonly<{
   }>;
 }>;
 
+export type FacturaWebSeparada = EntradaWebDeRegistrarFactura["factura"];
+
+/** La factura de la empresa leída con su forma: los opcionales en blanco son `null`. */
+export const aFacturaSeparadaWeb = (
+  f: z.infer<typeof formaDeLaFacturaSeparada>,
+): FacturaWebSeparada => ({
+  tipo: f.tipo,
+  puntoDeVenta: f.puntoDeVenta,
+  numero: f.numero,
+  fecha: f.fecha,
+  vencimientoDePago: enBlancoEsNada(f.vencimientoDePago),
+  lineas: f.lineas.map((l) => ({
+    productoId: l.productoId,
+    cantidadFacturada: l.cantidadFacturada,
+    precioNeto: l.precioNeto,
+    alicuota: l.alicuota ?? null,
+  })),
+  percepciones: enBlancoEsNada(f.percepciones),
+  totalSegunFactura: f.totalSegunFactura,
+  cuitDelProveedor: enBlancoEsNada(f.cuitDelProveedor),
+  condicionIva: enBlancoEsNada(f.condicionIva),
+});
+
 export function entradaDeRegistrarFactura(
   crudo: unknown,
 ): Resultado<EntradaWebDeRegistrarFactura, ErrorDeEntrada> {
   const forma = leer(formaDeRegistrar, crudo);
   if (!forma.ok) return forma;
-  const f = forma.valor.factura;
   return ok({
     clave: forma.valor.clave,
     proveedorId: forma.valor.proveedorId,
-    factura: {
-      tipo: f.tipo,
-      puntoDeVenta: f.puntoDeVenta,
-      numero: f.numero,
-      fecha: f.fecha,
-      vencimientoDePago: enBlancoEsNada(f.vencimientoDePago),
-      lineas: f.lineas.map((l) => ({
-        productoId: l.productoId,
-        cantidadFacturada: l.cantidadFacturada,
-        precioNeto: l.precioNeto,
-        alicuota: l.alicuota ?? null,
-      })),
-      percepciones: enBlancoEsNada(f.percepciones),
-      totalSegunFactura: f.totalSegunFactura,
-      cuitDelProveedor: enBlancoEsNada(f.cuitDelProveedor),
-      condicionIva: enBlancoEsNada(f.condicionIva),
-    },
+    factura: aFacturaSeparadaWeb(forma.valor.factura),
   });
 }
 

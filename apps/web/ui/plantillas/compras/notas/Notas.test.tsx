@@ -371,6 +371,7 @@ describe("el enlace «Notas de crédito» del detalle de la factura", () => {
     anularConciliacion: false,
     tomarElCosto: false,
     verNotas,
+    reemplazar: false,
   });
   const detalle = (verNotas: boolean) => (
     <PantallaDeDetalleDeFactura
