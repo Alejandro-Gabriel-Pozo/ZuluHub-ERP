@@ -291,6 +291,8 @@ describe.skipIf(base === null)("lectura pública de la carta (0044) con el rol r
           "rubro",
           "sucursal_id",
         ),
+        // Las cuentas de imagen declaradas (0102): qué cuenta, de qué proveedor y si sigue activa; ni quién la declaró, ni la clave, ni el motivo del retiro.
+        cuenta_de_imagen_declarada: ordenadas("cuenta", "empresa_id", "estado", "proveedor"),
         // La identidad de la carta (0077): solo el color y la empresa; ni quién la creó, ni cuándo, ni la versión.
         identidad_de_carta_empresa: ordenadas("color_principal", "empresa_id"),
         disponibilidad_de_producto: ordenadas("empresa_id", "oculto", "producto_id", "sucursal_id"),

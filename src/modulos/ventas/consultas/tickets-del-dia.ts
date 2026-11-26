@@ -11,6 +11,7 @@ import {
   type DatoDelCobro,
   type TipoDeMedio,
 } from "../../caja/publico";
+import { crearDirectorioDePartes } from "../../clientes/publico";
 import { ORIGEN_DEL_COBRO_DE_TICKET } from "../casos-de-uso/cobrar";
 import { esUuid, numeroDeCorreccion } from "../casos-de-uso/calculo";
 import type { RenglonParaFacturar, TicketDeJornada } from "../persistencia/tipos-de-lecturas";
@@ -28,6 +29,31 @@ export const MAXIMO_DE_TICKETS_DEL_DIA = 1000;
 
 const importe = (monto: string): ImporteJson => ({ moneda: "ARS", monto });
 
+const directorio = crearDirectorioDePartes();
+
+/** El cliente cargado al ticket (R2 mínimo, 0107). `nombre` es `null` si la parte se anonimizó o no se ve desde la empresa: nunca un nombre inventado. */
+export type ClienteDelTicket = Readonly<{ id: string; nombre: string | null }>;
+
+/**
+ * Los clientes cargados a estos tickets, con su nombre, en UNA lectura (sin N+1). Un ticket sin cliente no aparece en el mapa: su respuesta queda como era.
+ */
+async function clientesDe(
+  tx: TxDeConsultasDeVentas,
+  contexto: ContextoOperativo,
+  filas: readonly Readonly<{ ticketId: string; cargadoAParteId: string | null }>[],
+): Promise<ReadonlyMap<string, ClienteDelTicket>> {
+  const conCliente = filas.flatMap((f) =>
+    f.cargadoAParteId === null ? [] : [{ ticketId: f.ticketId, id: f.cargadoAParteId }],
+  );
+  if (conCliente.length === 0) return new Map();
+  const nombres = await directorio.nombresParaMostrar(tx, contexto.empresaId, [
+    ...new Set(conCliente.map((c) => c.id)),
+  ]);
+  return new Map(
+    conCliente.map((c) => [c.ticketId, { id: c.id, nombre: nombres.get(c.id) ?? null }]),
+  );
+}
+
 export type TicketDelDia = Readonly<{
   ticketId: string;
   numero: number;
@@ -41,6 +67,8 @@ export type TicketDelDia = Readonly<{
   emitidoEn: string;
   /** Tiene un comprobante que fiscal da por vigente (también «confirmando»). */
   facturado: boolean;
+  /** El cliente al que se le cargó la venta; la clave falta si el ticket no tiene. */
+  cliente?: ClienteDelTicket;
 }>;
 
 export type TicketsDelDia = Readonly<{
@@ -127,6 +155,7 @@ export async function ticketsDelDia(
     filas.map((f) => f.ticketId),
   );
   if (!facturados.ok) return facturados;
+  const clientes = await clientesDe(tx, contexto, filas);
   return ok({
     fechaNegocio: jornada,
     tickets: filas.map((f) => ({
@@ -138,9 +167,13 @@ export async function ticketsDelDia(
       totalVigente: importe(f.totalVigente),
       emitidoEn: f.emitidoEn.toISOString(),
       facturado: facturados.valor.has(f.ticketId),
+      ...conCliente(clientes.get(f.ticketId)),
     })),
   });
 }
+
+const conCliente = (cliente: ClienteDelTicket | undefined) =>
+  cliente === undefined ? {} : { cliente };
 
 export type CobroDeLaFicha = Readonly<{
   orden: number;
@@ -174,6 +207,8 @@ export type FichaDelTicketDelDia = Readonly<{
   anulacion: Readonly<{ motivo: string; hechaPor: string; hechaEn: string }> | null;
   /** false si está ANULADO o es de CORTESÍA (la misma regla que el papel del ticket). */
   imprimible: boolean;
+  /** El cliente al que se le cargó la venta; la clave falta si el ticket no tiene. */
+  cliente?: ClienteDelTicket;
 }>;
 
 export type ErrorDeFichaDelTicketDelDia =
@@ -199,6 +234,9 @@ export async function fichaDelTicketDelDia(
   }
   const facturados = await facturadosDe(tx, contexto, dependencias, [t.id]);
   if (!facturados.ok) return facturados;
+  const clientes = await clientesDe(tx, contexto, [
+    { ticketId: t.id, cargadoAParteId: t.cargadoAParteId },
+  ]);
 
   let caja: FichaDelTicketDelDia["caja"] = null;
   let cobros: readonly CobroDeLaFicha[] = [];
@@ -246,6 +284,7 @@ export async function fichaDelTicketDelDia(
     caja,
     cobros,
     imprimible: esImprimible(t.estado),
+    ...conCliente(clientes.get(t.id)),
     anulacion:
       ficha.anulacion === null
         ? null

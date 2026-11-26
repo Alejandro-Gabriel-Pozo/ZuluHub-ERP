@@ -143,6 +143,11 @@ export {
   type CambiosDeCartaPublica,
   type RepositorioDeCartas,
 } from "./persistencia/repositorio-de-cartas";
+export {
+  crearRepositorioDeCuentasDeImagen,
+  type AltaDeCuentaDeImagen,
+  type RepositorioDeCuentasDeImagen,
+} from "./persistencia/repositorio-de-cuentas-de-imagen";
 export type {
   CartaLeida,
   GrupoLeido,
@@ -189,6 +194,15 @@ export type {
   EntradaDeGuardarCartaPublica,
   SalidaDeGuardarCartaPublica,
 } from "./casos-de-uso/guardar-carta-publica";
+export type {
+  EntradaDeDeclararCuentaDeImagen,
+  SalidaDeDeclararCuentaDeImagen,
+} from "./casos-de-uso/declarar-cuenta-de-imagen";
+export type {
+  EntradaDeRetirarCuentaDeImagen,
+  SalidaDeRetirarCuentaDeImagen,
+} from "./casos-de-uso/retirar-cuenta-de-imagen";
+export type { CuentaDeImagenDeclarada } from "./dominio/cuenta-de-imagen";
 export type {
   AlcanceDeOcultamiento,
   EntradaDeOcultarProducto,

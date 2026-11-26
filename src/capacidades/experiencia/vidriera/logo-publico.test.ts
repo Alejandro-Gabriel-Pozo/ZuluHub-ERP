@@ -22,8 +22,12 @@ const PARTES: PartesDeDireccion = {
 };
 const BYTES = new Uint8Array([1, 2, 3]);
 
-const vidrieraConLogo = (logo: PartesDeDireccion | null, codigo = "cafe-1"): VidrieraPublicada =>
-  ({ id: "v1", codigo, identidad: { logo } }) as unknown as VidrieraPublicada;
+const vidrieraConLogo = (
+  logo: PartesDeDireccion | null,
+  codigo = "cafe-1",
+  cuentasDeImagen: readonly string[] = ["demo"],
+): VidrieraPublicada =>
+  ({ id: "v1", codigo, identidad: { logo }, cuentasDeImagen }) as unknown as VidrieraPublicada;
 
 function armar(
   vidriera: VidrieraPublicada | null,
@@ -102,6 +106,21 @@ describe("logoPublicoDeLaCarta: todo lo demás es la misma respuesta vacía", ()
     const { dependencias, traerLogo } = armar(null);
     expect(await logoPublicoDeLaCarta(dependencias, HOST, "cafe-1", "1700000000.webp")).toBeNull();
     expect(traerLogo).not.toHaveBeenCalled();
+  });
+
+  it("la cuenta del logo no está entre las declaradas por la empresa de la carta (otra, retirada o ninguna): el mismo vacío y NINGÚN pedido saliente", async () => {
+    for (const cuentas of [[], ["otra-cuenta"], ["demo2", "de-agencia"]]) {
+      const { dependencias, traerLogo } = armar(vidrieraConLogo(PARTES, "cafe-1", cuentas));
+      expect(
+        await logoPublicoDeLaCarta(dependencias, HOST, "cafe-1", "1700000000.webp"),
+        cuentas.join(","),
+      ).toBeNull();
+      expect(traerLogo).not.toHaveBeenCalled();
+    }
+    // Con la cuenta declarada entre otras, sí.
+    const { dependencias, traerLogo } = armar(vidrieraConLogo(PARTES, "cafe-1", ["otra", "demo"]));
+    expect(await logoPublicoDeLaCarta(dependencias, HOST, "cafe-1", "1700000000.webp")).toBe(BYTES);
+    expect(traerLogo).toHaveBeenCalledTimes(1);
   });
 
   it("una carta sin logo propio", async () => {

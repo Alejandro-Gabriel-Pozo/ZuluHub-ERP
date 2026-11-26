@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { MAXIMO_DE_CUENTAS_POR_ITEMS } from "../../../primitivas/cuentas/limites-de-division";
-import { huellaDeDivision, planDeDivision, type Asignacion, type LineaADividir } from "./division";
+import { MAXIMO_DE_CUENTAS_POR_ITEMS } from "./limites-de-division";
+import {
+  cantidadPorPasos,
+  pasosDeLaLinea,
+  planDeDivision,
+  totalesDeLaDivision,
+  type Asignacion,
+  type LineaADividir,
+} from "./division";
 
 const linea = (
   lineaId: string,
@@ -148,27 +155,6 @@ describe("planDeDivision", () => {
   });
 });
 
-describe("huellaDeDivision", () => {
-  const a: Asignacion[] = [
-    { lineaId: "a", forma: "ENTERO", parte: 1 },
-    { lineaId: "b", forma: "COMPARTIDO", partes: [2, 1] },
-  ];
-  it("no depende del orden de las asignaciones ni de las partes, y cambia con el contenido", () => {
-    const h = huellaDeDivision({ cuentaId: "c", partes: 2, asignaciones: a });
-    expect(huellaDeDivision({ cuentaId: "c", partes: 2, asignaciones: [...a].reverse() })).toBe(h);
-    expect(
-      huellaDeDivision({
-        cuentaId: "c",
-        partes: 2,
-        asignaciones: [a[0] as Asignacion, { lineaId: "b", forma: "COMPARTIDO", partes: [1, 2] }],
-      }),
-    ).toBe(h);
-    expect(huellaDeDivision({ cuentaId: "c", partes: 3, asignaciones: a })).not.toBe(h);
-    expect(huellaDeDivision({ cuentaId: "d", partes: 2, asignaciones: a })).not.toBe(h);
-    expect(h).toMatch(/^[0-9a-f]{64}$/);
-  });
-});
-
 describe("planDeDivision: todas las unidades a una sola cuenta", () => {
   it("es pasar la línea entera (COMPLETA), no un reparto por unidades de una sola parte", () => {
     const r = planDeDivision({
@@ -189,5 +175,57 @@ describe("planDeDivision: todas las unidades a una sola cuenta", () => {
         { lineaOrigenId: "b", parte: 2, modo: "COMPLETA", cantidad: "1.0000" },
       ],
     });
+  });
+});
+
+describe("totalesDeLaDivision (lo que muestra la pantalla)", () => {
+  const lineas = [linea("g", "3", "1000"), linea("p", "1", "3001")];
+  const asignaciones: Asignacion[] = [
+    { lineaId: "g", forma: "POR_UNIDADES", cantidades: ["1", "1", "1"] },
+    { lineaId: "p", forma: "COMPARTIDO", partes: [1, 2, 3] },
+  ];
+  const totales = (a: Asignacion[], partes = 3, l = lineas) => {
+    const plan = planDeDivision({ partes, lineas: l, asignaciones: a });
+    return plan.ok ? totalesDeLaDivision(partes, l, plan.valor) : null;
+  };
+
+  it("3 gaseosas y un plato entre 3: el centavo que sobra va a la Cuenta 1 y la suma es el total", () => {
+    expect(totales(asignaciones)).toEqual(["2000.34", "2000.33", "2000.33"]);
+  });
+
+  it("una línea entera a una cuenta y precio con decimales: redondea como el servidor", () => {
+    const l = [linea("a", "3", "33.333333"), linea("b", "1", "10")];
+    expect(
+      totales(
+        [
+          { lineaId: "a", forma: "ENTERO", parte: 2 },
+          { lineaId: "b", forma: "ENTERO", parte: 1 },
+        ],
+        2,
+        l,
+      ),
+    ).toEqual(["10.00", "100.00"]);
+  });
+
+  it("un plan con una línea que no existe no da totales a medias", () => {
+    expect(
+      totalesDeLaDivision(2, lineas, [
+        { lineaOrigenId: "x", parte: 1, modo: "COMPLETA", cantidad: "1" },
+      ]),
+    ).toBeNull();
+  });
+});
+
+describe("pasosDeLaLinea y cantidadPorPasos (dividir por unidades)", () => {
+  it("cuenta los pasos de la línea y arma la cantidad de N pasos sin pasar por number", () => {
+    expect(pasosDeLaLinea("3", "1")).toBe(3);
+    expect(pasosDeLaLinea("1.5", "0.5")).toBe(3);
+    expect(pasosDeLaLinea("2.5", "1")).toBeNull();
+    expect(pasosDeLaLinea("3", "0")).toBeNull();
+    expect(pasosDeLaLinea("tres", "1")).toBeNull();
+    expect(cantidadPorPasos("0.5", 3)).toBe(cantidadPorPasos("1.5", 1));
+    expect(cantidadPorPasos("1", 0)).toBe(cantidadPorPasos("0", 1));
+    expect(cantidadPorPasos("1", -1)).toBeNull();
+    expect(cantidadPorPasos("x", 1)).toBeNull();
   });
 });

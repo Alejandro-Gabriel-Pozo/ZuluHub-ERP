@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1261",
+  "fecha": "2026-11-25",
+  "quien": "dueño",
+  "tipo": "DINERO",
+  "estado": "CONFIRMADA",
+  "decision": "Una parte con saldo distinto de cero, a favor o en contra, no se puede anonimizar hasta que se salde; con saldo cero sí.",
+  "que_cambia": "Decide cuándo se puede anonimizar a quien tiene cuenta corriente: se mira el saldo en pesos de lo a cobrar y de lo a pagar. Revertir: quitar el impedimento del libro de saldos.",
+  "donde": "src/composicion/anonimizacion-de-partes.ts; dueño 25/11/2026, vía el orquestador («Acepto tus recomendaciones»); la fila la asienta diseño"
+}

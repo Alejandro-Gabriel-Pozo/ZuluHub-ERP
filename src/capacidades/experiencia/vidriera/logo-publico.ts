@@ -13,7 +13,8 @@ import type { AlcanceDelHost } from "../puerta";
  *     host que corresponde. Una carta que no se ve, tampoco entrega su logo.
  *  2. La versión pedida tiene que ser la guardada, ANTES de ir a ningún lado: un enlace viejo o inventado no cuesta una conexión saliente.
  *  3. La memoria decide si hay que salir a pedir; el traedor es el único que sale.
- * La cuenta del proveedor se toma de la carta misma (sin cuentas declaradas por la empresa todavía: deuda `logo-de-carta--cuentas-declaradas`).
+ * La cuenta del logo tiene que estar entre las que la EMPRESA DE LA CARTA declaró y tiene activas (0102, spec §5.7.2): `CUENTA_NO_DECLARADA` corta con `null` (el mismo 404, sin oráculo) y no
+ * sale ningún pedido. Es la segunda línea: la carta ya anula el logo de una cuenta no declarada al armarse (`armarVidrieraPublicada`).
  */
 
 /** El sufijo con que la carta nombra su logo servido. */
@@ -48,7 +49,7 @@ export async function logoPublicoDeLaCarta(
   if (vidriera === null) return null;
   const logo = vidriera.identidad.logo;
   if (logo === null || logo.version !== version) return null;
-  const destino = armarDestinoDeLogo(logo, [logo.cuenta]);
+  const destino = armarDestinoDeLogo(logo, vidriera.cuentasDeImagen);
   if (!destino.ok) return null;
   // La carta y la dirección exacta del logo: un logo cambiado (otra versión, otra imagen) nunca hereda los bytes ni el fallo del anterior.
   const clave = `${vidriera.codigo}|${direccionCanonica(logo)}`;

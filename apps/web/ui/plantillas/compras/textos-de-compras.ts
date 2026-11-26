@@ -41,6 +41,8 @@ export type TextosDeCompras = Readonly<{
   nuevaCompra: string;
   exportar: string;
   declararPago: string;
+  agregarMedio: string;
+  quitar: string;
   fecha: string;
   medio: string;
   caja: string;
@@ -87,6 +89,8 @@ export function textosDeCompras(): TextosDeCompras {
     nuevaCompra: texto({}, "compras.compra.nueva_compra"),
     exportar: texto({}, "compras.exportacion.exportar"),
     declararPago: texto({}, "compras.pago.declarar"),
+    agregarMedio: texto({}, "caja.medios.agregar"),
+    quitar: texto({}, "catalogo.accion.quitar"),
     fecha: texto({}, "fiscal.pantalla.rotulo_fecha"),
     medio: texto({}, "ventas.cobro.medio"),
     caja: texto({}, "caja.pantalla.titulo"),

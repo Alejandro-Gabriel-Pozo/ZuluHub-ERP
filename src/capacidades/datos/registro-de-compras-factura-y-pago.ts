@@ -44,6 +44,18 @@ export const DATOS_DE_COMPRAS_FACTURA_Y_PAGO = {
     ponerPor: PAGAR_FACTURA,
     requiere: REQUIERE_COMPRAS,
   },
+  "importe-de-medio-de-pago-de-compra": {
+    // Lo que paga un medio cuando el pago tiene varios; la suma contra el total de la factura la comprueba el servidor bajo el bloqueo (`resolverLosMedios`).
+    ficha: "src/modulos/compras/dominio/pago.ts",
+    propositos: [
+      DE_PAGAR_UNA_FACTURA(
+        "Cuánto paga cada medio cuando la factura se paga con varios (la suma es el total de la factura; con un solo medio no se escribe).",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_PAGO],
+    ponerPor: PAGAR_FACTURA,
+    requiere: REQUIERE_COMPRAS,
+  },
   "caja-de-pago-de-compra": {
     ficha: "src/modulos/compras/dominio/pago.ts",
     propositos: [

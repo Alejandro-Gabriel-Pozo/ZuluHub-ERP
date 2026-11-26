@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { FICHA_DE_LA_MESA } from "../../src/capacidades/pantallas/ficha-de-la-mesa";
+import { rutaDeCobrarLaMesa } from "../../apps/web/ui/plantillas/salon/rutas-del-salon";
 import { CATALOGO_DE_TEXTOS } from "../../src/capacidades/vocabulario/catalogo";
 
 /**
@@ -57,6 +58,11 @@ describe("ficha de la pantalla «Mesa»", () => {
   });
 
   it("la ruta es la de las rutas del salón", () => {
-    expect(FICHA_DE_LA_MESA.rutas).toEqual(["/salon/cuenta/[mesaId]"]);
+    expect(FICHA_DE_LA_MESA.rutas).toEqual([
+      "/salon/cuenta/[mesaId]",
+      "/salon/cuenta/[mesaId]/cobrar",
+    ]);
+    expect(rutaDeCobrarLaMesa("m1")).toBe("/salon/cuenta/m1/cobrar");
+    expect(rutaDeCobrarLaMesa("../x")).toBe("/salon/cuenta/..%2Fx/cobrar");
   });
 });
