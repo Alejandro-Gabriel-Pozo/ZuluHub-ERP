@@ -397,9 +397,9 @@ describe("orden por costo y pasos pesados en paralelo", () => {
   it("una falla corta: las tandas siguientes no corren", async () => {
     const f = falsos();
     const lanzados: string[] = [];
-    const correrPaso = (p: Paso, o: { envivo: boolean }) => {
+    const correrPaso = (p: Paso) => {
       lanzados.push(p.id);
-      return f.correrPaso(p, o);
+      return f.correrPaso(p);
     };
     const corrida = previo.correrTandas(
       [[paso("formato")], [paso("tipos", "p"), paso("lint", "p")]],
