@@ -60,7 +60,12 @@ describe.skipIf(base === null)("ventas: cobranza a cuenta corriente (CC-3)", () 
   const aCuenta = async (clienteId: string) => {
     const { cuenta } = await cuentaConLinea(m, e);
     return valorDe(
-      await m.casos.cerrarCuenta(e.gerente, { cuentaId: cuenta, ejemplarId: nuevoId(), clienteId }),
+      await m.casos.cerrarCuenta(e.gerente, {
+        cuentaId: cuenta,
+        ejemplarId: nuevoId(),
+        clienteId,
+        totalEsperado: { moneda: "ARS", monto: "1000.00" },
+      }),
     );
   };
   const cobrar = (
