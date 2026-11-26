@@ -474,7 +474,8 @@ jobs:
     needs: mutacion-plan
     if: ${{ !cancelled() && (github.event_name == 'push' || needs.mutacion-plan.outputs.toca_web != 'false') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 20 min: mediana 13,7 y máximo 15,0 sobre 25 corridas verdes; en c03db61a (26/11/2026) se canceló dos veces seguidas a los 15 min con 40 de 42 archivos ya en verde, sin tocar la web.
+    timeout-minutes: 20
     services:
       postgres:
         # Misma versión mayor que Neon. Sin contraseña: es una base descartable del CI.
