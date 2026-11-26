@@ -1,4 +1,4 @@
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import { ROLES_DE_LA_MEMBRESIA } from "../../capacidades/permisos/roles";
 import type { EstadoDeEmpresa, EstadoDeTenant } from "../../contexto/estados";
 import {
@@ -14,7 +14,13 @@ import {
   type EmpresaId,
   type InvitacionId,
 } from "../../primitivas/identificadores/marca";
-import type { LecturaDeSoporte, MembresiaVisible } from "../../plataforma/consultas/contrato";
+import { vigenteEn } from "../../capacidades/planes/vigencia";
+import type {
+  FuentesDelConjuntoLeidas,
+  LecturaDeSoporte,
+  MembresiaVisible,
+} from "../../plataforma/consultas/contrato";
+import { listaDeAcciones, validarNombresDeModulo } from "./autorizacion";
 import type { SoporteDb } from "./soporte-de-plataforma-db";
 import {
   ESTADOS_DE_EMPRESA,
@@ -304,12 +310,98 @@ export function crearLecturaDeSoporteDePostgres(db: Kysely<SoporteDb>): LecturaD
     },
 
     /**
-     * Módulos activables por empresa: todavía no existe la tabla (el único módulo, `administracion`, es
-     * obligatorio y no se guarda), igual que en `autorizacion.ts`. Cuando aparezca el primero, cambian
-     * las dos a la vez; una prueba de fidelidad contra los casos reales lo delataría.
+     * Lo mismo que lee `autorizacion.delActor` (`leerModulosDe`): las filas ACTIVAS de `modulo_de_empresa` y los módulos de la versión de plan de la asignación VIGENTE del tenant
+     * a `ahora` (`vigenteEn`), con la misma validación de nombres. Un tenant sin asignación vigente no tiene techo (`[]`); una asignación cuya versión no se ve es una falla. Una
+     * empresa que no se ve da dos listas vacías.
      */
-    modulosActivadosDe() {
-      return Promise.resolve([]);
+    async modulosDeLaEmpresa(empresa, ahora) {
+      const fila = await db
+        .selectFrom("empresa")
+        .select("tenant_id")
+        .where("id", "=", empresa)
+        .executeTakeFirst();
+      if (fila === undefined) return { activados: [], habilitados: [] };
+      const activados = await db
+        .selectFrom("modulo_de_empresa")
+        .select("modulo")
+        .where("empresa_id", "=", empresa)
+        .where("activo", "=", true)
+        .execute();
+      const asignaciones = await db
+        .selectFrom("plan_de_tenant as a")
+        .leftJoin("version_de_plan as v", "v.id", "a.version_de_plan_id")
+        .select(["a.numero", "a.vigente_desde", "v.modulos"])
+        .where("a.tenant_id", "=", fila.tenant_id)
+        .execute();
+      const rige = vigenteEn(
+        asignaciones.map((a) => ({
+          numero: a.numero,
+          vigenteDesde: a.vigente_desde,
+          modulos: a.modulos,
+        })),
+        ahora,
+      );
+      if (rige !== null && rige.modulos === null) {
+        throw new RangeError("la versión de plan vigente del tenant no existe en la base");
+      }
+      return {
+        activados: validarNombresDeModulo(
+          "activados",
+          activados.map((m) => m.modulo),
+        ),
+        habilitados: validarNombresDeModulo("plan", rige?.modulos ?? []),
+      };
+    },
+
+    /**
+     * Lo mismo que lee `autorizacion.delActor` (`leerMembresiaDelActor`): las versiones vigentes (la de mayor número) de las plantillas de los dos roles base y la del rol propio al
+     * que apunta la membresía, con su estado. Un valor que no es una lista de textos es un dato roto y falla.
+     */
+    async fuentesDelConjunto(persona, empresa): Promise<FuentesDelConjuntoLeidas> {
+      const fila = await db
+        .selectFrom("membresia as m")
+        .select([
+          sql<
+            boolean | null
+          >`(select r.activo from rol_de_empresa r where r.id = m.rol_propio_id and r.empresa_id = m.empresa_id)`.as(
+            "rol_propio_activo",
+          ),
+          sql<
+            string[] | null
+          >`(select v.acciones from version_de_rol v where v.rol_id = m.rol_propio_id and v.empresa_id = m.empresa_id order by v.numero desc limit 1)`.as(
+            "acciones_del_rol_propio",
+          ),
+          sql<
+            string[] | null
+          >`(select v.acciones from version_de_plantilla v where v.clave = 'ADMINISTRADOR' order by v.numero desc limit 1)`.as(
+            "plantilla_administrador",
+          ),
+          sql<
+            string[] | null
+          >`(select v.acciones from version_de_plantilla v where v.clave = 'OPERADOR' order by v.numero desc limit 1)`.as(
+            "plantilla_operador",
+          ),
+        ])
+        .where("m.persona_id", "=", persona)
+        .where("m.empresa_id", "=", empresa)
+        .executeTakeFirst();
+      if (fila === undefined) {
+        return { plantillas: { ADMINISTRADOR: null, OPERADOR: null }, rolPropio: null };
+      }
+      const delRolPropio = listaDeAcciones(fila.acciones_del_rol_propio, "el rol propio");
+      return {
+        plantillas: {
+          ADMINISTRADOR: listaDeAcciones(
+            fila.plantilla_administrador,
+            "la plantilla de ADMINISTRADOR",
+          ),
+          OPERADOR: listaDeAcciones(fila.plantilla_operador, "la plantilla de OPERADOR"),
+        },
+        rolPropio:
+          delRolPropio === null
+            ? null
+            : { activo: fila.rol_propio_activo === true, acciones: delRolPropio },
+      };
     },
   };
 }

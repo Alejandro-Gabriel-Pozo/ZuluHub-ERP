@@ -26,6 +26,7 @@ import {
   explicarAceptacion,
   type ExplicacionDeAceptacion,
   type ExplicacionDeAccion,
+  type FuentesDelConjuntoParaExplicar,
   type HechosDeAccion,
   type HechosDeAceptacion,
 } from "../dominio/soporte/explicar";
@@ -216,7 +217,7 @@ export function armarExplicarPorQue({
 
         const salida =
           objetivo.valor.tipo === "ACCION"
-            ? await explicarAccion(tx, reglasDeEmpresa, objetivo.valor)
+            ? await explicarAccion(tx, contexto, reglasDeEmpresa, objetivo.valor)
             : await explicarUnaAceptacion(tx, contexto, objetivo.valor);
         if (!salida.ok) return salida;
 
@@ -233,10 +234,17 @@ export function armarExplicarPorQue({
   };
 }
 
+/** Sin membresía no hay de dónde sacar acciones: el conjunto queda vacío (nace cerrado). */
+const SIN_FUENTES: FuentesDelConjuntoParaExplicar = {
+  plantillas: { ADMINISTRADOR: null, OPERADOR: null },
+  rolPropio: null,
+};
+
 type Objetivo<T extends ObjetivoValido["tipo"]> = Extract<ObjetivoValido, { tipo: T }>;
 
 async function explicarAccion(
   tx: TxDeExplicar,
+  contexto: ContextoDePlataforma,
   reglasDeEmpresa: DependenciasDeExplicar["reglasDeEmpresa"],
   objetivo: Objetivo<"ACCION">,
 ): Promise<Resultado<SalidaDeExplicar, "EMPRESA_NO_ENCONTRADA">> {
@@ -250,13 +258,19 @@ async function explicarAccion(
   const membresias =
     persona === null ? [] : await tx.soporte.membresiasDe(persona.id, [objetivo.empresaId]);
   const membresia = membresias.find((m) => m.empresaId === objetivo.empresaId) ?? null;
+  // Lo mismo que lee `autorizacion.delActor`: el conjunto de acciones de su rol (plantilla vigente o rol propio) y los módulos activados y del plan vigente a `ahora`.
+  const fuentes =
+    persona === null || membresia === null
+      ? SIN_FUENTES
+      : await tx.soporte.fuentesDelConjunto(persona.id, objetivo.empresaId);
+  const modulos = await tx.soporte.modulosDeLaEmpresa(objetivo.empresaId, contexto.ahora);
   const hechos: HechosDeAccion<RolDeLaMembresia> = {
     empresaId: objetivo.empresaId,
     persona: persona === null ? null : { activoGlobal: persona.activoGlobal },
     membresia: membresia === null ? null : { rol: membresia.rol, activo: membresia.activo },
-    modulosActivados: await tx.soporte.modulosActivadosDe(objetivo.empresaId),
-    // Igual que `autorizacion.delActor`: sin plan todavía (0007), no hay módulos habilitados.
-    modulosHabilitados: [],
+    modulosActivados: modulos.activados,
+    modulosHabilitados: modulos.habilitados,
+    fuentes,
     estadoDeEmpresa: estadosDeLaEmpresa.empresa,
     estadoDeTenant: estadosDeLaEmpresa.tenant,
   };

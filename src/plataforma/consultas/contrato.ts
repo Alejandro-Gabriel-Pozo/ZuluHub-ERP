@@ -336,9 +336,29 @@ export interface LecturaParaExplicar {
   membresiasDe(persona: PersonaId, empresas: readonly EmpresaId[]): Promise<MembresiaVisible[]>;
   /** Una invitación con sus empresas, sin sucursales y sin el hash del token; `null` si no existe. */
   invitacionPorId(id: InvitacionId): Promise<Invitacion | null>;
-  /** Módulos activables que la empresa activó. Hoy ninguno: no existe la tabla (como en `autorizacion`). */
-  modulosActivadosDe(empresa: EmpresaId): Promise<readonly string[]>;
+  /**
+   * Los módulos que decide el guard, leídos como los lee `autorizacion.delActor`: los que la empresa tiene ACTIVADOS y los que el plan VIGENTE de su tenant a `ahora` incluye (el techo).
+   * Una empresa que no se ve da ambas listas vacías (cierra).
+   */
+  modulosDeLaEmpresa(empresa: EmpresaId, ahora: Date): Promise<ModulosDeLaEmpresa>;
+  /**
+   * De dónde sale el conjunto de acciones de esa persona en esa empresa, leído como lo lee `autorizacion.delActor`: la versión vigente de la plantilla de cada rol base y, si tiene
+   * rol propio, ese rol (activo o archivado) con su versión vigente. Sin membresía no hay nada que leer (`rolPropio` y plantillas en `null`).
+   */
+  fuentesDelConjunto(persona: PersonaId, empresa: EmpresaId): Promise<FuentesDelConjuntoLeidas>;
 }
+
+export type ModulosDeLaEmpresa = Readonly<{
+  activados: readonly string[];
+  habilitados: readonly string[];
+}>;
+
+/** Las acciones guardadas, tal como están en la base (el catálogo del código las filtra después, en `conjuntoEfectivo`). `null`: sin versión legible. */
+export type FuentesDelConjuntoLeidas = Readonly<{
+  plantillas: Readonly<Record<"ADMINISTRADOR" | "OPERADOR", readonly string[] | null>>;
+  /** El rol propio al que apunta la membresía: `null` si no tiene o su versión no se pudo leer. */
+  rolPropio: Readonly<{ activo: boolean; acciones: readonly string[] }> | null;
+}>;
 
 /** Todo lo que el adaptador de lectura de soporte ofrece. */
 export type LecturaDeSoporte = LecturaDeNivel1 & LecturaParaExplicar;

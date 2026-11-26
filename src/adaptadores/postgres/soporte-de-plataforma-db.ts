@@ -24,6 +24,7 @@ export type SoporteDb = {
     numero: number | null;
     nombre_comercial: string;
     perillas: unknown;
+    modulos: string[];
   };
   plan_de_tenant: {
     tenant_id: string;
@@ -31,6 +32,7 @@ export type SoporteDb = {
     version_de_plan_id: string;
     vigente_desde: Date;
   };
+  modulo_de_empresa: { empresa_id: string; modulo: string; activo: boolean };
   ajuste_de_perilla: {
     tenant_id: string;
     empresa_id: string | null;

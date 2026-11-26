@@ -16,6 +16,7 @@ import type {
   FilaDeTenant,
   FilaDeTrabajoFallido,
   LecturaDeSoporte,
+  FuentesDelConjuntoLeidas,
   MembresiaVisible,
 } from "../../src/plataforma/consultas/contrato";
 import {
@@ -162,6 +163,10 @@ export type DatosDeLecturaFalsa = Partial<{
   personas: Persona[];
   membresias: MembresiaVisible[];
   modulosActivados: string[];
+  /** Los módulos del plan vigente (el techo); por defecto, ninguno. */
+  modulosHabilitados: string[];
+  /** De dónde sale el conjunto de acciones de cada persona; por defecto, sin plantillas ni rol propio. */
+  fuentes: FuentesDelConjuntoLeidas;
 }>;
 
 /** Una lectura en memoria que registra cada pedido. */
@@ -199,7 +204,17 @@ export function lecturaFalsa(datos: DatosDeLecturaFalsa = {}): LecturaDeSoporte 
       ),
     invitacionPorId: (id) =>
       pedir("invitacionPorId", [id], datos.invitaciones?.find((i) => i.id === id) ?? null),
-    modulosActivadosDe: (...a) => pedir("modulosActivadosDe", a, datos.modulosActivados ?? []),
+    modulosDeLaEmpresa: (...a) =>
+      pedir("modulosDeLaEmpresa", a, {
+        activados: datos.modulosActivados ?? [],
+        habilitados: datos.modulosHabilitados ?? [],
+      }),
+    fuentesDelConjunto: (...a) =>
+      pedir(
+        "fuentesDelConjunto",
+        a,
+        datos.fuentes ?? { plantillas: { ADMINISTRADOR: null, OPERADOR: null }, rolPropio: null },
+      ),
   };
 }
 

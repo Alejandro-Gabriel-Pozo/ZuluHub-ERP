@@ -61,7 +61,7 @@ const esRolDeLaMembresia = (valor: string): valor is RolDeLaMembresia =>
   valor === "PROPIO" || ROLES_DE_EMPRESA.some((rol) => rol === valor);
 
 /** Una lista de acciones leída de la base: un valor que no es una lista de textos es un dato roto y falla (no se trata como «sin permisos» en silencio). */
-function listaDeAcciones(valor: unknown, de: string): readonly string[] | null {
+export function listaDeAcciones(valor: unknown, de: string): readonly string[] | null {
   if (valor === null) return null;
   if (!Array.isArray(valor) || !valor.every((accion) => typeof accion === "string")) {
     throw new RangeError(`las acciones de ${de} no son una lista de textos`);
@@ -108,7 +108,10 @@ type MembresiaDelActor = Readonly<{
  * esa forma) es un dato roto, no un módulo que haya que ignorar en silencio. Como el rol desconocido, es una
  * falla: ningún actor opera con un plan o una activación que el código no sabe leer.
  */
-function validarNombresDeModulo(origen: string, nombres: readonly string[]): readonly string[] {
+export function validarNombresDeModulo(
+  origen: string,
+  nombres: readonly string[],
+): readonly string[] {
   for (const nombre of nombres) {
     if (!esClaveDe(CATALOGO_DE_MODULOS, nombre)) {
       throw new RangeError(`módulo desconocido en la base (${origen}): ${nombre}`);
