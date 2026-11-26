@@ -69,6 +69,7 @@ describe.skipIf(base === null)("ventas: anular un ticket con comprobante", () =>
     ejemplarBaseId: p.ejemplarId,
     ejemplarNuevoId: cambios.ejemplarNuevoId ?? nuevoId(),
     motivo: "Cargado por error",
+    sucursalDeTrabajo: p.e.sucursal,
   });
   const anular = (p: Preparado, cambios: { clave?: string; ejemplarNuevoId?: string } = {}) =>
     m.casos.anularTicket(p.e.gerente, pedido(p, cambios));

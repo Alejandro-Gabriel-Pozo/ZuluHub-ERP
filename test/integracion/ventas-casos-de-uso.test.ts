@@ -96,7 +96,14 @@ describe.skipIf(base === null)("ventas: casos de uso", () => {
     cuenta: string,
     extra: Partial<Parameters<MundoDeVentas["casos"]["cerrarCuenta"]>[1]> = {},
   ) => m.casos.cerrarCuenta(contexto, { cuentaId: cuenta, ejemplarId: nuevoId(), ...extra });
-  const anularTicket = (
+  /** La sucursal del ticket (la de trabajo de quien anula en estas pruebas); un id que no existe da vacío y el caso lo rechaza. */
+  const sucursalDelTicket = async (ticketId: string) =>
+    (
+      await m.filas<{ sucursal_id: string }>("select sucursal_id from ticket where id::text = $1", [
+        ticketId,
+      ])
+    )[0]?.sucursal_id ?? "";
+  const anularTicket = async (
     contexto: ContextoOperativo,
     t: Readonly<{ ticketId: string; ejemplarId: string }>,
     extra: Partial<Parameters<MundoDeVentas["casos"]["anularTicket"]>[1]> = {},
@@ -107,6 +114,7 @@ describe.skipIf(base === null)("ventas: casos de uso", () => {
       ejemplarBaseId: t.ejemplarId,
       ejemplarNuevoId: nuevoId(),
       motivo: "Error del cajero",
+      sucursalDeTrabajo: await sucursalDelTicket(t.ticketId),
       ...extra,
     });
   /** Una venta cerrada (ticket EMITIDO) de un producto. */
@@ -119,7 +127,7 @@ describe.skipIf(base === null)("ventas: casos de uso", () => {
     const cuenta = await abrir(e, contexto);
     valorDe((await agregar(contexto, cuenta, producto, cantidad)).r);
     const t = valorDe(await cerrar(contexto, cuenta));
-    return { cuenta, ...t };
+    return { cuenta, sucursal: e.sucursal, ...t };
   };
   const contar = (tabla: string, empresa: string) =>
     m.contar(`select count(*) as n from ${tabla} where empresa_id = $1`, [empresa]);
@@ -327,6 +335,7 @@ describe.skipIf(base === null)("ventas: casos de uso", () => {
       ejemplarBaseId: t.ejemplarId,
       ejemplarNuevoId: nuevoId(),
       motivo: "Error del cajero",
+      sucursalDeTrabajo: e.sucursal,
     };
     const primera = valorDe(await m.casos.anularTicket(e.gerente, pedido));
     expect(primera).toMatchObject({ numero: 1, estado: "ANULADO", yaExistia: false });
@@ -1458,6 +1467,7 @@ describe.skipIf(base === null)("ventas: casos de uso", () => {
         ejemplarBaseId: t.ejemplarId,
         ejemplarNuevoId: nuevoId(),
         motivo: "Error",
+        sucursalDeTrabajo: e.sucursal,
       }),
     ];
     for (const r of rechazos) expect(falla(r)).toBe("MODULO_EN_DESARROLLO");
@@ -1492,6 +1502,7 @@ describe.skipIf(base === null)("ventas: casos de uso", () => {
           ejemplarBaseId: t.ejemplarId,
           ejemplarNuevoId: nuevoId(),
           motivo: "Error",
+          sucursalDeTrabajo: e.sucursal,
         }),
       ];
       for (const r of rechazos) expect(falla(r)).toBe("MODULO_NO_ACTIVO");
@@ -1817,6 +1828,7 @@ describe.skipIf(base === null)("ventas: casos de uso", () => {
       const antes = await sinCambios(e);
       await expect(
         casos.anularTicket(e.gerente, {
+          sucursalDeTrabajo: e.sucursal,
           claveIdempotencia: nuevaClave(),
           ticketId: t.ticketId,
           ejemplarBaseId: t.ejemplarId,

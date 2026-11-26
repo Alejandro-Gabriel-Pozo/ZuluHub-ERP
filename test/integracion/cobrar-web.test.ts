@@ -260,19 +260,51 @@ describe.skipIf(base === null)("composición web: cobrar y anular", () => {
       motivo: "Se cobró de más",
     };
     const equivocado = { ...anulacion, claveIdempotencia: nuevaClave(), ejemplarBaseId: nuevoId() };
-    expect(await anularElTicket(d, e.gerente, equivocado)).toMatchObject(GENERICO);
-    const primera = await anularElTicket(d, e.gerente, anulacion);
+    expect(await anularElTicket(d, e.gerente, e.sucursal, equivocado)).toMatchObject(GENERICO);
+    const primera = await anularElTicket(d, e.gerente, e.sucursal, anulacion);
     expect(primera).toMatchObject({ ok: true, dato: { estado: "ANULADO", yaExistia: false } });
     const antes = await rastros(e);
-    const segunda = await anularElTicket(d, e.gerente, anulacion);
+    const segunda = await anularElTicket(d, e.gerente, e.sucursal, anulacion);
     expect(segunda).toMatchObject({ ok: true, dato: { estado: "ANULADO", yaExistia: true } });
     expect(await rastros(e)).toEqual(antes);
     expect(
-      await anularElTicket(d, e.gerente, { ...anulacion, motivo: "Otro motivo" }),
+      await anularElTicket(d, e.gerente, e.sucursal, { ...anulacion, motivo: "Otro motivo" }),
     ).toMatchObject(GENERICO);
-    expect(await anularElTicket(d, e.gerente, { ...anulacion, motivo: "" })).toMatchObject(
-      GENERICO,
-    );
+    expect(
+      await anularElTicket(d, e.gerente, e.sucursal, { ...anulacion, motivo: "" }),
+    ).toMatchObject(GENERICO);
+  });
+
+  it("anular: la sucursal la fija el servidor; sin sucursal de trabajo, de otra sucursal o con el caso de uso sin ella (un llamado que la omite) es «no encontrado» y no escribe nada, ni siquiera en una repetición", async () => {
+    const e = await m.escenario();
+    const caja = await m.cajaAbierta(e);
+    const cobrada = await cobrarLaVenta(d, e.gerente, e.sucursal, pedido(e, caja));
+    if (!cobrada.ok) throw new Error("no cobró");
+    const anulacion = {
+      claveIdempotencia: nuevaClave(),
+      ticketId: cobrada.dato.ticketId,
+      ejemplarBaseId: cobrada.dato.ejemplarId,
+      ejemplarNuevoId: nuevoId(),
+      motivo: "Se cobró de más",
+    };
+    const antes = await rastros(e);
+    expect(await anularElTicket(d, e.gerente, "", anulacion)).toMatchObject(GENERICO);
+    expect(await anularElTicket(d, e.gerente, e.otraSucursal, anulacion)).toMatchObject(GENERICO);
+    expect(await m.casos.anularTicket(e.gerente, anulacion as never)).toEqual({
+      ok: false,
+      error: "TICKET_NO_ENCONTRADO",
+    });
+    expect(await rastros(e)).toEqual(antes);
+    expect(await anularElTicket(d, e.gerente, e.sucursal, anulacion)).toMatchObject({
+      ok: true,
+      dato: { estado: "ANULADO", yaExistia: false },
+    });
+    // Una repetición con la misma clave desde otra sucursal tampoco devuelve lo hecho.
+    expect(await anularElTicket(d, e.gerente, e.otraSucursal, anulacion)).toMatchObject(GENERICO);
+    expect(await anularElTicket(d, e.gerente, e.sucursal, anulacion)).toMatchObject({
+      ok: true,
+      dato: { yaExistia: true },
+    });
   });
 
   it("concurrencia al anular: dos anulaciones a la vez con la misma clave dejan una sola anulación", async () => {
@@ -291,8 +323,8 @@ describe.skipIf(base === null)("composición web: cobrar y anular", () => {
     let rs;
     try {
       rs = await Promise.all([
-        anularElTicket(d, e.gerente, anulacion),
-        anularElTicket(d, e.gerente, anulacion),
+        anularElTicket(d, e.gerente, e.sucursal, anulacion),
+        anularElTicket(d, e.gerente, e.sucursal, anulacion),
       ]);
     } finally {
       m.soltarBarrera();

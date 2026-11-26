@@ -135,12 +135,20 @@ describe.skipIf(base === null)("ventas con stock: cerrar descuenta, anular devue
     const t = valorDe(await cerrar(mundo.e.gerente, cuenta, ejemplarId));
     return { cuenta, lineas, ...t };
   };
-  const anular = (
+  /** La sucursal del ticket (la de trabajo de quien anula en estas pruebas). */
+  const sucursalDelTicket = async (ticketId: string) =>
+    (
+      await m.filas<{ sucursal_id: string }>("select sucursal_id from ticket where id::text = $1", [
+        ticketId,
+      ])
+    )[0]?.sucursal_id ?? "";
+  const anular = async (
     contexto: ContextoOperativo,
     t: Readonly<{ ticketId: string; ejemplarId: string }>,
     extra: Record<string, unknown> = {},
   ) =>
     m.casos.anularTicket(contexto, {
+      sucursalDeTrabajo: await sucursalDelTicket(t.ticketId),
       claveIdempotencia: nuevaClave(),
       ticketId: t.ticketId,
       ejemplarBaseId: t.ejemplarId,
@@ -377,6 +385,7 @@ describe.skipIf(base === null)("ventas con stock: cerrar descuenta, anular devue
       ejemplarBaseId: t.ejemplarId,
       ejemplarNuevoId: nuevoId(),
       motivo: "¡Se equivocó el cajero!", // válido para ventas; el detalle de stock no admite el «!»: no viaja
+      sucursalDeTrabajo: e.sucursal,
     };
     const primera = valorDe(await m.casos.anularTicket(e.gerente, entrada));
     const repetida = valorDe(await m.casos.anularTicket(e.gerente, entrada));
@@ -410,6 +419,7 @@ describe.skipIf(base === null)("ventas con stock: cerrar descuenta, anular devue
         ejemplarBaseId: t.ejemplarId,
         ejemplarNuevoId: nuevoId(),
         motivo: "Error del cajero",
+        sucursalDeTrabajo: e.sucursal,
       };
       m.armarBarrera(2);
       try {
