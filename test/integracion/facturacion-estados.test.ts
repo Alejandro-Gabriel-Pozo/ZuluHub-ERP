@@ -60,6 +60,7 @@ import {
   type Escenario,
 } from "./facturacion-apoyo";
 import type { Intento } from "./sesiones";
+import { baseDeEsteArchivo } from "./entorno";
 
 /**
  * Facturación F2: el ciclo del comprobante frente a ARCA que la base impone (§B.2 y §B.8.4), su coherencia con
@@ -72,7 +73,7 @@ import type { Intento } from "./sesiones";
  *  4. Base = dominio: todo lo que `armarComprobanteNuevo` produce, la base lo acepta y lo cuadra.
  */
 
-const base = inject("baseDePruebas");
+const base = await baseDeEsteArchivo(inject("baseDePruebas"));
 vi.setConfig({ testTimeout: 120_000 });
 
 const ESTADOS = ESTADOS_DE_COMPROBANTE_ARCA;

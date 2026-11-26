@@ -1,0 +1,11 @@
+{
+  "id": "DEC-1039",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "SIN_DECISION",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La hoja de cobro de la mesa reutiliza la de Cobrar de la venta rápida en modo cuenta existente; no se duplica.",
+  "que_cambia": "Nada que vea el negocio: la mesa cobra con la misma hoja, los mismos medios y los mismos textos. Una sola hoja que mantener.",
+  "donde": "apps/web/ui/plantillas/cobrar/PantallaDeCobro.cliente.tsx (cuentaExistente); apps/web/ui/plantillas/salon/CobroDeLaMesa.cliente.tsx; Pedernal-docs plan-de-salon-dia-uno-2026-11-25.md DEC-1039",
+  "motivo": "Pieza común reutilizada (ADR-014: dos módulos la necesitan). Previene dos hojas de cobro que se desfasan (medios, datos del cobro, vuelto)."
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { tocar, violacionesDeAccesibilidad } from "../pruebas/ayudas";
+import { conReinicio, tocar, violacionesDeAccesibilidad } from "../pruebas/ayudas";
 import { BotonDeEnvio } from "./BotonDeEnvio.cliente";
 import { FormularioDeAccion, type AccionDeFormulario } from "./FormularioDeAccion.cliente";
 
@@ -67,41 +67,29 @@ describe("FormularioDeAccion y BotonDeEnvio", () => {
     await expect.element(page.getByRole("alert")).toBeVisible();
   });
 
-  const conCasilla = (accion: AccionDeFormulario, alReiniciar?: () => void) => (
-    <FormularioDeAccion accion={accion} {...(alReiniciar === undefined ? {} : { alReiniciar })}>
-      <BotonDeEnvio textoEnviando="Enviando…">Guardar</BotonDeEnvio>
-    </FormularioDeAccion>
-  );
+  /**
+   * React 19 REINICIA el formulario al terminar la acción, un rato después de que el botón queda libre: dejaba las casillas y los campos controlados mostrando otra cosa que su estado y se
+   * llevaba lo tipeado cuando la acción devolvía un error. `FormularioDeAccion` cancela el reinicio (`sinReiniciar`). Los campos que lo prueban (casillas, texto, selector) están en las pruebas
+   * de cada pantalla (`Usuarios.test.tsx`, `Invitaciones.test.tsx`); acá, que el evento llega y queda cancelado, con éxito y con error.
+   */
   const bien: AccionDeFormulario = () => Promise.resolve({ error: null });
   const mal: AccionDeFormulario = () =>
     Promise.resolve({
       error: { codigo: "ERROR_INTERNO", clave: "error.inesperado", presentacion: "INESPERADO" },
     });
-
-  it("al terminar la acción React reinicia el formulario y avisa por `alReiniciar` (con éxito)", async () => {
-    const reinicios = vi.fn();
-    await render(conCasilla(bien, reinicios));
-    tocar(page.getByRole("button", { name: "Guardar" }));
-    await vi.waitFor(() => expect(reinicios).toHaveBeenCalledTimes(1));
+  it("al terminar la acción el reinicio de React llega y queda cancelado (con éxito)", async () => {
+    await render(formulario(bien));
+    const cancelado = await conReinicio(() => {
+      tocar(page.getByRole("button", { name: "Entrar a la empresa" }));
+    });
+    expect(cancelado).toBe(true);
   });
 
-  it("también avisa por `alReiniciar` cuando la acción devuelve un error", async () => {
-    const reinicios = vi.fn();
-    await render(conCasilla(mal, reinicios));
-    tocar(page.getByRole("button", { name: "Guardar" }));
-    await vi.waitFor(() => expect(reinicios).toHaveBeenCalledTimes(1));
-  });
-
-  it("sin `alReiniciar` el formulario se comporta como siempre (nada se llama)", async () => {
-    const reinicios = vi.fn();
-    document.addEventListener("reset", reinicios, true);
-    try {
-      await render(conCasilla(bien));
-      tocar(page.getByRole("button", { name: "Guardar" }));
-      // El reinicio de React sí ocurre (se ve el evento del navegador); solo que nadie lo atiende.
-      await vi.waitFor(() => expect(reinicios).toHaveBeenCalledTimes(1));
-    } finally {
-      document.removeEventListener("reset", reinicios, true);
-    }
+  it("también queda cancelado cuando la acción devuelve un error", async () => {
+    await render(formulario(mal));
+    const cancelado = await conReinicio(() => {
+      tocar(page.getByRole("button", { name: "Entrar a la empresa" }));
+    });
+    expect(cancelado).toBe(true);
   });
 });

@@ -207,7 +207,7 @@ describe("el bloque «Sucursales» de la ficha de un empleado", () => {
     }
   });
 
-  it("lo que se ve tildado es lo que se manda, también si el reinicio del formulario llega en medio de los toques", async () => {
+  it("lo que se ve tildado es lo que se manda, también si un reinicio del formulario llega en medio de los toques (React lo cancela: `sinReiniciar`)", async () => {
     const { envios, accion } = accionDePrueba();
     await render(
       <PantallaDeFichaDeUsuario

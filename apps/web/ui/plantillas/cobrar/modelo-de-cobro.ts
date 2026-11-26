@@ -294,15 +294,16 @@ export type EntradaDelPedido = Readonly<{
   vuelto: Vuelto;
   /** Solo las que la persona confirmó en la venta (hoy: «VENTA_A_CERO» tras confirmar una línea a $ 0). */
   confirmaciones?: readonly string[] | undefined;
+  sinLineas?: boolean | undefined;
 }>;
 
 /**
  * El pedido de cobro (la forma de `entradas-de-cobrar.ts`, que el servidor vuelve a leer con lista de permitidos). Cada fila va como se escribió, salvo el efectivo: todas las filas de efectivo
  * se juntan en la primera con el NETO (lo entregado menos el vuelto) y si el neto es cero no va ninguna. Los datos que el medio no admite o que no se escribieron no viajan. Devuelve `null` si
- * no hay nada que mandar (sin filas o con un medio que el servidor no ofreció): nunca un pedido a medias.
+ * no hay nada que mandar (sin filas o con un medio que el servidor no ofreció): nunca un pedido a medias. `sinLineas`: se cobra una cuenta que YA existe (la de una mesa, SAL-D): el pedido no lleva líneas (las lee el servidor de la cuenta).
  */
 export function pedidoDeCobro(entrada: EntradaDelPedido): Readonly<Record<string, unknown>> | null {
-  const { pagos, medios, vuelto, total } = entrada;
+  const { pagos, medios, vuelto, total, sinLineas } = entrada;
   const medioDe = (pago: PagoEnEdicion) => medios.find((m) => m.id === pago.medioId);
   const primeraDeEfectivo = pagos.find((p) => medioDe(p)?.tipo === TIPO_DE_MEDIO_CON_VUELTO);
   const cobros: Record<string, unknown>[] = [];
@@ -320,12 +321,12 @@ export function pedidoDeCobro(entrada: EntradaDelPedido): Readonly<Record<string
       ...datosParaEnviar(pago, medio),
     });
   }
-  const lineas = lineasDelPedido(entrada.ids.lineas, entrada.cuenta);
+  const lineas = sinLineas === true ? [] : lineasDelPedido(entrada.ids.lineas, entrada.cuenta);
   if (cobros.length === 0 || lineas === null) return null;
   return {
     cuentaId: entrada.ids.cuentaId,
     ejemplarId: entrada.ids.ejemplarId,
-    lineas,
+    ...(sinLineas === true ? {} : { lineas }),
     totalEsperado: { moneda: total.moneda, monto: total.monto },
     cajaId: entrada.cajaId,
     cobros,

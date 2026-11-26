@@ -19,6 +19,7 @@ import {
   type FilaDeMedio,
   type MedioDePago,
 } from "./modelo-de-pago";
+import { sinReiniciar } from "../../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeDeclararPago = Readonly<{
   /** `declararElPagoAccion` con la factura, la compra y la clave de este intento ya ligadas (`.bind`): no viajan en el formulario. */
@@ -74,7 +75,7 @@ export function FormularioDeDeclararPago({
     setFilas((actuales) => actuales.map((f) => (f.id === id ? { ...f, ...cambio } : f)));
   };
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={3}>
           <Texto>

@@ -40,6 +40,13 @@ const FORMA_DE_CAMBIAR_DE_MESA = z.object({
   mesaDestinoId: identificador,
 });
 
+const FORMA_DE_UNIR = z.object({
+  unionId: identificador,
+  cuentaDestinoId: identificador,
+  cuentaOrigenId: identificador,
+  clave: texto,
+});
+
 const FORMA_DE_AGREGAR_AL_PEDIDO = z.object({
   cuentaId: identificador,
   lineaId: identificador,
@@ -58,6 +65,7 @@ export type PedidoDelMapa = Readonly<{ filtro: FiltroDelMapa }>;
 export type PedidoDeTomarPedido = z.output<typeof FORMA_DE_TOMAR_PEDIDO>;
 export type PedidoDeUnaCuenta = z.output<typeof FORMA_DE_UNA_CUENTA>;
 export type PedidoDeCambiarDeMesa = z.output<typeof FORMA_DE_CAMBIAR_DE_MESA>;
+export type PedidoDeUnir = z.output<typeof FORMA_DE_UNIR>;
 export type PedidoDeAgregarAlPedido = z.output<typeof FORMA_DE_AGREGAR_AL_PEDIDO>;
 
 /** El mapa sin filtro (o sin pedido) es «Todas». */
@@ -77,3 +85,7 @@ export const leerElPedidoDeCambiarDeMesa = (crudo: unknown): Pedido<PedidoDeCamb
 
 export const leerElPedidoDeAgregarAlPedido = (crudo: unknown): Pedido<PedidoDeAgregarAlPedido> =>
   leer(FORMA_DE_AGREGAR_AL_PEDIDO, crudo);
+
+/** «Unir con otra mesa»: el id de la unión y la clave los fija la pantalla una vez por intento; las dos cuentas, el destino y el origen. */
+export const leerElPedidoDeUnir = (crudo: unknown): Pedido<PedidoDeUnir> =>
+  leer(FORMA_DE_UNIR, crudo);

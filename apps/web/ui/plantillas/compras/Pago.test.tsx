@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
+import { conReinicio, tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
 import { PantallaDeFichaDeCompra } from "./ficha/PantallaDeFichaDeCompra";
 import type { FichaDeCompraParaLaPantalla } from "./ficha/modelo-de-ficha-de-compra";
 import { FormularioDeDeclararPago } from "./pago/FormularioDeDeclararPago.cliente";
@@ -269,6 +269,34 @@ describe("FormularioDeDeclararPago", () => {
     await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
     expect(accion).toHaveBeenCalledTimes(1);
   });
+
+  it("tras un error del servidor, y DESPUÉS del reinicio que React dispara, el pago conserva la fecha, el medio, la caja y el motivo que se escribieron", async () => {
+    const accion = vi.fn<AccionDeDeclarar>(() =>
+      Promise.resolve({ estado: "ERROR", error: GENERICO }),
+    );
+    await render(
+      <FormularioDeDeclararPago
+        accion={accion}
+        importe="$ 2.420,00"
+        hoy="2026-11-24"
+        cajas={CAJAS}
+        textos={textosDelFormulario()}
+      />,
+    );
+    await userEvent.fill(page.getByLabelText("Fecha"), "2026-11-20");
+    await userEvent.selectOptions(page.getByLabelText("Medio"), "EFECTIVO");
+    await userEvent.selectOptions(page.getByLabelText("Caja"), CAJAS[1]!.cajaId);
+    await userEvent.fill(page.getByLabelText("Motivo"), "Pago a proveedor");
+    const cancelado = await conReinicio(() => {
+      tocar(page.getByRole("button", { name: "Declarar pago" }));
+    });
+    expect(cancelado).toBe(true);
+    await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
+    await expect.element(page.getByLabelText("Fecha")).toHaveValue("2026-11-20");
+    await expect.element(page.getByLabelText("Medio")).toHaveValue("EFECTIVO");
+    await expect.element(page.getByLabelText("Caja")).toHaveValue(CAJAS[1]!.cajaId);
+    await expect.element(page.getByLabelText("Motivo")).toHaveValue("Pago a proveedor");
+  });
 });
 
 describe("HojaDeAnularPago", () => {
@@ -300,6 +328,22 @@ describe("HojaDeAnularPago", () => {
     liberar();
     await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
     expect(accion).toHaveBeenCalledTimes(1);
+  });
+
+  it("tras un error del servidor, y DESPUÉS del reinicio, la hoja conserva el motivo escrito", async () => {
+    const accion = vi.fn<AccionDeAnular>(() =>
+      Promise.resolve({ estado: "ERROR", error: GENERICO }),
+    );
+    await render(<HojaDeAnularPago accion={accion} textos={textos} />);
+    await userEvent.click(page.getByRole("button", { name: "Anular" }));
+    const dialogo = page.getByRole("dialog");
+    await userEvent.fill(dialogo.getByLabelText("Motivo"), "Se pagó dos veces");
+    const cancelado = await conReinicio(() => {
+      tocar(dialogo.getByRole("button", { name: "Anular" }));
+    });
+    expect(cancelado).toBe(true);
+    await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
+    await expect.element(dialogo.getByLabelText("Motivo")).toHaveValue("Se pagó dos veces");
   });
 });
 
