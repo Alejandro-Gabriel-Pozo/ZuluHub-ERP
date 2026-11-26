@@ -47,7 +47,7 @@ export type PropsDeFormularioDeMovimiento = Readonly<{
 
 /**
  * El formulario de los movimientos de stock a mano (maqueta `stock.html`): Entrada, Salida, Transferir, Ajustar y Anular comparten campos y envío. La cantidad, el costo y las reglas de cada motivo
- * las valida el servidor (confirmar-negativo-pendiente: el diálogo del nivel AVISAR no está, ver `stock-confirmar-negativo` en la deuda); la pantalla solo ofrece lo que el tipo lleva (`CAMPOS_DEL_TIPO`) y apaga «enviar» mientras falte lo mínimo. La unidad es la del artículo: no se elige.
+ * las valida el servidor (falta el diálogo «Va a quedar en negativo» del nivel AVISAR; con PERMITIR, el de hoy, no aparece nunca); la pantalla solo ofrece lo que el tipo lleva (`CAMPOS_DEL_TIPO`) y apaga «enviar» mientras falte lo mínimo. La unidad es la del artículo: no se elige.
  */
 export function FormularioDeMovimiento({
   tipo,

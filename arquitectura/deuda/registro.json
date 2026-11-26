@@ -540,14 +540,5 @@
     "motivo": "Entregar el logo por la ruta propia sin sumar una migración ni una pantalla nueva en el mismo PR. Se paga con una tabla de cuentas por empresa y la validación al guardar y al traer (armarDestinoDeLogo ya recibe la lista de cuentas declaradas). DEC-0831.",
     "aprobadoPor": "orquestador (V1c: diferir las cuentas declaradas como deuda con vencimiento, mensajes entre sesiones del 2026-11-20 y 2026-11-21; cupo liberado pagando campos-sin-dato--web-select (select crudo quitado de borrador-de-pagina.test.tsx))",
     "vence": "2027-01-20"
-  },
-  {
-    "id": "stock-confirmar-negativo",
-    "archivos": ["apps/web/ui/plantillas/stock/movimientos/FormularioDeMovimiento.cliente.tsx"],
-    "descripcion": "Los formularios de Salida y Transferir no tienen el diálogo «Va a quedar en negativo. ¿Confirmás?» (reintento con la misma clave y la confirmación del control): con el nivel AVISAR el servidor responde STOCK_CONTROL_AVISA y la persona ve el texto sin poder confirmar. El día uno el nivel es PERMITIR (P-6), así que no se muestra nunca; construirlo antes de poder cambiar el nivel.",
-    "tipo": "backlog",
-    "responsable": "agente (a pedido del dueño)",
-    "creada": "2026-11-25",
-    "verificacion": { "contiene": "confirmar-negativo-pendiente" }
   }
 ]
