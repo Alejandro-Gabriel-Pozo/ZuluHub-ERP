@@ -44,6 +44,7 @@ describe.skipIf(base === null)("ventas: humo", () => {
     });
     const anulado = valorDe(
       await m.casos.anularTicket(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         claveIdempotencia: nuevaClave(),
         ticketId: cierre.ticketId,
         ejemplarBaseId: cierre.ejemplarId,

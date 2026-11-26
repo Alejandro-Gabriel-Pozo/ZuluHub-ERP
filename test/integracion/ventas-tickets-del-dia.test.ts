@@ -102,6 +102,7 @@ describe.skipIf(base === null)("ventas: tickets del día y ficha del ticket", ()
     t: { ticketId: string; ejemplarId: string },
   ) =>
     m.casos.anularTicket(e.gerente, {
+      sucursalDeTrabajo: e.sucursal,
       claveIdempotencia: nuevaClave(),
       ticketId: t.ticketId,
       ejemplarBaseId: t.ejemplarId,
