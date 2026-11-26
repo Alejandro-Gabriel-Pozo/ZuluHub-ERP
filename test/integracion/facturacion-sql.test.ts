@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
-import { cuitUnico } from "./entorno";
+import { cuitUnico, baseDeEsteArchivo } from "./entorno";
 import {
   acepta,
   check,
@@ -47,7 +47,7 @@ import {
  * `facturacion-aislamiento.test.ts`; la concurrencia en `facturacion-concurrencia.test.ts`.
  */
 
-const base = inject("baseDePruebas");
+const base = await baseDeEsteArchivo(inject("baseDePruebas"));
 vi.setConfig({ testTimeout: 120_000 });
 
 const TABLAS = [
