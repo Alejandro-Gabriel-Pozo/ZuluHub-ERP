@@ -64,6 +64,8 @@ export type LineaDelEstadoDeCuenta = Readonly<{
   fechaDeNegocio: string;
   venceEl: string | null;
   anulaA: string | null;
+  /** El ticket detrás del movimiento (el del cargo, o el de la cobranza), para vincular la fila con él; `null` si no se pudo determinar. Solo lectura, de la empresa. */
+  ticketId: string | null;
   /** Qué es el movimiento (venta a cuenta, cobranza o su anulación). */
   tipo: TipoDeMovimiento;
   /** `true`: un cargo todavía con algo por saldar cuyo vencimiento ya pasó. */
@@ -83,6 +85,8 @@ export type CargoPendienteDelEstadoDeCuenta = Readonly<{
   clase: string;
   fechaDeNegocio: string;
   venceEl: string | null;
+  /** El ticket que originó el cargo, para vincular la fila con él (cobrarlo a cuenta); `null` si el cargo no viene de un ticket. */
+  ticketId: string | null;
   /** Lo que le falta saldar al cargo. */
   pendiente: ImporteJson;
   vencida: boolean;
@@ -111,6 +115,19 @@ const fechaOpcional = (
   const f = fechaCivilDesdeTexto(texto);
   return f.ok ? ok(f.valor) : err("FECHA_INVALIDA");
 };
+
+/** El ticket de un movimiento: el del cargo (por su id de ticket) o el de la cobranza (por su id de cobranza); `undefined` si no se pudo determinar. */
+function ticketDelMovimiento(
+  l: Readonly<{ origenTipo: string; origenId: string }>,
+  tickets: Readonly<{
+    porTicket: ReadonlyMap<string, TicketDeUnMovimiento>;
+    porCobranza: ReadonlyMap<string, TicketDeUnMovimiento>;
+  }>,
+): TicketDeUnMovimiento | undefined {
+  if (esOrigenDeUnaCobranza(l.origenTipo)) return tickets.porCobranza.get(l.origenId);
+  if (esOrigenDeUnTicket(l.origenTipo)) return tickets.porTicket.get(l.origenId);
+  return undefined;
+}
 
 /**
  * El estado de cuenta de UN cliente (CC-4): sus movimientos del libro con el saldo corrido (los espejos de anulación como líneas propias, nada se oculta), lo que le queda por saldar a cada
@@ -218,12 +235,9 @@ export function armarVerEstadoDeCuenta(dependencias: DependenciasDeEstadoDeCuent
             anulaA: l.anulaA,
             tipo: tipoDeMovimiento(l.clase, l.naturaleza),
             vencida: vencidas.has(l.asientoId),
+            ticketId: ticketDelMovimiento(l, tickets)?.ticketId ?? null,
             ticket: (() => {
-              const t = esOrigenDeUnaCobranza(l.origenTipo)
-                ? tickets.porCobranza.get(l.origenId)
-                : esOrigenDeUnTicket(l.origenTipo)
-                  ? tickets.porTicket.get(l.origenId)
-                  : undefined;
+              const t = ticketDelMovimiento(l, tickets);
               return t === undefined
                 ? null
                 : {
@@ -242,6 +256,7 @@ export function armarVerEstadoDeCuenta(dependencias: DependenciasDeEstadoDeCuent
             clase: c.clase,
             fechaDeNegocio: c.fechaNegocio,
             venceEl: c.venceEl,
+            ticketId: esOrigenDeUnTicket(c.origenTipo) ? c.origenId : null,
             pendiente: importeAJson(c.pendiente),
             vencida: c.vencida,
             antiguedadEnDias: antiguedadEnDias(c.fechaNegocio, hoy.valor),

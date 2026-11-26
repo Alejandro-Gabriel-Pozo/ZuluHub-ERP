@@ -3,6 +3,7 @@ import type { MedioDeCobranza } from "../dominio/exportacion";
 
 /** El ticket detrás de un movimiento, tal como se muestra: «Ticket {numero} · {canal} · {sucursal}». */
 export type TicketDeUnMovimiento = Readonly<{
+  ticketId: string;
   numero: number;
   sucursalId: string;
   esDelSalon: boolean;

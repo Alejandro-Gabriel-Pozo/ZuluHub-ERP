@@ -81,6 +81,12 @@ export const FICHA_DE_CUENTA_CORRIENTE = {
   acceso: "cuenta_corriente.ver",
   botones: [
     {
+      id: "exportar",
+      texto: "compras.exportacion.exportar",
+      hace: { navega: "/caja/cuenta-corriente/exportar" },
+      sinPermiso: "APAGADO",
+    },
+    {
       id: "habilitar-cliente",
       texto: "cuenta_corriente.lista.habilitar_cliente",
       hace: { navega: "/caja/cuenta-corriente/habilitar" },
@@ -288,6 +294,7 @@ export const FICHA_DE_CUENTA_CORRIENTE = {
     "navegacion.grupo.mostrador",
     "catalogo.accion.guardar",
     "catalogo.accion.cancelar",
+    "compras.exportacion.exportar",
   ],
   estadoDeLaFicha: "EN_CONSTRUCCION",
 } as const satisfies FichaDeLaCuentaCorriente;
