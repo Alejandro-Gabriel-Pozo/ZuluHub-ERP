@@ -131,6 +131,17 @@ export function PantallaDeFichaDeCompra({
           ) : null}
         </section>
       )}
+      {f.saldadaPorNotas === null ? null : <Insignia tono="neutro">{f.saldadaPorNotas}</Insignia>}
+      {f.notas === null ? null : (
+        <EnlaceDeAccion href={f.notas.href} variante="secundaria">
+          {f.notas.texto}
+        </EnlaceDeAccion>
+      )}
+      {f.cambiarElComprobante === null ? null : (
+        <EnlaceDeAccion href={f.cambiarElComprobante.href} variante="secundaria">
+          {f.cambiarElComprobante.texto}
+        </EnlaceDeAccion>
+      )}
       {f.declararPago === null ? null : (
         <EnlaceDeAccion href={f.declararPago.href} variante="primaria">
           {f.declararPago.texto}

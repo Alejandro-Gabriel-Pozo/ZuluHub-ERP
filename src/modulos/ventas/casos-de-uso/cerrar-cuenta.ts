@@ -1,7 +1,13 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import { crearDirectorioDePartes } from "../../clientes/publico";
 import type { PersonaId } from "../../../primitivas/identificadores/marca";
-import { importeAJson, type ImporteJson } from "../../../primitivas/dinero/importe";
+import {
+  importeAJson,
+  importeDesdeTexto,
+  type ImporteJson,
+} from "../../../primitivas/dinero/importe";
+import { FORMA_DEL_IMPORTE } from "../../../primitivas/dinero/forma-del-importe";
+import { ARS } from "../../../primitivas/dinero/moneda";
 import { cantidadATexto, cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
 import { precioUnitarioDesdeTexto } from "../../../primitivas/dinero/precio-unitario";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
@@ -40,6 +46,12 @@ export type EntradaDeCerrarCuenta = Readonly<{
    */
   clienteId?: string | undefined;
   /**
+   * El total que vio quien cierra (CC-5, B1a-2): OBLIGATORIO con `clienteId` (sin él, `ENTRADA_INVALIDA` y no se escribe nada) y sin efecto sin cliente. Si el total de la cuenta AHORA es otro (alguien agregó o
+   * quitó algo mientras se elegía el cliente), no se cierra ni se carga nada (`TOTAL_CAMBIO` con el total actual): lo que se carga a la cuenta del cliente es lo que la persona vio. Un cierre que ya se había
+   * hecho se devuelve igual (la idempotencia va primero), aunque este total ya sea viejo.
+   */
+  totalEsperado?: Readonly<{ moneda: string; monto: string }> | undefined;
+  /**
    * CC-2: con `clienteId`, el motivo con el que quien cierra aprueba que la venta pase el límite de crédito del cliente. Solo cuenta si la venta lo supera Y quien cierra tiene
    * `cuenta_corriente.aprobar_exceso` (lo decide el servidor): si no, el cierre no se hace. Sin cliente se ignora.
    */
@@ -62,7 +74,7 @@ export type SalidaDeCerrarCuenta = Readonly<{
 const directorio = crearDirectorioDePartes();
 
 /** La salida de un ticket que ya existía (repetición): el original, con el rótulo y el estado de hoy. */
-async function salidaDelTicketExistente(
+export async function salidaDelTicketExistente(
   tx: TxDeVentas,
   empresa: Parameters<TxDeVentas["tickets"]["ejemplarDeNumero"]>[0],
   ticket: Ticket,
@@ -180,10 +192,24 @@ export async function cerrarCuentaEnTx(
       if (actual !== null && actual.estado === "ANULADA") return err("CUENTA_ANULADA");
       throw new Error("la cuenta está cerrada pero no tiene ticket");
     }
+    // Un cierre ya hecho a nombre de OTRO cliente no se devuelve como si fuera este: la misma cuenta con otro cliente es un pedido distinto (`CLAVE_REUTILIZADA`). El mismo cliente, o ninguno, devuelve el ticket tal como quedó.
+    if (entrada.clienteId !== undefined && ticket.cargadoAParteId !== entrada.clienteId) {
+      return err("CLAVE_REUTILIZADA");
+    }
     return ok(await salidaDelTicketExistente(tx, empresaId, ticket));
   };
   if (decision.valor.tipo === "YA_CERRADA") return yaEmitido();
   const { estadoDelTicket, cortesia } = decision.valor;
+
+  // Cerrar a nombre de un cliente carga ese total a su cuenta: tiene que ser el que vio quien cierra. Va después de la idempotencia y antes de tocar nada.
+  if (entrada.clienteId !== undefined) {
+    if (entrada.totalEsperado === undefined) return err("ENTRADA_INVALIDA");
+    if (entrada.totalEsperado.moneda !== ARS) return err("MONEDA_NO_SOPORTADA");
+    if (!FORMA_DEL_IMPORTE.test(entrada.totalEsperado.monto)) return err("IMPORTE_INVALIDO");
+    if (calculado.total.unidades !== importeDesdeTexto(ARS, entrada.totalEsperado.monto).unidades) {
+      return err({ error: "TOTAL_CAMBIO", totalActual: importeAJson(calculado.total) });
+    }
+  }
 
   // El cliente se valida DESPUÉS de saber que esta transacción va a cerrar (un cierre repetido o perdido devuelve el ticket que ya existe) y ANTES de tocar nada. Cualquier
   // motivo (no existe, es de otra empresa, está inactiva o anonimizada, no es cliente, id mal formado) es el mismo `CLIENTE_NO_VALIDO`: no cuenta qué hay en otra empresa.

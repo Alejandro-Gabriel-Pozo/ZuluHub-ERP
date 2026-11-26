@@ -27,6 +27,18 @@ const DE_LA_FACTURA = (para: string): Proposito => ({
     "Pedernal-docs, brief `PR-7-factura-en-la-compra.md` de Compras (rama de planificación de la Ola 1) y maqueta `compra.html` (estados `factura` y `factura-total`); el bloque va dentro de «Nueva compra» (respuesta del orquestador, 24/11/2026); quién: los tres roles (recepciones.registrar y comprobantes_de_proveedor.registrar)",
 });
 
+const FORMULARIO_DE_NOTA =
+  "apps/web/ui/plantillas/compras/notas/FormularioDeCargarNota.cliente.tsx";
+const REGISTRAR_UNA_NOTA = [
+  "notas_de_credito_de_proveedor.registrar",
+  "notas_de_debito_de_proveedor.registrar",
+] as const;
+const DE_LA_NOTA = (para: string): Proposito => ({
+  para,
+  fuente:
+    "Pedernal-docs, brief `PR-NOTAS-1-notas-de-credito-y-debito-con-pagos.md` (pantalla 10) y maqueta `briefs/maquetas/servicios-y-bienes-de-uso.html` («Cargar una nota del proveedor»); ficha aprobada por el orquestador el 26/11/2026 (NOTAS-2c-1); quién: gerente y administrador (notas_de_credito_de_proveedor.registrar y notas_de_debito_de_proveedor.registrar)",
+});
+
 export const DATOS_DE_COMPRAS_FACTURA_Y_PAGO = {
   "fecha-de-pago-de-compra": {
     // Que la fecha sea real y no futura (el «hoy» de Argentina) lo decide el servidor (`leerPago`); la pantalla solo ofrece la de hoy y tope en hoy como ayuda.
@@ -94,9 +106,12 @@ export const DATOS_DE_COMPRAS_FACTURA_Y_PAGO = {
       DE_LA_FACTURA(
         "Punto de venta impreso en la factura; tiene que estar declarado en la ficha del proveedor (lo valida el servidor).",
       ),
+      DE_LA_NOTA(
+        "Punto de venta impreso en la nota del proveedor; tiene que estar declarado en la ficha del proveedor (lo valida el servidor).",
+      ),
     ],
-    consumidores: [BLOQUE_DE_FACTURA],
-    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    consumidores: [BLOQUE_DE_FACTURA, FORMULARIO_DE_NOTA],
+    ponerPor: [...REGISTRAR_COMPRA_CON_FACTURA, ...REGISTRAR_UNA_NOTA],
     requiere: REQUIERE_COMPRAS,
   },
   "numero-de-factura": {
@@ -105,16 +120,22 @@ export const DATOS_DE_COMPRAS_FACTURA_Y_PAGO = {
       DE_LA_FACTURA(
         "Número impreso en la factura; la misma factura (proveedor, tipo, punto de venta y número) no se carga dos veces.",
       ),
+      DE_LA_NOTA(
+        "Número impreso en la nota del proveedor; la misma nota (proveedor, tipo, punto de venta y número) no se carga dos veces.",
+      ),
     ],
-    consumidores: [BLOQUE_DE_FACTURA],
-    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    consumidores: [BLOQUE_DE_FACTURA, FORMULARIO_DE_NOTA],
+    ponerPor: [...REGISTRAR_COMPRA_CON_FACTURA, ...REGISTRAR_UNA_NOTA],
     requiere: REQUIERE_COMPRAS,
   },
   "fecha-de-factura": {
     ficha: "src/primitivas/tiempo/fecha-civil.ts",
-    propositos: [DE_LA_FACTURA("Fecha impresa en la factura.")],
-    consumidores: [BLOQUE_DE_FACTURA],
-    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    propositos: [
+      DE_LA_FACTURA("Fecha impresa en la factura."),
+      DE_LA_NOTA("Fecha impresa en la nota del proveedor."),
+    ],
+    consumidores: [BLOQUE_DE_FACTURA, FORMULARIO_DE_NOTA],
+    ponerPor: [...REGISTRAR_COMPRA_CON_FACTURA, ...REGISTRAR_UNA_NOTA],
     requiere: REQUIERE_COMPRAS,
   },
   "vencimiento-de-pago": {
@@ -150,9 +171,12 @@ export const DATOS_DE_COMPRAS_FACTURA_Y_PAGO = {
     ficha: "src/modulos/compras/dominio/comprobante.ts",
     propositos: [
       DE_LA_FACTURA("Alícuota de IVA de cada línea de una factura A (lista cerrada del dominio)."),
+      DE_LA_NOTA(
+        "Alícuota de IVA del importe de la nota del proveedor (lista cerrada del dominio).",
+      ),
     ],
-    consumidores: [BLOQUE_DE_FACTURA],
-    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    consumidores: [BLOQUE_DE_FACTURA, FORMULARIO_DE_NOTA],
+    ponerPor: [...REGISTRAR_COMPRA_CON_FACTURA, ...REGISTRAR_UNA_NOTA],
     requiere: REQUIERE_COMPRAS,
   },
   percepciones: {
@@ -172,9 +196,34 @@ export const DATOS_DE_COMPRAS_FACTURA_Y_PAGO = {
       DE_LA_FACTURA(
         "Total que dice el papel de la factura; si no coincide con la suma del servidor avisa y se carga igual.",
       ),
+      DE_LA_NOTA(
+        "Total que dice el papel de la nota del proveedor; el servidor lo compara con la suma de sus importes.",
+      ),
     ],
-    consumidores: [BLOQUE_DE_FACTURA],
-    ponerPor: REGISTRAR_COMPRA_CON_FACTURA,
+    consumidores: [BLOQUE_DE_FACTURA, FORMULARIO_DE_NOTA],
+    ponerPor: [...REGISTRAR_COMPRA_CON_FACTURA, ...REGISTRAR_UNA_NOTA],
+    requiere: REQUIERE_COMPRAS,
+  },
+  "tipo-de-nota-del-proveedor": {
+    ficha: "src/modulos/compras/dominio/comprobante.ts",
+    propositos: [
+      DE_LA_NOTA(
+        "Tipo de la nota del proveedor (A, B o C) de la clase que pide la pantalla (crédito o débito): de la lista cerrada de comprobantes; el servidor rechaza un tipo de otra clase.",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_NOTA],
+    ponerPor: REGISTRAR_UNA_NOTA,
+    requiere: REQUIERE_COMPRAS,
+  },
+  "importe-neto-de-nota-por-alicuota": {
+    ficha: "src/modulos/compras/dominio/decimal.ts",
+    propositos: [
+      DE_LA_NOTA(
+        "Neto de la nota del proveedor para su alícuota, como dice el papel (la nota no tiene líneas); el IVA, el total y el tope de lo acreditable los calcula y valida el servidor.",
+      ),
+    ],
+    consumidores: [FORMULARIO_DE_NOTA],
+    ponerPor: REGISTRAR_UNA_NOTA,
     requiere: REQUIERE_COMPRAS,
   },
   "cuit-de-proveedor-nuevo": {

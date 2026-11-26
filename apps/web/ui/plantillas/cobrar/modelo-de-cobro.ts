@@ -335,7 +335,7 @@ export function pedidoDeCobro(entrada: EntradaDelPedido): Readonly<Record<string
 }
 
 /** `{ datos }` con solo lo escrito y admitido por el medio, o nada. Las cuotas son un conteo entero: viajan como número (`cuotas.ts`). */
-function datosParaEnviar(
+export function datosParaEnviar(
   pago: PagoEnEdicion,
   medio: MedioParaCobrar,
 ):

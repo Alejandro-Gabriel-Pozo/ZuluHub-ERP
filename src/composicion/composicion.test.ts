@@ -27,11 +27,15 @@ import {
   DECLARACIONES_DE_CLIENTES,
   DECLARACIONES_DE_CONSULTAS_DE_CLIENTES,
 } from "../modulos/clientes/publico";
-import { DECLARACIONES_DE_CONSULTAS_DE_CUENTA_CORRIENTE } from "../modulos/cuenta_corriente/publico";
+import {
+  DECLARACIONES_DE_CONSULTAS_DE_CUENTA_CORRIENTE,
+  DECLARACIONES_DE_CUENTA_CORRIENTE,
+} from "../modulos/cuenta_corriente/publico";
 import {
   DECLARACIONES_DE_COMPRAS,
   DECLARACIONES_DE_CONSULTAS_DE_COMPRAS,
 } from "../modulos/compras/publico";
+import { DECLARACIONES_DE_COBRO_A_CUENTA } from "./cobro-a-cuenta";
 import { DECLARACIONES_DE_CUENTA_DEL_PROVEEDOR } from "./cuenta-del-proveedor";
 import {
   DECLARACIONES_DE_VENTAS,
@@ -659,9 +663,11 @@ const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
   casosDeUsoDeClientes: { conGuard: DECLARACIONES_DE_CLIENTES },
   consultasDeClientes: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CLIENTES },
   // CC-5 (A1): la lista y la ficha de la cuenta corriente; cada consulta exige `cuenta_corriente.ver` dentro de su transacción.
+  casosDeUsoDeCuentaCorriente: { conGuard: DECLARACIONES_DE_CUENTA_CORRIENTE },
   consultasDeCuentaCorriente: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CUENTA_CORRIENTE },
   casosDeUsoDeCompras: { conGuard: DECLARACIONES_DE_COMPRAS },
   consultasDeCompras: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_COMPRAS },
+  cobroACuenta: { conGuard: DECLARACIONES_DE_COBRO_A_CUENTA },
   cuentaDelProveedor: { conGuard: DECLARACIONES_DE_CUENTA_DEL_PROVEEDOR },
   casosDeUsoDeIdentidad: {
     conGuard: DECLARACIONES_DE_IDENTIDAD,

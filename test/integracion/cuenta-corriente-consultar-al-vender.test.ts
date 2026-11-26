@@ -22,6 +22,15 @@ import {
  * que sale aunque el registro de auditoría haya fallado.
  */
 
+/** El módulo se abrió el 26/11/2026 (CC-5): para probar que el guard va primero con el módulo cerrado se usa una COPIA del catálogo donde vuelve a estar en desarrollo (violación inyectada). */
+const REGLAS_CON_EL_MODULO_CERRADO = {
+  ...REGLAS_DE_PRUEBA,
+  catalogo: {
+    ...REGLAS_DE_PRUEBA.catalogo,
+    cuenta_corriente: { ...REGLAS_DE_PRUEBA.catalogo.cuenta_corriente, estado: "en_desarrollo" },
+  },
+} as unknown as typeof REGLAS_DE_PRUEBA;
+
 const base = inject("baseDePruebas");
 vi.setConfig({ testTimeout: 180_000 });
 
@@ -98,12 +107,29 @@ describe.skipIf(base === null)("cuenta corriente: consultar al vender (CC-5)", (
   const cargar = async (clienteId: string) => {
     const cuenta = await cuentaAbierta();
     valorDe(
-      await m.casos.cerrarCuenta(e.gerente, { cuentaId: cuenta, ejemplarId: nuevoId(), clienteId }),
+      await m.casos.cerrarCuenta(e.gerente, {
+        cuentaId: cuenta,
+        ejemplarId: nuevoId(),
+        clienteId,
+        totalEsperado: { moneda: "ARS", monto: "1000.00" },
+      }),
     );
   };
   const constancias = async () =>
     (await m.auditoria(e.empresa, "CUENTA_CORRIENTE_CONSULTADA_AL_VENDER")).length;
   const noDisponible = { ok: false, error: "CLIENTE_NO_DISPONIBLE" };
+
+  it("dice si quien consulta puede aprobar excesos: lo decide el servidor por el rol (el cajero no; el gerente y el administrador sí)", async () => {
+    const c = await cliente(e, { limite: "5000.00" });
+    const cuenta = await cuentaAbierta();
+    const puede = async (contexto: typeof e.operador) =>
+      valorDe(
+        await casos.verClienteParaVender(contexto, { cuentaDeConsumoId: cuenta, clienteId: c }),
+      ).puedeAprobarElExceso;
+    expect(await puede(e.operador)).toBe(false);
+    expect(await puede(e.gerente)).toBe(true);
+    expect(await puede(e.administrador)).toBe(true);
+  });
 
   it("el cajero ve SOLO el estado, el saldo, el crédito disponible y si está excedido del cliente (con su nombre y CUIT): ni el límite, ni los movimientos, ni otros clientes", async () => {
     const c = await cliente(e, { limite: "5000.00" });
@@ -112,10 +138,18 @@ describe.skipIf(base === null)("cuenta corriente: consultar al vender (CC-5)", (
     const r = valorDe(
       await casos.verClienteParaVender(e.operador, { cuentaDeConsumoId: cuenta, clienteId: c }),
     );
-    expect(Object.keys(r).sort()).toEqual(["cliente", "disponible", "estado", "excedido", "saldo"]);
+    expect(Object.keys(r).sort()).toEqual([
+      "cliente",
+      "disponible",
+      "estado",
+      "excedido",
+      "puedeAprobarElExceso",
+      "saldo",
+    ]);
     expect(Object.keys(r.cliente).sort()).toEqual(["cuit", "nombre"]);
     expect(r).toMatchObject({
       estado: "HABILITADA",
+      puedeAprobarElExceso: false,
       saldo: { moneda: "ARS", monto: "1000.00" },
       disponible: { moneda: "ARS", monto: "4000.00" },
       excedido: false,
@@ -165,7 +199,7 @@ describe.skipIf(base === null)("cuenta corriente: consultar al vender (CC-5)", (
     const antes = await constancias();
     const enDesarrollo = crearCasosDeUsoDeCuentaCorriente({
       transacciones,
-      reglas: REGLAS_DE_PRUEBA,
+      reglas: REGLAS_CON_EL_MODULO_CERRADO,
       cuentasDeConsumoParaVender: crearCuentasDeConsumoParaVender(),
     });
     const a = await enDesarrollo.verClienteParaVender(e.operador, {
@@ -190,6 +224,7 @@ describe.skipIf(base === null)("cuenta corriente: consultar al vender (CC-5)", (
         cuentaId: cerrada,
         ejemplarId: nuevoId(),
         clienteId: c,
+        totalEsperado: { moneda: "ARS", monto: "1000.00" },
       }),
     );
     const anulada = await cuentaAbierta();
@@ -305,7 +340,12 @@ describe.skipIf(base === null)("cuenta corriente: consultar al vender (CC-5)", (
     const [a, b, cierre] = await Promise.all([
       casos.verClienteParaVender(e.operador, pedido),
       casos.verClienteParaVender(e.operador, pedido),
-      m.casos.cerrarCuenta(e.gerente, { cuentaId: aCerrar, ejemplarId: nuevoId(), clienteId: c }),
+      m.casos.cerrarCuenta(e.gerente, {
+        cuentaId: aCerrar,
+        ejemplarId: nuevoId(),
+        clienteId: c,
+        totalEsperado: { moneda: "ARS", monto: "1000.00" },
+      }),
     ]);
     valorDe(cierre);
     for (const r of [a, b]) {

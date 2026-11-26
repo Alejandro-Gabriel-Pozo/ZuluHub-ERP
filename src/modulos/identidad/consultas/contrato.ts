@@ -1,5 +1,6 @@
 import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import type { CargaDeAutorizacion } from "../../../puertos/autorizacion";
+import type { LecturaDeDerechosDeUso } from "../../../puertos/derechos-de-uso";
 import type { Transacciones } from "../../../puertos/transacciones";
 import type { RepositorioDeSucursales } from "../../empresas/publico";
 import type {
@@ -21,7 +22,9 @@ export type TxDeConsultasDeIdentidad = Readonly<{
   invitaciones: Pick<RepositorioDeInvitaciones, "pendientesDeLaEmpresa">;
   traspasos: Pick<RepositorioDeTraspasos, "enCurso">;
   /** Los roles propios (lectura): la lista con cuántas personas activas tiene cada uno, y uno por id. */
-  roles: Pick<RepositorioDeRoles, "listar" | "obtener" | "personasActivas">;
+  roles: Pick<RepositorioDeRoles, "listar" | "obtener" | "personasActivas" | "pisos">;
+  /** Los módulos del plan de la empresa: las casillas de un módulo que el plan no incluye se muestran cerradas. */
+  derechos: Pick<LecturaDeDerechosDeUso, "deLaEmpresa">;
   /** Para poner el email de las personas del traspaso. */
   personas: Pick<RepositorioDePersonas, "obtener">;
   /** Para saber qué sucursales están activas: la asignación efectiva es "asignación y sucursal activas". */

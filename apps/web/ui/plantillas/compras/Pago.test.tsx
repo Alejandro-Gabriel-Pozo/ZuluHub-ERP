@@ -85,6 +85,7 @@ const ficha = (cambios: Record<string, unknown> = {}) =>
       fecha: "2026-10-31",
       vencimientoDePago: null,
       totalSegunLaFactura: pesos("2420.00"),
+      netoAPagar: pesos("2420.00"),
     },
     pagos: [],
     ...cambios,
@@ -348,7 +349,14 @@ describe("HojaDeAnularPago", () => {
 });
 
 describe("la ficha de la compra con el pago de la factura", () => {
-  const acciones = { corregir: false, anular: false, pagar: true, anularPago: true };
+  const acciones = {
+    corregir: false,
+    anular: false,
+    pagar: true,
+    anularPago: true,
+    verNotas: false,
+    cambiarElComprobante: false,
+  };
   const anularPago = () => () => Promise.resolve({ estado: "INICIAL" } as ResultadoDeAnularPago);
 
   it("sin pago y con permiso ofrece «Declarar pago» hacia la pantalla del pago; sin permiso, nada", async () => {

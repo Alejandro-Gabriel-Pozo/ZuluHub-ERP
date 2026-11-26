@@ -1,4 +1,4 @@
--- 0113_revertir_devolucion_de_un_cobro_de_ticket: deshace 0113. FRENA (55000) si ya hay devoluciones de una cobranza de ticket. AVISAR AL DUEÑO antes de correrla con datos.
+-- 0114_revertir_devolucion_de_un_cobro_de_ticket: deshace 0114. FRENA (55000) si ya hay devoluciones de una cobranza de ticket. AVISAR AL DUEÑO antes de correrla con datos.
 -- Se corre en UNA sola transacción, con el dueño de la base (evade RLS: sin eso el conteo no vería las devoluciones de las empresas y la reversión pasaría con datos).
 -- Restituye los dos cuerpos de 0091 tal cual estaban y la restricción original; se puede repetir sin que cambie nada.
 DO $$
@@ -109,7 +109,7 @@ ALTER TABLE IF EXISTS public.movimiento_de_dinero ADD CONSTRAINT movimiento_de_d
 DO $$
 BEGIN
   IF to_regclass('public.migracion') IS NOT NULL THEN
-    DELETE FROM public.migracion WHERE nombre = '0113_devolucion_de_un_cobro_de_ticket.sql';
+    DELETE FROM public.migracion WHERE nombre = '0114_devolucion_de_un_cobro_de_ticket.sql';
   END IF;
 END
 $$;

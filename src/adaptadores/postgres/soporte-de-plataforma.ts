@@ -24,6 +24,7 @@ import {
   aDato,
 } from "./soporte-de-plataforma-comunes";
 import { crearListasDeSoporte } from "./soporte-de-plataforma-listas";
+import { crearLecturasParaExplicarPermisos } from "./soporte-de-plataforma-permisos";
 
 /**
  * Lectura de soporte de plataforma (H5 §B.5.9) sobre las tablas que el rol de plataforma PUEDE leer:
@@ -302,14 +303,6 @@ export function crearLecturaDeSoporteDePostgres(db: Kysely<SoporteDb>): LecturaD
     async invitacionPorId(id: InvitacionId) {
       return (await cargarInvitaciones([id]))[0] ?? null;
     },
-
-    /**
-     * Módulos activables por empresa: todavía no existe la tabla (el único módulo, `administracion`, es
-     * obligatorio y no se guarda), igual que en `autorizacion.ts`. Cuando aparezca el primero, cambian
-     * las dos a la vez; una prueba de fidelidad contra los casos reales lo delataría.
-     */
-    modulosActivadosDe() {
-      return Promise.resolve([]);
-    },
+    ...crearLecturasParaExplicarPermisos(db),
   };
 }

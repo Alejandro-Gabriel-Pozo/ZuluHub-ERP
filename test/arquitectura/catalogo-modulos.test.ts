@@ -105,11 +105,11 @@ const SIN_CONSTRUIR: readonly string[] = [];
 
 /**
  * Módulos YA construidos (con su carpeta y sus casos de uso) que siguen `en_desarrollo`, es decir CERRADOS para todos, hasta que su pantalla los declare
- * disponibles (todo nace cerrado; un módulo `disponible` entra al editor de planes de la plataforma y la cuenta corriente de clientes todavía no tiene pantalla ni
- * textos aprobados). A diferencia de `SIN_CONSTRUIR`, a estos NO se les perdona nada: X1 y X4 rigen completos. Hoy, `cuenta_corriente` (CC-1, 25/11/2026; lo abre CC-5).
+ * disponibles (todo nace cerrado; un módulo `disponible` entra al editor de planes de la plataforma). A diferencia de `SIN_CONSTRUIR`, a estos NO se les perdona nada: X1 y X4 rigen completos.
+ * Hoy ninguno: `cuenta_corriente` (CC-1, 25/11/2026) se abrió el 26/11/2026 con CC-5 y ya cumple X1 y X4 como cualquier módulo disponible. Un módulo construido y cerrado nuevo se agrega acá.
  * Previene: dejar un módulo abierto por error, o perdonarle a un módulo construido lo que solo se le perdona a uno sin construir.
  */
-const CERRADOS_HASTA_LA_PANTALLA: readonly string[] = ["cuenta_corriente"];
+const CERRADOS_HASTA_LA_PANTALLA: readonly string[] = [];
 
 /**
  * Acciones de un módulo YA disponible que ninguna declaración de caso de uso nombra (X1 inverso), con lista exacta. Nació con DEC-0463
@@ -501,7 +501,7 @@ describe("P6: el catálogo REAL cumple los cruces", () => {
 
   it("todo módulo en desarrollo del catálogo real figura en SIN_CONSTRUIR: uno nuevo olvidado hace fallar esta prueba (E0-T1)", () => {
     const enDesarrollo = Object.entries(CATALOGO_DE_MODULOS)
-      .filter(([, definicion]) => definicion.estado === "en_desarrollo")
+      .filter(([, definicion]) => (definicion.estado as string) === "en_desarrollo")
       .map(([clave]) => clave);
     expect(
       enDesarrollo.filter(

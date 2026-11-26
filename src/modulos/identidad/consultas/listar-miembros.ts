@@ -15,6 +15,10 @@ export type MiembroDeLista = Readonly<{
   /** Hasta que la autenticación aporte el nombre, la lista muestra el email (D9). */
   email: string;
   rol: RolDeLaMembresia;
+  /** El nombre del rol propio cuando `rol` es `PROPIO` (lo escribe el gerente); `null` con un rol base. */
+  rolPropioNombre: string | null;
+  /** El id del rol propio cuando `rol` es `PROPIO` (la ficha lo usa para preseleccionar el rol al reasignar); `null` con un rol base. */
+  rolPropioId: string | null;
   /** `false`: la membresía está apagada (la persona sigue figurando). */
   activo: boolean;
   /** Las sucursales de la asignación efectiva: asignación activa Y sucursal activa. */
@@ -45,6 +49,9 @@ export function armarListarMiembros({ transacciones, reglas }: DependenciasDeCon
         );
         if (!permiso.ok) return permiso;
         const miembros = await tx.membresias.listarConEmail(empresaId);
+        const nombresDeRoles = new Map(
+          (await tx.roles.listar(empresaId)).map((r) => [r.id, r.nombre] as const),
+        );
         const asignaciones = await tx.asignaciones.activasDeLaEmpresa(empresaId);
         const activas = new Set((await tx.sucursales.listarActivas(empresaId)).map((s) => s.id));
         return ok(
@@ -53,6 +60,11 @@ export function armarListarMiembros({ transacciones, reglas }: DependenciasDeCon
               personaId: membresia.personaId,
               email,
               rol: membresia.rol,
+              rolPropioId: membresia.rolPropioId,
+              rolPropioNombre:
+                membresia.rolPropioId === null
+                  ? null
+                  : (nombresDeRoles.get(membresia.rolPropioId) ?? null),
               activo: membresia.activo,
               sucursales: asignaciones
                 .filter((a) => a.personaId === membresia.personaId && activas.has(a.sucursalId))

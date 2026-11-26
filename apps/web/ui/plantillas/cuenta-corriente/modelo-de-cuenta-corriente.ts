@@ -1,5 +1,9 @@
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
-import { formatearFecha, formatearImporte } from "../../patrones/formato-fiscal";
+import {
+  formatearFecha,
+  formatearImporte,
+  formatearNumeroDeDocumento,
+} from "../../patrones/formato-fiscal";
 import {
   direccionDelListadoDeCuentas,
   rutaDeLaFichaDeCuenta,
@@ -49,6 +53,8 @@ export type FichaDeCuentaParaLaPantalla = Readonly<{
     vence: string | null;
     vencida: boolean;
     importe: Importe;
+    /** El ticket detrás del movimiento, para vincular la fila con él (B2); la pantalla de hoy no lo muestra. */
+    ticketId: string | null;
     ticket: Readonly<{
       numero: number;
       canal: "SALON" | "MOSTRADOR";
@@ -58,7 +64,7 @@ export type FichaDeCuentaParaLaPantalla = Readonly<{
   }>[];
 }>;
 
-const SIN_DATO = "—";
+export const SIN_DATO = "—";
 
 const importe = (i: Importe): string => formatearImporte(i.monto);
 const dias = (n: number): string => texto({}, "cuenta_corriente.lista.dias", { n: String(n) });
@@ -273,4 +279,31 @@ export function armarLaFichaDeLaCuenta(
       importe: importe(m.importe),
     })),
   };
+}
+
+/** Un cliente que se puede elegir para habilitar. */
+export type ClienteParaHabilitarDeLaPantalla = Readonly<{
+  parteId: string;
+  nombre: string | null;
+  cuit: string | null;
+}>;
+
+/**
+ * Las opciones del selector de «Habilitar cuenta corriente»: «Nombre · CUIT». Un cliente sin nombre se ve con el rótulo «Cliente» (nunca un nombre inventado) y uno sin CUIT, con «—»; ese se puede elegir para ver el aviso,
+ * pero no se habilita (`tieneCuit`). El orden es el del servidor.
+ */
+export function clientesParaElegir(
+  clientes: readonly ClienteParaHabilitarDeLaPantalla[],
+  t: TextosDeCuentaCorriente,
+): readonly Readonly<{ parteId: string; etiqueta: string; nombre: string; tieneCuit: boolean }>[] {
+  return clientes.map((c) => {
+    const nombre = c.nombre ?? t.cliente;
+    const cuit = c.cuit === null ? SIN_DATO : formatearNumeroDeDocumento("CUIT", c.cuit);
+    return {
+      parteId: c.parteId,
+      etiqueta: `${nombre} · ${cuit}`,
+      nombre,
+      tieneCuit: c.cuit !== null,
+    };
+  });
 }

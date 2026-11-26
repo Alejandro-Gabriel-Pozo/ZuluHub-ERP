@@ -16,7 +16,7 @@ describe("el catálogo comercial de módulos", () => {
     expect(conCapacidad).toEqual([]);
   });
 
-  it("tiene catorce módulos (el de cuenta_corriente nace en_desarrollo, CC-1; produccion es disponible desde el 25/11/2026, DEC-1050): administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, caja y ventas (disponibles desde el 15/11/2026, DEC-0463), compras (disponible desde E9-T12), vidriera (disponible desde el 20/11/2026, DEC-0826), comandas y salon (disponibles desde S-0r, 17/11/2026, Q-S0-3), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
+  it("tiene catorce módulos (el de cuenta_corriente nació en_desarrollo, CC-1, y es disponible desde el 26/11/2026, CC-5; produccion es disponible desde el 25/11/2026, DEC-1050): administracion (obligatorio y disponible), facturacion (disponible, sin activar para nadie), catalogo, caja y ventas (disponibles desde el 15/11/2026, DEC-0463), compras (disponible desde E9-T12), vidriera (disponible desde el 20/11/2026, DEC-0826), comandas y salon (disponibles desde S-0r, 17/11/2026, Q-S0-3), cierre (disponible desde E3b), stock (disponible desde E5) y clientes (disponible y obligatorio desde E9-T4)", () => {
     expect(CATALOGO_DE_MODULOS).toEqual({
       administracion: {
         estado: "disponible",
@@ -183,6 +183,7 @@ describe("el catálogo comercial de módulos", () => {
           "movimientos_caja.anular_de_otros": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "cobros.corregir_medio": { capacidad: null, efecto: "COMPLETA_CIERRA" },
           "declaraciones_de_total.registrar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+          "salidas_de_dinero.registrar": { capacidad: null, efecto: "CREA_AMPLIA" },
         },
       },
       cierre: {
@@ -317,7 +318,7 @@ describe("el catálogo comercial de módulos", () => {
         },
       },
       cuenta_corriente: {
-        estado: "en_desarrollo",
+        estado: "disponible",
         obligatorio: false,
         requiere: ["clientes"],
         usaSiExiste: [],
@@ -356,19 +357,19 @@ describe("el catálogo comercial de módulos", () => {
     expect(carpetas).toEqual([["modulos/catalogo"], ["modulos/catalogo"], ["modulos/stock"]]);
   });
 
-  it("el catálogo tiene 45 acciones de catálogo, carta y stock (8 + 12 + 25), 35 de caja, cierre y ventas (23 + 4 + 8) y 43 de clientes y compras (9 + 34), sin repetir ninguna", () => {
+  it("el catálogo tiene 45 acciones de catálogo, carta y stock (8 + 12 + 25), 36 de caja, cierre y ventas (24 + 4 + 8) y 43 de clientes y compras (9 + 34), sin repetir ninguna", () => {
     const cuantas = (
       m: "catalogo" | "vidriera" | "stock" | "caja" | "cierre" | "ventas" | "clientes" | "compras",
     ) => Object.keys(CATALOGO_DE_MODULOS[m].acciones).length;
     expect([cuantas("catalogo"), cuantas("vidriera"), cuantas("stock")]).toEqual([8, 12, 25]);
-    expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([23, 4, 8]);
+    expect([cuantas("caja"), cuantas("cierre"), cuantas("ventas")]).toEqual([24, 4, 8]);
     expect([cuantas("clientes"), cuantas("compras")]).toEqual([9, 34]);
     const todas = Object.values(CATALOGO_DE_MODULOS).flatMap((m) => Object.keys(m.acciones));
     // 30 de administración (18 de usuarios, sucursales, gerencia y permisos, 5 de roles propios y su asignación de H4b T4, y 7 de la configuración fiscal de H7 T5),
     // 9 de facturación (2 de H7, 6 de F5 y 1 de F7), 49 de catálogo, carta y stock (54 menos las 6 retiradas por las
     // decisiones 138 y 133 y `depositos.asignar_emisor`, que E5 retiró: el piloto no exige emisor, D156, más `costos.ver`
     // de E5-T10, más `vidrieras.ocultar_en_empresa` de la 22A y `vidrieras.administrar_portal` del portal), 35 de caja, cierre y ventas (E0-T1), 42 de clientes y compras (E9-T1, T11, N3-2b, N3-4, N4-1, N4-3, N4-4, N4-5, la exportación del 25/11/2026 y las 3 de notas de débito de NOTAS-1), 16 de salón y comandas (E7), 6 de lotes de E6-T7, 5 de producción de E6-T8 y 5 de cuenta corriente (CC-1, CC-2 y CC-5): 187 en total.
-    expect(todas).toHaveLength(30 + 9 + 45 + 35 + 43 + 16 + 5 + 5);
+    expect(todas).toHaveLength(30 + 9 + 45 + 36 + 43 + 16 + 5 + 5);
     expect(new Set(todas).size).toBe(todas.length);
   });
 
@@ -604,6 +605,7 @@ const EFECTOS_DE_EMPRESA = {
     "recepciones.registrar",
     "roles.crear",
     "roles.editar",
+    "salidas_de_dinero.registrar",
     "sesiones_caja.abrir",
     "stock.ajustar",
     "stock.registrar_entrada",

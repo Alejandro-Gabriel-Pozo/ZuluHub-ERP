@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
 import { PantallaDeCobro } from "../cobrar/PantallaDeCobro.cliente";
 import type { CobroPreparado, TicketAnulado, VentaCobrada } from "../cobrar/modelo-de-cobro";
+import type { VentaACuentaDelCobro } from "../cobrar/modelo-de-vender-a-cuenta";
 import type { PapelDeTicket } from "../cobrar/PapelDelTicket.cliente";
 import type { TextosDeCobrar } from "../cobrar/textos-de-cobrar";
 import type { TextosDeDividirEnElCobro } from "../cobrar/textos-de-dividir-en-el-cobro";
@@ -25,6 +26,8 @@ export type PropsDeCobroDeLaMesa = Readonly<{
   /** Solo al cobrar una cuenta de una mesa dividida: sus textos y si es la última (la mesa queda libre y «Volver» lleva al salón). */
   deLaDivision?:
     Readonly<{ ultima: boolean; volverALasCuentas: string; mesaCobrada: string }> | undefined;
+  /** «Vender a cuenta corriente» (CC-5 B1b): ausente si la persona no puede cargar a cuenta o no hay clientes con cuenta: entonces no se ofrece. */
+  aCuenta?: VentaACuentaDelCobro | undefined;
   acciones: Readonly<{
     cobrar: Accion<VentaCobrada>;
     anular: Accion<TicketAnulado>;
@@ -45,6 +48,7 @@ export function CobroDeLaMesa({
   textos,
   textosDeDividir,
   deLaDivision,
+  aCuenta,
   acciones,
 }: PropsDeCobroDeLaMesa) {
   const router = useRouter();
@@ -59,6 +63,7 @@ export function CobroDeLaMesa({
       anular={acciones.anular}
       imprimir={acciones.imprimir}
       cuentaExistente={{ cuentaId }}
+      aCuenta={aCuenta}
       deLaDivision={
         deLaDivision === undefined
           ? undefined

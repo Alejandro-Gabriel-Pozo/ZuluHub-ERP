@@ -16,6 +16,7 @@ describe("códigos públicos de compras", () => {
       COMPRAS_CANTIDAD_INVALIDA: "compras.error.cantidad_invalida",
       COMPRAS_PRECIO_INVALIDO: "compras.error.precio_invalido",
       COMPRAS_PROVEEDOR_NO_ENCONTRADO: "compras.error.proveedor_no_encontrado",
+      COMPRAS_NOTA_CON_PAGO: "compras.error.nota_con_pago",
       COMPRAS_ACCION_NO_PERMITIDA: "compras.error.sin_permiso",
     });
     const texto = (c: keyof typeof CLAVES_DE_ERRORES_DE_COMPRAS) =>
@@ -25,6 +26,9 @@ describe("códigos públicos de compras", () => {
     expect(texto("COMPRAS_PUNTO_DE_VENTA_NO_DECLARADO")).toBe("Falta declarar los puntos de venta");
     expect(texto("COMPRAS_CANTIDAD_INVALIDA")).toBe("La cantidad tiene que ser mayor que cero");
     expect(texto("COMPRAS_PRECIO_INVALIDO")).toBe("Escribí un precio válido");
+    expect(texto("COMPRAS_NOTA_CON_PAGO")).toBe(
+      "Primero anulá el pago: se pagó con esta nota descontada",
+    );
     expect(texto("COMPRAS_PROVEEDOR_NO_ENCONTRADO")).toBe("El proveedor ya no está disponible");
     expect(texto("COMPRAS_ACCION_NO_PERMITIDA")).toBe("Esta acción no está permitida");
   });

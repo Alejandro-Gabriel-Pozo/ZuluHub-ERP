@@ -31,7 +31,7 @@ export type MovimientoDeDineroNuevo = Readonly<{
   terceroPersonaId: string | null;
   referencia: string | null;
   devuelveA: string | null;
-  /** La cobranza que devuelve (0113), con el pedido de devolución que agrupa sus líneas; `null` fuera de una devolución de cobranza. */
+  /** La cobranza que devuelve (0114), con el pedido de devolución que agrupa sus líneas; `null` fuera de una devolución de cobranza. */
   devuelveOrigen?: Readonly<{ tipo: OrigenDevoluble; id: string; devolucionId: string }> | null;
   /** El egreso manual de la salida; `null` en la entrada (sus movimientos son los cobros con origen del acto). */
   movimientoId: string | null;

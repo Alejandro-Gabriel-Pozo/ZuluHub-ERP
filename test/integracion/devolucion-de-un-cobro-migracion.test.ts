@@ -34,7 +34,7 @@ import {
 import { SesionDePrueba, type Intento } from "./sesiones";
 
 /**
- * Migración 0113 (DM-1): la devolución de un cobro de ticket. SQL directo con el rol de la aplicación sobre una base propia con todas las migraciones. Cada caso corre en una
+ * Migración 0114 (DM-1): la devolución de un cobro de ticket. SQL directo con el rol de la aplicación sobre una base propia con todas las migraciones. Cada caso corre en una
  * transacción que se deshace (`conAppDe`), salvo los de concurrencia y reversión, que confirman datos de verdad. Previene: una devolución que supera lo cobrado de la cobranza
  * (también con dos a la vez), una que cita una cobranza ajena o de otra sucursal, una que nace sin las columnas coherentes, y una reversión que borra devoluciones sin avisar.
  */
@@ -59,7 +59,7 @@ type Devolucion = Partial<{
 }>;
 
 describe.skipIf(base === null)(
-  "migración 0113: devolución de un cobro de ticket (SQL directo)",
+  "migración 0114: devolución de un cobro de ticket (SQL directo)",
   () => {
     let propia: Awaited<ReturnType<typeof crearBaseAparte>>;
     let dueno: pg.Client;
@@ -654,8 +654,8 @@ describe.skipIf(base === null)(
 
     // ---------------------------------------------------------------------------------------------
     describe("reversión", () => {
-      const REVERSION = "reversiones/0113_revertir_devolucion_de_un_cobro_de_ticket.sql";
-      const MIGRACION = "0113_devolucion_de_un_cobro_de_ticket.sql";
+      const REVERSION = "reversiones/0114_revertir_devolucion_de_un_cobro_de_ticket.sql";
+      const MIGRACION = "0114_devolucion_de_un_cobro_de_ticket.sql";
       const foto = async (c: pg.Client): Promise<string> => {
         const funciones = await c.query(
           `select p.proname, pg_get_functiondef(p.oid) as def from pg_proc p join pg_namespace n on n.oid = p.pronamespace

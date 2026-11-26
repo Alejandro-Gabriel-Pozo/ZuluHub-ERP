@@ -72,6 +72,14 @@ export {
   type OrdenDeLaLista,
 } from "./consultas/listar-clientes-con-cuenta";
 export type {
+  ClienteParaElegirAlVender,
+  ErrorAlListarClientesParaVender,
+} from "./consultas/listar-clientes-para-vender";
+export type {
+  ClienteSinCuenta,
+  ErrorAlListarClientesSinCuenta,
+} from "./consultas/listar-clientes-sin-cuenta";
+export type {
   CargoPendienteDelEstadoDeCuenta,
   DependenciasDeEstadoDeCuenta,
   EntradaDeVerEstadoDeCuenta,
@@ -80,7 +88,10 @@ export type {
   LineaDelEstadoDeCuenta,
   TxDeEstadoDeCuenta,
 } from "./consultas/ver-estado-de-cuenta";
-export { ORIGEN_DE_LA_COBRANZA_DE_VENTA } from "./dominio/cargo-de-venta";
+export {
+  ORIGEN_DE_LA_COBRANZA_DE_VENTA,
+  ORIGEN_DEL_CARGO_DE_VENTA,
+} from "./dominio/cargo-de-venta";
 export {
   armarHojaDeLaExportacion,
   type RotulosDeLaExportacion,

@@ -4,7 +4,7 @@ import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respue
 import type { ContextoOperativo } from "../contexto/contexto";
 import type { EmpresaDeLaLista } from "../modulos/identidad/publico";
 import type { EmpresaId, MarcaComercialId, PersonaId } from "../primitivas/identificadores/marca";
-import { rolParaMostrar, type RolDeEmpresa } from "../capacidades/permisos/roles";
+import { rolBaseParaMostrar, type RolDeEmpresa } from "../capacidades/permisos/roles";
 import type { SesionAutenticada } from "../puertos/autenticacion";
 import { aRespuesta, aRespuestaDeExcepcion, errorAPublico, respuestaDeFalla } from "./a-respuesta";
 import { contextoOperativo, contextoDeSesion } from "./contextos";
@@ -34,12 +34,13 @@ export type EmpresaParaLaPantalla = Pick<
   EmpresaDeLaLista,
   "empresaId" | "nombre" | "estadoEfectivo"
 > &
-  Readonly<{ rol: RolDeEmpresa }>;
+  /** `null`: rol propio de esa empresa (las pantallas de elección y de cuenta no lo muestran). */
+  Readonly<{ rol: RolDeEmpresa | null }>;
 
 const paraLaPantalla = (e: EmpresaDeLaLista): EmpresaParaLaPantalla => ({
   empresaId: e.empresaId,
   nombre: e.nombre,
-  rol: rolParaMostrar(e.rol),
+  rol: rolBaseParaMostrar(e.rol),
   estadoEfectivo: e.estadoEfectivo,
 });
 

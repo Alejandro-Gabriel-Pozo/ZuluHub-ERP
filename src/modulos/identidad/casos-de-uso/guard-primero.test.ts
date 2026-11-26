@@ -388,6 +388,7 @@ describe("P7: el guard va primero en cada consulta de identidad", () => {
     listarRoles: (c) => c.listarRoles(contexto),
     verRol: (c) => c.verRol(contexto, { rolId: "r-1" }),
     rolesAsignables: (c) => c.rolesAsignables(contexto),
+    accionesParaElegir: (c) => c.accionesParaElegir(contexto),
   };
 
   const consultas = Object.entries(DECLARACIONES_DE_CONSULTAS).flatMap(([nombre, declaracion]) =>
@@ -398,6 +399,7 @@ describe("P7: el guard va primero en cada consulta de identidad", () => {
 
   it("las consultas con acción que hay que probar", () => {
     expect(consultas.map((c) => c.nombre).sort()).toEqual([
+      "accionesParaElegir",
       "listarInvitacionesPendientes",
       "listarMiembros",
       "listarRoles",

@@ -1,4 +1,4 @@
--- 0113_devolucion_de_un_cobro_de_ticket: DM-1, la base de la devolución con medio de un cobro de ticket (PR-DM-1).
+-- 0114_devolucion_de_un_cobro_de_ticket: DM-1, la base de la devolución con medio de un cobro de ticket (PR-DM-1).
 -- QUÉ HACE:
 --   1. Tres columnas NULL en `movimiento_de_dinero` (`devuelve_origen_tipo`, `devuelve_origen_id`, `devolucion_id`) con su privilegio de inserción por columna:
 --      una devolución puede citar la COBRANZA de un ticket (además de la entrada de dinero de 0091) y varias líneas (una por medio) comparten un `devolucion_id`.
@@ -9,7 +9,7 @@
 --   4. NO ADITIVO (AVISO, como el AVISO 3 de 0091): reemplaza, con DOS `CREATE OR REPLACE`, `movimiento_de_dinero_devolvible` (envoltorio) y
 --      `movimiento_de_dinero_validar_alta` (el cuerpo vigente de 0091, el único que lo define, más la rama «DM-1» para la cobranza; el resto, igual).
 -- NO TOCA datos: nadie escribe todavía las columnas nuevas (DM-2). No edita 0091.
--- Reversión: `migraciones/reversiones/0113_revertir_devolucion_de_un_cobro_de_ticket.sql` — FRENA si hay devoluciones de cobranza (no revertir con datos; AVISAR AL DUEÑO).
+-- Reversión: `migraciones/reversiones/0114_revertir_devolucion_de_un_cobro_de_ticket.sql` — FRENA si hay devoluciones de cobranza (no revertir con datos; AVISAR AL DUEÑO).
 -- DEPENDE de 0027 (caja, cobro) y 0091. Solo corre contra el Postgres local de las pruebas; nunca contra Neon.
 
 ALTER TABLE movimiento_de_dinero

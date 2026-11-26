@@ -173,6 +173,8 @@ export async function registrarFacturaEnTx(
     despues: {
       proveedorId: proveedor.valor.id,
       nivel: datos.nivel,
+      // Fecha de la factura: junto con la fecha de la auditoría (la de carga) permite ver qué facturas de meses anteriores se cargaron después.
+      fechaDelComprobante: factura.fecha,
       lineas: factura.lineas.length,
       totalSegunFactura: preparada.valor.calculado.totalSegunFactura,
     },

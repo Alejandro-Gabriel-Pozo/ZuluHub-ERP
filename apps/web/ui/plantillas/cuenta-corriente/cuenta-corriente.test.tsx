@@ -5,6 +5,7 @@ import { PantallaDeLaListaDeCuentas } from "./PantallaDeLaListaDeCuentas";
 import {
   armarLaFichaDeLaCuenta,
   armarLaListaDeCuentas,
+  clientesParaElegir,
   type FichaDeCuentaParaLaPantalla,
   type ListaDeCuentasParaLaPantalla,
 } from "./modelo-de-cuenta-corriente";
@@ -60,6 +61,7 @@ const FICHA: FichaDeCuentaParaLaPantalla = {
       tipo: "VENTA_A_CUENTA",
       vence: "2026-10-31",
       vencida: true,
+      ticketId: null,
       importe: ARS("10000.00"),
       ticket: { numero: 42, canal: "SALON", sucursal: "Centro" },
       medioDePago: null,
@@ -69,6 +71,7 @@ const FICHA: FichaDeCuentaParaLaPantalla = {
       tipo: "COBRANZA",
       vence: null,
       vencida: false,
+      ticketId: null,
       importe: ARS("-4000.00"),
       ticket: { numero: 43, canal: "MOSTRADOR", sucursal: null },
       medioDePago: "EFECTIVO",
@@ -78,6 +81,7 @@ const FICHA: FichaDeCuentaParaLaPantalla = {
       tipo: "COBRANZA",
       vence: null,
       vencida: false,
+      ticketId: null,
       importe: ARS("-100.00"),
       ticket: null,
       medioDePago: null,
@@ -152,5 +156,29 @@ describe("el dibujo", () => {
     expect(html).toContain("&lt;img src=x");
     expect(html).toContain("Cuenta suspendida:");
     expect(html).not.toMatch(/<(button|form|input)\b/);
+  });
+});
+
+describe("las opciones de «Habilitar cuenta corriente»", () => {
+  it("muestran «Nombre · CUIT»; un cliente sin CUIT sale con «—» y no se puede habilitar; uno sin nombre, sin inventarlo", () => {
+    expect(
+      clientesParaElegir(
+        [
+          { parteId: "a", nombre: "Turismo Andino S. A.", cuit: "30689012345" },
+          { parteId: "b", nombre: "Kiosco", cuit: null },
+          { parteId: "c", nombre: null, cuit: "20123456786" },
+        ],
+        T,
+      ),
+    ).toEqual([
+      {
+        parteId: "a",
+        etiqueta: "Turismo Andino S. A. · 30-68901234-5",
+        nombre: "Turismo Andino S. A.",
+        tieneCuit: true,
+      },
+      { parteId: "b", etiqueta: "Kiosco · —", nombre: "Kiosco", tieneCuit: false },
+      { parteId: "c", etiqueta: "Cliente · 20-12345678-6", nombre: "Cliente", tieneCuit: true },
+    ]);
   });
 });

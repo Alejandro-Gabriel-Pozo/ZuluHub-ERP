@@ -44,7 +44,7 @@ export type EntradaDeCobrarMesa = Readonly<{
  * `UNIDA_COBRADA`) y, si es la ÚLTIMA cuenta hija de una división, la cuenta madre (`DIVISION_COBRADA`). Con eso la mesa queda libre. Idempotente: anular
  * una cuenta ya anulada no escribe.
  */
-async function liberarLoQueDepende(
+export async function liberarLoQueDepende(
   tx: TxDeSalon,
   contexto: ContextoOperativo,
   persona: PersonaId,

@@ -30,6 +30,20 @@ const ASIGNAR_SUCURSALES_PROPOSITO: Proposito = {
     "Pedernal-docs/11-especificaciones/plan-de-pantallas-usuarios-2026-11-23.md §2 (flujo 6) y §9 (pregunta 8); maqueta usuarios.html (vUsuario)",
 };
 
+const ALTA_DE_ROL = "apps/web/ui/plantillas/roles/FormularioDeAltaDeRol.cliente.tsx";
+const FICHA_DE_ROL = "apps/web/ui/plantillas/roles/FormularioDeFichaDeRol.cliente.tsx";
+const ROL_DE_USUARIO = "apps/web/ui/plantillas/roles/FormularioDeRolDeUsuario.cliente.tsx";
+const ROL_DE_USUARIO_PROPOSITO: Proposito = {
+  para: "El rol que el gerente le asigna a una persona de la empresa: uno de los dos roles base o un rol propio activo (ficha de una persona, pantalla «Usuarios»).",
+  fuente:
+    "Pedernal-docs/11-especificaciones/diseno-roles-propios.md (H4b) y decisiones-del-dueno-2026-11.md, respuesta del dueño del 26/11/2026 (Excel de roles propios, hoja Otras decisiones: asignar solo desde la ficha de la persona)",
+};
+const ROLES_PROPOSITO: Proposito = {
+  para: "Armar un rol propio de la empresa: su nombre, de dónde empieza y las acciones que puede hacer (pantalla «Roles», tramo T6).",
+  fuente:
+    "Pedernal-docs/11-especificaciones/diseno-roles-propios.md (H4b) y decisiones-del-dueno-2026-11.md, respuesta del dueño del 26/11/2026 (Excel de roles propios, hojas Acciones y Otras decisiones)",
+};
+
 export const DATOS_DE_ADMINISTRACION = {
   correo: {
     ficha: "src/primitivas/contacto/email.ts",
@@ -72,6 +86,42 @@ export const DATOS_DE_ADMINISTRACION = {
     propositos: [INVITAR_PROPOSITO, ASIGNAR_SUCURSALES_PROPOSITO],
     consumidores: [INVITAR, FICHA_DE_USUARIO],
     ponerPor: ["usuarios.invitar", "usuarios.asignar_sucursales"],
+    requiere: REQUIERE_ADMINISTRACION,
+  },
+  // Lo piden dos pantallas: el alta de un rol y su ficha.
+  "nombre-de-rol": {
+    ficha: "src/primitivas/texto/nombre-de-rol.ts",
+    propositos: [ROLES_PROPOSITO],
+    consumidores: [ALTA_DE_ROL, FICHA_DE_ROL],
+    ponerPor: ["roles.crear", "roles.editar"],
+    requiere: REQUIERE_ADMINISTRACION,
+  },
+  "origen-de-rol": {
+    ficha: "src/modulos/identidad/casos-de-uso/crear-rol.ts",
+    propositos: [ROLES_PROPOSITO],
+    consumidores: [ALTA_DE_ROL],
+    ponerPor: ["roles.crear"],
+    requiere: REQUIERE_ADMINISTRACION,
+  },
+  "rol-de-origen": {
+    ficha: "src/primitivas/identificadores/marca.ts",
+    propositos: [ROLES_PROPOSITO],
+    consumidores: [ALTA_DE_ROL],
+    ponerPor: ["roles.crear"],
+    requiere: REQUIERE_ADMINISTRACION,
+  },
+  "rol-de-usuario": {
+    ficha: "src/modulos/identidad/dominio/asignacion-de-rol.ts",
+    propositos: [ROL_DE_USUARIO_PROPOSITO],
+    consumidores: [ROL_DE_USUARIO],
+    ponerPor: ["usuarios.asignar_rol"],
+    requiere: REQUIERE_ADMINISTRACION,
+  },
+  "acciones-de-rol": {
+    ficha: "src/capacidades/roles/validar-conjunto.ts",
+    propositos: [ROLES_PROPOSITO],
+    consumidores: [FICHA_DE_ROL],
+    ponerPor: ["roles.editar"],
     requiere: REQUIERE_ADMINISTRACION,
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;

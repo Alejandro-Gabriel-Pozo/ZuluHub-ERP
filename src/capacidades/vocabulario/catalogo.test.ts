@@ -385,7 +385,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
           .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
       );
     expect(Object.keys(de("clientes"))).toHaveLength(32);
-    expect(Object.keys(de("compras"))).toHaveLength(233);
+    expect(Object.keys(de("compras"))).toHaveLength(253);
     expect(de("clientes")).toMatchObject({
       "clientes.lista.clientes_y_proveedores": "Clientes y proveedores",
       "clientes.error.cuit_invalido": "El CUIT no es válido",
@@ -560,6 +560,8 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
       "stock.lotes.corregir": "Corregir",
       "stock.lotes.fecha_de_vencimiento": "Fecha de vencimiento",
       "stock.error.vencimiento_pasado": "La fecha de vencimiento ya pasó",
+      "stock.error.lote_con_otra_fecha":
+        "Ese lote ya está cargado con otra fecha de vencimiento. Para cambiarla, usá Corregir.",
       "stock.error.saldo_de_lote_insuficiente": "El lote no tiene tanta existencia",
       "stock.lotes.pantalla": "Lotes",
       "stock.lotes.vence": "Vence",

@@ -5,7 +5,12 @@ import {
 } from "../../../patrones/formato-fiscal";
 import { nombreDeLaFactura } from "../lista/modelo-de-lista-de-compras";
 import { nombreDeUnidad } from "../nueva/modelo-de-nueva-compra";
-import { direccionDeLaListaDeFacturas, rutaDeLaFactura } from "../rutas-de-compras";
+import {
+  direccionDeLaListaDeFacturas,
+  rutaDeLaFactura,
+  rutaDeLasNotas,
+  rutaDeReemplazar,
+} from "../rutas-de-compras";
 import type { TextosDeFacturas } from "./textos-de-facturas";
 
 /**
@@ -86,6 +91,10 @@ export type AccionesDeLaFactura = Readonly<{
   conciliar: boolean;
   anularConciliacion: boolean;
   tomarElCosto: boolean;
+  /** Ver las notas de la factura (las dos acciones de ver notas: la lectura las pide). */
+  verNotas: boolean;
+  /** Reemplazar el comprobante (`comprobantes_de_proveedor.reemplazar`). */
+  reemplazar: boolean;
 }>;
 export const SIN_ACCIONES_DE_LA_FACTURA: AccionesDeLaFactura = {
   cargar: false,
@@ -93,6 +102,8 @@ export const SIN_ACCIONES_DE_LA_FACTURA: AccionesDeLaFactura = {
   conciliar: false,
   anularConciliacion: false,
   tomarElCosto: false,
+  verNotas: false,
+  reemplazar: false,
 };
 
 const SIN_DATO = "—";
@@ -224,6 +235,10 @@ export type FichaDeFacturaArmada = Readonly<{
       anulable: boolean;
     }>[];
   }> | null;
+  /** Adónde lleva «Notas de crédito»: solo con el permiso de ver las notas; `null` si no se ofrece. */
+  notas: Readonly<{ texto: string; href: string }> | null;
+  /** «Reemplazar» se ofrece (permiso y factura no anulada); lleva a «Reemplazar el comprobante». Los frenos (pago, conciliaciones, notas) los muestra esa pantalla y los revalida el servidor. */
+  reemplazar: Readonly<{ texto: string; href: string }> | null;
   /** «Conciliar» se ofrece (permiso y el estado de la factura que dice el servidor: «Falta conciliar» o «Conciliada en parte»; la pantalla no recalcula saldos). */
   conciliar: boolean;
 }>;
@@ -295,6 +310,13 @@ export function armarLaFichaDeFactura(
           })),
         }
       : null,
+    notas: acciones.verNotas
+      ? { texto: textos.notasDeCredito, href: rutaDeLasNotas(ficha.comprobanteId) }
+      : null,
+    reemplazar:
+      acciones.reemplazar && ficha.estado !== "ANULADA"
+        ? { texto: textos.reemplazar, href: rutaDeReemplazar(ficha.comprobanteId) }
+        : null,
     conciliar:
       acciones.conciliar &&
       (ficha.estado === "FALTA_CONCILIAR" || ficha.estado === "CONCILIADA_EN_PARTE"),

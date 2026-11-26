@@ -79,7 +79,9 @@
   ],
   "test/web/ficha-de-cuenta-corriente.test.ts": [
     "apps/web/app/s/app/(operacion)/caja/cuenta-corriente/**",
+    "apps/web/app/s/app/acciones-de-cuenta-corriente.ts",
     "apps/web/servidor/cuenta-corriente.ts",
+    "apps/web/servidor/cuenta-corriente-escritura.ts",
     "apps/web/ui/plantillas/cuenta-corriente/*"
   ],
   "test/web/ficha-de-existencias-y-movimientos.test.ts": [
@@ -103,6 +105,20 @@
     "apps/web/app/s/app/acciones-de-facturas.ts",
     "apps/web/servidor/facturas.ts",
     "apps/web/ui/plantillas/compras/facturas/*",
+    "apps/web/ui/plantillas/compras/rutas-de-compras.ts"
+  ],
+  "test/web/ficha-de-reemplazo-de-compras.test.ts": [
+    "apps/web/app/s/app/(operacion)/compras/**",
+    "apps/web/app/s/app/acciones-de-reemplazo.ts",
+    "apps/web/servidor/reemplazo.ts",
+    "apps/web/ui/plantillas/compras/reemplazo/*",
+    "apps/web/ui/plantillas/compras/rutas-de-compras.ts"
+  ],
+  "test/web/ficha-de-notas-de-compras.test.ts": [
+    "apps/web/app/s/app/(operacion)/compras/facturas/**",
+    "apps/web/app/s/app/acciones-de-notas.ts",
+    "apps/web/servidor/notas.ts",
+    "apps/web/ui/plantillas/compras/notas/*",
     "apps/web/ui/plantillas/compras/rutas-de-compras.ts"
   ],
   "test/web/ficha-de-impresoras.test.ts": [
@@ -167,8 +183,15 @@
     "apps/web/app/s/app/(operacion)/salon/page.tsx",
     "apps/web/ui/plantillas/salon/*"
   ],
+  "test/web/ficha-de-roles.test.ts": [
+    "apps/web/app/s/app/(operacion)/cuenta/**",
+    "apps/web/app/s/app/acciones-de-roles.ts",
+    "apps/web/servidor/roles.ts",
+    "apps/web/ui/plantillas/roles/*"
+  ],
   "test/web/ficha-de-usuarios.test.ts": [
     "apps/web/app/s/app/(operacion)/cuenta/**",
+    "apps/web/ui/plantillas/roles/*",
     "apps/web/servidor/usuarios.ts",
     "apps/web/ui/plantillas/sesion/PantallaDeCuenta.tsx",
     "apps/web/ui/plantillas/usuarios/*"

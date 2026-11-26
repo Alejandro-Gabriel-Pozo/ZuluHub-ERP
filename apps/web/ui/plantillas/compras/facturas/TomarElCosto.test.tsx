@@ -34,6 +34,8 @@ const TODO: AccionesDeLaFactura = {
   conciliar: true,
   anularConciliacion: true,
   tomarElCosto: true,
+  verNotas: false,
+  reemplazar: false,
 };
 const textos = textosDeFacturas();
 

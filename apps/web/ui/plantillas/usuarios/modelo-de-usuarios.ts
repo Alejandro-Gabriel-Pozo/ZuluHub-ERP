@@ -14,6 +14,12 @@ import {
 } from "../sesion/rutas-de-cuenta";
 import { textoDelRol } from "../sesion/textos-de-empresa";
 
+/** El rol de una persona: el texto del rol base, o el nombre del rol propio tal cual lo escribió el gerente. */
+const textoDelRolDeUsuario = (
+  rol: UsuarioParaLaPantalla["rol"],
+  diccionario: DiccionarioResuelto,
+): string => (typeof rol === "string" ? textoDelRol(rol, diccionario) : rol.propio);
+
 /**
  * El modelo de «Usuarios» (maqueta `usuarios.html`, `vLista`, `vUsuario` y la confirmación de desactivar): de lo que entrega el servidor a lo que dibuja la pantalla, con todo el texto ya resuelto. Puro: sin React ni servidor.
  * El orden es el del servidor (email). El estado se dice SIEMPRE con texto (la insignia lleva su texto; el color solo no alcanza). Una invitación vencida se marca por lo que dice el servidor
@@ -28,7 +34,8 @@ import { textoDelRol } from "../sesion/textos-de-empresa";
 export type UsuarioParaLaPantalla = Readonly<{
   personaId: string;
   email: string;
-  rol: RolDeEmpresa;
+  /** El rol base, o el nombre del rol propio (lo escribió el gerente: se muestra tal cual). */
+  rol: RolDeEmpresa | Readonly<{ propio: string }>;
   activo: boolean;
 }>;
 
@@ -93,7 +100,7 @@ function filaDeUsuario(
   return {
     personaId: u.personaId,
     email: u.email,
-    rol: textoDelRol(u.rol, diccionario),
+    rol: textoDelRolDeUsuario(u.rol, diccionario),
     href: rutaDeLaFichaDeUsuario(u.personaId),
     insignia: u.activo
       ? null
@@ -202,7 +209,7 @@ export function armarLaFichaDeUsuario(
     renglones: [
       {
         rotulo: texto(diccionario, "usuarios.campo.rol"),
-        valor: textoDelRol(u.rol, diccionario),
+        valor: textoDelRolDeUsuario(u.rol, diccionario),
         insignia: null,
       },
       {

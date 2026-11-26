@@ -1,6 +1,6 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
-import type { DatosDelCobro } from "../modulos/caja/publico";
+import type { DatosDelCobro, OpcionesDeCobro } from "../modulos/caja/publico";
 import { ok } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
 import {
@@ -76,21 +76,29 @@ export function cajasParaCobrar(
     {},
     () => ok({}),
     () => d.consultas().estadoDeCajasParaCobrar(contexto, { sucursalId }),
-    (estado) => ({
-      cajas: estado.cajas.map((c) => ({
-        cajaId: c.cajaId,
-        nombre: c.nombre,
-        estado: c.estado,
-        sesionId: c.sesionId,
-        fechaDeNegocio: c.fechaDeNegocio,
-        jornadaVencida: c.jornadaVencida,
-      })),
-      jornadaActual: {
-        fechaDeNegocio: estado.jornadaActual.fechaDeNegocio,
-        estado: estado.jornadaActual.estado,
-      },
-    }),
+    presentarLasCajas,
   );
+}
+
+/** Las cajas con su sesión como salen a la pantalla (lista blanca campo por campo); las comparten el cobro del mostrador y el cobro a cuenta. */
+export function presentarLasCajas(estado: {
+  cajas: readonly CajasParaCobrarParaLaPantalla["cajas"][number][];
+  jornadaActual: CajasParaCobrarParaLaPantalla["jornadaActual"];
+}): CajasParaCobrarParaLaPantalla {
+  return {
+    cajas: estado.cajas.map((c) => ({
+      cajaId: c.cajaId,
+      nombre: c.nombre,
+      estado: c.estado,
+      sesionId: c.sesionId,
+      fechaDeNegocio: c.fechaDeNegocio,
+      jornadaVencida: c.jornadaVencida,
+    })),
+    jornadaActual: {
+      fechaDeNegocio: estado.jornadaActual.fechaDeNegocio,
+      estado: estado.jornadaActual.estado,
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -123,6 +131,34 @@ export type OpcionesDeCobroParaLaPantalla = Readonly<{
   marcasDeTarjeta: readonly Readonly<{ id: string; nombre: string }>[];
 }>;
 
+/** Las opciones de cobro como salen a la pantalla (lista blanca campo por campo); las comparten el cobro del mostrador y el cobro a cuenta. */
+export function presentarLasOpciones(opciones: OpcionesDeCobro): OpcionesDeCobroParaLaPantalla {
+  return {
+    medios: opciones.medios.map((m) => ({
+      id: m.id,
+      tipo: m.tipo,
+      nombre: m.nombre,
+      cuentaObligatoria: m.cuentaObligatoria,
+      cuentas: m.cuentas.map((c) => ({ id: c.id, tipo: c.tipo, nombre: c.nombre })),
+      datosQuePide: {
+        cupon: m.datosQuePide.cupon,
+        ultimos4: m.datosQuePide.ultimos4,
+        marca: m.datosQuePide.marca,
+        cuotas: m.datosQuePide.cuotas,
+        dni: m.datosQuePide.dni,
+      },
+      datosQueSePiden: {
+        cupon: m.datosQueSePiden.cupon,
+        ultimos4: m.datosQueSePiden.ultimos4,
+        marca: m.datosQueSePiden.marca,
+        cuotas: m.datosQueSePiden.cuotas,
+        dni: m.datosQueSePiden.dni,
+      },
+    })),
+    marcasDeTarjeta: opciones.marcasDeTarjeta.map((m) => ({ id: m.id, nombre: m.nombre })),
+  };
+}
+
 /** Medios activos, cuentas de la sucursal de la caja, qué datos pide cada medio y las marcas. La caja tiene que ser de una sucursal del alcance. */
 export function opcionesDeCobroDeLaCaja(
   d: DependenciasDeCobrarWeb,
@@ -134,30 +170,7 @@ export function opcionesDeCobroDeLaCaja(
     crudo,
     entradaDeOpcionesDeCobro,
     (entrada) => d.consultas().opcionesParaCobrar(contexto, entrada),
-    (opciones) => ({
-      medios: opciones.medios.map((m) => ({
-        id: m.id,
-        tipo: m.tipo,
-        nombre: m.nombre,
-        cuentaObligatoria: m.cuentaObligatoria,
-        cuentas: m.cuentas.map((c) => ({ id: c.id, tipo: c.tipo, nombre: c.nombre })),
-        datosQuePide: {
-          cupon: m.datosQuePide.cupon,
-          ultimos4: m.datosQuePide.ultimos4,
-          marca: m.datosQuePide.marca,
-          cuotas: m.datosQuePide.cuotas,
-          dni: m.datosQuePide.dni,
-        },
-        datosQueSePiden: {
-          cupon: m.datosQueSePiden.cupon,
-          ultimos4: m.datosQueSePiden.ultimos4,
-          marca: m.datosQueSePiden.marca,
-          cuotas: m.datosQueSePiden.cuotas,
-          dni: m.datosQueSePiden.dni,
-        },
-      })),
-      marcasDeTarjeta: opciones.marcasDeTarjeta.map((m) => ({ id: m.id, nombre: m.nombre })),
-    }),
+    presentarLasOpciones,
   );
 }
 

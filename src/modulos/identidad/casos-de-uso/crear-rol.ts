@@ -78,88 +78,105 @@ export function crearCrearRol({ transacciones, reglas }: DependenciasDeIdentidad
     entrada: EntradaDeCrearRol,
   ): Promise<Resultado<SalidaDeCrearRol, ErrorAlCrearRol>> {
     const { empresaId } = contexto;
-    const resultado = await transacciones.ejecutar(
-      { contexto },
-      async (
-        tx,
-      ): Promise<Resultado<SalidaDeCrearRol, ErrorPropio | MotivoDeRechazo | EmpresaNoOpera>> => {
-        const previo = await permisoYEmpresaQueOpera(
+    const intentar = async () => {
+      const resultado = await transacciones.ejecutar(
+        { contexto },
+        async (
           tx,
-          contexto,
-          reglas,
-          DECLARACIONES.crearRol.accion,
-        );
-        if (!previo.ok) return previo;
-        const nombre = nombreValido(entrada.nombre);
-        if (!nombre.ok) return nombre;
-        const nombreClave = claveDeNombreDeRol(nombre.valor);
+        ): Promise<Resultado<SalidaDeCrearRol, ErrorPropio | MotivoDeRechazo | EmpresaNoOpera>> => {
+          const previo = await permisoYEmpresaQueOpera(
+            tx,
+            contexto,
+            reglas,
+            DECLARACIONES.crearRol.accion,
+          );
+          if (!previo.ok) return previo;
+          const nombre = nombreValido(entrada.nombre);
+          if (!nombre.ok) return nombre;
+          const nombreClave = claveDeNombreDeRol(nombre.valor);
 
-        const decision = decidirAltaDeRol({
-          nombreClave,
-          porId: await tx.roles.obtener(empresaId, entrada.rolId),
-          porNombre: await tx.roles.obtenerPorNombre(empresaId, nombreClave),
-        });
-        if (!decision.ok) return decision;
-        if (decision.valor.tipo === "YA_EXISTIA") {
-          return ok({ rolId: decision.valor.rolId, yaExistia: true });
-        }
+          const decision = decidirAltaDeRol({
+            nombreClave,
+            porId: await tx.roles.obtener(empresaId, entrada.rolId),
+            porNombre: await tx.roles.obtenerPorNombre(empresaId, nombreClave),
+          });
+          if (!decision.ok) return decision;
+          if (decision.valor.tipo === "YA_EXISTIA") {
+            return ok({ rolId: decision.valor.rolId, yaExistia: true });
+          }
 
-        const derechos = await tx.derechos.deLaEmpresa(contexto);
-        const enUso = await tx.roles.contarActivos(empresaId);
-        const perilla = exigirPerilla(derechos, "roles_propios_por_empresa", { empresaId }, enUso);
-        if (!perilla.ok) return perilla;
-        const tope = decidirTopeTecnicoDeRoles(enUso);
-        if (!tope.ok) return tope;
+          const derechos = await tx.derechos.deLaEmpresa(contexto);
+          const enUso = await tx.roles.contarActivos(empresaId);
+          const perilla = exigirPerilla(
+            derechos,
+            "roles_propios_por_empresa",
+            { empresaId },
+            enUso,
+          );
+          if (!perilla.ok) return perilla;
+          const tope = decidirTopeTecnicoDeRoles(enUso);
+          if (!tope.ok) return tope;
 
-        const pisos = await tx.roles.pisos();
-        let copia: readonly string[] = [];
-        let plantillaOrigen: PlantillaDeOrigen | null = null;
-        if (entrada.origen.tipo === "PLANTILLA") {
-          copia = (await tx.roles.accionesDeLaPlantilla(entrada.origen.clave)) ?? [];
-          plantillaOrigen = entrada.origen.clave;
-        } else if (entrada.origen.tipo === "ROL") {
-          const deOrigen = await tx.roles.obtener(empresaId, entrada.origen.rolId);
-          if (deOrigen === null) return err("ORIGEN_DE_ROL_NO_ENCONTRADO");
-          copia = deOrigen.acciones;
-          plantillaOrigen = deOrigen.plantillaOrigen;
-        }
-        const iniciales = accionesIniciales(copia, {
-          moduloDeLaAccion: moduloDeLaAccionDe(reglas),
-          modulosDelPlan: derechos.modulosHabilitados,
-          pisos,
-        });
-        const acciones = conjuntoValido(iniciales, reglas, derechos.modulosHabilitados, pisos);
-        if (!acciones.ok) return acciones;
-        if (contexto.personaId === null) {
-          throw new Error("invariante rota: el guard dejó pasar un contexto sin persona");
-        }
+          const pisos = await tx.roles.pisos();
+          let copia: readonly string[] = [];
+          let plantillaOrigen: PlantillaDeOrigen | null = null;
+          if (entrada.origen.tipo === "PLANTILLA") {
+            copia = (await tx.roles.accionesDeLaPlantilla(entrada.origen.clave)) ?? [];
+            plantillaOrigen = entrada.origen.clave;
+          } else if (entrada.origen.tipo === "ROL") {
+            const deOrigen = await tx.roles.obtener(empresaId, entrada.origen.rolId);
+            if (deOrigen === null) return err("ORIGEN_DE_ROL_NO_ENCONTRADO");
+            copia = deOrigen.acciones;
+            plantillaOrigen = deOrigen.plantillaOrigen;
+          }
+          const iniciales = accionesIniciales(copia, {
+            moduloDeLaAccion: moduloDeLaAccionDe(reglas),
+            modulosDelPlan: derechos.modulosHabilitados,
+            pisos,
+          });
+          const acciones = conjuntoValido(iniciales, reglas, derechos.modulosHabilitados, pisos);
+          if (!acciones.ok) return acciones;
+          if (contexto.personaId === null) {
+            throw new Error("invariante rota: el guard dejó pasar un contexto sin persona");
+          }
 
-        await tx.roles.crear({
-          id: entrada.rolId,
-          empresaId,
-          nombre: nombre.valor,
-          nombreClave,
-          plantillaOrigen,
-          acciones: acciones.valor,
-          creadoPor: contexto.personaId,
-          ahora: contexto.ahora,
-        });
-        await tx.auditoria.registrar({
-          empresaId,
-          actorPersonaId: contexto.personaId,
-          accion: "ROL_CREADO",
-          entidad: "rol_de_empresa",
-          entidadId: entrada.rolId,
-          despues: {
+          await tx.roles.crear({
+            id: entrada.rolId,
+            empresaId,
             nombre: nombre.valor,
+            nombreClave,
             plantillaOrigen,
-            origen: entrada.origen.tipo,
             acciones: acciones.valor,
-          },
-        });
-        return ok({ rolId: entrada.rolId, yaExistia: false });
-      },
-    );
-    return traducirErrores(resultado, RESTRICCIONES_ADMITIDAS);
+            creadoPor: contexto.personaId,
+            ahora: contexto.ahora,
+          });
+          await tx.auditoria.registrar({
+            empresaId,
+            actorPersonaId: contexto.personaId,
+            accion: "ROL_CREADO",
+            entidad: "rol_de_empresa",
+            entidadId: entrada.rolId,
+            despues: {
+              nombre: nombre.valor,
+              plantillaOrigen,
+              origen: entrada.origen.tipo,
+              acciones: acciones.valor,
+            },
+          });
+          return ok({ rolId: entrada.rolId, yaExistia: false });
+        },
+      );
+      return traducirErrores(resultado, RESTRICCIONES_ADMITIDAS);
+    };
+    // Dos pedidos iguales a la vez (doble clic, reintento de red): uno inserta y el otro choca con la clave única del id o del nombre. El que perdió repite UNA vez: ahora ve el rol de
+    // quien ganó y responde `yaExistia`, o el rechazo que corresponde si el id o el nombre son de otro. Repetir es seguro: nada se escribió en el intento que chocó.
+    const primero = await intentar();
+    if (
+      !primero.ok &&
+      (primero.error === "ID_DE_ROL_EN_USO" || primero.error === "NOMBRE_DE_ROL_EN_USO")
+    ) {
+      return intentar();
+    }
+    return primero;
   };
 }

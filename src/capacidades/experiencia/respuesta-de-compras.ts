@@ -16,6 +16,7 @@ export const CLAVES_DE_ERRORES_DE_COMPRAS = {
   COMPRAS_CANTIDAD_INVALIDA: "compras.error.cantidad_invalida",
   COMPRAS_PRECIO_INVALIDO: "compras.error.precio_invalido",
   COMPRAS_PROVEEDOR_NO_ENCONTRADO: "compras.error.proveedor_no_encontrado",
+  COMPRAS_NOTA_CON_PAGO: "compras.error.nota_con_pago",
   COMPRAS_ACCION_NO_PERMITIDA: "compras.error.sin_permiso",
 } as const satisfies Record<string, ClaveDeTexto>;
 

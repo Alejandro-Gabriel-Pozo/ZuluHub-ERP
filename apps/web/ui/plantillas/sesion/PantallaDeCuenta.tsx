@@ -27,6 +27,8 @@ export type PropsDePantallaDeCuenta = Readonly<{
   contactoDeLaSucursal?: Readonly<{ texto: string; href: string }>;
   /** El renglón «Usuarios» y adónde lleva; solo para quien puede ver a los usuarios (lo decide el servidor). Sin él, no se muestra. */
   usuarios?: Readonly<{ texto: string; href: string }>;
+  /** El renglón «Roles» y adónde lleva; solo para quien puede ver los roles (el gerente; lo decide el servidor). Sin él, no se muestra. */
+  roles?: Readonly<{ texto: string; href: string }>;
   accionDeCerrarSesion: AccionDeFormulario;
   diccionario?: DiccionarioResuelto;
 }>;
@@ -38,6 +40,7 @@ export function PantallaDeCuenta({
   configuracionFiscal,
   contactoDeLaSucursal,
   usuarios,
+  roles,
   accionDeCerrarSesion,
   diccionario = {},
 }: PropsDePantallaDeCuenta) {
@@ -46,8 +49,12 @@ export function PantallaDeCuenta({
       <dl className={estilos["datos"]}>
         <dt>{texto(diccionario, "empresa.etiqueta")}</dt>
         <dd className={estilos["valor"]}>{empresa.nombre}</dd>
-        <dt>{texto(diccionario, "empresa.rol_etiqueta")}</dt>
-        <dd className={estilos["valor"]}>{textoDelRol(empresa.rol, diccionario)}</dd>
+        {empresa.rol === null ? null : (
+          <>
+            <dt>{texto(diccionario, "empresa.rol_etiqueta")}</dt>
+            <dd className={estilos["valor"]}>{textoDelRol(empresa.rol, diccionario)}</dd>
+          </>
+        )}
       </dl>
       <SelectorDeSucursal
         empresaId={empresa.empresaId}
@@ -72,6 +79,13 @@ export function PantallaDeCuenta({
         <Texto>
           <a className={estilos["enlace"]} href={usuarios.href}>
             {usuarios.texto}
+          </a>
+        </Texto>
+      )}
+      {roles === undefined ? null : (
+        <Texto>
+          <a className={estilos["enlace"]} href={roles.href}>
+            {roles.texto}
           </a>
         </Texto>
       )}

@@ -36,6 +36,11 @@ const PERMITIDAS = [
   "ajuste_de_perilla",
   // La consola «Dominios» (0007: `SELECT` de plataforma; solo las columnas que se piden).
   "dominio",
+  // «Explicar por qué» repite la decisión del guard: los módulos activados y las acciones de la plantilla o del rol propio (0113: solo columnas, nunca el nombre del rol).
+  "modulo_de_empresa",
+  "version_de_plantilla",
+  "rol_de_empresa",
+  "version_de_rol",
 ];
 const OPERATIVAS = [
   "sucursal",
@@ -59,12 +64,16 @@ describe("el adaptador de lectura de soporte", () => {
       "soporte-de-plataforma-comunes.ts",
       "soporte-de-plataforma-db.ts",
       "soporte-de-plataforma-listas.ts",
+      "soporte-de-plataforma-permisos.ts",
       "soporte-de-plataforma.ts",
     ]);
     const importados = [...fuente.matchAll(/from "(\.\/[^"]+)"/g)].map((m) =>
       `${m[1]}.ts`.slice(2),
     );
-    for (const f of importados) expect(archivos, f).toContain(f);
+    // Lo único de fuera que pueden importar es la validación compartida con la autorización de empresa: pura, sin tablas ni SQL.
+    for (const f of importados.filter((f) => f !== "lecturas-de-permisos.ts")) {
+      expect(archivos, f).toContain(f);
+    }
   });
 
   it("lee tablas (hay algo que revisar)", () => {
@@ -95,9 +104,23 @@ describe("el adaptador de lectura de soporte", () => {
     expect(codigo).not.toMatch(/\bsql`/);
   });
 
-  it("de la membresía pide solo las cuatro columnas que la plataforma puede leer", () => {
+  it("de la membresía pide solo las cuatro columnas que la plataforma puede leer, más el rol propio (0113) en una lectura aparte", () => {
     const membresia = codigo.match(/selectFrom\("membresia"\)\s*\.select\(\[([^\]]*)\]\)/);
     expect(membresia?.[1]?.replace(/\s+/g, "")).toBe('"empresa_id","persona_id","rol","activo"');
-    expect(tablasLeidas.filter((t) => t === "membresia")).toHaveLength(1);
+    const propio = codigo.match(/selectFrom\("membresia"\)\s*\.select\("([a-z_]+)"\)/);
+    expect(propio?.[1]).toBe("rol_propio_id");
+    expect(tablasLeidas.filter((t) => t === "membresia")).toHaveLength(2);
+  });
+
+  it("del rol propio y de las versiones pide solo las columnas que la plataforma puede leer (0113), nunca el nombre del rol", () => {
+    expect(codigo).not.toMatch(
+      /nombre_clave|creado_por|selectFrom\("rol_de_empresa"\)\s*\.select\("nombre"/,
+    );
+    expect(codigo.match(/selectFrom\("rol_de_empresa"\)\s*\.select\("([a-z_]+)"\)/)?.[1]).toBe(
+      "activo",
+    );
+    expect(codigo.match(/selectFrom\("version_de_rol"\)\s*\.select\("([a-z_]+)"\)/)?.[1]).toBe(
+      "acciones",
+    );
   });
 });

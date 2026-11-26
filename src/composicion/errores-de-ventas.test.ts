@@ -18,6 +18,12 @@ describe("traducirErrorDeVentas: lista de permitidos", () => {
     },
   );
 
+  it("la venta a cuenta de $0 sale con su texto propio aprobado (DEC-VEN-003), no como el genérico", () => {
+    expect(traducirErrorDeVentas("VENTA_A_CERO_A_CUENTA")).toEqual({
+      codigo: "VENTAS_VENTA_A_CERO_A_CUENTA",
+    });
+  });
+
   it("`EMPRESA_NO_OPERA` pasa sin cambios, con su motivo", () => {
     const e = { codigo: "EMPRESA_NO_OPERA", empresaId: "e1", motivo: "EMPRESA_SUSPENDIDA" };
     expect(traducirErrorDeVentas(e)).toBe(e);

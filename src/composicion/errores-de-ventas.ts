@@ -28,6 +28,9 @@ export function traducirErrorDeVentas(error: unknown): unknown {
   // Con el día en cierre o cerrado: los dos avisos aprobados (CD-4), no el genérico.
   const delDia = codigoDeJornada(error);
   if (delDia !== null) return { codigo: delDia };
+  // Una venta a cuenta de $0 tiene su texto propio aprobado por el dueño (26/11/2026, DEC-VEN-003): no cae en el genérico.
+  if (error === "VENTA_A_CERO_A_CUENTA")
+    return { codigo: "VENTAS_VENTA_A_CERO_A_CUENTA" satisfies CodigoDeVentas };
   if (typeof error === "string") {
     return Object.hasOwn(CODIGOS_PUBLICOS, error) || error === DEFECTO_DE_LA_BASE
       ? error

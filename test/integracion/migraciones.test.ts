@@ -115,7 +115,8 @@ describe.skipIf(base === null)("migraciones", () => {
         "0110_clase_de_asiento_nota_de_debito_de_compra.sql",
         "0111_compras_notas_de_debito.sql",
         "0112_compras_reemplazo_de_factura.sql",
-        "0113_devolucion_de_un_cobro_de_ticket.sql",
+        "0113_soporte_lee_los_roles_propios.sql",
+        "0114_devolucion_de_un_cobro_de_ticket.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -212,7 +213,8 @@ describe.skipIf(base === null)("migraciones", () => {
           "0110_clase_de_asiento_nota_de_debito_de_compra.sql",
           "0111_compras_notas_de_debito.sql",
           "0112_compras_reemplazo_de_factura.sql",
-          "0113_devolucion_de_un_cobro_de_ticket.sql",
+          "0113_soporte_lee_los_roles_propios.sql",
+          "0114_devolucion_de_un_cobro_de_ticket.sql",
         ],
       });
     } finally {
@@ -415,7 +417,8 @@ describe.skipIf(base === null)("migraciones", () => {
         "0110_clase_de_asiento_nota_de_debito_de_compra.sql",
         "0111_compras_notas_de_debito.sql",
         "0112_compras_reemplazo_de_factura.sql",
-        "0113_devolucion_de_un_cobro_de_ticket.sql",
+        "0113_soporte_lee_los_roles_propios.sql",
+        "0114_devolucion_de_un_cobro_de_ticket.sql",
       ]);
     } finally {
       await aparte.destruir();

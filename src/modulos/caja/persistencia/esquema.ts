@@ -109,7 +109,7 @@ export type CajaDb = TablasDelCierreDeCaja & {
     tercero_persona_id: string | null;
     referencia: string | null;
     devuelve_a: string | null;
-    /** La cobranza que devuelve (0113): su tipo y su id; con `devolucion_id`, el pedido que agrupa las líneas por medio. Solo la salida de categoría devolución. */
+    /** La cobranza que devuelve (0114): su tipo y su id; con `devolucion_id`, el pedido que agrupa las líneas por medio. Solo la salida de categoría devolución. */
     devuelve_origen_tipo: OrigenDevoluble | null;
     devuelve_origen_id: string | null;
     devolucion_id: string | null;
