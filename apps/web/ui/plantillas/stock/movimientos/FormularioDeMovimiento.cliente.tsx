@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { CodigoDeStock } from "../../../../../../src/capacidades/experiencia/respuesta-de-stock";
 import { AreaDeTexto } from "../../../componentes/AreaDeTexto";
 import { Boton } from "../../../componentes/Boton.cliente";
 import { Campo } from "../../../componentes/Campo";
@@ -17,6 +18,9 @@ import {
   type Opcion,
   type TipoDeMovimiento,
 } from "./modelo-de-formularios";
+
+/** El código con que el servidor avisa «va a quedar en negativo» (nivel AVISAR): la pantalla muestra su texto y el próximo envío lo confirma con la misma clave. */
+const CODIGO_DE_AVISO = "STOCK_CONTROL_AVISA" satisfies CodigoDeStock;
 
 export type PropsDeFormularioDeMovimiento = Readonly<{
   tipo: TipoDeMovimiento;
@@ -47,7 +51,7 @@ export type PropsDeFormularioDeMovimiento = Readonly<{
 
 /**
  * El formulario de los movimientos de stock a mano (maqueta `stock.html`): Entrada, Salida, Transferir, Ajustar y Anular comparten campos y envío. La cantidad, el costo y las reglas de cada motivo
- * las valida el servidor (falta el diálogo «Va a quedar en negativo» del nivel AVISAR; con PERMITIR, el de hoy, no aparece nunca); la pantalla solo ofrece lo que el tipo lleva (`CAMPOS_DEL_TIPO`) y apaga «enviar» mientras falte lo mínimo. La unidad es la del artículo: no se elige.
+ * las valida el servidor (con el nivel AVISAR el servidor avisa «va a quedar en negativo»: «Registrar» reenvía confirmando con la misma clave; con PERMITIR no aparece nunca); la pantalla solo ofrece lo que el tipo lleva (`CAMPOS_DEL_TIPO`) y apaga «enviar» mientras falte lo mínimo. La unidad es la del artículo: no se elige.
  */
 export function FormularioDeMovimiento({
   tipo,
@@ -70,6 +74,22 @@ export function FormularioDeMovimiento({
   const [motivo, setMotivo] = useState(motivos[0]?.valor ?? "");
   const [costo, setCosto] = useState("");
   const [detalle, setDetalle] = useState("");
+  const [avisado, setAvisado] = useState(false);
+  /** Cambiar cualquier dato descarta la confirmación: lo que se confirma es lo que se vio. */
+  const cambia = (poner: (valor: string) => void) => (valor: string) => {
+    setAvisado(false);
+    poner(valor);
+  };
+  const conAviso: AccionDeFormulario = async (previo, datos) => {
+    if (avisado) datos.set("confirmar", "1");
+    // Cuando la acción sale bien, Next redirige y el pedido no devuelve valor: por eso `| undefined`.
+    const resultado: Awaited<ReturnType<AccionDeFormulario>> | undefined = await accion(
+      previo,
+      datos,
+    );
+    setAvisado(resultado?.error?.codigo === CODIGO_DE_AVISO);
+    return resultado;
+  };
   const completo =
     (!campos.deposito || deposito !== "") &&
     (!campos.origenYDestino || (origen !== "" && destino !== "")) &&
@@ -77,14 +97,14 @@ export function FormularioDeMovimiento({
     (!campos.cantidad || cantidad.trim() !== "") &&
     (!campos.detalleObligatorio || detalle.trim() !== "");
   return (
-    <FormularioDeAccion accion={accion}>
+    <FormularioDeAccion accion={conAviso}>
       {campos.deposito ? (
         <Selector
           dato="deposito-de-stock"
           etiqueta={textos.deposito}
           nombre="depositoId"
           valor={deposito}
-          alCambiar={setDeposito}
+          alCambiar={cambia(setDeposito)}
           opciones={depositos}
         />
       ) : null}
@@ -95,7 +115,7 @@ export function FormularioDeMovimiento({
             etiqueta={textos.origen}
             nombre="origenId"
             valor={origen}
-            alCambiar={setOrigen}
+            alCambiar={cambia(setOrigen)}
             opciones={depositos}
           />
           <Selector
@@ -103,7 +123,7 @@ export function FormularioDeMovimiento({
             etiqueta={textos.destino}
             nombre="destinoId"
             valor={destino}
-            alCambiar={setDestino}
+            alCambiar={cambia(setDestino)}
             opciones={depositos}
           />
         </>
@@ -114,7 +134,7 @@ export function FormularioDeMovimiento({
           etiqueta={textos.articulo}
           nombre="articuloId"
           valor={articulo}
-          alCambiar={setArticulo}
+          alCambiar={cambia(setArticulo)}
           opciones={articulos}
         />
       ) : null}
@@ -124,7 +144,7 @@ export function FormularioDeMovimiento({
           etiqueta={textos.sentido}
           nombre="sentido"
           valor={sentido}
-          alCambiar={setSentido}
+          alCambiar={cambia(setSentido)}
           opciones={sentidos}
         />
       ) : null}
@@ -134,7 +154,7 @@ export function FormularioDeMovimiento({
           etiqueta={textos.cantidad}
           nombre="cantidad"
           valor={cantidad}
-          alCambiar={setCantidad}
+          alCambiar={cambia(setCantidad)}
           inputMode="decimal"
           autoComplete="off"
         />
@@ -145,7 +165,7 @@ export function FormularioDeMovimiento({
           etiqueta={textos.motivo}
           nombre="motivo"
           valor={motivo}
-          alCambiar={setMotivo}
+          alCambiar={cambia(setMotivo)}
           opciones={motivos}
         />
       ) : null}
@@ -157,7 +177,7 @@ export function FormularioDeMovimiento({
           ayuda={textos.opcional}
           nombre="costoUnitario"
           valor={costo}
-          alCambiar={setCosto}
+          alCambiar={cambia(setCosto)}
           inputMode="decimal"
           autoComplete="off"
         />
@@ -168,7 +188,7 @@ export function FormularioDeMovimiento({
           etiqueta={textos.detalle}
           nombre="detalle"
           valor={detalle}
-          alCambiar={setDetalle}
+          alCambiar={cambia(setDetalle)}
         />
       ) : null}
       <div className={estilos["acciones"]}>
