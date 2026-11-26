@@ -211,6 +211,13 @@ export const TEXTOS_DE_STOCK = {
     usos: ["DE_FICHA"],
     fuente: { decision: "DEC-STK-006" },
   },
+  "stock.error.lote_con_otra_fecha": {
+    porDefecto:
+      "Ese lote ya está cargado con otra fecha de vencimiento. Para cambiarla, usá Corregir.",
+    largoMaximo: 120,
+    usos: ["DE_FICHA"],
+    fuente: { decision: "DEC-STK-008" },
+  },
   "stock.error.saldo_de_lote_insuficiente": {
     porDefecto: "El lote no tiene tanta existencia",
     usos: ["DE_FICHA"],
