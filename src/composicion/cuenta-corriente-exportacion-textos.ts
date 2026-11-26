@@ -4,40 +4,79 @@ import {
   ORIGENES_DE_LA_EXPORTACION,
   TRAMOS_DE_ANTIGUEDAD,
   type ColumnaDeLaExportacion,
+  type OrigenDeLaExportacion,
   type RotulosDeLaExportacion,
+  type TramoDeAntiguedad,
 } from "../modulos/cuenta_corriente/publico";
 import { texto } from "../capacidades/vocabulario/vocabulario";
 import { encabezadosDeCabecera, rotulosDeExportacion } from "./compras-exportacion-textos";
 
 /**
- * Los textos del archivo de la cuenta corriente (CC-5 D; dueño, 26/11/2026: «usen textos de la exportación de Compras»). No se crea ningún texto: lo que la exportación de compras ya
- * tiene aprobado se reutiliza desde su misma función (fecha de negocio, moneda, sucursal, medio de pago, estado, anulado, los tipos de medio); lo que no tiene texto aprobado sale con su
- * CÓDIGO ESTABLE (`importe_con_signo`, `DE_31_A_60`), nunca con un texto inventado. Cuando CC-1 (catálogo de cuenta corriente) deje aprobados los demás, se cambian acá, en esta tabla.
- * Previene: un encabezado o un valor escrito a mano que nadie aprobó. Chequeo: `cuenta-corriente-exportacion-textos.test.ts` (cada texto sale del catálogo o es su código).
+ * Los textos del archivo de la cuenta corriente (CC-5 D; dueño, 26/11/2026: «usen textos de la exportación de Compras»). Todo lo que ya existe aprobado en el catálogo se reutiliza desde su
+ * clave (compras, cuenta corriente de CC-1, fiscal, caja, ventas). Lo que NO existe sale de `SUPUESTOS_DE_TEXTO`: un inventario de redacción neutra que el orquestador acepta o rechaza (fila
+ * 173) y que, una vez aceptado, pasa al catálogo con su fuente; hasta entonces son SUPUESTO, no definitivos. Un valor sin texto (una clase de asiento no prevista, un medio que el catálogo no
+ * conoce) sale con su código estable: nunca un texto inventado.
+ * Previene: un encabezado o un valor escrito a mano que nadie aprobó y que se pierda de vista. Chequeo: `cuenta-corriente-exportacion-textos.test.ts` (cada texto sale del catálogo o es uno
+ * de los SUPUESTOS, y los SUPUESTOS son exactamente estos).
  */
 
 const t = (clave: Parameters<typeof texto>[1]): string => texto({}, clave);
 
-/** Las columnas que la exportación de compras ya tiene con texto aprobado; las demás salen con su código. */
-const DE_COMPRAS: Readonly<Partial<Record<ColumnaDeLaExportacion, string>>> = (() => {
-  const [fecha, moneda, sucursal, medio, estado] = encabezadosDeCabecera([
-    "fecha_de_negocio",
-    "moneda",
-    "sucursal",
-    "medio_de_pago",
-    "estado",
-  ]);
-  return {
-    fecha_de_negocio: fecha as string,
-    moneda: moneda as string,
-    sucursal: sucursal as string,
-    medio_de_pago: medio as string,
-    estado: estado as string,
-  };
-})();
+/**
+ * SUPUESTO: los únicos textos de esta exportación sin clave aprobada en el catálogo, con la redacción neutra que se propone. Costo de revertir: cambiar este bloque (o moverlo al catálogo con
+ * su fuente cuando el orquestador los acepte).
+ */
+export const SUPUESTOS_DE_TEXTO = {
+  antiguedadEnDias: "Antigüedad (días)",
+  tramoDeAntiguedad: "Tramo de antigüedad",
+  tramos: {
+    DE_0_A_30: "0 a 30 días",
+    DE_31_A_60: "31 a 60 días",
+    DE_61_A_90: "61 a 90 días",
+    MAS_DE_90: "Más de 90 días",
+  },
+  si: "Sí",
+  no: "No",
+  vigente: "Vigente",
+  cobranza: "Cobranza",
+} as const satisfies Readonly<{
+  antiguedadEnDias: string;
+  tramoDeAntiguedad: string;
+  tramos: Readonly<Record<TramoDeAntiguedad, string>>;
+  si: string;
+  no: string;
+  vigente: string;
+  cobranza: string;
+}>;
 
-/** El genérico: el código de la columna, que es estable entre exportaciones. */
-const encabezadoDe = (columna: ColumnaDeLaExportacion): string => DE_COMPRAS[columna] ?? columna;
+/** Las columnas que la exportación de compras ya tiene aprobadas: se piden con la misma función (fecha de negocio, moneda, sucursal, medio de pago y estado). */
+function deCompras(): Readonly<Record<string, string>> {
+  const columnas = ["fecha_de_negocio", "moneda", "sucursal", "medio_de_pago", "estado"] as const;
+  const rotulos = encabezadosDeCabecera(columnas);
+  return Object.fromEntries(columnas.map((c, i) => [c, rotulos[i] as string]));
+}
+
+function encabezados(): Readonly<Record<ColumnaDeLaExportacion, string>> {
+  const compras = deCompras();
+  return {
+    cliente: t("fiscal.pantalla.rotulo_cliente"),
+    cuit: t("fiscal.pantalla.documento_cuit"),
+    fecha_de_negocio: compras["fecha_de_negocio"] as string,
+    vence_el: t("compras.control.vence"),
+    clase: t("cuenta_corriente.movimiento.movimiento"),
+    // El importe del movimiento: el signo lo lleva el número (cargo suma, cobranza resta).
+    importe_con_signo: t("ventas.cobro.importe"),
+    pendiente: t("fiscal.pantalla.config_cartel_pendiente"),
+    moneda: compras["moneda"] as string,
+    antiguedad_en_dias: SUPUESTOS_DE_TEXTO.antiguedadEnDias,
+    tramo_de_antiguedad: SUPUESTOS_DE_TEXTO.tramoDeAntiguedad,
+    vencida: t("cuenta_corriente.movimiento.vencida"),
+    origen: t("cuenta_corriente.movimiento.origen_del_movimiento"),
+    sucursal: compras["sucursal"] as string,
+    medio_de_pago: compras["medio_de_pago"] as string,
+    estado: compras["estado"] as string,
+  };
+}
 
 /** Los tipos de medio de caja que el catálogo conoce, con su texto (el mismo de compras). Uno que no conoce sale con su código (lo resuelve `armarHojaDeLaExportacion`). */
 function tiposDeMedioConocidos(): Readonly<Record<string, string>> {
@@ -50,30 +89,42 @@ function tiposDeMedioConocidos(): Readonly<Record<string, string>> {
   return conocidos;
 }
 
-/** Los rótulos de la hoja: hoja y valores. Sin texto aprobado, el código. */
+function origenes(): Readonly<Record<OrigenDeLaExportacion, string>> {
+  const textos: Readonly<Record<OrigenDeLaExportacion, string>> = {
+    TICKET: t("fiscal.pantalla.imprimir_formato_ticket"),
+    COBRANZA: SUPUESTOS_DE_TEXTO.cobranza,
+    OTRO: t("caja.medios.tipo.otro"),
+  };
+  return Object.fromEntries(ORIGENES_DE_LA_EXPORTACION.map((o) => [o, textos[o]])) as Readonly<
+    Record<OrigenDeLaExportacion, string>
+  >;
+}
+
+/** Los rótulos de la hoja: hoja, encabezados y valores. */
 export function rotulosDeLaExportacionDeCuentaCorriente(): RotulosDeLaExportacion {
   return {
-    hoja: NOMBRE_DE_LA_HOJA,
+    hoja: t("cuenta_corriente.menu.entrada"),
     columnas: Object.fromEntries(
-      COLUMNAS_DE_LA_EXPORTACION.map((c) => [c, encabezadoDe(c)]),
+      COLUMNAS_DE_LA_EXPORTACION.map((c) => [c, encabezados()[c]]),
     ) as RotulosDeLaExportacion["columnas"],
     tramos: Object.fromEntries(
-      TRAMOS_DE_ANTIGUEDAD.map((tramo) => [tramo, tramo]),
+      TRAMOS_DE_ANTIGUEDAD.map((tramo) => [tramo, SUPUESTOS_DE_TEXTO.tramos[tramo]]),
     ) as RotulosDeLaExportacion["tramos"],
-    origenes: Object.fromEntries(
-      ORIGENES_DE_LA_EXPORTACION.map((origen) => [origen, origen]),
-    ) as RotulosDeLaExportacion["origenes"],
-    estados: { VIGENTE: "VIGENTE", ANULADO: t("caja.estado.anulado") },
-    si: "SI",
-    no: "NO",
-    clases: {},
+    origenes: origenes(),
+    estados: { VIGENTE: SUPUESTOS_DE_TEXTO.vigente, ANULADO: t("caja.estado.anulado") },
+    si: SUPUESTOS_DE_TEXTO.si,
+    no: SUPUESTOS_DE_TEXTO.no,
+    clases: {
+      CARGO_DE_VENTA_A_CUENTA: t("cuenta_corriente.movimiento.venta_a_cuenta"),
+      COBRANZA: SUPUESTOS_DE_TEXTO.cobranza,
+    },
     tiposDeMedio: tiposDeMedioConocidos(),
   };
 }
 
-/** El nombre de la hoja y del archivo: sin texto aprobado, el código `cuenta_corriente`. */
-const NOMBRE_DE_LA_HOJA = "cuenta_corriente";
-
-/** El nombre del archivo: el código y el día al que se calculó, solo con la fecha ya validada (nada escrito por la persona). */
+/**
+ * El nombre del archivo: el texto de la entrada del menú («Cuenta corriente») en minúsculas y con guion bajo (sin espacios), y el día al que se calculó, solo con la fecha ya validada (nada
+ * escrito por la persona). No agrega ningún texto nuevo: sale de uno aprobado.
+ */
 export const nombreDelArchivoDeCuentaCorriente = (alDia: string): string =>
-  `${NOMBRE_DE_LA_HOJA}_${alDia}.xlsx`;
+  `${t("cuenta_corriente.menu.entrada").toLowerCase().replaceAll(" ", "_")}_${alDia}.xlsx`;

@@ -196,12 +196,12 @@ describe.skipIf(base === null)("composición web: archivo de la cuenta corriente
     await cobrar(aCobrar);
     const { nombre, zip, filas } = await bajar();
     expect(nombre).toBe("cuenta_corriente_2026-11-09.xlsx");
-    expect(zip.get("xl/workbook.xml")).toContain('name="cuenta_corriente"');
+    expect(zip.get("xl/workbook.xml")).toContain('name="Cuenta corriente"');
     const encabezados = [...(filas.get(1)?.values() ?? [])].map((x) => x.valor);
-    // Los textos que compras ya tiene aprobados se reutilizan; el resto sale con su código estable.
+    // Los textos que el catálogo ya tiene aprobados se reutilizan; los que no, salen como SUPUESTO.
     for (const esperado of [
-      "cliente",
-      "importe_con_signo",
+      "Cliente",
+      "Importe",
       "Fecha de negocio",
       "Moneda",
       "Sucursal",

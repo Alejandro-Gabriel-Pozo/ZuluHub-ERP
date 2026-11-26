@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { leerZipComoTextos } from "../../src/adaptadores/xlsx/leer-zip-de-prueba";
+import { direccionDeExportarCuentaCorriente } from "../../apps/web/ui/plantillas/cuenta-corriente/rutas-de-cuenta-corriente";
 import { HUELLA, claveNueva } from "../integracion/caja-apoyo";
 import { crearAsignacionDeBase } from "../integracion/fixtures-identidad";
 import { cuitUnico } from "../integracion/unicos";
@@ -15,7 +16,7 @@ import { vigilar, type Vigilante } from "./apoyo/vigilante";
  * tipeada es `none`) y que `write-excel-file` corre en el servidor de Next.
  */
 const base = inject("baseDePruebas");
-const RUTA = "/caja/cuenta-corriente/exportar";
+const RUTA = direccionDeExportarCuentaCorriente();
 
 describe.skipIf(base === null)("recorrido de cuenta corriente: exportar a Excel", () => {
   let mundo: MundoDelRecorrido;
@@ -93,7 +94,7 @@ describe.skipIf(base === null)("recorrido de cuenta corriente: exportar a Excel"
     ]);
     expect(descarga.suggestedFilename()).toMatch(/^cuenta_corriente_\d{4}-\d{2}-\d{2}\.xlsx$/);
     const zip = leerZipComoTextos(new Uint8Array(readFileSync(await descarga.path())));
-    expect(zip.get("xl/workbook.xml")).toContain('name="cuenta_corriente"');
+    expect(zip.get("xl/workbook.xml")).toContain('name="Cuenta corriente"');
     expect(zip.get("xl/worksheets/sheet1.xml")).toContain("<v>1234.5</v>");
     expect(zip.get("xl/sharedStrings.xml")).toContain("Cliente del recorrido");
     for (const [nombre, xml] of zip) {

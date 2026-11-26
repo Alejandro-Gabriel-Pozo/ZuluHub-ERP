@@ -5,36 +5,70 @@ import {
   TRAMOS_DE_ANTIGUEDAD,
 } from "../modulos/cuenta_corriente/publico";
 import {
+  SUPUESTOS_DE_TEXTO,
   nombreDelArchivoDeCuentaCorriente,
   rotulosDeLaExportacionDeCuentaCorriente,
 } from "./cuenta-corriente-exportacion-textos";
 
 /**
- * Los textos del archivo de la cuenta corriente: ninguno inventado. Lo que compras ya tiene aprobado se reutiliza; lo demás sale con su código estable. Previene: un encabezado escrito a mano que
- * nadie aprobó y una columna que cambia de nombre entre exportaciones.
+ * Los textos del archivo de la cuenta corriente: ninguno inventado. Lo que el catálogo ya tiene aprobado se reutiliza desde su clave; lo único sin clave son los SUPUESTOS, que quedan acá
+ * listados exactamente (si cambia uno, esta prueba lo avisa). Previene: un encabezado escrito a mano que nadie aprobó, y un SUPUESTO que se agrande sin que lo vea quien lo acepta.
  */
 describe("los textos de la exportación de la cuenta corriente", () => {
   const r = rotulosDeLaExportacionDeCuentaCorriente();
 
-  it("las cinco columnas que compras ya tiene aprobadas salen con su texto y las demás con su código", () => {
-    expect(r.columnas.fecha_de_negocio).toBe("Fecha de negocio");
-    expect(r.columnas.moneda).toBe("Moneda");
-    expect(r.columnas.sucursal).toBe("Sucursal");
-    expect(r.columnas.medio_de_pago).toBe("Medio de pago");
-    expect(r.columnas.estado).toBe("Estado");
-    const conTexto = new Set(["fecha_de_negocio", "moneda", "sucursal", "medio_de_pago", "estado"]);
-    for (const c of COLUMNAS_DE_LA_EXPORTACION) {
-      if (!conTexto.has(c)) expect(r.columnas[c]).toBe(c);
-    }
+  it("las columnas salen en el orden de la exportación, con el texto aprobado que ya existe o el SUPUESTO", () => {
     expect(Object.keys(r.columnas)).toEqual([...COLUMNAS_DE_LA_EXPORTACION]);
+    expect(r.columnas).toEqual({
+      cliente: "Cliente",
+      cuit: "CUIT",
+      fecha_de_negocio: "Fecha de negocio",
+      vence_el: "Vence",
+      clase: "Movimiento",
+      importe_con_signo: "Importe",
+      pendiente: "Pendiente",
+      moneda: "Moneda",
+      antiguedad_en_dias: "Antigüedad (días)",
+      tramo_de_antiguedad: "Tramo de antigüedad",
+      vencida: "Vencida",
+      origen: "Origen del movimiento",
+      sucursal: "Sucursal",
+      medio_de_pago: "Medio de pago",
+      estado: "Estado",
+    });
   });
 
-  it("los tramos y los orígenes salen con su código; el estado anulado con el texto aprobado y el vigente con su código", () => {
-    for (const t of TRAMOS_DE_ANTIGUEDAD) expect(r.tramos[t]).toBe(t);
-    for (const o of ORIGENES_DE_LA_EXPORTACION) expect(r.origenes[o]).toBe(o);
-    expect(r.estados).toEqual({ VIGENTE: "VIGENTE", ANULADO: "Anulado" });
-    expect([r.si, r.no]).toEqual(["SI", "NO"]);
-    expect(r.clases).toEqual({});
+  it("los valores: lo aprobado sale con su texto, lo demás con el SUPUESTO", () => {
+    expect(r.hoja).toBe("Cuenta corriente");
+    expect(r.estados).toEqual({ VIGENTE: "Vigente", ANULADO: "Anulado" });
+    expect(r.origenes).toEqual({ TICKET: "Ticket", COBRANZA: "Cobranza", OTRO: "Otro" });
+    expect(Object.keys(r.origenes)).toEqual([...ORIGENES_DE_LA_EXPORTACION]);
+    expect(r.clases).toEqual({ CARGO_DE_VENTA_A_CUENTA: "Venta a cuenta", COBRANZA: "Cobranza" });
+    expect(r.tramos).toEqual({
+      DE_0_A_30: "0 a 30 días",
+      DE_31_A_60: "31 a 60 días",
+      DE_61_A_90: "61 a 90 días",
+      MAS_DE_90: "Más de 90 días",
+    });
+    expect(Object.keys(r.tramos)).toEqual([...TRAMOS_DE_ANTIGUEDAD]);
+    expect([r.si, r.no]).toEqual(["Sí", "No"]);
+  });
+
+  it("los SUPUESTOS son exactamente los del inventario (una palabra nueva se nota)", () => {
+    expect(SUPUESTOS_DE_TEXTO).toEqual({
+      antiguedadEnDias: "Antigüedad (días)",
+      tramoDeAntiguedad: "Tramo de antigüedad",
+      tramos: {
+        DE_0_A_30: "0 a 30 días",
+        DE_31_A_60: "31 a 60 días",
+        DE_61_A_90: "61 a 90 días",
+        MAS_DE_90: "Más de 90 días",
+      },
+      si: "Sí",
+      no: "No",
+      vigente: "Vigente",
+      cobranza: "Cobranza",
+    });
   });
 
   it("los tipos de medio de caja salen con el texto que compras ya usa", () => {
@@ -48,8 +82,7 @@ describe("los textos de la exportación de la cuenta corriente", () => {
     });
   });
 
-  it("el nombre del archivo lleva el código y el día", () => {
-    expect(r.hoja).toBe("cuenta_corriente");
+  it("el nombre del archivo sale del texto de la entrada del menú y el día, sin espacios", () => {
     expect(nombreDelArchivoDeCuentaCorriente("2026-11-26")).toBe(
       "cuenta_corriente_2026-11-26.xlsx",
     );

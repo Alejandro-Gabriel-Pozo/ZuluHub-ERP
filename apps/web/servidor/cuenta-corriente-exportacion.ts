@@ -19,7 +19,7 @@ import { dependenciasDeSesion } from "./sesion";
  */
 
 const dependencias: DependenciasDeLaExportacionDeCuentaCorriente = {
-  casos: () => web.exportacionDeCuentaCorriente(),
+  casos: () => web.casosDeUsoDeCuentaCorriente(),
   escritor: crearEscritorDePlanilla(),
   respuesta: dependenciasDeSesion.respuesta,
 };

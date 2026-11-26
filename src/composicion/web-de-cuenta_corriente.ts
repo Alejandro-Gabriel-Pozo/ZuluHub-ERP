@@ -1,4 +1,7 @@
-import { crearConsultasDeCuentaCorriente } from "../modulos/cuenta_corriente/publico";
+import {
+  crearCasosDeUsoDeCuentaCorriente,
+  crearConsultasDeCuentaCorriente,
+} from "../modulos/cuenta_corriente/publico";
 import { crearApoyoDeLaExportacionDeCuentaCorriente } from "./apoyo-de-exportacion-de-cuenta-corriente";
 import { perezoso } from "./perezoso";
 import type { BaseDeWeb } from "./web-base";
@@ -17,5 +20,17 @@ export function armarWebDeCuentaCorriente({ conexiones, reglas }: BaseDeWeb) {
         apoyo: crearApoyoDeLaExportacionDeCuentaCorriente(),
       }),
     ),
+    /**
+     * Los casos de uso de la cuenta corriente que la web ya usa (CC-5 D): SOLO `exportarCuentaCorriente` (la descarga a Excel), con su acción `cuenta_corriente.ver`. Sin el apoyo de ventas, caja y
+     * empresas la exportación se rechaza (nace cerrado); lo arma esta misma composición. Los demás casos de uso llegan con su pantalla.
+     */
+    casosDeUsoDeCuentaCorriente: perezoso(() => {
+      const { exportarCuentaCorriente } = crearCasosDeUsoDeCuentaCorriente({
+        transacciones: conexiones.transaccionesDeApp(),
+        reglas,
+        apoyoDeLaExportacion: crearApoyoDeLaExportacionDeCuentaCorriente(),
+      });
+      return { exportarCuentaCorriente };
+    }),
   };
 }

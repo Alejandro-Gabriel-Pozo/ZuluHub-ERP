@@ -64,7 +64,7 @@ describe("la exportación de la cuenta corriente por la composición web", () =>
     if (!r.ok) return;
     expect(r.dato.nombre).toBe("cuenta_corriente_2026-11-09.xlsx");
     const zip = leerZipComoTextos(r.dato.contenido);
-    expect(zip.get("xl/workbook.xml")).toContain('name="cuenta_corriente"');
+    expect(zip.get("xl/workbook.xml")).toContain('name="Cuenta corriente"');
     expect(zip.get("xl/worksheets/sheet1.xml")).toContain("<v>1234.5</v>");
   });
 

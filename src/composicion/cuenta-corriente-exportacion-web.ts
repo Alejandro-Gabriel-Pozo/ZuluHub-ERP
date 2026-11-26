@@ -20,7 +20,7 @@ import type { Web } from "./web";
  */
 
 export type DependenciasDeLaExportacionDeCuentaCorriente = Readonly<{
-  casos: () => Pick<ReturnType<Web["exportacionDeCuentaCorriente"]>, "exportarCuentaCorriente">;
+  casos: () => Pick<ReturnType<Web["casosDeUsoDeCuentaCorriente"]>, "exportarCuentaCorriente">;
   escritor: EscritorDePlanilla;
   respuesta: DependenciasDeRespuesta;
 }>;
