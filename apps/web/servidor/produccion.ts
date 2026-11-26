@@ -11,6 +11,12 @@ import {
   type OrdenParaLaPantalla,
 } from "../../../src/composicion/produccion-web";
 import type { EntradaDeLaListaDeOrdenes } from "../../../src/composicion/entradas-de-produccion";
+import {
+  abrirLaOrden,
+  cargarLaNuevaOrden,
+  type DependenciasDeNuevaOrdenWeb,
+  type OfertaDeProduccion,
+} from "../../../src/composicion/nueva-orden-web";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { rutaDeLaOrden } from "../ui/plantillas/produccion/filtros-de-ordenes";
 import type { ResultadoDeAccion } from "./acciones";
@@ -31,6 +37,12 @@ import { sucursalDelPedido } from "./sucursal-elegida";
 const dependencias: DependenciasDeProduccionWeb = {
   casosDeUso: web.casosDeUsoDeProduccion,
   consultas: web.consultasDeProduccion,
+  respuesta: dependenciasDeSesion.respuesta,
+};
+
+const dependenciasDeNuevaOrden: DependenciasDeNuevaOrdenWeb = {
+  casosDeUso: web.casosDeUsoDeProduccion,
+  consultas: web.consultasDeStock,
   respuesta: dependenciasDeSesion.respuesta,
 };
 
@@ -86,4 +98,34 @@ export async function anularLaOrdenDeLaFicha(
     ),
     ordenId,
   );
+}
+
+/** Lo que ofrece «Nueva orden» en la sucursal elegida en este dispositivo (nunca la que diga el navegador; sin ninguna, el genérico). */
+export async function cargarLaNuevaOrdenDeLaSucursal(
+  contexto: ContextoOperativo,
+): Promise<Respuesta<OfertaDeProduccion>> {
+  const sucursal = await sucursalDelPedido(contexto);
+  if (!sucursal.ok) return sucursal;
+  if (sucursal.dato.efectiva === "") return SIN_SUCURSAL;
+  return cargarLaNuevaOrden(dependenciasDeNuevaOrden, contexto, sucursal.dato.efectiva);
+}
+
+/** Abre la orden con lo que escribió la persona; si sale bien, va a la ficha de la orden. La clave de idempotencia la fija la página (`bind`): repetir el envío devuelve la misma orden. */
+export async function abrirLaOrdenDelFormulario(
+  clave: string,
+  datos: FormData,
+): Promise<ResultadoDeAccion> {
+  const respuesta = await conLaEmpresa(async (contexto) => {
+    const sucursal = await sucursalDelPedido(contexto);
+    if (!sucursal.ok) return sucursal;
+    if (sucursal.dato.efectiva === "") return SIN_SUCURSAL;
+    return abrirLaOrden(dependenciasDeNuevaOrden, contexto, sucursal.dato.efectiva, {
+      clave,
+      productoId: textoDe(datos, "productoId"),
+      cantidad: textoDe(datos, "cantidad"),
+      confirmar: textoDe(datos, "confirmar"),
+    });
+  });
+  if (!respuesta.ok) return { error: respuesta.error };
+  redirect(rutaDeLaOrden(respuesta.dato.ordenId));
 }

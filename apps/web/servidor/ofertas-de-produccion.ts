@@ -21,3 +21,10 @@ export async function accionesDeProduccion(
   ]);
   return { cancelar, anular };
 }
+
+/**
+ * ¿Se ofrece «Nueva orden» hoy? Es la oferta de `transformaciones.abrir` (gerente, administrador y operador): con el módulo `produccion` en desarrollo, no activo o en solo lectura (abrir crea), o sin el rol,
+ * no. Si no se pudieron leer los permisos, `false` (cierra, no abre). Ocultar no es autorizar: abrir vuelve a pasar por el guard. Chequeo: `test/web/produccion-acceso.test.ts`.
+ */
+export const puedeAbrirOrdenes = (contexto: ContextoOperativo): Promise<boolean> =>
+  puedeLaAccion(contexto, "transformaciones.abrir");

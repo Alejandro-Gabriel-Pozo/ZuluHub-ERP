@@ -19,7 +19,7 @@ import { accionDeProduccion } from "./produccion-web";
  * Reglas que cumple (cada una con su prueba en `nueva-orden-web.test.ts` y `test/integracion/nueva-orden-web.test.ts`):
  *  - **Lo que se ofrece lo decide el servidor.** Los productos son los activos con receta vigente Y artículo propio activo (la intersección de la lista de recetas con los artículos controlados: lo que `abrirOrden` exige);
  *    la unidad es la de stock del artículo y no se elige. El navegador manda solo el id: uno que no está en lo ofrecido sale como el genérico, sin decir por qué.
- *  - **SUPUESTO (O6): origen y destino son el depósito de venta de la sucursal elegida** (la maqueta no dibuja selector de depósito). Sin depósito de venta activo y normal, el genérico (nunca se asume otro).
+ *  - **SUPUESTO (DEC-PRO-002, O6): origen y destino son el depósito de venta de la sucursal elegida** (la maqueta no dibuja selector de depósito). Sin depósito de venta activo y normal, el genérico (nunca se asume otro).
  *  - **La empresa, la persona y la sucursal las pone el servidor**; el alcance de las dos sucursales, el permiso (`transformaciones.abrir`), el módulo y la perilla los decide el caso de uso dentro de su transacción.
  *  - **Repetir no duplica.** La clave es el UUID que fija la página al armar el formulario: el mismo gesto devuelve la misma orden con `yaExistia` (sin segunda orden, segundo número ni segunda auditoría). Con otro
  *    contenido la misma clave se rechaza (`ID_REUTILIZADO`, genérico).

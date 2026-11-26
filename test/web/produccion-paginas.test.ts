@@ -17,7 +17,8 @@ const mundo = vi.hoisted(
     pedidos: { quien: string; contexto: unknown; dato: unknown }[];
     lista: unknown;
     orden: unknown;
-  } => ({ permisos: null, pedidos: [], lista: null, orden: null }),
+    oferta: unknown;
+  } => ({ permisos: null, pedidos: [], lista: null, orden: null, oferta: null }),
 );
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
@@ -35,6 +36,11 @@ vi.mock("../../apps/web/servidor/produccion", () => ({
     mundo.pedidos.push({ quien: "orden", contexto, dato: id });
     return Promise.resolve(mundo.orden);
   },
+  cargarLaNuevaOrdenDeLaSucursal: (contexto: unknown) => {
+    mundo.pedidos.push({ quien: "nueva", contexto, dato: null });
+    return Promise.resolve(mundo.oferta);
+  },
+  abrirLaOrdenDelFormulario: () => Promise.resolve({ error: null }),
   cancelarLaOrdenDeLaFicha: () => Promise.resolve({ error: null }),
   anularLaOrdenDeLaFicha: () => Promise.resolve({ error: null }),
 }));
@@ -57,6 +63,7 @@ vi.mock("../../apps/web/servidor/sesion", () => ({
 const ID = "0b9f6a1e-2c3d-4e5f-8a7b-9c0d1e2f3a4b";
 const RUTA_DE_LA_LISTA = "../../apps/web/app/s/app/(operacion)/catalogo/produccion/page";
 const RUTA_DE_LA_FICHA = "../../apps/web/app/s/app/(operacion)/catalogo/produccion/[id]/page";
+const RUTA_DE_LA_NUEVA = "../../apps/web/app/s/app/(operacion)/catalogo/produccion/nueva/page";
 
 type Params = Record<string, string | string[] | undefined>;
 const cargarLista = (): Promise<{
@@ -65,6 +72,13 @@ const cargarLista = (): Promise<{
 const cargarFicha = (): Promise<{
   default: (p: { params: Promise<{ id: string }> }) => Promise<unknown>;
 }> => import(/* @vite-ignore */ RUTA_DE_LA_FICHA);
+
+const cargarNueva = (): Promise<{ default: () => Promise<unknown> }> =>
+  import(/* @vite-ignore */ RUTA_DE_LA_NUEVA);
+const htmlDeLaNueva = async () => {
+  const { default: Pagina } = await cargarNueva();
+  return renderToStaticMarkup((await Pagina()) as ReactNode);
+};
 
 const htmlDeLaLista = async (params: Params = {}) => {
   const { default: Pagina } = await cargarLista();
@@ -129,6 +143,16 @@ beforeEach(() => {
   mundo.pedidos = [];
   respondeLista({ ok: true, dato: ORDENES });
   respondeOrden({ ok: true, dato: FICHA });
+  mundo.oferta = {
+    ok: true,
+    dato: {
+      productos: [
+        { id: ID, nombre: "Masa de medialuna", unidadId: "KILOGRAMO" },
+        { id: "22222222-2222-4222-8222-222222222222", nombre: "Pan", unidadId: "UNIDAD" },
+      ],
+      depositoId: "33333333-3333-4333-8333-333333333333",
+    },
+  };
   puede(["transformaciones.ver", "transformaciones.cancelar", "transformaciones.anular"]);
 });
 
@@ -192,6 +216,78 @@ describe("la página de la lista de órdenes de producción", () => {
       error: { ...errorDeCodigo("ERROR_INTERNO"), referencia: "PD-ABC123" },
     });
     const t = aTexto(await htmlDeLaLista());
+    expect(t).toContain("PD-ABC123");
+    expect(t).not.toContain("ERROR_INTERNO");
+  });
+});
+
+describe("«Nueva orden» en la lista", () => {
+  it("con transformaciones.abrir hay un enlace «Nueva orden» a la pantalla de alta; sin el permiso, no", async () => {
+    puede(["transformaciones.ver", "transformaciones.abrir"]);
+    const con = await htmlDeLaLista();
+    expect(con).toContain('href="/catalogo/produccion/nueva"');
+    expect(aTexto(con)).toContain("Nueva orden");
+    puede(["transformaciones.ver", "transformaciones.cancelar"]);
+    const sin = await htmlDeLaLista();
+    expect(sin).not.toContain("/catalogo/produccion/nueva");
+    expect(aTexto(sin)).not.toContain("Nueva orden");
+  });
+
+  it("con la lista en error no hay enlace aunque pueda abrir", async () => {
+    puede(["transformaciones.ver", "transformaciones.abrir"]);
+    respondeLista({ ok: false, error: errorDeCodigo("MODULO_EN_DESARROLLO") });
+    expect(await htmlDeLaLista()).not.toContain("/catalogo/produccion/nueva");
+  });
+});
+
+describe("la página de «Nueva orden» de producción", () => {
+  it("un solo h1, «Nueva orden», con el producto (con su unidad), la cantidad y «Abrir orden»; Cancelar vuelve a la lista", async () => {
+    puede(["transformaciones.ver", "transformaciones.abrir"]);
+    const html = await htmlDeLaNueva();
+    expect([...html.matchAll(/<h1\b[^>]*>(.*?)<\/h1>/g)].map((m) => m[1])).toEqual(["Nueva orden"]);
+    const t = aTexto(html);
+    expect(t).toContain("Producto");
+    expect(t).toContain("Masa de medialuna (Kilogramo)");
+    expect(t).toContain("Pan (Unidad)");
+    expect(t).toContain("Cantidad a producir");
+    expect(html).toContain('name="productoId"');
+    expect(html).toContain('name="cantidad"');
+    expect(html).toMatch(/<a[^>]*href="\/catalogo\/produccion"[^>]*>Cancelar</);
+    // No hay campo de depósito, unidad, sucursal ni empresa: los decide el servidor.
+    for (const nombre of ["depositoId", "unidadId", "sucursalId", "empresaId", "clave"]) {
+      expect(html).not.toContain(`name="${nombre}"`);
+    }
+  });
+
+  it("pide lo que se ofrece con el contexto del servidor, y nada más", async () => {
+    puede(["transformaciones.ver", "transformaciones.abrir"]);
+    await htmlDeLaNueva();
+    expect(mundo.pedidos).toEqual([{ quien: "nueva", contexto: { id: "contexto" }, dato: null }]);
+  });
+
+  it("«Abrir orden» sale apagado sin transformaciones.abrir (solo una ayuda: el servidor decide)", async () => {
+    puede(["transformaciones.ver"]);
+    const html = await htmlDeLaNueva();
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>Abrir orden</);
+  });
+
+  it("sin nada que producir, el genérico y sin formulario", async () => {
+    mundo.oferta = { ok: true, dato: { productos: [], depositoId: "d" } };
+    const html = await htmlDeLaNueva();
+    expect(aTexto(html)).toContain("Esta acción no está permitida");
+    expect(html).not.toContain("<form");
+  });
+
+  it("el motivo del guard sale con su texto y sin formulario; un fallo inesperado, con su referencia", async () => {
+    mundo.oferta = { ok: false, error: errorDeCodigo("MODULO_EN_DESARROLLO") };
+    const html = await htmlDeLaNueva();
+    expect(aTexto(html)).toContain("Esta función todavía está en desarrollo.");
+    expect(html).not.toContain("<form");
+    mundo.oferta = {
+      ok: false,
+      error: { ...errorDeCodigo("ERROR_INTERNO"), referencia: "PD-ABC123" },
+    };
+    const t = aTexto(await htmlDeLaNueva());
     expect(t).toContain("PD-ABC123");
     expect(t).not.toContain("ERROR_INTERNO");
   });

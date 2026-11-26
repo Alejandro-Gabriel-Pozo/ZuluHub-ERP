@@ -74,3 +74,8 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+.nueva {
+  display: flex;
+  justify-content: flex-end;
+}
