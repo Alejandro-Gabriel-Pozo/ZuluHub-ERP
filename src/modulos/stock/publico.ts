@@ -148,6 +148,11 @@ export type {
 } from "./casos-de-uso/tipos-de-puertos";
 export type { ComponenteDeLaReceta, ComposicionDeProducto } from "./consultas/composiciones";
 export type { DepositoDeLista } from "./consultas/depositos";
+export {
+  MAXIMO_DE_DIAS_POR_VENCER,
+  type LoteQueVence,
+  type LotesDeUnArticulo,
+} from "./consultas/lotes";
 export type {
   CursorDeExistencias,
   EntradaDeExistencias,
