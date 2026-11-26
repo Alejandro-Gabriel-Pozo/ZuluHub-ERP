@@ -317,6 +317,9 @@ describe.skipIf(base === null)("ventas: cliente en el ticket (0107)", () => {
       expect(await correr(c, reversion)).toBeNull();
       expect(await correr(c, reversion)).toBeNull();
       expect(await esquema()).toBe("[]");
+      const registrada = () =>
+        c.query("select 1 from migracion where nombre = '0107_cliente_en_el_ticket.sql'");
+      expect((await registrada()).rowCount).toBe(0); // la reversión borra su fila del registro
       expect(await correr(c, migracion)).toBeNull();
       expect(await esquema()).toBe(original);
     } finally {
