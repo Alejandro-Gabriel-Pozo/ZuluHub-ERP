@@ -40,6 +40,8 @@ export type EntradaDeDividirCuenta = Readonly<{
   partes: number;
   /** Una por cada línea vigente de la cuenta: entero, por unidades o compartido. */
   asignaciones: readonly Asignacion[];
+  /** La sucursal con la que trabaja quien divide (la fija el servidor): una cuenta de OTRA, o sin ella, es como si no existiera (`CUENTA_NO_ENCONTRADA`), también en una repetición. */
+  sucursalDeTrabajo: string;
 }>;
 
 export type SalidaDeDividirCuenta = Readonly<{
@@ -93,6 +95,7 @@ async function dividir(
   if (madre === undefined) return err("CUENTA_NO_ENCONTRADA");
   const alcance = await exigirAlcance(tx, contexto, madre.sucursalId);
   if (!alcance.ok) return alcance;
+  if (entrada.sucursalDeTrabajo !== madre.sucursalId) return err("CUENTA_NO_ENCONTRADA");
 
   // Idempotencia por el id de la división: lo mismo devuelve lo hecho; el mismo id con otra cosa no se pisa.
   const previa = await tx.unionesYDivisiones.divisionPorId(empresaId, entrada.divisionId);

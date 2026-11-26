@@ -103,6 +103,7 @@ describe.skipIf(base === null)("salón: un producto oculto (carta real T8)", () 
     );
     const r = valorDe(
       await m.salon.dividirCuenta(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         divisionId: nuevoId(),
         cuentaId: cuenta,
         partes: 2,
