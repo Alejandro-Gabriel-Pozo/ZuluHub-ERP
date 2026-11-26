@@ -150,6 +150,7 @@ describe.skipIf(base === null)(
           "excedeEn",
           "excedido",
           "nombre",
+          "puedeAprobarElExceso",
           "saldo",
           "saldoDespues",
         ]);

@@ -34,6 +34,8 @@ export type PropsDeResultadoDelCobro = Readonly<{
   alNuevaVenta: () => void;
   /** El resultado de cobrar una mesa (SAL-D y SAL-C2): lleva «Anular» como el del mostrador (la mesa NO se reabre: queda libre) y el último botón es «Volver» (al salón), no «Nueva venta». */
   deLaMesa?: boolean | undefined;
+  /** La venta quedó cargada a la cuenta de un cliente (CC-5 B1b): no entró plata a la caja, así que el aviso es solo el número del ticket (sin «Cobrado»), como el de una venta a $ 0. «Imprimir» y «Anular» siguen. */
+  aCuenta?: boolean | undefined;
   /** Solo al cobrar una cuenta de una mesa dividida (SAL-E2): el botón dice «Volver a las cuentas» y, si era la última, el resultado avisa «Mesa cobrada» (la mesa quedó libre). */
   deLaDivision?: Readonly<{ rotuloDeVolver: string; mesaCobrada: string | null }> | undefined;
   nuevoId: () => string;
@@ -56,6 +58,7 @@ export function ResultadoDelCobro({
   alCambiarLaVista,
   alNuevaVenta,
   deLaMesa = false,
+  aCuenta = false,
   deLaDivision,
   nuevoId,
   esperaEntreVerificacionesMs,
@@ -136,7 +139,10 @@ export function ResultadoDelCobro({
           esperaEntreVerificacionesMs={esperaEntreVerificacionesMs}
         />
       ) : null}
-      <Aviso tono={aCero ? "info" : "exito"} {...(aCero ? {} : { titulo: textos.cobrado })}>
+      <Aviso
+        tono={aCero || aCuenta ? "info" : "exito"}
+        {...(aCero || aCuenta ? {} : { titulo: textos.cobrado })}
+      >
         <span data-ticket>{rotuloDelTicket(venta.numero)}</span>
       </Aviso>
       {deLaDivision?.mesaCobrada == null ? null : (
