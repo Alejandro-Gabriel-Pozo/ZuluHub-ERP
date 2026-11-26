@@ -3,7 +3,7 @@ import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 import type { ErrorPublico } from "../../../../../src/capacidades/experiencia/respuesta";
 import { legibleYTocable } from "../../pruebas/ayudas-de-emision";
-import { tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
+import { conReinicio, tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
 import { FormularioDePrecioDeProducto } from "./FormularioDePrecioDeProducto.cliente";
 import {
@@ -152,7 +152,10 @@ describe("FormularioDePrecioDeProducto", () => {
   it("si otra persona cambió el precio, la frase aprobada con el importe vigente, en el campo; lo que se escribió se conserva para revisarlo", async () => {
     await render(formulario(armarLosPrecios(PANTALLA), rechazo(DESACTUALIZADO)));
     await userEvent.fill(campo(), "14000");
-    tocar(guardar());
+    const cancelado = await conReinicio(() => {
+      tocar(guardar());
+    });
+    expect(cancelado).toBe(true);
     await expect
       .element(
         page.getByText("El precio vigente ahora es $ 15.000,00. Revisalo y volvé a intentar."),
