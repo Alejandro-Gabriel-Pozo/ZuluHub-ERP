@@ -105,6 +105,11 @@ export function PantallaDeDetalleDeFactura({
           </li>
         ))}
       </ul>
+      {f.notas === null ? null : (
+        <EnlaceDeAccion href={f.notas.href} variante="secundaria">
+          {f.notas.texto}
+        </EnlaceDeAccion>
+      )}
       {f.conciliar ? (
         <EnlaceDeAccion href={rutaDeConciliar(ficha.comprobanteId)}>
           {textos.conciliar}

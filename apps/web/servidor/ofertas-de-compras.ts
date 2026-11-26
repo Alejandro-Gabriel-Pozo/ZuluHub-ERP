@@ -25,5 +25,7 @@ export async function accionesDeLaCompra(
     anular: puede("recepciones.anular"),
     pagar: puede("comprobantes_de_proveedor.pagar"),
     anularPago: puede("comprobantes_de_proveedor.anular_pago"),
+    verNotas:
+      puede("notas_de_credito_de_proveedor.ver") && puede("notas_de_debito_de_proveedor.ver"),
   };
 }

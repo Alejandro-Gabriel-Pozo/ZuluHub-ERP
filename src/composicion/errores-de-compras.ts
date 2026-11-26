@@ -10,7 +10,7 @@ import { aRespuesta, aRespuestaDeExcepcion, type DependenciasDeRespuesta } from 
 import type { ErrorDeEntrada } from "./entradas-de-facturacion";
 
 /**
- * De un error de compras (N1 a N4) al código público que sale a la pantalla (ADR-016). Seis respuestas con texto propio, las que las maquetas aprobadas del 09/11/2026 redactan
+ * De un error de compras (N1 a N4) al código público que sale a la pantalla (ADR-016). Siete respuestas con texto propio, las seis que las maquetas aprobadas del 09/11/2026 redactan
  * (`compra.html`, `orden.html`): el remito y la factura repetidos, los puntos de venta sin declarar, la cantidad, el precio y el proveedor. TODO lo demás que el dominio rechaza sale
  * como el genérico «Esta acción no está permitida» (dueño, 30/10/2026, interfaz sobria: genérico antes que uno por acción), también lo que vuelve de stock o del directorio y lo
  * que tiene forma de objeto con nombre de negocio (`COMPROBANTE_YA_PAGADO`, `FUNCION_NO_INCLUIDA`). El guard, la empresa que no opera y la base ya traen su propio código y pasan SIN
@@ -99,7 +99,7 @@ const CODIGO_DE_ERROR_PROPIO: Readonly<Record<ErrorPropio, CodigoDeCompras>> = {
   NADA_PARA_PAGAR: "COMPRAS_ACCION_NO_PERMITIDA",
   REEMPLAZO_DE_FACTURA_NO_ANULADA: "COMPRAS_ACCION_NO_PERMITIDA",
   REEMPLAZO_DE_OTRO_PROVEEDOR: "COMPRAS_ACCION_NO_PERMITIDA",
-  NOTA_DE_CREDITO_CON_PAGO: "COMPRAS_ACCION_NO_PERMITIDA",
+  NOTA_DE_CREDITO_CON_PAGO: "COMPRAS_NOTA_CON_PAGO",
   NOTA_DE_DEBITO_DE_FACTURA_ANULADA: "COMPRAS_ACCION_NO_PERMITIDA",
   NOTA_DE_DEBITO_DE_OTRO_PROVEEDOR: "COMPRAS_ACCION_NO_PERMITIDA",
   NOTA_DE_DEBITO_NO_ENCONTRADA: "COMPRAS_ACCION_NO_PERMITIDA",
