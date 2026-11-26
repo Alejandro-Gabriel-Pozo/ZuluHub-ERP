@@ -1,7 +1,7 @@
 -- 0104_nota_libre_en_la_linea_de_comanda: una nota libre corta por plato del pedido («sin cebolla») que sale en el papel de cocina (SAL-G; maqueta y alcance aprobados por el dueño el 25/11/2026).
 --  * `linea_de_comanda.nota`: la nota viva; se carga al agregar y se edita SOLO mientras la línea no se envió. Nula = sin nota.
 --  * `renglon_de_envio.nota`: la FOTO de lo que vio la cocina (la tabla es de solo inserción: lo impreso no cambia nunca).
---  * Largo máximo 120 (SUPUESTO; subirlo es cambiar este CHECK; bajarlo con datos cargados recortaría notas) y el conjunto de caracteres permitidos es el de los textos de catálogo
+--  * Largo máximo 120 (SUPUESTO (DEC-SAL-006); subirlo es cambiar este CHECK; bajarlo con datos cargados recortaría notas) y el conjunto de caracteres permitidos es el de los textos de catálogo
 --    (`texto_de_catalogo_valido`, el mismo de `nombre_de_cocina`): sin controles, sin `<` ni `>`, sin espacios de más en los bordes.
 --  * Tres reglas de la base (no solo del código): (1) una línea enviada no cambia su nota ni se envía y cambia la nota en el mismo UPDATE; (2) la foto del envío lleva EXACTAMENTE la nota guardada
 --    en la línea; (3) una copia (unir, dividir, anular una parte) conserva la nota de su origen. La nota no tiene ninguna relación con precio, stock ni ticket: no hay nada de dinero acá.
