@@ -5,6 +5,7 @@ import { armarListarMiembros } from "./listar-miembros";
 import { armarListarRoles } from "./listar-roles";
 import { armarPersonasParaMostrar } from "./personas-para-mostrar";
 import { armarTraspasoEnCurso } from "./traspaso-en-curso";
+import { armarRolesAsignables } from "./roles-asignables";
 import { armarVerRol } from "./ver-rol";
 
 /**
@@ -21,6 +22,7 @@ export function crearConsultasDeIdentidad(dependencias: DependenciasDeConsultasD
     personasParaMostrar: armarPersonasParaMostrar(dependencias),
     listarRoles: armarListarRoles(dependencias),
     verRol: armarVerRol(dependencias),
+    rolesAsignables: armarRolesAsignables(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES_DE_CONSULTAS, unknown>;
 }
 
