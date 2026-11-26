@@ -42,10 +42,7 @@ export default async function PaginaDeFichaDeUsuario({
     if (!editor.ok) return <ErrorDelDetalle error={editor.error} />;
     // «Rol» (solo el gerente, y no sobre el gerente): el selector con los roles asignables. Sin permiso o con una falla, la ficha no ofrece cambiar el rol (el servidor lo vuelve a exigir al enviar).
     const ofertasDeRol = await ofertasDeRoles(contexto);
-    const asignables =
-      ofertasDeRol.asignar && ficha.dato.rol !== "GERENTE"
-        ? await cargarLosRolesAsignables(contexto)
-        : null;
+    const asignables = ofertasDeRol.asignar ? await cargarLosRolesAsignables(contexto) : null;
     const actual =
       typeof ficha.dato.rol === "string"
         ? ({ tipo: "BASE", rol: ficha.dato.rol } as const)
@@ -56,13 +53,14 @@ export default async function PaginaDeFichaDeUsuario({
               rolId: ficha.dato.rolPropioId,
               nombre: ficha.dato.rol.propio,
             } as const);
-    const rol =
+    const editorDeRol =
       asignables?.ok === true && actual !== null
-        ? {
-            editor: armarElEditorDeRolDeUsuario(asignables.dato, actual, {}),
-            accion: asignarRolAccion.bind(null, personaId),
-          }
+        ? armarElEditorDeRolDeUsuario(asignables.dato, actual, {})
         : null;
+    const rol =
+      editorDeRol === null
+        ? null
+        : { editor: editorDeRol, accion: asignarRolAccion.bind(null, personaId) };
     return conTitulo(
       armada.email,
       <PantallaDeFichaDeUsuario

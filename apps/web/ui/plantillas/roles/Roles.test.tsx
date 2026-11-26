@@ -244,6 +244,15 @@ describe("AccionDeEstadoDeRol", () => {
 });
 
 describe("FormularioDeRolDeUsuario", () => {
+  /** El editor del rol de una persona; en estas pruebas siempre se ofrece (el caso sin editor tiene su propia prueba). */
+  const editorDe = (
+    asignables: Parameters<typeof armarElEditorDeRolDeUsuario>[0],
+    actual: Parameters<typeof armarElEditorDeRolDeUsuario>[1],
+  ) => {
+    const editor = armarElEditorDeRolDeUsuario(asignables, actual, {});
+    if (editor === null) throw new Error("se esperaba un editor de rol");
+    return editor;
+  };
   const asignables = {
     base: ["ADMINISTRADOR", "OPERADOR"],
     propios: [{ rolId: R(1), nombre: "Cajero" }],
@@ -254,7 +263,7 @@ describe("FormularioDeRolDeUsuario", () => {
     await render(
       conArmazon(
         <FormularioDeRolDeUsuario
-          editor={armarElEditorDeRolDeUsuario(asignables, { tipo: "BASE", rol: "OPERADOR" }, {})}
+          editor={editorDe(asignables, { tipo: "BASE", rol: "OPERADOR" })}
           accion={accion}
         />,
       ),
@@ -269,11 +278,7 @@ describe("FormularioDeRolDeUsuario", () => {
   });
 
   it("un rol actual archivado se ve como opción apagada con su nombre: el selector arranca en un valor real y no ofrece reasignar a él", async () => {
-    const editor = armarElEditorDeRolDeUsuario(
-      asignables,
-      { tipo: "PROPIO", rolId: R(2), nombre: "Viejo" },
-      {},
-    );
+    const editor = editorDe(asignables, { tipo: "PROPIO", rolId: R(2), nombre: "Viejo" });
     expect(editor.valorInicial).toBe(`PROPIO:${R(2)}`);
     expect(editor.opciones.find((o) => o.valor === `PROPIO:${R(2)}`)).toEqual({
       valor: `PROPIO:${R(2)}`,
@@ -286,12 +291,17 @@ describe("FormularioDeRolDeUsuario", () => {
   });
 
   it("el rol actual que sigue activo no se duplica en las opciones", () => {
-    const editor = armarElEditorDeRolDeUsuario(
-      asignables,
-      { tipo: "PROPIO", rolId: R(1), nombre: "Cajero" },
-      {},
-    );
+    const editor = editorDe(asignables, { tipo: "PROPIO", rolId: R(1), nombre: "Cajero" });
     expect(editor.opciones.filter((o) => o.etiqueta === "Cajero")).toHaveLength(1);
     expect(editor.opciones.map((o) => o.etiqueta)).toEqual(["Administrador", "Empleado", "Cajero"]);
+  });
+
+  it("el gerente no tiene selector de rol: su rol no figura entre los asignables que dijo el servidor (no se nombra ningún rol)", () => {
+    expect(
+      armarElEditorDeRolDeUsuario(asignables, { tipo: "BASE", rol: "GERENTE" }, {}),
+    ).toBeNull();
+    expect(
+      armarElEditorDeRolDeUsuario(asignables, { tipo: "BASE", rol: "ADMINISTRADOR" }, {}),
+    ).not.toBeNull();
   });
 });

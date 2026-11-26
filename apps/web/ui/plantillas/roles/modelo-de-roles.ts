@@ -228,13 +228,18 @@ export type EditorDeRolDeUsuarioArmado = Readonly<{
 
 /**
  * El selector «Rol» de la ficha de una persona: los dos roles base y los roles propios activos, con el rol actual marcado. Si el rol actual es uno propio que ya no se puede asignar (archivado) se muestra igual, como opción
- * apagada con su nombre: así el selector arranca en un valor real y un toque en «Guardar» no reasigna a la persona sin que la elija. El gerente no se asigna (no tiene editor: lo decide la página).
+ * apagada con su nombre: así el selector arranca en un valor real y un toque en «Guardar» no reasigna a la persona sin que la elija.
+ * Devuelve `null` (no hay selector) si el rol base actual no está entre los asignables que dijo el servidor: así el gerente queda afuera sin que esta pantalla nombre ningún rol (regla «el rol no autoriza»: lo decide
+ * la lista del servidor, no una comparación con un literal; el servidor además rechaza asignar al gerente).
  */
 export function armarElEditorDeRolDeUsuario(
   asignables: RolesAsignablesParaLaPantalla,
   actual: RolActualDeLaPersona,
   diccionario: DiccionarioResuelto,
-): EditorDeRolDeUsuarioArmado {
+): EditorDeRolDeUsuarioArmado | null {
+  if (actual.tipo === "BASE" && !(asignables.base as readonly string[]).includes(actual.rol)) {
+    return null;
+  }
   const opciones: { valor: string; etiqueta: string; apagada?: boolean }[] = [
     ...asignables.base.map((r) => ({
       valor: `BASE:${r}`,
