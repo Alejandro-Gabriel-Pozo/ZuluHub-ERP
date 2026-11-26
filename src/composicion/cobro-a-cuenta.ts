@@ -5,7 +5,7 @@ import type { MotivoDeRechazo } from "../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../contexto/contexto";
 import { crearDirectorioDePartes } from "../modulos/clientes/publico";
 import { ORIGEN_DEL_CARGO_DE_VENTA } from "../modulos/cuenta_corriente/publico";
-import { crearTicketACobrar, type ErrorDeTicketACobrar } from "../modulos/ventas/publico";
+import { crearTicketACobrar } from "../modulos/ventas/publico";
 import {
   estaVencida,
   movimientosDeLasPartes,
