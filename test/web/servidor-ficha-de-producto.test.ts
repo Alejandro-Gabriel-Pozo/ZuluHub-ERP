@@ -71,8 +71,17 @@ const control = vi.hoisted((): { puede: boolean; pedidos: unknown[]; resultado: 
   resultado: null,
 }));
 vi.mock("../../apps/web/servidor/control-de-stock", () => ({
-  fijarElControl: (_contexto: unknown, productoId: string, controlado: boolean) => {
-    control.pedidos.push({ productoId, controlado });
+  fijarElControl: (
+    _contexto: unknown,
+    productoId: string,
+    controlado: boolean,
+    confirmarCuentasAbiertas = false,
+  ) => {
+    control.pedidos.push({
+      productoId,
+      controlado,
+      ...(confirmarCuentasAbiertas ? { confirmarCuentasAbiertas } : {}),
+    });
     return Promise.resolve(control.resultado);
   },
 }));
@@ -276,6 +285,30 @@ describe("el tilde «Se controla el stock»", () => {
     await expect(guardarConControl(true)).rejects.toThrow(REDIRIGIO);
     expect(control.pedidos).toEqual([{ productoId: ID, controlado: false }]);
     expect(mundo.ediciones).toHaveLength(1);
+  });
+
+  it("la confirmación de cuentas abiertas solo viaja con el valor «1»: otro valor o su ausencia no confirman", async () => {
+    for (const valor of ["on", "true", "0", ""]) {
+      control.pedidos = [];
+      await expect(
+        guardarConControl(false, { seControlaElStock: "on", confirmarCuentasAbiertas: valor }),
+      ).rejects.toThrow(REDIRIGIO);
+      expect(control.pedidos).toEqual([{ productoId: ID, controlado: true }]);
+    }
+    control.pedidos = [];
+    await expect(
+      guardarConControl(false, { seControlaElStock: "on", confirmarCuentasAbiertas: "1" }),
+    ).rejects.toThrow(REDIRIGIO);
+    expect(control.pedidos).toEqual([
+      { productoId: ID, controlado: true, confirmarCuentasAbiertas: true },
+    ]);
+  });
+
+  it("el aviso de cuentas abiertas frena el guardado: devuelve el aviso y NO guarda la ficha", async () => {
+    control.resultado = { ok: false, error: { codigo: "PRODUCCION_CUENTAS_ABIERTAS" } };
+    const r = await guardarConControl(false, { seControlaElStock: "on" });
+    expect(r).toEqual({ error: { codigo: "PRODUCCION_CUENTAS_ABIERTAS" } });
+    expect(mundo.ediciones).toEqual([]);
   });
 
   it("si el control falla, devuelve ese error y NO guarda la ficha", async () => {

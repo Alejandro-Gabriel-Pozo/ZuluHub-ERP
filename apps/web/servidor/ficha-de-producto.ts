@@ -60,7 +60,12 @@ export async function guardarLaFicha(
     if (controlVisto !== null && (await puedeControlarElStock(contexto))) {
       const pedido = datos.get("seControlaElStock") === "on";
       if (pedido !== controlVisto) {
-        const control = await fijarElControl(contexto, productoId, pedido);
+        const control = await fijarElControl(
+          contexto,
+          productoId,
+          pedido,
+          datos.get("confirmarCuentasAbiertas") === "1",
+        );
         if (!control.ok) return control;
       }
     }

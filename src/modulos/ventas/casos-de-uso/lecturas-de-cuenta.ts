@@ -78,3 +78,13 @@ export const bloquearCuentas = (
   empresa: EmpresaId,
   ids: readonly string[],
 ): Promise<Cuenta[]> => tx.cuentas.bloquear(empresa, ids);
+
+/**
+ * Cuántas cuentas abiertas tienen una línea vigente de este producto (de la empresa entera): lo que stock necesita saber, dentro de SU transacción, antes de darle stock
+ * propio a un plato (las cuentas abiertas pasarán a descontar el plato y no sus ingredientes). Sin permiso propio (lo exige quien llama): siempre filtra por la empresa.
+ */
+export const cuentasAbiertasConElProducto = (
+  tx: ConCuentas<"contarAbiertasConElProducto">,
+  empresa: EmpresaId,
+  productoId: string,
+): Promise<number> => tx.cuentas.contarAbiertasConElProducto(empresa, productoId);

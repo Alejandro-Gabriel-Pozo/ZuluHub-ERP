@@ -57,6 +57,20 @@ export const TEXTOS_DE_PRODUCCION = {
     porDefecto:
       "Al encenderlo, este producto deja de descontar sus ingredientes al venderse: se descuentan al producir.",
   },
+  // Condición del dueño (26/11/2026) sobre DEC-PRO-001; texto aceptado por delegación (fila 173), DEC-PRO-004.
+  "produccion.elaborado.aviso_cuentas_abiertas": {
+    largoMaximo: 160,
+    porDefecto:
+      "Hay cuentas abiertas con este plato. Al cerrarlas se descontará el plato y no sus ingredientes. ¿Confirmás?",
+    usos: [
+      {
+        como: "FUNCION",
+        archivo: "src/capacidades/experiencia/respuesta-de-produccion.ts",
+        nombre: "CLAVES_DE_ERRORES_DE_PRODUCCION",
+      },
+    ],
+    fuente: { decision: "DEC-PRO-004" },
+  },
 
   // Textos de la maqueta aprobada `produccion.html` (09/11/2026) que no tenían fila propia en «Textos aprobados»; aceptados por el orquestador por delegación del dueño (DDD filas 173 y 174, DEC-0555).
   // Fuente de cada uno: la línea de `10-ux-ui/prototipos-gastronomia/produccion.html` de Pedernal-docs.
