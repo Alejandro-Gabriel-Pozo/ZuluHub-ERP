@@ -12,7 +12,7 @@ import { DECLARACIONES } from "./declaraciones";
  * quedar sin nadie que gestione usuarios.
  *
  * «Gestión de usuarios» son las acciones con prefijo `usuarios.`: identidad también declara las del
- * traspaso (`gerencia.*`), que no son de gestión (el operador entrante las puede).
+ * traspaso (`gerencia.*`), que no son de gestión (el operador entrante las puede), y `usuarios.asignar_rol`, que es solo del gerente y no define quién cuenta como admin.
  */
 
 const ACCIONES_DE_IDENTIDAD = [
@@ -20,8 +20,14 @@ const ACCIONES_DE_IDENTIDAD = [
   ...Object.values(DECLARACIONES_DE_CONSULTAS),
 ].flatMap((d) => ("accion" in d ? [d.accion] : []));
 
+/** `usuarios.asignar_rol` es del gerente solo: no entra en lo que define a un admin (invitar, apagar, ver…). */
+const DEL_GERENTE_SOLO = "usuarios.asignar_rol";
 const ACCIONES_DE_USUARIOS = [
-  ...new Set(ACCIONES_DE_IDENTIDAD.filter((accion) => accion.startsWith("usuarios."))),
+  ...new Set(
+    ACCIONES_DE_IDENTIDAD.filter(
+      (accion) => accion.startsWith("usuarios.") && accion !== DEL_GERENTE_SOLO,
+    ),
+  ),
 ];
 
 /** ¿El rol puede TODAS las acciones de gestión de usuarios? */
@@ -32,6 +38,7 @@ const unico = (rol: RolDeEmpresa): Membresia => ({
   empresaId: empresaId("e-1"),
   personaId: personaId(`p-${rol}`),
   rol,
+  rolPropioId: null,
   activo: true,
   version: 1,
 });
@@ -52,7 +59,9 @@ describe("los roles que cuentan como admin para ULTIMO_ADMIN son los que gestion
   });
 
   it("toda acción `usuarios.` de la matriz la declara identidad (ninguna queda sin filtrar)", () => {
-    const delaMatriz = Object.keys(PERMISOS_DE_EMPRESA).filter((a) => a.startsWith("usuarios."));
+    const delaMatriz = Object.keys(PERMISOS_DE_EMPRESA).filter(
+      (a) => a.startsWith("usuarios.") && a !== DEL_GERENTE_SOLO,
+    );
     expect([...delaMatriz].sort()).toEqual([...ACCIONES_DE_USUARIOS].sort());
   });
 

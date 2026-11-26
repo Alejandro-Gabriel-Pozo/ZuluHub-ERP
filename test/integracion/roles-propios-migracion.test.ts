@@ -675,7 +675,7 @@ describe.skipIf(base === null)("migración 0097: roles propios de la empresa (T4
             )
           ).rows[0],
         ).toEqual({ n: 0 });
-        // Los cuatro `roles.*` los trae la semilla de 0094 (la regeneración de su bloque): la reversión de 0097 no los toca; `usuarios.asignar_rol` era solo de 0097 y se va.
+        // Los cinco los trae la semilla de 0094 (la regeneración de su bloque): la reversión de 0097 solo borra lo que sembró ella (hoy nada en una base nueva).
         expect(
           (
             await cliente.query(
@@ -683,7 +683,13 @@ describe.skipIf(base === null)("migración 0097: roles propios de la empresa (T4
             )
           ).rows,
         ).toEqual(
-          ["roles.archivar", "roles.crear", "roles.editar", "roles.ver"].map((accion) => ({
+          [
+            "roles.archivar",
+            "roles.crear",
+            "roles.editar",
+            "roles.ver",
+            "usuarios.asignar_rol",
+          ].map((accion) => ({
             accion,
             autor: "migracion:0094",
           })),

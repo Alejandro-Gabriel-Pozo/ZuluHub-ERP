@@ -78,6 +78,18 @@ export interface RepositorioDeMembresias {
     versionEsperada: number,
     rol: RolDeEmpresa,
   ): Promise<boolean>;
+  /**
+   * Asigna un rol (uno de los dos base o un rol propio) a una membresía, activa o apagada, sin cambiar `activo`. La base lo admite solo al gerente activo, hacia un rol
+   * propio ACTIVO de la misma empresa y nunca sobre el gerente (0097). `false`: no es de la empresa o cambió de versión.
+   */
+  asignarRol(
+    empresa: EmpresaId,
+    persona: PersonaId,
+    versionEsperada: number,
+    destino:
+      | Readonly<{ rol: "ADMINISTRADOR" | "OPERADOR"; rolPropioId: null }>
+      | Readonly<{ rol: "PROPIO"; rolPropioId: string }>,
+  ): Promise<boolean>;
 }
 
 export function crearRepositorioDePersonas(db: Kysely<IdentidadDb>): RepositorioDePersonas {
@@ -144,17 +156,26 @@ export function crearRepositorioDePersonas(db: Kysely<IdentidadDb>): Repositorio
 }
 
 export function crearRepositorioDeMembresias(db: Kysely<IdentidadDb>): RepositorioDeMembresias {
-  const columnas = ["empresa_id", "persona_id", "rol", "activo", "version"] as const;
+  const columnas = [
+    "empresa_id",
+    "persona_id",
+    "rol",
+    "rol_propio_id",
+    "activo",
+    "version",
+  ] as const;
   const aMembresia = (fila: {
     empresa_id: string;
     persona_id: string;
     rol: string;
+    rol_propio_id: string | null;
     activo: boolean;
     version: number;
   }): Membresia => ({
     empresaId: empresaId(fila.empresa_id),
     personaId: personaId(fila.persona_id),
     rol: deLaLista(ROLES_DE_LA_MEMBRESIA, fila.rol, "rol"),
+    rolPropioId: fila.rol_propio_id,
     activo: fila.activo,
     version: fila.version,
   });
@@ -188,6 +209,7 @@ export function crearRepositorioDeMembresias(db: Kysely<IdentidadDb>): Repositor
           "m.empresa_id",
           "m.persona_id",
           "m.rol",
+          "m.rol_propio_id",
           "m.activo",
           "m.version",
           "p.email as email",
@@ -269,6 +291,17 @@ export function crearRepositorioDeMembresias(db: Kysely<IdentidadDb>): Repositor
         .where("empresa_id", "=", empresa)
         .where("persona_id", "=", persona)
         .where("activo", "=", true)
+        .where("version", "=", versionEsperada)
+        .executeTakeFirst();
+      return r.numUpdatedRows === 1n;
+    },
+
+    async asignarRol(empresa, persona, versionEsperada, destino) {
+      const r = await db
+        .updateTable("membresia")
+        .set({ rol: destino.rol, rol_propio_id: destino.rolPropioId })
+        .where("empresa_id", "=", empresa)
+        .where("persona_id", "=", persona)
         .where("version", "=", versionEsperada)
         .executeTakeFirst();
       return r.numUpdatedRows === 1n;
