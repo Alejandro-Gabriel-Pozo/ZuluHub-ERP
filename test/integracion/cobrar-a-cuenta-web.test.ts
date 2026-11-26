@@ -88,6 +88,7 @@ describe.skipIf(base === null)("composición web: cobrar un ticket a cuenta (CC-
         cuentaId: cuenta,
         ejemplarId: nuevoId(),
         clienteId,
+        totalEsperado: { moneda: "ARS", monto: "1000.00" },
       }),
     );
   };
@@ -373,6 +374,7 @@ describe.skipIf(base === null)("composición web: cobrar un ticket a cuenta (CC-
         cuentaId: cuenta,
         ejemplarId: nuevoId(),
         clienteId: c,
+        totalEsperado: { moneda: "ARS", monto: "1000.00" },
       }),
     );
     expect(await cobrar(await pedido(fuera), e.operador)).toMatchObject(GENERICO);
