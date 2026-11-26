@@ -144,6 +144,7 @@ describe.skipIf(base === null)("composición web: archivo de la cuenta corriente
         cuentaId: cuenta,
         ejemplarId: nuevoId(),
         clienteId,
+        totalEsperado: { moneda: "ARS", monto: "1000.00" },
       }),
     );
   };
