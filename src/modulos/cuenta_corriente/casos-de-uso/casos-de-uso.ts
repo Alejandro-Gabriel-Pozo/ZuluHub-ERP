@@ -11,6 +11,7 @@ import type { DependenciasDeCuentaCorriente } from "./contrato";
 import type { DECLARACIONES } from "./declaraciones";
 import { armarExportarCuentaCorriente } from "./exportar-cuenta-corriente";
 import { armarHabilitarCuentaDelCliente } from "./habilitar";
+import { armarVerClienteParaVender } from "./ver-cliente-para-vender";
 
 /** Los argumentos de un caso de uso en la transacción del llamador, sin las reglas (las pone el módulo). */
 type DesdeLaTx<F extends (...argumentos: never[]) => unknown> = F extends (
@@ -42,6 +43,8 @@ export function crearCasosDeUsoDeCuentaCorriente(dependencias: DependenciasDeCue
     anularCobranzaDeVentaEnTx,
     // CC-4: lectura de toda la cuenta corriente para tablas dinámicas.
     exportarCuentaCorriente: armarExportarCuentaCorriente(dependencias),
+    // CC-5 (C3): el saldo y el crédito de UN cliente para quien le vende a cuenta.
+    verClienteParaVender: armarVerClienteParaVender(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES, unknown>;
 }
 
