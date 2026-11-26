@@ -135,6 +135,15 @@ describe.skipIf(base === null)("compras: el pago de la factura en el libro", () 
     ).toEqual([{ sucursal_id: m.e.sucursal, i: "-2420.00" }]);
     expect(await imputado(r.pagoId)).toBe("2420.00");
     expect(await saldo(m)).toBe("0.00");
+    // Cargo y pago netean a cero también por centro de costo (la distribución del pago es la del cargo, negada).
+    expect(
+      await c.filas(
+        `select d.sucursal_id, coalesce(sum(d.importe), 0)::text as t from distribucion_de_asiento d
+           join asiento_de_saldo a on a.id = d.asiento_id and a.empresa_id = d.empresa_id
+          where a.parte_id = $1 group by d.sucursal_id`,
+        [m.proveedor],
+      ),
+    ).toEqual([{ sucursal_id: m.e.sucursal, t: "0.00" }]);
   });
 
   it("la compra N2 que viaja con su pago también lo deja en el libro", async () => {
@@ -287,6 +296,31 @@ describe.skipIf(base === null)("compras: el pago de la factura en el libro", () 
         [f.comprobanteId],
       );
       expect(await saldo(m)).toBe(fila?.estado === "ANULADO" ? "0.00" : "2420.00");
+    }
+  });
+
+  it("C3: anular el pago y declarar otro a la vez sobre la misma factura, sin abrazo mortal: el nuevo se rechaza o entra después de la anulación, y el saldo queda coherente", async () => {
+    for (let ronda = 0; ronda < RONDAS; ronda++) {
+      const m = await armar();
+      const f = await cargar(m);
+      const r = valorDe(await pagar(m, f.comprobanteId));
+      c.armarBarrera(2);
+      let resultados;
+      try {
+        resultados = await Promise.all([anularPago(m, r.pagoId), pagar(m, f.comprobanteId)]);
+      } finally {
+        c.soltarBarrera();
+      }
+      expect(resultados[0].ok).toBe(true);
+      for (const x of resultados.filter((y) => !y.ok)) {
+        expect(codigo(x)).toBe("COMPROBANTE_YA_PAGADO");
+      }
+      const vigentes = await c.contar(
+        "select count(*) as n from pago_de_comprobante where comprobante_id = $1 and estado = 'VIGENTE'",
+        [f.comprobanteId],
+      );
+      expect(vigentes).toBe(resultados[1].ok ? 1 : 0);
+      expect(await saldo(m)).toBe(resultados[1].ok ? "0.00" : "2420.00");
     }
   });
 });

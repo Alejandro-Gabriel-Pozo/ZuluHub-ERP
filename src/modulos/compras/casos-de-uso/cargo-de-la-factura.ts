@@ -11,6 +11,9 @@ type R<S> = Resultado<S, ErrorDeCompras>;
  * entre sucursales) y lo hace AL FINAL de su transacción. ORDEN DE BLOQUEO: primero el comprobante (el caso de uso ya lo insertó o lo bloqueó) y DESPUÉS la parte (el libro toma el saldo del proveedor
  * al asentar): quien paga, anula un pago o anula la factura bloquea en el mismo orden, así que dos operaciones a la vez sobre la misma factura y proveedor se turnan sin abrazo mortal.
  * Un error del libro deshace TODA la transacción (la factura no queda sin su cargo).
+ *
+ * ORDEN DE BLOQUEO (el único lugar donde está escrito): COMPROBANTE, después el PAGO y por último la PARTE del libro. Lo cumplen registrar y anular la factura, declarar el pago y anular el pago (que antes bloqueaba el pago primero:
+ * cruzado con anular la factura era un abrazo mortal posible). Chequeo: `compras-pago-en-el-libro.test.ts` (dos actores, las tres combinaciones).
  */
 export async function asentarElCargoDeLaFactura(
   tx: TxDeCompras,

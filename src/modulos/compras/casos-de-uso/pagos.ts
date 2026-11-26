@@ -205,7 +205,7 @@ export function armarAnularPago(dependencias: DependenciasDeCompras) {
             "comprobantes_de_proveedor.anular_pago",
           ]);
           if (!permiso.ok) return permiso;
-          // ORDEN DE BLOQUEO (L2): primero el COMPROBANTE, después el pago y por último la parte del libro, igual que quien paga o anula la factura. Previene: el abrazo mortal de anular el pago a la vez que se anula su factura.
+          // Orden de bloqueo: comprobante, pago, parte (documentado en `cargo-de-la-factura.ts`).
           const sinBloquear = await tx.pagosDeProveedor.obtener(empresaId, entrada.pagoId);
           if (sinBloquear === null) return err("PAGO_NO_ENCONTRADO");
           const factura = await tx.comprobantesDeProveedor.bloquear(
