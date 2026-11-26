@@ -31,7 +31,6 @@ import {
   pedidoDeCobro,
   type CobroPreparado,
   type IdsDeLaVenta,
-  type LineaDeEstado,
   type PagoEnEdicion,
   type TicketAnulado,
   type VentaCobrada,
