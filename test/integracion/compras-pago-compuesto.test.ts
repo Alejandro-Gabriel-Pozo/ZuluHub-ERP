@@ -255,6 +255,8 @@ describe.skipIf(base === null)("compras: pago con varios medios", () => {
 
   it("un pago viejo (cabecera con su línea única del relleno de la 0103, sin salida de caja) se lee y se anula igual", async () => {
     const m = await armar();
+    // Cabecera y línea en UNA transacción: desde el paso 2 (0109) la base exige las dos juntas.
+    await c.filas("begin");
     const [pago] = await c.filas<{ id: string }>(
       `insert into pago_de_comprobante (empresa_id, comprobante_id, fecha_de_pago, medio, importe, clave_idempotencia, huella, registrado_por)
        values ($1, $2, '2026-10-01', 'EFECTIVO', 2420.00, $3, repeat('a', 64), $4) returning id`,
@@ -264,6 +266,7 @@ describe.skipIf(base === null)("compras: pago con varios medios", () => {
       `insert into medio_de_un_pago (empresa_id, pago_id, numero, medio, importe) values ($1, $2, 1, 'EFECTIVO', 2420.00)`,
       [m.e.empresa, pago?.id],
     );
+    await c.filas("commit");
     valorDe(
       await c.casos.anularPago(m.e.gerente, { pagoId: pago?.id as string, motivo: "Era de antes" }),
     );
