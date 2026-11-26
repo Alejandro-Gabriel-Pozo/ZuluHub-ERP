@@ -3,9 +3,9 @@
   "fecha": "2026-11-16",
   "quien": "sesión",
   "tipo": "SIN_DECISION",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "El nombre de un rol propio reusa la validación de textos de catálogo con 80 caracteres como máximo, hasta que T2 defina la primitiva del nombre.",
   "que_cambia": "Qué caracteres y qué largo admite el nombre de un rol propio; se corrige cambiando un CHECK.",
-  "donde": "migraciones/0094_permisos_configurables.sql (rol_de_empresa_nombre_ck)",
+  "donde": "migraciones/0094_permisos_configurables.sql (rol_de_empresa_nombre_ck); dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja D, fila del ID)",
   "motivo": "Reutiliza la función que ya valida los nombres del catálogo; el supuesto S7 del diseño pide una primitiva única que T2 creará y la base copiará."
 }

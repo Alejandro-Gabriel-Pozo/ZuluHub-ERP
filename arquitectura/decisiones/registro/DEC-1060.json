@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "PERMISOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Ver la lista de recetas, la ficha y la ficha de cocina lo puede quien tiene la acción stock.ver (gerente, administrador y operador); la entrada «Recetas» del menú sigue esa acción.",
-  "que_cambia": "Quién ve la pantalla. Revertir: cambiar la acción de la fila del menú y de la consulta, que hoy es stock.ver.",
-  "donde": "apps/web/ui/navegacion/menu-filas-catalogo.ts; recetas-pantalla.md §3, supuesto S2"
+  "que_cambia": "Quién ve la pantalla de recetas; revertir es cambiar la acción de la fila del menú y de la consulta. Dueño 26/11: «Sí: los costos de la receta solo los ve quien tiene permiso de costos (DEC-1069), así que el operador ve la receta sin ver el costo.»",
+  "donde": "apps/web/ui/navegacion/menu-filas-catalogo.ts; recetas-pantalla.md §3, supuesto S2; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)"
 }

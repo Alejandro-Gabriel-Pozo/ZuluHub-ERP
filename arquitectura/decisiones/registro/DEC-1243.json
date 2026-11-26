@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "COMERCIAL",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "El control del cierre `ventas.pendientes_de_facturar` no suma los EMITIDO con la perilla encendida en R-05a: el aporte no recibe el contexto de la empresa; sigue con los COBRADO.",
-  "que_cambia": "Con la perilla encendida, un emitido sin cobrar ni facturar figura en el cierre como «por cobrar» pero no como «pendiente de facturar» (solo informa, no bloquea). Resolverlo exige darle al aporte el contexto de la empresa, que toca cierre y CC-2: lo decide el orquestador. Detalle: PR-R05 §6.",
-  "donde": "src/modulos/ventas/aporte-al-cierre.ts; PR-R05-facturar-antes-de-cobrar.md §6"
+  "que_cambia": "CON CONDICIÓN: queda anotada en el registro de deuda. Dueño 26/11: «Sí como limitación temporal, no como definitiva. Condición: no se le enciende la perilla a ninguna empresa hasta resolver esta brecha.»",
+  "donde": "src/modulos/ventas/aporte-al-cierre.ts; PR-R05-facturar-antes-de-cobrar.md §6; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)"
 }

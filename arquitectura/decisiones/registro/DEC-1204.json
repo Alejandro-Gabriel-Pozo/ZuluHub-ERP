@@ -3,9 +3,9 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "SIN_DECISION",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "La semilla de 0094 (aún sin sellar) se regenera con las cuatro acciones `roles.*` y sus pisos; 0097 las siembra solo si faltan y su reversión borra únicamente lo que sembró ella.",
   "que_cambia": "Ninguno para el negocio: ninguna base real aplicó 0094 todavía; una que ya lo aplicó recibe los pisos por 0097.",
-  "donde": "migraciones/0094_permisos_configurables.sql; migraciones/0097_roles_propios_de_la_empresa.sql; migraciones/reversiones/0097_revertir_roles_propios_de_la_empresa.sql",
+  "donde": "migraciones/0094_permisos_configurables.sql; migraciones/0097_roles_propios_de_la_empresa.sql; migraciones/reversiones/0097_revertir_roles_propios_de_la_empresa.sql; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja D, fila del ID)",
   "motivo": "Es el mismo camino que siguió `compras.exportar` (#503): mientras 0094 no esté sellada, su bloque se regenera desde la matriz; separar los pisos en 0097 duplicaría la fuente."
 }

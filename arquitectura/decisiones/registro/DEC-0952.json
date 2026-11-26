@@ -3,9 +3,9 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "SIN_DECISION",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Lo que el código declara de cada acción viaja a la base en migraciones/plantillas-declaradas.json, generado por npm run semilla:plantillas.",
   "que_cambia": "Nada que vea el negocio: es el insumo de la sincronización de plantillas; una prueba falla si no coincide con el código.",
-  "donde": "migraciones/plantillas-declaradas.json; scripts/semilla-de-plantillas.ts",
+  "donde": "migraciones/plantillas-declaradas.json; scripts/semilla-de-plantillas.ts; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja D, fila del ID)",
   "motivo": "`npm run migrar` corre con Node directo y no puede importar PERMISOS_DE_EMPRESA (imports sin extensión); el alternativo (cargar el cargador de src/ en el migrar de producción) cambia cómo se migra."
 }

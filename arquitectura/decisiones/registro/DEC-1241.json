@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "PERMISOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Facturar un ticket sin cobrar no suma un permiso: lo facturan quienes hoy facturan (`ventas.ver` y `comprobantes.emitir`); el control es la perilla de la empresa (Q-C, opción A del diseño).",
-  "que_cambia": "Los tres roles actuales con esos permisos pueden facturar un ticket emitido sin cobrar cuando la empresa enciende la perilla. Si el dueño quiere restringirlo a gerente y administrador, hay que sumar una acción nueva (otro PR).",
-  "donde": "src/modulos/ventas/casos-de-uso/emitir-comprobante-de-ticket.ts; PR-R05-facturar-antes-de-cobrar.md §7, repositorio de documentos"
+  "que_cambia": "CON CONDICIÓN: queda anotada en el registro de deuda. Dueño 26/11: «Sí por ahora, porque la perilla nace apagada. Antes de encenderla para una empresa conviene restringirlo a gerente y administrador: facturar sin cobrar emite un comprobante fiscal y deja una deuda.»",
+  "donde": "src/modulos/ventas/casos-de-uso/emitir-comprobante-de-ticket.ts; PR-R05-facturar-antes-de-cobrar.md §7, repositorio de documentos; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)"
 }

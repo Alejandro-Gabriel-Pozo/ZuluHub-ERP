@@ -3,9 +3,9 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "SIN_DECISION",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "El motivo de suspender la cuenta corriente de un cliente es un texto de una línea de hasta 300 caracteres de la lista de permitidos del catálogo, y es obligatorio al suspender.",
   "que_cambia": "Un motivo más largo o con caracteres fuera de la lista se rechaza antes de guardar. Revertir: cambiar la constante del largo y el CHECK `cuenta_cliente_motivo_ck`.",
-  "donde": "src/primitivas/texto/motivo-de-suspension-de-cuenta.ts; migración 0106 (`cuenta_cliente_motivo_ck`)",
+  "donde": "src/primitivas/texto/motivo-de-suspension-de-cuenta.ts; migración 0106 (`cuenta_cliente_motivo_ck`); dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja D, fila del ID)",
   "motivo": "El 300 es el del brief PR-CC-1 §3 (SQL propuesto) y no tiene otra fuente; el motivo no se muestra ni cambia dinero ni permisos."
 }

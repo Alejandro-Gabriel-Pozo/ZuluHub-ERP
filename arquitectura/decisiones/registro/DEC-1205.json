@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "En la consola de plataforma la perilla `roles_propios_por_empresa` se rotula «Roles propios» (lo más corto, decisión 175 de textos delegados).",
   "que_cambia": "Aparece una fila nueva «Roles propios» en el plan de una empresa (ilimitado de base); ninguna otra pantalla cambia.",
-  "donde": "apps/plataforma/logica/plan.ts (ROTULO_DE_PERILLA)"
+  "donde": "apps/plataforma/logica/plan.ts (ROTULO_DE_PERILLA); dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja D, fila del ID)"
 }
