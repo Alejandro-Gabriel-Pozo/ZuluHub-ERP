@@ -132,6 +132,8 @@ export async function cobrarTicketEnTx(
     ejemplarId: entrada.ejemplarId,
   });
   if (!decision.ok) return decision.error === "TICKET_YA_COBRADO" ? yaCobrado() : decision;
+  // Un ticket con cargo a cuenta corriente (CC-2) se cobra por la cuenta del cliente (CC-3), no en caja: cobrarlo acá dejaría el cargo en el libro Y el cobro en la caja.
+  if (ticket.cargadoAParteId !== null) return err("TICKET_A_CUENTA_CORRIENTE");
   const total = importeDesdeTexto(ARS, vigente.total);
   const cuadra = cuadrarCobros(total, cobros.valor);
   if (!cuadra.ok) return cuadra;

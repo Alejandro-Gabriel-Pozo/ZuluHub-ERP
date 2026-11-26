@@ -39,6 +39,11 @@ export type EntradaDeCerrarCuenta = Readonly<{
    * tal como quedó (con el cliente del que ganó) y este dato se ignora.
    */
   clienteId?: string | undefined;
+  /**
+   * CC-2: con `clienteId`, el motivo con el que quien cierra aprueba que la venta pase el límite de crédito del cliente. Solo cuenta si la venta lo supera Y quien cierra tiene
+   * `cuenta_corriente.aprobar_exceso` (lo decide el servidor): si no, el cierre no se hace. Sin cliente se ignora.
+   */
+  aprobacionDelExceso?: Readonly<{ motivo: string }> | undefined;
 }>;
 
 export type SalidaDeCerrarCuenta = Readonly<{
@@ -190,6 +195,8 @@ export async function cerrarCuentaEnTx(
       "CUSTOMER",
     );
     if (!cliente.ok) return err("CLIENTE_NO_VALIDO");
+    // Cerrar a nombre de un cliente carga la venta a su cuenta: sin el puerto de la cuenta corriente no se cierra (nace cerrado).
+    if (opciones.cuentaCorriente === undefined) return err("CUENTA_CORRIENTE_NO_DISPONIBLE");
   }
 
   const cerrada = await tx.cuentas.cerrar(empresaId, cuenta.id, persona, contexto.ahora);
@@ -276,6 +283,18 @@ export async function cerrarCuentaEnTx(
       },
     });
   }
+  // El cargo va AL FINAL de lo que escribe el cierre (el libro serializa el saldo del cliente hasta que confirme): si la cuenta no deja cargar, se revierte TODO el cierre.
+  if (entrada.clienteId !== undefined && opciones.cuentaCorriente !== undefined) {
+    const cargo = await opciones.cuentaCorriente.cargarEnTx(tx, contexto, {
+      clienteId: entrada.clienteId,
+      ticketId: ticket.id,
+      sucursalId: cuenta.sucursalId,
+      total,
+      fechaDeNegocio: ticket.fechaNegocio,
+      aprobacion: entrada.aprobacionDelExceso,
+    });
+    if (!cargo.ok) return cargo;
+  }
   return ok({
     ticketId: ticket.id,
     ejemplarId: original,
@@ -295,9 +314,20 @@ async function cerrar(
   contexto: ContextoOperativo,
   entrada: EntradaDeCerrarCuenta,
 ): Promise<R<SalidaDeCerrarCuenta>> {
-  const persona = await prepararComando(tx, contexto, dependencias.reglas, ["cuentas.cerrar"]);
+  // Cerrar a nombre de un cliente (CC-2) pide además la acción de cargar a cuenta, que el servidor comprueba aunque el pedido traiga el cliente en cualquier forma.
+  const persona = await prepararComando(
+    tx,
+    contexto,
+    dependencias.reglas,
+    entrada.clienteId === undefined
+      ? ["cuentas.cerrar"]
+      : ["cuentas.cerrar", "cuenta_corriente.cargar_a_cuenta"],
+  );
   if (!persona.ok) return persona;
-  return cerrarCuentaEnTx(tx, contexto, persona.valor, entrada, { stock: dependencias.stock });
+  return cerrarCuentaEnTx(tx, contexto, persona.valor, entrada, {
+    stock: dependencias.stock,
+    cuentaCorriente: dependencias.cuentaCorriente,
+  });
 }
 
 export function armarCerrarCuenta(dependencias: DependenciasDeVentas) {

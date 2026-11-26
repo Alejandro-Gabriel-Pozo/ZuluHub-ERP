@@ -5,6 +5,7 @@ import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import {
   armarCabecera,
   armarDetalle,
+  armarPagos,
   armarResumen,
   type SalidaDeExportarCompras,
 } from "../modulos/compras/publico";
@@ -16,6 +17,7 @@ import {
   encabezadosDeCabecera,
   encabezadosDeDetalle,
   encabezadosDeResumen,
+  encabezadosDePagos,
   hojasDeLaExportacion,
   nombreDelArchivoDeCompras,
   rotulosDeExportacion,
@@ -76,6 +78,7 @@ function hojasDe(
   const cabecera = armarCabecera(salida.compras, correos, rotulos);
   const detalle = armarDetalle(salida.compras, rotulos);
   const resumen = armarResumen(salida.compras);
+  const pagos = armarPagos(salida.compras, rotulos);
   return [
     {
       nombre: nombres.cabecera,
@@ -91,6 +94,11 @@ function hojasDe(
       nombre: nombres.resumen,
       encabezados: encabezadosDeResumen(resumen.columnas),
       filas: resumen.filas,
+    },
+    {
+      nombre: nombres.pagos,
+      encabezados: encabezadosDePagos(pagos.columnas),
+      filas: pagos.filas,
     },
   ];
 }

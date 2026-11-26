@@ -167,6 +167,14 @@ async function anular(
     hechaPor: persona.valor,
     hechaEn: contexto.ahora,
   });
+  // El espejo del cargo a cuenta corriente (CC-2), en la misma transacción: si no, el cliente quedaría debiendo una venta anulada. Sin puerto no se anula (nace cerrado).
+  if (ticket.cargadoAParteId !== null) {
+    if (dependencias.cuentaCorriente === undefined) return err("CUENTA_CORRIENTE_NO_DISPONIBLE");
+    const espejo = await dependencias.cuentaCorriente.anularEnTx(tx, contexto, {
+      ticketId: ticket.id,
+    });
+    if (!espejo.ok) return espejo;
+  }
   if (dependencias.stock !== undefined) {
     const original = await tx.tickets.ejemplarDeNumero(empresaId, ticket.id, 1);
     if (original === null) throw new Error("el ticket no tiene su ejemplar original");

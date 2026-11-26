@@ -1,4 +1,5 @@
 import { crearCasosDeUsoDeVentas, crearConsultasDeVentas } from "../modulos/ventas/publico";
+import { crearCuentaCorrienteDeVentas } from "./cuenta-corriente-de-ventas";
 import { crearFacturadorDeTickets } from "./facturacion-de-tickets";
 import { perezoso } from "./perezoso";
 import { crearStockDeVentas } from "./stock-de-ventas";
@@ -18,6 +19,8 @@ export function armarWebDeVentas({ conexiones, reglas }: BaseDeWeb) {
         facturador: crearFacturadorDeTickets(reglas),
         // Descontar y devolver stock al cerrar y anular un ticket (E5-T12): la composición es el único lugar donde ventas y stock se tocan.
         stock: crearStockDeVentas(reglas),
+        // Cargar la venta a la cuenta corriente del cliente y anular ese cargo (CC-2): la composición es el único lugar donde ventas y cuenta_corriente se tocan.
+        cuentaCorriente: crearCuentaCorrienteDeVentas(reglas),
       }),
     ),
     consultasDeVentas: perezoso(() =>
