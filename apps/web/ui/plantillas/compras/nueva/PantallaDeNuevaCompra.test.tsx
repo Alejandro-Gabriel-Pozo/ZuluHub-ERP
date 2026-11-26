@@ -465,7 +465,11 @@ describe("Nueva compra «Con factura» (Compras PR 7)", () => {
     await userEvent.selectOptions(page.getByLabelText("Tipo"), "FACTURA_A");
     await expect.element(page.getByLabelText("IVA: Bife de chorizo")).toHaveValue("21");
     await userEvent.type(page.getByLabelText("Total según la factura"), "26620");
-    await vi.waitFor(() => expect(cotizadas.length).toBeGreaterThan(0));
+    // Se espera la cotización FINAL (con el total completo), no la primera que aparezca: la lectura espera una pausa al tipear y, con la suite en paralelo, una tecla puede tardar más que esa pausa
+    // y salir una cotización de un número parcial («26»): leer la primera daba «26.00» en vez de «26620.00».
+    await vi.waitFor(() =>
+      expect(cotizadas.at(-1)).toMatchObject({ totalSegunFactura: "26620.00" }),
+    );
     const ultima = cotizadas.at(-1) as {
       tipo: string;
       lineas: Record<string, unknown>[];
