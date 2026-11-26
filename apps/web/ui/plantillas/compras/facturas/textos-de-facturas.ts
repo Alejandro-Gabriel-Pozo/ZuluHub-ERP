@@ -8,6 +8,7 @@ export type TextosDeFacturas = Readonly<{
   titulo: string;
   cargarFactura: string;
   notasDeCredito: string;
+  reemplazar: string;
   proveedor: string;
   recepcion: string;
   totalSegunLaFactura: string;
@@ -40,6 +41,7 @@ export function textosDeFacturas(): TextosDeFacturas {
     titulo: texto({}, "compras.factura.titulo_lista"),
     cargarFactura: texto({}, "compras.factura.cargar_factura"),
     notasDeCredito: texto({}, "compras.factura.notas_de_credito"),
+    reemplazar: texto({}, "compras.orden.reemplazar"),
     proveedor: texto({}, "compras.compra.proveedor"),
     recepcion: texto({}, "compras.recepcion.recepcion"),
     totalSegunLaFactura: texto({}, "compras.factura.total_segun_la_factura"),
