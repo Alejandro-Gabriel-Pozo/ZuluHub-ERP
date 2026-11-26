@@ -4,7 +4,7 @@ import { nuevaClave, nuevoId, valorDe, type EscenarioDeVentas } from "./ventas-a
 
 /**
  * La base de la nota libre (migración 0104, SAL-G) con las migraciones REALES: las dos columnas, su CHECK (el conjunto de los textos de catálogo, hasta 120), los permisos por columna de la aplicación y las tres reglas que
- * viven en la base y no solo en el código: (1) una línea enviada no cambia su nota ni se envía y la cambia en el mismo UPDATE; (2) la foto del envío lleva exactamente la nota guardada; (3) una copia (dividir) conserva la nota de
+ * viven en la base y no solo en el código: (1) una línea enviada no cambia su nota ni se envía y la cambia en el mismo UPDATE; (2) la foto del envío lleva exactamente la nota guardada; (3) una copia (unir, dividir, anular una parte) conserva la nota de
  * su origen. El código que carga y copia la nota es del PR siguiente: acá se ejerce la regla de la base con SQL directo y con los casos de uso actuales (que todavía no copian la nota, y por eso la base los frena).
  */
 const base = inject("baseDePruebas");
@@ -138,34 +138,26 @@ describe.skipIf(base === null)("comandas: la nota libre en la base (0104)", () =
     valorDe(await enviar(e, cuentaId));
   });
 
-  it("(3) una copia conserva la nota de su origen: con nota, dividir (que todavía no la copia) lo frena la base y no queda división; sin nota divide", async () => {
+  it("(3) una copia conserva la nota de su origen: con nota, unir (que todavía no la copia) lo frena la base y no queda unión; sin nota une", async () => {
     const e = await m.escenario();
-    const { cuentaId, lineaId } = await conUnPlato(e);
-    valorDe(await enviar(e, cuentaId));
-    const dividir = (divisionId: string) =>
-      m.salon.dividirCuenta(e.gerente, {
-        divisionId,
-        cuentaId,
-        partes: 2,
+    const unir = (destino: string, origen: string) =>
+      m.salon.unirMesas(e.gerente, {
+        unionId: nuevoId(),
+        cuentaDestinoId: destino,
+        cuentaOrigenId: origen,
+        clave: nuevaClave(),
         sucursalDeTrabajo: e.sucursal,
-        asignaciones: [{ lineaId, forma: "POR_UNIDADES", cantidades: ["1", "1"] }],
       });
-    // La línea ya está enviada: su nota no se puede cambiar, así que se prueba la regla de la copia con una línea sin enviar.
-    const otra = await conUnPlato(e);
-    await ponerNota(otra.lineaId, "sin cebolla");
-    const otraDivision = await m.salon.dividirCuenta(e.gerente, {
-      divisionId: nuevoId(),
-      cuentaId: otra.cuentaId,
-      partes: 2,
-      sucursalDeTrabajo: e.sucursal,
-      asignaciones: [{ lineaId: otra.lineaId, forma: "POR_UNIDADES", cantidades: ["1", "1"] }],
-    });
-    expect(otraDivision.ok).toBe(false);
+    const destino = await conUnPlato(e);
+    const conNota = await conUnPlato(e);
+    await ponerNota(conNota.lineaId, "sin cebolla");
+    expect((await unir(destino.cuentaId, conNota.cuentaId)).ok).toBe(false);
     expect(
-      await m.contar("select count(*) as n from division_de_cuenta where cuenta_madre_id = $1", [
-        otra.cuentaId,
+      await m.contar("select count(*) as n from union_de_mesas where cuenta_origen_id = $1", [
+        conNota.cuentaId,
       ]),
     ).toBe(0);
-    expect((await dividir(nuevoId())).ok).toBe(true);
+    await ponerNota(conNota.lineaId, null);
+    expect((await unir(destino.cuentaId, conNota.cuentaId)).ok).toBe(true);
   });
 });
