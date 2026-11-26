@@ -7,6 +7,7 @@ import { decidirPorHuella } from "../dominio/huella";
 import { esUuid } from "../dominio/identificadores";
 import { huellaDeLaNotaDeCredito, leerNotaDeCredito } from "../dominio/nota-de-credito";
 import { motivoDeAnulacionDesdeTexto } from "../dominio/registrar-compra";
+import { anularLaNotaDeCredito, asentarLaNotaDeCredito } from "./cargo-de-la-factura";
 import { autorizar, traducir } from "./comun";
 import type { DependenciasDeCompras, TxDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
@@ -190,6 +191,13 @@ export function armarRegistrarNotaDeCredito(dependencias: DependenciasDeCompras)
               importes: c.importesPorAlicuota.length,
             },
           });
+          // Al final: la nota en el libro, contra el cargo de su factura (ver `asentarLaNotaDeCredito`).
+          const enElLibro = await asentarLaNotaDeCredito(tx, contexto, dependencias, {
+            notaId: comprobanteId,
+            facturaId: factura.id,
+            importe: c.totalSegunFactura,
+          });
+          if (!enElLibro.ok) return enElLibro;
           return ok({ comprobanteId, yaExistia: false });
         },
       ),
@@ -240,6 +248,18 @@ export function armarAnularNotaDeCredito(dependencias: DependenciasDeCompras) {
             "notas_de_credito_de_proveedor.anular",
           ]);
           if (!permiso.ok) return permiso;
+          // Orden de bloqueo: la factura, después la nota (documentado en `cargo-de-la-factura.ts`).
+          const sinBloquear = await tx.comprobantesDeProveedor.obtener(
+            empresaId,
+            entrada.comprobanteId,
+          );
+          if (
+            sinBloquear?.clase !== "NOTA_DE_CREDITO" ||
+            sinBloquear.comprobanteAsociadoId === null
+          ) {
+            return err("NOTA_DE_CREDITO_NO_ENCONTRADA");
+          }
+          await tx.comprobantesDeProveedor.bloquear(empresaId, sinBloquear.comprobanteAsociadoId);
           const nota = await tx.comprobantesDeProveedor.bloquear(empresaId, entrada.comprobanteId);
           if (nota === null || nota.clase !== "NOTA_DE_CREDITO") {
             return err("NOTA_DE_CREDITO_NO_ENCONTRADA");
@@ -251,6 +271,8 @@ export function armarAnularNotaDeCredito(dependencias: DependenciasDeCompras) {
             motivo: motivo.valor,
           });
           if (!hecho) throw new Error("la nota ya no estaba registrada bajo bloqueo");
+          const enElLibro = await anularLaNotaDeCredito(tx, contexto, dependencias, nota.id);
+          if (!enElLibro.ok) return enElLibro;
           await tx.auditoria.registrar({
             empresaId,
             actorPersonaId: persona,
