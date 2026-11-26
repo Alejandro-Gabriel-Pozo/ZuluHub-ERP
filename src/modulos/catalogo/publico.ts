@@ -96,6 +96,7 @@ export {
   esClaseDeUso,
   seConsumeLaClase,
   seControlaStockLaClase,
+  seProduceLaClase,
   vendeLaClase,
 } from "./dominio/clases";
 export type { AlcanceDePrecio, ErrorDeAlcanceDePrecio } from "./dominio/alcance-de-precio";
@@ -220,6 +221,7 @@ export type {
   PrecioParaVender,
   ProductoParaVender,
 } from "./casos-de-uso/productos-para-vender";
+export type { CuentaDeImagenParaAdministrar } from "./consultas/consultas-de-cuentas-de-imagen";
 export type {
   CartaParaAdministrar,
   ProductoOcultoParaAdministrar,

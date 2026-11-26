@@ -23,4 +23,5 @@ export const DECLARACIONES_DE_CONSULTAS = {
   verClasificacionDelProducto: { accion: "productos.ver" },
   verCartaPublica: { accion: "vidrieras.ver" },
   productosOcultos: { accion: "vidrieras.ver" },
+  listarCuentasDeImagen: { accion: "vidrieras.administrar_cuentas_de_imagen" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

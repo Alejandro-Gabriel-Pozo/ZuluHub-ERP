@@ -68,6 +68,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "roles.crear"
       | "roles.editar"
       | "roles.archivar"
+      | "usuarios.asignar_rol"
       | "sucursales.ver"
       | "sucursales.crear"
       | "sucursales.editar"

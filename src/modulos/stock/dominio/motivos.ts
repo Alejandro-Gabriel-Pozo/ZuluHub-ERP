@@ -88,6 +88,12 @@ export function motivoManualPermitido(clase: ClaseDeMovimiento, codigo: string):
   );
 }
 
+/** Los motivos que una persona puede elegir al registrar una entrada o una salida a mano, en el orden del sembrado (los formularios los toman de acá: una regla, un lugar). */
+export const motivosManualesDe = (clase: "ENTRADA" | "SALIDA"): readonly string[] =>
+  MOTIVOS_DE_MOVIMIENTO.filter(
+    (m) => m.clase === clase && motivoManualPermitido(clase, m.codigo),
+  ).map((m) => m.codigo);
+
 /** S-7: dar de baja por vencimiento exige además `stock.ajustar` (D118 lo reserva a administración). */
 export const motivoExigeAjustar = (codigo: string): boolean => codigo === MOTIVO_DE_VENCIMIENTO;
 

@@ -2,6 +2,7 @@ import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/decla
 
 const ARCHIVO_DE_PRUEBAS = "test/integracion/cuenta-corriente-casos-de-uso.test.ts";
 const ARCHIVO_DE_PRUEBAS_DEL_CARGO = "test/integracion/ventas-cargo-a-cuenta.test.ts";
+const ARCHIVO_DE_PRUEBAS_DE_LA_COBRANZA = "test/integracion/ventas-cobranza-a-cuenta.test.ts";
 
 /**
  * Los casos de uso de la ficha de cuenta corriente (CC-1; brief PR-CC-1 §1) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin
@@ -69,6 +70,28 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_PRUEBAS_DEL_CARGO,
         it: "límite: el saldo IGUAL al límite pasa; un centavo más pide aprobación, que solo vale con motivo y con `aprobar_exceso`, y queda auditada",
+      },
+    },
+  },
+  cobrarVentaEnTx: {
+    sinGuard:
+      "Corre dentro del cobro del ticket, que ya exigió `tickets.cobrar`: la cobranza es el mismo hecho que el cobro de caja y no tiene permiso propio (suspender al cliente no impide cobrarle).",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_PRUEBAS_DE_LA_COBRANZA,
+        it: "idempotencia: cobrar dos veces el mismo ticket a cuenta deja una cobranza, un asiento y una imputación",
+      },
+    },
+  },
+  anularCobranzaDeVentaEnTx: {
+    sinGuard:
+      "Es el espejo de la cobranza y corre dentro de la anulación del ticket, que ya exigió `tickets.corregir`: anular un ticket cobrado a cuenta sin anular su cobranza dejaría un cobro sin venta.",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_PRUEBAS_DE_LA_COBRANZA,
+        it: "anular un ticket cobrado a cuenta anula primero la cobranza y después el cargo (saldo en cero) y repetir la anulación no duplica nada",
       },
     },
   },

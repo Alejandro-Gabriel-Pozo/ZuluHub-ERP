@@ -273,12 +273,13 @@ const SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL = [
   "puntos_de_venta.editar",
 ] as const;
 
-/** H4b T4: los roles propios son solo del gerente (y su piso SOLO_GERENTE lo fija la base). */
+/** H4b T4: los roles propios y su asignación son solo del gerente (y su piso SOLO_GERENTE lo fija la base). */
 const SOLO_DEL_GERENTE_DE_ROLES = [
   "roles.archivar",
   "roles.crear",
   "roles.editar",
   "roles.ver",
+  "usuarios.asignar_rol",
 ] as const;
 
 const SOLO_DEL_GERENTE = [
@@ -335,9 +336,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 182 acciones: 38 de empresa (4 de roles propios), configuración fiscal y facturación, 45 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas y 4 de cuenta corriente (2 de CC-1 y 2 de CC-2)", () => {
+  it("hay 183 acciones: 39 de empresa (5 de roles propios y su asignación), configuración fiscal y facturación, 45 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas y 4 de cuenta corriente (2 de CC-1 y 2 de CC-2)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(182);
+    expect(todas).toHaveLength(183);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -352,7 +353,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("certificados"),
       porPrefijo("datos_fiscales"),
       porPrefijo("emisores"),
-    ]).toEqual([6, 5, 5, 1, 1, 5, 1, 1, 5, 1, 2, 1]);
+    ]).toEqual([7, 5, 5, 1, 1, 5, 1, 1, 5, 1, 2, 1]);
     expect([
       porPrefijo("productos"),
       porPrefijo("categorias"),
@@ -409,7 +410,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
 
   it("las acciones de usuarios son seis y las tienen exactamente el gerente y el administrador", () => {
     const deUsuarios = Object.keys(PERMISOS_DE_EMPRESA)
-      .filter((a) => a.startsWith("usuarios."))
+      .filter((a) => a.startsWith("usuarios.") && a !== "usuarios.asignar_rol") // esa es solo del gerente
       .sort();
     expect(deUsuarios).toEqual([...ACCIONES_DE_USUARIOS]);
     for (const accion of ACCIONES_DE_USUARIOS) {
@@ -424,8 +425,8 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     }
   });
 
-  it("los cuatro permisos de roles propios son solo del gerente: administrador y operador no pueden ninguno", () => {
-    expect(SOLO_DEL_GERENTE_DE_ROLES).toHaveLength(4);
+  it("los cinco permisos de roles propios y su asignación son solo del gerente: administrador y operador no pueden ninguno", () => {
+    expect(SOLO_DEL_GERENTE_DE_ROLES).toHaveLength(5);
     for (const accion of SOLO_DEL_GERENTE_DE_ROLES) {
       expect(PERMISOS_DE_EMPRESA[accion], accion).toEqual(["GERENTE"]);
     }
@@ -743,16 +744,16 @@ describe("el guard con las reglas reales", () => {
     (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
   );
 
-  it("todo módulo en desarrollo del catálogo es solo produccion y cuenta_corriente (CC-1, 25/11/2026; comandas y salon desde S-0r, 17/11/2026; cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12, catalogo, caja y ventas desde el 15/11/2026, DEC-0463, y vidriera desde el 20/11/2026, DEC-0826)", () => {
-    expect([...ENDESARROLLO].sort()).toEqual(["cuenta_corriente", "produccion"]);
+  it("todo módulo en desarrollo del catálogo es solo cuenta_corriente (CC-1, 25/11/2026; producción salió el 25/11/2026, DEC-1050; comandas y salon desde S-0r, 17/11/2026; cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12, catalogo, caja y ventas desde el 15/11/2026, DEC-0463, y vidriera desde el 20/11/2026, DEC-0826)", () => {
+    expect([...ENDESARROLLO]).toEqual(["cuenta_corriente"]);
   });
 
-  it("las 9 acciones sin construir (5 de producción y 4 de cuenta corriente) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  it("las 4 acciones sin construir (de cuenta corriente) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
     const sinConstruir = ENDESARROLLO.flatMap(
       (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
     );
-    expect(sinConstruir).toHaveLength(9);
+    expect(sinConstruir).toHaveLength(4);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(

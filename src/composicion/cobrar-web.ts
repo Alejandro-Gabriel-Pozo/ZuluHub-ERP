@@ -304,17 +304,22 @@ export type TicketAnuladoParaLaPantalla = Readonly<{
   yaExistia: boolean;
 }>;
 
-/** Anula el ticket recién cobrado (decisión 172: «anular todo» con motivo). Idempotente por la clave y el `ejemplarNuevoId` de la pantalla. */
+/**
+ * Anula el ticket recién cobrado (decisión 172: «anular todo» con motivo). Idempotente por la clave y el `ejemplarNuevoId` de la pantalla. La sucursal la fija el servidor y la valida el caso de uso: un ticket de otra sucursal
+ * (o sin sucursal de trabajo, `""`) es el genérico y no escribe nada.
+ */
 export function anularElTicket(
   d: DependenciasDeCobrarWeb,
   contexto: ContextoOperativo,
+  sucursalId: string,
   crudo: unknown,
 ): Promise<Respuesta<TicketAnuladoParaLaPantalla>> {
   return accionDeCobrar(
     d.respuesta,
     crudo,
     entradaDeAnularElTicket,
-    (entrada) => d.casosDeUso().anularTicket(contexto, entrada),
+    (entrada) =>
+      d.casosDeUso().anularTicket(contexto, { ...entrada, sucursalDeTrabajo: sucursalId }),
     (anulado) => ({
       ticketId: anulado.ticketId,
       numero: anulado.numero,

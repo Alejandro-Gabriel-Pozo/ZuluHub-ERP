@@ -3,6 +3,7 @@ import type { ContextoOperativo } from "../contexto/contexto";
 import {
   esClaseComprable,
   seControlaStockLaClase,
+  seProduceLaClase,
   vendeLaClase,
 } from "../modulos/catalogo/publico";
 import { ALICUOTAS_DEL_PRODUCTO } from "../modulos/fiscal/publico";
@@ -60,6 +61,8 @@ export type FichaParaLaPantalla = Readonly<{
   seCompra: boolean;
   /** Si la ficha puede ofrecer el tilde «Se controla el stock»: la clase se controla y el producto está activo (una sola regla: `seControlaStockLaClase`). */
   admiteControlDeStock: boolean;
+  /** Si la clase puede tener STOCK PROPIO (elaborado o vendible, y activo): la pantalla lo ofrece solo con la perilla `produccion` encendida (una sola regla: `seProduceLaClase`). */
+  admiteStockPropio: boolean;
   nombreDeCocina: string | null;
   codigo: string | null;
   codigoDeBarras: string | null;
@@ -98,6 +101,7 @@ export async function verLaFichaDeProducto(
         seVende: vendeLaClase(p.claseDeUso),
         seCompra: esClaseComprable(p.claseDeUso),
         admiteControlDeStock: p.activo && seControlaStockLaClase(p.claseDeUso),
+        admiteStockPropio: p.activo && seProduceLaClase(p.claseDeUso),
         nombreDeCocina: p.nombreDeCocina,
         codigo: p.codigo,
         codigoDeBarras: p.codigoDeBarras,

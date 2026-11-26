@@ -11,6 +11,7 @@ export type AccionesDelServidorDeLaMesa = AccionesDeLaCocina &
     tomarPedido: Accion;
     agregar: Accion;
     cambiarSalida: Accion;
+    cambiarNota: Accion;
     quitar: Accion;
     liberar: Accion;
     cambiarDeMesa: Accion;

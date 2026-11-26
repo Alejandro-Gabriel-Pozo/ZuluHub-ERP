@@ -4,6 +4,7 @@ import type { ContextoOperativo } from "../../src/contexto/contexto";
 import { HUELLA, claveNueva } from "./caja-apoyo";
 import { cuitUnico, sufijoUnico } from "./unicos";
 import {
+  FECHA_DE_NEGOCIO,
   cuentaConLinea,
   montarVentas,
   nuevaClave,
@@ -276,6 +277,38 @@ describe.skipIf(base === null)("ventas: cargo a cuenta corriente (CC-2)", () => 
     }
   });
 
+  it("al cierre del día, un ticket a cuenta NO es «tickets por cobrar» (no se reconoce) y figura en «tickets a cuenta corriente» (informa); el sin cliente sigue como antes", async () => {
+    const s = await m.escenario();
+    const c = await cliente({}, s);
+    const jornada = { sucursalId: s.sucursal, fechaDeNegocio: FECHA_DE_NEGOCIO };
+    const aCuenta = valorDe(
+      await m.casos.cerrarCuenta(s.gerente, {
+        cuentaId: (await cuentaConLinea(m, s)).cuenta,
+        ejemplarId: nuevoId(),
+        clienteId: c,
+      }),
+    );
+    const suelto = valorDe(
+      await m.casos.cerrarCuenta(s.gerente, {
+        cuentaId: (await cuentaConLinea(m, s)).cuenta,
+        ejemplarId: nuevoId(),
+      }),
+    );
+    const { controles } = valorDe(
+      await m.consultasDeCierre.controlesDeLaJornada(s.gerente, jornada),
+    );
+    expect(controles.find((x) => x.clave === "ventas.tickets_por_cobrar")).toMatchObject({
+      severidad: "RECONOCIBLE",
+      cantidad: 1,
+      referencias: [`ventas.ticket:${suelto.ticketId}`],
+    });
+    expect(controles.find((x) => x.clave === "ventas.tickets_a_cuenta_corriente")).toMatchObject({
+      severidad: "INFORMA",
+      cantidad: 1,
+      referencias: [`ventas.ticket:${aCuenta.ticketId}`],
+    });
+  });
+
   it("anular el ticket anula el cargo en la misma transacción (el saldo vuelve a cero) y repetir la anulación no duplica el espejo", async () => {
     const c = await cliente();
     const { r } = await venta(c);
@@ -286,6 +319,7 @@ describe.skipIf(base === null)("ventas: cargo a cuenta corriente (CC-2)", () => 
       ejemplarBaseId: t.ejemplarId,
       ejemplarNuevoId: nuevoId(),
       motivo: "Error del cajero",
+      sucursalDeTrabajo: e.sucursal,
     };
     valorDe(await m.casos.anularTicket(e.gerente, anular));
     valorDe(await m.casos.anularTicket(e.gerente, anular));
@@ -293,30 +327,7 @@ describe.skipIf(base === null)("ventas: cargo a cuenta corriente (CC-2)", () => 
     expect(await saldo(c)).toBe("0.00");
   });
 
-  it("un ticket con cargo a cuenta no se cobra en caja, y un cliente de otra empresa no se puede cargar", async () => {
-    const c = await cliente();
-    const caja = await m.cajaAbierta(e);
-    const t = valorDe((await venta(c)).r);
-    const cobro = await m.casos.cobrar(e.gerente, {
-      claveIdempotencia: nuevaClave(),
-      ticketId: t.ticketId,
-      ejemplarId: t.ejemplarId,
-      cajaId: caja.cajaId,
-      cobros: [
-        {
-          medioDePagoId: caja.medios["EFECTIVO"] as string,
-          cuentaDeCobroId: null,
-          importe: { moneda: "ARS", monto: "1000.00" },
-        },
-      ],
-    });
-    expect(cobro).toEqual({ ok: false, error: "TICKET_A_CUENTA_CORRIENTE" });
-    expect(
-      await m.contar("select count(*) as n from cobranza_de_ticket where ticket_id = $1", [
-        t.ticketId,
-      ]),
-    ).toBe(0);
-
+  it("un cliente de otra empresa no se puede cargar y el saldo de un cliente no se mezcla con el de otro de la misma empresa", async () => {
     const deOtra = await cliente({}, otra);
     const { cuenta, r } = await venta(deOtra);
     expect(r).toEqual({ ok: false, error: "CLIENTE_NO_VALIDO" });

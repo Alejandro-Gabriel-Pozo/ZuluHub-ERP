@@ -283,6 +283,7 @@ export const ERRORES_DE_COMPRAS_POR_RESTRICCION: Readonly<Record<string, string>
   pago_huella_ck: "NO_TRADUCIDA",
   pago_id_empresa_uk: "NO_TRADUCIDA",
   pago_importe_ck: "NO_TRADUCIDA",
+  pago_importe_positivo_ck: "NO_TRADUCIDA",
   pago_medio_ck: "NO_TRADUCIDA",
   pago_moneda_ck: "NO_TRADUCIDA",
   pago_motivo_ck: "NO_TRADUCIDA",

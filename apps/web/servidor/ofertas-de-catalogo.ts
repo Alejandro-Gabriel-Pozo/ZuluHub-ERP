@@ -46,3 +46,9 @@ export async function puedeControlarElStock(contexto: ContextoOperativo): Promis
   const permisos = await permisosDeLaPersona(contexto);
   return permisos !== null && ofertaDe("articulos.controlar", permisos).permitida;
 }
+
+/** ¿El plan tiene la perilla `produccion`? Solo decide si la ficha ofrece «Se produce en tanda»; encender vuelve a exigirla en el servidor. Sin permisos legibles, `false`. */
+export async function produccionEncendida(contexto: ContextoOperativo): Promise<boolean> {
+  const permisos = await permisosDeLaPersona(contexto);
+  return permisos !== null && permisos.funcionesEncendidas.includes("produccion");
+}

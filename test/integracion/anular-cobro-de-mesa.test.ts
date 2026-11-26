@@ -118,7 +118,7 @@ describe.skipIf(base === null)("composición web: anular el cobro de una mesa", 
     const c = await mesaCobrada(e);
     const cajaAntes = await contar("movimiento_caja", e);
     const cobranzasAntes = await contar("cobranza_de_ticket", e);
-    const r = await anularElTicket(d, e.gerente, anulacion(c));
+    const r = await anularElTicket(d, e.gerente, e.sucursal, anulacion(c));
     expect(r).toMatchObject({ ok: true, dato: { estado: "ANULADO", yaExistia: false } });
     expect(await estadoDelTicket(c.ticketId)).toBe("ANULADO");
     expect(await contar("ticket_correccion", e)).toBe(1);
@@ -137,17 +137,17 @@ describe.skipIf(base === null)("composición web: anular el cobro de una mesa", 
     const e = await m.escenario();
     const c = await mesaCobrada(e);
     const pedido = anulacion(c);
-    expect((await anularElTicket(d, e.gerente, pedido)).ok).toBe(true);
-    expect(await anularElTicket(d, e.gerente, pedido)).toMatchObject({
+    expect((await anularElTicket(d, e.gerente, e.sucursal, pedido)).ok).toBe(true);
+    expect(await anularElTicket(d, e.gerente, e.sucursal, pedido)).toMatchObject({
       ok: true,
       dato: { estado: "ANULADO", yaExistia: true },
     });
-    expect(await anularElTicket(d, e.gerente, { ...pedido, motivo: "Otro motivo" })).toMatchObject(
-      GENERICO,
-    );
-    expect(await anularElTicket(d, e.gerente, anulacion(c, { motivo: "" }))).toMatchObject(
-      GENERICO,
-    );
+    expect(
+      await anularElTicket(d, e.gerente, e.sucursal, { ...pedido, motivo: "Otro motivo" }),
+    ).toMatchObject(GENERICO);
+    expect(
+      await anularElTicket(d, e.gerente, e.sucursal, anulacion(c, { motivo: "" })),
+    ).toMatchObject(GENERICO);
     expect(await contar("ticket_correccion", e)).toBe(1);
   });
 
@@ -155,8 +155,8 @@ describe.skipIf(base === null)("composición web: anular el cobro de una mesa", 
     const e = await m.escenario();
     const c = await mesaCobrada(e);
     const [x, y] = await Promise.all([
-      anularElTicket(d, e.gerente, anulacion(c)),
-      anularElTicket(d, e.gerente, anulacion(c)),
+      anularElTicket(d, e.gerente, e.sucursal, anulacion(c)),
+      anularElTicket(d, e.gerente, e.sucursal, anulacion(c)),
     ]);
     expect([x.ok, y.ok].filter(Boolean)).toHaveLength(1);
     for (const r of [x, y]) if (!r.ok) expect(r).toMatchObject(GENERICO);
@@ -168,12 +168,14 @@ describe.skipIf(base === null)("composición web: anular el cobro de una mesa", 
     const e = await m.escenario();
     const otra = await m.escenario();
     const c = await mesaCobrada(e);
-    expect(await anularElTicket(d, otra.gerente, anulacion(c))).toMatchObject(GENERICO);
-    expect((await anularElTicket(d, { ...e.gerente, personaId: null }, anulacion(c))).ok).toBe(
-      false,
+    expect(await anularElTicket(d, otra.gerente, otra.sucursal, anulacion(c))).toMatchObject(
+      GENERICO,
     );
     expect(
-      await anularElTicket(d, e.gerente, anulacion(c, { ejemplarBaseId: nuevoId() })),
+      (await anularElTicket(d, { ...e.gerente, personaId: null }, e.sucursal, anulacion(c))).ok,
+    ).toBe(false);
+    expect(
+      await anularElTicket(d, e.gerente, e.sucursal, anulacion(c, { ejemplarBaseId: nuevoId() })),
     ).toMatchObject(GENERICO);
     expect(await estadoDelTicket(c.ticketId)).toBe("COBRADO");
     expect(await contar("ticket_correccion", e)).toBe(0);

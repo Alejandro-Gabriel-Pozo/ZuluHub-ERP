@@ -24,6 +24,7 @@ const LLAMADAS: Record<keyof typeof DECLARACIONES, (c: Casos) => Promise<unknown
   anularItemEnviado: (c) => c.anularItemEnviado(contextoDeParidad, ENTRADA),
   quitarSinEnviar: (c) => c.quitarSinEnviar(contextoDeParidad, ENTRADA),
   cambiarSalida: (c) => c.cambiarSalida(contextoDeParidad, ENTRADA),
+  cambiarNota: (c) => c.cambiarNota(contextoDeParidad, ENTRADA),
   registrarImpresora: (c) => c.registrarImpresora(contextoDeParidad, ENTRADA),
   editarImpresora: (c) => c.editarImpresora(contextoDeParidad, ENTRADA),
   desactivarImpresora: (c) => c.desactivarImpresora(contextoDeParidad, ENTRADA),

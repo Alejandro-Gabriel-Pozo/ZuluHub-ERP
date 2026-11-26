@@ -86,6 +86,8 @@ export type RenglonDelPapel = Readonly<{
   nombreDeCocina: string;
   /** Variante y opciones, también las ocultas de la carta (foto). */
   detalle: readonly string[];
+  /** La foto de la nota libre del plato («sin cebolla», SAL-G): sale bajo el plato, sin precio ni formato; ausente = sin nota. */
+  nota?: string | null | undefined;
   rol: RolDeRenglon;
 }>;
 
@@ -129,6 +131,7 @@ export function documentoDeComanda(
     if (!cantidad.ok) return cantidad;
     lineas.push(...envolver(`${cantidad.valor} ${r.nombreDeCocina}`, columnas, "NEGRITA"));
     for (const d of r.detalle) lineas.push(...sangrado(d, columnas));
+    if (r.nota !== undefined && r.nota !== null) lineas.push(...sangrado(r.nota, columnas));
     if (r.rol === "ESPERA") {
       lineas.push(...sangrado(TEXTOS_DEL_PAPEL.saleDespues, columnas));
     }
@@ -150,6 +153,8 @@ export type AvisoParaElPapel = Readonly<{
   paso: string;
   nombreDeCocina: string;
   detalle: readonly string[];
+  /** La nota libre del plato que se anula (la de la foto del envío): la cocina ve lo mismo que había preparado. */
+  nota?: string | null | undefined;
   motivo: string;
 }>;
 
@@ -186,6 +191,8 @@ export function documentoDeAnulacion(
   lineas.push(SEPARADOR);
   lineas.push(...envolver(`${anulada.valor} ${aviso.nombreDeCocina}`, columnas, "NEGRITA"));
   for (const d of aviso.detalle) lineas.push(...sangrado(d, columnas));
+  if (aviso.nota !== undefined && aviso.nota !== null)
+    lineas.push(...sangrado(aviso.nota, columnas));
   lineas.push(...envolver(`${TEXTOS_DEL_PAPEL.quedan}: ${quedan.valor}`, columnas, "NORMAL"));
   lineas.push(...envolver(`${TEXTOS_DEL_PAPEL.motivo}: ${aviso.motivo}`, columnas, "NORMAL"));
   return ok({ ancho: opciones.ancho, lineas });

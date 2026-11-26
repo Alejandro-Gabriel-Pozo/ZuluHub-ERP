@@ -32,4 +32,14 @@ export const TEXTOS_DE_CARTA_PUBLICA = {
   },
   "vidriera.producto.no_esta": { porDefecto: "Este producto ya no está en la carta." },
   "vidriera.pie.iva": { porDefecto: "Los precios incluyen IVA." },
+  // «Conectá tu cuenta de fotos» (cuentas de imagen declaradas, 0102): PROPUESTA de la sesión de construcción, pendiente del OK del dueño (DEC-CAT-001). CD-2 y CD-4 no están; los errores son el genérico aprobado.
+  "catalogo.cuentas_de_fotos.titulo": {
+    porDefecto: "Conectá tu cuenta de fotos",
+    fuente: { decision: "DEC-CAT-001" },
+  },
+  "catalogo.cuentas_de_fotos.cuenta": {
+    porDefecto: "Pegá el nombre de tu cuenta",
+    usos: [{ como: "DATO", dato: "cuenta-de-foto" }],
+    fuente: { decision: "DEC-CAT-001" },
+  },
 } as const;

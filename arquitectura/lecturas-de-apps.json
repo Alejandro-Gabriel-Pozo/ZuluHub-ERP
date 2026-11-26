@@ -59,6 +59,10 @@
     "apps/web/ui/plantillas/compras/correccion/*",
     "apps/web/ui/plantillas/compras/ficha/*"
   ],
+  "test/web/ficha-de-cuentas-de-fotos.test.ts": [
+    "apps/web/app/s/app/(operacion)/catalogo/carta-en-linea/cuentas-de-fotos/**",
+    "apps/web/ui/plantillas/carta/*"
+  ],
   "test/web/ficha-de-depositos.test.ts": [
     "apps/web/app/s/app/(operacion)/stock/depositos/**",
     "apps/web/ui/plantillas/stock/depositos/*"
@@ -78,7 +82,8 @@
     "apps/web/app/s/app/(operacion)/stock/movimientos/**",
     "apps/web/ui/plantillas/stock/existencias/*",
     "apps/web/ui/plantillas/stock/lectura/*",
-    "apps/web/ui/plantillas/stock/movimientos/*"
+    "apps/web/ui/plantillas/stock/movimientos/*",
+    "apps/web/pantallas/pantalla-de-movimiento.tsx"
   ],
   "test/web/ficha-de-facturas.test.ts": [
     "apps/web/app/s/app/(operacion)/compras/facturas/**",

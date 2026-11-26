@@ -6,6 +6,7 @@ import type { DependenciasDeRespuesta } from "./a-respuesta";
 import { laCuentaEsDeLaSucursal } from "./cuenta-de-mesa-web";
 import {
   leerElPedidoDeAnular,
+  leerElPedidoDeCambiarNota,
   leerElPedidoDeCambiarSalida,
   leerElPedidoDeEnviar,
   leerElPedidoDePedirQueSalga,
@@ -34,7 +35,7 @@ export type DependenciasDeComandasWeb = Readonly<{
     CasosDeUsoDeSalon,
     "enviarACocina" | "pedirQueSalga" | "anularItemEnviado"
   >;
-  casosDeUso: () => Pick<CasosDeUsoDeComandas, "cambiarSalida" | "quitarSinEnviar">;
+  casosDeUso: () => Pick<CasosDeUsoDeComandas, "cambiarSalida" | "cambiarNota" | "quitarSinEnviar">;
   /** Solo para saber qué cuentas son de la sucursal de trabajo. */
   consultasDeSalon: () => Pick<ConsultasDeSalon, "mapaDeMesas">;
   respuesta: DependenciasDeRespuesta;
@@ -185,6 +186,29 @@ export function cambiarLaSalida(
         d.casosDeUso().cambiarSalida(contexto, pedido),
       ),
     (s) => ({ salida: s.salida, yaEstaba: s.yaEstaba }),
+  );
+}
+
+/**
+ * La nota libre de un plato todavía no enviado («sin cebolla», SAL-G): vacía la quita; pedir la que ya tiene devuelve `yaEstaba`; con el plato ya enviado (o enviado a la vez por otro) es el genérico y la nota no cambia.
+ * No toca precio, stock ni ticket.
+ */
+export function cambiarLaNota(
+  d: Dependencias,
+  contexto: ContextoOperativo,
+  sucursalId: string,
+  crudo: unknown,
+): Promise<Respuesta<Readonly<{ nota: string | null; yaEstaba: boolean }>>> {
+  return accionDelSalon(
+    d.respuesta,
+    sucursalId,
+    crudo,
+    leerElPedidoDeCambiarNota,
+    (pedido) =>
+      conLaCuenta(d, contexto, sucursalId, pedido.cuentaId, () =>
+        d.casosDeUso().cambiarNota(contexto, pedido),
+      ),
+    (s) => ({ nota: s.nota, yaEstaba: s.yaEstaba }),
   );
 }
 

@@ -12,6 +12,8 @@ export type LineaDeLaFicha = Readonly<{
   /** El paso de la cantidad congelado en la línea (para repartir por unidades al dividir). */
   pasoDeCantidad: string;
   importe: string;
+  /** La nota libre para la cocina del plato («sin cebolla»); `null` si no tiene. */
+  nota: string | null;
   /** El importe de una línea compartida entre cuentas («Compartido»). */
   compartida: boolean;
   /** Estado de comanda: lo que falta enviar, lo que espera y lo enviado con su número de envío. */

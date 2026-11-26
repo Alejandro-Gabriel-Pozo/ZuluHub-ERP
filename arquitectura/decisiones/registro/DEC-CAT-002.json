@@ -1,0 +1,10 @@
+{
+  "id": "DEC-CAT-002",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La pantalla de cuentas de fotos vive en /catalogo/carta-en-linea/cuentas-de-fotos y no tiene entrada nueva en el menú; solo lista las cuentas activas y todo rechazo sale con el genérico.",
+  "que_cambia": "Cómo se llega a la pantalla y qué dice al fallar. Revertir: sumar la fila al menú o un enlace desde el logo, la sección de retiradas o un texto por error (todos son textos nuevos).",
+  "donde": "apps/web/ui/plantillas/carta/modelo-de-cuentas-de-fotos.ts; src/capacidades/pantallas/ficha-de-cuentas-de-fotos.ts; aceptada para construir por el orquestador el 26/11/2026"
+}

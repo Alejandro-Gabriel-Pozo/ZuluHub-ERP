@@ -25,6 +25,7 @@ const FICHA: FichaDeLaPantalla = {
   unidadBaseId: "UNIDAD",
   seVende: true,
   admiteControlDeStock: false,
+  admiteStockPropio: false,
   nombreDeCocina: "MILA",
   codigo: "MIL-1",
   codigoDeBarras: "12345678",
