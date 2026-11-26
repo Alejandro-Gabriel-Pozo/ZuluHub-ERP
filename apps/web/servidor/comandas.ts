@@ -2,6 +2,7 @@ import "server-only";
 import type { Respuesta } from "../../../src/capacidades/experiencia/respuesta";
 import {
   anularUnItemEnviado,
+  cambiarLaNota,
   cambiarLaSalida,
   enviarALaCocina,
   pedirQueSalga,
@@ -75,6 +76,10 @@ export const anularElItemEnviado = (crudo: unknown) =>
 /** «Sale ahora» / «Sale después» de un plato no enviado (`{ cuentaId, lineaId, salida }`). */
 export const cambiarElOrdenDeSalida = (crudo: unknown) =>
   enLaSucursal((c, s) => cambiarLaSalida(dependencias, c, s, crudo));
+
+/** La nota libre de un plato no enviado (`{ cuentaId, lineaId, nota }`; vacía la quita). */
+export const cambiarLaNotaDelPlato = (crudo: unknown) =>
+  enLaSucursal((c, s) => cambiarLaNota(dependencias, c, s, crudo));
 
 /** Quitar un plato que todavía no se envió (`{ cuentaId, lineaId }`): sin motivo y sin papel. */
 export const quitarElPlatoSinEnviar = (crudo: unknown) =>

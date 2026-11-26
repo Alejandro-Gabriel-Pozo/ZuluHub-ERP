@@ -36,6 +36,8 @@ export type Renglon = Readonly<{
   rol: RolDeRenglon;
   nombreDeCocina: string;
   detalleDeCocina: readonly string[];
+  /** La foto de la nota libre del plato al enviar (0104); `null` si no tenía. */
+  nota: string | null;
 }>;
 
 /** El estado de comanda de una línea (`linea_de_comanda`) con el número del envío en que salió. */
@@ -43,6 +45,8 @@ export type FilaDeComanda = Readonly<{
   lineaId: string;
   salida: SalidaDeLinea;
   envioId: string | null;
+  /** La nota libre viva del plato (0104); `null` si no tiene. */
+  nota: string | null;
   numeroDeEnvio: number | null;
 }>;
 
@@ -109,8 +113,16 @@ export interface RepositorioDeEnvios {
       cuentaId: string;
       salida: SalidaDeLinea;
       envioId: string | null;
+      nota: string | null;
     }>,
   ): Promise<void>;
+  /** Cambia la nota solo mientras el plato no se envió (`WHERE envio_id IS NULL`); `false` si ya salió. */
+  cambiarNota(empresa: EmpresaId, lineaId: string, nota: string | null): Promise<boolean>;
+  /** La nota viva de esas líneas, bloqueadas `FOR SHARE` hasta el fin de la transacción (el envío la copia a la foto del papel). */
+  notasDeLasLineas(
+    empresa: EmpresaId,
+    lineaIds: readonly string[],
+  ): Promise<Map<string, string | null>>;
   resumenPorCuentas(
     empresa: EmpresaId,
     cuentaIds: readonly string[],

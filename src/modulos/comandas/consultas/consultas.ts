@@ -207,6 +207,7 @@ export function crearConsultasDeComandas(dependencias: DependenciasDeConsultasDe
               paso: lineas[i]?.pasoDeCantidad ?? "1",
               nombreDeCocina: r.nombreDeCocina,
               detalle: r.detalleDeCocina,
+              nota: r.nota,
               rol: r.rol,
             })),
             { copia, ancho: ancho.valor },
@@ -236,6 +237,8 @@ export function crearConsultasDeComandas(dependencias: DependenciasDeConsultasDe
           const envio = await tx.envios.envioPorId(empresaId, aviso.envioId);
           const linea = await tx.cuentas.obtenerLinea(empresaId, aviso.lineaOrigenId as never);
           if (envio === null || linea === null) return err("DOCUMENTO_NO_ENCONTRADO");
+          // La nota del plato que se anula: una línea enviada no cambia su nota y la copia (el resto de una anulación parcial) la conserva, así que la viva es la que vio la cocina.
+          const fila = await tx.envios.filaDeComanda(empresaId, aviso.lineaOrigenId);
           return documentoDeAnulacion(
             {
               rotulo: aviso.rotulo,
@@ -248,6 +251,7 @@ export function crearConsultasDeComandas(dependencias: DependenciasDeConsultasDe
               paso: linea.pasoDeCantidad,
               nombreDeCocina: aviso.nombreDeCocina,
               detalle: aviso.detalleDeCocina,
+              nota: fila === null ? null : fila.nota,
               motivo: aviso.motivo,
             },
             { copia, ancho: ancho.valor },

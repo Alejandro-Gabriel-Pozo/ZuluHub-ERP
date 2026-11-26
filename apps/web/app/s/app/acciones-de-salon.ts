@@ -4,6 +4,7 @@ import type { Respuesta } from "../../../../../src/capacidades/experiencia/respu
 import {
   anularElItemEnviado,
   cambiarElOrdenDeSalida,
+  cambiarLaNotaDelPlato,
   cargarElPapelDelDocumento,
   declararSiSeImprimio,
   enviarLaCuentaALaCocina,
@@ -32,6 +33,10 @@ export async function tomarPedidoAccion(pedido: unknown): Promise<Respuesta<unkn
 
 export async function agregarAlPedidoAccion(pedido: unknown): Promise<Respuesta<unknown>> {
   return agregarAlPedidoDeLaMesaDelSalon(pedido);
+}
+
+export async function cambiarNotaAccion(pedido: unknown): Promise<Respuesta<unknown>> {
+  return cambiarLaNotaDelPlato(pedido);
 }
 
 export async function cambiarSalidaAccion(pedido: unknown): Promise<Respuesta<unknown>> {
