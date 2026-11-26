@@ -19,7 +19,7 @@ import type { TxDeApp } from "./conexiones";
 
 /**
  * Las lecturas del libro que necesita «Cobrar un ticket a cuenta» (CC-5 B2a): cuál es el cargo pendiente MÁS ANTIGUO de un cliente (con su vencimiento) y cuál es hoy su saldo. Viven en la
- * composición porque cruzan el libro de saldos con el directorio de clientes. Las dos exigen `cuenta_corriente.ver` (por la ficha del cliente se llega a cobrar: SUPUESTO aceptado) y filtran por
+ * composición porque cruzan el libro de saldos con el directorio de clientes. Las dos exigen `cuenta_corriente.ver` (se llega a cobrar desde la ficha del cliente; lo aceptó el orquestador y lo lleva al dueño) y filtran por
  * la empresa del contexto: un cliente que no existe, que es de otra empresa o que no es cliente sale igual (`null`). Leen en una transacción de solo lectura y no escriben ni auditan.
  * El «más antiguo» es el de registro más viejo entre los cargos de ventas (originales, sin anular) con algo pendiente (empate por id del asiento): determinista, sin selector. Solo cuentan los cargos que nacieron de un
  * ticket (`ventas.ticket`): cualquier otro origen futuro no se cobra con esta pantalla. Chequeo: `test/integracion/cobrar-a-cuenta-web.test.ts`.
