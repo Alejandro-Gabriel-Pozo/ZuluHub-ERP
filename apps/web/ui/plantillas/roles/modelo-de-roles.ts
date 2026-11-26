@@ -87,9 +87,6 @@ export function armarLaListaDeRoles(
   };
 }
 
-/** De dónde puede nacer un rol: `VACIO`, una plantilla base (`PLANTILLA:<clave>`) o copiando otro rol (`ROL`, y entonces se elige cuál). */
-export type OrigenElegido = "VACIO" | "PLANTILLA:ADMINISTRADOR" | "PLANTILLA:OPERADOR" | "ROL";
-
 type OpcionArmada = Readonly<{
   id: string;
   etiqueta: string;
