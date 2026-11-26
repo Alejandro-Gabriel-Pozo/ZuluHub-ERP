@@ -2,6 +2,7 @@ import type { ErrorDeAlcance } from "../../../capacidades/permisos/alcance";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { EmpresaNoOpera } from "../../../contexto/estados";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
+import type { ImpedimentoDeAnonimizacion } from "../dominio/anonimizacion";
 import type { ErrorDeCampoDeParte } from "../dominio/datos-de-parte";
 
 /**
@@ -25,6 +26,13 @@ export type ErrorDeClientes =
   | "CARGO_INVALIDO"
   | "PARTE_CON_VINCULOS"
   | "CURSOR_INVALIDO"
+  /** El motivo de la anonimización no es uno de los admitidos. */
+  | "MOTIVO_DE_ANONIMIZACION_INVALIDO"
+  /** Algún módulo impide anonimizar (hoy: la parte tiene saldo distinto de cero). Los códigos no llevan datos de la parte. */
+  | Readonly<{
+      error: "ANONIMIZACION_IMPEDIDA";
+      impedimentos: readonly ImpedimentoDeAnonimizacion[];
+    }>
   /** El documento ya es de otra parte activa de la empresa. `parteId` es `null` solo si lo dijo la base (la red de seguridad), que no sabe con quién choca. */
   | Readonly<{ error: "DOCUMENTO_YA_REGISTRADO"; parteId: string | null }>
   /** El documento es de una parte desactivada: se reactiva, no se duplica. */

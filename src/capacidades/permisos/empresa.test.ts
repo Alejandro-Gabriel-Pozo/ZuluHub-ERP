@@ -189,6 +189,8 @@ const DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS = [
 
 /** El nivel de operación de las compras es solo del gerente. */
 const SOLO_DEL_GERENTE_DE_COMPRAS = ["compras.configurar"] as const;
+/** Anonimizar una parte (derecho de supresión del titular): solo el gerente (clientes.md §C, decidido; dueño, 25/11/2026). */
+const SOLO_DEL_GERENTE_DE_CLIENTES = ["partes.anonimizar"] as const;
 
 /** E6-T7 (P-2): lotes y calidad. Mirar lo ven los tres roles; el resto, gerente y administrador. */
 const DEL_OPERADOR_DE_LOTES = ["lotes.ver"] as const;
@@ -284,6 +286,7 @@ const SOLO_DEL_GERENTE = [
   ...SOLO_DEL_GERENTE_DE_CONFIGURACION_FISCAL,
   ...SOLO_DEL_GERENTE_DE_CAJA,
   ...SOLO_DEL_GERENTE_DE_COMPRAS,
+  ...SOLO_DEL_GERENTE_DE_CLIENTES,
 ] as const;
 
 const DEL_ADMINISTRADOR = [
@@ -326,9 +329,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 178 acciones: 38 de empresa (4 de roles propios), configuración fiscal y facturación, 44 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas y 2 de cuenta corriente (CC-1)", () => {
+  it("hay 179 acciones: 38 de empresa (4 de roles propios), configuración fiscal y facturación, 44 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas y 2 de cuenta corriente (CC-1)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(178);
+    expect(todas).toHaveLength(179);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -379,7 +382,7 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
       porPrefijo("comprobantes_de_proveedor"),
       porPrefijo("compras"),
       porPrefijo("conciliaciones"),
-    ]).toEqual([8, 2, 4, 5, 3, 3]);
+    ]).toEqual([9, 2, 4, 5, 3, 3]);
   });
 
   it("las acciones retiradas por las decisiones 138 y 133 ya no existen: ni en la matriz ni en el catálogo", () => {

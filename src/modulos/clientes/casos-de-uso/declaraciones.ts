@@ -3,6 +3,7 @@ import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/decla
 const ARCHIVO_DE_PARTES = "test/integracion/clientes-partes.test.ts";
 const ARCHIVO_DE_EDITAR_CON_ROLES = "test/integracion/clientes-editar-con-roles.test.ts";
 const ARCHIVO_DE_ROLES = "test/integracion/clientes-roles-y-vinculos.test.ts";
+const ARCHIVO_DE_ANONIMIZAR = "test/integracion/clientes-anonimizar.test.ts";
 
 /**
  * Los casos de uso del directorio (E9 §3.1) y la acción que cada uno exige al guard (cruce X1 de ADR-003), con cómo se repite sin duplicar (ADR-015 §4) y
@@ -57,6 +58,16 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_PARTES,
         it: "I11: desactivar y reactivar dos veces es ok y la segunda no escribe ni audita",
+      },
+    },
+  },
+  anonimizarParte: {
+    accion: "partes.anonimizar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: ARCHIVO_DE_ANONIMIZAR,
+        it: "I1: anonimizar dos veces es ok y la segunda no escribe, no audita y no encola otro aviso",
       },
     },
   },

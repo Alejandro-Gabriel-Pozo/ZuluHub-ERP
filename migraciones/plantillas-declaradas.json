@@ -103,6 +103,7 @@
     "ordenes_de_compra.crear": ["ADMINISTRADOR", "GERENTE"],
     "ordenes_de_compra.pedir": ["ADMINISTRADOR", "GERENTE"],
     "ordenes_de_compra.ver": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
+    "partes.anonimizar": ["GERENTE"],
     "partes.cambiar_roles": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "partes.crear": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "partes.desactivar": ["ADMINISTRADOR", "GERENTE"],
