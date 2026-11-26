@@ -91,16 +91,19 @@ describe.skipIf(base === null)("compras: cambiar el comprobante de la compra", (
   };
   type M = Awaited<ReturnType<typeof armar>>;
 
+  /** `visto`: la factura vigente que la persona estaba mirando (por omisión, la de la compra al armarla). */
   const cambiar = (
     m: M,
     extra: { numero?: number; precioNeto?: string } = {},
     quien = m.e.gerente,
     recepcionId = m.recepcionId,
     casos = c.casos,
+    visto = m.factura,
   ) =>
     casos.cambiarElComprobanteDeLaCompra(quien, {
       clave: nuevoId(),
       recepcionId,
+      facturaVigenteVistaId: visto,
       motivo: "El proveedor mandó otra factura",
       factura: m.contenido(extra),
     });
@@ -234,7 +237,9 @@ describe.skipIf(base === null)("compras: cambiar el comprobante de la compra", (
     });
     expect(await auditorias("FACTURA_REGISTRADA", r.comprobanteId)).toBe(1);
     // Se puede volver a cambiar (la nueva pasa a ser la anterior).
-    const otra = valorDe(await cambiar(m));
+    const otra = valorDe(
+      await cambiar(m, {}, m.e.gerente, m.recepcionId, c.casos, r.comprobanteId),
+    );
     expect(await fila(r.comprobanteId)).toMatchObject({ estado: "ANULADO" });
     expect(await fila(otra.comprobanteId)).toMatchObject({ reemplaza_a_id: r.comprobanteId });
     expect(await saldo(m)).toBe("2420.00");
@@ -322,6 +327,7 @@ describe.skipIf(base === null)("compras: cambiar el comprobante de la compra", (
         await c.casos.cambiarElComprobanteDeLaCompra(m.e.gerente, {
           clave: nuevoId(),
           recepcionId: m.recepcionId,
+          facturaVigenteVistaId: m.factura,
           motivo,
           factura: m.contenido(),
         }),
@@ -331,6 +337,7 @@ describe.skipIf(base === null)("compras: cambiar el comprobante de la compra", (
       await c.casos.cambiarElComprobanteDeLaCompra(m.e.gerente, {
         clave: nuevoId(),
         recepcionId: m.recepcionId,
+        facturaVigenteVistaId: m.factura,
         motivo: "Cambio",
         factura: { tipo: "FACTURA_A" },
       }),
@@ -373,6 +380,7 @@ describe.skipIf(base === null)("compras: cambiar el comprobante de la compra", (
     const pedido = {
       clave: nuevoId(),
       recepcionId: m.recepcionId,
+      facturaVigenteVistaId: m.factura,
       motivo: "El proveedor mandó otra factura",
       factura: m.contenido({ precioNeto: "1.5" }),
     };
@@ -396,6 +404,7 @@ describe.skipIf(base === null)("compras: cambiar el comprobante de la compra", (
     const mismo = {
       clave: nuevoId(),
       recepcionId: n.recepcionId,
+      facturaVigenteVistaId: n.factura,
       motivo: "El proveedor mandó otra factura",
       factura: n.contenido(),
     };
@@ -494,6 +503,7 @@ describe.skipIf(base === null)("compras: cambiar el comprobante de la compra", (
         await sinEl(m.e.gerente, {
           clave: nuevoId(),
           recepcionId: m.recepcionId,
+          facturaVigenteVistaId: m.factura,
           motivo: "El proveedor mandó otra factura",
           factura: m.contenido(),
         }),
@@ -503,7 +513,35 @@ describe.skipIf(base === null)("compras: cambiar el comprobante de la compra", (
     }
   });
 
-  it("C1: dos personas cambian el comprobante a la vez: se encadenan (cada una cambia la factura vigente que encuentra) y al final hay UNA sola factura vigente, el saldo es el de la última y nada queda a medias", async () => {
+  it("la persona que miraba la factura X y ya fue cambiada por otra no escribe nada: FACTURA_YA_REEMPLAZADA con el id de la vigente; con la vigente a la vista, el cambio encadenado A→B→C sí entra", async () => {
+    const m = await armar();
+    const b = valorDe(await cambiar(m));
+    const tarde = await cambiar(m);
+    expect(!tarde.ok && tarde.error).toEqual({
+      error: "FACTURA_YA_REEMPLAZADA",
+      reemplazoId: b.comprobanteId,
+    });
+    expect(await facturas(m)).toBe(2);
+    expect(await auditorias("FACTURA_REEMPLAZADA", m.factura)).toBe(1);
+    expect(await saldo(m)).toBe("2420.00");
+    const cc = valorDe(await cambiar(m, {}, m.e.gerente, m.recepcionId, c.casos, b.comprobanteId));
+    expect(await fila(cc.comprobanteId)).toMatchObject({ reemplaza_a_id: b.comprobanteId });
+    expect(await facturas(m)).toBe(3);
+    expect(codigo(await cambiar(m, {}, m.e.gerente, m.recepcionId, c.casos, nuevoId()))).toBe(
+      "FACTURA_YA_REEMPLAZADA",
+    );
+    expect(
+      await c.casos.cambiarElComprobanteDeLaCompra(m.e.gerente, {
+        clave: nuevoId(),
+        recepcionId: m.recepcionId,
+        facturaVigenteVistaId: "no-es-un-id",
+        motivo: "Cambio",
+        factura: m.contenido(),
+      }),
+    ).toEqual({ ok: false, error: "IDENTIFICADOR_INVALIDO" });
+  });
+
+  it("C1: dos personas que miraban la misma factura la cambian a la vez: una gana y la otra recibe FACTURA_YA_REEMPLAZADA; queda UNA sola vigente y UNA sola auditoría de cambio", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda++) {
       const m = await armar();
       c.armarBarrera(2);
@@ -514,12 +552,12 @@ describe.skipIf(base === null)("compras: cambiar el comprobante de la compra", (
         c.soltarBarrera();
       }
       expect(
-        resultados.every((r) => r.ok || codigo(r) === "ConcurrenciaAgotada"),
+        resultados.filter((r) => r.ok),
         JSON.stringify(resultados),
-      ).toBe(true);
-      const hechos = resultados.filter((r) => r.ok).length;
-      expect(hechos).toBeGreaterThanOrEqual(1);
-      expect(await facturas(m)).toBe(1 + hechos);
+      ).toHaveLength(1);
+      const perdedora = resultados.find((r) => !r.ok);
+      expect(perdedora !== undefined && codigo(perdedora)).toBe("FACTURA_YA_REEMPLAZADA");
+      expect(await facturas(m)).toBe(2);
       expect(
         await c.contar(
           "select count(*) as n from comprobante_de_proveedor where empresa_id = $1 and clase = 'FACTURA' and estado = 'REGISTRADO'",

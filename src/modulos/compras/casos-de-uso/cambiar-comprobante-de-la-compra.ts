@@ -32,6 +32,8 @@ export type EntradaDeCambiarElComprobanteDeLaCompra = Readonly<{
   clave: string;
   /** La compra (N2) cuya factura se cambia. */
   recepcionId: string;
+  /** La factura vigente que la persona estaba mirando al decidir el cambio (control de versión: si entre tanto otra persona la cambió, no se escribe nada y falla `FACTURA_YA_REEMPLAZADA`). */
+  facturaVigenteVistaId: string;
   /** Por qué se cambia: queda en la anulación de la factura anterior (lo escribe quien la cambia; el sistema no inventa textos). */
   motivo: string;
   /** La factura nueva, como la de `registrarCompraConFactura`: cada línea dice a qué renglón de la compra corresponde. */
@@ -55,7 +57,7 @@ export type SalidaDeCambiarElComprobanteDeLaCompra = Readonly<{
  * Guard: `comprobantes_de_proveedor.reemplazar`, `.anular` y `.registrar`; alcance sobre la sucursal de la compra. NO anula el pago, las notas ni otra conciliación: si la factura tiene alguno falla cerrado con el código del primero
  * (`COMPROBANTE_YA_PAGADO` con el id del pago, `COMPROBANTE_CONCILIADO`, `COMPROBANTE_CON_NOTA_DE_CREDITO`); solo la conciliación atajo de la propia compra se espeja. Una compra sin factura (`COMPROBANTE_NO_ENCONTRADO`) o anulada
  * (`RECEPCION_YA_ANULADA`) no se cambia. El número puede ser el mismo: la anterior se anula ANTES de registrar la nueva. Repetición: misma clave y mismo contenido devuelve la misma factura (`yaExistia`) sin escribir ni
- * auditar; otro contenido, `CLAVE_REUTILIZADA`; cambiar dos veces la misma factura, `FACTURA_YA_REEMPLAZADA` con el id de la vigente.
+ * auditar; otro contenido, `CLAVE_REUTILIZADA`; si la factura vigente ya no es la que la persona miraba (`facturaVigenteVistaId`), `FACTURA_YA_REEMPLAZADA` con el id de la vigente y no escribe nada (el cambio es sobre lo que se vio, no sobre «lo último que haya»).
  */
 export function armarCambiarElComprobanteDeLaCompra(dependencias: DependenciasDeCompras) {
   return async function cambiarElComprobanteDeLaCompra(
@@ -65,7 +67,11 @@ export function armarCambiarElComprobanteDeLaCompra(dependencias: DependenciasDe
     const { empresaId } = contexto;
     if (contexto.personaId === null) return err("SIN_PERMISO");
     const persona = contexto.personaId;
-    if (!esUuid(entrada.clave) || !esUuid(entrada.recepcionId)) {
+    if (
+      !esUuid(entrada.clave) ||
+      !esUuid(entrada.recepcionId) ||
+      !esUuid(entrada.facturaVigenteVistaId)
+    ) {
       return err("IDENTIFICADOR_INVALIDO");
     }
     const motivo = motivoDeAnulacionDesdeTexto(entrada.motivo);
@@ -111,6 +117,10 @@ export function armarCambiarElComprobanteDeLaCompra(dependencias: DependenciasDe
           const vigente = await tx.comprobantesDeProveedor.delaRecepcion(empresaId, recepcion.id);
           if (vigente === null || vigente.clase !== "FACTURA") {
             return err("COMPROBANTE_NO_ENCONTRADO");
+          }
+          // Control de versión: la persona decidió mirando otra factura (otra persona ya cambió el comprobante): no se escribe nada.
+          if (vigente.id !== entrada.facturaVigenteVistaId) {
+            return err({ error: "FACTURA_YA_REEMPLAZADA", reemplazoId: vigente.id });
           }
           const original = await tx.comprobantesDeProveedor.bloquear(empresaId, vigente.id);
           if (original === null) return err("COMPROBANTE_NO_ENCONTRADO");
