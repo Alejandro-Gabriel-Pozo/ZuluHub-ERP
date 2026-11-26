@@ -34,6 +34,8 @@
     "conteos.cancelar": ["ADMINISTRADOR", "GERENTE"],
     "conteos.registrar": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "costos.ver": ["ADMINISTRADOR", "GERENTE"],
+    "cuenta_corriente.administrar": ["ADMINISTRADOR", "GERENTE"],
+    "cuenta_corriente.ver": ["ADMINISTRADOR", "GERENTE"],
     "cuentas.abrir": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "cuentas.agregar_linea": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "cuentas.anular": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],

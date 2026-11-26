@@ -208,6 +208,12 @@ const SOLO_DEL_ADMINISTRADOR_DE_PRODUCCION = [
   "transformaciones.anular",
 ] as const;
 
+/** CC-1 (brief PR-CC-1 §4): cuenta corriente de clientes. Ver la ficha y administrarla: gerente y administrador (el operador no). */
+const DEL_ADMINISTRADOR_DE_CUENTA_CORRIENTE = [
+  "cuenta_corriente.ver",
+  "cuenta_corriente.administrar",
+] as const;
+
 /** E7 (spec §3.13, PP-2): los tres roles unen, dividen, cambian de mesa, envían a cocina e imprimen; el operador también mira mesas e impresoras. */
 const DEL_OPERADOR_DE_SALON_Y_COMANDAS = [
   "comandas.enviar",
@@ -298,6 +304,7 @@ const DEL_ADMINISTRADOR = [
   ...DE_LA_ESCALERA_DE_ELECCIONES,
   ...DEL_ADMINISTRADOR_DE_CAJA,
   ...DEL_ADMINISTRADOR_DE_CLIENTES_Y_COMPRAS,
+  ...DEL_ADMINISTRADOR_DE_CUENTA_CORRIENTE,
   ...DEL_ADMINISTRADOR_DE_SALON_Y_COMANDAS,
 ].sort();
 
@@ -319,9 +326,9 @@ describe("la matriz rol → acciones (roles fijos, decisión 18)", () => {
     });
   });
 
-  it("hay 176 acciones: 38 de empresa (4 de roles propios), configuración fiscal y facturación, 44 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas", () => {
+  it("hay 178 acciones: 38 de empresa (4 de roles propios), configuración fiscal y facturación, 44 de catálogo, carta y stock (34 de T0, 1 de CE0 y 6 de lotes de E6), 35 de caja, cierre y ventas, 38 de clientes y compras y 16 de salón y comandas y 2 de cuenta corriente (CC-1)", () => {
     const todas = Object.keys(PERMISOS_DE_EMPRESA);
-    expect(todas).toHaveLength(176);
+    expect(todas).toHaveLength(178);
     const porPrefijo = (prefijo: string) => todas.filter((a) => a.startsWith(`${prefijo}.`)).length;
     expect([
       porPrefijo("usuarios"),
@@ -727,16 +734,16 @@ describe("el guard con las reglas reales", () => {
     (m) => CATALOGO_DE_MODULOS[m].estado === "en_desarrollo",
   );
 
-  it("todo módulo en desarrollo del catálogo es solo produccion (comandas y salon desde S-0r, 17/11/2026; cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12, catalogo, caja y ventas desde el 15/11/2026, DEC-0463, y vidriera desde el 20/11/2026, DEC-0826)", () => {
-    expect([...ENDESARROLLO].sort()).toEqual(["produccion"]);
+  it("todo módulo en desarrollo del catálogo es solo produccion y cuenta_corriente (CC-1, 25/11/2026; comandas y salon desde S-0r, 17/11/2026; cierre ya es disponible desde E3b, stock desde E5, clientes desde E9-T4, compras desde E9-T12, catalogo, caja y ventas desde el 15/11/2026, DEC-0463, y vidriera desde el 20/11/2026, DEC-0826)", () => {
+    expect([...ENDESARROLLO].sort()).toEqual(["cuenta_corriente", "produccion"]);
   });
 
-  it("las 5 acciones sin construir (todas de producción) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
+  it("las 7 acciones sin construir (5 de producción y 2 de cuenta corriente) dan MODULO_EN_DESARROLLO a todos los roles, también sin rol, con el módulo activado", () => {
     const todosActivos = new Set<ClaveModulo>(Object.keys(CATALOGO_DE_MODULOS) as ClaveModulo[]);
     const sinConstruir = ENDESARROLLO.flatMap(
       (m) => Object.keys(CATALOGO_DE_MODULOS[m].acciones) as (keyof typeof PERMISOS_DE_EMPRESA)[],
     );
-    expect(sinConstruir).toHaveLength(5);
+    expect(sinConstruir).toHaveLength(7);
     for (const rol of [...ROLES_DE_EMPRESA, null]) {
       for (const accion of sinConstruir) {
         expect(
