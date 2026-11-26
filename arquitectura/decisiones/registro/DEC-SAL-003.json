@@ -3,9 +3,9 @@
   "fecha": "2026-11-26",
   "quien": "sesión",
   "tipo": "SIN_DECISION",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "El plan de división y el reparto pasan de salon/dominio a primitivas/cuentas (la huella queda en el dominio del salón por su uso de node:crypto).",
   "que_cambia": "Nada que vea el cliente: la pantalla de dividir usa la misma función que el servidor para mostrar los importes.",
-  "donde": "src/primitivas/cuentas/reparto.ts, division.ts y src/modulos/salon/dominio/huella-de-division.ts",
+  "donde": "src/primitivas/cuentas/reparto.ts, division.ts y src/modulos/salon/dominio/huella-de-division.ts; confirmada por el dueño el 26/11/2026 (respuesta a la lista de decisiones)",
   "motivo": "La UI no puede importar src/modulos y el brief SAL-E2 exige una sola regla de reparto para la pantalla y el servidor; mover las funciones puras a primitivas es lo mínimo que lo permite."
 }

@@ -20,6 +20,11 @@ import { estadoDeMesa, type EstadoDeMesa } from "../dominio/estado-de-mesa";
 import type { CuentaDeLaFicha, FichaDeMesa, LineaDeLaFicha } from "./ficha-de-mesa";
 import type { Mesa } from "../persistencia/repositorio-de-mesas";
 import type { DependenciasDeConsultasDeSalon, TxDeConsultasDeSalon } from "./contrato";
+import {
+  numerosDeMesaDeCuentas,
+  type EntradaDeNumerosDeMesa,
+  type NumeroDeMesaDeUnaCuenta,
+} from "./numeros-de-mesa";
 
 export type ErrorDeConsultaDeSalon =
   | MotivoDeRechazo
@@ -116,6 +121,20 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
           );
         },
       ),
+
+    /** El número de la mesa de cada cuenta (SAL-F, cierre del día): las que no son de una mesa de la sucursal no aparecen (`numeros-de-mesa.ts`). */
+    numerosDeMesaDeCuentas: (
+      contexto: ContextoOperativo,
+      entrada: EntradaDeNumerosDeMesa,
+    ): Promise<R<readonly NumeroDeMesaDeUnaCuenta[]>> =>
+      dependencias.transacciones.ejecutar<
+        readonly NumeroDeMesaDeUnaCuenta[],
+        ErrorDeConsultaDeSalon
+      >({ contexto, aislamiento: "read committed", soloLectura: true }, async (tx) => {
+        const alcance = await previo(tx, contexto, dependencias);
+        if (!alcance.ok) return alcance;
+        return numerosDeMesaDeCuentas(tx, contexto, alcance.valor, entrada);
+      }),
 
     /**
      * El mapa de mesas de la sucursal (E7 §3.6): cada mesa activa con su estado DERIVADO de sus cuentas y envíos (no se guarda), en UNA pasada de lecturas

@@ -1,5 +1,10 @@
 import { texto } from "../../../../../../../../src/capacidades/vocabulario/vocabulario";
 import { pantallaDeOperacion } from "../../../../../../pantallas/operacion";
+import { controlarLoteAccion, dejarDeControlarLoteAccion } from "../../../acciones-de-lotes";
+import { lotesEncendidos, puedeEnStock } from "../../../../../../servidor/ofertas-de-stock";
+import { BotonDeEnvio } from "../../../../../../ui/patrones/BotonDeEnvio.cliente";
+import { FormularioDeAccion } from "../../../../../../ui/patrones/FormularioDeAccion.cliente";
+import { Boton } from "../../../../../../ui/componentes/Boton.cliente";
 import { cargarLosLotes, cargarLosVencimientos } from "../../../../../../servidor/lotes-de-stock";
 import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 import {
@@ -52,17 +57,50 @@ export default async function PaginaDeLotes({ searchParams }: PropsDePagina) {
       pedido.articuloId === undefined ? {} : { articuloId: pedido.articuloId },
     );
     if (!cargado.ok) return <ErrorDelDetalle error={cargado.error} />;
+    const vista = armarLosLotes(cargado.dato, (clave, valores) => texto({}, clave, valores));
+    // El control por lote es del ARTÍCULO: si ya se controla se ofrece dejar de controlar; si no, controlar (y solo con la perilla `lotes` del plan, FP-STK-13). Sin permiso el botón sale apagado.
+    const control =
+      vista.articuloId === null ? null : vista.controlado ? (
+        (await puedeEnStock(contexto, "lotes.dejar_de_controlar")) ? (
+          <FormularioDeAccion accion={dejarDeControlarLoteAccion.bind(null, vista.articuloId)}>
+            <BotonDeEnvio variante="secundaria">
+              {texto({}, "stock.lotes.dejar_de_controlar")}
+            </BotonDeEnvio>
+          </FormularioDeAccion>
+        ) : (
+          <Boton deshabilitado variante="secundaria">
+            {texto({}, "stock.lotes.dejar_de_controlar")}
+          </Boton>
+        )
+      ) : (await lotesEncendidos(contexto)) ? (
+        (await puedeEnStock(contexto, "lotes.controlar")) ? (
+          <FormularioDeAccion accion={controlarLoteAccion.bind(null, vista.articuloId)}>
+            <BotonDeEnvio variante="secundaria">{texto({}, "stock.lotes.controlar")}</BotonDeEnvio>
+          </FormularioDeAccion>
+        ) : (
+          <Boton deshabilitado variante="secundaria">
+            {texto({}, "stock.lotes.controlar")}
+          </Boton>
+        )
+      ) : null;
     return (
       <>
         {pestanas}
         <PantallaDeLotes
-          vista={armarLosLotes(cargado.dato, (clave, valores) => texto({}, clave, valores))}
+          vista={vista}
+          acciones={{
+            control,
+            puedeCorregir: await puedeEnStock(contexto, "lotes.corregir"),
+            puedeReasignar: await puedeEnStock(contexto, "lotes.reasignar"),
+          }}
           textos={{
             articulo: texto({}, "stock.accion.articulo"),
             vencimientos: texto({}, "stock.lotes.vencimientos"),
             vence: texto({}, "stock.lotes.vence"),
             existencia: texto({}, "stock.pantalla.existencia"),
             disponible: texto({}, "stock.pantalla.disponible"),
+            corregir: texto({}, "stock.lotes.corregir"),
+            reasignar: texto({}, "stock.lotes.reasignar"),
           }}
         />
       </>

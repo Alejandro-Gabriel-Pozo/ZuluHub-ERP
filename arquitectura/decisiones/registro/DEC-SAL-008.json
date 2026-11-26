@@ -3,9 +3,9 @@
   "fecha": "2026-11-26",
   "quien": "sesión",
   "tipo": "SIN_DECISION",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "motivo": "Es un ticket con varios cobros (CYN 89, E7 l.181) con textos y porcentaje de 2 decimales ya aprobados el 14/11/2026; sin dinero, permisos ni datos nuevos en el servidor.",
   "decision": "El cobro de una mesa ofrece «Dividir la cuenta» por porcentaje: la parte 1 es el resto y «Usar en el cobro» carga un cobro por parte.",
   "que_cambia": "Se ve el botón «Dividir la cuenta» y la hoja «Por porcentaje» en el cobro de una mesa; si se corrige, se cobra con las filas a mano como antes.",
-  "donde": "apps/web/ui/plantillas/cobrar/HojaDeDividirEnElCobro.cliente.tsx; Pedernal-docs conceptos/dividir-la-cuenta.md"
+  "donde": "apps/web/ui/plantillas/cobrar/HojaDeDividirEnElCobro.cliente.tsx; Pedernal-docs conceptos/dividir-la-cuenta.md; confirmada por el dueño el 26/11/2026 (respuesta a la lista de decisiones)"
 }

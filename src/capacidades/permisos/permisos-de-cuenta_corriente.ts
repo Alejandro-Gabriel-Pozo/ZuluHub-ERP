@@ -10,6 +10,8 @@ export const PERMISOS_DE_CUENTA_CORRIENTE = {
   // gerente y administrador, delegable en un rol propio (sin piso `SOLO_GERENTE`).
   "cuenta_corriente.cargar_a_cuenta": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "cuenta_corriente.aprobar_exceso": ["GERENTE", "ADMINISTRADOR"],
+  // CC-5 (C3 del dueño, 26/11/2026): ver el saldo y el crédito de UN cliente al venderle a cuenta: los mismos roles que cargan a cuenta (el cajero incluido).
+  "cuenta_corriente.consultar_al_vender": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
 } as const satisfies Record<
   keyof (typeof CATALOGO_DE_MODULOS)["cuenta_corriente"]["acciones"],
   readonly RolDeEmpresa[]

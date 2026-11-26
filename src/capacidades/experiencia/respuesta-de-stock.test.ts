@@ -20,6 +20,7 @@ describe("códigos públicos de stock", () => {
       STOCK_DEPOSITO_CON_EXISTENCIA: "stock.error.deposito_con_existencia",
       STOCK_ES_EL_DE_VENTA: "stock.error.es_el_de_venta",
       STOCK_DEPOSITO_DESACTUALIZADO: "stock.error.deposito_desactualizado",
+      STOCK_SALDO_DE_LOTE_INSUFICIENTE: "stock.error.saldo_de_lote_insuficiente",
       STOCK_ACCION_NO_PERMITIDA: "stock.error.sin_permiso",
     });
     const textos = {
@@ -34,6 +35,7 @@ describe("códigos públicos de stock", () => {
       "stock.error.es_el_de_venta": "No se puede desactivar el depósito de venta",
       "stock.error.deposito_desactualizado":
         "Otra persona modificó este depósito. Actualizá la pantalla",
+      "stock.error.saldo_de_lote_insuficiente": "El lote no tiene tanta existencia",
       "stock.error.sin_permiso": "Esta acción no está permitida",
     } as const;
     for (const [clave, texto] of Object.entries(textos)) {

@@ -3,6 +3,8 @@ import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/decla
 const ARCHIVO_DE_PRUEBAS = "test/integracion/cuenta-corriente-casos-de-uso.test.ts";
 const ARCHIVO_DE_PRUEBAS_DE_LA_EXPORTACION =
   "test/integracion/cuenta-corriente-estado-y-exportacion.test.ts";
+const ARCHIVO_DE_PRUEBAS_DE_VENDER =
+  "test/integracion/cuenta-corriente-consultar-al-vender.test.ts";
 const ARCHIVO_DE_PRUEBAS_DEL_CARGO = "test/integracion/ventas-cargo-a-cuenta.test.ts";
 const ARCHIVO_DE_PRUEBAS_DE_LA_COBRANZA = "test/integracion/ventas-cobranza-a-cuenta.test.ts";
 
@@ -118,6 +120,19 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_PRUEBAS_DE_LA_EXPORTACION,
         it: "exportar dos veces da las mismas filas, deja dos registros de auditoría sin los datos y no cambia el libro",
+      },
+    },
+  },
+  // CC-5 (C3 del dueño): quien vende a cuenta ve el saldo y el crédito de UN cliente; lee y deja su constancia, no cambia nada del libro.
+  verClienteParaVender: {
+    accion: "cuenta_corriente.consultar_al_vender",
+    repeticion: {
+      regla: "NO_APLICA",
+      motivo:
+        "Es una lectura: repetirla devuelve lo mismo y no cambia el libro ni las fichas; cada consulta deja su propio registro de auditoría (quién, qué cuenta y qué cliente, sin importes).",
+      prueba: {
+        archivo: ARCHIVO_DE_PRUEBAS_DE_VENDER,
+        it: "consultar dos veces da lo mismo, deja dos registros de auditoría sin importes y no cambia el libro",
       },
     },
   },

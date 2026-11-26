@@ -2,8 +2,8 @@ import type { FichaDePantalla } from "./ficha-de-mesas";
 
 /**
  * LA FICHA DE LA PESTAÑA «LOTES» DE STOCK (STK-E, lectura; FP-STK-13 y FP-STK-14; DDD:174: toda pantalla tiene su ficha). Declara lo que la pantalla ofrece: ruta y archivos, el acceso, los botones, los estados y cada
- * texto con SU uso y SU fuente. Misma forma que `ficha-de-mesas.ts` y la comprueba `ficha-de-existencias-y-movimientos.test.ts` contra el catálogo de textos. Es solo lectura: ningún botón (Controlar por lote,
- * Corregir y Reasignar llegan con STK-E de escritura) y sin importes (la maqueta no los muestra). Los artículos y los horizontes de Vencimientos se eligen con enlaces; la sucursal la fija el servidor.
+ * texto con SU uso y SU fuente. Misma forma que `ficha-de-mesas.ts` y la comprueba `ficha-de-existencias-y-movimientos.test.ts` contra el catálogo de textos. Escritura (STK-E1): «Controlar por lote» (solo con la perilla `lotes` del plan: sin ella no hay botón) o «Dejar de controlar» según el artículo, «Corregir» en cada lote con fechas y «Reasignar» en el «Sin asignar» con existencia
+ * (los dos llevan a su pantalla, ver `ficha-de-corregir-y-reasignar-lote.ts`); salen apagados sin el permiso y el servidor igual decide. Sin importes (la maqueta no los muestra). Los artículos y los horizontes de Vencimientos se eligen con enlaces; la sucursal la fija el servidor.
  * Previene: un botón o un texto que nadie aprobó, o un importe que la maqueta no pidió.
  */
 
@@ -12,6 +12,12 @@ const LOTES_APROBADOS = {
     "el dueño, 25/11/2026 (fila 449: «Lotes» como quinta pestaña) y el orquestador por delegación del dueño (fila 173) para los demás rótulos; DEC-STK-002",
   donde:
     "arquitectura/decisiones/registro/DEC-STK-002.json; Pedernal-docs 11-especificaciones/dia-uno-stock-inventario-de-textos-2026-11-25.md (L-01, L-03, L-04, L-10, L-11, L-12, L-16) y maqueta stock-lotes.html",
+} as const;
+const ESCRITURA_APROBADA = {
+  decidio:
+    "el dueño, 25/11/2026 (fila 449: L-05 a L-08 y L-15) y el orquestador por delegación del dueño (fila 173: L-09); DEC-STK-005",
+  donde:
+    "arquitectura/decisiones/registro/DEC-STK-005.json; Pedernal-docs 11-especificaciones/dia-uno-stock-inventario-de-textos-2026-11-25.md (L-05 a L-09 y L-15)",
 } as const;
 const MAQUETA_DE_STOCK = {
   decidio:
@@ -35,9 +41,50 @@ export const FICHA_DE_LOTES_DE_STOCK = {
   rutas: ["/stock/lotes"],
   titulo: "stock.lotes.pantalla",
   acceso: "lotes.ver",
-  botones: [],
+  botones: [
+    {
+      id: "controlar",
+      texto: "stock.lotes.controlar",
+      hace: { envia: "lotes.controlar" },
+      sinPermiso: "APAGADO",
+    },
+    {
+      id: "dejar-de-controlar",
+      texto: "stock.lotes.dejar_de_controlar",
+      hace: { envia: "lotes.dejar_de_controlar" },
+      sinPermiso: "APAGADO",
+    },
+    {
+      id: "corregir",
+      texto: "stock.lotes.corregir",
+      hace: { navega: "/stock/lotes/corregir" },
+      sinPermiso: "APAGADO",
+    },
+    {
+      id: "reasignar",
+      texto: "stock.lotes.reasignar",
+      hace: { navega: "/stock/lotes/reasignar" },
+      sinPermiso: "APAGADO",
+    },
+  ],
   estados: { ERROR: "GENERICO", SIN_PERMISO: "GENERICO" },
   textos: {
+    "stock.lotes.controlar": {
+      usos: ["page.tsx (botón; solo con la perilla `lotes` y si el artículo no se controla)"],
+      fuente: ESCRITURA_APROBADA,
+    },
+    "stock.lotes.dejar_de_controlar": {
+      usos: ["page.tsx (botón; si el artículo ya se controla)"],
+      fuente: ESCRITURA_APROBADA,
+    },
+    "stock.lotes.corregir": {
+      usos: [USO_DE_LA_PANTALLA + " (botón de cada lote con fechas)"],
+      fuente: ESCRITURA_APROBADA,
+    },
+    "stock.lotes.reasignar": {
+      usos: [USO_DE_LA_PANTALLA + " (botón del «Sin asignar» con existencia)"],
+      fuente: ESCRITURA_APROBADA,
+    },
     "stock.lotes.pantalla": {
       usos: ["título de la pantalla y de la pestaña"],
       fuente: LOTES_APROBADOS,
