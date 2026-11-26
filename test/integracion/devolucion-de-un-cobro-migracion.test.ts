@@ -524,6 +524,115 @@ describe.skipIf(base === null)(
       );
 
       it.each(AISLAMIENTOS)(
+        "(%s) devolver contra iniciar el cierre de la misma sesión: gana el que llegó primero; la devolución nunca entra en una sesión que ya no está abierta",
+        async (aislamiento) => {
+          const iniciarCierre = (s: SesionDePrueba, sesion: string) =>
+            s.directo(
+              `update sesion_caja set estado = 'EN_CIERRE', cierre_iniciado_por = $3,
+                      cierre_iniciado_en = abierta_en + interval '1 hour'
+                where empresa_id = $1 and id = $2`,
+              [m.empresa, sesion, m.persona],
+            );
+          const abrirApp = () =>
+            SesionDePrueba.abrir(
+              b(),
+              "pedernal_app",
+              comoEmpresa(empresaId(m.empresa), personaId(m.persona)),
+              aislamiento,
+            );
+
+          // (1) La devolución está en vuelo: el cierre espera, y al confirmar la devolución el movimiento queda dentro de la sesión.
+          {
+            const { cobranza } = await cobranzaConfirmada();
+            const sesion = await sesionNueva();
+            const a = await abrirApp();
+            const c = await abrirApp();
+            try {
+              const dev = await devolver(a, sesion, "EFECTIVO", "1000.00", { cobranza });
+              expect(dev.acto.ok, JSON.stringify(dev.acto)).toBe(true);
+              let cierreTermino = false;
+              const cierre = iniciarCierre(c, sesion).then((r) => {
+                cierreTermino = true;
+                return r;
+              });
+              await new Promise((r) => setTimeout(r, 400));
+              expect(cierreTermino, "el cierre debe esperar a la devolución en vuelo").toBe(false);
+              expect((await a.confirmar()).ok).toBe(true);
+              await cierre;
+              const confirmado = await c.confirmar();
+              // Serializable puede cortar al segundo (40001): en ningún caso la devolución queda fuera de la sesión ni a medias.
+              if (!confirmado.ok) expect(confirmado.codigo).toBe("40001");
+            } finally {
+              await a.cerrar();
+              await c.cerrar();
+            }
+            expect(
+              await cuenta(
+                "select count(*) as n from movimiento_de_dinero where devuelve_origen_id = $1 and sesion_id = $2",
+                [cobranza, sesion],
+              ),
+            ).toBe(1);
+            expect(
+              await cuenta(
+                "select count(*) as n from movimiento_caja where sesion_id = $1 and importe = -1000",
+                [sesion],
+              ),
+            ).toBe(1);
+          }
+
+          // (2) El cierre ya se confirmó: la devolución se rechaza completa (ni egreso ni acto) y lo devolvible no se toca.
+          {
+            const { cobranza } = await cobranzaConfirmada();
+            const sesion = await sesionNueva();
+            const c = await abrirApp();
+            try {
+              expect((await iniciarCierre(c, sesion)).ok).toBe(true);
+              expect((await c.confirmar()).ok).toBe(true);
+            } finally {
+              await c.cerrar();
+            }
+            const antes = await cuenta(
+              "select count(*) as n from movimiento_caja where sesion_id = $1",
+              [sesion],
+            );
+            const a = await abrirApp();
+            let rechazada = false;
+            try {
+              const egreso = await movimiento(a, esc, sesion, {
+                clase: "EGRESO_MANUAL",
+                medio: "EFECTIVO",
+                importe: "-1000.00",
+                motivo: "Devolucion de prueba",
+              });
+              rechazada = !egreso.ok;
+              if (egreso.ok) {
+                const acto = await insertarActo(a, sesion, textoDe(egreso, "id"), {
+                  cobranza,
+                  importe: "1000.00",
+                });
+                rechazada = !acto.ok;
+              }
+              await a.confirmar();
+            } finally {
+              await a.cerrar();
+            }
+            expect(rechazada, "una sesión en cierre no admite la devolución").toBe(true);
+            expect(
+              await cuenta(
+                "select count(*) as n from movimiento_de_dinero where devuelve_origen_id = $1",
+                [cobranza],
+              ),
+            ).toBe(0);
+            expect(
+              await cuenta("select count(*) as n from movimiento_caja where sesion_id = $1", [
+                sesion,
+              ]),
+            ).toBe(antes);
+          }
+        },
+      );
+
+      it.each(AISLAMIENTOS)(
         "(%s) dos devoluciones que caben juntas (4.000 y 6.000) entran las dos",
         async (aislamiento) => {
           const { cobranza } = await cobranzaConfirmada();
