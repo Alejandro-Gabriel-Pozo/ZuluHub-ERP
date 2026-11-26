@@ -59,6 +59,7 @@ const PUEDE = {
   pagar: true,
   anularPago: true,
   verNotas: false,
+  cambiarElComprobante: false,
 };
 
 describe("el pago de la factura en la ficha de la compra", () => {
@@ -131,6 +132,20 @@ describe("el pago de la factura en la ficha de la compra", () => {
     expect(armarLaFicha(ficha(), textos, { ...PUEDE, verNotas: true }).notas).toEqual({
       texto: "Notas de crédito",
       href: `/compras/facturas/${COMPROBANTE}/notas`,
+    });
+  });
+
+  it("«Cambiar el comprobante de la compra» se ofrece solo con los permisos, una factura y una compra no anulada, y lleva a la pantalla de la compra", () => {
+    const quien = { ...PUEDE, cambiarElComprobante: true };
+    expect(armarLaFicha(ficha(), textos, PUEDE).cambiarElComprobante).toBeNull();
+    expect(armarLaFicha(ficha(), textos).cambiarElComprobante).toBeNull();
+    expect(armarLaFicha(ficha({ factura: null }), textos, quien).cambiarElComprobante).toBeNull();
+    expect(
+      armarLaFicha(ficha({ estado: "ANULADA" }), textos, quien).cambiarElComprobante,
+    ).toBeNull();
+    expect(armarLaFicha(ficha(), textos, quien).cambiarElComprobante).toEqual({
+      texto: "Cambiar el comprobante de la compra",
+      href: `/compras/${ID}/cambiar-comprobante`,
     });
   });
 

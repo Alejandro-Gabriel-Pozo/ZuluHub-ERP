@@ -107,6 +107,13 @@
     "apps/web/ui/plantillas/compras/facturas/*",
     "apps/web/ui/plantillas/compras/rutas-de-compras.ts"
   ],
+  "test/web/ficha-de-reemplazo-de-compras.test.ts": [
+    "apps/web/app/s/app/(operacion)/compras/**",
+    "apps/web/app/s/app/acciones-de-reemplazo.ts",
+    "apps/web/servidor/reemplazo.ts",
+    "apps/web/ui/plantillas/compras/reemplazo/*",
+    "apps/web/ui/plantillas/compras/rutas-de-compras.ts"
+  ],
   "test/web/ficha-de-notas-de-compras.test.ts": [
     "apps/web/app/s/app/(operacion)/compras/facturas/**",
     "apps/web/app/s/app/acciones-de-notas.ts",

@@ -1,0 +1,7 @@
+{
+  "grupo": "web (reemplazo del comprobante: textos de la pantalla)",
+  "archivos": "apps/web/ui/plantillas/compras/reemplazo/textos-de-reemplazo.ts",
+  "minutos": 2,
+  "pruebas": "test/web/ficha-de-reemplazo-de-compras.test.ts",
+  "nivel": "PANTALLA"
+}
