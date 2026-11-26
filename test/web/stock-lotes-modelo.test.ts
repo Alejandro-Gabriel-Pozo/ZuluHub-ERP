@@ -113,4 +113,34 @@ describe("modelo de lotes", () => {
     });
     expect(leerLosLotes({ vista: "otra" }).vencimientos).toBe(false);
   });
+
+  it("cada estado sale con su texto y solo «Vencido» se marca como vencido; sin estado no hay texto", () => {
+    const v = armarLosVencimientos(VENCEN, textoDe);
+    expect(v.filas.map((f) => [f.articulo, f.codigo, f.vence, f.estado, f.vencido])).toEqual([
+      ["Crema", "C-554", "24/11/2026", "Vencido", true],
+      ["Queso cremoso", "Q-1104", "25/11/2026", "Vence hoy", false],
+      ["Pollo entero", "P-88", "29/11/2026", null, false],
+    ]);
+    expect(v.filas.map((f) => f.existencia)).toEqual(["2 Kilogramo", "3 Kilogramo", "8 Kilogramo"]);
+  });
+
+  it("sin unidad la cantidad sale sin unidad, y existencia y disponible salen cada uno con lo suyo", () => {
+    const v = armarLosLotes({ ...LOTES, unidadId: null }, textoDe);
+    expect(v.filas.map((f) => [f.existencia, f.disponible])).toEqual([
+      ["3", "3"],
+      ["1,5", "0"],
+    ]);
+  });
+
+  it("el artículo y los días de la dirección se descartan si están vacíos o repetidos, y la vista solo es Vencimientos con ese valor exacto", () => {
+    expect(leerLosLotes({ articulo: "", dias: "" })).toEqual({ vencimientos: false });
+    expect(leerLosLotes({ articulo: ["a"], dias: ["1"] })).toEqual({ vencimientos: false });
+    expect(leerLosLotes({ articulo: "a", dias: "0" })).toEqual({
+      vencimientos: false,
+      articuloId: "a",
+      dias: "0",
+    });
+    expect(leerLosLotes({ vista: "vencimientos" })).toEqual({ vencimientos: true });
+    expect(leerLosLotes({ vista: "" }).vencimientos).toBe(false);
+  });
 });
