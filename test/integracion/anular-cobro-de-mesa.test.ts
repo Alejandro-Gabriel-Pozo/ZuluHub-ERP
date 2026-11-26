@@ -137,7 +137,7 @@ describe.skipIf(base === null)("composición web: anular el cobro de una mesa", 
     const e = await m.escenario();
     const c = await mesaCobrada(e);
     const pedido = anulacion(c);
-    valorDe(await anularElTicket(d, e.gerente, pedido));
+    expect((await anularElTicket(d, e.gerente, pedido)).ok).toBe(true);
     expect(await anularElTicket(d, e.gerente, pedido)).toMatchObject({
       ok: true,
       dato: { estado: "ANULADO", yaExistia: true },
