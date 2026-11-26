@@ -103,7 +103,7 @@
       ],
       "parteDedicada": "src/capacidades/vocabulario/catalogo-<módulo>.ts",
       "soloJunta": true,
-      "lineas": 91,
+      "lineas": 93,
       "excepciones": [
         "nucleo",
         "carta-publica",
