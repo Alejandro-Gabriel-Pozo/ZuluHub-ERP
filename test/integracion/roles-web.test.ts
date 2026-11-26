@@ -6,15 +6,18 @@ import { armarConexiones, type Conexiones } from "../../src/composicion/conexion
 import {
   accionesParaElegir,
   archivar,
+  asignar,
   crear,
   editar,
   fichaDeRol,
   listarLosRoles,
+  rolesAsignables,
   type DependenciasDeRolesWeb,
 } from "../../src/composicion/roles-web";
 import { armarWeb } from "../../src/composicion/web";
 import { crearBaseAparte } from "./entorno";
 import { crearEscenarioDeConfiguracion } from "./fiscal-configuracion-apoyo";
+import { crearMembresiaDeBase, crearPersonaDeBase } from "./fixtures-identidad";
 
 /**
  * La pantalla «Roles» de /cuenta con la composición REAL (conexiones y web, base de verdad, roles limitados y las reglas reales de empresa). Lo que se prueba es el CABLEADO de la web (las reglas de los
@@ -238,5 +241,157 @@ describe.skipIf(base === null)("roles: pantalla de la empresa (web)", () => {
 
     for (const r of invalidas) expect(r).toMatchObject(GENERICO);
     expect(await filas(e.mundo.empresa)).toBe(0);
+  });
+
+  /** Suma una persona con membresía a la empresa del escenario y devuelve su id. */
+  async function sumar(
+    e: Awaited<ReturnType<typeof nuevo>>,
+    email: string,
+    rol: "ADMINISTRADOR" | "OPERADOR" = "OPERADOR",
+  ): Promise<string> {
+    const persona = await crearPersonaDeBase(dueno, email);
+    await crearMembresiaDeBase(dueno, e.mundo.empresa, persona.id, rol, true);
+    return persona.id;
+  }
+  const rolDe = async (empresa: string, persona: string) =>
+    (
+      await dueno.query<{ rol: string; rol_propio_id: string | null }>(
+        "select rol, rol_propio_id from membresia where empresa_id = $1 and persona_id = $2",
+        [empresa, persona],
+      )
+    ).rows[0];
+
+  it("asignar: el gerente pasa a una persona a un rol propio y de vuelta a uno base; repetir no cambia nada; los roles asignables son los activos", async () => {
+    const e = await nuevo("GERENTE");
+    const persona = await sumar(e, `op-${randomUUID()}@prueba.test`);
+    const rolId = randomUUID();
+    datosDe(await crear(d(), e.como(AHORA), vacio(rolId, "Cajero")));
+    const viejo = randomUUID();
+    datosDe(await crear(d(), e.como(AHORA), vacio(viejo, "Viejo")));
+    datosDe(await archivar(d(), e.como(AHORA), { rolId: viejo }));
+
+    const asignables = datosDe(await rolesAsignables(d(), e.como(AHORA)));
+    const ida = datosDe(
+      await asignar(d(), e.como(AHORA), { personaId: persona, destino: { tipo: "PROPIO", rolId } }),
+    );
+    const repetida = datosDe(
+      await asignar(d(), e.como(AHORA), { personaId: persona, destino: { tipo: "PROPIO", rolId } }),
+    );
+    const alPropio = await rolDe(e.mundo.empresa, persona);
+    const vuelta = datosDe(
+      await asignar(d(), e.como(AHORA), {
+        personaId: persona,
+        destino: { tipo: "BASE", rol: "ADMINISTRADOR" },
+      }),
+    );
+
+    expect(asignables.propios.map((r) => r.nombre)).toEqual(["Cajero"]);
+    expect(asignables.base).toEqual(["ADMINISTRADOR", "OPERADOR"]);
+    expect([ida.cambio, repetida.cambio, vuelta.cambio]).toEqual([true, false, true]);
+    expect(alPropio).toEqual({ rol: "PROPIO", rol_propio_id: rolId });
+    expect(await rolDe(e.mundo.empresa, persona)).toEqual({
+      rol: "ADMINISTRADOR",
+      rol_propio_id: null,
+    });
+  });
+
+  it("asignar: un rol archivado, el gerente y una persona o un rol de otra empresa se rechazan con el genérico y no cambian nada", async () => {
+    const a = await nuevo("GERENTE");
+    const b = await nuevo("GERENTE");
+    const persona = await sumar(a, `op-${randomUUID()}@prueba.test`);
+    const ajena = await sumar(b, `ajena-${randomUUID()}@prueba.test`);
+    const archivado = randomUUID();
+    datosDe(await crear(d(), a.como(AHORA), vacio(archivado, "Archivado")));
+    datosDe(await archivar(d(), a.como(AHORA), { rolId: archivado }));
+    const deB = randomUUID();
+    datosDe(await crear(d(), b.como(AHORA), vacio(deB, "De B")));
+
+    const rechazos = [
+      await asignar(d(), a.como(AHORA), {
+        personaId: persona,
+        destino: { tipo: "PROPIO", rolId: archivado },
+      }),
+      await asignar(d(), a.como(AHORA), {
+        personaId: persona,
+        destino: { tipo: "PROPIO", rolId: deB },
+      }),
+      await asignar(d(), a.como(AHORA), {
+        personaId: ajena,
+        destino: { tipo: "BASE", rol: "OPERADOR" },
+      }),
+      await asignar(d(), a.como(AHORA), {
+        personaId: a.persona,
+        destino: { tipo: "BASE", rol: "OPERADOR" },
+      }),
+    ];
+
+    for (const r of rechazos) expect(r).toMatchObject(GENERICO);
+    expect(await rolDe(a.mundo.empresa, persona)).toEqual({ rol: "OPERADOR", rol_propio_id: null });
+    expect(await rolDe(b.mundo.empresa, ajena)).toEqual({ rol: "OPERADOR", rol_propio_id: null });
+    expect((await rolDe(a.mundo.empresa, a.persona))?.rol).toBe("GERENTE");
+  });
+
+  it("asignar: quien no es el gerente recibe el genérico y los roles asignables tampoco se ven", async () => {
+    for (const rol of ["ADMINISTRADOR", "OPERADOR"] as const) {
+      const e = await nuevo(rol);
+      const persona = await sumar(e, `op-${randomUUID()}@prueba.test`);
+
+      const respuestas = [
+        await asignar(d(), e.como(AHORA), {
+          personaId: persona,
+          destino: { tipo: "BASE", rol: "ADMINISTRADOR" },
+        }),
+        await rolesAsignables(d(), e.como(AHORA)),
+      ];
+
+      for (const r of respuestas) expect(r).toMatchObject(GENERICO);
+      expect(await rolDe(e.mundo.empresa, persona)).toEqual({
+        rol: "OPERADOR",
+        rol_propio_id: null,
+      });
+    }
+  });
+
+  it("asignar: una forma inválida (destino desconocido, el rol gerente, id que no es identificador) es el genérico y no llega a la base", async () => {
+    const e = await nuevo("GERENTE");
+    const persona = await sumar(e, `op-${randomUUID()}@prueba.test`);
+    const ctx = e.como(AHORA);
+
+    const invalidas = [
+      await asignar(d(), ctx, { personaId: persona, destino: { tipo: "BASE", rol: "GERENTE" } }),
+      await asignar(d(), ctx, { personaId: persona, destino: { tipo: "OTRO" } }),
+      await asignar(d(), ctx, {
+        personaId: persona,
+        destino: { tipo: "PROPIO", rolId: "no-es-un-id" },
+      }),
+      await asignar(d(), ctx, { personaId: "../etc", destino: { tipo: "BASE", rol: "OPERADOR" } }),
+      await asignar(d(), ctx, undefined),
+    ];
+
+    for (const r of invalidas) expect(r).toMatchObject(GENERICO);
+    expect(await rolDe(e.mundo.empresa, persona)).toEqual({ rol: "OPERADOR", rol_propio_id: null });
+  });
+
+  it("asignar: dos asignaciones a la vez a la misma persona dejan UN rol coherente (el último que confirmó la base) y ninguna se rompe", async () => {
+    const e = await nuevo("GERENTE");
+    const persona = await sumar(e, `op-${randomUUID()}@prueba.test`);
+    const rolId = randomUUID();
+    datosDe(await crear(d(), e.como(AHORA), vacio(rolId, "Mozo")));
+
+    const resultados = await Promise.all([
+      asignar(d(), e.como(AHORA), { personaId: persona, destino: { tipo: "PROPIO", rolId } }),
+      asignar(d(), e.como(AHORA), {
+        personaId: persona,
+        destino: { tipo: "BASE", rol: "ADMINISTRADOR" },
+      }),
+    ]);
+
+    const final = await rolDe(e.mundo.empresa, persona);
+    // La base ordena las dos: queda uno de los dos destinos completo, nunca un estado a medias (el puntero de rol propio solo existe con el rol PROPIO).
+    expect([
+      { rol: "PROPIO", rol_propio_id: rolId },
+      { rol: "ADMINISTRADOR", rol_propio_id: null },
+    ]).toContainEqual(final);
+    expect(resultados.filter((r) => r.ok).length).toBeGreaterThanOrEqual(1);
   });
 });

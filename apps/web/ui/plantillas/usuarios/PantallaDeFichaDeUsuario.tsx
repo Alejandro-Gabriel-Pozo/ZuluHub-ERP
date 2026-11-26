@@ -1,4 +1,6 @@
 import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
+import { FormularioDeRolDeUsuario } from "../roles/FormularioDeRolDeUsuario.cliente";
+import type { EditorDeRolDeUsuarioArmado } from "../roles/modelo-de-roles";
 import { Insignia } from "../../componentes/Insignia";
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
 import {
@@ -18,6 +20,10 @@ export type PropsDePantallaDeFichaDeUsuario = Readonly<{
    * o quien mira no puede asignarlas).
    */
   sucursales?: Readonly<{ editor: EditorDeSucursalesArmado; accion: AccionDeFormulario }> | null;
+  /**
+   * El bloque «Rol» (solo el gerente, y no sobre el gerente): el selector con los roles asignables y la acción de guardar ya ligada a su persona. `null` (o sin él): la ficha no ofrece cambiar el rol.
+   */
+  rol?: Readonly<{ editor: EditorDeRolDeUsuarioArmado; accion: AccionDeFormulario }> | null;
 }>;
 
 /**
@@ -29,6 +35,7 @@ export function PantallaDeFichaDeUsuario({
   ficha,
   desactivar,
   sucursales = null,
+  rol = null,
 }: PropsDePantallaDeFichaDeUsuario) {
   return (
     <div className={estilos["cuerpo"]}>
@@ -46,6 +53,14 @@ export function PantallaDeFichaDeUsuario({
           </div>
         ))}
       </dl>
+      {rol === null ? null : (
+        <FormularioDeRolDeUsuario
+          // Al cambiar el rol guardado el bloque arranca de nuevo con lo que dice el servidor.
+          key={rol.editor.valorInicial}
+          accion={rol.accion}
+          editor={rol.editor}
+        />
+      )}
       {sucursales === null ? null : (
         <FormularioDeSucursalesDeUsuario
           // Al cambiar lo guardado (lo propio o lo de otra persona) el bloque arranca de nuevo con lo que dice el servidor.

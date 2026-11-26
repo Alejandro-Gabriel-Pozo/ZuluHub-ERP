@@ -1,9 +1,18 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
-import type { ModuloParaElegir, RolParaLaLista } from "../modulos/identidad/publico";
+import type {
+  ModuloParaElegir,
+  RolParaLaLista,
+  RolesAsignables,
+} from "../modulos/identidad/publico";
 import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
-import { entradaDeCrearRol, entradaDeEditarRol, entradaDeRol } from "./entradas-de-roles";
+import {
+  entradaDeAsignarRol,
+  entradaDeCrearRol,
+  entradaDeEditarRol,
+  entradaDeRol,
+} from "./entradas-de-roles";
 import { accionDeUsuarios, lecturaDeUsuarios } from "./errores-de-usuarios";
 import type { Web } from "./web";
 
@@ -23,11 +32,11 @@ import type { Web } from "./web";
 export type DependenciasDeRolesWeb = Readonly<{
   casosDeUso: () => Pick<
     ReturnType<Web["casosDeUsoDeIdentidad"]>,
-    "crearRol" | "editarRol" | "archivarRol"
+    "crearRol" | "editarRol" | "archivarRol" | "asignarRol"
   >;
   consultas: () => Pick<
     ReturnType<Web["consultasDeIdentidad"]>,
-    "listarRoles" | "verRol" | "accionesParaElegir"
+    "listarRoles" | "verRol" | "accionesParaElegir" | "rolesAsignables"
   >;
   respuesta: DependenciasDeRespuesta;
 }>;
@@ -135,5 +144,38 @@ export function archivar(
     entradaDeRol,
     (entrada) => d.casosDeUso().archivarRol(contexto, entrada),
     (salida) => ({ yaEstabaArchivado: salida.yaEstabaArchivado }),
+  );
+}
+
+/** Los roles que el gerente puede asignar hoy: los dos base y los roles propios ACTIVOS (`usuarios.asignar_rol`). */
+export function rolesAsignables(
+  d: DependenciasDeRolesWeb,
+  contexto: ContextoOperativo,
+): Promise<Respuesta<RolesAsignables>> {
+  return lecturaDeUsuarios(
+    d.respuesta,
+    () => d.consultas().rolesAsignables(contexto),
+    (r) => r,
+  );
+}
+
+/** Lo que devuelve asignar: `cambio: false` si la persona ya tenía ese rol (no se escribió ni se auditó nada). */
+export type RolAsignado = Readonly<{ cambio: boolean }>;
+
+/**
+ * Asignar un rol a una persona de la empresa (`usuarios.asignar_rol`, solo el gerente). `crudo`: `{ personaId, destino }`. Repetirlo es inocuo (el mismo rol no escribe ni audita); al gerente no se lo toca; un rol propio archivado
+ * o de otra empresa se rechaza dentro del caso de uso. Rige desde la operación siguiente de esa persona.
+ */
+export function asignar(
+  d: DependenciasDeRolesWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<RolAsignado>> {
+  return accionDeUsuarios(
+    d.respuesta,
+    crudo,
+    entradaDeAsignarRol,
+    (entrada) => d.casosDeUso().asignarRol(contexto, entrada),
+    (salida) => ({ cambio: salida.cambio }),
   );
 }

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-CCL-008",
+  "fecha": "2026-11-26",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Vender a cuenta corriente, primera etapa: con el límite pasado el confirmar queda bloqueado para todos; quien aprueba excesos sube el límite por Condiciones y vuelve. Sin hoja de aprobar.",
+  "que_cambia": "Una hoja de aprobar el exceso es un camino nuevo: pide pantalla, textos y atar la aprobación al exceso que vio quien aprueba (excedeEnEsperado); hoy el pedido web no admite aprobación. Los textos de la hoja salen de las maquetas aprobadas (delegación fila 173, sin el pie ni la aprobación).",
+  "donde": "Dueño 26/11/2026, \"Si\", mensaje sobre el exceso en la primera etapa; src/capacidades/vocabulario/catalogo-cuenta_corriente.ts; textos de las maquetas cuenta-corriente-elegir-cliente y cuenta-corriente-aprobar-exceso, aprobados por el dueño el 26/11/2026 con «Apruebo» y aceptados por el orquestador"
+}
