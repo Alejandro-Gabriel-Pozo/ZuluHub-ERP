@@ -7,6 +7,9 @@
 
 export const RUTA_DE_PRODUCCION = "/catalogo/produccion";
 
+/** La dirección de «Nueva orden». */
+export const RUTA_DE_NUEVA_ORDEN = `${RUTA_DE_PRODUCCION}/nueva`;
+
 /** Los estados que ofrece el filtro; «Todas» es no filtrar. Una prueba los compara con los que acepta la composición (`ESTADOS_DEL_FILTRO_DE_ORDENES`). */
 export const ESTADOS_DEL_FILTRO = ["ABIERTA"] as const;
 
