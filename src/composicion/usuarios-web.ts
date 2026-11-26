@@ -1,5 +1,5 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
-import { rolParaMostrar, type RolDeEmpresa } from "../capacidades/permisos/roles";
+import { rolBaseParaMostrar, type RolDeEmpresa } from "../capacidades/permisos/roles";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type { SucursalDeLista } from "../modulos/empresas/publico";
 import type { InvitacionPendienteDeLaLista, MiembroDeLista } from "../modulos/identidad/publico";
@@ -50,7 +50,7 @@ export type DependenciasDeUsuariosWeb = Readonly<{
 export type UsuarioParaLaPantalla = Readonly<{
   personaId: string;
   email: string;
-  rol: RolDeEmpresa;
+  rol: RolDeEmpresa | Readonly<{ propio: string }>;
   activo: boolean;
 }>;
 
@@ -68,10 +68,19 @@ export type ListaDeUsuariosParaLaPantalla = Readonly<{
   invitaciones: readonly InvitacionParaLaPantalla[];
 }>;
 
+/** El rol como lo dibuja la pantalla: el rol base (se traduce con el vocabulario) o el NOMBRE del rol propio (lo escribió el gerente; si no se pudiera leer, «sin nombre» no se inventa: falla). */
+const rolDelUsuario = (m: MiembroDeLista): UsuarioParaLaPantalla["rol"] => {
+  const base = rolBaseParaMostrar(m.rol);
+  if (base !== null) return base;
+  if (m.rolPropioNombre === null)
+    throw new RangeError("un miembro con rol propio llegó sin el nombre de su rol");
+  return { propio: m.rolPropioNombre };
+};
+
 const delUsuario = (m: MiembroDeLista): UsuarioParaLaPantalla => ({
   personaId: m.personaId,
   email: m.email,
-  rol: rolParaMostrar(m.rol),
+  rol: rolDelUsuario(m),
   activo: m.activo,
 });
 
@@ -267,7 +276,9 @@ async function miembroDeLaEmpresa(
   return miembro === undefined ? err("MEMBRESIA_NO_ENCONTRADA") : ok(miembro);
 }
 
-const esEmpleadoActivo = (m: MiembroDeLista): boolean => m.activo && m.rol === "OPERADOR";
+/** Las sucursales se asignan a quien trabaja por sucursal: el empleado y quien tiene un rol propio (lo delegado vale solo en sus sucursales). Administrador y gerente ven todas. */
+const conSucursalesAsignables = (m: MiembroDeLista): boolean =>
+  m.activo && (m.rol === "OPERADOR" || m.rol === "PROPIO");
 
 /**
  * Las casillas del editor de sucursales de la ficha de una persona (`usuarios.ver` y `sucursales.ver`). `crudo`: `{ personaId }`, el de la dirección. `null` si la persona no es un empleado
@@ -292,7 +303,7 @@ export function editorDeSucursalesDeUsuario(
     > => {
       const miembro = await miembroDeLaEmpresa(d, contexto, entrada.personaId);
       if (!miembro.ok) return miembro;
-      if (!esEmpleadoActivo(miembro.valor)) return ok(null);
+      if (!conSucursalesAsignables(miembro.valor)) return ok(null);
       const sucursales = await d.consultasDeEmpresas().listarSucursales(contexto, {
         incluirInactivas: false,
       });
@@ -327,7 +338,7 @@ export function asignarSucursalesDeUsuario(
     async (entrada) => {
       const miembro = await miembroDeLaEmpresa(d, contexto, entrada.personaId);
       if (!miembro.ok) return miembro;
-      if (!esEmpleadoActivo(miembro.valor)) return err("MEMBRESIA_NO_ES_DE_UN_EMPLEADO");
+      if (!conSucursalesAsignables(miembro.valor)) return err("MEMBRESIA_NO_ES_DE_UN_EMPLEADO");
       return d.casosDeUso().asignarSucursales(contexto, {
         personaId: entrada.personaId,
         sucursales: entrada.sucursales,

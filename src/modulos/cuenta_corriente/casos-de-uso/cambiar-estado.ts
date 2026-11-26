@@ -22,7 +22,12 @@ export type EntradaDeSuspenderCuenta = Readonly<{
   motivo: string;
 }>;
 
-export type EntradaDeReactivarCuenta = Readonly<{ cuentaId: string; versionEsperada: number }>;
+export type EntradaDeReactivarCuenta = Readonly<{
+  cuentaId: string;
+  versionEsperada: number;
+  /** Por qué se reactiva (obligatorio; maqueta aprobada de CC-5): queda en la constancia de auditoría, no en la ficha. */
+  motivo: string;
+}>;
 
 export type SalidaDeCambiarEstado = Readonly<{
   cuenta: CuentaPublica;
@@ -55,7 +60,7 @@ const RESTRICCIONES_AL_REACTIVAR = [
 /**
  * Suspender o reactivar la cuenta de un cliente: el mismo camino con el estado pedido. Contexto OPERATIVO con persona, en una transacción serializable, con el
  * orden fijo: guard (`cuenta_corriente.administrar`), la empresa opera, la ficha (de otra empresa o inexistente: `CUENTA_NO_ENCONTRADA`, sin oráculo), validación
- * (suspender exige motivo) y el dominio decide (`decidirCambioDeEstado`):
+ * (suspender y reactivar exigen motivo) y el dominio decide (`decidirCambioDeEstado`):
  *  - ya está en el estado pedido → ok `yaEstaba` sin escribir ni auditar (repetir el pedido es idempotente, aunque la versión esperada sea vieja);
  *  - la versión esperada no es la vigente → `VERSION_DESACTUALIZADA`;
  *  - si no, `UPDATE` condicionado a la versión y auditoría con el antes y el después. Reactivar vuelve a exigir que el cliente pueda deber (disparador de la base).
@@ -74,7 +79,7 @@ function armarCambioDeEstado(
     pedido === "SUSPENDIDA" ? RESTRICCIONES_AL_SUSPENDER : RESTRICCIONES_AL_REACTIVAR;
   return async function cambiarEstado(
     contexto: ContextoOperativo,
-    entrada: Readonly<{ cuentaId: string; versionEsperada: number; motivo?: string }>,
+    entrada: Readonly<{ cuentaId: string; versionEsperada: number; motivo: string }>,
   ): Promise<
     Resultado<
       SalidaDeCambiarEstado,
@@ -93,12 +98,10 @@ function armarCambioDeEstado(
         if (!previo.ok) return previo;
         const actual = await tx.cuentasDeClientes.obtener(empresaId, entrada.cuentaId);
         if (actual === null) return err("CUENTA_NO_ENCONTRADA");
-        let motivo: string | null = null;
-        if (pedido === "SUSPENDIDA") {
-          const valido = motivoValido(entrada.motivo);
-          if (!valido.ok) return valido;
-          motivo = valido.valor;
-        }
+        // Los dos cambios piden motivo: el de la suspensión se guarda en la ficha; el de la reactivación queda en la constancia.
+        const valido = motivoValido(entrada.motivo);
+        if (!valido.ok) return valido;
+        const motivo = pedido === "SUSPENDIDA" ? valido.valor : null;
 
         if (decidirCambioDeEstado(actual.estado, pedido) === "YA_ESTABA") {
           return ok({ cuenta: aCuentaPublica(actual), yaEstaba: true });
@@ -120,7 +123,14 @@ function armarCambioDeEstado(
               : "CUENTA_DEL_CLIENTE_REACTIVADA",
           entidadId: actual.id,
           antes: { estado: actual.estado, motivo: actual.motivoDeSuspension },
-          despues: { estado: cambiada.estado, motivo: cambiada.motivoDeSuspension },
+          despues:
+            pedido === "SUSPENDIDA"
+              ? { estado: cambiada.estado, motivo: cambiada.motivoDeSuspension }
+              : {
+                  estado: cambiada.estado,
+                  motivo: cambiada.motivoDeSuspension,
+                  motivoDeReactivacion: valido.valor,
+                },
         });
         return ok({ cuenta: aCuentaPublica(cambiada), yaEstaba: false });
       },

@@ -17,6 +17,7 @@ import { DATOS_DE_RECETAS } from "./registro-de-recetas";
 import { DATOS_DE_SALON } from "./registro-de-salon";
 import { DATOS_DE_STOCK_CONTEO } from "./registro-de-stock-conteo";
 import { DATOS_DE_STOCK_LOTES } from "./registro-de-stock-lotes";
+import { DATOS_DE_CUENTA_CORRIENTE } from "./registro-de-cuenta-corriente";
 import { DATOS_DE_STOCK_DEPOSITOS } from "./registro-de-stock-depositos";
 import { DATOS_DE_STOCK_MOVIMIENTOS } from "./registro-de-stock-movimientos";
 import { DATOS_DE_VENTAS } from "./registro-de-ventas";
@@ -59,6 +60,7 @@ export const FRAGMENTOS_DEL_REGISTRO = {
   compras: DATOS_DE_COMPRAS,
   "compras-factura-y-pago": DATOS_DE_COMPRAS_FACTURA_Y_PAGO,
   consumo: DATOS_DE_CONSUMO_DE_OPCION,
+  "cuenta-corriente": DATOS_DE_CUENTA_CORRIENTE,
   facturacion: DATOS_DE_FACTURACION,
   fiscal: DATOS_DE_FISCAL,
   produccion: DATOS_DE_PRODUCCION,
@@ -84,6 +86,7 @@ export const REGISTRO_DE_DATOS = {
   ...DATOS_DE_COMPRAS,
   ...DATOS_DE_COMPRAS_FACTURA_Y_PAGO,
   ...DATOS_DE_CONSUMO_DE_OPCION,
+  ...DATOS_DE_CUENTA_CORRIENTE,
   ...DATOS_DE_FACTURACION,
   ...DATOS_DE_FISCAL,
   ...DATOS_DE_PRODUCCION,

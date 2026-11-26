@@ -170,6 +170,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "movimientos_caja.anular_de_otros"
       | "cobros.corregir_medio"
       | "declaraciones_de_total.registrar"
+      | "salidas_de_dinero.registrar"
       | "jornadas.ver"
       | "jornadas.iniciar_auditoria"
       | "jornadas.cancelar_auditoria"
