@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1284",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "DATOS",
+  "estado": "CONFIRMADA",
+  "decision": "Pago con varios medios: una línea por medio, huella sin el total derivado y solo la línea en efectivo mueve la caja, por su importe.",
+  "que_cambia": "Reintentar el mismo pago después de que llegue una nota de crédito devuelve el pago hecho. Revertir: volver a poner el total en la huella y la caja por el total.",
+  "donde": "pago.ts (camposDeHuellaDePago), pagos.ts, compras-pago-compuesto.test.ts; H-N3 y regla de caja del brief de P1 aprobados por el orquestador el 25/11/2026"
+}
