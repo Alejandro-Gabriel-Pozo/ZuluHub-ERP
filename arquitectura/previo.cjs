@@ -18,7 +18,7 @@
 const { spawn, spawnSync } = require("node:child_process");
 const { Buffer } = require("node:buffer");
 const { existsSync, mkdtempSync, readdirSync, rmSync } = require("node:fs");
-const { tmpdir } = require("node:os");
+const { tmpdir, totalmem } = require("node:os");
 const { join } = require("node:path");
 
 const RAIZ = join(__dirname, "..");
@@ -28,18 +28,72 @@ const CANDIDATAS_DE_BASE = [`origin/${RAMA_BASE}`, "origin/main"];
 
 /** Los pasos fijos, en orden. El nombre (`id`) es lo que fija `test/arquitectura/previo.test.ts`. */
 const PASOS_FIJOS = [
-  { id: "tipos", comando: ["npm", "run", "typecheck"] },
   { id: "formato", comando: ["npm", "run", "format:check"] },
-  { id: "lint", comando: ["npm", "run", "lint"] },
   { id: "codigo-muerto", comando: ["npm", "run", "analizar:muerto"] },
   { id: "arquitectura", comando: ["npm", "run", "arquitectura"] },
   { id: "arquitectura-con-la-base", comando: ["node", "arquitectura/previo.cjs", "--con-la-base"] },
+  // Los dos pasos pesados corren a la vez (picos medidos: tipos 4,2 GB y lint 5,2 GB) si la máquina tiene memoria; ver `tandasDeLaCorrida`.
+  { id: "tipos", comando: ["npm", "run", "typecheck"], paralelo: "pesados" },
+  { id: "lint", comando: ["npm", "run", "lint"], paralelo: "pesados" },
+  { id: "composicion", comando: ["npx", "vitest", "run", "--project", "node", "src/composicion"] },
   {
     id: "pruebas-de-arquitectura",
     comando: ["npx", "vitest", "run", "--project", "node", "test/arquitectura"],
   },
-  { id: "composicion", comando: ["npx", "vitest", "run", "--project", "node", "src/composicion"] },
 ];
+
+/** Memoria total por debajo de la cual los pasos pesados corren de a uno (sumados pican ~9,4 GB; con menos de 14 GB no hay margen). */
+const MEMORIA_MINIMA_PARA_PARALELO = 14 * 1024 ** 3;
+
+/**
+ * Agrupa los pasos en tandas: los pasos seguidos con el mismo `paralelo` corren juntos si hay memoria (`memoriaTotal` en bytes) y, si no, de a uno, en el mismo orden. Función pura.
+ */
+function tandasDeLaCorrida(pasos, memoriaTotal) {
+  const tandas = [];
+  for (const paso of pasos) {
+    const ultima = tandas[tandas.length - 1];
+    const sePuedeJuntar =
+      paso.paralelo !== undefined &&
+      ultima !== undefined &&
+      ultima[0].paralelo === paso.paralelo &&
+      memoriaTotal >= MEMORIA_MINIMA_PARA_PARALELO;
+    if (sePuedeJuntar) ultima.push(paso);
+    else tandas.push([paso]);
+  }
+  return tandas;
+}
+
+/**
+ * Corre las tandas en orden. Dentro de una tanda en paralelo, la primera falla corta a las otras. `correrPaso(paso, { envivo })` devuelve `{ promesa, cancelar }` y la promesa
+ * `{ ok, segundos, cacheLimpiada }`; `escribir` recibe los textos de avance. Devuelve `{ ok, fallo, resumen }`. Se inyecta lo que toca el sistema para probarlo.
+ */
+async function correrTandas(tandas, correrPaso, escribir) {
+  const resumen = [];
+  const linea = (paso, r) =>
+    `${r.cancelado ? "CORTADO" : r.ok ? "ok     " : "FALLA  "} ${paso.id} (${r.segundos} s${r.cacheLimpiada && r.ok ? ", caché vieja limpiada" : ""})`;
+  for (const tanda of tandas) {
+    const enParalelo = tanda.length > 1;
+    escribir(
+      enParalelo
+        ? `\n== previo: ${tanda.map((p) => p.id).join(" y ")} en paralelo`
+        : `\n== previo: ${tanda[0].id} (${tanda[0].comando.join(" ")})`,
+    );
+    const lanzados = tanda.map((paso) => ({ paso, h: correrPaso(paso, { envivo: !enParalelo }) }));
+    let fallo = null;
+    await Promise.all(
+      lanzados.map(async ({ paso, h }) => {
+        const r = await h.promesa;
+        resumen.push(linea(paso, r));
+        if (!r.ok && !r.cancelado && fallo === null) {
+          fallo = paso;
+          for (const otro of lanzados) if (otro.paso !== paso) otro.h.cancelar();
+        }
+      }),
+    );
+    if (fallo !== null) return { ok: false, fallo, resumen };
+  }
+  return { ok: true, fallo: null, resumen };
+}
 
 /**
  * Cachés de transformación de vite que, vencidas, hacen fallar `test/arquitectura/grafo.test.ts` con «Unknown variable dynamic import»: su `import()` con
@@ -84,32 +138,83 @@ function limpiarCachesDeVite() {
   for (const ruta of CACHES_DE_VITE) rmSync(join(RAIZ, ruta), { recursive: true, force: true });
 }
 
-/** Corre un comando mostrando su salida en vivo y guardándola para reconocer fallas conocidas. */
-function ejecutarConSalida(comando) {
-  return new Promise((resolver) => {
-    const t0 = Date.now();
-    const trozos = [];
-    const hijo = spawn(comando[0], comando.slice(1), {
-      cwd: RAIZ,
-      stdio: ["inherit", "pipe", "pipe"],
-    });
+/**
+ * Corre un comando guardando su salida para reconocer fallas conocidas; con `envivo` la muestra a medida que sale (si no, la entrega al terminar en `salida`).
+ * Devuelve `{ promesa, cancelar }`: el hijo lleva su propio grupo de procesos para poder cortar también lo que lanza `npm`.
+ */
+function ejecutarConSalida(comando, envivo) {
+  const t0 = Date.now();
+  const trozos = [];
+  const hijo = spawn(comando[0], comando.slice(1), {
+    cwd: RAIZ,
+    stdio: ["inherit", "pipe", "pipe"],
+    detached: true,
+  });
+  let cancelado = false;
+  const promesa = new Promise((resolver) => {
     hijo.stdout.on("data", (d) => {
-      process.stdout.write(d);
+      if (envivo) process.stdout.write(d);
       trozos.push(d);
     });
     hijo.stderr.on("data", (d) => {
-      process.stderr.write(d);
+      if (envivo) process.stderr.write(d);
       trozos.push(d);
     });
-    hijo.on("error", () => resolver({ ok: false, segundos: 0, salida: "" }));
+    hijo.on("error", () => resolver({ ok: false, segundos: 0, salida: "", cancelado }));
     hijo.on("close", (codigo) =>
       resolver({
         ok: codigo === 0,
         segundos: Math.round((Date.now() - t0) / 1000),
         salida: Buffer.concat(trozos).toString("utf8"),
+        cancelado,
       }),
     );
   });
+  const cancelar = () => {
+    cancelado = true;
+    try {
+      process.kill(-hijo.pid, "SIGTERM");
+    } catch {
+      // ya terminó
+    }
+  };
+  return { promesa, cancelar };
+}
+
+/** Un paso real: con reintento por la caché vieja, cancelable y, en paralelo, con su salida al terminar. */
+function correrPasoReal(paso, { envivo }) {
+  let cancelado = false;
+  let actual = null;
+  let ultimaSalida = "";
+  const ejecutar = (comando) => {
+    if (cancelado) return Promise.resolve({ ok: false, segundos: 0, salida: "" });
+    actual = ejecutarConSalida(comando, envivo);
+    return actual.promesa.then((r) => {
+      ultimaSalida = r.salida;
+      return r;
+    });
+  };
+  const promesa = correrConReintentoPorCacheVieja(paso.comando, ejecutar, limpiarCachesDeVite).then(
+    (r) => {
+      if (!envivo) {
+        salida(`\n== previo: salida de ${paso.id}`);
+        process.stdout.write(ultimaSalida);
+      }
+      if (r.cacheLimpiada) {
+        salida(
+          `previo: «${paso.id}» falló por la caché vieja de vite; se limpió y se repitió una vez: ${r.ok ? "ahora pasa, caché vieja limpiada" : "vuelve a fallar, la falla vale"}.`,
+        );
+      }
+      return { ...r, cancelado };
+    },
+  );
+  return {
+    promesa,
+    cancelar: () => {
+      cancelado = true;
+      if (actual !== null) actual.cancelar();
+    },
+  };
 }
 
 const EXTENSIONES_DE_CODIGO = /\.(ts|tsx)$/;
@@ -286,26 +391,11 @@ async function main(argv) {
   }
 
   const pasos = pasosDeLaCorrida(plan);
-  const resumen = [];
-  for (const paso of pasos) {
-    salida(`\n== previo: ${paso.id} (${paso.comando.join(" ")})`);
-    const { ok, segundos, cacheLimpiada } = await correrConReintentoPorCacheVieja(
-      paso.comando,
-      ejecutarConSalida,
-      limpiarCachesDeVite,
-    );
-    if (cacheLimpiada) {
-      salida(
-        `previo: «${paso.id}» falló por la caché vieja de vite (grafo.test.ts); se limpió y se repitió una vez: ${ok ? "ahora pasa, caché vieja limpiada" : "vuelve a fallar, la falla vale"}.`,
-      );
-    }
-    resumen.push(
-      `${ok ? "ok   " : "FALLA"} ${paso.id} (${segundos} s${cacheLimpiada && ok ? ", caché vieja limpiada" : ""})`,
-    );
-    if (!ok) {
-      salidaDeError(`\nprevio: falló «${paso.id}»; se corta acá.\n${resumen.join("\n")}`);
-      return 1;
-    }
+  const tandas = tandasDeLaCorrida(pasos, totalmem());
+  const { ok, fallo, resumen } = await correrTandas(tandas, correrPasoReal, salida);
+  if (!ok) {
+    salidaDeError(`\nprevio: falló «${fallo.id}»; se corta acá.\n${resumen.join("\n")}`);
+    return 1;
   }
 
   salida(`\nprevio: todo en verde.\n${resumen.join("\n")}`);
@@ -327,6 +417,9 @@ module.exports = {
   planDeLasPruebas,
   comandosDelPlan,
   pasosDeLaCorrida,
+  tandasDeLaCorrida,
+  correrTandas,
+  MEMORIA_MINIMA_PARA_PARALELO,
   esCacheVieja,
   correrConReintentoPorCacheVieja,
 };
