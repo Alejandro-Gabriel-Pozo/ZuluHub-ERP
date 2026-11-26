@@ -316,5 +316,47 @@ describe.skipIf(base === null)(
       await pagina.waitForURL(`${mundo.url}/salon`);
       expect(vigilante.tomar()).toEqual([]);
     });
+    it("POR PORCENTAJE: la mesa 13 se cobra dividiendo la cuenta en dos partes: «Usar en el cobro» carga dos filas con medios distintos, un doble toque en «Cobrar» deja UN ticket con DOS cobros y la mesa queda libre", async () => {
+      // Un segundo medio para que cada parte pueda llevar el suyo (la hoja de cobro lo lee del servidor al abrirse).
+      await mundo.mundo.dueno.query(
+        "insert into medio_de_pago (empresa_id, tipo) values ($1, 'TRANSFERENCIA') on conflict do nothing",
+        [mundo.empresa],
+      );
+      await mesaConPedido(13, 1);
+      await enviarYRecargar();
+      await pagina.getByRole("button", { name: "Cobrar", exact: true }).click();
+      await pagina.waitForURL(/\/salon\/cuenta\/[0-9a-f-]{36}\/cobrar$/);
+      await pagina.getByRole("heading", { name: "Cobro", level: 2 }).waitFor();
+      await pagina.getByRole("button", { name: "Dividir la cuenta" }).click();
+      await pagina.getByRole("heading", { name: "Por porcentaje" }).waitFor();
+      expect(await pagina.getByRole("button", { name: "Usar en el cobro" }).isDisabled()).toBe(
+        true,
+      );
+      await pagina.getByRole("button", { name: "Agregar parte" }).click();
+      await pagina.getByText("50.00 %").first().waitFor();
+      expect(await pagina.getByRole("button", { name: "Usar en el cobro" }).isDisabled()).toBe(
+        false,
+      );
+      expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+      await pagina.getByRole("button", { name: "Usar en el cobro" }).click();
+      await pagina.getByText("Cobro completo").waitFor();
+      const importes = pagina.getByRole("textbox", { name: "Importe" });
+      expect(await importes.count()).toBe(2);
+      expect(await importes.nth(0).inputValue()).toBe("400,00");
+      expect(await importes.nth(1).inputValue()).toBe("400,00");
+      expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+
+      const tickets = await contar("ticket");
+      const cobros = await contar("cobro");
+      await pagina.getByRole("button", { name: "Cobrar", exact: true }).dblclick();
+      await pagina.getByText("Cobrado", { exact: true }).waitFor();
+      expect(await contar("ticket")).toBe(tickets + 1);
+      expect(await contar("cobro")).toBe(cobros + 2);
+      expect(await cuentasAbiertas()).toBe(0);
+      expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+      await pagina.getByRole("button", { name: "Volver", exact: true }).click();
+      await pagina.waitForURL(`${mundo.url}/salon`);
+      expect(vigilante.tomar()).toEqual([]);
+    });
   },
 );
