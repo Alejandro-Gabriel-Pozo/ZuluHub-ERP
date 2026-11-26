@@ -69,6 +69,10 @@ describe.skipIf(base === null)("0103: medio_de_un_pago", () => {
       );
       return filas[0]?.id as string;
     };
+    // El disparador de la cabecera es del paso 2 (0109, con su propia prueba): acá la cabecera se inserta sola para probar las líneas de 0103 de a una.
+    await c.filas(
+      "alter table pago_de_comprobante disable trigger pago_de_comprobante_verificar_medios",
+    );
     pagoId = await nuevoPago("TRANSFERENCIA");
   });
   afterAll(async () => {
@@ -183,6 +187,10 @@ describe.skipIf(base === null)("0103: medio_de_un_pago", () => {
 
   it("la reversión frena con pagos COMPUESTO; sin ellos corre dos veces, borra la tabla y deja el CHECK de antes", async () => {
     const reversion = await leer("reversiones/0103_revertir_pago_compuesto.sql");
+    // El paso 2 se revierte antes (su disparador usa la función que 0103 borra).
+    const reversionDelPaso2 = await leer(
+      "reversiones/0109_revertir_pago_compuesto_exigir_medios.sql",
+    );
     const compuesto = await nuevoPago("COMPUESTO");
     await sinConfirmar(c.dueno, async () => {
       acepta(await lineas(MIXTO, compuesto));
@@ -194,6 +202,7 @@ describe.skipIf(base === null)("0103: medio_de_un_pago", () => {
       await c.dueno.query("alter table pago_de_comprobante disable trigger user");
       await c.dueno.query("delete from pago_de_comprobante where medio = 'COMPUESTO'");
       await c.dueno.query("alter table pago_de_comprobante enable trigger user");
+      acepta(await intentoDelDueno(c.dueno, reversionDelPaso2));
       acepta(await intentoDelDueno(c.dueno, reversion));
       acepta(await intentoDelDueno(c.dueno, reversion));
       expect(
