@@ -22,8 +22,7 @@ const MAQUETA_DE_STOCK = {
 const CONTROL_APROBADO = {
   decidio:
     "el dueño, 09/11/2026 (aprobó la tabla «Textos nuevos» de la maqueta `control.html`; decisión D118)",
-  donde:
-    "Pedernal-docs 10-ux-ui prototipos-gastronomia, control.html (tabla «Textos nuevos», fila «Recibir»)",
+  donde: "Pedernal-docs 10-ux-ui, maqueta control.html (tabla «Textos nuevos», fila «Recibir»)",
 } as const;
 const YA_APROBADO = {
   decidio:
