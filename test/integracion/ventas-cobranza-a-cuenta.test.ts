@@ -187,11 +187,12 @@ describe.skipIf(base === null)("ventas: cobranza a cuenta corriente (CC-3)", () 
     valorDe(await m.casos.anularTicket(e.gerente, pedido));
     expect(await estadoDelTicket(t.ticketId)).toBe("ANULADO");
     const libro = await asientos(c);
-    expect(libro.map((a) => [a.clase, a.naturaleza])).toEqual([
-      ["CARGO_DE_VENTA_A_CUENTA", "ORIGINAL"],
-      ["COBRANZA", "ORIGINAL"],
-      ["COBRANZA", "ANULACION"],
-      ["CARGO_DE_VENTA_A_CUENTA", "ANULACION"],
+    // Los espejos se escriben en la misma transacción (mismo instante): el orden entre ellos no se compara, solo qué hay.
+    expect(libro.map((a) => `${a.clase}:${a.naturaleza}`).sort()).toEqual([
+      "CARGO_DE_VENTA_A_CUENTA:ANULACION",
+      "CARGO_DE_VENTA_A_CUENTA:ORIGINAL",
+      "COBRANZA:ANULACION",
+      "COBRANZA:ORIGINAL",
     ]);
     expect(await saldo(c)).toBe("0.00");
   });
