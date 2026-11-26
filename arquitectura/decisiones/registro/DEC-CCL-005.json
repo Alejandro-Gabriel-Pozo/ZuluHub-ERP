@@ -1,10 +1,10 @@
 {
   "id": "DEC-CCL-005",
   "fecha": "2026-11-26",
-  "quien": "sesión",
+  "quien": "padre",
   "tipo": "COMERCIAL",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "El banner de la cuenta suspendida muestra el motivo sin quién ni cuándo: la ficha no guarda quién ni cuándo suspendió.",
   "que_cambia": "Mostrar quién y cuándo exige guardarlos (una migración) o leer la auditoría desde una consulta nueva; el texto de la maqueta se completa entonces.",
-  "donde": "src/capacidades/vocabulario/catalogo-cuenta_corriente.ts clave cuenta_corriente.ficha.suspendida_detalle; orquestador, 26/11/2026: SUPUESTO, omitir persona y fecha en A1"
+  "donde": "src/capacidades/vocabulario/catalogo-cuenta_corriente.ts clave cuenta_corriente.ficha.suspendida_detalle; el dueño, chat del 26/11/2026: «Si a tus recomendaciones» (banner sin persona ni fecha; si después las quiere, es una migración chica aparte)"
 }

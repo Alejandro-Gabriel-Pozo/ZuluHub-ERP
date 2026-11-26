@@ -5,7 +5,7 @@ import type { FuenteDeTexto, UsoDeTexto } from "./uso-y-fuente-de-texto";
  * Pedernal-docs `11-especificaciones/briefs/maquetas/`), que el dueño aprobó el 26/11/2026 con su chat («Apruebo», con lo ya decidido aplicado: sin pies explicativos, «Excedida», «Crédito disponible», «Origen del
  * movimiento»); el orquestador los asentó en `DEC-CCL-004` (delegación del 15/11/2026, fila 173). Lo que la maqueta tiene y todavía no se usa (habilitar, suspender, reactivar, cambiar condiciones, exportar, cobrar) entra con su
  * pantalla. Se reutilizan los que ya existían (Cliente, Estado, Fecha, Importe, Vence, Anulación, Sucursal, Salón, Mostrador, los tipos de medio y «Sin resultados»): no se duplican.
- * El banner de una cuenta suspendida lleva el motivo SIN «(quién, cuándo)»: la ficha guarda el motivo y no quién ni cuándo suspendió (SUPUESTO (DEC-CCL-005)).
+ * El banner de una cuenta suspendida lleva el motivo SIN «(quién, cuándo)»: la ficha guarda el motivo y no quién ni cuándo suspendió (decisión del dueño, DEC-CCL-005).
  */
 const FUENTE: FuenteDeTexto = { decision: "DEC-CCL-004" };
 const FUENTE_DEL_BANNER: FuenteDeTexto = { decision: "DEC-CCL-005" };

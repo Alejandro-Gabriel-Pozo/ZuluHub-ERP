@@ -34,7 +34,7 @@ const MAQUETA_V2: FuenteDeTexto = {
 };
 const BANNER: FuenteDeTexto = {
   decidio:
-    "texto de la maqueta aprobada por el dueño el 26/11/2026, SIN «(quién, cuándo)» porque la ficha no guarda esos datos: supuesto declarado en DEC-CCL-005, pendiente de OK del dueño",
+    "texto de la maqueta aprobada por el dueño el 26/11/2026, SIN «(quién, cuándo)» porque la ficha no guarda esos datos: decisión confirmada por el dueño el 26/11/2026 (chat: «Si a tus recomendaciones», DEC-CCL-005)",
   donde:
     "Pedernal-docs 11-especificaciones/briefs/maquetas/cuenta-corriente-ficha-listado-y-cobro.html (v2, «Ficha suspendida»); arquitectura/decisiones/registro/DEC-CCL-005.json",
 };
