@@ -1,5 +1,5 @@
 import axe from "axe-core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { userEvent, type Locator } from "vitest/browser";
 import "../tokens.css";
 
@@ -83,6 +83,26 @@ export function restaurarConexion(): void {
 export function tocar(locator: Locator): void {
   const elemento = locator.element();
   if (elemento instanceof HTMLElement) elemento.click();
+}
+
+/**
+ * Corre `correr` y espera el evento `reset` del formulario que React 19 dispara al terminar una acción; dice si quedó cancelado (`defaultPrevented`, visto desde `document`, o sea después de
+ * React: lo que cancela `sinReiniciar`). Sirve para comprobar lo que queda en los campos DESPUÉS del reinicio y no antes (el reinicio llega un rato después de que el botón queda libre: una
+ * aserción apurada pasa aunque el defecto esté).
+ */
+export async function conReinicio(correr: () => void): Promise<boolean> {
+  let cancelado: boolean | null = null;
+  const alReiniciar = (e: Event) => {
+    cancelado = e.defaultPrevented;
+  };
+  document.addEventListener("reset", alReiniciar);
+  try {
+    correr();
+    await vi.waitFor(() => expect(cancelado).not.toBeNull());
+  } finally {
+    document.removeEventListener("reset", alReiniciar);
+  }
+  return cancelado === true;
 }
 
 /** Los cinco estados de un componente interactivo ([01] §4.1): la lista de verificación de cada uno. */

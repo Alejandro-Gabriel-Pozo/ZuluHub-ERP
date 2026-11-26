@@ -3,6 +3,7 @@
 import type { Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
 import {
   anularElTicketDelMostrador,
+  cobrarLaMesaDelSalon,
   cobrarLaVentaDelMostrador,
   papelDelTicketDelMostrador,
   type PapelDelTicketParaLaPantalla,
@@ -18,6 +19,13 @@ export async function cobrarLaVentaAccion(
   pedido: unknown,
 ): Promise<Respuesta<VentaCobradaParaLaPantalla>> {
   return cobrarLaVentaDelMostrador(pedido);
+}
+
+/** «Cobrar» la mesa del salón: la cuenta existente, en un acto (SAL-D). La clave y los ids de la cuenta y del ejemplar los fija la pantalla por intento. */
+export async function cobrarLaMesaAccion(
+  pedido: unknown,
+): Promise<Respuesta<VentaCobradaParaLaPantalla>> {
+  return cobrarLaMesaDelSalon(pedido);
 }
 
 export async function anularElTicketAccion(

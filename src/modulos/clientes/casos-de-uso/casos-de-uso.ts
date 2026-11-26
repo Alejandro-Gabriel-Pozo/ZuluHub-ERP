@@ -1,3 +1,4 @@
+import { armarAnonimizarParte } from "./anonimizar-parte";
 import type { DependenciasDeClientes } from "./contrato";
 import { armarEditarParteConRoles } from "./editar-parte-con-roles";
 import type { DECLARACIONES } from "./declaraciones";
@@ -24,6 +25,7 @@ export function crearCasosDeUsoDeClientes(dependencias: DependenciasDeClientes) 
     editarParteConRoles: armarEditarParteConRoles(dependencias),
     desactivarParte: armarDesactivarParte(dependencias),
     reactivarParte: armarReactivarParte(dependencias),
+    anonimizarParte: armarAnonimizarParte(dependencias),
     cambiarRolesDeParte: armarCambiarRolesDeParte(dependencias),
     vincularContacto: armarVincularContacto(dependencias),
     desvincularContacto: armarDesvincularContacto(dependencias),

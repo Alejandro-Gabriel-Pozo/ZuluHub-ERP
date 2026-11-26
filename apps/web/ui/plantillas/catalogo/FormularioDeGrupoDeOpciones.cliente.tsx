@@ -14,6 +14,7 @@ import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.clien
 import { Pila } from "../../primitivas/Pila";
 import estilos from "./FormularioDeGrupoDeOpciones.module.css";
 import { textoDelError, type FilaDeOpcionArmada, type GrupoArmado } from "./modelo-de-opciones";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeGrupoDeOpciones = Readonly<{
   grupo: GrupoArmado;
@@ -64,7 +65,7 @@ export function FormularioDeGrupoDeOpciones({
   const sinCampo = error !== null && campoDelError !== CAMPO_DEL_GRUPO;
 
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={3}>
           <Campo

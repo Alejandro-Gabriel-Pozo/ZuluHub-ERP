@@ -12,6 +12,7 @@ import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.clien
 import { Pila } from "../../primitivas/Pila";
 import estilos from "./PantallasDeSecciones.module.css";
 import { sePuedeGuardarElNombre, type FormularioDeSeccionArmado } from "./modelo-de-secciones";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeSeccionDeCarta = Readonly<{
   formulario: FormularioDeSeccionArmado;
@@ -43,7 +44,7 @@ export function FormularioDeSeccionDeCarta({
       >
         <span aria-hidden="true">‹</span>
       </a>
-      <form action={enviar}>
+      <form action={enviar} onReset={sinReiniciar}>
         <ProveedorDeEnvioDeFormulario value={enviando}>
           <Pila separacion={3}>
             <Campo

@@ -19,6 +19,7 @@ export type PropsDeFormularioDeSucursalesDeUsuario = Readonly<{
  * El bloque «Sucursales» de la ficha de un empleado (maqueta `usuarios.html`, `vUsuario`): una casilla por sucursal activa y «Guardar». Se manda el CONJUNTO FINAL: lo tildado, o nada si no hay ninguna
  * (válido: el empleado queda sin sucursales). El envío arma él mismo el pedido desde lo que se ve tildado (no depende de que el navegador omita las casillas sin marcar), así «ninguna» es siempre
  * una elección explícita de quien tocó «Guardar». Mientras envía el botón no se puede volver a tocar; la repetición inocua la garantiza el servidor (el mismo conjunto no escribe).
+ * El formulario no se reinicia al terminar la acción (`sinReiniciar`, en `FormularioDeAccion`): las casillas siguen como la persona las dejó. Chequeo: `Usuarios.test.tsx`.
  */
 export function FormularioDeSucursalesDeUsuario({
   accion,

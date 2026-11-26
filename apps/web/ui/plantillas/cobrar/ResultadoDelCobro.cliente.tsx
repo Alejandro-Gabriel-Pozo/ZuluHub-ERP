@@ -32,6 +32,8 @@ export type PropsDeResultadoDelCobro = Readonly<{
   /** Avisa a la pantalla si se está viendo el ticket del cliente (que trae su propia barra) o el resultado. */
   alCambiarLaVista: (viendoElTicket: boolean) => void;
   alNuevaVenta: () => void;
+  /** El resultado de cobrar una mesa (SAL-D): sin «Anular» (es de SAL-C2) y el último botón es «Volver» (al salón), no «Nueva venta». */
+  deLaMesa?: boolean | undefined;
   nuevoId: () => string;
   esperaEntreVerificacionesMs?: number | undefined;
 }>;
@@ -51,6 +53,7 @@ export function ResultadoDelCobro({
   imprimir,
   alCambiarLaVista,
   alNuevaVenta,
+  deLaMesa = false,
   nuevoId,
   esperaEntreVerificacionesMs,
 }: PropsDeResultadoDelCobro) {
@@ -162,17 +165,19 @@ export function ResultadoDelCobro({
             {textos.imprimirTicket}
           </Boton>
         )}
-        <Boton
-          variante="secundaria"
-          ancho="completo"
-          alTocar={() => {
-            setAnulando(true);
-          }}
-        >
-          {textos.anular}
-        </Boton>
+        {deLaMesa ? null : (
+          <Boton
+            variante="secundaria"
+            ancho="completo"
+            alTocar={() => {
+              setAnulando(true);
+            }}
+          >
+            {textos.anular}
+          </Boton>
+        )}
         <Boton ancho="completo" alTocar={alNuevaVenta}>
-          {textos.nuevaVenta}
+          {deLaMesa ? textos.volver : textos.nuevaVenta}
         </Boton>
       </div>
       {errorDelPapel === null ? null : <ErrorDeRespuesta error={errorDelPapel} />}

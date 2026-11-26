@@ -30,6 +30,9 @@ export const ROTULO_DE_PERILLA: Readonly<Record<string, string>> = {
   // de plataforma, pendiente del OK del dueño (DEC-0702).
   recepcion_separada: "Recepción separada",
   conciliacion_de_tres_vias: "Tres vías",
+  // `roles_propios_por_empresa` (H4b T4): «Roles propios» es el nombre de la función en el diseño de permisos configurables (`h4b-permisos-configurables.md`, repositorio de
+  // documentación); decisión 175 (textos delegados: lo más corto). Texto de la consola de plataforma, pendiente del OK del dueño (DEC-1205).
+  roles_propios_por_empresa: "Roles propios",
   // SUPUESTO (DEC-1242): rótulo provisorio, el del módulo; «Facturar antes de cobrar» (FAC-1) espera el OK del dueño.
   facturar_antes_de_cobrar: "Facturación",
 };
@@ -55,6 +58,8 @@ export const ROTULO_DE_MODULO: Readonly<Record<string, string>> = {
   // proveedores», el directorio) y `compras.md` («Compras»); decisión 175 (textos delegados: lo más corto).
   clientes: "Clientes y proveedores",
   compras: "Compras",
+  // SUPUESTO (DEC-1224): el nombre del módulo de cuenta corriente de clientes, en las palabras del dueño («cuentas corrientes de clientes», 25/11/2026) y lo más corto.
+  cuenta_corriente: "Cuenta corriente",
 };
 
 const buscar = (tabla: Readonly<Record<string, string>>, clave: string): string =>

@@ -56,6 +56,16 @@ const formaDeCobrarLaVenta = z.strictObject({
   cobros: z.array(cobro),
 });
 
+const formaDeCobrarLaMesa = z.strictObject({
+  claveIdempotencia: texto,
+  cuentaId: identificador,
+  ejemplarId: identificador,
+  totalEsperado: importe,
+  confirmaciones: z.array(texto).optional(),
+  cajaId: identificador,
+  cobros: z.array(cobro),
+});
+
 export type EntradaWebDeCobrarLaVenta = Readonly<{
   claveIdempotencia: string;
   cuentaId: string;
@@ -135,4 +145,20 @@ export function entradaDeFichaDelTicket(
   crudo: unknown,
 ): Resultado<Readonly<{ ticketId: string }>, ErrorDeEntrada> {
   return leer(formaDeFichaDelTicket, crudo);
+}
+
+/**
+ * La frontera de «Cobrar la mesa» (SAL-D): la cuenta que ya existe (la de la mesa) y lo que se cobra; NO viajan las líneas (las lee el servidor de la cuenta) ni la sucursal (la fija el servidor). El esquema es
+ * estricto: una clave de más, por ejemplo una propina o una línea, rechaza el pedido entero (sin propina, D152).
+ */
+export type EntradaWebDeCobrarLaMesa = Readonly<
+  Omit<z.output<typeof formaDeCobrarLaMesa>, "cobros"> & {
+    cobros: EntradaWebDeCobrarLaVenta["cobros"];
+  }
+>;
+
+export function entradaDeCobrarLaMesa(
+  crudo: unknown,
+): Resultado<EntradaWebDeCobrarLaMesa, ErrorDeEntrada> {
+  return leer(formaDeCobrarLaMesa, crudo);
 }

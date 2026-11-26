@@ -36,12 +36,14 @@ describe.skipIf(base === null)("clientes: la persistencia contra el esquema real
        select indexname from pg_indexes where schemaname = 'public' and tablename = any($1) and indexdef like 'CREATE UNIQUE%'`,
       [TABLAS],
     );
-    const migracion = await readFile(
-      join(import.meta.dirname, "../../migraciones", "0034_clientes.sql"),
-      "utf8",
+    // Los disparadores de las migraciones del directorio: 0034 y 0105 (anonimización: el cargo del vínculo).
+    const migraciones = await Promise.all(
+      ["0034_clientes.sql", "0105_anonimizacion_de_partes.sql"].map((archivo) =>
+        readFile(join(import.meta.dirname, "../../migraciones", archivo), "utf8"),
+      ),
     );
-    const deDisparadores = [...migracion.matchAll(/CONSTRAINT = '(\w+)'/g)].map(
-      (m) => m[1] as string,
+    const deDisparadores = migraciones.flatMap((migracion) =>
+      [...migracion.matchAll(/CONSTRAINT = '(\w+)'/g)].map((m) => m[1] as string),
     );
     expect(deDisparadores.length).toBeGreaterThan(8);
     const existentes = new Set([...rows.map((r) => r.nombre), ...deDisparadores]);

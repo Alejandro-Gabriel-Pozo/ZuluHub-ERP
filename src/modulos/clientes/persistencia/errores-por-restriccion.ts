@@ -39,6 +39,7 @@ export const ERRORES_DE_CLIENTES_POR_RESTRICCION: Readonly<Record<string, string
   parte_transicion_invalida: "NO_TRADUCIDA",
   parte_naturaleza_con_vinculos: "PARTE_CON_VINCULOS",
   parte_anonimizada_con_relaciones: "NO_TRADUCIDA",
+  parte_anonimizada_con_cargo: "NO_TRADUCIDA",
   // parte_rol
   parte_rol_pkey: "NO_TRADUCIDA",
   parte_rol_empresa_id_fkey: "NO_TRADUCIDA",

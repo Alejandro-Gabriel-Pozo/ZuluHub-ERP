@@ -79,7 +79,9 @@ const SOLO_GERENTE_ANEXO_A = [
   "cajas.desactivar",
   "compras.configurar",
 ].sort();
-/** Los 5 pisos que suma 0097 (T4): las acciones de roles y la asignación de rol son solo del gerente. */
+/** El piso solo-gerente de la anonimización de partes (0105; la semilla de 0094 se regenera mientras no esté sellada, así que también lo trae). */
+const SOLO_GERENTE_DE_0105 = ["partes.anonimizar"];
+/** Los 5 pisos de T4: las acciones de roles y la asignación de rol son solo del gerente (los cuatro `roles.*` vienen en la semilla de 0094; `usuarios.asignar_rol`, de 0097). */
 const SOLO_GERENTE_DE_0097 = [
   "roles.archivar",
   "roles.crear",
@@ -95,6 +97,27 @@ const TODOS_ANEXO_A = [
 ].sort();
 /** Una lista válida que cumple los pisos: los cuatro de todos y dos acciones libres. */
 const LISTA_VALIDA = [...TODOS_ANEXO_A, "ventas.ver", "mesas.ver"].sort();
+
+/** Una sentencia con el dueño de una base, dentro de una transacción que se deshace: la falla como `codigo:restriccion` o `null` si anduvo. */
+const comoDuenoDe = async (
+  cliente: pg.Client,
+  sql: string,
+  p: unknown[] = [],
+): Promise<string | null> => {
+  await cliente.query("begin");
+  try {
+    await cliente.query("savepoint s");
+    try {
+      await cliente.query(sql, p);
+      return null;
+    } catch (e) {
+      const err = e as { code?: string; constraint?: string };
+      return `${err.code}:${err.constraint ?? ""}`;
+    }
+  } finally {
+    await cliente.query("rollback");
+  }
+};
 
 describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H4b)", () => {
   const entorno = crearEntornoDePrueba(base as BaseDePruebas, 6);
@@ -145,21 +168,8 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
   };
 
   /** Lo mismo con el dueño de la base, siempre dentro de una transacción que se deshace (las tablas globales no se ensucian). */
-  const comoDuenoSinConfirmar = async (sql: string, p: unknown[] = []): Promise<string | null> => {
-    await dueno.query("begin");
-    try {
-      await dueno.query("savepoint s");
-      try {
-        await dueno.query(sql, p);
-        return null;
-      } catch (e) {
-        const err = e as { code?: string; constraint?: string };
-        return `${err.code}:${err.constraint ?? ""}`;
-      }
-    } finally {
-      await dueno.query("rollback");
-    }
-  };
+  const comoDuenoSinConfirmar = (sql: string, p: unknown[] = []): Promise<string | null> =>
+    comoDuenoDe(dueno, sql, p);
 
   beforeAll(async () => {
     dueno = new pg.Client({ connectionString: (base as BaseDePruebas).dueno });
@@ -308,31 +318,48 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
       }
     });
 
+    /**
+     * Las sentencias de abajo incluyen `truncate`: toma el bloqueo EXCLUSIVO de la tabla (y, con `cascade`, de todas las que la referencian) ANTES de que el disparador diga que no,
+     * así que en la base compartida espera a lo que otras pruebas, en paralelo, tengan abierto sobre esas tablas (o cae en un deadlock) y, bajo carga, no llega al 42501 a
+     * tiempo; además frena a esas otras pruebas. Por eso corre en una base propia: nadie más la toca y el resultado depende solo de los disparadores.
+     */
     it("ni el dueño de la base borra ni edita lo inmutable: disparadores de solo inserción y sin borrado", async () => {
-      const rol = await crearRol(empresa, "Intocable");
-      expect(
-        await intentar(empresa, SQL_VERSION, [empresa, rol, 1, LISTA_VALIDA, persona]),
-      ).toBeNull();
-      for (const sql of [
-        "update version_de_plantilla set autor = 'otro'",
-        "delete from version_de_plantilla",
-        "truncate version_de_plantilla",
-        "update plantilla_de_rol set clave = clave",
-        "delete from plantilla_de_rol",
-        "update accion_introducida set accion = accion",
-        "delete from accion_introducida",
-        "truncate accion_introducida",
-        "delete from piso_de_plataforma",
-        "truncate piso_de_plataforma",
-        "update version_de_rol set acciones = '{}'",
-        "delete from version_de_rol",
-        "truncate version_de_rol",
-        "delete from rol_de_empresa",
-        "truncate rol_de_empresa cascade",
-        "truncate plantilla_de_rol cascade",
-      ]) {
-        const r = await comoDuenoSinConfirmar(sql);
-        expect([sql, r?.split(":")[0]]).toEqual([sql, "42501"]);
+      const aparte = await crearBaseAparte(base as BaseDePruebas);
+      const cliente = new pg.Client({ connectionString: aparte.base.dueno });
+      try {
+        await cliente.connect();
+        const e = (await crearEmpresaActiva(crearEntornoDePrueba(aparte.base, 2))).empresa;
+        const autor = (await crearPersonaDeBase(cliente)).id;
+        const rol = randomUUID();
+        await cliente.query(
+          "insert into rol_de_empresa (id, empresa_id, nombre, nombre_clave) values ($1, $2, 'Intocable', 'intocable')",
+          [rol, e],
+        );
+        await cliente.query(SQL_VERSION, [e, rol, 1, LISTA_VALIDA, autor]);
+        for (const sql of [
+          "update version_de_plantilla set autor = 'otro'",
+          "delete from version_de_plantilla",
+          "truncate version_de_plantilla",
+          "update plantilla_de_rol set clave = clave",
+          "delete from plantilla_de_rol",
+          "update accion_introducida set accion = accion",
+          "delete from accion_introducida",
+          "truncate accion_introducida",
+          "delete from piso_de_plataforma",
+          "truncate piso_de_plataforma",
+          "update version_de_rol set acciones = '{}'",
+          "delete from version_de_rol",
+          "truncate version_de_rol",
+          "delete from rol_de_empresa",
+          "truncate rol_de_empresa cascade",
+          "truncate plantilla_de_rol cascade",
+        ]) {
+          const r = await comoDuenoDe(cliente, sql);
+          expect([sql, r?.split(":")[0]]).toEqual([sql, "42501"]);
+        }
+      } finally {
+        await cliente.end();
+        await aparte.destruir();
       }
     });
 
@@ -410,17 +437,19 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
         "select accion, tipo from piso_de_plataforma order by accion",
       );
       expect(rows.filter((r) => r.tipo === "SOLO_GERENTE").map((r) => r.accion)).toEqual(
-        [...SOLO_GERENTE_ANEXO_A, ...SOLO_GERENTE_DE_0097].sort(),
+        [...SOLO_GERENTE_ANEXO_A, ...SOLO_GERENTE_DE_0097, ...SOLO_GERENTE_DE_0105].sort(),
       );
       expect(rows.filter((r) => r.tipo === "TODOS_LOS_ROLES").map((r) => r.accion)).toEqual(
         TODOS_ANEXO_A,
       );
-      expect(rows).toHaveLength(28);
+      expect(rows).toHaveLength(29);
       // El piso solo-gerente es exactamente «lo que hoy solo tiene el gerente»; los de todos están entre los que hoy tienen los tres.
-      expect(SOLO_GERENTE_ANEXO_A).toEqual(
+      expect([...SOLO_GERENTE_ANEXO_A, ...SOLO_GERENTE_DE_0105].sort()).toEqual(
         TODAS.filter(
-          (a) => (PERMISOS_DE_EMPRESA as Record<string, readonly string[]>)[a]?.length === 1,
-        ),
+          (a) =>
+            (PERMISOS_DE_EMPRESA as Record<string, readonly string[]>)[a]?.length === 1 &&
+            !SOLO_GERENTE_DE_0097.includes(a),
+        ).sort(),
       );
       for (const a of TODOS_ANEXO_A)
         expect((PERMISOS_DE_EMPRESA as Record<string, readonly string[]>)[a]).toHaveLength(3);
@@ -812,7 +841,7 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
       const s = await comoApp(empresa);
       try {
         const p = await s.directo("select count(*)::int as n from piso_de_plataforma");
-        expect(p.ok && p.rows[0]).toEqual({ n: 28 });
+        expect(p.ok && p.rows[0]).toEqual({ n: 29 });
         const v = await s.directo("select count(*)::int as n from version_de_plantilla");
         expect(v.ok && v.rows[0]).toEqual({ n: 2 });
       } finally {
@@ -1009,7 +1038,7 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
         );
         await expect(correr()).rejects.toMatchObject({ code: "55000" });
         expect((await c.query("select 1 from version_de_rol")).rowCount).toBe(1);
-        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(23);
+        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(28);
         // Sin roles pero con una versión de plantilla de la plataforma: frena.
         await c.query("alter table rol_de_empresa disable trigger rol_de_empresa_sin_borrado");
         await c.query("alter table version_de_rol disable trigger version_de_rol_solo_insercion");
@@ -1065,7 +1094,7 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
         await c.query("begin");
         await c.query(await readFile(MIGRACION, "utf8"));
         await c.query("commit");
-        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(23);
+        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(28);
         expect((await c.query("select 1 from accion_introducida")).rowCount).toBe(TODAS.length);
       } finally {
         await c.end();
