@@ -3,7 +3,7 @@ import type { FichaDePantalla } from "./ficha-de-mesas";
 /**
  * LA FICHA DE LA PANTALLA «MOVIMIENTOS» DE STOCK (STK-B1, FP-STK-03; DDD:174: toda pantalla tiene su ficha). Declara lo que la pantalla ofrece: ruta y archivos, el acceso, los botones, los estados y cada texto
  * con SU uso y SU fuente. Misma forma que `ficha-de-mesas.ts` y la comprueba `ficha-de-existencias-y-movimientos.test.ts` contra el catálogo de textos y la tabla del menú, para que no se desfase.
- * Es el libro del depósito en solo lectura: la tarjeta no dibuja «Anular» todavía (llega con la escritura de Stock, y el servidor ya decide `anulable`). El depósito se elige con enlaces (DEC-1023). Solo
+ * Es el libro del depósito: «Anular» se dibuja solo en lo que el servidor dice `anulable` y sale apagado sin el permiso. El depósito se elige con enlaces (DEC-1023). Solo
  * se rotulan las clases y los motivos con texto aprobado; el ajuste por conteo se rotula «Ajuste» (DEC-1023). Los nombres de las unidades salen del catálogo de unidades de medida. Previene: un botón o un texto que nadie aprobó.
  */
 
@@ -38,7 +38,14 @@ export const FICHA_DE_MOVIMIENTOS = {
   rutas: ["/stock/movimientos"],
   titulo: "stock.pantalla.movimientos",
   acceso: "stock.ver",
-  botones: [],
+  botones: [
+    {
+      id: "anular",
+      texto: "stock.accion.anular",
+      hace: { navega: "/stock/movimientos/[id]/anular" },
+      sinPermiso: "APAGADO",
+    },
+  ],
   estados: { ERROR: "GENERICO", SIN_PERMISO: "GENERICO" },
   textos: {
     "stock.pantalla.movimientos": {
@@ -63,6 +70,10 @@ export const FICHA_DE_MOVIMIENTOS = {
       fuente: CLASES_DE_DEC_1022,
     },
     "stock.clase.anulacion": { usos: [USO_DE_LA_TARJETA], fuente: CLASES_DE_DEC_1022 },
+    "stock.accion.anular": {
+      usos: ["PantallaDeMovimientos.tsx (botón de la tarjeta anulable)"],
+      fuente: MAQUETA_DE_STOCK,
+    },
     "stock.estado.anulado": {
       usos: ["PantallaDeMovimientos.tsx (marca de un movimiento anulado)"],
       fuente: CLASES_DE_DEC_1022,

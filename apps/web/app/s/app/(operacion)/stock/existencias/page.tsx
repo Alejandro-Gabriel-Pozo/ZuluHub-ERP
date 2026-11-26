@@ -4,6 +4,8 @@ import { cargarLasExistencias } from "../../../../../../servidor/existencias-y-l
 import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 import { armarLasExistencias } from "../../../../../../ui/plantillas/stock/existencias/modelo-de-existencias";
 import { PantallaDeExistencias } from "../../../../../../ui/plantillas/stock/existencias/PantallaDeExistencias";
+import { puedeEnStock } from "../../../../../../servidor/ofertas-de-stock";
+import { RUTAS_DE_MOVIMIENTOS } from "../../../../../../ui/plantillas/stock/movimientos/modelo-de-formularios";
 import { leerLaLectura } from "../../../../../../ui/plantillas/stock/lectura/modelo-de-lectura";
 import { pestanasDeStock } from "../../../../../../ui/plantillas/stock/pestanas-de-stock";
 import { PestanasDeStock } from "../../../../../../ui/plantillas/stock/PestanasDeStock";
@@ -13,7 +15,7 @@ type PropsDePagina = Readonly<{
 }>;
 
 // `/stock/existencias`: la existencia de cada artículo en el depósito elegido de la sucursal elegida en el dispositivo (maqueta `stock.html`, 09/11/2026). El depósito y la página viajan en la dirección;
-// la sucursal la fija el servidor, nunca la dirección. Solo lectura: sin costos ni botones que escriban.
+// la sucursal la fija el servidor, nunca la dirección. Sin costos; los botones llevan a los formularios de movimiento, apagados sin permiso.
 export default async function PaginaDeExistencias({ searchParams }: PropsDePagina) {
   const params = await searchParams;
   return pantallaDeOperacion({ titulo: "stock.pantalla.existencias" }, async ({ contexto }) => {
@@ -29,6 +31,28 @@ export default async function PaginaDeExistencias({ searchParams }: PropsDePagin
             negativa: texto({}, "stock.pantalla.negativa"),
             siguiente: texto({}, "fiscal.pantalla.config_cert_siguiente"),
           }}
+          acciones={[
+            {
+              texto: texto({}, "stock.accion.entrada"),
+              href: RUTAS_DE_MOVIMIENTOS.entrada,
+              habilitado: await puedeEnStock(contexto, "stock.registrar_entrada"),
+            },
+            {
+              texto: texto({}, "stock.accion.salida"),
+              href: RUTAS_DE_MOVIMIENTOS.salida,
+              habilitado: await puedeEnStock(contexto, "stock.registrar_salida"),
+            },
+            {
+              texto: texto({}, "stock.accion.transferir"),
+              href: RUTAS_DE_MOVIMIENTOS.transferir,
+              habilitado: await puedeEnStock(contexto, "stock.transferir"),
+            },
+            {
+              texto: texto({}, "stock.accion.ajustar"),
+              href: RUTAS_DE_MOVIMIENTOS.ajustar,
+              habilitado: await puedeEnStock(contexto, "stock.ajustar"),
+            },
+          ]}
         />
       </>
     );

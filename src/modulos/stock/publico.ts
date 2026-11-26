@@ -91,6 +91,7 @@ export { CLASES_DE_MOVIMIENTO, ORIGEN_TRANSFORMACION } from "./dominio/movimient
 export {
   MOTIVO_CONSUMO_DE_TRANSFORMACION,
   MOTIVO_PRODUCTO_DE_TRANSFORMACION,
+  motivosManualesDe,
 } from "./dominio/motivos";
 export type { LoteDeEntrada } from "./casos-de-uso/lotes-del-libro";
 export type { ControlDeStock } from "./casos-de-uso/errores";
@@ -156,15 +157,18 @@ export type {
 export type {
   CabeceraDeMovimiento,
   CursorDeLibro,
-  CursorDeMovimientosDeDeposito,
   EntradaDeLibroDeArticulo,
-  EntradaDeMovimientosDeDeposito,
   FichaDeMovimiento,
-  MovimientoDeDeposito,
   PaginaDeLibro,
-  PaginaDeMovimientosDeDeposito,
   RenglonDeFicha,
 } from "./consultas/libro";
+export type {
+  ArticuloControlado,
+  CursorDeMovimientosDeDeposito,
+  EntradaDeMovimientosDeDeposito,
+  MovimientoDeDeposito,
+  PaginaDeMovimientosDeDeposito,
+} from "./consultas/libro-del-deposito";
 export type {
   CandidatoDeConteo,
   ConteoDeLista,

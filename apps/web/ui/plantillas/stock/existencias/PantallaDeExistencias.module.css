@@ -35,3 +35,9 @@
 .cantidad {
   font-variant-numeric: tabular-nums;
 }
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+}
