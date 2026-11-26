@@ -300,7 +300,7 @@ describe.skipIf(base === null)("cerrar una orden de producción en la web", () =
     );
     const a = await abrir(p, esc);
     const r = await cerrarLaOrden(d, esc.gerente, await pedido(a.ordenId, p, { de: esc }));
-    if (!r.ok && r.error.codigo === "PRODUCCION_VENCIMIENTO_REQUERIDO") {
+    if (!r.ok && r.error.codigo === "LOTE_VENCIMIENTO_REQUERIDO") {
       expect(await estado(a.ordenId)).toBe("ABIERTA");
       expect(await movimientos(a.ordenId)).toBe(0);
       const ok = await cerrarLaOrden(
