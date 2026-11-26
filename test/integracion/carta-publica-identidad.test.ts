@@ -4,7 +4,7 @@ import { armarVistaDeVidriera } from "../../src/capacidades/experiencia/vidriera
 import { temaDeLaCarta } from "../../src/capacidades/experiencia/vidriera/tema-de-la-carta";
 import { deLaMarca } from "../utilidades/alcance-del-host";
 import { montarCatalogo, precioDeBase } from "./catalogo-apoyo";
-import { cartaDeBase, empresaDeCarta } from "./carta-publica-apoyo";
+import { cartaDeBase, cuentaDeImagenDeBase, empresaDeCarta } from "./carta-publica-apoyo";
 import {
   MARCA_DEL_HOST,
   adaptadorReal,
@@ -130,6 +130,7 @@ describe.skipIf(base === null)("la identidad de la carta llega a la carta públi
 
   it("el logo elegido llega como una ruta PROPIA de la carta, con su versión: nada del proveedor se cuela en la vista", async () => {
     const m = await empresaConCarta();
+    await cuentaDeImagenDeBase(c.dueno, m.empresa, m.persona, "demo");
     await elegir(m.carta.id, {
       cara: "DIA",
       logo_proveedor: "CLOUDINARY",

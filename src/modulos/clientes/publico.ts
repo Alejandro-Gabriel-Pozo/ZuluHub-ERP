@@ -10,6 +10,7 @@ export { crearConsultasDeClientes, type ConsultasDeClientes } from "./consultas/
 export type {
   DependenciasDeClientes,
   DependenciasDeConsultasDeClientes,
+  TxDeCasosDeUsoDeClientes,
   TxDeClientes,
   TxDeConsultasDeClientes,
 } from "./casos-de-uso/contrato";
@@ -18,6 +19,24 @@ export type {
   EntradaDeEditarParteConRoles,
   SalidaDeEditarParteConRoles,
 } from "./casos-de-uso/editar-parte-con-roles";
+export {
+  TRABAJO_PARTE_ANONIMIZADA,
+  claveDeParteAnonimizada,
+  type EntradaDeAnonimizarParte,
+  type SalidaDeAnonimizarParte,
+} from "./casos-de-uso/anonimizar-parte";
+export {
+  MODULOS_QUE_IMPIDEN_ANONIMIZAR,
+  MOTIVOS_DE_ANONIMIZACION,
+  MOTIVOS_DE_IMPEDIMENTO,
+  type ImpedimentoDeAnonimizacion,
+  type MotivoDeAnonimizacion,
+} from "./dominio/anonimizacion";
+export type {
+  AnonimizacionDePartesEnTx,
+  CopiasDePartes,
+  ImpedimentosDeAnonimizacion,
+} from "./puertos-de-anonimizacion";
 export type {
   EntradaDeCambiarEstadoDeParte,
   EntradaDeCrearParte,

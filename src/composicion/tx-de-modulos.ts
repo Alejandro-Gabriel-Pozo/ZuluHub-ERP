@@ -1,4 +1,5 @@
 import type { ConfiguracionDeTransacciones } from "../adaptadores/postgres/transacciones";
+import { armarAnonimizacionDePartesEnTx } from "./anonimizacion-de-partes";
 import { crearRepositoriosDeCatalogo } from "../modulos/catalogo/publico";
 import {
   crearRepositorioDeRoles,
@@ -7,7 +8,10 @@ import {
 } from "../modulos/identidad/publico";
 import { crearRepositoriosDeComandas } from "../modulos/comandas/publico";
 import { crearRepositoriosDeSalon } from "../modulos/salon/publico";
-import { crearRepositoriosDeClientes } from "../modulos/clientes/publico";
+import {
+  crearRepositoriosDeClientes,
+  type AnonimizacionDePartesEnTx,
+} from "../modulos/clientes/publico";
 import { crearRepositoriosDeCompras } from "../modulos/compras/publico";
 import { crearRepositoriosDeCuentaCorriente } from "../modulos/cuenta_corriente/publico";
 import {
@@ -35,6 +39,8 @@ export type PiezasDeModulosEnTx = ReturnType<typeof crearRepositoriosDeCatalogo>
   ReturnType<typeof crearRepositoriosDeCompras> &
   ReturnType<typeof crearRepositoriosDeCuentaCorriente> &
   ReturnType<typeof crearRepositoriosDeProduccion> &
+  /** Lo que impide anonimizar una parte (saldo distinto de cero) y las copias que se vacían (`clientes`): sobre la misma conexión. */
+  Readonly<{ anonimizacionDePartes: AnonimizacionDePartesEnTx }> &
   /** Los roles propios de la empresa (H4b T4): identidad los usa en sus casos de uso y consultas. */
   Readonly<{ roles: RepositorioDeRoles }> &
   /** El libro de saldos (L1: compras asienta el cargo de la factura en su transacción): sus repositorios; la auditoría ya la trae la `Tx` base. */
@@ -56,6 +62,7 @@ export function armarPiezasDeModulosEnTx(
     ...crearRepositoriosDeCompras(db),
     ...crearRepositoriosDeCuentaCorriente(db),
     ...crearRepositoriosDeProduccion(db),
+    ...armarAnonimizacionDePartesEnTx(db),
     ...piezasDelLibro(db),
     hostsPropios: crearLecturaDeHostsPropios(db.withTables<HostsPropiosDb>()),
   };
