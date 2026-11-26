@@ -2,7 +2,7 @@ import type { FuenteDeTexto, UsosDeTexto } from "./uso-y-fuente-de-texto";
 
 /**
  * Los nombres que ve el gerente para cada acción del catálogo de módulos, en las casillas de la pantalla «Roles» (prefijo `roles.accion.<id de la acción>`). Una acción, un nombre: el id es el de
- * `src/capacidades/modulos/catalogo.ts` y `catalogo-de-acciones.test.ts` falla si el catálogo y este archivo no coinciden (acción sin nombre o nombre sin acción).
+ * `src/capacidades/modulos/catalogo.ts` y `textos-de-acciones-de-roles.test.ts` falla si el catálogo y este archivo no coinciden (acción sin nombre o nombre sin acción).
  * Fuente: el dueño aprobó la tabla completa el 26/11/2026 (Excel de roles propios, hoja Acciones: «esta aprobado todo el excel y las decisiones»), con la corrección de que las cinco de
  * `transformaciones.*` dicen «orden de producción» y `composiciones.editar` dice «Editar las recetas»; DEC-IDE-002 lo asienta.
  * La clave de las tres acciones «confirmar» dice «validar» porque el catálogo rechaza todo nombre que contenga «firma» (`NOMBRE_DE_SECRETO`, como `compras.*` y `ventas.*`):
