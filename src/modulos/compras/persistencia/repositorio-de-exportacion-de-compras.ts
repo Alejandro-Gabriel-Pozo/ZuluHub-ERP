@@ -33,9 +33,12 @@ export type FilaDeRecepcionParaExportar = Readonly<{
 }>;
 
 export type PagoParaLaExportacion = Readonly<{
+  id: string;
   comprobanteId: string;
   fechaDePago: string;
   medio: string;
+  /** Las líneas de medio del pago con su importe, en el orden de la lista de medios. */
+  medios: readonly Readonly<{ medio: string; importe: string }>[];
   importe: string;
   estado: "VIGENTE" | "ANULADO";
 }>;
@@ -174,6 +177,7 @@ export function crearRepositorioDeExportacionDeCompras(
       const filas = await db
         .selectFrom("pago_de_comprobante")
         .select([
+          "id",
           "comprobante_id",
           "medio",
           "estado",
@@ -184,7 +188,31 @@ export function crearRepositorioDeExportacionDeCompras(
         .where("comprobante_id", "in", ids)
         .orderBy("registrado_en")
         .execute();
+      const lineas =
+        filas.length === 0
+          ? []
+          : await db
+              .selectFrom("medio_de_un_pago")
+              .select(["pago_id", "medio", "numero", sql<string>`importe::text`.as("importe")])
+              .where("empresa_id", "=", empresa)
+              .where(
+                "pago_id",
+                "in",
+                filas.map((f) => f.id),
+              )
+              .orderBy("pago_id")
+              .orderBy("numero")
+              .execute();
+      // Las líneas se agrupan UNA vez: filtrarlas por cada pago es una cuenta cuadrática.
+      const porPago = new Map<string, { medio: string; importe: string }[]>();
+      for (const l of lineas) {
+        const lista = porPago.get(l.pago_id) ?? [];
+        lista.push({ medio: l.medio, importe: l.importe });
+        porPago.set(l.pago_id, lista);
+      }
       return filas.map((f) => ({
+        id: f.id,
+        medios: porPago.get(f.id) ?? [],
         comprobanteId: f.comprobante_id,
         fechaDePago: f.fecha_de_pago,
         medio: f.medio,

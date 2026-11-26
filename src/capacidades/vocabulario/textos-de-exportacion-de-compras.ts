@@ -27,6 +27,12 @@ const deResumen = <T extends string>(porDefecto: T, dueno: boolean) => ({
   usos: uso("encabezadosDeResumen"),
   fuente: dueno ? DEL_DUENO : DEL_ORQUESTADOR,
 });
+const DE_LA_HOJA_DE_PAGOS = { decision: "DEC-COM-004" } as const;
+const dePagos = <T extends string>(porDefecto: T) => ({
+  porDefecto,
+  usos: uso("encabezadosDePagos"),
+  fuente: DE_LA_HOJA_DE_PAGOS,
+});
 const deValor = <T extends string>(porDefecto: T, dueno: boolean) => ({
   porDefecto,
   usos: uso("rotulosDeExportacion"),
@@ -65,6 +71,13 @@ export const TEXTOS_DE_EXPORTACION_DE_COMPRAS = {
     usos: uso("hojasDeLaExportacion"),
     fuente: DEL_ORQUESTADOR,
   },
+  "compras.exportacion.hoja_pagos": {
+    porDefecto: "Pagos",
+    usos: uso("hojasDeLaExportacion"),
+    fuente: DE_LA_HOJA_DE_PAGOS,
+  },
+  // Pagos (una fila por línea de medio de cada pago vigente; el resto de sus encabezados reutiliza los de la Cabecera)
+  "compras.exportacion.pagos.id_del_pago": dePagos("ID del pago"),
   // Cabecera (una fila por compra)
   "compras.exportacion.cabecera.id": deCabecera("ID de la compra", false),
   "compras.exportacion.cabecera.numero": deCabecera("Número de compra", false),

@@ -112,7 +112,7 @@ export const COLUMNAS_DE_RESUMEN = [
 ] as const;
 export type ColumnaDeResumen = (typeof COLUMNAS_DE_RESUMEN)[number];
 
-const MONEDA = "ARS";
+export const MONEDA = "ARS";
 
 type EstadoDelPago = "PENDIENTE" | "PAGADO" | "ANULADO";
 
@@ -144,7 +144,7 @@ const claseDe = (c: ComprobanteParaExportar) =>
 const letraDe = (c: ComprobanteParaExportar) =>
   c.tipo === null ? null : FICHA_DE_TIPO_DE_COMPROBANTE[c.tipo].letra;
 
-function datosDelComprobante(
+export function datosDelComprobante(
   c: ComprobanteParaExportar | null,
   r: RotulosDeExportacion,
 ): Readonly<{

@@ -35,6 +35,8 @@
     "conteos.registrar": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "costos.ver": ["ADMINISTRADOR", "GERENTE"],
     "cuenta_corriente.administrar": ["ADMINISTRADOR", "GERENTE"],
+    "cuenta_corriente.aprobar_exceso": ["ADMINISTRADOR", "GERENTE"],
+    "cuenta_corriente.cargar_a_cuenta": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "cuenta_corriente.ver": ["ADMINISTRADOR", "GERENTE"],
     "cuentas.abrir": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],
     "cuentas.agregar_linea": ["ADMINISTRADOR", "GERENTE", "OPERADOR"],

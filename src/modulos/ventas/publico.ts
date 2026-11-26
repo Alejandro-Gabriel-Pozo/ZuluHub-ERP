@@ -129,3 +129,9 @@ export {
   crearRepositoriosDeVentas,
   type RepositoriosDeVentas,
 } from "./persistencia/repositorios-de-ventas";
+export type {
+  CargoACuenta,
+  CuentaCorrienteDeVentas,
+  EntradaDeCargoACuenta,
+  ErrorDelCargoACuenta,
+} from "./casos-de-uso/puertos-de-cuenta-corriente";
