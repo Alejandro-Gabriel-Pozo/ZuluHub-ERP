@@ -94,6 +94,7 @@ const fichaParaLaPantalla = (f: FichaDeMesa): FichaParaLaPantalla => ({
   cuentas: f.cuentas.map((c) => ({
     cuentaId: c.cuentaId,
     parte: c.parte,
+    cobrada: c.cobrada,
     total: importe(c.total),
     lineas: c.lineas.map((l) => ({
       lineaId: l.lineaId,
@@ -102,6 +103,7 @@ const fichaParaLaPantalla = (f: FichaDeMesa): FichaParaLaPantalla => ({
       varianteNombre: l.varianteNombre,
       cantidad: l.cantidad,
       precioUnitario: l.precioUnitario,
+      pasoDeCantidad: l.pasoDeCantidad,
       importe: l.importe,
       compartida: l.compartida,
       comanda: l.comanda,

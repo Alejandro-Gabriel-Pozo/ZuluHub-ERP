@@ -1,4 +1,5 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
+import { crearDirectorioDePartes } from "../../clientes/publico";
 import type { PersonaId } from "../../../primitivas/identificadores/marca";
 import { importeAJson, type ImporteJson } from "../../../primitivas/dinero/importe";
 import { cantidadATexto, cantidadDesdeTexto } from "../../../primitivas/cantidad/cantidad";
@@ -32,6 +33,12 @@ export type EntradaDeCerrarCuenta = Readonly<{
   /** Lo manda la pantalla: es el id del ejemplar ORIGINAL del ticket (idempotencia). */
   ejemplarId: string;
   confirmaciones?: readonly string[] | undefined;
+  /**
+   * El cliente al que se le carga la venta (R2 mínimo): una parte activa de la empresa con rol de cliente. Es un dato informativo del ticket: este caso de uso no crea
+   * deuda, asiento ni cobro (el cargo al libro es de la cuenta corriente). Sin él, el cierre es exactamente el de siempre. Si la cuenta ya estaba cerrada, se devuelve su ticket
+   * tal como quedó (con el cliente del que ganó) y este dato se ignora.
+   */
+  clienteId?: string | undefined;
 }>;
 
 export type SalidaDeCerrarCuenta = Readonly<{
@@ -43,7 +50,11 @@ export type SalidaDeCerrarCuenta = Readonly<{
   fechaNegocio: FechaCivil;
   total: ImporteJson;
   yaEstabaCerrada: boolean;
+  /** El cliente cargado al ticket; la clave falta si el ticket no tiene cliente. */
+  clienteId?: string;
 }>;
+
+const directorio = crearDirectorioDePartes();
 
 /** La salida de un ticket que ya existía (repetición): el original, con el rótulo y el estado de hoy. */
 async function salidaDelTicketExistente(
@@ -62,6 +73,7 @@ async function salidaDelTicketExistente(
     fechaNegocio: ticket.fechaNegocio,
     total: { moneda: "ARS", monto: ticket.total },
     yaEstabaCerrada: true,
+    ...(ticket.cargadoAParteId === null ? {} : { clienteId: ticket.cargadoAParteId }),
   };
 }
 
@@ -168,6 +180,18 @@ export async function cerrarCuentaEnTx(
   if (decision.valor.tipo === "YA_CERRADA") return yaEmitido();
   const { estadoDelTicket, cortesia } = decision.valor;
 
+  // El cliente se valida DESPUÉS de saber que esta transacción va a cerrar (un cierre repetido o perdido devuelve el ticket que ya existe) y ANTES de tocar nada. Cualquier
+  // motivo (no existe, es de otra empresa, está inactiva o anonimizada, no es cliente, id mal formado) es el mismo `CLIENTE_NO_VALIDO`: no cuenta qué hay en otra empresa.
+  if (entrada.clienteId !== undefined) {
+    const cliente = await directorio.parteParaOperacion(
+      tx,
+      empresaId,
+      entrada.clienteId,
+      "CUSTOMER",
+    );
+    if (!cliente.ok) return err("CLIENTE_NO_VALIDO");
+  }
+
   const cerrada = await tx.cuentas.cerrar(empresaId, cuenta.id, persona, contexto.ahora);
   if (!cerrada) return yaEmitido();
   const numero = await tx.tickets.siguienteNumero(empresaId, cuenta.sucursalId);
@@ -181,6 +205,7 @@ export async function cerrarCuentaEnTx(
     emitidoPor: persona,
     emitidoEn: contexto.ahora,
     sesionDeCajaId: opciones.sesionDeCajaId,
+    cargadoAParteId: entrada.clienteId,
   });
   const original = ejemplarId(entrada.ejemplarId);
   await tx.tickets.insertarEjemplar(empresaId, {
@@ -232,6 +257,7 @@ export async function cerrarCuentaEnTx(
       estado: estadoDelTicket,
       total,
       ejemplarId: original,
+      ...(entrada.clienteId === undefined ? {} : { clienteId: entrada.clienteId }),
     },
   });
   if (cortesia !== null) {
@@ -259,6 +285,7 @@ export async function cerrarCuentaEnTx(
     fechaNegocio: ticket.fechaNegocio,
     total: { moneda: "ARS", monto: total },
     yaEstabaCerrada: false,
+    ...(entrada.clienteId === undefined ? {} : { clienteId: entrada.clienteId }),
   });
 }
 

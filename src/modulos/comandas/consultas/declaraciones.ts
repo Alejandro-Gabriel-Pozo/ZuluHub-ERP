@@ -6,5 +6,6 @@ export const DECLARACIONES_DE_CONSULTAS = {
   enviosDeCuenta: { accion: "comandas.ver" },
   documentoParaImprimir: { accion: "comandas.ver" },
   trabajosDeImpresion: { accion: "comandas.ver" },
+  trabajosPendientesDeLaSucursal: { accion: "comandas.ver" },
   impresorasDeLaSucursal: { accion: "impresoras.ver" },
 } as const satisfies Record<string, DeclaracionDeCaso>;

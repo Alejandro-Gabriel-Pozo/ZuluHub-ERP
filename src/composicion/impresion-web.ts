@@ -42,7 +42,10 @@ export type DependenciasDeImpresionWeb = Readonly<{
   >;
   consultas: () => Pick<
     ConsultasDeComandas,
-    "impresorasDeLaSucursal" | "trabajosDeImpresion" | "documentoParaImprimir"
+    | "impresorasDeLaSucursal"
+    | "trabajosDeImpresion"
+    | "documentoParaImprimir"
+    | "trabajosPendientesDeLaSucursal"
   >;
   respuesta: DependenciasDeRespuesta;
 }>;
@@ -65,6 +68,17 @@ export type TrabajoParaLaPantalla = Readonly<{
   esCopia: boolean;
   estado: string;
   intentos: number;
+}>;
+/** Un envío de la pantalla de la cocina (SAL-H): con su trabajo original, sin la huella, la clave ni quién lo pidió. */
+export type EnvioDeLaCocina = Readonly<{
+  trabajoId: string;
+  envioId: string;
+  rotulo: string;
+  numero: number;
+  hora: string;
+  estado: string;
+  intentos: number;
+  sinImpresora: boolean;
 }>;
 export type PapelParaLaPantalla = Readonly<{
   ancho: number;
@@ -94,6 +108,37 @@ export async function verLasImpresoras(
     if (!lista.ok)
       return { ok: false, error: errorAPublico(traducirErrorDeSalon(lista.error), d.respuesta) };
     return { ok: true, dato: { impresoras: lista.valor.map(impresoraParaLaPantalla) } };
+  } catch (excepcion) {
+    return aRespuestaDeExcepcion(excepcion, d.respuesta);
+  }
+}
+
+/** Los envíos de la sucursal de trabajo que esperan papel o cuyo papel falló (la pantalla de la cocina, SAL-H). Es una LECTURA: no escribe ni audita. Sin sucursal, el genérico. */
+export async function verLaCocinaDeLaSucursal(
+  d: Dependencias,
+  contexto: ContextoOperativo,
+  sucursalId: string,
+): Promise<Respuesta<Readonly<{ envios: readonly EnvioDeLaCocina[] }>>> {
+  if (sucursalId === "") return respuestaGenericaDeSalon();
+  try {
+    const lista = await d.consultas().trabajosPendientesDeLaSucursal(contexto, { sucursalId });
+    if (!lista.ok)
+      return { ok: false, error: errorAPublico(traducirErrorDeSalon(lista.error), d.respuesta) };
+    return {
+      ok: true,
+      dato: {
+        envios: lista.valor.map((e) => ({
+          trabajoId: e.trabajoId,
+          envioId: e.envioId,
+          rotulo: e.rotulo,
+          numero: e.numero,
+          hora: e.hora,
+          estado: e.estado,
+          intentos: e.intentos,
+          sinImpresora: e.sinImpresora,
+        })),
+      },
+    };
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, d.respuesta);
   }

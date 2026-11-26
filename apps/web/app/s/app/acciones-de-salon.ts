@@ -15,6 +15,7 @@ import {
 import {
   agregarAlPedidoDeLaMesaDelSalon,
   cambiarDeMesaLaCuentaDelSalon,
+  dividirLaCuentaDelSalon,
   unirLasMesasDelSalon,
   liberarLaMesaDelSalon,
   tomarElPedidoDeLaMesa,
@@ -52,6 +53,10 @@ export async function cambiarDeMesaAccion(pedido: unknown): Promise<Respuesta<un
 
 export async function unirMesasAccion(pedido: unknown): Promise<Respuesta<unknown>> {
   return unirLasMesasDelSalon(pedido);
+}
+
+export async function dividirCuentaAccion(pedido: unknown): Promise<Respuesta<unknown>> {
+  return dividirLaCuentaDelSalon(pedido);
 }
 
 export async function enviarACocinaAccion(pedido: unknown) {

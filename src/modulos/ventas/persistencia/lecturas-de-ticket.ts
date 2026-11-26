@@ -53,7 +53,7 @@ export function crearLecturasDeTicket(db: Kysely<VentasDb>): LecturasDeTicket {
       if (!esUuid(ticketId)) return null;
       const t = await sql<Fila>`
         select t.id, t.sucursal_id, t.cuenta_id, t.numero, t.fecha_negocio::text as fecha_negocio, t.estado, t.total::text as total,
-               t.sesion_de_caja_id, t.ejemplar_vigente, t.emitido_por, t.emitido_en, t.version, ev.id as ejemplar_vigente_id,
+               t.sesion_de_caja_id, t.ejemplar_vigente, t.emitido_por, t.emitido_en, t.cargado_a_parte_id, t.version, ev.id as ejemplar_vigente_id,
                ev.total::text as total_vigente
           from ticket t
           join ticket_ejemplar ev on ev.empresa_id = t.empresa_id and ev.ticket_id = t.id and ev.numero_de_ejemplar = t.ejemplar_vigente
@@ -72,7 +72,7 @@ export function crearLecturasDeTicket(db: Kysely<VentasDb>): LecturasDeTicket {
       if (!esUuid(ticketId)) return null;
       const t = await sql<Fila>`
         select t.id, t.sucursal_id, t.cuenta_id, t.numero, t.fecha_negocio::text as fecha_negocio, t.estado, t.total::text as total,
-               t.sesion_de_caja_id, t.ejemplar_vigente, t.emitido_por, t.emitido_en, t.version
+               t.sesion_de_caja_id, t.ejemplar_vigente, t.emitido_por, t.emitido_en, t.cargado_a_parte_id, t.version
           from ticket t where t.empresa_id = ${empresa} and t.id = ${ticketId}`.execute(db);
       const f = t.rows[0];
       if (f === undefined) return null;
@@ -151,6 +151,7 @@ function aTicketDeFila(f: Fila): Ticket {
     ejemplarVigente: numero(f["ejemplar_vigente"]),
     emitidoPor: texto(f["emitido_por"]) as Ticket["emitidoPor"],
     emitidoEn: fecha(f["emitido_en"]),
+    cargadoAParteId: f["cargado_a_parte_id"] === null ? null : texto(f["cargado_a_parte_id"]),
     version: numero(f["version"]),
   };
 }

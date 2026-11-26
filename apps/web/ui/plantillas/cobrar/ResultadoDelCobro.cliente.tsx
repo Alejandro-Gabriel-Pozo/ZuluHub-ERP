@@ -34,6 +34,8 @@ export type PropsDeResultadoDelCobro = Readonly<{
   alNuevaVenta: () => void;
   /** El resultado de cobrar una mesa (SAL-D): sin «Anular» (es de SAL-C2) y el último botón es «Volver» (al salón), no «Nueva venta». */
   deLaMesa?: boolean | undefined;
+  /** Solo al cobrar una cuenta de una mesa dividida (SAL-E2): el botón dice «Volver a las cuentas» y, si era la última, el resultado avisa «Mesa cobrada» (la mesa quedó libre). */
+  deLaDivision?: Readonly<{ rotuloDeVolver: string; mesaCobrada: string | null }> | undefined;
   nuevoId: () => string;
   esperaEntreVerificacionesMs?: number | undefined;
 }>;
@@ -54,6 +56,7 @@ export function ResultadoDelCobro({
   alCambiarLaVista,
   alNuevaVenta,
   deLaMesa = false,
+  deLaDivision,
   nuevoId,
   esperaEntreVerificacionesMs,
 }: PropsDeResultadoDelCobro) {
@@ -133,6 +136,9 @@ export function ResultadoDelCobro({
       <Aviso tono={aCero ? "info" : "exito"} {...(aCero ? {} : { titulo: textos.cobrado })}>
         <span data-ticket>{rotuloDelTicket(venta.numero)}</span>
       </Aviso>
+      {deLaDivision?.mesaCobrada == null ? null : (
+        <Aviso tono="info">{deLaDivision.mesaCobrada}</Aviso>
+      )}
       <ul className={estilos["resumen"]}>
         <li>
           <strong>{textos.total}</strong>
@@ -177,7 +183,7 @@ export function ResultadoDelCobro({
           </Boton>
         )}
         <Boton ancho="completo" alTocar={alNuevaVenta}>
-          {deLaMesa ? textos.volver : textos.nuevaVenta}
+          {deLaDivision?.rotuloDeVolver ?? (deLaMesa ? textos.volver : textos.nuevaVenta)}
         </Boton>
       </div>
       {errorDelPapel === null ? null : <ErrorDeRespuesta error={errorDelPapel} />}
