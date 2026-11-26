@@ -125,7 +125,6 @@ describe.skipIf(base === null)("salón: la nota libre del plato", () => {
     const antes = await envios([cuentaId]);
     const r = valorDe(
       await m.salon.dividirCuenta(e.gerente, {
-        sucursalDeTrabajo: e.sucursal,
         divisionId: nuevoId(),
         cuentaId,
         partes: 2,

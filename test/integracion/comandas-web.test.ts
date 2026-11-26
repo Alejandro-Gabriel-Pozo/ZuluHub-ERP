@@ -275,7 +275,7 @@ describe.skipIf(base === null)("comandas e impresión de la web", () => {
     expect(codigo(await nota("x".repeat(121)))).toBe(GENERICO);
     expect(await viva()).toBe("sin cebolla");
     // Enviado: la nota ya no se toca.
-    valorDe(await enviar(cuenta, {}, y.gerente, y.sucursal));
+    expect((await enviar(cuenta, {}, y.gerente, y.sucursal)).ok).toBe(true);
     expect(codigo(await nota("otra"))).toBe(GENERICO);
     expect(await viva()).toBe("sin cebolla");
   });
