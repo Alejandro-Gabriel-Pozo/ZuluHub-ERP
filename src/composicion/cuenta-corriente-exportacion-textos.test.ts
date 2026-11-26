@@ -5,19 +5,17 @@ import {
   TRAMOS_DE_ANTIGUEDAD,
 } from "../modulos/cuenta_corriente/publico";
 import {
-  SUPUESTOS_DE_TEXTO,
   nombreDelArchivoDeCuentaCorriente,
   rotulosDeLaExportacionDeCuentaCorriente,
 } from "./cuenta-corriente-exportacion-textos";
 
 /**
- * Los textos del archivo de la cuenta corriente: ninguno inventado. Lo que el catálogo ya tiene aprobado se reutiliza desde su clave; lo único sin clave son los SUPUESTOS, que quedan acá
- * listados exactamente (si cambia uno, esta prueba lo avisa). Previene: un encabezado escrito a mano que nadie aprobó, y un SUPUESTO que se agrande sin que lo vea quien lo acepta.
+ * Los textos del archivo de la cuenta corriente: ninguno inventado. Todos salen del catálogo (los diez nuevos, de `DEC-CCL-006`). Previene: un encabezado escrito a mano que nadie aprobó.
  */
 describe("los textos de la exportación de la cuenta corriente", () => {
   const r = rotulosDeLaExportacionDeCuentaCorriente();
 
-  it("las columnas salen en el orden de la exportación, con el texto aprobado que ya existe o el SUPUESTO", () => {
+  it("las columnas salen en el orden de la exportación, con su texto del catálogo", () => {
     expect(Object.keys(r.columnas)).toEqual([...COLUMNAS_DE_LA_EXPORTACION]);
     expect(r.columnas).toEqual({
       cliente: "Cliente",
@@ -38,7 +36,7 @@ describe("los textos de la exportación de la cuenta corriente", () => {
     });
   });
 
-  it("los valores: lo aprobado sale con su texto, lo demás con el SUPUESTO", () => {
+  it("los valores: todos salen del catálogo", () => {
     expect(r.hoja).toBe("Cuenta corriente");
     expect(r.estados).toEqual({ VIGENTE: "Vigente", ANULADO: "Anulado" });
     expect(r.origenes).toEqual({ TICKET: "Ticket", COBRANZA: "Cobranza", OTRO: "Otro" });
@@ -52,23 +50,6 @@ describe("los textos de la exportación de la cuenta corriente", () => {
     });
     expect(Object.keys(r.tramos)).toEqual([...TRAMOS_DE_ANTIGUEDAD]);
     expect([r.si, r.no]).toEqual(["Sí", "No"]);
-  });
-
-  it("los SUPUESTOS son exactamente los del inventario (una palabra nueva se nota)", () => {
-    expect(SUPUESTOS_DE_TEXTO).toEqual({
-      antiguedadEnDias: "Antigüedad (días)",
-      tramoDeAntiguedad: "Tramo de antigüedad",
-      tramos: {
-        DE_0_A_30: "0 a 30 días",
-        DE_31_A_60: "31 a 60 días",
-        DE_61_A_90: "61 a 90 días",
-        MAS_DE_90: "Más de 90 días",
-      },
-      si: "Sí",
-      no: "No",
-      vigente: "Vigente",
-      cobranza: "Cobranza",
-    });
   });
 
   it("los tipos de medio de caja salen con el texto que compras ya usa", () => {

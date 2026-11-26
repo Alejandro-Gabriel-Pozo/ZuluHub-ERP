@@ -12,42 +12,19 @@ import { texto } from "../capacidades/vocabulario/vocabulario";
 import { encabezadosDeCabecera, rotulosDeExportacion } from "./compras-exportacion-textos";
 
 /**
- * Los textos del archivo de la cuenta corriente (CC-5 D; dueño, 26/11/2026: «usen textos de la exportación de Compras»). Todo lo que ya existe aprobado en el catálogo se reutiliza desde su
- * clave (compras, cuenta corriente de CC-1, fiscal, caja, ventas). Lo que NO existe sale de `SUPUESTOS_DE_TEXTO`: un inventario de redacción neutra que el orquestador acepta o rechaza (fila
- * 173) y que, una vez aceptado, pasa al catálogo con su fuente; hasta entonces son SUPUESTO, no definitivos. Un valor sin texto (una clase de asiento no prevista, un medio que el catálogo no
- * conoce) sale con su código estable: nunca un texto inventado.
- * Previene: un encabezado o un valor escrito a mano que nadie aprobó y que se pierda de vista. Chequeo: `cuenta-corriente-exportacion-textos.test.ts` (cada texto sale del catálogo o es uno
- * de los SUPUESTOS, y los SUPUESTOS son exactamente estos).
+ * Los textos del archivo de la cuenta corriente (CC-5 D; dueño, 26/11/2026: «usen textos de la exportación de Compras»). Ninguno se escribe a mano: todos salen del catálogo, y los diez que no
+ * existían se asentaron en `DEC-CCL-006` (`textos-de-exportacion-de-cuenta-corriente.ts`). Un valor sin texto (una clase de asiento no prevista, un medio que el catálogo no conoce) sale con
+ * su código estable: nunca un texto inventado. Previene: un encabezado o un valor escrito a mano que nadie aprobó. Chequeo: `cuenta-corriente-exportacion-textos.test.ts`.
  */
 
 const t = (clave: Parameters<typeof texto>[1]): string => texto({}, clave);
 
-/**
- * SUPUESTO: los únicos textos de esta exportación sin clave aprobada en el catálogo, con la redacción neutra que se propone. Costo de revertir: cambiar este bloque (o moverlo al catálogo con
- * su fuente cuando el orquestador los acepte).
- */
-export const SUPUESTOS_DE_TEXTO = {
-  antiguedadEnDias: "Antigüedad (días)",
-  tramoDeAntiguedad: "Tramo de antigüedad",
-  tramos: {
-    DE_0_A_30: "0 a 30 días",
-    DE_31_A_60: "31 a 60 días",
-    DE_61_A_90: "61 a 90 días",
-    MAS_DE_90: "Más de 90 días",
-  },
-  si: "Sí",
-  no: "No",
-  vigente: "Vigente",
-  cobranza: "Cobranza",
-} as const satisfies Readonly<{
-  antiguedadEnDias: string;
-  tramoDeAntiguedad: string;
-  tramos: Readonly<Record<TramoDeAntiguedad, string>>;
-  si: string;
-  no: string;
-  vigente: string;
-  cobranza: string;
-}>;
+const TEXTO_DE_TRAMO: Readonly<Record<TramoDeAntiguedad, () => string>> = {
+  DE_0_A_30: () => t("cuenta_corriente.exportacion.tramo_0_a_30"),
+  DE_31_A_60: () => t("cuenta_corriente.exportacion.tramo_31_a_60"),
+  DE_61_A_90: () => t("cuenta_corriente.exportacion.tramo_61_a_90"),
+  MAS_DE_90: () => t("cuenta_corriente.exportacion.tramo_mas_de_90"),
+};
 
 /** Las columnas que la exportación de compras ya tiene aprobadas: se piden con la misma función (fecha de negocio, moneda, sucursal, medio de pago y estado). */
 function deCompras(): Readonly<Record<string, string>> {
@@ -68,8 +45,8 @@ function encabezados(): Readonly<Record<ColumnaDeLaExportacion, string>> {
     importe_con_signo: t("ventas.cobro.importe"),
     pendiente: t("fiscal.pantalla.config_cartel_pendiente"),
     moneda: compras["moneda"] as string,
-    antiguedad_en_dias: SUPUESTOS_DE_TEXTO.antiguedadEnDias,
-    tramo_de_antiguedad: SUPUESTOS_DE_TEXTO.tramoDeAntiguedad,
+    antiguedad_en_dias: t("cuenta_corriente.exportacion.antiguedad_en_dias"),
+    tramo_de_antiguedad: t("cuenta_corriente.exportacion.tramo_de_antiguedad"),
     vencida: t("cuenta_corriente.movimiento.vencida"),
     origen: t("cuenta_corriente.movimiento.origen_del_movimiento"),
     sucursal: compras["sucursal"] as string,
@@ -92,7 +69,7 @@ function tiposDeMedioConocidos(): Readonly<Record<string, string>> {
 function origenes(): Readonly<Record<OrigenDeLaExportacion, string>> {
   const textos: Readonly<Record<OrigenDeLaExportacion, string>> = {
     TICKET: t("fiscal.pantalla.imprimir_formato_ticket"),
-    COBRANZA: SUPUESTOS_DE_TEXTO.cobranza,
+    COBRANZA: t("cuenta_corriente.exportacion.cobranza"),
     OTRO: t("caja.medios.tipo.otro"),
   };
   return Object.fromEntries(ORIGENES_DE_LA_EXPORTACION.map((o) => [o, textos[o]])) as Readonly<
@@ -108,15 +85,18 @@ export function rotulosDeLaExportacionDeCuentaCorriente(): RotulosDeLaExportacio
       COLUMNAS_DE_LA_EXPORTACION.map((c) => [c, encabezados()[c]]),
     ) as RotulosDeLaExportacion["columnas"],
     tramos: Object.fromEntries(
-      TRAMOS_DE_ANTIGUEDAD.map((tramo) => [tramo, SUPUESTOS_DE_TEXTO.tramos[tramo]]),
+      TRAMOS_DE_ANTIGUEDAD.map((tramo) => [tramo, TEXTO_DE_TRAMO[tramo]()]),
     ) as RotulosDeLaExportacion["tramos"],
     origenes: origenes(),
-    estados: { VIGENTE: SUPUESTOS_DE_TEXTO.vigente, ANULADO: t("caja.estado.anulado") },
-    si: SUPUESTOS_DE_TEXTO.si,
-    no: SUPUESTOS_DE_TEXTO.no,
+    estados: {
+      VIGENTE: t("cuenta_corriente.exportacion.vigente"),
+      ANULADO: t("caja.estado.anulado"),
+    },
+    si: t("cuenta_corriente.exportacion.si"),
+    no: t("cuenta_corriente.exportacion.no"),
     clases: {
       CARGO_DE_VENTA_A_CUENTA: t("cuenta_corriente.movimiento.venta_a_cuenta"),
-      COBRANZA: SUPUESTOS_DE_TEXTO.cobranza,
+      COBRANZA: t("cuenta_corriente.exportacion.cobranza"),
     },
     tiposDeMedio: tiposDeMedioConocidos(),
   };

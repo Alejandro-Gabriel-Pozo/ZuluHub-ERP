@@ -1,0 +1,10 @@
+{
+  "id": "DEC-CCL-006",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "La exportación de la cuenta corriente a Excel suma diez textos de etiqueta (antigüedad, sus cuatro tramos, Sí, No, Vigente y Cobranza); todo lo demás reutiliza textos ya aprobados.",
+  "que_cambia": "Son rótulos de encabezado y valores de celda del archivo; no cambian dinero, permisos ni fiscal. Cambiar uno es editar su clave en el catálogo.",
+  "donde": "src/capacidades/vocabulario/textos-de-exportacion-de-cuenta-corriente.ts (claves cuenta_corriente.exportacion.*); delegación fila 173, aceptación del orquestador 26/11/2026; inventario de textos de la exportación de cuenta corriente (el dueño, 26/11/2026: «Usen textos de la exportación de Compras»)"
+}
