@@ -36,6 +36,8 @@ export type Ticket = Readonly<{
   ejemplarVigente: number;
   emitidoPor: PersonaId;
   emitidoEn: Date;
+  /** El cliente al que se le cargó la venta al cerrar (R2 mínimo, 0107); `null` si no se cargó a ninguno. No cambia nunca. */
+  cargadoAParteId: string | null;
   version: number;
 }>;
 
@@ -68,6 +70,8 @@ export type AltaDeTicket = Readonly<{
   emitidoEn: Date;
   /** Solo si el ticket nace con su cobro (`venderYCobrar`): la sesión de caja de la que toma su fecha de negocio. */
   sesionDeCajaId?: string | undefined;
+  /** El cliente al que se le carga la venta (ya validado por quien llama); sin él, el ticket nace sin cliente. */
+  cargadoAParteId?: string | undefined;
 }>;
 
 export type AltaDeEjemplar = Readonly<{
@@ -152,6 +156,7 @@ type FilaDeTicket = Readonly<{
   ejemplar_vigente: number;
   emitido_por: string;
   emitido_en: Date;
+  cargado_a_parte_id: string | null;
   version: number;
 }>;
 
@@ -168,6 +173,7 @@ function aTicket(f: FilaDeTicket): Ticket {
     ejemplarVigente: f.ejemplar_vigente,
     emitidoPor: personaId(f.emitido_por),
     emitidoEn: f.emitido_en,
+    cargadoAParteId: f.cargado_a_parte_id,
     version: f.version,
   };
 }
@@ -190,6 +196,7 @@ export function crearRepositorioDeTickets(db: Kysely<VentasDb>): RepositorioDeTi
         "ejemplar_vigente",
         "emitido_por",
         "emitido_en",
+        "cargado_a_parte_id",
         "version",
       ]);
 
@@ -227,6 +234,7 @@ export function crearRepositorioDeTickets(db: Kysely<VentasDb>): RepositorioDeTi
           emitido_por: alta.emitidoPor,
           emitido_en: alta.emitidoEn,
           sesion_de_caja_id: alta.sesionDeCajaId ?? null,
+          cargado_a_parte_id: alta.cargadoAParteId ?? null,
         })
         .returning(["id", sql<string>`fecha_negocio::text`.as("fecha_negocio")])
         .executeTakeFirstOrThrow();

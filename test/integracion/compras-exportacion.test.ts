@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import {
   armarCabecera,
+  armarPagos,
   armarDetalle,
   armarResumen,
   type RotulosDeExportacion,
@@ -214,6 +215,52 @@ describe.skipIf(base === null)("compras: exportación a Excel", () => {
         0,
       ),
     ).toBe(136949991);
+  });
+
+  it("el pago con varios medios sale en la hoja de Pagos en una fila por medio, con las líneas sumando exacto el total; la Cabecera no dice COMPUESTO", async () => {
+    const m = await armar();
+    const r = valorDe(await c.casos.registrarCompraConFactura(m.e.operador, compraReal(m)));
+    const [negocio] = await c.filas<{ f: string }>(
+      "select fecha_negocio::text as f from recepcion where id = $1",
+      [r.recepcionId],
+    );
+    const pago = valorDe(
+      await c.casos.declararPago(m.e.gerente, {
+        clave: nuevoId(),
+        comprobanteId: r.comprobanteId as string,
+        fechaDePago: negocio?.f as string,
+        medios: [
+          { medio: "TRANSFERENCIA", importe: "1000000.00" },
+          { medio: "QR", importe: "369499.91" },
+        ],
+      }),
+    );
+    const salida = valorDe(await exportar(m));
+    const pagos = armarPagos(salida.compras, ROTULOS);
+    const col = (n: string) => pagos.columnas.indexOf(n as never);
+    expect(pagos.filas).toHaveLength(2);
+    expect(pagos.filas.map((f) => f[col("id_del_pago")])).toEqual([
+      { tipo: "texto", valor: pago.pagoId },
+      { tipo: "texto", valor: pago.pagoId },
+    ]);
+    expect(pagos.filas.map((f) => f[col("medio_de_pago")])).toEqual([
+      { tipo: "texto", valor: "TRANSFERENCIA" },
+      { tipo: "texto", valor: "QR" },
+    ]);
+    const suma = pagos.filas.reduce(
+      (a, f) =>
+        a + BigInt((f[col("importe_del_medio")] as { valor: string }).valor.replace(".", "")),
+      0n,
+    );
+    expect(suma).toBe(136949991n);
+    // La Cabecera sigue siendo una fila por compra y el abonado es el total; el medio de un pago compuesto no se resume en una palabra.
+    const cab = armarCabecera(salida.compras, new Map(), ROTULOS);
+    expect(cab.filas).toHaveLength(1);
+    expect(cab.filas[0]?.[cab.columnas.indexOf("importe_abonado")]).toEqual({
+      tipo: "decimal",
+      valor: "1369499.91",
+      decimales: 2,
+    });
   });
 
   it("una línea «Sin precio» sale con el importe vacío (no cero), y el Resumen la cuenta aparte", async () => {

@@ -1,6 +1,7 @@
 import type {
   ColumnaDeCabecera,
   ColumnaDeDetalle,
+  ColumnaDePagos,
   ColumnaDeResumen,
   RotulosDeExportacion,
 } from "../modulos/compras/publico";
@@ -45,6 +46,24 @@ const CABECERA: Readonly<Record<ColumnaDeCabecera, string>> = {
   registrado_el: t("compras.exportacion.cabecera.registrado_el"),
   registrado_por: t("compras.exportacion.cabecera.registrado_por"),
   signo: t("compras.exportacion.cabecera.signo"),
+};
+
+const PAGOS: Readonly<Record<ColumnaDePagos, string>> = {
+  id_del_pago: t("compras.exportacion.pagos.id_del_pago"),
+  id: CABECERA.id,
+  numero: CABECERA.numero,
+  sucursal: CABECERA.sucursal,
+  proveedor: CABECERA.proveedor,
+  tipo: CABECERA.tipo,
+  letra: CABECERA.letra,
+  punto_de_venta: CABECERA.punto_de_venta,
+  numero_del_comprobante: CABECERA.numero_del_comprobante,
+  fecha_del_comprobante: CABECERA.fecha_del_comprobante,
+  fecha_de_pago: CABECERA.fecha_de_pago,
+  medio_de_pago: CABECERA.medio_de_pago,
+  // Lo que pagó ese medio: el mismo texto aprobado de «Importe abonado» (la suma de las líneas de un pago es lo abonado).
+  importe_del_medio: CABECERA.importe_abonado,
+  moneda: CABECERA.moneda,
 };
 
 const DETALLE: Readonly<Record<ColumnaDeDetalle, string>> = {
@@ -100,6 +119,8 @@ export const encabezadosDeCabecera = (columnas: readonly ColumnaDeCabecera[]): s
   columnas.map((c) => CABECERA[c]);
 export const encabezadosDeDetalle = (columnas: readonly ColumnaDeDetalle[]): string[] =>
   columnas.map((c) => DETALLE[c]);
+export const encabezadosDePagos = (columnas: readonly ColumnaDePagos[]): string[] =>
+  columnas.map((c) => PAGOS[c]);
 export const encabezadosDeResumen = (columnas: readonly ColumnaDeResumen[]): string[] =>
   columnas.map((c) => RESUMEN[c]);
 
@@ -108,6 +129,7 @@ export const hojasDeLaExportacion = () =>
     cabecera: t("compras.exportacion.hoja_cabecera"),
     detalle: t("compras.exportacion.hoja_detalle"),
     resumen: t("compras.exportacion.hoja_resumen"),
+    pagos: t("compras.exportacion.hoja_pagos"),
   }) as const;
 
 const MEDIOS: Readonly<Record<string, Parameters<typeof texto>[1]>> = {

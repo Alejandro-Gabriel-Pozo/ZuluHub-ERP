@@ -1,0 +1,10 @@
+{
+  "id": "DEC-COM-004",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "La exportación de compras suma la hoja «Pagos» en formato largo, con 2 textos nuevos: «Pagos» e «ID del pago».",
+  "que_cambia": "Un pago con varios medios sale en una fila por medio, para tablas dinámicas; el resto de los encabezados reutiliza los de la Cabecera. Revertir: quitar la hoja y los 2 textos.",
+  "donde": "textos-de-exportacion-de-compras.ts, armar-hoja-de-pagos.ts; pedido del orquestador del 26/11/2026; los 2 textos nuevos aceptados por delegación (fila 173, mensaje del orquestador del 26/11/2026)"
+}

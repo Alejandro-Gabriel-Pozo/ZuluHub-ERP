@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { armarPagos } from "./armar-hoja-de-pagos";
 import { armarCabecera, armarDetalle, armarResumen } from "./armar-hojas";
 import type {
   CompraParaExportar,
@@ -198,8 +199,10 @@ describe("la Cabecera", () => {
 
   it("pago vigente: pagado, abonado el total, saldo cero, fecha y medio; pendiente: abonado 0,00 y saldo todo; solo anulados: anulado", () => {
     const pago = {
+      id: "p1",
       fechaDePago: "2026-10-24",
       medio: "TRANSFERENCIA",
+      medios: [{ medio: "TRANSFERENCIA", importe: "294208.90" }],
       importe: "294208.90",
       estado: "VIGENTE" as const,
     };
@@ -260,6 +263,88 @@ describe("la Cabecera", () => {
       ROTULOS,
     );
     expect(h.filas).toHaveLength(1);
+  });
+});
+
+describe("los Pagos (formato largo)", () => {
+  const pago = (cambios: Record<string, unknown> = {}) => ({
+    id: "p1",
+    fechaDePago: "2026-10-24",
+    medio: "COMPUESTO",
+    medios: [
+      { medio: "EFECTIVO", importe: "100000.10" },
+      { medio: "TRANSFERENCIA", importe: "194208.80" },
+    ],
+    importe: "294208.90",
+    estado: "VIGENTE" as const,
+    ...cambios,
+  });
+
+  it("un pago con varios medios sale en una fila por medio, con el id del pago repetido, el importe de cada línea y las dimensiones en cada fila", () => {
+    const h = armarPagos([compra({ comprobante: factura({ pagos: [pago()] }) })], ROTULOS);
+    expect(h.filas).toHaveLength(2);
+    for (const fila of [0, 1]) {
+      expect(col(h, "id_del_pago", fila)).toEqual({ tipo: "texto", valor: "p1" });
+      expect(col(h, "id", fila)).toEqual({ tipo: "texto", valor: "r1" });
+      expect(col(h, "sucursal", fila)).toEqual({ tipo: "texto", valor: "Casa central" });
+      expect(col(h, "proveedor", fila)).toEqual({ tipo: "texto", valor: "Carnes del Sur" });
+      expect(col(h, "fecha_de_pago", fila)).toEqual({ tipo: "fecha", valor: "2026-10-24" });
+      expect(col(h, "moneda", fila)).toEqual({ tipo: "texto", valor: "ARS" });
+      expect(col(h, "numero_del_comprobante", fila)).toEqual({ tipo: "entero", valor: 1 });
+    }
+    expect(col(h, "medio_de_pago", 0)).toEqual({ tipo: "texto", valor: "EFECTIVO" });
+    expect(col(h, "importe_del_medio", 0)).toEqual({
+      tipo: "decimal",
+      valor: "100000.10",
+      decimales: 2,
+    });
+    expect(col(h, "medio_de_pago", 1)).toEqual({ tipo: "texto", valor: "TRANSFERENCIA" });
+    expect(col(h, "importe_del_medio", 1)).toEqual({
+      tipo: "decimal",
+      valor: "194208.80",
+      decimales: 2,
+    });
+  });
+
+  it("un pago de un solo medio es una fila; uno anulado no sale (un pivot por medio contaría la plata dos veces)", () => {
+    const uno = pago({ medio: "QR", medios: [{ medio: "QR", importe: "294208.90" }] });
+    const h = armarPagos(
+      [compra({ comprobante: factura({ pagos: [pago({ estado: "ANULADO" }), uno] }) })],
+      ROTULOS,
+    );
+    expect(h.filas).toHaveLength(1);
+    expect(col(h, "medio_de_pago")).toEqual({ tipo: "texto", valor: "QR" });
+  });
+
+  it("un pago sin líneas sale con el medio y el importe de su cabecera (la hoja no inventa)", () => {
+    const h = armarPagos(
+      [compra({ comprobante: factura({ pagos: [pago({ medio: "QR", medios: [] })] }) })],
+      ROTULOS,
+    );
+    expect(h.filas).toHaveLength(1);
+    expect(col(h, "importe_del_medio")).toEqual({
+      tipo: "decimal",
+      valor: "294208.90",
+      decimales: 2,
+    });
+  });
+
+  it("sin factura, sin pagos o fuera de la Cabecera no sale ninguna fila", () => {
+    expect(armarPagos([compra({ comprobante: null })], ROTULOS).filas).toEqual([]);
+    expect(armarPagos([compra()], ROTULOS).filas).toEqual([]);
+    expect(
+      armarPagos(
+        [compra({ enCabecera: false, comprobante: factura({ pagos: [pago()] }) })],
+        ROTULOS,
+      ).filas,
+    ).toEqual([]);
+  });
+
+  it("las columnas son las de la hoja y no repiten ninguna", () => {
+    const h = armarPagos([], ROTULOS);
+    expect(new Set(h.columnas).size).toBe(h.columnas.length);
+    expect(h.columnas).toContain("id_del_pago");
+    expect(h.columnas).toContain("importe_del_medio");
   });
 });
 

@@ -469,6 +469,7 @@ describe.skipIf(base === null)("comandas: envíos, anulaciones y salida", () => 
     const tarde = { ...x.gerente, ahora: new Date("2026-11-09T21:00:00Z") };
     const papel = valorDe(
       await m.consultasDeComandas.documentoParaImprimir(tarde, {
+        sucursalDeTrabajo: x.sucursal,
         documentoTipo: "COMANDA",
         documentoId: envio.envioId,
         copia: true,
