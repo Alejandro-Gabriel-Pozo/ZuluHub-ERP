@@ -14,6 +14,7 @@ import { PlanoDeMesas } from "./PlanoDeMesas.cliente";
 import estilos from "./PantallasDeMesas.module.css";
 import type { FormularioDeMesaArmado } from "./modelo-de-mesas";
 import { conElBorrador } from "./modelo-del-plano";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeMesa = Readonly<{
   formulario: FormularioDeMesaArmado;
@@ -53,7 +54,7 @@ export function FormularioDeMesa({ formulario, accion }: PropsDeFormularioDeMesa
       >
         <span aria-hidden="true">‹</span>
       </a>
-      <form action={enviar}>
+      <form action={enviar} onReset={sinReiniciar}>
         <ProveedorDeEnvioDeFormulario value={enviando}>
           <Pila separacion={3}>
             <PlanoDeMesas plano={plano} />

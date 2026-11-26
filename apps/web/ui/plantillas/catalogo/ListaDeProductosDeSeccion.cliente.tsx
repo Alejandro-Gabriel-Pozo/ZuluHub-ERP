@@ -8,6 +8,7 @@ import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.clien
 import { BotonDeFilaDeProducto } from "./BotonDeFilaDeProducto.cliente";
 import estilos from "./PantallasDeSecciones.module.css";
 import { CAMPO_DE_QUITAR, type UnaSeccionArmada } from "./modelo-de-secciones";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeListaDeProductosDeSeccion = Readonly<{
   productos: UnaSeccionArmada["productos"];
@@ -29,7 +30,7 @@ export function ListaDeProductosDeSeccion({
 }: PropsDeListaDeProductosDeSeccion) {
   const [resultado, enviar, enviando] = useActionState(accion, SIN_ERROR);
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <ul className={estilos["productos"]}>
           {productos.map((p) => (

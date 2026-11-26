@@ -7,6 +7,7 @@ import type {
   RepositorioDeInvitaciones,
   RepositorioDeMembresias,
   RepositorioDePersonas,
+  RepositorioDeRoles,
   RepositorioDeTraspasos,
 } from "../persistencia/repositorios";
 
@@ -19,6 +20,8 @@ export type TxDeConsultasDeIdentidad = Readonly<{
   asignaciones: Pick<RepositorioDeAsignaciones, "activasDeLaEmpresa">;
   invitaciones: Pick<RepositorioDeInvitaciones, "pendientesDeLaEmpresa">;
   traspasos: Pick<RepositorioDeTraspasos, "enCurso">;
+  /** Los roles propios (lectura): la lista con cuántas personas activas tiene cada uno, y uno por id. */
+  roles: Pick<RepositorioDeRoles, "listar" | "obtener" | "personasActivas">;
   /** Para poner el email de las personas del traspaso. */
   personas: Pick<RepositorioDePersonas, "obtener">;
   /** Para saber qué sucursales están activas: la asignación efectiva es "asignación y sucursal activas". */

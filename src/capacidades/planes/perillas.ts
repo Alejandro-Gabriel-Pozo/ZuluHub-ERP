@@ -166,6 +166,15 @@ export const CATALOGO_DE_PERILLAS = {
     base: { limite: 1 },
     modulo: "caja",
   },
+  // Roles propios (H4b T4; decisión del dueño del 25/11/2026, DEC de T4b): cuántos roles propios ACTIVOS puede tener una empresa. Sin límite comercial (base `ILIMITADO`, sin migración: el tipo y
+  // el CHECK de la base ya admiten `ILIMITADO`); la plataforma puede ponerle un número a un plan o a una empresa con un ajuste. «Sin límite» no es infinito: el servidor además aplica el tope técnico
+  // `MAXIMO_DE_ROLES_PROPIOS_ACTIVOS_POR_EMPRESA`. La verifican `crearRol` y `editarRol` (al reactivar) con `exigirPerilla`.
+  roles_propios_por_empresa: {
+    ambito: "EMPRESA",
+    tipo: "LIMITE",
+    base: { limite: "ILIMITADO" },
+    modulo: "administracion",
+  },
 } as const satisfies Record<string, DefinicionDePerilla>;
 
 export type ClavePerilla = keyof typeof CATALOGO_DE_PERILLAS;

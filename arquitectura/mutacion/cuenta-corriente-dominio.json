@@ -1,0 +1,7 @@
+{
+  "grupo": "cuenta corriente (dominio)",
+  "archivos": "src/modulos/cuenta_corriente/dominio/**/*.ts,src/modulos/cuenta_corriente/consultas/disponible.ts",
+  "minutos": 1,
+  "pruebas": "src/modulos/cuenta_corriente",
+  "nivel": "CRITICO"
+}
