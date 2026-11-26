@@ -94,6 +94,10 @@ const LLAMADAS: Record<ConAccion, (casos: CasosDeUsoDeIdentidad) => Promise<unkn
   cancelarTraspaso: (c) => c.cancelarTraspaso(contexto, {}),
   aceptarTraspaso: (c) => c.aceptarTraspaso(contexto, { traspasoId: "t-1" }),
   rechazarTraspaso: (c) => c.rechazarTraspaso(contexto, { traspasoId: "t-1" }),
+  crearRol: (c) =>
+    c.crearRol(contexto, { rolId: "r-1", nombre: "Cajero", origen: { tipo: "VACIO" } }),
+  editarRol: (c) => c.editarRol(contexto, { rolId: "r-1", nombre: "Cajera" }),
+  archivarRol: (c) => c.archivarRol(contexto, { rolId: "r-1" }),
 };
 
 /**
@@ -126,8 +130,11 @@ describe("P7: el guard va primero en cada caso de uso", () => {
     expect(conAccion.map((c) => c.nombre).sort()).toEqual([
       "aceptarTraspaso",
       "apagarMembresia",
+      "archivarRol",
       "asignarSucursales",
       "cancelarTraspaso",
+      "crearRol",
+      "editarRol",
       "invitarUsuario",
       "proponerTraspaso",
       "rechazarTraspaso",
@@ -372,6 +379,8 @@ describe("P7: el guard va primero en cada consulta de identidad", () => {
     traspasoEnCurso: (c) => c.traspasoEnCurso(contexto),
     personasParaMostrar: (c) =>
       c.personasParaMostrar(contexto, { ids: ["00000000-0000-4000-8000-000000000001"] }),
+    listarRoles: (c) => c.listarRoles(contexto),
+    verRol: (c) => c.verRol(contexto, { rolId: "r-1" }),
   };
 
   const consultas = Object.entries(DECLARACIONES_DE_CONSULTAS).flatMap(([nombre, declaracion]) =>
@@ -384,8 +393,10 @@ describe("P7: el guard va primero en cada consulta de identidad", () => {
     expect(consultas.map((c) => c.nombre).sort()).toEqual([
       "listarInvitacionesPendientes",
       "listarMiembros",
+      "listarRoles",
       "personasParaMostrar",
       "traspasoEnCurso",
+      "verRol",
     ]);
   });
 

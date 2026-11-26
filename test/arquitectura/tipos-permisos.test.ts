@@ -54,6 +54,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "salon"
       | "clientes"
       | "compras"
+      | "cuenta_corriente"
       | "produccion"
     >();
     expectTypeOf<ClaveAccion>().toEqualTypeOf<
@@ -63,6 +64,10 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "usuarios.ver"
       | "usuarios.asignar_sucursales"
       | "usuarios.revocar_invitacion"
+      | "roles.ver"
+      | "roles.crear"
+      | "roles.editar"
+      | "roles.archivar"
       | "sucursales.ver"
       | "sucursales.crear"
       | "sucursales.editar"
@@ -191,6 +196,8 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "salon.dividir"
       | "tickets.cobrar"
       | "tickets.corregir"
+      | "cuenta_corriente.ver"
+      | "cuenta_corriente.administrar"
       | "partes.ver"
       | "partes.crear"
       | "partes.editar"
@@ -296,6 +303,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       "salon",
       "clientes",
       "compras",
+      "cuenta_corriente",
       "produccion",
     ]);
   });

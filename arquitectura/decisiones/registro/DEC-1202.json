@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1202",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Reactivar un rol propio archivado es una opción de editarlo (`roles.editar`, solo gerente) y cuenta contra la perilla y el tope técnico como un alta; un rol archivado no se edita sin reactivarlo.",
+  "que_cambia": "El gerente puede volver a usar un rol archivado; si ya no entra en el límite del plan, se rechaza con el mismo motivo que un alta.",
+  "donde": "src/modulos/identidad/casos-de-uso/editar-rol.ts"
+}

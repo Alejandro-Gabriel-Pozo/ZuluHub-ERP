@@ -2,8 +2,10 @@ import type { DependenciasDeConsultasDeIdentidad } from "./contrato";
 import type { DECLARACIONES_DE_CONSULTAS } from "./declaraciones";
 import { armarListarInvitacionesPendientes } from "./listar-invitaciones-pendientes";
 import { armarListarMiembros } from "./listar-miembros";
+import { armarListarRoles } from "./listar-roles";
 import { armarPersonasParaMostrar } from "./personas-para-mostrar";
 import { armarTraspasoEnCurso } from "./traspaso-en-curso";
+import { armarVerRol } from "./ver-rol";
 
 /**
  * Las consultas por pantalla de identidad (ADR-005). El `satisfies` exige que cada una tenga su
@@ -17,6 +19,8 @@ export function crearConsultasDeIdentidad(dependencias: DependenciasDeConsultasD
     listarInvitacionesPendientes: armarListarInvitacionesPendientes(dependencias),
     traspasoEnCurso: armarTraspasoEnCurso(dependencias),
     personasParaMostrar: armarPersonasParaMostrar(dependencias),
+    listarRoles: armarListarRoles(dependencias),
+    verRol: armarVerRol(dependencias),
   } satisfies Record<keyof typeof DECLARACIONES_DE_CONSULTAS, unknown>;
 }
 

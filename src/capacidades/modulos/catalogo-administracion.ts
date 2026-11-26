@@ -25,6 +25,12 @@ export const MODULO_DE_ADMINISTRACION = {
     "usuarios.ver": { capacidad: null, efecto: "LECTURA" },
     "usuarios.asignar_sucursales": { capacidad: null, efecto: "CREA_AMPLIA" },
     "usuarios.revocar_invitacion": { capacidad: null, efecto: "COMPLETA_CIERRA" },
+    // H4b T4 (roles propios): solo el gerente (piso SOLO_GERENTE de 0097). Crear y editar un rol crean o amplían; archivar cierra; reactivar es una opción de editar (pide `roles.editar`).
+    // `usuarios.asignar_rol` llega con el caso de uso que asigna (T4b-2); su piso ya está en 0097.
+    "roles.ver": { capacidad: null, efecto: "LECTURA" },
+    "roles.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
+    "roles.editar": { capacidad: null, efecto: "CREA_AMPLIA" },
+    "roles.archivar": { capacidad: null, efecto: "COMPLETA_CIERRA" },
     "sucursales.ver": { capacidad: null, efecto: "LECTURA" },
     "sucursales.crear": { capacidad: null, efecto: "CREA_AMPLIA" },
     "sucursales.editar": { capacidad: null, efecto: "CREA_AMPLIA" },

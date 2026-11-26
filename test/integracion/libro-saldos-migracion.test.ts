@@ -1403,7 +1403,8 @@ describe.skipIf(base === null)("migración 0092: libro de saldos (SQL directo)",
       const carpeta = await mkdtemp(join(tmpdir(), "pedernal-sin-0092-"));
       try {
         for (const f of await readdir(CARPETA_DE_MIGRACIONES)) {
-          if (f.endsWith(".sql") && f !== MIGRACION)
+          // 0106 (cuenta corriente) depende de 0092: sin el libro no corre, y no es parte de «lo que ya existía».
+          if (f.endsWith(".sql") && f !== MIGRACION && f !== "0106_cuenta_del_cliente.sql")
             await cp(join(CARPETA_DE_MIGRACIONES, f), join(carpeta, f));
         }
         await aplicarMigraciones(aparte.base.dueno, carpeta);

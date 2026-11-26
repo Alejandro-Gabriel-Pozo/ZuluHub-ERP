@@ -8,6 +8,7 @@ import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.clien
 import { BotonDeFilaDeProducto } from "./BotonDeFilaDeProducto.cliente";
 import estilos from "./PantallasDeSecciones.module.css";
 import { CAMPO_DE_AGREGAR, type CandidatosArmados } from "./modelo-de-secciones";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeListaDeCandidatos = Readonly<{
   filas: CandidatosArmados["filas"];
@@ -24,7 +25,7 @@ const SIN_ERROR: Readonly<{ error: ErrorPublico | null }> = { error: null };
 export function ListaDeCandidatos({ filas, accion }: PropsDeListaDeCandidatos) {
   const [resultado, enviar, enviando] = useActionState(accion, SIN_ERROR);
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <ul className={estilos["lista"]}>
           {filas.map((fila) => (

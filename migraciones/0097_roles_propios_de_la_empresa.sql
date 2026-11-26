@@ -168,7 +168,7 @@ CREATE TRIGGER rol_de_empresa_archivado BEFORE UPDATE ON rol_de_empresa
 -- 5. Pisos de las acciones nuevas: solo el gerente
 -- ---------------------------------------------------------------------------------------------
 -- Estas acciones nacen en el código de T4. Sin el piso, la sincronización de plantillas las daría por «introducidas sin piso» y el gerente las podría delegar a un rol propio:
--- con el piso, ninguna plantilla ni rol propio las lleva (la base lo rechaza). Idempotente.
+-- con el piso, ninguna plantilla ni rol propio las lleva (la base lo rechaza). Idempotente: las cuatro `roles.*` ya vienen en la semilla de 0094 (que se regenera desde la matriz mientras no está sellada) y quedan como están; esta migración siembra las que falten (hoy `usuarios.asignar_rol`, que llega a la matriz en T4b-2) y cubre una base donde 0094 ya se aplicó sin ellas.
 INSERT INTO piso_de_plataforma (accion, tipo, autor) VALUES
   ('roles.ver', 'SOLO_GERENTE', 'migracion:0097'),
   ('roles.crear', 'SOLO_GERENTE', 'migracion:0097'),

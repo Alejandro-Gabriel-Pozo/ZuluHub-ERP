@@ -316,12 +316,18 @@ function armarRegistro(dependencias: DependenciasDeCompras, conFactura: boolean)
             const nuevo = await tx.pagosDeProveedor.insertar(empresaId, {
               comprobanteId,
               fechaDePago: pago.fechaDePago,
-              medio: pago.medio,
+              medios: [{ medio: pago.medio, importe }],
               importe,
               clave: claveDelPagoDeLaCompra(recepcionId),
               huella: huellaDeComando(
                 "declarar_pago",
-                [comprobanteId, ...camposDeHuellaDePago(pago, importe)],
+                [
+                  comprobanteId,
+                  ...camposDeHuellaDePago({
+                    fechaDePago: pago.fechaDePago,
+                    medios: [{ medio: pago.medio, importe: null }],
+                  }),
+                ],
                 [],
               ),
               registradoPor: persona,
