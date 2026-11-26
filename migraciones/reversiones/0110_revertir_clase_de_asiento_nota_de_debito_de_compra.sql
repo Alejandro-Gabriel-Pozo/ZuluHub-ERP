@@ -1,5 +1,5 @@
 -- 0110_revertir_clase_de_asiento_nota_de_debito_de_compra: quita la clase sembrada por 0110. FRENA (55000) si hay asientos de esa clase (borrarla dejaría asientos sin su clase): hay que AVISAR AL DUEÑO y resolverlo a mano antes.
--- Se corre con el rol dueño de la base (evade RLS, que además deja ver todos los asientos). El catálogo es de solo inserción: el disparador se apaga solo para este borrado y se vuelve a encender. Se puede repetir sin que cambie nada.
+-- Se corre en UNA sola transacción, con el dueño de la base (evade RLS, que además deja ver todos los asientos): si algo falla, el disparador vuelve a su estado por DDL transaccional. El catálogo es de solo inserción: el disparador se apaga solo para este borrado y se vuelve a encender. Se puede repetir sin que cambie nada.
 DO $$
 DECLARE
   v_asientos bigint := 0;

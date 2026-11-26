@@ -1,4 +1,5 @@
 -- 0110_clase_de_asiento_nota_de_debito_de_compra: siembra la clase de asiento de la nota de débito del proveedor (A_PAGAR, suma, sin detalle ni vencimiento: las mismas banderas que REINTEGRO_DE_PROVEEDOR).
+-- SUPUESTO (DEC-COM-007): la nota de débito no vence (admite_vencimiento = false): se paga aparte y hoy no tiene fecha de vencimiento; costo de revertir: una migración que cambie la bandera.
 -- Solo DATOS (una fila del catálogo `clase_de_asiento`; 0092 sembró las demás de compras y esta no): idempotente (`ON CONFLICT DO NOTHING`, se puede correr dos veces). La usa el puerto del libro de compras (L3a) para la nota de débito (NOTAS-1).
 -- `clase_de_asiento` tiene FORCE RLS: sin un rol que la evada, el INSERT no se podría hacer (fail-closed). Reversión: `migraciones/reversiones/0110_revertir_clase_de_asiento_nota_de_debito_de_compra.sql`. DEPENDE de 0092.
 
