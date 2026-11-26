@@ -1,10 +1,10 @@
 {
   "id": "DEC-CCL-008",
   "fecha": "2026-11-26",
-  "quien": "padre",
-  "tipo": "COMERCIAL",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
   "estado": "CONFIRMADA",
-  "decision": "La pantalla «Cobrar un ticket a cuenta» suma quince textos de la maqueta P4; reutiliza Cliente, Vencida, Cobrado, Cancelar, tipos de medio, Salón, Mostrador y Ticket.",
-  "que_cambia": "Son los rótulos, la nota y los mensajes de la hoja de cobro y de su estado «Cobrado»; no cambian dinero (el importe sale del ticket), permisos ni fiscal. «sin_caja» lleva la corrección del dueño.",
-  "donde": "src/capacidades/vocabulario/textos-de-cobro-a-cuenta.ts; fila 173 (orquestador, 26/11/2026); maqueta P4 aprobada por el dueño el 26/11/2026; el cobro a cuenta lo hacen gerente y administrador desde la ficha (dueño, 26/11/2026)"
+  "decision": "Vender a cuenta corriente, primera etapa: con el límite pasado el confirmar queda bloqueado para todos; quien aprueba excesos sube el límite por Condiciones y vuelve. Sin hoja de aprobar.",
+  "que_cambia": "Una hoja de aprobar el exceso es un camino nuevo: pide pantalla, textos y atar la aprobación al exceso que vio quien aprueba (excedeEnEsperado); hoy el pedido web no admite aprobación. Los textos de la hoja salen de las maquetas aprobadas (delegación fila 173, sin el pie ni la aprobación).",
+  "donde": "Dueño 26/11/2026, \"Si\", mensaje sobre el exceso en la primera etapa; src/capacidades/vocabulario/catalogo-cuenta_corriente.ts; textos de las maquetas cuenta-corriente-elegir-cliente y cuenta-corriente-aprobar-exceso, aprobados por el dueño el 26/11/2026 con «Apruebo» y aceptados por el orquestador"
 }

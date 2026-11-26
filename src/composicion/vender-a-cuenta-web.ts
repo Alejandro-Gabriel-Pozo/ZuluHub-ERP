@@ -1,7 +1,9 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
+import { entradaDeCerrarLaMesaACuenta, entradaDeVenderACuenta } from "./entradas-de-cobrar";
 import { entradaDelClienteParaVender } from "./entradas-de-cuenta-corriente";
+import { accionDeCobrar } from "./errores-de-cobrar";
 import { accionDeClientes } from "./errores-de-clientes";
 import type { Web } from "./web";
 
@@ -61,6 +63,8 @@ export type ClienteElegidoParaLaPantalla = Readonly<{
   saldo: Importe;
   disponible: Importe;
   excedido: boolean;
+  /** Lo decide el servidor (`cuenta_corriente.aprobar_exceso`): la pantalla solo elige qué texto mostrar si la venta pasa el límite. */
+  puedeAprobarElExceso: boolean;
   /** Solo si se pasó el total de la venta: el saldo con ella y cuánto pasaría del límite, calculados por el servidor. */
   saldoDespues: Importe | null;
   excedeEn: Importe | null;
@@ -103,8 +107,112 @@ export function verElClienteParaVender(
       saldo: r.saldo,
       disponible: r.disponible,
       excedido: r.excedido,
+      puedeAprobarElExceso: r.puedeAprobarElExceso,
       saldoDespues: r.saldoDespues ?? null,
       excedeEn: r.excedeEn ?? null,
     }),
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Confirmar la venta a cuenta (mostrador) y cerrar la mesa a cuenta (salón)
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Lo que sale a la pantalla de una venta cargada a la cuenta de un cliente (lista blanca campo por campo): el ticket, sin cobros ni caja (no entró plata). */
+export type VentaACuentaParaLaPantalla = Readonly<{
+  ticketId: string;
+  /** El ejemplar ORIGINAL del ticket: lo que la pantalla manda después para anularlo (`ejemplarBaseId`). */
+  ejemplarId: string;
+  numero: number;
+  estado: string;
+  fechaNegocio: string;
+  total: Importe;
+  /** `true` si esta venta ya estaba cerrada (reintento): la pantalla muestra lo hecho, no una segunda venta. */
+  yaExistia: boolean;
+}>;
+
+const presentarLaVentaACuenta = (venta: {
+  ticketId: string;
+  ejemplarId: string;
+  numero: number;
+  estado: string;
+  fechaNegocio: string;
+  total: Importe;
+  yaEstabaCerrada: boolean;
+}): VentaACuentaParaLaPantalla => ({
+  ticketId: venta.ticketId,
+  ejemplarId: venta.ejemplarId,
+  numero: venta.numero,
+  estado: venta.estado,
+  fechaNegocio: venta.fechaNegocio,
+  total: { moneda: venta.total.moneda, monto: venta.total.monto },
+  yaExistia: venta.yaEstabaCerrada,
+});
+
+export type DependenciasDeVenderACuentaEnElMostrador = Readonly<{
+  casosDeUso: () => Pick<ReturnType<Web["casosDeUsoDeVentas"]>, "venderACuenta">;
+  respuesta: DependenciasDeRespuesta;
+}>;
+
+/**
+ * Confirma la venta rápida a cuenta (`venderACuenta`): cuenta, líneas, ticket, stock y cargo a la cuenta corriente del cliente, todo o nada, en UNA transacción. Misma frontera y mismo traductor de errores que
+ * cobrar (`entradas-de-cobrar.ts`, `errores-de-cobrar.ts`): todo rechazo de negocio (límite pasado, cliente suspendido o de otra empresa, total que cambió, venta de $ 0) sale como el genérico ya aprobado.
+ *  - **Repetir no duplica**: la cuenta y el ejemplar los fija la pantalla por intento; repetir devuelve el mismo ticket y no vuelve a cargar nada.
+ *  - **La sucursal la fija el servidor** (la de trabajo, validada contra el alcance); vacía cierra. **El permiso lo exige el caso de uso adentro** (`cuentas.cerrar` y `cuenta_corriente.cargar_a_cuenta`).
+ *  - **Sin aprobación del exceso**: el pedido no la admite; con el límite pasado el servidor rechaza.
+ */
+export function venderLaVentaACuenta(
+  d: DependenciasDeVenderACuentaEnElMostrador,
+  contexto: ContextoOperativo,
+  sucursalId: string,
+  crudo: unknown,
+): Promise<Respuesta<VentaACuentaParaLaPantalla>> {
+  return accionDeCobrar(
+    d.respuesta,
+    sucursalId === "" ? null : crudo,
+    entradaDeVenderACuenta,
+    (entrada) =>
+      d.casosDeUso().venderACuenta(contexto, {
+        cuentaId: entrada.cuentaId,
+        ejemplarId: entrada.ejemplarId,
+        sucursalId,
+        lineas: entrada.lineas,
+        totalEsperado: entrada.totalEsperado,
+        confirmaciones: entrada.confirmaciones,
+        clienteId: entrada.clienteId,
+      }),
+    presentarLaVentaACuenta,
+  );
+}
+
+export type DependenciasDeCerrarLaMesaACuenta = Readonly<{
+  casosDeUso: () => Pick<ReturnType<Web["casosDeUsoDeSalon"]>, "cerrarMesaACuenta">;
+  respuesta: DependenciasDeRespuesta;
+}>;
+
+/**
+ * Cierra la cuenta de una mesa a nombre de un cliente (`cerrarMesaACuenta`), sin cobro de caja: ticket, stock, cargo a la cuenta corriente y mesa libre, todo o nada. Mismas reglas que la venta rápida: repetir
+ * devuelve el mismo ticket, la sucursal la fija el servidor (una cuenta de otra sucursal es el genérico) y el pedido no admite aprobación del exceso. Con platos sin enviar no se cierra.
+ */
+export function cerrarLaMesaACuenta(
+  d: DependenciasDeCerrarLaMesaACuenta,
+  contexto: ContextoOperativo,
+  sucursalDeTrabajo: string,
+  crudo: unknown,
+): Promise<Respuesta<VentaACuentaParaLaPantalla>> {
+  return accionDeCobrar(
+    d.respuesta,
+    sucursalDeTrabajo === "" ? null : crudo,
+    entradaDeCerrarLaMesaACuenta,
+    (entrada) =>
+      d.casosDeUso().cerrarMesaACuenta(contexto, {
+        cuentaId: entrada.cuentaId,
+        ejemplarId: entrada.ejemplarId,
+        clienteId: entrada.clienteId,
+        totalEsperado: entrada.totalEsperado,
+        confirmaciones: entrada.confirmaciones,
+        sucursalDeTrabajo,
+      }),
+    presentarLaVentaACuenta,
   );
 }

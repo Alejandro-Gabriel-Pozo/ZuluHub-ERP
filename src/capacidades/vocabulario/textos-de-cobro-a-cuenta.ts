@@ -2,10 +2,10 @@ import type { FuenteDeTexto, UsoDeTexto } from "./uso-y-fuente-de-texto";
 
 /**
  * Los textos de la pantalla «Cobrar un ticket a cuenta» (prefijo `cuenta_corriente.cobro.`, CC-5 B2b; maqueta P4 `cuenta-corriente-ficha-listado-y-cobro.html`, aprobada por el dueño el 26/11/2026).
- * El orquestador los aceptó por la delegación de la fila 173 en `DEC-CCL-008`; `sin_caja` lleva la corrección del dueño (la caja abierta es obligatoria para TODO medio de cobro). Lo demás de la
+ * El orquestador los aceptó por la delegación de la fila 173 en `DEC-CCL-009`; `sin_caja` lleva la corrección del dueño (la caja abierta es obligatoria para TODO medio de cobro). Lo demás de la
  * pantalla reutiliza claves que ya existían (Cliente, Vencida, Cobrado, Cancelar, los tipos de medio, Salón, Mostrador y Ticket): no se repite ninguno.
  */
-const FUENTE: FuenteDeTexto = { decision: "DEC-CCL-008" };
+const FUENTE: FuenteDeTexto = { decision: "DEC-CCL-009" };
 const ARCHIVO = "apps/web/ui/plantillas/cuenta-corriente/textos-de-cobrar-a-cuenta.ts";
 const DE = (nombre: string): UsoDeTexto => ({ como: "FUNCION", archivo: ARCHIVO, nombre });
 /** Los tres textos largos de la hoja declaran su largo (la base admite hasta 200); los que llevan datos declaran sus marcadores. */

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-CCL-009",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "La pantalla «Cobrar un ticket a cuenta» suma quince textos de la maqueta P4; reutiliza Cliente, Vencida, Cobrado, Cancelar, tipos de medio, Salón, Mostrador y Ticket.",
+  "que_cambia": "Son los rótulos, la nota y los mensajes de la hoja de cobro y de su estado «Cobrado»; no cambian dinero (el importe sale del ticket), permisos ni fiscal. «sin_caja» lleva la corrección del dueño.",
+  "donde": "src/capacidades/vocabulario/textos-de-cobro-a-cuenta.ts; fila 173 (orquestador, 26/11/2026); maqueta P4 aprobada por el dueño el 26/11/2026; el cobro a cuenta lo hacen gerente y administrador desde la ficha (dueño, 26/11/2026)"
+}

@@ -12,6 +12,7 @@ const SUSPENDER = "apps/web/ui/plantillas/cuenta-corriente/FormularioDeSuspender
 const REACTIVAR = "apps/web/ui/plantillas/cuenta-corriente/FormularioDeReactivarCuenta.cliente.tsx";
 const COBRAR_A_CUENTA =
   "apps/web/ui/plantillas/cuenta-corriente/PantallaDeCobrarACuenta.cliente.tsx";
+const VENDER = "apps/web/ui/plantillas/cobrar/HojaDeVenderACuenta.cliente.tsx";
 const REQUIERE_CUENTA_CORRIENTE = {
   modulo: "cuenta_corriente",
   estadoDeEmpresa: ["ACTIVE"],
@@ -95,5 +96,18 @@ export const DATOS_DE_CUENTA_CORRIENTE = {
     consumidores: [COBRAR_A_CUENTA],
     ponerPor: ["tickets.cobrar"],
     requiere: { modulo: "caja", estadoDeEmpresa: ["ACTIVE"] },
+  },
+  "cliente-a-cuenta-de-la-venta": {
+    ficha: "src/modulos/cuenta_corriente/casos-de-uso/ver-cliente-para-vender.ts",
+    propositos: [
+      {
+        para: "Cliente con cuenta corriente al que se le carga la venta al cobrar (hoja «Vender a cuenta corriente»); el servidor revalida que sea de la empresa, tenga la cuenta habilitada y que la venta no pase el límite.",
+        fuente:
+          "Pedernal-docs/11-especificaciones/briefs/cuenta-corriente/PR-CC-2-cargo-a-cuenta-al-cerrar-el-ticket.md (elegir el cliente al cobrar) y la maqueta cuenta-corriente-elegir-cliente.html (aprobada por el dueño el 26/11/2026); arquitectura/decisiones/registro/DEC-CCL-008.json",
+      },
+    ],
+    consumidores: [VENDER],
+    ponerPor: ["cuenta_corriente.cargar_a_cuenta"],
+    requiere: REQUIERE_CUENTA_CORRIENTE,
   },
 } as const satisfies Readonly<Record<string, DefinicionDeDato>>;

@@ -1,7 +1,7 @@
 import { texto } from "../../../../../src/capacidades/vocabulario/vocabulario";
 
 /**
- * Los textos de «Cobrar un ticket a cuenta» ya resueltos (CC-5 B2b; maqueta P4, `DEC-CCL-008`). Los quince propios salen de `cuenta_corriente.cobro.*`; el resto reutiliza claves que ya existían
+ * Los textos de «Cobrar un ticket a cuenta» ya resueltos (CC-5 B2b; maqueta P4, `DEC-CCL-009`). Los quince propios salen de `cuenta_corriente.cobro.*`; el resto reutiliza claves que ya existían
  * (Cliente, Ticket, Vencida, Cobrado, Cancelar, Salón y Mostrador). Lo que lleva datos (`{n} · {canal} · {fecha}`, `Cobrar {importe}`…) lo resuelven las funciones de abajo: ningún texto se arma a mano.
  */
 export type TextosDeCobrarACuenta = Readonly<{
