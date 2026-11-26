@@ -330,6 +330,38 @@ describe.skipIf(base === null)("salón: cerrar la mesa a cuenta", () => {
     expect((await cerrar(p.cuenta, c)).ok).toBe(true);
   });
 
+  it("TOTAL ESPERADO: si otro agregó una línea mientras se elegía el cliente, TOTAL_CAMBIO con el total nuevo y la mesa sigue abierta; con el total nuevo y el plato enviado, cierra", async () => {
+    const p = await mesaConPlato();
+    const c = await cliente();
+    valorDe(
+      await m.salon.agregarAlPedido(e.gerente, {
+        cuentaId: p.cuenta,
+        lineaId: nuevoId(),
+        productoId: e.producto,
+        opcionIds: [],
+        cantidad: "1",
+      }),
+    );
+    // El plato nuevo todavía no se envió a cocina: primero lo frena la regla de la mesa.
+    expect(await cerrar(p.cuenta, c)).toEqual({ ok: false, error: "HAY_PLATOS_SIN_ENVIAR" });
+    valorDe(
+      await m.salon.enviarACocina(e.gerente, {
+        envioId: nuevoId(),
+        cuentaId: p.cuenta,
+        claveIdempotencia: claveNueva(),
+      }),
+    );
+    expect(await cerrar(p.cuenta, c)).toEqual({
+      ok: false,
+      error: { error: "TOTAL_CAMBIO", totalActual: { moneda: "ARS", monto: "2000.00" } },
+    });
+    expect(await tickets(p.cuenta)).toEqual([]);
+    expect(await asientos(c)).toEqual([]);
+    expect(
+      (await cerrar(p.cuenta, c, { totalEsperado: { moneda: "ARS", monto: "2000.00" } })).ok,
+    ).toBe(true);
+  });
+
   it("IDEMPOTENCIA CON TOTAL VIEJO Y OTRO CLIENTE: repetir el cierre con el total esperado viejo devuelve el ticket; con OTRO cliente es CLAVE_REUTILIZADA; nada se escribe de más", async () => {
     const p = await mesaConPlato();
     const [c, otro] = [await cliente(), await cliente()];
