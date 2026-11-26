@@ -50,8 +50,8 @@ del ingeniero. Las decisiones están en el repositorio de documentos (ADR 001 a 
 - Migraciones: SQL revisado; avisar antes de cualquier cambio destructivo.
 - No hacer commit de `.env`, claves ni cadenas de conexión.
 - **Ninguna sesión escribe en la base `production` (dueño, 2026-11-16, «respaldos A»).** Ningún agente, sesión, herramienta (incluido el MCP
-  de Neon) ni workflow distinto de `migrar.yml` ejecuta SQL de escritura contra la rama `production` de Neon ni crea, borra, resetea o
-  restaura ramas o snapshots de ese proyecto. Borrar o resetear una rama de Neon y restaurar (a un instante o desde un snapshot) lo hace solo
+  de Neon) ni workflow distinto de `migrar.yml` ejecuta SQL de escritura contra la rama `production` de un proyecto de producción de Neon (Pedernal `frosty-pond-14815728` y Hoteles del Neuquen
+  `withered-mode-13099736`) ni crea, borra, resetea o restaura ramas o snapshots de esos proyectos. Borrar o resetear una rama de Neon y restaurar (a un instante o desde un snapshot) lo hace solo
   el dueño, en la consola. Las migraciones llegan a producción solo por `migrar.yml`, con su aprobación y con un **snapshot previo
   obligatorio** (si no se puede crear, no se migra). Las sesiones usan Neon en solo lectura o contra `preview`. Previene: el MCP de Neon
   estaba conectado en modo escritura (borrar proyecto, resetear, restaurar y SQL; medido el 16/11/2026) y la única cerradura era esta frase; y
@@ -167,3 +167,4 @@ obedece igual, se acumula y compite con otras.
   puesta en marcha es `apps/web/PRIMER-DESPLIEGUE.md`.
 - Neon: **producción** = proyecto `frosty-pond-14815728` (organización `Pedernal`), rama `production` (hoy NO protegida: la protección exige un plan pago de Neon; el dueño la activará al pasar a Launch, antes del primer cliente real; mientras tanto la cerradura es el workflow `migrar.yml`, que solo lista y crea ramas, y la prueba `test/arquitectura/workflows-y-neon.test.ts`; al pasar a un plan pago: proteger la rama `production`), región `aws-sa-east-1`, Postgres 18.
   **Preview y desarrollo** = proyecto `flat-flower-36030007`, rama `preview` (su rama `production` vieja tiene datos de prueba y no es la de los clientes).
+- Neon, base del hotel: proyecto «Hoteles del Neuquen» `withered-mode-13099736`, rama `production` (el mismo Environment `cliente-hdn` de `migrar.yml`). Mismas reglas que la producción de Pedernal: snapshot previo obligatorio antes de migrar y ninguna sesión escribe en su rama `production` (ver «Reglas que no se negocian»).
