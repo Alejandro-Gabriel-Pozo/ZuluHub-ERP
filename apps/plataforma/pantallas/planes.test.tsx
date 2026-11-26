@@ -19,6 +19,17 @@ vi.mock("../app/planes/acciones", () => ({
   guardarBorradorAccion: vi.fn(),
   publicarVersionAccion: vi.fn(),
 }));
+// Hoy ningún módulo del catálogo real está en desarrollo (cuenta_corriente se abrió el 26/11/2026): para probar la etiqueta «En desarrollo» del editor se marca uno en una COPIA de la lista que arma la lógica.
+vi.mock("../logica/editor-de-plan", async (original) => {
+  const real = await original<typeof import("../logica/editor-de-plan")>();
+  return {
+    ...real,
+    modulosParaElegir: () =>
+      real
+        .modulosParaElegir()
+        .map((m) => (m.clave === "cuenta_corriente" ? { ...m, enDesarrollo: true } : m)),
+  };
+});
 const empujar = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: empujar, refresh: vi.fn() }) }));
 
