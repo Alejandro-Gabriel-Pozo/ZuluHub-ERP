@@ -105,6 +105,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0097_roles_propios_de_la_empresa.sql",
         "0098_correccion_de_lo_recibido.sql",
         "0103_pago_compuesto.sql",
+        "0104_nota_libre_en_la_linea_de_comanda.sql",
         "0106_cuenta_del_cliente.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
@@ -192,6 +193,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0097_roles_propios_de_la_empresa.sql",
           "0098_correccion_de_lo_recibido.sql",
           "0103_pago_compuesto.sql",
+          "0104_nota_libre_en_la_linea_de_comanda.sql",
           "0106_cuenta_del_cliente.sql",
         ],
       });
@@ -385,6 +387,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0097_roles_propios_de_la_empresa.sql",
         "0098_correccion_de_lo_recibido.sql",
         "0103_pago_compuesto.sql",
+        "0104_nota_libre_en_la_linea_de_comanda.sql",
         "0106_cuenta_del_cliente.sql",
       ]);
     } finally {
