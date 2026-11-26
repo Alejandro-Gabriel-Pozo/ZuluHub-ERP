@@ -17,7 +17,10 @@ import {
 import type { TxDeClientes } from "../../clientes/publico";
 import { aCuentaPublica, type CuentaPublica } from "../casos-de-uso/cuenta-publica";
 import { antiguedadEnDias } from "../antiguedad";
-import type { ApoyoDeLaExportacion } from "../casos-de-uso/puertos-de-exportacion";
+import type {
+  ApoyoDeLaExportacion,
+  TicketDeUnMovimiento,
+} from "../casos-de-uso/puertos-de-exportacion";
 import {
   esOrigenDeUnaCobranza,
   esOrigenDeUnTicket,
@@ -173,11 +176,16 @@ export function armarVerEstadoDeCuenta(dependencias: DependenciasDeEstadoDeCuent
           ),
         ];
         const apoyo = dependencias.apoyo;
-        const tickets =
+        const tickets: Readonly<{
+          porTicket: ReadonlyMap<string, TicketDeUnMovimiento>;
+          porCobranza: ReadonlyMap<string, TicketDeUnMovimiento>;
+        }> =
           apoyo === undefined
             ? { porTicket: new Map(), porCobranza: new Map() }
             : await apoyo.ticketsDeLosMovimientos(tx, empresa, idsDeTickets, idsDeCobranzas);
-        const medios =
+        const medios: Awaited<
+          ReturnType<ApoyoDeLaExportacion<TxDeEstadoDeCuenta>["mediosDeCobranza"]>
+        > =
           apoyo === undefined
             ? new Map()
             : await apoyo.mediosDeCobranza(tx, empresa, idsDeCobranzas);

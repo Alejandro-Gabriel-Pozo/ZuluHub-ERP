@@ -36,6 +36,7 @@ import { TEXTOS_DE_FISCAL_EMITIR } from "./catalogo-fiscal-emitir";
 import { TEXTOS_DE_FISCAL_IMPRIMIR } from "./catalogo-fiscal-imprimir";
 import { TEXTOS_DE_FISCAL_PANTALLAS } from "./catalogo-fiscal-pantallas";
 import { TEXTOS_DE_LOTES } from "./catalogo-lotes";
+import { TEXTOS_DE_CUENTA_CORRIENTE } from "./catalogo-cuenta_corriente";
 import { TEXTOS_DE_PRODUCCION } from "./catalogo-produccion";
 import { TEXTOS_DE_SALON } from "./catalogo-salon";
 import { TEXTOS_DE_STOCK } from "./catalogo-stock";
@@ -77,6 +78,7 @@ export const CATALOGO_DE_TEXTOS = {
   ...TEXTOS_DE_VENTAS,
   ...TEXTOS_DE_STOCK,
   ...TEXTOS_DE_PRODUCCION,
+  ...TEXTOS_DE_CUENTA_CORRIENTE,
   ...TEXTOS_DE_LOTES,
   ...TEXTOS_DE_SALON,
   ...TEXTOS_DE_COMANDAS,

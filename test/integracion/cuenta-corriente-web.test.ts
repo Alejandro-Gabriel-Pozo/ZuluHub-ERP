@@ -111,7 +111,9 @@ describe.skipIf(base === null)("cuenta corriente: la lista y la ficha en la web 
     await venderA(excedida, mia);
     await venderA(excedida, mia);
     // El límite baja después de vender (un gerente lo cambia): el cliente queda por encima.
-    await m.dueno.query("update cuenta_del_cliente set limite = '1500.00' where parte_id = $1", [excedida]);
+    await m.dueno.query("update cuenta_del_cliente set limite = '1500.00' where parte_id = $1", [
+      excedida,
+    ]);
     await cliente(mia, { suspendida: true, nombre: "Suspendida SA" });
     const habilitada = await cliente(mia, { limite: "9000.00", nombre: "Habilitada SA" });
     await venderA(habilitada, mia);
