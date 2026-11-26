@@ -1,0 +1,10 @@
+{
+  "id": "DEC-1042",
+  "fecha": "2026-11-25",
+  "quien": "sesión",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "La cocina tiene la pantalla Comandas: los envíos de la sucursal cuyo papel espera o falló, con Imprimir y Reintentar; se lee con una consulta nueva y no hay ningún texto nuevo salvo el título.",
+  "que_cambia": "La PC o tablet de la cocina imprime desde ahí sin depender del celular del mozo. Se actualiza al abrirla y al volver a la pestaña, no por tiempo. Se revierte quitando la pantalla y su fila del menú.",
+  "donde": "apps/web/ui/plantillas/salon/PantallaDeLaCocina.cliente.tsx; src/modulos/comandas/consultas (trabajosPendientesDeLaSucursal); maqueta aprobada por el dueño el 25/11/2026 vía el orquestador (fila 460); la fila la asienta diseño"
+}
