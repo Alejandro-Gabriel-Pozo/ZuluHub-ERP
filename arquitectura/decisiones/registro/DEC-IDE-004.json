@@ -1,0 +1,10 @@
+{
+  "id": "DEC-IDE-004",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El nombre de la acción «salidas de dinero» en los roles propios es «Registrar salidas de dinero por otros medios (transferencia, tarjeta, QR u otro)» hasta que el dueño lo apruebe.",
+  "que_cambia": "Solo la redacción de la casilla de esa acción en la pantalla Roles; el dueño la aprueba junto con la de devoluciones en una ronda corta.",
+  "donde": "src/capacidades/vocabulario/textos-de-acciones-de-roles.ts (roles.accion.salidas_de_dinero.registrar)"
+}
