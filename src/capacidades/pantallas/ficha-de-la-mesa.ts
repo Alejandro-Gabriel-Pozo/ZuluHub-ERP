@@ -33,6 +33,12 @@ const COPIA_APROBADA = {
   donde:
     "Pedernal-docs 10-ux-ui, maqueta imprimir.html (CYN 120) y 11-especificaciones/salon-dia-uno-inventario-de-textos.md, sección A.2",
 } as const;
+const UNIR_APROBADO = {
+  decidio:
+    "el dueño, 09/11/2026 (aprobó la maqueta `unir.html`; D115: 302 textos), y el recorrido del salón con «Unir», 25/11/2026 (fila 444 de decisiones-del-dueno-2026-11.md)",
+  donde:
+    "Pedernal-docs 10-ux-ui, maqueta unir.html y 11-especificaciones/briefs/salon/SAL-E1-unir-mesas.md §3 (S10)",
+} as const;
 const USO_DE_IMPRIMIR = "BotonDeImprimir.cliente.tsx";
 const USO_DEL_MODELO = "modelo-de-la-mesa.ts (ficha de la mesa)";
 const USO_DE_LA_PANTALLA = "PantallaDeLaMesa.cliente.tsx";
@@ -49,9 +55,15 @@ export const FICHA_DE_LA_MESA = {
     "apps/web/ui/plantillas/salon/ImpresionDelDocumento.cliente.tsx",
     "apps/web/ui/plantillas/salon/HojaDeAnularItem.cliente.tsx",
     "apps/web/ui/plantillas/salon/EnviosDeLaMesa.cliente.tsx",
+    "apps/web/ui/plantillas/salon/AccionesDeLaMesa.cliente.tsx",
+    "apps/web/ui/plantillas/salon/UnirLaMesa.cliente.tsx",
+    "apps/web/ui/plantillas/salon/HojaDeUnir.cliente.tsx",
+    "apps/web/ui/plantillas/salon/HojaDeCambiarDeMesa.cliente.tsx",
+    "apps/web/ui/plantillas/salon/CobroDeLaMesa.cliente.tsx",
+    "apps/web/app/s/app/(operacion)/salon/cuenta/[mesaId]/cobrar/page.tsx",
     "apps/web/ui/patrones/papel/BotonDeImprimir.cliente.tsx",
   ],
-  rutas: ["/salon/cuenta/[mesaId]"],
+  rutas: ["/salon/cuenta/[mesaId]", "/salon/cuenta/[mesaId]/cobrar"],
   titulo: "salon.texto.admin_mesa_numero",
   acceso: "mesas.ver",
   botones: [
@@ -116,6 +128,24 @@ export const FICHA_DE_LA_MESA = {
       sinPermiso: "AUSENTE",
     },
     {
+      id: "cobrar",
+      texto: "ventas.cobro.cobrar",
+      hace: { envia: "tickets.cobrar" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "unir",
+      texto: "salon.texto.unir_unir_con_otra_mesa",
+      hace: { envia: "salon.unir" },
+      sinPermiso: "AUSENTE",
+    },
+    {
+      id: "confirmar-union",
+      texto: "salon.texto.unir_unir_ahora",
+      hace: { envia: "salon.unir" },
+      sinPermiso: "AUSENTE",
+    },
+    {
       id: "liberar",
       texto: "salon.texto.mesa_liberar_mesa",
       hace: { envia: "cuentas.anular" },
@@ -153,6 +183,32 @@ export const FICHA_DE_LA_MESA = {
     "salon.texto.mesa_no_hay_mesas_libres": {
       usos: ["hoja de cambio de mesa sin destinos"],
       fuente: MAQUETA_APROBADA,
+    },
+    ...Object.fromEntries(
+      [
+        "salon.texto.unir_unir_con_otra_mesa",
+        "salon.texto.unir_unir_ahora",
+        "salon.texto.unir_cuanto_queda",
+        "salon.texto.unir_esto_no_se_deshace_para_separar_se_divide_la_cuent",
+        "salon.texto.unir_no_se_pueden_unir",
+        "salon.texto.unir_mesa_libre",
+        "salon.texto.unir_la_mesa_ya_tiene_un_cobro",
+      ].map((clave) => [
+        clave,
+        { usos: ["hoja de «Unir con otra mesa» (SAL-E1)", USO_DEL_MODELO], fuente: UNIR_APROBADO },
+      ]),
+    ),
+    "ventas.cobro.cobrar": {
+      usos: [
+        "botón «Cobrar» de la ficha de la mesa (lleva a la hoja de cobro de la mesa: la de la venta rápida en modo «cuenta existente», descrita en `ficha-de-cobrar.ts`)",
+        USO_DEL_MODELO,
+      ],
+      fuente: {
+        decidio:
+          "el dueño, 09/11/2026 (aprobó «Cobrar» en `salon.html:361` y la versión anterior de la venta rápida); el recorrido del salón (maqueta con «Cobrar la mesa»), 25/11/2026 (fila 444 de decisiones-del-dueno-2026-11.md)",
+        donde:
+          "Pedernal-docs 10-ux-ui, maqueta salon.html (`salon.html:361`) y 11-especificaciones/briefs/salon/SAL-D-cobro-de-mesa.md §3 (S8)",
+      },
     },
     "ventas.venta.agregar": {
       usos: [

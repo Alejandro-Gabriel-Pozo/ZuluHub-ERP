@@ -86,6 +86,7 @@ describe.skipIf(base === null)("salón: dividir la cuenta", () => {
     )[0]?.estado;
   const cobrarHija = (cuenta: string, total: string) =>
     m.salon.cobrarMesa(e.gerente, {
+      sucursalDeTrabajo: e.sucursal,
       claveIdempotencia: nuevaClave(),
       cuentaId: cuenta,
       ejemplarId: nuevoId(),
@@ -339,6 +340,7 @@ describe.skipIf(base === null)("salón: dividir la cuenta", () => {
     const otra = await mesaConLineas([{ cantidad: "1" }]);
     expect(
       await m.salon.unirMesas(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         unionId: nuevoId(),
         cuentaDestinoId: otra.cuenta,
         cuentaOrigenId: hija,
