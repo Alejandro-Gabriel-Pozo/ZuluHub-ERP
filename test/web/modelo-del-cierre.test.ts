@@ -302,9 +302,12 @@ describe("los controles", () => {
     if (!r.ok) throw new Error("ventas no respondió");
     for (const c of r.valor) delModuloDeVentas.add(c.clave);
     const delModuloDeCaja = Object.values(CONTROLES_DE_CAJA).map((c) => c.clave);
-    expect([...delModuloDeCaja, ...delModuloDeVentas].sort()).toEqual(
-      Object.keys(TEXTO_DE_CONTROL).sort(),
+    // El control de los tickets a cuenta corriente (CC-2) EXISTE en el servidor pero no se muestra (sin texto aprobado): no figura en los textos y la pantalla del cierre no se rompe.
+    expect(delModuloDeVentas.has("ventas.tickets_a_cuenta_corriente")).toBe(true);
+    const visibles = [...delModuloDeCaja, ...delModuloDeVentas].filter(
+      (clave) => !CONTROLES_QUE_NO_SE_MUESTRAN.has(clave),
     );
+    expect(visibles.sort()).toEqual(Object.keys(TEXTO_DE_CONTROL).sort());
     for (const clave of Object.values(TEXTO_DE_CONTROL))
       expect(Object.hasOwn(CATALOGO_DE_TEXTOS, clave)).toBe(true);
   });
