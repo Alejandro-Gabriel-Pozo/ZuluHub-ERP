@@ -206,3 +206,58 @@ export function armarLaFichaDeRol(
     reactivar: ofertas.editar && !rol.activo ? texto(diccionario, "caja.accion.reactivar") : null,
   };
 }
+
+/** Lo que entrega el servidor para el selector de la ficha de una persona: los dos roles base y los roles propios activos que se pueden asignar. */
+export type RolesAsignablesParaLaPantalla = Readonly<{
+  base: readonly ("ADMINISTRADOR" | "OPERADOR")[];
+  propios: readonly Readonly<{ rolId: string; nombre: string }>[];
+}>;
+
+/** El rol actual de la persona: uno base, o uno propio con su id y su nombre. */
+export type RolActualDeLaPersona =
+  | Readonly<{ tipo: "BASE"; rol: "ADMINISTRADOR" | "OPERADOR" | "GERENTE" }>
+  | Readonly<{ tipo: "PROPIO"; rolId: string; nombre: string }>;
+
+export type EditorDeRolDeUsuarioArmado = Readonly<{
+  rotulo: string;
+  /** El valor elegido al abrir: `BASE:<rol>` o `PROPIO:<id>` (el rol actual de la persona). */
+  valorInicial: string;
+  opciones: readonly Readonly<{ valor: string; etiqueta: string; apagada?: boolean }>[];
+  guardar: string;
+}>;
+
+/**
+ * El selector «Rol» de la ficha de una persona: los dos roles base y los roles propios activos, con el rol actual marcado. Si el rol actual es uno propio que ya no se puede asignar (archivado) se muestra igual, como opción
+ * apagada con su nombre: así el selector arranca en un valor real y un toque en «Guardar» no reasigna a la persona sin que la elija.
+ * Devuelve `null` (no hay selector) si el rol base actual no está entre los asignables que dijo el servidor: así el gerente queda afuera sin que esta pantalla nombre ningún rol (regla «el rol no autoriza»: lo decide
+ * la lista del servidor, no una comparación con un literal; el servidor además rechaza asignar al gerente).
+ */
+export function armarElEditorDeRolDeUsuario(
+  asignables: RolesAsignablesParaLaPantalla,
+  actual: RolActualDeLaPersona,
+  diccionario: DiccionarioResuelto,
+): EditorDeRolDeUsuarioArmado | null {
+  if (actual.tipo === "BASE" && !(asignables.base as readonly string[]).includes(actual.rol)) {
+    return null;
+  }
+  const opciones: { valor: string; etiqueta: string; apagada?: boolean }[] = [
+    ...asignables.base.map((r) => ({
+      valor: `BASE:${r}`,
+      etiqueta: texto(
+        diccionario,
+        r === "ADMINISTRADOR" ? "rol.administrador.nombre" : "rol.operador.nombre",
+      ),
+    })),
+    ...asignables.propios.map((r) => ({ valor: `PROPIO:${r.rolId}`, etiqueta: r.nombre })),
+  ];
+  const valorInicial = actual.tipo === "PROPIO" ? `PROPIO:${actual.rolId}` : `BASE:${actual.rol}`;
+  if (!opciones.some((o) => o.valor === valorInicial) && actual.tipo === "PROPIO") {
+    opciones.push({ valor: valorInicial, etiqueta: actual.nombre, apagada: true });
+  }
+  return {
+    rotulo: texto(diccionario, "usuarios.campo.rol"),
+    valorInicial,
+    opciones,
+    guardar: texto(diccionario, "caja.accion.guardar"),
+  };
+}

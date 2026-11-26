@@ -32,6 +32,12 @@ const ASIGNAR_SUCURSALES_PROPOSITO: Proposito = {
 
 const ALTA_DE_ROL = "apps/web/ui/plantillas/roles/FormularioDeAltaDeRol.cliente.tsx";
 const FICHA_DE_ROL = "apps/web/ui/plantillas/roles/FormularioDeFichaDeRol.cliente.tsx";
+const ROL_DE_USUARIO = "apps/web/ui/plantillas/roles/FormularioDeRolDeUsuario.cliente.tsx";
+const ROL_DE_USUARIO_PROPOSITO: Proposito = {
+  para: "El rol que el gerente le asigna a una persona de la empresa: uno de los dos roles base o un rol propio activo (ficha de una persona, pantalla «Usuarios»).",
+  fuente:
+    "Pedernal-docs/11-especificaciones/diseno-roles-propios.md (H4b) y decisiones-del-dueno-2026-11.md, respuesta del dueño del 26/11/2026 (Excel de roles propios, hoja Otras decisiones: asignar solo desde la ficha de la persona)",
+};
 const ROLES_PROPOSITO: Proposito = {
   para: "Armar un rol propio de la empresa: su nombre, de dónde empieza y las acciones que puede hacer (pantalla «Roles», tramo T6).",
   fuente:
@@ -102,6 +108,13 @@ export const DATOS_DE_ADMINISTRACION = {
     propositos: [ROLES_PROPOSITO],
     consumidores: [ALTA_DE_ROL],
     ponerPor: ["roles.crear"],
+    requiere: REQUIERE_ADMINISTRACION,
+  },
+  "rol-de-usuario": {
+    ficha: "src/modulos/identidad/dominio/asignacion-de-rol.ts",
+    propositos: [ROL_DE_USUARIO_PROPOSITO],
+    consumidores: [ROL_DE_USUARIO],
+    ponerPor: ["usuarios.asignar_rol"],
     requiere: REQUIERE_ADMINISTRACION,
   },
   "acciones-de-rol": {

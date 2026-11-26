@@ -17,6 +17,8 @@ export type MiembroDeLista = Readonly<{
   rol: RolDeLaMembresia;
   /** El nombre del rol propio cuando `rol` es `PROPIO` (lo escribe el gerente); `null` con un rol base. */
   rolPropioNombre: string | null;
+  /** El id del rol propio cuando `rol` es `PROPIO` (la ficha lo usa para preseleccionar el rol al reasignar); `null` con un rol base. */
+  rolPropioId: string | null;
   /** `false`: la membresía está apagada (la persona sigue figurando). */
   activo: boolean;
   /** Las sucursales de la asignación efectiva: asignación activa Y sucursal activa. */
@@ -58,6 +60,7 @@ export function armarListarMiembros({ transacciones, reglas }: DependenciasDeCon
               personaId: membresia.personaId,
               email,
               rol: membresia.rol,
+              rolPropioId: membresia.rolPropioId,
               rolPropioNombre:
                 membresia.rolPropioId === null
                   ? null
