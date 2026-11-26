@@ -10,6 +10,7 @@ import { multiplicarPrecioPorCantidad } from "../../../../../src/primitivas/dine
 import { precioUnitarioDesdeTexto } from "../../../../../src/primitivas/dinero/precio-unitario";
 import { POLITICA_VIGENTE, redondear } from "../../../../../src/primitivas/dinero/redondeo";
 import { formatearCantidad, formatearFecha, formatearImporte } from "../../patrones/formato-fiscal";
+import { rutaDeCierreDeLaOrden } from "./filtros-de-ordenes";
 import { cantidadConUnidad, marcaDeEstado } from "./modelo-de-ordenes";
 
 /**
@@ -47,7 +48,12 @@ export type OrdenDeLaFicha = Readonly<{
 }>;
 
 /** Qué deja hacer hoy el servidor, ya resuelto (`accionesDeProduccion`). */
-export type AccionesDeLaOrden = Readonly<{ cancelar: boolean; anular: boolean }>;
+export type AccionesDeLaOrden = Readonly<{
+  cancelar: boolean;
+  anular: boolean;
+  /** «Cerrar con lo real» (`transformaciones.cerrar`). Ausente: no se ofrece. */
+  cerrar?: boolean | undefined;
+}>;
 
 type DatoArmado = Readonly<{ rotulo: string; valor: string }>;
 
@@ -81,6 +87,8 @@ export type OrdenArmada = Readonly<{
     filas: readonly Readonly<{ nombre: string; cantidad: string }>[];
   }>;
   accion: AccionArmada | null;
+  /** «Cerrar con lo real»: solo en una orden abierta y si el servidor lo ofrece; lleva a la pantalla del cierre. */
+  cierre: Readonly<{ href: string; texto: string }> | null;
 }>;
 
 const esDeLoCerrado = (estado: string): boolean => estado === "CERRADA" || estado === "ANULADA";
@@ -206,5 +214,12 @@ export function armarLaOrden(
       })),
     },
     accion: accionDe(orden, acciones, d),
+    cierre:
+      orden.estado === "ABIERTA" && acciones.cerrar === true
+        ? {
+            href: rutaDeCierreDeLaOrden(orden.id),
+            texto: texto(d, "produccion.accion.cerrar_con_lo_real"),
+          }
+        : null,
   };
 }

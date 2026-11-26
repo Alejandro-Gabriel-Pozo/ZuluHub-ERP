@@ -43,6 +43,15 @@ describe("traducirErrorDeProduccion", () => {
     );
   });
 
+  it("el vencimiento que falta o ya pasó al cerrar sale con su código propio (texto aprobado de Lotes), no como el genérico", () => {
+    expect(traducirErrorDeProduccion("VENCIMIENTO_REQUERIDO")).toBe(
+      "PRODUCCION_VENCIMIENTO_REQUERIDO",
+    );
+    expect(traducirErrorDeProduccion("VENCIMIENTO_PASADO")).toBe("PRODUCCION_VENCIMIENTO_PASADO");
+    expect(traducirErrorDeProduccion("VENCIMIENTO_OTRO")).toEqual(GENERICO);
+    expect(traducirErrorDeProduccion("hasOwnProperty")).toEqual(GENERICO);
+  });
+
   it("un nombre heredado de Object.prototype no se confunde con un código conocido", () => {
     for (const error of ["toString", "constructor", "__proto__", "hasOwnProperty"]) {
       expect(traducirErrorDeProduccion(error)).toEqual(GENERICO);

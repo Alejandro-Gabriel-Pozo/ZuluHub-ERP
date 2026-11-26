@@ -205,6 +205,135 @@ describe("las filas de la exportación", () => {
     expect(ninguna).toMatchObject({ sucursalId: null, sucursal: null });
   });
 
+  const COBRANZA = movimiento({
+    asientoId: "a2",
+    clase: "COBRANZA",
+    importe: pesos("-1000.00"),
+    pendiente: pesos("0.00"),
+    origenTipo: "ventas.cobranza_de_ticket",
+    origenId: "c1",
+  });
+  const medio = (orden: number, tipoDeMedio: string, monto: string) => ({
+    orden,
+    tipoDeMedio,
+    importe: pesos(monto),
+  });
+  const filasDe = (m: MovimientoParaExportar, medios: ReturnType<typeof medio>[]) =>
+    armarFilasDeLaExportacion([m], CLIENTES, new Map([["c1", medios]]), SUCURSALES, HOY).map(
+      (f) => [f.importeConSigno, f.tipoDeMedio],
+    );
+
+  it("el reparto por medios: dos que suman, dos que no suman (por poco, en las dos direcciones), uno que coincide, uno que no coincide y ninguno", () => {
+    expect(filasDe(COBRANZA, [medio(1, "EFECTIVO", "400.00"), medio(2, "QR", "600.00")])).toEqual([
+      ["-400.00", "EFECTIVO"],
+      ["-600.00", "QR"],
+    ]);
+    // Suman un centavo de menos o de más: no se reparte.
+    expect(filasDe(COBRANZA, [medio(1, "EFECTIVO", "400.00"), medio(2, "QR", "599.99")])).toEqual([
+      ["-1000.00", null],
+    ]);
+    expect(filasDe(COBRANZA, [medio(1, "EFECTIVO", "400.00"), medio(2, "QR", "600.01")])).toEqual([
+      ["-1000.00", null],
+    ]);
+    expect(filasDe(COBRANZA, [medio(1, "QR", "1000.00")])).toEqual([["-1000.00", "QR"]]);
+    expect(filasDe(COBRANZA, [medio(1, "QR", "999.99")])).toEqual([["-1000.00", null]]);
+    expect(filasDe(COBRANZA, [medio(1, "QR", "1000.01")])).toEqual([["-1000.00", null]]);
+    expect(filasDe(COBRANZA, [])).toEqual([["-1000.00", null]]);
+  });
+
+  it("una cobranza de importe cero sin medios sale igual en UNA fila (nunca desaparece del archivo)", () => {
+    const cero = movimiento({
+      clase: "COBRANZA",
+      importe: pesos("0.00"),
+      pendiente: pesos("0.00"),
+      origenTipo: "ventas.cobranza_de_ticket",
+      origenId: "c1",
+    });
+    expect(filasDe(cero, [])).toEqual([["0.00", null]]);
+  });
+
+  it("el espejo de una cobranza anulada (importe POSITIVO) también reparte por medios, con signo positivo y en el orden de los medios", () => {
+    const espejo = movimiento({
+      asientoId: "a2-espejo",
+      clase: "COBRANZA",
+      importe: pesos("1000.00"),
+      pendiente: pesos("0.00"),
+      anulado: true,
+      origenTipo: "ventas.cobranza_de_ticket",
+      origenId: "c1",
+    });
+    expect(filasDe(espejo, [medio(2, "QR", "600.00"), medio(1, "EFECTIVO", "400.00")])).toEqual([
+      ["400.00", "EFECTIVO"],
+      ["600.00", "QR"],
+    ]);
+    expect(filasDe(espejo, [medio(1, "QR", "1000.00")])).toEqual([["1000.00", "QR"]]);
+  });
+
+  it("un movimiento que NO es una cobranza no toma medios aunque haya un origen con el mismo id; y la vencida y el pendiente salen tal cual del movimiento", () => {
+    const cargo = movimiento({
+      origenId: "c1",
+      vencida: true,
+      pendiente: pesos("250.50"),
+    });
+    const [fila] = armarFilasDeLaExportacion(
+      [cargo],
+      CLIENTES,
+      new Map([["c1", [medio(1, "QR", "1000.00")]]]),
+      SUCURSALES,
+      HOY,
+    );
+    expect(fila).toMatchObject({ tipoDeMedio: null, vencida: true, pendiente: "250.50" });
+    const [vigente] = armarFilasDeLaExportacion(
+      [movimiento()],
+      CLIENTES,
+      SIN_MEDIOS,
+      SUCURSALES,
+      HOY,
+    );
+    expect(vigente?.vencida).toBe(false);
+  });
+
+  it("la sucursal: una sola (aunque se repita) se informa; ninguna o varias, no; y el nombre que falta deja el nombre vacío con su id", () => {
+    const sucursalDe = (sucursales: readonly (string | null)[], nombres = SUCURSALES) =>
+      armarFilasDeLaExportacion(
+        [movimiento({ sucursales })],
+        CLIENTES,
+        SIN_MEDIOS,
+        nombres,
+        HOY,
+      ).map((f) => [f.sucursalId, f.sucursal]);
+    expect(sucursalDe(["s1", "s1"])).toEqual([["s1", "Norte"]]);
+    expect(sucursalDe(["s1"])).toEqual([["s1", "Norte"]]);
+    expect(sucursalDe([null])).toEqual([[null, null]]);
+    expect(sucursalDe(["s1", null])).toEqual([[null, null]]);
+    expect(sucursalDe(["s1", "s2"])).toEqual([[null, null]]);
+    expect(sucursalDe([])).toEqual([[null, null]]);
+    expect(sucursalDe(["s9"])).toEqual([["s9", null]]);
+  });
+
+  it("el estado, la antigüedad y el tramo salen de cada movimiento (anulado o vigente; hoy mismo y 91 días)", () => {
+    const [anulado] = armarFilasDeLaExportacion(
+      [movimiento({ anulado: true, fechaNegocio: fecha("2026-08-27") })],
+      CLIENTES,
+      SIN_MEDIOS,
+      SUCURSALES,
+      HOY,
+    );
+    expect(anulado).toMatchObject({
+      estado: "ANULADO",
+      antiguedadEnDias: 91,
+      tramoDeAntiguedad: "MAS_DE_90",
+    });
+    const [deHoy] = armarFilasDeLaExportacion(
+      [movimiento({ fechaNegocio: HOY })],
+      CLIENTES,
+      SIN_MEDIOS,
+      SUCURSALES,
+      HOY,
+    );
+    expect(deHoy).toMatchObject({ estado: "VIGENTE", antiguedadEnDias: 0 });
+  });
+
   it("el origen se clasifica por el tipo de origen del asiento; lo desconocido es OTRO", () => {
     expect(origenDeLaExportacion("ventas.ticket")).toBe("TICKET");
     expect(origenDeLaExportacion("ventas.cobranza_de_ticket")).toBe("COBRANZA");
@@ -275,6 +404,46 @@ describe("la hoja de la exportación", () => {
     expect(por["moneda"]).toEqual({ tipo: "texto", valor: "ARS" });
     expect(por["antiguedad_en_dias"]).toEqual({ tipo: "entero", valor: 25 });
     expect(por["vencida"]).toEqual({ tipo: "texto", valor: "no" });
+  });
+
+  it("los rótulos de clase y de tipo de medio: con rótulo sale el rótulo; sin rótulo, el código (estable); sin medio, la celda vacía", () => {
+    const rotulos: RotulosDeLaExportacion = {
+      ...ROTULOS,
+      clases: { COBRANZA: "Cobranza" },
+      tiposDeMedio: { EFECTIVO: "Efectivo" },
+    };
+    const fila = (
+      cambios: Partial<MovimientoParaExportar>,
+      medios?: Parameters<typeof armarFilasDeLaExportacion>[2],
+    ) =>
+      armarHojaDeLaExportacion(
+        armarFilasDeLaExportacion(
+          [movimiento(cambios)],
+          CLIENTES,
+          medios ?? SIN_MEDIOS,
+          SUCURSALES,
+          HOY,
+        ),
+        rotulos,
+      ).filas[0] as readonly unknown[];
+    const clase = COLUMNAS_DE_LA_EXPORTACION.indexOf("clase");
+    const medio = COLUMNAS_DE_LA_EXPORTACION.indexOf("medio_de_pago");
+    expect(fila({ clase: "COBRANZA" })[clase]).toEqual({ tipo: "texto", valor: "Cobranza" });
+    expect(fila({ clase: "AJUSTE_DE_SALDO" })[clase]).toEqual({
+      tipo: "texto",
+      valor: "AJUSTE_DE_SALDO",
+    });
+    expect(fila({})[medio]).toBeNull();
+    const cobranza = {
+      clase: "COBRANZA",
+      importe: pesos("-1000.00"),
+      origenTipo: "ventas.cobranza_de_ticket",
+      origenId: "c1",
+    };
+    const con = (tipo: string) =>
+      new Map([["c1", [{ orden: 1, tipoDeMedio: tipo, importe: pesos("1000.00") }]]]);
+    expect(fila(cobranza, con("EFECTIVO"))[medio]).toEqual({ tipo: "texto", valor: "Efectivo" });
+    expect(fila(cobranza, con("QR"))[medio]).toEqual({ tipo: "texto", valor: "QR" });
   });
 
   it("un nombre de cliente que parece una fórmula sale como celda de TEXTO con su contenido intacto: el escritor del archivo no lo interpreta", () => {

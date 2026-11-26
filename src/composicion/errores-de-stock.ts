@@ -99,6 +99,8 @@ const CODIGO_DE_ERROR_PROPIO: Readonly<Record<ErrorPropio, CodigoDeStock>> = {
 /** Los errores con forma de objeto que son del negocio de stock: el control de existencia negativa (avisa) y la función que el plan no incluye (el genérico). */
 const CODIGO_DE_ERROR_DE_OBJETO: Readonly<Record<string, CodigoDeStock>> = {
   CONTROL_REQUIERE_CONFIRMACION: "STOCK_CONTROL_AVISA",
+  /** El aviso de la carga inicial sobre un depósito que ya tiene existencia (P-8): lo arma la composición de la carga, no el módulo. */
+  YA_HAY_EXISTENCIA: "STOCK_YA_HAY_EXISTENCIA",
   FUNCION_NO_INCLUIDA: GENERICO,
 };
 

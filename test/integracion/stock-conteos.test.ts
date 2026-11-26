@@ -49,6 +49,8 @@ describe.skipIf(base === null)("stock: conteo físico", () => {
             clave: nuevoId(),
             depositoId: dep,
             motivo: "CARGA_INICIAL",
+            // Varias cargas al mismo depósito, de a un artículo: la confirmación del aviso de existencia previa (P-8) no es lo que se prueba acá.
+            confirmaExistenciaPrevia: true,
             renglones: [pedido(a.producto, cantidad)],
           }),
         );

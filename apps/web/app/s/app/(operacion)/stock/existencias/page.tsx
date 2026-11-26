@@ -7,6 +7,7 @@ import { PantallaDeExistencias } from "../../../../../../ui/plantillas/stock/exi
 import { puedeEnStock } from "../../../../../../servidor/ofertas-de-stock";
 import { RUTAS_DE_MOVIMIENTOS } from "../../../../../../ui/plantillas/stock/movimientos/modelo-de-formularios";
 import { leerLaLectura } from "../../../../../../ui/plantillas/stock/lectura/modelo-de-lectura";
+import { RUTAS_DE_STOCK } from "../../../../../../ui/plantillas/stock/rutas-de-stock";
 import { pestanasDeStock } from "../../../../../../ui/plantillas/stock/pestanas-de-stock";
 import { PestanasDeStock } from "../../../../../../ui/plantillas/stock/PestanasDeStock";
 
@@ -51,6 +52,14 @@ export default async function PaginaDeExistencias({ searchParams }: PropsDePagin
               texto: texto({}, "stock.accion.ajustar"),
               href: RUTAS_DE_MOVIMIENTOS.ajustar,
               habilitado: await puedeEnStock(contexto, "stock.ajustar"),
+            },
+            {
+              texto: texto({}, "stock.motivo.carga_inicial"),
+              href: RUTAS_DE_STOCK.cargaInicial,
+              // DEC-STK-004: la carga inicial pide `stock.registrar_entrada` y además `stock.ajustar` (solo una ayuda: el servidor decide).
+              habilitado:
+                (await puedeEnStock(contexto, "stock.registrar_entrada")) &&
+                (await puedeEnStock(contexto, "stock.ajustar")),
             },
           ]}
         />

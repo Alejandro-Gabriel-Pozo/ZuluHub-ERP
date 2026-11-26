@@ -1,0 +1,10 @@
+{
+  "id": "DEC-PRO-003",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "COMERCIAL",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "Al cerrar una orden de producción la pantalla no muestra el costo mientras se carga: el costo por unidad se ve en la ficha de la orden, ya cerrada y solo con permiso de costos.",
+  "que_cambia": "Quien cierra no ve el costo por unidad antes de confirmar. El costo real sale del promedio congelado por el libro, distinto del último costo de compra de la receta; una estimación al tipear daría dos números. Revertir: una consulta con costos (tamaño M).",
+  "donde": "src/composicion/cierre-de-orden-web.ts; pantallas-de-produccion-inventario.md §5 C2 (S-4); PR PRO-C"
+}

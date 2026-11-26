@@ -4,9 +4,15 @@ import { ARS } from "../../../primitivas/dinero/moneda";
 import { FORMA_DE_CLAVE } from "../../../primitivas/libro/clave";
 import {
   CLASE_DEL_CARGO_DE_VENTA,
+  CLASE_DE_LA_COBRANZA_DE_VENTA,
   DETALLE_DE_LA_ANULACION_DEL_CARGO_DE_VENTA,
+  DETALLE_DE_LA_ANULACION_DE_LA_COBRANZA,
   ORIGEN_DEL_CARGO_DE_VENTA,
+  ORIGEN_DE_LA_COBRANZA_DE_VENTA,
+  claveDeLaAnulacionDeLaCobranza,
   claveDeLaAnulacionDelCargoDeVenta,
+  claveDeLaCobranzaDeVenta,
+  claveDeLaImputacionDeLaCobranza,
   claveDelCargoDeVenta,
   excesoDelLimite,
 } from "./cargo-de-venta";
@@ -51,5 +57,41 @@ describe("claves y constantes del cargo", () => {
     expect(ORIGEN_DEL_CARGO_DE_VENTA).toBe("ventas.ticket");
     expect(CLASE_DEL_CARGO_DE_VENTA).toBe("CARGO_DE_VENTA_A_CUENTA");
     expect(DETALLE_DE_LA_ANULACION_DEL_CARGO_DE_VENTA).toBe("ANULACION-DE-TICKET");
+  });
+});
+
+describe("claves y constantes de la cobranza", () => {
+  const id = "5b6b3f0e-1f2d-4c3a-9d41-0a8f3c2b7e11";
+  const otro = "5b6b3f0e-1f2d-4c3a-9d41-0a8f3c2b7e12";
+  const CLAVES = [
+    claveDelCargoDeVenta,
+    claveDeLaAnulacionDelCargoDeVenta,
+    claveDeLaCobranzaDeVenta,
+    claveDeLaImputacionDeLaCobranza,
+    claveDeLaAnulacionDeLaCobranza,
+  ] as const;
+
+  it("cada clave es estable: da SIEMPRE los mismos valores para el mismo id (lo ya asentado en el libro se identifica por ellos; cambiar un espacio de nombres reescribiría su identidad)", () => {
+    expect(CLAVES.map((clave) => clave(id))).toEqual([
+      "3689918f-6fea-5856-9590-3ee58974bb7c",
+      "cd3a8a48-3df1-53df-ad94-e018394f21d0",
+      "819e30ee-86ed-56ec-86b0-0ae53d75e916",
+      "e12254ef-261d-5bf1-add4-8f96882f7d40",
+      "31a67e10-2afa-5df5-83ab-1833a2c12d5c",
+    ]);
+  });
+
+  it("dos ids distintos dan claves distintas en las cinco, y las cinco claves del mismo id son distintas entre sí", () => {
+    for (const clave of CLAVES) {
+      expect(clave(id)).not.toBe(clave(otro));
+      expect(clave(id)).toMatch(FORMA_DE_CLAVE);
+    }
+    expect(new Set(CLAVES.map((clave) => clave(id))).size).toBe(CLAVES.length);
+  });
+
+  it("origen, clase y detalle de la cobranza son los declarados", () => {
+    expect(ORIGEN_DE_LA_COBRANZA_DE_VENTA).toBe("ventas.cobranza_de_ticket");
+    expect(CLASE_DE_LA_COBRANZA_DE_VENTA).toBe("COBRANZA");
+    expect(DETALLE_DE_LA_ANULACION_DE_LA_COBRANZA).toBe("ANULACION-DE-COBRANZA");
   });
 });

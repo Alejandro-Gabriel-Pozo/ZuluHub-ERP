@@ -115,11 +115,11 @@ describe("motivoManualPermitido: lo que una persona puede elegir", () => {
 });
 
 describe("motivoExigeAjustar (S-7)", () => {
-  it("solo el vencimiento", () => {
+  it("solo el vencimiento y la carga inicial (DEC-STK-004)", () => {
     expect(MOTIVO_DE_VENCIMIENTO).toBe("VENCIMIENTO");
     expect(
       MOTIVOS_DE_MOVIMIENTO.filter((m) => motivoExigeAjustar(m.codigo)).map((m) => m.codigo),
-    ).toEqual(["VENCIMIENTO"]);
+    ).toEqual(["CARGA_INICIAL", "VENCIMIENTO"]);
     expect(motivoExigeAjustar("vencimiento")).toBe(false);
   });
 });

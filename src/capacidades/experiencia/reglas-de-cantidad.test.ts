@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { cantidadDesdeTexto } from "../../primitivas/cantidad/cantidad";
 import { mermaDesdeTexto } from "../../primitivas/cantidad/merma";
+import { precioUnitarioDesdeTexto } from "../../primitivas/dinero/precio-unitario";
 import { escribirNumero, interpretarNumeroPegado } from "./numero-argentino";
 import { porcentajeDesdeTexto } from "../../primitivas/cantidad/porcentaje";
 import {
   REGLA_DE_CANTIDAD,
+  REGLA_DE_COSTO_UNITARIO,
   REGLA_DE_MERMA,
   REGLA_DE_PORCENTAJE_DE_LA_PARTE,
 } from "./reglas-de-cantidad";
@@ -52,6 +54,29 @@ describe("REGLA_DE_MERMA", () => {
       expect(pegado.ok).toBe(true);
       expect(pegado.ok && mermaDesdeTexto(pegado.canonico).ok).toBe(true);
     }
+  });
+});
+
+describe("REGLA_DE_COSTO_UNITARIO", () => {
+  it("son las medidas de la primitiva: 12 enteros, 6 decimales, sin ceros de relleno", () => {
+    expect(REGLA_DE_COSTO_UNITARIO).toEqual({ decimales: 6, enterosMaximos: 12 });
+    expect(escribirNumero("5", 1, REGLA_DE_COSTO_UNITARIO).canonico).toBe("5");
+  });
+
+  it("lo que el campo deja pegar la primitiva lo acepta, y un séptimo decimal o un entero de más se rechaza", () => {
+    for (const texto of ["0,000001", "12.000,5", "1.250,00", "999999999999,999999"]) {
+      const pegado = interpretarNumeroPegado(texto, REGLA_DE_COSTO_UNITARIO);
+      expect(pegado.ok, texto).toBe(true);
+      expect(
+        () => precioUnitarioDesdeTexto(pegado.ok ? pegado.canonico : "x"),
+        texto,
+      ).not.toThrow();
+    }
+    expect(interpretarNumeroPegado("1,1234567", REGLA_DE_COSTO_UNITARIO)).toEqual({
+      ok: false,
+      motivo: "DECIMALES_DE_MAS",
+    });
+    expect(interpretarNumeroPegado("1234567890123", REGLA_DE_COSTO_UNITARIO).ok).toBe(false);
   });
 });
 
