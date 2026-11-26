@@ -1,4 +1,5 @@
 import type { DefinicionDeDato, Proposito } from "./tipos-de-datos";
+import { DEL_REEMPLAZO as R } from "./registro-de-compras-factura-y-pago";
 
 /**
  * Los datos de la lista de compras del registro de datos (ver `registro.ts`), en su propio archivo (una línea en el registro por módulo, sin pisar a los demás): los tres campos del filtro de la
@@ -127,9 +128,10 @@ export const DATOS_DE_COMPRAS = {
       DE_RECEPCIONES(
         "Motivo obligatorio de anular una recepción que todavía está «Por confirmar».",
       ),
+      R.proposito("Motivo obligatorio de anular la factura que se reemplaza."),
     ],
-    consumidores: [HOJA_DE_ANULAR, HOJA_DE_ANULAR_PAGO, ACCIONES_DE_LA_RECEPCION],
-    ponerPor: [...ANULAR_COMPRA, ...ANULAR_PAGO],
+    consumidores: [HOJA_DE_ANULAR, HOJA_DE_ANULAR_PAGO, ACCIONES_DE_LA_RECEPCION, R.formulario],
+    ponerPor: [...ANULAR_COMPRA, ...ANULAR_PAGO, ...R.accion],
     requiere: REQUIERE_COMPRAS,
   },
   "numero-de-punto-de-venta": {
@@ -180,14 +182,16 @@ export const DATOS_DE_COMPRAS = {
       DE_FACTURAS(
         "Producto de cada línea de la factura de la empresa («Cargar factura»), elegido buscando por nombre entre los productos que el servidor ofrece para comprar: con él se propone la conciliación.",
       ),
+      R.proposito("Producto de cada línea de la factura nueva que reemplaza a otra."),
     ],
     consumidores: [
       PANTALLA_DE_NUEVA_COMPRA,
       PANTALLA_DE_CARGAR_FACTURA,
       PRUEBA_DEL_BUSCADOR,
       PRUEBA_DE_LA_LECTURA,
+      R.formulario,
     ],
-    ponerPor: [...REGISTRAR_COMPRA, ...CARGAR_FACTURA],
+    ponerPor: [...REGISTRAR_COMPRA, ...CARGAR_FACTURA, ...R.accion],
     requiere: REQUIERE_COMPRAS,
   },
   "proveedor-de-compra": {

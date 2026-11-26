@@ -4,7 +4,7 @@
   "quien": "dueño",
   "tipo": "DINERO",
   "estado": "PENDIENTE_DE_OK",
-  "decision": "Al reemplazar o cambiar un comprobante con otro importe, la pantalla avisa «El costo del stock no cambia; si hace falta, usá Corregir lo recibido»; el motivo de la anulación viene precargado con «Reemplazada por la factura {número}», editable y obligatorio.",
+  "decision": "Con otro importe en el comprobante nuevo se avisa «El costo del stock no cambia; si hace falta, usá Corregir lo recibido»; motivo precargado «Reemplazada por la factura» más el número.",
   "que_cambia": "El costo del stock ya congelado de lo recibido NO se recalcula al cambiar el comprobante; si hace falta se corrige con «Corregir lo recibido». Revertir el aviso: cambiar el valor por defecto en catalogo-compras-costo.ts; revertir la regla del costo es una decisión de dinero nueva.",
   "donde": "catalogo-compras-costo.ts (compras.reemplazo.costo_no_cambia y motivo_por_defecto); respuesta P-1 del dueño del 26/11/2026 (vía el orquestador, aprobación de NOTAS-2c-2)"
 }

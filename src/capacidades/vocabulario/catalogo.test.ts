@@ -385,7 +385,7 @@ describe("el catálogo de textos: lo que tiene que traer hoy", () => {
           .map((c) => [c, CATALOGO_DE_TEXTOS[c].porDefecto]),
       );
     expect(Object.keys(de("clientes"))).toHaveLength(32);
-    expect(Object.keys(de("compras"))).toHaveLength(246);
+    expect(Object.keys(de("compras"))).toHaveLength(253);
     expect(de("clientes")).toMatchObject({
       "clientes.lista.clientes_y_proveedores": "Clientes y proveedores",
       "clientes.error.cuit_invalido": "El CUIT no es válido",
