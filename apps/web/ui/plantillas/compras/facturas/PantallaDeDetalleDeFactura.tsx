@@ -110,6 +110,11 @@ export function PantallaDeDetalleDeFactura({
           {f.notas.texto}
         </EnlaceDeAccion>
       )}
+      {f.reemplazar === null ? null : (
+        <EnlaceDeAccion href={f.reemplazar.href} variante="secundaria">
+          {f.reemplazar.texto}
+        </EnlaceDeAccion>
+      )}
       {f.conciliar ? (
         <EnlaceDeAccion href={rutaDeConciliar(ficha.comprobanteId)}>
           {textos.conciliar}

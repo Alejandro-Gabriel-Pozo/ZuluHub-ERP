@@ -137,6 +137,11 @@ export function PantallaDeFichaDeCompra({
           {f.notas.texto}
         </EnlaceDeAccion>
       )}
+      {f.cambiarElComprobante === null ? null : (
+        <EnlaceDeAccion href={f.cambiarElComprobante.href} variante="secundaria">
+          {f.cambiarElComprobante.texto}
+        </EnlaceDeAccion>
+      )}
       {f.declararPago === null ? null : (
         <EnlaceDeAccion href={f.declararPago.href} variante="primaria">
           {f.declararPago.texto}
