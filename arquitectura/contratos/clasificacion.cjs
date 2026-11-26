@@ -88,6 +88,7 @@ const MODULOS_DE_NEGOCIO = [
   "comandas",
   "clientes",
   "compras",
+  "cuenta_corriente",
   "empresas",
   "fiscal",
   "identidad",

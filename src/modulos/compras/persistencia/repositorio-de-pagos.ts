@@ -1,6 +1,12 @@
 import { sql, type Kysely } from "kysely";
 import type { EmpresaId, PersonaId } from "../../../primitivas/identificadores/marca";
-import { esMedioDePago, type MedioDePago } from "../dominio/pago";
+import {
+  MEDIOS_DE_LA_CABECERA,
+  MEDIOS_DE_PAGO,
+  medioDeLaCabecera,
+  type LineaDePago,
+  type MedioDeLaCabecera,
+} from "../dominio/pago";
 import type { ComprasDb } from "./esquema";
 import { esUuid } from "./filas";
 
@@ -10,7 +16,8 @@ export type PagoGuardado = Readonly<{
   id: string;
   comprobanteId: string;
   fechaDePago: string;
-  medio: MedioDePago;
+  /** El medio único, o `COMPUESTO` si el pago tiene más de un medio (sus líneas, en `mediosDe`). */
+  medio: MedioDeLaCabecera;
   /** Texto decimal de 2 decimales: el total del comprobante al declarar el pago. */
   importe: string;
   estado: EstadoDePago;
@@ -27,7 +34,8 @@ export type PagoGuardado = Readonly<{
 export type AltaDePago = Readonly<{
   comprobanteId: string;
   fechaDePago: string;
-  medio: MedioDePago;
+  /** Los medios con su importe: la suma es `importe` (lo exige la base al cerrar la transacción). La cabecera dice el medio único o `COMPUESTO`. */
+  medios: readonly LineaDePago[];
   importe: string;
   clave: string;
   huella: string;
@@ -52,7 +60,10 @@ export interface RepositorioDePagos {
   ): Promise<readonly PagoGuardado[]>;
   /** Todos los pagos del comprobante (vigente y anulados), del más viejo al más nuevo. */
   deComprobante(empresa: EmpresaId, comprobanteId: string): Promise<readonly PagoGuardado[]>;
+  /** La cabecera del pago y sus líneas de medio, en la misma transacción. `undefined` si chocó con la clave o con el pago vigente (no escribe ninguna línea). */
   insertar(empresa: EmpresaId, alta: AltaDePago): Promise<string | undefined>;
+  /** Los medios del pago con su importe, en el orden de la lista de medios. */
+  mediosDe(empresa: EmpresaId, pagoId: string): Promise<readonly LineaDePago[]>;
   /** `false` si ya no estaba VIGENTE. */
   anular(
     empresa: EmpresaId,
@@ -96,7 +107,8 @@ type Fila = {
 };
 
 function aPago(f: Fila): PagoGuardado {
-  if (!esMedioDePago(f.medio)) throw new RangeError(`medio de pago desconocido: ${f.medio}`);
+  const medio = MEDIOS_DE_LA_CABECERA.find((m) => m === f.medio);
+  if (medio === undefined) throw new RangeError(`medio de pago desconocido: ${f.medio}`);
   if (f.estado !== "VIGENTE" && f.estado !== "ANULADO") {
     throw new RangeError(`estado de pago desconocido: ${f.estado}`);
   }
@@ -104,7 +116,7 @@ function aPago(f: Fila): PagoGuardado {
     id: f.id,
     comprobanteId: f.comprobante_id,
     fechaDePago: f.fecha_de_pago,
-    medio: f.medio,
+    medio,
     importe: f.importe,
     estado: f.estado,
     claveIdempotencia: f.clave_idempotencia,
@@ -184,7 +196,7 @@ export function crearRepositorioDePagos(db: Kysely<ComprasDb>): RepositorioDePag
           empresa_id: empresa,
           comprobante_id: alta.comprobanteId,
           fecha_de_pago: alta.fechaDePago,
-          medio: alta.medio,
+          medio: medioDeLaCabecera(alta.medios),
           importe: alta.importe,
           clave_idempotencia: alta.clave,
           huella: alta.huella,
@@ -193,7 +205,35 @@ export function crearRepositorioDePagos(db: Kysely<ComprasDb>): RepositorioDePag
         .onConflict((oc) => oc.doNothing())
         .returning("id")
         .executeTakeFirst();
-      return fila?.id;
+      if (fila === undefined) return undefined;
+      await db
+        .insertInto("medio_de_un_pago")
+        .values(
+          alta.medios.map((m, i) => ({
+            empresa_id: empresa,
+            pago_id: fila.id,
+            numero: i + 1,
+            medio: m.medio,
+            importe: m.importe,
+          })),
+        )
+        .execute();
+      return fila.id;
+    },
+    async mediosDe(empresa, pagoId) {
+      if (!esUuid(pagoId)) return [];
+      const filas = await db
+        .selectFrom("medio_de_un_pago")
+        .select(["medio", sql<string>`importe::text`.as("importe")])
+        .where("empresa_id", "=", empresa)
+        .where("pago_id", "=", pagoId)
+        .orderBy("numero")
+        .execute();
+      return filas.map((f) => {
+        const medio = MEDIOS_DE_PAGO.find((m) => m === f.medio);
+        if (medio === undefined) throw new RangeError(`medio de pago desconocido: ${f.medio}`);
+        return { medio, importe: f.importe };
+      });
     },
     async anular(empresa, id, anulacion) {
       const fila = await db

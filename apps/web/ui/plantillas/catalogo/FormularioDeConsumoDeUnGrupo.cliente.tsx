@@ -14,6 +14,7 @@ import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.clien
 import { Pila } from "../../primitivas/Pila";
 import estilos from "./FormularioDeConsumoDeUnGrupo.module.css";
 import type { ConsumoArmado, LineaArmada } from "./modelo-de-consumo";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeConsumoDeUnGrupo = Readonly<{
   consumo: ConsumoArmado;
@@ -52,7 +53,7 @@ export function FormularioDeConsumoDeUnGrupo({
   const primero = consumo.insumos[0]?.valor ?? "";
 
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={3}>
           <h2 className={estilos["titulo"]}>{consumo.titulo}</h2>

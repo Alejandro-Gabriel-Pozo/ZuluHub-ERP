@@ -132,6 +132,7 @@ const TABLAS_DE_NEGOCIO = [
   "saldo_de_imputacion",
   "saldo_de_parte",
   "saldo_de_parte_por_centro_de_costo",
+  "cuenta_del_cliente", // 0106
   "cobro",
   "arqueo_caja",
   "arqueo_billete",
@@ -487,6 +488,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "saldo_de_parte",
             "saldo_de_parte_por_centro_de_costo",
           ].map((t) => `${t}:SELECT`), // 0092
+          "cuenta_del_cliente:SELECT", // 0106
           "cuenta_consumo:SELECT", // 0028
           "linea_cuenta:SELECT", // 0028
           "linea_cuenta_opcion:SELECT", // 0028
@@ -868,6 +870,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "pedernal_app:saldo_de_imputacion.importe",
           "pedernal_app:saldo_de_parte.saldo",
           "pedernal_app:saldo_de_parte_por_centro_de_costo.saldo",
+          // 0106: la ficha de cuenta corriente cambia plazo, límite, estado y motivo (nada de lo que la identifica)
+          ...["plazo_dias", "limite", "estado", "motivo_de_suspension"].map(
+            (c) => `pedernal_app:cuenta_del_cliente.${c}`,
+          ),
           // 0031: el promedio de costo cambia (el costo congelado de cada renglón no se modifica)
           "pedernal_app:costo_de_articulo.costo_unitario",
           "pedernal_app:costo_de_articulo.cantidad_valorizada",
@@ -1738,6 +1744,16 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...["empresa_id", "parte_id", "sentido", "moneda", "sucursal_id", "saldo"].map(
             (c) => `saldo_de_parte_por_centro_de_costo.${c}`,
           ),
+          // 0106: la ficha de cuenta corriente (la base fija `id`, `moneda`, `estado`, las fechas y la versión)
+          ...[
+            "empresa_id",
+            "parte_id",
+            "plazo_dias",
+            "limite",
+            "clave_idempotencia",
+            "huella",
+            "habilitada_por",
+          ].map((c) => `cuenta_del_cliente.${c}`),
           ...[
             "movimiento_id",
             "empresa_id",
