@@ -69,6 +69,8 @@ export type LineaDeLaFicha = Readonly<{
   varianteNombre: string | null;
   cantidad: string;
   precioUnitario: string;
+  /** El paso de la cantidad congelado en la línea (para repartir por unidades al dividir). */
+  pasoDeCantidad: string;
   importe: string;
   /** El importe de una línea compartida entre cuentas («Compartido»). */
   compartida: boolean;
@@ -85,6 +87,8 @@ export type CuentaDeLaFicha = Readonly<{
   cuentaId: string;
   /** Número de la parte («Cuenta 2») si es una cuenta hija de una división. */
   parte: number | null;
+  /** Una cuenta hija ya cobrada (cerrada): se muestra «Cobrada» y no se vuelve a cobrar; una cuenta de mesa o una hija abierta es `false`. */
+  cobrada: boolean;
   total: ImporteJson;
   lineas: readonly LineaDeLaFicha[];
 }>;
@@ -309,7 +313,7 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
           id: mesa.id,
         });
         let unidaAMesa: number | null = null;
-        let cuentasParaMostrar: { id: string; parte: number | null }[] = [];
+        let cuentasParaMostrar: { id: string; parte: number | null; cobrada: boolean }[] = [];
         if (abierta !== null) {
           const union = await tx.unionesYDivisiones.unionPorOrigen(empresaId, abierta.id);
           const division = await tx.unionesYDivisiones.divisionPorMadre(empresaId, abierta.id);
@@ -321,12 +325,16 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
               division.id,
             )) {
               const hija = await tx.cuentas.obtener(empresaId, parte.cuentaId as never);
-              if (hija !== null && hija.estado === "ABIERTA") {
-                cuentasParaMostrar.push({ id: hija.id, parte: parte.numero });
+              if (hija !== null && (hija.estado === "ABIERTA" || hija.estado === "CERRADA")) {
+                cuentasParaMostrar.push({
+                  id: hija.id,
+                  parte: parte.numero,
+                  cobrada: hija.estado === "CERRADA",
+                });
               }
             }
           } else {
-            cuentasParaMostrar = [{ id: abierta.id, parte: null }];
+            cuentasParaMostrar = [{ id: abierta.id, parte: null, cobrada: false }];
           }
         }
         const cuentas: CuentaDeLaFicha[] = [];
@@ -360,6 +368,7 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
               varianteNombre: l.varianteNombre,
               cantidad: l.cantidad,
               precioUnitario: l.precioUnitario,
+              pasoDeCantidad: l.pasoDeCantidad,
               importe: importes.get(l.id) ?? "0.00",
               compartida: l.importeFijo !== null,
               comanda: enviada
@@ -378,15 +387,23 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
           cuentas.push({
             cuentaId: c.id,
             parte: c.parte,
+            cobrada: c.cobrada,
             total: importeAJson(calculado.total),
             lineas: lineasFicha,
           });
         }
         const estado = estadoDeMesa({
-          cuentas: cuentas.map((c, i) => ({
-            pendientes: resumenes[i] ?? 0,
-            envios: c.lineas.filter((l) => l.comanda === "ENVIADA").length,
-          })),
+          // El estado de la mesa sale solo de las cuentas que siguen abiertas (una hija cobrada ya no cuenta).
+          cuentas: cuentas.flatMap((c, i) =>
+            c.cobrada
+              ? []
+              : [
+                  {
+                    pendientes: resumenes[i] ?? 0,
+                    envios: c.lineas.filter((l) => l.comanda === "ENVIADA").length,
+                  },
+                ],
+          ),
           unidaAMesa,
         });
         return ok({ mesaId: mesa.id, numero: mesa.numero, estado, unidaAMesa, cuentas });
