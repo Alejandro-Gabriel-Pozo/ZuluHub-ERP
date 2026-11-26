@@ -1,4 +1,5 @@
 import { exigirSucursal } from "../../../capacidades/permisos/alcance";
+import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import {
   sucursalId,
   type EmpresaId,
@@ -49,6 +50,8 @@ export type ClienteParaVender = Readonly<{
   saldo: ImporteJson;
   disponible: ImporteJson;
   excedido: boolean;
+  /** ¿Quien consulta tiene `cuenta_corriente.aprobar_exceso`? Lo decide el servidor: la pantalla solo elige qué mostrar cuando la venta pasa el límite (nunca autoriza nada). */
+  puedeAprobarElExceso: boolean;
   /** Solo si se pasó `totalDeLaVenta`: el saldo del cliente con esta venta cargada. */
   saldoDespues?: ImporteJson;
   /** Solo si se pasó `totalDeLaVenta`: cuánto pasaría del límite (cero si no pasa). */
@@ -143,6 +146,11 @@ export function armarVerClienteParaVender(dependencias: DependenciasDeCuentaCorr
           total.valor === null ? null : previsionDeLaVenta(ficha.limite, saldo, total.valor);
         const { disponible, excedido } = disponibleDe(ficha.limite, saldo);
         const datos = (await datosDeLosClientes(tx, empresa, [ficha.parteId])).get(ficha.parteId);
+        const puedeAprobar = await exigirAccion(
+          dependencias.reglas,
+          "cuenta_corriente.aprobar_exceso",
+          () => tx.autorizacion.delActor(contexto),
+        );
         // La constancia va ANTES de devolver el dato y en la misma transacción; si falla, no sale nada.
         await dejarConstancia(tx, contexto, previo.valor.persona, {
           accion: "CUENTA_CORRIENTE_CONSULTADA_AL_VENDER",
@@ -158,6 +166,7 @@ export function armarVerClienteParaVender(dependencias: DependenciasDeCuentaCorr
           saldo: importeAJson(saldo),
           disponible: importeAJson(disponible),
           excedido,
+          puedeAprobarElExceso: puedeAprobar.ok,
           ...(prevision === null ? {} : prevision),
         });
       },

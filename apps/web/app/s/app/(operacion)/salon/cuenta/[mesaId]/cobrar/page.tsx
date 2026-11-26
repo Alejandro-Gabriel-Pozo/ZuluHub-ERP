@@ -1,10 +1,12 @@
 import { errorDeCodigo } from "../../../../../../../../../../src/capacidades/experiencia/respuesta";
 import { conTitulo, pantallaDeOperacion } from "../../../../../../../../pantallas/operacion";
 import { cobroDeLaPagina } from "../../../../../../../../servidor/cobrar";
+import { clientesParaVenderDeLaPagina } from "../../../../../../../../servidor/vender-a-cuenta";
 import { puedeCobrarLaMesa } from "../../../../../../../../servidor/ofertas-de-salon";
 import { cargarLaFichaDeLaMesa } from "../../../../../../../../servidor/salon";
 import { ErrorDelDetalle } from "../../../../../../../../ui/patrones/ErrorDelDetalle";
 import { textosDeCobrar } from "../../../../../../../../ui/plantillas/cobrar/textos-de-cobrar";
+import { textosDeVenderACuenta } from "../../../../../../../../ui/plantillas/cobrar/textos-de-vender-a-cuenta";
 import { textosDeDividirEnElCobro } from "../../../../../../../../ui/plantillas/cobrar/textos-de-dividir-en-el-cobro";
 import { textosDeDividir } from "../../../../../../../../ui/plantillas/salon/textos-de-dividir";
 import { CobroDeLaMesa } from "../../../../../../../../ui/plantillas/salon/CobroDeLaMesa.cliente";
@@ -14,6 +16,10 @@ import {
   cobrarLaMesaAccion,
   papelDelTicketAccion,
 } from "../../../../../acciones-de-cobrar";
+import {
+  cerrarLaMesaACuentaAccion,
+  verElClienteParaVenderAccion,
+} from "../../../../../acciones-de-vender-a-cuenta";
 
 type PropsDePagina = Readonly<{
   params: Promise<{ mesaId: string }>;
@@ -53,6 +59,8 @@ export default async function PaginaDeCobrarLaMesa({ params, searchParams }: Pro
     if (!permitido || aCobrar === undefined) return generico;
     const preparado = await cobroDeLaPagina(contexto);
     if (!preparado.ok) return <ErrorDelDetalle error={preparado.error} />;
+    // «Vender a cuenta corriente»: solo si la persona puede cargar a cuenta (lo decide el servidor) y hay clientes que elegir.
+    const clientes = await clientesParaVenderDeLaPagina(contexto);
     const t = textosDeDividir();
     return conTitulo(
       mesa.titulo,
@@ -72,6 +80,16 @@ export default async function PaginaDeCobrarLaMesa({ params, searchParams }: Pro
                 volverALasCuentas: t.volverALasCuentas,
                 mesaCobrada: t.mesaCobrada,
               }
+        }
+        aCuenta={
+          clientes.ok && clientes.dato.clientes.length > 0
+            ? {
+                clientes: clientes.dato.clientes,
+                verCliente: verElClienteParaVenderAccion,
+                confirmar: cerrarLaMesaACuentaAccion,
+                textos: textosDeVenderACuenta(),
+              }
+            : undefined
         }
         acciones={{
           cobrar: cobrarLaMesaAccion,

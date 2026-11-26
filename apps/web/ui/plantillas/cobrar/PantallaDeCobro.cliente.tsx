@@ -17,6 +17,7 @@ import { CONFIRMACION_VENTA_A_CERO, type LineaDeLaVenta } from "../venta/modelo-
 import estilos from "./Cobrar.module.css";
 import { FilaDeCobro } from "./FilaDeCobro.cliente";
 import { HojaDeDividirEnElCobro } from "./HojaDeDividirEnElCobro.cliente";
+import { HojaDeVenderACuenta } from "./HojaDeVenderACuenta.cliente";
 import { filasDelReparto } from "./modelo-de-reparto-en-el-cobro";
 import type { PapelDeTicket } from "./PapelDelTicket.cliente";
 import { ResultadoDelCobro } from "./ResultadoDelCobro.cliente";
@@ -28,6 +29,7 @@ import {
   pagoAdicional,
   pagoNuevo,
   pedidoDeCobro,
+  pedidoDeVenderACuenta,
   type CobroPreparado,
   type IdsDeLaVenta,
   type LineaDeEstado,
@@ -35,6 +37,7 @@ import {
   type TicketAnulado,
   type VentaCobrada,
 } from "./modelo-de-cobro";
+import { comoVentaCobrada, type VentaACuenta, type VentaACuentaDelCobro } from "./modelo-de-vender-a-cuenta";
 import { type TextosDeCobrar } from "./textos-de-cobrar";
 import type { TextosDeDividirEnElCobro } from "./textos-de-dividir-en-el-cobro";
 import { useEnvioDelPedido } from "./useEnvioDelPedido.cliente";
@@ -72,6 +75,11 @@ export type PropsDePantallaDeCobro = Readonly<{
   deLaDivision?: Readonly<{ rotuloDeVolver: string; mesaCobrada: string | null }> | undefined;
   /** Solo al cobrar una cuenta de una mesa (SAL-E3): los textos de «Dividir la cuenta» por porcentaje; sin ellos, no se ofrece. Dividir es UN ticket con varios cobros: la hoja solo carga las filas de cobro. */
   dividirPorPorcentaje?: TextosDeDividirEnElCobro | undefined;
+  /**
+   * «Vender a cuenta corriente» (CC-5 B1b): los clientes que se pueden elegir y las acciones de servidor, o ausente si la persona no puede cargar a cuenta o no hay clientes (entonces el cobro no ofrece la hoja).
+   * La venta queda cargada a la cuenta del cliente sin pasar por la caja: el resultado es un ticket sin cobros. Con `cuentaExistente` (la mesa) se cierra esa cuenta; si no, se vende la cuenta de la venta rápida.
+   */
+  aCuenta?: VentaACuentaDelCobro | undefined;
   /** Vale `true` durante los primeros instantes tras abrir la vista (lo maneja la pantalla de venta): un toque en «Cobrar» entonces se ignora. */
   esperaAlAbrir?: Readonly<{ current: boolean }>;
 }>;
@@ -105,6 +113,7 @@ export function PantallaDeCobro({
   cuentaExistente,
   deLaDivision,
   dividirPorPorcentaje,
+  aCuenta,
 }: PropsDePantallaDeCobro) {
   const medios = preparado.estado === "LISTO" ? preparado.opciones.medios : [];
   const [pagos, setPagos] = useState<readonly PagoEnEdicion[]>(() => {
@@ -124,12 +133,17 @@ export function PantallaDeCobro({
   });
 
   const [dividiendo, setDividiendo] = useState(false);
+  const [vendiendoACuenta, setVendiendoACuenta] = useState(false);
+  const [ventaACuenta, setVentaACuenta] = useState<VentaACuenta | null>(null);
   const idDelTitulo = useId();
   // Con el ticket del cliente a la vista, la barra es la suya (`TicketDelCliente`): esta no se dibuja.
   const [viendoElTicket, setViendoElTicket] = useState(false);
   const [rechazoYaVisto, setRechazoYaVisto] = useState<ErrorPublico | null>(null);
   const estado = estadoDelCobro(total, pagos, medios);
-  const ventaHecha = ventaCobrada ?? (envio.estado.tipo === "hecho" ? envio.estado.valor : null);
+  const ventaHecha =
+    ventaCobrada ??
+    (envio.estado.tipo === "hecho" ? envio.estado.valor : null) ??
+    (ventaACuenta === null ? null : comoVentaCobrada(ventaACuenta));
   const hecho = ventaHecha !== null;
   // Con un envío en curso, incierto o hecho nada se edita ni se vuelve: otro pedido con la misma clave sería un error, y con otra clave podría cobrar dos veces.
   const congelado = envio.enCurso || envio.estado.tipo === "incierto" || hecho;
@@ -181,7 +195,8 @@ export function PantallaDeCobro({
     envio.estado.rechazo !== rechazoYaVisto
       ? envio.estado.rechazo
       : null;
-  const enResultado = (hecho && preparado.estado === "LISTO") || rechazoDelCobro !== null;
+  const enResultado =
+    (hecho && (preparado.estado === "LISTO" || ventaACuenta !== null)) || rechazoDelCobro !== null;
   const titulo = enResultado ? textos.resultado : textos.titulo;
 
   // El foco va al título al abrir la vista y cada vez que cambia de «Cobro» a «Resultado» (y al revés).
@@ -191,10 +206,11 @@ export function PantallaDeCobro({
   }, [enResultado, viendoElTicket]);
 
   const cuerpo =
-    ventaHecha !== null && preparado.estado === "LISTO" ? (
+    ventaHecha !== null && (preparado.estado === "LISTO" || ventaACuenta !== null) ? (
       <ResultadoDelCobro
         venta={ventaHecha}
-        medios={preparado.opciones.medios}
+        medios={preparado.estado === "LISTO" ? preparado.opciones.medios : []}
+        aCuenta={ventaACuenta !== null}
         vuelto={estado.vuelto?.vuelto ?? "0.00"}
         textos={textos}
         anular={anular}
@@ -298,6 +314,17 @@ export function PantallaDeCobro({
               {dividirPorPorcentaje.dividirLaCuenta}
             </Boton>
           ) : null}
+          {aCuenta !== undefined && aCuenta.clientes.length > 0 ? (
+            <Boton
+              variante="secundaria"
+              deshabilitado={congelado}
+              alTocar={() => {
+                setVendiendoACuenta(true);
+              }}
+            >
+              {aCuenta.textos.titulo}
+            </Boton>
+          ) : null}
           <LineaDelEstado linea={lineaDeEstado(estado.vuelto)} textos={textos} />
           {envio.estado.tipo === "rechazado" && !esElRechazoGenerico(envio.estado.rechazo) ? (
             <ErrorDeRespuesta error={envio.estado.rechazo} />
@@ -318,6 +345,33 @@ export function PantallaDeCobro({
         </div>
       </>
     );
+
+  if (vendiendoACuenta && aCuenta !== undefined && ventaACuenta === null) {
+    return (
+      <HojaDeVenderACuenta
+        total={total}
+        aCuenta={aCuenta}
+        textos={aCuenta.textos}
+        textosDelCobro={textos}
+        cuentaDeConsumoId={cuentaExistente?.cuentaId}
+        esperaEntreVerificacionesMs={esperaEntreVerificacionesMs}
+        pedidoDeLaVenta={(clienteId) =>
+          pedidoDeVenderACuenta({
+            ids: idsDeLaVenta(),
+            clienteId,
+            cuenta,
+            total,
+            confirmaciones: confirmoCero ? [CONFIRMACION_VENTA_A_CERO] : undefined,
+            sinLineas: cuentaExistente !== undefined,
+          })
+        }
+        alVendida={setVentaACuenta}
+        alVolver={() => {
+          setVendiendoACuenta(false);
+        }}
+      />
+    );
+  }
 
   if (dividiendo && dividirPorPorcentaje !== undefined) {
     return (

@@ -14,6 +14,7 @@ import {
   pagoAdicional,
   pagoNuevo,
   pedidoDeCobro,
+  pedidoDeVenderACuenta,
   resumenDelCobro,
   textoDelErrorDeDato,
   type MedioParaCobrar,
@@ -25,6 +26,11 @@ import {
   rotuloDeUnDato,
   textosDeCobrar,
 } from "../../apps/web/ui/plantillas/cobrar/textos-de-cobrar";
+import {
+  comoVentaCobrada,
+  superaElLimite,
+  type ClienteElegidoAlVender,
+} from "../../apps/web/ui/plantillas/cobrar/modelo-de-vender-a-cuenta";
 import { MAXIMO_DE_COBROS_POR_TICKET } from "../../src/primitivas/dinero/limites-de-cobro";
 import type { LineaDeLaVenta } from "../../apps/web/ui/plantillas/venta/modelo-de-la-cuenta";
 
@@ -656,5 +662,140 @@ describe("textosDeCobrar", () => {
     expect(textos.cobrar).toBe("Cobrar");
     expect(textos.nuevaVenta).toBe("Nueva venta");
     expect(textos.noPermitido).toBe("Esta acción no está permitida");
+  });
+});
+
+describe("pedidoDeVenderACuenta (CC-5 B1b)", () => {
+  const cuenta: readonly LineaDeLaVenta[] = [
+    {
+      clave: "l1",
+      productoId: "p1",
+      varianteId: null,
+      opcionIds: [],
+      cantidad: 20_000,
+      revision: 0,
+    },
+    {
+      clave: "l2",
+      productoId: "p2",
+      varianteId: "v1",
+      opcionIds: ["o1"],
+      cantidad: 5_000,
+      revision: 0,
+    },
+  ];
+  const ids = {
+    cuentaId: "cuenta-1",
+    ejemplarId: "ejemplar-1",
+    lineas: new Map([
+      ["l1", "linea-1"],
+      ["l2", "linea-2"],
+    ]),
+  };
+  const total = { moneda: "ARS", monto: "1500.00" };
+
+  it("lleva la cuenta, el ejemplar, el cliente, las líneas y el total que se vio; NO lleva caja, cobros ni aprobación del exceso", () => {
+    const pedido = pedidoDeVenderACuenta({ ids, clienteId: "c-1", cuenta, total });
+    expect(pedido).toEqual({
+      cuentaId: "cuenta-1",
+      ejemplarId: "ejemplar-1",
+      clienteId: "c-1",
+      lineas: [
+        { lineaId: "linea-1", productoId: "p1", opcionIds: [], cantidad: "2" },
+        {
+          lineaId: "linea-2",
+          productoId: "p2",
+          varianteId: "v1",
+          opcionIds: ["o1"],
+          cantidad: "0.5",
+        },
+      ],
+      totalEsperado: { moneda: "ARS", monto: "1500.00" },
+    });
+    const claves = Object.keys(pedido ?? {});
+    for (const prohibida of ["cajaId", "cobros", "aprobacionDelExceso", "sucursalId"]) {
+      expect(claves).not.toContain(prohibida);
+    }
+  });
+
+  it("la confirmación de venta a $ 0 viaja solo si se pasó", () => {
+    expect(pedidoDeVenderACuenta({ ids, clienteId: "c-1", cuenta, total })).not.toHaveProperty(
+      "confirmaciones",
+    );
+    expect(
+      pedidoDeVenderACuenta({ ids, clienteId: "c-1", cuenta, total, confirmaciones: ["X"] }),
+    ).toMatchObject({ confirmaciones: ["X"] });
+  });
+
+  it("la mesa (cuenta que ya existe) no lleva líneas", () => {
+    const pedido = pedidoDeVenderACuenta({
+      ids,
+      clienteId: "c-1",
+      cuenta: [],
+      total,
+      sinLineas: true,
+    });
+    expect(pedido).toEqual({
+      cuentaId: "cuenta-1",
+      ejemplarId: "ejemplar-1",
+      clienteId: "c-1",
+      totalEsperado: { moneda: "ARS", monto: "1500.00" },
+    });
+  });
+
+  it("una línea sin su id, o una cuenta vacía en el mostrador, no arma un pedido a medias", () => {
+    expect(
+      pedidoDeVenderACuenta({
+        ids: { ...ids, lineas: new Map([["l1", "linea-1"]]) },
+        clienteId: "c-1",
+        cuenta,
+        total,
+      }),
+    ).toBeNull();
+    expect(pedidoDeVenderACuenta({ ids, clienteId: "c-1", cuenta: [], total })).toBeNull();
+  });
+});
+
+describe("modelo de vender a cuenta (CC-5 B1b)", () => {
+  const importe = (monto: string) => ({ moneda: "ARS", monto });
+  const cliente = (excedeEn: string | null): ClienteElegidoAlVender => ({
+    nombre: "Agencia",
+    cuit: null,
+    estado: "HABILITADA",
+    saldo: importe("0.00"),
+    disponible: importe("100.00"),
+    excedido: false,
+    puedeAprobarElExceso: false,
+    saldoDespues: importe("10.00"),
+    excedeEn: excedeEn === null ? null : importe(excedeEn),
+  });
+
+  it("supera el límite solo si el servidor dice que excede en más de cero", () => {
+    expect(superaElLimite(cliente("0.01"))).toBe(true);
+    expect(superaElLimite(cliente("30000.00"))).toBe(true);
+    expect(superaElLimite(cliente("0.00"))).toBe(false);
+    expect(superaElLimite(cliente("0"))).toBe(false);
+    expect(superaElLimite(cliente(null))).toBe(false);
+  });
+
+  it("la venta a cuenta se ve como un ticket sin cobros", () => {
+    expect(
+      comoVentaCobrada({
+        ticketId: "t-1",
+        ejemplarId: "e-1",
+        numero: 9,
+        estado: "EMITIDO",
+        fechaNegocio: "2026-11-26",
+        total: importe("1000.00"),
+        yaExistia: true,
+      }),
+    ).toEqual({
+      ticketId: "t-1",
+      ejemplarId: "e-1",
+      numero: 9,
+      estado: "EMITIDO",
+      total: importe("1000.00"),
+      cobros: [],
+    });
   });
 });
