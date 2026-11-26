@@ -18,6 +18,7 @@ import {
   comoSesion,
   crearEmpresaActiva,
   crearEntornoDePrueba,
+  baseDeEsteArchivo,
 } from "./entorno";
 import {
   acepta,
@@ -48,7 +49,7 @@ import { SesionDePrueba } from "./sesiones";
  *     librería solo toca sus tablas.
  */
 
-const base = inject("baseDePruebas");
+const base = await baseDeEsteArchivo(inject("baseDePruebas"));
 
 const TABLAS_DE_AUTENTICACION = [
   "account",

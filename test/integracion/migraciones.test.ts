@@ -104,7 +104,10 @@ describe.skipIf(base === null)("migraciones", () => {
         "0096_lectura_publica_de_las_cartas_de_la_empresa_del_host.sql",
         "0097_roles_propios_de_la_empresa.sql",
         "0098_correccion_de_lo_recibido.sql",
+        "0102_cuentas_de_imagen_declaradas.sql",
         "0103_pago_compuesto.sql",
+        "0105_anonimizacion_de_partes.sql",
+        "0106_cuenta_del_cliente.sql",
         "0108_facturar_antes_de_cobrar.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
@@ -191,7 +194,10 @@ describe.skipIf(base === null)("migraciones", () => {
           "0096_lectura_publica_de_las_cartas_de_la_empresa_del_host.sql",
           "0097_roles_propios_de_la_empresa.sql",
           "0098_correccion_de_lo_recibido.sql",
+          "0102_cuentas_de_imagen_declaradas.sql",
           "0103_pago_compuesto.sql",
+          "0105_anonimizacion_de_partes.sql",
+          "0106_cuenta_del_cliente.sql",
           "0108_facturar_antes_de_cobrar.sql",
         ],
       });
@@ -384,7 +390,10 @@ describe.skipIf(base === null)("migraciones", () => {
         "0096_lectura_publica_de_las_cartas_de_la_empresa_del_host.sql",
         "0097_roles_propios_de_la_empresa.sql",
         "0098_correccion_de_lo_recibido.sql",
+        "0102_cuentas_de_imagen_declaradas.sql",
         "0103_pago_compuesto.sql",
+        "0105_anonimizacion_de_partes.sql",
+        "0106_cuenta_del_cliente.sql",
         "0108_facturar_antes_de_cobrar.sql",
       ]);
     } finally {

@@ -36,6 +36,7 @@ const CODIGO_DE_ERROR_PROPIO: Readonly<Record<ErrorPropio, CodigoDeClientes>> = 
   CARGO_INVALIDO: "CLIENTES_ACCION_NO_PERMITIDA",
   PARTE_CON_VINCULOS: "CLIENTES_ACCION_NO_PERMITIDA",
   CURSOR_INVALIDO: "CLIENTES_ACCION_NO_PERMITIDA",
+  MOTIVO_DE_ANONIMIZACION_INVALIDO: "CLIENTES_ACCION_NO_PERMITIDA",
 };
 
 /** El campo del formulario al que se asocia el error de un documento (el número); el nombre, el email y el teléfono se llaman como su campo. */

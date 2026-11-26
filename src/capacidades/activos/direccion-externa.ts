@@ -111,7 +111,8 @@ function soloAsciiVisible(texto: string): boolean {
   return true;
 }
 
-function esCuenta(cuenta: unknown): cuenta is string {
+/** ¿Es una cuenta del proveedor? LA regla de forma de la cuenta, una sola vez: quien declara cuentas por empresa la usa y la base la copia (`cuenta_de_imagen_cuenta_ck`, 0102). */
+export function esCuenta(cuenta: unknown): cuenta is string {
   return (
     typeof cuenta === "string" &&
     cuenta.length >= 1 &&

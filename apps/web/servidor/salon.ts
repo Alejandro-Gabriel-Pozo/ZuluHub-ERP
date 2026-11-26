@@ -14,6 +14,10 @@ import {
   type MapaParaLaPantalla,
 } from "../../../src/composicion/cuenta-de-mesa-web";
 import {
+  unirLasMesas,
+  type DependenciasDeUnirMesasWeb,
+} from "../../../src/composicion/unir-mesas-web";
+import {
   cambiarElEstadoDeLaMesa,
   crearLaMesa,
   editarLaMesa,
@@ -52,6 +56,11 @@ const dependencias: DependenciasDeMesasWeb = {
 const dependenciasDeLaCuenta: DependenciasDeCuentaDeMesaWeb = {
   casosDeUso: web.casosDeUsoDeSalon,
   consultas: web.consultasDeSalon,
+  respuesta: dependenciasDeSesion.respuesta,
+};
+
+const dependenciasDeUnir: DependenciasDeUnirMesasWeb = {
+  casosDeUso: web.casosDeUsoDeSalon,
   respuesta: dependenciasDeSesion.respuesta,
 };
 
@@ -184,3 +193,7 @@ export const cambiarDeMesaLaCuentaDelSalon = (crudo: unknown) =>
   enLaSucursal((contexto, sucursal) =>
     cambiarDeMesaLaCuenta(dependenciasDeLaCuenta, contexto, sucursal, crudo),
   );
+
+/** «Unir con otra mesa» (`{ unionId, cuentaDestinoId, cuentaOrigenId, clave }`; el `unionId` y la clave los fija la página una vez por intento). */
+export const unirLasMesasDelSalon = (crudo: unknown) =>
+  enLaSucursal((contexto, sucursal) => unirLasMesas(dependenciasDeUnir, contexto, sucursal, crudo));

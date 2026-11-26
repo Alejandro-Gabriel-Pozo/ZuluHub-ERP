@@ -136,3 +136,21 @@ export function crearStockFalso(): StockFalso {
       Promise.resolve(hay(alcance, producto, (k) => conteos.has(k))),
   };
 }
+
+/**
+ * Una cuenta de imagen declarada por la empresa, montada por el dueño de la base (0102): para las pruebas que guardan un logo y necesitan que su cuenta esté declarada y
+ * activa. Lo que se prueba de las cuentas pasa por el rol real y por los casos de uso, nunca por este atajo.
+ */
+export async function cuentaDeImagenDeBase(
+  dueno: pg.Client,
+  empresa: string,
+  persona: string,
+  cuenta: string,
+): Promise<string> {
+  const { rows } = await dueno.query<{ id: string }>(
+    `insert into cuenta_de_imagen_declarada (empresa_id, proveedor, cuenta, clave_idempotencia, huella, declarada_por)
+     values ($1, 'CLOUDINARY', $2, $3, $4, $5) returning id`,
+    [empresa, cuenta, randomBytes(16).toString("hex"), randomBytes(32).toString("hex"), persona],
+  );
+  return rows[0]?.id as string;
+}

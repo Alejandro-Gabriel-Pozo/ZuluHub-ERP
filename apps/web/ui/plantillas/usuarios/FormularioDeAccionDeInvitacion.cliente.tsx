@@ -9,6 +9,7 @@ import {
   ACCION_DE_INVITACION_INICIAL,
   type ResultadoDeAccionDeInvitacion,
 } from "./resultado-de-usuarios";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeAccionDeInvitacion = Readonly<{
   /** `reenviarInvitacionAccion` o `revocarInvitacionAccion`, con el id de la invitación ya ligado (`.bind`): el id no viaja en el formulario. */
@@ -39,7 +40,7 @@ export function FormularioDeAccionDeInvitacion({
   }, [ruta]);
 
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={3}>
           <BotonDeEnvio {...(variante === undefined ? {} : { variante })}>{texto}</BotonDeEnvio>

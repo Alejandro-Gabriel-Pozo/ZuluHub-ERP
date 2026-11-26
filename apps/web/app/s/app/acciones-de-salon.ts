@@ -15,6 +15,7 @@ import {
 import {
   agregarAlPedidoDeLaMesaDelSalon,
   cambiarDeMesaLaCuentaDelSalon,
+  unirLasMesasDelSalon,
   liberarLaMesaDelSalon,
   tomarElPedidoDeLaMesa,
 } from "../../../servidor/salon";
@@ -47,6 +48,10 @@ export async function liberarMesaAccion(pedido: unknown): Promise<Respuesta<unkn
 
 export async function cambiarDeMesaAccion(pedido: unknown): Promise<Respuesta<unknown>> {
   return cambiarDeMesaLaCuentaDelSalon(pedido);
+}
+
+export async function unirMesasAccion(pedido: unknown): Promise<Respuesta<unknown>> {
+  return unirLasMesasDelSalon(pedido);
 }
 
 export async function enviarACocinaAccion(pedido: unknown) {

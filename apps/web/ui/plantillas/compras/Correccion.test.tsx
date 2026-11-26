@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
-import { tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
+import { conReinicio, tocar, violacionesDeAccesibilidad } from "../../pruebas/ayudas";
 import { FormularioDeCorregirLinea } from "./correccion/FormularioDeCorregirLinea.cliente";
 import {
   CORREGIR_INICIAL,
@@ -143,6 +143,29 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
     expect(accion).toHaveBeenCalledTimes(1);
   });
 
+  it("la hoja de «Anular» conserva el motivo escrito tras un error del servidor, también DESPUÉS del reinicio de React", async () => {
+    const accion = vi.fn<AccionDeAnular>(() =>
+      Promise.resolve({ estado: "ERROR", error: GENERICO, consumida: false }),
+    );
+    await render(
+      <PantallaDeFichaDeCompra
+        ficha={ficha()}
+        textos={textosDeCompras()}
+        acciones={{ corregir: false, anular: true, pagar: false, anularPago: false }}
+        accionDeAnular={accion}
+      />,
+    );
+    await userEvent.click(page.getByRole("button", { name: "Anular" }));
+    const dialogo = page.getByRole("dialog");
+    await userEvent.fill(dialogo.getByLabelText("Motivo"), "Se cargó mal");
+    const cancelado = await conReinicio(() => {
+      tocar(dialogo.getByRole("button", { name: "Anular" }));
+    });
+    expect(cancelado).toBe(true);
+    await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
+    await expect.element(dialogo.getByLabelText("Motivo")).toHaveValue("Se cargó mal");
+  });
+
   it("si la compra ya se consumió, junto al genérico va «Corregir» (a la primera línea que se puede corregir)", async () => {
     const accion = vi.fn<AccionDeAnular>(() =>
       Promise.resolve({ estado: "ERROR", error: GENERICO, consumida: true }),
@@ -207,5 +230,21 @@ describe("FormularioDeCorregirLinea", () => {
     liberar();
     await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
     expect(accion).toHaveBeenCalledTimes(1);
+  });
+
+  it("tras un error del servidor, y DESPUÉS del reinicio, conserva el precio y el motivo escritos", async () => {
+    const accion = vi.fn<AccionDeCorregir>(() =>
+      Promise.resolve({ estado: "ERROR", error: GENERICO }),
+    );
+    await render(<FormularioDeCorregirLinea accion={accion} textos={textos} />);
+    await userEvent.fill(page.getByLabelText("Precio por Kilogramo"), "1200");
+    await userEvent.fill(page.getByLabelText("Motivo"), "Subió el precio");
+    const cancelado = await conReinicio(() => {
+      tocar(page.getByRole("button", { name: "Corregir" }));
+    });
+    expect(cancelado).toBe(true);
+    await expect.element(page.getByText("Esta acción no está permitida")).toBeVisible();
+    await expect.element(page.getByLabelText("Precio por Kilogramo")).toHaveValue("1.200,00");
+    await expect.element(page.getByLabelText("Motivo")).toHaveValue("Subió el precio");
   });
 });

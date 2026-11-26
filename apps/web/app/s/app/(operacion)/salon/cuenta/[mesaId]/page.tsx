@@ -12,12 +12,14 @@ import {
   cargarLaFichaDeLaMesa,
   nuevoIdDeCuentaDeMesa,
 } from "../../../../../../../servidor/salon";
+import { puedeCobrarLaMesa, puedeUnirMesas } from "../../../../../../../servidor/ofertas-de-salon";
 import { cargarLaVentaRapida } from "../../../../../../../servidor/venta-rapida";
 import { armarLosTextosDeImprimir } from "../../../../../../../ui/patrones/papel/textos-de-imprimir";
 import { ErrorDelDetalle } from "../../../../../../../ui/patrones/ErrorDelDetalle";
 import {
   armarLaMesa,
   mesasLibresParaElCambio,
+  mesasParaUnir,
   textosDeLaMesa,
 } from "../../../../../../../ui/plantillas/salon/modelo-de-la-mesa";
 import { RUTA_DE_IMPRESORAS } from "../../../../../../../ui/plantillas/salon/modelo-de-impresoras";
@@ -28,6 +30,7 @@ import {
   anularItemEnviadoAccion,
   cambiarDeMesaAccion,
   cambiarSalidaAccion,
+  unirMesasAccion,
   declararImpresionAccion,
   enviarACocinaAccion,
   imprimirDocumentoAccion,
@@ -73,8 +76,13 @@ export default async function PaginaDeLaMesa({ params }: PropsDePagina) {
           enviar: await puedeEnviarAComandas(contexto),
           imprimir: await puedeImprimir(contexto),
           reimprimir: await puedeReimprimir(contexto),
+          cobrar: await puedeCobrarLaMesa(contexto),
+          unir: await puedeUnirMesas(contexto),
         }
-      : { enviar: false, imprimir: false, reimprimir: false };
+      : { enviar: false, imprimir: false, reimprimir: false, cobrar: false, unir: false };
+    // Las mesas a las que se puede unir esta: solo si se ofrece unir; si no se pudo leer el mapa, no se ofrece.
+    const mapa = cocina.unir ? await cargarElMapaDeMesas({ filtro: "TODAS" }) : null;
+    const paraUnir = mapa?.ok === true ? mesasParaUnir({}, mapa.dato.mesas, mesaId) : null;
     const configurarImpresoras = conCuenta && (await puedeAdministrarImpresoras(contexto));
     return conTitulo(
       mesa.titulo,
@@ -95,6 +103,7 @@ export default async function PaginaDeLaMesa({ params }: PropsDePagina) {
             quitar: quitarSinEnviarAccion,
             liberar: liberarMesaAccion,
             cambiarDeMesa: cambiarDeMesaAccion,
+            unir: unirMesasAccion,
             enviar: enviarACocinaAccion,
             pedirQueSalga: pedirQueSalgaAccion,
             anular: anularItemEnviadoAccion,
@@ -105,6 +114,7 @@ export default async function PaginaDeLaMesa({ params }: PropsDePagina) {
           }}
           textosDeImprimir={armarLosTextosDeImprimir()}
           puede={cocina}
+          mesasParaUnir={paraUnir}
           rutaDeImpresoras={configurarImpresoras ? RUTA_DE_IMPRESORAS : null}
           cuentaNuevaId={nuevoIdDeCuentaDeMesa()}
           mesasLibres={

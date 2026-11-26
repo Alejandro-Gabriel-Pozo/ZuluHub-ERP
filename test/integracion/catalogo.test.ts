@@ -104,6 +104,8 @@ const TABLAS_DE_NEGOCIO = [
   "disponibilidad_de_producto",
   // La identidad de la carta: el color de la empresa para sus cartas (0077_identidad_de_la_carta)
   "identidad_de_carta_empresa",
+  // Las cuentas del proveedor de imágenes que cada empresa declara (0102_cuentas_de_imagen_declaradas)
+  "cuenta_de_imagen_declarada",
   // El portal de la vidriera (0078_portal_de_la_empresa)
   "portal_de_empresa",
   "portal_tarjeta",
@@ -132,6 +134,7 @@ const TABLAS_DE_NEGOCIO = [
   "saldo_de_imputacion",
   "saldo_de_parte",
   "saldo_de_parte_por_centro_de_costo",
+  "cuenta_del_cliente", // 0106
   "cobro",
   "arqueo_caja",
   "arqueo_billete",
@@ -487,6 +490,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "saldo_de_parte",
             "saldo_de_parte_por_centro_de_costo",
           ].map((t) => `${t}:SELECT`), // 0092
+          "cuenta_del_cliente:SELECT", // 0106
           "cuenta_consumo:SELECT", // 0028
           "linea_cuenta:SELECT", // 0028
           "linea_cuenta_opcion:SELECT", // 0028
@@ -604,6 +608,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "carta_publica:SELECT", // 0043
           "disponibilidad_de_producto:SELECT", // 0043
           "identidad_de_carta_empresa:SELECT", // 0077
+          "cuenta_de_imagen_declarada:SELECT", // 0102
           ...["portal_de_empresa", "portal_tarjeta", "portal_zona"].map(
             (tabla) => `${tabla}:SELECT`,
           ), // 0078
@@ -868,6 +873,10 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "pedernal_app:saldo_de_imputacion.importe",
           "pedernal_app:saldo_de_parte.saldo",
           "pedernal_app:saldo_de_parte_por_centro_de_costo.saldo",
+          // 0106: la ficha de cuenta corriente cambia plazo, límite, estado y motivo (nada de lo que la identifica)
+          ...["plazo_dias", "limite", "estado", "motivo_de_suspension"].map(
+            (c) => `pedernal_app:cuenta_del_cliente.${c}`,
+          ),
           // 0031: el promedio de costo cambia (el costo congelado de cada renglón no se modifica)
           "pedernal_app:costo_de_articulo.costo_unitario",
           "pedernal_app:costo_de_articulo.cantidad_valorizada",
@@ -960,6 +969,9 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "rubro",
           ].map((c) => `pedernal_app:carta_publica.${c}`), // 0043 y 0077
           "pedernal_app:identidad_de_carta_empresa.color_principal", // 0077
+          ...["estado", "motivo_de_retiro", "retirada_por"].map(
+            (c) => `pedernal_app:cuenta_de_imagen_declarada.${c}`,
+          ), // 0102
           ...[
             "portal_de_empresa.color_detras",
             "portal_de_empresa.color_encabezado",
@@ -1433,6 +1445,16 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           "rubro",
           "sucursal_id",
         ].map((c) => `carta_publica.${c}`), // 0043 y 0077
+        // 0102: las cuentas de imagen declaradas (lo que escribe la aplicación al declarar; el retiro va por UPDATE)
+        ...[
+          "id",
+          "empresa_id",
+          "proveedor",
+          "cuenta",
+          "clave_idempotencia",
+          "huella",
+          "declarada_por",
+        ].map((c) => `cuenta_de_imagen_declarada.${c}`),
         // 0077: el color de la empresa para sus cartas (una fila por empresa)
         ...["color_principal", "creado_por", "empresa_id"].map(
           (c) => `identidad_de_carta_empresa.${c}`,
@@ -1738,6 +1760,16 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...["empresa_id", "parte_id", "sentido", "moneda", "sucursal_id", "saldo"].map(
             (c) => `saldo_de_parte_por_centro_de_costo.${c}`,
           ),
+          // 0106: la ficha de cuenta corriente (la base fija `id`, `moneda`, `estado`, las fechas y la versión)
+          ...[
+            "empresa_id",
+            "parte_id",
+            "plazo_dias",
+            "limite",
+            "clave_idempotencia",
+            "huella",
+            "habilitada_por",
+          ].map((c) => `cuenta_del_cliente.${c}`),
           ...[
             "movimiento_id",
             "empresa_id",

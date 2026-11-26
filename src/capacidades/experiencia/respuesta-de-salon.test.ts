@@ -15,6 +15,9 @@ describe("códigos públicos de «Mesas»", () => {
       SALON_NUMERO_DE_MESA_EN_USO: "salon.texto.admin_ya_existe_una_mesa_con_ese_numero",
       SALON_MESA_FUERA_DEL_SALON: "salon.texto.admin_queda_fuera_del_salon",
       SALON_MESA_SUPERPUESTA: "salon.error.se_superpone_con_la_mesa",
+      SALON_UNIR_NO_SE_PUEDEN_UNIR: "salon.texto.unir_no_se_pueden_unir",
+      SALON_UNIR_MESA_LIBRE: "salon.texto.unir_mesa_libre",
+      SALON_UNIR_LA_MESA_YA_TIENE_UN_COBRO: "salon.texto.unir_la_mesa_ya_tiene_un_cobro",
     });
     const texto = (c: ClaveDeTexto) => CATALOGO_DE_TEXTOS[c].porDefecto;
     expect(texto("salon.texto.admin_escribi_un_numero_del_1_al_99")).toBe(
@@ -25,6 +28,9 @@ describe("códigos públicos de «Mesas»", () => {
     );
     expect(texto("salon.texto.admin_queda_fuera_del_salon")).toBe("Queda fuera del salón");
     expect(texto("salon.error.se_superpone_con_la_mesa")).toBe("Se superpone con la mesa {numero}");
+    expect(texto("salon.texto.unir_no_se_pueden_unir")).toBe("No se pueden unir");
+    expect(texto("salon.texto.unir_mesa_libre")).toBe("Mesa libre");
+    expect(texto("salon.texto.unir_la_mesa_ya_tiene_un_cobro")).toBe("La mesa ya tiene un cobro");
   });
 
   it("todo código está en la tabla pública, como aviso, y los parámetros coinciden con los marcadores del texto", () => {

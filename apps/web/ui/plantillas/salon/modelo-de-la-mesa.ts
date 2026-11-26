@@ -2,6 +2,11 @@ import {
   texto,
   type DiccionarioResuelto,
 } from "../../../../../src/capacidades/vocabulario/vocabulario";
+import {
+  importeAJson,
+  importeDesdeJson,
+  sumar,
+} from "../../../../../src/primitivas/dinero/importe";
 import { formatearCantidad, formatearImporte } from "../../patrones/formato-fiscal";
 
 /**
@@ -59,6 +64,11 @@ export type TextosDeLaMesa = Readonly<{
   sinPedido: string;
   liberar: string;
   cambiarDeMesa: string;
+  unirConOtraMesa: string;
+  confirmarUnion: string;
+  cuantoQueda: string;
+  noSeDeshace: string;
+  noSePuedenUnir: string;
   pasarALaMesa: string;
   noHayMesasLibres: string;
   agregar: string;
@@ -70,6 +80,7 @@ export type TextosDeLaMesa = Readonly<{
   cancelar: string;
   cerrar: string;
   enviarACocina: string;
+  cobrar: string;
   enviadoACocina: string;
   pedirQueSalga: string;
   pedirQueSalgaTodo: string;
@@ -89,6 +100,11 @@ export function textosDeLaMesa(d: DiccionarioResuelto = {}): TextosDeLaMesa {
     sinPedido: texto(d, "salon.texto.mesa_la_mesa_no_tiene_pedido"),
     liberar: texto(d, "salon.texto.mesa_liberar_mesa"),
     cambiarDeMesa: texto(d, "salon.texto.mesa_cambiar_de_mesa"),
+    unirConOtraMesa: texto(d, "salon.texto.unir_unir_con_otra_mesa"),
+    confirmarUnion: texto(d, "salon.texto.unir_unir_ahora"),
+    cuantoQueda: texto(d, "salon.texto.unir_cuanto_queda"),
+    noSeDeshace: texto(d, "salon.texto.unir_esto_no_se_deshace_para_separar_se_divide_la_cuent"),
+    noSePuedenUnir: texto(d, "salon.texto.unir_no_se_pueden_unir"),
     pasarALaMesa: texto(d, "salon.texto.mesa_pasar_a_la_mesa"),
     noHayMesasLibres: texto(d, "salon.texto.mesa_no_hay_mesas_libres"),
     agregar: texto(d, "ventas.venta.agregar"),
@@ -100,6 +116,7 @@ export function textosDeLaMesa(d: DiccionarioResuelto = {}): TextosDeLaMesa {
     cancelar: texto(d, "ventas.venta.cancelar"),
     cerrar: texto(d, "vidriera.producto.cerrar"),
     enviarACocina: texto(d, "comandas.texto.envio_enviar_a_cocina"),
+    cobrar: texto(d, "ventas.cobro.cobrar"),
     enviadoACocina: texto(d, "comandas.texto.envio_enviado_a_cocina"),
     pedirQueSalga: texto(d, "comandas.texto.salida_pedir_que_salga"),
     pedirQueSalgaTodo: texto(d, "comandas.texto.salida_pedir_que_salga_todo"),
@@ -157,6 +174,8 @@ export type MesaArmada = Readonly<{
   cuentaId: string | null;
   /** «$ 1.234,56»; `null` si no hay cuenta (o su moneda no es ARS). */
   total: string | null;
+  /** El total tal como lo guarda la cuenta (texto decimal con su moneda): es el `totalEsperado` de «Cobrar»; `null` si no hay cuenta o su moneda no es ARS. */
+  totalACobrar: Importe | null;
   grupos: readonly GrupoArmado[];
   /** Los envíos de la cuenta, por número y sin repetir («Envío 1»): de cada uno se puede pedir una copia. */
   envios: readonly Readonly<{ envioId: string; titulo: string }>[];
@@ -222,6 +241,7 @@ export function armarLaMesa(d: DiccionarioResuelto, ficha: FichaDeLaMesaDeLaPant
     cuentasHijas: [],
     cuentaId: null,
     total: null,
+    totalACobrar: null,
     grupos: [],
     envios: [],
     hayParaEnviar: false,
@@ -265,6 +285,10 @@ export function armarLaMesa(d: DiccionarioResuelto, ficha: FichaDeLaMesaDeLaPant
     modo: "CON_CUENTA",
     cuentaId: unica.cuentaId,
     total: importeDe(unica.total),
+    totalACobrar:
+      unica.total.moneda === MONEDA
+        ? { moneda: unica.total.moneda, monto: unica.total.monto }
+        : null,
     sinPlatos: platos.length === 0,
     hayParaEnviar: platos.some((p) => p.l.comanda === "PARA_ENVIAR"),
     hayEnEspera: platos.some((p) => p.l.comanda === "ESPERA"),
@@ -295,4 +319,54 @@ export function mesasLibresParaElCambio(
     }))
     .sort((a, b) => a.numero - b.numero)
     .map(({ id, titulo }) => ({ id, titulo }));
+}
+
+/** Una mesa con cuenta a la que se puede unir la actual: su cuenta (el destino) y su total, para «Cuánto queda». */
+export type MesaParaUnir = Readonly<{
+  mesaId: string;
+  cuentaId: string;
+  titulo: string;
+  total: Importe;
+}>;
+
+/**
+ * Las mesas a las que se puede unir la actual: del mapa, las que tienen una cuenta abierta con total en pesos, sin la actual, por número. Las unidas, divididas o libres no se ofrecen (el servidor igual rechaza cada caso).
+ * Ayuda de pantalla: la regla es del servidor.
+ */
+export function mesasParaUnir(
+  d: DiccionarioResuelto,
+  mesas: readonly Readonly<{
+    mesaId: string;
+    numero: number;
+    estado: string;
+    cuentaId?: string | undefined;
+    total?: Importe | undefined;
+  }>[],
+  mesaActual: string,
+): readonly MesaParaUnir[] {
+  return mesas
+    .filter(
+      (m) =>
+        (m.estado === "EN_PEDIDO" || m.estado === "OCUPADA") &&
+        m.mesaId !== mesaActual &&
+        m.cuentaId !== undefined &&
+        m.total?.moneda === MONEDA,
+    )
+    .sort((a, b) => a.numero - b.numero)
+    .map((m) => ({
+      mesaId: m.mesaId,
+      cuentaId: m.cuentaId as string,
+      titulo: texto(d, "salon.texto.admin_mesa_numero", { numero: String(m.numero) }),
+      total: m.total as Importe,
+    }));
+}
+
+/** «Cuánto queda»: la suma EXACTA de las dos cuentas («$ 1.234,56»), sin pasar por `number`; `null` si no se pueden sumar (otra moneda o un monto mal formado). */
+export function cuantoQuedaAlUnir(actual: Importe, destino: Importe): string | null {
+  try {
+    const suma = sumar(importeDesdeJson(actual), importeDesdeJson(destino));
+    return formatearImporte(importeAJson(suma).monto);
+  } catch {
+    return null;
+  }
 }

@@ -62,6 +62,36 @@ export const DECLARACIONES = {
       },
     },
   },
+  crearRol: {
+    accion: "roles.crear",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/roles-casos-de-uso.test.ts",
+        it: "crearRol: el mismo pedido dos veces (mismo id) devuelve el mismo rol y no escribe ni audita de nuevo",
+      },
+    },
+  },
+  editarRol: {
+    accion: "roles.editar",
+    repeticion: {
+      regla: "SIN_CAMBIOS",
+      prueba: {
+        archivo: "test/integracion/roles-casos-de-uso.test.ts",
+        it: "editarRol: repetir la misma edición no escribe una versión nueva ni audita",
+      },
+    },
+  },
+  archivarRol: {
+    accion: "roles.archivar",
+    repeticion: {
+      regla: "YA_ESTABA",
+      prueba: {
+        archivo: "test/integracion/roles-casos-de-uso.test.ts",
+        it: "archivarRol: archivar dos veces es ok la segunda y no escribe ni audita de nuevo",
+      },
+    },
+  },
   proponerTraspaso: {
     accion: "gerencia.proponer_traspaso",
     repeticion: {

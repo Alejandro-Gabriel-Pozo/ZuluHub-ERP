@@ -12,7 +12,7 @@ import type { ErrorDeCorreccion } from "../dominio/correccion";
 import type { ErrorDeCorreccionDeLoRecibido } from "../dominio/correccion-de-lo-recibido";
 import type { ErrorDeVinculo } from "../dominio/orden-de-compra";
 import type { ErrorDeResolucion, ErrorDeTolerancia } from "../dominio/diferencias";
-import type { ErrorDePago, ErrorDeSalidaDeCaja } from "../dominio/pago";
+import type { ErrorDeLosMedios, ErrorDePago, ErrorDeSalidaDeCaja } from "../dominio/pago";
 import type { ErrorDeLinea } from "../dominio/calcular-linea";
 
 /**
@@ -56,6 +56,7 @@ export const CODIGOS_DE_ERROR_DE_COMPRAS = [
   "COMPROBANTE_ANULADO",
   "COMPROBANTE_NO_PAGABLE",
   "MEDIO_INVALIDO",
+  "LA_SUMA_DE_LOS_MEDIOS_NO_ES_EL_TOTAL",
   "SALIDA_DE_CAJA_INVALIDA",
   "SALIDA_DE_CAJA_SOLO_EN_EFECTIVO",
   "CAJA_NO_ENCONTRADA",
@@ -130,6 +131,7 @@ export type ErrorDeCompras =
   | ErrorDeComprobante
   | ErrorDeFactura
   | ErrorDePago
+  | ErrorDeLosMedios
   | ErrorDeSalidaDeCaja
   | ErrorDeCorreccion
   | ErrorDeCorreccionDeLoRecibido

@@ -12,7 +12,7 @@ import { CATALOGO_DE_MODELOS_DE_VIDRIERA } from "../../src/capacidades/experienc
 import { CATALOGO_DE_PERILLAS } from "../../src/capacidades/planes/perillas";
 import { COLOR_RRGGBB } from "../../src/primitivas/color/contraste";
 import { deLaMarca } from "../utilidades/alcance-del-host";
-import { cartaDeBase } from "./carta-publica-apoyo";
+import { cartaDeBase, cuentaDeImagenDeBase } from "./carta-publica-apoyo";
 import { MARCA_DEL_HOST, adaptadorReal, montarEnsayo } from "./carta-publica-lectura-apoyo";
 import { montarCatalogo, valorDe, type EscenarioDeCatalogo } from "./catalogo-apoyo";
 import { agotadaEnElResultado, perdedorAceptable, repetirSiAgotada } from "./concurrencia-apoyo";
@@ -32,6 +32,11 @@ const REVERSION = join(
 );
 
 const MIGRACION = join(import.meta.dirname, "../../migraciones/0077_identidad_de_la_carta.sql");
+/** 0102 (las cuentas de imagen declaradas) cuelga de las columnas del logo de 0077: se revierte antes que ella (sin cuentas declaradas, no frena). */
+const REVERSION_DE_LAS_CUENTAS_DE_IMAGEN = join(
+  import.meta.dirname,
+  "../../migraciones/reversiones/0102_revertir_cuentas_de_imagen_declaradas.sql",
+);
 /** 0078 (el portal) y 0083 (su plan) dependen de 0077: se revierten antes que ella. */
 const REVERSION_DEL_PORTAL = join(
   import.meta.dirname,
@@ -228,6 +233,7 @@ describe.skipIf(base === null)("identidad de la carta (0077)", () => {
   describe("guardarCartaPublica con identidad", () => {
     it("guarda modelo, cara, color propio y logo; audita antes y después; y repetirlo es yaExistia sin escribir ni auditar (idempotencia)", async () => {
       const e = await c.escenario();
+      await cuentaDeImagenDeBase(c.dueno, e.empresa, e.personaDelGerente, LOGO.cuenta);
       const pedido = nueva(e, {
         modelo: "LISTA",
         cara: "BOLICHE",
@@ -287,6 +293,7 @@ describe.skipIf(base === null)("identidad de la carta (0077)", () => {
 
     it("ausente o vacío es «sin elegir»: LISTA, sin cara, sin color y sin logo (NULL), y se puede volver a ese estado", async () => {
       const e = await c.escenario();
+      await cuentaDeImagenDeBase(c.dueno, e.empresa, e.personaDelGerente, LOGO.cuenta);
       const pedido = nueva(e, { cara: "NOCHE", colorPropio: "#0e7490", logo: LOGO });
       valorDe(await c.casos.guardarCartaPublica(e.gerente, pedido));
       valorDe(
@@ -342,7 +349,8 @@ describe.skipIf(base === null)("identidad de la carta (0077)", () => {
           JSON.stringify(extra),
         ).toEqual({ ok: false, error });
       }
-      // Los bordes que sí valen.
+      // Los bordes que sí valen (la cuenta de 64 caracteres, declarada por la empresa).
+      await cuentaDeImagenDeBase(c.dueno, e.empresa, e.personaDelGerente, t(64));
       valorDe(
         await c.casos.guardarCartaPublica(
           e.gerente,
@@ -498,7 +506,8 @@ describe.skipIf(base === null)("identidad de la carta (0077)", () => {
           colorDeLaEmpresa: null,
           logo: null,
         });
-        // Con identidad en la carta y color de la empresa.
+        // Con identidad en la carta y color de la empresa. La cuenta del logo se declara ANTES (la base no deja guardar el logo de una cuenta no declarada).
+        await cuentaDeImagenDeBase(c.dueno, en.e.empresa, en.e.personaDelGerente, LOGO.cuenta);
         await c.dueno.query(
           `update carta_publica set cara = 'BOLICHE', color_propio = '#0e7490', modelo = 'CUADRICULA', logo_proveedor = 'CLOUDINARY', logo_cuenta = 'mi-cuenta_1',
                   logo_id_publico = 'logos/casa-central', logo_version = '1731700000', logo_extension = 'png' where id = $1`,
@@ -567,6 +576,7 @@ describe.skipIf(base === null)("identidad de la carta (0077)", () => {
         await cl.query("begin");
         await cl.query(await readFile(REVERSION_DEL_PORTAL_POR_PLAN, "utf8"));
         await cl.query(await readFile(REVERSION_DEL_PORTAL, "utf8"));
+        await cl.query(await readFile(REVERSION_DE_LAS_CUENTAS_DE_IMAGEN, "utf8"));
         await cl.query("commit");
         // Con una carta que eligió una cara: frena y no deja nada a medias.
         const e = await (
