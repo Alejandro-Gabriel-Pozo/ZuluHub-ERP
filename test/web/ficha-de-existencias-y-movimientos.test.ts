@@ -9,6 +9,10 @@ import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import type { FichaDePantalla } from "../../src/capacidades/pantallas/ficha-de-mesas";
 import { FICHA_DE_EXISTENCIAS } from "../../src/capacidades/pantallas/ficha-de-existencias";
 import { FICHA_DE_CARGA_INICIAL_DE_STOCK } from "../../src/capacidades/pantallas/ficha-de-carga-inicial-de-stock";
+import {
+  FICHA_DE_CONTEO_DE_STOCK,
+  FICHA_DE_REVISION_DE_CONTEO_DE_STOCK,
+} from "../../src/capacidades/pantallas/ficha-de-conteo-de-stock";
 import { FICHA_DE_LOTES_DE_STOCK } from "../../src/capacidades/pantallas/ficha-de-lotes-de-stock";
 import { FICHA_DE_MOVIMIENTOS } from "../../src/capacidades/pantallas/ficha-de-movimientos";
 import {
@@ -46,6 +50,20 @@ const FICHAS: readonly {
     nombre: "Lotes",
     ficha: FICHA_DE_LOTES_DE_STOCK,
     pagina: "lotes",
+    citas: true,
+    accesoDelMenu: false,
+  },
+  {
+    nombre: "Conteo",
+    ficha: FICHA_DE_CONTEO_DE_STOCK,
+    pagina: "conteo",
+    citas: true,
+    accesoDelMenu: false,
+  },
+  {
+    nombre: "Revisión del conteo",
+    ficha: FICHA_DE_REVISION_DE_CONTEO_DE_STOCK,
+    pagina: "conteo/revisar",
     citas: true,
     accesoDelMenu: false,
   },

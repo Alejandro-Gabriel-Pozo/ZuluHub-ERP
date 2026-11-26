@@ -53,6 +53,7 @@ export type {
   SalidaDeCancelarConteo,
   SalidaDeRegistrarConteo,
 } from "./casos-de-uso/conteos";
+export { MOTIVOS_DE_DIFERENCIA, type MotivoDeDiferencia } from "./dominio/motivos-de-diferencia";
 export type {
   EntradaDeAplicarConteo,
   MarcaPedida,

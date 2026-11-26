@@ -10,13 +10,21 @@ export const RUTAS_DE_STOCK = {
   conteo: "/stock/conteo",
   depositos: "/stock/depositos",
   lotes: "/stock/lotes",
+  /** La revisión y el resultado de un conteo (FP-STK-11 y FP-STK-12): no es pestaña, se llega desde Conteo. */
+  revisarConteo: "/stock/conteo/revisar",
   /** No es pestaña: se llega por el botón «Carga inicial» de Existencias (FP-STK-08). */
   cargaInicial: "/stock/carga-inicial",
   entrada: "/stock/existencias",
 } as const;
 
 // Previene una pestaña que lleva a un 404; cada pantalla de Stock suma su clave acá cuando entra. Chequeo: `PestanasDeStock.test.tsx`.
-export const PESTANAS_CONSTRUIDAS = ["existencias", "movimientos", "depositos", "lotes"] as const;
+export const PESTANAS_CONSTRUIDAS = [
+  "existencias",
+  "movimientos",
+  "conteo",
+  "depositos",
+  "lotes",
+] as const;
 
 /** Una pestaña de Stock: adónde lleva, su texto ya resuelto y si es la pantalla actual. */
 export type PestanaDeStock = Readonly<{ href: string; texto: string; actual: boolean }>;
