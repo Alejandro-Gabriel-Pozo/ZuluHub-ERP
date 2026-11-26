@@ -1,6 +1,6 @@
 import type { Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
-import { err, ok } from "../primitivas/resultado/resultado";
+import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
 import {
   entradaDeCambiarElComprobante,
@@ -43,6 +43,16 @@ export type QueHayQueDeshacerParaLaPantalla = Readonly<{
   }>[];
 }>;
 
+/** Una lectura que no encontró nada (la factura o la compra no existe, es de otra empresa o está fuera del alcance) es el mismo error que un rechazo: no se distingue. */
+const hallada = <T, E>(
+  lectura: Resultado<T | null, E>,
+): Resultado<T, E | "COMPROBANTE_NO_ENCONTRADO"> =>
+  !lectura.ok
+    ? lectura
+    : lectura.valor === null
+      ? err("COMPROBANTE_NO_ENCONTRADO")
+      : ok(lectura.valor);
+
 const aLaPantalla = (l: QueHayQueDeshacerParaLaPantalla): QueHayQueDeshacerParaLaPantalla => ({
   comprobanteId: l.comprobanteId,
   anulada: l.anulada,
@@ -62,12 +72,7 @@ export function loQueHayQueDeshacerAntesDeReemplazar(
     d.respuesta,
     { comprobanteId },
     entradaDeDeshacerAntesDeReemplazar,
-    async (entrada) => {
-      const lectura = await d.consultas().queHayQueDeshacerAntes(contexto, entrada);
-      if (!lectura.ok) return lectura;
-      if (lectura.valor === null) return err("COMPROBANTE_NO_ENCONTRADO");
-      return ok(lectura.valor);
-    },
+    async (entrada) => hallada(await d.consultas().queHayQueDeshacerAntes(contexto, entrada)),
     aLaPantalla,
   );
 }
@@ -82,14 +87,8 @@ export function loQueHayQueDeshacerAntesDeCambiar(
     d.respuesta,
     { recepcionId },
     entradaDeDeshacerAntesDeCambiar,
-    async (entrada) => {
-      const lectura = await d
-        .consultas()
-        .queHayQueDeshacerAntesDeCambiarElComprobante(contexto, entrada);
-      if (!lectura.ok) return lectura;
-      if (lectura.valor === null) return err("COMPROBANTE_NO_ENCONTRADO");
-      return ok(lectura.valor);
-    },
+    async (entrada) =>
+      hallada(await d.consultas().queHayQueDeshacerAntesDeCambiarElComprobante(contexto, entrada)),
     aLaPantalla,
   );
 }

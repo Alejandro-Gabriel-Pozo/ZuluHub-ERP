@@ -24,6 +24,16 @@ const FRENOS: readonly FrenoParaLaPantalla[] = [
   { freno: "NOTAS_VIGENTES" },
 ];
 
+describe("SIN_ACCIONES_DEL_REEMPLAZO", () => {
+  it("todo nace cerrado", () => {
+    expect(SIN_ACCIONES_DEL_REEMPLAZO).toStrictEqual({
+      anularPago: false,
+      anularConciliacion: false,
+      verNotas: false,
+    });
+  });
+});
+
 describe("pasosPrevios", () => {
   it("respeta el orden del servidor y lleva cada paso a la pantalla que lo resuelve, con el permiso de ese paso", () => {
     expect(pasosPrevios(FRENOS, { facturaId: FACTURA, recepcionId: COMPRA }, TODO)).toEqual([

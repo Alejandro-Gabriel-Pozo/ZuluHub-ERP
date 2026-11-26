@@ -89,7 +89,7 @@ describe("loQueHayQueDeshacerAntesDeReemplazar", () => {
           ],
         }),
     });
-    expect(await loQueHayQueDeshacerAntesDeReemplazar(d, contexto, FACTURA)).toEqual({
+    expect(await loQueHayQueDeshacerAntesDeReemplazar(d, contexto, FACTURA)).toStrictEqual({
       ok: true,
       dato: {
         comprobanteId: FACTURA,
@@ -121,6 +121,15 @@ describe("loQueHayQueDeshacerAntesDeReemplazar", () => {
     const { d } = montar({ lectura: () => err("SIN_PERMISO") });
     expect(await loQueHayQueDeshacerAntesDeReemplazar(d, contexto, FACTURA)).toMatchObject({
       ok: false,
+      error: { codigo: "SIN_PERMISO" },
+    });
+  });
+
+  it("lo mismo en el cambio de comprobante de una compra: el rechazo de la consulta sale tal cual", async () => {
+    const { d } = montar({ lectura: () => err("SIN_PERMISO") });
+    expect(await loQueHayQueDeshacerAntesDeCambiar(d, contexto, COMPRA)).toMatchObject({
+      ok: false,
+      error: { codigo: "SIN_PERMISO" },
     });
   });
 });

@@ -174,3 +174,24 @@ describe("entradaDeTomarElCosto", () => {
     expect(entradaDeTomarElCosto(null).ok).toBe(false);
   });
 });
+
+describe("entradaDeRegistrarFactura: opcionales en null", () => {
+  it("los opcionales que llegan como null (no solo en blanco) son «no hay» y no rompen la lectura", () => {
+    const r = entradaDeRegistrarFactura({
+      clave: OTRO,
+      proveedorId: ID,
+      factura: factura({
+        vencimientoDePago: null,
+        percepciones: null,
+        cuitDelProveedor: null,
+        condicionIva: null,
+      }),
+    });
+    expect(r.ok && r.valor.factura).toMatchObject({
+      vencimientoDePago: null,
+      percepciones: null,
+      cuitDelProveedor: null,
+      condicionIva: null,
+    });
+  });
+});

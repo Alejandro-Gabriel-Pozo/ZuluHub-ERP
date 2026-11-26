@@ -30,9 +30,9 @@ const formaDeLinea = z.strictObject({
 });
 
 /** La factura de la empresa (N3 y N4): la de «Nueva compra» con cada línea apuntando a su PRODUCTO. La usan «Cargar factura» y «Reemplazar» (una regla, un lugar). */
-export const formaDeLaFacturaSeparada = formaDeFactura
-  .omit({ lineas: true })
-  .extend({ lineas: z.array(formaDeLinea).min(1) });
+export const formaDeLaFacturaSeparada = formaDeFactura.extend({
+  lineas: z.array(formaDeLinea).min(1),
+});
 
 const formaDeRegistrar = z.strictObject({
   clave: identificador,
