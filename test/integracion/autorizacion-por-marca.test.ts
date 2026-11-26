@@ -380,6 +380,7 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
       listarRoles: (_e, ctx) => ops.consultasDeIdentidad.listarRoles(ctx),
       verRol: (_e, ctx) => ops.consultasDeIdentidad.verRol(ctx, { rolId: randomUUID() }),
       rolesAsignables: (_e, ctx) => ops.consultasDeIdentidad.rolesAsignables(ctx),
+      accionesParaElegir: (_e, ctx) => ops.consultasDeIdentidad.accionesParaElegir(ctx),
     };
     const DE_EMPRESAS: Record<
       keyof typeof DECLARACIONES_DE_EMPRESAS,

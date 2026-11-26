@@ -4,6 +4,8 @@ export const RUTAS_DE_CUENTA = {
   contactoDeLaSucursal: "/cuenta/contacto-de-la-sucursal",
   usuarios: "/cuenta/usuarios",
   invitarUsuario: "/cuenta/usuarios/invitar",
+  roles: "/cuenta/roles",
+  nuevoRol: "/cuenta/roles/nuevo",
 } as const;
 
 /** La ficha de una persona de la empresa: `/cuenta/usuarios/<personaId>`. */
@@ -17,3 +19,6 @@ export const rutaDeLaFichaDeInvitacion = (invitacionId: string): string =>
 /** Reactivar a una persona desactivada: el formulario de invitar con su id (`?reactivar=<personaId>`); el servidor busca ahí su email y su rol, el navegador no los manda. */
 export const rutaDeReactivarUsuario = (personaId: string): string =>
   `${RUTAS_DE_CUENTA.invitarUsuario}?reactivar=${encodeURIComponent(personaId)}`;
+
+/** La ficha de un rol propio, donde se lo edita, se lo archiva o se lo reactiva: `/cuenta/roles/<rolId>`. */
+export const rutaDeLaFichaDeRol = (rolId: string): string => `${RUTAS_DE_CUENTA.roles}/${rolId}`;
