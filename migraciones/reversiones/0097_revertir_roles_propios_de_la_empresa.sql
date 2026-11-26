@@ -35,9 +35,9 @@ BEGIN
   END IF;
   SELECT count(*) INTO v_cambios FROM public.piso_de_plataforma
    WHERE accion IN ('roles.ver', 'roles.crear', 'roles.editar', 'roles.archivar', 'usuarios.asignar_rol')
-     AND (version > 1 OR autor <> 'migracion:0097' OR tipo <> 'SOLO_GERENTE');
+     AND (version > 1 OR autor NOT IN ('migracion:0094', 'migracion:0097') OR tipo <> 'SOLO_GERENTE');
   IF v_cambios > 0 THEN
-    RAISE EXCEPTION 'la plataforma cambió % de los pisos que sembró 0097: avisar al dueño antes de perder lo que decidió', v_cambios
+    RAISE EXCEPTION 'la plataforma cambió % de los pisos que sembraron 0094 o 0097: avisar al dueño antes de perder lo que decidió', v_cambios
       USING ERRCODE = '55000';
   END IF;
 END
@@ -83,7 +83,7 @@ BEGIN
 END
 $$;
 
--- Los pisos no se borran (disparador `sin_borrado`): acá se apaga ese disparador SOLO para sacar las cinco filas que esta migración sembró, y se vuelve a encender.
+-- Los pisos no se borran (disparador `sin_borrado`): acá se apaga ese disparador SOLO para sacar las filas que esta migración sembró (autor 0097; las que ya traía la semilla de 0094 quedan), y se vuelve a encender.
 ALTER TABLE piso_de_plataforma DISABLE TRIGGER piso_de_plataforma_sin_borrado;
 DELETE FROM piso_de_plataforma
  WHERE accion IN ('roles.ver', 'roles.crear', 'roles.editar', 'roles.archivar', 'usuarios.asignar_rol') AND autor = 'migracion:0097';

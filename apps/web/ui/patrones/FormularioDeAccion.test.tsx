@@ -94,7 +94,7 @@ describe("FormularioDeAccion y BotonDeEnvio", () => {
   }
 
   it("al terminar la acción el reinicio de React llega y queda cancelado (con éxito)", async () => {
-    await render(formulario(bien as unknown as AccionDeFormulario));
+    await render(formulario(bien));
     const cancelado = await conReinicio(() => {
       tocar(page.getByRole("button", { name: "Entrar a la empresa" }));
     });
