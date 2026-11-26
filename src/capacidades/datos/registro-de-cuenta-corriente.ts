@@ -25,7 +25,7 @@ const PROPOSITO = (para: string): Proposito => ({
 const PROPOSITO_DE_COBRAR = (para: string): Proposito => ({
   para,
   fuente:
-    "Maqueta cuenta-corriente-ficha-listado-y-cobro.html (hoja «Cobrar un ticket a cuenta», aprobada por el dueño el 26/11/2026) y DEC-CCL-008",
+    "Pedernal-docs/11-especificaciones/briefs/cuenta-corriente/PR-CC-1-ficha-del-cliente-y-clases-a-cobrar.md y la maqueta cuenta-corriente-ficha-listado-y-cobro.html (hoja «Cobrar un ticket a cuenta», aprobada por el dueño el 26/11/2026)",
 });
 
 export const DATOS_DE_CUENTA_CORRIENTE = {
