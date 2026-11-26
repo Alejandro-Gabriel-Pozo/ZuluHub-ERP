@@ -1,6 +1,10 @@
 import type { Respuesta } from "../../../../../src/capacidades/experiencia/respuesta";
-import { esImporteEnCero } from "../venta/modelo-de-la-cuenta";
-import type { VentaCobrada } from "./modelo-de-cobro";
+import {
+  esImporteEnCero,
+  lineasDelPedido,
+  type LineaDeLaVenta,
+} from "../venta/modelo-de-la-cuenta";
+import type { IdsDeLaVenta, VentaCobrada } from "./modelo-de-cobro";
 import type { TextosDeVenderACuenta } from "./textos-de-vender-a-cuenta";
 
 /**
@@ -62,3 +66,31 @@ export const comoVentaCobrada = (venta: VentaACuenta): VentaCobrada => ({
 /** ¿La venta pasaría el límite? Lo dice el servidor (`excedeEn` mayor que cero); la pantalla solo lo lee. */
 export const superaElLimite = (cliente: ClienteElegidoAlVender): boolean =>
   cliente.excedeEn !== null && !esImporteEnCero(cliente.excedeEn.monto);
+
+/**
+ * El pedido de «Confirmar venta a cuenta» (CC-5 B1b; la forma de `entradaDeVenderACuenta` y `entradaDeCerrarLaMesaACuenta`, que el servidor vuelve a leer con lista de permitidos): lo mismo que el de cobrar, sin caja ni
+ * cobros, con el CLIENTE elegido. Los ids (cuenta, ejemplar, líneas) son los MISMOS del intento de cobro de la pantalla: repetir el envío devuelve el mismo ticket y no vuelve a cargar nada. Nunca lleva la aprobación de un exceso
+ * (la primera etapa no la ofrece). `sinLineas`: la cuenta ya existe (la mesa). Devuelve `null` si hay líneas que no se pueden mandar: nunca un pedido a medias.
+ */
+export function pedidoDeVenderACuenta(
+  entrada: Readonly<{
+    ids: IdsDeLaVenta;
+    clienteId: string;
+    cuenta: readonly LineaDeLaVenta[];
+    total: Readonly<{ moneda: string; monto: string }>;
+    confirmaciones?: readonly string[] | undefined;
+    sinLineas?: boolean | undefined;
+  }>,
+): Readonly<Record<string, unknown>> | null {
+  const lineas =
+    entrada.sinLineas === true ? [] : lineasDelPedido(entrada.ids.lineas, entrada.cuenta);
+  if (lineas === null) return null;
+  return {
+    cuentaId: entrada.ids.cuentaId,
+    ejemplarId: entrada.ids.ejemplarId,
+    clienteId: entrada.clienteId,
+    ...(entrada.sinLineas === true ? {} : { lineas }),
+    totalEsperado: { moneda: entrada.total.moneda, monto: entrada.total.monto },
+    ...(entrada.confirmaciones === undefined ? {} : { confirmaciones: entrada.confirmaciones }),
+  };
+}

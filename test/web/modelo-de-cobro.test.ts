@@ -14,7 +14,6 @@ import {
   pagoAdicional,
   pagoNuevo,
   pedidoDeCobro,
-  pedidoDeVenderACuenta,
   resumenDelCobro,
   textoDelErrorDeDato,
   type MedioParaCobrar,
@@ -28,6 +27,7 @@ import {
 } from "../../apps/web/ui/plantillas/cobrar/textos-de-cobrar";
 import {
   comoVentaCobrada,
+  pedidoDeVenderACuenta,
   superaElLimite,
   type ClienteElegidoAlVender,
 } from "../../apps/web/ui/plantillas/cobrar/modelo-de-vender-a-cuenta";
