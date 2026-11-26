@@ -61,7 +61,7 @@ export type CuentaHijaArmada = Readonly<{
 export const BORRADOR_INICIAL: Borrador = { cuentas: 2, repartos: {} };
 
 /** Más pasos que estos no se reparten «Por unidades» (una fila por paso): el botón queda apagado. */
-export const MAXIMO_DE_PASOS_A_REPARTIR = 30;
+const MAXIMO_DE_PASOS_A_REPARTIR = 30;
 
 export const puedeAgregarCuenta = (b: Borrador): boolean => b.cuentas < MAXIMO_DE_CUENTAS_POR_ITEMS;
 

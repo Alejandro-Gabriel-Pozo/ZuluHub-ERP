@@ -77,6 +77,8 @@ export default async function PaginaDeLaMesa({ params }: PropsDePagina) {
         ? await cargarElMapaDeMesas({ filtro: "LIBRES" })
         : null;
     // Lo que la persona puede hacer con la cocina: solo ayudas que apagan o quitan botones (el servidor decide cada acción).
+    // «Cobrar» de cada cuenta de una mesa dividida (SAL-E2) también se ofrece sin ser una mesa de una sola cuenta.
+    const cobrarHijas = mesa.cuentasHijas.length > 0 && (await puedeCobrarLaMesa(contexto));
     const cocina = conCuenta
       ? {
           enviar: await puedeEnviarAComandas(contexto),
@@ -90,7 +92,7 @@ export default async function PaginaDeLaMesa({ params }: PropsDePagina) {
           enviar: false,
           imprimir: false,
           reimprimir: false,
-          cobrar: false,
+          cobrar: cobrarHijas,
           unir: false,
           dividir: false,
         };

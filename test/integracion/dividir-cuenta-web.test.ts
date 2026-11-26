@@ -214,4 +214,39 @@ describe.skipIf(base === null)("composición web: dividir la cuenta", () => {
     expect(await dividir(e, x, { asignaciones: [] })).toMatchObject(GENERICO);
     expect(await divisiones(x.cuentaId)).toBe(0);
   });
+  it("LA FICHA de la mesa dividida trae cada cuenta con sus platos como se enviaron; al cobrar una queda cobrada y la otra sigue pendiente", async () => {
+    const e = await m.escenario();
+    const caja = await m.cajaAbierta(e);
+    const x = await mesaConLaCuenta(e);
+    const hecho = await dividir(e, x);
+    if (!hecho.ok) throw new Error("la división no se hizo");
+    const [a, b, c] = hecho.dato.cuentas as [
+      (typeof hecho.dato.cuentas)[0],
+      (typeof hecho.dato.cuentas)[0],
+      (typeof hecho.dato.cuentas)[0],
+    ];
+    const ficha = async () =>
+      valorDe(await m.consultasDeSalon.fichaDeMesa(e.gerente, { mesaId: x.mesaId }));
+    const antes = await ficha();
+    expect(antes.cuentas.map((h) => [h.parte, h.cobrada, h.total.monto])).toEqual([
+      [1, false, "2000.34"],
+      [2, false, "2000.33"],
+      [3, false, "2000.33"],
+    ]);
+    for (const h of antes.cuentas) {
+      expect(h.lineas.length).toBeGreaterThan(0);
+      expect(h.lineas.every((l) => l.comanda === "ENVIADA")).toBe(true);
+      expect(h.lineas.every((l) => l.pasoDeCantidad !== "")).toBe(true);
+    }
+    valorDe(await cobrar(e, caja, b.cuentaId, b.total.monto));
+    const despues = await ficha();
+    expect(despues.cuentas.map((h) => [h.parte, h.cobrada])).toEqual([
+      [1, false],
+      [2, true],
+      [3, false],
+    ]);
+    expect(despues.estado).not.toBe("LIBRE");
+    valorDe(await cobrar(e, caja, a.cuentaId, a.total.monto));
+    valorDe(await cobrar(e, caja, c.cuentaId, c.total.monto));
+  });
 });
