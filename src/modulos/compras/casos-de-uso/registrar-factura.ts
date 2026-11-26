@@ -3,11 +3,12 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import { esClaseComprable } from "../../catalogo/publico";
 import { crearDirectorioDePartes } from "../../clientes/publico";
 import { huellaDeLaFacturaSeparada, leerFacturaSeparada } from "../dominio/conciliacion-separada";
+import type { NivelDeCompra } from "../dominio/niveles";
 import { decidirPorHuella } from "../dominio/huella";
 import { esUuid } from "../dominio/identificadores";
 import { asentarElCargoDeLaFactura } from "./cargo-de-la-factura";
 import { autorizar, traducir } from "./comun";
-import type { DependenciasDeCompras } from "./contrato";
+import type { DependenciasDeCompras, TxDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
 import { exigirNivelSeparado } from "./nivel-separado";
 import {
@@ -19,6 +20,10 @@ import {
 import type { AvisoDeCompra } from "./registrar-compra-tipos";
 
 type R<S> = Resultado<S, ErrorDeCompras>;
+type ValorDeFacturaSeparada = Extract<
+  ReturnType<typeof leerFacturaSeparada>,
+  { ok: true }
+>["valor"];
 
 const directorio = crearDirectorioDePartes();
 
@@ -51,12 +56,10 @@ export function armarRegistrarFactura(dependencias: DependenciasDeCompras) {
   ): Promise<R<SalidaDeRegistrarFactura>> {
     const { empresaId } = contexto;
     if (contexto.personaId === null) return err("SIN_PERMISO");
-    const persona = contexto.personaId;
     if (!esUuid(entrada.clave) || !esUuid(entrada.proveedorId))
       return err("IDENTIFICADOR_INVALIDO");
     const leida = leerFacturaSeparada(entrada.factura);
     if (!leida.ok) return leida;
-    const { factura, productos } = leida.valor;
     const huella = huellaDeLaFacturaSeparada(entrada.proveedorId, leida.valor);
 
     return traducir(
@@ -76,83 +79,112 @@ export function armarRegistrarFactura(dependencias: DependenciasDeCompras) {
               return err("CLAVE_REUTILIZADA");
             return ok({ comprobanteId: previa.id, yaExistia: true, avisos: [] });
           }
-          const proveedor = await directorio.parteParaOperacion(
-            tx,
-            empresaId,
-            entrada.proveedorId,
-            "PROVEEDOR",
-          );
-          if (!proveedor.ok) return err("PROVEEDOR_NO_ENCONTRADO");
-          const nueva = await exigirFacturaNueva(tx, empresaId, proveedor.valor.id, factura);
-          if (!nueva.ok) return nueva;
-
-          const deLaFactura = [];
-          for (const productoId of productos) {
-            const producto = await tx.productosParaCompras.bloquearCompartido(
-              empresaId,
-              productoId,
-            );
-            if (producto === null) return err("PRODUCTO_NO_ENCONTRADO");
-            if (!producto.activo || !esClaseComprable(producto.claseDeUso)) {
-              return err("PRODUCTO_NO_COMPRABLE");
-            }
-            deLaFactura.push({
-              descripcion: producto.nombre,
-              unidad: producto.unidadBaseId,
-              productoId: producto.id,
-            });
-          }
-          const condicion = await leerCondicionDeIva(tx, contexto, dependencias, factura);
-          if (!condicion.ok) return condicion;
-          const preparada = await prepararFactura(
-            tx,
-            contexto,
-            dependencias,
-            proveedor.valor,
-            factura,
-            null,
-            condicion.valor,
-          );
-          if (!preparada.ok) return preparada;
-
-          const comprobanteId = await guardarFactura(tx, {
-            empresaId,
-            persona,
-            recepcionId: null,
-            proveedorId: proveedor.valor.id,
-            nivel: nivel.valor,
+          return registrarFacturaEnTx(tx, contexto, dependencias, {
             clave: entrada.clave,
+            proveedorId: entrada.proveedorId,
+            leida: leida.valor,
             huella,
-            factura,
-            lineas: [],
-            deLaFactura,
-            preparada: preparada.valor,
+            nivel: nivel.valor,
+            reemplazaAId: null,
           });
-          await tx.auditoria.registrar({
-            empresaId,
-            actorPersonaId: persona,
-            accion: "FACTURA_REGISTRADA",
-            entidad: "comprobante_de_proveedor",
-            entidadId: comprobanteId,
-            despues: {
-              proveedorId: proveedor.valor.id,
-              nivel: nivel.valor,
-              lineas: factura.lineas.length,
-              totalSegunFactura: preparada.valor.calculado.totalSegunFactura,
-            },
-          });
-          // Al final: el libro toma el saldo del proveedor después del comprobante (ver `asentarElCargoDeLaFactura`).
-          const cargo = await asentarElCargoDeLaFactura(tx, contexto, dependencias, {
-            comprobanteId,
-            proveedorId: proveedor.valor.id,
-            total: preparada.valor.calculado.totalSegunFactura,
-            venceEl: factura.vencimientoDePago,
-            sucursalId: null,
-          });
-          if (!cargo.ok) return cargo;
-          return ok({ comprobanteId, yaExistia: false, avisos: preparada.valor.avisos });
         },
       ),
     );
   };
+}
+
+/**
+ * Lo que cargar una factura sola hace DENTRO de una transacción que ya autorizó, ya miró la repetición y ya tiene el nivel: el proveedor, el duplicado, los productos, las cuentas, el comprobante con sus líneas, la auditoría y el cargo
+ * en el libro. Lo usan `registrarFactura` y el reemplazo de una factura (`reemplazaAId`: la que la nueva reemplaza, ya anulada en esa misma transacción).
+ */
+export async function registrarFacturaEnTx(
+  tx: TxDeCompras,
+  contexto: ContextoOperativo,
+  dependencias: DependenciasDeCompras,
+  datos: Readonly<{
+    clave: string;
+    proveedorId: string;
+    leida: ValorDeFacturaSeparada;
+    huella: string;
+    nivel: NivelDeCompra;
+    reemplazaAId: string | null;
+  }>,
+): Promise<R<SalidaDeRegistrarFactura>> {
+  const { empresaId } = contexto;
+  if (contexto.personaId === null) return err("SIN_PERMISO");
+  const persona = contexto.personaId;
+  const { factura, productos } = datos.leida;
+  const proveedor = await directorio.parteParaOperacion(
+    tx,
+    empresaId,
+    datos.proveedorId,
+    "PROVEEDOR",
+  );
+  if (!proveedor.ok) return err("PROVEEDOR_NO_ENCONTRADO");
+  const nueva = await exigirFacturaNueva(tx, empresaId, proveedor.valor.id, factura);
+  if (!nueva.ok) return nueva;
+
+  const deLaFactura = [];
+  for (const productoId of productos) {
+    const producto = await tx.productosParaCompras.bloquearCompartido(empresaId, productoId);
+    if (producto === null) return err("PRODUCTO_NO_ENCONTRADO");
+    if (!producto.activo || !esClaseComprable(producto.claseDeUso)) {
+      return err("PRODUCTO_NO_COMPRABLE");
+    }
+    deLaFactura.push({
+      descripcion: producto.nombre,
+      unidad: producto.unidadBaseId,
+      productoId: producto.id,
+    });
+  }
+  const condicion = await leerCondicionDeIva(tx, contexto, dependencias, factura);
+  if (!condicion.ok) return condicion;
+  const preparada = await prepararFactura(
+    tx,
+    contexto,
+    dependencias,
+    proveedor.valor,
+    factura,
+    null,
+    condicion.valor,
+  );
+  if (!preparada.ok) return preparada;
+
+  const comprobanteId = await guardarFactura(tx, {
+    empresaId,
+    persona,
+    recepcionId: null,
+    proveedorId: proveedor.valor.id,
+    nivel: datos.nivel,
+    clave: datos.clave,
+    huella: datos.huella,
+    factura,
+    lineas: [],
+    deLaFactura,
+    preparada: preparada.valor,
+    reemplazaAId: datos.reemplazaAId,
+  });
+  await tx.auditoria.registrar({
+    empresaId,
+    actorPersonaId: persona,
+    accion: "FACTURA_REGISTRADA",
+    entidad: "comprobante_de_proveedor",
+    entidadId: comprobanteId,
+    despues: {
+      proveedorId: proveedor.valor.id,
+      nivel: datos.nivel,
+      lineas: factura.lineas.length,
+      totalSegunFactura: preparada.valor.calculado.totalSegunFactura,
+    },
+  });
+  // Al final: el libro toma el saldo del proveedor después del comprobante (ver `asentarElCargoDeLaFactura`).
+  const cargo = await asentarElCargoDeLaFactura(tx, contexto, dependencias, {
+    comprobanteId,
+    proveedorId: proveedor.valor.id,
+    total: preparada.valor.calculado.totalSegunFactura,
+    venceEl: factura.vencimientoDePago,
+    sucursalId: null,
+  });
+  if (!cargo.ok) return cargo;
+  return ok({ comprobanteId, yaExistia: false, avisos: preparada.valor.avisos });
 }

@@ -154,6 +154,8 @@ export type ComprasDb = {
     clase: string;
     /** N4 (0085): la factura que corrige una nota de crédito (solo la clase NOTA_DE_CREDITO la lleva). */
     comprobante_asociado_id: string | null;
+    /** NOTAS-2 (0112): la factura anulada que esta factura reemplaza (solo una factura la lleva). */
+    reemplaza_a_id: string | null;
     tipo: string | null;
     punto_de_venta: number | null;
     numero: number | null;

@@ -24,11 +24,12 @@ import type { BaseDePruebas } from "./global";
  */
 
 const base = inject("baseDePruebas");
-/** Los tres que el caso de uso devuelve con el id de la ganadora (objeto), no como código simple. */
+/** Los que el caso de uso devuelve con el id de la ganadora (objeto), no como código simple. */
 const CON_ID = new Set([
   "REMITO_YA_REGISTRADO",
   "COMPROBANTE_YA_REGISTRADO",
   "COMPROBANTE_YA_PAGADO",
+  "FACTURA_YA_REEMPLAZADA",
 ]);
 const TABLAS = [
   "configuracion_de_compras",

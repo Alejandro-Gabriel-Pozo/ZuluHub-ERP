@@ -58,7 +58,6 @@ export const CODIGOS_DE_ERROR_DE_COMPRAS = [
   "MEDIO_INVALIDO",
   "LA_SUMA_DE_LOS_MEDIOS_NO_ES_EL_TOTAL",
   "NADA_PARA_PAGAR",
-  "FACTURA_YA_REEMPLAZADA",
   "REEMPLAZO_DE_FACTURA_NO_ANULADA",
   "REEMPLAZO_DE_OTRO_PROVEEDOR",
   "NOTA_DE_CREDITO_CON_PAGO",
@@ -157,4 +156,6 @@ export type ErrorDeCompras =
   | Readonly<{ error: "REMITO_YA_REGISTRADO"; recepcionId: string | null }>
   | Readonly<{ error: "COMPROBANTE_YA_REGISTRADO"; comprobanteId: string | null }>
   | Readonly<{ error: "COMPROBANTE_YA_PAGADO"; pagoId: string | null }>
+  /** La factura ya fue reemplazada: `reemplazoId` es la nueva vigente (`null` solo si lo dijo la base, que no sabe con quién choca). */
+  | Readonly<{ error: "FACTURA_YA_REEMPLAZADA"; reemplazoId: string | null }>
   | Readonly<{ error: "FUNCION_NO_INCLUIDA"; perilla: string }>;

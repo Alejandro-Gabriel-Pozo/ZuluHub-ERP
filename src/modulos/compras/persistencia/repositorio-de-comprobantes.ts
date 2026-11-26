@@ -16,6 +16,8 @@ export type ComprobanteGuardado = Readonly<{
   clase: string;
   /** La factura que corrige (solo una nota de crédito). */
   comprobanteAsociadoId: string | null;
+  /** La factura anulada que esta factura reemplaza (NOTAS-2); `null` en las demás. */
+  reemplazaAId: string | null;
   tipo: TipoDeComprobanteDeProveedor | null;
   puntoDeVenta: number | null;
   numero: number | null;
@@ -50,6 +52,8 @@ export type AltaDeComprobante = Readonly<{
   clase: string;
   /** La factura que corrige: obligatoria en una nota de crédito y ausente en lo demás (lo exige la base). */
   comprobanteAsociadoId?: string | null;
+  /** La factura anulada que la nueva reemplaza (solo una factura; la base exige que esté anulada y sea del mismo proveedor al confirmar). */
+  reemplazaAId?: string | null;
   tipo: TipoDeComprobanteDeProveedor;
   puntoDeVenta: number;
   numero: number;
@@ -81,6 +85,11 @@ export type AltaDeComprobante = Readonly<{
  */
 export interface RepositorioDeComprobantes {
   porClave(empresa: EmpresaId, clave: string): Promise<ComprobanteGuardado | null>;
+  /** La factura VIGENTE que reemplaza a esta (la anulada), o `null`: a lo sumo una (lo impone la base). */
+  reemplazoVigenteDe(
+    empresa: EmpresaId,
+    facturaId: string,
+  ): Promise<Readonly<{ id: string }> | null>;
   /** El comprobante NO anulado de ese proveedor con ese tipo, punto de venta y número (el anulado libera el número). */
   porDuplicado(
     empresa: EmpresaId,
@@ -120,6 +129,7 @@ const COLUMNAS = [
   "proveedor_id",
   "clase",
   "comprobante_asociado_id",
+  "reemplaza_a_id",
   "tipo",
   "punto_de_venta",
   "numero",
@@ -154,6 +164,7 @@ type Fila = {
   proveedor_id: string;
   clase: string;
   comprobante_asociado_id: string | null;
+  reemplaza_a_id: string | null;
   tipo: string | null;
   punto_de_venta: number | null;
   numero: number | null;
@@ -196,6 +207,7 @@ function aComprobante(f: Fila): ComprobanteGuardado {
     proveedorId: f.proveedor_id,
     clase: f.clase,
     comprobanteAsociadoId: f.comprobante_asociado_id,
+    reemplazaAId: f.reemplaza_a_id,
     tipo: f.tipo,
     puntoDeVenta: f.punto_de_venta,
     numero: f.numero,
@@ -239,6 +251,16 @@ export function crearRepositorioDeComprobantes(db: Kysely<ComprasDb>): Repositor
     return fila === undefined ? null : aComprobante(fila);
   }
   return {
+    async reemplazoVigenteDe(empresa, facturaId) {
+      const fila = await db
+        .selectFrom("comprobante_de_proveedor")
+        .select("id")
+        .where("empresa_id", "=", empresa)
+        .where("reemplaza_a_id", "=", facturaId)
+        .where("estado", "=", "REGISTRADO")
+        .executeTakeFirst();
+      return fila === undefined ? null : { id: fila.id };
+    },
     async porClave(empresa, clave) {
       const fila = await db
         .selectFrom("comprobante_de_proveedor")
@@ -338,6 +360,7 @@ export function crearRepositorioDeComprobantes(db: Kysely<ComprasDb>): Repositor
           proveedor_id: alta.proveedorId,
           clase: alta.clase,
           comprobante_asociado_id: alta.comprobanteAsociadoId ?? null,
+          reemplaza_a_id: alta.reemplazaAId ?? null,
           tipo: alta.tipo,
           punto_de_venta: alta.puntoDeVenta,
           numero: alta.numero,

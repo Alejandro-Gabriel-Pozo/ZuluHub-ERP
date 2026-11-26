@@ -9,6 +9,7 @@ const ARCHIVO_DE_CONCILIACION_SEPARADA = "test/integracion/compras-n3-conciliaci
 const ARCHIVO_DE_ORDENES = "test/integracion/compras-n4-ordenes.test.ts";
 const ARCHIVO_DE_DIFERENCIAS = "test/integracion/compras-n4-diferencias.test.ts";
 const ARCHIVO_DE_NOTAS = "test/integracion/compras-n4-notas-de-credito.test.ts";
+const ARCHIVO_DE_REEMPLAZO = "test/integracion/compras-reemplazo-de-factura.test.ts";
 const ARCHIVO_DE_NOTAS_DE_DEBITO = "test/integracion/compras-notas-de-debito.test.ts";
 const ARCHIVO_DE_DEVOLUCIONES = "test/integracion/compras-n4-devoluciones.test.ts";
 
@@ -215,6 +216,16 @@ export const DECLARACIONES = {
       prueba: {
         archivo: ARCHIVO_DE_NOTAS,
         it: "I2: anular dos veces la misma nota devuelve yaEstaba y la segunda no escribe ni audita",
+      },
+    },
+  },
+  reemplazarFactura: {
+    accion: "comprobantes_de_proveedor.reemplazar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_REEMPLAZO,
+        it: "I1: reemplazar dos veces con la misma clave (también a la vez) deja una sola factura nueva y una sola auditoría; con otro contenido, CLAVE_REUTILIZADA",
       },
     },
   },
