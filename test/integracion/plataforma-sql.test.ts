@@ -320,6 +320,27 @@ describe.skipIf(base === null)("plataforma: la migración 0004 contra una base r
        select empresa_id, id, emisor_id, 'FACTURA_B', 0, 'HOMOLOGACION' from punto_de_venta where empresa_id = $1`,
       [activa.empresa],
     );
+    // Un rol propio con su primera versión (0094 y 0113): la plataforma lo lee por columna, así que tampoco puede estar vacío.
+    const rolPropio = randomUUID();
+    await dueno.query(
+      `insert into rol_de_empresa (id, empresa_id, nombre, nombre_clave) values ($1, $2, 'Cajero', 'cajero')`,
+      [rolPropio, activa.empresa],
+    );
+    await dueno.query(
+      `insert into version_de_rol (empresa_id, rol_id, numero, acciones, creado_por, creado_en)
+       values ($1, $2, 1, $3::text[], $4, now())`,
+      [
+        activa.empresa,
+        rolPropio,
+        [
+          "gerencia.aceptar_traspaso",
+          "gerencia.rechazar_traspaso",
+          "gerencia.ver_traspaso",
+          "permisos.ver_propios",
+        ],
+        personaMiembro,
+      ],
+    );
   });
   afterAll(async () => {
     await entorno.cerrar();
