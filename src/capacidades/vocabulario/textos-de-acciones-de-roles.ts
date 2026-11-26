@@ -18,7 +18,13 @@ const USO: UsosDeTexto = [
 ];
 
 /** Un nombre de acción con su uso y su fuente (los mismos para las 188). */
-const nombre = (porDefecto: string) => ({ porDefecto, usos: USO, fuente: FUENTE }) as const;
+const nombre = (porDefecto: string, largoMaximo?: number) =>
+  ({
+    porDefecto,
+    usos: USO,
+    fuente: FUENTE,
+    ...(largoMaximo === undefined ? {} : { largoMaximo }),
+  }) as const;
 
 export const TEXTOS_DE_ACCIONES_DE_ROLES = {
   "roles.accion.usuarios.invitar": nombre("Invitar usuarios"),
@@ -136,6 +142,11 @@ export const TEXTOS_DE_ACCIONES_DE_ROLES = {
   ),
   "roles.accion.cobros.corregir_medio": nombre("Corregir el medio de pago de un cobro"),
   "roles.accion.declaraciones_de_total.registrar": nombre("Declarar el total contado en la caja"),
+  // SUPUESTO (propuesto por el orquestador el 26/11/2026; el dueño lo aprueba en una ronda corta junto con `devoluciones.registrar`): hasta entonces es la redacción propuesta, no una aprobada.
+  "roles.accion.salidas_de_dinero.registrar": nombre(
+    "Registrar salidas de dinero por otros medios (transferencia, tarjeta, QR u otro)",
+    120,
+  ),
   "roles.accion.jornadas.ver": nombre("Ver las jornadas"),
   "roles.accion.jornadas.iniciar_auditoria": nombre("Iniciar la auditoría del día"),
   "roles.accion.jornadas.cancelar_auditoria": nombre("Cancelar la auditoría del día"),

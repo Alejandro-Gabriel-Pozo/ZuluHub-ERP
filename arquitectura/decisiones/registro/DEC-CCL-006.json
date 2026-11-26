@@ -1,0 +1,10 @@
+{
+  "id": "DEC-CCL-006",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "COMERCIAL",
+  "estado": "CONFIRMADA",
+  "decision": "Textos de habilitar, cambiar plazo o límite, suspender y reactivar la cuenta corriente (CC-5 A2): los de la maqueta v2 aprobada, sin pie explicativo; reactivar pide motivo.",
+  "que_cambia": "Si el dueño corrige un texto, se cambia su clave en el catálogo; el motivo de reactivación obligatorio queda en la constancia de auditoría (sin migración).",
+  "donde": "src/capacidades/vocabulario/catalogo-cuenta_corriente.ts; el dueño, chat del 26/11/2026: «Apruebo» a los textos de las maquetas; plantilla A2 aceptada por el orquestador por la delegación de la fila 173; descarta el pie explicativo del formulario de habilitar"
+}

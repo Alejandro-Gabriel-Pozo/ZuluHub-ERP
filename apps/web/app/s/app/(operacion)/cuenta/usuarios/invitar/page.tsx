@@ -39,7 +39,13 @@ export default async function PaginaDeInvitarUsuario({
     if (typeof reactivar !== "string") return generico;
     const persona = await cargarLaFichaDeUsuario(contexto, reactivar);
     if (!persona.ok) return <ErrorDelDetalle error={persona.error} />;
-    if (persona.dato.activo || persona.dato.rol === "GERENTE") return generico;
+    // Un rol propio no se invita (el servidor responde ROL_NO_INVITABLE): tampoco se ofrece reactivarlo por invitación.
+    if (
+      persona.dato.activo ||
+      persona.dato.rol === "GERENTE" ||
+      typeof persona.dato.rol !== "string"
+    )
+      return generico;
     return conTitulo(
       texto({}, "caja.accion.reactivar"),
       <FormularioDeInvitacion
