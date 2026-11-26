@@ -1,6 +1,7 @@
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
+import { notaDeCocinaDesdeTexto } from "../../../primitivas/texto/nota-de-cocina";
 import { lineaPorId, lineasDeCuenta } from "../../ventas/publico";
 import { puedeCobrarse, type SalidaDeLinea } from "../dominio/envio";
 import { exigirUuid } from "./comun";
@@ -21,17 +22,24 @@ export type EstadoDeComandaDeLinea = Readonly<{
 }>;
 
 /**
- * `registrarLineaDeComandaEnTx`: deja la fila de comanda de una línea recién agregada (`AHORA` por defecto). Idempotente: la misma fila no cambia nada; con
- * otra salida y la línea sin enviar, la actualiza; con la línea ya enviada, `LINEA_YA_ENVIADA`.
+ * `registrarLineaDeComandaEnTx`: deja la fila de comanda de una línea recién agregada (`AHORA` por defecto) y su NOTA LIBRE si se pidió (SAL-G; `undefined` = no se toca). Idempotente: la misma fila no cambia nada;
+ * con otra salida o nota y la línea sin enviar, la actualiza; con la línea ya enviada, `LINEA_YA_ENVIADA`. Una nota inválida es `NOTA_INVALIDA` y no escribe nada.
  */
 export async function registrarLineaDeComandaEnTx(
   tx: TxDeComandas,
   contexto: ContextoOperativo,
-  entrada: Readonly<{ cuentaId: string; lineaId: string; salida: SalidaDeLinea }>,
+  entrada: Readonly<{
+    cuentaId: string;
+    lineaId: string;
+    salida: SalidaDeLinea;
+    nota?: string | undefined;
+  }>,
 ): Promise<R<Readonly<{ yaExistia: boolean }>>> {
   const ids = exigirUuid(entrada.cuentaId, entrada.lineaId);
   if (!ids.ok) return ids;
   if (entrada.salida !== "AHORA" && entrada.salida !== "DESPUES") return err("SALIDA_INVALIDA");
+  const nota = entrada.nota === undefined ? undefined : notaDeCocinaDesdeTexto(entrada.nota);
+  if (nota !== undefined && !nota.ok) return err("NOTA_INVALIDA");
   const { empresaId } = contexto;
   const linea = await lineaPorId(tx, empresaId, entrada.lineaId);
   if (linea === null || linea.cuentaId !== entrada.cuentaId) return err("LINEA_NO_ENCONTRADA");
@@ -43,11 +51,18 @@ export async function registrarLineaDeComandaEnTx(
       cuentaId: entrada.cuentaId,
       salida: entrada.salida,
       envioId: null,
+      nota: nota === undefined ? null : nota.valor,
     });
     return ok({ yaExistia: false });
   }
-  if (previa.salida === entrada.salida) return ok({ yaExistia: true });
-  if (!(await tx.envios.cambiarSalida(empresaId, linea.id, entrada.salida))) {
+  const cambiaNota = nota !== undefined && nota.valor !== previa.nota;
+  if (previa.salida === entrada.salida && !cambiaNota) return ok({ yaExistia: true });
+  if (previa.salida !== entrada.salida) {
+    if (!(await tx.envios.cambiarSalida(empresaId, linea.id, entrada.salida))) {
+      return err("LINEA_YA_ENVIADA");
+    }
+  }
+  if (cambiaNota && !(await tx.envios.cambiarNota(empresaId, linea.id, nota.valor))) {
     return err("LINEA_YA_ENVIADA");
   }
   return ok({ yaExistia: false });
@@ -89,7 +104,7 @@ export async function platosPendientesEnTx(
 
 /**
  * `copiarEstadoDeComandaEnTx`: la línea nueva (copia de otra por unir, dividir o anular una parte) conserva la `salida` y el `envio_id` de la origen
- * (lo enviado sigue enviado y no se reimprime). Si la origen no tiene fila, la nueva nace sin enviar `AHORA`.
+ * y la `nota` de la origen (lo enviado sigue enviado y no se reimprime). Si la origen no tiene fila, la nueva nace sin enviar `AHORA` y sin nota.
  */
 export async function copiarEstadoDeComandaEnTx(
   tx: TxDeComandas,
@@ -104,6 +119,8 @@ export async function copiarEstadoDeComandaEnTx(
     cuentaId: entrada.cuentaDestinoId,
     salida: origen === null ? "AHORA" : origen.salida,
     envioId: origen === null ? null : origen.envioId,
+    // La nota viaja con el plato (SAL-G): la base exige que una copia conserve la de su origen.
+    nota: origen === null ? null : origen.nota,
   });
   return ok(null);
 }

@@ -335,6 +335,7 @@ export function crearConsultasDeSalon(dependencias: DependenciasDeConsultasDeSal
               precioUnitario: l.precioUnitario,
               pasoDeCantidad: l.pasoDeCantidad,
               importe: importes.get(l.id) ?? "0.00",
+              nota: f?.nota ?? null,
               compartida: l.importeFijo !== null,
               comanda: enviada
                 ? "ENVIADA"

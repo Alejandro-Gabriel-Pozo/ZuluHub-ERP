@@ -22,6 +22,7 @@ const linea = (extra: Partial<LineaDeLaFichaDeLaPantalla> & { lineaId: string })
   precioUnitario: "9500.00",
   pasoDeCantidad: "1.0000",
   importe: "19000.00",
+  nota: null,
   compartida: false,
   comanda: "PARA_ENVIAR",
   numeroDeEnvio: null,

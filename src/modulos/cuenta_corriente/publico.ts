@@ -34,7 +34,9 @@ export { DECLARACIONES as DECLARACIONES_DE_CUENTA_CORRIENTE } from "./casos-de-u
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_CUENTA_CORRIENTE } from "./consultas/declaraciones";
 export {
   anularCargoDeVentaEnTx,
+  anularCobranzaDeVentaEnTx,
   cargarVentaEnTx,
+  cobrarVentaEnTx,
   type CargoDeVentaRegistrado,
   type EntradaDelCargoDeVenta,
   type ErrorDelCargoDeVenta,

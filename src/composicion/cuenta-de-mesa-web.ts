@@ -105,6 +105,7 @@ const fichaParaLaPantalla = (f: FichaDeMesa): FichaParaLaPantalla => ({
       precioUnitario: l.precioUnitario,
       pasoDeCantidad: l.pasoDeCantidad,
       importe: l.importe,
+      nota: l.nota,
       compartida: l.compartida,
       comanda: l.comanda,
       numeroDeEnvio: l.numeroDeEnvio,

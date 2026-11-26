@@ -2,22 +2,35 @@ import type { ReglasDeEmpresa } from "../../../capacidades/permisos/empresa";
 import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
-import { importeATexto, importeDesdeTexto } from "../../../primitivas/dinero/importe";
+import {
+  importeATexto,
+  importeCero,
+  importeDesdeTexto,
+  restar,
+} from "../../../primitivas/dinero/importe";
 import { ARS } from "../../../primitivas/dinero/moneda";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import { sumarDiasCiviles, type FechaCivil } from "../../../primitivas/tiempo/fecha-civil";
 import { explicacionDesdeTexto } from "../../cierre/publico";
 import {
   anularAsientoEnTx,
+  conSigno,
+  imputarEnTx,
   registrarAsientoEnTx,
   type ErrorDelLibro,
   type TxDeSaldos,
 } from "../../saldos_de_partes/publico";
 import {
+  CLASE_DE_LA_COBRANZA_DE_VENTA,
   CLASE_DEL_CARGO_DE_VENTA,
+  DETALLE_DE_LA_ANULACION_DE_LA_COBRANZA,
   DETALLE_DE_LA_ANULACION_DEL_CARGO_DE_VENTA,
+  ORIGEN_DE_LA_COBRANZA_DE_VENTA,
   ORIGEN_DEL_CARGO_DE_VENTA,
+  claveDeLaAnulacionDeLaCobranza,
   claveDeLaAnulacionDelCargoDeVenta,
+  claveDeLaCobranzaDeVenta,
+  claveDeLaImputacionDeLaCobranza,
   claveDelCargoDeVenta,
   excesoDelLimite,
 } from "../dominio/cargo-de-venta";
@@ -161,6 +174,71 @@ export async function anularCargoDeVentaEnTx(
     asientoId: original.id,
     detalle: DETALLE_DE_LA_ANULACION_DEL_CARGO_DE_VENTA,
     clave: claveDeLaAnulacionDelCargoDeVenta(entrada.ticketId),
+  });
+  return espejo.ok
+    ? ok({ asientoId: espejo.valor.asientoId, yaExistia: espejo.valor.yaExistia })
+    : espejo;
+}
+
+/**
+ * La cobranza del ticket a cuenta (CC-3), DENTRO de la transacción del cobro de caja (que ya autorizó con `tickets.cobrar`): el asiento COBRANZA (A_COBRAR, −) por el total del ticket, con la distribución del cargo en
+ * signo −, imputado al cargo de ESE ticket (1 a 1), con claves derivadas de la cobranza (repetir no duplica ni el asiento ni la imputación). Cobra el cargo ENTERO: otro importe, o un ticket sin cargo, se rechaza.
+ * NO toma la ficha: suspender al cliente no impide cobrarle. Va AL FINAL de lo que escribe el cobro (el libro serializa el saldo de la parte hasta que confirma).
+ */
+export async function cobrarVentaEnTx(
+  tx: TxDeSaldos,
+  contexto: ContextoOperativo,
+  entrada: Readonly<{ ticketId: string; cobranzaId: string; total: string }>,
+): Promise<Resultado<CargoDeVentaRegistrado, ErrorDelLibro>> {
+  const cargo = await tx.asientos.porOrigen(
+    contexto.empresaId,
+    ORIGEN_DEL_CARGO_DE_VENTA,
+    entrada.ticketId,
+    1,
+  );
+  if (cargo === null) return err("ASIENTO_NO_ENCONTRADO");
+  const importe = importeDesdeTexto(ARS, entrada.total);
+  if (importe.unidades !== cargo.importe.unidades) return err("IMPORTE_INVALIDO");
+  const asiento = await registrarAsientoEnTx(tx, contexto, {
+    parteId: cargo.parteId,
+    sentido: "A_COBRAR",
+    clase: CLASE_DE_LA_COBRANZA_DE_VENTA,
+    importe: restar(importeCero(ARS), importe),
+    origen: { tipo: ORIGEN_DE_LA_COBRANZA_DE_VENTA, id: entrada.cobranzaId, orden: 1 },
+    venceEl: null,
+    clave: claveDeLaCobranzaDeVenta(entrada.cobranzaId),
+    hechoEn: contexto.ahora,
+    distribucion: conSigno(await tx.asientos.distribucionDe(contexto.empresaId, cargo.id), "-"),
+  });
+  if (!asiento.ok) return asiento;
+  const imputacion = await imputarEnTx(tx, contexto, {
+    saldanteId: asiento.valor.asientoId,
+    repartos: [{ saldadoId: cargo.id, importe }],
+    clave: claveDeLaImputacionDeLaCobranza(entrada.cobranzaId),
+  });
+  return imputacion.ok ? ok(asiento.valor) : imputacion;
+}
+
+/**
+ * El espejo de la cobranza al anular un ticket cobrado a cuenta (CC-3): anula el asiento COBRANZA (y deshace su imputación) en la MISMA transacción que la anulación, ANTES de anular el cargo. El dinero de caja no se
+ * toca (como en el mostrador, la salida de caja la registra el gerente aparte). Sin asiento de cobranza no hay con qué anular: `ASIENTO_NO_ENCONTRADO` y la anulación del ticket se revierte. Repetir no duplica el espejo.
+ */
+export async function anularCobranzaDeVentaEnTx(
+  tx: TxDeSaldos,
+  contexto: ContextoOperativo,
+  entrada: Readonly<{ cobranzaId: string }>,
+): Promise<Resultado<CargoDeVentaRegistrado, ErrorDelLibro>> {
+  const original = await tx.asientos.porOrigen(
+    contexto.empresaId,
+    ORIGEN_DE_LA_COBRANZA_DE_VENTA,
+    entrada.cobranzaId,
+    1,
+  );
+  if (original === null) return err("ASIENTO_NO_ENCONTRADO");
+  const espejo = await anularAsientoEnTx(tx, contexto, {
+    asientoId: original.id,
+    detalle: DETALLE_DE_LA_ANULACION_DE_LA_COBRANZA,
+    clave: claveDeLaAnulacionDeLaCobranza(entrada.cobranzaId),
   });
   return espejo.ok
     ? ok({ asientoId: espejo.valor.asientoId, yaExistia: espejo.valor.yaExistia })

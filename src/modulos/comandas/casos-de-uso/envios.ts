@@ -117,8 +117,13 @@ export async function crearTrabajoOriginalEnTx(
   return { trabajoId, impresoraId };
 }
 
-/** Lo que dice la foto de una línea para la cocina: su nombre y su detalle (variante y opciones, también las ocultas de la carta). */
-function renglonDeLaLinea(linea: Linea, orden: number, rol: "SALE" | "ESPERA"): Renglon {
+/** Lo que dice la foto de una línea para la cocina: su nombre, su detalle (variante y opciones, también las ocultas de la carta) y su nota libre (SAL-G). */
+function renglonDeLaLinea(
+  linea: Linea,
+  orden: number,
+  rol: "SALE" | "ESPERA",
+  nota: string | null,
+): Renglon {
   return {
     orden,
     lineaId: linea.id,
@@ -129,6 +134,7 @@ function renglonDeLaLinea(linea: Linea, orden: number, rol: "SALE" | "ESPERA"): 
       ...(linea.varianteNombre === null ? [] : [linea.varianteNombre]),
       ...linea.opciones.map((o) => o.nombre),
     ],
+    nota,
   };
 }
 
@@ -250,16 +256,23 @@ async function enviarConTipoEnTx(
   const tomadas = new Set(await tx.envios.tomarParaEnviar(empresaId, envio.id, seleccion.salen));
   if (tomadas.size === 0) return err(tipo === "ENVIO" ? "NADA_PARA_ENVIAR" : "NADA_QUE_PEDIR");
   const porLinea = new Map<string, Linea>(lineas.map((l) => [l.id, l]));
+  // La nota de cada renglón es la VIVA y bloqueada (`FOR SHARE`, las tomadas ya lo están por el UPDATE): la base exige que la foto lleve exactamente la guardada, y una edición a la vez espera al fin del envío.
+  const notas = await tx.envios.notasDeLasLineas(empresaId, [
+    ...seleccion.salen.filter((id) => tomadas.has(id)),
+    ...seleccion.esperan,
+  ]);
   const renglones: Renglon[] = [];
   for (const id of seleccion.salen) {
     const l = porLinea.get(id);
     if (l !== undefined && tomadas.has(id)) {
-      renglones.push(renglonDeLaLinea(l, renglones.length + 1, "SALE"));
+      renglones.push(renglonDeLaLinea(l, renglones.length + 1, "SALE", notas.get(id) ?? null));
     }
   }
   for (const id of seleccion.esperan) {
     const l = porLinea.get(id);
-    if (l !== undefined) renglones.push(renglonDeLaLinea(l, renglones.length + 1, "ESPERA"));
+    if (l !== undefined) {
+      renglones.push(renglonDeLaLinea(l, renglones.length + 1, "ESPERA", notas.get(id) ?? null));
+    }
   }
   await tx.envios.insertarRenglones(empresaId, envio.id, renglones);
   const trabajo = await crearTrabajoOriginalEnTx(tx, contexto, persona.valor, {

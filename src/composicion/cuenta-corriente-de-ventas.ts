@@ -2,7 +2,9 @@ import type { ReglasDeEmpresa } from "../capacidades/permisos/empresa";
 import { err, ok } from "../primitivas/resultado/resultado";
 import {
   anularCargoDeVentaEnTx,
+  anularCobranzaDeVentaEnTx,
   cargarVentaEnTx,
+  cobrarVentaEnTx,
   type ErrorDelCargoDeVenta,
   type TxDeCargoDeVenta,
 } from "../modulos/cuenta_corriente/publico";
@@ -49,6 +51,14 @@ export function crearCuentaCorrienteDeVentas(
   return {
     async cargarEnTx(tx, contexto, entrada) {
       const r = await cargarVentaEnTx(comoTxDeCargo(tx), contexto, reglas, entrada);
+      return r.ok ? ok(r.valor) : err(codigoDelCargo(r.error));
+    },
+    async cobrarEnTx(tx, contexto, entrada) {
+      const r = await cobrarVentaEnTx(comoTxDeCargo(tx), contexto, entrada);
+      return r.ok ? ok(r.valor) : err(codigoDelCargo(r.error));
+    },
+    async anularCobranzaEnTx(tx, contexto, entrada) {
+      const r = await anularCobranzaDeVentaEnTx(comoTxDeCargo(tx), contexto, entrada);
       return r.ok ? ok(r.valor) : err(codigoDelCargo(r.error));
     },
     async anularEnTx(tx, contexto, entrada) {

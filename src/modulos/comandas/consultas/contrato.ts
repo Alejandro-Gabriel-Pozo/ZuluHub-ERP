@@ -11,7 +11,7 @@ export type TxDeConsultasDeComandas = LecturaDeEstados &
   Readonly<{
     envios: Pick<
       RepositorioDeEnvios,
-      "envioPorId" | "renglonesDeEnvio" | "enviosDeCuenta" | "avisoPorId"
+      "envioPorId" | "renglonesDeEnvio" | "enviosDeCuenta" | "avisoPorId" | "filaDeComanda"
     >;
     impresion: Pick<
       RepositorioDeImpresion,
