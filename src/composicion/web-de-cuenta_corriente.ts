@@ -3,6 +3,7 @@ import {
   crearConsultasDeCuentaCorriente,
 } from "../modulos/cuenta_corriente/publico";
 import { crearApoyoDeLaExportacionDeCuentaCorriente } from "./apoyo-de-exportacion-de-cuenta-corriente";
+import { crearCobroACuenta } from "./cobro-a-cuenta";
 import { perezoso } from "./perezoso";
 import type { BaseDeWeb } from "./web-base";
 
@@ -36,5 +37,12 @@ export function armarWebDeCuentaCorriente({ conexiones, reglas }: BaseDeWeb) {
         exportarCuentaCorriente: casos.exportarCuentaCorriente,
       };
     }),
+    /**
+     * Las lecturas del libro de «Cobrar un ticket a cuenta» (CC-5 B2a): el cargo pendiente más antiguo de un cliente y su saldo, cada una con SU acción (`cuenta_corriente.ver`). El cobro mismo es
+     * `cobrar` de ventas (`casosDeUsoDeVentas`): esta composición solo une las dos piezas en `cobrar-a-cuenta-web.ts`.
+     */
+    cobroACuenta: perezoso(() =>
+      crearCobroACuenta({ transacciones: conexiones.transaccionesDeApp(), reglas }),
+    ),
   };
 }

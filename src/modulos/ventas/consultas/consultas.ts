@@ -34,6 +34,7 @@ import {
   ticketSeFactura,
 } from "../casos-de-uso/facturar-antes-de-cobrar";
 import { reunirPendientes } from "./pendientes-de-facturar";
+import { ticketACobrar, type ErrorDeTicketACobrar } from "./ticket-a-cobrar";
 import {
   fichaDelTicketDelDia,
   ticketsDelDia,
@@ -53,6 +54,7 @@ export type ErrorDeConsultaDeVentas =
   | ErrorDeTicketsDelDia
   | ErrorDeFichaDelTicketDelDia
   | ErrorDeDocumentoDelTicket
+  | ErrorDeTicketACobrar
   | "IDENTIFICADOR_INVALIDO"
   | "FECHA_INVALIDA"
   | "CANTIDAD_INVALIDA"
@@ -183,6 +185,10 @@ export function crearConsultasDeVentas(dependencias: DependenciasDeConsultasDeVe
     /** Qué ofrecer al cobrar con una caja (K1): medios, cuentas, datos que pide cada medio y marcas. Ver `opciones-para-cobrar.ts`. */
     opcionesParaCobrar: (contexto: ContextoOperativo, entrada: Readonly<{ cajaId: string }>) =>
       leer(contexto, (tx, p) => opcionesParaCobrar(tx, contexto, p.alcance, entrada)),
+
+    /** El ticket cargado a la cuenta de un cliente que se va a cobrar (CC-5 B2a). Ver `ticket-a-cobrar.ts`. */
+    ticketACobrar: (contexto: ContextoOperativo, entrada: Readonly<{ ticketId: string }>) =>
+      leer(contexto, (tx, p) => ticketACobrar(tx, contexto, p.alcance, entrada)),
 
     /** El papel del ticket para imprimir (K6). Ver `documento-del-ticket.ts`. */
     documentoDelTicket: (contexto: ContextoOperativo, entrada: EntradaDeDocumentoDelTicket) =>
