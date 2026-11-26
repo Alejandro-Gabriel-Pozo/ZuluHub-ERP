@@ -298,8 +298,7 @@ describe("cobrar el ticket a cuenta", () => {
   it("una excepción sale con referencia y sin detalle", async () => {
     const d: DependenciasDeCobrarACuentaWeb = {
       ...dependencias(),
-      casosDeUso: () =>
-        ({ cobrar: () => Promise.reject(new Error("la base no responde")) }) as never,
+      casosDeUso: () => ({ cobrar: () => Promise.reject(new Error("la base no responde")) }),
     };
     const r = await cobrarUnTicketACuenta(d, CONTEXTO, PEDIDO);
     expect(r.ok).toBe(false);

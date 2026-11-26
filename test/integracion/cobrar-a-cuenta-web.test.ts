@@ -140,7 +140,8 @@ describe.skipIf(base === null)("composición web: cobrar un ticket a cuenta (CC-
     await m.cajaAbierta(e);
     const hoja = await ticketACobrarDelCliente(d, e.gerente, { clienteId: c });
     expect(hoja.ok).toBe(true);
-    if (!hoja.ok || hoja.dato === null) throw new Error(`debía haber una hoja: ${JSON.stringify(hoja)}`);
+    if (!hoja.ok || hoja.dato === null)
+      throw new Error(`debía haber una hoja: ${JSON.stringify(hoja)}`);
     expect(hoja.dato.ticket).toMatchObject({
       ticketId: primero.ticketId,
       canal: "MOSTRADOR",
