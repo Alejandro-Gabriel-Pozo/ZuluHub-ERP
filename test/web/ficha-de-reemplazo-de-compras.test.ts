@@ -58,8 +58,8 @@ describe("ficha de la pantalla «Reemplazar el comprobante»", () => {
     for (const [clave, valor] of Object.entries(textos)) {
       if (typeof valor === "string") expect(valor, clave).not.toBe("");
     }
-    expect(textos.motivoPorDefecto("0005-00001234")).toBe(
-      "Reemplazada por la factura 0005-00001234",
-    );
+    // Un texto (no una función): cruza de la página de servidor al formulario de cliente; el número lo pone la pantalla.
+    expect(textos.motivoPorDefecto).toBe("Reemplazada por la factura {numero}");
+    for (const valor of Object.values(textos)) expect(typeof valor).not.toBe("function");
   });
 });

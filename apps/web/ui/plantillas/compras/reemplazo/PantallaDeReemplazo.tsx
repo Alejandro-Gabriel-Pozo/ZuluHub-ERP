@@ -33,8 +33,9 @@ export function PantallaDeReemplazo({ pasos, textos, children }: PropsDePantalla
           <ol className={estilos["lista"]}>
             {pasos.map((p) => (
               <li key={p.freno} className={estilos["tarjeta"]}>
-                <span className={estilos["titulo"]}>{ROTULO_DEL_PASO(textos, p.freno)}</span>
-                {p.ruta === null ? null : (
+                {p.ruta === null ? (
+                  <span className={estilos["titulo"]}>{ROTULO_DEL_PASO(textos, p.freno)}</span>
+                ) : (
                   <EnlaceDeAccion href={p.ruta} variante="secundaria">
                     {ROTULO_DEL_PASO(textos, p.freno)}
                   </EnlaceDeAccion>

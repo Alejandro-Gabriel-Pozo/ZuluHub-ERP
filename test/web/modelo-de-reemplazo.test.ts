@@ -77,7 +77,7 @@ describe("numeroParaElMotivo", () => {
 });
 
 describe("motivoDelReemplazo", () => {
-  const porDefecto = (n: string) => `Reemplazada por la factura ${n}`;
+  const porDefecto = "Reemplazada por la factura {numero}";
   it("sin tocar el campo, el precargado con el número de la nueva", () => {
     expect(motivoDelReemplazo(null, "0005-00001234", porDefecto)).toBe(
       "Reemplazada por la factura 0005-00001234",

@@ -135,6 +135,20 @@ describe("el pago de la factura en la ficha de la compra", () => {
     });
   });
 
+  it("«Cambiar el comprobante de la compra» se ofrece solo con los permisos, una factura y una compra no anulada, y lleva a la pantalla de la compra", () => {
+    const quien = { ...PUEDE, cambiarElComprobante: true };
+    expect(armarLaFicha(ficha(), textos, PUEDE).cambiarElComprobante).toBeNull();
+    expect(armarLaFicha(ficha(), textos).cambiarElComprobante).toBeNull();
+    expect(armarLaFicha(ficha({ factura: null }), textos, quien).cambiarElComprobante).toBeNull();
+    expect(
+      armarLaFicha(ficha({ estado: "ANULADA" }), textos, quien).cambiarElComprobante,
+    ).toBeNull();
+    expect(armarLaFicha(ficha(), textos, quien).cambiarElComprobante).toEqual({
+      texto: "Cambiar el comprobante de la compra",
+      href: `/compras/${ID}/cambiar-comprobante`,
+    });
+  });
+
   it("muestra el medio, la fecha, el importe con centavos exactos, quién y cuándo (hora de Argentina)", () => {
     const [p] = armarLaFicha(ficha({ pagos: [pago()] }), textos, PUEDE).pagos;
     expect(p?.titulo).toBe("Transferencia · 24/11/2026");

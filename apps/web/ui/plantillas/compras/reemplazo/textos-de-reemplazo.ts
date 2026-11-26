@@ -21,8 +21,8 @@ export type TextosDeReemplazo = Readonly<{
   reintentar: string;
   /** Los textos del formulario de la factura (los mismos de «Nueva compra» y «Cargar factura»: es el mismo bloque). */
   factura: TextosDeNuevaCompra;
-  /** El motivo precargado con el número de la factura nueva (`0005-00001234`). */
-  motivoPorDefecto: (numero: string) => string;
+  /** La plantilla del motivo precargado, con el marcador `{numero}` a la vista: el número de la factura nueva lo pone la pantalla (un texto, no una función: los textos cruzan de la página de servidor al formulario de cliente). */
+  motivoPorDefecto: string;
 }>;
 
 export function textosDeReemplazo(): TextosDeReemplazo {
@@ -41,6 +41,6 @@ export function textosDeReemplazo(): TextosDeReemplazo {
     enviando: texto({}, "conexion.enviando"),
     reintentar: texto({}, "estado.reintentar"),
     factura: textosDeNuevaCompra(),
-    motivoPorDefecto: (numero) => texto({}, "compras.reemplazo.motivo_por_defecto", { numero }),
+    motivoPorDefecto: texto({}, "compras.reemplazo.motivo_por_defecto"),
   };
 }
