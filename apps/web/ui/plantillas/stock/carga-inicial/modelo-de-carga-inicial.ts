@@ -11,6 +11,7 @@ import { multiplicarPrecioPorCantidad } from "../../../../../../src/primitivas/d
 import { precioUnitarioDesdeTexto } from "../../../../../../src/primitivas/dinero/precio-unitario";
 import { POLITICA_VIGENTE, redondear } from "../../../../../../src/primitivas/dinero/redondeo";
 import { formatearImporte } from "../../../patrones/formato-fiscal";
+import { loteCompleto, type ControlDeLote } from "../movimientos/modelo-de-formularios";
 
 /**
  * El modelo de vista de la grilla de «Carga inicial» (STK-C, FP-STK-08): qué filas están completas, cuánto vale cada una, el resumen y qué errores marcar. Puro: sin React ni servidor. TODO es ayuda de la pantalla:
@@ -29,6 +30,9 @@ export type FilaDeCarga = Readonly<{
   cantidad: string;
   /** Texto decimal canónico o vacío (vacío = sin costo). */
   costo: string;
+  /** Solo de un artículo controlado por lote (STK-E2b, DEC-STK-007): el código del lote y su vencimiento (`AAAA-MM-DD`), o vacío. */
+  lote: string;
+  vence: string;
 }>;
 
 export const FILA_VACIA = (clave: number): FilaDeCarga => ({
@@ -36,6 +40,8 @@ export const FILA_VACIA = (clave: number): FilaDeCarga => ({
   articuloId: "",
   cantidad: "",
   costo: "",
+  lote: "",
+  vence: "",
 });
 
 /** Corre una cuenta de las primitivas: un valor que no entra en ellas (texto roto, fuera de rango) es `null`; un fallo que no es de valor no se esconde. */
@@ -87,13 +93,26 @@ export function errorDeLaFila(fila: FilaDeCarga): ErrorDeFila | null {
   return null;
 }
 
-/** Una fila lista para mandar: artículo elegido, cantidad mayor que cero y, si hay costo, uno que sirva. */
-export const filaCompleta = (fila: FilaDeCarga): boolean =>
-  fila.articuloId !== "" && cantidadValida(fila.cantidad) && errorDeLaFila(fila) === null;
+/** Cómo se controla por lote el artículo de una fila (lo da el servidor): `null` si no se controla. */
+export type ControlesPorArticulo = Readonly<Record<string, ControlDeLote>>;
+
+/**
+ * Una fila lista para mandar: artículo elegido, cantidad mayor que cero, si hay costo uno que sirva y, si el artículo se controla por lote, el lote (y su vencimiento si el control lo pide). Sin `controles`, ningún
+ * artículo se controla por lote (nada se pide de más).
+ */
+export const filaCompleta = (fila: FilaDeCarga, controles: ControlesPorArticulo = {}): boolean =>
+  fila.articuloId !== "" &&
+  cantidadValida(fila.cantidad) &&
+  errorDeLaFila(fila) === null &&
+  loteCompleto(controles[fila.articuloId] ?? null, fila.lote, fila.vence);
 
 /** «Registrar» se ofrece con depósito, al menos una fila y todas completas (una fila a medias frena la tanda: nada se manda). */
-export const puedeRegistrar = (depositoId: string, filas: readonly FilaDeCarga[]): boolean =>
-  depositoId !== "" && filas.length > 0 && filas.every(filaCompleta);
+export const puedeRegistrar = (
+  depositoId: string,
+  filas: readonly FilaDeCarga[],
+  controles: ControlesPorArticulo = {},
+): boolean =>
+  depositoId !== "" && filas.length > 0 && filas.every((f) => filaCompleta(f, controles));
 
 export type ResumenDeCarga = Readonly<{
   /** Cuántos artículos tiene la tanda (las filas completas). */
@@ -104,8 +123,11 @@ export type ResumenDeCarga = Readonly<{
   sinCosto: number;
 }>;
 
-export function resumenDeLaCarga(filas: readonly FilaDeCarga[]): ResumenDeCarga {
-  const completas = filas.filter(filaCompleta);
+export function resumenDeLaCarga(
+  filas: readonly FilaDeCarga[],
+  controles: ControlesPorArticulo = {},
+): ResumenDeCarga {
+  const completas = filas.filter((f) => filaCompleta(f, controles));
   const importes = completas.map(importeDeLaFila).filter((i): i is Importe => i !== null);
   const total =
     importes.length === 0

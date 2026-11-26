@@ -8,6 +8,7 @@ import {
 } from "../../../../../../src/capacidades/experiencia/reglas-de-cantidad";
 import { texto } from "../../../../../../src/capacidades/vocabulario/vocabulario";
 import { Boton } from "../../../componentes/Boton.cliente";
+import { Campo } from "../../../componentes/Campo";
 import { CampoNumero } from "../../../componentes/CampoNumero";
 import { Selector } from "../../../componentes/Selector";
 import { BotonDeEnvio } from "../../../patrones/BotonDeEnvio.cliente";
@@ -15,6 +16,7 @@ import {
   FormularioDeAccion,
   type AccionDeFormulario,
 } from "../../../patrones/FormularioDeAccion.cliente";
+import { loteQueSePide, type OpcionDeArticulo } from "../movimientos/modelo-de-formularios";
 import {
   errorDeLaFila,
   FILA_VACIA,
@@ -35,7 +37,8 @@ export type PropsDeFormularioDeCargaInicial = Readonly<{
   /** La acción de servidor con la clave de idempotencia ya ligada (`bind`): repetir el envío no duplica. */
   accion: AccionDeFormulario;
   depositos: readonly Opcion[];
-  articulos: readonly Opcion[];
+  /** Cada artículo con cómo se controla por lote hoy (`null`: no se controla): con control, la fila pide «Lote» y «Vence». */
+  articulos: readonly OpcionDeArticulo[];
   /** La unidad de stock de cada artículo (solo lectura), ya con su texto. */
   unidades: Readonly<Record<string, string>>;
   /** Adónde lleva «Cancelar». */
@@ -89,7 +92,8 @@ export function FormularioDeCargaInicial({
     return resultado;
   };
 
-  const resumen = resumenDeLaCarga(filas);
+  const controles = Object.fromEntries(articulos.map((a) => [a.valor, a.controlDeLote]));
+  const resumen = resumenDeLaCarga(filas, controles);
   const hayLibres = opcionesParaLaFila(articulos, filas, -1).length > 0;
   return (
     <FormularioDeAccion accion={conAviso}>
@@ -108,6 +112,7 @@ export function FormularioDeCargaInicial({
         {filas.map((fila, i) => {
           const error = errorDeLaFila(fila);
           const valor = valorDeLaFila(fila);
+          const pideLote = loteQueSePide(controles[fila.articuloId] ?? null);
           return (
             <li key={fila.clave} className={estilos["fila"]}>
               <Selector
@@ -118,6 +123,26 @@ export function FormularioDeCargaInicial({
                 alCambiar={(v) => cambiaFila(fila.clave, { articuloId: v })}
                 opciones={opcionesParaLaFila(articulos, filas, fila.clave)}
               />
+              {pideLote === null ? null : (
+                <Campo
+                  dato="codigo-de-lote"
+                  etiqueta={texto({}, "lotes.lote.lote")}
+                  nombre={`loteCodigo.${i}`}
+                  valor={fila.lote}
+                  alCambiar={(v) => cambiaFila(fila.clave, { lote: v })}
+                  autoComplete="off"
+                />
+              )}
+              {pideLote?.vence === true ? (
+                <Campo
+                  dato="vencimiento-de-lote"
+                  etiqueta={texto({}, "stock.lotes.vence")}
+                  nombre={`loteVence.${i}`}
+                  tipo="date"
+                  valor={fila.vence}
+                  alCambiar={(v) => cambiaFila(fila.clave, { vence: v })}
+                />
+              ) : null}
               <CampoNumero
                 dato="cantidad-de-movimiento-de-stock"
                 etiqueta={texto({}, "stock.accion.cantidad")}
@@ -173,7 +198,7 @@ export function FormularioDeCargaInicial({
         <a className={estilos["secundario"]} href={hrefDeCancelar}>
           {texto({}, "catalogo.accion.cancelar")}
         </a>
-        {puedeEnviar && puedeRegistrar(deposito, filas) ? (
+        {puedeEnviar && puedeRegistrar(deposito, filas, controles) ? (
           <BotonDeEnvio>{texto({}, "stock.accion.registrar")}</BotonDeEnvio>
         ) : (
           <Boton deshabilitado>{texto({}, "stock.accion.registrar")}</Boton>

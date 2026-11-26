@@ -14,8 +14,11 @@ import {
 import estilos from "./FormularioDeMovimiento.module.css";
 import {
   CAMPOS_DEL_TIPO,
+  loteCompleto,
+  loteQueSePide,
   MOTIVO_CON_COSTO,
   type Opcion,
+  type OpcionDeArticulo,
   type TipoDeMovimiento,
 } from "./modelo-de-formularios";
 
@@ -36,12 +39,15 @@ export type PropsDeFormularioDeMovimiento = Readonly<{
     motivo: string;
     costo: string;
     opcional: string;
+    /** Rótulos del lote de una entrada de un artículo controlado por lote (STK-E2b). */
+    lote: string;
+    vence: string;
     detalle: string;
     enviar: string;
     cancelar: string;
   }>;
   depositos: readonly Opcion[];
-  articulos: readonly Opcion[];
+  articulos: readonly OpcionDeArticulo[];
   motivos: readonly Opcion[];
   sentidos: readonly Opcion[];
   hrefDeCancelar: string;
@@ -73,6 +79,8 @@ export function FormularioDeMovimiento({
   const [cantidad, setCantidad] = useState("");
   const [motivo, setMotivo] = useState(motivos[0]?.valor ?? "");
   const [costo, setCosto] = useState("");
+  const [lote, setLote] = useState("");
+  const [vence, setVence] = useState("");
   const [detalle, setDetalle] = useState("");
   const [avisado, setAvisado] = useState(false);
   /** Cambiar cualquier dato descarta la confirmación: lo que se confirma es lo que se vio. */
@@ -90,7 +98,14 @@ export function FormularioDeMovimiento({
     setAvisado(resultado?.error?.codigo === CODIGO_DE_AVISO);
     return resultado;
   };
+  // El lote se pide solo en una ENTRADA de un artículo controlado por lote (el servidor igual decide).
+  const control =
+    tipo === "ENTRADA"
+      ? (articulos.find((a) => a.valor === articulo)?.controlDeLote ?? null)
+      : null;
+  const pideLote = loteQueSePide(control);
   const completo =
+    loteCompleto(control, lote, vence) &&
     (!campos.deposito || deposito !== "") &&
     (!campos.origenYDestino || (origen !== "" && destino !== "")) &&
     (!campos.articulo || articulo !== "") &&
@@ -136,6 +151,26 @@ export function FormularioDeMovimiento({
           valor={articulo}
           alCambiar={cambia(setArticulo)}
           opciones={articulos}
+        />
+      ) : null}
+      {pideLote === null ? null : (
+        <Campo
+          dato="codigo-de-lote"
+          etiqueta={textos.lote}
+          nombre="loteCodigo"
+          valor={lote}
+          alCambiar={cambia(setLote)}
+          autoComplete="off"
+        />
+      )}
+      {pideLote?.vence === true ? (
+        <Campo
+          dato="vencimiento-de-lote"
+          etiqueta={textos.vence}
+          nombre="loteVence"
+          tipo="date"
+          valor={vence}
+          alCambiar={cambia(setVence)}
         />
       ) : null}
       {campos.sentido ? (
