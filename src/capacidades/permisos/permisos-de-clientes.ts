@@ -12,6 +12,8 @@ export const PERMISOS_DE_CLIENTES = {
   "partes.desvincular_contacto": ["GERENTE", "ADMINISTRADOR", "OPERADOR"],
   "partes.desactivar": ["GERENTE", "ADMINISTRADOR"],
   "partes.reactivar": ["GERENTE", "ADMINISTRADOR"],
+  // Derecho de supresión del titular (clientes.md §C, decidido): solo el gerente.
+  "partes.anonimizar": ["GERENTE"],
 } as const satisfies Record<
   keyof (typeof CATALOGO_DE_MODULOS)["clientes"]["acciones"],
   readonly RolDeEmpresa[]

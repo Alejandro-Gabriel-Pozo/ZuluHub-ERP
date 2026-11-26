@@ -206,6 +206,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "partes.desvincular_contacto"
       | "partes.desactivar"
       | "partes.reactivar"
+      | "partes.anonimizar"
       | "proveedores.editar_ficha"
       | "proveedores.pedir_ficha"
       | "recepciones.ver"

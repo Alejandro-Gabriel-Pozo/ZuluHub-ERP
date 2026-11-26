@@ -79,6 +79,8 @@ const SOLO_GERENTE_ANEXO_A = [
   "cajas.desactivar",
   "compras.configurar",
 ].sort();
+/** El piso solo-gerente de la anonimización de partes (0105; la semilla de 0094 se regenera mientras no esté sellada, así que también lo trae). */
+const SOLO_GERENTE_DE_0105 = ["partes.anonimizar"];
 /** Los 5 pisos de T4: las acciones de roles y la asignación de rol son solo del gerente (los cuatro `roles.*` vienen en la semilla de 0094; `usuarios.asignar_rol`, de 0097). */
 const SOLO_GERENTE_DE_0097 = [
   "roles.archivar",
@@ -435,19 +437,19 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
         "select accion, tipo from piso_de_plataforma order by accion",
       );
       expect(rows.filter((r) => r.tipo === "SOLO_GERENTE").map((r) => r.accion)).toEqual(
-        [...SOLO_GERENTE_ANEXO_A, ...SOLO_GERENTE_DE_0097].sort(),
+        [...SOLO_GERENTE_ANEXO_A, ...SOLO_GERENTE_DE_0097, ...SOLO_GERENTE_DE_0105].sort(),
       );
       expect(rows.filter((r) => r.tipo === "TODOS_LOS_ROLES").map((r) => r.accion)).toEqual(
         TODOS_ANEXO_A,
       );
-      expect(rows).toHaveLength(28);
+      expect(rows).toHaveLength(29);
       // El piso solo-gerente es exactamente «lo que hoy solo tiene el gerente»; los de todos están entre los que hoy tienen los tres.
-      expect(SOLO_GERENTE_ANEXO_A).toEqual(
+      expect([...SOLO_GERENTE_ANEXO_A, ...SOLO_GERENTE_DE_0105].sort()).toEqual(
         TODAS.filter(
           (a) =>
             (PERMISOS_DE_EMPRESA as Record<string, readonly string[]>)[a]?.length === 1 &&
             !SOLO_GERENTE_DE_0097.includes(a),
-        ),
+        ).sort(),
       );
       for (const a of TODOS_ANEXO_A)
         expect((PERMISOS_DE_EMPRESA as Record<string, readonly string[]>)[a]).toHaveLength(3);
@@ -839,7 +841,7 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
       const s = await comoApp(empresa);
       try {
         const p = await s.directo("select count(*)::int as n from piso_de_plataforma");
-        expect(p.ok && p.rows[0]).toEqual({ n: 28 });
+        expect(p.ok && p.rows[0]).toEqual({ n: 29 });
         const v = await s.directo("select count(*)::int as n from version_de_plantilla");
         expect(v.ok && v.rows[0]).toEqual({ n: 2 });
       } finally {
@@ -1036,7 +1038,7 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
         );
         await expect(correr()).rejects.toMatchObject({ code: "55000" });
         expect((await c.query("select 1 from version_de_rol")).rowCount).toBe(1);
-        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(27);
+        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(28);
         // Sin roles pero con una versión de plantilla de la plataforma: frena.
         await c.query("alter table rol_de_empresa disable trigger rol_de_empresa_sin_borrado");
         await c.query("alter table version_de_rol disable trigger version_de_rol_solo_insercion");
@@ -1092,7 +1094,7 @@ describe.skipIf(base === null)("migración 0094: permisos configurables (T1 de H
         await c.query("begin");
         await c.query(await readFile(MIGRACION, "utf8"));
         await c.query("commit");
-        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(27);
+        expect((await c.query("select 1 from piso_de_plataforma")).rowCount).toBe(28);
         expect((await c.query("select 1 from accion_introducida")).rowCount).toBe(TODAS.length);
       } finally {
         await c.end();

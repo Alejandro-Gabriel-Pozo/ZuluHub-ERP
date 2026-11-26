@@ -5,6 +5,7 @@ import { CATALOGO_DE_MODULOS } from "../../src/capacidades/modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, type ReglasDeEmpresa } from "../../src/capacidades/permisos/empresa";
 import type { ContextoOperativo } from "../../src/contexto/contexto";
 import type { TransaccionesDePostgres } from "../../src/adaptadores/postgres/transacciones";
+import { armarAnonimizacionDePartesEnTx } from "../../src/composicion/anonimizacion-de-partes";
 import { crearEgresoDeCaja } from "../../src/composicion/egreso-de-caja";
 import { armarTxDeSaldos } from "../../src/composicion/libro-de-saldos";
 import { crearLibroDeProveedores } from "../../src/composicion/libro-de-proveedores";
@@ -96,6 +97,7 @@ export type EscenarioDeCompras = Readonly<{
 type TxDePruebaConCompras = TxDePrueba &
   RepositoriosDeStock &
   RepositoriosDeClientes &
+  ReturnType<typeof armarAnonimizacionDePartesEnTx> &
   RepositoriosDeCompras;
 
 /** Los repositorios del libro sobre la conexión de la transacción (la auditoría ya la trae la `Tx` base). */
@@ -158,6 +160,7 @@ export async function montarCompras(
       ...tx,
       ...crearRepositoriosDeStock(tx.db),
       ...crearRepositoriosDeClientes(tx.db),
+      ...armarAnonimizacionDePartesEnTx(tx.db),
       ...piezasDelLibro(tx.db),
       ...repos,
       // Fiscal (solo lectura para compras): el adaptador real de la condición de IVA de la empresa los usa sobre la misma conexión.
