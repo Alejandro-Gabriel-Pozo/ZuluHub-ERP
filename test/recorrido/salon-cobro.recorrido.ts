@@ -322,7 +322,7 @@ describe.skipIf(base === null)(
         "insert into medio_de_pago (empresa_id, tipo) values ($1, 'TRANSFERENCIA') on conflict do nothing",
         [mundo.empresa],
       );
-      await mesaConPedido(13, 15);
+      await mesaConPedido(13, 1);
       await enviarYRecargar();
       await pagina.getByRole("button", { name: "Cobrar", exact: true }).click();
       await pagina.waitForURL(/\/salon\/cuenta\/[0-9a-f-]{36}\/cobrar$/);
