@@ -1,3 +1,4 @@
+import { TEXTOS_DE_EXPORTACION_DE_CUENTA_CORRIENTE } from "./textos-de-exportacion-de-cuenta-corriente";
 import type { FuenteDeTexto, UsoDeTexto } from "./uso-y-fuente-de-texto";
 
 /**
@@ -236,4 +237,6 @@ export const TEXTOS_DE_CUENTA_CORRIENTE = {
     usos: [DE_LOS_TEXTOS],
     fuente: FUENTE_DE_A2,
   },
+  // La exportación a Excel (CC-5 D): sus diez textos nuevos viven aparte.
+  ...TEXTOS_DE_EXPORTACION_DE_CUENTA_CORRIENTE,
 } as const;
