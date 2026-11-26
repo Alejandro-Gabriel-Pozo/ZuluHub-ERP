@@ -70,3 +70,25 @@ a.fila:focus-visible {
   gap: var(--espacio-3);
   align-items: center;
 }
+
+.historial {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+}
+
+.titulo {
+  margin: 0;
+  font-size: var(--tipo-tamano-medio);
+  font-weight: var(--tipo-peso-fuerte);
+}
+
+.evento {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  padding: var(--espacio-3);
+  border: var(--borde-grosor) solid var(--color-borde);
+  border-radius: var(--radio-base);
+  overflow-wrap: anywhere;
+}
