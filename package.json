@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "typecheck": "node --max-old-space-size=6144 node_modules/typescript/bin/tsc --noEmit && node --max-old-space-size=6144 node_modules/typescript/bin/tsc --noEmit -p apps/web/tsconfig.json && node --max-old-space-size=6144 node_modules/typescript/bin/tsc --noEmit -p apps/plataforma/tsconfig.json",
-    "lint": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js .",
+    "lint": "node --max-old-space-size=6144 node_modules/eslint/bin/eslint.js .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run --project node",
