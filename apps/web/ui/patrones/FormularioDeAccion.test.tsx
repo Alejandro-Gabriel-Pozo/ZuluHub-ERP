@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
-import { tocar, violacionesDeAccesibilidad } from "../pruebas/ayudas";
+import { conReinicio, tocar, violacionesDeAccesibilidad } from "../pruebas/ayudas";
 import { BotonDeEnvio } from "./BotonDeEnvio.cliente";
 import { FormularioDeAccion, type AccionDeFormulario } from "./FormularioDeAccion.cliente";
 
@@ -77,22 +77,6 @@ describe("FormularioDeAccion y BotonDeEnvio", () => {
     Promise.resolve({
       error: { codigo: "ERROR_INTERNO", clave: "error.inesperado", presentacion: "INESPERADO" },
     });
-  /** Espera el evento `reset` del formulario y dice si quedó cancelado (`defaultPrevented`, visto desde `document`, después de React). */
-  async function conReinicio(correr: () => void): Promise<boolean> {
-    let cancelado: boolean | null = null;
-    const alReiniciar = (e: Event) => {
-      cancelado = e.defaultPrevented;
-    };
-    document.addEventListener("reset", alReiniciar);
-    try {
-      correr();
-      await vi.waitFor(() => expect(cancelado).not.toBeNull());
-    } finally {
-      document.removeEventListener("reset", alReiniciar);
-    }
-    return cancelado === true;
-  }
-
   it("al terminar la acción el reinicio de React llega y queda cancelado (con éxito)", async () => {
     await render(formulario(bien));
     const cancelado = await conReinicio(() => {

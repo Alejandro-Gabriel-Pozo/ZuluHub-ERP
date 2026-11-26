@@ -67,6 +67,7 @@ describe.skipIf(base === null)(
     };
     const unir = (destino: string, origen: string, unionId = nuevoId(), clave = nuevaClave()) =>
       m.salon.unirMesas(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         unionId,
         cuentaDestinoId: destino,
         cuentaOrigenId: origen,
@@ -96,6 +97,7 @@ describe.skipIf(base === null)(
       )[0]?.estado;
     const cobrar = (cuenta: string, total: string) =>
       m.salon.cobrarMesa(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         claveIdempotencia: nuevaClave(),
         cuentaId: cuenta,
         ejemplarId: nuevoId(),
