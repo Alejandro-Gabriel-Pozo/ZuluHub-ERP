@@ -82,6 +82,7 @@ export {
   bloquearCuentas,
   cuentaAbiertaPorAncla,
   cuentaPorId,
+  cuentasAbiertasConElProducto,
   cuentasAbiertasPorAncla,
   lineaPorId,
   lineasDeCuenta,

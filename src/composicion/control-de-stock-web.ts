@@ -6,10 +6,11 @@ import {
 import type { ContextoOperativo } from "../contexto/contexto";
 import { formatearDecimalFijo, parsearDecimalFijo } from "../primitivas/cantidad/decimal-fijo";
 import { textoDeBusquedaDeProductoDesdeTexto } from "../primitivas/texto/termino-de-busqueda-de-producto";
-import type {
-  CasosDeUsoDeStock,
-  ConsultasDeStock,
-  CursorDeExistencias,
+import {
+  CONFIRMACION_DE_CUENTAS_ABIERTAS,
+  type CasosDeUsoDeStock,
+  type ConsultasDeStock,
+  type CursorDeExistencias,
 } from "../modulos/stock/publico";
 import { aRespuestaDeExcepcion, errorAPublico, type DependenciasDeRespuesta } from "./a-respuesta";
 import { identificador } from "./entradas-de-facturacion";
@@ -35,11 +36,17 @@ export type DependenciasDeControlDeStockWeb = Readonly<{
 }>;
 
 const GENERICO = errorDeCodigo("CATALOGO_ACCION_NO_PERMITIDA");
+const AVISO_DE_CUENTAS_ABIERTAS = errorDeCodigo("PRODUCCION_CUENTAS_ABIERTAS");
 
 /** Los errores de negocio del módulo (cadenas con nombre) salen como el genérico; lo que no es de negocio (la base, un defecto) sigue su camino común. */
 function conError(error: unknown, d: DependenciasDeControlDeStockWeb): ErrorPublico {
   // `{ error: "FUNCION_NO_INCLUIDA", perilla }` (plan sin «Producción») es el genérico, no un fallo inesperado; `Object(...)` evita lanzar con `null` o cadenas.
-  const deObjeto = (Object(error) as { error?: unknown }).error === "FUNCION_NO_INCLUIDA";
+  const nombre = (Object(error) as { error?: unknown }).error;
+  // Encender el stock propio de un plato con cuentas abiertas: no es un fallo, la ficha pide confirmar. El aviso no lleva detalle de las cuentas (solo que hay).
+  if (nombre === "CUENTAS_ABIERTAS_REQUIEREN_CONFIRMACION") {
+    return AVISO_DE_CUENTAS_ABIERTAS;
+  }
+  const deObjeto = nombre === "FUNCION_NO_INCLUIDA";
   return deObjeto || (typeof error === "string" && error !== "ERROR_DE_LA_BASE_NO_TRADUCIDO")
     ? GENERICO
     : errorAPublico(error, d.respuesta);
@@ -76,10 +83,15 @@ export async function fijarElControlDeStock(
 ): Promise<Respuesta<ResultadoDeControlDeStock>> {
   const pedido = leerElPedidoDeControlDeStock(crudo);
   if (!pedido.ok) return { ok: false, error: GENERICO };
-  const { productoId, controlado } = pedido.valor;
+  const { productoId, controlado, confirmarCuentasAbiertas } = pedido.valor;
   try {
     if (controlado) {
-      const hecho = await d.casosDeUso().controlarArticulo(contexto, { productoId });
+      const hecho = await d.casosDeUso().controlarArticulo(contexto, {
+        productoId,
+        ...(confirmarCuentasAbiertas === true
+          ? { confirmaciones: [CONFIRMACION_DE_CUENTAS_ABIERTAS] }
+          : {}),
+      });
       return hecho.ok
         ? { ok: true, dato: { productoId, controlado, yaEstaba: hecho.valor.yaExistia } }
         : { ok: false, error: conError(hecho.error, d) };
