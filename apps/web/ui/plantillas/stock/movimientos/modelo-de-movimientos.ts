@@ -47,12 +47,16 @@ export type MovimientosDeLaComposicion = Readonly<{
     unidadId: string;
     cantidad: string;
     anulado: boolean;
+    anulable: boolean;
   }>[];
   siguiente: string | null;
 }>;
 
 type TarjetaDeMovimiento = Readonly<{
   id: string;
+  movimientoId: string;
+  /** Lo decide el servidor (solo los manuales no anulados); la pantalla no replica la regla. */
+  anulable: boolean;
   /** La clase, o `null` si no tiene texto aprobado. */
   clase: string | null;
   anulado: boolean;
@@ -89,6 +93,8 @@ export function armarLosMovimientos(
     })),
     tarjetas: dato.movimientos.map((m) => ({
       id: `${m.movimientoId}:${String(m.numero)}`,
+      movimientoId: m.movimientoId,
+      anulable: m.anulable,
       clase: rotulo(CLAVE_DE_TEXTO_DE_LA_CLASE, m.clase),
       anulado: m.anulado,
       cantidad: conSigno(cantidadConUnidad(m.cantidad, m.unidadId)),

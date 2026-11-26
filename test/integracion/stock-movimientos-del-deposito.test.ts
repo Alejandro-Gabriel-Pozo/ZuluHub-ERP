@@ -214,4 +214,26 @@ describe.skipIf(base === null)("stock: movimientos de un depósito", () => {
       c.encenderModulos();
     }
   });
+
+  it("articulosControlados: solo los activos, por nombre, con la unidad de stock; el operador los ve; otra empresa no ve los ajenos; sin costos", async () => {
+    const a = await c.articulo(e);
+    const baja = await c.articulo(e, { activo: false });
+    const ids = (r: Awaited<ReturnType<typeof c.consultas.articulosControlados>>) =>
+      valorDe(r).map((x) => x.articuloId);
+    const mios = valorDe(await c.consultas.articulosControlados(e.operador));
+    expect(mios.map((x) => x.articuloId)).toContain(a.articulo);
+    expect(mios.map((x) => x.articuloId)).not.toContain(baja.articulo);
+    const nombres = mios.map((x) => x.nombre.toLowerCase());
+    expect(nombres).toEqual([...nombres].sort((x, y) => (x < y ? -1 : x > y ? 1 : 0)));
+    const fila = mios.find((x) => x.articuloId === a.articulo);
+    expect(Object.keys(fila ?? {}).sort()).toEqual([
+      "articuloId",
+      "nombre",
+      "productoId",
+      "unidadId",
+    ]);
+    expect(fila).toMatchObject({ productoId: a.producto, unidadId: "UNIDAD" });
+    const otra = await c.escenario();
+    expect(ids(await c.consultas.articulosControlados(otra.gerente))).not.toContain(a.articulo);
+  });
 });
