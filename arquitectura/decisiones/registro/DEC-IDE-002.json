@@ -1,0 +1,10 @@
+{
+  "id": "DEC-IDE-002",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Los textos de las acciones de los roles propios, «Qué puede hacer», «Solo el gerente», «No incluida en el plan» y «Roles» en el menú Cuenta (solo gerente) quedan aprobados.",
+  "que_cambia": "Los 188 nombres de acción de la tabla, con «orden de producción» en las cinco de transformaciones y «Editar las recetas»; un piso nuevo solo-gerente se rechaza si un rol propio ya tiene esa acción (S2).",
+  "donde": "Dueño 26/11/2026, Excel de roles propios, hojas Acciones y Otras decisiones: «esta aprobado todo el excel y las decisiones»; roles-textos-de-acciones.md (rama roles/textos-de-acciones, 3a098127)"
+}
