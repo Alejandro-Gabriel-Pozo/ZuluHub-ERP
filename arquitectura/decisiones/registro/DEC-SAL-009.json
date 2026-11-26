@@ -1,0 +1,10 @@
+{
+  "id": "DEC-SAL-009",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "El cierre del día rotula la anulación del cobro de una mesa como «Diferencia por anulación de la mesa N» para que el gerente registre la salida de caja.",
+  "que_cambia": "En «Cobrado contra el ticket» el ticket anulado de una mesa dice de qué mesa es; no cambia ningún importe ni la caja, y el mostrador sigue como «Ticket N».",
+  "donde": "src/capacidades/vocabulario/catalogo-cierre.ts; palabras del dueño del 26/11/2026 vía el orquestador; aceptado por delegación fila 173"
+}
