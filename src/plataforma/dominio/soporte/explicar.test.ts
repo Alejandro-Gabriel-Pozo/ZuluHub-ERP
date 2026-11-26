@@ -25,7 +25,7 @@ import {
  * la matriz real de empresa no se importa desde plataforma. La fidelidad contra el guard y la matriz
  * reales se prueba en `test/plataforma/fidelidad-de-explicar.test.ts`.
  */
-type Rol = "JEFE" | "AYUDANTE";
+type Rol = "GERENTE" | "OPERADOR" | "PROPIO";
 type Modulo = "base" | "ventas" | "futuro";
 type Accion = "base.ver" | "base.cerrar" | "ventas.vender" | "futuro.pronosticar";
 
@@ -53,10 +53,10 @@ const CATALOGO = {
 const REGLAS: ReglasDelGuard<Modulo, Accion, never, Rol> = {
   catalogo: CATALOGO,
   permisos: {
-    "base.ver": ["JEFE", "AYUDANTE"],
-    "base.cerrar": ["JEFE"],
-    "ventas.vender": ["JEFE"],
-    "futuro.pronosticar": ["JEFE"],
+    "base.ver": ["GERENTE", "OPERADOR"],
+    "base.cerrar": ["GERENTE"],
+    "ventas.vender": ["GERENTE"],
+    "futuro.pronosticar": ["GERENTE"],
   },
 };
 
@@ -65,9 +65,10 @@ const E1 = empresaId("e-1");
 const hechos = (cambios: Partial<HechosDeAccion<Rol>> = {}): HechosDeAccion<Rol> => ({
   empresaId: E1,
   persona: { activoGlobal: true },
-  membresia: { rol: "JEFE", activo: true },
+  membresia: { rol: "GERENTE", activo: true },
   modulosActivados: ["ventas"],
   modulosHabilitados: ["ventas"],
+  fuentes: { plantillas: { ADMINISTRADOR: [], OPERADOR: ["base.ver"] }, rolPropio: null },
   estadoDeEmpresa: "ACTIVE",
   estadoDeTenant: "ACTIVE",
   ...cambios,
@@ -80,7 +81,7 @@ describe("explicarAccionDeEmpresa: lo que ve cada persona", () => {
   it("con rol, módulo activo y la empresa operando: permitido, con el rol y la razón", () => {
     expect(explicarAccionDeEmpresa(REGLAS, "base.cerrar", hechos())).toEqual({
       accion: "base.cerrar",
-      rol: "JEFE",
+      rol: "GERENTE",
       razonDelRol: "CON_ROL",
       estadoEfectivo: "OPERA",
       guard: OK,
@@ -93,9 +94,9 @@ describe("explicarAccionDeEmpresa: lo que ve cada persona", () => {
     const e = explicarAccionDeEmpresa(
       REGLAS,
       "base.cerrar",
-      hechos({ membresia: { rol: "AYUDANTE", activo: true } }),
+      hechos({ membresia: { rol: "OPERADOR", activo: true } }),
     );
-    expect(e.rol).toBe("AYUDANTE");
+    expect(e.rol).toBe("OPERADOR");
     expect(e.razonDelRol).toBe("CON_ROL");
     expect(e.guard).toEqual(rechazo("SIN_PERMISO"));
     expect(e.opera).toEqual(OK);
@@ -107,7 +108,7 @@ describe("explicarAccionDeEmpresa: lo que ve cada persona", () => {
       [{ persona: null }, "PERSONA_INEXISTENTE"],
       [{ persona: { activoGlobal: false } }, "PERSONA_SUSPENDIDA"],
       [{ membresia: null }, "SIN_MEMBRESIA"],
-      [{ membresia: { rol: "JEFE", activo: false } }, "MEMBRESIA_APAGADA"],
+      [{ membresia: { rol: "GERENTE", activo: false } }, "MEMBRESIA_APAGADA"],
     ];
     for (const [cambios, razon] of casos) {
       const e = explicarAccionDeEmpresa(REGLAS, "base.ver", hechos(cambios));
@@ -118,7 +119,7 @@ describe("explicarAccionDeEmpresa: lo que ve cada persona", () => {
   });
 
   it("precedencia de las razones: persona inexistente, suspendida, sin membresía, apagada", () => {
-    const todoMal = hechos({ persona: null, membresia: { rol: "JEFE", activo: false } });
+    const todoMal = hechos({ persona: null, membresia: { rol: "GERENTE", activo: false } });
     expect(explicarAccionDeEmpresa(REGLAS, "base.ver", todoMal).razonDelRol).toBe(
       "PERSONA_INEXISTENTE",
     );
@@ -191,7 +192,7 @@ describe("explicarAccionDeEmpresa: módulos y empresa, en el orden de los casos 
     const e = explicarAccionDeEmpresa(
       REGLAS,
       "base.cerrar",
-      hechos({ membresia: { rol: "AYUDANTE", activo: true }, estadoDeEmpresa: "SUSPENDED" }),
+      hechos({ membresia: { rol: "OPERADOR", activo: true }, estadoDeEmpresa: "SUSPENDED" }),
     );
     expect(e.decision).toEqual(rechazo("SIN_PERMISO"));
     // Pero se ve que además la empresa no opera.
@@ -247,12 +248,12 @@ describe("explicarAccionDeEmpresa: módulos y empresa, en el orden de los casos 
   });
 
   it("un rol de otro catálogo en los hechos no compila", () => {
-    const deOtroCatalogo: HechosDeAccion<"GERENTE"> = {
+    const deOtroCatalogo: HechosDeAccion<"JEFE"> = {
       ...hechos(),
-      membresia: { rol: "GERENTE", activo: true },
+      membresia: { rol: "JEFE", activo: true },
     };
     const noSeEjecuta = () =>
-      // @ts-expect-error "GERENTE" no es un rol de estas reglas
+      // @ts-expect-error "JEFE" no es un rol de estas reglas
       explicarAccionDeEmpresa(REGLAS, "base.ver", deOtroCatalogo);
     expect(noSeEjecuta).toBeTypeOf("function");
   });

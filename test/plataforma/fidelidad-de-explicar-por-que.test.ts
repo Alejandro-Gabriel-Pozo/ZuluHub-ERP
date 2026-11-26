@@ -4,7 +4,12 @@ import type { ClaveAccion } from "../../src/capacidades/modulos/catalogo";
 import { PERMISOS_DE_EMPRESA, REGLAS_DE_EMPRESA } from "../../src/capacidades/permisos/empresa";
 import { exigirAccion } from "../../src/capacidades/permisos/exigir";
 import { REGLAS_DE_PLATAFORMA } from "../../src/capacidades/permisos/plataforma";
-import { ROLES_DE_EMPRESA, type RolDeEmpresa } from "../../src/capacidades/permisos/roles";
+import {
+  ROLES_DE_EMPRESA,
+  ROLES_DE_LA_MEMBRESIA,
+  type RolDeLaMembresia,
+} from "../../src/capacidades/permisos/roles";
+import { conjuntoEfectivo } from "../../src/capacidades/roles/conjunto-efectivo";
 import {
   comprobarQueOpera,
   type EstadoDeEmpresa,
@@ -85,14 +90,27 @@ function conCaso(datos: Parameters<typeof lecturaFalsa>[0]) {
   };
 }
 
+// Lo guardado en la base: las acciones de cada plantilla y del rol propio (con una clave retirada del catálogo y una repetida a propósito), o sin versión legible.
+const listaGuardada = fc.option(fc.subarray([...acciones, "retirada.del_catalogo"]), { nil: null });
 const hechosDeAccion = fc.record({
   accion: fc.constantFrom(...acciones),
   persona: fc.option(fc.boolean(), { nil: null }),
   membresia: fc.option(
-    fc.record({ rol: fc.constantFrom(...ROLES_DE_EMPRESA), activo: fc.boolean() }),
+    fc.record({ rol: fc.constantFrom(...ROLES_DE_LA_MEMBRESIA), activo: fc.boolean() }),
     { nil: null },
   ),
+  fuentes: fc.record({
+    plantillas: fc.record({ ADMINISTRADOR: listaGuardada, OPERADOR: listaGuardada }),
+    rolPropio: fc.option(
+      fc.record({
+        activo: fc.boolean(),
+        acciones: fc.subarray([...acciones, "retirada.del_catalogo"]),
+      }),
+      { nil: null },
+    ),
+  }),
   modulosActivados: fc.subarray(["administracion", "otro", "constructor", "__proto__"]),
+  modulosHabilitados: fc.subarray(["administracion", "otro", "constructor", "__proto__"]),
   estadoDeEmpresa: estadosDeEmpresa,
   estadoDeTenant: estadosDeTenant,
   porId: fc.boolean(),
@@ -111,6 +129,8 @@ describe("explicarPorQue (acción) = exigirAccion + comprobarQueOpera reales", (
               ? []
               : [{ empresaId: EMPRESA, personaId: persona.id, ...h.membresia }],
           modulosActivados: h.modulosActivados,
+          modulosHabilitados: h.modulosHabilitados,
+          fuentes: h.fuentes,
         });
 
         const r = await explicarPorQue(comoAdministrador, {
@@ -128,12 +148,24 @@ describe("explicarPorQue (acción) = exigirAccion + comprobarQueOpera reales", (
         if (!r.ok || r.valor.tipo !== "ACCION") return;
 
         // El oráculo: lo que carga `autorizacion.delActor` y lo que hacen los casos de uso reales.
-        const rol: RolDeEmpresa | null =
+        const rol: RolDeLaMembresia | null =
           persona !== null && persona.activoGlobal && h.membresia !== null && h.membresia.activo
             ? h.membresia.rol
             : null;
         const real = await exigirAccion(REGLAS_DE_EMPRESA, h.accion, () =>
-          Promise.resolve({ rol, modulosActivados: h.modulosActivados, modulosHabilitados: [] }),
+          Promise.resolve({
+            rol,
+            acciones: [
+              ...conjuntoEfectivo(rol, {
+                catalogo: new Set(acciones),
+                plantilla: (clave) => h.fuentes.plantillas[clave],
+                rolPropio: rol === "PROPIO" ? h.fuentes.rolPropio : null,
+              }),
+            ],
+            // Sin rol, `autorizacion.delActor` no lee módulos (SIN_ROL): el guard ve «no activo» antes de mirar el rol.
+            modulosActivados: rol === null ? [] : h.modulosActivados,
+            modulosHabilitados: rol === null ? [] : h.modulosHabilitados,
+          }),
         );
         const opera = comprobarQueOpera(
           EMPRESA,
