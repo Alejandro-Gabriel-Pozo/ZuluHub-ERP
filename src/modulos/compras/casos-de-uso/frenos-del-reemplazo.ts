@@ -15,7 +15,7 @@ export type FrenoDelReemplazo = Readonly<{
   error: ErrorDeCompras;
 }>;
 
-/** Solo se reemplaza una factura que llega sola (N3 y N4), no la del atajo de N1 y N2 (esa se cambia con «cambiar el comprobante de la compra», NOTAS-2b). */
+/** Solo se reemplaza una factura que llega sola (N3 y N4), no la del atajo de N1 y N2 (esa se cambia con `cambiarComprobanteDeLaCompra`, NOTAS-2b). */
 export const esFacturaReemplazable = (c: ComprobanteGuardado | null): c is ComprobanteGuardado =>
   c !== null && c.clase === "FACTURA" && esNivelDeRecepcionSeparada(c.nivel) && !c.esAtajo;
 
@@ -26,6 +26,8 @@ export async function frenosDeLaFactura(
   >,
   empresaId: EmpresaId,
   facturaId: string,
+  /** `true`: la factura es la del atajo de una compra (N1 y N2) y su propia conciliación no frena (se espeja al cambiar el comprobante); solo frena otra conciliación vigente. */
+  sinElAtajo = false,
 ): Promise<readonly FrenoDelReemplazo[]> {
   const frenos: FrenoDelReemplazo[] = [];
   const pago = await tx.pagosDeProveedor.vigenteDe(empresaId, facturaId);
@@ -35,8 +37,12 @@ export async function frenosDeLaFactura(
       error: { error: "COMPROBANTE_YA_PAGADO", pagoId: pago.id },
     });
   }
-  const saldos = await tx.conciliacionesDeCompra.saldosDeFactura(empresaId, facturaId);
-  if (saldos.some((s) => s.asignada !== "0.0000")) {
+  const conciliada = sinElAtajo
+    ? (await tx.conciliacionesDeCompra.historialDe(empresaId, facturaId)).some((c) => !c.anulada)
+    : (await tx.conciliacionesDeCompra.saldosDeFactura(empresaId, facturaId)).some(
+        (s) => s.asignada !== "0.0000",
+      );
+  if (conciliada) {
     frenos.push({ freno: "CONCILIACIONES_VIVAS", error: "COMPROBANTE_CONCILIADO" });
   }
   const [acreditado, debitado] = await Promise.all([
