@@ -241,6 +241,17 @@ describe("las filas de la exportación", () => {
     expect(filasDe(COBRANZA, [])).toEqual([["-1000.00", null]]);
   });
 
+  it("una cobranza de importe cero sin medios sale igual en UNA fila (nunca desaparece del archivo)", () => {
+    const cero = movimiento({
+      clase: "COBRANZA",
+      importe: pesos("0.00"),
+      pendiente: pesos("0.00"),
+      origenTipo: "ventas.cobranza_de_ticket",
+      origenId: "c1",
+    });
+    expect(filasDe(cero, [])).toEqual([["0.00", null]]);
+  });
+
   it("el espejo de una cobranza anulada (importe POSITIVO) también reparte por medios, con signo positivo y en el orden de los medios", () => {
     const espejo = movimiento({
       asientoId: "a2-espejo",

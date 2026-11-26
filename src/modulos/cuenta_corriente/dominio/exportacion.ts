@@ -143,14 +143,18 @@ export function armarFilasDeLaExportacion(
       vencida: m.vencida,
       origen,
       sucursalId,
+      // Stryker disable next-line ConditionalExpression: sin sucursal, `Map.get(null)` da `undefined` y el `?? null` lo vuelve `null`: da lo mismo que cortar antes.
       sucursal: sucursalId === null ? null : (nombresDeSucursales.get(sucursalId) ?? null),
       estado: m.anulado ? ("ANULADO" as const) : ("VIGENTE" as const),
     };
     const medios = origen === "COBRANZA" ? (mediosPorCobranza.get(m.origenId) ?? []) : [];
     const total = medios.reduce((suma, medio) => suma + medio.importe.unidades, 0n);
     // El importe del asiento va con su signo (negativo en una cobranza); los medios, en positivo: se reparte el valor absoluto y se devuelve el signo.
+    // Stryker disable next-line EqualityOperator: con importe cero `-0n` y `0n` son el mismo valor.
     const absoluto = m.importe.unidades < 0n ? -m.importe.unidades : m.importe.unidades;
+    // Stryker disable next-line EqualityOperator: con UN solo medio que suma el importe, repartir da la misma fila única que la rama de abajo (`>=` y `>` dan lo mismo).
     if (medios.length > 1 && total === absoluto) {
+      // Stryker disable next-line EqualityOperator: solo se llega acá con medios que suman el importe; con importe cero cada medio vale cero y negarlo da el mismo texto.
       const negativo = m.importe.unidades < 0n;
       for (const medio of [...medios].sort((a, b) => a.orden - b.orden)) {
         filas.push({
@@ -167,6 +171,7 @@ export function armarFilasDeLaExportacion(
       ...base,
       importeConSigno: importeATexto(m.importe),
       tipoDeMedio:
+        // Stryker disable next-line ConditionalExpression,OptionalChaining: con VARIOS medios que suman ya se salió arriba; con ninguno, `total === absoluto` solo vale con importe cero y el resultado es `null` igual; con uno, `medios[0]` existe.
         medios.length === 1 && total === absoluto ? (medios[0]?.tipoDeMedio ?? null) : null,
     });
   }
