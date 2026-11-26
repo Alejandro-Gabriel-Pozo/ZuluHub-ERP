@@ -848,7 +848,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           // 0038: salón y comandas cambian solo lo que sus disparadores permiten (la mesa se edita y se desactiva; la línea de comanda pasa a enviada; el trabajo de impresión mueve su estado)
           ...["ultimo"].map((c) => `pedernal_app:contador_de_envios.${c}`),
           ...["activa", "nombre", "papel_mm", "uso"].map((c) => `pedernal_app:impresora.${c}`),
-          ...["envio_id", "salida"].map((c) => `pedernal_app:linea_de_comanda.${c}`),
+          ...["envio_id", "nota", "salida"].map((c) => `pedernal_app:linea_de_comanda.${c}`), // 0104: la nota se cambia mientras no se envió
           ...["activa", "columna", "fila", "forma", "numero", "tamano"].map(
             (c) => `pedernal_app:mesa.${c}`,
           ),
@@ -1967,7 +1967,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
           ...["empresa_id", "linea_nueva_id", "linea_origen_id", "modo"].map(
             (c) => `linea_copiada.${c}`,
           ),
-          ...["cuenta_id", "empresa_id", "envio_id", "linea_id", "salida"].map(
+          ...["cuenta_id", "empresa_id", "envio_id", "linea_id", "nota", "salida"].map(
             (c) => `linea_de_comanda.${c}`,
           ),
           ...["empresa_id", "linea_id", "mesa_origen_id", "union_id"].map(
@@ -1998,6 +1998,7 @@ describe.skipIf(base === null)("meta-tests sobre el catálogo de la base", () =>
             "envio_id",
             "linea_id",
             "nombre_de_cocina",
+            "nota",
             "orden",
             "rol",
           ].map((c) => `renglon_de_envio.${c}`),
