@@ -20,6 +20,7 @@ export const CLAVES_DE_ERRORES_DE_STOCK = {
   STOCK_DEPOSITO_CON_EXISTENCIA: "stock.error.deposito_con_existencia",
   STOCK_ES_EL_DE_VENTA: "stock.error.es_el_de_venta",
   STOCK_DEPOSITO_DESACTUALIZADO: "stock.error.deposito_desactualizado",
+  STOCK_SALDO_DE_LOTE_INSUFICIENTE: "stock.error.saldo_de_lote_insuficiente",
   STOCK_ACCION_NO_PERMITIDA: "stock.error.sin_permiso",
 } as const satisfies Record<string, ClaveDeTexto>;
 

@@ -1,0 +1,10 @@
+{
+  "id": "DEC-STK-005",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "CONFIRMADA",
+  "decision": "Textos de Lotes en escritura: Controlar por lote, Dejar de controlar, Reasignar, Corregir, Fecha de vencimiento y El lote no tiene tanta existencia.",
+  "que_cambia": "Seis claves nuevas (cinco: dueño 25/11/2026, fila 449; Fecha de vencimiento: orquestador, fila 173). SUPUESTOS: Corregir y Reasignar en pantalla propia; sin valor del lote. Revertir: sacar claves y pantallas.",
+  "donde": "dia-uno-stock-inventario-de-textos-2026-11-25.md L-05 a L-09 y L-15; dia-uno-stock-fichas-de-pantalla-2026-11-25.md FP-STK-13 y FP-STK-16"
+}

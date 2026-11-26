@@ -20,7 +20,10 @@ const TEXTOS = {
   vence: "Vence",
   existencia: "Existencia",
   disponible: "Disponible",
+  corregir: "Corregir",
+  reasignar: "Reasignar",
 };
+const ACCIONES = { control: null, puedeCorregir: true, puedeReasignar: true } as const;
 const LOTES: LotesDeLaComposicion = {
   articulos: [
     { id: "a1", nombre: "Queso cremoso" },
@@ -36,6 +39,8 @@ const LOTES: LotesDeLaComposicion = {
       existencia: "3.0000",
       disponible: "3.0000",
       sinAsignar: false,
+      version: 3,
+      depositos: [{ depositoId: "d1", existencia: "3.0000" }],
     },
     {
       loteId: "l2",
@@ -44,8 +49,11 @@ const LOTES: LotesDeLaComposicion = {
       existencia: "1.5000",
       disponible: "0.0000",
       sinAsignar: true,
+      version: 1,
+      depositos: [{ depositoId: "d1", existencia: "1.5000" }],
     },
   ],
+  control: { activo: true },
 };
 const VENCEN: VencimientosDeLaComposicion = {
   dias: 7,
@@ -82,7 +90,9 @@ const VENCEN: VencimientosDeLaComposicion = {
 
 describe("PantallaDeLotes", () => {
   it("una tarjeta por lote con vencimiento, existencia y disponible; el «Sin asignar» sin fecha; accesible", async () => {
-    await render(<PantallaDeLotes vista={armarLosLotes(LOTES, textoDe)} textos={TEXTOS} />);
+    await render(
+      <PantallaDeLotes vista={armarLosLotes(LOTES, textoDe)} textos={TEXTOS} acciones={ACCIONES} />,
+    );
     await expect.element(page.getByText("Q-1104")).toBeVisible();
     await expect.element(page.getByText("Vence 02/12/2026")).toBeVisible();
     await expect.element(page.getByText("Sin asignar")).toBeVisible();
@@ -92,7 +102,9 @@ describe("PantallaDeLotes", () => {
   });
 
   it("el selector lista los artículos como enlaces, marca el elegido y hay un enlace a Vencimientos", async () => {
-    await render(<PantallaDeLotes vista={armarLosLotes(LOTES, textoDe)} textos={TEXTOS} />);
+    await render(
+      <PantallaDeLotes vista={armarLosLotes(LOTES, textoDe)} textos={TEXTOS} acciones={ACCIONES} />,
+    );
     await expect
       .element(page.getByRole("link", { name: "Pollo" }))
       .toHaveAttribute("href", "/stock/lotes?articulo=a2");
@@ -105,15 +117,60 @@ describe("PantallaDeLotes", () => {
   });
 });
 
+describe("PantallaDeLotes: botones de escritura", () => {
+  it("«Corregir» en el lote con fechas y «Reasignar» en el «Sin asignar» con existencia, como enlaces a su pantalla", async () => {
+    await render(
+      <PantallaDeLotes vista={armarLosLotes(LOTES, textoDe)} textos={TEXTOS} acciones={ACCIONES} />,
+    );
+    await expect
+      .element(page.getByRole("link", { name: "Corregir" }))
+      .toHaveAttribute("href", "/stock/lotes/corregir?articulo=a1&lote=l1");
+    await expect
+      .element(page.getByRole("link", { name: "Reasignar" }))
+      .toHaveAttribute("href", "/stock/lotes/reasignar?articulo=a1&lote=l2");
+    expect(page.getByRole("link", { name: "Corregir" }).elements()).toHaveLength(1);
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("sin permiso salen apagados (no enlaces); sin existencia en el «Sin asignar» no hay «Reasignar»", async () => {
+    const sinExistencia = {
+      ...LOTES,
+      lotes: LOTES.lotes.map((l) => (l.sinAsignar ? { ...l, existencia: "0.0000" } : l)),
+    };
+    await render(
+      <PantallaDeLotes
+        vista={armarLosLotes(sinExistencia, textoDe)}
+        textos={TEXTOS}
+        acciones={{ control: null, puedeCorregir: false, puedeReasignar: false }}
+      />,
+    );
+    await expect.element(page.getByRole("button", { name: "Corregir" })).toBeDisabled();
+    expect(page.getByRole("link", { name: "Corregir" }).elements()).toHaveLength(0);
+    expect(page.getByText("Reasignar").elements()).toHaveLength(0);
+  });
+
+  it("muestra el control por lote que arma la página", async () => {
+    await render(
+      <PantallaDeLotes
+        vista={armarLosLotes(LOTES, textoDe)}
+        textos={TEXTOS}
+        acciones={{ ...ACCIONES, control: <button type="button">Dejar de controlar</button> }}
+      />,
+    );
+    await expect.element(page.getByRole("button", { name: "Dejar de controlar" })).toBeVisible();
+  });
+});
+
 describe("PantallaDeLotes sin artículos controlados", () => {
   it("no deja un selector vacío: solo el enlace a Vencimientos", async () => {
     await render(
       <PantallaDeLotes
         vista={armarLosLotes(
-          { articulos: [], articuloId: null, unidadId: null, lotes: [] },
+          { articulos: [], articuloId: null, unidadId: null, lotes: [], control: null },
           textoDe,
         )}
         textos={TEXTOS}
+        acciones={ACCIONES}
       />,
     );
     expect(page.getByRole("navigation").elements()).toHaveLength(0);

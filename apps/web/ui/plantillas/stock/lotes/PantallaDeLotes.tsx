@@ -1,3 +1,6 @@
+import type { ReactNode } from "react";
+import { Boton } from "../../../componentes/Boton.cliente";
+import { EnlaceDeAccion } from "../../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../../componentes/Insignia";
 import { SelectorDeDeposito } from "../lectura/SelectorDeDeposito";
 import type { VistaDeLotes, VistaDeVencimientos } from "./modelo-de-lotes";
@@ -9,6 +12,15 @@ export type TextosDeLotes = Readonly<{
   vence: string;
   existencia: string;
   disponible: string;
+  corregir: string;
+  reasignar: string;
+}>;
+
+/** Lo que ofrecen los botones de escritura: el control por lote del artículo (ya armado por la página: es un formulario con su acción) y si la persona puede corregir y reasignar (apagados sin permiso; el servidor igual decide). */
+export type AccionesDeLotes = Readonly<{
+  control: ReactNode;
+  puedeCorregir: boolean;
+  puedeReasignar: boolean;
 }>;
 
 /**
@@ -18,13 +30,15 @@ export type TextosDeLotes = Readonly<{
 export function PantallaDeLotes({
   vista,
   textos,
-}: Readonly<{ vista: VistaDeLotes; textos: TextosDeLotes }>) {
+  acciones,
+}: Readonly<{ vista: VistaDeLotes; textos: TextosDeLotes; acciones: AccionesDeLotes }>) {
   return (
     <div className={estilos["raiz"]}>
       {vista.opciones.length === 0 ? null : (
         <SelectorDeDeposito rotulo={textos.articulo} opciones={vista.opciones} />
       )}
       <a href={vista.hrefDeVencimientos}>{textos.vencimientos}</a>
+      {acciones.control}
       <ul className={estilos["lista"]}>
         {vista.filas.map((fila) => (
           <li key={fila.id} className={estilos["tarjeta"]}>
@@ -40,6 +54,24 @@ export function PantallaDeLotes({
             <span className={estilos["cantidad"]}>
               {textos.disponible} {fila.disponible}
             </span>
+            {fila.hrefDeCorregir === null ? null : acciones.puedeCorregir ? (
+              <EnlaceDeAccion href={fila.hrefDeCorregir} variante="secundaria">
+                {textos.corregir}
+              </EnlaceDeAccion>
+            ) : (
+              <Boton deshabilitado variante="secundaria">
+                {textos.corregir}
+              </Boton>
+            )}
+            {fila.hrefDeReasignar === null ? null : acciones.puedeReasignar ? (
+              <EnlaceDeAccion href={fila.hrefDeReasignar} variante="secundaria">
+                {textos.reasignar}
+              </EnlaceDeAccion>
+            ) : (
+              <Boton deshabilitado variante="secundaria">
+                {textos.reasignar}
+              </Boton>
+            )}
           </li>
         ))}
       </ul>
