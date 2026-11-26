@@ -72,6 +72,10 @@ export {
   type OrdenDeLaLista,
 } from "./consultas/listar-clientes-con-cuenta";
 export type {
+  ClienteParaElegirAlVender,
+  ErrorAlListarClientesParaVender,
+} from "./consultas/listar-clientes-para-vender";
+export type {
   CargoPendienteDelEstadoDeCuenta,
   DependenciasDeEstadoDeCuenta,
   EntradaDeVerEstadoDeCuenta,
