@@ -32,3 +32,11 @@ export {
 export type { TxDeConsultasDeCuentaCorriente } from "./consultas/ver-cuenta";
 export { DECLARACIONES as DECLARACIONES_DE_CUENTA_CORRIENTE } from "./casos-de-uso/declaraciones";
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_CUENTA_CORRIENTE } from "./consultas/declaraciones";
+export {
+  anularCargoDeVentaEnTx,
+  cargarVentaEnTx,
+  type CargoDeVentaRegistrado,
+  type EntradaDelCargoDeVenta,
+  type ErrorDelCargoDeVenta,
+  type TxDeCargoDeVenta,
+} from "./casos-de-uso/cargar-venta";
