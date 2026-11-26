@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { EmpresaId } from "../../../primitivas/identificadores/marca";
 import { importeATexto } from "../../../primitivas/dinero/importe";
@@ -28,6 +29,11 @@ import type {
 /** La clave del egreso de un origen: una por origen, así repetir el pago no saca la plata dos veces. */
 export function claveDeEgreso(origen: OrigenDeEgreso): string {
   return `egreso_${origen.tipo.toLowerCase()}_${origen.id}`;
+}
+
+/** El origen del egreso de una salida de dinero (también el de cada línea de una devolución): UNO por clave de idempotencia, con su hash (la clave cruda cabe en 128 y el prefijo del egreso la pasaría). */
+export function origenDeSalidaPorClave(clave: string): OrigenDeEgreso {
+  return { tipo: "SALIDA_DE_DINERO", id: createHash("sha256").update(clave).digest("hex") };
 }
 
 /** La clave de la anulación de ese egreso (otra clave: la tabla de movimientos tiene una sola clave única por empresa). */
@@ -136,6 +142,7 @@ export async function registrarEgresoEnTx(
       sesionId: previa.sesionId,
       yaExistia: true,
       medioTipo: null,
+      superaElEfectivo: false,
     });
   }
 
@@ -195,6 +202,7 @@ export async function registrarEgresoEnTx(
           sesionId: ganadora.sesionId,
           yaExistia: true,
           medioTipo: null,
+          superaElEfectivo: false,
         });
   }
   await dejarConstancia(tx, contexto, persona, {
@@ -210,7 +218,9 @@ export async function registrarEgresoEnTx(
       origenId: entrada.origen.id,
     },
   });
-  if (esEfectivo && egresoSuperaElEfectivo(esperadoAntes, movimiento.valor.importe)) {
+  const superaElEfectivo =
+    esEfectivo && egresoSuperaElEfectivo(esperadoAntes, movimiento.valor.importe);
+  if (superaElEfectivo) {
     await dejarConstancia(tx, contexto, persona, {
       accion: "EGRESO_SUPERA_EFECTIVO",
       entidad: "movimiento_caja",
@@ -218,7 +228,13 @@ export async function registrarEgresoEnTx(
       despues: { sesionId: sesion.id, importe: importeATexto(movimiento.valor.importe) },
     });
   }
-  return ok({ movimientoId, sesionId: sesion.id, yaExistia: false, medioTipo: medio.tipo });
+  return ok({
+    movimientoId,
+    sesionId: sesion.id,
+    yaExistia: false,
+    medioTipo: medio.tipo,
+    superaElEfectivo,
+  });
 }
 
 /**

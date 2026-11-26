@@ -299,6 +299,17 @@ export type {
   ErrorAlAnularMovimientoDeCaja,
   SalidaDeAnularMovimientoDeCaja,
 } from "./casos-de-uso/anular-movimiento";
+export type {
+  AvisoDeDevolverDinero,
+  EntradaDeDevolverDinero,
+  ErrorAlDevolverDinero,
+  SalidaDeDevolverDinero,
+} from "./casos-de-uso/devolver-dinero";
+export type {
+  EntradaDeAnularDevolucion,
+  ErrorAlAnularDevolucion,
+  SalidaDeAnularDevolucion,
+} from "./casos-de-uso/anular-devolucion";
 export { cajaParaVentas } from "./cobrar/caja-para-ventas";
 export { cajaParaCompras } from "./egreso/caja-para-compras";
 export type {
@@ -326,6 +337,12 @@ export type {
 } from "./cobrar/contrato";
 export { crearConsultasDeCaja, type ConsultasDeCaja } from "./consultas/consultas";
 export type { DependenciasDeConsultasDeCaja, TxDeConsultasDeCaja } from "./consultas/contrato";
+export type {
+  CobradoPorMedio,
+  CobrosDevolublesDeUnOrigen,
+  EntradaDeCobrosDevolublesDeUnOrigen,
+  ErrorAlConsultarCobrosDevolubles,
+} from "./consultas/cobros-devolubles-de-un-origen";
 export type {
   CajaDeLista,
   CajasDeLaSucursal,

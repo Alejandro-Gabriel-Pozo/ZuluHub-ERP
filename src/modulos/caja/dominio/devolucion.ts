@@ -34,16 +34,15 @@ export type ErrorDeDevolucion =
   ErrorDeImporte | "LINEAS_INVALIDAS" | "LINEA_REPETIDA" | "DEVOLUCION_SUPERA_LO_COBRADO";
 
 /**
- * Valida las líneas de una devolución contra lo devolvible de la cobranza: de 1 a 10 líneas, cada importe positivo, en ARS y dentro del tope, ningún par (medio, cuenta)
- * repetido, y que la suma no supere lo devolvible. Devuelve las líneas validadas y su total. El tope definitivo lo impone la base con bloqueo.
+ * Valida la FORMA de las líneas de una devolución: de 1 a 10 líneas, cada importe positivo y en ARS, ningún par (medio, cuenta) repetido. Devuelve las líneas validadas y su total.
+ * No mira lo devolvible: el caso de uso la corre ANTES de la idempotencia (repetir un pedido ya hecho no puede fallar porque el tope se consumió con él mismo).
  */
-export function decidirDevolucion(
-  entrada: Readonly<{ devolvible: Importe; lineas: readonly LineaDeDevolucionEntrada[] }>,
+export function validarLineasDeDevolucion(
+  lineas: readonly LineaDeDevolucionEntrada[],
 ): Resultado<
   Readonly<{ lineas: readonly LineaDeDevolucion[]; total: Importe }>,
   ErrorDeDevolucion
 > {
-  const { lineas } = entrada;
   if (lineas.length < 1 || lineas.length > MAXIMO_DE_LINEAS_DE_UNA_DEVOLUCION) {
     return err("LINEAS_INVALIDAS");
   }
@@ -61,9 +60,25 @@ export function decidirDevolucion(
       importe: importe.valor,
     });
   }
-  const total = sumarImportes(armadas.map((l) => l.importe));
-  if (total.unidades > entrada.devolvible.unidades) return err("DEVOLUCION_SUPERA_LO_COBRADO");
-  return ok({ lineas: armadas, total });
+  return ok({ lineas: armadas, total: sumarImportes(armadas.map((l) => l.importe)) });
+}
+
+/**
+ * Valida las líneas de una devolución contra lo devolvible de la cobranza (la forma, con `validarLineasDeDevolucion`, y que la suma no supere lo devolvible). El tope
+ * definitivo lo impone la base con bloqueo.
+ */
+export function decidirDevolucion(
+  entrada: Readonly<{ devolvible: Importe; lineas: readonly LineaDeDevolucionEntrada[] }>,
+): Resultado<
+  Readonly<{ lineas: readonly LineaDeDevolucion[]; total: Importe }>,
+  ErrorDeDevolucion
+> {
+  const forma = validarLineasDeDevolucion(entrada.lineas);
+  if (!forma.ok) return forma;
+  if (forma.valor.total.unidades > entrada.devolvible.unidades) {
+    return err("DEVOLUCION_SUPERA_LO_COBRADO");
+  }
+  return forma;
 }
 
 /**
@@ -96,6 +111,14 @@ export function claveDeLinea(claveDelPedido: string, orden: number): string {
     .update(JSON.stringify(["caja.devolucion.linea", claveDelPedido, orden]))
     .digest("hex");
   return `dev_${h}`;
+}
+
+/** La clave de la anulación de la línea `orden` (desde 1) de un pedido de anulación: derivada de la clave de ESE pedido (la de anular, no la de devolver), una por línea. Determinística. */
+export function claveDeAnulacionDeLinea(claveDelPedido: string, orden: number): string {
+  const h = createHash("sha256")
+    .update(JSON.stringify(["caja.devolucion.anulacion.linea", claveDelPedido, orden]))
+    .digest("hex");
+  return `deva_${h}`;
 }
 
 /** El identificador del pedido de devolución (el `devolucion_id` que comparten sus líneas): un uuid determinístico derivado de la clave del pedido. */

@@ -40,6 +40,8 @@ export const PERMISOS_DE_CAJA = {
   // Salida de dinero por un medio que no es efectivo (dueño, 26/11/2026, Q-D8 A): gerente y administrador. La salida en efectivo sigue con `movimientos_caja.registrar_manual`
   // (el operador la mantiene hasta que el dueño decida otra cosa); la tabla `pideLaAccionDeSalida` es el único lugar que lo decide.
   "salidas_de_dinero.registrar": ["GERENTE", "ADMINISTRADOR"],
+  // Devolver dinero de un cobro de ticket por el medio que corresponde, y anular esa devolución (dueño, 26/11/2026, DEC-VEN-004): gerente y administrador, sin piso, delegable.
+  "devoluciones.registrar": ["GERENTE", "ADMINISTRADOR"],
 } as const satisfies Record<
   keyof (typeof CATALOGO_DE_MODULOS)["caja"]["acciones"],
   readonly RolDeEmpresa[]

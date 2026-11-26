@@ -3,14 +3,9 @@ import { exigirAccion } from "../../../capacidades/permisos/exigir";
 import type { MotivoDeRechazo } from "../../../capacidades/permisos/guard";
 import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { EmpresaNoOpera } from "../../../contexto/estados";
-import { importeATexto } from "../../../primitivas/dinero/importe";
 import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado";
 import type { ErrorDePersistencia } from "../../../puertos/transacciones";
-import {
-  decidirAnulacion,
-  movimientoAnulableDe,
-  type ErrorDeAnulacion,
-} from "../dominio/anulacion";
+import type { ErrorDeAnulacion } from "../dominio/anulacion";
 import { decidirPorHuella } from "../dominio/huella";
 import {
   exigirClave,
@@ -19,13 +14,13 @@ import {
 } from "../dominio/idempotencia-de-operacion";
 import { motivoObligatorio } from "../dominio/texto";
 import {
-  dejarConstancia,
   exigirAlcance,
   prepararCaso,
   repetirSiOtroGano,
   UNICAS_DE_LA_ANULACION,
   REINTENTOS_EN_LA_SESION_DE_CAJA,
 } from "./comun";
+import { anularMovimientoEnTx } from "./anular-movimiento-en-tx";
 import type { DependenciasDeCaja } from "./contrato";
 import { DECLARACIONES } from "./declaraciones";
 import { traducirErrores } from "./traducir";
@@ -44,7 +39,11 @@ export type SalidaDeAnularMovimientoDeCaja = Readonly<{
 }>;
 
 type ErrorPropio =
-  ErrorDeClave | ErrorDeAnulacion | "CLAVE_REUTILIZADA" | "MOVIMIENTO_NO_ENCONTRADO";
+  | ErrorDeClave
+  | ErrorDeAnulacion
+  | "CLAVE_REUTILIZADA"
+  | "MOVIMIENTO_NO_ENCONTRADO"
+  | "MOVIMIENTO_CON_DEVOLUCION";
 
 export type ErrorAlAnularMovimientoDeCaja =
   ErrorPropio | MotivoDeRechazo | EmpresaNoOpera | ErrorDeAlcance | ErrorDePersistencia;
@@ -62,7 +61,7 @@ const RESTRICCIONES_ADMITIDAS = [
  * (`movimientos_caja.anular`, permitido en solo lectura), la empresa opera, el movimiento (con alcance sobre la sucursal de su sesión),
  * validación (clave y motivo), idempotencia (la clave, ANTES de mirar el estado: repetir la anulación devuelve lo hecho) y las reglas del
  * dominio: solo ingreso, egreso o ajuste de una sesión `ABIERTA`, una sola vez (`MOVIMIENTO_YA_ANULADO`: dos anulaciones a la vez dejan una),
- * nunca un cobro (`MOVIMIENTO_CON_ORIGEN`). El operador anula SOLO lo que cargó él (se compara `registrado_por` con la persona del contexto
+ * nunca un cobro (`MOVIMIENTO_CON_ORIGEN`) ni el egreso de una devolución (`MOVIMIENTO_CON_DEVOLUCION`: se anula con `anularDevolucion`). El operador anula SOLO lo que cargó él (se compara `registrado_por` con la persona del contexto
  * firmado, nunca con un dato de la pantalla); gerente y administrador, cualquiera (`movimientos_caja.anular_de_otros`). La anulación y su
  * auditoría `MOVIMIENTO_ANULADO` van en la misma transacción.
  */
@@ -99,6 +98,13 @@ export function armarAnularMovimientoDeCaja({ transacciones, reglas }: Dependenc
           const motivo = motivoObligatorio(entrada.motivo);
           if (!motivo.ok) return motivo;
 
+          // El egreso de una devolución se anula SOLO anulando la devolución (`anularDevolucion`, con `devoluciones.registrar`): si no, quien tiene
+          // `movimientos_caja.anular_de_otros` se saltearía ese permiso y dejaría el pedido a medias. Falla cerrado, antes de mirar la repetición.
+          if (
+            (await tx.movimientosDeDinero.delMovimiento(empresaId, original.id))?.devuelveOrigen
+          ) {
+            return err("MOVIMIENTO_CON_DEVOLUCION");
+          }
           const huella = huellaDeAnulacion({ movimientoId: original.id, motivo: motivo.valor });
           const previa = await tx.movimientos.obtenerPorClave(empresaId, clave.valor);
           const repeticion = decidirPorHuella(previa?.huella ?? null, huella);
@@ -110,42 +116,15 @@ export function armarAnularMovimientoDeCaja({ transacciones, reglas }: Dependenc
               tx.autorizacion.delActor(contexto),
             )
           ).ok;
-          const espejo = decidirAnulacion({
-            movimiento: movimientoAnulableDe(original),
-            yaAnulado: (await tx.movimientos.anulacionDe(empresaId, original.id)) !== null,
-            sesion: original.estadoDeLaSesion,
-            actor: { personaId: previo.valor.persona, puedeAnularDeOtros },
-            motivo: motivo.valor,
-          });
-          if (!espejo.ok) return espejo;
-
-          const anulacionId = await tx.movimientos.insertar({
-            empresa: empresaId,
-            sesionId: original.sesionId,
-            clase: espejo.valor.clase,
-            medioDePagoId: espejo.valor.medioDePagoId,
-            cuentaDeCobroId: espejo.valor.cuentaDeCobroId,
-            importe: espejo.valor.importe,
-            motivo: espejo.valor.motivo,
-            anulaA: original.id,
-            corrigeJornada: null,
-            registradoEn: ahora,
-            registradoPor: previo.valor.persona,
+          const anulada = await anularMovimientoEnTx(tx, contexto, previo.valor.persona, {
+            original,
             claveDeIdempotencia: clave.valor,
             huella,
+            motivo: motivo.valor,
+            puedeAnularDeOtros,
           });
-          await dejarConstancia(tx, contexto, previo.valor.persona, {
-            accion: "MOVIMIENTO_ANULADO",
-            entidad: "movimiento_caja",
-            entidadId: anulacionId,
-            despues: {
-              sesionId: original.sesionId,
-              movimientoAnuladoId: original.id,
-              clase: original.clase,
-              importe: importeATexto(espejo.valor.importe),
-              motivo: espejo.valor.motivo,
-            },
-          });
+          if (!anulada.ok) return anulada;
+          const { anulacionId } = anulada.valor;
           return ok({ anulacionId, yaExistia: false });
         },
       );

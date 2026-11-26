@@ -47,6 +47,8 @@ export type SalidaDeEgresoPorOrigen = Readonly<{
   yaExistia: boolean;
   /** El tipo del medio por el que salió. En una repetición (`yaExistia`) es `null`: no se vuelve a leer. */
   medioTipo: TipoDeMedio | null;
+  /** `true`: el egreso salió del efectivo y superó lo esperado en la sesión (queda la constancia `EGRESO_SUPERA_EFECTIVO`; no bloquea). En una repetición es `false`: no se vuelve a medir. */
+  superaElEfectivo: boolean;
 }>;
 
 export type ErrorAlEgresar =

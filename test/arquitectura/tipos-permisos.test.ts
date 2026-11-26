@@ -171,6 +171,7 @@ describe("tipos cerrados derivados del catálogo", () => {
       | "cobros.corregir_medio"
       | "declaraciones_de_total.registrar"
       | "salidas_de_dinero.registrar"
+      | "devoluciones.registrar"
       | "jornadas.ver"
       | "jornadas.iniciar_auditoria"
       | "jornadas.cancelar_auditoria"

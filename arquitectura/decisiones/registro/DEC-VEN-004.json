@@ -1,0 +1,10 @@
+{
+  "id": "DEC-VEN-004",
+  "fecha": "2026-11-26",
+  "quien": "dueño",
+  "tipo": "PERMISOS",
+  "estado": "CONFIRMADA",
+  "decision": "Devolver dinero de un cobro de ticket y anular esa devolución exigen la acción «devoluciones.registrar»: gerente y administrador por defecto, sin piso de plataforma y delegable por empresa.",
+  "que_cambia": "Quién puede devolver plata de un ticket cobrado por el medio que corresponde. El operador no puede salvo que la empresa se lo delegue; anular el egreso de una devolución por el camino genérico de caja queda rechazado, así quien solo puede anular movimientos de otros no se saltea este permiso.",
+  "donde": "Dueño 26/11/2026, sección «devolución con medio» de decisiones-del-dueno-2026-11.md (Q-D5, «Sí»), vía el orquestador; src/capacidades/permisos/permisos-de-caja.ts (devoluciones.registrar); src/modulos/caja/casos-de-uso/devolver-dinero.ts y anular-devolucion.ts"
+}

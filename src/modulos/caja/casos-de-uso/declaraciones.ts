@@ -212,6 +212,26 @@ export const DECLARACIONES = {
       },
     },
   },
+  devolverDinero: {
+    accion: "devoluciones.registrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/caja-devolucion.test.ts",
+        it: "la misma devolución dos veces con la misma clave: la segunda devuelve yaExistia y no escribe ni audita",
+      },
+    },
+  },
+  anularDevolucion: {
+    accion: "devoluciones.registrar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: "test/integracion/caja-devolucion.test.ts",
+        it: "anular la misma devolución dos veces con la misma clave: la segunda devuelve yaExistia y no escribe ni audita",
+      },
+    },
+  },
   registrarAjuste: {
     accion: "movimientos_caja.ajustar",
     repeticion: {
