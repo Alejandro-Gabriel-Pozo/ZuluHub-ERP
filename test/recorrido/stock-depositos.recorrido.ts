@@ -508,4 +508,46 @@ describe.skipIf(base === null || !stockAbierto)("recorrido de depósitos de stoc
     await pagina.waitForLoadState("networkidle");
     expect(vigilante.tomar()).toEqual([]);
   });
+
+  it("una Entrada de un artículo controlado por lote pide «Lote» y «Vence», se registra una sola vez (doble clic) y el lote aparece en «Lotes» con su vencimiento", async () => {
+    const { articulo } = await articuloDeBase(mundo.mundo.dueno, { empresa: mundo.empresa });
+    await pagina.goto(`${mundo.url}/stock/lotes?articulo=${articulo}`);
+    await pagina.waitForLoadState("networkidle");
+    await pagina.getByRole("button", { name: "Controlar por lote" }).click();
+    await pagina.getByRole("button", { name: "Dejar de controlar" }).waitFor();
+
+    await pagina.goto(`${mundo.url}/stock/movimientos/entrada`);
+    await pagina.waitForLoadState("networkidle");
+    await pagina.getByLabel("Artículo").selectOption(articulo);
+    await pagina.getByLabel("Lote", { exact: true }).waitFor();
+    await pagina.getByLabel("Vence", { exact: true }).waitFor();
+    await pagina.getByLabel("Cantidad").fill("5");
+    expect(await pagina.getByRole("button", { name: "Registrar" }).isDisabled()).toBe(true);
+    await pagina.getByLabel("Lote", { exact: true }).fill("L-77");
+    await pagina.getByLabel("Vence", { exact: true }).fill("2099-06-01");
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    await pagina.getByRole("button", { name: "Registrar" }).dblclick();
+    await pagina.waitForURL((url) => url.pathname === "/stock/movimientos");
+    await pagina.waitForLoadState("networkidle");
+    const existencia = async () =>
+      (
+        await mundo.mundo.dueno.query<{ e: string }>(
+          "select coalesce(sum(existencia), 0)::text as e from saldo_de_stock where articulo_id = $1",
+          [articulo],
+        )
+      ).rows[0]?.e;
+    expect(await existencia()).toBe("5.0000");
+    const lotes = await mundo.mundo.dueno.query<{ codigo: string; vence: string }>(
+      "select codigo, fecha_de_vencimiento::text as vence from lote where empresa_id = $1 and articulo_id = $2 and not es_sin_asignar",
+      [mundo.empresa, articulo],
+    );
+    expect(lotes.rows).toEqual([{ codigo: "L-77", vence: "2099-06-01" }]);
+    expect(vigilante.tomar()).toEqual([]);
+
+    await pagina.goto(`${mundo.url}/stock/lotes?articulo=${articulo}`);
+    await pagina.waitForLoadState("networkidle");
+    await pagina.getByText("L-77", { exact: true }).waitFor();
+    await pagina.getByText("Vence 01/06/2099").waitFor();
+    expect(vigilante.tomar()).toEqual([]);
+  });
 });

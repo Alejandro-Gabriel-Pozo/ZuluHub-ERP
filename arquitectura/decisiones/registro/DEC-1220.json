@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "PERMISOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Habilitar, suspender, reactivar y cambiar plazo y límite de una cuenta corriente, y verla con su saldo, son del gerente y del administrador (el operador no); se pueden delegar en un rol propio.",
   "que_cambia": "El operador no ve ni habilita cuentas corrientes hasta que el dueño lo decida (CC-2, CC-5). «Administrar» es del dueño; «ver» es supuesto. Revertir: cambiar los roles de una fila y regenerar la semilla.",
-  "donde": "src/capacidades/permisos/permisos-de-cuenta_corriente.ts; brief PR-CC-1 §4 (Pedernal-docs 11-especificaciones/briefs/cuenta-corriente/)"
+  "donde": "src/capacidades/permisos/permisos-de-cuenta_corriente.ts; brief PR-CC-1 §4 (Pedernal-docs 11-especificaciones/briefs/cuenta-corriente/); dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)"
 }

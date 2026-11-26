@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Los ingredientes se eligen de un selector con la lista completa, uno por vez con «Agregar»; la hoja con buscador queda para otro tramo. La receta se arma y confirma en una pantalla de dos pasos.",
   "que_cambia": "Cómo se agrega un ingrediente. Revertir: sumar la hoja con buscador (otro tramo, con su dato de búsqueda).",
-  "donde": "apps/web/ui/plantillas/recetas/FormularioDeReceta.cliente.tsx; recetas-pantalla.md §6, supuesto S11"
+  "donde": "apps/web/ui/plantillas/recetas/FormularioDeReceta.cliente.tsx; recetas-pantalla.md §6, supuesto S11; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)"
 }

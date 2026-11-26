@@ -3,8 +3,8 @@
   "fecha": "2026-11-26",
   "quien": "sesión",
   "tipo": "DINERO",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Al dividir por ítems, «Por unidades» solo se ofrece si precio por paso es un número exacto de centavos; si no, la línea va Entera o Compartida.",
   "que_cambia": "Un ítem por peso o fracción con un precio que no cierra en centavos (2 kg a $ 1.000,01) ya no se reparte por unidades: así las cuentas suman el total de la mesa. Revertirlo es sacar una función.",
-  "donde": "src/primitivas/cuentas/division.ts (cierraExactoPorPaso); aprobado como supuesto por el orquestador el 26/11/2026"
+  "donde": "src/primitivas/cuentas/division.ts (cierraExactoPorPaso); aprobado como supuesto por el orquestador el 26/11/2026; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)"
 }

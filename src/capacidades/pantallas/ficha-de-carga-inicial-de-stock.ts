@@ -29,6 +29,12 @@ const YA_APROBADO = {
     "el dueño, 09/11/2026 y 12/11/2026 (maqueta de productos aprobada); por delegación (fila 173) el orquestador acepta los textos ya aprobados",
   donde: "Pedernal-docs 11-especificaciones/dia-uno-stock-inventario-de-textos-2026-11-25.md §1.7",
 } as const;
+const LOTE_APROBADO = {
+  decidio:
+    "el dueño, 09/11/2026 («Lote», control.html, D118) y el orquestador por delegación del dueño (fila 173) para «Vence» (L-03); DEC-STK-007",
+  donde:
+    "arquitectura/decisiones/registro/DEC-STK-007.json; Pedernal-docs 11-especificaciones/dia-uno-stock-inventario-de-textos-2026-11-25.md (L-02 y L-03)",
+} as const;
 const USO = "FormularioDeCargaInicial.cliente.tsx";
 
 export const FICHA_DE_CARGA_INICIAL_DE_STOCK = {
@@ -62,6 +68,15 @@ export const FICHA_DE_CARGA_INICIAL_DE_STOCK = {
     "stock.accion.articulo": {
       usos: [USO + " (rótulo de cada fila)"],
       fuente: ARTICULO_DE_MOVIMIENTOS,
+    },
+    // Carga con lote (STK-E2b, FP-STK-15; DEC-STK-007): la fila de un artículo controlado por lote pide «Lote» (L-02) y «Vence» (L-03). Un lote por fila.
+    "lotes.lote.lote": {
+      usos: [USO + " (rótulo del lote de la fila de un artículo controlado por lote)"],
+      fuente: LOTE_APROBADO,
+    },
+    "stock.lotes.vence": {
+      usos: [USO + " (vencimiento del lote de la fila; solo si el control lo pide)"],
+      fuente: LOTE_APROBADO,
     },
     "stock.accion.cantidad": { usos: [USO], fuente: MAQUETA_DE_STOCK },
     "stock.accion.costo_por_unidad": { usos: [USO], fuente: MAQUETA_DE_STOCK },

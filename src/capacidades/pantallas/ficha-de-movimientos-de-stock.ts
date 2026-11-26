@@ -29,6 +29,12 @@ const ARCHIVOS = [
   "apps/web/ui/plantillas/stock/movimientos/FormularioDeMovimiento.cliente.tsx",
   "apps/web/ui/plantillas/stock/movimientos/modelo-de-formularios.ts",
 ] as const;
+const LOTE_APROBADO = {
+  decidio:
+    "el dueño, 09/11/2026 («Lote», control.html, D118) y el orquestador por delegación del dueño (fila 173) para «Vence» (L-03); DEC-STK-007",
+  donde:
+    "arquitectura/decisiones/registro/DEC-STK-007.json; Pedernal-docs 11-especificaciones/dia-uno-stock-inventario-de-textos-2026-11-25.md (L-02 y L-03)",
+} as const;
 const USO = "FormularioDeMovimiento.cliente.tsx";
 const COMUNES = {
   "stock.accion.cantidad": { usos: [USO], fuente: MAQUETA },
@@ -66,6 +72,15 @@ export const FICHA_DE_ENTRADA = {
       fuente: MAQUETA,
     },
     "catalogo.campo.opcional": { usos: [USO + " (ayuda del costo)"], fuente: YA_APROBADO },
+    // Entrada con lote (STK-E2b, FP-STK-15; DEC-STK-007): solo de un artículo controlado por lote. «Lote» (L-02) y «Vence» (L-03) ya estaban aprobados.
+    "lotes.lote.lote": {
+      usos: [USO + " (rótulo del lote de una ENTRADA de un artículo controlado por lote)"],
+      fuente: LOTE_APROBADO,
+    },
+    "stock.lotes.vence": {
+      usos: [USO + " (vencimiento del lote; solo si el control lo pide)"],
+      fuente: LOTE_APROBADO,
+    },
     "stock.accion.detalle": { usos: [USO], fuente: MAQUETA },
   },
   estadoDeLaFicha: "EN_CONSTRUCCION",

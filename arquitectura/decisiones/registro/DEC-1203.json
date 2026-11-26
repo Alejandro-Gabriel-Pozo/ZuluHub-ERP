@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "PERMISOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Archivar un rol propio con personas activas se rechaza: primero se las pasa a otro rol. Un rol archivado no otorga ninguna acción a quien lo tuviera (conjunto vacío).",
   "que_cambia": "El gerente no puede dejar sin permisos a una persona por archivar su rol sin querer.",
-  "donde": "src/modulos/identidad/dominio/rol-propio.ts (decidirArchivadoDeRol); src/modulos/identidad/casos-de-uso/archivar-rol.ts"
+  "donde": "src/modulos/identidad/dominio/rol-propio.ts (decidirArchivadoDeRol); src/modulos/identidad/casos-de-uso/archivar-rol.ts; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja A, fila del ID)"
 }

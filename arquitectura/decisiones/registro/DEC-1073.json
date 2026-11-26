@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "COMERCIAL",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Guardar una receta crea siempre una versión nueva y nada se pisa; guardar lo mismo otra vez no crea otra. Las ventas descuentan según la versión nueva; lo ya vendido conserva la suya.",
   "que_cambia": "Cómo se comporta guardar y qué descuentan las ventas desde ese momento. Revertir: es el diseño del caso de uso guardarComposicion, no de la pantalla.",
-  "donde": "src/composicion/recetas-web.ts; recetas-pantalla.md §6; plan de producción del día uno (REC-B)"
+  "donde": "src/composicion/recetas-web.ts; recetas-pantalla.md §6; plan de producción del día uno (REC-B); dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja A, fila del ID)"
 }

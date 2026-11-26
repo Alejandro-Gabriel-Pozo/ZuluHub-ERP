@@ -59,6 +59,9 @@ export async function registrarEntradaOSalidaDeStock(
           "cantidad",
           "motivo",
           "costoUnitario",
+          // El lote de una ENTRADA de un artículo controlado por lote (STK-E2b): sin estos campos el lote tipeado se perdería en silencio y la entrada iría al «Sin asignar».
+          "loteCodigo",
+          "loteVence",
           "detalle",
           "confirmar",
         ]),

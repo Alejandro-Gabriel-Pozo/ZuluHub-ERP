@@ -127,3 +127,29 @@ describe("opcionesParaLaFila", () => {
     expect(opcionesParaLaFila(opciones, filas, -1).map((o) => o.valor)).toEqual(["a3"]);
   });
 });
+
+describe("filas con lote (STK-E2b)", () => {
+  const controles = { a1: "LOTE_Y_VENCIMIENTO", a2: "LOTE", a3: null } as const;
+
+  it("una fila de un artículo controlado por lote está completa solo con el lote (y el vencimiento si el control lo pide)", () => {
+    expect(filaCompleta(fila(1), controles)).toBe(false);
+    expect(filaCompleta(fila(1, { lote: "L-1" }), controles)).toBe(false);
+    expect(filaCompleta(fila(1, { lote: "L-1", vence: "2099-06-01" }), controles)).toBe(true);
+    expect(filaCompleta(fila(2), controles)).toBe(false);
+    expect(filaCompleta(fila(2, { lote: "L-1" }), controles)).toBe(true);
+    expect(filaCompleta(fila(3), controles)).toBe(true);
+  });
+
+  it("sin controles (o con el artículo sin control) no se pide nada de más: se comporta como siempre", () => {
+    expect(filaCompleta(fila(1))).toBe(true);
+    expect(filaCompleta(fila(1), {})).toBe(true);
+  });
+
+  it("«Registrar» y el resumen cuentan solo las filas completas según los controles", () => {
+    const filas = [fila(1, { lote: "L-1", vence: "2099-06-01" }), fila(2)];
+    expect(puedeRegistrar("d1", filas, controles)).toBe(false);
+    expect(puedeRegistrar("d1", [filas[0] ?? fila(1)], controles)).toBe(true);
+    expect(resumenDeLaCarga(filas, controles).articulos).toBe(1);
+    expect(FILA_VACIA(1)).toMatchObject({ lote: "", vence: "" });
+  });
+});

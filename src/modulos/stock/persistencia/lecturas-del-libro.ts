@@ -72,12 +72,16 @@ export type FilaDeLibro = Readonly<{
   anuladoPor: string | null;
 }>;
 
-/** Un artículo que se controla y está activo, para ofrecerlo en un formulario de movimiento: su unidad es la de stock (no se elige). */
+/**
+ * Un artículo que se controla y está activo, para ofrecerlo en un formulario de movimiento: su unidad es la de stock (no se elige). `controlDeLote`: el modo con que se controla por lote HOY (`LOTE` o `LOTE_Y_VENCIMIENTO`),
+ * o `null` si no se controla (o el control está apagado): la pantalla de entrada ofrece «Lote» y «Vence» solo cuando no es `null` (STK-E2b). Es una ayuda para la pantalla; el servidor decide al escribir.
+ */
 export type ArticuloControlado = Readonly<{
   articuloId: string;
   productoId: string;
   nombre: string;
   unidadId: string;
+  controlDeLote: "LOTE" | "LOTE_Y_VENCIMIENTO" | null;
 }>;
 
 export type FiltroDeMovimientosDeDeposito = Readonly<{
@@ -206,10 +210,12 @@ export function crearLecturasDelLibro(db: Kysely<StockDb>): LecturasDelLibro {
         producto_id: string;
         nombre: string;
         unidad_de_stock_id: string;
+        modo_de_lote: string | null;
       }>`
-        select a.id as articulo_id, a.producto_id, p.nombre, a.unidad_de_stock_id
+        select a.id as articulo_id, a.producto_id, p.nombre, a.unidad_de_stock_id, c.modo as modo_de_lote
           from articulo_de_stock a
           join producto p on p.id = a.producto_id and p.empresa_id = a.empresa_id
+          left join control_de_lote c on c.articulo_id = a.id and c.empresa_id = a.empresa_id and c.activo
          where a.empresa_id = ${empresa} and a.activo and p.activo
          order by p.nombre_clave, a.id
       `.execute(db);
@@ -218,6 +224,10 @@ export function crearLecturasDelLibro(db: Kysely<StockDb>): LecturasDelLibro {
         productoId: f.producto_id,
         nombre: f.nombre,
         unidadId: f.unidad_de_stock_id,
+        controlDeLote:
+          f.modo_de_lote === "LOTE" || f.modo_de_lote === "LOTE_Y_VENCIMIENTO"
+            ? f.modo_de_lote
+            : null,
       }));
     },
     async movimientosDeDeposito(empresa, filtro) {
