@@ -21,6 +21,8 @@ describe("códigos públicos de stock", () => {
       STOCK_ES_EL_DE_VENTA: "stock.error.es_el_de_venta",
       STOCK_DEPOSITO_DESACTUALIZADO: "stock.error.deposito_desactualizado",
       STOCK_SALDO_DE_LOTE_INSUFICIENTE: "stock.error.saldo_de_lote_insuficiente",
+      LOTE_VENCIMIENTO_REQUERIDO: "lotes.error.vencimiento_requerido",
+      STOCK_VENCIMIENTO_PASADO: "stock.error.vencimiento_pasado",
       STOCK_ACCION_NO_PERMITIDA: "stock.error.sin_permiso",
     });
     const textos = {
@@ -36,6 +38,8 @@ describe("códigos públicos de stock", () => {
       "stock.error.deposito_desactualizado":
         "Otra persona modificó este depósito. Actualizá la pantalla",
       "stock.error.saldo_de_lote_insuficiente": "El lote no tiene tanta existencia",
+      "lotes.error.vencimiento_requerido": "Falta la fecha de vencimiento",
+      "stock.error.vencimiento_pasado": "La fecha de vencimiento ya pasó",
       "stock.error.sin_permiso": "Esta acción no está permitida",
     } as const;
     for (const [clave, texto] of Object.entries(textos)) {
