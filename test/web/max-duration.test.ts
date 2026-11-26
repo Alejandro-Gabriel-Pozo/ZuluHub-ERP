@@ -64,3 +64,15 @@ describe("maxDuration de la descarga de compras", () => {
     expect(Number(m?.[1])).toBe(30);
   });
 });
+
+describe("maxDuration de la descarga de la cuenta corriente", () => {
+  it("el archivo de la cuenta corriente declara su tope (lee hasta 20.000 filas y escribe en memoria; no llama a nadie de afuera)", () => {
+    const ruta = join(
+      import.meta.dirname,
+      "../../apps/web/app/s/app/(operacion)/caja/cuenta-corriente/exportar/route.ts",
+    );
+    const m = /^export const maxDuration = (\d+);$/m.exec(readFileSync(ruta, "utf8"));
+    expect(m).not.toBeNull();
+    expect(Number(m?.[1])).toBe(30);
+  });
+});

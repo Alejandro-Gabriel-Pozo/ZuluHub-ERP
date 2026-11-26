@@ -3,8 +3,8 @@
   "fecha": "2026-11-26",
   "quien": "padre",
   "tipo": "DINERO",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "El egreso manual de caja deja de ser solo de efectivo en el dominio, como ya lo era en la base, y qué medios admite cada categoría de salida es una lista en código: hoy todas por cualquier medio.",
   "que_cambia": "Una salida de dinero puede salir por cualquier medio activo; si no es efectivo exige caja abierta y deja su acto de salida. Pasar una categoría a solo efectivo es cambiar una línea, sin migración.",
-  "donde": "Dueño 26/11/2026, Q-D8 opción A, vía el orquestador; src/modulos/caja/dominio/movimiento-de-dinero.ts (MEDIOS_ADMITIDOS_POR_CATEGORIA)"
+  "donde": "Dueño 26/11/2026, Q-D8: «A: cualquier medio para todas» y «El control queda en permiso, motivo, auditoría y caja abierta», vía el orquestador; src/modulos/caja/dominio/movimiento-de-dinero.ts (MEDIOS_ADMITIDOS_POR_CATEGORIA)"
 }

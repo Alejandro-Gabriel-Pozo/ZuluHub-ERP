@@ -24,13 +24,16 @@ export function armarWebDeCuentaCorriente({ conexiones, reglas }: BaseDeWeb) {
       const casos = crearCasosDeUsoDeCuentaCorriente({
         transacciones: conexiones.transaccionesDeApp(),
         reglas,
+        // El apoyo de ventas, caja y empresas que necesita la exportación (CC-5 D); sin él `exportarCuentaCorriente` se rechaza (nace cerrado).
+        apoyoDeLaExportacion: crearApoyoDeLaExportacionDeCuentaCorriente(),
       });
-      // Solo los de la ficha, que tienen guard propio: los que corren en la transacción de ventas (cargar, cobrar, anular) no salen a la web.
+      // Solo los de la ficha y la exportación a Excel, que tienen guard propio: los que corren en la transacción de ventas (cargar, cobrar, anular) no salen a la web.
       return {
         habilitarCuentaDelCliente: casos.habilitarCuentaDelCliente,
         cambiarCondicionesDeLaCuenta: casos.cambiarCondicionesDeLaCuenta,
         suspenderCuentaDelCliente: casos.suspenderCuentaDelCliente,
         reactivarCuentaDelCliente: casos.reactivarCuentaDelCliente,
+        exportarCuentaCorriente: casos.exportarCuentaCorriente,
       };
     }),
   };
