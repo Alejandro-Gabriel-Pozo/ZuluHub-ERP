@@ -194,6 +194,23 @@ describe.skipIf(base === null)("ventas: cliente en el ticket (0107)", () => {
     }
   });
 
+  it("un ticket con cliente se sigue pudiendo anular (el disparador del cliente no frena los otros cambios) y conserva su cliente", async () => {
+    const cliente = await parte();
+    const { cuenta } = await cuentaConLinea(m, e);
+    const r = valorDe(await cerrar(cuenta, nuevoId(), cliente));
+    const anulado = valorDe(
+      await m.casos.anularTicket(e.gerente, {
+        claveIdempotencia: `clave-${randomUUID()}`,
+        ticketId: r.ticketId,
+        ejemplarBaseId: r.ejemplarId,
+        ejemplarNuevoId: nuevoId(),
+        motivo: "Error de carga",
+      }),
+    );
+    expect(anulado.estado).toBe("ANULADO");
+    expect(await ticketsDe(cuenta)).toEqual([{ id: r.ticketId, cliente }]);
+  });
+
   it("en la base: el cliente no se cambia ni para el dueño, la aplicación no puede actualizarlo y la clave foránea rechaza un cliente de otra empresa", async () => {
     const cliente = await parte();
     const { cuenta } = await cuentaConLinea(m, e);
@@ -259,6 +276,24 @@ describe.skipIf(base === null)("ventas: cliente en el ticket (0107)", () => {
     expect(
       await m.contar("select count(*) as n from ticket where cargado_a_parte_id is not null"),
     ).toBeGreaterThan(0);
+
+    // Con un rol que no evade RLS la guarda de la reversión falla claro, sin tocar nada.
+    const sinBypass = `sin_bypass_${sufijoUnico()}`;
+    await m.dueno.query(`create role ${sinBypass} nologin nosuperuser nobypassrls`);
+    try {
+      await m.dueno.query(`grant ${sinBypass} to current_user`);
+      expect(await correr(m.dueno, `set local role ${sinBypass}; ${reversion}`)).toMatch(
+        /evada RLS/,
+      );
+    } finally {
+      await m.dueno.query(`drop owned by ${sinBypass}`);
+      await m.dueno.query(`drop role ${sinBypass}`);
+    }
+    expect(
+      await m.contar(
+        "select count(*) as n from information_schema.columns where table_name = 'ticket' and column_name = 'cargado_a_parte_id'",
+      ),
+    ).toBe(1);
 
     const aparte = await crearBaseAparte(base);
     const c = new pg.Client({ connectionString: aparte.base.dueno });
