@@ -111,6 +111,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0106_cuenta_del_cliente.sql",
         "0107_cliente_en_el_ticket.sql",
         "0108_facturar_antes_de_cobrar.sql",
+        "0110_clase_de_asiento_nota_de_debito_de_compra.sql",
       ]);
       const segunda = await aplicarMigraciones(aparte.base.dueno, CARPETA_REAL);
       expect(segunda).toEqual({
@@ -203,6 +204,7 @@ describe.skipIf(base === null)("migraciones", () => {
           "0106_cuenta_del_cliente.sql",
           "0107_cliente_en_el_ticket.sql",
           "0108_facturar_antes_de_cobrar.sql",
+          "0110_clase_de_asiento_nota_de_debito_de_compra.sql",
         ],
       });
     } finally {
@@ -401,6 +403,7 @@ describe.skipIf(base === null)("migraciones", () => {
         "0106_cuenta_del_cliente.sql",
         "0107_cliente_en_el_ticket.sql",
         "0108_facturar_antes_de_cobrar.sql",
+        "0110_clase_de_asiento_nota_de_debito_de_compra.sql",
       ]);
     } finally {
       await aparte.destruir();

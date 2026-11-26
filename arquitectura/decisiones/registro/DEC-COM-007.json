@@ -1,0 +1,10 @@
+{
+  "id": "DEC-COM-007",
+  "fecha": "2026-11-26",
+  "quien": "sesión",
+  "tipo": "DATOS",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "La nota de débito vinculada a una factura es un cargo suelto del proveedor, sin imputar, con la distribución de esa factura o sin centro de costo; se paga aparte.",
+  "que_cambia": "La deuda con el proveedor sube por la nota y no reduce ni aumenta lo pendiente de la factura. Revertir: imputarla contra el cargo de su factura.",
+  "donde": "libro-de-proveedores.ts (registrarNotaDeDebito), compras-libro-reparto-y-nota-de-debito.test.ts; respuesta (c) del orquestador a Compras 4 del 26/11/2026"
+}

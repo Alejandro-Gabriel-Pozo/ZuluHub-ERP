@@ -215,6 +215,10 @@ describe.skipIf(base === null)("compras: el cargo de la factura en el libro", ()
         anularCargo: c.dependencias.libroDeProveedores.anularCargo,
         registrarPago: c.dependencias.libroDeProveedores.registrarPago,
         anularPago: c.dependencias.libroDeProveedores.anularPago,
+        registrarNotaDeCredito: c.dependencias.libroDeProveedores.registrarNotaDeCredito,
+        anularNotaDeCredito: c.dependencias.libroDeProveedores.anularNotaDeCredito,
+        registrarNotaDeDebito: c.dependencias.libroDeProveedores.registrarNotaDeDebito,
+        anularNotaDeDebito: c.dependencias.libroDeProveedores.anularNotaDeDebito,
       },
     });
     const r = valorDe(
