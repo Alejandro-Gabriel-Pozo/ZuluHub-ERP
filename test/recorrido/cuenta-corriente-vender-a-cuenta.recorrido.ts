@@ -171,7 +171,8 @@ describe.skipIf(base === null)("recorrido de cuenta corriente: abrir y vender a 
     expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
     await pagina.getByRole("button", { name: "Habilitar", exact: true }).click();
     await expect.poll(() => contar("cuenta_del_cliente", "and parte_id = $2", [agencia])).toBe(1);
-    // El envío redirige: se espera a que la página termine de cargar antes de pedir otra, o la navegación se aborta.
+    // Habilitar redirige a la ficha del cliente: se espera ese destino antes de pedir otra página, o la navegación se aborta.
+    await pagina.waitForURL(new RegExp(`/caja/cuenta-corriente/${agencia}$`));
     await pagina.waitForLoadState("networkidle");
     await ir("/caja/cuenta-corriente");
     await pagina.getByText("Agencia Cóndor Viajes").first().waitFor();
