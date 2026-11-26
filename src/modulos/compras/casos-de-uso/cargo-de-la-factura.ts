@@ -111,3 +111,36 @@ export async function anularLaNotaDeCredito(
   });
   return espejo.ok ? ok(null) : err(espejo.error);
 }
+
+/**
+ * La nota de débito en el libro (L3a): un cargo suelto del proveedor, con la distribución de la factura vinculada si hay (la nota sola no cambia lo pendiente de la factura: se paga aparte). Lo llama el caso de uso que guarda la nota
+ * AL FINAL de su transacción; un error del libro deshace TODO.
+ */
+export async function asentarLaNotaDeDebito(
+  tx: TxDeCompras,
+  contexto: ContextoOperativo,
+  dependencias: DependenciasDeCompras,
+  datos: Readonly<{
+    notaId: string;
+    proveedorId: string;
+    facturaId: string | null;
+    importe: string;
+  }>,
+): Promise<R<null>> {
+  const asiento = await dependencias.libroDeProveedores.registrarNotaDeDebito(tx, contexto, {
+    ...datos,
+    hechoEn: contexto.ahora,
+  });
+  return asiento.ok ? ok(null) : err(asiento.error);
+}
+
+/** El espejo de la nota de débito al anularla: sin asiento (una nota anterior al libro) falla cerrado, igual que la de crédito. */
+export async function anularLaNotaDeDebito(
+  tx: TxDeCompras,
+  contexto: ContextoOperativo,
+  dependencias: DependenciasDeCompras,
+  notaId: string,
+): Promise<R<null>> {
+  const espejo = await dependencias.libroDeProveedores.anularNotaDeDebito(tx, contexto, { notaId });
+  return espejo.ok ? ok(null) : err(espejo.error);
+}
