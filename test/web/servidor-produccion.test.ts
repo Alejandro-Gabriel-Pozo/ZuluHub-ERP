@@ -27,6 +27,8 @@ const mundo = vi.hoisted(
     depositos: unknown[][];
     resultado: unknown;
     resultadoDeAbrir: unknown;
+    resultadoDeCerrar: unknown;
+    ficha: unknown;
     sucursal: unknown;
   } => ({
     listados: [],
@@ -35,12 +37,18 @@ const mundo = vi.hoisted(
     depositos: [],
     resultado: null,
     resultadoDeAbrir: null,
+    resultadoDeCerrar: null,
+    ficha: null,
     sucursal: null,
   }),
 );
 vi.mock("../../apps/web/servidor/composicion", () => ({
   web: {
     casosDeUsoDeProduccion: () => ({
+      cerrarOrden: (...a: unknown[]) => {
+        mundo.casos.push(["cerrar", ...a]);
+        return Promise.resolve(mundo.resultadoDeCerrar);
+      },
       abrirOrden: (...a: unknown[]) => {
         mundo.casos.push(["abrir", ...a]);
         return Promise.resolve(mundo.resultadoDeAbrir);
@@ -80,7 +88,7 @@ vi.mock("../../apps/web/servidor/composicion", () => ({
       },
       fichaDeOrden: (...a: unknown[]) => {
         mundo.fichas.push(a);
-        return Promise.resolve(ok(null));
+        return Promise.resolve(ok(mundo.ficha));
       },
     }),
   },
@@ -103,6 +111,8 @@ import {
   cancelarLaOrdenDeLaFicha,
   cargarLaNuevaOrdenDeLaSucursal,
   cargarLaOrden,
+  cargarLaOrdenParaElCierre,
+  cerrarLaOrdenDelFormulario,
   cargarLasOrdenes,
 } from "../../apps/web/servidor/produccion";
 
@@ -119,6 +129,15 @@ beforeEach(() => {
     casos: [],
     depositos: [],
     resultado: ok({ yaEstaba: false }),
+    ficha: null,
+    resultadoDeCerrar: ok({
+      lote: null,
+      costoUnitario: null,
+      costoEstado: "SIN_COSTO",
+      mermaDeLote: "0",
+      excepciones: [],
+      yaExistia: false,
+    }),
     resultadoDeAbrir: ok({
       ordenId: ORDEN,
       numero: 3,
@@ -305,6 +324,150 @@ describe("abrir una orden desde el formulario", () => {
       formulario({ productoId: MASA, cantidad: "16" }),
     );
     expect(r).toEqual({ error: { codigo: "SESION_VENCIDA" } });
+    expect(mundo.casos).toEqual([]);
+  });
+});
+
+const HARINA = "66666666-6666-4666-8666-666666666666";
+const MANTECA = "77777777-7777-4777-8777-777777777777";
+const FICHA = {
+  ordenId: ORDEN,
+  numero: 14,
+  estado: "ABIERTA",
+  nombre: "Masa",
+  unidadId: "KILOGRAMO",
+  cantidadEsperada: "16.0000",
+  renglones: [
+    {
+      productoId: HARINA,
+      nombre: "Harina",
+      esperado: "12.0000",
+      real: null,
+      unidadId: "KILOGRAMO",
+    },
+    {
+      productoId: MANTECA,
+      nombre: "Manteca",
+      esperado: "4.0000",
+      real: null,
+      unidadId: "KILOGRAMO",
+    },
+  ],
+};
+
+describe("«Cerrar con lo real»: la orden a cerrar", () => {
+  it("se pide con el contexto que ya resolvió la página y el id de la dirección, y trae los renglones", async () => {
+    mundo.ficha = FICHA;
+    const r = await cargarLaOrdenParaElCierre(CONTEXTO as never, ORDEN);
+    expect(r).toMatchObject({ ok: true, dato: { id: ORDEN, numero: 14, renglones: [{}, {}] } });
+    expect(mundo.fichas).toEqual([[CONTEXTO, { ordenId: ORDEN }]]);
+  });
+
+  it("una orden que no está o ya no está abierta es el genérico", async () => {
+    expect(await cargarLaOrdenParaElCierre(CONTEXTO as never, ORDEN)).toMatchObject({
+      ok: false,
+      error: { codigo: "PRODUCCION_ACCION_NO_PERMITIDA" },
+    });
+    mundo.ficha = { ...FICHA, estado: "CERRADA" };
+    expect(await cargarLaOrdenParaElCierre(CONTEXTO as never, ORDEN)).toMatchObject({
+      ok: false,
+      error: { codigo: "PRODUCCION_ACCION_NO_PERMITIDA" },
+    });
+  });
+});
+
+describe("cerrar una orden desde el formulario", () => {
+  const datos = (extra: Record<string, string> = {}) => {
+    const f = new FormData();
+    f.append("consumos", "12");
+    f.append("consumos", "3.5");
+    f.set("obtenido", "15");
+    f.set("vence", "2026-12-31");
+    for (const [k, v] of Object.entries(extra)) f.set(k, v);
+    return f;
+  };
+
+  it("usa la empresa del servidor, la orden y la clave que ligó la página y solo lo real, lo obtenido, el vencimiento y la confirmación; si sale bien vuelve a la ficha", async () => {
+    mundo.ficha = FICHA;
+    const f = datos({
+      confirmar: "1",
+      empresaId: "otra",
+      unidadId: "GRAMO",
+      ordenId: "x",
+      clave: "y",
+    });
+    await expect(cerrarLaOrdenDelFormulario(ORDEN, CLAVE, f)).rejects.toThrow(
+      `NEXT_REDIRECT /catalogo/produccion/${ORDEN}`,
+    );
+    expect(mundo.casos).toEqual([
+      [
+        "cerrar",
+        CONTEXTO,
+        {
+          ordenId: ORDEN,
+          clave: CLAVE,
+          obtenido: "15",
+          unidadId: "KILOGRAMO",
+          vence: "2026-12-31",
+          consumos: [
+            { productoId: HARINA, cantidadReal: "12", unidadId: "KILOGRAMO" },
+            { productoId: MANTECA, cantidadReal: "3.5", unidadId: "KILOGRAMO" },
+          ],
+          confirmaciones: ["stock.existencia_negativa"],
+        },
+      ],
+    ]);
+  });
+
+  it("repetirlo (ya existía) también vuelve a la ficha: no duplica ni da error", async () => {
+    mundo.ficha = FICHA;
+    mundo.resultadoDeCerrar = ok({
+      lote: null,
+      costoUnitario: null,
+      costoEstado: "SIN_COSTO",
+      mermaDeLote: "0",
+      excepciones: [],
+      yaExistia: true,
+    });
+    await expect(cerrarLaOrdenDelFormulario(ORDEN, CLAVE, datos())).rejects.toThrow(
+      `NEXT_REDIRECT /catalogo/produccion/${ORDEN}`,
+    );
+  });
+
+  it("un campo de consumo que no es texto es un consumo en blanco (cero): lo decide el servidor", async () => {
+    mundo.ficha = FICHA;
+    const f = new FormData();
+    f.append("consumos", new File(["x"], "x.txt"));
+    f.append("consumos", "4");
+    f.set("obtenido", "15");
+    await expect(cerrarLaOrdenDelFormulario(ORDEN, CLAVE, f)).rejects.toThrow("NEXT_REDIRECT");
+    expect(mundo.casos[0]?.[2]).toMatchObject({
+      consumos: [{ cantidadReal: "0" }, { cantidadReal: "4" }],
+      vence: null,
+    });
+  });
+
+  it("si el servidor pide confirmar, devuelve el aviso y se queda en el formulario; si falta el vencimiento, su texto", async () => {
+    mundo.ficha = FICHA;
+    mundo.resultadoDeCerrar = err({ error: "CONTROL_REQUIERE_CONFIRMACION", detalle: [] });
+    expect(await cerrarLaOrdenDelFormulario(ORDEN, CLAVE, datos())).toMatchObject({
+      error: { codigo: "STOCK_CONTROL_AVISA" },
+    });
+    expect(mundo.casos[0]?.[2]).not.toHaveProperty("confirmaciones");
+    mundo.resultadoDeCerrar = err("VENCIMIENTO_REQUERIDO");
+    expect(await cerrarLaOrdenDelFormulario(ORDEN, CLAVE, datos())).toMatchObject({
+      error: { codigo: "PRODUCCION_VENCIMIENTO_REQUERIDO" },
+    });
+    mundo.resultadoDeCerrar = err("ORDEN_YA_CERRADA");
+    expect(await cerrarLaOrdenDelFormulario(ORDEN, CLAVE, datos())).toMatchObject({
+      error: { codigo: "PRODUCCION_ACCION_NO_PERMITIDA" },
+    });
+  });
+
+  it("una orden que no está: el genérico y no se cierra nada", async () => {
+    expect(await cerrarLaOrdenDelFormulario(ORDEN, CLAVE, datos())).toMatchObject({
+      error: { codigo: "PRODUCCION_ACCION_NO_PERMITIDA" },
+    });
     expect(mundo.casos).toEqual([]);
   });
 });

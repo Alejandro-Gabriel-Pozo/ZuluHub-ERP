@@ -1,0 +1,7 @@
+{
+  "grupo": "web (producción: cerrar con lo real)",
+  "archivos": "src/composicion/entradas-de-cierre-de-orden.ts,src/composicion/cierre-de-orden-web.ts,apps/web/ui/plantillas/produccion/modelo-de-cierre-de-orden.ts",
+  "minutos": 2,
+  "pruebas": "src/composicion/entradas-de-cierre-de-orden.test.ts src/composicion/cierre-de-orden-web.test.ts test/web/cierre-de-orden-modelo.test.ts",
+  "nivel": "CRITICO"
+}

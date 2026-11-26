@@ -5,6 +5,7 @@ import {
   abrirLaOrdenDelFormulario,
   anularLaOrdenDeLaFicha,
   cancelarLaOrdenDeLaFicha,
+  cerrarLaOrdenDelFormulario,
 } from "../../../servidor/produccion";
 
 // Las acciones de servidor de «Producción», expuestas a Next. Finas a propósito (ADR-015, punto 2): la directiva `"use server"` tiene que ser lo primero de este archivo, así que lo que
@@ -37,4 +38,15 @@ export async function abrirOrdenAccion(
 ): Promise<ResultadoDeAccion> {
   void previo;
   return abrirLaOrdenDelFormulario(clave, datos);
+}
+
+/** Cierra una orden con lo real. La orden y la clave de idempotencia se ligan con `.bind` al armar la página (repetir el envío no cierra dos veces); la empresa, la persona, la sucursal, el producto y la unidad de cada consumo no viajan: las decide el servidor. */
+export async function cerrarOrdenAccion(
+  ordenId: string,
+  clave: string,
+  previo: ResultadoDeAccion,
+  datos: FormData,
+): Promise<ResultadoDeAccion> {
+  void previo;
+  return cerrarLaOrdenDelFormulario(ordenId, clave, datos);
 }

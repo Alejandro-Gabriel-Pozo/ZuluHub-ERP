@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Aviso } from "../../componentes/Aviso";
+import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../componentes/Insignia";
 import type { AccionDeFormulario } from "../../patrones/FormularioDeAccion.cliente";
 import { Texto } from "../../primitivas/Texto";
@@ -71,7 +72,14 @@ export function PantallaDeLaOrden({ orden, cancelar, anular }: PropsDePantallaDe
           </li>
         ))}
       </ul>
-      {hoja === null ? null : <div className={estilos["acciones"]}>{hoja}</div>}
+      {orden.cierre === null && hoja === null ? null : (
+        <div className={estilos["acciones"]}>
+          {orden.cierre === null ? null : (
+            <EnlaceDeAccion href={orden.cierre.href}>{orden.cierre.texto}</EnlaceDeAccion>
+          )}
+          {hoja}
+        </div>
+      )}
     </div>
   );
 }

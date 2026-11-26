@@ -19,7 +19,7 @@ import { accionDeProduccion } from "./produccion-web";
  *  - **Cerrar es una sola transacción del caso de uso** (consumo, producto con lote y costo, estado, auditoría): si algo falla no queda nada. Dos cierres a la vez: la fila de la orden se bloquea y el segundo relee.
  *  - **Repetir no duplica.** La clave es el UUID que fija la página al armar el formulario: el mismo gesto devuelve el mismo cierre con `yaExistia`. Una orden ya cerrada con el mismo contenido también (aunque venga otra clave);
  *    con otro contenido, el genérico. Por eso cerrar NO mira el estado de la ficha: lo decide el caso de uso.
- *  - **El costo no se calcula acá.** Lo congela el caso de uso con el promedio del libro (dinero exacto, redondeo una vez); la pantalla no lo muestra al cargar (SUPUESTO S-4) y la ficha lo trae solo con `costos.ver`.
+ *  - **El costo no se calcula acá.** Lo congela el caso de uso con el promedio del libro (dinero exacto, redondeo una vez); la pantalla no lo muestra al cargar (SUPUESTO S-4, DEC-PRO-003) y la ficha lo trae solo con `costos.ver`.
  *  - **«Producir igual» es reenviar con la misma clave y `confirmar`.** Con el control en AVISAR y faltante de insumo, sin confirmar sale el aviso `STOCK_CONTROL_AVISA` y no se escribe nada; el detalle no sale.
  *  - **Todo resultado sale por el camino común** (`aRespuesta`, ADR-016): el vencimiento que falta o ya pasó, con su texto de Lotes; los demás errores de la orden, el genérico; un fallo inesperado, sin detalle y con referencia.
  * Previene: consumir un ingrediente que no es de la orden, cerrar dos veces la misma orden y quedar con el stock movido sin la orden cerrada. Chequeo: las dos pruebas citadas.
@@ -30,6 +30,9 @@ export type DependenciasDeCierreDeOrdenWeb = Readonly<{
   consultas: () => Pick<ConsultasDeProduccion, "fichaDeOrden">;
   respuesta: DependenciasDeRespuesta;
 }>;
+
+/** Todo lo que no corresponde (orden ajena, inexistente o ya no abierta, renglones que no coinciden, forma inválida): el genérico, sin decir cuál de los casos es. */
+const SIN_ORDEN = errorDeCodigo("PRODUCCION_ACCION_NO_PERMITIDA");
 
 export type RenglonParaCerrar = Readonly<{ nombre: string; esperado: string; unidadId: string }>;
 
@@ -56,8 +59,8 @@ export function cargarLaOrdenParaCerrar(
     async (entrada) => {
       const ficha = await d.consultas().fichaDeOrden(contexto, entrada);
       if (!ficha.ok) return ficha;
-      if (ficha.valor === null) return err("ORDEN_NO_ENCONTRADA" as const);
-      if (ficha.valor.estado !== "ABIERTA") return err("ORDEN_YA_CERRADA" as const);
+      if (ficha.valor === null) return err(SIN_ORDEN);
+      if (ficha.valor.estado !== "ABIERTA") return err(SIN_ORDEN);
       return ok(ficha.valor);
     },
     (f): OrdenParaCerrar => ({
@@ -77,8 +80,6 @@ export function cargarLaOrdenParaCerrar(
 
 export type CierreHecho = Readonly<{ ordenId: string; yaExistia: boolean }>;
 
-const SIN_ORDEN = errorDeCodigo("PRODUCCION_ACCION_NO_PERMITIDA");
-
 /** Cierra la orden con lo real que cargó la persona. Repetir con la misma clave devuelve el mismo cierre (`yaExistia`). */
 export async function cerrarLaOrden(
   d: DependenciasDeCierreDeOrdenWeb,
@@ -92,9 +93,9 @@ export async function cerrarLaOrden(
     const ficha = await d.consultas().fichaDeOrden(contexto, { ordenId: e.ordenId });
     const cierre = await (async () => {
       if (!ficha.ok) return ficha;
-      if (ficha.valor === null) return err("ORDEN_NO_ENCONTRADA" as const);
+      if (ficha.valor === null) return err(SIN_ORDEN);
       if (ficha.valor.renglones.length !== e.consumos.length) {
-        return err("RENGLONES_INVALIDOS" as const);
+        return err(SIN_ORDEN);
       }
       return d.casosDeUso().cerrarOrden(contexto, {
         ordenId: ficha.valor.ordenId,
