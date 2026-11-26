@@ -499,7 +499,6 @@ describe("PantallaDeLaMesa", () => {
           {
             cuentaId: "c1",
             parte: null,
-            cobrada: false,
             total: ARS("38000.00"),
             lineas: [
               linea({ lineaId: "a", nota: "sin cebolla" }),

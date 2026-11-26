@@ -158,8 +158,13 @@ describe.skipIf(base === null)("recorrido del salón: del mapa a la mesa", () =>
     await pagina.getByRole("button", { name: "Tomar pedido" }).click();
     await pagina.getByText("La mesa no tiene pedido").waitFor();
     await pagina.getByRole("button", { name: /^Medialuna/ }).click();
+    await pagina.getByLabel("Nota para la cocina", { exact: true }).fill("sin cebolla");
     await pagina.getByRole("button", { name: /^Agregar( ·|$)/ }).click();
     await pagina.getByRole("heading", { name: "Para enviar" }).waitFor();
+    // La nota queda en el plato (editable mientras no se envió).
+    expect(await pagina.getByLabel("Nota para la cocina", { exact: true }).inputValue()).toBe(
+      "sin cebolla",
+    );
 
     // Doble toque en «Enviar a cocina»: un solo envío y un solo diálogo de impresión.
     await pagina.getByRole("button", { name: "Enviar a cocina" }).dblclick();
@@ -167,6 +172,14 @@ describe.skipIf(base === null)("recorrido del salón: del mapa a la mesa", () =>
     expect(await filas("envio_de_comanda")).toBe(1);
     expect(await filas("trabajo_de_impresion")).toBe(1);
     expect(await impresiones()).toHaveLength(1);
+    // La comanda impresa lleva la nota bajo el plato y la foto del envío la guarda.
+    expect((await impresiones())[0]).toContain("sin cebolla");
+    expect(
+      await contar(
+        "select count(*)::text as n from renglon_de_envio where empresa_id = $1 and nota = 'sin cebolla'",
+        [mundo.empresa],
+      ),
+    ).toBe(1);
     expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
 
     // Anular lo enviado: sin motivo no se puede; con motivo queda el aviso y la línea anulada (no se borra).
