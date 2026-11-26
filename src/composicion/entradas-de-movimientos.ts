@@ -25,6 +25,7 @@ const formaDeMovimiento = z.object({
   motivo: texto,
   costoUnitario: decimal.optional(),
   detalle: texto.optional(),
+  confirmar: z.enum(["", "1"]).optional(),
 });
 export type EntradaWebDeMovimiento = Readonly<{
   clave: string;
@@ -34,6 +35,8 @@ export type EntradaWebDeMovimiento = Readonly<{
   motivo: string;
   costoUnitario: string | undefined;
   detalle: string | undefined;
+  /** La persona vio el aviso «va a quedar en negativo» y lo confirmó (solo sirve con el nivel AVISAR). */
+  confirmar: boolean;
 }>;
 export function entradaDeMovimiento(
   crudo: unknown,
@@ -44,6 +47,7 @@ export function entradaDeMovimiento(
         ...f.valor,
         costoUnitario: enBlanco(f.valor.costoUnitario),
         detalle: enBlanco(f.valor.detalle),
+        confirmar: f.valor.confirmar === "1",
       })
     : f;
 }
@@ -54,9 +58,22 @@ const formaDeTransferencia = z.object({
   destinoId: identificador,
   articuloId: identificador,
   cantidad: decimal,
+  confirmar: z.enum(["", "1"]).optional(),
 });
-export type EntradaWebDeTransferencia = z.output<typeof formaDeTransferencia>;
-export const entradaDeTransferencia = (crudo: unknown) => leer(formaDeTransferencia, crudo);
+export type EntradaWebDeTransferencia = Readonly<{
+  clave: string;
+  origenId: string;
+  destinoId: string;
+  articuloId: string;
+  cantidad: string;
+  confirmar: boolean;
+}>;
+export function entradaDeTransferencia(
+  crudo: unknown,
+): Resultado<EntradaWebDeTransferencia, ErrorDeEntrada> {
+  const f = leer(formaDeTransferencia, crudo);
+  return f.ok ? ok({ ...f.valor, confirmar: f.valor.confirmar === "1" }) : f;
+}
 
 const formaDeAjuste = z.object({
   clave: identificador,

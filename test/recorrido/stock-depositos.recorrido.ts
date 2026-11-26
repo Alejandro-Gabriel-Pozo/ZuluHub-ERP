@@ -262,4 +262,33 @@ describe.skipIf(base === null || !stockAbierto)("recorrido de depósitos de stoc
     expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
     expect(vigilante.tomar()).toEqual([]);
   });
+
+  it("con el nivel AVISAR, una salida que deja negativo avisa y «Registrar» la confirma una sola vez", async () => {
+    const { articulo } = await articuloDeBase(mundo.mundo.dueno, { empresa: mundo.empresa });
+    await mundo.mundo.dueno.query(
+      `insert into nivel_de_control (empresa_id, sucursal_id, control, nivel) values ($1, null, 'stock.existencia_negativa', 'AVISAR')
+       on conflict on constraint nivel_de_control_uk do update set nivel = excluded.nivel`,
+      [mundo.empresa],
+    );
+    try {
+      await pagina.goto(`${mundo.url}/stock/movimientos/salida`);
+      await pagina.waitForLoadState("networkidle");
+      await pagina.getByLabel("Artículo").selectOption(articulo);
+      await pagina.getByLabel("Cantidad").fill("2");
+      await pagina.getByRole("button", { name: "Registrar" }).click();
+      await pagina.getByText("Va a quedar en negativo. ¿Confirmás?").waitFor();
+      expect(pagina.url()).toContain("/stock/movimientos/salida");
+      await pagina.getByRole("button", { name: "Registrar" }).dblclick();
+      await pagina.waitForURL((url) => url.pathname === "/stock/movimientos");
+      await pagina.waitForLoadState("networkidle");
+      const tarjetas = pagina.getByRole("listitem").filter({ hasText: "-2 Unidad" });
+      expect(await tarjetas.count()).toBe(1);
+      expect(vigilante.tomar()).toEqual([]);
+    } finally {
+      await mundo.mundo.dueno.query(
+        "update nivel_de_control set nivel = 'PERMITIR' where empresa_id = $1 and control = 'stock.existencia_negativa'",
+        [mundo.empresa],
+      );
+    }
+  });
 });
