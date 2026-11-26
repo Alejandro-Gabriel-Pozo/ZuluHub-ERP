@@ -84,7 +84,9 @@ describe.skipIf(base === null)("ventas: cliente en el ticket (0107)", () => {
     m.casos.cerrarCuenta(e.gerente, {
       cuentaId: cuenta,
       ejemplarId: ejemplar,
-      ...(clienteId === undefined ? {} : { clienteId }),
+      ...(clienteId === undefined
+        ? {}
+        : { clienteId, totalEsperado: { moneda: "ARS", monto: "1000.00" } }),
     });
   const ticketsDe = async (cuenta: string) =>
     (
@@ -165,18 +167,21 @@ describe.skipIf(base === null)("ventas: cliente en el ticket (0107)", () => {
     expect(await cerrar(vacia, nuevoId(), await parte())).toEqual(sin);
   });
 
-  it("idempotencia: repetir el cierre devuelve el mismo ticket y un cliente distinto no lo cambia (queda el del primero)", async () => {
+  it("idempotencia: repetir el cierre devuelve el mismo ticket; un cliente distinto es CLAVE_REUTILIZADA y no lo cambia (queda el del primero)", async () => {
     const primero = await parte();
     const { cuenta } = await cuentaConLinea(m, e);
     const ejemplar = nuevoId();
     const a = valorDe(await cerrar(cuenta, ejemplar, primero));
-    const repetidas = [
-      valorDe(await cerrar(cuenta, ejemplar, primero)),
-      valorDe(await cerrar(cuenta, nuevoId(), await parte())),
-    ];
-    for (const b of repetidas) {
-      expect(b).toMatchObject({ ticketId: a.ticketId, yaEstabaCerrada: true, clienteId: primero });
-    }
+    const repetida = valorDe(await cerrar(cuenta, ejemplar, primero));
+    expect(repetida).toMatchObject({
+      ticketId: a.ticketId,
+      yaEstabaCerrada: true,
+      clienteId: primero,
+    });
+    expect(await cerrar(cuenta, nuevoId(), await parte())).toEqual({
+      ok: false,
+      error: "CLAVE_REUTILIZADA",
+    });
     expect(await ticketsDe(cuenta)).toEqual([{ id: a.ticketId, cliente: primero }]);
     const emisiones =
       "select count(*) as n from auditoria_empresa where accion = 'TICKET_EMITIDO' and entidad_id = $1";
@@ -191,15 +196,21 @@ describe.skipIf(base === null)("ventas: cliente en el ticket (0107)", () => {
       const crudos = await Promise.all(clientes.map((c) => cerrar(cuenta, nuevoId(), c))).finally(
         m.soltarBarrera,
       );
-      // Quien pierde por agotamiento del motor serializable repite el MISMO pedido (seguro): ya no encuentra la cuenta abierta.
+      // Quien pierde (la cuenta ya se cerró a nombre del otro) recibe CLAVE_REUTILIZADA; si perdió por agotamiento del motor serializable, repite el MISMO pedido (seguro) y ve el mismo resultado.
       const resultados = await Promise.all(
-        crudos.map(async (q, i) => (q.ok ? q : await cerrar(cuenta, nuevoId(), clientes[i]))),
+        crudos.map(async (q, i) =>
+          q.ok || (!q.ok && q.error === "CLAVE_REUTILIZADA")
+            ? q
+            : await cerrar(cuenta, nuevoId(), clientes[i]),
+        ),
       );
       const filas = await ticketsDe(cuenta);
       expect(filas, `ronda ${ronda}`).toHaveLength(1);
       expect(clientes).toContain(filas[0]?.cliente);
-      for (const q of resultados) expect(valorDe(q).clienteId).toBe(filas[0]?.cliente);
-      expect(resultados.filter((q) => q.ok && !q.valor.yaEstabaCerrada)).toHaveLength(1);
+      const ganadores = resultados.filter((q) => q.ok);
+      expect(ganadores, `ronda ${ronda}`).toHaveLength(1);
+      expect(ganadores[0]?.ok && ganadores[0].valor.clienteId).toBe(filas[0]?.cliente);
+      expect(resultados.filter((q) => !q.ok)).toEqual([{ ok: false, error: "CLAVE_REUTILIZADA" }]);
     }
   });
 
