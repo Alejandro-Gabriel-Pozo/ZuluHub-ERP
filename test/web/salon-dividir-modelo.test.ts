@@ -84,6 +84,20 @@ describe("modelo de «Dividir la cuenta»", () => {
     expect(conUnaCuentaMas(b)).toBe(b);
   });
 
+  it("«Por unidades» solo si precio × paso cierra en centavos (DEC-SAL-010): 2 kg a $ 1.000,01 solo Entero o Compartido; a $ 1.000,00 sí; 0,5 de pizza (un paso) no", () => {
+    const [helado, heladoExacto, media, kilo] = lineasParaDividir([
+      ficha("2", "1000.01", "2000.02", "h1", "0.5"),
+      ficha("2", "1000.00", "2000.00", "h2", "0.5"),
+      ficha("0.5", "1001.00", "500.50", "m", "0.5"),
+      ficha("1.25", "14000.00", "17500.00", "k", "0.001"),
+    ]);
+    expect(helado?.pasos).toBeNull();
+    expect(heladoExacto?.pasos).toBe(4);
+    expect(media?.pasos).toBeNull();
+    // 1,250 kg en pasos de 1 g son 1250 pasos: más que el máximo, también solo Entero o Compartido.
+    expect(kilo?.pasos).toBeNull();
+  });
+
   it("la plantilla «Cuenta N» toma el número", () => {
     expect(conNumero("Cuenta N", 3)).toBe("Cuenta 3");
     expect(conNumero("Cuenta", 3)).toBe("Cuenta 3");

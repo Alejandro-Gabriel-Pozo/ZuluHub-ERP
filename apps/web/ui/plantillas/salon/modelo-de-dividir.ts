@@ -1,5 +1,6 @@
 import {
   cantidadPorPasos,
+  cierraExactoPorPaso,
   pasosDeLaLinea,
   planDeDivision,
   totalesDeLaDivision,
@@ -89,7 +90,14 @@ export function lineasParaDividir(
       cantidad: l.cantidad,
       pasoDeCantidad: l.pasoDeCantidad,
       precioUnitario: l.precioUnitario,
-      pasos: pasos !== null && pasos >= 2 && pasos <= MAXIMO_DE_PASOS_A_REPARTIR ? pasos : null,
+      // «Por unidades» solo si hay entre 2 y el máximo de pasos y precio × paso cierra en centavos (DEC-SAL-010); si no, solo Entero o Compartido.
+      pasos:
+        pasos !== null &&
+        pasos >= 2 &&
+        pasos <= MAXIMO_DE_PASOS_A_REPARTIR &&
+        cierraExactoPorPaso(l.precioUnitario, l.pasoDeCantidad)
+          ? pasos
+          : null,
     };
   });
 }
