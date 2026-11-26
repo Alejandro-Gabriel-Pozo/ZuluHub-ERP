@@ -14,6 +14,8 @@ export const DECLARACIONES_DE_CONSULTAS = {
   listarRoles: { accion: "roles.ver" },
   verRol: { accion: "roles.ver" },
   rolesAsignables: { accion: "usuarios.asignar_rol" },
+  // Las casillas del formulario de un rol (T6): se ven con el permiso de verlos; guardar lo decide `roles.crear`/`roles.editar`.
+  accionesParaElegir: { accion: "roles.ver" },
   // El correo con que se muestra a una persona en historiales y listas de cualquier pantalla: los tres roles (como `sucursalesElegibles`, es lo propio de quien opera,
   // no administración). SUPUESTO DEC-0464: la acción es la misma que la de las sucursales elegibles; el alcance es la empresa del contexto.
   personasParaMostrar: { accion: "permisos.ver_propios" },
