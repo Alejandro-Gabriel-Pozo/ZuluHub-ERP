@@ -49,3 +49,31 @@ export async function anularElCargoDeLaFactura(
   const espejo = await dependencias.libroDeProveedores.anularCargo(tx, contexto, { comprobanteId });
   return espejo.ok ? ok(null) : err(espejo.error);
 }
+
+/**
+ * El pago de la factura en el libro (L2): el asiento de pago imputado contra el cargo, por el `importe` que se guardó en el pago. Lo llaman TODOS los casos de uso que guardan un pago (`declararPago` y la compra N2 con pago)
+ * AL FINAL de su transacción, con el comprobante ya bloqueado y ANTES de que el libro tome la parte (mismo orden de bloqueo que el cargo). Un error del libro deshace TODO: el pago, sus líneas, el egreso de caja y la auditoría.
+ */
+export async function asentarElPagoDeLaFactura(
+  tx: TxDeCompras,
+  contexto: ContextoOperativo,
+  dependencias: DependenciasDeCompras,
+  datos: Readonly<{ pagoId: string; comprobanteId: string; importe: string }>,
+): Promise<R<null>> {
+  const asiento = await dependencias.libroDeProveedores.registrarPago(tx, contexto, {
+    ...datos,
+    hechoEn: contexto.ahora,
+  });
+  return asiento.ok ? ok(null) : err(asiento.error);
+}
+
+/** El espejo del pago al anularlo: sin asiento (un pago anterior al libro) falla cerrado, igual que el cargo. */
+export async function anularElPagoDeLaFactura(
+  tx: TxDeCompras,
+  contexto: ContextoOperativo,
+  dependencias: DependenciasDeCompras,
+  pagoId: string,
+): Promise<R<null>> {
+  const espejo = await dependencias.libroDeProveedores.anularPago(tx, contexto, { pagoId });
+  return espejo.ok ? ok(null) : err(espejo.error);
+}

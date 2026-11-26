@@ -19,6 +19,27 @@ export const claveDelCargo = (comprobanteId: string): string =>
 export const claveDeLaAnulacionDelCargo = (comprobanteId: string): string =>
   uuidV5DeLista(ESPACIO_DE_LA_ANULACION_DEL_CARGO, [comprobanteId]);
 
+/**
+ * El pago de una factura en el libro (L2): cada pago deja UN asiento de pago (lo que se le pagó al proveedor, resta) imputado contra el cargo de su factura; al anular el pago, el espejo (que deshace la imputación).
+ * Las claves salen del pago: reintentar el mismo pago repite las mismas y el libro devuelve lo hecho.
+ */
+export const ORIGEN_DEL_PAGO = "compras.pago";
+export const CLASE_DEL_PAGO = "PAGO_A_PROVEEDOR";
+/** El texto del espejo del pago: un código, no un texto que vea el cliente (el motivo de la anulación queda en el pago). */
+export const DETALLE_DE_LA_ANULACION_DEL_PAGO = "ANULACION-DE-PAGO";
+
+const ESPACIO_DEL_PAGO = "7c3e1d90-2b4a-4a8e-b6f1-0e5d8a9c4b21";
+const ESPACIO_DE_LA_IMPUTACION_DEL_PAGO = "a1d84f37-6c0e-4b92-9d5a-2f7b3e8c1d60";
+const ESPACIO_DE_LA_ANULACION_DEL_PAGO = "e92b5a14-3d7c-4f08-a6b1-8c4d0f2e7a35";
+
+export const claveDelPago = (pagoId: string): string => uuidV5DeLista(ESPACIO_DEL_PAGO, [pagoId]);
+
+export const claveDeLaImputacionDelPago = (pagoId: string): string =>
+  uuidV5DeLista(ESPACIO_DE_LA_IMPUTACION_DEL_PAGO, [pagoId]);
+
+export const claveDeLaAnulacionDelPago = (pagoId: string): string =>
+  uuidV5DeLista(ESPACIO_DE_LA_ANULACION_DEL_PAGO, [pagoId]);
+
 /** Cómo se reparte el cargo entre sucursales (centro de costo); `null` es «sin centro de costo». Los importes son texto decimal en pesos y suman el total. */
 export type RepartoDelCargo = Readonly<{ sucursalId: string | null; importe: string }>;
 

@@ -12,6 +12,7 @@ import {
   type LineaDePago,
 } from "../dominio/pago";
 import { motivoDeAnulacionDesdeTexto } from "../dominio/registrar-compra";
+import { anularElPagoDeLaFactura, asentarElPagoDeLaFactura } from "./cargo-de-la-factura";
 import { autorizar, exigirAlcanceDeSucursal, traducir } from "./comun";
 import type { DependenciasDeCompras, TxDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
@@ -148,6 +149,13 @@ export function armarDeclararPago(dependencias: DependenciasDeCompras) {
             });
             if (!egreso.ok) return err(egreso.error);
           }
+          // Al final: el pago en el libro, después de bloquear el comprobante (ver `asentarElPagoDeLaFactura`).
+          const enElLibro = await asentarElPagoDeLaFactura(tx, contexto, dependencias, {
+            pagoId,
+            comprobanteId: comprobante.id,
+            importe: comprobante.totalSegunFactura,
+          });
+          if (!enElLibro.ok) return enElLibro;
           await tx.auditoria.registrar({
             empresaId,
             actorPersonaId: persona,
@@ -197,6 +205,14 @@ export function armarAnularPago(dependencias: DependenciasDeCompras) {
             "comprobantes_de_proveedor.anular_pago",
           ]);
           if (!permiso.ok) return permiso;
+          // ORDEN DE BLOQUEO (L2): primero el COMPROBANTE, después el pago y por último la parte del libro, igual que quien paga o anula la factura. Previene: el abrazo mortal de anular el pago a la vez que se anula su factura.
+          const sinBloquear = await tx.pagosDeProveedor.obtener(empresaId, entrada.pagoId);
+          if (sinBloquear === null) return err("PAGO_NO_ENCONTRADO");
+          const factura = await tx.comprobantesDeProveedor.bloquear(
+            empresaId,
+            sinBloquear.comprobanteId,
+          );
+          if (factura === null) return err("COMPROBANTE_NO_ENCONTRADO");
           const pago = await tx.pagosDeProveedor.bloquear(empresaId, entrada.pagoId);
           if (pago === null) return err("PAGO_NO_ENCONTRADO");
           const alcance = await exigirAlcanceDelComprobante(tx, contexto, pago.comprobanteId);
@@ -213,6 +229,8 @@ export function armarAnularPago(dependencias: DependenciasDeCompras) {
             motivo: motivo.valor,
           });
           if (!devuelto.ok) return err(devuelto.error);
+          const enElLibro = await anularElPagoDeLaFactura(tx, contexto, dependencias, pago.id);
+          if (!enElLibro.ok) return enElLibro;
           await tx.auditoria.registrar({
             empresaId,
             actorPersonaId: persona,

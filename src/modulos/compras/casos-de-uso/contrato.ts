@@ -35,6 +35,7 @@ export type CodigoDeEgresoDeCaja =
 export type CodigoDelLibroDeProveedores =
   | "LIBRO_DE_SALDOS_RECHAZADO"
   | "ASIENTO_DE_LA_FACTURA_NO_ENCONTRADO"
+  | "ASIENTO_DEL_PAGO_NO_ENCONTRADO"
   | "CLAVE_REUTILIZADA"
   | "SIN_PERMISO";
 
@@ -62,6 +63,25 @@ export type LibroDeProveedores = Readonly<{
     tx: TxDeCompras,
     contexto: ContextoOperativo,
     entrada: Readonly<{ comprobanteId: string }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+  /**
+   * El pago de la factura (L2): un asiento de pago por `importe` (texto decimal en pesos: el que se guardó en el pago, nunca recalculado) con la parte y la distribución por centro de costo del cargo de la factura,
+   * imputado contra ese cargo. Sin cargo (una factura anterior al libro) o con un importe que no es el del cargo, falla cerrado. Repetido con el mismo pago devuelve lo hecho.
+   */
+  registrarPago(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ pagoId: string; comprobanteId: string; importe: string; hechoEn: Date }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+  /** El espejo del asiento del pago (deshace su imputación): sin asiento (un pago anterior al libro) falla cerrado (`ASIENTO_DEL_PAGO_NO_ENCONTRADO`). */
+  anularPago(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ pagoId: string }>,
   ): Promise<
     Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
   >;
