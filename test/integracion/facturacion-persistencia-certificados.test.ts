@@ -27,6 +27,7 @@ import {
   pedidoDe,
   type TxFacturacionDePrueba,
 } from "./facturacion-persistencia-apoyo";
+import { baseDeEsteArchivo } from "./entorno";
 
 /**
  * Facturación F3: los repositorios de certificados, de la credencial de acceso a ARCA y de los intentos, contra una
@@ -36,7 +37,7 @@ import {
  * una credencial.
  */
 
-const base = inject("baseDePruebas");
+const base = await baseDeEsteArchivo(inject("baseDePruebas"));
 vi.setConfig({ testTimeout: 120_000 });
 
 function exito<T, E>(r: Resultado<T, E>): T {
