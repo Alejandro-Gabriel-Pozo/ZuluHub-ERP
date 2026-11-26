@@ -28,6 +28,7 @@ const montar = (
     depositos?: unknown[];
     fallaDepositos?: boolean;
     fallaArticulos?: boolean;
+    controlDeLote?: "LOTE" | "LOTE_Y_VENCIMIENTO";
   } = {},
 ) => {
   const llamadas: { que: string; entrada: unknown }[] = [];
@@ -65,7 +66,15 @@ const montar = (
         cambios.fallaArticulos === true
           ? Promise.resolve(err({ tipo: "ERROR_DE_BASE" }))
           : Promise.resolve(
-              ok([{ articuloId: ART, productoId: PROD, nombre: "Harina", unidadId: "KILOGRAMO" }]),
+              ok([
+                {
+                  articuloId: ART,
+                  productoId: PROD,
+                  nombre: "Harina",
+                  unidadId: "KILOGRAMO",
+                  controlDeLote: cambios.controlDeLote ?? null,
+                },
+              ]),
             ),
     }),
     respuesta: { registrar: (x: string) => registrados.push(x) },
@@ -82,7 +91,7 @@ describe("opcionesParaMover", () => {
     const r = await opcionesParaMover(d, contexto, SUC);
     expect(r.ok && r.dato.depositos.map((x) => x.id)).toEqual([D1, D2]);
     expect(r.ok && r.dato.articulos).toEqual([
-      { id: ART, nombre: "Harina", unidadId: "KILOGRAMO" },
+      { id: ART, nombre: "Harina", unidadId: "KILOGRAMO", controlDeLote: null },
     ]);
     expect(r.ok && r.dato.motivosDeEntrada).toEqual([
       "COMPRA",
@@ -416,5 +425,60 @@ describe("la confirmación del aviso de negativo", () => {
         await registrarElMovimiento(d, contexto, SUC, false, { ...pedido, motivo: "MERMA" }),
       ),
     ).toBe("STOCK_CONTROL_AVISA");
+  });
+});
+
+describe("registrarElMovimiento con lote (STK-E2b)", () => {
+  const lote = { loteCodigo: "L-1", loteVence: "2099-06-01" };
+  const renglonesDe = (llamadas: readonly { entrada: unknown }[]) =>
+    (llamadas[0]?.entrada as { renglones: Record<string, unknown>[] }).renglones;
+
+  it("una ENTRADA con lote manda UN lote con la cantidad del renglón y su vencimiento; sin vencimiento, `null`", async () => {
+    const { d, llamadas } = montar();
+    expect((await registrarElMovimiento(d, contexto, SUC, true, { ...pedido, ...lote })).ok).toBe(
+      true,
+    );
+    expect(renglonesDe(llamadas)[0]).toEqual({
+      productoId: PROD,
+      cantidad: "2.5",
+      unidadId: "KILOGRAMO",
+      costoUnitario: undefined,
+      lotes: [{ codigo: "L-1", fechaDeVencimiento: "2099-06-01", cantidad: "2.5" }],
+    });
+    const b = montar();
+    await registrarElMovimiento(b.d, contexto, SUC, true, { ...pedido, loteCodigo: "L-1" });
+    expect(renglonesDe(b.llamadas)[0]?.["lotes"]).toEqual([
+      { codigo: "L-1", fechaDeVencimiento: null, cantidad: "2.5" },
+    ]);
+  });
+
+  it("sin lote el renglón no lleva `lotes` (entra al «Sin asignar» como siempre)", async () => {
+    const { d, llamadas } = montar();
+    await registrarElMovimiento(d, contexto, SUC, true, pedido);
+    expect(Object.keys(renglonesDe(llamadas)[0] ?? {})).not.toContain("lotes");
+  });
+
+  it("campos de lote en una SALIDA, o un vencimiento sin código, son un pedido mal formado: genérico y no llega al caso de uso", async () => {
+    const { d, llamadas } = montar();
+    expect(
+      codigoDe(await registrarElMovimiento(d, contexto, SUC, false, { ...pedido, ...lote })),
+    ).toBe("STOCK_ACCION_NO_PERMITIDA");
+    expect(
+      codigoDe(
+        await registrarElMovimiento(d, contexto, SUC, false, { ...pedido, loteCodigo: "L-1" }),
+      ),
+    ).toBe("STOCK_ACCION_NO_PERMITIDA");
+    expect(
+      codigoDe(
+        await registrarElMovimiento(d, contexto, SUC, true, { ...pedido, loteVence: "2099-06-01" }),
+      ),
+    ).toBe("STOCK_ACCION_NO_PERMITIDA");
+    expect(llamadas).toEqual([]);
+  });
+
+  it("las opciones traen cómo se controla cada artículo por lote (ayuda para la pantalla)", async () => {
+    const { d } = montar({ controlDeLote: "LOTE_Y_VENCIMIENTO" });
+    const r = await opcionesParaMover(d, contexto, SUC);
+    expect(r.ok && r.dato.articulos[0]?.controlDeLote).toBe("LOTE_Y_VENCIMIENTO");
   });
 });

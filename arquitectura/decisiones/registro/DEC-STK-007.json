@@ -1,0 +1,10 @@
+{
+  "id": "DEC-STK-007",
+  "fecha": "2026-11-26",
+  "quien": "padre",
+  "tipo": "CLIENTE",
+  "estado": "PENDIENTE_DE_OK",
+  "decision": "En la entrada y la carga inicial de un artículo controlado por lote, la pantalla pide el lote y su vencimiento, un solo lote por renglón.",
+  "que_cambia": "Lote (código) obligatorio y Vence si el control lo pide; repartir en varios lotes necesita un botón sin texto aprobado. Textos ya aprobados (lotes.lote.lote, stock.lotes.vence). Revertir: sacar los campos y volver a «Sin asignar».",
+  "donde": "dia-uno-stock-fichas-de-pantalla-2026-11-25.md FP-STK-15; dia-uno-stock-inventario-de-textos-2026-11-25.md L-02 y L-03"
+}

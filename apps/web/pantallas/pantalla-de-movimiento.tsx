@@ -80,6 +80,8 @@ export function pantallaDeMovimiento(tipo: TipoDeMovimiento, movimientoId: strin
             motivo: textoDe("stock.accion.motivo"),
             costo: textoDe("stock.accion.costo_por_unidad"),
             opcional: textoDe("catalogo.campo.opcional"),
+            lote: textoDe("lotes.lote.lote"),
+            vence: textoDe("stock.lotes.vence"),
             detalle: textoDe("stock.accion.detalle"),
             enviar: textoDe(tipo === "ANULAR" ? "stock.accion.anular" : "stock.accion.registrar"),
             cancelar: textoDe("catalogo.accion.cancelar"),

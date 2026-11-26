@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "INFRAESTRUCTURA",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "La descarga del archivo de compras es un GET desde un enlace y rechaza todo pedido cuyo Sec-Fetch-Site no sea same-origin o none.",
   "que_cambia": "Un sitio ajeno no puede sembrar registros de auditoría. Revertir: quitar la guarda de compras-exportacion.ts.",
-  "donde": "plan-exportacion-de-compras-2026-11-25.md §2; compras-exportacion.ts, descarga-de-compras.ts"
+  "donde": "plan-exportacion-de-compras-2026-11-25.md §2; compras-exportacion.ts, descarga-de-compras.ts; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja D, fila del ID)"
 }

@@ -16,6 +16,9 @@ export const CAMINOS_DE_STOCK_MOVIMIENTOS = {
           cantidad: "cantidad-de-movimiento-de-stock",
           motivo: "motivo-de-movimiento-de-stock",
           costoUnitario: "costo-por-unidad-de-entrada",
+          // Solo de un artículo controlado por lote (STK-E2b): el lote de la entrada y su vencimiento.
+          loteCodigo: "codigo-de-lote",
+          loteVence: "vencimiento-de-lote",
           detalle: "detalle-de-movimiento-de-stock",
         },
       },
@@ -29,7 +32,12 @@ export const CAMINOS_DE_STOCK_MOVIMIENTOS = {
         "cantidad-de-movimiento-de-stock",
         "motivo-de-movimiento-de-stock",
       ],
-      admite: ["costo-por-unidad-de-entrada", "detalle-de-movimiento-de-stock"],
+      admite: [
+        "costo-por-unidad-de-entrada",
+        "codigo-de-lote",
+        "vencimiento-de-lote",
+        "detalle-de-movimiento-de-stock",
+      ],
     },
     camposDeError: [],
   },

@@ -228,11 +228,16 @@ describe.skipIf(base === null)("stock: movimientos de un depósito", () => {
     const fila = mios.find((x) => x.articuloId === a.articulo);
     expect(Object.keys(fila ?? {}).sort()).toEqual([
       "articuloId",
+      "controlDeLote",
       "nombre",
       "productoId",
       "unidadId",
     ]);
-    expect(fila).toMatchObject({ productoId: a.producto, unidadId: "UNIDAD" });
+    expect(fila).toMatchObject({
+      productoId: a.producto,
+      unidadId: "UNIDAD",
+      controlDeLote: null,
+    });
     const otra = await c.escenario();
     expect(ids(await c.consultas.articulosControlados(otra.gerente))).not.toContain(a.articulo);
   });

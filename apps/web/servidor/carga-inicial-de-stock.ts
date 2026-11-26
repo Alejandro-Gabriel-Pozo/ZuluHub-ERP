@@ -37,7 +37,7 @@ export async function cargarLasOpcionesDeLaCargaInicial(
 }
 
 /**
- * Los renglones de la grilla tal como los manda el formulario: `articuloId.0`, `cantidad.0`, `costoUnitario.0`, `articuloId.1`… por posición. Se lee de a una fila hasta que falta el artículo, con un tope de un
+ * Los renglones de la grilla tal como los manda el formulario: `articuloId.0`, `cantidad.0`, `costoUnitario.0`, `loteCodigo.0`, `loteVence.0`, `articuloId.1`… por posición. Se lee de a una fila hasta que falta el artículo, con un tope de un
  * renglón MÁS que el máximo para que la composición lo rechace (nunca se recorre sin límite). Un campo ausente es texto vacío; la forma y los valores los valida la composición y el servidor.
  */
 function renglonesDe(datos: FormData): readonly Record<string, string>[] {
@@ -48,6 +48,8 @@ function renglonesDe(datos: FormData): readonly Record<string, string>[] {
       articuloId: textoDe(datos, `articuloId.${i}`),
       cantidad: textoDe(datos, `cantidad.${i}`),
       costoUnitario: textoDe(datos, `costoUnitario.${i}`),
+      loteCodigo: textoDe(datos, `loteCodigo.${i}`),
+      loteVence: textoDe(datos, `loteVence.${i}`),
     });
   }
   return renglones;

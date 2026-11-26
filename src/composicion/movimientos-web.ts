@@ -32,7 +32,13 @@ export type DependenciasDeMovimientosWeb = Readonly<{
 
 export type OpcionesDeMovimiento = Readonly<{
   depositos: readonly Readonly<{ id: string; nombre: string; uso: string }>[];
-  articulos: readonly Readonly<{ id: string; nombre: string; unidadId: string }>[];
+  articulos: readonly Readonly<{
+    id: string;
+    nombre: string;
+    unidadId: string;
+    /** Cómo se controla por lote hoy, o `null` (ayuda para ofrecer «Lote» y «Vence» en la entrada). */
+    controlDeLote: "LOTE" | "LOTE_Y_VENCIMIENTO" | null;
+  }>[];
   motivosDeEntrada: readonly string[];
   motivosDeSalida: readonly string[];
 }>;
@@ -62,6 +68,7 @@ export function opcionesParaMover(
         id: x.articuloId,
         nombre: x.nombre,
         unidadId: x.unidadId,
+        controlDeLote: x.controlDeLote,
       })),
       motivosDeEntrada: motivosManualesDe("ENTRADA").filter((m) => m !== "CARGA_INICIAL"),
       motivosDeSalida: motivosManualesDe("SALIDA"),
@@ -115,6 +122,12 @@ export function registrarElMovimiento(
         motivo: e.motivo,
         detalle: e.detalle,
       };
+      // Los lotes (STK-E2b): solo una ENTRADA trae el suyo, y con código (un vencimiento sin código no es un lote). Campos de lote en una salida, o un vencimiento solo, son un pedido mal formado: nunca se ignoran
+      // en silencio. Es UN lote por renglón desde la pantalla (SUPUESTO, DEC-STK-007): su cantidad es la del renglón. Que el artículo lleve control, la forma del código y la fecha los valida el servidor.
+      const hayLote = e.loteCodigo !== undefined || e.loteVence !== undefined;
+      if (hayLote && (!entrada || e.loteCodigo === undefined)) {
+        return err("RENGLONES_INVALIDOS" as const);
+      }
       // Un costo mandado en una salida lo rechaza el servidor (`COSTO_INVALIDO`): la pantalla no lo filtra.
       const renglones = [
         {
@@ -122,6 +135,17 @@ export function registrarElMovimiento(
           cantidad: e.cantidad,
           unidadId: r.valor.unidadId,
           costoUnitario: e.costoUnitario,
+          ...(e.loteCodigo === undefined
+            ? {}
+            : {
+                lotes: [
+                  {
+                    codigo: e.loteCodigo,
+                    fechaDeVencimiento: e.loteVence ?? null,
+                    cantidad: e.cantidad,
+                  },
+                ],
+              }),
         },
       ];
       return entrada
