@@ -23,6 +23,12 @@ const previo = require("../../arquitectura/previo.cjs") as {
     modulosExistentes: string[];
   }) => { tipo: string; [clave: string]: unknown };
   comandosDelPlan: (plan: { tipo: string; [clave: string]: unknown }) => string[][];
+  esCacheVieja: (comando: string[], salida: string) => boolean;
+  correrConReintentoPorCacheVieja: (
+    comando: string[],
+    ejecutar: (comando: string[]) => Promise<{ ok: boolean; segundos: number; salida: string }>,
+    limpiar: () => void,
+  ) => Promise<{ ok: boolean; segundos: number; cacheLimpiada: boolean }>;
 };
 
 const PASOS_ESPERADOS = [
@@ -187,5 +193,76 @@ describe("pruebas que corre previo", () => {
     });
     expect(plan.tipo).toBe("nada");
     expect(plan["aviso"]).toEqual([expect.stringContaining("test:componentes")]);
+  });
+});
+
+describe("caché vieja de vite en grafo.test.ts", () => {
+  const VITEST = ["npx", "vitest", "run", "--project", "node", "test/arquitectura"];
+  const SINTOMA =
+    " FAIL  |node| test/arquitectura/grafo.test.ts\nError: Unknown variable dynamic import: ../../src/capacidades/pantallas/ficha-x.ts";
+  const falla = (salida: string) => ({ ok: false, segundos: 1, salida });
+  const pasa = { ok: true, segundos: 1, salida: "" };
+
+  it("reconoce el síntoma solo en vitest, con el mensaje y con grafo.test.ts", () => {
+    expect(previo.esCacheVieja(VITEST, SINTOMA)).toBe(true);
+    expect(previo.esCacheVieja(["npm", "run", "lint"], SINTOMA)).toBe(false);
+    expect(previo.esCacheVieja(VITEST, "Error: Unknown variable dynamic import: ../x.ts")).toBe(
+      false,
+    );
+    expect(previo.esCacheVieja(VITEST, " FAIL  test/arquitectura/grafo.test.ts\nboom")).toBe(false);
+  });
+
+  it("con el síntoma limpia la caché y repite UNA vez; si ahora pasa, lo dice sin saltear", async () => {
+    const respuestas = [falla(SINTOMA), pasa];
+    let corridas = 0;
+    let limpiezas = 0;
+    const r = await previo.correrConReintentoPorCacheVieja(
+      VITEST,
+      () => Promise.resolve(respuestas[corridas++] ?? pasa),
+      () => limpiezas++,
+    );
+    expect(r).toEqual({ ok: true, segundos: 2, cacheLimpiada: true });
+    expect([corridas, limpiezas]).toEqual([2, 1]);
+  });
+
+  it("si vuelve a fallar, corta como cualquier falla (no repite una tercera vez)", async () => {
+    let corridas = 0;
+    let limpiezas = 0;
+    const r = await previo.correrConReintentoPorCacheVieja(
+      VITEST,
+      () => {
+        corridas++;
+        return Promise.resolve(falla(SINTOMA));
+      },
+      () => limpiezas++,
+    );
+    expect(r.ok).toBe(false);
+    expect([corridas, limpiezas]).toEqual([2, 1]);
+  });
+
+  it("otra falla no limpia nada ni se repite", async () => {
+    let corridas = 0;
+    let limpiezas = 0;
+    const r = await previo.correrConReintentoPorCacheVieja(
+      VITEST,
+      () => {
+        corridas++;
+        return Promise.resolve(falla("AssertionError: expected 1 to be 2"));
+      },
+      () => limpiezas++,
+    );
+    expect(r).toEqual({ ok: false, segundos: 1, cacheLimpiada: false });
+    expect([corridas, limpiezas]).toEqual([1, 0]);
+  });
+
+  it("un paso que pasa no limpia nada", async () => {
+    let limpiezas = 0;
+    const r = await previo.correrConReintentoPorCacheVieja(
+      VITEST,
+      () => Promise.resolve(pasa),
+      () => limpiezas++,
+    );
+    expect(r.cacheLimpiada).toBe(false);
+    expect(limpiezas).toBe(0);
   });
 });

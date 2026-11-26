@@ -15,7 +15,8 @@
  * pruebas que importan lo que cambió (incluye las de integración de los módulos que consumen un contrato tocado). Si el diff no se puede
  * inferir, lo dice y corta (fail closed): se indica el módulo con `npm run previo -- <módulo>`.
  */
-const { spawnSync } = require("node:child_process");
+const { spawn, spawnSync } = require("node:child_process");
+const { Buffer } = require("node:buffer");
 const { existsSync, mkdtempSync, readdirSync, rmSync } = require("node:fs");
 const { tmpdir } = require("node:os");
 const { join } = require("node:path");
@@ -39,6 +40,77 @@ const PASOS_FIJOS = [
   },
   { id: "composicion", comando: ["npx", "vitest", "run", "--project", "node", "src/composicion"] },
 ];
+
+/**
+ * Cachés de transformación de vite que, vencidas, hacen fallar `test/arquitectura/grafo.test.ts` con «Unknown variable dynamic import»: su `import()` con
+ * variable se resuelve al transformar, y un transformado cacheado antes de que entrara un archivo nuevo (por un merge de la integración) no lo incluye. El CI,
+ * sin caché, no lo ve. Solo se borran ante ese síntoma (borrarlas siempre encarecería cada corrida con transformación en frío) y se repite UNA vez.
+ */
+const CACHES_DE_VITE = [
+  "node_modules/.vite",
+  "node_modules/.vite-temp",
+  "node_modules/.vitest-cache",
+];
+const SINTOMA_DE_CACHE_VIEJA = /Unknown variable dynamic import/;
+
+/** ¿Esta falla de vitest es el síntoma de la caché vieja de `grafo.test.ts`? Función pura. */
+function esCacheVieja(comando, salidaCompleta) {
+  return (
+    comando.includes("vitest") &&
+    SINTOMA_DE_CACHE_VIEJA.test(salidaCompleta) &&
+    /grafo\.test\.ts/.test(salidaCompleta)
+  );
+}
+
+/**
+ * Corre un paso; si falla por la caché vieja, la limpia y lo repite UNA vez (sin saltear nada: si vuelve a fallar, la falla vale).
+ * `ejecutar(comando)` devuelve `{ ok, segundos, salida }` y `limpiar()` borra las cachés; se inyectan para probarlo.
+ */
+async function correrConReintentoPorCacheVieja(comando, ejecutar, limpiar) {
+  const primera = await ejecutar(comando);
+  if (primera.ok || !esCacheVieja(comando, primera.salida)) {
+    return { ok: primera.ok, segundos: primera.segundos, cacheLimpiada: false };
+  }
+  limpiar();
+  const segunda = await ejecutar(comando);
+  return {
+    ok: segunda.ok,
+    segundos: primera.segundos + segunda.segundos,
+    cacheLimpiada: true,
+  };
+}
+
+function limpiarCachesDeVite() {
+  for (const ruta of CACHES_DE_VITE) rmSync(join(RAIZ, ruta), { recursive: true, force: true });
+}
+
+/** Corre un comando mostrando su salida en vivo y guardándola para reconocer fallas conocidas. */
+function ejecutarConSalida(comando) {
+  return new Promise((resolver) => {
+    const t0 = Date.now();
+    const trozos = [];
+    const hijo = spawn(comando[0], comando.slice(1), {
+      cwd: RAIZ,
+      stdio: ["inherit", "pipe", "pipe"],
+    });
+    hijo.stdout.on("data", (d) => {
+      process.stdout.write(d);
+      trozos.push(d);
+    });
+    hijo.stderr.on("data", (d) => {
+      process.stderr.write(d);
+      trozos.push(d);
+    });
+    hijo.on("error", () => resolver({ ok: false, segundos: 0, salida: "" }));
+    hijo.on("close", (codigo) =>
+      resolver({
+        ok: codigo === 0,
+        segundos: Math.round((Date.now() - t0) / 1000),
+        salida: Buffer.concat(trozos).toString("utf8"),
+      }),
+    );
+  });
+}
 
 const EXTENSIONES_DE_CODIGO = /\.(ts|tsx)$/;
 /**
@@ -183,7 +255,7 @@ function correr(comando) {
   return { ok: r.status === 0, segundos: Math.round((Date.now() - t0) / 1000) };
 }
 
-function main(argv) {
+async function main(argv) {
   if (argv.includes("--con-la-base")) return conLaBase();
   const modulo = argv.find((a) => !a.startsWith("-"));
   const modulosExistentes = readdirSync(join(RAIZ, "src", "modulos"), { withFileTypes: true })
@@ -212,8 +284,19 @@ function main(argv) {
   const resumen = [];
   for (const paso of pasos) {
     salida(`\n== previo: ${paso.id} (${paso.comando.join(" ")})`);
-    const { ok, segundos } = correr(paso.comando);
-    resumen.push(`${ok ? "ok   " : "FALLA"} ${paso.id} (${segundos} s)`);
+    const { ok, segundos, cacheLimpiada } = await correrConReintentoPorCacheVieja(
+      paso.comando,
+      ejecutarConSalida,
+      limpiarCachesDeVite,
+    );
+    if (cacheLimpiada) {
+      salida(
+        `previo: «${paso.id}» falló por la caché vieja de vite (grafo.test.ts); se limpió y se repitió una vez: ${ok ? "ahora pasa, caché vieja limpiada" : "vuelve a fallar, la falla vale"}.`,
+      );
+    }
+    resumen.push(
+      `${ok ? "ok   " : "FALLA"} ${paso.id} (${segundos} s${cacheLimpiada && ok ? ", caché vieja limpiada" : ""})`,
+    );
     if (!ok) {
       salidaDeError(`\nprevio: falló «${paso.id}»; se corta acá.\n${resumen.join("\n")}`);
       return 1;
@@ -234,8 +317,16 @@ function main(argv) {
   return 0;
 }
 
-module.exports = { PASOS_FIJOS, planDeLasPruebas, comandosDelPlan };
+module.exports = {
+  PASOS_FIJOS,
+  planDeLasPruebas,
+  comandosDelPlan,
+  esCacheVieja,
+  correrConReintentoPorCacheVieja,
+};
 
 if (require.main === module) {
-  process.exitCode = main(process.argv.slice(2));
+  main(process.argv.slice(2)).then((codigo) => {
+    process.exitCode = codigo;
+  });
 }
