@@ -156,8 +156,10 @@ export function armarExportarCompras(
             proveedorCuit: c.proveedorCuit,
             estado: c.estado,
             pagos: (pagosPorComprobante.get(c.id) ?? []).map((p) => ({
+              id: p.id,
               fechaDePago: p.fechaDePago,
               medio: p.medio,
+              medios: p.medios,
               importe: p.importe,
               estado: p.estado,
             })),
