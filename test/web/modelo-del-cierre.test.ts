@@ -175,17 +175,25 @@ describe("los controles", () => {
     expect([...m.bloquean, ...m.porReconocer, ...m.informan]).toEqual([]);
   });
 
-  it("los tres controles de stock no se muestran en esta versión (no tienen texto aprobado)", () => {
+  it("los tres controles de stock y los tickets a cuenta corriente no se muestran en esta versión (no tienen texto aprobado)", () => {
     const m = modelo(
       cierre({
-        controles: Object.values(CONTROLES_DE_STOCK).map((clave) =>
-          control({ modulo: "stock", clave, severidad: "INFORMA", cantidad: 4 }),
-        ),
+        controles: [
+          ...Object.values(CONTROLES_DE_STOCK).map((clave) =>
+            control({ modulo: "stock", clave, severidad: "INFORMA", cantidad: 4 }),
+          ),
+          control({
+            modulo: "ventas",
+            clave: "ventas.tickets_a_cuenta_corriente",
+            severidad: "INFORMA",
+            cantidad: 2,
+          }),
+        ],
       }),
     );
     expect(m.informan).toEqual([]);
     expect([...CONTROLES_QUE_NO_SE_MUESTRAN].sort()).toEqual(
-      Object.values(CONTROLES_DE_STOCK).sort(),
+      [...Object.values(CONTROLES_DE_STOCK), "ventas.tickets_a_cuenta_corriente"].sort(),
     );
   });
 
