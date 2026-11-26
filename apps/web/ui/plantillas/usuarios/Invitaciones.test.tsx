@@ -134,9 +134,22 @@ describe("FormularioDeInvitacion", () => {
       });
     await render(conArmazon(formulario(rechazo)));
     await userEvent.fill(page.getByLabelText("Email"), "marcos@lacteos.test");
-    tocar(page.getByRole("button", { name: "Enviar invitación" }));
-    await expect.element(page.getByText("Ya es parte de la empresa")).toBeVisible();
+    await userEvent.selectOptions(page.getByLabelText("Rol"), "ADMINISTRADOR");
+    // React reinicia el formulario un rato DESPUÉS de la acción: se espera ese reinicio (llega cancelado) antes de mirar lo escrito, en vez de suponer cuándo cae.
+    let reinicios = 0;
+    const contar = () => {
+      reinicios += 1;
+    };
+    document.addEventListener("reset", contar, true);
+    try {
+      tocar(page.getByRole("button", { name: "Enviar invitación" }));
+      await expect.element(page.getByText("Ya es parte de la empresa")).toBeVisible();
+      await vi.waitFor(() => expect(reinicios).toBe(1));
+    } finally {
+      document.removeEventListener("reset", contar, true);
+    }
     await expect.element(page.getByLabelText("Email")).toHaveValue("marcos@lacteos.test");
+    await expect.element(page.getByLabelText("Rol")).toHaveValue("ADMINISTRADOR");
     expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
   });
 });

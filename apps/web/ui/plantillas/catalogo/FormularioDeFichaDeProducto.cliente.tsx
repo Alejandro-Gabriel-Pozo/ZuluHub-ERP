@@ -16,6 +16,7 @@ import { Pila } from "../../primitivas/Pila";
 import estilosDeCobrar from "../cobrar/Cobrar.module.css";
 import estilos from "./FormularioDeFichaDeProducto.module.css";
 import type { FichaArmada } from "./modelo-de-ficha-de-producto";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDeFichaDeProducto = Readonly<{
   ficha: FichaArmada;
@@ -78,7 +79,7 @@ export function FormularioDeFichaDeProducto({
 
   return (
     <>
-      <form action={enviar}>
+      <form action={enviar} onReset={sinReiniciar}>
         <ProveedorDeEnvioDeFormulario value={enviando}>
           <Pila separacion={3}>
             <SoloLectura etiqueta={ficha.clase.etiqueta} valor={ficha.clase.valor} />
