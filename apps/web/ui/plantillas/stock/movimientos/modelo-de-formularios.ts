@@ -102,9 +102,29 @@ export function opcionesDeDeposito(
     .map((d) => ({ valor: d.id, etiqueta: d.nombre }));
 }
 
+/** Cómo se controla un artículo por lote hoy (`null`: no se controla). Lo da el servidor: es una ayuda para ofrecer «Lote» y «Vence». */
+export type ControlDeLote = "LOTE" | "LOTE_Y_VENCIMIENTO" | null;
+
+export type OpcionDeArticulo = Opcion & Readonly<{ controlDeLote: ControlDeLote }>;
+
 export const opcionesDeArticulo = (
-  articulos: readonly Readonly<{ id: string; nombre: string }>[],
-): readonly Opcion[] => articulos.map((a) => ({ valor: a.id, etiqueta: a.nombre }));
+  articulos: readonly Readonly<{ id: string; nombre: string; controlDeLote: ControlDeLote }>[],
+): readonly OpcionDeArticulo[] =>
+  articulos.map((a) => ({ valor: a.id, etiqueta: a.nombre, controlDeLote: a.controlDeLote }));
+
+/**
+ * Lo que pide el lote de una entrada (STK-E2b, DEC-STK-007): con control por lote, el código del lote (siempre) y el vencimiento (solo si el control lo pide); sin control, nada. Es ayuda: el servidor valida la
+ * forma del código, la fecha, que no haya pasado y que el artículo lleve control, y decide.
+ */
+export function loteQueSePide(control: ControlDeLote): Readonly<{ vence: boolean }> | null {
+  return control === null ? null : { vence: control === "LOTE_Y_VENCIMIENTO" };
+}
+
+/** ¿Está completo lo que pide el lote? Sin control no se pide nada (completo). */
+export function loteCompleto(control: ControlDeLote, codigo: string, vence: string): boolean {
+  const pide = loteQueSePide(control);
+  return pide === null || (codigo.trim() !== "" && (!pide.vence || vence !== ""));
+}
 
 /** Los motivos con texto aprobado, en el orden que da el servidor. */
 export function opcionesDeMotivo(

@@ -21,6 +21,8 @@ const TEXTOS = {
   motivo: "Motivo",
   costo: "Costo por unidad",
   opcional: "(opcional)",
+  lote: "Lote",
+  vence: "Vence",
   detalle: "Detalle",
   enviar: "Registrar",
   cancelar: "Cancelar",
@@ -30,7 +32,13 @@ const DEPOSITOS = [
   { valor: "d1", etiqueta: "Salón" },
   { valor: "d2", etiqueta: "Cocina" },
 ];
-const ARTICULOS = [{ valor: "a1", etiqueta: "Harina" }];
+const ARTICULOS = [{ valor: "a1", etiqueta: "Harina", controlDeLote: null }];
+/** Harina con control de lote y vencimiento, Sal con control de lote sin vencimiento y Azúcar sin control. */
+const CON_LOTES = [
+  { valor: "a1", etiqueta: "Harina", controlDeLote: "LOTE_Y_VENCIMIENTO" as const },
+  { valor: "a2", etiqueta: "Sal", controlDeLote: "LOTE" as const },
+  { valor: "a3", etiqueta: "Azúcar", controlDeLote: null },
+];
 const MOTIVOS = [
   { valor: "COMPRA", etiqueta: "Compra" },
   { valor: "OTRA_ENTRADA", etiqueta: "Otra entrada" },
@@ -44,13 +52,14 @@ const formulario = (
   tipo: TipoDeMovimiento,
   accion: AccionDeFormulario = ok,
   puedeEnviar = true,
+  articulos: readonly (typeof ARTICULOS)[number][] | typeof CON_LOTES = ARTICULOS,
 ) => (
   <FormularioDeMovimiento
     tipo={tipo}
     accion={accion}
     textos={{ ...TEXTOS, enviar: tipo === "ANULAR" ? "Anular" : "Registrar" }}
     depositos={DEPOSITOS}
-    articulos={ARTICULOS}
+    articulos={articulos}
     motivos={MOTIVOS}
     sentidos={SENTIDOS}
     hrefDeCancelar="/stock/movimientos"
@@ -185,5 +194,45 @@ describe("FormularioDeMovimiento", () => {
     tocar(registrar);
     await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(2));
     expect(accion.mock.calls[1]?.[1].get("confirmar")).toBeNull();
+  });
+
+  it("una ENTRADA de un artículo controlado por lote pide «Lote» y «Vence»; con control sin vencimiento, solo «Lote»; sin control, nada; «Registrar» espera lo que se pide", async () => {
+    await render(formulario("ENTRADA", ok, true, CON_LOTES));
+    expect(existe("Lote")).toBe(true);
+    expect(existe("Vence")).toBe(true);
+    await userEvent.fill(page.getByLabelText("Cantidad"), "5");
+    await expect.element(page.getByRole("button", { name: "Registrar" })).toBeDisabled();
+    await userEvent.fill(page.getByLabelText("Lote"), "L-1");
+    await expect.element(page.getByRole("button", { name: "Registrar" })).toBeDisabled();
+    await userEvent.fill(page.getByLabelText("Vence"), "2099-06-01");
+    await expect.element(page.getByRole("button", { name: "Registrar" })).toBeEnabled();
+    await userEvent.selectOptions(page.getByLabelText("Artículo"), "a2");
+    expect(existe("Vence")).toBe(false);
+    expect(existe("Lote")).toBe(true);
+    await userEvent.selectOptions(page.getByLabelText("Artículo"), "a3");
+    expect(existe("Lote")).toBe(false);
+    await expect.element(page.getByRole("button", { name: "Registrar" })).toBeEnabled();
+    expect(await violacionesDeAccesibilidad()).toEqual([]);
+  });
+
+  it("los campos de lote solo existen en la ENTRADA: una salida de un artículo controlado por lote no los ofrece", async () => {
+    await render(formulario("SALIDA", ok, true, CON_LOTES));
+    expect(existe("Lote")).toBe(false);
+    expect(existe("Vence")).toBe(false);
+  });
+
+  it("envía UN solo pedido con el lote y el vencimiento como texto; si el artículo deja de pedir lote, no manda nada de lote", async () => {
+    const accion = vi.fn<AccionDeFormulario>(ok);
+    await render(formulario("ENTRADA", accion, true, CON_LOTES));
+    await userEvent.fill(page.getByLabelText("Cantidad"), "5");
+    await userEvent.fill(page.getByLabelText("Lote"), "L-1");
+    await userEvent.fill(page.getByLabelText("Vence"), "2099-06-01");
+    tocar(page.getByRole("button", { name: "Registrar" }));
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    expect(Object.fromEntries(accion.mock.calls[0]?.[1].entries() ?? [])).toMatchObject({
+      articuloId: "a1",
+      loteCodigo: "L-1",
+      loteVence: "2099-06-01",
+    });
   });
 });

@@ -19,11 +19,17 @@ const MOV = "88888888-8888-4888-8888-888888888888";
 const contexto = { empresaId: "e1" } as unknown as ContextoOperativo;
 const GENERICO = "STOCK_ACCION_NO_PERMITIDA";
 
-const articulo = (articuloId: string, productoId: string, unidadId: string) => ({
+const articulo = (
+  articuloId: string,
+  productoId: string,
+  unidadId: string,
+  controlDeLote: "LOTE" | "LOTE_Y_VENCIMIENTO" | null = null,
+) => ({
   articuloId,
   productoId,
   nombre: productoId,
   unidadId,
+  controlDeLote,
 });
 const base = (cambios: Record<string, unknown> = {}) => ({
   clave: CLAVE,
@@ -120,8 +126,8 @@ describe("opcionesParaLaCargaInicial", () => {
       dato: {
         depositos: [{ id: D1, nombre: "Salón" }],
         articulos: [
-          { id: A1, nombre: "p1", unidadId: "KILOGRAMO" },
-          { id: A2, nombre: "p2", unidadId: "UNIDAD" },
+          { id: A1, nombre: "p1", unidadId: "KILOGRAMO", controlDeLote: null },
+          { id: A2, nombre: "p2", unidadId: "UNIDAD", controlDeLote: null },
         ],
       },
     });
@@ -216,5 +222,61 @@ describe("registrarLaCargaInicial", () => {
     const r = await registrarLaCargaInicial(rota.d, contexto, SUC, base());
     expect(r.ok).toBe(false);
     expect(JSON.stringify(r)).not.toContain("secreto interno");
+  });
+});
+
+describe("registrarLaCargaInicial con lotes (STK-E2b)", () => {
+  const renglonesDe = (llamadas: readonly { que: string; entrada: unknown }[]) =>
+    (llamadas.find((x) => x.que === "entrada")?.entrada as { renglones: Record<string, unknown>[] })
+      .renglones;
+
+  it("una fila con lote manda UN lote con la cantidad de la fila y su vencimiento; las demás filas no llevan `lotes`", async () => {
+    const { d, llamadas } = montar();
+    const r = await registrarLaCargaInicial(
+      d,
+      contexto,
+      SUC,
+      base({
+        renglones: [
+          {
+            articuloId: A1,
+            cantidad: "10",
+            costoUnitario: "",
+            loteCodigo: "L-1",
+            loteVence: "2099-06-01",
+          },
+          { articuloId: A2, cantidad: "2.5", costoUnitario: "", loteCodigo: "", loteVence: "" },
+        ],
+      }),
+    );
+    expect(r.ok).toBe(true);
+    const renglones = renglonesDe(llamadas);
+    expect(renglones[0]?.["lotes"]).toEqual([
+      { codigo: "L-1", fechaDeVencimiento: "2099-06-01", cantidad: "10" },
+    ]);
+    expect(Object.keys(renglones[1] ?? {})).not.toContain("lotes");
+  });
+
+  it("un vencimiento sin código es un pedido mal formado: genérico y no se escribe nada de la tanda", async () => {
+    const { d, llamadas } = montar();
+    const r = await registrarLaCargaInicial(
+      d,
+      contexto,
+      SUC,
+      base({
+        renglones: [
+          { articuloId: A1, cantidad: "10", costoUnitario: "", loteVence: "2099-06-01" },
+          { articuloId: A2, cantidad: "2.5", costoUnitario: "" },
+        ],
+      }),
+    );
+    expect(codigoDe(r)).toBe(GENERICO);
+    expect(llamadas.filter((x) => x.que === "entrada")).toEqual([]);
+  });
+
+  it("las opciones traen cómo se controla cada artículo por lote", async () => {
+    const { d } = montar();
+    const r = await opcionesParaLaCargaInicial(d, contexto, SUC);
+    expect(r.ok && r.dato.articulos.map((a) => a.controlDeLote)).toEqual([null, null]);
   });
 });

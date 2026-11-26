@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   CAMPOS_DEL_TIPO,
   MOTIVO_CON_COSTO,
+  loteCompleto,
+  loteQueSePide,
   opcionesDeArticulo,
   opcionesDeDeposito,
   opcionesDeMotivo,
@@ -63,8 +65,8 @@ describe("las opciones", () => {
   });
 
   it("los artículos salen por su id con su nombre", () => {
-    expect(opcionesDeArticulo([{ id: "a1", nombre: "Harina" }])).toEqual([
-      { valor: "a1", etiqueta: "Harina" },
+    expect(opcionesDeArticulo([{ id: "a1", nombre: "Harina", controlDeLote: null }])).toEqual([
+      { valor: "a1", etiqueta: "Harina", controlDeLote: null },
     ]);
   });
 
@@ -85,5 +87,23 @@ describe("las opciones", () => {
       { valor: "SUMA", etiqueta: "Sobra" },
       { valor: "RESTA", etiqueta: "Falta" },
     ]);
+  });
+});
+
+describe("el lote de una entrada (STK-E2b)", () => {
+  it("sin control no se pide nada; con control se pide el código y, solo con vencimiento, la fecha", () => {
+    expect(loteQueSePide(null)).toBeNull();
+    expect(loteQueSePide("LOTE")).toEqual({ vence: false });
+    expect(loteQueSePide("LOTE_Y_VENCIMIENTO")).toEqual({ vence: true });
+  });
+
+  it("está completo según lo que se pide: sin control, siempre; con control, el código no vacío; con vencimiento, también la fecha", () => {
+    expect(loteCompleto(null, "", "")).toBe(true);
+    expect(loteCompleto("LOTE", "", "")).toBe(false);
+    expect(loteCompleto("LOTE", "  ", "")).toBe(false);
+    expect(loteCompleto("LOTE", "L-1", "")).toBe(true);
+    expect(loteCompleto("LOTE_Y_VENCIMIENTO", "L-1", "")).toBe(false);
+    expect(loteCompleto("LOTE_Y_VENCIMIENTO", "", "2099-06-01")).toBe(false);
+    expect(loteCompleto("LOTE_Y_VENCIMIENTO", "L-1", "2099-06-01")).toBe(true);
   });
 });

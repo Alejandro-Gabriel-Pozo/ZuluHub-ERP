@@ -24,7 +24,14 @@ describe("entradaDeMovimiento", () => {
       }),
     ).toStrictEqual({
       ok: true,
-      valor: { ...base, costoUnitario: undefined, detalle: undefined, confirmar: false },
+      valor: {
+        ...base,
+        costoUnitario: undefined,
+        detalle: undefined,
+        loteCodigo: undefined,
+        loteVence: undefined,
+        confirmar: false,
+      },
     });
     expect(
       entradaDeMovimiento({ ...base, costoUnitario: "10.5", detalle: "Factura 1" }),
@@ -32,6 +39,21 @@ describe("entradaDeMovimiento", () => {
       ok: true,
       valor: { costoUnitario: "10.5", detalle: "Factura 1" },
     });
+  });
+
+  it("el lote y su vencimiento pasan como texto; en blanco son ausentes (STK-E2b)", () => {
+    expect(
+      entradaDeMovimiento({ ...base, loteCodigo: "L-1", loteVence: "2099-06-01" }),
+    ).toMatchObject({
+      ok: true,
+      valor: { loteCodigo: "L-1", loteVence: "2099-06-01" },
+    });
+    expect(entradaDeMovimiento({ ...base, loteCodigo: "  ", loteVence: "" })).toMatchObject({
+      ok: true,
+      valor: { loteCodigo: undefined, loteVence: undefined },
+    });
+    expect(entradaDeMovimiento({ ...base, loteCodigo: 7 }).ok).toBe(false);
+    expect(entradaDeMovimiento({ ...base, loteVence: 20990601 }).ok).toBe(false);
   });
 
   it.each([
