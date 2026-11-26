@@ -78,7 +78,13 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
       <PantallaDeFichaDeCompra
         ficha={ficha()}
         textos={textosDeCompras()}
-        acciones={{ corregir: true, anular: true, pagar: false, anularPago: false }}
+        acciones={{
+          corregir: true,
+          anular: true,
+          pagar: false,
+          anularPago: false,
+          verNotas: false,
+        }}
         accionDeAnular={() => Promise.resolve({ estado: "INICIAL" })}
       />,
     );
@@ -101,7 +107,13 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
           },
         })}
         textos={textosDeCompras()}
-        acciones={{ corregir: true, anular: true, pagar: false, anularPago: false }}
+        acciones={{
+          corregir: true,
+          anular: true,
+          pagar: false,
+          anularPago: false,
+          verNotas: false,
+        }}
         accionDeAnular={() => Promise.resolve({ estado: "INICIAL" })}
       />,
     );
@@ -121,7 +133,13 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
       <PantallaDeFichaDeCompra
         ficha={ficha()}
         textos={textosDeCompras()}
-        acciones={{ corregir: false, anular: true, pagar: false, anularPago: false }}
+        acciones={{
+          corregir: false,
+          anular: true,
+          pagar: false,
+          anularPago: false,
+          verNotas: false,
+        }}
         accionDeAnular={accion}
       />,
     );
@@ -151,7 +169,13 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
       <PantallaDeFichaDeCompra
         ficha={ficha()}
         textos={textosDeCompras()}
-        acciones={{ corregir: false, anular: true, pagar: false, anularPago: false }}
+        acciones={{
+          corregir: false,
+          anular: true,
+          pagar: false,
+          anularPago: false,
+          verNotas: false,
+        }}
         accionDeAnular={accion}
       />,
     );
@@ -174,7 +198,13 @@ describe("la ficha de una compra con «Corregir» y «Anular»", () => {
       <PantallaDeFichaDeCompra
         ficha={ficha()}
         textos={textosDeCompras()}
-        acciones={{ corregir: true, anular: true, pagar: false, anularPago: false }}
+        acciones={{
+          corregir: true,
+          anular: true,
+          pagar: false,
+          anularPago: false,
+          verNotas: false,
+        }}
         accionDeAnular={accion}
       />,
     );

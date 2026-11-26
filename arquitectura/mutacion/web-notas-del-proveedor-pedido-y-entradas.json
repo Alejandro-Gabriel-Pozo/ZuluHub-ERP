@@ -1,0 +1,7 @@
+{
+  "grupo": "web (notas del proveedor: pedido y entradas)",
+  "archivos": "src/composicion/entradas-de-notas.ts,src/composicion/notas-web.ts,apps/web/ui/plantillas/compras/notas/modelo-de-pedido-de-nota.ts",
+  "minutos": 4,
+  "pruebas": "src/composicion/entradas-de-notas.test.ts src/composicion/notas-web.test.ts test/web/modelo-de-pedido-de-nota.test.ts",
+  "nivel": "CRITICO"
+}

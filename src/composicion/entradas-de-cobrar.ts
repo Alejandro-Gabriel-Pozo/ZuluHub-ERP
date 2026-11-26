@@ -21,7 +21,7 @@ import {
 const importe = z.strictObject({ moneda: texto, monto: decimal });
 
 /** Los cinco datos opcionales de un cobro. Ausente es válido; el contenido lo juzga caja (`validarDatosDelCobro`). */
-const datosDelCobro = z.strictObject({
+export const datosDelCobro = z.strictObject({
   cupon: texto.optional(),
   ultimos4: texto.optional(),
   marcaDeTarjetaId: texto.optional(),

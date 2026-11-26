@@ -189,6 +189,7 @@ const FICHA: FichaDeCompraParaLaPantalla = {
     fecha: "2026-10-31",
     vencimientoDePago: "2026-11-30",
     totalSegunLaFactura: pesos("29225040.00"),
+    netoAPagar: pesos("29225040.00"),
   },
   pagos: [],
 };

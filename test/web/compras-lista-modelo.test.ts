@@ -265,6 +265,7 @@ describe("la ficha de una compra", () => {
           fecha: "2026-10-31",
           vencimientoDePago: "2026-11-30",
           totalSegunLaFactura: { moneda: "ARS", monto: "29225040.00" },
+          netoAPagar: { moneda: "ARS", monto: "29225040.00" },
         },
       }),
       t,

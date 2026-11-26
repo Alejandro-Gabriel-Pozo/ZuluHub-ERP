@@ -7,7 +7,13 @@ import {
   formatearFecha,
   formatearImporte,
 } from "../../../patrones/formato-fiscal";
-import { RUTA_DE_COMPRAS, rutaDeCorregirLaLinea, rutaDelPago } from "../rutas-de-compras";
+import { NETO_CERO } from "../notas/modelo-de-notas";
+import {
+  RUTA_DE_COMPRAS,
+  rutaDeCorregirLaLinea,
+  rutaDeLasNotas,
+  rutaDelPago,
+} from "../rutas-de-compras";
 import {
   nombreDeLaFactura,
   numeroImpreso,
@@ -63,6 +69,8 @@ export type FichaDeCompraParaLaPantalla = Readonly<{
     fecha: string | null;
     vencimientoDePago: string | null;
     totalSegunLaFactura: Importe;
+    /** Lo que hay que pagar de la factura (total menos las notas de crédito vigentes), tal cual lo calcula el servidor. */
+    netoAPagar: Importe;
   }> | null;
   pagos: readonly Readonly<{
     id: string;
@@ -111,12 +119,15 @@ export type AccionesDeLaCompraParaLaPantalla = Readonly<{
   pagar: boolean;
   /** Anular el pago (`comprobantes_de_proveedor.anular_pago`). */
   anularPago: boolean;
+  /** Ver las notas de la factura (las dos acciones de ver notas: la lectura las pide). */
+  verNotas: boolean;
 }>;
 export const SIN_ACCIONES_DE_LA_COMPRA: AccionesDeLaCompraParaLaPantalla = {
   corregir: false,
   anular: false,
   pagar: false,
   anularPago: false,
+  verNotas: false,
 };
 
 /** Un pago de la factura ya armado para mostrar: «Transferencia · 24/11/2026», su importe, quién y cuándo, y, si se anuló, «Anulado» con su motivo, quién y cuándo. */
@@ -162,6 +173,10 @@ export type FichaArmada = Readonly<{
   declararPago: Readonly<{ texto: string; href: string }> | null;
   /** El pago vigente que «Anular» puede anular (con el permiso); `null` si no se ofrece. */
   anularPagoId: string | null;
+  /** «Notas de crédito»: lleva a «Notas de la factura»; solo con el permiso y una factura; `null` si no se ofrece. */
+  notas: Readonly<{ texto: string; href: string }> | null;
+  /** «Saldada por notas»: la factura de una compra no anulada, sin pago vigente, que las notas dejaron sin nada para pagar; `null` en cualquier otro caso. */
+  saldadaPorNotas: string | null;
 }>;
 
 /** «2 Kilogramo» sin presentación; «2 Caja de 12» con ella: la cantidad de compra con el nombre de lo que se compró. */
@@ -303,13 +318,26 @@ export function armarLaFicha(
             }
           : null,
     })),
+    // Con neto cero no hay nada para pagar: el enlace no se ofrece (el servidor sigue rechazando con el genérico).
     declararPago:
       acciones.pagar &&
       ficha.factura !== null &&
       ficha.estado !== "ANULADA" &&
-      vigente === undefined
+      vigente === undefined &&
+      ficha.factura.netoAPagar.monto !== NETO_CERO
         ? { texto: textos.declararPago, href: rutaDelPago(ficha.recepcionId) }
         : null,
     anularPagoId: acciones.anularPago && vigente !== undefined ? vigente.id : null,
+    notas:
+      acciones.verNotas && ficha.factura !== null
+        ? { texto: textos.notasDeCredito, href: rutaDeLasNotas(ficha.factura.comprobanteId) }
+        : null,
+    saldadaPorNotas:
+      ficha.factura !== null &&
+      ficha.estado !== "ANULADA" &&
+      vigente === undefined &&
+      ficha.factura.netoAPagar.monto === NETO_CERO
+        ? textos.saldadaPorNotas
+        : null,
   };
 }
