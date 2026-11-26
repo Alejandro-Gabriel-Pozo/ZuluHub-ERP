@@ -131,6 +131,7 @@ describe.skipIf(base === null)("0108: facturar antes de cobrar (documento_valida
         ejemplarBaseId: t.anulado.ejemplarId,
         ejemplarNuevoId: nuevoId(),
         motivo: "Cargado por error",
+        sucursalDeTrabajo: e.sucursal,
       }),
     );
     const productoACero = await m.productoVendible(e.empresa, "0");
@@ -331,6 +332,7 @@ describe.skipIf(base === null)("0108: facturar antes de cobrar (documento_valida
       ejemplarBaseId: t.emitidoFacturado.ejemplarId,
       ejemplarNuevoId: nuevoId(),
       motivo: "Cargado por error",
+      sucursalDeTrabajo: e.sucursal,
     });
     expect(r.ok ? "ok" : (r.error as { error?: string }).error).toBe(
       "TICKET_CON_COMPROBANTE_VIGENTE",
