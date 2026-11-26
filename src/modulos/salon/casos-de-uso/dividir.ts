@@ -13,11 +13,11 @@ import {
   lineasDeCuenta,
 } from "../../ventas/publico";
 import {
-  huellaDeDivision,
   planDeDivision,
   type Asignacion,
   type CopiaAHacer,
-} from "../dominio/division";
+} from "../../../primitivas/cuentas/division";
+import { huellaDeDivision } from "../dominio/huella-de-division";
 import { armarComando, exigirAlcance, exigirUuid } from "./comun";
 import type { DependenciasDeSalon, TxDeSalon } from "./contrato";
 import {

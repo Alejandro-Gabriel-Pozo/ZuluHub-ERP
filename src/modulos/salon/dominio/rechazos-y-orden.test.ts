@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { celdasDeMesa } from "./celdas";
-import { huellaDeDivision, planDeDivision, type Asignacion, type LineaADividir } from "./division";
+import {
+  planDeDivision,
+  type Asignacion,
+  type LineaADividir,
+} from "../../../primitivas/cuentas/division";
+import { huellaDeDivision } from "./huella-de-division";
 import { posicionDeMesa } from "./mesa";
 import { MAXIMO_DE_CUENTAS_POR_ITEMS } from "../../../primitivas/cuentas/limites-de-division";
 import {
