@@ -11,6 +11,35 @@ describe("leerElPedidoDeControlDeStock", () => {
     });
   });
 
+  it.each([true, false])(
+    "acepta confirmarCuentasAbiertas=%s (la confirmación del aviso)",
+    (confirmarCuentasAbiertas) => {
+      expect(
+        leerElPedidoDeControlDeStock({
+          productoId: ID,
+          controlado: true,
+          confirmarCuentasAbiertas,
+        }),
+      ).toEqual({
+        ok: true,
+        valor: { productoId: ID, controlado: true, confirmarCuentasAbiertas },
+      });
+    },
+  );
+
+  it.each(["true", 1, null])(
+    "rechaza confirmarCuentasAbiertas que no es booleano (%s)",
+    (confirmarCuentasAbiertas) => {
+      expect(
+        leerElPedidoDeControlDeStock({
+          productoId: ID,
+          controlado: true,
+          confirmarCuentasAbiertas,
+        }),
+      ).toEqual({ ok: false, error: "PEDIDO_INVALIDO" });
+    },
+  );
+
   it.each([
     ["sin producto", { controlado: true }],
     ["producto que no es un id", { productoId: "x", controlado: true }],
