@@ -176,6 +176,45 @@ describe.skipIf(base === null)("compras: reemplazo de factura", () => {
     expect(audit?.despues.mismoNumero).toBe(true);
   });
 
+  it("el motivo es obligatorio (vacío o en blanco se rechaza sin escribir nada) y se guarda tal como lo envía quien reemplaza; la auditoría lleva la fecha de la factura (la de carga es la de la auditoría)", async () => {
+    const m = await armar();
+    for (const motivo of ["", "   "]) {
+      const r = await c.casos.reemplazarFactura(m.e.gerente, {
+        clave: nuevoId(),
+        comprobanteId: m.factura,
+        motivo,
+        factura: m.contenido(),
+      });
+      expect(r).toEqual({ ok: false, error: "MOTIVO_REQUERIDO" });
+    }
+    expect(await fila(m.factura)).toMatchObject({ estado: "REGISTRADO", motivo: null });
+    expect(await facturas(m)).toBe(1);
+    const editado = "Reemplazada por la factura 0005-00001234 (corregida a mano)";
+    const ok = valorDe(
+      await c.casos.reemplazarFactura(m.e.gerente, {
+        clave: nuevoId(),
+        comprobanteId: m.factura,
+        motivo: editado,
+        factura: m.contenido(),
+      }),
+    );
+    expect(await fila(m.factura)).toMatchObject({ estado: "ANULADO", motivo: editado });
+    const [reemplazo] = await c.filas<{
+      despues: { fechaDeLaOriginal: string; fechaDeLaNueva: string; motivo: string };
+    }>(
+      "select despues from auditoria_empresa where accion = 'FACTURA_REEMPLAZADA' and entidad_id = $1",
+      [m.factura],
+    );
+    expect(reemplazo?.despues.motivo).toBe(editado);
+    expect(reemplazo?.despues.fechaDeLaOriginal).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(reemplazo?.despues.fechaDeLaNueva).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const [alta] = await c.filas<{ despues: { fechaDelComprobante: string } }>(
+      "select despues from auditoria_empresa where accion = 'FACTURA_REGISTRADA' and entidad_id = $1",
+      [ok.comprobanteId],
+    );
+    expect(alta?.despues.fechaDelComprobante).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
   it("lo que hay que deshacer antes: un pago vigente y las notas vigentes frenan (el primero que se encuentra), sin escribir nada; deshechos, se reemplaza", async () => {
     const m = await armar();
     const pago = valorDe(await pagar(m));

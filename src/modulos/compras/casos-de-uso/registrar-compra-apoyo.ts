@@ -96,8 +96,8 @@ export async function prepararFactura(
     version: number;
   }>,
   factura: FacturaPedida,
-  /** Las líneas recibidas con las que se concilia en el mismo acto (N2); `null` si la factura llega sola (N3: se concilia después, sin atajo). */
-  lineas: readonly LineaCalculada[] | null,
+  /** Lo recibido con lo que se concilia en el mismo acto (N2); `null` si la factura llega sola (N3: se concilia después, sin atajo). */
+  lineas: readonly Pick<LineaCalculada, "cantidadEnStock">[] | null,
   condicionDeLaEmpresa: CondicionDeIvaDeLaEmpresa | null,
 ): Promise<R<FacturaPreparada>> {
   const { empresaId } = contexto;

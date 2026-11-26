@@ -152,6 +152,8 @@ export function armarReemplazarFactura(
               estado: "ANULADO",
               motivo: motivo.valor,
               reemplazadaPor: nueva.valor.comprobanteId,
+              fechaDeLaOriginal: original.fechaDelComprobante,
+              fechaDeLaNueva: f.fecha,
               // El proveedor reutilizó el número de la factura anulada: no es una aceptación silenciosa (RP-9).
               mismoNumero:
                 f.tipo === original.tipo &&

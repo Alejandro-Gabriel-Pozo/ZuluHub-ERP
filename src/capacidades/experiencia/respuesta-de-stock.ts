@@ -24,6 +24,8 @@ export const CLAVES_DE_ERRORES_DE_STOCK = {
   // Entrada con lotes (STK-E2a): la fecha de vencimiento falta (texto ya aprobado de Lotes, que también usa producción al cerrar una orden) o ya pasó (L-14).
   LOTE_VENCIMIENTO_REQUERIDO: "lotes.error.vencimiento_requerido",
   STOCK_VENCIMIENTO_PASADO: "stock.error.vencimiento_pasado",
+  // Un lote que ya existe con otra fecha de vencimiento se rechaza con texto propio (DEC-STK-008).
+  STOCK_LOTE_CON_OTRA_FECHA: "stock.error.lote_con_otra_fecha",
   STOCK_ACCION_NO_PERMITIDA: "stock.error.sin_permiso",
 } as const satisfies Record<string, ClaveDeTexto>;
 

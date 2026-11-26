@@ -136,6 +136,35 @@ describe.skipIf(base === null)("0112 compras: reemplazo de factura contra una ba
     expect(await vinculo(distinta)).toBe(otra.factura);
   });
 
+  it("dos facturas ACTIVAS con el mismo proveedor, tipo, punto de venta y número: la base rechaza la segunda (cp_duplicado_uk); la anulada no cuenta", async () => {
+    const e = await escenario();
+    const o = (
+      await dueno.query<{ numero: number; tipo: string; punto_de_venta: number }>(
+        "select numero, tipo, punto_de_venta from comprobante_de_proveedor where id = $1",
+        [e.factura],
+      )
+    ).rows[0];
+    const igual = { tipo: o?.tipo, punto_de_venta: o?.punto_de_venta, numero: o?.numero };
+    await conAppDe(b(), e.m, async (s) => {
+      const doble = factura(e, null, igual);
+      clave(await s.intentar(doble.texto, doble.parametros), "cp_duplicado_uk");
+    });
+    // Anulada la original, el mismo número se puede volver a cargar (una sola vez).
+    await dueno.query(
+      "update comprobante_de_proveedor set estado = 'ANULADO', anulado_por = $2, anulado_en = now(), motivo_de_anulacion = 'Mal cargada' where id = $1",
+      [e.factura, e.m.persona],
+    );
+    await conAppDe(b(), e.m, async (s) => {
+      const recarga = factura(e, null, igual);
+      acepta(await s.intentar(recarga.texto, recarga.parametros));
+      expect((await s.confirmar()).ok).toBe(true);
+    });
+    await conAppDe(b(), e.m, async (s) => {
+      const otra = factura(e, null, igual);
+      clave(await s.intentar(otra.texto, otra.parametros), "cp_duplicado_uk");
+    });
+  });
+
   it("sin anular la original, la nueva falla AL CONFIRMAR y no queda nada; con otro proveedor también", async () => {
     const e = await escenario();
     await conAppDe(b(), e.m, async (s) => {

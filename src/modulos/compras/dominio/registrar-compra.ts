@@ -220,6 +220,12 @@ export function motivoDeAnulacionDesdeTexto(texto: unknown): Resultado<string, "
 export const claveDeLaConciliacionDeAtajo = (recepcionId: string): string =>
   uuidV5DeLista(ESPACIO_DE_LA_CLAVE_DE_CONCILIACION, [recepcionId]);
 
+/** La clave de la conciliación atajo de la factura que reemplaza a otra en la misma compra (NOTAS-2b): la de la recepción ya la usó la factura anterior, así que suma la clave del cambio (única por gesto: un reintento repite la misma). */
+export const claveDeLaConciliacionDelCambioDeComprobante = (
+  recepcionId: string,
+  claveDelCambio: string,
+): string => uuidV5DeLista(ESPACIO_DE_LA_CLAVE_DE_CONCILIACION, [recepcionId, claveDelCambio]);
+
 /** La clave del espejo de una conciliación (una sola por conciliación: además la impone el único `(empresa, anula_a)`). */
 export const claveDeLaAnulacionDeLaConciliacion = (conciliacionId: string): string =>
   uuidV5DeLista(ESPACIO_DE_LA_CLAVE_DE_ANULACION_DE_CONCILIACION, [conciliacionId]);
