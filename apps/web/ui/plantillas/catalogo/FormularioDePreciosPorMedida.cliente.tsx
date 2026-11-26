@@ -13,6 +13,7 @@ import {
   textoDelErrorDePrecios,
   type PreciosPorMedidaArmados,
 } from "./modelo-de-precios-por-medida";
+import { sinReiniciar } from "../../patrones/sin-reinicio";
 
 export type PropsDeFormularioDePreciosPorMedida = Readonly<{
   precios: PreciosPorMedidaArmados;
@@ -39,7 +40,7 @@ export function FormularioDePreciosPorMedida({
   const error = resultado.error;
   const delCampo = precios.campos.some((c) => c.nombreDelCampo === error?.campo);
   return (
-    <form action={enviar}>
+    <form action={enviar} onReset={sinReiniciar}>
       <ProveedorDeEnvioDeFormulario value={enviando}>
         <Pila separacion={3}>
           {precios.campos.map((campo, i) => (
