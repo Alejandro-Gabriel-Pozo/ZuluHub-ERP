@@ -9,6 +9,7 @@ import type { ContextoOperativo } from "../../../contexto/contexto";
 import type { RepositorioDeEmpresas, RepositorioDeSucursales } from "../../empresas/publico";
 import type { LectorDeCarta } from "../persistencia/lector-de-carta";
 import type { RepositorioDeCartas } from "../persistencia/repositorio-de-cartas";
+import type { RepositorioDeCuentasDeImagen } from "../persistencia/repositorio-de-cuentas-de-imagen";
 import type { RepositorioDeDisponibilidad } from "../persistencia/repositorio-de-disponibilidad";
 import type { RepositorioDeFamilias } from "../persistencia/repositorio-de-familias";
 import type { RepositorioDeUnidades } from "../persistencia/repositorio-de-unidades";
@@ -58,6 +59,8 @@ export type TxDeCatalogo = LecturaDeEstados &
     presentacionesDeProducto: RepositorioDePresentaciones;
     /** La carta pública, el botón «Ocultar» y las secciones (migración 0043 y T2 de la carta real). */
     cartasPublicas: RepositorioDeCartas;
+    /** Las cuentas del proveedor de imágenes que la empresa declaró (0102): de ellas, y solo de ellas, se trae un logo. */
+    cuentasDeImagen: RepositorioDeCuentasDeImagen;
     disponibilidadDeProductos: RepositorioDeDisponibilidad;
     /** Las familias de productos (0079, A8). */
     familias: RepositorioDeFamilias;

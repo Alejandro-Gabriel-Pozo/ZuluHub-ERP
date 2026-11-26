@@ -35,6 +35,7 @@ function publicada(c: VidrieraDeEjemplo, lugar: string | null = null): VidrieraP
       colorDeLaEmpresa: null,
       logo: null,
     },
+    cuentasDeImagen: [],
     letraBase: "NORMAL",
     secciones: c.secciones,
   };

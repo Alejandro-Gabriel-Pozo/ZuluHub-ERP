@@ -58,6 +58,7 @@ describe.skipIf(base === null)("catálogo: la persistencia contra el esquema rea
         "0079_familias_de_productos.sql",
         "0080_aplicacion_de_precio_de_familia.sql",
         "0081_orden_y_destacado_de_la_carta.sql",
+        "0102_cuentas_de_imagen_declaradas.sql",
       ].map((archivo) => readFile(join(import.meta.dirname, "../../migraciones", archivo), "utf8")),
     );
     const deDisparadores = migraciones.flatMap((sql) =>

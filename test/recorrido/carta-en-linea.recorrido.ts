@@ -2,6 +2,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from "playwrig
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { HOST_DEL_RECORRIDO, armarMundoDelRecorrido, type MundoDelRecorrido } from "./apoyo/mundo";
 import { vigilar, violacionesGravesDeAxe, type Vigilante } from "./apoyo/vigilante";
+import { cuentaDeImagenDeBase } from "../integracion/carta-publica-apoyo";
 
 /**
  * «CARTA EN LÍNEA» con su identidad (V1), de punta a punta en la app REAL construida y con un navegador real: la persona abre la pantalla, elige la cara, un color propio y la dirección de su logo, toca «Guardar» (con
@@ -53,6 +54,17 @@ describe.skipIf(base === null)(
         modulosAdicionales: ["catalogo", "vidriera"],
         activarModulosEnDesarrollo: true,
       });
+      // La cuenta del logo («demo») la declara la empresa ANTES de guardar el logo (0102).
+      const miembro = await mundo.mundo.dueno.query<{ persona_id: string }>(
+        "select persona_id from membresia where empresa_id = $1 limit 1",
+        [mundo.empresa],
+      );
+      await cuentaDeImagenDeBase(
+        mundo.mundo.dueno,
+        mundo.empresa,
+        miembro.rows[0]?.persona_id as string,
+        "demo",
+      );
       const ejecutable = process.env["PEDERNAL_NAVEGADOR"];
       navegador = await chromium.launch({
         ...(ejecutable === undefined || ejecutable === "" ? {} : { executablePath: ejecutable }),
