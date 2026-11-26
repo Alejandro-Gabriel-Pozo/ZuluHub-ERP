@@ -5,6 +5,7 @@ import { crearDirectorioDePartes } from "../../clientes/publico";
 import { huellaDeLaFacturaSeparada, leerFacturaSeparada } from "../dominio/conciliacion-separada";
 import { decidirPorHuella } from "../dominio/huella";
 import { esUuid } from "../dominio/identificadores";
+import { asentarElCargoDeLaFactura } from "./cargo-de-la-factura";
 import { autorizar, traducir } from "./comun";
 import type { DependenciasDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
@@ -140,6 +141,15 @@ export function armarRegistrarFactura(dependencias: DependenciasDeCompras) {
               totalSegunFactura: preparada.valor.calculado.totalSegunFactura,
             },
           });
+          // Al final: el libro toma el saldo del proveedor después del comprobante (ver `asentarElCargoDeLaFactura`).
+          const cargo = await asentarElCargoDeLaFactura(tx, contexto, dependencias, {
+            comprobanteId,
+            proveedorId: proveedor.valor.id,
+            total: preparada.valor.calculado.totalSegunFactura,
+            venceEl: factura.vencimientoDePago,
+            sucursalId: null,
+          });
+          if (!cargo.ok) return cargo;
           return ok({ comprobanteId, yaExistia: false, avisos: preparada.valor.avisos });
         },
       ),

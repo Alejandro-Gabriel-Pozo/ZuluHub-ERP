@@ -13,6 +13,7 @@ import {
   type HostsPropiosDb,
   type LecturaDeHostsPropios,
 } from "../modulos/marcas/publico";
+import { armarTxDeSaldos } from "./libro-de-saldos";
 import { crearRepositoriosDeProduccion } from "../modulos/produccion/publico";
 import { crearRepositoriosDeStock } from "../modulos/stock/publico";
 import { crearRepositoriosDeVentas } from "../modulos/ventas/publico";
@@ -33,6 +34,8 @@ export type PiezasDeModulosEnTx = ReturnType<typeof crearRepositoriosDeCatalogo>
   ReturnType<typeof crearRepositoriosDeProduccion> &
   /** Lo que impide anonimizar una parte (saldo distinto de cero) y las copias que se vacían (`clientes`): sobre la misma conexión. */
   Readonly<{ anonimizacionDePartes: AnonimizacionDePartesEnTx }> &
+  /** El libro de saldos (L1: compras asienta el cargo de la factura en su transacción): sus repositorios; la auditoría ya la trae la `Tx` base. */
+  Pick<ReturnType<typeof armarTxDeSaldos>, "asientos" | "imputaciones" | "saldos"> &
   /** El host activo propio de la empresa por superficie (dominio propio): solo lectura; la base deja ver únicamente lo activo de la empresa del contexto (0095). */
   Readonly<{ hostsPropios: LecturaDeHostsPropios }>;
 
@@ -49,6 +52,14 @@ export function armarPiezasDeModulosEnTx(
     ...crearRepositoriosDeCompras(db),
     ...crearRepositoriosDeProduccion(db),
     ...armarAnonimizacionDePartesEnTx(db),
+    ...piezasDelLibro(db),
     hostsPropios: crearLecturaDeHostsPropios(db.withTables<HostsPropiosDb>()),
   };
+}
+
+function piezasDelLibro(
+  db: Parameters<ConfiguracionDeTransacciones<unknown>["armar"]>[0],
+): Pick<ReturnType<typeof armarTxDeSaldos>, "asientos" | "imputaciones" | "saldos"> {
+  const { asientos, imputaciones, saldos } = armarTxDeSaldos(db);
+  return { asientos, imputaciones, saldos };
 }

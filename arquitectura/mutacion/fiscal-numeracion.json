@@ -3,5 +3,5 @@
   "archivos": "src/modulos/fiscal/dominio/numeracion.ts,src/modulos/fiscal/dominio/numeracion-invariantes.ts,src/modulos/fiscal/dominio/numeracion-modelo.ts",
   "minutos": 3.8,
   "pruebas": "src/modulos/fiscal",
-  "critico": true
+  "nivel": "CRITICO"
 }

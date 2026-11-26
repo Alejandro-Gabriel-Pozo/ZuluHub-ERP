@@ -3,6 +3,7 @@ import { err, ok, type Resultado } from "../../../primitivas/resultado/resultado
 import { esUuid } from "../dominio/identificadores";
 import { esNivelDeRecepcionSeparada } from "../dominio/recepcion-separada";
 import { motivoDeAnulacionDesdeTexto } from "../dominio/registrar-compra";
+import { anularElCargoDeLaFactura } from "./cargo-de-la-factura";
 import { autorizar, traducir } from "./comun";
 import type { DependenciasDeCompras } from "./contrato";
 import type { ErrorDeCompras } from "./errores";
@@ -70,6 +71,8 @@ export function armarAnularFactura(dependencias: DependenciasDeCompras) {
             antes: { estado: "REGISTRADO" },
             despues: { estado: "ANULADO", motivo: motivo.valor },
           });
+          const cargo = await anularElCargoDeLaFactura(tx, contexto, dependencias, comprobante.id);
+          if (!cargo.ok) return cargo;
           return ok({ anulada: true });
         },
       ),

@@ -7,6 +7,8 @@ import type { ContextoOperativo } from "../../src/contexto/contexto";
 import type { TransaccionesDePostgres } from "../../src/adaptadores/postgres/transacciones";
 import { armarAnonimizacionDePartesEnTx } from "../../src/composicion/anonimizacion-de-partes";
 import { crearEgresoDeCaja } from "../../src/composicion/egreso-de-caja";
+import { armarTxDeSaldos } from "../../src/composicion/libro-de-saldos";
+import { crearLibroDeProveedores } from "../../src/composicion/libro-de-proveedores";
 import { crearCasosDeUsoDeCaja } from "../../src/modulos/caja/publico";
 import {
   crearRepositorioDeDatosFiscales,
@@ -98,6 +100,12 @@ type TxDePruebaConCompras = TxDePrueba &
   ReturnType<typeof armarAnonimizacionDePartesEnTx> &
   RepositoriosDeCompras;
 
+/** Los repositorios del libro sobre la conexión de la transacción (la auditoría ya la trae la `Tx` base). */
+function piezasDelLibro(db: Parameters<typeof armarTxDeSaldos>[0]) {
+  const { asientos, imputaciones, saldos } = armarTxDeSaldos(db);
+  return { asientos, imputaciones, saldos };
+}
+
 export async function montarCompras(
   base: BaseDePruebas,
   opciones: Readonly<{ reglas?: ReglasDeEmpresa; conexiones?: number }> = {},
@@ -112,8 +120,25 @@ export async function montarCompras(
   /** La barrera de la ronda en curso: cada transacción espera tras leer su autorización hasta que llegaron todas. */
   let barrera: () => Promise<void> = () => Promise.resolve();
   /** Una falla inyectada en un punto de «Comprar y recibir» (para probar que no queda nada a medias). */
-  let falla: "oferta" | "lineas" | null = null;
+  let falla: "oferta" | "lineas" | "libro" | null = null;
   let condicionDeIva: CondicionDeIvaDeLaEmpresa | null = "RESPONSABLE_INSCRIPTO";
+  /** El libro real; con `inyectarFalla("libro")` falla en lugar de asentar (para probar que no queda nada a medias). */
+  const libroConFalla = () => {
+    const real = crearLibroDeProveedores();
+    const cae = () => {
+      if (falla === "libro") throw new Error("falla inyectada en el libro");
+    };
+    return {
+      registrarCargo: (...a: Parameters<typeof real.registrarCargo>) => {
+        cae();
+        return real.registrarCargo(...a);
+      },
+      anularCargo: (...a: Parameters<typeof real.anularCargo>) => {
+        cae();
+        return real.anularCargo(...a);
+      },
+    };
+  };
   const entorno = crearEntornoDePrueba(propia.base, opciones.conexiones ?? 12, (tx) => {
     let primera = true;
     const repos = crearRepositoriosDeCompras(tx.db);
@@ -122,6 +147,7 @@ export async function montarCompras(
       ...crearRepositoriosDeStock(tx.db),
       ...crearRepositoriosDeClientes(tx.db),
       ...armarAnonimizacionDePartesEnTx(tx.db),
+      ...piezasDelLibro(tx.db),
       ...repos,
       // Fiscal (solo lectura para compras): el adaptador real de la condición de IVA de la empresa los usa sobre la misma conexión.
       emisores: crearRepositorioDeEmisores(tx.db.withTables<FiscalDb>()),
@@ -191,6 +217,7 @@ export async function montarCompras(
     reglas,
     stock: crearPuertosDeStock({ reglas }),
     egresoDeCaja: crearEgresoDeCaja(),
+    libroDeProveedores: libroConFalla(),
     // La condición de la empresa frente al IVA: de entrada, responsable inscripto (el IVA de una Factura A es crédito fiscal); cada prueba la cambia con `fijarCondicionDeIva`.
     ivaDeLaEmpresa: { condicion: () => Promise.resolve(condicionDeIva) },
   };
@@ -341,7 +368,7 @@ export async function montarCompras(
     alcances,
     /** Las dependencias reales de los casos de uso (para armar uno con otro parámetro, por ejemplo el tope de la exportación). */
     dependencias,
-    inyectarFalla: (punto: "oferta" | "lineas" | null) => {
+    inyectarFalla: (punto: "oferta" | "lineas" | "libro" | null) => {
       falla = punto;
     },
     armarBarrera: (participantes: number) => {

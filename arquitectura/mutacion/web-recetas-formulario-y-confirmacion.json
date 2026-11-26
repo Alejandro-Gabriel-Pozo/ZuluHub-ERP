@@ -1,0 +1,7 @@
+{
+  "grupo": "web (recetas: formulario y confirmación)",
+  "archivos": "apps/web/ui/plantillas/recetas/modelo-de-formulario-de-receta.ts",
+  "minutos": 2,
+  "pruebas": "test/web/recetas-formulario-modelo.test.ts",
+  "nivel": "CRITICO"
+}

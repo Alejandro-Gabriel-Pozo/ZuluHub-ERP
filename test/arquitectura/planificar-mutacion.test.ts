@@ -642,6 +642,8 @@ describe("planificador de mutación: apps/** (las aplicaciones importan de src, 
       /^test\/arquitectura\/guardian-[^/]+\.ts$/,
       // Esta misma prueba: grafos de juguete con nombres `apps/...`; del árbol real solo lista nombres de archivo.
       /^test\/arquitectura\/planificar-mutacion\.test\.ts$/,
+      // El registro de relajaciones: usa nombres `apps/web/ui/...` de juguete y del árbol real solo lista los archivos que expanden los grupos de mutación (no lee su contenido).
+      /^test\/arquitectura\/relajaciones-de-pruebas\.test\.ts$/,
     ];
     const LECTURA_DE_ARCHIVOS =
       /\b(readFileSync|readdirSync|readdir|globSync|existsSync|statSync|lstatSync|readFile|opendirSync|cpSync|copyFileSync)\b/;
@@ -1147,13 +1149,15 @@ describe("planificador de mutación: el registro de decisiones (arquitectura/dec
     ).toBe(true);
   });
 
-  it("el árbol real: las decisiones están entre los archivos del guardián (todas con la forma DEC-NNNN.json)", () => {
+  it("el árbol real: las decisiones están entre los archivos del guardián (todas con la forma DEC-NNNN.json o DEC-FAM-NNN.json)", () => {
     const reales = leerArchivosDelGuardian(RAIZ).filter((a) =>
       a.startsWith("arquitectura/decisiones/registro/"),
     );
     expect(reales.length).toBeGreaterThan(100);
     for (const archivo of reales) {
-      expect(archivo).toMatch(/^arquitectura\/decisiones\/registro\/DEC-\d{4}\.json$/);
+      expect(archivo).toMatch(
+        /^arquitectura\/decisiones\/registro\/DEC-(?:\d{4}|[A-Z]{2,4}-\d{3})\.json$/,
+      );
     }
   });
 
@@ -1200,7 +1204,7 @@ describe("planificador de mutación: el registro de decisiones (arquitectura/dec
   const MARCAS_DE_LECTURA_DEL_REPO = [
     /ls-files/,
     /decisiones\/registro/,
-    /\bDEC-\d{4}\b/,
+    /\bDEC-(?:\d{4}|[A-Z]{2,4}-\d{3})\b/,
     /readdirSync\([^)]*recursive/,
   ];
   const sinDeclarar = (archivos: Record<string, string>) =>

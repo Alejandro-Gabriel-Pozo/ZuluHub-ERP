@@ -3,5 +3,5 @@
   "archivos": "src/modulos/salon/dominio/**/*.ts",
   "minutos": 5,
   "pruebas": "src/modulos/salon/dominio",
-  "critico": true
+  "nivel": "CRITICO"
 }

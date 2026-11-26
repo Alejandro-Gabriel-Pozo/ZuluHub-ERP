@@ -5,7 +5,7 @@
  *
  * Previene: decisiones de permisos, dinero, lo que ve un cliente o lo comercial tomadas por una sesión y anotadas solo como «SUPUESTO» en un
  * comentario o en un PR (caso real, 11/11/2026: `presentacion_de_producto` pasó de catálogo a compras contra el diseño aprobado). Dos reglas:
- *  (a) todo marcador `SUPUESTO` de código, SQL de migraciones y pruebas cita un `DEC-0000` que está en el registro, y todo `DEC-0000` citado
+ *  (a) todo marcador `SUPUESTO` de código, SQL de migraciones y pruebas cita un `DEC-0000` (heredado) o un `DEC-SAL-001` (por familia) que está en el registro, y todo id citado
  *      existe. Una migración que ya está en la base no se puede editar (su checksum cambiaría): se cubre con una entrada cuyo `donde` nombra
  *      el archivo; una migración nueva cita en la línea;
  *  (b) con `--base`: si el cambio toca un archivo sensible (`archivos-sensibles.json`, un solo lugar y ampliable), el registro trae al menos
@@ -25,17 +25,19 @@ const { leerRegistroEnCarpeta } = require("../registros/en-carpeta.cjs");
 const { fallasDeLaCuota } = require("./cuota.cjs");
 const {
   problemasDeLaCuota,
+  problemasDeLasFamilias,
   problemasDeLosSensibles,
   problemasDelRegistro,
   TIPO_SIN_DECISION,
 } = require("./forma.cjs");
 
-/** El registro es una carpeta con un archivo por decisión (`DEC-0001.json`): ver `arquitectura/registros/en-carpeta.cjs`. */
+/** El registro es una carpeta con un archivo por decisión (`DEC-0001.json` heredada, `DEC-SAL-001.json` por familia: `familias.json`): ver `arquitectura/registros/en-carpeta.cjs`. */
 const CARPETA_DEL_REGISTRO = "arquitectura/decisiones/registro";
 /** El registro de antes (un solo array): ya no se lee; si reaparece, es una falla. */
 const MONOLITO_DEL_REGISTRO = "arquitectura/decisiones/registro.json";
 const ARCHIVO_DE_LOS_SENSIBLES = "arquitectura/decisiones/archivos-sensibles.json";
 const ARCHIVO_DE_LA_CUOTA = "arquitectura/decisiones/cuota.json";
+const ARCHIVO_DE_LAS_FAMILIAS = "arquitectura/decisiones/familias.json";
 const USO = "Uso: node arquitectura/decisiones/decisiones.cjs [--base=<carpeta de la base>]";
 
 /** Los archivos donde se busca el marcador: programa y SQL (las pruebas incluidas). La documentación (`.md`) no se mira. */
@@ -44,7 +46,8 @@ const ES_ESCANEADO = /\.(?:[cm]?[jt]sx?|sql)$/;
 const EXENTOS = Object.freeze(["arquitectura/decisiones/", "test/arquitectura/decisiones"]);
 const ES_DE_PRUEBA = /\.test\.[cm]?[jt]sx?$/;
 const MARCADOR = /(?<![\p{L}\p{N}_])SUPUESTOS?(?![\p{L}\p{N}_])/u;
-const CITA = /\bDEC-\d{4}\b/g;
+/** Una cita a una decisión: heredada (`DEC-0001`) o por familia (`DEC-SAL-001`). */
+const CITA = /\bDEC-(?:\d{4}|[A-Z]{2,4}-\d{3})\b/g;
 const MIGRACION = /^migraciones\/[^/]+\.sql$/;
 
 const texto = (contenido) => Buffer.from(contenido).toString("utf8");
@@ -63,8 +66,8 @@ function leerJson(arbol, ruta) {
 
 /** Instrucción exacta de qué entrada falta y cómo agregarla (los PR que tocan permisos, módulos o textos la ven en el error). */
 const COMO_AGREGAR =
-  `Agregá un archivo nuevo en ${CARPETA_DEL_REGISTRO}/, uno por decisión, llamado «<id>.json» (id nuevo: el siguiente libre, el que sigue al último archivo de la carpeta; si al juntar con main otra rama tomó el mismo, Git marca el choque: renumerá el tuyo y las citas «DEC-NNNN» que pusiste; fecha AAAA-MM-DD): ` +
-  '{ "id": "DEC-0000", "fecha": "AAAA-MM-DD", "quien": "sesión", "tipo": "PERMISOS", "estado": "PENDIENTE_DE_OK", ' +
+  `Agregá un archivo nuevo en ${CARPETA_DEL_REGISTRO}/, uno por decisión, llamado «<id>.json». El id lleva el código de su familia y el siguiente número libre de ESA familia (DEC-SAL-001, DEC-SAL-002…; las familias están en ${ARCHIVO_DE_LAS_FAMILIAS} y una familia nueva se agrega ahí); si al juntar con main otra rama tomó el mismo id, Git marca el choque: renumerá el tuyo y las citas «DEC-FAM-NNN» que pusiste; fecha AAAA-MM-DD: ` +
+  '{ "id": "DEC-SAL-001", "fecha": "AAAA-MM-DD", "quien": "sesión", "tipo": "PERMISOS", "estado": "PENDIENTE_DE_OK", ' +
   '"decision": "lo que se decidió, en una línea de negocio", "que_cambia": "qué ve el negocio si se corrige", "donde": "archivo o especificación" }. ' +
   `Si el cambio es puramente técnico: "tipo": "${TIPO_SIN_DECISION}" y un "motivo" que lo explique.`;
 
@@ -175,7 +178,7 @@ const archivoDe = (id) => `${CARPETA_DEL_REGISTRO}/${id}.json`;
  * Lee el registro de un árbol: `{ fallas, registro, hayRegistro }`. El array viejo (`registro.json`) no se lee: si está, falla.
  * Con una falla de lectura o de forma `evaluar` corta antes de usar `registro`.
  */
-function leerElRegistro(arbol, quien) {
+function leerElRegistro(arbol, quien, familias) {
   const leido = leerRegistroEnCarpeta({
     arbol,
     carpeta: CARPETA_DEL_REGISTRO,
@@ -197,17 +200,44 @@ function leerElRegistro(arbol, quien) {
       hayRegistro: true,
     };
   }
-  const fallas = problemasDelRegistro(leido.valor).map(({ id, problema }) =>
-    enLinea(archivoDe(id), 1, `${quien}${id}: ${problema}`),
-  );
+  // Sin una lista de familias válida no se puede juzgar la forma de los ids: esa falla ya está dicha y `evaluar` corta antes de usar el registro.
+  const fallas =
+    familias === null
+      ? []
+      : problemasDelRegistro(leido.valor, familias).map(({ id, problema }) =>
+          enLinea(archivoDe(id), 1, `${quien}${id}: ${problema}`),
+        );
   return { fallas, registro: leido.valor, hayRegistro: true };
 }
 
+/** Lee `familias.json` de un árbol: `{ fallas, valor }` (`valor` es `null` si falta, no se puede leer o no tiene la forma). */
+function leerLasFamilias(arbol, quien) {
+  const leido = leerJson(arbol, ARCHIVO_DE_LAS_FAMILIAS);
+  if (leido.ausente) {
+    return { fallas: [enLinea(ARCHIVO_DE_LAS_FAMILIAS, 1, `${quien}no existe.`)], valor: null };
+  }
+  if (leido.error !== undefined) {
+    return { fallas: [enLinea(ARCHIVO_DE_LAS_FAMILIAS, 1, `${quien}${leido.error}`)], valor: null };
+  }
+  const problemas = problemasDeLasFamilias(leido.valor);
+  return {
+    fallas: problemas.map((problema) => enLinea(ARCHIVO_DE_LAS_FAMILIAS, 1, `${quien}${problema}`)),
+    valor: problemas.length === 0 ? leido.valor : null,
+  };
+}
+
 /** Los problemas de forma del registro y de la lista de sensibles de un árbol, como fallas. Devuelve `{ fallas, registro, sensibles }`. */
-function leerDeclaraciones(arbol, etiqueta, cuotaObligatoria) {
+function leerDeclaraciones(arbol, etiqueta, cuotaObligatoria, familiasDelCambio = null) {
   const fallas = [];
   const quien = etiqueta === "" ? "" : `${etiqueta}: `;
-  const delRegistro = leerElRegistro(arbol, quien);
+  // Las familias son las del CAMBIO (la base se juzga con las reglas del cambio: una familia nueva no puede dejar «inválidas» las entradas de la base).
+  const deLasFamilias =
+    familiasDelCambio === null
+      ? leerLasFamilias(arbol, quien)
+      : { fallas: [], valor: familiasDelCambio };
+  fallas.push(...deLasFamilias.fallas);
+  const familias = deLasFamilias.valor;
+  const delRegistro = leerElRegistro(arbol, quien, familias);
   const deLosSensibles = leerJson(arbol, ARCHIVO_DE_LOS_SENSIBLES);
   fallas.push(...delRegistro.fallas);
   const registro = delRegistro.registro;
@@ -230,13 +260,13 @@ function leerDeclaraciones(arbol, etiqueta, cuotaObligatoria) {
   } else if (deLaCuota.error !== undefined) {
     fallas.push(enLinea(ARCHIVO_DE_LA_CUOTA, 1, `${quien}${deLaCuota.error}`));
   } else {
-    const problemas = problemasDeLaCuota(deLaCuota.valor);
+    const problemas = familias === null ? [] : problemasDeLaCuota(deLaCuota.valor, familias);
     for (const problema of problemas)
       fallas.push(enLinea(ARCHIVO_DE_LA_CUOTA, 1, `${quien}${problema}`));
     // Con problemas `evaluar` corta antes de usar la cuota, así que se guarda siempre.
     cuota = deLaCuota.valor;
   }
-  return { fallas, registro, sensibles, cuota, hayRegistro: delRegistro.hayRegistro };
+  return { fallas, registro, sensibles, cuota, familias, hayRegistro: delRegistro.hayRegistro };
 }
 
 /**
@@ -251,7 +281,7 @@ function evaluar({ pr, base = null }) {
     fallas.push(...controlarMarcadores({ pr, base, registro: delCambio.registro }));
   }
   if (base === null || delCambio.fallas.length > 0) return { fallas, avisos };
-  const deLaBase = leerDeclaraciones(base, "Base", false);
+  const deLaBase = leerDeclaraciones(base, "Base", false, delCambio.familias);
   if (!deLaBase.hayRegistro) {
     avisos.push(
       enLinea(
@@ -314,6 +344,7 @@ if (require.main === module) {
 
 module.exports = {
   ARCHIVO_DE_LA_CUOTA,
+  ARCHIVO_DE_LAS_FAMILIAS,
   ARCHIVO_DE_LOS_SENSIBLES,
   CARPETA_DEL_REGISTRO,
   COMO_AGREGAR,
@@ -323,4 +354,5 @@ module.exports = {
   controlarMarcadores,
   ejecutar,
   evaluar,
+  leerLasFamilias,
 };

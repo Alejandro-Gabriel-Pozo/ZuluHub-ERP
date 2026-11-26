@@ -39,6 +39,7 @@ const { correrPaquete, problemasDelGrupo, escaparPropiedad, comandoDeStryker } =
     comandoDeStryker: (
       g: G,
       entorno: Record<string, string | undefined>,
+      umbral?: unknown,
     ) => { argumentos: string[]; entorno: Record<string, string | undefined> };
   };
 const { cargarLosGrupos } = require("../../arquitectura/grupos-de-mutacion.cjs") as {
@@ -324,10 +325,11 @@ describe("correr un paquete: se nombra cada grupo y ninguna falla se oculta", ()
     }
   });
 
-  it("Stryker se llama como antes: el mismo --mutate con la exclusión de pruebas, el filtro de pruebas del grupo y sin shell", () => {
+  it("Stryker se llama como antes: el mismo --mutate con la exclusión de pruebas, el filtro de pruebas del grupo, el umbral de su nivel y sin shell", () => {
     const { argumentos, entorno } = comandoDeStryker(
       { grupo: "a", archivos: "src/a.ts,src/b.ts:1-9", pruebas: "src/a src/b" },
       { FC_SEMILLA: "20261011" },
+      90,
     );
     expect(argumentos).toEqual([
       "stryker",
@@ -335,7 +337,49 @@ describe("correr un paquete: se nombra cada grupo y ninguna falla se oculta", ()
       "--mutate",
       "src/a.ts,src/b.ts:1-9,!src/**/*.test.ts",
     ]);
-    expect(entorno).toEqual({ FC_SEMILLA: "20261011", PEDERNAL_FILTRO_PRUEBAS: "src/a src/b" });
+    expect(entorno).toEqual({
+      FC_SEMILLA: "20261011",
+      PEDERNAL_FILTRO_PRUEBAS: "src/a src/b",
+      PEDERNAL_UMBRAL_DE_MUTACION: "90",
+    });
+  });
+
+  it("VIOLACIÓN: un grupo sin umbral válido (falta, 0, mayor que 100, decimal o texto) lanza: nunca corre con otro umbral", () => {
+    const grupo = { grupo: "a", archivos: "src/a.ts", pruebas: "" };
+    for (const umbral of [undefined, null, 0, -1, 101, 70.5, "70", Number.NaN]) {
+      expect(() => comandoDeStryker(grupo, {}, umbral), String(umbral)).toThrow(
+        "no tiene un umbral de mutación válido",
+      );
+    }
+    for (const umbral of [1, 70, 90, 100]) {
+      expect(comandoDeStryker(grupo, {}, umbral).entorno["PEDERNAL_UMBRAL_DE_MUTACION"]).toBe(
+        String(umbral),
+      );
+    }
+  });
+
+  it("el umbral que llega a Stryker es el de la variable del entorno y la config lo lee de ahí (sin variable, 100; inválida, lanza)", () => {
+    const leerUmbral = (valor: string | undefined) => {
+      const base = { NODE_ENV: "test" as const, PATH: process.env["PATH"] ?? "" };
+      const entorno = valor === undefined ? base : { ...base, PEDERNAL_UMBRAL_DE_MUTACION: valor };
+      const r = spawnSync(
+        process.execPath,
+        [
+          "--input-type=module",
+          "-e",
+          `const c = (await import(${JSON.stringify(join(RAIZ, "stryker.config.mjs"))})).default; console.log(c.thresholds.break);`,
+        ],
+        { encoding: "utf8", env: entorno },
+      );
+      return { salida: r.stdout.trim(), estado: r.status };
+    };
+    expect(leerUmbral(undefined)).toEqual({ salida: "100", estado: 0 });
+    expect(leerUmbral("")).toEqual({ salida: "100", estado: 0 });
+    expect(leerUmbral("90")).toEqual({ salida: "90", estado: 0 });
+    expect(leerUmbral("70")).toEqual({ salida: "70", estado: 0 });
+    for (const malo of ["0", "101", "7.5", "-1", "abc", "1e2", " 90", "090x"]) {
+      expect(leerUmbral(malo).estado, malo).not.toBe(0);
+    }
   });
 });
 

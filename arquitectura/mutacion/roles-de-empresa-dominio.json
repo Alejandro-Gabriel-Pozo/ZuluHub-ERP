@@ -3,5 +3,5 @@
   "archivos": "src/capacidades/roles/**/*.ts",
   "minutos": 2,
   "pruebas": "src/capacidades/roles",
-  "critico": true
+  "nivel": "CRITICO"
 }

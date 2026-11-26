@@ -2,5 +2,6 @@
   "grupo": "clasificación comercial (árbol y nombre del nodo)",
   "archivos": "src/primitivas/clasificacion/**/*.ts",
   "minutos": 1,
-  "pruebas": "src/primitivas/clasificacion"
+  "pruebas": "src/primitivas/clasificacion",
+  "nivel": "SERVIDOR"
 }

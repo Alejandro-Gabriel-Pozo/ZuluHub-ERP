@@ -3,5 +3,5 @@
   "archivos": "src/primitivas/cantidad/**/*.ts",
   "minutos": 1.6,
   "pruebas": "src/primitivas/cantidad src/primitivas/dinero",
-  "critico": true
+  "nivel": "CRITICO"
 }

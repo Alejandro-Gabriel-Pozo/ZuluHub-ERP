@@ -210,7 +210,7 @@ describe.skipIf(base === null)("ventas: facturar un ticket cobrado", () => {
 
   // ---- estados y rechazos que no escriben --------------------------------------------------------------------------------------
 
-  it("un ticket que no está cobrado es TICKET_NO_FACTURABLE; uno que no existe, TICKET_NO_ENCONTRADO", async () => {
+  it("con la perilla `facturar_antes_de_cobrar` apagada (la base), un ticket que no está cobrado es TICKET_NO_FACTURABLE; uno que no existe, TICKET_NO_ENCONTRADO", async () => {
     const e = await escenarioFacturable(m);
     const cuenta = crypto.randomUUID();
     valorDe(await m.casos.abrirCuenta(e.gerente, { cuentaId: cuenta, sucursalId: e.sucursal }));

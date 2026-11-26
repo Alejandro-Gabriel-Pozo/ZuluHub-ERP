@@ -2,5 +2,6 @@
   "grupo": "contacto (email)",
   "archivos": "src/primitivas/contacto/**/*.ts",
   "minutos": 0.6,
-  "pruebas": "src/primitivas/contacto"
+  "pruebas": "src/primitivas/contacto",
+  "nivel": "SERVIDOR"
 }

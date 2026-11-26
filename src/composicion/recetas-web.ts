@@ -1,10 +1,13 @@
-import type { Respuesta } from "../capacidades/experiencia/respuesta";
+import { errorDeCodigo, type Respuesta } from "../capacidades/experiencia/respuesta";
 import type { ContextoOperativo } from "../contexto/contexto";
 import {
   MAXIMO_DE_PERSONAS_POR_CONSULTA,
   type ConsultasDeIdentidad,
 } from "../modulos/identidad/publico";
+import { formatearDecimalFijo, parsearDecimalFijo } from "../primitivas/cantidad/decimal-fijo";
+import { err } from "../primitivas/resultado/resultado";
 import type {
+  CasosDeUsoDeStock,
   ConsultasDeStock,
   FichaDeCocina,
   PaginaDeIngredientes,
@@ -12,12 +15,19 @@ import type {
   RecetaDeProducto,
   VistaPreviaDeReceta,
 } from "../modulos/stock/publico";
-import { aRespuestaDeExcepcion, errorAPublico, type DependenciasDeRespuesta } from "./a-respuesta";
+import {
+  aRespuesta,
+  aRespuestaDeExcepcion,
+  errorAPublico,
+  type DependenciasDeRespuesta,
+} from "./a-respuesta";
 import { identificador } from "./entradas-de-facturacion";
 import { codificarLaPagina } from "./entradas-de-productos";
 import {
+  aEntradaDeGuardarReceta,
   leerLaEntradaDeLaListaDeRecetas,
   leerLaEntradaDeLosIngredientes,
+  leerElPedidoDeReceta,
   type EntradaDeLaListaDeRecetas,
   type EntradaDeLosIngredientes,
 } from "./entradas-de-recetas";
@@ -42,6 +52,7 @@ import { traducirErrorDeReceta } from "./errores-de-recetas";
  */
 
 export type DependenciasDeRecetasWeb = Readonly<{
+  casosDeUso: () => Pick<CasosDeUsoDeStock, "guardarComposicion">;
   consultas: () => Pick<
     ConsultasDeStock,
     | "listarRecetas"
@@ -211,4 +222,162 @@ export async function listarLasVersionesDeLaReceta(
   } catch (excepcion) {
     return aRespuestaDeExcepcion(excepcion, d.respuesta);
   }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Guardar una receta (REC-B). Reglas que cumple (cada una con su prueba en `recetas-web.test.ts` y `test/integracion/recetas-web.test.ts`):
+//  - **La empresa y la persona las pone el servidor**; del navegador solo viene lo que dice el formulario, y el producto, la versión que se vio y la unidad de cada ingrediente las liga la página.
+//  - **Todo o nada y una sola vez**: es `guardarComposicion` (una transacción, auditoría adentro); guardar dos veces el MISMO contenido es `yaExistia` (idempotencia por contenido, sin clave), y dos
+//    guardados a la vez con la misma versión vista dejan UNA versión nueva y rechazan la otra (`COMPOSICION_DESACTUALIZADA`, que sale como el genérico).
+//  - **Todo rechazo de la receta sale como el genérico** (`traducirErrorDeReceta`); un pedido que no tiene la forma pedida, también, sin decir cuál campo.
+//  - **La confirmación calcula el servidor**: el neto y el costo «antes / ahora / diferencia» salen de la vista previa y de la receta vigente, con aritmética exacta (texto decimal, nunca `number`).
+
+const GENERICO = errorDeCodigo("RECETA_ACCION_NO_PERMITIDA");
+
+/** Lo que se guardó: el producto, la versión que quedó vigente y si ya estaba (el mismo contenido no crea otra versión). */
+export type RecetaGuardada = Readonly<{ productoId: string; version: number; yaExistia: boolean }>;
+
+/** Guarda la receta como versión nueva, o dice que ya estaba. `crudo` es el pedido armado por el servidor fino (`leerElPedidoDeReceta`). */
+export async function guardarLaReceta(
+  d: DependenciasDeRecetasWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<RecetaGuardada>> {
+  const leido = leerElPedidoDeReceta(crudo);
+  if (!leido.ok) return { ok: false, error: GENERICO };
+  const entrada = aEntradaDeGuardarReceta(leido.valor);
+  if (entrada === null) return { ok: false, error: GENERICO };
+  try {
+    const guardada = await d.casosDeUso().guardarComposicion(contexto, entrada);
+    return aRespuesta(
+      guardada.ok ? guardada : err(traducirErrorDeReceta(guardada.error)),
+      d.respuesta,
+      (valor) => ({
+        productoId: entrada.productoId,
+        version: valor.version,
+        yaExistia: valor.yaExistia,
+      }),
+    );
+  } catch (excepcion) {
+    return aRespuestaDeExcepcion(excepcion, d.respuesta);
+  }
+}
+
+/**
+ * Lo que se le muestra a la persona antes de guardar. `netos`: el neto de cada ingrediente por su id. `costos`: SOLO con `costos.ver`; `ahora` es el costo de una unidad con los precios de hoy y
+ * `null` si falta algún costo («Sin costo», nunca cero); `antes` y `diferencia` solo si el producto ya tenía receta (`antes` es `null` si ya era incompleta; `diferencia` es `null` si alguno de los dos
+ * lo es y, si no, `ahora − antes` con signo).
+ */
+export type ConfirmacionDeLaReceta = Readonly<{
+  netos: Readonly<Record<string, string>>;
+  costos?:
+    | Readonly<{
+        moneda: "ARS";
+        ahora: string | null;
+        antes?: string | null | undefined;
+        diferencia?: string | null | undefined;
+      }>
+    | undefined;
+}>;
+
+const ESCALA_DEL_COSTO = 6;
+
+type CostosDeUnaVersion = Readonly<{ porUnidad: string; incompleto: boolean }>;
+const costoSiSeSabe = (costos: CostosDeUnaVersion): string | null =>
+  costos.incompleto ? null : costos.porUnidad;
+
+/** `ahora − antes` con signo, exacto (los costos vienen con 6 decimales), o `null` si alguno no se sabe. */
+function diferenciaDeCostos(ahora: string | null, antes: string | null): string | null {
+  if (ahora === null || antes === null) return null;
+  return formatearDecimalFijo(
+    parsearDecimalFijo(ahora, ESCALA_DEL_COSTO, "ahora") -
+      parsearDecimalFijo(antes, ESCALA_DEL_COSTO, "antes"),
+    ESCALA_DEL_COSTO,
+  );
+}
+
+/** Calcula la confirmación sin guardar nada. `null` si lo pedido no se puede calcular (un producto que no es de la empresa, una cantidad inválida…). */
+export async function verLaConfirmacionDeLaReceta(
+  d: DependenciasDeRecetasWeb,
+  contexto: ContextoOperativo,
+  crudo: unknown,
+): Promise<Respuesta<ConfirmacionDeLaReceta | null>> {
+  const leido = leerElPedidoDeReceta(crudo);
+  if (!leido.ok) return { ok: false, error: GENERICO };
+  const entrada = aEntradaDeGuardarReceta(leido.valor);
+  if (entrada === null) return { ok: false, error: GENERICO };
+  try {
+    const vista = await d.consultas().vistaPreviaDeReceta(contexto, {
+      productoId: entrada.productoId,
+      rinde: entrada.rinde,
+      componentes: entrada.componentes,
+    });
+    if (!vista.ok) return conError(vista.error, d);
+    if (vista.valor === null) return { ok: true, dato: null };
+    const netos = Object.fromEntries(vista.valor.componentes.map((c) => [c.productoId, c.neto]));
+    if (vista.valor.costos === undefined) return { ok: true, dato: { netos } };
+    const ahora = costoSiSeSabe(vista.valor.costos);
+    const costos = { moneda: vista.valor.costos.moneda, ahora };
+    if (entrada.versionEsperada === 0) return { ok: true, dato: { netos, costos } };
+    const vigente = await d
+      .consultas()
+      .recetaDeProducto(contexto, { productoId: entrada.productoId });
+    if (!vigente.ok) return conError(vigente.error, d);
+    const costosDeAntes = vigente.valor?.ficha?.costos;
+    if (costosDeAntes === undefined) return { ok: true, dato: { netos, costos } };
+    const antes = costoSiSeSabe(costosDeAntes);
+    return {
+      ok: true,
+      dato: { netos, costos: { ...costos, antes, diferencia: diferenciaDeCostos(ahora, antes) } },
+    };
+  } catch (excepcion) {
+    return aRespuestaDeExcepcion(excepcion, d.respuesta);
+  }
+}
+
+/** Cuántas páginas se recorren como máximo al armar una lista completa (50 por página): un tope de seguridad, no una regla de negocio. */
+const MAXIMO_DE_PAGINAS = 20;
+
+/**
+ * TODOS los ingredientes que se ofrecen para una receta (de a páginas, hasta `MAXIMO_DE_PAGINAS`): la pantalla los ofrece en un selector y no puede esconder uno por cortar la lista. Si hay más
+ * que el tope sale el genérico (falla cerrado): nunca una lista recortada en silencio.
+ */
+export async function ofrecerTodosLosIngredientes(
+  d: DependenciasDeRecetasWeb,
+  contexto: ContextoOperativo,
+  /** El producto de la receta que se arma; vacío: no se excluye ninguno (una receta nueva todavía no tiene producto). */
+  excluirProductoId: string,
+): Promise<Respuesta<PaginaDeIngredientesParaLaPantalla["ingredientes"]>> {
+  const todos: PaginaDeIngredientesParaLaPantalla["ingredientes"][number][] = [];
+  let despues = "";
+  for (let pagina = 0; pagina < MAXIMO_DE_PAGINAS; pagina++) {
+    const r = await ofrecerLosIngredientes(d, contexto, { texto: "", despues, excluirProductoId });
+    if (!r.ok) return r;
+    todos.push(...r.dato.ingredientes);
+    if (r.dato.siguiente === null) return { ok: true, dato: todos };
+    despues = r.dato.siguiente;
+  }
+  return { ok: false, error: GENERICO };
+}
+
+/** TODOS los productos activos que se pueden elaborar y todavía no tienen receta (el selector «Producto» de una receta nueva), con el mismo tope y la misma regla que los ingredientes. */
+export async function ofrecerTodosLosProductosSinReceta(
+  d: DependenciasDeRecetasWeb,
+  contexto: ContextoOperativo,
+): Promise<Respuesta<PaginaDeRecetasParaLaPantalla["recetas"]>> {
+  const todos: PaginaDeRecetasParaLaPantalla["recetas"][number][] = [];
+  let despues = "";
+  for (let pagina = 0; pagina < MAXIMO_DE_PAGINAS; pagina++) {
+    const r = await listarLasRecetas(d, contexto, {
+      texto: "",
+      conReceta: "sin",
+      activo: "si",
+      despues,
+    });
+    if (!r.ok) return r;
+    todos.push(...r.dato.recetas);
+    if (r.dato.siguiente === null) return { ok: true, dato: todos };
+    despues = r.dato.siguiente;
+  }
+  return { ok: false, error: GENERICO };
 }
