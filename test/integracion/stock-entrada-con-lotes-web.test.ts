@@ -150,7 +150,7 @@ describe.skipIf(base === null)("entrada con lote de la web", () => {
     }
   });
 
-  it("DOS entradas a la vez del MISMO lote nuevo: con la misma fecha suman las dos; con fechas distintas una gana y la otra no pisa (genérico)", async () => {
+  it("DOS entradas a la vez del MISMO lote nuevo: con la misma fecha suman las dos; con fechas distintas una gana y la otra no pisa (con su texto propio)", async () => {
     for (let ronda = 0; ronda < RONDAS; ronda += 1) {
       const igual = await controlado();
       const rs = await aLaVez(
@@ -181,13 +181,13 @@ describe.skipIf(base === null)("entrada con lote de la web", () => {
         ronda,
       );
       expect(rd.filter((r) => r.ok)).toHaveLength(1);
-      expect(rd.filter((r) => !r.ok).map(codigoDe)).toEqual([GENERICO]);
+      expect(rd.filter((r) => !r.ok).map(codigoDe)).toEqual(["STOCK_LOTE_CON_OTRA_FECHA"]);
       expect((await lotesDe(distinta.articulo)).filter((l) => !l.sinAsignar)).toHaveLength(1);
       await losLotesSuman(distinta.articulo);
     }
   });
 
-  it("vencimiento pasado y vencimiento que falta salen con su texto; lote existente con otra fecha, lote en artículo sin control, en una salida o un vencimiento sin código: genérico; nada se escribe", async () => {
+  it("vencimiento pasado y vencimiento que falta salen con su texto; lote existente con otra fecha con su texto propio; lote en artículo sin control, en una salida o un vencimiento sin código: genérico; nada se escribe", async () => {
     const a = await controlado();
     const sinControl = await c.articulo(e);
     expect(codigoDe(await entrar(a.articulo, { loteCodigo: "L-1", loteVence: "2000-01-01" }))).toBe(
@@ -216,7 +216,7 @@ describe.skipIf(base === null)("entrada con lote de la web", () => {
     expect(await resumen(a.articulo)).toEqual([]);
     valorDe((await entrar(a.articulo, { loteCodigo: "L-1", loteVence: "2099-06-01" })) as never);
     expect(codigoDe(await entrar(a.articulo, { loteCodigo: "L-1", loteVence: "2099-07-07" }))).toBe(
-      GENERICO,
+      "STOCK_LOTE_CON_OTRA_FECHA",
     );
     expect(await resumen(a.articulo)).toEqual([["L-1", "2099-06-01", "5.0000"]]);
   });

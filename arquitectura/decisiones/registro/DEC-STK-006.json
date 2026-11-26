@@ -5,6 +5,6 @@
   "tipo": "CLIENTE",
   "estado": "CONFIRMADA",
   "decision": "La entrada manual de un artículo controlado por lote puede traer lote y vencimiento por renglón, y la fecha que ya pasó se avisa con su texto.",
-  "que_cambia": "Texto nuevo: La fecha de vencimiento ya pasó (L-14, dueño 25/11/2026, fila 449). SUPUESTOS: lotes solo en entradas; sin costo por lote; un lote que ya existe con otra fecha se rechaza. Revertir: sacar el campo lotes y el texto.",
+  "que_cambia": "Texto nuevo: La fecha de vencimiento ya pasó (L-14, dueño 25/11/2026, fila 449). Sin costo por lote; lotes solo en entradas. Dueño 26/11/2026, Excel de preguntas: fila 5 «Sí, con texto propio» (lote con otra fecha: se rechaza); fila 6 «Sí por ahora» (un lote por renglón).",
   "donde": "dia-uno-stock-diseno-2026-11-25.md DEC 1014 y P-10; dia-uno-stock-inventario-de-textos-2026-11-25.md L-13 y L-14; dia-uno-stock-fichas-de-pantalla-2026-11-25.md FP-STK-15"
 }
