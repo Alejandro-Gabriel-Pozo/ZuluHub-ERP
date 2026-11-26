@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { cantidadDesdeTexto } from "../../primitivas/cantidad/cantidad";
 import { mermaDesdeTexto } from "../../primitivas/cantidad/merma";
 import { escribirNumero, interpretarNumeroPegado } from "./numero-argentino";
-import { REGLA_DE_CANTIDAD, REGLA_DE_MERMA } from "./reglas-de-cantidad";
+import { porcentajeDesdeTexto } from "../../primitivas/cantidad/porcentaje";
+import {
+  REGLA_DE_CANTIDAD,
+  REGLA_DE_MERMA,
+  REGLA_DE_PORCENTAJE_DE_LA_PARTE,
+} from "./reglas-de-cantidad";
 
 describe("REGLA_DE_CANTIDAD", () => {
   it("son las medidas de la primitiva: 14 enteros, 4 decimales, sin ceros de relleno", () => {
@@ -47,5 +52,27 @@ describe("REGLA_DE_MERMA", () => {
       expect(pegado.ok).toBe(true);
       expect(pegado.ok && mermaDesdeTexto(pegado.canonico).ok).toBe(true);
     }
+  });
+});
+
+describe("REGLA_DE_PORCENTAJE_DE_LA_PARTE", () => {
+  it("son las medidas de la hoja por porcentaje: 3 enteros y 2 decimales, sin ceros de relleno", () => {
+    expect(REGLA_DE_PORCENTAJE_DE_LA_PARTE).toEqual({ decimales: 2, enterosMaximos: 3 });
+  });
+
+  it("lo que el campo deja pegar la primitiva del porcentaje lo acepta", () => {
+    for (const texto of ["0", "5", "33,33", "99,99", "100"]) {
+      const pegado = interpretarNumeroPegado(texto, REGLA_DE_PORCENTAJE_DE_LA_PARTE);
+      expect(pegado.ok).toBe(true);
+      expect(pegado.ok && porcentajeDesdeTexto(pegado.canonico).unidades >= 0n).toBe(true);
+    }
+  });
+
+  it("un tercer decimal o un cuarto entero se rechaza al pegar", () => {
+    expect(interpretarNumeroPegado("1,234", REGLA_DE_PORCENTAJE_DE_LA_PARTE)).toEqual({
+      ok: false,
+      motivo: "DECIMALES_DE_MAS",
+    });
+    expect(interpretarNumeroPegado("1000", REGLA_DE_PORCENTAJE_DE_LA_PARTE).ok).toBe(false);
   });
 });

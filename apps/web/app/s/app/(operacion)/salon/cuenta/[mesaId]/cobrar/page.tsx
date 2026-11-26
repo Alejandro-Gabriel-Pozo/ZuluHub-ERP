@@ -5,6 +5,7 @@ import { puedeCobrarLaMesa } from "../../../../../../../../servidor/ofertas-de-s
 import { cargarLaFichaDeLaMesa } from "../../../../../../../../servidor/salon";
 import { ErrorDelDetalle } from "../../../../../../../../ui/patrones/ErrorDelDetalle";
 import { textosDeCobrar } from "../../../../../../../../ui/plantillas/cobrar/textos-de-cobrar";
+import { textosDeDividirEnElCobro } from "../../../../../../../../ui/plantillas/cobrar/textos-de-dividir-en-el-cobro";
 import { textosDeDividir } from "../../../../../../../../ui/plantillas/salon/textos-de-dividir";
 import { CobroDeLaMesa } from "../../../../../../../../ui/plantillas/salon/CobroDeLaMesa.cliente";
 import { armarLaMesa } from "../../../../../../../../ui/plantillas/salon/modelo-de-la-mesa";
@@ -61,6 +62,7 @@ export default async function PaginaDeCobrarLaMesa({ params, searchParams }: Pro
         total={aCobrar.total}
         preparado={preparado.dato}
         textos={textosDeCobrar()}
+        textosDeDividir={textosDeDividirEnElCobro()}
         deLaDivision={
           hija === undefined
             ? undefined
