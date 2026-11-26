@@ -1,5 +1,6 @@
 import type { ClaveAccion } from "../modulos/catalogo";
 import type { ClaveDeTexto } from "../vocabulario/catalogo";
+import { TEXTOS_DE_LA_FICHA_DE_COBRAR_A_CUENTA } from "./textos-de-ficha-de-cobrar-a-cuenta";
 
 /**
  * LA FICHA DE LAS PANTALLAS DE LA CUENTA CORRIENTE DE CLIENTES (CC-5, A1: el listado y la ficha del cliente; A2: habilitar, cambiar plazo o límite, suspender y reactivar; DDD:174: toda pantalla nace con ficha). Declara lo que ofrecen: rutas y archivos, el acceso,
@@ -8,14 +9,14 @@ import type { ClaveDeTexto } from "../vocabulario/catalogo";
  * (`reutilizados`) y no se duplican. Previene: un botón o un texto que nadie aprobó, y una ruta o una fila de menú que se mueve sin que la ficha lo note.
  */
 
-type FuenteDeTexto = Readonly<{ decidio: string; donde: string }>;
+export type FuenteDeTexto = Readonly<{ decidio: string; donde: string }>;
 type BotonDeLaFicha = Readonly<{
   id: string;
   texto: ClaveDeTexto;
   hace: Readonly<{ navega: string }> | Readonly<{ envia: ClaveAccion }>;
   sinPermiso: "APAGADO";
 }>;
-type TextoDeFicha = Readonly<{ usos: readonly string[]; fuente: FuenteDeTexto }>;
+export type TextoDeFicha = Readonly<{ usos: readonly string[]; fuente: FuenteDeTexto }>;
 
 export type FichaDeLaCuentaCorriente = Readonly<{
   archivos: readonly string[];
@@ -50,12 +51,6 @@ const A2: FuenteDeTexto = {
   donde:
     "Pedernal-docs 11-especificaciones/briefs/maquetas/cuenta-corriente-ficha-listado-y-cobro.html (v2, «Habilitar cuenta» y «Ficha suspendida»); arquitectura/decisiones/registro/DEC-CCL-006.json",
 };
-const B2B: FuenteDeTexto = {
-  decidio:
-    "el dueño, 26/11/2026 (chat: «Apruebo» a los textos de la maqueta P4; la corrección de «sin caja abierta»: la caja abierta es obligatoria para todo medio); el orquestador asentó los quince textos en DEC-CCL-009 por la delegación de la fila 173",
-  donde:
-    "Pedernal-docs 11-especificaciones/briefs/maquetas/cuenta-corriente-ficha-listado-y-cobro.html (P4, «Cobrar un ticket a cuenta»); arquitectura/decisiones/registro/DEC-CCL-009.json",
-};
 const VENDER: FuenteDeTexto = {
   decidio:
     "el dueño, 26/11/2026 (chat: «Apruebo» a los textos de las maquetas; «Si» a que en la primera etapa con el límite pasado el confirmar quede bloqueado para todos); el orquestador asentó los textos en DEC-CCL-008 por la delegación de la fila 173, sin la aprobación del exceso ni el límite a la vista de quien vende",
@@ -63,7 +58,6 @@ const VENDER: FuenteDeTexto = {
     "Pedernal-docs 11-especificaciones/briefs/maquetas/cuenta-corriente-elegir-cliente.html y cuenta-corriente-aprobar-exceso.html; arquitectura/decisiones/registro/DEC-CCL-008.json",
 };
 const MODELO = "modelo-de-cuenta-corriente.ts";
-const COBRAR = "modelo-de-cobrar-a-cuenta.ts";
 
 export const FICHA_DE_CUENTA_CORRIENTE = {
   archivos: [
@@ -316,63 +310,7 @@ export const FICHA_DE_CUENTA_CORRIENTE = {
     },
     "cuenta_corriente.ficha.reactivar": { usos: ["botón de reactivar la cuenta"], fuente: A2 },
 
-    "cuenta_corriente.cobro.titulo": {
-      usos: ["título de la pantalla y de la pestaña de cobrar un ticket a cuenta"],
-      fuente: B2B,
-    },
-    "cuenta_corriente.cobro.nota": {
-      usos: ["nota de la hoja: el cobro es por el total del ticket"],
-      fuente: B2B,
-    },
-    "cuenta_corriente.cobro.ticket_valor": {
-      usos: [COBRAR + " (valor del ticket: número, canal y fecha)"],
-      fuente: B2B,
-    },
-    "cuenta_corriente.cobro.vencia_el": {
-      usos: ["rótulo del vencimiento del cargo en la hoja"],
-      fuente: B2B,
-    },
-    "cuenta_corriente.cobro.total_a_cobrar": {
-      usos: ["rótulo del total del ticket en la hoja"],
-      fuente: B2B,
-    },
-    "cuenta_corriente.cobro.medio": {
-      usos: ["rótulo del selector de medio de cobro"],
-      fuente: B2B,
-    },
-    "cuenta_corriente.cobro.caja": { usos: ["rótulo del selector de caja"], fuente: B2B },
-    "cuenta_corriente.cobro.caja_opcion": {
-      usos: [COBRAR + " (opción de caja: caja, sucursal y sesión abierta hoy)"],
-      fuente: B2B,
-    },
-    "cuenta_corriente.cobro.entra_en_la_caja": {
-      usos: [COBRAR + " (fecha de la caja elegida)"],
-      fuente: B2B,
-    },
-    "cuenta_corriente.cobro.cobrar": {
-      usos: ["botón «Cobrar» con el importe del ticket"],
-      fuente: B2B,
-    },
-    "cuenta_corriente.cobro.cobrado_detalle": {
-      usos: [COBRAR + " (estado «Cobrado»: ticket, fecha, medio, importe y saldo del cliente)"],
-      fuente: B2B,
-    },
-    "cuenta_corriente.cobro.sin_caja": {
-      usos: ["aviso cuando no hay caja abierta hoy; «Cobrar» queda apagado"],
-      fuente: B2B,
-    },
-    "cuenta_corriente.cobro.ver_cuenta": {
-      usos: ["enlace del estado «Cobrado» que vuelve a la ficha"],
-      fuente: B2B,
-    },
-    "cuenta_corriente.cobro.cobrar_otro": {
-      usos: ["enlace del estado «Cobrado» que abre el siguiente cargo pendiente"],
-      fuente: B2B,
-    },
-    "cuenta_corriente.cobro.boton_de_la_ficha": {
-      usos: ["botón de la ficha del cliente que abre la hoja de cobro"],
-      fuente: B2B,
-    },
+    ...TEXTOS_DE_LA_FICHA_DE_COBRAR_A_CUENTA,
     "cuenta_corriente.vender.titulo": {
       usos: ["título de la hoja «Vender a cuenta corriente» y botón del cobro que la abre"],
       fuente: VENDER,
