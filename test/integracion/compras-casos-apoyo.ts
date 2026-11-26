@@ -120,7 +120,7 @@ export async function montarCompras(
   /** La barrera de la ronda en curso: cada transacción espera tras leer su autorización hasta que llegaron todas. */
   let barrera: () => Promise<void> = () => Promise.resolve();
   /** Una falla inyectada en un punto de «Comprar y recibir» (para probar que no queda nada a medias). */
-  let falla: "oferta" | "lineas" | "libro" | "libro-pago" | null = null;
+  let falla: "oferta" | "lineas" | "libro" | "libro-pago" | "libro-nota" | null = null;
   let condicionDeIva: CondicionDeIvaDeLaEmpresa | null = "RESPONSABLE_INSCRIPTO";
   /** El libro real; con `inyectarFalla("libro")` falla en lugar de asentar (para probar que no queda nada a medias). */
   const libroConFalla = () => {
@@ -134,7 +134,29 @@ export async function montarCompras(
         throw new Error("falla inyectada en el libro");
       }
     };
+    // `libro-nota` solo falla en las notas: para probar que la nota no queda a medias.
+    const caeNota = () => {
+      if (falla === "libro" || falla === "libro-nota") {
+        throw new Error("falla inyectada en el libro");
+      }
+    };
     return {
+      registrarNotaDeCredito: (...a: Parameters<typeof real.registrarNotaDeCredito>) => {
+        caeNota();
+        return real.registrarNotaDeCredito(...a);
+      },
+      anularNotaDeCredito: (...a: Parameters<typeof real.anularNotaDeCredito>) => {
+        caeNota();
+        return real.anularNotaDeCredito(...a);
+      },
+      registrarNotaDeDebito: (...a: Parameters<typeof real.registrarNotaDeDebito>) => {
+        caeNota();
+        return real.registrarNotaDeDebito(...a);
+      },
+      anularNotaDeDebito: (...a: Parameters<typeof real.anularNotaDeDebito>) => {
+        caeNota();
+        return real.anularNotaDeDebito(...a);
+      },
       registrarCargo: (...a: Parameters<typeof real.registrarCargo>) => {
         cae();
         return real.registrarCargo(...a);
@@ -382,7 +404,7 @@ export async function montarCompras(
     alcances,
     /** Las dependencias reales de los casos de uso (para armar uno con otro parámetro, por ejemplo el tope de la exportación). */
     dependencias,
-    inyectarFalla: (punto: "oferta" | "lineas" | "libro" | "libro-pago" | null) => {
+    inyectarFalla: (punto: "oferta" | "lineas" | "libro" | "libro-pago" | "libro-nota" | null) => {
       falla = punto;
     },
     armarBarrera: (participantes: number) => {

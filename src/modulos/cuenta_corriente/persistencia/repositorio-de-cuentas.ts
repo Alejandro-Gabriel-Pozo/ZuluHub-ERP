@@ -41,6 +41,8 @@ export interface RepositorioDeCuentasDeClientes {
     empresa: EmpresaId,
     parteId: string,
   ): Promise<CuentaGuardada | null>;
+  /** Todas las fichas de la empresa (CC-4: la lista de clientes con cuenta), por parte: un orden estable para que dos lecturas den lo mismo. */
+  listar(empresa: EmpresaId): Promise<readonly CuentaGuardada[]>;
   /** La ficha habilitada con esa clave de idempotencia; `null` si nadie la usó. */
   obtenerPorClave(empresa: EmpresaId, clave: string): Promise<CuentaGuardada | null>;
   /**
@@ -115,6 +117,16 @@ export function crearRepositorioDeCuentasDeClientes(
         .forUpdate()
         .executeTakeFirst();
       return fila === undefined ? null : aCuenta(fila);
+    },
+
+    async listar(empresa) {
+      const filas = await db
+        .selectFrom("cuenta_del_cliente")
+        .selectAll()
+        .where("empresa_id", "=", empresa)
+        .orderBy("parte_id")
+        .execute();
+      return filas.map(aCuenta);
     },
 
     async obtenerPorClave(empresa, clave) {

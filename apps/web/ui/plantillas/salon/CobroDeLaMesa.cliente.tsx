@@ -6,6 +6,7 @@ import { PantallaDeCobro } from "../cobrar/PantallaDeCobro.cliente";
 import type { CobroPreparado, TicketAnulado, VentaCobrada } from "../cobrar/modelo-de-cobro";
 import type { PapelDeTicket } from "../cobrar/PapelDelTicket.cliente";
 import type { TextosDeCobrar } from "../cobrar/textos-de-cobrar";
+import type { TextosDeDividirEnElCobro } from "../cobrar/textos-de-dividir-en-el-cobro";
 import { RUTA_DEL_SALON, rutaDeLaCuentaDeMesa } from "./rutas-del-salon";
 
 type Accion<R> = (pedido: unknown) => Promise<Respuesta<R>>;
@@ -19,6 +20,8 @@ export type PropsDeCobroDeLaMesa = Readonly<{
   /** Lo que la página resolvió en el servidor: la caja y las opciones, o por qué no se puede cobrar. */
   preparado: CobroPreparado;
   textos: TextosDeCobrar;
+  /** Los textos de «Dividir la cuenta» por porcentaje (SAL-E3): un ticket cobrado con varios cobros. */
+  textosDeDividir: TextosDeDividirEnElCobro;
   /** Solo al cobrar una cuenta de una mesa dividida: sus textos y si es la última (la mesa queda libre y «Volver» lleva al salón). */
   deLaDivision?:
     Readonly<{ ultima: boolean; volverALasCuentas: string; mesaCobrada: string }> | undefined;
@@ -40,6 +43,7 @@ export function CobroDeLaMesa({
   total,
   preparado,
   textos,
+  textosDeDividir,
   deLaDivision,
   acciones,
 }: PropsDeCobroDeLaMesa) {
@@ -50,6 +54,7 @@ export function CobroDeLaMesa({
       total={total}
       preparado={preparado}
       textos={textos}
+      dividirPorPorcentaje={textosDeDividir}
       cobrar={acciones.cobrar}
       anular={acciones.anular}
       imprimir={acciones.imprimir}

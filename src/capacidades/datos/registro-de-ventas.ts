@@ -23,6 +23,10 @@ const PROPOSITO = (para: string): Proposito => ({ para, fuente: FUENTE_DE_LA_VEN
 const FILA_DE_COBRO = "apps/web/ui/plantillas/cobrar/FilaDeCobro.cliente.tsx";
 const DATOS_DEL_MEDIO = "apps/web/ui/plantillas/cobrar/DatosDelMedio.cliente.tsx";
 const ANULAR_EL_TICKET = "apps/web/ui/plantillas/cobrar/AnularElTicket.cliente.tsx";
+// SAL-E3: dividir por porcentaje dentro del cobro de una mesa (la hoja carga las filas de cobro).
+const DIVIDIR_EN_EL_COBRO = "apps/web/ui/plantillas/cobrar/HojaDeDividirEnElCobro.cliente.tsx";
+const FUENTE_DE_DIVIDIR_POR_PORCENTAJE =
+  "Pedernal-docs/11-especificaciones/conceptos/dividir-la-cuenta.md (por porcentaje es un solo ticket con varios cobros) y dividir-y-unir-rehacer-maquetas.md §5, la decisión del dueño del 14/11/2026 (porcentaje con 2 decimales, un solo botón «Dividir la cuenta») y la maqueta `salon.html` (hoja «Por porcentaje», aprobada el 09/11/2026)";
 const FUENTE_DEL_COBRO =
   "Pedernal-docs/11-especificaciones/conceptos/pantalla-cobrar.md y servidor-del-mostrador-minimo.md §7; la maqueta de venta rápida `venta-rapida-v4.html` (zona cobro, carpeta de prototipos de Pedernal-docs 10-ux-ui); decisión 129 (datos opcionales del cobro) y filas 171, 172 y 175 de 11-especificaciones/decisiones-del-dueno-2026-11.md";
 const PROPOSITO_DEL_COBRO = (para: string): Proposito => ({ para, fuente: FUENTE_DEL_COBRO });
@@ -67,6 +71,18 @@ export const DATOS_DE_VENTAS = {
       ),
     ],
     consumidores: [FILA_DE_COBRO],
+    ponerPor: ["tickets.cobrar"],
+    requiere: REQUIERE_VENTAS,
+  },
+  "porcentaje-de-la-parte": {
+    ficha: "src/primitivas/cantidad/porcentaje.ts",
+    propositos: [
+      {
+        para: "Porcentaje de cada parte, de la 2 en adelante, al dividir por porcentaje la cuenta de una mesa en el cobro: de 0 a 100 con hasta 2 decimales; la parte 1 es el resto hasta 100 %. La pantalla solo propone los importes de cada cobro; el servidor exige que sumen el total al centavo.",
+        fuente: FUENTE_DE_DIVIDIR_POR_PORCENTAJE,
+      },
+    ],
+    consumidores: [DIVIDIR_EN_EL_COBRO],
     ponerPor: ["tickets.cobrar"],
     requiere: REQUIERE_VENTAS,
   },

@@ -24,6 +24,7 @@ import {
   type TxDeConsultasDeCuentaCorriente,
   type TxDeCuentaCorriente,
 } from "../../src/modulos/cuenta_corriente/publico";
+import { crearRepositoriosDeClientes } from "../../src/modulos/clientes/publico";
 import { crearRepositorioDeEmpresas, type EmpresasDb } from "../../src/modulos/empresas/publico";
 import { crearRepositorioDeTenants, type TenantsDb } from "../../src/modulos/tenants/publico";
 import {
@@ -74,6 +75,7 @@ export function crearEntornoDeCuentaCorriente(
       tenants: crearRepositorioDeTenants(db.withTables<TenantsDb>()),
       empresas: crearRepositorioDeEmpresas(db.withTables<EmpresasDb>()),
       ...crearRepositoriosDeCuentaCorriente(db),
+      ...crearRepositoriosDeClientes(db),
       auditoria: crearAuditoriaDePostgres(db.withTables<AuditoriaDb>()),
       autorizacion,
     });

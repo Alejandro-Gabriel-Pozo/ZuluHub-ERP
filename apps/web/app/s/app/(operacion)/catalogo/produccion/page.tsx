@@ -1,4 +1,5 @@
 import { pantallaDeOperacion } from "../../../../../../pantallas/operacion";
+import { puedeAbrirOrdenes } from "../../../../../../servidor/ofertas-de-produccion";
 import { cargarLasOrdenes } from "../../../../../../servidor/produccion";
 import { ErrorDelDetalle } from "../../../../../../ui/patrones/ErrorDelDetalle";
 import { leerElFiltroDeEstado } from "../../../../../../ui/plantillas/produccion/filtros-de-ordenes";
@@ -19,7 +20,11 @@ export default async function PaginaDeProduccion({ searchParams }: PropsDePagina
     const respuesta = await cargarLasOrdenes(contexto, { estado });
     return (
       <PantallaDeListaDeOrdenes
-        lista={respuesta.ok ? armarLaLista(respuesta.dato, estado) : null}
+        lista={
+          respuesta.ok
+            ? armarLaLista(respuesta.dato, estado, {}, { abrir: await puedeAbrirOrdenes(contexto) })
+            : null
+        }
         error={respuesta.ok ? null : <ErrorDelDetalle error={respuesta.error} />}
       />
     );

@@ -48,6 +48,14 @@ export const CLASES_DE_ASIENTO: readonly ClaseDeAsiento[] = [
     exigeDetalle: false,
     admiteVencimiento: false,
   },
+  // La nota de débito del proveedor (siembra 0110, L3a): un cargo suelto que se paga aparte.
+  {
+    sentido: "A_PAGAR",
+    clase: "NOTA_DE_DEBITO_DE_COMPRA",
+    signo: "+",
+    exigeDetalle: false,
+    admiteVencimiento: false,
+  },
   {
     sentido: "A_PAGAR",
     clase: "CREDITO_A_FAVOR",

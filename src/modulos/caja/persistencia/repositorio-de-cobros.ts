@@ -60,6 +60,15 @@ export interface RepositorioDeCobros {
   datosPendientes(empresa: EmpresaId, cobroId: string): Promise<readonly DatoDelCobro[] | null>;
   /** Los cobros de un origen, ordenados por su posición dentro de él. Solo lectura. */
   deOrigen(empresa: EmpresaId, origen: ReferenciaOpaca): Promise<CobroDeOrigenGuardado[]>;
+  /**
+   * Los cobros de VARIOS orígenes del mismo tipo en una sola lectura (CC-4: el medio de cada cobranza de la cuenta corriente, sin una consulta por cobranza). Cada cobro trae el id del
+   * origen del que sale; ordenados por origen y posición. Solo lectura.
+   */
+  deVariosOrigenes(
+    empresa: EmpresaId,
+    tipo: string,
+    ids: readonly string[],
+  ): Promise<(CobroDeOrigenGuardado & Readonly<{ origenId: string }>)[]>;
   /** Las marcas de tarjeta ACTIVAS (la lista `MARCAS_DE_TARJETA`), por nombre. Solo lectura. */
   marcasActivas(): Promise<MarcaDeTarjeta[]>;
   /** ¿Es esta una marca de tarjeta activa? Un texto que no es un UUID no puede serlo. */
@@ -104,76 +113,16 @@ export function crearRepositorioDeCobros(db: Kysely<CajaDb>): RepositorioDeCobro
 
     async deOrigen(empresa, origen) {
       if (!esUuid(origen.id)) return [];
-      const cobros = await db
-        .selectFrom("cobro as co")
-        .innerJoin("movimiento_caja as m", (unir) =>
-          unir.onRef("m.id", "=", "co.movimiento_id").onRef("m.empresa_id", "=", "co.empresa_id"),
-        )
-        .innerJoin("sesion_caja as s", (unir) =>
-          unir.onRef("s.id", "=", "m.sesion_id").onRef("s.empresa_id", "=", "m.empresa_id"),
-        )
-        .innerJoin("medio_de_pago as md", (unir) =>
-          unir
-            .onRef("md.id", "=", "m.medio_de_pago_id")
-            .onRef("md.empresa_id", "=", "m.empresa_id"),
-        )
-        .select([
-          "co.movimiento_id as cobro_id",
-          "m.sesion_id as sesion_id",
-          "co.origen_orden as origen_orden",
-          sql<string>`m.importe::text`.as("importe"),
-          "m.medio_de_pago_id as medio_de_pago_id",
-          "md.tipo as medio_tipo",
-          "m.cuenta_de_cobro_id as cuenta_de_cobro_id",
-          sql<string>`s.fecha_negocio::text`.as("fecha_negocio"),
-          "co.datos_pendientes as datos_pendientes",
-        ])
-        .where("co.empresa_id", "=", empresa)
-        .where("co.origen_tipo", "=", origen.tipo)
-        .where("co.origen_id", "=", origen.id)
-        .orderBy("co.origen_orden")
-        .execute();
-      if (cobros.length === 0) return [];
-      const correcciones = await db
-        .selectFrom("correccion_de_medio as k")
-        .innerJoin("medio_de_pago as md", (unir) =>
-          unir
-            .onRef("md.id", "=", "k.medio_despues_id")
-            .onRef("md.empresa_id", "=", "k.empresa_id"),
-        )
-        .select([
-          "k.cobro_id as cobro_id",
-          "k.secuencia as secuencia",
-          "k.medio_despues_id as medio_despues_id",
-          "md.tipo as medio_despues_tipo",
-          "k.cuenta_despues_id as cuenta_despues_id",
-        ])
-        .where("k.empresa_id", "=", empresa)
-        .where(
-          "k.cobro_id",
-          "in",
-          cobros.map((c) => c.cobro_id),
-        )
-        .orderBy("k.secuencia")
-        .execute();
-      return cobros.map((c) => ({
-        cobroId: c.cobro_id,
-        sesionId: c.sesion_id,
-        origenOrden: c.origen_orden,
-        importe: importeDesdeTexto(ARS, c.importe),
-        medioDePagoId: c.medio_de_pago_id,
-        medioTipo: c.medio_tipo,
-        cuentaDeCobroId: c.cuenta_de_cobro_id,
-        fechaDeNegocio: c.fecha_negocio as FechaCivil,
-        datosPendientes: c.datos_pendientes as DatoDelCobro[],
-        correcciones: correcciones
-          .filter((k) => k.cobro_id === c.cobro_id)
-          .map((k) => ({
-            secuencia: k.secuencia,
-            medioDespuesId: k.medio_despues_id,
-            medioDespuesTipo: k.medio_despues_tipo,
-            cuentaDespuesId: k.cuenta_despues_id,
-          })),
+      const cobros = await leerCobrosDeOrigenes(db, empresa, origen.tipo, [origen.id]);
+      return cobros.map((c) => c.cobro);
+    },
+
+    async deVariosOrigenes(empresa, tipo, ids) {
+      const validos = ids.filter(esUuid);
+      if (validos.length === 0) return [];
+      return (await leerCobrosDeOrigenes(db, empresa, tipo, validos)).map((c) => ({
+        ...c.cobro,
+        origenId: c.origenId,
       }));
     },
 
@@ -207,4 +156,85 @@ export function crearRepositorioDeCobros(db: Kysely<CajaDb>): RepositorioDeCobro
       return fila !== undefined;
     },
   };
+}
+
+/** La lectura de los cobros de uno o varios orígenes con sus correcciones de medio (la comparten `deOrigen` y `deVariosOrigenes`); `ids` ya son UUID y no está vacío. */
+async function leerCobrosDeOrigenes(
+  db: Kysely<CajaDb>,
+  empresa: EmpresaId,
+  tipo: string,
+  ids: readonly string[],
+): Promise<Readonly<{ origenId: string; cobro: CobroDeOrigenGuardado }>[]> {
+  const cobros = await db
+    .selectFrom("cobro as co")
+    .innerJoin("movimiento_caja as m", (unir) =>
+      unir.onRef("m.id", "=", "co.movimiento_id").onRef("m.empresa_id", "=", "co.empresa_id"),
+    )
+    .innerJoin("sesion_caja as s", (unir) =>
+      unir.onRef("s.id", "=", "m.sesion_id").onRef("s.empresa_id", "=", "m.empresa_id"),
+    )
+    .innerJoin("medio_de_pago as md", (unir) =>
+      unir.onRef("md.id", "=", "m.medio_de_pago_id").onRef("md.empresa_id", "=", "m.empresa_id"),
+    )
+    .select([
+      "co.movimiento_id as cobro_id",
+      "co.origen_id as origen_id",
+      "m.sesion_id as sesion_id",
+      "co.origen_orden as origen_orden",
+      sql<string>`m.importe::text`.as("importe"),
+      "m.medio_de_pago_id as medio_de_pago_id",
+      "md.tipo as medio_tipo",
+      "m.cuenta_de_cobro_id as cuenta_de_cobro_id",
+      sql<string>`s.fecha_negocio::text`.as("fecha_negocio"),
+      "co.datos_pendientes as datos_pendientes",
+    ])
+    .where("co.empresa_id", "=", empresa)
+    .where("co.origen_tipo", "=", tipo)
+    .where("co.origen_id", "in", ids)
+    .orderBy("co.origen_id")
+    .orderBy("co.origen_orden")
+    .execute();
+  if (cobros.length === 0) return [];
+  const correcciones = await db
+    .selectFrom("correccion_de_medio as k")
+    .innerJoin("medio_de_pago as md", (unir) =>
+      unir.onRef("md.id", "=", "k.medio_despues_id").onRef("md.empresa_id", "=", "k.empresa_id"),
+    )
+    .select([
+      "k.cobro_id as cobro_id",
+      "k.secuencia as secuencia",
+      "k.medio_despues_id as medio_despues_id",
+      "md.tipo as medio_despues_tipo",
+      "k.cuenta_despues_id as cuenta_despues_id",
+    ])
+    .where("k.empresa_id", "=", empresa)
+    .where(
+      "k.cobro_id",
+      "in",
+      cobros.map((c) => c.cobro_id),
+    )
+    .orderBy("k.secuencia")
+    .execute();
+  return cobros.map((c) => ({
+    origenId: c.origen_id,
+    cobro: {
+      cobroId: c.cobro_id,
+      sesionId: c.sesion_id,
+      origenOrden: c.origen_orden,
+      importe: importeDesdeTexto(ARS, c.importe),
+      medioDePagoId: c.medio_de_pago_id,
+      medioTipo: c.medio_tipo,
+      cuentaDeCobroId: c.cuenta_de_cobro_id,
+      fechaDeNegocio: c.fecha_negocio as FechaCivil,
+      datosPendientes: c.datos_pendientes as DatoDelCobro[],
+      correcciones: correcciones
+        .filter((k) => k.cobro_id === c.cobro_id)
+        .map((k) => ({
+          secuencia: k.secuencia,
+          medioDespuesId: k.medio_despues_id,
+          medioDespuesTipo: k.medio_despues_tipo,
+          cuentaDespuesId: k.cuenta_despues_id,
+        })),
+    },
+  }));
 }

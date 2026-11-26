@@ -64,9 +64,12 @@ export {
   crearRepositorioDeSaldos,
   type EstadoDeAsiento,
   type CargoPendiente,
+  type CargoPendienteDeParte,
   type LadoDePartida,
   type LineaDeCuenta,
+  type MovimientoDelLibro,
   type PartidaAbierta,
+  type SaldoDeParte,
   type RepositorioDeSaldos,
 } from "./persistencia/repositorio-de-saldos";
 export { anularAsientoEnTx, type AsientoAnulado } from "./casos-de-uso/anular-asiento";
@@ -81,9 +84,12 @@ export { registrarAsientoEnTx, type AsientoRegistrado } from "./casos-de-uso/reg
 export { traducirErroresDelLibro } from "./casos-de-uso/traducir";
 export {
   cargosAbiertos,
+  cargosAbiertosDeLasPartes,
   creditosAbiertos,
   estadoDeCuenta,
+  movimientosDeLasPartes,
   saldoDeParte,
   saldoPorCentroDeCosto,
+  saldosDeLasPartes,
   type LecturaDeSaldos,
 } from "./consultas/consultas";

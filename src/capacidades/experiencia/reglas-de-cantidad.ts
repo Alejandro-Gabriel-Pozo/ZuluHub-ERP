@@ -1,6 +1,10 @@
 import { DECIMALES_DE_CANTIDAD, ENTEROS_DE_CANTIDAD } from "../../primitivas/cantidad/cantidad";
 import { DECIMALES_DE_MERMA, ENTEROS_DE_MERMA } from "../../primitivas/cantidad/merma";
 import {
+  DECIMALES_DEL_PORCENTAJE_DE_LA_PARTE,
+  ENTEROS_DEL_PORCENTAJE_DE_LA_PARTE,
+} from "../../primitivas/cuentas/reparto-por-porcentaje";
+import {
   DECIMALES_DE_PRECIO_UNITARIO,
   ENTEROS_DE_PRECIO_UNITARIO,
 } from "../../primitivas/dinero/precio-unitario";
@@ -26,4 +30,10 @@ export const REGLA_DE_MERMA: ReglaDeNumero = {
 export const REGLA_DE_COSTO_UNITARIO: ReglaDeNumero = {
   decimales: DECIMALES_DE_PRECIO_UNITARIO,
   enterosMaximos: ENTEROS_DE_PRECIO_UNITARIO,
+};
+
+/** El porcentaje de una parte al dividir la cuenta por porcentaje (SAL-E3): hasta 100 con 2 decimales (decisión del dueño, 14/11/2026), sin ceros de relleno. */
+export const REGLA_DE_PORCENTAJE_DE_LA_PARTE: ReglaDeNumero = {
+  decimales: DECIMALES_DEL_PORCENTAJE_DE_LA_PARTE,
+  enterosMaximos: ENTEROS_DEL_PORCENTAJE_DE_LA_PARTE,
 };

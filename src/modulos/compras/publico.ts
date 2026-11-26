@@ -6,15 +6,22 @@ export { DECLARACIONES as DECLARACIONES_DE_COMPRAS } from "./casos-de-uso/declar
 export { DECLARACIONES_DE_CONSULTAS as DECLARACIONES_DE_CONSULTAS_DE_COMPRAS } from "./consultas/declaraciones";
 export { crearCasosDeUsoDeCompras, type CasosDeUsoDeCompras } from "./casos-de-uso/casos-de-uso";
 export {
+  CLASE_DE_LA_NOTA_DE_CREDITO,
+  CLASE_DE_LA_NOTA_DE_DEBITO,
   CLASE_DEL_CARGO_DE_FACTURA,
   CLASE_DEL_PAGO,
+  DETALLE_DE_LA_ANULACION_DE_LA_NOTA,
   DETALLE_DE_LA_ANULACION_DEL_CARGO,
   DETALLE_DE_LA_ANULACION_DEL_PAGO,
+  ORIGEN_DE_LA_NOTA,
   ORIGEN_DEL_CARGO_DE_FACTURA,
   ORIGEN_DEL_PAGO,
+  claveDeLaAnulacionDeLaNota,
   claveDeLaAnulacionDelCargo,
   claveDeLaAnulacionDelPago,
+  claveDeLaImputacionDeLaNota,
   claveDeLaImputacionDelPago,
+  claveDeLaNota,
   claveDelCargo,
   claveDelPago,
 } from "./dominio/cargo-de-factura";
