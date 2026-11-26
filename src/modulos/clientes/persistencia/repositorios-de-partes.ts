@@ -7,6 +7,7 @@ import type { TipoDeVinculo } from "../dominio/vinculos";
 import { normalizarParaBusqueda, nombreCompletoDeParte } from "../dominio/busqueda";
 import { digitosDeTelefono } from "../dominio/duplicados";
 import type { ClientesDb } from "./esquema";
+import { anonimizarParteEnDb, apagarRelacionesEnDb } from "./anonimizacion-de-partes";
 import { aParte, aRol, aVinculo, esUuid } from "./filas";
 import type { Parte, RolGuardadoDeParte, VinculoGuardado } from "./modelo";
 
@@ -85,6 +86,19 @@ export interface RepositorioDePartes {
     datos: DatosDeParte,
   ): Promise<Parte | null>;
   cambiarEstado(empresa: EmpresaId, id: string, estado: EstadoDeParte): Promise<Parte | null>;
+  /**
+   * Vacía TODOS los datos personales de la parte y la deja `ANONIMIZADA`, en un solo `UPDATE` (la base fija `anonimizada_en` y la versión, y exige que no quede
+   * ningún dato). Solo una parte que todavía no está anonimizada; `null` si no hay fila para anonimizar. Se llama con la parte bloqueada (`bloquear`).
+   */
+  anonimizar(empresa: EmpresaId, id: string): Promise<Parte | null>;
+  /**
+   * Apaga los roles activos de la parte y los vínculos en los que participa (activos o no) y les vacía el cargo, que es un dato personal. Devuelve cuántos roles y
+   * cuántos vínculos cambió (solo números, para la auditoría). Repetirlo no cambia nada.
+   */
+  apagarRelacionesDe(
+    empresa: EmpresaId,
+    parteId: string,
+  ): Promise<Readonly<{ roles: number; vinculos: number }>>;
   /** Las partes que coinciden con lo buscado, sin ordenar (hasta `TOPE_DE_CANDIDATOS_DE_BUSQUEDA`), por nombre de búsqueda e id. */
   candidatos(empresa: EmpresaId, filtro: FiltroDeCandidatos): Promise<Parte[]>;
   /** Las partes que comparten el email, los dígitos del teléfono o el nombre de búsqueda con lo dado (sin la propia). */
@@ -207,6 +221,8 @@ export function crearRepositorioDePartes(db: Kysely<ClientesDb>): RepositorioDeP
         .executeTakeFirst();
       return fila === undefined ? null : aParte(fila);
     },
+    anonimizar: (empresa, id) => anonimizarParteEnDb(db, empresa, id),
+    apagarRelacionesDe: (empresa, parteId) => apagarRelacionesEnDb(db, empresa, parteId),
     async candidatos(empresa, filtro) {
       const patron = `%${escaparParaLike(filtro.textoNormalizado)}%`;
       let consulta = partes()

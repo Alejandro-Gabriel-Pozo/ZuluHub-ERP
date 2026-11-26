@@ -182,7 +182,10 @@ export type FichaDeCompra = Readonly<{
   pagos: readonly Readonly<{
     id: string;
     fechaDePago: string;
+    /** El medio único, o `COMPUESTO` si el pago tiene varios (sus líneas, en `medios`). */
     medio: string;
+    /** Una línea por medio con lo que pagó (la suma es `importe`), en el orden de la lista de medios. */
+    medios: readonly Readonly<{ medio: string; importe: string }>[];
     importe: string;
     estado: string;
     registradoPor: string;
@@ -213,6 +216,13 @@ export async function fichaDeCompraDentro(
   const factura = await tx.comprobantesDeProveedor.delaRecepcion(contexto.empresaId, recepcion.id);
   const pagos =
     factura === null ? [] : await tx.pagosDeProveedor.deComprobante(contexto.empresaId, factura.id);
+  const mediosDeLosPagos = new Map<
+    string,
+    Awaited<ReturnType<typeof tx.pagosDeProveedor.mediosDe>>
+  >();
+  for (const p of pagos) {
+    mediosDeLosPagos.set(p.id, await tx.pagosDeProveedor.mediosDe(contexto.empresaId, p.id));
+  }
   const { lineas, importes, corregidas } = await importesVigentes(tx, contexto, [recepcion.id]);
   const productos = new Map(
     (
@@ -305,6 +315,7 @@ export async function fichaDeCompraDentro(
       id: p.id,
       fechaDePago: p.fechaDePago,
       medio: p.medio,
+      medios: mediosDeLosPagos.get(p.id) ?? [],
       importe: p.importe,
       estado: p.estado,
       registradoPor: p.registradoPor,

@@ -24,6 +24,7 @@ describe("la acción de servidor del papel del ticket expuesta a Next", () => {
   it("papelDelTicketAccion es asíncrona y está entre las acciones de cobrar", () => {
     expect(Object.keys(acciones).sort()).toEqual([
       "anularElTicketAccion",
+      "cobrarLaMesaAccion",
       "cobrarLaVentaAccion",
       "papelDelTicketAccion",
     ]);

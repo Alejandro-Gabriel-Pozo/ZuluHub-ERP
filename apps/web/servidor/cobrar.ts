@@ -11,9 +11,14 @@ import {
   type TicketAnuladoParaLaPantalla,
   type VentaCobradaParaLaPantalla,
 } from "../../../src/composicion/cobrar-web";
+import {
+  cobrarLaMesa,
+  type DependenciasDeCobrarMesaWeb,
+} from "../../../src/composicion/cobrar-mesa-web";
 import type { ContextoOperativo } from "../../../src/contexto/contexto";
 import { web } from "./composicion";
 import { conLaEmpresa } from "./con-la-empresa";
+import { sucursalDeTrabajo } from "./salon";
 import { dependenciasDeSesion } from "./sesion";
 import { sucursalDelPedido } from "./sucursal-elegida";
 
@@ -34,6 +39,11 @@ export type {
 const dependencias: DependenciasDeCobrarWeb = {
   casosDeUso: web.casosDeUsoDeVentas,
   consultas: web.consultasDeVentas,
+  respuesta: dependenciasDeSesion.respuesta,
+};
+
+const dependenciasDeLaMesa: DependenciasDeCobrarMesaWeb = {
+  casosDeUso: web.casosDeUsoDeSalon,
   respuesta: dependenciasDeSesion.respuesta,
 };
 
@@ -66,6 +76,20 @@ export function cobrarLaVentaDelMostrador(
     const sucursal = await laSucursal(contexto);
     if (!sucursal.ok) return sucursal;
     return cobrarLaVenta(dependencias, contexto, sucursal.dato, pedido);
+  });
+}
+
+/**
+ * Cobra LA MESA (SAL-D): la cuenta que ya existe, en un acto y con la mesa libre al final (idempotente por la clave de la pantalla). La sucursal la fija el servidor (la de trabajo, validada contra el alcance); sin ninguna, el
+ * genérico. El permiso lo exige el caso de uso adentro (`cuentas.cerrar`, `tickets.cobrar` y `cuentas.anular`).
+ */
+export function cobrarLaMesaDelSalon(
+  pedido: unknown,
+): Promise<Respuesta<VentaCobradaParaLaPantalla>> {
+  return conLaEmpresa(async (contexto) => {
+    const sucursal = await sucursalDeTrabajo(contexto);
+    if (!sucursal.ok) return sucursal;
+    return cobrarLaMesa(dependenciasDeLaMesa, contexto, sucursal.dato, pedido);
   });
 }
 

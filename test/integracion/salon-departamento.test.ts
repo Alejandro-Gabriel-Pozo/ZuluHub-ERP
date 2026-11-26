@@ -158,6 +158,7 @@ describe.skipIf(base === null)("salón: el departamento sale del producto", () =
     const origen = await conPedido(e, [c.producto]);
     const r = valorDe(
       await m.salon.unirMesas(e.gerente, {
+        sucursalDeTrabajo: e.sucursal,
         unionId: nuevoId(),
         cuentaDestinoId: destino,
         cuentaOrigenId: origen,

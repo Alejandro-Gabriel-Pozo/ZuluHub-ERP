@@ -29,6 +29,8 @@ export type EntradaDeUnirMesas = Readonly<{
   cuentaOrigenId: string;
   /** `^[A-Za-z0-9_-]{16,128}$`, por intento (idempotencia). */
   clave: string;
+  /** La sucursal con la que trabaja quien une (la fija el servidor): una cuenta de OTRA, o sin ella, es como si no existiera (`CUENTA_NO_ENCONTRADA`); incluida la de reserva en una repetición. */
+  sucursalDeTrabajo: string;
 }>;
 
 export type SalidaDeUnirMesas = Readonly<{
@@ -93,6 +95,7 @@ async function unir(
   for (const c of [destino, origen]) {
     const alcance = await exigirAlcance(tx, contexto, c.sucursalId);
     if (!alcance.ok) return alcance;
+    if (entrada.sucursalDeTrabajo !== c.sucursalId) return err("CUENTA_NO_ENCONTRADA");
   }
 
   // Idempotencia: la misma unión (mismo id o misma clave) con lo mismo devuelve lo hecho; con otra cosa, nunca se pisa.

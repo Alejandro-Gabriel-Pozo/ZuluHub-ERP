@@ -10,3 +10,7 @@ export const RUTA_DE_LA_CUENTA_DE_MESA = `${RUTA_DEL_SALON}/cuenta`;
 /** La ficha de una mesa; el id viaja codificado (nunca se arma una ruta con un texto crudo). */
 export const rutaDeLaCuentaDeMesa = (mesaId: string): string =>
   `${RUTA_DE_LA_CUENTA_DE_MESA}/${encodeURIComponent(mesaId)}`;
+
+/** «Cobrar» la mesa (SAL-D): la hoja de cobro de la cuenta de esa mesa; el id viaja codificado. */
+export const rutaDeCobrarLaMesa = (mesaId: string): string =>
+  `${rutaDeLaCuentaDeMesa(mesaId)}/cobrar`;

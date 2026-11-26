@@ -47,6 +47,8 @@ const textosDelFormulario = () => {
     motivo: t.motivo,
     sinElegir: t.sinElegir,
     declararPago: t.declararPago,
+    agregarMedio: t.agregarMedio,
+    quitar: t.quitar,
     medios: {
       EFECTIVO: t.medioDePago("EFECTIVO"),
       TARJETA_DEBITO: t.medioDePago("TARJETA_DEBITO"),
@@ -158,6 +160,65 @@ describe("FormularioDeDeclararPago", () => {
     expect(datos.get("medio")).toBe("EFECTIVO");
     expect(datos.get("cajaId")).toBe(CAJAS[1]?.cajaId);
     expect(datos.get("motivo")).toBe("Pago de la factura");
+  });
+
+  it("«Agregar medio» suma una fila con su importe; cada medio sale una sola vez; «Quitar» la saca; con varios viajan los medios con su importe, la caja y el motivo; sin violaciones de accesibilidad", async () => {
+    const accion = vi.fn<AccionDeDeclarar>(() => Promise.resolve(DECLARAR_PAGO_INICIAL));
+    await render(
+      <FormularioDeDeclararPago
+        accion={accion}
+        importe="$ 2.420,00"
+        hoy="2026-11-24"
+        cajas={CAJAS}
+        textos={textosDelFormulario()}
+      />,
+    );
+    expect(page.getByRole("button", { name: "Quitar" }).elements()).toHaveLength(0);
+    await userEvent.selectOptions(page.getByLabelText("Medio"), "EFECTIVO");
+    tocar(page.getByRole("button", { name: "Agregar medio" }));
+    await expect.element(page.getByLabelText("Medio 2")).toBeVisible();
+    const segundo = page.getByLabelText("Medio 2").element() as HTMLSelectElement;
+    expect([...segundo.options].map((o) => o.value)).not.toContain("EFECTIVO");
+    await userEvent.selectOptions(page.getByLabelText("Medio 2"), "QR");
+    const enviar = page.getByRole("button", { name: "Declarar pago" });
+    await userEvent.selectOptions(page.getByLabelText("Caja"), CAJAS[0]?.cajaId ?? "");
+    await userEvent.fill(page.getByLabelText("Motivo"), "Pago de la factura");
+    await expect.element(enviar).toBeDisabled();
+    await userEvent.fill(page.getByLabelText("Importe 1"), "1000");
+    await userEvent.fill(page.getByLabelText("Importe 2"), "1420");
+    await expect.element(enviar).toBeEnabled();
+    expect(await violacionesDeAccesibilidad(document.body)).toEqual([]);
+    tocar(enviar);
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    const datos = accion.mock.calls[0]?.[1] as FormData;
+    expect(datos.getAll("medio")).toEqual(["EFECTIVO", "QR"]);
+    expect(datos.getAll("importe")).toEqual(["1000.00", "1420.00"]);
+    expect(datos.get("cajaId")).toBe(CAJAS[0]?.cajaId);
+  });
+
+  it("al quitar la segunda fila vuelve el pago de un solo medio, sin importe que escribir", async () => {
+    const accion = vi.fn<AccionDeDeclarar>(() => Promise.resolve(DECLARAR_PAGO_INICIAL));
+    await render(
+      <FormularioDeDeclararPago
+        accion={accion}
+        importe="$ 2.420,00"
+        hoy="2026-11-24"
+        cajas={CAJAS}
+        textos={textosDelFormulario()}
+      />,
+    );
+    await userEvent.selectOptions(page.getByLabelText("Medio"), "TRANSFERENCIA");
+    tocar(page.getByRole("button", { name: "Agregar medio" }));
+    await expect.element(page.getByLabelText("Medio 2")).toBeVisible();
+    tocar(page.getByRole("button", { name: "Quitar" }).nth(1));
+    await vi.waitFor(() => expect(page.getByLabelText("Importe").elements()).toHaveLength(0));
+    const enviar = page.getByRole("button", { name: "Declarar pago" });
+    await expect.element(enviar).toBeEnabled();
+    tocar(enviar);
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    const datos = accion.mock.calls[0]?.[1] as FormData;
+    expect(datos.getAll("medio")).toEqual(["TRANSFERENCIA"]);
+    expect(datos.getAll("importe")).toEqual([]);
   });
 
   it("volver a otro medio saca la caja y el motivo del envío", async () => {
