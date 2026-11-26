@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { texto } from "../../src/capacidades/vocabulario/vocabulario";
 import {
   armarLosLotes,
+  hrefDeCorregir,
+  hrefDeReasignar,
+  loteParaCorregir,
+  loteParaReasignar,
   armarLosVencimientos,
   hrefDeLotes,
   hrefDeVencimientos,
@@ -28,6 +32,8 @@ const LOTES: LotesDeLaComposicion = {
       existencia: "3.0000",
       disponible: "3.0000",
       sinAsignar: false,
+      version: 3,
+      depositos: [{ depositoId: "d1", existencia: "3.0000" }],
     },
     {
       loteId: "l2",
@@ -36,8 +42,11 @@ const LOTES: LotesDeLaComposicion = {
       existencia: "1.5000",
       disponible: "0.0000",
       sinAsignar: true,
+      version: 1,
+      depositos: [{ depositoId: "d1", existencia: "1.5000" }],
     },
   ],
+  control: { activo: true },
 };
 const VENCEN: VencimientosDeLaComposicion = {
   dias: 7,
@@ -142,5 +151,68 @@ describe("modelo de lotes", () => {
     });
     expect(leerLosLotes({ vista: "vencimientos" })).toEqual({ vencimientos: true });
     expect(leerLosLotes({ vista: "" }).vencimientos).toBe(false);
+  });
+});
+
+describe("escritura de lotes (STK-E1)", () => {
+  it("las direcciones de Corregir y Reasignar llevan el artículo y el lote escapados", () => {
+    expect(hrefDeCorregir("a 1", "l&2")).toBe("/stock/lotes/corregir?articulo=a+1&lote=l%262");
+    expect(hrefDeReasignar("a1", "l2")).toBe("/stock/lotes/reasignar?articulo=a1&lote=l2");
+  });
+
+  it("«Corregir» se ofrece en el lote con fechas, no en el «Sin asignar»; «Reasignar» solo en el «Sin asignar» con existencia positiva", () => {
+    const v = armarLosLotes(LOTES, textoDe);
+    expect(v.filas.map((f) => [f.hrefDeCorregir, f.hrefDeReasignar])).toEqual([
+      ["/stock/lotes/corregir?articulo=a1&lote=l1", null],
+      [null, "/stock/lotes/reasignar?articulo=a1&lote=l2"],
+    ]);
+    for (const existencia of ["0.0000", "-2.0000"]) {
+      const sin = armarLosLotes(
+        { ...LOTES, lotes: LOTES.lotes.map((l) => (l.sinAsignar ? { ...l, existencia } : l)) },
+        textoDe,
+      );
+      expect(sin.filas[1]?.hrefDeReasignar, existencia).toBeNull();
+    }
+  });
+
+  it("el artículo se ve controlado solo con el control activo; sin artículo no hay ninguna dirección", () => {
+    expect(armarLosLotes(LOTES, textoDe).controlado).toBe(true);
+    expect(armarLosLotes({ ...LOTES, control: { activo: false } }, textoDe).controlado).toBe(false);
+    expect(armarLosLotes({ ...LOTES, control: null }, textoDe).controlado).toBe(false);
+    const vacio = armarLosLotes({ ...LOTES, articuloId: null }, textoDe);
+    expect(vacio.filas.every((f) => f.hrefDeCorregir === null && f.hrefDeReasignar === null)).toBe(
+      true,
+    );
+  });
+
+  it("el lote a corregir es uno del artículo con fechas y trae su versión", () => {
+    expect(loteParaCorregir(LOTES, "l1")).toEqual({
+      codigo: "Q-1104",
+      vence: "2026-12-02",
+      version: 3,
+    });
+    expect(loteParaCorregir(LOTES, "l2")).toBeNull();
+    expect(loteParaCorregir(LOTES, "otro")).toBeNull();
+    expect(loteParaCorregir(LOTES, undefined)).toBeNull();
+  });
+
+  it("reasignar: sale del «Sin asignar» con existencia, solo en los depósitos donde la tiene, y va a lotes que ya existen", () => {
+    const depositos = [
+      { id: "d1", nombre: "Salón" },
+      { id: "d2", nombre: "Cocina" },
+    ];
+    expect(loteParaReasignar(LOTES, "l2", depositos, textoDe)).toEqual({
+      origen: "Sin asignar",
+      unidadId: "KILOGRAMO",
+      depositos: [{ valor: "d1", etiqueta: "Salón" }],
+      destinos: [{ valor: "l1", etiqueta: "Q-1104" }],
+    });
+    expect(loteParaReasignar(LOTES, "l1", depositos, textoDe)).toBeNull();
+    expect(loteParaReasignar(LOTES, "nada", depositos, textoDe)).toBeNull();
+    const sinExistencia = {
+      ...LOTES,
+      lotes: LOTES.lotes.map((l) => (l.sinAsignar ? { ...l, existencia: "0.0000" } : l)),
+    };
+    expect(loteParaReasignar(sinExistencia, "l2", depositos, textoDe)).toBeNull();
   });
 });

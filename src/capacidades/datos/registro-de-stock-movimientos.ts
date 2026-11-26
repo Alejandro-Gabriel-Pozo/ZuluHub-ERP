@@ -28,8 +28,12 @@ export const DATOS_DE_STOCK_MOVIMIENTOS = {
         "Depósito de la sucursal donde entra, sale, se transfiere o se ajusta existencia (solo los activos; en Entrada no los de Cuarentena ni Rechazo).",
       ),
     ],
-    consumidores: [CARPETA, GRILLA_DE_LA_CARGA],
-    ponerPor: TODAS,
+    consumidores: [
+      CARPETA,
+      GRILLA_DE_LA_CARGA,
+      "apps/web/ui/plantillas/stock/lotes/FormularioDeReasignarLote.cliente.tsx",
+    ],
+    ponerPor: [...TODAS, "lotes.reasignar"],
     requiere: REQUIERE_STOCK,
   },
   "articulo-de-stock": {
@@ -50,8 +54,12 @@ export const DATOS_DE_STOCK_MOVIMIENTOS = {
         "Cantidad del movimiento: mayor que cero, hasta cuatro decimales, en la unidad de stock del artículo.",
       ),
     ],
-    consumidores: [CARPETA, GRILLA_DE_LA_CARGA],
-    ponerPor: TODAS,
+    consumidores: [
+      CARPETA,
+      GRILLA_DE_LA_CARGA,
+      "apps/web/ui/plantillas/stock/lotes/FormularioDeReasignarLote.cliente.tsx",
+    ],
+    ponerPor: [...TODAS, "lotes.reasignar"],
     requiere: REQUIERE_STOCK,
   },
   "motivo-de-movimiento-de-stock": {
@@ -87,8 +95,17 @@ export const DATOS_DE_STOCK_MOVIMIENTOS = {
       CARPETA,
       "apps/web/ui/plantillas/stock/conteo/FormularioDeAplicarConteo.cliente.tsx",
       "apps/web/ui/plantillas/stock/conteo/FormularioDeCancelarConteo.cliente.tsx",
+      "apps/web/ui/plantillas/stock/lotes/FormularioDeCorregirLote.cliente.tsx",
+      "apps/web/ui/plantillas/stock/lotes/FormularioDeReasignarLote.cliente.tsx",
     ],
-    ponerPor: [...TODAS, "stock.anular", "conteos.aplicar", "conteos.cancelar"],
+    ponerPor: [
+      ...TODAS,
+      "stock.anular",
+      "conteos.aplicar",
+      "conteos.cancelar",
+      "lotes.corregir",
+      "lotes.reasignar",
+    ],
     requiere: REQUIERE_STOCK,
   },
   "sentido-de-ajuste": {

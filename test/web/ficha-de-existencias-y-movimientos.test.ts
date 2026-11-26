@@ -13,6 +13,10 @@ import {
   FICHA_DE_CONTEO_DE_STOCK,
   FICHA_DE_REVISION_DE_CONTEO_DE_STOCK,
 } from "../../src/capacidades/pantallas/ficha-de-conteo-de-stock";
+import {
+  FICHA_DE_CORREGIR_LOTE,
+  FICHA_DE_REASIGNAR_LOTE,
+} from "../../src/capacidades/pantallas/ficha-de-corregir-y-reasignar-lote";
 import { FICHA_DE_LOTES_DE_STOCK } from "../../src/capacidades/pantallas/ficha-de-lotes-de-stock";
 import { FICHA_DE_MOVIMIENTOS } from "../../src/capacidades/pantallas/ficha-de-movimientos";
 import {
@@ -64,6 +68,20 @@ const FICHAS: readonly {
     nombre: "Revisión del conteo",
     ficha: FICHA_DE_REVISION_DE_CONTEO_DE_STOCK,
     pagina: "conteo/revisar",
+    citas: true,
+    accesoDelMenu: false,
+  },
+  {
+    nombre: "Corregir lote",
+    ficha: FICHA_DE_CORREGIR_LOTE,
+    pagina: "lotes/corregir",
+    citas: true,
+    accesoDelMenu: false,
+  },
+  {
+    nombre: "Reasignar lote",
+    ficha: FICHA_DE_REASIGNAR_LOTE,
+    pagina: "lotes/reasignar",
     citas: true,
     accesoDelMenu: false,
   },
