@@ -9,6 +9,9 @@ import {
 import { restaurarConexion, tocar, violacionesDeAccesibilidad } from "../../web/ui/pruebas/ayudas";
 import { EditorDeBorrador, type PropsDeEditorDeBorrador } from "./editor-de-borrador.cliente";
 import { NuevoPlan } from "./nuevo-plan.cliente";
+import type * as ModuloDelEditor_ from "../logica/editor-de-plan";
+
+type ModuloDelEditor = typeof ModuloDelEditor_;
 
 /**
  * Planes de la consola (cliente): una clave de idempotencia por intento reusada en cada reintento, un doble toque que envía una sola vez, los valores fijados al primer toque, la publicación que guarda
@@ -21,7 +24,7 @@ vi.mock("../app/planes/acciones", () => ({
 }));
 // Hoy ningún módulo del catálogo real está en desarrollo (cuenta_corriente se abrió el 26/11/2026): para probar la etiqueta «En desarrollo» del editor se marca uno en una COPIA de la lista que arma la lógica.
 vi.mock("../logica/editor-de-plan", async (original) => {
-  const real = await original<typeof import("../logica/editor-de-plan")>();
+  const real = await original<ModuloDelEditor>();
   return {
     ...real,
     modulosParaElegir: () =>
