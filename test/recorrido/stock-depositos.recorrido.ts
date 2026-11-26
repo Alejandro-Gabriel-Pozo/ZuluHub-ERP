@@ -232,6 +232,36 @@ describe.skipIf(base === null || !stockAbierto)("recorrido de depósitos de stoc
     vigilante.tomar();
   });
 
+  it("la pestaña «Lotes» carga limpia, lleva a Vencimientos con su horizonte, y un artículo ajeno o unos días fuera de rango dan el genérico", async () => {
+    await articuloDeBase(mundo.mundo.dueno, { empresa: mundo.empresa });
+    await pagina.goto(`${mundo.url}/stock/existencias`);
+    await pagina.getByRole("main").getByRole("link", { name: "Lotes" }).click();
+    await pagina.waitForURL((url) => url.pathname === "/stock/lotes");
+    await pagina.getByRole("navigation", { name: "Artículo" }).waitFor();
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    await pagina.getByRole("link", { name: "Vencimientos" }).click();
+    await pagina.waitForURL((url) => url.search === "?vista=vencimientos");
+    await pagina.getByRole("link", { name: "Vence en los próximos 7 días" }).waitFor();
+    await pagina.getByRole("link", { name: "Vence en los próximos 30 días" }).click();
+    await pagina.waitForURL((url) => url.search === "?vista=vencimientos&dias=30");
+    expect(
+      await pagina
+        .getByRole("link", { name: "Vence en los próximos 30 días" })
+        .getAttribute("aria-current"),
+    ).toBe("page");
+    expect(await violacionesGravesDeAxe(pagina)).toEqual([]);
+    expect(vigilante.tomar()).toEqual([]);
+    for (const ruta of [
+      "/stock/lotes?articulo=00000000-0000-4000-8000-000000000000",
+      "/stock/lotes?vista=vencimientos&dias=366",
+    ]) {
+      const respuesta = await pagina.goto(`${mundo.url}${ruta}`);
+      expect(respuesta?.status(), ruta).toBe(200);
+      await pagina.getByText("Esta acción no está permitida").waitFor();
+    }
+    vigilante.tomar();
+  });
+
   it("registrar una entrada desde Existencias la deja en Movimientos una sola vez (doble clic) y anularla la marca «Anulado» con su espejo", async () => {
     const { articulo } = await articuloDeBase(mundo.mundo.dueno, { empresa: mundo.empresa });
     expect(articulo).toMatch(/^[0-9a-f-]{36}$/);

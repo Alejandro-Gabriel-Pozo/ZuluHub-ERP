@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   claveDeLaAnulacionDelCargo,
+  claveDeLaAnulacionDeLaNota,
   claveDeLaAnulacionDelPago,
+  claveDeLaImputacionDeLaNota,
+  claveDeLaNota,
   claveDeLaImputacionDelPago,
   claveDelCargo,
   claveDelPago,
@@ -52,6 +55,28 @@ describe("las claves del pago de una factura en el libro", () => {
       claveDeLaAnulacionDelPago(COMPROBANTE),
       claveDelCargo(COMPROBANTE),
       claveDeLaAnulacionDelCargo(COMPROBANTE),
+    ];
+    expect(new Set(claves).size).toBe(claves.length);
+  });
+});
+
+describe("las claves de una nota del proveedor en el libro", () => {
+  it("salen de la nota: la misma nota, las mismas claves; otra nota, otras; con la forma de clave de los libros", () => {
+    for (const clave of [claveDeLaNota, claveDeLaImputacionDeLaNota, claveDeLaAnulacionDeLaNota]) {
+      expect(clave(COMPROBANTE)).toBe(clave(COMPROBANTE));
+      expect(clave(COMPROBANTE)).not.toBe(clave(OTRO));
+      expect(clave(COMPROBANTE)).toMatch(/^[A-Za-z0-9_-]{16,128}$/);
+    }
+  });
+
+  it("el asiento, su imputación y su espejo no se pisan entre sí ni con las del cargo y del pago", () => {
+    const claves = [
+      claveDeLaNota(COMPROBANTE),
+      claveDeLaImputacionDeLaNota(COMPROBANTE),
+      claveDeLaAnulacionDeLaNota(COMPROBANTE),
+      claveDelCargo(COMPROBANTE),
+      claveDelPago(COMPROBANTE),
+      claveDeLaImputacionDelPago(COMPROBANTE),
     ];
     expect(new Set(claves).size).toBe(claves.length);
   });

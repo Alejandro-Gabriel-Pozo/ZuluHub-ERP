@@ -49,14 +49,18 @@ const ordenes: OrdenesDeLaLista = {
   ],
 };
 
-const pantalla = (lista: OrdenesDeLaLista = ordenes, estado: "" | "ABIERTA" = "") => (
+const pantalla = (
+  lista: OrdenesDeLaLista = ordenes,
+  estado: "" | "ABIERTA" = "",
+  abrir = false,
+) => (
   <ArmazonDeOperacion
     titulo={texto({}, "produccion.pantalla.produccion")}
     marca="Hotel del Lago"
     empresa="Café del Puerto"
     modulos={[]}
   >
-    <PantallaDeListaDeOrdenes lista={armarLaLista(lista, estado)} />
+    <PantallaDeListaDeOrdenes lista={armarLaLista(lista, estado, {}, { abrir })} />
   </ArmazonDeOperacion>
 );
 
@@ -97,6 +101,20 @@ afterEach(async () => {
 });
 
 describe("lista de órdenes de producción", () => {
+  it("«Nueva orden» es un enlace a la pantalla de alta, tocable y accesible, y solo está si se ofrece", async () => {
+    await ventana(390);
+    await render(pantalla(ordenes, "", true));
+    const nueva = page.getByRole("link", { name: "Nueva orden" });
+    await expect.element(nueva).toHaveAttribute("href", "/catalogo/produccion/nueva");
+    expect(await violacionesDeAccesibilidad(document.body, { pagina: true })).toEqual([]);
+    legibleYTocable();
+  });
+
+  it("sin la oferta no hay «Nueva orden»", async () => {
+    await render(pantalla());
+    expect(page.getByRole("link", { name: "Nueva orden" }).elements()).toHaveLength(0);
+  });
+
   it("en el celular: accesible como página, legible y tocable, con una tarjeta por orden", async () => {
     await ventana(390);
     await render(pantalla());

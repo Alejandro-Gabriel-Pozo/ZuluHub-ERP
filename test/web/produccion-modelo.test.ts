@@ -135,6 +135,17 @@ describe("armarLaLista", () => {
     expect(armarLaLista(lista, "ABIERTA").filtros.map((f) => f.actual)).toEqual([false, true]);
   });
 
+  it("«Nueva orden» sale solo si el servidor ofrece abrir (cualquier otra cosa, no)", () => {
+    expect(armarLaLista(lista, "", {}, { abrir: true }).nueva).toEqual({
+      href: "/catalogo/produccion/nueva",
+      texto: "Nueva orden",
+    });
+    expect(armarLaLista(lista, "").nueva).toBeNull();
+    expect(armarLaLista(lista, "", {}, {}).nueva).toBeNull();
+    expect(armarLaLista(lista, "", {}, { abrir: false }).nueva).toBeNull();
+    expect(armarLaLista(lista, "", {}, { abrir: undefined }).nueva).toBeNull();
+  });
+
   it("sin órdenes, «Sin resultados»", () => {
     expect(armarLaLista({ ordenes: [] }, "ABIERTA")).toMatchObject({
       filas: [],

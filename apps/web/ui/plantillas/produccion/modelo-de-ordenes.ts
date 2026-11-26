@@ -8,6 +8,7 @@ import type { TonoDeEstado } from "../../componentes/Insignia";
 import { formatearCantidad } from "../../patrones/formato-fiscal";
 import {
   direccionDeLaLista,
+  RUTA_DE_NUEVA_ORDEN,
   rutaDeLaOrden,
   type EstadoDelFiltroDeLaLista,
 } from "./filtros-de-ordenes";
@@ -93,7 +94,12 @@ export type ListaArmada = Readonly<{
   filas: readonly FilaDeOrden[];
   /** «Sin resultados» si no hay filas; `null` si las hay. */
   vacio: string | null;
+  /** «Nueva orden»: solo si el servidor ofrece abrir hoy; `null` si no. Una ayuda: abrir vuelve a pasar por el guard. */
+  nueva: Readonly<{ href: string; texto: string }> | null;
 }>;
+
+/** Qué se ofrece hoy en la lista (lo calcula el servidor con la oferta de `transformaciones.abrir`). */
+export type AccionesDeLaLista = Readonly<{ abrir?: boolean | undefined }>;
 
 /** «Todas» y «Abiertas»: los textos de la maqueta (`produccion.html`, línea 341), aceptados por delegación del dueño (DEC-0555). */
 const FILTROS = [
@@ -105,6 +111,7 @@ export function armarLaLista(
   lista: OrdenesDeLaLista,
   estado: EstadoDelFiltroDeLaLista,
   d: DiccionarioResuelto = {},
+  acciones: AccionesDeLaLista = {},
 ): ListaArmada {
   return {
     filtros: FILTROS.map((f) => ({
@@ -120,5 +127,9 @@ export function armarLaLista(
       cantidad: cantidadConUnidad(o.cantidad, o.unidadId, d),
     })),
     vacio: lista.ordenes.length === 0 ? texto(d, "catalogo.lista.sin_resultados") : null,
+    nueva:
+      acciones.abrir === true
+        ? { href: RUTA_DE_NUEVA_ORDEN, texto: texto(d, "produccion.pantalla.nueva_orden") }
+        : null,
   };
 }

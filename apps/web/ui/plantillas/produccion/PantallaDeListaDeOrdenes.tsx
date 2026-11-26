@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Aviso } from "../../componentes/Aviso";
+import { EnlaceDeAccion } from "../../componentes/EnlaceDeAccion";
 import { Insignia } from "../../componentes/Insignia";
 import type { ListaArmada } from "./modelo-de-ordenes";
 import estilos from "./PantallaDeListaDeOrdenes.module.css";
@@ -13,7 +14,7 @@ export type PropsDePantallaDeListaDeOrdenes = Readonly<{
 
 /**
  * La lista de órdenes de producción (maqueta `produccion.html`, 09/11/2026), solo lectura: los filtros «Todas» y «Abiertas» (enlaces, no campos) y una tarjeta por orden, que lleva a su
- * ficha: «Orden N · producto», el estado en texto y la cantidad con su unidad. Sin «Nueva orden» (otro tramo). Una lista vacía dice «Sin resultados» (aviso informativo). Sin textos
+ * ficha: «Orden N · producto», el estado en texto y la cantidad con su unidad. «Nueva orden» solo si el servidor la ofrece. Una lista vacía dice «Sin resultados» (aviso informativo). Sin textos
  * propios: todos llegan resueltos. El `h1` lo pone el armazón.
  */
 export function PantallaDeListaDeOrdenes({ lista, error }: PropsDePantallaDeListaDeOrdenes) {
@@ -22,6 +23,11 @@ export function PantallaDeListaDeOrdenes({ lista, error }: PropsDePantallaDeList
       {error ?? null}
       {lista === null ? null : (
         <>
+          {lista.nueva === null ? null : (
+            <div className={estilos["nueva"]}>
+              <EnlaceDeAccion href={lista.nueva.href}>{lista.nueva.texto}</EnlaceDeAccion>
+            </div>
+          )}
           <ul className={estilos["filtros"]}>
             {lista.filtros.map((filtro) => (
               <li key={filtro.href}>

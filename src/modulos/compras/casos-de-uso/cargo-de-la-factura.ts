@@ -12,8 +12,9 @@ type R<S> = Resultado<S, ErrorDeCompras>;
  * al asentar): quien paga, anula un pago o anula la factura bloquea en el mismo orden, así que dos operaciones a la vez sobre la misma factura y proveedor se turnan sin abrazo mortal.
  * Un error del libro deshace TODA la transacción (la factura no queda sin su cargo).
  *
- * ORDEN DE BLOQUEO (el único lugar donde está escrito): COMPROBANTE, después el PAGO y por último la PARTE del libro. Lo cumplen registrar y anular la factura, declarar el pago y anular el pago (que antes bloqueaba el pago primero:
- * cruzado con anular la factura era un abrazo mortal posible). Chequeo: `compras-pago-en-el-libro.test.ts` (dos actores, las tres combinaciones).
+ * ORDEN DE BLOQUEO (el único lugar donde está escrito): el COMPROBANTE de la FACTURA, después la NOTA (su comprobante), el PAGO y por último la PARTE del libro. Lo cumplen registrar y anular la factura, declarar y anular el pago (que
+ * antes bloqueaba el pago primero: cruzado con anular la factura era un abrazo mortal posible) y registrar y anular una nota de crédito (la base bloquea la factura al insertar la nota; anular la nota bloquea primero la factura).
+ * Chequeo: `compras-pago-en-el-libro.test.ts` y `compras-nota-en-el-libro.test.ts` (dos actores, todas las combinaciones).
  */
 export async function asentarElCargoDeLaFactura(
   tx: TxDeCompras,
@@ -78,5 +79,35 @@ export async function anularElPagoDeLaFactura(
   pagoId: string,
 ): Promise<R<null>> {
   const espejo = await dependencias.libroDeProveedores.anularPago(tx, contexto, { pagoId });
+  return espejo.ok ? ok(null) : err(espejo.error);
+}
+
+/**
+ * La nota de crédito en el libro (L3a): el asiento de nota imputado contra el cargo de su factura (lo que sobre de lo pendiente queda como saldo a favor de la empresa). Lo llama el caso de uso que guarda la nota AL FINAL de su
+ * transacción, con la factura ya bloqueada por la base. Un error del libro deshace TODO: la nota no queda sin su asiento.
+ */
+export async function asentarLaNotaDeCredito(
+  tx: TxDeCompras,
+  contexto: ContextoOperativo,
+  dependencias: DependenciasDeCompras,
+  datos: Readonly<{ notaId: string; facturaId: string; importe: string }>,
+): Promise<R<null>> {
+  const asiento = await dependencias.libroDeProveedores.registrarNotaDeCredito(tx, contexto, {
+    ...datos,
+    hechoEn: contexto.ahora,
+  });
+  return asiento.ok ? ok(null) : err(asiento.error);
+}
+
+/** El espejo de la nota de crédito al anularla: sin asiento (una nota anterior al libro) falla cerrado, igual que el cargo y el pago. */
+export async function anularLaNotaDeCredito(
+  tx: TxDeCompras,
+  contexto: ContextoOperativo,
+  dependencias: DependenciasDeCompras,
+  notaId: string,
+): Promise<R<null>> {
+  const espejo = await dependencias.libroDeProveedores.anularNotaDeCredito(tx, contexto, {
+    notaId,
+  });
   return espejo.ok ? ok(null) : err(espejo.error);
 }

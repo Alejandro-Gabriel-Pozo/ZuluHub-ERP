@@ -36,6 +36,7 @@ export type CodigoDelLibroDeProveedores =
   | "LIBRO_DE_SALDOS_RECHAZADO"
   | "ASIENTO_DE_LA_FACTURA_NO_ENCONTRADO"
   | "ASIENTO_DEL_PAGO_NO_ENCONTRADO"
+  | "ASIENTO_DE_LA_NOTA_NO_ENCONTRADO"
   | "CLAVE_REUTILIZADA"
   | "SIN_PERMISO";
 
@@ -74,6 +75,49 @@ export type LibroDeProveedores = Readonly<{
     tx: TxDeCompras,
     contexto: ContextoOperativo,
     entrada: Readonly<{ pagoId: string; comprobanteId: string; importe: string; hechoEn: Date }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+  /**
+   * La nota de crédito (L3a): un asiento de nota (resta) por `importe` a nombre del proveedor de la factura, repartido por centro de costo contra lo PENDIENTE del cargo, imputado contra el cargo hasta lo que quede
+   * pendiente (lo que sobre queda como saldo a favor de la empresa). Sin cargo (factura anterior al libro) falla cerrado. Repetido con la misma nota devuelve lo hecho.
+   */
+  registrarNotaDeCredito(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ notaId: string; facturaId: string; importe: string; hechoEn: Date }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+  /** El espejo de la nota de crédito (deshace su imputación): sin asiento (una nota anterior al libro) falla cerrado (`ASIENTO_DE_LA_NOTA_NO_ENCONTRADO`). */
+  anularNotaDeCredito(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ notaId: string }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+  /**
+   * La nota de débito (L3a, la usa NOTAS-1): un cargo SUELTO del proveedor (suma, sin imputar: se paga aparte), con la distribución por sucursal de la factura vinculada si hay y tiene cargo, o «sin centro de costo».
+   * Repetido con la misma nota devuelve lo hecho.
+   */
+  registrarNotaDeDebito(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{
+      notaId: string;
+      proveedorId: string;
+      facturaId: string | null;
+      importe: string;
+      hechoEn: Date;
+    }>,
+  ): Promise<
+    Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
+  >;
+  anularNotaDeDebito(
+    tx: TxDeCompras,
+    contexto: ContextoOperativo,
+    entrada: Readonly<{ notaId: string }>,
   ): Promise<
     Resultado<Readonly<{ asientoId: string; yaExistia: boolean }>, CodigoDelLibroDeProveedores>
   >;
