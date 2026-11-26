@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "INFRAESTRUCTURA",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Las celdas de texto del archivo que podrían leerse como fórmula llevan una comilla simple antepuesta.",
   "que_cambia": "Aplica a los textos que empiezan con igual, más, menos, arroba, tabulador o retorno de carro. Previene la inyección de fórmulas. Revertir: quitar textoInofensivo de celdas-de-xlsx.ts.",
-  "donde": "Condiciones del orquestador del 25/11/2026; celdas-de-xlsx.ts"
+  "donde": "Condiciones del orquestador del 25/11/2026; celdas-de-xlsx.ts; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja D, fila del ID)"
 }

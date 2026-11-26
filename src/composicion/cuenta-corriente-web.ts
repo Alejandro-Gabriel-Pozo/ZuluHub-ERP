@@ -9,7 +9,7 @@ import type { Web } from "./web";
  * Las pantallas de la cuenta corriente de clientes (CC-5, A1): la lista de clientes con cuenta y la ficha con su estado de cuenta. Cada una es una LECTURA (no escribe ni audita) que ya trae su permiso
  * (`cuenta_corriente.ver`), su aislamiento por empresa y su transacción. Acá solo se arma el pedido y se presenta lo que la pantalla necesita:
  *  - **La empresa y la persona salen del contexto**, nunca del pedido; un campo de más en el pedido es el genérico.
- *  - Todo sale campo por campo (lista de permitidos): nada del ficha interna (ni su clave ni su huella ni su versión) y ningún id de persona.
+ *  - Todo sale campo por campo (lista de permitidos): nada de la ficha interna salvo su id y su versión (que las escrituras necesitan) y ningún id de persona; ni la clave ni la huella.
  *  - Los errores de negocio salen como el genérico («Esta acción no está permitida»): una ficha que no existe o es de otra empresa es indistinguible de un permiso que falta.
  * Previene: una lista o una ficha con datos de otra empresa o de otro cliente, un permiso decidido por la pantalla y un error crudo del módulo en el navegador. Chequeo: `test/integracion/cuenta-corriente-web.test.ts`.
  */
@@ -86,6 +86,9 @@ export function listarLasCuentas(
 
 export type FichaDeCuentaParaLaPantalla = Readonly<{
   parteId: string;
+  /** La ficha de cuenta (para suspender, reactivar y cambiar condiciones) y la versión que se vio: las acciones la devuelven como `versionEsperada` (control de versión optimista). Ninguna es un dato de otra persona. */
+  cuentaId: string;
+  version: number;
   nombre: string | null;
   cuit: string | null;
   estado: EstadoVisibleDelCliente;
@@ -124,6 +127,8 @@ export function fichaDeLaCuenta(
     (entrada) => d.consultas().verEstadoDeCuenta(contexto, { parteId: entrada.parteId }),
     (e): FichaDeCuentaParaLaPantalla => ({
       parteId: e.cuenta.parteId,
+      cuentaId: e.cuenta.id,
+      version: e.cuenta.version,
       nombre: e.cliente.nombre,
       cuit: e.cliente.cuit,
       estado: estadoVisible(e.cuenta.estado, e.excedido),

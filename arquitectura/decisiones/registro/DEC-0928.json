@@ -3,9 +3,9 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "SIN_DECISION",
-  "estado": "PENDIENTE_DE_OK",
-  "decision": "SUPUESTO: los clientes con base propia son una lista cerrada en migrar.yml, hoy vacía; sumar uno son dos líneas (opción y caso), nunca texto libre.",
-  "que_cambia": "Migrar un cliente nuevo exige un PR de dos líneas y su Environment con revisor. Revertir: borrar los casos y las opciones; sin cliente en la lista no cambia nada.",
-  "donde": ".github/workflows/migrar.yml (opciones y caso de validar); test/arquitectura/workflow-migrar.test.ts",
+  "estado": "CONFIRMADA",
+  "decision": "SUPUESTO: los clientes con base propia son una lista cerrada en migrar.yml, hoy con `cliente-hdn`; sumar uno son dos líneas (opción y caso), nunca texto libre.",
+  "que_cambia": "Migrar un cliente nuevo exige un PR de dos líneas y su Environment con revisor. Revertir: borrar los casos y las opciones; hoy el único es `cliente-hdn` (el hotel).",
+  "donde": ".github/workflows/migrar.yml (opciones y caso de validar); test/arquitectura/workflow-migrar.test.ts; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)",
   "motivo": "Técnica: lista blanca; un texto libre apuntaría a un Environment sin revisor (GitHub lo crea vacío); el dueño decidió el extra de plan el 25/11/2026."
 }

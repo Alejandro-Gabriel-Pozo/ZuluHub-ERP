@@ -89,6 +89,20 @@ describe("listarUsuarios", () => {
     expect(JSON.stringify(r)).not.toMatch(/token|hash|sucursales|quien-invito|emitid/i);
   });
 
+  it("una persona con rol propio sale con el NOMBRE de su rol; sin el nombre falla en voz alta (no parece otro rol)", async () => {
+    const propio = { ...miembro(A, "a@x.test"), rol: "PROPIO", rolPropioNombre: "Cajero" };
+    const r = await listarUsuarios(dependencias(ok([propio]), ok([])), CONTEXTO);
+    expect(r).toMatchObject({
+      ok: true,
+      dato: { usuarios: [{ rol: { propio: "Cajero" } }] },
+    });
+    const sinNombre = await listarUsuarios(
+      dependencias(ok([{ ...propio, rolPropioNombre: null }]), ok([])),
+      CONTEXTO,
+    );
+    expect(sinNombre.ok).toBe(false);
+  });
+
   it("si falla la lista de miembros, falla todo y no se pide la otra", async () => {
     const llamadas: string[] = [];
     const r = await listarUsuarios(
@@ -217,6 +231,12 @@ describe("las sucursales de un empleado (U4)", () => {
     });
     expect(llamadas).toEqual([["listarSucursales", { incluirInactivas: false }]]);
     expect(JSON.stringify(r)).not.toMatch(/no-tiene-que-salir|zonaHoraria|version|horaDeCorte/);
+  });
+
+  it("quien tiene un rol propio activo SÍ tiene editor de sucursales (lo delegado vale solo en las suyas)", async () => {
+    const propio = { ...miembro(A, "a@x.test"), rol: "PROPIO", rolPropioNombre: "Cajero" };
+    const r = await editorDeSucursalesDeUsuario(deps(ok([propio])), CONTEXTO, { personaId: A });
+    expect(r).toMatchObject({ ok: true, dato: [{ id: "suc-1" }, { id: "suc-2" }] });
   });
 
   it("para un gerente, un administrador o un desactivado no hay editor (null) y ni se piden las sucursales", async () => {

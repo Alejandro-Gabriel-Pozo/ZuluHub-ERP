@@ -19,13 +19,10 @@ export type RolDeLaMembresia = RolDeEmpresa | "PROPIO";
 export const ROLES_DE_LA_MEMBRESIA = [...ROLES_DE_EMPRESA, "PROPIO"] as const;
 
 /**
- * El rol tal como lo muestran HOY las pantallas: solo los tres base. Un rol propio llega a las pantallas con las pantallas de roles (T6, con su inventario de textos aprobado);
- * hasta entonces falla en voz alta en vez de mostrarse como otro rol. Previene: que una persona con rol propio aparezca como «Empleado» o «Administrador» en una lista.
- * Chequeo: `roles.test.ts`.
+ * El rol BASE que las pantallas traducen con el vocabulario (`rol.<x>.nombre`); un rol propio (`PROPIO`) no tiene texto de marca (su nombre lo escribe el gerente): devuelve `null` y cada pantalla
+ * decide qué mostrar (la lista de usuarios, el nombre; la elección de empresa y la cuenta, nada). Previene: que una persona con rol propio aparezca como «Empleado» o «Administrador» en una lista
+ * (el antiguo `rolParaMostrar` fallaba en voz alta hasta que T6 definió cómo se muestra). Chequeo: `roles.test.ts`.
  */
-export function rolParaMostrar(rol: RolDeLaMembresia): RolDeEmpresa {
-  if (rol === "PROPIO") {
-    throw new RangeError("el rol propio todavía no se muestra en las pantallas");
-  }
-  return rol;
+export function rolBaseParaMostrar(rol: RolDeLaMembresia): RolDeEmpresa | null {
+  return rol === "PROPIO" ? null : rol;
 }

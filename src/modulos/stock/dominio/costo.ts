@@ -139,7 +139,8 @@ export type CorreccionDeCosto = Readonly<{
  * aplica la diferencia:
  *  - con costo anterior: `nuevo = promedio + (costoNuevo − costoAnterior) × queda ÷ cantidadValorizada`, con `queda` acotada a lo valorizado (la existencia sin costo no
  *    tiene qué corregir) y el redondeo de la política vigente; sin unidades valorizadas, o sin nada que quede, el estado no cambia;
- *  - sin costo anterior (la compra entró sin precio): lo que queda entra al promedio con el costo nuevo.
+ *  - sin costo anterior (la compra entró sin precio): lo que queda, acotado a las unidades sin costo (existencia − valorizada), entra al promedio con el costo nuevo;
+ *    si todas las unidades ya tienen costo, el estado no cambia. Invariante: la cantidad valorizada nunca pasa de la existencia.
  * `COSTO_RESULTANTE_INVALIDO` si el promedio quedaría en cero o negativo (la estimación se pasó): no se aplica y la corrección no sigue.
  */
 export function corregirPromedio(
@@ -151,9 +152,15 @@ export function corregirPromedio(
     correccion.existenciaActual.unidades,
   );
   if (queda <= 0n) return ok(estado);
-  const cantidadQueQueda = cantidadDeUnidades(queda);
   if (correccion.costoAnterior === null) {
-    return ok(entrar(estado, cantidadQueQueda, costoDefinitivo(correccion.costoNuevo)));
+    // La compra entró sin precio: solo pueden ganar costo las unidades que hoy NO lo tienen (existencia − valorizada). Sin este tope lo valorizado pasaba
+    // de lo que hay y el promedio ponderaba unidades que no existen.
+    const sinCosto = correccion.existenciaActual.unidades - estado.cantidadValorizada.unidades;
+    if (sinCosto <= 0n) return ok(estado);
+    const aplicables = minimoDe(queda, sinCosto);
+    return ok(
+      entrar(estado, cantidadDeUnidades(aplicables), costoDefinitivo(correccion.costoNuevo)),
+    );
   }
   // Stryker disable next-line ConditionalExpression: sin promedio la cantidad valorizada es cero (invariante de `entrar`), y el segundo lado ya lo cubre
   if (estado.promedio === null || estado.cantidadValorizada.unidades <= 0n) return ok(estado);

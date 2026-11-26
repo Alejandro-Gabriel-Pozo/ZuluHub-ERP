@@ -11,6 +11,7 @@ import { armarRegistrarFactura } from "./registrar-factura";
 import { armarAnularRecepcionPendiente, armarConfirmarRecepcion } from "./confirmar-recepcion";
 import { armarRegistrarRecepcion } from "./registrar-recepcion";
 import { armarCrearOrden, armarEditarOrden } from "./ordenes";
+import { armarCambiarElComprobanteDeLaCompra } from "./cambiar-comprobante-de-la-compra";
 import { armarReemplazarFactura } from "./reemplazar-factura";
 import { armarAnularNotaDeCredito, armarRegistrarNotaDeCredito } from "./notas-de-credito";
 import { armarAnularNotaDeDebito, armarRegistrarNotaDeDebito } from "./notas-de-debito";
@@ -51,6 +52,7 @@ export function crearCasosDeUsoDeCompras(dependencias: DependenciasDeCompras) {
     registrarFactura: armarRegistrarFactura(dependencias),
     anularFactura: armarAnularFactura(dependencias),
     reemplazarFactura: armarReemplazarFactura(dependencias),
+    cambiarElComprobanteDeLaCompra: armarCambiarElComprobanteDeLaCompra(dependencias),
     conciliarFactura: armarConciliarFactura(dependencias),
     anularConciliacion: armarAnularConciliacion(dependencias),
     crearOrden: armarCrearOrden(dependencias),

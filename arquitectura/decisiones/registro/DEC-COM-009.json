@@ -3,8 +3,8 @@
   "fecha": "2026-11-26",
   "quien": "padre",
   "tipo": "PERMISOS",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Tres acciones nuevas para la nota de débito del proveedor, sin piso de solo gerente: ver (los tres roles), registrar y anular (gerente y administrador), como las de la nota de crédito.",
   "que_cambia": "Quién puede cargar y anular notas de débito. Revertir: cambiar los roles en permisos-de-compras.ts y volver a generar la declaración de plantillas; las plantillas por empresa son configurables.",
-  "donde": "permisos-de-compras.ts, catalogo-compras.ts, 0094 (bloque de semilla), plantillas-declaradas.json; criterio del orquestador del 26/11/2026"
+  "donde": "permisos-de-compras.ts, catalogo-compras.ts, 0094 (bloque de semilla), plantillas-declaradas.json; criterio del orquestador del 26/11/2026; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)"
 }

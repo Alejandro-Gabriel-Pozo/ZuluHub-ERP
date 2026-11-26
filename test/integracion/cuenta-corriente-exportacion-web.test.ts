@@ -198,7 +198,7 @@ describe.skipIf(base === null)("composición web: archivo de la cuenta corriente
     expect(nombre).toBe("cuenta_corriente_2026-11-09.xlsx");
     expect(zip.get("xl/workbook.xml")).toContain('name="Cuenta corriente"');
     const encabezados = [...(filas.get(1)?.values() ?? [])].map((x) => x.valor);
-    // Los textos que el catálogo ya tiene aprobados se reutilizan; los diez nuevos están en DEC-CCL-006.
+    // Los textos que el catálogo ya tiene aprobados se reutilizan; los diez nuevos están en DEC-CCL-007.
     for (const esperado of [
       "Cliente",
       "Importe",

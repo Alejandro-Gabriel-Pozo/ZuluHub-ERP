@@ -5,7 +5,13 @@ import { MAXIMO_DE_RENGLONES } from "../modulos/stock/publico";
 import { err, ok, type Resultado } from "../primitivas/resultado/resultado";
 import type { DependenciasDeRespuesta } from "./a-respuesta";
 import { enBlanco } from "./entradas-de-movimientos";
-import { decimal, identificador, leer, type ErrorDeEntrada } from "./entradas-de-facturacion";
+import {
+  decimal,
+  identificador,
+  leer,
+  texto,
+  type ErrorDeEntrada,
+} from "./entradas-de-facturacion";
 import { accionDeStock } from "./errores-de-stock";
 import type { Web } from "./web";
 
@@ -32,7 +38,14 @@ export type DependenciasDeCargaInicialWeb = Readonly<{
 }>;
 
 const formaDeRenglon = z
-  .object({ articuloId: identificador, cantidad: decimal, costoUnitario: decimal.optional() })
+  .object({
+    articuloId: identificador,
+    cantidad: decimal,
+    costoUnitario: decimal.optional(),
+    /** Solo de un artículo controlado por lote (STK-E2b): el código del lote y su vencimiento; el servidor valida la forma y las reglas. En blanco = ausente. */
+    loteCodigo: texto.optional(),
+    loteVence: texto.optional(),
+  })
   .strict();
 const formaDeCarga = z
   .object({
@@ -50,6 +63,8 @@ export type EntradaWebDeCargaInicial = Readonly<{
     articuloId: string;
     cantidad: string;
     costoUnitario: string | undefined;
+    loteCodigo: string | undefined;
+    loteVence: string | undefined;
   }>[];
   /** La persona vio el aviso «este depósito ya tiene existencia» y lo confirmó. */
   confirmar: boolean;
@@ -68,6 +83,8 @@ export function entradaDeCargaInicial(
           articuloId: r.articuloId,
           cantidad: r.cantidad,
           costoUnitario: enBlanco(r.costoUnitario),
+          loteCodigo: enBlanco(r.loteCodigo),
+          loteVence: enBlanco(r.loteVence),
         })),
         confirmar: f.valor.confirmar === "1",
       })
@@ -77,7 +94,13 @@ export function entradaDeCargaInicial(
 export type OpcionesDeCargaInicial = Readonly<{
   /** Solo los depósitos de uso `Normal` activos de la sucursal. */
   depositos: readonly Readonly<{ id: string; nombre: string }>[];
-  articulos: readonly Readonly<{ id: string; nombre: string; unidadId: string }>[];
+  articulos: readonly Readonly<{
+    id: string;
+    nombre: string;
+    unidadId: string;
+    /** Cómo se controla por lote hoy, o `null` (ayuda para ofrecer «Lote» y «Vence» en la fila). */
+    controlDeLote: "LOTE" | "LOTE_Y_VENCIMIENTO" | null;
+  }>[];
 }>;
 
 /** Lo que ofrece la grilla: los depósitos `Normal` activos de la sucursal y los artículos que se pueden mover. */
@@ -105,6 +128,7 @@ export function opcionesParaLaCargaInicial(
         id: x.articuloId,
         nombre: x.nombre,
         unidadId: x.unidadId,
+        controlDeLote: x.controlDeLote,
       })),
     }),
   );
@@ -136,11 +160,26 @@ export function registrarLaCargaInicial(
       for (const r of e.renglones) {
         const articulo = porId.get(r.articuloId);
         if (articulo === undefined) return err("ARTICULO_NO_CONTROLADO" as const);
+        // Un vencimiento sin código no es un lote: pedido mal formado, nunca se ignora en silencio. UN lote por fila (SUPUESTO, DEC-STK-007): su cantidad es la de la fila.
+        if (r.loteCodigo === undefined && r.loteVence !== undefined) {
+          return err("RENGLONES_INVALIDOS" as const);
+        }
         renglones.push({
           productoId: articulo.productoId,
           cantidad: r.cantidad,
           unidadId: articulo.unidadId,
           costoUnitario: r.costoUnitario,
+          ...(r.loteCodigo === undefined
+            ? {}
+            : {
+                lotes: [
+                  {
+                    codigo: r.loteCodigo,
+                    fechaDeVencimiento: r.loteVence ?? null,
+                    cantidad: r.cantidad,
+                  },
+                ],
+              }),
         });
       }
       return d.casosDeUso().registrarEntrada(contexto, {

@@ -13,17 +13,17 @@ import { encabezadosDeCabecera, rotulosDeExportacion } from "./compras-exportaci
 
 /**
  * Los textos del archivo de la cuenta corriente (CC-5 D; dueño, 26/11/2026: «usen textos de la exportación de Compras»). Ninguno se escribe a mano: todos salen del catálogo, y los diez que no
- * existían se asentaron en `DEC-CCL-006` (`textos-de-exportacion-de-cuenta-corriente.ts`). Un valor sin texto (una clase de asiento no prevista, un medio que el catálogo no conoce) sale con
+ * existían se asentaron en `DEC-CCL-007` (`textos-de-exportacion-de-cuenta-corriente.ts`). Un valor sin texto (una clase de asiento no prevista, un medio que el catálogo no conoce) sale con
  * su código estable: nunca un texto inventado. Previene: un encabezado o un valor escrito a mano que nadie aprobó. Chequeo: `cuenta-corriente-exportacion-textos.test.ts`.
  */
 
 const t = (clave: Parameters<typeof texto>[1]): string => texto({}, clave);
 
 const TEXTO_DE_TRAMO: Readonly<Record<TramoDeAntiguedad, () => string>> = {
-  DE_0_A_30: () => t("cuenta_corriente.exportacion.tramo_0_a_30"),
-  DE_31_A_60: () => t("cuenta_corriente.exportacion.tramo_31_a_60"),
-  DE_61_A_90: () => t("cuenta_corriente.exportacion.tramo_61_a_90"),
-  MAS_DE_90: () => t("cuenta_corriente.exportacion.tramo_mas_de_90"),
+  DE_0_A_30: () => t("exportacion_de_cuenta_corriente.tramo_0_a_30"),
+  DE_31_A_60: () => t("exportacion_de_cuenta_corriente.tramo_31_a_60"),
+  DE_61_A_90: () => t("exportacion_de_cuenta_corriente.tramo_61_a_90"),
+  MAS_DE_90: () => t("exportacion_de_cuenta_corriente.tramo_mas_de_90"),
 };
 
 /** Las columnas que la exportación de compras ya tiene aprobadas: se piden con la misma función (fecha de negocio, moneda, sucursal, medio de pago y estado). */
@@ -45,8 +45,8 @@ function encabezados(): Readonly<Record<ColumnaDeLaExportacion, string>> {
     importe_con_signo: t("ventas.cobro.importe"),
     pendiente: t("fiscal.pantalla.config_cartel_pendiente"),
     moneda: compras["moneda"] as string,
-    antiguedad_en_dias: t("cuenta_corriente.exportacion.antiguedad_en_dias"),
-    tramo_de_antiguedad: t("cuenta_corriente.exportacion.tramo_de_antiguedad"),
+    antiguedad_en_dias: t("exportacion_de_cuenta_corriente.antiguedad_en_dias"),
+    tramo_de_antiguedad: t("exportacion_de_cuenta_corriente.tramo_de_antiguedad"),
     vencida: t("cuenta_corriente.movimiento.vencida"),
     origen: t("cuenta_corriente.movimiento.origen_del_movimiento"),
     sucursal: compras["sucursal"] as string,
@@ -69,7 +69,7 @@ function tiposDeMedioConocidos(): Readonly<Record<string, string>> {
 function origenes(): Readonly<Record<OrigenDeLaExportacion, string>> {
   const textos: Readonly<Record<OrigenDeLaExportacion, string>> = {
     TICKET: t("fiscal.pantalla.imprimir_formato_ticket"),
-    COBRANZA: t("cuenta_corriente.exportacion.cobranza"),
+    COBRANZA: t("exportacion_de_cuenta_corriente.cobranza"),
     OTRO: t("caja.medios.tipo.otro"),
   };
   return Object.fromEntries(ORIGENES_DE_LA_EXPORTACION.map((o) => [o, textos[o]])) as Readonly<
@@ -89,14 +89,14 @@ export function rotulosDeLaExportacionDeCuentaCorriente(): RotulosDeLaExportacio
     ) as RotulosDeLaExportacion["tramos"],
     origenes: origenes(),
     estados: {
-      VIGENTE: t("cuenta_corriente.exportacion.vigente"),
+      VIGENTE: t("exportacion_de_cuenta_corriente.vigente"),
       ANULADO: t("caja.estado.anulado"),
     },
-    si: t("cuenta_corriente.exportacion.si"),
-    no: t("cuenta_corriente.exportacion.no"),
+    si: t("exportacion_de_cuenta_corriente.si"),
+    no: t("exportacion_de_cuenta_corriente.no"),
     clases: {
       CARGO_DE_VENTA_A_CUENTA: t("cuenta_corriente.movimiento.venta_a_cuenta"),
-      COBRANZA: t("cuenta_corriente.exportacion.cobranza"),
+      COBRANZA: t("exportacion_de_cuenta_corriente.cobranza"),
     },
     tiposDeMedio: tiposDeMedioConocidos(),
   };

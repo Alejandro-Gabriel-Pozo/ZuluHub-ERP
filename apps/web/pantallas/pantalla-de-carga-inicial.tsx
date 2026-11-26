@@ -3,6 +3,7 @@ import { registrarCargaInicialAccion } from "../app/s/app/acciones-de-carga-inic
 import { cargarLasOpcionesDeLaCargaInicial } from "../servidor/carga-inicial-de-stock";
 import { puedeEnStock } from "../servidor/ofertas-de-stock";
 import { ErrorDelDetalle } from "../ui/patrones/ErrorDelDetalle";
+import { opcionesDeArticulo } from "../ui/plantillas/stock/movimientos/modelo-de-formularios";
 import { FormularioDeCargaInicial } from "../ui/plantillas/stock/carga-inicial/FormularioDeCargaInicial.cliente";
 import { textoDeLaUnidad } from "../ui/plantillas/produccion/modelo-de-ordenes";
 import { RUTAS_DE_STOCK } from "../ui/plantillas/stock/rutas-de-stock";
@@ -29,7 +30,7 @@ export function pantallaDeCargaInicial() {
         <FormularioDeCargaInicial
           accion={registrarCargaInicialAccion.bind(null, randomUUID())}
           depositos={dato.depositos.map((d) => ({ valor: d.id, etiqueta: d.nombre }))}
-          articulos={dato.articulos.map((a) => ({ valor: a.id, etiqueta: a.nombre }))}
+          articulos={opcionesDeArticulo(dato.articulos)}
           unidades={Object.fromEntries(
             dato.articulos.map((a) => [a.id, textoDeLaUnidad(a.unidadId)]),
           )}

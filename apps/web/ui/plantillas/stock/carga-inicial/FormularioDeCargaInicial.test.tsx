@@ -13,16 +13,26 @@ const DEPOSITOS = [
   { valor: "d2", etiqueta: "Cocina" },
 ];
 const ARTICULOS = [
-  { valor: "a1", etiqueta: "Harina" },
-  { valor: "a2", etiqueta: "Sal" },
+  { valor: "a1", etiqueta: "Harina", controlDeLote: null },
+  { valor: "a2", etiqueta: "Sal", controlDeLote: null },
 ];
-const UNIDADES = { a1: "Kilogramo", a2: "Unidad" };
+/** Harina con control de lote y vencimiento; Sal con control de lote sin vencimiento; Azúcar sin control. */
+const CON_LOTES = [
+  { valor: "a1", etiqueta: "Harina", controlDeLote: "LOTE_Y_VENCIMIENTO" as const },
+  { valor: "a2", etiqueta: "Sal", controlDeLote: "LOTE" as const },
+  { valor: "a3", etiqueta: "Azúcar", controlDeLote: null },
+];
+const UNIDADES = { a1: "Kilogramo", a2: "Unidad", a3: "Kilogramo" };
 
-const grilla = (accion: AccionDeFormulario = ok, puedeEnviar = true) => (
+const grilla = (
+  accion: AccionDeFormulario = ok,
+  puedeEnviar = true,
+  articulos: readonly (typeof ARTICULOS)[number][] | typeof CON_LOTES = ARTICULOS,
+) => (
   <FormularioDeCargaInicial
     accion={accion}
     depositos={DEPOSITOS}
-    articulos={ARTICULOS}
+    articulos={articulos}
     unidades={UNIDADES}
     hrefDeCancelar="/stock/existencias"
     puedeEnviar={puedeEnviar}
@@ -114,5 +124,40 @@ describe("FormularioDeCargaInicial", () => {
     tocar(registrar());
     await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(3));
     expect(accion.mock.calls[2]?.[1].get("confirmar")).toBeNull();
+  });
+
+  it("una fila de un artículo controlado por lote pide «Lote» y «Vence»; sin vencimiento en el control pide solo «Lote»; sin control no pide nada", async () => {
+    await render(grilla(ok, true, CON_LOTES));
+    await userEvent.fill(page.getByLabelText("Cantidad"), "4");
+    await expect.element(page.getByLabelText("Lote")).toBeVisible();
+    await expect.element(page.getByLabelText("Vence")).toBeVisible();
+    await expect.element(registrar()).toBeDisabled();
+    await userEvent.fill(page.getByLabelText("Lote"), "L-1");
+    await expect.element(registrar()).toBeDisabled();
+    await userEvent.fill(page.getByLabelText("Vence"), "2099-06-01");
+    await expect.element(registrar()).toBeEnabled();
+    await userEvent.selectOptions(page.getByLabelText("Artículo"), "a2");
+    expect(page.getByLabelText("Vence").elements()).toHaveLength(0);
+    await expect.element(page.getByLabelText("Lote")).toBeVisible();
+    await userEvent.selectOptions(page.getByLabelText("Artículo"), "a3");
+    expect(page.getByLabelText("Lote").elements()).toHaveLength(0);
+    await expect.element(registrar()).toBeEnabled();
+  });
+
+  it("manda el lote y el vencimiento por posición, junto con la cantidad como texto decimal exacto", async () => {
+    const accion = vi.fn<AccionDeFormulario>(ok);
+    await render(grilla(accion, true, CON_LOTES));
+    await userEvent.fill(page.getByLabelText("Cantidad"), "4,5");
+    await userEvent.fill(page.getByLabelText("Lote"), "L-1");
+    await userEvent.fill(page.getByLabelText("Vence"), "2099-06-01");
+    tocar(registrar());
+    await vi.waitFor(() => expect(accion).toHaveBeenCalledTimes(1));
+    const datos = Object.fromEntries(accion.mock.calls[0]?.[1].entries() ?? []);
+    expect(datos).toMatchObject({
+      "articuloId.0": "a1",
+      "cantidad.0": "4.5",
+      "loteCodigo.0": "L-1",
+      "loteVence.0": "2099-06-01",
+    });
   });
 });

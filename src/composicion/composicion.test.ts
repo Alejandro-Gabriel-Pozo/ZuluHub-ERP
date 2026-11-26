@@ -662,8 +662,8 @@ const DECISIONES_DE_WEB: Record<keyof ReturnType<typeof armarWeb>, Decision> = {
   casosDeUsoDeClientes: { conGuard: DECLARACIONES_DE_CLIENTES },
   consultasDeClientes: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CLIENTES },
   // CC-5 (A1): la lista y la ficha de la cuenta corriente; cada consulta exige `cuenta_corriente.ver` dentro de su transacción.
-  consultasDeCuentaCorriente: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CUENTA_CORRIENTE },
   casosDeUsoDeCuentaCorriente: { conGuard: DECLARACIONES_DE_CUENTA_CORRIENTE },
+  consultasDeCuentaCorriente: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_CUENTA_CORRIENTE },
   casosDeUsoDeCompras: { conGuard: DECLARACIONES_DE_COMPRAS },
   consultasDeCompras: { conGuard: DECLARACIONES_DE_CONSULTAS_DE_COMPRAS },
   cuentaDelProveedor: { conGuard: DECLARACIONES_DE_CUENTA_DEL_PROVEEDOR },

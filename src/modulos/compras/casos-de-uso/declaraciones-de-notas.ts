@@ -2,6 +2,7 @@ import type { DeclaracionDeCasoDeUso } from "../../../capacidades/permisos/decla
 
 const ARCHIVO_DE_NOTAS = "test/integracion/compras-n4-notas-de-credito.test.ts";
 const ARCHIVO_DE_REEMPLAZO = "test/integracion/compras-reemplazo-de-factura.test.ts";
+const ARCHIVO_DE_CAMBIO_DE_COMPROBANTE = "test/integracion/compras-cambio-de-comprobante.test.ts";
 const ARCHIVO_DE_NOTAS_DE_DEBITO = "test/integracion/compras-notas-de-debito.test.ts";
 
 /** Los casos de uso de las notas del proveedor y del reemplazo de factura con su acción y cómo se repiten (parte de `DECLARACIONES`, separada para no pasar del tope de líneas por archivo). */
@@ -33,6 +34,16 @@ export const DECLARACIONES_DE_NOTAS = {
       prueba: {
         archivo: ARCHIVO_DE_REEMPLAZO,
         it: "I1: reemplazar dos veces con la misma clave (también a la vez) deja una sola factura nueva y una sola auditoría; con otro contenido, CLAVE_REUTILIZADA",
+      },
+    },
+  },
+  cambiarElComprobanteDeLaCompra: {
+    accion: "comprobantes_de_proveedor.reemplazar",
+    repeticion: {
+      regla: "CLAVE_DE_IDEMPOTENCIA",
+      prueba: {
+        archivo: ARCHIVO_DE_CAMBIO_DE_COMPROBANTE,
+        it: "I1: cambiar el comprobante dos veces con la misma clave (también a la vez) deja una sola factura nueva, un solo cargo y una sola auditoría; con otro contenido, CLAVE_REUTILIZADA",
       },
     },
   },

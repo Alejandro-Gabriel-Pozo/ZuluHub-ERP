@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "El módulo de cuentas corrientes de clientes se llama «Cuenta corriente» en la consola de plataforma (una prueba exige un rótulo por cada módulo del catálogo, también los cerrados).",
   "que_cambia": "Solo el rótulo que ve quien administra planes en la consola de plataforma; el módulo está cerrado. Revertir: cambiar la entrada de ROTULO_DE_MODULO.",
-  "donde": "apps/plataforma/logica/plan.ts (ROTULO_DE_MODULO); pedido del dueño del 25/11/2026 («cuentas corrientes de clientes»)"
+  "donde": "apps/plataforma/logica/plan.ts (ROTULO_DE_MODULO); pedido del dueño del 25/11/2026 («cuentas corrientes de clientes»); dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja C, fila del ID)"
 }

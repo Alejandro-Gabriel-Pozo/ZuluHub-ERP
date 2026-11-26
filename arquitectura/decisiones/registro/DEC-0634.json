@@ -3,9 +3,9 @@
   "fecha": "2026-11-16",
   "quien": "sesión",
   "tipo": "SIN_DECISION",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "T1 concede ya a la aplicación y a la plataforma los privilegios de escritura por columna del diseño, aunque ningún caso de uso los use todavía.",
   "que_cambia": "Nada que vea el negocio; hasta T4 y T5 no hay pantalla ni caso de uso que escriba, y una prueba lista exactamente qué recibe cada rol.",
-  "donde": "migraciones/0094_permisos_configurables.sql (privilegios); test/integracion/permisos-configurables-migracion.test.ts",
+  "donde": "migraciones/0094_permisos_configurables.sql (privilegios); test/integracion/permisos-configurables-migracion.test.ts; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja D, fila del ID)",
   "motivo": "El pedido de T1 incluye los privilegios por columna; revertirlos es un REVOKE en una migración nueva."
 }

@@ -10,7 +10,7 @@ import {
 } from "./cuenta-corriente-exportacion-textos";
 
 /**
- * Los textos del archivo de la cuenta corriente: ninguno inventado. Todos salen del catálogo (los diez nuevos, de `DEC-CCL-006`). Previene: un encabezado escrito a mano que nadie aprobó.
+ * Los textos del archivo de la cuenta corriente: ninguno inventado. Todos salen del catálogo (los diez nuevos, de `DEC-CCL-007`). Previene: un encabezado escrito a mano que nadie aprobó.
  */
 describe("los textos de la exportación de la cuenta corriente", () => {
   const r = rotulosDeLaExportacionDeCuentaCorriente();

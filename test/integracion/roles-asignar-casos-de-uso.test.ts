@@ -292,6 +292,26 @@ describe.skipIf(base === null)(
       });
     });
 
+    it("listarMiembros: quien tiene un rol propio sale con el nombre de su rol; los demás, sin nombre", async () => {
+      const e = await apoyo.escenario();
+      const op = await apoyo.miembro(e, "OPERADOR");
+      const otro = await apoyo.miembro(e, "OPERADOR");
+      const rol = await crearRol(e, "Cajero de turno");
+      await casos.asignarRol(e.ctx, { personaId: op.id, destino: { tipo: "PROPIO", rolId: rol } });
+
+      const r = await consultas.listarMiembros(e.ctx);
+
+      const por = new Map(r.ok ? r.valor.map((m) => [m.personaId, m] as const) : []);
+      expect([por.get(op.id)?.rol, por.get(op.id)?.rolPropioNombre]).toEqual([
+        "PROPIO",
+        "Cajero de turno",
+      ]);
+      expect([por.get(otro.id)?.rol, por.get(otro.id)?.rolPropioNombre]).toEqual([
+        "OPERADOR",
+        null,
+      ]);
+    });
+
     it("rolesAsignables: el gerente ve los dos roles base y los propios activos, no los archivados", async () => {
       const e = await apoyo.escenario();
       const activo = await crearRol(e, "Activo");

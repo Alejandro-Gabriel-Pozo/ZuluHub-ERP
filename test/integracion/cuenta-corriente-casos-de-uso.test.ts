@@ -329,6 +329,7 @@ describe.skipIf(base === null)("cuenta corriente de clientes: casos de uso y con
         await cc.casos.reactivarCuentaDelCliente(m.ctx(), {
           cuentaId: cuenta.id,
           versionEsperada: 2,
+          motivo: "Regularizó sus pagos",
         }),
       );
       expect(primera).toMatchObject({
@@ -339,6 +340,7 @@ describe.skipIf(base === null)("cuenta corriente de clientes: casos de uso y con
         await cc.casos.reactivarCuentaDelCliente(m.ctx(), {
           cuentaId: cuenta.id,
           versionEsperada: 2,
+          motivo: "Regularizó sus pagos",
         }),
       );
       expect(segunda).toMatchObject({
@@ -347,6 +349,107 @@ describe.skipIf(base === null)("cuenta corriente de clientes: casos de uso y con
       });
       expect(await auditorias(m, "CUENTA_DEL_CLIENTE_REACTIVADA", cuenta.id)).toBe(1);
       expect((await fichaEnBase(cuenta.id))?.version).toBe(3);
+    });
+
+    it("reactivar exige un motivo válido (aunque la cuenta ya esté habilitada), no cambia nada sin él y deja el motivo en la constancia", async () => {
+      const { cuenta } = await habilitada();
+      for (const motivo of ["", "   ", "a".repeat(301), "Dos\nlíneas"]) {
+        expect(
+          error(
+            await cc.casos.reactivarCuentaDelCliente(m.ctx(), {
+              cuentaId: cuenta.id,
+              versionEsperada: 1,
+              motivo,
+            }),
+          ),
+          JSON.stringify(motivo),
+        ).toBe("MOTIVO_INVALIDO");
+      }
+      exito(
+        await cc.casos.suspenderCuentaDelCliente(m.ctx(), {
+          cuentaId: cuenta.id,
+          versionEsperada: 1,
+          motivo: "Pagos vencidos",
+        }),
+      );
+      expect(
+        error(
+          await cc.casos.reactivarCuentaDelCliente(m.ctx(), {
+            cuentaId: cuenta.id,
+            versionEsperada: 2,
+            motivo: "",
+          }),
+        ),
+      ).toBe("MOTIVO_INVALIDO");
+      expect((await fichaEnBase(cuenta.id))?.estado).toBe("SUSPENDIDA");
+      expect(await auditorias(m, "CUENTA_DEL_CLIENTE_REACTIVADA", cuenta.id)).toBe(0);
+      exito(
+        await cc.casos.reactivarCuentaDelCliente(m.ctx(), {
+          cuentaId: cuenta.id,
+          versionEsperada: 2,
+          motivo: "Regularizó sus pagos",
+        }),
+      );
+      const constancia = await dueno.query<{ despues: unknown }>(
+        "select despues from auditoria_empresa where empresa_id = $1 and accion = 'CUENTA_DEL_CLIENTE_REACTIVADA' and entidad_id = $2",
+        [m.empresa, cuenta.id],
+      );
+      expect(constancia.rows).toHaveLength(1);
+      expect(constancia.rows[0]?.despues).toMatchObject({
+        estado: "HABILITADA",
+        motivoDeReactivacion: "Regularizó sus pagos",
+      });
+    });
+
+    it("reactivar de nuevo con OTRO motivo no pisa el original ni audita otra vez; dos reactivaciones a la vez dejan UNA constancia", async () => {
+      const { cuenta } = await habilitada();
+      exito(
+        await cc.casos.suspenderCuentaDelCliente(m.ctx(), {
+          cuentaId: cuenta.id,
+          versionEsperada: 1,
+          motivo: "Pagos vencidos",
+        }),
+      );
+      exito(
+        await cc.casos.reactivarCuentaDelCliente(m.ctx(), {
+          cuentaId: cuenta.id,
+          versionEsperada: 2,
+          motivo: "Primer motivo",
+        }),
+      );
+      const otra = exito(
+        await cc.casos.reactivarCuentaDelCliente(m.ctx(), {
+          cuentaId: cuenta.id,
+          versionEsperada: 2,
+          motivo: "Segundo motivo",
+        }),
+      );
+      expect(otra.yaEstaba).toBe(true);
+      const constancias = await dueno.query<{ despues: unknown }>(
+        "select despues from auditoria_empresa where empresa_id = $1 and accion = 'CUENTA_DEL_CLIENTE_REACTIVADA' and entidad_id = $2",
+        [m.empresa, cuenta.id],
+      );
+      expect(constancias.rows).toHaveLength(1);
+      expect(constancias.rows[0]?.despues).toMatchObject({ motivoDeReactivacion: "Primer motivo" });
+
+      const { cuenta: c2 } = await habilitada();
+      exito(
+        await cc.casos.suspenderCuentaDelCliente(m.ctx(), {
+          cuentaId: c2.id,
+          versionEsperada: 1,
+          motivo: "Mora",
+        }),
+      );
+      const reactivar = (motivo: string) =>
+        cc.casos.reactivarCuentaDelCliente(m.ctx(), {
+          cuentaId: c2.id,
+          versionEsperada: 2,
+          motivo,
+        });
+      const [a, b] = await Promise.all([reactivar("A"), reactivar("B")]);
+      expect([a.ok, b.ok]).toEqual([true, true]);
+      expect(await auditorias(m, "CUENTA_DEL_CLIENTE_REACTIVADA", c2.id)).toBe(1);
+      expect((await fichaEnBase(c2.id))?.estado).toBe("HABILITADA");
     });
 
     it("suspender exige un motivo válido; con versión vieja es VERSION_DESACTUALIZADA; una ficha ajena o inexistente es CUENTA_NO_ENCONTRADA", async () => {
@@ -408,6 +511,7 @@ describe.skipIf(base === null)("cuenta corriente de clientes: casos de uso y con
           await cc.casos.reactivarCuentaDelCliente(m.ctx(), {
             cuentaId: cuenta.id,
             versionEsperada: 2,
+            motivo: "Regularizó sus pagos",
           }),
         ),
       ).toBe("PARTE_NO_ACTIVA");
@@ -504,6 +608,7 @@ describe.skipIf(base === null)("cuenta corriente de clientes: casos de uso y con
           await cc.casos.reactivarCuentaDelCliente(deB, {
             cuentaId: cuenta.id,
             versionEsperada: 1,
+            motivo: "Regularizó sus pagos",
           }),
         ),
       ).toBe("CUENTA_NO_ENCONTRADA");
@@ -569,6 +674,7 @@ describe.skipIf(base === null)("cuenta corriente de clientes: casos de uso y con
             await casos.casos.reactivarCuentaDelCliente(operador(), {
               cuentaId: cuenta.id,
               versionEsperada: 1,
+              motivo: "Regularizó sus pagos",
             }),
           ),
         ).toBe("SIN_PERMISO");

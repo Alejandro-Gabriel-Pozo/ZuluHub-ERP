@@ -25,6 +25,9 @@ const formaDeMovimiento = z.object({
   motivo: texto,
   costoUnitario: decimal.optional(),
   detalle: texto.optional(),
+  /** Solo en una ENTRADA de un artículo controlado por lote (STK-E2b): el código del lote y su vencimiento; el servidor valida la forma y las reglas. En blanco = ausente. */
+  loteCodigo: texto.optional(),
+  loteVence: texto.optional(),
   confirmar: z.enum(["", "1"]).optional(),
 });
 export type EntradaWebDeMovimiento = Readonly<{
@@ -35,6 +38,8 @@ export type EntradaWebDeMovimiento = Readonly<{
   motivo: string;
   costoUnitario: string | undefined;
   detalle: string | undefined;
+  loteCodigo: string | undefined;
+  loteVence: string | undefined;
   /** La persona vio el aviso «va a quedar en negativo» y lo confirmó (solo sirve con el nivel AVISAR). */
   confirmar: boolean;
 }>;
@@ -47,6 +52,8 @@ export function entradaDeMovimiento(
         ...f.valor,
         costoUnitario: enBlanco(f.valor.costoUnitario),
         detalle: enBlanco(f.valor.detalle),
+        loteCodigo: enBlanco(f.valor.loteCodigo),
+        loteVence: enBlanco(f.valor.loteVence),
         confirmar: f.valor.confirmar === "1",
       })
     : f;
