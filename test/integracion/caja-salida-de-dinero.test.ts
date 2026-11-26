@@ -242,7 +242,7 @@ describe.skipIf(base === null)("caja: salida de dinero por cualquier medio", () 
     expect(await auditorias(m, "EGRESO_SUPERA_EFECTIVO")).toBe(0);
   });
 
-  it("IDEMPOTENCIA: la misma salida dos veces con la misma clave: la segunda devuelve yaExistia y no escribe ni audita", async () => {
+  it("la misma salida dos veces con la misma clave: la segunda devuelve yaExistia y no escribe ni audita", async () => {
     const m = await mundo();
     await abrir(m);
     const entrada = { claveDeIdempotencia: claveNueva(), importe: pesos("33.30") };
