@@ -23,6 +23,7 @@ describe("códigos públicos de stock", () => {
       STOCK_SALDO_DE_LOTE_INSUFICIENTE: "stock.error.saldo_de_lote_insuficiente",
       LOTE_VENCIMIENTO_REQUERIDO: "lotes.error.vencimiento_requerido",
       STOCK_VENCIMIENTO_PASADO: "stock.error.vencimiento_pasado",
+      STOCK_LOTE_CON_OTRA_FECHA: "stock.error.lote_con_otra_fecha",
       STOCK_ACCION_NO_PERMITIDA: "stock.error.sin_permiso",
     });
     const textos = {
@@ -40,6 +41,8 @@ describe("códigos públicos de stock", () => {
       "stock.error.saldo_de_lote_insuficiente": "El lote no tiene tanta existencia",
       "lotes.error.vencimiento_requerido": "Falta la fecha de vencimiento",
       "stock.error.vencimiento_pasado": "La fecha de vencimiento ya pasó",
+      "stock.error.lote_con_otra_fecha":
+        "Ese lote ya está cargado con otra fecha de vencimiento. Para cambiarla, usá Corregir.",
       "stock.error.sin_permiso": "Esta acción no está permitida",
     } as const;
     for (const [clave, texto] of Object.entries(textos)) {
