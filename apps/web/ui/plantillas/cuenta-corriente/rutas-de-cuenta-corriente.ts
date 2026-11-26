@@ -17,3 +17,7 @@ export const RUTA_DE_HABILITAR_CUENTA = `${RUTA_DE_LA_CUENTA_CORRIENTE}/habilita
 
 export const rutaDeLasCondicionesDeCuenta = (parteId: string): string =>
   `${rutaDeLaFichaDeCuenta(parteId)}/condiciones`;
+
+/** La descarga a Excel de la cuenta corriente de todos los clientes con ficha, al día de hoy (CC-5 D): una dirección de GET sin parámetros; el servidor decide empresa y permisos. */
+export const direccionDeExportarCuentaCorriente = (): string =>
+  `${RUTA_DE_LA_CUENTA_CORRIENTE}/exportar`;
