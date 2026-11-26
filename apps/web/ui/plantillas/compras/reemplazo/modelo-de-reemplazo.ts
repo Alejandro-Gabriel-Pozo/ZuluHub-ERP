@@ -71,7 +71,7 @@ export function numeroParaElMotivo(puntoDeVenta: string, numero: string): string
 }
 
 /** El marcador del número en la plantilla del motivo («Reemplazada por la factura {numero}»), el mismo que declara el catálogo. */
-export const MARCADOR_DEL_NUMERO = "{numero}";
+const MARCADOR_DEL_NUMERO = "{numero}";
 
 /** El motivo que se envía: lo que escribió la persona (aunque sea vacío: entonces no se envía) o, si no tocó el campo, la plantilla con el número de la factura nueva; `""` mientras falta el número. */
 export function motivoDelReemplazo(
