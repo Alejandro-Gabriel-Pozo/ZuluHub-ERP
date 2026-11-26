@@ -51,6 +51,7 @@ export type TextosDeCuentaCorriente = Readonly<{
   guardar: string;
   cancelar: string;
   exportar: string;
+  cobrarUnTicket: string;
 }>;
 
 export function textosDeCuentaCorriente(): TextosDeCuentaCorriente {
@@ -101,5 +102,6 @@ export function textosDeCuentaCorriente(): TextosDeCuentaCorriente {
     guardar: texto({}, "catalogo.accion.guardar"),
     cancelar: texto({}, "catalogo.accion.cancelar"),
     exportar: texto({}, "compras.exportacion.exportar"),
+    cobrarUnTicket: texto({}, "cuenta_corriente.cobro.boton_de_la_ficha"),
   };
 }

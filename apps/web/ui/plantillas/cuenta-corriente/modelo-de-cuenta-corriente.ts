@@ -64,7 +64,7 @@ export type FichaDeCuentaParaLaPantalla = Readonly<{
   }>[];
 }>;
 
-const SIN_DATO = "—";
+export const SIN_DATO = "—";
 
 const importe = (i: Importe): string => formatearImporte(i.monto);
 const dias = (n: number): string => texto({}, "cuenta_corriente.lista.dias", { n: String(n) });

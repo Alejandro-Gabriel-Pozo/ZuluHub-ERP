@@ -123,6 +123,9 @@ describe.skipIf(base === null)("composición web: cobrar un ticket a cuenta (CC-
        where k.ticket_id = $1`,
       [ticketId],
     );
+  const nombreDeLaSucursal = async (id: string): Promise<string> =>
+    (await m.filas<{ nombre: string }>("select nombre from sucursal where id = $1", [id]))[0]
+      ?.nombre as string;
   const estadoDe = async (ticketId: string): Promise<string> =>
     (await m.filas<{ estado: string }>("select estado from ticket where id = $1", [ticketId]))[0]
       ?.estado as string;
@@ -152,7 +155,9 @@ describe.skipIf(base === null)("composición web: cobrar un ticket a cuenta (CC-
       fechaNegocio: "2026-11-09",
       venceEl: "2026-12-09",
       vencida: false,
+      sucursal: await nombreDeLaSucursal(e.sucursal),
     });
+    expect(hoja.dato.opciones?.medios.some((x) => x.tipo === "EFECTIVO")).toBe(true);
     expect(hoja.dato.cliente).toEqual({ id: c, nombre: await nombreDelCliente(c) });
     expect(hoja.dato.cajas.some((x) => x.estado === "ABIERTA")).toBe(true);
     expect(hoja.dato.jornadaActual.estado).toBe("ABIERTA");
@@ -342,6 +347,11 @@ describe.skipIf(base === null)("composición web: cobrar un ticket a cuenta (CC-
       dato: null,
     });
     expect(await cobrar(await pedido(t, { de: otra }), otra.gerente)).toMatchObject(GENERICO);
+    // El nombre de una sucursal de otra empresa no se lee: sale vacío.
+    expect(await d.cobro().nombreDeLaSucursal(otra.gerente, { sucursalId: e.sucursal })).toEqual({
+      ok: true,
+      valor: null,
+    });
     expect(await estadoDe(t.ticketId)).toBe("EMITIDO");
     expect(await cobranzasDe(t.ticketId)).toBe(0);
   });
