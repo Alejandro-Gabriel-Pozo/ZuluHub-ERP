@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "CLIENTE",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "«Recetas» va en el menú del área Catálogo, grupo Producción, con las direcciones /catalogo/recetas, /catalogo/recetas/id y /catalogo/recetas/id/cocina.",
   "que_cambia": "Dónde se llega a las recetas y cómo se llaman las direcciones. Revertir: mover una fila y sus rutas.",
-  "donde": "apps/web/ui/navegacion/menu-filas-catalogo.ts; recetas-pantalla.md §3, supuestos S1 y S2"
+  "donde": "apps/web/ui/navegacion/menu-filas-catalogo.ts; recetas-pantalla.md §3, supuestos S1 y S2; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)"
 }

@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "COMERCIAL",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Al enviar a cocina o anular un ítem enviado, la comanda se imprime con el diálogo de impresión del sistema; si no hay impresora se avisa y se puede configurar.",
   "que_cambia": "Quien envía ve abrirse el diálogo de impresión del navegador sin pedirlo; si falla, reintenta o va a configurar impresoras. Se revierte quitando el arranque automático: la persona toca Imprimir.",
-  "donde": "apps/web/ui/patrones/papel/BotonDeImprimir.cliente.tsx; apps/web/ui/plantillas/salon/ImpresionDelDocumento.cliente.tsx; Pedernal-docs plan-de-salon-dia-uno-2026-11-25.md DEC-1034"
+  "donde": "apps/web/ui/patrones/papel/BotonDeImprimir.cliente.tsx; apps/web/ui/plantillas/salon/ImpresionDelDocumento.cliente.tsx; Pedernal-docs plan-de-salon-dia-uno-2026-11-25.md DEC-1034; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja A, fila del ID)"
 }

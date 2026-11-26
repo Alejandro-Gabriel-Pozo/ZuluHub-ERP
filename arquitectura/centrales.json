@@ -63,7 +63,7 @@
       ],
       "parteDedicada": "src/composicion/web-de-<módulo>.ts",
       "soloJunta": false,
-      "lineas": 91,
+      "lineas": 93,
       "excepciones": ["empresas", "fiscal", "identidad"]
     },
     {
@@ -103,7 +103,7 @@
       ],
       "parteDedicada": "src/capacidades/vocabulario/catalogo-<módulo>.ts",
       "soloJunta": true,
-      "lineas": 90,
+      "lineas": 91,
       "excepciones": [
         "nucleo",
         "carta-publica",

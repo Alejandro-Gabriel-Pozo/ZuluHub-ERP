@@ -3,8 +3,8 @@
   "fecha": "2026-11-25",
   "quien": "sesión",
   "tipo": "COMERCIAL",
-  "estado": "PENDIENTE_DE_OK",
+  "estado": "CONFIRMADA",
   "decision": "Se corrige la línea que entró entera a un solo depósito de uso normal; no se corrige a cero ni lo que entró repartido o a cuarentena. Respeta el control de existencia negativa.",
   "que_cambia": "Esas líneas se rechazan con el mensaje genérico. Una recepción que no llegó se anula. Revertir: sumar los casos, es código y quizás una migración.",
-  "donde": "corregir-lo-recibido.ts, compras-correccion-recibido.test.ts"
+  "donde": "corregir-lo-recibido.ts, compras-correccion-recibido.test.ts; dueño 26/11/2026: «Sí» (Excel decisiones-pendientes-del-pr-final, hoja B, fila del ID)"
 }

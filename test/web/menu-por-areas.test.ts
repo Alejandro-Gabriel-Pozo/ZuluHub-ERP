@@ -210,6 +210,15 @@ describe("la tabla real: lo declarado por pantalla", () => {
         "/caja/cierre-del-dia",
         "cierre.titulo",
       ],
+      [
+        "cuenta-corriente",
+        "ventas",
+        "caja",
+        "cuenta_corriente",
+        "cuenta_corriente.ver",
+        "/caja/cuenta-corriente",
+        "cuenta_corriente.menu.entrada",
+      ],
       ["salon", "ventas", "salon", "salon", "mesas.ver", "/salon", "salon.texto.grupo_salon"],
       ["mesas", "ventas", "salon", "salon", "mesas.ver", "/salon/mesas", "salon.texto.admin_mesas"],
       [
@@ -579,6 +588,7 @@ describe("las claves de las filas salen de la tabla (E-5)", () => {
     "comprobantes",
     "caja",
     "cierre-del-dia",
+    "cuenta-corriente",
     "salon",
     "mesas",
     "impresoras",

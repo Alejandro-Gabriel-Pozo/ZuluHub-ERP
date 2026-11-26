@@ -77,6 +77,11 @@
     "apps/plataforma/pantallas/*",
     "apps/plataforma/servidor/*"
   ],
+  "test/web/ficha-de-cuenta-corriente.test.ts": [
+    "apps/web/app/s/app/(operacion)/caja/cuenta-corriente/**",
+    "apps/web/servidor/cuenta-corriente.ts",
+    "apps/web/ui/plantillas/cuenta-corriente/*"
+  ],
   "test/web/ficha-de-existencias-y-movimientos.test.ts": [
     "apps/web/app/s/app/(operacion)/stock/existencias/**",
     "apps/web/app/s/app/(operacion)/stock/movimientos/**",
