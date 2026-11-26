@@ -353,6 +353,14 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
         ops.identidad.aceptarTraspaso(ctx, { traspasoId: randomUUID() }),
       rechazarTraspaso: (_e, ctx) =>
         ops.identidad.rechazarTraspaso(ctx, { traspasoId: randomUUID() }),
+      crearRol: (_e, ctx) =>
+        ops.identidad.crearRol(ctx, {
+          rolId: randomUUID(),
+          nombre: `Rol ${sufijoUnico()}`,
+          origen: { tipo: "VACIO" },
+        }),
+      editarRol: (_e, ctx) => ops.identidad.editarRol(ctx, { rolId: randomUUID(), nombre: "Otro" }),
+      archivarRol: (_e, ctx) => ops.identidad.archivarRol(ctx, { rolId: randomUUID() }),
     };
     const DE_CONSULTAS_DE_IDENTIDAD: Record<
       keyof typeof DECLARACIONES_DE_CONSULTAS_DE_IDENTIDAD,
@@ -364,6 +372,8 @@ describe.skipIf(base === null)("autorización por marca de entrada contra una ba
       traspasoEnCurso: (_e, ctx) => ops.consultasDeIdentidad.traspasoEnCurso(ctx),
       personasParaMostrar: (e, ctx) =>
         ops.consultasDeIdentidad.personasParaMostrar(ctx, { ids: [e.otra] }),
+      listarRoles: (_e, ctx) => ops.consultasDeIdentidad.listarRoles(ctx),
+      verRol: (_e, ctx) => ops.consultasDeIdentidad.verRol(ctx, { rolId: randomUUID() }),
     };
     const DE_EMPRESAS: Record<
       keyof typeof DECLARACIONES_DE_EMPRESAS,
